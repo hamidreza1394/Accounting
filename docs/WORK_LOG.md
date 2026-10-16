@@ -17,3 +17,11 @@
 - **گزارش تفصیلی:** `docs/REPOSITORY_AUDIT.md` و فهرست `docs/CLASS_REVIEW_INVENTORY.csv`.
 - **تست:** `dotnet` در محیط موجود نیست و دانلود شبکه‌ای در دسترس نبود؛ Restore/Build/Test و ارتقای واقعی فایل‌های Bootstrap/Icons اجرا نشدند. هیچ نتیجه‌ای به‌عنوان Build موفق اعلام نمی‌شود.
 - **باقی‌مانده:** احراز هویت legacy، ارتقای واقعی assetهای Bootstrap/Icons، تست‌های Integration و تصمیم .NET 10 LTS از اولویت‌های بعدی‌اند.
+
+
+## 2026-10-16 — Multi-agent coordination documentation
+- **نوع کار:** تکمیل مستندات گردش کار Agentها طبق درخواست کاربر؛ بدون تغییر کد اجرایی.
+- **تغییرات:** افزوده شد: docs/AGENT_COORDINATION.md، پرامپ اختصاصی Codex در docs/prompts/CODEX_PROMPT.md، پرامپ اختصاصی Copilot در docs/prompts/COPILOT_PROMPT.md، و گزارش docs/handoffs/ISSUE-UNNUMBERED-agent-workflow-hardening.md. فایل‌های AGENTS.md و docs/AGENT_START_PROMPT.md نیز به این گردش کار پیوند داده شدند.
+- **گردش کار پیشنهادی:** هر وظیفه یک Issue، شاخه و PR مستقل؛ handoff در Git ثبت شود؛ ادغام فقط پس از بازبینی Maintainer.
+- **تست:** Restore/Build/Test و اسکریپت دارایی‌ها اجرا نشده‌اند؛ این تغییر مستنداتی است و اجرای محلی/git diff --check از این مسیر ممکن نبود. هیچ ادعایی درباره موفقیت Build/Test وجود ندارد.
+- **وضعیت Git:** تغییرات روی شاخه docs/agent-workflow-hardening ثبت شده‌اند؛ main تغییر نکرده است. PR هنوز ساخته نشده است.
