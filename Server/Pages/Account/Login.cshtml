@@ -1,78 +1,151 @@
-﻿@page
+@page
 @model Server.Pages.Security.LoginModel
 @{
-	var pageTitle = Resources.PageTitles.Login;
-	var isRtl = System.Threading.Thread.CurrentThread.CurrentUICulture.TextInfo.IsRightToLeft;
-	ViewData[Constants.ViewDataKeyName.PageTitle] = pageTitle;
-	Layout = isRtl ? "Layouts/Rtl/_Security" : "Layouts/Ltr/_Security";
+    var pageTitle = "ورود به تراز آوا";
+    ViewData[Constants.ViewDataKeyName.PageTitle] = pageTitle;
+    Layout = "Layouts/Rtl/_Security";
 }
 
-<main class="login-shell" aria-labelledby="login-title">
-	<div class="login-orbit login-orbit-one" aria-hidden="true"></div>
-	<div class="login-orbit login-orbit-two" aria-hidden="true"></div>
+<style>
+    :root { --tara-navy:#123b67; --tara-blue:#1677c8; --tara-cyan:#16b8c8; --tara-ink:#16324f; --tara-muted:#72859a; }
+    body { margin:0; background:#f2f8ff; font-family:Tahoma,"Segoe UI",sans-serif; }
+    .tara-login { min-height:100vh; direction:rtl; display:grid; grid-template-columns:minmax(390px, .86fr) minmax(0,1.14fr); overflow:hidden; background:linear-gradient(135deg,#f9fcff 0%,#eaf5ff 52%,#f5fbff 100%); color:var(--tara-ink); }
+    .tara-form-side { display:flex; align-items:center; justify-content:center; padding:42px clamp(24px,5vw,82px); position:relative; z-index:2; }
+    .tara-card { width:min(100%,440px); padding:clamp(28px,3.4vw,48px); background:rgba(255,255,255,.88); border:1px solid rgba(255,255,255,.95); border-radius:28px; box-shadow:0 28px 80px rgba(31,92,145,.13),0 4px 14px rgba(31,92,145,.05); backdrop-filter:blur(18px); }
+    .tara-logo { width:68px;height:68px;display:grid;place-items:center;border-radius:22px;background:linear-gradient(145deg,#0d477d,#138bd0 70%,#17c3ca);box-shadow:0 12px 25px rgba(20,125,190,.25);color:#fff;font-size:30px;margin:0 auto 20px; }
+    .tara-title { text-align:center;font-weight:800;font-size:clamp(26px,2.2vw,34px);letter-spacing:-1px;margin:0;color:#153a61; }
+    .tara-subtitle { text-align:center;color:#73869b;font-size:14px;line-height:1.9;margin:12px 0 30px; }
+    .tara-label { display:block;font-size:13px;font-weight:700;color:#294a69;margin:0 0 9px; }
+    .tara-field { position:relative;margin-bottom:20px; }
+    .tara-field-icon { position:absolute;right:17px;top:50%;transform:translateY(-50%);font-size:18px;color:#7393b0;z-index:2; }
+    .tara-input { width:100%;height:56px;border:1px solid #dce8f3;border-radius:14px;background:#f8fbff;padding:0 48px 0 48px;color:#16324f;box-shadow:inset 0 1px 2px rgba(20,65,105,.025);transition:border-color .2s,box-shadow .2s,background .2s; }
+    .tara-input:focus { outline:0;border-color:#31a9d2;background:#fff;box-shadow:0 0 0 4px rgba(34,173,211,.13); }
+    .tara-input::placeholder { color:#a0afbd; }
+    .tara-password-toggle { position:absolute;left:12px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:#7891a8;padding:7px; }
+    .tara-remember { color:#637c94;font-size:13px; }
+    .tara-remember input { margin-left:7px;accent-color:#168cc6; }
+    .tara-submit { width:100%;height:56px;border:0;border-radius:14px;color:white;font-size:16px;font-weight:700;background:linear-gradient(100deg,#1265b4,#078fca 58%,#13b7c2);box-shadow:0 12px 24px rgba(10,133,192,.23);transition:transform .2s,box-shadow .2s; }
+    .tara-submit:hover { color:#fff;transform:translateY(-2px);box-shadow:0 16px 30px rgba(10,133,192,.3); }
+    .tara-secure { display:flex;justify-content:center;align-items:center;gap:7px;color:#8a9caf;font-size:12px;margin-top:22px; }
+    .tara-visual { position:relative;min-height:100vh;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:5vw;background:radial-gradient(ellipse at 20% 20%,rgba(87,211,255,.45),transparent 35%),radial-gradient(ellipse at 82% 76%,rgba(44,155,235,.38),transparent 32%),linear-gradient(140deg,#d9f1ff 0%,#a9d8f6 38%,#d8f4ff 100%); }
+    .tara-visual:before,.tara-visual:after { content:"";position:absolute;border:1px solid rgba(255,255,255,.65);border-radius:50%;pointer-events:none; }
+    .tara-visual:before { width:760px;height:760px;right:-260px;top:-250px;box-shadow:0 0 0 45px rgba(255,255,255,.10),0 0 0 100px rgba(255,255,255,.08); }
+    .tara-visual:after { width:520px;height:520px;left:-190px;bottom:-210px;box-shadow:0 0 0 35px rgba(255,255,255,.13),0 0 0 75px rgba(255,255,255,.09); }
+    .tara-decoration { position:absolute;inset:0;opacity:.5;background-image:linear-gradient(rgba(255,255,255,.3) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.3) 1px,transparent 1px);background-size:48px 48px;mask-image:linear-gradient(135deg,#000,transparent 78%); }
+    .tara-visual-inner { position:relative;z-index:1;width:min(100%,850px); }
+    .tara-brand { display:flex;align-items:center;justify-content:center;gap:17px;margin-bottom:38px;color:#124875; }
+    .tara-brand-icon { width:76px;height:76px;display:grid;place-items:center;border-radius:24px;background:linear-gradient(145deg,#fff,#e8f8ff);box-shadow:0 12px 30px rgba(37,104,151,.14);font-size:37px;color:#087fbd; }
+    .tara-brand-name { font-size:clamp(34px,4vw,54px);font-weight:900;letter-spacing:-1.5px;line-height:1.15; }
+    .tara-brand-caption { font-size:15px;color:#356d95;margin-top:8px; }
+    .tara-dashboard { position:relative;padding:24px;border:1px solid rgba(255,255,255,.9);border-radius:27px;background:rgba(255,255,255,.64);box-shadow:0 30px 70px rgba(34,99,145,.18);backdrop-filter:blur(16px);transform:perspective(1300px) rotateY(3deg) rotateX(1deg); }
+    .tara-dash-top { display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:22px; }
+    .tara-dash-heading { font-weight:800;color:#17466e;font-size:17px; }
+    .tara-dash-caption { font-size:12px;color:#7190a9;margin-top:5px; }
+    .tara-live { border-radius:20px;padding:8px 12px;background:#e3fbf4;color:#149a7b;font-size:12px;font-weight:700;white-space:nowrap; }
+    .tara-stats { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px; }
+    .tara-stat { border:1px solid rgba(255,255,255,.95);border-radius:16px;padding:16px;background:rgba(255,255,255,.72); }
+    .tara-stat-label { color:#718ba2;font-size:12px;margin-bottom:9px; }
+    .tara-stat-value { color:#17456e;font-size:clamp(15px,1.4vw,21px);font-weight:800;white-space:nowrap; }
+    .tara-stat-icon { display:inline-grid;place-items:center;width:30px;height:30px;border-radius:10px;background:#e3f5ff;color:#078dc1;margin-bottom:12px; }
+    .tara-chart-card { background:rgba(255,255,255,.83);border:1px solid white;border-radius:18px;padding:18px; }
+    .tara-chart-title { font-size:13px;font-weight:800;color:#2b5274; }
+    .tara-chart-sub { font-size:11px;color:#8aa0b3;margin-top:5px; }
+    .tara-chart { width:100%;height:auto;display:block;margin-top:10px; }
+    .tara-bottom-note { text-align:center;color:#47789c;font-size:13px;margin-top:24px; }
+    .tara-bottom-note i { color:#078fc1;margin-left:6px; }
+    .tara-validation { color:#c03950;font-size:12px;margin-top:7px;display:block; }
+    @@media(max-width:991.98px) { .tara-login{grid-template-columns:1fr}.tara-visual{display:none}.tara-form-side{min-height:100vh;padding:24px 16px}.tara-card{max-width:470px} }
+    @@media(max-width:480px) { .tara-card{padding:28px 22px;border-radius:22px}.tara-title{font-size:27px}.tara-subtitle{margin-bottom:24px} }
+    @@media(prefers-reduced-motion:reduce) { *,*:before,*:after{transition:none!important;scroll-behavior:auto!important} }
+</style>
 
-	<div class="container login-container">
-		<div class="row g-0 login-panel">
-			<section class="col-lg-6 login-brand-panel" aria-hidden="true">
-				<div class="login-brand-content">
-					<div class="login-mark"><i class="bi bi-bar-chart-line-fill"></i></div>
-					<div class="login-signal">
-						<span></span><span></span><span></span><span></span><span></span>
-					</div>
-				</div>
-			</section>
+<main class="tara-login" aria-labelledby="tara-login-title">
+    <section class="tara-form-side">
+        <div class="tara-card">
+            <div class="tara-logo"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i></div>
+            <h1 class="tara-title" id="tara-login-title">ورود به تراز آوا</h1>
+            <p class="tara-subtitle">به سامانه هوشمند مدیریت مالی و حسابداری خوش آمدید.<br />برای ادامه، اطلاعات حساب خود را وارد کنید.</p>
 
-			<section class="col-lg-6 login-form-panel">
-				<div class="login-form-wrap">
-					<div class="d-flex justify-content-between align-items-center gap-3 mb-4">
-						<div>
-							<p class="login-kicker mb-2">@(pageTitle)</p>
-							<h1 id="login-title" class="login-title mb-0">@(pageTitle)</h1>
-						</div>
-						<partial name="PartialViews/_ChangeCulture" />
-					</div>
+            <partial name="PartialViews/_DisplayPageMessages" />
 
-					<partial name="PartialViews/_DisplayPageMessages" />
+            <form method="post" class="login-form">
+                <input asp-for="ReturnUrl" type="hidden" />
+                <div asp-validation-summary="ModelOnly" class="tara-validation" role="alert"></div>
 
-					<form method="post" class="login-form">
-						<input asp-for="ReturnUrl" type="hidden" />
-						<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                <div class="tara-field">
+                    <label asp-for="ViewModel.Username" class="tara-label">نام کاربری</label>
+                    <i class="bi bi-person tara-field-icon" aria-hidden="true"></i>
+                    <input asp-for="ViewModel.Username" class="tara-input" placeholder="نام کاربری خود را وارد کنید" autocomplete="username" dir="ltr" autofocus />
+                    <span asp-validation-for="ViewModel.Username" class="tara-validation"></span>
+                </div>
 
-						<div class="mb-3">
-							<label asp-for="ViewModel.Username" class="form-label login-label"></label>
-							<div class="login-input-group">
-								<i class="bi bi-person login-input-icon" aria-hidden="true"></i>
-								<input asp-for="ViewModel.Username" class="form-control login-input" autocomplete="username" dir="ltr" autofocus />
-							</div>
-							<span asp-validation-for="ViewModel.Username" class="field-validation-error"></span>
-						</div>
+                <div class="tara-field">
+                    <label asp-for="ViewModel.Password" class="tara-label">رمز عبور</label>
+                    <i class="bi bi-lock tara-field-icon" aria-hidden="true"></i>
+                    <input asp-for="ViewModel.Password" id="login-password" class="tara-input" placeholder="رمز عبور خود را وارد کنید" autocomplete="current-password" dir="ltr" />
+                    <button type="button" class="tara-password-toggle" data-password-toggle="login-password" aria-controls="login-password" aria-label="نمایش یا مخفی کردن رمز عبور"><i class="bi bi-eye" aria-hidden="true"></i></button>
+                    <span asp-validation-for="ViewModel.Password" class="tara-validation"></span>
+                </div>
 
-						<div class="mb-3">
-							<label asp-for="ViewModel.Password" class="form-label login-label"></label>
-							<div class="login-input-group">
-								<i class="bi bi-lock login-input-icon" aria-hidden="true"></i>
-								<input asp-for="ViewModel.Password" id="login-password" class="form-control login-input login-password-input" autocomplete="current-password" dir="ltr" />
-								<button type="button" class="login-password-toggle" data-password-toggle="login-password" aria-controls="login-password" aria-label="@(Resources.DataDictionary.Password)">
-									<i class="bi bi-eye" aria-hidden="true"></i>
-								</button>
-							</div>
-							<span asp-validation-for="ViewModel.Password" class="field-validation-error"></span>
-						</div>
+                <div class="d-flex justify-content-between align-items-center gap-3 mb-4">
+                    <label class="tara-remember"><input asp-for="ViewModel.RememberMe" /> مرا به خاطر بسپار</label>
+                </div>
 
-						<div class="d-flex justify-content-between align-items-center gap-3 mb-4">
-							<div class="form-check login-check">
-								<input asp-for="ViewModel.RememberMe" class="form-check-input" />
-								<label asp-for="ViewModel.RememberMe" class="form-check-label"></label>
-							</div>
-						</div>
+                <button type="submit" class="btn tara-submit" data-login-submit>
+                    <span class="login-submit-label">ورود به حساب کاربری</span>
+                    <span class="spinner-border spinner-border-sm d-none me-2" data-login-spinner aria-hidden="true"></span>
+                </button>
+            </form>
+            <div class="tara-secure"><i class="bi bi-shield-lock" aria-hidden="true"></i> ورود امن به فضای کاری شما</div>
+        </div>
+    </section>
 
-						<button type="submit" class="btn login-submit w-100" data-login-submit>
-							<span class="login-submit-label">@(Resources.ButtonCaptions.Login)</span>
-							<span class="spinner-border spinner-border-sm d-none" data-login-spinner aria-hidden="true"></span>
-						</button>
-					</form>
-				</div>
-			</section>
-		</div>
-	</div>
+    <section class="tara-visual" aria-label="معرفی سامانه تراز آوا">
+        <div class="tara-decoration" aria-hidden="true"></div>
+        <div class="tara-visual-inner">
+            <header class="tara-brand">
+                <div class="tara-brand-icon"><i class="bi bi-bar-chart-line-fill" aria-hidden="true"></i></div>
+                <div>
+                    <div class="tara-brand-name">تراز آوا</div>
+                    <div class="tara-brand-caption">سامانه یکپارچه مدیریت مالی و حسابداری</div>
+                </div>
+            </header>
+
+            <div class="tara-dashboard">
+                <div class="tara-dash-top">
+                    <div>
+                        <div class="tara-dash-heading">نمای کلی عملکرد مالی</div>
+                        <div class="tara-dash-caption">تصویری شفاف از وضعیت مالی کسب‌وکار شما</div>
+                    </div>
+                    <span class="tara-live"><i class="bi bi-arrow-up-left" aria-hidden="true"></i> گزارش هوشمند</span>
+                </div>
+
+                <div class="tara-stats">
+                    <div class="tara-stat"><div class="tara-stat-icon"><i class="bi bi-wallet2"></i></div><div class="tara-stat-label">دریافتی‌های ماه</div><div class="tara-stat-value">۸٫۲ میلیارد</div></div>
+                    <div class="tara-stat"><div class="tara-stat-icon"><i class="bi bi-credit-card"></i></div><div class="tara-stat-label">پرداختی‌های ماه</div><div class="tara-stat-value">۳٫۷ میلیارد</div></div>
+                    <div class="tara-stat"><div class="tara-stat-icon"><i class="bi bi-graph-up-arrow"></i></div><div class="tara-stat-label">رشد درآمد</div><div class="tara-stat-value">۱۲٫۵٪</div></div>
+                </div>
+
+                <div class="tara-chart-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div><div class="tara-chart-title">روند درآمد و هزینه</div><div class="tara-chart-sub">نمایش نمونه‌ای از گزارش‌های مالی</div></div>
+                        <i class="bi bi-three-dots" style="color:#7f9bb2;font-size:22px"></i>
+                    </div>
+                    <svg class="tara-chart" viewBox="0 0 700 220" role="img" aria-label="نمودار نمونه روند درآمد و هزینه">
+                        <defs>
+                            <linearGradient id="taraArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#16b8c8" stop-opacity=".28"/><stop offset="100%" stop-color="#16b8c8" stop-opacity="0"/></linearGradient>
+                            <linearGradient id="taraBars" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1aa9cf"/><stop offset="100%" stop-color="#80d9ec"/></linearGradient>
+                        </defs>
+                        <g stroke="#dceaf4" stroke-width="1"><path d="M20 30H680M20 70H680M20 110H680M20 150H680M20 190H680"/></g>
+                        <g fill="url(#taraBars)" opacity=".88"><rect x="55" y="137" width="22" height="53" rx="5"/><rect x="110" y="116" width="22" height="74" rx="5"/><rect x="165" y="129" width="22" height="61" rx="5"/><rect x="220" y="91" width="22" height="99" rx="5"/><rect x="275" y="103" width="22" height="87" rx="5"/><rect x="330" y="73" width="22" height="117" rx="5"/><rect x="385" y="83" width="22" height="107" rx="5"/><rect x="440" y="57" width="22" height="133" rx="5"/><rect x="495" y="67" width="22" height="123" rx="5"/><rect x="550" y="38" width="22" height="152" rx="5"/><rect x="605" y="47" width="22" height="143" rx="5"/></g>
+                        <path d="M25 150 C70 145 82 118 125 126 S190 111 235 98 S300 116 345 82 S410 95 455 63 S520 76 565 43 S625 56 675 22 L675 190 L25 190Z" fill="url(#taraArea)"/>
+                        <path d="M25 150 C70 145 82 118 125 126 S190 111 235 98 S300 116 345 82 S410 95 455 63 S520 76 565 43 S625 56 675 22" fill="none" stroke="#0aaebc" stroke-width="4" stroke-linecap="round"/>
+                        <path d="M25 169 C70 163 82 151 125 158 S190 145 235 136 S300 151 345 125 S410 137 455 112 S520 127 565 95 S625 104 675 82" fill="none" stroke="#edaa62" stroke-width="3" stroke-linecap="round"/>
+                        <g fill="#7c98ae" font-size="12"><text x="55" y="211">فروردین</text><text x="220" y="211">خرداد</text><text x="385" y="211">مرداد</text><text x="550" y="211">مهر</text></g>
+                    </svg>
+                </div>
+            </div>
+            <div class="tara-bottom-note"><i class="bi bi-stars"></i> تصمیم‌های دقیق‌تر، با دیدی روشن‌تر به اعداد</div>
+        </div>
+    </section>
 </main>
