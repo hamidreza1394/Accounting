@@ -1,111 +1,84 @@
 ﻿@page
 @model Server.Pages.Security.LoginModel
 @{
-	var pageTitle =
-		Resources.PageTitles.Login;
-
+	var pageTitle = Resources.PageTitles.Login;
+	var isRtl = System.Threading.Thread.CurrentThread.CurrentUICulture.TextInfo.IsRightToLeft;
 	ViewData[Constants.ViewDataKeyName.PageTitle] = pageTitle;
-
-	if (System.Threading.Thread.CurrentThread.CurrentUICulture.TextInfo.IsRightToLeft)
-	{
-		Layout =
-			"Layouts/Rtl/_Security";
-	}
-	else
-	{
-		Layout =
-			"Layouts/Ltr/_Security";
-	}
+	Layout = isRtl ? "Layouts/Rtl/_Security" : "Layouts/Ltr/_Security";
 }
 
-<form method="post">
+<main class="login-shell" aria-labelledby="login-title">
+	<div class="login-orbit login-orbit-one" aria-hidden="true"></div>
+	<div class="login-orbit login-orbit-two" aria-hidden="true"></div>
 
-	<div class="container my-0 my-sm-1 my-md-3 my-lg-5">
-		<div class="row">
-			<div class="col-12 p-3   col-md-8 offset-md-2 p-md-4   col-lg-6 offset-lg-3 p-lg-5   bg-light border border-2 rounded-3 shadow-lg">
-				<fieldset>
-					<legend>
-						@(pageTitle)
-					</legend>
+	<div class="container login-container">
+		<div class="row g-0 login-panel">
+			<section class="col-lg-6 login-brand-panel" aria-label="@(pageTitle)">
+				<div class="login-brand-content">
+					<div class="login-mark" aria-hidden="true"><i class="bi bi-bar-chart-line-fill"></i></div>
+					<p class="login-eyebrow">@(pageTitle)</p>
+					<h1 class="login-brand-title">@(pageTitle)</h1>
+					<div class="login-signal" aria-hidden="true">
+						<span></span><span></span><span></span><span></span><span></span>
+					</div>
+				</div>
+			</section>
 
-					<hr />
+			<section class="col-lg-6 login-form-panel">
+				<div class="login-form-wrap">
+					<div class="d-flex justify-content-between align-items-center gap-3 mb-4">
+						<div>
+							<p class="login-kicker mb-2">@(pageTitle)</p>
+							<h2 id="login-title" class="login-title mb-0">@(pageTitle)</h2>
+						</div>
+						<partial name="PartialViews/_ChangeCulture" />
+					</div>
 
 					<partial name="PartialViews/_DisplayPageMessages" />
 
-					<input type="hidden" value="@(Model.ReturnUrl)" />
+					<form method="post" class="login-form" novalidate>
+						<input asp-for="ReturnUrl" type="hidden" />
+						<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
-					<div class="mb-3">
-						<label asp-for="ViewModel.Username" class="form-label"></label>
-
-						<div class="input-group">
-							<div class="input-group-text"><i class="bi bi-person-fill"></i></div>
-							<input asp-for="ViewModel.Username" class="form-control" dir="ltr" />
+						<div class="mb-3">
+							<label asp-for="ViewModel.Username" class="form-label login-label"></label>
+							<div class="login-input-group">
+								<i class="bi bi-person login-input-icon" aria-hidden="true"></i>
+								<input asp-for="ViewModel.Username" class="form-control login-input" autocomplete="username" dir="ltr" autofocus />
+							</div>
+							<span asp-validation-for="ViewModel.Username" class="field-validation-error"></span>
 						</div>
 
-						<span asp-validation-for="ViewModel.Username" class="text-danger"></span>
-					</div>
-
-					<div class="mb-3">
-						<label asp-for="ViewModel.Password" class="form-label"></label>
-
-						<div class="input-group">
-							<div class="input-group-text"><i class="bi bi-lock-fill"></i></div>
-							<input asp-for="ViewModel.Password" class="form-control" dir="ltr" />
+						<div class="mb-3">
+							<label asp-for="ViewModel.Password" class="form-label login-label"></label>
+							<div class="login-input-group">
+								<i class="bi bi-lock login-input-icon" aria-hidden="true"></i>
+								<input asp-for="ViewModel.Password" id="login-password" class="form-control login-input login-password-input" autocomplete="current-password" dir="ltr" />
+								<button type="button" class="login-password-toggle" data-password-toggle="login-password" aria-controls="login-password" aria-label="@(Resources.DataDictionary.Password)">
+									<i class="bi bi-eye" aria-hidden="true"></i>
+								</button>
+							</div>
+							<span asp-validation-for="ViewModel.Password" class="field-validation-error"></span>
 						</div>
 
-						<span asp-validation-for="ViewModel.Password" class="text-danger"></span>
-					</div>
-
-					<div class="mb-3">
-						<div class="form-check">
-							<input asp-for="ViewModel.RememberMe" class="form-check-input" />
-							<label asp-for="ViewModel.RememberMe" class="form-check-label"></label>
+						<div class="d-flex justify-content-between align-items-center gap-3 mb-4">
+							<div class="form-check login-check">
+								<input asp-for="ViewModel.RememberMe" class="form-check-input" />
+								<label asp-for="ViewModel.RememberMe" class="form-check-label"></label>
+							</div>
 						</div>
-					</div>
 
-					<div class="mb-3">
-						<button type="submit" class="btn btn-primary">@(Resources.ButtonCaptions.Login)</button>
-						<button type="reset" class="btn btn-secondary">@(Resources.ButtonCaptions.Reset)</button>
-					</div>
-				</fieldset>
-
-				<hr class="mt-4" />
-
-				<div class="d-grid gap-2 mb-3">
-					<a asp-page="/Google/Login" class="btn btn-danger">
-						@(Resources.ButtonCaptions.LoginWithGoogle)
-					</a>
+						<button type="submit" class="btn login-submit w-100" data-login-submit>
+							<span class="login-submit-label">@(Resources.ButtonCaptions.Login)</span>
+							<span class="spinner-border spinner-border-sm d-none" data-login-spinner aria-hidden="true"></span>
+						</button>
+					</form>
 				</div>
-
-				<hr class="mt-4" />
-
-				<div class="text-center">
-					<a asp-page="/Index" class="text-decoration-none">
-						@(Resources.ButtonCaptions.Home)
-					</a>
-					|
-					<a asp-page="/Account/Register" class="text-decoration-none">
-						@(Resources.ButtonCaptions.Register)
-					</a>
-
-					<br />
-
-					<a href="#" class="text-decoration-none">
-						@(Resources.ButtonCaptions.ForgotUsername)
-					</a>
-					|
-					<a href="#" class="text-decoration-none">
-						@(Resources.ButtonCaptions.ForgotPassword)
-					</a>
-
-					<br />
-
-					<a href="#" class="text-decoration-none">
-						@(Resources.ButtonCaptions.SendAgainEmailAddressVerificationKey)
-					</a>
-				</div>
-			</div>
+			</section>
 		</div>
 	</div>
+</main>
 
-</form>
+@section Scripts {
+	<partial name="_ValidationScriptsPartial" />
+}
