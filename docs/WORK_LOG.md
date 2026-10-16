@@ -30,14 +30,13 @@
 - **تغییرات:** صفحه ورود دو ستونه واکنش‌گرا با Bootstrap/Bootstrap Icons محلی، رنگ سرمه‌ای/فیروزه‌ای، فرم واقعی Razor Pages، نمایش/مخفی‌سازی رمز عبور، Loading، دسترس‌پذیری پایه، تغییر زبان موجود و حذف لینک‌های غیرفعال OAuth/بازیابی.
 - **امنیت:** ReturnUrl محلی و Cookie/Remember Me/Logout موجود حفظ شدند؛ SHA-256 خام و کاربر مرکزی به‌عنوان ریسک P0 باقی ماندند و جایگزینی بدون User Store و طرح مهاجرت اجرا نشد.
 - **داده:** هیچ Schema یا Migration تغییر نکرد.
-- **اعتبارسنجی:** Build، Test، اسکریپت دارایی‌ها، `git diff --check` و مرورگر در محیط متصل اجرا نشدند؛ باید در CI/محیط دارای SDK اجرا شوند.
 - **تحویل:** handoff در `docs/handoffs/ISSUE-UNNUMBERED-secure-login-page.md` ثبت شد. Merge به `main` انجام نشده است.
 
 
-## 2026-10-16 — Issue #7 CI follow-up
-- **یافته CI:** Build موفق بود، اما `dotnet test` در مسیر VSTest با SDK جدیدتر و Microsoft.Testing.Platform شکست خورد.
-- **تصمیم:** به‌جای ارتقای پکیج‌ها یا تغییر معماری، `global.json` با SDK سازگار `9.0.100` اضافه شد تا پروژه net9.0 و پکیج‌های موجود روی مسیر پایدار باقی بمانند.
-- **UI:** تکرار عنوان در بخش برند حذف شد؛ نام تجاری واقعی در منابع/تنظیمات یافت نشد و نام جدیدی اضافه نشد.
-- **JavaScript:** handler عمومی فرم حذف و به `.login-form` محدود شد؛ ارسال با Enter، اعتبارسنجی موجود و Loading حفظ شدند؛ TinyMCE با guard باقی ماند.
-- **وضعیت:** اجرای CI جدید روی commit `b54ac4214a6ae54fe297682791445ce465ab0894` در زمان ثبت این گزارش Pending بود؛ نتیجه نهایی هنوز تأیید نشده است.
+## 2026-10-16 — Issue #7 CI follow-up and MTP correction
+- **یافته:** پروژه تست `xunit.v3` نسخه `4.0.2` را همراه `Microsoft.NET.Test.Sdk` و `xunit.runner.visualstudio` داشت؛ CI از SDK شناور `9.0.x` استفاده می‌کرد و انتخاب Runner صریح نبود. اجرای قبلی در مسیر VSTest/MTP شکست خورد.
+- **مبنای فنی:** راهنمای رسمی xUnit v3 برای SDKهای 8/9 فعال‌کردن `TestingPlatformDotnetTestSupport=true` را برای اجرای MTP از `dotnet test` مشخص می‌کند؛ xUnit v3 نسخه 4 از MTP v2 استفاده می‌کند.
+- **تغییر:** `Microsoft.NET.Test.Sdk` و `xunit.runner.visualstudio` از پروژه تست حذف شدند، `TestingPlatformDotnetTestSupport=true` اضافه شد و `global.json` روی SDK `9.0.100` تثبیت شد. Target Framework، xUnit version و معماری تغییر نکردند.
+- **UI/JS:** عنوان تکراری برند حذف شد و JavaScript فقط به `.login-form` محدود شد؛ Enter، اعتبارسنجی ناموفق و جلوگیری از ارسال تکراری پوشش داده شدند.
+- **وضعیت CI:** اجرای جدید روی Commit `38c69b71e8e5e4e78f1ab5f177c49d970d38a0e2` در زمان ثبت این گزارش Pending بود؛ Restore، Build، Test و Static Assets هنوز نتیجه نهایی ندارند.
 - **ریسک‌های باز:** SHA-256 خام، نبود Rate Limiting/Account Lockout و نبود Integration Test واقعی همچنان رفع‌نشده هستند.
