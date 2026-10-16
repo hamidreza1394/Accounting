@@ -3,29 +3,30 @@
 - **Issue:** [#7](https://github.com/hamidreza1394/Accounting/issues/7)
 - **Agent/مسئول:** Ashna-X1
 - **تاریخ:** 2026-10-16
-- **وضعیت:** ناقص — اصلاحات ثبت شده، CI نهایی باید تأیید شود؛ بازبینی Maintainer لازم است
+- **وضعیت:** ناقص — CI اصلاح شده و اجرای نهایی در حال انجام است؛ بازبینی Maintainer لازم است
 
-## تغییرات این دور
-- علت شکست تست بررسی شد: اجرای `dotnet test` در مسیر VSTest با SDK جدیدتر و Microsoft.Testing.Platform، در حالی که پروژه تست روی `Microsoft.NET.Test.Sdk` و xUnit Visual Studio Adapter است.
-- `global.json` با SDK سازگار `9.0.100` اضافه شد؛ Target Framework، پکیج‌ها و معماری تغییر نکردند.
-- بخش برند دیگر عنوان صفحه را تکرار نمی‌کند؛ نام تجاری واقعی در منابع/تنظیمات پروژه پیدا نشد و نام جدیدی جعل نشد.
-- JavaScript به `.login-form` محدود شد؛ فرم‌های دیگر برنامه تحت تأثیر handler ورود قرار نمی‌گیرند و ارسال با Enter نیز با اعتبارسنجی/Loading اختصاصی فرم انجام می‌شود.
+## تحلیل علت CI
+- پروژه تست روی `net9.0` از `xunit.v3` نسخه `4.0.2` استفاده می‌کرد و هم‌زمان `Microsoft.NET.Test.Sdk` و `xunit.runner.visualstudio` را داشت.
+- CI از SDK شناور `9.0.x` استفاده می‌کرد و `global.json` نداشت؛ در نتیجه انتخاب مسیر VSTest/MTP صریح و قابل تکرار نبود.
+- مستندات رسمی xUnit v3 می‌گوید xUnit v3 نسخه 4 به‌صورت پیش‌فرض MTP v2 دارد؛ برای `dotnet test` روی SDKهای 8/9 باید `TestingPlatformDotnetTestSupport=true` در پروژه تست فعال شود. همچنین در مسیر VSTest، Adapter/ Test SDK استفاده می‌شوند.
+- تغییر کم‌ریسک اعمال‌شده: حذف `Microsoft.NET.Test.Sdk` و `xunit.runner.visualstudio` از پروژه تست، افزودن `TestingPlatformDotnetTestSupport=true` و تثبیت SDK با `global.json` روی `9.0.100`. Target Framework، نسخه `xunit.v3` و معماری برنامه تغییر نکردند.
+- لاگ اجرای جدید پس از Commit `38c69b71e8e5e4e78f1ab5f177c49d970d38a0e2` در زمان ثبت این Handoff هنوز نهایی نشده است؛ بنابراین رفع CI قطعی اعلام نمی‌شود.
 
-## خلاصه تغییرات اصلی
-- صفحه ورود دو ستونه، واکنش‌گرا، RTL/LTR و مبتنی بر Bootstrap/دارایی‌های محلی.
-- نمایش/مخفی‌سازی رمز عبور، Loading و پیام‌های اعتبارسنجی.
-- حفظ فرم واقعی Razor Pages، Cookie، Remember Me، Logout و کنترل ReturnUrl محلی.
-- حذف لینک‌های غیرفعال Google OAuth و بازیابی رمز عبور.
+## تغییرات UI و JavaScript
+- عنوان تکراری از بخش برند حذف شد؛ چون نام تجاری واقعی در تنظیمات/منابع موجود نبود، نام جدیدی اضافه نشد.
+- JavaScript فقط روی `.login-form` نصب می‌شود؛ فرم‌های دیگر برنامه handler ورود، Loading یا disable شدن دکمه‌های ورود را دریافت نمی‌کنند.
+- رویداد submit اعتبارسنجی موجود را اجرا می‌کند؛ در خطای اعتبارسنجی ارسال متوقف می‌شود و Loading فعال نمی‌شود. در حالت معتبر، کنترل‌های فرم ورود غیرفعال، Loading فعال و ارسال native فرم انجام می‌شود؛ Enter همان مسیر را طی می‌کند.
 
 ## بررسی و آزمون
-| فرمان/آزمون | نتیجه واقعی | توضیح |
+| مرحله | نتیجه واقعی | توضیح |
 |---|---|---|
-| `dotnet restore Template.sln` | CI قبلی موفق | Restore پیش از Build تکمیل شد |
-| `dotnet build Template.sln --no-restore --configuration Release` | CI قبلی موفق | Build با تغییرات صفحه ورود موفق بود |
-| `dotnet test Template.sln --no-build --configuration Release` | CI قبلی ناموفق | شکست VSTest/Microsoft.Testing.Platform بررسی و با تثبیت SDK اصلاح شد |
-| `python3 scripts/check_static_assets.py` | در CI اجرا می‌شود | نتیجه اجرای جدید باید از لینک CI تأیید شود |
+| بررسی `Template.Tests.csproj` و `Directory.Packages.props` | موفق | xUnit `4.0.2`، SDK پروژه `net9.0` و وابستگی‌های قبلی ثبت شد |
+| بررسی لاگ/Runهای CI قبلی | شکست قبلی تأیید شد | Build موفق و Test در مسیر VSTest/MTP شکست خورد؛ اجرای دقیق جدید هنوز در حال انجام است |
+| `dotnet restore Template.sln` | CI جدید در حال اجرا | نتیجه نهایی هنوز منتشر نشده |
+| `dotnet build Template.sln --no-restore --configuration Release` | CI جدید در حال اجرا | نتیجه نهایی هنوز منتشر نشده |
+| `dotnet test Template.sln --no-build --configuration Release` | CI جدید در حال اجرا | نتیجه نهایی هنوز منتشر نشده |
+| `python3 scripts/check_static_assets.py` | CI جدید در حال اجرا | نتیجه نهایی هنوز منتشر نشده |
 | `git diff --check` | اجرا نشده | Shell محلی در این محیط در دسترس نیست |
-| CI پس از اصلاح | Pending | آخرین اجرای شناخته‌شده روی `b54ac4214a6ae54fe297682791445ce465ab0894` است |
 | مرورگر/RTL/LTR/کوکی | اجرا نشده | محیط مرورگر در اختیار نیست |
 
 ## امنیت، داده و سازگاری
@@ -37,7 +38,7 @@
 - هیچ رمز عبور، Secret یا حساب ثابت جدیدی اضافه نشد.
 
 ## کارهای باقی‌مانده
-1. تأیید نتیجه نهایی CI روی آخرین commit.
+1. تأیید نتیجه نهایی CI روی Commit `38c69b71e8e5e4e78f1ab5f177c49d970d38a0e2`.
 2. اجرای مرورگر و تست Integration واقعی.
 3. طراحی مهاجرت تدریجی از SHA-256 خام به PasswordHasher استاندارد بدون قفل‌کردن کاربران موجود.
 4. تعیین و پیاده‌سازی سیاست Lockout/Rate Limiting در Issue جداگانه.
@@ -45,6 +46,5 @@
 ## شناسه‌های Git
 - **Branch:** `agent/UNNUMBERED-secure-login-page`
 - **Base:** `main`
-- **Latest implementation commit:** [`728bc0a8904c23791c175141b8cac8cebb7df068`](https://github.com/hamidreza1394/Accounting/commit/728bc0a8904c23791c175141b8cac8cebb7df068)
-- **Latest SDK pin commit:** [`b54ac4214a6ae54fe297682791445ce465ab0894`](https://github.com/hamidreza1394/Accounting/commit/b54ac4214a6ae54fe297682791445ce465ab0894)
+- **Latest code commit:** [`38c69b71e8e5e4e78f1ab5f177c49d970d38a0e2`](https://github.com/hamidreza1394/Accounting/commit/38c69b71e8e5e4e78f1ab5f177c49d970d38a0e2)
 - **Pull Request:** [#8](https://github.com/hamidreza1394/Accounting/pull/8)
