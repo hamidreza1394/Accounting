@@ -21,7 +21,7 @@
 - `docs/AGENT_COORDINATION.md` — قواعد همکاری، جلوگیری از تداخل و ترتیب اولویت‌ها
 - `docs/prompts/CODEX_PROMPT.md` — پرامپ اجرای وظایف برای Codex
 - `docs/prompts/COPILOT_PROMPT.md` — پرامپ اجرای وظایف برای Copilot
-- `docs/AGENTS.md` — پیوندهای سیاست مخزن و گردش کار
+- `AGENTS.md` — پیوندهای سیاست مخزن و گردش کار
 - `docs/AGENT_START_PROMPT.md` — الزام استفاده از پروتکل هماهنگی و پرامپ‌های تخصصی
 - `docs/WORK_LOG.md` — ثبت تاریخچه این تغییر
 - `docs/handoffs/ISSUE-UNNUMBERED-agent-workflow-hardening.md` — این گزارش
@@ -51,5 +51,5 @@
 
 ## شناسه‌های Git
 - Branch: `docs/agent-workflow-hardening`
-- Commit: در خروجی‌های GitHub برای هر فایل ثبت شده است؛ commit واحد نهایی هنوز ایجاد نشده
-- Pull Request: هنوز ایجاد نشده
+- Commit نهایی شاخه: e27930893bc7d67ac98782091b21331333f12680
+- Pull Request: https://github.com/hamidreza1394/Accounting/pull/6 (باز، ادغام‌نشده)
