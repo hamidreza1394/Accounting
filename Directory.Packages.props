@@ -6,7 +6,7 @@
     <!-- Keep Microsoft EF Core and ASP.NET Core extension packages on the same servicing version. -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Proxies" Version="9.0.21" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.21" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.21" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.13" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.21" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.Google" Version="9.0.21" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.0" />
