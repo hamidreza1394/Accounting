@@ -20,3 +20,7 @@ You are a senior software engineer working in an existing ASP.NET Core Razor Pag
 [PASTE ISSUE TITLE, DESCRIPTION, SCOPE, AND ACCEPTANCE CRITERIA HERE]
 
 ---
+
+
+## هماهنگی بین Agentها
+پیش از شروع، docs/AGENT_COORDINATION.md را هم بخوان. اگر Agent مورد استفاده Codex است، الزامات docs/prompts/CODEX_PROMPT.md را نیز رعایت کن؛ برای GitHub Copilot از docs/prompts/COPILOT_PROMPT.md استفاده کن. در همه حالت‌ها Issue واقعی، شاخه مستقل، گزارش handoff و نتیجه واقعی تست‌ها الزامی است.
