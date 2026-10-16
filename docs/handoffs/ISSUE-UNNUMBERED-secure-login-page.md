@@ -3,7 +3,7 @@
 - **Issue:** [#7](https://github.com/hamidreza1394/Accounting/issues/7)
 - **Agent/مسئول:** Ashna-X1
 - **تاریخ:** 2026-10-16
-- **وضعیت:** ناقص — نیازمند اجرای Build/Test روی محیط دارای .NET SDK و بازبینی Maintainer
+- **وضعیت:** ناقص — نیازمند تکمیل CI و بازبینی Maintainer
 
 ## هدف و معیارهای پذیرش
 - [x] بازطراحی واکنش‌گرای صفحه ورود با Bootstrap و دارایی‌های محلی
@@ -37,11 +37,12 @@
 ## بررسی و آزمون
 | فرمان/آزمون | نتیجه واقعی | توضیح/کد خروج |
 |---|---|---|
-| `dotnet restore Template.sln` | اجرا نشده | ابزار اجرای Shell/SDK در این محیط در دسترس نبود |
-| `dotnet build Template.sln --no-restore --configuration Release` | اجرا نشده | ابزار اجرای Shell/SDK در این محیط در دسترس نبود |
-| `dotnet test Template.sln --no-build --configuration Release` | اجرا نشده | ابزار اجرای Shell/SDK در این محیط در دسترس نبود |
-| `python3 scripts/check_static_assets.py` | اجرا نشده | ابزار اجرای Shell در این محیط در دسترس نبود |
+| `dotnet restore Template.sln` | اجرا نشده | Shell/SDK محلی در این محیط در دسترس نبود |
+| `dotnet build Template.sln --no-restore --configuration Release` | اجرا نشده | Shell/SDK محلی در این محیط در دسترس نبود |
+| `dotnet test Template.sln --no-build --configuration Release` | اجرا نشده | Shell/SDK محلی در این محیط در دسترس نبود |
+| `python3 scripts/check_static_assets.py` | اجرا نشده | Shell محلی در این محیط در دسترس نبود |
 | `git diff --check` | اجرا نشده | working tree محلی در اختیار نبود |
+| CI شاخه | در حال اجرا | آخرین push روی commit `aa05393063c7927cba3011e511437317f828eed9`؛ نتیجه نهایی هنوز منتشر نشده است |
 | مرورگر/RTL/LTR/کوکی | اجرا نشده | محیط مرورگر و اجرای برنامه در اختیار نبود |
 
 ## امنیت، داده و سازگاری
@@ -53,7 +54,7 @@
 - هیچ تغییر دیتابیس یا Migration انجام نشد.
 
 ## ریسک‌ها و کارهای باقی‌مانده
-1. اجرای واقعی Build/Test و اصلاح خطاهای احتمالی Razor/CSS در CI یا محیط توسعه.
+1. تکمیل CI و اصلاح خطاهای احتمالی Razor/CSS در صورت شکست Build.
 2. افزودن Integration Test با SQL Server/host واقعی برای موفقیت، شکست، Cookie، Remember Me، Logout و ReturnUrl.
 3. طراحی و اجرای مهاجرت تدریجی از SHA-256 خام به PasswordHasher استاندارد بدون قفل‌کردن کاربران موجود.
 4. افزودن lockout/rate limiting پس از تعیین سیاست امنیتی سازگار با معماری پروژه.
@@ -61,5 +62,6 @@
 
 ## شناسه‌های Git
 - **Branch:** `agent/UNNUMBERED-secure-login-page`
-- **Commit:** در چند commit محدود روی شاخه ثبت شده؛ آخرین commit این handoff پس از ثبت Work Log مشخص می‌شود.
-- **Pull Request:** پس از تکمیل ثبت مستندات و بازبینی نهایی ایجاد می‌شود.
+- **Base:** `main`
+- **Latest commit:** [`aa05393063c7927cba3011e511437317f828eed9`](https://github.com/hamidreza1394/Accounting/commit/aa05393063c7927cba3011e511437317f828eed9)
+- **Pull Request:** در حال ایجاد برای بازبینی Maintainer
