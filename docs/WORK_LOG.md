@@ -32,3 +32,12 @@
 - **داده:** هیچ Schema یا Migration تغییر نکرد.
 - **اعتبارسنجی:** Build، Test، اسکریپت دارایی‌ها، `git diff --check` و مرورگر در محیط متصل اجرا نشدند؛ باید در CI/محیط دارای SDK اجرا شوند.
 - **تحویل:** handoff در `docs/handoffs/ISSUE-UNNUMBERED-secure-login-page.md` ثبت شد. Merge به `main` انجام نشده است.
+
+
+## 2026-10-16 — Issue #7 CI follow-up
+- **یافته CI:** Build موفق بود، اما `dotnet test` در مسیر VSTest با SDK جدیدتر و Microsoft.Testing.Platform شکست خورد.
+- **تصمیم:** به‌جای ارتقای پکیج‌ها یا تغییر معماری، `global.json` با SDK سازگار `9.0.100` اضافه شد تا پروژه net9.0 و پکیج‌های موجود روی مسیر پایدار باقی بمانند.
+- **UI:** تکرار عنوان در بخش برند حذف شد؛ نام تجاری واقعی در منابع/تنظیمات یافت نشد و نام جدیدی اضافه نشد.
+- **JavaScript:** handler عمومی فرم حذف و به `.login-form` محدود شد؛ ارسال با Enter، اعتبارسنجی موجود و Loading حفظ شدند؛ TinyMCE با guard باقی ماند.
+- **وضعیت:** اجرای CI جدید روی commit `b54ac4214a6ae54fe297682791445ce465ab0894` در زمان ثبت این گزارش Pending بود؛ نتیجه نهایی هنوز تأیید نشده است.
+- **ریسک‌های باز:** SHA-256 خام، نبود Rate Limiting/Account Lockout و نبود Integration Test واقعی همچنان رفع‌نشده هستند.
