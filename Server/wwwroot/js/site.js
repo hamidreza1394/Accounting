@@ -1,9 +1,16 @@
 $(function () {
-	$('form').on('submit', function () {
-		if ($(this).valid()) {
-			$('button').prop('disabled', true);
-			$('input[type=button]').prop('disabled', true);
+	$('.login-form').on('submit', function (event) {
+		const form = $(this);
+
+		if (!form.valid()) {
+			return;
 		}
+
+		event.preventDefault();
+		form.find('button').prop('disabled', true);
+		form.find('[data-login-spinner]').removeClass('d-none');
+		form.find('.login-submit-label').addClass('visually-hidden');
+		form[0].submit();
 	});
 
 	$('[data-password-toggle]').on('click', function () {
@@ -19,16 +26,6 @@ $(function () {
 		const isPassword = password.getAttribute('type') === 'password';
 		password.setAttribute('type', isPassword ? 'text' : 'password');
 		icon.toggleClass('bi-eye bi-eye-slash');
-	});
-
-	$('[data-login-submit]').on('click', function () {
-		const button = $(this);
-		const form = button.closest('form');
-
-		if (form.valid()) {
-			button.find('[data-login-spinner]').removeClass('d-none');
-			button.find('.login-submit-label').addClass('visually-hidden');
-		}
 	});
 });
 
