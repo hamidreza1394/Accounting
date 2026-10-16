@@ -21,60 +21,31 @@
                     <span>سامانه یکپارچه مدیریت مالی و حسابداری</span>
                 </div>
             </div>
-
             <div class="taraz-visual-copy">
                 <p class="taraz-eyebrow">کنترل مالی، با دقت و آرامش</p>
                 <h1>تصمیم‌های بهتر<br /><span>از یک تراز روشن</span></h1>
                 <p>گزارش‌های مالی و جریان نقدی خود را در یک نگاه منظم و قابل اعتماد دنبال کنید.</p>
             </div>
-
             <div class="taraz-dashboard" aria-hidden="true">
                 <div class="taraz-dashboard__top"><span>نمای کلی مالی</span><b>+۷٫۴٪</b></div>
-                <div class="taraz-dashboard__chart">
-                    <svg viewBox="0 0 620 220" role="presentation" focusable="false">
-                        <defs><linearGradient id="taraz-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#35d5e8" stop-opacity=".28" /><stop offset="1" stop-color="#35d5e8" stop-opacity="0" /></linearGradient></defs>
-                        <path class="taraz-chart-fill" d="M0 188 C60 165 82 170 128 130 S205 145 250 95 S330 126 375 72 S465 98 520 42 S575 65 620 18 V220 H0Z" />
-                        <path class="taraz-chart-line" d="M0 188 C60 165 82 170 128 130 S205 145 250 95 S330 126 375 72 S465 98 520 42 S575 65 620 18" />
-                    </svg>
-                </div>
+                <div class="taraz-dashboard__chart"><svg viewBox="0 0 620 220" role="presentation" focusable="false"><defs><linearGradient id="taraz-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#35d5e8" stop-opacity=".28" /><stop offset="1" stop-color="#35d5e8" stop-opacity="0" /></linearGradient></defs><path class="taraz-chart-fill" d="M0 188 C60 165 82 170 128 130 S205 145 250 95 S330 126 375 72 S465 98 520 42 S575 65 620 18 V220 H0Z" /><path class="taraz-chart-line" d="M0 188 C60 165 82 170 128 130 S205 145 250 95 S330 126 375 72 S465 98 520 42 S575 65 620 18" /></svg></div>
                 <div class="taraz-dashboard__stats"><span><small>درآمد</small><b>۲۴۸M</b></span><span><small>هزینه</small><b>۷۲M</b></span><span><small>جریان نقدی</small><b>۱۷۶M</b></span></div>
             </div>
         </section>
 
         <section class="taraz-login__panel">
             <div class="taraz-panel-card">
-                <div class="taraz-brand taraz-brand--form">
-                    <img src="~/images/taraz-ava-mark.svg" alt="نشان تراز آوا" width="48" height="48" />
-                    <div><strong>تراز آوا</strong><span>سامانه یکپارچه مدیریت مالی و حسابداری</span></div>
-                </div>
-
-                <div class="taraz-form-heading">
-                    <p class="taraz-eyebrow">خوش آمدید</p>
-                    <h2 id="login-title">ورود به سامانه</h2>
-                    <p>برای ادامه، نام کاربری و رمز عبور خود را وارد کنید.</p>
-                </div>
-
+                <div class="taraz-brand taraz-brand--form"><img src="~/images/taraz-ava-mark.svg" alt="نشان تراز آوا" width="48" height="48" /><div><strong>تراز آوا</strong><span>سامانه یکپارچه مدیریت مالی و حسابداری</span></div></div>
+                <div class="taraz-form-heading"><p class="taraz-eyebrow">خوش آمدید</p><h2 id="login-title">ورود به سامانه</h2><p>برای ادامه، نام کاربری و رمز عبور خود را وارد کنید.</p></div>
                 <form method="post" class="taraz-login-form" novalidate>
                     @Html.AntiForgeryToken()
                     <input asp-for="ReturnUrl" type="hidden" />
                     <div asp-validation-summary="ModelOnly" class="taraz-validation" role="alert"></div>
-
-                    <div class="taraz-field">
-                        <label asp-for="ViewModel.Username">نام کاربری</label>
-                        <div class="taraz-input-wrap"><span class="taraz-input-icon" aria-hidden="true">◉</span><input asp-for="ViewModel.Username" autocomplete="username" placeholder="نام کاربری خود را وارد کنید" autofocus /><span class="taraz-input-line"></span></div>
-                        <span asp-validation-for="ViewModel.Username" class="taraz-field-error"></span>
-                    </div>
-
-                    <div class="taraz-field">
-                        <label asp-for="ViewModel.Password">رمز عبور</label>
-                        <div class="taraz-input-wrap"><span class="taraz-input-icon" aria-hidden="true">◆</span><input asp-for="ViewModel.Password" autocomplete="current-password" placeholder="رمز عبور خود را وارد کنید" /><button type="button" class="taraz-password-toggle" data-password-toggle="ViewModel_Password" aria-label="نمایش رمز عبور" aria-pressed="false">نمایش</button><span class="taraz-input-line"></span></div>
-                        <span asp-validation-for="ViewModel.Password" class="taraz-field-error"></span>
-                    </div>
-
+                    <div class="taraz-field"><label asp-for="ViewModel.Username">نام کاربری</label><div class="taraz-input-wrap"><span class="taraz-input-icon" aria-hidden="true">◉</span><input asp-for="ViewModel.Username" autocomplete="username" placeholder="نام کاربری خود را وارد کنید" autofocus /><span class="taraz-input-line"></span></div><span asp-validation-for="ViewModel.Username" class="taraz-field-error"></span></div>
+                    <div class="taraz-field"><label asp-for="ViewModel.Password">رمز عبور</label><div class="taraz-input-wrap"><span class="taraz-input-icon" aria-hidden="true">◆</span><input asp-for="ViewModel.Password" autocomplete="current-password" placeholder="رمز عبور خود را وارد کنید" /><button type="button" class="taraz-password-toggle" data-password-toggle="ViewModel_Password" aria-label="نمایش رمز عبور" aria-pressed="false">نمایش</button><span class="taraz-input-line"></span></div><span asp-validation-for="ViewModel.Password" class="taraz-field-error"></span></div>
                     <label class="taraz-remember"><input asp-for="ViewModel.RememberMe" /><span class="taraz-check" aria-hidden="true"></span><span>مرا به خاطر بسپار</span></label>
                     <button type="submit" class="taraz-submit"><span class="taraz-submit-label">ورود امن به سامانه</span><span class="taraz-submit-status" hidden>در حال بررسی...</span><span class="taraz-submit-arrow" aria-hidden="true">←</span></button>
                 </form>
-
                 <p class="taraz-security-note"><span aria-hidden="true">●</span> ارتباط شما با سامانه به‌صورت امن برقرار می‌شود.</p>
             </div>
             <p class="taraz-copyright">© تراز آوا — سامانه مدیریت مالی و حسابداری</p>
@@ -83,6 +54,5 @@
 </div>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
     <script src="~/js/taraz-login.js" asp-append-version="true"></script>
 }
