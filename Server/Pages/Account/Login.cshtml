@@ -36,7 +36,7 @@
 
 					<partial name="PartialViews/_DisplayPageMessages" />
 
-					<form method="post" class="login-form" novalidate>
+					<form method="post" class="login-form">
 						<input asp-for="ReturnUrl" type="hidden" />
 						<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
@@ -47,7 +47,7 @@
 								<input asp-for="ViewModel.Username" class="form-control login-input" autocomplete="username" dir="ltr" autofocus />
 							</div>
 							<span asp-validation-for="ViewModel.Username" class="field-validation-error"></span>
-						</div>
+					</div>
 
 						<div class="mb-3">
 							<label asp-for="ViewModel.Password" class="form-label login-label"></label>
@@ -78,7 +78,3 @@
 		</div>
 	</div>
 </main>
-
-@section Scripts {
-	<partial name="_ValidationScriptsPartial" />
-}
