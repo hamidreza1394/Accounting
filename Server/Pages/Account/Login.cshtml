@@ -1,19 +1,22 @@
 @page
 @model Server.Pages.Security.LoginModel
 @{
-    ViewData["Title"] = "ورود به سامانه";
+    var isRightToLeft = System.Threading.Thread.CurrentThread.CurrentUICulture.TextInfo.IsRightToLeft;
+    ViewData["Title"] = Resources.PageTitles.Login;
+    ViewData["BodyClass"] = "taraz-login-page";
+    Layout = isRightToLeft ? "Layouts/Rtl/_Security" : "Layouts/Ltr/_Security";
 }
 
 @section StyleSheets {
     <link rel="stylesheet" href="~/css/rtl/taraz-login.css" asp-append-version="true" />
 }
 
-<div class="taraz-login" dir="rtl">
+<div class="taraz-login" dir="@(isRightToLeft ? "rtl" : "ltr")">
     <div class="taraz-login__ambient" aria-hidden="true"></div>
     <div class="taraz-login__grid" aria-hidden="true"></div>
 
     <main class="taraz-login__shell" aria-labelledby="login-title">
-        <section class="taraz-login__visual" aria-label="نمایش داشبورد مالی تراز آوا">
+        <section class="taraz-login__visual" aria-label="@(isRightToLeft ? "نمایش داشبورد مالی تراز آوا" : "Taraz Ava financial dashboard")">
             <div class="taraz-brand taraz-brand--visual">
                 <img src="~/images/taraz-ava-mark.svg" alt="" width="52" height="52" />
                 <div>
@@ -22,33 +25,33 @@
                 </div>
             </div>
             <div class="taraz-visual-copy">
-                <p class="taraz-eyebrow">کنترل مالی، با دقت و آرامش</p>
-                <h1>تصمیم‌های بهتر<br /><span>از یک تراز روشن</span></h1>
-                <p>گزارش‌های مالی و جریان نقدی خود را در یک نگاه منظم و قابل اعتماد دنبال کنید.</p>
+                <p class="taraz-eyebrow">@(isRightToLeft ? "کنترل مالی، با دقت و آرامش" : "Financial control, with clarity")</p>
+                <h1>@(isRightToLeft ? "تصمیم‌های بهتر" : "Better decisions")<br /><span>@(isRightToLeft ? "از یک تراز روشن" : "from clear balance")</span></h1>
+                <p>@(isRightToLeft ? "گزارش‌های مالی و جریان نقدی خود را در یک نگاه منظم و قابل اعتماد دنبال کنید." : "Follow your financial reports and cash flow in one clear, reliable view.")</p>
             </div>
             <div class="taraz-dashboard" aria-hidden="true">
-                <div class="taraz-dashboard__top"><span>نمای کلی مالی</span><b>+۷٫۴٪</b></div>
+                <div class="taraz-dashboard__top"><span>@(isRightToLeft ? "نمای کلی مالی" : "Financial overview")</span><b>+۷٫۴٪</b></div>
                 <div class="taraz-dashboard__chart"><svg viewBox="0 0 620 220" role="presentation" focusable="false"><defs><linearGradient id="taraz-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#35d5e8" stop-opacity=".28" /><stop offset="1" stop-color="#35d5e8" stop-opacity="0" /></linearGradient></defs><path class="taraz-chart-fill" d="M0 188 C60 165 82 170 128 130 S205 145 250 95 S330 126 375 72 S465 98 520 42 S575 65 620 18 V220 H0Z" /><path class="taraz-chart-line" d="M0 188 C60 165 82 170 128 130 S205 145 250 95 S330 126 375 72 S465 98 520 42 S575 65 620 18" /></svg></div>
-                <div class="taraz-dashboard__stats"><span><small>درآمد</small><b>۲۴۸M</b></span><span><small>هزینه</small><b>۷۲M</b></span><span><small>جریان نقدی</small><b>۱۷۶M</b></span></div>
+                <div class="taraz-dashboard__stats"><span><small>@(isRightToLeft ? "درآمد" : "Revenue")</small><b>۲۴۸M</b></span><span><small>@(isRightToLeft ? "هزینه" : "Expenses")</small><b>۷۲M</b></span><span><small>@(isRightToLeft ? "جریان نقدی" : "Cash flow")</small><b>۱۷۶M</b></span></div>
             </div>
         </section>
 
         <section class="taraz-login__panel">
             <div class="taraz-panel-card">
-                <div class="taraz-brand taraz-brand--form"><img src="~/images/taraz-ava-mark.svg" alt="نشان تراز آوا" width="48" height="48" /><div><strong>تراز آوا</strong><span>سامانه یکپارچه مدیریت مالی و حسابداری</span></div></div>
-                <div class="taraz-form-heading"><p class="taraz-eyebrow">خوش آمدید</p><h2 id="login-title">ورود به سامانه</h2><p>برای ادامه، نام کاربری و رمز عبور خود را وارد کنید.</p></div>
+                <div class="taraz-brand taraz-brand--form"><img src="~/images/taraz-ava-mark.svg" alt="تراز آوا" width="48" height="48" /><div><strong>تراز آوا</strong><span>سامانه یکپارچه مدیریت مالی و حسابداری</span></div></div>
+                <div class="taraz-form-heading"><p class="taraz-eyebrow">@(isRightToLeft ? "خوش آمدید" : "Welcome")</p><h2 id="login-title">@Resources.PageTitles.Login</h2><p>@(isRightToLeft ? "برای ادامه، نام کاربری و رمز عبور خود را وارد کنید." : "Enter your username and password to continue.")</p></div>
                 <form method="post" class="taraz-login-form" novalidate>
                     @Html.AntiForgeryToken()
                     <input asp-for="ReturnUrl" type="hidden" />
                     <div asp-validation-summary="ModelOnly" class="taraz-validation" role="alert"></div>
-                    <div class="taraz-field"><label asp-for="ViewModel.Username">نام کاربری</label><div class="taraz-input-wrap"><span class="taraz-input-icon" aria-hidden="true">◉</span><input asp-for="ViewModel.Username" autocomplete="username" placeholder="نام کاربری خود را وارد کنید" autofocus /><span class="taraz-input-line"></span></div><span asp-validation-for="ViewModel.Username" class="taraz-field-error"></span></div>
-                    <div class="taraz-field"><label asp-for="ViewModel.Password">رمز عبور</label><div class="taraz-input-wrap"><span class="taraz-input-icon" aria-hidden="true">◆</span><input asp-for="ViewModel.Password" autocomplete="current-password" placeholder="رمز عبور خود را وارد کنید" /><button type="button" class="taraz-password-toggle" data-password-toggle="ViewModel_Password" aria-label="نمایش رمز عبور" aria-pressed="false">نمایش</button><span class="taraz-input-line"></span></div><span asp-validation-for="ViewModel.Password" class="taraz-field-error"></span></div>
-                    <label class="taraz-remember"><input asp-for="ViewModel.RememberMe" /><span class="taraz-check" aria-hidden="true"></span><span>مرا به خاطر بسپار</span></label>
-                    <button type="submit" class="taraz-submit"><span class="taraz-submit-label">ورود امن به سامانه</span><span class="taraz-submit-status" hidden>در حال بررسی...</span><span class="taraz-submit-arrow" aria-hidden="true">←</span></button>
+                    <div class="taraz-field"><label asp-for="ViewModel.Username">@Resources.DataDictionary.Username</label><div class="taraz-input-wrap"><span class="taraz-input-icon" aria-hidden="true">◉</span><input asp-for="ViewModel.Username" autocomplete="username" placeholder="@(isRightToLeft ? "شناسه کاربری خود را وارد کنید" : "Enter your username")" autofocus /><span class="taraz-input-line"></span></div><span asp-validation-for="ViewModel.Username" class="taraz-field-error"></span></div>
+                    <div class="taraz-field"><label asp-for="ViewModel.Password">@Resources.DataDictionary.Password</label><div class="taraz-input-wrap"><span class="taraz-input-icon" aria-hidden="true">◆</span><input asp-for="ViewModel.Password" autocomplete="current-password" placeholder="@(isRightToLeft ? "رمز عبور خود را وارد کنید" : "Enter your password")" /><button type="button" class="taraz-password-toggle" data-password-toggle="ViewModel_Password" aria-label="@(isRightToLeft ? "نمایش رمز عبور" : "Show password")" aria-pressed="false">@(isRightToLeft ? "نمایش" : "Show")</button><span class="taraz-input-line"></span></div><span asp-validation-for="ViewModel.Password" class="taraz-field-error"></span></div>
+                    <label class="taraz-remember"><input asp-for="ViewModel.RememberMe" /><span class="taraz-check" aria-hidden="true"></span><span>@Resources.DataDictionary.RememberMe</span></label>
+                    <button type="submit" class="taraz-submit"><span class="taraz-submit-label">@Resources.ButtonCaptions.Login</span><span class="taraz-submit-status" hidden>@(isRightToLeft ? "در حال بررسی..." : "Checking...")</span><span class="taraz-submit-arrow" aria-hidden="true">@(isRightToLeft ? "←" : "→")</span></button>
                 </form>
-                <p class="taraz-security-note"><span aria-hidden="true">●</span> ارتباط شما با سامانه به‌صورت امن برقرار می‌شود.</p>
+                <p class="taraz-security-note"><span aria-hidden="true">●</span> @(isRightToLeft ? "ارتباط شما با سامانه به‌صورت امن برقرار می‌شود." : "Your connection to the system is secure.")</p>
             </div>
-            <p class="taraz-copyright">© تراز آوا — سامانه مدیریت مالی و حسابداری</p>
+            <p class="taraz-copyright">© تراز آوا — @(isRightToLeft ? "سامانه مدیریت مالی و حسابداری" : "Financial and accounting management system")</p>
         </section>
     </main>
 </div>
