@@ -6,37 +6,40 @@
 - **نوع کار:** بررسی ایستا و آماده‌سازی اسکلت.
 - **یافته‌ها:** همه پروژه‌های اصلی روی `net6.0` بودند؛ NuGetها نسخه‌های قدیمی EF Core/Google Auth داشتند؛ Solution پروژه StateMachine را دربر نمی‌گرفت؛ تست پروژه‌ای وجود نداشت؛ `.editorconfig` چند هشدار Nullable را خاموش می‌کرد؛ appsettings حاوی MasterPassword hash و ActivationKeys بود؛ `Program.cs` محیط را براساس Debugger بازنویسی می‌کرد؛ PageModel ورود دارای نام کاربری/Claims hardcode بود؛ یک مدیر نمونه با اطلاعات تماس و رمز عبور شناخته‌شده نیز در EF seed شده بود.
 - **تغییرات:** هدف‌گذاری `net9.0`، ایجاد پروژه Application، انتقال پروژه Data به `Infrastructure/Persistence` (با حفظ namespace فعلی)، Central Package Management با نسخه 9.0.21 برای بسته‌های Microsoft، حذف `System.Drawing.Common` بلااستفاده، تنظیم Build/Analyzer، تست پایه xUnit، CI و مستندات معماری/امنیت/Agent.
-- **امنیت:** مقادیر MasterPassword/ActivationKeys حذف شدند؛ Login username به تنظیمات منتقل شد؛ Seed مدیر نمونه حذف شد؛ فعال‌سازی در Development غیرفعال و در محیط‌های غیر Development اجباری باقی ماند.
-- **تست:** Build/Test اجرا نشد؛ محیط فعلی `dotnet` ندارد. JSON/XML و ساختار فایل‌ها باید با CI واقعی تأیید شوند.
-- **کار باقی‌مانده:** اجرای CI، بررسی خطاهای کامپایل، مهاجرت به .NET 10 LTS، جایگزینی Authentication legacy، جداسازی Application/Infrastructure، افزودن تست‌های واقعی و بررسی به‌روزرسانی frontend.
-
+- **امنیت:** مقادیر MasterPassword/ActivationKeys حذف شدند؛ Login username به تنظیمات منتقل شد؛ Seed مدیر نمونه حذف شد؛ فعال‌سازی در Development غیرفعال و در محیط‌های دیگر فعال است.
+- **تست:** Build/Test در بررسی اولیه اجرا نشد؛ محیط آن بررسی `dotnet` نداشت.
 
 ## 2026-10-16 — Repository audit and agent workflow hardening
-- **دامنه:** بررسی ایستای ZIP net9-baseline؛ 12 فایل پروژه `.csproj` و 199 فایل C#.
-- **اصلاحات:** تکمیل AGENTS.md، افزودن Issue templates و handoff template، کنترل CDN در CI، جلوگیری از Open Redirect پس از ورود، تنظیم امنیت Cookie، اصلاح Middleware قدیمی و توسعه مستندات.
-- **گزارش تفصیلی:** `docs/REPOSITORY_AUDIT.md` و `docs/CLASS_REVIEW_INVENTORY.csv`.
-- **تست:** `dotnet` در محیط بررسی موجود نبود؛ Restore/Build/Test و ارتقای واقعی assetها اجرا نشدند.
-
+- **دامنه:** بررسی ایستای مخزن و فایل‌های C#.
+- **اصلاحات:** تکمیل AGENTS.md، مستندات گردش کار Agentها، کنترل CDN در CI، جلوگیری از Open Redirect پس از ورود، تنظیم امنیت Cookie، اصلاح Middleware قدیمی و مستندات معماری/امنیت.
+- **تست:** در بررسی اولیه Restore/Build/Test و ارتقای واقعی assetها اجرا نشدند.
 
 ## 2026-10-16 — Multi-agent coordination documentation
 - **نوع کار:** تکمیل مستندات گردش کار Agentها؛ بدون تغییر کد اجرایی.
-- **تغییرات:** مستندات هماهنگی، پرامپت‌های Agent، قالب Handoff و Issue workflow اضافه یا تکمیل شدند.
 - **وضعیت Git:** تغییرات مستنداتی قبلی روی شاخه مستقل ثبت شدند؛ Merge به main انجام نشده است.
-
 
 ## 2026-10-16 — Issue #7 secure localized login page
 - **نوع کار:** بازطراحی محدود صفحه ورود و ثبت ریسک‌های احراز هویت.
 - **شاخه:** `agent/UNNUMBERED-secure-login-page`
-- **تغییرات:** صفحه ورود دو ستونه واکنش‌گرا با Bootstrap/Bootstrap Icons محلی، رنگ سرمه‌ای/فیروزه‌ای، فرم واقعی Razor Pages، نمایش/مخفی‌سازی رمز عبور، Loading، دسترس‌پذیری پایه، تغییر زبان موجود و حذف لینک‌های غیرفعال OAuth/بازیابی.
-- **امنیت:** ReturnUrl محلی و Cookie/Remember Me/Logout موجود حفظ شدند؛ SHA-256 خام و کاربر مرکزی به‌عنوان ریسک P0 باقی ماندند و جایگزینی بدون User Store و طرح مهاجرت اجرا نشد.
+- **تغییرات:** صفحه ورود دو ستونه واکنش‌گرا با Bootstrap/Bootstrap Icons محلی، رنگ سرمه‌ای/فیروزه‌ای، فرم واقعی Razor Pages، نمایش/مخفی‌سازی رمز عبور، Loading، دسترس‌پذیری پایه و حذف لینک‌های غیرفعال OAuth/بازیابی.
+- **امنیت:** ReturnUrl محلی و Cookie/Remember Me/Logout موجود حفظ شدند؛ SHA-256 خام و کاربر مرکزی به‌عنوان ریسک P0 باقی ماندند.
 - **داده:** هیچ Schema یا Migration تغییر نکرد.
-- **تحویل:** handoff در `docs/handoffs/ISSUE-UNNUMBERED-secure-login-page.md` ثبت شد. Merge به `main` انجام نشده است.
-
 
 ## 2026-10-16 — Issue #7 CI follow-up and MTP correction
-- **یافته:** پروژه تست `xunit.v3` نسخه `4.0.2` را همراه `Microsoft.NET.Test.Sdk` و `xunit.runner.visualstudio` داشت؛ CI از SDK شناور `9.0.x` استفاده می‌کرد و انتخاب Runner صریح نبود. اجرای قبلی در مسیر VSTest/MTP شکست خورد.
-- **مبنای فنی:** راهنمای رسمی xUnit v3 برای SDKهای 8/9 فعال‌کردن `TestingPlatformDotnetTestSupport=true` را برای اجرای MTP از `dotnet test` مشخص می‌کند؛ xUnit v3 نسخه 4 از MTP v2 استفاده می‌کند.
-- **تغییر:** `Microsoft.NET.Test.Sdk` و `xunit.runner.visualstudio` از پروژه تست حذف شدند، `TestingPlatformDotnetTestSupport=true` اضافه شد و `global.json` روی SDK `9.0.100` تثبیت شد. Target Framework، xUnit version و معماری تغییر نکردند.
-- **UI/JS:** عنوان تکراری برند حذف شد و JavaScript فقط به `.login-form` محدود شد؛ Enter، اعتبارسنجی ناموفق و جلوگیری از ارسال تکراری پوشش داده شدند.
-- **وضعیت CI:** اجرای جدید روی Commit `38c69b71e8e5e4e78f1ab5f177c49d970d38a0e2` در زمان ثبت این گزارش Pending بود؛ Restore، Build، Test و Static Assets هنوز نتیجه نهایی ندارند.
-- **ریسک‌های باز:** SHA-256 خام، نبود Rate Limiting/Account Lockout و نبود Integration Test واقعی همچنان رفع‌نشده هستند.
+- **تغییر:** پشتیبانی اجرای xUnit v3 با MTP فعال شد و global.json روی SDK `9.0.100` تثبیت شد.
+- **وضعیت:** اجرای CI قبلی در زمان ثبت گزارش Pending بود؛ ریسک SHA-256 خام، نبود Rate Limiting/Account Lockout و نبود Integration Test واقعی باقی ماند.
+
+## 2026-10-16 — Issue #11 Taraz Ava login redesign
+- **نوع کار:** بازطراحی حرفه‌ای صفحه ورود فارسی و RTL مطابق تصویر مرجع.
+- **Issue:** https://github.com/hamidreza1394/Accounting/issues/11
+- **شاخه:** `feature/login-redesign`
+- **فایل‌های تغییرکرده:** `Server/Pages/Account/Login.cshtml`، `Server/wwwroot/css/rtl/taraz-login.css`، `Server/wwwroot/js/taraz-login.js`، `Server/wwwroot/images/taraz-ava-mark.svg`، `docs/login-redesign.md` و `docs/handoffs/ISSUE-11-login-redesign.md`.
+- **تصمیم‌های طراحی:** ساختار دو بخشی مطابق منطق تصویر مرجع، داشبورد مالی SVG تزئینی، کارت شیشه‌ای ورود، پالت سرمه‌ای/آبی/فیروزه‌ای، فونت محلی IRANSansX، طراحی RTL و واکنش‌گرا، reduced-motion و بدون CDN یا پکیج جدید.
+- **سازگاری و امنیت:** `Login.cshtml.cs`، `LoginViewModel`، Data Annotations، ValidationSummary، Anti-forgery، Remember Me، ReturnUrl، Cookie Authentication، Claims و Sign-in تغییر نکردند. هیچ Entity، Migration، جدول دیتابیس، Secret یا منطق حسابداری تغییر نکرد.
+- **نتیجه بررسی Diff:** شاخه نسبت به `main` هفت Commit جلوتر و یک فایل مستنداتی دارای تغییرات هم‌زمانِ بعدی نبود؛ فایل‌های تغییرکرده در محدوده Login و مستندات مرتبط هستند. تغییرات PageModel و ViewModel در Diff وجود ندارد.
+- **نتیجه CI:** آخرین Workflow با شناسه `38921084636` روی Commit `6ebaf2f52582f134605a5f59009aa5e63dd46940` موفق شد. Job `build-and-test` با نتیجه `success` پایان یافت و شامل static asset check، restore، build و test بود: https://github.com/hamidreza1394/Accounting/actions/runs/38921084636
+- **Build/Test:** Build و Test در CI واقعی موفق شدند؛ اجرای محلی توسط Agent انجام نشد.
+- **بررسی دارایی‌ها:** اسکریپت `scripts/check_static_assets.py` در Job موفق CI اجرا شد و خطای CDN گزارش نکرد.
+- **بررسی بصری و اجرای برنامه:** انجام نشد؛ Browser Control در محیط Agent در دسترس نبود و اجرای برنامه به Connection String و Secretهای معتبر نیاز دارد.
+- **ریسک‌های باقی‌مانده:** SHA-256 بدون salt، نبود Rate Limiting/Account Lockout و نبود Integration Test واقعی، ریسک‌های قبلی پروژه هستند و در این Issue تغییر نکردند. بررسی بصری مرورگر و اجرای end-to-end هنوز انجام نشده است.
+- **وضعیت تحویل:** Draft PR پس از این ثبت Work Log ایجاد می‌شود؛ Merge به `main` انجام نشده است.
