@@ -12,16 +12,31 @@
 
 
 ## 2026-10-16 — Repository audit and agent workflow hardening
-- **دامنه:** بررسی ایستای ZIP net9-baseline؛ 12 csproj، 199 فایل C#، 76 فایل Razor و 1 فایل تست.
-- **اصلاحات:** تکمیل AGENTS.md، افزودن Issue templates و handoff template، کنترل CDN در CI، جلوگیری از Open Redirect پس از ورود، تنظیم امنیت Cookie، اصلاح Middleware قدیمی برای عدم بلعیدن Exception و توسعه مستندات.
-- **گزارش تفصیلی:** `docs/REPOSITORY_AUDIT.md` و فهرست `docs/CLASS_REVIEW_INVENTORY.csv`.
-- **تست:** `dotnet` در محیط موجود نیست و دانلود شبکه‌ای در دسترس نبود؛ Restore/Build/Test و ارتقای واقعی فایل‌های Bootstrap/Icons اجرا نشدند. هیچ نتیجه‌ای به‌عنوان Build موفق اعلام نمی‌شود.
-- **باقی‌مانده:** احراز هویت legacy، ارتقای واقعی assetهای Bootstrap/Icons، تست‌های Integration و تصمیم .NET 10 LTS از اولویت‌های بعدی‌اند.
+- **دامنه:** بررسی ایستای ZIP net9-baseline؛ 12 فایل پروژه `.csproj` و 199 فایل C#.
+- **اصلاحات:** تکمیل AGENTS.md، افزودن Issue templates و handoff template، کنترل CDN در CI، جلوگیری از Open Redirect پس از ورود، تنظیم امنیت Cookie، اصلاح Middleware قدیمی و توسعه مستندات.
+- **گزارش تفصیلی:** `docs/REPOSITORY_AUDIT.md` و `docs/CLASS_REVIEW_INVENTORY.csv`.
+- **تست:** `dotnet` در محیط بررسی موجود نبود؛ Restore/Build/Test و ارتقای واقعی assetها اجرا نشدند.
 
 
 ## 2026-10-16 — Multi-agent coordination documentation
-- **نوع کار:** تکمیل مستندات گردش کار Agentها طبق درخواست کاربر؛ بدون تغییر کد اجرایی.
-- **تغییرات:** افزوده شد: docs/AGENT_COORDINATION.md، پرامپ اختصاصی Codex در docs/prompts/CODEX_PROMPT.md، پرامپ اختصاصی Copilot در docs/prompts/COPILOT_PROMPT.md، و گزارش docs/handoffs/ISSUE-UNNUMBERED-agent-workflow-hardening.md. فایل‌های AGENTS.md و docs/AGENT_START_PROMPT.md نیز به این گردش کار پیوند داده شدند.
-- **گردش کار پیشنهادی:** هر وظیفه یک Issue، شاخه و PR مستقل؛ handoff در Git ثبت شود؛ ادغام فقط پس از بازبینی Maintainer.
-- **تست:** Restore/Build/Test و اسکریپت دارایی‌ها اجرا نشده‌اند؛ این تغییر مستنداتی است و اجرای محلی/git diff --check از این مسیر ممکن نبود. هیچ ادعایی درباره موفقیت Build/Test وجود ندارد.
-- **وضعیت Git:** تغییرات روی شاخه docs/agent-workflow-hardening ثبت شده‌اند؛ main تغییر نکرده است. PR هنوز ساخته نشده است.
+- **نوع کار:** تکمیل مستندات گردش کار Agentها؛ بدون تغییر کد اجرایی.
+- **تغییرات:** مستندات هماهنگی، پرامپت‌های Agent، قالب Handoff و Issue workflow اضافه یا تکمیل شدند.
+- **وضعیت Git:** تغییرات مستنداتی قبلی روی شاخه مستقل ثبت شدند؛ Merge به main انجام نشده است.
+
+
+## 2026-10-16 — Issue #7 secure localized login page
+- **نوع کار:** بازطراحی محدود صفحه ورود و ثبت ریسک‌های احراز هویت.
+- **شاخه:** `agent/UNNUMBERED-secure-login-page`
+- **تغییرات:** صفحه ورود دو ستونه واکنش‌گرا با Bootstrap/Bootstrap Icons محلی، رنگ سرمه‌ای/فیروزه‌ای، فرم واقعی Razor Pages، نمایش/مخفی‌سازی رمز عبور، Loading، دسترس‌پذیری پایه، تغییر زبان موجود و حذف لینک‌های غیرفعال OAuth/بازیابی.
+- **امنیت:** ReturnUrl محلی و Cookie/Remember Me/Logout موجود حفظ شدند؛ SHA-256 خام و کاربر مرکزی به‌عنوان ریسک P0 باقی ماندند و جایگزینی بدون User Store و طرح مهاجرت اجرا نشد.
+- **داده:** هیچ Schema یا Migration تغییر نکرد.
+- **تحویل:** handoff در `docs/handoffs/ISSUE-UNNUMBERED-secure-login-page.md` ثبت شد. Merge به `main` انجام نشده است.
+
+
+## 2026-10-16 — Issue #7 CI follow-up and MTP correction
+- **یافته:** پروژه تست `xunit.v3` نسخه `4.0.2` را همراه `Microsoft.NET.Test.Sdk` و `xunit.runner.visualstudio` داشت؛ CI از SDK شناور `9.0.x` استفاده می‌کرد و انتخاب Runner صریح نبود. اجرای قبلی در مسیر VSTest/MTP شکست خورد.
+- **مبنای فنی:** راهنمای رسمی xUnit v3 برای SDKهای 8/9 فعال‌کردن `TestingPlatformDotnetTestSupport=true` را برای اجرای MTP از `dotnet test` مشخص می‌کند؛ xUnit v3 نسخه 4 از MTP v2 استفاده می‌کند.
+- **تغییر:** `Microsoft.NET.Test.Sdk` و `xunit.runner.visualstudio` از پروژه تست حذف شدند، `TestingPlatformDotnetTestSupport=true` اضافه شد و `global.json` روی SDK `9.0.100` تثبیت شد. Target Framework، xUnit version و معماری تغییر نکردند.
+- **UI/JS:** عنوان تکراری برند حذف شد و JavaScript فقط به `.login-form` محدود شد؛ Enter، اعتبارسنجی ناموفق و جلوگیری از ارسال تکراری پوشش داده شدند.
+- **وضعیت CI:** اجرای جدید روی Commit `38c69b71e8e5e4e78f1ab5f177c49d970d38a0e2` در زمان ثبت این گزارش Pending بود؛ Restore، Build، Test و Static Assets هنوز نتیجه نهایی ندارند.
+- **ریسک‌های باز:** SHA-256 خام، نبود Rate Limiting/Account Lockout و نبود Integration Test واقعی همچنان رفع‌نشده هستند.
