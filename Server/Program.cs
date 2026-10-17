@@ -68,7 +68,7 @@ var setupRequired = string.IsNullOrWhiteSpace(connectionString);
 if (setupRequired)
 {
     settingsStore!.EnsureSetupToken();
-    builder.Services.AddSingleton(settingsStore);
+    builder.Services.AddSingleton(settingsStore!);
     builder.Services.AddScoped<DatabaseConnectionSetupService>();
 }
 
