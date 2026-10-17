@@ -110,7 +110,7 @@ if (!setupRequired && applyMigrationsOnStartup)
     var migrator = scope.ServiceProvider.GetRequiredService<Data.IDatabaseSchemaMigrator>();
     await migrator.MigrateAsync();
 }
-else if (!setupRequired && !app.Environment.IsDevelopment())
+else if (!setupRequired && (!app.Environment.IsDevelopment() || connectionLoadedFromLocalSettings))
 {
     try
     {
