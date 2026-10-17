@@ -41,7 +41,12 @@ public sealed class PendingModelChangesDiagnostic
 
 			Assert.NotNull(snapshot);
 
-			var source = snapshot!.Model.GetRelationalModel();
+			// Exactly what "Migrator.HasPendingModelChanges" does: the snapshot model is a
+			// stand-alone ModelBuilder model, so it has to be finalized and initialized first.
+			var snapshotModel = context.GetService<IModelRuntimeInitializer>()
+				.Initialize(snapshot!.Model);
+
+			var source = snapshotModel.GetRelationalModel();
 			var target = context.Model.GetRelationalModel();
 
 			var operations = context.GetService<IMigrationsModelDiffer>()
