@@ -189,6 +189,16 @@ conventions of the context (`Infrastructure/Persistence/Conventions/`).
   security and no filter that restricts a query to the tenant of the current
   user. This has to be implemented in the application layer and is reported as
   an open point.
+* Besides the 24 indexes that the configurations declare with `.HasIndex(...)`,
+  the model has 8 more indexes that no configuration writes down. The EF Core
+  `ForeignKeyIndexConvention` creates an index for every foreign key whose
+  columns are not already the leading columns of a key or of another index. Any
+  tool that derives the model from the configuration files has to apply the same
+  rule, otherwise the snapshot misses those indexes and
+  `has-pending-model-changes` fails: `IX_CompanyRolePermissions_PermissionId`,
+  `IX_LoginLogs_UserId`, `IX_MenuItems_ParentId`, `IX_Pages_CreatorUserId`,
+  `IX_Pages_PageCategoryId`, `IX_Permissions_ApplicationHandlerId`,
+  `IX_UserCompanyMemberships_RoleId_TenantId` and `IX_Users_RoleId`.
 
 ## 7. The migrations of this repository
 
@@ -235,7 +245,13 @@ that they can not drift apart from the snapshot.
 | The model of the code base | `python3 scripts/ef_model.py --repo-root .` | The tables, the columns, the types, the keys, the indexes and the foreign keys of the model |
 | The generated migrations | `python3 scripts/generate_migrations.py --repo-root . --check` | The committed model snapshot and the files of the newest migration are up to date |
 | The migration and the model | `python3 scripts/verify_migration_model.py --repo-root .` | The snapshot describes the model of the code base (the equivalent of `has-pending-model-changes`), the published migration matches its own designer file, the newest migration applies exactly the difference between the two, and the C# syntax of all generated files is valid |
-| The model tests | `dotnet test` | The tables, the keys, the foreign keys, the indexes and the types of the model |
+| The model tests | `dotnet test` | The tables, the keys, the foreign keys, the indexes and the types of the model, and `Database.HasPendingModelChanges()` |
+| The official check | `dotnet ef migrations has-pending-model-changes --project Infrastructure/Persistence/Infrastructure.Persistence.csproj --startup-project Server/Server.csproj` | The comparison that `MigrateAsync` makes at runtime. It throws `PendingModelChangesWarning` when the snapshot and the model differ. |
+
+The last four checks also run in `.github/workflows/dotnet.yml`. The workflow
+passes `--configuration Release --no-build` to `dotnet ef`, because `--no-build`
+reuses the output of the build step and would otherwise look for a Debug build
+that does not exist.
 
 `scripts/verify_migration_model.py` needs `tree-sitter` and
 `tree-sitter-c-sharp` for the C# syntax check; without them it reports that the

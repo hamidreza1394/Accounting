@@ -170,5 +170,8 @@ SSL_ERROR_SYSCALL` رد شد، بنابراین نه SDK قابل نصب است 
 
 ## شناسه‌های Git
 - Branch: `arena/e5e905ae-accounting`
-- Commit: `a7a98845371b6173c75e518bfb15d2784de8cd4f`
 - Pull Request: https://github.com/hamidreza1394/Accounting/pull/25
+- آخرین Commit این تغییر در زمان ثبت: `e705e3e`
+- اجرای سبز CI: https://github.com/hamidreza1394/Accounting/actions/runs/39039125915
+  (هر ۱۳ گام success، از جمله `Build`، `Test`، `Verify the migration and the
+  model snapshot` و `Check for pending model changes`)
