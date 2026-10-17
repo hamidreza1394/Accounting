@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection;
+using Data.SaaS;
 // **************************************************
 
 // **************************************************
@@ -116,6 +117,9 @@ builder.Services.AddDbContext<Data.DatabaseContext>
 // **************************************************
 
 // **************************************************
+// Register SaaS identity/persistence alongside the legacy login until the migration issue is completed.
+builder.Services.AddSaaSPersistence(connectionString);
+
 var app =
 	builder.Build();
 // **************************************************

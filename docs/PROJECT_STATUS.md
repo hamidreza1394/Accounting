@@ -40,3 +40,10 @@
 - اسکریپت کنترل دارایی CDN به CI افزوده شد.
 - نسخه‌های فعلی Bootstrap (5.2.2) و Bootstrap Icons (1.9.1) هنوز نیاز به ارتقای واقعی فایل‌های محلی دارند؛ این کار به علت نبود شبکه در محیط بررسی انجام نشد.
 - Restore/Build/Test هنوز باید روی دستگاه توسعه یا CI اجرا و نتیجه ثبت شود.
+
+
+## 2026-10-17 — پایه دیتابیس SaaS (در انتظار اعتبارسنجی)
+- مدل‌های اولیه Tenant/CompanyMembership/FiscalPeriod/CompanyRole/Permission/AccountingDocument/AuditLog و SaaSIdentityContext افزوده شده‌اند.
+- Target Framework و CI برای .NET 10 تنظیم شده‌اند؛ برای بازکردن هدف net10.0، Visual Studio 2026 نسخه 18.0 یا بالاتر لازم است.
+- **تأیید نشده:** Migration واقعی، Restore، Build، Test و آزمون SQL Server اجرا نشده‌اند. این تغییر تا موفقیت CI و بازبینی Migration آماده Production نیست.
+- Login legacy هنوز فعال است؛ جایگزینی کامل Identity/MFA و جریان انتخاب شرکت/دوره در کارهای بعدی است.

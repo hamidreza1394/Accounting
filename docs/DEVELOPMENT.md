@@ -1,7 +1,7 @@
 # راهنمای توسعه محلی
 
 ## پیش‌نیازها
-- Visual Studio 2022 با workload مربوط به ASP.NET and web development یا .NET SDK 9 نصب‌شده.
+- Visual Studio 2026 نسخه 18.0+ برای هدف‌گیری net10.0، یا SDK .NET 10 نصب‌شده برای CLI؛ workload مربوط به ASP.NET and web development.
 - SQL Server متناسب با Connection String محیط محلی.
 - Git؛ Python 3 فقط برای بررسی ممنوعیت CDN در اسکریپت CI.
 - برای دریافت/به‌روزرسانی NuGet و LibMan در مرحله آماده‌سازی به اینترنت دسترسی لازم است؛ **اجرای برنامه پس از دریافت وابستگی‌ها نباید برای CSS/JS/فونت/آیکون به اینترنت خارجی نیاز داشته باشد**.

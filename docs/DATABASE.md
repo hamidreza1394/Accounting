@@ -15,3 +15,7 @@
 - DbContext به‌صورت Scoped بماند و بین Threadها به اشتراک گذاشته نشود.
 - تراکنش و رفتار Cascade براساس قواعد دامنه و تست مشخص شود.
 - Connection String واقعی در فایل tracked قرار نگیرد؛ از `ConnectionStrings__ConnectionString` یا Secret Store استفاده شود.
+
+
+## SaaS چندشرکتی
+مدل پایه جدید در `Domain/SaaS` و `Infrastructure/Persistence/SaaS/SaaSIdentityContext.cs` قرار دارد. جزئیات اتصال محلی/ابر، TenantId، فیلترها و دستورات Migration در [SAAS_DATABASE.md](SAAS_DATABASE.md) آمده است. Migration تولیدی هنوز ساخته نشده است.

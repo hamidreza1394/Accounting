@@ -43,3 +43,11 @@
 - **بررسی بصری و اجرای برنامه:** انجام نشد؛ Browser Control در محیط Agent در دسترس نبود و اجرای برنامه به Connection String و Secretهای معتبر نیاز دارد.
 - **ریسک‌های باقی‌مانده:** SHA-256 بدون salt، نبود Rate Limiting/Account Lockout و نبود Integration Test واقعی، ریسک‌های قبلی پروژه هستند و در این Issue تغییر نکردند. بررسی بصری مرورگر و اجرای end-to-end هنوز انجام نشده است.
 - **وضعیت تحویل:** Draft PR پس از این ثبت Work Log ایجاد می‌شود؛ Merge به `main` انجام نشده است.
+
+
+## 2026-10-17 — Issue #14 SaaS persistence foundation
+- **Issue:** https://github.com/hamidreza1394/Accounting/issues/14
+- **Branch:** `feature/issue-14-multitenant-database`
+- **تغییرات:** مدل‌های SaaS چندشرکتی، Identity context جدا، tenant query filters، تنظیم اتصال محلی/قابل override، ارتقای هدف پروژه و CI به .NET 10.
+- **آزمون:** Restore/Build/Test و Migration واقعی در محیط تغییر اجرا نشدند؛ CI باید نتیجه واقعی را مشخص کند.
+- **محدودیت:** login قدیمی هنوز جایگزین نشده؛ Migration تولیدی و تست‌های امنیتی integration باقی است.
