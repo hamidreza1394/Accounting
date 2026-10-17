@@ -67,3 +67,11 @@
 - خطای ثبت‌شده: `Server/Pages/Admin/FileManager/PartialViews/_DisplayPictures.cshtml` به `System.Drawing.Image` وابسته است، اما مرجع `System.Drawing.Common` حذف شده؛ این مورد باید با انتخاب راهکار سازگار با .NET 10 رفع شود.
 - اجرای CI روی Merge commit هنگام ثبت گزارش هنوز در حال اجرا بود؛ تا مشاهده نتیجه سبز، وضعیت موفق اعلام نشود.
 - کارهای باقیمانده: Migration امن، حذف مسیر `EnsureCreated()` پس از طراحی rollout، اتصال Identity، tenant resolution، فیلترهای Tenant، authorization و تست‌های integration برای جلوگیری از دسترسی بین شرکت‌ها.
+
+
+## CI build-failure follow-up — 2026-10-17
+- **Branch:** `fix/net10-file-manager-image-build`
+- **Root cause:** `_DisplayPictures.cshtml` called `System.Drawing.Image.FromFile` and accessed image metadata, but the project no longer references `System.Drawing.Common`. The CI compiler reported CS1069/CS1061 in that Razor view. Re-adding this package would restore compile-time types but retain a Windows-only runtime dependency, which is not suitable for a potentially Linux-hosted web application.
+- **Change:** the view now relies on the browser to render the file URL and no longer decodes image files on the server. File length/attributes, file links and image cards are retained. Added lazy loading and safe new-tab link attributes. Extension normalization uses `ToLowerInvariant()`.
+- **Known UI trade-off:** image width/height, DPI, pixel format and Tag fields are no longer displayed. These were derived from System.Drawing and are intentionally not replaced with guessed values.
+- **Validation status:** awaiting the GitHub Actions run for this branch/PR. Build and tests are not marked successful until CI confirms them.
