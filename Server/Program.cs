@@ -7,7 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
-using Server.Infrastructure.DatabaseSetup;
+using Infrastructure.DatabaseSetup;
 // **************************************************
 
 var builder = WebApplication.CreateBuilder(args);
