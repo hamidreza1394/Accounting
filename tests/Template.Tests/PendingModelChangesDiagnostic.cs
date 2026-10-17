@@ -47,7 +47,10 @@ public sealed class PendingModelChangesDiagnostic
 				.Initialize(snapshot!.Model);
 
 			var source = snapshotModel.GetRelationalModel();
-			var target = context.Model.GetRelationalModel();
+
+			// "Migrator" compares against the design-time model, not the read-optimized
+			// runtime model of the context.
+			var target = context.GetService<IDesignTimeModel>().Model.GetRelationalModel();
 
 			var operations = context.GetService<IMigrationsModelDiffer>()
 				.GetDifferences(source, target);
