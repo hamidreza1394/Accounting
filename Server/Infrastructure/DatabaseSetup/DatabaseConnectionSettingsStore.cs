@@ -53,7 +53,7 @@ public sealed class DatabaseConnectionSettingsStore
     {
         if (string.IsNullOrWhiteSpace(SetupAccessToken))
         {
-            SetupAccessToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(24));
+            SetupAccessToken = System.Convert.ToBase64String(RandomNumberGenerator.GetBytes(24));
             File.WriteAllText(SetupTokenFilePath, SetupAccessToken);
             RestrictFilePermissions(SetupTokenFilePath);
         }
