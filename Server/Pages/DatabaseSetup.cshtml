@@ -23,7 +23,7 @@
         label { font-size: .92rem; font-weight: 600; }
         input, select { width: 100%; border: 1px solid #cbd5e1; border-radius: 9px; padding: 11px 12px; font: inherit; background: #fff; }
         input:focus, select:focus { outline: 3px solid #2563eb20; border-color: #2563eb; }
-        .check { display: flex; align-items: center; gap: 10px; font-weight: 400; }
+        .check { display: flex; align-items: center; gap: 10px; font-weight: 400; margin-top: 12px; }
         .check input { width: auto; }
         button { margin-top: 20px; border: 0; border-radius: 9px; padding: 13px 20px; background: #1d4ed8; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
         .alert { margin: 16px 0; padding: 12px 14px; border-radius: 9px; line-height: 1.8; }
@@ -49,64 +49,68 @@
         <div class="alert success" role="status">@Model.SuccessMessage</div>
     }
 
-    <div class="note">
-        کد یک‌بارمصرف راه‌اندازی در فایل زیر روی همان سروری که برنامه اجرا می‌شود قرار دارد:
-        <br /><code dir="ltr">@Model.SetupTokenFilePath</code>
-        <br />این فایل را در اختیار دیگران قرار ندهید.
-    </div>
-
-    <form method="post" autocomplete="off">
-        <div asp-validation-summary="ModelOnly" class="validation"></div>
-        <div class="grid" style="margin-top:18px">
-            <div class="field wide">
-                <label asp-for="Input.SetupToken">کد راه‌اندازی</label>
-                <input asp-for="Input.SetupToken" autocomplete="off" required />
-                <span asp-validation-for="Input.SetupToken" class="validation"></span>
-            </div>
-            <div class="field">
-                <label asp-for="Input.Server">سرور SQL Server</label>
-                <input asp-for="Input.Server" dir="ltr" required />
-                <span asp-validation-for="Input.Server" class="validation"></span>
-            </div>
-            <div class="field">
-                <label asp-for="Input.Database">نام دیتابیس</label>
-                <input asp-for="Input.Database" dir="ltr" required />
-                <span asp-validation-for="Input.Database" class="validation"></span>
-            </div>
-            <div class="field wide">
-                <label asp-for="Input.AuthenticationMode">روش احراز هویت</label>
-                <select asp-for="Input.AuthenticationMode" id="authMode">
-                    <option value="Windows">احراز هویت ویندوز (Windows Authentication)</option>
-                    <option value="Sql">نام کاربری و رمز SQL Server</option>
-                </select>
-            </div>
-            <div class="field sql-only" id="sqlUserField" hidden>
-                <label asp-for="Input.UserName">نام کاربری SQL</label>
-                <input asp-for="Input.UserName" autocomplete="off" dir="ltr" />
-                <span asp-validation-for="Input.UserName" class="validation"></span>
-            </div>
-            <div class="field sql-only" id="sqlPasswordField" hidden>
-                <label asp-for="Input.Password">رمز عبور SQL</label>
-                <input asp-for="Input.Password" type="password" autocomplete="new-password" dir="ltr" />
-                <span asp-validation-for="Input.Password" class="validation"></span>
-            </div>
-            <div class="field wide">
-                <label class="check">
-                    <input asp-for="Input.CreateDatabaseIfMissing" />
-                    اگر دیتابیس وجود ندارد، آن را بساز و Migrationهای برنامه را اجرا کن
-                </label>
-                <label class="check">
-                    <input asp-for="Input.TrustServerCertificate" />
-                    اعتماد به گواهی سرور (فقط برای محیط‌های مورد اعتماد؛ در Production ترجیحاً خاموش باشد)
-                </label>
-            </div>
+    @if (!Model.SettingsAlreadySaved)
+    {
+        <div class="note">
+            کد یک‌بارمصرف راه‌اندازی در فایل زیر روی همان سروری که برنامه اجرا می‌شود قرار دارد:
+            <br /><code dir="ltr">@Model.SetupTokenFilePath</code>
+            <br />این فایل را در اختیار دیگران قرار ندهید.
         </div>
-        <button type="submit">آزمایش اتصال و ذخیره تنظیمات</button>
-    </form>
+
+        <form method="post" autocomplete="off">
+            <div asp-validation-summary="ModelOnly" class="validation"></div>
+            <div class="grid" style="margin-top:18px">
+                <div class="field wide">
+                    <label asp-for="Input.SetupToken">کد راه‌اندازی</label>
+                    <input asp-for="Input.SetupToken" autocomplete="off" required />
+                    <span asp-validation-for="Input.SetupToken" class="validation"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Input.Server">سرور SQL Server</label>
+                    <input asp-for="Input.Server" dir="ltr" required />
+                    <span asp-validation-for="Input.Server" class="validation"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Input.Database">نام دیتابیس</label>
+                    <input asp-for="Input.Database" dir="ltr" required />
+                    <span asp-validation-for="Input.Database" class="validation"></span>
+                </div>
+                <div class="field wide">
+                    <label asp-for="Input.AuthenticationMode">روش احراز هویت</label>
+                    <select asp-for="Input.AuthenticationMode" id="authMode">
+                        <option value="Windows">احراز هویت ویندوز (Windows Authentication)</option>
+                        <option value="Sql">نام کاربری و رمز SQL Server</option>
+                    </select>
+                </div>
+                <div class="field sql-only" id="sqlUserField" hidden>
+                    <label asp-for="Input.UserName">نام کاربری SQL</label>
+                    <input asp-for="Input.UserName" autocomplete="off" dir="ltr" />
+                    <span asp-validation-for="Input.UserName" class="validation"></span>
+                </div>
+                <div class="field sql-only" id="sqlPasswordField" hidden>
+                    <label asp-for="Input.Password">رمز عبور SQL</label>
+                    <input asp-for="Input.Password" type="password" autocomplete="new-password" dir="ltr" />
+                    <span asp-validation-for="Input.Password" class="validation"></span>
+                </div>
+                <div class="field wide">
+                    <label class="check">
+                        <input asp-for="Input.CreateDatabaseIfMissing" />
+                        اگر دیتابیس وجود ندارد، آن را بساز و Migrationهای برنامه را اجرا کن
+                    </label>
+                    <label class="check">
+                        <input asp-for="Input.TrustServerCertificate" />
+                        اعتماد به گواهی سرور (فقط برای محیط‌های مورد اعتماد؛ در Production ترجیحاً خاموش باشد)
+                    </label>
+                </div>
+            </div>
+            <button type="submit">آزمایش اتصال و ذخیره تنظیمات</button>
+        </form>
+    }
 </main>
 <script>
     (() => {
         const mode = document.getElementById('authMode');
+        if (!mode) return;
         const fields = document.querySelectorAll('.sql-only');
         const refresh = () => fields.forEach(field => field.hidden = mode.value !== 'Sql');
         mode.addEventListener('change', refresh);
