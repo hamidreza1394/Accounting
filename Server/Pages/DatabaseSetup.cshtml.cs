@@ -8,7 +8,7 @@ using Infrastructure.DatabaseSetup;
 
 namespace Server.Pages;
 
-public sealed class DatabaseSetupModel : PageModel
+public sealed class DatabaseSetupModel : Microsoft.AspNetCore.Mvc.RazorPages.PageModel
 {
     private readonly DatabaseConnectionSettingsStore _settingsStore;
     private readonly DatabaseConnectionSetupService _setupService;
