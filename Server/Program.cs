@@ -47,11 +47,13 @@ builder.Services
 var settingsStore = new DatabaseConnectionSettingsStore(
     NullLogger<DatabaseConnectionSettingsStore>.Instance);
 var connectionString = builder.Configuration.GetConnectionString("ConnectionString");
+var connectionLoadedFromLocalSettings = false;
 
 if (string.IsNullOrWhiteSpace(connectionString) &&
     settingsStore.TryLoadConnectionString(out var storedConnectionString))
 {
     connectionString = storedConnectionString;
+    connectionLoadedFromLocalSettings = true;
     builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
     {
         ["ConnectionStrings:ConnectionString"] = connectionString
@@ -87,7 +89,11 @@ if (setupRequired)
 }
 
 var migrateOnly = args.Any(arg => string.Equals(arg, "--migrate", StringComparison.OrdinalIgnoreCase));
-var applyMigrationsOnStartup = app.Environment.IsDevelopment()
+// Connections configured by the operator through the setup form are migrated during first-run
+// initialization only for a new/empty database. Existing databases require an explicit migration
+// step so a legacy EnsureCreated schema is never upgraded blindly on application startup.
+var applyMigrationsOnStartup = !connectionLoadedFromLocalSettings
+    && app.Environment.IsDevelopment()
     && string.Equals(builder.Configuration["Database:ApplyMigrations"], "true", StringComparison.OrdinalIgnoreCase);
 
 if (!setupRequired && migrateOnly)
