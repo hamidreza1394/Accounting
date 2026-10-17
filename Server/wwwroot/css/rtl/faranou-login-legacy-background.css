@@ -1,0 +1,113 @@
+.taraz-login-page .taraz-login {
+    position: relative;
+    overflow: hidden;
+    color: #f5fbff;
+    background: radial-gradient(circle at 20% 10%, #123d62 0, #071b35 43%, #041225 100%);
+}
+
+.taraz-login-page .taraz-login::before,
+.taraz-login-page .taraz-login::after {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    content: "";
+}
+
+.taraz-login-page .taraz-login::before {
+    background:
+        radial-gradient(circle at 26% 60%, rgba(23, 184, 197, 0.18), transparent 28%),
+        radial-gradient(circle at 82% 22%, rgba(53, 213, 232, 0.12), transparent 25%);
+}
+
+.taraz-login-page .taraz-login::after {
+    opacity: 0.15;
+    background-image:
+        linear-gradient(30deg, transparent 48%, #35d5e8 49%, transparent 50%),
+        linear-gradient(150deg, transparent 48%, #174c83 49%, transparent 50%);
+    background-size: 90px 90px;
+}
+
+.taraz-login-page .taraz-login__shell {
+    position: relative;
+    z-index: 1;
+}
+
+.taraz-login-page .taraz-panel-card {
+    border-color: rgba(154, 216, 231, 0.28);
+    background: rgba(6, 28, 54, 0.88);
+    box-shadow: 0 30px 90px rgba(0, 0, 0, 0.35), inset 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.taraz-login-page .taraz-form-heading h1,
+.taraz-login-page .taraz-field label,
+.taraz-login-page .taraz-brand strong {
+    color: #f5fbff;
+}
+
+.taraz-login-page .taraz-form-heading > p:last-child,
+.taraz-login-page .taraz-brand span,
+.taraz-login-page .taraz-support-note,
+.taraz-login-page .taraz-security-note,
+.taraz-login-page .taraz-copyright {
+    color: #a9bfd1;
+}
+
+.taraz-login-page .taraz-input-wrap input {
+    color: #f6fdff;
+    border-color: rgba(131, 198, 216, 0.3);
+    background: rgba(2, 17, 35, 0.72);
+}
+
+.taraz-login-page .taraz-input-wrap input:focus {
+    border-color: #35d5e8;
+    box-shadow: 0 0 0 4px rgba(53, 213, 232, 0.14);
+}
+
+.taraz-login-page .taraz-password-toggle {
+    min-width: 92px;
+    color: #83d8e2;
+}
+
+.taraz-login-page .taraz-password-toggle:hover {
+    background: rgba(53, 213, 232, 0.12);
+}
+
+.taraz-login-page .taraz-password-toggle:focus-visible,
+.taraz-login-page .taraz-submit:focus-visible {
+    outline-color: #35d5e8;
+}
+
+.taraz-login-page .taraz-submit {
+    color: #042038;
+    background: linear-gradient(100deg, #17b8c5, #35d5e8);
+    box-shadow: 0 12px 28px rgba(23, 184, 197, 0.18);
+}
+
+.taraz-login-page .taraz-submit:hover {
+    box-shadow: 0 16px 32px rgba(23, 184, 197, 0.28);
+}
+
+.taraz-login-page .taraz-message--error,
+.taraz-login-page .taraz-validation--summary:not(:empty) {
+    color: #ffd0c8;
+    border-color: rgba(255, 182, 166, 0.35);
+    background: rgba(123, 42, 40, 0.35);
+}
+
+.taraz-login-page .taraz-password-icon {
+    display: inline-flex;
+    width: 1.1em;
+    height: 1.1em;
+    margin-inline-end: 0.35em;
+    align-items: center;
+    justify-content: center;
+    vertical-align: -0.15em;
+    font-size: 1.05em;
+    line-height: 1;
+}
+
+@media (max-width: 960px) {
+    .taraz-login-page .taraz-login {
+        overflow: auto;
+    }
+}
