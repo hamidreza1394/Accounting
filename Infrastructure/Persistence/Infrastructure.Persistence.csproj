@@ -3,6 +3,8 @@
 	<PropertyGroup>
 		<Nullable>enable</Nullable>
 		<TargetFramework>net10.0</TargetFramework>
+		<!-- The code base uses the "Data" root namespace; keep the generated migrations consistent with it. -->
+		<RootNamespace>Data</RootNamespace>
 		<!--<ImplicitUsings>enable</ImplicitUsings>-->
 	</PropertyGroup>
 
@@ -16,6 +18,11 @@
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Proxies" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+		</PackageReference>
+		<!-- Design-time only: required by the dotnet-ef tools and by IDesignTimeDbContextFactory. -->
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
 		</PackageReference>

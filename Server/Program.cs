@@ -112,12 +112,99 @@ builder.Services.AddDbContext<Data.DatabaseContext>
 		options
 			// using Microsoft.EntityFrameworkCore;
 			.UseSqlServer(connectionString: connectionString);
+
+		options
+			// using Microsoft.EntityFrameworkCore;
+			.MigrationsAssembly(migrationAssembly: typeof(Data.DatabaseContext).Assembly.FullName);
 	});
+// **************************************************
+
+// The schema migrator is the only component that is allowed to change the database schema.
+// -> using Microsoft.Extensions.DependencyInjection;
+builder.Services.AddScoped<Data.IDatabaseSchemaMigrator, Data.DatabaseSchemaMigrator>();
 // **************************************************
 
 // **************************************************
 var app =
 	builder.Build();
+// **************************************************
+
+// **************************************************
+// Database schema management.
+//
+// The database schema is owned by the EF Core migrations in
+// "Infrastructure/Persistence/Migrations" and is never created implicitly.
+//
+//   dotnet run --project Server -- --migrate
+//       Applies the pending migrations and exits. This is the supported way of migrating
+//       a production database: it is an explicit, reviewable, single-purpose operation.
+//
+//   Database:ApplyMigrations = true (Development only)
+//       Applies the pending migrations when the application starts. It is ignored outside
+//       of the Development environment, so a production deployment can never migrate the
+//       database as a side effect of a restart.
+//
+//   dotnet ef database update --project Infrastructure/Persistence
+//       The canonical EF Core workflow, see docs/database-migrations.md.
+// **************************************************
+var migrateOnly =
+	args.Any(arg => string.Equals(arg, "--migrate", StringComparison.OrdinalIgnoreCase));
+
+var applyMigrationsOnStartup =
+	(builder.Configuration.GetValue<bool?>("Database:ApplyMigrations") ?? false)
+	&& app.Environment.IsDevelopment();
+
+if (migrateOnly)
+{
+	using (var scope = app.Services.CreateScope())
+	{
+		var migrator =
+			scope.ServiceProvider.GetRequiredService<Data.IDatabaseSchemaMigrator>();
+
+		await migrator.MigrateAsync();
+	}
+
+	return;
+}
+
+if (applyMigrationsOnStartup)
+{
+	using (var scope = app.Services.CreateScope())
+	{
+		var migrator =
+			scope.ServiceProvider.GetRequiredService<Data.IDatabaseSchemaMigrator>();
+
+		await migrator.MigrateAsync();
+	}
+}
+else if (!app.Environment.IsDevelopment())
+{
+	// The production database is never migrated automatically: only report the drift.
+	try
+	{
+		using var scope = app.Services.CreateScope();
+
+		var migrator =
+			scope.ServiceProvider.GetRequiredService<Data.IDatabaseSchemaMigrator>();
+
+		var pendingMigrations =
+			await migrator.GetPendingMigrationsAsync();
+
+		if (pendingMigrations.Count > 0)
+		{
+			app.Logger.LogWarning
+				(message: "The database schema is out of date. {PendingMigrationCount} migration(s) are pending: {PendingMigrations}. Apply them with 'dotnet run --project Server -- --migrate'.",
+				PendingMigrationCount: pendingMigrations.Count,
+				PendingMigrations: string.Join(", ", pendingMigrations));
+		}
+	}
+	catch (System.Exception exception)
+	{
+		app.Logger.LogWarning
+			(exception: exception,
+			message: "The pending database migrations could not be checked at start-up.");
+	}
+}
 // **************************************************
 
 // IsDevelopment() -> using Microsoft.Extensions.Hosting;
