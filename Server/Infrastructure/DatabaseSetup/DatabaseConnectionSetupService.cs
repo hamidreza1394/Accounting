@@ -2,7 +2,7 @@ using System.Security.Cryptography;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
-namespace Server.Infrastructure.DatabaseSetup;
+namespace Infrastructure.DatabaseSetup;
 
 public sealed class DatabaseConnectionSetupService
 {
