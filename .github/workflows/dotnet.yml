@@ -25,6 +25,10 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: '3.x'
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
       - name: Check local-only static assets
         run: python3 scripts/check_static_assets.py
       - name: Restore
@@ -35,6 +39,16 @@ jobs:
         run: |
           set -o pipefail
           dotnet test Template.sln --no-build --configuration Release 2>&1 | tee /tmp/dotnet-test.log
+      # Behavioral (DOM-level) tests for client-side scripts. The xUnit tests only
+      # inspect the .cshtml/.js source as text; these tests render the form in jsdom,
+      # load the real taraz-login.js + site.js, and assert that clicking the password
+      # toggle actually flips password.type between "password" and "text".
+      - name: Behavioral tests (jsdom)
+        working-directory: tests/Template.Tests.Js
+        run: |
+          set -o pipefail
+          npm install --no-fund --no-audit 2>&1 | tee /tmp/npm-install.log
+          node --test 2>&1 | tee /tmp/behavioral-test.log
       # The migration checks are the guards against a model snapshot that no longer
       # describes the model, which fails at runtime with PendingModelChangesWarning.
       - name: Check the generated migrations
@@ -58,7 +72,7 @@ jobs:
       - name: Publish the failure details
         if: failure()
         run: |
-          for log in /tmp/dotnet-test.log /tmp/dotnet-ef.log; do
+          for log in /tmp/dotnet-test.log /tmp/dotnet-ef.log /tmp/behavioral-test.log /tmp/npm-install.log; do
             if [ -f "$log" ]; then
               {
                 echo "### $(basename "$log")"
@@ -70,8 +84,8 @@ jobs:
             fi
           done
           # The step summary is not readable through the API, the annotation is.
-          for log in /tmp/dotnet-test.log /tmp/dotnet-ef.log; do
+          for log in /tmp/dotnet-test.log /tmp/dotnet-ef.log /tmp/behavioral-test.log /tmp/npm-install.log; do
             if [ -f "$log" ]; then
-              echo "::error title=$(basename "$log")::$(tail -n 120 "$log" | grep -a -E 'error|Failed|failed|Assert|Exception|Test summary|total:|Passed!|Failed!|Unable|not found|pending' | head -n 40 | tr -d '\r' | tr '\n' '~')"
+              echo "::error title=$(basename "$log")::$(tail -n 120 "$log" | grep -a -E 'error|Failed|failed|Assert|Exception|Test summary|total:|Passed!|Failed!|Unable|not found|pending|not ok' | head -n 40 | tr -d '\r' | tr '\n' '~')"
             fi
           done
