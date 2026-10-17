@@ -103,8 +103,8 @@ public sealed class DatabaseSetupModel : PageModel
         }
 
         SettingsAlreadySaved = true;
-        SuccessMessage = result.DatabaseCreated
-            ? "اتصال تأیید شد، دیتابیس ساخته شد و Migrationهای پروژه اعمال شدند. برای بارگذاری تنظیمات جدید، برنامه را متوقف و دوباره اجرا کنید."
+        SuccessMessage = result.MigrationsApplied
+            ? "اتصال تأیید شد و دیتابیس خالی با Migrationهای پروژه آماده شد. برای بارگذاری تنظیمات جدید، برنامه را متوقف و دوباره اجرا کنید."
             : "اتصال تأیید و تنظیمات به‌صورت رمزنگاری‌شده ذخیره شد. دیتابیس از قبل وجود داشت و برای جلوگیری از تغییر ناخواسته داده‌ها، Migration خودکار روی دیتابیس موجود اجرا نشد. برنامه را مجدداً اجرا کنید و وضعیت Migrationها را بررسی کنید.";
 
         _logger.LogInformation("The first-run database setup succeeded. Database credentials were not logged.");
