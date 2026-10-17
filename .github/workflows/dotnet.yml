@@ -47,6 +47,8 @@ jobs:
             tail -n 250 /tmp/dotnet-test.log
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+          # The step summary is not readable through the API, the annotation is.
+          echo "::error title=dotnet test output::$(grep -a -E 'error|Failed|failed|Assert|Exception|Test summary|total:|Passed!|Failed!' /tmp/dotnet-test.log | head -n 60 | tr -d '\r' | tr '\n' '~')"
       # The migration checks are the guards against a model snapshot that no longer
       # describes the model, which fails at runtime with PendingModelChangesWarning.
       - name: Check the generated migrations
