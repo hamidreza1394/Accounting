@@ -19,7 +19,7 @@ public sealed class PendingModelChangesDiagnostic
 	private static DatabaseContext CreateContext()
 	{
 		var options = new DbContextOptionsBuilder<DatabaseContext>()
-			.UseSqlServer("Server=(localdb)\\MSSQLLocalDB;Database=TarazAva_ModelTests;Trusted_Connection=True;\")
+			.UseSqlServer("Server=(localdb)\\MSSQLLocalDB;Database=TarazAva_ModelTests;Trusted_Connection=True;")
 			.Options;
 
 		return new DatabaseContext(options);
