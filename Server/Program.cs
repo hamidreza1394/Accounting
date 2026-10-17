@@ -44,30 +44,33 @@ builder.Services
 
 // Standard configuration (User Secrets/environment/appsettings) always wins.
 // Only use the protected local settings file when no connection string was configured.
-var settingsStore = new DatabaseConnectionSettingsStore(
-    NullLogger<DatabaseConnectionSettingsStore>.Instance);
 var connectionString = builder.Configuration.GetConnectionString("ConnectionString");
 var connectionLoadedFromLocalSettings = false;
+DatabaseConnectionSettingsStore? settingsStore = null;
 
-if (string.IsNullOrWhiteSpace(connectionString) &&
-    settingsStore.TryLoadConnectionString(out var storedConnectionString))
+if (string.IsNullOrWhiteSpace(connectionString))
 {
-    connectionString = storedConnectionString;
-    connectionLoadedFromLocalSettings = true;
-    builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+    settingsStore = new DatabaseConnectionSettingsStore(
+        NullLogger<DatabaseConnectionSettingsStore>.Instance);
+
+    if (settingsStore.TryLoadConnectionString(out var storedConnectionString))
     {
-        ["ConnectionStrings:ConnectionString"] = connectionString
-    });
+        connectionString = storedConnectionString;
+        connectionLoadedFromLocalSettings = true;
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:ConnectionString"] = connectionString
+        });
+    }
 }
 
 var setupRequired = string.IsNullOrWhiteSpace(connectionString);
 if (setupRequired)
 {
-    settingsStore.EnsureSetupToken();
+    settingsStore!.EnsureSetupToken();
+    builder.Services.AddSingleton(settingsStore);
+    builder.Services.AddScoped<DatabaseConnectionSetupService>();
 }
-
-builder.Services.AddSingleton(settingsStore);
-builder.Services.AddScoped<DatabaseConnectionSetupService>();
 
 if (!setupRequired)
 {
@@ -85,7 +88,7 @@ if (setupRequired)
 {
     app.Logger.LogWarning(
         "Taraz Ava requires first-run database setup. Open /DatabaseSetup on the application host and read the one-time token from {SetupTokenFilePath}. The token and database credentials are never written to application logs.",
-        settingsStore.SetupTokenFilePath);
+        settingsStore!.SetupTokenFilePath);
 }
 
 var migrateOnly = args.Any(arg => string.Equals(arg, "--migrate", StringComparison.OrdinalIgnoreCase));
@@ -148,9 +151,9 @@ app.UseStaticFiles();
 
 // Do not let application pages run without a configured database. The setup endpoint is the
 // only dynamic page exposed until the operator completes setup and restarts the application.
-if (setupRequired)
+app.Use(async (context, next) =>
 {
-    app.Use(async (context, next) =>
+    if (setupRequired)
     {
         if (context.Request.Path.StartsWithSegments("/DatabaseSetup"))
         {
@@ -159,8 +162,17 @@ if (setupRequired)
         }
 
         context.Response.Redirect("/DatabaseSetup");
-    });
-}
+        return;
+    }
+
+    if (context.Request.Path.StartsWithSegments("/DatabaseSetup"))
+    {
+        context.Response.Redirect("/");
+        return;
+    }
+
+    await next();
+});
 
 app.UseRouting();
 app.UseAuthentication();
