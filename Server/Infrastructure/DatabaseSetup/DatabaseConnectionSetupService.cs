@@ -110,7 +110,7 @@ public sealed class DatabaseConnectionSetupService
                 await using var emptyDatabaseCommand = new SqlCommand(
                     "SELECT CASE WHEN OBJECT_ID(N'__EFMigrationsHistory', N'U') IS NULL AND NOT EXISTS (SELECT 1 FROM sys.tables WHERE is_ms_shipped = 0) THEN 1 ELSE 0 END;",
                     databaseConnection);
-                databaseNeedsInitialMigration = Convert.ToInt32(
+                databaseNeedsInitialMigration = System.Convert.ToInt32(
                     await emptyDatabaseCommand.ExecuteScalarAsync(cancellationToken)) == 1;
             }
 
