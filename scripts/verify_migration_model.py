@@ -150,7 +150,7 @@ def parse_migration(source: str) -> dict[str, Any]:
                         r'"([^"]*)"', values.get("principalTable", "")
                     ).group(1),
                     "principal_columns": (
-                        _parse_lambda_columns(values.get("principalColumn", ""))
+                        _parse_literal_columns(values.get("principalColumn", ""))
                         if "principalColumn" in values
                         else _parse_literal_columns(values.get("principalColumns", ""))
                     ),
@@ -217,6 +217,7 @@ def parse_snapshot(source: str) -> dict[str, Any]:
                     ),
                     "max_length": _optional_int(re.search(r"HasMaxLength\((\d+)\)", calls)),
                     "unicode": ".IsUnicode(false)" not in calls,
+                    "value_generated": ".ValueGeneratedOnAdd()" in calls,
                     "column_type": _optional_string(
                         re.search(r'HasColumnType\("([^"]*)"\)', calls)
                     ),
@@ -306,6 +307,25 @@ def _parse_enum(text: str, prefix: str) -> str | None:
 
 def _parse_literal_list(text: str) -> list[str]:
     return re.findall(r'"([^"]*)"', text)
+
+
+def _expects_value_generation(entity: dict[str, Any], column: dict[str, Any]) -> bool:
+    """Reports whether EF Core generates the value of the column when the row is added.
+
+    EF Core applies the 'ValueGenerationConvention': a key of a single property that is a
+    'Guid' or an integer (but not a 'byte') and that is not a foreign key property gets
+    'ValueGenerated.OnAdd'.
+    """
+    primary_key = entity.get("primary_key") or []
+    if len(primary_key) != 1 or primary_key[0] != column["name"]:
+        return False
+
+    for foreign_key in entity.get("foreign_keys", []):
+        if column["name"] in foreign_key["columns"]:
+            return False
+
+    clr_type = (column.get("clr_type") or column.get("provider_clr_type") or "").split(".")[-1]
+    return clr_type == "Guid" or clr_type in {"int", "Int32", "long", "Int64", "short", "Int16"}
 
 
 def _parse_literal_columns(text: str) -> list[str]:
@@ -506,6 +526,12 @@ def verify(repository_root: str) -> list[str]:
                     f"The column type of '{clr_name}.{column['name']}' is "
                     f"'{actual['column_type']}' in the snapshot but '{expected_column_type}' "
                     "in the model."
+                )
+            expected_value_generated = _expects_value_generation(entity, column)
+            if bool(actual["value_generated"]) != expected_value_generated:
+                problems.append(
+                    f"The value generation of '{clr_name}.{column['name']}' differs between "
+                    "the snapshot and the model."
                 )
         if entity["primary_key"] not in described["keys"]:
             problems.append(f"The primary key of '{clr_name}' is missing in the snapshot.")

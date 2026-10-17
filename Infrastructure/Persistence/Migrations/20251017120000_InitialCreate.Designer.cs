@@ -18,10 +18,12 @@ namespace Data.Migrations
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
             #pragma warning disable 612, 618
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.13");
 
             modelBuilder.Entity("Domain.Role", b =>
             {
                 b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -55,6 +57,7 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.User", b =>
             {
                 b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -172,6 +175,7 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.Page", b =>
             {
                 b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -292,6 +296,7 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.LoginLog", b =>
             {
                 b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -319,6 +324,7 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.MenuItem", b =>
             {
                 b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -369,6 +375,7 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.Permission", b =>
             {
                 b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -397,6 +404,7 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.PageCategory", b =>
             {
                 b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -430,6 +438,7 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.ApplicationHandler", b =>
             {
                 b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -477,6 +486,7 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.Company", b =>
             {
                 b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -512,6 +522,7 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.UserCompanyMembership", b =>
             {
                 b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -548,6 +559,7 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.FiscalPeriod", b =>
             {
                 b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -586,6 +598,7 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.CompanyRole", b =>
             {
                 b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -627,6 +640,7 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.PermissionDefinition", b =>
             {
                 b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -674,6 +688,7 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.SecurityAuditEvent", b =>
             {
                 b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -735,6 +750,7 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.PostCategory", b =>
             {
                 b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")

@@ -53,7 +53,7 @@ namespace Data.Migrations
                         name: "FK_MenuItems_MenuItems_ParentId",
                         column: x => x.ParentId,
                         principalTable: "MenuItems",
-                        principalColumn: x => x.Id);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -168,7 +168,7 @@ namespace Data.Migrations
                         name: "FK_PostCategory_PostCategory_ParentId",
                         column: x => x.ParentId,
                         principalTable: "PostCategory",
-                        principalColumn: x => x.Id,
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.NoAction);
                 });
 
@@ -210,7 +210,7 @@ namespace Data.Migrations
                         name: "FK_Users_Roles_RoleId",
                         column: x => x.RoleId,
                         principalTable: "Roles",
-                        principalColumn: x => x.Id,
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.NoAction);
                 });
 
@@ -232,13 +232,13 @@ namespace Data.Migrations
                         name: "FK_Permissions_ApplicationHandlers_ApplicationHandlerId",
                         column: x => x.ApplicationHandlerId,
                         principalTable: "ApplicationHandlers",
-                        principalColumn: x => x.Id,
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.NoAction);
                     table.ForeignKey(
                         name: "FK_Permissions_Roles_RoleId",
                         column: x => x.RoleId,
                         principalTable: "Roles",
-                        principalColumn: x => x.Id,
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.NoAction);
                 });
 
@@ -262,7 +262,7 @@ namespace Data.Migrations
                         name: "FK_FiscalPeriods_Companies_TenantId",
                         column: x => x.TenantId,
                         principalTable: "Companies",
-                        principalColumn: x => x.Id,
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
 
@@ -287,7 +287,7 @@ namespace Data.Migrations
                         name: "FK_CompanyRoles_Companies_TenantId",
                         column: x => x.TenantId,
                         principalTable: "Companies",
-                        principalColumn: x => x.Id,
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
 
@@ -335,13 +335,13 @@ namespace Data.Migrations
                         name: "FK_Pages_Users_CreatorUserId",
                         column: x => x.CreatorUserId,
                         principalTable: "Users",
-                        principalColumn: x => x.Id,
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_Pages_PageCategories_PageCategoryId",
                         column: x => x.PageCategoryId,
                         principalTable: "PageCategories",
-                        principalColumn: x => x.Id,
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -362,7 +362,7 @@ namespace Data.Migrations
                         name: "FK_LoginLogs_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
-                        principalColumn: x => x.Id,
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -386,7 +386,7 @@ namespace Data.Migrations
                         name: "FK_UserCompanyMemberships_Companies_TenantId",
                         column: x => x.TenantId,
                         principalTable: "Companies",
-                        principalColumn: x => x.Id,
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_UserCompanyMemberships_CompanyRoles_RoleId_TenantId",
@@ -410,13 +410,13 @@ namespace Data.Migrations
                         name: "FK_CompanyRolePermissions_CompanyRoles_RoleId",
                         column: x => x.RoleId,
                         principalTable: "CompanyRoles",
-                        principalColumn: x => x.Id,
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_CompanyRolePermissions_PermissionDefinitions_PermissionId",
                         column: x => x.PermissionId,
                         principalTable: "PermissionDefinitions",
-                        principalColumn: x => x.Id,
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
 

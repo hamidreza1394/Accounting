@@ -151,8 +151,13 @@ var migrateOnly =
 	args.Any(arg => string.Equals(arg, "--migrate", StringComparison.OrdinalIgnoreCase));
 
 var applyMigrationsOnStartup =
-	(builder.Configuration.GetValue<bool?>("Database:ApplyMigrations") ?? false)
-	&& app.Environment.IsDevelopment();
+	app.Environment.IsDevelopment()
+	&& string.Equals
+		(
+			builder.Configuration["Database:ApplyMigrations"],
+			"true",
+			StringComparison.OrdinalIgnoreCase
+		);
 
 if (migrateOnly)
 {
@@ -194,8 +199,11 @@ else if (!app.Environment.IsDevelopment())
 		{
 			app.Logger.LogWarning
 				(message: "The database schema is out of date. {PendingMigrationCount} migration(s) are pending: {PendingMigrations}. Apply them with 'dotnet run --project Server -- --migrate'.",
-				PendingMigrationCount: pendingMigrations.Count,
-				PendingMigrations: string.Join(", ", pendingMigrations));
+				args: new object[]
+				{
+					pendingMigrations.Count,
+					string.Join(", ", pendingMigrations)
+				});
 		}
 	}
 	catch (System.Exception exception)

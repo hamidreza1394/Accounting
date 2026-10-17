@@ -33,6 +33,10 @@ CONTEXT_TYPE = "Data.DatabaseContext"
 SNAPSHOT_CLASS = "DatabaseContextModelSnapshot"
 MIGRATIONS_DIRECTORY = os.path.join("Infrastructure", "Persistence", "Migrations")
 
+# The version of the Entity Framework Core packages of the solution. It is written into the
+# "ProductVersion" annotation of the model snapshot, exactly like the EF Core tools do.
+PRODUCT_VERSION = "10.0.13"
+
 INDENT = "    "
 
 # The delete behaviors of the model and the referential actions of the migration.
@@ -90,6 +94,27 @@ def clr_type_name(clr_type: str) -> str:
         "System.Double": "double",
         "System.Decimal": "decimal",
     }.get(clr_type, clr_type.split(".")[-1])
+
+
+def value_generated_on_add(entity: dict[str, Any], column: dict[str, Any]) -> bool:
+    """Reports whether the value of the column is generated when the row is added.
+
+    EF Core applies the 'ValueGenerationConvention': a key of a single property that is a
+    'Guid' or an integer (but not a 'byte') and that is not a foreign key property gets
+    'ValueGenerated.OnAdd'. The snapshot has to keep that flag, otherwise the model of the
+    snapshot differs from the model of the code base.
+    """
+    primary_key = entity.get("primary_key") or []
+    if len(primary_key) != 1 or primary_key[0] != column["name"]:
+        return False
+
+    for foreign_key in entity.get("foreign_keys", []):
+        if column["name"] in foreign_key["columns"]:
+            return False
+
+    clr_type = column.get("clr_type") or column.get("provider_clr_type") or ""
+    clr_type = clr_type.split(".")[-1]
+    return clr_type == "Guid" or clr_type in {"int", "Int32", "long", "Int64", "short", "Int16"}
 
 
 def table_order(entities: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -194,9 +219,10 @@ def generate_create_table(entity: dict[str, Any], lines: list[str]) -> None:
             f'column: {lambda_expression(foreign_key["columns"])}',
             f'principalTable: {literal(foreign_key["principal_table"])}',
         ]
+        # EF Core 10 expects the name of the principal column, not a lambda.
         if len(foreign_key["principal_columns"]) == 1:
             arguments.append(
-                f'principalColumn: {lambda_expression(foreign_key["principal_columns"])}'
+                f'principalColumn: {literal(foreign_key["principal_columns"][0])}'
             )
         else:
             arguments.append(
@@ -294,6 +320,8 @@ def generate_model(entity_types: list[dict[str, Any]], indent: str) -> list[str]
     """
     lines: list[str] = []
 
+    lines.append(f'{indent}modelBuilder.HasAnnotation("ProductVersion", "{PRODUCT_VERSION}");')
+
     for entity in entity_types:
         lines.append("")
         lines.append(f'{indent}modelBuilder.Entity({literal(entity["clr_name"])}, b =>')
@@ -313,6 +341,8 @@ def generate_model(entity_types: list[dict[str, Any]], indent: str) -> list[str]
                 "object",
             }:
                 lines.append(f"{indent}{INDENT * 2}.IsRequired()")
+            if value_generated_on_add(entity, column):
+                lines.append(f"{indent}{INDENT * 2}.ValueGeneratedOnAdd()")
             if column["max_length"] is not None:
                 lines.append(f"{indent}{INDENT * 2}.HasMaxLength({column['max_length']})")
             if column["unicode"] is False:

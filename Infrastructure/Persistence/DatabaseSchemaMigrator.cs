@@ -62,8 +62,11 @@ public sealed class DatabaseSchemaMigrator : IDatabaseSchemaMigrator
 
 		_logger.LogInformation
 			(message: "Applying {PendingMigrationCount} pending database migration(s): {PendingMigrations}.",
-			PendingMigrationCount: pendingMigrations.Count,
-			PendingMigrations: string.Join(", ", pendingMigrations));
+			args: new object[]
+			{
+				pendingMigrations.Count,
+				string.Join(", ", pendingMigrations)
+			});
 
 		await _databaseContext.Database
 			.MigrateAsync(cancellationToken: cancellationToken);
