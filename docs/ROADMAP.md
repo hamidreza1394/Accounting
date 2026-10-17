@@ -52,3 +52,11 @@
 - [ ] جایگزینی احراز هویت Legacy با ASP.NET Core Identity و مهاجرت حساب‌ها.
 - [ ] پیاده‌سازی انتخاب شرکت/دوره و Tenant resolution سمت سرور.
 - [ ] اعمال کنترل دسترسی tenant-aware و تست نفوذ متقاطع شرکت‌ها.
+
+
+## فاز 3A — راه‌اندازی اولیه دیتابیس (Issue #22)
+- [x] فرم Razor Pages برای تنظیم سرور، دیتابیس و احراز هویت Windows/SQL.
+- [x] تست اتصال و ذخیره رمزنگاری‌شده Connection String خارج از مخزن.
+- [x] ساخت دیتابیس تازه و اعمال Migrationها؛ عدم اعمال خودکار Migration روی schema دارای جدول‌ها.
+- [ ] تأیید Build/Test/CI و تست عملی با SQL Server واقعی.
+- [ ] بازبینی امنیت استقرار و کلیدهای Data Protection روی Windows Service/IIS/Linux.

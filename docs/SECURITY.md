@@ -34,3 +34,14 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<Base64-SHA256-has
 
 ## OWASP Top 10 و DevSecOps
 هر PR باید اثر تغییر بر Access Control، Cryptographic Failures، Injection، Insecure Design، Security Misconfiguration، Vulnerable Components، Authentication Failures، Integrity Failures، Logging/Monitoring و SSRF را بررسی کند. امنیت بخشی از چرخه توسعه و CI است، نه بررسی انتهایی.
+
+
+## امنیت راه‌اندازی اولیه دیتابیس — Issue #22
+
+- صفحه تنظیمات فقط زمانی در دسترس است که Connection String از Configuration یا فایل محلی محافظت‌شده قابل بازیابی نباشد.
+- دسترسی اولیه با کد تصادفی یک‌بارمصرف کنترل می‌شود. کد در فایل `setup-token.txt` خارج از مخزن قرار می‌گیرد، در log نوشته نمی‌شود و پس از ذخیره موفق حذف می‌شود. اپراتور باید آن را فقط روی میزبان برنامه بخواند.
+- Connection String کامل، از جمله رمز SQL، با ASP.NET Core Data Protection محافظت و خارج از repository ذخیره می‌شود. در ویندوز کلیدها با DPAPI (وابسته به هویت کاربر سرویس) محافظت می‌شوند؛ در سیستم‌های Unix مجوز دسترسی فایل/پوشه به کاربر اجراکننده محدود می‌شود.
+- از مسیر محلی تنظیمات و پوشه کلیدها نسخه پشتیبان امن بگیرید؛ بدون کلید Data Protection تنظیمات رمزنگاری‌شده قابل بازیابی نیستند. دسترسی به پوشه LocalApplicationData باید فقط برای حساب سرویس/کاربر مجاز باشد.
+- در شبکه‌های غیرقابل‌اعتماد، صفحه راه‌اندازی را فقط پشت HTTPS منتشر کنید. کد یک‌بارمصرف جایگزین TLS، کنترل دسترسی میزبان یا سیاست امنیتی شبکه نیست.
+- گزینه TrustServerCertificate فقط برای سرور مورد اعتماد/گواهی خودامضا مناسب است؛ در Production گواهی معتبر ترجیح دارد.
+- خطاهای SQL فقط با شماره خطا به کاربر نمایش داده می‌شوند؛ Connection String و رمز عبور نباید در log ثبت شوند.

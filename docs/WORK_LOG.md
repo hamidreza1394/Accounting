@@ -83,3 +83,14 @@
 - **Attempted fix:** add `"test": { "runner": "Microsoft.Testing.Platform" }` to `global.json` on branch `fix/net10-test-runner-ci`.
 - **Other CI finding:** Restore reported NU1902/NU1903 vulnerability warnings for transitive `System.Security.Cryptography.Pkcs` 9.0.11. Determine the dependency path and update to a patched compatible version; do not suppress the advisory.
 - **Validation status:** awaiting CI on the follow-up PR. This change is not considered verified until Test succeeds.
+
+
+## 2026-10-17 — Issue #22 first-run database setup
+- **Issue:** https://github.com/hamidreza1394/Accounting/issues/22
+- **Branch:** `feature/issue-22-database-first-run-setup`
+- **Scope:** افزودن صفحه راه‌اندازی اولیه Razor Pages، تست اتصال SQL Server، ذخیره Connection String رمزنگاری‌شده خارج از مخزن، ساخت دیتابیس تازه و اعمال Migration اولیه، و جلوگیری از تغییر خودکار schema دیتابیس موجود.
+- **Implementation:** `DatabaseConnectionSettingsStore` از ASP.NET Core Data Protection استفاده می‌کند؛ در Windows کلیدها با DPAPI محافظت می‌شوند و در Unix مجوز فایل/پوشه محدود می‌شود. کد یک‌بارمصرف در فایل محلی خارج از مخزن نگه‌داری می‌شود و در log چاپ نمی‌شود.
+- **Safety:** اتصال‌های صریح Configuration Providers بر فایل محلی مقدم‌اند. فرم SQL Connection String را با builder استاندارد می‌سازد، ورودی نام دیتابیس را به پارامتر SQL می‌دهد و شناسه را با `QUOTENAME` می‌سازد. دیتابیس دارای جدول‌ها خودکار migrate نمی‌شود.
+- **PR:** https://github.com/hamidreza1394/Accounting/pull/23
+- **Validation:** Restore/Build/Test و اتصال به SQL Server در این محیط اجرا نشده‌اند. GitHub Actions برای PR در حال اجرا است؛ این تغییر تا سبزشدن CI و آزمون SQL Server، تأییدشده/آماده Production تلقی نمی‌شود.
+- **Known limitation:** برای دیتابیس قدیمی که با `EnsureCreated()` ساخته شده و فاقد `__EFMigrationsHistory` است، ابتدا باید schema و baseline بررسی شود؛ صفحه setup عمداً آن را خودکار تغییر نمی‌دهد.

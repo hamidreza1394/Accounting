@@ -1,0 +1,121 @@
+@page
+@model Server.Pages.DatabaseSetupModel
+@{
+    Layout = null;
+    ViewData["Title"] = "راه‌اندازی پایگاه داده تراز آوا";
+}
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"]</title>
+    <style>
+        :root { color-scheme: light; font-family: Tahoma, "Segoe UI", sans-serif; background: #f3f6fb; color: #172033; }
+        * { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+        main { width: min(760px, 100%); background: #fff; border: 1px solid #e0e7f0; border-radius: 18px; padding: clamp(22px, 4vw, 42px); box-shadow: 0 18px 55px #17203312; }
+        h1 { margin: 0 0 10px; font-size: 1.65rem; }
+        p { line-height: 1.9; color: #536176; }
+        .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+        .field { display: flex; flex-direction: column; gap: 7px; }
+        .wide { grid-column: 1 / -1; }
+        label { font-size: .92rem; font-weight: 600; }
+        input, select { width: 100%; border: 1px solid #cbd5e1; border-radius: 9px; padding: 11px 12px; font: inherit; background: #fff; }
+        input:focus, select:focus { outline: 3px solid #2563eb20; border-color: #2563eb; }
+        .check { display: flex; align-items: center; gap: 10px; font-weight: 400; margin-top: 12px; }
+        .check input { width: auto; }
+        button { margin-top: 20px; border: 0; border-radius: 9px; padding: 13px 20px; background: #1d4ed8; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+        .alert { margin: 16px 0; padding: 12px 14px; border-radius: 9px; line-height: 1.8; }
+        .error { background: #fff1f2; color: #9f1239; border: 1px solid #fecdd3; }
+        .success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+        .validation { color: #be123c; font-size: .85rem; }
+        .note { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; font-size: .9rem; overflow-wrap: anywhere; }
+        [hidden] { display: none !important; }
+        @@media (max-width: 580px) { .grid { grid-template-columns: 1fr; } .wide { grid-column: auto; } }
+    </style>
+</head>
+<body>
+<main>
+    <h1>راه‌اندازی پایگاه داده تراز آوا</h1>
+    <p>برای شروع، اطلاعات اتصال به SQL Server را وارد کنید. ابتدا اتصال آزمایش می‌شود؛ سپس تنظیمات به‌صورت رمزنگاری‌شده روی همین دستگاه ذخیره خواهد شد.</p>
+
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="alert error" role="alert">@Model.ErrorMessage</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.SuccessMessage))
+    {
+        <div class="alert success" role="status">@Model.SuccessMessage</div>
+    }
+
+    @if (!Model.SettingsAlreadySaved)
+    {
+        <div class="note">
+            کد یک‌بارمصرف راه‌اندازی در فایل زیر روی همان سروری که برنامه اجرا می‌شود قرار دارد:
+            <br /><code dir="ltr">@Model.SetupTokenFilePath</code>
+            <br />این فایل را در اختیار دیگران قرار ندهید.
+        </div>
+
+        <form method="post" autocomplete="off">
+            <div asp-validation-summary="ModelOnly" class="validation"></div>
+            <div class="grid" style="margin-top:18px">
+                <div class="field wide">
+                    <label asp-for="Input.SetupToken">کد راه‌اندازی</label>
+                    <input asp-for="Input.SetupToken" autocomplete="off" required />
+                    <span asp-validation-for="Input.SetupToken" class="validation"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Input.Server">سرور SQL Server</label>
+                    <input asp-for="Input.Server" dir="ltr" required />
+                    <span asp-validation-for="Input.Server" class="validation"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Input.Database">نام دیتابیس</label>
+                    <input asp-for="Input.Database" dir="ltr" required />
+                    <span asp-validation-for="Input.Database" class="validation"></span>
+                </div>
+                <div class="field wide">
+                    <label asp-for="Input.AuthenticationMode">روش احراز هویت</label>
+                    <select asp-for="Input.AuthenticationMode" id="authMode">
+                        <option value="Windows">احراز هویت ویندوز (Windows Authentication)</option>
+                        <option value="Sql">نام کاربری و رمز SQL Server</option>
+                    </select>
+                </div>
+                <div class="field sql-only" id="sqlUserField" hidden>
+                    <label asp-for="Input.UserName">نام کاربری SQL</label>
+                    <input asp-for="Input.UserName" autocomplete="off" dir="ltr" />
+                    <span asp-validation-for="Input.UserName" class="validation"></span>
+                </div>
+                <div class="field sql-only" id="sqlPasswordField" hidden>
+                    <label asp-for="Input.Password">رمز عبور SQL</label>
+                    <input asp-for="Input.Password" type="password" autocomplete="new-password" dir="ltr" />
+                    <span asp-validation-for="Input.Password" class="validation"></span>
+                </div>
+                <div class="field wide">
+                    <label class="check">
+                        <input asp-for="Input.CreateDatabaseIfMissing" />
+                        اگر دیتابیس وجود ندارد، آن را بساز و Migrationهای برنامه را اجرا کن
+                    </label>
+                    <label class="check">
+                        <input asp-for="Input.TrustServerCertificate" />
+                        اعتماد به گواهی سرور (فقط برای محیط‌های مورد اعتماد؛ در Production ترجیحاً خاموش باشد)
+                    </label>
+                </div>
+            </div>
+            <button type="submit">آزمایش اتصال و ذخیره تنظیمات</button>
+        </form>
+    }
+</main>
+<script>
+    (() => {
+        const mode = document.getElementById('authMode');
+        if (!mode) return;
+        const fields = document.querySelectorAll('.sql-only');
+        const refresh = () => fields.forEach(field => field.hidden = mode.value !== 'Sql');
+        mode.addEventListener('change', refresh);
+        refresh();
+    })();
+</script>
+</body>
+</html>
