@@ -2,7 +2,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.AspNetCore.DataProtection;
 
-namespace Server.Infrastructure.DatabaseSetup;
+namespace Infrastructure.DatabaseSetup;
 
 /// <summary>
 /// Stores the SQL Server connection string outside the repository. The payload is protected
