@@ -537,10 +537,20 @@ def apply_configuration_statement(
                 settings["max_length"] = int(max_length_argument)
             else:
                 settings["max_length_expression"] = max_length_argument
-        if re.search(r"\.IsRequired\(\s*(?:required\s*:\s*)?true", normalized):
-            settings["required"] = True
-        if re.search(r"\.IsRequired\(\s*(?:required\s*:\s*)?false", normalized):
-            settings["required"] = False
+        if ".IsRequired(" in normalized:
+            required_match = re.search(
+                r"\.IsRequired\(\s*(?:required\s*:\s*)?(?P<value>true|false)?\s*\)",
+                normalized,
+            )
+            if required_match is None:
+                raise ModelExtractionError(
+                    f"{file_name}: unsupported IsRequired(...) call: {normalized}"
+                )
+            # "PropertyBuilder.IsRequired(bool required = true)" defaults to 'true', so a
+            # call without an argument (".IsRequired()") makes the property required. The
+            # nullability of the column follows it, and with it the filter that the
+            # 'SqlServerIndexConvention' derives for the unique indexes of the property.
+            settings["required"] = required_match.group("value") != "false"
         unicode_match = re.search(r"\.IsUnicode\(\s*(?:unicode\s*:\s*)?(?P<value>true|false)", normalized)
         if unicode_match:
             settings["unicode"] = unicode_match.group("value") == "true"
@@ -1162,6 +1172,7 @@ def build_column(
     simple = simple_name(unwrapped)
 
     # Data annotations.
+    value_generated = None
     for attribute in attributes:
         name_of_attribute = attribute_name(attribute)
         if name_of_attribute == "Required":
@@ -1183,7 +1194,31 @@ def build_column(
                 settings = dict(settings)
                 settings.setdefault("max_length", value)
         elif name_of_attribute == "DatabaseGenerated":
-            pass
+            option_match = re.search(
+                r"DatabaseGeneratedOption\s*\.\s*(?P<option>\w+)", attribute
+            )
+            if option_match is None:
+                raise ModelExtractionError(
+                    f"The [DatabaseGenerated] attribute of the property '{name}' could "
+                    "not be read."
+                )
+            # 'DatabaseGeneratedAttributeConvention' (EF Core) maps the attribute to
+            # 'ValueGenerated' and applies it with 'ConfigurationSource.DataAnnotation',
+            # so it wins over the 'ValueGenerationConvention', which uses
+            # 'ConfigurationSource.Convention'. 'Domain.Seedwork.Entity.Id' therefore
+            # keeps 'ValueGenerated.Never' even though it is a Guid primary key, and the
+            # snapshot must not claim '.ValueGeneratedOnAdd()' for it.
+            try:
+                value_generated = {
+                    "None": "Never",
+                    "Identity": "OnAdd",
+                    "Computed": "OnAddOrUpdate",
+                }[option_match.group("option")]
+            except KeyError:
+                raise ModelExtractionError(
+                    f"The [DatabaseGenerated] option '{option_match.group('option')}' of "
+                    f"the property '{name}' is unknown."
+                ) from None
 
     max_length_expression = settings.pop("max_length_expression", None)
     if max_length_expression is not None:
@@ -1272,6 +1307,7 @@ def build_column(
         "max_length": max_length,
         "unicode": unicode,
         "provider_clr_type": provider_clr_type,
+        "value_generated": value_generated,
     }
 
 

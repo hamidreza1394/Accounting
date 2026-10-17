@@ -20,7 +20,6 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.Role", b =>
             {
                 b.Property<Guid>("Id")
-                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -54,7 +53,6 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.User", b =>
             {
                 b.Property<Guid>("Id")
-                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -172,7 +170,6 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.Page", b =>
             {
                 b.Property<Guid>("Id")
-                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -198,6 +195,7 @@ namespace Data.Migrations
                 b.Property<string>("Title")
                     .IsRequired()
                     .HasMaxLength(100)
+                    .IsUnicode(true)
                     .HasColumnType("nvarchar(100)");
 
                 b.Property<string>("Password")
@@ -208,6 +206,7 @@ namespace Data.Migrations
 
                 b.Property<string>("Description")
                     .HasMaxLength(100)
+                    .IsUnicode(true)
                     .HasColumnType("nvarchar(100)");
 
                 b.Property<bool>("IsFeatured")
@@ -221,6 +220,7 @@ namespace Data.Migrations
 
                 b.Property<string>("Introduction")
                     .HasMaxLength(4000)
+                    .IsUnicode(true)
                     .HasColumnType("nvarchar(4000)");
 
                 b.Property<bool>("IsCommentingEnabled")
@@ -228,6 +228,7 @@ namespace Data.Migrations
 
                 b.Property<string>("ImageUrl")
                     .HasMaxLength(4000)
+                    .IsUnicode(true)
                     .HasColumnType("nvarchar(4000)");
 
                 b.Property<string>("Body")
@@ -244,14 +245,17 @@ namespace Data.Migrations
 
                 b.Property<string>("Author")
                     .HasMaxLength(200)
+                    .IsUnicode(true)
                     .HasColumnType("nvarchar(200)");
 
                 b.Property<string>("Classification")
                     .HasMaxLength(1000)
+                    .IsUnicode(true)
                     .HasColumnType("nvarchar(1000)");
 
                 b.Property<string>("Copyright")
                     .HasMaxLength(1000)
+                    .IsUnicode(true)
                     .HasColumnType("nvarchar(1000)");
 
                 b.Property<int>("Hits")
@@ -280,6 +284,7 @@ namespace Data.Migrations
 
                 b.Property<string>("Category")
                     .HasMaxLength(200)
+                    .IsUnicode(true)
                     .HasColumnType("nvarchar(200)");
 
                 b.HasKey("Id");
@@ -293,7 +298,6 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.LoginLog", b =>
             {
                 b.Property<Guid>("Id")
-                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -321,7 +325,6 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.MenuItem", b =>
             {
                 b.Property<Guid>("Id")
-                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -372,7 +375,6 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.Permission", b =>
             {
                 b.Property<Guid>("Id")
-                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -401,7 +403,6 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.PageCategory", b =>
             {
                 b.Property<Guid>("Id")
-                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -435,7 +436,6 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.ApplicationHandler", b =>
             {
                 b.Property<Guid>("Id")
-                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -483,7 +483,6 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.Company", b =>
             {
                 b.Property<Guid>("Id")
-                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -519,7 +518,6 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.UserCompanyMembership", b =>
             {
                 b.Property<Guid>("Id")
-                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -556,7 +554,6 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.FiscalPeriod", b =>
             {
                 b.Property<Guid>("Id")
-                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -595,7 +592,6 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.CompanyRole", b =>
             {
                 b.Property<Guid>("Id")
-                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -637,7 +633,6 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.PermissionDefinition", b =>
             {
                 b.Property<Guid>("Id")
-                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -685,7 +680,6 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.SecurityAuditEvent", b =>
             {
                 b.Property<Guid>("Id")
-                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -747,7 +741,6 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.PostCategory", b =>
             {
                 b.Property<Guid>("Id")
-                    .ValueGeneratedOnAdd()
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<int>("Ordering")
@@ -760,7 +753,9 @@ namespace Data.Migrations
                     .HasColumnType("uniqueidentifier");
 
                 b.Property<string>("Title")
+                    .IsRequired()
                     .HasMaxLength(50)
+                    .IsUnicode(true)
                     .HasColumnType("nvarchar(50)");
 
                 b.Property<bool>("IsActive")
@@ -782,7 +777,7 @@ namespace Data.Migrations
 
                 b.HasIndex("ParentId", "Title")
                     .IsUnique()
-                    .HasFilter("[ParentId] IS NOT NULL AND [Title] IS NOT NULL");
+                    .HasFilter("[ParentId] IS NOT NULL");
 
                 b.ToTable("PostCategory");
             });

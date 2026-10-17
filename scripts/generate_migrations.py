@@ -5,13 +5,18 @@ The generator works on the model that ``scripts/ef_model.py`` extracts from the
 domain model, the entity configurations and the ``DatabaseContext``. The output
 follows the code shape of the EF Core 10 generators
 (``CSharpMigrationsGenerator``, ``CSharpSnapshotGenerator`` and
-``CSharpMigrationOperationGenerator``) so that the files can be replaced by the
-output of ``dotnet ef migrations add`` without a diff.
+``CSharpMigrationOperationGenerator``).
+
+It writes the model snapshot and the files of the newest migration. The files of the
+published ``InitialCreate`` migration are historical and are never rewritten, exactly
+like EF Core leaves an applied migration alone.
 
 Usage:
     python3 scripts/generate_migrations.py --repo-root . [--check]
 
-``--check`` only verifies that the committed files are up to date.
+``--check`` only verifies that the committed files are up to date. When it reports that
+the model snapshot is out of date, the model has changed and a new migration has to be
+added (with ``dotnet ef migrations add`` as soon as a .NET SDK is available).
 """
 
 from __future__ import annotations
@@ -23,7 +28,9 @@ from typing import Any
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import migration_model as mm  # noqa: E402
 from ef_model import ModelExtractionError, derive_model  # noqa: E402
+from migration_model import MigrationModelError, value_generated_on_add  # noqa: E402
 
 MIGRATION_ID = "20251017120000"
 MIGRATION_NAME = "InitialCreate"
@@ -32,6 +39,25 @@ MIGRATION_NAMESPACE = "Data.Migrations"
 CONTEXT_TYPE = "Data.DatabaseContext"
 SNAPSHOT_CLASS = "DatabaseContextModelSnapshot"
 MIGRATIONS_DIRECTORY = os.path.join("Infrastructure", "Persistence", "Migrations")
+
+# The migration that brings the schema of 'InitialCreate' in line with the model of the
+# code base. 'InitialCreate' itself is a published migration and stays untouched, exactly
+# as the rules of 'docs/database-migrations.md' require. Its operations are not written
+# down here: they are computed from the difference between the model of the
+# 'InitialCreate' designer file and the model of the code base, so that they can not drift
+# apart from the snapshot.
+DELTA_MIGRATION_ID = "20261017090000"
+DELTA_MIGRATION_NAME = "AlignSchemaWithModel"
+DELTA_MIGRATION_CLASS = "AlignSchemaWithModel"
+
+# The statements that have to run before the structural operations of a migration. They
+# are a human decision and are therefore written down here instead of being computed:
+# 'PostCategory.Title' becomes NOT NULL, and SQL Server refuses the 'ALTER COLUMN' while
+# a row still holds a NULL. 'PostCategory' is legacy template code that the application
+# does not write to, so an empty title is the only sensible replacement.
+DELTA_MIGRATION_PRELUDE = [
+    "UPDATE [PostCategory] SET [Title] = N'' WHERE [Title] IS NULL;",
+]
 
 # The version of the Entity Framework Core packages of the solution. It is written into the
 # "ProductVersion" annotation of the model snapshot, exactly like the EF Core tools do.
@@ -94,27 +120,6 @@ def clr_type_name(clr_type: str) -> str:
         "System.Double": "double",
         "System.Decimal": "decimal",
     }.get(clr_type, clr_type.split(".")[-1])
-
-
-def value_generated_on_add(entity: dict[str, Any], column: dict[str, Any]) -> bool:
-    """Reports whether the value of the column is generated when the row is added.
-
-    EF Core applies the 'ValueGenerationConvention': a key of a single property that is a
-    'Guid' or an integer (but not a 'byte') and that is not a foreign key property gets
-    'ValueGenerated.OnAdd'. The snapshot has to keep that flag, otherwise the model of the
-    snapshot differs from the model of the code base.
-    """
-    primary_key = entity.get("primary_key") or []
-    if len(primary_key) != 1 or primary_key[0] != column["name"]:
-        return False
-
-    for foreign_key in entity.get("foreign_keys", []):
-        if column["name"] in foreign_key["columns"]:
-            return False
-
-    clr_type = column.get("clr_type") or column.get("provider_clr_type") or ""
-    clr_type = clr_type.split(".")[-1]
-    return clr_type == "Guid" or clr_type in {"int", "Int32", "long", "Int64", "short", "Int16"}
 
 
 def table_order(entities: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -269,7 +274,13 @@ def generate_create_index(entity: dict[str, Any], index: dict[str, Any], lines: 
 
 
 def generate_migration(entities: list[dict[str, Any]]) -> str:
-    """Renders the migration file with its 'Up' and 'Down' operations."""
+    """Renders the migration file with its 'Up' and 'Down' operations.
+
+    Historical: this is the generator that produced the published
+    ``20251017120000_InitialCreate`` migration. It is kept so that the published file
+    stays reviewable against the model it was generated from; ``build_files`` no longer
+    calls it, because a published migration is never rewritten.
+    """
     ordered = table_order(entities)
 
     lines: list[str] = []
@@ -348,8 +359,14 @@ def generate_model(entity_types: list[dict[str, Any]], indent: str) -> list[str]
                 lines.append(f"{indent}{INDENT * 2}.ValueGeneratedOnAdd()")
             if column["max_length"] is not None:
                 lines.append(f"{indent}{INDENT * 2}.HasMaxLength({column['max_length']})")
-            if column["unicode"] is False:
-                lines.append(f"{indent}{INDENT * 2}.IsUnicode(false)")
+            if column["unicode"] is not None:
+                # 'CSharpSnapshotGenerator.GenerateFluentApiForIsUnicode' writes the
+                # annotation whenever it is present, so '.IsUnicode(true)' belongs into the
+                # snapshot as well. Without it the snapshot model reports 'IsUnicode == null'
+                # while the model of the code base reports 'true'.
+                lines.append(
+                    f"{indent}{INDENT * 2}.IsUnicode({'true' if column['unicode'] else 'false'})"
+                )
             column_type = column["snapshot_column_type"] or column["store_type"]
             lines.append(f"{indent}{INDENT * 2}.HasColumnType({literal(column_type)})")
             lines[-1] = lines[-1] + ";"
@@ -527,8 +544,96 @@ def generate_designer(entity_types: list[dict[str, Any]]) -> str:
 # --------------------------------------------------------------------------------------
 
 
+def generate_delta_migration(operations: list[dict[str, Any]]) -> str:
+    """Renders the migration that applies the difference of the two models."""
+    lines: list[str] = []
+    lines.append("using System;")
+    lines.append("using Microsoft.EntityFrameworkCore.Migrations;")
+    lines.append("")
+    lines.append("#nullable disable")
+    lines.append("")
+    lines.append(f"namespace {MIGRATION_NAMESPACE}")
+    lines.append("{")
+    lines.append(f"{INDENT}/// <inheritdoc />")
+    lines.append(f"{INDENT}public partial class {DELTA_MIGRATION_CLASS} : Migration")
+    lines.append(f"{INDENT}{{")
+    lines.append(f"{INDENT * 2}/// <inheritdoc />")
+    lines.append(f"{INDENT * 2}protected override void Up(MigrationBuilder migrationBuilder)")
+    lines.append(f"{INDENT * 2}{{")
+    for statement in DELTA_MIGRATION_PRELUDE:
+        lines.append(f"{INDENT * 3}migrationBuilder.Sql({literal(statement)});")
+        lines.append("")
+    lines.extend(mm.render_up(operations, INDENT * 3))
+    lines.append(f"{INDENT * 2}}}")
+    lines.append("")
+    lines.append(f"{INDENT * 2}/// <inheritdoc />")
+    lines.append(f"{INDENT * 2}protected override void Down(MigrationBuilder migrationBuilder)")
+    lines.append(f"{INDENT * 2}{{")
+    lines.extend(mm.render_up(mm.reverse_operations(operations), INDENT * 3))
+    lines.append(f"{INDENT * 2}}}")
+    lines.append(f"{INDENT}}}")
+    lines.append("}")
+    return "\n".join(lines) + "\n"
+
+
+def generate_delta_designer(entity_types: list[dict[str, Any]]) -> str:
+    """Renders the designer file of the migration that applies the difference."""
+    lines: list[str] = []
+    lines.append("// <auto-generated />")
+    lines.append("using System;")
+    lines.append("using Data;")
+    lines.append("using Microsoft.EntityFrameworkCore;")
+    lines.append("using Microsoft.EntityFrameworkCore.Infrastructure;")
+    lines.append("using Microsoft.EntityFrameworkCore.Migrations;")
+    lines.append("using Microsoft.EntityFrameworkCore.Storage.ValueConversion;")
+    lines.append("")
+    lines.append("#nullable disable")
+    lines.append("")
+    lines.append(f"namespace {MIGRATION_NAMESPACE}")
+    lines.append("{")
+    lines.append(f"{INDENT}[DbContext(typeof({CONTEXT_TYPE}))]")
+    lines.append(
+        f"{INDENT}[Migration({literal(DELTA_MIGRATION_ID + '_' + DELTA_MIGRATION_NAME)})]"
+    )
+    lines.append(f"{INDENT}partial class {DELTA_MIGRATION_CLASS}")
+    lines.append(f"{INDENT}{{")
+    lines.append(f"{INDENT * 2}/// <inheritdoc />")
+    lines.append(f"{INDENT * 2}protected override void BuildTargetModel(ModelBuilder modelBuilder)")
+    lines.append(f"{INDENT * 2}{{")
+    lines.append(f"{INDENT * 3}#pragma warning disable 612, 618")
+    lines.extend(generate_model(entity_types, INDENT * 3))
+    lines.append(f"{INDENT * 3}#pragma warning restore 612, 618")
+    lines.append(f"{INDENT * 2}}}")
+    lines.append(f"{INDENT}}}")
+    lines.append("}")
+    return "\n".join(lines) + "\n"
+
+
+def compute_delta_operations(repository_root: str) -> list[dict[str, Any]]:
+    """Computes the operations of the delta migration.
+
+    The 'InitialCreate' migration is a published migration: it describes the schema as it
+    was when it was written and it is never regenerated. The difference is therefore
+    computed between the model of its designer file and the model of the code base, which
+    is exactly the comparison that 'dotnet ef migrations has-pending-model-changes' makes
+    between the model snapshot and the model.
+    """
+    model = derive_model(repository_root)
+    current = mm.normalize_derived_model(model)
+    designer_path = os.path.join(
+        repository_root, MIGRATIONS_DIRECTORY, f"{MIGRATION_ID}_{MIGRATION_NAME}.Designer.cs"
+    )
+    published = mm.parse_generated_model(mm.read_text(designer_path))
+    return mm.compute_operations(published, current)
+
+
 def build_files(repository_root: str) -> dict[str, str]:
-    """Builds the content of every generated file."""
+    """Builds the content of every generated file.
+
+    The files of the published 'InitialCreate' migration are *not* part of the result.
+    They are historical: like EF Core, this generator only writes the model snapshot and
+    the files of the newest migration.
+    """
     model = derive_model(repository_root)
     entities = model["entities"]
 
@@ -542,8 +647,12 @@ def build_files(repository_root: str) -> dict[str, str]:
     )
 
     return {
-        f"{MIGRATION_ID}_{MIGRATION_NAME}.cs": generate_migration(entity_types),
-        f"{MIGRATION_ID}_{MIGRATION_NAME}.Designer.cs": generate_designer(entity_types),
+        f"{DELTA_MIGRATION_ID}_{DELTA_MIGRATION_NAME}.cs": generate_delta_migration(
+            compute_delta_operations(repository_root)
+        ),
+        f"{DELTA_MIGRATION_ID}_{DELTA_MIGRATION_NAME}.Designer.cs": generate_delta_designer(
+            entity_types
+        ),
         f"{SNAPSHOT_CLASS}.cs": generate_snapshot(entity_types),
     }
 
@@ -590,6 +699,6 @@ def main(argv: list[str]) -> int:
 if __name__ == "__main__":
     try:
         sys.exit(main(sys.argv[1:]))
-    except (ModelExtractionError, GenerationError) as error:
+    except (ModelExtractionError, GenerationError, MigrationModelError) as error:
         print(f"error: {error}", file=sys.stderr)
         sys.exit(2)
