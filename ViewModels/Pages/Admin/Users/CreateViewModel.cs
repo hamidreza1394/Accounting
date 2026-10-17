@@ -1,4 +1,4 @@
-﻿namespace ViewModels.Pages.Admin.Users;
+namespace ViewModels.Pages.Admin.Users;
 
 public class CreateViewModel : CommonViewModel
 {
@@ -21,15 +21,19 @@ public class CreateViewModel : CommonViewModel
 		ErrorMessageResourceType = typeof(Resources.Messages.Validations),
 		ErrorMessageResourceName = nameof(Resources.Messages.Validations.Required))]
 
-	[System.ComponentModel.DataAnnotations.MaxLength
-		(length: Constants.MaxLength.Password,
-		ErrorMessageResourceType = typeof(Resources.Messages.Validations),
-		ErrorMessageResourceName = nameof(Resources.Messages.Validations.MaxLength))]
+		[System.ComponentModel.DataAnnotations.MinLength
+			(length: Constants.MinLength.UserPassword,
+			ErrorMessageResourceType = typeof(Resources.Messages.Validations),
+			ErrorMessageResourceName = nameof(Resources.Messages.Validations.MinLength))]
 
-	[System.ComponentModel.DataAnnotations.RegularExpression
-		(pattern: Constants.RegularExpression.Password,
-		ErrorMessageResourceType = typeof(Resources.Messages.Validations),
-		ErrorMessageResourceName = nameof(Resources.Messages.Validations.Password))]
+		[System.ComponentModel.DataAnnotations.MaxLength
+			(length: Constants.MaxLength.UserPassword,
+			ErrorMessageResourceType = typeof(Resources.Messages.Validations),
+			ErrorMessageResourceName = nameof(Resources.Messages.Validations.MaxLength))]
+
+		[ViewModels.Validation.NotCommonPassword
+			(ErrorMessageResourceType = typeof(Resources.Messages.Validations),
+			ErrorMessageResourceName = nameof(Resources.Messages.Validations.CommonPassword))]
 
 	//[System.ComponentModel.DataAnnotations.DataType
 	//	(dataType: System.ComponentModel.DataAnnotations.DataType.Password)]

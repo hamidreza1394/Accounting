@@ -154,7 +154,7 @@
     <value>خانه</value>
   </data>
   <data name="Login" xml:space="preserve">
-    <value>ورود</value>
+    <value>ورود به سامانه</value>
   </data>
   <data name="LoginWithGoogle" xml:space="preserve">
     <value>ورود از طریق گوگل</value>

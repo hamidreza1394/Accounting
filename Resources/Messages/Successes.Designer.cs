@@ -61,6 +61,15 @@ namespace Resources.Messages {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to You have signed in successfully..
+        /// </summary>
+        public static string LoginSucceeded {
+            get {
+                return ResourceManager.GetString("LoginSucceeded", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to The {0} successfully created..
         /// </summary>
         public static string Created {

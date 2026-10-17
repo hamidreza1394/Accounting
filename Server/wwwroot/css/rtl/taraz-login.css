@@ -1,1 +1,630 @@
-@font-face{font-family:IRANSansX;src:url('/fonts/woff2/IRANSansX-regular.woff2') format('woff2');font-weight:400;font-display:swap}@font-face{font-family:IRANSansX;src:url('/fonts/woff2/IRANSansX-demibold.woff2') format('woff2');font-weight:600;font-display:swap}:root{--navy:#071b35;--blue:#174c83;--cyan:#35d5e8;--teal:#17b8c5;--orange:#f2a65a}.taraz-login-page{margin:0;min-width:320px;background:#041225}.taraz-login-page .taraz-login{width:100%;min-height:100vh;min-height:100dvh;overflow:hidden;position:relative;color:#f5fbff;background:radial-gradient(circle at 20% 10%,#123d62 0,#071b35 43%,#041225 100%);font-family:IRANSansX,Arial,sans-serif}.taraz-login__ambient,.taraz-login__grid{position:absolute;inset:0;pointer-events:none}.taraz-login__ambient{background:radial-gradient(circle at 26% 60%,rgba(23,184,197,.18),transparent 28%),radial-gradient(circle at 82% 22%,rgba(53,213,232,.12),transparent 25%)}.taraz-login__grid{opacity:.15;background-image:linear-gradient(30deg,transparent 48%,#35d5e8 49%,transparent 50%),linear-gradient(150deg,transparent 48%,#174c83 49%,transparent 50%);background-size:90px 90px}.taraz-login__shell{position:relative;z-index:1;display:grid;grid-template-columns:1.18fr .82fr;gap:5vw;width:100%;min-height:100vh;min-height:100dvh;box-sizing:border-box;margin:0;padding:clamp(28px,6vw,90px)}.taraz-login__visual{display:flex;flex-direction:column;justify-content:center;min-width:0;padding:2rem}.taraz-brand{display:flex;align-items:center;gap:14px}.taraz-brand img{flex:none;object-fit:contain}.taraz-brand strong{display:block;font-size:1.45rem;font-weight:600;letter-spacing:-.04em}.taraz-brand span{display:block;color:#a5c0d4;font-size:.75rem;margin-top:4px}.taraz-visual-copy{max-width:580px;margin:clamp(45px,9vh,100px) 0 35px}.taraz-eyebrow{color:var(--cyan);font-size:.78rem;font-weight:600;letter-spacing:.03em;margin:0 0 12px}.taraz-visual-copy h1{font-size:clamp(2.2rem,5vw,4.5rem);line-height:1.3;letter-spacing:-.07em;margin:0}.taraz-visual-copy h1 span{color:var(--cyan)}.taraz-visual-copy>p:last-child{color:#a9bfd1;line-height:2;margin-top:20px}.taraz-dashboard{width:min(100%,650px);box-sizing:border-box;padding:22px;border:1px solid rgba(53,213,232,.3);border-radius:24px;background:linear-gradient(145deg,rgba(22,76,131,.68),rgba(4,23,46,.65));box-shadow:0 25px 80px rgba(0,0,0,.35),inset 0 1px rgba(255,255,255,.1);transform:rotate(-3deg)}.taraz-dashboard__top,.taraz-dashboard__stats{display:flex;justify-content:space-between;align-items:center}.taraz-dashboard__top{color:#d9f7ff;font-size:.85rem}.taraz-dashboard__top b{color:var(--orange);font-size:.8rem}.taraz-dashboard__chart{height:180px;margin:18px 0 10px;border-bottom:1px solid rgba(144,205,224,.2);background:repeating-linear-gradient(0deg,transparent 0 44px,rgba(144,205,224,.12) 45px)}.taraz-dashboard__chart svg{width:100%;height:100%}.taraz-chart-fill{fill:url(#taraz-fill)}.taraz-chart-line{fill:none;stroke:var(--cyan);stroke-width:5;stroke-linecap:round}.taraz-dashboard__stats{gap:12px}.taraz-dashboard__stats span{display:grid;gap:6px;color:#a4c3d5;font-size:.7rem}.taraz-dashboard__stats b{color:#f1fcff;font-size:1rem}.taraz-login__panel{display:flex;align-items:center;justify-content:center;flex-direction:column;min-width:0}.taraz-panel-card{width:min(100%,460px);box-sizing:border-box;padding:clamp(25px,4vw,44px);border:1px solid rgba(154,216,231,.28);border-radius:26px;background:rgba(6,28,54,.78);box-shadow:0 30px 90px rgba(0,0,0,.35),inset 0 1px rgba(255,255,255,.08);backdrop-filter:blur(18px)}.taraz-brand--form{margin-bottom:42px}.taraz-form-heading h2{font-size:1.8rem;margin:0 0 8px}.taraz-form-heading>p:last-child{color:#9bb5c8;font-size:.82rem;margin:0 0 30px}.taraz-field{margin-bottom:21px}.taraz-field label{display:block;color:#c8e3ed;font-size:.82rem;margin-bottom:9px}.taraz-input-wrap{position:relative;display:flex;align-items:center}.taraz-input-wrap input{width:100%;height:55px;padding:0 44px 0 82px;box-sizing:border-box;color:#f6fdff;border:1px solid rgba(131,198,216,.3);border-radius:12px;background:rgba(2,17,35,.62);font:inherit;font-size:.82rem;outline:none;transition:.2s}.taraz-input-wrap input:focus{border-color:var(--cyan);box-shadow:0 0 0 4px rgba(53,213,232,.12)}.taraz-input-wrap input::placeholder{color:#7795aa}.taraz-input-icon{position:absolute;right:16px;color:var(--cyan);z-index:1;font-size:1rem}.taraz-password-toggle{position:absolute;left:12px;z-index:1;color:#83b6c8;background:none;border:0;font:inherit;font-size:.7rem;cursor:pointer}.taraz-password-toggle:focus-visible{outline:2px solid var(--cyan);outline-offset:3px;border-radius:4px}.taraz-field-error,.taraz-validation{display:block;color:#ffb6a6;font-size:.72rem;margin-top:7px}.taraz-validation:empty{display:none}.taraz-remember{display:flex;align-items:center;gap:9px;color:#a9c1d0;font-size:.76rem;cursor:pointer;margin:3px 0 25px}.taraz-remember input{position:absolute;opacity:0}.taraz-check{width:17px;height:17px;border:1px solid #5b8da0;border-radius:5px}.taraz-remember input:checked+.taraz-check{background:var(--teal);border-color:var(--teal);box-shadow:inset 0 0 0 4px #092039}.taraz-remember input:focus-visible+.taraz-check{outline:2px solid var(--cyan);outline-offset:3px}.taraz-submit{position:relative;width:100%;height:55px;border:0;border-radius:12px;color:#042038;background:linear-gradient(100deg,#17b8c5,#35d5e8);font:600 .88rem IRANSansX;cursor:pointer;box-shadow:0 12px 28px rgba(23,184,197,.18);transition:transform .2s,filter .2s}.taraz-submit:hover{filter:brightness(1.08);transform:translateY(-2px)}.taraz-submit:disabled{opacity:.65;cursor:wait;transform:none}.taraz-submit-arrow{position:absolute;left:18px;font-size:1.3rem}.taraz-security-note{color:#7897aa;font-size:.68rem;text-align:center;margin:26px 0 0}.taraz-security-note span{color:var(--teal);margin-left:5px}.taraz-copyright{color:#638298;font-size:.68rem;margin-top:28px}.taraz-login[dir=ltr] .taraz-input-icon{right:auto;left:16px}.taraz-login[dir=ltr] .taraz-input-wrap input{padding:0 82px 0 44px}.taraz-login[dir=ltr] .taraz-password-toggle{left:auto;right:12px}.taraz-login[dir=ltr] .taraz-submit-arrow{left:auto;right:18px}@media(max-width:900px){.taraz-login__shell{grid-template-columns:1fr;padding:28px 20px}.taraz-login__visual{padding:0}.taraz-visual-copy{margin:45px 0 25px}.taraz-visual-copy h1{font-size:2.4rem}.taraz-dashboard{transform:none}.taraz-login__panel{padding:10px 0 20px}}@media(max-width:520px){.taraz-login__visual{display:none}.taraz-login__shell{min-height:100svh;padding:20px 16px}.taraz-panel-card{width:100%;padding:28px 20px}}@media(prefers-reduced-motion:reduce){.taraz-submit{transition:none}.taraz-submit:hover{transform:none}}
+/* Faranou sign-in page - isolated stylesheet (loaded only by Pages/Account/Login). */
+
+/* ---------- Fonts: IRANSansX (files present in wwwroot/fonts, real weights only) ---------- */
+@font-face {
+	font-family: IRANSansX;
+	src: url('/fonts/woff2/IRANSansX-Regular.woff2') format('woff2'),
+		url('/fonts/woff/IRANSansX-Regular.woff') format('woff');
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: IRANSansX;
+	src: url('/fonts/woff2/IRANSansX-Medium.woff2') format('woff2'),
+		url('/fonts/woff/IRANSansX-Medium.woff') format('woff');
+	font-weight: 500;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: IRANSansX;
+	src: url('/fonts/woff2/IRANSansX-DemiBold.woff2') format('woff2'),
+		url('/fonts/woff/IRANSansX-DemiBold.woff') format('woff');
+	font-weight: 600;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: IRANSansX;
+	src: url('/fonts/woff2/IRANSansX-Bold.woff2') format('woff2'),
+		url('/fonts/woff/IRANSansX-Bold.woff') format('woff');
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
+}
+
+/* ---------- Design tokens (from the Faranou identity: navy, gold, teal) ---------- */
+:root {
+	--fn-navy: #1c3d5a;
+	--fn-navy-deep: #142f47;
+	--fn-gold: #d9a24b;
+	--fn-gold-deep: #b8842e;
+	--fn-teal: #2f8d93;
+	--fn-ink: #22384b;
+	--fn-muted: #64798b;
+	--fn-bg: #f6f3ee;
+	--fn-bg-cool: #eef2f5;
+	--fn-card: #ffffff;
+	--fn-border: #dfe6ec;
+	--fn-field-bg: #fbfcfd;
+	--fn-error: #b3372f;
+	--fn-error-bg: #fbeceb;
+	--fn-warning: #8a6116;
+	--fn-warning-bg: #fdf4e3;
+	--fn-success: #256b4f;
+	--fn-success-bg: #e9f4ee;
+	--fn-shadow-card: 0 24px 60px rgba(28, 61, 90, 0.10), 0 2px 10px rgba(28, 61, 90, 0.06);
+	--fn-radius-card: 22px;
+	--fn-radius-field: 12px;
+}
+
+/* ---------- Page shell ---------- */
+.taraz-login-page {
+	margin: 0;
+	min-width: 320px;
+	background: var(--fn-bg);
+}
+
+.taraz-login-page .taraz-login {
+	width: 100%;
+	min-height: 100vh;
+	min-height: 100dvh;
+	box-sizing: border-box;
+	color: var(--fn-ink);
+	background:
+		radial-gradient(circle at 88% 12%, rgba(217, 162, 75, 0.10), transparent 42%),
+		radial-gradient(circle at 8% 88%, rgba(47, 141, 147, 0.10), transparent 42%),
+		linear-gradient(135deg, var(--fn-bg) 0%, var(--fn-bg-cool) 100%);
+	font-family: IRANSansX, Tahoma, Arial, sans-serif;
+}
+
+.taraz-login *,
+.taraz-login *::before,
+.taraz-login *::after {
+	box-sizing: border-box;
+}
+
+/* Two balanced desktop panels. The form panel is placed on the physical right and
+   the introduction panel on the physical left, in both RTL and LTR. */
+.taraz-login__shell {
+	display: grid;
+	grid-template-columns: minmax(380px, 0.92fr) minmax(0, 1.08fr);
+	width: 100%;
+	min-height: 100vh;
+	min-height: 100dvh;
+	margin: 0;
+	padding: clamp(24px, 4.5vw, 64px);
+	gap: clamp(28px, 4vw, 64px);
+	align-items: center;
+}
+
+.taraz-login[dir="rtl"] .taraz-login__shell {
+	grid-template-columns: minmax(380px, 0.92fr) minmax(0, 1.08fr);
+}
+
+.taraz-login[dir="ltr"] .taraz-login__shell {
+	grid-template-columns: minmax(0, 1.08fr) minmax(380px, 0.92fr);
+}
+
+.taraz-login[dir="rtl"] .taraz-login__panel {
+	grid-column: 1;
+}
+
+.taraz-login[dir="rtl"] .taraz-login__visual {
+	grid-column: 2;
+}
+
+.taraz-login[dir="ltr"] .taraz-login__panel {
+	grid-column: 2;
+}
+
+.taraz-login[dir="ltr"] .taraz-login__visual {
+	grid-column: 1;
+}
+
+/* ---------- Form panel (right) ---------- */
+.taraz-login__panel {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-width: 0;
+}
+
+.taraz-panel-card {
+	width: min(100%, 460px);
+	padding: clamp(28px, 3.4vw, 44px);
+	border: 1px solid rgba(28, 61, 90, 0.08);
+	border-radius: var(--fn-radius-card);
+	background: var(--fn-card);
+	box-shadow: var(--fn-shadow-card);
+}
+
+.taraz-brand {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+}
+
+.taraz-brand img {
+	flex: none;
+	object-fit: contain;
+}
+
+.taraz-brand strong {
+	display: block;
+	color: var(--fn-navy);
+	font-size: 1.5rem;
+	font-weight: 700;
+	letter-spacing: -0.02em;
+	line-height: 1.2;
+}
+
+.taraz-brand span {
+	display: block;
+	margin-top: 4px;
+	color: var(--fn-muted);
+	font-size: 0.72rem;
+	letter-spacing: 0.02em;
+}
+
+.taraz-brand--form {
+	margin-bottom: 30px;
+}
+
+.taraz-eyebrow {
+	margin: 0 0 10px;
+	color: var(--fn-teal);
+	font-size: 0.78rem;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+}
+
+.taraz-form-heading h1 {
+	margin: 0 0 8px;
+	color: var(--fn-navy-deep);
+	font-size: 1.65rem;
+	font-weight: 700;
+	letter-spacing: -0.02em;
+	line-height: 1.4;
+}
+
+.taraz-form-heading > p:last-child {
+	margin: 0 0 26px;
+	color: var(--fn-muted);
+	font-size: 0.84rem;
+	line-height: 1.9;
+}
+
+/* ---------- Fields ---------- */
+.taraz-field {
+	margin-bottom: 18px;
+}
+
+.taraz-field label {
+	display: block;
+	margin-bottom: 8px;
+	color: var(--fn-navy);
+	font-size: 0.84rem;
+	font-weight: 600;
+}
+
+.taraz-input-wrap {
+	position: relative;
+	display: flex;
+	align-items: center;
+}
+
+.taraz-input-wrap input {
+	width: 100%;
+	height: 54px;
+	padding-inline-start: 48px;
+	padding-inline-end: 92px;
+	color: var(--fn-ink);
+	border: 1px solid var(--fn-border);
+	border-radius: var(--fn-radius-field);
+	background: var(--fn-field-bg);
+	font: inherit;
+	font-size: 0.88rem;
+	outline: none;
+	transition: border-color 0.18s, box-shadow 0.18s;
+}
+
+.taraz-input-wrap input:focus {
+	border-color: var(--fn-teal);
+	box-shadow: 0 0 0 4px rgba(47, 141, 147, 0.16);
+}
+
+.taraz-input-wrap input::placeholder {
+	color: #97a6b4;
+}
+
+.taraz-input-icon {
+	position: absolute;
+	inset-inline-start: 16px;
+	display: inline-flex;
+	color: var(--fn-teal);
+	pointer-events: none;
+}
+
+.taraz-password-toggle {
+	position: absolute;
+	inset-inline-end: 10px;
+	padding: 6px 10px;
+	color: var(--fn-teal);
+	border: 0;
+	border-radius: 8px;
+	background: transparent;
+	font: inherit;
+	font-size: 0.74rem;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.taraz-password-toggle:hover {
+	background: rgba(47, 141, 147, 0.10);
+}
+
+.taraz-password-toggle:focus-visible {
+	outline: 2px solid var(--fn-teal);
+	outline-offset: 2px;
+}
+
+/* ---------- Validation and status messages ---------- */
+.taraz-field-error {
+	display: block;
+	min-height: 0;
+	margin-top: 6px;
+	color: var(--fn-error);
+	font-size: 0.74rem;
+	line-height: 1.8;
+}
+
+.taraz-field-error:empty {
+	display: none;
+}
+
+.taraz-validation,
+.taraz-form-status:not(:empty) {
+	margin-bottom: 16px;
+}
+
+.taraz-validation:empty,
+.taraz-form-status:empty {
+	display: none;
+}
+
+.taraz-validation {
+	color: var(--fn-error);
+	font-size: 0.78rem;
+	line-height: 1.9;
+}
+
+.taraz-validation ul {
+	padding-inline-start: 1.2em;
+	margin: 0;
+}
+
+.taraz-validation--summary:not(:empty) {
+	padding: 12px 16px;
+	border: 1px solid rgba(179, 55, 47, 0.25);
+	border-radius: 10px;
+	background: var(--fn-error-bg);
+}
+
+.taraz-message {
+	padding: 12px 16px;
+	border-radius: 10px;
+	font-size: 0.8rem;
+	line-height: 1.9;
+}
+
+.taraz-message ul {
+	margin: 0;
+	padding-inline-start: 1.2em;
+}
+
+.taraz-message + .taraz-message {
+	margin-top: 8px;
+}
+
+.taraz-message--error {
+	color: var(--fn-error);
+	border: 1px solid rgba(179, 55, 47, 0.25);
+	background: var(--fn-error-bg);
+}
+
+.taraz-message--warning {
+	color: var(--fn-warning);
+	border: 1px solid rgba(138, 97, 22, 0.25);
+	background: var(--fn-warning-bg);
+}
+
+.taraz-message--success {
+	color: var(--fn-success);
+	border: 1px solid rgba(37, 107, 79, 0.25);
+	background: var(--fn-success-bg);
+}
+
+/* ---------- Remember me ---------- */
+.taraz-remember {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	margin: 4px 0 22px;
+	color: var(--fn-muted);
+	font-size: 0.8rem;
+	cursor: pointer;
+}
+
+.taraz-remember input {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+}
+
+.taraz-check {
+	width: 18px;
+	height: 18px;
+	border: 1.5px solid #9db0bf;
+	border-radius: 5px;
+	background: var(--fn-card);
+	transition: background 0.15s, border-color 0.15s;
+}
+
+.taraz-remember input:checked + .taraz-check {
+	border-color: var(--fn-teal);
+	background: var(--fn-teal);
+	box-shadow: inset 0 0 0 3px var(--fn-card);
+}
+
+.taraz-remember input:focus-visible + .taraz-check {
+	outline: 2px solid var(--fn-teal);
+	outline-offset: 2px;
+}
+
+/* ---------- Submit ---------- */
+.taraz-submit {
+	position: relative;
+	width: 100%;
+	height: 54px;
+	color: #ffffff;
+	border: 0;
+	border-radius: var(--fn-radius-field);
+	background: linear-gradient(135deg, var(--fn-navy) 0%, var(--fn-navy-deep) 55%, #275378 100%);
+	font: 600 0.95rem IRANSansX, Tahoma, Arial, sans-serif;
+	cursor: pointer;
+	box-shadow: 0 12px 26px rgba(28, 61, 90, 0.22);
+	transition: transform 0.18s, box-shadow 0.18s, filter 0.18s;
+}
+
+.taraz-submit:hover {
+	filter: brightness(1.08);
+	transform: translateY(-1px);
+	box-shadow: 0 16px 30px rgba(28, 61, 90, 0.26);
+}
+
+.taraz-submit:focus-visible {
+	outline: 2px solid var(--fn-gold);
+	outline-offset: 3px;
+}
+
+.taraz-submit:disabled {
+	opacity: 0.7;
+	cursor: wait;
+	transform: none;
+}
+
+.taraz-submit-arrow {
+	position: absolute;
+	inset-inline-start: 20px;
+	font-size: 1.25rem;
+	line-height: 1;
+}
+
+/* ---------- Notes ---------- */
+.taraz-support-note {
+	margin: 22px 0 0;
+	color: var(--fn-muted);
+	font-size: 0.76rem;
+	line-height: 2;
+}
+
+.taraz-security-note {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 7px;
+	margin: 14px 0 0;
+	color: var(--fn-muted);
+	font-size: 0.72rem;
+}
+
+.taraz-security-note span {
+	display: inline-flex;
+	color: var(--fn-teal);
+}
+
+.taraz-copyright {
+	margin: 22px 0 0;
+	color: var(--fn-muted);
+	font-size: 0.72rem;
+}
+
+/* ---------- Introduction panel (left) ---------- */
+.taraz-login__visual {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	min-width: 0;
+	padding: clamp(8px, 2vw, 28px);
+}
+
+.taraz-visual-brand {
+	margin-bottom: clamp(24px, 4vh, 44px);
+}
+
+.taraz-visual-brand img {
+	display: block;
+	width: min(340px, 82%);
+	height: auto;
+	border-radius: 16px;
+	box-shadow: 0 18px 44px rgba(28, 61, 90, 0.12);
+}
+
+.taraz-visual-copy {
+	max-width: 560px;
+}
+
+.taraz-visual-title {
+	margin: 0 0 26px;
+	color: var(--fn-navy-deep);
+	font-size: clamp(1.7rem, 2.9vw, 2.5rem);
+	font-weight: 700;
+	letter-spacing: -0.02em;
+	line-height: 1.55;
+}
+
+.taraz-features {
+	display: grid;
+	gap: 14px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.taraz-features li {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 14px 18px;
+	border: 1px solid rgba(28, 61, 90, 0.08);
+	border-radius: 14px;
+	background: rgba(255, 255, 255, 0.72);
+	color: var(--fn-ink);
+	font-size: 0.98rem;
+	font-weight: 500;
+	line-height: 1.8;
+	box-shadow: 0 8px 22px rgba(28, 61, 90, 0.05);
+}
+
+.taraz-feature-icon {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 38px;
+	height: 38px;
+	color: var(--fn-gold-deep);
+	border-radius: 10px;
+	background: rgba(217, 162, 75, 0.14);
+}
+
+.taraz-features li:first-child .taraz-feature-icon {
+	color: var(--fn-teal);
+	background: rgba(47, 141, 147, 0.12);
+}
+
+.taraz-visual-chart {
+	width: min(100%, 560px);
+	margin-top: clamp(24px, 4vh, 42px);
+	padding: 18px 18px 6px;
+	border: 1px solid rgba(28, 61, 90, 0.08);
+	border-radius: 18px;
+	background: var(--fn-card);
+	box-shadow: 0 18px 44px rgba(28, 61, 90, 0.08);
+}
+
+.taraz-visual-chart svg {
+	display: block;
+	width: 100%;
+	height: auto;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 960px) {
+	.taraz-login__shell,
+	.taraz-login[dir="rtl"] .taraz-login__shell,
+	.taraz-login[dir="ltr"] .taraz-login__shell {
+		grid-template-columns: 1fr;
+		gap: 34px;
+		padding: 28px 18px 36px;
+	}
+
+	.taraz-login[dir="rtl"] .taraz-login__panel,
+	.taraz-login[dir="rtl"] .taraz-login__visual,
+	.taraz-login[dir="ltr"] .taraz-login__panel,
+	.taraz-login[dir="ltr"] .taraz-login__visual {
+		grid-column: 1 / -1;
+	}
+
+	.taraz-login__panel {
+		order: 1;
+	}
+
+	.taraz-login__visual {
+		order: 2;
+		padding: 0;
+	}
+
+	.taraz-panel-card {
+		width: min(100%, 520px);
+	}
+
+	.taraz-visual-brand img {
+		width: min(300px, 70%);
+	}
+
+	.taraz-visual-title {
+		font-size: clamp(1.45rem, 4.6vw, 1.9rem);
+	}
+}
+
+@media (max-width: 520px) {
+	.taraz-login__shell {
+		padding: 18px 14px 28px;
+	}
+
+	.taraz-panel-card {
+		padding: 26px 20px;
+	}
+
+	.taraz-input-wrap input {
+		height: 50px;
+		padding-inline-end: 86px;
+	}
+
+	.taraz-submit {
+		height: 50px;
+	}
+
+	.taraz-visual-chart {
+		display: none;
+	}
+
+	.taraz-visual-brand {
+		margin-bottom: 18px;
+	}
+
+	.taraz-features li {
+		font-size: 0.9rem;
+		padding: 12px 14px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.taraz-submit,
+	.taraz-input-wrap input,
+	.taraz-check {
+		transition: none;
+	}
+
+	.taraz-submit:hover {
+		transform: none;
+	}
+}

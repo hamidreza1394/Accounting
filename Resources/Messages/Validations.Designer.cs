@@ -124,6 +124,15 @@ namespace Resources.Messages {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to This password appears in a list of common or breached passwords. Please choose a different password!.
+        /// </summary>
+        public static string CommonPassword {
+            get {
+                return ResourceManager.GetString("CommonPassword", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Max length of {0} is {1}!.
         /// </summary>
         public static string MaxLength {

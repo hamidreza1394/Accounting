@@ -141,6 +141,9 @@
   <data name="MaxLength" xml:space="preserve">
     <value>Max length of {0} is {1}!</value>
   </data>
+  <data name="CommonPassword" xml:space="preserve">
+    <value>This password appears in a list of common or breached passwords. Please choose a different password!</value>
+  </data>
   <data name="MinLength" xml:space="preserve">
     <value>The '{0}' value must be a string with a minimum length of '{1}'!</value>
   </data>
@@ -148,7 +151,7 @@
     <value>{0} is not valid!</value>
   </data>
   <data name="Password" xml:space="preserve">
-    <value>{0} is not valid!</value>
+    <value>Password must be at least 8 and at most 128 characters and must not be a common or breached password. Any character (including Persian characters and symbols) is allowed!</value>
   </data>
   <data name="Range" xml:space="preserve">
     <value>{0} should be greater than or equal to {1} and less than or equal to {2}!</value>
@@ -160,6 +163,6 @@
     <value>{0} is not valid!</value>
   </data>
   <data name="Username" xml:space="preserve">
-    <value>{0} is not valid!</value>
+    <value>Username must be 3 to 20 characters and may contain only English letters, digits and the characters '-', '.', '_', '@', '+'!</value>
   </data>
 </root>

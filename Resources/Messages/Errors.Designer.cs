@@ -61,6 +61,24 @@ namespace Resources.Messages {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Please enter your username and password..
+        /// </summary>
+        public static string UsernameAndPasswordAreRequired {
+            get {
+                return ResourceManager.GetString("UsernameAndPasswordAreRequired", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Due to repeated failed attempts, sign-in is temporarily locked. Please try again later..
+        /// </summary>
+        public static string AccountIsTemporarilyLocked {
+            get {
+                return ResourceManager.GetString("AccountIsTemporarilyLocked", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to The {0} already exists!.
         /// </summary>
         public static string AlreadyExists {
