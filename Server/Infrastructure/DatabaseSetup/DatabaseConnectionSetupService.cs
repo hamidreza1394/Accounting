@@ -142,6 +142,14 @@ public sealed class DatabaseConnectionSetupService
             return DatabaseSetupResult.Failure(
                 "ذخیره تنظیمات یا آماده‌سازی دیتابیس ناموفق بود. دسترسی پوشه برنامه و گزارش خطای سرور را بررسی کنید.");
         }
+        catch (Exception exception)
+        {
+            _logger.LogError(
+                "Database setup failed with exception type {ExceptionType}; sensitive connection details were not logged.",
+                exception.GetType().Name);
+            return DatabaseSetupResult.Failure(
+                "راه‌اندازی دیتابیس ناموفق بود. گزارش فنی سرور را بررسی کنید؛ اطلاعات اتصال در پیام خطا نمایش داده نمی‌شود.");
+        }
     }
 }
 
