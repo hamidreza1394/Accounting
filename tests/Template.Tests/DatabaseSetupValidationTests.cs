@@ -66,4 +66,24 @@ public sealed class DatabaseSetupValidationTests
         Assert.False(result.Succeeded);
         Assert.Equal("برای ورود SQL Server، نام کاربری و رمز عبور لازم است.", result.ErrorMessage);
     }
+    [Fact]
+    public async Task ConfigureAsync_WhenSystemDatabaseIsSelected_ReturnsValidationFailure()
+    {
+        var store = new DatabaseConnectionSettingsStore(
+            NullLogger<DatabaseConnectionSettingsStore>.Instance);
+        var service = new DatabaseConnectionSetupService(
+            store,
+            NullLogger<DatabaseConnectionSetupService>.Instance);
+
+        var result = await service.ConfigureAsync(new DatabaseSetupRequest
+        {
+            Server = "localhost",
+            Database = "master",
+            AuthenticationMode = "Windows"
+        });
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("انتخاب دیتابیس‌های سیستمی SQL Server مجاز نیست.", result.ErrorMessage);
+    }
+
 }
