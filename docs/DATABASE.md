@@ -4,7 +4,8 @@
 - `Infrastructure/Persistence/DatabaseContext.cs` شامل DbContext است.
 - تنظیمات Entityها در `Infrastructure/Persistence/Configurations` قرار دارند.
 - SQL Server و EF Core استفاده می‌شوند.
-- استفاده از Lazy Loading Proxies فعال است؛ وابستگی به Lazy Loading باید در فاز دیتابیس ارزیابی شود، چون ممکن است Queryهای پنهان و N+1 ایجاد کند.
+- Lazy-loading و change-tracking proxies در `Server/Program.cs` فعال نیستند. مدل دامنه شامل Entityهای sealed مانند `Company` است و نیازی نیست برای Change Tracking استاندارد EF Core کلاس‌ها proxy-compatible شوند.
+- برای داده‌های مرتبط، از `Include/ThenInclude` یا projection به ViewModel استفاده شود تا بارگذاری داده‌ها آشکار و قابل بررسی باشد و Queryهای پنهان/N+1 ایجاد نشوند.
 
 ## استانداردها
 - Mapping صریح برای طول رشته، Required/Optional، Precision، Index، کلید و رفتار حذف.
@@ -16,7 +17,6 @@
 - تراکنش و رفتار Cascade براساس قواعد دامنه و تست مشخص شود.
 - Connection String واقعی در فایل tracked قرار نگیرد؛ از `ConnectionStrings__ConnectionString` یا Secret Store استفاده شود.
 
-
 ## مدل چندمستاجری افزوده‌شده در Issue #16
 - `Company`: محدوده Tenant و ریشه داده شرکت.
 - `UserCompanyMembership`: اتصال شناسه کاربر مرکزی به شرکت و نقش همان شرکت؛ ترکیب UserId/TenantId یکتا است.
@@ -26,4 +26,4 @@
 - `SecurityAuditEvent`: ثبت رویداد امنیتی بدون ذخیره رمز یا توکن.
 - نگاشت‌ها در `Infrastructure/Persistence/Configurations` قرار دارند و به‌وسیله `ApplyConfigurationsFromAssembly` کشف می‌شوند.
 
-**محدودیت فعلی:** مدل‌ها به DbContext افزوده شده‌اند، اما هنوز Migration بازبینی‌شده تولید نشده است. برای دیتابیس موجود، افزودن DbSet به‌تنهایی جدول جدید ایجاد نمی‌کند. همچنین `Database.EnsureCreated()` در سازنده DbContext هنوز بدهی فنی قدیمی است و باید در Issue مستقل، همراه با تعیین baseline/migration و مسیر حفظ داده‌ها حذف شود. تا زمان انجام این کار، این تغییر را Migration-ready یا production-ready تلقی نکنید.
+**محدودیت فعلی:** مدل‌ها به DbContext افزوده شده‌اند، اما هنوز Migration بازبینی‌شده تولید نشده است. برای دیتابیس موجود، افزودن DbSet به‌تنهایی جدول جدید ایجاد نمی‌کند. همچنین Migration رسمی و مسیر حفظ داده‌های موجود باید پیش از استفاده عملیاتی تعیین شود.

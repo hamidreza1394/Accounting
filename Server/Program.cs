@@ -52,8 +52,6 @@ builder.Services.Configure<Infrastructure.Settings.ApplicationSettings>
 // **************************************************
 
 // **************************************************
-// **************************************************
-// **************************************************
 builder.Services
     .AddAuthentication(defaultScheme: Infrastructure.Security.Utility.AuthenticationScheme)
     .AddCookie(
@@ -71,28 +69,6 @@ builder.Services
 // **************************************************
 
 // **************************************************
-//builder.Services
-//	.AddAuthentication(defaultScheme: Infrastructure.Security.Utility.AuthenticationScheme)
-//	.AddCookie(authenticationScheme: Infrastructure.Security.Utility.AuthenticationScheme)
-//	.AddGoogle(authenticationScheme: Microsoft.AspNetCore.Authentication.Google.GoogleDefaults.AuthenticationScheme,
-//	configureOptions: options =>
-//	{
-//		options.ClientId =
-//			builder.Configuration["ApplicationSettings:Authentication:Google:ClientId"];
-
-//		options.ClientSecret =
-//			builder.Configuration["ApplicationSettings:Authentication:Google:ClientSecret"];
-
-//		// MapJsonKey() -> using Microsoft.AspNetCore.Authentication;
-//		options.ClaimActions.MapJsonKey
-//			(claimType: "urn:google:picture", jsonKey: "picture", valueType: "url");
-//	})
-//	;
-// **************************************************
-// **************************************************
-// **************************************************
-
-// **************************************************
 // GetConnectionString() -> using Microsoft.Extensions.Configuration;
 var connectionString = builder.Configuration.GetConnectionString("ConnectionString");
 if (string.IsNullOrWhiteSpace(connectionString))
@@ -101,194 +77,83 @@ if (string.IsNullOrWhiteSpace(connectionString))
         "Database connection string is missing. Configure ConnectionStrings:ConnectionString using User Secrets or an environment variable.");
 }
 
-// AddDbContext -> using Microsoft.Extensions.DependencyInjection;
-builder.Services.AddDbContext<Data.DatabaseContext>
-	(optionsAction: options =>
-	{
-		options
-			// using Microsoft.EntityFrameworkCore;
-			.UseLazyLoadingProxies();
+// Change-tracking proxies and lazy-loading proxies are intentionally not enabled.
+// The domain model includes sealed entities (for example Domain.Company), and normal EF Core
+// change tracking does not require proxy-compatible entities. Load related data explicitly
+// with Include/ThenInclude or project directly into view models to avoid hidden database queries.
+builder.Services.AddDbContext<Data.DatabaseContext>(options =>
+    options.UseSqlServer(
+        connectionString,
+        sqlServer => sqlServer.MigrationsAssembly(typeof(Data.DatabaseContext).Assembly.FullName)));
 
-		options
-			// using Microsoft.EntityFrameworkCore;
-			.UseSqlServer
-			(
-				connectionString: connectionString,
-				// The migrations of the persistence assembly own the schema of the database.
-				sqlServerOptionsAction: sqlServer => sqlServer
-					.MigrationsAssembly(assemblyName: typeof(Data.DatabaseContext).Assembly.FullName)
-			);
-	});
 // **************************************************
-
-// The schema migrator is the only component that is allowed to change the database schema.
-// -> using Microsoft.Extensions.DependencyInjection;
 builder.Services.AddScoped<Data.IDatabaseSchemaMigrator, Data.DatabaseSchemaMigrator>();
 // **************************************************
 
-// **************************************************
-var app =
-	builder.Build();
-// **************************************************
+var app = builder.Build();
 
-// **************************************************
-// Database schema management.
-//
-// The database schema is owned by the EF Core migrations in
-// "Infrastructure/Persistence/Migrations" and is never created implicitly.
-//
-//   dotnet run --project Server -- --migrate
-//       Applies the pending migrations and exits. This is the supported way of migrating
-//       a production database: it is an explicit, reviewable, single-purpose operation.
-//
-//   Database:ApplyMigrations = true (Development only)
-//       Applies the pending migrations when the application starts. It is ignored outside
-//       of the Development environment, so a production deployment can never migrate the
-//       database as a side effect of a restart.
-//
-//   dotnet ef database update --project Infrastructure/Persistence
-//       The canonical EF Core workflow, see docs/database-migrations.md.
-// **************************************************
-var migrateOnly =
-	args.Any(arg => string.Equals(arg, "--migrate", StringComparison.OrdinalIgnoreCase));
-
-var applyMigrationsOnStartup =
-	app.Environment.IsDevelopment()
-	&& string.Equals
-		(
-			builder.Configuration["Database:ApplyMigrations"],
-			"true",
-			StringComparison.OrdinalIgnoreCase
-		);
+var migrateOnly = args.Any(arg => string.Equals(arg, "--migrate", StringComparison.OrdinalIgnoreCase));
+var applyMigrationsOnStartup = app.Environment.IsDevelopment()
+    && string.Equals(builder.Configuration["Database:ApplyMigrations"], "true", StringComparison.OrdinalIgnoreCase);
 
 if (migrateOnly)
 {
-	using (var scope = app.Services.CreateScope())
-	{
-		var migrator =
-			scope.ServiceProvider.GetRequiredService<Data.IDatabaseSchemaMigrator>();
-
-		await migrator.MigrateAsync();
-	}
-
-	return;
+    using var scope = app.Services.CreateScope();
+    var migrator = scope.ServiceProvider.GetRequiredService<Data.IDatabaseSchemaMigrator>();
+    await migrator.MigrateAsync();
+    return;
 }
 
 if (applyMigrationsOnStartup)
 {
-	using (var scope = app.Services.CreateScope())
-	{
-		var migrator =
-			scope.ServiceProvider.GetRequiredService<Data.IDatabaseSchemaMigrator>();
-
-		await migrator.MigrateAsync();
-	}
+    using var scope = app.Services.CreateScope();
+    var migrator = scope.ServiceProvider.GetRequiredService<Data.IDatabaseSchemaMigrator>();
+    await migrator.MigrateAsync();
 }
 else if (!app.Environment.IsDevelopment())
 {
-	// The production database is never migrated automatically: only report the drift.
-	try
-	{
-		using var scope = app.Services.CreateScope();
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        var migrator = scope.ServiceProvider.GetRequiredService<Data.IDatabaseSchemaMigrator>();
+        var pendingMigrations = await migrator.GetPendingMigrationsAsync();
 
-		var migrator =
-			scope.ServiceProvider.GetRequiredService<Data.IDatabaseSchemaMigrator>();
-
-		var pendingMigrations =
-			await migrator.GetPendingMigrationsAsync();
-
-		if (pendingMigrations.Count > 0)
-		{
-			app.Logger.LogWarning
-				(message: "The database schema is out of date. {PendingMigrationCount} migration(s) are pending: {PendingMigrations}. Apply them with 'dotnet run --project Server -- --migrate'.",
-				args: new object[]
-				{
-					pendingMigrations.Count,
-					string.Join(", ", pendingMigrations)
-				});
-		}
-	}
-	catch (System.Exception exception)
-	{
-		app.Logger.LogWarning
-			(exception: exception,
-			message: "The pending database migrations could not be checked at start-up.");
-	}
+        if (pendingMigrations.Count > 0)
+        {
+            app.Logger.LogWarning(
+                "The database schema is out of date. {PendingMigrationCount} migration(s) are pending: {PendingMigrations}. Apply them with 'dotnet run --project Server -- --migrate'.",
+                pendingMigrations.Count,
+                string.Join(", ", pendingMigrations));
+        }
+    }
+    catch (Exception exception)
+    {
+        app.Logger.LogWarning(exception, "The pending database migrations could not be checked at start-up.");
+    }
 }
-// **************************************************
 
-// IsDevelopment() -> using Microsoft.Extensions.Hosting;
 if (app.Environment.IsDevelopment())
 {
-	// **************************************************
-	// UseDeveloperExceptionPage() -> using Microsoft.AspNetCore.Builder;
-	app.UseDeveloperExceptionPage();
-	// **************************************************
+    app.UseDeveloperExceptionPage();
 }
 else
 {
-	// **************************************************
-	// UseGlobalException() -> using Infrastructure.Middlewares;
-	app.UseGlobalException();
-	// **************************************************
-
-	// **************************************************
-	// UseExceptionHandler() -> using Microsoft.AspNetCore.Builder;
-	app.UseExceptionHandler("/Errors/Error");
-	// **************************************************
-
-	// **************************************************
-	// The default HSTS value is 30 days.
-	// You may want to change this for production scenarios,
-	// see https://aka.ms/aspnetcore-hsts
-	// UseHsts() -> using Microsoft.AspNetCore.Builder; 
-	app.UseHsts();
-	// **************************************************
+    app.UseGlobalException();
+    app.UseExceptionHandler("/Errors/Error");
+    app.UseHsts();
 }
 
-// **************************************************
-// UseHttpsRedirection() -> using Microsoft.AspNetCore.Builder;
 app.UseHttpsRedirection();
-// **************************************************
-
-// **************************************************
-// UseStaticFiles() -> using Microsoft.AspNetCore.Builder;
 app.UseStaticFiles();
-// **************************************************
 
-// **************************************************
-// License/host activation is enforced outside Development. Configure ApplicationSettings:ActivationKeys in production.
 if (!app.Environment.IsDevelopment())
 {
     app.UseActivationKeys();
 }
-// **************************************************
 
-// **************************************************
-// UseRouting() -> using Microsoft.AspNetCore.Builder;
 app.UseRouting();
-// **************************************************
-
-// **************************************************
-// UseAuthorization() -> using Microsoft.AspNetCore.Builder;
 app.UseAuthentication();
-// **************************************************
-
-// **************************************************
-// UseAuthorization() -> using Microsoft.AspNetCore.Builder;
 app.UseAuthorization();
-// **************************************************
-
-// **************************************************
-// UseCultureCookie() -> using Infrastructure.Middlewares;
 app.UseCultureCookie();
-// **************************************************
-
-// **************************************************
-// MapRazorPages() -> using Microsoft.AspNetCore.Builder;
 app.MapRazorPages();
-// **************************************************
-
-// **************************************************
 app.Run();
-// **************************************************
