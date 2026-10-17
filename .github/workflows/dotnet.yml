@@ -35,20 +35,6 @@ jobs:
         run: |
           set -o pipefail
           dotnet test Template.sln --no-build --configuration Release 2>&1 | tee /tmp/dotnet-test.log
-      # The logs of a run can not always be downloaded; the tail of the test output is
-      # therefore published in the job summary, where it stays readable.
-      - name: Publish the test output
-        if: failure()
-        run: |
-          {
-            echo '### dotnet test output'
-            echo ''
-            echo '```'
-            tail -n 250 /tmp/dotnet-test.log
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-          # The step summary is not readable through the API, the annotation is.
-          echo "::error title=dotnet test output::$(grep -a -E 'error|Failed|failed|Assert|Exception|Test summary|total:|Passed!|Failed!' /tmp/dotnet-test.log | head -n 60 | tr -d '\r' | tr '\n' '~')"
       # The migration checks are the guards against a model snapshot that no longer
       # describes the model, which fails at runtime with PendingModelChangesWarning.
       - name: Check the generated migrations
@@ -60,10 +46,32 @@ jobs:
       - name: Install dotnet-ef
         run: dotnet tool install --global dotnet-ef --version 10.0.13
       # The official check. It builds the model and compares it with the snapshot; it
-      # never opens a database connection.
+      # never opens a database connection. "--no-build" reuses the output of the build
+      # step, so it has to ask for the same configuration.
       - name: Check for pending model changes
-        run: >-
-          dotnet ef migrations has-pending-model-changes
-          --project Infrastructure/Persistence/Infrastructure.Persistence.csproj
-          --startup-project Server/Server.csproj
-          --no-build
+        run: |
+          set -o pipefail
+          dotnet ef migrations has-pending-model-changes --project Infrastructure/Persistence/Infrastructure.Persistence.csproj --startup-project Server/Server.csproj --configuration Release --no-build 2>&1 | tee /tmp/dotnet-ef.log
+      # The logs of a run can not always be downloaded, so the failure details are
+      # published where they stay readable. This step runs last, so that every log that
+      # exists is published.
+      - name: Publish the failure details
+        if: failure()
+        run: |
+          for log in /tmp/dotnet-test.log /tmp/dotnet-ef.log; do
+            if [ -f "$log" ]; then
+              {
+                echo "### $(basename "$log")"
+                echo ''
+                echo '```'
+                tail -n 250 "$log"
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+          # The step summary is not readable through the API, the annotation is.
+          for log in /tmp/dotnet-test.log /tmp/dotnet-ef.log; do
+            if [ -f "$log" ]; then
+              echo "::error title=$(basename "$log")::$(tail -n 120 "$log" | grep -a -E 'error|Failed|failed|Assert|Exception|Test summary|total:|Passed!|Failed!|Unable|not found|pending' | head -n 40 | tr -d '\r' | tr '\n' '~')"
+            fi
+          done
