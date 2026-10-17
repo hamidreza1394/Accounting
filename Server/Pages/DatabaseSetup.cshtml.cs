@@ -60,7 +60,8 @@ public sealed class DatabaseSetupModel : PageModel
             return RedirectToPage("/Index");
         }
 
-        if (_settingsStore.SetupAccessToken is null)
+        var expectedTokenValue = _settingsStore.SetupAccessToken;
+        if (expectedTokenValue is null)
         {
             SettingsAlreadySaved = System.IO.File.Exists(_settingsStore.SettingsFilePath);
             SuccessMessage = "تنظیمات قبلاً ذخیره شده است. برای فعال شدن اتصال جدید، برنامه را متوقف و دوباره اجرا کنید.";
@@ -68,7 +69,7 @@ public sealed class DatabaseSetupModel : PageModel
         }
 
         var providedToken = Encoding.UTF8.GetBytes(Input.SetupToken ?? string.Empty);
-        var expectedToken = Encoding.UTF8.GetBytes(_settingsStore.SetupAccessToken);
+        var expectedToken = Encoding.UTF8.GetBytes(expectedTokenValue);
         if (providedToken.Length != expectedToken.Length ||
             !CryptographicOperations.FixedTimeEquals(providedToken, expectedToken))
         {
