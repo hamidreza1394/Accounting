@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+
 namespace Data.Configurations;
 
 internal sealed class FiscalPeriodConfiguration : Microsoft.EntityFrameworkCore.IEntityTypeConfiguration<Domain.FiscalPeriod>

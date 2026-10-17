@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+
 namespace Data.Configurations;
 
 internal sealed class CompanyConfiguration : Microsoft.EntityFrameworkCore.IEntityTypeConfiguration<Domain.Company>

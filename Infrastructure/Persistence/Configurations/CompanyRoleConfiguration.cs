@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+
 namespace Data.Configurations;
 
 internal sealed class CompanyRoleConfiguration : Microsoft.EntityFrameworkCore.IEntityTypeConfiguration<Domain.CompanyRole>
