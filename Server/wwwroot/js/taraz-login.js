@@ -6,9 +6,12 @@
         var hideLabel = toggle.getAttribute('data-label-hide') || 'پنهان کردن رمز';
         var showAria = toggle.getAttribute('data-aria-show') || 'نمایش رمز';
         var hideAria = toggle.getAttribute('data-aria-hide') || 'پنهان کردن رمز';
+        var label = toggle.querySelector('[data-password-label]');
+        var icon = toggle.querySelector('[data-password-icon]');
 
         password.type = visible ? 'text' : 'password';
-        toggle.textContent = visible ? hideLabel : showLabel;
+        if (label) label.textContent = visible ? hideLabel : showLabel;
+        if (icon) icon.textContent = visible ? '◉' : '◌';
         toggle.setAttribute('aria-label', visible ? hideAria : showAria);
         toggle.setAttribute('title', visible ? hideAria : showAria);
         toggle.setAttribute('aria-pressed', String(visible));
@@ -18,14 +21,6 @@
         var form = document.querySelector('.taraz-login-form');
         var toggle = form ? form.querySelector('[data-password-toggle]') : null;
         var password = toggle ? document.getElementById(toggle.getAttribute('data-password-toggle')) : null;
-
-        if (form) {
-            // Keep the restored, local background isolated to the Faranou page.
-            var backgroundStylesheet = document.createElement('link');
-            backgroundStylesheet.rel = 'stylesheet';
-            backgroundStylesheet.href = '/css/rtl/faranou-login-legacy-background.css';
-            document.head.appendChild(backgroundStylesheet);
-        }
 
         if (toggle && password) {
             setPasswordVisibility(toggle, password, false);
@@ -38,16 +33,12 @@
         if (form) {
             form.addEventListener('submit', function () {
                 var button = form.querySelector('.taraz-submit');
-                if (!button || button.disabled || !form.checkValidity()) {
-                    return;
-                }
-
+                if (!button || button.disabled || !form.checkValidity()) return;
                 button.disabled = true;
                 button.setAttribute('aria-busy', 'true');
-
-                var label = button.querySelector('.taraz-submit-label');
+                var submitLabel = button.querySelector('.taraz-submit-label');
                 var status = button.querySelector('.taraz-submit-status');
-                if (label) label.hidden = true;
+                if (submitLabel) submitLabel.hidden = true;
                 if (status) status.hidden = false;
             });
 
@@ -56,9 +47,9 @@
                 if (button && button.disabled) {
                     button.disabled = false;
                     button.removeAttribute('aria-busy');
-                    var label = button.querySelector('.taraz-submit-label');
+                    var submitLabel = button.querySelector('.taraz-submit-label');
                     var status = button.querySelector('.taraz-submit-status');
-                    if (label) label.hidden = false;
+                    if (submitLabel) submitLabel.hidden = false;
                     if (status) status.hidden = true;
                 }
             });
@@ -66,12 +57,8 @@
 
         var firstError = document.querySelector('.taraz-field input[aria-invalid="true"], .taraz-field-error:not(:empty)');
         if (firstError) {
-            var invalidInput = firstError.tagName === 'INPUT'
-                ? firstError
-                : (firstError.closest('.taraz-field') || document).querySelector('input');
-            if (invalidInput && typeof invalidInput.focus === 'function') {
-                invalidInput.focus({ preventScroll: false });
-            }
+            var invalidInput = firstError.tagName === 'INPUT' ? firstError : (firstError.closest('.taraz-field') || document).querySelector('input');
+            if (invalidInput && typeof invalidInput.focus === 'function') invalidInput.focus({ preventScroll: false });
         }
     });
 }());
