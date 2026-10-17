@@ -27,9 +27,21 @@ public sealed class LoginPasswordToggleTests
         var toggleIndex = markup.IndexOf("data-password-toggle=\"ViewModel_Password\"", System.StringComparison.Ordinal);
 
         Assert.True(toggleIndex >= 0);
-        Assert.Contains("type=\"button\"", markup);
-        Assert.Contains("aria-controls=\"ViewModel_Password\"", markup);
-        Assert.DoesNotContain("type=\"submit\"", markup[toggleIndex..]);
+
+        // The toggle button is the <button> opening tag that owns data-password-toggle.
+        // Slice only that opening tag (from <button to the next >) so that the separate
+        // submit button further down the form is not mistaken for the toggle. The earlier
+        // assertion `Assert.DoesNotContain("type=\"submit\"", markup[toggleIndex..])`
+        // matched the real submit button that legitimately follows the toggle.
+        var buttonStart = markup.LastIndexOf("<button", toggleIndex, System.StringComparison.Ordinal);
+        var openTagEnd = markup.IndexOf('>', toggleIndex);
+        Assert.True(buttonStart >= 0 && openTagEnd > toggleIndex,
+            "Password toggle opening tag could not be located.");
+        var toggleOpenTag = markup.Substring(buttonStart, openTagEnd - buttonStart + 1);
+
+        Assert.Contains("type=\"button\"", toggleOpenTag);
+        Assert.Contains("aria-controls=\"ViewModel_Password\"", toggleOpenTag);
+        Assert.DoesNotContain("type=\"submit\"", toggleOpenTag);
     }
 
     [Fact]
