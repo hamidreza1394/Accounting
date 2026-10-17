@@ -185,5 +185,18 @@ public sealed class DatabaseModelTests
 		var migrations = context.Database.GetMigrations().ToArray();
 
 		Assert.Contains("20251017120000_InitialCreate", migrations);
+		Assert.Contains("20261017090000_AlignSchemaWithModel", migrations);
+	}
+
+	[Fact]
+	public void TheModelSnapshotDescribesTheCurrentModel()
+	{
+		// This is the check that "dotnet ef migrations has-pending-model-changes" runs. A
+		// snapshot that differs from the model makes every "Database.MigrateAsync" throw
+		// "PendingModelChangesWarning", which is what the database setup page reported.
+		// The comparison only builds the two models, it never opens a connection.
+		using var context = CreateContext();
+
+		Assert.False(context.Database.HasPendingModelChanges());
 	}
 }

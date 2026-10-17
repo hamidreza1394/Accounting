@@ -189,18 +189,96 @@ conventions of the context (`Infrastructure/Persistence/Conventions/`).
   security and no filter that restricts a query to the tenant of the current
   user. This has to be implemented in the application layer and is reported as
   an open point.
+* Besides the 24 indexes that the configurations declare with `.HasIndex(...)`,
+  the model has 8 more indexes that no configuration writes down. The EF Core
+  `ForeignKeyIndexConvention` creates an index for every foreign key whose
+  columns are not already the leading columns of a key or of another index. Any
+  tool that derives the model from the configuration files has to apply the same
+  rule, otherwise the snapshot misses those indexes and
+  `has-pending-model-changes` fails: `IX_CompanyRolePermissions_PermissionId`,
+  `IX_LoginLogs_UserId`, `IX_MenuItems_ParentId`, `IX_Pages_CreatorUserId`,
+  `IX_Pages_PageCategoryId`, `IX_Permissions_ApplicationHandlerId`,
+  `IX_UserCompanyMemberships_RoleId_TenantId` and `IX_Users_RoleId`.
 
-## 7. The checks of this repository
+## 7. The migrations of this repository
+
+| Migration | What it does |
+| --- | --- |
+| `20251017120000_InitialCreate` | Creates every table of the model. Published and immutable. |
+| `20261017090000_AlignSchemaWithModel` | Brings the schema of `InitialCreate` in line with the model of the code base. |
+
+`20261017090000_AlignSchemaWithModel` exists because the snapshot that was
+committed with `InitialCreate` described a model that differs from the model of
+the code base (see the deviations below). It applies exactly that difference:
+
+1. `DropIndex` on `IX_PostCategory_ParentId_Title`. SQL Server refuses
+   `ALTER COLUMN` on a column that participates in an index (error 5074), so the
+   index is dropped first; note that `MigrationsModelDiffer` yields the column
+   operations of a table before its index operations.
+2. `AlterColumn` on `PostCategory.Title`: `nvarchar(50) NULL` becomes
+   `nvarchar(50) NOT NULL`, because `PostCategoryConfiguration` calls
+   `.IsRequired()`. Rows that were written with a `NULL` title before this
+   migration are set to an empty string first, otherwise the `ALTER` fails.
+3. `CreateIndex` on `IX_PostCategory_ParentId_Title` with the filter
+   `[ParentId] IS NOT NULL`. The `SqlServerIndexConvention` drops the
+   `[Title] IS NOT NULL` part as soon as `Title` is no longer nullable.
+4. Eight `CreateIndex` operations for the indexes that the
+   `ForeignKeyIndexConvention` implies and that no configuration writes down:
+   `IX_CompanyRolePermissions_PermissionId`, `IX_LoginLogs_UserId`,
+   `IX_MenuItems_ParentId`, `IX_Pages_CreatorUserId`,
+   `IX_Pages_PageCategoryId`, `IX_Permissions_ApplicationHandlerId`,
+   `IX_UserCompanyMemberships_RoleId_TenantId` and `IX_Users_RoleId`. They are
+   missing from the database as well, because `InitialCreate` was generated from
+   the same model that did not know the convention.
+
+`Down` reverses the steps.
+
+The operations of the migration are not written down anywhere by hand:
+`scripts/generate_migrations.py` computes them from the difference between the
+model of the `InitialCreate` designer file and the model of the code base, so
+that they can not drift apart from the snapshot.
+
+## 8. The checks of this repository
 
 | Check | Command | What it verifies |
 | --- | --- | --- |
 | The model of the code base | `python3 scripts/ef_model.py --repo-root .` | The tables, the columns, the types, the keys, the indexes and the foreign keys of the model |
-| The generated migrations | `python3 scripts/generate_migrations.py --repo-root . --check` | The committed migration and snapshot are up to date |
-| The migration and the model | `python3 scripts/verify_migration_model.py --repo-root .` | The migration and the snapshot describe the model of the code base, and the C# syntax is valid |
-| The model tests | `dotnet test` | The tables, the keys, the foreign keys, the indexes and the types of the model |
+| The generated migrations | `python3 scripts/generate_migrations.py --repo-root . --check` | The committed model snapshot and the files of the newest migration are up to date |
+| The migration and the model | `python3 scripts/verify_migration_model.py --repo-root .` | The snapshot describes the model of the code base (the equivalent of `has-pending-model-changes`), the published migration matches its own designer file, the newest migration applies exactly the difference between the two, and the C# syntax of all generated files is valid |
+| The model tests | `dotnet test` | The tables, the keys, the foreign keys, the indexes and the types of the model, and `Database.HasPendingModelChanges()` |
+| The official check | `dotnet ef migrations has-pending-model-changes --project Infrastructure/Persistence/Infrastructure.Persistence.csproj --startup-project Server/Server.csproj` | The comparison that `MigrateAsync` makes at runtime. It throws `PendingModelChangesWarning` when the snapshot and the model differ. |
 
-`scripts/generate_migrations.py` writes the migration, its designer file and
-the model snapshot in the format of the EF Core generators. It exists because
-the migrations of this repository were written without a .NET SDK; it can be
-replaced by `dotnet ef migrations add` as soon as the SDK is available, the
-result is the same.
+The last four checks also run in `.github/workflows/dotnet.yml`. The workflow
+passes `--configuration Release --no-build` to `dotnet ef`, because `--no-build`
+reuses the output of the build step and would otherwise look for a Debug build
+that does not exist.
+
+`scripts/verify_migration_model.py` needs `tree-sitter` and
+`tree-sitter-c-sharp` for the C# syntax check; without them it reports that the
+syntax was not validated and fails.
+
+`scripts/generate_migrations.py` writes the model snapshot and the files of the
+newest migration in the format of the EF Core generators. It exists because the
+migrations of this repository were written without a .NET SDK. It is a
+re-implementation of parts of EF Core and **not** a replacement for
+`dotnet ef migrations add`: whenever a deviation between the two was found, the
+model of the application won and the script was corrected. Replace it with
+`dotnet ef migrations add` as soon as the SDK is available.
+
+### The deviations that were found and corrected
+
+The script is the reason why `/DatabaseSetup` failed with
+`PendingModelChangesWarning`: the snapshot it had written described a model that
+differs from the model of the code base.
+
+| Deviation of the script | What EF Core 10.0.13 really does | Effect on `has-pending-model-changes` |
+| --- | --- | --- |
+| Only the indexes that a configuration declares with `.HasIndex(...)` were collected, so the eight indexes that the foreign keys imply were missing from the snapshot. | `ForeignKeyIndexConvention.CreateIndex` adds an index for every foreign key whose columns are not already the leading columns of a key or of another index (`AreIndexedBy`). No configuration ever writes those indexes down. | **Yes — this was the whole warning.** `MigrationsModelDiffer` reported exactly eight `CreateIndexOperation`s: `IX_CompanyRolePermissions_PermissionId`, `IX_LoginLogs_UserId`, `IX_MenuItems_ParentId`, `IX_Pages_CreatorUserId`, `IX_Pages_PageCategoryId`, `IX_Permissions_ApplicationHandlerId`, `IX_UserCompanyMemberships_RoleId_TenantId` and `IX_Users_RoleId`. |
+| `.IsRequired()` without an argument was ignored, so `PostCategory.Title` was written as nullable although `PostCategoryConfiguration` requires it. | `PropertyBuilder.IsRequired(bool required = true)` defaults to `true`. | **Yes.** `MigrationsModelDiffer.ColumnStructureEquals` compares `IsNullable`, so an `AlterColumnOperation` is produced. |
+| Because `Title` was nullable, the automatic filter of the unique index kept `[Title] IS NOT NULL`. | `SqlServerIndexConvention` recomputes the filter of a unique, non-clustered index when the nullability of one of its columns changes. | **Yes.** `IndexStructureEquals` compares `Filter`; an index whose filter differs is dropped and created again. |
+| Only `.IsUnicode(false)` was written into the snapshot. | `CSharpSnapshotGenerator.GenerateFluentApiForIsUnicode` writes the annotation whenever it is present, `.IsUnicode(true)` included. | No. `IsUnicode` is compared while *matching* columns, but it is not part of the `AlterColumnOperation` trigger, because a real change of it always changes the store type (`varchar` ↔ `nvarchar`). |
+| `.ValueGeneratedOnAdd()` was written for every `Guid` primary key. | `Seedwork.Entity.Id` carries `[DatabaseGenerated(DatabaseGeneratedOption.None)]`, which the `DatabaseGeneratedAttributeConvention` applies with `ConfigurationSource.DataAnnotation`; the `ValueGenerationConvention` uses `ConfigurationSource.Convention` and can not override it, so the value generation is `Never`. | No. `ColumnStructureEquals` does not compare `ValueGenerated`. |
+
+The two rows in the middle are snapshot fidelity only: they do not produce a
+migration operation, but they made the committed snapshot different from the
+snapshot that `dotnet ef migrations add` would have written.

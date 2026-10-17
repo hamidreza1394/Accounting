@@ -32,4 +32,46 @@ jobs:
       - name: Build
         run: dotnet build Template.sln --no-restore --configuration Release
       - name: Test
-        run: dotnet test Template.sln --no-build --configuration Release
+        run: |
+          set -o pipefail
+          dotnet test Template.sln --no-build --configuration Release 2>&1 | tee /tmp/dotnet-test.log
+      # The migration checks are the guards against a model snapshot that no longer
+      # describes the model, which fails at runtime with PendingModelChangesWarning.
+      - name: Check the generated migrations
+        run: python3 scripts/generate_migrations.py --repo-root . --check
+      - name: Install the C# parser of the migration verification
+        run: python3 -m pip install --disable-pip-version-check tree-sitter tree-sitter-c-sharp
+      - name: Verify the migration and the model snapshot
+        run: python3 scripts/verify_migration_model.py --repo-root .
+      - name: Install dotnet-ef
+        run: dotnet tool install --global dotnet-ef --version 10.0.13
+      # The official check. It builds the model and compares it with the snapshot; it
+      # never opens a database connection. "--no-build" reuses the output of the build
+      # step, so it has to ask for the same configuration.
+      - name: Check for pending model changes
+        run: |
+          set -o pipefail
+          dotnet ef migrations has-pending-model-changes --project Infrastructure/Persistence/Infrastructure.Persistence.csproj --startup-project Server/Server.csproj --configuration Release --no-build 2>&1 | tee /tmp/dotnet-ef.log
+      # The logs of a run can not always be downloaded, so the failure details are
+      # published where they stay readable. This step runs last, so that every log that
+      # exists is published.
+      - name: Publish the failure details
+        if: failure()
+        run: |
+          for log in /tmp/dotnet-test.log /tmp/dotnet-ef.log; do
+            if [ -f "$log" ]; then
+              {
+                echo "### $(basename "$log")"
+                echo ''
+                echo '```'
+                tail -n 250 "$log"
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+          # The step summary is not readable through the API, the annotation is.
+          for log in /tmp/dotnet-test.log /tmp/dotnet-ef.log; do
+            if [ -f "$log" ]; then
+              echo "::error title=$(basename "$log")::$(tail -n 120 "$log" | grep -a -E 'error|Failed|failed|Assert|Exception|Test summary|total:|Passed!|Failed!|Unable|not found|pending' | head -n 40 | tr -d '\r' | tr '\n' '~')"
+            fi
+          done
