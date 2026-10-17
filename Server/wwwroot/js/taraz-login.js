@@ -10,24 +10,22 @@
         password.type = visible ? 'text' : 'password';
         toggle.textContent = visible ? hideLabel : showLabel;
         toggle.setAttribute('aria-label', visible ? hideAria : showAria);
-        toggle.setAttribute('aria-pressed', String(visible));
         toggle.setAttribute('title', visible ? hideAria : showAria);
-
-        var icon = toggle.querySelector('[data-password-icon]');
-        if (!icon) {
-            icon = document.createElement('span');
-            icon.setAttribute('data-password-icon', 'true');
-            icon.setAttribute('aria-hidden', 'true');
-            toggle.insertBefore(icon, toggle.firstChild);
-        }
-
-        icon.textContent = visible ? '◉' : '◌';
+        toggle.setAttribute('aria-pressed', String(visible));
     }
 
     document.addEventListener('DOMContentLoaded', function () {
         var form = document.querySelector('.taraz-login-form');
         var toggle = form ? form.querySelector('[data-password-toggle]') : null;
         var password = toggle ? document.getElementById(toggle.getAttribute('data-password-toggle')) : null;
+
+        if (form) {
+            // Keep the restored, local background isolated to the Faranou page.
+            var backgroundStylesheet = document.createElement('link');
+            backgroundStylesheet.rel = 'stylesheet';
+            backgroundStylesheet.href = '/css/rtl/faranou-login-legacy-background.css';
+            document.head.appendChild(backgroundStylesheet);
+        }
 
         if (toggle && password) {
             setPasswordVisibility(toggle, password, false);
