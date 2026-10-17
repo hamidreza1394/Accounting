@@ -157,7 +157,7 @@
     <value>طبقه بندی</value>
   </data>
   <data name="ConfirmPassword" xml:space="preserve">
-    <value>تکرار گذرواژه</value>
+    <value>تکرار کلمه عبور</value>
   </data>
   <data name="Copyright" xml:space="preserve">
     <value>حق نشر</value>
@@ -346,7 +346,7 @@
     <value>والد</value>
   </data>
   <data name="Password" xml:space="preserve">
-    <value>گذرواژه</value>
+    <value>کلمه عبور</value>
   </data>
   <data name="Path" xml:space="preserve">
     <value>مسیر</value>
@@ -358,7 +358,7 @@
     <value>تاریخ و زمان شروع انتشار</value>
   </data>
   <data name="RememberMe" xml:space="preserve">
-    <value>مرا به خاطر داشته باش</value>
+    <value>مرا به خاطر بسپار</value>
   </data>
   <data name="RemoverUserId" xml:space="preserve">
     <value>کاربر حذف کننده</value>
@@ -391,7 +391,7 @@
     <value>سایت‌ها</value>
   </data>
   <data name="SiteTitle" xml:space="preserve">
-    <value>متخصصین ایرانی</value>
+    <value>فرانو</value>
   </data>
   <data name="SocialNetworks" xml:space="preserve">
     <value>شبکه‌های اجتماعی</value>
@@ -424,7 +424,7 @@
     <value>مدیریت کاربران</value>
   </data>
   <data name="Username" xml:space="preserve">
-    <value>شناسه کاربری</value>
+    <value>نام کاربری</value>
   </data>
   <data name="Users" xml:space="preserve">
     <value>کاربران</value>

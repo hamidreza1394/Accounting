@@ -1,6 +1,14 @@
-﻿<title>
-	@(ViewData[Constants.ViewDataKeyName.PageTitle])
+﻿@{
+	var pageTitle =
+		ViewData[Constants.ViewDataKeyName.PageTitle] as string;
+}
+
+<title>
+	@(string.IsNullOrWhiteSpace(pageTitle)
+		? Resources.DataDictionary.SiteTitle
+		: $"{pageTitle} | {Resources.DataDictionary.SiteTitle}")
 </title>
 
 <meta name="author" content="Mr. Dariush Tasdighi" />
-<meta name="description" content="A simple ASP.NET Core Razor Page Template for new projects." />
+<meta name="description" content="فرانو، نرم‌افزار حسابداری هوشمند — دسترسی امن به اطلاعات مالی شما." />
+<meta name="application-name" content="فرانو — FARANOU" />

@@ -1,4 +1,4 @@
-﻿namespace ViewModels.Pages.Admin.Users;
+namespace ViewModels.Pages.Admin.Users;
 
 public class CommonViewModel : object
 {
@@ -108,6 +108,11 @@ public class CommonViewModel : object
 		(length: Constants.MaxLength.Username,
 		ErrorMessageResourceType = typeof(Resources.Messages.Validations),
 		ErrorMessageResourceName = nameof(Resources.Messages.Validations.MaxLength))]
+
+	[System.ComponentModel.DataAnnotations.RegularExpression
+		(pattern: Constants.RegularExpression.Username,
+		ErrorMessageResourceType = typeof(Resources.Messages.Validations),
+		ErrorMessageResourceName = nameof(Resources.Messages.Validations.Username))]
 	public string? Username { get; set; }
 	#endregion /Username Property
 
