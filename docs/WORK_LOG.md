@@ -74,3 +74,12 @@
 - **Fix:** removed server-side image decoding and the `System.Drawing.Image` dependency from the Razor view. Images are rendered by the browser using the existing image URL; file size and attributes remain displayed. Added lazy loading, bounded preview height and `rel="noopener noreferrer"` for new tabs. Replaced locale-sensitive `ToLower()` with `ToLowerInvariant()`.
 - **Trade-off:** server-computed width, height, DPI, pixel format and image Tag metadata are no longer shown. This avoids adding a platform-specific dependency; if these metadata fields are a confirmed requirement, implement them later through an explicitly selected cross-platform image library and tests.
 - **Validation:** CI must run on this branch before the fix is considered verified. Do not claim Build/Test success until the new workflow result is inspected.
+
+
+## 2026-10-17 — .NET 10 test runner CI follow-up
+- **Observed CI:** main workflow `39007029455` — Build succeeded with 0 errors and 371 analyzer/package warnings; Test failed.
+- **Exact failure:** `Microsoft.Testing.Platform.MSBuild.targets`: “Testing with VSTest target is no longer supported by Microsoft.Testing.Platform on .NET 10 SDK and later. If you use dotnet test, you should opt-in to the new dotnet test experience.”
+- **Root cause:** repository already uses xUnit v3 and `TestingPlatformDotnetTestSupport=true`, but `global.json` did not select the Microsoft.Testing.Platform runner for the .NET 10 `dotnet test` experience.
+- **Attempted fix:** add `"test": { "runner": "Microsoft.Testing.Platform" }` to `global.json` on branch `fix/net10-test-runner-ci`.
+- **Other CI finding:** Restore reported NU1902/NU1903 vulnerability warnings for transitive `System.Security.Cryptography.Pkcs` 9.0.11. Determine the dependency path and update to a patched compatible version; do not suppress the advisory.
+- **Validation status:** awaiting CI on the follow-up PR. This change is not considered verified until Test succeeds.

@@ -75,3 +75,11 @@
 - **Change:** the view now relies on the browser to render the file URL and no longer decodes image files on the server. File length/attributes, file links and image cards are retained. Added lazy loading and safe new-tab link attributes. Extension normalization uses `ToLowerInvariant()`.
 - **Known UI trade-off:** image width/height, DPI, pixel format and Tag fields are no longer displayed. These were derived from System.Drawing and are intentionally not replaced with guessed values.
 - **Validation status:** awaiting the GitHub Actions run for this branch/PR. Build and tests are not marked successful until CI confirms them.
+
+
+## Follow-up — .NET 10 test runner CI failure (2026-10-17)
+- Latest main CI run `39007029455`: Build succeeded (0 errors, 371 warnings), but Test failed before test execution because Microsoft.Testing.Platform was invoked via the legacy VSTest target.
+- Failure message states that .NET 10 requires opting into the new `dotnet test` experience when using Microsoft.Testing.Platform.
+- Added the `test.runner = Microsoft.Testing.Platform` setting to `global.json` on branch `fix/net10-test-runner-ci`; the new CI run must verify the behavior before this fix is accepted.
+- Restore also reports NU1902/NU1903 for transitive `System.Security.Cryptography.Pkcs` 9.0.11. Trace its dependency and update to a patched version in a separate reviewed change if possible.
+- No claim of successful tests until CI passes.
