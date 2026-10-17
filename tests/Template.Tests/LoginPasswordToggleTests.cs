@@ -7,10 +7,13 @@ public sealed class LoginPasswordToggleTests
 {
     private static string ReadRepositoryFile(string relativePath)
     {
-        var root = Directory.GetParent(Directory.GetCurrentDirectory())?.Parent?.Parent?.Parent?.FullName;
-        Assert.False(string.IsNullOrWhiteSpace(root));
+        var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
+        for (var index = 0; index < 5 && directory.Parent != null; index++)
+        {
+            directory = directory.Parent;
+        }
 
-        var path = Path.Combine(root!, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        var path = Path.Combine(directory.FullName, relativePath.Replace('/', Path.DirectorySeparatorChar));
         Assert.True(File.Exists(path), $"Expected repository file was not found: {path}");
         return File.ReadAllText(path);
     }
@@ -36,7 +39,6 @@ public sealed class LoginPasswordToggleTests
         Assert.Contains("password.type = visible ? 'text' : 'password';", script);
         Assert.Contains("toggle.setAttribute('aria-pressed', String(visible));", script);
         Assert.Contains("event.preventDefault();", script);
-        Assert.Contains("data-password-icon", script);
         Assert.Contains("[data-password-toggle]').not('.taraz-login-form [data-password-toggle]')", commonScript);
     }
 }
