@@ -22,9 +22,10 @@ public sealed class DatabaseConnectionSetupService
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.Server) ||
-            string.IsNullOrWhiteSpace(request.Database))
+            string.IsNullOrWhiteSpace(request.Database) ||
+            request.Database.Trim().Length > 128)
         {
-            return DatabaseSetupResult.Failure("نام سرور و نام پایگاه داده الزامی است.");
+            return DatabaseSetupResult.Failure("نام سرور و نام پایگاه داده الزامی است؛ نام دیتابیس حداکثر ۱۲۸ نویسه است.");
         }
 
         if (!string.Equals(request.AuthenticationMode, "Windows", StringComparison.OrdinalIgnoreCase) &&
@@ -60,12 +61,15 @@ public sealed class DatabaseConnectionSetupService
                 builder.Password = request.Password;
             }
 
-            await using (var connection = new SqlConnection(builder.ConnectionString))
-            {
-                await connection.OpenAsync(cancellationToken);
+            var databaseName = request.Database.Trim();
+            var databaseCreated = false;
 
-                await using var checkCommand = new SqlCommand("SELECT DB_ID(@databaseName);", connection);
-                checkCommand.Parameters.AddWithValue("@databaseName", request.Database.Trim());
+            await using (var masterConnection = new SqlConnection(builder.ConnectionString))
+            {
+                await masterConnection.OpenAsync(cancellationToken);
+
+                await using var checkCommand = new SqlCommand("SELECT DB_ID(@databaseName);", masterConnection);
+                checkCommand.Parameters.AddWithValue("@databaseName", databaseName);
                 var databaseId = await checkCommand.ExecuteScalarAsync(cancellationToken);
 
                 if (databaseId is null or DBNull)
@@ -79,17 +83,30 @@ public sealed class DatabaseConnectionSetupService
                     // QUOTENAME quotes the identifier on the server; the user input is a SQL parameter.
                     await using var createCommand = new SqlCommand(
                         "DECLARE @sql nvarchar(max) = N'CREATE DATABASE ' + QUOTENAME(@databaseName); EXEC sys.sp_executesql @sql;",
-                        connection);
-                    createCommand.Parameters.AddWithValue("@databaseName", request.Database.Trim());
+                        masterConnection);
+                    createCommand.Parameters.AddWithValue("@databaseName", databaseName);
                     await createCommand.ExecuteNonQueryAsync(cancellationToken);
-                    // Migration is run after the new database is created and the connection targets it.
-                    databaseId = 0;
+                    databaseCreated = true;
                 }
             }
 
+            builder.InitialCatalog = databaseName;
             var databaseConnectionString = builder.ConnectionString;
+            var databaseNeedsInitialMigration = false;
 
-            if (databaseCreated || databaseNeedsInitialMigration)
+            if (!databaseCreated)
+            {
+                await using var databaseConnection = new SqlConnection(databaseConnectionString);
+                await databaseConnection.OpenAsync(cancellationToken);
+                await using var emptyDatabaseCommand = new SqlCommand(
+                    "SELECT CASE WHEN OBJECT_ID(N'__EFMigrationsHistory', N'U') IS NULL AND NOT EXISTS (SELECT 1 FROM sys.tables WHERE is_ms_shipped = 0) THEN 1 ELSE 0 END;",
+                    databaseConnection);
+                databaseNeedsInitialMigration = Convert.ToInt32(
+                    await emptyDatabaseCommand.ExecuteScalarAsync(cancellationToken)) == 1;
+            }
+
+            var migrationsApplied = databaseCreated || databaseNeedsInitialMigration;
+            if (migrationsApplied)
             {
                 var options = new DbContextOptionsBuilder<Data.DatabaseContext>()
                     .UseSqlServer(
@@ -104,10 +121,10 @@ public sealed class DatabaseConnectionSetupService
             _settingsStore.SaveConnectionString(databaseConnectionString);
 
             _logger.LogInformation(
-                "Database setup completed. DatabaseCreated={DatabaseCreated}; connection details are not logged.",
-                databaseCreated);
+                "Database setup completed. MigrationsApplied={MigrationsApplied}; connection details are not logged.",
+                migrationsApplied);
 
-            return DatabaseSetupResult.Success(databaseCreated || databaseNeedsInitialMigration);
+            return DatabaseSetupResult.Success(migrationsApplied);
         }
         catch (SqlException exception)
         {
@@ -139,8 +156,8 @@ public sealed class DatabaseSetupRequest
     public bool CreateDatabaseIfMissing { get; init; } = true;
 }
 
-public sealed record DatabaseSetupResult(bool Succeeded, bool DatabaseCreated, string? ErrorMessage)
+public sealed record DatabaseSetupResult(bool Succeeded, bool MigrationsApplied, string? ErrorMessage)
 {
-    public static DatabaseSetupResult Success(bool databaseCreated) => new(true, databaseCreated, null);
+    public static DatabaseSetupResult Success(bool migrationsApplied) => new(true, migrationsApplied, null);
     public static DatabaseSetupResult Failure(string message) => new(false, false, message);
 }
