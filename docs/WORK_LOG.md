@@ -43,3 +43,13 @@
 - **بررسی بصری و اجرای برنامه:** انجام نشد؛ Browser Control در محیط Agent در دسترس نبود و اجرای برنامه به Connection String و Secretهای معتبر نیاز دارد.
 - **ریسک‌های باقی‌مانده:** SHA-256 بدون salt، نبود Rate Limiting/Account Lockout و نبود Integration Test واقعی، ریسک‌های قبلی پروژه هستند و در این Issue تغییر نکردند. بررسی بصری مرورگر و اجرای end-to-end هنوز انجام نشده است.
 - **وضعیت تحویل:** Draft PR پس از این ثبت Work Log ایجاد می‌شود؛ Merge به `main` انجام نشده است.
+
+
+## 2026-10-17 — Issue #16 multi-tenant database model and .NET 10
+- **Issue:** https://github.com/hamidreza1394/Accounting/issues/16
+- **Branch:** feature/issue-16-multitenant-database-net10
+- **Scope:** اضافه‌شدن مدل‌های Company، UserCompanyMembership، FiscalPeriod، CompanyRole، PermissionDefinition، CompanyRolePermission و SecurityAuditEvent به Domain و DbContext؛ پیکربندی صریح EF Core؛ اتصال SQL Server از ConnectionStrings استاندارد؛ هدف‌گذاری .NET 10 و EF Core 10؛ به‌روزرسانی CI و مستندات.
+- **Connection:** مقدار توسعه محلی Windows Integrated Authentication است؛ استقرار با User Secrets یا متغیر محیطی ConnectionStrings__ConnectionString انجام می‌شود و هیچ credential جدیدی commit نشده است.
+- **Migration/Auth:** Migration رسمی هنوز تولید/اعمال نشده است. Database.EnsureCreated() legacy هنوز در سازنده DbContext باقی است. Login هنوز legacy است؛ UserCompanyMembership.UserId فعلاً scalar است و به ASP.NET Core Identity متصل نشده. Tenant isolation/authorization هنوز برای Production کامل نیست.
+- **Build/Test:** این محیط امکان اجرای dotnet restore/build/test یا اتصال به SQL Server را نداشت؛ نتیجه واقعی CI باید قبل از ادغام بررسی شود. هیچ ادعای Build یا تست موفق محلی مطرح نمی‌شود.
+- **Next:** بررسی CI، تولید و بازبینی Migration baseline با حفظ داده‌ها، مهاجرت Login به Identity، Tenant resolution و تست‌های امنیتی cross-tenant.

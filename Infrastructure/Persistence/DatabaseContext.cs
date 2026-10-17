@@ -28,6 +28,14 @@ public class DatabaseContext : Microsoft.EntityFrameworkCore.DbContext
 
 	public Microsoft.EntityFrameworkCore.DbSet<Domain.ApplicationHandler> ApplicationHandlers { get; set; }
 
+    public Microsoft.EntityFrameworkCore.DbSet<Domain.Company> Companies { get; set; }
+    public Microsoft.EntityFrameworkCore.DbSet<Domain.UserCompanyMembership> UserCompanyMemberships { get; set; }
+    public Microsoft.EntityFrameworkCore.DbSet<Domain.FiscalPeriod> FiscalPeriods { get; set; }
+    public Microsoft.EntityFrameworkCore.DbSet<Domain.CompanyRole> CompanyRoles { get; set; }
+    public Microsoft.EntityFrameworkCore.DbSet<Domain.PermissionDefinition> PermissionDefinitions { get; set; }
+    public Microsoft.EntityFrameworkCore.DbSet<Domain.CompanyRolePermission> CompanyRolePermissions { get; set; }
+    public Microsoft.EntityFrameworkCore.DbSet<Domain.SecurityAuditEvent> SecurityAuditEvents { get; set; }
+
 	protected override void OnConfiguring
 		(Microsoft.EntityFrameworkCore.DbContextOptionsBuilder optionsBuilder)
 	{

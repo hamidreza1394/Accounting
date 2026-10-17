@@ -1,7 +1,7 @@
 # راهنمای توسعه محلی
 
 ## پیش‌نیازها
-- Visual Studio 2022 با workload مربوط به ASP.NET and web development یا .NET SDK 9 نصب‌شده.
+- Visual Studio 2026 (نسخه 18.0 یا بالاتر) با workload مربوط به ASP.NET and web development و .NET 10 SDK نصب‌شده. برای بازکردن و هدف‌گذاری رسمی net10.0، Visual Studio 2022 کافی نیست.
 - SQL Server متناسب با Connection String محیط محلی.
 - Git؛ Python 3 فقط برای بررسی ممنوعیت CDN در اسکریپت CI.
 - برای دریافت/به‌روزرسانی NuGet و LibMan در مرحله آماده‌سازی به اینترنت دسترسی لازم است؛ **اجرای برنامه پس از دریافت وابستگی‌ها نباید برای CSS/JS/فونت/آیکون به اینترنت خارجی نیاز داشته باشد**.
@@ -11,7 +11,7 @@
 
 ```powershell
 dotnet user-secrets init --project Server/Server.csproj
-dotnet user-secrets set "ConnectionStrings:ConnectionString" "Server=.;Database=YourLocalDb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true;" --project Server/Server.csproj
+dotnet user-secrets set "ConnectionStrings:ConnectionString" "Server=.\SQLSERVER2025;Database=TarazAvaDb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true;" --project Server/Server.csproj
 ```
 
 ورود مدیریتی فعلی هنوز legacy است و برای Production تأیید نمی‌شود؛ راهنمای `docs/SECURITY.md` را بخوانید. مقادیر `MasterUsername`، `MasterPassword` و `ActivationKeys` باید فقط در User Secrets/Environment/Secret Store تنظیم شوند و خالی‌بودن آن‌ها نباید با مقدار پیش‌فرض ناامن دور زده شود.
@@ -44,4 +44,25 @@ dotnet ef migrations list --project Infrastructure/Persistence/Infrastructure.Pe
 ```
 
 ## نکته نسخه پلتفرم
-هدف فعلی بنا به درخواست پروژه .NET 9 است، اما پشتیبانی آن در نوامبر 2026 پایان می‌یابد. قبل از شروع قابلیت‌های محصولی، تصمیم ثبت‌شده برای .NET 10 LTS را بررسی کنید. تغییر نسخه باید در یک PR مستقل با Restore/Build/Test انجام شود.
+هدف فعلی پروژه .NET 10 LTS است. Visual Studio 2026 نسخه 18.0 یا بالاتر برای هدف‌گذاری رسمی net10.0 لازم است. پیش از ادغام تغییرات، Restore/Build/Test در CI و روی دستگاه توسعه باید موفق باشند.
+
+
+## تنظیم اتصال SQL Server برای محیط‌های مختلف
+
+- مقدار توسعه محلی در `Server/appsettings.json` فقط از Windows Integrated Authentication استفاده می‌کند و رمز دیتابیس در Git ذخیره نمی‌شود.
+- برای جایگزینی اتصال در دستگاه توسعه، از User Secrets استفاده کنید.
+- برای سرور مشتری یا فضای ابری، متغیر محیطی `ConnectionStrings__ConnectionString` را در تنظیمات سرویس میزبانی تنظیم کنید؛ این مقدار بر appsettings پیش‌فرض اولویت دارد.
+- برای SQL Login در محیط عملیاتی، رمز را فقط از Secret Store/Environment امن تزریق کنید؛ آن را در appsettings یا Git commit نکنید.
+- تغییر Connection String فقط محل SQL Server را عوض می‌کند؛ قبل از استقرار باید Schema از طریق Migration بازبینی‌شده اعمال شود. Migration و انتقال داده هنوز بخشی از این تغییر نیست.
+
+نمونه متغیر محیطی PowerShell برای نشست فعلی:
+
+```powershell
+$env:ConnectionStrings__ConnectionString = "Server=localhost\SQLSERVER2025;Database=TarazAvaDb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true;"
+```
+
+## .NET 10 و Visual Studio
+
+- مخزن به `.NET 10 LTS` و EF Core 10 ارتقا داده شده است.
+- برای توسعه رسمی `net10.0` از Visual Studio 2026 نسخه 18.0 یا بالاتر استفاده کنید. نصب SDK به‌تنهایی پشتیبانی هدف‌گذاری net10.0 را به Visual Studio 2022 اضافه نمی‌کند.
+- پس از نصب، از Developer PowerShell اجرا کنید: `dotnet --info`, `dotnet restore Template.sln`, `dotnet build Template.sln --configuration Release`, `dotnet test Template.sln --configuration Release`.
