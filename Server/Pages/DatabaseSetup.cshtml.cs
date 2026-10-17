@@ -4,7 +4,7 @@ using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Configuration;
-using Server.Infrastructure.DatabaseSetup;
+using Infrastructure.DatabaseSetup;
 
 namespace Server.Pages;
 
