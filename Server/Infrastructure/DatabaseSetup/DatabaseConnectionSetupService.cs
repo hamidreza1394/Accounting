@@ -28,6 +28,15 @@ public sealed class DatabaseConnectionSetupService
             return DatabaseSetupResult.Failure("نام سرور و نام پایگاه داده الزامی است؛ نام دیتابیس حداکثر ۱۲۸ نویسه است.");
         }
 
+        var requestedDatabaseName = request.Database.Trim();
+        if (requestedDatabaseName.Equals("master", StringComparison.OrdinalIgnoreCase) ||
+            requestedDatabaseName.Equals("model", StringComparison.OrdinalIgnoreCase) ||
+            requestedDatabaseName.Equals("msdb", StringComparison.OrdinalIgnoreCase) ||
+            requestedDatabaseName.Equals("tempdb", StringComparison.OrdinalIgnoreCase))
+        {
+            return DatabaseSetupResult.Failure("انتخاب دیتابیس‌های سیستمی SQL Server مجاز نیست.");
+        }
+
         if (!string.Equals(request.AuthenticationMode, "Windows", StringComparison.OrdinalIgnoreCase) &&
             !string.Equals(request.AuthenticationMode, "Sql", StringComparison.OrdinalIgnoreCase))
         {
