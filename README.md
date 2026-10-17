@@ -3,12 +3,12 @@
 این مخزن، یک قالب موجود Razor Pages است که برای توسعه مرحله‌ای آماده شده است.
 
 ## فناوری‌ها
-- ASP.NET Core Razor Pages / .NET 9
-- SQL Server و EF Core 9
+- ASP.NET Core Razor Pages / .NET 10 LTS
+- SQL Server و EF Core 10
 - مدیریت متمرکز نسخه NuGet با `Directory.Packages.props`
 - تست پایه xUnit v3 و CI با GitHub Actions
 
-> **چرخه عمر:** .NET 9 در نوامبر 2026 به پایان پشتیبانی می‌رسد. این هدف‌گذاری برای پیروی از درخواست فعلی انجام شده است؛ پیش از استقرار طولانی‌مدت، ارتقا به .NET 10 LTS را در اولویت قرار دهید.
+> **محیط توسعه:** برای هدف‌گذاری رسمی `net10.0` از Visual Studio 2026 نسخه 18.0 یا بالاتر استفاده کنید. تنظیمات اتصال دیتابیس و مراحل توسعه در `docs/DEVELOPMENT.md` آمده است.
 
 ## شروع سریع
 ```bash
