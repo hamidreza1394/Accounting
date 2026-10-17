@@ -91,5 +91,6 @@
 - **Scope:** افزودن صفحه راه‌اندازی اولیه Razor Pages، تست اتصال SQL Server، ذخیره Connection String رمزنگاری‌شده خارج از مخزن، ساخت دیتابیس تازه و اعمال Migration اولیه، و جلوگیری از تغییر خودکار schema دیتابیس موجود.
 - **Implementation:** `DatabaseConnectionSettingsStore` از ASP.NET Core Data Protection استفاده می‌کند؛ در Windows کلیدها با DPAPI محافظت می‌شوند و در Unix مجوز فایل/پوشه محدود می‌شود. کد یک‌بارمصرف در فایل محلی خارج از مخزن نگه‌داری می‌شود و در log چاپ نمی‌شود.
 - **Safety:** اتصال‌های صریح Configuration Providers بر فایل محلی مقدم‌اند. فرم SQL Connection String را با builder استاندارد می‌سازد، ورودی نام دیتابیس را به پارامتر SQL می‌دهد و شناسه را با `QUOTENAME` می‌سازد. دیتابیس دارای جدول‌ها خودکار migrate نمی‌شود.
-- **Validation:** Restore/Build/Test و اتصال به SQL Server در این محیط اجرا نشده‌اند. CI برای PR باید بررسی شود؛ این تغییر تا سبزشدن CI و آزمون SQL Server، تأییدشده/آماده Production تلقی نمی‌شود.
+- **PR:** https://github.com/hamidreza1394/Accounting/pull/23
+- **Validation:** Restore/Build/Test و اتصال به SQL Server در این محیط اجرا نشده‌اند. GitHub Actions برای PR در حال اجرا است؛ این تغییر تا سبزشدن CI و آزمون SQL Server، تأییدشده/آماده Production تلقی نمی‌شود.
 - **Known limitation:** برای دیتابیس قدیمی که با `EnsureCreated()` ساخته شده و فاقد `__EFMigrationsHistory` است، ابتدا باید schema و baseline بررسی شود؛ صفحه setup عمداً آن را خودکار تغییر نمی‌دهد.
