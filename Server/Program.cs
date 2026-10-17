@@ -111,11 +111,13 @@ builder.Services.AddDbContext<Data.DatabaseContext>
 
 		options
 			// using Microsoft.EntityFrameworkCore;
-			.UseSqlServer(connectionString: connectionString);
-
-		options
-			// using Microsoft.EntityFrameworkCore;
-			.MigrationsAssembly(assemblyName: typeof(Data.DatabaseContext).Assembly.FullName);
+			.UseSqlServer
+			(
+				connectionString: connectionString,
+				// The migrations of the persistence assembly own the schema of the database.
+				sqlServerOptionsAction: sqlServer => sqlServer
+					.MigrationsAssembly(assemblyName: typeof(Data.DatabaseContext).Assembly.FullName)
+			);
 	});
 // **************************************************
 
