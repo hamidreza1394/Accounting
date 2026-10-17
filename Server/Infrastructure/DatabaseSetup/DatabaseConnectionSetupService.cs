@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
@@ -59,16 +60,12 @@ public sealed class DatabaseConnectionSetupService
                 builder.Password = request.Password;
             }
 
-            var masterConnectionString = builder.ConnectionString;
-            var databaseName = request.Database.Trim();
-            var databaseCreated = false;
-
-            await using (var connection = new SqlConnection(masterConnectionString))
+            await using (var connection = new SqlConnection(builder.ConnectionString))
             {
                 await connection.OpenAsync(cancellationToken);
 
                 await using var checkCommand = new SqlCommand("SELECT DB_ID(@databaseName);", connection);
-                checkCommand.Parameters.AddWithValue("@databaseName", databaseName);
+                checkCommand.Parameters.AddWithValue("@databaseName", request.Database.Trim());
                 var databaseId = await checkCommand.ExecuteScalarAsync(cancellationToken);
 
                 if (databaseId is null or DBNull)
@@ -79,17 +76,19 @@ public sealed class DatabaseConnectionSetupService
                             "اتصال به SQL Server موفق بود، اما دیتابیس وجود ندارد. گزینه ساخت دیتابیس را فعال کنید.");
                     }
 
-                    // The database identifier is quoted by SQL Server's QUOTENAME; it is never concatenated raw.
+                    // QUOTENAME quotes the identifier on the server; the user input is a SQL parameter.
                     await using var createCommand = new SqlCommand(
                         "DECLARE @sql nvarchar(max) = N'CREATE DATABASE ' + QUOTENAME(@databaseName); EXEC sys.sp_executesql @sql;",
                         connection);
-                    createCommand.Parameters.AddWithValue("@databaseName", databaseName);
+                    createCommand.Parameters.AddWithValue("@databaseName", request.Database.Trim());
                     await createCommand.ExecuteNonQueryAsync(cancellationToken);
-                    databaseCreated = true;
+                    // Migration is run after the new database is created and the connection targets it.
+                    databaseId = 0;
                 }
             }
 
-            builder.InitialCatalog = databaseName;
+            var databaseCreated = Equals(databaseId, 0);
+            builder.InitialCatalog = request.Database.Trim();
             var databaseConnectionString = builder.ConnectionString;
 
             if (databaseCreated)
