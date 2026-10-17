@@ -4,7 +4,7 @@
 پایه‌سازی پروژه موجود ASP.NET Core Razor Pages برای توسعه مرحله‌ای و قابل بازبینی.
 
 ## وضعیت فعلی پس از بازسازی اولیه
-- پروژه‌های C# از `net6.0` به `net9.0` هدف‌گذاری شده‌اند.
+- در شاخه `main` هدف‌گذاری به `net10.0` منتقل شده است؛ CI پس از Merge باید سبز شود.
 - نسخه NuGetها با Central Package Management در `Directory.Packages.props` متمرکز شده است.
 - تحلیلگرهای .NET و تنظیمات Nullable در سطح مخزن فعال شده‌اند.
 - پروژه تست اولیه اضافه شده و به Solution افزوده شده است.
@@ -18,7 +18,7 @@
 در محیط اجرای این بازسازی، `dotnet` نصب نیست؛ بنابراین Restore، Build، Test و بررسی هشدارهای کامپایل اجرا نشده‌اند. فایل‌ها و XML/JSON به‌صورت ایستا بررسی می‌شوند؛ CI باید اولین Build واقعی را انجام دهد.
 
 ## ریسک‌های باقی‌مانده
-1. .NET 9 در 10/11 نوامبر 2026 به پایان پشتیبانی می‌رسد؛ مهاجرت به .NET 10 LTS باید در اولویت برنامه قرار گیرد.
+1. پروژه اکنون `.NET 10 LTS` را هدف گرفته است؛ خطاهای Build در CI باید قبل از ادامه توسعه برطرف شوند.
 2. احراز هویت فعلی یک راهکار قدیمی با نام کاربری مرکزی و SHA-256 بدون salt است؛ برای تولید مناسب نیست و باید با ASP.NET Core Identity یا PasswordHasher استاندارد جایگزین شود.
 3. پروژه `Application` به‌عنوان مرز آماده Use Case ایجاد شده است؛ persistence به `Infrastructure/Persistence` منتقل شده (با حفظ namespace قدیمی `Data`)، اما دسترسی مستقیم به EF Core در PageModelها هنوز وجود دارد و باید مرحله‌ای و همراه تست حذف شود.
 4. در مخزن پروژه تست موجود نبود؛ تست اولیه فقط قرارداد تابع Hashing موجود را تثبیت می‌کند و جای تست‌های واقعی را نمی‌گیرد.
@@ -27,8 +27,8 @@
 7. مسیر Google OAuth در صفحه وجود دارد اما ثبت Handler در `Program.cs` کامنت شده است؛ باید فعال یا حذف شود.
 
 ## معیار ورود به فاز بعد
-- اجرای Restore/Build/Test روی ماشین دارای .NET 9 SDK و رفع خطاها.
-- تصمیم رسمی درباره ارتقا به .NET 10 LTS.
+- اجرای Restore/Build/Test روی .NET 10 SDK و رفع خطاهای CI.
+- بررسی Migration و حفظ داده‌های موجود.
 - تعیین مدل احراز هویت، نقش‌ها و مجوزها.
 - ثبت Issueهای مهاجرت معماری و افزودن تست برای مسیرهای حیاتی.
 
@@ -48,3 +48,13 @@
 - Connection String پیش‌فرض توسعه به ریشه استاندارد `ConnectionStrings:ConnectionString` منتقل شده و از Environment/User Secrets قابل override است.
 - **محدودیت:** Login فعلی هنوز Legacy است؛ عضویت جدید هنوز به ASP.NET Core Identity متصل نشده و کنترل کامل Tenant در درخواست‌ها فعال نشده است. Migration رسمی برای دیتابیس‌های موجود و آزمون SQL Server باید جداگانه تکمیل شود.
 - **تست:** این تغییر از طریق GitHub API و بدون اجرای SDK در محیط ویرایش اعمال شده است؛ Restore/Build/Test محلی توسط این Agent اجرا نشده‌اند. CI باید نتیجه واقعی را ثبت کند.
+
+
+## وضعیت پس از Merge مربوط به Issue #16 — 2026-10-17
+- PR #17 در `main` ادغام شده است: https://github.com/hamidreza1394/Accounting/pull/17
+- Merge commit: `1e0ec4e10799a3a949f33f73659f5b4e656aaff2`.
+- مدل پایه چندشرکتی، دوره مالی، عضویت شرکت، نقش/مجوز، رویداد امنیتی، پیکربندی EF Core و تنظیمات قابل تغییر اتصال SQL Server در مخزن ثبت شده‌اند.
+- هدف پروژه به .NET 10 / EF Core 10 منتقل شده است.
+- **CI سبز نیست/هنوز تأیید نشده:** اجرای CI شاخه Feature با Restore موفق ولی Build ناموفق تمام شد؛ خطاهای مشاهده‌شده مربوط به استفاده از `System.Drawing.Image` در `Server/Pages/Admin/FileManager/PartialViews/_DisplayPictures.cshtml` پس از حذف مرجع `System.Drawing.Common` است. اجرای CI روی Merge commit در زمان ثبت این یادداشت هنوز در حال اجرا بود. وضعیت را از https://github.com/hamidreza1394/Accounting/actions بررسی کن.
+- **مهم:** Migration ساخته یا اعمال نشده است؛ `Database.EnsureCreated()` قدیمی باقی مانده؛ Login هنوز Legacy است و ASP.NET Core Identity، tenant resolution، فیلترهای سراسری Tenant، policy authorization و تست‌های cross-tenant تکمیل نشده‌اند.
+- این مرحله فقط پایه مدل و پیکربندی است و برای Production آماده نیست.

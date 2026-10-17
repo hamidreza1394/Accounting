@@ -3,7 +3,7 @@
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/16
 - **Agent/مسئول:** ChatGPT
 - **تاریخ:** 2026-10-17
-- **وضعیت:** ناقص؛ مدل و تنظیمات اولیه در شاخه کاری ثبت می‌شوند، اما CI و Migration باید بررسی شوند.
+- **وضعیت:** PR #17 ادغام شده، اما کار از نظر CI، Migration و امنیت چندمستاجری ناقص است.
 
 ## هدف و معیارهای پذیرش
 - [x] مدل اولیه چندشرکتی و دوره مالی در Domain.
@@ -61,3 +61,9 @@
 - Branch: feature/issue-16-multitenant-database-net10
 - Commit: در زمان ایجاد گزارش مشخص نشده است.
 - Pull Request: پس از ثبت Commit ایجاد می‌شود.
+
+## پیگیری پس از ادغام — 2026-10-17
+- CI شاخه Feature: Restore موفق، Build ناموفق و Test اجرا نشده است.
+- خطای ثبت‌شده: `Server/Pages/Admin/FileManager/PartialViews/_DisplayPictures.cshtml` به `System.Drawing.Image` وابسته است، اما مرجع `System.Drawing.Common` حذف شده؛ این مورد باید با انتخاب راهکار سازگار با .NET 10 رفع شود.
+- اجرای CI روی Merge commit هنگام ثبت گزارش هنوز در حال اجرا بود؛ تا مشاهده نتیجه سبز، وضعیت موفق اعلام نشود.
+- کارهای باقیمانده: Migration امن، حذف مسیر `EnsureCreated()` پس از طراحی rollout، اتصال Identity، tenant resolution، فیلترهای Tenant، authorization و تست‌های integration برای جلوگیری از دسترسی بین شرکت‌ها.
