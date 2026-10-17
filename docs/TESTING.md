@@ -19,3 +19,9 @@ dotnet test Template.sln --no-build --configuration Release
 
 ## قاعده گزارش
 نتیجه واقعی هر دستور، کد خروج، تست‌های اجراشده/نشده و علت شکست ثبت شود. اجرای موفق Build جایگزین تست عملکردی و بازبینی امنیتی نیست.
+
+
+## تست‌های راه‌اندازی پایگاه داده (Issue #22)
+- `DatabaseSetupValidationTests` ورودی‌های فاقد سرور، روش احراز هویت نامعتبر و SQL Login بدون رمز را بدون اتصال به SQL Server بررسی می‌کند.
+- این تست‌ها Integration Test نیستند؛ مسیرهای Windows Authentication، SQL Login معتبر، ایجاد دیتابیس، اعمال Migration، Data Protection و دیتابیس موجود باید روی SQL Server واقعی در محیط ایزوله آزموده شوند.
+- تا زمان اجرای CI و تست SQL Server، پیاده‌سازی راه‌اندازی اولیه تأیید نهایی نشده است.
