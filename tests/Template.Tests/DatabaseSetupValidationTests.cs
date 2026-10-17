@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
-using Server.Infrastructure.DatabaseSetup;
+using Infrastructure.DatabaseSetup;
 using Xunit;
 
 namespace Template.Tests;
