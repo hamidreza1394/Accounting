@@ -981,6 +981,12 @@ def derive_model(repository_root: str) -> dict[str, Any]:
             "configured": True,
             "dependent_navigation": dependent_navigation,
             "principal_navigation": principal_navigation,
+            # Only a one to one relationship ("HasOne(...).WithOne(...)") gives the
+            # foreign key of the dependent side a unique index. A relationship that is
+            # written from the principal side ("HasMany(...).WithOne(...)") is still a
+            # one to many relationship, so its foreign key stays non unique.
+            "unique": relationship["has_kind"] == "one"
+            and relationship["with_kind"] == "one",
         }
         foreign_key["name"] = "FK_{}_{}_{}".format(
             foreign_key["dependent"],
@@ -1035,6 +1041,9 @@ def derive_model(repository_root: str) -> dict[str, Any]:
                 "configured": False,
                 "dependent_navigation": navigation["name"],
                 "principal_navigation": principal_navigation,
+                # A navigation that is only discovered by the conventions is always the
+                # "many" side of a one to many relationship.
+                "unique": False,
             }
             foreign_key["name"] = "FK_{}_{}_{}".format(
                 foreign_key["dependent"],
@@ -1050,6 +1059,42 @@ def derive_model(repository_root: str) -> dict[str, Any]:
             for foreign_key in foreign_keys
             if foreign_key["dependent_entity"] == entity["clr_name"]
         ]
+
+    # ---- The indexes that the foreign keys imply --------------------------------------
+    # "ForeignKeyIndexConvention" of EF Core creates an index for every foreign key whose
+    # columns are not already the leading columns of a key or of another index. The
+    # configurations never write those indexes down, so a snapshot that only collects the
+    # declared indexes misses them and "HasPendingModelChanges" reports a difference on
+    # every run, which is what made "/DatabaseSetup" fail.
+    for entity in model_entities:
+        covering: list[tuple[list[str], bool]] = []
+        if entity["primary_key"]:
+            covering.append((list(entity["primary_key"]), True))
+        for key in entity["alternate_keys"]:
+            covering.append((list(key), True))
+        for index in entity["indexes"]:
+            covering.append((list(index["columns"]), bool(index["unique"])))
+
+        for foreign_key in entity["foreign_keys"]:
+            columns = list(foreign_key["columns"])
+            unique = bool(foreign_key.get("unique"))
+
+            if any(
+                are_indexed_by(columns, unique, covering_columns, covering_unique)
+                for covering_columns, covering_unique in covering
+            ):
+                continue
+
+            entity["indexes"].append(
+                {
+                    "columns": columns,
+                    "unique": unique,
+                    "filter": None,
+                    "clustered": None,
+                    "implicit": True,
+                }
+            )
+            covering.append((columns, unique))
 
     # ---- Index names -----------------------------------------------------------------
     for entity in model_entities:
@@ -1096,6 +1141,27 @@ def resolve_entity_type(
         if candidate in entities:
             return candidate
     return None
+
+
+def are_indexed_by(
+    properties: list[str],
+    unique: bool,
+    covering_columns: list[str],
+    covering_unique: bool,
+) -> bool:
+    """
+    Returns whether the given columns are already covered by an existing key or index.
+
+    This is a one to one translation of
+    "ForeignKeyIndexConvention.AreIndexedBy" of EF Core. A non unique foreign key is
+    covered when its columns are the leading columns of the covering key or index. A
+    unique foreign key is only covered by a unique key or index over exactly the same
+    columns, in the same order.
+    """
+    if not unique:
+        return list(covering_columns)[: len(properties)] == list(properties)
+
+    return bool(covering_unique) and list(covering_columns) == list(properties)
 
 
 def navigation_target(

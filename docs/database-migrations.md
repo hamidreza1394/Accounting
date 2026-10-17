@@ -212,8 +212,16 @@ the code base (see the deviations below). It applies exactly that difference:
 3. `CreateIndex` on `IX_PostCategory_ParentId_Title` with the filter
    `[ParentId] IS NOT NULL`. The `SqlServerIndexConvention` drops the
    `[Title] IS NOT NULL` part as soon as `Title` is no longer nullable.
+4. Eight `CreateIndex` operations for the indexes that the
+   `ForeignKeyIndexConvention` implies and that no configuration writes down:
+   `IX_CompanyRolePermissions_PermissionId`, `IX_LoginLogs_UserId`,
+   `IX_MenuItems_ParentId`, `IX_Pages_CreatorUserId`,
+   `IX_Pages_PageCategoryId`, `IX_Permissions_ApplicationHandlerId`,
+   `IX_UserCompanyMemberships_RoleId_TenantId` and `IX_Users_RoleId`. They are
+   missing from the database as well, because `InitialCreate` was generated from
+   the same model that did not know the convention.
 
-`Down` reverses the three steps.
+`Down` reverses the steps.
 
 The operations of the migration are not written down anywhere by hand:
 `scripts/generate_migrations.py` computes them from the difference between the
@@ -249,6 +257,7 @@ differs from the model of the code base.
 
 | Deviation of the script | What EF Core 10.0.13 really does | Effect on `has-pending-model-changes` |
 | --- | --- | --- |
+| Only the indexes that a configuration declares with `.HasIndex(...)` were collected, so the eight indexes that the foreign keys imply were missing from the snapshot. | `ForeignKeyIndexConvention.CreateIndex` adds an index for every foreign key whose columns are not already the leading columns of a key or of another index (`AreIndexedBy`). No configuration ever writes those indexes down. | **Yes — this was the whole warning.** `MigrationsModelDiffer` reported exactly eight `CreateIndexOperation`s: `IX_CompanyRolePermissions_PermissionId`, `IX_LoginLogs_UserId`, `IX_MenuItems_ParentId`, `IX_Pages_CreatorUserId`, `IX_Pages_PageCategoryId`, `IX_Permissions_ApplicationHandlerId`, `IX_UserCompanyMemberships_RoleId_TenantId` and `IX_Users_RoleId`. |
 | `.IsRequired()` without an argument was ignored, so `PostCategory.Title` was written as nullable although `PostCategoryConfiguration` requires it. | `PropertyBuilder.IsRequired(bool required = true)` defaults to `true`. | **Yes.** `MigrationsModelDiffer.ColumnStructureEquals` compares `IsNullable`, so an `AlterColumnOperation` is produced. |
 | Because `Title` was nullable, the automatic filter of the unique index kept `[Title] IS NOT NULL`. | `SqlServerIndexConvention` recomputes the filter of a unique, non-clustered index when the nullability of one of its columns changes. | **Yes.** `IndexStructureEquals` compares `Filter`; an index whose filter differs is dropped and created again. |
 | Only `.IsUnicode(false)` was written into the snapshot. | `CSharpSnapshotGenerator.GenerateFluentApiForIsUnicode` writes the annotation whenever it is present, `.IsUnicode(true)` included. | No. `IsUnicode` is compared while *matching* columns, but it is not part of the `AlterColumnOperation` trigger, because a real change of it always changes the store type (`varchar` ↔ `nvarchar`). |

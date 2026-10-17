@@ -167,6 +167,8 @@ namespace Data.Migrations
                     .IsUnique()
                     .HasFilter("[CellPhoneNumberVerificationKey] IS NOT NULL");
 
+                b.HasIndex("RoleId");
+
                 b.ToTable("Users");
             });
 
@@ -295,6 +297,10 @@ namespace Data.Migrations
                 b.HasIndex("Ordering")
                     .HasAnnotation("SqlServer:Clustered", false);
 
+                b.HasIndex("CreatorUserId");
+
+                b.HasIndex("PageCategoryId");
+
                 b.ToTable("Pages");
             });
 
@@ -321,6 +327,8 @@ namespace Data.Migrations
                 b.HasKey("Id");
 
                 b.HasIndex("UserIP");
+
+                b.HasIndex("UserId");
 
                 b.ToTable("LoginLogs");
             });
@@ -372,6 +380,8 @@ namespace Data.Migrations
 
                 b.HasKey("Id");
 
+                b.HasIndex("ParentId");
+
                 b.ToTable("MenuItems");
             });
 
@@ -399,6 +409,8 @@ namespace Data.Migrations
 
                 b.HasIndex("RoleId", "ApplicationHandlerId")
                     .IsUnique();
+
+                b.HasIndex("ApplicationHandlerId");
 
                 b.ToTable("Permissions");
             });
@@ -551,6 +563,8 @@ namespace Data.Migrations
 
                 b.HasIndex("TenantId", "IsActive");
 
+                b.HasIndex("RoleId", "TenantId");
+
                 b.ToTable("UserCompanyMemberships");
             });
 
@@ -676,6 +690,8 @@ namespace Data.Migrations
                     .HasColumnType("uniqueidentifier");
 
                 b.HasKey("RoleId", "PermissionId");
+
+                b.HasIndex("PermissionId");
 
                 b.ToTable("CompanyRolePermissions");
             });

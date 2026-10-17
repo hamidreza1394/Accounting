@@ -3,7 +3,7 @@
 - **Issue:** `UNNUMBERED`
 - **Agent/مسئول:** Arena.ai Agent Mode
 - **تاریخ:** 2026-10-17
-- **وضعیت:** انجام‌شده (با محدودیت محیطی در Build/Test)
+- **وضعیت:** انجام‌شده؛ Build/Test و `has-pending-model-changes` روی GitHub Actions سبز شدند
 
 ## هدف و معیارهای پذیرش
 - [x] علت ریشه‌ای `PendingModelChangesWarning` در `/DatabaseSetup` پیدا و اصلاح شود.
@@ -11,7 +11,7 @@
 - [x] Migration جدید برای اختلاف واقعی Schema ساخته شود؛ `InitialCreate` بدون تغییر بماند.
 - [x] `PendingModelChangesWarning` غیرفعال یا با `ConfigureWarnings` پنهان نشود.
 - [x] ابزار رسمی EF Core در CI اضافه شود (`dotnet ef migrations has-pending-model-changes`).
-- [ ] اجرای `dotnet build` / `dotnet test` — در این محیط ممکن نبود (پایین‌تر توضیح داده شده).
+- [x] اجرای `dotnet build` / `dotnet test` — در sandbox ممکن نبود، ولی روی GitHub Actions اجرا شد و سبز است (پایین‌تر).
 
 ## علت ریشه‌ای (اثبات‌شده)
 
@@ -23,8 +23,26 @@
 `Migrator.MigrateAsync` پیش از اعمال Migration، مدل Snapshot را با مدل زمان طراحی
 مقایسه می‌کند (`Migrator.HasPendingModelChanges` →
 `MigrationsModelDiffer.HasDifferences(snapshot.Model.GetRelationalModel(), designTimeModel.Model.GetRelationalModel())`)
-و در صورت اختلاف `PendingModelChangesWarning` می‌اندازد. دو انحراف ابزار پایتون از
-EF Core 10.0.13 این اختلاف را ساخته بود:
+و در صورت اختلاف `PendingModelChangesWarning` می‌اندازد.
+
+**علت اصلی (با ابزار واقعی EF Core اثبات شد).** یک آزمون تشخیصی موقت، خروجی
+`IMigrationsModelDiffer.GetDifferences(snapshotModel.GetRelationalModel(), designTimeModel.GetRelationalModel())`
+را روی CI چاپ کرد و دقیقاً **هشت `CreateIndexOperation`** برگرداند:
+`IX_CompanyRolePermissions_PermissionId`، `IX_LoginLogs_UserId`،
+`IX_MenuItems_ParentId`، `IX_Pages_CreatorUserId`، `IX_Pages_PageCategoryId`،
+`IX_Permissions_ApplicationHandlerId`،
+`IX_UserCompanyMemberships_RoleId_TenantId` و `IX_Users_RoleId`.
+
+`scripts/ef_model.py` فقط ایندکس‌هایی را جمع می‌کرد که یک Configuration با
+`.HasIndex(...)` صریحاً اعلام کرده باشد. اما EF Core با
+`ForeignKeyIndexConvention.CreateIndex` برای **هر foreign key** یک ایندکس می‌سازد،
+مگر آن‌که ستون‌هایش از قبل ستون‌های ابتدایی یک Key یا یک ایندکس دیگر باشند
+(`ForeignKeyIndexConvention.AreIndexedBy`). هیچ Configuration‌ای این ایندکس‌ها را
+نمی‌نویسد، پس Snapshot همیشه هشت ایندکس کم داشت. چون `InitialCreate` هم از همان
+مدل تولید شده بود، این ایندکس‌ها در دیتابیس هم وجود ندارند؛ به همین دلیل
+Snapshot و Migration با هم سازگار بودند و اختلاف فقط با مدل واقعی ظاهر می‌شد.
+
+علاوه بر آن، دو انحراف دیگر هم `has-pending-model-changes` را قرمز می‌کردند:
 
 1. **`scripts/ef_model.py:540`** — فراخوانی `.IsRequired()` بدون آرگومان نادیده
    گرفته می‌شد (regex فقط `IsRequired(true)`/`IsRequired(required: true)` را می‌گرفت).
@@ -56,12 +74,17 @@ EF Core 10.0.13 این اختلاف را ساخته بود:
    فقط دقت Snapshot را بهتر کرد.)
 
 هر چهار مورد با خواندن مستقیم سورس `dotnet/efcore` شاخهٔ `release/10.0` تأیید شد
-(`MigrationsModelDiffer.cs`، `SqlServerIndexConvention.cs`،
-`CSharpSnapshotGenerator.cs`، `CSharpMigrationOperationGenerator.cs`،
-`DatabaseGeneratedAttributeConvention.cs`، `Internal/Property.cs`).
+(`MigrationsModelDiffer.cs`، `ForeignKeyIndexConvention.cs`،
+`SqlServerIndexConvention.cs`، `CSharpSnapshotGenerator.cs`،
+`CSharpMigrationOperationGenerator.cs`، `DatabaseGeneratedAttributeConvention.cs`،
+`Internal/Property.cs`). علت اصلی در نهایت با خودِ ابزار EF Core روی CI اندازه‌گیری
+شد، نه فقط با تحلیل سورس؛ آزمون تشخیصی پس از شناسایی علت حذف شد.
 
 ## خلاصه تغییرات
-- رفع دو باگ ریشه‌ای در `scripts/ef_model.py` (پارس `.IsRequired()` و
+- **پیاده‌سازی `ForeignKeyIndexConvention` در `scripts/ef_model.py`** (تابع
+  `are_indexed_by` + حلقهٔ تولید ایندکس‌های ضمنی): برای هر foreign key که ستون‌هایش
+  پوشش داده نشده، ایندکس `IX_<Table>_<Columns>` ساخته می‌شود. این علت اصلی خطا بود.
+- رفع دو باگ ریشه‌ای دیگر در `scripts/ef_model.py` (پارس `.IsRequired()` و
   `[DatabaseGenerated(...)]`؛ هر دو قبلاً بی‌صدا نادیده گرفته می‌شدند).
 - رفع دو باگ دقت Snapshot در `scripts/generate_migrations.py`
   (`.IsUnicode(true)` و `ValueGenerated`).
@@ -112,10 +135,10 @@ EF Core 10.0.13 این اختلاف را ساخته بود:
 | `python3 scripts/verify_migration_model.py --repo-root .` | موفق | exit 0؛ شامل اعتبارسنجی syntax با tree-sitter |
 | `python3 scripts/check_static_assets.py` | موفق | exit 0 |
 | آزمون منفی (برگشت Snapshot به نسخهٔ قبلی) | موفق | exit 1 با ۲۷ خطا، از جمله `nullable` و `filter` |
-| `dotnet build Template.sln` | **اجرا نشده** | .NET SDK در sandbox نیست |
-| `dotnet test Template.sln` | **اجرا نشده** | .NET SDK در sandbox نیست |
-| `dotnet ef migrations has-pending-model-changes` | **اجرا نشده** | .NET SDK و NuGet در دسترس نیست |
-| اجرای Migration روی دیتابیس خالی | **اجرا نشده** | SQL Server در sandbox نیست |
+| `dotnet build Template.sln --configuration Release` | موفق روی CI | گام `Build` در GitHub Actions سبز شد |
+| `dotnet test Template.sln --no-build --configuration Release` | موفق روی CI | ۱۶ آزمون، ۰ خطا (پس از اصلاح) |
+| `dotnet ef migrations has-pending-model-changes` | موفق روی CI | گام `Check for pending model changes` سبز شد |
+| اجرای Migration روی دیتابیس خالی | **اجرا نشده** | SQL Server در sandbox و در runner نیست |
 
 دلیل: در این محیط فقط `github.com`, `codeload.github.com`, `api.github.com`,
 `registry.npmjs.org`, `pypi.org` و `files.pythonhosted.org` در دسترس‌اند. تلاش برای
@@ -132,14 +155,18 @@ SSL_ERROR_SYSCALL` رد شد، بنابراین نه SDK قابل نصب است 
 - تنها تغییر داده‌ای، مقداردهی `Title`های NULL به رشتهٔ خالی در همان Migration است.
 
 ## ریسک‌ها و کارهای باقی‌مانده
-- Build/Test رسمی روی CI باید اجرا شود؛ اگر تحلیل سورس EF Core در مورد
-  `.IsUnicode(true)` یا `ValueGenerated` خطایی داشته باشد، فقط محتوای Snapshot
-  متفاوت می‌شود و نه Schema (هیچ‌کدام در `AlterColumnOperation` اثر ندارند).
-- اگر `dotnet ef migrations add` روی همین مدل Migration خالی تولید نکند، یعنی
-  اختلاف دیگری باقی است؛ `dotnet ef migrations has-pending-model-changes` در CI
-  همین را کنترل می‌کند.
+- اجرای Migration روی یک دیتابیس خالی هنوز به‌صورت دستی تست نشده (SQL Server نه در
+  sandbox هست و نه در runner). هشت `CreateIndex` جدید روی ستون‌های FK هستند و اگر
+  ایندکسی با همان نام از قبل در یک دیتابیس قدیمی وجود داشته باشد، `CreateIndex`
+  خطا می‌دهد؛ در دیتابیسی که با `InitialCreate` ساخته شده باشد چنین ایندکسی وجود
+  ندارد، چون `InitialCreate` هم آن‌ها را نمی‌سازد.
 - `PostCategory` همچنان کد قدیمی قالب است و `DbSet` ندارد؛ حذف آن از مدل تصمیم
   جداگانه‌ای است و در این تغییر وارد نشد.
+- لاگ کامل گام‌های GitHub Actions از طریق API قابل دانلود نیست
+  (`results-receiver.actions.githubusercontent.com` با EOF رد می‌شود). برای همین
+  گام `Publish the test output` در workflow اضافه شد که خلاصهٔ خروجی `dotnet test`
+  را در صورت شکست به‌صورت annotation منتشر می‌کند. همین کانال برای تشخیص علت اصلی
+  استفاده شد.
 
 ## شناسه‌های Git
 - Branch: `arena/e5e905ae-accounting`
