@@ -8,10 +8,12 @@ public sealed class LoginPasswordToggleTests
     private static string ReadRepositoryFile(string relativePath)
     {
         var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
-        for (var index = 0; index < 5 && directory.Parent != null; index++)
+        while (directory.Parent != null && !File.Exists(Path.Combine(directory.FullName, "Template.sln")))
         {
             directory = directory.Parent;
         }
+
+        Assert.True(File.Exists(Path.Combine(directory.FullName, "Template.sln")), "Repository root could not be located.");
 
         var path = Path.Combine(directory.FullName, relativePath.Replace('/', Path.DirectorySeparatorChar));
         Assert.True(File.Exists(path), $"Expected repository file was not found: {path}");
