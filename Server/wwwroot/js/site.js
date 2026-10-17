@@ -13,7 +13,9 @@ $(function () {
 		form[0].submit();
 	});
 
-	$('[data-password-toggle]').on('click', function () {
+	// Legacy pages keep their existing jQuery toggle. The dedicated Faranou
+	// page owns its toggle in taraz-login.js, so the two handlers never overlap.
+	$('.login-form:not(.taraz-login-form) [data-password-toggle]').on('click', function () {
 		const button = $(this);
 		const passwordId = button.attr('data-password-toggle');
 		const password = document.getElementById(passwordId);
