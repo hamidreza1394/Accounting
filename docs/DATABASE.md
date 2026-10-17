@@ -19,7 +19,7 @@
 
 ## مدل چندمستاجری افزوده‌شده در Issue #16
 - `Company`: محدوده Tenant و ریشه داده شرکت.
-- `UserCompanyMembership`: اتصال شناسه کاربر مرکزی به شرکت و نقش همان شرکت؛ ترکیب UserId/CompanyId یکتا است.
+- `UserCompanyMembership`: اتصال شناسه کاربر مرکزی به شرکت و نقش همان شرکت؛ ترکیب UserId/TenantId یکتا است.
 - `FiscalPeriod`: دوره مالی با تاریخ شروع/پایان و وضعیت Open/Closed/Archived.
 - `CompanyRole`: نقش مستقل در محدوده شرکت.
 - `PermissionDefinition` و `CompanyRolePermission`: کاتالوگ مجوز و تخصیص به نقش.

@@ -7,11 +7,13 @@ internal sealed class UserCompanyMembershipConfiguration : Microsoft.EntityFrame
         builder.ToTable("UserCompanyMemberships");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.CreatedAtUtc).IsRequired();
-        builder.HasIndex(x => new { x.UserId, x.CompanyId }).IsUnique();
-        builder.HasIndex(x => new { x.CompanyId, x.IsActive });
+        builder.HasIndex(x => new { x.UserId, x.TenantId }).IsUnique();
+        builder.HasIndex(x => new { x.TenantId, x.IsActive });
         builder.HasOne(x => x.Company).WithMany(x => x.Memberships)
-            .HasForeignKey(x => x.CompanyId).OnDelete(Microsoft.EntityFrameworkCore.DeleteBehavior.Restrict);
+            .HasForeignKey(x => x.TenantId).OnDelete(Microsoft.EntityFrameworkCore.DeleteBehavior.Restrict);
         builder.HasOne(x => x.Role).WithMany(x => x.Memberships)
-            .HasForeignKey(x => x.RoleId).OnDelete(Microsoft.EntityFrameworkCore.DeleteBehavior.Restrict);
+            .HasForeignKey(x => new { x.RoleId, x.TenantId })
+            .HasPrincipalKey(x => new { x.Id, x.TenantId })
+            .OnDelete(Microsoft.EntityFrameworkCore.DeleteBehavior.Restrict);
     }
 }

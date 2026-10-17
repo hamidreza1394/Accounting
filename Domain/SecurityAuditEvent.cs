@@ -6,7 +6,7 @@ namespace Domain;
 public sealed class SecurityAuditEvent : Seedwork.Entity
 {
     public Guid? UserId { get; set; }
-    public Guid? CompanyId { get; set; }
+    public Guid? TenantId { get; set; }
     public string EventType { get; set; } = string.Empty;
     public string? EntityType { get; set; }
     public string? EntityId { get; set; }

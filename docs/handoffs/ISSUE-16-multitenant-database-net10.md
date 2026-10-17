@@ -31,7 +31,7 @@
 
 ## تصمیم‌های فنی
 - یک Company همان Tenant است و شناسه Company.Id شناسه محدوده مستأجر است.
-- عضویت با UserId/CompanyId یکتا است؛ Role به شرکت محدود است.
+- عضویت با UserId/TenantId یکتا است؛ Role به شرکت محدود است.
 - UserCompanyMembership.UserId در این مرحله scalar باقی می‌ماند تا مدل قدیمی User به‌طور ناخواسته به Identity جدید متصل نشود.
 - .NET 10 LTS انتخاب شد؛ Visual Studio 2026 نسخه 18.0+ برای هدف‌گذاری رسمی لازم است.
 - Connection String محرمانه در Git ذخیره نمی‌شود.

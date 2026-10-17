@@ -6,7 +6,7 @@ namespace Domain;
 public sealed class CompanyRole : Seedwork.Entity,
     Dtat.Seedwork.Abstractions.IEntityHasIsActive
 {
-    public Guid CompanyId { get; set; }
+    public Guid TenantId { get; set; }
     public Company Company { get; set; } = null!;
     public string Code { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;

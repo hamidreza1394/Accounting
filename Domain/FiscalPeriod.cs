@@ -5,7 +5,7 @@ namespace Domain;
 /// </summary>
 public sealed class FiscalPeriod : Seedwork.Entity
 {
-    public Guid CompanyId { get; set; }
+    public Guid TenantId { get; set; }
     public Company Company { get; set; } = null!;
     public string Title { get; set; } = string.Empty;
     public DateOnly StartDate { get; set; }

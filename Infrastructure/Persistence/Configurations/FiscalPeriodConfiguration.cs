@@ -8,9 +8,9 @@ internal sealed class FiscalPeriodConfiguration : Microsoft.EntityFrameworkCore.
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Title).HasMaxLength(100).IsRequired();
         builder.Property(x => x.Status).IsRequired();
-        builder.HasIndex(x => new { x.CompanyId, x.StartDate, x.EndDate }).IsUnique();
-        builder.HasIndex(x => new { x.CompanyId, x.Status });
+        builder.HasIndex(x => new { x.TenantId, x.StartDate, x.EndDate }).IsUnique();
+        builder.HasIndex(x => new { x.TenantId, x.Status });
         builder.HasOne(x => x.Company).WithMany(x => x.FiscalPeriods)
-            .HasForeignKey(x => x.CompanyId).OnDelete(Microsoft.EntityFrameworkCore.DeleteBehavior.Restrict);
+            .HasForeignKey(x => x.TenantId).OnDelete(Microsoft.EntityFrameworkCore.DeleteBehavior.Restrict);
     }
 }
