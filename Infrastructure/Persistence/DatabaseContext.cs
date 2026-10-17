@@ -53,7 +53,7 @@ public class DatabaseContext : Microsoft.EntityFrameworkCore.DbContext
     public Microsoft.EntityFrameworkCore.DbSet<Domain.SecurityAuditEvent> SecurityAuditEvents { get; set; }
 
 	protected override void OnModelCreating
-		(Microsoft.EntityFrameworkCore.Metadata.Builders.ModelBuilder modelBuilder)
+		(Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder)
 	{
 		base.OnModelCreating(modelBuilder: modelBuilder);
 
@@ -62,7 +62,7 @@ public class DatabaseContext : Microsoft.EntityFrameworkCore.DbContext
 	}
 
 	protected override void ConfigureConventions
-		(Microsoft.EntityFrameworkCore.Metadata.Builders.ModelConfigurationBuilder builder)
+		(Microsoft.EntityFrameworkCore.ModelConfigurationBuilder builder)
 	{
 		base.ConfigureConventions(builder: builder);
 
