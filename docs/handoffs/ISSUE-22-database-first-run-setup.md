@@ -57,5 +57,5 @@
 
 ## شناسه‌های Git
 - Branch: `feature/issue-22-database-first-run-setup`
-- Commitهای آخر: در PR ثبت می‌شوند.
-- Pull Request: پس از بازبینی استاتیک و CI ایجاد خواهد شد.
+- Commit آخر هنگام به‌روزرسانی handoff: در PR ثبت شده؛ Head SHA را از صفحه PR بررسی کنید.
+- Pull Request: https://github.com/hamidreza1394/Accounting/pull/23 (باز؛ CI در حال اجرا است).
