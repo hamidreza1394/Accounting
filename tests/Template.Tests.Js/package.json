@@ -1,0 +1,12 @@
+{
+  "name": "template.tests.js",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Behavioral (DOM-level) tests for client-side scripts that the .NET unit tests can't exercise.",
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "jsdom": "^24.1.0"
+  }
+}
