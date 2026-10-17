@@ -70,6 +70,17 @@ public sealed class DatabaseModelTests
 			var primaryKey = entityType.FindPrimaryKey();
 
 			Assert.NotNull(primaryKey);
+
+			if (entityType.ClrType == typeof(Domain.CompanyRolePermission))
+			{
+				// The permission of a role is identified by the pair (role, permission).
+				Assert.Equal(
+					new[] { "RoleId", "PermissionId" },
+					primaryKey!.Properties.Select(property => property.Name).ToArray());
+
+				continue;
+			}
+
 			Assert.Equal("Id", Assert.Single(primaryKey!.Properties).Name);
 			Assert.Equal(typeof(Guid), primaryKey.Properties[0].ClrType);
 		}
@@ -163,7 +174,7 @@ public sealed class DatabaseModelTests
 		var startDate = fiscalPeriod!.FindProperty("StartDate");
 
 		Assert.NotNull(startDate);
-		Assert.Equal("date", startDate!.GetColumnType());
+		Assert.Equal("date", startDate!.GetColumnType(), ignoreCase: true);
 	}
 
 	[Fact]

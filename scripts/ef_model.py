@@ -1235,13 +1235,14 @@ def build_column(
         store_type = STORE_TYPE_DATETIME2
     elif simple == "DateOnly":
         # The DateOnly -> DateTime value converter changes the provider CLR type to
-        # DateTime. The "HaveColumnType(\"Date\")" convention is applied on top of it, so
-        # SQL Server resolves the "date" store type with the DateTime mapping
-        # (SqlServerDateTimeTypeMapping("date")), which keeps the store type "date".
-        store_type = STORE_TYPE_DATE
+        # DateTime. The "HaveColumnType(\"Date\")" convention is applied on top of it. The
+        # store type of a column that has an explicit column type is that column type
+        # ("RelationalTypeMapping.WithTypeMappingInfo" keeps the requested name), so the
+        # store type is "Date" and not "date".
+        snapshot_column_type = date_only.get("column_type")
+        store_type = snapshot_column_type or STORE_TYPE_DATE
         provider_clr_type = "System.DateTime"
         snapshot_clr_type = "System.DateTime"
-        snapshot_column_type = date_only.get("column_type")
     elif resolve_type_name(unwrapped, namespace, enums) in enums:
         underlying = enums[resolve_type_name(unwrapped, namespace, enums)]
         store_type = {
