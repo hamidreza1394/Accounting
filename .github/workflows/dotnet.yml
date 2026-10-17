@@ -32,7 +32,21 @@ jobs:
       - name: Build
         run: dotnet build Template.sln --no-restore --configuration Release
       - name: Test
-        run: dotnet test Template.sln --no-build --configuration Release
+        run: |
+          set -o pipefail
+          dotnet test Template.sln --no-build --configuration Release 2>&1 | tee /tmp/dotnet-test.log
+      # The logs of a run can not always be downloaded; the tail of the test output is
+      # therefore published in the job summary, where it stays readable.
+      - name: Publish the test output
+        if: failure()
+        run: |
+          {
+            echo '### dotnet test output'
+            echo ''
+            echo '```'
+            tail -n 250 /tmp/dotnet-test.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
       # The migration checks are the guards against a model snapshot that no longer
       # describes the model, which fails at runtime with PendingModelChangesWarning.
       - name: Check the generated migrations
