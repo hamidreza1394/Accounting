@@ -390,7 +390,7 @@ namespace Data.Migrations
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_UserCompanyMemberships_CompanyRoles_RoleId_TenantId",
-                        column: x => new { x.RoleId, x.TenantId },
+                        columns: x => new { x.RoleId, x.TenantId },
                         principalTable: "CompanyRoles",
                         principalColumns: new[] { "Id", "TenantId" },
                         onDelete: ReferentialAction.Restrict);

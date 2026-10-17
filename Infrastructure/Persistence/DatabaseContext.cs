@@ -64,7 +64,7 @@ public class DatabaseContext : Microsoft.EntityFrameworkCore.DbContext
 	protected override void ConfigureConventions
 		(Microsoft.EntityFrameworkCore.ModelConfigurationBuilder builder)
 	{
-		base.ConfigureConventions(builder: builder);
+		base.ConfigureConventions(builder);
 
 		builder.Properties<System.DateOnly>()
 			.HaveConversion<Conventions.DateTimeConventions.DateOnlyConverter>()

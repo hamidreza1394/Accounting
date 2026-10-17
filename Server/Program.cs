@@ -115,7 +115,7 @@ builder.Services.AddDbContext<Data.DatabaseContext>
 
 		options
 			// using Microsoft.EntityFrameworkCore;
-			.MigrationsAssembly(migrationAssembly: typeof(Data.DatabaseContext).Assembly.FullName);
+			.MigrationsAssembly(assemblyName: typeof(Data.DatabaseContext).Assembly.FullName);
 	});
 // **************************************************
 

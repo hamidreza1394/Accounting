@@ -288,7 +288,7 @@ namespace Data.Migrations
                 b.HasKey("Id");
 
                 b.HasIndex("Ordering")
-                    .Annotation("SqlServer:Clustered", false);
+                    .HasAnnotation("SqlServer:Clustered", false);
 
                 b.ToTable("Pages");
             });
@@ -781,7 +781,7 @@ namespace Data.Migrations
                 b.HasKey("Id");
 
                 b.HasIndex("Ordering")
-                    .Annotation("SqlServer:Clustered", false);
+                    .HasAnnotation("SqlServer:Clustered", false);
 
                 b.HasIndex("ParentId", "Title")
                     .IsUnique()

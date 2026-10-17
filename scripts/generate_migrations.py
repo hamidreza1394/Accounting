@@ -214,9 +214,12 @@ def generate_create_table(entity: dict[str, Any], lines: list[str]) -> None:
         )
     for foreign_key in entity["foreign_keys"]:
         lines.append(f"{INDENT * 5}table.ForeignKey(")
+        column_argument = (
+            "column" if len(foreign_key["columns"]) == 1 else "columns"
+        )
         arguments = [
             f'name: {literal(foreign_key_name(foreign_key))}',
-            f'column: {lambda_expression(foreign_key["columns"])}',
+            f'{column_argument}: {lambda_expression(foreign_key["columns"])}',
             f'principalTable: {literal(foreign_key["principal_table"])}',
         ]
         # EF Core 10 expects the name of the principal column, not a lambda.
@@ -375,7 +378,9 @@ def generate_model(entity_types: list[dict[str, Any]], indent: str) -> list[str]
             if index["unique"]:
                 lines.append(f"{indent}{INDENT * 2}.IsUnique()")
             if index.get("clustered") is False:
-                lines.append(f'{indent}{INDENT * 2}.Annotation("SqlServer:Clustered", false)')
+                lines.append(
+                    f'{indent}{INDENT * 2}.HasAnnotation("SqlServer:Clustered", false)'
+                )
             if index["filter"]:
                 lines.append(f"{indent}{INDENT * 2}.HasFilter({literal(index['filter'])})")
             lines[-1] = lines[-1] + ";"

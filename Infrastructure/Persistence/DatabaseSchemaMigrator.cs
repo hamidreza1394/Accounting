@@ -38,9 +38,9 @@ public sealed class DatabaseSchemaMigrator : IDatabaseSchemaMigrator
 		(CancellationToken cancellationToken = default)
 	{
 		var pendingMigrations =
-			await _databaseContext.Database
-				.GetPendingMigrationsAsync(cancellationToken: cancellationToken)
-				.ToListAsync(cancellationToken: cancellationToken);
+			(await _databaseContext.Database
+				.GetPendingMigrationsAsync(cancellationToken: cancellationToken))
+			.ToList();
 
 		return pendingMigrations;
 	}

@@ -51,7 +51,7 @@ public sealed class DesignTimeDatabaseContextFactory : IDesignTimeDbContextFacto
 			.UseSqlServer(
 				connectionString: connectionString,
 				sqlServerOptionsAction: sqlServer => sqlServer
-					.MigrationsAssembly(migrationAssembly: typeof(DatabaseContext).Assembly.FullName));
+					.MigrationsAssembly(assemblyName: typeof(DatabaseContext).Assembly.FullName));
 
 		return new DatabaseContext(optionsBuilder.Options);
 	}
