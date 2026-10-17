@@ -6,12 +6,20 @@
 - Git؛ Python 3 فقط برای بررسی ممنوعیت CDN در اسکریپت CI.
 - برای دریافت/به‌روزرسانی NuGet و LibMan در مرحله آماده‌سازی به اینترنت دسترسی لازم است؛ **اجرای برنامه پس از دریافت وابستگی‌ها نباید برای CSS/JS/فونت/آیکون به اینترنت خارجی نیاز داشته باشد**.
 
-## تنظیم اسرار محلی
-مقادیر محرمانه را در `appsettings.json` یا `appsettings.Development.json` وارد نکنید. نمونه Connection String توسعه فعلی از Windows Integrated Authentication استفاده می‌کند؛ آن را فقط مطابق SQL Server محلی خود تنظیم کنید. برای تنظیم User Secrets:
+## تنظیم اتصال پایگاه داده
+در اجرای اولیه، اگر Connection String از User Secrets، متغیر محیطی یا تنظیمات صریح برنامه ارائه نشده باشد، برنامه به صفحه `/DatabaseSetup` هدایت می‌شود. فرم اتصال SQL Server را آزمایش می‌کند، در صورت نیاز دیتابیس را می‌سازد و برای دیتابیس خالی Migrationهای EF Core را اجرا می‌کند.
 
+- فایل تنظیمات محافظت‌شده در مسیر `%LOCALAPPDATA%\\TarazAva\\Database\\database-settings.json` در ویندوز ذخیره می‌شود؛ مسیر دقیق روی صفحه نمایش داده می‌شود.
+- Connection String در فایل به کمک ASP.NET Core Data Protection رمزنگاری می‌شود. کلیدهای Data Protection در پوشه `keys` نگه‌داری می‌شوند و در ویندوز با DPAPI محافظت می‌شوند.
+- فایل `setup-token.txt` کد یک‌بارمصرف فرم را نگه می‌دارد. آن را فقط از روی همان سرور بخوانید و در اختیار دیگران قرار ندهید؛ پس از ذخیره موفق تنظیمات حذف می‌شود.
+- پس از ذخیره تنظیمات، برنامه را متوقف و دوباره اجرا کنید. برای دیتابیس موجود، Migration خودکار انجام نمی‌شود تا schema قدیمی یا دیتابیس ایجادشده با `EnsureCreated()` ناخواسته تغییر نکند.
+- در استقرار، پوشه داده و کلیدهای Data Protection باید با همان هویت سرویس قابل دسترس باشند. جابه‌جایی فایل تنظیمات به دستگاه دیگر بدون انتقال امن کلیدها امکان رمزگشایی را تضمین نمی‌کند.
+- برای پیکربندی صریح/مدیریت‌شده، مقادیر `ConnectionStrings:ConnectionString` در User Secrets یا متغیر محیطی `ConnectionStrings__ConnectionString` بر فایل محلی مقدم هستند.
+
+برای استفاده از User Secrets:
 ```powershell
 dotnet user-secrets init --project Server/Server.csproj
-dotnet user-secrets set "ConnectionStrings:ConnectionString" "Server=.\SQLSERVER2025;Database=TarazAvaDb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true;" --project Server/Server.csproj
+dotnet user-secrets set "ConnectionStrings:ConnectionString" "Server=localhost;Database=TarazAvaDb;Trusted_Connection=True;Encrypt=True;TrustServerCertificate=False;" --project Server/Server.csproj
 ```
 
 ورود مدیریتی فعلی هنوز legacy است و برای Production تأیید نمی‌شود؛ راهنمای `docs/SECURITY.md` را بخوانید. مقادیر `MasterUsername`، `MasterPassword` و `ActivationKeys` باید فقط در User Secrets/Environment/Secret Store تنظیم شوند و خالی‌بودن آن‌ها نباید با مقدار پیش‌فرض ناامن دور زده شود.
