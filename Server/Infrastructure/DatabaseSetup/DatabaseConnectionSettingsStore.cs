@@ -18,8 +18,10 @@ public sealed class DatabaseConnectionSettingsStore
     {
         _logger = logger;
         var root = GetRootDirectory();
+        Directory.CreateDirectory(root);
         var keyDirectory = Path.Combine(root, "keys");
         Directory.CreateDirectory(keyDirectory);
+        RestrictDirectoryPermissions(root);
         RestrictDirectoryPermissions(keyDirectory);
 
         var provider = DataProtectionProvider.Create(
@@ -34,13 +36,26 @@ public sealed class DatabaseConnectionSettingsStore
 
         _protector = provider.CreateProtector(ProtectorPurpose);
         SettingsFilePath = Path.Combine(root, "database-settings.json");
-        SetupAccessToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(24));
+        SetupTokenFilePath = Path.Combine(root, "setup-token.txt");
     }
 
     public string SettingsFilePath { get; }
+    public string SetupTokenFilePath { get; }
+    public string? SetupAccessToken { get; private set; }
 
-    /// <summary>A one-process, one-time bootstrap token. It is intentionally not persisted.</summary>
-    public string SetupAccessToken { get; }
+    /// <summary>
+    /// Creates a short-lived bootstrap token outside the repository. It is only generated when
+    /// standard configuration and the protected local settings file do not supply a connection.
+    /// </summary>
+    public void EnsureSetupToken()
+    {
+        if (string.IsNullOrWhiteSpace(SetupAccessToken))
+        {
+            SetupAccessToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(24));
+            File.WriteAllText(SetupTokenFilePath, SetupAccessToken);
+            RestrictFilePermissions(SetupTokenFilePath);
+        }
+    }
 
     public bool TryLoadConnectionString(out string? connectionString)
     {
@@ -88,6 +103,13 @@ public sealed class DatabaseConnectionSettingsStore
         RestrictFilePermissions(temporaryPath);
         File.Move(temporaryPath, SettingsFilePath, overwrite: true);
         RestrictFilePermissions(SettingsFilePath);
+
+        if (File.Exists(SetupTokenFilePath))
+        {
+            File.Delete(SetupTokenFilePath);
+        }
+
+        SetupAccessToken = null;
     }
 
     private static string GetRootDirectory()
