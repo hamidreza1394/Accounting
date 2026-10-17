@@ -32,12 +32,21 @@ public sealed class DatabaseSetupModel : PageModel
     public string SetupTokenFilePath => _settingsStore.SetupTokenFilePath;
     public string? SuccessMessage { get; private set; }
     public string? ErrorMessage { get; private set; }
+    public bool SettingsAlreadySaved { get; private set; }
 
     public IActionResult OnGet()
     {
         if (!string.IsNullOrWhiteSpace(_configuration.GetConnectionString("ConnectionString")))
         {
             return RedirectToPage("/Index");
+        }
+
+        SettingsAlreadySaved = _settingsStore.SetupAccessToken is null &&
+            System.IO.File.Exists(_settingsStore.SettingsFilePath);
+
+        if (SettingsAlreadySaved)
+        {
+            SuccessMessage = "تنظیمات ذخیره شده است. برای فعال شدن اتصال جدید، برنامه را متوقف و دوباره اجرا کنید.";
         }
 
         return Page();
@@ -50,10 +59,16 @@ public sealed class DatabaseSetupModel : PageModel
             return RedirectToPage("/Index");
         }
 
+        if (_settingsStore.SetupAccessToken is null)
+        {
+            SettingsAlreadySaved = System.IO.File.Exists(_settingsStore.SettingsFilePath);
+            SuccessMessage = "تنظیمات قبلاً ذخیره شده است. برای فعال شدن اتصال جدید، برنامه را متوقف و دوباره اجرا کنید.";
+            return Page();
+        }
+
         var providedToken = Encoding.UTF8.GetBytes(Input.SetupToken ?? string.Empty);
-        var expectedToken = Encoding.UTF8.GetBytes(_settingsStore.SetupAccessToken ?? string.Empty);
-        if (expectedToken.Length == 0 ||
-            providedToken.Length != expectedToken.Length ||
+        var expectedToken = Encoding.UTF8.GetBytes(_settingsStore.SetupAccessToken);
+        if (providedToken.Length != expectedToken.Length ||
             !CryptographicOperations.FixedTimeEquals(providedToken, expectedToken))
         {
             ModelState.AddModelError(nameof(Input.SetupToken),
@@ -87,6 +102,7 @@ public sealed class DatabaseSetupModel : PageModel
             return Page();
         }
 
+        SettingsAlreadySaved = true;
         SuccessMessage = result.DatabaseCreated
             ? "اتصال تأیید شد، دیتابیس ساخته شد و Migrationهای پروژه اعمال شدند. برای بارگذاری تنظیمات جدید، برنامه را متوقف و دوباره اجرا کنید."
             : "اتصال تأیید و تنظیمات به‌صورت رمزنگاری‌شده ذخیره شد. دیتابیس از قبل وجود داشت و برای جلوگیری از تغییر ناخواسته داده‌ها، Migration خودکار روی دیتابیس موجود اجرا نشد. برنامه را مجدداً اجرا کنید و وضعیت Migrationها را بررسی کنید.";
@@ -106,7 +122,6 @@ public sealed class DatabaseSetupModel : PageModel
 
         [Required(ErrorMessage = "نام دیتابیس الزامی است.")]
         [StringLength(128, MinimumLength = 1)]
-        [RegularExpression(@"^[^\[\]/\\.]+$", ErrorMessage = "نام دیتابیس شامل نویسه‌های غیرمجاز است.")]
         public string Database { get; set; } = "TarazAvaDb";
 
         [Required]
