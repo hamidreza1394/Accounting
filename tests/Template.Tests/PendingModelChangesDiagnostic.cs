@@ -1,7 +1,9 @@
 using Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using System.Text;
 using Xunit;
 
@@ -30,33 +32,45 @@ public sealed class PendingModelChangesDiagnostic
 	{
 		using var context = CreateContext();
 
-		var snapshot = context.GetService<IMigrationsAssembly>().ModelSnapshot;
+		var count = -1;
+		var text = string.Empty;
 
-		Assert.NotNull(snapshot);
+		try
+		{
+			var snapshot = context.GetService<IMigrationsAssembly>().ModelSnapshot;
 
-		var source = snapshot!.Model.GetRelationalModel();
-		var target = context.Model.GetRelationalModel();
+			Assert.NotNull(snapshot);
 
-		var operations = context.GetService<IMigrationsModelDiffer>()
-			.GetDifferences(source, target);
+			var source = snapshot!.Model.GetRelationalModel();
+			var target = context.Model.GetRelationalModel();
 
-		var lines = new List<string> { $"PENDING OPERATIONS: {operations.Count}" };
+			var operations = context.GetService<IMigrationsModelDiffer>()
+				.GetDifferences(source, target);
 
-		lines.AddRange(operations.Select(Describe));
-		lines.Add("--- TABLES ---");
-		lines.AddRange(Compare(Tables(source), Tables(target), "TABLE"));
-		lines.Add("--- COLUMNS ---");
-		lines.AddRange(Compare(Columns(source), Columns(target), "COLUMN"));
-		lines.Add("--- INDEXES ---");
-		lines.AddRange(Compare(Indexes(source), Indexes(target), "INDEX"));
-		lines.Add("--- CONSTRAINTS ---");
-		lines.AddRange(Compare(Constraints(source), Constraints(target), "CONSTRAINT"));
+			count = operations.Count;
 
-		var text = string.Join(Environment.NewLine, lines);
+			var lines = new List<string> { $"PENDING OPERATIONS: {count}" };
+
+			lines.AddRange(operations.Select(Describe));
+			lines.Add("--- TABLES ---");
+			lines.AddRange(Compare(Tables(source), Tables(target), "TABLE"));
+			lines.Add("--- COLUMNS ---");
+			lines.AddRange(Compare(Columns(source), Columns(target), "COLUMN"));
+			lines.Add("--- INDEXES ---");
+			lines.AddRange(Compare(Indexes(source), Indexes(target), "INDEX"));
+			lines.Add("--- CONSTRAINTS ---");
+			lines.AddRange(Compare(Constraints(source), Constraints(target), "CONSTRAINT"));
+
+			text = string.Join(Environment.NewLine, lines);
+		}
+		catch (Exception exception)
+		{
+			text = $"DIAGNOSTIC FAILED: {exception}";
+		}
 
 		File.WriteAllText("/tmp/pending-model-changes.txt", text);
 
-		Assert.True(operations.Count == 0, text);
+		Assert.True(count == 0, text);
 	}
 
 	private static string Describe(MigrationOperation operation)
