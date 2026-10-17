@@ -78,9 +78,11 @@ if (!setupRequired)
         options.UseSqlServer(
             connectionString!,
             sqlServer => sqlServer.MigrationsAssembly(typeof(Data.DatabaseContext).Assembly.FullName)));
-}
 
-builder.Services.AddScoped<Data.IDatabaseSchemaMigrator, Data.DatabaseSchemaMigrator>();
+    // DatabaseSchemaMigrator depends on DatabaseContext; register it only when the same
+    // branch has registered and configured that context.
+    builder.Services.AddScoped<Data.IDatabaseSchemaMigrator, Data.DatabaseSchemaMigrator>();
+}
 
 var app = builder.Build();
 
