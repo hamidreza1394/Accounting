@@ -11,5 +11,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Dtat\Dtat.csproj" />
     <ProjectReference Include="..\..\Infrastructure\Persistence\Infrastructure.Persistence.csproj" />
+    <ProjectReference Include="..\..\Server\Server.csproj" />
   </ItemGroup>
 </Project>
