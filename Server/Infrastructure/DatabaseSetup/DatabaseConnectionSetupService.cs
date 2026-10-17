@@ -87,11 +87,9 @@ public sealed class DatabaseConnectionSetupService
                 }
             }
 
-            var databaseCreated = Equals(databaseId, 0);
-            builder.InitialCatalog = request.Database.Trim();
             var databaseConnectionString = builder.ConnectionString;
 
-            if (databaseCreated)
+            if (databaseCreated || databaseNeedsInitialMigration)
             {
                 var options = new DbContextOptionsBuilder<Data.DatabaseContext>()
                     .UseSqlServer(
@@ -109,7 +107,7 @@ public sealed class DatabaseConnectionSetupService
                 "Database setup completed. DatabaseCreated={DatabaseCreated}; connection details are not logged.",
                 databaseCreated);
 
-            return DatabaseSetupResult.Success(databaseCreated);
+            return DatabaseSetupResult.Success(databaseCreated || databaseNeedsInitialMigration);
         }
         catch (SqlException exception)
         {
