@@ -28,6 +28,8 @@ public sealed class DatabaseConnectionSettingsStore
             new DirectoryInfo(keyDirectory),
             dataProtection =>
             {
+                dataProtection.SetApplicationName("TarazAva");
+
                 if (OperatingSystem.IsWindows())
                 {
                     dataProtection.ProtectKeysWithDpapi();
