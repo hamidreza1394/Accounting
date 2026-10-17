@@ -11,7 +11,7 @@
 
 ```powershell
 dotnet user-secrets init --project Server/Server.csproj
-dotnet user-secrets set "ConnectionStrings:ConnectionString" "Server=.;Database=TarazAvaDb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true;" --project Server/Server.csproj
+dotnet user-secrets set "ConnectionStrings:ConnectionString" "Server=.\SQLSERVER2025;Database=TarazAvaDb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true;" --project Server/Server.csproj
 ```
 
 ورود مدیریتی فعلی هنوز legacy است و برای Production تأیید نمی‌شود؛ راهنمای `docs/SECURITY.md` را بخوانید. مقادیر `MasterUsername`، `MasterPassword` و `ActivationKeys` باید فقط در User Secrets/Environment/Secret Store تنظیم شوند و خالی‌بودن آن‌ها نباید با مقدار پیش‌فرض ناامن دور زده شود.
@@ -58,7 +58,7 @@ dotnet ef migrations list --project Infrastructure/Persistence/Infrastructure.Pe
 نمونه متغیر محیطی PowerShell برای نشست فعلی:
 
 ```powershell
-$env:ConnectionStrings__ConnectionString = "Server=localhost;Database=TarazAvaDb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true;"
+$env:ConnectionStrings__ConnectionString = "Server=localhost\SQLSERVER2025;Database=TarazAvaDb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true;"
 ```
 
 ## .NET 10 و Visual Studio
