@@ -49,6 +49,17 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           # The step summary is not readable through the API, the annotation is.
           echo "::error title=dotnet test output::$(grep -a -E 'error|Failed|failed|Assert|Exception|Test summary|total:|Passed!|Failed!' /tmp/dotnet-test.log | head -n 60 | tr -d '\r' | tr '\n' '~')"
+      # TEMPORARY DIAGNOSTIC - one annotation per reported model difference.
+      - name: Publish the pending model changes
+        if: failure()
+        run: |
+          if [ -f /tmp/pending-model-changes.txt ]; then
+            head -n 150 /tmp/pending-model-changes.txt | while IFS= read -r line; do
+              echo "::error title=pending model change::$(printf '%s' "$line" | tr -d '\r')"
+            done
+          else
+            echo "::error title=pending model changes::the diagnostic file was not written"
+          fi
       # The migration checks are the guards against a model snapshot that no longer
       # describes the model, which fails at runtime with PendingModelChangesWarning.
       - name: Check the generated migrations
