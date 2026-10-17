@@ -45,3 +45,9 @@ Connection String از `ConnectionStrings:ConnectionString` خوانده می‌
 **وضعیت:** مدل داده اولیه پذیرفته‌شده؛ جریان احراز هویت هنوز در حال مهاجرت.
 
 هر شخص یک حساب مرکزی دارد و دسترسی به شرکت‌ها از طریق عضویت مستقل و نقش scoped به همان شرکت تعریف می‌شود. کلاس `UserCompanyMembership.UserId` در این مرحله scalar باقی مانده تا پیش از جایگزینی Login قدیمی با ASP.NET Core Identity، وابستگی نادرست به مدل کاربر فعلی ایجاد نشود. این مدل به‌تنهایی جداسازی امن Tenant را فعال نمی‌کند.
+
+
+## D-010 — First-run database configuration
+**وضعیت:** پیاده‌سازی اولیه در PR، نیازمند تأیید CI و آزمون SQL Server.
+
+اگر Connection String صریح از Configuration Providers موجود نباشد، برنامه از فایل محلی رمزنگاری‌شده با ASP.NET Core Data Protection استفاده می‌کند و در نبود آن صفحه راه‌اندازی را نمایش می‌دهد. در ویندوز کلیدهای Data Protection با DPAPI محافظت می‌شوند؛ در Unix مجوز فایل/پوشه محدود می‌شود. تنظیمات صریح User Secrets/Environment بر فایل محلی مقدم‌اند. دیتابیس تازه/خالی با Migrationها مقداردهی می‌شود؛ schema موجود به‌صورت خودکار تغییر نمی‌کند تا دیتابیس‌های قدیمی مبتنی بر `EnsureCreated()` ناخواسته خراب نشوند.
