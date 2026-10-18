@@ -456,25 +456,139 @@
 	font-size: 0.72rem;
 }
 
-/* ---------- Introduction panel (left) ---------- */
+/* ---------- Illustrative, non-interactive dashboard preview ---------- */
 .taraz-login__visual {
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
+	gap: clamp(18px, 3vh, 28px);
 	min-width: 0;
-	padding: clamp(8px, 2vw, 28px);
+	padding: clamp(8px, 2vw, 20px);
 }
 
-.taraz-visual-brand {
-	margin-bottom: clamp(24px, 4vh, 44px);
+.fn-preview {
+	width: min(100%, 560px);
+	overflow: hidden;
+	border: 1px solid rgba(28, 61, 90, 0.10);
+	border-radius: 18px;
+	background: var(--fn-card);
+	box-shadow: 0 18px 44px rgba(28, 61, 90, 0.10);
+	pointer-events: none;
+	user-select: none;
 }
 
-.taraz-visual-brand img {
+.fn-preview__top {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 12px 14px;
+	color: #f4f7fa;
+	background: var(--fn-navy-deep);
+}
+
+.fn-preview__top strong {
+	font-size: 0.92rem;
+	font-weight: 700;
+}
+
+.fn-preview__badge {
+	margin-inline-start: auto;
+	padding: 3px 8px;
+	border-radius: 999px;
+	background: rgba(217, 162, 75, 0.22);
+	color: #f6e3c2;
+	font-size: 0.68rem;
+	font-weight: 600;
+}
+
+.fn-preview__body {
+	display: grid;
+	grid-template-columns: 52px minmax(0, 1fr);
+	min-height: 220px;
+}
+
+.taraz-login[dir="ltr"] .fn-preview__body {
+	grid-template-columns: 52px minmax(0, 1fr);
+}
+
+.fn-preview__side {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 14px 12px;
+	background: #f3f6f8;
+	border-inline-end: 1px solid var(--fn-border);
+}
+
+.fn-preview__side span {
 	display: block;
-	width: min(340px, 82%);
+	height: 10px;
+	border-radius: 6px;
+	background: #d5dee6;
+}
+
+.fn-preview__side span.is-active {
+	background: var(--fn-teal);
+}
+
+.fn-preview__main {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 14px;
+}
+
+.fn-preview__stats {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 8px;
+}
+
+.fn-preview__stats div {
+	padding: 10px 10px 8px;
+	border: 1px solid var(--fn-border);
+	border-radius: 12px;
+	background: var(--fn-field-bg);
+}
+
+.fn-preview__stats em {
+	display: block;
+	color: var(--fn-muted);
+	font-style: normal;
+	font-size: 0.68rem;
+}
+
+.fn-preview__stats b {
+	display: block;
+	margin-top: 4px;
+	color: var(--fn-navy);
+	font-size: 1rem;
+	font-weight: 700;
+}
+
+.fn-preview__chart {
+	padding: 6px 8px 0;
+	border: 1px solid var(--fn-border);
+	border-radius: 12px;
+	background: #fff;
+}
+
+.fn-preview__chart svg {
+	display: block;
+	width: 100%;
 	height: auto;
-	border-radius: 16px;
-	box-shadow: 0 18px 44px rgba(28, 61, 90, 0.12);
+}
+
+.fn-preview__rows {
+	display: grid;
+	gap: 8px;
+}
+
+.fn-preview__rows span {
+	display: block;
+	height: 12px;
+	border-radius: 6px;
+	background: linear-gradient(90deg, #e7eef3 0 42%, #f7f9fb 42% 100%);
 }
 
 .taraz-visual-copy {
@@ -482,68 +596,20 @@
 }
 
 .taraz-visual-title {
-	margin: 0 0 26px;
+	margin: 0 0 8px;
 	color: var(--fn-navy-deep);
-	font-size: clamp(1.7rem, 2.9vw, 2.5rem);
+	font-size: clamp(1.45rem, 2.4vw, 2rem);
 	font-weight: 700;
 	letter-spacing: -0.02em;
-	line-height: 1.55;
+	line-height: 1.5;
 }
 
-.taraz-features {
-	display: grid;
-	gap: 14px;
+.taraz-visual-lead {
 	margin: 0;
-	padding: 0;
-	list-style: none;
-}
-
-.taraz-features li {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	padding: 14px 18px;
-	border: 1px solid rgba(28, 61, 90, 0.08);
-	border-radius: 14px;
-	background: rgba(255, 255, 255, 0.72);
-	color: var(--fn-ink);
-	font-size: 0.98rem;
-	font-weight: 500;
-	line-height: 1.8;
-	box-shadow: 0 8px 22px rgba(28, 61, 90, 0.05);
-}
-
-.taraz-feature-icon {
-	display: inline-flex;
-	flex: none;
-	align-items: center;
-	justify-content: center;
-	width: 38px;
-	height: 38px;
-	color: var(--fn-gold-deep);
-	border-radius: 10px;
-	background: rgba(217, 162, 75, 0.14);
-}
-
-.taraz-features li:first-child .taraz-feature-icon {
-	color: var(--fn-teal);
-	background: rgba(47, 141, 147, 0.12);
-}
-
-.taraz-visual-chart {
-	width: min(100%, 560px);
-	margin-top: clamp(24px, 4vh, 42px);
-	padding: 18px 18px 6px;
-	border: 1px solid rgba(28, 61, 90, 0.08);
-	border-radius: 18px;
-	background: var(--fn-card);
-	box-shadow: 0 18px 44px rgba(28, 61, 90, 0.08);
-}
-
-.taraz-visual-chart svg {
-	display: block;
-	width: 100%;
-	height: auto;
+	max-width: 34rem;
+	color: var(--fn-muted);
+	font-size: 0.92rem;
+	line-height: 1.9;
 }
 
 /* ---------- Responsive ---------- */
@@ -576,12 +642,12 @@
 		width: min(100%, 520px);
 	}
 
-	.taraz-visual-brand img {
-		width: min(300px, 70%);
+	.taraz-visual-title {
+		font-size: clamp(1.35rem, 4.2vw, 1.7rem);
 	}
 
-	.taraz-visual-title {
-		font-size: clamp(1.45rem, 4.6vw, 1.9rem);
+	.fn-preview {
+		width: min(100%, 520px);
 	}
 }
 
@@ -603,17 +669,13 @@
 		height: 50px;
 	}
 
-	.taraz-visual-chart {
+	.fn-preview__chart,
+	.fn-preview__rows {
 		display: none;
 	}
 
-	.taraz-visual-brand {
-		margin-bottom: 18px;
-	}
-
-	.taraz-features li {
-		font-size: 0.9rem;
-		padding: 12px 14px;
+	.fn-preview__body {
+		min-height: 0;
 	}
 }
 
