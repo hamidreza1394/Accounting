@@ -69,10 +69,44 @@
             <p class="taraz-copyright">© فرانو — @(isRightToLeft ? "نرم‌افزار حسابداری هوشمند" : "Smart Accounting Software")</p>
         </section>
 
-        <section class="taraz-login__visual" aria-label="@(isRightToLeft ? "معرفی نرم‌افزار حسابداری فرانو" : "Faranou accounting software")">
-            <div class="taraz-visual-brand"><img src="~/images/faranou-logo.jpg" alt="@(isRightToLeft ? "لوگوی فرانو — نرم‌افزار حسابداری هوشمند" : "Faranou logo — smart accounting software")" width="360" height="197" /></div>
-            <div class="taraz-visual-copy"><p class="taraz-eyebrow">نرم‌افزار حسابداری هوشمند</p><h2 class="taraz-visual-title">دسترسی امن به اطلاعات مالی شما</h2><ul class="taraz-features"><li><span class="taraz-feature-icon" aria-hidden="true">✓</span><span>دقت و شفافیت در مدیریت مالی</span></li><li><span class="taraz-feature-icon" aria-hidden="true">↗</span><span>حسابداری دقیق، تصمیم‌گیری مطمئن</span></li></ul></div>
-            <div class="taraz-visual-chart" aria-hidden="true"><svg viewBox="0 0 560 240" role="presentation" focusable="false"><path d="M40 186 C110 170 150 176 200 150 S300 140 350 112 S450 96 520 56" fill="none" stroke="#35d5e8" stroke-width="5" stroke-linecap="round"/></svg></div>
+        <section class="taraz-login__visual" aria-label="@(isRightToLeft ? "پیش‌نمایش نمایشی محیط نرم‌افزار" : "Illustrative preview of the software")">
+            <div class="fn-preview" inert>
+                <div class="fn-preview__top">
+                    <img src="~/images/faranou-mark.svg" alt="" width="28" height="28" />
+                    <strong>@(isRightToLeft ? "فرانو" : "Faranou")</strong>
+                    <span class="fn-preview__badge">@(isRightToLeft ? "نمونه نمایشی" : "Preview only")</span>
+                </div>
+                <div class="fn-preview__body">
+                    <aside class="fn-preview__side" aria-hidden="true">
+                        <span class="is-active"></span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </aside>
+                    <div class="fn-preview__main">
+                        <div class="fn-preview__stats">
+                            <div><em>@(isRightToLeft ? "دریافت" : "In")</em><b>—</b></div>
+                            <div><em>@(isRightToLeft ? "پرداخت" : "Out")</em><b>—</b></div>
+                            <div><em>@(isRightToLeft ? "مانده" : "Balance")</em><b>—</b></div>
+                        </div>
+                        <div class="fn-preview__chart" aria-hidden="true">
+                            <svg viewBox="0 0 320 92" focusable="false">
+                                <path d="M8 70 C48 66 70 48 108 52 S168 28 208 34 S268 18 312 14" fill="none" stroke="#2f8d93" stroke-width="3" stroke-linecap="round"/>
+                                <path d="M8 78 C60 74 100 70 150 64 S230 58 312 48" fill="none" stroke="#d9a24b" stroke-width="3" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div class="fn-preview__rows" aria-hidden="true">
+                            <span></span><span></span><span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="taraz-visual-copy">
+                <p class="taraz-eyebrow">@(isRightToLeft ? "نرم‌افزار حسابداری هوشمند" : "Smart accounting")</p>
+                <h2 class="taraz-visual-title">@(isRightToLeft ? "تصمیم‌های مالی، با دیدی روشن‌تر" : "Clearer financial decisions")</h2>
+                <p class="taraz-visual-lead">@(isRightToLeft ? "ابزارهای موردنیاز برای مدیریت دقیق‌تر کسب‌وکار شما، در یک محیط یکپارچه." : "The tools you need to manage the business more precisely, in one place.")</p>
+            </div>
         </section>
     </main>
 </div>
