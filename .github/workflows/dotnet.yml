@@ -1,0 +1,35 @@
+name: .NET CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dotnet-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Check local-only static assets
+        run: python3 scripts/check_static_assets.py
+      - name: Restore
+        run: dotnet restore Template.sln
+      - name: Build
+        run: dotnet build Template.sln --no-restore --configuration Release
+      - name: Test
+        run: dotnet test Template.sln --no-build --configuration Release
