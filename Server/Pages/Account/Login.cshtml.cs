@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authentication;
+﻿using Microsoft.AspNetCore.Authentication;
 
 namespace Server.Pages.Security
 {
@@ -9,22 +9,30 @@ namespace Server.Pages.Security
 	/// infrastructure account), failures are throttled and recorded in the security
 	/// audit trail, and the redirect target is restricted to local URLs.
 	/// </summary>
-	public class LoginModel : Infrastructure.BasePageModelWithDatabaseContext
+	/// <remarks>
+	/// The page only coordinates the flow: validation, the authentication decision and
+	/// the sign-in itself are separate steps. The authentication service is resolved from
+	/// dependency injection (it owns the scoped database context) and is never created with
+	/// <c>new</c> here.
+	/// </remarks>
+	public class LoginModel : Infrastructure.BasePageModel
 	{
+		#region Constants
+		/// <summary>
+		/// The temporary destination that is shown after a successful sign-in. The
+		/// accounting modules are not part of this step.
+		/// </summary>
+		public const string SuccessPageName = "/Account/LoginSuccess";
+		#endregion /Constants
+
 		#region Constructor
 		public LoginModel
-			(Data.DatabaseContext databaseContext,
-			Microsoft.Extensions.Logging.ILogger<LoginModel> logger,
-			Infrastructure.Settings.ApplicationSettings applicationSettings) :
-			base(databaseContext: databaseContext)
+			(Infrastructure.Security.AuthenticationService authenticationService,
+			Microsoft.Extensions.Logging.ILogger<LoginModel> logger) : base()
 		{
 			ViewModel = new();
 			Logger = logger;
-
-			AuthenticationService =
-				new Infrastructure.Security.AuthenticationService
-				(databaseContext: databaseContext, logger: logger,
-				applicationSettings: applicationSettings);
+			AuthenticationService = authenticationService;
 		}
 		#endregion /Constructor
 
@@ -49,8 +57,10 @@ namespace Server.Pages.Security
 		public async System.Threading.Tasks.Task
 			<Microsoft.AspNetCore.Mvc.IActionResult> OnPostAsync()
 		{
+			// **************************************************
 			// Scenario (a): the required fields are empty. The field messages are
 			// produced by the model validation; one summary message is added as well.
+			// **************************************************
 			if (string.IsNullOrWhiteSpace(value: ViewModel.Username) ||
 				string.IsNullOrWhiteSpace(value: ViewModel.Password))
 			{
@@ -58,13 +68,15 @@ namespace Server.Pages.Security
 					(key: string.Empty,
 					errorMessage: Resources.Messages.Errors.UsernameAndPasswordAreRequired);
 
-				ViewModel.Password = null;
+				ClearPassword();
+
 				return Page();
 			}
 
 			if (ModelState.IsValid == false)
 			{
-				ViewModel.Password = null;
+				ClearPassword();
+
 				return Page();
 			}
 
@@ -88,20 +100,23 @@ namespace Server.Pages.Security
 						AddPageError(message:
 							Resources.Messages.Errors.AccountIsTemporarilyLocked);
 
-						ViewModel.Password = null;
+						ClearPassword();
+
 						return Page();
 					}
 
 					// **************************************************
 					// Scenario (c): the account is disabled. This state is only
-					// reported after the correct password is supplied.
+					// reported after the correct password is supplied, so it cannot
+					// be used to find out whether an account exists.
 					// **************************************************
 					case Infrastructure.Security.LoginOutcome.AccountIsNotActive:
 					{
 						AddPageError(message:
 							Resources.Messages.Errors.UserAccountIsNotActive);
 
-						ViewModel.Password = null;
+						ClearPassword();
+
 						return Page();
 					}
 
@@ -114,7 +129,8 @@ namespace Server.Pages.Security
 						AddPageError(message:
 							Resources.Messages.Errors.InvalidUsernameOrPassword);
 
-						ViewModel.Password = null;
+						ClearPassword();
+
 						return Page();
 					}
 
@@ -131,6 +147,9 @@ namespace Server.Pages.Security
 						var authenticationProperties =
 							new Microsoft.AspNetCore.Authentication.AuthenticationProperties
 							{
+								// Remember Me keeps the behaviour of the previous
+								// implementation: a persistent cookie instead of a
+								// session cookie.
 								IsPersistent = ViewModel.RememberMe,
 							};
 
@@ -141,42 +160,87 @@ namespace Server.Pages.Security
 							properties: authenticationProperties);
 
 						AddPageSuccess(message:
-							Resources.Messages.Successes.LoginSucceeded);
+							Resources.Messages.Successes.LoginSucceededPendingFeatures);
 
-						// Only redirect to local URLs to prevent an open-redirect.
-						if (!string.IsNullOrWhiteSpace(ReturnUrl) &&
-							Url.IsLocalUrl(ReturnUrl))
+						ClearPassword();
+
+						// **************************************************
+						// Post/Redirect/Get: the signed-in browser is redirected, so a
+						// refresh of the destination never posts the form again and
+						// never shows the "resubmit" dialog of the browser.
+						// **************************************************
+						var localReturnUrl = GetLocalReturnUrl();
+
+						if (localReturnUrl != null)
 						{
-							return Redirect(url: ReturnUrl);
+							return Redirect(url: localReturnUrl);
 						}
 
-						return RedirectToPage(pageName: "/Index");
+						return RedirectToPage(pageName: SuccessPageName);
 					}
 				}
 
 				// Unreachable in practice; kept fail-closed.
 				AddPageError(message: Resources.Messages.Errors.UnexpectedError);
-				ViewModel.Password = null;
+				ClearPassword();
+
 				return Page();
 			}
 			catch (System.Exception ex)
 			{
 				// Scenario (e): unexpected server error. The technical details stay
-				// in the log; the user only sees a generic message.
+				// in the log; the user only sees a generic message. The exception is
+				// logged without any credential, cookie or token.
 				Logger.LogError
 					(exception: ex, message: "Sign-in failed with an unexpected error.");
 
 				AddPageError(message:
 					Resources.Messages.Errors.UnexpectedError);
 
-				ViewModel.Password = null;
+				ClearPassword();
+
 				return Page();
 			}
-			finally
-			{
-				await DisposeDatabaseContextAsync();
-			}
 		}
+
+		#region GetLocalReturnUrl
+		/// <summary>
+		/// Returns the requested return URL only when it is a local URL of this
+		/// application. Anything else - an absolute URL, a protocol-relative URL or a
+		/// malformed value - yields <c>null</c>, so the caller falls back to the
+		/// temporary success page and an open redirect is not possible.
+		/// </summary>
+		private string? GetLocalReturnUrl()
+		{
+			if (string.IsNullOrWhiteSpace(value: ReturnUrl))
+			{
+				return null;
+			}
+
+			if (Url.IsLocalUrl(url: ReturnUrl!) == false)
+			{
+				return null;
+			}
+
+			return ReturnUrl;
+		}
+		#endregion /GetLocalReturnUrl
+
+		#region ClearPassword
+		/// <summary>
+		/// Removes the supplied password from the page model and from the model state.
+		/// Clearing only the property is not enough: the input tag helper takes the
+		/// value of a failed post from the model state, so the password would otherwise
+		/// be written back into the HTML of the response.
+		/// </summary>
+		private void ClearPassword()
+		{
+			ViewModel.Password = null;
+
+			ModelState.Remove
+				(key: $"{nameof(ViewModel)}.{nameof(ViewModel.Password)}");
+		}
+		#endregion /ClearPassword
 
 		#region BuildClaimsPrincipal
 		private System.Security.Claims.ClaimsPrincipal BuildClaimsPrincipal

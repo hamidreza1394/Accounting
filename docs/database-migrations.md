@@ -282,3 +282,21 @@ differs from the model of the code base.
 The two rows in the middle are snapshot fidelity only: they do not produce a
 migration operation, but they made the committed snapshot different from the
 snapshot that `dotnet ef migrations add` would have written.
+
+## `WidenUserPasswordHash` — Issue #30 (2026-10-19)
+
+This migration was generated with the real tool (`dotnet ef migrations add
+WidenUserPasswordHash` on .NET SDK 10.0.401 / EF Core 10.0.13), not with
+`scripts/generate_migrations.py`. The SDK was available in the environment of
+this change, so the script was not used and the snapshot it would have written
+was not involved.
+
+- `Up`: `Users.Password` `varchar(44)` → `varchar(255)` (`unicode: false`, nullable).
+  No row is modified; an existing Base64 SHA-256 digest stays valid and is
+  replaced by the sign-in flow after the next successful login.
+- `Down`: returns the column to `varchar(44)`, which truncates an 84-character
+  credential and makes it unusable. Give every account that already signed in
+  with the new format a new credential before rolling back.
+- Not applied to a SQL Server instance in this environment; `dotnet ef database
+  update` (or `dotnet run --project Server -- --migrate`) must be run on a test
+  database before deployment.

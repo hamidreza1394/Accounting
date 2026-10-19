@@ -46,3 +46,14 @@
 - **اعتبارسنجی محلی:** `node --test` ۷ آزمون، ۷ pass، 0 fail (مدت ~۵۵۰ms). `dotnet build`/`dotnet test` در sandbox اجرا نشدند (نبود SDK .NET) — وابسته به CI GitHub Actions برای تأیید نهایی.
 - **مستندات:** `docs/handoffs/ISSUE-UNNUMBERED-pr27-ci-fix-and-behavioral-test.md` ساخته شد (قالب `TEMPLATE.md`).
 - **Git:** Branch `fix/faranou-login-password-toggle`؛ PR https://github.com/hamidreza1394/Accounting/pull/27؛ commitهای این مرحله `e947489` و commit جدیدتر با آزمون رفتاری. **Merge نشد** — منتظر تأیید مسئول.
+
+## 2026-10-19 — Issue #30: تکمیل و اصلاح احراز هویت صفحه ورود
+
+- **وضعیت ورودی:** `LoginModel` سرویس `AuthenticationService` را با `new` می‌ساخت، `DbContext` تزریق‌شده را در `finally` Dispose می‌کرد، رمز را فقط از `ViewModel` و نه از `ModelState` پاک می‌کرد (امکان بازگرداندن رمز در HTML)، و پس از ورود موفق بدون مقصد موقت به `ReturnUrl`/`Index` می‌رفت. رمز عبور با SHA-256 بدون salt ذخیره می‌شد و ستون `Users.Password` برابر `varchar(44)` بود.
+- **جریان ورود:** DI برای `AuthenticationService` (Scoped) و `PasswordHashService` (Singleton) در `Program.cs`؛ PageModel از `BasePageModel` بدون `DbContext`؛ Post/Redirect/Get با پیام موفقیت در TempData؛ `ClearPassword()` حذف هم‌زمان property و کلید `ModelState`؛ `GetLocalReturnUrl()` فقط با `Url.IsLocalUrl`.
+- **مقصد موقت:** صفحه جدید `Server/Pages/Account/LoginSuccess.cshtml(.cs)` با `[Authorize]`، فقط پیام «ورود به حساب با موفقیت انجام شد. بخش‌های نرم‌افزار در مراحل بعدی تکمیل خواهند شد.» (کلید جدید `Successes.LoginSucceededPendingFeatures`). `/Index` دست‌نخورده ماند.
+- **رمز عبور:** `PasswordHashService` با `PasswordHasher<Domain.User>`؛ پذیرش هش قدیمی به‌صورت `SuccessRehashNeeded` و ارتقای آن پس از ورود موفق؛ `SimulateVerification` برای نام کاربری ناموجود؛ تبدیل هش نامعتبر به `Failed` به‌جای `FormatException`؛ مسیر ایجاد کاربر ادمین نیز به همین سرویس منتقل شد.
+- **طرح داده:** `Constants.FixedLength.PasswordHash = 255`، `Domain.User.Password` با `MaxLength(255)`، Migration `20261019071146_WidenUserPasswordHash` (تولیدشده با `dotnet ef` واقعی، بدون تغییر داده).
+- **تست:** فایل جدید `tests/Template.Tests/LoginAuthenticationTests.cs` با ۳۷ آزمون (جریان PageModel، سرویس هش، پیکربندی). نتیجه واقعی: `dotnet build -c Release` → `0 Error(s)`؛ `dotnet test` → `total: 90`, `failed: 0`, `succeeded: 90`؛ `scripts/check_static_assets.py` → PASS؛ `git diff --check` → پاک.
+- **اجرانشده (صادقانه):** Migration روی SQL Server واقعی و آزمون End-to-End روی مرورگر در این محیط ممکن نبود.
+- **Git:** Branch `fix/secure-login-authentication`؛ Issue #30؛ PR در ادامه همین شاخه. **Merge نشد** — منتظر تأیید مسئول.
