@@ -183,11 +183,11 @@ public class User :
 		ErrorMessageResourceType = typeof(Resources.Messages.Validations),
 		ErrorMessageResourceName = nameof(Resources.Messages.Validations.MaxLength))]
 
-	[System.ComponentModel.DataAnnotations.MaxLength
-		(length: Constants.FixedLength.DatabasePassword,
-		ErrorMessageResourceType = typeof(Resources.Messages.Validations),
-		ErrorMessageResourceName = nameof(Resources.Messages.Validations.MaxLength))]
-	public string? Password { get; set; }
+		[System.ComponentModel.DataAnnotations.MaxLength
+			(length: Constants.FixedLength.PasswordHash,
+			ErrorMessageResourceType = typeof(Resources.Messages.Validations),
+			ErrorMessageResourceName = nameof(Resources.Messages.Validations.MaxLength))]
+		public string? Password { get; set; }
 	#endregion /Password Property
 
 	#region FirstName Property

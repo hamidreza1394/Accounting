@@ -64,22 +64,19 @@ namespace Infrastructure.Security
 		private const string UserEntityType = "User";
 		private const string MasterEntityType = "MasterAccount";
 		private const string UnknownUserIP = "0.0.0.0";
-
-		// Compared against a supplied password when the username does not exist,
-		// so that a missing account and a wrong password take the same work.
-		private static readonly string DummyPasswordHash =
-			Dtat.Security.Hashing.GetSha256(text: "faranou-dummy-password")!;
 		#endregion /Constants
 
 		#region Constructor
 		public AuthenticationService
 			(Data.DatabaseContext databaseContext,
 			Microsoft.Extensions.Logging.ILogger logger,
-			Infrastructure.Settings.ApplicationSettings applicationSettings) : base()
+			Infrastructure.Settings.ApplicationSettings applicationSettings,
+			PasswordHashService passwordHashService) : base()
 		{
 			DatabaseContext = databaseContext;
 			Logger = logger;
 			ApplicationSettings = applicationSettings;
+			PasswordHashService = passwordHashService;
 		}
 		#endregion /Constructor
 
@@ -87,6 +84,7 @@ namespace Infrastructure.Security
 		private Data.DatabaseContext DatabaseContext { get; }
 		private Microsoft.Extensions.Logging.ILogger Logger { get; }
 		private Infrastructure.Settings.ApplicationSettings ApplicationSettings { get; }
+		private PasswordHashService PasswordHashService { get; }
 		#endregion /Properties
 
 		#region Methods
@@ -152,16 +150,28 @@ namespace Infrastructure.Security
 				string.Equals(fixedUsername, ApplicationSettings.MasterUsername,
 				comparisonType: System.StringComparison.OrdinalIgnoreCase))
 			{
-				var masterPasswordHash =
-					Dtat.Security.Hashing.GetSha256(text: password);
+				// The configured value may be a current-format credential (produced by
+				// PasswordHashService) or the legacy Base64 SHA-256 digest that older
+				// deployments used. Both are accepted; the configuration itself is never
+				// rewritten by the application.
+				var masterPasswordOutcome =
+					PasswordHashService.Verify
+					(storedHash: ApplicationSettings.MasterPassword,
+					password: password);
 
 				var isMasterPasswordCorrect =
-					masterPasswordHash != null &&
-					IsFixedTimeEqual(left: masterPasswordHash,
-					right: ApplicationSettings.MasterPassword);
+					masterPasswordOutcome != PasswordVerificationOutcome.Failed;
 
 				if (isMasterPasswordCorrect)
 				{
+					if (masterPasswordOutcome ==
+						PasswordVerificationOutcome.SuccessRehashNeeded)
+					{
+						// Only the fact of the weak format is logged, never the value.
+						Logger.LogWarning(
+							"The configured infrastructure account password uses the legacy SHA-256 format. Replace it with a credential produced by the password hasher before production.");
+					}
+
 					await WriteAuditEventAsync
 						(eventType: LoginSucceededEvent, entityType: MasterEntityType,
 						entityId: lockoutKey, userId: null, auditIP: auditIP);
@@ -188,21 +198,22 @@ namespace Infrastructure.Security
 				.FirstOrDefaultAsync();
 			// **************************************************
 
-			var suppliedPasswordHash =
-				Dtat.Security.Hashing.GetSha256(text: password) ?? string.Empty;
-
 			if (user == null)
 			{
 				// Same work as a wrong password, so a missing account is not faster.
-				IsFixedTimeEqual(left: suppliedPasswordHash, right: DummyPasswordHash);
+				PasswordHashService.SimulateVerification(password: password);
 
 				await RegisterFailedAttemptAsync(lockoutKey: lockoutKey, auditIP: auditIP);
 
 				return new LoginResult { Outcome = LoginOutcome.InvalidCredentials, };
 			}
 
+			var passwordOutcome =
+				PasswordHashService.Verify
+				(storedHash: user.Password, password: password);
+
 			var isPasswordCorrect =
-				IsFixedTimeEqual(left: suppliedPasswordHash, right: user.Password);
+				passwordOutcome != PasswordVerificationOutcome.Failed;
 
 			if (!isPasswordCorrect)
 			{
@@ -229,6 +240,15 @@ namespace Infrastructure.Security
 			// Successful sign-in: the login is recorded without any credential.
 			// **************************************************
 			user.LastLoginDateTime = Dtat.Utility.Now;
+
+			// A credential in the legacy SHA-256 format is upgraded in place after a
+			// successful sign-in. The password itself is known only here, so this is the
+			// only point where the upgrade can happen without asking the user again.
+			if (passwordOutcome == PasswordVerificationOutcome.SuccessRehashNeeded)
+			{
+				user.Password =
+					PasswordHashService.Hash(password: password!);
+			}
 
 			var loginLog = new Domain.LoginLog
 				(userId: user.Id, userIP: NormalizeLoginLogIP(userIP: userIP));
@@ -300,20 +320,13 @@ namespace Infrastructure.Security
 		#region IsFixedTimeEqual
 		/// <summary>
 		/// Compares two Base64 digests without an early exit, so that the length of
-		/// the shared prefix is not measurable.
+		/// the shared prefix is not measurable. The implementation lives in
+		/// <see cref="PasswordHashService" /> and is kept here for callers and tests
+		/// that use the authentication service directly.
 		/// </summary>
 		public static bool IsFixedTimeEqual(string? left, string? right)
 		{
-			if (left == null || right == null)
-			{
-				return false;
-			}
-
-			var leftBytes = System.Text.Encoding.UTF8.GetBytes(s: left);
-			var rightBytes = System.Text.Encoding.UTF8.GetBytes(s: right);
-
-			return System.Security.Cryptography.CryptographicOperations
-				.FixedTimeEquals(left: leftBytes, right: rightBytes);
+			return PasswordHashService.IsFixedTimeEqual(left: left, right: right);
 		}
 		#endregion /IsFixedTimeEqual
 

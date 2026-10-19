@@ -15,8 +15,11 @@ Usage:
     python3 scripts/generate_migrations.py --repo-root . [--check]
 
 ``--check`` only verifies that the committed files are up to date. When it reports that
-the model snapshot is out of date, the model has changed and a new migration has to be
-added (with ``dotnet ef migrations add`` as soon as a .NET SDK is available).
+the model snapshot is out of date, the model has changed and the most recent migration
+has to describe that change. Add the new migration to this script (a new pair of
+``CURRENT_MIGRATION_*`` constants) and let it regenerate the files; with a .NET SDK
+available you can also verify the result with ``dotnet ef migrations
+has-pending-model-changes``.
 """
 
 from __future__ import annotations
@@ -40,24 +43,24 @@ CONTEXT_TYPE = "Data.DatabaseContext"
 SNAPSHOT_CLASS = "DatabaseContextModelSnapshot"
 MIGRATIONS_DIRECTORY = os.path.join("Infrastructure", "Persistence", "Migrations")
 
-# The migration that brings the schema of 'InitialCreate' in line with the model of the
-# code base. 'InitialCreate' itself is a published migration and stays untouched, exactly
-# as the rules of 'docs/database-migrations.md' require. Its operations are not written
-# down here: they are computed from the difference between the model of the
-# 'InitialCreate' designer file and the model of the code base, so that they can not drift
-# apart from the snapshot.
+# The migration that came before the current one. It is published history: it describes
+# the schema as it was when it was applied and it is never rewritten, exactly like
+# 'InitialCreate'. Its designer file is the starting point of the difference that the
+# current migration has to apply.
 DELTA_MIGRATION_ID = "20261017090000"
 DELTA_MIGRATION_NAME = "AlignSchemaWithModel"
-DELTA_MIGRATION_CLASS = "AlignSchemaWithModel"
 
-# The statements that have to run before the structural operations of a migration. They
-# are a human decision and are therefore written down here instead of being computed:
-# 'PostCategory.Title' becomes NOT NULL, and SQL Server refuses the 'ALTER COLUMN' while
-# a row still holds a NULL. 'PostCategory' is legacy template code that the application
-# does not write to, so an empty title is the only sensible replacement.
-DELTA_MIGRATION_PRELUDE = [
-    "UPDATE [PostCategory] SET [Title] = N'' WHERE [Title] IS NULL;",
-]
+# The most recent migration. Its operations are computed from the difference between
+# the model of the migration before it (DELTA_MIGRATION_*) and the model of the code
+# base, so the files can not drift apart from the snapshot. DELTA_MIGRATION_* is
+# published history and is never rewritten, exactly like 'InitialCreate'.
+CURRENT_MIGRATION_ID = "20261019071146"
+CURRENT_MIGRATION_NAME = "WidenUserPasswordHash"
+CURRENT_MIGRATION_CLASS = "WidenUserPasswordHash"
+
+# Statements that have to run before the structural operations of the current
+# migration. A human decision, therefore written down instead of computed.
+CURRENT_MIGRATION_PRELUDE: list[str] = []
 
 # The version of the Entity Framework Core packages of the solution. It is written into the
 # "ProductVersion" annotation of the model snapshot, exactly like the EF Core tools do.
@@ -544,8 +547,12 @@ def generate_designer(entity_types: list[dict[str, Any]]) -> str:
 # --------------------------------------------------------------------------------------
 
 
-def generate_delta_migration(operations: list[dict[str, Any]]) -> str:
-    """Renders the migration that applies the difference of the two models."""
+def generate_migration(
+    operations: list[dict[str, Any]],
+    migration_class: str,
+    prelude: list[str],
+) -> str:
+    """Renders a migration that applies the difference of the two models."""
     lines: list[str] = []
     lines.append("using System;")
     lines.append("using Microsoft.EntityFrameworkCore.Migrations;")
@@ -555,12 +562,12 @@ def generate_delta_migration(operations: list[dict[str, Any]]) -> str:
     lines.append(f"namespace {MIGRATION_NAMESPACE}")
     lines.append("{")
     lines.append(f"{INDENT}/// <inheritdoc />")
-    lines.append(f"{INDENT}public partial class {DELTA_MIGRATION_CLASS} : Migration")
+    lines.append(f"{INDENT}public partial class {migration_class} : Migration")
     lines.append(f"{INDENT}{{")
     lines.append(f"{INDENT * 2}/// <inheritdoc />")
     lines.append(f"{INDENT * 2}protected override void Up(MigrationBuilder migrationBuilder)")
     lines.append(f"{INDENT * 2}{{")
-    for statement in DELTA_MIGRATION_PRELUDE:
+    for statement in prelude:
         lines.append(f"{INDENT * 3}migrationBuilder.Sql({literal(statement)});")
         lines.append("")
     lines.extend(mm.render_up(operations, INDENT * 3))
@@ -576,8 +583,13 @@ def generate_delta_migration(operations: list[dict[str, Any]]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def generate_delta_designer(entity_types: list[dict[str, Any]]) -> str:
-    """Renders the designer file of the migration that applies the difference."""
+def generate_migration_designer(
+    entity_types: list[dict[str, Any]],
+    migration_id: str,
+    migration_name: str,
+    migration_class: str,
+) -> str:
+    """Renders the designer file of a migration that applies a model difference."""
     lines: list[str] = []
     lines.append("// <auto-generated />")
     lines.append("using System;")
@@ -592,10 +604,8 @@ def generate_delta_designer(entity_types: list[dict[str, Any]]) -> str:
     lines.append(f"namespace {MIGRATION_NAMESPACE}")
     lines.append("{")
     lines.append(f"{INDENT}[DbContext(typeof({CONTEXT_TYPE}))]")
-    lines.append(
-        f"{INDENT}[Migration({literal(DELTA_MIGRATION_ID + '_' + DELTA_MIGRATION_NAME)})]"
-    )
-    lines.append(f"{INDENT}partial class {DELTA_MIGRATION_CLASS}")
+    lines.append(f"{INDENT}[Migration({literal(migration_id + '_' + migration_name)})]")
+    lines.append(f"{INDENT}partial class {migration_class}")
     lines.append(f"{INDENT}{{")
     lines.append(f"{INDENT * 2}/// <inheritdoc />")
     lines.append(f"{INDENT * 2}protected override void BuildTargetModel(ModelBuilder modelBuilder)")
@@ -609,19 +619,21 @@ def generate_delta_designer(entity_types: list[dict[str, Any]]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def compute_delta_operations(repository_root: str) -> list[dict[str, Any]]:
-    """Computes the operations of the delta migration.
+def compute_operations_from_previous_migration(repository_root: str) -> list[dict[str, Any]]:
+    """Computes the operations of the most recent migration.
 
-    The 'InitialCreate' migration is a published migration: it describes the schema as it
-    was when it was written and it is never regenerated. The difference is therefore
-    computed between the model of its designer file and the model of the code base, which
-    is exactly the comparison that 'dotnet ef migrations has-pending-model-changes' makes
-    between the model snapshot and the model.
+    Every migration that came before is published: it describes the schema as it was when
+    it was applied and it is never rewritten. The difference is therefore computed
+    between the model of the designer file of the previous migration and the model of the
+    code base, which is exactly the comparison that 'dotnet ef
+    migrations has-pending-model-changes' makes between the model snapshot and the model.
     """
     model = derive_model(repository_root)
     current = mm.normalize_derived_model(model)
     designer_path = os.path.join(
-        repository_root, MIGRATIONS_DIRECTORY, f"{MIGRATION_ID}_{MIGRATION_NAME}.Designer.cs"
+        repository_root,
+        MIGRATIONS_DIRECTORY,
+        f"{DELTA_MIGRATION_ID}_{DELTA_MIGRATION_NAME}.Designer.cs",
     )
     published = mm.parse_generated_model(mm.read_text(designer_path))
     return mm.compute_operations(published, current)
@@ -646,12 +658,19 @@ def build_files(repository_root: str) -> dict[str, str]:
         key=lambda entity: (order.get(entity["clr_name"], len(order)), entity["clr_name"]),
     )
 
+    # Only the files of the most recent migration and the model snapshot are generated.
+    # The files of the migrations that came before it are published history.
     return {
-        f"{DELTA_MIGRATION_ID}_{DELTA_MIGRATION_NAME}.cs": generate_delta_migration(
-            compute_delta_operations(repository_root)
+        f"{CURRENT_MIGRATION_ID}_{CURRENT_MIGRATION_NAME}.cs": generate_migration(
+            compute_operations_from_previous_migration(repository_root),
+            CURRENT_MIGRATION_CLASS,
+            CURRENT_MIGRATION_PRELUDE,
         ),
-        f"{DELTA_MIGRATION_ID}_{DELTA_MIGRATION_NAME}.Designer.cs": generate_delta_designer(
-            entity_types
+        f"{CURRENT_MIGRATION_ID}_{CURRENT_MIGRATION_NAME}.Designer.cs": generate_migration_designer(
+            entity_types,
+            CURRENT_MIGRATION_ID,
+            CURRENT_MIGRATION_NAME,
+            CURRENT_MIGRATION_CLASS,
         ),
         f"{SNAPSHOT_CLASS}.cs": generate_snapshot(entity_types),
     }

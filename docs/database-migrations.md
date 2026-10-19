@@ -282,3 +282,30 @@ differs from the model of the code base.
 The two rows in the middle are snapshot fidelity only: they do not produce a
 migration operation, but they made the committed snapshot different from the
 snapshot that `dotnet ef migrations add` would have written.
+
+## `WidenUserPasswordHash` — Issue #30 (2026-10-19)
+
+- `Up`: `Users.Password` `varchar(44)` → `varchar(255)` (`unicode: false`, nullable).
+  No row is modified; an existing Base64 SHA-256 digest stays valid and is replaced by the
+  sign-in flow after the next successful login.
+- `Down`: returns the column to `varchar(44)`, which truncates an 84-character credential
+  and makes it unusable. Give every account that already signed in with the new format a
+  new credential before rolling back.
+- Not applied to a SQL Server instance in this environment; `dotnet ef database update`
+  (or `dotnet run --project Server -- --migrate`) must be run on a test database before
+  deployment.
+
+The files were produced by `scripts/generate_migrations.py`, because CI enforces that
+script (`--check` and `verify_migration_model.py`). Three changes to the tooling were
+needed and are part of this migration:
+
+| Change | Why |
+| --- | --- |
+| `generate_migrations.py`: the generated migration is now described by `CURRENT_MIGRATION_*` and its operations are the difference between the **previous** migration and the model. | The script always rewrote `AlignSchemaWithModel`, which is published history. A new change has to land in a new migration, not in an applied one. |
+| `generate_migrations.py`: `generate_delta_migration` / `generate_delta_designer` take the migration id, name, class and prelude as parameters. | The two functions were hard-wired to the delta migration. |
+| `migration_model.py`: `_column_operations` compares the facets **by value** instead of by truthiness. | `bool("varchar(44)") == bool("varchar(255)")` is `True`, so a pure length change was invisible and the generator produced an empty migration. EF Core's `MigrationsModelDiffer.ColumnStructureEquals` compares the store type string, so the value comparison is the correct one. |
+| `verify_migration_model.py`: the newest migration is verified against the designer of the migration **before it**. | It compared the newest migration with the difference from `InitialCreate`, which is only correct while there are two migrations. |
+
+Checks that were run locally after the change: `generate_migrations.py --check`,
+`verify_migration_model.py` (needs `tree-sitter` and `tree-sitter-c-sharp`) and
+`dotnet ef migrations has-pending-model-changes` — all three pass.

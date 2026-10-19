@@ -33,6 +33,7 @@ builder.Services
         authenticationScheme: Infrastructure.Security.Utility.AuthenticationScheme,
         configureOptions: options =>
         {
+            options.Cookie.Name = ".Faranou.Authentication";
             options.Cookie.HttpOnly = true;
             options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax;
             options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
@@ -40,6 +41,11 @@ builder.Services
                 : Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
             options.SlidingExpiration = true;
             options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+
+            // Explicit instead of relying on the framework defaults, so the sign-in flow
+            // and the challenge of an anonymous request can never disagree.
+            options.LoginPath = "/Account/Login";
+            options.AccessDeniedPath = "/Account/AccessDenied";
         });
 
 // Standard configuration (User Secrets/environment/appsettings) always wins.
@@ -82,6 +88,24 @@ if (!setupRequired)
     // DatabaseSchemaMigrator depends on DatabaseContext; register it only when the same
     // branch has registered and configured that context.
     builder.Services.AddScoped<Data.IDatabaseSchemaMigrator, Data.DatabaseSchemaMigrator>();
+
+    // Stateless and thread-safe: one instance is enough for the whole application.
+    builder.Services.AddSingleton<Infrastructure.Security.PasswordHashService>();
+
+    // Scoped, because the sign-in service owns the scoped DatabaseContext. The page models
+    // resolve it from the container instead of constructing it, so the dependency is created
+    // and disposed exactly once per request.
+    builder.Services.AddScoped<Infrastructure.Security.AuthenticationService>
+        (implementationFactory: serviceProvider =>
+            new Infrastructure.Security.AuthenticationService(
+                databaseContext: serviceProvider.GetRequiredService<Data.DatabaseContext>(),
+                logger: serviceProvider
+                    .GetRequiredService<Microsoft.Extensions.Logging.ILoggerFactory>()
+                    .CreateLogger<Infrastructure.Security.AuthenticationService>(),
+                applicationSettings: serviceProvider
+                    .GetRequiredService<Infrastructure.Settings.ApplicationSettings>(),
+                passwordHashService: serviceProvider
+                    .GetRequiredService<Infrastructure.Security.PasswordHashService>()));
 }
 
 var app = builder.Build();

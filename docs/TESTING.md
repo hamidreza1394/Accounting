@@ -25,3 +25,10 @@ dotnet test Template.sln --no-build --configuration Release
 - `DatabaseSetupValidationTests` ورودی‌های فاقد سرور، روش احراز هویت نامعتبر و SQL Login بدون رمز را بدون اتصال به SQL Server بررسی می‌کند.
 - این تست‌ها Integration Test نیستند؛ مسیرهای Windows Authentication، SQL Login معتبر، ایجاد دیتابیس، اعمال Migration، Data Protection و دیتابیس موجود باید روی SQL Server واقعی در محیط ایزوله آزموده شوند.
 - تا زمان اجرای CI و تست SQL Server، پیاده‌سازی راه‌اندازی اولیه تأیید نهایی نشده است.
+
+## تست‌های جریان ورود (Issue #30)
+- `LoginAuthenticationTests` جریان PageModel را با `DatabaseContext` روی provider حافظه‌ای (`Microsoft.EntityFrameworkCore.InMemory`، فقط آزمون) و یک `IAuthenticationService` ثبت‌کننده اجرا می‌کند: فیلد خالی، نام کاربری ناموجود، رمز اشتباه، حساب غیرفعال، قفل موقت، ورود موفق، Remember Me، ثبت `LoginLog`/`LastLoginDateTime`، ارتقای هش قدیمی، حساب زیرساختی، `ReturnUrl` محلی و خارجی، و خطای زیرساخت.
+- صدور کوکی با ثبت فراخوانی `SignInAsync` (scheme و `IsPersistent`) بررسی می‌شود؛ این آزمون جای آزمون HTTP واقعی روی مرورگر را نمی‌گیرد.
+- `PasswordHashServiceTests` قالب جدید، salt یکتا، رد رمز اشتباه، پذیرش و درخواست ارتقای هش قدیمی و رد مقدار نامعتبر را پوشش می‌دهد.
+- `LoginConfigurationTests` به‌صورت ایستا بررسی می‌کند که مقصد موقت `[Authorize]` دارد و فرم/ماژول حسابداری ندارد، صفحه ورود Anti-forgery و toggle رمز را حفظ کرده، و تنظیمات Cookie/ترتیب Middleware تغییر نکرده است.
+- اجرای Migration روی SQL Server واقعی همچنان آزمون‌نشده است.

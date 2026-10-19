@@ -66,3 +66,11 @@
 - Migration روی دیتابیس دارای جدول‌ها خودکار اجرا نمی‌شود تا دیتابیس قدیمی مبتنی بر `EnsureCreated()` ناخواسته تغییر نکند.
 - **وضعیت تأیید:** Restore/Build/Test و اتصال واقعی SQL Server هنوز اجرا/تأیید نشده‌اند. تا بررسی CI و تست SQL Server، این تغییر برای Production تأییدشده نیست.
 - گزارش handoff: `docs/handoffs/ISSUE-22-database-first-run-setup.md`.
+
+## 2026-10-19 — Issue #30 تکمیل احراز هویت صفحه ورود
+- جریان ورود با DI واقعی، Post/Redirect/Get، پاک‌سازی رمز از `ModelState` و مقصد موقت محافظت‌شده `/Account/LoginSuccess` تکمیل شد.
+- رمز عبور به `PasswordHasher<T>` منتقل شد؛ هش قدیمی SHA-256 پذیرفته و پس از ورود موفق ارتقا می‌یابد.
+- Migration `WidenUserPasswordHash` ستون `Users.Password` را به `varchar(255)` بزرگ می‌کند.
+- **تأییدشده:** `dotnet restore`, `dotnet build -c Release` (0 error), `dotnet test` (90/90), `scripts/check_static_assets.py`, `git diff --check`.
+- **تأییدنشده:** اجرای Migration روی SQL Server واقعی و آزمون End-to-End روی مرورگر در این محیط انجام نشده است.
+- گزارش: `docs/handoffs/ISSUE-30-secure-login-authentication.md`.

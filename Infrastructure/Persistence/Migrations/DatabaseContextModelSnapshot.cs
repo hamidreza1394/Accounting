@@ -100,9 +100,9 @@ namespace Data.Migrations
                     .HasColumnType("varchar(20)");
 
                 b.Property<string>("Password")
-                    .HasMaxLength(44)
+                    .HasMaxLength(255)
                     .IsUnicode(false)
-                    .HasColumnType("varchar(44)");
+                    .HasColumnType("varchar(255)");
 
                 b.Property<string>("FirstName")
                     .HasMaxLength(50)

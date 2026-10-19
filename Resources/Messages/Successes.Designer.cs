@@ -70,6 +70,15 @@ namespace Resources.Messages {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to You have signed in successfully. The remaining parts of the application will be completed in the next steps..
+        /// </summary>
+        public static string LoginSucceededPendingFeatures {
+            get {
+                return ResourceManager.GetString("LoginSucceededPendingFeatures", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to The {0} successfully created..
         /// </summary>
         public static string Created {

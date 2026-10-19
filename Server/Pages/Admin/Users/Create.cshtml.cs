@@ -10,16 +10,20 @@ public class CreateModel : Infrastructure.BasePageModelWithDatabaseContext
 {
 	#region Constructor
 	public CreateModel(Data.DatabaseContext databaseContext,
-		Microsoft.Extensions.Logging.ILogger<CreateModel> logger) :
+		Microsoft.Extensions.Logging.ILogger<CreateModel> logger,
+		Infrastructure.Security.PasswordHashService passwordHashService) :
 		base(databaseContext: databaseContext)
 	{
 		Logger = logger;
+		PasswordHashService = passwordHashService;
 		ViewModel = new();
 	}
 	#endregion /Constructor
 
 	#region Properties
 	private Microsoft.Extensions.Logging.ILogger<CreateModel> Logger { get; }
+
+	private Infrastructure.Security.PasswordHashService PasswordHashService { get; }
 
 	[Microsoft.AspNetCore.Mvc.BindProperty]
 	public ViewModels.Pages.Admin.Users.CreateViewModel ViewModel { get; set; }
@@ -183,8 +187,8 @@ public class CreateModel : Infrastructure.BasePageModelWithDatabaseContext
 				(text: ViewModel.TitleInContactUsPage);
 
 			var hashOfPassword =
-				Dtat.Security.Hashing.GetSha256
-				(text: ViewModel.Password);
+				PasswordHashService.Hash
+				(password: ViewModel.Password!);
 
 			var newEntity =
 				new Domain.User(emailAddress: fixedEmailAddress)

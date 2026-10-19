@@ -120,6 +120,9 @@
   <data name="LoginSucceeded" xml:space="preserve">
     <value>ورود شما با موفقیت انجام شد.</value>
   </data>
+  <data name="LoginSucceededPendingFeatures" xml:space="preserve">
+    <value>ورود به حساب با موفقیت انجام شد. بخش‌های نرم‌افزار در مراحل بعدی تکمیل خواهند شد.</value>
+  </data>
   <data name="Created" xml:space="preserve">
     <value>{0} با موفقیت ایجاد گردید.</value>
   </data>
