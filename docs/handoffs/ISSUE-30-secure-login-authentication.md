@@ -109,5 +109,5 @@
 
 ## شناسه‌های Git
 - Branch: `fix/secure-login-authentication`
-- Commit: `72f6c44` (جریان ورود و هش)، `00dcb01` (مستندات)، `82a1f3a` (تولید Migration با اسکریپت مخزن)، `0204c9c` (ثبت نتیجه CI سبز)
+- Commit: `72f6c44` (جریان ورود و هش)، `00dcb01` (مستندات)، `82a1f3a` (تولید Migration با اسکریپت مخزن)، `0204c9c` و `7d5f47d` (ثبت نتیجه CI و تکمیل همین فایل)
 - Pull Request: [#31](https://github.com/hamidreza1394/Accounting/pull/31) — CI سبز (`build-and-test` روی push و pull_request)، `mergeStateStatus: CLEAN`
