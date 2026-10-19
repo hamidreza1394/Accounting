@@ -42,8 +42,12 @@
 
 ### ۴) طرح داده
 - `Constants.FixedLength.PasswordHash = 255` اضافه شد و `Domain.User.Password` حداکثر طول ۲۵۵ گرفت (حداقل ۴۴ برای سازگاری با هش قدیمی حفظ شد).
-- Migration `20261019071146_WidenUserPasswordHash`: `Users.Password` از `varchar(44)` به `varchar(255)`. بدون تغییر داده؛ `Down` خطر بریدن هش جدید را مستند می‌کند.
-- Migration با `dotnet ef migrations add` واقعی (SDK 10.0.401) ساخته شد، نه با `scripts/generate_migrations.py`. در نتیجه `DatabaseContextModelSnapshot.cs` به قالب رسمی EF Core بازنویسی شد؛ این فایل تولیدی است و بازنویسی آن عمدی و لازم است. بررسی `dotnet ef migrations has-pending-model-changes` → «No changes have been made to the model since the last migration.»
+- Migration `20261019071146_WidenUserPasswordHash`: `Users.Password` از `varchar(44)` به `varchar(255)`. بدون تغییر داده. خطر `Down` (بریدن هش جدید) در `docs/database-migrations.md` مستند شده، چون فایل Migration توسط اسکریپت بازتولید می‌شود و کامنت دستی در آن پایدار نمی‌ماند.
+- فایل‌های Migration با `scripts/generate_migrations.py` تولید شدند، چون CI این اسکریپت را اجباری می‌کند (`--check` و `verify_migration_model.py`). سه اصلاح در ابزار لازم شد:
+  1. `generate_migrations.py`: مهاجرت جاری با `CURRENT_MIGRATION_*` توصیف می‌شود و عملیات آن از تفاضل **مهاجرت قبلی** با مدل محاسبه می‌شود (پیش‌تر همیشه `AlignSchemaWithModel` بازنویسی می‌شد که تاریخ منتشرشده است).
+  2. `migration_model.py`: مقایسه‌ی facetها از «درست/نادرست» به مقایسه‌ی **مقدار** تغییر کرد؛ `bool("varchar(44)") == bool("varchar(255)")` بود و تغییر خالص طول دیده نمی‌شد (Migration خالی تولید می‌شد).
+  3. `verify_migration_model.py`: مهاجرت جدید با designer مهاجرت **قبلی** سنجیده می‌شود، نه با `InitialCreate`.
+- `DatabaseContextModelSnapshot.cs` فقط ۲ خط تغییر دارد (`varchar(44)` → `varchar(255)`).
 
 ### ۵) پیکربندی
 - `Program.cs`: ثبت `PasswordHashService` (Singleton، بدون state) و `AuthenticationService` (Scoped، وابسته به `DbContext`).
@@ -58,7 +62,8 @@
 - `Server/Program.cs` — ثبت DI و تنظیمات Cookie.
 - `Server/Pages/Admin/Users/Create.cshtml.cs` — تولید هش استاندارد برای کاربر جدید.
 - `Domain/User.cs`, `Constants/FixedLength.cs` — طول ستون رمز.
-- `Infrastructure/Persistence/Migrations/20261019071146_WidenUserPasswordHash.cs` + Snapshot.
+- `Infrastructure/Persistence/Migrations/20261019071146_WidenUserPasswordHash.cs` + `.Designer.cs` + Snapshot.
+- `scripts/generate_migrations.py`, `scripts/migration_model.py`, `scripts/verify_migration_model.py` — پشتیبانی از زنجیره‌ی مهاجرت‌ها و اصلاح مقایسه‌ی طول ستون (توضیح در `docs/database-migrations.md`).
 - `Resources/Messages/Successes.resx`, `Successes.fa-IR.resx`, `Successes.Designer.cs` — پیام موفقیت موقت.
 - `tests/Template.Tests/LoginAuthenticationTests.cs` — ۳۷ آزمون جدید (۳ کلاس).
 - `Directory.Packages.props`, `tests/Template.Tests/Template.Tests.csproj` — `Microsoft.EntityFrameworkCore.InMemory` فقط برای آزمون.
@@ -80,7 +85,10 @@
 | `dotnet test Template.sln --no-build --configuration Release` | موفق | `total: 90`, `failed: 0`, `succeeded: 90` (۵۳ آزمون قبلی + ۳۷ آزمون جدید) |
 | `python scripts/check_static_assets.py` | موفق | `PASS: no remote CDN asset references found` |
 | `git diff --check` | پاک | بدون فضای انتهایی/تعارض |
-| Migration روی SQL Server واقعی | **اجرا نشده** | SQL Server در این محیط موجود نیست؛ فقط scaffold و بازبینی شد |
+| `python scripts/generate_migrations.py --repo-root . --check` | موفق | «The generated migrations are up to date.» |
+| `python scripts/verify_migration_model.py --repo-root .` | موفق | «The model snapshot and the migrations match the EF Core model of the code base.» (با `tree-sitter` در venv ایزوله) |
+| `dotnet ef migrations has-pending-model-changes --project Infrastructure/Persistence --startup-project Server -c Release --no-build` | موفق | «No changes have been made to the model since the last migration.» |
+| Migration روی SQL Server واقعی | **اجرا نشده** | SQL Server در این محیط موجود نیست؛ فقط تولید و بازبینی شد |
 
 ## امنیت، داده و سازگاری
 - هیچ رمز، هش، توکن یا Connection String در Log ثبت نمی‌شود؛ پیام کاربر عمومی است.
@@ -96,7 +104,8 @@
 3. **Migration روی SQL Server اجرا نشده:** پیش از استقرار باید `dotnet ef database update` (یا `--migrate`) روی دیتابیس آزمون اجرا و ستون بررسی شود.
 4. **ASP.NET Core Identity کامل** (قفل حساب، تأیید ایمیل، 2FA) هنوز پیاده نشده؛ این تغییر فقط هش و جریان ورود را استاندارد می‌کند.
 5. **حساب زیرساختی با قالب قدیمی** فقط هشدار Log می‌دهد؛ اپراتور باید مقدار را با هش جدید جایگزین کند (روش در `docs/SECURITY.md`).
-6. آزمون «عدم بازگرداندن رمز در HTML» در سطح `ModelState` و متن کد انجام شده، نه با رندر واقعی Razor در مرورگر.
+6. **ابزار تولید Migration** اصلاح شد (`scripts/*.py`). این تغییر فراتر از فایل‌های جریان ورود است، ولی بدون آن CI این مخزن (که `--check` و `verify_migration_model.py` را اجرا می‌کند) سبز نمی‌شد؛ تغییرات کوچک، مستند و همراه با همان Migration است.
+7. آزمون «عدم بازگرداندن رمز در HTML» در سطح `ModelState` و متن کد انجام شده، نه با رندر واقعی Razor در مرورگر.
 
 ## شناسه‌های Git
 - Branch: `fix/secure-login-authentication`

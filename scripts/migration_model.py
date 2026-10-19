@@ -472,10 +472,13 @@ def _column_operations(
     for name in sorted(target_columns):
         source_column = source_columns[name]
         target_column = target_columns[name]
+        # The facets are compared by value, not by truthiness: a column type keeps its
+        # truthiness when only the length changes ('varchar(44)' -> 'varchar(255)'), and
+        # that is exactly the kind of change an 'AlterColumn' has to carry.
         changed = [
             facet
             for facet in ALTER_COLUMN_FACETS
-            if bool(source_column[facet]) != bool(target_column[facet])
+            if source_column[facet] != target_column[facet]
         ]
         if changed:
             operations.append(

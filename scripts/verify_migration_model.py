@@ -11,8 +11,8 @@ The script replaces the checks that normally need the .NET SDK:
 * The published ``InitialCreate`` migration is verified against its own designer file: a
   published migration is historical, it must describe the schema as it was when it was
   written and not the schema of today.
-* The newest migration is verified against the difference between the two: it has to
-  apply exactly that difference, no more and no less.
+* The newest migration is verified against the difference between the migration before
+  it and the snapshot: it has to apply exactly that difference, no more and no less.
 * The C# syntax of every generated file is validated with tree-sitter.
 
 Usage:
@@ -36,7 +36,8 @@ from migration_model import MigrationModelError  # noqa: E402
 MIGRATIONS_DIRECTORY = os.path.join("Infrastructure", "Persistence", "Migrations")
 
 INITIAL_MIGRATION = "20251017120000_InitialCreate"
-NEWEST_MIGRATION = "20261017090000_AlignSchemaWithModel"
+PREVIOUS_MIGRATION = "20261017090000_AlignSchemaWithModel"
+NEWEST_MIGRATION = "20261019071146_WidenUserPasswordHash"
 SNAPSHOT_FILE = "DatabaseContextModelSnapshot.cs"
 
 
@@ -466,6 +467,8 @@ def verify(repository_root: str) -> list[str]:
     directory = os.path.join(repository_root, MIGRATIONS_DIRECTORY)
     initial_migration_path = os.path.join(directory, f"{INITIAL_MIGRATION}.cs")
     initial_designer_path = os.path.join(directory, f"{INITIAL_MIGRATION}.Designer.cs")
+    previous_migration_path = os.path.join(directory, f"{PREVIOUS_MIGRATION}.cs")
+    previous_designer_path = os.path.join(directory, f"{PREVIOUS_MIGRATION}.Designer.cs")
     newest_migration_path = os.path.join(directory, f"{NEWEST_MIGRATION}.cs")
     newest_designer_path = os.path.join(directory, f"{NEWEST_MIGRATION}.Designer.cs")
     snapshot_path = os.path.join(directory, SNAPSHOT_FILE)
@@ -474,6 +477,8 @@ def verify(repository_root: str) -> list[str]:
     for path in (
         initial_migration_path,
         initial_designer_path,
+        previous_migration_path,
+        previous_designer_path,
         newest_migration_path,
         newest_designer_path,
         snapshot_path,
@@ -486,6 +491,7 @@ def verify(repository_root: str) -> list[str]:
     model = derive_model(repository_root)
     snapshot = mm.parse_generated_model(mm.read_text(snapshot_path))
     initial_designer = mm.parse_generated_model(mm.read_text(initial_designer_path))
+    previous_designer = mm.parse_generated_model(mm.read_text(previous_designer_path))
     newest_designer = mm.parse_generated_model(mm.read_text(newest_designer_path))
 
     # 1. The snapshot has to describe the model of the code base. This is the check that
@@ -507,14 +513,14 @@ def verify(repository_root: str) -> list[str]:
         verify_initial_migration(mm.read_text(initial_migration_path), initial_designer)
     )
 
-    # 4. The newest migration applies exactly the difference between the published schema
-    #    and the schema of the snapshot.
-    expected = signatures_of(mm.compute_operations(initial_designer, snapshot))
+    # 4. The newest migration applies exactly the difference between the schema of the
+    #    migration before it and the schema of the snapshot.
+    expected = signatures_of(mm.compute_operations(previous_designer, snapshot))
     actual = parse_operations(mm.read_text(newest_migration_path))
     if actual != expected:
         problems.append(
             "The operations of the newest migration differ from the difference between "
-            f"the published migration and the snapshot.\n  applied:   {actual}\n"
+            f"the previous migration and the snapshot.\n  applied:   {actual}\n"
             f"  expected:  {expected}"
         )
 
@@ -531,6 +537,8 @@ def main(argv: list[str]) -> int:
         [
             os.path.join(directory, f"{INITIAL_MIGRATION}.cs"),
             os.path.join(directory, f"{INITIAL_MIGRATION}.Designer.cs"),
+            os.path.join(directory, f"{PREVIOUS_MIGRATION}.cs"),
+            os.path.join(directory, f"{PREVIOUS_MIGRATION}.Designer.cs"),
             os.path.join(directory, f"{NEWEST_MIGRATION}.cs"),
             os.path.join(directory, f"{NEWEST_MIGRATION}.Designer.cs"),
             os.path.join(directory, SNAPSHOT_FILE),
