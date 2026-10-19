@@ -100,5 +100,5 @@
 
 ## شناسه‌های Git
 - Branch: `fix/secure-login-authentication`
-- Commit: در PR ثبت می‌شود
-- Pull Request: در PR ثبت می‌شود
+- Commit: `72f6c44` (به‌همراه commit مستندات)
+- Pull Request: [#31](https://github.com/hamidreza1394/Accounting/pull/31)

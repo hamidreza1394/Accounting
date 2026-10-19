@@ -56,4 +56,4 @@
 - **طرح داده:** `Constants.FixedLength.PasswordHash = 255`، `Domain.User.Password` با `MaxLength(255)`، Migration `20261019071146_WidenUserPasswordHash` (تولیدشده با `dotnet ef` واقعی، بدون تغییر داده).
 - **تست:** فایل جدید `tests/Template.Tests/LoginAuthenticationTests.cs` با ۳۷ آزمون (جریان PageModel، سرویس هش، پیکربندی). نتیجه واقعی: `dotnet build -c Release` → `0 Error(s)`؛ `dotnet test` → `total: 90`, `failed: 0`, `succeeded: 90`؛ `scripts/check_static_assets.py` → PASS؛ `git diff --check` → پاک.
 - **اجرانشده (صادقانه):** Migration روی SQL Server واقعی و آزمون End-to-End روی مرورگر در این محیط ممکن نبود.
-- **Git:** Branch `fix/secure-login-authentication`؛ Issue #30؛ PR در ادامه همین شاخه. **Merge نشد** — منتظر تأیید مسئول.
+- **Git:** Branch `fix/secure-login-authentication`؛ Issue #30؛ PR https://github.com/hamidreza1394/Accounting/pull/31. **Merge نشد** — منتظر تأیید مسئول.
