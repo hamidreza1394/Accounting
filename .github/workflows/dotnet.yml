@@ -91,6 +91,14 @@ jobs:
         run: |
           set -o pipefail
           dotnet test Template.sln --no-build --configuration Release 2>&1 | tee /tmp/dotnet-test.log
+      - name: Report vulnerable NuGet packages (direct and transitive)
+        run: |
+          set -o pipefail
+          dotnet list Template.sln package --vulnerable --include-transitive 2>&1 | tee /tmp/nuget-vulnerable.log
+          if grep -qiE 'has the following vulnerable packages' /tmp/nuget-vulnerable.log; then
+            echo "::error title=Vulnerable NuGet packages::see the step log"; exit 1
+          fi
+          echo "::notice title=NuGet vulnerability scan::no vulnerable package reported"
       - name: Report the test totals
         if: always()
         run: |
