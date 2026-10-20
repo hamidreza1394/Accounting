@@ -283,6 +283,9 @@ if (!setupRequired)
     // JSON API of the React client (same origin, cookie authentication, anti-forgery).
     app.MapFaranouApi();
 
+    // CSP violation reports (answers 404 unless SecurityHeaders:CspReportingEnabled is true).
+    app.MapCspReports();
+
     // The React client is built into wwwroot/app (see ClientApp/README.md). Client-side
     // routes under /app fall back to its index.html; the data itself is protected by the API.
     // index.html is revalidated on every visit so a new release is picked up immediately;

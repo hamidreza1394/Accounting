@@ -35,7 +35,7 @@
 }
 
 <div aria-live="polite" aria-atomic="true" class="posiiton-relative">
-	<div class="toast-container position-absolute @(toastSettings.Style)" style="z-index: 10000;">
+	<div class="toast-container faranou-toast-container position-absolute @(toastSettings.Style)">
 
 		@{
 			if (toastErrors != null)
@@ -93,22 +93,5 @@
 	</div>
 </div>
 
-<script>
-
-	window.addEventListener('load', (e) => {
-
-		var toastElements =
-			document.querySelectorAll('.toast')
-
-		toastElements.forEach((toastElement, index) => {
-
-			let toast =
-				new bootstrap.Toast(toastElement)
-
-			toast.show()
-
-		})
-
-	})
-
-</script>
+@* Shows the toasts above (Bootstrap); a file instead of an inline script, for the CSP. *@
+<script src="~/js/toast-messages.js" asp-append-version="true"></script>
