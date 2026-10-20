@@ -80,3 +80,38 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - پاسخ‌های API `Cache-Control: no-store` دارند. خطای غیرمنتظره با جزئیات فقط در Log سرور ثبت و به کاربر پیام عمومی داده می‌شود.
 - جلسه‌هایی که پیش از این تغییر صادر شده‌اند Claim شناسه کاربر ندارند؛ API برای آن‌ها 401 برمی‌گرداند و کاربر باید دوباره وارد شود. داشبورد Razor برای سازگاری، شناسه را از نام کاربری پیدا می‌کند.
 - **باقی‌مانده:** Content-Security-Policy برای `/app`، اعتبارسنجی مجدد نشست (Security Stamp) هنگام تغییر رمز/غیرفعال‌سازی برای صفحات Razor، Rate Limiting برای API، و OpenAPI با کنترل دسترسی.
+
+
+## بازبینی امنیتی پس از PR #38 — 2026-10-20
+### اعتبارسنجی مجدد نشست (D-014)
+- هر درخواست احرازشده حساب را بررسی می‌کند: حساب حذف‌شده یا غیرفعال، یا رمز/هش تغییرکرده، نشست را در همان درخواست پایان می‌دهد (صفحات به ورود هدایت می‌شوند، API پاسخ 401 می‌دهد). این شامل نشست‌های Razor و «مرا به خاطر بسپار» هم هست.
+- نشست‌های قدیمی بدون Claim `CredentialStamp` یک‌بار باطل می‌شوند.
+
+### CSP و هدرهای امنیتی (D-015)
+| مسیر | سیاست |
+|---|---|
+| `/app/*` | اجباری: `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'` |
+| `/api/*` | اجباری: `default-src 'none'; frame-ancestors 'none'` |
+| صفحات Razor | اجباری: `object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'` + سیاست سخت‌گیرانه به‌صورت Report-Only |
+
+همه پاسخ‌ها: `X-Content-Type-Options: nosniff`، `Referrer-Policy: strict-origin-when-cross-origin`، `Permissions-Policy` محدود، `Cross-Origin-Opener-Policy: same-origin`. کلاینت React در Chromium زیر سیاست اجباری بدون هیچ خطای CSP اجرا شد.
+
+**موارد inline مانع اجبار CSP در Razor:** اسکریپت inline در `Pages/Shared/PartialViews/_DisplayToastMessages.cshtml` (همه صفحات دارای Toast)، `Pages/DatabaseSetup.cshtml`، `Pages/Admin/MenuItems/Create|Update.cshtml`، `Pages/Admin/PageManager/Delete.cshtml`؛ `<style>` inline در `DatabaseSetup`، `MenuItems/Create|Update` و `Account/LoginSuccess.cshtml`؛ Event handler inline (`onclick`/...) در `MenuItems/Create|Update` و `PageManager/Delete`؛ چند `style="..."`. TinyMCE در صفحات مدیریت هم پیش از اجبار باید بررسی شود.
+
+### Rate Limiting
+| سیاست | محدوده | پیش‌فرض (`RateLimiting` در appsettings) |
+|---|---|---|
+| `api` | همه `/api/v1`، به ازای کاربر (یا آدرس برای ناشناس) | 300 درخواست در 60 ثانیه |
+| `api-sensitive` | `antiforgery/token` و `session/logout` | 30 در 60 ثانیه |
+| `login` | فقط POST فرم ورود، به ازای آدرس کلاینت (GET محدود نمی‌شود) | 20 در 60 ثانیه |
+
+پاسخ رد: 429 با `Retry-After` (برای API به‌صورت `application/problem+json`). این محدودیت مکمل قفل موقت ۵ تلاش ناموفق در ۱۵ دقیقه به ازای نام کاربری است. **محدودیت:** پشت Reverse Proxy تا پیکربندی ForwardedHeaders، همه کاربران پشت Proxy یک پارتیشن آدرس مشترک دارند.
+
+### خطاهای API
+خطای غیرمنتظره در API (حتی پیش از Endpoint Filter، مثلاً هنگام ساخت سرویس) فقط Log می‌شود و پاسخ عمومی `application/problem+json` بدون متن Exception، Connection String یا Stack Trace برمی‌گردد (تست Integration).
+
+### هش‌های SHA-256 قدیمی — برنامه حذف
+- هش جدید: `PasswordHasher<T>` نسخه V3 (PBKDF2-HMAC-SHA512، salt تصادفی ۱۲۸ بیتی برای هر رمز، 100,000 تکرار در .NET 10).
+- هش قدیمی (`Base64(SHA-256)`، دقیقاً ۴۴ نویسه) فقط در ورود موفق پذیرفته و همان لحظه به V3 ارتقا داده می‌شود؛ ارتقا مهر نشست را عوض می‌کند و نشست‌های دیگر همان حساب را باطل می‌کند.
+- شمارش حساب‌های باقی‌مانده: `SELECT COUNT(*) FROM Users WHERE LEN(Password) = 44;`
+- **برنامه پیشنهادی:** (۱) از تاریخ استقرار این نسخه، ۹۰ روز فرصت ورود؛ (۲) سپس برای حساب‌های باقی‌مانده رمز تصادفی غیرقابل‌استفاده تنظیم و بازنشانی رمز توسط مدیر الزامی شود؛ (۳) پس از صفرشدن شمارش، پذیرش قالب قدیمی از `PasswordHashService.Verify` حذف شود. حساب زیرساختی (`MasterPassword`) باید همین حالا با مقدار تولیدشده توسط `PasswordHashService.Hash` جایگزین شود. این مراحل نیاز به تصمیم مسئول دارد و اجرا نشده است.
