@@ -298,6 +298,10 @@ namespace Server.Pages.Security
 				claims.Add(item: new System.Security.Claims.Claim
 					(type: "AccountKind", value: "Infrastructure"));
 
+				claims.Add(item: new System.Security.Claims.Claim
+					(type: Infrastructure.Security.SessionValidator.CredentialStampClaimType,
+					value: loginResult.CredentialStamp ?? string.Empty));
+
 				var claimsIdentity =
 					new System.Security.Claims.ClaimsIdentity
 					(claims: claims,
@@ -337,6 +341,12 @@ namespace Server.Pages.Security
 			claims.Add(item: new System.Security.Claims.Claim
 				(type: System.Security.Claims.ClaimTypes.NameIdentifier,
 				value: user.Id.ToString()));
+
+			// Re-validated on every request (Infrastructure.Security.SessionValidator): a changed
+			// password or a deactivated account ends this session on the next request.
+			claims.Add(item: new System.Security.Claims.Claim
+				(type: Infrastructure.Security.SessionValidator.CredentialStampClaimType,
+				value: loginResult.CredentialStamp ?? string.Empty));
 
 			// Company identifiers are intentionally NOT copied into the cookie. A claim
 			// would outlive a revoked membership until the cookie expires; the company

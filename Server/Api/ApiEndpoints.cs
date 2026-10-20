@@ -40,11 +40,14 @@ public static class ApiEndpoints
 		var api = endpoints
 			.MapGroup($"{RoutePrefix}/v1")
 			.RequireAuthorization()
+			.RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiPolicy)
 			.AddEndpointFilter<ApiResponseFilter>();
 
 		api.MapGet("/session", GetSession);
-		api.MapPost("/session/logout", LogoutAsync);
-		api.MapGet("/antiforgery/token", GetAntiforgeryToken);
+		api.MapPost("/session/logout", LogoutAsync)
+			.RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+		api.MapGet("/antiforgery/token", GetAntiforgeryToken)
+			.RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
 		api.MapGet("/companies", GetCompaniesAsync);
 		api.MapGet("/companies/{companyId:guid}/overview", GetCompanyOverviewAsync);
 
@@ -54,6 +57,30 @@ public static class ApiEndpoints
 	public static bool IsApiRequest(PathString path)
 	{
 		return path.StartsWithSegments(RoutePrefix, StringComparison.OrdinalIgnoreCase);
+	}
+
+	/// <summary>
+	/// The exception handler of the API branch. It also covers failures that happen before an
+	/// endpoint filter runs (for example while a service of the endpoint is created): the
+	/// details go to the log only, the client gets a generic problem response.
+	/// </summary>
+	public static async Task WriteUnexpectedErrorAsync(HttpContext httpContext)
+	{
+		var exception = httpContext.Features
+			.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
+
+		httpContext.RequestServices
+			.GetRequiredService<ILoggerFactory>()
+			.CreateLogger(typeof(ApiEndpoints).FullName!)
+			.LogError(exception, "API request {Method} {Path} failed with an unexpected error.",
+				httpContext.Request.Method, httpContext.Request.Path.Value);
+
+		httpContext.Response.Headers.CacheControl = "no-store";
+
+		await TypedResults.Problem(
+				title: "خطای غیرمنتظره‌ای در سرور رخ داد. لطفاً دوباره تلاش کنید.",
+				statusCode: StatusCodes.Status500InternalServerError)
+			.ExecuteAsync(httpContext);
 	}
 
 	/// <summary>GET /api/v1/session — the verified identity of the current session.</summary>

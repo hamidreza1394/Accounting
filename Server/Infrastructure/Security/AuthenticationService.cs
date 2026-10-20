@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -37,6 +37,12 @@ namespace Infrastructure.Security
 		/// </summary>
 		public System.Collections.Generic.List<System.Guid> ActiveCompanyIds { get; init; } =
 			new();
+
+		/// <summary>
+		/// The stamp of the credential that was verified (see <see cref="SessionValidator" />).
+		/// A later change of the stored credential invalidates the session.
+		/// </summary>
+		public string? CredentialStamp { get; init; }
 	}
 
 	/// <summary>
@@ -180,6 +186,8 @@ namespace Infrastructure.Security
 					{
 						Outcome = LoginOutcome.Succeeded,
 						IsInfrastructureMaster = true,
+						CredentialStamp =
+							SessionValidator.ComputeCredentialStamp(ApplicationSettings.MasterPassword),
 					};
 				}
 
@@ -276,6 +284,8 @@ namespace Infrastructure.Security
 				Outcome = LoginOutcome.Succeeded,
 				User = user,
 				ActiveCompanyIds = activeCompanyIds,
+				// Computed after a possible rehash, so the stamp matches the stored value.
+				CredentialStamp = SessionValidator.ComputeCredentialStamp(user.Password),
 			};
 		}
 		#endregion /AuthenticateAsync

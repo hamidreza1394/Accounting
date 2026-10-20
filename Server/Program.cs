@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Infrastructure.DatabaseSetup;
 using Server.Api;
+using Infrastructure.Security;
 // **************************************************
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,7 +22,24 @@ builder.Services.AddRouting(options =>
     options.LowercaseQueryStrings = true;
 });
 
-builder.Services.AddRazorPages();
+builder.Services.AddRazorPages(options =>
+{
+    // Submissions of the sign-in form are limited per client address, in addition to the
+    // per-username lockout of AuthenticationService.
+    options.Conventions.AddPageRouteModelConvention("/Account/Login", model =>
+    {
+        foreach (var selector in model.Selectors)
+        {
+            selector.EndpointMetadata.Add(
+                new Microsoft.AspNetCore.RateLimiting.EnableRateLimitingAttribute(
+                    Infrastructure.Security.RateLimitingPolicies.LoginPolicy));
+        }
+    });
+});
+
+builder.Services.AddFaranouRateLimiting(builder.Configuration);
+builder.Services.Configure<Infrastructure.Security.SecurityHeadersSettings>(
+    builder.Configuration.GetSection(Infrastructure.Security.SecurityHeadersSettings.SectionName));
 
 builder.Services.Configure<Infrastructure.Settings.ApplicationSettings>
     (builder.Configuration.GetSection(key: Infrastructure.Settings.ApplicationSettings.KeyName))
@@ -56,6 +74,10 @@ builder.Services
             // 401/403 so the React client can handle them.
             options.Events.OnRedirectToLogin = Server.Api.ApiCookieAuthenticationEvents.RedirectToLoginAsync;
             options.Events.OnRedirectToAccessDenied = Server.Api.ApiCookieAuthenticationEvents.RedirectToAccessDeniedAsync;
+
+            // Every request re-checks the account (active, unchanged credential); a deactivated
+            // account or a changed password ends existing sessions on their next request.
+            options.Events.OnValidatePrincipal = Infrastructure.Security.SessionValidator.ValidatePrincipalAsync;
         });
 
 // The React client sends the anti-forgery request token in this header; Razor forms keep
@@ -176,6 +198,9 @@ else if (!setupRequired && (!app.Environment.IsDevelopment() || connectionLoaded
     }
 }
 
+// First, so every response (pages, API, static files, errors) carries the security headers.
+app.UseMiddleware<Infrastructure.Security.SecurityHeadersMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
@@ -186,6 +211,15 @@ else
     app.UseExceptionHandler("/Errors/Error");
     app.UseHsts();
 }
+
+// API requests never receive an HTML error page or a stack trace, in any environment: the
+// exception is logged and a generic application/problem+json response is returned.
+app.UseWhen(
+    context => ApiEndpoints.IsApiRequest(context.Request.Path),
+    api => api.UseExceptionHandler(new ExceptionHandlerOptions
+    {
+        ExceptionHandler = ApiEndpoints.WriteUnexpectedErrorAsync,
+    }));
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
@@ -217,6 +251,9 @@ app.Use(async (context, next) =>
 
 app.UseRouting();
 app.UseAuthentication();
+// After authentication (partitions per signed-in user) and before authorization, so that
+// anonymous floods are limited too.
+app.UseRateLimiter();
 app.UseAuthorization();
 app.UseCultureCookie();
 app.MapRazorPages();
@@ -228,7 +265,17 @@ if (!setupRequired)
 
     // The React client is built into wwwroot/app (see ClientApp/README.md). Client-side
     // routes under /app fall back to its index.html; the data itself is protected by the API.
-    app.MapFallbackToFile("/app/{*path:nonfile}", "app/index.html");
+    // index.html is revalidated on every visit so a new release is picked up immediately;
+    // the hashed files under /app/assets can be cached by the browser.
+    app.MapFallbackToFile("/app/{*path:nonfile}", "app/index.html", new StaticFileOptions
+    {
+        OnPrepareResponse = context => context.Context.Response.Headers.CacheControl = "no-cache",
+    });
 }
 
 app.Run();
+
+// Exposes the entry point to the HTTP integration tests (WebApplicationFactory<Program>).
+public partial class Program
+{
+}
