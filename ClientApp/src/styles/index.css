@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+/* IRANSansX is served by the ASP.NET Core host from wwwroot/fonts (the same files as the
+   Razor sign-in page). No font, icon or stylesheet is loaded from a CDN. */
+@font-face {
+  font-family: IRANSansX;
+  src: url('/fonts/woff2/IRANSansX-Regular.woff2') format('woff2'),
+    url('/fonts/woff/IRANSansX-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: IRANSansX;
+  src: url('/fonts/woff2/IRANSansX-Medium.woff2') format('woff2'),
+    url('/fonts/woff/IRANSansX-Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: IRANSansX;
+  src: url('/fonts/woff2/IRANSansX-DemiBold.woff2') format('woff2'),
+    url('/fonts/woff/IRANSansX-DemiBold.woff') format('woff');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: IRANSansX;
+  src: url('/fonts/woff2/IRANSansX-Bold.woff2') format('woff2'),
+    url('/fonts/woff/IRANSansX-Bold.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* The Faranou palette of the sign-in page (Server/wwwroot/css/rtl/taraz-login.css). */
+@theme {
+  --font-sans: IRANSansX, Tahoma, 'Segoe UI', sans-serif;
+
+  --color-navy: #1c3d5a;
+  --color-navy-deep: #142f47;
+  --color-gold: #d9a24b;
+  --color-gold-deep: #b8842e;
+  --color-teal: #2f8d93;
+  --color-ink: #22384b;
+  --color-muted: #64798b;
+  --color-sand: #f6f3ee;
+  --color-cool: #eef2f5;
+  --color-line: #dfe6ec;
+  --color-danger: #b3372f;
+  --color-danger-soft: #fbeceb;
+  --color-warning: #8a6116;
+  --color-warning-soft: #fdf4e3;
+  --color-success: #256b4f;
+  --color-success-soft: #e9f4ee;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-sand);
+    color: var(--color-ink);
+    min-height: 100vh;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-gold);
+    outline-offset: 2px;
+  }
+}

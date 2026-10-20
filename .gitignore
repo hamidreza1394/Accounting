@@ -367,3 +367,7 @@ FodyWeavers.xsd
 .env
 .env.*
 !.env.example
+
+# Faranou React client: build output (produced by "npm run build" in ClientApp) and packages.
+Server/wwwroot/app/
+ClientApp/node_modules/

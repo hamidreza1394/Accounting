@@ -12,6 +12,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The React client (ClientApp): locked install, strict type check, unit tests,
+  # production build, the offline-resources check of the build output and an audit
+  # of the runtime dependencies. Node 24 ships npm 11, which the lockfile needs.
+  client:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ClientApp
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: ClientApp/package-lock.json
+      - name: Install (locked)
+        run: npm ci --no-fund --no-audit
+      - name: Type check
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: Production build
+        run: npm run build
+      - name: Check that the build needs no internet resource
+        run: npm run check:offline
+      - name: Audit runtime dependencies
+        run: npm audit --omit=dev --audit-level=high
+
   build-and-test:
     runs-on: ubuntu-latest
     steps:
@@ -26,9 +56,9 @@ jobs:
         with:
           python-version: '3.x'
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '24'
       - name: Check local-only static assets
         run: python3 scripts/check_static_assets.py
       - name: Restore
