@@ -2,14 +2,18 @@ using System.ComponentModel.DataAnnotations;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Configuration;
 using Infrastructure.DatabaseSetup;
 using Infrastructure.Security;
 
 namespace Server.Pages;
 
-public sealed class DatabaseSetupModel : PageModel
+/// <summary>
+/// First-run database setup. Must not inherit the project CMS type
+/// <c>Server.Pages.PageModel</c>, which requires <see cref="Data.DatabaseContext"/>
+/// before a connection string exists. Use the framework Razor Pages base type.
+/// </summary>
+public sealed class DatabaseSetupModel : Microsoft.AspNetCore.Mvc.RazorPages.PageModel
 {
 	private const string MasterBootstrapGateKey = "MasterBootstrapGate";
 
@@ -230,7 +234,7 @@ public sealed class DatabaseSetupModel : PageModel
 
 		[Required(ErrorMessage = "نام سرور الزامی است.")]
 		[StringLength(256, MinimumLength = 1)]
-		public string Server { get; set; } = @".\\SQLSERVER2025";
+		public string Server { get; set; } = ".\\SQLSERVER2025";
 
 		[Required(ErrorMessage = "نام دیتابیس الزامی است.")]
 		[StringLength(128, MinimumLength = 1)]
