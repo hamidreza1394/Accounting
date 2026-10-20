@@ -24,6 +24,13 @@ test.beforeEach(async ({ page }) => {
   });
   page.__errors = [];
   page.on('pageerror', (error) => page.__errors.push(error.message));
+  page.__failedRequests = [];
+  page.on('requestfailed', (request) => page.__failedRequests.push(request.url()));
+  page.on('response', (response) => {
+    if (response.status() >= 400 && /\.(css|js|woff2?|svg|png|jpe?g|ico)(\?|$)/i.test(response.url())) {
+      page.__failedRequests.push(`${response.status()} ${response.url()}`);
+    }
+  });
 });
 
 async function violations(page, disposition = 'enforce') {
@@ -34,6 +41,7 @@ async function violations(page, disposition = 'enforce') {
 async function expectCleanPage(page) {
   expect(await violations(page), `CSP violations on ${page.url()}`).toEqual([]);
   expect(page.__errors, `script errors on ${page.url()}`).toEqual([]);
+  expect(page.__failedRequests, `failed static resources on ${page.url()}`).toEqual([]);
 }
 
 async function signIn(page, user, { rememberMe = false } = {}) {
@@ -61,8 +69,15 @@ test('the sign-in page renders with its local font, without CSP violations', asy
 
   await expect(page.locator('#ViewModel_Username')).toBeVisible();
   await expect(page.locator('#ViewModel_Password')).toBeVisible();
-  await page.evaluate(() => document.fonts.ready);
-  expect(await page.evaluate(() => document.fonts.check('16px IRANSansX'))).toBe(true);
+  // The local IRANSansX faces that the page uses are loaded (font-src 'self'; no CDN).
+  const loadedFaces = await page.evaluate(async () => {
+    await document.fonts.ready;
+    return [...document.fonts]
+      .filter((face) => face.family.replace(/["']/g, '') === 'IRANSansX' && face.status === 'loaded')
+      .map((face) => face.weight);
+  });
+  expect(loadedFaces.length).toBeGreaterThan(0);
+  expect(page.__failedRequests).toEqual([]);
 
   // The password toggle (taraz-login.js) still works under the enforced CSP.
   await page.locator('[data-password-toggle]').first().click();
