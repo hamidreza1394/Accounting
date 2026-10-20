@@ -1,0 +1,15 @@
+{
+  "name": "faranou-e2e",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Browser end-to-end tests of a published Faranou server with SQL Server (run by CI, see README.md).",
+  "type": "module",
+  "scripts": {
+    "seed": "node seed.mjs",
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "mssql": "12.7.4"
+  }
+}
