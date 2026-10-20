@@ -9,7 +9,12 @@ using Infrastructure.Security;
 
 namespace Server.Pages;
 
-public sealed class DatabaseSetupModel : PageModel
+/// <summary>
+/// First-run database setup. Must not inherit the project CMS type
+/// <c>Server.Pages.PageModel</c>, which requires <see cref="Data.DatabaseContext"/>
+/// before a connection string exists. Use the framework Razor Pages base type.
+/// </summary>
+public sealed class DatabaseSetupModel : Microsoft.AspNetCore.Mvc.RazorPages.PageModel
 {
 	private const string MasterBootstrapGateKey = "MasterBootstrapGate";
 
