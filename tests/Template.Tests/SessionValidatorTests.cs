@@ -147,7 +147,7 @@ public sealed class SecurityHeadersTests
 	[InlineData("/Account/Login", Infrastructure.Security.SecurityHeadersMiddleware.RazorBaselinePolicy)]
 	public void EachAreaGetsItsPolicy(string path, string expectedPolicy)
 	{
-		var headers = new HeaderDictionary();
+		IHeaderDictionary headers = new HeaderDictionary();
 
 		Infrastructure.Security.SecurityHeadersMiddleware.ApplyHeaders(new PathString(path), headers, enforceRazorPolicy: false);
 
@@ -158,11 +158,11 @@ public sealed class SecurityHeadersTests
 	[Fact]
 	public void TheRazorStrictPolicy_IsReportOnly_UntilItIsEnforced()
 	{
-		var reportOnly = new HeaderDictionary();
+		IHeaderDictionary reportOnly = new HeaderDictionary();
 		Infrastructure.Security.SecurityHeadersMiddleware.ApplyHeaders(new PathString("/"), reportOnly, enforceRazorPolicy: false);
 		Assert.Equal(Infrastructure.Security.SecurityHeadersMiddleware.RazorStrictPolicy, reportOnly["Content-Security-Policy-Report-Only"].ToString());
 
-		var enforced = new HeaderDictionary();
+		IHeaderDictionary enforced = new HeaderDictionary();
 		Infrastructure.Security.SecurityHeadersMiddleware.ApplyHeaders(new PathString("/"), enforced, enforceRazorPolicy: true);
 		Assert.Equal(Infrastructure.Security.SecurityHeadersMiddleware.RazorStrictPolicy, enforced.ContentSecurityPolicy.ToString());
 		Assert.False(enforced.ContainsKey("Content-Security-Policy-Report-Only"));

@@ -30,4 +30,15 @@
 		</PackageReference>
 	</ItemGroup>
 
+	<!--
+		A published server must contain the built React client (wwwroot/app), otherwise /app
+		answers 404 in production. Build it first with scripts/publish.sh (or publish.ps1), which
+		runs npm ci, the type check, the tests and npm run build in ClientApp before publishing.
+		Pass -p:FaranouSkipClientAppCheck=true only for a deliberate server-only publish.
+	-->
+	<Target Name="FaranouEnsureClientAppBuilt" BeforeTargets="PrepareForPublish" Condition="'$(FaranouSkipClientAppCheck)' != 'true'">
+		<Error Condition="!Exists('$(MSBuildProjectDirectory)/wwwroot/app/index.html')"
+			Text="The React client is not built (Server/wwwroot/app/index.html is missing). Run scripts/publish.sh (or: cd ClientApp; npm ci; npm run build) before 'dotnet publish', or pass -p:FaranouSkipClientAppCheck=true for a server-only publish." />
+	</Target>
+
 </Project>
