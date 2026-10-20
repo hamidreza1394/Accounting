@@ -2,7 +2,6 @@ using System.ComponentModel.DataAnnotations;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Configuration;
 using Infrastructure.DatabaseSetup;
 using Infrastructure.Security;
@@ -235,7 +234,7 @@ public sealed class DatabaseSetupModel : Microsoft.AspNetCore.Mvc.RazorPages.Pag
 
 		[Required(ErrorMessage = "نام سرور الزامی است.")]
 		[StringLength(256, MinimumLength = 1)]
-		public string Server { get; set; } = @".\\SQLSERVER2025";
+		public string Server { get; set; } = ".\\SQLSERVER2025";
 
 		[Required(ErrorMessage = "نام دیتابیس الزامی است.")]
 		[StringLength(128, MinimumLength = 1)]
