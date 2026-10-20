@@ -27,6 +27,10 @@ builder.Services.Configure<Infrastructure.Settings.ApplicationSettings>
     .AddSingleton(implementationFactory: serviceType =>
         serviceType.GetRequiredService<Microsoft.Extensions.Options.IOptions<Infrastructure.Settings.ApplicationSettings>>().Value);
 
+// Stateless security helpers are safe as singletons in every hosting mode, including first-run setup.
+builder.Services.AddSingleton<Infrastructure.Security.PasswordHashService>();
+builder.Services.AddSingleton<InfrastructureMasterBootstrap>();
+
 builder.Services
     .AddAuthentication(defaultScheme: Infrastructure.Security.Utility.AuthenticationScheme)
     .AddCookie(
@@ -88,9 +92,6 @@ if (!setupRequired)
     // DatabaseSchemaMigrator depends on DatabaseContext; register it only when the same
     // branch has registered and configured that context.
     builder.Services.AddScoped<Data.IDatabaseSchemaMigrator, Data.DatabaseSchemaMigrator>();
-
-    // Stateless and thread-safe: one instance is enough for the whole application.
-    builder.Services.AddSingleton<Infrastructure.Security.PasswordHashService>();
 
     // Scoped, because the sign-in service owns the scoped DatabaseContext. The page models
     // resolve it from the container instead of constructing it, so the dependency is created
