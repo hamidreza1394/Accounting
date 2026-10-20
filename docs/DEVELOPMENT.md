@@ -74,3 +74,17 @@ $env:ConnectionStrings__ConnectionString = "Server=localhost\SQLSERVER2025;Datab
 - مخزن به `.NET 10 LTS` و EF Core 10 ارتقا داده شده است.
 - برای توسعه رسمی `net10.0` از Visual Studio 2026 نسخه 18.0 یا بالاتر استفاده کنید. نصب SDK به‌تنهایی پشتیبانی هدف‌گذاری net10.0 را به Visual Studio 2022 اضافه نمی‌کند.
 - پس از نصب، از Developer PowerShell اجرا کنید: `dotnet --info`, `dotnet restore Template.sln`, `dotnet build Template.sln --configuration Release`, `dotnet test Template.sln --configuration Release`.
+
+
+## کلاینت React (`ClientApp`)
+پیش‌نیاز: Node.js 22.12+ (CI: Node 24 / npm 11).
+
+```powershell
+cd ClientApp
+npm ci
+npm run build      # خروجی در Server/wwwroot/app؛ سپس سرور را اجرا و /app را باز کنید
+npm run dev        # توسعه: http://localhost:5173/app/ ؛ /api و /Account به https://localhost:5001 پروکسی می‌شوند
+```
+- آدرس سرور برای پروکسی: متغیر `FARANOU_SERVER_URL`.
+- خروجی Build در Git ثبت نمی‌شود (`.gitignore`)؛ در انتشار ابتدا `npm ci && npm run build` و سپس `dotnet publish` اجرا شود. اگر Build کلاینت انجام نشده باشد، `/app` پاسخ 404 می‌دهد و بقیه برنامه کار می‌کند.
+- ورود از صفحه Razor `/Account/Login` انجام می‌شود؛ پس از ورود، `/app` یا پیوند «داشبورد جدید (پیش‌نمایش)» در صفحه اصلی را باز کنید.

@@ -8,6 +8,8 @@
 - `Resources`: منابع چندزبانه.
 - `Application`: پروژه اسکلت برای Use Caseهای آینده؛ فعلاً جریان‌های موجود به آن منتقل نشده‌اند.
 - `Constants`, `Dtat`, `Dtat.Seedwork.Abstractions`, `Dtat.StateMachine*`: کتابخانه‌های کمکی و مشترک.
+- `Server/Api`: API نسخه 1 (Minimal API) برای کلاینت React؛ `Server/Infrastructure/Tenancy`: تصمیم سمت سرور دسترسی به شرکت.
+- `ClientApp`: کلاینت React + TypeScript + Vite + Tailwind؛ خروجی آن در `Server/wwwroot/app` و مسیر `/app`.
 
 این ساختار هنوز Clean Architecture کامل نیست: `Server` مستقیماً به `Data` و EF Core وابسته است و بخشی از منطق کاربردی در PageModelها قرار دارد.
 
@@ -66,3 +68,28 @@
 
 ## MVC، MVVM، Layered، Clean، Monolith و Microservices
 Razor Pages خودش مدل Page/PageModel دارد و نیازی نیست پروژه را به‌زور MVC یا MVVM نام‌گذاری کنیم. تفکیک لایه‌ای و جهت وابستگی از انتخاب برچسب معماری مهم‌تر است. Modular Monolith نقطه شروع است؛ Microservices تنها با دلیل عملیاتی/دامنه‌ای انتخاب می‌شود.
+
+
+## Frontend و API (2026-10-20)
+
+```
+Browser ──(Cookie HttpOnly, same origin)──▶ ASP.NET Core (Server)
+  ├─ /Account/Login, /, /Admin/*   Razor Pages (ورود و صفحات موجود — مسیر بازگشت)
+  ├─ /app/*                        index.html کلاینت React (wwwroot/app)
+  └─ /api/v1/*                     Minimal API ──▶ CompanyAccessService ──▶ DatabaseContext (EF Core / SQL Server)
+```
+
+- **جریان ورود:** کلاینت هیچ فرم ورودی ندارد. پاسخ 401 از API کاربر را به `/Account/Login?ReturnUrl=/app/...` می‌برد؛ صفحه ورود فقط `ReturnUrl` محلی را می‌پذیرد.
+- **قرارداد API v1** (JSON، camelCase، همه نیازمند ورود، پاسخ‌ها `no-store`):
+
+| Method | مسیر | پاسخ | توضیح |
+|---|---|---|---|
+| GET | `/api/v1/session` | `{ username, fullName, accountKind, isAdministrator }` | هویت تأییدشده نشست |
+| GET | `/api/v1/antiforgery/token` | `{ headerName, requestToken }` | Cookie ضد جعل را صادر می‌کند |
+| POST | `/api/v1/session/logout` | 204 / 400 | نیازمند هدر `X-XSRF-TOKEN` |
+| GET | `/api/v1/companies` | `[{ id, name, nationalId, roleName }]` | فقط شرکت‌های قابل دسترس؛ حساب زیرساختی: `[]` |
+| GET | `/api/v1/companies/{id}/overview` | `{ company, fiscalPeriods: [{ id, title, startDate, endDate, status }] }` / 404 | تاریخ‌ها ISO `yyyy-MM-dd` (میلادی)؛ 404 برای شرکت غیرمجاز یا ناموجود |
+
+- **خطاها:** 401 (نشست نیست/منقضی یا نشست قدیمی بدون شناسه)، 403، 404، 400 (Anti-forgery) و 500 به‌صورت `application/problem+json` با عنوان قابل نمایش؛ جزئیات فنی فقط در Log.
+- **مرز مسئولیت:** قواعد دسترسی و داده فقط در Backend. کلاینت پاسخ‌ها را در زمان اجرا با قرارداد بررسی می‌کند (`ClientApp/src/api/types.ts`) و فقط نمایش (از جمله تبدیل تاریخ به شمسی) را انجام می‌دهد.
+- **ساختار فعلی Backend:** هنوز Modular Monolith با یک پروژه وب است. منطق جدید دسترسی در یک سرویس کوچک و قابل تست قرار گرفته و Endpointها فقط هماهنگ‌کننده هستند. انتقال آن به پروژه `Application` زمانی انجام می‌شود که Use Case حسابداری واقعی (و قرارداد مستقل از EF) وجود داشته باشد؛ ایجاد Interface/Repository صرفاً برای لایه‌بندی انجام نشد (D-006).

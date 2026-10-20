@@ -13,7 +13,8 @@
 ## 2) قواعد غیرقابل مذاکره
 - چارچوب هدف در شاخه مهاجرت فعلی `net10.0` و زبان C# 14 است؛ برای توسعه رسمی از Visual Studio 2026 نسخه 18.0 یا بالاتر استفاده شود.
 - .NET 10 LTS تا نوامبر 2028 پشتیبانی می‌شود؛ تغییر Target Framework باید در Issue و تصمیم معماری ثبت و با CI تأیید شود.
-- Razor Pages الگوی UI فعلی است. منطق دامنه و Use Case را در PageModel انباشته نکن؛ جابه‌جایی کد قدیمی باید تدریجی، قابل بازبینی و همراه تست باشد.
+- صفحات موجود (از جمله ورود) Razor Pages هستند و رابط کاربری جدید در `ClientApp` با React + TypeScript (strict) + Vite + Tailwind ساخته می‌شود (D-011). منطق دامنه و Use Case را نه در PageModel انباشته کن و نه در کلاینت React؛ کلاینت فقط از `/api/v1` می‌خواند. جابه‌جایی کد قدیمی باید تدریجی، قابل بازبینی و همراه تست باشد و صفحه Razor تا تأیید جایگزین حذف نشود.
+- دسترسی به داده هر شرکت فقط از طریق `Infrastructure.Tenancy.CompanyAccessService` (عضویت فعال در دیتابیس) تعیین شود؛ به `TenantId`/شناسه شرکت ارسالی کلاینت یا Claim اعتماد نکن (D-013). API هم‌مبدأ با Cookie و Anti-forgery است؛ توکن در `localStorage` ذخیره نکن (D-012).
 - هیچ وابستگی زمان اجرا برای CSS/JS/فونت/آیکون از CDN یا اینترنت خارجی مجاز نیست. دارایی‌های وب باید در `Server/wwwroot/lib/` یا پوشه استاتیک محلی پروژه باشند. لینک‌های معمول به سایت‌های بیرونی در محتوای صفحه، به‌خودی‌خود CDN محسوب نمی‌شوند.
 - ارتقای نسخه LibMan فقط با به‌روزرسانی واقعی فایل‌های محلی، بررسی مجوز، ثبت نسخه و تست UI معتبر است. صرف تغییر `libman.json` بدون به‌روزرسانی فایل‌های توزیع‌شده ممنوع است.
 - نسخه‌های NuGet در `Directory.Packages.props` مدیریت می‌شوند؛ در `.csproj` نسخه را تکرار نکن. بسته‌های EF Core باید در یک خط نسخه سازگار باشند.
@@ -46,6 +47,8 @@
   dotnet build Template.sln --no-restore --configuration Release
   dotnet test Template.sln --no-build --configuration Release
   python3 scripts/check_static_assets.py
+  # کلاینت React
+  cd ClientApp && npm ci && npm run typecheck && npm test && npm run build && npm run check:offline
   ```
 - برای تغییر دیتابیس، بررسی migration، مدل و رفتار روی SQL Server را هم گزارش کن. Build موفق به معنی صحت عملکردی یا امنیتی کامل نیست.
 

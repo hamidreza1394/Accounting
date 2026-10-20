@@ -59,3 +59,12 @@
 - **تست:** فایل جدید `tests/Template.Tests/LoginAuthenticationTests.cs` با ۳۷ آزمون (جریان PageModel، سرویس هش، پیکربندی). نتیجه واقعی: `dotnet build -c Release` → `0 Error(s)`؛ `dotnet test` → `total: 90`, `failed: 0`, `succeeded: 90`؛ `scripts/check_static_assets.py` → PASS؛ `git diff --check` → پاک.
 - **اجرانشده (صادقانه):** Migration روی SQL Server واقعی و آزمون End-to-End روی مرورگر در این محیط ممکن نبود.
 - **Git:** Branch `fix/secure-login-authentication`؛ Issue #30؛ PR https://github.com/hamidreza1394/Accounting/pull/31 (commitهای `72f6c44`, `00dcb01`, `82a1f3a`). **CI سبز** — هر دو run `39227188912` و `39227195897` با `pass`؛ `mergeStateStatus: CLEAN`. **Merge نشد** — منتظر تأیید مسئول.
+
+## 2026-10-20 — ارتقای معماری فرانو (UNNUMBERED)
+- **پایه:** `main` @ `f539a36`؛ شاخه `feature/faranou-modern-architecture`.
+- **Backend:** `CompanyAccessService` (Tenant از عضویت فعال در دیتابیس، هر درخواست)، API v1 در `/api/v1` با Cookie هم‌مبدأ و Anti-forgery، 401/403 برای API، `no-store`، Claim شناسه کاربر و حذف Claimهای `TenantId`.
+- **اصلاحات:** خطای داشبورد دیگر بلعیده نمی‌شود؛ خروج فقط POST؛ پیام ساختگی ثبت‌نام حذف شد؛ منوی مدیریت فقط برای Admin.
+- **Frontend:** `ClientApp` (React 19.3 / TS 7 strict / Vite 8 / Tailwind 4)، داشبورد RTL در `/app` با داده واقعی و حالت خالی/خطا؛ تاریخ شمسی فقط در نمایش؛ بدون CDN.
+- **تست:** CI روی `387e703` سبز (Build + همه تست‌های .NET + گاردهای Migration)؛ محلی: typecheck، ۱۸ تست Vitest، Build، بررسی آفلاین، رندر Chromium. Build/Test .NET در محیط Agent اجرا نشد (NuGet مسدود)؛ SQL Server واقعی و E2E اجرا نشد.
+- **ADR:** D-011، D-012، D-013؛ D-001 جزئاً و D-003 کاملاً منسوخ علامت خوردند.
+- **گزارش:** `docs/handoffs/ISSUE-UNNUMBERED-faranou-modern-architecture.md`. **Merge نشد.**

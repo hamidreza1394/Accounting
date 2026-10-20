@@ -32,3 +32,20 @@ dotnet test Template.sln --no-build --configuration Release
 - `PasswordHashServiceTests` قالب جدید، salt یکتا، رد رمز اشتباه، پذیرش و درخواست ارتقای هش قدیمی و رد مقدار نامعتبر را پوشش می‌دهد.
 - `LoginConfigurationTests` به‌صورت ایستا بررسی می‌کند که مقصد موقت `[Authorize]` دارد و فرم/ماژول حسابداری ندارد، صفحه ورود Anti-forgery و toggle رمز را حفظ کرده، و تنظیمات Cookie/ترتیب Middleware تغییر نکرده است.
 - اجرای Migration روی SQL Server واقعی همچنان آزمون‌نشده است.
+
+
+## تست‌های جداسازی شرکت و API (2026-10-20)
+- `CompanyAccessServiceTests`: دسترسی فقط با عضویت فعال در شرکت فعال با نقش فعال؛ عدم دسترسی به شرکت Tenant دیگر، شرکت ناموجود و `Guid.Empty`؛ حساب غیرفعال؛ اثر فوری لغو عضویت؛ نادیده‌گرفتن Claim روی هویت احراز‌نشده.
+- `ApiEndpointTests`: فهرست شرکت‌ها فقط برای کاربر جاری، حساب زیرساختی بدون شرکت، 401 برای نشست قدیمی بدون شناسه، نمای کلی فقط با داده همان شرکت، 404 یکسان برای Tenant دیگر و شرکت ناموجود، بی‌اثر بودن Claim جعلی `TenantId`، مسیرهای API.
+- `ApiCookieAuthenticationEventsTests`: پاسخ 401/403 برای `/api` و حفظ Redirect صفحه ورود برای صفحات مرورگر.
+- `SessionHardeningTests` و `SuccessfulSignIn_IssuesTheUserIdentifier_AndNoCompanyClaims`: خروج فقط با POST، Claim شناسه کاربر و نبود Claim شرکت.
+- این تست‌ها Endpointها را مستقیم با EF Core InMemory اجرا می‌کنند؛ تست HTTP کامل با `WebApplicationFactory` و SQL Server واقعی هنوز اضافه نشده است.
+
+## تست‌های کلاینت React (`ClientApp`)
+```bash
+cd ClientApp && npm ci && npm run typecheck && npm test && npm run build && npm run check:offline
+```
+- `src/api/client.test.ts`: ارسال Cookie هم‌مبدأ، 401 → `UnauthenticatedError`، 404 بدون جزئیات، عدم نمایش متن خطای 500، رد پاسخ ناسازگار با قرارداد، Escape شناسه شرکت، ارسال توکن Anti-forgery در خروج، `ReturnUrl` فقط محلی.
+- `src/App.test.tsx`: نمایش داده واقعی و تاریخ شمسی، حالت خالی (بدون شرکت/بدون دوره)، نمایش خطا به‌جای فهرست خالی و تلاش دوباره، انتقال به صفحه ورود، نادیده‌گرفتن شرکت آدرس که سرور برنگردانده، تغییر شرکت.
+- `src/lib/date.test.ts`: تبدیل تاریخ میلادی ذخیره‌شده به شمسی بدون جابه‌جایی منطقه زمانی.
+- `npm run check:offline` خروجی Build را برای منبع خارجی و وجود همه فایل‌های محلی (فونت، تصویر) بررسی می‌کند.
