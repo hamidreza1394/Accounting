@@ -60,3 +60,17 @@
 - [x] ساخت دیتابیس تازه و اعمال Migrationها؛ عدم اعمال خودکار Migration روی schema دارای جدول‌ها.
 - [ ] تأیید Build/Test/CI و تست عملی با SQL Server واقعی.
 - [ ] بازبینی امنیت استقرار و کلیدهای Data Protection روی Windows Service/IIS/Linux.
+
+
+## فاز 7 — مدرن‌سازی معماری و Frontend (2026-10-20)
+- [x] سرویس سمت سرور دسترسی به شرکت و حذف Claimهای Tenant از Cookie (D-013).
+- [x] API نسخه 1 هم‌مبدأ با Cookie و Anti-forgery (D-012).
+- [x] کلاینت React/TypeScript/Vite/Tailwind راست‌چین در `/app` با داشبورد داده واقعی (D-011).
+- [x] CI کلاینت (typecheck، تست، Build، بررسی منابع آفلاین، audit).
+- [ ] OpenAPI برای `/api/v1` (نیازمند `Microsoft.AspNetCore.OpenApi`).
+- [ ] تست Integration HTTP با `WebApplicationFactory` و SQL Server واقعی (مثلاً Testcontainers یا LocalDB در CI ویندوز).
+- [ ] Global Query Filter Tenant همراه با نخستین ماژول حسابداری.
+- [ ] انتقال صفحه ورود به React پس از تست‌های رگرسیون ظاهری (Screenshot) و رفتاری صفحه فعلی.
+- [ ] انتقال Layout/منو و سپس صفحات مدیریت؛ حذف صفحات Razor فقط پس از اثبات عدم نیاز.
+- [ ] Content-Security-Policy و Rate Limiting برای API.
+- [ ] ماژول‌های حسابداری: سرفصل حساب‌ها، اسناد با `decimal(18,2)`/`decimal(19,4)` و قواعد گردکردن مستند، گزارش‌ها.

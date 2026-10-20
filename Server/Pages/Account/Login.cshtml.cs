@@ -331,14 +331,17 @@ namespace Server.Pages.Security
 			claims.Add(item: new System.Security.Claims.Claim
 				(type: "AccountKind", value: "User"));
 
-			// Company access is derived from active memberships only. A role in one
-			// company never implies a role in another company; the role of each
-			// membership is resolved per company when a company context is chosen.
-			foreach (var tenantId in loginResult.ActiveCompanyIds)
-			{
-				claims.Add(item: new System.Security.Claims.Claim
-					(type: "TenantId", value: tenantId.ToString()));
-			}
+			// The stable identifier of the verified account. Every server-side access
+			// decision (for example the company access of the API) resolves the
+			// memberships of this identifier from the database on each request.
+			claims.Add(item: new System.Security.Claims.Claim
+				(type: System.Security.Claims.ClaimTypes.NameIdentifier,
+				value: user.Id.ToString()));
+
+			// Company identifiers are intentionally NOT copied into the cookie. A claim
+			// would outlive a revoked membership until the cookie expires; the company
+			// access is therefore always read from the active memberships in the database
+			// (Infrastructure.Tenancy.CompanyAccessService).
 
 			var userClaimsIdentity =
 				new System.Security.Claims.ClaimsIdentity

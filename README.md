@@ -3,7 +3,8 @@
 این مخزن، یک قالب موجود Razor Pages است که برای توسعه مرحله‌ای آماده شده است.
 
 ## فناوری‌ها
-- ASP.NET Core Razor Pages / .NET 10 LTS
+- ASP.NET Core Razor Pages + Minimal API (`/api/v1`) / .NET 10 LTS
+- کلاینت React 19 + TypeScript (strict) + Vite + Tailwind CSS در `ClientApp` (مسیر `/app`) — راهنما: [ClientApp/README.md](ClientApp/README.md)
 - SQL Server و EF Core 10
 - مدیریت متمرکز نسخه NuGet با `Directory.Packages.props`
 - تست پایه xUnit v3 و CI با GitHub Actions
@@ -15,6 +16,7 @@
 dotnet restore Template.sln
 dotnet build Template.sln --configuration Release
 dotnet test Template.sln --configuration Release
+cd ClientApp && npm ci && npm run build && cd ..   # کلاینت React (اختیاری؛ بدون آن /app در دسترس نیست)
 dotnet run --project Server/Server.csproj
 ```
 

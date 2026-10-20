@@ -1,2 +1,26 @@
-﻿@page
+@page
 @model Server.Pages.Account.LogoutModel
+@{
+	ViewData[Constants.ViewDataKeyName.PageTitle] = Resources.PageTitles.Logout;
+}
+
+<div class="row">
+	<div class="col-12 col-md-8 offset-md-2 col-lg-6 offset-lg-3">
+		<div class="card">
+			<div class="card-body">
+				<h1 class="h4">@(Resources.PageTitles.Logout)</h1>
+
+				<p class="text-muted">
+					برای خروج از حساب کاربری، دکمه زیر را بزنید.
+				</p>
+
+				@* The form tag helper adds the anti-forgery token. *@
+				<form method="post">
+					<button type="submit" class="btn btn-danger">
+						@(Resources.PageTitles.Logout)
+					</button>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>

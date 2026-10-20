@@ -71,3 +71,12 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - ستون `Users.Password` به `varchar(255)` بزرگ شده است (Migration `WidenUserPasswordHash`)؛ Migration داده‌ای را تغییر نمی‌دهد.
 - جریان ورود: Post/Redirect/Get، پیام عمومی برای اعتبارنامه اشتباه، پیام اختصاصی غیرفعال/قفل، حذف رمز از `ModelState` پیش از رندر پاسخ، و هدایت به مقصد موقت محافظت‌شده `/Account/LoginSuccess`.
 - `ReturnUrl` فقط با `Url.IsLocalUrl` پذیرفته می‌شود؛ در غیر این صورت مقصد موقت.
+
+
+## API و جداسازی شرکت‌ها — 2026-10-20
+- API نسخه 1 فقط با Cookie احراز هویت (HttpOnly، SameSite=Lax، Secure در Production) کار می‌کند؛ توکنی در JavaScript یا `localStorage` نیست و CORS فعال نیست (D-012).
+- درخواست تغییردهنده API (فعلاً `POST /api/v1/session/logout`) بدون هدر معتبر `X-XSRF-TOKEN` رد می‌شود (400). خروج صفحات Razor هم فقط با POST و Anti-forgery است؛ پیوند GET دیگر نشست را پایان نمی‌دهد.
+- دسترسی به شرکت فقط از عضویت فعال در دیتابیس (کاربر فعال + عضویت فعال + شرکت فعال + نقش فعال همان شرکت) تعیین می‌شود و در هر درخواست دوباره بررسی می‌شود؛ Claim یا پارامتر کلاینت مبنای دسترسی نیست (D-013). شرکت غیرمجاز و ناموجود پاسخ یکسان 404 دارند.
+- پاسخ‌های API `Cache-Control: no-store` دارند. خطای غیرمنتظره با جزئیات فقط در Log سرور ثبت و به کاربر پیام عمومی داده می‌شود.
+- جلسه‌هایی که پیش از این تغییر صادر شده‌اند Claim شناسه کاربر ندارند؛ API برای آن‌ها 401 برمی‌گرداند و کاربر باید دوباره وارد شود. داشبورد Razor برای سازگاری، شناسه را از نام کاربری پیدا می‌کند.
+- **باقی‌مانده:** Content-Security-Policy برای `/app`، اعتبارسنجی مجدد نشست (Security Stamp) هنگام تغییر رمز/غیرفعال‌سازی برای صفحات Razor، Rate Limiting برای API، و OpenAPI با کنترل دسترسی.

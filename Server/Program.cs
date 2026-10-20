@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Infrastructure.DatabaseSetup;
+using Server.Api;
 // **************************************************
 
 var builder = WebApplication.CreateBuilder(args);
@@ -50,7 +51,16 @@ builder.Services
             // and the challenge of an anonymous request can never disagree.
             options.LoginPath = "/Account/Login";
             options.AccessDeniedPath = "/Account/AccessDenied";
+
+            // Browser pages keep the redirect to the login page; /api requests receive
+            // 401/403 so the React client can handle them.
+            options.Events.OnRedirectToLogin = Server.Api.ApiCookieAuthenticationEvents.RedirectToLoginAsync;
+            options.Events.OnRedirectToAccessDenied = Server.Api.ApiCookieAuthenticationEvents.RedirectToAccessDeniedAsync;
         });
+
+// The React client sends the anti-forgery request token in this header; Razor forms keep
+// sending it as a form field. Both are validated by the same antiforgery service.
+builder.Services.AddAntiforgery(options => options.HeaderName = Server.Api.ApiEndpoints.AntiforgeryHeaderName);
 
 // Standard configuration (User Secrets/environment/appsettings) always wins.
 // Only use the protected local settings file when no connection string was configured.
@@ -92,6 +102,10 @@ if (!setupRequired)
     // DatabaseSchemaMigrator depends on DatabaseContext; register it only when the same
     // branch has registered and configured that context.
     builder.Services.AddScoped<Data.IDatabaseSchemaMigrator, Data.DatabaseSchemaMigrator>();
+
+    // The single server-side decision point for company (tenant) access. It reads the
+    // memberships from the database on each request; it never trusts a client tenant id.
+    builder.Services.AddScoped<Infrastructure.Tenancy.CompanyAccessService>();
 
     // Scoped, because the sign-in service owns the scoped DatabaseContext. The page models
     // resolve it from the container instead of constructing it, so the dependency is created
@@ -206,4 +220,15 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseCultureCookie();
 app.MapRazorPages();
+
+if (!setupRequired)
+{
+    // JSON API of the React client (same origin, cookie authentication, anti-forgery).
+    app.MapFaranouApi();
+
+    // The React client is built into wwwroot/app (see ClientApp/README.md). Client-side
+    // routes under /app fall back to its index.html; the data itself is protected by the API.
+    app.MapFallbackToFile("/app/{*path:nonfile}", "app/index.html");
+}
+
 app.Run();

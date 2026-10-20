@@ -18,43 +18,48 @@
 	}
 	else
 	{
-		<li class="nav-item dropdown">
-			<a class="nav-link dropdown-toggle" href="#" id="adminSettingsNavbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-				@(Resources.PageTitles.AdminSettings)
-			</a>
-			<ul class="dropdown-menu" aria-labelledby="adminSettingsNavbarDropdown">
-				<li>
-					<a class="dropdown-item" asp-page="/Admin/FileManager/Index">
-						@(Resources.PageTitles.FileManager)
-					</a>
-				</li>
-				<li>
-					<a class="dropdown-item" asp-page="/Admin/Users/Index">
-						@(Resources.DataDictionary.UserManager)
-					</a>
-				</li>
-				<li>
-					<a class="dropdown-item" asp-page="/Admin/Roles/Index">
-						@(Resources.DataDictionary.RoleManager)
-					</a>
-				</li>
-				<li>
-					<a class="dropdown-item" asp-page="/Admin/PageManager/Index">
-						@(Resources.DataDictionary.PageManager)
-					</a>
-				</li>
-				<li>
-					<a class="dropdown-item" asp-page="/Admin/MenuItems/Index">
-						@(Resources.DataDictionary.MenuItemManager)
-					</a>
-				</li>
-				<li>
-					<a class="dropdown-item" asp-page="/Admin/ApplicationHandlers/Index">
-						@(Resources.DataDictionary.ApplicationHandlerManager)
-					</a>
-				</li>
-			</ul>
-		</li>
+		@* The administration menu is shown to administrators only. The pages themselves are
+		   protected with [Authorize(Roles = Admin)]; hiding the menu is not the security control. *@
+		if (User.IsInRole(Constants.Role.Admin))
+		{
+			<li class="nav-item dropdown">
+				<a class="nav-link dropdown-toggle" href="#" id="adminSettingsNavbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+					@(Resources.PageTitles.AdminSettings)
+				</a>
+				<ul class="dropdown-menu" aria-labelledby="adminSettingsNavbarDropdown">
+					<li>
+						<a class="dropdown-item" asp-page="/Admin/FileManager/Index">
+							@(Resources.PageTitles.FileManager)
+						</a>
+					</li>
+					<li>
+						<a class="dropdown-item" asp-page="/Admin/Users/Index">
+							@(Resources.DataDictionary.UserManager)
+						</a>
+					</li>
+					<li>
+						<a class="dropdown-item" asp-page="/Admin/Roles/Index">
+							@(Resources.DataDictionary.RoleManager)
+						</a>
+					</li>
+					<li>
+						<a class="dropdown-item" asp-page="/Admin/PageManager/Index">
+							@(Resources.DataDictionary.PageManager)
+						</a>
+					</li>
+					<li>
+						<a class="dropdown-item" asp-page="/Admin/MenuItems/Index">
+							@(Resources.DataDictionary.MenuItemManager)
+						</a>
+					</li>
+					<li>
+						<a class="dropdown-item" asp-page="/Admin/ApplicationHandlers/Index">
+							@(Resources.DataDictionary.ApplicationHandlerManager)
+						</a>
+					</li>
+				</ul>
+			</li>
+		}
 
 		<li class="nav-item dropdown">
 			<a class="nav-link dropdown-toggle" href="#" id="userSettingsNavbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -96,9 +101,13 @@
 		</li>
 
 		<li class="nav-item">
-			<a class="nav-link" asp-page="/Account/Logout">
-				@(Resources.PageTitles.Logout)
-			</a>
+			@* Sign-out changes the session state, so it is a POST with an anti-forgery token
+			   (added by the form tag helper) instead of a plain link that any page could trigger. *@
+			<form method="post" asp-page="/Account/Logout" class="d-inline">
+				<button type="submit" class="nav-link btn btn-link">
+					@(Resources.PageTitles.Logout)
+				</button>
+			</form>
 		</li>
 	}
 

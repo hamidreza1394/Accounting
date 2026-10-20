@@ -604,6 +604,30 @@ public sealed class LoginAuthenticationTests
 	}
 
 	[Fact]
+	public async Task SuccessfulSignIn_IssuesTheUserIdentifier_AndNoCompanyClaims()
+	{
+		using var harness = new Harness();
+		var user = harness.AddUser
+			(username: "dariush",
+			passwordHash: harness.PasswordHashService.Hash(password: "Correct-Password-1"));
+
+		var model = harness.CreateModel(username: "dariush", password: "Correct-Password-1");
+
+		await model.OnPostAsync();
+
+		var principal = harness.Authentication.Principal!;
+
+		Assert.Equal
+			(expected: user.Id.ToString(),
+			actual: principal.FindFirst(type: ClaimTypes.NameIdentifier)?.Value);
+
+		// Company access is resolved from the database on each request; a company claim
+		// in the cookie would outlive a revoked membership.
+		Assert.Empty(principal.FindAll(type: "TenantId"));
+		Assert.Equal(expected: user.Id, actual: Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal));
+	}
+
+	[Fact]
 	public async Task SuccessfulSignIn_ShowsTheTemporarySuccessMessage()
 	{
 		using var harness = new Harness();

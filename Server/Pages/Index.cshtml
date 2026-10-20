@@ -25,6 +25,14 @@
 		<p class="text-muted">
 			نرم‌افزار حسابداری هوشمند — دسترسی امن به اطلاعات مالی شما
 		</p>
+
+		<p>
+			@* The new React dashboard (preview). It uses the same sign-in and the same
+			   server-side company access as this page. *@
+			<a class="btn btn-outline-primary btn-sm" href="~/app/">
+				داشبورد جدید (پیش‌نمایش)
+			</a>
+		</p>
 	</div>
 </div>
 
@@ -57,7 +65,13 @@
 			</div>
 
 			<div class="card-body">
-				@if (Model.Companies.Count == 0)
+				@if (Model.CompaniesLoadFailed)
+				{
+					<div class="alert alert-danger mb-0" role="alert">
+						دریافت فهرست شرکت‌ها با خطا مواجه شد. لطفاً بعداً دوباره تلاش کنید یا با مدیر سیستم تماس بگیرید.
+					</div>
+				}
+				else if (Model.Companies.Count == 0)
 				{
 					<p class="mb-0 text-muted">
 						در حال حاضر عضویت فعالی در شرکتی ندارید. دسترسی به اطلاعات هر شرکت تنها با عضویت معتبر و فعال در آن شرکت امکان‌پذیر است.
