@@ -16,13 +16,15 @@
         body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; }
         main { width: min(760px, 100%); background: #fff; border: 1px solid #e0e7f0; border-radius: 18px; padding: clamp(22px, 4vw, 42px); box-shadow: 0 18px 55px #17203312; }
         h1 { margin: 0 0 10px; font-size: 1.65rem; }
+        h2 { margin: 28px 0 10px; font-size: 1.2rem; }
         p { line-height: 1.9; color: #536176; }
         .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
         .field { display: flex; flex-direction: column; gap: 7px; }
         .wide { grid-column: 1 / -1; }
         label { font-size: .92rem; font-weight: 600; }
-        input, select { width: 100%; border: 1px solid #cbd5e1; border-radius: 9px; padding: 11px 12px; font: inherit; background: #fff; }
-        input:focus, select:focus { outline: 3px solid #2563eb20; border-color: #2563eb; }
+        input, select, textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 9px; padding: 11px 12px; font: inherit; background: #fff; }
+        textarea { min-height: 110px; font-family: Consolas, "Courier New", monospace; font-size: .85rem; direction: ltr; text-align: left; }
+        input:focus, select:focus, textarea:focus { outline: 3px solid #2563eb20; border-color: #2563eb; }
         .check { display: flex; align-items: center; gap: 10px; font-weight: 400; margin-top: 12px; }
         .check input { width: auto; }
         button { margin-top: 20px; border: 0; border-radius: 9px; padding: 13px 20px; background: #1d4ed8; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
@@ -31,6 +33,8 @@
         .success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
         .validation { color: #be123c; font-size: .85rem; }
         .note { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; font-size: .9rem; overflow-wrap: anywhere; }
+        .commands { margin-top: 12px; }
+        .commands h3 { margin: 14px 0 6px; font-size: .95rem; }
         [hidden] { display: none !important; }
         @@media (max-width: 580px) { .grid { grid-template-columns: 1fr; } .wide { grid-column: auto; } }
     </style>
@@ -105,6 +109,56 @@
             </div>
             <button type="submit">آزمایش اتصال و ذخیره تنظیمات</button>
         </form>
+    }
+
+    @if (Model.ShowMasterBootstrap)
+    {
+        <h2>تنظیم مدیر زیرساختی (Master)</h2>
+        <p>
+            حساب مدیر زیرساختی در جدول کاربران ذخیره نمی‌شود و از
+            <code dir="ltr">ApplicationSettings</code> خوانده می‌شود.
+            رمز باید حداقل ۱۵ نویسه باشد؛ عبارت عبور مجاز است. برنامه رمز خام را ذخیره نمی‌کند و فقط هش استاندارد را برای قرار دادن در User Secrets یا متغیر محیطی آماده می‌کند.
+        </p>
+        <form method="post" asp-page-handler="PrepareMaster" autocomplete="off">
+            <div class="grid">
+                <div class="field wide">
+                    <label asp-for="MasterInput.Username">نام کاربری مدیر زیرساختی</label>
+                    <input asp-for="MasterInput.Username" autocomplete="username" dir="ltr" required />
+                    <span asp-validation-for="MasterInput.Username" class="validation"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="MasterInput.Password">رمز عبور (حداقل ۱۵ نویسه)</label>
+                    <input asp-for="MasterInput.Password" type="password" autocomplete="new-password" dir="ltr" required />
+                    <span asp-validation-for="MasterInput.Password" class="validation"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="MasterInput.PasswordConfirmation">تکرار رمز عبور</label>
+                    <input asp-for="MasterInput.PasswordConfirmation" type="password" autocomplete="new-password" dir="ltr" required />
+                    <span asp-validation-for="MasterInput.PasswordConfirmation" class="validation"></span>
+                </div>
+            </div>
+            <button type="submit">آماده‌سازی هش و دستورات پیکربندی</button>
+        </form>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Model.MasterDevelopmentCommands))
+    {
+        <div class="commands note" role="status">
+            <h3>توسعه — User Secrets</h3>
+            <p>پس از اجرای دستورات زیر، برنامه را Restart کنید. مقدار زیر <strong>هش</strong> است نه رمز خام.</p>
+            <textarea readonly rows="4" aria-label="دستورات User Secrets">@Model.MasterDevelopmentCommands</textarea>
+            <h3>تولید — متغیر محیطی / Secret Store</h3>
+            <p>در Production مقادیر را در Secret Store یا متغیر محیطی میزبان قرار دهید (نه در فایل tracked).</p>
+            <textarea readonly rows="3" aria-label="متغیرهای محیطی">@Model.MasterProductionVariables</textarea>
+            <p>نام کاربری آماده‌شده: <code dir="ltr">@Model.MasterPreparedUsername</code></p>
+        </div>
+    }
+
+    @if (Model.MasterAlreadyConfigured && Model.SettingsAlreadySaved)
+    {
+        <div class="note" style="margin-top:18px">
+            حساب زیرساختی از قبل در Configuration موجود است و از این صفحه تغییر داده نمی‌شود. برای چرخش رمز، Secret Store یا User Secrets را خارج از UI راه‌اندازی به‌روز کنید و برنامه را Restart کنید.
+        </div>
     }
 </main>
 <script>
