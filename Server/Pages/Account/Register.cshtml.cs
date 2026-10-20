@@ -1,6 +1,4 @@
-﻿using System.Linq;
 using Microsoft.Extensions.Logging;
-using Microsoft.EntityFrameworkCore;
 
 namespace Server.Pages.Security
 {
@@ -30,90 +28,17 @@ namespace Server.Pages.Security
 		public async
 			System.Threading.Tasks.Task OnPostAsync()
 		{
-			if (ModelState.IsValid == false)
-			{
-				return;
-			}
+			// Public self-registration is not implemented: the previous implementation
+			// stored nothing but still reported a successful registration. Accounts are
+			// created by an administrator until a verified registration flow (unique
+			// username/e-mail, password policy, e-mail verification and company
+			// membership approval) exists. The user is told so honestly.
+			Logger.LogInformation("A self-registration attempt was rejected because public registration is disabled.");
 
-			// **************************************************
-			//string? fixedUsername = Infrastructure.Utility
-			//	.RemoveSpacesAndMakeTextCaseInsensitive(text: ViewModel.Username);
+			AddPageError(message:
+				"ثبت‌نام عمومی در این نسخه فعال نیست. حساب کاربری توسط مدیر سیستم ایجاد می‌شود.");
 
-			//string? fixedEmailAddress = Infrastructure.Utility
-			//	.RemoveSpacesAndMakeTextCaseInsensitive(text: ViewModel.EmailAddress);
-			// **************************************************
-
-			try
-			{
-				//bool isUsernameFound =
-				//	await DatabaseContext.Users
-				//	.Where(current => current.Username == fixedUsername)
-				//	.AnyAsync();
-
-				//bool isEmailAddressFound =
-				//	await DatabaseContext.Users
-				//	.Where(current => current.EmailAddress == fixedEmailAddress)
-				//	.Where(current => current.IsEmailAddressVerified.HasValue && current.IsEmailAddressVerified.Value)
-				//	.Where(current => current.IsDeleted == false)
-				//	.AnyAsync();
-
-				//// **************************************************
-				//if (isUsernameFound)
-				//{
-				//	string errorMessage = string.Format
-				//		(Resources.Messages.Errors.AlreadyExists, Resources.DataDictionary.Username);
-
-				//	AddPageError(message: errorMessage);
-				//}
-
-				//if (isEmailAddressFound)
-				//{
-				//	string errorMessage = string.Format
-				//		(Resources.Messages.Errors.AlreadyExists, Resources.DataDictionary.EmailAddress);
-
-				//	AddPageError(message: errorMessage);
-				//}
-				//// **************************************************
-
-				//if (isUsernameFound || isEmailAddressFound)
-				//{
-				//	return;
-				//}
-
-				//// **************************************************
-				//Domain.User user = new()
-				//{
-				//	Username = fixedUsername,
-				//	//RoleId = DefaultRoleId,
-				//	EmailAddress = fixedEmailAddress,
-				//	Password = Dtat.Security.Cryptography.GetSha256(text: ViewModel.Password),
-				//};
-
-				//await DatabaseContext.AddAsync(entity: user);
-
-				//await DatabaseContext.SaveChangesAsync();
-				// **************************************************
-
-				AddToastSuccess(message: "اطلاعات شما با موفقیت در این سامانه ثبت شد...");
-
-				// **************************************************
-				// TODO: Send Verification Key To User Email Address
-				// **************************************************
-			}
-			catch (System.Exception ex)
-			{
-				Logger.LogError(message: ex.Message);
-
-				//System.Console.WriteLine(value: ex.Message);
-
-				AddPageError(message: Resources.Messages.Errors.UnexpectedError);
-			}
-			finally
-			{
-				await DisposeDatabaseContextAsync();
-			}
-
-			return;
+			await DisposeDatabaseContextAsync();
 		}
 	}
 }
