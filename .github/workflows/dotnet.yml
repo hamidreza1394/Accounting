@@ -87,9 +87,15 @@ jobs:
           # Runs the integration tests against the SQL Server container above (real SQL Server,
           # schema from the EF Core migrations). The database is created and dropped by the tests.
           FARANOU_TEST_SQLSERVER: Server=localhost,1433;Database=FaranouTests;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
+          FARANOU_REQUIRE_SQLSERVER: '1'
         run: |
           set -o pipefail
           dotnet test Template.sln --no-build --configuration Release 2>&1 | tee /tmp/dotnet-test.log
+      - name: Report the test totals
+        if: always()
+        run: |
+          totals="$(grep -aE 'total: |failed: |succeeded: |skipped: |Test run summary' /tmp/dotnet-test.log | tr -d '\r' | tr '\n' ' ' || true)"
+          echo "::notice title=.NET test totals::${totals:-no summary found}"
       # Behavioral (DOM-level) tests for client-side scripts. The xUnit tests only
       # inspect the .cshtml/.js source as text; these tests render the form in jsdom,
       # load the real taraz-login.js + site.js, and assert that clicking the password

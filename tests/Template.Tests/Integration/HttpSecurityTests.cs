@@ -592,3 +592,41 @@ public sealed class RateLimitingTests : IClassFixture<RateLimitingTests.Factory>
 		Assert.Equal((HttpStatusCode)429, third.StatusCode);
 	}
 }
+
+/// <summary>
+/// Makes the database of the integration run explicit. In CI (FARANOU_REQUIRE_SQLSERVER=1) the
+/// run fails if the tests did not really use SQL Server with the migrated schema.
+/// </summary>
+public sealed class IntegrationDatabaseTests : IClassFixture<FaranouApplicationFactory>
+{
+	public IntegrationDatabaseTests(FaranouApplicationFactory factory)
+	{
+		Factory = factory;
+	}
+
+	private FaranouApplicationFactory Factory { get; }
+
+	[Fact]
+	public async Task TheIntegrationDatabase_IsTheOneTheRunRequires()
+	{
+		var providerName = await Factory.WithDatabaseAsync(database => Task.FromResult(database.Database.ProviderName));
+		var requireSqlServer = Environment.GetEnvironmentVariable("FARANOU_REQUIRE_SQLSERVER") == "1";
+
+		if (requireSqlServer || IntegrationDatabase.UsesSqlServer)
+		{
+			Assert.Equal("Microsoft.EntityFrameworkCore.SqlServer", providerName);
+
+			var pending = await Factory.WithDatabaseAsync(async database =>
+				(await database.Database.GetPendingMigrationsAsync()).ToList());
+			var applied = await Factory.WithDatabaseAsync(async database =>
+				(await database.Database.GetAppliedMigrationsAsync()).ToList());
+
+			Assert.Empty(pending);
+			Assert.Contains(applied, migration => migration.EndsWith("_WidenUserPasswordHash", StringComparison.Ordinal));
+		}
+		else
+		{
+			Assert.Equal("Microsoft.EntityFrameworkCore.InMemory", providerName);
+		}
+	}
+}
