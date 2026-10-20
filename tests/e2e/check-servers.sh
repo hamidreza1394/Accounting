@@ -4,6 +4,8 @@
 set -uo pipefail
 publish="${FARANOU_E2E_PUBLISH:?}"
 failed=0
+# The first-run settings live in LocalApplicationData, which .NET only reports when it exists.
+mkdir -p "${RUNNER_TEMP:-/tmp}/faranou-e2e-setup"
 
 start() { # start <name> <port> <path> [env...]
   local name="$1" port="$2" path="$3"; shift 3

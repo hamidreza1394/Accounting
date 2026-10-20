@@ -3,7 +3,7 @@
 //   FARANOU_E2E_PUBLISH  publish directory (scripts/publish.sh output)
 //   FARANOU_E2E_SQL      connection string of the migrated + seeded E2E database
 import { defineConfig, devices } from '@playwright/test';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 
 const publish = process.env.FARANOU_E2E_PUBLISH;
 const connectionString = process.env.FARANOU_E2E_SQL;
@@ -14,6 +14,9 @@ if (!publish || !connectionString) {
 const state = JSON.parse(readFileSync(new URL('./.e2e-state.json', import.meta.url), 'utf8'));
 const port = 5090;
 const setupPort = 5091;
+// LocalApplicationData of the setup-mode instance; .NET only reports the folder when it exists.
+const setupData = `${process.env.RUNNER_TEMP ?? '/tmp'}/faranou-e2e-setup`;
+mkdirSync(setupData, { recursive: true });
 
 export default defineConfig({
   testDir: './specs',
@@ -61,8 +64,8 @@ export default defineConfig({
         ASPNETCORE_ENVIRONMENT: 'Production',
         ASPNETCORE_URLS: `http://localhost:${setupPort}`,
         AllowedHosts: 'localhost',
-        LOCALAPPDATA: `${process.env.RUNNER_TEMP ?? '/tmp'}/faranou-e2e-setup`,
-        XDG_DATA_HOME: `${process.env.RUNNER_TEMP ?? '/tmp'}/faranou-e2e-setup`,
+        LOCALAPPDATA: setupData,
+        XDG_DATA_HOME: setupData,
       },
     },
   ],
