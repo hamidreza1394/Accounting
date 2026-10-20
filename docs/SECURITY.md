@@ -115,3 +115,12 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - هش قدیمی (`Base64(SHA-256)`، دقیقاً ۴۴ نویسه) فقط در ورود موفق پذیرفته و همان لحظه به V3 ارتقا داده می‌شود؛ ارتقا مهر نشست را عوض می‌کند و نشست‌های دیگر همان حساب را باطل می‌کند.
 - شمارش حساب‌های باقی‌مانده: `SELECT COUNT(*) FROM Users WHERE LEN(Password) = 44;`
 - **برنامه پیشنهادی:** (۱) از تاریخ استقرار این نسخه، ۹۰ روز فرصت ورود؛ (۲) سپس برای حساب‌های باقی‌مانده رمز تصادفی غیرقابل‌استفاده تنظیم و بازنشانی رمز توسط مدیر الزامی شود؛ (۳) پس از صفرشدن شمارش، پذیرش قالب قدیمی از `PasswordHashService.Verify` حذف شود. حساب زیرساختی (`MasterPassword`) باید همین حالا با مقدار تولیدشده توسط `PasswordHashService.Hash` جایگزین شود. این مراحل نیاز به تصمیم مسئول دارد و اجرا نشده است.
+
+
+## پیگیری آمادگی Production — 2026-10-20
+- **Proxy و میزبان (D-017):** اعتماد فقط به Proxyهای فهرست‌شده؛ پیش‌فرض هیچ. `X-Forwarded-Host` پذیرفته نمی‌شود. برای `AllowedHosts=*` هشدار شروع برنامه ثبت می‌شود. جزئیات: `docs/DEPLOYMENT.md`.
+- **CSP (D-018):** inlineهای این صفحات منتقل شدند: `_DisplayToastMessages`، `DatabaseSetup`، `Admin/MenuItems/Create|Update`، `Admin/PageManager/Delete`، `Account/LoginSuccess`، `Account/Login`، `_DisplayPictures` و پاورقی‌ها. CSP سخت‌گیرانه Razor اکنون اجباری است، به‌جز `/Admin/PageManager` (TinyMCE) که Report-Only مانده. تست `ContentSecurityPolicyTests` بازگشت inline و `javascript:` را منع می‌کند و E2E هیچ نقض اجباری در صفحات ورود، خانه، داشبورد، خروج، مدیریت و راه‌اندازی اولیه نیافت.
+- **گزارش CSP:** `POST /csp-report` پیش‌فرض خاموش است (`CspReportingEnabled`). فقط Media Typeهای گزارش و حداکثر ۸KB پذیرفته می‌شود، Rate Limit `CspReport` دارد (۲۰ در دقیقه به ازای آدرس) و Log پاک‌سازی‌شده بدون ذخیره ثبت می‌شود.
+- **Master (D-019):** مراحل در `docs/DEPLOYMENT.md` بخش ۶ آمده است. هیچ رمز یا هش واقعی در Git یا تست ثابت وجود ندارد؛ تست‌ها رمز را در زمان اجرا تولید می‌کنند.
+- **سازگاری کاربران:** منطق ورود کاربران عادی تغییر نکرده است. کاربران فعلی (با هش جدید یا قدیمی) بدون تغییر رمز وارد می‌شوند. فقط ارتقای Master یا خاموش‌کردن قالب قدیمی Master نیاز به ورود مجدد Master دارد.
+- **رفع اشکال:** نام فایل‌های فونت در `fontiran.css` با حروف کوچک بود (`IRANSansX-thin`/`light`) و روی میزبان حساس به حروف (Linux) 404 می‌داد. اصلاح شد و یک تست وجود همه URLهای محلی CSS را با حروف دقیق بررسی می‌کند.

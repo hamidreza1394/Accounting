@@ -74,9 +74,14 @@
 - [ ] انتقال Layout/منو و سپس صفحات مدیریت؛ حذف صفحات Razor فقط پس از اثبات عدم نیاز.
 - [x] Rate Limiting برای API، نقاط حساس نشست و ارسال فرم ورود.
 - [x] CSP اجباری برای `/app` و `/api`؛ CSP پایه برای Razor همراه با سیاست سخت‌گیرانه Report-Only.
-- [ ] اجباری‌کردن CSP سخت‌گیرانه برای Razor پس از انتقال اسکریپت/سبک‌های inline (فهرست در `docs/SECURITY.md`).
+- [x] اجباری‌کردن CSP سخت‌گیرانه برای Razor پس از انتقال inlineها (D-018؛ `/Admin/PageManager` به‌دلیل TinyMCE هنوز Report-Only).
+- [ ] جایگزینی یا پیکربندی TinyMCE برای حذف استثنای Report-Only.
 - [x] اعتبارسنجی مجدد نشست در هر درخواست (حساب غیرفعال/رمز تغییرکرده).
 - [x] فرایند Publish قطعی همراه کلاینت و Smoke Test خروجی Publish در CI.
-- [ ] حذف کامل پذیرش هش SHA-256 قدیمی طبق برنامه `docs/SECURITY.md`.
-- [ ] پیکربندی ForwardedHeaders برای Proxy مورد اعتماد (لازمه Rate Limiting دقیق پشت Proxy).
+- [x] ابزار مهاجرت Master و امکان خاموش‌کردن قالب قدیمی Master (D-019).
+- [ ] حذف کامل پذیرش هش SHA-256 قدیمی کاربران طبق برنامه `docs/SECURITY.md` (نیازمند تصمیم).
+- [x] پیکربندی ForwardedHeaders فقط برای Proxyهای مورد اعتماد (D-017).
+- [ ] تعیین مقادیر واقعی `AllowedHosts` و `ReverseProxy` محیط Production (پرسش‌های باز در `docs/DEPLOYMENT.md`).
+- [x] تست E2E مرورگر با سرور منتشرشده و SQL Server واقعی در CI.
+- [ ] Rate Limiting و کلیدهای Data Protection مشترک برای اجرای چندنمونه‌ای (در صورت نیاز، با ADR).
 - [ ] ماژول‌های حسابداری: سرفصل حساب‌ها، اسناد با `decimal(18,2)`/`decimal(19,4)` و قواعد گردکردن مستند، گزارش‌ها.

@@ -85,3 +85,19 @@ Cookie خودکفاست و بدون بررسی مجدد تا انقضا معتب
 **وضعیت:** پذیرفته‌شده (2026-10-20).
 
 خروجی Build کلاینت در Git نیست. انتشار فقط با `scripts/publish.sh` (یا `publish.ps1`) انجام می‌شود: `npm ci` ← typecheck و تست ← `npm run build` ← بررسی آفلاین ← `dotnet publish` (net10.0، Release) ← بررسی محتوای خروجی. `Server.csproj` در صورت نبود `wwwroot/app/index.html` انتشار را متوقف می‌کند (`-p:FaranouSkipClientAppCheck=true` فقط برای انتشار عمدی بدون کلاینت). CI همین اسکریپت را اجرا و سرور منتشرشده را با `scripts/smoke-published-app.sh` آزمایش می‌کند. Workflow جداگانه ساخته نشد؛ Job `publish` به همان `dotnet.yml` اضافه شد.
+
+
+## D-017 — اعتماد صریح به Reverse Proxy و محدودیت میزبان
+**وضعیت:** پذیرفته‌شده (2026-10-20).
+
+`X-Forwarded-For` و `X-Forwarded-Proto` فقط از آدرس‌ها یا شبکه‌های فهرست‌شده در `ReverseProxy` پذیرفته می‌شوند. پیش‌فرض هیچ است، حتی loopback، برخلاف پیش‌فرض فریم‌ورک. `X-Forwarded-Host` پذیرفته نمی‌شود و میزبان با `AllowedHosts` محدود می‌شود. ورودی نامعتبر برنامه را متوقف می‌کند. برای `*` در `AllowedHosts` و نبود پیکربندی Proxy، بیرون از Development هشدار شروع برنامه ثبت می‌شود و مقدار فرضی تحمیل نمی‌شود (دامنه نهایی تعیین نشده است). جزئیات در `docs/DEPLOYMENT.md`.
+
+## D-018 — اجباری‌شدن CSP صفحات Razor و گزارش نقض
+**وضعیت:** پذیرفته‌شده (2026-10-20). D-015 را تکمیل می‌کند.
+
+همه اسکریپت‌ها، سبک‌ها و Handlerهای inline صفحات Razor به فایل‌های محلی منتقل شدند (`wwwroot/js/toast-messages.js`، `database-setup.js`، `menu-item-icon-picker.js` و CSSهای متناظر). یک تست ایستا بازگشت آن‌ها را منع می‌کند و تست E2E مرورگر نبود نقض را تأیید می‌کند. سپس `EnforceRazorContentSecurityPolicy` به‌صورت پیش‌فرض `true` شد. صفحات `/Admin/PageManager` (TinyMCE سبک inline تزریق می‌کند) با `RazorReportOnlyPathPrefixes` در حالت Report-Only ماندند. Endpoint گزارش `POST /csp-report` پیش‌فرض خاموش است و با محدودیت Media Type، اندازه و نرخ، و Log پاک‌سازی‌شده بدون ذخیره ساخته شده است. Nonce/Hash به کار نرفت.
+
+## D-019 — مهاجرت اعتبارنامه Master
+**وضعیت:** پذیرفته‌شده (2026-10-20).
+
+دستور `--create-master-credential` هش جدید را بدون نمایش رمز و بدون اجرای سرور وب تولید می‌کند. `ApplicationSettings:AllowLegacyMasterPasswordHash` (پیش‌فرض `true` برای سازگاری) پس از جایگزینی روی `false` تنظیم می‌شود تا قالب SHA-256 رد شود. منطق ورود کاربران عادی تغییری نکرده است.
