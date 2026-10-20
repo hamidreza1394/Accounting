@@ -37,7 +37,7 @@
 	font-display: swap;
 }
 
-/* ---------- Design tokens (from the Faranou identity: navy, gold, teal) ---------- */
+/* ---------- Design tokens ---------- */
 :root {
 	--fn-navy: #1c3d5a;
 	--fn-navy-deep: #142f47;
@@ -88,7 +88,6 @@
 	box-sizing: border-box;
 }
 
-/* Two balanced desktop panels. */
 .taraz-login__shell {
 	display: grid;
 	grid-template-columns: minmax(380px, 0.92fr) minmax(0, 1.08fr);
@@ -109,21 +108,10 @@
 	grid-template-columns: minmax(0, 1.08fr) minmax(380px, 0.92fr);
 }
 
-.taraz-login[dir="rtl"] .taraz-login__panel {
-	grid-column: 1;
-}
-
-.taraz-login[dir="rtl"] .taraz-login__visual {
-	grid-column: 2;
-}
-
-.taraz-login[dir="ltr"] .taraz-login__panel {
-	grid-column: 2;
-}
-
-.taraz-login[dir="ltr"] .taraz-login__visual {
-	grid-column: 1;
-}
+.taraz-login[dir="rtl"] .taraz-login__panel { grid-column: 1; }
+.taraz-login[dir="rtl"] .taraz-login__visual { grid-column: 2; }
+.taraz-login[dir="ltr"] .taraz-login__panel { grid-column: 2; }
+.taraz-login[dir="ltr"] .taraz-login__visual { grid-column: 1; }
 
 /* ---------- Form panel (right) — preserved ---------- */
 .taraz-login__panel {
@@ -450,7 +438,7 @@
 	font-size: 0.72rem;
 }
 
-/* LEFT PANEL — brand + dashboard (scoped) */
+/* LEFT PANEL — brand + dashboard */
 .taraz-login__visual {
 	display: flex;
 	flex-direction: column;
@@ -465,9 +453,10 @@
 	margin-inline: auto;
 	display: flex;
 	flex-direction: column;
-	gap: clamp(18px, 2.8vh, 28px);
+	gap: clamp(20px, 3vh, 32px);
 	pointer-events: none;
 	user-select: none;
+	font-family: IRANSansX, Tahoma, Arial, sans-serif;
 }
 
 .fn-brand-hero {
@@ -477,37 +466,38 @@
 .fn-cloud-mark {
 	display: flex;
 	justify-content: center;
-	margin-bottom: 10px;
+	margin-bottom: 12px;
 }
 
 .fn-cloud-mark svg {
 	display: block;
-	filter: drop-shadow(0 8px 20px rgba(53, 213, 232, 0.25));
+	filter: drop-shadow(0 10px 24px rgba(53, 213, 232, 0.22));
 }
 
 .fn-brand-name {
-	margin: 0 0 6px;
+	margin: 0 0 8px;
 	color: #f5fbff;
-	font-size: clamp(2rem, 3.2vw, 2.55rem);
+	font-size: clamp(1.75rem, 2.8vw, 2.15rem);
 	font-weight: 700;
 	letter-spacing: -0.02em;
-	line-height: 1.25;
+	line-height: 1.35;
 }
 
 .fn-brand-tagline {
-	margin: 0 0 10px;
+	margin: 0 0 12px;
 	color: #83d8e2;
-	font-size: clamp(0.95rem, 1.4vw, 1.1rem);
+	font-size: 1rem;
 	font-weight: 600;
-	line-height: 1.6;
+	line-height: 1.7;
 }
 
 .fn-brand-lead {
 	margin: 0 auto;
-	max-width: 28rem;
-	color: #a9bfd1;
-	font-size: 0.88rem;
-	line-height: 1.9;
+	max-width: 30rem;
+	color: #b8cddc;
+	font-size: 0.92rem;
+	font-weight: 400;
+	line-height: 1.95;
 }
 
 .fn-benefits {
@@ -516,20 +506,21 @@
 	padding: 0;
 	display: grid;
 	grid-template-columns: 1fr 1fr;
-	gap: 10px 14px;
+	gap: 12px 14px;
 }
 
 .fn-benefits li {
 	display: flex;
 	align-items: flex-start;
-	gap: 10px;
-	padding: 10px 12px;
-	border-radius: 12px;
-	background: rgba(255, 255, 255, 0.04);
-	border: 1px solid rgba(154, 216, 231, 0.12);
-	color: #d6e6f0;
-	font-size: 0.78rem;
-	line-height: 1.7;
+	gap: 12px;
+	padding: 12px 14px;
+	border-radius: 14px;
+	background: rgba(255, 255, 255, 0.045);
+	border: 1px solid rgba(154, 216, 231, 0.14);
+	color: #e2eef5;
+	font-size: 0.88rem;
+	font-weight: 400;
+	line-height: 1.75;
 }
 
 .fn-benefit-icon {
@@ -537,34 +528,61 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 28px;
-	height: 28px;
-	border-radius: 8px;
-	background: rgba(53, 213, 232, 0.12);
+	width: 32px;
+	height: 32px;
+	border-radius: 10px;
+	background: rgba(53, 213, 232, 0.14);
 	color: #35d5e8;
 }
 
 .fn-dash {
-	padding: 14px;
+	padding: 16px;
 	border-radius: 18px;
-	background: rgba(6, 28, 54, 0.45);
+	background: rgba(6, 28, 54, 0.48);
 	border: 1px solid rgba(154, 216, 231, 0.18);
 	box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22), inset 0 1px rgba(255, 255, 255, 0.05);
 	backdrop-filter: blur(8px);
+}
+
+.fn-dash-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 14px;
+}
+
+.fn-dash-header__title {
+	color: #f5fbff;
+	font-size: 0.95rem;
+	font-weight: 600;
+	line-height: 1.4;
+}
+
+.fn-dash-header__badge {
+	flex: none;
+	padding: 4px 10px;
+	border-radius: 999px;
+	background: rgba(217, 162, 75, 0.18);
+	border: 1px solid rgba(217, 162, 75, 0.28);
+	color: #f0d5a0;
+	font-size: 0.72rem;
+	font-weight: 600;
+	line-height: 1.3;
 }
 
 .fn-dash-cards {
 	display: grid;
 	grid-template-columns: repeat(3, minmax(0, 1fr));
 	gap: 10px;
-	margin-bottom: 12px;
+	margin-bottom: 14px;
 }
 
 .fn-dash-card {
 	position: relative;
-	padding: 12px 12px 10px;
-	border-radius: 12px;
-	background: rgba(255, 255, 255, 0.05);
+	padding: 14px 12px 12px;
+	border-radius: 14px;
+	background: rgba(255, 255, 255, 0.055);
 	border: 1px solid rgba(154, 216, 231, 0.14);
 }
 
@@ -573,53 +591,57 @@
 	align-items: center;
 	justify-content: space-between;
 	gap: 6px;
-	color: #8eb0c4;
-	font-size: 0.68rem;
-	margin-bottom: 6px;
+	color: #9bb8cc;
+	font-size: 0.78rem;
+	font-weight: 500;
+	margin-bottom: 8px;
+	line-height: 1.4;
 }
 
 .fn-dash-card__head svg {
-	opacity: 0.85;
+	opacity: 0.9;
 	color: #35d5e8;
 }
 
 .fn-dash-card__value {
 	color: #f5fbff;
-	font-size: clamp(0.85rem, 1.5vw, 1.05rem);
+	font-size: clamp(0.95rem, 1.6vw, 1.12rem);
 	font-weight: 700;
 	letter-spacing: 0.01em;
 	font-variant-numeric: tabular-nums;
+	line-height: 1.3;
 }
 
 .fn-dash-card__trend {
 	position: absolute;
-	inset-inline-end: 10px;
-	bottom: 10px;
+	inset-inline-end: 12px;
+	bottom: 12px;
 	color: #5ec4cc;
-	font-size: 0.75rem;
+	font-size: 0.8rem;
 	font-weight: 700;
 }
 
 .fn-dash-charts {
 	display: grid;
-	grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+	grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
 	gap: 12px;
 }
 
 .fn-dash-line,
 .fn-dash-donut {
-	padding: 10px 12px;
-	border-radius: 12px;
+	padding: 12px 14px;
+	border-radius: 14px;
 	background: rgba(255, 255, 255, 0.04);
 	border: 1px solid rgba(154, 216, 231, 0.12);
 }
 
 .fn-dash-line__title,
 .fn-dash-donut__title {
-	margin: 0 0 6px;
-	color: #8eb0c4;
-	font-size: 0.72rem;
+	margin: 0 0 8px;
+	color: #9bb8cc;
+	font-size: 0.8rem;
 	font-weight: 600;
+	line-height: 1.4;
 }
 
 .fn-dash-line svg {
@@ -631,7 +653,7 @@
 .fn-dash-donut__body {
 	display: flex;
 	align-items: center;
-	gap: 10px;
+	gap: 12px;
 }
 
 .fn-dash-legend {
@@ -640,9 +662,11 @@
 	padding: 0;
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
-	font-size: 0.68rem;
-	color: #b8cddc;
+	gap: 6px;
+	font-size: 0.78rem;
+	font-weight: 400;
+	color: #c5d8e6;
+	line-height: 1.45;
 }
 
 .fn-dash-legend i {
@@ -650,7 +674,7 @@
 	width: 8px;
 	height: 8px;
 	border-radius: 50%;
-	margin-inline-end: 6px;
+	margin-inline-end: 8px;
 	vertical-align: middle;
 }
 
@@ -670,26 +694,17 @@
 		grid-column: 1 / -1;
 	}
 
-	.taraz-login__panel {
-		order: 1;
-	}
+	.taraz-login__panel { order: 1; }
+	.taraz-login__visual { order: 2; padding: 0; }
 
-	.taraz-login__visual {
-		order: 2;
-		padding: 0;
-	}
+	.taraz-panel-card { width: min(100%, 520px); }
+	.fn-brand-panel { width: min(100%, 520px); }
 
-	.taraz-panel-card {
-		width: min(100%, 520px);
-	}
+	.fn-benefits { grid-template-columns: 1fr; }
 
-	.fn-brand-panel {
-		width: min(100%, 520px);
-	}
-
-	.fn-benefits {
-		grid-template-columns: 1fr;
-	}
+	.fn-brand-name { font-size: clamp(1.55rem, 5vw, 1.9rem); }
+	.fn-brand-tagline { font-size: 0.95rem; }
+	.fn-brand-lead { font-size: 0.9rem; }
 }
 
 @media (max-width: 520px) {
@@ -719,7 +734,11 @@
 	}
 
 	.fn-dash-donut__body {
-		justify-content: center;
+		justify-content: flex-start;
+	}
+
+	.fn-benefits li {
+		font-size: 0.86rem;
 	}
 }
 
