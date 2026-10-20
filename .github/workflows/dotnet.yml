@@ -285,6 +285,11 @@ jobs:
       - name: Seed accounts and companies
         working-directory: tests/e2e
         run: npm run seed
+      - name: Check that both server variants start
+        working-directory: tests/e2e
+        env:
+          FARANOU_E2E_PUBLISH: ${{ runner.temp }}/faranou-publish
+        run: ./check-servers.sh
       - name: Browser tests
         working-directory: tests/e2e
         env:
