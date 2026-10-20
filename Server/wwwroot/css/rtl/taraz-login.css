@@ -88,8 +88,7 @@
 	box-sizing: border-box;
 }
 
-/* Two balanced desktop panels. The form panel is placed on the physical right and
-   the introduction panel on the physical left, in both RTL and LTR. */
+/* Two balanced desktop panels. */
 .taraz-login__shell {
 	display: grid;
 	grid-template-columns: minmax(380px, 0.92fr) minmax(0, 1.08fr);
@@ -126,7 +125,7 @@
 	grid-column: 1;
 }
 
-/* ---------- Form panel (right) ---------- */
+/* ---------- Form panel (right) — preserved ---------- */
 .taraz-login__panel {
 	display: flex;
 	flex-direction: column;
@@ -200,7 +199,6 @@
 	line-height: 1.9;
 }
 
-/* ---------- Fields ---------- */
 .taraz-field {
 	margin-bottom: 18px;
 }
@@ -274,7 +272,6 @@
 	outline-offset: 2px;
 }
 
-/* ---------- Validation and status messages ---------- */
 .taraz-field-error {
 	display: block;
 	min-height: 0;
@@ -350,7 +347,6 @@
 	background: var(--fn-success-bg);
 }
 
-/* ---------- Remember me ---------- */
 .taraz-remember {
 	display: inline-flex;
 	align-items: center;
@@ -388,7 +384,6 @@
 	outline-offset: 2px;
 }
 
-/* ---------- Submit ---------- */
 .taraz-submit {
 	position: relative;
 	width: 100%;
@@ -427,7 +422,6 @@
 	line-height: 1;
 }
 
-/* ---------- Notes ---------- */
 .taraz-support-note {
 	margin: 22px 0 0;
 	color: var(--fn-muted);
@@ -456,163 +450,210 @@
 	font-size: 0.72rem;
 }
 
-/* ---------- Illustrative, non-interactive dashboard preview ---------- */
+/* LEFT PANEL — brand + dashboard (scoped) */
 .taraz-login__visual {
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
-	gap: clamp(18px, 3vh, 28px);
+	align-items: stretch;
 	min-width: 0;
-	padding: clamp(8px, 2vw, 20px);
+	padding: clamp(4px, 1.5vw, 12px);
 }
 
-.fn-preview {
+.fn-brand-panel {
 	width: min(100%, 560px);
-	overflow: hidden;
-	border: 1px solid rgba(28, 61, 90, 0.10);
-	border-radius: 18px;
-	background: var(--fn-card);
-	box-shadow: 0 18px 44px rgba(28, 61, 90, 0.10);
+	margin-inline: auto;
+	display: flex;
+	flex-direction: column;
+	gap: clamp(18px, 2.8vh, 28px);
 	pointer-events: none;
 	user-select: none;
 }
 
-.fn-preview__top {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	padding: 12px 14px;
-	color: #f4f7fa;
-	background: var(--fn-navy-deep);
+.fn-brand-hero {
+	text-align: center;
 }
 
-.fn-preview__top strong {
-	font-size: 0.92rem;
+.fn-cloud-mark {
+	display: flex;
+	justify-content: center;
+	margin-bottom: 10px;
+}
+
+.fn-cloud-mark svg {
+	display: block;
+	filter: drop-shadow(0 8px 20px rgba(53, 213, 232, 0.25));
+}
+
+.fn-brand-name {
+	margin: 0 0 6px;
+	color: #f5fbff;
+	font-size: clamp(2rem, 3.2vw, 2.55rem);
+	font-weight: 700;
+	letter-spacing: -0.02em;
+	line-height: 1.25;
+}
+
+.fn-brand-tagline {
+	margin: 0 0 10px;
+	color: #83d8e2;
+	font-size: clamp(0.95rem, 1.4vw, 1.1rem);
+	font-weight: 600;
+	line-height: 1.6;
+}
+
+.fn-brand-lead {
+	margin: 0 auto;
+	max-width: 28rem;
+	color: #a9bfd1;
+	font-size: 0.88rem;
+	line-height: 1.9;
+}
+
+.fn-benefits {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 10px 14px;
+}
+
+.fn-benefits li {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 10px 12px;
+	border-radius: 12px;
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(154, 216, 231, 0.12);
+	color: #d6e6f0;
+	font-size: 0.78rem;
+	line-height: 1.7;
+}
+
+.fn-benefit-icon {
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border-radius: 8px;
+	background: rgba(53, 213, 232, 0.12);
+	color: #35d5e8;
+}
+
+.fn-dash {
+	padding: 14px;
+	border-radius: 18px;
+	background: rgba(6, 28, 54, 0.45);
+	border: 1px solid rgba(154, 216, 231, 0.18);
+	box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22), inset 0 1px rgba(255, 255, 255, 0.05);
+	backdrop-filter: blur(8px);
+}
+
+.fn-dash-cards {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 10px;
+	margin-bottom: 12px;
+}
+
+.fn-dash-card {
+	position: relative;
+	padding: 12px 12px 10px;
+	border-radius: 12px;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(154, 216, 231, 0.14);
+}
+
+.fn-dash-card__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 6px;
+	color: #8eb0c4;
+	font-size: 0.68rem;
+	margin-bottom: 6px;
+}
+
+.fn-dash-card__head svg {
+	opacity: 0.85;
+	color: #35d5e8;
+}
+
+.fn-dash-card__value {
+	color: #f5fbff;
+	font-size: clamp(0.85rem, 1.5vw, 1.05rem);
+	font-weight: 700;
+	letter-spacing: 0.01em;
+	font-variant-numeric: tabular-nums;
+}
+
+.fn-dash-card__trend {
+	position: absolute;
+	inset-inline-end: 10px;
+	bottom: 10px;
+	color: #5ec4cc;
+	font-size: 0.75rem;
 	font-weight: 700;
 }
 
-.fn-preview__badge {
-	margin-inline-start: auto;
-	padding: 3px 8px;
-	border-radius: 999px;
-	background: rgba(217, 162, 75, 0.22);
-	color: #f6e3c2;
-	font-size: 0.68rem;
+.fn-dash-charts {
+	display: grid;
+	grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+	gap: 12px;
+}
+
+.fn-dash-line,
+.fn-dash-donut {
+	padding: 10px 12px;
+	border-radius: 12px;
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(154, 216, 231, 0.12);
+}
+
+.fn-dash-line__title,
+.fn-dash-donut__title {
+	margin: 0 0 6px;
+	color: #8eb0c4;
+	font-size: 0.72rem;
 	font-weight: 600;
 }
 
-.fn-preview__body {
-	display: grid;
-	grid-template-columns: 52px minmax(0, 1fr);
-	min-height: 220px;
-}
-
-.taraz-login[dir="ltr"] .fn-preview__body {
-	grid-template-columns: 52px minmax(0, 1fr);
-}
-
-.fn-preview__side {
-	display: flex;
-	flex-direction: column;
-	gap: 10px;
-	padding: 14px 12px;
-	background: #f3f6f8;
-	border-inline-end: 1px solid var(--fn-border);
-}
-
-.fn-preview__side span {
-	display: block;
-	height: 10px;
-	border-radius: 6px;
-	background: #d5dee6;
-}
-
-.fn-preview__side span.is-active {
-	background: var(--fn-teal);
-}
-
-.fn-preview__main {
-	display: flex;
-	flex-direction: column;
-	gap: 12px;
-	padding: 14px;
-}
-
-.fn-preview__stats {
-	display: grid;
-	grid-template-columns: repeat(3, minmax(0, 1fr));
-	gap: 8px;
-}
-
-.fn-preview__stats div {
-	padding: 10px 10px 8px;
-	border: 1px solid var(--fn-border);
-	border-radius: 12px;
-	background: var(--fn-field-bg);
-}
-
-.fn-preview__stats em {
-	display: block;
-	color: var(--fn-muted);
-	font-style: normal;
-	font-size: 0.68rem;
-}
-
-.fn-preview__stats b {
-	display: block;
-	margin-top: 4px;
-	color: var(--fn-navy);
-	font-size: 1rem;
-	font-weight: 700;
-}
-
-.fn-preview__chart {
-	padding: 6px 8px 0;
-	border: 1px solid var(--fn-border);
-	border-radius: 12px;
-	background: #fff;
-}
-
-.fn-preview__chart svg {
+.fn-dash-line svg {
 	display: block;
 	width: 100%;
 	height: auto;
 }
 
-.fn-preview__rows {
-	display: grid;
-	gap: 8px;
+.fn-dash-donut__body {
+	display: flex;
+	align-items: center;
+	gap: 10px;
 }
 
-.fn-preview__rows span {
-	display: block;
-	height: 12px;
-	border-radius: 6px;
-	background: linear-gradient(90deg, #e7eef3 0 42%, #f7f9fb 42% 100%);
-}
-
-.taraz-visual-copy {
-	max-width: 560px;
-}
-
-.taraz-visual-title {
-	margin: 0 0 8px;
-	color: var(--fn-navy-deep);
-	font-size: clamp(1.45rem, 2.4vw, 2rem);
-	font-weight: 700;
-	letter-spacing: -0.02em;
-	line-height: 1.5;
-}
-
-.taraz-visual-lead {
+.fn-dash-legend {
+	list-style: none;
 	margin: 0;
-	max-width: 34rem;
-	color: var(--fn-muted);
-	font-size: 0.92rem;
-	line-height: 1.9;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	font-size: 0.68rem;
+	color: #b8cddc;
 }
 
-/* ---------- Responsive ---------- */
+.fn-dash-legend i {
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	margin-inline-end: 6px;
+	vertical-align: middle;
+}
+
 @media (max-width: 960px) {
 	.taraz-login__shell,
 	.taraz-login[dir="rtl"] .taraz-login__shell,
@@ -642,12 +683,12 @@
 		width: min(100%, 520px);
 	}
 
-	.taraz-visual-title {
-		font-size: clamp(1.35rem, 4.2vw, 1.7rem);
+	.fn-brand-panel {
+		width: min(100%, 520px);
 	}
 
-	.fn-preview {
-		width: min(100%, 520px);
+	.fn-benefits {
+		grid-template-columns: 1fr;
 	}
 }
 
@@ -669,13 +710,16 @@
 		height: 50px;
 	}
 
-	.fn-preview__chart,
-	.fn-preview__rows {
-		display: none;
+	.fn-dash-cards {
+		grid-template-columns: 1fr;
 	}
 
-	.fn-preview__body {
-		min-height: 0;
+	.fn-dash-charts {
+		grid-template-columns: 1fr;
+	}
+
+	.fn-dash-donut__body {
+		justify-content: center;
 	}
 }
 

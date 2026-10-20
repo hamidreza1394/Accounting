@@ -69,43 +69,140 @@
             <p class="taraz-copyright">© فرانو — @(isRightToLeft ? "نرم‌افزار حسابداری هوشمند" : "Smart Accounting Software")</p>
         </section>
 
-        <section class="taraz-login__visual" aria-label="@(isRightToLeft ? "پیش‌نمایش نمایشی محیط نرم‌افزار" : "Illustrative preview of the software")">
-            <div class="fn-preview" inert>
-                <div class="fn-preview__top">
-                    <img src="~/images/faranou-mark.svg" alt="" width="28" height="28" />
-                    <strong>@(isRightToLeft ? "فرانو" : "Faranou")</strong>
-                    <span class="fn-preview__badge">@(isRightToLeft ? "نمونه نمایشی" : "Preview only")</span>
+        <section class="taraz-login__visual" aria-label="@(isRightToLeft ? "معرفی برند فرا نو و پیش‌نمایش نمایشی" : "Faranou brand introduction and illustrative preview")">
+            <div class="fn-brand-panel" inert>
+                <div class="fn-brand-hero">
+                    <div class="fn-cloud-mark" aria-hidden="true">
+                        <svg viewBox="0 0 120 88" width="88" height="64" focusable="false">
+                            <defs>
+                                <linearGradient id="fnCloudGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#e8f7fa"/>
+                                    <stop offset="55%" stop-color="#b8e8ef"/>
+                                    <stop offset="100%" stop-color="#7dd3de"/>
+                                </linearGradient>
+                                <linearGradient id="fnBarGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+                                    <stop offset="0%" stop-color="#2f8d93"/>
+                                    <stop offset="100%" stop-color="#5ec4cc"/>
+                                </linearGradient>
+                                <linearGradient id="fnArrowGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#2f8d93"/>
+                                    <stop offset="100%" stop-color="#e0a94a"/>
+                                </linearGradient>
+                            </defs>
+                            <ellipse cx="58" cy="48" rx="42" ry="28" fill="url(#fnCloudGrad)" opacity="0.95"/>
+                            <ellipse cx="38" cy="42" rx="22" ry="18" fill="url(#fnCloudGrad)"/>
+                            <ellipse cx="78" cy="40" rx="26" ry="20" fill="url(#fnCloudGrad)"/>
+                            <rect x="36" y="42" width="9" height="18" rx="2.5" fill="url(#fnBarGrad)"/>
+                            <rect x="48" y="34" width="9" height="26" rx="2.5" fill="url(#fnBarGrad)"/>
+                            <rect x="60" y="26" width="9" height="34" rx="2.5" fill="url(#fnBarGrad)"/>
+                            <rect x="72" y="18" width="9" height="42" rx="2.5" fill="url(#fnBarGrad)"/>
+                            <path d="M28 58 C40 52 52 44 68 28" fill="none" stroke="url(#fnArrowGrad)" stroke-width="3.2" stroke-linecap="round"/>
+                            <polygon points="74,18 68,30 62,24" fill="#e0a94a"/>
+                        </svg>
+                    </div>
+                    <h2 class="fn-brand-name">فرانو</h2>
+                    <p class="fn-brand-tagline">@(isRightToLeft ? "فرانو؛ فراتر از ایده‌ها، تا واقعیت" : "Faranou — Beyond ideas, into reality")</p>
+                    <p class="fn-brand-lead">@(isRightToLeft ? "مدیریت مالی کسب‌وکار خود را با دقت، نظم و اطمینان تجربه کنید." : "Experience precise, orderly and confident financial management for your business.")</p>
                 </div>
-                <div class="fn-preview__body">
-                    <aside class="fn-preview__side" aria-hidden="true">
-                        <span class="is-active"></span>
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </aside>
-                    <div class="fn-preview__main">
-                        <div class="fn-preview__stats">
-                            <div><em>@(isRightToLeft ? "دریافت" : "In")</em><b>—</b></div>
-                            <div><em>@(isRightToLeft ? "پرداخت" : "Out")</em><b>—</b></div>
-                            <div><em>@(isRightToLeft ? "مانده" : "Balance")</em><b>—</b></div>
+
+                <ul class="fn-benefits" role="list">
+                    <li>
+                        <span class="fn-benefit-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></svg>
+                        </span>
+                        <span>@(isRightToLeft ? "مدیریت مالی دقیق و هوشمند" : "Precise & smart financial management")</span>
+                    </li>
+                    <li>
+                        <span class="fn-benefit-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l7 4v5c0 5-3 8-7 9-4-1-7-4-7-9V7l7-4z"/><path d="M9.5 12l1.8 1.8L15 10"/></svg>
+                        </span>
+                        <span>@(isRightToLeft ? "حسابداری دقیق، تصمیم‌گیری مطمئن" : "Accurate accounting, confident decisions")</span>
+                    </li>
+                    <li>
+                        <span class="fn-benefit-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 19V5M4 19h16"/><path d="M8 15l3-4 3 2 4-6"/></svg>
+                        </span>
+                        <span>@(isRightToLeft ? "نظم مالی، مسیر رشد کسب‌وکار" : "Financial order, path to growth")</span>
+                    </li>
+                    <li>
+                        <span class="fn-benefit-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 18a5 5 0 0 1 0-10 6.5 6.5 0 0 1 12.4 2A4 4 0 0 1 18 18H7z"/></svg>
+                        </span>
+                        <span>@(isRightToLeft ? "ابزارهای یکپارچه برای مدیریت مالی" : "Integrated tools for financial management")</span>
+                    </li>
+                </ul>
+
+                <div class="fn-dash" aria-hidden="true">
+                    <div class="fn-dash-cards">
+                        <div class="fn-dash-card">
+                            <div class="fn-dash-card__head">
+                                <span>@(isRightToLeft ? "پرداخت‌ها" : "Payments")</span>
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/></svg>
+                            </div>
+                            <div class="fn-dash-card__value">4,120,000</div>
+                            <div class="fn-dash-card__trend">↑</div>
                         </div>
-                        <div class="fn-preview__chart" aria-hidden="true">
-                            <svg viewBox="0 0 320 92" focusable="false">
-                                <path d="M8 70 C48 66 70 48 108 52 S168 28 208 34 S268 18 312 14" fill="none" stroke="#2f8d93" stroke-width="3" stroke-linecap="round"/>
-                                <path d="M8 78 C60 74 100 70 150 64 S230 58 312 48" fill="none" stroke="#d9a24b" stroke-width="3" stroke-linecap="round"/>
+                        <div class="fn-dash-card">
+                            <div class="fn-dash-card__head">
+                                <span>@(isRightToLeft ? "دریافت‌ها" : "Receipts")</span>
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 9h8M8 13h5"/></svg>
+                            </div>
+                            <div class="fn-dash-card__value">8,350,000</div>
+                            <div class="fn-dash-card__trend">↑</div>
+                        </div>
+                        <div class="fn-dash-card">
+                            <div class="fn-dash-card__head">
+                                <span>@(isRightToLeft ? "فروش امروز" : "Sales today")</span>
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L21 8H7"/></svg>
+                            </div>
+                            <div class="fn-dash-card__value">12,480,000</div>
+                            <div class="fn-dash-card__trend">↑</div>
+                        </div>
+                    </div>
+
+                    <div class="fn-dash-charts">
+                        <div class="fn-dash-line">
+                            <div class="fn-dash-line__title">@(isRightToLeft ? "روند فروش" : "Sales trend")</div>
+                            <svg viewBox="0 0 280 90" width="100%" height="90" focusable="false">
+                                <defs>
+                                    <linearGradient id="fnLineFill" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="#35d5e8" stop-opacity="0.35"/>
+                                        <stop offset="100%" stop-color="#35d5e8" stop-opacity="0"/>
+                                    </linearGradient>
+                                </defs>
+                                <line x1="20" y1="12" x2="20" y2="72" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+                                <line x1="20" y1="72" x2="268" y2="72" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+                                <path d="M20 68 L52 58 L84 52 L116 48 L148 40 L180 34 L212 26 L244 18 L268 12" fill="none" stroke="#35d5e8" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M20 68 L52 58 L84 52 L116 48 L148 40 L180 34 L212 26 L244 18 L268 12 L268 72 L20 72 Z" fill="url(#fnLineFill)"/>
+                                <circle cx="268" cy="12" r="3.5" fill="#e0a94a"/>
                             </svg>
                         </div>
-                        <div class="fn-preview__rows" aria-hidden="true">
-                            <span></span><span></span><span></span>
+                        <div class="fn-dash-donut">
+                            <div class="fn-dash-donut__title">@(isRightToLeft ? "توزیع سود" : "Profit mix")</div>
+                            <div class="fn-dash-donut__body">
+                                <svg viewBox="0 0 80 80" width="72" height="72" focusable="false">
+                                    <circle cx="40" cy="40" r="28" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="10"/>
+                                    <circle cx="40" cy="40" r="28" fill="none" stroke="#35d5e8" stroke-width="10"
+                                            stroke-dasharray="117.5 58" stroke-dashoffset="0"
+                                            transform="rotate(-90 40 40)"/>
+                                    <circle cx="40" cy="40" r="28" fill="none" stroke="#e0a94a" stroke-width="10"
+                                            stroke-dasharray="40.3 135.2" stroke-dashoffset="-117.5"
+                                            transform="rotate(-90 40 40)"/>
+                                    <circle cx="40" cy="40" r="28" fill="none" stroke="#7aa2c9" stroke-width="10"
+                                            stroke-dasharray="17.5 157.9" stroke-dashoffset="-157.8"
+                                            transform="rotate(-90 40 40)"/>
+                                    <text x="40" y="38" text-anchor="middle" fill="#f5fbff" font-size="14" font-weight="700" font-family="IRANSansX,Tahoma,sans-serif">67%</text>
+                                    <text x="40" y="50" text-anchor="middle" fill="#a9bfd1" font-size="7" font-family="IRANSansX,Tahoma,sans-serif">@(isRightToLeft ? "سود" : "Profit")</text>
+                                </svg>
+                                <ul class="fn-dash-legend">
+                                    <li><i style="background:#35d5e8"></i>@(isRightToLeft ? "سود خالص ۶۷٪" : "Net 67%")</li>
+                                    <li><i style="background:#e0a94a"></i>@(isRightToLeft ? "هزینه‌ها ۲۳٪" : "Costs 23%")</li>
+                                    <li><i style="background:#7aa2c9"></i>@(isRightToLeft ? "سایر ۱۰٪" : "Other 10%")</li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="taraz-visual-copy">
-                <p class="taraz-eyebrow">@(isRightToLeft ? "نرم‌افزار حسابداری هوشمند" : "Smart accounting")</p>
-                <h2 class="taraz-visual-title">@(isRightToLeft ? "تصمیم‌های مالی، با دیدی روشن‌تر" : "Clearer financial decisions")</h2>
-                <p class="taraz-visual-lead">@(isRightToLeft ? "ابزارهای موردنیاز برای مدیریت دقیق‌تر کسب‌وکار شما، در یک محیط یکپارچه." : "The tools you need to manage the business more precisely, in one place.")</p>
             </div>
         </section>
     </main>
