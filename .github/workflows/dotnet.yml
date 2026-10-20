@@ -99,6 +99,17 @@ jobs:
             echo "::error title=Vulnerable NuGet packages::see the step log"; exit 1
           fi
           echo "::notice title=NuGet vulnerability scan::no vulnerable package reported"
+      - name: Report the failing tests
+        if: failure()
+        run: |
+          sed -e 's/\x1b\[[0-9;]*m//g' -e 's/\r//g' /tmp/dotnet-test.log > /tmp/dotnet-test.clean.log
+          grep -nE '^\s*(failed|\[FAIL\])\s' /tmp/dotnet-test.clean.log | head -n 20 | while IFS= read -r line; do
+            echo "::error title=Failed test::$line"
+          done
+          first="$(grep -nE '^\s*(failed|\[FAIL\])\s' /tmp/dotnet-test.clean.log | head -n 1 | cut -d: -f1)"
+          if [ -n "$first" ]; then
+            echo "::error title=First failure details::$(sed -n "${first},$((first + 40))p" /tmp/dotnet-test.clean.log | tr '\n' '~' | cut -c1-6000)"
+          fi
       - name: Report the test totals
         if: always()
         run: |
@@ -155,6 +166,53 @@ jobs:
             fi
           done
 
+  # Safety tests of the publish scripts: the output-directory guard refuses dangerous paths
+  # (root, repository, home, current directory, sources, links, foreign directories) and
+  # deletes nothing in those cases. Bash and PowerShell 7 run on Linux.
+  publish-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Bash guard tests
+        run: scripts/tests/publish-output.test.sh
+      - name: PowerShell guard tests (PowerShell 7 on Linux)
+        shell: pwsh
+        run: ./scripts/tests/publish-output.tests.ps1
+
+  # The PowerShell publish script on a real Windows runner: guard tests, then the complete
+  # publish (npm ci, client checks and build, dotnet publish, output checks).
+  publish-windows:
+    runs-on: windows-latest
+    needs: [client, build-and-test]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: ClientApp/package-lock.json
+      - name: PowerShell guard tests (Windows)
+        shell: pwsh
+        run: ./scripts/tests/publish-output.tests.ps1
+      - name: Publish with scripts/publish.ps1
+        shell: pwsh
+        run: ./scripts/publish.ps1 -Output (Join-Path $env:RUNNER_TEMP 'faranou-publish')
+      - name: Check the Windows publish output
+        shell: pwsh
+        run: |
+          $out = Join-Path $env:RUNNER_TEMP 'faranou-publish'
+          foreach ($path in 'Server.dll', 'wwwroot/app/index.html', 'wwwroot/fonts/woff2/IRANSansX-Regular.woff2', '.faranou-publish-output') {
+            if (-not (Test-Path (Join-Path $out $path))) { throw "missing $path" }
+            Write-Host "present: $path"
+          }
+
   # Production build in the documented order (scripts/publish.sh: npm ci, client type check and
   # tests, npm run build, offline check, dotnet publish, checks of the publish output), then the
   # published server is started and /app, its client routes and bundles are requested over HTTP.
@@ -181,3 +239,74 @@ jobs:
       - name: List the published client
         if: always()
         run: find "$RUNNER_TEMP/faranou-publish/wwwroot/app" -type f | sort || true
+
+  # Browser end-to-end tests: Chromium -> published server (Production) -> SQL Server 2022.
+  # Sign-in, session, company selection, anti-forgery, company isolation, session revalidation
+  # and the enforced CSP of the visited pages (tests/e2e).
+  e2e:
+    runs-on: ubuntu-latest
+    needs: [client, build-and-test]
+    env:
+      MSSQL_SA_PASSWORD: Ci1Faranou${{ github.run_id }}e2e
+      FARANOU_E2E_SQL: Server=localhost,1433;Database=FaranouE2E;User Id=sa;Password=Ci1Faranou${{ github.run_id }}e2e;TrustServerCertificate=True;Encrypt=True
+    services:
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: Ci1Faranou${{ github.run_id }}e2e
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Ci1Faranou${{ github.run_id }}e2e -Q 'SELECT 1' -b"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+      - name: Publish
+        run: scripts/publish.sh "$RUNNER_TEMP/faranou-publish"
+      - name: Create the database schema (migrations of the published server)
+        run: ConnectionStrings__ConnectionString="$FARANOU_E2E_SQL" dotnet "$RUNNER_TEMP/faranou-publish/Server.dll" --migrate
+      - name: Install the E2E tools
+        working-directory: tests/e2e
+        run: |
+          npm ci --no-fund --no-audit
+          npx playwright install --with-deps chromium
+      - name: Seed accounts and companies
+        working-directory: tests/e2e
+        run: npm run seed
+      - name: Check that both server variants start
+        working-directory: tests/e2e
+        env:
+          FARANOU_E2E_PUBLISH: ${{ runner.temp }}/faranou-publish
+        run: ./check-servers.sh
+      - name: Browser tests
+        working-directory: tests/e2e
+        env:
+          FARANOU_E2E_PUBLISH: ${{ runner.temp }}/faranou-publish
+        run: npx playwright test
+      - name: Report the E2E result
+        if: always()
+        working-directory: tests/e2e
+        run: |
+          if [ -d playwright-report ]; then echo "::notice title=E2E::report saved as artifact e2e-report"; fi
+      - name: Keep the E2E report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            tests/e2e/playwright-report
+            tests/e2e/test-results
+          retention-days: 7
+

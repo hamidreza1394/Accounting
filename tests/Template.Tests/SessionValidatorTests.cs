@@ -149,7 +149,7 @@ public sealed class SecurityHeadersTests
 	{
 		IHeaderDictionary headers = new HeaderDictionary();
 
-		Infrastructure.Security.SecurityHeadersMiddleware.ApplyHeaders(new PathString(path), headers, enforceRazorPolicy: false);
+		Infrastructure.Security.SecurityHeadersMiddleware.ApplyHeaders(new PathString(path), headers, new Infrastructure.Security.SecurityHeadersSettings());
 
 		Assert.Equal(expectedPolicy, headers.ContentSecurityPolicy.ToString());
 		Assert.Equal("nosniff", headers.XContentTypeOptions.ToString());
@@ -159,13 +159,50 @@ public sealed class SecurityHeadersTests
 	public void TheRazorStrictPolicy_IsReportOnly_UntilItIsEnforced()
 	{
 		IHeaderDictionary reportOnly = new HeaderDictionary();
-		Infrastructure.Security.SecurityHeadersMiddleware.ApplyHeaders(new PathString("/"), reportOnly, enforceRazorPolicy: false);
+		Infrastructure.Security.SecurityHeadersMiddleware.ApplyHeaders(new PathString("/"), reportOnly, new Infrastructure.Security.SecurityHeadersSettings());
 		Assert.Equal(Infrastructure.Security.SecurityHeadersMiddleware.RazorStrictPolicy, reportOnly["Content-Security-Policy-Report-Only"].ToString());
 
 		IHeaderDictionary enforced = new HeaderDictionary();
-		Infrastructure.Security.SecurityHeadersMiddleware.ApplyHeaders(new PathString("/"), enforced, enforceRazorPolicy: true);
+		Infrastructure.Security.SecurityHeadersMiddleware.ApplyHeaders(new PathString("/"), enforced, new Infrastructure.Security.SecurityHeadersSettings { EnforceRazorContentSecurityPolicy = true });
 		Assert.Equal(Infrastructure.Security.SecurityHeadersMiddleware.RazorStrictPolicy, enforced.ContentSecurityPolicy.ToString());
 		Assert.False(enforced.ContainsKey("Content-Security-Policy-Report-Only"));
+	}
+
+	[Fact]
+	public void ReportOnlyPrefixes_KeepTheStrictPolicyReportOnly_WhileItIsEnforcedElsewhere()
+	{
+		var settings = new Infrastructure.Security.SecurityHeadersSettings
+		{
+			EnforceRazorContentSecurityPolicy = true,
+			RazorReportOnlyPathPrefixes = ["/Admin/PageManager"],
+		};
+
+		IHeaderDictionary editor = new HeaderDictionary();
+		Infrastructure.Security.SecurityHeadersMiddleware.ApplyHeaders(new PathString("/admin/pagemanager/create"), editor, settings);
+		Assert.Equal(Infrastructure.Security.SecurityHeadersMiddleware.RazorBaselinePolicy, editor.ContentSecurityPolicy.ToString());
+		Assert.Equal(Infrastructure.Security.SecurityHeadersMiddleware.RazorStrictPolicy, editor["Content-Security-Policy-Report-Only"].ToString());
+
+		IHeaderDictionary other = new HeaderDictionary();
+		Infrastructure.Security.SecurityHeadersMiddleware.ApplyHeaders(new PathString("/Admin/Users"), other, settings);
+		Assert.Equal(Infrastructure.Security.SecurityHeadersMiddleware.RazorStrictPolicy, other.ContentSecurityPolicy.ToString());
+	}
+
+	[Fact]
+	public void Reporting_AddsTheReportUri_ToDocumentPolicies_Only()
+	{
+		var settings = new Infrastructure.Security.SecurityHeadersSettings
+		{
+			EnforceRazorContentSecurityPolicy = true,
+			CspReportingEnabled = true,
+		};
+
+		IHeaderDictionary page = new HeaderDictionary();
+		Infrastructure.Security.SecurityHeadersMiddleware.ApplyHeaders(new PathString("/Account/Login"), page, settings);
+		Assert.EndsWith("; report-uri /csp-report", page.ContentSecurityPolicy.ToString(), StringComparison.Ordinal);
+
+		IHeaderDictionary api = new HeaderDictionary();
+		Infrastructure.Security.SecurityHeadersMiddleware.ApplyHeaders(new PathString("/api/v1/session"), api, settings);
+		Assert.Equal(Infrastructure.Security.SecurityHeadersMiddleware.ApiPolicy, api.ContentSecurityPolicy.ToString());
 	}
 
 	[Fact]

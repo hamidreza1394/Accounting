@@ -75,3 +75,10 @@
 - **CI:** ۱۶۴ تست .NET موفق (۰ Skip) روی SQL Server؛ اسکن NuGet بدون مورد؛ Jobهای client و publish موفق. محلی: ۲۴ تست Vitest، Build و بررسی آفلاین، CSP در Chromium.
 - **اجرانشده:** Build/Test .NET در محیط Agent، `publish.ps1`، E2E مرورگر با دیتابیس.
 - **گزارش:** `docs/handoffs/ISSUE-UNNUMBERED-post-pr38-security-review.md`. **Merge نشد.**
+
+## 2026-10-20 — پیگیری آمادگی Production (UNNUMBERED)
+- **پایه:** `main` @ `2511907`؛ شاخه `security/production-readiness-followup` (کار جلسه قبلی Claude بازبینی و تکمیل شد).
+- محافظ پوشه خروجی انتشار (Bash/PowerShell با تست، اجرای Windows در CI)، Proxy مورد اعتماد و هشدار `AllowedHosts`، مهاجرت Master، حذف inlineهای Razor و اجباری‌شدن CSP، گزارش CSP امن، اصلاح نام فونت، E2E مرورگر با SQL Server.
+- **رفع:** E2E درخواست‌های API لغوشده هنگام ناوبری را به‌اشتباه «منبع ایستای ناموفق» می‌شمرد.
+- **CI:** ۲۰۴ تست .NET، ۱۲ تست E2E، تست‌های Bash و PowerShell (Linux و Windows)، انتشار Linux و Windows، همه موفق.
+- **گزارش:** `docs/handoffs/ISSUE-UNNUMBERED-production-readiness-followup.md`. **Merge نشد.**

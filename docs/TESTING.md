@@ -66,3 +66,19 @@ cd ClientApp && npm ci && npm run typecheck && npm test && npm run build && npm 
 
 ## Publish و Smoke Test
 `scripts/publish.sh` و سپس `scripts/smoke-published-app.sh` در Job `publish` اجرا می‌شوند: `/app/` و مسیر داخلی کلاینت (همان index.html با CSP سخت‌گیرانه و `Cache-Control: no-cache`)، همه Bundleهای ارجاع‌شده، فونت و تصویر محلی، 401 برای API ناشناس و رندر فرم ورود. Smoke test به دیتابیس متصل نمی‌شود.
+
+
+## تست‌های آمادگی Production (2026-10-20)
+| حوزه | تست | محیط اجرا |
+|---|---|---|
+| محافظ پوشه خروجی Bash | `scripts/tests/publish-output.test.sh` (۲۲ حالت، هر حالت ردشده بقای فایل نگهبان را بررسی می‌کند) | CI Linux، و محلی |
+| محافظ پوشه خروجی PowerShell | `scripts/tests/publish-output.tests.ps1` | CI: PowerShell 7 روی Linux و **Windows واقعی** |
+| انتشار کامل با `publish.ps1` | Job `publish-windows` | CI Windows |
+| Proxy، HSTS، HTTPS، Rate Limiting، AllowedHosts | `Integration/DeploymentConfigurationTests` | CI، SQL Server |
+| مهاجرت Master | `MasterCredentialTests` | CI |
+| نبود inline، گزارش CSP، حروف دقیق URLهای CSS | `ContentSecurityPolicyTests` | CI |
+| **E2E مرورگر** | `tests/e2e` (Playwright/Chromium ← سرور منتشرشده در Production ← SQL Server 2022 واقعی)، ۱۲ سناریو | CI Job `e2e` |
+
+**سناریوهای E2E:** صفحه ورود با فونت محلی و بدون نقض CSP؛ رد رمز اشتباه و حساب غیرفعال؛ Cookie از نوع HttpOnly و نمایش فقط شرکت‌های خود در خانه Razor؛ Remember Me؛ داشبورد React با داده واقعی، تغییر شرکت و نادیده‌گرفتن شناسه شرکت بیگانه؛ 404 یکسان برای شرکت دیگران و شرکت ناموجود؛ رد خروج API بدون توکن و خروج با دکمه داشبورد؛ خروج Razor (GET خارج نمی‌کند)؛ بازگشت از نشست منقضی با `ReturnUrl`؛ پایان نشست باز پس از غیرفعال‌سازی؛ صفحات مدیریت Master؛ صفحه راه‌اندازی اولیه. همه زیر CSP اجباری. Seed با حساب‌ها و رمزهای تصادفی هر اجرا انجام می‌شود (`tests/e2e/seed.mjs`).
+
+تست‌های Mock یا InMemory معادل E2E یا SQL Server معرفی نمی‌شوند. E2E فقط در CI اجرا شد؛ راهنمای اجرای محلی در `tests/e2e/README.md` است.

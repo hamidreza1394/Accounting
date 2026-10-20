@@ -17,7 +17,7 @@ dotnet restore Template.sln
 dotnet build Template.sln --configuration Release
 dotnet test Template.sln --configuration Release
 cd ClientApp && npm ci && npm run build && cd ..   # کلاینت React (اختیاری؛ بدون آن /app در دسترس نیست)
-# انتشار Production (کلاینت + سرور + بررسی خروجی): scripts/publish.sh  یا  pwsh scripts/publish.ps1
+# انتشار Production (کلاینت + سرور + بررسی خروجی): scripts/publish.sh  یا  pwsh scripts/publish.ps1 — راهنما: docs/DEPLOYMENT.md
 dotnet run --project Server/Server.csproj
 ```
 

@@ -753,3 +753,13 @@
 		transform: none;
 	}
 }
+
+/* ---------- Moved from inline markup (Content-Security-Policy: no inline styles) ---------- */
+/* Login.cshtml: legend dots of the illustrative dashboard (same colours as the chart). */
+.fn-dash-legend__dot--net { background: #35d5e8; }
+.fn-dash-legend__dot--costs { background: #e0a94a; }
+.fn-dash-legend__dot--other { background: #7aa2c9; }
+
+/* LoginSuccess.cshtml: a single, centered column (the page shows one confirmation only). */
+.taraz-login__shell.taraz-login__shell--single { grid-template-columns: minmax(0, 1fr); }
+.taraz-login__shell--single .taraz-login__panel { grid-column: 1 / -1; }

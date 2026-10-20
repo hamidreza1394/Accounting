@@ -401,11 +401,25 @@ public sealed class HttpSecurityTests : IClassFixture<FaranouApplicationFactory>
 	}
 
 	[Fact]
-	public async Task TheLoginPage_GetsTheBaselinePolicy_AndTheStrictPolicyAsReportOnly()
+	public async Task TheLoginPage_GetsTheEnforcedStrictPolicy()
 	{
 		using var client = Factory.CreateBrowser();
 
 		var response = await client.GetAsync("/Account/Login");
+
+		Assert.Equal(
+			Infrastructure.Security.SecurityHeadersMiddleware.RazorStrictPolicy,
+			response.Headers.GetValues("Content-Security-Policy").Single());
+		Assert.False(response.Headers.Contains("Content-Security-Policy-Report-Only"));
+	}
+
+	[Fact]
+	public async Task ThePageEditor_KeepsTheStrictPolicyReportOnly()
+	{
+		using var client = Factory.CreateBrowser();
+
+		// Anonymous: the page redirects to the sign-in, the headers are set all the same.
+		var response = await client.GetAsync("/Admin/PageManager/Create");
 
 		Assert.Equal(
 			Infrastructure.Security.SecurityHeadersMiddleware.RazorBaselinePolicy,
@@ -413,6 +427,17 @@ public sealed class HttpSecurityTests : IClassFixture<FaranouApplicationFactory>
 		Assert.Equal(
 			Infrastructure.Security.SecurityHeadersMiddleware.RazorStrictPolicy,
 			response.Headers.GetValues("Content-Security-Policy-Report-Only").Single());
+	}
+
+	[Fact]
+	public async Task CspReports_AreNotAccepted_WhileReportingIsDisabled()
+	{
+		using var client = Factory.CreateBrowser();
+
+		var response = await client.PostAsync("/csp-report",
+			new StringContent("{\"csp-report\":{}}", System.Text.Encoding.UTF8, "application/csp-report"));
+
+		Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
 	}
 
 	[Fact]

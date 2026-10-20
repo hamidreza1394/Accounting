@@ -22,11 +22,6 @@
 @section StyleSheets {
     <link rel="stylesheet" href="~/css/rtl/taraz-login.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/rtl/faranou-login-legacy-background.css" asp-append-version="true" />
-    <style>
-        /* A single, centered column: this page shows one confirmation only. */
-        .taraz-login__shell.taraz-login__shell--single { grid-template-columns: minmax(0, 1fr); }
-        .taraz-login__shell--single .taraz-login__panel { grid-column: 1 / -1; }
-    </style>
 }
 
 <div class="taraz-login" dir="@(isRightToLeft ? "rtl" : "ltr")">

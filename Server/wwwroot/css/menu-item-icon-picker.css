@@ -1,0 +1,5 @@
+/* Admin menu items: font of the icon picker (Pages/Admin/MenuItems/Create|Update). */
+.popover-title-text,
+.iconpicker-btn {
+	font-family: IRANSansX;
+}

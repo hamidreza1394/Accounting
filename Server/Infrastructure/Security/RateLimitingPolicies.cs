@@ -29,6 +29,9 @@ public sealed class RateLimitingSettings
 	/// per-username lockout of <see cref="AuthenticationService" />.
 	/// </summary>
 	public FixedWindowLimitSettings Login { get; set; } = new() { PermitLimit = 20, WindowSeconds = 60 };
+
+	/// <summary>CSP violation reports (<c>POST /csp-report</c>), per client address.</summary>
+	public FixedWindowLimitSettings CspReport { get; set; } = new() { PermitLimit = 20, WindowSeconds = 60 };
 }
 
 /// <summary>
@@ -45,6 +48,7 @@ public static class RateLimitingPolicies
 	public const string ApiPolicy = "api";
 	public const string ApiSensitivePolicy = "api-sensitive";
 	public const string LoginPolicy = "login";
+	public const string CspReportPolicy = "csp-report";
 
 	public static IServiceCollection AddFaranouRateLimiting(this IServiceCollection services, IConfiguration configuration)
 	{
@@ -60,6 +64,9 @@ public static class RateLimitingPolicies
 
 			options.AddPolicy(ApiSensitivePolicy, context =>
 				CreateLimiter(context, ApiSensitivePolicy, settings => settings.ApiSensitive));
+
+			options.AddPolicy(CspReportPolicy, context =>
+				CreateLimiter(context, CspReportPolicy, settings => settings.CspReport, byUser: false));
 
 			options.AddPolicy(LoginPolicy, context =>
 			{

@@ -274,3 +274,7 @@ div.tox {
 @media (prefers-reduced-motion: reduce) {
 	.login-submit { transition: none; }
 }
+
+/* Moved from inline style attributes (Content-Security-Policy: no inline styles). */
+.faranou-toast-container { z-index: 10000; }
+.faranou-file-thumbnail { max-height: 220px; object-fit: contain; }
