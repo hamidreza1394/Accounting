@@ -234,3 +234,46 @@ public sealed class CspReportRateLimitTests : IClassFixture<CspReportRateLimitTe
 		Assert.Equal(new[] { HttpStatusCode.NoContent, HttpStatusCode.NoContent, (HttpStatusCode)429 }, statuses);
 	}
 }
+
+/// <summary>
+/// Local resources referenced by the application stylesheets must exist with the exact file-name
+/// case: Linux servers are case-sensitive (the fonts of fontiran.css were requested in lower case
+/// and answered 404 there, while Windows served them).
+/// </summary>
+public sealed class StylesheetResourceTests
+{
+	[Fact]
+	public void EveryLocalUrlInTheApplicationStylesheets_ExistsWithTheExactCase()
+	{
+		var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
+
+		while (directory.Parent != null && !File.Exists(Path.Combine(directory.FullName, "Template.sln")))
+		{
+			directory = directory.Parent;
+		}
+
+		var wwwroot = Path.Combine(directory.FullName, "Server", "wwwroot");
+		var missing = new List<string>();
+		var urlPattern = new Regex(@"url\(\s*['""]?(/[^'"")?#]+)", RegexOptions.IgnoreCase);
+
+		foreach (var stylesheet in Directory.EnumerateFiles(Path.Combine(wwwroot, "css"), "*.css", SearchOption.AllDirectories))
+		{
+			foreach (Match match in urlPattern.Matches(File.ReadAllText(stylesheet)))
+			{
+				var relative = match.Groups[1].Value.TrimStart('/');
+				var folder = Path.GetDirectoryName(Path.Combine(wwwroot, relative))!;
+				var name = Path.GetFileName(relative);
+
+				var exists = Directory.Exists(folder) &&
+					Directory.EnumerateFiles(folder).Any(file => string.Equals(Path.GetFileName(file), name, StringComparison.Ordinal));
+
+				if (!exists)
+				{
+					missing.Add($"{Path.GetRelativePath(wwwroot, stylesheet)}: {match.Groups[1].Value}");
+				}
+			}
+		}
+
+		Assert.True(missing.Count == 0, "Missing or wrongly cased resources:\n" + string.Join("\n", missing.Distinct()));
+	}
+}

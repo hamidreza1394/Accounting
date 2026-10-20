@@ -29,7 +29,7 @@ done
 
 failures=0
 check() { # check <description> <expected> <actual>
-  if [ "$2" = "$3" ]; then echo "  ok   $1"; else echo "  FAIL $1 (expected '$2', got '$3')"; failures=$((failures + 1)); fi
+  if [ "$2" = "$3" ]; then echo "  ok   $1"; else echo "  FAIL $1 (expected '$2', got '$3')"; echo "::error title=Smoke test::$1 (expected '$2', got '$3')"; failures=$((failures + 1)); fi
 }
 status() { curl -s -o /dev/null -w '%{http_code}' "$base$1"; }
 header() { curl -s -D - -o /dev/null "$base$1" | tr -d '\r' | awk -v name="$(echo "$2" | tr 'A-Z' 'a-z')" 'BEGIN{FS=": "} tolower($1)==name {sub(/^[^:]*: /,""); print; exit}'; }
