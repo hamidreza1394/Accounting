@@ -10,7 +10,16 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Infrastructure.DatabaseSetup;
 using Server.Api;
 using Infrastructure.Security;
+using Infrastructure.Hosting;
 // **************************************************
+
+// Operator command: produce a new infrastructure (Master) credential and exit. It runs before
+// the host is built, so it needs no database and starts no web server.
+if (args.Any(arg => string.Equals(arg, Infrastructure.DatabaseSetup.MasterCredentialCommand.Argument, StringComparison.OrdinalIgnoreCase)))
+{
+    Environment.ExitCode = Infrastructure.DatabaseSetup.MasterCredentialCommand.RunOnConsole();
+    return;
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,6 +47,8 @@ builder.Services.AddRazorPages(options =>
 });
 
 builder.Services.AddFaranouRateLimiting(builder.Configuration);
+// Forwarding headers are honoured only from the proxies listed in ReverseProxy (none by default).
+builder.Services.AddFaranouForwardedHeaders(builder.Configuration);
 builder.Services.Configure<Infrastructure.Security.SecurityHeadersSettings>(
     builder.Configuration.GetSection(Infrastructure.Security.SecurityHeadersSettings.SectionName));
 
@@ -198,7 +209,16 @@ else if (!setupRequired && (!app.Environment.IsDevelopment() || connectionLoaded
     }
 }
 
-// First, so every response (pages, API, static files, errors) carries the security headers.
+foreach (var warning in Infrastructure.Hosting.DeploymentConfigurationChecks.GetWarnings(app.Configuration, app.Environment))
+{
+    app.Logger.LogWarning("Deployment configuration: {Warning}", warning);
+}
+
+// First: the client address and scheme from a trusted proxy are needed by HSTS, HTTPS
+// redirection, rate limiting and the audit trail. Without a configured proxy it does nothing.
+app.UseForwardedHeaders();
+
+// Then, so every response (pages, API, static files, errors) carries the security headers.
 app.UseMiddleware<Infrastructure.Security.SecurityHeadersMiddleware>();
 
 if (app.Environment.IsDevelopment())

@@ -168,6 +168,18 @@ namespace Infrastructure.Security
 				var isMasterPasswordCorrect =
 					masterPasswordOutcome != PasswordVerificationOutcome.Failed;
 
+				if (isMasterPasswordCorrect &&
+					masterPasswordOutcome == PasswordVerificationOutcome.SuccessRehashNeeded &&
+					!ApplicationSettings.AllowLegacyMasterPasswordHash)
+				{
+					// The legacy format was switched off by the operator: the correct password
+					// is refused like a wrong one. Only the fact is logged, never a value.
+					Logger.LogWarning(
+						"Infrastructure account sign-in was refused because the configured password uses the legacy SHA-256 format and AllowLegacyMasterPasswordHash is false.");
+
+					isMasterPasswordCorrect = false;
+				}
+
 				if (isMasterPasswordCorrect)
 				{
 					if (masterPasswordOutcome ==

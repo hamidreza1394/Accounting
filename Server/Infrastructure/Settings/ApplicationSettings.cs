@@ -34,6 +34,15 @@
 		// **********
 
 		// **********
+		/// <summary>
+		/// Whether a <see cref="MasterPassword" /> in the legacy Base64 SHA-256 format is still
+		/// accepted. Default true for compatibility; set false once the credential was replaced
+		/// with one produced by <c>--create-master-credential</c> (see docs/SECURITY.md).
+		/// </summary>
+		public bool AllowLegacyMasterPasswordHash { get; set; } = true;
+		// **********
+
+		// **********
 		public string[]? ActivationKeys { get; set; }
 		// **********
 
