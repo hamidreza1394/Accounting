@@ -88,3 +88,17 @@ npm run dev        # توسعه: http://localhost:5173/app/ ؛ /api و /Account 
 - آدرس سرور برای پروکسی: متغیر `FARANOU_SERVER_URL`.
 - خروجی Build در Git ثبت نمی‌شود (`.gitignore`)؛ در انتشار ابتدا `npm ci && npm run build` و سپس `dotnet publish` اجرا شود. اگر Build کلاینت انجام نشده باشد، `/app` پاسخ 404 می‌دهد و بقیه برنامه کار می‌کند.
 - ورود از صفحه Razor `/Account/Login` انجام می‌شود؛ پس از ورود، `/app` یا پیوند «داشبورد جدید (پیش‌نمایش)» در صفحه اصلی را باز کنید.
+
+
+## انتشار (Production)
+```bash
+scripts/publish.sh artifacts/publish          # Linux/macOS/CI
+scripts/smoke-published-app.sh artifacts/publish   # اختیاری: آزمون HTTP خروجی
+```
+```powershell
+pwsh scripts/publish.ps1 -Output artifacts\publish   # Windows (همان مراحل)
+```
+- ترتیب ثابت: `npm ci` ← typecheck/تست کلاینت ← `npm run build` ← بررسی آفلاین ← `dotnet publish` ← بررسی وجود `wwwroot/app/index.html`، JS، CSS، فونت و تصاویر در خروجی.
+- `dotnet publish` مستقیم بدون Build کلاینت خطا می‌دهد (D-016).
+- **توسعه محلی:** `npm run dev` (Vite + پروکسی به سرور) یا یک‌بار `npm run build` و سپس `dotnet run`؛ **Production:** فقط اسکریپت انتشار.
+- تنظیمات جدید قابل تغییر در `appsettings`/Environment: `RateLimiting:*` و `SecurityHeaders:EnforceRazorContentSecurityPolicy`.

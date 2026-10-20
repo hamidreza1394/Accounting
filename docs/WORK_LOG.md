@@ -68,3 +68,10 @@
 - **تست:** CI روی `387e703` سبز (Build + همه تست‌های .NET + گاردهای Migration)؛ محلی: typecheck، ۱۸ تست Vitest، Build، بررسی آفلاین، رندر Chromium. Build/Test .NET در محیط Agent اجرا نشد (NuGet مسدود)؛ SQL Server واقعی و E2E اجرا نشد.
 - **ADR:** D-011، D-012، D-013؛ D-001 جزئاً و D-003 کاملاً منسوخ علامت خوردند.
 - **گزارش:** `docs/handoffs/ISSUE-UNNUMBERED-faranou-modern-architecture.md`. **Merge نشد.**
+
+## 2026-10-20 — بازبینی امنیتی پس از PR #38 (UNNUMBERED)
+- **پایه:** `main` @ `207d81f`؛ شاخه `security/post-pr38-hardening`.
+- اعتبارسنجی مجدد نشست، CSP/هدرها، Rate Limiting، Exception Handler اختصاصی API، انتشار قطعی همراه کلاینت و Smoke Test، بازنویسی و تست بررسی آفلاین، ۲۷ تست Integration HTTP روی SQL Server 2022 در CI.
+- **CI:** ۱۶۴ تست .NET موفق (۰ Skip) روی SQL Server؛ اسکن NuGet بدون مورد؛ Jobهای client و publish موفق. محلی: ۲۴ تست Vitest، Build و بررسی آفلاین، CSP در Chromium.
+- **اجرانشده:** Build/Test .NET در محیط Agent، `publish.ps1`، E2E مرورگر با دیتابیس.
+- **گزارش:** `docs/handoffs/ISSUE-UNNUMBERED-post-pr38-security-review.md`. **Merge نشد.**

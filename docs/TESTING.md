@@ -49,3 +49,20 @@ cd ClientApp && npm ci && npm run typecheck && npm test && npm run build && npm 
 - `src/App.test.tsx`: نمایش داده واقعی و تاریخ شمسی، حالت خالی (بدون شرکت/بدون دوره)، نمایش خطا به‌جای فهرست خالی و تلاش دوباره، انتقال به صفحه ورود، نادیده‌گرفتن شرکت آدرس که سرور برنگردانده، تغییر شرکت.
 - `src/lib/date.test.ts`: تبدیل تاریخ میلادی ذخیره‌شده به شمسی بدون جابه‌جایی منطقه زمانی.
 - `npm run check:offline` خروجی Build را برای منبع خارجی و وجود همه فایل‌های محلی (فونت، تصویر) بررسی می‌کند.
+
+
+## تست‌های Integration HTTP (2026-10-20)
+- `tests/Template.Tests/Integration` با `WebApplicationFactory<Program>` کل Pipeline واقعی را اجرا می‌کند: هدرها، Exception Handler، Cookie Authentication و اعتبارسنجی مجدد، Rate Limiting، Authorization، Anti-forgery، Routing، Razor Pages و API.
+- **دیتابیس:** با متغیر `FARANOU_TEST_SQLSERVER` تست‌ها روی **SQL Server واقعی** اجرا می‌شوند؛ Schema با Migrationهای EF Core ساخته می‌شود و نام دیتابیس باید با `FaranouTests` شروع شود (حذف و دوباره ساخته می‌شود). CI یک Container از `mcr.microsoft.com/mssql/server:2022-latest` بالا می‌آورد و با `FARANOU_REQUIRE_SQLSERVER=1` اگر Provider واقعاً SQL Server نباشد یا Migration معلق باشد شکست می‌خورد. بدون متغیر، Provider حافظه‌ای استفاده می‌شود که **معادل SQL Server نیست** (بدون Constraint و ترجمه SQL).
+- سناریوها: 401 بدون HTML برای API ناشناس؛ حفظ Redirect صفحات؛ ورود موفق با Cookie از نوع HttpOnly/Secure/SameSite=Lax و هویت درست؛ Remember Me؛ `ReturnUrl` محلی/خارجی؛ رمز اشتباه؛ رد فرم ورود بدون توکن؛ رد خروج API بدون توکن یا با توکن جعلی؛ خروج API و Razor فقط با POST و توکن معتبر؛ پایان نشست پس از غیرفعال‌سازی یا تغییر رمز؛ فقط شرکت‌های دارای عضویت/شرکت/نقش فعال؛ قطع دسترسی در درخواست بعد از لغو عضویت؛ 404 یکسان برای شرکت دیگران و ناموجود؛ شناسه غیر GUID؛ نبود داده شرکت دیگر در پاسخ؛ پاسخ خطای عمومی بدون اسرار؛ هدرها و CSP؛ 429 برای API و ارسال فرم ورود؛ حساب زیرساختی.
+- اجرای محلی با SQL Server (فقط دیتابیس آزمایشی):
+  ```powershell
+  $env:FARANOU_TEST_SQLSERVER = "Server=localhost;Database=FaranouTests;Trusted_Connection=True;TrustServerCertificate=True"
+  dotnet test Template.sln --configuration Release
+  ```
+
+## بررسی منابع آفلاین کلاینت
+`ClientApp/scripts/offline-check.mjs` (تست‌ها: `offline-check.test.mjs`) روی خروجی واقعی Build و نیز روی خروجی Publish اجرا می‌شود. HTML (`src`/`href`/`srcset`)، CSS (`url()`/`@import`، نسبت به خود فایل CSS)، JS (`import()` با رشته ثابت، `new URL(..., import.meta.url)`، فهرست Preload ویت، و رشته‌های ثابت با پسوند منبع) بررسی می‌شوند؛ Query string و Fragment برای یافتن فایل حذف می‌شوند. **محدودیت:** آدرس‌هایی که در زمان اجرا ساخته می‌شوند (الحاق رشته، داده API، محتوای کاربر) با اسکن ایستا قابل کشف نیستند؛ قبولی این بررسی شاهد است، نه تضمین کامل استقلال از اینترنت.
+
+## Publish و Smoke Test
+`scripts/publish.sh` و سپس `scripts/smoke-published-app.sh` در Job `publish` اجرا می‌شوند: `/app/` و مسیر داخلی کلاینت (همان index.html با CSP سخت‌گیرانه و `Cache-Control: no-cache`)، همه Bundleهای ارجاع‌شده، فونت و تصویر محلی، 401 برای API ناشناس و رندر فرم ورود. Smoke test به دیتابیس متصل نمی‌شود.

@@ -1,7 +1,7 @@
 # نقشه راه توسعه
 
 ## فاز 0 — تثبیت اسکلت
-- [x] هدف‌گذاری پروژه روی .NET 9
+- [x] ~~هدف‌گذاری پروژه روی .NET 9~~ — منسوخ: هدف رسمی `net10.0` است (D-007؛ `Directory.Build.props`، همه `.csproj`ها، `global.json` و CI).
 - [x] مدیریت متمرکز نسخه NuGet
 - [x] فعال‌کردن قواعد پایه C# و Nullable
 - [x] افزودن تست پایه و CI
@@ -35,7 +35,7 @@
 - [ ] بررسی آسیب‌پذیری NuGet و فرانت‌اند در CI
 - [ ] قالب PR، مالکیت کد و محافظت Branch
 - [ ] ثبت نسخه‌ها و روش انتشار/بازگشت (rollback)
-- [ ] تصمیم درباره ارتقا به .NET 10 LTS پیش از پایان پشتیبانی .NET 9
+- [x] ارتقا به .NET 10 LTS (D-007).
 
 ## فاز 5 — آماده‌سازی محصول و محتوای قالب
 - [ ] جایگزینی نام، عکس، لینک‌ها و اطلاعات تماس صاحب قالب در صفحات About/Contact/SEO با محتوای متعلق به محصول
@@ -68,9 +68,15 @@
 - [x] کلاینت React/TypeScript/Vite/Tailwind راست‌چین در `/app` با داشبورد داده واقعی (D-011).
 - [x] CI کلاینت (typecheck، تست، Build، بررسی منابع آفلاین، audit).
 - [ ] OpenAPI برای `/api/v1` (نیازمند `Microsoft.AspNetCore.OpenApi`).
-- [ ] تست Integration HTTP با `WebApplicationFactory` و SQL Server واقعی (مثلاً Testcontainers یا LocalDB در CI ویندوز).
+- [x] تست Integration HTTP با `WebApplicationFactory` و SQL Server 2022 واقعی (Service Container در CI).
 - [ ] Global Query Filter Tenant همراه با نخستین ماژول حسابداری.
 - [ ] انتقال صفحه ورود به React پس از تست‌های رگرسیون ظاهری (Screenshot) و رفتاری صفحه فعلی.
 - [ ] انتقال Layout/منو و سپس صفحات مدیریت؛ حذف صفحات Razor فقط پس از اثبات عدم نیاز.
-- [ ] Content-Security-Policy و Rate Limiting برای API.
+- [x] Rate Limiting برای API، نقاط حساس نشست و ارسال فرم ورود.
+- [x] CSP اجباری برای `/app` و `/api`؛ CSP پایه برای Razor همراه با سیاست سخت‌گیرانه Report-Only.
+- [ ] اجباری‌کردن CSP سخت‌گیرانه برای Razor پس از انتقال اسکریپت/سبک‌های inline (فهرست در `docs/SECURITY.md`).
+- [x] اعتبارسنجی مجدد نشست در هر درخواست (حساب غیرفعال/رمز تغییرکرده).
+- [x] فرایند Publish قطعی همراه کلاینت و Smoke Test خروجی Publish در CI.
+- [ ] حذف کامل پذیرش هش SHA-256 قدیمی طبق برنامه `docs/SECURITY.md`.
+- [ ] پیکربندی ForwardedHeaders برای Proxy مورد اعتماد (لازمه Rate Limiting دقیق پشت Proxy).
 - [ ] ماژول‌های حسابداری: سرفصل حساب‌ها، اسناد با `decimal(18,2)`/`decimal(19,4)` و قواعد گردکردن مستند، گزارش‌ها.

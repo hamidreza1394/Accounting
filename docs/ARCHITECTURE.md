@@ -93,3 +93,7 @@ Browser ──(Cookie HttpOnly, same origin)──▶ ASP.NET Core (Server)
 - **خطاها:** 401 (نشست نیست/منقضی یا نشست قدیمی بدون شناسه)، 403، 404، 400 (Anti-forgery) و 500 به‌صورت `application/problem+json` با عنوان قابل نمایش؛ جزئیات فنی فقط در Log.
 - **مرز مسئولیت:** قواعد دسترسی و داده فقط در Backend. کلاینت پاسخ‌ها را در زمان اجرا با قرارداد بررسی می‌کند (`ClientApp/src/api/types.ts`) و فقط نمایش (از جمله تبدیل تاریخ به شمسی) را انجام می‌دهد.
 - **ساختار فعلی Backend:** هنوز Modular Monolith با یک پروژه وب است. منطق جدید دسترسی در یک سرویس کوچک و قابل تست قرار گرفته و Endpointها فقط هماهنگ‌کننده هستند. انتقال آن به پروژه `Application` زمانی انجام می‌شود که Use Case حسابداری واقعی (و قرارداد مستقل از EF) وجود داشته باشد؛ ایجاد Interface/Repository صرفاً برای لایه‌بندی انجام نشد (D-006).
+
+
+## ترتیب Middleware (2026-10-20)
+`SecurityHeaders` ← (Development: DeveloperExceptionPage | سایر: GlobalException، ExceptionHandler `/Errors/Error`، HSTS) ← Exception Handler اختصاصی `/api` (problem+json) ← HTTPS Redirection ← Static Files ← محافظ First-run ← Routing ← Authentication (+ اعتبارسنجی مجدد نشست) ← **Rate Limiter** ← Authorization ← Culture ← Razor Pages / API / Fallback `/app`.
