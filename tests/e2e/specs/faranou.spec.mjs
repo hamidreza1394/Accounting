@@ -25,7 +25,14 @@ test.beforeEach(async ({ page }) => {
   page.__errors = [];
   page.on('pageerror', (error) => page.__errors.push(error.message));
   page.__failedRequests = [];
-  page.on('requestfailed', (request) => page.__failedRequests.push(request.url()));
+  // Only static resources count. API fetches that a navigation cancels (net::ERR_ABORTED, e.g.
+  // after signing out) and intentional 4xx answers of the API are asserted by the tests.
+  const staticTypes = new Set(['document', 'stylesheet', 'script', 'font', 'image']);
+  page.on('requestfailed', (request) => {
+    if (staticTypes.has(request.resourceType())) {
+      page.__failedRequests.push(`${request.failure()?.errorText ?? 'failed'} ${request.url()}`);
+    }
+  });
   page.on('response', (response) => {
     if (response.status() >= 400 && /\.(css|js|woff2?|svg|png|jpe?g|ico)(\?|$)/i.test(response.url())) {
       page.__failedRequests.push(`${response.status()} ${response.url()}`);
