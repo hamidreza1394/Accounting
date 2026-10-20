@@ -102,9 +102,14 @@ jobs:
       - name: Report the failing tests
         if: failure()
         run: |
-          grep -aE '^\s*(failed|\[FAIL\]) ' -A 12 /tmp/dotnet-test.log | tr -d '\r' | head -n 120 > /tmp/failed-tests.txt || true
-          while IFS= read -r line; do echo "::error title=Failed test::$line"; done < <(grep -aE '^\s*(failed|\[FAIL\]) ' /tmp/dotnet-test.log | tr -d '\r' | head -n 20)
-          echo "::error title=Failure details::$(cat /tmp/failed-tests.txt | tr '\n' '~' | cut -c1-6000)"
+          sed -e 's/\x1b\[[0-9;]*m//g' -e 's/\r//g' /tmp/dotnet-test.log > /tmp/dotnet-test.clean.log
+          grep -nE '^\s*(failed|\[FAIL\])\s' /tmp/dotnet-test.clean.log | head -n 20 | while IFS= read -r line; do
+            echo "::error title=Failed test::$line"
+          done
+          first="$(grep -nE '^\s*(failed|\[FAIL\])\s' /tmp/dotnet-test.clean.log | head -n 1 | cut -d: -f1)"
+          if [ -n "$first" ]; then
+            echo "::error title=First failure details::$(sed -n "${first},$((first + 40))p" /tmp/dotnet-test.clean.log | tr '\n' '~' | cut -c1-6000)"
+          fi
       - name: Report the test totals
         if: always()
         run: |
