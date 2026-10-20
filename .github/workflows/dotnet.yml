@@ -155,6 +155,53 @@ jobs:
             fi
           done
 
+  # Safety tests of the publish scripts: the output-directory guard refuses dangerous paths
+  # (root, repository, home, current directory, sources, links, foreign directories) and
+  # deletes nothing in those cases. Bash and PowerShell 7 run on Linux.
+  publish-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Bash guard tests
+        run: scripts/tests/publish-output.test.sh
+      - name: PowerShell guard tests (PowerShell 7 on Linux)
+        shell: pwsh
+        run: ./scripts/tests/publish-output.tests.ps1
+
+  # The PowerShell publish script on a real Windows runner: guard tests, then the complete
+  # publish (npm ci, client checks and build, dotnet publish, output checks).
+  publish-windows:
+    runs-on: windows-latest
+    needs: [client, build-and-test]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: ClientApp/package-lock.json
+      - name: PowerShell guard tests (Windows)
+        shell: pwsh
+        run: ./scripts/tests/publish-output.tests.ps1
+      - name: Publish with scripts/publish.ps1
+        shell: pwsh
+        run: ./scripts/publish.ps1 -Output (Join-Path $env:RUNNER_TEMP 'faranou-publish')
+      - name: Check the Windows publish output
+        shell: pwsh
+        run: |
+          $out = Join-Path $env:RUNNER_TEMP 'faranou-publish'
+          foreach ($path in 'Server.dll', 'wwwroot/app/index.html', 'wwwroot/fonts/woff2/IRANSansX-Regular.woff2', '.faranou-publish-output') {
+            if (-not (Test-Path (Join-Path $out $path))) { throw "missing $path" }
+            Write-Host "present: $path"
+          }
+
   # Production build in the documented order (scripts/publish.sh: npm ci, client type check and
   # tests, npm run build, offline check, dotnet publish, checks of the publish output), then the
   # published server is started and /app, its client routes and bundles are requested over HTTP.
