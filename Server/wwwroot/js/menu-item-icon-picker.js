@@ -29,7 +29,7 @@
 			templates: {
 				footer: '<div class="popover-footer"></div>',
 				iconpicker: '<div class="iconpicker"><div class="iconpicker-items"></div></div>',
-				// href="#" instead of "javascript:;": javascript: URLs are blocked by the CSP.
+				// href="#" instead of a script URL, which the CSP blocks.
 				iconpickerItem: '<a role="button" href="#" class="iconpicker-item"><i></i></a>',
 				search: '<input type="search" class="form-control iconpicker-search" placeholder="' + escapeHtml(data.iconpickerSearch) + '" />',
 				popover: '<div class="iconpicker-popover popover" role="tooltip"><div class="arrow"></div><div class="popover-title"></div><div class="popover-content"></div></div>',
