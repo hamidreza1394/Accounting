@@ -50,6 +50,7 @@ public static class ApiEndpoints
 			.RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
 		api.MapGet("/companies", GetCompaniesAsync);
 		api.MapGet("/companies/{companyId:guid}/overview", GetCompanyOverviewAsync);
+		api.MapWorkContextEndpoints();
 
 		return endpoints;
 	}
@@ -125,6 +126,8 @@ public static class ApiEndpoints
 		}
 
 		await httpContext.SignOutAsync(Infrastructure.Security.Utility.AuthenticationScheme);
+
+		httpContext.RequestServices.GetService<Infrastructure.Tenancy.WorkContextCookie>()?.Delete(httpContext);
 
 		return TypedResults.NoContent();
 	}
