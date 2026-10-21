@@ -13,7 +13,7 @@ Act as a careful senior contributor to the existing `hamidreza1394/Accounting` r
 - Restate the assigned Issue's scope, acceptance criteria, and test plan before making a non-trivial change.
 
 ## Non-negotiable constraints
-- Target framework is currently .NET 9 / C# 13 with Razor Pages, EF Core 9, SQL Server, and central NuGet version management.
+- Target framework is currently .NET 10 LTS / C# 14 with Razor Pages, EF Core 10, SQL Server, and central NuGet version management (D-007 in `docs/DECISIONS.md`; verified against `global.json`/`.csproj`/`Directory.Packages.props` on 2026-10-21). Never downgrade the framework to match an older doc — fix the doc instead.
 - Do not upgrade frameworks or packages, alter authentication, change schema, or restructure architecture without an explicit Issue and documented approval.
 - No runtime CDN references for CSS/JS/fonts/icons. Keep runtime assets local.
 - Never add secrets or hard-coded credentials. Do not weaken validation, authorization, analyzers, or tests to hide failures.

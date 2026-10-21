@@ -67,3 +67,62 @@ dotnet format Template.sln --verify-no-changes
 - EF Core 9.0.21 package listing: https://www.nuget.org/packages/Microsoft.EntityFrameworkCore.SqlServer/9.0.21
 
 **تفسیر نتیجه:** این بسته اکنون مستندات و کنترل‌های بیشتری دارد و چند ایراد قابل اثبات اصلاح شده، اما تا رفع موارد P0 و اجرای واقعی Build/Test نباید به‌عنوان نسخه Production-ready تلقی شود.
+
+---
+
+## بررسی 2026-10-21 (GitHub آنلاین، شاخه `main` @ `8244bf3`، مرحله یک ممیزی جامع)
+
+- **مبنا:** مخزن واقعی GitHub (`hamidreza1394/Accounting`)، نه ZIP آفلاین. `dotnet` 10.0.113 و `npm`/Node 22 واقعاً نصب و اجرا شدند.
+- **روش:** Restore/Build واقعی .NET، `gh api` برای وضعیت واقعی PRها و CI، بازتولید محلی Smoke Test، اسکن آسیب‌پذیری NuGet/npm، بررسی EF Core pending model changes، grep هدفمند برای Query Filter/OAuth/Exception handling.
+- **یافته مهم:** بسیاری از یافته‌های P0 بخش ۲۰۲۶-۱۰-۱۶ (هدف net9.0، نبود Build، عدم استفاده از PasswordHasher) در کامیت‌های بعدی (D-007، PR #30، PR #38، PR #44) واقعاً رفع شده‌اند؛ جزئیات رفع در `docs/DECISIONS.md` و `docs/WORK_LOG.md` ثبت است. این بخش یافته‌های **جدید** یا **هنوز باز** را ثبت می‌کند؛ بخش ۲۰۲۶-۱۰-۱۶ بالا به‌عنوان سابقه تاریخی حفظ شده و حذف نشده است.
+
+### شناسه AUD-2026-10-21-01 — شکست CI روی HEAD واقعی main (قطعاً Flaky؛ با Re-run واقعی تأیید شد)
+- **شدت:** Medium (از High به Medium کاهش یافت چون Regression قطعی در کد نبود) | **وضعیت:** Verified — Flaky، نه Regression
+- **به‌روزرسانی قطعی (همان روز):** همان Run (`39483239598`) با `gh run rerun 39483239598` دوباره روی **دقیقاً همان Commit** (`8244bf3`) اجرا شد. نتیجه Attempt شماره ۲: `status=completed`, `conclusion=success` برای **تمام** Jobها از جمله `publish` (همانی که بار اول Fail شده بود). این با بازتولید محلی (۶/۶ موفق) هم‌خوانی کامل دارد و اثبات می‌کند این یک رفتار ناپایدار گذرا در Runner بوده، نه یک باگ تکرارشونده در کد. **با این حال**، چون علت ریشه‌ای دقیق (کدام منبع Flaky — رقابت منابع، Timing گرم‌شدن Antiforgery/Data Protection، یا چیز دیگر) شناسایی نشده، این مورد را Closed نمی‌کنیم؛ `scripts/smoke-published-app.sh` هیچ تغییری در این دور نگرفت چون هیچ شاهدی از نقص در خودِ اسکریپت یا کد برنامه پیدا نشد — تغییر دادن آن بدون شاهد، دقیقاً همان «تضعیف برای سبز شدن تست» است که مجاز نیست.
+- **محل:** GitHub Actions run `39483239598` (workflow `.NET CI`، commit `8244bf3` = دقیقاً همان Merge Commit فعلی `main` از PR #44)، Job `publish`، Job ID `118838139150`.
+- **شواهد:** خروجی `gh api repos/hamidreza1394/Accounting/actions/jobs/118838139150/logs`: `FAIL login page renders the anti-forgery token (expected 'yes', got 'no')` در `scripts/smoke-published-app.sh`؛ کل Workflow Run با `conclusion: failure` ثبت شده، در حالی که Jobهای دیگر همان Run (`build-and-test`, `client`, `e2e`, `publish-windows`, `publish-scripts`) موفق بودند.
+- **اثر:** `docs/PROJECT_STATUS.md` و `docs/DECISIONS.md` ادعا می‌کنند CI برای همین Merge «تأییدشده/سبز» است؛ این ادعا برای آخرین Run واقعی این Commit نادرست است.
+- **بازتولید محلی:** همان Commit را در این محیط (`dotnet` 10.0.113، بدون SQL Server) با `scripts/publish.sh` سپس `scripts/smoke-published-app.sh` **۶ بار پیاپی** اجرا کردم → **۶ از ۶ بار موفق**، همان چک Anti-forgery هم هر بار passed. بنابراین این یک Regression قطعی قابل بازتولید در کد نیست؛ به احتمال زیاد یک رفتار ناپایدار (Flaky) مختص Runner CI (رقابت منابع/زمان‌بندی گرم‌شدن Data Protection/Antiforgery هنگام اجرای هم‌زمان چند Job) است، اما بدون اجرای دوباره CI واقعی قابل اثبات قطعی نیست.
+- **راهکار پیشنهادی:** (۱) CI را دوباره روی `main` اجرا کن (workflow_dispatch یا یک Commit خالی) و نتیجه واقعی را ثبت کن؛ (۲) اگر دوباره fail شد، warm-up صریح (یک درخواست اولیه به `/Account/Login` پیش از شروع چک‌ها) یا بررسی هم‌زمانی Jobهای `publish`/`publish-windows` روی یک Runner مشترک را بررسی کن.
+- **تست لازم:** Re-run واقعی CI؛ در صورت تکرار، افزودن Retry منطقی در `scripts/smoke-published-app.sh` یا لاگ بیشتر برای تشخیص علت.
+- **وابستگی:** به تنهایی مانع کار دیگری نیست، اما ادعای «CI سبز» در مستندات باید تا تأیید مجدد محتاطانه خوانده شود.
+
+### شناسه AUD-2026-10-21-02 — مسیر Google OAuth کاملاً بدون Handler ثبت‌شده (نه فقط کامنت)
+- **شدت:** Medium | **وضعیت:** Open
+- **محل:** `Server/Pages/Google/Login.cshtml.cs` (`OnGet` → `HttpContext.ChallengeAsync(GoogleDefaults.AuthenticationScheme, ...)`)، `Server/Pages/Google/Response.cshtml.cs`، `Server/Server.csproj` (وابستگی `Microsoft.AspNetCore.Authentication.Google` هنوز موجود).
+- **شواهد:** `grep -n "Google" Server/Program.cs` هیچ نتیجه‌ای برنگرداند — یعنی هیچ `.AddGoogle(...)` یا ثبت Scheme در Pipeline وجود ندارد (نه حتی به‌صورت کامنت، کاملاً غایب). `grep` برای لینک به `/Google/Login` در تمام `.cshtml`ها هم صفر نتیجه داد → این یک Route یتیم (Dead Route) بدون لینک UI است.
+- **سناریوی سوءاستفاده/اثر:** درخواست مستقیم به `/Google/Login` باعث `InvalidOperationException` («No authentication handler is registered for the scheme 'Google'») می‌شود. ExceptionHandler استاندارد پروژه این را می‌گیرد و پیام عمومی بدون جزئیات نشان می‌دهد (طبق بررسی `docs/SECURITY.md`)، بنابراین افشای اطلاعات حساس رخ نمی‌دهد؛ ریسک اصلی، کد/وابستگی بلااستفاده و تجربه کاربری ناقص (خطای کنترل‌نشده به‌جای 404) است، نه نشت امنیتی مستقیم.
+- **راهکار:** تصمیم معمار/کاربر لازم است: یا این صفحات و وابستگی NuGet مرتبط کامل حذف شوند، یا Google OAuth با Client ID/Secret واقعی (از Secret Store) کامل و امن پیاده‌سازی شود. این دقیقاً همان ریسک باز #7 در `docs/PROJECT_STATUS.md` است؛ تنها تفاوت با توضیح قبلی («کامنت شده») این است که در کد فعلی حتی یک خط کامنت هم از ثبت Handler نیست — کاملاً غایب است.
+- **تست لازم:** بعد از تصمیم، یک تست Integration که مسیر `/Google/Login` را یا 404 (پس از حذف) یا یک ریدایرکت صحیح 302 به Google (پس از پیاده‌سازی) تأیید کند.
+
+### شناسه AUD-2026-10-21-03 — آسیب‌پذیری High در `vite` (فقط ابزار توسعه، نه Bundle Production)
+- **شدت:** Low (بر خلاف برچسب «High» خود npm، اثر واقعی محدود به ابزار توسعه است) | **وضعیت:** Deferred
+- **محل:** `ClientApp/package-lock.json` → `vite@8.3.0-8.3.2` → وابستگی گذرای `launch-editor`.
+- **شواهد:** خروجی واقعی `npm audit` در `ClientApp`: سه Advisory (`GHSA-698v-4r3x-3vcv`, `GHSA-r825-w8mm-5pxw`, `GHSA-587h-7wmj-h5pm`) مربوط به «باز کردن فایل در ویرایشگر» از سرور Dev ویت، نه کد Bundle شده Production. `npm audit fix --force` نسخه `vite@8.3.5` (خارج از بازه فعلی `package.json`) را پیشنهاد می‌دهد.
+- **اثر:** این قابلیت فقط در حالت توسعه (`vite dev`) فعال است و در Build/Publish واقعی (`npm run build`) اجرا نمی‌شود؛ ریسک مستقیم برای کاربران Production نیست، اما باید برای امنیت محیط توسعه برطرف شود.
+- **راهکار:** ارتقای `vite` به نسخه Patched در یک وظیفه مجزا، همراه اجرای کامل `npm run typecheck && npm test && npm run build && npm run check:offline` برای رد تغییر رفتار.
+- **تست لازم:** `npm audit` بعد از ارتقا باید صفر یافته بدهد؛ کل مجموعه تست کلاینت باید سبز بماند.
+
+### شناسه AUD-2026-10-21-04 — اسکن آسیب‌پذیری NuGet: بدون یافته (Verified)
+- **شدت:** Informational | **وضعیت:** Verified
+- **شواهد:** `dotnet list Template.sln package --vulnerable --include-transitive` روی تمام ۱۲ پروژه Solution: «has no vulnerable packages given the current sources» برای همه.
+- **نتیجه:** نیاز به اقدام فوری ندارد؛ پیشنهاد می‌شود این دستور به‌صورت دوره‌ای در CI اجرا و Fail/Warn شود (طبق فاز ۴ نقشه راه که هنوز `[ ]` است).
+
+### شناسه AUD-2026-10-21-05 — سازگاری Migration/Model Snapshot: بدون Drift (Verified با محدودیت)
+- **شدت:** Informational | **وضعیت:** Verified (محدود)
+- **شواهد:** نصب `dotnet-ef` 10.0.0 و اجرای واقعی `dotnet ef migrations has-pending-model-changes` روی `Infrastructure.Persistence` → خروجی: «No changes have been made to the model since the last migration.» فهرست Migrationها (`dotnet ef migrations list`): `InitialCreate`، `AlignSchemaWithModel`، `WidenUserPasswordHash`.
+- **محدودیت صادقانه:** در این محیط SQL Server/LocalDB در دسترس نیست («LocalDB is not supported on this platform»)؛ بنابراین وضعیت «کدام Migration واقعاً روی یک دیتابیس Apply شده» تأیید **نشد** — فقط سازگاری فایل Snapshot با مدل فعلی تأیید شد. تست‌های Integration واقعی روی SQL Server (طبق `docs/TESTING.md`) باید جداگانه و با `FARANOU_TEST_SQLSERVER` اجرا شوند.
+
+### شناسه AUD-2026-10-21-06 — عدم وجود EF Core Global Query Filter: مطابق تصمیم مستند D-013 (نه یافته جدید)
+- **شدت:** Informational | **وضعیت:** Verified — مطابق مستندات
+- **شواهد:** `grep -rn "HasQueryFilter\|IgnoreQueryFilters"` در `Infrastructure`, `Server`, `Domain`, `Application` صفر نتیجه داد.
+- **تفسیر:** این دقیقاً با تصمیم صریح D-013 در `docs/DECISIONS.md` («Global Query Filter فعلاً اضافه نشد... با اولین ماژول حسابداری اضافه شود») هم‌خوانی دارد؛ عدم وجود Filter یک ناسازگاری کد/مستند نیست. دفاع فعلی فقط از طریق `CompanyAccessService` در سطح Service/Endpoint است. **تست‌های رفتاری مرتبط (`CompanyAccessServiceTests`, `ApiEndpointTests`) در این بررسی اجرا نشدند** (نیاز به EF InMemory/SQL Server دارند و در دامنه زمانی این مرحله اجرا نشد)؛ لازم است در مرحله اعتبارسنجی بعدی واقعاً اجرا شوند تا این مورد کاملاً Verified شود، نه فقط بر اساس Grep کد.
+
+### شناسه AUD-2026-10-21-07 — بهبود واقعی: عدم وجود `catch (Exception)` عمومی در `Server/Pages`
+- **شدت:** Informational (بهبود مثبت) | **وضعیت:** Verified (دامنه محدود)
+- **شواهد:** `grep -rc "catch (Exception" Server/Pages` → صفر در تمام فایل‌ها؛ در باسلاین ۲۰۲۶-۱۰-۱۶ چند مورد در PageModelهای CRUD ثبت شده بود.
+- **محدودیت:** فقط `Server/Pages` بررسی شد، نه کل مخزن (`Infrastructure`, `Application`, `Dtat*`). این یافته را نباید به کل مخزن تعمیم داد بدون بررسی مجزا.
+
+### یادداشت روش‌شناسی این دور
+- هیچ PR باز یا Draft در مخزن وجود ندارد («closed» همگی)؛ آخرین PR ادغام‌شده #44 دقیقاً همان HEAD فعلی `main` است. بنابراین خطر «اصلاح تکراری روی کاری که در شاخه دیگری انجام شده» در این لحظه وجود ندارد — فقط یک شاخه (`main`) در Remote موجود است.
+- تست‌های Unit/Integration .NET (`dotnet test`) و تست‌های کلاینت (`npm test`) در این دور اجرا **نشدند** (در دامنه زمانی این مرحله از ممیزی قرار نگرفت)؛ این یک محدودیت صادقانه است، نه ادعای پوشش. باید در مرحله اعتبارسنجی (مرحله چهار) واقعاً اجرا و نتیجه‌شان با کد خروج دقیق ثبت شود.
