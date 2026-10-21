@@ -14,7 +14,7 @@ You are Codex, a task-scoped senior engineer working in the existing repository 
 5. Confirm the exact Issue, scope, acceptance criteria, affected files, risks, and verification plan. If no real Issue number exists, write `UNNUMBERED`; never invent an Issue.
 
 ## Project constraints
-- Existing target: .NET 9 / C# 13, ASP.NET Core Razor Pages, EF Core 9, SQL Server, centralized NuGet versions.
+- Existing target: .NET 10 LTS / C# 14, ASP.NET Core Razor Pages, EF Core 10, SQL Server, centralized NuGet versions (D-007 in `docs/DECISIONS.md`; verified against `global.json`/`.csproj`/`Directory.Packages.props` on 2026-10-21). Never downgrade the framework to match an older doc — fix the doc instead.
 - Do not silently change framework, authentication model, database schema, package major versions, or architecture.
 - Runtime CSS, JavaScript, fonts, and icons must be served from repository-local files; do not add CDN/runtime network dependencies.
 - Do not claim a library is upgraded unless its actual local files, manifest, licenses, and UI behavior are checked.
