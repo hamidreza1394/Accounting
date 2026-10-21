@@ -3,7 +3,7 @@ import type { SelectedContext, Session } from '../api/types';
 import { formatPersianDate } from '../lib/date';
 import { Button } from './ui/Button';
 import { FaranouLogo } from './ui/FaranouLogo';
-import { BuildingIcon, CalendarIcon, SwapIcon } from './ui/icons';
+import { BuildingIcon, CalendarIcon, EyeIcon, SwapIcon } from './ui/icons';
 
 type AppShellProps = {
   session: Session;
@@ -79,6 +79,12 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
                 <span className="ms-2 text-xs font-normal tabular-nums text-muted">
                   ({formatPersianDate(context.fiscalPeriod.startDate)} تا {formatPersianDate(context.fiscalPeriod.endDate)})
                 </span>
+                {context.fiscalPeriod.accessMode === 'readOnly' ? (
+                  <span className="ms-2 inline-flex items-center gap-1 rounded-md border border-slate-300 bg-cool px-2 py-0.5 text-xs font-semibold text-muted">
+                    <EyeIcon width={13} height={13} />
+                    فقط مشاهده و گزارش‌گیری
+                  </span>
+                ) : null}
               </dd>
             </div>
           </dl>

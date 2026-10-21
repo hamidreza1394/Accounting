@@ -27,14 +27,14 @@ export function BlockedAccess({ session, reason, companies, onRetry, onLogout }:
             <LockIcon width={28} height={28} />
           </span>
           <h1 className="text-xl font-bold text-navy">
-            {noCompany ? 'شرکتی برای ورود در دسترس نیست' : 'دوره مالی بازی برای ورود وجود ندارد'}
+            {noCompany ? 'شرکتی برای ورود در دسترس نیست' : 'دوره مالی قابل ورودی وجود ندارد'}
           </h1>
           <p className="text-sm leading-7 text-muted">
             {noCompany
               ? infrastructure
                 ? 'حساب زیرساختی به شرکتی تعلق ندارد. برای کار با اطلاعات یک شرکت، با حساب کاربری عضو آن شرکت وارد شوید.'
                 : 'عضویت فعالی در هیچ شرکتی ندارید یا عضویت شما غیرفعال شده است. برای دریافت دسترسی با مدیر سیستم یا مدیر شرکت تماس بگیرید.'
-              : 'شما در شرکت‌های زیر عضو هستید، اما هیچ‌کدام دوره مالی باز ندارند. برای ادامه، از مدیر شرکت بخواهید یک دوره مالی باز تعریف یا فعال کند.'}
+              : 'شما در شرکت‌های زیر عضو هستید، اما هیچ‌کدام دوره مالی باز یا بسته‌ای برای ورود ندارند. برای ادامه، از مدیر شرکت بخواهید یک دوره مالی تعریف یا فعال کند.'}
           </p>
         </div>
 
@@ -46,7 +46,7 @@ export function BlockedAccess({ session, reason, companies, onRetry, onLogout }:
                   <BuildingIcon className="text-navy" />
                   {company.name}
                 </span>
-                <Badge tone="warning">بدون دوره مالی باز</Badge>
+                <Badge tone="warning">بدون دوره مالی قابل ورود</Badge>
               </li>
             ))}
           </ul>

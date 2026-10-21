@@ -41,6 +41,7 @@ export function period(id: string, title: string, overrides: Record<string, unkn
     endDate: '2027-03-20',
     status: 'Open',
     isSelectable: true,
+    accessMode: 'readWrite',
     ...overrides,
   };
 }

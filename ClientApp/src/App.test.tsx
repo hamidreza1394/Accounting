@@ -6,7 +6,7 @@ import { antiforgeryRoute, company, contextBody, period, selected, session, stub
 
 const open1405 = period('p1', 'سال مالی ۱۴۰۵');
 const open1406 = period('p2', 'سال مالی ۱۴۰۶', { startDate: '2027-03-21', endDate: '2028-03-19' });
-const closed1404 = period('p0', 'سال مالی ۱۴۰۴', { status: 'Closed', isSelectable: false });
+const closed1404 = period('p0', 'سال مالی ۱۴۰۴', { status: 'Closed', accessMode: 'readOnly' });
 
 const companyA = company('a', 'شرکت الف', [open1405], '10101010101');
 const overviewA = {
@@ -110,7 +110,7 @@ describe('App', () => {
     expect(postBodies).toEqual([{ companyId: 'b', fiscalPeriodId: 'p2' }]);
   });
 
-  it('lists the periods of the only company when it has several open ones; closed periods cannot be chosen', async () => {
+  it('lists the periods of the only company when it has several open ones; a closed period is enterable as view-only', async () => {
     const company2 = company('a', 'شرکت الف', [open1406, open1405, closed1404]);
     stubApi({
       ...antiforgeryRoute,
@@ -123,11 +123,67 @@ describe('App', () => {
     await screen.findByRole('heading', { name: 'انتخاب دوره مالی و شرکت' });
     // The single company is selected for the user; its periods are shown.
     expect(screen.getByRole('radio', { name: /شرکت الف/ })).toBeChecked();
-    expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۴/ })).toBeDisabled();
+    expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۴/ })).toBeEnabled();
+    expect(screen.getByText('ورود فقط برای مشاهده و گزارش‌گیری')).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۵/ })).toBeEnabled();
     // Nothing is chosen for the user when more than one period is open.
     expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۵/ })).not.toBeChecked();
     expect(screen.getByRole('button', { name: /ورود به محیط کاری/ })).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('preselects the single open period even when closed ones exist, and shows the read-only mode after entering a closed one', async () => {
+    const company2 = company('a', 'شرکت الف', [open1405, closed1404]);
+    const postBodies: unknown[] = [];
+    stubApi({
+      ...antiforgeryRoute,
+      'GET /api/v1/session': { status: 200, body: session },
+      'GET /api/v1/context': { status: 200, body: contextBody({ companies: [company2] }) },
+      'POST /api/v1/context': ({ body }) => {
+        postBodies.push(body);
+        return { status: 200, body: selected(company2, closed1404) };
+      },
+      'GET /api/v1/companies/a/overview': { status: 200, body: overviewA },
+    });
+
+    render(<App navigate={vi.fn()} />);
+
+    await screen.findByRole('heading', { name: 'انتخاب دوره مالی و شرکت' });
+    expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۵/ })).toBeChecked();
+
+    // Choosing the closed period explicitly is allowed: it opens for viewing and reports only.
+    await userEvent.click(screen.getByText(/سال مالی ۱۴۰۴/));
+    await userEvent.click(screen.getByRole('button', { name: /ورود به محیط کاری/ }));
+
+    expect(await screen.findByRole('heading', { name: 'داشبورد' })).toBeInTheDocument();
+    expect(postBodies).toEqual([{ companyId: 'a', fiscalPeriodId: 'p0' }]);
+    expect(screen.getByText('فقط مشاهده و گزارش‌گیری')).toBeInTheDocument();
+  });
+
+  it('drops the data of the previous company when the user switches, and loads the new one', async () => {
+    const companyB = company('b', 'شرکت ب', [open1406]);
+    const overviewB = {
+      company: { id: 'b', name: 'شرکت ب', nationalId: null, roleName: 'حسابدار' },
+      fiscalPeriods: [{ id: 'p2', title: 'سال مالی ۱۴۰۶', startDate: '2027-03-21', endDate: '2028-03-19', status: 'Open' }],
+    };
+    const choices = contextBody({ current: selected(companyA, open1405), companies: [companyA, companyB] });
+    const fetchMock = stubApi({
+      ...antiforgeryRoute,
+      'GET /api/v1/session': { status: 200, body: session },
+      'GET /api/v1/context': { status: 200, body: choices },
+      'POST /api/v1/context': { status: 200, body: selected(companyB, open1406) },
+      'GET /api/v1/companies/a/overview': { status: 200, body: overviewA },
+      'GET /api/v1/companies/b/overview': { status: 200, body: overviewB },
+    });
+
+    render(<App navigate={vi.fn()} />);
+    await screen.findByRole('heading', { name: 'داشبورد' });
+    await userEvent.click(await screen.findByRole('button', { name: /تغییر شرکت یا دوره/ }));
+    await userEvent.click(await screen.findByRole('radio', { name: /شرکت ب/ }));
+    await userEvent.click(screen.getByRole('button', { name: /ورود به محیط کاری/ }));
+
+    await waitFor(() => expect(fetchMock.mock.calls.some((call) => call[0] === '/api/v1/companies/b/overview')).toBe(true));
+    // No leftover of company A (its period title) remains once company B is active.
+    await waitFor(() => expect(screen.queryByText('سال مالی ۱۴۰۵')).not.toBeInTheDocument());
   });
 
   it('does not open the working environment when the user has no company', async () => {
@@ -144,21 +200,22 @@ describe('App', () => {
     expect(fetchMock.mock.calls.some((call) => String(call[0]).includes('/overview'))).toBe(false);
   });
 
-  it('explains that a company has no open fiscal period and does not open the environment', async () => {
+  it('explains that a company has no enterable fiscal period and does not open the environment', async () => {
+    const archived = period('p9', 'سال بایگانی', { status: 'Archived', isSelectable: false, accessMode: null });
     stubApi({
       ...antiforgeryRoute,
       'GET /api/v1/session': { status: 200, body: session },
       'GET /api/v1/context': {
         status: 200,
-        body: contextBody({ entry: 'noEligiblePeriod', companies: [company('a', 'شرکت الف', [closed1404])] }),
+        body: contextBody({ entry: 'noEligiblePeriod', companies: [company('a', 'شرکت الف', [archived])] }),
       },
     });
 
     render(<App navigate={vi.fn()} />);
 
-    expect(await screen.findByRole('heading', { name: 'دوره مالی بازی برای ورود وجود ندارد' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'دوره مالی قابل ورودی وجود ندارد' })).toBeInTheDocument();
     expect(screen.getByText('شرکت الف')).toBeInTheDocument();
-    expect(screen.getByText('بدون دوره مالی باز')).toBeInTheDocument();
+    expect(screen.getByText('بدون دوره مالی قابل ورود')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'داشبورد' })).not.toBeInTheDocument();
   });
 

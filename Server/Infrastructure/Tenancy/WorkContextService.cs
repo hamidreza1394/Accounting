@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Tenancy;
@@ -20,15 +21,23 @@ public sealed class WorkContextService
 	/// <summary>The upper bound of fiscal periods offered per company.</summary>
 	public const int MaxFiscalPeriodsPerCompany = 50;
 
+	public const string SelectedEvent = "WorkContextSelected";
+	public const string ChangedEvent = "WorkContextChanged";
+	public const string DeniedEvent = "WorkContextSelectionDenied";
+
 	public WorkContextService(
 		Data.DatabaseContext databaseContext,
 		CompanyAccessService companyAccessService,
-		WorkContextCookie cookie)
+		WorkContextCookie cookie,
+		ILogger<WorkContextService> logger)
 	{
 		DatabaseContext = databaseContext;
 		CompanyAccessService = companyAccessService;
 		Cookie = cookie;
+		Logger = logger;
 	}
+
+	private ILogger<WorkContextService> Logger { get; }
 
 	private Data.DatabaseContext DatabaseContext { get; }
 
@@ -112,19 +121,87 @@ public sealed class WorkContextService
 		Guid requestedFiscalPeriodId,
 		CancellationToken cancellationToken = default)
 	{
-		var context = await ResolveAsync(userId, requestedCompanyId, requestedFiscalPeriodId, cancellationToken);
+		var result = await ResolveAsync(userId, requestedCompanyId, requestedFiscalPeriodId, cancellationToken);
 
-		if (context.Outcome == SelectionOutcome.Selected)
+		// What the user was working in before, if anything: a change of environment is audited as such.
+		var previous = Cookie.Read(httpContext, userId, sessionId);
+
+		if (result.Outcome == SelectionOutcome.Selected)
 		{
-			Cookie.Write(
+			var selected = result.Context!;
+
+			// The new choice replaces the old one completely (a single cookie), and every later read
+			// validates it against the database again, so nothing of the previous environment lingers.
+			Cookie.Write(httpContext, userId, sessionId, selected.Company.CompanyId, selected.FiscalPeriod.Id);
+
+			var changed = previous is { } before
+				&& (before.CompanyId != selected.Company.CompanyId || before.FiscalPeriodId != selected.FiscalPeriod.Id);
+
+			await WriteAuditAsync(
 				httpContext,
+				changed ? ChangedEvent : SelectedEvent,
 				userId,
-				sessionId,
-				context.Context!.Company.CompanyId,
-				context.Context.FiscalPeriod.Id);
+				selected.Company.CompanyId,
+				selected.FiscalPeriod.Id,
+				new
+				{
+					accessMode = selected.FiscalPeriod.AccessMode?.ToString(),
+					previousCompanyId = previous?.CompanyId,
+					previousFiscalPeriodId = previous?.FiscalPeriodId,
+				},
+				cancellationToken);
+		}
+		else
+		{
+			// The requested identifiers come from the client and are unverified: they are recorded as
+			// details only, never as the tenant of the event.
+			await WriteAuditAsync(
+				httpContext,
+				DeniedEvent,
+				userId,
+				null,
+				requestedFiscalPeriodId,
+				new
+				{
+					outcome = result.Outcome.ToString(),
+					requestedCompanyId,
+					requestedFiscalPeriodId,
+				},
+				cancellationToken);
 		}
 
-		return context;
+		return result;
+	}
+
+	private async Task WriteAuditAsync(
+		HttpContext httpContext,
+		string eventType,
+		Guid userId,
+		Guid? tenantId,
+		Guid fiscalPeriodId,
+		object details,
+		CancellationToken cancellationToken)
+	{
+		var ipAddress = Infrastructure.Security.AuthenticationService.GetAuditIP(
+			httpContext.Connection.RemoteIpAddress?.ToString());
+
+		DatabaseContext.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
+		{
+			EventType = eventType,
+			EntityType = "FiscalPeriod",
+			EntityId = fiscalPeriodId == Guid.Empty ? null : fiscalPeriodId.ToString(),
+			UserId = userId,
+			TenantId = tenantId,
+			IpAddress = ipAddress,
+			OccurredAtUtc = DateTime.UtcNow,
+			CorrelationId = System.Diagnostics.Activity.Current?.Id,
+			DetailsJson = JsonSerializer.Serialize(details),
+		});
+
+		await DatabaseContext.SaveChangesAsync(cancellationToken);
+
+		// No cookie value and no personal data: only the event name and the (already stored) ids.
+		Logger.LogInformation("Work-context audit event {EventType} for user {UserId}.", eventType, userId);
 	}
 
 	/// <summary>

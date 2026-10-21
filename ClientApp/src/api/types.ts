@@ -33,8 +33,14 @@ export type CompanyOverview = {
   fiscalPeriods: FiscalPeriod[];
 };
 
-/** A fiscal period as offered for selection; `isSelectable` is decided by the server. */
-export type FiscalPeriodChoice = FiscalPeriod & { isSelectable: boolean };
+/** What a working context allows: an open period is read-write, a closed one is read-only. */
+export type AccessMode = 'readWrite' | 'readOnly';
+
+/**
+ * A fiscal period as offered for selection; `isSelectable` and `accessMode` are decided by the
+ * server (`accessMode` is `null` for a period that cannot be entered).
+ */
+export type FiscalPeriodChoice = FiscalPeriod & { isSelectable: boolean; accessMode: AccessMode | null };
 
 export type CompanyChoice = CompanySummary & { fiscalPeriods: FiscalPeriodChoice[] };
 
@@ -171,7 +177,11 @@ export function parseFiscalPeriodChoice(value: unknown): FiscalPeriodChoice {
   if (!isObject(value)) {
     throw new ContractError('fiscalPeriod');
   }
-  return { ...parseFiscalPeriod(value), isSelectable: readBoolean(value, 'isSelectable', 'fiscalPeriod') };
+  const mode = value['accessMode'];
+  if (mode !== null && mode !== 'readWrite' && mode !== 'readOnly') {
+    throw new ContractError('fiscalPeriod');
+  }
+  return { ...parseFiscalPeriod(value), isSelectable: readBoolean(value, 'isSelectable', 'fiscalPeriod'), accessMode: mode };
 }
 
 function parseCompanyChoice(value: unknown): CompanyChoice {

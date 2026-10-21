@@ -89,7 +89,7 @@ Browser ──(Cookie HttpOnly, same origin)──▶ ASP.NET Core (Server)
 | POST | `/api/v1/session/logout` | 204 / 400 | نیازمند هدر `X-XSRF-TOKEN` |
 | GET | `/api/v1/companies` | `[{ id, name, nationalId, roleName }]` | فقط شرکت‌های قابل دسترس؛ حساب زیرساختی: `[]` |
 | GET | `/api/v1/companies/{id}/overview` | `{ company, fiscalPeriods: [{ id, title, startDate, endDate, status }] }` / 404 | تاریخ‌ها ISO `yyyy-MM-dd` (میلادی)؛ 404 برای شرکت غیرمجاز یا ناموجود |
-| GET | `/api/v1/context` | `{ current \| null, entry, directSelection \| null, companies: [{ id, name, nationalId, roleName, fiscalPeriods: [{ id, title, startDate, endDate, status, isSelectable }] }] }` | `entry`: `directEntry` \| `selectionRequired` \| `noCompany` \| `noEligiblePeriod` (D-031)؛ `current` فقط در صورت اعتبار فعلی |
+| GET | `/api/v1/context` | `{ current \| null, entry, directSelection \| null, companies: [{ id, name, nationalId, roleName, fiscalPeriods: [{ id, title, startDate, endDate, status, isSelectable, accessMode }] }] }` | `entry`: `directEntry` \| `selectionRequired` \| `noCompany` \| `noEligiblePeriod` (D-031)؛ `current` فقط در صورت اعتبار فعلی؛ `accessMode`: `readWrite` (Open) \| `readOnly` (Closed) \| `null` (Archived؛ غیرقابل‌ورود) (D-032) |
 | POST | `/api/v1/context` | `{ company, fiscalPeriod }` / 400 / 401 / 404 / 409 | بدنه `{ companyId, fiscalPeriodId }`؛ هدر `X-XSRF-TOKEN`؛ 404 یکسان برای شرکت غیرمجاز، دوره ناموجود و دوره شرکت دیگر؛ 409 دوره غیرقابل‌انتخاب |
 | DELETE | `/api/v1/context` | 204 / 400 | فراموش‌کردن انتخاب؛ نیازمند `X-XSRF-TOKEN` |
 

@@ -34,7 +34,8 @@ internal sealed class WorkContextFixture : IDisposable
 
 		Cookie = new Infrastructure.Tenancy.WorkContextCookie(new EphemeralDataProtectionProvider(), TimeProvider.System);
 		Service = new Infrastructure.Tenancy.WorkContextService(
-			Database, new Infrastructure.Tenancy.CompanyAccessService(Database), Cookie);
+			Database, new Infrastructure.Tenancy.CompanyAccessService(Database), Cookie,
+			Microsoft.Extensions.Logging.Abstractions.NullLogger<Infrastructure.Tenancy.WorkContextService>.Instance);
 	}
 
 	public Data.DatabaseContext Database { get; }
@@ -126,18 +127,42 @@ public sealed class WorkContextOptionsTests
 	}
 
 	[Fact]
-	public async Task ClosedAndArchivedPeriods_AreIgnoredForDirectEntry_ButStillListed()
+	public async Task AClosedPeriod_IsEnterableReadOnly_AnArchivedOneIsNot_AndTheyAreAskedAbout()
 	{
 		using var fixture = new WorkContextFixture();
-		var (_, periods) = fixture.AddCompany(true, true, true, Closed, Open, Archived);
+		fixture.AddCompany(true, true, true, Closed, Open, Archived);
+
+		var options = await fixture.Service.GetOptionsAsync(fixture.User.Id);
+
+		// Open and closed are both enterable, so the user chooses (the open one is the usual way in).
+		Assert.Equal(Infrastructure.Tenancy.EntryMode.SelectionRequired, options.Entry);
+		var listed = Assert.Single(options.Companies).FiscalPeriods;
+		Assert.Equal(3, listed.Count);
+		Assert.Equal(2, listed.Count(period => period.IsSelectable));
+		Assert.Equal(Infrastructure.Tenancy.WorkAccessMode.ReadWrite, listed.Single(period => period.Status == Open).AccessMode);
+		Assert.Equal(Infrastructure.Tenancy.WorkAccessMode.ReadOnly, listed.Single(period => period.Status == Closed).AccessMode);
+		Assert.Null(listed.Single(period => period.Status == Archived).AccessMode);
+	}
+
+	[Fact]
+	public async Task OneCompanyWithOnlyAClosedPeriod_IsDirectEntry_ReadOnly()
+	{
+		using var fixture = new WorkContextFixture();
+		var (_, periods) = fixture.AddCompany(true, true, true, Closed);
 
 		var options = await fixture.Service.GetOptionsAsync(fixture.User.Id);
 
 		Assert.Equal(Infrastructure.Tenancy.EntryMode.DirectEntry, options.Entry);
-		Assert.Equal(periods[1].Id, options.DirectFiscalPeriodId);
-		var listed = Assert.Single(options.Companies).FiscalPeriods;
-		Assert.Equal(3, listed.Count);
-		Assert.Single(listed, period => period.IsSelectable);
+		Assert.Equal(periods[0].Id, options.DirectFiscalPeriodId);
+	}
+
+	[Fact]
+	public void ThePolicy_GivesFullAccessToOpen_ViewingToClosed_AndNothingToArchived()
+	{
+		Assert.Equal(Infrastructure.Tenancy.WorkAccessMode.ReadWrite, Infrastructure.Tenancy.FiscalPeriodSelectionPolicy.GetAccessMode(Open));
+		Assert.Equal(Infrastructure.Tenancy.WorkAccessMode.ReadOnly, Infrastructure.Tenancy.FiscalPeriodSelectionPolicy.GetAccessMode(Closed));
+		Assert.Null(Infrastructure.Tenancy.FiscalPeriodSelectionPolicy.GetAccessMode(Archived));
+		Assert.False(Infrastructure.Tenancy.FiscalPeriodSelectionPolicy.IsSelectable(Archived));
 	}
 
 	[Fact]
@@ -166,11 +191,11 @@ public sealed class WorkContextOptionsTests
 	}
 
 	[Fact]
-	public async Task ACompanyWithoutAPeriod_OrWithOnlyClosedOnes_IsNoEligiblePeriod()
+	public async Task ACompanyWithoutAPeriod_OrWithOnlyArchivedOnes_IsNoEligiblePeriod()
 	{
 		using var fixture = new WorkContextFixture();
 		fixture.AddCompany(true, true, true);
-		fixture.AddCompany(true, true, true, Closed, Archived);
+		fixture.AddCompany(true, true, true, Archived, Archived);
 
 		var options = await fixture.Service.GetOptionsAsync(fixture.User.Id);
 
@@ -279,13 +304,57 @@ public sealed class WorkContextSelectionTests
 		Assert.Equal(Infrastructure.Tenancy.SelectionOutcome.PeriodNotFound, empty.Outcome);
 	}
 
-	[Theory]
-	[InlineData(Domain.FiscalPeriodStatus.Closed)]
-	[InlineData(Domain.FiscalPeriodStatus.Archived)]
-	public async Task ANonOpenPeriod_IsRefused(Domain.FiscalPeriodStatus status)
+	[Fact]
+	public async Task AClosedPeriod_IsAccepted_ButOnlyForViewing()
 	{
 		using var fixture = new WorkContextFixture();
-		var (company, periods) = fixture.AddCompany(true, true, true, status);
+		var (company, periods) = fixture.AddCompany(true, true, true, Domain.FiscalPeriodStatus.Closed);
+
+		var result = await fixture.Service.SelectAsync(
+			NewHttpContext(fixture), fixture.User.Id, Guid.NewGuid(), company.Id, periods[0].Id);
+
+		Assert.Equal(Infrastructure.Tenancy.SelectionOutcome.Selected, result.Outcome);
+		Assert.Equal(Infrastructure.Tenancy.WorkAccessMode.ReadOnly, result.Context!.FiscalPeriod.AccessMode);
+		Assert.False(result.Context.AllowsWrites);
+	}
+
+	[Fact]
+	public async Task AnOpenPeriod_AllowsWrites()
+	{
+		using var fixture = new WorkContextFixture();
+		var (company, periods) = fixture.AddCompany(true, true, true, Domain.FiscalPeriodStatus.Open);
+
+		var result = await fixture.Service.SelectAsync(
+			NewHttpContext(fixture), fixture.User.Id, Guid.NewGuid(), company.Id, periods[0].Id);
+
+		Assert.True(result.Context!.AllowsWrites);
+	}
+
+	[Fact]
+	public async Task EverySelection_IsAudited_AndADeniedOneNeverNamesAnUnverifiedTenant()
+	{
+		using var fixture = new WorkContextFixture();
+		var (company, periods) = fixture.AddCompany(true, true, true, Domain.FiscalPeriodStatus.Open);
+		var (_, foreign) = fixture.AddCompany(false, true, true, Domain.FiscalPeriodStatus.Open);
+		var sessionId = Guid.NewGuid();
+
+		await fixture.Service.SelectAsync(NewHttpContext(fixture), fixture.User.Id, sessionId, company.Id, periods[0].Id);
+		await fixture.Service.SelectAsync(NewHttpContext(fixture), fixture.User.Id, sessionId, company.Id, foreign[0].Id);
+
+		var events = await fixture.Database.SecurityAuditEvents.OrderBy(item => item.OccurredAtUtc).ToListAsync();
+		Assert.Equal(2, events.Count);
+		Assert.Equal(Infrastructure.Tenancy.WorkContextService.SelectedEvent, events[0].EventType);
+		Assert.Equal(company.Id, events[0].TenantId);
+		Assert.Equal(Infrastructure.Tenancy.WorkContextService.DeniedEvent, events[1].EventType);
+		Assert.Null(events[1].TenantId);
+		Assert.Equal(fixture.User.Id, events[1].UserId);
+	}
+
+	[Fact]
+	public async Task AnArchivedPeriod_IsRefused()
+	{
+		using var fixture = new WorkContextFixture();
+		var (company, periods) = fixture.AddCompany(true, true, true, Domain.FiscalPeriodStatus.Archived);
 
 		var result = await fixture.Service.SelectAsync(
 			NewHttpContext(fixture), fixture.User.Id, Guid.NewGuid(), company.Id, periods[0].Id);

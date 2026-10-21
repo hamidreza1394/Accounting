@@ -56,7 +56,7 @@ describe('WorkContextSelector', () => {
     renderSelector(
       contextBody({
         companies: [
-          company('a', 'شرکت الف', [period('p1', 'دوره', { status: 'Closed', isSelectable: false })]),
+          company('a', 'شرکت الف', [period('p1', 'دوره', { status: 'Archived', isSelectable: false, accessMode: null })]),
           company('b', 'شرکت ب', [period('p2', 'دوره')]),
         ],
       }) as WorkContext,
@@ -64,7 +64,7 @@ describe('WorkContextSelector', () => {
 
     const disabled = screen.getByRole('radio', { name: /شرکت الف/ });
     expect(disabled).toBeDisabled();
-    expect(disabled).toHaveAccessibleDescription(/یک دوره مالی باز برای این شرکت لازم است/);
+    expect(disabled).toHaveAccessibleDescription(/یک دوره مالی باز یا بسته برای این شرکت لازم است/);
     expect(screen.getByRole('radio', { name: /شرکت ب/ })).toBeEnabled();
   });
 
@@ -74,8 +74,8 @@ describe('WorkContextSelector', () => {
         companies: [
           company('a', 'شرکت الف', [
             period('p1', 'باز'),
-            period('p2', 'سال قدیمی', { status: 'Closed', isSelectable: false }),
-            period('p3', 'سال بایگانی', { status: 'Archived', isSelectable: false }),
+            period('p2', 'سال قدیمی', { status: 'Closed', accessMode: 'readOnly' }),
+            period('p3', 'سال بایگانی', { status: 'Archived', isSelectable: false, accessMode: null }),
           ]),
         ],
       }) as WorkContext,

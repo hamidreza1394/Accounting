@@ -146,7 +146,7 @@ public sealed class WorkContextHttpTests : IClassFixture<FaranouApplicationFacto
 		var company = await Factory.WithDatabaseAsync(database => TestData.AddCompanyAsync(database, TestData.Unique("شرکت-")));
 		await Factory.WithDatabaseAsync(database => TestData.AddMembershipAsync(database, user, company));
 		var closedId = await Factory.WithDatabaseAsync(database => TestData.AddFiscalPeriodAsync(
-			database, company, "بسته", Start, End, Domain.FiscalPeriodStatus.Closed));
+			database, company, "بایگانی", Start, End, Domain.FiscalPeriodStatus.Archived));
 		using var client = Factory.CreateBrowser();
 		await Browser.SignInAsync(client, user);
 
@@ -156,9 +156,10 @@ public sealed class WorkContextHttpTests : IClassFixture<FaranouApplicationFacto
 		var period = Assert.Single(Assert.Single(context.GetProperty("companies").EnumerateArray())
 			.GetProperty("fiscalPeriods").EnumerateArray());
 		Assert.False(period.GetProperty("isSelectable").GetBoolean());
-		Assert.Equal("Closed", period.GetProperty("status").GetString());
+		Assert.Equal("Archived", period.GetProperty("status").GetString());
+		Assert.Equal(JsonValueKind.Null, period.GetProperty("accessMode").ValueKind);
 
-		// The server refuses the closed period even though the client sends a real identifier.
+		// The server refuses the archived period even though the client sends a real identifier.
 		Assert.Equal(HttpStatusCode.Conflict, (await SelectAsync(client, company.Id, closedId)).StatusCode);
 		Assert.Equal(JsonValueKind.Null, (await GetContextAsync(client)).GetProperty("current").ValueKind);
 	}
@@ -274,7 +275,7 @@ public sealed class WorkContextHttpTests : IClassFixture<FaranouApplicationFacto
 	}
 
 	[Fact]
-	public async Task APeriodThatIsClosedAfterTheSelection_EndsTheContext()
+	public async Task APeriodThatIsArchivedAfterTheSelection_EndsTheContext()
 	{
 		var (user, company, periodId) = await UserWithOneOpenPeriodAsync();
 		using var client = Factory.CreateBrowser();
@@ -284,7 +285,7 @@ public sealed class WorkContextHttpTests : IClassFixture<FaranouApplicationFacto
 		await Factory.WithDatabaseAsync(async database =>
 		{
 			var period = await database.FiscalPeriods.SingleAsync(item => item.Id == periodId);
-			period.Status = Domain.FiscalPeriodStatus.Closed;
+			period.Status = Domain.FiscalPeriodStatus.Archived;
 			await database.SaveChangesAsync();
 		});
 
@@ -386,5 +387,118 @@ public sealed class WorkContextHttpTests : IClassFixture<FaranouApplicationFacto
 		// Only opaque protected data: neither identifier appears in clear text.
 		Assert.DoesNotContain(company.Id.ToString(), cookie, StringComparison.OrdinalIgnoreCase);
 		Assert.DoesNotContain(periodId.ToString(), cookie, StringComparison.OrdinalIgnoreCase);
+	}
+
+	[Fact]
+	public async Task ACompanyWithOnlyAClosedPeriod_CanBeEnteredReadOnly_AndTheModeFollowsTheDatabase()
+	{
+		var (user, company, periodId) = await UserWithOneOpenPeriodAsync();
+		await Factory.WithDatabaseAsync(async database =>
+		{
+			var period = await database.FiscalPeriods.SingleAsync(item => item.Id == periodId);
+			period.Status = Domain.FiscalPeriodStatus.Closed;
+			await database.SaveChangesAsync();
+		});
+		using var client = Factory.CreateBrowser();
+		await Browser.SignInAsync(client, user);
+
+		var response = await SelectAsync(client, company.Id, periodId);
+
+		Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+		var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+		Assert.Equal("readOnly", body.GetProperty("fiscalPeriod").GetProperty("accessMode").GetString());
+		var current = (await GetContextAsync(client)).GetProperty("current");
+		Assert.Equal("readOnly", current.GetProperty("fiscalPeriod").GetProperty("accessMode").GetString());
+
+		// The period is reopened: the very next read reports full access.
+		await Factory.WithDatabaseAsync(async database =>
+		{
+			var period = await database.FiscalPeriods.SingleAsync(item => item.Id == periodId);
+			period.Status = Domain.FiscalPeriodStatus.Open;
+			await database.SaveChangesAsync();
+		});
+		var reopened = (await GetContextAsync(client)).GetProperty("current");
+		Assert.Equal("readWrite", reopened.GetProperty("fiscalPeriod").GetProperty("accessMode").GetString());
+	}
+
+	[Fact]
+	public async Task ChangingTheWorkContextInTheSameSignIn_ReplacesIt_IsAudited_AndNeedsNoNewSignIn()
+	{
+		var (user, first, firstPeriod) = await UserWithOneOpenPeriodAsync();
+		var second = await Factory.WithDatabaseAsync(database => TestData.AddCompanyAsync(database, TestData.Unique("شرکت-")));
+		await Factory.WithDatabaseAsync(database => TestData.AddMembershipAsync(database, user, second));
+		var secondPeriod = await Factory.WithDatabaseAsync(database =>
+			TestData.AddFiscalPeriodAsync(database, second, "سال مالی دوم", Start, End));
+		using var client = Factory.CreateBrowser();
+		await Browser.SignInAsync(client, user);
+
+		Assert.Equal(HttpStatusCode.OK, (await SelectAsync(client, first.Id, firstPeriod)).StatusCode);
+		Assert.Equal(HttpStatusCode.OK, (await SelectAsync(client, second.Id, secondPeriod)).StatusCode);
+
+		var current = (await GetContextAsync(client)).GetProperty("current");
+		Assert.Equal(second.Id, current.GetProperty("company").GetProperty("id").GetGuid());
+		Assert.Equal(secondPeriod, current.GetProperty("fiscalPeriod").GetProperty("id").GetGuid());
+
+		var events = await Factory.WithDatabaseAsync(database => database.SecurityAuditEvents
+			.Where(item => item.UserId == user.Id && item.EventType.StartsWith("WorkContext"))
+			.OrderBy(item => item.OccurredAtUtc)
+			.ToListAsync());
+		Assert.Equal(new[] { "WorkContextSelected", "WorkContextChanged" }, events.Select(item => item.EventType).ToArray());
+		Assert.Equal(second.Id, events[1].TenantId);
+		Assert.Contains(first.Id.ToString(), events[1].DetailsJson);
+		Assert.DoesNotContain("Cookie", events[1].DetailsJson!, StringComparison.OrdinalIgnoreCase);
+	}
+
+	[Fact]
+	public async Task ADeniedChange_KeepsThePreviousContext_DoesNotGrantTheOtherCompany_AndIsAudited()
+	{
+		var (user, own, ownPeriod) = await UserWithOneOpenPeriodAsync();
+		var foreign = await Factory.WithDatabaseAsync(database => TestData.AddCompanyAsync(database, TestData.Unique("شرکت-")));
+		var foreignPeriod = await Factory.WithDatabaseAsync(database =>
+			TestData.AddFiscalPeriodAsync(database, foreign, "دوره-محرمانه", Start, End));
+		using var client = Factory.CreateBrowser();
+		await Browser.SignInAsync(client, user);
+		await SelectAsync(client, own.Id, ownPeriod);
+
+		var denied = await SelectAsync(client, foreign.Id, foreignPeriod);
+
+		Assert.Equal(HttpStatusCode.NotFound, denied.StatusCode);
+		var current = (await GetContextAsync(client)).GetProperty("current");
+		Assert.Equal(own.Id, current.GetProperty("company").GetProperty("id").GetGuid());
+		var events = await Factory.WithDatabaseAsync(database => database.SecurityAuditEvents
+			.Where(item => item.UserId == user.Id && item.EventType == "WorkContextSelectionDenied")
+			.ToListAsync());
+		var deniedEvent = Assert.Single(events);
+		Assert.Null(deniedEvent.TenantId);
+	}
+
+	[Fact]
+	public async Task AfterAChange_TheMembershipOfTheOldCompanyNoLongerMatters_ButTheNewOneIsStillChecked()
+	{
+		var (user, first, firstPeriod) = await UserWithOneOpenPeriodAsync();
+		var second = await Factory.WithDatabaseAsync(database => TestData.AddCompanyAsync(database, TestData.Unique("شرکت-")));
+		await Factory.WithDatabaseAsync(database => TestData.AddMembershipAsync(database, user, second));
+		var secondPeriod = await Factory.WithDatabaseAsync(database =>
+			TestData.AddFiscalPeriodAsync(database, second, "دوره", Start, End));
+		using var client = Factory.CreateBrowser();
+		await Browser.SignInAsync(client, user);
+		await SelectAsync(client, first.Id, firstPeriod);
+		await SelectAsync(client, second.Id, secondPeriod);
+
+		await Factory.WithDatabaseAsync(async database =>
+		{
+			var membership = await database.UserCompanyMemberships.SingleAsync(item => item.UserId == user.Id && item.TenantId == first.Id);
+			membership.IsActive = false;
+			await database.SaveChangesAsync();
+		});
+		Assert.Equal(second.Id, (await GetContextAsync(client)).GetProperty("current").GetProperty("company").GetProperty("id").GetGuid());
+
+		await Factory.WithDatabaseAsync(async database =>
+		{
+			var membership = await database.UserCompanyMemberships.SingleAsync(item => item.UserId == user.Id && item.TenantId == second.Id);
+			membership.IsActive = false;
+			await database.SaveChangesAsync();
+		});
+		Assert.Equal(JsonValueKind.Null, (await GetContextAsync(client)).GetProperty("current").ValueKind);
 	}
 }

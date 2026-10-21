@@ -199,20 +199,30 @@ public static class WorkContextEndpoints
 			StartDate: period.StartDate,
 			EndDate: period.EndDate,
 			Status: period.Status.ToString(),
-			IsSelectable: period.IsSelectable);
+			IsSelectable: period.IsSelectable,
+			AccessMode: period.AccessMode switch
+			{
+				Infrastructure.Tenancy.WorkAccessMode.ReadWrite => "readWrite",
+				Infrastructure.Tenancy.WorkAccessMode.ReadOnly => "readOnly",
+				_ => null,
+			});
 	}
 }
 
 public sealed record SelectContextRequest(Guid CompanyId, Guid FiscalPeriodId);
 
-/// <summary>A fiscal period offered for selection; <c>IsSelectable</c> is decided by the server.</summary>
+/// <summary>
+/// A fiscal period offered for selection; <c>IsSelectable</c> and <c>AccessMode</c>
+/// (<c>readWrite</c>, <c>readOnly</c> or <c>null</c>) are decided by the server.
+/// </summary>
 public sealed record FiscalPeriodChoiceResponse(
 	Guid Id,
 	string Title,
 	DateOnly StartDate,
 	DateOnly EndDate,
 	string Status,
-	bool IsSelectable);
+	bool IsSelectable,
+	string? AccessMode);
 
 public sealed record CompanyChoiceResponse(
 	Guid Id,

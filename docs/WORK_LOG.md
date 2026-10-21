@@ -112,3 +112,9 @@
 - **اجرانشده:** CI، E2E و هر تست روی SQL Server (در محیط موجود نیست).
 - **`NeedsApproval`:** «دوره معتبر = Open»؛ دوره‌های بسته/بایگانی/آینده؛ تغییر زمینه حین نشست.
 - **گزارش:** `docs/handoffs/ISSUE-UNNUMBERED-company-fiscal-period-selection.md`.
+
+## 2026-10-21 — اعتبار دوره مالی و تغییر زمینه حین نشست (UNNUMBERED، همان شاخه `feature/company-fiscal-period-selection`)
+- **تصمیم کارفرما:** ADR D-032. Open=ورود عادی، Closed=فقط مشاهده/گزارش (`accessMode`)، Archived و دوره بیگانه/خارج دسترسی=ممنوع؛ تغییر زمینه حین نشست مجاز با بررسی سرور و ممیزی.
+- **کد:** سیاست در `WorkContext.cs`، ممیزی `WorkContextSelected/Changed/SelectionDenied` در `WorkContextService.cs`، فیلد `accessMode` در API؛ کلاینت: نشان «فقط مشاهده»، پیش‌انتخاب بدون ابهام، بازسازی داشبورد با کلید شرکت+دوره؛ اصلاح انتخاب Radio در E2E (کلیک روی Label) و سناریوهای جدید.
+- **شاهد محلی:** ۲۵۳ تست .NET (Provider حافظه‌ای)، ۴۸ تست کلاینت، Build/typecheck/offline/static assets موفق. **اجرانشده:** E2E و تست روی SQL Server (فقط CI).
+- **باقی:** رفتار `Archived`/آینده `NeedsApproval`؛ اِعمال `AllowsWrites` روی Endpointهای نوشتن آینده.

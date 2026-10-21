@@ -8,7 +8,7 @@ import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { ChoiceCard } from './ui/ChoiceCard';
 import { FaranouLogo } from './ui/FaranouLogo';
-import { ArrowLeftIcon, BuildingIcon, CalendarIcon, CloseIcon, InfoIcon, LockIcon, SearchIcon, UserIcon } from './ui/icons';
+import { ArrowLeftIcon, BuildingIcon, CalendarIcon, CloseIcon, EyeIcon, InfoIcon, LockIcon, SearchIcon, UserIcon } from './ui/icons';
 
 const statusLabels = { Open: 'باز', Closed: 'بسته', Archived: 'بایگانی‌شده' } as const;
 
@@ -30,10 +30,24 @@ function selectablePeriods(company: CompanyChoice): FiscalPeriodChoice[] {
   return company.fiscalPeriods.filter((period) => period.isSelectable);
 }
 
-/** The period to pre-select: only when there is no ambiguity. */
-function soleSelectablePeriod(company: CompanyChoice | undefined): string | null {
-  const periods = company ? selectablePeriods(company) : [];
-  return periods.length === 1 ? (periods[0]?.id ?? null) : null;
+function openPeriods(company: CompanyChoice): FiscalPeriodChoice[] {
+  return company.fiscalPeriods.filter((period) => period.accessMode === 'readWrite');
+}
+
+/**
+ * The period to pre-select, only when there is no ambiguity: the single open period (the usual
+ * way in), otherwise the single enterable period of any kind.
+ */
+function preferredPeriod(company: CompanyChoice | undefined): string | null {
+  if (!company) {
+    return null;
+  }
+  const open = openPeriods(company);
+  if (open.length === 1) {
+    return open[0]?.id ?? null;
+  }
+  const enterable = selectablePeriods(company);
+  return enterable.length === 1 ? (enterable[0]?.id ?? null) : null;
 }
 
 /**
@@ -65,7 +79,7 @@ export function WorkContextSelector({
     if (current && company?.id === current.company.id && company.fiscalPeriods.some((p) => p.id === current.fiscalPeriod.id && p.isSelectable)) {
       return current.fiscalPeriod.id;
     }
-    return soleSelectablePeriod(company);
+    return preferredPeriod(company);
   });
   const [query, setQuery] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -97,7 +111,7 @@ export function WorkContextSelector({
     setPeriodId((previous) =>
       previous && next?.fiscalPeriods.some((period) => period.id === previous && period.isSelectable)
         ? previous
-        : soleSelectablePeriod(next),
+        : preferredPeriod(next),
     );
     setError(null);
   }
@@ -171,7 +185,7 @@ export function WorkContextSelector({
           <div className="flex flex-col gap-1.5">
             <h1 className="text-2xl font-bold leading-snug text-ws-navy sm:text-[1.75rem]">انتخاب دوره مالی و شرکت</h1>
             <p className="max-w-3xl text-sm leading-8 text-ws-sub sm:text-[0.95rem]">
-              ابتدا شرکت موردنظر خود را از میان شرکت‌های مجاز حساب کاربری‌تان انتخاب کنید، سپس یکی از دوره‌های مالی باز آن را انتخاب کرده و وارد محیط کاری شوید.
+              ابتدا شرکت موردنظر خود را از میان شرکت‌های مجاز حساب کاربری‌تان انتخاب کنید، سپس یکی از دوره‌های مالی آن را انتخاب کرده و وارد محیط کاری شوید. دوره باز برای کار عادی است و دوره بسته فقط برای مشاهده و گزارش‌گیری.
             </p>
           </div>
 
@@ -223,8 +237,8 @@ export function WorkContextSelector({
               ) : (
                 <div role="radiogroup" aria-labelledby={`${groupId}-companies`} className="flex flex-col gap-2.5">
                   {visibleCompanies.map((item) => {
-                    const periodCount = selectablePeriods(item).length;
-                    const unavailable = periodCount === 0;
+                    const periodCount = openPeriods(item).length;
+                    const unavailable = selectablePeriods(item).length === 0;
                     const hintId = `${groupId}-company-${item.id}-hint`;
 
                     return (
@@ -250,7 +264,11 @@ export function WorkContextSelector({
                             <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                               <span className="text-lg font-bold text-ws-navy [overflow-wrap:anywhere]">{item.name}</span>
                               {unavailable ? (
-                                <Badge tone="warning">بدون دوره مالی باز</Badge>
+                                <Badge tone="warning">بدون دوره مالی قابل ورود</Badge>
+                              ) : periodCount === 0 ? (
+                                <Badge tone="neutral" icon={<EyeIcon width={14} height={14} />}>
+                                  فقط مشاهده و گزارش‌گیری
+                                </Badge>
                               ) : (
                                 <Badge tone="info" icon={<CalendarIcon width={14} height={14} />}>
                                   {periodCount} دوره مالی باز
@@ -275,7 +293,7 @@ export function WorkContextSelector({
                             {unavailable ? (
                               <span id={hintId} className="inline-flex items-center gap-1.5 text-[0.8125rem] font-medium text-ws-sub">
                                 <InfoIcon width={15} height={15} />
-                                برای ورود، یک دوره مالی باز برای این شرکت لازم است.
+                                برای ورود، یک دوره مالی باز یا بسته برای این شرکت لازم است.
                               </span>
                             ) : null}
                           </span>
@@ -334,6 +352,12 @@ export function WorkContextSelector({
                           <span className="text-[0.8125rem] tabular-nums text-ws-sub">
                             از {formatPersianDate(period.startDate)} تا {formatPersianDate(period.endDate)}
                           </span>
+                          {period.accessMode === 'readOnly' ? (
+                            <span className="inline-flex items-center gap-1.5 text-[0.8125rem] font-medium text-ws-sub">
+                              <EyeIcon width={15} height={15} />
+                              ورود فقط برای مشاهده و گزارش‌گیری
+                            </span>
+                          ) : null}
                           {period.isSelectable ? null : (
                             <span id={hintId} className="text-[0.8125rem] text-ws-sub">
                               ورود به این دوره امکان‌پذیر نیست.
@@ -364,7 +388,10 @@ export function WorkContextSelector({
             <span className="flex min-w-0 flex-col leading-snug">
               <span className="text-xs text-ws-sub">شرکت انتخاب‌شده</span>
               <strong className="text-base text-ws-navy [overflow-wrap:anywhere]">{company ? company.name : '—'}</strong>
-              <span className="text-[0.8125rem] text-ws-sub">{selectedPeriod ? selectedPeriod.title : '—'}</span>
+              <span className="text-[0.8125rem] text-ws-sub">
+                {selectedPeriod ? selectedPeriod.title : '—'}
+                {selectedPeriod?.accessMode === 'readOnly' ? ' · فقط مشاهده' : ''}
+              </span>
             </span>
           </div>
 

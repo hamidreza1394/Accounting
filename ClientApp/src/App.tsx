@@ -215,7 +215,11 @@ export function App({ navigate = defaultNavigate }: { navigate?: Navigate }) {
       }}
       onLogout={handleLogout}
     >
-      <Dashboard session={session} context={context.current} onUnauthenticated={handleUnauthenticated} />
+      <Dashboard
+        key={`${context.current.company.id}:${context.current.fiscalPeriod.id}`}
+        session={session}
+        context={context.current}
+        onUnauthenticated={handleUnauthenticated} />
     </AppShell>
   );
 }

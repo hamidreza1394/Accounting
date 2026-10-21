@@ -132,13 +132,23 @@ test('remember me issues a persistent cookie', async ({ page, context }) => {
 async function chooseAlicesCompany(page) {
   await page.goto('/app/');
   await expect(page.getByRole('heading', { name: 'انتخاب دوره مالی و شرکت' })).toBeVisible();
-  await page.getByRole('radio', { name: new RegExp(a.name) }).check();
-  await page.getByRole('radio', { name: /سال مالی ۱۴۰۵/ }).check();
+  await chooseOption(page, a.name, /سال مالی ۱۴۰۵/);
+}
+
+// The radios are visually hidden inside their label cards, so the label is what a user clicks.
+async function chooseOption(page, companyName, periodPattern) {
+  const companyRadio = page.getByRole('radio', { name: new RegExp(companyName) });
+  if (!(await companyRadio.isChecked())) {
+    await page.locator('label', { has: companyRadio }).click();
+  }
+  const periodRadio = page.getByRole('radio', { name: periodPattern });
+  await page.locator('label', { has: periodRadio }).click();
+  await expect(periodRadio).toBeChecked();
   await page.getByRole('button', { name: /ورود به محیط کاری/ }).click();
   await expect(page.getByRole('heading', { name: 'داشبورد' })).toBeVisible();
 }
 
-test('several companies: the user chooses, closed periods and foreign data are not offered', async ({ page }) => {
+test('several companies: the user chooses, a closed period is view-only and foreign data is not offered', async ({ page }) => {
   await signIn(page, alice);
   await page.goto('/app/');
 
@@ -148,8 +158,13 @@ test('several companies: the user chooses, closed periods and foreign data are n
   // A company without a fiscal period cannot be entered.
   await expect(page.getByRole('radio', { name: new RegExp(c.name) })).toBeDisabled();
 
+  // The closed period is offered, marked as view-only; it is not hidden.
+  await page.locator('label', { has: page.getByRole('radio', { name: new RegExp(a.name) }) }).click();
+  await expect(page.getByText('ورود فقط برای مشاهده و گزارش‌گیری')).toBeVisible();
+
   await chooseAlicesCompany(page);
   await expect(page.locator('table').getByText('۱۴۰۵/۰۱/۰۱')).toBeVisible();
+  await expect(page.getByText('فقط مشاهده و گزارش‌گیری')).toHaveCount(0);
   await expect(page.getByLabel('زمینه کاری جاری')).toContainText(a.name);
   await expectCleanPage(page);
 });
@@ -168,8 +183,23 @@ test('a company without a fiscal period blocks the entry with an explanation', a
   await signIn(page, dave);
   await page.goto('/app/');
 
-  await expect(page.getByRole('heading', { name: 'دوره مالی بازی برای ورود وجود ندارد' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'دوره مالی قابل ورودی وجود ندارد' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'داشبورد' })).toHaveCount(0);
+  await expectCleanPage(page);
+});
+
+test('a closed period opens for viewing only, and switching back leaves nothing of it behind', async ({ page }) => {
+  await signIn(page, alice);
+  await page.goto('/app/');
+  await expect(page.getByRole('heading', { name: 'انتخاب دوره مالی و شرکت' })).toBeVisible();
+  await chooseOption(page, a.name, /سال مالی ۱۴۰۴/);
+  await expect(page.getByLabel('زمینه کاری جاری')).toContainText('فقط مشاهده و گزارش‌گیری');
+
+  // Switching in the same sign-in: no new login, the badge belongs to the closed period only.
+  await page.getByRole('button', { name: /تغییر شرکت یا دوره/ }).click();
+  await expect(page.getByRole('heading', { name: 'انتخاب دوره مالی و شرکت' })).toBeVisible();
+  await chooseOption(page, a.name, /سال مالی ۱۴۰۵/);
+  await expect(page.getByLabel('زمینه کاری جاری')).not.toContainText('فقط مشاهده و گزارش‌گیری');
   await expectCleanPage(page);
 });
 
