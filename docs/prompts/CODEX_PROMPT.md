@@ -39,3 +39,10 @@ Summarize: (1) what changed, (2) key files, (3) tests actually run and outcomes,
 
 ## Assigned Issue
 [Paste the real Issue title, scope, and acceptance criteria here.]
+
+
+## مرجع مستندات و لایسنس (به‌روزرسانی 2026-10-21)
+- نقطه شروع مستندات: `docs/INDEX.md`. در تناقض، ترتیب D-030: کد ← CI/تست ← تصمیم کارفرما ← PR/تاریخچه ← مستندات ← پیشنهاد Agent. وضعیت‌ها: Accepted, Implemented, Verified, Proposed, NeedsApproval, Deprecated, Blocked, NotImplemented — فایل تست یا Migration را دلیل اجرا نگیر.
+- لایسنس تجاری، مشتری، نصب و زیرسیستم‌ها **پیاده‌سازی نشده‌اند** (`docs/LICENSING.md`، D-020..D-029). `ActivationKeysHandlerMiddleware` کد مرده و Deprecated است؛ آن را به Pipeline وصل نکن یا به‌عنوان لایسنس معرفی نکن (D-028).
+- کلید خصوصی صدور، رمز یا داده واقعی را در فایل، Log یا گزارش نیاور. ادعای مصونیت مطلق در برابر کپی ماشین آفلاین نکن.
+- ADR بعدی D-031 است.

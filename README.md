@@ -1,6 +1,6 @@
-# ASP.NET Core Razor Pages — Project Baseline
+# فرانو — نرم‌افزار حسابداری (ASP.NET Core Razor Pages + React)
 
-این مخزن، یک قالب موجود Razor Pages است که برای توسعه مرحله‌ای آماده شده است.
+مخزن نرم‌افزار حسابداری «فرانو»: پایه چندشرکتی (Multi-Tenant) روی ASP.NET Core و SQL Server با کلاینت React. **هنوز ماژول حسابداری (سند، سرفصل، گزارش) و سیستم لایسنس تجاری پیاده‌سازی نشده‌اند**؛ وضعیت واقعی در [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) و نقطه شروع مستندات در [docs/INDEX.md](docs/INDEX.md) است. مجوز استفاده (LICENSE) هنوز در مخزن تعیین نشده است (تصمیم مالک مخزن).
 
 ## فناوری‌ها
 - ASP.NET Core Razor Pages + Minimal API (`/api/v1`) / .NET 10 LTS
@@ -24,6 +24,9 @@ dotnet run --project Server/Server.csproj
 تنظیمات Connection String و ورود را طبق `docs/DEVELOPMENT.md` تنظیم کنید. مقادیر محرمانه نباید در فایل‌های tracked ذخیره شوند.
 
 ## مستندات اصلی
+- [فهرست و ترتیب مطالعه مستندات](docs/INDEX.md)
+- [نیازمندی‌های محصول](docs/PRODUCT_REQUIREMENTS.md) و [ردیابی نیازمندی‌ها](docs/REQUIREMENTS_TRACEABILITY.md)
+- [طرح لایسنس (NotImplemented)](docs/LICENSING.md)
 - [دستورالعمل Agentها](AGENTS.md)
 - [وضعیت پروژه](docs/PROJECT_STATUS.md)
 - [نقشه راه](docs/ROADMAP.md)
@@ -42,4 +45,3 @@ dotnet run --project Server/Server.csproj
 
 ## ساختار فعلی
 پروژه وب `Server`، لایه `Domain`، اسکلت `Application` و پروژه `Infrastructure/Persistence` (با نام‌فضای قدیمی `Data`) از هم جدا شده‌اند. منطق کاربردی قدیمی هنوز به‌طور کامل از PageModelها منتقل نشده است؛ مهاجرت باقی‌مانده باید در PRهای کوچک و همراه تست انجام شود. جزئیات در `docs/ARCHITECTURE.md` آمده است.
-# Accounting

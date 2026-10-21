@@ -24,3 +24,10 @@ You are a senior software engineer working in an existing ASP.NET Core Razor Pag
 
 ## هماهنگی بین Agentها
 پیش از شروع، docs/AGENT_COORDINATION.md را هم بخوان. اگر Agent مورد استفاده Codex است، الزامات docs/prompts/CODEX_PROMPT.md را نیز رعایت کن؛ برای GitHub Copilot از docs/prompts/COPILOT_PROMPT.md استفاده کن. در همه حالت‌ها Issue واقعی، شاخه مستقل، گزارش handoff و نتیجه واقعی تست‌ها الزامی است.
+
+
+## مرجع مستندات و لایسنس (به‌روزرسانی 2026-10-21)
+- نقطه شروع مستندات: `docs/INDEX.md`. در تناقض، ترتیب D-030: کد ← CI/تست ← تصمیم کارفرما ← PR/تاریخچه ← مستندات ← پیشنهاد Agent. وضعیت‌ها: Accepted, Implemented, Verified, Proposed, NeedsApproval, Deprecated, Blocked, NotImplemented — فایل تست یا Migration را دلیل اجرا نگیر.
+- لایسنس تجاری، مشتری، نصب و زیرسیستم‌ها **پیاده‌سازی نشده‌اند** (`docs/LICENSING.md`، D-020..D-029). `ActivationKeysHandlerMiddleware` کد مرده و Deprecated است؛ آن را به Pipeline وصل نکن یا به‌عنوان لایسنس معرفی نکن (D-028).
+- کلید خصوصی صدور، رمز یا داده واقعی را در فایل، Log یا گزارش نیاور. ادعای مصونیت مطلق در برابر کپی ماشین آفلاین نکن.
+- ADR بعدی D-031 است.

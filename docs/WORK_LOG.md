@@ -96,3 +96,11 @@
 - **اجرانشده (صادقانه):** تست‌های یکپارچه‌سازی مبتنی بر SQL Server واقعی (`CompanyAccessServiceTests`, `ApiEndpointTests` با `FARANOU_TEST_SQLSERVER`) — SQL Server/LocalDB در این محیط موجود نیست؛ بازبینی رفتاری خط‌به‌خط کد احراز هویت/چندمستاجری/CSP فراتر از آنچه در ممیزی ۲۰۲۶-۱۰-۱۶ و ۲۰۲۶-۱۰-۲۱ (مرحله یک) انجام شد؛ تصمیم دربارهٔ مسیر مرده Google OAuth (AUD-2026-10-21-02) و ارتقای `vite` (AUD-2026-10-21-03) — هنوز باز و منتظر تصمیم کاربر/اولویت‌بندی بعدی.
 - **Git:** Branch `fix/comprehensive-quality-hardening` از `main`@`8244bf3`. Commit/Push/PR پس از این یادداشت انجام می‌شود (طبق اجازهٔ صریح مأموریت سوم).
 - **گزارش:** `docs/handoffs/ISSUE-UNNUMBERED-comprehensive-quality-hardening.md`.
+
+## 2026-10-21 — مرجع رسمی معماری و مستندات (UNNUMBERED، شاخه `docs/architecture-source-of-truth`)
+- **پایه:** `main` @ `1d39dbf9e0843045e00441bf2778267e9764a3f6`. فقط مستندات تغییر کرد (کد، Schema، Migration، پیکربندی و بسته‌ها دست‌نخورده).
+- **جدید:** `docs/INDEX.md`، `PRODUCT_REQUIREMENTS.md`، `REQUIREMENTS_TRACEABILITY.md`، `LICENSING.md`، `LICENSING_DATA_MODEL.md` (ERD واقعی/پیشنهادی)، `LICENSING_WORKFLOWS.md`، `LICENSING_THREAT_MODEL.md`، ADRهای D-020..D-030 (جدول وضعیت D-001..D-030 و توضیح D-009)، handoff.
+- **اصلاح ناهمخوانی‌ها:** Activation قدیمی کد مرده است نه فعال (D-028)؛ Migration وجود دارد؛ ROADMAP/TESTING/SECURITY/PROJECT_STATUS هم‌تراز با کد و CI؛ بخش ممیزی جدید AUD-2026-10-21-08..20.
+- **شاهد اجرا:** فقط CI `39585708662` روی commit مبنا (۶ Job سبز، ۲۰۴ تست .NET روی SQL Server 2022، ۱۲ E2E). **Build/Test در این محیط اجرا نشد** (dotnet نیست).
+- **تصمیم‌های باز (`NeedsApproval`):** دوره ارفاق ۳۰ روزه، فهرست زیرسیستم‌ها، الگوریتم امضا، مسیر گذار Activation قدیمی (وجود مشتری Production: نامشخص)، رابطه Company ابری با مشتری، `LICENSE`.
+- **گزارش:** `docs/handoffs/ISSUE-UNNUMBERED-architecture-source-of-truth.md`. Merge نشد.

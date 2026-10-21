@@ -97,3 +97,35 @@ Browser ──(Cookie HttpOnly, same origin)──▶ ASP.NET Core (Server)
 
 ## ترتیب Middleware (2026-10-20)
 `SecurityHeaders` ← (Development: DeveloperExceptionPage | سایر: GlobalException، ExceptionHandler `/Errors/Error`، HSTS) ← Exception Handler اختصاصی `/api` (problem+json) ← HTTPS Redirection ← Static Files ← محافظ First-run ← Routing ← Authentication (+ اعتبارسنجی مجدد نشست) ← **Rate Limiter** ← Authorization ← Culture ← Razor Pages / API / Fallback `/app`.
+
+
+## وضعیت مرجع و معماری تجاری هدف (2026-10-21)
+مبنا: `main`@`1d39dbf`. ساختار بالا (Server/Domain/Infrastructure/Application اسکلت/ClientApp) وضعیت واقعی است؛ بخش زیر **طرح هدف با وضعیت `NotImplemented`** است (D-020..D-029).
+
+```mermaid
+flowchart LR
+  subgraph Vendor["سامانه فروشنده (Host/DB/هویت جدا)"]
+    VCP["Control Plane: مشتری، قرارداد، کاتالوگ"]
+    ISS["سرویس صدور (کلید خصوصی)"]
+  end
+  subgraph Contracts["Licensing.Contracts (مشترک؛ بدون کلید خصوصی)"]
+    FMT["قالب فایل + اعتبارسنجی امضا"]
+  end
+  subgraph Install["نصب مشتری (Cloud یا OnPremises)"]
+    SRV["Server: Razor + /api/v1"]
+    LIC["ماژول لایسنس نصب"]
+    ACC["هسته حسابداری + Tenant"]
+  end
+  VCP --> ISS
+  ISS -- "فایل امضاشده" --> LIC
+  FMT --- ISS
+  FMT --- LIC
+  SRV --> LIC
+  SRV --> ACC
+```
+
+- جهت وابستگی: `Server → Licensing.Contracts`؛ `Domain` همچنان به Server/Infrastructure وابسته نیست. `Licensing.Contracts` به EF Core و Server وابسته نیست.
+- بسته نصب مشتری شامل کد صدور یا کلید خصوصی نیست (D-021، D-024).
+- تصمیم هر درخواست حسابداری سمت سرور: هویت ← عضویت شرکت (D-013) ← لایسنس/زیرسیستم ← مجوز عملیاتی ← وضعیت دوره مالی (D-025). نمایش در React فقط بازتاب است.
+- این طرح D-002 (Modular Monolith برای هسته) را نقض نمی‌کند.
+- **انحراف‌های پیاده‌سازی از تصمیم/هدف (ثبت‌شده؛ بدون اصلاح در این مأموریت):** (۱) مجوز عملیاتی تعریف شده ولی مصرف نمی‌شود؛ (۲) `UserCompanyMemberships.UserId` بدون FK؛ (۳) `Application` هنوز اسکلت است و `Server` مستقیم به EF/`DbContext` وابسته است؛ (۴) کد مرده Activation (D-028).
