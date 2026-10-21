@@ -256,18 +256,28 @@ internal static class TestData
 		await database.SaveChangesAsync();
 	}
 
-	public static async Task AddFiscalPeriodAsync(
-		Data.DatabaseContext database, SeededCompany company, string title, DateOnly start, DateOnly end)
+	public static async Task<Guid> AddFiscalPeriodAsync(
+		Data.DatabaseContext database,
+		SeededCompany company,
+		string title,
+		DateOnly start,
+		DateOnly end,
+		Domain.FiscalPeriodStatus status = Domain.FiscalPeriodStatus.Open)
 	{
-		database.FiscalPeriods.Add(new Domain.FiscalPeriod
+		var period = new Domain.FiscalPeriod
 		{
 			TenantId = company.Id,
 			Title = title,
 			StartDate = start,
 			EndDate = end,
-		});
+			Status = status,
+		};
+
+		database.FiscalPeriods.Add(period);
 
 		await database.SaveChangesAsync();
+
+		return period.Id;
 	}
 }
 

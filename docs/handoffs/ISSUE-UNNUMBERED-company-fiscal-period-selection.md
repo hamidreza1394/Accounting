@@ -1,0 +1,58 @@
+# تحویل وظیفه — ISSUE-UNNUMBERED-company-fiscal-period-selection
+
+- **Issue:** `UNNUMBERED` (شماره جعلی ساخته نشد)
+- **Agent/مسئول:** Claude (Sonnet 5.5)
+- **تاریخ:** 2026-10-21
+- **وضعیت:** ناقص تا تأیید CI — پیاده‌سازی و تست محلی کامل؛ CI/E2E روی SQL Server اجرا نشده؛ ادغام نشده
+
+## هدف و معیارهای پذیرش
+- [x] یک شرکت با یک دوره معتبر → ورود مستقیم (تست: `App.test.tsx`، `WorkContextOptionsTests`)
+- [x] چند شرکت یا چند دوره → صفحه انتخاب (تست‌های کلاینت و سرور)
+- [x] بدون شرکت مجاز / بدون دوره معتبر → مسدود با پیام و گام بعدی
+- [x] هر ورود جدید دوباره می‌پرسد؛ انتخاب قبلی بازیابی نمی‌شود (Cookie وابسته به `SessionId` هر ورود)
+- [x] اعتبار فقط سمت سرور؛ دوره باید متعلق به همان شرکت باشد؛ دست‌کاری شناسه 404 یکسان؛ لغو عضویت فوراً اثر می‌کند
+- [x] UI فارسی/RTL با حالت‌های بارگذاری، خطا، نشست منقضی، جلوگیری از ارسال دوباره، صفحه‌کلید/فوکوس
+- [ ] CI و E2E روی SQL Server (اجرا نشده؛ فقط CI)
+- [ ] تأیید محصول برای «دوره معتبر = Open» و تغییر زمینه حین نشست (`NeedsApproval`)
+
+## خلاصه تغییرات
+- سرور: `WorkContextService`/`WorkContextCookie`/`FiscalPeriodSelectionPolicy` و endpointهای `GET|POST|DELETE /api/v1/context`؛ `SessionId` Claim در ورود؛ حذف Cookie در ورود/خروج.
+- کلاینت: `WorkContextSelector`، `BlockedAccess`، نوار زمینه در `AppShell`، `components/ui` (Button، Badge، Alert، ChoiceCard، آیکون‌ها)، `?company=` حذف شد.
+- E2E: `seed.mjs` (کاربران `dave` و `erin`) و `faranou.spec.mjs` با جریان جدید.
+- **Schema/Migration: بدون تغییر** (دلیل در `docs/DATABASE.md`).
+
+## فایل‌های مهم تغییرکرده
+- `Server/Infrastructure/Tenancy/WorkContext.cs`، `WorkContextCookie.cs`، `WorkContextService.cs`، `Server/Api/WorkContextEndpoints.cs`، `Server/Api/ApiEndpoints.cs`، `Server/Program.cs`، `Server/Pages/Account/Login.cshtml.cs`، `Logout.cshtml.cs`
+- `ClientApp/src/App.tsx`، `api/client.ts`، `api/types.ts`، `components/*`، `components/ui/*`
+- `tests/Template.Tests/WorkContextTests.cs`، `Integration/WorkContextHttpTests.cs`، `Integration/FaranouApplicationFactory.cs`
+- `tests/e2e/seed.mjs`، `tests/e2e/specs/faranou.spec.mjs`
+- مستندات: `DECISIONS.md` (D-031)، `ARCHITECTURE.md`، `SECURITY.md`، `TESTING.md`، `DATABASE.md`، `PROJECT_STATUS.md`، `ROADMAP.md`، `PRODUCT_REQUIREMENTS.md`
+
+## تصمیم‌های فنی
+- ADR **D-031**: قواعد ورود، Cookie محافظت‌شده وابسته به ورود، اعتبارسنجی مجدد با دیتابیس، «دوره معتبر = Open» (`NeedsApproval`)، بدون تغییر Schema.
+
+## بررسی و آزمون
+| فرمان/آزمون | نتیجه واقعی | توضیح/کد خروج |
+|---|---|---|
+| `dotnet build Template.sln -c Release` | موفق | ۰ خطا، ۷۴۷ هشدار |
+| `dotnet test --solution Template.sln --no-build -c Release` | موفق | total 245، failed 0، skipped 0 — **Provider حافظه‌ای، نه SQL Server** |
+| `npx tsc --noEmit` (کلاینت) | موفق | بدون خطا |
+| `npx vitest run` | موفق | ۳۹ از ۳۹ |
+| `npm run build` / `npm run check:offline` | موفق | ۱۲ منبع محلی، بدون مرجع خارجی |
+| `python3 scripts/check_static_assets.py` | موفق | بدون مرجع CDN |
+| E2E Playwright (`tests/e2e`) | **اجرا نشد** | SQL Server/Docker در محیط نیست؛ فقط `node --check` سینتکس |
+| بررسی بصری | انجام شد با محدودیت | Chromium + API شبیه‌سازی‌شده؛ دسکتاپ/موبایل، RTL، بدون اسکرول افقی؛ داشبورد با داده واقعی دیده نشد |
+| Migration روی SQL Server | اجرا نشد / لازم نبود | Schema تغییر نکرده |
+
+## امنیت، داده و سازگاری
+- 404 یکسان، 409 برای دوره غیرقابل‌انتخاب، 400 برای Anti-forgery، 401 برای نشست بدون `SessionId` (باید دوباره وارد شود). بدون داده حساس در پاسخ/Log. ادعای امنیت کامل نمی‌شود.
+
+## ریسک‌ها و کارهای باقی‌مانده
+- اجرای CI و E2E؛ تأیید محصول برای تعریف دوره معتبر و رفتار دوره‌های بسته/بایگانی/آینده؛ تأیید «تغییر زمینه حین نشست».
+- CHECK/عدم هم‌پوشانی دوره‌ها در دیتابیس وجود ندارد (پیشنهاد جداگانه).
+- این شاخه روی `docs/architecture-source-of-truth` (PR #46) پایه‌گذاری شده است.
+
+## شناسه‌های Git
+- Branch: `feature/company-fiscal-period-selection`
+- Commit: `f6e57d4` (سرور)، `175837b` (کلاینت)، و commit مستندات/E2E این تحویل
+- Pull Request: در گزارش نهایی

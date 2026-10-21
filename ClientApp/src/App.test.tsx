@@ -1,93 +1,277 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
+import { antiforgeryRoute, company, contextBody, period, selected, session, stubApi } from './test/api';
 
-type Route = { status: number; body?: unknown };
+const open1405 = period('p1', 'سال مالی ۱۴۰۵');
+const open1406 = period('p2', 'سال مالی ۱۴۰۶', { startDate: '2027-03-21', endDate: '2028-03-19' });
+const closed1404 = period('p0', 'سال مالی ۱۴۰۴', { status: 'Closed', isSelectable: false });
 
-function stubApi(routes: Record<string, Route>) {
-  const fetchMock = vi.fn((input: string) => {
-    const route = routes[input];
-    if (!route) {
-      return Promise.resolve(new Response(null, { status: 404 }));
-    }
-    return Promise.resolve(
-      new Response(route.body === undefined ? null : JSON.stringify(route.body), {
-        status: route.status,
-        headers: { 'Content-Type': 'application/json' },
-      }),
-    );
-  });
-  vi.stubGlobal('fetch', fetchMock);
-  return fetchMock;
-}
-
-const session = { username: 'alice', fullName: 'آلیس احمدی', accountKind: 'User', isAdministrator: false };
-const companyA = { id: 'a', name: 'شرکت الف', nationalId: '10101010101', roleName: 'حسابدار' };
-const companyB = { id: 'b', name: 'شرکت ب', nationalId: null, roleName: 'مدیر' };
+const companyA = company('a', 'شرکت الف', [open1405], '10101010101');
+const overviewA = {
+  company: { id: 'a', name: 'شرکت الف', nationalId: '10101010101', roleName: 'حسابدار' },
+  fiscalPeriods: [
+    { id: 'p1', title: 'سال مالی ۱۴۰۵', startDate: '2026-03-21', endDate: '2027-03-20', status: 'Open' },
+  ],
+};
 
 describe('App', () => {
   beforeEach(() => {
     window.history.replaceState(null, '', '/app/');
   });
 
-  it('shows the real fiscal periods of the company, with Persian dates', async () => {
-    stubApi({
-      '/api/v1/session': { status: 200, body: session },
-      '/api/v1/companies': { status: 200, body: [companyA] },
-      '/api/v1/companies/a/overview': {
+  it('enters directly when the server finds one company with one open period', async () => {
+    const fetchMock = stubApi({
+      ...antiforgeryRoute,
+      'GET /api/v1/session': { status: 200, body: session },
+      'GET /api/v1/context': {
         status: 200,
-        body: {
-          company: companyA,
-          fiscalPeriods: [{ id: 'p1', title: 'سال مالی ۱۴۰۵', startDate: '2026-03-21', endDate: '2027-03-20', status: 'Open' }],
-        },
+        body: contextBody({
+          entry: 'directEntry',
+          directSelection: { companyId: 'a', fiscalPeriodId: 'p1' },
+          companies: [companyA],
+        }),
+      },
+      'POST /api/v1/context': { status: 200, body: selected(companyA, open1405) },
+      'GET /api/v1/companies/a/overview': { status: 200, body: overviewA },
+    });
+
+    render(<App navigate={vi.fn()} />);
+
+    // No selection screen: the dashboard of the confirmed choice appears.
+    expect(await screen.findByRole('heading', { name: 'داشبورد' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).not.toBeInTheDocument();
+
+    const post = fetchMock.mock.calls.find((call) => (call[1] as RequestInit | undefined)?.method === 'POST');
+    expect(JSON.parse((post?.[1] as RequestInit).body as string)).toEqual({ companyId: 'a', fiscalPeriodId: 'p1' });
+
+    // The context bar names the company and period; real data is shown and none is invented.
+    const bar = screen.getByLabelText('زمینه کاری جاری');
+    expect(within(bar).getByText('شرکت الف')).toBeInTheDocument();
+    expect(within(bar).getByText('سال مالی ۱۴۰۵')).toBeInTheDocument();
+    const table = await screen.findByRole('table');
+    expect(within(table).getByText('۱۴۰۵/۰۱/۰۱')).toBeInTheDocument();
+    expect(screen.getByText(/هیچ آمار مالی/)).toBeInTheDocument();
+  });
+
+  it('falls back to the selection screen when the server refuses the automatic entry', async () => {
+    stubApi({
+      ...antiforgeryRoute,
+      'GET /api/v1/session': { status: 200, body: session },
+      'GET /api/v1/context': {
+        status: 200,
+        body: contextBody({
+          entry: 'directEntry',
+          directSelection: { companyId: 'a', fiscalPeriodId: 'p1' },
+          companies: [companyA],
+        }),
+      },
+      'POST /api/v1/context': { status: 409, body: { title: 'این دوره مالی برای ورود در دسترس نیست.' } },
+    });
+
+    render(<App navigate={vi.fn()} />);
+
+    expect(await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'داشبورد' })).not.toBeInTheDocument();
+  });
+
+  it('asks the user to choose when there are several companies, and enters only after both choices', async () => {
+    const companyB = company('b', 'شرکت ب', [open1406]);
+    const postBodies: unknown[] = [];
+    stubApi({
+      ...antiforgeryRoute,
+      'GET /api/v1/session': { status: 200, body: session },
+      'GET /api/v1/context': { status: 200, body: contextBody({ companies: [companyA, companyB] }) },
+      'POST /api/v1/context': ({ body }) => {
+        postBodies.push(body);
+        return { status: 200, body: selected(companyB, open1406) };
+      },
+      'GET /api/v1/companies/b/overview': {
+        status: 200,
+        body: { company: { id: 'b', name: 'شرکت ب', nationalId: null, roleName: 'حسابدار' }, fiscalPeriods: [] },
       },
     });
 
     render(<App navigate={vi.fn()} />);
 
-    const table = await screen.findByRole('table');
-    expect(within(table).getByText('سال مالی ۱۴۰۵')).toBeInTheDocument();
-    expect(within(table).getByText('۱۴۰۵/۰۱/۰۱')).toBeInTheDocument();
-    expect(within(table).getByText('باز')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'شرکت الف' })).toBeInTheDocument();
-    // No figures are invented: the page states that the accounting modules do not exist yet.
-    expect(screen.getByText(/هیچ آمار مالی/)).toBeInTheDocument();
+    await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' });
+    const enter = screen.getByRole('button', { name: /ورود به محیط کاری/ });
+    expect(enter).toHaveAttribute('aria-disabled', 'true');
+
+    await userEvent.click(screen.getByRole('radio', { name: /شرکت ب/ }));
+    // The company has exactly one open period, so it is pre-selected, but entering still needs the click.
+    expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۶/ })).toBeChecked();
+    expect(postBodies).toHaveLength(0);
+
+    await userEvent.click(enter);
+
+    expect(await screen.findByRole('heading', { name: 'داشبورد' })).toBeInTheDocument();
+    expect(postBodies).toEqual([{ companyId: 'b', fiscalPeriodId: 'p2' }]);
   });
 
-  it('shows an empty state when the user has no company', async () => {
+  it('lists the periods of the only company when it has several open ones; closed periods cannot be chosen', async () => {
+    const company2 = company('a', 'شرکت الف', [open1406, open1405, closed1404]);
     stubApi({
-      '/api/v1/session': { status: 200, body: session },
-      '/api/v1/companies': { status: 200, body: [] },
+      ...antiforgeryRoute,
+      'GET /api/v1/session': { status: 200, body: session },
+      'GET /api/v1/context': { status: 200, body: contextBody({ companies: [company2] }) },
     });
 
     render(<App navigate={vi.fn()} />);
 
-    expect(await screen.findByText('در حال حاضر عضویت فعالی در شرکتی ندارید.')).toBeInTheDocument();
+    await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' });
+    // The single company is selected for the user; its periods are shown.
+    expect(screen.getByRole('radio', { name: /شرکت الف/ })).toBeChecked();
+    expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۴/ })).toBeDisabled();
+    expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۵/ })).toBeEnabled();
+    // Nothing is chosen for the user when more than one period is open.
+    expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۵/ })).not.toBeChecked();
+    expect(screen.getByRole('button', { name: /ورود به محیط کاری/ })).toHaveAttribute('aria-disabled', 'true');
   });
 
-  it('shows an empty state when the company has no fiscal period', async () => {
-    stubApi({
-      '/api/v1/session': { status: 200, body: session },
-      '/api/v1/companies': { status: 200, body: [companyA] },
-      '/api/v1/companies/a/overview': { status: 200, body: { company: companyA, fiscalPeriods: [] } },
+  it('does not open the working environment when the user has no company', async () => {
+    const fetchMock = stubApi({
+      ...antiforgeryRoute,
+      'GET /api/v1/session': { status: 200, body: session },
+      'GET /api/v1/context': { status: 200, body: contextBody({ entry: 'noCompany' }) },
     });
 
     render(<App navigate={vi.fn()} />);
 
-    expect(await screen.findByText('هنوز دوره مالی برای این شرکت ثبت نشده است.')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'شرکتی برای ورود در دسترس نیست' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'داشبورد' })).not.toBeInTheDocument();
+    expect(fetchMock.mock.calls.some((call) => String(call[0]).includes('/overview'))).toBe(false);
+  });
+
+  it('explains that a company has no open fiscal period and does not open the environment', async () => {
+    stubApi({
+      ...antiforgeryRoute,
+      'GET /api/v1/session': { status: 200, body: session },
+      'GET /api/v1/context': {
+        status: 200,
+        body: contextBody({ entry: 'noEligiblePeriod', companies: [company('a', 'شرکت الف', [closed1404])] }),
+      },
+    });
+
+    render(<App navigate={vi.fn()} />);
+
+    expect(await screen.findByRole('heading', { name: 'دوره مالی بازی برای ورود وجود ندارد' })).toBeInTheDocument();
+    expect(screen.getByText('شرکت الف')).toBeInTheDocument();
+    expect(screen.getByText('بدون دوره مالی باز')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'داشبورد' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the validated choice of the same sign-in after a reload, without asking again', async () => {
+    const fetchMock = stubApi({
+      ...antiforgeryRoute,
+      'GET /api/v1/session': { status: 200, body: session },
+      'GET /api/v1/context': {
+        status: 200,
+        body: contextBody({ current: selected(companyA, open1405), companies: [companyA, company('b', 'شرکت ب', [open1406])] }),
+      },
+      'GET /api/v1/companies/a/overview': { status: 200, body: overviewA },
+    });
+
+    render(<App navigate={vi.fn()} />);
+
+    expect(await screen.findByRole('heading', { name: 'داشبورد' })).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some((call) => (call[1] as RequestInit | undefined)?.method === 'POST')).toBe(false);
+  });
+
+  it('lets the user change company or period in the same sign-in, and cancel', async () => {
+    const companyB = company('b', 'شرکت ب', [open1406]);
+    const contexts = [
+      contextBody({ current: selected(companyA, open1405), companies: [companyA, companyB] }),
+      contextBody({ current: selected(companyA, open1405), companies: [companyA, companyB] }),
+    ];
+    const fetchMock = stubApi({
+      ...antiforgeryRoute,
+      'GET /api/v1/session': { status: 200, body: session },
+      'GET /api/v1/context': () => ({ status: 200, body: contexts.shift() }),
+      'GET /api/v1/companies/a/overview': { status: 200, body: overviewA },
+    });
+
+    render(<App navigate={vi.fn()} />);
+
+    await userEvent.click(await screen.findByRole('button', { name: /تغییر شرکت یا دوره/ }));
+
+    // The selector opens with the current choice pre-selected, and the choices were reloaded.
+    expect(await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /شرکت الف/ })).toBeChecked();
+    expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۵/ })).toBeChecked();
+    expect(fetchMock.mock.calls.filter((call) => call[0] === '/api/v1/context')).toHaveLength(2);
+
+    await userEvent.click(screen.getByRole('button', { name: 'انصراف' }));
+    expect(await screen.findByRole('heading', { name: 'داشبورد' })).toBeInTheDocument();
+  });
+
+  it('sends one request even when the entry button is activated twice quickly', async () => {
+    const companyB = company('b', 'شرکت ب', [open1406]);
+    let release: (() => void) | undefined;
+    let posts = 0;
+    stubApi({
+      ...antiforgeryRoute,
+      'GET /api/v1/session': { status: 200, body: session },
+      'GET /api/v1/context': { status: 200, body: contextBody({ companies: [companyA, companyB] }) },
+      'POST /api/v1/context': () => {
+        posts += 1;
+        return { status: 200, body: selected(companyB, open1406) };
+      },
+      'GET /api/v1/companies/b/overview': {
+        status: 200,
+        body: { company: { id: 'b', name: 'شرکت ب', nationalId: null, roleName: 'حسابدار' }, fiscalPeriods: [] },
+      },
+    });
+    void release;
+
+    render(<App navigate={vi.fn()} />);
+    await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' });
+    await userEvent.click(screen.getByRole('radio', { name: /شرکت ب/ }));
+    const enter = screen.getByRole('button', { name: /ورود به محیط کاری/ });
+
+    await userEvent.dblClick(enter);
+
+    await screen.findByRole('heading', { name: 'داشبورد' });
+    expect(posts).toBe(1);
+  });
+
+  it('shows a clear message and a refresh action when the server refuses a stale choice', async () => {
+    const companyB = company('b', 'شرکت ب', [open1406]);
+    const fetchMock = stubApi({
+      ...antiforgeryRoute,
+      'GET /api/v1/session': { status: 200, body: session },
+      'GET /api/v1/context': { status: 200, body: contextBody({ companies: [companyA, companyB] }) },
+      'POST /api/v1/context': { status: 404 },
+    });
+
+    render(<App navigate={vi.fn()} />);
+    await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' });
+    await userEvent.click(screen.getByRole('radio', { name: /شرکت ب/ }));
+    await userEvent.click(screen.getByRole('button', { name: /ورود به محیط کاری/ }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('دسترسی شما به این شرکت یا دوره مالی تغییر کرده است');
+    await waitFor(() => expect(alert).toHaveFocus());
+    expect(screen.queryByRole('heading', { name: 'داشبورد' })).not.toBeInTheDocument();
+
+    const isContextGet = (call: unknown[]) =>
+      call[0] === '/api/v1/context' && ((call[1] as RequestInit | undefined)?.method ?? 'GET') === 'GET';
+    const before = fetchMock.mock.calls.filter(isContextGet).length;
+    await userEvent.click(screen.getByRole('button', { name: 'به‌روزرسانی فهرست' }));
+    await waitFor(() => expect(fetchMock.mock.calls.filter(isContextGet).length).toBeGreaterThan(before));
   });
 
   it('shows a server error instead of an empty list, and can retry', async () => {
     const fetchMock = stubApi({
-      '/api/v1/session': { status: 200, body: session },
-      '/api/v1/companies': { status: 500 },
+      'GET /api/v1/session': { status: 200, body: session },
+      'GET /api/v1/context': { status: 500 },
     });
 
     render(<App navigate={vi.fn()} />);
 
     expect(await screen.findByRole('alert')).toHaveTextContent('خطای غیرمنتظره');
-    expect(screen.queryByText('در حال حاضر عضویت فعالی در شرکتی ندارید.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'شرکتی برای ورود در دسترس نیست' })).not.toBeInTheDocument();
 
     const callsBeforeRetry = fetchMock.mock.calls.length;
     await userEvent.click(screen.getByRole('button', { name: 'تلاش دوباره' }));
@@ -96,8 +280,8 @@ describe('App', () => {
 
   it('sends an expired session to the existing sign-in page', async () => {
     stubApi({
-      '/api/v1/session': { status: 401 },
-      '/api/v1/companies': { status: 401 },
+      'GET /api/v1/session': { status: 401 },
+      'GET /api/v1/context': { status: 401 },
     });
     const navigate = vi.fn();
 
@@ -107,34 +291,37 @@ describe('App', () => {
     expect(navigate).toHaveBeenCalledWith('/Account/Login?ReturnUrl=%2Fapp%2F');
   });
 
-  it('ignores a company in the address bar that the server did not return', async () => {
-    window.history.replaceState(null, '', '/app/?company=someone-elses');
-    const fetchMock = stubApi({
-      '/api/v1/session': { status: 200, body: session },
-      '/api/v1/companies': { status: 200, body: [companyA, companyB] },
-      '/api/v1/companies/a/overview': { status: 200, body: { company: companyA, fiscalPeriods: [] } },
+  it('sends the user to the sign-in page when the session ends while choosing', async () => {
+    const companyB = company('b', 'شرکت ب', [open1406]);
+    stubApi({
+      ...antiforgeryRoute,
+      'GET /api/v1/session': { status: 200, body: session },
+      'GET /api/v1/context': { status: 200, body: contextBody({ companies: [companyA, companyB] }) },
+      'POST /api/v1/context': { status: 401 },
     });
+    const navigate = vi.fn();
 
-    render(<App navigate={vi.fn()} />);
+    render(<App navigate={navigate} />);
+    await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' });
+    await userEvent.click(screen.getByRole('radio', { name: /شرکت ب/ }));
+    await userEvent.click(screen.getByRole('button', { name: /ورود به محیط کاری/ }));
 
-    await screen.findByRole('heading', { name: 'شرکت الف' });
-    expect(fetchMock.mock.calls.map((call) => call[0])).not.toContain('/api/v1/companies/someone-elses/overview');
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/Account/Login?ReturnUrl=%2Fapp%2F'));
   });
 
-  it('switches the company and remembers it in the address bar', async () => {
+  it('signs out from the working environment', async () => {
     stubApi({
-      '/api/v1/session': { status: 200, body: session },
-      '/api/v1/companies': { status: 200, body: [companyA, companyB] },
-      '/api/v1/companies/a/overview': { status: 200, body: { company: companyA, fiscalPeriods: [] } },
-      '/api/v1/companies/b/overview': { status: 200, body: { company: companyB, fiscalPeriods: [] } },
+      ...antiforgeryRoute,
+      'GET /api/v1/session': { status: 200, body: session },
+      'GET /api/v1/context': { status: 200, body: contextBody({ current: selected(companyA, open1405), companies: [companyA] }) },
+      'GET /api/v1/companies/a/overview': { status: 200, body: overviewA },
+      'POST /api/v1/session/logout': { status: 204 },
     });
+    const navigate = vi.fn();
 
-    render(<App navigate={vi.fn()} />);
+    render(<App navigate={navigate} />);
+    await userEvent.click(await screen.findByRole('button', { name: 'خروج' }));
 
-    await screen.findByRole('heading', { name: 'شرکت الف' });
-    await userEvent.selectOptions(screen.getByLabelText('شرکت'), 'b');
-
-    expect(await screen.findByRole('heading', { name: 'شرکت ب' })).toBeInTheDocument();
-    expect(window.location.search).toBe('?company=b');
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/Account/Login'));
   });
 });

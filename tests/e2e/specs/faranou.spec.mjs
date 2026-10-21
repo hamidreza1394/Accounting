@@ -1,12 +1,12 @@
 // End-to-end: real browser (Chromium) -> published server (Production) -> SQL Server.
-// Covers sign-in, session, company selection, anti-forgery, company isolation, session
+// Covers sign-in, session, company and fiscal-period selection, anti-forgery, company isolation, session
 // revalidation and the enforced Content-Security-Policy of the pages that are visited.
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import sql from 'mssql';
 
 const state = JSON.parse(readFileSync(new URL('../.e2e-state.json', import.meta.url), 'utf8'));
-const { alice, bob, carol } = state.users;
+const { alice, bob, carol, dave, erin } = state.users;
 const { a, b, c } = state.companies;
 
 // Every page records CSP violations (enforced and report-only) and script errors.
@@ -129,20 +129,101 @@ test('remember me issues a persistent cookie', async ({ page, context }) => {
   expect(cookie?.expires).toBeGreaterThan(Date.now() / 1000);
 });
 
-test('the React dashboard shows real data, switches companies and ignores a foreign company id', async ({ page }) => {
+async function chooseAlicesCompany(page) {
+  await page.goto('/app/');
+  await expect(page.getByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeVisible();
+  await page.getByRole('radio', { name: new RegExp(a.name) }).check();
+  await page.getByRole('radio', { name: /سال مالی ۱۴۰۵/ }).check();
+  await page.getByRole('button', { name: /ورود به محیط کاری/ }).click();
+  await expect(page.getByRole('heading', { name: 'داشبورد' })).toBeVisible();
+}
+
+test('several companies: the user chooses, closed periods and foreign data are not offered', async ({ page }) => {
   await signIn(page, alice);
+  await page.goto('/app/');
 
-  await page.goto(`/app/?company=${b.id}`);
-  await expect(page.getByRole('heading', { name: a.name })).toBeVisible();
-  await expect(page.locator('table').getByText('۱۴۰۵/۰۱/۰۱')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeVisible();
+  await expect(page.getByText(b.name)).toHaveCount(0);
   await expect(page.getByText(state.secretPeriodTitle)).toHaveCount(0);
+  // A company without a fiscal period cannot be entered.
+  await expect(page.getByRole('radio', { name: new RegExp(c.name) })).toBeDisabled();
 
-  await page.getByLabel('شرکت', { exact: true }).selectOption(c.id);
-  await expect(page.getByRole('heading', { name: c.name })).toBeVisible();
-  await expect(page.getByText('هنوز دوره مالی برای این شرکت ثبت نشده است.')).toBeVisible();
-  expect(new URL(page.url()).searchParams.get('company')).toBe(c.id);
-
+  await chooseAlicesCompany(page);
+  await expect(page.locator('table').getByText('۱۴۰۵/۰۱/۰۱')).toBeVisible();
+  await expect(page.getByLabel('زمینه کاری جاری')).toContainText(a.name);
   await expectCleanPage(page);
+});
+
+test('a single company with a single open period is entered directly', async ({ page }) => {
+  await signIn(page, bob);
+  await page.goto('/app/');
+
+  await expect(page.getByRole('heading', { name: 'داشبورد' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toHaveCount(0);
+  await expect(page.getByLabel('زمینه کاری جاری')).toContainText(b.name);
+  await expectCleanPage(page);
+});
+
+test('a company without a fiscal period blocks the entry with an explanation', async ({ page }) => {
+  await signIn(page, dave);
+  await page.goto('/app/');
+
+  await expect(page.getByRole('heading', { name: 'دوره مالی بازی برای ورود وجود ندارد' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'داشبورد' })).toHaveCount(0);
+  await expectCleanPage(page);
+});
+
+test('a user without any company is blocked with an explanation', async ({ page }) => {
+  await signIn(page, erin);
+  await page.goto('/app/');
+
+  await expect(page.getByRole('heading', { name: 'شرکتی برای ورود در دسترس نیست' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'داشبورد' })).toHaveCount(0);
+  await expectCleanPage(page);
+});
+
+test('every new sign-in asks again; the previous choice is not restored', async ({ page }) => {
+  await signIn(page, alice);
+  await chooseAlicesCompany(page);
+
+  await page.getByRole('button', { name: 'خروج' }).click();
+  await expect(page).toHaveURL(/\/Account\/Login/i);
+
+  await signIn(page, alice);
+  await page.goto('/app/');
+  await expect(page.getByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'داشبورد' })).toHaveCount(0);
+});
+
+test('the context API refuses a foreign company, a foreign period and tampering', async ({ page }) => {
+  await signIn(page, alice);
+  await page.goto('/app/');
+
+  const result = await page.evaluate(async ({ foreign, own }) => {
+    const token = await (await fetch('/api/v1/antiforgery/token')).json();
+    const post = async (body, withToken = true) => {
+      const response = await fetch('/api/v1/context', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', ...(withToken ? { [token.headerName]: token.requestToken } : {}) },
+        body: JSON.stringify(body),
+      });
+      return { status: response.status, body: await response.text() };
+    };
+    const context = await (await fetch('/api/v1/context')).json();
+    const ownPeriod = context.companies.find((company) => company.id === own).fiscalPeriods[0].id;
+    return {
+      foreignCompany: await post({ companyId: foreign, fiscalPeriodId: ownPeriod }),
+      unknownPeriod: await post({ companyId: own, fiscalPeriodId: crypto.randomUUID() }),
+      noToken: await post({ companyId: own, fiscalPeriodId: ownPeriod }, false),
+    };
+  }, { foreign: b.id, own: a.id });
+
+  expect(result.foreignCompany.status).toBe(404);
+  expect(result.unknownPeriod.status).toBe(404);
+  expect(result.foreignCompany.body).toBe(result.unknownPeriod.body);
+  expect(result.noToken.status).toBe(400);
+  expect(result.foreignCompany.body).not.toContain(state.secretPeriodTitle);
 });
 
 test('another tenant’s company and an unknown company give the same 404', async ({ page }) => {
@@ -166,8 +247,7 @@ test('another tenant’s company and an unknown company give the same 404', asyn
 
 test('API sign-out needs the anti-forgery token; the dashboard button signs out', async ({ page }) => {
   await signIn(page, alice);
-  await page.goto('/app/');
-  await expect(page.getByRole('heading', { name: 'داشبورد' })).toBeVisible();
+  await chooseAlicesCompany(page);
 
   const forged = await page.evaluate(async () =>
     (await fetch('/api/v1/session/logout', { method: 'POST', credentials: 'same-origin' })).status);
@@ -193,14 +273,14 @@ test('the Razor sign-out form works; a GET does not sign out', async ({ page }) 
 });
 
 test('an expired session in the dashboard leads back to the sign-in page and returns', async ({ page }) => {
-  await page.goto('/app/?company=x');
-  await expect(page).toHaveURL(/\/Account\/Login\?ReturnUrl=%2Fapp%2F%3Fcompany%3Dx/i);
+  await page.goto('/app/');
+  await expect(page).toHaveURL(/\/Account\/Login\?ReturnUrl=%2Fapp%2F/i);
 
   await page.locator('#ViewModel_Username').fill(alice.username);
   await page.locator('#ViewModel_Password').fill(alice.password);
   await page.locator('form.taraz-login-form button[type="submit"]').click();
-  await expect(page).toHaveURL(/\/app\/\?company=x/);
-  await expect(page.getByRole('heading', { name: 'داشبورد' })).toBeVisible();
+  await expect(page).toHaveURL(/\/app\//);
+  await expect(page.getByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeVisible();
 });
 
 test('deactivating an account ends its open session on the next request', async ({ page }) => {

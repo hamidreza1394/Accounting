@@ -159,6 +159,11 @@ namespace Server.Pages.Security
 							principal: claimsPrincipal,
 							properties: authenticationProperties);
 
+						// The previous choice of company and fiscal period never survives a new sign-in.
+						HttpContext.RequestServices
+							.GetService<Infrastructure.Tenancy.WorkContextCookie>()
+							?.Delete(httpContext: HttpContext);
+
 						AddPageSuccess(message:
 							Resources.Messages.Successes.LoginSucceededPendingFeatures);
 
@@ -334,6 +339,13 @@ namespace Server.Pages.Security
 
 			claims.Add(item: new System.Security.Claims.Claim
 				(type: "AccountKind", value: "User"));
+
+			// A random identifier of THIS sign-in. The company and fiscal period a user chooses
+			// are bound to it (Infrastructure.Tenancy.WorkContextCookie), so a choice made in an
+			// earlier sign-in is never restored: every new sign-in asks again.
+			claims.Add(item: new System.Security.Claims.Claim
+				(type: Infrastructure.Tenancy.WorkContextCookie.SessionIdClaimType,
+				value: System.Guid.NewGuid().ToString()));
 
 			// The stable identifier of the verified account. Every server-side access
 			// decision (for example the company access of the API) resolves the

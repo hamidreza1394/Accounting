@@ -32,6 +32,8 @@ const state = {
     alice: { username: `alice${suffix}`, password: password(), id: randomUUID(), active: true },
     bob: { username: `bob${suffix}`, password: password(), id: randomUUID(), active: true },
     carol: { username: `carol${suffix}`, password: password(), id: randomUUID(), active: false },
+    dave: { username: `dave${suffix}`, password: password(), id: randomUUID(), active: true },
+    erin: { username: `erin${suffix}`, password: password(), id: randomUUID(), active: true },
   },
   companies: {
     a: { id: randomUUID(), name: `شرکت الف ${suffix}`, roleId: randomUUID() },
@@ -93,12 +95,14 @@ async function period(company, title, start, end, status = 1) {
       title: [sql.NVarChar(100), title], start: [sql.Date, start], end: [sql.Date, end], status: [sql.Int, status] });
 }
 
-const { alice, bob, carol } = state.users;
+const { alice, bob, carol, dave } = state.users;
 const { a, b, c } = state.companies;
 await member(alice, a);
 await member(alice, c);
 await member(bob, b);
 await member(carol, a);
+await member(dave, c); // company without any fiscal period
+// erin has no company at all
 await period(a, 'سال مالی ۱۴۰۵', '2026-03-21', '2027-03-20', 1);
 await period(a, 'سال مالی ۱۴۰۴', '2025-03-21', '2026-03-20', 2);
 await period(b, state.secretPeriodTitle, '2026-03-21', '2027-03-20', 1);

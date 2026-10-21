@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Infrastructure.DatabaseSetup;
 using Server.Api;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Infrastructure.Security;
 using Infrastructure.Hosting;
 // **************************************************
@@ -139,6 +140,12 @@ if (!setupRequired)
     // The single server-side decision point for company (tenant) access. It reads the
     // memberships from the database on each request; it never trusts a client tenant id.
     builder.Services.AddScoped<Infrastructure.Tenancy.CompanyAccessService>();
+
+    // The company and fiscal period a user chose for the current sign-in (D-031). The cookie
+    // helper is stateless; the service validates every stored choice against the database.
+    builder.Services.TryAddSingleton(TimeProvider.System);
+    builder.Services.AddSingleton<Infrastructure.Tenancy.WorkContextCookie>();
+    builder.Services.AddScoped<Infrastructure.Tenancy.WorkContextService>();
 
     // Scoped, because the sign-in service owns the scoped DatabaseContext. The page models
     // resolve it from the container instead of constructing it, so the dependency is created
