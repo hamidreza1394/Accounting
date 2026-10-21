@@ -2,10 +2,14 @@ import {
   parseAntiforgeryToken,
   parseCompanies,
   parseCompanyOverview,
+  parseSelectedContextResponse,
   parseSession,
+  parseWorkContext,
   type CompanyOverview,
   type CompanySummary,
+  type SelectedContext,
   type Session,
+  type WorkContext,
 } from './types';
 
 // The API lives on the same origin and is authenticated by the HttpOnly cookie of the
@@ -97,6 +101,23 @@ async function post(path: string): Promise<void> {
   await ensureSuccess(response);
 }
 
+/** A state-changing request: carries the anti-forgery request token and, optionally, a JSON body. */
+async function sendJson(method: 'POST' | 'DELETE', path: string, body?: unknown): Promise<Response> {
+  const token = parseAntiforgeryToken(await getJson('/antiforgery/token'));
+  const response = await fetch(`${apiBase}${path}`, {
+    method,
+    credentials: 'same-origin',
+    headers: {
+      Accept: 'application/json',
+      [token.headerName]: token.requestToken,
+      ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+  await ensureSuccess(response);
+  return response;
+}
+
 export async function getSession(signal?: AbortSignal): Promise<Session> {
   return parseSession(await getJson('/session', signal));
 }
@@ -107,6 +128,17 @@ export async function getCompanies(signal?: AbortSignal): Promise<CompanySummary
 
 export async function getCompanyOverview(companyId: string, signal?: AbortSignal): Promise<CompanyOverview> {
   return parseCompanyOverview(await getJson(`/companies/${encodeURIComponent(companyId)}/overview`, signal));
+}
+
+/** The validated current choice, the choices and the entry mode, all decided by the server. */
+export async function getWorkContext(signal?: AbortSignal): Promise<WorkContext> {
+  return parseWorkContext(await getJson('/context', signal));
+}
+
+/** Chooses a company and one of its fiscal periods; the server validates the pair again. */
+export async function selectWorkContext(companyId: string, fiscalPeriodId: string): Promise<SelectedContext> {
+  const response = await sendJson('POST', '/context', { companyId, fiscalPeriodId });
+  return parseSelectedContextResponse(await response.json());
 }
 
 export async function logout(): Promise<void> {

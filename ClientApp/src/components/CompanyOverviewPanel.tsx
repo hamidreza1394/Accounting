@@ -23,6 +23,8 @@ const statusStyles: Record<FiscalPeriodStatus, string> = {
 
 type CompanyOverviewPanelProps = {
   companyId: string;
+  /** The fiscal period the user entered; it is marked in the list. */
+  currentPeriodId: string;
   onUnauthenticated: (error: unknown) => boolean;
 };
 
@@ -30,7 +32,7 @@ type CompanyOverviewPanelProps = {
  * The real data of one company, as returned by the server for the signed-in user. The
  * server decides whether the company may be accessed; this component never assumes it.
  */
-export function CompanyOverviewPanel({ companyId, onUnauthenticated }: CompanyOverviewPanelProps) {
+export function CompanyOverviewPanel({ companyId, currentPeriodId, onUnauthenticated }: CompanyOverviewPanelProps) {
   const [state, setState] = useState<OverviewState>({ kind: 'loading' });
   const [attempt, setAttempt] = useState(0);
 
@@ -101,7 +103,10 @@ export function CompanyOverviewPanel({ companyId, onUnauthenticated }: CompanyOv
             {fiscalPeriods.map((period) => (
               <li key={period.id} className="rounded-xl border border-line p-4 text-sm">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium">{period.title}</span>
+                  <span className="font-medium">
+                    {period.title}
+                    {period.id === currentPeriodId ? <span className="ms-2 text-xs font-semibold text-teal">(دوره جاری)</span> : null}
+                  </span>
                   <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusStyles[period.status]}`}>
                     {statusLabels[period.status]}
                   </span>
@@ -126,7 +131,10 @@ export function CompanyOverviewPanel({ companyId, onUnauthenticated }: CompanyOv
               <tbody>
                 {fiscalPeriods.map((period) => (
                   <tr key={period.id} className="border-b border-line/70 last:border-0">
-                    <td className="py-3 pe-4 font-medium">{period.title}</td>
+                    <td className="py-3 pe-4 font-medium">
+                      {period.title}
+                      {period.id === currentPeriodId ? <span className="ms-2 text-xs font-semibold text-teal">(دوره جاری)</span> : null}
+                    </td>
                     <td className="py-3 pe-4 tabular-nums">{formatPersianDate(period.startDate)}</td>
                     <td className="py-3 pe-4 tabular-nums">{formatPersianDate(period.endDate)}</td>
                     <td className="py-3">

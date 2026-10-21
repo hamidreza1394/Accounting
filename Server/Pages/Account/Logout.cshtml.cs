@@ -29,6 +29,10 @@ namespace Server.Pages.Account
 			await HttpContext.SignOutAsync
 				(scheme: Infrastructure.Security.Utility.AuthenticationScheme);
 
+			HttpContext.RequestServices
+				.GetService<Infrastructure.Tenancy.WorkContextCookie>()
+				?.Delete(httpContext: HttpContext);
+
 			return RedirectToPage(pageName: "/Account/Login");
 		}
 	}

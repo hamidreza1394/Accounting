@@ -89,6 +89,9 @@ Browser ──(Cookie HttpOnly, same origin)──▶ ASP.NET Core (Server)
 | POST | `/api/v1/session/logout` | 204 / 400 | نیازمند هدر `X-XSRF-TOKEN` |
 | GET | `/api/v1/companies` | `[{ id, name, nationalId, roleName }]` | فقط شرکت‌های قابل دسترس؛ حساب زیرساختی: `[]` |
 | GET | `/api/v1/companies/{id}/overview` | `{ company, fiscalPeriods: [{ id, title, startDate, endDate, status }] }` / 404 | تاریخ‌ها ISO `yyyy-MM-dd` (میلادی)؛ 404 برای شرکت غیرمجاز یا ناموجود |
+| GET | `/api/v1/context` | `{ current \| null, entry, directSelection \| null, companies: [{ id, name, nationalId, roleName, fiscalPeriods: [{ id, title, startDate, endDate, status, isSelectable, accessMode }] }] }` | `entry`: `directEntry` \| `selectionRequired` \| `noCompany` \| `noEligiblePeriod` (D-031)؛ `current` فقط در صورت اعتبار فعلی؛ `accessMode`: `readWrite` (Open) \| `readOnly` (Closed) \| `null` (Archived؛ غیرقابل‌ورود) (D-032) |
+| POST | `/api/v1/context` | `{ company, fiscalPeriod }` / 400 / 401 / 404 / 409 | بدنه `{ companyId, fiscalPeriodId }`؛ هدر `X-XSRF-TOKEN`؛ 404 یکسان برای شرکت غیرمجاز، دوره ناموجود و دوره شرکت دیگر؛ 409 دوره غیرقابل‌انتخاب |
+| DELETE | `/api/v1/context` | 204 / 400 | فراموش‌کردن انتخاب؛ نیازمند `X-XSRF-TOKEN` |
 
 - **خطاها:** 401 (نشست نیست/منقضی یا نشست قدیمی بدون شناسه)، 403، 404، 400 (Anti-forgery) و 500 به‌صورت `application/problem+json` با عنوان قابل نمایش؛ جزئیات فنی فقط در Log.
 - **مرز مسئولیت:** قواعد دسترسی و داده فقط در Backend. کلاینت پاسخ‌ها را در زمان اجرا با قرارداد بررسی می‌کند (`ClientApp/src/api/types.ts`) و فقط نمایش (از جمله تبدیل تاریخ به شمسی) را انجام می‌دهد.
@@ -129,3 +132,8 @@ flowchart LR
 - تصمیم هر درخواست حسابداری سمت سرور: هویت ← عضویت شرکت (D-013) ← لایسنس/زیرسیستم ← مجوز عملیاتی ← وضعیت دوره مالی (D-025). نمایش در React فقط بازتاب است.
 - این طرح D-002 (Modular Monolith برای هسته) را نقض نمی‌کند.
 - **انحراف‌های پیاده‌سازی از تصمیم/هدف (ثبت‌شده؛ بدون اصلاح در این مأموریت):** (۱) مجوز عملیاتی تعریف شده ولی مصرف نمی‌شود؛ (۲) `UserCompanyMemberships.UserId` بدون FK؛ (۳) `Application` هنوز اسکلت است و `Server` مستقیم به EF/`DbContext` وابسته است؛ (۴) کد مرده Activation (D-028).
+
+## انتخاب شرکت و دوره مالی (D-031)
+- **جریان:** ورود (صفحه Razor موجود، بدون تغییر ظاهر) → `/app/` → کلاینت `GET /api/v1/context` را می‌خواند و بر اساس `entry` که **سرور** تعیین کرده یکی از این‌ها را نشان می‌دهد: ورود مستقیم (تأیید خودکار با `POST`)، صفحه انتخاب، یا صفحه مسدود (`noCompany`/`noEligiblePeriod`). هر ورود جدید دوباره می‌پرسد.
+- **ذخیره:** Cookie محافظت‌شده `.Faranou.WorkContext` وابسته به کاربر و `SessionId` همان ورود؛ در هر خواندن با دیتابیس اعتبارسنجی می‌شود (`WorkContextService`، `WorkContextCookie`، `FiscalPeriodSelectionPolicy` در `Server/Infrastructure/Tenancy/`).
+- **کلاینت:** `WorkContextSelector`، `BlockedAccess`، نوار زمینه در `AppShell`، و کیت کوچک `components/ui` (Button، Badge، Alert، ChoiceCard، آیکون‌های SVG محلی). فونت و دارایی‌ها محلی؛ بدون CDN.

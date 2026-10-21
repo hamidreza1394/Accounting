@@ -58,6 +58,24 @@
   --color-warning-soft: #fdf4e3;
   --color-success: #256b4f;
   --color-success-soft: #e9f4ee;
+
+  /* Work-context screens (company and fiscal-period selection): the approved palette. */
+  --color-ws-navy: #0b2545;
+  --color-ws-blue: #2468d8;
+  --color-ws-blue-deep: #1b50ad;
+  --color-ws-blue-soft: #eaf1fd;
+  --color-ws-teal: #0797a5;
+  --color-ws-teal-soft: #f0fafb;
+  --color-ws-text: #0f1d33;
+  --color-ws-sub: #475569;
+  --color-ws-line: #d5deea;
+  --color-ws-bg: #f1f4f8;
+  --color-ws-ok: #15803d;
+  --color-ws-ok-soft: #eaf6ee;
+  --color-ws-warn: #b45309;
+  --color-ws-warn-soft: #fdf3e3;
+  --color-ws-off: #475569;
+  --color-ws-off-soft: #eef1f5;
 }
 
 @layer base {

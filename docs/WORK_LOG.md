@@ -104,3 +104,17 @@
 - **شاهد اجرا:** فقط CI `39585708662` روی commit مبنا (۶ Job سبز، ۲۰۴ تست .NET روی SQL Server 2022، ۱۲ E2E). **Build/Test در این محیط اجرا نشد** (dotnet نیست).
 - **تصمیم‌های باز (`NeedsApproval`):** دوره ارفاق ۳۰ روزه، فهرست زیرسیستم‌ها، الگوریتم امضا، مسیر گذار Activation قدیمی (وجود مشتری Production: نامشخص)، رابطه Company ابری با مشتری، `LICENSE`.
 - **گزارش:** `docs/handoffs/ISSUE-UNNUMBERED-architecture-source-of-truth.md`. Merge نشد.
+
+## 2026-10-21 — انتخاب شرکت و دوره مالی پس از ورود (UNNUMBERED، شاخه `feature/company-fiscal-period-selection`)
+- **پایه:** شاخه `docs/architecture-source-of-truth` (`6a731db`، PR #46). Merge نشد.
+- **جدید:** `/api/v1/context`، Cookie زمینه کاری وابسته به هر ورود، صفحه انتخاب و مسدود، نوار زمینه، کیت UI کوچک، ADR D-031. بدون تغییر Schema/Migration.
+- **شاهد محلی:** ۲۴۵ تست .NET (Provider حافظه‌ای)، ۳۹ تست کلاینت، Build و بررسی آفلاین موفق، بررسی بصری با API شبیه‌سازی‌شده.
+- **اجرانشده:** CI، E2E و هر تست روی SQL Server (در محیط موجود نیست).
+- **`NeedsApproval`:** «دوره معتبر = Open»؛ دوره‌های بسته/بایگانی/آینده؛ تغییر زمینه حین نشست.
+- **گزارش:** `docs/handoffs/ISSUE-UNNUMBERED-company-fiscal-period-selection.md`.
+
+## 2026-10-21 — اعتبار دوره مالی و تغییر زمینه حین نشست (UNNUMBERED، همان شاخه `feature/company-fiscal-period-selection`)
+- **تصمیم کارفرما:** ADR D-032. Open=ورود عادی، Closed=فقط مشاهده/گزارش (`accessMode`)، Archived و دوره بیگانه/خارج دسترسی=ممنوع؛ تغییر زمینه حین نشست مجاز با بررسی سرور و ممیزی.
+- **کد:** سیاست در `WorkContext.cs`، ممیزی `WorkContextSelected/Changed/SelectionDenied` در `WorkContextService.cs`، فیلد `accessMode` در API؛ کلاینت: نشان «فقط مشاهده»، پیش‌انتخاب بدون ابهام، بازسازی داشبورد با کلید شرکت+دوره؛ اصلاح انتخاب Radio در E2E (کلیک روی Label) و سناریوهای جدید.
+- **شاهد محلی:** ۲۵۳ تست .NET (Provider حافظه‌ای)، ۴۸ تست کلاینت، Build/typecheck/offline/static assets موفق. **اجرانشده:** E2E و تست روی SQL Server (فقط CI).
+- **باقی:** رفتار `Archived`/آینده `NeedsApproval`؛ اِعمال `AllowsWrites` روی Endpointهای نوشتن آینده.

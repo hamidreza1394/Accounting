@@ -33,6 +33,37 @@ export type CompanyOverview = {
   fiscalPeriods: FiscalPeriod[];
 };
 
+/** What a working context allows: an open period is read-write, a closed one is read-only. */
+export type AccessMode = 'readWrite' | 'readOnly';
+
+/**
+ * A fiscal period as offered for selection; `isSelectable` and `accessMode` are decided by the
+ * server (`accessMode` is `null` for a period that cannot be entered).
+ */
+export type FiscalPeriodChoice = FiscalPeriod & { isSelectable: boolean; accessMode: AccessMode | null };
+
+export type CompanyChoice = CompanySummary & { fiscalPeriods: FiscalPeriodChoice[] };
+
+export type SelectedContext = {
+  company: CompanySummary;
+  fiscalPeriod: FiscalPeriodChoice;
+};
+
+export type EntryMode = 'directEntry' | 'selectionRequired' | 'noCompany' | 'noEligiblePeriod';
+
+export type DirectSelection = { companyId: string; fiscalPeriodId: string };
+
+/**
+ * The working context of the sign-in: the validated current choice (if any), the choices, and
+ * what to do next. Every decision is made by the server; the client only presents it.
+ */
+export type WorkContext = {
+  current: SelectedContext | null;
+  entry: EntryMode;
+  directSelection: DirectSelection | null;
+  companies: CompanyChoice[];
+};
+
 export type AntiforgeryToken = {
   headerName: string;
   requestToken: string;
@@ -131,6 +162,76 @@ export function parseFiscalPeriod(value: unknown): FiscalPeriod {
     startDate: readIsoDate(value, 'startDate', 'fiscalPeriod'),
     endDate: readIsoDate(value, 'endDate', 'fiscalPeriod'),
     status,
+  };
+}
+
+function readBoolean(source: JsonObject, key: string, what: string): boolean {
+  const value = source[key];
+  if (typeof value !== 'boolean') {
+    throw new ContractError(`${what}.${key}`);
+  }
+  return value;
+}
+
+export function parseFiscalPeriodChoice(value: unknown): FiscalPeriodChoice {
+  if (!isObject(value)) {
+    throw new ContractError('fiscalPeriod');
+  }
+  const mode = value['accessMode'];
+  if (mode !== null && mode !== 'readWrite' && mode !== 'readOnly') {
+    throw new ContractError('fiscalPeriod');
+  }
+  return { ...parseFiscalPeriod(value), isSelectable: readBoolean(value, 'isSelectable', 'fiscalPeriod'), accessMode: mode };
+}
+
+function parseCompanyChoice(value: unknown): CompanyChoice {
+  if (!isObject(value) || !Array.isArray(value['fiscalPeriods'])) {
+    throw new ContractError('companyChoice');
+  }
+  return { ...parseCompanySummary(value), fiscalPeriods: value['fiscalPeriods'].map(parseFiscalPeriodChoice) };
+}
+
+function parseSelectedContext(value: unknown): SelectedContext {
+  if (!isObject(value)) {
+    throw new ContractError('context');
+  }
+  return {
+    company: parseCompanySummary(value['company']),
+    fiscalPeriod: parseFiscalPeriodChoice(value['fiscalPeriod']),
+  };
+}
+
+const entryModes: readonly EntryMode[] = ['directEntry', 'selectionRequired', 'noCompany', 'noEligiblePeriod'];
+
+export function parseSelectedContextResponse(value: unknown): SelectedContext {
+  return parseSelectedContext(value);
+}
+
+export function parseWorkContext(value: unknown): WorkContext {
+  if (!isObject(value) || !Array.isArray(value['companies'])) {
+    throw new ContractError('workContext');
+  }
+  const entry = readString(value, 'entry', 'workContext');
+  if (!(entryModes as readonly string[]).includes(entry)) {
+    throw new ContractError('workContext.entry');
+  }
+  const direct = value['directSelection'];
+  let directSelection: DirectSelection | null = null;
+  if (direct !== null && direct !== undefined) {
+    if (!isObject(direct)) {
+      throw new ContractError('workContext.directSelection');
+    }
+    directSelection = {
+      companyId: readString(direct, 'companyId', 'directSelection'),
+      fiscalPeriodId: readString(direct, 'fiscalPeriodId', 'directSelection'),
+    };
+  }
+  const current = value['current'];
+  return {
+    current: current === null || current === undefined ? null : parseSelectedContext(current),
+    entry: entry as EntryMode,
+    directSelection,
+    companies: value['companies'].map(parseCompanyChoice),
   };
 }
 
