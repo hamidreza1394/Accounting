@@ -216,10 +216,10 @@ public sealed class LoginAuthenticationTests
 						},
 				};
 
-			// The .NET 10 model-state pipeline no longer exposes a public value-provider
-			// result, so the submitted values are not replayed here. The page is
-			// responsible for removing the password from the model state, and that
-			// contract is asserted on the model state directly.
+			// The submitted values are not replayed here, because most scenarios do not
+			// need them. A test that has to prove something about the submitted value
+			// itself seeds it explicitly with ModelState.SetModelValue, which is the
+			// same call the model binder makes.
 			return model;
 		}
 
@@ -290,6 +290,118 @@ public sealed class LoginAuthenticationTests
 		Assert.IsType<PageResult>(result);
 		Assert.Equal(0, harness.Authentication.SignInCount);
 		Assert.Empty(collection: harness.Database.SecurityAuditEvents);
+	}
+
+	[Fact]
+	public async Task PasswordAboveTheMaximumLength_KeepsTheValidationMessage_AndIssuesNoCookie()
+	{
+		using var harness = new Harness();
+		harness.AddUser
+			(username: "dariush",
+			passwordHash: harness.PasswordHashService.Hash(password: "Correct-Password-1"));
+
+		var tooLongPassword =
+			new string(c: 'a', count: Constants.MaxLength.UserPassword + 1);
+
+		var model =
+			harness.CreateModel(username: "dariush", password: tooLongPassword);
+
+		// **************************************************
+		// Reproduce what the model binder does before the handler runs: the submitted
+		// value is written into the model state, and the real data annotations of the
+		// view model add the validation errors.
+		//
+		// Seeding the value is what makes the "cleared" assertions at the end of this
+		// test meaningful: the model state entry is what the input tag helper reads when
+		// it redisplays a failed post. Without the seed the raw value would be null from
+		// the start, and the assertions could never fail.
+		// **************************************************
+		const string passwordKey = "ViewModel.Password";
+
+		model.ModelState.SetModelValue
+			(key: passwordKey,
+			rawValue: tooLongPassword,
+			attemptedValue: tooLongPassword);
+
+		AddTheValidationErrorsOfTheViewModel(model: model);
+
+		Assert.False(model.ModelState.IsValid);
+
+		// The seed is really in the model state; otherwise the assertions below would
+		// pass for the wrong reason.
+		Assert.Equal
+			(expected: tooLongPassword,
+			actual: model.ModelState[passwordKey]!.RawValue as string);
+
+		Assert.Equal
+			(expected: tooLongPassword,
+			actual: model.ModelState[passwordKey]!.AttemptedValue);
+
+		var result = await model.OnPostAsync();
+
+		Assert.IsType<PageResult>(result);
+		Assert.Equal(0, harness.Authentication.SignInCount);
+		Assert.Empty(collection: harness.Database.SecurityAuditEvents);
+
+		// The message of the field survives, so the form is never rendered without an
+		// explanation of why the sign-in did not happen.
+		Assert.True(model.ModelState.TryGetValue
+			(key: passwordKey, out var modelStateEntry));
+
+		Assert.NotEmpty(collection: modelStateEntry!.Errors);
+
+		// The message names the limit that was violated, so the user learns why the
+		// sign-in did not happen instead of seeing the form again without an explanation.
+		var maximumLength =
+			Constants.MaxLength.UserPassword.ToString
+				(provider: System.Globalization.CultureInfo.InvariantCulture);
+
+		var renderedMessages =
+			string.Join
+				(separator: " ",
+				values: modelStateEntry.Errors
+					.Select(selector: error => error.ErrorMessage));
+
+		Assert.Contains(maximumLength, renderedMessages);
+
+		// The credential itself is not kept: not in the page model, and neither as the
+		// raw value nor as the attempted value of the model state entry that the HTML
+		// generator reads when it redisplays a failed post.
+		Assert.Null(model.ViewModel.Password);
+		Assert.Null(modelStateEntry.RawValue);
+		Assert.Null(modelStateEntry.AttemptedValue);
+	}
+
+	/// <summary>
+	/// Runs the real data annotations of the view model and copies the failures into the
+	/// model state, exactly as the server-side validation of Razor Pages does before the
+	/// page handler is invoked.
+	/// </summary>
+	private static void AddTheValidationErrorsOfTheViewModel
+		(Server.Pages.Security.LoginModel model)
+	{
+		var validationResults =
+			new List<System.ComponentModel.DataAnnotations.ValidationResult>();
+
+		var validationContext =
+			new System.ComponentModel.DataAnnotations.ValidationContext
+				(instance: model.ViewModel);
+
+		System.ComponentModel.DataAnnotations.Validator.TryValidateObject
+			(instance: model.ViewModel,
+			validationContext: validationContext,
+			validationResults: validationResults,
+			validateAllProperties: true);
+
+		foreach (var validationResult in validationResults)
+		{
+			foreach (var memberName in validationResult.MemberNames)
+			{
+				model.ModelState.AddModelError
+					(key: $"ViewModel.{memberName}",
+					errorMessage: validationResult.ErrorMessage ?? string.Empty);
+			}
+		}
 	}
 	#endregion
 
@@ -822,6 +934,66 @@ public sealed class PasswordHashServiceTests
 
 		Assert.False
 			(Infrastructure.Security.PasswordHashService.IsLegacySha256Hash(value: current));
+	}
+
+	[Fact]
+	public void LegacyVerification_PaysTheCostClassOfTheCurrentFormat()
+	{
+		var legacyHash = Dtat.Security.Hashing.GetSha256(text: "Legacy-Password-1");
+		var currentHash = _service.Hash(password: "C0rrect-Phrase-1405!");
+
+		// Warm up the JIT and the PBKDF2 path, so the first measurement is not the one
+		// that pays for the initialisation.
+		_service.SimulateVerification(password: "warm-up-password");
+		_service.Verify(storedHash: currentHash, password: "warm-up-password");
+		_service.Verify(storedHash: legacyHash, password: "warm-up-password");
+
+		var dummyCost = MeasureMinimumCost
+			(action: () => _service.SimulateVerification(password: "Legacy-Password-1"));
+
+		var legacySuccessCost = MeasureMinimumCost
+			(action: () => _service.Verify
+				(storedHash: legacyHash, password: "Legacy-Password-1"));
+
+		var legacyFailureCost = MeasureMinimumCost
+			(action: () => _service.Verify
+				(storedHash: legacyHash, password: "Legacy-Password-2"));
+
+		// A legacy digest on its own is a single SHA-256, which is about four orders of
+		// magnitude cheaper than the dummy PBKDF2 of the unknown-username path. The
+		// threshold is deliberately generous: it asserts the cost class of the two paths,
+		// not an equality of their durations.
+		var minimumAcceptedCost = dummyCost / 5;
+
+		Assert.True
+			(condition: legacySuccessCost >= minimumAcceptedCost,
+			userMessage: $"A matching legacy digest was verified in {legacySuccessCost} ticks, the dummy PBKDF2 needed {dummyCost}.");
+
+		Assert.True
+			(condition: legacyFailureCost >= minimumAcceptedCost,
+			userMessage: $"A non-matching legacy digest was verified in {legacyFailureCost} ticks, the dummy PBKDF2 needed {dummyCost}.");
+	}
+
+	/// <summary>
+	/// Returns the cheapest of a few runs: noise and scheduling delays only ever make a
+	/// single run slower, never faster.
+	/// </summary>
+	private static long MeasureMinimumCost(System.Action action, int iterations = 3)
+	{
+		var minimum = long.MaxValue;
+
+		for (var index = 0; index < iterations; index++)
+		{
+			var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+			action();
+
+			stopwatch.Stop();
+
+			minimum = System.Math.Min(val1: minimum, val2: stopwatch.ElapsedTicks);
+		}
+
+		return minimum;
 	}
 }
 

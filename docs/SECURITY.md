@@ -24,13 +24,28 @@
 - Dependabot/NuGet audit و اسکن Secretها در CI فعال شوند.
 - خطاهای تولیدی نباید Stack Trace یا داده حساس به کاربر نشان دهند.
 
-## تنظیم محلی موقت برای Login قدیمی
+## تنظیم حساب زیرساختی (Master)
+
+`ApplicationSettings:MasterPassword` یک **اعتبارنامه هش‌شده** است، نه رمز خام؛ کد آن را با هش‌کننده پروژه بررسی می‌کند (به بخش «احراز هویت صفحه ورود — Issue #30» پایین‌تر مراجعه کنید).
+
+روش توصیه‌شده تولید مقدار جدید:
+
+```csharp
+// یک‌بار در محیط توسعه/استقرار اجرا و خروجی را در User Secrets یا Secret Store قرار دهید
+new Infrastructure.Security.PasswordHashService().Hash("<password>")
+```
+
 ```bash
 dotnet user-secrets init --project Server/Server.csproj
 dotnet user-secrets set "ApplicationSettings:MasterUsername" "your-local-user" --project Server/Server.csproj
-dotnet user-secrets set "ApplicationSettings:MasterPassword" "<Base64-SHA256-hash>" --project Server/Server.csproj
+dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produced by PasswordHashService.Hash>" --project Server/Server.csproj
 ```
-این فقط برای سازگاری موقت با Login فعلی است و راهکار توصیه‌شده برای Production نیست.
+
+- روش توصیه‌شده `Microsoft.AspNetCore.Identity.PasswordHasher<T>` است: PBKDF2، salt یکتا برای هر مقدار، قالب نسخه‌دار.
+- پذیرش قالب قدیمی `Base64(SHA-256)` فقط برای **سازگاری و مهاجرت تدریجی** است؛ برای مقدار جدید از آن استفاده نکن.
+- رمز خام را هرگز به‌عنوان `MasterPassword` در `appsettings.json`، User Secrets یا Environment قرار نده؛ مقدار تنظیمات به‌عنوان هش بررسی می‌شود و ورود با رمز خام ناموفق خواهد بود.
+- اگر مقدار پیکربندی‌شده هنوز قالب قدیمی داشته باشد، در هر ورود موفق یک `LogWarning` بدون مقدار در Log ثبت می‌شود؛ آن را با مقدار جدید جایگزین کن.
+- رمز خام، هش و مقدار تنظیمات هرگز در Log نوشته نمی‌شوند.
 
 ## OWASP Top 10 و DevSecOps
 هر PR باید اثر تغییر بر Access Control، Cryptographic Failures، Injection، Insecure Design، Security Misconfiguration، Vulnerable Components، Authentication Failures، Integrity Failures، Logging/Monitoring و SSRF را بررسی کند. امنیت بخشی از چرخه توسعه و CI است، نه بررسی انتهایی.
@@ -51,13 +66,8 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<Base64-SHA256-has
 - رمز عبور کاربران اکنون با `Microsoft.AspNetCore.Identity.PasswordHasher<T>` (PBKDF2، salt یکتا برای هر رمز، قالب نسخه‌دار) هش می‌شود. هش قدیمی `Base64(SHA-256)` دیگر تولید نمی‌شود.
 - سازگاری: هش قدیمی هنوز پذیرفته می‌شود و پس از نخستین ورود موفق در همان رکورد با هش استاندارد جایگزین می‌شود (`SuccessRehashNeeded`). حساب‌هایی که هرگز وارد نشوند هش قدیمی خود را نگه می‌دارند؛ پیش از Production باید یا وارد شوند یا رمزشان بازنشانی شود.
 - مقدار هش نامعتبر/بریده در ستون، ورود را با شکست مواجه می‌کند (نه `FormatException`).
-- برای نام کاربری ناموجود، همان هزینه محاسباتی بررسی رمز انجام می‌شود تا زمان پاسخ وجود حساب را افشا نکند.
-- حساب زیرساختی (`ApplicationSettings:MasterPassword`) هم قالب جدید و هم قالب قدیمی را می‌پذیرد. تولید مقدار جدید:
-  ```csharp
-  // یک‌بار در محیط توسعه/استقرار اجرا و مقدار را در User Secrets/Secret Store قرار دهید
-  new Infrastructure.Security.PasswordHashService().Hash("<password>")
-  ```
-  اگر مقدار قدیمی پیکربندی شده باشد، در هر ورود موفق یک هشدار (بدون مقدار) در Log ثبت می‌شود.
+- برای نام کاربری ناموجود، همان هزینه محاسباتی بررسی رمز انجام می‌شود تا زمان پاسخ وجود حساب را افشا نکند. حساب‌هایی که هنوز هش قدیمی دارند نیز همین هزینه را می‌پردازند: پس از مقایسه ثابت‌زمانی SHA-256، یک بررسی ساختگی با هش‌کننده فعلی (PBKDF2) اجرا می‌شود که نتیجه‌اش نادیده گرفته می‌شود و برای رمز درست و نادرست یکسان اجرا می‌گردد. هدف، کاهش اختلاف آشکار هزینه دو مسیر است، نه برابری کامل زمان پاسخ؛ اختلاف‌های جزئی در حد نویز باقی می‌ماند و هیچ تضمین ریاضی برای یکسان‌بودن زمان دو مسیر وجود ندارد.
+- حساب زیرساختی (`ApplicationSettings:MasterPassword`) هم قالب جدید و هم قالب قدیمی را می‌پذیرد؛ روش تولید مقدار جدید و قواعد آن در بخش «تنظیم حساب زیرساختی (Master)» در بالای همین سند آمده است. اگر مقدار قدیمی پیکربندی شده باشد، در هر ورود موفق یک هشدار (بدون مقدار) در Log ثبت می‌شود.
 - ستون `Users.Password` به `varchar(255)` بزرگ شده است (Migration `WidenUserPasswordHash`)؛ Migration داده‌ای را تغییر نمی‌دهد.
 - جریان ورود: Post/Redirect/Get، پیام عمومی برای اعتبارنامه اشتباه، پیام اختصاصی غیرفعال/قفل، حذف رمز از `ModelState` پیش از رندر پاسخ، و هدایت به مقصد موقت محافظت‌شده `/Account/LoginSuccess`.
 - `ReturnUrl` فقط با `Url.IsLocalUrl` پذیرفته می‌شود؛ در غیر این صورت مقصد موقت.

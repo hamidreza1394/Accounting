@@ -112,6 +112,17 @@
 				var isMatch =
 					IsFixedTimeEqual(left: suppliedDigest, right: storedHash);
 
+				// A legacy digest is verified by a single SHA-256, which is orders of
+				// magnitude cheaper than the PBKDF2 of the current format. Without the
+				// extra work below, a request for an existing account that still has a
+				// legacy digest would answer faster than a request for an unknown
+				// username (which pays for the dummy PBKDF2), and that difference would
+				// reveal which accounts are not migrated yet.
+				//
+				// The result is ignored on purpose: only the cost is wanted, and it is
+				// paid for the matching and for the non-matching case alike.
+				SimulateVerification(password: password);
+
 				return isMatch
 					? PasswordVerificationOutcome.SuccessRehashNeeded
 					: PasswordVerificationOutcome.Failed;

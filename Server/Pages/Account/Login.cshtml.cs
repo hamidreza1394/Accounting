@@ -228,17 +228,50 @@ namespace Server.Pages.Security
 
 		#region ClearPassword
 		/// <summary>
-		/// Removes the supplied password from the page model and from the model state.
-		/// Clearing only the property is not enough: the input tag helper takes the
-		/// value of a failed post from the model state, so the password would otherwise
-		/// be written back into the HTML of the response.
+		/// Removes the supplied password from the page model and from the model state,
+		/// without losing the validation errors that belong to the field.
 		/// </summary>
+		/// <remarks>
+		/// Clearing only the property is not enough: the input tag helper takes the value
+		/// of a failed post from the model state, so the password would otherwise be
+		/// written back into the HTML of the response. Removing the whole model state entry
+		/// is not right either, because it also drops the errors of the field - a password
+		/// that violates the maximum length would then come back as a form without any
+		/// message at all. The entry is therefore removed and its messages are re-added
+		/// without a value.
+		/// </remarks>
 		private void ClearPassword()
 		{
 			ViewModel.Password = null;
 
-			ModelState.Remove
-				(key: $"{nameof(ViewModel)}.{nameof(ViewModel.Password)}");
+			var modelStateKey =
+				$"{nameof(ViewModel)}.{nameof(ViewModel.Password)}";
+
+			if (ModelState.TryGetValue
+				(key: modelStateKey, out var modelStateEntry) == false)
+			{
+				return;
+			}
+
+			var errorMessages =
+				new System.Collections.Generic.List<string>();
+
+			foreach (var error in modelStateEntry.Errors)
+			{
+				if (string.IsNullOrEmpty(value: error.ErrorMessage) == false)
+				{
+					errorMessages.Add(item: error.ErrorMessage);
+				}
+			}
+
+			ModelState.Remove(key: modelStateKey);
+
+			foreach (var errorMessage in errorMessages)
+			{
+				// Re-added without a value: the message stays, the credential does not.
+				ModelState.AddModelError
+					(key: modelStateKey, errorMessage: errorMessage);
+			}
 		}
 		#endregion /ClearPassword
 
