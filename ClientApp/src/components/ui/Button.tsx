@@ -53,7 +53,7 @@ export function Button({
       {loading ? (
         <span aria-hidden="true" className="size-4 animate-spin rounded-full border-2 border-current/30 border-t-current motion-reduce:animate-none" />
       ) : null}
-      <span>{loading && loadingLabel ? loadingLabel : children}</span>
+      <span className="inline-flex items-center gap-2">{loading && loadingLabel ? loadingLabel : children}</span>
     </button>
   );
 }

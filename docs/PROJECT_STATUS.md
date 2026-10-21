@@ -152,3 +152,8 @@
   - `npm ci && npm run typecheck && npm test -- --run && npm run build && npm run check:offline` در `ClientApp` → همه موفق (۲۴ تست Vitest Pass؛ Build و بررسی آفلاین بدون خطا).
 - **ریسک باقی‌مانده بدون تغییر:** مسیر مرده Google OAuth (`AUD-2026-10-21-02`، نیاز به تصمیم حذف/تکمیل)، آسیب‌پذیری Low در `vite` (`AUD-2026-10-21-03`، فقط ابزار توسعه)، عدم امکان تست SQL Server واقعی در این محیط (`FARANOU_TEST_SQLSERVER` اجرا نشد).
 - گزارش: `docs/handoffs/ISSUE-UNNUMBERED-comprehensive-quality-hardening.md`.
+
+## انتخاب شرکت و دوره مالی (D-031) — 2026-10-21
+- `Implemented` در شاخه `feature/company-fiscal-period-selection` (PR باز، ادغام‌نشده): `/api/v1/context`، Cookie زمینه کاری، صفحه انتخاب، صفحات مسدود، نوار زمینه، کیت UI کوچک.
+- `Verified` فقط محلی: ۲۴۵ تست .NET (Provider حافظه‌ای)، ۳۹ تست کلاینت، Build کلاینت و بررسی آفلاین، بررسی بصری با API شبیه‌سازی‌شده. CI و E2E روی SQL Server هنوز اجرا نشده‌اند.
+- `NeedsApproval`: «دوره معتبر = Open»؛ رفتار دوره‌های بسته/بایگانی‌شده/آینده؛ تغییر شرکت/دوره حین نشست.
