@@ -95,3 +95,29 @@ export function SwapIcon(props: IconProps) {
     </Base>
   );
 }
+
+export function SearchIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="M20 20l-3.5-3.5" />
+    </Base>
+  );
+}
+
+export function CloseIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M6 6l12 12M18 6L6 18" />
+    </Base>
+  );
+}
+
+export function UserIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21c1-4.5 4.5-6.5 8-6.5s7 2 8 6.5" />
+    </Base>
+  );
+}

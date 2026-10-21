@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { WorkContext } from '../api/types';
 import { antiforgeryRoute, company, contextBody, period, selected, session, stubApi } from '../test/api';
-import { WorkContextSelector, searchThreshold } from './WorkContextSelector';
+import { WorkContextSelector } from './WorkContextSelector';
 
 function renderSelector(context: WorkContext) {
   return render(
@@ -23,22 +23,29 @@ const many = (count: number) =>
   Array.from({ length: count }, (_, index) => company(`c${index}`, `شرکت شماره ${index + 1}`, [period(`p${index}`, 'دوره')]));
 
 describe('WorkContextSelector', () => {
-  it('shows no search box for a short list of companies', () => {
-    renderSelector(contextBody({ companies: many(searchThreshold) }) as WorkContext);
+  it('always offers the search and filters by name', async () => {
+    renderSelector(contextBody({ companies: many(9) }) as WorkContext);
 
-    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
-  });
-
-  it('offers a search for a long list and filters by name', async () => {
-    renderSelector(contextBody({ companies: many(searchThreshold + 3) }) as WorkContext);
-
-    await userEvent.type(screen.getByRole('searchbox', { name: 'جست‌وجوی شرکت' }), 'شماره 8');
+    await userEvent.type(screen.getByRole('searchbox', { name: 'جست‌وجوی شرکت بر اساس نام یا شناسه ملی' }), 'شماره 8');
 
     expect(screen.getAllByRole('radio', { name: /شرکت شماره/ })).toHaveLength(1);
   });
 
+  it('finds a company by national id typed with Persian digits and extra spaces', async () => {
+    renderSelector(
+      contextBody({
+        companies: [company('a', 'شرکت الف', [period('p1', 'دوره')], '10101010101'), company('b', 'شرکت ب', [period('p2', 'دوره')], '20202020202')],
+      }) as WorkContext,
+    );
+
+    await userEvent.type(screen.getByRole('searchbox'), '  ۱۰۱۰۱  ');
+
+    expect(screen.getAllByRole('radio', { name: /شرکت/ })).toHaveLength(1);
+    expect(screen.getByRole('radio', { name: /شرکت الف/ })).toBeInTheDocument();
+  });
+
   it('says so when the search finds nothing', async () => {
-    renderSelector(contextBody({ companies: many(searchThreshold + 1) }) as WorkContext);
+    renderSelector(contextBody({ companies: many(3) }) as WorkContext);
 
     await userEvent.type(screen.getByRole('searchbox'), 'ناموجود');
 
@@ -118,5 +125,56 @@ describe('WorkContextSelector', () => {
     expect(alert).not.toHaveTextContent('Sql');
     // A server failure is retried with the same button; the stale-list action is not offered.
     expect(screen.queryByRole('button', { name: 'به‌روزرسانی فهرست' })).not.toBeInTheDocument();
+  });
+
+  it('shows only data the server provides: no licence, user count or subsystem fields', () => {
+    renderSelector(contextBody({ companies: [company('a', 'شرکت الف', [period('p1', 'دوره')], '10101010101')] }) as WorkContext);
+
+    expect(screen.queryByText(/مجوز/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/زیرسیستم/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/کاربر$/)).not.toBeInTheDocument();
+  });
+
+  it('shows the fiscal periods of the chosen company only, and clears the period when the company changes', async () => {
+    renderSelector(
+      contextBody({
+        companies: [
+          company('a', 'شرکت الف', [period('p1', 'دوره الف ۱'), period('p2', 'دوره الف ۲')]),
+          company('b', 'شرکت ب', [period('p3', 'دوره ب ۱'), period('p4', 'دوره ب ۲')]),
+        ],
+      }) as WorkContext,
+    );
+
+    expect(screen.getByText('ابتدا یک شرکت انتخاب کنید.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('radio', { name: /شرکت الف/ }));
+    await userEvent.click(screen.getByRole('radio', { name: /دوره الف ۲/ }));
+    expect(screen.getByRole('button', { name: /ورود به محیط کاری/ })).not.toHaveAttribute('aria-disabled');
+
+    await userEvent.click(screen.getByRole('radio', { name: /شرکت ب/ }));
+
+    expect(screen.queryByRole('radio', { name: /دوره الف/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /دوره ب ۱/ })).not.toBeChecked();
+    expect(screen.getByRole('button', { name: /ورود به محیط کاری/ })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByText('دوره‌های مالی متعلق به شرکت ب')).toBeInTheDocument();
+  });
+
+  it('the cancel button leaves the screen: it goes back when changing, and signs out on first entry', async () => {
+    const onCancel = vi.fn();
+    const onLogout = vi.fn();
+    const ctx = contextBody({ companies: [company('a', 'شرکت الف', [period('p1', 'دوره')])] }) as WorkContext;
+    const { unmount } = render(
+      <WorkContextSelector session={session} context={ctx} current={null} onSelected={vi.fn()} onCancel={onCancel} onLogout={onLogout} onRefresh={vi.fn()} onUnauthenticated={() => false} />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'انصراف' }));
+    expect(onCancel).toHaveBeenCalledOnce();
+    expect(onLogout).not.toHaveBeenCalled();
+    unmount();
+
+    const logout = vi.fn();
+    render(
+      <WorkContextSelector session={session} context={ctx} current={null} onSelected={vi.fn()} onLogout={logout} onRefresh={vi.fn()} onUnauthenticated={() => false} />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'انصراف' }));
+    expect(logout).toHaveBeenCalledOnce();
   });
 });

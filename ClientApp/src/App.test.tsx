@@ -41,7 +41,7 @@ describe('App', () => {
 
     // No selection screen: the dashboard of the confirmed choice appears.
     expect(await screen.findByRole('heading', { name: 'داشبورد' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'انتخاب دوره مالی و شرکت' })).not.toBeInTheDocument();
 
     const post = fetchMock.mock.calls.find((call) => (call[1] as RequestInit | undefined)?.method === 'POST');
     expect(JSON.parse((post?.[1] as RequestInit).body as string)).toEqual({ companyId: 'a', fiscalPeriodId: 'p1' });
@@ -72,7 +72,7 @@ describe('App', () => {
 
     render(<App navigate={vi.fn()} />);
 
-    expect(await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'انتخاب دوره مالی و شرکت' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'داشبورد' })).not.toBeInTheDocument();
   });
 
@@ -95,7 +95,7 @@ describe('App', () => {
 
     render(<App navigate={vi.fn()} />);
 
-    await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' });
+    await screen.findByRole('heading', { name: 'انتخاب دوره مالی و شرکت' });
     const enter = screen.getByRole('button', { name: /ورود به محیط کاری/ });
     expect(enter).toHaveAttribute('aria-disabled', 'true');
 
@@ -120,7 +120,7 @@ describe('App', () => {
 
     render(<App navigate={vi.fn()} />);
 
-    await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' });
+    await screen.findByRole('heading', { name: 'انتخاب دوره مالی و شرکت' });
     // The single company is selected for the user; its periods are shown.
     expect(screen.getByRole('radio', { name: /شرکت الف/ })).toBeChecked();
     expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۴/ })).toBeDisabled();
@@ -197,7 +197,7 @@ describe('App', () => {
     await userEvent.click(await screen.findByRole('button', { name: /تغییر شرکت یا دوره/ }));
 
     // The selector opens with the current choice pre-selected, and the choices were reloaded.
-    expect(await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'انتخاب دوره مالی و شرکت' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /شرکت الف/ })).toBeChecked();
     expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۵/ })).toBeChecked();
     expect(fetchMock.mock.calls.filter((call) => call[0] === '/api/v1/context')).toHaveLength(2);
@@ -226,7 +226,7 @@ describe('App', () => {
     void release;
 
     render(<App navigate={vi.fn()} />);
-    await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' });
+    await screen.findByRole('heading', { name: 'انتخاب دوره مالی و شرکت' });
     await userEvent.click(screen.getByRole('radio', { name: /شرکت ب/ }));
     const enter = screen.getByRole('button', { name: /ورود به محیط کاری/ });
 
@@ -246,7 +246,7 @@ describe('App', () => {
     });
 
     render(<App navigate={vi.fn()} />);
-    await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' });
+    await screen.findByRole('heading', { name: 'انتخاب دوره مالی و شرکت' });
     await userEvent.click(screen.getByRole('radio', { name: /شرکت ب/ }));
     await userEvent.click(screen.getByRole('button', { name: /ورود به محیط کاری/ }));
 
@@ -302,7 +302,7 @@ describe('App', () => {
     const navigate = vi.fn();
 
     render(<App navigate={navigate} />);
-    await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' });
+    await screen.findByRole('heading', { name: 'انتخاب دوره مالی و شرکت' });
     await userEvent.click(screen.getByRole('radio', { name: /شرکت ب/ }));
     await userEvent.click(screen.getByRole('button', { name: /ورود به محیط کاری/ }));
 

@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import type { SelectedContext, Session } from '../api/types';
 import { formatPersianDate } from '../lib/date';
 import { Button } from './ui/Button';
+import { FaranouLogo } from './ui/FaranouLogo';
 import { BuildingIcon, CalendarIcon, SwapIcon } from './ui/icons';
 
 type AppShellProps = {
@@ -38,7 +39,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
       <header className="bg-navy text-white shadow-md">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <a href="/app/" className="flex items-center gap-3" aria-label="فرانو — داشبورد">
-            <img src="/images/faranou-mark.svg" alt="" width={36} height={36} className="rounded-lg bg-white/10 p-1" />
+            <FaranouLogo size={36} label={false} />
             <span className="flex flex-col leading-tight">
               <strong className="text-lg">فرانو</strong>
               <span className="text-xs text-white/70">نرم‌افزار حسابداری هوشمند</span>

@@ -131,7 +131,7 @@ test('remember me issues a persistent cookie', async ({ page, context }) => {
 
 async function chooseAlicesCompany(page) {
   await page.goto('/app/');
-  await expect(page.getByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'انتخاب دوره مالی و شرکت' })).toBeVisible();
   await page.getByRole('radio', { name: new RegExp(a.name) }).check();
   await page.getByRole('radio', { name: /سال مالی ۱۴۰۵/ }).check();
   await page.getByRole('button', { name: /ورود به محیط کاری/ }).click();
@@ -142,7 +142,7 @@ test('several companies: the user chooses, closed periods and foreign data are n
   await signIn(page, alice);
   await page.goto('/app/');
 
-  await expect(page.getByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'انتخاب دوره مالی و شرکت' })).toBeVisible();
   await expect(page.getByText(b.name)).toHaveCount(0);
   await expect(page.getByText(state.secretPeriodTitle)).toHaveCount(0);
   // A company without a fiscal period cannot be entered.
@@ -159,7 +159,7 @@ test('a single company with a single open period is entered directly', async ({ 
   await page.goto('/app/');
 
   await expect(page.getByRole('heading', { name: 'داشبورد' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'انتخاب دوره مالی و شرکت' })).toHaveCount(0);
   await expect(page.getByLabel('زمینه کاری جاری')).toContainText(b.name);
   await expectCleanPage(page);
 });
@@ -191,7 +191,7 @@ test('every new sign-in asks again; the previous choice is not restored', async 
 
   await signIn(page, alice);
   await page.goto('/app/');
-  await expect(page.getByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'انتخاب دوره مالی و شرکت' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'داشبورد' })).toHaveCount(0);
 });
 
@@ -280,7 +280,7 @@ test('an expired session in the dashboard leads back to the sign-in page and ret
   await page.locator('#ViewModel_Password').fill(alice.password);
   await page.locator('form.taraz-login-form button[type="submit"]').click();
   await expect(page).toHaveURL(/\/app\//);
-  await expect(page.getByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'انتخاب دوره مالی و شرکت' })).toBeVisible();
 });
 
 test('deactivating an account ends its open session on the next request', async ({ page }) => {

@@ -3,10 +3,10 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react';
 type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
 const variants: Record<Variant, string> = {
-  primary: 'bg-navy text-white hover:bg-navy-deep border border-navy',
-  secondary: 'bg-white text-navy border border-line hover:border-navy/40 hover:bg-cool',
+  primary: 'bg-ws-blue text-white hover:bg-ws-blue-deep border border-ws-blue shadow-sm',
+  secondary: 'bg-white text-ws-text border border-slate-400 hover:bg-ws-bg',
   danger: 'bg-danger text-white border border-danger hover:opacity-90',
-  ghost: 'bg-transparent text-navy border border-transparent hover:bg-cool',
+  ghost: 'bg-transparent text-ws-text border border-transparent hover:bg-ws-bg',
 };
 
 type ButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'className'> & {
@@ -46,9 +46,9 @@ export function Button({
         }
         onClick?.(event);
       }}
-      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${
-        variants[variant]
-      } ${inert ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] px-5 py-2.5 text-sm font-semibold transition-colors ${
+        inert && !loading ? 'cursor-not-allowed border border-slate-300 bg-slate-300 text-slate-600' : variants[variant]
+      } ${loading ? 'cursor-progress' : inert ? '' : 'cursor-pointer'}`}
     >
       {loading ? (
         <span aria-hidden="true" className="size-4 animate-spin rounded-full border-2 border-current/30 border-t-current motion-reduce:animate-none" />
