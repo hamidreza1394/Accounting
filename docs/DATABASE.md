@@ -26,7 +26,19 @@
 - `SecurityAuditEvent`: ثبت رویداد امنیتی بدون ذخیره رمز یا توکن.
 - نگاشت‌ها در `Infrastructure/Persistence/Configurations` قرار دارند و به‌وسیله `ApplyConfigurationsFromAssembly` کشف می‌شوند.
 
-**محدودیت فعلی:** مدل‌ها به DbContext افزوده شده‌اند، اما هنوز Migration بازبینی‌شده تولید نشده است. برای دیتابیس موجود، افزودن DbSet به‌تنهایی جدول جدید ایجاد نمی‌کند. همچنین Migration رسمی و مسیر حفظ داده‌های موجود باید پیش از استفاده عملیاتی تعیین شود.
+**وضعیت Migration (به‌روزرسانی 2026-10-21):** ~~«هنوز Migration تولید نشده است»~~ منسوخ. سه Migration در `Infrastructure/Persistence/Migrations` وجود دارد: `InitialCreate` (`20251017120000_InitialCreate`)، `AlignSchemaWithModel`، `WidenUserPasswordHash`. CI گاردهای `generate_migrations.py --check`، `verify_migration_model.py` و `dotnet ef migrations has-pending-model-changes` را اجرا می‌کند و اجرای شماره `39585708662` سبز بود. وجود Migration به‌معنی اعمال آن روی هر دیتابیس مشتری نیست؛ برای دیتابیس‌های قدیمی ساخته‌شده با `EnsureCreated()` مسیر کنترل‌شده در بخش «راه‌اندازی اولیه» پایین و `database-migrations.md` گفته شده است. نکته: برچسب زمانی `InitialCreate` (`20251017…`) ناهمگون به‌نظر می‌رسد (AUD-2026-10-21-08+)؛ بدون تصمیم مستند بازنویسی نشود.
+
+## ویژگی‌های واقعی Schema مدل چندشرکتی (از `Configurations/*`)
+- `Companies`: `Name` حداکثر ۲۰۰؛ `NationalId` حداکثر ۲۰ با نمایه یکتای فیلتردار.
+- `FiscalPeriods`: یکتا روی `(TenantId, StartDate, EndDate)`.
+- `CompanyRoles`: یکتا روی `(TenantId, Code)` و کلید جایگزین `(Id, TenantId)`.
+- `PermissionDefinitions`: `Code` حداکثر ۱۲۰، یکتا.
+- `UserCompanyMemberships`: یکتا روی `(UserId, TenantId)`؛ کلید خارجی ترکیبی `(RoleId, TenantId)` به `CompanyRoles` و FK به `Companies`. **`UserId` هیچ FK به `Users` ندارد** (جلوگیری از عضویت یتیم در برنامه/تست لازم است؛ تصمیم اصلاح جداگانه).
+- Global Query Filter وجود ندارد (D-013)؛ فیلتر صریح با `CompanyAccessService`.
+- موجودیت‌های پایه (`Seedwork/Entity.cs`): `Id` (Guid)، `Ordering`، `InsertDateTime`.
+
+## مدل داده لایسنس (طرح، `NotImplemented`)
+هیچ جدول لایسنس/مشتری/نصب وجود ندارد. طرح و ERD در [`LICENSING_DATA_MODEL.md`](LICENSING_DATA_MODEL.md)؛ هر جدول آینده فقط با Migration افزایشی بازبینی‌شده پس از تأیید کارفرما (D-020، D-025).
 
 
 ## راه‌اندازی اولیه و فایل تنظیمات محلی — Issue #22

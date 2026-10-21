@@ -22,7 +22,7 @@ dotnet user-secrets init --project Server/Server.csproj
 dotnet user-secrets set "ConnectionStrings:ConnectionString" "Server=localhost;Database=TarazAvaDb;Trusted_Connection=True;Encrypt=True;TrustServerCertificate=False;" --project Server/Server.csproj
 ```
 
-ورود مدیریتی فعلی هنوز legacy است و برای Production تأیید نمی‌شود؛ راهنمای `docs/SECURITY.md` را بخوانید. مقادیر `MasterUsername`، `MasterPassword` و `ActivationKeys` باید فقط در User Secrets/Environment/Secret Store تنظیم شوند و خالی‌بودن آن‌ها نباید با مقدار پیش‌فرض ناامن دور زده شود.
+ورود مدیریتی فعلی هنوز legacy است و برای Production تأیید نمی‌شود؛ راهنمای `docs/SECURITY.md` را بخوانید. مقادیر `MasterUsername` و `MasterPassword` باید فقط در User Secrets/Environment/Secret Store تنظیم شوند و خالی‌بودن آن‌ها نباید با مقدار پیش‌فرض ناامن دور زده شود. (به‌روزرسانی 2026-10-21: گزینه `ActivationKeys` فعلاً بی‌اثر است چون Middleware به Pipeline متصل نیست — D-028؛ لایسنس آینده در `docs/LICENSING.md`.)
 
 ## Restore و اجرا
 ```powershell

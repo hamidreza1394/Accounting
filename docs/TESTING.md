@@ -8,7 +8,7 @@
 - تست‌های end-to-end فقط برای جریان‌های مهم و با محیط قابل تکرار.
 
 ## ساختار
-`tests/Template.Tests` فعلاً یک تست پایه برای رفتار تابع Hashing قدیمی دارد. این تست فقط نمونه اتصال xUnit و CI است؛ پوشش تجاری معنادار محسوب نمی‌شود. تست‌های بعدی باید با Use Caseهای واقعی و مستقل از جزئیات پیاده‌سازی نوشته شوند.
+`tests/Template.Tests` اکنون مجموعه‌ای از فایل‌های تست دارد (ورود، جداسازی شرکت، API، CSP، Master، Migration/مدل، DI دیتابیس، تست‌های Integration HTTP در `Integration/`)؛ ادعای قدیمی «فقط یک تست پایه» منسوخ است (2026-10-21). `BaselineTests.cs` فقط نمونه اتصال باقی مانده است. ۲۰۴ تست .NET در اجرای CI `39585708662` موفق گزارش شد؛ **وجود فایل تست به‌معنی اجرای موفق نیست** و این بازبینی مستنداتی تست اجرا نکرده است.
 
 ## فرمان‌ها
 ```bash
@@ -35,11 +35,11 @@ dotnet test Template.sln --no-build --configuration Release
 
 
 ## تست‌های جداسازی شرکت و API (2026-10-20)
-- `CompanyAccessServiceTests`: دسترسی فقط با عضویت فعال در شرکت فعال با نقش فعال؛ عدم دسترسی به شرکت Tenant دیگر، شرکت ناموجود و `Guid.Empty`؛ حساب غیرفعال؛ اثر فوری لغو عضویت؛ نادیده‌گرفتن Claim روی هویت احراز‌نشده.
+- (نام کلاس‌ها در `tests/Template.Tests/CompanyAccessTests.cs`) `CompanyAccessServiceTests`: دسترسی فقط با عضویت فعال در شرکت فعال با نقش فعال؛ عدم دسترسی به شرکت Tenant دیگر، شرکت ناموجود و `Guid.Empty`؛ حساب غیرفعال؛ اثر فوری لغو عضویت؛ نادیده‌گرفتن Claim روی هویت احراز‌نشده.
 - `ApiEndpointTests`: فهرست شرکت‌ها فقط برای کاربر جاری، حساب زیرساختی بدون شرکت، 401 برای نشست قدیمی بدون شناسه، نمای کلی فقط با داده همان شرکت، 404 یکسان برای Tenant دیگر و شرکت ناموجود، بی‌اثر بودن Claim جعلی `TenantId`، مسیرهای API.
 - `ApiCookieAuthenticationEventsTests`: پاسخ 401/403 برای `/api` و حفظ Redirect صفحه ورود برای صفحات مرورگر.
 - `SessionHardeningTests` و `SuccessfulSignIn_IssuesTheUserIdentifier_AndNoCompanyClaims`: خروج فقط با POST، Claim شناسه کاربر و نبود Claim شرکت.
-- این تست‌ها Endpointها را مستقیم با EF Core InMemory اجرا می‌کنند؛ تست HTTP کامل با `WebApplicationFactory` و SQL Server واقعی هنوز اضافه نشده است.
+- این تست‌ها Endpointها را مستقیم با EF Core InMemory اجرا می‌کنند؛ تست HTTP کامل با `WebApplicationFactory` و SQL Server واقعی بعداً اضافه شد (بخش «تست‌های Integration HTTP» پایین).
 
 ## تست‌های کلاینت React (`ClientApp`)
 ```bash
@@ -82,3 +82,11 @@ cd ClientApp && npm ci && npm run typecheck && npm test && npm run build && npm 
 **سناریوهای E2E:** صفحه ورود با فونت محلی و بدون نقض CSP؛ رد رمز اشتباه و حساب غیرفعال؛ Cookie از نوع HttpOnly و نمایش فقط شرکت‌های خود در خانه Razor؛ Remember Me؛ داشبورد React با داده واقعی، تغییر شرکت و نادیده‌گرفتن شناسه شرکت بیگانه؛ 404 یکسان برای شرکت دیگران و شرکت ناموجود؛ رد خروج API بدون توکن و خروج با دکمه داشبورد؛ خروج Razor (GET خارج نمی‌کند)؛ بازگشت از نشست منقضی با `ReturnUrl`؛ پایان نشست باز پس از غیرفعال‌سازی؛ صفحات مدیریت Master؛ صفحه راه‌اندازی اولیه. همه زیر CSP اجباری. Seed با حساب‌ها و رمزهای تصادفی هر اجرا انجام می‌شود (`tests/e2e/seed.mjs`).
 
 تست‌های Mock یا InMemory معادل E2E یا SQL Server معرفی نمی‌شوند. E2E فقط در CI اجرا شد؛ راهنمای اجرای محلی در `tests/e2e/README.md` است.
+
+
+## وضعیت و شکاف‌ها (2026-10-21)
+- **شاهد CI:** اجرای `39585708662` — ۲۰۴ تست .NET روی SQL Server 2022، ۱۲ E2E، اسکن NuGet بدون مورد. این سند اجرای جدید ادعا نمی‌کند.
+- **ناهمخوانی دستور:** CI و `AGENTS.md` از `dotnet test Template.sln --no-build ...` استفاده می‌کنند؛ در SDK محلی `10.0.113` طبق `WORK_LOG.md` سینتکس `dotnet test --solution Template.sln` لازم بود. دلیل و راه‌حل یکسان‌سازی **باز** است (REPOSITORY_AUDIT).
+- **تست‌های لایسنس:** هیچ تستی وجود ندارد چون قابلیتی پیاده‌سازی نشده (`NotImplemented`). تست‌های پذیرش آینده در ADRهای D-022..D-028 و `docs/LICENSING_THREAT_MODEL.md` فهرست شده‌اند؛ هر کدام فقط پس از اجرای واقعی `Verified` می‌شود.
+- تست صریح «نقش Admin قدیمی به داده شرکت غیرعضو دسترسی ندارد» برای افزودن پیشنهاد می‌شود (D-029).
+- تست ایستا «بسته Publish مشتری فاقد کلید خصوصی/کد فروشنده است» برای آینده (D-021).

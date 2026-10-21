@@ -1,6 +1,39 @@
 # وضعیت پروژه
 
-## هدف
+> **بازبینی مرجع 2026-10-21 (شاخه `docs/architecture-source-of-truth`)** — مبنا: `main` @ `1d39dbf9e0843045e00441bf2778267e9764a3f6`. بخش «وضعیت تأییدشده فعلی» زیر معتبر است؛ بخش‌های بعد از آن تا «هدف» **تاریخی و در موارد مشخص‌شده منسوخ** هستند و برای حفظ سابقه نگه داشته شده‌اند. در تناقض، ترتیب منابع حقیقت D-030 (`docs/INDEX.md`) ملاک است. واژگان وضعیت: `Accepted`, `Implemented`, `Verified`, `Proposed`, `NeedsApproval`, `Deprecated`, `Blocked`, `NotImplemented`.
+
+## وضعیت تأییدشده فعلی (2026-10-21)
+
+### شواهد اجرا
+- **CI:** اجرای GitHub Actions شماره `39585708662` روی commit مبنا: هر ۶ Job موفق — Build، ۲۰۴ تست .NET (۰ رد، ۰ Skip) روی SQL Server 2022، گاردهای Migration (`generate_migrations.py --check`، `verify_migration_model.py`، `dotnet ef migrations has-pending-model-changes`)، Job کلاینت، E2E (۱۲ تست)، اسکن آسیب‌پذیری NuGet بدون مورد. این اجرا توسط CI انجام شده است.
+- **این بازبینی مستنداتی Build/Test اجرا نکرده است** (`dotnet` در محیط این Agent نصب نیست). ادعاهای «Verified» به اجرای بالا استناد می‌کنند، نه به اجرای محلی.
+- اجرای محلی گزارش‌شده در دور قبل (2026-10-21، SDK 10.0.113): ۲۰۴ تست .NET موفق، `check_static_assets.py` PASS، تست‌های کلاینت (۲۴) موفق — طبق `WORK_LOG.md`.
+
+### آنچه `Implemented` است
+- Razor Pages + Minimal API `/api/v1` + کلاینت React در `/app`، هدف `net10.0`، EF Core 10، SQL Server.
+- مدل چندشرکتی: `Company`، `UserCompanyMembership`، `CompanyRole`، `PermissionDefinition`، `CompanyRolePermission`، `FiscalPeriod`، `SecurityAuditEvent`؛ تعیین دسترسی شرکت فقط با `CompanyAccessService` (D-013).
+- **Migrationها وجود دارند:** `InitialCreate`، `AlignSchemaWithModel`، `WidenUserPasswordHash` (مسیر `Infrastructure/Persistence/Migrations`). اظهار قدیمی «Migration ساخته نشده» منسوخ است.
+- ورود امن با `PasswordHasher<T>` (ارتقای هش SHA-256 قدیمی هنگام ورود)، Cookie + Anti-forgery، Rate Limiting، CSP/هدرهای امنیتی، اعتبارسنجی مجدد نشست.
+- فرایند Publish قطعی و Smoke Test در CI؛ راه‌اندازی اولیه دیتابیس (Issue #22).
+
+### آنچه `NotImplemented` است
+- **هیچ ماژول حسابداری** (سند، سرفصل، گزارش) در کد نیست.
+- **هیچ سیستم لایسنس/مشتری تجاری/نصب/زیرسیستم** (D-020..D-027؛ `docs/LICENSING.md`).
+- **مصرف مجوز عملیاتی:** `PermissionDefinition`/`CompanyRolePermission` در دیتابیس هستند ولی در `Server/` بررسی نمی‌شوند (D-025).
+- Global Query Filter (طبق D-013 عمداً وجود ندارد)، OpenAPI.
+
+### وضعیت Activation قدیمی (اصلاح گزاره منسوخ)
+`ActivationKeysHandlerMiddleware` **کد مرده است**: `UseActivationKeys()` در `Server/Program.cs` فراخوانی نمی‌شود (از commit `370fe67`، 2026-10-17، Issue #22). گزاره قدیمی «در محیط‌های دیگر فعال است» **منسوخ و نادرست** است. هیچ کنترل لایسنس در برنامه فعال نیست. وجود مشتری Production با Activation قدیمی: **نامشخص**. جزئیات: D-028.
+
+### ریسک‌ها و تصمیم‌های باز
+- هویت: چهار دامنه (صفحات `Admin`، Master زیرساختی، نقش شرکتی، مدیر فروشنده) باید طبق D-029 جدا بمانند؛ `UserCompanyMemberships.UserId` بدون FK است.
+- دوره ارفاق ۳۰ روزه، فهرست زیرسیستم‌ها، الگوریتم امضا، مسیر گذار Activation قدیمی و کپی ماشین مجازی: `NeedsApproval` (ر.ک. `docs/LICENSING.md` بخش ۶). کپی کامل VM در نصب آفلاین قابل جلوگیری نیست.
+- مسیر مرده Google OAuth در صفحه ورود (AUD-2026-10-21-02)؛ نبود فایل `LICENSE` در مخزن؛ ناهمخوانی نام‌ها (Template/TarazAva/Dtat/Faranou)؛ Branch protection مخزن نامشخص؛ شکاف دستور تست `dotnet test Template.sln` در CI با `--solution` لازم در SDK محلی 10.0.113 — ر.ک. `docs/REPOSITORY_AUDIT.md`.
+
+---
+**بخش‌های زیر تاریخی‌اند (وضعیت اولیه بازسازی). موارد منسوخ: ذکر «dotnet نصب نیست/Build اجرا نشده»، «Migration نیست»، «پروژه تست موجود نبود»، «Activation فعال است»، و «Google OAuth کامنت شده» (در واقع Handler ثبت نشده است).**
+
+## هدف (تاریخی)
 پایه‌سازی پروژه موجود ASP.NET Core Razor Pages برای توسعه مرحله‌ای و قابل بازبینی.
 
 ## وضعیت فعلی پس از بازسازی اولیه
@@ -11,7 +44,7 @@
 - گردش‌کار CI برای Restore، Build و Test اضافه شده است.
 - مقادیر MasterPassword و ActivationKeys از فایل‌های تنظیمات حذف شده‌اند؛ مقادیر لازم باید در محیط مناسب پیکربندی شوند.
 - حساب مدیر نمونه با اطلاعات تماس و رمز عبور ثابت از EF Core seed حذف شده است؛ ایجاد حساب واقعی باید از مسیر امن مدیریت هویت انجام شود.
-- در Development، Middleware فعال‌سازی اجرا نمی‌شود؛ در محیط‌های دیگر فعال است.
+- ~~در Development، Middleware فعال‌سازی اجرا نمی‌شود؛ در محیط‌های دیگر فعال است.~~ **منسوخ (2026-10-21):** پس از commit `370fe67` این Middleware به Pipeline متصل نیست (کد مرده)؛ D-028.
 - `Program.cs` از محیط استاندارد ASP.NET Core پیروی می‌کند و نبود Connection String را با پیام روشن گزارش می‌دهد.
 
 ## محدودیت مهم
