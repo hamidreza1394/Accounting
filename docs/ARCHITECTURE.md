@@ -146,3 +146,15 @@ flowchart LR
 - اجرای چند نمونه Web فقط پس از بررسی state وابسته به نمونه، Cookie/Data Protection keys، فایل‌های موقت، rate limiting per-instance، graceful shutdown و health/readiness انجام شود. وجود چند نمونه روی یک میزبان به‌تنهایی HA نیست.
 - هر انتخاب cache توزیع‌شده، queue، broker، Kubernetes یا rate limiting توزیع‌شده نیازمند شواهد و در صورت تغییر معماری، ADR است؛ افزودن پیش‌دستانه آن‌ها ممنوع نیست اما بدون نیاز واقعی توصیه نمی‌شود.
 - معیارها و شکاف‌های تأییدشده در `docs/CLOUD_CONCURRENCY_READINESS.md` ثبت شده‌اند. بار، latency، SQL contention و ظرفیت connection pool از روی کد به‌تنهایی قابل اثبات نیستند.
+
+## گروه‌های شرکتی و گزارش گروه (D-033..D-035، 2026-10-22)
+```
+نصب (مرز استقرار/دیتابیس) ─┬─ Company (واحد جداسازی؛ TenantId = Companies.Id؛ مشتری = CustomerAccount، NotImplemented) ── FiscalPeriod, CompanyRole, UserCompanyMembership
+                  └─ CorporateGroup (OwnerCompanyId) ── CorporateGroupMember (بازه) ── Company
+                     OwnershipRelationship (Company ↔ Company، بازه، درصدها) — مستقل از گروه
+                     ConsolidationProfile / ConsolidationRun ── ConsolidationRunCompany (Company + FiscalPeriod)
+```
+- **جای کد:** قواعد خالص در `Domain/CorporateGroups/` (بدون وابستگی به EF/Web)؛ نگاشت EF در `Infrastructure/Persistence/Configurations`؛ سرویس‌های کاربردی و سنجش دسترسی در `Server/Infrastructure/CorporateGroups/` هم‌الگو با `Server/Infrastructure/Tenancy/` (پروژه `Application` هنوز اسکلت است؛ Interface/Repository صرفاً برای لایه‌بندی ساخته نشد، D-006).
+- **تصمیم دسترسی:** همه از `CompanyAccessService` (عضویت فعال + `HasPermissionAsync`)؛ عضویت شرکت در گروه دسترسی نمی‌دهد (D-034).
+- **مرز نصب:** نصب فقط مرز استقرار/دیتابیس است، نه مرز مشتری؛ مشتری/مستأجر همان `CustomerAccount` (D-020، `NotImplemented`) است و فقط در نصب اختصاصی با نصب منطبق است. گروه فقط شرکت‌های همان دیتابیس را می‌پذیرد؛ نصب‌های دیگر فقط از راه بسته داده امضاشده در آینده (D-035). معماری توزیع‌شده پیاده نشد. گروه/مالکیت بین شرکت‌های چند مشتری در نصب ابری مشترک تصمیم باز (`NeedsApproval`) و پیش‌شرط API/UI گروه است (D-033 اصلاح، `CORPORATE_GROUPS.md` ۶.۱).
+- **خارج از این مرحله:** API/UI گروه، دفتر و سند، گزارش عددی، تعدیلات، تطبیق درون‌گروهی (`docs/CORPORATE_GROUPS.md` بخش ۸).

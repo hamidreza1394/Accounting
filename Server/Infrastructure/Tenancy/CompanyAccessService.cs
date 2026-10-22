@@ -109,6 +109,69 @@ public sealed class CompanyAccessService
 			.FirstOrDefaultAsync(cancellationToken);
 	}
 
+	/// <summary>
+	/// Whether the user may perform the operation <paramref name="permissionCode" /> in the
+	/// company: an active membership (same rules as <see cref="FindAccessibleCompanyAsync" />)
+	/// whose company role has the permission assigned (D-034).
+	/// </summary>
+	public async Task<bool> HasPermissionAsync(
+		Guid userId,
+		Guid companyId,
+		string permissionCode,
+		CancellationToken cancellationToken = default)
+	{
+		if (companyId == Guid.Empty)
+		{
+			return false;
+		}
+
+		var granted = await GetCompaniesWithPermissionAsync(
+			userId,
+			[companyId],
+			permissionCode,
+			cancellationToken);
+
+		return granted.Contains(companyId);
+	}
+
+	/// <summary>
+	/// The subset of <paramref name="companyIds" /> in which the user holds the permission
+	/// <paramref name="permissionCode" /> through an active membership. One query, so a
+	/// group report can check every company of its scope at once.
+	/// </summary>
+	public async Task<IReadOnlySet<Guid>> GetCompaniesWithPermissionAsync(
+		Guid userId,
+		IReadOnlyCollection<Guid> companyIds,
+		string permissionCode,
+		CancellationToken cancellationToken = default)
+	{
+		ArgumentNullException.ThrowIfNull(companyIds);
+		ArgumentException.ThrowIfNullOrWhiteSpace(permissionCode);
+
+		var requested = companyIds.Where(id => id != Guid.Empty).Distinct().ToList();
+		if (userId == Guid.Empty || requested.Count == 0)
+		{
+			return new HashSet<Guid>();
+		}
+
+		var permissionIds = DatabaseContext.PermissionDefinitions
+			.AsNoTracking()
+			.Where(permission => permission.Code == permissionCode)
+			.Select(permission => permission.Id);
+
+		var granted = await QueryActiveMemberships(userId)
+			.Where(membership => requested.Contains(membership.TenantId))
+			.Where(membership => DatabaseContext.CompanyRolePermissions
+				.Any(rolePermission =>
+					rolePermission.RoleId == membership.RoleId &&
+					permissionIds.Contains(rolePermission.PermissionId)))
+			.Select(membership => membership.TenantId)
+			.Distinct()
+			.ToListAsync(cancellationToken);
+
+		return granted.ToHashSet();
+	}
+
 	private IQueryable<Domain.UserCompanyMembership> QueryActiveMemberships(Guid userId)
 	{
 		var activeUserIds = DatabaseContext.Users

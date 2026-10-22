@@ -51,6 +51,12 @@ public class DatabaseContext : Microsoft.EntityFrameworkCore.DbContext
     public Microsoft.EntityFrameworkCore.DbSet<Domain.PermissionDefinition> PermissionDefinitions { get; set; }
     public Microsoft.EntityFrameworkCore.DbSet<Domain.CompanyRolePermission> CompanyRolePermissions { get; set; }
     public Microsoft.EntityFrameworkCore.DbSet<Domain.SecurityAuditEvent> SecurityAuditEvents { get; set; }
+    public Microsoft.EntityFrameworkCore.DbSet<Domain.CorporateGroup> CorporateGroups { get; set; }
+    public Microsoft.EntityFrameworkCore.DbSet<Domain.CorporateGroupMember> CorporateGroupMembers { get; set; }
+    public Microsoft.EntityFrameworkCore.DbSet<Domain.OwnershipRelationship> OwnershipRelationships { get; set; }
+    public Microsoft.EntityFrameworkCore.DbSet<Domain.ConsolidationProfile> ConsolidationProfiles { get; set; }
+    public Microsoft.EntityFrameworkCore.DbSet<Domain.ConsolidationRun> ConsolidationRuns { get; set; }
+    public Microsoft.EntityFrameworkCore.DbSet<Domain.ConsolidationRunCompany> ConsolidationRunCompanies { get; set; }
 
 	protected override void OnModelCreating
 		(Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder)

@@ -56,3 +56,10 @@
 - **نتیجه: Schema و Migration تغییر نکرد.** `FiscalPeriod` پیش‌تر `TenantId`، `StartDate`، `EndDate` و `Status` دارد؛ ایندکس `(TenantId, Status)` و یکتایی `(TenantId, StartDate, EndDate)` برای پرس‌وجوی انتخاب کافی است. فیلد «دوره جاری» یا «آخرین انتخاب» ساخته نشد (حدسی؛ انتخاب فقط در نشست است).
 - **شکاف‌های ثبت‌شده، بدون اقدام:** محدودیت CHECK برای `StartDate < EndDate` و جلوگیری از هم‌پوشانی دوره‌های یک شرکت وجود ندارد؛ در صورت تأیید محصول به‌صورت Migration جداگانه پیشنهاد می‌شود (`NeedsApproval`). `UserCompanyMemberships.UserId` همچنان بدون FK است (D-029).
 - پایگاه داده عملیاتی با پایگاه لایسنس فروشنده ترکیب نشد.
+
+## جداول گروه شرکتی و تلفیق (D-033، 2026-10-22)
+- جداول جدید: `CorporateGroups`، `CorporateGroupMembers`، `OwnershipRelationships`، `ConsolidationProfiles`، `ConsolidationRuns`، `ConsolidationRunCompanies`. ستون‌ها، کلیدها، CHECKها و ایندکس‌ها: [`CORPORATE_GROUPS_DATA_MODEL.md`](CORPORATE_GROUPS_DATA_MODEL.md).
+- تنها تغییر روی جدول موجود: قید یکتای `AK_FiscalPeriods_Id_TenantId` برای FK ترکیبی `(FiscalPeriodId, CompanyId)` از `ConsolidationRunCompanies`؛ دیتابیس دوره مالی شرکت دیگر را نمی‌پذیرد.
+- درصدها `decimal(9,6)`؛ تاریخ‌های اعتبار `date`؛ همه FKها `Restrict`.
+- کاتالوگ مجوز گروه با درج idempotent (`IF NOT EXISTS`) در همان Migration؛ هیچ داده مشتری یا عدد مالی درج نمی‌شود.
+- هم‌پوشانی بازه‌ها، جمع درصدها و چرخه کنترلی در سرویس با تراکنش `Serializable` کنترل می‌شوند، نه در دیتابیس؛ نوشتن مستقیم SQL این قواعد را دور می‌زند.

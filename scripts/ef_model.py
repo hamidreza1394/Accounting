@@ -1363,6 +1363,14 @@ def build_column(
             f"The CLR type '{clr_type}' of the property '{name}' has no known SQL Server mapping."
         )
 
+    # An explicit "HasColumnType(...)" of the entity configuration wins over the type
+    # mapping of the CLR type, exactly like in EF Core (for example "decimal(9,6)" instead
+    # of the default "decimal(18, 2)"). The snapshot writes it unchanged. DateOnly is left
+    # alone: its store type already comes from the DbContext convention above.
+    explicit_column_type = settings.get("column_type")
+    if explicit_column_type and simple != "DateOnly":
+        store_type = explicit_column_type
+
     return {
         "name": name,
         "clr_type": clr_type,

@@ -6,7 +6,9 @@
 |---|---|---|---|---|
 | FR-ID-01 ورود امن | D-012, D-014 | `Server/Infrastructure/Security/AuthenticationService.cs`, `Server/Pages/Account/Login.cshtml.cs` | `tests/Template.Tests/LoginAuthenticationTests.cs`, `tests/Template.Tests/Integration/HttpSecurityTests.cs`, `SessionValidatorTests.cs` | `Implemented`؛ `Verified` بر اساس CI 39585708662 در حد گزارش آن اجرا |
 | FR-ID-03 دسترسی شرکت | D-013 | `Server/Infrastructure/Tenancy/CompanyAccessService.cs` | `CompanyAccessServiceTests`, `ApiEndpointTests` (`tests/Template.Tests/CompanyAccessTests.cs`)، `HttpSecurityTests` | `Implemented` |
-| FR-ID-04 مجوز عملیاتی | D-025 | تعریف: `PermissionDefinition`, `CompanyRolePermission`؛ مصرف در `Server/`: نیست | — | `NotImplemented` |
+| FR-ID-04 مجوز عملیاتی | D-025, D-034 | `CompanyAccessService.HasPermissionAsync`/`GetCompaniesWithPermissionAsync`؛ مصرف فقط در `Server/Infrastructure/CorporateGroups/CorporateGroupService.cs` | `CorporateGroupServiceTests.HasPermission_*` | بخشی `Implemented` |
+| FR-GRP-01..05 گروه شرکتی | D-033, D-034 | `Domain/CorporateGroups/*`، `Infrastructure/Persistence/Configurations/{CorporateGroup*,OwnershipRelationship,Consolidation*}Configuration.cs`، Migration `20261022150943_AddCorporateGroups`، `CorporateGroupService` | `CorporateGroupRulesTests`، `CorporateGroupServiceTests`، `Integration/CorporateGroupSqlServerTests`، `DatabaseModelTests` | `Implemented`؛ `Verified` محلی 2026-10-22 روی SQL Server 2022 (CI ثبت نشده) |
+| FR-GRP-06..08 | D-034, D-035 | — | — | `Blocked`/`NotImplemented`/`Proposed` |
 | FR-ID-05 تفکیک هویت | D-029 | `Login.cshtml.cs` (Claim `AccountKind`) | — | بخشی `Implemented` |
 | FR-LIC-01..08, 10 لایسنس | D-020..D-027 | هیچ | هیچ | `NotImplemented` |
 | FR-LIC-09 Activation قدیمی | D-028 | `ActivationKeysHandlerMiddleware.cs`, `ExtensionMethods.cs` (بدون فراخوانی در `Program.cs`) | — | کد مرده؛ `Deprecated` |

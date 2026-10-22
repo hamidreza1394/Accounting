@@ -167,3 +167,10 @@
 - **شکاف‌ها:** آزمون بار قابل تکرار در مخزن یافت نشد؛ تعداد نمونه/مشخصات Production باز است؛ limiter به‌ازای هر نمونه است؛ ماژول‌های حسابداری و آزمون صحت نوشتن مالی هنوز پیاده‌سازی نشده‌اند.
 - **محدودیت این ممیزی:** فایل‌های کد و مستندات از GitHub بررسی شدند؛ Build/Test/Load Test در این دور اجرا نشده‌اند. هیچ نتیجه runtime از روی جست‌وجوی کد استنباط نشده است.
 - **گام بعدی:** اجرای پرامپ `docs/prompts/CLOUD_CONCURRENCY_IMPLEMENTATION_PROMPT.md` در شاخه مستقل Issue #49، با رعایت کامل `AGENTS.md` و بدون merge خودکار.
+
+## گروه شرکتی، گزارش تجمیعی و تلفیقی (D-033..D-035) — 2026-10-22
+- **شاخه:** `feature/corporate-groups-consolidation` از `main`@`ef3feb5`؛ Commit/PR ساخته نشده (طبق دستور کارفرما).
+- `Implemented` + `Verified` محلی (SQL Server 2022، ۳۰۵ از ۳۰۵ تست): جداول گروه/عضویت/مالکیت/پروفایل/اجرا/محدوده اجرا، Migration افزایشی `20261022150943_AddCorporateGroups`، قواعد دامنه، `CompanyAccessService.HasPermissionAsync` (نخستین مصرف مجوز عملیاتی)، `CorporateGroupService`.
+- `NotImplemented`: API/UI گروه، تخصیص مجوز به نقش‌ها، تعدیلات و تطبیق درون‌گروهی؛ `Blocked`: گزارش تجمیعی عددی (نبود دفتر/کدینگ)؛ `Proposed`: گروه بین نصب‌ها (D-035).
+- **CI روی این شاخه اجرا نشده است.** Migration روی هیچ دیتابیس مشتری اعمال نشده است.
+- گزارش: `docs/handoffs/ISSUE-UNNUMBERED-corporate-groups-consolidation.md`.
