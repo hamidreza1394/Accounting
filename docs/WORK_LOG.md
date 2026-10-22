@@ -134,3 +134,8 @@
 - **وضعیت:** `Accepted` به‌عنوان رویهٔ کاری؛ بر اساس داده در این پروژه اندازه‌گیری نشده است.
 - **اجرانشده:** تست/Build لازم نبود (بدون تغییر کد).
 - **Git:** PR #50، ادغام نشده. گزارش: `docs/handoffs/ISSUE-UNNUMBERED-agent-delegation-rule.md`.
+
+## 2026-10-22 — دروازهٔ بازبینی پیش از PR و ثبت توکن Agentها (UNNUMBERED، شاخه `docs/agent-pre-pr-gate`)
+- **دامنه:** فقط مستندات (`CLAUDE.md`، `docs/AGENT_COORDINATION.md`)؛ کد، Schema و `DECISIONS.md` تغییر نکرد؛ ADR جدید نیست.
+- **تغییر:** بند «دروازهٔ بازبینی پیش از PR» (دامنه Diff و نتیجهٔ واقعی تست، عمق به نسبت ریسک، بدون PR تا پایان بازبینی) و افزودن مصرف توکن هر Agent به اندازه‌گیری. وضعیت: `Accepted` به‌عنوان رویهٔ کاری؛ بهینه‌بودن اندازه‌گیری نشده.
+- **اجرانشده:** تست/Build لازم نبود. ادغام نشده؛ گزارش: `docs/handoffs/ISSUE-UNNUMBERED-agent-pre-pr-gate.md`.
