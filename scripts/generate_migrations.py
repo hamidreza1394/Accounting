@@ -25,6 +25,7 @@ has-pending-model-changes``.
 from __future__ import annotations
 
 import argparse
+import re
 import os
 import sys
 from typing import Any
@@ -46,21 +47,89 @@ MIGRATIONS_DIRECTORY = os.path.join("Infrastructure", "Persistence", "Migrations
 # The migration that came before the current one. It is published history: it describes
 # the schema as it was when it was applied and it is never rewritten, exactly like
 # 'InitialCreate'. Its designer file is the starting point of the difference that the
-# current migration has to apply.
-DELTA_MIGRATION_ID = "20261017090000"
-DELTA_MIGRATION_NAME = "AlignSchemaWithModel"
+# current migration has to apply. ('AlignSchemaWithModel' and 'WidenUserPasswordHash'
+# are published history as well.)
+DELTA_MIGRATION_ID = "20261019071146"
+DELTA_MIGRATION_NAME = "WidenUserPasswordHash"
 
 # The most recent migration. Its operations are computed from the difference between
 # the model of the migration before it (DELTA_MIGRATION_*) and the model of the code
 # base, so the files can not drift apart from the snapshot. DELTA_MIGRATION_* is
 # published history and is never rewritten, exactly like 'InitialCreate'.
-CURRENT_MIGRATION_ID = "20261019071146"
-CURRENT_MIGRATION_NAME = "WidenUserPasswordHash"
-CURRENT_MIGRATION_CLASS = "WidenUserPasswordHash"
+CURRENT_MIGRATION_ID = "20261022150943"
+CURRENT_MIGRATION_NAME = "AddCorporateGroups"
+CURRENT_MIGRATION_CLASS = "AddCorporateGroups"
+
+# 'AddCorporateGroups' adds tables, which this generator can not render
+# ('compute_operations' refuses them). Its Up/Down were therefore written with 'dotnet ef
+# migrations add' and are verified by 'verify_migration_model.py'; this generator still
+# writes (and '--check' still compares byte by byte) its designer file and the model
+# snapshot, and '--check' verifies that the hand written SQL statements below are in it.
+CURRENT_MIGRATION_WRITTEN_BY_EF_TOOLS = True
 
 # Statements that have to run before the structural operations of the current
 # migration. A human decision, therefore written down instead of computed.
 CURRENT_MIGRATION_PRELUDE: list[str] = []
+
+# The permission catalog entries of the corporate group model (D-034): (id, code, name).
+# Fixed identifiers, inserted only when the code does not exist yet, so the statement is
+# idempotent and never overwrites a row that an administrator already has.
+CORPORATE_GROUP_PERMISSIONS: list[tuple[str, str, str]] = [
+    ("0b6d2f3e-5d0a-4c1e-9a51-2c7c0e3f1a01", "corporate-groups.view", "مشاهده گروه شرکتی"),
+    ("0b6d2f3e-5d0a-4c1e-9a51-2c7c0e3f1a02", "corporate-groups.manage", "مدیریت گروه شرکتی و پروفایل تلفیق"),
+    ("0b6d2f3e-5d0a-4c1e-9a51-2c7c0e3f1a03", "corporate-groups.members.manage", "مدیریت عضویت شرکت در گروه"),
+    ("0b6d2f3e-5d0a-4c1e-9a51-2c7c0e3f1a04", "corporate-groups.ownership.manage", "ثبت روابط مالکیت و کنترل"),
+    ("0b6d2f3e-5d0a-4c1e-9a51-2c7c0e3f1a05", "reporting.group-aggregate.view", "اجرای گزارش تجمیعی گروه"),
+    ("0b6d2f3e-5d0a-4c1e-9a51-2c7c0e3f1a06", "reporting.group-consolidated.run", "اجرای گزارش تلفیقی گروه"),
+    ("0b6d2f3e-5d0a-4c1e-9a51-2c7c0e3f1a07", "consolidation.adjustments.approve", "تأیید تعدیلات تلفیقی"),
+    ("0b6d2f3e-5d0a-4c1e-9a51-2c7c0e3f1a08", "reporting.group.export", "دریافت خروجی گزارش گروه"),
+]
+
+# Statements that run after the structural operations of 'AddCorporateGroups', in Up.
+# A human decision, therefore written down instead of computed, like the prelude: the
+# CHECK constraints of the new tables (not part of the model that the guards know) and
+# the idempotent permission catalog rows.
+ADD_CORPORATE_GROUPS_EPILOGUE: list[str] = [
+    "ALTER TABLE [CorporateGroupMembers] ADD CONSTRAINT [CK_CorporateGroupMembers_ValidPeriod] CHECK ([ValidTo] IS NULL OR [ValidTo] >= [ValidFrom]);",
+    "ALTER TABLE [CorporateGroupMembers] ADD CONSTRAINT [CK_CorporateGroupMembers_MemberRole] CHECK ([MemberRole] BETWEEN 1 AND 5);",
+    "ALTER TABLE [OwnershipRelationships] ADD CONSTRAINT [CK_OwnershipRelationships_DistinctCompanies] CHECK ([ParentCompanyId] <> [SubsidiaryCompanyId]);",
+    "ALTER TABLE [OwnershipRelationships] ADD CONSTRAINT [CK_OwnershipRelationships_OwnershipPercentage] CHECK ([OwnershipPercentage] >= 0 AND [OwnershipPercentage] <= 100);",
+    "ALTER TABLE [OwnershipRelationships] ADD CONSTRAINT [CK_OwnershipRelationships_VotingPercentage] CHECK ([VotingPercentage] >= 0 AND [VotingPercentage] <= 100);",
+    "ALTER TABLE [OwnershipRelationships] ADD CONSTRAINT [CK_OwnershipRelationships_ControlBasis] CHECK ([ControlBasis] BETWEEN 1 AND 4);",
+    "ALTER TABLE [OwnershipRelationships] ADD CONSTRAINT [CK_OwnershipRelationships_ValidPeriod] CHECK ([ValidTo] IS NULL OR [ValidTo] >= [ValidFrom]);",
+    "ALTER TABLE [ConsolidationProfiles] ADD CONSTRAINT [CK_ConsolidationProfiles_ReportingCurrencyCode] CHECK (LEN([ReportingCurrencyCode]) = 3 AND [ReportingCurrencyCode] COLLATE Latin1_General_BIN NOT LIKE '%[^A-Z]%');",
+    "ALTER TABLE [ConsolidationRuns] ADD CONSTRAINT [CK_ConsolidationRuns_Period] CHECK ([PeriodEnd] >= [PeriodStart]);",
+    "ALTER TABLE [ConsolidationRuns] ADD CONSTRAINT [CK_ConsolidationRuns_ProfileOfConsolidated] CHECK ([Kind] <> 2 OR [ConsolidationProfileId] IS NOT NULL);",
+    "ALTER TABLE [ConsolidationRuns] ADD CONSTRAINT [CK_ConsolidationRuns_Kind] CHECK ([Kind] BETWEEN 1 AND 2);",
+    "ALTER TABLE [ConsolidationRuns] ADD CONSTRAINT [CK_ConsolidationRuns_Status] CHECK ([Status] BETWEEN 1 AND 5);",
+    "ALTER TABLE [ConsolidationProfiles] ADD CONSTRAINT [CK_ConsolidationProfiles_AccountingFramework] CHECK ([AccountingFramework] BETWEEN 1 AND 2);",
+    "ALTER TABLE [ConsolidationProfiles] ADD CONSTRAINT [CK_ConsolidationProfiles_FiscalPeriodMappingPolicy] CHECK ([FiscalPeriodMappingPolicy] = 1);",
+    "ALTER TABLE [ConsolidationRunCompanies] ADD CONSTRAINT [CK_ConsolidationRunCompanies_MemberRole] CHECK ([MemberRole] BETWEEN 1 AND 5);",
+] + [
+    (
+        f"IF NOT EXISTS (SELECT 1 FROM [PermissionDefinitions] WHERE [Code] = '{code}') "
+        f"INSERT INTO [PermissionDefinitions] ([Id], [Code], [Name], [Description], [Ordering], [InsertDateTime]) "
+        f"VALUES ('{identifier}', '{code}', N'{name}', NULL, 10000, SYSDATETIME());"
+    )
+    for identifier, code, name in CORPORATE_GROUP_PERMISSIONS
+]
+
+# Statements that run first in Down. Only the catalog rows that no role uses are removed;
+# a row that an administrator assigned to a role stays (its data is not ours to drop).
+ADD_CORPORATE_GROUPS_DOWN_PRELUDE: list[str] = [
+    "DELETE FROM [PermissionDefinitions] WHERE [Id] IN ("
+    + ", ".join(f"'{identifier}'" for identifier, _, _ in CORPORATE_GROUP_PERMISSIONS)
+    + ") AND NOT EXISTS (SELECT 1 FROM [CompanyRolePermissions] WHERE [CompanyRolePermissions].[PermissionId] = [PermissionDefinitions].[Id]);",
+]
+
+# The hand-written SQL belongs to one migration. It is keyed by the migration id, so it can
+# never be emitted into the next migration when the CURRENT_MIGRATION_* constants move on.
+HAND_WRITTEN_SQL: dict[str, tuple[list[str], list[str]]] = {
+    "20261022150943": (ADD_CORPORATE_GROUPS_EPILOGUE, ADD_CORPORATE_GROUPS_DOWN_PRELUDE),
+}
+CURRENT_MIGRATION_EPILOGUE, CURRENT_MIGRATION_DOWN_PRELUDE = HAND_WRITTEN_SQL.get(
+    CURRENT_MIGRATION_ID, ([], [])
+)
 
 # The version of the Entity Framework Core packages of the solution. It is written into the
 # "ProductVersion" annotation of the model snapshot, exactly like the EF Core tools do.
@@ -551,6 +620,8 @@ def generate_migration(
     operations: list[dict[str, Any]],
     migration_class: str,
     prelude: list[str],
+    epilogue: list[str] | None = None,
+    down_prelude: list[str] | None = None,
 ) -> str:
     """Renders a migration that applies the difference of the two models."""
     lines: list[str] = []
@@ -571,11 +642,17 @@ def generate_migration(
         lines.append(f"{INDENT * 3}migrationBuilder.Sql({literal(statement)});")
         lines.append("")
     lines.extend(mm.render_up(operations, INDENT * 3))
+    for statement in epilogue or []:
+        lines.append("")
+        lines.append(f"{INDENT * 3}migrationBuilder.Sql({literal(statement)});")
     lines.append(f"{INDENT * 2}}}")
     lines.append("")
     lines.append(f"{INDENT * 2}/// <inheritdoc />")
     lines.append(f"{INDENT * 2}protected override void Down(MigrationBuilder migrationBuilder)")
     lines.append(f"{INDENT * 2}{{")
+    for statement in down_prelude or []:
+        lines.append(f"{INDENT * 3}migrationBuilder.Sql({literal(statement)});")
+        lines.append("")
     lines.extend(mm.render_up(mm.reverse_operations(operations), INDENT * 3))
     lines.append(f"{INDENT * 2}}}")
     lines.append(f"{INDENT}}}")
@@ -660,12 +737,16 @@ def build_files(repository_root: str) -> dict[str, str]:
 
     # Only the files of the most recent migration and the model snapshot are generated.
     # The files of the migrations that came before it are published history.
-    return {
-        f"{CURRENT_MIGRATION_ID}_{CURRENT_MIGRATION_NAME}.cs": generate_migration(
+    files: dict[str, str] = {}
+    if not CURRENT_MIGRATION_WRITTEN_BY_EF_TOOLS:
+        files[f"{CURRENT_MIGRATION_ID}_{CURRENT_MIGRATION_NAME}.cs"] = generate_migration(
             compute_operations_from_previous_migration(repository_root),
             CURRENT_MIGRATION_CLASS,
             CURRENT_MIGRATION_PRELUDE,
-        ),
+            CURRENT_MIGRATION_EPILOGUE,
+            CURRENT_MIGRATION_DOWN_PRELUDE,
+        )
+    return files | {
         f"{CURRENT_MIGRATION_ID}_{CURRENT_MIGRATION_NAME}.Designer.cs": generate_migration_designer(
             entity_types,
             CURRENT_MIGRATION_ID,
@@ -699,6 +780,28 @@ def main(argv: list[str]) -> int:
             with open(path, encoding="utf-8") as file:
                 if file.read() != content:
                     problems.append(f"{name} is out of date.")
+        if CURRENT_MIGRATION_WRITTEN_BY_EF_TOOLS:
+            name = f"{CURRENT_MIGRATION_ID}_{CURRENT_MIGRATION_NAME}.cs"
+            path = os.path.join(directory, name)
+            source = open(path, encoding="utf-8").read() if os.path.exists(path) else ""
+            if not source:
+                problems.append(f"{name} is missing.")
+            # The raw SQL of each method must be exactly the reviewed statements: none
+            # missing, none added or altered, and each in the right method.
+            down_start = source.find("protected override void Down(")
+            sections = {
+                "Up": (source[:down_start], CURRENT_MIGRATION_PRELUDE + CURRENT_MIGRATION_EPILOGUE),
+                "Down": (source[down_start:], CURRENT_MIGRATION_DOWN_PRELUDE),
+            }
+            for method, (body, wanted) in sections.items():
+                found = [match.group(0) for match in re.finditer(r'migrationBuilder\.Sql\("(?:[^"\\]|\\.)*"\);', body)]
+                expected = [f"migrationBuilder.Sql({literal(statement)});" for statement in wanted]
+                if down_start < 0 or found != expected:
+                    problems.append(
+                        f"{name}: the SQL statements of {method} differ from the reviewed "
+                        f"list: a statement is missing, added, altered or out of order (found "
+                        f"{len(found)}, expected {len(expected)})."
+                    )
         if problems:
             for problem in problems:
                 print(f"error: {problem}", file=sys.stderr)

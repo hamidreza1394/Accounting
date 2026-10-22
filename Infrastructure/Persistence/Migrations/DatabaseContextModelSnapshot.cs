@@ -595,6 +595,8 @@ namespace Data.Migrations
 
                 b.HasKey("Id");
 
+                b.HasAlternateKey("Id", "TenantId");
+
                 b.HasIndex("TenantId", "StartDate", "EndDate")
                     .IsUnique();
 
@@ -754,6 +756,276 @@ namespace Data.Migrations
                 b.ToTable("SecurityAuditEvents");
             });
 
+            modelBuilder.Entity("Domain.CorporateGroup", b =>
+            {
+                b.Property<Guid>("Id")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<int>("Ordering")
+                    .HasColumnType("int");
+
+                b.Property<DateTime>("InsertDateTime")
+                    .HasColumnType("datetime2");
+
+                b.Property<string>("Code")
+                    .IsRequired()
+                    .HasMaxLength(40)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(40)");
+
+                b.Property<string>("Name")
+                    .IsRequired()
+                    .HasMaxLength(200)
+                    .HasColumnType("nvarchar(200)");
+
+                b.Property<Guid>("OwnerCompanyId")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<bool>("IsActive")
+                    .HasColumnType("bit");
+
+                b.Property<DateTime>("CreatedAtUtc")
+                    .HasColumnType("datetime2");
+
+                b.Property<Guid>("CreatedByUserId")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<DateTime?>("UpdatedAtUtc")
+                    .HasColumnType("datetime2");
+
+                b.HasKey("Id");
+
+                b.HasIndex("OwnerCompanyId", "Code")
+                    .IsUnique();
+
+                b.HasIndex("OwnerCompanyId", "IsActive");
+
+                b.ToTable("CorporateGroups");
+            });
+
+            modelBuilder.Entity("Domain.CorporateGroupMember", b =>
+            {
+                b.Property<Guid>("Id")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<int>("Ordering")
+                    .HasColumnType("int");
+
+                b.Property<DateTime>("InsertDateTime")
+                    .HasColumnType("datetime2");
+
+                b.Property<Guid>("CorporateGroupId")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<Guid>("CompanyId")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<int>("MemberRole")
+                    .HasColumnType("int");
+
+                b.Property<DateTime>("ValidFrom")
+                    .HasColumnType("Date");
+
+                b.Property<DateTime?>("ValidTo")
+                    .HasColumnType("Date");
+
+                b.Property<DateTime>("CreatedAtUtc")
+                    .HasColumnType("datetime2");
+
+                b.Property<Guid>("CreatedByUserId")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<DateTime?>("EndedAtUtc")
+                    .HasColumnType("datetime2");
+
+                b.Property<Guid?>("EndedByUserId")
+                    .HasColumnType("uniqueidentifier");
+
+                b.HasKey("Id");
+
+                b.HasIndex("CorporateGroupId", "CompanyId", "ValidFrom")
+                    .IsUnique();
+
+                b.HasIndex("CompanyId");
+
+                b.ToTable("CorporateGroupMembers");
+            });
+
+            modelBuilder.Entity("Domain.OwnershipRelationship", b =>
+            {
+                b.Property<Guid>("Id")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<int>("Ordering")
+                    .HasColumnType("int");
+
+                b.Property<DateTime>("InsertDateTime")
+                    .HasColumnType("datetime2");
+
+                b.Property<Guid>("ParentCompanyId")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<Guid>("SubsidiaryCompanyId")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<decimal>("OwnershipPercentage")
+                    .HasColumnType("decimal(9,6)");
+
+                b.Property<decimal>("VotingPercentage")
+                    .HasColumnType("decimal(9,6)");
+
+                b.Property<int>("ControlBasis")
+                    .HasColumnType("int");
+
+                b.Property<DateTime>("ValidFrom")
+                    .HasColumnType("Date");
+
+                b.Property<DateTime?>("ValidTo")
+                    .HasColumnType("Date");
+
+                b.Property<DateTime>("CreatedAtUtc")
+                    .HasColumnType("datetime2");
+
+                b.Property<Guid>("CreatedByUserId")
+                    .HasColumnType("uniqueidentifier");
+
+                b.HasKey("Id");
+
+                b.HasIndex("ParentCompanyId", "SubsidiaryCompanyId", "ValidFrom")
+                    .IsUnique();
+
+                b.HasIndex("SubsidiaryCompanyId");
+
+                b.HasIndex("ControlBasis");
+
+                b.ToTable("OwnershipRelationships");
+            });
+
+            modelBuilder.Entity("Domain.ConsolidationProfile", b =>
+            {
+                b.Property<Guid>("Id")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<int>("Ordering")
+                    .HasColumnType("int");
+
+                b.Property<DateTime>("InsertDateTime")
+                    .HasColumnType("datetime2");
+
+                b.Property<Guid>("CorporateGroupId")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<string>("Name")
+                    .IsRequired()
+                    .HasMaxLength(120)
+                    .HasColumnType("nvarchar(120)");
+
+                b.Property<int>("AccountingFramework")
+                    .HasColumnType("int");
+
+                b.Property<string>("ReportingCurrencyCode")
+                    .IsRequired()
+                    .HasMaxLength(3)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(3)");
+
+                b.Property<int>("FiscalPeriodMappingPolicy")
+                    .HasColumnType("int");
+
+                b.Property<bool>("IsActive")
+                    .HasColumnType("bit");
+
+                b.Property<DateTime>("CreatedAtUtc")
+                    .HasColumnType("datetime2");
+
+                b.Property<Guid>("CreatedByUserId")
+                    .HasColumnType("uniqueidentifier");
+
+                b.HasKey("Id");
+
+                b.HasAlternateKey("Id", "CorporateGroupId");
+
+                b.HasIndex("CorporateGroupId", "Name")
+                    .IsUnique();
+
+                b.ToTable("ConsolidationProfiles");
+            });
+
+            modelBuilder.Entity("Domain.ConsolidationRun", b =>
+            {
+                b.Property<Guid>("Id")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<int>("Ordering")
+                    .HasColumnType("int");
+
+                b.Property<DateTime>("InsertDateTime")
+                    .HasColumnType("datetime2");
+
+                b.Property<Guid>("CorporateGroupId")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<Guid?>("ConsolidationProfileId")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<int>("Kind")
+                    .HasColumnType("int");
+
+                b.Property<DateTime>("PeriodStart")
+                    .HasColumnType("Date");
+
+                b.Property<DateTime>("PeriodEnd")
+                    .HasColumnType("Date");
+
+                b.Property<int>("Status")
+                    .HasColumnType("int");
+
+                b.Property<string>("FailureCode")
+                    .HasMaxLength(80)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(80)");
+
+                b.Property<DateTime>("StartedAtUtc")
+                    .HasColumnType("datetime2");
+
+                b.Property<DateTime?>("CompletedAtUtc")
+                    .HasColumnType("datetime2");
+
+                b.Property<Guid>("ExecutedByUserId")
+                    .HasColumnType("uniqueidentifier");
+
+                b.HasKey("Id");
+
+                b.HasIndex("CorporateGroupId", "StartedAtUtc");
+
+                b.HasIndex("ConsolidationProfileId", "CorporateGroupId");
+
+                b.ToTable("ConsolidationRuns");
+            });
+
+            modelBuilder.Entity("Domain.ConsolidationRunCompany", b =>
+            {
+                b.Property<Guid>("ConsolidationRunId")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<Guid>("CompanyId")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<Guid>("FiscalPeriodId")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<int>("MemberRole")
+                    .HasColumnType("int");
+
+                b.HasKey("ConsolidationRunId", "CompanyId");
+
+                b.HasIndex("CompanyId");
+
+                b.HasIndex("FiscalPeriodId", "CompanyId");
+
+                b.ToTable("ConsolidationRunCompanies");
+            });
+
             modelBuilder.Entity("Domain.PostCategory", b =>
             {
                 b.Property<Guid>("Id")
@@ -899,6 +1171,91 @@ namespace Data.Migrations
                     .IsRequired();
             });
 
+            modelBuilder.Entity("Domain.CorporateGroup", b =>
+            {
+                b.HasOne("Domain.Company", "OwnerCompany")
+                    .WithMany("AdministeredGroups")
+                    .HasForeignKey("OwnerCompanyId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+            });
+
+            modelBuilder.Entity("Domain.CorporateGroupMember", b =>
+            {
+                b.HasOne("Domain.CorporateGroup", "CorporateGroup")
+                    .WithMany("Members")
+                    .HasForeignKey("CorporateGroupId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+
+                b.HasOne("Domain.Company", "Company")
+                    .WithMany("GroupMemberships")
+                    .HasForeignKey("CompanyId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+            });
+
+            modelBuilder.Entity("Domain.OwnershipRelationship", b =>
+            {
+                b.HasOne("Domain.Company", "ParentCompany")
+                    .WithMany("OwnedCompanies")
+                    .HasForeignKey("ParentCompanyId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+
+                b.HasOne("Domain.Company", "SubsidiaryCompany")
+                    .WithMany("Owners")
+                    .HasForeignKey("SubsidiaryCompanyId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+            });
+
+            modelBuilder.Entity("Domain.ConsolidationProfile", b =>
+            {
+                b.HasOne("Domain.CorporateGroup", "CorporateGroup")
+                    .WithMany("Profiles")
+                    .HasForeignKey("CorporateGroupId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+            });
+
+            modelBuilder.Entity("Domain.ConsolidationRun", b =>
+            {
+                b.HasOne("Domain.CorporateGroup", "CorporateGroup")
+                    .WithMany("Runs")
+                    .HasForeignKey("CorporateGroupId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+
+                b.HasOne("Domain.ConsolidationProfile", "ConsolidationProfile")
+                    .WithMany("Runs")
+                    .HasForeignKey("ConsolidationProfileId", "CorporateGroupId")
+                    .HasPrincipalKey("Id", "CorporateGroupId")
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity("Domain.ConsolidationRunCompany", b =>
+            {
+                b.HasOne("Domain.ConsolidationRun", "ConsolidationRun")
+                    .WithMany("Companies")
+                    .HasForeignKey("ConsolidationRunId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+
+                b.HasOne("Domain.Company", "Company")
+                    .WithMany("ConsolidationRuns")
+                    .HasForeignKey("CompanyId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+
+                b.HasOne("Domain.FiscalPeriod", "FiscalPeriod")
+                    .WithMany("ConsolidationRuns")
+                    .HasForeignKey("FiscalPeriodId", "CompanyId")
+                    .HasPrincipalKey("Id", "TenantId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+            });
+
             modelBuilder.Entity("Domain.PostCategory", b =>
             {
                 b.HasOne("Domain.PostCategory", "Parent")
@@ -939,6 +1296,16 @@ namespace Data.Migrations
                 b.Navigation("Memberships");
                 b.Navigation("FiscalPeriods");
                 b.Navigation("Roles");
+                b.Navigation("AdministeredGroups");
+                b.Navigation("GroupMemberships");
+                b.Navigation("OwnedCompanies");
+                b.Navigation("Owners");
+                b.Navigation("ConsolidationRuns");
+            });
+
+            modelBuilder.Entity("Domain.FiscalPeriod", b =>
+            {
+                b.Navigation("ConsolidationRuns");
             });
 
             modelBuilder.Entity("Domain.CompanyRole", b =>
@@ -950,6 +1317,23 @@ namespace Data.Migrations
             modelBuilder.Entity("Domain.PermissionDefinition", b =>
             {
                 b.Navigation("RolePermissions");
+            });
+
+            modelBuilder.Entity("Domain.CorporateGroup", b =>
+            {
+                b.Navigation("Members");
+                b.Navigation("Profiles");
+                b.Navigation("Runs");
+            });
+
+            modelBuilder.Entity("Domain.ConsolidationProfile", b =>
+            {
+                b.Navigation("Runs");
+            });
+
+            modelBuilder.Entity("Domain.ConsolidationRun", b =>
+            {
+                b.Navigation("Companies");
             });
 
             modelBuilder.Entity("Domain.PostCategory", b =>

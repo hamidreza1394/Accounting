@@ -46,9 +46,15 @@ public sealed class DatabaseModelTests
 				"Companies",
 				"CompanyRolePermissions",
 				"CompanyRoles",
+				"ConsolidationProfiles",
+				"ConsolidationRunCompanies",
+				"ConsolidationRuns",
+				"CorporateGroupMembers",
+				"CorporateGroups",
 				"FiscalPeriods",
 				"LoginLogs",
 				"MenuItems",
+				"OwnershipRelationships",
 				"PageCategories",
 				"Pages",
 				"PermissionDefinitions",
@@ -81,9 +87,62 @@ public sealed class DatabaseModelTests
 				continue;
 			}
 
+			if (entityType.ClrType == typeof(Domain.ConsolidationRunCompany))
+			{
+				// A company is in the scope of a run at most once (D-033).
+				Assert.Equal(
+					new[] { "ConsolidationRunId", "CompanyId" },
+					primaryKey!.Properties.Select(property => property.Name).ToArray());
+
+				continue;
+			}
+
 			Assert.Equal("Id", Assert.Single(primaryKey!.Properties).Name);
 			Assert.Equal(typeof(Guid), primaryKey.Properties[0].ClrType);
 		}
+	}
+
+	[Fact]
+	public void TheFiscalPeriodOfARunCompany_MustBelongToTheSameCompany()
+	{
+		// (FiscalPeriodId, CompanyId) references FiscalPeriods (Id, TenantId), so the
+		// database rejects the fiscal period of another company (D-033).
+		var runCompany = Model.FindEntityType("Domain.ConsolidationRunCompany");
+		Assert.NotNull(runCompany);
+
+		var foreignKey = Assert.Single(
+			runCompany!.GetForeignKeys(),
+			candidate => candidate.PrincipalEntityType.ClrType == typeof(Domain.FiscalPeriod));
+
+		Assert.Equal(new[] { "FiscalPeriodId", "CompanyId" }, foreignKey.Properties.Select(property => property.Name).ToArray());
+		Assert.Equal(new[] { "Id", "TenantId" }, foreignKey.PrincipalKey.Properties.Select(property => property.Name).ToArray());
+
+		var run = Model.FindEntityType("Domain.ConsolidationRun");
+		var profileKey = Assert.Single(
+			run!.GetForeignKeys(),
+			candidate => candidate.PrincipalEntityType.ClrType == typeof(Domain.ConsolidationProfile));
+		Assert.Equal(new[] { "ConsolidationProfileId", "CorporateGroupId" }, profileKey.Properties.Select(property => property.Name).ToArray());
+	}
+
+	[Fact]
+	public void TheCorporateGroupModel_NeverDeletesInCascade()
+	{
+		var types = new[]
+		{
+			typeof(Domain.CorporateGroup), typeof(Domain.CorporateGroupMember), typeof(Domain.OwnershipRelationship),
+			typeof(Domain.ConsolidationProfile), typeof(Domain.ConsolidationRun), typeof(Domain.ConsolidationRunCompany),
+		};
+
+		foreach (var type in types)
+		{
+			foreach (var foreignKey in Model.FindEntityType(type)!.GetForeignKeys())
+			{
+				Assert.Equal(Microsoft.EntityFrameworkCore.DeleteBehavior.Restrict, foreignKey.DeleteBehavior);
+			}
+		}
+
+		var percentage = Model.FindEntityType(typeof(Domain.OwnershipRelationship))!.FindProperty(nameof(Domain.OwnershipRelationship.OwnershipPercentage));
+		Assert.Equal("decimal(9,6)", percentage!.GetColumnType());
 	}
 
 	[Fact]

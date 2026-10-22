@@ -24,6 +24,7 @@ must not produce one here either.
 from __future__ import annotations
 
 import re
+from collections import Counter
 from typing import Any
 
 # The CLR types that the generated files use, mapped to their full name.
@@ -440,6 +441,68 @@ def compute_operations(
     # (SQL Server error 5074), therefore every 'DropIndex' of the migration comes first.
     order = {"drop_index": 0, "alter_column": 1, "create_index": 2}
     return sorted(operations, key=lambda operation: order[operation["kind"]])
+
+
+def compute_operations_with_added_tables(
+    source: dict[str, Any], target: dict[str, Any]
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int]:
+    """The difference of a migration that adds tables (written with 'dotnet ef').
+
+    'compute_operations' refuses added tables because this module can not render a
+    'CreateTable'. A migration that adds tables is therefore written with 'dotnet ef
+    migrations add' and only verified here. The method returns
+
+    * the operations on the tables that already existed (column and index changes and the
+      alternate keys that were added to them; dropped tables, dropped keys and changed or
+      removed relationships are still refused),
+    * the entity types of the added tables (verified against the designer file by the
+      caller), and
+    * the number of relationships that were added (they have to be the foreign keys of
+      the added tables).
+    """
+    source_entities = source["entities"]
+    target_entities = target["entities"]
+
+    added = sorted(set(target_entities) - set(source_entities))
+    removed = sorted(set(source_entities) - set(target_entities))
+    if removed:
+        raise MigrationModelError(
+            f"The entity types {removed} were removed; dropping a table is not supported."
+        )
+
+    source_relationships = Counter(_normalize_relationships(source["relationships"]))
+    target_relationships = Counter(_normalize_relationships(target["relationships"]))
+    if source_relationships - target_relationships:
+        raise MigrationModelError(
+            "A relationship of an existing table was changed or removed; this is not "
+            "supported by the verification of a migration that adds tables."
+        )
+    added_relationships = sum((target_relationships - source_relationships).values())
+
+    operations: list[dict[str, Any]] = []
+    for clr_name in sorted(source_entities):
+        source_entity = source_entities[clr_name]
+        target_entity = target_entities[clr_name]
+        if source_entity["table"] != target_entity["table"]:
+            raise MigrationModelError(f"The table of '{clr_name}' was renamed.")
+        if source_entity["primary_key"] != target_entity["primary_key"]:
+            raise MigrationModelError(f"The primary key of '{clr_name}' was changed.")
+        source_keys = {tuple(key) for key in source_entity["alternate_keys"]}
+        target_keys = {tuple(key) for key in target_entity["alternate_keys"]}
+        if source_keys - target_keys:
+            raise MigrationModelError(f"An alternate key of '{clr_name}' was removed.")
+        for key in sorted(target_keys - source_keys):
+            operations.append(
+                {
+                    "kind": "add_unique_constraint",
+                    "table": target_entity["table"],
+                    "columns": list(key),
+                }
+            )
+        operations.extend(_column_operations(source_entity, target_entity))
+        operations.extend(_index_operations(source_entity, target_entity))
+
+    return operations, [target_entities[name] for name in added], added_relationships
 
 
 def _normalize_relationships(relationships: list[dict[str, Any]]) -> list[tuple[Any, ...]]:

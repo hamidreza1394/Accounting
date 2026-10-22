@@ -147,6 +147,10 @@ if (!setupRequired)
     builder.Services.AddSingleton<Infrastructure.Tenancy.WorkContextCookie>();
     builder.Services.AddScoped<Infrastructure.Tenancy.WorkContextService>();
 
+    // Corporate groups, ownership and the scope of group report runs (D-033, D-034). Every
+    // permission is decided by CompanyAccessService; a group membership grants no access.
+    builder.Services.AddScoped<Infrastructure.CorporateGroups.CorporateGroupService>();
+
     // Scoped, because the sign-in service owns the scoped DatabaseContext. The page models
     // resolve it from the container instead of constructing it, so the dependency is created
     // and disposed exactly once per request.

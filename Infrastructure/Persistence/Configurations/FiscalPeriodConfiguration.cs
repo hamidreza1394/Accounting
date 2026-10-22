@@ -12,6 +12,9 @@ internal sealed class FiscalPeriodConfiguration : Microsoft.EntityFrameworkCore.
         builder.Property(x => x.Status).IsRequired();
         builder.HasIndex(x => new { x.TenantId, x.StartDate, x.EndDate }).IsUnique();
         builder.HasIndex(x => new { x.TenantId, x.Status });
+        // The principal of composite foreign keys that must stay inside one company, for
+        // example ConsolidationRunCompanies (FiscalPeriodId, CompanyId) (D-033).
+        builder.HasAlternateKey(x => new { x.Id, x.TenantId });
         builder.HasOne(x => x.Company).WithMany(x => x.FiscalPeriods)
             .HasForeignKey(x => x.TenantId).OnDelete(Microsoft.EntityFrameworkCore.DeleteBehavior.Restrict);
     }

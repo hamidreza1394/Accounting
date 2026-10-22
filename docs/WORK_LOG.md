@@ -139,3 +139,10 @@
 - **دامنه:** فقط مستندات (`CLAUDE.md`، `docs/AGENT_COORDINATION.md`)؛ کد، Schema و `DECISIONS.md` تغییر نکرد؛ ADR جدید نیست.
 - **تغییر:** بند «دروازهٔ بازبینی پیش از PR» (دامنه Diff و نتیجهٔ واقعی تست، عمق به نسبت ریسک، بدون PR تا پایان بازبینی) و افزودن مصرف توکن هر Agent به اندازه‌گیری. وضعیت: `Accepted` به‌عنوان رویهٔ کاری؛ بهینه‌بودن اندازه‌گیری نشده.
 - **اجرانشده:** تست/Build لازم نبود. ادغام نشده؛ گزارش: `docs/handoffs/ISSUE-UNNUMBERED-agent-pre-pr-gate.md`.
+
+## 2026-10-22 — زیرساخت گروه شرکتی، گزارش تجمیعی و تلفیقی (UNNUMBERED، شاخه `feature/corporate-groups-consolidation`)
+- مستندات پیش از کد: `docs/CORPORATE_GROUPS.md`، `docs/CORPORATE_GROUPS_DATA_MODEL.md`، ADRهای D-033..D-035؛ اصلاح شماره ADR بعدی (D-036) در `CLAUDE.md`/`AGENTS.md`/`INDEX.md`؛ یافته‌ها AUD-2026-10-22-01..04.
+- کد: مدل و قواعد در `Domain/CorporateGroups/`، شش پیکربندی EF، کلید جایگزین `FiscalPeriods(Id, TenantId)`، Migration `20261022150943_AddCorporateGroups`، `HasPermissionAsync`، `CorporateGroupService`؛ گسترش گاردهای Migration پایتونی برای Migrationهای افزاینده جدول.
+- آزمون واقعی: ۳۰۵ از ۳۰۵ روی SQL Server 2022؛ هر دو گارد Migration و `has-pending-model-changes` سبز؛ `apply_migrations_to_testdb.sh` روی دیتابیس آزمایشی.
+- بازبینی مستقل امنیتی و کیفیت: بدون یافته Critical/High؛ یافته‌های Medium/Low اصلاح یا به‌عنوان ریسک ثبت شدند.
+- Commit/Push/PR انجام نشد. جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-corporate-groups-consolidation.md`.

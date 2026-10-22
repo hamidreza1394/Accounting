@@ -36,8 +36,8 @@ from migration_model import MigrationModelError  # noqa: E402
 MIGRATIONS_DIRECTORY = os.path.join("Infrastructure", "Persistence", "Migrations")
 
 INITIAL_MIGRATION = "20251017120000_InitialCreate"
-PREVIOUS_MIGRATION = "20261017090000_AlignSchemaWithModel"
-NEWEST_MIGRATION = "20261019071146_WidenUserPasswordHash"
+PREVIOUS_MIGRATION = "20261019071146_WidenUserPasswordHash"
+NEWEST_MIGRATION = "20261022150943_AddCorporateGroups"
 SNAPSHOT_FILE = "DatabaseContextModelSnapshot.cs"
 
 
@@ -126,7 +126,20 @@ def parse_operations(source: str) -> list[tuple[Any, ...]]:
             found = re.search(rf"(?<![\w]){name}: (?P<value>[^\n]+)", arguments)
             return found.group("value").strip().rstrip(",") if found else None
 
-        if kind == "DropIndex":
+        if kind == "AddUniqueConstraint":
+            columns = argument("column") or argument("columns") or ""
+            operations.append(
+                (
+                    position,
+                    (
+                        "add_unique_constraint",
+                        _string(argument("table")),
+                        _string(argument("name")),
+                        tuple(mm.parse_literal_list(columns)),
+                    ),
+                )
+            )
+        elif kind == "DropIndex":
             operations.append(
                 (
                     position,
@@ -204,6 +217,15 @@ def signatures_of(operations: list[dict[str, Any]]) -> list[tuple[Any, ...]]:
                     "drop_index",
                     operation["table"],
                     mm.index_name(operation["table"], operation["index"]),
+                )
+            )
+        elif operation["kind"] == "add_unique_constraint":
+            signatures.append(
+                (
+                    "add_unique_constraint",
+                    operation["table"],
+                    "AK_{}_{}".format(operation["table"], "_".join(operation["columns"])),
+                    tuple(operation["columns"]),
                 )
             )
         elif operation["kind"] == "create_index":
@@ -415,6 +437,106 @@ def verify_initial_migration(migration_source: str, designer: dict[str, Any]) ->
     return problems
 
 
+def verify_migration_with_added_tables(
+    model: dict[str, Any],
+    previous_designer: dict[str, Any],
+    snapshot: dict[str, Any],
+    newest_designer: dict[str, Any],
+    migration_source: str,
+) -> list[str]:
+    """Verifies a migration that adds tables; such a migration is written with 'dotnet ef'.
+
+    * The new tables (columns, keys, alternate keys, indexes) must be created exactly as the
+      designer file describes them, and with exactly the foreign keys of the model.
+    * Every other operation must be the difference of the tables that already existed
+      (column/index changes and added alternate keys), no more and no less.
+    """
+    problems: list[str] = []
+    operations, added_entities, added_relationships = (
+        mm.compute_operations_with_added_tables(previous_designer, snapshot)
+    )
+    added_tables = {entity["table"] for entity in added_entities}
+
+    # The new tables against the designer file of the migration.
+    new_tables_designer = {
+        "entities": {
+            name: entity
+            for name, entity in newest_designer["entities"].items()
+            if entity["table"] in added_tables
+        }
+    }
+    created = parse_create_tables(migration_source)
+    unexpected = sorted(set(created) - added_tables)
+    for table in unexpected:
+        problems.append(f"The migration creates the table '{table}' that already existed.")
+    # The indexes of the tables that already existed are verified as operations below.
+    chunks = re.split(r"(?=migrationBuilder\.)", migration_source)
+    filtered_source = "".join(
+        chunk
+        for chunk in chunks
+        if not chunk.startswith("migrationBuilder.CreateIndex(")
+        or re.search(r'table: "([^"]+)"', chunk).group(1) in added_tables
+    )
+    problems.extend(verify_initial_migration(filtered_source, new_tables_designer))
+
+    # The foreign keys of the new tables against the model of the code base.
+    wanted_foreign_keys = sorted(
+        "FK_{}_{}_{}".format(
+            foreign_key["dependent"],
+            foreign_key["principal_table"],
+            "_".join(foreign_key["columns"]),
+        )
+        for foreign_key in model["foreign_keys"]
+        if foreign_key["dependent"] in added_tables
+    )
+    actual_foreign_keys = sorted(
+        foreign_key["name"]
+        for table in added_tables & set(created)
+        for foreign_key in created[table]["foreign_keys"]
+    )
+    if wanted_foreign_keys != actual_foreign_keys:
+        problems.append(
+            "The foreign keys of the new tables differ from the model.\n"
+            f"  created: {actual_foreign_keys}\n  wanted:  {wanted_foreign_keys}"
+        )
+    if added_relationships != len(wanted_foreign_keys):
+        problems.append(
+            f"{added_relationships} relationship(s) were added to the model but the new "
+            f"tables declare {len(wanted_foreign_keys)} foreign key(s); a relationship of "
+            "an existing table changed."
+        )
+
+    # Down undoes Up: it drops every new table and every alternate key that Up added to an
+    # existing table (the raw SQL of Down is checked by 'generate_migrations.py --check').
+    down_start = migration_source.find("protected override void Down(")
+    down_source = migration_source[down_start:] if down_start >= 0 else ""
+    dropped_tables = set(re.findall(r'migrationBuilder\.DropTable\(\s*name: "([^"]+)"', down_source))
+    if dropped_tables != added_tables:
+        problems.append(
+            "Down does not drop exactly the new tables.\n"
+            f"  dropped: {sorted(dropped_tables)}\n  wanted:  {sorted(added_tables)}"
+        )
+    for operation in operations:
+        if operation["kind"] == "add_unique_constraint":
+            name = "AK_{}_{}".format(operation["table"], "_".join(operation["columns"]))
+            if f'name: "{name}"' not in down_source or "DropUniqueConstraint(" not in down_source:
+                problems.append(f"Down does not drop the unique constraint '{name}'.")
+
+    # The operations on the tables that already existed.
+    expected = sorted(signatures_of(operations))
+    actual = sorted(
+        signature
+        for signature in parse_operations(migration_source)
+        if not (signature[0] == "create_index" and signature[1] in added_tables)
+    )
+    if actual != expected:
+        problems.append(
+            "The operations of the newest migration on the existing tables differ from "
+            f"the difference of the models.\n  applied:   {actual}\n  expected:  {expected}"
+        )
+    return problems
+
+
 def parse_create_indexes(source: str) -> list[dict[str, Any]]:
     """Reads the 'CreateIndex' operations of a migration."""
     indexes: list[dict[str, Any]] = []
@@ -515,8 +637,18 @@ def verify(repository_root: str) -> list[str]:
 
     # 4. The newest migration applies exactly the difference between the schema of the
     #    migration before it and the schema of the snapshot.
+    newest_source = mm.read_text(newest_migration_path)
+    added_tables = set(snapshot["entities"]) - set(previous_designer["entities"])
+    if added_tables:
+        problems.extend(
+            verify_migration_with_added_tables(
+                model, previous_designer, snapshot, newest_designer, newest_source
+            )
+        )
+        return problems
+
     expected = signatures_of(mm.compute_operations(previous_designer, snapshot))
-    actual = parse_operations(mm.read_text(newest_migration_path))
+    actual = parse_operations(newest_source)
     if actual != expected:
         problems.append(
             "The operations of the newest migration differ from the difference between "

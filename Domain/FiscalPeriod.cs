@@ -11,6 +11,7 @@ public sealed class FiscalPeriod : Seedwork.Entity
     public DateOnly StartDate { get; set; }
     public DateOnly EndDate { get; set; }
     public FiscalPeriodStatus Status { get; set; } = FiscalPeriodStatus.Open;
+    public ICollection<ConsolidationRunCompany> ConsolidationRuns { get; set; } = new List<ConsolidationRunCompany>();
 }
 
 public enum FiscalPeriodStatus
