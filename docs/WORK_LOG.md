@@ -118,3 +118,12 @@
 - **کد:** سیاست در `WorkContext.cs`، ممیزی `WorkContextSelected/Changed/SelectionDenied` در `WorkContextService.cs`، فیلد `accessMode` در API؛ کلاینت: نشان «فقط مشاهده»، پیش‌انتخاب بدون ابهام، بازسازی داشبورد با کلید شرکت+دوره؛ اصلاح انتخاب Radio در E2E (کلیک روی Label) و سناریوهای جدید.
 - **شاهد محلی:** ۲۵۳ تست .NET (Provider حافظه‌ای)، ۴۸ تست کلاینت، Build/typecheck/offline/static assets موفق. **اجرانشده:** E2E و تست روی SQL Server (فقط CI).
 - **باقی:** رفتار `Archived`/آینده `NeedsApproval`؛ اِعمال `AllowsWrites` روی Endpointهای نوشتن آینده.
+
+
+## 2026-10-22 — ممیزی آمادگی 100+ کاربر هم‌زمان ابری (Issue #49)
+- **دامنه:** بررسی مستندات و فایل‌های مرتبط در مخزن GitHub؛ معماری Modular Monolith، .NET 10/EF Core 10/SQL Server، Razor Pages + API `/api/v1` + React، Rate Limiting، Reverse Proxy و CI.
+- **نتیجه اصلی:** ظرفیت 100 کاربر `NotVerified` است. در جست‌وجوی انجام‌شده سناریوی بار قابل تکرار در مخزن/CI پیدا نشد؛ تعداد نمونه‌های Production باز است؛ Rate Limiting فعلی per-instance است؛ ماژول‌های حسابداری اصلی و تست رقابت نوشتن مالی هنوز پیاده‌سازی نشده‌اند.
+- **مستندات:** افزوده شد `docs/CLOUD_CONCURRENCY_READINESS.md` و `docs/prompts/CLOUD_CONCURRENCY_IMPLEMENTATION_PROMPT.md`; اسناد INDEX، ARCHITECTURE، TESTING، DEPLOYMENT، ROADMAP، REPOSITORY_AUDIT و PROJECT_STATUS هماهنگ شدند. Handoff در `docs/handoffs/ISSUE-49-cloud-concurrency-readiness.md`.
+- **تغییر کد/DB:** هیچ کد اجرایی، Schema، Migration، نسخه بسته یا topology استقرار تغییر نکرد.
+- **اجرا نشد:** Restore/Build/Test و Load/Stress/Soak؛ این دور فقط ممیزی از طریق مخزن GitHub بود. ظرفیت و رفتار runtime از روی کد ادعا نشده‌اند.
+- **گام بعدی:** Agent باید پرامپ اجرایی را طبق `AGENTS.md` در شاخه/PR مستقل اجرا کند؛ هیچ merge خودکار مجاز نیست.
