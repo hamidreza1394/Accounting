@@ -127,3 +127,10 @@
 - **تغییر کد/DB:** هیچ کد اجرایی، Schema، Migration، نسخه بسته یا topology استقرار تغییر نکرد.
 - **اجرا نشد:** Restore/Build/Test و Load/Stress/Soak؛ این دور فقط ممیزی از طریق مخزن GitHub بود. ظرفیت و رفتار runtime از روی کد ادعا نشده‌اند.
 - **گام بعدی:** Agent باید پرامپ اجرایی را طبق `AGENTS.md` در شاخه/PR مستقل اجرا کند؛ هیچ merge خودکار مجاز نیست.
+
+## 2026-10-22 — مستندسازی قاعدهٔ تقسیم کار بین Subagentها (UNNUMBERED، شاخه `docs/agent-delegation-rule`)
+- **دامنه:** فقط مستندات؛ کد، Schema، Migration و `docs/DECISIONS.md` تغییر نکرد و ADR جدید ثبت نشد (رویهٔ کاری است، نه تصمیم معماری).
+- **تغییر:** بخش «تقسیم کار بین Subagentهای Claude Code» به `docs/AGENT_COORDINATION.md` افزوده شد (سطح تقسیم، نگاشت کار به Agent/مدل، پروتکل ناهماهنگی، اندازه‌گیری، توضیح «چرا همه‌چیز با بالاترین مدل نه»)؛ ارجاع در `docs/INDEX.md`. منبع اصلی همچنان `CLAUDE.md`.
+- **وضعیت:** `Accepted` به‌عنوان رویهٔ کاری؛ بر اساس داده در این پروژه اندازه‌گیری نشده است.
+- **اجرانشده:** تست/Build لازم نبود (بدون تغییر کد).
+- **Git:** PR #50، ادغام نشده. گزارش: `docs/handoffs/ISSUE-UNNUMBERED-agent-delegation-rule.md`.
