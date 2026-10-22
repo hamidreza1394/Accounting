@@ -137,3 +137,12 @@ flowchart LR
 - **جریان:** ورود (صفحه Razor موجود، بدون تغییر ظاهر) → `/app/` → کلاینت `GET /api/v1/context` را می‌خواند و بر اساس `entry` که **سرور** تعیین کرده یکی از این‌ها را نشان می‌دهد: ورود مستقیم (تأیید خودکار با `POST`)، صفحه انتخاب، یا صفحه مسدود (`noCompany`/`noEligiblePeriod`). هر ورود جدید دوباره می‌پرسد.
 - **ذخیره:** Cookie محافظت‌شده `.Faranou.WorkContext` وابسته به کاربر و `SessionId` همان ورود؛ در هر خواندن با دیتابیس اعتبارسنجی می‌شود (`WorkContextService`، `WorkContextCookie`، `FiscalPeriodSelectionPolicy` در `Server/Infrastructure/Tenancy/`).
 - **کلاینت:** `WorkContextSelector`، `BlockedAccess`، نوار زمینه در `AppShell`، و کیت کوچک `components/ui` (Button، Badge، Alert، ChoiceCard، آیکون‌های SVG محلی). فونت و دارایی‌ها محلی؛ بدون CDN.
+
+
+## مقیاس‌پذیری ابری و کاربران هم‌زمان (Issue #49، 2026-10-22)
+
+- هدف کسب‌وکار: پشتیبانی آزمون‌پذیر از حداقل 100 کاربر مجازی هم‌زمان؛ وضعیت فعلی ظرفیت `NotVerified` است تا آزمون بار واقعی روی commit و محیط مشخص انجام شود.
+- نقطه شروع معماری همچنان Modular Monolith است: یک برنامه ASP.NET Core، API هم‌مبدأ، EF Core و SQL Server. افزایش منابع و profiling مقدم بر جداکردن سرویس‌هاست؛ microservices الزام مقیاس‌پذیری نیست.
+- اجرای چند نمونه Web فقط پس از بررسی state وابسته به نمونه، Cookie/Data Protection keys، فایل‌های موقت، rate limiting per-instance، graceful shutdown و health/readiness انجام شود. وجود چند نمونه روی یک میزبان به‌تنهایی HA نیست.
+- هر انتخاب cache توزیع‌شده، queue، broker، Kubernetes یا rate limiting توزیع‌شده نیازمند شواهد و در صورت تغییر معماری، ADR است؛ افزودن پیش‌دستانه آن‌ها ممنوع نیست اما بدون نیاز واقعی توصیه نمی‌شود.
+- معیارها و شکاف‌های تأییدشده در `docs/CLOUD_CONCURRENCY_READINESS.md` ثبت شده‌اند. بار، latency، SQL contention و ظرفیت connection pool از روی کد به‌تنهایی قابل اثبات نیستند.
