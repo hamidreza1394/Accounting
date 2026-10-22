@@ -272,6 +272,22 @@ public sealed class CorporateGroupServiceTests : IDisposable
 	}
 
 	[Fact]
+	public async Task DeniedGroupCreation_DoesNotAuditTheUnverifiedOwnerCompanyAsTenant()
+	{
+		var s = await ScenarioAsync();
+
+		var result = await s.Service.CreateGroupAsync(s.Outsider, s.Holding, CorporateGroupScenario.Unique("g"), "گروه");
+
+		Assert.Equal(CorporateGroupOutcome.NotFound, result.Outcome);
+		var audit = await database.SecurityAuditEvents.SingleAsync(entry =>
+			entry.UserId == s.Outsider &&
+			entry.EventType == "CorporateGroupAccessDenied" &&
+			entry.DetailsJson!.Contains("CorporateGroupCreate", StringComparison.Ordinal));
+		Assert.Null(audit.TenantId);
+		Assert.Null(audit.EntityId);
+	}
+
+	[Fact]
 	public async Task AGroupCode_IsValidatedAndUnique()
 	{
 		var s = await ScenarioAsync();

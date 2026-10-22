@@ -164,7 +164,8 @@ public sealed class CorporateGroupService
 
 		if (!await CompanyAccess.HasPermissionAsync(userId, ownerCompanyId, CorporateGroupPermissions.Manage, cancellationToken))
 		{
-			await AuditDeniedAsync(userId, "CorporateGroupCreate", ownerCompanyId, null, cancellationToken);
+			// The requested owner company has not been verified as accessible; do not persist it in the audit tenant field.
+			await AuditDeniedAsync(userId, "CorporateGroupCreate", null, null, cancellationToken);
 			return CorporateGroupResult<Guid>.Failure(CorporateGroupOutcome.NotFound);
 		}
 

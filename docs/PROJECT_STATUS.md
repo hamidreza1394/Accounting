@@ -168,9 +168,9 @@
 - **محدودیت این ممیزی:** فایل‌های کد و مستندات از GitHub بررسی شدند؛ Build/Test/Load Test در این دور اجرا نشده‌اند. هیچ نتیجه runtime از روی جست‌وجوی کد استنباط نشده است.
 - **گام بعدی:** اجرای پرامپ `docs/prompts/CLOUD_CONCURRENCY_IMPLEMENTATION_PROMPT.md` در شاخه مستقل Issue #49، با رعایت کامل `AGENTS.md` و بدون merge خودکار.
 
-## گروه شرکتی، گزارش تجمیعی و تلفیقی (D-033..D-035) — 2026-10-22
-- **شاخه:** `feature/corporate-groups-consolidation` از `main`@`ef3feb5`؛ Commit/PR ساخته نشده (طبق دستور کارفرما).
-- `Implemented` + `Verified` محلی (SQL Server 2022، ۳۰۵ از ۳۰۵ تست): جداول گروه/عضویت/مالکیت/پروفایل/اجرا/محدوده اجرا، Migration افزایشی `20261022150943_AddCorporateGroups`، قواعد دامنه، `CompanyAccessService.HasPermissionAsync` (نخستین مصرف مجوز عملیاتی)، `CorporateGroupService`.
-- `NotImplemented`: API/UI گروه، تخصیص مجوز به نقش‌ها، تعدیلات و تطبیق درون‌گروهی؛ `Blocked`: گزارش تجمیعی عددی (نبود دفتر/کدینگ)؛ `Proposed`: گروه بین نصب‌ها (D-035).
-- **CI روی این شاخه اجرا نشده است.** Migration روی هیچ دیتابیس مشتری اعمال نشده است.
-- گزارش: `docs/handoffs/ISSUE-UNNUMBERED-corporate-groups-consolidation.md`.
+## گروه شرکتی، گزارش تجمیعی و تلفیقی (D-033..D-035) — وضعیت پس از ادغام PR #53 (2026-10-22)
+- **وضعیت Git:** PR #53 ادغام شده است؛ Merge commit در `main`: `1d30436d25b4f1e76b95e76a764afe249fd84f6f`. [CI](https://github.com/hamidreza1394/Accounting/actions/runs/39826940050): همه Jobهای گزارش‌شده موفق.
+- `Implemented`: جداول گروه/عضویت/مالکیت/پروفایل/اجرا/محدوده اجرا، Migration افزایشی `20261022150943_AddCorporateGroups`، قواعد دامنه، `CompanyAccessService.HasPermissionAsync` و `CorporateGroupService`. گزارش محلی قبلی ۳۰۵/۳۰۵ تست SQL Server 2022 در handoff تاریخی ثبت شده است؛ این سطر ادعای اجرای مجدد محلی در این بازبینی نیست.
+- `NotImplemented`: API/UI گروه، تخصیص مجوز به نقش‌ها، دفتر/کدینگ، تعدیلات و تطبیق درون‌گروهی؛ `Blocked`: گزارش عددی تا وجود دفتر و کدینگ؛ مرز `CustomerAccount` در ابر مشترک و چرخه کنترلی همچنان `NeedsApproval`.
+- Migration روی دیتابیس مشتری/تولید اعمال نشده است.
+- گزارش اولیه: `docs/handoffs/ISSUE-UNNUMBERED-corporate-groups-consolidation.md`.

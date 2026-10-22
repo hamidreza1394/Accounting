@@ -3,7 +3,7 @@
 - **Issue:** `UNNUMBERED` (مأموریت مستقیم کارفرما، 2026-10-22؛ Issue گیت‌هاب ساخته نشده)
 - **Agent/مسئول:** Claude (Lead؛ پیاده‌سازی مستقیم) + دو بازبین مستقل فقط‌خواندنی
 - **تاریخ:** 2026-10-22
-- **وضعیت:** انجام‌شده در محدوده زیرساخت؛ ادغام‌نشده؛ بدون Commit/Push/PR (طبق دستور کارفرما)
+- **وضعیت هنگام تهیه گزارش اولیه:** انجام‌شده در محدوده زیرساخت؛ هنوز ادغام‌نشده و بدون PR در آن لحظه. **به‌روزرسانی پس از آن:** PR #53 ادغام شده است؛ Merge commit `1d30436d25b4f1e76b95e76a764afe249fd84f6f`؛ CI اجرا `39826940050` موفق گزارش شده است.
 
 ## هدف و معیارهای پذیرش
 - [x] مستندات پیش از کد به‌روز و ADRهای D-033..D-035 ثبت شدند.
@@ -66,6 +66,13 @@
 - `CURRENT_MIGRATION_WRITTEN_BY_EF_TOOLS` برای Migration بعدی که فقط ستون/ایندکس تغییر می‌دهد باید `False` شود.
 
 ## شناسه‌های Git
-- Branch: `feature/corporate-groups-consolidation` (محلی، Push نشده)
-- Commit: ندارد
-- Pull Request: ندارد
+- Branch: `feature/corporate-groups-consolidation`
+- Commit پیاده‌سازی: `a01a204fba8df16e8b274ffddb948b86c2a7274f`
+- Pull Request: [#53](https://github.com/hamidreza1394/Accounting/pull/53) — ادغام‌شده
+- Merge commit در `main`: `1d30436d25b4f1e76b95e76a764afe249fd84f6f`
+- CI پس از ادغام: [39826940050](https://github.com/hamidreza1394/Accounting/actions/runs/39826940050) — همه Jobهای گزارش‌شده موفق
+
+## پیگیری ممیزی پس از ادغام (Issue #54)
+- اصلاح جداگانه: شناسه `ownerCompanyId` که دسترسی آن رد شده بود، دیگر در `SecurityAuditEvent.TenantId` ثبت نمی‌شود؛ تست رگرسیون برای این رفتار افزوده شده است.
+- مستند یکتایی کد با ایندکس واقعی `(OwnerCompanyId, Code)` همسو شد.
+- این گزارش اولیه سابقه زمان اجرا را حفظ می‌کند؛ برای وضعیت اصلاحات بعدی، Issue #54 و PR اصلاحی را ببینید.

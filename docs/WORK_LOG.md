@@ -146,3 +146,12 @@
 - آزمون واقعی: ۳۰۵ از ۳۰۵ روی SQL Server 2022؛ هر دو گارد Migration و `has-pending-model-changes` سبز؛ `apply_migrations_to_testdb.sh` روی دیتابیس آزمایشی.
 - بازبینی مستقل امنیتی و کیفیت: بدون یافته Critical/High؛ یافته‌های Medium/Low اصلاح یا به‌عنوان ریسک ثبت شدند.
 - Commit/Push/PR انجام نشد. جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-corporate-groups-consolidation.md`.
+
+
+## 2026-10-22 — اصلاحات ممیزی پس از ادغام گروه شرکتی (Issue #54)
+- PR #53 در `main` ادغام شده است (Merge commit `1d30436d25b4f1e76b95e76a764afe249fd84f6f`); CI اجرا [39826940050](https://github.com/hamidreza1394/Accounting/actions/runs/39826940050) موفق گزارش شده است. این واقعیت جایگزین وضعیت تاریخی ثبت‌شده در گزارش اولیه می‌شود.
+- یافته امنیتی: هنگام رد `CorporateGroupCreate`، شناسه شرکت درخواستی بدون اثبات دسترسی در `SecurityAuditEvent.TenantId` نوشته می‌شد؛ اصلاح شد تا شناسه تأییدنشده در فیلد Tenant/Entity ثبت نشود و تست رگرسیون اضافه شد.
+- مستند مدل داده با ایندکس واقعی یکتا `(OwnerCompanyId, Code)` هماهنگ شد؛ D-033/D-034 و وضعیت پروژه به‌روزرسانی شدند.
+- مرز `CustomerAccount` در ابر مشترک و قاعده چرخه کنترلی همچنان `NeedsApproval` است؛ API/UI گروه، Schema مشتری و Migration جدید اضافه نشد.
+- **تست‌های این تغییر:** در این محیط از طریق GitHub API قابل اجرا نبودند؛ CI باید روی PR اجرا شود. هیچ دیتابیس تولیدی لمس یا Migration اجرا نشد.
+- PR اصلاحی: [Issue #54](https://github.com/hamidreza1394/Accounting/issues/54)؛ شاخه `fix/issue-54-corporate-groups-audit`.

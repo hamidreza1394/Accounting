@@ -24,7 +24,7 @@ erDiagram
 ### `CorporateGroups`
 | ستون | نوع | توضیح |
 |---|---|---|
-| `Code` | `varchar(40)` NOT NULL | یکتا در نصب |
+| `Code` | `varchar(40)` NOT NULL | یکتا در محدوده شرکت مالک اداری (`OwnerCompanyId`)؛ کد یکسان در دو شرکت مالک متفاوت مجاز است |
 | `Name` | `nvarchar(200)` NOT NULL | |
 | `OwnerCompanyId` | `uniqueidentifier` NOT NULL | FK → `Companies.Id`؛ مالک اداری، نه مالک داده اعضا |
 | `IsActive` | `bit` NOT NULL | |
@@ -32,7 +32,7 @@ erDiagram
 | `CreatedByUserId` | `uniqueidentifier` NOT NULL | بدون FK، هم‌سو با `UserCompanyMemberships.UserId` (D-009/D-029) |
 | `UpdatedAtUtc` | `datetime2` NULL | |
 
-ایندکس‌ها: یکتا `(Code)`؛ `(OwnerCompanyId, IsActive)`.
+ایندکس‌ها: یکتا `(OwnerCompanyId, Code)`؛ `(OwnerCompanyId, IsActive)`. این یکتایی با محدوده مجوزها هم‌سو است و از افشای وجود گروه شرکت دیگر از طریق خطای کد تکراری جلوگیری می‌کند.
 
 ### `CorporateGroupMembers`
 | ستون | نوع | توضیح |
