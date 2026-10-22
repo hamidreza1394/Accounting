@@ -176,3 +176,19 @@ dotnet format Template.sln --verify-no-changes
 
 ### مواردی که بررسی شد و ناهمخوانی نداشت
 commit مبنا؛ مدل چندشرکتی؛ نبود Global Query Filter (D-013)؛ نبود هر کد لایسنس/مشتری/ماژول؛ خروجی Publish بدون CDN (طبق CI).
+
+
+## ممیزی تکمیلی آمادگی کاربران هم‌زمان ابری — 2026-10-22 (Issue #49)
+
+**محدوده:** جست‌وجو در کد و مستندات شاخه main شامل `Server/Program.cs`, `Server/Api/**`, `Infrastructure/Persistence/**`, `Directory.Build.props`, `Directory.Packages.props`, CI، راهبرد تست و Deployment. این بررسی آزمون بار اجرا نکرده و ظرفیت را تأیید نمی‌کند.
+
+- **CC-01 — High/Open:** آزمون بار/فشار/soak قابل اجرا در مخزن/CI پیدا نشد. ظرفیت 100 کاربر `NotVerified` است.
+- **CC-02 — High/Open:** تعداد نمونه و مشخصات Production در Deployment هنوز پرسش باز است.
+- **CC-03 — High/Open:** Rate Limiting فعلی per-instance است؛ رفتار scale-out باید تحلیل شود.
+- **CC-04 — High/Open:** ماژول‌های حسابداری اصلی هنوز `NotImplemented` هستند؛ بنابراین صحت نوشتن مالی تحت رقابت قابل ادعا نیست.
+- **CC-05 — Medium/Open:** راهنمای سنجه‌های performance/runtime و SQL contention در مستندات بررسی‌شده مشخص نیست؛ ابتدا سنجه‌های میزبان واقعی را شناسایی کن.
+- **CC-06 — Medium/Open:** `Application` هنوز اسکلت است و بخشی از PageModelها به Persistence متصل‌اند؛ profiling مسیرهای پرتکرار لازم است، نه refactor گسترده حدسی.
+- **CC-07 — Medium/Guardrail:** Global Query Filter عمداً طبق D-013 استفاده نشده؛ هیچ تغییر tenant isolation بدون ADR و تست cross-tenant.
+- **CC-08 — Medium/Open:** Data Protection keys، Proxy/TLS و منابع محیط Production باید هنگام تعیین استقرار بررسی شوند.
+
+موارد بالا در `docs/CLOUD_CONCURRENCY_READINESS.md` توضیح داده شده‌اند. نبود Redis/Kubernetes/microservices به‌تنهایی یافته نقص محسوب نمی‌شود؛ اندازه‌گیری runtime برای تعیین گلوگاه CPU، RAM، DB pool، query latency و deadlock ضروری است.
