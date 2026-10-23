@@ -112,10 +112,21 @@ describe('selection', () => {
     expect(initialSelection(years, null)).toEqual({ yearKey: '2026-03-21|2027-03-20', companyId: 'a' });
   });
 
-  it('preselects nothing when it is ambiguous', () => {
+  it('preselects the newest open year when several years are available, without guessing a company', () => {
     const years = groupFiscalYears(choices(a, b));
 
-    expect(initialSelection(years, null)).toEqual({ yearKey: null, companyId: null });
+    expect(initialSelection(years, null)).toEqual({ yearKey: '2026-03-21|2027-03-20', companyId: null });
+  });
+
+  it('prefers the newest open year over a newer closed-only year', () => {
+    const years = groupFiscalYears(
+      choices(
+        company('closed', 'شرکت بسته', [period('closed-1', 'سال بسته', { ...y1405, status: 'Closed', isSelectable: true, accessMode: 'readOnly' })]),
+        company('open', 'شرکت باز', [period('open-1', 'سال باز', y1404)]),
+      ),
+    );
+
+    expect(initialSelection(years, null)).toEqual({ yearKey: '2025-03-21|2026-03-20', companyId: 'open' });
   });
 
   it('preselects the year but not the company when the only year has several enterable companies', () => {
