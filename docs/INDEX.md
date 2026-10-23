@@ -15,7 +15,7 @@
 | [`ROADMAP.md`](ROADMAP.md) | برنامه راه |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | معماری و جهت وابستگی |
 | [`WORK_CONTEXT_SELECTOR_UI.md`](WORK_CONTEXT_SELECTOR_UI.md) | طراحی بصری و رفتار صفحه انتخاب شرکت و دوره مالی (لوگو، فونت، مرور محصولات، اندازه‌گیری) |
-| [`DECISIONS.md`](DECISIONS.md) | ADRها D-001..D-036 (بعدی D-037) |
+| [`DECISIONS.md`](DECISIONS.md) | ADRها D-001..D-037 (بعدی D-038) |
 | [`CORPORATE_GROUPS.md`](CORPORATE_GROUPS.md) | گروه شرکتی، گزارش تجمیعی/تلفیقی، مجوزها و نقشه راه (D-033..D-035) |
 | [`CORPORATE_GROUPS_DATA_MODEL.md`](CORPORATE_GROUPS_DATA_MODEL.md) | جداول، کلیدها و راهبرد Migration گروه شرکتی |
 | [`PRODUCT_REQUIREMENTS.md`](PRODUCT_REQUIREMENTS.md) | نیازمندی‌های محصول |
