@@ -358,7 +358,7 @@
     <value>تاریخ و زمان شروع انتشار</value>
   </data>
   <data name="RememberMe" xml:space="preserve">
-    <value>ذخیره نام کاربری و ورود پایدار</value>
+    <value>ذخیره نام کاربری و ماندن در حساب (تا پایان مهلت بی‌فعالیتی)</value>
   </data>
   <data name="RemoverUserId" xml:space="preserve">
     <value>کاربر حذف کننده</value>

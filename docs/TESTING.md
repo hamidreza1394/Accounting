@@ -143,3 +143,7 @@ cd ClientApp && npm ci && npm run typecheck && npm test && npm run build && npm 
 | E2E: `scripts/publish.sh` ← `Server.dll --migrate` ← `npm run seed` ← `./check-servers.sh` ← `npx playwright test` (Chromium واقعی، سرور منتشرشده، SQL Server واقعی) | `18 passed` (۴۴ ثانیه)؛ `check-servers.sh` هر دو حالت OK |
 
 اجرا نشد: `npm test`/`npm run build` کلاینت React (مرحلهٔ `client` CI)، Windows (`publish-windows`)، ویندوز/PowerShell، Firefox/Safari.
+
+## تست‌های نام کاربری ورود (PR #67)
+- `RememberedUsernameTests` (Integration، SQL Server واقعی): ویژگی‌های کوکی، نبود رمز، بازیابی/عدم بازیابی، مقدار مشکوک و کدگذاری خروجی، حذف با ورود ناموفق.
+- `tests/e2e/specs/faranou.spec.mjs`: به‌خاطرسپاری، خاموش‌کردن، ورود ناموفق، صفات Password Manager و یادداشت.

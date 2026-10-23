@@ -79,8 +79,10 @@ namespace Server.Pages.Security
 		{
 			ReturnUrl = returnUrl;
 
+			// The cookie is user-controlled input: only a plausible user name is restored
+			// (length of the field, no control characters); anything else is ignored.
 			if (HttpContext.Request.Cookies.TryGetValue(RememberedUsernameCookieName, out var rememberedUsername) &&
-				string.IsNullOrWhiteSpace(rememberedUsername) == false)
+				IsPlausibleUsername(rememberedUsername))
 			{
 				ViewModel.Username = rememberedUsername;
 				ViewModel.RememberMe = true;
@@ -92,7 +94,8 @@ namespace Server.Pages.Security
 		{
 			// Opting out immediately removes the remembered username, including when
 			// authentication subsequently fails. Passwords are never stored by this app.
-			if (ViewModel.RememberMe == false)
+			if (ViewModel.RememberMe == false &&
+				HttpContext.Request.Cookies.ContainsKey(RememberedUsernameCookieName))
 			{
 				DeleteRememberedUsername();
 			}
@@ -251,17 +254,34 @@ namespace Server.Pages.Security
 			}
 		}
 
-		private void RememberUsername(string username)
+		private static bool IsPlausibleUsername(string? value)
 		{
-			var options = new Microsoft.AspNetCore.Http.CookieOptions
+			return string.IsNullOrWhiteSpace(value) == false &&
+				value.Length <= Constants.MaxLength.Username &&
+				value.Any(char.IsControl) == false;
+		}
+
+		// Same rule as the authentication and the work-context cookies: HTTPS only outside
+		// development (not "whatever the request looked like", which depends on proxy settings).
+		private Microsoft.AspNetCore.Http.CookieOptions CreateRememberedUsernameOptions()
+		{
+			var environment = HttpContext.RequestServices
+				.GetRequiredService<Microsoft.Extensions.Hosting.IHostEnvironment>();
+
+			return new Microsoft.AspNetCore.Http.CookieOptions
 			{
 				HttpOnly = true,
-				Secure = HttpContext.Request.IsHttps,
+				Secure = environment.IsDevelopment() == false || HttpContext.Request.IsHttps,
 				SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax,
 				Path = "/",
 				IsEssential = true,
-				Expires = DateTimeOffset.UtcNow.AddDays(365),
 			};
+		}
+
+		private void RememberUsername(string username)
+		{
+			var options = CreateRememberedUsernameOptions();
+			options.Expires = DateTimeOffset.UtcNow.AddDays(365);
 
 			HttpContext.Response.Cookies.Append(
 				RememberedUsernameCookieName,
@@ -273,13 +293,7 @@ namespace Server.Pages.Security
 		{
 			HttpContext.Response.Cookies.Delete(
 				RememberedUsernameCookieName,
-				new Microsoft.AspNetCore.Http.CookieOptions
-				{
-					HttpOnly = true,
-					Secure = HttpContext.Request.IsHttps,
-					SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax,
-					Path = "/",
-				});
+				CreateRememberedUsernameOptions());
 		}
 
 		#region GetLocalReturnUrl

@@ -64,7 +64,7 @@
                     </div>
 
                     <label class="taraz-remember" asp-for="ViewModel.RememberMe"><input asp-for="ViewModel.RememberMe" /><span class="taraz-check" aria-hidden="true"></span><span>@Resources.DataDictionary.RememberMe</span></label>
-                    <p class="taraz-security-note">@(isRightToLeft ? "برای ذخیره رمز عبور، درخواست ذخیره‌سازی مرورگر را تأیید کنید." : "To save your password, accept your browser’s password-manager prompt.")</p>
+                    <p class="taraz-security-note">@(isRightToLeft ? "فرانو فقط نام کاربری را ذخیره می‌کند، نه رمز عبور. برای ذخیره رمز عبور، پیشنهاد ذخیره‌سازی مرورگر را تأیید کنید." : "Faranou stores only your username, never your password. To save your password, accept your browser’s password-manager prompt.")</p>
                     <button type="submit" class="taraz-submit"><span class="taraz-submit-label">@Resources.ButtonCaptions.Login</span><span class="taraz-submit-status" hidden><span class="taraz-spinner" aria-hidden="true"></span>@(isRightToLeft ? "در حال بررسی..." : "Checking...")</span><span class="taraz-submit-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg></span></button>
                 </form>
                 <p class="taraz-support-note">@(isRightToLeft ? "در صورت فراموشی اطلاعات ورود یا بروز مشکل در ورود، با مدیر سامانه یا پشتیبانی تماس بگیرید." : "If you have forgotten your sign-in details or need help, contact the system administrator or support.")</p>
