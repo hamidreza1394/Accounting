@@ -4,7 +4,7 @@
 Codex، Copilot و Agentهای دیگر می‌توانند در یک مخزن مشارکت کنند، اما Git باید منبع حقیقت باشد. حافظه گفت‌وگو یا خلاصه تولیدشده توسط یک Agent، جای فایل‌های ثبت‌شده در مخزن را نمی‌گیرد.
 
 ## قواعد هماهنگی
-0. **نقطه شروع:** `docs/INDEX.md`. ترتیب منابع حقیقت و واژگان وضعیت (`Accepted`/`Implemented`/`Verified`/`Proposed`/`NeedsApproval`/`Deprecated`/`Blocked`/`NotImplemented`) در D-030 است؛ قابلیت لایسنس/زیرسیستم را `Implemented` فرض نکن (همه `NotImplemented`‌اند). ADR جدید از D-031 شروع می‌شود؛ شماره‌های موجود را تغییر نده.
+0. **نقطه شروع:** `docs/INDEX.md`. ترتیب منابع حقیقت و واژگان وضعیت (`Accepted`/`Implemented`/`Verified`/`Proposed`/`NeedsApproval`/`Deprecated`/`Blocked`/`NotImplemented`) در D-030 است؛ قابلیت لایسنس/زیرسیستم را `Implemented` فرض نکن (همه `NotImplemented`‌اند). شماره ADR بعدی D-036 است (مرجع: `docs/DECISIONS.md`)؛ شماره‌های موجود را تغییر نده.
 1. **یک وظیفه = یک Issue = یک شاخه = یک PR.** نام شاخه پیشنهادی: `agent/<issue-number>-<short-name>`.
 2. **یک مالک ادغام تعیین کن.** فقط مسئول ادغام یا Maintainer، PRها را بازبینی و merge کند.
 3. **از اجرای موازی روی یک working tree مشترک اجتناب کن.** Agentهای هم‌زمان باید شاخه‌ها/working treeهای جداگانه داشته باشند و فایل‌های هم‌پوشان را هماهنگ کنند.
@@ -55,8 +55,8 @@ Codex، Copilot و Agentهای دیگر می‌توانند در یک مخزن �
 | تست، Build، Regression | `qa-engineer` | sonnet |
 | بازبینی کیفیت Diff | `code-reviewer` | sonnet |
 | CI/CD، publish، Smoke Test | `devops-release-engineer` | sonnet |
-| مستندات حساس (ADR، `PROJECT_STATUS`، وضعیت‌ها، handoff) | `documentation-engineer` با `model: sonnet` در فراخوانی | sonnet |
-| مستندات ساده و تکراری (افزودن ردیف WORK_LOG، اصلاح متن) | `documentation-engineer` | haiku |
+| مستندات حساس: معماری، امنیت، ADR/تصمیم‌های فنی، قرارداد API، `PROJECT_STATUS`، وضعیت‌ها، handoff | `documentation-engineer` (پیش‌فرض `sonnet`)؛ برای تغییر محتوایی، بازبینی تخصصی Diff: معماری/ADR/API ← `architect`، امنیت ← `security-reviewer` | sonnet (بازبین: opus) |
+| مستندات ساده و تکراری (افزودن ردیف WORK_LOG، اصلاح نگارشی) | `documentation-engineer` با `model: haiku` در فراخوانی | haiku |
 
 ### پ) پروتکل جلوگیری از ناهماهنگی
 1. **قرارداد اول:** Lead پیش از فراخوانی هر Agent، قرارداد مشترک (شکل API، نام فیلدها، قواعد دامنه، معیارهای پذیرش) را می‌نویسد؛ Agent قرارداد را تغییر نمی‌دهد و نیاز به تغییر را گزارش می‌کند.
@@ -72,6 +72,9 @@ Codex، Copilot و Agentهای دیگر می‌توانند در یک مخزن �
 
 ### ت) اندازه‌گیری
 Lead در گزارش پایانی هر کار تقسیم‌شده می‌نویسد: کدام Agent چه کرد، چند توکن مصرف کرد (عددی که ابزار Agent گزارش می‌دهد؛ در نبود آن «نامشخص»)، چند رفت‌وبرگشت لازم شد و آیا تقسیم کار صرفه داشت. تا کنون داده‌ای برای تأیید یا رد صرفهٔ این رویه در این پروژه جمع نشده است.
+
+### Skill، Plugin و کنترل‌های قطعی (2026-10-23)
+قاعدهٔ تشخیص و فراخوانی Skill/Plugin، تفکیک چهار وضعیت «نصب‌شده / در دسترس / فراخوانی‌شده / اجراشده» و قالب گزارش آن‌ها در بخش «Skill، Plugin، MCP و کنترل‌های قطعی» در `CLAUDE.md` است و اینجا تکرار نمی‌شود. کنترل‌های قطعی عبارت‌اند از CI و `permissions` در `.claude/settings.json` (محدودیت‌ها در همان بخش `CLAUDE.md`). این تنظیمات فقط Claude Code را مقید می‌کنند، نه Codex یا Copilot.
 
 ### چرا همه‌چیز با بالاترین مدل نه
 - **مزایای استفاده از بالاترین مدل برای همه‌چیز:** ناهماهنگی کمتر (یک مدل، یک برداشت از قرارداد) و کیفیت بهتر در کار دشوار.

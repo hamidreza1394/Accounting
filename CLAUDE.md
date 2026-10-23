@@ -28,7 +28,7 @@
 | `devops-release-engineer` | `.claude/agents/devops-release-engineer.md` | `sonnet` | CI/CD، publish.sh/ps1، Smoke Test، Deployment | کامل |
 | `security-reviewer` | `.claude/agents/security-reviewer.md` | `opus` | بازبینی امنیتی Diff، بدون اصلاح فایل | فقط‌خواندنی + Bash |
 | `code-reviewer` | `.claude/agents/code-reviewer.md` | `sonnet` | بازبینی مستقل Diff (کیفیت/Regression، غیرامنیتی) | فقط‌خواندنی + Bash |
-| `documentation-engineer` | `.claude/agents/documentation-engineer.md` | `haiku` | نگهداری مستندات و گزارش‌های تحویل | کامل |
+| `documentation-engineer` | `.claude/agents/documentation-engineer.md` | `sonnet` (پیش‌فرض؛ مستندات ساده با `haiku` در فراخوانی) | نگهداری مستندات و گزارش‌های تحویل | کامل |
 
 دسترسی فقط‌خواندنی `architect`، `security-reviewer` و `code-reviewer` در فیلد `tools` همان Agent اعمال شده (فهرست `Edit`/`Write` در آن نیست)، نه صرفاً یک توصیه در متن؛ این سه Agent از نظر ابزاری قادر به تغییر فایل نیستند مگر خودِ تعریف Agent تغییر کند. برای فایلی که چند Agent «کامل» ممکن است هم‌زمان نیاز به تغییرش داشته باشند (مثلاً یک Migration که هم `database-engineer` و هم `backend-developer` به آن مرتبطند)، طبق `docs/AGENT_COORDINATION.md` قاعده ۳ («از اجرای موازی روی یک working tree مشترک اجتناب کن») عمل کن: یک Agent/شاخه در هر لحظه مالک آن فایل باشد.
 
@@ -60,8 +60,8 @@
 | تست، Build، Regression | `qa-engineer` | sonnet |
 | بازبینی کیفیت Diff | `code-reviewer` | sonnet |
 | CI/CD، publish، Smoke Test | `devops-release-engineer` | sonnet |
-| مستندات حساس (ADR، `PROJECT_STATUS`، وضعیت‌ها، handoff) | `documentation-engineer` با `model: sonnet` در فراخوانی | sonnet |
-| مستندات ساده و تکراری (افزودن ردیف WORK_LOG، اصلاح متن) | `documentation-engineer` | haiku |
+| مستندات حساس: معماری، امنیت، ADR/تصمیم‌های فنی، قرارداد API، `PROJECT_STATUS`، وضعیت‌ها، handoff | `documentation-engineer` (پیش‌فرض `sonnet`)؛ برای تغییر محتوایی، بازبینی تخصصی Diff: معماری/ADR/API ← `architect`، امنیت ← `security-reviewer` | sonnet (بازبین: opus) |
+| مستندات ساده و تکراری (افزودن ردیف WORK_LOG، اصلاح نگارشی) | `documentation-engineer` با `model: haiku` در فراخوانی | haiku |
 
 برای برش عمودی، Agent پیاده‌ساز همه‌چیز آن قابلیت را (سرور، کلاینت، تست‌های همان قابلیت) انجام می‌دهد تا قرارداد بین لایه‌ها دو دست نشود. اگر کار واقعاً دو تخصص مستقل دارد (مثلاً Migration و UI)، قرارداد پیش‌تر نوشته و ثابت می‌شود (بخش پ).
 
@@ -96,9 +96,34 @@ Lead برای هر کار تقسیم‌شده در گزارش پایانی می�
 5. اجرای تست‌های مرتبط — `qa-engineer`.
 6. بازبینی امنیتی متناسب با ریسک — `security-reviewer` (برای تغییرات حساس: احراز هویت، Multi-Tenancy، ورودی کاربر، اسرار).
 7. Build/CI/Publish — `devops-release-engineer` (برای شکست CI یا تغییر Workflow/اسکریپت انتشار).
-8. به‌روزرسانی مستندات و گزارش تحویل (`docs/handoffs/ISSUE-<شماره>-...md` و `docs/WORK_LOG.md`) — `documentation-engineer`.
+8. به‌روزرسانی مستندات و گزارش تحویل (`docs/handoffs/ISSUE-<شماره>-...md` و `docs/WORK_LOG.md`) — `documentation-engineer`؛ مستندات حساس با `sonnet` و بازبینی تخصصی، مستندات ساده با `haiku` (جدول ب).
 
 برای تغییرات کوچک، مراحل ۲ و ۶ لازم نیست اجرا شوند. هیچ Agent مجاز به Commit/Push/Merge بدون تأیید صریح نیست؛ این قاعده از `AGENTS.md` بخش ۲ و ۵ است و برای همه Agentها بدون استثنا اعمال می‌شود.
+
+### Skill، Plugin، MCP و کنترل‌های قطعی (قاعدهٔ دائمی هر وظیفه؛ 2026-10-23)
+
+این بخش به تقسیم کار بالا و `AGENTS.md` چیزی نمی‌افزاید جز نحوهٔ تشخیص، فراخوانی و گزارش قابلیت‌ها؛ با هیچ‌کدام تعارض ندارد و در صورت اختلاف آن دو برنده‌اند.
+
+1. **تشخیص و فعال‌سازی:** پس از مطالعهٔ مستندات (`AGENTS.md` بخش ۱) و پیش از شروع، Claude قابلیت‌های مرتبط را از **فهرست Skill و Agent همان جلسه** برمی‌دارد، نه از حافظه یا نام‌های این فایل؛ Skill را با ابزار `Skill` (یا `/نام` صریح) و Subagent را با ابزار `Agent` (یا نام صریح) فعال می‌کند. کار خیلی کوچک (جدول الف) Skill و Agent نمی‌خواهد؛ فراخوانی هم‌زمان همهٔ قابلیت‌ها ممنوع است.
+2. **چهار وضعیت جدا:** (۱) نصب/پیکربندی‌شده: روی این دستگاه هست (`claude plugin list`، `.claude/agents/`)؛ (۲) در دسترس: در فهرست همین جلسه آمده؛ (۳) فراخوانی‌شده: ابزار `Skill`/`Agent` واقعاً صدا زده شد؛ (۴) اجراشده با نتیجه: خروجی قابل‌بررسی (دستور، Diff، گزارشی که Lead مستقلاً راستی‌آزمایی کرد) وجود دارد. فقط بالاترین وضعیتِ واقعاً رسیده‌شده گزارش می‌شود؛ «نصب‌شده» هرگز «استفاده‌شده» نیست.
+3. **انتخاب تخصص** (Skillها سطح کاربرند و روی هر دستگاه فرق می‌کنند؛ ستون دوم فقط «اگر در دسترس بود»):
+
+   | حوزه | Subagent مخزن | Skill اختیاری |
+   |---|---|---|
+   | معماری، ADR | `architect` | `engineering:architecture`، `engineering:system-design` |
+   | امنیت و دسترسی | `security-reviewer` | `engineering:code-review` |
+   | بازبینی Diff/PR | `code-reviewer` | `engineering:code-review`، `code-review:code-review` |
+   | UI/UX، فارسی/RTL | `frontend-developer` | `frontend-design:frontend-design`، `design:accessibility-review`، `design:design-critique` |
+   | تست و QA | `qa-engineer` | `engineering:testing-strategy`، `superpowers:test-driven-development` |
+   | خطایابی | Agent حوزهٔ مربوط | `engineering:debug`، `superpowers:systematic-debugging` |
+   | مستندات | `documentation-engineer` | `engineering:documentation` |
+   | پیش از ادعای «تمام شد» | Lead | `superpowers:verification-before-completion` |
+
+   برای دامنهٔ حسابداری/مالی، EF Core/SQL Server و Tailwind در بررسی 2026-10-23 Skill مرتبطی در دسترس نبود؛ مرجع همان مستندات و ADRهای `docs/` است. Skill اختصاصی فقط در صورت نیاز تکرارشونده **پیشنهاد** می‌شود، نه بدون تأیید ساخته.
+4. **تقدم:** Skill و Plugin ابزار کمکی‌اند و بر `AGENTS.md`، این فایل و ADRها غلبه نمی‌کنند. اگر فرایند یا خروجی Skill تعارض داشت (CDN یا فونت خارجی، Commit/Push/Merge خودکار، ساخت شاخه یا worktree جدا، تغییر معماری یا Schema بدون تأیید)، قاعدهٔ مخزن اجرا و تعارض گزارش می‌شود.
+5. **در دسترس نبود:** محدودیت را صریح اعلام کن، جایگزین مناسب (Agent مخزن یا چک‌لیست دستی از `docs/`) را به کار ببر و در گزارش «در دسترس نبود» ثبت کن؛ هرگز ادعای اجرا نکن.
+6. **پس از تغییر و گزارش:** تست‌های مرتبط و بازبینی مستقل به نسبت ریسک طبق بخش ث و `AGENTS.md` بخش ۴ اجرا می‌شود. گزارش پایانی (علاوه بر ت و `AGENTS.md` بخش ۵) چهار دستهٔ جدا دارد: **استفاده‌شده** (با شاهد)، **در دسترس ولی استفاده‌نشده** (با دلیل)، **در دسترس نبود**، **اجرانشده** (با دلیل).
+7. **کنترل‌های قطعی و محدودیت‌هایشان:** متن این فایل رفتار را هدایت می‌کند و تضمین قطعی نیست. کنترل قطعی فقط CI (`.github/workflows/dotnet.yml`) و `permissions` در `.claude/settings.json` است: `deny` برای خواندن (و در نتیجه نوشتن) `.env*` (جز `.env.example`)، `appsettings.Local.json`، `secrets.json`، `*.pfx`، `*.p12`، مخزن User Secrets، `dotnet ef database drop` و Push اجباری (`--force`، `-f`، `+branch`)، حذفی (`--delete`) و آینه‌ای (`--mirror`)؛ `ask` برای Commit، Push، Merge، Rebase، `reset --hard`، `clean`، `restore`، `checkout --`، `branch -D`، `gh pr create/merge`، `gh release`، `dotnet ef database update`، `dotnet ef migrations remove`، `dotnet user-secrets list` و `rm -r`. محدودیت‌ها: قواعد Bash فقط شکل ظاهری فرمان را می‌سنجند (`/bin/rm`، `bash -c`، `git -C . push`، حذف شاخه با `git push origin :branch` و `sqlcmd` را نمی‌گیرند)؛ `Read deny` برای ابزارهای خواندن و فرمان‌های شناخته‌شده مثل `cat` اعمال می‌شود، نه اسکریپتی که خودش فایل را باز می‌کند؛ این‌ها Sandbox کامل نیستند و Hook اضافه نشده است. `allow` محلی قاعدهٔ `deny`/`ask` را لغو نمی‌کند؛ تغییر آن‌ها با ویرایش همان فایل و بازبینی PR است. Pluginها روی هر دستگاه جدا نصب می‌شوند و تغییر فایل‌های مخزن فعال‌شدن آن‌ها را تضمین نمی‌کند؛ نسخهٔ Claude Code را با `claude --version` بخوان (عدد 2.1.306 در این فایل مربوط به بررسی 2026-10-21 است).
 
 ### محدودیت‌های مشترک همه Agentها
 
