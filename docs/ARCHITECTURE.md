@@ -79,7 +79,7 @@ Browser ──(Cookie HttpOnly, same origin)──▶ ASP.NET Core (Server)
   └─ /api/v1/*                     Minimal API ──▶ CompanyAccessService ──▶ DatabaseContext (EF Core / SQL Server)
 ```
 
-- **جریان ورود:** کلاینت هیچ فرم ورودی ندارد. پاسخ 401 از API کاربر را به `/Account/Login?ReturnUrl=/app/...` می‌برد؛ صفحه ورود فقط `ReturnUrl` محلی را می‌پذیرد.
+- **جریان ورود:** کلاینت هیچ فرم ورودی ندارد. پاسخ 401 از API کاربر را به `/Account/Login?ReturnUrl=/app/...` می‌برد؛ صفحه ورود فقط `ReturnUrl` محلی را می‌پذیرد (و `ReturnUrl` که به `/Account/Login*` برگردد نادیده می‌گیرد). بدون `ReturnUrl` امن، ورود موفق کاربر شرکتی را به `/app/` (انتخاب شرکت و دوره مالی، D-031) و حساب Master زیرساختی را (که شرکت ندارد) به خانهٔ Razor `/` می‌برد (`LoginModel.GetDefaultDestination`). `/Account/LoginSuccess` دیگر صفحه‌ای نمایش نمی‌دهد؛ فقط برای لینک‌های قدیمی با `[Authorize]` به همان مقصد پیش‌فرض Redirect می‌کند.
 - **قرارداد API v1** (JSON، camelCase، همه نیازمند ورود، پاسخ‌ها `no-store`):
 
 | Method | مسیر | پاسخ | توضیح |

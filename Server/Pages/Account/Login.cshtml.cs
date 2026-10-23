@@ -19,10 +19,16 @@ namespace Server.Pages.Security
 	{
 		#region Constants
 		/// <summary>
-		/// The temporary destination that is shown after a successful sign-in. The
-		/// accounting modules are not part of this step.
+		/// The React client. It asks <c>GET /api/v1/context</c> and shows the company and
+		/// fiscal period selection (or enters directly / shows the status page), see D-031.
 		/// </summary>
-		public const string SuccessPageName = "/Account/LoginSuccess";
+		public const string WorkContextAppPath = "/app/";
+
+		/// <summary>
+		/// The Razor home of the infrastructure (master) account. That account has no
+		/// company, so the company selection is not meaningful for it (D-015).
+		/// </summary>
+		public const string InfrastructureHomePath = "/";
 		#endregion /Constants
 
 		#region Constructor
@@ -35,6 +41,24 @@ namespace Server.Pages.Security
 			AuthenticationService = authenticationService;
 		}
 		#endregion /Constructor
+
+		#region GetDefaultDestination
+		/// <summary>
+		/// The destination of a signed-in browser that has no (safe) return URL: the company and
+		/// fiscal period selection for company users, the Razor home for the infrastructure account.
+		/// </summary>
+		public static string GetDefaultDestination
+			(System.Security.Claims.ClaimsPrincipal? principal)
+		{
+			var isInfrastructure =
+				string.Equals
+				(a: principal?.FindFirst(type: Infrastructure.Tenancy.CompanyAccessService.AccountKindClaimType)?.Value,
+				b: "Infrastructure",
+				comparisonType: System.StringComparison.Ordinal);
+
+			return isInfrastructure ? InfrastructureHomePath : WorkContextAppPath;
+		}
+		#endregion /GetDefaultDestination
 
 		#region Properties
 		[Microsoft.AspNetCore.Mvc.BindProperty]
@@ -164,9 +188,6 @@ namespace Server.Pages.Security
 							.GetService<Infrastructure.Tenancy.WorkContextCookie>()
 							?.Delete(httpContext: HttpContext);
 
-						AddPageSuccess(message:
-							Resources.Messages.Successes.LoginSucceededPendingFeatures);
-
 						ClearPassword();
 
 						// **************************************************
@@ -181,7 +202,9 @@ namespace Server.Pages.Security
 							return Redirect(url: localReturnUrl);
 						}
 
-						return RedirectToPage(pageName: SuccessPageName);
+						// No return URL: the work environment is chosen first. The server
+						// validates the company and the period again when one is chosen.
+						return Redirect(url: GetDefaultDestination(principal: claimsPrincipal));
 					}
 				}
 
@@ -212,8 +235,9 @@ namespace Server.Pages.Security
 		/// <summary>
 		/// Returns the requested return URL only when it is a local URL of this
 		/// application. Anything else - an absolute URL, a protocol-relative URL or a
-		/// malformed value - yields <c>null</c>, so the caller falls back to the
-		/// temporary success page and an open redirect is not possible.
+		/// malformed value - yields <c>null</c>, so the caller falls back to the default
+		/// destination and an open redirect is not possible. A return URL that points back
+		/// to the sign-in pages is ignored as well, so the user never ends up in a loop.
 		/// </summary>
 		private string? GetLocalReturnUrl()
 		{
@@ -225,6 +249,19 @@ namespace Server.Pages.Security
 			if (Url.IsLocalUrl(url: ReturnUrl!) == false)
 			{
 				return null;
+			}
+
+			var path = ReturnUrl!.Split(separator: new[] { '?', '#' }, count: 2)[0];
+
+			foreach (var signInPath in new[] { "/Account/Login", "/Account/LoginSuccess" })
+			{
+				// Equal to the page itself or below it ("/Account/Login/..."), nothing else.
+				if (path.Equals(value: signInPath, comparisonType: System.StringComparison.OrdinalIgnoreCase) ||
+					path.StartsWith
+					(value: signInPath + "/", comparisonType: System.StringComparison.OrdinalIgnoreCase))
+				{
+					return null;
+				}
 			}
 
 			return ReturnUrl;
