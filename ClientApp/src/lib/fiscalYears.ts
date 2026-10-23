@@ -119,14 +119,21 @@ function isEnterableIn(year: FiscalYear | undefined, companyId: string | null): 
 }
 
 /**
- * The selection to start with, only when there is no ambiguity: the single enterable year;
- * otherwise the year of the current choice (the user came to change it).
+ * Starts at the newest year that has an open period. If no open period exists, it falls back
+ * to the newest year that can be entered read-only. When the user explicitly comes to change
+ * an existing context, keep that context's year if it remains enterable.
+ *
+ * The company is preselected only when it is unambiguous in the chosen year. A per-user
+ * preferred-company setting is a separate persisted preference and must not be inferred from
+ * the last session's context.
  */
 export function initialSelection(years: readonly FiscalYear[], current: SelectedContext | null): Selection {
   const enterableYears = years.filter((year) => year.isEnterable);
   const currentYear = current ? years.find((year) => year.key === yearKey(current.fiscalPeriod)) : undefined;
 
-  const year = enterableYears.length === 1 ? enterableYears[0] : currentYear?.isEnterable ? currentYear : undefined;
+  const year = currentYear?.isEnterable
+    ? currentYear
+    : enterableYears.find((item) => item.status === 'Open') ?? enterableYears[0];
   if (!year) {
     return { yearKey: null, companyId: null };
   }
