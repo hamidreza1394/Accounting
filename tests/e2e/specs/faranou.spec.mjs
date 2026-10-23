@@ -133,7 +133,7 @@ test('remember me issues a persistent cookie', async ({ page, context }) => {
 
 test('remember me stores only the username in an HttpOnly preference cookie and restores it on the next visit', async ({ page, context }) => {
   await signIn(page, alice, { rememberMe: true });
-  await expect(page).toHaveURL(/\\/app\\/$/);
+  await expect(page).toHaveURL(/\/app\/$/);
 
   const remembered = (await context.cookies()).find((current) => current.name === '.Faranou.RememberedUsername');
   expect(remembered?.value).toBe(alice.username);
