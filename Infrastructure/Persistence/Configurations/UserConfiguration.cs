@@ -42,6 +42,17 @@ internal class UserConfiguration : object,
 			.IsUnique(unique: true)
 			;
 
+		builder
+			.HasIndex(current => current.DefaultCompanyId)
+			;
+
+		builder
+			.HasOne<Domain.Company>()
+			.WithMany()
+			.HasForeignKey(current => current.DefaultCompanyId)
+			.OnDelete(Microsoft.EntityFrameworkCore.DeleteBehavior.SetNull)
+			;
+
 		//builder.HasIndex(current => current.Username)
 		//	.IsUnique(unique: true)
 		//	// HasFilter -> using Microsoft.EntityFrameworkCore;
