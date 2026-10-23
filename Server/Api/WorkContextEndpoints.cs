@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Server.Api;
 
@@ -24,6 +25,7 @@ public static class WorkContextEndpoints
 		api.MapGet("/context", GetContextAsync);
 		api.MapPost("/context", SelectAsync);
 		api.MapDelete("/context", ClearAsync);
+		api.MapPost("/context/default-company", SetDefaultCompanyAsync);
 
 		return api;
 	}
@@ -36,6 +38,7 @@ public static class WorkContextEndpoints
 		HttpContext httpContext,
 		ClaimsPrincipal user,
 		[FromServices] Infrastructure.Tenancy.WorkContextService workContextService,
+		[FromServices] Data.DatabaseContext databaseContext,
 		CancellationToken cancellationToken)
 	{
 		var userId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(user);
@@ -46,7 +49,7 @@ public static class WorkContextEndpoints
 			// before the identifier existed has to sign in again.
 			return IsCompanyUser(user)
 				? TypedResults.Unauthorized()
-				: TypedResults.Ok(ToResponse(null, EmptyOptions()));
+				: TypedResults.Ok(ToResponse(null, EmptyOptions(), null));
 		}
 
 		var options = await workContextService.GetOptionsAsync(userId.Value, cancellationToken);
@@ -58,7 +61,64 @@ public static class WorkContextEndpoints
 			? null
 			: await workContextService.GetCurrentAsync(httpContext, userId.Value, sessionId.Value, cancellationToken);
 
-		return TypedResults.Ok(ToResponse(current, options));
+		var defaultCompanyId = await databaseContext.Users
+			.AsNoTracking()
+			.Where(account => account.Id == userId.Value && account.IsActive)
+			.Select(account => account.DefaultCompanyId)
+			.SingleOrDefaultAsync(cancellationToken);
+
+		// A stale preference never grants access and is not exposed if the membership was revoked.
+		if (defaultCompanyId is { } preferred &&
+			!options.Companies.Any(item => item.Company.CompanyId == preferred))
+		{
+			defaultCompanyId = null;
+		}
+
+		return TypedResults.Ok(ToResponse(current, options, defaultCompanyId));
+	}
+
+	/// <summary>Stores a user-specific company preference without changing the current sign-in context.</summary>
+	public static async Task<Results<NoContent, NotFound, ProblemHttpResult, UnauthorizedHttpResult>>
+		SetDefaultCompanyAsync(
+			HttpContext httpContext,
+			ClaimsPrincipal user,
+			[FromBody] SetDefaultCompanyRequest? request,
+			[FromServices] IAntiforgery antiforgery,
+			[FromServices] Data.DatabaseContext databaseContext,
+			[FromServices] Infrastructure.Tenancy.CompanyAccessService companyAccessService,
+			CancellationToken cancellationToken)
+	{
+		if (!await antiforgery.IsRequestValidAsync(httpContext))
+		{
+			return TypedResults.Problem(title: "درخواست نامعتبر است. صفحه را دوباره بارگذاری کنید.", statusCode: StatusCodes.Status400BadRequest);
+		}
+
+		var userId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(user);
+		if (userId is null)
+		{
+			return IsCompanyUser(user) ? TypedResults.Unauthorized() : TypedResults.NotFound();
+		}
+
+		if (request is null || request.CompanyId == Guid.Empty)
+		{
+			return TypedResults.Problem(title: "درخواست تنظیم شرکت پیش‌فرض معتبر نیست.", statusCode: StatusCodes.Status400BadRequest);
+		}
+
+		var account = await databaseContext.Users.SingleOrDefaultAsync(item => item.Id == userId.Value && item.IsActive, cancellationToken);
+		if (account is null)
+		{
+			return TypedResults.Unauthorized();
+		}
+
+		if (request.CompanyId is { } companyId &&
+			await companyAccessService.FindAccessibleCompanyAsync(userId.Value, companyId, cancellationToken) is null)
+		{
+			return TypedResults.NotFound();
+		}
+
+		account.DefaultCompanyId = request.CompanyId;
+		await databaseContext.SaveChangesAsync(cancellationToken);
+		return TypedResults.NoContent();
 	}
 
 	/// <summary>POST /api/v1/context — chooses a company and one of its fiscal periods.</summary>
@@ -160,7 +220,8 @@ public static class WorkContextEndpoints
 
 	private static WorkContextResponse ToResponse(
 		Infrastructure.Tenancy.WorkContext? current,
-		Infrastructure.Tenancy.WorkContextOptions options)
+		Infrastructure.Tenancy.WorkContextOptions options,
+		Guid? defaultCompanyId)
 	{
 		return new WorkContextResponse(
 			Current: current is null
@@ -176,6 +237,7 @@ public static class WorkContextEndpoints
 			DirectSelection: options.DirectCompanyId is { } companyId && options.DirectFiscalPeriodId is { } periodId
 				? new SelectContextRequest(companyId, periodId)
 				: null,
+			DefaultCompanyId: defaultCompanyId,
 			Companies: options.Companies
 				.Select(item => new CompanyChoiceResponse(
 					Id: item.Company.CompanyId,
@@ -211,6 +273,8 @@ public static class WorkContextEndpoints
 
 public sealed record SelectContextRequest(Guid CompanyId, Guid FiscalPeriodId);
 
+public sealed record SetDefaultCompanyRequest(Guid? CompanyId);
+
 /// <summary>
 /// A fiscal period offered for selection; <c>IsSelectable</c> and <c>AccessMode</c>
 /// (<c>readWrite</c>, <c>readOnly</c> or <c>null</c>) are decided by the server.
@@ -243,4 +307,5 @@ public sealed record WorkContextResponse(
 	SelectedContextResponse? Current,
 	string Entry,
 	SelectContextRequest? DirectSelection,
+	Guid? DefaultCompanyId,
 	IReadOnlyList<CompanyChoiceResponse> Companies);
