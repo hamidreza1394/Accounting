@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ApiError, selectWorkContext } from '../api/client';
+import { ApiError, selectWorkContext, setDefaultCompany as saveDefaultCompany } from '../api/client';
 import type { FiscalPeriodStatus, SelectedContext, Session, WorkContext } from '../api/types';
 import { formatPersianDate } from '../lib/date';
 import {
@@ -174,11 +174,13 @@ function CompanyRow({
   checked,
   name,
   onChange,
+  isDefault,
 }: {
   entry: YearEntry;
   checked: boolean;
   name: string;
   onChange: (id: string) => void;
+  isDefault: boolean;
 }) {
   const { company, period } = entry;
   const enterable = period.isSelectable;
@@ -210,6 +212,7 @@ function CompanyRow({
           <span className="flex min-w-0 flex-col gap-1">
             <span title={company.name} className="line-clamp-2 text-lg font-bold leading-snug text-title [overflow-wrap:anywhere]">
               {company.name}
+              {isDefault ? <Badge tone="info">پیش‌فرض شما</Badge> : null}
             </span>
             {!enterable || readOnly ? (
               <span className="flex flex-wrap items-center gap-2">
@@ -278,7 +281,9 @@ export function WorkContextSelector({
   const unavailableCompanies = useMemo(() => companiesWithoutEnterablePeriod(companies), [companies]);
   const hasEnterableYear = years.some((year) => year.isEnterable);
 
-  const [selection, setSelection] = useState<Selection>(() => initialSelection(years, current));
+  const [selection, setSelection] = useState<Selection>(() => initialSelection(years, current, context.defaultCompanyId));
+  const [defaultCompanyId, setDefaultCompanyId] = useState<string | null>(() => context.defaultCompanyId);
+  const [savingDefault, setSavingDefault] = useState(false);
   const [query, setQuery] = useState('');
   const [yearQuery, setYearQuery] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -308,6 +313,10 @@ export function WorkContextSelector({
     }
   }, [error]);
 
+  useEffect(() => {
+    setDefaultCompanyId(context.defaultCompanyId);
+  }, [context.defaultCompanyId]);
+
   function chooseYear(key: string) {
     if (submittingRef.current) {
       return;
@@ -330,6 +339,28 @@ export function WorkContextSelector({
     }
     setSelection((previous) => ({ ...previous, companyId: id }));
     setError(null);
+  }
+
+  async function saveSelectedCompanyAsDefault() {
+    if (!entry || savingDefault) {
+      return;
+    }
+    setSavingDefault(true);
+    setError(null);
+    try {
+      await saveDefaultCompany(entry.company.id);
+      setDefaultCompanyId(entry.company.id);
+    } catch (caught: unknown) {
+      if (onUnauthenticated(caught)) {
+        return;
+      }
+      setError({
+        message: caught instanceof Error ? caught.message : 'ذخیره شرکت پیش‌فرض انجام نشد. دوباره تلاش کنید.',
+        stale: false,
+      });
+    } finally {
+      setSavingDefault(false);
+    }
   }
 
   async function enter() {
@@ -524,10 +555,24 @@ export function WorkContextSelector({
                     name={`${groupId}-company`}
                     checked={item.company.id === selection.companyId}
                     onChange={chooseCompany}
+                    isDefault={item.company.id === defaultCompanyId}
                   />
                 ))}
               </div>
             )}
+
+            {entry ? (
+              <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-[#e5edf6] pt-3">
+                {defaultCompanyId === entry.company.id ? (
+                  <Badge tone="info">این شرکت، پیش‌فرض حساب شماست</Badge>
+                ) : (
+                  <Button variant="secondary" disabled={savingDefault} onClick={() => void saveSelectedCompanyAsDefault()}>
+                    {savingDefault ? 'در حال ذخیره...' : 'ذخیره شرکت انتخاب‌شده به‌عنوان پیش‌فرض'}
+                  </Button>
+                )}
+                <span className="text-xs leading-5 text-sub">این ترجیح فقط برای حساب کاربری شما ذخیره می‌شود و ورود بعدی همچنان صفحه انتخاب را نمایش می‌دهد.</span>
+              </div>
+            ) : null}
 
             {hasEnterableYear && unavailableCompanies.length > 0 ? (
               <p className="mt-3 flex items-start gap-2 text-[0.8125rem] leading-6 text-sub">
