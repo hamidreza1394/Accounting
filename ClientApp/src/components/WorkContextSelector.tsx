@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ApiError, selectWorkContext, setDefaultCompany as saveDefaultCompany } from '../api/client';
-import type { FiscalPeriodStatus, SelectedContext, Session, WorkContext } from '../api/types';
+import type { CompanyRelationshipType, FiscalPeriodStatus, SelectedContext, Session, WorkContext } from '../api/types';
 import { formatPersianDate } from '../lib/date';
 import {
   companiesWithoutEnterablePeriod,
@@ -23,6 +23,17 @@ import { ChoiceCard } from './ui/ChoiceCard';
 import { BuildingIcon, CalendarIcon, EyeIcon, InfoIcon, LockIcon, SearchIcon, UsersIcon } from './ui/icons';
 
 const statusLabels = { Open: 'باز', Closed: 'بسته', Archived: 'بایگانی‌شده' } as const;
+
+const relationshipLabels: Record<CompanyRelationshipType, string> = {
+  parent: 'شرکت مادر',
+  subsidiary: 'شرکت زیرمجموعه',
+  associate: 'شرکت وابسته',
+  jointVenture: 'مشارکت مشترک',
+  investor: 'شرکت سرمایه‌گذار',
+  investment: 'سرمایه‌پذیر بدون کنترل',
+  independent: 'شرکت مستقل',
+  unknown: 'نوع رابطه نامشخص',
+};
 
 /** The badge of a fiscal year in the period list. */
 const yearBadges: Record<FiscalPeriodStatus, { label: string; className: string }> = {
@@ -213,6 +224,14 @@ function CompanyRow({
             <span title={company.name} className="line-clamp-2 text-lg font-bold leading-snug text-title [overflow-wrap:anywhere]">
               {company.name}
               {isDefault ? <Badge tone="info">پیش‌فرض شما</Badge> : null}
+            </span>
+            <span className="flex flex-wrap items-center gap-1.5 text-xs text-sub">
+              <span>نوع شرکت:</span>
+              {company.relationshipTypes.map((type) => (
+                <Badge key={type} tone={type === 'unknown' ? 'warning' : type === 'independent' ? 'neutral' : 'info'} icon={null}>
+                  {relationshipLabels[type]}
+                </Badge>
+              ))}
             </span>
             {!enterable || readOnly ? (
               <span className="flex flex-wrap items-center gap-2">
