@@ -187,4 +187,5 @@
 - **اجرانشده:** Windows (DPAPI، Service، IIS، UNC، `HardenWindowsAcl`)، Login SQL منقضی/غیرفعال، CI، دو POST هم‌زمان روی HTTP، POST بوت‌استرپ Master روی HTTP. AUD-2026-10-23-01 (E2E قدیمی) حل شد.
 - **باز:** املای Farano/Faranou `NeedsApproval`؛ `AGENTS.md`/`CLAUDE.md` هنوز «ADR بعدی D-036» دارند (نیازمند تأیید صریح مالک برای تغییر).
 - **توکن (گزارش ابزار/تخمین):** architect ۷۵٬۱۲۷؛ backend-developer ۲۷۰٬۴۷۶ (۳ دور)؛ documentation-engineer دور اول ۲۳۷٬۳۶۵؛ qa-engineer ۱۳۵٬۱۱۵؛ code-reviewer ۱۸۴٬۴۵۸؛ security-reviewer ۱۲۰٬۸۸۲ + بازبینی دوم ۹۴٬۸۷۷؛ Lead نامشخص. جمع Agentها حدود ۱٫۱ میلیون توکن.
-- **Git:** Commit/Push/PR انجام نشد. گزارش: `docs/handoffs/ISSUE-UNNUMBERED-database-setup-redesign.md`.
+- **Git:** شاخه `feature/database-setup-redesign`، PR #59 (Merge نشده). گزارش: `docs/handoffs/ISSUE-UNNUMBERED-database-setup-redesign.md`.
+- **CI (یافتهٔ بعد از باز شدن PR):** Job `publish` در اجرای push شکست خورد (Smoke: «login page renders the anti-forgery token»). علت، شرایط رقابتی موجود در `scripts/smoke-published-app.sh` بود (`curl | grep -q` زیر `pipefail`: `grep -q` با اولین تطابق خارج می‌شود و `curl` با SIGPIPE می‌میرد)، نه تغییر صفحهٔ راه‌اندازی. بازتولید محلی با همان الگو: ۱۱ شکست از ۴۰۰ (حدود ۲٫۷٪)؛ پس از اصلاح (گرفتن بدنه در متغیر): ۰ از ۴۰۰ و Smoke کامل موفق. اصلاح یک‌جایی و کم‌خطر در همین PR آمده؛ اگر مالک نمی‌خواهد، قابل جدا کردن است.

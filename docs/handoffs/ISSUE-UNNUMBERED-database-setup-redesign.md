@@ -139,5 +139,6 @@
 
 ## شناسه‌های Git
 - Branch: `feature/database-setup-redesign`
-- Commit: ثبت نشده
-- Pull Request: ثبت نشده
+- Commit: `2018b11` (اصلی) + Commit اصلاح Smoke (در PR)
+- Pull Request: #59 (Merge نشده)
+- CI: Job `publish` در اجرای push به‌خاطر شرایط رقابتی قدیمی در `scripts/smoke-published-app.sh` شکست خورد (`curl | grep -q` زیر `pipefail`؛ ۱۱ از ۴۰۰ محلی)؛ در همین PR با گرفتن بدنه در متغیر اصلاح شد (۰ از ۴۰۰). این تنها تغییر خارج از جریان راه‌اندازی است و قابل جدا کردن است.
