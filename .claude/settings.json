@@ -39,5 +39,19 @@
       "Bash(git push *--delete*)",
       "Bash(git push *--mirror*)"
     ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"$CLAUDE_CODE_REMOTE\" = true ] && bash \"$CLAUDE_PROJECT_DIR\"/scripts/dev/cloud-session-start.sh || true",
+            "timeout": 300
+          }
+        ]
+      }
+    ]
   }
 }

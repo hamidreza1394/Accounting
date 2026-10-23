@@ -76,6 +76,40 @@ $env:ConnectionStrings__ConnectionString = "Server=localhost\SQLSERVER2025;Datab
 - پس از نصب، از Developer PowerShell اجرا کنید: `dotnet --info`, `dotnet restore Template.sln`, `dotnet build Template.sln --configuration Release`, `dotnet test Template.sln --configuration Release`.
 
 
+## Claude Code Cloud: SDK و SQL Server آزمایشی (2026-10-23)
+
+**علت نبودن `dotnet`:** تصویر پایهٔ جلسه‌های Claude Code Cloud (Ubuntu 24.04) فقط ابزارهای از پیش‌نصب‌شدهٔ خودش را دارد و .NET SDK در آن نیست؛ مستندات رسمی Anthropic صریحاً می‌گوید ابزارهای بیرون از آن فهرست، حتی اگر رجیستری‌شان در فهرست مجاز شبکه باشد، با «Setup script» نصب می‌شوند. دامنه‌های `builds.dotnet.microsoft.com`، `api.nuget.org`، `mcr.microsoft.com` و Docker Hub در سطح شبکهٔ پیش‌فرض (Trusted) مجازند؛ مانع شبکه نیست. Docker نصب است ولی daemon پیش‌فرض بالا نمی‌آید.
+
+**راه‌حل قابل تکرار در مخزن (بدون مسیر شخصی):**
+- `scripts/dev/install-dotnet.sh`: نسخهٔ SDK را از `global.json` (`sdk.version` + `rollForward`) می‌خواند، تازه‌ترین SDK پایدار پذیرفته‌شده را از `releases.json` رسمی Microsoft پیدا می‌کند، SHA-512 را با مقدار منتشرشده تطبیق می‌دهد (ناسازگاری = توقف بدون نصب؛ این کنترل «یکپارچگی نسبت به فراداده منتشرشده» است، نه امضای دیجیتال: اعتماد به HTTPS با `builds.dotnet.microsoft.com` است و فقط همان میزبان با https پذیرفته می‌شود) و در `/usr/share/dotnet` (root) یا `~/.dotnet` نصب می‌کند و `dotnet` را به `/usr/local/bin` پیوند می‌دهد. ایدمپوتنت است؛ `--check` فقط نسخهٔ لازم را گزارش می‌کند (کد خروج ۳ = نصب نیست). با `global.json` فعلی (۱۰٫۰٫۱۰۰، `latestFeature`) در 2026-10-23 نسخهٔ `10.0.402` نصب شد؛ همان نسخه‌ای که `actions/setup-dotnet` با `10.0.x` در CI می‌گیرد.
+- `scripts/dev/cloud-session-start.sh` + Hook `SessionStart` در `.claude/settings.json`: فقط وقتی `CLAUDE_CODE_REMOTE=true` است اسکریپت بالا را اجرا می‌کند (محلی هیچ کاری نمی‌کند) و هرگز جلسه را خراب نمی‌کند؛ خطا را روی stderr می‌نویسد.
+- **سریع‌تر و کش‌شده (اختیاری، دستی توسط مالک حساب):** Setup script پیکربندی خود Environment است و در مخزن ذخیره نمی‌شود. در تنظیمات Environment همین دو خط را بگذارید؛ نصب یک‌بار انجام و در کش (حدود ۷ روز) نگه داشته می‌شود:
+  ```bash
+  #!/bin/bash
+  bash scripts/dev/install-dotnet.sh || true
+  ```
+  (در آزمایش این محیط نصب سرد حدود ۹ ثانیه طول کشید؛ مهلت ۲۴۰ثانیه‌ای curl زیر حد ۳۰۰ثانیه‌ای Hook و حد تقریبی ۵ دقیقهٔ کش می‌ماند. نصب نیمه‌کاره با فایل نشانهٔ `.faranou-complete` تشخیص داده و در اجرای بعدی ترمیم می‌شود.) بدون این کار Hook همین نصب را در شروع هر جلسه ایدمپوتنت انجام می‌دهد.
+- پس از آماده‌سازی: `dotnet --info`، `dotnet --list-sdks`.
+
+**SQL Server واقعی (نه SQLite) برای تست‌های یکپارچه و E2E:** `scripts/dev/test-sqlserver.sh up|env|down`. کانتینر `mcr.microsoft.com/mssql/server:2022-latest` (برچسب متحرک، مثل CI) فقط روی `127.0.0.1:14333`، رمز `sa` تصادفی در فایل با مجوز ۶۰۰ بیرون از مخزن؛ اگر daemon بالا نباشد و کاربر root باشد `dockerd` را بالا می‌آورد؛ تست‌های xUnit دیتابیس‌های خودشان (`FaranouTests_CG_*`) را می‌سازند و حذف می‌کنند؛ دیتابیس E2E (`FaranouE2E`) را `--migrate` می‌سازد و تا `down` در همین سرور موقت می‌ماند. «ایزوله» یعنی نمونهٔ جدا و یک‌بارمصرف روی localhost، نه ایزولهٔ شبکه‌ای از کانتینرهای دیگر همان میزبان Docker؛ اسکریپت فقط کانتینری را حذف می‌کند که خودش با برچسب `faranou.test-sqlserver=1` ساخته است. رمز در `docker inspect` و فهرست پردازش‌های همان ماشین دیده می‌شود (رمز یک‌بارمصرف است)؛ خروجی `up`/`env` را حتماً در متغیر بگیرید و چاپ نکنید.
+
+**Hook و مجوزها:** Hook `SessionStart` بیرون از `permissions.ask/deny` اجرا می‌شود و کد مخزن را در شروع جلسه اجرا می‌کند (در Cloud با دسترسی root). برای همین فقط وقتی `CLAUDE_CODE_REMOTE=true` است اسکریپت شروع می‌شود و تغییر `scripts/dev/*` و `.claude/*` باید مثل پیکربندی اجرایی بازبینی شود. پیشنهاد (نیازمند تصمیم مسئول مخزن، در این PR اعمال نشد): فایل `CODEOWNERS` برای `.claude/**` و `scripts/dev/**` و بازبینی اجباری.
+
+```bash
+scripts/dev/install-dotnet.sh
+out="$(scripts/dev/test-sqlserver.sh up)" && eval "$out"   # FARANOU_TEST_SQLSERVER، FARANOU_REQUIRE_SQLSERVER، FARANOU_E2E_SQL
+dotnet restore Template.sln
+dotnet build Template.sln --no-restore --configuration Release
+dotnet test Template.sln --no-build --configuration Release
+# E2E (Node 22.12+؛ در CI Node 24): انتشار در مسیر موقت خارج از مخزن، Migration، Seed، Playwright
+export FARANOU_E2E_PUBLISH="$(mktemp -d)/faranou-publish"
+scripts/publish.sh "$FARANOU_E2E_PUBLISH"
+ConnectionStrings__ConnectionString="$FARANOU_E2E_SQL" dotnet "$FARANOU_E2E_PUBLISH/Server.dll" --migrate
+(cd tests/e2e && npm ci && npm run seed && npx playwright test)
+scripts/dev/test-sqlserver.sh down
+```
+هیچ رمز یا Connection String ثابت در Git نیست. این اسکریپت‌ها جایگزین Job های CI نیستند؛ CI همچنان با Service Container همان تست‌ها را روی PR اجرا می‌کند.
+
 ## کلاینت React (`ClientApp`)
 پیش‌نیاز: Node.js 22.12+ (CI: Node 24 / npm 11).
 

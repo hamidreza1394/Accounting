@@ -50,6 +50,7 @@
   # کلاینت React
   cd ClientApp && npm ci && npm run typecheck && npm test && npm run build && npm run check:offline
   ```
+- در Claude Code Cloud `dotnet` از پیش نصب نیست: `scripts/dev/install-dotnet.sh` (Hook `SessionStart` آن را خودکار اجرا می‌کند) SDK مورد نیاز `global.json` را نصب می‌کند و `scripts/dev/test-sqlserver.sh up` یک SQL Server 2022 آزمایشی ایزوله در Docker می‌سازد؛ جزئیات و محدودیت‌ها در `docs/DEVELOPMENT.md` بخش «Claude Code Cloud». تست‌های SQL Server/E2E را فقط وقتی «موفق» بنویس که واقعاً روی SQL Server اجرا شده باشند.
 - برای تغییر دیتابیس، بررسی migration، مدل و رفتار روی SQL Server را هم گزارش کن. Build موفق به معنی صحت عملکردی یا امنیتی کامل نیست.
 
 ## 5) مستندسازی و تحویل اجباری

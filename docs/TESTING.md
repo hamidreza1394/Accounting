@@ -86,7 +86,7 @@ cd ClientApp && npm ci && npm run typecheck && npm test && npm run build && npm 
 
 ## وضعیت و شکاف‌ها (2026-10-21)
 - **شاهد CI:** اجرای `39585708662` — ۲۰۴ تست .NET روی SQL Server 2022، ۱۲ E2E، اسکن NuGet بدون مورد. این سند اجرای جدید ادعا نمی‌کند.
-- **ناهمخوانی دستور:** CI و `AGENTS.md` از `dotnet test Template.sln --no-build ...` استفاده می‌کنند؛ در SDK محلی `10.0.113` طبق `WORK_LOG.md` سینتکس `dotnet test --solution Template.sln` لازم بود. دلیل و راه‌حل یکسان‌سازی **باز** است (REPOSITORY_AUDIT).
+- **ناهمخوانی دستور (حل‌شد، 2026-10-23):** علت تفاوت SDK بود، نه Runner: در SDK `10.0.113` (باند 10.0.1xx) فرمان `dotnet test Template.sln` خطای «should be via '--solution'» می‌داد؛ در SDK `10.0.402` که `global.json` (`rollForward: latestFeature`) می‌پذیرد و CI می‌گیرد، هر دو شکل `dotnet test Template.sln --no-build ...` و `dotnet test --solution Template.sln --no-build ...` اجرا شدند (شاهد در بخش «نتیجهٔ واقعی» پایین). فرمان رسمی همان `AGENTS.md` است؛ `scripts/dev/install-dotnet.sh` همان SDK CI را نصب می‌کند.
 - **تست‌های لایسنس:** هیچ تستی وجود ندارد چون قابلیتی پیاده‌سازی نشده (`NotImplemented`). تست‌های پذیرش آینده در ADRهای D-022..D-028 و `docs/LICENSING_THREAT_MODEL.md` فهرست شده‌اند؛ هر کدام فقط پس از اجرای واقعی `Verified` می‌شود.
 - تست صریح «نقش Admin قدیمی به داده شرکت غیرعضو دسترسی ندارد» برای افزودن پیشنهاد می‌شود (D-029).
 - تست ایستا «بسته Publish مشتری فاقد کلید خصوصی/کد فروشنده است» برای آینده (D-021).
@@ -117,3 +117,15 @@ cd ClientApp && npm ci && npm run typecheck && npm test && npm run build && npm 
 - همان فرمان بدون SQL Server → ۳۰۱ موفق، ۴ Skip (چهار تست `CorporateGroupSqlServerTests` عمداً فقط با SQL Server اجرا می‌شوند؛ در CI با `FARANOU_REQUIRE_SQLSERVER=1` نبود SQL Server شکست است، نه Skip).
 - تست هم‌زمانی (دو درخواست موازی با یک کد گروه، ۵ بار در هر اجرا) سه بار پشت‌سرهم سبز؛ همین تست خطای واقعی (Deadlock پیچیده در `InvalidOperationException`) را پیش از اصلاح آشکار کرد.
 - کلاینت React تغییری نکرد و تست‌های آن در این کار اجرا نشدند.
+
+## نتیجهٔ واقعی محیط Cloud با اسکریپت‌های `scripts/dev` (2026-10-23)
+محیط: Claude Code Cloud، Ubuntu 24.04، SDK `10.0.402` (نصب‌شده با `scripts/dev/install-dotnet.sh`؛ SHA-512 با فراداده رسمی تطبیق داده شد، که کنترل یکپارچگی است نه امضا)، Node 22.22.0، SQL Server 2022 در Docker (`scripts/dev/test-sqlserver.sh up`، `127.0.0.1:14333`). کد مبنا: `main` در commit `19d608e`.
+
+| فرمان | نتیجه |
+|---|---|
+| `dotnet restore Template.sln` / `dotnet build Template.sln --no-restore -c Release` | کد خروج ۰؛ ۰ خطا، ۹۲۱ هشدار (روی SDK 10.0.113: ۹۲۷؛ تفاوت از Analyzer نسخهٔ SDK) |
+| `dotnet test Template.sln --no-build -c Release` با `FARANOU_TEST_SQLSERVER` و `FARANOU_REQUIRE_SQLSERVER=1` | `total: 306, failed: 0, succeeded: 306, skipped: 0` (۲۶ ثانیه) |
+| همان فرمان با `--solution` و بدون SQL Server | ۳۰۶ تست، ۳۰۲ موفق، ۴ Skip (`CorporateGroupSqlServerTests`)، ۰ ناموفق |
+| E2E: `scripts/publish.sh` ← `Server.dll --migrate` ← `npm run seed` ← `./check-servers.sh` ← `npx playwright test` (Chromium واقعی، سرور منتشرشده، SQL Server واقعی) | `18 passed` (۴۴ ثانیه)؛ `check-servers.sh` هر دو حالت OK |
+
+اجرا نشد: `npm test`/`npm run build` کلاینت React (مرحلهٔ `client` CI)، Windows (`publish-windows`)، ویندوز/PowerShell، Firefox/Safari.
