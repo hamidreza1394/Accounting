@@ -126,6 +126,48 @@ public sealed class WorkContextHttpTests : IClassFixture<FaranouApplicationFacto
 	}
 
 	[Fact]
+	public async Task DefaultCompanyPreference_IsPersistedPerUser_AndReturnedByTheContextApi()
+	{
+		var (user, first, _) = await UserWithOneOpenPeriodAsync();
+		var second = await Factory.WithDatabaseAsync(database => TestData.AddCompanyAsync(database, TestData.Unique("شرکت-")));
+		await Factory.WithDatabaseAsync(database => TestData.AddMembershipAsync(database, user, second));
+		await Factory.WithDatabaseAsync(database => TestData.AddFiscalPeriodAsync(database, second, "دوره دوم", Start, End));
+		using var client = Factory.CreateBrowser();
+		await Browser.SignInAsync(client, user);
+
+		var response = await SendWithTokenAsync(client, HttpMethod.Post, "/api/v1/context/default-company", new { companyId = second.Id });
+		Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+		var context = await GetContextAsync(client);
+		Assert.Equal(second.Id.ToString(), context.GetProperty("defaultCompanyId").GetString());
+		var storedPreference = await Factory.WithDatabaseAsync(database => database.Users
+			.Where(account => account.Id == user.Id)
+			.Select(account => account.DefaultCompanyId)
+			.SingleAsync());
+		Assert.Equal(second.Id, storedPreference);
+		Assert.NotEqual(first.Id, storedPreference);
+	}
+
+	[Fact]
+	public async Task DefaultCompanyPreference_CannotBeSetToACompanyWithoutActiveMembership()
+	{
+		var (user, ownCompany, _) = await UserWithOneOpenPeriodAsync();
+		var foreignCompany = await Factory.WithDatabaseAsync(database => TestData.AddCompanyAsync(database, TestData.Unique("شرکت-")));
+		using var client = Factory.CreateBrowser();
+		await Browser.SignInAsync(client, user);
+
+		var response = await SendWithTokenAsync(client, HttpMethod.Post, "/api/v1/context/default-company", new { companyId = foreignCompany.Id });
+		Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+		var storedPreference = await Factory.WithDatabaseAsync(database => database.Users
+			.Where(account => account.Id == user.Id)
+			.Select(account => account.DefaultCompanyId)
+			.SingleAsync());
+		Assert.Null(storedPreference);
+		Assert.Equal(ownCompany.Id.ToString(), Assert.Single((await GetContextAsync(client)).GetProperty("companies").EnumerateArray()).GetProperty("id").GetString());
+	}
+
+	[Fact]
 	public async Task NoCompany_IsReportedAndNothingCanBeSelected()
 	{
 		var user = await Factory.WithDatabaseAsync(database => TestData.AddUserAsync(database));
