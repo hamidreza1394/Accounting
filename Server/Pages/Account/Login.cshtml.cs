@@ -258,7 +258,7 @@ namespace Server.Pages.Security
 				HttpOnly = true,
 				Secure = HttpContext.Request.IsHttps,
 				SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax,
-				Path = "/Account/Login",
+				Path = "/",
 				IsEssential = true,
 				Expires = DateTimeOffset.UtcNow.AddDays(365),
 			};
@@ -278,7 +278,7 @@ namespace Server.Pages.Security
 					HttpOnly = true,
 					Secure = HttpContext.Request.IsHttps,
 					SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax,
-					Path = "/Account/Login",
+					Path = "/",
 				});
 		}
 
