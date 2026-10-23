@@ -200,7 +200,7 @@ namespace Server.Pages.Security
 
 						if (ViewModel.RememberMe)
 						{
-							RememberUsername(ViewModel.Username);
+							RememberUsername(ViewModel.Username!);
 						}
 
 						// The previous choice of company and fiscal period never survives a new sign-in.
