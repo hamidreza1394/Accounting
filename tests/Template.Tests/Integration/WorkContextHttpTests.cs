@@ -826,7 +826,7 @@ public sealed class WorkContextHttpTests : IClassFixture<FaranouApplicationFacto
 	[Fact]
 	public async Task ProvisioningIsRepeatable_AndRefusesToSplitAnExistingRelationshipAcrossBoundaries()
 	{
-		var (user, a, b) = await UserWithTwoCompaniesAsync();
+		var (_, a, b) = await UserWithTwoCompaniesAsync();
 		await Factory.WithDatabaseAsync(async database =>
 		{
 			database.OwnershipRelationships.Add(new Domain.OwnershipRelationship
@@ -859,12 +859,12 @@ public sealed class WorkContextHttpTests : IClassFixture<FaranouApplicationFacto
 		Assert.Equal(HttpStatusCode.BadRequest, (await SendWithTokenAsync(client, HttpMethod.Post, path, new { boundaryId = Guid.Empty, companyIds = new[] { a.Id } })).StatusCode);
 		Assert.Equal(HttpStatusCode.BadRequest, (await SendWithTokenAsync(client, HttpMethod.Post, path, new { boundaryId = boundary, companyIds = new[] { a.Id, a.Id } })).StatusCode);
 		Assert.Equal(HttpStatusCode.NotFound, (await SendWithTokenAsync(client, HttpMethod.Post, path, new { boundaryId = boundary, companyIds = new[] { Guid.NewGuid() } })).StatusCode);
-		_ = user;
 	}
 
 	[Fact]
 	public async Task ConcurrentProvisioningOfTheSameCompanyWithDifferentBoundaries_LetsExactlyOneWin()
 	{
+		Assert.SkipUnless(IntegrationDatabase.UsesSqlServer, "Serializable isolation and deadlocks need SQL Server (FARANOU_TEST_SQLSERVER).");
 		var company = await Factory.WithDatabaseAsync(database => TestData.AddCompanyAsync(database, TestData.Unique("رقابت-")));
 		using var first = Factory.CreateBrowser();
 		using var second = Factory.CreateBrowser();

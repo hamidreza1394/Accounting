@@ -127,12 +127,14 @@ public static class CustomerBoundaryEndpoints
         var result = await strategy.ExecuteAsync(async () =>
         {
             databaseContext.ChangeTracker.Clear();
-            await using var transaction = await databaseContext.Database.BeginTransactionAsync(
-                System.Data.IsolationLevel.Serializable, cancellationToken);
+            // Serializable isolation exists only on a relational provider (the in-memory test provider has no transactions).
+            await using var transaction = databaseContext.Database.IsRelational()
+                ? await databaseContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken)
+                : null;
             try
             {
                 var outcome = await AssignWithinTransactionAsync(httpContext, user, databaseContext, request, cancellationToken);
-                if (outcome.Result is NoContent)
+                if (outcome.Result is NoContent && transaction is not null)
                 {
                     await transaction.CommitAsync(cancellationToken);
                 }
@@ -167,6 +169,27 @@ public static class CustomerBoundaryEndpoints
         int count,
         CancellationToken cancellationToken)
     {
+        try
+        {
+            await WriteRejectionAuditAsync(httpContext, user, databaseContext, outcome, count, cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // The audit of a refusal must never turn the intended 400/409 into a 500.
+            httpContext.RequestServices.GetRequiredService<ILoggerFactory>()
+                .CreateLogger("Server.Api.CustomerBoundaryEndpoints")
+                .LogError(exception, "The rejection of a customer boundary provisioning could not be audited.");
+        }
+    }
+
+    private static async Task WriteRejectionAuditAsync(
+        HttpContext httpContext,
+        ClaimsPrincipal user,
+        Data.DatabaseContext databaseContext,
+        string outcome,
+        int count,
+        CancellationToken cancellationToken)
+    {
         databaseContext.ChangeTracker.Clear();
         databaseContext.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
         {
@@ -182,18 +205,19 @@ public static class CustomerBoundaryEndpoints
 
     private static bool IsConcurrencyConflict(Exception exception)
     {
+        const int lockTimeout = 1222;
         const int deadlockVictim = 1205;
-        const int snapshotConflict = 3960;
         for (var current = exception; current is not null; current = current.InnerException!)
         {
-            if (current is Microsoft.Data.SqlClient.SqlException sql && sql.Errors.Cast<Microsoft.Data.SqlClient.SqlError>().Any(error => error.Number is deadlockVictim or snapshotConflict))
+            if (current is Microsoft.Data.SqlClient.SqlException sql &&
+                sql.Errors.Cast<Microsoft.Data.SqlClient.SqlError>().Any(error => error.Number is deadlockVictim or lockTimeout))
             {
                 return true;
             }
 
             if (current.InnerException is null)
             {
-                break;
+                return false;
             }
         }
 
