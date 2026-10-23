@@ -168,6 +168,104 @@ public sealed class WorkContextHttpTests : IClassFixture<FaranouApplicationFacto
 	}
 
 	[Fact]
+	public async Task CompanyRelationshipTypes_AreShownOnlyWhenBothCompaniesShareAProvisionedBoundary()
+	{
+		var user = await Factory.WithDatabaseAsync(database => TestData.AddUserAsync(database));
+		var parent = await Factory.WithDatabaseAsync(database => TestData.AddCompanyAsync(database, TestData.Unique("مادر-")));
+		var child = await Factory.WithDatabaseAsync(database => TestData.AddCompanyAsync(database, TestData.Unique("فرعی-")));
+		await Factory.WithDatabaseAsync(database => TestData.AddMembershipAsync(database, user, parent));
+		await Factory.WithDatabaseAsync(database => TestData.AddMembershipAsync(database, user, child));
+		await Factory.WithDatabaseAsync(database => TestData.AddFiscalPeriodAsync(database, parent, "دوره", Start, End));
+		await Factory.WithDatabaseAsync(database => TestData.AddFiscalPeriodAsync(database, child, "دوره", Start, End));
+		var boundaryId = Guid.NewGuid();
+		await Factory.WithDatabaseAsync(async database =>
+		{
+			var parentEntity = await database.Companies.SingleAsync(company => company.Id == parent.Id);
+			var childEntity = await database.Companies.SingleAsync(company => company.Id == child.Id);
+			parentEntity.CustomerBoundaryId = boundaryId;
+			childEntity.CustomerBoundaryId = boundaryId;
+			database.OwnershipRelationships.Add(new Domain.OwnershipRelationship
+			{
+				ParentCompanyId = parent.Id,
+				SubsidiaryCompanyId = child.Id,
+				OwnershipPercentage = 100m,
+				VotingPercentage = 100m,
+				ControlBasis = Domain.ControlBasis.Control,
+				ValidFrom = Start,
+			});
+			await database.SaveChangesAsync();
+		});
+
+		using var client = Factory.CreateBrowser();
+		await Browser.SignInAsync(client, user);
+		var companies = (await GetContextAsync(client)).GetProperty("companies");
+		var parentTypes = Assert.Single(companies.EnumerateArray().Where(item => item.GetProperty("id").GetGuid() == parent.Id)).GetProperty("relationshipTypes");
+		var childTypes = Assert.Single(companies.EnumerateArray().Where(item => item.GetProperty("id").GetGuid() == child.Id)).GetProperty("relationshipTypes");
+		Assert.Contains("parent", parentTypes.EnumerateArray().Select(item => item.GetString()));
+		Assert.Contains("subsidiary", childTypes.EnumerateArray().Select(item => item.GetString()));
+	}
+
+	[Fact]
+	public async Task CompanyRelationshipTypes_DoNotClassifyAnUnprovisionedOrCrossBoundaryRelationship()
+	{
+		var user = await Factory.WithDatabaseAsync(database => TestData.AddUserAsync(database));
+		var parent = await Factory.WithDatabaseAsync(database => TestData.AddCompanyAsync(database, TestData.Unique("مادر-")));
+		var child = await Factory.WithDatabaseAsync(database => TestData.AddCompanyAsync(database, TestData.Unique("فرعی-")));
+		await Factory.WithDatabaseAsync(database => TestData.AddMembershipAsync(database, user, parent));
+		await Factory.WithDatabaseAsync(database => TestData.AddMembershipAsync(database, user, child));
+		await Factory.WithDatabaseAsync(database => TestData.AddFiscalPeriodAsync(database, parent, "دوره", Start, End));
+		await Factory.WithDatabaseAsync(database => TestData.AddFiscalPeriodAsync(database, child, "دوره", Start, End));
+		await Factory.WithDatabaseAsync(async database =>
+		{
+			var parentEntity = await database.Companies.SingleAsync(company => company.Id == parent.Id);
+			var childEntity = await database.Companies.SingleAsync(company => company.Id == child.Id);
+			parentEntity.CustomerBoundaryId = Guid.NewGuid();
+			childEntity.CustomerBoundaryId = Guid.NewGuid();
+			database.OwnershipRelationships.Add(new Domain.OwnershipRelationship
+			{
+				ParentCompanyId = parent.Id,
+				SubsidiaryCompanyId = child.Id,
+				OwnershipPercentage = 100m,
+				VotingPercentage = 100m,
+				ControlBasis = Domain.ControlBasis.Control,
+				ValidFrom = Start,
+			});
+			await database.SaveChangesAsync();
+		});
+
+		using var client = Factory.CreateBrowser();
+		await Browser.SignInAsync(client, user);
+		var companies = (await GetContextAsync(client)).GetProperty("companies");
+		foreach (var company in companies.EnumerateArray())
+		{
+			var types = company.GetProperty("relationshipTypes").EnumerateArray().Select(item => item.GetString()).ToArray();
+			Assert.Equal(new[] { "unknown" }, types);
+			Assert.DoesNotContain("parent", types);
+			Assert.DoesNotContain("subsidiary", types);
+		}
+	}
+
+	[Fact]
+	public async Task CompanyUser_CannotProvisionCustomerBoundaries()
+	{
+		var (user, company, _) = await UserWithOneOpenPeriodAsync();
+		using var client = Factory.CreateBrowser();
+		await Browser.SignInAsync(client, user);
+
+		var response = await client.PostAsJsonAsync("/api/v1/operator/customer-boundaries/assign", new
+		{
+			boundaryId = Guid.NewGuid(),
+			companyIds = new[] { company.Id },
+		});
+		Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+		var boundary = await Factory.WithDatabaseAsync(database => database.Companies
+			.Where(item => item.Id == company.Id)
+			.Select(item => item.CustomerBoundaryId)
+			.SingleAsync());
+		Assert.Null(boundary);
+	}
+
+	[Fact]
 	public async Task NoCompany_IsReportedAndNothingCanBeSelected()
 	{
 		var user = await Factory.WithDatabaseAsync(database => TestData.AddUserAsync(database));
