@@ -212,3 +212,11 @@
 - **باز:** بازبینی انسانی؛ SVG رسمی لوگو؛ «ADR بعدی D-036» در `AGENTS.md`/`CLAUDE.md`.
 - **توکن:** frontend-developer ≈۱۱۹٬۰۰۰؛ security-reviewer ≈۶۱٬۰۰۰؛ code-reviewer ≈۶۷٬۰۰۰.
 - **جزئیات:** `docs/handoffs/ISSUE-UNNUMBERED-work-context-selector-redesign.md`.
+
+## 2026-10-23 — پیاده‌سازی طرح نهایی صفحه انتخاب شرکت و دوره مالی (UNNUMBERED)
+- **تغییر:** هدر سرمه‌ای با خروج بهبودیافته، پس‌زمینهٔ SVG، پنل دوره راست و متمایز، شرکت‌ها ردیفی، جست‌وجوی دوره/شرکت، نوار پایین با دکمهٔ بزرگ، ارتفاع روان؛ بدون تغییر API/Schema.
+- **بررسی واقعی:** Build؛ ۴۹۷ تست .NET (۴۹۵ موفق، ۲ Skip) روی SQL Server واقعی؛ ۸۵ تست کلاینت؛ ۲۵ تست E2E. lint/axe اجرا نشد.
+- **بازبینی:** security-reviewer بدون یافته؛ code-reviewer بدون مسدودکننده (اصلاح‌ها اعمال شد).
+- **باز:** بازبینی انسانی، «کد ملی/شناسه ملی»، برچسب گروه شرکتی تا پیاده‌سازی D-033..35.
+- **توکن:** frontend-developer ≈۱۶۱٬۰۰۰؛ code-reviewer ≈۶۲٬۰۰۰؛ security-reviewer ≈۳۷٬۰۰۰.
+- **جزئیات:** `docs/handoffs/ISSUE-UNNUMBERED-work-context-selector-final-design.md`.

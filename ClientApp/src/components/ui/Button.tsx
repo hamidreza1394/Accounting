@@ -1,12 +1,13 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
-type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
+type Variant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'onDark';
 
 const variants: Record<Variant, string> = {
   primary: 'bg-navy text-white hover:bg-navy-deep border border-navy shadow-sm',
   secondary: 'bg-white text-ink border border-slate-400 hover:bg-cool',
   danger: 'bg-danger text-white border border-danger hover:opacity-90',
   ghost: 'bg-transparent text-ink border border-transparent hover:bg-cool',
+  onDark: 'bg-white/10 text-white border border-white/35 hover:bg-white/20',
 };
 
 type ButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'className'> & {

@@ -1,4 +1,4 @@
-import type { CompanyChoice, FiscalPeriodChoice, SelectedContext } from '../api/types';
+import type { CompanyChoice, FiscalPeriodChoice, FiscalPeriodStatus, SelectedContext } from '../api/types';
 import { formatPersianDate } from './date';
 
 // The selection screen is organised by fiscal year first (the year decides which companies are
@@ -24,7 +24,22 @@ export type FiscalYear = {
   enterableCount: number;
   /** True when at least one company can be entered in this year. */
   isEnterable: boolean;
+  /** The status shown for the year (see `yearStatus`). */
+  status: FiscalPeriodStatus;
 };
+
+/**
+ * One status for a year that groups several companies' periods: open when any enterable period
+ * is open, closed when the enterable ones are all closed, and for a year nobody can enter the
+ * status the server reported (archived).
+ */
+export function yearStatus(entries: readonly YearEntry[]): FiscalPeriodStatus {
+  const enterable = entries.filter((entry) => entry.period.isSelectable);
+  if (enterable.length === 0) {
+    return entries.some((entry) => entry.period.status === 'Archived') ? 'Archived' : (entries[0]?.period.status ?? 'Archived');
+  }
+  return enterable.some((entry) => entry.period.status === 'Open') ? 'Open' : 'Closed';
+}
 
 export function yearKey(period: { startDate: string; endDate: string }): string {
   return `${period.startDate}|${period.endDate}`;
@@ -78,6 +93,7 @@ export function groupFiscalYears(companies: readonly CompanyChoice[]): FiscalYea
       companyCount: entries.length,
       enterableCount,
       isEnterable: enterableCount > 0,
+      status: yearStatus(entries),
     };
   });
 

@@ -48,7 +48,7 @@ export function LoadingScreen({ label }: { label: string }) {
   return (
     <div className="flex flex-col gap-6">
       <LoadingState label={label} />
-      <div className="grid gap-6 lg:grid-cols-[24rem_minmax(0,1fr)]">
+      <div className="grid gap-6 lg:grid-cols-[26.25rem_minmax(0,1fr)]">
         <div className="flex flex-col gap-2.5">
           <SkeletonBlock className="h-20" />
           <SkeletonBlock className="h-20" />
