@@ -167,7 +167,7 @@ internal sealed class CorporateGroupScenario
 
 	private Guid AddCompany(string name)
 	{
-		var company = new Company { Name = name + " " + Unique("c"), IsActive = true };
+		var company = new Company { Name = name + " " + Unique("c"), IsActive = true, CustomerBoundaryId = Guid.Parse("d3b0f6c9-6d45-4d2f-9b62-77a93b5e3b4a") };
 		Database.Companies.Add(company);
 		return company.Id;
 	}
