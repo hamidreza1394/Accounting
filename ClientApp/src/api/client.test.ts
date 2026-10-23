@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ApiError, UnauthenticatedError, buildLoginUrl, getCompanies, getCompanyOverview, logout } from './client';
+import { ApiError, UnauthenticatedError, buildLoginUrl, getCompanies, getCompanyOverview, getWorkContext, logout, setDefaultCompany } from './client';
 import { ContractError } from './types';
 
 function jsonResponse(status: number, body: unknown, contentType = 'application/json'): Response {
@@ -77,6 +77,61 @@ describe('api client', () => {
     expect(url).toBe('/api/v1/session/logout');
     expect(init.method).toBe('POST');
     expect((init.headers as Record<string, string>)['X-XSRF-TOKEN']).toBe('token-123');
+  });
+
+  it('saves the default company with an anti-forgery token and JSON body', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(200, { headerName: 'X-XSRF-TOKEN', requestToken: 'token-123' }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await setDefaultCompany('company-42');
+
+    const [url, init] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(url).toBe('/api/v1/context/default-company');
+    expect(init.method).toBe('POST');
+    expect((init.headers as Record<string, string>)['X-XSRF-TOKEN']).toBe('token-123');
+    expect(JSON.parse(String(init.body))).toEqual({ companyId: 'company-42' });
+  });
+
+  it('parses the saved default company and server-validated relationship labels', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, {
+      current: null,
+      entry: 'selectionRequired',
+      directSelection: null,
+      defaultCompanyId: 'company-42',
+      companies: [{
+        id: 'company-42',
+        name: 'شرکت مادر',
+        nationalId: null,
+        roleName: 'مدیر',
+        relationshipTypes: ['parent'],
+        fiscalPeriods: [{
+          id: 'period-1', title: 'سال مالی', startDate: '2026-03-21', endDate: '2027-03-20',
+          status: 'Open', isSelectable: true, accessMode: 'readWrite',
+        }],
+      }],
+    })));
+
+    const context = await getWorkContext();
+    expect(context.defaultCompanyId).toBe('company-42');
+    expect(context.companies[0]?.relationshipTypes).toEqual(['parent']);
+  });
+
+  it('rejects unknown company relationship type codes', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, {
+      current: null,
+      entry: 'selectionRequired',
+      directSelection: null,
+      defaultCompanyId: null,
+      companies: [{
+        id: 'company-42', name: 'شرکت', nationalId: null, roleName: 'مدیر', relationshipTypes: ['not-a-real-type'],
+        fiscalPeriods: [],
+      }],
+    })));
+
+    await expect(getWorkContext()).rejects.toBeInstanceOf(ContractError);
   });
 
   it('builds a login URL that returns to a local path only', () => {
