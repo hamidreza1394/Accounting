@@ -246,6 +246,40 @@ public sealed class WorkContextHttpTests : IClassFixture<FaranouApplicationFacto
 	}
 
 	[Fact]
+	public async Task InfrastructureAccount_CanProvisionABoundaryButCannotReassignACompanyToAnotherCustomer()
+	{
+		var company = await Factory.WithDatabaseAsync(database => TestData.AddCompanyAsync(database, TestData.Unique("شرکت-")));
+		using var client = Factory.CreateBrowser();
+		var login = await Browser.PostLoginAsync(client, "faranou-test-master", "Faranou-Test-Master-Password-1");
+		Assert.Equal(HttpStatusCode.Redirect, login.StatusCode);
+
+		var boundaryId = Guid.NewGuid();
+		var provision = await SendWithTokenAsync(client, HttpMethod.Post, "/api/v1/operator/customer-boundaries/assign", new
+		{
+			boundaryId,
+			companyIds = new[] { company.Id },
+		});
+		Assert.Equal(HttpStatusCode.NoContent, provision.StatusCode);
+		var storedBoundary = await Factory.WithDatabaseAsync(database => database.Companies
+			.Where(item => item.Id == company.Id)
+			.Select(item => item.CustomerBoundaryId)
+			.SingleAsync());
+		Assert.Equal(boundaryId, storedBoundary);
+
+		var reassign = await SendWithTokenAsync(client, HttpMethod.Post, "/api/v1/operator/customer-boundaries/assign", new
+		{
+			boundaryId = Guid.NewGuid(),
+			companyIds = new[] { company.Id },
+		});
+		Assert.Equal(HttpStatusCode.Conflict, reassign.StatusCode);
+		storedBoundary = await Factory.WithDatabaseAsync(database => database.Companies
+			.Where(item => item.Id == company.Id)
+			.Select(item => item.CustomerBoundaryId)
+			.SingleAsync());
+		Assert.Equal(boundaryId, storedBoundary);
+	}
+
+	[Fact]
 	public async Task CompanyUser_CannotProvisionCustomerBoundaries()
 	{
 		var (user, company, _) = await UserWithOneOpenPeriodAsync();
