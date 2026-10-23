@@ -51,6 +51,7 @@ public static class ApiEndpoints
 		api.MapGet("/companies", GetCompaniesAsync);
 		api.MapGet("/companies/{companyId:guid}/overview", GetCompanyOverviewAsync);
 		api.MapWorkContextEndpoints();
+		api.MapCustomerBoundaryEndpoints();
 
 		return endpoints;
 	}

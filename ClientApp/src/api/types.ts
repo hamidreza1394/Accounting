@@ -42,7 +42,9 @@ export type AccessMode = 'readWrite' | 'readOnly';
  */
 export type FiscalPeriodChoice = FiscalPeriod & { isSelectable: boolean; accessMode: AccessMode | null };
 
-export type CompanyChoice = CompanySummary & { fiscalPeriods: FiscalPeriodChoice[] };
+export type CompanyRelationshipType = 'parent' | 'subsidiary' | 'associate' | 'jointVenture' | 'investor' | 'investment' | 'independent' | 'unknown';
+
+export type CompanyChoice = CompanySummary & { fiscalPeriods: FiscalPeriodChoice[]; relationshipTypes: CompanyRelationshipType[] };
 
 export type SelectedContext = {
   company: CompanySummary;
@@ -61,6 +63,7 @@ export type WorkContext = {
   current: SelectedContext | null;
   entry: EntryMode;
   directSelection: DirectSelection | null;
+  defaultCompanyId: string | null;
   companies: CompanyChoice[];
 };
 
@@ -184,11 +187,24 @@ export function parseFiscalPeriodChoice(value: unknown): FiscalPeriodChoice {
   return { ...parseFiscalPeriod(value), isSelectable: readBoolean(value, 'isSelectable', 'fiscalPeriod'), accessMode: mode };
 }
 
+const companyRelationshipTypes: readonly CompanyRelationshipType[] = ['parent', 'subsidiary', 'associate', 'jointVenture', 'investor', 'investment', 'independent', 'unknown'];
+
+function parseCompanyRelationshipTypes(value: unknown): CompanyRelationshipType[] {
+  if (!Array.isArray(value) || value.some((item) => typeof item !== 'string' || !(companyRelationshipTypes as readonly string[]).includes(item))) {
+    throw new ContractError('companyChoice.relationshipTypes');
+  }
+  return value as CompanyRelationshipType[];
+}
+
 function parseCompanyChoice(value: unknown): CompanyChoice {
   if (!isObject(value) || !Array.isArray(value['fiscalPeriods'])) {
     throw new ContractError('companyChoice');
   }
-  return { ...parseCompanySummary(value), fiscalPeriods: value['fiscalPeriods'].map(parseFiscalPeriodChoice) };
+  return {
+    ...parseCompanySummary(value),
+    relationshipTypes: parseCompanyRelationshipTypes(value['relationshipTypes']),
+    fiscalPeriods: value['fiscalPeriods'].map(parseFiscalPeriodChoice),
+  };
 }
 
 function parseSelectedContext(value: unknown): SelectedContext {
@@ -231,6 +247,7 @@ export function parseWorkContext(value: unknown): WorkContext {
     current: current === null || current === undefined ? null : parseSelectedContext(current),
     entry: entry as EntryMode,
     directSelection,
+    defaultCompanyId: readNullableString(value, 'defaultCompanyId', 'workContext'),
     companies: value['companies'].map(parseCompanyChoice),
   };
 }

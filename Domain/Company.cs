@@ -8,6 +8,8 @@ public sealed class Company : Seedwork.Entity,
 {
     public string Name { get; set; } = string.Empty;
     public string? NationalId { get; set; }
+    /// <summary>Opaque, operator-provisioned customer boundary; null means not provisioned and must fail closed for group relationships.</summary>
+    public Guid? CustomerBoundaryId { get; set; }
     public bool IsActive { get; set; } = true;
     public ICollection<UserCompanyMembership> Memberships { get; set; } = new List<UserCompanyMembership>();
     public ICollection<FiscalPeriod> FiscalPeriods { get; set; } = new List<FiscalPeriod>();

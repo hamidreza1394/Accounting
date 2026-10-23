@@ -47,11 +47,11 @@ export function period(id: string, title: string, overrides: Record<string, unkn
 }
 
 export function company(id: string, name: string, fiscalPeriods: unknown[], nationalId: string | null = null) {
-  return { id, name, nationalId, roleName: 'حسابدار', fiscalPeriods };
+  return { id, name, nationalId, roleName: 'حسابدار', relationshipTypes: ['unknown'], fiscalPeriods };
 }
 
 export function contextBody(overrides: Record<string, unknown> = {}) {
-  return { current: null, entry: 'selectionRequired', directSelection: null, companies: [], ...overrides };
+  return { current: null, entry: 'selectionRequired', directSelection: null, defaultCompanyId: null, companies: [], ...overrides };
 }
 
 export function selected(c: { id: string; name: string; nationalId: string | null; roleName: string }, p: unknown) {

@@ -141,6 +141,11 @@ export async function selectWorkContext(companyId: string, fiscalPeriodId: strin
   return parseSelectedContextResponse(await response.json());
 }
 
+/** Persists the preferred company for this user; it never selects the active work context. */
+export async function setDefaultCompany(companyId: string | null): Promise<void> {
+  await sendJson('POST', '/context/default-company', { companyId });
+}
+
 export async function logout(): Promise<void> {
   await post('/session/logout');
 }

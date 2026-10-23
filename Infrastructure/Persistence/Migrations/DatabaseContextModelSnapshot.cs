@@ -67,6 +67,9 @@ namespace Data.Migrations
                 b.Property<DateTime?>("LastLoginDateTime")
                     .HasColumnType("datetime2");
 
+                b.Property<Guid?>("DefaultCompanyId")
+                    .HasColumnType("uniqueidentifier");
+
                 b.Property<Guid?>("RoleId")
                     .HasColumnType("uniqueidentifier");
 
@@ -165,6 +168,8 @@ namespace Data.Migrations
                     .HasFilter("[CellPhoneNumberVerificationKey] IS NOT NULL");
 
                 b.HasIndex("RoleId");
+
+                b.HasIndex("DefaultCompanyId");
 
                 b.ToTable("Users");
             });
@@ -513,10 +518,15 @@ namespace Data.Migrations
                     .IsUnicode(false)
                     .HasColumnType("varchar(20)");
 
+                b.Property<Guid?>("CustomerBoundaryId")
+                    .HasColumnType("uniqueidentifier");
+
                 b.Property<bool>("IsActive")
                     .HasColumnType("bit");
 
                 b.HasKey("Id");
+
+                b.HasIndex("CustomerBoundaryId");
 
                 b.HasIndex("NationalId")
                     .IsUnique()
@@ -1072,6 +1082,11 @@ namespace Data.Migrations
 
             modelBuilder.Entity("Domain.User", b =>
             {
+                b.HasOne("Domain.Company", null)
+                    .WithMany()
+                    .HasForeignKey("DefaultCompanyId")
+                    .OnDelete(DeleteBehavior.SetNull);
+
                 b.HasOne("Domain.Role", "Role")
                     .WithMany("Users")
                     .HasForeignKey("RoleId")

@@ -167,7 +167,7 @@ internal sealed class CorporateGroupScenario
 
 	private Guid AddCompany(string name)
 	{
-		var company = new Company { Name = name + " " + Unique("c"), IsActive = true };
+		var company = new Company { Name = name + " " + Unique("c"), IsActive = true, CustomerBoundaryId = Guid.Parse("d3b0f6c9-6d45-4d2f-9b62-77a93b5e3b4a") };
 		Database.Companies.Add(company);
 		return company.Id;
 	}
@@ -574,6 +574,40 @@ public sealed class CorporateGroupServiceTests : IDisposable
 		var run = await s.Service.StartReportRunAsync(s.Admin, new(group.Value, GroupReportKind.Aggregate, null, CorporateGroupScenario.YearStart, CorporateGroupScenario.QuarterEnd));
 
 		Assert.Equal(CorporateGroupRules.FailurePartialMembership, run.Value!.FailureCode);
+	}
+
+	[Fact]
+	public async Task CorporateGroupAndOwnershipWrites_RejectDifferentCustomerBoundaries()
+	{
+		var s = await ScenarioAsync();
+		var subsidiary = await s.Database.Companies.SingleAsync(company => company.Id == s.SubA);
+		subsidiary.CustomerBoundaryId = Guid.NewGuid();
+		await s.Database.SaveChangesAsync();
+
+		var group = await s.Service.CreateGroupAsync(s.Admin, s.Holding, CorporateGroupScenario.Unique("g"), "گروه");
+		Assert.True(group.Succeeded, group.ErrorCode);
+
+		var member = await s.Service.AddMemberAsync(s.Admin, group.Value, s.SubA, CorporateGroupMemberRole.Subsidiary, CorporateGroupScenario.YearStart, null);
+		Assert.Equal(CorporateGroupOutcome.NotFound, member.Outcome);
+
+		var ownership = await s.Service.RecordOwnershipAsync(s.Admin, new(s.Holding, s.SubA, 60m, 60m, ControlBasis.Control, CorporateGroupScenario.YearStart, null));
+		Assert.Equal(CorporateGroupOutcome.NotFound, ownership.Outcome);
+		Assert.Empty(await s.Database.CorporateGroupMembers.Where(item => item.CorporateGroupId == group.Value).ToListAsync());
+		Assert.Empty(await s.Database.OwnershipRelationships.Where(item => item.ParentCompanyId == s.Holding && item.SubsidiaryCompanyId == s.SubA).ToListAsync());
+	}
+
+	[Fact]
+	public async Task CreatingAGroupForAnUnprovisionedCompany_FailsClosed()
+	{
+		var s = await ScenarioAsync();
+		var holding = await s.Database.Companies.SingleAsync(company => company.Id == s.Holding);
+		holding.CustomerBoundaryId = null;
+		await s.Database.SaveChangesAsync();
+
+		var result = await s.Service.CreateGroupAsync(s.Admin, s.Holding, CorporateGroupScenario.Unique("g"), "گروه");
+		Assert.Equal(CorporateGroupOutcome.Invalid, result.Outcome);
+		Assert.Equal(CorporateGroupService.ErrorCustomerBoundaryNotProvisioned, result.ErrorCode);
+		Assert.Empty(await s.Database.CorporateGroups.Where(group => group.OwnerCompanyId == s.Holding).ToListAsync());
 	}
 
 	[Fact]

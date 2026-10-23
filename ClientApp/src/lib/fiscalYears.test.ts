@@ -129,6 +129,25 @@ describe('selection', () => {
     expect(initialSelection(years, null)).toEqual({ yearKey: '2025-03-21|2026-03-20', companyId: 'open' });
   });
 
+  it('preselects the saved default company when it is enterable in the newest open year', () => {
+    const years = groupFiscalYears(choices(a, b));
+
+    expect(initialSelection(years, null, 'b')).toEqual({ yearKey: '2026-03-21|2027-03-20', companyId: 'b' });
+  });
+
+  it('ignores a saved default company when it cannot be entered in the selected year', () => {
+    const years = groupFiscalYears(choices(a, b));
+
+    expect(initialSelection(years, null, 'missing')).toEqual({ yearKey: '2026-03-21|2027-03-20', companyId: null });
+  });
+
+  it('preserves an explicit current company over the saved default during context switching', () => {
+    const years = groupFiscalYears(choices(a, b));
+    const current = selected(a, a.fiscalPeriods[0]) as SelectedContext;
+
+    expect(initialSelection(years, current, 'b')).toEqual({ yearKey: '2026-03-21|2027-03-20', companyId: 'a' });
+  });
+
   it('preselects the year but not the company when the only year has several enterable companies', () => {
     const years = groupFiscalYears(choices(company('a', 'الف', [period('a5', 'x', y1405)]), company('b', 'ب', [period('b5', 'x', y1405)])));
 

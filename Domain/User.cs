@@ -57,6 +57,9 @@ public class User :
 	public System.DateTime? LastLoginDateTime { get; set; }
 	#endregion /LastLoginDateTime Property
 
+	/// <summary>The user's preferred company for the next work-context selection; never grants access.</summary>
+	public System.Guid? DefaultCompanyId { get; set; }
+
 	#region RoleId Property
 	/// <summary>
 	/// نقش کاربر
