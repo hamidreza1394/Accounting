@@ -134,7 +134,7 @@ erDiagram
 | موضوع | وضعیت |
 |---|---|
 | نگاشت `PermissionDefinition` به `ModuleCode` (ستون یا کاتالوگ ثابت) | `NeedsApproval` (D-025) |
-| رابطه `Company` ابری با `CustomerAccount` (ستون ارجاعی یا جدول رابط در دیتابیس ابری) | `NeedsApproval` |
+| رابطه `Company` ابری با `CustomerAccount` (ستون ارجاعی یا جدول رابط در دیتابیس ابری) | **تعیین‌تکلیف‌شده با D-038 (2026-10-23):** ستون ارجاعی به `CustomerAccount` ساخته **نمی‌شود**؛ فقط شناسه مرز مات و تصادفی `Companies.CustomerBoundaryId` (هرگز برابر `CustomerAccount.Id`). نگاشت `CustomerAccount` ← (نصب، مرز) فقط در سامانه کنترلی فروشنده است: `NotImplemented` |
 | محل ذخیره کلید خصوصی نصب | `NeedsApproval` |
 | جایگزینی/اصلاح FK برای `UserCompanyMemberships.UserId` | تصمیم جداگانه؛ بدون اثر بر این طرح |
 | لایسنس در سطح نصب یا شرکت (پیش‌فرض: نصب) | `NeedsApproval` |

@@ -1,5 +1,7 @@
 # تحویل کار — پیش‌فرض انتخاب سال و مرز امنیتی مشتری
 
+> **وضعیت به‌روز (2026-10-23):** این سند تاریخی است. PR #65 و PRهای #67، #68، #69 ادغام شده‌اند (Issue #66 بسته است)؛ شرکت پیش‌فرض، مرز مشتری و برچسب‌های رابطه (موارد ۱ تا ۳ زیر «موارد تکمیل‌نشده») با PR #68 پیاده شده‌اند و D-037 دیگر `Blocked` نیست (`Implemented`؛ `Verified` ادعا نمی‌شود، CI اجرا نشده). شرح علت شکست CI و سایر گزاره‌های زیر مربوط به زمان نگارش است. وضعیت و تصمیم‌های فعلی: [`ISSUE-66-customer-boundary-default-company-audit.md`](ISSUE-66-customer-boundary-default-company-audit.md)، D-038..D-040.
+
 **وضعیت:** PR #65 در Draft؛ بدون Merge.  
 **شاخه:** `feature/work-context-defaults-company-boundary`.
 

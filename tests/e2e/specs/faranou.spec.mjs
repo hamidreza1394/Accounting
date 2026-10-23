@@ -337,13 +337,13 @@ test('year first: same-name companies are told apart by their national id, and a
   await signIn(page, frank);
   await expect(page).toHaveURL(/\/app\/$/);
   await expect(page.getByRole('heading', { name: 'فرانو - دوره مالی' })).toBeVisible();
-  await expect(page.getByText('ابتدا یک دوره مالی انتخاب کنید.')).toBeVisible();
+  // The newest open year is preselected; no company is chosen for the user and nothing is entered.
+  await expect(page.getByRole('radio', { name: /سال مالی ۱۴۰۵/ })).toBeChecked();
   await expect(page.getByRole('button', { name: /ورود به محیط کاری/ })).toBeDisabled();
 
   // The archived year is shown but not selectable.
   await expect(page.getByRole('radio', { name: /سال مالی ۱۴۰۳/ })).toBeDisabled();
 
-  await page.locator('label', { has: page.getByRole('radio', { name: /سال مالی ۱۴۰۵/ }) }).click();
   const sameName = page.getByRole('radio', { name: new RegExp(e.name) });
   await expect(sameName).toHaveCount(2);
   await expect(page.getByText('۱۰۲۰۰۲۳۴۵۶۷', { exact: false }).or(page.getByText('10200234567'))).toBeVisible();

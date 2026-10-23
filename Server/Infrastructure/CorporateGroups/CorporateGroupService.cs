@@ -255,6 +255,12 @@ public sealed class CorporateGroupService
 
 		return await InSerializableTransactionAsync(async () =>
 		{
+			// Re-checked inside the transaction: the guarantee must not depend on the boundary being write-once.
+			if (!await ShareProvisionedCustomerBoundaryAsync(cancellationToken, group.OwnerCompanyId, companyId))
+			{
+				return CorporateGroupResult<Guid>.Failure(CorporateGroupOutcome.NotFound);
+			}
+
 			var existing = await DatabaseContext.CorporateGroupMembers
 				.Where(member => member.CorporateGroupId == groupId && member.CompanyId == companyId)
 				.Select(member => new Domain.GroupMembershipFact(member.CompanyId, member.MemberRole, member.ValidFrom, member.ValidTo))
@@ -405,9 +411,23 @@ public sealed class CorporateGroupService
 
 		return await InSerializableTransactionAsync(async () =>
 		{
-			// Every relationship of the subsidiary (totals, single control) and every
-			// control edge of the installation (cycles).
+			if (!await ShareProvisionedCustomerBoundaryAsync(cancellationToken, request.ParentCompanyId, request.SubsidiaryCompanyId))
+			{
+				return CorporateGroupResult<Guid>.Failure(CorporateGroupOutcome.NotFound);
+			}
+
+			var boundaryId = await DatabaseContext.Companies
+				.Where(company => company.Id == request.ParentCompanyId)
+				.Select(company => company.CustomerBoundaryId)
+				.SingleAsync(cancellationToken);
+
+			// Every relationship of the subsidiary (totals, single control) and every control edge
+			// (cycles), limited to the candidate's customer boundary: legacy rows of another or an
+			// unprovisioned boundary must neither change the outcome nor reveal their existence (D-037).
 			var existing = await DatabaseContext.OwnershipRelationships
+				.Where(relationship =>
+					relationship.ParentCompany.CustomerBoundaryId == boundaryId &&
+					relationship.SubsidiaryCompany.CustomerBoundaryId == boundaryId)
 				.Where(relationship =>
 					relationship.SubsidiaryCompanyId == request.SubsidiaryCompanyId ||
 					relationship.ControlBasis == Domain.ControlBasis.Control ||

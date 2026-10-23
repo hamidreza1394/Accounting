@@ -597,6 +597,36 @@ public sealed class CorporateGroupServiceTests : IDisposable
 	}
 
 	[Fact]
+	public async Task LegacyRelationshipsOfAnotherBoundary_NeverChangeTheOutcomeOfAValidWrite()
+	{
+		var s = await ScenarioAsync();
+		var start = CorporateGroupScenario.YearStart;
+		var outsider = new Company { Name = CorporateGroupScenario.Unique("خارج"), IsActive = true, CustomerBoundaryId = Guid.NewGuid() };
+		s.Database.Companies.Add(outsider);
+		// Legacy rows that cross boundaries: SubB -> outsider and outsider -> SubA (control), and a second
+		// controlling parent of SubB. Counted, they would reject the valid write below as a cycle or as
+		// a second controlling parent and would reveal that the outside company exists.
+		foreach (var (parent, subsidiary) in new[] { (s.SubB, outsider.Id), (outsider.Id, s.SubA), (outsider.Id, s.SubB) })
+		{
+			s.Database.OwnershipRelationships.Add(new OwnershipRelationship
+			{
+				ParentCompanyId = parent,
+				SubsidiaryCompanyId = subsidiary,
+				OwnershipPercentage = 60m,
+				VotingPercentage = 60m,
+				ControlBasis = ControlBasis.Control,
+				ValidFrom = start,
+				CreatedByUserId = s.Admin,
+			});
+		}
+
+		await s.Database.SaveChangesAsync();
+
+		var result = await s.Service.RecordOwnershipAsync(s.Admin, new(s.SubA, s.SubB, 70m, 70m, ControlBasis.Control, start, null));
+		Assert.True(result.Succeeded, result.ErrorCode);
+	}
+
+	[Fact]
 	public async Task CreatingAGroupForAnUnprovisionedCompany_FailsClosed()
 	{
 		var s = await ScenarioAsync();
