@@ -5,11 +5,12 @@
 # "test" or "dev".
 #
 # Usage:
-#   TARAZAVA_TEST_CONNECTIONSTRING='Server=localhost;Database=TarazAva_Test;...' \
+#   FARANO_TEST_CONNECTIONSTRING='Server=localhost;Database=Farano_Test;...' \
 #       scripts/apply_migrations_to_testdb.sh
 #
 # The connection string must never be committed. It is read from the
-# environment (or from the user secrets of the Server project).
+# environment (or from the user secrets of the Server project). The previous
+# variable name TARAZAVA_TEST_CONNECTIONSTRING is still read as a fallback.
 
 set -euo pipefail
 
@@ -18,10 +19,10 @@ CONTEXT_PROJECT="${REPOSITORY_ROOT}/Infrastructure/Persistence/Infrastructure.Pe
 STARTUP_PROJECT="${REPOSITORY_ROOT}/Server/Server.csproj"
 MIGRATIONS_DIRECTORY="${REPOSITORY_ROOT}/Infrastructure/Persistence/Migrations"
 
-CONNECTION_STRING="${TARAZAVA_TEST_CONNECTIONSTRING:-${ConnectionStrings__ConnectionString:-}}"
+CONNECTION_STRING="${FARANO_TEST_CONNECTIONSTRING:-${TARAZAVA_TEST_CONNECTIONSTRING:-${ConnectionStrings__ConnectionString:-}}}"
 if [ -z "${CONNECTION_STRING}" ]; then
   echo "error: no connection string was given." >&2
-  echo "       set TARAZAVA_TEST_CONNECTIONSTRING to the connection string of the test database." >&2
+  echo "       set FARANO_TEST_CONNECTIONSTRING to the connection string of the test database." >&2
   exit 2
 fi
 

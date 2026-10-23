@@ -152,6 +152,7 @@ dotnet format Template.sln --verify-no-changes
 
 ### AUD-2026-10-21-13 — نام‌گذاری ناهماهنگ
 - `Template.sln`/`Template.Tests`، مسیر `TarazAva` در تنظیمات محلی، `Dtat*` و نام محصول «فرانو». **شدت:** Low | **وضعیت:** Open (بدون تغییر نام در این مأموریت).
+- **به‌روزرسانی 2026-10-23:** مسیر `TarazAva` در جریان راه‌اندازی دیتابیس به `Farano` (با مهاجرت فقط‌خواندنی از مسیر قدیمی) تغییر کرد (D-036، `NeedsApproval`، شاخه `feature/database-setup-redesign`، ادغام‌نشده). ناهماهنگی تازه: «Farano» در این جریان در برابر «Faranou» در Cookie، API و `FARANOU_*`؛ املای نهایی باید تأیید شود (`docs/DATABASE_SETUP.md` بخش ۱).
 
 ### AUD-2026-10-21-14 — دو مدل مجوز موازی و عدم مصرف مجوز عملیاتی
 - نقش `Admin` قدیمی (جدول `Roles`/Claim) در برابر `CompanyRole`/`PermissionDefinition`؛ مجوزهای شرکتی در `Server/` بررسی نمی‌شوند. **شدت:** Medium | **وضعیت:** Open (D-025، D-029).
@@ -208,3 +209,9 @@ commit مبنا؛ مدل چندشرکتی؛ نبود Global Query Filter (D-013)
 - **AUD-2026-10-22-06 — Medium / اصلاح در شاخه Issue #54:** در `CorporateGroupService.CreateGroupAsync`، مسیر رد مجوز مقدار `ownerCompanyId` درخواستی را به `AuditDeniedAsync` می‌داد؛ این شناسه در آن نقطه هنوز تأیید نشده بود. این با قرارداد خود تابع («فقط شناسه‌های اثبات‌شده») ناسازگار بود و می‌توانست فراداده یک شرکت را به رویداد ممیزی کاربر نامرتبط وصل کند. اصلاح: `TenantId=null` و `EntityId=null` برای این رویداد، همراه تست رگرسیون. تأیید نهایی منوط به CI روی PR است.
 - **AUD-2026-10-22-07 — Low / اصلاح مستندات در شاخه Issue #54:** `docs/CORPORATE_GROUPS_DATA_MODEL.md` یکتایی `Code` را در کل نصب توصیف می‌کرد؛ کد EF و Migration در واقع `(OwnerCompanyId, Code)` را یکتا می‌کنند. مستند با پیاده‌سازی هماهنگ شد.
 - **وضعیت باز:** رابطه `Company` با `CustomerAccount` و ممنوع/مجاز بودن گروه‌های چندمشتری در ابر مشترک هنوز `NeedsApproval` است. این PR زیرساختی API/UI یا مدل مشتری اضافه نمی‌کند؛ پیش از هر API/UI گروه باید تصمیم گرفته شود. قاعده `ControlCycle` نیز بدون تأیید حسابداری تغییر نمی‌کند.
+
+## ممیزی بازطراحی راه‌اندازی دیتابیس — 2026-10-23 (شاخه `feature/database-setup-redesign`)
+- **AUD-2026-10-23-01 — Medium / Resolved (2026-10-23):** تست E2E `the first-run setup page works under the enforced CSP` در `tests/e2e/specs/faranou.spec.mjs` به `#authMode` و `#sqlUserField` ارجاع می‌دهد؛ این شناسه‌ها در `Server/Pages/DatabaseSetup.cshtml` بازطراحی‌شده وجود ندارند (شاهد: جستجوی متنی در صفحه و `database-setup.js` بدون نتیجه؛ `HEAD` آن‌ها را داشت). تست به نشانه‌گذاری جدید به‌روز شد و در اجرای Lead موفق بود (E2E ۱۸ از ۱۸)؛ CI هنوز باز نشده.
+- **AUD-2026-10-23-02 — Medium / Open:** `Program` تنظیم سراسری `AddDataProtection` ندارد؛ Cookie ورود و Anti-forgery از حلقه کلید پیش‌فرض استفاده می‌کنند (پیگیری، به‌ویژه چندنمونه؛ `docs/DEPLOYMENT.md` بخش ۵ و ۹).
+- **AUD-2026-10-23-03 — Low / NeedsApproval:** املای Farano (جریان راه‌اندازی) با Faranou (بقیه مخزن) ناهمخوان است.
+- **AUD-2026-10-23-04 — Low / Open:** مسیر UNC برای پوشه تنظیمات در کد بدون هشدار پذیرفته می‌شود؛ ACL در Windows با `HardenWindowsAcl` (اجرا نشده) محدود می‌شود؛ ACL پوشه اشتراکی UNC با اپراتور است.

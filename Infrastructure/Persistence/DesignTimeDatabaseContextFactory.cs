@@ -18,7 +18,7 @@ namespace Data;
 /// The connection string is only used to pick the provider and the migrations assembly; the
 /// design-time operations that create migrations never open a connection. For commands that do
 /// connect (<c>database update</c>, <c>database update --script</c>) the value is read, in order,
-/// from the <c>TARAZAVA_CONNECTIONSTRING</c> environment variable, from the
+/// from the <c>FARANO_CONNECTIONSTRING</c> environment variable, from the
 /// <c>ConnectionStrings:ConnectionString</c> user secret / environment variable of the
 /// <c>Server</c> project, and finally from the local development default below.
 /// </para>
@@ -28,19 +28,26 @@ public sealed class DesignTimeDatabaseContextFactory : IDesignTimeDbContextFacto
 	/// <summary>
 	/// Name of the environment variable that overrides the design-time connection string.
 	/// </summary>
-	public const string ConnectionStringEnvironmentVariableName = "TARAZAVA_CONNECTIONSTRING";
+	public const string ConnectionStringEnvironmentVariableName = "FARANO_CONNECTIONSTRING";
+
+	/// <summary>
+	/// Previous name of <see cref="ConnectionStringEnvironmentVariableName" />; still read as a
+	/// fallback so existing developer machines and scripts keep working.
+	/// </summary>
+	private const string LegacyConnectionStringEnvironmentVariableName = "TARAZAVA_CONNECTIONSTRING";
 
 	/// <summary>
 	/// Local development fallback. It is only a fallback: it is never used by the running
 	/// application, which reads <c>ConnectionStrings:ConnectionString</c> from configuration.
 	/// </summary>
 	private const string LocalDevelopmentConnectionString =
-		"Server=(localdb)\\mssqllocaldb;Database=TarazAvaDb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true";
+		"Server=(localdb)\\mssqllocaldb;Database=Farano;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true";
 
 	public DatabaseContext CreateDbContext(string[] args)
 	{
 		var connectionString =
 			Environment.GetEnvironmentVariable(ConnectionStringEnvironmentVariableName)
+			?? Environment.GetEnvironmentVariable(LegacyConnectionStringEnvironmentVariableName)
 			?? Environment.GetEnvironmentVariable("ConnectionStrings__ConnectionString")
 			?? LocalDevelopmentConnectionString;
 

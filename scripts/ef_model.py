@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extracts the EF Core model of the Taraz Ava project from the C# sources.
+"""Extracts the EF Core model of the Farano project from the C# sources.
 
 The extractor is intentionally strict: every construct that it does not understand
 makes it fail instead of silently producing a wrong model. The extracted model is

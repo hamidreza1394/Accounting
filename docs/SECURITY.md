@@ -53,15 +53,24 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 هر PR باید اثر تغییر بر Access Control، Cryptographic Failures، Injection، Insecure Design، Security Misconfiguration، Vulnerable Components، Authentication Failures، Integrity Failures، Logging/Monitoring و SSRF را بررسی کند. امنیت بخشی از چرخه توسعه و CI است، نه بررسی انتهایی.
 
 
-## امنیت راه‌اندازی اولیه دیتابیس — Issue #22
+## امنیت راه‌اندازی اولیه دیتابیس — Issue #22 (بازطراحی 2026-10-23)
 
-- صفحه تنظیمات فقط زمانی در دسترس است که Connection String از Configuration یا فایل محلی محافظت‌شده قابل بازیابی نباشد.
-- دسترسی اولیه با کد تصادفی یک‌بارمصرف کنترل می‌شود. کد در فایل `setup-token.txt` خارج از مخزن قرار می‌گیرد، در log نوشته نمی‌شود و پس از ذخیره موفق حذف می‌شود. اپراتور باید آن را فقط روی میزبان برنامه بخواند.
-- Connection String کامل، از جمله رمز SQL، با ASP.NET Core Data Protection محافظت و خارج از repository ذخیره می‌شود. در ویندوز کلیدها با DPAPI (وابسته به هویت کاربر سرویس) محافظت می‌شوند؛ در سیستم‌های Unix مجوز دسترسی فایل/پوشه به کاربر اجراکننده محدود می‌شود.
-- از مسیر محلی تنظیمات و پوشه کلیدها نسخه پشتیبان امن بگیرید؛ بدون کلید Data Protection تنظیمات رمزنگاری‌شده قابل بازیابی نیستند. دسترسی به پوشه LocalApplicationData باید فقط برای حساب سرویس/کاربر مجاز باشد.
-- در شبکه‌های غیرقابل‌اعتماد، صفحه راه‌اندازی را فقط پشت HTTPS منتشر کنید. کد یک‌بارمصرف جایگزین TLS، کنترل دسترسی میزبان یا سیاست امنیتی شبکه نیست.
-- گزینه TrustServerCertificate فقط برای سرور مورد اعتماد/گواهی خودامضا مناسب است؛ در Production گواهی معتبر ترجیح دارد.
-- خطاهای SQL فقط با شماره خطا به کاربر نمایش داده می‌شوند؛ Connection String و رمز عبور نباید در log ثبت شوند.
+> جزئیات و ماتریس رفتار: [`DATABASE_SETUP.md`](DATABASE_SETUP.md)؛ تصمیم D-036 (`NeedsApproval`). `Implemented` در شاخه `feature/database-setup-redesign` (ادغام‌نشده). بازبینی مستقل امنیتی (opus) در دو دور: بدون Critical/High/Medium پس از اصلاح؛ یافته‌های F1 و F2 (Medium) و N1..N3 (Low) اصلاح شدند. رفتار Windows (DPAPI/Service/IIS/UNC/`HardenWindowsAcl`) اجرا نشده.
+
+- صفحه تنظیمات فقط وقتی در دسترس است که Connection String از Configuration یا فایل محلی قابل استفاده نباشد. حالت‌ها: Configured / Setup / Blocked؛ فایل موجودِ ناخوانا (`Corrupt`، `Undecryptable`، `LegacyUnreadable`) هرگز صفحه ساده first-run نمی‌دهد و جایگزینی آن کد راه‌اندازی **و** تیک تأیید می‌خواهد و فایل قبلی ابتدا در `backups/` کپی می‌شود. در `AccessDenied` و `UnsupportedVersion` (Blocked) فرم ارائه نمی‌شود و POST جعلی چیزی را تغییر نمی‌دهد.
+- دسترسی اولیه با کد تصادفی یک‌بارمصرف (`setup-token.txt` در پوشه تنظیمات، خارج از مخزن) کنترل می‌شود؛ مقایسه با `CryptographicOperations.FixedTimeEquals`؛ در Log نمی‌آید و پس از ذخیره موفق حذف می‌شود. اپراتور آن را فقط روی میزبان برنامه بخواند.
+- Connection String کامل با ASP.NET Core Data Protection محافظت می‌شود (`ApplicationName=Farano`، Purpose `Farano.DatabaseConnectionSettings.v2`، حلقه کلید تازه). در Windows کلیدها با DPAPI (پیش‌فرض: وابسته به حساب کاربر جاری) محافظت می‌شوند؛ در Unix مجوز پوشه `700` و فایل `600`. در Windows `HardenWindowsAcl` وراثت را قطع و FullControl را فقط به کاربر جاری، SYSTEM و Administrators می‌دهد (هرگز استثنا پرتاب نمی‌کند؛ شکست = هشدار `WindowsAclNotApplied`)؛ **این کد روی Windows اجرا نشده (فقط کامپایل شده)**. UNC بدون هشدار در کد پذیرفته می‌شود و ACL آن با اپراتور است. حلقه کلید در Linux در حالت rest رمز نیست و با مجوز `700` محافظت می‌شود.
+- محل ذخیره: `Farano:Settings:Directory` یا `LocalApplicationData/Farano/Settings`؛ مسیر سفارشی باید absolute و بیرون پوشه برنامه باشد و هرگز به پوشه برنامه fallback نمی‌شود. ProgramData و DPAPI سطح ماشین رد شدند (D-036).
+- نام دیتابیس با فهرست مجاز (حرف/رقم/`_`/`-`/نقطه و فاصله میانی؛ حداکثر ۱۲۳ نویسه؛ ZWNJ و سایر نویسه‌های `Cf` رد) و نرمال‌سازی NFKC برای نام سیستمی بررسی می‌شود و مرجع نهایی `DB_ID` سمت سرور است (۱ تا ۴ ← `SystemDatabaseNotAllowed`): نام هم‌ریخت مثل «ｍａｓｔｅｒ» پیش‌تر می‌توانست دور بزند (یافته F1، با آزمایش تأیید شد، اصلاح شد). فهرست مجاز چون نام فایل‌های `.mdf/_log.ldf` از نام ساخته می‌شود لازم است.
+- راه‌اندازی یک‌بارمصرف است: پس از مصرف کد یا تغییر وضعیت فایل‌ها `AlreadyConfigured`؛ `Save` هم زیر قفل وضعیت را دوباره می‌سنجد؛ کد راه‌اندازی بازتاب داده نمی‌شود؛ تنظیم‌شدن مسیر پوشه با مقایسه روی مسیر واقعی (لینک‌ها) و ممنوعیت پوشه برنامه، ریشه محتوا و `WebRoot`.
+- **ملاحظه SSRF:** دارنده کد راه‌اندازی می‌تواند اتصال خروجی به سرور/پورت دلخواه را از میزبان آزمایش کند. محدودیت نرخ برای حدس کد وجود ندارد (کد ۱۹۲ بیتی). صفحه در حالت Setup/Blocked مسیرهای پوشه سرور را به هر کسی که به صفحه می‌رسد نشان می‌دهد (پیگیری، `NeedsApproval`). صفحه را فقط روی شبکه مورد اعتماد بگذارید.
+- فرمان `--settings` را با همان حساب سرویس اجرا کنید؛ `status` ممکن است با چرخش کلید در `keys/` بنویسد.
+- فایل قدیمی `TarazAva` فقط‌خواندنی است و هرگز حذف یا تغییر نمی‌شود؛ دیتابیس هرگز `DROP` نمی‌شود؛ فایل‌های `.mdf/.ldf` را برنامه نمی‌سازد/جابه‌جا نمی‌کند.
+- از مسیر تنظیمات و `keys/` نسخه پشتیبان امن بگیرید؛ بدون کلید ciphertext قابل بازیابی نیست. دسترسی پوشه فقط برای حساب سرویس/کاربر مجاز باشد.
+- در شبکه‌های غیرقابل‌اعتماد، صفحه راه‌اندازی را فقط پشت HTTPS منتشر کنید. کد یک‌بارمصرف جایگزین TLS یا کنترل دسترسی میزبان نیست.
+- `TrustServerCertificate`: اتصال همیشه `Encrypt=Mandatory` است؛ این گزینه فقط **اعتبارسنجی گواهی سرور را خاموش می‌کند** و در برابر MITM آسیب‌پذیر است؛ فقط برای سرور محلی/آزمایشی، در تولید گواهی معتبر.
+- خطاها فقط با کد خطا، مرحله و شناسه پیگیری (۱۲ hex) نمایش داده و Log می‌شوند؛ Connection String، نام کاربری و رمز در پیام و Log نیستند (`DatabaseSetupRequest.ToString()` و `DatabaseSettingsLoadResult.ToString()` مقدار حساس چاپ نمی‌کنند). فرمان `--settings status` هرگز Connection String چاپ نمی‌کند.
+- **ریسک باقی‌مانده:** برنامه تنظیم سراسری `AddDataProtection` ندارد؛ Cookie ورود و Anti-forgery از حلقه کلید پیش‌فرض فریمورک استفاده می‌کنند (پیگیری جداگانه؛ `docs/DEPLOYMENT.md` بخش ۵). نام Farano/Faranou در این جریان `NeedsApproval` است (`DATABASE_SETUP.md` بخش ۱).
 
 ## احراز هویت صفحه ورود — Issue #30
 

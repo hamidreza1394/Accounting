@@ -1,4 +1,4 @@
-# Database management of the Taraz Ava (تراز آوا) application
+# Database management of the Farano (فرانو) application
 
 This document describes how the schema of the database is managed, which
 commands have to be used and how an existing database is upgraded.
@@ -35,7 +35,7 @@ startup project has to be given explicitly.
 
 ```bash
 # The context that is used by the tools.
-export TARAZAVA_CONNECTIONSTRING='Server=localhost;Database=TarazAva_Development;Trusted_Connection=True;TrustServerCertificate=True'
+export FARANO_CONNECTIONSTRING='Server=localhost;Database=Farano_Development;Trusted_Connection=True;TrustServerCertificate=True'
 
 # A new migration after a change of the model.
 dotnet ef migrations add <MigrationName> \
@@ -76,7 +76,8 @@ dotnet ef migrations remove \
 ```
 
 The connection string of the tools is read, in this order, from
-`TARAZAVA_CONNECTIONSTRING`, from `ConnectionStrings__ConnectionString` and
+`FARANO_CONNECTIONSTRING` (the previous name `TARAZAVA_CONNECTIONSTRING` is still read as a
+fallback), from `ConnectionStrings__ConnectionString` and
 finally from the local database of the developer machine. The fallback of the
 design time factory is only used when none of them is set.
 
@@ -97,9 +98,13 @@ database whose name does not contain `test`, `dev` or `scratch`, so that a
 production or a customer database can not be touched by accident.
 
 ```bash
-TARAZAVA_TEST_CONNECTIONSTRING='Server=localhost;Database=TarazAva_Test;...' \
+FARANO_TEST_CONNECTIONSTRING='Server=localhost;Database=Farano_Test;...' \
   scripts/apply_migrations_to_testdb.sh
 ```
+
+The previous variable name `TARAZAVA_TEST_CONNECTIONSTRING` is still read as a
+fallback (order: `FARANO_TEST_CONNECTIONSTRING`, `TARAZAVA_TEST_CONNECTIONSTRING`,
+`ConnectionStrings__ConnectionString`). Use the new name.
 
 ### Production
 

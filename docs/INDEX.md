@@ -14,7 +14,7 @@
 | [`PROJECT_STATUS.md`](PROJECT_STATUS.md) | وضعیت تأییدشده فعلی |
 | [`ROADMAP.md`](ROADMAP.md) | برنامه راه |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | معماری و جهت وابستگی |
-| [`DECISIONS.md`](DECISIONS.md) | ADRها D-001..D-035 (بعدی D-036) |
+| [`DECISIONS.md`](DECISIONS.md) | ADRها D-001..D-036 (بعدی D-037) |
 | [`CORPORATE_GROUPS.md`](CORPORATE_GROUPS.md) | گروه شرکتی، گزارش تجمیعی/تلفیقی، مجوزها و نقشه راه (D-033..D-035) |
 | [`CORPORATE_GROUPS_DATA_MODEL.md`](CORPORATE_GROUPS_DATA_MODEL.md) | جداول، کلیدها و راهبرد Migration گروه شرکتی |
 | [`PRODUCT_REQUIREMENTS.md`](PRODUCT_REQUIREMENTS.md) | نیازمندی‌های محصول |
@@ -24,6 +24,7 @@
 | [`LICENSING_WORKFLOWS.md`](LICENSING_WORKFLOWS.md) | گردش‌کارها |
 | [`LICENSING_THREAT_MODEL.md`](LICENSING_THREAT_MODEL.md) | تهدیدها |
 | [`DATABASE.md`](DATABASE.md), [`database-migrations.md`](database-migrations.md) | دیتابیس و Migration |
+| [`DATABASE_SETUP.md`](DATABASE_SETUP.md) | راه‌اندازی اولیه دیتابیس، محل و رمزنگاری تنظیمات اتصال، مهاجرت TarazAva ← Farano، فرمان `--settings` (D-036) |
 | [`SECURITY.md`](SECURITY.md) | امنیت |
 | [`TESTING.md`](TESTING.md) | تست |
 | [`DEPLOYMENT.md`](DEPLOYMENT.md), [`DEVELOPMENT.md`](DEVELOPMENT.md) | استقرار و توسعه |

@@ -9,7 +9,7 @@
 ## تنظیم اتصال پایگاه داده
 در اجرای اولیه، اگر Connection String از User Secrets، متغیر محیطی یا تنظیمات صریح برنامه ارائه نشده باشد، برنامه به صفحه `/DatabaseSetup` هدایت می‌شود. فرم اتصال SQL Server را آزمایش می‌کند، در صورت نیاز دیتابیس را می‌سازد و برای دیتابیس خالی Migrationهای EF Core را اجرا می‌کند.
 
-- فایل تنظیمات محافظت‌شده در مسیر `%LOCALAPPDATA%\\TarazAva\\Database\\database-settings.json` در ویندوز ذخیره می‌شود؛ مسیر دقیق روی صفحه نمایش داده می‌شود.
+- فایل تنظیمات محافظت‌شده (`database-connection.json`) در `LocalApplicationData/Farano/Settings` ذخیره می‌شود (ویندوز: `%LOCALAPPDATA%\\Farano\\Settings`)؛ با کلید `Farano:Settings:Directory` (متغیر `Farano__Settings__Directory`) قابل تغییر است (مسیر absolute، بیرون پوشه برنامه). مسیر دقیق روی صفحه نمایش داده می‌شود. فایل قدیمی `TarazAva` فقط خوانده و مهاجرت می‌شود؛ جزئیات و فرمان `--settings`: [`DATABASE_SETUP.md`](DATABASE_SETUP.md).
 - Connection String در فایل به کمک ASP.NET Core Data Protection رمزنگاری می‌شود. کلیدهای Data Protection در پوشه `keys` نگه‌داری می‌شوند و در ویندوز با DPAPI محافظت می‌شوند.
 - فایل `setup-token.txt` کد یک‌بارمصرف فرم را نگه می‌دارد. آن را فقط از روی همان سرور بخوانید و در اختیار دیگران قرار ندهید؛ پس از ذخیره موفق تنظیمات حذف می‌شود.
 - پس از ذخیره تنظیمات، برنامه را متوقف و دوباره اجرا کنید. برای دیتابیس موجود، Migration خودکار انجام نمی‌شود تا schema قدیمی یا دیتابیس ایجادشده با `EnsureCreated()` ناخواسته تغییر نکند.
@@ -19,10 +19,14 @@
 برای استفاده از User Secrets:
 ```powershell
 dotnet user-secrets init --project Server/Server.csproj
-dotnet user-secrets set "ConnectionStrings:ConnectionString" "Server=localhost;Database=TarazAvaDb;Trusted_Connection=True;Encrypt=True;TrustServerCertificate=False;" --project Server/Server.csproj
+dotnet user-secrets set "ConnectionStrings:ConnectionString" "Server=localhost;Database=Farano;Trusted_Connection=True;Encrypt=True;TrustServerCertificate=False;" --project Server/Server.csproj
 ```
 
 ورود مدیریتی فعلی هنوز legacy است و برای Production تأیید نمی‌شود؛ راهنمای `docs/SECURITY.md` را بخوانید. مقادیر `MasterUsername` و `MasterPassword` باید فقط در User Secrets/Environment/Secret Store تنظیم شوند و خالی‌بودن آن‌ها نباید با مقدار پیش‌فرض ناامن دور زده شود. (به‌روزرسانی 2026-10-21: گزینه `ActivationKeys` فعلاً بی‌اثر است چون Middleware به Pipeline متصل نیست — D-028؛ لایسنس آینده در `docs/LICENSING.md`.)
+
+## متغیرهای محیطی تغییرنام‌یافته (2026-10-23)
+- `TARAZAVA_CONNECTIONSTRING` ← `FARANO_CONNECTIONSTRING` (ابزار طراحی EF) و `TARAZAVA_TEST_CONNECTIONSTRING` ← `FARANO_TEST_CONNECTIONSTRING` (`scripts/apply_migrations_to_testdb.sh`). نام قدیمی هنوز به‌عنوان جایگزین خوانده می‌شود؛ نام جدید را به‌کار ببرید. دیتابیس پیش‌فرض ابزار طراحی `Farano` است.
+- تست‌های SQL Server همچنان با `FARANOU_TEST_SQLSERVER` (املای Faranou) کنترل می‌شوند؛ املای نهایی Farano/Faranou `NeedsApproval` است (`DATABASE_SETUP.md` بخش ۱).
 
 ## Restore و اجرا
 ```powershell
@@ -66,7 +70,7 @@ dotnet ef migrations list --project Infrastructure/Persistence/Infrastructure.Pe
 نمونه متغیر محیطی PowerShell برای نشست فعلی:
 
 ```powershell
-$env:ConnectionStrings__ConnectionString = "Server=localhost\SQLSERVER2025;Database=TarazAvaDb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true;"
+$env:ConnectionStrings__ConnectionString = "Server=localhost\SQLSERVER2025;Database=Farano;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true;"
 ```
 
 ## .NET 10 و Visual Studio

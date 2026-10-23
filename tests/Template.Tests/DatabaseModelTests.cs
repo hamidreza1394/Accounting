@@ -6,7 +6,7 @@ using Xunit;
 namespace Template.Tests;
 
 /// <summary>
-/// Verifies the EF Core model of the Taraz Ava database: the tables, the columns,
+/// Verifies the EF Core model of the Farano database: the tables, the columns,
 /// the keys, the indexes and the foreign keys. The tests build the model in
 /// memory, they do not need a running SQL Server instance.
 /// </summary>
@@ -15,7 +15,7 @@ public sealed class DatabaseModelTests
 	private static DatabaseContext CreateContext()
 	{
 		var options = new DbContextOptionsBuilder<DatabaseContext>()
-			.UseSqlServer("Server=(localdb)\\MSSQLLocalDB;Database=TarazAva_ModelTests;Trusted_Connection=True;")
+			.UseSqlServer("Server=(localdb)\\MSSQLLocalDB;Database=Farano_ModelTests;Trusted_Connection=True;")
 			.Options;
 
 		return new DatabaseContext(options);

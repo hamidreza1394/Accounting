@@ -174,3 +174,13 @@
 - `NotImplemented`: API/UI گروه، تخصیص مجوز به نقش‌ها، دفتر/کدینگ، تعدیلات و تطبیق درون‌گروهی؛ `Blocked`: گزارش عددی تا وجود دفتر و کدینگ؛ مرز `CustomerAccount` در ابر مشترک و چرخه کنترلی همچنان `NeedsApproval`.
 - Migration روی دیتابیس مشتری/تولید اعمال نشده است.
 - گزارش اولیه: `docs/handoffs/ISSUE-UNNUMBERED-corporate-groups-consolidation.md`.
+
+## بازطراحی راه‌اندازی دیتابیس و تنظیمات اتصال (D-036) — 2026-10-23
+- **وضعیت Git:** شاخه `feature/database-setup-redesign`؛ Commit/Push/PR انجام نشده و ادغام نشده است. به‌همین دلیل `main` هنوز مسیر قدیمی `TarazAva` را دارد.
+- `Implemented` (فقط در شاخه): پوشه تنظیمات `Farano` با سیاست مسیر، رمزنگاری با `ApplicationName=Farano`، مهاجرت فقط‌خواندنی از `TarazAva`، حالت‌های Configured/Setup/Blocked، فرمان `--settings status|migrate`، مراحل و کدهای خطای راه‌اندازی، رد دیتابیس بیگانه، رفع دو علت پیام عمومی «اطلاعات فرم را بررسی کنید»، بازطراحی UI. جزئیات: [`DATABASE_SETUP.md`](DATABASE_SETUP.md).
+- **`Verified` محلی توسط Lead (2026-10-23، SDK 10.0.402، SQL Server 2022 واقعی):** build ۰ خطا؛ ۴۸۹ تست، ۴۸۷ موفق، ۰ ناموفق، ۲ Skip (دو تست `chmod` با root)؛ E2E ۱۸ از ۱۸؛ ClientApp ۴۸ از ۴۸؛ `check_static_assets.py` PASS. بدون SQL Server (گزارش Agent پیاده‌ساز، دوباره اجرا نشد): ۴۶۹ موفق/۲۰ Skip. CI هنوز باز نشده.
+- `NeedsApproval`: تصمیم D-036 و املای Farano/Faranou.
+- **اجرا نشده:** رفتار Windows (DPAPI، Service، IIS، UNC، `HardenWindowsAcl` — فقط کامپایل شده)؛ Login SQL با رمز منقضی/غیرفعال؛ CI؛ دو POST هم‌زمان روی HTTP؛ POST بوت‌استرپ Master روی HTTP.
+- **بازبینی:** `code-reviewer` یک دور بدون High؛ `security-reviewer` دو دور، پایان بدون Critical/High/Medium؛ `architect` روی Diff نهایی اجرا نشد.
+- **یافته باز:** `AddDataProtection` سراسری تنظیم نشده (AUD-2026-10-23-02). E2E صفحه راه‌اندازی به‌روز و موفق شد (AUD-2026-10-23-01 حل‌شد).
+- گزارش: `docs/handoffs/ISSUE-UNNUMBERED-database-setup-redesign.md`.

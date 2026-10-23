@@ -53,7 +53,10 @@ check "GET /fonts/woff2/IRANSansX-Regular.woff2 -> 200" 200 "$(status /fonts/wof
 check "GET /images/faranou-mark.svg -> 200" 200 "$(status /images/faranou-mark.svg)"
 check "GET /api/v1/session (anonymous) -> 401" 401 "$(status /api/v1/session)"
 check "GET /Account/Login -> 200" 200 "$(status /Account/Login)"
-check "login page renders the anti-forgery token" yes "$(curl -s "$base/Account/Login" | grep -q '__RequestVerificationToken' && echo yes || echo no)"
+# Read the whole body first: with `curl | grep -q` under pipefail, grep exits at the first match and
+# curl can die with SIGPIPE (exit 23) while still writing, which made this check fail at random.
+login="$(curl -s "$base/Account/Login")"
+check "login page renders the anti-forgery token" yes "$(grep -q '__RequestVerificationToken' <<<"$login" && echo yes || echo no)"
 
 if [ "$failures" -ne 0 ]; then
   echo "==> $failures smoke check(s) failed. Server log:" >&2
