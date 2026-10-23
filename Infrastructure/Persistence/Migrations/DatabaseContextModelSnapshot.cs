@@ -518,10 +518,15 @@ namespace Data.Migrations
                     .IsUnicode(false)
                     .HasColumnType("varchar(20)");
 
+                b.Property<Guid?>("CustomerBoundaryId")
+                    .HasColumnType("uniqueidentifier");
+
                 b.Property<bool>("IsActive")
                     .HasColumnType("bit");
 
                 b.HasKey("Id");
+
+                b.HasIndex("CustomerBoundaryId");
 
                 b.HasIndex("NationalId")
                     .IsUnique()
