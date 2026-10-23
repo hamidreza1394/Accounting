@@ -92,6 +92,7 @@ public sealed class CorporateGroupService
 	public const string ErrorScopeAccessDenied = "ScopeAccessDenied";
 	public const string ErrorAlreadyEnded = "MembershipAlreadyEnded";
 	public const string ErrorConcurrentChange = "ConcurrentChange";
+	public const string ErrorCustomerBoundaryNotProvisioned = "CustomerBoundaryNotProvisioned";
 
 	private const int MaximumCodeLength = 40;
 	private const int MaximumNameLength = 200;
@@ -142,6 +143,8 @@ public sealed class CorporateGroupService
 		var groups = await DatabaseContext.CorporateGroups
 			.AsNoTracking()
 			.Where(group => group.IsActive && visibleOwners.Contains(group.OwnerCompanyId))
+			.Where(group => group.OwnerCompany.CustomerBoundaryId != null)
+			.Where(group => !group.Members.Any(member => member.Company.CustomerBoundaryId == null || member.Company.CustomerBoundaryId != group.OwnerCompany.CustomerBoundaryId))
 			.Select(group => new CorporateGroupSummary(group.Id, group.Code, group.Name, group.OwnerCompanyId))
 			.ToListAsync(cancellationToken);
 
@@ -167,6 +170,11 @@ public sealed class CorporateGroupService
 			// The requested owner company has not been verified as accessible; do not persist it in the audit tenant field.
 			await AuditDeniedAsync(userId, "CorporateGroupCreate", null, null, cancellationToken);
 			return CorporateGroupResult<Guid>.Failure(CorporateGroupOutcome.NotFound);
+		}
+
+		if (!await ShareProvisionedCustomerBoundaryAsync(cancellationToken, ownerCompanyId))
+		{
+			return CorporateGroupResult<Guid>.Failure(CorporateGroupOutcome.Invalid, ErrorCustomerBoundaryNotProvisioned);
 		}
 
 		if (!IsValidCode(code) || name.Length == 0 || name.Length > MaximumNameLength)
@@ -234,6 +242,12 @@ public sealed class CorporateGroupService
 		{
 			// The member company is not visible to the user: same answer as an unknown company.
 			await AuditDeniedAsync(userId, "CorporateGroupMemberAdd", group.OwnerCompanyId, groupId, cancellationToken);
+			return CorporateGroupResult<Guid>.Failure(CorporateGroupOutcome.NotFound);
+		}
+
+		if (!await ShareProvisionedCustomerBoundaryAsync(cancellationToken, group.OwnerCompanyId, companyId))
+		{
+			// Missing or different customer boundaries are deliberately indistinguishable.
 			return CorporateGroupResult<Guid>.Failure(CorporateGroupOutcome.NotFound);
 		}
 
@@ -372,6 +386,11 @@ public sealed class CorporateGroupService
 		if (!granted.Contains(request.ParentCompanyId) || !granted.Contains(request.SubsidiaryCompanyId))
 		{
 			await AuditDeniedAsync(userId, "OwnershipRelationshipRecord", null, null, cancellationToken);
+			return CorporateGroupResult<Guid>.Failure(CorporateGroupOutcome.NotFound);
+		}
+
+		if (!await ShareProvisionedCustomerBoundaryAsync(cancellationToken, request.ParentCompanyId, request.SubsidiaryCompanyId))
+		{
 			return CorporateGroupResult<Guid>.Failure(CorporateGroupOutcome.NotFound);
 		}
 
@@ -629,6 +648,24 @@ public sealed class CorporateGroupService
 			new GroupReportRunSummary(run.Id, run.Status, run.FailureCode, resolution.Companies));
 	}
 
+	private async Task<bool> ShareProvisionedCustomerBoundaryAsync(CancellationToken cancellationToken, params Guid[] companyIds)
+	{
+		var ids = companyIds.Distinct().ToArray();
+		if (ids.Length == 0 || ids.Any(id => id == Guid.Empty))
+		{
+			return false;
+		}
+
+		var boundaries = await DatabaseContext.Companies
+			.AsNoTracking()
+			.Where(company => ids.Contains(company.Id))
+			.Select(company => new { company.Id, company.CustomerBoundaryId })
+			.ToListAsync(cancellationToken);
+
+		return boundaries.Count == ids.Length &&
+			boundaries.All(company => company.CustomerBoundaryId is not null) &&
+			boundaries.Select(company => company.CustomerBoundaryId).Distinct().Count() == 1;
+	}
 	private async Task<CorporateGroupSummary?> FindVisibleGroupAsync(
 		Guid userId,
 		Guid groupId,
@@ -642,6 +679,8 @@ public sealed class CorporateGroupService
 		var group = await DatabaseContext.CorporateGroups
 			.AsNoTracking()
 			.Where(candidate => candidate.Id == groupId && candidate.IsActive)
+			.Where(candidate => candidate.OwnerCompany.CustomerBoundaryId != null)
+			.Where(candidate => !candidate.Members.Any(member => member.Company.CustomerBoundaryId == null || member.Company.CustomerBoundaryId != candidate.OwnerCompany.CustomerBoundaryId))
 			.Select(candidate => new CorporateGroupSummary(candidate.Id, candidate.Code, candidate.Name, candidate.OwnerCompanyId))
 			.FirstOrDefaultAsync(cancellationToken);
 
