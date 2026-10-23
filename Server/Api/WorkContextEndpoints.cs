@@ -49,7 +49,7 @@ public static class WorkContextEndpoints
 			// before the identifier existed has to sign in again.
 			return IsCompanyUser(user)
 				? TypedResults.Unauthorized()
-				: TypedResults.Ok(ToResponse(null, EmptyOptions(), null));
+				: TypedResults.Ok(ToResponse(null, EmptyOptions(), null, new Dictionary<Guid, IReadOnlyList<string>>()));
 		}
 
 		var options = await workContextService.GetOptionsAsync(userId.Value, cancellationToken);
@@ -74,7 +74,8 @@ public static class WorkContextEndpoints
 			defaultCompanyId = null;
 		}
 
-		return TypedResults.Ok(ToResponse(current, options, defaultCompanyId));
+		var relationshipTypes = await GetCompanyRelationshipTypesAsync(databaseContext, options.Companies.Select(item => item.Company.CompanyId).ToArray(), cancellationToken);
+		return TypedResults.Ok(ToResponse(current, options, defaultCompanyId, relationshipTypes));
 	}
 
 	/// <summary>Stores a user-specific company preference without changing the current sign-in context.</summary>
@@ -218,10 +219,90 @@ public static class WorkContextEndpoints
 			null);
 	}
 
+	private static async Task<IReadOnlyDictionary<Guid, IReadOnlyList<string>>> GetCompanyRelationshipTypesAsync(
+		Data.DatabaseContext databaseContext,
+		Guid[] companyIds,
+		CancellationToken cancellationToken)
+	{
+		if (companyIds.Length == 0)
+		{
+			return new Dictionary<Guid, IReadOnlyList<string>>();
+		}
+
+		var boundaries = await databaseContext.Companies
+			.AsNoTracking()
+			.Where(company => companyIds.Contains(company.Id))
+			.Select(company => new { company.Id, company.CustomerBoundaryId })
+			.ToDictionaryAsync(company => company.Id, company => company.CustomerBoundaryId, cancellationToken);
+		var today = DateOnly.FromDateTime(DateTime.UtcNow);
+		var relationships = await databaseContext.OwnershipRelationships
+			.AsNoTracking()
+			.Where(relationship => companyIds.Contains(relationship.ParentCompanyId) || companyIds.Contains(relationship.SubsidiaryCompanyId))
+			.Where(relationship => relationship.ValidFrom <= today && (relationship.ValidTo == null || relationship.ValidTo >= today))
+			.Select(relationship => new
+			{
+				relationship.ParentCompanyId,
+				relationship.SubsidiaryCompanyId,
+				relationship.ControlBasis,
+				ParentBoundaryId = relationship.ParentCompany.CustomerBoundaryId,
+				SubsidiaryBoundaryId = relationship.SubsidiaryCompany.CustomerBoundaryId,
+			})
+			.ToListAsync(cancellationToken);
+
+		var result = new Dictionary<Guid, IReadOnlyList<string>>();
+		foreach (var companyId in companyIds)
+		{
+			if (!boundaries.TryGetValue(companyId, out var boundaryId) || boundaryId is null)
+			{
+				result[companyId] = ["unknown"];
+				continue;
+			}
+
+			var related = relationships.Where(relationship => relationship.ParentCompanyId == companyId || relationship.SubsidiaryCompanyId == companyId).ToList();
+			var unresolved = related.Any(relationship => relationship.ParentBoundaryId is null ||
+				relationship.SubsidiaryBoundaryId is null || relationship.ParentBoundaryId != relationship.SubsidiaryBoundaryId ||
+				relationship.ParentBoundaryId != boundaryId);
+			var valid = related.Where(relationship => relationship.ParentBoundaryId == boundaryId &&
+				relationship.SubsidiaryBoundaryId == boundaryId).ToList();
+			var types = new HashSet<string>(StringComparer.Ordinal);
+			foreach (var relationship in valid)
+			{
+				if (relationship.ControlBasis == Domain.ControlBasis.Control)
+				{
+					types.Add(relationship.ParentCompanyId == companyId ? "parent" : "subsidiary");
+				}
+				else if (relationship.ControlBasis == Domain.ControlBasis.SignificantInfluence)
+				{
+					types.Add(relationship.ParentCompanyId == companyId ? "investor" : "associate");
+				}
+				else if (relationship.ControlBasis == Domain.ControlBasis.JointControl)
+				{
+					types.Add("jointVenture");
+				}
+				else
+				{
+					types.Add(relationship.ParentCompanyId == companyId ? "investor" : "investment");
+				}
+			}
+
+			if (unresolved)
+			{
+				types.Add("unknown");
+			}
+			else if (types.Count == 0)
+			{
+				types.Add("independent");
+			}
+			result[companyId] = types.OrderBy(type => type, StringComparer.Ordinal).ToArray();
+		}
+
+		return result;
+	}
 	private static WorkContextResponse ToResponse(
 		Infrastructure.Tenancy.WorkContext? current,
 		Infrastructure.Tenancy.WorkContextOptions options,
-		Guid? defaultCompanyId)
+		Guid? defaultCompanyId,
+		IReadOnlyDictionary<Guid, IReadOnlyList<string>> relationshipTypes)
 	{
 		return new WorkContextResponse(
 			Current: current is null
@@ -244,6 +325,7 @@ public static class WorkContextEndpoints
 					Name: item.Company.CompanyName,
 					NationalId: item.Company.NationalId,
 					RoleName: item.Company.RoleName,
+					RelationshipTypes: relationshipTypes.TryGetValue(item.Company.CompanyId, out var types) ? types : ["unknown"],
 					FiscalPeriods: item.FiscalPeriods.Select(ToPeriod).ToList()))
 				.ToList());
 	}
@@ -293,6 +375,7 @@ public sealed record CompanyChoiceResponse(
 	string Name,
 	string? NationalId,
 	string RoleName,
+	IReadOnlyList<string> RelationshipTypes,
 	IReadOnlyList<FiscalPeriodChoiceResponse> FiscalPeriods);
 
 public sealed record SelectedContextResponse(
