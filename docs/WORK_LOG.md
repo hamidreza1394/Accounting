@@ -155,3 +155,10 @@
 - مرز `CustomerAccount` در ابر مشترک و قاعده چرخه کنترلی همچنان `NeedsApproval` است؛ API/UI گروه، Schema مشتری و Migration جدید اضافه نشد.
 - **تست‌های این تغییر:** در این محیط از طریق GitHub API قابل اجرا نبودند؛ CI باید روی PR اجرا شود. هیچ دیتابیس تولیدی لمس یا Migration اجرا نشد.
 - PR اصلاحی: [Issue #54](https://github.com/hamidreza1394/Accounting/issues/54)؛ شاخه `fix/issue-54-corporate-groups-audit`.
+
+## 2026-10-23 — ارتقای UI/UX صفحه ورود و نشان جدید فرانو (UNNUMBERED، شاخه `ui/login-professional-polish`)
+- **تغییر:** نشان SVG محلی `faranou-logo-mark.svg`؛ سربرگ برند، فرم (آیکون رمز، چک‌باکس، spinner، فوکوس)، ستون معرفی و داشبورد نمایشی در `Login.cshtml`، `taraz-login.css` و `taraz-login.js` پالایش شد؛ `LoginSuccess` هم‌سان شد. PageModel، احراز هویت، CSRF، CSP و داده‌های نمایشی تغییر نکرد؛ `faranou-mark.svg` (favicon) و CI دست‌نخورده است.
+- **بررسی واقعی:** `npm test` در `tests/Template.Tests.Js` (۷ از ۷)، `check_static_assets.py`، `git diff --check`، ۱۵ بررسی تعاملی Chromium و اسکرول افقی در ۵ عرض روی رندر استاتیک Markup؛ بازبین‌های مستقل `code-reviewer` و `security-reviewer`؛ یک اشکال LTR در `LoginSuccess` یافت و رفع شد.
+- **.NET (SDK 10.0.113، بعداً نصب‌شده خارج از مخزن):** restore موفق؛ build Release ۰ خطا؛ `dotnet test --solution Template.sln` ۳۰۶ تست، ۳۰۲ موفق، ۰ ناموفق، ۴ ردشده.
+- **اجرانشده:** ۴ تست `CorporateGroupSqlServerTests` (نیاز به `FARANOU_TEST_SQLSERVER`؛ Docker daemon نیست)، E2E با SQL Server، Firefox و Safari؛ باید در CI روی PR دیده شود.
+- **Git:** Commit/Push/PR انجام نشد. گزارش: `docs/handoffs/ISSUE-UNNUMBERED-login-professional-ui.md`.
