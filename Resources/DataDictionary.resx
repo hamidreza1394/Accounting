@@ -361,7 +361,7 @@
     <value>Publish Start Date Time</value>
   </data>
   <data name="RememberMe" xml:space="preserve">
-    <value>Remember Me</value>
+    <value>Remember username and keep me signed in</value>
   </data>
   <data name="RemoverUserId" xml:space="preserve">
     <value>Remover User Id</value>
