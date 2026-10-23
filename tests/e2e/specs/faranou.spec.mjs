@@ -55,9 +55,12 @@ async function signIn(page, user, { rememberMe = false } = {}) {
   await page.goto('/Account/Login');
   await page.locator('#ViewModel_Username').fill(user.username);
   await page.locator('#ViewModel_Password').fill(user.password);
-  if (rememberMe) {
+  // Set the option explicitly: a remembered username comes back with the box already ticked.
+  const box = page.locator('#ViewModel_RememberMe');
+  if ((await box.isChecked()) !== rememberMe) {
     await page.locator('label.taraz-remember').click();
   }
+  await expect(box).toBeChecked({ checked: rememberMe });
   await page.locator('form.taraz-login-form button[type="submit"]').click();
 }
 
@@ -138,7 +141,13 @@ test('remember me stores only the username in an HttpOnly preference cookie and 
   const remembered = (await context.cookies()).find((current) => current.name === '.Faranou.RememberedUsername');
   expect(remembered?.value).toBe(alice.username);
   expect(remembered?.httpOnly).toBe(true);
+  expect(remembered?.sameSite).toBe('Lax');
+  expect(remembered?.path).toBe('/');
   expect(remembered?.expires).toBeGreaterThan(Date.now() / 1000);
+  // Only the username is kept: no cookie of the app and no browser storage holds the password.
+  const everything = JSON.stringify(await context.cookies()) +
+    (await page.evaluate(() => JSON.stringify({ ...localStorage }) + JSON.stringify({ ...sessionStorage })));
+  expect(everything.includes(alice.password)).toBe(false);
 
   await context.clearCookies({ name: '.Faranou.Authentication' });
   await page.goto('/Account/Login');
@@ -146,6 +155,49 @@ test('remember me stores only the username in an HttpOnly preference cookie and 
   await expect(page.locator('#ViewModel_RememberMe')).toBeChecked();
   await expect(page.locator('#ViewModel_Password')).toHaveValue('');
   await expectCleanPage(page);
+});
+
+test('without the option no username is remembered, and turning it off removes the remembered one', async ({ page, context }) => {
+  await signIn(page, alice);
+  await expect(page).toHaveURL(/\/app\/$/);
+  expect((await context.cookies()).some((cookie) => cookie.name === '.Faranou.RememberedUsername')).toBe(false);
+  await context.clearCookies();
+
+  // Remember it first...
+  await signIn(page, alice, { rememberMe: true });
+  await expect(page).toHaveURL(/\/app\/$/);
+  expect((await context.cookies()).some((cookie) => cookie.name === '.Faranou.RememberedUsername')).toBe(true);
+  await context.clearCookies({ name: '.Faranou.Authentication' });
+
+  // ...then sign in again with the option off: the preference cookie is removed and not restored.
+  await signIn(page, alice, { rememberMe: false });
+  await expect(page).toHaveURL(/\/app\/$/);
+  expect((await context.cookies()).some((cookie) => cookie.name === '.Faranou.RememberedUsername')).toBe(false);
+  await context.clearCookies();
+  await page.goto('/Account/Login');
+  await expect(page.locator('#ViewModel_Username')).toHaveValue('');
+  await expect(page.locator('#ViewModel_RememberMe')).not.toBeChecked();
+});
+
+test('a failed sign-in with the option does not remember the username, and shows no password', async ({ page, context }) => {
+  await page.goto('/Account/Login');
+  await page.locator('#ViewModel_Username').fill(alice.username);
+  await page.locator('#ViewModel_Password').fill(`${alice.password}-wrong`);
+  await page.locator('label.taraz-remember').click();
+  await page.locator('form.taraz-login-form button[type="submit"]').click();
+
+  await expect(page).toHaveURL(/\/Account\/Login/i);
+  expect((await context.cookies()).some((cookie) => cookie.name === '.Faranou.RememberedUsername')).toBe(false);
+  await expect(page.locator('#ViewModel_Password')).toHaveValue('');
+  await page.goto('/Account/Login');
+  await expect(page.locator('#ViewModel_Username')).toHaveValue('');
+});
+
+test('the sign-in form is marked for the browser password manager, and the app says it does not store the password', async ({ page }) => {
+  await page.goto('/Account/Login');
+  await expect(page.locator('#ViewModel_Username')).toHaveAttribute('autocomplete', 'username');
+  await expect(page.locator('#ViewModel_Password')).toHaveAttribute('autocomplete', 'current-password');
+  await expect(page.locator('.taraz-security-note', { hasText: 'فقط نام کاربری را ذخیره می‌کند' })).toBeVisible();
 });
 
 async function chooseAlicesCompany(page) {
