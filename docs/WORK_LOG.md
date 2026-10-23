@@ -204,3 +204,11 @@
 - **مستندات:** راهنمای اجرای محلی React در `docs/DEVELOPMENT.md`.
 - **اعتبارسنجی:** منتظر CI روی PR است؛ تست محلی Visual Studio/Windows در این محیط قابل اجرا نیست. قبل از ادغام، بررسی کنید target روی Windows و Visual Studio واقعاً اجرا و Buildهای عادی CI را تحت تأثیر قرار ندهد.
 - **Git:** Issue #61؛ شاخه `fix/local-react-build-on-server-build`. بدون تغییر مستقیم `main`.
+
+## 2026-10-23 — بازطراحی صفحه انتخاب شرکت و دوره مالی (UNNUMBERED)
+- **تغییر:** جریان اول دوره مالی، بعد شرکت؛ لوگوی رسمی بریده‌شده؛ فونت Vazirmatn محلی (OFL)؛ حالت‌های خالی/خطا/بارگذاری؛ بدون تغییر API/Schema.
+- **بررسی واقعی:** Build؛ ۴۹۷ تست .NET (۴۹۵ موفق، ۲ Skip) روی SQL Server واقعی؛ ۷۶ تست کلاینت؛ ۲۴ تست E2E؛ آفلاین/static assets موفق. lint و ابزار دسترس‌پذیری اجرا نشد.
+- **بازبینی:** `security-reviewer` بدون یافتهٔ مهم؛ `code-reviewer` بدون یافتهٔ مسدودکننده (اصلاح‌ها اعمال و تست‌ها دوباره اجرا شد).
+- **باز:** بازبینی انسانی؛ SVG رسمی لوگو؛ «ADR بعدی D-036» در `AGENTS.md`/`CLAUDE.md`.
+- **توکن:** frontend-developer ≈۱۱۹٬۰۰۰؛ security-reviewer ≈۶۱٬۰۰۰؛ code-reviewer ≈۶۷٬۰۰۰.
+- **جزئیات:** `docs/handoffs/ISSUE-UNNUMBERED-work-context-selector-redesign.md`.

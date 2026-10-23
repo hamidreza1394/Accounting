@@ -1,25 +1,39 @@
-import { useId } from 'react';
+// The official Faranou mark (cut out of the official logo; never redrawn) and the product name.
+// The image is a local static file; its size is explicit so the page does not shift while it loads.
+const MARK_WIDTH = 432;
+const MARK_HEIGHT = 416;
 
-/**
- * The Faranou mark (three rising bars and a gold arrow on a blue tile) with the product name.
- * Inline SVG: no image request, no external asset. The name is real text so it is read aloud
- * and scales with the font.
- */
-export function FaranouLogo({ size = 42, label = true }: { size?: number; label?: boolean }) {
-  const titleId = useId();
+type FaranouLogoProps = {
+  /** Height of the mark in pixels. */
+  size?: number;
+  /** Shows the name and the tagline next to the mark. */
+  label?: boolean;
+  /** `dark` is for the navy header: the mark sits on a white tile and the text is white. */
+  tone?: 'light' | 'dark';
+};
+
+export function FaranouLogo({ size = 40, label = true, tone = 'light' }: FaranouLogoProps) {
+  const dark = tone === 'dark';
+  const mark = (
+    <img
+      src="/images/faranou-brand-mark.webp"
+      width={Math.round((size * MARK_WIDTH) / MARK_HEIGHT)}
+      height={size}
+      alt="نشان فرانو"
+      decoding="async"
+      className="shrink-0"
+    />
+  );
 
   return (
     <span className="inline-flex items-center gap-3">
-      <svg width={size} height={size} viewBox="0 0 64 64" fill="none" role="img" aria-labelledby={titleId}>
-        <title id={titleId}>نشان فرانو</title>
-        <rect width="64" height="64" rx="14" fill="#2468D8" />
-        <rect x="14" y="37" width="8" height="13" rx="2" fill="#fff" />
-        <rect x="26" y="29" width="8" height="21" rx="2" fill="#fff" />
-        <rect x="38" y="20" width="8" height="30" rx="2" fill="#fff" />
-        <path d="M13 30c9-1 17-6 24-16" stroke="#F2C45A" strokeWidth="4" strokeLinecap="round" />
-        <path d="M30 12.5l8-.6-1.8 7.6" stroke="#F2C45A" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-      {label ? <span className="text-[1.7rem] font-bold leading-none">فرانو</span> : null}
+      {dark ? <span className="inline-flex rounded-lg bg-white p-1">{mark}</span> : mark}
+      {label ? (
+        <span className="flex flex-col leading-tight">
+          <strong className={`text-lg font-extrabold ${dark ? 'text-white' : 'text-navy'}`}>فرانو</strong>
+          <span className={`text-xs ${dark ? 'text-white/75' : 'text-sub'}`}>نرم‌افزار حسابداری هوشمند</span>
+        </span>
+      ) : null}
     </span>
   );
 }

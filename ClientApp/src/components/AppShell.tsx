@@ -36,14 +36,10 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
 
   return (
     <div className="min-h-screen">
-      <header className="bg-navy text-white shadow-md">
+      <header className="on-dark bg-navy text-white shadow-md">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <a href="/app/" className="flex items-center gap-3" aria-label="فرانو — داشبورد">
-            <FaranouLogo size={36} label={false} />
-            <span className="flex flex-col leading-tight">
-              <strong className="text-lg">فرانو</strong>
-              <span className="text-xs text-white/70">نرم‌افزار حسابداری هوشمند</span>
-            </span>
+            <FaranouLogo size={36} tone="dark" />
           </a>
 
           <div className="flex items-center gap-3 text-sm">

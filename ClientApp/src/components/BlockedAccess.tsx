@@ -1,5 +1,6 @@
 import type { CompanyChoice, Session } from '../api/types';
 import { Badge } from './ui/Badge';
+import { SelectionLayout } from './SelectionLayout';
 import { Button } from './ui/Button';
 import { BuildingIcon, LockIcon } from './ui/icons';
 
@@ -20,8 +21,8 @@ export function BlockedAccess({ session, reason, companies, onRetry, onLogout }:
   const infrastructure = session.accountKind === 'Infrastructure';
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-10">
-      <main id="main" className="w-full max-w-xl rounded-2xl border border-line bg-white p-6 shadow-sm sm:p-8">
+    <SelectionLayout session={session} width="narrow">
+      <section className="rounded-2xl border border-line bg-white p-6 shadow-sm sm:p-8">
         <div className="flex flex-col items-center gap-4 text-center">
           <span aria-hidden="true" className="inline-flex size-14 items-center justify-center rounded-full bg-warning-soft text-warning">
             <LockIcon width={28} height={28} />
@@ -29,7 +30,7 @@ export function BlockedAccess({ session, reason, companies, onRetry, onLogout }:
           <h1 className="text-xl font-bold text-navy">
             {noCompany ? 'شرکتی برای ورود در دسترس نیست' : 'دوره مالی قابل ورودی وجود ندارد'}
           </h1>
-          <p className="text-sm leading-7 text-muted">
+          <p className="text-sm leading-7 text-sub">
             {noCompany
               ? infrastructure
                 ? 'حساب زیرساختی به شرکتی تعلق ندارد. برای کار با اطلاعات یک شرکت، با حساب کاربری عضو آن شرکت وارد شوید.'
@@ -41,8 +42,8 @@ export function BlockedAccess({ session, reason, companies, onRetry, onLogout }:
         {!noCompany && companies.length > 0 ? (
           <ul className="mt-6 flex flex-col gap-2" aria-label="شرکت‌های شما">
             {companies.map((company) => (
-              <li key={company.id} className="flex items-center justify-between gap-3 rounded-xl border border-line p-3 text-sm">
-                <span className="flex items-center gap-2 font-medium">
+              <li key={company.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line p-3 text-sm">
+                <span className="flex min-w-0 items-center gap-2 font-medium [overflow-wrap:anywhere]">
                   <BuildingIcon className="text-navy" />
                   {company.name}
                 </span>
@@ -58,7 +59,7 @@ export function BlockedAccess({ session, reason, companies, onRetry, onLogout }:
           </Button>
           <Button onClick={onRetry}>بررسی دوباره</Button>
         </div>
-      </main>
-    </div>
+      </section>
+    </SelectionLayout>
   );
 }

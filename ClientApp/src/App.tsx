@@ -12,7 +12,8 @@ import type { SelectedContext, Session, WorkContext } from './api/types';
 import { AppShell } from './components/AppShell';
 import { BlockedAccess } from './components/BlockedAccess';
 import { Dashboard } from './components/Dashboard';
-import { ErrorState, LoadingState } from './components/Feedback';
+import { ErrorState, LoadingScreen } from './components/Feedback';
+import { SelectionLayout } from './components/SelectionLayout';
 import { WorkContextSelector } from './components/WorkContextSelector';
 
 type AppState =
@@ -25,10 +26,6 @@ type AppState =
 export type Navigate = (url: string) => void;
 
 const defaultNavigate: Navigate = (url) => window.location.assign(url);
-
-function Centered({ children }: { children: React.ReactNode }) {
-  return <div className="mx-auto max-w-xl p-6">{children}</div>;
-}
 
 export function App({ navigate = defaultNavigate }: { navigate?: Navigate }) {
   const [state, setState] = useState<AppState>({ kind: 'loading' });
@@ -138,33 +135,33 @@ export function App({ navigate = defaultNavigate }: { navigate?: Navigate }) {
 
   if (state.kind === 'loading') {
     return (
-      <Centered>
-        <LoadingState label="در حال بارگذاری…" />
-      </Centered>
+      <SelectionLayout>
+        <LoadingScreen label="در حال بارگذاری…" />
+      </SelectionLayout>
     );
   }
 
   if (state.kind === 'entering') {
     return (
-      <Centered>
-        <LoadingState label="در حال ورود به محیط کاری…" />
-      </Centered>
+      <SelectionLayout>
+        <LoadingScreen label="در حال ورود به محیط کاری…" />
+      </SelectionLayout>
     );
   }
 
   if (state.kind === 'redirecting') {
     return (
-      <Centered>
-        <LoadingState label="در حال انتقال به صفحه ورود…" />
-      </Centered>
+      <SelectionLayout>
+        <LoadingScreen label="در حال انتقال به صفحه ورود…" />
+      </SelectionLayout>
     );
   }
 
   if (state.kind === 'error') {
     return (
-      <Centered>
+      <SelectionLayout width="narrow">
         <ErrorState message={state.message} onRetry={reload} />
-      </Centered>
+      </SelectionLayout>
     );
   }
 

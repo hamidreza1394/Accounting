@@ -91,7 +91,7 @@ cd ClientApp && npm ci && npm run typecheck && npm test && npm run build && npm 
 | Proxy، HSTS، HTTPS، Rate Limiting، AllowedHosts | `Integration/DeploymentConfigurationTests` | CI، SQL Server |
 | مهاجرت Master | `MasterCredentialTests` | CI |
 | نبود inline، گزارش CSP، حروف دقیق URLهای CSS | `ContentSecurityPolicyTests` | CI |
-| **E2E مرورگر** | `tests/e2e` (Playwright/Chromium ← سرور منتشرشده در Production ← SQL Server 2022 واقعی)، ۱۲ سناریو | CI Job `e2e` |
+| **E2E مرورگر** | `tests/e2e` (Playwright/Chromium ← سرور منتشرشده در Production ← SQL Server 2022 واقعی)، ۱۲ سناریو (بعدها گسترش‌یافته؛ در بازطراحی انتخاب‌گر 2026-10-23 به ۲۴ تست رسید: همنام‌ها، سال بایگانی، تغییر سریع سال، ورود بدون دوبار ارسال، منابع محلی) | CI Job `e2e` |
 
 **سناریوهای E2E:** صفحه ورود با فونت محلی و بدون نقض CSP؛ رد رمز اشتباه و حساب غیرفعال؛ Cookie از نوع HttpOnly و نمایش فقط شرکت‌های خود در خانه Razor؛ Remember Me؛ داشبورد React با داده واقعی، تغییر شرکت و نادیده‌گرفتن شناسه شرکت بیگانه؛ 404 یکسان برای شرکت دیگران و شرکت ناموجود؛ رد خروج API بدون توکن و خروج با دکمه داشبورد؛ خروج Razor (GET خارج نمی‌کند)؛ بازگشت از نشست منقضی با `ReturnUrl`؛ پایان نشست باز پس از غیرفعال‌سازی؛ صفحات مدیریت Master؛ صفحه راه‌اندازی اولیه. همه زیر CSP اجباری. Seed با حساب‌ها و رمزهای تصادفی هر اجرا انجام می‌شود (`tests/e2e/seed.mjs`).
 
