@@ -156,6 +156,13 @@
 - **تست‌های این تغییر:** در این محیط از طریق GitHub API قابل اجرا نبودند؛ CI باید روی PR اجرا شود. هیچ دیتابیس تولیدی لمس یا Migration اجرا نشد.
 - PR اصلاحی: [Issue #54](https://github.com/hamidreza1394/Accounting/issues/54)؛ شاخه `fix/issue-54-corporate-groups-audit`.
 
+## 2026-10-23 — قواعد دائمی Claude Code: Skill/Plugin، کنترل‌های قطعی و هماهنگی documentation-engineer (UNNUMBERED، شاخه `docs/claude-code-standing-rules`)
+- **دامنه:** فقط فایل‌های دستورالعمل و تنظیمات (`CLAUDE.md`، `.claude/settings.json`، `.claude/agents/documentation-engineer.md`، `docs/AGENT_COORDINATION.md`، `docs/INDEX.md` و سه فایل پرامپت)؛ کد محصول، Schema، CI و `DECISIONS.md` تغییر نکرد؛ ADR جدید نیست؛ Hook اضافه نشد.
+- **تغییر:** بخش «Skill، Plugin، MCP و کنترل‌های قطعی» در `CLAUDE.md` (تفکیک چهار وضعیت نصب/در دسترس/فراخوانی/اجرا، نگاشت حوزه به Agent و Skill اختیاری، تقدم قواعد مخزن، قالب گزارش)؛ فایل جدید `.claude/settings.json` فقط با `permissions` (`deny` و `ask`)؛ `documentation-engineer` به پیش‌فرض `sonnet` و جدول ب با بازبینی تخصصی مستندات حساس هماهنگ شد؛ ارجاع منسوخ «ADR بعدی D-031» در `AGENT_COORDINATION.md` و سه فایل پرامپت به D-036 اصلاح شد (شاهد: `DECISIONS.md` و `INDEX.md`).
+- **آزمون واقعی** (Claude Code 2.1.309، جلسه headless در دایرکتوری موقت جدا): قواعد `deny` روی `.env`، `Server/.env` تو در تو، `secrets.json`، نوشتن روی `.env.local`، `git push -f/-fu/+main` و `dotnet ef --project … database drop` کار کردند؛ `.env.example`، `appsettings.json` و pushهای بی‌خطر به‌اشتباه رد نشدند. اثر قواعد `ask` به‌صورت تجربی تفکیک‌پذیر نبود و فقط بر پایه مستندات رسمی گزارش شده است. در یک جلسه headless فقط‌خواندنی، وظیفهٔ امنیتی `security-reviewer` را فراخوانی کرد؛ هیچ Skill افزونه‌ای فراخوانی نشد.
+- **اجرانشده:** `dotnet build/test` (SDK در این محیط نصب نیست؛ کد تغییر نکرد)، CI روی PR، Hook، Sandbox.
+- **Git:** Commit/Push/PR انجام نشد. گزارش: `docs/handoffs/ISSUE-UNNUMBERED-claude-code-standing-rules.md`.
+
 ## 2026-10-23 — ارتقای UI/UX صفحه ورود و نشان جدید فرانو (UNNUMBERED، شاخه `ui/login-professional-polish`)
 - **تغییر:** نشان SVG محلی `faranou-logo-mark.svg`؛ سربرگ برند، فرم (آیکون رمز، چک‌باکس، spinner، فوکوس)، ستون معرفی و داشبورد نمایشی در `Login.cshtml`، `taraz-login.css` و `taraz-login.js` پالایش شد؛ `LoginSuccess` هم‌سان شد. PageModel، احراز هویت، CSRF، CSP و داده‌های نمایشی تغییر نکرد؛ `faranou-mark.svg` (favicon) و CI دست‌نخورده است.
 - **بررسی واقعی:** `npm test` در `tests/Template.Tests.Js` (۷ از ۷)، `check_static_assets.py`، `git diff --check`، ۱۵ بررسی تعاملی Chromium و اسکرول افقی در ۵ عرض روی رندر استاتیک Markup؛ بازبین‌های مستقل `code-reviewer` و `security-reviewer`؛ یک اشکال LTR در `LoginSuccess` یافت و رفع شد.

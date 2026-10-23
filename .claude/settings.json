@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "ask": [
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git merge *)",
+      "Bash(git rebase *)",
+      "Bash(git reset --hard *)",
+      "Bash(git clean *)",
+      "Bash(git restore *)",
+      "Bash(git checkout -- *)",
+      "Bash(git branch -D *)",
+      "Bash(gh pr create *)",
+      "Bash(gh pr merge *)",
+      "Bash(gh release *)",
+      "Bash(dotnet ef *database update*)",
+      "Bash(dotnet ef *migrations remove*)",
+      "Bash(dotnet user-secrets list *)",
+      "Bash(rm -r*)",
+      "Bash(rm -fr*)"
+    ],
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(!.env.example)",
+      "Read(**/appsettings.Local.json)",
+      "Read(**/secrets.json)",
+      "Read(**/*.pfx)",
+      "Read(**/*.p12)",
+      "Read(~/.microsoft/usersecrets/**)",
+      "Read(~/AppData/Roaming/Microsoft/UserSecrets/**)",
+      "Bash(dotnet ef *database drop*)",
+      "Bash(git push *--force*)",
+      "Bash(git push -f*)",
+      "Bash(git push * -f*)",
+      "Bash(git push +*)",
+      "Bash(git push * +*)",
+      "Bash(git push *--delete*)",
+      "Bash(git push *--mirror*)"
+    ]
+  }
+}
