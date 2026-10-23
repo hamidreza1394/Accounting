@@ -9,6 +9,13 @@ public sealed class Company : Seedwork.Entity,
     public string Name { get; set; } = string.Empty;
     public string? NationalId { get; set; }
     public bool IsActive { get; set; } = true;
+
+    /// <summary>
+    /// Opaque operational security boundary assigned by trusted provisioning. Null means
+    /// the company has not been mapped safely yet; corporate relationships must fail closed.
+    /// This is not a CustomerAccount identifier and contains no commercial customer data.
+    /// </summary>
+    public Guid? CustomerBoundaryId { get; set; }
     public ICollection<UserCompanyMembership> Memberships { get; set; } = new List<UserCompanyMembership>();
     public ICollection<FiscalPeriod> FiscalPeriods { get; set; } = new List<FiscalPeriod>();
     public ICollection<CompanyRole> Roles { get; set; } = new List<CompanyRole>();
