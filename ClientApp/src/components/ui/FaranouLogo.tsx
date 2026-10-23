@@ -27,7 +27,7 @@ export function FaranouLogo({ size = 40, label = true, tone = 'light' }: Faranou
 
   return (
     <span className="inline-flex items-center gap-3">
-      {dark ? <span className="inline-flex rounded-lg bg-white p-1">{mark}</span> : mark}
+      {dark ? <span className="inline-flex rounded-xl bg-white/95 p-1.5">{mark}</span> : mark}
       {label ? (
         <span className="flex flex-col leading-tight">
           <strong className={`text-lg font-extrabold ${dark ? 'text-white' : 'text-navy'}`}>فرانو</strong>

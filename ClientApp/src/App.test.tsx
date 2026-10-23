@@ -46,7 +46,7 @@ describe('App', () => {
 
     // No selection screen: the dashboard of the confirmed choice appears.
     expect(await screen.findByRole('heading', { name: 'داشبورد' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'فرانو - دوره مالی' })).not.toBeInTheDocument();
 
     const post = fetchMock.mock.calls.find((call) => (call[1] as RequestInit | undefined)?.method === 'POST');
     expect(JSON.parse((post?.[1] as RequestInit).body as string)).toEqual({ companyId: 'a', fiscalPeriodId: 'p1' });
@@ -77,7 +77,7 @@ describe('App', () => {
 
     render(<App navigate={vi.fn()} />);
 
-    expect(await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'فرانو - دوره مالی' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'داشبورد' })).not.toBeInTheDocument();
   });
 
@@ -100,7 +100,7 @@ describe('App', () => {
 
     render(<App navigate={vi.fn()} />);
 
-    await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' });
+    await screen.findByRole('heading', { name: 'فرانو - دوره مالی' });
     const enter = screen.getByRole('button', { name: /ورود به محیط کاری/ });
     expect(enter).toHaveAttribute('aria-disabled', 'true');
 
@@ -125,8 +125,8 @@ describe('App', () => {
 
     render(<App navigate={vi.fn()} />);
 
-    await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' });
-    const years = within(screen.getByRole('radiogroup', { name: 'دوره مالی' })).getAllByRole('radio');
+    await screen.findByRole('heading', { name: 'فرانو - دوره مالی' });
+    const years = within(screen.getByRole('radiogroup', { name: 'دوره‌های مالی' })).getAllByRole('radio');
     expect(years).toHaveLength(3);
     years.forEach((year) => {
       expect(year).toBeEnabled();
@@ -155,7 +155,7 @@ describe('App', () => {
 
     render(<App navigate={vi.fn()} />);
 
-    await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' });
+    await screen.findByRole('heading', { name: 'فرانو - دوره مالی' });
     // Two enterable years: neither is chosen for the user.
     expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۵/ })).not.toBeChecked();
 
@@ -265,7 +265,7 @@ describe('App', () => {
     await userEvent.click(await screen.findByRole('button', { name: /تغییر شرکت یا دوره/ }));
 
     // The selector opens with the current choice pre-selected, and the choices were reloaded.
-    expect(await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'فرانو - دوره مالی' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /شرکت الف/ })).toBeChecked();
     expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۵/ })).toBeChecked();
     expect(fetchMock.mock.calls.filter((call) => call[0] === '/api/v1/context')).toHaveLength(2);
@@ -294,7 +294,7 @@ describe('App', () => {
     void release;
 
     render(<App navigate={vi.fn()} />);
-    await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' });
+    await screen.findByRole('heading', { name: 'فرانو - دوره مالی' });
     await userEvent.click(screen.getByRole('radio', { name: /سال مالی ۱۴۰۶/ }));
     const enter = screen.getByRole('button', { name: /ورود به محیط کاری/ });
 
@@ -314,7 +314,7 @@ describe('App', () => {
     });
 
     render(<App navigate={vi.fn()} />);
-    await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' });
+    await screen.findByRole('heading', { name: 'فرانو - دوره مالی' });
     await userEvent.click(screen.getByRole('radio', { name: /سال مالی ۱۴۰۶/ }));
     await userEvent.click(screen.getByRole('button', { name: /ورود به محیط کاری/ }));
 
@@ -370,7 +370,7 @@ describe('App', () => {
     const navigate = vi.fn();
 
     render(<App navigate={navigate} />);
-    await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' });
+    await screen.findByRole('heading', { name: 'فرانو - دوره مالی' });
     await userEvent.click(screen.getByRole('radio', { name: /سال مالی ۱۴۰۶/ }));
     await userEvent.click(screen.getByRole('button', { name: /ورود به محیط کاری/ }));
 

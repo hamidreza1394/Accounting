@@ -24,13 +24,23 @@ export function normalizeSearchText(value: string): string {
   return text.toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
-/** True when every word of the query occurs in the company name or in its national id. */
-export function matchesCompany(query: string, name: string, nationalId: string | null): boolean {
+/** True when every word of the query occurs in at least one of the (normalised) fields. */
+function matchesFields(query: string, fields: ReadonlyArray<string | null>): boolean {
   const words = normalizeSearchText(query).split(' ').filter(Boolean);
   if (words.length === 0) {
     return true;
   }
-  const haystack = `${normalizeSearchText(name)} ${normalizeSearchText(nationalId ?? '')}`;
+  const haystack = fields.map((field) => normalizeSearchText(field ?? '')).join(' ');
 
   return words.every((word) => haystack.includes(word));
+}
+
+/** True when every word of the query occurs in the company name or in its national id. */
+export function matchesCompany(query: string, name: string, nationalId: string | null): boolean {
+  return matchesFields(query, [name, nationalId]);
+}
+
+/** True when every word of the query occurs in the fiscal year title or in its (Jalali) dates. */
+export function matchesYear(query: string, title: string, startDate: string, endDate: string): boolean {
+  return matchesFields(query, [title, startDate, endDate]);
 }

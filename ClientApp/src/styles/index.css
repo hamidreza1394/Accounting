@@ -35,6 +35,18 @@
   --color-warning-soft: #fdf4e3;
   --color-success: #256b4f;
   --color-success-soft: #e9f4ee;
+
+  /* The selection screens (the approved reference): headline navy, selection blue, period panel
+     tint, teal tick and the orange call to action. */
+  --color-title: #162f49;
+  --color-night: #10263d;
+  --color-pick: #63afe3;
+  --color-pick-soft: #eef9fe;
+  --color-period: #e7f0fc;
+  --color-period-line: #b9d1ee;
+  --color-tick: #1593a6;
+  --color-cta: #fab14c;
+  --color-cta-soft: #ffe4b7;
 }
 
 @layer base {
@@ -63,15 +75,15 @@
 }
 
 @layer components {
-  /* The calm backdrop of the selection screens: only gradients, no image, no animation.
-     A navy glow in one corner, a very faint geometric grid, and a warm-to-cool wash. */
+  /* The light backdrop of the selection screens: a cool wash, a very faint geometric grid and a
+     soft glow at the top. The ridges, glow lines and chart bars are an inline SVG
+     (SelectionBackdrop); no image file, no animation. */
   .selection-backdrop {
-    background-color: var(--color-sand);
+    background-color: #eef3fa;
     background-image:
-      radial-gradient(48rem 26rem at 100% 0%, rgb(28 61 90 / 0.08), transparent 70%),
-      radial-gradient(36rem 20rem at 0% 100%, rgb(47 141 147 / 0.07), transparent 70%),
-      repeating-linear-gradient(0deg, rgb(28 61 90 / 0.035) 0 1px, transparent 1px 32px),
-      repeating-linear-gradient(90deg, rgb(28 61 90 / 0.035) 0 1px, transparent 1px 32px),
-      linear-gradient(180deg, #faf8f4 0%, #eef2f5 100%);
+      radial-gradient(60rem 18rem at 50% 0%, rgb(255 255 255 / 0.9), transparent 70%),
+      repeating-linear-gradient(0deg, rgb(28 61 90 / 0.03) 0 1px, transparent 1px 40px),
+      repeating-linear-gradient(90deg, rgb(28 61 90 / 0.03) 0 1px, transparent 1px 40px),
+      linear-gradient(180deg, #f7faff 0%, #e9f0f9 55%, #eef3fa 100%);
   }
 }

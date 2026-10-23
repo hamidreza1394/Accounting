@@ -47,28 +47,85 @@ const twoYears = () =>
   });
 
 describe('WorkContextSelector', () => {
-  it('shows the new heading, the guidance and real counts', () => {
+  it('shows the title, the guidance and real counts, and claims no group relation', () => {
     renderSelector(twoYears());
 
-    expect(screen.getByRole('heading', { level: 1, name: 'انتخاب شرکت و دوره مالی' })).toBeInTheDocument();
-    expect(screen.getByText(/ابتدا دوره مالی و سپس شرکت موردنظر را انتخاب کنید/)).toBeInTheDocument();
-    expect(screen.getByText('۲ شرکت قابل دسترسی')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'فرانو - دوره مالی' })).toBeInTheDocument();
+    expect(screen.getByText('برای ورود به محیط کاری، ابتدا دوره مالی و سپس شرکت موردنظر را انتخاب کنید.')).toBeInTheDocument();
+    expect(screen.getByText('شما به ۲ شرکت دسترسی دارید')).toBeInTheDocument();
     expect(screen.getByText('۲ دوره مالی')).toBeInTheDocument();
+    expect(screen.queryByText(/همگروه|هلدینگ|زیرمجموعه|شرکت مادر/)).not.toBeInTheDocument();
+  });
+
+  it('has a header with the user, one real logout control and no decorative controls', async () => {
+    const onLogout = vi.fn();
+    renderSelector(twoYears(), { onLogout });
+
+    const banner = screen.getByRole('banner');
+    expect(within(banner).getByText('آلیس احمدی')).toBeInTheDocument();
+    expect(within(banner).getByText('alice')).toBeInTheDocument();
+    expect(within(banner).getAllByRole('button')).toHaveLength(1);
+    expect(screen.queryByText(/فرانو - داشبورد/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/داشبورد/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /اعلان|تنظیمات|خانه/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    await userEvent.click(within(banner).getByRole('button', { name: 'خروج' }));
+    expect(onLogout).toHaveBeenCalledOnce();
   });
 
   it('lists the years newest first in the first panel and asks for a year before showing companies', () => {
     renderSelector(twoYears());
 
-    const years = screen.getByRole('radiogroup', { name: 'دوره مالی' });
+    const years = screen.getByRole('radiogroup', { name: 'دوره‌های مالی' });
     const radios = within(years).getAllByRole('radio');
     expect(radios[0]).toHaveAccessibleName(/سال ۱۴۰۵/);
     expect(radios[1]).toHaveAccessibleName(/سال ۱۴۰۴/);
     expect(screen.getByText('ابتدا یک دوره مالی انتخاب کنید.')).toBeInTheDocument();
-    expect(screen.queryByRole('radiogroup', { name: 'شرکت‌های مجاز' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('radiogroup', { name: 'شرکت‌ها' })).not.toBeInTheDocument();
     expect(screen.getByText('۱۴۰۵/۰۱/۰۱')).toBeInTheDocument();
     expect(screen.getByText('۱۴۰۵/۱۲/۲۹')).toBeInTheDocument();
     expect(screen.getByText('۲ شرکت')).toBeInTheDocument();
     expect(screen.getByText('۲ شرکت · ۱ قابل ورود')).toBeInTheDocument();
+  });
+
+  it('badges each year by its real status: active, closed or archived', () => {
+    renderSelector(
+      contextBody({
+        companies: [
+          company('a', 'شرکت الف', [
+            period('a5', 'سال ۱۴۰۵', y1405),
+            period('a4', 'سال ۱۴۰۴', { ...y1404, ...closed }),
+            period('a3', 'سال ۱۴۰۳', { startDate: '2024-03-20', endDate: '2025-03-20', ...archived }),
+          ]),
+        ],
+      }),
+    );
+
+    const years = within(screen.getByRole('radiogroup', { name: 'دوره‌های مالی' }));
+    expect(years.getByRole('radio', { name: /سال ۱۴۰۵/ })).toHaveAccessibleName(/فعال/);
+    expect(years.getByRole('radio', { name: /سال ۱۴۰۴/ })).toHaveAccessibleName(/بسته شده/);
+    expect(years.getByRole('radio', { name: /سال ۱۴۰۳/ })).toHaveAccessibleName(/بایگانی/);
+    expect(years.getByRole('radio', { name: /سال ۱۴۰۳/ })).toBeDisabled();
+  });
+
+  it('filters the years by title or Jalali date, accepting Persian digits', async () => {
+    renderSelector(twoYears());
+    const search = screen.getByRole('searchbox', { name: 'جست‌وجوی دوره مالی بر اساس عنوان یا تاریخ' });
+    expect(search).toHaveAttribute('placeholder', 'جستجو در دوره‌های مالی...');
+    const years = () => within(screen.getByRole('radiogroup', { name: 'دوره‌های مالی' })).getAllByRole('radio');
+
+    await userEvent.type(search, 'سال ۱۴۰۴');
+    expect(years()).toHaveLength(1);
+    expect(years()[0]).toHaveAccessibleName(/سال ۱۴۰۴/);
+
+    await userEvent.clear(search);
+    await userEvent.type(search, '1405/01/01');
+    expect(years()).toHaveLength(1);
+    expect(years()[0]).toHaveAccessibleName(/سال ۱۴۰۵/);
+
+    await userEvent.clear(search);
+    await userEvent.type(search, 'ناموجود');
+    expect(screen.getByText('دوره مالی با این مشخصات پیدا نشد.')).toBeInTheDocument();
   });
 
   it('shows the companies of the chosen year with their own status, and a disabled one with the reason', async () => {
@@ -76,7 +133,7 @@ describe('WorkContextSelector', () => {
 
     await userEvent.click(screen.getByRole('radio', { name: /سال ۱۴۰۴/ }));
 
-    const companies = screen.getByRole('radiogroup', { name: 'شرکت‌های مجاز' });
+    const companies = screen.getByRole('radiogroup', { name: 'شرکت‌ها' });
     const a = within(companies).getByRole('radio', { name: /شرکت الف/ });
     expect(a).toBeEnabled();
     expect(within(companies).getByText('فقط مشاهده و گزارش‌گیری')).toBeInTheDocument();
@@ -91,7 +148,7 @@ describe('WorkContextSelector', () => {
     await userEvent.click(screen.getByRole('radio', { name: /سال ۱۴۰۵/ }));
 
     expect(screen.getByText('10101010101').closest('bdi')).toHaveAttribute('dir', 'ltr');
-    expect(screen.getAllByText(/شناسه ملی:/)).toHaveLength(1);
+    expect(screen.getAllByText(/کد ملی:/)).toHaveLength(1);
     expect(screen.getAllByText('حسابدار')).toHaveLength(2);
   });
 
@@ -105,7 +162,7 @@ describe('WorkContextSelector', () => {
       }),
     );
 
-    const rows = within(screen.getByRole('radiogroup', { name: 'شرکت‌های مجاز' })).getAllByRole('radio');
+    const rows = within(screen.getByRole('radiogroup', { name: 'شرکت‌ها' })).getAllByRole('radio');
     expect(rows).toHaveLength(2);
     expect(rows[0]).toHaveAccessibleName(/11111111111/);
     expect(rows[1]).toHaveAccessibleName(/22222222222/);
@@ -139,7 +196,7 @@ describe('WorkContextSelector', () => {
     expect(screen.getByRole('radio', { name: /سال ۱۴۰۵/ })).toBeChecked();
     expect(screen.getByRole('radio', { name: /شرکت الف/ })).toBeChecked();
     expect(enterButton()).not.toHaveAttribute('aria-disabled');
-    expect(screen.getByText('انتخاب شما:').parentElement).toHaveTextContent('سال ۱۴۰۵ · شرکت الف');
+    expect(screen.getByText('انتخاب شما:').parentElement).toHaveTextContent(/سال ۱۴۰۵ \(فعال\) · شرکت الف/);
   });
 
   it('preselects only the year when it is the single one but has several companies', () => {
@@ -178,7 +235,7 @@ describe('WorkContextSelector', () => {
     await userEvent.click(screen.getByRole('radio', { name: /سال ۱۴۰۵/ }));
     await userEvent.click(screen.getByRole('radio', { name: /شرکت ج/ }));
     await userEvent.click(screen.getByRole('radio', { name: /سال ۱۴۰۴/ }));
-    within(screen.getByRole('radiogroup', { name: 'شرکت‌های مجاز' }))
+    within(screen.getByRole('radiogroup', { name: 'شرکت‌ها' }))
       .getAllByRole('radio')
       .forEach((radio) => expect(radio).not.toBeChecked());
     expect(enterButton()).toHaveAttribute('aria-disabled', 'true');
@@ -197,26 +254,63 @@ describe('WorkContextSelector', () => {
 
     expect(y5).toBeChecked();
     expect(y4).not.toBeChecked();
-    expect(within(screen.getByRole('radiogroup', { name: 'شرکت‌های مجاز' })).getByRole('radio', { name: /شرکت ب/ })).toBeEnabled();
+    expect(within(screen.getByRole('radiogroup', { name: 'شرکت‌ها' })).getByRole('radio', { name: /شرکت ب/ })).toBeEnabled();
   });
 
-  it('offers the search only for more than six companies of the year, and filters by name or id', async () => {
-    const { unmount } = renderSelector(contextBody({ companies: many(6) }));
-    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
-    unmount();
-
+  it('filters the companies of the year by name or national id, with Persian digits', async () => {
     renderSelector(
       contextBody({
-        companies: [...many(7).slice(0, 6), company('x', 'شرکت ویژه', [period('px', 'سال ۱۴۰۵', y1405)], '10101010101'), company('y', 'شرکت دیگر', [period('py', 'سال ۱۴۰۵', y1405)])],
+        companies: [...many(3), company('x', 'شرکت ویژه', [period('px', 'سال ۱۴۰۵', y1405)], '10101010101'), company('y', 'شرکت دیگر', [period('py', 'سال ۱۴۰۵', y1405)])],
       }),
     );
-    const search = screen.getByRole('searchbox', { name: 'جست‌وجوی شرکت بر اساس نام یا شناسه ملی' });
+    const search = screen.getByRole('searchbox', { name: 'جست‌وجوی شرکت بر اساس نام یا کد ملی' });
+    const list = () => within(screen.getByRole('radiogroup', { name: 'شرکت‌ها' }));
+    expect(list().getAllByRole('radio')).toHaveLength(5);
+
     await userEvent.type(search, '  ۱۰۱۰۱  ');
-    const list = () => within(screen.getByRole('radiogroup', { name: 'شرکت‌های مجاز' }));
+    expect(list().getAllByRole('radio')).toHaveLength(1);
+    await userEvent.clear(search);
+    await userEvent.type(search, 'ویژه');
     expect(list().getAllByRole('radio')).toHaveLength(1);
     await userEvent.clear(search);
     await userEvent.type(search, 'ناموجود');
     expect(screen.getByText('شرکتی با این مشخصات پیدا نشد.')).toBeInTheDocument();
+  });
+
+  it('searches only the companies of the selected year and is disabled before a year is chosen', async () => {
+    renderSelector(twoYears());
+    const search = screen.getByRole('searchbox', { name: 'جست‌وجوی شرکت بر اساس نام یا کد ملی' });
+    expect(search).toBeDisabled();
+
+    await userEvent.click(screen.getByRole('radio', { name: /سال ۱۴۰۴/ }));
+    expect(search).toBeEnabled();
+    await userEvent.type(search, 'الف');
+    expect(within(screen.getByRole('radiogroup', { name: 'شرکت‌ها' })).getAllByRole('radio')).toHaveLength(1);
+    // Changing the year clears the company query.
+    await userEvent.click(screen.getByRole('radio', { name: /سال ۱۴۰۵/ }));
+    expect(search).toHaveValue('');
+  });
+
+  it('draws one full-width row per company (a list, never a grid) with the real role as a chip', async () => {
+    renderSelector(
+      contextBody({
+        companies: [
+          { ...company('a', 'شرکت الف', [period('a5', 'سال ۱۴۰۵', y1405)], '10101010101'), roleName: 'مدیر مالی' },
+          { ...company('b', 'شرکت ب', [period('b5', 'سال ۱۴۰۵', y1405)]), roleName: '' },
+        ],
+      }),
+    );
+
+    const group = screen.getByRole('radiogroup', { name: 'شرکت‌ها' });
+    expect(group.className).toContain('flex-col');
+    expect(group.className).not.toMatch(/grid|columns/);
+    expect(within(group).getAllByRole('radio')).toHaveLength(2);
+    expect(within(group).getByText('مدیر مالی')).toBeInTheDocument();
+    // No role, no chip: the row shows nothing instead of an invented label.
+    expect(within(group).getAllByText(/نقش:/)).toHaveLength(1);
+    // The count chip and the national id label.
+    expect(within(screen.getByRole('region', { name: 'شرکت‌ها' })).getByText('۲ شرکت')).toBeInTheDocument();
+    expect(within(group).getAllByText(/کد ملی:/)).toHaveLength(1);
   });
 
   it('notes companies that cannot be entered in any year, only when some year can be entered', () => {
@@ -327,6 +421,19 @@ describe('WorkContextSelector', () => {
     expect(onLogout).toHaveBeenCalledOnce();
   });
 
+  it('keeps the enter button looking and acting disabled until a valid year and company are chosen', async () => {
+    renderSelector(twoYears());
+
+    expect(enterButton()).toHaveAttribute('aria-disabled', 'true');
+    await userEvent.click(screen.getByRole('radio', { name: /سال ۱۴۰۵/ }));
+    expect(enterButton()).toHaveAttribute('aria-disabled', 'true');
+    await userEvent.click(screen.getByRole('radio', { name: /شرکت الف/ }));
+    expect(enterButton()).not.toHaveAttribute('aria-disabled');
+    const live = screen.getByText('انتخاب شما:').parentElement;
+    expect(live).toHaveAttribute('aria-live', 'polite');
+    expect(live).toHaveTextContent(/سال ۱۴۰۵ \(فعال\) · شرکت الف/);
+  });
+
   it('shows the official brand mark and no licence, user-count or subsystem data', () => {
     renderSelector(twoYears());
 
@@ -349,7 +456,8 @@ describe('WorkContextSelector', () => {
       }),
     );
 
-    expect(screen.getByText('باز', { selector: 'span' })).toBeInTheDocument();
+    // An open period is the normal case and needs no badge; the others say what they are.
+    expect(screen.queryByText('باز', { selector: 'span' })).not.toBeInTheDocument();
     expect(screen.getByText('فقط مشاهده و گزارش‌گیری')).toBeInTheDocument();
     expect(screen.getByText('بایگانی‌شده')).toBeInTheDocument();
   });

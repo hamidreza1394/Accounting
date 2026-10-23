@@ -130,3 +130,22 @@ export function EyeIcon(props: IconProps) {
     </Base>
   );
 }
+
+export function ChevronLeftIcon(props: IconProps) {
+  // Points to the left: "forward" in a right-to-left interface.
+  return (
+    <Base strokeWidth={2.4} {...props}>
+      <path d="m15 5-7 7 7 7" />
+    </Base>
+  );
+}
+
+export function UsersIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20c.6-3.8 3.2-5.5 6.5-5.5s5.9 1.7 6.5 5.5" />
+      <path d="M16 4.8a3.3 3.3 0 0 1 0 6.4M18 14.8c2 .6 3.2 2.300 3.500 5.200" />
+    </Base>
+  );
+}

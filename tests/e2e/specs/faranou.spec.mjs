@@ -108,7 +108,7 @@ test('sign-in issues an HttpOnly session cookie and the Razor home shows only th
   await signIn(page, alice);
   // The sign-in itself leads to the company/fiscal period selection (no stop on a success page).
   await expect(page).toHaveURL(/\/app\/$/);
-  await expect(page.getByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'فرانو - دوره مالی' })).toBeVisible();
   await expectCleanPage(page);
 
   const cookie = (await context.cookies()).find((current) => current.name === '.Faranou.Authentication');
@@ -133,7 +133,7 @@ test('remember me issues a persistent cookie', async ({ page, context }) => {
 
 async function chooseAlicesCompany(page) {
   await page.goto('/app/');
-  await expect(page.getByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'فرانو - دوره مالی' })).toBeVisible();
   await chooseOption(page, a.name, /سال مالی ۱۴۰۵/);
 }
 
@@ -156,7 +156,7 @@ test('several companies: the user chooses, a closed period is view-only and fore
   await signIn(page, alice);
   await page.goto('/app/');
 
-  await expect(page.getByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'فرانو - دوره مالی' })).toBeVisible();
   await expect(page.getByText(b.name)).toHaveCount(0);
   await expect(page.getByText(state.secretPeriodTitle)).toHaveCount(0);
   // A company without a fiscal period cannot be entered: it is named in a note, never offered as a row.
@@ -180,7 +180,7 @@ test('right after sign-in, with no manual navigation, every account kind reaches
   // Several companies and periods: the selection (and not the old success page).
   await signIn(page, alice);
   await expect(page).toHaveURL(/\/app\/$/);
-  await expect(page.getByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'فرانو - دوره مالی' })).toBeVisible();
   await expect(page.getByText(b.name)).toHaveCount(0);
   await page.context().clearCookies();
 
@@ -205,7 +205,7 @@ test('the old success URL only forwards a signed-in user, and an anonymous one i
   await signIn(page, alice);
   await page.goto('/Account/LoginSuccess');
   await expect(page).toHaveURL(/\/app\/$/);
-  await expect(page.getByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'فرانو - دوره مالی' })).toBeVisible();
 });
 
 test('a single company with a single open period is entered directly', async ({ page }) => {
@@ -213,7 +213,7 @@ test('a single company with a single open period is entered directly', async ({ 
   await page.goto('/app/');
 
   await expect(page.getByRole('heading', { name: 'داشبورد' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'فرانو - دوره مالی' })).toHaveCount(0);
   await expect(page.getByLabel('زمینه کاری جاری')).toContainText(b.name);
   await expectCleanPage(page);
 });
@@ -230,13 +230,13 @@ test('a company without a fiscal period blocks the entry with an explanation', a
 test('a closed period opens for viewing only, and switching back leaves nothing of it behind', async ({ page }) => {
   await signIn(page, alice);
   await page.goto('/app/');
-  await expect(page.getByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'فرانو - دوره مالی' })).toBeVisible();
   await chooseOption(page, a.name, /سال مالی ۱۴۰۴/);
   await expect(page.getByLabel('زمینه کاری جاری')).toContainText('فقط مشاهده و گزارش‌گیری');
 
   // Switching in the same sign-in: no new login, the badge belongs to the closed period only.
   await page.getByRole('button', { name: /تغییر شرکت یا دوره/ }).click();
-  await expect(page.getByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'فرانو - دوره مالی' })).toBeVisible();
   await chooseOption(page, a.name, /سال مالی ۱۴۰۵/);
   await expect(page.getByLabel('زمینه کاری جاری')).not.toContainText('فقط مشاهده و گزارش‌گیری');
   await expectCleanPage(page);
@@ -260,14 +260,14 @@ test('every new sign-in asks again; the previous choice is not restored', async 
 
   await signIn(page, alice);
   await page.goto('/app/');
-  await expect(page.getByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'فرانو - دوره مالی' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'داشبورد' })).toHaveCount(0);
 });
 
 test('year first: same-name companies are told apart by their national id, and an archived year cannot be chosen', async ({ page }) => {
   await signIn(page, frank);
   await expect(page).toHaveURL(/\/app\/$/);
-  await expect(page.getByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'فرانو - دوره مالی' })).toBeVisible();
   await expect(page.getByText('ابتدا یک دوره مالی انتخاب کنید.')).toBeVisible();
   await expect(page.getByRole('button', { name: /ورود به محیط کاری/ })).toBeDisabled();
 
@@ -322,7 +322,7 @@ test('the selection page loads only local fonts and images and shows the officia
     if (!/^(localhost|127\.0\.0\.1)$/.test(url.hostname)) external.push(request.url());
   });
   await signIn(page, frank);
-  await expect(page.getByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'فرانو - دوره مالی' })).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
   expect(external).toEqual([]);
   expect(requested).toContain('/images/faranou-brand-mark.webp');
@@ -330,6 +330,36 @@ test('the selection page loads only local fonts and images and shows the officia
   const family = await page.evaluate(() => getComputedStyle(document.querySelector('h1')).fontFamily);
   expect(family).toContain('Vazirmatn');
   await expect(page.getByRole('img', { name: 'نشان فرانو' })).toBeVisible();
+});
+
+test('final design: header has only real controls, companies are single rows, both searches filter real data', async ({ page }) => {
+  await signIn(page, frank);
+  await expect(page.getByRole('heading', { name: 'فرانو - دوره مالی' })).toBeVisible();
+  // Header: brand, user and sign-out only; no dashboard title, no invented bell/settings.
+  await expect(page.getByText('فرانو - داشبورد')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'خروج' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /اعلان|تنظیمات/ })).toHaveCount(0);
+  await expect(page.getByText(/همگروه|زیرمجموعه|شرکت مادر/)).toHaveCount(0);
+
+  // Year search filters the real list.
+  await page.getByRole('searchbox', { name: /دوره/ }).fill('۱۴۰۴');
+  await expect(page.getByRole('radio', { name: /سال مالی ۱۴۰۴/ })).toBeVisible();
+  await expect(page.getByRole('radio', { name: /سال مالی ۱۴۰۵/ })).toHaveCount(0);
+  await page.getByRole('searchbox', { name: /دوره/ }).fill('');
+  await page.locator('label', { has: page.getByRole('radio', { name: /سال مالی ۱۴۰۵/ }) }).click();
+
+  // One company per row: every row starts at the same left edge and rows are stacked.
+  const rows = page.getByRole('radiogroup', { name: /شرکت/ }).locator('label');
+  await expect(rows).toHaveCount(3);
+  const boxes = await rows.evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect()).map((r) => ({ x: Math.round(r.x), w: Math.round(r.width), y: Math.round(r.y) })));
+  expect(new Set(boxes.map((b) => b.x)).size).toBe(1);
+  expect(new Set(boxes.map((b) => b.w)).size).toBe(1);
+  expect(boxes[1].y).toBeGreaterThan(boxes[0].y);
+
+  // Company search by national id keeps only the matching real company.
+  await page.getByRole('searchbox', { name: /شرکت/ }).fill('10300345678');
+  await expect(rows).toHaveCount(1);
+  await expectCleanPage(page);
 });
 
 test('the context API refuses a foreign company, a foreign period and tampering', async ({ page }) => {
@@ -417,7 +447,7 @@ test('an expired session in the dashboard leads back to the sign-in page and ret
   await page.locator('#ViewModel_Password').fill(alice.password);
   await page.locator('form.taraz-login-form button[type="submit"]').click();
   await expect(page).toHaveURL(/\/app\//);
-  await expect(page.getByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'فرانو - دوره مالی' })).toBeVisible();
 });
 
 test('deactivating an account ends its open session on the next request', async ({ page }) => {

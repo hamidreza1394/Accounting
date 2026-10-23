@@ -171,3 +171,18 @@ describe('formatCount', () => {
     expect(formatCount(12)).toBe('۱۲');
   });
 });
+
+describe('year status', () => {
+  const closed = { status: 'Closed', accessMode: 'readOnly' };
+  const statusOf = (...periods: unknown[]) =>
+    groupFiscalYears(choices(...periods.map((item, index) => company(`c${index}`, `ش${index}`, [item])))) [0]?.status;
+
+  it('is open when any enterable period is open, closed when the enterable ones are closed', () => {
+    expect(statusOf(period('a', 'س', y1405), period('b', 'س', { ...y1405, ...closed }))).toBe('Open');
+    expect(statusOf(period('a', 'س', { ...y1405, ...closed }), period('b', 'س', { ...y1405, ...archived }))).toBe('Closed');
+  });
+
+  it('keeps the archived status of a year nobody can enter', () => {
+    expect(statusOf(period('a', 'س', { ...y1405, ...archived }))).toBe('Archived');
+  });
+});
