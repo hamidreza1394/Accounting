@@ -67,6 +67,9 @@ namespace Data.Migrations
                 b.Property<DateTime?>("LastLoginDateTime")
                     .HasColumnType("datetime2");
 
+                b.Property<Guid?>("DefaultCompanyId")
+                    .HasColumnType("uniqueidentifier");
+
                 b.Property<Guid?>("RoleId")
                     .HasColumnType("uniqueidentifier");
 
@@ -512,6 +515,9 @@ namespace Data.Migrations
                     .HasMaxLength(20)
                     .IsUnicode(false)
                     .HasColumnType("varchar(20)");
+
+                b.Property<Guid?>("CustomerBoundaryId")
+                    .HasColumnType("uniqueidentifier");
 
                 b.Property<bool>("IsActive")
                     .HasColumnType("bit");
