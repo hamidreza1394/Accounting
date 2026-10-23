@@ -574,7 +574,7 @@ public sealed class LoginAuthenticationTests
 
 	#region Scenario (d): successful sign-in
 	[Fact]
-	public async Task ValidCredentials_IssueTheCookie_AndRedirectToTheTemporaryPage()
+	public async Task ValidCredentials_IssueTheCookie_AndRedirectToTheWorkContextSelection()
 	{
 		using var harness = new Harness();
 		harness.AddUser
@@ -585,10 +585,10 @@ public sealed class LoginAuthenticationTests
 
 		var result = await model.OnPostAsync();
 
-		var redirect = Assert.IsType<RedirectToPageResult>(result);
+		var redirect = Assert.IsType<RedirectResult>(result);
 		Assert.Equal
-			(expected: Server.Pages.Security.LoginModel.SuccessPageName,
-			actual: redirect.PageName);
+			(expected: Server.Pages.Security.LoginModel.WorkContextAppPath,
+			actual: redirect.Url);
 
 		Assert.Equal(expected: 1, actual: harness.Authentication.SignInCount);
 		Assert.Equal
@@ -628,7 +628,7 @@ public sealed class LoginAuthenticationTests
 	}
 
 	[Fact]
-	public async Task SuccessfulSignIn_ShowsTheTemporarySuccessMessage()
+	public async Task SuccessfulSignIn_AddsNoPageSuccessMessage()
 	{
 		using var harness = new Harness();
 		harness.AddUser
@@ -639,38 +639,7 @@ public sealed class LoginAuthenticationTests
 
 		await model.OnPostAsync();
 
-		var messages = harness.GetMessages(type: PageSuccess);
-		Assert.NotNull(messages);
-		Assert.Contains
-			(expected: Resources.Messages.Successes.LoginSucceededPendingFeatures,
-			collection: messages!);
-	}
-
-	[Fact]
-	public async Task SuccessfulSignIn_KeepsTheMessageAcrossTheRedirect()
-	{
-		using var harness = new Harness();
-		harness.AddUser
-			(username: "dariush",
-			passwordHash: harness.PasswordHashService.Hash(password: "Correct-Password-1"));
-
-		var model = harness.CreateModel(username: "dariush", password: "Correct-Password-1");
-
-		await model.OnPostAsync();
-
-		// The end of the request writes TempData, the next request reads it.
-		harness.TempData.Save();
-
-		var nextRequestTempData =
-			new TempDataDictionary
-				(context: harness.HttpContext, provider: harness.TempDataProvider);
-
-		var messages = nextRequestTempData[key: PageSuccess] as IList<string>;
-
-		Assert.NotNull(messages);
-		Assert.Contains
-			(expected: Resources.Messages.Successes.LoginSucceededPendingFeatures,
-			collection: messages!);
+		Assert.Null(harness.GetMessages(type: PageSuccess));
 	}
 
 	[Fact]
@@ -744,7 +713,7 @@ public sealed class LoginAuthenticationTests
 
 		var result = await model.OnPostAsync();
 
-		Assert.IsType<RedirectToPageResult>(result);
+		Assert.IsType<RedirectResult>(result);
 		Assert.Equal(expected: 1, actual: harness.Authentication.SignInCount);
 
 		var storedUser = harness.Database.Users.Single();
@@ -774,7 +743,7 @@ public sealed class LoginAuthenticationTests
 
 		var result = await model.OnPostAsync();
 
-		Assert.IsType<RedirectToPageResult>(result);
+		Assert.IsType<RedirectResult>(result);
 		Assert.Equal(expected: 1, actual: harness.Authentication.SignInCount);
 
 		var principal = harness.Authentication.Principal!;
@@ -798,7 +767,7 @@ public sealed class LoginAuthenticationTests
 
 		var result = await model.OnPostAsync();
 
-		Assert.IsType<RedirectToPageResult>(result);
+		Assert.IsType<RedirectResult>(result);
 		Assert.Equal(expected: 1, actual: harness.Authentication.SignInCount);
 	}
 	#endregion
@@ -841,11 +810,11 @@ public sealed class LoginAuthenticationTests
 
 		var result = await model.OnPostAsync();
 
-		// The sign-in still succeeds, but the browser goes to the temporary page.
-		var redirect = Assert.IsType<RedirectToPageResult>(result);
+		// The sign-in still succeeds, but the browser goes to the default destination.
+		var redirect = Assert.IsType<RedirectResult>(result);
 		Assert.Equal
-			(expected: Server.Pages.Security.LoginModel.SuccessPageName,
-			actual: redirect.PageName);
+			(expected: Server.Pages.Security.LoginModel.WorkContextAppPath,
+			actual: redirect.Url);
 	}
 	#endregion
 
@@ -1050,7 +1019,7 @@ public sealed class LoginConfigurationTests
 	}
 
 	[Fact]
-	public void TheTemporarySuccessPage_RequiresAnAuthenticatedUser()
+	public void TheOldSuccessPage_RequiresAnAuthenticatedUser()
 	{
 		var attribute =
 			typeof(Server.Pages.Account.LoginSuccessModel)
@@ -1061,16 +1030,31 @@ public sealed class LoginConfigurationTests
 		Assert.NotNull(attribute);
 	}
 
-	[Fact]
-	public void TheTemporarySuccessPage_ShowsOnlyTheConfirmation()
+	[Theory]
+	[InlineData("User", "/app/")]
+	[InlineData("Infrastructure", "/")]
+	[InlineData(null, "/app/")]
+	[InlineData("no-principal", "/app/")]
+	public void TheDefaultDestination_FollowsTheAccountKind_AndIsAlwaysLocal(string? accountKind, string expected)
 	{
-		var markup = ReadRepositoryFile("Server/Pages/Account/LoginSuccess.cshtml");
+		if (accountKind == "no-principal")
+		{
+			Assert.Equal(expected, Server.Pages.Security.LoginModel.GetDefaultDestination(principal: null));
+			return;
+		}
 
-		Assert.Contains("LoginSucceededPendingFeatures", markup);
+		var claims = new List<Claim>();
+		if (accountKind != null)
+		{
+			claims.Add(new Claim("AccountKind", accountKind));
+		}
+		var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, "test"));
 
-		// No form and no accounting module: this page is a confirmation only.
-		Assert.DoesNotContain("<form", markup);
-		Assert.DoesNotContain("asp-page", markup);
+		var destination = Server.Pages.Security.LoginModel.GetDefaultDestination(principal: principal);
+
+		Assert.Equal(expected, destination);
+		Assert.StartsWith("/", destination);
+		Assert.False(destination.StartsWith("//", StringComparison.Ordinal));
 	}
 
 	[Fact]

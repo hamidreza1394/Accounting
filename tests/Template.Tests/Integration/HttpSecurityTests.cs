@@ -81,7 +81,8 @@ public sealed class HttpSecurityTests : IClassFixture<FaranouApplicationFactory>
 		var response = await Browser.PostLoginAsync(client, user.Username, user.Password);
 
 		Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-		Assert.Equal("/Account/LoginSuccess", response.Headers.Location!.OriginalString, ignoreCase: true);
+		// Without a return URL a company user lands on the company/fiscal period selection.
+		Assert.Equal("/app/", response.Headers.Location!.OriginalString);
 
 		var cookie = response.Headers.GetValues("Set-Cookie")
 			.Single(value => value.StartsWith(".Faranou.Authentication=", StringComparison.Ordinal));
@@ -127,8 +128,47 @@ public sealed class HttpSecurityTests : IClassFixture<FaranouApplicationFactory>
 		using (var client = Factory.CreateBrowser())
 		{
 			var external = await Browser.PostLoginAsync(client, user.Username, user.Password, returnUrl: "https://evil.example/");
-			Assert.Equal("/Account/LoginSuccess", external.Headers.Location!.OriginalString, ignoreCase: true);
+			Assert.Equal("/app/", external.Headers.Location!.OriginalString);
 		}
+	}
+
+	[Theory]
+	[InlineData("/Account/Login?ReturnUrl=%2F")]
+	[InlineData("/account/login")]
+	[InlineData("/Account/LoginSuccess")]
+	[InlineData("/Account/Login/")]
+	[InlineData("/Account/Login#x")]
+	public async Task AReturnUrlThatPointsBackToTheSignInPages_IsIgnored(string returnUrl)
+	{
+		var user = await Factory.WithDatabaseAsync(database => TestData.AddUserAsync(database));
+		using var client = Factory.CreateBrowser();
+
+		var response = await Browser.PostLoginAsync(client, user.Username, user.Password, returnUrl: returnUrl);
+
+		Assert.Equal("/app/", response.Headers.Location!.OriginalString);
+	}
+
+	[Fact]
+	public async Task TheOldSuccessPage_OnlyForwardsToTheSelection_AndStaysProtected()
+	{
+		using (var anonymous = Factory.CreateBrowser())
+		{
+			var challenge = await anonymous.GetAsync("/Account/LoginSuccess");
+
+			Assert.Equal(HttpStatusCode.Redirect, challenge.StatusCode);
+			Assert.Equal("/Account/Login", challenge.Headers.Location!.AbsolutePath, ignoreCase: true);
+			Assert.Contains("ReturnUrl=", challenge.Headers.Location.Query, StringComparison.OrdinalIgnoreCase);
+		}
+
+		var user = await Factory.WithDatabaseAsync(database => TestData.AddUserAsync(database));
+		using var client = Factory.CreateBrowser();
+		await Browser.SignInAsync(client, user);
+
+		var forward = await client.GetAsync("/Account/LoginSuccess");
+
+		Assert.Equal(HttpStatusCode.Redirect, forward.StatusCode);
+		Assert.Equal("/app/", forward.Headers.Location!.OriginalString);
+		Assert.DoesNotContain("LoginSucceeded", await forward.Content.ReadAsStringAsync(), StringComparison.Ordinal);
 	}
 
 	[Fact]
@@ -493,6 +533,11 @@ public sealed class InfrastructureAccountTests : IClassFixture<InfrastructureAcc
 
 		var response = await Browser.PostLoginAsync(client, MasterUsername, MasterPassword);
 		Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+		// No company: the Razor home (administration), not the company selection.
+		Assert.Equal("/", response.Headers.Location!.OriginalString);
+
+		var forward = await client.GetAsync("/Account/LoginSuccess");
+		Assert.Equal("/", forward.Headers.Location!.OriginalString);
 
 		var session = await client.GetFromJsonAsync<JsonElement>("/api/v1/session");
 		Assert.Equal("Infrastructure", session.GetProperty("accountKind").GetString());

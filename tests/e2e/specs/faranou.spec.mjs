@@ -106,7 +106,9 @@ test('a wrong password and an inactive account are refused', async ({ page }) =>
 
 test('sign-in issues an HttpOnly session cookie and the Razor home shows only the own companies', async ({ page, context }) => {
   await signIn(page, alice);
-  await expect(page).toHaveURL(/\/account\/loginsuccess/i);
+  // The sign-in itself leads to the company/fiscal period selection (no stop on a success page).
+  await expect(page).toHaveURL(/\/app\/$/);
+  await expect(page.getByRole('heading', { name: 'انتخاب دوره مالی و شرکت' })).toBeVisible();
   await expectCleanPage(page);
 
   const cookie = (await context.cookies()).find((current) => current.name === '.Faranou.Authentication');
@@ -123,7 +125,7 @@ test('sign-in issues an HttpOnly session cookie and the Razor home shows only th
 
 test('remember me issues a persistent cookie', async ({ page, context }) => {
   await signIn(page, alice, { rememberMe: true });
-  await expect(page).toHaveURL(/\/account\/loginsuccess/i);
+  await expect(page).toHaveURL(/\/app\/$/);
 
   const cookie = (await context.cookies()).find((current) => current.name === '.Faranou.Authentication');
   expect(cookie?.expires).toBeGreaterThan(Date.now() / 1000);
@@ -167,6 +169,38 @@ test('several companies: the user chooses, a closed period is view-only and fore
   await expect(page.getByText('فقط مشاهده و گزارش‌گیری')).toHaveCount(0);
   await expect(page.getByLabel('زمینه کاری جاری')).toContainText(a.name);
   await expectCleanPage(page);
+});
+
+test('right after sign-in, with no manual navigation, every account kind reaches its proper step', async ({ page }) => {
+  // Several companies and periods: the selection (and not the old success page).
+  await signIn(page, alice);
+  await expect(page).toHaveURL(/\/app\/$/);
+  await expect(page.getByRole('heading', { name: 'انتخاب دوره مالی و شرکت' })).toBeVisible();
+  await expect(page.getByText(b.name)).toHaveCount(0);
+  await page.context().clearCookies();
+
+  // Exactly one company with one open period: direct entry (D-031).
+  await signIn(page, bob);
+  await expect(page.getByRole('heading', { name: 'داشبورد' })).toBeVisible();
+  await expect(page.getByLabel('زمینه کاری جاری')).toContainText(b.name);
+  await page.context().clearCookies();
+
+  // Company without a usable period, and no company: the status page, never a blank page.
+  await signIn(page, dave);
+  await expect(page.getByRole('heading', { name: 'دوره مالی قابل ورودی وجود ندارد' })).toBeVisible();
+  await page.context().clearCookies();
+  await signIn(page, erin);
+  await expect(page.getByRole('heading', { name: 'شرکتی برای ورود در دسترس نیست' })).toBeVisible();
+});
+
+test('the old success URL only forwards a signed-in user, and an anonymous one is sent to sign-in', async ({ page }) => {
+  await page.goto('/Account/LoginSuccess');
+  await expect(page).toHaveURL(/\/Account\/Login\?ReturnUrl=/i);
+
+  await signIn(page, alice);
+  await page.goto('/Account/LoginSuccess');
+  await expect(page).toHaveURL(/\/app\/$/);
+  await expect(page.getByRole('heading', { name: 'انتخاب دوره مالی و شرکت' })).toBeVisible();
 });
 
 test('a single company with a single open period is entered directly', async ({ page }) => {
@@ -330,7 +364,8 @@ test('deactivating an account ends its open session on the next request', async 
 
 test('administration pages of the infrastructure account have no enforced CSP violation', async ({ page }) => {
   await signIn(page, state.master);
-  await expect(page).toHaveURL(/\/account\/loginsuccess/i);
+  // The infrastructure account has no company: it lands on the Razor home, not on the selection.
+  await expect.poll(() => new URL(page.url()).pathname).toBe('/');
 
   for (const path of ['/', '/Admin/Users', '/Admin/Roles', '/Admin/MenuItems', '/Admin/MenuItems/Create',
     '/Admin/PageCategories', '/Admin/ApplicationHandlers', '/Admin/FileManager', '/Account/Logout']) {

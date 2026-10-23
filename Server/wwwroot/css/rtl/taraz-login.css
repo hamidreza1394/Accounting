@@ -1,4 +1,4 @@
-/* Faranou sign-in page - isolated stylesheet (loaded by Pages/Account/Login and LoginSuccess).
+/* Faranou sign-in page - isolated stylesheet (loaded by Pages/Account/Login).
    Dark navy surface, teal for actions, gold for accents. The page backdrop lives in
    faranou-login-legacy-background.css. No inline styles are allowed by the CSP, so every
    visual rule of these pages belongs in one of these two files. */

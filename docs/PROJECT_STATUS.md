@@ -101,7 +101,7 @@
 - گزارش handoff: `docs/handoffs/ISSUE-22-database-first-run-setup.md`.
 
 ## 2026-10-19 — Issue #30 تکمیل احراز هویت صفحه ورود
-- جریان ورود با DI واقعی، Post/Redirect/Get، پاک‌سازی رمز از `ModelState` و مقصد موقت محافظت‌شده `/Account/LoginSuccess` تکمیل شد.
+- جریان ورود با DI واقعی، Post/Redirect/Get، پاک‌سازی رمز از `ModelState` تکمیل شد. (اصلاح 2026-10-23: مقصد پیش‌فرض پس از ورود اکنون `/app/` (انتخاب شرکت و دوره مالی) است و حساب Master به `/` می‌رود؛ `/Account/LoginSuccess` فقط Redirect می‌کند.)
 - رمز عبور به `PasswordHasher<T>` منتقل شد؛ هش قدیمی SHA-256 پذیرفته و پس از ورود موفق ارتقا می‌یابد.
 - Migration `WidenUserPasswordHash` ستون `Users.Password` را به `varchar(255)` بزرگ می‌کند.
 - **تأییدشده:** `dotnet restore`, `dotnet build -c Release` (0 error), `dotnet test` (90/90), `scripts/check_static_assets.py`, `git diff --check`.

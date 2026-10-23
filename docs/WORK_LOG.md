@@ -189,3 +189,10 @@
 - **توکن (گزارش ابزار/تخمین):** architect ۷۵٬۱۲۷؛ backend-developer ۲۷۰٬۴۷۶ (۳ دور)؛ documentation-engineer دور اول ۲۳۷٬۳۶۵؛ qa-engineer ۱۳۵٬۱۱۵؛ code-reviewer ۱۸۴٬۴۵۸؛ security-reviewer ۱۲۰٬۸۸۲ + بازبینی دوم ۹۴٬۸۷۷؛ Lead نامشخص. جمع Agentها حدود ۱٫۱ میلیون توکن.
 - **Git:** شاخه `feature/database-setup-redesign`، PR #59 (Merge نشده). گزارش: `docs/handoffs/ISSUE-UNNUMBERED-database-setup-redesign.md`.
 - **CI (یافتهٔ بعد از باز شدن PR):** Job `publish` در اجرای push شکست خورد (Smoke: «login page renders the anti-forgery token»). علت، شرایط رقابتی موجود در `scripts/smoke-published-app.sh` بود (`curl | grep -q` زیر `pipefail`: `grep -q` با اولین تطابق خارج می‌شود و `curl` با SIGPIPE می‌میرد)، نه تغییر صفحهٔ راه‌اندازی. بازتولید محلی با همان الگو: ۱۱ شکست از ۴۰۰ (حدود ۲٫۷٪)؛ پس از اصلاح (گرفتن بدنه در متغیر): ۰ از ۴۰۰ و Smoke کامل موفق. اصلاح یک‌جایی و کم‌خطر در همین PR آمده؛ اگر مالک نمی‌خواهد، قابل جدا کردن است.
+
+## 2026-10-23 — اصلاح مسیر پس از ورود (انتخاب شرکت و دوره مالی)
+- **علت:** `/Account/LoginSuccess` مقصد موقت بدون هدایت بعدی بود و Login بدون `ReturnUrl` به آن می‌رفت؛ کلاینت `/app/` و API زمینه (D-031) از قبل وجود داشتند.
+- **تغییر:** ورود ← `/app/` (کاربر شرکتی) یا `/` (حساب Master)؛ `LoginSuccess` فقط Redirect؛ `ReturnUrl` به صفحات ورود نادیده؛ حذف پیام TempData بی‌مصرف.
+- **بررسی واقعی:** Build؛ ۴۹۷ تست .NET (۴۹۵ موفق، ۲ Skip، ۰ شکست) روی SQL Server 2022 واقعی؛ ۲۰ تست E2E Chromium (جزئیات و اجرای نهایی در handoff `ISSUE-UNNUMBERED-login-redirect-work-context.md`)؛ بازبینی `code-reviewer` و `security-reviewer` بدون یافتهٔ مهم باز.
+- **باز:** سازگاری مسیر مطلق با `PathBase`؛ `AGENTS.md`/`CLAUDE.md` هنوز «ADR بعدی D-036» دارند.
+- **توکن:** code-reviewer ≈۴۵٬۰۰۰؛ security-reviewer ≈۴۴٬۰۰۰؛ پیاده‌سازی توسط Lead بدون Subagent (تغییر کوچک و متمرکز؛ تقسیم صرفه نداشت).
