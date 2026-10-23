@@ -78,6 +78,15 @@ public static class CustomerBoundaryEndpoints
             });
         }
 
+        if (!await ExistingRelationshipsRemainWithinBoundaryAsync(databaseContext, request.CompanyIds, request.BoundaryId, cancellationToken))
+        {
+            return TypedResults.Conflict(new ProblemDetails
+            {
+                Title = "تخصیص مرز باعث عبور یک رابطه ثبت‌شده از مرز مشتری می‌شود؛ همه شرکت‌های مرتبط را با یک مرز معتبر تخصیص دهید.",
+                Status = StatusCodes.Status409Conflict,
+            });
+        }
+
         foreach (var company in companies)
         {
             company.CustomerBoundaryId = request.BoundaryId;
@@ -96,6 +105,66 @@ public static class CustomerBoundaryEndpoints
 
         await databaseContext.SaveChangesAsync(cancellationToken);
         return TypedResults.NoContent();
+    }
+    private static async Task<bool> ExistingRelationshipsRemainWithinBoundaryAsync(
+        Data.DatabaseContext databaseContext,
+        IReadOnlyList<Guid> requestedCompanyIds,
+        Guid boundaryId,
+        CancellationToken cancellationToken)
+    {
+        var requested = requestedCompanyIds.ToHashSet();
+        var ownerships = await databaseContext.OwnershipRelationships
+            .AsNoTracking()
+            .Where(relationship => requested.Contains(relationship.ParentCompanyId) || requested.Contains(relationship.SubsidiaryCompanyId))
+            .Select(relationship => new { relationship.ParentCompanyId, relationship.SubsidiaryCompanyId })
+            .ToListAsync(cancellationToken);
+
+        var groupIds = await databaseContext.CorporateGroups
+            .AsNoTracking()
+            .Where(group => requested.Contains(group.OwnerCompanyId) || group.Members.Any(member => requested.Contains(member.CompanyId)))
+            .Select(group => group.Id)
+            .ToListAsync(cancellationToken);
+        var groupOwners = await databaseContext.CorporateGroups
+            .AsNoTracking()
+            .Where(group => groupIds.Contains(group.Id))
+            .Select(group => new { group.Id, group.OwnerCompanyId })
+            .ToListAsync(cancellationToken);
+        var groupMembers = await databaseContext.CorporateGroupMembers
+            .AsNoTracking()
+            .Where(member => groupIds.Contains(member.CorporateGroupId))
+            .Select(member => new { member.CorporateGroupId, member.CompanyId })
+            .ToListAsync(cancellationToken);
+
+        var relatedCompanyIds = ownerships.SelectMany(item => new[] { item.ParentCompanyId, item.SubsidiaryCompanyId })
+            .Concat(groupOwners.Select(item => item.OwnerCompanyId))
+            .Concat(groupMembers.Select(item => item.CompanyId))
+            .Concat(requestedCompanyIds)
+            .Distinct()
+            .ToArray();
+        var currentBoundaries = await databaseContext.Companies
+            .AsNoTracking()
+            .Where(company => relatedCompanyIds.Contains(company.Id))
+            .ToDictionaryAsync(company => company.Id, company => company.CustomerBoundaryId, cancellationToken);
+
+        Guid? EffectiveBoundary(Guid companyId) => requested.Contains(companyId)
+            ? boundaryId
+            : currentBoundaries.GetValueOrDefault(companyId);
+
+        if (ownerships.Any(item => EffectiveBoundary(item.ParentCompanyId) != boundaryId || EffectiveBoundary(item.SubsidiaryCompanyId) != boundaryId))
+        {
+            return false;
+        }
+
+        foreach (var group in groupOwners)
+        {
+            if (EffectiveBoundary(group.OwnerCompanyId) != boundaryId ||
+                groupMembers.Where(member => member.CorporateGroupId == group.Id).Any(member => EffectiveBoundary(member.CompanyId) != boundaryId))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
 
