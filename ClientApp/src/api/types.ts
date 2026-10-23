@@ -61,6 +61,7 @@ export type WorkContext = {
   current: SelectedContext | null;
   entry: EntryMode;
   directSelection: DirectSelection | null;
+  defaultCompanyId: string | null;
   companies: CompanyChoice[];
 };
 
@@ -231,6 +232,7 @@ export function parseWorkContext(value: unknown): WorkContext {
     current: current === null || current === undefined ? null : parseSelectedContext(current),
     entry: entry as EntryMode,
     directSelection,
+    defaultCompanyId: readNullableString(value, 'defaultCompanyId', 'workContext'),
     companies: value['companies'].map(parseCompanyChoice),
   };
 }
