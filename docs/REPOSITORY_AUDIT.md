@@ -163,7 +163,7 @@ dotnet format Template.sln --verify-no-changes
 - **شدت:** Low | **وضعیت:** Open — بدون بازنویسی Migration (قاعده `AGENTS.md`).
 
 ### AUD-2026-10-21-17 — ناهمخوانی دستور تست
-- CI/`AGENTS.md`: `dotnet test Template.sln --no-build ...`؛ SDK محلی 10.0.113 طبق `WORK_LOG.md` به `--solution` نیاز داشت. **شدت:** Low | **وضعیت:** Open — علت (تفاوت SDK/runner) تأیید نشد.
+- CI/`AGENTS.md`: `dotnet test Template.sln --no-build ...`؛ SDK محلی 10.0.113 طبق `WORK_LOG.md` به `--solution` نیاز داشت. **شدت:** Low | **وضعیت:** Resolved (2026-10-23) — علت تفاوت باند SDK بود: `10.0.113` به `--solution` نیاز داشت، `10.0.402` (SDK مورد انتظار `global.json` و CI) هر دو شکل را می‌پذیرد؛ شاهد در `docs/TESTING.md`.
 
 ### AUD-2026-10-21-18 — `CLASS_REVIEW_INVENTORY.csv` منسوخ
 - ۱۹۹ فایل C# مربوط به ۲۰۲۶-۱۰-۱۶. **شدت:** Low | **وضعیت:** Open (بازتولید نشد).

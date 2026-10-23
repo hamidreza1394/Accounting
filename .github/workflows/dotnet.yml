@@ -179,6 +179,16 @@ jobs:
       - name: PowerShell guard tests (PowerShell 7 on Linux)
         shell: pwsh
         run: ./scripts/tests/publish-output.tests.ps1
+      # scripts/dev installs the SDK and starts a disposable SQL Server in Claude Code cloud
+      # sessions. Lint them, and check that global.json still resolves to a published SDK.
+      - name: Lint the developer scripts
+        run: |
+          bash -n scripts/dev/*.sh
+          shellcheck -S style scripts/dev/*.sh
+      - name: Resolve the SDK version of global.json (no install)
+        run: |
+          rc=0; scripts/dev/install-dotnet.sh --check || rc=$?
+          [ "$rc" = 0 ] || [ "$rc" = 3 ]
 
   # The PowerShell publish script on a real Windows runner: guard tests, then the complete
   # publish (npm ci, client checks and build, dotnet publish, output checks).

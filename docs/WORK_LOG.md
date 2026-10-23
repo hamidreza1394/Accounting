@@ -169,3 +169,11 @@
 - **.NET (SDK 10.0.113، بعداً نصب‌شده خارج از مخزن):** restore موفق؛ build Release ۰ خطا؛ `dotnet test --solution Template.sln` ۳۰۶ تست، ۳۰۲ موفق، ۰ ناموفق، ۴ ردشده.
 - **اجرانشده:** ۴ تست `CorporateGroupSqlServerTests` (نیاز به `FARANOU_TEST_SQLSERVER`؛ Docker daemon نیست)، E2E با SQL Server، Firefox و Safari؛ باید در CI روی PR دیده شود.
 - **Git:** Commit/Push/PR انجام نشد. گزارش: `docs/handoffs/ISSUE-UNNUMBERED-login-professional-ui.md`.
+
+## 2026-10-23 — رفع نبودن `dotnet` در Claude Code Cloud و زیرساخت تست واقعی (UNNUMBERED، شاخه `chore/dotnet-sdk-cloud-test-infra`)
+- **علت:** تصویر پایهٔ Cloud SDK .NET ندارد (طبق مستندات رسمی با Setup script نصب می‌شود)؛ شبکه مانع نبود؛ Docker نصب ولی daemon بالا نبود.
+- **تغییر:** `scripts/dev/install-dotnet.sh` (SDK از `global.json`، SHA-512 رسمی، ایدمپوتنت)، `scripts/dev/test-sqlserver.sh` (SQL Server 2022 ایزوله در Docker، رمز تصادفی بیرون از Git)، `scripts/dev/cloud-session-start.sh` + Hook `SessionStart` (فقط Cloud)، دو گام lint در Job موجود `publish-scripts`، مستندات و `AGENTS.md`/`CLAUDE.md`؛ AUD-17 (`--solution`) حل شد: علتش باند SDK بود.
+- **نتیجهٔ واقعی (SDK 10.0.402):** Release build ۰ خطا (۹۲۱ هشدار)؛ xUnit روی SQL Server واقعی ۳۰۶ از ۳۰۶، ۰ Skip؛ E2E ۱۸ موفق؛ تست JS ۷ از ۷؛ بررسی دارایی‌ها و `git diff --check` موفق.
+- **اجرانشده:** Windows/PowerShell، Firefox/Safari، رفتار Runtime Hook، Setup script کش‌شده (مالک حساب در UI).
+- **بازبینی:** `code-reviewer` و `security-reviewer` (بدون Critical/High)؛ یافته‌های معتبر اصلاح شد؛ `CODEOWNERS` و سنجاق digest به تصمیم مسئول مخزن واگذار شد.
+- **Git:** گزارش: `docs/handoffs/ISSUE-UNNUMBERED-dotnet-cloud-test-infra.md`.
