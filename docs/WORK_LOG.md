@@ -196,3 +196,11 @@
 - **بررسی واقعی:** Build؛ ۴۹۷ تست .NET (۴۹۵ موفق، ۲ Skip، ۰ شکست) روی SQL Server 2022 واقعی؛ ۲۰ تست E2E Chromium (جزئیات و اجرای نهایی در handoff `ISSUE-UNNUMBERED-login-redirect-work-context.md`)؛ بازبینی `code-reviewer` و `security-reviewer` بدون یافتهٔ مهم باز.
 - **باز:** سازگاری مسیر مطلق با `PathBase`؛ `AGENTS.md`/`CLAUDE.md` هنوز «ADR بعدی D-036» دارند.
 - **توکن:** code-reviewer ≈۴۵٬۰۰۰؛ security-reviewer ≈۴۴٬۰۰۰؛ پیاده‌سازی توسط Lead بدون Subagent (تغییر کوچک و متمرکز؛ تقسیم صرفه نداشت).
+
+
+## 2026-10-23 — جلوگیری از 404 در `/app/` هنگام اجرای محلی Visual Studio (Issue #61)
+- **علت محتمل بر اساس کد:** `Server/wwwroot/app` خروجی تولیدی React است و در `.gitignore` قرار دارد؛ اسکریپت‌های انتشار آن را می‌سازند، اما اجرای مستقیم Server با Visual Studio F5 قبلاً الزام یا ساخت خودکار آن را نداشت.
+- **اصلاح پیشنهادی در PR:** افزودن MSBuild target افزایشی فقط برای Buildهای عادی Visual Studio؛ در صورت قدیمی/غایب بودن خروجی، وابستگی‌های npm در صورت نیاز نصب و React ساخته می‌شود. خروجی تولیدی وارد Git نمی‌شود و رفتار CLI/CI تغییر داده نمی‌شود.
+- **مستندات:** راهنمای اجرای محلی React در `docs/DEVELOPMENT.md`.
+- **اعتبارسنجی:** منتظر CI روی PR است؛ تست محلی Visual Studio/Windows در این محیط قابل اجرا نیست. قبل از ادغام، بررسی کنید target روی Windows و Visual Studio واقعاً اجرا و Buildهای عادی CI را تحت تأثیر قرار ندهد.
+- **Git:** Issue #61؛ شاخه `fix/local-react-build-on-server-build`. بدون تغییر مستقیم `main`.
