@@ -123,11 +123,11 @@ function isEnterableIn(year: FiscalYear | undefined, companyId: string | null): 
  * to the newest year that can be entered read-only. When the user explicitly comes to change
  * an existing context, keep that context's year if it remains enterable.
  *
- * The company is preselected only when it is unambiguous in the chosen year. A per-user
- * preferred-company setting is a separate persisted preference and must not be inferred from
- * the last session's context.
+ * The company is preselected from the user's saved preference when enterable in the chosen year;
+ * otherwise it is selected only when unambiguous. Previous context is preserved only during an
+ * explicit context-switch flow, never inferred on a new sign-in.
  */
-export function initialSelection(years: readonly FiscalYear[], current: SelectedContext | null): Selection {
+export function initialSelection(years: readonly FiscalYear[], current: SelectedContext | null, defaultCompanyId: string | null = null): Selection {
   const enterableYears = years.filter((year) => year.isEnterable);
   const currentYear = current ? years.find((year) => year.key === yearKey(current.fiscalPeriod)) : undefined;
 
@@ -137,9 +137,12 @@ export function initialSelection(years: readonly FiscalYear[], current: Selected
   if (!year) {
     return { yearKey: null, companyId: null };
   }
-  const companyId = isEnterableIn(year, current?.company.id ?? null)
-    ? (current?.company.id ?? null)
-    : singleEnterableCompany(year);
+  const currentCompanyId = current?.company.id ?? null;
+  const companyId = isEnterableIn(year, currentCompanyId)
+    ? currentCompanyId
+    : isEnterableIn(year, defaultCompanyId)
+      ? defaultCompanyId
+      : singleEnterableCompany(year);
   return { yearKey: year.key, companyId };
 }
 
