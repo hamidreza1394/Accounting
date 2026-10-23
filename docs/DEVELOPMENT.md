@@ -36,6 +36,15 @@ dotnet test Template.sln --configuration Release
 dotnet run --project Server/Server.csproj
 ```
 
+## اجرای محلی React در Visual Studio
+
+مسیر `/app/` از خروجی ساخته‌شدهٔ React در `Server/wwwroot/app` سرو می‌شود؛ این پوشه عمداً در Git نادیده گرفته شده است. برای جلوگیری از 404 در اجرای F5:
+
+- در Build عادی پروژهٔ Server از داخل Visual Studio، MSBuild به‌صورت افزایشی ClientApp را Build می‌کند؛ در اولین اجرا، اگر `ClientApp/node_modules` موجود نباشد، `npm ci` اجرا می‌شود. پیش‌نیاز: Node.js و npm در PATH باشند و برای نصب اولیه بسته‌ها دسترسی به رجیستری npm وجود داشته باشد.
+- برای اجرای خط فرمان، ابتدا از ریشهٔ مخزن اجرا کنید: `cd ClientApp`, سپس `npm ci` (در اولین بار) و `npm run build`؛ بعد Server را اجرا کنید. گردش انتشار همچنان باید از `scripts/publish.ps1` یا `scripts/publish.sh` استفاده کند.
+- خروجی تولیدی را به Git اضافه نکنید. اجرای برنامه پس از Build همچنان محلی است و به CDN خارجی وابسته نیست.
+- اگر عمداً فقط Server را Build می‌کنید و نمی‌خواهید ClientApp در Visual Studio ساخته شود، از property `FaranouSkipClientAppBuild=true` استفاده کنید؛ در این حالت باید خروجی React را جداگانه بسازید.
+
 ## کتابخانه‌های مرورگر
 `Server/libman.json` مرجع نسخه LibMan است و فایل‌های مورد استفاده مرورگر داخل `Server/wwwroot/lib/` نگهداری می‌شوند. پس از تغییر نسخه، فایل‌های محلی را واقعاً به‌روزرسانی و UI را تست کنید:
 

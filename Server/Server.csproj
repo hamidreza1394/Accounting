@@ -31,6 +31,34 @@
 	</ItemGroup>
 
 	<!--
+		Visual Studio F5 must not start a server whose React route will 404 on a fresh checkout.
+		The client output is generated/ignored; build it incrementally for regular VS builds.
+		CLI and CI builds keep using the explicit scripts/publish.sh / npm workflow.
+	-->
+	<ItemGroup Condition="'$(BuildingInsideVisualStudio)' == 'true'">
+		<FaranouClientBuildInput Include="$(MSBuildProjectDirectory)/../ClientApp/**/*"
+			Exclude="$(MSBuildProjectDirectory)/../ClientApp/node_modules/**/*;$(MSBuildProjectDirectory)/../ClientApp/.vite/**/*" />
+	</ItemGroup>
+
+	<Target Name="FaranouBuildClientAppForVisualStudio"
+		BeforeTargets="Build"
+		Condition="'$(BuildingInsideVisualStudio)' == 'true' and '$(DesignTimeBuild)' != 'true' and '$(FaranouSkipClientAppBuild)' != 'true'"
+		Inputs="@(FaranouClientBuildInput)"
+		Outputs="$(MSBuildProjectDirectory)/wwwroot/app/index.html">
+		<PropertyGroup>
+			<FaranouClientAppDirectory>$(MSBuildProjectDirectory)/../ClientApp</FaranouClientAppDirectory>
+		</PropertyGroup>
+		<Error Condition="!Exists('$(FaranouClientAppDirectory)/package.json')"
+			Text="Farano ClientApp/package.json was not found. Restore the complete repository before building the Server project." />
+		<Exec Command="npm ci --no-fund --no-audit"
+			WorkingDirectory="$(FaranouClientAppDirectory)"
+			Condition="!Exists('$(FaranouClientAppDirectory)/node_modules/.package-lock.json')" />
+		<Exec Command="npm run build" WorkingDirectory="$(FaranouClientAppDirectory)" />
+		<Error Condition="!Exists('$(MSBuildProjectDirectory)/wwwroot/app/index.html')"
+			Text="Farano React build did not produce Server/wwwroot/app/index.html. Check the npm build output." />
+	</Target>
+
+	<!--
 		A published server must contain the built React client (wwwroot/app), otherwise /app
 		answers 404 in production. Build it first with scripts/publish.sh (or publish.ps1), which
 		runs npm ci, the type check, the tests and npm run build in ClientApp before publishing.
