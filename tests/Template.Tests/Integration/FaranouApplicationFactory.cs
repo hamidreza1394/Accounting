@@ -135,6 +135,11 @@ public class FaranouApplicationFactory : WebApplicationFactory<Program>, IAsyncL
 		["RateLimiting:Api:PermitLimit"] = "100000",
 		["RateLimiting:ApiSensitive:PermitLimit"] = "100000",
 		["RateLimiting:Login:PermitLimit"] = "100000",
+		["ApplicationSettings:MasterUsername"] = "faranou-test-master",
+		["ApplicationSettings:MasterPassword"] = System.Convert.ToBase64String(
+			System.Security.Cryptography.SHA256.HashData(
+				System.Text.Encoding.UTF8.GetBytes("Faranou-Test-Master-Password-1"))),
+		["ApplicationSettings:AllowLegacyMasterPasswordHash"] = "true",
 	};
 
 	protected virtual void ConfigureServices(IServiceCollection services)
