@@ -131,6 +131,23 @@ test('remember me issues a persistent cookie', async ({ page, context }) => {
   expect(cookie?.expires).toBeGreaterThan(Date.now() / 1000);
 });
 
+test('remember me stores only the username in an HttpOnly preference cookie and restores it on the next visit', async ({ page, context }) => {
+  await signIn(page, alice, { rememberMe: true });
+  await expect(page).toHaveURL(/\/app\/$/);
+
+  const remembered = (await context.cookies()).find((current) => current.name === '.Faranou.RememberedUsername');
+  expect(remembered?.value).toBe(alice.username);
+  expect(remembered?.httpOnly).toBe(true);
+  expect(remembered?.expires).toBeGreaterThan(Date.now() / 1000);
+
+  await context.clearCookies({ name: '.Faranou.Authentication' });
+  await page.goto('/Account/Login');
+  await expect(page.locator('#ViewModel_Username')).toHaveValue(alice.username);
+  await expect(page.locator('#ViewModel_RememberMe')).toBeChecked();
+  await expect(page.locator('#ViewModel_Password')).toHaveValue('');
+  await expectCleanPage(page);
+});
+
 async function chooseAlicesCompany(page) {
   await page.goto('/app/');
   await expect(page.getByRole('heading', { name: 'فرانو - دوره مالی' })).toBeVisible();

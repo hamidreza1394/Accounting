@@ -73,14 +73,29 @@ namespace Server.Pages.Security
 		#endregion /Properties
 
 		#region Methods
+		private const string RememberedUsernameCookieName = ".Faranou.RememberedUsername";
+
 		public void OnGet(string? returnUrl)
 		{
 			ReturnUrl = returnUrl;
+
+			if (HttpContext.Request.Cookies.TryGetValue(RememberedUsernameCookieName, out var rememberedUsername) &&
+				string.IsNullOrWhiteSpace(rememberedUsername) == false)
+			{
+				ViewModel.Username = rememberedUsername;
+				ViewModel.RememberMe = true;
+			}
 		}
 
 		public async System.Threading.Tasks.Task
 			<Microsoft.AspNetCore.Mvc.IActionResult> OnPostAsync()
 		{
+			// Opting out immediately removes the remembered username, including when
+			// authentication subsequently fails. Passwords are never stored by this app.
+			if (ViewModel.RememberMe == false)
+			{
+				DeleteRememberedUsername();
+			}
 			// **************************************************
 			// Scenario (a): the required fields are empty. The field messages are
 			// produced by the model validation; one summary message is added as well.
@@ -183,6 +198,11 @@ namespace Server.Pages.Security
 							principal: claimsPrincipal,
 							properties: authenticationProperties);
 
+						if (ViewModel.RememberMe)
+						{
+							RememberUsername(ViewModel.Username!);
+						}
+
 						// The previous choice of company and fiscal period never survives a new sign-in.
 						HttpContext.RequestServices
 							.GetService<Infrastructure.Tenancy.WorkContextCookie>()
@@ -229,6 +249,37 @@ namespace Server.Pages.Security
 
 				return Page();
 			}
+		}
+
+		private void RememberUsername(string username)
+		{
+			var options = new Microsoft.AspNetCore.Http.CookieOptions
+			{
+				HttpOnly = true,
+				Secure = HttpContext.Request.IsHttps,
+				SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax,
+				Path = "/",
+				IsEssential = true,
+				Expires = DateTimeOffset.UtcNow.AddDays(365),
+			};
+
+			HttpContext.Response.Cookies.Append(
+				RememberedUsernameCookieName,
+				username.Trim(),
+				options);
+		}
+
+		private void DeleteRememberedUsername()
+		{
+			HttpContext.Response.Cookies.Delete(
+				RememberedUsernameCookieName,
+				new Microsoft.AspNetCore.Http.CookieOptions
+				{
+					HttpOnly = true,
+					Secure = HttpContext.Request.IsHttps,
+					SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax,
+					Path = "/",
+				});
 		}
 
 		#region GetLocalReturnUrl
