@@ -1,54 +1,31 @@
 @import "tailwindcss";
 
-/* IRANSansX is served by the ASP.NET Core host from wwwroot/fonts (the same files as the
-   Razor sign-in page). No font, icon or stylesheet is loaded from a CDN. */
+/* Vazirmatn (variable, weights 100-900, SIL OFL) is served by the ASP.NET Core host from
+   wwwroot/fonts/vazirmatn. No font, icon or stylesheet is loaded from a CDN. */
 @font-face {
-  font-family: IRANSansX;
-  src: url('/fonts/woff2/IRANSansX-Regular.woff2') format('woff2'),
-    url('/fonts/woff/IRANSansX-Regular.woff') format('woff');
-  font-weight: 400;
+  font-family: Vazirmatn;
+  src: url('/fonts/vazirmatn/Vazirmatn-Variable.woff2') format('woff2');
+  font-weight: 100 900;
   font-style: normal;
   font-display: swap;
 }
 
-@font-face {
-  font-family: IRANSansX;
-  src: url('/fonts/woff2/IRANSansX-Medium.woff2') format('woff2'),
-    url('/fonts/woff/IRANSansX-Medium.woff') format('woff');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: IRANSansX;
-  src: url('/fonts/woff2/IRANSansX-DemiBold.woff2') format('woff2'),
-    url('/fonts/woff/IRANSansX-DemiBold.woff') format('woff');
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: IRANSansX;
-  src: url('/fonts/woff2/IRANSansX-Bold.woff2') format('woff2'),
-    url('/fonts/woff/IRANSansX-Bold.woff') format('woff');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* The Faranou palette of the sign-in page (Server/wwwroot/css/rtl/taraz-login.css). */
+/* The Faranou palette, taken from the official logo: deep navy, teal and gold. */
 @theme {
-  --font-sans: IRANSansX, Tahoma, 'Segoe UI', sans-serif;
+  --font-sans: Vazirmatn, Tahoma, 'Segoe UI', sans-serif;
 
   --color-navy: #1c3d5a;
   --color-navy-deep: #142f47;
   --color-gold: #d9a24b;
   --color-gold-deep: #b8842e;
   --color-teal: #2f8d93;
+  /* Teal dark enough for text and icons on white (WCAG AA). */
+  --color-teal-deep: #1d6a70;
+  --color-teal-soft: #e8f4f5;
   --color-ink: #22384b;
   --color-muted: #64798b;
+  /* Secondary text: AA on white, sand and cool surfaces. */
+  --color-sub: #4a5d6e;
   --color-sand: #f6f3ee;
   --color-cool: #eef2f5;
   --color-line: #dfe6ec;
@@ -58,30 +35,14 @@
   --color-warning-soft: #fdf4e3;
   --color-success: #256b4f;
   --color-success-soft: #e9f4ee;
-
-  /* Work-context screens (company and fiscal-period selection): the approved palette. */
-  --color-ws-navy: #0b2545;
-  --color-ws-blue: #2468d8;
-  --color-ws-blue-deep: #1b50ad;
-  --color-ws-blue-soft: #eaf1fd;
-  --color-ws-teal: #0797a5;
-  --color-ws-teal-soft: #f0fafb;
-  --color-ws-text: #0f1d33;
-  --color-ws-sub: #475569;
-  --color-ws-line: #d5deea;
-  --color-ws-bg: #f1f4f8;
-  --color-ws-ok: #15803d;
-  --color-ws-ok-soft: #eaf6ee;
-  --color-ws-warn: #b45309;
-  --color-ws-warn-soft: #fdf3e3;
-  --color-ws-off: #475569;
-  --color-ws-off-soft: #eef1f5;
 }
 
 @layer base {
   html {
     font-family: var(--font-sans);
     -webkit-text-size-adjust: 100%;
+    line-height: 1.7;
+    font-optical-sizing: auto;
   }
 
   body {
@@ -91,7 +52,26 @@
   }
 
   :focus-visible {
-    outline: 3px solid var(--color-gold);
+    outline: 3px solid var(--color-teal-deep);
     outline-offset: 2px;
+  }
+
+  /* On the dark navy header the teal ring is invisible: use the gold accent there. */
+  .on-dark :focus-visible {
+    outline-color: var(--color-gold);
+  }
+}
+
+@layer components {
+  /* The calm backdrop of the selection screens: only gradients, no image, no animation.
+     A navy glow in one corner, a very faint geometric grid, and a warm-to-cool wash. */
+  .selection-backdrop {
+    background-color: var(--color-sand);
+    background-image:
+      radial-gradient(48rem 26rem at 100% 0%, rgb(28 61 90 / 0.08), transparent 70%),
+      radial-gradient(36rem 20rem at 0% 100%, rgb(47 141 147 / 0.07), transparent 70%),
+      repeating-linear-gradient(0deg, rgb(28 61 90 / 0.035) 0 1px, transparent 1px 32px),
+      repeating-linear-gradient(90deg, rgb(28 61 90 / 0.035) 0 1px, transparent 1px 32px),
+      linear-gradient(180deg, #faf8f4 0%, #eef2f5 100%);
   }
 }

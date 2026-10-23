@@ -6,7 +6,12 @@ import { antiforgeryRoute, company, contextBody, period, selected, session, stub
 
 const open1405 = period('p1', 'سال مالی ۱۴۰۵');
 const open1406 = period('p2', 'سال مالی ۱۴۰۶', { startDate: '2027-03-21', endDate: '2028-03-19' });
-const closed1404 = period('p0', 'سال مالی ۱۴۰۴', { status: 'Closed', accessMode: 'readOnly' });
+const closed1404 = period('p0', 'سال مالی ۱۴۰۴', {
+  startDate: '2025-03-21',
+  endDate: '2026-03-20',
+  status: 'Closed',
+  accessMode: 'readOnly',
+});
 
 const companyA = company('a', 'شرکت الف', [open1405], '10101010101');
 const overviewA = {
@@ -41,7 +46,7 @@ describe('App', () => {
 
     // No selection screen: the dashboard of the confirmed choice appears.
     expect(await screen.findByRole('heading', { name: 'داشبورد' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'انتخاب دوره مالی و شرکت' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).not.toBeInTheDocument();
 
     const post = fetchMock.mock.calls.find((call) => (call[1] as RequestInit | undefined)?.method === 'POST');
     expect(JSON.parse((post?.[1] as RequestInit).body as string)).toEqual({ companyId: 'a', fiscalPeriodId: 'p1' });
@@ -72,7 +77,7 @@ describe('App', () => {
 
     render(<App navigate={vi.fn()} />);
 
-    expect(await screen.findByRole('heading', { name: 'انتخاب دوره مالی و شرکت' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'داشبورد' })).not.toBeInTheDocument();
   });
 
@@ -95,13 +100,13 @@ describe('App', () => {
 
     render(<App navigate={vi.fn()} />);
 
-    await screen.findByRole('heading', { name: 'انتخاب دوره مالی و شرکت' });
+    await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' });
     const enter = screen.getByRole('button', { name: /ورود به محیط کاری/ });
     expect(enter).toHaveAttribute('aria-disabled', 'true');
 
-    await userEvent.click(screen.getByRole('radio', { name: /شرکت ب/ }));
-    // The company has exactly one open period, so it is pre-selected, but entering still needs the click.
-    expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۶/ })).toBeChecked();
+    await userEvent.click(screen.getByRole('radio', { name: /سال مالی ۱۴۰۶/ }));
+    // Only company B can be entered in that year, so it is pre-selected, but entering still needs the click.
+    expect(screen.getByRole('radio', { name: /شرکت ب/ })).toBeChecked();
     expect(postBodies).toHaveLength(0);
 
     await userEvent.click(enter);
@@ -110,7 +115,7 @@ describe('App', () => {
     expect(postBodies).toEqual([{ companyId: 'b', fiscalPeriodId: 'p2' }]);
   });
 
-  it('lists the periods of the only company when it has several open ones; a closed period is enterable as view-only', async () => {
+  it('offers every fiscal year of the only company; nothing is chosen for the user, and a closed year is view-only', async () => {
     const company2 = company('a', 'شرکت الف', [open1406, open1405, closed1404]);
     stubApi({
       ...antiforgeryRoute,
@@ -120,18 +125,21 @@ describe('App', () => {
 
     render(<App navigate={vi.fn()} />);
 
-    await screen.findByRole('heading', { name: 'انتخاب دوره مالی و شرکت' });
-    // The single company is selected for the user; its periods are shown.
-    expect(screen.getByRole('radio', { name: /شرکت الف/ })).toBeChecked();
-    expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۴/ })).toBeEnabled();
-    expect(screen.getByText('ورود فقط برای مشاهده و گزارش‌گیری')).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۵/ })).toBeEnabled();
-    // Nothing is chosen for the user when more than one period is open.
-    expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۵/ })).not.toBeChecked();
+    await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' });
+    const years = within(screen.getByRole('radiogroup', { name: 'دوره مالی' })).getAllByRole('radio');
+    expect(years).toHaveLength(3);
+    years.forEach((year) => {
+      expect(year).toBeEnabled();
+      expect(year).not.toBeChecked();
+    });
     expect(screen.getByRole('button', { name: /ورود به محیط کاری/ })).toHaveAttribute('aria-disabled', 'true');
+
+    await userEvent.click(screen.getByRole('radio', { name: /سال مالی ۱۴۰۴/ }));
+    expect(screen.getByRole('radio', { name: /شرکت الف/ })).toBeChecked();
+    expect(screen.getByText('فقط مشاهده و گزارش‌گیری')).toBeInTheDocument();
   });
 
-  it('preselects the single open period even when closed ones exist, and shows the read-only mode after entering a closed one', async () => {
+  it('enters a closed year as view-only and shows the read-only mode on the dashboard', async () => {
     const company2 = company('a', 'شرکت الف', [open1405, closed1404]);
     const postBodies: unknown[] = [];
     stubApi({
@@ -147,11 +155,11 @@ describe('App', () => {
 
     render(<App navigate={vi.fn()} />);
 
-    await screen.findByRole('heading', { name: 'انتخاب دوره مالی و شرکت' });
-    expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۵/ })).toBeChecked();
+    await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' });
+    // Two enterable years: neither is chosen for the user.
+    expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۵/ })).not.toBeChecked();
 
-    // Choosing the closed period explicitly is allowed: it opens for viewing and reports only.
-    await userEvent.click(screen.getByText(/سال مالی ۱۴۰۴/));
+    await userEvent.click(screen.getByRole('radio', { name: /سال مالی ۱۴۰۴/ }));
     await userEvent.click(screen.getByRole('button', { name: /ورود به محیط کاری/ }));
 
     expect(await screen.findByRole('heading', { name: 'داشبورد' })).toBeInTheDocument();
@@ -178,7 +186,10 @@ describe('App', () => {
     render(<App navigate={vi.fn()} />);
     await screen.findByRole('heading', { name: 'داشبورد' });
     await userEvent.click(await screen.findByRole('button', { name: /تغییر شرکت یا دوره/ }));
-    await userEvent.click(await screen.findByRole('radio', { name: /شرکت ب/ }));
+    // The current choice (company A, year 1405) is shown; moving to 1406 clears A and pre-selects B.
+    expect(await screen.findByRole('radio', { name: /شرکت الف/ })).toBeChecked();
+    await userEvent.click(screen.getByRole('radio', { name: /سال مالی ۱۴۰۶/ }));
+    expect(screen.getByRole('radio', { name: /شرکت ب/ })).toBeChecked();
     await userEvent.click(screen.getByRole('button', { name: /ورود به محیط کاری/ }));
 
     await waitFor(() => expect(fetchMock.mock.calls.some((call) => call[0] === '/api/v1/companies/b/overview')).toBe(true));
@@ -254,7 +265,7 @@ describe('App', () => {
     await userEvent.click(await screen.findByRole('button', { name: /تغییر شرکت یا دوره/ }));
 
     // The selector opens with the current choice pre-selected, and the choices were reloaded.
-    expect(await screen.findByRole('heading', { name: 'انتخاب دوره مالی و شرکت' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /شرکت الف/ })).toBeChecked();
     expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۵/ })).toBeChecked();
     expect(fetchMock.mock.calls.filter((call) => call[0] === '/api/v1/context')).toHaveLength(2);
@@ -283,8 +294,8 @@ describe('App', () => {
     void release;
 
     render(<App navigate={vi.fn()} />);
-    await screen.findByRole('heading', { name: 'انتخاب دوره مالی و شرکت' });
-    await userEvent.click(screen.getByRole('radio', { name: /شرکت ب/ }));
+    await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' });
+    await userEvent.click(screen.getByRole('radio', { name: /سال مالی ۱۴۰۶/ }));
     const enter = screen.getByRole('button', { name: /ورود به محیط کاری/ });
 
     await userEvent.dblClick(enter);
@@ -303,8 +314,8 @@ describe('App', () => {
     });
 
     render(<App navigate={vi.fn()} />);
-    await screen.findByRole('heading', { name: 'انتخاب دوره مالی و شرکت' });
-    await userEvent.click(screen.getByRole('radio', { name: /شرکت ب/ }));
+    await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' });
+    await userEvent.click(screen.getByRole('radio', { name: /سال مالی ۱۴۰۶/ }));
     await userEvent.click(screen.getByRole('button', { name: /ورود به محیط کاری/ }));
 
     const alert = await screen.findByRole('alert');
@@ -359,8 +370,8 @@ describe('App', () => {
     const navigate = vi.fn();
 
     render(<App navigate={navigate} />);
-    await screen.findByRole('heading', { name: 'انتخاب دوره مالی و شرکت' });
-    await userEvent.click(screen.getByRole('radio', { name: /شرکت ب/ }));
+    await screen.findByRole('heading', { name: 'انتخاب شرکت و دوره مالی' });
+    await userEvent.click(screen.getByRole('radio', { name: /سال مالی ۱۴۰۶/ }));
     await userEvent.click(screen.getByRole('button', { name: /ورود به محیط کاری/ }));
 
     await waitFor(() => expect(navigate).toHaveBeenCalledWith('/Account/Login?ReturnUrl=%2Fapp%2F'));

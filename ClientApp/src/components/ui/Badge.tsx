@@ -4,10 +4,10 @@ import { CheckIcon, InfoIcon, LockIcon } from './icons';
 type Tone = 'success' | 'warning' | 'neutral' | 'info';
 
 const tones: Record<Tone, string> = {
-  success: 'border-ws-ok/30 bg-ws-ok-soft text-ws-ok',
-  warning: 'border-ws-warn/30 bg-ws-warn-soft text-ws-warn',
-  neutral: 'border-slate-300 bg-ws-off-soft text-ws-off',
-  info: 'border-ws-blue/25 bg-ws-blue-soft text-ws-blue-deep',
+  success: 'border-success/30 bg-success-soft text-success',
+  warning: 'border-gold-deep/40 bg-warning-soft text-warning',
+  neutral: 'border-slate-300 bg-cool text-sub',
+  info: 'border-teal-deep/25 bg-teal-soft text-teal-deep',
 };
 
 const defaultIcons: Record<Tone, ReactNode> = {

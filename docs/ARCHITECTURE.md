@@ -136,6 +136,7 @@ flowchart LR
 ## انتخاب شرکت و دوره مالی (D-031)
 - **جریان:** ورود (صفحه Razor موجود، بدون تغییر ظاهر) → `/app/` → کلاینت `GET /api/v1/context` را می‌خواند و بر اساس `entry` که **سرور** تعیین کرده یکی از این‌ها را نشان می‌دهد: ورود مستقیم (تأیید خودکار با `POST`)، صفحه انتخاب، یا صفحه مسدود (`noCompany`/`noEligiblePeriod`). هر ورود جدید دوباره می‌پرسد.
 - **ذخیره:** Cookie محافظت‌شده `.Faranou.WorkContext` وابسته به کاربر و `SessionId` همان ورود؛ در هر خواندن با دیتابیس اعتبارسنجی می‌شود (`WorkContextService`، `WorkContextCookie`، `FiscalPeriodSelectionPolicy` در `Server/Infrastructure/Tenancy/`).
+- **ترتیب نمایش (اصلاح 2026-10-23):** در صفحهٔ انتخاب اول «دورهٔ مالی» (پنل راست) و سپس شرکت‌های مجاز همان دوره (پنل چپ) نمایش داده می‌شود. سال‌ها در کلاینت از دوره‌های واقعی شرکت‌ها بر اساس `startDate|endDate` گروه‌بندی می‌شوند؛ قرارداد API و اعتبارسنجی سرور تغییر نکرده است. جزئیات: `docs/WORK_CONTEXT_SELECTOR_UI.md`.
 - **کلاینت:** `WorkContextSelector`، `BlockedAccess`، نوار زمینه در `AppShell`، و کیت کوچک `components/ui` (Button، Badge، Alert، ChoiceCard، آیکون‌های SVG محلی). فونت و دارایی‌ها محلی؛ بدون CDN.
 
 

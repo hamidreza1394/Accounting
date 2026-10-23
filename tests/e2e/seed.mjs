@@ -34,11 +34,16 @@ const state = {
     carol: { username: `carol${suffix}`, password: password(), id: randomUUID(), active: false },
     dave: { username: `dave${suffix}`, password: password(), id: randomUUID(), active: true },
     erin: { username: `erin${suffix}`, password: password(), id: randomUUID(), active: true },
+    // Several companies (a long name, two companies with the same name) and three fiscal years.
+    frank: { username: `frank${suffix}`, password: password(), id: randomUUID(), active: true },
   },
   companies: {
     a: { id: randomUUID(), name: `شرکت الف ${suffix}`, roleId: randomUUID() },
     b: { id: randomUUID(), name: `شرکت ب ${suffix}`, roleId: randomUUID() },
     c: { id: randomUUID(), name: `شرکت ج ${suffix}`, roleId: randomUUID() },
+    d: { id: randomUUID(), name: `شرکت صنایع غذایی پارس‌آریا و همکاران (سهامی خاص) ${suffix}`, roleId: randomUUID(), nationalId: '10100123456' },
+    e: { id: randomUUID(), name: `شرکت همنام ${suffix}`, roleId: randomUUID(), nationalId: '10200234567' },
+    f: { id: randomUUID(), name: `شرکت همنام ${suffix}`, roleId: randomUUID(), nationalId: '10300345678' },
   },
   secretPeriodTitle: `دوره محرمانه ب ${suffix}`,
 };
@@ -71,8 +76,9 @@ for (const user of Object.values(state.users)) {
 }
 
 for (const company of Object.values(state.companies)) {
-  await run(`INSERT INTO Companies (Id, Ordering, InsertDateTime, Name, IsActive) VALUES (@id, 10000, @now, @name, 1)`,
-    { id: [sql.UniqueIdentifier, company.id], now: [sql.DateTime2, now], name: [sql.NVarChar(200), company.name] });
+  await run(`INSERT INTO Companies (Id, Ordering, InsertDateTime, Name, NationalId, IsActive) VALUES (@id, 10000, @now, @name, @nationalId, 1)`,
+    { id: [sql.UniqueIdentifier, company.id], now: [sql.DateTime2, now], name: [sql.NVarChar(200), company.name],
+      nationalId: [sql.NVarChar(50), company.nationalId ?? null] });
   await run(
     `INSERT INTO CompanyRoles (Id, Ordering, InsertDateTime, TenantId, Code, Name, IsSystemRole, IsActive)
      VALUES (@id, 10000, @now, @tenant, 'accountant', N'حسابدار', 0, 1)`,
@@ -95,8 +101,8 @@ async function period(company, title, start, end, status = 1) {
       title: [sql.NVarChar(100), title], start: [sql.Date, start], end: [sql.Date, end], status: [sql.Int, status] });
 }
 
-const { alice, bob, carol, dave } = state.users;
-const { a, b, c } = state.companies;
+const { alice, bob, carol, dave, frank } = state.users;
+const { a, b, c, d, e, f } = state.companies;
 await member(alice, a);
 await member(alice, c);
 await member(bob, b);
@@ -106,6 +112,18 @@ await member(dave, c); // company without any fiscal period
 await period(a, 'سال مالی ۱۴۰۵', '2026-03-21', '2027-03-20', 1);
 await period(a, 'سال مالی ۱۴۰۴', '2025-03-21', '2026-03-20', 2);
 await period(b, state.secretPeriodTitle, '2026-03-21', '2027-03-20', 1);
+for (const company of [d, e, f]) {
+  await member(frank, company);
+}
+// Company d: three years (open, closed, archived). The two same-named companies share the open year;
+// f also has the closed year, e an archived one only for 1403.
+await period(d, 'سال مالی ۱۴۰۵', '2026-03-21', '2027-03-20', 1);
+await period(d, 'سال مالی ۱۴۰۴', '2025-03-21', '2026-03-20', 2);
+await period(d, 'سال مالی ۱۴۰۳', '2024-03-20', '2025-03-20', 3);
+await period(e, 'سال مالی ۱۴۰۵', '2026-03-21', '2027-03-20', 1);
+await period(e, 'سال مالی ۱۴۰۳', '2024-03-20', '2025-03-20', 3);
+await period(f, 'سال مالی ۱۴۰۵', '2026-03-21', '2027-03-20', 1);
+await period(f, 'سال مالی ۱۴۰۴', '2025-03-21', '2026-03-20', 2);
 
 await pool.close();
 writeFileSync(new URL('./.e2e-state.json', import.meta.url), JSON.stringify(state, null, 2));
