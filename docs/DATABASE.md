@@ -41,16 +41,19 @@
 هیچ جدول لایسنس/مشتری/نصب وجود ندارد. طرح و ERD در [`LICENSING_DATA_MODEL.md`](LICENSING_DATA_MODEL.md)؛ هر جدول آینده فقط با Migration افزایشی بازبینی‌شده پس از تأیید کارفرما (D-020، D-025).
 
 
-## راه‌اندازی اولیه و فایل تنظیمات محلی — Issue #22
+## راه‌اندازی اولیه و فایل تنظیمات محلی — Issue #22 (بازطراحی 2026-10-23)
 
-- اگر Connection String صریح از Configuration Providers وجود نداشته باشد، `Server/Program.cs` فایل محلی محافظت‌شده را بررسی می‌کند؛ اگر آن هم وجود نداشته باشد، درخواست‌های پویا به صفحه `/DatabaseSetup` هدایت می‌شوند.
-- تنظیمات محلی در `%LOCALAPPDATA%/TarazAva/Database/database-settings.json` (ویندوز) ذخیره می‌شوند. مقدار Connection String در فایل JSON به‌صورت Data Protection ciphertext است، نه متن ساده.
-- کلیدهای Data Protection در پوشه `keys` کنار فایل تنظیمات قرار دارند. در ویندوز با DPAPI محافظت می‌شوند؛ در سیستم‌های Unix مجوز پوشه و فایل محدود می‌شود. فایل تنظیمات و کلیدها را با هم، امن و تحت همان هویت اجرایی پشتیبان‌گیری کنید؛ انتقال ciphertext بدون کلید قابل رمزگشایی نیست.
-- کد راه‌اندازی یک‌بارمصرف در `setup-token.txt` قرار دارد، در لاگ چاپ نمی‌شود و بعد از ذخیره موفق حذف می‌شود.
-- فرم از `SqlConnectionStringBuilder` استفاده می‌کند و اتصال را به `master` می‌سنجد. نام دیتابیس در SQL با `QUOTENAME` محافظت می‌شود و مقدار ورودی به‌صورت پارامتر منتقل می‌شود.
-- اگر دیتابیس وجود نداشته باشد و گزینه ساخت فعال باشد، دیتابیس ساخته و Migrationهای EF Core اعمال می‌شوند. دیتابیس خالی موجود نیز با Migrationها مقداردهی اولیه می‌شود. دیتابیس دارای جدول‌ها/داده‌ها به‌طور خودکار تغییر نمی‌کند؛ وضعیت Migration باید بررسی و در صورت لزوم به‌صورت کنترل‌شده اعمال شود.
-- پس از ذخیره تنظیمات، برنامه را Restart کنید. مقدار صریح `ConnectionStrings:ConnectionString` از User Secrets/Environment/configuration بر فایل محلی اولویت دارد.
-- برای تنظیمات محلی ایجادشده از فرم، Migration خودکار در هر بار شروع برنامه فعال نیست؛ این کار از اعمال کورکورانه Migration روی دیتابیس قدیمی ایجادشده با `EnsureCreated()` جلوگیری می‌کند. از `dotnet run --project Server -- --migrate` فقط پس از بازبینی وضعیت schema استفاده کنید.
+> جزئیات کامل، جدول مهاجرت از `TarazAva` و ماتریس رفتار: [`DATABASE_SETUP.md`](DATABASE_SETUP.md). تصمیم: D-036 (`NeedsApproval`). وضعیت: `Implemented` در شاخه `feature/database-setup-redesign` (ادغام‌نشده).
+
+- اگر Connection String صریح از Configuration Providers وجود نداشته باشد، `Server/Program.cs` فایل محلی محافظت‌شده را بررسی می‌کند؛ اگر آن هم قابل استفاده نباشد، درخواست‌های پویا به `/DatabaseSetup` هدایت می‌شوند. فایل ناخوانا هرگز صفحه ساده first-run نشان نمی‌دهد.
+- ~~`%LOCALAPPDATA%/TarazAva/Database/database-settings.json`~~ **منسوخ.** مسیر فعلی: `Farano:Settings:Directory` (متغیر `Farano__Settings__Directory`) و در نبود آن `LocalApplicationData/Farano/Settings` (فایل `database-connection.json`، `keys/`، `backups/`، `migration.json`، `setup-token.txt`). مسیر سفارشی باید absolute و بیرون پوشه برنامه باشد؛ هرگز به پوشه برنامه برنمی‌گردد. فایل قدیمی `TarazAva` فقط خوانده و مهاجرت می‌شود و هرگز تغییر یا حذف نمی‌شود.
+- این تنظیمات از فایل‌های داده SQL Server (`.mdf/.ldf`) جداست؛ برنامه آن‌ها را نمی‌سازد، جابه‌جا یا حذف نمی‌کند.
+- کلیدهای Data Protection (`ApplicationName=Farano`) در `keys/` کنار فایل قرار دارند و در Windows با DPAPI (وابسته به حساب) محافظت می‌شوند. فایل تنظیمات و کلیدها را با هم و با همان هویت اجرایی پشتیبان بگیرید؛ ciphertext بدون کلید قابل رمزگشایی نیست.
+- فرم از `SqlConnectionStringBuilder` استفاده می‌کند، اتصال را به `master` می‌سنجد (`Encrypt` همیشه فعال)، نام دیتابیس را با پارامتر و `QUOTENAME` به SQL می‌دهد و هرگز `DROP` اجرا نمی‌کند.
+- وضعیت دیتابیس موجود: `Missing`/`Empty`/`UpToDate`/`PartiallyMigrated`/`ForeignOrLegacy`. دیتابیس خالی یا ساخته‌شده Migration می‌شود؛ دیتابیس نیمه‌Migration فقط با تیک صریح؛ دیتابیس بیگانه (جدول بدون تاریخچه Migration یا شناسه ناشناس) رد می‌شود و دست نمی‌خورد.
+- پس از ذخیره تنظیمات برنامه را Restart کنید. مقدار صریح `ConnectionStrings:ConnectionString` بر فایل محلی اولویت دارد (در آن حالت Store ساخته نمی‌شود).
+- برای تنظیمات ایجادشده از فرم، Migration خودکار در هر بار شروع فعال نیست (جلوگیری از اعمال کورکورانه روی دیتابیس قدیمی `EnsureCreated()`). از `dotnet run --project Server -- --migrate` فقط پس از بازبینی Schema استفاده کنید.
+- فرمان اپراتور: `dotnet Server.dll --settings status` و `--settings migrate [--replace-current|--keep-current]` (کد خروج ۰/۱/۲).
 
 ## بازبینی مدل داده برای انتخاب شرکت و دوره (D-031) — 2026-10-21
 - **نتیجه: Schema و Migration تغییر نکرد.** `FiscalPeriod` پیش‌تر `TenantId`، `StartDate`، `EndDate` و `Status` دارد؛ ایندکس `(TenantId, Status)` و یکتایی `(TenantId, StartDate, EndDate)` برای پرس‌وجوی انتخاب کافی است. فیلد «دوره جاری» یا «آخرین انتخاب» ساخته نشد (حدسی؛ انتخاب فقط در نشست است).

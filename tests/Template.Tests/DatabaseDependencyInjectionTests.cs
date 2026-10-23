@@ -13,7 +13,7 @@ public sealed class DatabaseDependencyInjectionTests
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddDbContext<DatabaseContext>(options =>
-            options.UseSqlServer("Server=(localdb)\\MSSQLLocalDB;Database=TarazAva_DiValidation;Trusted_Connection=True;"));
+            options.UseSqlServer("Server=(localdb)\\MSSQLLocalDB;Database=Farano_DiValidation;Trusted_Connection=True;"));
         services.AddScoped<IDatabaseSchemaMigrator, DatabaseSchemaMigrator>();
 
         using var provider = services.BuildServiceProvider(new ServiceProviderOptions

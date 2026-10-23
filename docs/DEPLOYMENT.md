@@ -60,9 +60,22 @@ pwsh scripts/publish.ps1 -Output D:\Deploy\Faranou\release-2026-10-20   # Window
 - `SecurityHeaders:CspReportingEnabled=true` گزارش‌ها را در `POST /csp-report` فعال می‌کند. این Endpoint ناشناس است ولی فقط Media Typeهای گزارش CSP و حداکثر ۸KB را می‌پذیرد، با Rate Limit `CspReport` محدود است، چند فیلد پاک‌سازی‌شده را Log می‌کند و چیزی ذخیره یا بازتاب نمی‌دهد. پیش‌فرض خاموش است. برای فعال‌سازی، حجم Log و هشدارها را در نظر بگیرید.
 
 ## ۸. سایر تنظیمات
-- `ConnectionStrings__ConnectionString`: از Secret Store یا Environment.
+- `ConnectionStrings__ConnectionString`: از Secret Store یا Environment (بر فایل محلی مقدم است؛ بخش ۹).
 - Migration: `dotnet Server.dll --migrate` فقط پس از پشتیبان‌گیری و بازبینی (`docs/DATABASE.md`).
 - `RateLimiting:*`: سقف‌ها به ازای هر نمونه هستند (بخش ۵).
+
+## ۹. محل نگهداری تنظیمات اتصال پایگاه داده (فرانو)
+وضعیت: `Implemented` در شاخه `feature/database-setup-redesign` (ادغام‌نشده)، D-036 `NeedsApproval`؛ **اجرا نشده روی Windows (DPAPI، Windows Service، IIS، UNC، `HardenWindowsAcl`)**؛ روی Linux (SDK 10.0.402، SQL Server 2022 واقعی) تست و E2E اجرا شده است (`DATABASE_SETUP.md` بخش ۱۲). جزئیات: [`DATABASE_SETUP.md`](DATABASE_SETUP.md).
+- اگر `ConnectionStrings__ConnectionString` تعیین شده باشد (ابر/کانتینر/Secret Store)، فایل محلی هرگز ساخته یا خوانده نمی‌شود؛ برای ابر/کانتینر همین روش را بگیرید و فایل محلی پایدار فرض نکنید.
+- در غیر این صورت پوشه تنظیمات: `Farano__Settings__Directory` (absolute، بیرون پوشه برنامه) یا `LocalApplicationData/Farano/Settings`. فایل‌ها: `database-connection.json`، `keys/`، `backups/` (۱۰ نسخه آخر)، `migration.json`، `setup-token.txt`، `.lock`. این پوشه با پوشه Publish جدا است و با به‌روزرسانی برنامه پاک نمی‌شود. فایل‌های `.mdf/.ldf` SQL Server را برنامه نمی‌سازد یا حذف نمی‌کند.
+- **Windows Service:** با `LocalSystem` پروفایل `systemprofile` به‌کار می‌رود؛ حساب اختصاصی/مجازی ترجیح دارد و مسیر را صریح بدهید. DPAPI وابسته به حساب است؛ تغییر حساب سرویس فایل را `Undecryptable` می‌کند.
+- **IIS:** «Load User Profile» را برای App Pool فعال کنید یا Connection String را از Configuration بدهید؛ هویت App Pool باید روی پوشه تنظیمات Write داشته باشد.
+- **پوشه اشتراکی سرور مشتری:** UNC در کد پذیرفته می‌شود (بدون هشدار کد)؛ ACL محدود وظیفه اپراتور است. کلیدها فقط روی همان ماشین و همان حساب رمزگشایی می‌شوند.
+- **چند نصب زیر یک حساب:** برای هر نصب مسیر جدا با `Farano__Settings__Directory`.
+- **ارتقا از TarazAva:** نصب قدیمی فایل `LocalApplicationData/TarazAva/Database/database-settings.json` را دارد؛ شروع جدید آن را فقط می‌خواند و مهاجرت می‌کند (فایل قدیمی دست‌نخورده می‌ماند). وضعیت و تصمیم: `dotnet Server.dll --settings status` و `--settings migrate [--replace-current|--keep-current]`. پیش از ارتقا فایل و پوشه `keys` قدیمی را پشتیبان بگیرید و همان حساب ویندوز قبلی را برای اولین اجرا به‌کار ببرید.
+- **فرمان `--settings`:** با همان حساب سرویس اجرا شود؛ `status` ممکن است با چرخش کلید در `keys/` بنویسد. صفحه راه‌اندازی تا پایان Setup/Blocked مسیر پوشه سرور را نشان می‌دهد؛ فقط روی شبکه مورد اعتماد در دسترس بگذارید.
+- **Windows:** `HardenWindowsAcl` دسترسی پوشه را به کاربر جاری، SYSTEM و Administrators محدود می‌کند (اجرا نشده؛ شکست = هشدار `WindowsAclNotApplied`).
+- **ریسک:** `AddDataProtection` سراسری تنظیم نشده؛ برای چندنمونه بخش ۵ باید جداگانه حل شود.
 
 ## پرسش‌های باز (نیازمند تصمیم مسئول)
 1. نام دامنه نهایی (برای `AllowedHosts`) و اینکه آیا چند نام لازم است.

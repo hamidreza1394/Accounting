@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Data;
 
 /// <summary>
-/// The EF Core <see cref="DbContext" /> of the Taraz Ava accounting application.
+/// The EF Core <see cref="DbContext" /> of the Farano accounting application.
 /// </summary>
 /// <remarks>
 /// <para>

@@ -4,7 +4,7 @@
 Codex، Copilot و Agentهای دیگر می‌توانند در یک مخزن مشارکت کنند، اما Git باید منبع حقیقت باشد. حافظه گفت‌وگو یا خلاصه تولیدشده توسط یک Agent، جای فایل‌های ثبت‌شده در مخزن را نمی‌گیرد.
 
 ## قواعد هماهنگی
-0. **نقطه شروع:** `docs/INDEX.md`. ترتیب منابع حقیقت و واژگان وضعیت (`Accepted`/`Implemented`/`Verified`/`Proposed`/`NeedsApproval`/`Deprecated`/`Blocked`/`NotImplemented`) در D-030 است؛ قابلیت لایسنس/زیرسیستم را `Implemented` فرض نکن (همه `NotImplemented`‌اند). شماره ADR بعدی D-036 است (مرجع: `docs/DECISIONS.md`)؛ شماره‌های موجود را تغییر نده.
+0. **نقطه شروع:** `docs/INDEX.md`. ترتیب منابع حقیقت و واژگان وضعیت (`Accepted`/`Implemented`/`Verified`/`Proposed`/`NeedsApproval`/`Deprecated`/`Blocked`/`NotImplemented`) در D-030 است؛ قابلیت لایسنس/زیرسیستم را `Implemented` فرض نکن (همه `NotImplemented`‌اند). شماره ADR بعدی D-037 است (مرجع: `docs/DECISIONS.md`)؛ شماره‌های موجود را تغییر نده.
 1. **یک وظیفه = یک Issue = یک شاخه = یک PR.** نام شاخه پیشنهادی: `agent/<issue-number>-<short-name>`.
 2. **یک مالک ادغام تعیین کن.** فقط مسئول ادغام یا Maintainer، PRها را بازبینی و merge کند.
 3. **از اجرای موازی روی یک working tree مشترک اجتناب کن.** Agentهای هم‌زمان باید شاخه‌ها/working treeهای جداگانه داشته باشند و فایل‌های هم‌پوشان را هماهنگ کنند.

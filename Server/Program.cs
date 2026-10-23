@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
 using Infrastructure.DatabaseSetup;
 using Server.Api;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -101,15 +100,29 @@ builder.Services.AddAntiforgery(options => options.HeaderName = Server.Api.ApiEn
 var connectionString = builder.Configuration.GetConnectionString("ConnectionString");
 var connectionLoadedFromLocalSettings = false;
 DatabaseConnectionSettingsStore? settingsStore = null;
+DatabaseSettingsLoadResult? settingsLoad = null;
 
 if (string.IsNullOrWhiteSpace(connectionString))
 {
-    settingsStore = new DatabaseConnectionSettingsStore(
-        NullLogger<DatabaseConnectionSettingsStore>.Instance);
+    // Location: Farano:Settings:Directory (env Farano__Settings__Directory) or
+    // LocalApplicationData/Farano/Settings. A legacy TarazAva file is only read, never changed.
+    var settingsLocation = DatabaseSettingsLocation.Resolve(
+        builder.Configuration,
+        contentRootPath: builder.Environment.ContentRootPath,
+        webRootPath: builder.Environment.WebRootPath);
+    settingsStore = new DatabaseConnectionSettingsStore(settingsLocation.Root, settingsLocation.LegacyRoot);
 
-    if (settingsStore.TryLoadConnectionString(out var storedConnectionString))
+    // Operator command (before the host starts): --settings status | migrate [...]
+    if (SettingsCommand.IsSettingsCommand(args))
     {
-        connectionString = storedConnectionString;
+        Environment.ExitCode = SettingsCommand.RunOnConsole(args, settingsStore, settingsLocation);
+        return;
+    }
+
+    settingsLoad = settingsStore.Load();
+    if (settingsLoad.HasConnectionString)
+    {
+        connectionString = settingsLoad.ConnectionString;
         connectionLoadedFromLocalSettings = true;
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
@@ -117,13 +130,31 @@ if (string.IsNullOrWhiteSpace(connectionString))
         });
     }
 }
+else if (SettingsCommand.IsSettingsCommand(args))
+{
+    Console.Error.WriteLine("A connection string is configured explicitly (ConnectionStrings:ConnectionString); the settings file is not used, so --settings has nothing to report.");
+    Environment.ExitCode = 2;
+    return;
+}
 
+// Setup mode: NotConfigured/Corrupt/Undecryptable/LegacyUnreadable (the page asks for a replace
+// confirmation when a file exists). Blocked: AccessDenied/UnsupportedVersion (no form). A file that
+// exists but cannot be read never shows the plain first-run screen.
 var setupRequired = string.IsNullOrWhiteSpace(connectionString);
 if (setupRequired)
 {
-    settingsStore!.EnsureSetupToken();
+    if (!settingsLoad!.IsBlocked && !settingsStore!.TryEnsureSetupToken())
+    {
+        settingsLoad = new DatabaseSettingsLoadResult
+        {
+            Status = DatabaseSettingsStatus.AccessDenied,
+            SettingsDirectory = settingsStore.SettingsDirectory,
+        };
+        settingsStore.OverrideLastLoad(settingsLoad);
+    }
+
     builder.Services.AddSingleton(settingsStore!);
-    builder.Services.AddScoped<DatabaseConnectionSetupService>();
+    builder.Services.AddSingleton<DatabaseConnectionSetupService>();
 }
 
 if (!setupRequired)
@@ -169,10 +200,38 @@ if (!setupRequired)
 
 var app = builder.Build();
 
-if (setupRequired)
+if (settingsLoad is not null)
+{
+    // Status, folder and warning codes only; never the connection string.
+    app.Logger.Log(
+        settingsLoad.Status is DatabaseSettingsStatus.Loaded or DatabaseSettingsStatus.MigratedFromLegacy or DatabaseSettingsStatus.NotConfigured
+            ? LogLevel.Information
+            : LogLevel.Warning,
+        "Database settings: Status={SettingsStatus}; Folder={SettingsFolder}; WarningCodes={WarningCodes}.",
+        settingsLoad.Status,
+        settingsLoad.SettingsDirectory,
+        string.Join(",", settingsLoad.WarningCodes));
+}
+
+if (settingsStore is not null)
+{
+    foreach (var warningCode in settingsStore.DrainWarnings())
+    {
+        app.Logger.LogWarning("Database settings warning: {WarningCode}.", warningCode);
+    }
+}
+
+if (setupRequired && settingsLoad!.IsBlocked)
+{
+    app.Logger.LogError(
+        "Farano database settings cannot be used ({SettingsStatus}). /DatabaseSetup shows the folder and the remedy; the setup form is disabled until the problem is fixed. Folder: {SettingsFolder}",
+        settingsLoad.Status,
+        settingsLoad.SettingsDirectory);
+}
+else if (setupRequired)
 {
     app.Logger.LogWarning(
-        "Taraz Ava requires first-run database setup. Open /DatabaseSetup on the application host and read the one-time token from {SetupTokenFilePath}. The token and database credentials are never written to application logs.",
+        "Farano requires first-run database setup. Open /DatabaseSetup on the application host and read the one-time token from {SetupTokenFilePath}. The token and database credentials are never written to application logs.",
         settingsStore!.SetupTokenFilePath);
 }
 

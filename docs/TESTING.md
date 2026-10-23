@@ -21,10 +21,24 @@ dotnet test Template.sln --no-build --configuration Release
 نتیجه واقعی هر دستور، کد خروج، تست‌های اجراشده/نشده و علت شکست ثبت شود. اجرای موفق Build جایگزین تست عملکردی و بازبینی امنیتی نیست.
 
 
-## تست‌های راه‌اندازی پایگاه داده (Issue #22)
-- `DatabaseSetupValidationTests` ورودی‌های فاقد سرور، روش احراز هویت نامعتبر و SQL Login بدون رمز را بدون اتصال به SQL Server بررسی می‌کند.
-- این تست‌ها Integration Test نیستند؛ مسیرهای Windows Authentication، SQL Login معتبر، ایجاد دیتابیس، اعمال Migration، Data Protection و دیتابیس موجود باید روی SQL Server واقعی در محیط ایزوله آزموده شوند.
-- تا زمان اجرای CI و تست SQL Server، پیاده‌سازی راه‌اندازی اولیه تأیید نهایی نشده است.
+## تست‌های راه‌اندازی پایگاه داده (Issue #22؛ بازطراحی 2026-10-23)
+وضعیت: `Implemented` در شاخه `feature/database-setup-redesign` (ادغام‌نشده). جزئیات رفتار: [`DATABASE_SETUP.md`](DATABASE_SETUP.md).
+
+| فایل (`tests/Template.Tests/`) | محور | نیاز به SQL Server |
+|---|---|---|
+| `DatabaseSetupValidationTests` | پیش‌فرض‌ها (دیتابیس `Farano`، سرور خالی)، اعتبارسنجی همه فیلدها با هم، فهرست مجاز نام دیتابیس و نام سیستمی (NFKC)، طول‌ها، نبود نشت رمز در `ToString` | خیر |
+| `DatabaseSetupServiceTests` | جدول طبقه‌بندی خطا، زنجیره گواهی/Authentication، پیام و راه‌حل هر کد، قواعد `ClassifyDatabaseState`، نبود `[Required]` ضمنی، میزبان اشتباه بدون ذخیره و بدون نشت راز، یک راه‌اندازی در لحظه، `SettingsCommand` | خیر |
+| `DatabaseSetupPageTests` | رفتار `PageModel` (کد راه‌اندازی، خطای همه فیلدها، Windows بدون اعتبارنامه، فایل ناخوانا، Blocked بدون فرم، دروازه یک‌بارمصرف)؛ آزمون جهش Lead: با خاموش‌کردن اصلاح `ModelState`، ۴ تست شکست می‌خورد | خیر |
+| `DatabaseSettingsStoreTests` | ماتریس رفتار Store، فایل قدیمی بایت‌به‌بایت دست‌نخورده، پشتیبان‌گیری و سقف ۱۰، شکست نوشتن اتمی، قفل، مجوز Unix، نبود نشت | خیر |
+| `DatabaseSettingsLocationTests` | ترتیب مسیر، مسیر نسبی/داخل پوشه برنامه، مسیر واقعی (لینک)، `LocalApplicationData` خالی، ثابت‌های برند | خیر |
+| `DatabaseSetupSqlServerTests` | ساخت دیتابیس+Migration+ذخیره رمزشده، دیتابیس منطبق/بیگانه/جدیدتر، نیمه‌Migration، رمز اشتباه، میزبان اشتباه | **بله** |
+| `DatabaseSetupPageSqlServerTests` | جریان صفحه روی SQL Server واقعی | **بله** |
+| `DatabaseSetupTestSupport.cs` | ابزار مشترک (پوشه موقت، ساخت تنظیمات قدیمی) | — |
+
+- **قاعده Skip:** تست‌های SQL Server بدون `FARANOU_TEST_SQLSERVER` Skip می‌شوند؛ با `FARANOU_REQUIRE_SQLSERVER=1` نبود آن شکست است. دیتابیس‌های آزمون `FaranoTests_Setup_*` ساخته و حذف می‌شوند. دو تست مبتنی بر `chmod` (AccessDenied و LegacyUnreadable) روی Windows یا با root Skip می‌شوند؛ تست مجوز Unix روی Windows Skip می‌شود.
+- **نتیجه اجرای Lead (2026-10-23، SDK 10.0.402):** `dotnet build Template.sln -c Release` ۰ خطا؛ `dotnet test Template.sln --no-build -c Release` با SQL Server 2022 واقعی: ۴۸۹ تست، ۴۸۷ موفق، ۰ ناموفق، ۲ Skip (دو تست `chmod` با root). بدون SQL Server طبق گزارش Agent پیاده‌ساز: ۴۶۹ موفق، ۲۰ Skip (Lead دوباره اجرا نکرد). E2E (`publish.sh`، `--migrate`، seed، Playwright): ۱۸ موفق، ۰ ناموفق. ClientApp: typecheck، `npm test` ۴۸ از ۴۸، build، `check:offline`. `scripts/check_static_assets.py` PASS. `git diff --check` تمیز. بررسی دستی Chromium (دسکتاپ ۱۲۸۰ و موبایل ۳۷۵): بدون خطای Console/CSP، بدون درخواست خارجی، بدون اسکرول افقی.
+- **E2E صفحه راه‌اندازی:** `tests/e2e/specs/faranou.spec.mjs` به نشانه‌گذاری جدید به‌روزرسانی شد و موفق بود (AUD-2026-10-23-01 حل‌شد).
+- **اجرا نشد:** Windows (DPAPI، Service، IIS، UNC، `HardenWindowsAcl` — فقط کامپایل شده)؛ Login SQL با رمز منقضی/غیرفعال (18470/18487/18488 فقط با جدول خالص)؛ CI؛ دو POST هم‌زمان روی HTTP (دروازه سرویس تست واحد دارد)؛ POST بوت‌استرپ Master روی HTTP؛ شکست تزریق‌شده وسط Migration (نیمه‌Migration با اعمال دستی اولین Migration شبیه‌سازی شده).
 
 ## تست‌های جریان ورود (Issue #30)
 - `LoginAuthenticationTests` جریان PageModel را با `DatabaseContext` روی provider حافظه‌ای (`Microsoft.EntityFrameworkCore.InMemory`، فقط آزمون) و یک `IAuthenticationService` ثبت‌کننده اجرا می‌کند: فیلد خالی، نام کاربری ناموجود، رمز اشتباه، حساب غیرفعال، قفل موقت، ورود موفق، Remember Me، ثبت `LoginLog`/`LastLoginDateTime`، ارتقای هش قدیمی، حساب زیرساختی، `ReturnUrl` محلی و خارجی، و خطای زیرساخت.

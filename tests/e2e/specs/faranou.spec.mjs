@@ -355,9 +355,24 @@ test('administration pages of the infrastructure account have no enforced CSP vi
 test('the first-run setup page works under the enforced CSP', async ({ page }) => {
   await page.goto('http://localhost:5091/DatabaseSetup');
 
-  await expect(page.locator('#authMode')).toBeVisible();
-  await expect(page.locator('#sqlUserField')).toBeHidden();
-  await page.locator('#authMode').selectOption('Sql');
-  await expect(page.locator('#sqlUserField')).toBeVisible();
+  await expect(page).toHaveTitle(/فرانو/);
+  await expect(page.locator('#Input_AuthenticationMode')).toBeVisible();
+  await expect(page.locator('[data-sql-only]').first()).toBeHidden();
+  await page.locator('#Input_AuthenticationMode').selectOption('Sql');
+  await expect(page.locator('[data-sql-only]').first()).toBeVisible();
+
+  // Password show/hide works without inline script.
+  await page.locator('#Input_Password').fill('not-a-real-secret');
+  await page.locator('[data-toggle-password]').click();
+  await expect(page.locator('#Input_Password')).toHaveAttribute('type', 'text');
+  await page.locator('[data-toggle-password]').click();
+  await expect(page.locator('#Input_Password')).toHaveAttribute('type', 'password');
+
+  // An empty submit shows every independent error next to its own field, in one pass.
+  await page.locator('#Input_Password').fill('');
+  await page.locator('[data-submit]').click();
+  for (const field of ['SetupToken', 'Server', 'UserName', 'Password']) {
+    await expect(page.locator(`[data-error-for="${field}"]`)).toBeVisible();
+  }
   await expectCleanPage(page);
 });

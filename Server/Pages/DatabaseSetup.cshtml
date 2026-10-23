@@ -1,8 +1,56 @@
 @page
+@using Infrastructure.DatabaseSetup
 @model Server.Pages.DatabaseSetupModel
 @{
     Layout = null;
-    ViewData["Title"] = "راه‌اندازی پایگاه داده تراز آوا";
+    ViewData["Title"] = "راه‌اندازی پایگاه داده فرانو";
+}
+@functions {
+    string FieldError(string field) =>
+        ModelState.TryGetValue("Input." + field, out var entry) && entry.Errors.Count > 0
+            ? string.Join(" ", entry.Errors.Select(error => error.ErrorMessage))
+            : string.Empty;
+
+    bool HasError(string field) => FieldError(field).Length > 0;
+
+    // Server-rendered state (works without JS): aria-invalid, and the error id appended to the hint id.
+    string? Invalid(string field) => HasError(field) ? "true" : null;
+
+    string? Described(string field, string? hintId)
+    {
+        var ids = new List<string>();
+        if (hintId is not null) ids.Add(hintId);
+        if (HasError(field)) ids.Add("err-" + field);
+        return ids.Count == 0 ? null : string.Join(" ", ids);
+    }
+
+    bool SqlMode => string.Equals(Model.Input.AuthenticationMode, "Sql", StringComparison.OrdinalIgnoreCase);
+
+    static string StageLabel(DatabaseSetupStage stage) => stage switch
+    {
+        DatabaseSetupStage.Validating => "بررسی ورودی‌ها",
+        DatabaseSetupStage.TestingConnection => "آزمایش اتصال",
+        DatabaseSetupStage.Connected => "اتصال برقرار شد",
+        DatabaseSetupStage.CreatingDatabase => "ساخت دیتابیس",
+        DatabaseSetupStage.RunningMigrations => "اجرای Migrationها",
+        DatabaseSetupStage.SavingSettings => "ذخیره تنظیمات",
+        DatabaseSetupStage.Completed => "تکمیل",
+        _ => stage.ToString()
+    };
+
+    static string StageState(DatabaseSetupStageStatus status) => status switch
+    {
+        DatabaseSetupStageStatus.Succeeded => "ok",
+        DatabaseSetupStageStatus.Failed => "failed",
+        _ => "skipped"
+    };
+
+    static string StageStateText(DatabaseSetupStageStatus status) => status switch
+    {
+        DatabaseSetupStageStatus.Succeeded => "انجام شد",
+        DatabaseSetupStageStatus.Failed => "ناموفق",
+        _ => "انجام نشد"
+    };
 }
 <!doctype html>
 <html lang="fa" dir="rtl">
@@ -10,23 +58,63 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="~/css/rtl/fontiran.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/database-setup.css" asp-append-version="true" />
 </head>
 <body>
-<main>
-    <h1>راه‌اندازی پایگاه داده تراز آوا</h1>
-    <p>برای شروع، اطلاعات اتصال به SQL Server را وارد کنید. ابتدا اتصال آزمایش می‌شود؛ سپس تنظیمات به‌صورت رمزنگاری‌شده روی همین دستگاه ذخیره خواهد شد.</p>
+<main aria-labelledby="setup-title">
+    <div class="brand">
+        <img src="~/images/faranou-logo-mark.svg" alt="" width="26" height="32" />
+        <strong>فرانو</strong><span lang="en" dir="ltr">Farano</span>
+    </div>
+    <h1 id="setup-title">راه‌اندازی پایگاه داده فرانو</h1>
+    <p>اطلاعات اتصال به SQL Server را وارد کنید. ابتدا اتصال آزمایش می‌شود؛ سپس تنظیمات به‌صورت رمزنگاری‌شده در پوشهٔ تنظیمات همین سرور ذخیره می‌شود. فایل‌های داده (<span dir="ltr">.mdf/.ldf</span>) را خود SQL Server در پوشهٔ پیش‌فرض خودش می‌سازد (نام آن‌ها از نام دیتابیس گرفته می‌شود)؛ فرانو مسیری تعیین نمی‌کند و هیچ فایل دادهٔ موجودی را جابه‌جا یا حذف نمی‌کند.</p>
 
     @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
     {
-        <div class="alert error" role="alert">@Model.ErrorMessage</div>
+        <div class="alert error" role="alert">
+            <strong>@Model.ErrorMessage</strong>
+            @if (!string.IsNullOrWhiteSpace(Model.FailureRemedy))
+            {
+                <span>@Model.FailureRemedy</span>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.TrackingId) && Model.ErrorMessage?.Contains(Model.TrackingId, StringComparison.Ordinal) != true)
+            {
+                <span class="tracking">شناسهٔ پیگیری: <code dir="ltr">@Model.TrackingId</code> — هنگام پیگیری، این شناسه را به پشتیبان بدهید؛ جزئیات فنی فقط در لاگ سرور ثبت شده است.</span>
+            }
+        </div>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.StatusTitle))
+    {
+        <div class="alert @(Model.IsBlocked ? "error" : "warning")" role="status">
+            <strong>@Model.StatusTitle</strong>
+            @if (!string.IsNullOrWhiteSpace(Model.StatusRemedy))
+            {
+                <span>@Model.StatusRemedy</span>
+            }
+            <span>پوشهٔ تنظیمات: <code dir="ltr">@Model.SettingsDirectory</code></span>
+        </div>
     }
     @if (!string.IsNullOrWhiteSpace(Model.SuccessMessage))
     {
         <div class="alert success" role="status">@Model.SuccessMessage</div>
     }
+    @foreach (var warning in Model.Warnings)
+    {
+        <div class="alert warning" role="status">@warning</div>
+    }
 
-    @if (!Model.SettingsAlreadySaved)
+    @if (Model.StageOutcomes.Count > 0)
+    {
+        <ol class="steps" role="list" aria-label="مراحل راه‌اندازی">
+            @foreach (var outcome in Model.StageOutcomes)
+            {
+                <li data-state="@StageState(outcome.Status)">@StageLabel(outcome.Stage): @StageStateText(outcome.Status)</li>
+            }
+        </ol>
+    }
+
+    @if (!Model.SettingsAlreadySaved && !Model.IsBlocked)
     {
         <div class="note">
             کد یک‌بارمصرف راه‌اندازی در فایل زیر روی همان سروری که برنامه اجرا می‌شود قرار دارد:
@@ -34,53 +122,79 @@
             <br />این فایل را در اختیار دیگران قرار ندهید.
         </div>
 
-        <form method="post" autocomplete="off">
+        <form method="post" autocomplete="off" novalidate data-setup-form>
             <div asp-validation-summary="ModelOnly" class="validation"></div>
-            <div class="grid spaced">
+            <div class="grid">
                 <div class="field wide">
                     <label asp-for="Input.SetupToken">کد راه‌اندازی</label>
-                    <input asp-for="Input.SetupToken" autocomplete="off" required />
-                    <span asp-validation-for="Input.SetupToken" class="validation"></span>
+                    <input asp-for="Input.SetupToken" data-field="SetupToken" autocomplete="off" dir="ltr" required aria-required="true" aria-invalid="@Invalid("SetupToken")" aria-describedby="@Described("SetupToken", null)" />
+                    <span class="validation" id="err-SetupToken" data-error-for="SetupToken" hidden="@(FieldError("SetupToken").Length == 0)">@FieldError("SetupToken")</span>
                 </div>
                 <div class="field">
                     <label asp-for="Input.Server">سرور SQL Server</label>
-                    <input asp-for="Input.Server" dir="ltr" required />
-                    <span asp-validation-for="Input.Server" class="validation"></span>
+                    <input asp-for="Input.Server" data-field="Server" dir="ltr" required aria-required="true" maxlength="256" placeholder="localhost" aria-invalid="@Invalid("Server")" aria-describedby="@Described("Server", "hint-Server")" />
+                    <p class="hint" id="hint-Server">نام یا نشانی سرور؛ برای نمونهٔ نام‌دار <span dir="ltr">host\instance</span> و برای درگاه دیگر <span dir="ltr">host,1433</span>.</p>
+                    <div class="chips" role="group" aria-label="نمونه‌های رایج">
+                        <button type="button" class="chip" data-fill="localhost" data-target="Input_Server">localhost</button>
+                        <button type="button" class="chip" data-fill=".\SQLEXPRESS" data-target="Input_Server">.\SQLEXPRESS</button>
+                        <button type="button" class="chip" data-fill="host.docker.internal,1433" data-target="Input_Server">host.docker.internal,1433</button>
+                    </div>
+                    <span class="validation" id="err-Server" data-error-for="Server" hidden="@(FieldError("Server").Length == 0)">@FieldError("Server")</span>
                 </div>
                 <div class="field">
                     <label asp-for="Input.Database">نام دیتابیس</label>
-                    <input asp-for="Input.Database" dir="ltr" required />
-                    <span asp-validation-for="Input.Database" class="validation"></span>
+                    <input asp-for="Input.Database" data-field="Database" dir="ltr" required aria-required="true" maxlength="123" aria-invalid="@Invalid("Database")" aria-describedby="@Described("Database", "hint-Database")" />
+                    <p class="hint" id="hint-Database">اگر وجود نداشته باشد و گزینهٔ ساخت فعال باشد ساخته می‌شود؛ دیتابیس موجود هرگز حذف یا بازسازی نمی‌شود.</p>
+                    <span class="validation" id="err-Database" data-error-for="Database" hidden="@(FieldError("Database").Length == 0)">@FieldError("Database")</span>
                 </div>
                 <div class="field wide">
                     <label asp-for="Input.AuthenticationMode">روش احراز هویت</label>
-                    <select asp-for="Input.AuthenticationMode" id="authMode">
+                    <select asp-for="Input.AuthenticationMode" data-field="AuthenticationMode" data-auth-mode aria-invalid="@Invalid("AuthenticationMode")" aria-describedby="@Described("AuthenticationMode", null)">
                         <option value="Windows">احراز هویت ویندوز (Windows Authentication)</option>
                         <option value="Sql">نام کاربری و رمز SQL Server</option>
                     </select>
+                    <span class="validation" id="err-AuthenticationMode" data-error-for="AuthenticationMode" hidden="@(FieldError("AuthenticationMode").Length == 0)">@FieldError("AuthenticationMode")</span>
                 </div>
-                <div class="field sql-only" id="sqlUserField" hidden>
+                <div class="field" data-sql-only hidden="@(!SqlMode)">
                     <label asp-for="Input.UserName">نام کاربری SQL</label>
-                    <input asp-for="Input.UserName" autocomplete="off" dir="ltr" />
-                    <span asp-validation-for="Input.UserName" class="validation"></span>
+                    <input asp-for="Input.UserName" data-field="UserName" autocomplete="off" dir="ltr" maxlength="128" aria-invalid="@Invalid("UserName")" aria-describedby="@Described("UserName", null)" />
+                    <span class="validation" id="err-UserName" data-error-for="UserName" hidden="@(FieldError("UserName").Length == 0)">@FieldError("UserName")</span>
                 </div>
-                <div class="field sql-only" id="sqlPasswordField" hidden>
+                <div class="field" data-sql-only hidden="@(!SqlMode)">
                     <label asp-for="Input.Password">رمز عبور SQL</label>
-                    <input asp-for="Input.Password" type="password" autocomplete="new-password" dir="ltr" />
-                    <span asp-validation-for="Input.Password" class="validation"></span>
+                    <div class="password-wrap">
+                        <input asp-for="Input.Password" data-field="Password" type="password" autocomplete="new-password" dir="ltr" maxlength="256" aria-invalid="@Invalid("Password")" aria-describedby="@Described("Password", null)" />
+                        <button type="button" class="toggle" data-toggle-password data-target="Input_Password" aria-pressed="false" aria-label="نمایش رمز عبور">نمایش</button>
+                    </div>
+                    <span class="validation" id="err-Password" data-error-for="Password" hidden="@(FieldError("Password").Length == 0)">@FieldError("Password")</span>
                 </div>
-                <div class="field wide">
+                <div class="field wide options">
                     <label class="check">
                         <input asp-for="Input.CreateDatabaseIfMissing" />
-                        اگر دیتابیس وجود ندارد، آن را بساز و Migrationهای برنامه را اجرا کن
+                        <span>اگر دیتابیس وجود ندارد، آن را بساز و Migrationهای برنامه را اجرا کن</span>
                     </label>
                     <label class="check">
-                        <input asp-for="Input.TrustServerCertificate" />
-                        اعتماد به گواهی سرور (فقط برای محیط‌های مورد اعتماد؛ در Production ترجیحاً خاموش باشد)
+                        <input asp-for="Input.ContinuePartialMigrations" />
+                        <span>اگر دیتابیس فرانو با Migrationهای ناتمام است (اجرای قبلی نیمه‌کاره مانده)، ادامهٔ Migrationها را مجاز کن</span>
                     </label>
+                    <label class="check">
+                        <input asp-for="Input.TrustServerCertificate" aria-describedby="hint-Trust" />
+                        <span>اعتماد به گواهی سرور (TrustServerCertificate)</span>
+                    </label>
+                    <p class="hint" id="hint-Trust">اتصال همیشه رمزنگاری می‌شود. با فعال‌کردن این گزینه گواهی سرور بررسی نمی‌شود و اتصال در برابر جعل سرور (MITM) آسیب‌پذیر است؛ فقط برای SQL Server محلی یا آزمایشی با گواهی خودامضا. در محیط عملیاتی یک گواهی معتبر نصب کنید و این گزینه را خاموش بگذارید.</p>
+                    @if (Model.RequiresReplaceConfirmation)
+                    {
+                        <label class="check">
+                            <input asp-for="Input.ConfirmReplace" />
+                            <span>فایل تنظیمات قبلی قابل استفاده نیست؛ جایگزینی آن را تأیید می‌کنم (نسخهٔ قبلی پیش از جایگزینی در پوشهٔ پشتیبان نگه داشته می‌شود).</span>
+                        </label>
+                        <span class="validation" id="err-ConfirmReplace" data-error-for="ConfirmReplace" hidden="@(FieldError("ConfirmReplace").Length == 0)">@FieldError("ConfirmReplace")</span>
+                    }
                 </div>
             </div>
-            <button type="submit">آزمایش اتصال و ذخیره تنظیمات</button>
+            <button type="submit" data-submit data-busy-text="در حال بررسی اتصال و آماده‌سازی… لطفاً صبر کنید">آزمایش اتصال و ذخیره تنظیمات</button>
+            <p class="sr-only" role="status" aria-live="polite" data-busy-status></p>
+            <p class="sr-only" aria-live="polite" data-error-summary></p>
         </form>
     }
 
