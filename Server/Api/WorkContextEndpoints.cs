@@ -249,6 +249,27 @@ public static class WorkContextEndpoints
 			})
 			.ToListAsync(cancellationToken);
 
+		// Group membership is a separate concept from ownership (D-033): it never implies a parent or
+		// subsidiary, but a member must not be shown as "independent" either.
+		var memberships = await databaseContext.CorporateGroupMembers
+			.AsNoTracking()
+			.Where(member => companyIds.Contains(member.CompanyId))
+			.Where(member => member.CorporateGroup.IsActive && member.ValidFrom <= today && (member.ValidTo == null || member.ValidTo >= today))
+			.Select(member => new { member.CompanyId, member.CorporateGroupId })
+			.ToListAsync(cancellationToken);
+
+		// A group is only trusted when its owner and EVERY member (not just this user's companies) sit in
+		// one provisioned boundary; the same rule hides such groups in CorporateGroupService (D-037).
+		var groupIds = memberships.Select(member => member.CorporateGroupId).Distinct().ToArray();
+		var inconsistentGroups = (await databaseContext.CorporateGroups
+			.AsNoTracking()
+			.Where(group => groupIds.Contains(group.Id))
+			.Where(group => group.OwnerCompany.CustomerBoundaryId == null ||
+				group.Members.Any(member => member.Company.CustomerBoundaryId == null ||
+					member.Company.CustomerBoundaryId != group.OwnerCompany.CustomerBoundaryId))
+			.Select(group => group.Id)
+			.ToListAsync(cancellationToken)).ToHashSet();
+
 		var result = new Dictionary<Guid, IReadOnlyList<string>>();
 		foreach (var companyId in companyIds)
 		{
@@ -277,11 +298,24 @@ public static class WorkContextEndpoints
 				}
 				else if (relationship.ControlBasis == Domain.ControlBasis.JointControl)
 				{
-					types.Add("jointVenture");
+					// The holder of a jointly controlled stake is a joint venturer; the controlled company is the joint venture.
+					types.Add(relationship.ParentCompanyId == companyId ? "jointVenturer" : "jointVenture");
 				}
 				else
 				{
 					types.Add(relationship.ParentCompanyId == companyId ? "investor" : "investment");
+				}
+			}
+
+			foreach (var membership in memberships.Where(item => item.CompanyId == companyId))
+			{
+				if (inconsistentGroups.Contains(membership.CorporateGroupId))
+				{
+					unresolved = true;
+				}
+				else
+				{
+					types.Add("groupMember");
 				}
 			}
 

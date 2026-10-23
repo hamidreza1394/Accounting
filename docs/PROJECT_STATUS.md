@@ -185,3 +185,11 @@
 - **بازبینی:** `code-reviewer` یک دور بدون High؛ `security-reviewer` دو دور، پایان بدون Critical/High/Medium؛ `architect` روی Diff نهایی اجرا نشد.
 - **یافته باز:** `AddDataProtection` سراسری تنظیم نشده (AUD-2026-10-23-02). E2E صفحه راه‌اندازی به‌روز و موفق شد (AUD-2026-10-23-01 حل‌شد).
 - گزارش: `docs/handoffs/ISSUE-UNNUMBERED-database-setup-redesign.md`.
+
+## مرز مشتری، شرکت پیش‌فرض و برچسب‌های رابطه (D-037..D-040) — 2026-10-23
+- **وضعیت Git:** PRهای #65، #67، #68، #69 ادغام شده‌اند (Issue #66 بسته است). PR #68 (`4bcee61`) ستون‌ها و Endpointها را بدون ADR/handoff/`WORK_LOG` ادغام کرد و شرحش می‌گفت Build/Test اجرا نشده. این بازبینی در شاخه `feature/customer-boundary-audit-and-docs` است (Commit/PR در زمان نگارش ثبت نشده).
+- `Implemented` (در کد): `Users.DefaultCompanyId` و `POST /api/v1/context/default-company` (D-039)؛ `Companies.CustomerBoundaryId`، `POST .../operator/customer-boundaries/assign` و `GET .../operator/customer-boundaries/diagnostics` (فقط حساب زیرساختی)؛ اعمال مرز در `CorporateGroupService`؛ برچسب‌های `relationshipTypes` در `GET /api/v1/context`؛ پیش‌انتخاب سال/شرکت بدون ورود خودکار (D-038، D-040). تصمیم‌ها: D-037 و D-038 و D-039 و D-040.
+- **وضعیت تأیید:** `Verified` در این سند ادعا نمی‌شود. CI اجرا نشده (سقف صورتحساب GitHub؛ Jobها شروع نمی‌شوند). نتیجه اجرای محلی (SQL Server واقعی): ۵۲۴ تست .NET با ۰ شکست و ۲ ردشده، Vitest ۹۴/۹۴، E2E ۲۹/۲۹ — جزئیات در handoff. اجرا نشده: Firefox، Safari، axe، HTTPS پشت Proxy.
+- `NotImplemented`: API/UI گروه شرکتی و گزارش گروه؛ نگاشت سمت فروشنده `CustomerAccount` ← (نصب، مرز)؛ رویه اصلاح/ادغام/تفکیک/فروش شرکت؛ تریگر دیتابیس مرز.
+- `NeedsApproval`: واژگان برچسب‌ها و نمایش آن برای عضو بدون `corporate-groups.view`؛ رویه اصلاح مرز و تریگر دیتابیس؛ تأیید پسا‌واقع کارفرما برای D-038..D-040 (انحراف پیاده‌سازی: PR #68 پیش از ثبت ادغام شد).
+- ریسک‌های باقی‌مانده و شرح: `docs/SECURITY.md` (بخش مرز مشتری) و D-038. گزارش: `docs/handoffs/ISSUE-66-customer-boundary-default-company-audit.md`.

@@ -147,3 +147,13 @@ cd ClientApp && npm ci && npm run typecheck && npm test && npm run build && npm 
 ## تست‌های نام کاربری ورود (PR #67)
 - `RememberedUsernameTests` (Integration، SQL Server واقعی): ویژگی‌های کوکی، نبود رمز، بازیابی/عدم بازیابی، مقدار مشکوک و کدگذاری خروجی، حذف با ورود ناموفق.
 - `tests/e2e/specs/faranou.spec.mjs`: به‌خاطرسپاری، خاموش‌کردن، ورود ناموفق، صفات Password Manager و یادداشت.
+
+## تست‌های مرز مشتری، شرکت پیش‌فرض و برچسب‌های رابطه (D-038..D-040) — 2026-10-23
+فهرست زیر نام تست‌های افزوده/اصلاح‌شده در کد است؛ **نتیجه اجرا در این سند ثبت نمی‌شود** (نتیجه واقعی را Lead در PR/handoff می‌آورد). CI اجرا نشده (سقف صورتحساب GitHub). Firefox، Safari، axe و HTTPS پشت Proxy اجرا نشدند.
+
+- **`Integration/WorkContextHttpTests.cs` (افزوده‌ها):** `AGroupMemberWithoutOwnership_IsShownAsGroupMember_NeverAsIndependentOrParent`؛ `AGroupSpanningTwoBoundaries_OrAnUnprovisionedOne_IsNeverClassified`؛ `ACompanyWithAProvisionedBoundaryAndNoRelationship_IsIndependent_AndWithoutBoundaryIsUnknown`؛ `ProvisioningIsRepeatable_AndRefusesToSplitAnExistingRelationshipAcrossBoundaries`؛ `ConcurrentProvisioningOfTheSameCompanyWithDifferentBoundaries_LetsExactlyOneWin`؛ `TheDiagnostics_AreOperatorOnly_ReadOnly_AndExposeNoCompanyNames`؛ `JointControl_IsLabelledPerSide_AndSignificantInfluenceAsInvestorAndAssociate`؛ `ProvisioningManyCompanies_WritesABoundedAudit_AndRejectionsAreAuditedToo`.
+- **`CorporateGroupServiceTests.LegacyRelationshipsOfAnotherBoundary_NeverChangeTheOutcomeOfAValidWrite`:** ردیف‌های قدیمی مرز دیگر/Provision‌نشده بر چرخه/درصد/کنترل یگانه یک نوشتن معتبر اثر ندارند.
+- **Vitest:** دو تست جدید در `WorkContextSelector.test.tsx`: `shows the server-provided relationship labels in each row, several labels together, and never invents one` و `marks the saved default company without entering automatically`.
+- **اصلاح تست‌های شکسته از قبل روی `main` (حذف نشدند):** `CorporateGroupSqlServerTests` (تست Migration: شرکت با SQL درج می‌شود چون مدل ستونی داشت که در Schema قدیمی نبود)؛ شش تست Vitest و یک تست E2E که هنوز قاعده منسوخ «چیزی پیش‌انتخاب نمی‌شود» (D-031) را می‌سنجیدند، به قاعده پذیرفته‌شده (D-040) به‌روز شدند.
+
+- `ConcurrentProvisioningOfTheSameCompanyWithDifferentBoundaries_LetsExactlyOneWin` فقط روی SQL Server اجرا می‌شود (Serializable و Deadlock روی Provider حافظه‌ای معنا ندارند؛ بدون `FARANOU_TEST_SQLSERVER` رد می‌شود). تراکنش Serializable تخصیص مرز فقط روی Provider رابطه‌ای باز می‌شود.

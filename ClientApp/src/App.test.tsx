@@ -102,10 +102,11 @@ describe('App', () => {
 
     await screen.findByRole('heading', { name: 'فرانو - دوره مالی' });
     const enter = screen.getByRole('button', { name: /ورود به محیط کاری/ });
-    expect(enter).toHaveAttribute('aria-disabled', 'true');
 
-    await userEvent.click(screen.getByRole('radio', { name: /سال مالی ۱۴۰۶/ }));
-    // Only company B can be entered in that year, so it is pre-selected, but entering still needs the click.
+    // The newest open year (1406) is preselected; only company B can be entered in it, so it is
+    // preselected too, but nothing is entered until the user clicks.
+    expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۶/ })).toBeChecked();
+    expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۵/ })).not.toBeChecked();
     expect(screen.getByRole('radio', { name: /شرکت ب/ })).toBeChecked();
     expect(postBodies).toHaveLength(0);
 
@@ -115,7 +116,7 @@ describe('App', () => {
     expect(postBodies).toEqual([{ companyId: 'b', fiscalPeriodId: 'p2' }]);
   });
 
-  it('offers every fiscal year of the only company; nothing is chosen for the user, and a closed year is view-only', async () => {
+  it('offers every fiscal year of the only company; the newest open one is preselected, and a closed year is view-only', async () => {
     const company2 = company('a', 'شرکت الف', [open1406, open1405, closed1404]);
     stubApi({
       ...antiforgeryRoute,
@@ -128,11 +129,10 @@ describe('App', () => {
     await screen.findByRole('heading', { name: 'فرانو - دوره مالی' });
     const years = within(screen.getByRole('radiogroup', { name: 'دوره‌های مالی' })).getAllByRole('radio');
     expect(years).toHaveLength(3);
-    years.forEach((year) => {
-      expect(year).toBeEnabled();
-      expect(year).not.toBeChecked();
-    });
-    expect(screen.getByRole('button', { name: /ورود به محیط کاری/ })).toHaveAttribute('aria-disabled', 'true');
+    years.forEach((year) => expect(year).toBeEnabled());
+    expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۶/ })).toBeChecked();
+    expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۵/ })).not.toBeChecked();
+    expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۴/ })).not.toBeChecked();
 
     await userEvent.click(screen.getByRole('radio', { name: /سال مالی ۱۴۰۴/ }));
     expect(screen.getByRole('radio', { name: /شرکت الف/ })).toBeChecked();
@@ -156,8 +156,9 @@ describe('App', () => {
     render(<App navigate={vi.fn()} />);
 
     await screen.findByRole('heading', { name: 'فرانو - دوره مالی' });
-    // Two enterable years: neither is chosen for the user.
-    expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۵/ })).not.toBeChecked();
+    // The newest open year is preselected; the closed one is not, and entering needs a click.
+    expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۵/ })).toBeChecked();
+    expect(screen.getByRole('radio', { name: /سال مالی ۱۴۰۴/ })).not.toBeChecked();
 
     await userEvent.click(screen.getByRole('radio', { name: /سال مالی ۱۴۰۴/ }));
     await userEvent.click(screen.getByRole('button', { name: /ورود به محیط کاری/ }));

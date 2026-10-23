@@ -675,4 +675,236 @@ public sealed class WorkContextHttpTests : IClassFixture<FaranouApplicationFacto
 		});
 		Assert.Equal(JsonValueKind.Null, (await GetContextAsync(client)).GetProperty("current").ValueKind);
 	}
+
+	private async Task<(SeededUser User, SeededCompany A, SeededCompany B)> UserWithTwoCompaniesAsync()
+	{
+		var user = await Factory.WithDatabaseAsync(database => TestData.AddUserAsync(database));
+		var a = await Factory.WithDatabaseAsync(database => TestData.AddCompanyAsync(database, TestData.Unique("الف-")));
+		var b = await Factory.WithDatabaseAsync(database => TestData.AddCompanyAsync(database, TestData.Unique("ب-")));
+		foreach (var company in new[] { a, b })
+		{
+			await Factory.WithDatabaseAsync(database => TestData.AddMembershipAsync(database, user, company));
+			await Factory.WithDatabaseAsync(database => TestData.AddFiscalPeriodAsync(database, company, "دوره", Start, End));
+		}
+
+		return (user, a, b);
+	}
+
+	private async Task SetBoundariesAsync(Guid? boundaryOfA, SeededCompany a, Guid? boundaryOfB, SeededCompany b)
+	{
+		await Factory.WithDatabaseAsync(async database =>
+		{
+			(await database.Companies.SingleAsync(company => company.Id == a.Id)).CustomerBoundaryId = boundaryOfA;
+			(await database.Companies.SingleAsync(company => company.Id == b.Id)).CustomerBoundaryId = boundaryOfB;
+			await database.SaveChangesAsync();
+		});
+	}
+
+	private async Task AddGroupMembersAsync(Guid createdBy, SeededCompany owner, SeededCompany member)
+	{
+		await Factory.WithDatabaseAsync(async database =>
+		{
+			var group = new Domain.CorporateGroup { Code = TestData.Unique("g"), Name = "گروه", OwnerCompanyId = owner.Id, CreatedByUserId = createdBy };
+			database.CorporateGroups.Add(group);
+			database.CorporateGroupMembers.Add(new Domain.CorporateGroupMember { CorporateGroupId = group.Id, CompanyId = owner.Id, MemberRole = Domain.CorporateGroupMemberRole.Parent, ValidFrom = Start, CreatedByUserId = createdBy });
+			database.CorporateGroupMembers.Add(new Domain.CorporateGroupMember { CorporateGroupId = group.Id, CompanyId = member.Id, MemberRole = Domain.CorporateGroupMemberRole.Subsidiary, ValidFrom = Start, CreatedByUserId = createdBy });
+			await database.SaveChangesAsync();
+		});
+	}
+
+	private static string[] TypesOf(JsonElement context, Guid companyId) => context.GetProperty("companies").EnumerateArray()
+		.Single(item => item.GetProperty("id").GetGuid() == companyId)
+		.GetProperty("relationshipTypes").EnumerateArray().Select(item => item.GetString()!).ToArray();
+
+	[Fact]
+	public async Task JointControl_IsLabelledPerSide_AndSignificantInfluenceAsInvestorAndAssociate()
+	{
+		var (user, a, b) = await UserWithTwoCompaniesAsync();
+		var boundary = Guid.NewGuid();
+		await SetBoundariesAsync(boundary, a, boundary, b);
+		await Factory.WithDatabaseAsync(async database =>
+		{
+			database.OwnershipRelationships.Add(new Domain.OwnershipRelationship
+			{
+				ParentCompanyId = a.Id,
+				SubsidiaryCompanyId = b.Id,
+				OwnershipPercentage = 50m,
+				VotingPercentage = 50m,
+				ControlBasis = Domain.ControlBasis.JointControl,
+				ValidFrom = Start,
+			});
+			await database.SaveChangesAsync();
+		});
+
+		using var client = Factory.CreateBrowser();
+		await Browser.SignInAsync(client, user);
+		var context = await GetContextAsync(client);
+		Assert.Equal(new[] { "jointVenturer" }, TypesOf(context, a.Id));
+		Assert.Equal(new[] { "jointVenture" }, TypesOf(context, b.Id));
+	}
+
+	[Fact]
+	public async Task ProvisioningManyCompanies_WritesABoundedAudit_AndRejectionsAreAuditedToo()
+	{
+		var ids = await Factory.WithDatabaseAsync(async database =>
+		{
+			var companies = Enumerable.Range(0, 150).Select(_ => new Domain.Company { Name = TestData.Unique("انبوه-"), IsActive = true }).ToList();
+			database.Companies.AddRange(companies);
+			await database.SaveChangesAsync();
+			return companies.Select(company => company.Id).ToArray();
+		});
+		using var client = Factory.CreateBrowser();
+		await Browser.PostLoginAsync(client, "faranou-test-master", "Faranou-Test-Master-Password-1");
+		const string path = "/api/v1/operator/customer-boundaries/assign";
+		var boundary = Guid.NewGuid();
+
+		var response = await SendWithTokenAsync(client, HttpMethod.Post, path, new { boundaryId = boundary, companyIds = ids });
+		Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+		var details = await Factory.WithDatabaseAsync(database => database.SecurityAuditEvents
+			.Where(item => item.EventType == "CustomerBoundaryProvisioned" && item.EntityId == boundary.ToString("D"))
+			.Select(item => item.DetailsJson)
+			.SingleAsync());
+		Assert.NotNull(details);
+		Assert.True(details!.Length < 1000);
+		Assert.Contains("\"Count\":150", details, StringComparison.Ordinal);
+		Assert.Contains("faranou-test-master", details, StringComparison.Ordinal);
+
+		var rejected = await SendWithTokenAsync(client, HttpMethod.Post, path, new { boundaryId = Guid.NewGuid(), companyIds = ids.Take(2).ToArray() });
+		Assert.Equal(HttpStatusCode.Conflict, rejected.StatusCode);
+		Assert.True(await Factory.WithDatabaseAsync(database => database.SecurityAuditEvents
+			.AnyAsync(item => item.EventType == "CustomerBoundaryProvisionRejected" && item.DetailsJson!.Contains("faranou-test-master"))));
+	}
+
+	[Fact]
+	public async Task AGroupMemberWithoutOwnership_IsShownAsGroupMember_NeverAsIndependentOrParent()
+	{
+		var (user, a, b) = await UserWithTwoCompaniesAsync();
+		var boundary = Guid.NewGuid();
+		await SetBoundariesAsync(boundary, a, boundary, b);
+		await AddGroupMembersAsync(user.Id, a, b);
+
+		using var client = Factory.CreateBrowser();
+		await Browser.SignInAsync(client, user);
+		var context = await GetContextAsync(client);
+
+		Assert.Equal(new[] { "groupMember" }, TypesOf(context, a.Id));
+		Assert.Equal(new[] { "groupMember" }, TypesOf(context, b.Id));
+	}
+
+	[Fact]
+	public async Task AGroupSpanningTwoBoundaries_OrAnUnprovisionedOne_IsNeverClassified()
+	{
+		var (user, a, b) = await UserWithTwoCompaniesAsync();
+		await SetBoundariesAsync(Guid.NewGuid(), a, Guid.NewGuid(), b);
+		await AddGroupMembersAsync(user.Id, a, b);
+
+		using var client = Factory.CreateBrowser();
+		await Browser.SignInAsync(client, user);
+		var context = await GetContextAsync(client);
+		Assert.Equal(new[] { "unknown" }, TypesOf(context, a.Id));
+		Assert.Equal(new[] { "unknown" }, TypesOf(context, b.Id));
+
+		await SetBoundariesAsync(null, a, null, b);
+		context = await GetContextAsync(client);
+		Assert.Equal(new[] { "unknown" }, TypesOf(context, a.Id));
+		Assert.Equal(new[] { "unknown" }, TypesOf(context, b.Id));
+	}
+
+	[Fact]
+	public async Task ACompanyWithAProvisionedBoundaryAndNoRelationship_IsIndependent_AndWithoutBoundaryIsUnknown()
+	{
+		var (user, a, b) = await UserWithTwoCompaniesAsync();
+		await SetBoundariesAsync(Guid.NewGuid(), a, null, b);
+
+		using var client = Factory.CreateBrowser();
+		await Browser.SignInAsync(client, user);
+		var context = await GetContextAsync(client);
+		Assert.Equal(new[] { "independent" }, TypesOf(context, a.Id));
+		Assert.Equal(new[] { "unknown" }, TypesOf(context, b.Id));
+	}
+
+	[Fact]
+	public async Task ProvisioningIsRepeatable_AndRefusesToSplitAnExistingRelationshipAcrossBoundaries()
+	{
+		var (_, a, b) = await UserWithTwoCompaniesAsync();
+		await Factory.WithDatabaseAsync(async database =>
+		{
+			database.OwnershipRelationships.Add(new Domain.OwnershipRelationship
+			{
+				ParentCompanyId = a.Id,
+				SubsidiaryCompanyId = b.Id,
+				OwnershipPercentage = 60m,
+				VotingPercentage = 60m,
+				ControlBasis = Domain.ControlBasis.Control,
+				ValidFrom = Start,
+			});
+			await database.SaveChangesAsync();
+		});
+		using var client = Factory.CreateBrowser();
+		await Browser.PostLoginAsync(client, "faranou-test-master", "Faranou-Test-Master-Password-1");
+		var boundary = Guid.NewGuid();
+		const string path = "/api/v1/operator/customer-boundaries/assign";
+
+		// Only one side of the relationship: refused, nothing changes.
+		var partial = await SendWithTokenAsync(client, HttpMethod.Post, path, new { boundaryId = boundary, companyIds = new[] { a.Id } });
+		Assert.Equal(HttpStatusCode.Conflict, partial.StatusCode);
+		Assert.Null(await Factory.WithDatabaseAsync(database => database.Companies.Where(item => item.Id == a.Id).Select(item => item.CustomerBoundaryId).SingleAsync()));
+
+		// Both sides together: accepted, and running the same provisioning again changes nothing.
+		var both = new { boundaryId = boundary, companyIds = new[] { a.Id, b.Id } };
+		Assert.Equal(HttpStatusCode.NoContent, (await SendWithTokenAsync(client, HttpMethod.Post, path, both)).StatusCode);
+		Assert.Equal(HttpStatusCode.NoContent, (await SendWithTokenAsync(client, HttpMethod.Post, path, both)).StatusCode);
+
+		// Malformed input is a 400, an unknown company a 404.
+		Assert.Equal(HttpStatusCode.BadRequest, (await SendWithTokenAsync(client, HttpMethod.Post, path, new { boundaryId = Guid.Empty, companyIds = new[] { a.Id } })).StatusCode);
+		Assert.Equal(HttpStatusCode.BadRequest, (await SendWithTokenAsync(client, HttpMethod.Post, path, new { boundaryId = boundary, companyIds = new[] { a.Id, a.Id } })).StatusCode);
+		Assert.Equal(HttpStatusCode.NotFound, (await SendWithTokenAsync(client, HttpMethod.Post, path, new { boundaryId = boundary, companyIds = new[] { Guid.NewGuid() } })).StatusCode);
+	}
+
+	[Fact]
+	public async Task ConcurrentProvisioningOfTheSameCompanyWithDifferentBoundaries_LetsExactlyOneWin()
+	{
+		Assert.SkipUnless(IntegrationDatabase.UsesSqlServer, "Serializable isolation and deadlocks need SQL Server (FARANOU_TEST_SQLSERVER).");
+		var company = await Factory.WithDatabaseAsync(database => TestData.AddCompanyAsync(database, TestData.Unique("رقابت-")));
+		using var first = Factory.CreateBrowser();
+		using var second = Factory.CreateBrowser();
+		await Browser.PostLoginAsync(first, "faranou-test-master", "Faranou-Test-Master-Password-1");
+		await Browser.PostLoginAsync(second, "faranou-test-master", "Faranou-Test-Master-Password-1");
+		var boundaryOne = Guid.NewGuid();
+		var boundaryTwo = Guid.NewGuid();
+		const string path = "/api/v1/operator/customer-boundaries/assign";
+
+		var results = await Task.WhenAll(
+			SendWithTokenAsync(first, HttpMethod.Post, path, new { boundaryId = boundaryOne, companyIds = new[] { company.Id } }),
+			SendWithTokenAsync(second, HttpMethod.Post, path, new { boundaryId = boundaryTwo, companyIds = new[] { company.Id } }));
+
+		var codes = results.Select(result => result.StatusCode).OrderBy(code => (int)code).ToArray();
+		Assert.Equal(new[] { HttpStatusCode.NoContent, HttpStatusCode.Conflict }, codes);
+		var stored = await Factory.WithDatabaseAsync(database => database.Companies.Where(item => item.Id == company.Id).Select(item => item.CustomerBoundaryId).SingleAsync());
+		Assert.Contains(stored, new Guid?[] { boundaryOne, boundaryTwo });
+	}
+
+	[Fact]
+	public async Task TheDiagnostics_AreOperatorOnly_ReadOnly_AndExposeNoCompanyNames()
+	{
+		var (user, a, b) = await UserWithTwoCompaniesAsync();
+		await SetBoundariesAsync(Guid.NewGuid(), a, Guid.NewGuid(), b);
+		await AddGroupMembersAsync(user.Id, a, b);
+
+		using var companyClient = Factory.CreateBrowser();
+		await Browser.SignInAsync(companyClient, user);
+		Assert.Equal(HttpStatusCode.NotFound, (await companyClient.GetAsync("/api/v1/operator/customer-boundaries/diagnostics")).StatusCode);
+
+		using var operatorClient = Factory.CreateBrowser();
+		await Browser.PostLoginAsync(operatorClient, "faranou-test-master", "Faranou-Test-Master-Password-1");
+		var response = await operatorClient.GetAsync("/api/v1/operator/customer-boundaries/diagnostics");
+		Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+		var text = await response.Content.ReadAsStringAsync();
+		var json = JsonDocument.Parse(text).RootElement;
+		Assert.True(json.GetProperty("unresolvedCorporateGroups").GetInt32() >= 1);
+		var unresolved = json.GetProperty("unresolvedCompanyIds").EnumerateArray().Select(item => item.GetGuid()).ToArray();
+		Assert.Contains(a.Id, unresolved);
+		Assert.Contains(b.Id, unresolved);
+		Assert.DoesNotContain(a.Name, text, StringComparison.Ordinal);
+	}
 }

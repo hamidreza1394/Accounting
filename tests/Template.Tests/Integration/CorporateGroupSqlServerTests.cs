@@ -79,9 +79,13 @@ public sealed class CorporateGroupSqlServerTests
 			{
 				await before.GetService<IMigrator>().MigrateAsync(PreviousMigration, TestContext.Current.CancellationToken);
 
+				// The company row is inserted with SQL because the current model has columns
+				// (for example CustomerBoundaryId) that do not exist yet in the old schema.
 				var company = new Company { Name = "شرکت موجود", NationalId = "10101010101", IsActive = true };
+				await before.Database.ExecuteSqlInterpolatedAsync(
+					$"INSERT INTO Companies (Id, Ordering, InsertDateTime, Name, NationalId, IsActive) VALUES ({company.Id}, 0, SYSUTCDATETIME(), {company.Name}, {company.NationalId}, 1)",
+					TestContext.Current.CancellationToken);
 				var role = new CompanyRole { TenantId = company.Id, Code = "accountant", Name = "حسابدار", IsActive = true };
-				before.Companies.Add(company);
 				before.CompanyRoles.Add(role);
 				before.FiscalPeriods.Add(new FiscalPeriod
 				{

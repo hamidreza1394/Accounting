@@ -29,8 +29,10 @@ const relationshipLabels: Record<CompanyRelationshipType, string> = {
   subsidiary: 'شرکت زیرمجموعه',
   associate: 'شرکت وابسته',
   jointVenture: 'مشارکت مشترک',
+  jointVenturer: 'شریک مشارکت مشترک',
   investor: 'شرکت سرمایه‌گذار',
   investment: 'سرمایه‌پذیر بدون کنترل',
+  groupMember: 'عضو گروه شرکتی',
   independent: 'شرکت مستقل',
   unknown: 'نوع رابطه نامشخص',
 };

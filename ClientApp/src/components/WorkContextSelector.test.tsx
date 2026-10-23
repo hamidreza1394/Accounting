@@ -73,18 +73,19 @@ describe('WorkContextSelector', () => {
     expect(onLogout).toHaveBeenCalledOnce();
   });
 
-  it('lists the years newest first in the first panel and asks for a year before showing companies', () => {
+  it('lists the years newest first and preselects the newest open year without choosing a company', () => {
     renderSelector(twoYears());
 
     const years = screen.getByRole('radiogroup', { name: 'دوره‌های مالی' });
     const radios = within(years).getAllByRole('radio');
     expect(radios[0]).toHaveAccessibleName(/سال ۱۴۰۵/);
     expect(radios[1]).toHaveAccessibleName(/سال ۱۴۰۴/);
-    expect(screen.getByText('ابتدا یک دوره مالی انتخاب کنید.')).toBeInTheDocument();
-    expect(screen.queryByRole('radiogroup', { name: 'شرکت‌ها' })).not.toBeInTheDocument();
+    expect(radios[0]).toBeChecked();
+    expect(radios[1]).not.toBeChecked();
+    within(screen.getByRole('radiogroup', { name: 'شرکت‌ها' })).getAllByRole('radio').forEach((radio) => expect(radio).not.toBeChecked());
     expect(screen.getByText('۱۴۰۵/۰۱/۰۱')).toBeInTheDocument();
     expect(screen.getByText('۱۴۰۵/۱۲/۲۹')).toBeInTheDocument();
-    expect(screen.getByText('۲ شرکت')).toBeInTheDocument();
+    expect(screen.getAllByText('۲ شرکت').length).toBeGreaterThan(0);
     expect(screen.getByText('۲ شرکت · ۱ قابل ورود')).toBeInTheDocument();
   });
 
@@ -183,10 +184,12 @@ describe('WorkContextSelector', () => {
     expect(old).toHaveAccessibleDescription('ورود به این دوره امکان‌پذیر نیست.');
   });
 
-  it('preselects nothing when several years and companies are possible, and keeps the button disabled', () => {
+  it('preselects only the newest open year when several companies are possible, never enters, and keeps the button disabled', () => {
     renderSelector(twoYears());
 
-    screen.getAllByRole('radio').forEach((radio) => expect(radio).not.toBeChecked());
+    expect(screen.getByRole('radio', { name: /سال ۱۴۰۵/ })).toBeChecked();
+    expect(screen.getByRole('radio', { name: /سال ۱۴۰۴/ })).not.toBeChecked();
+    within(screen.getByRole('radiogroup', { name: 'شرکت‌ها' })).getAllByRole('radio').forEach((radio) => expect(radio).not.toBeChecked());
     expect(enterButton()).toHaveAttribute('aria-disabled', 'true');
   });
 
@@ -277,13 +280,12 @@ describe('WorkContextSelector', () => {
     expect(screen.getByText('شرکتی با این مشخصات پیدا نشد.')).toBeInTheDocument();
   });
 
-  it('searches only the companies of the selected year and is disabled before a year is chosen', async () => {
+  it('searches only the companies of the selected year and clears the query when the year changes', async () => {
     renderSelector(twoYears());
     const search = screen.getByRole('searchbox', { name: 'جست‌وجوی شرکت بر اساس نام یا کد ملی' });
-    expect(search).toBeDisabled();
+    expect(search).toBeEnabled();
 
     await userEvent.click(screen.getByRole('radio', { name: /سال ۱۴۰۴/ }));
-    expect(search).toBeEnabled();
     await userEvent.type(search, 'الف');
     expect(within(screen.getByRole('radiogroup', { name: 'شرکت‌ها' })).getAllByRole('radio')).toHaveLength(1);
     // Changing the year clears the company query.
@@ -460,5 +462,33 @@ describe('WorkContextSelector', () => {
     expect(screen.queryByText('باز', { selector: 'span' })).not.toBeInTheDocument();
     expect(screen.getByText('فقط مشاهده و گزارش‌گیری')).toBeInTheDocument();
     expect(screen.getByText('بایگانی‌شده')).toBeInTheDocument();
+  });
+
+  it('shows the server-provided relationship labels in each row, several labels together, and never invents one', () => {
+    const withTypes = (id: string, name: string, types: string[]) => ({ ...company(id, name, [period(`${id}1`, 'سال ۱۴۰۵', y1405)]), relationshipTypes: types });
+    renderSelector(contextBody({
+      companies: [
+        withTypes('a', 'شرکت الف', ['parent', 'groupMember']),
+        withTypes('b', 'شرکت ب', ['independent']),
+        withTypes('c', 'شرکت ج', ['unknown']),
+      ],
+    }));
+
+    const rowOf = (name: string) => screen.getByText(name).closest('li, [role="radio"], label, div[class*="rounded"]') as HTMLElement;
+    expect(within(rowOf('شرکت الف')).getByText('شرکت مادر')).toBeInTheDocument();
+    expect(within(rowOf('شرکت الف')).getByText('عضو گروه شرکتی')).toBeInTheDocument();
+    expect(within(rowOf('شرکت ب')).getByText('شرکت مستقل')).toBeInTheDocument();
+    expect(within(rowOf('شرکت ج')).getByText('نوع رابطه نامشخص')).toBeInTheDocument();
+    expect(within(rowOf('شرکت ج')).queryByText('شرکت مستقل')).not.toBeInTheDocument();
+  });
+
+  it('marks the saved default company without entering automatically', () => {
+    const onSelected = vi.fn();
+    const body = twoYears() as { companies: unknown[] };
+    renderSelector({ ...body, defaultCompanyId: 'b' }, { onSelected });
+
+    expect(screen.getAllByText('پیش‌فرض شما').length).toBeGreaterThan(0);
+    expect(onSelected).not.toHaveBeenCalled();
+    expect(enterButton()).toBeInTheDocument();
   });
 });
