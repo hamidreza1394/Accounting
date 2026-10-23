@@ -29,8 +29,11 @@
         <section class="taraz-login__panel" aria-labelledby="login-success-title">
             <div class="taraz-panel-card">
                 <div class="taraz-brand taraz-brand--form">
-                    <img src="~/images/faranou-mark.svg" alt="" width="52" height="52" />
-                    <div><strong>فرانو</strong><span>FARANOU — @(isRightToLeft ? "نرم‌افزار حسابداری هوشمند" : "Smart Accounting Software")</span></div>
+                    <span class="fn-mark fn-mark--sm"><img src="~/images/faranou-logo-mark.svg" alt="" width="26" height="32" /></span>
+                    <div class="taraz-brand__text">
+                        <p class="taraz-brand__name"><strong>فرانو</strong><span class="taraz-brand__latin" lang="en" dir="ltr">FARANOU</span></p>
+                        <p class="taraz-brand__descriptor">@(isRightToLeft ? "نرم‌افزار حسابداری هوشمند" : "Smart Accounting Software")</p>
+                    </div>
                 </div>
 
                 <div class="taraz-form-heading">

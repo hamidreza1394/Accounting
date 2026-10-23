@@ -21,8 +21,11 @@
         <section class="taraz-login__panel" aria-labelledby="login-title">
             <div class="taraz-panel-card">
                 <div class="taraz-brand taraz-brand--form">
-                    <img src="~/images/faranou-mark.svg" alt="" width="52" height="52" />
-                    <div><strong>فرانو</strong><span>FARANOU — @(isRightToLeft ? "نرم‌افزار حسابداری هوشمند" : "Smart Accounting Software")</span></div>
+                    <span class="fn-mark fn-mark--sm"><img src="~/images/faranou-logo-mark.svg" alt="" width="26" height="32" /></span>
+                    <div class="taraz-brand__text">
+                        <p class="taraz-brand__name"><strong>فرانو</strong><span class="taraz-brand__latin" lang="en" dir="ltr">FARANOU</span></p>
+                        <p class="taraz-brand__descriptor">@(isRightToLeft ? "نرم‌افزار حسابداری هوشمند" : "Smart Accounting Software")</p>
+                    </div>
                 </div>
 
                 <div class="taraz-form-heading">
@@ -54,53 +57,27 @@
                         <label asp-for="ViewModel.Password">@Resources.DataDictionary.Password</label>
                         <div class="taraz-input-wrap">
                             <span class="taraz-input-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
-                            <input asp-for="ViewModel.Password" autocomplete="current-password" placeholder="@(isRightToLeft ? "کلمه عبور خود را وارد کنید" : "Enter your password")" />
-                            <button type="button" class="taraz-password-toggle" data-password-toggle="ViewModel_Password" data-label-show="@(isRightToLeft ? "نمایش رمز" : "Show password")" data-label-hide="@(isRightToLeft ? "پنهان کردن رمز" : "Hide password")" data-aria-show="@(isRightToLeft ? "نمایش رمز" : "Show password")" data-aria-hide="@(isRightToLeft ? "پنهان کردن رمز" : "Hide password")" aria-controls="ViewModel_Password" aria-label="@(isRightToLeft ? "نمایش رمز" : "Show password")" title="@(isRightToLeft ? "نمایش رمز" : "Show password")" aria-pressed="false"><span class="taraz-password-icon" data-password-icon aria-hidden="true">◌</span><span data-password-label>@(isRightToLeft ? "نمایش رمز" : "Show password")</span></button>
+                            <input asp-for="ViewModel.Password" class="taraz-input--with-action" autocomplete="current-password" placeholder="@(isRightToLeft ? "کلمه عبور خود را وارد کنید" : "Enter your password")" />
+                            <button type="button" class="taraz-password-toggle" data-password-toggle="ViewModel_Password" data-label-show="@(isRightToLeft ? "نمایش رمز" : "Show password")" data-label-hide="@(isRightToLeft ? "پنهان کردن رمز" : "Hide password")" data-aria-show="@(isRightToLeft ? "نمایش رمز" : "Show password")" data-aria-hide="@(isRightToLeft ? "پنهان کردن رمز" : "Hide password")" aria-controls="ViewModel_Password" aria-label="@(isRightToLeft ? "نمایش رمز" : "Show password")" title="@(isRightToLeft ? "نمایش رمز" : "Show password")" aria-pressed="false"><span class="taraz-password-icon" data-password-icon aria-hidden="true"><svg class="taraz-eye taraz-eye--show" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><svg class="taraz-eye taraz-eye--hide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></svg></span><span class="taraz-password-label" data-password-label>@(isRightToLeft ? "نمایش رمز" : "Show password")</span></button>
                         </div>
                         <span asp-validation-for="ViewModel.Password" class="taraz-field-error"></span>
                     </div>
 
                     <label class="taraz-remember" asp-for="ViewModel.RememberMe"><input asp-for="ViewModel.RememberMe" /><span class="taraz-check" aria-hidden="true"></span><span>@Resources.DataDictionary.RememberMe</span></label>
-                    <button type="submit" class="taraz-submit"><span class="taraz-submit-label">@Resources.ButtonCaptions.Login</span><span class="taraz-submit-status" hidden>@(isRightToLeft ? "در حال بررسی..." : "Checking...")</span><span class="taraz-submit-arrow" aria-hidden="true">←</span></button>
+                    <button type="submit" class="taraz-submit"><span class="taraz-submit-label">@Resources.ButtonCaptions.Login</span><span class="taraz-submit-status" hidden><span class="taraz-spinner" aria-hidden="true"></span>@(isRightToLeft ? "در حال بررسی..." : "Checking...")</span><span class="taraz-submit-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg></span></button>
                 </form>
                 <p class="taraz-support-note">@(isRightToLeft ? "در صورت فراموشی اطلاعات ورود یا بروز مشکل در ورود، با مدیر سامانه یا پشتیبانی تماس بگیرید." : "If you have forgotten your sign-in details or need help, contact the system administrator or support.")</p>
-                <p class="taraz-security-note"><span aria-hidden="true">🔒</span>@(isRightToLeft ? "ارتباط شما با سامانه به‌صورت امن برقرار می‌شود." : "Your connection to the system is secure.")</p>
+                <p class="taraz-security-note"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>@(isRightToLeft ? "ارتباط شما با سامانه به‌صورت امن برقرار می‌شود." : "Your connection to the system is secure.")</p>
             </div>
             <p class="taraz-copyright">© فرانو — @(isRightToLeft ? "نرم‌افزار حسابداری هوشمند" : "Smart Accounting Software")</p>
         </section>
 
-        <section class="taraz-login__visual" aria-label="@(isRightToLeft ? "معرفی برند فرا نو و پیش‌نمایش نمایشی" : "Faranou brand introduction and illustrative preview")">
+        <section class="taraz-login__visual" aria-label="@(isRightToLeft ? "معرفی برند فرانو و پیش‌نمایش نمایشی" : "Faranou brand introduction and illustrative preview")">
             <div class="fn-brand-panel" inert>
                 <div class="fn-brand-hero">
-                    <div class="fn-cloud-mark" aria-hidden="true">
-                        <svg viewBox="0 0 120 88" width="96" height="70" focusable="false">
-                            <defs>
-                                <linearGradient id="fnCloudGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop offset="0%" stop-color="#e8f7fa"/>
-                                    <stop offset="55%" stop-color="#b8e8ef"/>
-                                    <stop offset="100%" stop-color="#7dd3de"/>
-                                </linearGradient>
-                                <linearGradient id="fnBarGrad" x1="0%" y1="100%" x2="0%" y2="0%">
-                                    <stop offset="0%" stop-color="#2f8d93"/>
-                                    <stop offset="100%" stop-color="#5ec4cc"/>
-                                </linearGradient>
-                                <linearGradient id="fnArrowGrad" x1="0%" y1="100%" x2="100%" y2="0%">
-                                    <stop offset="0%" stop-color="#2f8d93"/>
-                                    <stop offset="100%" stop-color="#e0a94a"/>
-                                </linearGradient>
-                            </defs>
-                            <ellipse cx="58" cy="48" rx="42" ry="28" fill="url(#fnCloudGrad)" opacity="0.95"/>
-                            <ellipse cx="38" cy="42" rx="22" ry="18" fill="url(#fnCloudGrad)"/>
-                            <ellipse cx="78" cy="40" rx="26" ry="20" fill="url(#fnCloudGrad)"/>
-                            <rect x="36" y="42" width="9" height="18" rx="2.5" fill="url(#fnBarGrad)"/>
-                            <rect x="48" y="34" width="9" height="26" rx="2.5" fill="url(#fnBarGrad)"/>
-                            <rect x="60" y="26" width="9" height="34" rx="2.5" fill="url(#fnBarGrad)"/>
-                            <rect x="72" y="18" width="9" height="42" rx="2.5" fill="url(#fnBarGrad)"/>
-                            <path d="M28 58 C40 52 52 44 68 28" fill="none" stroke="url(#fnArrowGrad)" stroke-width="3.2" stroke-linecap="round"/>
-                            <polygon points="74,18 68,30 62,24" fill="#e0a94a"/>
-                        </svg>
-                    </div>
+                    <span class="fn-mark fn-mark--lg" aria-hidden="true"><img src="~/images/faranou-logo-mark.svg" alt="" width="58" height="70" /></span>
                     <h2 class="fn-brand-name">فرانو</h2>
+                    <p class="fn-brand-latin" lang="en" dir="ltr">FARANOU</p>
                     <p class="fn-brand-tagline">@(isRightToLeft ? "فرانو؛ فراتر از ایده‌ها، تا واقعیت" : "Faranou — Beyond ideas, into reality")</p>
                     <p class="fn-brand-lead">@(isRightToLeft ? "مدیریت مالی کسب‌وکار خود را با دقت، نظم و اطمینان تجربه کنید." : "Experience precise, orderly and confident financial management for your business.")</p>
                 </div>

@@ -7,11 +7,9 @@
         var showAria = toggle.getAttribute('data-aria-show') || 'نمایش رمز';
         var hideAria = toggle.getAttribute('data-aria-hide') || 'پنهان کردن رمز';
         var label = toggle.querySelector('[data-password-label]');
-        var icon = toggle.querySelector('[data-password-icon]');
 
         password.type = visible ? 'text' : 'password';
         if (label) label.textContent = visible ? hideLabel : showLabel;
-        if (icon) icon.textContent = visible ? '◉' : '◌';
         toggle.setAttribute('aria-label', visible ? hideAria : showAria);
         toggle.setAttribute('title', visible ? hideAria : showAria);
         toggle.setAttribute('aria-pressed', String(visible));

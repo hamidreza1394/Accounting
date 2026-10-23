@@ -162,3 +162,10 @@
 - **آزمون واقعی** (Claude Code 2.1.309، جلسه headless در دایرکتوری موقت جدا): قواعد `deny` روی `.env`، `Server/.env` تو در تو، `secrets.json`، نوشتن روی `.env.local`، `git push -f/-fu/+main` و `dotnet ef --project … database drop` کار کردند؛ `.env.example`، `appsettings.json` و pushهای بی‌خطر به‌اشتباه رد نشدند. اثر قواعد `ask` به‌صورت تجربی تفکیک‌پذیر نبود و فقط بر پایه مستندات رسمی گزارش شده است. در یک جلسه headless فقط‌خواندنی، وظیفهٔ امنیتی `security-reviewer` را فراخوانی کرد؛ هیچ Skill افزونه‌ای فراخوانی نشد.
 - **اجرانشده:** `dotnet build/test` (SDK در این محیط نصب نیست؛ کد تغییر نکرد)، CI روی PR، Hook، Sandbox.
 - **Git:** Commit/Push/PR انجام نشد. گزارش: `docs/handoffs/ISSUE-UNNUMBERED-claude-code-standing-rules.md`.
+
+## 2026-10-23 — ارتقای UI/UX صفحه ورود و نشان جدید فرانو (UNNUMBERED، شاخه `ui/login-professional-polish`)
+- **تغییر:** نشان SVG محلی `faranou-logo-mark.svg`؛ سربرگ برند، فرم (آیکون رمز، چک‌باکس، spinner، فوکوس)، ستون معرفی و داشبورد نمایشی در `Login.cshtml`، `taraz-login.css` و `taraz-login.js` پالایش شد؛ `LoginSuccess` هم‌سان شد. PageModel، احراز هویت، CSRF، CSP و داده‌های نمایشی تغییر نکرد؛ `faranou-mark.svg` (favicon) و CI دست‌نخورده است.
+- **بررسی واقعی:** `npm test` در `tests/Template.Tests.Js` (۷ از ۷)، `check_static_assets.py`، `git diff --check`، ۱۵ بررسی تعاملی Chromium و اسکرول افقی در ۵ عرض روی رندر استاتیک Markup؛ بازبین‌های مستقل `code-reviewer` و `security-reviewer`؛ یک اشکال LTR در `LoginSuccess` یافت و رفع شد.
+- **.NET (SDK 10.0.113، بعداً نصب‌شده خارج از مخزن):** restore موفق؛ build Release ۰ خطا؛ `dotnet test --solution Template.sln` ۳۰۶ تست، ۳۰۲ موفق، ۰ ناموفق، ۴ ردشده.
+- **اجرانشده:** ۴ تست `CorporateGroupSqlServerTests` (نیاز به `FARANOU_TEST_SQLSERVER`؛ Docker daemon نیست)، E2E با SQL Server، Firefox و Safari؛ باید در CI روی PR دیده شود.
+- **Git:** Commit/Push/PR انجام نشد. گزارش: `docs/handoffs/ISSUE-UNNUMBERED-login-professional-ui.md`.
