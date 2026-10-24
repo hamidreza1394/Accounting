@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Faranou.Licensing.Contracts</RootNamespace>
+    <AssemblyName>Faranou.Licensing.Contracts</AssemblyName>
+    <Description>Versioned licensing contracts for offline activation request/response. No ASP.NET, EF, or Server dependencies (D-041).</Description>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+</Project>
