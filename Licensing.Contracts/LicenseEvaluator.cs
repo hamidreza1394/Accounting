@@ -1,9 +1,8 @@
 namespace Faranou.Licensing.Contracts;
 
 /// <summary>
-/// Pure evaluation of a structurally valid, signature-verified payload against time.
-/// Uses injected <see cref="TimeProvider"/> only (OD-05).
-/// High-water clock anti-rollback is a host concern and is not implemented here.
+/// Time/status evaluation only. Must not be used on unsigned data in production paths —
+/// use <see cref="LicenseEnvelopeValidator"/> instead.
 /// </summary>
 public sealed class LicenseEvaluator
 {
@@ -19,7 +18,8 @@ public sealed class LicenseEvaluator
 	public LicenseStatus Evaluate(LicensePayload payload, string localInstallationId)
 	{
 		ArgumentNullException.ThrowIfNull(payload);
-		if (!string.Equals(payload.InstallationId, localInstallationId, StringComparison.Ordinal))
+		if (string.IsNullOrEmpty(localInstallationId)
+		    || !string.Equals(payload.InstallationId, localInstallationId, StringComparison.Ordinal))
 			return LicenseStatus.Invalid;
 
 		var structural = StructuralValidation.ValidatePayload(payload);
@@ -31,8 +31,11 @@ public sealed class LicenseEvaluator
 		if (payload.NotBeforeUtc is { } nbf && now < nbf)
 			return LicenseStatus.Invalid;
 
-		if (payload.LicenseKind == LicensePayload.KindPerpetual || payload.ExpiresAtUtc is null)
+		if (payload.LicenseKind == LicensePayload.KindPerpetual)
 			return LicenseStatus.Valid;
+
+		if (payload.ExpiresAtUtc is null)
+			return LicenseStatus.Invalid;
 
 		var expires = payload.ExpiresAtUtc.Value;
 		if (now <= expires)

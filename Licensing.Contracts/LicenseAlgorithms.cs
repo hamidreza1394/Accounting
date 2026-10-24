@@ -1,15 +1,14 @@
 namespace Faranou.Licensing.Contracts;
 
 /// <summary>
-/// Stable algorithm identifiers written into the signed envelope.
-/// OD-12 is still Proposed; ECDSA-P256-SHA256 is the provisional default for implementation
-/// and tests only — not a product Accepted decision until the owner confirms.
+/// Algorithm identifiers. OD-12 remains Proposed; only allowlisted values may verify.
 /// </summary>
 public static class LicenseAlgorithms
 {
-	/// <summary>ECDSA P-256 with SHA-256; signature encoded as IEEE P1363 (r||s, 64 bytes).</summary>
 	public const string EcdsaP256Sha256 = "ECDSA-P256-SHA256";
-
-	/// <summary>Current format version of the envelope JSON payload bytes that are signed.</summary>
 	public const int CurrentFormatVersion = 1;
+
+	/// <summary>Explicit allowlist — unknown algorithms are rejected.</summary>
+	public static bool IsAllowed(string? algorithm)
+		=> string.Equals(algorithm, EcdsaP256Sha256, StringComparison.Ordinal);
 }
