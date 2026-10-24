@@ -3,21 +3,34 @@ using System.Security.Cryptography;
 namespace Faranou.Licensing.Contracts;
 
 /// <summary>
-/// Provisional verifier for OD-12 proposal (ECDSA P-256 / SHA-256, IEEE P1363 signature).
-/// Not an Accepted product decision until the owner confirms OD-12.
+/// Provisional ECDSA P-256 / SHA-256 verifier (IEEE P1363). OD-12 not Accepted.
+/// Does not select algorithm from attacker-controlled input beyond equality with fixed constant.
 /// </summary>
 public sealed class EcdsaP256Sha256Verifier : ILicenseSignatureVerifier
 {
 	public string Algorithm => LicenseAlgorithms.EcdsaP256Sha256;
 
-	public bool TryVerify(LicenseEnvelope envelope, ReadOnlySpan<byte> publicKeySpkiOrRaw, out string? error)
+	public bool TryVerify(LicenseEnvelope envelope, ReadOnlySpan<byte> publicKeySpki, out string? errorCode)
 	{
 		ArgumentNullException.ThrowIfNull(envelope);
-		error = null;
+		errorCode = null;
 
 		if (!string.Equals(envelope.Algorithm, Algorithm, StringComparison.Ordinal))
 		{
-			error = "algorithm mismatch";
+			errorCode = "algorithm_mismatch";
+			return false;
+		}
+
+		if (publicKeySpki.Length is 0 or > LicenseInputLimits.MaxPublicKeyBytes)
+		{
+			errorCode = "public_key_invalid";
+			return false;
+		}
+
+		if (string.IsNullOrEmpty(envelope.SignatureBase64)
+		    || envelope.SignatureBase64.Length > LicenseInputLimits.MaxSignatureBase64Chars)
+		{
+			errorCode = "signature_invalid";
 			return false;
 		}
 
@@ -28,13 +41,20 @@ public sealed class EcdsaP256Sha256Verifier : ILicenseSignatureVerifier
 		}
 		catch (FormatException)
 		{
-			error = "invalid signature encoding";
+			errorCode = "signature_encoding_invalid";
 			return false;
 		}
 
 		if (signature.Length != 64)
 		{
-			error = "ECDSA P-256 IEEE P1363 signature must be 64 bytes";
+			errorCode = "signature_length_invalid";
+			return false;
+		}
+
+		if (string.IsNullOrEmpty(envelope.PayloadJson)
+		    || envelope.PayloadJson.Length > LicenseInputLimits.MaxPayloadJsonChars)
+		{
+			errorCode = "payload_size_invalid";
 			return false;
 		}
 
@@ -42,48 +62,34 @@ public sealed class EcdsaP256Sha256Verifier : ILicenseSignatureVerifier
 		try
 		{
 			using var ecdsa = ECDsa.Create();
-			ImportPublicKey(ecdsa, publicKeySpkiOrRaw);
-			if (!ecdsa.VerifyData(data, signature, HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation))
+			try
 			{
-				error = "signature verification failed";
+				ecdsa.ImportSubjectPublicKeyInfo(publicKeySpki, out _);
+			}
+			catch (CryptographicException)
+			{
+				errorCode = "public_key_import_failed";
 				return false;
 			}
-			return true;
-		}
-		catch (CryptographicException ex)
-		{
-			error = "cryptographic error: " + ex.Message;
-			return false;
-		}
-	}
 
-	private static void ImportPublicKey(ECDsa ecdsa, ReadOnlySpan<byte> key)
-	{
-		try
-		{
-			ecdsa.ImportSubjectPublicKeyInfo(key, out _);
-			return;
+			if (ecdsa.KeySize != 256)
+			{
+				errorCode = "public_key_curve_invalid";
+				return false;
+			}
+
+			if (!ecdsa.VerifyData(data, signature, HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation))
+			{
+				errorCode = "signature_mismatch";
+				return false;
+			}
+
+			return true;
 		}
 		catch (CryptographicException)
 		{
-			// fall through
+			errorCode = "cryptographic_failure";
+			return false;
 		}
-
-		if (key.Length == 65 && key[0] == 0x04)
-		{
-			var parameters = new ECParameters
-			{
-				Curve = ECCurve.NamedCurves.nistP256,
-				Q = new ECPoint
-				{
-					X = key.Slice(1, 32).ToArray(),
-					Y = key.Slice(33, 32).ToArray()
-				}
-			};
-			ecdsa.ImportParameters(parameters);
-			return;
-		}
-
-		throw new CryptographicException("Unrecognized public key format");
 	}
 }
