@@ -8,6 +8,9 @@
 #   * an existing directory is replaced only when it is empty or carries the marker file of an
 #     earlier publish (.faranou-publish-output); an existing file is refused.
 # Nothing is deleted unless every check passes.
+#
+# Assert-FaranouCustomerPublishClean (G2 / D-041) refuses Vendor assemblies and private-key
+# material in the customer package after a real publish.
 
 $script:FaranouPublishMarker = '.faranou-publish-output'
 
@@ -32,7 +35,6 @@ function Test-FaranouSameOrAncestor([string]$Candidate, [string]$Path) {
 }
 
 function Test-FaranouLink([string]$Path) {
-    # The path itself or any existing ancestor being a link would let the delete escape.
     $current = $Path
     while ($current) {
         if (Test-Path -LiteralPath $current) {
@@ -90,4 +92,44 @@ function Initialize-FaranouPublishOutput([string]$Output) {
     if (Test-Path -LiteralPath $Output) { Remove-Item -LiteralPath $Output -Recurse -Force }
     New-Item -ItemType Directory -Path $Output -Force | Out-Null
     Set-Content -LiteralPath (Join-Path $Output $script:FaranouPublishMarker) -Value 'Created by scripts/publish.ps1; the whole directory is replaced by the next publish.'
+}
+
+function Assert-FaranouCustomerPublishClean([string]$Output) {
+    if (-not (Test-Path -LiteralPath $Output -PathType Container)) {
+        throw "publish: G2 content guard: output directory does not exist: $Output"
+    }
+
+    $found = $false
+    $vendorNames = @('Vendor.*.dll', 'Vendor.*.exe', 'Vendor.*.so', 'Vendor.*.dylib', 'Vendor.*.pdb')
+    foreach ($pattern in $vendorNames) {
+        Get-ChildItem -LiteralPath $Output -Recurse -File -Filter $pattern -ErrorAction SilentlyContinue | ForEach-Object {
+            Write-Error "publish: G2 content guard: forbidden Vendor assembly or library: $($_.FullName.Substring($Output.Length).TrimStart('\','/'))"
+            $found = $true
+        }
+    }
+
+    foreach ($ext in @('*.pfx', '*.p12', '*.key')) {
+        Get-ChildItem -LiteralPath $Output -Recurse -File -Filter $ext -ErrorAction SilentlyContinue | ForEach-Object {
+            Write-Error "publish: G2 content guard: forbidden sensitive file: $($_.FullName.Substring($Output.Length).TrimStart('\','/'))"
+            $found = $true
+        }
+    }
+
+    $skipExt = @('.dll', '.exe', '.so', '.dylib', '.pdb', '.png', '.jpg', '.jpeg', '.gif', '.woff', '.woff2', '.ttf', '.eot', '.ico', '.zip', '.nupkg')
+    $pemPattern = '-----BEGIN ([A-Z0-9 ]+)?PRIVATE KEY-----'
+    Get-ChildItem -LiteralPath $Output -Recurse -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Length -lt 512KB -and ($skipExt -notcontains $_.Extension.ToLowerInvariant()) } |
+        ForEach-Object {
+            try {
+                $text = Get-Content -LiteralPath $_.FullName -Raw -ErrorAction Stop
+                if ($text -match $pemPattern) {
+                    Write-Error "publish: G2 content guard: private key material detected in: $($_.FullName.Substring($Output.Length).TrimStart('\','/'))"
+                    $found = $true
+                }
+            } catch { }
+        }
+
+    if ($found) {
+        throw 'publish: G2 content guard failed (D-041): customer package must not contain Vendor assemblies or private keys'
+    }
 }

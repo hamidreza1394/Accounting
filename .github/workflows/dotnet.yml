@@ -12,9 +12,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # The React client (ClientApp): locked install, strict type check, unit tests,
-  # production build, the offline-resources check of the build output and an audit
-  # of the runtime dependencies. Node 24 ships npm 11, which the lockfile needs.
+  # G3 (D-041): secret scanning. Pinned to full commit SHA of gitleaks/gitleaks-action v3.0.0.
+  # https://github.com/gitleaks/gitleaks-action/releases/tag/v3.0.0
+  # commit e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e (Node 24 runtime)
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   client:
     runs-on: ubuntu-latest
     defaults:
@@ -44,8 +56,7 @@ jobs:
 
   build-and-test:
     runs-on: ubuntu-latest
-    # A disposable SQL Server for the HTTP integration tests (tests/Template.Tests/Integration).
-    # The sa password only exists inside this throw-away container of one CI run.
+    needs: [secret-scan]
     env:
       MSSQL_SA_PASSWORD: Ci1Faranou${{ github.run_id }}x
     services:
@@ -84,8 +95,6 @@ jobs:
         run: dotnet build Template.sln --no-restore --configuration Release
       - name: Test
         env:
-          # Runs the integration tests against the SQL Server container above (real SQL Server,
-          # schema from the EF Core migrations). The database is created and dropped by the tests.
           FARANOU_TEST_SQLSERVER: Server=localhost,1433;Database=FaranouTests;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
           FARANOU_REQUIRE_SQLSERVER: '1'
         run: |
@@ -115,18 +124,12 @@ jobs:
         run: |
           totals="$(grep -aE 'total: |failed: |succeeded: |skipped: |Test run summary' /tmp/dotnet-test.log | tr -d '\r' | tr '\n' ' ' || true)"
           echo "::notice title=.NET test totals::${totals:-no summary found}"
-      # Behavioral (DOM-level) tests for client-side scripts. The xUnit tests only
-      # inspect the .cshtml/.js source as text; these tests render the form in jsdom,
-      # load the real taraz-login.js + site.js, and assert that clicking the password
-      # toggle actually flips password.type between "password" and "text".
       - name: Behavioral tests (jsdom)
         working-directory: tests/Template.Tests.Js
         run: |
           set -o pipefail
           npm install --no-fund --no-audit 2>&1 | tee /tmp/npm-install.log
           node --test 2>&1 | tee /tmp/behavioral-test.log
-      # The migration checks are the guards against a model snapshot that no longer
-      # describes the model, which fails at runtime with PendingModelChangesWarning.
       - name: Check the generated migrations
         run: python3 scripts/generate_migrations.py --repo-root . --check
       - name: Install the C# parser of the migration verification
@@ -135,16 +138,10 @@ jobs:
         run: python3 scripts/verify_migration_model.py --repo-root .
       - name: Install dotnet-ef
         run: dotnet tool install --global dotnet-ef --version 10.0.13
-      # The official check. It builds the model and compares it with the snapshot; it
-      # never opens a database connection. "--no-build" reuses the output of the build
-      # step, so it has to ask for the same configuration.
       - name: Check for pending model changes
         run: |
           set -o pipefail
           dotnet ef migrations has-pending-model-changes --project Infrastructure/Persistence/Infrastructure.Persistence.csproj --startup-project Server/Server.csproj --configuration Release --no-build 2>&1 | tee /tmp/dotnet-ef.log
-      # The logs of a run can not always be downloaded, so the failure details are
-      # published where they stay readable. This step runs last, so that every log that
-      # exists is published.
       - name: Publish the failure details
         if: failure()
         run: |
@@ -159,28 +156,25 @@ jobs:
               } >> "$GITHUB_STEP_SUMMARY"
             fi
           done
-          # The step summary is not readable through the API, the annotation is.
           for log in /tmp/dotnet-test.log /tmp/dotnet-ef.log /tmp/behavioral-test.log /tmp/npm-install.log; do
             if [ -f "$log" ]; then
               echo "::error title=$(basename "$log")::$(tail -n 120 "$log" | grep -a -E 'error|Failed|failed|Assert|Exception|Test summary|total:|Passed!|Failed!|Unable|not found|pending|not ok' | head -n 40 | tr -d '\r' | tr '\n' '~')"
             fi
           done
 
-  # Safety tests of the publish scripts: the output-directory guard refuses dangerous paths
-  # (root, repository, home, current directory, sources, links, foreign directories) and
-  # deletes nothing in those cases. Bash and PowerShell 7 run on Linux.
   publish-scripts:
     runs-on: ubuntu-latest
+    needs: [secret-scan]
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-      - name: Bash guard tests
+      - name: Bash guard tests (output directory)
         run: scripts/tests/publish-output.test.sh
+      - name: Bash G2 content guard tests
+        run: bash scripts/tests/publish-content-guard.test.sh
       - name: PowerShell guard tests (PowerShell 7 on Linux)
         shell: pwsh
         run: ./scripts/tests/publish-output.tests.ps1
-      # scripts/dev installs the SDK and starts a disposable SQL Server in Claude Code cloud
-      # sessions. Lint them, and check that global.json still resolves to a published SDK.
       - name: Lint the developer scripts
         run: |
           bash -n scripts/dev/*.sh
@@ -190,8 +184,6 @@ jobs:
           rc=0; scripts/dev/install-dotnet.sh --check || rc=$?
           [ "$rc" = 0 ] || [ "$rc" = 3 ]
 
-  # The PowerShell publish script on a real Windows runner: guard tests, then the complete
-  # publish (npm ci, client checks and build, dotnet publish, output checks).
   publish-windows:
     runs-on: windows-latest
     needs: [client, build-and-test]
@@ -223,9 +215,6 @@ jobs:
             Write-Host "present: $path"
           }
 
-  # Production build in the documented order (scripts/publish.sh: npm ci, client type check and
-  # tests, npm run build, offline check, dotnet publish, checks of the publish output), then the
-  # published server is started and /app, its client routes and bundles are requested over HTTP.
   publish:
     runs-on: ubuntu-latest
     needs: [client, build-and-test]
@@ -242,7 +231,7 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: ClientApp/package-lock.json
-      - name: Publish (client build + server publish + output checks)
+      - name: Publish (client build + server publish + output checks + G2)
         run: scripts/publish.sh "$RUNNER_TEMP/faranou-publish"
       - name: Smoke test of the published server
         run: scripts/smoke-published-app.sh "$RUNNER_TEMP/faranou-publish"
@@ -250,9 +239,6 @@ jobs:
         if: always()
         run: find "$RUNNER_TEMP/faranou-publish/wwwroot/app" -type f | sort || true
 
-  # Browser end-to-end tests: Chromium -> published server (Production) -> SQL Server 2022.
-  # Sign-in, session, company selection, anti-forgery, company isolation, session revalidation
-  # and the enforced CSP of the visited pages (tests/e2e).
   e2e:
     runs-on: ubuntu-latest
     needs: [client, build-and-test]
@@ -319,4 +305,3 @@ jobs:
             tests/e2e/playwright-report
             tests/e2e/test-results
           retention-days: 7
-
