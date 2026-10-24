@@ -11,6 +11,9 @@
 #   * an existing directory is only replaced when it is empty or carries the marker file
 #     written by an earlier publish (.faranou-publish-output); an existing file is refused.
 # The same rules are implemented in scripts/publish.ps1 (Resolve-FaranouPublishOutput).
+#
+# After a real publish, faranou_assert_customer_publish_clean (G2 / D-041) refuses Vendor
+# assemblies and private-key material in the customer package.
 
 FARANOU_PUBLISH_MARKER=".faranou-publish-output"
 
@@ -84,4 +87,53 @@ faranou_prepare_output() {
   rm -rf -- "$output"
   mkdir -p -- "$output"
   printf 'Created by scripts/publish.sh; the whole directory is replaced by the next publish.\n' > "$output/$FARANOU_PUBLISH_MARKER"
+}
+
+# G2 (D-041): refuse Vendor assemblies and private-key material in the customer publish output.
+# Called after a real dotnet publish. Patterns are intentional and narrow:
+#   - assembly / native name Vendor.* (case-insensitive on the file name)
+#   - sensitive extensions: .pfx .p12 .key (any path)
+#   - PEM private-key headers in text files (BEGIN ... PRIVATE KEY)
+# Does not block ordinary customer DLLs, appsettings, or public certificates without private key.
+faranou_assert_customer_publish_clean() {
+  local output="$1"
+  local found=0
+  local rel
+
+  if [ ! -d "$output" ]; then
+    echo "publish: G2 content guard: output directory does not exist: $output" >&2
+    return 1
+  fi
+
+  # Vendor assemblies / native libraries (name starts with Vendor.)
+  while IFS= read -r -d '' f; do
+    rel="${f#"$output"/}"
+    echo "publish: G2 content guard: forbidden Vendor assembly or library: $rel" >&2
+    found=1
+  done < <(find "$output" -type f \( -iname 'Vendor.*.dll' -o -iname 'Vendor.*.exe' -o -iname 'Vendor.*.so' -o -iname 'Vendor.*.dylib' -o -iname 'Vendor.*.pdb' \) -print0 2>/dev/null)
+
+  # Sensitive key/certificate container extensions
+  while IFS= read -r -d '' f; do
+    rel="${f#"$output"/}"
+    echo "publish: G2 content guard: forbidden sensitive file: $rel" >&2
+    found=1
+  done < <(find "$output" -type f \( -iname '*.pfx' -o -iname '*.p12' -o -iname '*.key' \) -print0 2>/dev/null)
+
+  # PEM private-key material (text scan; skip binary-looking files by size/name heuristics)
+  while IFS= read -r -d '' f; do
+    case "$f" in
+      *.dll|*.exe|*.so|*.dylib|*.pdb|*.png|*.jpg|*.jpeg|*.gif|*.woff|*.woff2|*.ttf|*.eot|*.ico|*.zip|*.nupkg) continue ;;
+    esac
+    if grep -qE -- '-----BEGIN ([A-Z0-9 ]+)?PRIVATE KEY-----' "$f" 2>/dev/null; then
+      rel="${f#"$output"/}"
+      echo "publish: G2 content guard: private key material detected in: $rel" >&2
+      found=1
+    fi
+  done < <(find "$output" -type f -size -512k -print0 2>/dev/null)
+
+  if [ "$found" -ne 0 ]; then
+    echo "publish: G2 content guard failed (D-041): customer package must not contain Vendor assemblies or private keys" >&2
+    return 1
+  fi
+  return 0
 }
