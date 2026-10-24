@@ -1,6 +1,6 @@
 # معماری لایسنس و فعال‌سازی (طرح هدف)
 
-> **وضعیت کل سند: `NotImplemented`.** در کد `main` (commit مبنا `1d39dbf`) هیچ مدل، سرویس، API یا صفحه‌ای برای لایسنس، مشتری تجاری، نصب یا زیرسیستم وجود ندارد. این سند طرح هدف و مرجع Agentها برای پیاده‌سازی آینده است؛ نه توصیف رفتار فعلی. تصمیم‌های پایه: D-020 تا D-029 در [`DECISIONS.md`](DECISIONS.md). مدل داده: [`LICENSING_DATA_MODEL.md`](LICENSING_DATA_MODEL.md). گردش‌کارها: [`LICENSING_WORKFLOWS.md`](LICENSING_WORKFLOWS.md). تهدیدها: [`LICENSING_THREAT_MODEL.md`](LICENSING_THREAT_MODEL.md).
+> **وضعیت کل سند: `NotImplemented`.** در کد `main` (commit مبنا `1d39dbf`؛ بازبینی فاز صفر 2026-10-24 روی `8c1e7a3` تغییری در این وضعیت نداد) هیچ مدل، سرویس، API یا صفحه‌ای برای لایسنس، مشتری تجاری، نصب یا زیرسیستم وجود ندارد. این سند طرح هدف و مرجع Agentها برای پیاده‌سازی آینده است؛ نه توصیف رفتار فعلی. تصمیم‌های پایه: D-020 تا D-029 و (فاز صفر 2026-10-24) D-041 تا D-044 در [`DECISIONS.md`](DECISIONS.md)؛ تصمیم‌های باز با گزینه‌ها و پیشنهاد: [`LICENSING_OPEN_DECISIONS.md`](LICENSING_OPEN_DECISIONS.md). مدل داده: [`LICENSING_DATA_MODEL.md`](LICENSING_DATA_MODEL.md). گردش‌کارها: [`LICENSING_WORKFLOWS.md`](LICENSING_WORKFLOWS.md). تهدیدها: [`LICENSING_THREAT_MODEL.md`](LICENSING_THREAT_MODEL.md).
 
 ## ۱) وضعیت فعلی (واقعی)
 
@@ -46,6 +46,8 @@
 یک سرویس سمت سرور وضعیت لایسنس را از فایل معتبر محلی (یا در ابر از دیتابیس مرکزی) محاسبه می‌کند: `Valid`, `ExpiringSoon`, `Grace`, `Restricted`, `Missing`, `Invalid`. نتیجه با بررسی عضویت شرکت و مجوز عملیاتی ترکیب می‌شود (D-025). Endpointها یک نقطه مشترک سیاست Authorization دارند؛ بررسی پراکنده ممنوع است.
 
 ## ۶) تصمیم‌های بازِ نیازمند تأیید کارفرما (`NeedsApproval`)
+
+> **تکمیل 2026-10-24:** هر ردیف این جدول در [`LICENSING_OPEN_DECISIONS.md`](LICENSING_OPEN_DECISIONS.md) با گزینه‌ها، مزایا و معایب، ریسک و پیشنهاد فنی آمده است (OD-01..OD-17). ردیف ۹ (رابطهٔ `Company` ابری با `CustomerAccount`) با D-038 تعیین‌تکلیف شده است. جدول زیر بدون تغییر نگه داشته شده است.
 
 | # | پرسش | پیش‌فرض پیشنهادی |
 |---|---|---|
