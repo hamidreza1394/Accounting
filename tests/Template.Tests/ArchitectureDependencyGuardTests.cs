@@ -39,7 +39,7 @@ public sealed class ArchitectureDependencyGuardTests
 
 			foreach (var reference in ReadProjectReferences(path))
 			{
-				var resolved = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(path)!, reference));
+				var resolved = ResolveReferencePath(path, reference);
 				if (File.Exists(resolved))
 				{
 					queue.Enqueue(resolved);
@@ -83,6 +83,7 @@ public sealed class ArchitectureDependencyGuardTests
 				</Project>
 				""".Trim());
 
+			// Use MSBuild-style backslashes (as real .csproj files often do).
 			File.WriteAllText(Path.Combine(serverDir, "Server.csproj"),
 				"""
 				<Project Sdk="Microsoft.NET.Sdk.Web">
@@ -138,7 +139,7 @@ public sealed class ArchitectureDependencyGuardTests
 
 			foreach (var reference in ReadProjectReferences(path))
 			{
-				var resolved = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(path)!, reference));
+				var resolved = ResolveReferencePath(path, reference);
 				if (File.Exists(resolved))
 				{
 					queue.Enqueue(resolved);
@@ -147,6 +148,15 @@ public sealed class ArchitectureDependencyGuardTests
 		}
 
 		return violations;
+	}
+
+	/// <summary>
+	/// MSBuild Include paths commonly use backslashes. Normalize so Linux File.Exists works.
+	/// </summary>
+	private static string ResolveReferencePath(string fromCsproj, string include)
+	{
+		var normalized = include.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
+		return Path.GetFullPath(Path.Combine(Path.GetDirectoryName(fromCsproj)!, normalized));
 	}
 
 	private static IEnumerable<string> ReadProjectReferences(string csprojPath)
@@ -173,8 +183,8 @@ public sealed class ArchitectureDependencyGuardTests
 				continue;
 			}
 
-			// Absolute or parent-path includes that escape the project folder are forbidden.
-			var combined = Path.GetFullPath(Path.Combine(projectDir, candidate));
+			var normalized = candidate.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
+			var combined = Path.GetFullPath(Path.Combine(projectDir, normalized));
 			if (!combined.StartsWith(projectFull + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
 			    && !string.Equals(combined, projectFull, StringComparison.OrdinalIgnoreCase))
 			{
