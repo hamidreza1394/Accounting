@@ -4,8 +4,17 @@ namespace Faranou.Licensing.Contracts;
 
 public static class StructuralValidation
 {
-	private static readonly Regex IdPattern = new(@"^[A-Za-z0-9._-]{8,128}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
-	private static readonly Regex CodePattern = new(@"^[A-Za-z0-9._-]{1,64}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+	private static readonly Regex IdPattern = new(
+		@"^[A-Za-z0-9._-]{8," + LicenseInputLimits.MaxIdChars + "}$",
+		RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+	private static readonly Regex CodePattern = new(
+		@"^[A-Za-z0-9._-]{1," + LicenseInputLimits.MaxCodeChars + "}$",
+		RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+	private static readonly Regex KidPattern = new(
+		@"^[A-Za-z0-9._-]{1," + LicenseInputLimits.MaxKidChars + "}$",
+		RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
 	public static IReadOnlyList<string> ValidateActivationRequest(ActivationRequest request)
 	{
@@ -13,11 +22,11 @@ public static class StructuralValidation
 		var errors = new List<string>();
 		if (request.FormatVersion < 1)
 			errors.Add("formatVersion must be >= 1");
-		if (!IdPattern.IsMatch(request.InstallationId))
+		if (request.InstallationId is null || !IdPattern.IsMatch(request.InstallationId))
 			errors.Add("installationId is invalid");
-		if (!CodePattern.IsMatch(request.ProductCode))
+		if (request.ProductCode is null || !CodePattern.IsMatch(request.ProductCode))
 			errors.Add("productCode is invalid");
-		if (string.IsNullOrWhiteSpace(request.ProductVersion) || request.ProductVersion.Length > 64)
+		if (string.IsNullOrWhiteSpace(request.ProductVersion) || request.ProductVersion.Length > LicenseInputLimits.MaxCodeChars)
 			errors.Add("productVersion is invalid");
 		if (request.CreatedAtUtc == default)
 			errors.Add("createdAtUtc is required");
@@ -32,11 +41,11 @@ public static class StructuralValidation
 		var errors = new List<string>();
 		if (payload.FormatVersion != LicenseAlgorithms.CurrentFormatVersion)
 			errors.Add($"unsupported formatVersion: {payload.FormatVersion}");
-		if (!IdPattern.IsMatch(payload.LicenseId))
+		if (payload.LicenseId is null || !IdPattern.IsMatch(payload.LicenseId))
 			errors.Add("licenseId is invalid");
-		if (!IdPattern.IsMatch(payload.InstallationId))
+		if (payload.InstallationId is null || !IdPattern.IsMatch(payload.InstallationId))
 			errors.Add("installationId is invalid");
-		if (!CodePattern.IsMatch(payload.ProductCode))
+		if (payload.ProductCode is null || !CodePattern.IsMatch(payload.ProductCode))
 			errors.Add("productCode is invalid");
 		if (payload.LicenseKind is not (LicensePayload.KindPerpetual or LicensePayload.KindTerm))
 			errors.Add("licenseKind must be perpetual or term");
@@ -44,15 +53,42 @@ public static class StructuralValidation
 			errors.Add("graceDays out of range");
 		if (payload.Sequence < 1)
 			errors.Add("sequence must be >= 1");
-		if (payload.LicenseKind == LicensePayload.KindTerm && payload.ExpiresAtUtc is null)
-			errors.Add("term license requires expiresAtUtc");
-		if (payload.Limits.MaxCompanies is < 1)
-			errors.Add("maxCompanies must be >= 1 when set");
-		foreach (var s in payload.Limits.Subsystems)
+
+		if (payload.LicenseKind == LicensePayload.KindTerm)
 		{
-			if (!CodePattern.IsMatch(s))
-				errors.Add($"invalid subsystem code: {s}");
+			if (payload.ExpiresAtUtc is null)
+				errors.Add("term license requires expiresAtUtc");
 		}
+		else if (payload.LicenseKind == LicensePayload.KindPerpetual)
+		{
+			if (payload.ExpiresAtUtc is not null)
+				errors.Add("perpetual license must not set expiresAtUtc");
+		}
+
+		if (payload.NotBeforeUtc is { } nbf && payload.ExpiresAtUtc is { } exp && nbf > exp)
+			errors.Add("notBeforeUtc must not be after expiresAtUtc");
+
+		if (payload.Limits is null)
+			errors.Add("limits is required");
+		else
+		{
+			if (payload.Limits.MaxCompanies is < 1)
+				errors.Add("maxCompanies must be >= 1 when set");
+			var subs = payload.Limits.Subsystems;
+			if (subs is null)
+				errors.Add("subsystems is required");
+			else if (subs.Count > LicenseInputLimits.MaxSubsystemCount)
+				errors.Add("too many subsystems");
+			else
+			{
+				foreach (var s in subs)
+				{
+					if (s is null || !CodePattern.IsMatch(s) || s.Length > LicenseInputLimits.MaxSubsystemCodeChars)
+						errors.Add("invalid subsystem code");
+				}
+			}
+		}
+
 		return errors;
 	}
 
@@ -62,21 +98,30 @@ public static class StructuralValidation
 		var errors = new List<string>();
 		if (envelope.FormatVersion != LicenseAlgorithms.CurrentFormatVersion)
 			errors.Add($"unsupported envelope formatVersion: {envelope.FormatVersion}");
-		if (string.IsNullOrWhiteSpace(envelope.Kid) || envelope.Kid.Length > 64)
+		if (envelope.Kid is null || !KidPattern.IsMatch(envelope.Kid))
 			errors.Add("kid is invalid");
-		if (string.IsNullOrWhiteSpace(envelope.Algorithm))
-			errors.Add("algorithm is required");
-		if (string.IsNullOrWhiteSpace(envelope.PayloadJson))
+		if (string.IsNullOrWhiteSpace(envelope.Algorithm) || envelope.Algorithm.Length > LicenseInputLimits.MaxAlgorithmChars)
+			errors.Add("algorithm is invalid");
+		else if (!LicenseAlgorithms.IsAllowed(envelope.Algorithm))
+			errors.Add("algorithm not allowed");
+		if (string.IsNullOrEmpty(envelope.PayloadJson))
 			errors.Add("payloadJson is required");
-		if (string.IsNullOrWhiteSpace(envelope.SignatureBase64))
+		else if (envelope.PayloadJson.Length > LicenseInputLimits.MaxPayloadJsonChars)
+			errors.Add("payloadJson too large");
+		if (string.IsNullOrEmpty(envelope.SignatureBase64))
 			errors.Add("signatureBase64 is required");
-		try
+		else if (envelope.SignatureBase64.Length > LicenseInputLimits.MaxSignatureBase64Chars)
+			errors.Add("signatureBase64 too large");
+		else
 		{
-			_ = Convert.FromBase64String(envelope.SignatureBase64);
-		}
-		catch
-		{
-			errors.Add("signatureBase64 is not valid Base64");
+			try
+			{
+				_ = Convert.FromBase64String(envelope.SignatureBase64);
+			}
+			catch
+			{
+				errors.Add("signatureBase64 is not valid Base64");
+			}
 		}
 		return errors;
 	}
