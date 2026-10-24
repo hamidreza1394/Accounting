@@ -215,3 +215,69 @@ commit مبنا؛ مدل چندشرکتی؛ نبود Global Query Filter (D-013)
 - **AUD-2026-10-23-02 — Medium / Open:** `Program` تنظیم سراسری `AddDataProtection` ندارد؛ Cookie ورود و Anti-forgery از حلقه کلید پیش‌فرض استفاده می‌کنند (پیگیری، به‌ویژه چندنمونه؛ `docs/DEPLOYMENT.md` بخش ۵ و ۹).
 - **AUD-2026-10-23-03 — Low / NeedsApproval:** املای Farano (جریان راه‌اندازی) با Faranou (بقیه مخزن) ناهمخوان است.
 - **AUD-2026-10-23-04 — Low / Open:** مسیر UNC برای پوشه تنظیمات در کد بدون هشدار پذیرفته می‌شود؛ ACL در Windows با `HardenWindowsAcl` (اجرا نشده) محدود می‌شود؛ ACL پوشه اشتراکی UNC با اپراتور است.
+
+## ممیزی مجدد فاز صفر لایسنس و سامانهٔ مرکزی — 2026-10-24 (شاخه `docs/licensing-central-system-phase0`)
+
+**محدوده و روش:** `main`@`8c1e7a3` (پس از ادغام PR #70)، کلون سطحی (عمق ۱) و فقط‌خواندنی برای کد. هدف: اعتبارسنجی مجدد یافته‌های گزارش ممیزی قبلی (که خودش ورودی اولیه بود، نه حقیقت اثبات‌شده) و ثبت تصمیم‌های فاز صفر. هیچ کد اجرایی، Schema، Migration یا وابستگی تغییر نکرد.
+
+**بررسی‌های واقعاً اجراشده (SDK 10.0.402، Linux):**
+
+| بررسی | نتیجه |
+|---|---|
+| `dotnet restore Template.sln` | موفق |
+| `dotnet build Template.sln --configuration Release --no-restore` | موفق، ۰ خطا، ۶۶۵ هشدار. نخستین تلاش به‌دلیل قفل فایل در `Server/obj` شکست خورد که از اجرای هم‌زمان Build پس‌زمینهٔ خودِ این بررسی بود، نه خطای کد؛ تلاش دوم پس از توقف فرایندهای رقیب موفق شد. |
+| `dotnet test tests/Template.Tests/Template.Tests.csproj --no-build --configuration Release --filter "FullyQualifiedName!~Integration"` | ۴۲۳ تست: ۴۰۷ موفق، ۰ ناموفق، ۱۶ ردشده (از جمله تست‌های `chmod` که با root معنا ندارند) |
+| `cd ClientApp && npm ci && npm run typecheck && npm test` | تمیز؛ ۹۴ از ۹۴ تست Vitest موفق |
+| `python3 scripts/check_static_assets.py` | PASS |
+| آزمایش امضا (برنامهٔ کوچک خارج از مخزن، .NET 10.0.13، Ubuntu 24.04) | ECDSA P-256: امضا 64 بایت، Verify حدود 0.10 ms؛ RSA-PSS 3072: امضا 384 بایت، Verify حدود 0.06 ms؛ نوع Ed25519 در BCL یافت نشد (جزئیات: `LICENSING_OPEN_DECISIONS.md` OD-12) |
+
+**اجرا نشد / قابل‌بررسی نبود:** تست‌های Integration و E2E روی SQL Server (Docker daemon در این محیط در دسترس نیست)؛ `npm run build`/`check:offline`؛ CI (توکن `gh` معتبر نیست و طبق مستندات سقف صورتحساب GitHub مانع اجرا است)؛ تاریخچهٔ PR/Issue؛ تنظیمات Branch protection؛ Windows Server/Firefox/Safari/axe؛ هرگونه DB واقعی. ادعاهای مستندات دربارهٔ ۵۲۴ تست .NET، E2E ۲۹/۲۹ و CI سبز در این بررسی **تأیید نشدند** و همان‌طور که هستند نقل می‌شوند. از مخزن دور ۴۹ شاخه خوانده شد (`git ls-remote`)؛ شاخه یا کدی برای لایسنس، مشتری تجاری یا سامانهٔ فروشنده وجود ندارد.
+
+### وضعیت هر یافتهٔ گزارش قبلی
+
+وضعیت‌ها: **تأییدشده** (شاهد فعلی)، **اصلاح‌شده** (تأییدشده ولی دقیق‌تر یا ناقص‌تر از گزارش قبلی)، **ردشده/منسوخ**، **ناقص** (نیازمند بررسی بیشتر)، **غیرقابل‌بررسی** (در این محیط).
+
+| # | ادعای گزارش قبلی | وضعیت | شاهد |
+|---|---|---|---|
+| 1 | Solution با ۱۲ پروژه، همه `net10.0` | تأییدشده | `Template.sln`؛ `Directory.Build.props` خط 3؛ Build موفق |
+| 2 | `Application` فقط اسکلت است و `Server` مستقیم به EF وابسته است | تأییدشده | فقط `Application.csproj` و `README.md`؛ `Server/Server.csproj` خطوط 15–22 |
+| 3 | React 19.3 + TS 7 strict + Vite 8 + Tailwind 4.3 | تأییدشده | `ClientApp/package.json`؛ typecheck و ۹۴ تست موفق |
+| 4 | `Company` = Tenant؛ `CompanyAccessService` تنها نقطهٔ تصمیم دسترسی | تأییدشده | `Server/Infrastructure/Tenancy/CompanyAccessService.cs` خطوط 179–188 (کاربر، عضویت، شرکت، نقش فعال) |
+| 5 | مجوز عملیاتی فقط توسط گروه شرکتی مصرف می‌شود | تأییدشده | `HasPermissionAsync`/`GetCompaniesWithPermissionAsync` فقط در `CorporateGroupService`؛ تنها مجوزهای Seedشده هشت مجوز گروه شرکتی‌اند (`20261022150943_AddCorporateGroups`) |
+| 6 | ورود: PBKDF2، قفل حساب ۵ شکست در ۱۵ دقیقه | تأییدشده | `AuthenticationService.cs` خطوط 62–65 |
+| 7 | MFA وجود ندارد | تأییدشده | جست‌وجوی MFA/TOTP/Authenticator در `Server` و `Domain` بی‌نتیجه (AUD-2026-10-24-05) |
+| 8 | حساب Master پیکربندی‌محور و `--create-master-credential` | تأییدشده | `Server/Program.cs` خط 18؛ `InfrastructureMasterBootstrap.cs` (حداقل طول رمز ۱۵) |
+| 9 | «هیچ مسیر ایجاد مشتری/شرکت/مدیر اولیه وجود ندارد» | **اصلاح‌شده** | کاربر قدیمی را صفحهٔ `Server/Pages/Admin/Users/Create.cshtml.cs` (خط 194، نقش Admin) می‌سازد؛ ولی هیچ مسیر غیرآزمونی برای `Company`، عضویت، `CompanyRole`، `FiscalPeriod` یا `PermissionDefinition` نیست (AUD-2026-10-24-01) |
+| 10 | `AddDataProtection` سراسری نیست | **اصلاح‌شده** | `DatabaseConnectionSettingsStore.cs` یک Provider اختصاصی دارد و `ProtectKeysWithDpapi()` فقط در Windows اعمال می‌شود؛ تنظیم سراسری در `Program` نیست (AUD-2026-10-24-02، AUD-2026-10-23-02) |
+| 11 | `ActivationKeysHandlerMiddleware` کد مرده است | تأییدشده | `UseActivationKeys()` تعریف شده (`Server/Infrastructure/Middlewares/ExtensionMethods.cs` خطوط 27–30) ولی در `Program.cs` فراخوانی نمی‌شود؛ کلید = SHA-256 مقدار `Request.Host`؛ در نبود کلید پاسخ 200 با متن `No Activation Key` (AUD-2026-10-24-08) |
+| 12 | باقی‌ماندهٔ `ActivationKeys` در تنظیمات | **اصلاح‌شده** | `Server/appsettings.json:44` و `appsettings.Development.json:11` (آرایهٔ خالی)، `ApplicationSettings.cs:46`، و `.env.example:6` فقط به‌صورت **کامنت**؛ گزارش قبلی آن را فعال نشان داده بود |
+| 13 | هیچ کد لایسنس/امضای نامتقارن/مشتری تجاری نیست | تأییدشده | جست‌وجوی `ECDsa`/`RSA.`/`SignData`/`VerifyData` در کل مخزن بی‌نتیجه؛ هیچ پروژه یا شاخهٔ لایسنس نیست |
+| 14 | D-020..D-029 طرح‌اند و D-021 جداسازی سامانه فروشنده را الزام می‌کند | تأییدشده | `docs/DECISIONS.md`؛ D-021 بند ۲ و گزینهٔ ردشدهٔ (الف) |
+| 15 | D-021 دربارهٔ مخزن مشترک/جدا حکمی ندارد | تأییدشده | متن D-021؛ اکنون با D-041 تکمیل شد |
+| 16 | انتشار مشتری فقط `Server` را شامل می‌شود | تأییدشده، ولی بدون گارد | `scripts/publish.sh:42`؛ Jobهای `publish` و `publish-windows`؛ هیچ آزمون خودکاری برای نبود کد فروشنده/کلید در خروجی نیست (AUD-2026-10-24-06) |
+| 17 | `SecurityAuditEvent` جدول معمولی و قابل‌ویرایش است | تأییدشده | `Domain/SecurityAuditEvent.cs`؛ `SecurityAuditEventConfiguration.cs` (بدون Append-only/زنجیره) (AUD-2026-10-24-04) |
+| 18 | منبع زمان یکدست نیست | تأییدشده با شمارش به‌روز | کد غیرآزمونی: `DateTime.UtcNow` ۱۶، `DateTime.Now` ۲، `DateTimeOffset.UtcNow` ۴ (بدون خطوط کامنت‌شده)؛ `TimeProvider` فقط در `Program.cs`، `WorkContextCookie.cs`، `CorporateGroupService.cs` (AUD-2026-10-24-03) |
+| 19 | CI شامل Jobهای client، build-and-test، publish-scripts، publish-windows، publish، e2e و بدون اسکن اسرار | تأییدشده | `.github/workflows/dotnet.yml`؛ جست‌وجوی gitleaks/trufflehog بی‌نتیجه؛ **اجرای CI** غیرقابل‌بررسی |
+| 20 | D-031/D-036 در مستندات «ادغام‌نشده»اند ولی کدشان در `main` است | تأییدشده | `Server/Infrastructure/Tenancy/WorkContext*.cs`، `DatabaseSetup/SettingsCommand.cs`، `DatabaseSettingsLocation.cs` و فراخوانی در `Program.cs` (AUD-2026-10-24-07) |
+| 21 | `AGENTS.md`/`CLAUDE.md` شمارهٔ ADR بعدی را D-036 می‌گویند | تأییدشده؛ در همین PR اصلاح شد | اکنون D-045 |
+| 22 | فایل `LICENSE` در مخزن نیست | تأییدشده | AUD-2026-10-21-12 |
+| 23 | برچسب زمانی `InitialCreate` (2025) ناهمگون است | تأییدشده | `Infrastructure/Persistence/Migrations/20251017120000_InitialCreate.cs`؛ AUD-2026-10-21-16 |
+| 24 | نام‌گذاری ناهمگون (Template/TarazAva/Dtat/Faranou/Farano) | تأییدشده | `Template.sln` و بقیه؛ AUD-2026-10-21-13، AUD-2026-10-23-03 |
+| 25 | ۵۲۴ تست .NET، E2E ۲۹/۲۹ و CI سبز | **غیرقابل‌بررسی** | نقل از مستندات؛ در این محیط فقط ۴۰۷ تست غیر-Integration (موفق)، ۹۴ تست Vitest اجرا شد |
+| 26 | حساب راه‌اندازی/Master بدون SQL Server و Docker قابل آزمون نیست | **غیرقابل‌بررسی** | Docker daemon در دسترس نیست؛ تست‌های Integration/E2E اجرا نشدند |
+| 27 | وضعیت PR/Issue/شاخه‌های GitHub | **ناقص** | فقط شاخه‌های دور خوانده شد (۴۹ شاخه؛ `main`@`8c1e7a3`)؛ PR/Issue و Branch protection قابل‌بررسی نبود (توکن `gh` نامعتبر) |
+
+### یافته‌های جدید این ممیزی
+
+- **AUD-2026-10-24-01 — Medium / Open:** مسیر ساخت اولین `Company`، مدیر شرکت، نقش‌ها و دورهٔ مالی در نصب تازه وجود ندارد؛ نصب فقط با SQL/تست پر می‌شود. شاهد در جدول بالا (ردیف 9). پیشنهاد: D-044، OD-14.
+- **AUD-2026-10-24-02 — Medium / Open:** حلقهٔ کلید Data Protection تنظیمات اتصال فقط در Windows با DPAPI محافظت می‌شود؛ در Linux/macOS حفاظت به مجوز فایل‌سیستم محدود است. هر کلید خصوصی نصب (D-027، OD-08) نباید به این وضع تکیه کند و به AUD-2026-10-23-02 وابسته است.
+- **AUD-2026-10-24-03 — Low–Medium / Open:** منبع زمان یکدست نیست؛ ارزیابی لایسنس و «ساعت مؤثر» (OD-05) به `TimeProvider` تزریقی نیاز دارد.
+- **AUD-2026-10-24-04 — Medium / Open (برای کاربرد فروشنده):** ممیزی قابل‌ویرایش برای صدور/ابطال لایسنس کافی نیست؛ D-043.
+- **AUD-2026-10-24-05 — Low–Medium / Open:** حساب Master بدون MFA و بر پایهٔ راز مشترک در پیکربندی است؛ الگوی هویت مدیر فروشنده نیست (D-029، D-043).
+- **AUD-2026-10-24-06 — High (پیش‌شرط) / Open:** گارد خودکار جداسازی بستهٔ مشتری از کد فروشنده و گام اسکن اسرار وجود ندارد؛ پیش از هر کد امضا باید G1–G3 در D-041 اجرا شود (مرتبط با AUD-2026-10-21-20).
+- **AUD-2026-10-24-07 — Low / Open:** انحراف مستندات (D-030): D-031/D-036 در `DECISIONS.md`/`PROJECT_STATUS.md` «ادغام‌نشده» نوشته شده‌اند ولی کدشان در `main` است؛ در این PR یادداشت‌های «توضیح 2026-10-24» افزوده شد و شمارهٔ ADR بعدی در `AGENTS.md`/`CLAUDE.md` اصلاح شد. ارتقا به `Verified` منوط به شاهد CI است.
+- **AUD-2026-10-24-08 — Info / NeedsApproval:** باقی‌ماندهٔ کد مرده Activation (کلاس Middleware، متد افزونه، گزینهٔ `ActivationKeys`، نمونهٔ کامنت‌شده در `.env.example`) تا PR جدا با تأیید حذف نشود (D-028؛ جزئیات D-044 بند ۶).
+- **AUD-2026-10-24-09 — Info:** `Server/libman.json` کتابخانه‌هایی با نسخه‌های قدیمی (مثلاً Bootstrap 5.2.2، jQuery 3.6.1، TinyMCE 6.2.0) را نگه می‌دارد؛ آسیب‌پذیری آن‌ها در این ممیزی بررسی نشد و ارتقا طبق قاعدهٔ LibMan در `AGENTS.md` فقط با به‌روزرسانی واقعی فایل‌ها مجاز است.
+
+### تعارض‌ها و ناسازگاری‌ها با تصمیم‌های قطعی
+- هیچ تعارضی با تصمیم‌های `Accepted` پیشین یافت نشد. تنها نکتهٔ ساختاری: D-021 مخزن را مشخص نکرده بود که D-041 تکمیل می‌کند. گزینهٔ «ماژول داخل `Server`» همچنان با D-021 ناسازگار و `Rejected` است.

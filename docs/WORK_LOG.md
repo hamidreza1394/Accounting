@@ -252,3 +252,9 @@
 - **اعتبارسنجی:** CI اجرا نشده (سقف صورتحساب GitHub). نتیجه اجرای محلی: Build بدون خطا؛ ۵۲۴ تست .NET روی SQL Server واقعی (۵۲۲ موفق، ۰ شکست، ۲ ردشده)؛ Vitest ۹۴/۹۴؛ E2E ۲۹/۲۹. پیش از این کار `main` یک تست .NET، ۶ تست Vitest و یک E2E شکست‌خورده داشت که اصلاح شد (جزئیات در handoff). اجرا نشده: Firefox، Safari، axe، HTTPS پشت Proxy.
 - **باز:** `AGENTS.md` و `CLAUDE.md` هنوز «ADR بعدی D-036» می‌گویند (اکنون D-041)؛ تغییر آن‌ها فقط با تأیید صریح کاربر.
 - **جزئیات:** `docs/handoffs/ISSUE-66-customer-boundary-default-company-audit.md`.
+
+## 2026-10-24 — فاز صفر لایسنس و سامانهٔ مرکزی مشتریان (شاخه `docs/licensing-central-system-phase0`، فقط مستندات)
+- **زمینه:** مأموریت مالک محصول برای معماری سامانهٔ مرکزی مشتریان/لایسنس کنار نرم‌افزار حسابداری. گزارش ممیزی قبلی ورودی اولیه بود و با کد `main`@`8c1e7a3` دوباره اعتبارسنجی شد.
+- **انجام‌شده:** ممیزی مجدد (۲۷ ردیف وضعیت + AUD-2026-10-24-01..09)، ADR D-041 (`Accepted` مشروط) و D-042..D-044 (`Proposed`)، سند `LICENSING_OPEN_DECISIONS.md` (۱۷ تصمیم باز)، گسترش مدل داده/گردش‌کار/تهدید، نقشهٔ راه L0..L4، اصلاح شمارهٔ ADR بعدی (D-045) و انحراف مستندات D-031/D-036.
+- **اعتبارسنجی واقعی:** Release Build ۰ خطا؛ ۴۰۷ تست .NET غیر-Integration موفق (۱۶ ردشده)؛ ۹۴ تست Vitest و typecheck؛ `check_static_assets.py` PASS؛ آزمایش امضا ECDSA/RSA-PSS روی Linux. **اجرا نشد:** SQL Server/Integration/E2E، CI، `npm run build`، Windows.
+- **باز:** پاسخ مالک به OD-01/02/12 (پیش‌شرط L1)؛ گاردهای G1–G3؛ بررسی Branch protection. جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-licensing-phase0-architecture.md`.

@@ -144,3 +144,108 @@ erDiagram
 - هیچ ستون یا FK از جداول نصب مشتری به جداول فروشنده نیست.
 - تاریخچه لایسنس‌ها و رخدادها حذف نمی‌شود؛ تغییر وضعیت با رخداد ثبت می‌شود.
 - انقضا یا ابطال هرگز ردیف داده حسابداری را حذف/تغییر نمی‌دهد (D-026).
+
+## ۵) تکمیل فاز صفر — 2026-10-24 (`Proposed`، `NotImplemented`)
+
+> این بخش ERD بخش ۲-الف را **جایگزین** می‌کند (در تعارض نام‌ها `LicenseRevision`/`AuditEvent` به‌جای فیلدهای `License`/`LicenseEvent` بخش ۲-الف ملاک است؛ بخش ۲-ب و جداول واقعی بخش ۱ بدون تغییرند). `License` فیلد `Type` (`Perpetual` | `Term`، D-022 بند ۱) را دارد؛ `LicenseRevision` بازه‌ها و `Sequence` را. هیچ جدول، ستون یا Migration ساخته نشده است. نام‌ها پیشنهادی‌اند و پیش از Migration با مالک محصول نهایی می‌شوند (D-041 بند ۵). نام `Activation` خالی عمداً به کار نرفته تا با سازوکار قدیمی `ActivationKeys` (D-028، کد مرده) اشتباه نشود؛ نام پیشنهادی `ActivationRequest`.
+
+### الف) ERD تکمیلی دیتابیس فروشنده
+
+```mermaid
+erDiagram
+    CustomerAccount ||--o{ CustomerContact : has
+    CustomerAccount ||--o{ Contract : signs
+    CustomerAccount ||--o{ Installation : owns
+    CustomerAccount ||--o{ CustomerBoundary : "maps (D-038)"
+    Installation ||--o{ CustomerBoundary : "hosts"
+    Product ||--o{ Subsystem : offers
+    Contract ||--o{ SupportContract : "may include"
+    Contract ||--o{ License : grants
+    Installation ||--o{ License : "target of"
+    License ||--o{ LicenseRevision : "versions"
+    LicenseRevision ||--o{ LicenseEntitlement : includes
+    Subsystem ||--o{ LicenseEntitlement : "defines"
+    LicenseRevision ||--o{ LicenseLimit : constrains
+    SigningKey ||--o{ LicenseRevision : "signs (kid)"
+    Installation ||--o{ ActivationRequest : submits
+    ActivationRequest ||--o| LicenseRevision : "answered by"
+    Installation ||--o| Installation : "superseded by"
+    CentralAdminUser ||--o{ AuditEvent : "acts"
+    CentralAdminUser }o--o{ AdminRole : "has"
+    LicenseRevision ||--o{ AuditEvent : "subject of"
+    CustomerBoundary {
+        Guid BoundaryId "opaque, random, never CustomerAccount.Id"
+        Guid CustomerAccountId
+        Guid InstallationId
+    }
+    LicenseRevision {
+        Guid LicenseId
+        int Sequence
+        string Kid
+        string PayloadSha256
+        date ValidFrom
+        date ValidUntil
+        date SupportUntil
+        date UpdatesUntil
+        int GraceDays
+        string Status
+    }
+    Installation {
+        Guid Id
+        string PublicKeyFingerprint
+        string Mode "Dedicated | CloudManaged"
+        string Status "Pending | Active | Retired | Revoked"
+        Guid SupersededById
+    }
+    SigningKey {
+        string Kid
+        string Status "Planned | Active | VerifyOnly | Revoked | Expired"
+        date NotBefore
+        date NotAfter
+    }
+    AuditEvent {
+        Guid Id
+        string PrevHash
+        string Hash
+        string Action
+    }
+```
+
+### ب) فهرست موجودیت‌ها، ضرورت و مالکیت
+
+| موجودیت | ضروری؟ | مالک داده | روابط و توضیح |
+|---|---|---|---|
+| `CustomerAccount` | بله | فروشنده | مشتری تجاری فرانو (خریدار). با شرکت حسابداری مشتری یکی **نیست** (D-020). |
+| `CustomerContact` | بله (برای قرارداد و اطلاع‌رسانی) | فروشنده | n:1 به `CustomerAccount`. اطلاعات تماس کمینه؛ حساب ورود نیست و هرگز به نصب مشتری نمی‌رود. |
+| `Product` | بله | فروشنده | محصول قابل فروش (مثلاً نرم‌افزار حسابداری فرانو). 1:n به `Subsystem`. |
+| `Subsystem` (در ERD قدیم: `ModuleDefinition`) | بله | فروشنده | کد پایدار؛ فهرست نهایی `NeedsApproval` (OD-02، OD-15). |
+| `Contract` | بله | فروشنده | n:1 به `CustomerAccount`؛ 1:n به `License`. |
+| `SupportContract` | بله (حق پشتیبانی/به‌روزرسانی مستقل از حق استفاده است، D-022) | فروشنده | تاریخ شروع/پایان، دامنه، وضعیت. مقادیر `supportUntil`/`updatesUntil` هنگام صدور از آن به Payload کپی می‌شوند. |
+| `License` | بله | فروشنده | هویت پایدار لایسنس (`licenseId`)؛ n:1 به `Contract` و به `Installation` هدف. |
+| `LicenseRevision` | بله | فروشنده | هر صدور، تغییر، تمدید یا تعلیق یک نسخهٔ **تغییرناپذیر** با `sequence` یکنواخت، `kid`، هش بایت‌های Payload و بازه‌های اعتبار. نسخه‌ها ویرایش یا حذف نمی‌شوند (D-022 بند ۴). |
+| `LicenseEntitlement` (قدیم: `LicenseModuleEntitlement`) | بله | فروشنده | زیرسیستم‌های فعال‌شده در هر نسخه. |
+| `LicenseLimit` | بله | فروشنده | سقف‌ها (حداقل `maxCompanies`؛ `maxUsers` `Deferred`). |
+| `Installation` | بله | فروشنده (ثبت) + نصب (هویت محلی) | مالک مستقیم (`CustomerAccount`) فقط برای نصب `Dedicated` و تهی‌پذیر است؛ در نصب `CloudManaged` چندمشتری تنها مرجع، `CustomerBoundary` است و دو منبع نباید ناسازگار باشند؛ اثرانگشت کلید عمومی؛ وضعیت؛ پیوند «جایگزین‌شده با» برای اتصال مجدد (OD-06). |
+| `ActivationRequest` | بله | فروشنده | درخواست دریافت‌شده (آفلاین یا آنلاین) با `requestId` یک‌بارمصرف و نتیجه؛ n:1 به `Installation`، 0..1 به نسخهٔ لایسنس پاسخ. |
+| `CustomerBoundary` | بله (برای ابر مشترک و نگاشت D-038) | فروشنده | نگاشت `BoundaryId` مات ← (`CustomerAccount`، `Installation`) با یکتایی (`CustomerAccountId`، `InstallationId`) طبق D-038 و **تنها مرجع** مالکیت در ابر مشترک؛ تولیدکنندهٔ `BoundaryId` (فروشنده یا اپراتور نصب) `NeedsApproval` است. در دیتابیس نصب فقط `Companies.CustomerBoundaryId` است؛ هیچ FK یا ستون ارجاعی به `CustomerAccount` در نصب ساخته نمی‌شود. |
+| `SigningKey` | بله | کلید عمومی: فروشنده + نصب؛ کلید خصوصی: فقط محیط امن فروشنده | چرخهٔ عمر: برنامه‌ریزی‌شده، فعال، فقط-تأیید (کلید بازنشسته که لایسنس‌های قبلی را هنوز تأیید می‌کند)، ابطال‌شده، منقضی. |
+| `CentralAdminUser` و `AdminRole` | بله | فروشنده | هویت جدا، MFA، نقش‌ها (D-043). هرگز ردیف `Users` نصب نیست (D-029). |
+| `AuditEvent` | بله | فروشنده | Append-only با زنجیرهٔ هش (D-043). |
+
+### پ) جداول سمت نصب مشتری (تکمیل بخش ۲-ب)
+
+| موجودیت | محتوا | یادداشت |
+|---|---|---|
+| `InstallationIdentity` | `InstallationId`، اثرانگشت کلید عمومی | کلید خصوصی در ستون عادی ذخیره نمی‌شود؛ محل: OD-08. |
+| `InstalledLicense` | پاکت امضاشده، `Sequence`، تاریخ ورود، وضعیت | فقط آخرین نسخهٔ معتبر + تاریخچه برای ممیزی. |
+| `TrustedSigningKey` | `Kid`، کلید عمومی، بازهٔ اعتبار، امضای ریشه | فقط کش «بستهٔ اعتماد»: ردیفی که با کلید ریشهٔ داخل برنامه امضا نشده باشد نادیده گرفته می‌شود (T29)؛ چرخش: OD-07. |
+| `LicenseAuditEntry` | رخدادهای ورود/رد/تغییر وضعیت | ممیزی محلی؛ انتخاب بین جدول جدا و `SecurityAuditEvent` در ADR آتی. |
+| `LicenseTimeHighWater` | بیشینهٔ زمان مشاهده‌شده | برای «ساعت مؤثر» (OD-05). |
+
+### ت) قواعد مالکیت داده
+
+- **داده حسابداری، کاربران و شرکت‌های مشتری:** فقط در دیتابیس نصب؛ هرگز در فروشنده.
+- **داده تجاری (مشتری، قرارداد، قیمت، تماس):** فقط در فروشنده؛ هرگز در نصب. در پاکت فقط `customerRef` مات و کمینه است.
+- **کلید خصوصی صدور:** فقط محیط امن فروشنده (OD-07). **کلید خصوصی نصب:** فقط همان نصب (OD-08). کلید عمومی هر دو طرف در هر دو سو مجاز است.
+- **ارتباط `Company` با `CustomerAccount`:** فقط از مسیر `CustomerBoundary` در فروشنده و `Companies.CustomerBoundaryId` مات در نصب؛ مستقیم هرگز (D-038). یک `CustomerAccount` می‌تواند چند `Installation` و در هر نصب چند `Company` داشته باشد (D-020).
+- هیچ ستون یا FK از جداول نصب مشتری به جداول فروشنده نیست (بخش ۴ همین سند).
