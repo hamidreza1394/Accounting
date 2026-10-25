@@ -156,3 +156,12 @@ pwsh scripts/publish.ps1 -Output artifacts\publish   # Windows (همان مرا�
 - خروجی Publish Vendor از push به `main` به‌شکل GitHub Actions artifact با مهلت نگهداری ۷ روز منتشر می‌شود. این artifact **استقرار Production نیست**؛ هنوز محیط‌های deploy، نام دامنه/TLS، secret store و رویهٔ release باید در مرحلهٔ جدا تعیین شوند.
 - Workflow هیچ credential استقرار یا کلید امضایی ندارد و عملیات Sign لایسنس در GitHub Actions انجام نمی‌شود.
 - `.github/CODEOWNERS` مسیرهای Vendor و قرارداد مشترک را به مالک فعلی مخزن ارجاع می‌دهد؛ این فایل به‌تنهایی بازبینی اجباری ایجاد نمی‌کند. تنظیم `Require review from Code Owners` و حداقل یک reviewer واجد دسترسی غیر از نویسنده باید در Branch protection بررسی و در تنظیمات مخزن اعمال شود.
+
+
+## پیکربندی persistence سامانهٔ Vendor
+- Host مستقل از متغیر با پیشوند `FARANO_VENDOR_` استفاده می‌کند. کلید اتصال دیتابیس `ConnectionStrings:VendorDb` است و نام متغیر محیطی آن `FARANO_VENDOR_ConnectionStrings__VendorDb` می‌باشد؛ هیچ مقدار پیش‌فرض یا اتصال به دیتابیس مشتری وجود ندارد.
+- `/health/live` فقط liveness است و اتصال دیتابیس را بررسی نمی‌کند. هر مسیر/سرویسی که `VendorDbContext` را resolve کند در نبود connection string با خطای تنظیمات عمومی fail-closed می‌شود؛ مقدار connection string نباید در log ثبت شود.
+- برای ابزارهای EF Core نیز همین متغیر باید به یک **دیتابیس مخصوص Vendor** اشاره کند. کارخانهٔ طراحی عمداً اتصال پیش‌فرض (local/customer) ندارد.
+- در محیط توسعه، پس از تنظیم متغیر امن، فهرست Migrationها را با فرمان زیر بررسی کنید:
+  `dotnet ef migrations list --project Vendor/Vendor.Persistence/Vendor.Persistence.csproj --startup-project Vendor/Vendor.Persistence/Vendor.Persistence.csproj --context VendorDbContext`
+- پیش از اعمال در محیط Production، SQL script قابل بازبینی تولید و مرحله‌بندی deployment/backup طبق راهنمای عملیات اجرا شود؛ Migrationهای Vendor هیچ‌گاه روی دیتابیس مشتری اجرا نمی‌شوند.
