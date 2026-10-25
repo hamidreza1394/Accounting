@@ -69,7 +69,7 @@ jobs:
         run: |
           dotnet tool install dotnet-ef --tool-path "$RUNNER_TEMP/dotnet-tools" --version 10.0.13
           export PATH="$RUNNER_TEMP/dotnet-tools:$PATH"
-          dotnet ef migrations has-pending-model-changes --project Vendor/Vendor.Persistence/Vendor.Persistence.csproj --startup-project Vendor/Vendor.Persistence/Vendor.Persistence.csproj --context VendorDbContext
+          dotnet ef migrations has-pending-model-changes --project Vendor/Vendor.Persistence/Vendor.Persistence.csproj --startup-project Vendor/Vendor.Host/Vendor.Host.csproj --context VendorDbContext
 
       - name: Test Vendor solution
         env:
