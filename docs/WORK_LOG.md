@@ -263,6 +263,6 @@
 - **هدف:** تأیید دریافت Job توسط رانر خودمیزبان، بدون تغییر CI اصلی یا ادغام خودکار.
 - **تغییر:** Workflow مستقل `.github/workflows/self-hosted-runner-smoke-test.yml` برای برچسب‌های `self-hosted, Windows, X64` اضافه شد؛ هویت رانر و نسخه ابزارهای Git، .NET، Node.js و npm را گزارش می‌کند.
 - **محدوده:** فقط آزمون smoke؛ هیچ دیتابیس یا فایل برنامه تغییر نمی‌کند و مجوز Workflow به `contents: read` محدود است.
-- **اعتبارسنجی:** وضعیت سرویس Windows در گزارش کاربر `Running/Automatic` و وضعیت GitHub `Idle` گزارش شده است. اجرای Workflow هنوز نتیجه ندارد؛ نباید تا دریافت نتیجه واقعی، Job را موفق اعلام کرد.
-- **محدودیت:** ممکن است محدودیت صورتحساب/حساب GitHub جلوی شروع Job را بگیرد. CI اصلی همچنان به runnerهای Linux/Windows میزبانی‌شده وابسته است و در این تغییر منتقل نشده.
-- **جزئیات:** `docs/handoffs/ISSUE-75-self-hosted-runner-smoke-test.md`.
+- **اعتبارسنجی:** وضعیت سرویس Windows `Running/Automatic` و وضعیت GitHub `Idle` بود. اجرای واقعی Smoke Test در Run `40184375342` روی `WIN-H8GIFNN1I6P` با نتیجه `success` تأیید شد؛ .NET `10.0.402`، Node `v24.22.1` و npm `11.19.1` پیدا شدند، اما Git در PATH سرویس پیدا نشد.
+- **محدودیت:** Git در PATH سرویس Windows Runner موجود نیست و باید Machine PATH اصلاح و سرویس restart شود. CI اصلی همچنان به runnerهای Linux/Windows میزبانی‌شده وابسته است و در این تغییر منتقل نشده؛ خطای CI اصلی به‌تنهایی با این تست حل نمی‌شود.
+- **جزئیات:** `docs/handoffs/ISSUE-75-self-hosted-runner-smoke-test.md`; Run موفق: `https://github.com/hamidreza1394/Accounting/actions/runs/40184375342`.
