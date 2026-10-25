@@ -258,3 +258,11 @@
 - **انجام‌شده:** ممیزی مجدد (۲۷ ردیف وضعیت + AUD-2026-10-24-01..09)، ADR D-041 (`Accepted` مشروط) و D-042..D-044 (`Proposed`)، سند `LICENSING_OPEN_DECISIONS.md` (۱۷ تصمیم باز)، گسترش مدل داده/گردش‌کار/تهدید، نقشهٔ راه L0..L4، اصلاح شمارهٔ ADR بعدی (D-045) و انحراف مستندات D-031/D-036.
 - **اعتبارسنجی واقعی:** Release Build ۰ خطا؛ ۴۰۷ تست .NET غیر-Integration موفق (۱۶ ردشده)؛ ۹۴ تست Vitest و typecheck؛ `check_static_assets.py` PASS؛ آزمایش امضا ECDSA/RSA-PSS روی Linux. **اجرا نشد:** SQL Server/Integration/E2E، CI، `npm run build`، Windows.
 - **باز:** پاسخ مالک به OD-01/02/12 (پیش‌شرط L1)؛ گاردهای G1–G3؛ بررسی Branch protection. جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-licensing-phase0-architecture.md`.
+
+## 2026-10-25 — آزمون اولیه رانر GitHub Actions روی Windows Server (Issue #75)
+- **هدف:** تأیید دریافت Job توسط رانر خودمیزبان، بدون تغییر CI اصلی یا ادغام خودکار.
+- **تغییر:** Workflow مستقل `.github/workflows/self-hosted-runner-smoke-test.yml` برای برچسب‌های `self-hosted, Windows, X64` اضافه شد؛ هویت رانر و نسخه ابزارهای Git، .NET، Node.js و npm را گزارش می‌کند.
+- **محدوده:** فقط آزمون smoke؛ هیچ دیتابیس یا فایل برنامه تغییر نمی‌کند و مجوز Workflow به `contents: read` محدود است.
+- **اعتبارسنجی:** وضعیت سرویس Windows در گزارش کاربر `Running/Automatic` و وضعیت GitHub `Idle` گزارش شده است. اجرای Workflow هنوز نتیجه ندارد؛ نباید تا دریافت نتیجه واقعی، Job را موفق اعلام کرد.
+- **محدودیت:** ممکن است محدودیت صورتحساب/حساب GitHub جلوی شروع Job را بگیرد. CI اصلی همچنان به runnerهای Linux/Windows میزبانی‌شده وابسته است و در این تغییر منتقل نشده.
+- **جزئیات:** `docs/handoffs/ISSUE-75-self-hosted-runner-smoke-test.md`.
