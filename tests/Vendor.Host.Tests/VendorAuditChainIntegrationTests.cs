@@ -9,8 +9,9 @@ namespace Faranou.Vendor.Host.Tests;
 public sealed class VendorAuditChainIntegrationTests
 {
     [Fact]
-    public async Task ConcurrentWritersCreateOneValidChain_AndContentTamperingIsDetected()
+    public async Task ConcurrentWritersCreateOneValidChainAndDetectContentTampering()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var baseConnectionString = Environment.GetEnvironmentVariable("FARANOU_VENDOR_TEST_SQLSERVER");
         if (string.IsNullOrWhiteSpace(baseConnectionString))
         {
@@ -37,7 +38,7 @@ public sealed class VendorAuditChainIntegrationTests
         {
             await using (var setup = new VendorDbContext(options))
             {
-                await setup.Database.MigrateAsync();
+                await setup.Database.MigrateAsync(cancellationToken);
             }
 
             const int writersCount = 16;
@@ -50,7 +51,7 @@ public sealed class VendorAuditChainIntegrationTests
                     ActionCode: $"test.parallel-event-{index:D2}",
                     SubjectType: "IntegrationTest",
                     SubjectId: Guid.NewGuid().ToString("N"),
-                    CorrelationId: Guid.NewGuid().ToString("N")));
+                    CorrelationId: Guid.NewGuid().ToString("N")), cancellationToken);
             });
 
             var receipts = await Task.WhenAll(writes);
@@ -60,7 +61,7 @@ public sealed class VendorAuditChainIntegrationTests
             await using (var verificationContext = new VendorDbContext(options))
             {
                 var verifier = new VendorAuditChainVerifier();
-                var result = await verifier.VerifyAsync(verificationContext);
+                var result = await verifier.VerifyAsync(verificationContext, cancellationToken);
                 Assert.True(result.IsValid, $"Audit chain verification failed: {result.FailureCode}");
                 Assert.Equal(writersCount, result.EventCount);
                 Assert.NotNull(result.HeadHash);
@@ -68,17 +69,17 @@ public sealed class VendorAuditChainIntegrationTests
                 var rootId = await verificationContext.AuditEvents
                     .Where(item => item.PreviousHash == VendorAuditChainVerifier.GenesisHash)
                     .Select(item => item.Id)
-                    .SingleAsync();
+                    .SingleAsync(cancellationToken);
 
                 await verificationContext.AuditEvents
                     .Where(item => item.Id == rootId)
-                    .ExecuteUpdateAsync(update => update.SetProperty(item => item.ActionCode, "tampered.audit-event"));
+                    .ExecuteUpdateAsync(update => update.SetProperty(item => item.ActionCode, "tampered.audit-event"), cancellationToken);
             }
 
             await using (var verificationAfterTampering = new VendorDbContext(options))
             {
                 var verifier = new VendorAuditChainVerifier();
-                var result = await verifier.VerifyAsync(verificationAfterTampering);
+                var result = await verifier.VerifyAsync(verificationAfterTampering, cancellationToken);
                 Assert.False(result.IsValid);
                 Assert.Equal("event-content-mismatch", result.FailureCode);
                 Assert.Null(result.HeadHash);
@@ -87,7 +88,7 @@ public sealed class VendorAuditChainIntegrationTests
         finally
         {
             await using var cleanup = new VendorDbContext(options);
-            await cleanup.Database.EnsureDeletedAsync();
+            await cleanup.Database.EnsureDeletedAsync(cancellationToken);
         }
     }
 }
