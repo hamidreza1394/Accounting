@@ -121,10 +121,10 @@
 
 **L2 — سامانهٔ مرکزی فروشنده**
 - هدف و دامنه: Host، دیتابیس و هویت مستقل؛ مدل `CustomerAccount/Contact/Product/Subsystem/Contract/SupportContract/License/LicenseRevision/Entitlement/Limit/Installation/ActivationRequest/CustomerBoundary/SigningKey/CentralAdminUser/AuditEvent`؛ سرویس امضا؛ صدور و ابطال دستی با فایل؛ ممیزی زنجیره‌ای؛ مدیر مرکزی با MFA. Endpoint آنلاین (D-042) مرحلهٔ بعدی همین فاز.
-- وابستگی: L1؛ OD-07، OD-11، OD-09.
+- وابستگی: L1 قراردادها در PR #82 ادغام شده است؛ OD-07/09/11 با D-046 پذیرفته شده‌اند. پیش از کد اجرایی، Issueهای طراحی/پیاده‌سازی L2 و انتخاب محیط KMS/HSM لازم‌اند.
 - فایل‌ها/پروژه‌ها: `Vendor/**` (نام نهایی `NeedsApproval`)، `Vendor.sln`، Workflow استقرار جدا.
-- آزمون: Integration روی SQL Server؛ ورود بدون MFA رد؛ تفکیک وظایف؛ ممیزی غیرقابل‌ویرایش و کشف دست‌کاری؛ صدور→اعتبارسنجی با `Licensing.Contracts`.
-- پذیرش: بستهٔ `Server` هیچ ارجاعی به فروشنده ندارد (G1/G2 سبز)؛ کلید خصوصی خارج از مخزن/CI.
+- آزمون: Integration روی SQL Server؛ MFA اجباری؛ maker-checker که تأیید درخواست خود را رد کند؛ مجوز نقش سمت سرور؛ ممیزی مقاوم در برابر دست‌کاری و کشف آن؛ صدور→اعتبارسنجی با `Licensing.Contracts`؛ قطع شبکه بدون توقف عملیات آفلاین.
+- پذیرش: بستهٔ `Server` هیچ ارجاعی به فروشنده ندارد (G1/G2 سبز)؛ کلید خصوصی خارج از مخزن/CI/DB مشتری؛ کلید Production فقط از KMS/HSM با مجوز امضا؛ حداقل دو مدیر واجد شرایط پیش از Production؛ ارتباط آنلاین اختیاری.
 - ریسک: مدیریت کلید و مراسم؛ Migration فقط روی دیتابیس **فروشنده** (دیتابیس مشتری دست‌نخورده).
 - مستندات: `LICENSING_DATA_MODEL.md`، `SECURITY.md`، `DEPLOYMENT.md`، راهنمای عملیات صدور/چرخش کلید.
 
