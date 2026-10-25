@@ -1,6 +1,6 @@
 # معماری لایسنس و فعال‌سازی (طرح هدف)
 
-> **وضعیت قابلیت در کد: `NotImplemented`.** لایسنس، مشتری تجاری، نصب و زیرسیستم هنوز در برنامه پیاده‌سازی نشده‌اند. تصمیم‌های OD-01/02/12 با D-045 و OD-07/09/11 با D-046 پذیرفته شده‌اند؛ D-047 معماری اجرایی Vendor را فعلاً به‌صورت `Proposed` ثبت می‌کند. این تصمیم‌ها رفتار اجرایی موجود را تغییر نمی‌دهند. تصمیم‌های پایه: D-020 تا D-029 و D-041 تا D-047 در [`DECISIONS.md`](DECISIONS.md)؛ موارد باز: [`LICENSING_OPEN_DECISIONS.md`](LICENSING_OPEN_DECISIONS.md). مدل داده: [`LICENSING_DATA_MODEL.md`](LICENSING_DATA_MODEL.md). گردش‌کارها: [`LICENSING_WORKFLOWS.md`](LICENSING_WORKFLOWS.md). تهدیدها: [`LICENSING_THREAT_MODEL.md`](LICENSING_THREAT_MODEL.md).
+> **وضعیت قابلیت در کد: `NotImplemented`.** لایسنس، مشتری تجاری، نصب و زیرسیستم هنوز در برنامه پیاده‌سازی نشده‌اند. تصمیم‌های OD-01/02/12 با D-045 و OD-07/09/11 با D-046 پذیرفته شده‌اند؛ D-047 معماری اجرایی Vendor را `Accepted` می‌داند؛ اسکلت Host مستقل در PR #92 ادغام شده و بقیهٔ کنترل‌پلین هنوز در حال پیاده‌سازی مرحله‌ای است. این تصمیم‌ها رفتار اجرایی موجود را تغییر نمی‌دهند. تصمیم‌های پایه: D-020 تا D-029 و D-041 تا D-047 در [`DECISIONS.md`](DECISIONS.md)؛ موارد باز: [`LICENSING_OPEN_DECISIONS.md`](LICENSING_OPEN_DECISIONS.md). مدل داده: [`LICENSING_DATA_MODEL.md`](LICENSING_DATA_MODEL.md). گردش‌کارها: [`LICENSING_WORKFLOWS.md`](LICENSING_WORKFLOWS.md). تهدیدها: [`LICENSING_THREAT_MODEL.md`](LICENSING_THREAT_MODEL.md).
 
 ## ۱) وضعیت فعلی (واقعی)
 
@@ -22,9 +22,9 @@
 
 | جزء | توضیح | وضعیت |
 |---|---|---|
-| سامانه مرکزی فروشنده (Vendor Control Plane) | ثبت مشتری، قرارداد، کاتالوگ زیرسیستم، صدور/تمدید/تعلیق، ممیزی؛ Host، دیتابیس و هویت جدا | `NotImplemented` |
+| سامانه مرکزی فروشنده (Vendor Control Plane) | Host مستقل پایه پیاده‌سازی شده؛ دیتابیس، Identity/MFA، RBAC، مدیریت مشتری/قرارداد، ممیزی، صدور/تمدید هنوز در دست پیاده‌سازی | `Partially Implemented` (اسکلت Host و CI مستقل؛ قابلیت‌های مدیریتی/تجاری `NotImplemented`) |
 | سرویس صدور | امضای لایسنس با کلید خصوصی در محیط امن فروشنده | `NotImplemented` |
-| `Licensing.Contracts` | قالب فایل، اعتبارسنجی امضا (فقط کلید عمومی)، قرارداد «چه چیزی مجاز است؟» | `NotImplemented` |
+| `Licensing.Contracts` | قرارداد نسخه‌دار آفلاین، مدل درخواست/پاسخ و اعتبارسنجی | `Implemented`؛ تست‌های قرارداد در CI اجرا می‌شوند. یکپارچه‌سازی کامل با Vendor و برنامهٔ مشتری `NotImplemented` است |
 | ماژول لایسنس نصب | ورود فایل، ذخیره، ارزیابی وضعیت، ممیزی، محدودسازی سمت سرور | `NotImplemented` |
 | نمایش در React | فقط بازتاب وضعیت از API؛ منبع تصمیم نیست | `NotImplemented` |
 
