@@ -154,15 +154,17 @@ function YearCard({
         </span>
         <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.78125rem] text-sub">
           <CalendarIcon width={14} height={14} strokeWidth={2} className="shrink-0" />
-          <span className="sr-only">از</span>
-          <bdi dir="ltr" className="font-medium tabular-nums">
-            {formatPersianDate(year.startDate)}
-          </bdi>
-          <span aria-hidden="true">-</span>
-          <span className="sr-only">تا</span>
-          <bdi dir="ltr" className="font-medium tabular-nums">
-            {formatPersianDate(year.endDate)}
-          </bdi>
+          <span className="inline-flex items-center gap-x-2 whitespace-nowrap">
+            <span className="sr-only">از</span>
+            <bdi dir="ltr" className="font-medium tabular-nums">
+              {formatPersianDate(year.startDate)}
+            </bdi>
+            <span aria-hidden="true">-</span>
+            <span className="sr-only">تا</span>
+            <bdi dir="ltr" className="font-medium tabular-nums">
+              {formatPersianDate(year.endDate)}
+            </bdi>
+          </span>
           <span aria-hidden="true">·</span>
           <span>
             {formatCount(year.companyCount)} شرکت

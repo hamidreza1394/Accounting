@@ -349,10 +349,17 @@
 - **اعتبارسنجی پس از اصلاح:** CI باید روی HEAD جدید دوباره اجرا شود؛ تا آن زمان نتیجهٔ نهایی `Verified` نیست.
 
 
-## 2026-10-25 — گارد وابستگی Vendor (Issue #95)
-- **مبنای معماری:** D-041 شرط می‌گذارد که گراف وابستگی Server به پروژه‌های Vendor نرسد و `Licensing.Contracts` بدون ProjectReference/لینک منبع بیرونی بماند. بررسی مجدد نشان داد G2 و G3 موجودند، اما G1 هنوز به‌صورت تست رگرسیون وجود نداشت؛ G4/G5 و allow-list کامل G2 نیز حل‌شده فرض نمی‌شوند.
-- **پیاده‌سازی در شاخه:** `tests/Template.Tests/Architecture/VendorIsolationTests.cs` با پیمایش XML گراف ProjectReference مستقیم/ترنزیتیو، بررسی قرارداد و fixture منفی افزوده شد. هیچ package جدیدی اضافه نشده است.
-- **محدوده داده:** هیچ کد اجرایی مشتری، Schema/Migration یا دیتابیس مشتری تغییر نکرده؛ فقط تست معماری در پروژهٔ تست اضافه شده است.
-- **اعتبارسنجی:** Build/Test محلی و `git diff --check` در این محیط اجرا نشده‌اند؛ منتظر CI واقعی روی PR هستیم. تا آن زمان G1 `NotVerified` است.
-- **ریسک/باقی‌مانده:** تحلیل XML fail-closed است و ProjectReference دارای property/wildcard را غیرقابل‌اثبات تلقی می‌کند. آزمون CI باید ثابت کند گراف فعلی بدون نقض است. G4/G5 و allow-list کامل Publish خارج از محدوده‌اند.
-- **گزارش تحویل:** `docs/handoffs/ISSUE-95-vendor-isolation-g1.md`.
+## 2026-10-25 — پیگیری L2.1: همگام‌سازی وضعیت Vendor و شواهد CI (Issue #93)
+- **یافته:** پس از ادغام PR #92، D-047 در `DECISIONS.md` پذیرفته بود، اما `INDEX.md` و `ROADMAP.md` هنوز `Proposed` می‌گفتند؛ `ARCHITECTURE.md` نیز به‌روز نبود و G2 موجود را نادیده می‌گرفت.
+- **اصلاح مستندات:** وضعیت D-047/PR #92/CI run در `INDEX.md`، `ROADMAP.md`، `ARCHITECTURE.md` و `PROJECT_STATUS.md` با دامنهٔ محدود و شواهد واقعی همسو شد. ادعای وجود تمام گاردهای G1–G6 نشده است؛ فقط G2 با اسکریپت و تست مشخص ثبت شد.
+- **شاهد CI:** run `40212722972` موفق؛ `vendor-build-test`، `secret-scan`، `client`، `build-and-test`، `publish-scripts`، `e2e`، `publish-windows` و `publish` موفق بودند. run `40212637047` شکست اولیهٔ xUnit را ثبت کرده بود و علت در commit بعدی اصلاح شد.
+- **محدوده:** مستندات فقط؛ کد اجرایی، Workflow، Schema/Migration و دیتابیس مشتری تغییر نکرد.
+- **اعتبارسنجی محلی:** `git diff --check` و Build/Test محلی در این محیط اجرا نشده‌اند؛ PR/CI باید بررسی شود. لینک‌ها و متن‌ها به‌صورت متنی بررسی شدند.
+- **باقی‌مانده:** قبل از گسترش قابلیت‌های مدیریتی، پوشش گاردهای جداسازی باید به‌صورت جداگانه و مستند بازبینی شود. Vendor هنوز Production-ready نیست.
+- **گزارش تحویل:** `docs/handoffs/ISSUE-93-vendor-status-reconciliation.md`.
+
+## 2026-10-25 — ممیزی UI صفحهٔ انتخاب شرکت/دوره و سه اصلاح کوچک
+- **ممیزی:** مرورگر Playwright با API شبیه‌سازی‌شده در ۳۶۰/۷۶۸/۱۲۸۰؛ بدون سرریز افقی و بدون هدف لمسی کوچک.
+- **اصلاح:** عنوان تب بر اساس صفحه، عدم‌شکست بازهٔ تاریخ، preload فونت محلی؛ دو تست جدید.
+- **اعتبارسنجی محلی:** typecheck، ۹۶ تست، build، check:offline و check_static_assets موفق؛ .NET اجرا نشد (کد تغییر نکرده).
+- **گزارش تحویل:** `docs/handoffs/ISSUE-UNNUMBERED-ui-selection-audit.md`.

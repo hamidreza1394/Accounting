@@ -60,6 +60,44 @@ describe('App', () => {
     expect(screen.getByText(/هیچ آمار مالی/)).toBeInTheDocument();
   });
 
+  it('names the screen in the tab title: selection first, dashboard after entering', async () => {
+    stubApi({
+      ...antiforgeryRoute,
+      'GET /api/v1/session': { status: 200, body: session },
+      'GET /api/v1/context': {
+        status: 200,
+        body: contextBody({ companies: [companyA, company('b', 'شرکت ب', [open1406], '20202020202')] }),
+      },
+    });
+
+    render(<App navigate={vi.fn()} />);
+
+    expect(await screen.findByRole('heading', { name: 'فرانو - دوره مالی' })).toBeInTheDocument();
+    expect(document.title).toBe('فرانو — انتخاب دوره مالی');
+  });
+
+  it('names the dashboard in the tab title once the work context is entered', async () => {
+    stubApi({
+      ...antiforgeryRoute,
+      'GET /api/v1/session': { status: 200, body: session },
+      'GET /api/v1/context': {
+        status: 200,
+        body: contextBody({
+          entry: 'directEntry',
+          directSelection: { companyId: 'a', fiscalPeriodId: 'p1' },
+          companies: [companyA],
+        }),
+      },
+      'POST /api/v1/context': { status: 200, body: selected(companyA, open1405) },
+      'GET /api/v1/companies/a/overview': { status: 200, body: overviewA },
+    });
+
+    render(<App navigate={vi.fn()} />);
+
+    expect(await screen.findByRole('heading', { name: 'داشبورد' })).toBeInTheDocument();
+    expect(document.title).toBe('فرانو — داشبورد');
+  });
+
   it('falls back to the selection screen when the server refuses the automatic entry', async () => {
     stubApi({
       ...antiforgeryRoute,

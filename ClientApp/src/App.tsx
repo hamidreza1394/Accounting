@@ -133,6 +133,13 @@ export function App({ navigate = defaultNavigate }: { navigate?: Navigate }) {
     );
   }, []);
 
+  const showsSelection =
+    state.kind === 'ready' && (state.context.current === null || state.selecting);
+  // The tab title names the screen, so several open tabs and the history stay distinguishable.
+  useEffect(() => {
+    document.title = showsSelection ? 'فرانو — انتخاب دوره مالی' : 'فرانو — داشبورد';
+  }, [showsSelection]);
+
   if (state.kind === 'loading') {
     return (
       <SelectionLayout>
