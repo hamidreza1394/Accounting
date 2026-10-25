@@ -157,3 +157,10 @@ cd ClientApp && npm ci && npm run typecheck && npm test && npm run build && npm 
 - **اصلاح تست‌های شکسته از قبل روی `main` (حذف نشدند):** `CorporateGroupSqlServerTests` (تست Migration: شرکت با SQL درج می‌شود چون مدل ستونی داشت که در Schema قدیمی نبود)؛ شش تست Vitest و یک تست E2E که هنوز قاعده منسوخ «چیزی پیش‌انتخاب نمی‌شود» (D-031) را می‌سنجیدند، به قاعده پذیرفته‌شده (D-040) به‌روز شدند.
 
 - `ConcurrentProvisioningOfTheSameCompanyWithDifferentBoundaries_LetsExactlyOneWin` فقط روی SQL Server اجرا می‌شود (Serializable و Deadlock روی Provider حافظه‌ای معنا ندارند؛ بدون `FARANOU_TEST_SQLSERVER` رد می‌شود). تراکنش Serializable تخصیص مرز فقط روی Provider رابطه‌ای باز می‌شود.
+
+
+## آزمون‌های قرارداد لایسنس (Issue #80 / D-045)
+- آزمون مستقل: `dotnet test tests/Licensing.Contracts.Tests/Licensing.Contracts.Tests.csproj --configuration Release`.
+- CI باید همین مجموعه را روی Linux در `build-and-test` و روی Windows در Job `publish-windows` اجرا کند؛ موفقیت فقط روی یک سیستم‌عامل برای تأیید سازگاری کافی نیست.
+- بردار ثابت RFC 6979 برای ECDSA P-256/SHA-256 و امضای IEEE P1363 با طول دقیق 64 بایت؛ آزمون تغییر حتی یک فاصله در Payload برای اثبات امضا روی بایت‌های دقیق JSON.
+- آزمون‌های ساختاری برای کد زیرسیستم ناشناخته و کد تکراری. کلیدهای ثابت آزمون فقط کلید عمومی و دادهٔ تست شناخته‌شده‌اند؛ کلید خصوصی صدور محصول هرگز در مخزن قرار نمی‌گیرد.
