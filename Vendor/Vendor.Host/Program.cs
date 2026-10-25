@@ -1,4 +1,6 @@
 using Faranou.Vendor.Persistence;
+using Faranou.Vendor.Persistence.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,6 +19,25 @@ builder.Services.AddDbContext<VendorDbContext>(options =>
     }
 
     options.UseSqlServer(connectionString);
+});
+
+// Identity schema v3 is required for the built-in ASP.NET Core 10 passkey store.
+builder.Services.AddIdentityCore<VendorAdminUser>(options =>
+{
+    options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
+    options.User.RequireUniqueEmail = true;
+    options.Lockout.AllowedForNewUsers = true;
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+}).AddRoles<IdentityRole<Guid>>()
+  .AddEntityFrameworkStores<VendorDbContext>()
+  .AddDefaultTokenProviders();
+
+// WebAuthn must require both a discoverable credential and local user verification.
+builder.Services.Configure<IdentityPasskeyOptions>(options =>
+{
+    options.ResidentKeyRequirement = "required";
+    options.UserVerificationRequirement = "required";
 });
 
 var app = builder.Build();
