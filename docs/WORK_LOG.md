@@ -379,3 +379,13 @@
 - **اصلاح:** عنوان تب بر اساس صفحه، عدم‌شکست بازهٔ تاریخ، preload فونت محلی؛ دو تست جدید.
 - **اعتبارسنجی محلی:** typecheck، ۹۶ تست، build، check:offline و check_static_assets موفق؛ .NET اجرا نشد (کد تغییر نکرده).
 - **گزارش تحویل:** `docs/handoffs/ISSUE-UNNUMBERED-ui-selection-audit.md`.
+
+
+## 2026-10-25 — تکمیل L2.2: ثبت Migrationهای Vendor در مخزن (Issue #100، پیگیری پس از PR #101)
+- **علت پیگیری:** PR #101 ادغام شد، ولی Migration و Snapshot اولیه صرفاً به‌صورت موقت توسط CI ساخته می‌شدند؛ در نتیجه source قابل اعمال/بازبینی در مخزن نبود. سبز شدن تست همان run به‌تنهایی این خلأ را برطرف نمی‌کرد.
+- **اصلاح در شاخهٔ follow-up:** سه فایل تولیدشده توسط `dotnet-ef 10.0.13` ثبت شدند: `Vendor/Vendor.Persistence/Migrations/20261025180755_VendorInitialIdentityAndAudit.cs`, فایل `.Designer.cs` و `VendorDbContextModelSnapshot.cs`. گام scaffolding/آپلود موقت از `vendor-ci.yml` حذف شد و به جایش بررسی دائمی `dotnet ef migrations has-pending-model-changes` اضافه شد.
+- **شاهد قبلی:** در run `40219629655`، step تولید EF migration موفق و `Vendor.Host.Tests` روی SQL Server واقعی موفق شد، اما source تولیدشده در آن لحظه artifact/workspace بود، نه commit؛ بنابراین آن run را شاهد نهاییِ migration ثبت‌شده به حساب نمی‌آوریم.
+- **محدوده:** دیتابیس مشتری، `Template.sln`، `Server/Server.csproj` و Migrationهای مشتری تغییر نکردند. دیتابیس Integration با پیشوند `FaranouVendorTests_` یکتا ساخته و پس از تست حذف می‌شود.
+- **وضعیت اعتبارسنجی این پیگیری:** منتظر CI روی commit حاوی Migrationهای ثبت‌شده هستیم؛ Build/Test محلی اجرا نشده‌اند چون SDK در محیط محلی این Agent موجود نیست. تا نتیجهٔ CI، وضعیت schema `NotVerified` می‌ماند.
+- **امنیت/باقی‌مانده:** کلاس `VendorAuditEvent` فقط مدل زنجیرهٔ هش است؛ سرویس append-only، اعتبارسنجی زنجیره و checkpoint مستقل هنوز لازم است. ورود/MFA/RBAC و bootstrap هنوز فعال/قابل دسترس نیستند.
+- **گزارش تحویل:** `docs/handoffs/ISSUE-100-vendor-persistence-identity-audit.md`.

@@ -22,7 +22,7 @@
 
 | جزء | توضیح | وضعیت |
 |---|---|---|
-| سامانه مرکزی فروشنده (Vendor Control Plane) | Host مستقل پایه پیاده‌سازی شده؛ دیتابیس، Identity/MFA، RBAC، مدیریت مشتری/قرارداد، ممیزی، صدور/تمدید هنوز در دست پیاده‌سازی | `Partially Implemented` (اسکلت Host و CI مستقل؛ قابلیت‌های مدیریتی/تجاری `NotImplemented`) |
+| سامانه مرکزی فروشنده (Vendor Control Plane) | Host و پایهٔ persistence/Identity/audit مستقل در حال پیاده‌سازی مرحله‌ای؛ login/MFA، bootstrap، RBAC، مشتری/قرارداد، سرویس ممیزی، maker-checker و صدور/تمدید هنوز پیاده‌سازی کامل نشده‌اند | `Partially Implemented`; schema فقط پس از CI موفق روی migration ثبت‌شده `Verified` است |
 | سرویس صدور | امضای لایسنس با کلید خصوصی در محیط امن فروشنده | `NotImplemented` |
 | `Licensing.Contracts` | قرارداد نسخه‌دار آفلاین، مدل درخواست/پاسخ و اعتبارسنجی | `Implemented`؛ تست‌های قرارداد در CI اجرا می‌شوند. یکپارچه‌سازی کامل با Vendor و برنامهٔ مشتری `NotImplemented` است |
 | ماژول لایسنس نصب | ورود فایل، ذخیره، ارزیابی وضعیت، ممیزی، محدودسازی سمت سرور | `NotImplemented` |

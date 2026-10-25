@@ -6,7 +6,8 @@
 
 - اسکلت اولیهٔ Host روی `net10.0` ایجاد شده است.
 - `/health/live` فقط زنده‌بودن فرایند وب را اعلام می‌کند؛ وضعیت دیتابیس یا جزئیات عملیاتی را افشا نمی‌کند.
-- هویت، MFA، RBAC، دیتابیس Vendor، صدور لایسنس و اتصال KMS/HSM هنوز پیاده‌سازی نشده‌اند.
+- لایهٔ persistence مستقل (`VendorDbContext`، جداول Identity مجزا، `VendorAuditEvents` و Migration اولیه) در این مرحله اضافه شده است؛ CI باید اجرای Migration روی SQL Server آزمایشی و هماهنگی snapshot را تأیید کند.
+- ورود مدیر، سیاست MFA/passkey/TOTP، RBAC، bootstrap اولیه، سرویس ثبت/اعتبارسنجی زنجیرهٔ ممیزی، maker-checker، دادهٔ مشتری تجاری/قرارداد/لایسنس، صدور امضا و KMS/HSM هنوز پیاده‌سازی نشده‌اند.
 - این اسکلت برای Production آماده نیست.
 
 ## توسعه و آزمون
@@ -42,3 +43,9 @@ Host عمداً به ارائه‌دهندهٔ ابری خاصی وابسته ن
 - `.github/workflows/vendor-ci.yml` به تغییرات Vendor/Contracts و تنظیمات build واکنش نشان می‌دهد و Restore/Build/Test مستقل را اجرا می‌کند.
 - فقط push به `main` artifact خروجی `dotnet publish` را تولید می‌کند؛ artifact موقت ۷ روز نگه داشته می‌شود. این مرحله Deploy واقعی نیست و هیچ credential یا کلید امضایی استفاده نمی‌کند.
 - workflow مستقل Vendor جایگزین گاردهای مشتری نیست؛ انتشار مشتری همچنان توسط `.github/workflows/dotnet.yml` و اسکریپت‌های publish اعتبارسنجی می‌شود.
+
+
+## اتصال دیتابیس Vendor
+- متغیر محیطی: `FARANO_VENDOR_ConnectionStrings__VendorDb` (به یک دیتابیس مستقل Vendor).
+- هیچ connection string پیش‌فرض، seed مدیر، ثبت‌نام عمومی یا endpoint مدیریتی ناشناس وجود ندارد.
+- قبل از استفادهٔ واقعی، پیاده‌سازی login/MFA و bootstrap باید تکمیل و کنترل‌های امنیتی/عملیاتی جداگانه تأیید شوند؛ وجود Schema به معنی آماده‌بودن پنل نیست.
