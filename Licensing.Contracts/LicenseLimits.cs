@@ -2,7 +2,7 @@ namespace Faranou.Licensing.Contracts;
 
 /// <summary>
 /// Commercial limits carried in the signed payload.
-/// OD-02 Proposed: v1 carries maxCompanies + subsystem codes only.
+/// D-045 Accepted: v1 carries maxCompanies + the fixed subsystem-code allowlist.
 /// </summary>
 public sealed record LicenseLimits(
 	int? MaxCompanies,
