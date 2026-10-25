@@ -347,3 +347,12 @@
 - **شاهد:** اجرای GitHub Actions شماره `40212637047`، Job `vendor-build-test` در Build شکست خورد؛ خطای xUnit v3 تصریح کرد پروژهٔ تست باید `<OutputType>Exe</OutputType>` داشته باشد. Restore و Build خود Host موفق بودند؛ تست‌ها به‌دلیل شکست Build اجرا نشدند.
 - **اصلاح:** `tests/Vendor.Host.Tests/Vendor.Host.Tests.csproj` به‌روزرسانی شد تا خروجی تست executable باشد. این اصلاح از خطای واقعی CI ناشی شد، نه حدس.
 - **اعتبارسنجی پس از اصلاح:** CI باید روی HEAD جدید دوباره اجرا شود؛ تا آن زمان نتیجهٔ نهایی `Verified` نیست.
+
+
+## 2026-10-25 — گارد وابستگی Vendor (Issue #95)
+- **مبنای معماری:** D-041 شرط می‌گذارد که گراف وابستگی Server به پروژه‌های Vendor نرسد و `Licensing.Contracts` بدون ProjectReference/لینک منبع بیرونی بماند. بررسی مجدد نشان داد G2 و G3 موجودند، اما G1 هنوز به‌صورت تست رگرسیون وجود نداشت؛ G4/G5 و allow-list کامل G2 نیز حل‌شده فرض نمی‌شوند.
+- **پیاده‌سازی در شاخه:** `tests/Template.Tests/Architecture/VendorIsolationTests.cs` با پیمایش XML گراف ProjectReference مستقیم/ترنزیتیو، بررسی قرارداد و fixture منفی افزوده شد. هیچ package جدیدی اضافه نشده است.
+- **محدوده داده:** هیچ کد اجرایی مشتری، Schema/Migration یا دیتابیس مشتری تغییر نکرده؛ فقط تست معماری در پروژهٔ تست اضافه شده است.
+- **اعتبارسنجی:** Build/Test محلی و `git diff --check` در این محیط اجرا نشده‌اند؛ منتظر CI واقعی روی PR هستیم. تا آن زمان G1 `NotVerified` است.
+- **ریسک/باقی‌مانده:** تحلیل XML fail-closed است و ProjectReference دارای property/wildcard را غیرقابل‌اثبات تلقی می‌کند. آزمون CI باید ثابت کند گراف فعلی بدون نقض است. G4/G5 و allow-list کامل Publish خارج از محدوده‌اند.
+- **گزارش تحویل:** `docs/handoffs/ISSUE-95-vendor-isolation-g1.md`.
