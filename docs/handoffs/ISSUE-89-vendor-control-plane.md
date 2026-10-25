@@ -26,7 +26,7 @@
 - `docs/handoffs/ISSUE-89-vendor-control-plane.md` — این گزارش.
 
 ## تصمیم‌های فنی
-- D-047 فقط Proposed است، نه Accepted.
+- **به‌روزرسانی 2026-10-25:** هنگام نگارش اولیه D-047 Proposed بود؛ کارفرما بعداً معماری را برای cloud و dedicated server صریحاً تأیید کرد. وضعیت جاری در `docs/DECISIONS.md` برابر `Accepted` است؛ پیاده‌سازی مرحلهٔ اول در PR #92 دنبال می‌شود.
 - Vendor باید Host، Identity، DbContext، SQL Server database و CI/Publish boundary مستقل داشته باشد؛ تنها قرارداد مشترک `Licensing.Contracts` است.
 - MFA برای حساب‌های انسانی، bootstrap محدود و ممیزی‌شده، دو مدیر واجد شرایط پیش از Production و maker-checker سمت سرور.
 - Hash-chain به‌تنهایی ضددستکاری کامل نیست؛ نیاز به validation و checkpoint مستقل دارد.
@@ -48,11 +48,11 @@
 - Hash-chain داخل همان DB، دستکاری توسط DBA را به‌تنهایی ناممکن نمی‌کند.
 
 ## ریسک‌ها و کارهای باقی‌مانده
-- بازبینی انسانی و پذیرش D-047.
+- پیاده‌سازی مرحله‌ای طبق D-047 پذیرفته‌شده؛ PR #92 فقط اسکلت Host را پوشش می‌دهد.
 - تعیین KMS/HSM، recovery/break-glass، alerting و مقصد مستقل audit checkpoint.
 - پیاده‌سازی مرحله‌ای و اجرای Build/Integration tests/CI واقعی.
 
 ## شناسه‌های Git
 - Branch: `docs/licensing-l2-vendor-architecture`
 - Commit: در زمان نگارش هنوز نهایی نشده است.
-- Pull Request: هنوز ایجاد نشده است.
+- Pull Request معماری: #90 (merged)؛ پیاده‌سازی اولیه: #92 (open هنگام به‌روزرسانی).

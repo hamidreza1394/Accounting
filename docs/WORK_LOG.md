@@ -332,3 +332,18 @@
 - **اعتبارسنجی:** Build/Test اجرا نشده‌اند؛ تغییرات این مرحله مستنداتی هستند و باید در PR/CI بازبینی شوند. CI سبز برای HEAD نهایی هنوز تأیید نشده است.
 - **ریسک/باقی‌مانده:** D-047 هنوز `Proposed` است. محصول KMS/HSM، runbook بازیابی/break-glass و مقصد مستقل checkpoint نیازمند تعیین محیط/تصمیم جدا هستند. هیچ پیاده‌سازی Production مجاز فرض نشده است.
 - **گزارش تحویل:** `docs/handoffs/ISSUE-89-vendor-control-plane.md`; [Issue #89](https://github.com/hamidreza1394/Accounting/issues/89).
+
+
+## 2026-10-25 — L2.1 اسکلت مستقل Vendor (Issue #91)
+- **تصمیم:** کارفرما D-047 را برای محیط‌های ابری و سرور اختصاصی تأیید کرد؛ وضعیت تصمیم در `docs/DECISIONS.md` به `Accepted` تغییر یافت. پیاده‌سازی همچنان `NotImplemented` در سطح قابلیت‌های کامل لایسنس است.
+- **تغییرات روی شاخه `feature/vendor-host-skeleton`:** ایجاد `Vendor.sln` مستقل، پروژهٔ `Vendor/Vendor.Host` با target `net10.0`، endpoint حداقلی `/health/live`، تست‌های smoke و `Vendor/README.md` برای استقرار cloud/dedicated-server. افزودن Job مجزا برای Build/Test Vendor در CI.
+- **جداسازی:** هیچ ProjectReference به برنامه مشتری، هیچ تغییری در `Template.sln`، هیچ Migration یا تغییری در دیتابیس مشتری و هیچ secret/کلید خصوصی اضافه نشده است.
+- **اعتبارسنجی:** این Agent نتوانست Build/Test محلی اجرا کند؛ CI شاخه/PR هنوز باید اجرا و بررسی شود. موفقیت آزمون‌ها تا دریافت نتیجه واقعی گزارش نمی‌شود.
+- **ریسک/محدودیت:** Host هنوز احراز هویت، RBAC، دیتابیس، logging عملیاتی یا صدور لایسنس ندارد و Production-ready نیست. این موارد به PRهای جداگانه واگذار شده‌اند.
+- **تحویل:** `docs/handoffs/ISSUE-91-vendor-host-skeleton.md`.
+
+
+## 2026-10-25 — اصلاح شکست اولیهٔ CI برای Vendor.Host.Tests
+- **شاهد:** اجرای GitHub Actions شماره `40212637047`، Job `vendor-build-test` در Build شکست خورد؛ خطای xUnit v3 تصریح کرد پروژهٔ تست باید `<OutputType>Exe</OutputType>` داشته باشد. Restore و Build خود Host موفق بودند؛ تست‌ها به‌دلیل شکست Build اجرا نشدند.
+- **اصلاح:** `tests/Vendor.Host.Tests/Vendor.Host.Tests.csproj` به‌روزرسانی شد تا خروجی تست executable باشد. این اصلاح از خطای واقعی CI ناشی شد، نه حدس.
+- **اعتبارسنجی پس از اصلاح:** CI باید روی HEAD جدید دوباره اجرا شود؛ تا آن زمان نتیجهٔ نهایی `Verified` نیست.

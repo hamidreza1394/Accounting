@@ -1,5 +1,7 @@
 # وضعیت پروژه
 
+> **افزوده 2026-10-25 — Vendor L2:** D-047 با تأیید صریح کارفرما برای استقرار ابری و سرور اختصاصی `Accepted` است. اسکلت اولیه در شاخه `feature/vendor-host-skeleton` در حال بازبینی است: `Vendor.sln` و `Vendor.Host`/health smoke test در شاخه وجود دارند، اما هنوز CI نهایی تأیید نشده و این قابلیت‌ها `Verified` نیستند. دیتابیس/Identity/MFA/صدور لایسنس Vendor هنوز `NotImplemented` هستند. دیتابیس و Migrationهای مشتری تغییر نکرده‌اند.
+
 > **بازبینی مرجع 2026-10-21 (شاخه `docs/architecture-source-of-truth`)** — مبنا: `main` @ `1d39dbf9e0843045e00441bf2778267e9764a3f6`. بخش «وضعیت تأییدشده فعلی» زیر معتبر است؛ بخش‌های بعد از آن تا «هدف» **تاریخی و در موارد مشخص‌شده منسوخ** هستند و برای حفظ سابقه نگه داشته شده‌اند. در تناقض، ترتیب منابع حقیقت D-030 (`docs/INDEX.md`) ملاک است. واژگان وضعیت: `Accepted`, `Implemented`, `Verified`, `Proposed`, `NeedsApproval`, `Deprecated`, `Blocked`, `NotImplemented`.
 
 ## وضعیت تأییدشده فعلی (2026-10-21)

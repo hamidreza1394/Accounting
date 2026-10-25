@@ -314,3 +314,22 @@ jobs:
             tests/e2e/playwright-report
             tests/e2e/test-results
           retention-days: 7
+
+
+  vendor-build-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore Vendor solution
+        run: dotnet restore Vendor.sln
+      - name: Build Vendor solution
+        run: dotnet build Vendor.sln --no-restore --configuration Release
+      - name: Test Vendor solution
+        run: dotnet test Vendor.sln --configuration Release
