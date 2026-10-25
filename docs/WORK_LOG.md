@@ -347,3 +347,13 @@
 - **شاهد:** اجرای GitHub Actions شماره `40212637047`، Job `vendor-build-test` در Build شکست خورد؛ خطای xUnit v3 تصریح کرد پروژهٔ تست باید `<OutputType>Exe</OutputType>` داشته باشد. Restore و Build خود Host موفق بودند؛ تست‌ها به‌دلیل شکست Build اجرا نشدند.
 - **اصلاح:** `tests/Vendor.Host.Tests/Vendor.Host.Tests.csproj` به‌روزرسانی شد تا خروجی تست executable باشد. این اصلاح از خطای واقعی CI ناشی شد، نه حدس.
 - **اعتبارسنجی پس از اصلاح:** CI باید روی HEAD جدید دوباره اجرا شود؛ تا آن زمان نتیجهٔ نهایی `Verified` نیست.
+
+
+## 2026-10-25 — پیگیری L2.1: همگام‌سازی وضعیت Vendor و شواهد CI (Issue #93)
+- **یافته:** پس از ادغام PR #92، D-047 در `DECISIONS.md` پذیرفته بود، اما `INDEX.md` و `ROADMAP.md` هنوز `Proposed` می‌گفتند؛ `ARCHITECTURE.md` نیز به‌روز نبود و G2 موجود را نادیده می‌گرفت.
+- **اصلاح مستندات:** وضعیت D-047/PR #92/CI run در `INDEX.md`، `ROADMAP.md`، `ARCHITECTURE.md` و `PROJECT_STATUS.md` با دامنهٔ محدود و شواهد واقعی همسو شد. ادعای وجود تمام گاردهای G1–G6 نشده است؛ فقط G2 با اسکریپت و تست مشخص ثبت شد.
+- **شاهد CI:** run `40212722972` موفق؛ `vendor-build-test`، `secret-scan`، `client`، `build-and-test`، `publish-scripts`، `e2e`، `publish-windows` و `publish` موفق بودند. run `40212637047` شکست اولیهٔ xUnit را ثبت کرده بود و علت در commit بعدی اصلاح شد.
+- **محدوده:** مستندات فقط؛ کد اجرایی، Workflow، Schema/Migration و دیتابیس مشتری تغییر نکرد.
+- **اعتبارسنجی محلی:** `git diff --check` و Build/Test محلی در این محیط اجرا نشده‌اند؛ PR/CI باید بررسی شود. لینک‌ها و متن‌ها به‌صورت متنی بررسی شدند.
+- **باقی‌مانده:** قبل از گسترش قابلیت‌های مدیریتی، پوشش گاردهای جداسازی باید به‌صورت جداگانه و مستند بازبینی شود. Vendor هنوز Production-ready نیست.
+- **گزارش تحویل:** `docs/handoffs/ISSUE-93-vendor-status-reconciliation.md`.
