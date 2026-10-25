@@ -258,3 +258,8 @@
 - **انجام‌شده:** ممیزی مجدد (۲۷ ردیف وضعیت + AUD-2026-10-24-01..09)، ADR D-041 (`Accepted` مشروط) و D-042..D-044 (`Proposed`)، سند `LICENSING_OPEN_DECISIONS.md` (۱۷ تصمیم باز)، گسترش مدل داده/گردش‌کار/تهدید، نقشهٔ راه L0..L4، اصلاح شمارهٔ ADR بعدی (D-045) و انحراف مستندات D-031/D-036.
 - **اعتبارسنجی واقعی:** Release Build ۰ خطا؛ ۴۰۷ تست .NET غیر-Integration موفق (۱۶ ردشده)؛ ۹۴ تست Vitest و typecheck؛ `check_static_assets.py` PASS؛ آزمایش امضا ECDSA/RSA-PSS روی Linux. **اجرا نشد:** SQL Server/Integration/E2E، CI، `npm run build`، Windows.
 - **باز:** پاسخ مالک به OD-01/02/12 (پیش‌شرط L1)؛ گاردهای G1–G3؛ بررسی Branch protection. جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-licensing-phase0-architecture.md`.
+
+## 2026-10-25 — رفع شکست CI (G1/G2) و بازگردانی پوشش تست لایسنس (شاخهٔ محلی `fix/ci-g1-xunit-using-and-g2-printf`، بدون commit)
+- **انجام‌شده:** `using Xunit;` در تست G1؛ اصلاح `printf --` در تست G2؛ تست‌های `EvaluatorStateTests` برای پوشش حذف‌شده در PR #74.
+- **اعتبارسنجی:** Build و تست‌ها محلی موفق؛ CI/API اجرا نشد (دسترسی). Guard مهاجرت از پیش روی main شکست می‌خورد و رفع نشد.
+- **باز:** مولد مهاجرت‌ها از دو مهاجرت اخیر عقب است؛ تصمیم‌های OD-01/02/12. جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-ci-g1-g2-fix-and-licensing-test-coverage.md`.

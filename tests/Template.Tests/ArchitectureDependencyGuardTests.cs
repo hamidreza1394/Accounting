@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using Xunit;
 
 namespace Template.Tests;
 

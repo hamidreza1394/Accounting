@@ -24,7 +24,9 @@ printf 'public class Server {}\n' > "$clean/Server.dll"
 printf 'ok\n' > "$clean/wwwroot/app/index.html"
 printf 'js\n' > "$clean/wwwroot/app/assets/main.js"
 printf 'css\n' > "$clean/wwwroot/app/assets/main.css"
-printf '-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----\n' > "$clean/public-cert.pem"
+printf -- '-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----\n' > "$clean/public-cert.pem"
+# A fixture that silently came out empty would make the checks below meaningless.
+[ -s "$clean/public-cert.pem" ] || fail "public certificate fixture created" "fixture file is empty"
 if faranou_assert_customer_publish_clean "$clean"; then
   ok "clean publish output accepted"
 else
@@ -79,7 +81,8 @@ pem="$sandbox/pem"
 mkdir -p "$pem"
 printf 'x' > "$pem/Server.dll"
 # Synthetic marker text only — not a cryptographic key.
-printf '-----BEGIN RSA PRIVATE KEY-----\nTEST-FIXTURE-NOT-A-REAL-KEY\n-----END RSA PRIVATE KEY-----\n' > "$pem/leak.txt"
+printf -- '-----BEGIN RSA PRIVATE KEY-----\nTEST-FIXTURE-NOT-A-REAL-KEY\n-----END RSA PRIVATE KEY-----\n' > "$pem/leak.txt"
+[ -s "$pem/leak.txt" ] || fail "PEM private key fixture created" "fixture file is empty"
 if faranou_assert_customer_publish_clean "$pem" 2>/dev/null; then
   fail "PEM private key content rejected" "guard accepted BEGIN RSA PRIVATE KEY fixture"
 else
