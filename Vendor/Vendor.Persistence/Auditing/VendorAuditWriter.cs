@@ -84,8 +84,8 @@ public sealed class VendorAuditWriter : IVendorAuditWriter
                 if (!VendorAuditChainVerifier.IsHash(leaf.EventHash) ||
                     !IsValidActionCode(leaf.ActionCode) ||
                     !IsValidSubjectType(leaf.SubjectType) ||
-                    !IsSafeOpaqueId(leaf.SubjectId, 200) ||
-                    !IsSafeOpaqueId(leaf.CorrelationId, 100) ||
+                    !IsValidSubjectId(leaf.SubjectId) ||
+                    !IsValidCorrelationId(leaf.CorrelationId) ||
                     leaf.MetadataJson is not null ||
                     !string.Equals(VendorAuditChainVerifier.ComputeEventHash(leaf), leaf.EventHash, StringComparison.Ordinal))
                 {
@@ -148,13 +148,6 @@ public sealed class VendorAuditWriter : IVendorAuditWriter
 
     internal static bool IsValidSubjectType(string? subjectType) =>
         subjectType is null || (subjectType.Length is >= 1 and <= 100 && SubjectTypePattern.IsMatch(subjectType));
-
-    internal static bool IsSafeOpaqueId(string? value, int maximumLength) =>
-        value is null || (value.Length >= 1 && value.Length <= maximumLength &&
-            value.All(character => (character >= '0' && character <= '9') ||
-                                   (character >= 'a' && character <= 'f') ||
-                                   (character >= 'A' && character <= 'F') ||
-                                   character is '-' or ':'));
 
     internal static bool IsValidSubjectId(string? value) =>
         value is null || Guid.TryParseExact(value, "N", out _) || Guid.TryParseExact(value, "D", out _);
