@@ -1,0 +1,55 @@
+name: Self-hosted Windows Runner Smoke Test
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/self-hosted-runner-smoke-test.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: self-hosted-runner-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  runner-smoke-test:
+    name: Verify Windows runner
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 5
+    steps:
+      - name: Report runner identity
+        shell: powershell
+        run: |
+          Write-Host "Runner name: $env:RUNNER_NAME"
+          Write-Host "Runner OS: $env:RUNNER_OS"
+          Write-Host "Runner architecture: $env:RUNNER_ARCH"
+          Write-Host "PowerShell version: $($PSVersionTable.PSVersion)"
+          if ($env:RUNNER_OS -ne "Windows") { throw "Expected a Windows runner." }
+          if ($env:RUNNER_ARCH -ne "X64") { throw "Expected an X64 runner." }
+
+      - name: Check installed development tools
+        shell: powershell
+        run: |
+          $checks = @(
+            @{ Name = "Git"; Command = "git"; Args = @("--version") },
+            @{ Name = ".NET SDK"; Command = "dotnet"; Args = @("--version") },
+            @{ Name = "Node.js"; Command = "node"; Args = @("--version") },
+            @{ Name = "npm"; Command = "npm"; Args = @("--version") }
+          )
+          foreach ($check in $checks) {
+            $tool = Get-Command $check.Command -ErrorAction SilentlyContinue
+            if ($null -eq $tool) {
+              Write-Warning "$($check.Name) was not found on the runner service PATH."
+              continue
+            }
+            $output = & $check.Command @($check.Args)
+            if ($LASTEXITCODE -ne 0) { throw "$($check.Name) version check failed." }
+            Write-Host "$($check.Name): $output"
+          }
+
+      - name: Confirm job completed on the self-hosted runner
+        shell: powershell
+        run: |
+          Write-Host "FARANO_SELF_HOSTED_RUNNER_SMOKE_TEST=PASS"
