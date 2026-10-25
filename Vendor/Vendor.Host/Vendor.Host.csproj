@@ -6,4 +6,7 @@
     <RootNamespace>Faranou.Vendor.Host</RootNamespace>
     <AssemblyName>Faranou.Vendor.Host</AssemblyName>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Vendor.Persistence\Vendor.Persistence.csproj" />
+  </ItemGroup>
 </Project>

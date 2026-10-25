@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vendor.Host", "Vendor\Vendo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vendor.Host.Tests", "tests\Vendor.Host.Tests\Vendor.Host.Tests.csproj", "{E0B7AF89-C7F1-4E2A-BD3A-3E82B30B0A02}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vendor.Persistence", "Vendor\\Vendor.Persistence\\Vendor.Persistence.csproj", "{97E9A8B4-1D61-4E38-AD2A-4DD54B35E136}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
