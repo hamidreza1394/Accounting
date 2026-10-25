@@ -59,3 +59,8 @@
 - Branch: `security/issue-105-vendor-audit-chain`
 - Commit: پس از آخرین تغییر تعیین شود.
 - Pull Request: پس از ایجاد ثبت شود.
+
+## رخداد CI و اصلاح محیط
+- اجرای `40223605922` قبل از Build/Test در `actions/setup-dotnet@v6` شکست خورد؛ دانلود .NET SDK `10.0.403` و Runtime `10.0.14` از `dotnetorigin.blob.core.windows.net` با HTTP 409 انجام نشد. این خطا نشانهٔ شکست کد نیست.
+- برای جلوگیری از استفاده از build منتشرنشده/غیرقابل‌دانلود در لحظه، `.github/workflows/vendor-ci.yml` به SDK `10.0.402` که در اجرای قبلی همین workflow نصب و اجرا شده بود، pin شد. این تغییر موقتِ قابل‌ردیابی در همین PR است؛ باید با انتشار پایدار بعدی بازبینی شود.
+- CI روی commit جدید هنوز باید کامل شود؛ تا آن زمان وضعیت نهایی `NotVerified` است.
