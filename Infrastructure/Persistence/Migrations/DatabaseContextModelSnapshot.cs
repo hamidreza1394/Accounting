@@ -159,6 +159,8 @@ namespace Data.Migrations
                     .IsUnique()
                     .HasFilter("[Username] IS NOT NULL");
 
+                b.HasIndex("DefaultCompanyId");
+
                 b.HasIndex("CellPhoneNumber")
                     .IsUnique()
                     .HasFilter("[CellPhoneNumber] IS NOT NULL");
@@ -168,8 +170,6 @@ namespace Data.Migrations
                     .HasFilter("[CellPhoneNumberVerificationKey] IS NOT NULL");
 
                 b.HasIndex("RoleId");
-
-                b.HasIndex("DefaultCompanyId");
 
                 b.ToTable("Users");
             });
@@ -1082,15 +1082,15 @@ namespace Data.Migrations
 
             modelBuilder.Entity("Domain.User", b =>
             {
-                b.HasOne("Domain.Company", null)
-                    .WithMany()
-                    .HasForeignKey("DefaultCompanyId")
-                    .OnDelete(DeleteBehavior.SetNull);
-
                 b.HasOne("Domain.Role", "Role")
                     .WithMany("Users")
                     .HasForeignKey("RoleId")
                     .OnDelete(DeleteBehavior.NoAction);
+
+                b.HasOne("Domain.Company", null)
+                    .WithMany()
+                    .HasForeignKey("DefaultCompanyId")
+                    .OnDelete(DeleteBehavior.SetNull);
             });
 
             modelBuilder.Entity("Domain.Page", b =>

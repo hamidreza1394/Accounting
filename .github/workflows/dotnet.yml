@@ -134,6 +134,10 @@ jobs:
         run: python3 scripts/generate_migrations.py --repo-root . --check
       - name: Install the C# parser of the migration verification
         run: python3 -m pip install --disable-pip-version-check tree-sitter tree-sitter-c-sharp
+      - name: Test the migration guards (unit and mutation tests)
+        run: |
+          python3 scripts/tests/test_migration_tooling.py
+          python3 scripts/tests/test_migration_guard_mutations.py
       - name: Verify the migration and the model snapshot
         run: python3 scripts/verify_migration_model.py --repo-root .
       - name: Install dotnet-ef
