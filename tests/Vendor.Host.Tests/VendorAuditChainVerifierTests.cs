@@ -41,7 +41,7 @@ public sealed class VendorAuditChainVerifierTests
             EventHash = new string('0', 64)
         };
 
-        var result = new VendorAuditChainVerifier().Verify([auditEvent]);
+        var result = VendorAuditChainVerifier.Verify([auditEvent]);
 
         Assert.False(result.IsValid);
         Assert.Equal("invalid-event-fields-or-unapproved-metadata", result.FailureCode);
