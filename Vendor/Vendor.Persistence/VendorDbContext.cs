@@ -31,6 +31,7 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
         builder.Entity<IdentityUserRole<Guid>>().ToTable("VendorAdminUserRoles");
         builder.Entity<IdentityUserToken<Guid>>().ToTable("VendorAdminUserTokens");
         builder.Entity<IdentityRoleClaim<Guid>>().ToTable("VendorAdminRoleClaims");
+        builder.Entity<IdentityUserPasskey<Guid>>().ToTable("VendorAdminUserPasskeys");
 
         builder.Entity<VendorAuditEvent>(entity =>
         {
