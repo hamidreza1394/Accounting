@@ -14,8 +14,6 @@ on:
       - 'global.json'
       - '.github/workflows/vendor-ci.yml'
   pull_request:
-    branches:
-      - main
     paths:
       - 'Vendor/**'
       - 'Vendor.sln'
@@ -37,6 +35,21 @@ concurrency:
 jobs:
   build-test-package:
     runs-on: ubuntu-latest
+    env:
+      MSSQL_SA_PASSWORD: Ci1Faranou${{ github.run_id }}xvnd
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: Ci1Faranou${{ github.run_id }}xvnd
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Ci1Faranou${{ github.run_id }}xvnd -Q 'SELECT 1' -b"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 20
     permissions:
       contents: read
     steps:
@@ -51,6 +64,9 @@ jobs:
       - name: Build Vendor solution
         run: dotnet build Vendor.sln --no-restore --configuration Release
       - name: Test Vendor solution
+        env:
+          FARANOU_VENDOR_TEST_SQLSERVER: Server=localhost,1433;Database=FaranouVendorTests;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
+          FARANOU_REQUIRE_VENDOR_SQLSERVER: '1'
         run: dotnet test Vendor.sln --configuration Release
       - name: Publish standalone Vendor host
         run: dotnet publish Vendor/Vendor.Host/Vendor.Host.csproj --no-restore --configuration Release --output "$RUNNER_TEMP/vendor-publish"
