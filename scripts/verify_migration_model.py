@@ -36,8 +36,8 @@ from migration_model import MigrationModelError  # noqa: E402
 MIGRATIONS_DIRECTORY = os.path.join("Infrastructure", "Persistence", "Migrations")
 
 INITIAL_MIGRATION = "20251017120000_InitialCreate"
-PREVIOUS_MIGRATION = "20261019071146_WidenUserPasswordHash"
-NEWEST_MIGRATION = "20261022150943_AddCorporateGroups"
+PREVIOUS_MIGRATION = "20261023190000_AddUserDefaultCompany"
+NEWEST_MIGRATION = "20261023191000_AddCompanyCustomerBoundary"
 SNAPSHOT_FILE = "DatabaseContextModelSnapshot.cs"
 
 
@@ -165,6 +165,19 @@ def parse_operations(source: str) -> list[tuple[Any, ...]]:
                     ),
                 )
             )
+        elif kind == "AddColumn":
+            operations.append(
+                (
+                    position,
+                    (
+                        "add_column",
+                        _string(argument("table")),
+                        _string(argument("name")),
+                        _string(argument("type")),
+                        argument("nullable") == "true",
+                    ),
+                )
+            )
         elif kind == "AlterColumn":
             operations.append(
                 (
@@ -238,6 +251,17 @@ def signatures_of(operations: list[dict[str, Any]]) -> list[tuple[Any, ...]]:
                     tuple(index["columns"]),
                     bool(index["unique"]),
                     index["filter"] or None,
+                )
+            )
+        elif operation["kind"] == "add_column":
+            column = operation["column"]
+            signatures.append(
+                (
+                    "add_column",
+                    operation["table"],
+                    operation["name"],
+                    column["column_type"],
+                    bool(column["nullable"]),
                 )
             )
         else:

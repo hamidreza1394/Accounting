@@ -559,7 +559,7 @@ def apply_configuration_statement(
             settings["column_type"] = column_type_match.group("value")
         return
 
-    if ".HasOne(" in normalized or ".HasMany(" in normalized:
+    if re.search(r"\.Has(?:One|Many)\s*[<(]", normalized):
         configuration.foreign_keys.append(parse_relationship(normalized, file_name))
         return
 
@@ -580,6 +580,8 @@ def parse_relationship(statement: str, file_name: str) -> dict[str, Any]:
     relationship: dict[str, Any] = {
         "has_kind": None,
         "has_navigation": None,
+        "has_type": None,
+        "with_type": None,
         "with_kind": None,
         "with_navigation": None,
         "foreign_key": None,
@@ -587,6 +589,17 @@ def parse_relationship(statement: str, file_name: str) -> dict[str, Any]:
         "on_delete": None,
         "required": None,
     }
+
+    # The generic, navigation-less form "HasOne<T>()" / "HasMany<T>()" names the related
+    # entity by type; the relationship then has no navigation on that side.
+    generic_has = re.search(r"\.Has(?P<kind>One|Many)\s*<\s*(?P<type>[\w\.]+)\s*>\s*\(", statement)
+    if generic_has:
+        statement = statement.replace(generic_has.group(0), f".Has{generic_has.group('kind')}(", 1)
+        relationship["has_type"] = generic_has.group("type")
+    generic_with = re.search(r"\.With(?P<kind>One|Many)\s*<\s*(?P<type>[\w\.]+)\s*>\s*\(", statement)
+    if generic_with:
+        statement = statement.replace(generic_with.group(0), f".With{generic_with.group('kind')}(", 1)
+        relationship["with_type"] = generic_with.group("type")
 
     has_one_argument = method_call_argument(statement, "HasOne")
     has_many_argument = method_call_argument(statement, "HasMany")
@@ -903,14 +916,36 @@ def derive_model(repository_root: str) -> dict[str, Any]:
     for configuration_entity, relationship in configured_relationships:
         has_navigation = (relationship["has_navigation"] or [None])[0]
         with_navigation = (relationship["with_navigation"] or [None])[0]
-        if has_navigation is None or with_navigation is None:
+        navigationless = has_navigation is None and relationship["has_type"] is not None
+        if navigationless:
+            # "HasOne<T>().WithMany()": no navigation on either side. EF Core can only
+            # infer the foreign key from navigations, so it must be configured explicitly.
+            if with_navigation is not None or not relationship["foreign_key"]:
+                raise ModelExtractionError(
+                    f"{configuration_entity}: a navigation-less relationship must declare "
+                    "HasForeignKey(...) and no inverse navigation."
+                )
+            if relationship["has_kind"] != "one" or relationship["with_kind"] != "many":
+                raise ModelExtractionError(
+                    f"{configuration_entity}: only 'HasOne<T>().WithMany()' is supported "
+                    "without navigations."
+                )
+        elif has_navigation is None or with_navigation is None:
             raise ModelExtractionError(
                 f"{configuration_entity}: the relationship does not declare its navigations."
             )
 
         source_entity = entity_by_clr[configuration_entity]
 
-        if relationship["has_kind"] == "one":
+        if navigationless:
+            type_name = relationship["has_type"]
+            principal_entity = entity_by_clr.get(type_name) or entity_by_clr.get(f"Domain.{type_name}")
+            if principal_entity is None:
+                raise ModelExtractionError(
+                    f"{configuration_entity}: the related entity type '{type_name}' is unknown."
+                )
+            dependent_entity = source_entity
+        elif relationship["has_kind"] == "one":
             # The source entity is the dependent one, the navigation points to the principal.
             principal_entity = navigation_target(source_entity, has_navigation, entity_by_clr)
             dependent_entity = source_entity
@@ -920,15 +955,16 @@ def derive_model(repository_root: str) -> dict[str, Any]:
             principal_entity = source_entity
 
         # Cross check the inverse navigation.
-        inverse_entity = principal_entity if relationship["with_kind"] == "many" else dependent_entity
-        inverse_target = navigation_target(inverse_entity, with_navigation, entity_by_clr)
-        expected = dependent_entity if relationship["with_kind"] == "many" else principal_entity
-        if inverse_target["clr_name"] != expected["clr_name"]:
-            raise ModelExtractionError(
-                f"{configuration_entity}: the inverse navigation '{with_navigation}' of the "
-                f"relationship does not point to '{expected['clr_name']}' but to "
-                f"'{inverse_target['clr_name']}'."
-            )
+        if not navigationless:
+            inverse_entity = principal_entity if relationship["with_kind"] == "many" else dependent_entity
+            inverse_target = navigation_target(inverse_entity, with_navigation, entity_by_clr)
+            expected = dependent_entity if relationship["with_kind"] == "many" else principal_entity
+            if inverse_target["clr_name"] != expected["clr_name"]:
+                raise ModelExtractionError(
+                    f"{configuration_entity}: the inverse navigation '{with_navigation}' of the "
+                    f"relationship does not point to '{expected['clr_name']}' but to "
+                    f"'{inverse_target['clr_name']}'."
+                )
 
         foreign_key_columns = relationship["foreign_key"]
         if not foreign_key_columns:

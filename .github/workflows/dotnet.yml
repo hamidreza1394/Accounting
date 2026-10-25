@@ -130,6 +130,8 @@ jobs:
           set -o pipefail
           npm install --no-fund --no-audit 2>&1 | tee /tmp/npm-install.log
           node --test 2>&1 | tee /tmp/behavioral-test.log
+      - name: Test the migration guard tooling
+        run: python3 scripts/tests/test_migration_tooling.py
       - name: Check the generated migrations
         run: python3 scripts/generate_migrations.py --repo-root . --check
       - name: Install the C# parser of the migration verification

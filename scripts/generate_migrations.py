@@ -56,9 +56,9 @@ DELTA_MIGRATION_NAME = "WidenUserPasswordHash"
 # the model of the migration before it (DELTA_MIGRATION_*) and the model of the code
 # base, so the files can not drift apart from the snapshot. DELTA_MIGRATION_* is
 # published history and is never rewritten, exactly like 'InitialCreate'.
-CURRENT_MIGRATION_ID = "20261022150943"
-CURRENT_MIGRATION_NAME = "AddCorporateGroups"
-CURRENT_MIGRATION_CLASS = "AddCorporateGroups"
+CURRENT_MIGRATION_ID = "20261023191000"
+CURRENT_MIGRATION_NAME = "AddCompanyCustomerBoundary"
+CURRENT_MIGRATION_CLASS = "AddCompanyCustomerBoundary"
 
 # 'AddCorporateGroups' adds tables, which this generator can not render
 # ('compute_operations' refuses them). Its Up/Down were therefore written with 'dotnet ef
@@ -485,11 +485,15 @@ def generate_model(entity_types: list[dict[str, Any]], indent: str) -> list[str]
         lines.append("")
         lines.append(f'{indent}modelBuilder.Entity({literal(entity["clr_name"])}, b =>')
         lines.append(f"{indent}{{")
-        for foreign_key in entity["foreign_keys"]:
+        ordered_foreign_keys = entity["foreign_keys"]
+        for foreign_key in ordered_foreign_keys:
             principal = f'{literal(foreign_key["principal_entity"])}'
             if foreign_key["dependent_navigation"]:
                 principal += f', {literal(foreign_key["dependent_navigation"])}'
-            if foreign_key is not entity["foreign_keys"][0]:
+            else:
+                # A relationship without a navigation on the dependent side.
+                principal += ", null"
+            if foreign_key is not ordered_foreign_keys[0]:
                 lines.append("")
             lines.append(f"{indent}{INDENT}b.HasOne({principal})")
             if foreign_key["principal_navigation"]:

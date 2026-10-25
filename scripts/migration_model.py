@@ -243,7 +243,7 @@ def parse_generated_model(source: str) -> dict[str, Any]:
 
     relationships: list[dict[str, Any]] = []
     for match in re.finditer(
-        r'b\.HasOne\("(?P<principal>[^"]+)"(?:, "(?P<navigation>[^"]+)")?\)\s*'
+        r'b\.HasOne\("(?P<principal>[^"]+)"(?:, (?:"(?P<navigation>[^"]+)"|null))?\)\s*'
         r"(?P<calls>.*?);",
         source,
         re.DOTALL,
@@ -439,7 +439,7 @@ def compute_operations(
 
     # A column that participates in an index can not be altered while the index exists
     # (SQL Server error 5074), therefore every 'DropIndex' of the migration comes first.
-    order = {"drop_index": 0, "alter_column": 1, "create_index": 2}
+    order = {"drop_index": 0, "add_column": 1, "alter_column": 1, "create_index": 2}
     return sorted(operations, key=lambda operation: order[operation["kind"]])
 
 
@@ -509,7 +509,7 @@ def _normalize_relationships(relationships: list[dict[str, Any]]) -> list[tuple[
     return sorted(
         (
             relationship["principal"],
-            relationship["navigation"],
+            relationship["navigation"] or "",
             tuple(relationship["columns"]),
             tuple(relationship["principal_columns"] or ()),
             relationship["on_delete"],
@@ -525,14 +525,26 @@ def _column_operations(
     source_columns = {c["name"]: c for c in source_entity["columns"]}
     target_columns = {c["name"]: c for c in target_entity["columns"]}
 
-    if set(source_columns) != set(target_columns):
+    if set(source_columns) - set(target_columns):
+        # A dropped column can lose data; its migration is written and reviewed by hand.
         raise MigrationModelError(
             f"The columns of '{target_entity['table']}' differ; the migration has to be "
             "written with 'dotnet ef migrations add'."
         )
 
     operations: list[dict[str, Any]] = []
-    for name in sorted(target_columns):
+    # A column that only the target model has is added, in the order of the model.
+    for column in target_entity["columns"]:
+        if column["name"] not in source_columns:
+            operations.append(
+                {
+                    "kind": "add_column",
+                    "table": target_entity["table"],
+                    "name": column["name"],
+                    "column": column,
+                }
+            )
+    for name in sorted(set(target_columns) & set(source_columns)):
         source_column = source_columns[name]
         target_column = target_columns[name]
         # The facets are compared by value, not by truthiness: a column type keeps its
@@ -729,6 +741,13 @@ def reverse_operations(operations: list[dict[str, Any]]) -> list[dict[str, Any]]
         elif operation["kind"] == "create_index":
             reversed_operations.append(
                 {"kind": "drop_index", "table": operation["table"], "index": operation["index"]}
+            )
+        elif operation["kind"] == "add_column":
+            # The generator does not write migrations that add columns; they are written
+            # with 'dotnet ef migrations add' and only verified (Up) by the verifier.
+            raise MigrationModelError(
+                "The Down method of an 'AddColumn' migration is not generated; write the "
+                "migration with 'dotnet ef migrations add'."
             )
         else:
             reversed_operations.append(
