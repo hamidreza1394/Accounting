@@ -69,6 +69,7 @@ jobs:
         run: |
           dotnet tool install dotnet-ef --tool-path "$RUNNER_TEMP/dotnet-tools" --version 10.0.13
           echo "$RUNNER_TEMP/dotnet-tools" >> "$GITHUB_PATH"
+          export PATH="$RUNNER_TEMP/dotnet-tools:$PATH"
           dotnet ef migrations add VendorInitialIdentityAndAudit --project Vendor/Vendor.Persistence/Vendor.Persistence.csproj --startup-project Vendor/Vendor.Persistence/Vendor.Persistence.csproj --context VendorDbContext --output-dir Migrations
           dotnet ef migrations has-pending-model-changes --project Vendor/Vendor.Persistence/Vendor.Persistence.csproj --startup-project Vendor/Vendor.Persistence/Vendor.Persistence.csproj --context VendorDbContext
           echo "::group::EF-generated Vendor migration"
