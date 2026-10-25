@@ -341,3 +341,9 @@
 - **اعتبارسنجی:** این Agent نتوانست Build/Test محلی اجرا کند؛ CI شاخه/PR هنوز باید اجرا و بررسی شود. موفقیت آزمون‌ها تا دریافت نتیجه واقعی گزارش نمی‌شود.
 - **ریسک/محدودیت:** Host هنوز احراز هویت، RBAC، دیتابیس، logging عملیاتی یا صدور لایسنس ندارد و Production-ready نیست. این موارد به PRهای جداگانه واگذار شده‌اند.
 - **تحویل:** `docs/handoffs/ISSUE-91-vendor-host-skeleton.md`.
+
+
+## 2026-10-25 — اصلاح شکست اولیهٔ CI برای Vendor.Host.Tests
+- **شاهد:** اجرای GitHub Actions شماره `40212637047`، Job `vendor-build-test` در Build شکست خورد؛ خطای xUnit v3 تصریح کرد پروژهٔ تست باید `<OutputType>Exe</OutputType>` داشته باشد. Restore و Build خود Host موفق بودند؛ تست‌ها به‌دلیل شکست Build اجرا نشدند.
+- **اصلاح:** `tests/Vendor.Host.Tests/Vendor.Host.Tests.csproj` به‌روزرسانی شد تا خروجی تست executable باشد. این اصلاح از خطای واقعی CI ناشی شد، نه حدس.
+- **اعتبارسنجی پس از اصلاح:** CI باید روی HEAD جدید دوباره اجرا شود؛ تا آن زمان نتیجهٔ نهایی `Verified` نیست.
