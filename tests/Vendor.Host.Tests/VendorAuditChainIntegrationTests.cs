@@ -60,8 +60,7 @@ public sealed class VendorAuditChainIntegrationTests
 
             await using (var verificationContext = new VendorDbContext(options))
             {
-                var verifier = new VendorAuditChainVerifier();
-                var result = await verifier.VerifyAsync(verificationContext, cancellationToken);
+                var result = await VendorAuditChainVerifier.VerifyAsync(verificationContext, cancellationToken);
                 Assert.True(result.IsValid, $"Audit chain verification failed: {result.FailureCode}");
                 Assert.Equal(writersCount, result.EventCount);
                 Assert.NotNull(result.HeadHash);
@@ -78,8 +77,7 @@ public sealed class VendorAuditChainIntegrationTests
 
             await using (var verificationAfterTampering = new VendorDbContext(options))
             {
-                var verifier = new VendorAuditChainVerifier();
-                var result = await verifier.VerifyAsync(verificationAfterTampering, cancellationToken);
+                var result = await VendorAuditChainVerifier.VerifyAsync(verificationAfterTampering, cancellationToken);
                 Assert.False(result.IsValid);
                 Assert.Equal("event-content-mismatch", result.FailureCode);
                 Assert.Null(result.HeadHash);
