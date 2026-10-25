@@ -389,3 +389,12 @@
 - **وضعیت اعتبارسنجی این پیگیری:** منتظر CI روی commit حاوی Migrationهای ثبت‌شده هستیم؛ Build/Test محلی اجرا نشده‌اند چون SDK در محیط محلی این Agent موجود نیست. تا نتیجهٔ CI، وضعیت schema `NotVerified` می‌ماند.
 - **امنیت/باقی‌مانده:** کلاس `VendorAuditEvent` فقط مدل زنجیرهٔ هش است؛ سرویس append-only، اعتبارسنجی زنجیره و checkpoint مستقل هنوز لازم است. ورود/MFA/RBAC و bootstrap هنوز فعال/قابل دسترس نیستند.
 - **گزارش تحویل:** `docs/handoffs/ISSUE-100-vendor-persistence-identity-audit.md`.
+
+## 2026-10-25 — L2.4 زنجیرهٔ ممیزی Vendor (Issue #105)
+- **مبنای معماری:** D-047 ممیزی قابل‌کشف می‌خواهد و تصریح می‌کند hash-chain داخل همان DB به‌تنهایی در برابر DBA کافی نیست. جدول `VendorAuditEvents` در PRهای #101/#102 موجود است؛ این مرحله بدون تغییر مدل/مهاجرت اجرا می‌شود.
+- **پیاده‌سازی در شاخه:** `IVendorAuditWriter`, `VendorAuditWriter`, `VendorAuditChainVerifier` برای append تراکنشی SQL Server، hash نسخه‌دار SHA-256، شناسه‌های opaque و verification زنجیره افزوده شدند. قفل `sp_getapplock` با مالکیت تراکنش جلوی شاخه‌شدن ناشی از چند نمونه را می‌گیرد.
+- **تست‌ها:** تست Integration روی SQL Server 2022 با ۱۶ نویسندهٔ هم‌زمان، verification و دستکاری محتوای رخداد؛ تست‌های واحد برای رد metadata آزاد و شناسهٔ شبه-PII.
+- **محدوده:** Host wiring و endpoint ایجاد نشده‌اند تا با PR #104 (ورود/MFA و schema Passkey) تداخل رخ ندهد. هیچ Schema/Migration، `Template.sln` یا دیتابیس مشتری تغییر نکرده است.
+- **اعتبارسنجی:** Build/Test محلی اجرا نشده‌اند؛ CI روی HEAD نهایی این PR باید اجرا شود. تا نتیجهٔ واقعی، status `NotVerified` است.
+- **باقی‌مانده:** SQL permissions append-only، checkpoint/export مستقل، پایش/alerting، سیاست retention و اتصال سرویس به Host پس از MFA/bootstrap باقی‌اند.
+- **تحویل:** `docs/handoffs/ISSUE-105-vendor-audit-chain.md`.
