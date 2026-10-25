@@ -1,5 +1,6 @@
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Identity;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,6 +8,23 @@ var builder = WebApplication.CreateBuilder(args);
 
 // The dedicated prefix prevents accidentally sharing customer-app settings/secrets.
 builder.Configuration.AddEnvironmentVariables(prefix: "FARANO_VENDOR_");
+
+// Vendor Data Protection must have an independent, persistent key directory in Production.
+var keyDirectory = builder.Configuration["DataProtection:KeysDirectory"];
+if (string.IsNullOrWhiteSpace(keyDirectory) && builder.Environment.IsProduction())
+{
+    throw new InvalidOperationException(
+        "Vendor Data Protection keys are not configured. Set FARANO_VENDOR_DataProtection__KeysDirectory to a dedicated persistent directory.");
+}
+
+var dataProtection = builder.Services.AddDataProtection()
+    .SetApplicationName("Faranou.Vendor.ControlPlane");
+if (!string.IsNullOrWhiteSpace(keyDirectory))
+{
+    var fullKeyDirectory = Path.GetFullPath(keyDirectory);
+    Directory.CreateDirectory(fullKeyDirectory);
+    dataProtection.PersistKeysToFileSystem(new DirectoryInfo(fullKeyDirectory));
+}
 
 builder.Services.AddHealthChecks();
 builder.Services.AddDbContext<VendorDbContext>(options =>
