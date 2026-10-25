@@ -167,8 +167,8 @@ cd ClientApp && npm ci && npm run typecheck && npm test && npm run build && npm 
 
 
 ## گارد جداسازی سامانه فروشنده (D-041، Issue #95)
-- تست `tests/Template.Tests/Architecture/VendorIsolationTests.cs` گراف `ProjectReference` پروژهٔ `Server` را مستقیم و ترنزیتیو می‌پیماید و هر ارجاع به `Vendor/**` را رد می‌کند.
+- تست `tests/Template.Tests/Architecture/VendorIsolationTests.cs` گراف `ProjectReference` پروژهٔ `Server` را مستقیم و ترنزیتیو می‌پیماید، هر ارجاع به `Vendor/**` و هر `PackageReference` با نام Vendor-محور را رد می‌کند.
 - تست جداگانه بررسی می‌کند که `Licensing.Contracts` هیچ `ProjectReference` و هیچ `Compile`/`Content Link` به فایل خارج از پوشهٔ خودش نداشته باشد.
 - تست منفی از یک گراف XML مصنوعی و موقت استفاده می‌کند که وابستگی ترنزیتیو به `Vendor` دارد؛ تست باید آن را تشخیص دهد. این fixture کد اجرایی Vendor را build یا اجرا نمی‌کند.
-- این گارد بخشی از `Template.sln` است و با فرمان‌های معمول `dotnet test Template.sln --configuration Release` اجرا می‌شود. نتیجهٔ واقعی CI روی PR باید قبل از اعلام `Verified` بررسی شود.
+- در `Licensing.Contracts` نیز هر `ProjectReference`، هر وابستگی ASP.NET Core/EF Core/Vendor و هر `Compile`/`Content Link` بیرون از پوشه رد می‌شود. این گارد بخشی از `Template.sln` است و با فرمان‌های معمول `dotnet test Template.sln --configuration Release` اجرا می‌شود. نتیجهٔ واقعی CI روی PR باید قبل از اعلام `Verified` بررسی شود.
 - این تست جایگزین G2/G3 نیست؛ G2 خروجی Publish را بررسی می‌کند و G3 اسکن اسرار در CI است. G4/G5 و allow-list کامل Publish هنوز جداگانه باید تعیین/پیاده‌سازی شوند.
