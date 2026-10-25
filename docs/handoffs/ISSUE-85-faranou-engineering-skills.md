@@ -26,6 +26,7 @@
 - `.claude/skills/faranou-ui-ux-design/SKILL.md` — طراحی RTL، دسترس‌پذیری و offline assets.
 - `.claude/skills/faranou-accounting-domain/SKILL.md` — قواعد دامنه حسابداری و کنترل‌های مالی.
 - `docs/INDEX.md` — ارجاع به Skillهای نسخه‌بندی‌شده.
+- `CLAUDE.md` — جدول انتخاب Skillها و قواعد استفاده از نسخه‌های مخزن.
 - `docs/WORK_LOG.md` — ثبت تحویل.
 - `docs/handoffs/ISSUE-85-faranou-engineering-skills.md` — این گزارش.
 
