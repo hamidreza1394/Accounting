@@ -117,9 +117,15 @@ Lead برای هر کار تقسیم‌شده در گزارش پایانی می�
    | تست و QA | `qa-engineer` | `engineering:testing-strategy`، `superpowers:test-driven-development` |
    | خطایابی | Agent حوزهٔ مربوط | `engineering:debug`، `superpowers:systematic-debugging` |
    | مستندات | `documentation-engineer` | `engineering:documentation` |
+   | معماری و ADR فرانو | `architect` | `faranou-architecture-review` |
+   | امنیت و جداسازی شرکت‌ها | `security-reviewer` | `faranou-security-multitenancy` |
+   | UI/UX فارسی و RTL | `frontend-developer` | `faranou-ui-ux-design` |
+   | تست و کیفیت فرانو | `qa-engineer` | `faranou-testing-quality` |
+   | حسابداری، مالی و قواعد داده | `backend-developer` / `database-engineer` | `faranou-accounting-domain` |
+   | توسعه عمومی فرانو | Agent حوزهٔ مربوط | `faranou-senior-developer` |
    | پیش از ادعای «تمام شد» | Lead | `superpowers:verification-before-completion` |
 
-   برای دامنهٔ حسابداری/مالی، EF Core/SQL Server و Tailwind در بررسی 2026-10-23 Skill مرتبطی در دسترس نبود؛ مرجع همان مستندات و ADRهای `docs/` است. Skill اختصاصی فقط در صورت نیاز تکرارشونده **پیشنهاد** می‌شود، نه بدون تأیید ساخته.
+   Skillهای اختصاصی فرانو در `.claude/skills/` نسخه‌بندی شده‌اند (Issue #85 / PR #86). وجود فایل در مخزن به‌تنهایی ثابت نمی‌کند که Skill در جلسهٔ جاری در دسترس یا فراخوانی شده است؛ فهرست Skillهای همان جلسه را بررسی کن و فقط در صورت در دسترس بودن آن را فعال کن. در هر تعارض، `AGENTS.md`، این فایل و ADRها مقدم‌اند.
 4. **تقدم:** Skill و Plugin ابزار کمکی‌اند و بر `AGENTS.md`، این فایل و ADRها غلبه نمی‌کنند. اگر فرایند یا خروجی Skill تعارض داشت (CDN یا فونت خارجی، Commit/Push/Merge خودکار، ساخت شاخه یا worktree جدا، تغییر معماری یا Schema بدون تأیید)، قاعدهٔ مخزن اجرا و تعارض گزارش می‌شود.
 5. **در دسترس نبود:** محدودیت را صریح اعلام کن، جایگزین مناسب (Agent مخزن یا چک‌لیست دستی از `docs/`) را به کار ببر و در گزارش «در دسترس نبود» ثبت کن؛ هرگز ادعای اجرا نکن.
 6. **پس از تغییر و گزارش:** تست‌های مرتبط و بازبینی مستقل به نسبت ریسک طبق بخش ث و `AGENTS.md` بخش ۴ اجرا می‌شود. گزارش پایانی (علاوه بر ت و `AGENTS.md` بخش ۵) چهار دستهٔ جدا دارد: **استفاده‌شده** (با شاهد)، **در دسترس ولی استفاده‌نشده** (با دلیل)، **در دسترس نبود**، **اجرانشده** (با دلیل).
