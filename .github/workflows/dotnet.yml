@@ -168,6 +168,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+      - name: Scripts started directly by a workflow are executable (100755)
+        run: python3 scripts/tests/check_workflow_script_modes.py
       - name: Bash guard tests (output directory)
         run: scripts/tests/publish-output.test.sh
       - name: Bash G2 content guard tests
