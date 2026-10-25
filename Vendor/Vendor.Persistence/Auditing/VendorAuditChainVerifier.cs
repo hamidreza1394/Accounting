@@ -46,9 +46,14 @@ public sealed class VendorAuditChainVerifier
         var byHash = new Dictionary<string, VendorAuditEvent>(StringComparer.Ordinal);
         foreach (var entry in entries)
         {
-            if (entry.Id == Guid.Empty || !VendorAuditWriter.IsValidActionCode(entry.ActionCode))
+            if (entry.Id == Guid.Empty ||
+                !VendorAuditWriter.IsValidActionCode(entry.ActionCode) ||
+                !VendorAuditWriter.IsValidSubjectType(entry.SubjectType) ||
+                !VendorAuditWriter.IsSafeOpaqueId(entry.SubjectId, 200) ||
+                !VendorAuditWriter.IsSafeOpaqueId(entry.CorrelationId, 100) ||
+                entry.MetadataJson is not null)
             {
-                return VendorAuditChainVerificationResult.Invalid(entries.Length, "invalid-event-fields");
+                return VendorAuditChainVerificationResult.Invalid(entries.Length, "invalid-event-fields-or-unapproved-metadata");
             }
 
             if (!IsHash(entry.EventHash) || !IsHash(entry.PreviousHash))
