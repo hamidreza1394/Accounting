@@ -18,21 +18,14 @@ public sealed class VendorAuditWriter : IVendorAuditWriter
         new("^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private static readonly Regex SubjectTypePattern =
         new("^[A-Za-z][A-Za-z0-9_.-]*$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
-    private static readonly Regex OpaqueIdPattern =
-        new("^[A-Za-z0-9._:-]+$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private readonly VendorDbContext _dbContext;
     private readonly TimeProvider _timeProvider;
-    private readonly VendorAuditChainVerifier _verifier;
 
-    public VendorAuditWriter(
-        VendorDbContext dbContext,
-        TimeProvider timeProvider,
-        VendorAuditChainVerifier? verifier = null)
+    public VendorAuditWriter(VendorDbContext dbContext, TimeProvider timeProvider)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
-        _verifier = verifier ?? new VendorAuditChainVerifier();
     }
 
     public async Task<VendorAuditWriteResult> AppendAsync(
@@ -157,7 +150,18 @@ public sealed class VendorAuditWriter : IVendorAuditWriter
         subjectType is null || (subjectType.Length is >= 1 and <= 100 && SubjectTypePattern.IsMatch(subjectType));
 
     internal static bool IsSafeOpaqueId(string? value, int maximumLength) =>
-        value is null || (value.Length >= 1 && value.Length <= maximumLength && OpaqueIdPattern.IsMatch(value));
+        value is null || (value.Length >= 1 && value.Length <= maximumLength &&
+            value.All(character => (character >= '0' && character <= '9') ||
+                                   (character >= 'a' && character <= 'f') ||
+                                   (character >= 'A' && character <= 'F') ||
+                                   character is '-' or ':'));
+
+    internal static bool IsValidSubjectId(string? value) =>
+        value is null || Guid.TryParseExact(value, "N", out _) || Guid.TryParseExact(value, "D", out _);
+
+    internal static bool IsValidCorrelationId(string? value) =>
+        value is null || Guid.TryParseExact(value, "N", out _) || Guid.TryParseExact(value, "D", out _) ||
+        IsW3CTraceId(value);
 
     private static void ValidateRequest(VendorAuditWriteRequest request)
     {
@@ -171,16 +175,22 @@ public sealed class VendorAuditWriter : IVendorAuditWriter
             throw new ArgumentException("SubjectType must be a bounded identifier, not display text or personal data.", nameof(request));
         }
 
-        if (!IsSafeOpaqueId(request.SubjectId, 200))
+        if (!IsValidSubjectId(request.SubjectId))
         {
-            throw new ArgumentException("SubjectId must be a bounded opaque identifier.", nameof(request));
+            throw new ArgumentException("SubjectId must be an opaque GUID; human-readable identifiers are prohibited.", nameof(request));
         }
 
-        if (!IsSafeOpaqueId(request.CorrelationId, 100))
+        if (!IsValidCorrelationId(request.CorrelationId))
         {
-            throw new ArgumentException("CorrelationId must be a bounded opaque identifier.", nameof(request));
+            throw new ArgumentException("CorrelationId must be an opaque GUID or W3C trace identifier.", nameof(request));
         }
     }
+
+    private static bool IsW3CTraceId(string value) =>
+        value.Length == 32 && value.Any(character => character != '0') &&
+        value.All(character => (character >= '0' && character <= '9') ||
+                               (character >= 'a' && character <= 'f') ||
+                               (character >= 'A' && character <= 'F'));
 
     private static async Task AcquireTransactionLockAsync(
         IDbContextTransaction transaction,
