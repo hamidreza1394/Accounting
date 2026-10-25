@@ -188,10 +188,9 @@ public sealed class EnvelopeValidatorTests
 	{
 		var payload = Sample();
 		var json = CanonicalJson.SerializePayload(payload);
-		Assert.StartsWith("{\"formatVersion\":1,", json, StringComparison.Ordinal);
-		Assert.Contains("\"licenseId\":\"lic-00000001\"", json, StringComparison.Ordinal);
-		Assert.Contains("\"installationId\":\"inst-001\"", json, StringComparison.Ordinal);
-		Assert.Contains("\"licenseKind\":\"perpetual\"", json, StringComparison.Ordinal);
+		Assert.Equal(
+			"{\"formatVersion\":1,\"licenseId\":\"lic-00000001\",\"installationId\":\"inst-001\",\"productCode\":\"faranou-accounting\",\"licenseKind\":\"perpetual\",\"issuedAtUtc\":\"2026-01-01T00:00:00.0000000+00:00\",\"notBeforeUtc\":\"2026-01-01T00:00:00.0000000+00:00\",\"graceDays\":30,\"sequence\":1,\"limits\":{\"maxCompanies\":5,\"subsystems\":[\"finance\"]}}",
+			json);
 		Assert.DoesNotContain("\n", json, StringComparison.Ordinal);
 		Assert.True(CanonicalJson.TryParsePayload(json, out var parsed, out _));
 		Assert.Equal(payload.LicenseId, parsed!.LicenseId);
