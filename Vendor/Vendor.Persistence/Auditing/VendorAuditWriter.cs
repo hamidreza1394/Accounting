@@ -79,6 +79,13 @@ public sealed class VendorAuditWriter : IVendorAuditWriter
             }
 
             var previousHash = leaf?.EventHash ?? VendorAuditChainVerifier.GenesisHash;
+            var rootCount = await _dbContext.AuditEvents.CountAsync(
+                entry => entry.PreviousHash == VendorAuditChainVerifier.GenesisHash, cancellationToken);
+            if ((leaf is null && rootCount != 0) || (leaf is not null && rootCount != 1))
+            {
+                throw new VendorAuditChainIntegrityException("invalid-root-count");
+            }
+
             if (leaf is not null)
             {
                 if (!VendorAuditChainVerifier.IsHash(leaf.EventHash) ||
@@ -141,6 +148,12 @@ public sealed class VendorAuditWriter : IVendorAuditWriter
     internal static bool IsValidActionCode(string? actionCode) =>
         actionCode is { Length: >= 1 and <= 100 } && ActionCodePattern.IsMatch(actionCode);
 
+    internal static bool IsValidSubjectType(string? subjectType) =>
+        subjectType is null || (subjectType.Length is >= 1 and <= 100 && SubjectTypePattern.IsMatch(subjectType));
+
+    internal static bool IsSafeOpaqueId(string? value, int maximumLength) =>
+        value is null || (value.Length >= 1 && value.Length <= maximumLength && OpaqueIdPattern.IsMatch(value));
+
     private static void ValidateRequest(VendorAuditWriteRequest request)
     {
         if (!IsValidActionCode(request.ActionCode))
@@ -148,8 +161,7 @@ public sealed class VendorAuditWriter : IVendorAuditWriter
             throw new ArgumentException("ActionCode must be a lowercase, non-PII audit identifier.", nameof(request));
         }
 
-        if (request.SubjectType is { Length: > 0 } subjectType &&
-            (subjectType.Length > 100 || !SubjectTypePattern.IsMatch(subjectType)))
+        if (!IsValidSubjectType(request.SubjectType))
         {
             throw new ArgumentException("SubjectType must be a bounded identifier, not display text or personal data.", nameof(request));
         }
@@ -164,9 +176,6 @@ public sealed class VendorAuditWriter : IVendorAuditWriter
             throw new ArgumentException("CorrelationId must be a bounded opaque identifier.", nameof(request));
         }
     }
-
-    private static bool IsSafeOpaqueId(string? value, int maximumLength) =>
-        value is null || (value.Length >= 1 && value.Length <= maximumLength && OpaqueIdPattern.IsMatch(value));
 
     private static async Task AcquireTransactionLockAsync(
         IDbContextTransaction transaction,
