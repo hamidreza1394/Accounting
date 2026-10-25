@@ -1,6 +1,6 @@
 # معماری لایسنس و فعال‌سازی (طرح هدف)
 
-> **وضعیت قابلیت در کد: `NotImplemented`.** لایسنس، مشتری تجاری، نصب و زیرسیستم هنوز در برنامه پیاده‌سازی نشده‌اند. تصمیم‌های OD-01/02/12 برای طراحی قرارداد با D-045 به `Accepted` رسیده‌اند؛ این موضوع رفتار اجرایی موجود را تغییر نمی‌دهد. تصمیم‌های پایه: D-020 تا D-029 و D-041 تا D-045 در [`DECISIONS.md`](DECISIONS.md)؛ موارد باز: [`LICENSING_OPEN_DECISIONS.md`](LICENSING_OPEN_DECISIONS.md). مدل داده: [`LICENSING_DATA_MODEL.md`](LICENSING_DATA_MODEL.md). گردش‌کارها: [`LICENSING_WORKFLOWS.md`](LICENSING_WORKFLOWS.md). تهدیدها: [`LICENSING_THREAT_MODEL.md`](LICENSING_THREAT_MODEL.md).
+> **وضعیت قابلیت در کد: `NotImplemented`.** لایسنس، مشتری تجاری، نصب و زیرسیستم هنوز در برنامه پیاده‌سازی نشده‌اند. تصمیم‌های OD-01/02/12 با D-045 و OD-07/09/11 با D-046 پذیرفته شده‌اند؛ D-047 معماری اجرایی Vendor را فعلاً به‌صورت `Proposed` ثبت می‌کند. این تصمیم‌ها رفتار اجرایی موجود را تغییر نمی‌دهند. تصمیم‌های پایه: D-020 تا D-029 و D-041 تا D-047 در [`DECISIONS.md`](DECISIONS.md)؛ موارد باز: [`LICENSING_OPEN_DECISIONS.md`](LICENSING_OPEN_DECISIONS.md). مدل داده: [`LICENSING_DATA_MODEL.md`](LICENSING_DATA_MODEL.md). گردش‌کارها: [`LICENSING_WORKFLOWS.md`](LICENSING_WORKFLOWS.md). تهدیدها: [`LICENSING_THREAT_MODEL.md`](LICENSING_THREAT_MODEL.md).
 
 ## ۱) وضعیت فعلی (واقعی)
 
