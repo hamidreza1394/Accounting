@@ -268,3 +268,8 @@
 - **علت:** پارسر `ef_model.py` فرم `HasOne<T>().WithMany()` را نمی‌شناخت و ابزارها دو Migration اخیر را پوشش نمی‌دادند؛ `dotnet ef has-pending-model-changes` روی main سبز بود (بدون اختلاف واقعی مدل).
 - **انجام‌شده:** اصلاح پارسر + تست رگرسیون + گام CI؛ پیشبرد مولد/تأییدکننده به `AddCompanyCustomerBoundary`؛ پشتیبانی `AddColumn`؛ کامیت جدا برای ترتیب Snapshot/Designer.
 - **جزئیات:** `docs/handoffs/ISSUE-UNNUMBERED-migration-guard-hasone-generic.md`.
+
+## 2026-10-25 — اصلاح PR #78 پس از بازبینی مستقل (شاخهٔ `fix/migration-guard-hasone-generic`)
+- **یافته‌ها:** نسخهٔ اول فقط ثابت‌ها را جلو برده بود: SQL مرورشدهٔ `AddCorporateGroups` از کنترل خارج می‌شد، Migrationهای میانی و `Down` سنجیده نمی‌شدند، `defaultValue`/`AddForeignKey` نادیده گرفته می‌شد.
+- **اصلاح:** زنجیرهٔ کامل Up/Down از روی پوشه، SQL مرورشده برای همهٔ Migrationها، `AddColumn`/`AddForeignKey` fail-closed، ۳۱ تست جهشی + تست‌های واحد. هیچ Migration/Snapshot/مدل برای سبز شدن CI تغییر نکرد.
+- **باز:** AUD-2026-10-25-02 (محدودیت‌های باقی‌مانده). جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-migration-guard-hasone-generic.md`.

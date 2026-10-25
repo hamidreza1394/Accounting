@@ -12,17 +12,18 @@
 - [x] `generate_migrations.py --check`، `verify_migration_model.py` و `dotnet ef migrations has-pending-model-changes` سبز باشند.
 
 ## علت اثبات‌شده
-1. **شواهد EF:** روی `main` (`e9fef6a`) دستور `dotnet ef migrations has-pending-model-changes` (EF 10.0.13) می‌گوید «No changes have been made to the model since the last migration». پس اختلاف واقعی بین مدل و Snapshot/Migration وجود ندارد و Migration یا Snapshotِ معنایی تغییر نکرد.
-2. **محدودیت پارسر:** `scripts/ef_model.py` فقط `.HasOne(` / `.HasMany(` را می‌شناخت، نه فرم عمومی بدون Navigation `HasOne<T>().WithMany()` که PR #68 برای `Users.DefaultCompanyId` آورد.
-3. **عقب‌ماندن ابزارها:** پس از رفع پارسر، `generate_migrations.py` هنوز `AddCorporateGroups` را «آخرین Migration» می‌دانست و `verify_migration_model.py` پنجرهٔ `WidenUserPasswordHash → AddCorporateGroups` را؛ دو Migration بعدی (`AddUserDefaultCompany`، `AddCompanyCustomerBoundary`) را هیچ Guard نمی‌سنجید. تأیید می‌کرد که Designer قدیمی با مدل فعلی نمی‌خواند و `AddColumn` را هم نمی‌فهمید.
-4. **ترتیب دستی در Snapshot:** Snapshot و Designer آخرین Migration (کامیت‌های `75af614`، `7ffe1c3`) دستی ویرایش شده بودند و ترتیب ایندکس/FK مربوط به `DefaultCompanyId` با خروجی مولد فرق داشت. همهٔ خطوط یکسان‌اند و فقط جابه‌جا شده‌اند.
+1. **شواهد EF:** روی `main` (`e9fef6a`) دستور `dotnet ef migrations has-pending-model-changes` (EF 10.0.13) می‌گوید «No changes have been made to the model since the last migration». اختلاف واقعی بین مدل و Snapshot/Migration وجود ندارد؛ Migration، مدل و کد دامنه تغییر نکرد.
+2. **محدودیت پارسر:** `scripts/ef_model.py` فقط `.HasOne(` / `.HasMany(` را می‌شناخت، نه `HasOne<T>().WithMany()` (PR #68).
+3. **عقب‌ماندن گاردها:** مولد و تأییدکننده فقط یک پنجرهٔ ثابت را می‌سنجیدند و دو Migration بعدی را نه.
+4. **ترتیب دستی در Snapshot:** Snapshot و Designer آخرین Migration دستی ویرایش شده بودند؛ فقط ترتیب ایندکس/FK `DefaultCompanyId` با مولد فرق داشت.
 
-## خلاصه تغییرات
-- `scripts/ef_model.py`: پشتیبانی از `HasOne<T>().WithMany().HasForeignKey(...)` (فقط همین فرم بدون Navigation؛ بدون `HasForeignKey` یا با نوع ناشناخته خطا می‌دهد).
-- `scripts/generate_migrations.py`: Migration جاری = `AddCompanyCustomerBoundary`؛ FK بدون Navigation به‌صورت `HasOne("…", null)` تولید می‌شود (همان شکل EF).
-- `scripts/migration_model.py`، `scripts/verify_migration_model.py`: پنجرهٔ تأیید `AddUserDefaultCompany → AddCompanyCustomerBoundary`؛ پشتیبانی از `AddColumn`؛ حذف ستون هنوز نیازمند Migration دستی است.
-- `scripts/tests/test_migration_tooling.py` (جدید) + گام CI «Test the migration guard tooling». تست‌ها روی پارسر قدیمی ناموفق بودند (۳ خطا، ۱ شکست) و روی جدید موفق‌اند.
-- **کامیت جدا:** بازتولید `DatabaseContextModelSnapshot.cs` و `…AddCompanyCustomerBoundary.Designer.cs` فقط برای ترتیب (و هدر Designer). نیاز به نگاه ویژهٔ مالک.
+## بازبینی مستقل (2026-10-25) و اصلاح
+بازبینی انتقادی نشان داد نسخهٔ اول PR فقط ثابت‌ها را جلو برده بود و پوشش را کم کرده بود (با تست جهشی اثبات شد: از ۳۰ تغییر غیرمجاز، گاردهای قبلی فقط ۳ مورد را رد می‌کردند). اصلاح:
+- **SQL دست‌نویس همهٔ Migrationها** (`generate_migrations.py::check_reviewed_sql`): هر Migration باید دقیقاً SQL مرورشدهٔ خودش را داشته باشد (`AddCorporateGroups`، `AlignSchemaWithModel` پین‌شده)؛ Migration بدون ورودی نباید SQL داشته باشد؛ شکل غیرقابل‌مقایسه (`@"..."`، interpolated) رد می‌شود؛ Migration تازه‌تر از `CURRENT_MIGRATION_*` خطا می‌دهد.
+- **زنجیرهٔ کامل** (`verify_migration_model.py`): زنجیره از پوشه خوانده می‌شود (بدون ثابت)؛ برای هر Migration از دوم به بعد، `Up` باید دقیقاً تفاضل Designer قبلی و Designer خودش و `Down` دقیقاً وارونهٔ آن باشد. مسیر «افزودن جدول» (`AddCorporateGroups`) هم Up و Down را می‌سنجد.
+- **`AddColumn`/`AddForeignKey`** با سیاست fail-closed: آرگومان ناشناخته (`comment`، `precision`، ...) رد می‌شود؛ نوع CLR، نوع ستون، nullable، `maxLength`، `unicode`؛ `defaultValue` = فقط مقدار پیش‌فرض CLR برای ستون NOT NULL و هرگز برای ستون nullable؛ FK: جدول/ستون/مقصد/`onDelete` (فقط مقادیر نگاشت‌شده). `DropColumn`، `RenameColumn`، `DropTable`، `InsertData`، `DropForeignKey` در `Up`، حذف یا تغییر رابطه و حذف ستون رد می‌شوند.
+- **تست جهشی** `scripts/tests/test_migration_guard_mutations.py` (۳۱ تست روی نسخهٔ موقت): تغییر SQL، حذف `CreateIndex`/`DropIndex`/FK، تغییر نوع/nullable/default/length، `Down` خالی/اشتباه/اضافه، دستکاری Designer تاریخی و Snapshot، Migration ثبت‌نشده و ...؛ هر کدام باید با دلیل درست رد شود. به‌علاوه تست‌های واحد مثبت/منفی `AddColumn` و FK و کشف زنجیره.
+- کامیت جدا (فقط ترتیب Snapshot/Designer) مثل قبل باقی است.
 
 ## تصمیم‌های فنی
 - تصمیم معماری جدیدی گرفته نشد. Guardها ضعیف نشدند؛ پوشش آن‌ها به دو Migration اخیر گسترش یافت.

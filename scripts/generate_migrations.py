@@ -124,7 +124,16 @@ ADD_CORPORATE_GROUPS_DOWN_PRELUDE: list[str] = [
 
 # The hand-written SQL belongs to one migration. It is keyed by the migration id, so it can
 # never be emitted into the next migration when the CURRENT_MIGRATION_* constants move on.
+#
+# Every migration of the directory is checked against this registry by '--check': a
+# migration that is not listed must contain no raw SQL at all (fail-closed), and a listed one
+# must contain exactly the listed statements. 'AlignSchemaWithModel' is pinned as it was
+# published: it repairs NULL titles before the column becomes NOT NULL.
 HAND_WRITTEN_SQL: dict[str, tuple[list[str], list[str]]] = {
+    "20261017090000": (
+        ["UPDATE [PostCategory] SET [Title] = N'' WHERE [Title] IS NULL;"],
+        [],
+    ),
     "20261022150943": (ADD_CORPORATE_GROUPS_EPILOGUE, ADD_CORPORATE_GROUPS_DOWN_PRELUDE),
 }
 CURRENT_MIGRATION_EPILOGUE, CURRENT_MIGRATION_DOWN_PRELUDE = HAND_WRITTEN_SQL.get(
@@ -761,6 +770,74 @@ def build_files(repository_root: str) -> dict[str, str]:
     }
 
 
+MIGRATION_SOURCE_FILE = re.compile(r"^(?P<id>\d{14})_(?P<name>\w+)\.cs$")
+RAW_SQL_CALL = re.compile(r"migrationBuilder\s*\.\s*Sql\s*\(")
+REVIEWED_SQL_CALL = re.compile(r'migrationBuilder\.Sql\("(?:[^"\\]|\\.)*"\);')
+
+
+def check_reviewed_sql(directory: str) -> list[str]:
+    """Every migration of the directory contains exactly its reviewed raw SQL, nothing else.
+
+    * A migration without an entry in 'HAND_WRITTEN_SQL' must not contain raw SQL.
+    * The statements of a listed migration must be exactly the reviewed ones, in the right
+      method and order; a call in any other form (verbatim, interpolated, with extra
+      arguments) is refused because it can not be compared.
+    * The newest migration of the directory must be the one of 'CURRENT_MIGRATION_*', so the
+      constants can not silently fall behind a new migration.
+    """
+    problems: list[str] = []
+    migrations: dict[str, str] = {}
+    for file_name in sorted(os.listdir(directory)):
+        match = MIGRATION_SOURCE_FILE.match(file_name)
+        if match:
+            migrations[match.group("id")] = file_name
+
+    if not migrations:
+        return ["No migration was found."]
+    newest = max(migrations)
+    if newest != CURRENT_MIGRATION_ID:
+        problems.append(
+            f"The newest migration is {migrations[newest]} but CURRENT_MIGRATION_* names "
+            f"{CURRENT_MIGRATION_ID}_{CURRENT_MIGRATION_NAME}; advance the constants "
+            "(and verify_migration_model.py reads the chain from the directory)."
+        )
+    for migration_id in sorted(set(HAND_WRITTEN_SQL) - set(migrations)):
+        problems.append(
+            f"HAND_WRITTEN_SQL lists the migration {migration_id} but its file is missing."
+        )
+
+    for migration_id, file_name in sorted(migrations.items()):
+        with open(os.path.join(directory, file_name), encoding="utf-8") as file:
+            source = file.read()
+        down_start = source.find("protected override void Down(")
+        if down_start < 0:
+            problems.append(f"{file_name}: the migration declares no Down method.")
+            continue
+        up_wanted, down_wanted = HAND_WRITTEN_SQL.get(migration_id, ([], []))
+        if migration_id == CURRENT_MIGRATION_ID:
+            up_wanted = CURRENT_MIGRATION_PRELUDE + list(up_wanted)
+        sections = {
+            "Up": (source[:down_start], up_wanted),
+            "Down": (source[down_start:], down_wanted),
+        }
+        for method, (body, wanted) in sections.items():
+            found = [match.group(0) for match in REVIEWED_SQL_CALL.finditer(body)]
+            calls = len(RAW_SQL_CALL.findall(body))
+            expected = [f"migrationBuilder.Sql({literal(statement)});" for statement in wanted]
+            if calls != len(found):
+                problems.append(
+                    f"{file_name}: {method} contains a raw SQL call in a form that can not be "
+                    "compared with the reviewed statements (fail-closed)."
+                )
+            elif found != expected:
+                problems.append(
+                    f"{file_name}: the SQL statements of {method} differ from the reviewed "
+                    "list: a statement is missing, added, altered or out of order (found "
+                    f"{len(found)}, expected {len(expected)})."
+                )
+    return problems
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", default=".")
@@ -784,28 +861,7 @@ def main(argv: list[str]) -> int:
             with open(path, encoding="utf-8") as file:
                 if file.read() != content:
                     problems.append(f"{name} is out of date.")
-        if CURRENT_MIGRATION_WRITTEN_BY_EF_TOOLS:
-            name = f"{CURRENT_MIGRATION_ID}_{CURRENT_MIGRATION_NAME}.cs"
-            path = os.path.join(directory, name)
-            source = open(path, encoding="utf-8").read() if os.path.exists(path) else ""
-            if not source:
-                problems.append(f"{name} is missing.")
-            # The raw SQL of each method must be exactly the reviewed statements: none
-            # missing, none added or altered, and each in the right method.
-            down_start = source.find("protected override void Down(")
-            sections = {
-                "Up": (source[:down_start], CURRENT_MIGRATION_PRELUDE + CURRENT_MIGRATION_EPILOGUE),
-                "Down": (source[down_start:], CURRENT_MIGRATION_DOWN_PRELUDE),
-            }
-            for method, (body, wanted) in sections.items():
-                found = [match.group(0) for match in re.finditer(r'migrationBuilder\.Sql\("(?:[^"\\]|\\.)*"\);', body)]
-                expected = [f"migrationBuilder.Sql({literal(statement)});" for statement in wanted]
-                if down_start < 0 or found != expected:
-                    problems.append(
-                        f"{name}: the SQL statements of {method} differ from the reviewed "
-                        f"list: a statement is missing, added, altered or out of order (found "
-                        f"{len(found)}, expected {len(expected)})."
-                    )
+        problems.extend(check_reviewed_sql(directory))
         if problems:
             for problem in problems:
                 print(f"error: {problem}", file=sys.stderr)

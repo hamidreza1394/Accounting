@@ -242,31 +242,37 @@ def parse_generated_model(source: str) -> dict[str, Any]:
             described["table"] = table
 
     relationships: list[dict[str, Any]] = []
-    for match in re.finditer(
-        r'b\.HasOne\("(?P<principal>[^"]+)"(?:, (?:"(?P<navigation>[^"]+)"|null))?\)\s*'
-        r"(?P<calls>.*?);",
+    for entity_match in re.finditer(
+        r'modelBuilder\.Entity\("(?P<name>[^"]+)", b =>\s*\{(?P<body>.*?)\n\s*\}\);',
         source,
         re.DOTALL,
     ):
-        calls = match.group("calls")
-        foreign_key = re.search(r"\.HasForeignKey\((?P<columns>[^)]*)\)", calls)
-        if foreign_key is None:
-            continue
-        principal_key = re.search(r"\.HasPrincipalKey\((?P<columns>[^)]*)\)", calls)
-        relationships.append(
-            {
-                "principal": match.group("principal"),
-                "navigation": match.group("navigation"),
-                "columns": parse_literal_list(foreign_key.group("columns")),
-                "principal_columns": (
-                    parse_literal_list(principal_key.group("columns"))
-                    if principal_key
-                    else None
-                ),
-                "on_delete": parse_enum(calls, "DeleteBehavior."),
-                "required": ".IsRequired()" in calls,
-            }
-        )
+        for match in re.finditer(
+            r'b\.HasOne\("(?P<principal>[^"]+)"(?:, (?:"(?P<navigation>[^"]+)"|null))?\)\s*'
+            r"(?P<calls>.*?);",
+            entity_match.group("body"),
+            re.DOTALL,
+        ):
+            calls = match.group("calls")
+            foreign_key = re.search(r"\.HasForeignKey\((?P<columns>[^)]*)\)", calls)
+            if foreign_key is None:
+                continue
+            principal_key = re.search(r"\.HasPrincipalKey\((?P<columns>[^)]*)\)", calls)
+            relationships.append(
+                {
+                    "dependent": entity_match.group("name"),
+                    "principal": match.group("principal"),
+                    "navigation": match.group("navigation"),
+                    "columns": parse_literal_list(foreign_key.group("columns")),
+                    "principal_columns": (
+                        parse_literal_list(principal_key.group("columns"))
+                        if principal_key
+                        else None
+                    ),
+                    "on_delete": parse_enum(calls, "DeleteBehavior."),
+                    "required": ".IsRequired()" in calls,
+                }
+            )
 
     for entity in entities.values():
         if entity["table"] is None:
@@ -314,6 +320,7 @@ def normalize_derived_model(model: dict[str, Any]) -> dict[str, Any]:
 
     relationships = [
         {
+            "dependent": foreign_key["dependent_entity"],
             "principal": foreign_key["principal_entity"],
             "navigation": foreign_key["dependent_navigation"],
             "columns": list(foreign_key["columns"]),
@@ -410,13 +417,16 @@ def compute_operations(
             "or dropped; the migration has to be written with 'dotnet ef migrations add'."
         )
 
-    if _normalize_relationships(source["relationships"]) != _normalize_relationships(
-        target["relationships"]
-    ):
+    source_relationships = Counter(_normalize_relationships(source["relationships"]))
+    target_relationships = Counter(_normalize_relationships(target["relationships"]))
+    if source_relationships - target_relationships:
+        # A relationship that was removed or changed (principal, columns, delete behavior)
+        # drops or rebuilds a constraint; such a migration is written and reviewed by hand.
         raise MigrationModelError(
-            "The relationships of the two models differ; the migration has to be written "
-            "with 'dotnet ef migrations add'."
+            "A relationship of the source model was removed or changed; the migration has "
+            "to be written with 'dotnet ef migrations add'."
         )
+    added_relationships = target_relationships - source_relationships
 
     operations: list[dict[str, Any]] = []
     for clr_name in sorted(target_entities):
@@ -437,10 +447,57 @@ def compute_operations(
         operations.extend(_column_operations(source_entity, target_entity))
         operations.extend(_index_operations(source_entity, target_entity))
 
+    for relationship in target["relationships"]:
+        key = _relationship_key(relationship)
+        if added_relationships[key] > 0:
+            added_relationships[key] -= 1
+            operations.append(_foreign_key_operation(relationship, target_entities))
+
     # A column that participates in an index can not be altered while the index exists
-    # (SQL Server error 5074), therefore every 'DropIndex' of the migration comes first.
-    order = {"drop_index": 0, "add_column": 1, "alter_column": 1, "create_index": 2}
+    # (SQL Server error 5074), therefore every 'DropIndex' of the migration comes first. A
+    # foreign key is added last, after the columns and indexes it depends on.
+    order = {
+        "drop_index": 0,
+        "add_column": 1,
+        "alter_column": 1,
+        "create_index": 2,
+        "add_foreign_key": 3,
+    }
     return sorted(operations, key=lambda operation: order[operation["kind"]])
+
+
+# 'DeleteBehavior' -> 'ReferentialAction' as EF Core's migrations code generator writes it.
+# Behaviors that this table does not list are refused (fail-closed), not guessed.
+REFERENTIAL_ACTIONS = {
+    None: "Restrict",
+    "ClientSetNull": "Restrict",
+    "Restrict": "Restrict",
+    "Cascade": "Cascade",
+    "SetNull": "SetNull",
+    "NoAction": "NoAction",
+}
+
+
+def _foreign_key_operation(
+    relationship: dict[str, Any], entities: dict[str, dict[str, Any]]
+) -> dict[str, Any]:
+    dependent = entities[relationship["dependent"]]
+    principal = entities[relationship["principal"]]
+    if relationship["on_delete"] not in REFERENTIAL_ACTIONS:
+        raise MigrationModelError(
+            f"The delete behavior '{relationship['on_delete']}' of a new foreign key is not "
+            "supported; the migration has to be written with 'dotnet ef migrations add'."
+        )
+    columns = list(relationship["columns"])
+    return {
+        "kind": "add_foreign_key",
+        "table": dependent["table"],
+        "name": "FK_{}_{}_{}".format(dependent["table"], principal["table"], "_".join(columns)),
+        "columns": columns,
+        "principal_table": principal["table"],
+        "principal_columns": list(relationship["principal_columns"] or principal["primary_key"]),
+        "on_delete": REFERENTIAL_ACTIONS[relationship["on_delete"]],
+    }
 
 
 def compute_operations_with_added_tables(
@@ -505,18 +562,20 @@ def compute_operations_with_added_tables(
     return operations, [target_entities[name] for name in added], added_relationships
 
 
-def _normalize_relationships(relationships: list[dict[str, Any]]) -> list[tuple[Any, ...]]:
-    return sorted(
-        (
-            relationship["principal"],
-            relationship["navigation"] or "",
-            tuple(relationship["columns"]),
-            tuple(relationship["principal_columns"] or ()),
-            relationship["on_delete"],
-            relationship["required"],
-        )
-        for relationship in relationships
+def _relationship_key(relationship: dict[str, Any]) -> tuple[Any, ...]:
+    return (
+        relationship["dependent"],
+        relationship["principal"],
+        relationship["navigation"] or "",
+        tuple(relationship["columns"]),
+        tuple(relationship["principal_columns"] or ()),
+        relationship["on_delete"] or "",
+        relationship["required"],
     )
+
+
+def _normalize_relationships(relationships: list[dict[str, Any]]) -> list[tuple[Any, ...]]:
+    return sorted(_relationship_key(relationship) for relationship in relationships)
 
 
 def _column_operations(
@@ -743,11 +802,16 @@ def reverse_operations(operations: list[dict[str, Any]]) -> list[dict[str, Any]]
                 {"kind": "drop_index", "table": operation["table"], "index": operation["index"]}
             )
         elif operation["kind"] == "add_column":
-            # The generator does not write migrations that add columns; they are written
-            # with 'dotnet ef migrations add' and only verified (Up) by the verifier.
-            raise MigrationModelError(
-                "The Down method of an 'AddColumn' migration is not generated; write the "
-                "migration with 'dotnet ef migrations add'."
+            reversed_operations.append(
+                {"kind": "drop_column", "table": operation["table"], "name": operation["name"]}
+            )
+        elif operation["kind"] == "add_foreign_key":
+            reversed_operations.append(
+                {
+                    "kind": "drop_foreign_key",
+                    "table": operation["table"],
+                    "name": operation["name"],
+                }
             )
         else:
             reversed_operations.append(
@@ -762,5 +826,11 @@ def reverse_operations(operations: list[dict[str, Any]]) -> list[dict[str, Any]]
             )
     # The same rule as in 'compute_operations': an index is dropped before a column that
     # it uses is altered, and created again afterwards.
-    order = {"drop_index": 0, "alter_column": 1, "create_index": 2}
+    order = {
+        "drop_foreign_key": 0,
+        "drop_index": 1,
+        "drop_column": 2,
+        "alter_column": 2,
+        "create_index": 3,
+    }
     return sorted(reversed_operations, key=lambda operation: order[operation["kind"]])

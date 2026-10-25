@@ -11,8 +11,11 @@ The script replaces the checks that normally need the .NET SDK:
 * The published ``InitialCreate`` migration is verified against its own designer file: a
   published migration is historical, it must describe the schema as it was when it was
   written and not the schema of today.
-* The newest migration is verified against the difference between the migration before
-  it and the snapshot: it has to apply exactly that difference, no more and no less.
+* EVERY later migration is verified against the difference between the designer file of
+  the migration before it and its own designer file: its 'Up' has to apply exactly that
+  difference and its 'Down' exactly the reverse, no more and no less. An operation that
+  the script does not verify is refused (fail-closed). The designer file of the newest
+  migration and the snapshot are verified against the model of the code base.
 * The C# syntax of every generated file is validated with tree-sitter.
 
 Usage:
@@ -35,9 +38,10 @@ from migration_model import MigrationModelError  # noqa: E402
 
 MIGRATIONS_DIRECTORY = os.path.join("Infrastructure", "Persistence", "Migrations")
 
+# The chain of migrations is read from the directory, so a new migration is verified
+# without editing this script. The first one must be the published 'InitialCreate'.
 INITIAL_MIGRATION = "20251017120000_InitialCreate"
-PREVIOUS_MIGRATION = "20261023190000_AddUserDefaultCompany"
-NEWEST_MIGRATION = "20261023191000_AddCompanyCustomerBoundary"
+MIGRATION_FILE = re.compile(r"^(?P<name>\d{14}_\w+)\.cs$")
 SNAPSHOT_FILE = "DatabaseContextModelSnapshot.cs"
 
 
@@ -106,111 +110,232 @@ def parse_create_tables(source: str) -> dict[str, dict[str, Any]]:
     return tables
 
 
-def parse_operations(source: str) -> list[tuple[Any, ...]]:
-    """Reads the operations of the 'Up' method in the order in which they are applied."""
-    # The 'Down' method applies the operations in the opposite direction; it is verified
-    # by 'signatures_of(reverse_operations(...))' and not scanned here.
-    down = source.find("protected override void Down(")
-    if down >= 0:
-        source = source[:down]
+# The operations that a migration may contain, per method. Everything else is refused
+# (fail-closed): an operation that is not listed here is not verified, so it must not pass.
+UP_OPERATIONS = {
+    "AddColumn",
+    "AlterColumn",
+    "CreateIndex",
+    "DropIndex",
+    "AddForeignKey",
+    "AddUniqueConstraint",
+}
+DOWN_OPERATIONS = {
+    "DropColumn",
+    "AlterColumn",
+    "CreateIndex",
+    "DropIndex",
+    "DropForeignKey",
+}
+# 'Sql' is compared with the reviewed statements by 'generate_migrations.py --check'. The
+# table operations are verified by the migration that adds tables (see below) and are
+# refused everywhere else.
+TABLE_UP_OPERATIONS = {"CreateTable"}
+TABLE_DOWN_OPERATIONS = {"DropTable", "DropUniqueConstraint"}
 
-    operations: list[tuple[int, tuple[Any, ...]]] = []
+ADD_COLUMN_ARGUMENTS = {"name", "table", "type", "nullable", "maxLength", "unicode", "defaultValue"}
+ADD_FOREIGN_KEY_ARGUMENTS = {
+    "name",
+    "table",
+    "column",
+    "columns",
+    "principalTable",
+    "principalColumn",
+    "principalColumns",
+    "onDelete",
+}
+NAME_TABLE_ARGUMENTS = {"name", "table"}
+UNIQUE_CONSTRAINT_ARGUMENTS = {"name", "table", "column", "columns"}
+CREATE_INDEX_ARGUMENTS = {"name", "table", "column", "columns", "unique", "filter", "clustered"}
+ALTER_COLUMN_ARGUMENTS = {
+    "name",
+    "table",
+    "type",
+    "nullable",
+    "maxLength",
+    "unicode",
+    "oldClrType",
+    "oldType",
+    "oldNullable",
+    "oldMaxLength",
+    "oldUnicode",
+}
 
-    for position, match in enumerate(
-        re.finditer(r"migrationBuilder\.(?P<kind>\w+)(?:<[^>]*>)?\(", source)
+# The value that EF Core writes as 'defaultValue' for a column that is added as NOT NULL.
+CLR_DEFAULT_LITERALS = {
+    "System.Guid": 'new Guid("00000000-0000-0000-0000-000000000000")',
+    "System.Boolean": "false",
+    "System.Int32": "0",
+    "System.Int64": "0L",
+    "System.Int16": "(short)0",
+    "System.Byte": "(byte)0",
+    "System.Decimal": "0m",
+    "System.Double": "0.0",
+    "System.Single": "0f",
+    "System.String": '""',
+    "System.DateTime": "new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)",
+}
+
+
+def expected_default_literal(column: dict[str, Any]) -> str | None:
+    """The 'defaultValue' of an AddColumn: none for a nullable column, the CLR default else."""
+    if column["nullable"]:
+        return None
+    literal_value = CLR_DEFAULT_LITERALS.get(column["clr_type"])
+    if literal_value is None:
+        raise MigrationModelError(
+            f"A NOT NULL column of the type '{column['clr_type']}' is added; its default "
+            "value is not known to this script, so the migration has to be reviewed by hand."
+        )
+    return literal_value
+
+
+def _call_arguments(arguments_text: str, kind: str, allowed: set[str]) -> dict[str, str]:
+    """Parses 'name: value' arguments and refuses positional or unknown ones."""
+    values: dict[str, str] = {}
+    for argument in mm.split_arguments(arguments_text):
+        key, separator, value = argument.partition(":")
+        key = key.strip()
+        if not separator or not re.fullmatch(r"\w+", key):
+            raise VerificationError(f"'{kind}' has a positional or malformed argument: '{argument}'.")
+        if key not in allowed:
+            raise VerificationError(
+                f"'{kind}' has the argument '{key}' that this script does not verify "
+                "(fail-closed); write the migration with 'dotnet ef migrations add' and "
+                "extend the verification."
+            )
+        if key in values:
+            raise VerificationError(f"'{kind}' has the argument '{key}' twice.")
+        values[key] = value.strip()
+    return values
+
+
+def split_migration_methods(source: str) -> tuple[str, str]:
+    """Returns the text of the 'Up' and of the 'Down' method."""
+    up_start = source.find("protected override void Up(")
+    down_start = source.find("protected override void Down(")
+    if up_start < 0 or down_start < 0 or down_start < up_start:
+        raise VerificationError("The migration does not declare 'Up' followed by 'Down'.")
+    return source[up_start:down_start], source[down_start:]
+
+
+def parse_operations(
+    source: str, section: str = "up", allow_table_operations: bool = False
+) -> list[tuple[Any, ...]]:
+    """Reads the operations of the 'Up' or the 'Down' method in the order of the file."""
+    up_source, down_source = split_migration_methods(source)
+    if section == "up":
+        text, allowed, skipped = up_source, UP_OPERATIONS, {"Sql"}
+        if allow_table_operations:
+            skipped = skipped | TABLE_UP_OPERATIONS
+    elif section == "down":
+        text, allowed, skipped = down_source, DOWN_OPERATIONS, {"Sql"}
+        if allow_table_operations:
+            skipped = skipped | TABLE_DOWN_OPERATIONS
+    else:  # pragma: no cover - programming error
+        raise ValueError(section)
+
+    operations: list[tuple[Any, ...]] = []
+    for match in re.finditer(
+        r"migrationBuilder\.(?P<kind>\w+)(?:<(?P<generic>[^>]*)>)?\(", text
     ):
         kind = match.group("kind")
-        arguments, _ = mm.balanced_call(source, match.end() - 1)
+        arguments_text, _ = mm.balanced_call(text, match.end() - 1)
+        if kind in skipped:
+            continue
+        if kind not in allowed:
+            raise VerificationError(
+                f"The {section.capitalize()} method contains an operation that this script "
+                f"does not verify: '{kind}'."
+            )
 
-        def argument(name: str) -> str | None:
-            found = re.search(rf"(?<![\w]){name}: (?P<value>[^\n]+)", arguments)
-            return found.group("value").strip().rstrip(",") if found else None
-
-        if kind == "AddUniqueConstraint":
-            columns = argument("column") or argument("columns") or ""
+        if kind == "AddColumn":
+            arguments = _call_arguments(arguments_text, kind, ADD_COLUMN_ARGUMENTS)
             operations.append(
                 (
-                    position,
-                    (
-                        "add_unique_constraint",
-                        _string(argument("table")),
-                        _string(argument("name")),
-                        tuple(mm.parse_literal_list(columns)),
+                    "add_column",
+                    _string(arguments.get("table")),
+                    _string(arguments.get("name")),
+                    (match.group("generic") or "").rstrip("?"),
+                    _string(arguments.get("type")),
+                    arguments.get("nullable") == "true",
+                    int(arguments["maxLength"]) if "maxLength" in arguments else None,
+                    False if arguments.get("unicode") == "false" else None,
+                    arguments.get("defaultValue"),
+                )
+            )
+        elif kind == "DropColumn":
+            arguments = _call_arguments(arguments_text, kind, NAME_TABLE_ARGUMENTS)
+            operations.append(
+                ("drop_column", _string(arguments.get("table")), _string(arguments.get("name")))
+            )
+        elif kind == "DropForeignKey":
+            arguments = _call_arguments(arguments_text, kind, NAME_TABLE_ARGUMENTS)
+            operations.append(
+                ("drop_foreign_key", _string(arguments.get("table")), _string(arguments.get("name")))
+            )
+        elif kind == "AddForeignKey":
+            arguments = _call_arguments(arguments_text, kind, ADD_FOREIGN_KEY_ARGUMENTS)
+            on_delete = arguments.get("onDelete", "")
+            operations.append(
+                (
+                    "add_foreign_key",
+                    _string(arguments.get("table")),
+                    _string(arguments.get("name")),
+                    tuple(mm.parse_literal_list(arguments.get("column") or arguments.get("columns") or "")),
+                    _string(arguments.get("principalTable")),
+                    tuple(
+                        mm.parse_literal_list(
+                            arguments.get("principalColumn") or arguments.get("principalColumns") or ""
+                        )
                     ),
+                    on_delete.replace("ReferentialAction.", ""),
+                )
+            )
+        elif kind == "AddUniqueConstraint":
+            arguments = _call_arguments(arguments_text, kind, UNIQUE_CONSTRAINT_ARGUMENTS)
+            columns = arguments.get("column") or arguments.get("columns") or ""
+            operations.append(
+                (
+                    "add_unique_constraint",
+                    _string(arguments.get("table")),
+                    _string(arguments.get("name")),
+                    tuple(mm.parse_literal_list(columns)),
                 )
             )
         elif kind == "DropIndex":
+            arguments = _call_arguments(arguments_text, kind, NAME_TABLE_ARGUMENTS)
             operations.append(
-                (
-                    position,
-                    (
-                        "drop_index",
-                        _string(argument("table")),
-                        _string(argument("name")),
-                    ),
-                )
+                ("drop_index", _string(arguments.get("table")), _string(arguments.get("name")))
             )
         elif kind == "CreateIndex":
-            columns = argument("column") or argument("columns") or ""
+            arguments = _call_arguments(arguments_text, kind, CREATE_INDEX_ARGUMENTS)
+            columns = arguments.get("column") or arguments.get("columns") or ""
             operations.append(
                 (
-                    position,
-                    (
-                        "create_index",
-                        _string(argument("table")),
-                        _string(argument("name")),
-                        tuple(mm.parse_literal_list(columns)),
-                        argument("unique") == "true",
-                        _string(argument("filter")),
-                    ),
-                )
-            )
-        elif kind == "AddColumn":
-            operations.append(
-                (
-                    position,
-                    (
-                        "add_column",
-                        _string(argument("table")),
-                        _string(argument("name")),
-                        _string(argument("type")),
-                        argument("nullable") == "true",
-                    ),
+                    "create_index",
+                    _string(arguments.get("table")),
+                    _string(arguments.get("name")),
+                    tuple(mm.parse_literal_list(columns)),
+                    arguments.get("unique") == "true",
+                    _string(arguments.get("filter")),
                 )
             )
         elif kind == "AlterColumn":
+            arguments = _call_arguments(arguments_text, kind, ALTER_COLUMN_ARGUMENTS)
             operations.append(
                 (
-                    position,
-                    (
-                        "alter_column",
-                        _string(argument("table")),
-                        _string(argument("name")),
-                        _string(argument("type")),
-                        argument("nullable") == "true",
-                        _string(argument("oldType")),
-                        argument("oldNullable") == "true",
-                    ),
+                    "alter_column",
+                    _string(arguments.get("table")),
+                    _string(arguments.get("name")),
+                    _string(arguments.get("type")),
+                    arguments.get("nullable") == "true",
+                    _string(arguments.get("oldType")),
+                    arguments.get("oldNullable") == "true",
                 )
             )
-        elif kind in {
-            "CreateTable",
-            "DropTable",
-            "AddForeignKey",
-            "DropForeignKey",
-            "Sql",
-        }:
-            # 'CreateTable'/'DropTable' are verified by 'verify_initial_migration'; the
-            # 'Sql' statements of the prelude are written down by the generator and are
-            # verified byte by byte by 'generate_migrations.py --check'.
-            continue
-        else:
-            raise VerificationError(
-                f"The migration contains an operation that this script does not "
-                f"understand: '{kind}'."
-            )
 
-    return [signature for _, signature in sorted(operations, key=lambda item: item[0])]
+    return operations
 
 
 def _string(value: str | None) -> str | None:
@@ -260,10 +385,30 @@ def signatures_of(operations: list[dict[str, Any]]) -> list[tuple[Any, ...]]:
                     "add_column",
                     operation["table"],
                     operation["name"],
+                    mm.clr_type_name(column["clr_type"]),
                     column["column_type"],
                     bool(column["nullable"]),
+                    column["max_length"],
+                    False if column.get("unicode") is False else None,
+                    expected_default_literal(column),
                 )
             )
+        elif operation["kind"] == "drop_column":
+            signatures.append(("drop_column", operation["table"], operation["name"]))
+        elif operation["kind"] == "add_foreign_key":
+            signatures.append(
+                (
+                    "add_foreign_key",
+                    operation["table"],
+                    operation["name"],
+                    tuple(operation["columns"]),
+                    operation["principal_table"],
+                    tuple(operation["principal_columns"]),
+                    operation["on_delete"],
+                )
+            )
+        elif operation["kind"] == "drop_foreign_key":
+            signatures.append(("drop_foreign_key", operation["table"], operation["name"]))
         else:
             column = operation["column"]
             old_column = operation["old_column"]
@@ -550,13 +695,29 @@ def verify_migration_with_added_tables(
     expected = sorted(signatures_of(operations))
     actual = sorted(
         signature
-        for signature in parse_operations(migration_source)
+        for signature in parse_operations(migration_source, "up", allow_table_operations=True)
         if not (signature[0] == "create_index" and signature[1] in added_tables)
     )
     if actual != expected:
         problems.append(
-            "The operations of the newest migration on the existing tables differ from "
-            f"the difference of the models.\n  applied:   {actual}\n  expected:  {expected}"
+            "The operations of the migration on the existing tables differ from the "
+            f"difference of the models.\n  applied:   {actual}\n  expected:  {expected}"
+        )
+
+    # Down: apart from the tables and keys checked above, exactly the reverse operations.
+    reversible = [
+        operation for operation in operations if operation["kind"] != "add_unique_constraint"
+    ]
+    expected_down = signatures_of(mm.reverse_operations(reversible))
+    actual_down = [
+        signature
+        for signature in parse_operations(migration_source, "down", allow_table_operations=True)
+        if not (signature[0] == "drop_index" and signature[1] in added_tables)
+    ]
+    if actual_down != expected_down:
+        problems.append(
+            "The Down method does not reverse the operations on the existing tables.\n"
+            f"  applied:   {actual_down}\n  expected:  {expected_down}"
         )
     return problems
 
@@ -608,27 +769,85 @@ def verify_syntax(paths: list[str]) -> list[str]:
     return problems
 
 
+def designer_foreign_keys(designer: dict[str, Any]) -> dict[str, Any]:
+    """The foreign keys that a designer file describes, in the shape of the derived model."""
+    entities = designer["entities"]
+    return {
+        "foreign_keys": [
+            {
+                "dependent": entities[relationship["dependent"]]["table"],
+                "principal_table": entities[relationship["principal"]]["table"],
+                "columns": list(relationship["columns"]),
+            }
+            for relationship in designer["relationships"]
+        ]
+    }
+
+
+def migration_chain(directory: str) -> list[str]:
+    """The names of all migrations in the order in which EF Core applies them."""
+    return sorted(
+        match.group("name")
+        for file_name in os.listdir(directory)
+        if (match := MIGRATION_FILE.match(file_name))
+    )
+
+
+def verify_step(
+    name: str,
+    previous_designer: dict[str, Any],
+    designer: dict[str, Any],
+    source: str,
+) -> list[str]:
+    """Verifies one migration against the models of its own and of the previous designer."""
+    added_tables = set(designer["entities"]) - set(previous_designer["entities"])
+    if added_tables:
+        return verify_migration_with_added_tables(
+            designer_foreign_keys(designer), previous_designer, designer, designer, source
+        )
+
+    problems: list[str] = []
+    created = parse_create_tables(source)
+    if created:
+        problems.append(
+            f"The migration creates the tables {sorted(created)} but its designer file "
+            "adds no entity type."
+        )
+    operations = mm.compute_operations(previous_designer, designer)
+    expected_up = signatures_of(operations)
+    actual_up = parse_operations(source, "up")
+    if actual_up != expected_up:
+        problems.append(
+            "The operations of Up differ from the difference between the designer file of "
+            f"the previous migration and its own.\n  applied:   {actual_up}\n"
+            f"  expected:  {expected_up}"
+        )
+    expected_down = signatures_of(mm.reverse_operations(operations))
+    actual_down = parse_operations(source, "down")
+    if actual_down != expected_down:
+        problems.append(
+            "The operations of Down are not the reverse of Up.\n"
+            f"  applied:   {actual_down}\n  expected:  {expected_down}"
+        )
+    return problems
+
+
 def verify(repository_root: str) -> list[str]:
     """Runs every check and returns the problems that were found."""
     directory = os.path.join(repository_root, MIGRATIONS_DIRECTORY)
-    initial_migration_path = os.path.join(directory, f"{INITIAL_MIGRATION}.cs")
-    initial_designer_path = os.path.join(directory, f"{INITIAL_MIGRATION}.Designer.cs")
-    previous_migration_path = os.path.join(directory, f"{PREVIOUS_MIGRATION}.cs")
-    previous_designer_path = os.path.join(directory, f"{PREVIOUS_MIGRATION}.Designer.cs")
-    newest_migration_path = os.path.join(directory, f"{NEWEST_MIGRATION}.cs")
-    newest_designer_path = os.path.join(directory, f"{NEWEST_MIGRATION}.Designer.cs")
+    chain = migration_chain(directory)
     snapshot_path = os.path.join(directory, SNAPSHOT_FILE)
 
     problems: list[str] = []
-    for path in (
-        initial_migration_path,
-        initial_designer_path,
-        previous_migration_path,
-        previous_designer_path,
-        newest_migration_path,
-        newest_designer_path,
-        snapshot_path,
-    ):
+    if len(chain) < 2 or chain[0] != INITIAL_MIGRATION:
+        return [
+            f"The chain of migrations must start with '{INITIAL_MIGRATION}' and have a "
+            f"successor; found {chain}."
+        ]
+    paths = [snapshot_path]
+    for name in chain:
+        paths += [os.path.join(directory, f"{name}.cs"), os.path.join(directory, f"{name}.Designer.cs")]
+    for path in paths:
         if not os.path.exists(path):
             problems.append(f"{path} is missing.")
     if problems:
@@ -636,49 +855,39 @@ def verify(repository_root: str) -> list[str]:
 
     model = derive_model(repository_root)
     snapshot = mm.parse_generated_model(mm.read_text(snapshot_path))
-    initial_designer = mm.parse_generated_model(mm.read_text(initial_designer_path))
-    previous_designer = mm.parse_generated_model(mm.read_text(previous_designer_path))
-    newest_designer = mm.parse_generated_model(mm.read_text(newest_designer_path))
+    designers = {
+        name: mm.parse_generated_model(mm.read_text(os.path.join(directory, f"{name}.Designer.cs")))
+        for name in chain
+    }
+    sources = {name: mm.read_text(os.path.join(directory, f"{name}.cs")) for name in chain}
+    newest = chain[-1]
 
     # 1. The snapshot has to describe the model of the code base. This is the check that
     #    'dotnet ef migrations has-pending-model-changes' performs.
-    problems.extend(
-        verify_model_against_generated(model, snapshot, "model snapshot")
-    )
+    problems.extend(verify_model_against_generated(model, snapshot, "model snapshot"))
 
     # 2. The designer file of the newest migration describes the model after that
     #    migration, which is the model of the snapshot.
     problems.extend(
         verify_model_against_generated(
-            model, newest_designer, "designer file of the newest migration"
+            model, designers[newest], "designer file of the newest migration"
         )
     )
 
     # 3. The published migration creates the schema of its own designer file.
     problems.extend(
-        verify_initial_migration(mm.read_text(initial_migration_path), initial_designer)
+        f"{chain[0]}: {problem}"
+        for problem in verify_initial_migration(sources[chain[0]], designers[chain[0]])
     )
 
-    # 4. The newest migration applies exactly the difference between the schema of the
-    #    migration before it and the schema of the snapshot.
-    newest_source = mm.read_text(newest_migration_path)
-    added_tables = set(snapshot["entities"]) - set(previous_designer["entities"])
-    if added_tables:
-        problems.extend(
-            verify_migration_with_added_tables(
-                model, previous_designer, snapshot, newest_designer, newest_source
-            )
-        )
-        return problems
-
-    expected = signatures_of(mm.compute_operations(previous_designer, snapshot))
-    actual = parse_operations(newest_source)
-    if actual != expected:
-        problems.append(
-            "The operations of the newest migration differ from the difference between "
-            f"the previous migration and the snapshot.\n  applied:   {actual}\n"
-            f"  expected:  {expected}"
-        )
+    # 4. EVERY later migration applies exactly the difference between the designer file of
+    #    the migration before it and its own designer file, and Down reverses it.
+    for previous, name in zip(chain, chain[1:]):
+        try:
+            step_problems = verify_step(name, designers[previous], designers[name], sources[name])
+        except (MigrationModelError, VerificationError) as error:
+            step_problems = [f"cannot be verified (fail-closed): {error}"]
+        problems.extend(f"{name}: {problem}" for problem in step_problems)
 
     return problems
 
@@ -689,17 +898,13 @@ def main(argv: list[str]) -> int:
     arguments = parser.parse_args(argv)
 
     directory = os.path.join(arguments.repo_root, MIGRATIONS_DIRECTORY)
-    syntax_problems = verify_syntax(
-        [
-            os.path.join(directory, f"{INITIAL_MIGRATION}.cs"),
-            os.path.join(directory, f"{INITIAL_MIGRATION}.Designer.cs"),
-            os.path.join(directory, f"{PREVIOUS_MIGRATION}.cs"),
-            os.path.join(directory, f"{PREVIOUS_MIGRATION}.Designer.cs"),
-            os.path.join(directory, f"{NEWEST_MIGRATION}.cs"),
-            os.path.join(directory, f"{NEWEST_MIGRATION}.Designer.cs"),
-            os.path.join(directory, SNAPSHOT_FILE),
+    syntax_paths = [os.path.join(directory, SNAPSHOT_FILE)]
+    for name in migration_chain(directory):
+        syntax_paths += [
+            os.path.join(directory, f"{name}.cs"),
+            os.path.join(directory, f"{name}.Designer.cs"),
         ]
-    )
+    syntax_problems = verify_syntax([path for path in syntax_paths if os.path.exists(path)])
     problems = verify(arguments.repo_root)
 
     for problem in syntax_problems + problems:
@@ -713,7 +918,10 @@ def main(argv: list[str]) -> int:
         return 1
 
     print("The C# syntax of the generated files is valid.")
-    print("The model snapshot and the migrations match the EF Core model of the code base.")
+    print(
+        "The model snapshot and all migrations match the EF Core model of the code base "
+        f"({len(migration_chain(directory))} migrations verified, Up and Down)."
+    )
     return 0
 
 
