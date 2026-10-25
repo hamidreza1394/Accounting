@@ -49,8 +49,8 @@ public sealed class VendorAuditChainVerifier
             if (entry.Id == Guid.Empty ||
                 !VendorAuditWriter.IsValidActionCode(entry.ActionCode) ||
                 !VendorAuditWriter.IsValidSubjectType(entry.SubjectType) ||
-                !VendorAuditWriter.IsSafeOpaqueId(entry.SubjectId, 200) ||
-                !VendorAuditWriter.IsSafeOpaqueId(entry.CorrelationId, 100) ||
+                !VendorAuditWriter.IsValidSubjectId(entry.SubjectId) ||
+                !VendorAuditWriter.IsValidCorrelationId(entry.CorrelationId) ||
                 entry.MetadataJson is not null)
             {
                 return VendorAuditChainVerificationResult.Invalid(entries.Length, "invalid-event-fields-or-unapproved-metadata");
