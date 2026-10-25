@@ -3,7 +3,7 @@
 - **Issue:** [#85 — Harden and version-control Faranou engineering skills](https://github.com/hamidreza1394/Accounting/issues/85)
 - **Agent/مسئول:** ChatGPT
 - **تاریخ:** 2026-10-25
-- **وضعیت:** انجام تغییرات مستنداتی؛ منتظر بازبینی PR
+- **وضعیت:** تغییرات مستنداتی انجام شد؛ PR پیش‌نویس و منتظر بازبینی
 
 ## هدف و معیارهای پذیرش
 - [x] همگام‌کردن Skill اصلی با .NET 10 / C# 14 و معماری موجود Razor Pages + React/API.
@@ -56,4 +56,4 @@
 ## شناسه‌های Git
 - Branch: `docs/issue-85-faranou-engineering-skills`
 - Commit: در تاریخچه Branch قابل مشاهده است.
-- Pull Request: پس از ایجاد، در این گزارش/Issue پیوند داده می‌شود.
+- Pull Request: [#86 — docs: version and align Faranou engineering skills](https://github.com/hamidreza1394/Accounting/pull/86) (Draft؛ ادغام نشده).
