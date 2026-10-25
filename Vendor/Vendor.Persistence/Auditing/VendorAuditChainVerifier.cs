@@ -33,7 +33,7 @@ public sealed class VendorAuditChainVerifier
         return Verify(events);
     }
 
-    public VendorAuditChainVerificationResult Verify(IEnumerable<VendorAuditEvent> events)
+    public static VendorAuditChainVerificationResult Verify(IEnumerable<VendorAuditEvent> events)
     {
         ArgumentNullException.ThrowIfNull(events);
 
