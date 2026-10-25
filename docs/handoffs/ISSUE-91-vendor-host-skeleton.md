@@ -38,10 +38,10 @@
 | فرمان/آزمون | نتیجه واقعی | توضیح/کد خروج |
 |---|---|---|
 | `dotnet restore Vendor.sln` | اجرا نشده | در این مرحله ابزار اجرای محلی در دسترس نبود |
-| `dotnet build Vendor.sln --no-restore --configuration Release` | اجرا نشده | منتظر CI |
+| `dotnet build Vendor.sln --no-restore --configuration Release` | شکست اولیه در CI | اجرای `40212637047` نشان داد xUnit v3 به `OutputType=Exe` نیاز دارد؛ در commit بعدی اصلاح شد و CI جدید لازم است |
 | `dotnet test Vendor.sln --configuration Release` | اجرا نشده | منتظر CI |
 | `git diff --check` | اجرا نشده | تغییرات از GitHub Contents API ایجاد شده‌اند |
-| CI روی HEAD نهایی | اجرا نشده/تأیید نشده | نباید سبز فرض شود |
+| CI روی HEAD نهایی | در انتظار اجرای مجدد | شکست اولیه شناسایی و اصلاح شد؛ نتیجهٔ commit اصلاحی هنوز تأیید نشده |
 
 ## امنیت، داده و سازگاری
 - دیتابیس مشتری و Migrationهایش تغییر نکرده‌اند.
