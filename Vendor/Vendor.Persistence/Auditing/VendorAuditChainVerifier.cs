@@ -21,7 +21,7 @@ public sealed class VendorAuditChainVerifier
         DefaultIgnoreCondition = JsonIgnoreCondition.Never
     };
 
-    public async Task<VendorAuditChainVerificationResult> VerifyAsync(
+    public static async Task<VendorAuditChainVerificationResult> VerifyAsync(
         VendorDbContext dbContext,
         CancellationToken cancellationToken = default)
     {
