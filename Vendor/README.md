@@ -36,3 +36,9 @@ Host عمداً به ارائه‌دهندهٔ ابری خاصی وابسته ن
 ## مرز امنیتی
 
 `Vendor.sln` مستقل است. برنامهٔ مشتری نباید به پروژه‌های Vendor ارجاع دهد؛ تنها قرارداد مشترک مجاز در مراحل بعدی `Licensing.Contracts` است. دیتابیس مشتری و Migrationهای آن خارج از این Solution باقی می‌مانند.
+
+
+## CI و بستهٔ build
+- `.github/workflows/vendor-ci.yml` به تغییرات Vendor/Contracts و تنظیمات build واکنش نشان می‌دهد و Restore/Build/Test مستقل را اجرا می‌کند.
+- فقط push به `main` artifact خروجی `dotnet publish` را تولید می‌کند؛ artifact موقت ۷ روز نگه داشته می‌شود. این مرحله Deploy واقعی نیست و هیچ credential یا کلید امضایی استفاده نمی‌کند.
+- workflow مستقل Vendor جایگزین گاردهای مشتری نیست؛ انتشار مشتری همچنان توسط `.github/workflows/dotnet.yml` و اسکریپت‌های publish اعتبارسنجی می‌شود.

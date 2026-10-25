@@ -1,0 +1,95 @@
+name: Vendor CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Vendor/**'
+      - 'Vendor.sln'
+      - 'tests/Vendor.Host.Tests/**'
+      - 'Licensing.Contracts/**'
+      - 'Directory.Packages.props'
+      - 'Directory.Build.props'
+      - 'global.json'
+      - '.github/workflows/vendor-ci.yml'
+  pull_request:
+    paths:
+      - 'Vendor/**'
+      - 'Vendor.sln'
+      - 'tests/Vendor.Host.Tests/**'
+      - 'Licensing.Contracts/**'
+      - 'Directory.Packages.props'
+      - 'Directory.Build.props'
+      - 'global.json'
+      - '.github/workflows/vendor-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vendor-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test-package:
+    runs-on: ubuntu-latest
+    env:
+      MSSQL_SA_PASSWORD: Ci1Faranou${{ github.run_id }}xvnd
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: Ci1Faranou${{ github.run_id }}xvnd
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Ci1Faranou${{ github.run_id }}xvnd -Q 'SELECT 1' -b"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore Vendor solution
+        run: dotnet restore Vendor.sln
+      - name: Build Vendor solution
+        run: dotnet build Vendor.sln --no-restore --configuration Release
+      - name: Test Vendor solution
+        env:
+          FARANOU_VENDOR_TEST_SQLSERVER: Server=localhost,1433;Database=FaranouVendorTests;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
+          FARANOU_REQUIRE_VENDOR_SQLSERVER: '1'
+        run: dotnet test Vendor.sln --configuration Release
+      - name: Publish standalone Vendor host
+        run: dotnet publish Vendor/Vendor.Host/Vendor.Host.csproj --no-restore --configuration Release --output "$RUNNER_TEMP/vendor-publish"
+      - name: Check artifact contains the host and no private-key files
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/vendor-publish"
+          test -s "$out/Faranou.Vendor.Host.dll"
+          if find "$out" -type f \( -iname '*.pfx' -o -iname '*.p12' -o -iname '*.key' \) -print -quit | grep -q .; then
+            echo 'Private-key file extension found in Vendor publish output.' >&2
+            exit 1
+          fi
+          if find "$out" -type f -size -512k ! -name '*.dll' ! -name '*.exe' ! -name '*.so' ! -name '*.dylib' ! -name '*.pdb' -print0 |
+            xargs -0 -r grep -IlE -- '-----BEGIN ([A-Z0-9 ]+)?PRIVATE KEY-----' | grep -q .; then
+            echo 'Private-key PEM marker found in Vendor publish output.' >&2
+            exit 1
+          fi
+      - name: Upload package from main only
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: vendor-host-${{ github.sha }}
+          path: ${{ runner.temp }}/vendor-publish/
+          if-no-files-found: error
+          retention-days: 7

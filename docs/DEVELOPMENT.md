@@ -149,3 +149,10 @@ pwsh scripts/publish.ps1 -Output artifacts\publish   # Windows (همان مرا�
 - `dotnet publish` مستقیم بدون Build کلاینت خطا می‌دهد (D-016).
 - **توسعه محلی:** `npm run dev` (Vite + پروکسی به سرور) یا یک‌بار `npm run build` و سپس `dotnet run`؛ **Production:** فقط اسکریپت انتشار.
 - تنظیمات جدید قابل تغییر در `appsettings`/Environment: `RateLimiting:*` و `SecurityHeaders:EnforceRazorContentSecurityPolicy`.
+
+
+## سامانهٔ مرکزی Vendor: CI و بستهٔ مستقل
+- تغییرات `Vendor/**`، `Vendor.sln`، تست‌های Vendor، `Licensing.Contracts` و تنظیمات SDK/NuGet در workflow مستقل `.github/workflows/vendor-ci.yml` بررسی می‌شوند؛ این کار از workflow کامل محصول مشتری جداست.
+- خروجی Publish Vendor از push به `main` به‌شکل GitHub Actions artifact با مهلت نگهداری ۷ روز منتشر می‌شود. این artifact **استقرار Production نیست**؛ هنوز محیط‌های deploy، نام دامنه/TLS، secret store و رویهٔ release باید در مرحلهٔ جدا تعیین شوند.
+- Workflow هیچ credential استقرار یا کلید امضایی ندارد و عملیات Sign لایسنس در GitHub Actions انجام نمی‌شود.
+- `.github/CODEOWNERS` مسیرهای Vendor و قرارداد مشترک را به مالک فعلی مخزن ارجاع می‌دهد؛ این فایل به‌تنهایی بازبینی اجباری ایجاد نمی‌کند. تنظیم `Require review from Code Owners` و حداقل یک reviewer واجد دسترسی غیر از نویسنده باید در Branch protection بررسی و در تنظیمات مخزن اعمال شود.

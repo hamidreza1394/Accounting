@@ -349,6 +349,22 @@
 - **اعتبارسنجی پس از اصلاح:** CI باید روی HEAD جدید دوباره اجرا شود؛ تا آن زمان نتیجهٔ نهایی `Verified` نیست.
 
 
+## 2026-10-25 — گارد وابستگی Vendor (Issue #95)
+- **مبنای معماری:** D-041 شرط می‌گذارد که گراف وابستگی Server به پروژه‌های Vendor نرسد و `Licensing.Contracts` بدون ProjectReference/لینک منبع بیرونی بماند. بررسی مجدد نشان داد G2 و G3 موجودند، اما G1 هنوز به‌صورت تست رگرسیون وجود نداشت؛ G4/G5 و allow-list کامل G2 نیز حل‌شده فرض نمی‌شوند.
+- **پیاده‌سازی در شاخه:** `tests/Template.Tests/Architecture/VendorIsolationTests.cs` با پیمایش XML گراف ProjectReference مستقیم/ترنزیتیو، بررسی قرارداد و fixture منفی افزوده شد. هیچ package جدیدی اضافه نشده است.
+- **محدوده داده:** هیچ کد اجرایی مشتری، Schema/Migration یا دیتابیس مشتری تغییر نکرده؛ فقط تست معماری در پروژهٔ تست اضافه شده است.
+- **اعتبارسنجی:** Build/Test محلی و `git diff --check` در این محیط اجرا نشده‌اند؛ منتظر CI واقعی روی PR هستیم. تا آن زمان G1 `NotVerified` است.
+- **ریسک/باقی‌مانده:** تحلیل XML fail-closed است و ProjectReference دارای property/wildcard را غیرقابل‌اثبات تلقی می‌کند. آزمون CI باید ثابت کند گراف فعلی بدون نقض است. G4/G5 و allow-list کامل Publish خارج از محدوده‌اند.
+- **گزارش تحویل:** `docs/handoffs/ISSUE-95-vendor-isolation-g1.md`.
+
+
+## 2026-10-25 — جداسازی workflow و مالکیت کد Vendor (Issue #98)
+- **مبنای تصمیم:** D-041 G4/G5 را برای جداسازی فروشنده ضروری می‌داند. PRهای #92/#94/#96 ادغام شده‌اند؛ گارد G1 در CI run `40214517027` تأیید شد و G2/G3 موجودند، ولی allow-list کامل G2 و تنظیمات Branch protection هنوز تأیید نشده‌اند.
+- **تغییرات روی شاخه:** `.github/CODEOWNERS` برای `Vendor/**`, `Vendor.sln`, `tests/Vendor.Host.Tests/**`, `Licensing.Contracts/**` و workflowهای CI؛ `.github/workflows/vendor-ci.yml` با path filters، permissions فقط read، Restore/Build/Test مستقل، publish به مسیر موقت، گارد کلید خصوصی و artifact فقط روی push به `main`. Job تکراری `vendor-build-test` از `.github/workflows/dotnet.yml` حذف شد تا workflow محصول مشتری تکرار غیرضروری نداشته باشد.
+- **مرز ایمنی:** در workflow کلید/secret استقرار یا امضای لایسنس وجود ندارد؛ artifact یک بستهٔ build موقت است، نه deploy. هیچ Schema/Migration یا دیتابیس مشتری تغییر نکرد.
+- **اعتبارسنجی:** Build/Test محلی و lint YAML در این محیط اجرا نشده‌اند؛ CI روی PR لازم است. به‌عنوان مرجع، run `40214517027` برای PR #96 همهٔ Jobهای گزارش‌شده را موفق داشت. CODEOWNERS تا تنظیم required-code-owner-review در branch protection به‌تنهایی enforce نمی‌شود.
+- **باقی‌مانده:** گارد allow-list کامل اسمبلی‌های Publish، تنظیم Branch protection/required review (نیازمند دسترسی تنظیمات مخزن)، و انتخاب محیط استقرار واقعی Vendor باقی است.
+- **گزارش تحویل:** `docs/handoffs/ISSUE-98-vendor-ci-codeowners.md`.
 ## 2026-10-25 — پیگیری L2.1: همگام‌سازی وضعیت Vendor و شواهد CI (Issue #93)
 - **یافته:** پس از ادغام PR #92، D-047 در `DECISIONS.md` پذیرفته بود، اما `INDEX.md` و `ROADMAP.md` هنوز `Proposed` می‌گفتند؛ `ARCHITECTURE.md` نیز به‌روز نبود و G2 موجود را نادیده می‌گرفت.
 - **اصلاح مستندات:** وضعیت D-047/PR #92/CI run در `INDEX.md`، `ROADMAP.md`، `ARCHITECTURE.md` و `PROJECT_STATUS.md` با دامنهٔ محدود و شواهد واقعی همسو شد. ادعای وجود تمام گاردهای G1–G6 نشده است؛ فقط G2 با اسکریپت و تست مشخص ثبت شد.
