@@ -365,3 +365,17 @@
 - **اعتبارسنجی:** Build/Test محلی و lint YAML در این محیط اجرا نشده‌اند؛ CI روی PR لازم است. به‌عنوان مرجع، run `40214517027` برای PR #96 همهٔ Jobهای گزارش‌شده را موفق داشت. CODEOWNERS تا تنظیم required-code-owner-review در branch protection به‌تنهایی enforce نمی‌شود.
 - **باقی‌مانده:** گارد allow-list کامل اسمبلی‌های Publish، تنظیم Branch protection/required review (نیازمند دسترسی تنظیمات مخزن)، و انتخاب محیط استقرار واقعی Vendor باقی است.
 - **گزارش تحویل:** `docs/handoffs/ISSUE-98-vendor-ci-codeowners.md`.
+## 2026-10-25 — پیگیری L2.1: همگام‌سازی وضعیت Vendor و شواهد CI (Issue #93)
+- **یافته:** پس از ادغام PR #92، D-047 در `DECISIONS.md` پذیرفته بود، اما `INDEX.md` و `ROADMAP.md` هنوز `Proposed` می‌گفتند؛ `ARCHITECTURE.md` نیز به‌روز نبود و G2 موجود را نادیده می‌گرفت.
+- **اصلاح مستندات:** وضعیت D-047/PR #92/CI run در `INDEX.md`، `ROADMAP.md`، `ARCHITECTURE.md` و `PROJECT_STATUS.md` با دامنهٔ محدود و شواهد واقعی همسو شد. ادعای وجود تمام گاردهای G1–G6 نشده است؛ فقط G2 با اسکریپت و تست مشخص ثبت شد.
+- **شاهد CI:** run `40212722972` موفق؛ `vendor-build-test`، `secret-scan`، `client`، `build-and-test`، `publish-scripts`، `e2e`، `publish-windows` و `publish` موفق بودند. run `40212637047` شکست اولیهٔ xUnit را ثبت کرده بود و علت در commit بعدی اصلاح شد.
+- **محدوده:** مستندات فقط؛ کد اجرایی، Workflow، Schema/Migration و دیتابیس مشتری تغییر نکرد.
+- **اعتبارسنجی محلی:** `git diff --check` و Build/Test محلی در این محیط اجرا نشده‌اند؛ PR/CI باید بررسی شود. لینک‌ها و متن‌ها به‌صورت متنی بررسی شدند.
+- **باقی‌مانده:** قبل از گسترش قابلیت‌های مدیریتی، پوشش گاردهای جداسازی باید به‌صورت جداگانه و مستند بازبینی شود. Vendor هنوز Production-ready نیست.
+- **گزارش تحویل:** `docs/handoffs/ISSUE-93-vendor-status-reconciliation.md`.
+
+## 2026-10-25 — ممیزی UI صفحهٔ انتخاب شرکت/دوره و سه اصلاح کوچک
+- **ممیزی:** مرورگر Playwright با API شبیه‌سازی‌شده در ۳۶۰/۷۶۸/۱۲۸۰؛ بدون سرریز افقی و بدون هدف لمسی کوچک.
+- **اصلاح:** عنوان تب بر اساس صفحه، عدم‌شکست بازهٔ تاریخ، preload فونت محلی؛ دو تست جدید.
+- **اعتبارسنجی محلی:** typecheck، ۹۶ تست، build، check:offline و check_static_assets موفق؛ .NET اجرا نشد (کد تغییر نکرده).
+- **گزارش تحویل:** `docs/handoffs/ISSUE-UNNUMBERED-ui-selection-audit.md`.

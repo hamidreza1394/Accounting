@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="referrer" content="same-origin" />
     <link rel="icon" type="image/png" href="/images/faranou-favicon-32.png" />
+    <!-- The only font is local and critical for first paint: fetch it in parallel with the CSS. -->
+    <link rel="preload" href="/fonts/vazirmatn/Vazirmatn-Variable.woff2" as="font" type="font/woff2" crossorigin />
     <title>فرانو — داشبورد</title>
   </head>
   <body>
