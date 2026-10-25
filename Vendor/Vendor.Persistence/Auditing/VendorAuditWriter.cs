@@ -89,6 +89,11 @@ public sealed class VendorAuditWriter : IVendorAuditWriter
             if (leaf is not null)
             {
                 if (!VendorAuditChainVerifier.IsHash(leaf.EventHash) ||
+                    !IsValidActionCode(leaf.ActionCode) ||
+                    !IsValidSubjectType(leaf.SubjectType) ||
+                    !IsSafeOpaqueId(leaf.SubjectId, 200) ||
+                    !IsSafeOpaqueId(leaf.CorrelationId, 100) ||
+                    leaf.MetadataJson is not null ||
                     !string.Equals(VendorAuditChainVerifier.ComputeEventHash(leaf), leaf.EventHash, StringComparison.Ordinal))
                 {
                     throw new VendorAuditChainIntegrityException("invalid-chain-leaf");
