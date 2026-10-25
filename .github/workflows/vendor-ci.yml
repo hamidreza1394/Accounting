@@ -36,6 +36,8 @@ jobs:
   build-test-package:
     runs-on: ubuntu-latest
     env:
+      ASPNETCORE_ENVIRONMENT: Development
+      FARANO_VENDOR_DataProtection__KeysDirectory: /tmp/faranou-vendor-dp-keys
       MSSQL_SA_PASSWORD: Ci1Faranou${{ github.run_id }}xvnd
     services:
       sqlserver:
