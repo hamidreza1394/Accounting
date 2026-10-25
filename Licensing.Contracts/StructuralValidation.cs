@@ -81,10 +81,19 @@ public static class StructuralValidation
 				errors.Add("too many subsystems");
 			else
 			{
+				var seenSubsystems = new HashSet<string>(StringComparer.Ordinal);
 				foreach (var s in subs)
 				{
 					if (s is null || !CodePattern.IsMatch(s) || s.Length > LicenseInputLimits.MaxSubsystemCodeChars)
+					{
 						errors.Add("invalid subsystem code");
+						continue;
+					}
+
+					if (!LicenseSubsystemCodes.IsAllowed(s))
+						errors.Add("unsupported subsystem code");
+					if (!seenSubsystems.Add(s))
+						errors.Add("duplicate subsystem code");
 				}
 			}
 		}

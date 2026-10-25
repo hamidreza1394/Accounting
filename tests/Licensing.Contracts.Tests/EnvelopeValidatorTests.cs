@@ -125,14 +125,72 @@ public sealed class EnvelopeValidatorTests
 	}
 
 	[Fact]
+	public void PayloadWhitespaceChange_FailsBecauseSignatureCoversExactUtf8Bytes()
+	{
+		var (env, resolver, _) = CreateSigned();
+		var alteredJson = env.PayloadJson.Replace("{", "{ ", StringComparison.Ordinal);
+		var result = NewValidator(resolver).Validate(env with { PayloadJson = alteredJson }, "inst-001");
+		Assert.False(result.Success);
+		Assert.Equal("signature_invalid", result.ErrorCode);
+	}
+
+	[Fact]
+	public void Rfc6979P256Sha256FixedVector_VerifiesExact64ByteP1363Signature()
+	{
+		// RFC 6979, Appendix A.2.5: P-256 / SHA-256, message "sample".
+		// Public test key only; no private key is included or needed.
+		var publicParameters = new ECParameters
+		{
+			Curve = ECCurve.NamedCurves.nistP256,
+			Q = new ECPoint
+			{
+				X = Convert.FromHexString("60FED4BA255A9D31C961EB74C6356D68C049B8923B61FA6CE669622E60F29FB6"),
+				Y = Convert.FromHexString("7903FE1008B8BC99A41AE9E95628BC64F2F1B20C2D7E9F5177A3C294D4462299")
+			}
+		};
+		using var publicKey = ECDsa.Create(publicParameters);
+		var signature = Convert.FromHexString(
+			"EFD48B2AACB6A8FD1140DD9CD45E81D69D2C877B56AAF991C34D0EA84EAF3716" +
+			"F7CB1C942D657C41D436C7A1B6E29F65F3E900DBB9AFF4064DC4AB2F843ACDA8");
+		Assert.Equal(64, signature.Length);
+
+		var envelope = new LicenseEnvelope(
+			1,
+			"rfc6979-vector",
+			LicenseAlgorithms.EcdsaP256Sha256,
+			"sample",
+			Convert.ToBase64String(signature));
+		var verifier = new EcdsaP256Sha256Verifier();
+
+		Assert.True(verifier.TryVerify(envelope, publicKey.ExportSubjectPublicKeyInfo(), out var errorCode), errorCode);
+	}
+
+	[Fact]
+	public void UnknownSubsystemCode_FailsStructuralValidation()
+	{
+		var payload = Sample() with { Limits = new LicenseLimits(5, new[] { "future-module" }) };
+		Assert.Contains(
+			StructuralValidation.ValidatePayload(payload),
+			error => error.Contains("unsupported subsystem code", StringComparison.Ordinal));
+	}
+
+	[Fact]
+	public void DuplicateSubsystemCode_FailsStructuralValidation()
+	{
+		var payload = Sample() with { Limits = new LicenseLimits(5, new[] { "finance", "finance" }) };
+		Assert.Contains(
+			StructuralValidation.ValidatePayload(payload),
+			error => error.Contains("duplicate subsystem code", StringComparison.Ordinal));
+	}
+
+	[Fact]
 	public void CanonicalJson_FixedVector_MatchesExpectedPrefix()
 	{
 		var payload = Sample();
 		var json = CanonicalJson.SerializePayload(payload);
-		Assert.StartsWith("{\"formatVersion\":1,", json, StringComparison.Ordinal);
-		Assert.Contains("\"licenseId\":\"lic-00000001\"", json, StringComparison.Ordinal);
-		Assert.Contains("\"installationId\":\"inst-001\"", json, StringComparison.Ordinal);
-		Assert.Contains("\"licenseKind\":\"perpetual\"", json, StringComparison.Ordinal);
+		Assert.Equal(
+			"{\"formatVersion\":1,\"licenseId\":\"lic-00000001\",\"installationId\":\"inst-001\",\"productCode\":\"faranou-accounting\",\"licenseKind\":\"perpetual\",\"issuedAtUtc\":\"2026-01-01T00:00:00.0000000+00:00\",\"notBeforeUtc\":\"2026-01-01T00:00:00.0000000+00:00\",\"graceDays\":30,\"sequence\":1,\"limits\":{\"maxCompanies\":5,\"subsystems\":[\"finance\"]}}",
+			json);
 		Assert.DoesNotContain("\n", json, StringComparison.Ordinal);
 		Assert.True(CanonicalJson.TryParsePayload(json, out var parsed, out _));
 		Assert.Equal(payload.LicenseId, parsed!.LicenseId);

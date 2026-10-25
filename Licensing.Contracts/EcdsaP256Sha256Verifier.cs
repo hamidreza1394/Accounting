@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 namespace Faranou.Licensing.Contracts;
 
 /// <summary>
-/// Provisional ECDSA P-256 / SHA-256 verifier (IEEE P1363). OD-12 not Accepted.
+/// ECDSA P-256 / SHA-256 verifier with fixed 64-byte IEEE P1363 signatures (D-045).
 /// Does not select algorithm from attacker-controlled input beyond equality with fixed constant.
 /// </summary>
 public sealed class EcdsaP256Sha256Verifier : ILicenseSignatureVerifier
@@ -72,7 +72,12 @@ public sealed class EcdsaP256Sha256Verifier : ILicenseSignatureVerifier
 				return false;
 			}
 
-			if (ecdsa.KeySize != 256)
+			var publicParameters = ecdsa.ExportParameters(includePrivateParameters: false);
+			if (ecdsa.KeySize != 256
+			    || !string.Equals(
+				    publicParameters.Curve.Oid.Value,
+				    ECCurve.NamedCurves.nistP256.Oid.Value,
+				    StringComparison.Ordinal))
 			{
 				errorCode = "public_key_curve_invalid";
 				return false;
