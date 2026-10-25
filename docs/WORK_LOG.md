@@ -389,3 +389,11 @@
 - **وضعیت اعتبارسنجی این پیگیری:** منتظر CI روی commit حاوی Migrationهای ثبت‌شده هستیم؛ Build/Test محلی اجرا نشده‌اند چون SDK در محیط محلی این Agent موجود نیست. تا نتیجهٔ CI، وضعیت schema `NotVerified` می‌ماند.
 - **امنیت/باقی‌مانده:** کلاس `VendorAuditEvent` فقط مدل زنجیرهٔ هش است؛ سرویس append-only، اعتبارسنجی زنجیره و checkpoint مستقل هنوز لازم است. ورود/MFA/RBAC و bootstrap هنوز فعال/قابل دسترس نیستند.
 - **گزارش تحویل:** `docs/handoffs/ISSUE-100-vendor-persistence-identity-audit.md`.
+
+
+## 2026-10-25 — پایدارسازی نصب SDK در CI (Issue #108)
+- **شاهد:** .NET CI run `40224122273` در PR #106 قبل از Restore/Build/Test در `actions/setup-dotnet@v6` شکست خورد؛ دانلود SDK `10.0.403` و Runtime `10.0.14` از `dotnetorigin.blob.core.windows.net` با HTTP 409 انجام نشد. همان اجرای Vendor با SDK `10.0.402` توانست Restore/Build/Test را اجرا کند.
+- **تغییر:** چهار اعلان SDK در `.github/workflows/dotnet.yml` از wildcard `10.0.x` به نسخهٔ دقیق `10.0.402` پین شدند تا build فعلاً از یک SDK قابل‌دریافت و قبلاً آزموده‌شده استفاده کند؛ `global.json`، NuGet package versions و کد runtime تغییر نکردند.
+- **سیاست ارتقا:** پس از تأیید دسترس‌پذیری SDK patch جدید، نسخه در یک Issue/PR مشخص ارتقا یافته و کل .NET CI روی SQL Server واقعی دوباره اجرا شود؛ پین دائمی و بدون بازبینی نیست.
+- **اعتبارسنجی:** Build/Test این PR هنوز اجرا نشده؛ CI باید نشان دهد Setup .NET، Restore، Build/Test و migration guards عبور می‌کنند. خطای اولیه از نصب SDK بود، نه شکست تست کد.
+- **گزارش تحویل:** `docs/handoffs/ISSUE-108-pin-dotnet-sdk.md`.
