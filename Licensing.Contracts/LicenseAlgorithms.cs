@@ -1,7 +1,7 @@
 namespace Faranou.Licensing.Contracts;
 
 /// <summary>
-/// Algorithm identifiers. OD-12 remains Proposed; only allowlisted values may verify.
+/// Fixed v1 algorithm identifier accepted by D-045; only this allowlisted value may verify.
 /// </summary>
 public static class LicenseAlgorithms
 {
