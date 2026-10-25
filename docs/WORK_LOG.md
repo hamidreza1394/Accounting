@@ -398,3 +398,5 @@
 - **اعتبارسنجی:** Build/Test محلی اجرا نشده‌اند؛ CI روی HEAD نهایی این PR باید اجرا شود. تا نتیجهٔ واقعی، status `NotVerified` است.
 - **باقی‌مانده:** SQL permissions append-only، checkpoint/export مستقل، پایش/alerting، سیاست retention و اتصال سرویس به Host پس از MFA/bootstrap باقی‌اند.
 - **تحویل:** `docs/handoffs/ISSUE-105-vendor-audit-chain.md`.
+
+- **CI finding:** run `40223605922` failed before Build/Test in `actions/setup-dotnet@v6` while fetching SDK `10.0.403` / runtime `10.0.14` from `dotnetorigin.blob.core.windows.net` (HTTP 409), not in project code. Vendor CI was pinned to SDK `10.0.402`, the last successfully provisioned SDK on this repository workflow, to make the rerun deterministic; verify future servicing updates separately. Build/Test from the earlier run had succeeded but the final publish step had not completed. A new run on the pinned version is required.
