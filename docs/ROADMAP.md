@@ -120,9 +120,9 @@
 - مستندات: `LICENSING.md`، `LICENSING_THREAT_MODEL.md`، `TESTING.md`، `DEPLOYMENT.md`، D-045 (انتخاب الگوریتم پذیرفته شده؛ بردارهای آزمون هنوز باید اجرا شوند).
 
 **L2 — سامانهٔ مرکزی فروشنده**
-- Issue اجرایی/طراحی: [#89](https://github.com/hamidreza1394/Accounting/issues/89)؛ D-046 پذیرفته و D-047 برای معماری اجرایی هنوز `Proposed` است.
+- معماری اجرایی: D-047 `Accepted` با تأیید صریح کارفرما (2026-10-25). L2.1 اسکلت مستقل Vendor در PR #92 ادغام شده و CI run [40212722972](https://github.com/hamidreza1394/Accounting/actions/runs/40212722972) موفق است؛ این فقط اسکلت Host را تأیید می‌کند، نه آمادگی Production.
 - هدف و دامنه: Host، دیتابیس و هویت مستقل؛ مدل `CustomerAccount/Contact/Product/Subsystem/Contract/SupportContract/License/LicenseRevision/Entitlement/Limit/Installation/ActivationRequest/CustomerBoundary/SigningKey/CentralAdminUser/AuditEvent`؛ سرویس امضا؛ صدور و ابطال دستی با فایل؛ ممیزی زنجیره‌ای؛ مدیر مرکزی با MFA. Endpoint آنلاین (D-042) مرحلهٔ بعدی همین فاز.
-- وابستگی: L1 قراردادها در PR #82 ادغام شده است؛ OD-07/09/11 با D-046 پذیرفته شده‌اند. Issue #89 مسیر طراحی و پیاده‌سازی مرحله‌ای را تعریف می‌کند؛ D-047 باید پیش از ساخت Host/Identity/MFA به بازبینی و پذیرش برسد. انتخاب محصول KMS/HSM پیش از اتصال Production لازم است، اما abstraction و تست‌ها می‌توانند بدون کلید واقعی طراحی شوند.
+- وابستگی: قرارداد L1 در PR #82 ادغام شده؛ OD-07/09/11 در D-046 پذیرفته شده‌اند. D-047 مرز Host/DB/هویت/انتشار مستقل، MFA اجباری، bootstrap محدود، RBAC، maker-checker، ممیزی قابل‌کشف و امضای KMS/HSM را الزام می‌کند. Issue #91 و PR #92 فقط Host حداقلی و CI مستقل را فراهم کردند؛ دیتابیس Vendor، Identity/MFA، RBAC، audit/maker-checker، امضا و صدور لایسنس هنوز `NotImplemented` هستند. انتخاب KMS/HSM و runbook بازیابی پیش از اتصال Production لازم است؛ هیچ کلید واقعی در توسعه/CI مجاز نیست.
 - فایل‌ها/پروژه‌ها: `Vendor/**` (نام نهایی `NeedsApproval`)، `Vendor.sln`، Workflow استقرار جدا.
 - آزمون: Integration روی SQL Server؛ MFA اجباری؛ maker-checker که تأیید درخواست خود را رد کند؛ مجوز نقش سمت سرور؛ ممیزی مقاوم در برابر دست‌کاری و کشف آن؛ صدور→اعتبارسنجی با `Licensing.Contracts`؛ قطع شبکه بدون توقف عملیات آفلاین.
 - پذیرش: بستهٔ `Server` هیچ ارجاعی به فروشنده ندارد (G1/G2 سبز)؛ کلید خصوصی خارج از مخزن/CI/DB مشتری؛ کلید Production فقط از KMS/HSM با مجوز امضا؛ حداقل دو مدیر واجد شرایط پیش از Production؛ ارتباط آنلاین اختیاری.
