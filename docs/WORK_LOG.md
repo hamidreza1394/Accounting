@@ -322,3 +322,13 @@
 - **اعتبارسنجی:** مخزن ECC، ساختار واقعی تست‌ها و manifestهای فرانو بررسی شدند. Build و تست‌ها اجرا نشدند؛ CI روی HEAD نهایی باید جداگانه بررسی شود.
 - **وضعیت:** شاخه `docs/issue-87-curated-ecc-skills`؛ PR برای بازبینی ایجاد می‌شود و ادغام نشده است.
 - **گزارش تحویل:** `docs/handoffs/ISSUE-87-curated-ecc-skills.md`.
+
+
+## 2026-10-25 — شروع L2 سامانه مرکزی فروشنده (Issue #89)
+- **پیش‌شرط تأییدشده:** PR #84 ادغام شده است؛ D-046 تصمیم‌های OD-07/09/11 را پذیرفته است. Issue #83 پس از ثبت تصمیم‌ها بسته شد.
+- **ممیزی اولیه:** `.NET 10 / EF Core 10` و `Licensing.Contracts` در main بررسی شد. `Template.sln` و `Server` متعلق به برنامه مشتری‌اند؛ Vendor باید Solution/Host/DB/Identity مستقل داشته باشد. وضعیت فعلی پروژه لایسنس همچنان `NotImplemented` است.
+- **اقدام:** Issue #89 ساخته شد تا کار به مراحل قابل بازبینی تقسیم شود. این شاخه فقط D-047 پیشنهادی و همگام‌سازی اسناد را آماده می‌کند؛ کد اجرایی، Schema/Migration و کلید واقعی اضافه نمی‌شود.
+- **قواعد معماری پیشنهادی:** هویت ASP.NET Core Identity جدا؛ بدون ثبت‌نام عمومی/مدیر پیش‌فرض؛ MFA اجباری؛ bootstrap یک‌بارمصرف و ممیزی‌شده؛ حداقل دو مدیر واجد MFA برای آمادگی Production؛ maker-checker سمت سرور؛ ممیزی hash-chain همراه checkpoint مستقل؛ KMS/HSM با مجوز فقط-امضا و fail-closed در Production.
+- **اعتبارسنجی:** Build/Test اجرا نشده‌اند؛ تغییرات این مرحله مستنداتی هستند و باید در PR/CI بازبینی شوند. CI سبز برای HEAD نهایی هنوز تأیید نشده است.
+- **ریسک/باقی‌مانده:** D-047 هنوز `Proposed` است. محصول KMS/HSM، runbook بازیابی/break-glass و مقصد مستقل checkpoint نیازمند تعیین محیط/تصمیم جدا هستند. هیچ پیاده‌سازی Production مجاز فرض نشده است.
+- **گزارش تحویل:** `docs/handoffs/ISSUE-89-vendor-control-plane.md`; [Issue #89](https://github.com/hamidreza1394/Accounting/issues/89).
