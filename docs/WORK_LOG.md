@@ -312,3 +312,13 @@
 - **اعتبارسنجی:** فایل‌های مبنا و Skill نصب‌شده از GitHub/محیط Skill خوانده شدند. Build، تست .NET و تست کلاینت اجرا نشدند؛ این تغییر صرفاً مستنداتی است. بررسی نهایی لینک‌ها و diff در PR باقی است.
 - **وضعیت:** روی شاخه `docs/issue-85-faranou-engineering-skills`؛ ادغام نشده و نیازمند بازبینی انسانی است.
 - **گزارش تحویل:** `docs/handoffs/ISSUE-85-faranou-engineering-skills.md`.
+
+
+## 2026-10-25 — انتخاب و سازگارسازی Skillهای ECC (Issue #87)
+- **منبع:** مخزن رسمی `affaan-m/ECC`، snapshot درخت `90606c8315ee09cafc303515c5f33024db6b9882`؛ مجوز MIT در `third_party/ECC-LICENSE.txt` حفظ شد.
+- **افزوده شد:** Skillهای انتخابی .NET، C# testing، API، React، React testing، Playwright E2E و تحلیل اثر تغییر؛ دو Skill مختص فرانو برای Migrationهای EF Core/SQL Server و ثبت تصمیم در `docs/DECISIONS.md` نوشته شد.
+- **کنترل سازگاری:** راهنمای generic دربارهٔ Bearer token، Next.js/RSC، PostgreSQL/Prisma، افزودن پکیج‌های تست، ساخت `docs/adr/` و نصب Hookها بدون بررسی/تأیید مجاز نیست؛ محدودیت‌ها در Skillها و `docs/THIRD_PARTY_SKILLS.md` درج شدند.
+- **محدوده:** فقط مستندات و Skillها؛ هیچ کد محصول، Schema/Migration اجرایی، package manifest/lockfile، Workflow، Hook اجرایی، MCP server یا پکیج runtime نصب نشد.
+- **اعتبارسنجی:** مخزن ECC، ساختار واقعی تست‌ها و manifestهای فرانو بررسی شدند. Build و تست‌ها اجرا نشدند؛ CI روی HEAD نهایی باید جداگانه بررسی شود.
+- **وضعیت:** شاخه `docs/issue-87-curated-ecc-skills`؛ PR برای بازبینی ایجاد می‌شود و ادغام نشده است.
+- **گزارش تحویل:** `docs/handoffs/ISSUE-87-curated-ecc-skills.md`.
