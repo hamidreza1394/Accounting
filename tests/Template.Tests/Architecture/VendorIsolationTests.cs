@@ -37,8 +37,21 @@ public sealed class VendorIsolationTests
             violations.Add($"Licensing.Contracts must not contain ProjectReference: {projectReference}");
         }
 
+        foreach (var packageReference in document.Descendants().Where(element => element.Name.LocalName == "PackageReference"))
+        {
+            var packageName = (string?)packageReference.Attribute("Include");
+            if (packageName is not null &&
+                (packageName.StartsWith("Microsoft.AspNetCore.", StringComparison.OrdinalIgnoreCase) ||
+                 packageName.StartsWith("Microsoft.EntityFrameworkCore.", StringComparison.OrdinalIgnoreCase) ||
+                 packageName.StartsWith("Faranou.Vendor.", StringComparison.OrdinalIgnoreCase)))
+            {
+                violations.Add($"Licensing.Contracts must not depend on web, EF Core, or Vendor packages: {packageName}");
+            }
+        }
+
         foreach (var linkedItem in document.Descendants().Where(element =>
-                     element.Name.LocalName is "Compile" or "Content" && element.Attribute("Link") is not null))
+                     (element.Name.LocalName is "Compile" or "Content") &&
+                     (element.Attribute("Link") is not null || element.Elements().Any(child => child.Name.LocalName == "Link")))
         {
             var include = (string?)linkedItem.Attribute("Include");
             if (string.IsNullOrWhiteSpace(include) || include.Contains("$(", StringComparison.Ordinal) ||
