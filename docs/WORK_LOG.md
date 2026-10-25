@@ -400,3 +400,5 @@
 - **تحویل:** `docs/handoffs/ISSUE-105-vendor-audit-chain.md`.
 
 - **CI finding:** run `40223605922` failed before Build/Test in `actions/setup-dotnet@v6` while fetching SDK `10.0.403` / runtime `10.0.14` from `dotnetorigin.blob.core.windows.net` (HTTP 409), not in project code. Vendor CI was pinned to SDK `10.0.402`, the last successfully provisioned SDK on this repository workflow, to make the rerun deterministic; verify future servicing updates separately. Build/Test from the earlier run had succeeded but the final publish step had not completed. A new run on the pinned version is required.
+
+- **یافتهٔ CI بعد از pin:** در اجرای `40223833470` نصب SDK دیگر مانع اصلی نبود؛ Build تست به‌علت یک فراخوانی باقی‌ماندهٔ instance به متد `VendorAuditChainVerifier.Verify` (پس از تبدیل به static) شکست خورد (`CS0176`). تمام فراخوانی‌های unit/integration به static API تغییر داده شدند و `VerifyAsync` نیز به‌دلیل نداشتن state استاتیک شد؛ CI روی HEAD جدید هنوز لازم است.
