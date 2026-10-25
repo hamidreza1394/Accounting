@@ -51,7 +51,7 @@ public sealed class VendorIsolationTests
 
         foreach (var linkedItem in document.Descendants().Where(element =>
                      (element.Name.LocalName is "Compile" or "Content") &&
-                     (element.Attribute("Link") is not null || element.Elements().Any(child => child.Name.LocalName == "Link")))
+                     (element.Attribute("Link") is not null || element.Elements().Any(child => child.Name.LocalName == "Link"))))
         {
             var include = (string?)linkedItem.Attribute("Include");
             if (string.IsNullOrWhiteSpace(include) || include.Contains("$(", StringComparison.Ordinal) ||
@@ -111,7 +111,8 @@ public sealed class VendorIsolationTests
     private static IReadOnlyList<string> FindServerVendorBoundaryViolations(string repositoryRoot, string startingProject)
     {
         var vendorDirectory = Path.GetFullPath(Path.Combine(repositoryRoot, "Vendor"));
-        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var pathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        var visited = new HashSet<string>(pathComparer);
         var violations = new List<string>();
 
         Visit(startingProject);
