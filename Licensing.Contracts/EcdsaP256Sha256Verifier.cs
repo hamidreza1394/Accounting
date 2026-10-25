@@ -72,7 +72,12 @@ public sealed class EcdsaP256Sha256Verifier : ILicenseSignatureVerifier
 				return false;
 			}
 
-			if (ecdsa.KeySize != 256)
+			var publicParameters = ecdsa.ExportParameters(includePrivateParameters: false);
+			if (ecdsa.KeySize != 256
+			    || !string.Equals(
+				    publicParameters.Curve.Oid.Value,
+				    ECCurve.NamedCurves.nistP256.Oid.Value,
+				    StringComparison.Ordinal))
 			{
 				errorCode = "public_key_curve_invalid";
 				return false;
