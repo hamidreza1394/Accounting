@@ -117,7 +117,7 @@
 - آزمون: امضای معتبر/نامعتبر/دستکاری‌شده، `kid` و `formatVersion` ناشناخته، `sequence` قدیمی، `installationId` ناسازگار، مرزهای انقضا/ارفاق/محدود، عقب‌گرد ساعت؛ آزمون منفی گارد G1/G2.
 - پذیرش: هیچ کلید خصوصی در مخزن؛ `Licensing.Contracts` به `Server`، EF و ASP.NET وابسته نیست؛ بردارهای تست روی Linux و Windows اجرا و ثبت شده‌اند (الگوریتم نهایی ECDSA P-256/SHA-256، IEEE P1363 64 بایت).
 - ریسک امنیتی/مهاجرت: انتخاب الگوریتم؛ نشت کلید آزمایشی در بردارها (فقط کلید آزمایشی بی‌ارزش، با برچسب صریح)؛ **Migration ندارد**.
-- مستندات: `LICENSING.md`، `LICENSING_THREAT_MODEL.md`، `TESTING.md`، `DEPLOYMENT.md`، D-024 (ارتقای وضعیت پس از تأیید).
+- مستندات: `LICENSING.md`، `LICENSING_THREAT_MODEL.md`، `TESTING.md`، `DEPLOYMENT.md`، D-045 (انتخاب الگوریتم پذیرفته شده؛ بردارهای آزمون هنوز باید اجرا شوند).
 
 **L2 — سامانهٔ مرکزی فروشنده**
 - هدف و دامنه: Host، دیتابیس و هویت مستقل؛ مدل `CustomerAccount/Contact/Product/Subsystem/Contract/SupportContract/License/LicenseRevision/Entitlement/Limit/Installation/ActivationRequest/CustomerBoundary/SigningKey/CentralAdminUser/AuditEvent`؛ سرویس امضا؛ صدور و ابطال دستی با فایل؛ ممیزی زنجیره‌ای؛ مدیر مرکزی با MFA. Endpoint آنلاین (D-042) مرحلهٔ بعدی همین فاز.
