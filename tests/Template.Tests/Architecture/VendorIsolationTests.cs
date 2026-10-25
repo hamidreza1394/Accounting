@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using Xunit;
 
 namespace Template.Tests.Architecture;
 
@@ -143,7 +144,7 @@ public sealed class VendorIsolationTests
     {
         foreach (var startingDirectory in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })
         {
-            var current = new DirectoryInfo(startingDirectory);
+            DirectoryInfo? current = new DirectoryInfo(startingDirectory);
             while (current is not null)
             {
                 if (File.Exists(Path.Combine(current.FullName, "Template.sln")) &&
@@ -164,9 +165,10 @@ public sealed class VendorIsolationTests
     {
         var fullDirectory = Path.GetFullPath(directory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         var fullCandidate = Path.GetFullPath(candidatePath);
-        return fullCandidate.Equals(fullDirectory, StringComparison.OrdinalIgnoreCase) ||
-               fullCandidate.StartsWith(fullDirectory + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
-               fullCandidate.StartsWith(fullDirectory + Path.AltDirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        return fullCandidate.Equals(fullDirectory, comparison) ||
+               fullCandidate.StartsWith(fullDirectory + Path.DirectorySeparatorChar, comparison) ||
+               fullCandidate.StartsWith(fullDirectory + Path.AltDirectorySeparatorChar, comparison);
     }
 
     private static string NormalizeProjectPath(string path) =>
