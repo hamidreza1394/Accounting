@@ -63,6 +63,28 @@ jobs:
         run: dotnet restore Vendor.sln
       - name: Build Vendor solution
         run: dotnet build Vendor.sln --no-restore --configuration Release
+      - name: Scaffold Vendor initial migration for review
+        env:
+          FARANO_VENDOR_ConnectionStrings__VendorDb: Server=localhost,1433;Database=master;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
+        run: |
+          dotnet tool install dotnet-ef --tool-path "$RUNNER_TEMP/dotnet-tools" --version 10.0.13
+          echo "$RUNNER_TEMP/dotnet-tools" >> "$GITHUB_PATH"
+          dotnet ef migrations add VendorInitialIdentityAndAudit --project Vendor/Vendor.Persistence/Vendor.Persistence.csproj --startup-project Vendor/Vendor.Persistence/Vendor.Persistence.csproj --context VendorDbContext --output-dir Migrations
+          dotnet ef migrations has-pending-model-changes --project Vendor/Vendor.Persistence/Vendor.Persistence.csproj --startup-project Vendor/Vendor.Persistence/Vendor.Persistence.csproj --context VendorDbContext
+          echo "::group::EF-generated Vendor migration"
+          cat Vendor/Vendor.Persistence/Migrations/*_VendorInitialIdentityAndAudit.cs
+          echo "::endgroup::"
+          echo "::group::EF-generated Vendor model snapshot"
+          cat Vendor/Vendor.Persistence/Migrations/VendorDbContextModelSnapshot.cs
+          echo "::endgroup::"
+      - name: Upload generated Vendor migration for source review
+        uses: actions/upload-artifact@v4
+        with:
+          name: vendor-generated-migrations-${{ github.sha }}
+          path: Vendor/Vendor.Persistence/Migrations/*.cs
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Test Vendor solution
         env:
           FARANOU_VENDOR_TEST_SQLSERVER: Server=localhost,1433;Database=FaranouVendorTests;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
