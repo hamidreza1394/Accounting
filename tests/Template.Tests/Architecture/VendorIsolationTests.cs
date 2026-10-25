@@ -15,7 +15,7 @@ public sealed class VendorIsolationTests
         var repositoryRoot = FindRepositoryRoot();
         var serverProject = Path.Combine(repositoryRoot, "Server", "Server.csproj");
 
-        var violations = FindVendorProjectReferenceViolations(repositoryRoot, serverProject);
+        var violations = FindServerVendorBoundaryViolations(repositoryRoot, serverProject);
 
         Assert.True(
             violations.Count == 0,
@@ -84,17 +84,20 @@ public sealed class VendorIsolationTests
 
         try
         {
-            WriteProject(Path.Combine(serverDirectory, "Server.csproj"), "../Shared/Shared.csproj");
+            WriteProject(Path.Combine(serverDirectory, "Server.csproj"), "../Shared/Shared.csproj", "Contoso.Vendor.Security");
             WriteProject(Path.Combine(sharedDirectory, "Shared.csproj"), "../Vendor/Host/Host.csproj");
             WriteProject(Path.Combine(vendorDirectory, "Host.csproj"));
 
-            var violations = FindVendorProjectReferenceViolations(
+            var violations = FindServerVendorBoundaryViolations(
                 temporaryRoot,
                 Path.Combine(serverDirectory, "Server.csproj"));
 
             Assert.True(
-                violations.Any(violation => violation.Contains("Vendor", StringComparison.OrdinalIgnoreCase)),
+                violations.Any(violation => violation.Contains("Forbidden Vendor project reference", StringComparison.Ordinal)),
                 "The guard must detect a Vendor project reached through a transitive ProjectReference.");
+            Assert.True(
+                violations.Any(violation => violation.Contains("Forbidden Vendor-specific PackageReference", StringComparison.Ordinal)),
+                "The guard must reject Vendor-specific NuGet dependencies in the Server project graph.");
         }
         finally
         {
@@ -105,7 +108,7 @@ public sealed class VendorIsolationTests
         }
     }
 
-    private static IReadOnlyList<string> FindVendorProjectReferenceViolations(string repositoryRoot, string startingProject)
+    private static IReadOnlyList<string> FindServerVendorBoundaryViolations(string repositoryRoot, string startingProject)
     {
         var vendorDirectory = Path.GetFullPath(Path.Combine(repositoryRoot, "Vendor"));
         var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -129,6 +132,15 @@ public sealed class VendorIsolationTests
             }
 
             var document = XDocument.Load(projectPath);
+            foreach (var packageReference in document.Descendants().Where(element => element.Name.LocalName == "PackageReference"))
+            {
+                var packageName = (string?)packageReference.Attribute("Include");
+                if (packageName is not null && packageName.Contains("Vendor", StringComparison.OrdinalIgnoreCase))
+                {
+                    violations.Add($"Forbidden Vendor-specific PackageReference in {projectPath}: {packageName}");
+                }
+            }
+
             foreach (var reference in document.Descendants().Where(element => element.Name.LocalName == "ProjectReference"))
             {
                 var include = (string?)reference.Attribute("Include");
@@ -187,12 +199,23 @@ public sealed class VendorIsolationTests
     private static string NormalizeProjectPath(string path) =>
         path.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
 
-    private static void WriteProject(string path, string? projectReference = null)
+    private static void WriteProject(string path, string? projectReference = null, string? packageReference = null)
     {
         var project = new XElement("Project");
+        var itemGroup = new XElement("ItemGroup");
         if (projectReference is not null)
         {
-            project.Add(new XElement("ItemGroup", new XElement("ProjectReference", new XAttribute("Include", projectReference))));
+            itemGroup.Add(new XElement("ProjectReference", new XAttribute("Include", projectReference)));
+        }
+
+        if (packageReference is not null)
+        {
+            itemGroup.Add(new XElement("PackageReference", new XAttribute("Include", packageReference)));
+        }
+
+        if (itemGroup.HasElements)
+        {
+            project.Add(itemGroup);
         }
 
         new XDocument(project).Save(path);
