@@ -307,7 +307,7 @@
 
 ## 2026-10-25 — نسخه‌بندی Skillهای مهندسی فرانو (Issue #85)
 - **هدف:** همگام‌کردن راهنمای توسعه با معماری تأییدشده و ایجاد راهنماهای تخصصی قابل‌بازبینی در مخزن.
-- **تغییرات:** Skill اصلی برای `.NET 10 / C# 14` و معماری Razor Pages + React/TypeScript/Vite/Tailwind + API هم‌مبدأ همگام شد؛ Skillهای معماری، امنیت و Multi-Tenancy، تست/کیفیت، UI/UX فارسی RTL و دامنه حسابداری اضافه شدند. `docs/INDEX.md` و handoff Issue #85 به‌روزرسانی شدند.
+- **تغییرات:** Skill اصلی برای `.NET 10 / C# 14` و معماری Razor Pages + React/TypeScript/Vite/Tailwind + API هم‌مبدأ همگام شد؛ Skillهای معماری، امنیت و Multi-Tenancy، تست/کیفیت، UI/UX فارسی RTL و دامنه حسابداری اضافه شدند. `CLAUDE.md`، `docs/INDEX.md` و handoff Issue #85 به‌روزرسانی شدند.
 - **محدوده:** مستندات و Skillها בלבד؛ هیچ کد اجرایی، Schema/Migration، package manifest، lockfile یا Workflow تغییر نکرد.
 - **اعتبارسنجی:** فایل‌های مبنا و Skill نصب‌شده از GitHub/محیط Skill خوانده شدند. Build، تست .NET و تست کلاینت اجرا نشدند؛ این تغییر صرفاً مستنداتی است. بررسی نهایی لینک‌ها و diff در PR باقی است.
 - **وضعیت:** روی شاخه `docs/issue-85-faranou-engineering-skills`؛ ادغام نشده و نیازمند بازبینی انسانی است.
