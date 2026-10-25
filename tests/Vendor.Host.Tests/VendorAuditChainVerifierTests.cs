@@ -6,7 +6,7 @@ namespace Faranou.Vendor.Host.Tests;
 public sealed class VendorAuditChainVerifierTests
 {
     [Fact]
-    public void Verify_RejectsFreeFormMetadataEvenBeforeHashValidation()
+    public void VerifyRejectsFreeFormMetadataEvenBeforeHashValidation()
     {
         var auditEvent = new VendorAuditEvent
         {
@@ -20,7 +20,7 @@ public sealed class VendorAuditChainVerifierTests
             MetadataJson = "{\"password\":\"must-never-be-accepted\"}"
         };
 
-        var result = new VendorAuditChainVerifier().Verify([auditEvent]);
+        var result = VendorAuditChainVerifier.Verify([auditEvent]);
 
         Assert.False(result.IsValid);
         Assert.Equal("invalid-event-fields-or-unapproved-metadata", result.FailureCode);
@@ -28,7 +28,7 @@ public sealed class VendorAuditChainVerifierTests
     }
 
     [Fact]
-    public void Verify_RejectsNonOpaqueSubjectIdentifiers()
+    public void VerifyRejectsNonOpaqueSubjectIdentifiers()
     {
         var auditEvent = new VendorAuditEvent
         {
