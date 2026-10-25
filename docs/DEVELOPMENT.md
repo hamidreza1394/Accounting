@@ -165,3 +165,8 @@ pwsh scripts/publish.ps1 -Output artifacts\publish   # Windows (همان مرا�
 - در محیط توسعه، پس از تنظیم متغیر امن، فهرست Migrationها را با فرمان زیر بررسی کنید:
   `dotnet ef migrations list --project Vendor/Vendor.Persistence/Vendor.Persistence.csproj --startup-project Vendor/Vendor.Persistence/Vendor.Persistence.csproj --context VendorDbContext`
 - پیش از اعمال در محیط Production، SQL script قابل بازبینی تولید و مرحله‌بندی deployment/backup طبق راهنمای عملیات اجرا شود؛ Migrationهای Vendor هیچ‌گاه روی دیتابیس مشتری اجرا نمی‌شوند.
+
+
+## نسخهٔ SDK در CI
+- برای reproducibility، `.github/workflows/dotnet.yml` فعلاً از SDK `10.0.402` استفاده می‌کند؛ این نسخه در workflow مستقل Vendor نصب و آزموده شد، در حالی‌که انتخاب خودکار `10.0.x` در 2026-10-25 به دانلود `10.0.403` و `10.0.14` با HTTP 409 برخورد کرد (Issue #108).
+- این pin جایگزین ارتقای امنیتی معمول نیست: هنگام انتشار و دسترس‌پذیری پایدار SDK patch جدید، با Issue/PR جدا، `dotnet-version` و `global.json` را هماهنگ و همهٔ تست‌های CI را اجرا کنید. صرف سبزشدن Setup کافی نیست.
