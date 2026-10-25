@@ -40,6 +40,7 @@ public sealed class VendorPersistenceIntegrationTests
         {
             await db.Database.MigrateAsync();
             Assert.Empty(await db.Database.GetPendingMigrationsAsync());
+            Assert.NotNull(db.Model.FindEntityType(typeof(Microsoft.AspNetCore.Identity.IdentityUserPasskey<Guid>)));
 
             var sqlConnection = db.Database.GetDbConnection();
             await sqlConnection.OpenAsync();
@@ -51,10 +52,10 @@ public sealed class VendorPersistenceIntegrationTests
                     WHERE name IN (
                         N'VendorAdminUsers', N'VendorAdminRoles', N'VendorAdminUserClaims',
                         N'VendorAdminUserLogins', N'VendorAdminUserRoles', N'VendorAdminUserTokens',
-                        N'VendorAdminRoleClaims', N'VendorAuditEvents');
+                        N'VendorAdminRoleClaims', N'VendorAdminUserPasskeys', N'VendorAuditEvents');
                     """;
                 var tableCount = Convert.ToInt64(await command.ExecuteScalarAsync());
-                Assert.Equal(8L, tableCount);
+                Assert.Equal(9L, tableCount);
             }
 
             var adminId = Guid.NewGuid();
