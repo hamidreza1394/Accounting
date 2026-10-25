@@ -6,7 +6,7 @@
 - **وضعیت:** تست G1 و مستندات افزوده شده‌اند؛ منتظر CI و بازبینی
 
 ## هدف و معیارهای پذیرش
-- [x] تست رگرسیون برای گراف مستقیم/ترنزیتیو `Server` افزوده شد.
+- [x] تست رگرسیون برای گراف مستقیم/ترنزیتیو `Server` و PackageReferenceهای Vendor-محور افزوده شد.
 - [x] نبود ProjectReference در `Licensing.Contracts` کنترل می‌شود.
 - [x] لینک‌های Compile/Content به خارج از پوشهٔ `Licensing.Contracts` رد می‌شوند.
 - [x] fixture منفی نشان می‌دهد وابستگی ترنزیتیو به Vendor تشخیص داده می‌شود.
@@ -14,7 +14,7 @@
 - [ ] بازبینی نهایی diff و بررسی اینکه هیچ مسیر معتبر پروژه به‌اشتباه رد نمی‌شود.
 
 ## خلاصه تغییرات
-- `tests/Template.Tests/Architecture/VendorIsolationTests.cs`: تست معماری G1؛ پیمایش XML گراف پروژه، کنترل `Licensing.Contracts` و تست منفی.
+- `tests/Template.Tests/Architecture/VendorIsolationTests.cs`: تست معماری G1؛ پیمایش XML گراف پروژه، رد PackageReferenceهای Vendor-محور، کنترل `Licensing.Contracts` و تست منفی.
 - `docs/DECISIONS.md`: وضعیت واقعی G1–G6 و شکاف‌های باقی‌مانده ثبت شد؛ D-041 بی‌صدا به‌عنوان کاملاً محقق‌شده معرفی نشد.
 - `docs/TESTING.md`: راهنمای اجرای گارد و حدود آن افزوده شد.
 - `docs/WORK_LOG.md`: شواهد، محدودیت‌ها و گام بعدی ثبت شد.
