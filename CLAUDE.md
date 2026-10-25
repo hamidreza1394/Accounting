@@ -122,10 +122,19 @@ Lead برای هر کار تقسیم‌شده در گزارش پایانی می�
    | UI/UX فارسی و RTL | `frontend-developer` | `faranou-ui-ux-design` |
    | تست و کیفیت فرانو | `qa-engineer` | `faranou-testing-quality` |
    | حسابداری، مالی و قواعد داده | `backend-developer` / `database-engineer` | `faranou-accounting-domain` |
+   | توسعه عمومی .NET/C# | `backend-developer` | `dotnet-patterns` |
+   | آزمون C#/.NET | `qa-engineer` | `csharp-testing` |
+   | طراحی API هم‌مبدأ | `backend-developer` | `api-design` |
+   | React/TypeScript | `frontend-developer` | `react-patterns` |
+   | آزمون React/Vitest | `qa-engineer` | `react-testing` |
+   | E2E مرورگر | `qa-engineer` | `e2e-testing` |
+   | تحلیل اثر قبل/بعد تغییر | `architect` | `change-impact` |
+   | Migrationهای EF Core/SQL Server | `database-engineer` | `faranou-efcore-migrations` |
+   | ثبت تصمیم معماری در فایل موجود | `architect` | `faranou-architecture-decisions` |
    | توسعه عمومی فرانو | Agent حوزهٔ مربوط | `faranou-senior-developer` |
    | پیش از ادعای «تمام شد» | Lead | `superpowers:verification-before-completion` |
 
-   Skillهای اختصاصی فرانو در `.claude/skills/` نسخه‌بندی شده‌اند (Issue #85 / PR #86). وجود فایل در مخزن به‌تنهایی ثابت نمی‌کند که Skill در جلسهٔ جاری در دسترس یا فراخوانی شده است؛ فهرست Skillهای همان جلسه را بررسی کن و فقط در صورت در دسترس بودن آن را فعال کن. در هر تعارض، `AGENTS.md`، این فایل و ADRها مقدم‌اند.
+   Skillهای اختصاصی فرانو و Skillهای انتخابی سازگارشده از ECC در `.claude/skills/` نسخه‌بندی شده‌اند (Issue #85 / PR #86 و Issue #87). منشأ، SHA و قواعد سازگارسازی در `docs/THIRD_PARTY_SKILLS.md` ثبت شده‌اند. وجود فایل در مخزن به‌تنهایی ثابت نمی‌کند که Skill در جلسهٔ جاری در دسترس یا فراخوانی شده است؛ فهرست Skillهای همان جلسه را بررسی کن و فقط در صورت در دسترس بودن آن را فعال کن. در هر تعارض، `AGENTS.md`، این فایل و ADRها مقدم‌اند.
 4. **تقدم:** Skill و Plugin ابزار کمکی‌اند و بر `AGENTS.md`، این فایل و ADRها غلبه نمی‌کنند. اگر فرایند یا خروجی Skill تعارض داشت (CDN یا فونت خارجی، Commit/Push/Merge خودکار، ساخت شاخه یا worktree جدا، تغییر معماری یا Schema بدون تأیید)، قاعدهٔ مخزن اجرا و تعارض گزارش می‌شود.
 5. **در دسترس نبود:** محدودیت را صریح اعلام کن، جایگزین مناسب (Agent مخزن یا چک‌لیست دستی از `docs/`) را به کار ببر و در گزارش «در دسترس نبود» ثبت کن؛ هرگز ادعای اجرا نکن.
 6. **پس از تغییر و گزارش:** تست‌های مرتبط و بازبینی مستقل به نسبت ریسک طبق بخش ث و `AGENTS.md` بخش ۴ اجرا می‌شود. گزارش پایانی (علاوه بر ت و `AGENTS.md` بخش ۵) چهار دستهٔ جدا دارد: **استفاده‌شده** (با شاهد)، **در دسترس ولی استفاده‌نشده** (با دلیل)، **در دسترس نبود**، **اجرانشده** (با دلیل).
