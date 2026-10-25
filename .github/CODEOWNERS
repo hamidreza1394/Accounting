@@ -1,0 +1,8 @@
+# Ownership boundaries for the Vendor control plane and its shared public contract.
+# CODEOWNERS only requests ownership review; enforce required code-owner reviews in repository rules/branch protection.
+/Vendor/ @hamidreza1394
+/Vendor.sln @hamidreza1394
+/tests/Vendor.Host.Tests/ @hamidreza1394
+/Licensing.Contracts/ @hamidreza1394
+/.github/workflows/vendor-ci.yml @hamidreza1394
+/.github/workflows/dotnet.yml @hamidreza1394
