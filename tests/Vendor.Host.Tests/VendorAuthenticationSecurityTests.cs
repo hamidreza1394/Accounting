@@ -309,7 +309,7 @@ public sealed class VendorAuthenticationSecurityTests
         _ => operation.GetType().Name + " (" + operation + ")"
     };
 
-    private static string GenerateTotpCode(string base32Secret)
+    internal static string GenerateTotpCode(string base32Secret)
     {
         const string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
         var normalized = base32Secret.Trim().TrimEnd('=').ToUpperInvariant();
