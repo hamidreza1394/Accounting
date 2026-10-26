@@ -228,11 +228,13 @@ public static class VendorBootstrapCommand
         }
         catch (OperationCanceledException)
         {
+            await TryAuditFailureAsync(services, "vendor.bootstrap.cancelled", CancellationToken.None);
             prompt.WriteLine("Bootstrap لغو شد؛ حساب موقت، در صورت ایجاد، غیرفعال باقی می‌ماند.");
             return 10;
         }
         catch (Exception exception)
         {
+            await TryAuditFailureAsync(services, "vendor.bootstrap.failed", CancellationToken.None);
             // Do not log exception messages or objects: provider exceptions may contain connection data.
             logger.LogError("Vendor bootstrap failed. Exception type: {ExceptionType}. Sensitive exception details were intentionally omitted.",
                 exception.GetType().Name);
