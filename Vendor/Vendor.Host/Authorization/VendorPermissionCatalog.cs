@@ -7,8 +7,8 @@ namespace Faranou.Vendor.Host.Authorization;
 public static class VendorPermissionCatalog
 {
     public const int Version = 1;
-    public const string ClaimType = "vendor:permission";
-    public const string PolicyPrefix = "VendorPermission:";
+    public const string ClaimType = "vendor:permission:v1";
+    public const string PolicyPrefix = "VendorPermission:v1:";
 
     public const string CustomersRead = "vendor.customers.read";
     public const string CustomersManage = "vendor.customers.manage";
