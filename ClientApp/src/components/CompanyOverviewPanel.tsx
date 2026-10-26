@@ -153,6 +153,7 @@ export function CompanyOverviewPanel({ companyId, currentPeriodId, onUnauthentic
           </div>
           </>
         )}
+        </Card>
       </section>
 
       <section aria-labelledby="modules-heading" className="rounded-2xl border border-gold/40 bg-warning-soft p-5 text-sm">
@@ -163,7 +164,6 @@ export function CompanyOverviewPanel({ companyId, currentPeriodId, onUnauthentic
           اسناد حسابداری، سرفصل حساب‌ها و گزارش‌های مالی هنوز پیاده‌سازی نشده‌اند؛ به همین دلیل هیچ آمار مالی در این
           داشبورد نمایش داده نمی‌شود.
         </p>
-        </Card>
       </section>
     </div>
   );
