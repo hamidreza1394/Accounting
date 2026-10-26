@@ -219,3 +219,11 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - Hash-chain در همان پایگاه داده، تغییر یک رخداد را تشخیص می‌دهد اما بازنویسی کامل توسط DBA را متوقف نمی‌کند. برای Production، حساب SQL برنامه باید کمترین دسترسی لازم و بدون UPDATE/DELETE روی جدول ممیزی داشته باشد؛ مهاجرت/حساب اجرایی نیازمند تفکیک مجوز است.
 - پیش از ادغام عملیات حساس: Verify chain باید fail-closed عمل کند؛ شکست اعتبارسنجی نباید به صدور لایسنس، تغییر مدیر یا عملیات حساس اجازه دهد.
 - Checkpoint/export به مقصد مستقل، پایش شکست/انحراف، retention و runbook بازیابی هنوز پیاده نشده‌اند؛ هیچ ادعای ممیزی تغییرناپذیر/Production-ready مطرح نمی‌شود.
+
+
+## Vendor RBAC — Issue #150 (foundation only; not Production-verified)
+- The Vendor Host defines a versioned server-side permission catalog. Permission identifiers are not role names and must not be derived from UI visibility.
+- Named permission policies combine the existing enabled Vendor administrator/MFA requirement with an explicit permission requirement.
+- Permissions are read from ASP.NET Core Identity role claims of type `vendor:permission`; unknown permission identifiers fail closed.
+- This is only the authorization foundation. No role/permission administration API, resource-level customer/installation/contract/license checks, maker-checker state machine, or audit checkpoint is claimed complete.
+- The PR must pass Vendor CI, SQL Server integration tests, the strict EF snapshot gate, publish/artifact checks, and full repository CI before the implementation can be considered verified.
