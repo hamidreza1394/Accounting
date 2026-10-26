@@ -171,7 +171,7 @@ public sealed class VendorAuthenticationSecurityTests
             finally
             {
                 await db.Database.CloseConnectionAsync();
-                await db.Database.EnsureDeletedAsync(CancellationToken.None);
+                await db.Database.EnsureDeletedAsync(TestContext.Current.CancellationToken);
             }
         }
     }
