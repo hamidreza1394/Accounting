@@ -397,6 +397,6 @@
 - **محافظت destructive test:** تست فقط `localhost`, `127.0.0.1` یا `::1` و catalog پایهٔ `FaranouVendorTests` را می‌پذیرد؛ سپس DB نام‌تصادفی می‌سازد، connection را می‌بندد و فقط همان DB را حذف می‌کند. در CI متغیر test الزامی است و تست نمی‌تواند بی‌صدا skip شود.
 - **Workflow:** نام متغیرهای integration test با workflow یکسان شد. CI از SQL Server 2022 استفاده می‌کند؛ اسکن/Publish و مرحلهٔ signing تغییر نکرده‌اند.
 - **مرز داده:** هیچ فایل `Server/**`، `Infrastructure/Persistence/**` یا Migration مشتری تغییر نکرده است؛ هیچ endpoint ورود/ثبت‌نام/bootstrap، مدیر seed، secret یا کلید امضا اضافه نشد.
-- **اعتبارسنجی:** Build/Test محلی اجرا نشده‌اند. CI روی PR جاری باید اجرا شود؛ تا آن زمان تست Migration و DI `NotVerified` هستند. CI قبلی PR #102 سبز بود اما فقط شاهد model-snapshot check و وضعیت قبل از این تغییرات است.
+- **اعتبارسنجی:** Build/Test محلی اجرا نشده‌اند. Vendor CI روی PR #118، run `40272872248`، سبز شد: Restore، Build، `dotnet ef migrations has-pending-model-changes`، تست‌های Vendor (از جمله Migration واقعی روی SQL Server)، Publish و گارد خروجی موفق بودند. `.NET CI` run `40272872260` در زمان ثبت هنوز در حال اجرا بود؛ نتیجهٔ کلی PR تا پایان آن نهایی نیست. CI PR #102 پیش از این تغییرات فقط model-snapshot check داشت.
 - **باقی‌مانده:** MFA/passkey/TOTP، bootstrap یک‌بارمصرف، RBAC سمت سرور، audit writer/verifier/checkpoint، maker-checker، کنترل‌های deploy و G2 allow-list انتشار همچنان مرحله‌های مستقل هستند.
 - **Handoff:** `docs/handoffs/ISSUE-117-vendor-persistence-hardening.md`.
