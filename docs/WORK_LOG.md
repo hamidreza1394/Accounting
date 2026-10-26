@@ -556,3 +556,4 @@
 - **دامنه داده:** هیچ Migration یا دیتابیس مشتری تغییر نکرده است. Issue #113 باز می‌ماند تا تمام معیارها و CI تأیید شوند.
 - **خطای CI و اصلاح DI:** Vendor CI run [40363406842](https://github.com/hamidreza1394/Accounting/actions/runs/40363406842) در آزمون Integration خطا داد: `DataProtectorTokenProvider<VendorAdminUser>` نمی‌توانست `IDataProtectionProvider` را resolve کند. علت این بود که command mode و ServiceCollection تست، Data Protection را ثبت نکرده بودند. ثبت سرویس و رعایت مسیر کلید persistent در Production اضافه شد؛ اجرای تازه لازم است.
 - **محافظت از خروجی حساس:** راز bootstrap با ورودی مخفی دریافت می‌شود؛ URI TOTP فقط از مسیر خروجی کنسول تعاملی نوشته می‌شود و در صورت redirect بودن stdout، enrollment fail-closed می‌شود.
+- **محافظت از خروجی حساس:** راز bootstrap با ورودی مخفی دریافت می‌شود؛ URI TOTP فقط از مسیر خروجی کنسول تعاملی نوشته می‌شود و در صورت redirect بودن stdout، enrollment fail-closed می‌شود.
