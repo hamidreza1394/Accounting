@@ -473,3 +473,7 @@
 - شاخهٔ `fix/vendor-identity-registration-single-source` ثبت Identity را به یک محل در Persistence منتقل می‌کند و تنظیمات SchemaVersion، SignInManager و DefaultTokenProviders را همان‌جا نگه می‌دارد. Host فقط پیکربندی Host/auth cookie را انجام می‌دهد.
 - هدف، حذف ثبت تکراری سرویس‌ها و جلوگیری از اختلاف تنظیمات Identity در زمان اجرای Migration/احراز هویت است. این ارتباط علت قطعی شکست قبلی اعلام نمی‌شود تا CI و تست SQL Server آن را تأیید کنند.
 - تست/build محلی اجرا نشده؛ منتظر CI روی PR مستقل هستیم.
+
+### CI evidence — Vendor UI fix PR #131
+- Vendor CI run [40285919870](https://github.com/hamidreza1394/Accounting/actions/runs/40285919870) completed with failure in `VendorAuthenticationSecurityTests.PasswordOnlyIsDeniedAndTotpChallengeDoesNotIssueApplicationCookie`: runtime `Database.MigrateAsync` throws `PendingModelChangesWarning`. Frontend typecheck/tests/build, asset budget, .NET build and EF CLI snapshot check passed in the same run.
+- This reproduces the runtime-only model mismatch and motivates validating the single-source Identity registration in PR #132. The duplicated registration is a concrete inconsistency, but is not declared the proven sole root cause until the new SQL Server integration run passes.
