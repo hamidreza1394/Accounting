@@ -57,6 +57,40 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+      - name: Setup Node for standalone Vendor UI
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: Vendor/Vendor.Web/package-lock.json
+      - name: Install locked Vendor UI dependencies
+        working-directory: Vendor/Vendor.Web
+        run: npm ci --no-fund --no-audit
+      - name: Type-check Vendor UI
+        working-directory: Vendor/Vendor.Web
+        run: npm run typecheck
+      - name: Test Vendor UI
+        working-directory: Vendor/Vendor.Web
+        run: npm test
+      - name: Audit Vendor UI runtime dependencies
+        working-directory: Vendor/Vendor.Web
+        run: npm audit --omit=dev --audit-level=high
+      - name: Build Vendor UI into the standalone Host
+        working-directory: Vendor/Vendor.Web
+        run: npm run build
+      - name: Enforce Vendor UI asset budgets
+        shell: bash
+        run: |
+          set -euo pipefail
+          js="$(find Vendor/Vendor.Host/wwwroot/assets -maxdepth 1 -type f -name '*.js' -print -quit)"
+          css="$(find Vendor/Vendor.Host/wwwroot/assets -maxdepth 1 -type f -name '*.css' -print -quit)"
+          test -n "$js"
+          test -n "$css"
+          js_gzip="$(gzip -c "$js" | wc -c)"
+          css_gzip="$(gzip -c "$css" | wc -c)"
+          echo "Vendor UI compressed assets: JS=${js_gzip} bytes, CSS=${css_gzip} bytes"
+          test "$js_gzip" -le 102400 || { echo "Vendor JS gzip budget exceeded (100 KiB)." >&2; exit 1; }
+          test "$css_gzip" -le 20480 || { echo "Vendor CSS gzip budget exceeded (20 KiB)." >&2; exit 1; }
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
@@ -77,6 +111,7 @@ jobs:
 
       - name: Test Vendor solution
         env:
+          FARANO_VENDOR_ConnectionStrings__VendorDb: Server=localhost,1433;Database=FaranouVendorTests;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
           FARANO_VENDOR_TEST_SQLSERVER: Server=localhost,1433;Database=FaranouVendorTests;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
           FARANO_REQUIRE_VENDOR_SQLSERVER: '1'
         run: dotnet test Vendor.sln --configuration Release
@@ -88,6 +123,9 @@ jobs:
           set -euo pipefail
           out="$RUNNER_TEMP/vendor-publish"
           test -s "$out/Faranou.Vendor.Host.dll"
+          test -s "$out/wwwroot/index.html"
+          test -n "$(find "$out/wwwroot/assets" -type f -name '*.js' -print -quit)"
+          test -n "$(find "$out/wwwroot/assets" -type f -name '*.css' -print -quit)"
           if find "$out" -type f \( -iname '*.pfx' -o -iname '*.p12' -o -iname '*.key' \) -print -quit | grep -q .; then
             echo 'Private-key file extension found in Vendor publish output.' >&2
             exit 1

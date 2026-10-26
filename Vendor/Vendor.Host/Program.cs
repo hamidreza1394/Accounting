@@ -1,6 +1,12 @@
 using System.Threading.RateLimiting;
 using Faranou.Vendor.Host.Authentication;
 using Faranou.Vendor.Persistence;
+using Faranou.Vendor.Persistence.Identity;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -194,6 +200,27 @@ if (app.Environment.IsProduction())
 }
 
 app.UseRouting();
+
+// The standalone Vendor UI is bundled into this Host at publish time. Serve only local
+// assets; the login screen and compiled JS/CSS are intentionally public, while APIs remain
+// protected by the endpoint authorization policy below.
+app.UseDefaultFiles();
+app.Use(async (context, next) =>
+{
+    // Vite emits content-hashed filenames under /assets; immutable caching avoids
+    // repeat downloads while a new index.html immediately points to the latest bundle.
+    if (context.Request.Path.StartsWithSegments("/assets"))
+    {
+        context.Response.Headers.CacheControl = "public,max-age=31536000,immutable";
+    }
+    else if (string.Equals(Path.GetFileName(context.Request.Path), "index.html", StringComparison.OrdinalIgnoreCase))
+    {
+        context.Response.Headers.CacheControl = "no-store";
+    }
+
+    await next();
+});
+app.UseStaticFiles();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -201,7 +228,31 @@ app.UseAntiforgery();
 
 app.MapHealthChecks("/health/live").AllowAnonymous();
 app.MapVendorAuthentication();
-app.MapFallback(() => Results.NotFound()).AllowAnonymous();
+app.MapFallback(async context =>
+{
+    var path = context.Request.Path.Value ?? "/";
+    if ((!HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method)) ||
+        path.StartsWith("/api", StringComparison.OrdinalIgnoreCase) ||
+        path.StartsWith("/health", StringComparison.OrdinalIgnoreCase) ||
+        Path.HasExtension(path))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    var webRoot = app.Environment.WebRootPath ??
+        Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+    var indexPath = Path.Combine(webRoot, "index.html");
+    if (!File.Exists(indexPath))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    context.Response.ContentType = "text/html; charset=utf-8";
+    context.Response.Headers.CacheControl = "no-store";
+    await context.Response.SendFileAsync(indexPath);
+}).AllowAnonymous();
 
 app.Run();
 

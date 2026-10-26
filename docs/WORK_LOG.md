@@ -411,14 +411,31 @@
 - **اعتبارسنجی:** مستندات رسمی فعلی shadcn/ui برای Vite، RTL و Tailwind v4 بررسی شدند. Build/Test در این مرحله اجرا نشده است.
 - **دیتابیس:** هیچ تغییر دیتابیس یا Migration انجام نشد.
 
+## 2026-10-26 — VENDOR-UI-01: اسکلت مستقل پنل فروشنده (Issue #126)
+- **هدف:** شروع مرحله UI بدون وابستگی به UI مشتری و بدون جعل API یا داده مدیریتی.
+- **Branch:** feat/issue-126-vendor-ui-shell.
+- **تغییرات:** پروژه مستقل Vendor/Vendor.Web با React 19، TypeScript strict، Vite، Tailwind v4، lockfile مستقل و source-owned shadcn Button/Card؛ صفحه ورود فارسی RTL با جریان واقعی password→TOTP و antiforgery؛ shell واکنش‌گرا و داشبورد اولیه با placeholderهای صریح؛ build به Vendor/Vendor.Host/wwwroot؛ Host static-file و SPA fallback امن که مسیرهای ناشناخته API/health را به HTML تبدیل نمی‌کند؛ Vendor CI شامل npm ci/typecheck/test/build و audit وابستگی‌های runtime و بررسی وجود UI bundle در publish.
+- **مرزها:** هیچ تغییری در ClientApp، دیتابیس مشتری یا Migrationهای مشتری انجام نشده است. آمار مشتری/نصب/لایسنس جعلی نمایش داده نمی‌شود. هیچ توکن یا رمز در localStorage/sessionStorage ذخیره نمی‌شود.
+- **اعتبارسنجی:** Restore/Build/Test و CI از این Agent اجرا نشده‌اند؛ باید نتایج PR را بررسی کرد. وضعیت Implemented in branch، نه Verified و نه Production-ready.
+- **باقی‌مانده:** مرور نهایی TypeScript/React و CI؛ آزمون مرورگری روی HTTPS واقعی؛ تکمیل Issue #119 bootstrap، #123 RBAC و audit checkpoint مستقل پیش از عملیات تجاری.
 
-## 2026-10-26 — نصب واقعی shadcn/ui و اتصال به UI فرانو (Issue #122)
-- **مبنای کار:** `main` پس از ادغام PR #121؛ Branch مستقل `feat/issue-122-shadcn-install`.
-- **علت ادامهٔ Issue:** بازبینی `main` نشان داد Issue #122 بسته شده بود اما `package.json` فقط React و ابزارهای قبلی را داشت؛ alias `@/*` و کامپوننت‌های واقعی shadcn نصب نشده بودند. Issue دوباره باز شد تا وضعیت واقعی با معیار پذیرش منطبق شود.
-- **تغییرات:** نصب از CLI رسمی و پین `shadcn@4.22.1`؛ تولید `button.tsx` و `card.tsx` با Base UI؛ ثبت `@base-ui/react`، `class-variance-authority`، `cn` و `lucide-react` در وابستگی‌ها؛ حذف `clsx` و `tailwind-merge` که در این مسیر استفاده نمی‌شوند؛ تولید lockfile با npm و clean install؛ alias در Vite/TypeScript؛ توکن‌های semantic هماهنگ با رنگ‌های فرانو.
-- **اتصال به محصول:** retry در `Feedback.tsx` از shadcn Button استفاده می‌کند؛ دو پنل اطلاعات شرکت و دوره مالی در `CompanyOverviewPanel.tsx` از Card استفاده می‌کنند؛ کامپوننت قدیمی `Button.tsx` به `FaranouButton.tsx` تغییر نام داده شد تا در ویندوز و TypeScript با `button.tsx` تداخل حروف بزرگ/کوچک نداشته باشد و رفتار قبلی حفظ شود.
-- **تست:** تست جدید Button برای فعال‌سازی صفحه‌کلید و disabled و تست Card برای عنوان/توضیح/محتوا افزوده شد. اجرای bootstrap پیش از این تست‌های تازه، clean `npm ci`، typecheck، تست‌های موجود، build، offline check و runtime audit را موفق گذراند؛ CI استاندارد باید تست‌های تازه را روی commit نهایی تأیید کند.
-- **امنیت/آفلاین:** کامپوننت‌ها در مخزن هستند؛ CDN، فونت خارجی یا runtime service اضافه نشده. بسته‌های npm فقط در زمان Build/Install لازم‌اند. هیچ دیتابیس مشتری یا Migration تغییر نکرد.
-- **Workflow:** workflow موقت bootstrap پس از تولید و تأیید اولیه حذف شد؛ در مخزن باقی نمی‌ماند. CI دائمی `.NET CI` مرجع نهایی خواهد بود.
-- **وضعیت:** `Implemented, awaiting final CI`؛ PR ادغام‌نشده است و هیچ ادعای Verified برای آخرین commit تا پایان CI نمی‌شود.
-- **Handoff:** `docs/handoffs/ISSUE-122-shadcn-ui-install.md`.
+### پیگیری CI برای VENDOR-UI-01 — 2026-10-26
+- Vendor CI run 40277399614: npm ci، TypeScript typecheck، تست‌های UI، build فرانت‌اند، npm audit و Restore دات‌نت موفق بودند؛ Build دات‌نت شکست خورد چون Program.cs فاقد usingهای لازم برای Data Protection، EF Core، Identity و Authorization بود.
+- اصلاح: افزودن usingهای صریح در Vendor/Vendor.Host/Program.cs، commit 3d317ea206087ae026520a84ada49f61941bf139.
+- وضعیت بازبینی: اجرای Vendor CI روی commit اصلاحی 3d317ea در صف GitHub Actions است؛ هنوز نتیجه Build/Test نهایی نداریم. PR #127 همچنان Draft است و Merge نشده است.
+
+
+## 2026-10-26 — بهبود سرعت بارگذاری Vendor UI و اصلاح پیکربندی CI
+- **دامنه:** ادامهٔ UI پنل فروشنده در شاخه `feat/issue-126-vendor-ui-shell`، بدون تغییر ClientApp یا دیتابیس مشتری.
+- **بهبود بارگذاری:** فایل‌های خروجی Vite در مسیر `/assets` دارای نام‌های hashدار هستند؛ Host برای این فایل‌ها `Cache-Control: public,max-age=31536000,immutable` می‌فرستد تا بارگذاری مجدد از cache مرورگر انجام شود. `index.html` همچنان `no-store` می‌ماند تا انتشار نسخهٔ جدید به bundle قدیمی قفل نشود. این تغییر از الگوی استاندارد asset fingerprinting/cache استفاده می‌کند؛ اندازه و زمان واقعی لود هنوز با Lighthouse/مرورگر اندازه‌گیری نشده است.
+- **یافتهٔ CI:** Vendor CI run 40277588682 نشان داد npm ci، typecheck، تست‌های UI، audit و build فرانت‌اند و نیز .NET build موفق شدند؛ اما ۷ تست Host به دلیل نبود متغیر `FARANO_VENDOR_ConnectionStrings__VendorDb` در مرحلهٔ تست شکست خوردند.
+- **اصلاح CI:** متغیر اتصال VendorDb در مرحلهٔ `dotnet test` به همان SQL Server آزمایشی اضافه شد. این تغییر هنوز باید در اجرای جدید CI تأیید شود؛ هیچ تستی را حذف یا دور نزده‌ایم.
+- **اعتبارسنجی:** بهبود cache و اصلاح workflow در CI جدید باید تأیید شوند. UI هنوز در مرورگر واقعی/HTTPS و با Lighthouse بررسی نشده است؛ ادعای اندازه‌گیری سرعت یا آمادگی Production مطرح نیست.
+- **محدودیت‌ها:** صفحات مشتری/نصب/لایسنس هنوز placeholder هستند؛ bootstrap مدیر، RBAC، اتصال APIهای تجاری، و audit checkpoint مستقل کامل نشده‌اند.
+- **مرجع:** PR #127 — https://github.com/hamidreza1394/Accounting/pull/127.
+
+## 2026-10-26 — کنترل بودجهٔ bundle فرانت‌اند Vendor
+- **اندازه‌گیری مبنا:** خروجی build ثبت‌شده در Vendor CI run 40277588682 برابر بود با JavaScript خام 278.82 kB / gzip 90.03 kB و CSS خام 30.46 kB / gzip 7.29 kB؛ HTML خام 0.53 kB / gzip 0.37 kB. این‌ها اندازهٔ artifact هستند، نه اندازه‌گیری زمان واقعی بارگذاری.
+- **گارد جلوگیری از regression:** به workflow، بررسی سقف gzip برای JavaScript برابر 100 KiB و CSS برابر 20 KiB افزوده شد. اگر رشد وابستگی‌ها یا CSS از این بودجه عبور کند، CI شکست می‌خورد تا قبل از انتشار بررسی شود. اجرای این گارد در CI بعدی باید تأیید شود.
+- **کش مرورگر:** assetهای hashدار یک سال immutable و index.html بدون cache باقی می‌ماند.
+- **مبنای فنی:** راهنمای رسمی Vite توضیح می‌دهد که build تولیدی، preload و CSS splitting را پشتیبانی می‌کند؛ از code splitting دستی تا وقتی bundle بزرگ یا مسیرهای واقعی ماژولار نشده‌اند پرهیز می‌کنیم تا درخواست‌های اضافی و پیچیدگی غیرضروری ایجاد نشود: https://vite.dev/guide/features و https://vite.dev/guide/performance.html.

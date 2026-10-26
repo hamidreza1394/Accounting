@@ -4,6 +4,8 @@
 
 ## وضعیت
 
+- **UI اولیه در شاخه feat/issue-126-vendor-ui-shell پیاده‌سازی شده، اما تا Merge و CI سبز در main پیاده‌سازی تأییدشده محسوب نمی‌شود.** Vendor.Web پروژه React/TypeScript strict/Vite/Tailwind مستقلی است؛ خروجی محلی در Vendor.Host/wwwroot قرار می‌گیرد. ورود از endpointهای واقعی password → TOTP، antiforgery و Cookie هم‌مبدأ استفاده می‌کند. صفحات مشتری/نصب/لایسنس فعلاً فقط placeholder هستند و داده آماری ساختگی نمایش نمی‌دهند.
+
 - اسکلت اولیهٔ Host روی `net10.0` ایجاد شده است.
 - `/health/live` فقط زنده‌بودن فرایند وب را اعلام می‌کند؛ وضعیت دیتابیس یا جزئیات عملیاتی را افشا نمی‌کند.
 - لایهٔ persistence مستقل (`VendorDbContext`، جداول Identity مجزا، `VendorAuditEvents` و Migration اولیه) در PR #102 ادغام شده است؛ CI آن PR هماهنگی مدل/Snapshot را بررسی کرده است. Issue #117 پوشش تکمیلی اجرای Migration روی SQL Server واقعی و ثبت storeهای Identity را اضافه می‌کند. تا سبز شدن CI آن PR، اجرای Migration روی SQL Server در تست اختصاصی `NotVerified` است.
@@ -67,3 +69,20 @@ Host عمداً به ارائه‌دهندهٔ ابری خاصی وابسته ن
 - append با `sp_getapplock` در تراکنش SQL Server سریال می‌شود تا چند نمونهٔ Host یک شاخهٔ واحد بسازند. verifier ریشهٔ چندگانه، والد گمشده، fork، چرخه، رخداد جداشده و تغییر محتوا را گزارش می‌کند.
 - **محدودیت امنیتی:** زنجیره در همان دیتابیس مانع DBA دارای مجوز بازنویسی نمی‌شود. مجوز SQL مخصوص درج، اعتبارسنجی دوره‌ای و checkpoint/export مستقل به مقصدی با مجوز جداگانه همچنان قبل از استفادهٔ Production لازم‌اند.
 - هیچ endpointی هنوز این writer را صدا نمی‌زند؛ wiring به Host پس از تکمیل مسیر ورود/MFA و bootstrap، در PR مستقل انجام می‌شود.
+
+## رابط مستقل Vendor — Issue #126
+
+- پروژه UI مستقل: Vendor/Vendor.Web؛ dependencyها و package-lock.json مستقل از ClientApp هستند. کامپوننت‌های shadcn/ui به‌صورت source-owned در خود پروژه Vendor نگهداری می‌شوند.
+- توسعه محلی: از Vendor/Vendor.Web اجرا کنید: npm ci، سپس npm run dev. برای proxy به Host، مقدار FARANO_VENDOR_SERVER_URL را به آدرس HTTPS واقعی Host تنظیم کنید.
+- Build: npm run typecheck، npm test و npm run build. خروجی build مستقیماً به Vendor/Vendor.Host/wwwroot نوشته می‌شود و در publish مستقل Host بسته‌بندی می‌شود.
+- هیچ CSS/JS/font/icon از CDN بارگیری نمی‌شود. فعلاً فونت‌های سیستم استفاده می‌شوند تا Host مستقل به دارایی‌های مشتری وابسته نباشد.
+- ورود از endpointهای /api/auth/antiforgery، /api/auth/password، /api/auth/totp/verify، /api/auth/me و /api/auth/logout استفاده می‌کند. توکن CSRF فقط در حافظه نگهداری می‌شود؛ credential یا توکن در Web Storage ذخیره نمی‌شود.
+- Host فایل‌های استاتیک و SPA routeهای UI را سرو می‌کند، اما مسیرهای ناشناخته /api/* و /health/* به صفحه SPA بازنویسی نمی‌شوند.
+- این UI به معنی تکمیل bootstrap، RBAC، maker-checker، audit checkpoint یا آمادگی Production نیست. قبل از فعال‌سازی عملیات تجاری، Issueهای امنیتی وابسته و APIهای واقعی باید تکمیل شوند.
+
+
+### Vendor UI performance guardrails
+- خروجی تولیدی Vite به‌صورت local bundle سرو می‌شود؛ CSS/JS/font/icon از CDN خارجی بارگیری نمی‌شود.
+- فایل‌های hashدار `wwwroot/assets` با `Cache-Control: public,max-age=31536000,immutable` کش می‌شوند؛ `index.html` با `no-store` سرو می‌شود تا نسخه‌های جدید فوراً به assetهای hashدار جدید اشاره کنند.
+- Vendor CI سقف gzip برای bundle اصلی JavaScript برابر 100 KiB و CSS برابر 20 KiB را کنترل می‌کند. اندازهٔ مشاهده‌شده در build قبلی 90.03 KiB JS و 7.29 KiB CSS بود؛ گارد تازه باید در CI بعدی تأیید شود.
+- این اعداد اندازهٔ فایل هستند و جایگزین اندازه‌گیری Lighthouse، Core Web Vitals یا تست شبکه در مرورگر واقعی نیستند.

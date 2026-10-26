@@ -32,4 +32,16 @@ public sealed class LivenessEndpointTests
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
+    [Fact]
+    public async Task UnknownApiPathDoesNotFallBackToVendorSpa()
+    {
+        await using var factory = new WebApplicationFactory<Program>();
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync("/api/not-a-real-endpoint", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.DoesNotContain("<html", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.OrdinalIgnoreCase);
+    }
+
 }
