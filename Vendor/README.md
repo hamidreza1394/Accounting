@@ -109,3 +109,5 @@ Host عمداً به ارائه‌دهندهٔ ابری خاصی وابسته ن
 ## بازبینی پس از ادغام‌ها — ثبت Identity
 - در `main` یک ثبت `AddIdentityCore<VendorAdminUser>` در `Vendor.Persistence/DependencyInjection.cs` و ثبت دوم در `Vendor.Host/Program.cs` مشاهده شد. شاخهٔ `fix/vendor-identity-registration-single-source` ثبت تکراری Host را حذف کرده و تنظیمات Identity و providerهای لازم را در Persistence متمرکز می‌کند.
 - تا اجرای Vendor CI و integration testهای SQL Server، این اصلاح **Not verified** است؛ Production-ready اعلام نمی‌شود.
+
+- **اصلاح migration Passkey:** بازبینی پس از merge نشان داد فایل Designer migration مربوط به Passkey در `main` وجود نداشت؛ PR #132 آن را اضافه کرده و تست SQL Server را برای اعمال migration و وجود جدول Passkey گسترش می‌دهد. تا Vendor CI سبز نشود، این اصلاح تأییدشده نیست.
