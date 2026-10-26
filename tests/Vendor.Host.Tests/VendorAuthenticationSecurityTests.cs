@@ -5,9 +5,9 @@ using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Identity;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Xunit;
@@ -38,11 +38,23 @@ public sealed class VendorAuthenticationSecurityTests
             HandleCookies = true
         });
 
+        var configuredConnection = Environment.GetEnvironmentVariable("FARANO_VENDOR_ConnectionStrings__VendorDb");
+        if (string.IsNullOrWhiteSpace(configuredConnection))
+        {
+            Assert.Fail("The isolated Vendor authentication database must be configured in CI.");
+        }
+
+        var connectionBuilder = new SqlConnectionStringBuilder(configuredConnection);
+        Assert.Contains("localhost", connectionBuilder.DataSource, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("FaranouVendorAuthTests", connectionBuilder.InitialCatalog);
+
         await using (var scope = factory.Services.CreateAsyncScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
             await db.Database.EnsureDeletedAsync();
-            await db.Database.MigrateAsync();
+            try
+            {
+                await db.Database.MigrateAsync();
 
             var users = scope.ServiceProvider.GetRequiredService<UserManager<VendorAdminUser>>();
             var passwordOnly = new VendorAdminUser
@@ -135,7 +147,11 @@ public sealed class VendorAuthenticationSecurityTests
             using var afterLogout = await client.GetAsync("/api/auth/me");
             Assert.Equal(HttpStatusCode.Unauthorized, afterLogout.StatusCode);
 
-            await db.Database.EnsureDeletedAsync();
+            }
+            finally
+            {
+                await db.Database.EnsureDeletedAsync();
+            }
         }
     }
 
@@ -163,9 +179,9 @@ public sealed class VendorAuthenticationSecurityTests
     }
 
     [Fact]
-    public async Task Identity_cookie_and_passkey_options_enforce_secure_mfa_defaults()
+    public Task Identity_cookie_and_passkey_options_enforce_secure_mfa_defaults()
     {
-        await using var factory = new WebApplicationFactory<Program>();
+        using var factory = new WebApplicationFactory<Program>();
         using var scope = factory.Services.CreateScope();
 
         var appCookie = scope.ServiceProvider
@@ -181,6 +197,7 @@ public sealed class VendorAuthenticationSecurityTests
         var passkeyOptions = scope.ServiceProvider.GetRequiredService<IOptions<IdentityPasskeyOptions>>().Value;
         Assert.Equal("required", passkeyOptions.UserVerificationRequirement);
         Assert.Equal("required", passkeyOptions.ResidentKeyRequirement);
+        return Task.CompletedTask;
     }
 
     [Fact]
