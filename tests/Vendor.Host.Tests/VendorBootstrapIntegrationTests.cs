@@ -91,6 +91,7 @@ public sealed class VendorBootstrapIntegrationTests
                 var user = Assert.Single(users);
                 Assert.True(user.IsEnabled);
                 Assert.True(user.TwoFactorEnabled);
+                Assert.False(user.EmailConfirmed);
                 Assert.False(user.MustChangePassword);
 
                 var audit = await VendorAuditChainVerifier.VerifyAsync(db, TestContext.Current.CancellationToken);
