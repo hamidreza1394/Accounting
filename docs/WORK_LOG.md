@@ -578,3 +578,6 @@
 - **محدوده خارج از این PR:** مجوزدهی منبع‌محور مشتری/نصب/قرارداد/لایسنس و maker-checker هنوز پیاده‌سازی نشده‌اند؛ هیچ Migration یا تغییر دیتابیس مشتری وجود ندارد.
 - **اعتبارسنجی:** کد از طریق GitHub API روی شاخه ثبت شد؛ Build/Test محلی در این محیط اجرا نشده‌اند. CI روی PR باید Vendor UI، Build/Test با SQL Server، strict EF snapshot gate، Publish/artifact scan و full repository CI را تأیید کند. وضعیت تا آن زمان **Implemented in branch / Not Verified** است.
 - **Handoff:** `docs/handoffs/ISSUE-150-vendor-rbac-foundation.md`.
+
+
+- **CI بازخورد اولیه PR #153:** Vendor CI run [40380994581](https://github.com/hamidreza1394/Accounting/actions/runs/40380994581) کامپایل را متوقف کرد: `VendorPermissionRequirement.cs` namespace مربوط به `VendorAdminAccessRequirement` را وارد نکرده بود. علت مشخص شد و `using Faranou.Vendor.Host.Authentication;` اضافه شد. این اصلاح باید با اجرای جدید CI تأیید شود؛ نتیجهٔ قبلی شکست خورده و هیچ تست .NET پس از Build اجرا نشده بود.
