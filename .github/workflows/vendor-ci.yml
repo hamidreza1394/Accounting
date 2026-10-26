@@ -36,17 +36,17 @@ jobs:
   build-test-package:
     runs-on: ubuntu-latest
     env:
-      MSSQL_SA_PASSWORD: Ci1Faranou${{ github.run_id }}xvnd
+      MSSQL_SA_PASSWORD: Ci1!Faranou${{ github.run_id }}xvnd
     services:
       sqlserver:
         image: mcr.microsoft.com/mssql/server:2022-latest
         env:
           ACCEPT_EULA: Y
-          MSSQL_SA_PASSWORD: Ci1Faranou${{ github.run_id }}xvnd
+          MSSQL_SA_PASSWORD: Ci1!Faranou${{ github.run_id }}xvnd
         ports:
           - 1433:1433
         options: >-
-          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Ci1Faranou${{ github.run_id }}xvnd -Q 'SELECT 1' -b"
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Ci1!Faranou${{ github.run_id }}xvnd -Q 'SELECT 1' -b"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 20
