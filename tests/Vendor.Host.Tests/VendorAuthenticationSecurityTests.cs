@@ -62,8 +62,13 @@ public sealed class VendorAuthenticationSecurityTests
                 // Diagnose the runtime model against the last migration before MigrateAsync throws its generic warning.
                 var migrationsAssembly = db.GetService<IMigrationsAssembly>();
                 var modelDiffer = db.GetService<IMigrationsModelDiffer>();
-                var migrationTargetModel = migrationsAssembly.ModelSnapshot!.Model;
-                var runtimeDesignTimeModel = db.GetService<IDesignTimeModel>().Model;
+                var modelRuntimeInitializer = db.GetService<IModelRuntimeInitializer>();
+                var migrationTargetModel = modelRuntimeInitializer.Initialize(
+                    migrationsAssembly.ModelSnapshot!.Model,
+                    designTime: true);
+                var runtimeDesignTimeModel = modelRuntimeInitializer.Initialize(
+                    db.GetService<IDesignTimeModel>().Model,
+                    designTime: true);
                 var modelDifferences = modelDiffer.GetDifferences(
                     migrationTargetModel.GetRelationalModel(),
                     runtimeDesignTimeModel.GetRelationalModel());
