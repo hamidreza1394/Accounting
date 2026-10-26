@@ -606,3 +606,9 @@
 - آزمون با الگوی xUnit v3 و WebApplicationFactory موجود در پروژه نوشته شده است؛ پکیج جدید اضافه نشده است.
 - **محدودیت:** آزمون اجرا نشده و هنوز آزمون قوی‌تر با حساب دارای Passkey واقعی/credential ثبت‌شده لازم است. Build و CI تأیید نشده‌اند؛ وضعیت همچنان Implemented / Not Verified است.
 - Commit آزمون: 1a9c0bbcb60c3899af64d07bee6827f7787088d4.
+
+
+## 2026-10-26 — نتیجه CI برای اصلاح Passkey (PR #157)
+- Vendor CI run 40388746698 به نتیجه موفق رسید؛ شامل UI type-check/test، Vendor build/test، EF model snapshot gate، publish و بررسی artifact نبودن فایل کلید خصوصی.
+- در .NET CI run 40388746692، build-and-test، migration guards و گزارش آسیب‌پذیری NuGet موفق شدند. E2E، publish و publish-windows هنگام آخرین بررسی هنوز در حال اجرا بودند؛ نتیجه نهایی این workflow هنوز نامشخص است.
+- آزمون HTTP اضافه‌شده اجرا شده و سبز است، اما هنوز حالت حسابی با Passkey واقعی را پوشش نمی‌دهد؛ این محدودیت باز می‌ماند.
