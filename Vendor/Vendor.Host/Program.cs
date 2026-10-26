@@ -130,23 +130,6 @@ builder.Services.AddRateLimiter(options =>
             }));
 });
 
-builder.Services.AddIdentityCore<VendorAdminUser>(options =>
-{
-    options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
-    options.User.RequireUniqueEmail = true;
-    options.Lockout.AllowedForNewUsers = true;
-    options.Lockout.MaxFailedAccessAttempts = 5;
-    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
-    options.Password.RequiredLength = 14;
-    options.Password.RequireDigit = true;
-    options.Password.RequireLowercase = true;
-    options.Password.RequireUppercase = true;
-    options.Password.RequireNonAlphanumeric = true;
-})
-.AddRoles<IdentityRole<Guid>>()
-.AddEntityFrameworkStores<VendorDbContext>()
-.AddSignInManager()
-.AddDefaultTokenProviders();
 
 var passkeyServerDomain = builder.Configuration["IdentityPasskeys:ServerDomain"];
 if (builder.Environment.IsProduction())
