@@ -9,14 +9,16 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
-var builder = WebApplication.CreateBuilder(args);
+var bootstrapCommandRequested = VendorBootstrapCommand.IsRequested(args);
+// A bare command name is not valid input for the default command-line configuration provider.
+var builder = WebApplication.CreateBuilder(bootstrapCommandRequested ? Array.Empty<string>() : args);
 
 // Vendor has its own configuration namespace and never falls back to customer settings.
 builder.Configuration.AddEnvironmentVariables(prefix: "FARANO_VENDOR_");
 
 // This maintenance command intentionally bypasses the HTTP host and its web-only production
 // prerequisites. It uses the Vendor database only and never accepts credentials in arguments.
-if (VendorBootstrapCommand.IsRequested(args))
+if (bootstrapCommandRequested)
 {
     builder.Services.AddVendorPersistence(builder.Configuration);
     new IdentityBuilder(typeof(VendorAdminUser), builder.Services).AddDefaultTokenProviders();
