@@ -67,12 +67,15 @@ public sealed class VendorPermissionAuthorizationTests
     public async Task NonPermissionPoliciesDelegateToDefaultProvider()
     {
         var options = new AuthorizationOptions();
-        VendorAuthorizationPolicies.Configure(options);
+        options.AddPolicy("ExistingCustomPolicy", policy => policy.RequireClaim("scope", "test"));
         var provider = new VendorPermissionPolicyProvider(Options.Create(options));
 
-        var policy = await provider.GetPolicyAsync("Default");
+        var policy = await provider.GetPolicyAsync("ExistingCustomPolicy");
 
         Assert.NotNull(policy);
-        Assert.Contains(policy!.Requirements, requirement => requirement is VendorAdminAccessRequirement);
+        Assert.Contains(
+            policy!.Requirements,
+            requirement => requirement is ClaimsAuthorizationRequirement claims &&
+                           claims.ClaimType == "scope");
     }
 }
