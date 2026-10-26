@@ -1,4 +1,7 @@
+using System.Buffers.Binary;
+using System.Globalization;
 using System.Net;
+using System.Security.Cryptography;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Faranou.Vendor.Persistence;
@@ -150,13 +153,18 @@ public sealed class VendorAuthenticationSecurityTests
             Assert.Contains("__Host-Faranou.Vendor.TwoFactor=", setCookies, StringComparison.Ordinal);
             Assert.DoesNotContain("__Host-Faranou.Vendor.Auth=", setCookies, StringComparison.Ordinal);
 
-            // Verify the generated code against the same provider the endpoint uses. Avoid an
-            // unrelated unauthenticated request between the two-factor challenge and verification.
-            var authenticatorProvider = users.Options.Tokens.AuthenticatorTokenProvider;
-            var code = await users.GenerateTwoFactorTokenAsync(user, authenticatorProvider);
+            // Generate a code as a real authenticator app does from the persisted shared key.
+            // This tests the complete RFC 6238 interoperability path instead of testing the
+            // Identity token provider by asking it to generate and validate its own output.
+            var authenticatorKey = await users.GetAuthenticatorKeyAsync(user);
+            Assert.False(string.IsNullOrWhiteSpace(authenticatorKey));
+            var code = GenerateTotpCode(authenticatorKey!);
             Assert.True(
-                await users.VerifyTwoFactorTokenAsync(user, authenticatorProvider, code),
-                "The generated TOTP code must validate before exercising the HTTP challenge flow.");
+                await users.VerifyTwoFactorTokenAsync(
+                    user,
+                    users.Options.Tokens.AuthenticatorTokenProvider,
+                    code),
+                "A standards-compliant RFC 6238 code must validate before exercising the HTTP challenge flow.");
             var twoFactorCookie = passwordResponse.Headers.GetValues("Set-Cookie")
                 .Select(value => value.Split(';', 2)[0])
                 .Single(value => value.StartsWith("__Host-Faranou.Vendor.TwoFactor=", StringComparison.Ordinal));
@@ -282,6 +290,45 @@ public sealed class VendorAuthenticationSecurityTests
             $"{foreignKey.PrincipalTable}({string.Join(",", foreignKey.PrincipalColumns)}); onDelete={foreignKey.OnDelete}",
         _ => operation.GetType().Name + " (" + operation + ")"
     };
+
+    private static string GenerateTotpCode(string base32Secret)
+    {
+        const string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+        var normalized = base32Secret.Trim().TrimEnd('=').ToUpperInvariant();
+        var secret = new List<byte>(normalized.Length * 5 / 8);
+        var buffer = 0;
+        var bitsInBuffer = 0;
+
+        foreach (var character in normalized)
+        {
+            var value = alphabet.IndexOf(character);
+            if (value < 0)
+            {
+                throw new InvalidOperationException("The persisted authenticator key is not valid Base32.");
+            }
+
+            buffer = (buffer << 5) | value;
+            bitsInBuffer += 5;
+            if (bitsInBuffer >= 8)
+            {
+                bitsInBuffer -= 8;
+                secret.Add((byte)((buffer >> bitsInBuffer) & 0xff));
+            }
+        }
+
+        var timeCounter = DateTimeOffset.UtcNow.ToUnixTimeSeconds() / 30;
+        Span<byte> counter = stackalloc byte[sizeof(long)];
+        BinaryPrimitives.WriteInt64BigEndian(counter, timeCounter);
+
+        using var hmac = new HMACSHA1(secret.ToArray());
+        var hash = hmac.ComputeHash(counter.ToArray());
+        var offset = hash[^1] & 0x0f;
+        var binaryCode = ((hash[offset] & 0x7f) << 24)
+            | ((hash[offset + 1] & 0xff) << 16)
+            | ((hash[offset + 2] & 0xff) << 8)
+            | (hash[offset + 3] & 0xff);
+        return (binaryCode % 1_000_000).ToString("D6", CultureInfo.InvariantCulture);
+    }
 
     private static async Task ResetTestDatabaseAsync(
         string configuredConnection,
