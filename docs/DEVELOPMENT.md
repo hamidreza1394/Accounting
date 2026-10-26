@@ -1,5 +1,9 @@
 # راهنمای توسعه محلی
 
+## رابط React و shadcn/ui
+
+استاندارد طراحی کامپوننت‌های جدید در `ClientApp`، shadcn/ui با RTL فارسی است؛ راهنمای کامل در [`UI_COMPONENTS.md`](UI_COMPONENTS.md) آمده است. `ClientApp/components.json` پیکربندی اولیه را ثبت می‌کند، اما به‌تنهایی وابستگی npm را نصب نمی‌کند. پیش از استفاده از کامپوننت‌ها باید مرحلهٔ نصب رسمی اجرا شود، `package.json` و `package-lock.json` هماهنگ بمانند و `npm ci`, `npm run typecheck`, `npm test`, `npm run build` و `npm run check:offline` سبز شوند. از اجرای `npx shadcn@latest` بدون بازبینی نسخه و diff در شاخهٔ کاری استفاده نکنید.
+
 ## پیش‌نیازها
 - Visual Studio 2026 (نسخه 18.0 یا بالاتر) با workload مربوط به ASP.NET and web development و .NET 10 SDK نصب‌شده. برای بازکردن و هدف‌گذاری رسمی net10.0، Visual Studio 2022 کافی نیست.
 - SQL Server متناسب با Connection String محیط محلی.
