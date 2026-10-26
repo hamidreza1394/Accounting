@@ -64,14 +64,10 @@ public sealed class VendorAuthenticationSecurityTests
                 var modelDiffer = db.GetService<IMigrationsModelDiffer>();
                 var modelRuntimeInitializer = db.GetService<IModelRuntimeInitializer>();
                 var migrationTargetModel = modelRuntimeInitializer.Initialize(
-                    migrationsAssembly.ModelSnapshot!.Model,
-                    designTime: true);
-                var runtimeDesignTimeModel = modelRuntimeInitializer.Initialize(
-                    db.GetService<IDesignTimeModel>().Model,
-                    designTime: true);
+                    migrationsAssembly.ModelSnapshot!.Model);
                 var modelDifferences = modelDiffer.GetDifferences(
                     migrationTargetModel.GetRelationalModel(),
-                    runtimeDesignTimeModel.GetRelationalModel());
+                    db.Model.GetRelationalModel());
                 Assert.True(
                     modelDifferences.Count == 0,
                     "Runtime Vendor model differs from latest migration target: " +
