@@ -450,3 +450,9 @@
 - **اعتبارسنجی:** در زمان ثبت، اجرای Vendor CI برای این شاخه پس از بازشدن PR هنوز انجام نشده/تأیید نشده است. تست‌های جدید UI، TypeScript، build، audit، تست‌های SQL Server و publish باید در GitHub Actions بررسی شوند. Build/Test محلی در این محیط اجرا نشده است.
 - **مرزها:** هیچ تغییری در ClientApp، Customer DB یا Migrationهای مشتری نیست. CRUD مشتری/نصب/قرارداد/لایسنس، bootstrap کامل، RBAC، maker-checker، audit checkpoint مستقل و KMS/HSM همچنان مانع آمادگی Production هستند.
 - **مراجع:** Issue #128 https://github.com/hamidreza1394/Accounting/issues/128؛ PR #127 merged https://github.com/hamidreza1394/Accounting/pull/127.
+
+
+### تکمیل‌یادداشت Issue #128 — یافتهٔ CI دوم
+- اجرای Vendor CI روی commit `c5aadd0`، پس از سبزشدن تمام گام‌های فرانت‌اند، در `dotnet test` شکست خورد: `PendingModelChangesWarning` هنگام اجرای Migration در تست احراز هویت؛ در همان run، دستور EF CLI برای بررسی pending model changes موفق بود.
+- بررسی `Vendor/Vendor.Host/Program.cs` دو ثبت مستقل `AddDbContext<VendorDbContext>` را نشان داد: یک ثبت در `AddVendorPersistence` با Migration Assembly صریح و یک ثبت تکراری در Host بدون آن تنظیم. ثبت تکراری حذف شد تا persistence module تنها منبع پیکربندی DbContext و Migration Assembly باشد. این اصلاح نیازمند اجرای دوبارهٔ integration test است؛ علت به‌عنوان قطعیِ حل‌شده اعلام نمی‌شود تا CI تأیید کند.
+- آخرین اصلاح: commit `a2af05b78fe5f8d5237d3b36aa92c786a171b783`. CI جدید هنوز باید بررسی شود.
