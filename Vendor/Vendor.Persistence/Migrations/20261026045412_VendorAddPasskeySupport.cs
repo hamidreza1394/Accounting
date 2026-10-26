@@ -7,7 +7,7 @@ namespace Faranou.Vendor.Persistence.Migrations;
 
 [DbContext(typeof(VendorDbContext))]
 [Migration("20261026045412_VendorAddPasskeySupport")]
-public sealed class VendorAddPasskeySupport : Migration
+public sealed partial class VendorAddPasskeySupport : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
