@@ -39,6 +39,7 @@ describe('Vendor control plane shell', () => {
   });
 
   it('keeps TOTP setup secrets in the active UI flow and confirms enrollment through the API', async () => {
+    const storageWrite = vi.spyOn(Storage.prototype, 'setItem');
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(response({ userName: 'vendor-admin', totpEnabled: false, passkeyCount: 1 }))
       .mockResolvedValueOnce(response({ requestToken: 'csrf-one' }))
@@ -54,7 +55,6 @@ describe('Vendor control plane shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'تأیید و فعال‌سازی TOTP' }));
     expect(await screen.findByText('احراز هویت TOTP فعال شد. کلید مشترک را از این صفحه خارج نکنید.')).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith('/api/auth/totp/confirm', expect.objectContaining({ method: 'POST', cache: 'no-store' }));
-    expect(localStorage.setItem).not.toHaveBeenCalled();
-    expect(sessionStorage.setItem).not.toHaveBeenCalled();
+    expect(storageWrite).not.toHaveBeenCalled();
   });
 });
