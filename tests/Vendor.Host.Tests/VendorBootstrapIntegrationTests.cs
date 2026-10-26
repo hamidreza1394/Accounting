@@ -5,6 +5,7 @@ using Faranou.Vendor.Host.Bootstrap;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Auditing;
 using Faranou.Vendor.Persistence.Identity;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -47,6 +48,7 @@ public sealed class VendorBootstrapIntegrationTests
 
         var services = new ServiceCollection();
         services.AddLogging();
+        services.AddDataProtection().SetApplicationName("Faranou.Vendor.ControlPlane");
         services.AddVendorPersistence(configuration);
         new IdentityBuilder(typeof(VendorAdminUser), services).AddDefaultTokenProviders();
 
