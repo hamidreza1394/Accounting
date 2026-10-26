@@ -65,6 +65,10 @@ jobs:
         run: dotnet restore Vendor.sln
       - name: Build Vendor solution
         run: dotnet build Vendor.sln --no-restore --configuration Release
+      - name: Install EF Core CLI
+        run: |
+          dotnet tool install --global dotnet-ef --version 10.0.13
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
       - name: Verify Vendor EF model snapshot is current
         env:
           FARANO_VENDOR_ConnectionStrings__VendorDb: Server=localhost,1433;Database=master;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
