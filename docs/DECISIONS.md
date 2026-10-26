@@ -742,7 +742,7 @@ Cookie خودکفاست و بدون بررسی مجدد تا انقضا معتب
 ## D-048 — shadcn/ui برای کلاینت React با RTL فارسی
 
 - **وضعیت تصمیم:** `Accepted` (طبق درخواست صریح مالک محصول در 2026-10-26).
-- **وضعیت پیاده‌سازی:** `Partially Implemented` — پیکربندی پایه `ClientApp/components.json` و استاندارد `docs/UI_COMPONENTS.md` در شاخهٔ تغییر افزوده شده‌اند؛ CLI، وابستگی‌های npm/lockfile و کامپوننت‌های واقعی هنوز باید در مرحلهٔ اجرایی بعدی نصب و با CI تأیید شوند.
+- **وضعیت پیاده‌سازی:** `Implemented` در تغییر مرتبط با Issue #122 — CLI نسخهٔ `4.22.1` در `devDependencies` پین شده؛ کامپوننت‌های Base UI `button.tsx` و `card.tsx` تولید شده‌اند؛ `@base-ui/react`, `class-variance-authority`, `cn` و `lucide-react` در وابستگی‌ها و lockfile ثبت شده‌اند؛ alias Vite/TypeScript و توکن‌های semantic در CSS تنظیم شده‌اند. Button در retry خطا و Card در پنل داشبورد استفاده می‌شوند. وضعیت `Verified` فقط پس از موفقیت CI روی آخرین commit این تغییر اعلام می‌شود.
 - **دامنه:** فقط React + TypeScript در `ClientApp`; صفحات Razor موجود بدون نیازمندی مستقل بازنویسی نمی‌شوند.
 - **مبنای انتخاب:** کامپوننت‌ها به‌صورت source داخل مخزن نگهداری می‌شوند؛ با React 19 و Tailwind CSS v4 فعلی سازگار می‌مانند؛ RTL فارسی، دسترس‌پذیری و runtime آفلاین الزامی است.
 - **قیود:** هیچ دارایی runtime از CDN؛ هیچ ارتقای بی‌دلیل Tailwind/React؛ تغییر `package.json` همراه `package-lock.json`؛ فقط کامپوننت‌های موردنیاز؛ authorization و اعتبارسنجی سمت سرور مستقل از UI باقی می‌ماند.

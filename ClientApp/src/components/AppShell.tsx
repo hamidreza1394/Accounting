@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import type { SelectedContext, Session } from '../api/types';
 import { formatPersianDate } from '../lib/date';
-import { Button } from './ui/Button';
+import { Button } from './ui/FaranouButton';
 import { FaranouLogo } from './ui/FaranouLogo';
 import { BuildingIcon, CalendarIcon, EyeIcon, SwapIcon } from './ui/icons';
 

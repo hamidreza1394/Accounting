@@ -18,7 +18,7 @@ import { SelectionFooter } from './SelectionFooter';
 import { SelectionLayout } from './SelectionLayout';
 import { Alert } from './ui/Alert';
 import { Badge } from './ui/Badge';
-import { Button } from './ui/Button';
+import { Button } from './ui/FaranouButton';
 import { ChoiceCard } from './ui/ChoiceCard';
 import { BuildingIcon, CalendarIcon, EyeIcon, InfoIcon, LockIcon, SearchIcon, UsersIcon } from './ui/icons';
 

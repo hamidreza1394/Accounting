@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { fileURLToPath, URL } from 'node:url';
 
 // The client is served by the ASP.NET Core server under /app (same origin as the API and
 // the Razor sign-in page), so the authentication cookie and the anti-forgery cookie work
@@ -12,6 +13,11 @@ const proxied = ['/api', '/Account', '/fonts', '/images', '/css', '/lib', '/favi
 export default defineConfig({
   base: '/app/',
   plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
   build: {
     outDir: '../Server/wwwroot/app',
     emptyOutDir: true,

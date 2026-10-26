@@ -1,7 +1,7 @@
 import type { CompanyChoice, Session } from '../api/types';
 import { Badge } from './ui/Badge';
 import { SelectionLayout } from './SelectionLayout';
-import { Button } from './ui/Button';
+import { Button } from './ui/FaranouButton';
 import { BuildingIcon, LockIcon } from './ui/icons';
 
 type BlockedAccessProps = {
