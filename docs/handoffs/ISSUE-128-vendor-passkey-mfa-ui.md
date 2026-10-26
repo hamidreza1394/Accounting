@@ -18,12 +18,13 @@
 - `Vendor/Vendor.Web/src/App.test.tsx`: تست fallback مرورگر و ثبت TOTP، با assert عدم نوشتن در Web Storage.
 - `tests/Vendor.Host.Tests/LivenessEndpointTests.cs`: تست deep link کلاینت به‌جای انتظار 404 برای مسیر UI؛ تست مستقل unknown API همچنان 404 را بررسی می‌کند.
 - `.github/workflows/vendor-ci.yml`: دیتابیس اتصال Host در تست به `FaranouVendorAuthTests` تنظیم شد تا با تست integration هم‌خوان باشد؛ SQL Server آزمایشی audit همچنان از متغیر مستقل می‌آید.
+- `Vendor/Vendor.Host/Program.cs`: ثبت تکراری `AddDbContext<VendorDbContext>` حذف شد تا تنظیم Migration Assembly در persistence module حفظ شود؛ این اصلاح پس از مشاهدهٔ `PendingModelChangesWarning` در تست runtime انجام شد و تا CI مجدد، تأییدنشده است.
 - `Vendor/README.md`, `docs/PROJECT_STATUS.md`, `docs/WORK_LOG.md` و handoff قبلی به‌روزرسانی شدند.
 
 ## شواهد و وضعیت تست
 - Vendor CI در main: run [40279335977](https://github.com/hamidreza1394/Accounting/actions/runs/40279335977) شکست خورد.
 - شکست‌های قطعی: تست `UnknownPathReturnsNotFound` با SPA fallback تناقض داشت؛ assertion تست authentication انتظار `FaranouVendorAuthTests` داشت، در حالی که workflow `FaranouVendorTests` تنظیم می‌کرد.
-- این دو اصلاح در شاخه انجام شده‌اند، اما **CI پس از اصلاحات هنوز سبز تأیید نشده است**. TypeScript, Vitest, npm audit, Vite build, bundle budget, .NET build/test روی SQL Server و publish باید در PR بررسی شوند.
+- اصلاح SPA fallback و نام دیتابیس انجام شد. اجرای run 40280056742 نشان داد TypeScript، Vitest، audit، Vite build، بودجهٔ bundle، .NET build و EF snapshot check سبز هستند؛ اما `dotnet test` هنوز به‌علت `PendingModelChangesWarning` در runtime migration شکست خورد. ثبت تکراری DbContext در Host حذف شده است و **CI پس از این اصلاح هنوز سبز تأیید نشده**.
 - Build/Test محلی اجرا نشده است.
 - هیچ تغییر در ClientApp، Customer DB یا Customer migrations انجام نشده است.
 
