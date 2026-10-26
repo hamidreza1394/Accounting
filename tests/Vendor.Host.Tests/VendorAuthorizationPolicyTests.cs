@@ -25,5 +25,8 @@ public sealed class VendorAuthorizationPolicyTests
     {
         Assert.Contains(policy.Requirements, requirement => requirement is DenyAnonymousAuthorizationRequirement);
         Assert.Contains(policy.Requirements, requirement => requirement is VendorAdminAccessRequirement);
+        Assert.Contains(policy.Requirements, requirement =>
+            requirement is VendorPermissionRequirement permission &&
+            permission.PermissionCode == VendorPermissionCatalog.PanelAccess);
     }
 }
