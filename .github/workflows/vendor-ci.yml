@@ -78,6 +78,19 @@ jobs:
       - name: Build Vendor UI into the standalone Host
         working-directory: Vendor/Vendor.Web
         run: npm run build
+      - name: Enforce Vendor UI asset budgets
+        shell: bash
+        run: |
+          set -euo pipefail
+          js="$(find Vendor/Vendor.Host/wwwroot/assets -maxdepth 1 -type f -name '*.js' -print -quit)"
+          css="$(find Vendor/Vendor.Host/wwwroot/assets -maxdepth 1 -type f -name '*.css' -print -quit)"
+          test -n "$js"
+          test -n "$css"
+          js_gzip="$(gzip -c "$js" | wc -c)"
+          css_gzip="$(gzip -c "$css" | wc -c)"
+          echo "Vendor UI compressed assets: JS=${js_gzip} bytes, CSS=${css_gzip} bytes"
+          test "$js_gzip" -le 102400 || { echo "Vendor JS gzip budget exceeded (100 KiB)." >&2; exit 1; }
+          test "$css_gzip" -le 20480 || { echo "Vendor CSS gzip budget exceeded (20 KiB)." >&2; exit 1; }
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
