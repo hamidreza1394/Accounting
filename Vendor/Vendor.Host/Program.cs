@@ -207,6 +207,7 @@ app.UseAntiforgery();
 
 app.MapHealthChecks("/health/live").AllowAnonymous();
 app.MapVendorAuthentication();
+app.MapFallback(() => Results.NotFound()).AllowAnonymous();
 
 app.Run();
 
