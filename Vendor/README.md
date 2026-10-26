@@ -7,7 +7,8 @@
 - اسکلت اولیهٔ Host روی `net10.0` ایجاد شده است.
 - `/health/live` فقط زنده‌بودن فرایند وب را اعلام می‌کند؛ وضعیت دیتابیس یا جزئیات عملیاتی را افشا نمی‌کند.
 - لایهٔ persistence مستقل (`VendorDbContext`، جداول Identity مجزا، `VendorAuditEvents` و Migration اولیه) در این مرحله اضافه شده است؛ CI باید اجرای Migration روی SQL Server آزمایشی و هماهنگی snapshot را تأیید کند.
-- ورود مدیر، سیاست MFA/passkey/TOTP، RBAC، bootstrap اولیه، سرویس ثبت/اعتبارسنجی زنجیرهٔ ممیزی، maker-checker، دادهٔ مشتری تجاری/قرارداد/لایسنس، صدور امضا و KMS/HSM هنوز پیاده‌سازی نشده‌اند.
+- API پایهٔ احراز هویت مدیر، Cookie session، TOTP و passkey بر اساس Identity در ASP.NET Core 10، ضدجعل درخواست، rate limiting و سیاست دسترسی فعال/MFA در شاخهٔ Issue #103 پیاده‌سازی شده‌اند؛ تا CI سبز و ادغام، وضعیت آن NotVerified است.
+- bootstrap نخستین مدیر، UI پنل، RBAC ریزدانه، maker-checker، checkpoint مستقل ممیزی، دادهٔ مشتری/قرارداد/لایسنس، صدور امضا و KMS/HSM هنوز پیاده‌سازی نشده‌اند.
 - این اسکلت برای Production آماده نیست.
 
 ## توسعه و آزمون
@@ -49,3 +50,11 @@ Host عمداً به ارائه‌دهندهٔ ابری خاصی وابسته ن
 - متغیر محیطی: `FARANO_VENDOR_ConnectionStrings__VendorDb` (به یک دیتابیس مستقل Vendor).
 - هیچ connection string پیش‌فرض، seed مدیر، ثبت‌نام عمومی یا endpoint مدیریتی ناشناس وجود ندارد.
 - قبل از استفادهٔ واقعی، پیاده‌سازی login/MFA و bootstrap باید تکمیل و کنترل‌های امنیتی/عملیاتی جداگانه تأیید شوند؛ وجود Schema به معنی آماده‌بودن پنل نیست.
+
+## احراز هویت Vendor — شاخهٔ Issue #103
+- ورود با رمز فقط در صورتی که حساب فعال و TOTP از قبل فعال باشد به مرحلهٔ چالش دوم‌عامل می‌رود؛ حساب غیرفعال یا فاقد MFA نشست دریافت نمی‌کند.
+- ورود TOTP از کوکی موقت Identity استفاده می‌کند؛ کوکی موقت برای APIهای محافظت‌شده پذیرفته نمی‌شود. نشست نهایی claim نوع احراز هویت amr=otp دارد.
+- Passkey از APIهای رسمی Identity در ASP.NET Core 10 استفاده می‌کند؛ UserVerificationRequirement=required و ResidentKeyRequirement=required است. اعتبارسنجی assertion قبل از صدور نشست، فعال‌بودن مدیر را بررسی می‌کند و شمارندهٔ credential به‌روزرسانی‌شده را ذخیره می‌کند.
+- Cookieهای نشست و MFA کوتاه‌عمر، Secure, HttpOnly, SameSite=Strict, host-only و با پیشوند __Host- هستند. Data Protection در Production به مسیر پایدار مستقل نیاز دارد؛ passkey domain نیز باید صریحاً تنظیم شود.
+- همهٔ POSTهای auth از X-CSRF-TOKEN و cookie ضدجعل استفاده می‌کنند. درخواست‌های ورود بر اساس IP محدود می‌شوند؛ forwarded headers ناشناخته فعال نیستند.
+- هیچ registration endpoint عمومی، JWT سفارشی، SMS، OAuth خارجی یا token در localStorage وجود ندارد. bootstrap اولین مدیر و UI در Issueهای بعدی می‌آیند.
