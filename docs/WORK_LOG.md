@@ -400,3 +400,13 @@
 - **اعتبارسنجی:** Build/Test محلی اجرا نشده‌اند. Vendor CI روی PR #118، run `40272872248`، سبز شد: Restore، Build، `dotnet ef migrations has-pending-model-changes`، تست‌های Vendor (از جمله Migration واقعی روی SQL Server)، Publish و گارد خروجی موفق بودند. `.NET CI` run `40272872260` در زمان ثبت هنوز در حال اجرا بود؛ نتیجهٔ کلی PR تا پایان آن نهایی نیست. CI PR #102 پیش از این تغییرات فقط model-snapshot check داشت.
 - **باقی‌مانده:** MFA/passkey/TOTP، bootstrap یک‌بارمصرف، RBAC سمت سرور، audit writer/verifier/checkpoint، maker-checker، کنترل‌های deploy و G2 allow-list انتشار همچنان مرحله‌های مستقل هستند.
 - **Handoff:** `docs/handoffs/ISSUE-117-vendor-persistence-hardening.md`.
+
+
+## 2026-10-26 — مبنای shadcn/ui و RTL فارسی
+- **درخواست:** پذیرش shadcn/ui در رابط React و مستندسازی در مخزن.
+- **بررسی:** `ClientApp` از React 19، TypeScript strict، Vite و Tailwind CSS 4 استفاده می‌کند؛ alias `@/*` و `components.json` از قبل وجود نداشت. Runtime باید بدون CDN بماند.
+- **تصمیم:** D-048؛ shadcn/ui به‌صورت source-owned components با RTL و فقط در `ClientApp` استفاده شود. صفحات Razor فعلی خارج از این تغییر هستند.
+- **تغییرات این مرحله:** ایجاد `ClientApp/components.json` و `docs/UI_COMPONENTS.md`؛ افزودن ارجاع در README و مستندات توسعه/استانداردها/فهرست/وضعیت پروژه.
+- **محدودیت مهم:** این مرحله هنوز CLI، بسته‌های npm، lockfile یا کامپوننت‌های تولیدشده را تغییر نداده است؛ وضعیت صادقانه `Partially Implemented` است. مرحلهٔ بعد باید نصب و lockfile را با npm معتبر به‌روزرسانی و تست‌های CI را اجرا کند.
+- **اعتبارسنجی:** مستندات رسمی فعلی shadcn/ui برای Vite، RTL و Tailwind v4 بررسی شدند. Build/Test در این مرحله اجرا نشده است.
+- **دیتابیس:** هیچ تغییر دیتابیس یا Migration انجام نشد.
