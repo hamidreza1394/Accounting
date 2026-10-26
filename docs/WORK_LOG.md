@@ -529,3 +529,10 @@
 - **اعتبارسنجی:** اصلاح روی GitHub ثبت شده؛ هنوز Vendor CI پس از این اصلاح اجرا/تأیید نشده است. تا سبز شدن آزمون SQL Server، کل Vendor suite، EF snapshot gate و Publish، Verified یا آماده ادغام محسوب نمی‌شود.
 - **ایمنی:** هیچ تغییر در دیتابیس مشتری، Migrationهای مشتری یا منطق احراز هویت Production انجام نشده است.
 - **مراجع:** Issue [#141](https://github.com/hamidreza1394/Accounting/issues/141)، PR follow-up پس از آماده شدن branch ایجاد می‌شود.
+
+
+## 2026-10-26 — Issue #143: اصلاح خطای کامپایل آزمون antiforgery
+- **شاهد CI:** Vendor CI run [40349534341](https://github.com/hamidreza1394/Accounting/actions/runs/40349534341) پس از ادغام PR #142 در مرحله Build شکست خورد: متغیر antiforgeryCookie در خطوط جریان TOTP و Application استفاده شده بود اما در دریافت اولیه توکن با discard (`var (token, _)`) دور انداخته شده بود. خطاهای CS0103 و خطاهای زنجیره‌ای CS8130 از همین مورد ناشی می‌شدند.
+- **اصلاح:** در شاخه fix/vendor-antiforgery-cookie-variable، کوکی اولیه از tuple نگه داشته می‌شود تا همراه کوکی هویت در درخواست‌های بعدی استفاده شود. منطق Production و کنترل امنیتی تغییری نکرده است.
+- **وضعیت:** commit ثبت شده؛ Vendor CI تازه هنوز اجرا/تأیید نشده. تا عبور Build، آزمون SQL Server، کل Vendor suite، EF snapshot gate و Publish، این اصلاح Verified نیست.
+- **Issue:** [#143](https://github.com/hamidreza1394/Accounting/issues/143).
