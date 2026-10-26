@@ -32,8 +32,11 @@ public static class DependencyInjection
                 sql => sql.MigrationsAssembly(typeof(VendorDbContext).Assembly.FullName));
         });
 
+        // Identity is configured in one place so runtime authentication and EF tooling
+        // cannot silently register competing IdentityOptions for the same DbContext.
         services.AddIdentityCore<VendorAdminUser>(options =>
             {
+                options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
                 options.User.RequireUniqueEmail = true;
                 options.Password.RequiredLength = 14;
                 options.Password.RequiredUniqueChars = 4;
@@ -46,7 +49,9 @@ public static class DependencyInjection
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
             })
             .AddRoles<IdentityRole<Guid>>()
-            .AddEntityFrameworkStores<VendorDbContext>();
+            .AddEntityFrameworkStores<VendorDbContext>()
+            .AddSignInManager()
+            .AddDefaultTokenProviders();
 
         return services;
     }
