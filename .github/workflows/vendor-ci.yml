@@ -78,8 +78,8 @@ jobs:
       - name: Test Vendor solution
         env:
           FARANO_VENDOR_ConnectionStrings__VendorDb: Server=localhost,1433;Database=FaranouVendorAuthTests;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
-          FARANOU_VENDOR_TEST_SQLSERVER: Server=localhost,1433;Database=FaranouVendorTests;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
-          FARANOU_REQUIRE_VENDOR_SQLSERVER: '1'
+          FARANO_VENDOR_TEST_SQLSERVER: Server=localhost,1433;Database=FaranouVendorTests;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
+          FARANO_REQUIRE_VENDOR_SQLSERVER: '1'
         run: dotnet test Vendor.sln --configuration Release
       - name: Publish standalone Vendor host
         run: dotnet publish Vendor/Vendor.Host/Vendor.Host.csproj --no-restore --configuration Release --output "$RUNNER_TEMP/vendor-publish"
