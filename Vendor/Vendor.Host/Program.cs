@@ -1,5 +1,6 @@
 using System.Threading.RateLimiting;
 using Faranou.Vendor.Host.Authentication;
+using Faranou.Vendor.Host.Bootstrap;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Identity;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -12,6 +13,22 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Vendor has its own configuration namespace and never falls back to customer settings.
 builder.Configuration.AddEnvironmentVariables(prefix: "FARANO_VENDOR_");
+
+// This maintenance command intentionally bypasses the HTTP host and its web-only production
+// prerequisites. It uses the Vendor database only and never accepts credentials in arguments.
+if (VendorBootstrapCommand.IsRequested(args))
+{
+    builder.Services.AddVendorPersistence(builder.Configuration);
+    new IdentityBuilder(typeof(VendorAdminUser), builder.Services).AddDefaultTokenProviders();
+    await using var commandServices = builder.Services.BuildServiceProvider(
+        new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
+    var exitCode = await VendorBootstrapCommand.RunAsync(
+        commandServices,
+        builder.Configuration,
+        new ConsoleVendorBootstrapPrompt());
+    Environment.ExitCode = exitCode;
+    return;
+}
 
 builder.Services.AddHealthChecks();
 builder.Services.AddVendorPersistence(builder.Configuration);
