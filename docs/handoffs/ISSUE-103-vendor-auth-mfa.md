@@ -3,7 +3,7 @@
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/103
 - **Branch:** `security/issue-103-vendor-auth-mfa`
 - **تاریخ:** 2026-10-26
-- **وضعیت:** پیاده‌سازی آماده CI؛ migration passkey باید از artifact CI بازبینی و به مخزن commit شود
+- **وضعیت:** Migration passkey از artifact CI بازبینی و commit شده؛ منتظر CI مجدد
 
 ## تغییرات
 - ثبت ASP.NET Core Identity با SchemaVersion v3 و APIهای رسمی passkey در .NET 10.
@@ -21,8 +21,8 @@
 
 ## Migration و CI
 - `VendorDbContext` باید `IdentityUserPasskey<Guid>` را با کلید `CredentialId` و owned JSON data نگاشت کند.
-- workflow فعلی برای بازبینی، migration passkey را موقتاً تولید و artifact می‌کند؛ این فقط پل موقت است. پیش از ادغام، migration و snapshot تولیدشده باید به branch commit شوند و step تولید migration از CI حذف شود.
-- Build/Test محلی اجرا نشده؛ SDK در محیط ابزار موجود نبود. CI باید build، snapshot check، تست SQL Server و secret scan را تأیید کند.
+- Migration `20261026045412_VendorAddPasskeySupport.cs` و تغییر `VendorDbContextModelSnapshot.cs` از artifact run `40271317565` بازبینی و commit شدند. گام تولید/آپلود Migration از workflow حذف شده است؛ workflow فقط بررسی drift و تست Migration ثبت‌شده را اجرا می‌کند.
+- Build/Test محلی اجرا نشده؛ SDK در محیط ابزار موجود نبود. run `40271317565` به‌علت نبود `AddHealthChecks()` در تست‌های Host شکست خورد؛ این ثبت در کد اصلاح شده و CI مجدد باید build، snapshot check، تست SQL Server و secret scan را تأیید کند.
 
 ## خارج از محدوده
 - bootstrap نخستین مدیر، registration عمومی، UI پنل React، RBAC ریزدانه، maker-checker و audit checkpoint خارجی.
