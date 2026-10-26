@@ -52,3 +52,8 @@ dotnet Faranou.Vendor.Host.dll bootstrap-admin
 - تست هم‌زمانی باید ثابت کند از دو تلاش هم‌زمان فقط یک مدیر فعال ایجاد می‌شود.
 - تست باید زنجیرهٔ ممیزی را با `VendorAuditChainVerifier` اعتبارسنجی کند.
 - تا پایان Vendor CI، EF snapshot gate و publish مستقل، وضعیت این تغییر **Verified نیست**.
+
+## اعتبارسنجی CI — 2026-10-26
+- در Vendor CI run [40363406842](https://github.com/hamidreza1394/Accounting/actions/runs/40363406842)، Build و تست‌های UI موفق بودند، اما آزمون `VendorBootstrapIntegrationTests` پیش از اجرای سناریوها به‌علت ثبت‌نشدن `IDataProtectionProvider` در ServiceCollection تست شکست خورد.
+- در نسخهٔ فعلی `main`، آزمون Integration سرویس `AddDataProtection().SetApplicationName("Faranou.Vendor.ControlPlane")` را ثبت می‌کند. این تغییر علت مشخص‌شده را هدف می‌گیرد؛ بااین‌حال، تا اجرای تازهٔ CI سبز نشود، bootstrap **Verified** نیست.
+- هشدارهای analyzer مربوط به آزمون و logging نیز در لاگ همان اجرا مشاهده شدند؛ در این PR تغییر رفتار Production یا کنترل امنیتی انجام نمی‌شود. هر اصلاح جداگانه باید با آزمون معتبر توجیه شود.
