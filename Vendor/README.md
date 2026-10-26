@@ -79,3 +79,10 @@ Host عمداً به ارائه‌دهندهٔ ابری خاصی وابسته ن
 - ورود از endpointهای /api/auth/antiforgery، /api/auth/password، /api/auth/totp/verify، /api/auth/me و /api/auth/logout استفاده می‌کند. توکن CSRF فقط در حافظه نگهداری می‌شود؛ credential یا توکن در Web Storage ذخیره نمی‌شود.
 - Host فایل‌های استاتیک و SPA routeهای UI را سرو می‌کند، اما مسیرهای ناشناخته /api/* و /health/* به صفحه SPA بازنویسی نمی‌شوند.
 - این UI به معنی تکمیل bootstrap، RBAC، maker-checker، audit checkpoint یا آمادگی Production نیست. قبل از فعال‌سازی عملیات تجاری، Issueهای امنیتی وابسته و APIهای واقعی باید تکمیل شوند.
+
+
+### Vendor UI performance guardrails
+- خروجی تولیدی Vite به‌صورت local bundle سرو می‌شود؛ CSS/JS/font/icon از CDN خارجی بارگیری نمی‌شود.
+- فایل‌های hashدار `wwwroot/assets` با `Cache-Control: public,max-age=31536000,immutable` کش می‌شوند؛ `index.html` با `no-store` سرو می‌شود تا نسخه‌های جدید فوراً به assetهای hashدار جدید اشاره کنند.
+- Vendor CI سقف gzip برای bundle اصلی JavaScript برابر 100 KiB و CSS برابر 20 KiB را کنترل می‌کند. اندازهٔ مشاهده‌شده در build قبلی 90.03 KiB JS و 7.29 KiB CSS بود؛ گارد تازه باید در CI بعدی تأیید شود.
+- این اعداد اندازهٔ فایل هستند و جایگزین اندازه‌گیری Lighthouse، Core Web Vitals یا تست شبکه در مرورگر واقعی نیستند.
