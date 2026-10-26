@@ -396,5 +396,7 @@
 - Passkey با PerformPasskeyAssertionAsync بررسی می‌شود؛ قبل از صدور cookie، فعال‌بودن مدیر کنترل و شمارندهٔ passkey ذخیره می‌شود. User verification و resident key اجباری‌اند.
 - Cookieهای host-only امن، ضدجعل، rate limiting جدا برای credential attempts، Data Protection persistent و تنظیمات production host/passkey domain افزوده شدند.
 - Integration tests شامل رد password-only/disabled account، challenge موقت TOTP بدون application cookie، تکمیل TOTP، passkey creation options، logout، rate limit، anti-forgery و نبود public registration هستند.
-- CI برای بازبینی migration passkey را موقتاً scaffold می‌کند؛ migration/snapshot تولیدشده باید از artifact بازبینی و به مخزن commit شود و سپس step scaffolding موقت حذف شود. این وضعیت برای merge نهایی کافی نیست.
+- CI run `40271317565` Migration `20261026045412_VendorAddPasskeySupport` را با EF Core 10.0.13 تولید کرد؛ فایل migration از artifact بازبینی و در شاخه commit شد. Snapshot نیز به‌روزرسانی شد و گام scaffolding/آپلود موقت از workflow حذف شد. CI بعدی باید `has-pending-model-changes` و اجرای Migration ثبت‌شده را تأیید کند.
 - Build/Test محلی اجرا نشده‌اند؛ CI واقعی باید سبز باشد. دیتابیس مشتری و Migrationهای مشتری تغییر نکرده‌اند.
+
+- **اصلاح CI در Issue #103:** `AddHealthChecks()` به Host بازگردانده شد؛ run `40271317565` تست‌ها را به‌دلیل نبود این registration شکست داد، نه به‌دلیل migration. این خطا اصلاح شده و CI مجدد لازم است.
