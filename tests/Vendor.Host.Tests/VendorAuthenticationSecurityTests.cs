@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
@@ -72,7 +73,7 @@ public sealed class VendorAuthenticationSecurityTests
                 Assert.True(
                     modelDifferences.Count == 0,
                     "Runtime Vendor model differs from latest migration target: " +
-                    string.Join(", ", modelDifferences.Select(operation => operation.GetType().Name + " (" + operation + ")")));
+                    string.Join("; ", modelDifferences.Select(DescribeModelOperation)));
 
                 await db.Database.MigrateAsync(cancellationToken);
 
@@ -259,6 +260,21 @@ public sealed class VendorAuthenticationSecurityTests
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
+
+    private static string DescribeModelOperation(MigrationOperation operation) => operation switch
+    {
+        AlterColumnOperation alter =>
+            $"AlterColumn {alter.Table}.{alter.Name}: type {alter.OldColumn.ColumnType} -> {alter.ColumnType}; " +
+            $"nullable {alter.OldColumn.IsNullable} -> {alter.IsNullable}; " +
+            $"defaultSql {alter.OldColumn.DefaultValueSql ?? "<null>"} -> {alter.DefaultValueSql ?? "<null>"}",
+        CreateIndexOperation index =>
+            $"CreateIndex {index.Table}.{index.Name}({string.Join(",", index.Columns)}); " +
+            $"unique={index.IsUnique}; filter={index.Filter ?? "<null>"}",
+        AddForeignKeyOperation foreignKey =>
+            $"AddForeignKey {foreignKey.Table}.{foreignKey.Name}({string.Join(",", foreignKey.Columns)}) -> " +
+            $"{foreignKey.PrincipalTable}({string.Join(",", foreignKey.PrincipalColumns)}); onDelete={foreignKey.OnDelete}",
+        _ => operation.GetType().Name + " (" + operation + ")"
+    };
 
     private static async Task ResetTestDatabaseAsync(
         string configuredConnection,
