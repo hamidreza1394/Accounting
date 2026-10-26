@@ -113,6 +113,8 @@ builder.Services.AddAntiforgery(options =>
     options.Cookie.Path = "/";
 });
 
+builder.Services.AddHealthChecks();
+
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
