@@ -1,5 +1,6 @@
 using System.Threading.RateLimiting;
 using Faranou.Vendor.Host.Authentication;
+using Faranou.Vendor.Host.Authorization;
 using Faranou.Vendor.Host.Bootstrap;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Identity;
@@ -216,13 +217,7 @@ builder.Services.Configure<IdentityPasskeyOptions>(options =>
 });
 
 builder.Services.AddScoped<IAuthorizationHandler, VendorAdminAccessHandler>();
-builder.Services.AddAuthorization(options =>
-{
-    options.FallbackPolicy = new AuthorizationPolicyBuilder()
-        .RequireAuthenticatedUser()
-        .AddRequirements(new VendorAdminAccessRequirement())
-        .Build();
-});
+builder.Services.AddAuthorization(VendorAuthorizationPolicies.Configure);
 
 var app = builder.Build();
 
