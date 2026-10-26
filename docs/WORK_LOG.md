@@ -410,3 +410,11 @@
 - **محدودیت مهم:** این مرحله هنوز CLI، بسته‌های npm، lockfile یا کامپوننت‌های تولیدشده را تغییر نداده است؛ وضعیت صادقانه `Partially Implemented` است. مرحلهٔ بعد باید نصب و lockfile را با npm معتبر به‌روزرسانی و تست‌های CI را اجرا کند.
 - **اعتبارسنجی:** مستندات رسمی فعلی shadcn/ui برای Vite، RTL و Tailwind v4 بررسی شدند. Build/Test در این مرحله اجرا نشده است.
 - **دیتابیس:** هیچ تغییر دیتابیس یا Migration انجام نشد.
+
+## 2026-10-26 — VENDOR-UI-01: اسکلت مستقل پنل فروشنده (Issue #126)
+- **هدف:** شروع مرحله UI بدون وابستگی به UI مشتری و بدون جعل API یا داده مدیریتی.
+- **Branch:** feat/issue-126-vendor-ui-shell.
+- **تغییرات:** پروژه مستقل Vendor/Vendor.Web با React 19، TypeScript strict، Vite، Tailwind v4، lockfile مستقل و source-owned shadcn Button/Card؛ صفحه ورود فارسی RTL با جریان واقعی password→TOTP و antiforgery؛ shell واکنش‌گرا و داشبورد اولیه با placeholderهای صریح؛ build به Vendor/Vendor.Host/wwwroot؛ Host static-file و SPA fallback امن که مسیرهای ناشناخته API/health را به HTML تبدیل نمی‌کند؛ Vendor CI شامل npm ci/typecheck/test/build و audit وابستگی‌های runtime و بررسی وجود UI bundle در publish.
+- **مرزها:** هیچ تغییری در ClientApp، دیتابیس مشتری یا Migrationهای مشتری انجام نشده است. آمار مشتری/نصب/لایسنس جعلی نمایش داده نمی‌شود. هیچ توکن یا رمز در localStorage/sessionStorage ذخیره نمی‌شود.
+- **اعتبارسنجی:** Restore/Build/Test و CI از این Agent اجرا نشده‌اند؛ باید نتایج PR را بررسی کرد. وضعیت Implemented in branch، نه Verified و نه Production-ready.
+- **باقی‌مانده:** مرور نهایی TypeScript/React و CI؛ آزمون مرورگری روی HTTPS واقعی؛ تکمیل Issue #119 bootstrap، #123 RBAC و audit checkpoint مستقل پیش از عملیات تجاری.
