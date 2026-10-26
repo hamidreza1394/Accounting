@@ -5,8 +5,6 @@ using Faranou.Vendor.Persistence.Identity;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace Faranou.Vendor.Host.Authentication;
 
@@ -316,7 +314,7 @@ public static class VendorAuthenticationEndpoints
 
             if (string.IsNullOrWhiteSpace(key))
             {
-                return Results.Problem("Authenticator setup could not be started.");
+                return Results.Problem(detail: "Authenticator setup could not be started.");
             }
 
             var label = Uri.EscapeDataString(user.Email ?? user.UserName ?? user.Id.ToString("D"));
