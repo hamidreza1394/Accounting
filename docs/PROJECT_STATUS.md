@@ -1,3 +1,14 @@
+## Vendor follow-up — Identity SchemaVersion 3 and migration drift (2026-10-26, PR #138)
+
+- **Confirmed root cause:** the SQL Server integration diagnostic compared the runtime design-time model with the migration snapshot and reported five Identity column changes plus a missing passkey UserId index/foreign key. The affected columns are VendorAdminUserTokens.Name, VendorAdminUserTokens.LoginProvider, VendorAdminUsers.PhoneNumber, and both key columns in VendorAdminUserLogins.
+- **Migration work in progress:** 20261026084500_VendorAlignIdentitySchemaV3 aligns the model with IdentitySchemaVersions.Version3; its migration target model and VendorDbContextModelSnapshot are updated. Because SQL Server rejects altering columns that participate in primary keys, the migration drops and recreates the affected Identity token/login primary keys around the width changes.
+- **CI gate:** PR #137 merged a temporary continue-on-error on the Vendor snapshot check. PR #138 removes that bypass and orders the SQL Server integration test before the strict EF snapshot gate so diagnostic failures remain visible.
+- **Verification status:** Not verified. Earlier SQL Server runs exposed the model drift and then the primary-key dependency; the latest migration revision still requires a fresh Vendor CI run, successful dotnet ef migrations has-pending-model-changes, SQL Server integration tests and publish checks. Do not merge PR #138 while any of these fail.
+- **Isolation:** no customer accounting DbContext, customer migration or customer database schema was changed.
+- **Remaining Production blockers:** secure one-time first-admin bootstrap, forced password-change flow, fine-grained RBAC, maker-checker, audit event wiring and independent checkpoints, and real customer/installation/contract/license APIs plus the signing/KMS/HSM workflow.
+
+---
+
 
 ## Issue #130 — استاندارد RTL فارسی و کمبوباکس قابل مدیریت
 - فایل `Vendor/Vendor.Web/index.html` از قبل `lang="fa"` و `dir="rtl"` داشت؛ این مبنا حفظ شد.
