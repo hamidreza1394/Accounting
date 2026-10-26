@@ -13,7 +13,7 @@ public sealed class DesignTimeVendorDbContextFactory : IDesignTimeDbContextFacto
     {
         var options = new DbContextOptionsBuilder<VendorDbContext>()
             .UseSqlServer(
-                "Server=localhost;Database=FaranouVendorDesignTime;User Id=design_time_only;Password=NotARealSecret!;TrustServerCertificate=True",
+                "Server=localhost;Database=FaranouVendorDesignTime;Integrated Security=True;TrustServerCertificate=True",
                 sql => sql.MigrationsAssembly(typeof(VendorDbContext).Assembly.FullName))
             .Options;
 
