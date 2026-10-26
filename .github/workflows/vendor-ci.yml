@@ -57,6 +57,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+      - name: Setup Node for standalone Vendor UI
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: Vendor/Vendor.Web/package-lock.json
+      - name: Install locked Vendor UI dependencies
+        working-directory: Vendor/Vendor.Web
+        run: npm ci --no-fund --no-audit
+      - name: Type-check Vendor UI
+        working-directory: Vendor/Vendor.Web
+        run: npm run typecheck
+      - name: Test Vendor UI
+        working-directory: Vendor/Vendor.Web
+        run: npm test
+      - name: Build Vendor UI into the standalone Host
+        working-directory: Vendor/Vendor.Web
+        run: npm run build
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
