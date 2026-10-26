@@ -17,6 +17,13 @@ if (bootstrapCommandRequested && args.Length != 1)
     return;
 }
 
+if (bootstrapCommandRequested && (Console.IsInputRedirected || Console.IsOutputRedirected))
+{
+    Console.Error.WriteLine("bootstrap-admin requires an interactive terminal; redirected input/output is refused.");
+    Environment.ExitCode = 2;
+    return;
+}
+
 // A bare command name is not valid input for the default command-line configuration provider.
 var builder = WebApplication.CreateBuilder(bootstrapCommandRequested ? Array.Empty<string>() : args);
 
