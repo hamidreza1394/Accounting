@@ -47,8 +47,7 @@ public static class DependencyInjection
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
             })
             .AddRoles<IdentityRole<Guid>>()
-            .AddEntityFrameworkStores<VendorDbContext>()
-            .AddDefaultTokenProviders();
+            .AddEntityFrameworkStores<VendorDbContext>();
 
         return services;
     }

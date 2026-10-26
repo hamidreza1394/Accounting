@@ -16,7 +16,10 @@ builder.Configuration.AddEnvironmentVariables(prefix: "FARANO_VENDOR_");
 builder.Services.AddHealthChecks();
 builder.Services.AddVendorPersistence(builder.Configuration);
 // SignInManager belongs to the ASP.NET Core host layer, not the persistence class library.
-builder.Services.AddSignInManager();
+// Sign-in manager and token providers are host-layer Identity services; register them on the same IdentityBuilder.
+new IdentityBuilder(typeof(VendorAdminUser), builder.Services)
+    .AddSignInManager()
+    .AddDefaultTokenProviders();
 var keyDirectory = builder.Configuration["DataProtection:KeysDirectory"];
 if (builder.Environment.IsProduction() &&
     (string.IsNullOrWhiteSpace(keyDirectory) || !Path.IsPathFullyQualified(keyDirectory)))
