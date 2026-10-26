@@ -104,3 +104,8 @@ Host عمداً به ارائه‌دهندهٔ ابری خاصی وابسته ن
 - مرز معماری: شرکت‌های حسابداری (از جمله مستقل/مادر/زیرمجموعه) متعلق به دیتابیس نصب مشتری‌اند، نه دیتابیس تجاری Vendor. Vendor مشتری تجاری، نصب و مجوز را مدیریت می‌کند. ایجاد شرکت حسابداری از پنل مرکزی بدون طرح provisioning مستقل و تأییدشده انجام نمی‌شود.
 - تست‌های جدید برای جهت RTL، پیش‌فرض اولین گزینه، تغییر انتخاب، پنهان بودن مدیریت گزینه بدون مجوز و پیام خطا اضافه شده‌اند.
 - اعتبارسنجی محلی در این محیط اجرا نشد؛ وضعیت تا نتیجه Vendor CI روی PR **Implemented / Not yet Verified** است.
+
+
+## بازبینی پس از ادغام‌ها — ثبت Identity
+- در `main` یک ثبت `AddIdentityCore<VendorAdminUser>` در `Vendor.Persistence/DependencyInjection.cs` و ثبت دوم در `Vendor.Host/Program.cs` مشاهده شد. شاخهٔ `fix/vendor-identity-registration-single-source` ثبت تکراری Host را حذف کرده و تنظیمات Identity و providerهای لازم را در Persistence متمرکز می‌کند.
+- تا اجرای Vendor CI و integration testهای SQL Server، این اصلاح **Not verified** است؛ Production-ready اعلام نمی‌شود.
