@@ -103,7 +103,7 @@ public sealed class VendorAuthenticationSecurityTests
             var createDisabled = await users.CreateAsync(disabled, "Secure-Vendor#2026");
             Assert.True(createDisabled.Succeeded, string.Join("; ", createDisabled.Errors.Select(error => error.Code)));
 
-            var (token, antiforgeryCookie) = await GetAntiforgeryTokenAndCookieAsync(client, cancellationToken);
+            var (token, _) = await GetAntiforgeryTokenAndCookieAsync(client, cancellationToken);
             using var passwordOnlyResponse = await PostWithTokenAsync(
                 client,
                 "/api/auth/password",
