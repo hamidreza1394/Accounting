@@ -564,3 +564,9 @@
 - **تست:** آزمون واحد تضمین می‌کند هر دو policy نیازمند هویت احراز‌شده و گارد MFA/فعال‌بودن مدیر باشند.
 - **دامنه:** بدون تغییر Schema/Migration، دیتابیس مشتری یا endpointهای تجاری؛ RBAC، resource authorization و maker-checker همچنان در ادامهٔ Issue #114 لازم‌اند.
 - **اعتبارسنجی:** PR در شاخهٔ وابسته به bootstrap ساخته می‌شود؛ CI تازه لازم است و وضعیت تا سبز شدن Not Verified.
+
+## 2026-10-26 — پیگیری اعتبارسنجی bootstrap پس از خطای DI
+- **شاهد CI:** [Vendor CI run 40363406842](https://github.com/hamidreza1394/Accounting/actions/runs/40363406842) در مرحله تست Vendor شکست خورد؛ علت مستقیم، ثبت‌نشدن `IDataProtectionProvider` در ServiceCollection آزمون `VendorBootstrapIntegrationTests` بود. Build و تست‌های UI پیش از آن موفق بودند.
+- **اصلاح مشاهده‌شده در `main`:** تست اکنون `AddDataProtection().SetApplicationName("Faranou.Vendor.ControlPlane")` را ثبت می‌کند. این با خطای DI مشخص‌شده هم‌راستاست؛ اما نتیجهٔ تازه‌ای که رفع خطا را ثابت کند هنوز از این بررسی به‌دست نیامده است.
+- **اقدام:** PR مستنداتی برای اجرای دوبارهٔ Vendor CI و CI کامل ایجاد می‌شود. فقط در صورت سبزشدن تست SQL Server، strict EF snapshot gate و Publish می‌توان bootstrap را Verified دانست.
+- **محدوده:** این پیگیری فقط مستندات است؛ هیچ کد Production، Migration مشتری یا داده‌ای تغییر نمی‌کند.
