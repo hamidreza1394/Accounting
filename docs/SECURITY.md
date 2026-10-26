@@ -227,3 +227,10 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - مجوزها از Claimهای نقش ASP.NET Core Identity با نوع `vendor:permission:v1` خوانده می‌شوند؛ شناسه‌های ناشناخته باید رد شوند.
 - این تغییر فقط زیرساخت اولیه مجوزدهی است. API/UI مدیریت نقش و مجوز، کنترل منبع‌محور مشتری/نصب/قرارداد/لایسنس، گردش‌کار Maker-Checker و checkpoint مستقل ممیزی هنوز تکمیل نشده‌اند.
 - تا موفقیت Vendor CI، تست‌های Integration روی SQL Server، گارد Snapshot مدل EF، بررسی بسته انتشار و CI کامل مخزن، این پیاده‌سازی تأییدشده برای Production محسوب نمی‌شود.
+
+
+## پیگیری امنیت Vendor — گزینه‌های Passkey (Issue #152، 2026-10-26)
+- گزینه‌های احراز هویت Passkey نباید بر اساس وجود/وضعیت حساب، فهرست credential متفاوتی افشا کنند.
+- پیاده‌سازی در شاخه اصلاحی برای تمام درخواست‌ها از MakePasskeyRequestOptionsAsync(user: null) استفاده می‌کند؛ این روش برای discoverable credentials/ورود بدون نام کاربری مستند شده است.
+- وضعیت: Implemented / Not Verified تا زمانی که آزمون HTTP رگرسیون و CI کامل سبز شوند. Anti-forgery، rate limiting و Cache-Control: no-store باید حفظ شوند.
+- مرجع: https://learn.microsoft.com/en-us/aspnet/core/security/authentication/passkeys?view=aspnetcore-10.0

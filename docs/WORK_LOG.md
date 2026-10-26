@@ -590,3 +590,12 @@
 - **اعتبارسنجی:** اصلاح روی شاخه `feat/issue-150-vendor-rbac-foundation` ثبت شده است. CI پس از این commit باید نتیجه نهایی را تأیید کند؛ تا آن زمان وضعیت **اصلاح‌شده در شاخه، اما تأییدنشده** است.
 - **مستندات:** handoff فارسی `docs/handoffs/ISSUE-150-vendor-rbac-foundation.md` و بخش RBAC در `docs/SECURITY.md` به‌روزرسانی شدند.
 - **پیوند پیگیری:** [PR #153](https://github.com/hamidreza1394/Accounting/pull/153).
+
+
+## 2026-10-26 — Issue #152: کاهش افشای وضعیت حساب در گزینه‌های Passkey
+- **یافته:** endpoint POST /api/auth/passkey/options نام کاربری دریافتی را resolve می‌کرد و در صورت وجود حساب فعال دارای Passkey، گزینه‌های مخصوص همان credentialها را تولید می‌کرد. این تفاوت پاسخ می‌تواند اطلاعاتی درباره وجود حساب/credential افشا کند.
+- **اصلاح در شاخه:** VendorAuthenticationEndpoints.cs دیگر نام کاربری را به UserManager نمی‌فرستد و برای تمام درخواست‌ها MakePasskeyRequestOptionsAsync(user: null) را اجرا می‌کند. بدنهٔ HTTP حفظ شده تا قرارداد کلاینت نشکند؛ هدر تکراری Cache-Control: no-store نیز حذف شد.
+- **مبنای فنی:** مستندات رسمی ASP.NET Core 10 می‌گوید کاربر مشخص باعث درج credentialهای همان کاربر در allow-list می‌شود و null برای discoverable credentials/ورود بدون نام کاربری مناسب است: https://learn.microsoft.com/en-us/aspnet/core/security/authentication/passkeys?view=aspnetcore-10.0
+- **حفاظت‌های حفظ‌شده:** Anti-forgery، rate limiting و no-store دست‌نخورده‌اند. هیچ دیتابیس یا Migration مشتری تغییر نکرده است.
+- **اعتبارسنجی:** تغییر از طریق GitHub API در commit 9b4ea03e45afc2de1af88293abf3ad998b02e565 ثبت شد. Build/Test محلی اجرا نشد؛ آزمون HTTP رگرسیون و اجرای CI هنوز باقی است. بنابراین این تغییر Implemented / Not Verified است و هنوز آماده ادغام نهایی محسوب نمی‌شود.
+- **Handoff:** docs/handoffs/ISSUE-152-passkey-options-enumeration.md؛ شاخه fix/issue-152-passkey-options-enumeration.

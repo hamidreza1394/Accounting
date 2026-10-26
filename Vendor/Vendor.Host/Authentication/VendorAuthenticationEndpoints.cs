@@ -131,10 +131,9 @@ public static class VendorAuthenticationEndpoints
         .RequireRateLimiting("vendor-auth-attempt");
 
         auth.MapPost("/passkey/options", async (
-            PasskeyOptionsRequest request,
+            PasskeyOptionsRequest _,
             HttpContext context,
             IAntiforgery antiforgery,
-            UserManager<VendorAdminUser> users,
             SignInManager<VendorAdminUser> signInManager) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context))
@@ -142,25 +141,11 @@ public static class VendorAuthenticationEndpoints
                 return Results.BadRequest(new { error = "Invalid anti-forgery token." });
             }
 
-            VendorAdminUser? user = null;
-            if (!string.IsNullOrWhiteSpace(request.UserName) && request.UserName.Length <= 256)
-            {
-                var candidate = await users.FindByNameAsync(request.UserName);
-                if (candidate is { IsEnabled: true })
-                {
-                    var passkeys = await users.GetPasskeysAsync(candidate);
-                    if (passkeys.Count > 0)
-                    {
-                        user = candidate;
-                    }
-                }
-            }
-
-            // A null user intentionally enables discoverable-credential UX and avoids
-            // revealing whether a username exists or has a registered passkey.
+            // Never resolve the supplied username here: per-user allowCredentials can
+            // reveal whether an account or passkey exists. Use discoverable credentials
+            // for every request so the response shape is independent of account state.
             context.Response.Headers["Cache-Control"] = "no-store";
-            context.Response.Headers["Cache-Control"] = "no-store";
-            var optionsJson = await signInManager.MakePasskeyRequestOptionsAsync(user);
+            var optionsJson = await signInManager.MakePasskeyRequestOptionsAsync(user: null);
             return Results.Content(optionsJson, "application/json");
         })
         .AllowAnonymous()
