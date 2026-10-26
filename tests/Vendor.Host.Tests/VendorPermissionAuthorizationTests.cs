@@ -106,6 +106,33 @@ public sealed class VendorPermissionAuthorizationTests
     }
 
     [Fact]
+    public async Task EveryProtectedVendorApiEndpointRetainsActiveMfaAdministratorBaseline()
+    {
+        await using var factory = new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program>();
+        var dataSource = factory.Services.GetRequiredService<Microsoft.AspNetCore.Routing.EndpointDataSource>();
+        var policyProvider = factory.Services.GetRequiredService<IAuthorizationPolicyProvider>();
+        var protectedEndpoints = dataSource.Endpoints
+            .OfType<Microsoft.AspNetCore.Routing.RouteEndpoint>()
+            .Where(endpoint =>
+                endpoint.RoutePattern.RawText?.StartsWith("/api/", StringComparison.OrdinalIgnoreCase) == true &&
+                endpoint.Metadata.GetMetadata<IAllowAnonymous>() is null)
+            .ToArray();
+
+        Assert.NotEmpty(protectedEndpoints);
+        foreach (var endpoint in protectedEndpoints)
+        {
+            var authorizeData = endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>();
+            Assert.NotEmpty(authorizeData);
+
+            var effectivePolicy = await AuthorizationPolicy.CombineAsync(policyProvider, authorizeData);
+            Assert.NotNull(effectivePolicy);
+            Assert.Contains(
+                effectivePolicy!.Requirements,
+                requirement => requirement is VendorAdminAccessRequirement);
+        }
+    }
+
+    [Fact]
     public async Task NonPermissionPoliciesDelegateToDefaultProvider()
     {
         var options = new AuthorizationOptions();
