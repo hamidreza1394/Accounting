@@ -10,6 +10,13 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 var bootstrapCommandRequested = VendorBootstrapCommand.IsRequested(args);
+if (bootstrapCommandRequested && args.Length != 1)
+{
+    Console.Error.WriteLine("bootstrap-admin accepts no command-line arguments; enter all secrets interactively.");
+    Environment.ExitCode = 2;
+    return;
+}
+
 // A bare command name is not valid input for the default command-line configuration provider.
 var builder = WebApplication.CreateBuilder(bootstrapCommandRequested ? Array.Empty<string>() : args);
 
