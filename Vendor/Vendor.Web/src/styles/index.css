@@ -11,7 +11,7 @@ body { direction: inherit; text-align: start; }
 .auth-form input,
 select,
 textarea { text-align: start; }
-.auth-form input[dir="auto"] { direction: auto; unicode-bidi: plaintext; }
+.auth-form input[dir="auto"] { unicode-bidi: plaintext; }
 .auth-form input[dir="ltr"],
 .totp-setup code[dir="ltr"] { direction: ltr; text-align: left; unicode-bidi: plaintext; }
 .password-field input { padding-inline-start: 65px; padding-left: 13px; }
