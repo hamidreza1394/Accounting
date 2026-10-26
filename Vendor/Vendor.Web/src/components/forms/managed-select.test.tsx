@@ -17,6 +17,32 @@ describe('ManagedSelect', () => {
     expect(select).toHaveAttribute('dir', 'rtl');
   });
 
+  it('skips disabled options when choosing the default and disables a list with no enabled options', () => {
+    const { rerender } = render(
+      <ManagedSelect
+        label="نوع شرکت"
+        options={[
+          { value: 'legacy', label: 'نوع قدیمی', disabled: true },
+          { value: 'independent', label: 'شرکت مستقل' },
+          { value: 'parent', label: 'شرکت مادر' },
+        ]}
+        defaultValue="legacy"
+      />,
+    );
+
+    const select = screen.getByRole('combobox', { name: 'نوع شرکت' });
+    expect(select).toHaveValue('independent');
+    expect(select).toBeEnabled();
+
+    rerender(
+      <ManagedSelect
+        label="نوع شرکت"
+        options={[{ value: 'disabled', label: 'گزینه غیرفعال', disabled: true }]}
+      />,
+    );
+    expect(screen.getByRole('combobox', { name: 'نوع شرکت' })).toBeDisabled();
+  });
+
   it('uses a valid explicit default and reports subsequent selections', () => {
     const onValueChange = vi.fn();
     render(
