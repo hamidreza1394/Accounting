@@ -237,3 +237,5 @@
 - کد فعلی پس از merge نشان داد Identity در `AddVendorPersistence` و دوباره در `Vendor.Host/Program.cs` ثبت می‌شود؛ این با معماری مستند «یک محل ثبت persistence/Identity» ناسازگار است.
 - شاخهٔ `fix/vendor-identity-registration-single-source` ثبت Identity را به Persistence محدود کرده و SchemaVersion، SignInManager و token providers را در همان ثبت حفظ می‌کند.
 - وضعیت: اصلاح پیشنهادی در شاخه، **Not verified** تا سبز شدن Vendor CI و integration tests روی SQL Server. علت ریشه‌ای شکست قبلی هنوز قطعی فرض نمی‌شود.
+
+- CI evidence: Vendor CI run [40285919870](https://github.com/hamidreza1394/Accounting/actions/runs/40285919870) failed only in the runtime auth integration test at `Database.MigrateAsync` with `PendingModelChangesWarning`; frontend checks, .NET build and EF CLI snapshot check passed. PR #132 consolidates Identity registration, but the cause remains **unconfirmed until rerun**.
