@@ -219,8 +219,10 @@ public static class VendorBootstrapCommand
                 throw new InvalidOperationException("Could not activate the verified Vendor administrator.");
             }
 
+            // The local bootstrap operator is not authenticated as a Vendor admin yet;
+            // do not falsely attribute this event to the account being created.
             await audit.AppendAsync(new VendorAuditWriteRequest(
-                user.Id, "vendor.bootstrap.completed", "VendorAdminUser", user.Id.ToString("N")), cancellationToken);
+                null, "vendor.bootstrap.completed", "VendorAdminUser", user.Id.ToString("N")), cancellationToken);
             await enrollmentTransaction.CommitAsync(cancellationToken);
 
             prompt.WriteLine("Bootstrap با موفقیت تکمیل شد. مدیر فعال است و ورود همچنان به MFA نیاز دارد.");
