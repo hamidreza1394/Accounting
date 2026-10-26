@@ -159,11 +159,6 @@ public static class VendorAuthenticationEndpoints
             // A null user intentionally enables discoverable-credential UX and avoids
             // revealing whether a username exists or has a registered passkey.
             context.Response.Headers["Cache-Control"] = "no-store";
-            if (user is not null && (await users.GetPasskeysAsync(user)).Count >= 5)
-            {
-                return Results.Conflict(new { error = "The passkey limit for this account has been reached." });
-            }
-
             context.Response.Headers["Cache-Control"] = "no-store";
             var optionsJson = await signInManager.MakePasskeyRequestOptionsAsync(user);
             return Results.Content(optionsJson, "application/json");
@@ -229,6 +224,11 @@ public static class VendorAuthenticationEndpoints
             if (user is null || !user.IsEnabled)
             {
                 return Results.Unauthorized();
+            }
+
+            if ((await users.GetPasskeysAsync(user)).Count >= 5)
+            {
+                return Results.Conflict(new { error = "The passkey limit for this account has been reached." });
             }
 
             var userName = await users.GetUserNameAsync(user) ?? user.Email ?? "Vendor administrator";
