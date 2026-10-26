@@ -1,8 +1,10 @@
+using Faranou.Vendor.Persistence.Auditing;
 using Faranou.Vendor.Persistence.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Faranou.Vendor.Persistence;
 
@@ -31,6 +33,9 @@ public static class DependencyInjection
                 connectionString,
                 sql => sql.MigrationsAssembly(typeof(VendorDbContext).Assembly.FullName));
         });
+
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddScoped<IVendorAuditWriter, VendorAuditWriter>();
 
         services.AddIdentityCore<VendorAdminUser>(options =>
             {
