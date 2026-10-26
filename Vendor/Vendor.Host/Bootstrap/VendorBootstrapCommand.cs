@@ -220,7 +220,7 @@ public static class VendorBootstrapCommand
                 return 9;
             }
 
-            await EnsureOwnerRoleAsync(roles, users, user, cancellationToken);
+            await EnsureOwnerRoleAsync(roles, users, user);
 
             var enableMfa = await users.SetTwoFactorEnabledAsync(user, true);
             if (!enableMfa.Succeeded)
@@ -265,8 +265,7 @@ public static class VendorBootstrapCommand
     private static async Task EnsureOwnerRoleAsync(
         RoleManager<IdentityRole<Guid>> roles,
         UserManager<VendorAdminUser> users,
-        VendorAdminUser user,
-        CancellationToken cancellationToken)
+        VendorAdminUser user)
     {
         var role = await roles.FindByNameAsync(VendorPermissionCatalog.OwnerRoleName);
         if (role is null)
@@ -308,7 +307,6 @@ public static class VendorBootstrapCommand
             }
         }
 
-        _ = cancellationToken;
     }
 
     private static async Task TryAuditFailureAsync(
