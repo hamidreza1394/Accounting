@@ -231,3 +231,9 @@
 - Migration ثبت‌شدهٔ `20261026045412_VendorAddPasskeySupport` و snapshot به شاخه افزوده شدند؛ workflow دیگر scaffolding موقت ندارد. CI جدید باید نبود drift مدل و اجرای migration را تأیید کند.
 - باقی‌مانده‌های اصلی: bootstrap امن نخستین مدیر، اتصال/تکمیل audit chain و checkpoint مستقل، RBAC و maker-checker، مدل مشتری/قرارداد/لایسنس، KMS/HSM، UI پنل و deployment واقعی.
 - هیچ schema/migration دیتابیس مشتری تغییر نکرده است.
+
+
+## Vendor follow-up — ثبت تکراری Identity (2026-10-26)
+- کد فعلی پس از merge نشان داد Identity در `AddVendorPersistence` و دوباره در `Vendor.Host/Program.cs` ثبت می‌شود؛ این با معماری مستند «یک محل ثبت persistence/Identity» ناسازگار است.
+- شاخهٔ `fix/vendor-identity-registration-single-source` ثبت Identity را به Persistence محدود کرده و SchemaVersion، SignInManager و token providers را در همان ثبت حفظ می‌کند.
+- وضعیت: اصلاح پیشنهادی در شاخه، **Not verified** تا سبز شدن Vendor CI و integration tests روی SQL Server. علت ریشه‌ای شکست قبلی هنوز قطعی فرض نمی‌شود.
