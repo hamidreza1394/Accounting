@@ -48,5 +48,5 @@
 
 ## شناسه‌های Git
 - Branch: feat/issue-126-vendor-ui-shell
-- Commit: چند commit از طریق GitHub Contents API؛ آخرین commit باید از PR بررسی شود.
-- Pull Request: در حال ایجاد پس از تکمیل فایل‌های مستندات.
+- آخرین commit شاخه در زمان تحویل: 952c025ca21fb5b30fc4e1531598cfaece26b288.
+- Pull Request: https://github.com/hamidreza1394/Accounting/pull/127 (Draft; CI در انتظار اجرا/تکمیل).
