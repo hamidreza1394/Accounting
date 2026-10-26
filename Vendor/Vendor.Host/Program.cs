@@ -1,6 +1,12 @@
 using System.Threading.RateLimiting;
 using Faranou.Vendor.Host.Authentication;
 using Faranou.Vendor.Persistence;
+using Faranou.Vendor.Persistence.Identity;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
