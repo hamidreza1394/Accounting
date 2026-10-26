@@ -488,3 +488,11 @@
 - CI run 40286276604 failed at compile time because `IdentityBuilder.AddSignInManager()` is not available to the plain `Microsoft.NET.Sdk` Persistence project with its current references.
 - Follow-up branch `fix/vendor-identity-signin-manager-registration` removes that host-layer extension call from Persistence and registers SignInManager in the ASP.NET Core Host after `AddVendorPersistence`; IdentityCore, roles, EF stores and token providers remain registered once in Persistence.
 - Must be validated by a fresh Vendor CI run; do not merge if compile or runtime migration tests fail.
+
+
+## 2026-10-26 — Issue #134: انتقال ثبت Identity token providers به Host
+- **علت CI:** Vendor CI run [40287063856](https://github.com/hamidreza1394/Accounting/actions/runs/40287063856) در Build شکست خورد؛ `IdentityBuilder.AddDefaultTokenProviders()` در پروژهٔ کلاس‌لایبرری Persistence با `Microsoft.NET.Sdk` و وابستگی‌های فعلی در دسترس نیست.
+- **اصلاح در شاخهٔ مستقل:** زنجیرهٔ Persistence فقط Identity options، roles و EF stores را ثبت می‌کند؛ `AddDefaultTokenProviders()` به Host منتقل شده و روی همان `VendorAdminUser`/سرویس‌ها اعمال می‌شود. ثبت مجدد `AddIdentityCore` انجام نشده است.
+- **حفظ امنیت:** token providers حذف نشده‌اند؛ این موضوع برای جریان‌های token/TOTP مهم است. هیچ دیتابیس یا Migration مشتری تغییر نکرده است.
+- **اعتبارسنجی:** هنوز Build/Test پس از اصلاح اجرا نشده؛ نتیجهٔ معتبر فقط پس از Vendor CI جدید ثبت می‌شود.
+- **Issue/Branch:** [#134](https://github.com/hamidreza1394/Accounting/issues/134)؛ `fix/vendor-identity-token-providers`.
