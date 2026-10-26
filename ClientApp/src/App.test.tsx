@@ -73,7 +73,7 @@ describe('App', () => {
     render(<App navigate={vi.fn()} />);
 
     expect(await screen.findByRole('heading', { name: 'فرانو - دوره مالی' })).toBeInTheDocument();
-    expect(document.title).toBe('فرانو — انتخاب دوره مالی');
+    await waitFor(() => expect(document.title).toBe('فرانو — انتخاب دوره مالی'));
   });
 
   it('names the dashboard in the tab title once the work context is entered', async () => {
@@ -95,7 +95,7 @@ describe('App', () => {
     render(<App navigate={vi.fn()} />);
 
     expect(await screen.findByRole('heading', { name: 'داشبورد' })).toBeInTheDocument();
-    expect(document.title).toBe('فرانو — داشبورد');
+    await waitFor(() => expect(document.title).toBe('فرانو — داشبورد'));
   });
 
   it('falls back to the selection screen when the server refuses the automatic entry', async () => {
