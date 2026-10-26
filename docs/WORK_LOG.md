@@ -466,3 +466,10 @@
 - مرز معماری: شرکت‌های حسابداری (از جمله مستقل/مادر/زیرمجموعه) متعلق به دیتابیس نصب مشتری‌اند، نه دیتابیس تجاری Vendor. Vendor مشتری تجاری، نصب و مجوز را مدیریت می‌کند. ایجاد شرکت حسابداری از پنل مرکزی بدون طرح provisioning مستقل و تأییدشده انجام نمی‌شود.
 - تست‌های جدید برای جهت RTL، پیش‌فرض اولین گزینه، تغییر انتخاب، پنهان بودن مدیریت گزینه بدون مجوز و پیام خطا اضافه شده‌اند.
 - اعتبارسنجی محلی در این محیط اجرا نشد؛ وضعیت تا نتیجه Vendor CI روی PR **Implemented / Not yet Verified** است.
+
+
+## 2026-10-26 — Vendor Identity registration regression
+- بازبینی پس از ادغام‌ها نشان داد `AddVendorPersistence`، `AddIdentityCore<VendorAdminUser>` را ثبت می‌کند و `Vendor.Host/Program.cs` دوباره Identity را با همان DbContext ثبت می‌کرد؛ بنابراین گزارش قدیمی مبنی بر تک‌منبع بودن Identity با کد فعلی `main` هم‌خوان نبود.
+- شاخهٔ `fix/vendor-identity-registration-single-source` ثبت Identity را به یک محل در Persistence منتقل می‌کند و تنظیمات SchemaVersion، SignInManager و DefaultTokenProviders را همان‌جا نگه می‌دارد. Host فقط پیکربندی Host/auth cookie را انجام می‌دهد.
+- هدف، حذف ثبت تکراری سرویس‌ها و جلوگیری از اختلاف تنظیمات Identity در زمان اجرای Migration/احراز هویت است. این ارتباط علت قطعی شکست قبلی اعلام نمی‌شود تا CI و تست SQL Server آن را تأیید کنند.
+- تست/build محلی اجرا نشده؛ منتظر CI روی PR مستقل هستیم.
