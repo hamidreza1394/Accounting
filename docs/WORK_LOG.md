@@ -389,3 +389,12 @@
 - **وضعیت اعتبارسنجی این پیگیری:** منتظر CI روی commit حاوی Migrationهای ثبت‌شده هستیم؛ Build/Test محلی اجرا نشده‌اند چون SDK در محیط محلی این Agent موجود نیست. تا نتیجهٔ CI، وضعیت schema `NotVerified` می‌ماند.
 - **امنیت/باقی‌مانده:** کلاس `VendorAuditEvent` فقط مدل زنجیرهٔ هش است؛ سرویس append-only، اعتبارسنجی زنجیره و checkpoint مستقل هنوز لازم است. ورود/MFA/RBAC و bootstrap هنوز فعال/قابل دسترس نیستند.
 - **گزارش تحویل:** `docs/handoffs/ISSUE-100-vendor-persistence-identity-audit.md`.
+
+## 2026-10-26 — Issue #103: API احراز هویت Vendor با MFA
+- **مبنای کار:** D-047 پذیرفته‌شده، Issue #103 و مستند رسمی Microsoft برای ASP.NET Core 10 Identity passkeys؛ شاخهٔ security/issue-103-vendor-auth-mfa از قبل وجود داشت و قبل از افزودن قابلیت‌ها با main مقایسه شد تا پیاده‌سازی تکراری ایجاد نشود.
+- **پیاده‌سازی روی شاخه:** APIهای password→TOTP, passkey options/sign-in, passkey enrollment, TOTP setup/confirmation, session/me, logout و دریافت anti-forgery token؛ cookieهای امن، Data Protection مجزا، rate limits جدا برای تلاش‌های credential و عملیات auth، fallback authorization policy با بررسی دیتابیس فعال‌بودن مدیر و claim احراز هویت MFA.
+- **اصلاح امنیتی مهم:** از PerformPasskeyAssertionAsync استفاده می‌شود تا قبل از صدور cookie، مدیر resolve و فعال‌بودن او بررسی شود؛ سپس passkey با شمارندهٔ به‌روزشده ذخیره و نشست با claim amr=passkey ایجاد می‌شود. استفادهٔ مستقیم از PasskeySignInAsync پیش از بررسی وضعیت مدیر می‌توانست cookie را زودتر صادر کند.
+- **تست‌ها:** SQL Server Integration test برای رد password-only و مدیر غیرفعال، challenge TOTP بدون application cookie، تکمیل TOTP، دسترسی session/me، logout، تنظیمات passkey user verification، cookieهای امن، ضدجعل و rate limit؛ ثبت‌نام عمومی باید 404 بماند.
+- **مهاجرت Passkey:** CI در شاخه، migration passkey را موقتاً scaffold و artifact می‌کند تا اختلاف مدل/Schema دیده شود؛ این فایل باید از خروجی CI بازبینی و به source کنترل‌شده commit شود، سپس scaffolding موقت از workflow حذف شود. این workflow نباید به‌عنوان جایگزین migration commit شده باقی بماند.
+- **اعتبارسنجی:** Build/Test محلی اجرا نشده‌اند؛ CI باید روی SQL Server واقعی اجرا شود. تا ادغام migration واقعی و سبزشدن همهٔ CI، قابلیت auth NotVerified است.
+- **محدودیت:** bootstrap نخستین مدیر عمداً خارج از این Issue است؛ تا آن زمان هیچ حسابی از طریق registration عمومی ایجاد نمی‌شود. هیچ تغییر دیتابیس مشتری انجام نشده است.
