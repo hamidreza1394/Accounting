@@ -224,6 +224,6 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 ## Vendor RBAC — Issue #150 (foundation only; not Production-verified)
 - The Vendor Host defines a versioned server-side permission catalog. Permission identifiers are not role names and must not be derived from UI visibility.
 - Named permission policies combine the existing enabled Vendor administrator/MFA requirement with an explicit permission requirement.
-- Permissions are read from ASP.NET Core Identity role claims of type `vendor:permission`; unknown permission identifiers fail closed.
+- Permissions are read from ASP.NET Core Identity role claims of type `vendor:permission:v1`; unknown permission identifiers fail closed.
 - This is only the authorization foundation. No role/permission administration API, resource-level customer/installation/contract/license checks, maker-checker state machine, or audit checkpoint is claimed complete.
 - The PR must pass Vendor CI, SQL Server integration tests, the strict EF snapshot gate, publish/artifact checks, and full repository CI before the implementation can be considered verified.
