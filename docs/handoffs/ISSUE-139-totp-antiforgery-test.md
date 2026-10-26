@@ -43,3 +43,10 @@ Vendor CI run [40345676162](https://github.com/hamidreza1394/Accounting/actions/
 - **Branch:** `fix/issue-139-totp-antiforgery-test`
 - **Commits:** `4d4c5465e3cb559588c19700c14a78b2bc8d602d`, `2d4ef844a52a24d0eda5cde7d42c2854b9062053`
 - **Pull Request:** پس از آماده‌سازی مستندات باز می‌شود.
+
+
+## Follow-up after PR #140 — Issue #141
+- Vendor CI run [40346746819](https://github.com/hamidreza1394/Accounting/actions/runs/40346746819) failed in GetAntiforgeryTokenAndCookieAsync with InvalidOperationException: The given header was not found: the helper assumed every request emits a new antiforgery Set-Cookie header.
+- ASP.NET Core can reuse the existing antiforgery cookie while returning a new request token bound to the current identity. The follow-up sends the existing antiforgery cookie with the TOTP/application identity cookie and falls back to that existing cookie only when no replacement is emitted.
+- Production antiforgery behavior and the security assertions remain unchanged.
+- **Status:** implementation pushed to fix/issue-141-antiforgery-cookie-reuse; fresh Vendor CI is still required. Do not mark verified or merge until SQL Server integration tests, all Vendor tests, strict EF snapshot validation, and publish pass.
