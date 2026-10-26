@@ -84,7 +84,7 @@ public sealed class InitialVendorPersistence : Migration
             constraints: table =>
             {
                 table.PrimaryKey("PK_AdminRoleClaims", x => x.Id);
-                table.ForeignKey("FK_AdminRoleClaims_AdminRoles_RoleId", x => x.RoleId, "vendor", "AdminRoles", "Id", onDelete: ReferentialAction.Cascade);
+                table.ForeignKey(name: "FK_AdminRoleClaims_AdminRoles_RoleId", column: x => x.RoleId, principalSchema: "vendor", principalTable: "AdminRoles", principalColumn: "Id", onDelete: ReferentialAction.Cascade);
             });
 
         migrationBuilder.CreateTable(
@@ -100,7 +100,7 @@ public sealed class InitialVendorPersistence : Migration
             constraints: table =>
             {
                 table.PrimaryKey("PK_AdminUserClaims", x => x.Id);
-                table.ForeignKey("FK_AdminUserClaims_AdminUsers_UserId", x => x.UserId, "vendor", "AdminUsers", "Id", onDelete: ReferentialAction.Cascade);
+                table.ForeignKey(name: "FK_AdminUserClaims_AdminUsers_UserId", column: x => x.UserId, principalSchema: "vendor", principalTable: "AdminUsers", principalColumn: "Id", onDelete: ReferentialAction.Cascade);
             });
 
         migrationBuilder.CreateTable(
@@ -116,7 +116,7 @@ public sealed class InitialVendorPersistence : Migration
             constraints: table =>
             {
                 table.PrimaryKey("PK_AdminUserLogins", x => new { x.LoginProvider, x.ProviderKey });
-                table.ForeignKey("FK_AdminUserLogins_AdminUsers_UserId", x => x.UserId, "vendor", "AdminUsers", "Id", onDelete: ReferentialAction.Cascade);
+                table.ForeignKey(name: "FK_AdminUserLogins_AdminUsers_UserId", column: x => x.UserId, principalSchema: "vendor", principalTable: "AdminUsers", principalColumn: "Id", onDelete: ReferentialAction.Cascade);
             });
 
         migrationBuilder.CreateTable(
@@ -130,8 +130,8 @@ public sealed class InitialVendorPersistence : Migration
             constraints: table =>
             {
                 table.PrimaryKey("PK_AdminUserRoles", x => new { x.UserId, x.RoleId });
-                table.ForeignKey("FK_AdminUserRoles_AdminRoles_RoleId", x => x.RoleId, "vendor", "AdminRoles", "Id", onDelete: ReferentialAction.Cascade);
-                table.ForeignKey("FK_AdminUserRoles_AdminUsers_UserId", x => x.UserId, "vendor", "AdminUsers", "Id", onDelete: ReferentialAction.Cascade);
+                table.ForeignKey(name: "FK_AdminUserRoles_AdminRoles_RoleId", column: x => x.RoleId, principalSchema: "vendor", principalTable: "AdminRoles", principalColumn: "Id", onDelete: ReferentialAction.Cascade);
+                table.ForeignKey(name: "FK_AdminUserRoles_AdminUsers_UserId", column: x => x.UserId, principalSchema: "vendor", principalTable: "AdminUsers", principalColumn: "Id", onDelete: ReferentialAction.Cascade);
             });
 
         migrationBuilder.CreateTable(
@@ -147,7 +147,7 @@ public sealed class InitialVendorPersistence : Migration
             constraints: table =>
             {
                 table.PrimaryKey("PK_AdminUserTokens", x => new { x.UserId, x.LoginProvider, x.Name });
-                table.ForeignKey("FK_AdminUserTokens_AdminUsers_UserId", x => x.UserId, "vendor", "AdminUsers", "Id", onDelete: ReferentialAction.Cascade);
+                table.ForeignKey(name: "FK_AdminUserTokens_AdminUsers_UserId", column: x => x.UserId, principalSchema: "vendor", principalTable: "AdminUsers", principalColumn: "Id", onDelete: ReferentialAction.Cascade);
             });
 
         migrationBuilder.CreateIndex("RoleNameIndex", "AdminRoles", "NormalizedName", schema: "vendor", unique: true, filter: "[NormalizedName] IS NOT NULL");
