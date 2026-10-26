@@ -221,9 +221,9 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - Checkpoint/export به مقصد مستقل، پایش شکست/انحراف، retention و runbook بازیابی هنوز پیاده نشده‌اند؛ هیچ ادعای ممیزی تغییرناپذیر/Production-ready مطرح نمی‌شود.
 
 
-## Vendor RBAC — Issue #150 (foundation only; not Production-verified)
-- The Vendor Host defines a versioned server-side permission catalog. Permission identifiers are not role names and must not be derived from UI visibility.
-- Named permission policies combine the existing enabled Vendor administrator/MFA requirement with an explicit permission requirement.
-- Permissions are read from ASP.NET Core Identity role claims of type `vendor:permission:v1`; unknown permission identifiers fail closed.
-- This is only the authorization foundation. No role/permission administration API, resource-level customer/installation/contract/license checks, maker-checker state machine, or audit checkpoint is claimed complete.
-- The PR must pass Vendor CI, SQL Server integration tests, the strict EF snapshot gate, publish/artifact checks, and full repository CI before the implementation can be considered verified.
+## زیرساخت RBAC در Vendor — Issue #150 (هنوز تأیید Production نشده)
+- در Host فروشنده، کاتالوگ نسخه‌دار مجوزها تعریف شده است. شناسه مجوز با نام نقش یا نمایش/مخفی‌بودن اجزای UI یکی نیست.
+- سیاست‌های نام‌دار مجوز، گارد موجود حساب فعال و MFA را همراه با مجوز مشخص اعمال می‌کنند.
+- مجوزها از Claimهای نقش ASP.NET Core Identity با نوع `vendor:permission:v1` خوانده می‌شوند؛ شناسه‌های ناشناخته باید رد شوند.
+- این تغییر فقط زیرساخت اولیه مجوزدهی است. API/UI مدیریت نقش و مجوز، کنترل منبع‌محور مشتری/نصب/قرارداد/لایسنس، گردش‌کار Maker-Checker و checkpoint مستقل ممیزی هنوز تکمیل نشده‌اند.
+- تا موفقیت Vendor CI، تست‌های Integration روی SQL Server، گارد Snapshot مدل EF، بررسی بسته انتشار و CI کامل مخزن، این پیاده‌سازی تأییدشده برای Production محسوب نمی‌شود.
