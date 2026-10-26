@@ -245,3 +245,9 @@
 
 ## CI follow-up — SignInManager registration
 - Vendor CI run 40286276604 found a compile error (`IdentityBuilder` has no `AddSignInManager` in Persistence project). Follow-up branch moves only SignInManager registration to Vendor.Host while keeping IdentityCore/store registration single-source. Status: Not verified until CI passes.
+
+
+## Vendor CI follow-up — Issue #134 (2026-10-26)
+- Vendor CI run [40287063856](https://github.com/hamidreza1394/Accounting/actions/runs/40287063856) failed during `dotnet build` because `AddDefaultTokenProviders()` is not available from the Persistence class library's current compile-time references. All frontend typecheck/tests/build and asset-budget checks passed in that run; .NET tests were skipped after the build failure.
+- Branch `fix/vendor-identity-token-providers` moves only token-provider registration to `Vendor.Host`, retaining IdentityCore/store registration in Persistence and preserving token-provider behavior.
+- Status: **Implemented in branch / Not verified** until fresh Vendor CI completes Build, model snapshot check, SQL Server integration tests and publish.
