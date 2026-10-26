@@ -61,3 +61,9 @@ Host عمداً به ارائه‌دهندهٔ ابری خاصی وابسته ن
 
 ## Migration ثبت‌شده برای Passkey
 - Migration `20261026045412_VendorAddPasskeySupport` و تغییرات `VendorDbContextModelSnapshot` اکنون در source ثبت شده‌اند؛ workflow دیگر Migration تولید نمی‌کند و فقط `dotnet ef migrations has-pending-model-changes` را اجرا می‌کند.
+## زنجیرهٔ ممیزی Vendor — Issue #105
+- شاخهٔ کاری `security/issue-105-vendor-audit-chain` سرویس `IVendorAuditWriter` و verifier را اضافه می‌کند؛ تا ادغام PR و CI موفق، این قابلیت در وضعیت `NotVerified` است.
+- Writer فقط شناسه‌های محدود و متادیتای allow-listed می‌پذیرد؛ `MetadataJson` آزاد عمداً از درخواست حذف شده است. زمان از `TimeProvider` می‌آید و canonical hash نسخه‌دار SHA-256 روی فیلدهای ثابت و `PreviousHash` محاسبه می‌شود.
+- append با `sp_getapplock` در تراکنش SQL Server سریال می‌شود تا چند نمونهٔ Host یک شاخهٔ واحد بسازند. verifier ریشهٔ چندگانه، والد گمشده، fork، چرخه، رخداد جداشده و تغییر محتوا را گزارش می‌کند.
+- **محدودیت امنیتی:** زنجیره در همان دیتابیس مانع DBA دارای مجوز بازنویسی نمی‌شود. مجوز SQL مخصوص درج، اعتبارسنجی دوره‌ای و checkpoint/export مستقل به مقصدی با مجوز جداگانه همچنان قبل از استفادهٔ Production لازم‌اند.
+- هیچ endpointی هنوز این writer را صدا نمی‌زند؛ wiring به Host پس از تکمیل مسیر ورود/MFA و bootstrap، در PR مستقل انجام می‌شود.

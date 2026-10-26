@@ -214,3 +214,8 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - Every auth POST validates antiforgery; credential attempts are rate-limited by remote IP. Auth responses and WebAuthn/TOTP setup payloads are not cacheable.
 - Production requires a fully qualified persistent Data Protection key directory, an explicit non-wildcard AllowedHosts list, and an explicit passkey relying-party domain.
 - Branch-only until CI/review/committed migration complete. Bootstrap, granular RBAC, maker-checker, independent audit checkpoints, and UI remain out of scope.
+## سامانهٔ مرکزی Vendor — زنجیرهٔ ممیزی (Issue #105)
+- Writer زنجیرهٔ ممیزی در شاخهٔ Issue #105 با شناسه‌های قابل‌اعتبارسنجی، بدون متن آزاد/PII، hash نسخه‌دار و قفل تراکنشی SQL Server پیاده شده است؛ تا ادغام/CI `NotVerified` است.
+- Hash-chain در همان پایگاه داده، تغییر یک رخداد را تشخیص می‌دهد اما بازنویسی کامل توسط DBA را متوقف نمی‌کند. برای Production، حساب SQL برنامه باید کمترین دسترسی لازم و بدون UPDATE/DELETE روی جدول ممیزی داشته باشد؛ مهاجرت/حساب اجرایی نیازمند تفکیک مجوز است.
+- پیش از ادغام عملیات حساس: Verify chain باید fail-closed عمل کند؛ شکست اعتبارسنجی نباید به صدور لایسنس، تغییر مدیر یا عملیات حساس اجازه دهد.
+- Checkpoint/export به مقصد مستقل، پایش شکست/انحراف، retention و runbook بازیابی هنوز پیاده نشده‌اند؛ هیچ ادعای ممیزی تغییرناپذیر/Production-ready مطرح نمی‌شود.
