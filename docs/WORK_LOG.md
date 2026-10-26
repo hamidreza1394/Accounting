@@ -570,3 +570,11 @@
 - **اصلاح مشاهده‌شده در `main`:** تست اکنون `AddDataProtection().SetApplicationName("Faranou.Vendor.ControlPlane")` را ثبت می‌کند. این با خطای DI مشخص‌شده هم‌راستاست؛ اما نتیجهٔ تازه‌ای که رفع خطا را ثابت کند هنوز از این بررسی به‌دست نیامده است.
 - **اقدام:** PR مستنداتی برای اجرای دوبارهٔ Vendor CI و CI کامل ایجاد می‌شود. فقط در صورت سبزشدن تست SQL Server، strict EF snapshot gate و Publish می‌توان bootstrap را Verified دانست.
 - **محدوده:** این پیگیری فقط مستندات است؛ هیچ کد Production، Migration مشتری یا داده‌ای تغییر نمی‌کند.
+
+
+## 2026-10-26 — Issue #150: مبنای RBAC فروشنده (در شاخه؛ در انتظار CI)
+- **محدوده:** شاخه `feat/issue-150-vendor-rbac-foundation` بر مبنای `main`@ `6fc04fd368185c6e9935cbd121ed9ccaac1455a6`، کاتالوگ نسخه‌دار مجوزها، policyهای نام‌دار، ارزیابی claimهای نقش Identity و تست‌های ترکیب policy را اضافه می‌کند.
+- **طراحی امنیتی:** مجوزها شناسه‌های پایدار سمت سرورند و از نام نقش یا برچسب UI جدا هستند. هر policy مجوزی هم‌زمان گارد موجود مدیر فعال/MFA را الزام می‌کند. شناسه مجوز ناشناخته fail-closed رد می‌شود. مجوزها از claim نوع `vendor:permission` روی نقش‌های Identity خوانده می‌شوند؛ هنوز endpoint یا UI برای مدیریت نقش/مجوز ساخته نشده است.
+- **محدوده خارج از این PR:** مجوزدهی منبع‌محور مشتری/نصب/قرارداد/لایسنس و maker-checker هنوز پیاده‌سازی نشده‌اند؛ هیچ Migration یا تغییر دیتابیس مشتری وجود ندارد.
+- **اعتبارسنجی:** کد از طریق GitHub API روی شاخه ثبت شد؛ Build/Test محلی در این محیط اجرا نشده‌اند. CI روی PR باید Vendor UI، Build/Test با SQL Server، strict EF snapshot gate، Publish/artifact scan و full repository CI را تأیید کند. وضعیت تا آن زمان **Implemented in branch / Not Verified** است.
+- **Handoff:** `docs/handoffs/ISSUE-150-vendor-rbac-foundation.md`.
