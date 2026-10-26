@@ -20,12 +20,12 @@ if (VendorBootstrapCommand.IsRequested(args))
 {
     builder.Services.AddVendorPersistence(builder.Configuration);
     new IdentityBuilder(typeof(VendorAdminUser), builder.Services).AddDefaultTokenProviders();
-    await using var commandServices = builder.Services.BuildServiceProvider(
-        new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
+    var commandApp = builder.Build();
     var exitCode = await VendorBootstrapCommand.RunAsync(
-        commandServices,
+        commandApp.Services,
         builder.Configuration,
         new ConsoleVendorBootstrapPrompt());
+    await commandApp.DisposeAsync();
     Environment.ExitCode = exitCode;
     return;
 }
