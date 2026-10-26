@@ -4,6 +4,7 @@ using System.Text.Json;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Identity;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -17,8 +18,9 @@ namespace Faranou.Vendor.Host.Tests;
 public sealed class VendorAuthenticationSecurityTests
 {
     [Fact]
-    public async Task Password_only_is_denied_and_totp_challenge_does_not_issue_application_cookie()
+    public async Task PasswordOnlyIsDeniedAndTotpChallengeDoesNotIssueApplicationCookie()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         var baseConnectionString = Environment.GetEnvironmentVariable("FARANO_VENDOR_TEST_SQLSERVER");
         if (string.IsNullOrWhiteSpace(baseConnectionString))
         {
@@ -51,10 +53,10 @@ public sealed class VendorAuthenticationSecurityTests
         await using (var scope = factory.Services.CreateAsyncScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
-            await db.Database.EnsureDeletedAsync();
+            await db.Database.EnsureDeletedAsync(cancellationToken);
             try
             {
-                await db.Database.MigrateAsync();
+                await db.Database.MigrateAsync(cancellationToken);
 
             var users = scope.ServiceProvider.GetRequiredService<UserManager<VendorAdminUser>>();
             var passwordOnly = new VendorAdminUser
@@ -79,12 +81,13 @@ public sealed class VendorAuthenticationSecurityTests
             var createDisabled = await users.CreateAsync(disabled, "Secure-Vendor#2026");
             Assert.True(createDisabled.Succeeded, string.Join("; ", createDisabled.Errors.Select(error => error.Code)));
 
-            var token = await GetAntiforgeryTokenAsync(client);
+            var token = await GetAntiforgeryTokenAsync(client, cancellationToken);
             using var passwordOnlyResponse = await PostWithTokenAsync(
                 client,
                 "/api/auth/password",
                 new { userName = passwordOnly.UserName, password = "Secure-Vendor#2026" },
-                token);
+                token,
+                cancellationToken);
             Assert.Equal(HttpStatusCode.Unauthorized, passwordOnlyResponse.StatusCode);
 
             using var disabledResponse = await PostWithTokenAsync(
@@ -115,7 +118,7 @@ public sealed class VendorAuthenticationSecurityTests
                 new { userName = user.UserName, password = "Secure-Vendor#2026" },
                 token);
             Assert.Equal(HttpStatusCode.OK, passwordResponse.StatusCode);
-            using (var responseDocument = JsonDocument.Parse(await passwordResponse.Content.ReadAsStringAsync()))
+            using (var responseDocument = JsonDocument.Parse(await passwordResponse.Content.ReadAsStringAsync(cancellationToken)))
             {
                 Assert.True(responseDocument.RootElement.GetProperty("requiresSecondFactor").GetBoolean());
             }
@@ -126,7 +129,7 @@ public sealed class VendorAuthenticationSecurityTests
             Assert.Contains("__Host-Faranou.Vendor.TwoFactor=", setCookies, StringComparison.Ordinal);
             Assert.DoesNotContain("__Host-Faranou.Vendor.Auth=", setCookies, StringComparison.Ordinal);
 
-            using var beforeTotp = await client.GetAsync("/api/auth/me");
+            using var beforeTotp = await client.GetAsync("/api/auth/me", cancellationToken);
             Assert.Equal(HttpStatusCode.Unauthorized, beforeTotp.StatusCode);
 
             var code = await users.GenerateTwoFactorTokenAsync(user, TokenOptions.DefaultAuthenticatorProvider);
@@ -139,7 +142,7 @@ public sealed class VendorAuthenticationSecurityTests
 
             using var meResponse = await client.GetAsync("/api/auth/me");
             Assert.Equal(HttpStatusCode.OK, meResponse.StatusCode);
-            using var meDocument = JsonDocument.Parse(await meResponse.Content.ReadAsStringAsync());
+            using var meDocument = JsonDocument.Parse(await meResponse.Content.ReadAsStringAsync(cancellationToken));
             Assert.True(meDocument.RootElement.GetProperty("totpEnabled").GetBoolean());
 
             using var creationOptionsResponse = await PostWithTokenAsync(
@@ -148,7 +151,7 @@ public sealed class VendorAuthenticationSecurityTests
                 new { },
                 token);
             Assert.Equal(HttpStatusCode.OK, creationOptionsResponse.StatusCode);
-            using (var creationOptions = JsonDocument.Parse(await creationOptionsResponse.Content.ReadAsStringAsync()))
+            using (var creationOptions = JsonDocument.Parse(await creationOptionsResponse.Content.ReadAsStringAsync(cancellationToken)))
             {
                 var authenticatorSelection = creationOptions.RootElement.GetProperty("authenticatorSelection");
                 Assert.Equal("required", authenticatorSelection.GetProperty("userVerification").GetString());
@@ -169,7 +172,7 @@ public sealed class VendorAuthenticationSecurityTests
     }
 
     [Fact]
-    public async Task Anonymous_auth_post_is_antiforgery_protected_and_rate_limited()
+    public async Task AnonymousAuthPostIsAntiforgeryProtectedAndRateLimited()
     {
         await using var factory = new WebApplicationFactory<Program>();
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
@@ -192,7 +195,7 @@ public sealed class VendorAuthenticationSecurityTests
     }
 
     [Fact]
-    public Task Identity_cookie_and_passkey_options_enforce_secure_mfa_defaults()
+    public Task IdentityCookieAndPasskeyOptionsEnforceSecureMfaDefaults()
     {
         using var factory = new WebApplicationFactory<Program>();
         using var scope = factory.Services.CreateScope();
@@ -214,7 +217,7 @@ public sealed class VendorAuthenticationSecurityTests
     }
 
     [Fact]
-    public async Task Public_registration_endpoint_is_not_mapped()
+    public async Task PublicRegistrationEndpointIsNotMapped()
     {
         await using var factory = new WebApplicationFactory<Program>();
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
@@ -226,16 +229,16 @@ public sealed class VendorAuthenticationSecurityTests
         {
             userName = "attacker",
             password = "Secure-Vendor#2026"
-        });
+        }, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     private static async Task<string> GetAntiforgeryTokenAsync(HttpClient client)
     {
-        using var response = await client.GetAsync("/api/auth/antiforgery");
+        using var response = await client.GetAsync("/api/auth/antiforgery", cancellationToken);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
         var token = document.RootElement.GetProperty("requestToken").GetString();
         Assert.False(string.IsNullOrWhiteSpace(token));
         return token!;
@@ -245,13 +248,14 @@ public sealed class VendorAuthenticationSecurityTests
         HttpClient client,
         string uri,
         object payload,
-        string token)
+        string token,
+        CancellationToken cancellationToken)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, uri)
         {
             Content = JsonContent.Create(payload)
         };
         request.Headers.Add("X-CSRF-TOKEN", token);
-        return client.SendAsync(request);
+        return client.SendAsync(request, cancellationToken);
     }
 }
