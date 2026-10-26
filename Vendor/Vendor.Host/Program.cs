@@ -22,6 +22,26 @@ if (bootstrapCommandRequested)
 {
     builder.Services.AddVendorPersistence(builder.Configuration);
     new IdentityBuilder(typeof(VendorAdminUser), builder.Services).AddDefaultTokenProviders();
+
+    // Identity's default token-provider set also requires Data Protection services, even though
+    // this command never issues an HTTP session. Production must use the same persistent key store.
+    var commandKeyDirectory = builder.Configuration["DataProtection:KeysDirectory"];
+    if (builder.Environment.IsProduction() &&
+        (string.IsNullOrWhiteSpace(commandKeyDirectory) || !Path.IsPathFullyQualified(commandKeyDirectory)))
+    {
+        throw new InvalidOperationException(
+            "Vendor Data Protection keys require a fully qualified persistent directory. Set FARANO_VENDOR_DataProtection__KeysDirectory.");
+    }
+
+    var commandDataProtection = builder.Services.AddDataProtection()
+        .SetApplicationName("Faranou.Vendor.ControlPlane");
+    if (!string.IsNullOrWhiteSpace(commandKeyDirectory))
+    {
+        var fullCommandKeyDirectory = Path.GetFullPath(commandKeyDirectory);
+        Directory.CreateDirectory(fullCommandKeyDirectory);
+        commandDataProtection.PersistKeysToFileSystem(new DirectoryInfo(fullCommandKeyDirectory));
+    }
+
     var commandApp = builder.Build();
     var exitCode = await VendorBootstrapCommand.RunAsync(
         commandApp.Services,
