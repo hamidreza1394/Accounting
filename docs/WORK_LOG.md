@@ -389,3 +389,14 @@
 - **وضعیت اعتبارسنجی این پیگیری:** منتظر CI روی commit حاوی Migrationهای ثبت‌شده هستیم؛ Build/Test محلی اجرا نشده‌اند چون SDK در محیط محلی این Agent موجود نیست. تا نتیجهٔ CI، وضعیت schema `NotVerified` می‌ماند.
 - **امنیت/باقی‌مانده:** کلاس `VendorAuditEvent` فقط مدل زنجیرهٔ هش است؛ سرویس append-only، اعتبارسنجی زنجیره و checkpoint مستقل هنوز لازم است. ورود/MFA/RBAC و bootstrap هنوز فعال/قابل دسترس نیستند.
 - **گزارش تحویل:** `docs/handoffs/ISSUE-100-vendor-persistence-identity-audit.md`.
+
+## 2026-10-26 — Vendor persistence hardening (Issue #117)
+- **مبنای کار:** `main` پس از ادغام PR #102 (`9b63c546c7a569498f6987137c686c2d7f9fb6ff`). PR #116 بسته شد چون بر پایهٔ نسخهٔ قدیمی‌تر بود و مدل Persistence/Migration ناسازگار داشت؛ هیچ تغییری از آن ادغام نشد.
+- **تغییرات:** registration دیتابیس و ASP.NET Core Identity EF stores به `Vendor/Vendor.Persistence/DependencyInjection.cs` منتقل شد؛ Host فقط `AddVendorPersistence` را صدا می‌زند. سیاست‌های پایهٔ Identity شامل ایمیل یکتا، رمز ۱۴ کاراکتری با ۴ کاراکتر یکتا، و lockout پس از ۵ تلاش برای ۱۵ دقیقه است. این سیاست‌ها جایگزین MFA اجباری نیستند.
+- **تست‌ها:** تست metadata مدل و default غیرفعال بودن مدیر؛ نبود FK از audit به admin؛ fail-closed هنگام نبود اتصال Vendor؛ resolve شدن `IUserStore`/`IRoleStore`; اجرای Migration و assert هشت جدول روی SQL Server واقعی.
+- **محافظت destructive test:** تست فقط `localhost`, `127.0.0.1` یا `::1` و catalog پایهٔ `FaranouVendorTests` را می‌پذیرد؛ سپس DB نام‌تصادفی می‌سازد، connection را می‌بندد و فقط همان DB را حذف می‌کند. در CI متغیر test الزامی است و تست نمی‌تواند بی‌صدا skip شود.
+- **Workflow:** نام متغیرهای integration test با workflow یکسان شد. CI از SQL Server 2022 استفاده می‌کند؛ اسکن/Publish و مرحلهٔ signing تغییر نکرده‌اند.
+- **مرز داده:** هیچ فایل `Server/**`، `Infrastructure/Persistence/**` یا Migration مشتری تغییر نکرده است؛ هیچ endpoint ورود/ثبت‌نام/bootstrap، مدیر seed، secret یا کلید امضا اضافه نشد.
+- **اعتبارسنجی:** Build/Test محلی اجرا نشده‌اند. CI روی PR جاری باید اجرا شود؛ تا آن زمان تست Migration و DI `NotVerified` هستند. CI قبلی PR #102 سبز بود اما فقط شاهد model-snapshot check و وضعیت قبل از این تغییرات است.
+- **باقی‌مانده:** MFA/passkey/TOTP، bootstrap یک‌بارمصرف، RBAC سمت سرور، audit writer/verifier/checkpoint، maker-checker، کنترل‌های deploy و G2 allow-list انتشار همچنان مرحله‌های مستقل هستند.
+- **Handoff:** `docs/handoffs/ISSUE-117-vendor-persistence-hardening.md`.
