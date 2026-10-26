@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -56,6 +58,18 @@ public sealed class VendorAuthenticationSecurityTests
             var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
             try
             {
+                // Diagnose the runtime model against the last migration before MigrateAsync throws its generic warning.
+                var migrationsAssembly = db.GetService<IMigrationsAssembly>();
+                var modelDiffer = db.GetService<IMigrationsModelDiffer>();
+                var latestMigration = migrationsAssembly.Migrations.OrderBy(entry => entry.Key, StringComparer.Ordinal).Last().Value;
+                var modelDifferences = modelDiffer.GetDifferences(
+                    latestMigration.TargetModel.GetRelationalModel(),
+                    db.Model.GetRelationalModel());
+                Assert.True(
+                    modelDifferences.Count == 0,
+                    "Runtime Vendor model differs from latest migration target: " +
+                    string.Join(", ", modelDifferences.Select(operation => operation.GetType().Name + " (" + operation + ")")));
+
                 await db.Database.MigrateAsync(cancellationToken);
 
             var users = scope.ServiceProvider.GetRequiredService<UserManager<VendorAdminUser>>();
