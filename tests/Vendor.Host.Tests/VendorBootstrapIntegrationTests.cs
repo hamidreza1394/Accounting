@@ -1,7 +1,6 @@
 using System.Buffers.Binary;
 using System.Globalization;
 using System.Security.Cryptography;
-using System.Text;
 using Faranou.Vendor.Host.Bootstrap;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Auditing;
@@ -109,7 +108,6 @@ public sealed class VendorBootstrapIntegrationTests
     {
         private string? _authenticatorKey;
         private int _lineReadCount;
-        private int _passwordReadCount;
 
         public string? ReadLine(string prompt)
         {
@@ -126,7 +124,6 @@ public sealed class VendorBootstrapIntegrationTests
         public string ReadPassword(string prompt)
         {
             _ = prompt;
-            _passwordReadCount++;
             return "Secure-Vendor#2026";
         }
 
