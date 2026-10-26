@@ -2,6 +2,7 @@ using Faranou.Vendor.Host.Authentication;
 using Faranou.Vendor.Host.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Xunit;
 
@@ -62,6 +63,46 @@ public sealed class VendorPermissionAuthorizationTests
             policy!.Requirements,
             requirement => requirement is VendorPermissionRequirement permission &&
                            !VendorPermissionCatalog.Contains(permission.Permission));
+    }
+
+    [Fact]
+    public async Task EveryVendorApiEndpointDeclaresExplicitAccessMetadata()
+    {
+        await using var factory = new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program>();
+        var dataSource = factory.Services.GetRequiredService<Microsoft.AspNetCore.Routing.EndpointDataSource>();
+        var apiEndpoints = dataSource.Endpoints
+            .OfType<Microsoft.AspNetCore.Routing.RouteEndpoint>()
+            .Where(endpoint => endpoint.RoutePattern.RawText?.StartsWith("/api/", StringComparison.OrdinalIgnoreCase) == true)
+            .ToArray();
+
+        Assert.NotEmpty(apiEndpoints);
+
+        var unclassified = apiEndpoints
+            .Where(endpoint =>
+                endpoint.Metadata.GetMetadata<IAllowAnonymous>() is null &&
+                !endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>().Any())
+            .Select(endpoint => endpoint.RoutePattern.RawText)
+            .ToArray();
+        Assert.Empty(unclassified);
+
+        var publicApiPaths = apiEndpoints
+            .Where(endpoint => endpoint.Metadata.GetMetadata<IAllowAnonymous>() is not null)
+            .Select(endpoint => endpoint.RoutePattern.RawText!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var approvedPublicPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "/api/auth/antiforgery",
+            "/api/auth/password",
+            "/api/auth/totp/verify",
+            "/api/auth/passkey/options",
+            "/api/auth/passkey/sign-in",
+            "/api/auth/logout"
+        };
+
+        Assert.Subset(approvedPublicPaths, publicApiPaths);
+        Assert.Subset(publicApiPaths, approvedPublicPaths);
     }
 
     [Fact]
