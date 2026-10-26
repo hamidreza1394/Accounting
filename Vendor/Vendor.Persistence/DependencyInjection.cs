@@ -48,7 +48,6 @@ public static class DependencyInjection
             })
             .AddRoles<IdentityRole<Guid>>()
             .AddEntityFrameworkStores<VendorDbContext>()
-            .AddSignInManager()
             .AddDefaultTokenProviders();
 
         return services;
