@@ -11,7 +11,7 @@
 - [x] اتصال صفحه ورود به endpointهای واقعی password/TOTP و ضدجعل درخواست
 - [x] Host برای static assets و SPA routes و جلوگیری از fallback ناشناخته API
 - [x] Vendor CI برای build/test UI و بسته‌بندی assetها به‌روزرسانی شد
-- [ ] CI واقعی سبز و مرور بصری/مرورگری روی HTTPS
+- [ ] CI مجدد روی commit 3d317ea سبز و مرور بصری/مرورگری روی HTTPS
 - [ ] اثبات نهایی جداسازی بسته مشتری با CIهای اصلی
 
 ## خلاصه تغییرات
@@ -29,12 +29,12 @@
 ## بررسی و آزمون
 | فرمان/آزمون | نتیجه واقعی | توضیح/کد خروج |
 |---|---|---|
-| npm ci | اجرا نشده | قرار است در Vendor CI اجرا شود |
-| npm run typecheck | اجرا نشده | نیازمند CI |
-| npm test | اجرا نشده | تست‌های UI اضافه شده‌اند؛ نتیجه هنوز نامعلوم است |
-| npm run build | اجرا نشده | خروجی publish هنوز با CI تأیید نشده است |
-| dotnet build Vendor.sln | اجرا نشده | نیازمند Vendor CI |
-| dotnet test Vendor.sln | اجرا نشده | نیازمند Vendor CI/SQL Server integration |
+| npm ci | موفق در run 40277399614 | وابستگی‌ها نصب شدند |
+| npm run typecheck | موفق در run 40277399614 | TypeScript strict |
+| npm test | موفق در run 40277399614 | تست‌های UI سبز شدند |
+| npm run build | موفق در run 40277399614 | خروجی Vite ساخته شد |
+| dotnet build Vendor.sln | ناموفق در run 40277399614 | usingهای لازم در Program.cs مفقود بودند؛ در commit 3d317ea اصلاح شد، اجرای مجدد در صف است |
+| dotnet test Vendor.sln | اجرا نشد در run 40277399614 | به‌دلیل شکست Build اجرا نشد؛ اجرای مجدد پس از اصلاح لازم است |
 
 ## امنیت، داده و سازگاری
 - APIهای احراز هویت هم‌مبدأ و ضدجعل درخواست هستند؛ APIها همچنان authorization سمت سرور دارند.
