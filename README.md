@@ -4,7 +4,7 @@
 
 ## فناوری‌ها
 - ASP.NET Core Razor Pages + Minimal API (`/api/v1`) / .NET 10 LTS
-- کلاینت React 19 + TypeScript (strict) + Vite + Tailwind CSS در `ClientApp` (مسیر `/app`) — راهنما: [ClientApp/README.md](ClientApp/README.md)
+- کلاینت React 19 + TypeScript (strict) + Vite + Tailwind CSS v4 در `ClientApp` (مسیر `/app`); استاندارد کامپوننت‌های جدید: shadcn/ui با پیکربندی RTL — راهنما: [ClientApp/README.md](ClientApp/README.md) و [استاندارد UI](docs/UI_COMPONENTS.md)
 - SQL Server و EF Core 10
 - مدیریت متمرکز نسخه NuGet با `Directory.Packages.props`
 - تست پایه xUnit v3 و CI با GitHub Actions
@@ -33,6 +33,7 @@ dotnet run --project Server/Server.csproj
 - [تصمیمات معماری](docs/DECISIONS.md)
 - [معماری هدف و وضعیت موجود](docs/ARCHITECTURE.md)
 - [استانداردهای کدنویسی](docs/CODING_STANDARDS.md)
+- [استاندارد کامپوننت‌های UI و shadcn/ui](docs/UI_COMPONENTS.md)
 - [راهبرد تست](docs/TESTING.md)
 - [راهنمای پایگاه داده](docs/DATABASE.md)
 - [چک‌لیست امنیت](docs/SECURITY.md)
