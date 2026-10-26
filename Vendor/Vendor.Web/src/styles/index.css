@@ -3,3 +3,16 @@
 
 /* Security controls: consistent spacing, visible focus, and clear secret handling. */
 .passkey-button{width:100%;height:44px!important;margin-top:9px;gap:9px;border-color:#cfdbe5!important;color:#1c3d5a!important;background:#fff!important}.passkey-button:hover{background:#f0f5f8!important}.security-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:15px}.security-actions button{flex:1;min-width:145px}.totp-setup{display:grid;gap:11px;margin-top:17px;padding:15px;border:1px solid #d8e4eb;border-radius:12px;background:#f8fafc}.totp-setup>b{font-size:13px;color:#1c3d5a}.totp-setup>p{margin:0;color:#627488;font-size:12px;line-height:1.9}.totp-setup code{display:block;max-width:100%;overflow-wrap:anywhere;padding:10px;border-radius:8px;background:#edf2f7;color:#1c3d5a;font-size:12px;user-select:all}.totp-setup details summary{cursor:pointer;color:#1d6a70;font-size:12px;font-weight:700}.totp-setup details code{margin-top:8px;font-size:10px}.totp-setup .auth-form{margin-top:5px}.totp-setup .auth-form button{min-height:40px}
+
+
+/* Persian RTL defaults: use logical properties so controls remain correct in RTL and LTR contexts. */
+:root { direction: rtl; text-align: start; }
+body { direction: inherit; text-align: start; }
+.auth-form input,
+select,
+textarea { text-align: start; }
+.auth-form input[dir="auto"] { direction: auto; unicode-bidi: plaintext; }
+.auth-form input[dir="ltr"],
+.totp-setup code[dir="ltr"] { direction: ltr; text-align: left; unicode-bidi: plaintext; }
+.password-field input { padding-inline-start: 65px; padding-left: 13px; }
+.password-toggle { left: auto; inset-inline-start: 9px; }
