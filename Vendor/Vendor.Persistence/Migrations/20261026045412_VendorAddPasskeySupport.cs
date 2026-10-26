@@ -1,13 +1,8 @@
-using Faranou.Vendor.Persistence;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Faranou.Vendor.Persistence.Migrations;
 
-[DbContext(typeof(VendorDbContext))]
-[Migration("20261026045412_VendorAddPasskeySupport")]
-public sealed class VendorAddPasskeySupport : Migration
+public sealed partial class VendorAddPasskeySupport : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {

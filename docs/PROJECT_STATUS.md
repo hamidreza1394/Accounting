@@ -233,8 +233,11 @@
 - هیچ schema/migration دیتابیس مشتری تغییر نکرده است.
 
 
-## پیگیری پس از ادغام Issue #130 — 2026-10-26
-- بازبینی کد `ManagedSelect` یک مورد مرزی یافت: گزینهٔ اول ممکن بود `disabled` باشد و همچنان به‌عنوان پیش‌فرض انتخاب شود.
-- اصلاح در شاخهٔ `fix/vendor-managed-select-default-option` انجام شده است؛ انتخاب پیش‌فرض اکنون فقط از گزینه‌های فعال است و حالت نبود گزینهٔ فعال صریحاً غیرفعال می‌شود.
-- تست رگرسیون افزوده شده؛ وضعیت تا اجرای CI **Not verified** است.
-- محدودیت جاری: کامپوننت فقط زیرساخت UI است؛ گزینه‌های مدیریتی هنوز به API، مجوز سمت سرور و ذخیره‌سازی واقعی نیاز دارند.
+## Vendor follow-up — ثبت تکراری Identity (2026-10-26)
+- کد فعلی پس از merge نشان داد Identity در `AddVendorPersistence` و دوباره در `Vendor.Host/Program.cs` ثبت می‌شود؛ این با معماری مستند «یک محل ثبت persistence/Identity» ناسازگار است.
+- شاخهٔ `fix/vendor-identity-registration-single-source` ثبت Identity را به Persistence محدود کرده و SchemaVersion، SignInManager و token providers را در همان ثبت حفظ می‌کند.
+- وضعیت: اصلاح پیشنهادی در شاخه، **Not verified** تا سبز شدن Vendor CI و integration tests روی SQL Server. علت ریشه‌ای شکست قبلی هنوز قطعی فرض نمی‌شود.
+
+- CI evidence: Vendor CI run [40285919870](https://github.com/hamidreza1394/Accounting/actions/runs/40285919870) failed only in the runtime auth integration test at `Database.MigrateAsync` with `PendingModelChangesWarning`; frontend checks, .NET build and EF CLI snapshot check passed. PR #132 consolidates Identity registration, but the cause remains **unconfirmed until rerun**.
+
+- **یافتهٔ مهم‌تر دربارهٔ migration:** فایل `20261026045412_VendorAddPasskeySupport.Designer.cs` در `main` غایب بود. شاخهٔ PR #132 اکنون `BuildTargetModel` این migration را اضافه کرده و تست SQL Server، اعمال migration و جدول `VendorAdminUserPasskeys` را صریح بررسی می‌کند. این با شکست runtime `PendingModelChangesWarning` سازگار است؛ تا CI سبز، رفع‌شدن آن تأیید نشده است.

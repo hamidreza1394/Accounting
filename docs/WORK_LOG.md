@@ -468,8 +468,17 @@
 - اعتبارسنجی محلی در این محیط اجرا نشد؛ وضعیت تا نتیجه Vendor CI روی PR **Implemented / Not yet Verified** است.
 
 
-## 2026-10-26 — Vendor ManagedSelect: اصلاح انتخاب پیش‌فرض گزینهٔ غیرفعال
-- در بازبینی پس از ادغام Issue #130، یک نقص در `ManagedSelect` پیدا شد: محاسبهٔ پیش‌فرض قبلی اولین گزینه را بدون توجه به `disabled` انتخاب می‌کرد و ممکن بود یک گزینهٔ غیرقابل انتخاب پیش‌فرض شود.
-- کامپوننت اکنون اولین گزینهٔ فعال را انتخاب می‌کند؛ `defaultValue` فقط در صورت وجود و فعال بودن معتبر است؛ اگر هیچ گزینهٔ فعالی وجود نداشته باشد، کنترل غیرفعال و پیام «گزینهٔ فعالی موجود نیست» نمایش داده می‌شود.
-- تست رگرسیون برای گزینهٔ اول غیرفعال، پیش‌فرض نامعتبر و فهرستی که تمام گزینه‌های آن غیرفعال‌اند اضافه شد.
-- شاخه: `fix/vendor-managed-select-default-option`. Build/test محلی اجرا نشده؛ CI روی PR باید نتیجه را تأیید کند.
+## 2026-10-26 — Vendor Identity registration regression
+- بازبینی پس از ادغام‌ها نشان داد `AddVendorPersistence`، `AddIdentityCore<VendorAdminUser>` را ثبت می‌کند و `Vendor.Host/Program.cs` دوباره Identity را با همان DbContext ثبت می‌کرد؛ بنابراین گزارش قدیمی مبنی بر تک‌منبع بودن Identity با کد فعلی `main` هم‌خوان نبود.
+- شاخهٔ `fix/vendor-identity-registration-single-source` ثبت Identity را به یک محل در Persistence منتقل می‌کند و تنظیمات SchemaVersion، SignInManager و DefaultTokenProviders را همان‌جا نگه می‌دارد. Host فقط پیکربندی Host/auth cookie را انجام می‌دهد.
+- هدف، حذف ثبت تکراری سرویس‌ها و جلوگیری از اختلاف تنظیمات Identity در زمان اجرای Migration/احراز هویت است. این ارتباط علت قطعی شکست قبلی اعلام نمی‌شود تا CI و تست SQL Server آن را تأیید کنند.
+- تست/build محلی اجرا نشده؛ منتظر CI روی PR مستقل هستیم.
+
+### CI evidence — Vendor UI fix PR #131
+- Vendor CI run [40285919870](https://github.com/hamidreza1394/Accounting/actions/runs/40285919870) completed with failure in `VendorAuthenticationSecurityTests.PasswordOnlyIsDeniedAndTotpChallengeDoesNotIssueApplicationCookie`: runtime `Database.MigrateAsync` throws `PendingModelChangesWarning`. Frontend typecheck/tests/build, asset budget, .NET build and EF CLI snapshot check passed in the same run.
+- This reproduces the runtime-only model mismatch and motivates validating the single-source Identity registration in PR #132. The duplicated registration is a concrete inconsistency, but is not declared the proven sole root cause until the new SQL Server integration run passes.
+
+### یافتهٔ قطعی‌تر دربارهٔ PendingModelChangesWarning
+- بازبینی مستقیم `main` نشان داد فایل `20261026045412_VendorAddPasskeySupport.Designer.cs` اصلاً وجود نداشت؛ migration فقط `Up/Down` داشت و `BuildTargetModel` تولیدشده را نداشت. این نقص با شکست runtime `Database.MigrateAsync` و موفقیت بررسی snapshot از CLI سازگار است و علت مستقیم محتمل‌تری از ثبت تکراری Identity است.
+- همین شاخه اکنون designer را از snapshot جاری ساخته، `BuildModel` را به `BuildTargetModel` تبدیل کرده، metadata را در designer متمرکز کرده و تست SQL Server را برای وجود جدول `VendorAdminUserPasskeys` و اعمال هر دو migration تقویت می‌کند. ثبت Identity نیز جداگانه تک‌منبع شده است.
+- تا CI جدید سبز نشود، این علت/اصلاح تأییدشده محسوب نمی‌شود.

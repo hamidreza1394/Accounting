@@ -13,6 +13,7 @@ namespace Faranou.Vendor.Host.Tests;
 public sealed class VendorPersistenceTests
 {
     private const string InitialMigration = "20261025180755_VendorInitialIdentityAndAudit";
+    private const string PasskeyMigration = "20261026045412_VendorAddPasskeySupport";
 
     [Fact]
     public void Model_uses_vendor_specific_tables_and_disables_admins_by_default()
@@ -124,12 +125,14 @@ public sealed class VendorPersistenceTests
                 (
                     N'VendorAdminUsers', N'VendorAdminRoles', N'VendorAdminUserClaims',
                     N'VendorAdminRoleClaims', N'VendorAdminUserLogins', N'VendorAdminUserRoles',
-                    N'VendorAdminUserTokens', N'VendorAuditEvents'
+                    N'VendorAdminUserTokens', N'VendorAuditEvents', N'VendorAdminUserPasskeys'
                 );
                 """;
 
-            Assert.Equal(8, Convert.ToInt32(await command.ExecuteScalarAsync()));
-            Assert.Contains(InitialMigration, await context.Database.GetAppliedMigrationsAsync());
+            Assert.Equal(9, Convert.ToInt32(await command.ExecuteScalarAsync()));
+            var appliedMigrations = await context.Database.GetAppliedMigrationsAsync();
+            Assert.Contains(InitialMigration, appliedMigrations);
+            Assert.Contains(PasskeyMigration, appliedMigrations);
 
             command.CommandText = """
                 SELECT COUNT(*)

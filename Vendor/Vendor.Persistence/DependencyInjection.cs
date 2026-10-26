@@ -34,6 +34,7 @@ public static class DependencyInjection
 
         services.AddIdentityCore<VendorAdminUser>(options =>
             {
+                options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
                 options.User.RequireUniqueEmail = true;
                 options.Password.RequiredLength = 14;
                 options.Password.RequiredUniqueChars = 4;
@@ -46,7 +47,9 @@ public static class DependencyInjection
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
             })
             .AddRoles<IdentityRole<Guid>>()
-            .AddEntityFrameworkStores<VendorDbContext>();
+            .AddEntityFrameworkStores<VendorDbContext>()
+            .AddSignInManager()
+            .AddDefaultTokenProviders();
 
         return services;
     }
