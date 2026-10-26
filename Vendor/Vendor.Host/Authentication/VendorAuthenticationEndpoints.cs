@@ -50,7 +50,7 @@ public static class VendorAuthenticationEndpoints
             var user = await users.FindByNameAsync(request.UserName);
             if (user is null)
             {
-                return Results.Unauthorized(new { error = GenericSignInFailure });
+                return Results.Json(new { error = GenericSignInFailure }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
             // Always perform a password check for disabled or MFA-unenrolled accounts so
@@ -58,7 +58,7 @@ public static class VendorAuthenticationEndpoints
             if (!user.IsEnabled || !user.TwoFactorEnabled)
             {
                 _ = await signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true);
-                return Results.Unauthorized(new { error = GenericSignInFailure });
+                return Results.Json(new { error = GenericSignInFailure }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
             var result = await signInManager.PasswordSignInAsync(
@@ -78,7 +78,7 @@ public static class VendorAuthenticationEndpoints
                 await signInManager.SignOutAsync();
             }
 
-            return Results.Unauthorized(new { error = GenericSignInFailure });
+            return Results.Json(new { error = GenericSignInFailure }, statusCode: StatusCodes.Status401Unauthorized);
         })
         .AllowAnonymous()
         .RequireRateLimiting("vendor-auth");
@@ -97,13 +97,13 @@ public static class VendorAuthenticationEndpoints
 
             if (string.IsNullOrWhiteSpace(request.Code) || request.Code.Length > 32)
             {
-                return Results.Unauthorized(new { error = GenericSignInFailure });
+                return Results.Json(new { error = GenericSignInFailure }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
             var user = await signInManager.GetTwoFactorAuthenticationUserAsync();
             if (user is null || !user.IsEnabled || !user.TwoFactorEnabled)
             {
-                return Results.Unauthorized(new { error = GenericSignInFailure });
+                return Results.Json(new { error = GenericSignInFailure }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
             var result = await signInManager.TwoFactorAuthenticatorSignInAsync(
@@ -113,7 +113,7 @@ public static class VendorAuthenticationEndpoints
 
             if (!result.Succeeded)
             {
-                return Results.Unauthorized(new { error = GenericSignInFailure });
+                return Results.Json(new { error = GenericSignInFailure }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
             // Replace Identity's final cookie with a principal that records the verified factor.
@@ -175,13 +175,13 @@ public static class VendorAuthenticationEndpoints
 
             if (string.IsNullOrWhiteSpace(request.CredentialJson) || request.CredentialJson.Length > 64 * 1024)
             {
-                return Results.Unauthorized(new { error = GenericSignInFailure });
+                return Results.Json(new { error = GenericSignInFailure }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
             var result = await signInManager.PasskeySignInAsync(request.CredentialJson);
             if (!result.Succeeded)
             {
-                return Results.Unauthorized(new { error = GenericSignInFailure });
+                return Results.Json(new { error = GenericSignInFailure }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
             var authentication = await context.AuthenticateAsync(IdentityConstants.ApplicationScheme);
@@ -192,14 +192,14 @@ public static class VendorAuthenticationEndpoints
             if (user is null || !user.IsEnabled)
             {
                 await signInManager.SignOutAsync();
-                return Results.Unauthorized(new { error = GenericSignInFailure });
+                return Results.Json(new { error = GenericSignInFailure }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
             var passkeys = await users.GetPasskeysAsync(user);
             if (passkeys.Count == 0)
             {
                 await signInManager.SignOutAsync();
-                return Results.Unauthorized(new { error = GenericSignInFailure });
+                return Results.Json(new { error = GenericSignInFailure }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
             await signInManager.SignInWithClaimsAsync(
@@ -308,7 +308,7 @@ public static class VendorAuthenticationEndpoints
                 var reset = await users.ResetAuthenticatorKeyAsync(user);
                 if (!reset.Succeeded)
                 {
-                    return Results.Problem("Authenticator setup could not be started.");
+                    return Results.Problem(detail: "Authenticator setup could not be started.");
                 }
 
                 key = await users.GetAuthenticatorKeyAsync(user);
