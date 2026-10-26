@@ -511,3 +511,12 @@
 - **Observed CI results:** run [40293940211](https://github.com/hamidreza1394/Accounting/actions/runs/40293940211) reported the model-drift operations. Run [40295157534](https://github.com/hamidreza1394/Accounting/actions/runs/40295157534) was pending/in progress before this documentation update; an earlier run failed because the primary key was not yet dropped/recreated. The latest migration revision has not been verified yet.
 - **Safety:** no warning suppression, no deleted tests, no changes to customer accounting migrations. PR #138 remains Draft and must not be merged until the SQL Server migration test, strict EF snapshot check, full Vendor tests and publish pass.
 - **Next steps:** inspect latest Vendor CI; correct any further migration/model mismatch; then implement the secure first-admin bootstrap and forced password-change flow as a separate small change, followed by RBAC and audit wiring.
+
+
+## 2026-10-26 — Issue #139: اصلاح آزمون antiforgery در جریان Password → TOTP
+- **شواهد اولیه:** Vendor CI run [40345676162](https://github.com/hamidreza1394/Accounting/actions/runs/40345676162) در آزمون `PasswordOnlyIsDeniedAndTotpChallengeDoesNotIssueApplicationCookie` شکست خورد؛ Expected `OK` و Actual `BadRequest`. لاگ علت را «antiforgery token was meant for a different claims-based user» گزارش کرد.
+- **اصلاح در شاخه `fix/issue-139-totp-antiforgery-test`:** آزمون بعد از دریافت کوکی challenge مربوط به TOTP توکن antiforgery تازه می‌گیرد؛ بعد از ورود موفق نیز برای هویت Application توکن تازه می‌گیرد. اعتبارسنجی antiforgery و assertion عدم صدور کوکی Application قبل از TOTP حفظ شده‌اند.
+- **فایل تغییرکرده:** `tests/Vendor.Host.Tests/VendorAuthenticationSecurityTests.cs`; handoff: `docs/handoffs/ISSUE-139-totp-antiforgery-test.md`.
+- **تست‌ها:** هنوز پس از اصلاح اجرا نشده‌اند؛ نتیجه باید از Vendor CI روی PR گرفته شود. در اجرای قبلی، فرانت‌اند و .NET Build موفق بودند اما تست Integration شکست خورد و EF snapshot/Publish اجرا نشدند.
+- **امنیت/داده:** هیچ تغییری در منطق runtime، سیاست امنیتی، Schema/Migration یا دیتابیس مشتری اعمال نشده است. این اصلاح فقط آزمون را با چرخه واقعی هویت هماهنگ می‌کند.
+- **وضعیت:** Implemented in branch / Not yet Verified. Merge نشود تا آزمون SQL Server، کل Vendor suite، EF snapshot gate و Publish موفق شوند.

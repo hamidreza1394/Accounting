@@ -103,7 +103,7 @@ public sealed class VendorAuthenticationSecurityTests
             var createDisabled = await users.CreateAsync(disabled, "Secure-Vendor#2026");
             Assert.True(createDisabled.Succeeded, string.Join("; ", createDisabled.Errors.Select(error => error.Code)));
 
-            var (token, antiforgeryCookie) = await GetAntiforgeryTokenAndCookieAsync(client, cancellationToken);
+            var (token, _) = await GetAntiforgeryTokenAndCookieAsync(client, cancellationToken);
             using var passwordOnlyResponse = await PostWithTokenAsync(
                 client,
                 "/api/auth/password",
@@ -168,13 +168,17 @@ public sealed class VendorAuthenticationSecurityTests
             var twoFactorCookie = passwordResponse.Headers.GetValues("Set-Cookie")
                 .Select(value => value.Split(';', 2)[0])
                 .Single(value => value.StartsWith("__Host-Faranou.Vendor.TwoFactor=", StringComparison.Ordinal));
+            // Antiforgery request tokens are bound to the current claims identity. The TOTP
+            // challenge cookie changes that identity, so refresh the token under the challenge.
+            var (totpToken, totpAntiforgeryCookie) =
+                await GetAntiforgeryTokenAndCookieAsync(client, cancellationToken, twoFactorCookie);
             using var totpResponse = await PostWithTokenAsync(
                 client,
                 "/api/auth/totp/verify",
                 new { code },
-                token,
+                totpToken,
                 cancellationToken,
-                $"{antiforgeryCookie}; {twoFactorCookie}");
+                $"{totpAntiforgeryCookie}; {twoFactorCookie}");
             Assert.Equal(HttpStatusCode.OK, totpResponse.StatusCode);
 
             using var meResponse = await client.GetAsync("/api/auth/me", cancellationToken);
@@ -182,12 +186,21 @@ public sealed class VendorAuthenticationSecurityTests
             using var meDocument = JsonDocument.Parse(await meResponse.Content.ReadAsStringAsync(cancellationToken));
             Assert.True(meDocument.RootElement.GetProperty("totpEnabled").GetBoolean());
 
+            var applicationCookie = totpResponse.Headers.GetValues("Set-Cookie")
+                .Select(value => value.Split(';', 2)[0])
+                .Single(value => value.StartsWith("__Host-Faranou.Vendor.Auth=", StringComparison.Ordinal));
+            // The application cookie establishes a new claims identity after TOTP; use a
+            // request token minted for that authenticated identity for subsequent mutations.
+            var (authenticatedToken, authenticatedAntiforgeryCookie) =
+                await GetAntiforgeryTokenAndCookieAsync(client, cancellationToken, applicationCookie);
+            var authenticatedCookieHeader = $"{authenticatedAntiforgeryCookie}; {applicationCookie}";
             using var creationOptionsResponse = await PostWithTokenAsync(
                 client,
                 "/api/auth/passkey/creation-options",
                 new { },
-                token,
-                cancellationToken);
+                authenticatedToken,
+                cancellationToken,
+                authenticatedCookieHeader);
             Assert.Equal(HttpStatusCode.OK, creationOptionsResponse.StatusCode);
             using (var creationOptions = JsonDocument.Parse(await creationOptionsResponse.Content.ReadAsStringAsync(cancellationToken)))
             {
@@ -196,7 +209,8 @@ public sealed class VendorAuthenticationSecurityTests
                 Assert.Equal("required", authenticatorSelection.GetProperty("residentKey").GetString());
             }
 
-            using var logoutResponse = await PostWithTokenAsync(client, "/api/auth/logout", new { }, token, cancellationToken);
+            using var logoutResponse = await PostWithTokenAsync(
+                client, "/api/auth/logout", new { }, authenticatedToken, cancellationToken, authenticatedCookieHeader);
             Assert.Equal(HttpStatusCode.OK, logoutResponse.StatusCode);
             using var afterLogout = await client.GetAsync("/api/auth/me", cancellationToken);
             Assert.Equal(HttpStatusCode.Unauthorized, afterLogout.StatusCode);
@@ -356,9 +370,16 @@ public sealed class VendorAuthenticationSecurityTests
 
     private static async Task<(string Token, string Cookie)> GetAntiforgeryTokenAndCookieAsync(
         HttpClient client,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? cookieHeader = null)
     {
-        using var response = await client.GetAsync("/api/auth/antiforgery", cancellationToken);
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/auth/antiforgery");
+        if (!string.IsNullOrWhiteSpace(cookieHeader))
+        {
+            request.Headers.TryAddWithoutValidation("Cookie", cookieHeader);
+        }
+
+        using var response = await client.SendAsync(request, cancellationToken);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
         var token = document.RootElement.GetProperty("requestToken").GetString();
