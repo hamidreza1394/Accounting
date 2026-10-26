@@ -207,7 +207,13 @@ app.UseRouting();
 app.UseDefaultFiles();
 app.Use(async (context, next) =>
 {
-    if (string.Equals(Path.GetFileName(context.Request.Path), "index.html", StringComparison.OrdinalIgnoreCase))
+    // Vite emits content-hashed filenames under /assets; immutable caching avoids
+    // repeat downloads while a new index.html immediately points to the latest bundle.
+    if (context.Request.Path.StartsWithSegments("/assets"))
+    {
+        context.Response.Headers.CacheControl = "public,max-age=31536000,immutable";
+    }
+    else if (string.Equals(Path.GetFileName(context.Request.Path), "index.html", StringComparison.OrdinalIgnoreCase))
     {
         context.Response.Headers.CacheControl = "no-store";
     }
