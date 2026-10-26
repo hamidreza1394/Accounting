@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -103,7 +102,6 @@ builder.Services.AddAntiforgery(options =>
     options.Cookie.Path = "/";
 });
 
-builder.Services.AddHealthChecks();
 
 builder.Services.AddRateLimiter(options =>
 {
