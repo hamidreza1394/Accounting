@@ -141,6 +141,7 @@ public sealed class VendorPersistenceTests
         }
         finally
         {
+            await context.Database.CloseConnectionAsync();
             await context.Database.EnsureDeletedAsync();
         }
     }
