@@ -6,7 +6,8 @@
 
 - اسکلت اولیهٔ Host روی `net10.0` ایجاد شده است.
 - `/health/live` فقط زنده‌بودن فرایند وب را اعلام می‌کند؛ وضعیت دیتابیس یا جزئیات عملیاتی را افشا نمی‌کند.
-- هویت، MFA، RBAC، دیتابیس Vendor، صدور لایسنس و اتصال KMS/HSM هنوز پیاده‌سازی نشده‌اند.
+- پروژهٔ persistence مستقل Vendor و migration اولیه برای Identity مدیران و AuditEvent ایجاد شده‌اند؛ Integration Test روی SQL Server واقعی در CI اجرا می‌شود.
+- ورود مدیر، MFA اجباری، RBAC، bootstrap کنترل‌شده، سرویس ممیزی hash-chain، کاتالوگ مشتری/قرارداد، صدور لایسنس و اتصال KMS/HSM هنوز پیاده‌سازی نشده‌اند.
 - این اسکلت برای Production آماده نیست.
 
 ## توسعه و آزمون
@@ -42,3 +43,11 @@ Host عمداً به ارائه‌دهندهٔ ابری خاصی وابسته ن
 - `.github/workflows/vendor-ci.yml` به تغییرات Vendor/Contracts و تنظیمات build واکنش نشان می‌دهد و Restore/Build/Test مستقل را اجرا می‌کند.
 - فقط push به `main` artifact خروجی `dotnet publish` را تولید می‌کند؛ artifact موقت ۷ روز نگه داشته می‌شود. این مرحله Deploy واقعی نیست و هیچ credential یا کلید امضایی استفاده نمی‌کند.
 - workflow مستقل Vendor جایگزین گاردهای مشتری نیست؛ انتشار مشتری همچنان توسط `.github/workflows/dotnet.yml` و اسکریپت‌های publish اعتبارسنجی می‌شود.
+
+
+## پایگاه دادهٔ مستقل Vendor (مرحلهٔ پایه)
+- پروژهٔ `Vendor/Vendor.Persistence` و `VendorDbContext` فقط در `Vendor.sln` قرار دارند و از دیتابیس برنامهٔ مشتری استفاده نمی‌کنند.
+- تنظیم اتصال از متغیر محیطی `FARANO_VENDOR_ConnectionStrings__VendorDb` یا Configuration Provider اختصاصی تأمین می‌شود. مقدار اتصال در مخزن قرار نگیرد. نبود اتصال هنگام ثبت سرویس persistence خطا می‌دهد.
+- Migration اولیه فقط schema با نام `vendor` و جداول `AdminUsers`, `AdminRoles`, جداول Identity مرتبط و `AuditEvents` را ایجاد می‌کند؛ اجرای آن باید فقط روی دیتابیس Vendor انجام شود.
+- `VendorAuditEvent` فعلاً مدل ذخیره‌سازی است، نه سرویس ممیزی کامل. Hash-chain به‌تنهایی جلوی DBA مخرب را نمی‌گیرد؛ append-only SQL permissions، اعتبارسنجی زنجیره و checkpoint خارجی هنوز لازم‌اند.
+- مدیر پیش‌فرض/seed، endpoint ورود، ثبت‌نام عمومی و bootstrap در این مرحله وجود ندارد.
