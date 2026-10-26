@@ -61,6 +61,18 @@ public sealed class VendorBootstrapIntegrationTests
                 await db.Database.MigrateAsync(TestContext.Current.CancellationToken);
             }
 
+            var rejectedSecretPrompt = new FakePrompt("incorrect-bootstrap-secret", "must-not-exist", "must-not-exist@example.invalid");
+            Assert.Equal(
+                3,
+                await VendorBootstrapCommand.RunAsync(
+                    provider, configuration, rejectedSecretPrompt, TestContext.Current.CancellationToken));
+
+            await using (var rejectedScope = provider.CreateAsyncScope())
+            {
+                var db = rejectedScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                Assert.Empty(await db.Users.AsNoTracking().ToListAsync(TestContext.Current.CancellationToken));
+            }
+
             var promptA = new FakePrompt(bootstrapSecret, "bootstrap-a", "bootstrap-a@example.invalid");
             var promptB = new FakePrompt(bootstrapSecret, "bootstrap-b", "bootstrap-b@example.invalid");
 
@@ -83,7 +95,7 @@ public sealed class VendorBootstrapIntegrationTests
 
                 var audit = await VendorAuditChainVerifier.VerifyAsync(db, TestContext.Current.CancellationToken);
                 Assert.True(audit.IsValid, audit.FailureCode);
-                Assert.Equal(3, audit.EventCount);
+                Assert.Equal(4, audit.EventCount);
             }
         }
         finally
