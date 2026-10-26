@@ -164,7 +164,7 @@ public sealed class VendorAuthenticationSecurityTests
 
             using var logoutResponse = await PostWithTokenAsync(client, "/api/auth/logout", new { }, token, cancellationToken);
             Assert.Equal(HttpStatusCode.OK, logoutResponse.StatusCode);
-            using var afterLogout = await client.GetAsync("/api/auth/me");
+            using var afterLogout = await client.GetAsync("/api/auth/me", cancellationToken);
             Assert.Equal(HttpStatusCode.Unauthorized, afterLogout.StatusCode);
 
             }
