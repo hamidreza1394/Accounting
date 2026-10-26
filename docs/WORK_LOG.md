@@ -557,3 +557,10 @@
 - **خطای CI و اصلاح DI:** Vendor CI run [40363406842](https://github.com/hamidreza1394/Accounting/actions/runs/40363406842) در آزمون Integration خطا داد: `DataProtectorTokenProvider<VendorAdminUser>` نمی‌توانست `IDataProtectionProvider` را resolve کند. علت این بود که command mode و ServiceCollection تست، Data Protection را ثبت نکرده بودند. ثبت سرویس و رعایت مسیر کلید persistent در Production اضافه شد؛ اجرای تازه لازم است.
 - **محافظت از خروجی حساس:** راز bootstrap با ورودی مخفی دریافت می‌شود؛ URI TOTP فقط از مسیر خروجی کنسول تعاملی نوشته می‌شود و در صورت redirect بودن stdout، enrollment fail-closed می‌شود.
 - **محافظت از خروجی حساس:** راز bootstrap با ورودی مخفی دریافت می‌شود؛ URI TOTP فقط از مسیر خروجی کنسول تعاملی نوشته می‌شود و در صورت redirect بودن stdout، enrollment fail-closed می‌شود.
+
+## 2026-10-26 — Issue #114: اعمال baseline احراز هویت روی DefaultPolicy
+- **یافتهٔ امنیتی:** `FallbackPolicy` قبلی فقط endpointهای بدون metadata را پوشش می‌داد؛ endpointهایی با `.RequireAuthorization()` از `DefaultPolicy` استفاده می‌کنند و ممکن بود گارد `VendorAdminAccessRequirement` را دور بزنند.
+- **اصلاح:** `VendorAuthorizationPolicies.Configure` یک baseline مشترک شامل `RequireAuthenticatedUser` و `VendorAdminAccessRequirement` روی هر دو `DefaultPolicy` و `FallbackPolicy` اعمال می‌کند. این اصلاح هنوز جای permissionهای ریزدانه و maker-checker را نمی‌گیرد.
+- **تست:** آزمون واحد تضمین می‌کند هر دو policy نیازمند هویت احراز‌شده و گارد MFA/فعال‌بودن مدیر باشند.
+- **دامنه:** بدون تغییر Schema/Migration، دیتابیس مشتری یا endpointهای تجاری؛ RBAC، resource authorization و maker-checker همچنان در ادامهٔ Issue #114 لازم‌اند.
+- **اعتبارسنجی:** PR در شاخهٔ وابسته به bootstrap ساخته می‌شود؛ CI تازه لازم است و وضعیت تا سبز شدن Not Verified.
