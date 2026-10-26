@@ -16,10 +16,21 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables(prefix: "FARANO_VENDOR_");
 
 var keyDirectory = builder.Configuration["DataProtection:KeysDirectory"];
-if (string.IsNullOrWhiteSpace(keyDirectory) && builder.Environment.IsProduction())
+if (builder.Environment.IsProduction() &&
+    (string.IsNullOrWhiteSpace(keyDirectory) || !Path.IsPathFullyQualified(keyDirectory)))
 {
     throw new InvalidOperationException(
-        "Vendor Data Protection keys are not configured. Set FARANO_VENDOR_DataProtection__KeysDirectory to a dedicated persistent directory.");
+        "Vendor Data Protection keys require a fully qualified persistent directory. Set FARANO_VENDOR_DataProtection__KeysDirectory.");
+}
+
+if (builder.Environment.IsProduction())
+{
+    var allowedHosts = builder.Configuration["AllowedHosts"];
+    if (string.IsNullOrWhiteSpace(allowedHosts) || allowedHosts.Split(';').Any(host => host.Trim() == "*"))
+    {
+        throw new InvalidOperationException(
+            "Vendor Production requires an explicit AllowedHosts list; wildcard host filtering is not permitted.");
+    }
 }
 
 var dataProtection = builder.Services.AddDataProtection()
