@@ -471,3 +471,5 @@
 - اصلاح: فایل Designer با TargetModel متناظر با Snapshot فعلی (شامل جدول Passkey) اضافه شد و کلاس Migration به `partial` تغییر کرد تا metadata به همان Migration متصل شود. این تغییر ریشه‌ای‌تر از جابه‌جایی DI است؛ با این حال تا اجرای مجدد SQL Server integration test، علت و رفع آن **تأییدشده** محسوب نمی‌شود.
 - پاکسازی کم‌خطر: ثبت تکراری `AddHealthChecks` و using غیرضروری از Host حذف شد.
 - محدودیت اجرای فعلی: ابزار GitHub موجود در این محیط امکان dispatch مستقیم workflow را ارائه نمی‌کند و commitهای ایجادشده از API در نتایج workflow فعلاً run تازه‌ای نشان نداده‌اند. لازم است CI روی HEAD جدید اجرا شود؛ تا آن زمان PR #129 همچنان نباید ادغام شود.
+
+- **تقویت regression test:** تست Migration روی SQL Server اکنون علاوه بر جدول‌های پایه، `VendorAdminUserPasskeys` و اعمال شدن هر دو Migration را بررسی می‌کند؛ بنابراین حذف/جاافتادن Migration Passkey در آینده در تست قابل کشف خواهد بود.
