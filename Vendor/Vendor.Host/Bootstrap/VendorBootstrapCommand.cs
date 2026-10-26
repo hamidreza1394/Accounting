@@ -1,6 +1,8 @@
 using System.Data;
 using System.Security.Cryptography;
+using System.Security.Claims;
 using System.Text;
+using Faranou.Vendor.Host.Authorization;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Auditing;
 using Faranou.Vendor.Persistence.Identity;
@@ -98,6 +100,7 @@ public static class VendorBootstrapCommand
         var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
         var users = scope.ServiceProvider.GetRequiredService<UserManager<VendorAdminUser>>();
         var audit = scope.ServiceProvider.GetRequiredService<IVendorAuditWriter>();
+        var roles = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
 
         if (!db.Database.IsSqlServer())
         {
@@ -217,6 +220,8 @@ public static class VendorBootstrapCommand
                 return 9;
             }
 
+            await EnsureOwnerRoleAsync(roles, users, user, cancellationToken);
+
             var enableMfa = await users.SetTwoFactorEnabledAsync(user, true);
             if (!enableMfa.Succeeded)
             {
@@ -254,6 +259,56 @@ public static class VendorBootstrapCommand
             prompt.WriteLine("Bootstrap ناموفق بود؛ جزئیات حساس ثبت یا نمایش داده نشدند. حساب موقت، در صورت وجود، باید غیرفعال بماند.");
             return 11;
         }
+    }
+
+
+    private static async Task EnsureOwnerRoleAsync(
+        RoleManager<IdentityRole<Guid>> roles,
+        UserManager<VendorAdminUser> users,
+        VendorAdminUser user,
+        CancellationToken cancellationToken)
+    {
+        var role = await roles.FindByNameAsync(VendorPermissionCatalog.OwnerRoleName);
+        if (role is null)
+        {
+            role = new IdentityRole<Guid>(VendorPermissionCatalog.OwnerRoleName);
+            var createRole = await roles.CreateAsync(role);
+            if (!createRole.Succeeded)
+            {
+                throw new InvalidOperationException("Could not create the initial Vendor owner role.");
+            }
+        }
+
+        var existingClaims = await roles.GetClaimsAsync(role);
+        foreach (var permission in VendorPermissionCatalog.All)
+        {
+            if (existingClaims.Any(claim =>
+                    string.Equals(claim.Type, VendorPermissionCatalog.ClaimType, StringComparison.Ordinal) &&
+                    string.Equals(claim.Value, permission.Code, StringComparison.Ordinal)))
+            {
+                continue;
+            }
+
+            var addClaim = await roles.AddClaimAsync(
+                role,
+                new Claim(VendorPermissionCatalog.ClaimType, permission.Code));
+            if (!addClaim.Succeeded)
+            {
+                throw new InvalidOperationException("Could not grant the initial Vendor owner permission catalog.");
+            }
+        }
+
+        var userRoles = await users.GetRolesAsync(user);
+        if (!userRoles.Contains(VendorPermissionCatalog.OwnerRoleName, StringComparer.OrdinalIgnoreCase))
+        {
+            var addRole = await users.AddToRoleAsync(user, VendorPermissionCatalog.OwnerRoleName);
+            if (!addRole.Succeeded)
+            {
+                throw new InvalidOperationException("Could not assign the initial Vendor owner role.");
+            }
+        }
+
+        _ = cancellationToken;
     }
 
     private static async Task TryAuditFailureAsync(
