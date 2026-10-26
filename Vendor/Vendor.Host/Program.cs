@@ -42,17 +42,20 @@ if (!string.IsNullOrWhiteSpace(keyDirectory))
     dataProtection.PersistKeysToFileSystem(new DirectoryInfo(fullKeyDirectory));
 }
 
-builder.Services.AddDbContext<VendorDbContext>(options =>
+var vendorConnectionString = builder.Configuration.GetConnectionString("VendorDb");
+if (string.IsNullOrWhiteSpace(vendorConnectionString))
 {
-    var connectionString = builder.Configuration.GetConnectionString("VendorDb");
-    if (string.IsNullOrWhiteSpace(connectionString))
-    {
-        throw new InvalidOperationException(
-            "Vendor database is not configured. Set FARANO_VENDOR_ConnectionStrings__VendorDb.");
-    }
+    throw new InvalidOperationException(
+        "Vendor database is not configured. Set FARANO_VENDOR_ConnectionStrings__VendorDb.");
+}
 
-    options.UseSqlServer(connectionString);
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = 128 * 1024;
 });
+
+builder.Services.AddDbContext<VendorDbContext>(options =>
+    options.UseSqlServer(vendorConnectionString));
 
 builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
     .AddIdentityCookies();
@@ -154,10 +157,21 @@ builder.Services.AddIdentityCore<VendorAdminUser>(options =>
 .AddDefaultTokenProviders();
 
 var passkeyServerDomain = builder.Configuration["IdentityPasskeys:ServerDomain"];
-if (builder.Environment.IsProduction() && string.IsNullOrWhiteSpace(passkeyServerDomain))
+if (builder.Environment.IsProduction())
 {
-    throw new InvalidOperationException(
-        "Passkey relying-party domain is not configured. Set FARANO_VENDOR_IdentityPasskeys__ServerDomain.");
+    if (string.IsNullOrWhiteSpace(passkeyServerDomain))
+    {
+        throw new InvalidOperationException(
+            "Passkey relying-party domain is not configured. Set FARANO_VENDOR_IdentityPasskeys__ServerDomain.");
+    }
+
+    var allowedHosts = builder.Configuration["AllowedHosts"] ?? string.Empty;
+    if (!allowedHosts.Split(';').Any(host =>
+            string.Equals(host.Trim(), passkeyServerDomain, StringComparison.OrdinalIgnoreCase)))
+    {
+        throw new InvalidOperationException(
+            "Vendor AllowedHosts must explicitly include the configured passkey relying-party domain.");
+    }
 }
 
 builder.Services.Configure<IdentityPasskeyOptions>(options =>
