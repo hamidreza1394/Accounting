@@ -3,7 +3,7 @@
 - **Issue:** [#134](https://github.com/hamidreza1394/Accounting/issues/134)
 - **Agent/مسئول:** ChatGPT / Faranou Senior Developer skill
 - **تاریخ:** 2026-10-26
-- **وضعیت:** اصلاح در شاخه؛ منتظر CI
+- **وضعیت:** اصلاح دوم در شاخه؛ منتظر CI
 
 ## هدف و معیارهای پذیرش
 - [x] رفع محل نامعتبر فراخوانی `AddDefaultTokenProviders()` در Persistence class library.
@@ -13,7 +13,7 @@
 - [ ] Publish و بررسی artifact موفق شوند.
 
 ## خلاصه تغییرات
-- ثبت `AddDefaultTokenProviders()` از Persistence به ASP.NET Core Host منتقل شد.
+- ثبت `AddSignInManager()` و `AddDefaultTokenProviders()` هر دو از طریق یک `IdentityBuilder` در ASP.NET Core Host انجام می‌شوند.
 - ثبت دوبارهٔ `AddIdentityCore` اضافه نشد و token providers حذف نشدند.
 - مستندات وضعیت و گزارش کار به‌روز شدند.
 
@@ -33,8 +33,8 @@
 |---|---|---|
 | Vendor CI run 40287063856 | ناموفق | Build خطای نبودن `IdentityBuilder.AddDefaultTokenProviders()` در Persistence داد. |
 | Frontend typecheck/tests/build/budget در همان run | موفق | گام‌های فرانت‌اند پیش از Build .NET سبز بودند. |
-| Build پس از اصلاح | اجرا نشده | نیازمند Vendor CI جدید |
-| تست‌های SQL Server/TOTP پس از اصلاح | اجرا نشده | در run شکست‌خورده به علت Build رد شدند |
+| Vendor CI run 40288514593 | ناموفق | خطای دوم: `AddSignInManager` به‌اشتباه روی `IServiceCollection` صدا زده شده بود. |
+| Build و تست‌ها پس از اصلاح دوم | اجرا نشده | نیازمند اجرای تازهٔ Vendor CI |
 
 ## امنیت، داده و سازگاری
 - token providers حذف نشده‌اند؛ تست‌های TOTP/auth باید پس از Build مجدداً اجرا شوند.
@@ -47,4 +47,4 @@
 ## شناسه‌های Git
 - Branch: `fix/vendor-identity-token-providers`
 - Commit: در تاریخچهٔ شاخه ثبت می‌شود.
-- Pull Request: پس از ثبت تغییرات
+- Pull Request: [#135](https://github.com/hamidreza1394/Accounting/pull/135)
