@@ -124,15 +124,15 @@ public sealed class VendorBootstrapIntegrationTests
     {
         private string? _authenticatorKey;
         private int _lineReadCount;
+        private int _passwordReadCount;
 
         public string? ReadLine(string prompt)
         {
             _ = prompt;
             return _lineReadCount++ switch
             {
-                0 => bootstrapSecret,
-                1 => userName,
-                2 => email,
+                0 => userName,
+                1 => email,
                 _ => GenerateTotpCode(_authenticatorKey ?? throw new InvalidOperationException("TOTP URI was not provided."))
             };
         }
@@ -140,10 +140,18 @@ public sealed class VendorBootstrapIntegrationTests
         public string ReadPassword(string prompt)
         {
             _ = prompt;
-            return "Secure-Vendor#2026";
+            return _passwordReadCount++ switch
+            {
+                0 => bootstrapSecret,
+                _ => "Secure-Vendor#2026"
+            };
         }
 
-        public void WriteLine(string message)
+        public void WriteLine(string message) => CaptureAuthenticatorUri(message);
+
+        public void WriteSensitiveLine(string message) => CaptureAuthenticatorUri(message);
+
+        private void CaptureAuthenticatorUri(string message)
         {
             if (!message.StartsWith("otpauth://totp/", StringComparison.Ordinal))
             {
