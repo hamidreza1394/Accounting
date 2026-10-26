@@ -94,7 +94,8 @@ public sealed class VendorAuthenticationSecurityTests
                 client,
                 "/api/auth/password",
                 new { userName = disabled.UserName, password = "Secure-Vendor#2026" },
-                token);
+                token,
+                cancellationToken);
             Assert.Equal(HttpStatusCode.Unauthorized, disabledResponse.StatusCode);
 
             var user = new VendorAdminUser
@@ -116,7 +117,8 @@ public sealed class VendorAuthenticationSecurityTests
                 client,
                 "/api/auth/password",
                 new { userName = user.UserName, password = "Secure-Vendor#2026" },
-                token);
+                token,
+                cancellationToken);
             Assert.Equal(HttpStatusCode.OK, passwordResponse.StatusCode);
             using (var responseDocument = JsonDocument.Parse(await passwordResponse.Content.ReadAsStringAsync(cancellationToken)))
             {
@@ -137,10 +139,11 @@ public sealed class VendorAuthenticationSecurityTests
                 client,
                 "/api/auth/totp/verify",
                 new { code },
-                token);
+                token,
+                cancellationToken);
             Assert.Equal(HttpStatusCode.OK, totpResponse.StatusCode);
 
-            using var meResponse = await client.GetAsync("/api/auth/me");
+            using var meResponse = await client.GetAsync("/api/auth/me", cancellationToken);
             Assert.Equal(HttpStatusCode.OK, meResponse.StatusCode);
             using var meDocument = JsonDocument.Parse(await meResponse.Content.ReadAsStringAsync(cancellationToken));
             Assert.True(meDocument.RootElement.GetProperty("totpEnabled").GetBoolean());
@@ -149,7 +152,8 @@ public sealed class VendorAuthenticationSecurityTests
                 client,
                 "/api/auth/passkey/creation-options",
                 new { },
-                token);
+                token,
+                cancellationToken);
             Assert.Equal(HttpStatusCode.OK, creationOptionsResponse.StatusCode);
             using (var creationOptions = JsonDocument.Parse(await creationOptionsResponse.Content.ReadAsStringAsync(cancellationToken)))
             {
@@ -158,7 +162,7 @@ public sealed class VendorAuthenticationSecurityTests
                 Assert.Equal("required", authenticatorSelection.GetProperty("residentKey").GetString());
             }
 
-            using var logoutResponse = await PostWithTokenAsync(client, "/api/auth/logout", new { }, token);
+            using var logoutResponse = await PostWithTokenAsync(client, "/api/auth/logout", new { }, token, cancellationToken);
             Assert.Equal(HttpStatusCode.OK, logoutResponse.StatusCode);
             using var afterLogout = await client.GetAsync("/api/auth/me");
             Assert.Equal(HttpStatusCode.Unauthorized, afterLogout.StatusCode);
@@ -166,7 +170,7 @@ public sealed class VendorAuthenticationSecurityTests
             }
             finally
             {
-                await db.Database.EnsureDeletedAsync();
+                await db.Database.EnsureDeletedAsync(CancellationToken.None);
             }
         }
     }
@@ -174,6 +178,7 @@ public sealed class VendorAuthenticationSecurityTests
     [Fact]
     public async Task AnonymousAuthPostIsAntiforgeryProtectedAndRateLimited()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         await using var factory = new WebApplicationFactory<Program>();
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
@@ -186,7 +191,8 @@ public sealed class VendorAuthenticationSecurityTests
         {
             using var response = await client.PostAsJsonAsync(
                 "/api/auth/password",
-                new { userName = "nobody", password = "not-a-real-password" });
+                new { userName = "nobody", password = "not-a-real-password" },
+                cancellationToken);
             statuses.Add(response.StatusCode);
         }
 
@@ -219,6 +225,7 @@ public sealed class VendorAuthenticationSecurityTests
     [Fact]
     public async Task PublicRegistrationEndpointIsNotMapped()
     {
+        var cancellationToken = TestContext.Current.CancellationToken;
         await using var factory = new WebApplicationFactory<Program>();
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
@@ -229,12 +236,12 @@ public sealed class VendorAuthenticationSecurityTests
         {
             userName = "attacker",
             password = "Secure-Vendor#2026"
-        }, TestContext.Current.CancellationToken);
+        }, cancellationToken);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    private static async Task<string> GetAntiforgeryTokenAsync(HttpClient client)
+    private static async Task<string> GetAntiforgeryTokenAsync(HttpClient client, CancellationToken cancellationToken)
     {
         using var response = await client.GetAsync("/api/auth/antiforgery", cancellationToken);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
