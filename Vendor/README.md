@@ -9,7 +9,7 @@
 - اسکلت اولیهٔ Host روی `net10.0` ایجاد شده است.
 - `/health/live` فقط زنده‌بودن فرایند وب را اعلام می‌کند؛ وضعیت دیتابیس یا جزئیات عملیاتی را افشا نمی‌کند.
 - لایهٔ persistence مستقل (`VendorDbContext`، جداول Identity مجزا، `VendorAuditEvents` و Migration اولیه) در PR #102 ادغام شده است؛ CI آن PR هماهنگی مدل/Snapshot را بررسی کرده است. Issue #117 پوشش تکمیلی اجرای Migration روی SQL Server واقعی و ثبت storeهای Identity را اضافه می‌کند. تا سبز شدن CI آن PR، اجرای Migration روی SQL Server در تست اختصاصی `NotVerified` است.
-- ورود مدیر، سیاست MFA/passkey/TOTP، RBAC، bootstrap اولیه، سرویس ثبت/اعتبارسنجی زنجیرهٔ ممیزی، maker-checker، دادهٔ مشتری تجاری/قرارداد/لایسنس، صدور امضا و KMS/HSM هنوز پیاده‌سازی نشده‌اند.
+- APIهای پایهٔ MFA/passkey/TOTP و کنترل دسترسی عمومی سمت سرور در Host وجود دارند؛ UI آن‌ها در Issue #128 تکمیل می‌شود و هنوز CI آن شاخه باید سبز شود. bootstrap امن و جریان تغییر رمز، RBAC ریزدانه و مدیریت نقش‌ها، اتصال ممیزی به عملیات، checkpoint مستقل، maker-checker، مدل و API مشتری/نصب/قرارداد/لایسنس، صدور امضا و KMS/HSM هنوز کامل نیستند.
 - این اسکلت برای Production آماده نیست.
 
 ## توسعه و آزمون
