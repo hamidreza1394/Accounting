@@ -10,6 +10,7 @@
 ## تغییرات
 - tests/Vendor.Host.Tests/VendorPermissionAuthorizationTests.cs: آزمون integration با WebApplicationFactory و EndpointDataSource اضافه شد.
 - آزمون مسیرهای عمومی را به شش مسیر مجاز احراز هویت محدود می‌کند: antiforgery، password، TOTP verify، passkey options، passkey sign-in و logout.
+- آزمون دوم سیاست مؤثر تمام endpointهای محافظت‌شده را با AuthorizationPolicy.CombineAsync می‌سازد و وجود VendorAdminAccessRequirement (گارد مدیر فعال/MFA) را تأیید می‌کند.
 - تست موجود DefaultAndFallbackPoliciesBothRequireAuthenticatedMfaVendorAdministrator حفظ شده است.
 
 ## اعتبارسنجی
