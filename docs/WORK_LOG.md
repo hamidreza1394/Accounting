@@ -464,3 +464,10 @@
 - اصلاح جدید: پیکربندی Identity (شامل SchemaVersion v3، سیاست رمز عبور، lockout، SignInManager و token providers) به یک نقطهٔ ثبت در `Vendor.Persistence/DependencyInjection.cs` منتقل شد و ثبت دوم از `Vendor.Host/Program.cs` حذف شد.
 - **وضعیت اعتبارسنجی: در انتظار CI روی commitهای جدید.** این اصلاح هنوز تأییدشده محسوب نمی‌شود؛ هشدار EF سرکوب نشده و تست integration حذف یا skip نشده است. تا اجرای مجدد SQL Server integration test، PR #129 نباید ادغام شود.
 - مراجع: [PR #129](https://github.com/hamidreza1394/Accounting/pull/129)، [Vendor CI run 40280390617](https://github.com/hamidreza1394/Accounting/actions/runs/40280390617).
+
+
+### پیگیری بعدی CI — کشف نقص metadata در Migration مربوط به Passkey
+- بازخوانی فایل‌های شاخه نشان داد `VendorAddPasskeySupport.cs` ثبت شده بود، اما فایل Designer متناظر `20261026045412_VendorAddPasskeySupport.Designer.cs` اصلاً وجود نداشت. در نتیجه Migration فاقد `BuildTargetModel` تولیدشده بود؛ این با الگوی EF Core برای Migrationهای ثبت‌شده سازگار نیست و علت محتمل خطای `PendingModelChangesWarning` هنگام `Database.MigrateAsync` است، درحالی‌که بررسی CLI فقط Snapshot را می‌خواند.
+- اصلاح: فایل Designer با TargetModel متناظر با Snapshot فعلی (شامل جدول Passkey) اضافه شد و کلاس Migration به `partial` تغییر کرد تا metadata به همان Migration متصل شود. این تغییر ریشه‌ای‌تر از جابه‌جایی DI است؛ با این حال تا اجرای مجدد SQL Server integration test، علت و رفع آن **تأییدشده** محسوب نمی‌شود.
+- پاکسازی کم‌خطر: ثبت تکراری `AddHealthChecks` و using غیرضروری از Host حذف شد.
+- محدودیت اجرای فعلی: ابزار GitHub موجود در این محیط امکان dispatch مستقیم workflow را ارائه نمی‌کند و commitهای ایجادشده از API در نتایج workflow فعلاً run تازه‌ای نشان نداده‌اند. لازم است CI روی HEAD جدید اجرا شود؛ تا آن زمان PR #129 همچنان نباید ادغام شود.
