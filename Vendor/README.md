@@ -115,7 +115,7 @@ Host عمداً به ارائه‌دهندهٔ ابری خاصی وابسته ن
 ## راه‌اندازی امن اولین مدیر Vendor — Issue #113
 - دستور `bootstrap-admin` یک حالت command-mode است؛ هیچ endpoint عمومی برای ساخت مدیر اضافه نشده است و در این حالت HTTP Host اجرا نمی‌شود.
 - پیش‌نیازها: دیتابیس مستقل Vendor از قبل با Migrationهای Vendor آماده باشد؛ `FARANO_VENDOR_ConnectionStrings__VendorDb` و راز تصادفی یک‌باره `FARANO_VENDOR_Bootstrap__Secret` از Secret Store/Environment تأمین شوند. راز باید حداقل ۳۲ بایت باشد و هرگز به‌عنوان آرگومان command یا در فایل tracked قرار نگیرد.
-- فرمان: `dotnet Faranou.Vendor.Host.dll bootstrap-admin` (از پوشهٔ انتشار Vendor). فرمان راز را تعاملی می‌گیرد؛ نام کاربری، ایمیل و گذرواژهٔ قوی مدیر نیز تعاملی دریافت می‌شوند. گذرواژه روی ترمینال echo نمی‌شود.
+- فرمان: `dotnet Faranou.Vendor.Host.dll bootstrap-admin` (از پوشهٔ انتشار Vendor). راز bootstrap و گذرواژه با ورودی مخفی دریافت می‌شوند؛ نام کاربری و ایمیل تعاملی هستند. URI حاوی TOTP فقط در کنسول تعاملی نمایش داده می‌شود.
 - حساب ابتدا غیرفعال ساخته می‌شود. تنها پس از ثبت کلید authenticator و تأیید کد واقعی TOTP، `TwoFactorEnabled` و `IsEnabled` فعال می‌شوند. pending account به نشست مدیریتی دسترسی ندارد.
 - SQL Server application lock عملیات bootstrap را بین چند فرایند سریال می‌کند. اگر فرایند هنگام ثبت TOTP قطع شود، حساب pending باقی می‌ماند؛ اجرای مجدد با همان نام کاربری و گذرواژه می‌تواند enrollment را بازیابی کند. بعد از تکمیل موفق، اجرای مجدد fail-closed است.
 - رویدادهای pending-created، TOTP-rejected و completed به زنجیرهٔ ممیزی Vendor افزوده می‌شوند. راز bootstrap، گذرواژه و کد TOTP در audit/log نوشته نمی‌شوند.
