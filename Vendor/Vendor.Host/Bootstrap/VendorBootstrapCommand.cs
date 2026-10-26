@@ -24,6 +24,18 @@ public static class VendorBootstrapCommand
     private const int ApplicationLockTimeoutMilliseconds = 10_000;
     private const string Issuer = "Faranou Vendor";
 
+    private static readonly Action<ILogger, string, Exception?> LogBootstrapFailure =
+        LoggerMessage.Define<string>(
+            LogLevel.Error,
+            new EventId(5101, nameof(LogBootstrapFailure)),
+            "Vendor bootstrap failed. Exception type: {ExceptionType}. Sensitive exception details were intentionally omitted.");
+
+    private static readonly Action<ILogger, string, Exception?> LogAuditFailureUnavailable =
+        LoggerMessage.Define<string>(
+            LogLevel.Warning,
+            new EventId(5102, nameof(LogAuditFailureUnavailable)),
+            "Could not persist Vendor bootstrap failure audit event. Exception type: {ExceptionType}; details omitted.");
+
     public static bool IsRequested(IEnumerable<string> args) =>
         args.Any(argument => string.Equals(argument, CommandName, StringComparison.Ordinal));
 
@@ -238,8 +250,7 @@ public static class VendorBootstrapCommand
         {
             await TryAuditFailureAsync(services, "vendor.bootstrap.failed", CancellationToken.None);
             // Do not log exception messages or objects: provider exceptions may contain connection data.
-            logger.LogError("Vendor bootstrap failed. Exception type: {ExceptionType}. Sensitive exception details were intentionally omitted.",
-                exception.GetType().Name);
+            LogBootstrapFailure(logger, exception.GetType().Name, null);
             prompt.WriteLine("Bootstrap ناموفق بود؛ جزئیات حساس ثبت یا نمایش داده نشدند. حساب موقت، در صورت وجود، باید غیرفعال بماند.");
             return 11;
         }
@@ -259,9 +270,10 @@ public static class VendorBootstrapCommand
         catch (Exception exception)
         {
             var logger = services.GetService<ILoggerFactory>()?.CreateLogger("VendorBootstrapCommand");
-            logger?.LogWarning(
-                "Could not persist Vendor bootstrap failure audit event. Exception type: {ExceptionType}; details omitted.",
-                exception.GetType().Name);
+            if (logger is not null)
+            {
+                LogAuditFailureUnavailable(logger, exception.GetType().Name, null);
+            }
         }
     }
 
