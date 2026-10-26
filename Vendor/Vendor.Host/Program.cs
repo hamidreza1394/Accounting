@@ -1,20 +1,14 @@
 using System.Threading.RateLimiting;
 using Faranou.Vendor.Host.Authentication;
 using Faranou.Vendor.Persistence;
-using Faranou.Vendor.Persistence.Identity;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Vendor has its own configuration namespace and never falls back to customer settings.
 builder.Configuration.AddEnvironmentVariables(prefix: "FARANO_VENDOR_");
 
+builder.Services.AddHealthChecks();
+builder.Services.AddVendorPersistence(builder.Configuration);
 var keyDirectory = builder.Configuration["DataProtection:KeysDirectory"];
 if (builder.Environment.IsProduction() &&
     (string.IsNullOrWhiteSpace(keyDirectory) || !Path.IsPathFullyQualified(keyDirectory)))

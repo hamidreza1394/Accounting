@@ -390,15 +390,13 @@
 - **امنیت/باقی‌مانده:** کلاس `VendorAuditEvent` فقط مدل زنجیرهٔ هش است؛ سرویس append-only، اعتبارسنجی زنجیره و checkpoint مستقل هنوز لازم است. ورود/MFA/RBAC و bootstrap هنوز فعال/قابل دسترس نیستند.
 - **گزارش تحویل:** `docs/handoffs/ISSUE-100-vendor-persistence-identity-audit.md`.
 
-## 2026-10-26 — Issue #103: API احراز هویت Vendor با MFA
-- شاخهٔ security/issue-103-vendor-auth-mfa-v2 از main فعلی ساخته شد تا conflict با PRهای هم‌زمان رفع شود؛ کد persistence/MFA schema موجود حفظ شد.
-- APIهای password→TOTP، passkey options/assertion/enrollment، TOTP setup/confirm، me/logout و anti-forgery token اضافه شدند. نشست‌های محافظت‌شده نیازمند مدیر فعال و claim amr منطبق با TOTP یا passkey ثبت‌شده‌اند.
-- Passkey با PerformPasskeyAssertionAsync بررسی می‌شود؛ قبل از صدور cookie، فعال‌بودن مدیر کنترل و شمارندهٔ passkey ذخیره می‌شود. User verification و resident key اجباری‌اند.
-- Cookieهای host-only امن، ضدجعل، rate limiting جدا برای credential attempts، Data Protection persistent و تنظیمات production host/passkey domain افزوده شدند.
-- Integration tests شامل رد password-only/disabled account، challenge موقت TOTP بدون application cookie، تکمیل TOTP، passkey creation options، logout، rate limit، anti-forgery و نبود public registration هستند.
-- CI run `40271317565` Migration `20261026045412_VendorAddPasskeySupport` را با EF Core 10.0.13 تولید کرد؛ فایل migration از artifact بازبینی و در شاخه commit شد. Snapshot نیز به‌روزرسانی شد و گام scaffolding/آپلود موقت از workflow حذف شد. CI بعدی باید `has-pending-model-changes` و اجرای Migration ثبت‌شده را تأیید کند.
-- Build/Test محلی اجرا نشده‌اند؛ CI واقعی باید سبز باشد. دیتابیس مشتری و Migrationهای مشتری تغییر نکرده‌اند.
-
-- **اصلاح CI در Issue #103:** `AddHealthChecks()` به Host بازگردانده شد؛ run `40271317565` تست‌ها را به‌دلیل نبود این registration شکست داد، نه به‌دلیل migration. این خطا اصلاح شده و CI مجدد لازم است.
-
-- **پیگیری CI run `40271756059`:** Build سبز شد، ولی مرحلهٔ `has-pending-model-changes` ابتدا به‌دلیل نبود ابزار `dotnet-ef` شکست خورد؛ گام نصب ابزار به workflow اضافه شد. اجرای تست بعدی شکاف‌های واقعی را نشان داد: متغیرهای SQL integration با املای ناسازگار باعث Skip شدن تست auth شد و fallback authorization مسیرهای ناشناخته را به 401 تبدیل می‌کرد. متغیرها یکدست، provisioning دیتابیس‌های تصادفی روی `master` اضافه و fallback صریح 404 شد. CI جدید روی HEAD باید همهٔ این اصلاحات را تأیید کند.
+## 2026-10-26 — Vendor persistence hardening (Issue #117)
+- **مبنای کار:** `main` پس از ادغام PR #102 (`9b63c546c7a569498f6987137c686c2d7f9fb6ff`). PR #116 بسته شد چون بر پایهٔ نسخهٔ قدیمی‌تر بود و مدل Persistence/Migration ناسازگار داشت؛ هیچ تغییری از آن ادغام نشد.
+- **تغییرات:** registration دیتابیس و ASP.NET Core Identity EF stores به `Vendor/Vendor.Persistence/DependencyInjection.cs` منتقل شد؛ Host فقط `AddVendorPersistence` را صدا می‌زند. سیاست‌های پایهٔ Identity شامل ایمیل یکتا، رمز ۱۴ کاراکتری با ۴ کاراکتر یکتا، و lockout پس از ۵ تلاش برای ۱۵ دقیقه است. این سیاست‌ها جایگزین MFA اجباری نیستند.
+- **تست‌ها:** تست metadata مدل و default غیرفعال بودن مدیر؛ نبود FK از audit به admin؛ fail-closed هنگام نبود اتصال Vendor؛ resolve شدن `IUserStore`/`IRoleStore`; اجرای Migration و assert هشت جدول روی SQL Server واقعی.
+- **محافظت destructive test:** تست فقط `localhost`, `127.0.0.1` یا `::1` و catalog پایهٔ `FaranouVendorTests` را می‌پذیرد؛ سپس DB نام‌تصادفی می‌سازد، connection را می‌بندد و فقط همان DB را حذف می‌کند. در CI متغیر test الزامی است و تست نمی‌تواند بی‌صدا skip شود.
+- **Workflow:** نام متغیرهای integration test با workflow یکسان شد. CI از SQL Server 2022 استفاده می‌کند؛ اسکن/Publish و مرحلهٔ signing تغییر نکرده‌اند.
+- **مرز داده:** هیچ فایل `Server/**`، `Infrastructure/Persistence/**` یا Migration مشتری تغییر نکرده است؛ هیچ endpoint ورود/ثبت‌نام/bootstrap، مدیر seed، secret یا کلید امضا اضافه نشد.
+- **اعتبارسنجی:** Build/Test محلی اجرا نشده‌اند. Vendor CI روی PR #118، run `40272872248`، سبز شد: Restore، Build، `dotnet ef migrations has-pending-model-changes`، تست‌های Vendor (از جمله Migration واقعی روی SQL Server)، Publish و گارد خروجی موفق بودند. `.NET CI` run `40272872260` در زمان ثبت هنوز در حال اجرا بود؛ نتیجهٔ کلی PR تا پایان آن نهایی نیست. CI PR #102 پیش از این تغییرات فقط model-snapshot check داشت.
+- **باقی‌مانده:** MFA/passkey/TOTP، bootstrap یک‌بارمصرف، RBAC سمت سرور، audit writer/verifier/checkpoint، maker-checker، کنترل‌های deploy و G2 allow-list انتشار همچنان مرحله‌های مستقل هستند.
+- **Handoff:** `docs/handoffs/ISSUE-117-vendor-persistence-hardening.md`.
