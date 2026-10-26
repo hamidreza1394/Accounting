@@ -536,3 +536,11 @@
 - **اصلاح:** در شاخه fix/vendor-antiforgery-cookie-variable، کوکی اولیه از tuple نگه داشته می‌شود تا همراه کوکی هویت در درخواست‌های بعدی استفاده شود. منطق Production و کنترل امنیتی تغییری نکرده است.
 - **وضعیت:** commit ثبت شده؛ Vendor CI تازه هنوز اجرا/تأیید نشده. تا عبور Build، آزمون SQL Server، کل Vendor suite، EF snapshot gate و Publish، این اصلاح Verified نیست.
 - **Issue:** [#143](https://github.com/hamidreza1394/Accounting/issues/143).
+
+## 2026-10-26 — Issue #145: اصلاح فرض نادرست آزمون کوکی پس از TOTP
+- **شاهد CI:** Vendor CI run [40352627665](https://github.com/hamidreza1394/Accounting/actions/runs/40352627665) پس از ادغام PR #144 شکست خورد. مراحل UI و Build دات‌نت موفق بودند؛ آزمون PasswordOnlyIsDeniedAndTotpChallengeDoesNotIssueApplicationCookie در استخراج کوکی خطای Sequence contains more than one matching element داد.
+- **علت:** Endpoint ابتدا TwoFactorAuthenticatorSignInAsync را اجرا می‌کند و سپس برای افزودن claim amr=otp کوکی Application را با SignInWithClaimsAsync مجدداً صادر می‌کند. در پاسخ ممکن است بیش از یک هدر Set-Cookie با نام کوکی Application دیده شود؛ Single در تست فرض نادرستی درباره تعداد هدرها داشت.
+- **اصلاح پیشنهادی در شاخه:** آزمون مقدار نهایی کوکی Application را از هدرهای پاسخ می‌گیرد. هیچ assertion درباره رد ورود password-only، تأیید TOTP، نشست معتبر یا حفاظت antiforgery حذف نشده است.
+- **اعتبارسنجی:** هنوز CI پس از این اصلاح اجرا نشده؛ تا موفقیت کل Vendor suite روی SQL Server، strict EF snapshot gate و Publish، وضعیت Verified نیست.
+- **محدوده:** فقط آزمون و مستندات؛ بدون تغییر رفتار Production، دیتابیس مشتری یا Migrationهای مشتری.
+- **Issue:** [#145](https://github.com/hamidreza1394/Accounting/issues/145).
