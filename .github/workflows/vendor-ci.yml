@@ -60,7 +60,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 10.0.402
       - name: Restore Vendor solution
         run: dotnet restore Vendor.sln
       - name: Build Vendor solution
@@ -90,6 +90,7 @@ jobs:
 
       - name: Test Vendor solution
         env:
+          FARANO_VENDOR_ConnectionStrings__VendorDb: Server=localhost,1433;Database=FaranouVendorAuthTests;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
           FARANOU_VENDOR_TEST_SQLSERVER: Server=localhost,1433;Database=FaranouVendorTests;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
           FARANOU_REQUIRE_VENDOR_SQLSERVER: '1'
         run: dotnet test Vendor.sln --configuration Release
