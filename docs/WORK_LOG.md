@@ -501,3 +501,13 @@
 ### Issue #134 — نتیجهٔ CI اول و اصلاح دوم
 - اجرای Vendor CI [40288514593](https://github.com/hamidreza1394/Accounting/actions/runs/40288514593) ثابت کرد که `AddDefaultTokenProviders()` به Host منتقل شده اما خط قدیمی `builder.Services.AddSignInManager()` هنوز اشتباه است: extension متد روی `IdentityBuilder` قرار دارد، نه `IServiceCollection`.
 - اصلاح دوم در همان شاخه، `AddSignInManager()` و `AddDefaultTokenProviders()` را روی یک `IdentityBuilder` در Host ثبت می‌کند. پس از این اصلاح باید CI دوباره اجرا شود؛ هیچ تستی هنوز پس از اصلاح دوم موفق گزارش نشده است.
+
+
+## 2026-10-26 — Vendor EF Core Identity SchemaVersion 3 migration drift
+
+- **Issue:** follow-up to Vendor authentication integration test after PR #137; tracked in draft PR [#138](https://github.com/hamidreza1394/Accounting/pull/138).
+- **Diagnosis:** the SQL Server test compared the runtime design-time model with the latest migration snapshot and exposed five column metadata differences (VendorAdminUserTokens.Name/LoginProvider, VendorAdminUsers.PhoneNumber, and VendorAdminUserLogins.ProviderKey/LoginProvider), plus a missing VendorAdminUserPasskeys.UserId index and foreign key. These differences correspond to the configured IdentitySchemaVersions.Version3.
+- **Changes on branch fix/vendor-strict-migration-gate:** restored the strict EF snapshot gate after PR #137's temporary bypass; added 20261026084500_VendorAlignIdentitySchemaV3, its separate designer target model, and the updated snapshot; added explicit drop/recreate of the token/login primary keys because SQL Server rejected altering VendorAdminUserTokens.Name while PK_VendorAdminUserTokens depended on it; corrected the diagnostic test to compare initialized snapshot metadata with the EF design-time model.
+- **Observed CI results:** run [40293940211](https://github.com/hamidreza1394/Accounting/actions/runs/40293940211) reported the model-drift operations. Run [40295157534](https://github.com/hamidreza1394/Accounting/actions/runs/40295157534) was pending/in progress before this documentation update; an earlier run failed because the primary key was not yet dropped/recreated. The latest migration revision has not been verified yet.
+- **Safety:** no warning suppression, no deleted tests, no changes to customer accounting migrations. PR #138 remains Draft and must not be merged until the SQL Server migration test, strict EF snapshot check, full Vendor tests and publish pass.
+- **Next steps:** inspect latest Vendor CI; correct any further migration/model mismatch; then implement the secure first-admin bootstrap and forced password-change flow as a separate small change, followed by RBAC and audit wiring.

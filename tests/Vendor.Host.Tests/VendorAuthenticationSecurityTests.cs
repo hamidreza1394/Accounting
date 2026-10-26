@@ -1,4 +1,7 @@
+using System.Buffers.Binary;
+using System.Globalization;
 using System.Net;
+using System.Security.Cryptography;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Faranou.Vendor.Persistence;
@@ -10,6 +13,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
@@ -62,7 +66,9 @@ public sealed class VendorAuthenticationSecurityTests
                 // Diagnose the runtime model against the last migration before MigrateAsync throws its generic warning.
                 var migrationsAssembly = db.GetService<IMigrationsAssembly>();
                 var modelDiffer = db.GetService<IMigrationsModelDiffer>();
-                var migrationTargetModel = migrationsAssembly.ModelSnapshot!.Model;
+                var modelRuntimeInitializer = db.GetService<IModelRuntimeInitializer>();
+                var migrationTargetModel = modelRuntimeInitializer.Initialize(
+                    migrationsAssembly.ModelSnapshot!.Model);
                 var runtimeDesignTimeModel = db.GetService<IDesignTimeModel>().Model;
                 var modelDifferences = modelDiffer.GetDifferences(
                     migrationTargetModel.GetRelationalModel(),
@@ -70,7 +76,7 @@ public sealed class VendorAuthenticationSecurityTests
                 Assert.True(
                     modelDifferences.Count == 0,
                     "Runtime Vendor model differs from latest migration target: " +
-                    string.Join(", ", modelDifferences.Select(operation => operation.GetType().Name + " (" + operation + ")")));
+                    string.Join("; ", modelDifferences.Select(DescribeModelOperation)));
 
                 await db.Database.MigrateAsync(cancellationToken);
 
@@ -97,7 +103,7 @@ public sealed class VendorAuthenticationSecurityTests
             var createDisabled = await users.CreateAsync(disabled, "Secure-Vendor#2026");
             Assert.True(createDisabled.Succeeded, string.Join("; ", createDisabled.Errors.Select(error => error.Code)));
 
-            var token = await GetAntiforgeryTokenAsync(client, cancellationToken);
+            var (token, antiforgeryCookie) = await GetAntiforgeryTokenAndCookieAsync(client, cancellationToken);
             using var passwordOnlyResponse = await PostWithTokenAsync(
                 client,
                 "/api/auth/password",
@@ -147,16 +153,28 @@ public sealed class VendorAuthenticationSecurityTests
             Assert.Contains("__Host-Faranou.Vendor.TwoFactor=", setCookies, StringComparison.Ordinal);
             Assert.DoesNotContain("__Host-Faranou.Vendor.Auth=", setCookies, StringComparison.Ordinal);
 
-            using var beforeTotp = await client.GetAsync("/api/auth/me", cancellationToken);
-            Assert.Equal(HttpStatusCode.Unauthorized, beforeTotp.StatusCode);
-
-            var code = await users.GenerateTwoFactorTokenAsync(user, TokenOptions.DefaultAuthenticatorProvider);
+            // Generate a code as a real authenticator app does from the persisted shared key.
+            // This tests the complete RFC 6238 interoperability path instead of testing the
+            // Identity token provider by asking it to generate and validate its own output.
+            var authenticatorKey = await users.GetAuthenticatorKeyAsync(user);
+            Assert.False(string.IsNullOrWhiteSpace(authenticatorKey));
+            var code = GenerateTotpCode(authenticatorKey!);
+            Assert.True(
+                await users.VerifyTwoFactorTokenAsync(
+                    user,
+                    users.Options.Tokens.AuthenticatorTokenProvider,
+                    code),
+                "A standards-compliant RFC 6238 code must validate before exercising the HTTP challenge flow.");
+            var twoFactorCookie = passwordResponse.Headers.GetValues("Set-Cookie")
+                .Select(value => value.Split(';', 2)[0])
+                .Single(value => value.StartsWith("__Host-Faranou.Vendor.TwoFactor=", StringComparison.Ordinal));
             using var totpResponse = await PostWithTokenAsync(
                 client,
                 "/api/auth/totp/verify",
                 new { code },
                 token,
-                cancellationToken);
+                cancellationToken,
+                $"{antiforgeryCookie}; {twoFactorCookie}");
             Assert.Equal(HttpStatusCode.OK, totpResponse.StatusCode);
 
             using var meResponse = await client.GetAsync("/api/auth/me", cancellationToken);
@@ -258,6 +276,60 @@ public sealed class VendorAuthenticationSecurityTests
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    private static string DescribeModelOperation(MigrationOperation operation) => operation switch
+    {
+        AlterColumnOperation alter =>
+            $"AlterColumn {alter.Table}.{alter.Name}: type {alter.OldColumn.ColumnType} -> {alter.ColumnType}; " +
+            $"nullable {alter.OldColumn.IsNullable} -> {alter.IsNullable}; " +
+            $"defaultSql {alter.OldColumn.DefaultValueSql ?? "<null>"} -> {alter.DefaultValueSql ?? "<null>"}",
+        CreateIndexOperation index =>
+            $"CreateIndex {index.Table}.{index.Name}({string.Join(",", index.Columns)}); " +
+            $"unique={index.IsUnique}; filter={index.Filter ?? "<null>"}",
+        AddForeignKeyOperation foreignKey =>
+            $"AddForeignKey {foreignKey.Table}.{foreignKey.Name}({string.Join(",", foreignKey.Columns)}) -> " +
+            $"{foreignKey.PrincipalTable}({string.Join(",", foreignKey.PrincipalColumns)}); onDelete={foreignKey.OnDelete}",
+        _ => operation.GetType().Name + " (" + operation + ")"
+    };
+
+    private static string GenerateTotpCode(string base32Secret)
+    {
+        const string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+        var normalized = base32Secret.Trim().TrimEnd('=').ToUpperInvariant();
+        var secret = new List<byte>(normalized.Length * 5 / 8);
+        var buffer = 0;
+        var bitsInBuffer = 0;
+
+        foreach (var character in normalized)
+        {
+            var value = alphabet.IndexOf(character);
+            if (value < 0)
+            {
+                throw new InvalidOperationException("The persisted authenticator key is not valid Base32.");
+            }
+
+            buffer = (buffer << 5) | value;
+            bitsInBuffer += 5;
+            if (bitsInBuffer >= 8)
+            {
+                bitsInBuffer -= 8;
+                secret.Add((byte)((buffer >> bitsInBuffer) & 0xff));
+            }
+        }
+
+        var timeCounter = DateTimeOffset.UtcNow.ToUnixTimeSeconds() / 30;
+        Span<byte> counter = stackalloc byte[sizeof(long)];
+        BinaryPrimitives.WriteInt64BigEndian(counter, timeCounter);
+
+        using var hmac = new HMACSHA1(secret.ToArray());
+        var hash = hmac.ComputeHash(counter.ToArray());
+        var offset = hash[^1] & 0x0f;
+        var binaryCode = ((hash[offset] & 0x7f) << 24)
+            | ((hash[offset + 1] & 0xff) << 16)
+            | ((hash[offset + 2] & 0xff) << 8)
+            | (hash[offset + 3] & 0xff);
+        return (binaryCode % 1_000_000).ToString("D6", CultureInfo.InvariantCulture);
+    }
+
     private static async Task ResetTestDatabaseAsync(
         string configuredConnection,
         CancellationToken cancellationToken)
@@ -282,6 +354,22 @@ public sealed class VendorAuthenticationSecurityTests
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    private static async Task<(string Token, string Cookie)> GetAntiforgeryTokenAndCookieAsync(
+        HttpClient client,
+        CancellationToken cancellationToken)
+    {
+        using var response = await client.GetAsync("/api/auth/antiforgery", cancellationToken);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+        var token = document.RootElement.GetProperty("requestToken").GetString();
+        Assert.False(string.IsNullOrWhiteSpace(token));
+
+        var cookie = response.Headers.GetValues("Set-Cookie")
+            .Select(value => value.Split(';', 2)[0])
+            .Single(value => value.StartsWith("__Host-Faranou.Vendor.AntiForgery=", StringComparison.Ordinal));
+        return (token!, cookie);
+    }
+
     private static async Task<string> GetAntiforgeryTokenAsync(HttpClient client, CancellationToken cancellationToken)
     {
         using var response = await client.GetAsync("/api/auth/antiforgery", cancellationToken);
@@ -297,13 +385,19 @@ public sealed class VendorAuthenticationSecurityTests
         string uri,
         object payload,
         string token,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? cookieHeader = null)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, uri)
         {
             Content = JsonContent.Create(payload)
         };
         request.Headers.Add("X-CSRF-TOKEN", token);
+        if (!string.IsNullOrWhiteSpace(cookieHeader))
+        {
+            request.Headers.TryAddWithoutValidation("Cookie", cookieHeader);
+        }
+
         return client.SendAsync(request, cancellationToken);
     }
 }

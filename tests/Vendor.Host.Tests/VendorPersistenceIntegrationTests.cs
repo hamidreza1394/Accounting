@@ -3,6 +3,8 @@ using Faranou.Vendor.Persistence.Auditing;
 using Faranou.Vendor.Persistence.Identity;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Faranou.Vendor.Host.Tests;
@@ -36,17 +38,16 @@ public sealed class VendorPersistenceIntegrationTests
             // Every test gets a unique, clearly disposable database. Never point the suite at a customer database.
             InitialCatalog = databaseName
         };
-        var options = new DbContextOptionsBuilder<VendorDbContext>()
-            .UseSqlServer(connection.ConnectionString)
-            .Options;
-
-        await using var db = new VendorDbContext(options);
+        await using var provider = VendorTestServiceProviderFactory.Create(connection.ConnectionString);
+        await using var scope = provider.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
         try
         {
             await db.Database.MigrateAsync(TestContext.Current.CancellationToken);
             Assert.Empty(await db.Database.GetPendingMigrationsAsync(TestContext.Current.CancellationToken));
             var appliedMigrations = await db.Database.GetAppliedMigrationsAsync(TestContext.Current.CancellationToken);
             Assert.Contains("20261026045412_VendorAddPasskeySupport", appliedMigrations);
+            Assert.Contains("20261026084500_VendorAlignIdentitySchemaV3", appliedMigrations);
             Assert.NotNull(db.Model.FindEntityType(typeof(Microsoft.AspNetCore.Identity.IdentityUserPasskey<Guid>)));
 
             var sqlConnection = db.Database.GetDbConnection();
