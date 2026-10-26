@@ -599,3 +599,9 @@
 - **اعتبارسنجی:** آزمون اجرا نشده؛ CI باید اجرا و نتیجه ثبت شود. این تغییر هنوز Verified نیست.
 - **باقی‌مانده:** آزمون‌های منفی با احراز هویت واقعی، resource-level authorization/IDOR و maker-checker؛ هیچ Migration مشتری تغییر نکرده است.
 - Handoff: docs/handoffs/ISSUE-154-vendor-endpoint-authorization-coverage.md
+
+
+## تکمیل Issue #154 — آزمون سیاست مؤثر endpointهای محافظت‌شده
+- افزوده شد: آزمون می‌سازد سیاست مؤثر هر endpoint محافظت‌شده API را با AuthorizationPolicy.CombineAsync و تأیید می‌کند VendorAdminAccessRequirement (گارد مدیر فعال/MFA) در همه آن‌ها وجود دارد؛ در کنار آزمون metadata دسترسی و فهرست مسیرهای عمومی مجاز.
+- Commit: 1708e1d7c4b67a51222690bc756b95e945db2eee.
+- وضعیت: تست/Build هنوز منتظر CI هستند؛ Verified اعلام نمی‌شود.
