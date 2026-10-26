@@ -185,7 +185,7 @@ public static class VendorBootstrapCommand
             var label = Uri.EscapeDataString(string.IsNullOrWhiteSpace(email) ? userName : email);
             var issuer = Uri.EscapeDataString(Issuer);
             var authenticatorUri = $"otpauth://totp/{issuer}:{label}?secret={Uri.EscapeDataString(authenticatorKey)}&issuer={issuer}&digits=6&period=30";
-            prompt.WriteLine("این QR/URI را فقط در برنامهٔ authenticator مورد اعتماد ثبت کنید؛ آن را در log یا تیکت قرار ندهید:");
+            prompt.WriteLine("این URI را فقط در برنامهٔ authenticator مورد اعتماد ثبت کنید؛ آن را در log یا تیکت قرار ندهید:");
             prompt.WriteSensitiveLine(authenticatorUri);
             prompt.WriteLine("کد شش‌رقمی جاری را برای تأیید واقعی TOTP وارد کنید.");
             var code = NormalizeCode(prompt.ReadLine("کد TOTP: "));
