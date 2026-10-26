@@ -423,3 +423,13 @@
 - Vendor CI run 40277399614: npm ci، TypeScript typecheck، تست‌های UI، build فرانت‌اند، npm audit و Restore دات‌نت موفق بودند؛ Build دات‌نت شکست خورد چون Program.cs فاقد usingهای لازم برای Data Protection، EF Core، Identity و Authorization بود.
 - اصلاح: افزودن usingهای صریح در Vendor/Vendor.Host/Program.cs، commit 3d317ea206087ae026520a84ada49f61941bf139.
 - وضعیت بازبینی: اجرای Vendor CI روی commit اصلاحی 3d317ea در صف GitHub Actions است؛ هنوز نتیجه Build/Test نهایی نداریم. PR #127 همچنان Draft است و Merge نشده است.
+
+
+## 2026-10-26 — بهبود سرعت بارگذاری Vendor UI و اصلاح پیکربندی CI
+- **دامنه:** ادامهٔ UI پنل فروشنده در شاخه `feat/issue-126-vendor-ui-shell`، بدون تغییر ClientApp یا دیتابیس مشتری.
+- **بهبود بارگذاری:** فایل‌های خروجی Vite در مسیر `/assets` دارای نام‌های hashدار هستند؛ Host برای این فایل‌ها `Cache-Control: public,max-age=31536000,immutable` می‌فرستد تا بارگذاری مجدد از cache مرورگر انجام شود. `index.html` همچنان `no-store` می‌ماند تا انتشار نسخهٔ جدید به bundle قدیمی قفل نشود. این تغییر از الگوی استاندارد asset fingerprinting/cache استفاده می‌کند؛ اندازه و زمان واقعی لود هنوز با Lighthouse/مرورگر اندازه‌گیری نشده است.
+- **یافتهٔ CI:** Vendor CI run 40277588682 نشان داد npm ci، typecheck، تست‌های UI، audit و build فرانت‌اند و نیز .NET build موفق شدند؛ اما ۷ تست Host به دلیل نبود متغیر `FARANO_VENDOR_ConnectionStrings__VendorDb` در مرحلهٔ تست شکست خوردند.
+- **اصلاح CI:** متغیر اتصال VendorDb در مرحلهٔ `dotnet test` به همان SQL Server آزمایشی اضافه شد. این تغییر هنوز باید در اجرای جدید CI تأیید شود؛ هیچ تستی را حذف یا دور نزده‌ایم.
+- **اعتبارسنجی:** بهبود cache و اصلاح workflow در CI جدید باید تأیید شوند. UI هنوز در مرورگر واقعی/HTTPS و با Lighthouse بررسی نشده است؛ ادعای اندازه‌گیری سرعت یا آمادگی Production مطرح نیست.
+- **محدودیت‌ها:** صفحات مشتری/نصب/لایسنس هنوز placeholder هستند؛ bootstrap مدیر، RBAC، اتصال APIهای تجاری، و audit checkpoint مستقل کامل نشده‌اند.
+- **مرجع:** PR #127 — https://github.com/hamidreza1394/Accounting/pull/127.
