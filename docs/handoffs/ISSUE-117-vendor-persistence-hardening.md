@@ -28,12 +28,12 @@
 |---|---|
 | CI PR #102، run `40220512121` (Vendor CI) و `40220512124` (.NET CI) | سبز؛ قبل از تغییرات این Issue، شامل model snapshot check |
 | Build/Test محلی | اجرا نشده؛ .NET SDK در محیط این Agent در دسترس نیست |
-| تست Migration روی SQL Server در این شاخه | در کد اضافه شده؛ تا اجرای CI `NotVerified` |
-| تست resolve شدن Identity stores | در کد اضافه شده؛ تا اجرای CI `NotVerified` |
+| Vendor CI run `40272872248` | سبز؛ Restore/Build/model snapshot/Test/Migration واقعی SQL Server/Publish موفق |
+| تست resolve شدن Identity stores | در همان Vendor CI سبز؛ درون `dotnet test Vendor.sln` اجرا شد |
 | `git diff --check` / YAML lint محلی | اجرا نشده |
 
 ## باقی‌مانده
-- CI باید Restore/Build/Test و migration واقعی را اجرا کند؛ هر شکست باید در همین PR رفع شود.
+- Vendor CI run `40272872248` سبز است. باید `.NET CI` run `40272872260` نیز کامل شود؛ در صورت شکست، علت باید پیش از ادغام اصلاح شود.
 - بازبینی SQL migration و `has-pending-model-changes` ضروری است.
 - login/MFA/passkey/TOTP، bootstrap نخستین مدیر، RBAC، audit writer/verifier/checkpoint و maker-checker در Issueهای مستقل بعدی هستند.
 - هیچ ادعایی دربارهٔ Production readiness وجود ندارد.
