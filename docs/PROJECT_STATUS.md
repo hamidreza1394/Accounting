@@ -204,3 +204,10 @@
 - **یافته‌های ممیزی مجدد:** AUD-2026-10-24-01..09 در `docs/REPOSITORY_AUDIT.md`؛ مهم‌ترین‌ها: نبود مسیر ساخت اولین شرکت/مدیر (01)، نبود گارد جداسازی بستهٔ مشتری و اسکن اسرار (06)، ممیزی قابل‌ویرایش (04)، ریسک حفاظت کلید در Linux (02).
 - **اصلاح انحراف مستندات (D-030):** D-031/D-036 در `main` موجودند (یادداشت در `DECISIONS.md`)؛ شمارهٔ ADR بعدی در `AGENTS.md`/`CLAUDE.md` اصلاح شد (D-045).
 - **گام بعدی (پس از تأیید مالک):** مرحلهٔ L1 در `docs/ROADMAP.md` فاز 8؛ پیش‌شرط: پاسخ OD-01، OD-02، OD-12.
+
+
+## Vendor Control Plane — وضعیت بعد از Issue #100 (2026-10-26)
+- **پیاده‌سازی جزئی:** Host مستقل، workflow Vendor مستقل، persistence پروژهٔ جدا، schema `vendor`، Identity EF store، مدل اولیه AuditEvent، migration و snapshot افزوده شده‌اند.
+- **اعتبارسنجی:** منتظر CI واقعی PR مربوطه است. Build/Test محلی اجرا نشده‌اند؛ وجود migration در کد به‌تنهایی اثبات اجرای موفق روی SQL Server نیست.
+- **هنوز NotImplemented:** ورود و نشست امن مدیر، MFA اجباری/passkey/TOTP، bootstrap یک‌بارمصرف، حداقل دو مدیر واجد MFA پیش از Production، RBAC سمت سرور، maker-checker، سرویس hash-chain/verification و checkpoint مستقل، مشتری/نصب/قرارداد/کاتالوگ/صدور لایسنس، KMS/HSM و deployment واقعی.
+- **مرز داده:** هیچ migration/schema یا تغییر اجرایی روی دیتابیس مشتری در Issue #100 انجام نشده است.
