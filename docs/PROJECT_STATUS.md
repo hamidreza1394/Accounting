@@ -241,3 +241,7 @@
 - CI evidence: Vendor CI run [40285919870](https://github.com/hamidreza1394/Accounting/actions/runs/40285919870) failed only in the runtime auth integration test at `Database.MigrateAsync` with `PendingModelChangesWarning`; frontend checks, .NET build and EF CLI snapshot check passed. PR #132 consolidates Identity registration, but the cause remains **unconfirmed until rerun**.
 
 - **یافتهٔ مهم‌تر دربارهٔ migration:** فایل `20261026045412_VendorAddPasskeySupport.Designer.cs` در `main` غایب بود. شاخهٔ PR #132 اکنون `BuildTargetModel` این migration را اضافه کرده و تست SQL Server، اعمال migration و جدول `VendorAdminUserPasskeys` را صریح بررسی می‌کند. این با شکست runtime `PendingModelChangesWarning` سازگار است؛ تا CI سبز، رفع‌شدن آن تأیید نشده است.
+
+
+## CI follow-up — SignInManager registration
+- Vendor CI run 40286276604 found a compile error (`IdentityBuilder` has no `AddSignInManager` in Persistence project). Follow-up branch moves only SignInManager registration to Vendor.Host while keeping IdentityCore/store registration single-source. Status: Not verified until CI passes.
