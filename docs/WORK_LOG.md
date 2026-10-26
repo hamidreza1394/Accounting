@@ -397,3 +397,15 @@
 - **سیاست ارتقا:** پس از تأیید دسترس‌پذیری SDK patch جدید، نسخه در یک Issue/PR مشخص ارتقا یافته و کل .NET CI روی SQL Server واقعی دوباره اجرا شود؛ پین دائمی و بدون بازبینی نیست.
 - **اعتبارسنجی:** Build/Test این PR هنوز اجرا نشده؛ CI باید نشان دهد Setup .NET، Restore، Build/Test و migration guards عبور می‌کنند. خطای اولیه از نصب SDK بود، نه شکست تست کد.
 - **گزارش تحویل:** `docs/handoffs/ISSUE-108-pin-dotnet-sdk.md`.
+## 2026-10-25 — L2.4 زنجیرهٔ ممیزی Vendor (Issue #105)
+- **مبنای معماری:** D-047 ممیزی قابل‌کشف می‌خواهد و تصریح می‌کند hash-chain داخل همان DB به‌تنهایی در برابر DBA کافی نیست. جدول `VendorAuditEvents` در PRهای #101/#102 موجود است؛ این مرحله بدون تغییر مدل/مهاجرت اجرا می‌شود.
+- **پیاده‌سازی در شاخه:** `IVendorAuditWriter`, `VendorAuditWriter`, `VendorAuditChainVerifier` برای append تراکنشی SQL Server، hash نسخه‌دار SHA-256، شناسه‌های opaque و verification زنجیره افزوده شدند. قفل `sp_getapplock` با مالکیت تراکنش جلوی شاخه‌شدن ناشی از چند نمونه را می‌گیرد.
+- **تست‌ها:** تست Integration روی SQL Server 2022 با ۱۶ نویسندهٔ هم‌زمان، verification و دستکاری محتوای رخداد؛ تست‌های واحد برای رد metadata آزاد و شناسهٔ شبه-PII.
+- **محدوده:** Host wiring و endpoint ایجاد نشده‌اند تا با PR #104 (ورود/MFA و schema Passkey) تداخل رخ ندهد. هیچ Schema/Migration، `Template.sln` یا دیتابیس مشتری تغییر نکرده است.
+- **اعتبارسنجی:** Build/Test محلی اجرا نشده‌اند؛ CI روی HEAD نهایی این PR باید اجرا شود. تا نتیجهٔ واقعی، status `NotVerified` است.
+- **باقی‌مانده:** SQL permissions append-only، checkpoint/export مستقل، پایش/alerting، سیاست retention و اتصال سرویس به Host پس از MFA/bootstrap باقی‌اند.
+- **تحویل:** `docs/handoffs/ISSUE-105-vendor-audit-chain.md`.
+
+- **CI finding:** run `40223605922` failed before Build/Test in `actions/setup-dotnet@v6` while fetching SDK `10.0.403` / runtime `10.0.14` from `dotnetorigin.blob.core.windows.net` (HTTP 409), not in project code. Vendor CI was pinned to SDK `10.0.402`, the last successfully provisioned SDK on this repository workflow, to make the rerun deterministic; verify future servicing updates separately. Build/Test from the earlier run had succeeded but the final publish step had not completed. A new run on the pinned version is required.
+
+- **یافتهٔ CI بعد از pin:** در اجرای `40223833470` نصب SDK دیگر مانع اصلی نبود؛ Build تست به‌علت یک فراخوانی باقی‌ماندهٔ instance به متد `VendorAuditChainVerifier.Verify` (پس از تبدیل به static) شکست خورد (`CS0176`). تمام فراخوانی‌های unit/integration به static API تغییر داده شدند و `VerifyAsync` نیز به‌دلیل نداشتن state استاتیک شد؛ CI روی HEAD جدید هنوز لازم است.
