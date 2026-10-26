@@ -477,3 +477,8 @@
 ### CI evidence — Vendor UI fix PR #131
 - Vendor CI run [40285919870](https://github.com/hamidreza1394/Accounting/actions/runs/40285919870) completed with failure in `VendorAuthenticationSecurityTests.PasswordOnlyIsDeniedAndTotpChallengeDoesNotIssueApplicationCookie`: runtime `Database.MigrateAsync` throws `PendingModelChangesWarning`. Frontend typecheck/tests/build, asset budget, .NET build and EF CLI snapshot check passed in the same run.
 - This reproduces the runtime-only model mismatch and motivates validating the single-source Identity registration in PR #132. The duplicated registration is a concrete inconsistency, but is not declared the proven sole root cause until the new SQL Server integration run passes.
+
+### یافتهٔ قطعی‌تر دربارهٔ PendingModelChangesWarning
+- بازبینی مستقیم `main` نشان داد فایل `20261026045412_VendorAddPasskeySupport.Designer.cs` اصلاً وجود نداشت؛ migration فقط `Up/Down` داشت و `BuildTargetModel` تولیدشده را نداشت. این نقص با شکست runtime `Database.MigrateAsync` و موفقیت بررسی snapshot از CLI سازگار است و علت مستقیم محتمل‌تری از ثبت تکراری Identity است.
+- همین شاخه اکنون designer را از snapshot جاری ساخته، `BuildModel` را به `BuildTargetModel` تبدیل کرده، metadata را در designer متمرکز کرده و تست SQL Server را برای وجود جدول `VendorAdminUserPasskeys` و اعمال هر دو migration تقویت می‌کند. ثبت Identity نیز جداگانه تک‌منبع شده است.
+- تا CI جدید سبز نشود، این علت/اصلاح تأییدشده محسوب نمی‌شود.
