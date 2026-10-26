@@ -58,7 +58,7 @@ public static class VendorBootstrapCommand
             return 2;
         }
 
-        var suppliedSecret = prompt.ReadLine("راز یک‌بارهٔ bootstrap را وارد کنید: ");
+        var suppliedSecret = prompt.ReadPassword("راز یک‌بارهٔ bootstrap را وارد کنید: ");
         if (!MatchesSecret(expectedSecret, suppliedSecret))
         {
             await TryAuditFailureAsync(services, "vendor.bootstrap.secret-rejected", cancellationToken);
@@ -186,7 +186,7 @@ public static class VendorBootstrapCommand
             var issuer = Uri.EscapeDataString(Issuer);
             var authenticatorUri = $"otpauth://totp/{issuer}:{label}?secret={Uri.EscapeDataString(authenticatorKey)}&issuer={issuer}&digits=6&period=30";
             prompt.WriteLine("این QR/URI را فقط در برنامهٔ authenticator مورد اعتماد ثبت کنید؛ آن را در log یا تیکت قرار ندهید:");
-            prompt.WriteLine(authenticatorUri);
+            prompt.WriteSensitiveLine(authenticatorUri);
             prompt.WriteLine("کد شش‌رقمی جاری را برای تأیید واقعی TOTP وارد کنید.");
             var code = NormalizeCode(prompt.ReadLine("کد TOTP: "));
 
@@ -315,6 +315,7 @@ public interface IVendorBootstrapPrompt
     string? ReadLine(string prompt);
     string ReadPassword(string prompt);
     void WriteLine(string message);
+    void WriteSensitiveLine(string message);
 }
 
 public sealed class ConsoleVendorBootstrapPrompt : IVendorBootstrapPrompt
@@ -356,4 +357,14 @@ public sealed class ConsoleVendorBootstrapPrompt : IVendorBootstrapPrompt
     }
 
     public void WriteLine(string message) => Console.WriteLine(message);
+
+    public void WriteSensitiveLine(string message)
+    {
+        if (Console.IsOutputRedirected)
+        {
+            throw new InvalidOperationException("TOTP enrollment requires an interactive console; sensitive output is never written to redirected output.");
+        }
+
+        Console.WriteLine(message);
+    }
 }
