@@ -2,6 +2,12 @@
 
 رابط کاربری جدید فرانو با React، TypeScript (strict)، Vite و Tailwind CSS. خروجی Build در `Server/wwwroot/app` قرار می‌گیرد و سرور ASP.NET Core آن را در مسیر `/app` و هم‌مبدأ با API و صفحه ورود Razor سرو می‌کند.
 
+## استاندارد کامپوننت‌های UI
+
+کامپوننت‌های جدید React بر اساس shadcn/ui طراحی می‌شوند؛ پیکربندی اولیه در `components.json` با هدف RTL فارسی ثبت شده است. راهنمای معماری، محدودیت‌های آفلاین، دسترس‌پذیری و فرآیند افزودن کامپوننت در [docs/UI_COMPONENTS.md](../docs/UI_COMPONENTS.md) است.
+
+> توجه: این commit فقط پیکربندی و استاندارد را ثبت می‌کند. CLI، وابستگی‌های npm، `src/lib/utils.ts` و کامپوننت‌های تولیدشده هنوز نصب/تولید نشده‌اند؛ تا تکمیل PR نصب و سبز شدن CI، از import کردن `@/components/ui/*` خودداری کنید. نصب باید `package.json` و `package-lock.json` را هماهنگ به‌روزرسانی کند.
+
 ## پیش‌نیاز
 - Node.js 22.12 یا بالاتر (CI از Node 24 و npm 11 استفاده می‌کند؛ `package-lock.json` با npm 11 ساخته شده است).
 
