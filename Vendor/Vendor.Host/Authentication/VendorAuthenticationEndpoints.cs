@@ -176,27 +176,19 @@ public static class VendorAuthenticationEndpoints
                 return Results.Json(new { error = GenericSignInFailure }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
-            var result = await signInManager.PasskeySignInAsync(request.CredentialJson);
-            if (!result.Succeeded)
+            var assertion = await signInManager.PerformPasskeyAssertionAsync(request.CredentialJson);
+            if (!assertion.Succeeded ||
+                assertion.User is not { IsEnabled: true } user ||
+                assertion.Passkey is not { } updatedPasskey)
             {
                 return Results.Json(new { error = GenericSignInFailure }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
-            var authentication = await context.AuthenticateAsync(IdentityConstants.ApplicationScheme);
-            var user = authentication.Principal is null
-                ? null
-                : await users.GetUserAsync(authentication.Principal);
-
-            if (user is null || !user.IsEnabled)
+            // The assertion API does not persist the updated signature counter automatically.
+            // Persist it only after checking that the resolved administrator is still enabled.
+            var updatePasskey = await users.AddOrUpdatePasskeyAsync(user, updatedPasskey);
+            if (!updatePasskey.Succeeded)
             {
-                await signInManager.SignOutAsync();
-                return Results.Json(new { error = GenericSignInFailure }, statusCode: StatusCodes.Status401Unauthorized);
-            }
-
-            var passkeys = await users.GetPasskeysAsync(user);
-            if (passkeys.Count == 0)
-            {
-                await signInManager.SignOutAsync();
                 return Results.Json(new { error = GenericSignInFailure }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
