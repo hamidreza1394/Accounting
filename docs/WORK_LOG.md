@@ -418,3 +418,8 @@
 - **مرزها:** هیچ تغییری در ClientApp، دیتابیس مشتری یا Migrationهای مشتری انجام نشده است. آمار مشتری/نصب/لایسنس جعلی نمایش داده نمی‌شود. هیچ توکن یا رمز در localStorage/sessionStorage ذخیره نمی‌شود.
 - **اعتبارسنجی:** Restore/Build/Test و CI از این Agent اجرا نشده‌اند؛ باید نتایج PR را بررسی کرد. وضعیت Implemented in branch، نه Verified و نه Production-ready.
 - **باقی‌مانده:** مرور نهایی TypeScript/React و CI؛ آزمون مرورگری روی HTTPS واقعی؛ تکمیل Issue #119 bootstrap، #123 RBAC و audit checkpoint مستقل پیش از عملیات تجاری.
+
+### پیگیری CI برای VENDOR-UI-01 — 2026-10-26
+- Vendor CI run 40277399614: npm ci، TypeScript typecheck، تست‌های UI، build فرانت‌اند، npm audit و Restore دات‌نت موفق بودند؛ Build دات‌نت شکست خورد چون Program.cs فاقد usingهای لازم برای Data Protection، EF Core، Identity و Authorization بود.
+- اصلاح: افزودن usingهای صریح در Vendor/Vendor.Host/Program.cs، commit 3d317ea206087ae026520a84ada49f61941bf139.
+- وضعیت بازبینی: اجرای Vendor CI روی commit اصلاحی 3d317ea در صف GitHub Actions است؛ هنوز نتیجه Build/Test نهایی نداریم. PR #127 همچنان Draft است و Merge نشده است.
