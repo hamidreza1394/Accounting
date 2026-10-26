@@ -544,3 +544,12 @@
 - **اعتبارسنجی:** هنوز CI پس از این اصلاح اجرا نشده؛ تا موفقیت کل Vendor suite روی SQL Server، strict EF snapshot gate و Publish، وضعیت Verified نیست.
 - **محدوده:** فقط آزمون و مستندات؛ بدون تغییر رفتار Production، دیتابیس مشتری یا Migrationهای مشتری.
 - **Issue:** [#145](https://github.com/hamidreza1394/Accounting/issues/145).
+
+## 2026-10-26 — Issue #113: پیاده‌سازی اولیه bootstrap امن مدیر Vendor
+- **دامنه:** شاخهٔ `feat/issue-113-vendor-bootstrap` بر مبنای شاخهٔ اصلاح CI #146 ساخته شد تا وابستگی CI حل‌شده را حفظ کند.
+- **پیاده‌سازی:** فرمان تعاملی `bootstrap-admin` فقط در command mode اجرا می‌شود؛ راز ۳۲ بایتی از `FARANO_VENDOR_Bootstrap__Secret` و ورودی تعاملی دریافت و با hash ثابت‌طول + `FixedTimeEquals` مقایسه می‌شود. راز/گذرواژه در آرگومان CLI قرار نمی‌گیرند.
+- **ایمنی حساب:** حساب pending ابتدا غیرفعال ذخیره می‌شود؛ enrollment TOTP تحت SQL Server transaction-scoped application lock انجام می‌شود؛ فقط پس از تأیید کد، MFA و حساب فعال می‌شوند. قطع enrollment حساب را غیرفعال باقی می‌گذارد و قابل بازیابی است.
+- **ممیزی:** ثبت scoped `IVendorAuditWriter`/`TimeProvider` افزوده شد؛ رویدادهای pending-created، TOTP-rejected و completed در همان تراکنش‌های Vendor نوشته می‌شوند.
+- **تست:** آزمون Integration جدید روی SQL Server واقعی دو تلاش هم‌زمان را اجرا می‌کند و باید فقط یک مدیر فعال و زنجیرهٔ ممیزی معتبر داشته باشد؛ همچنین مقایسهٔ راز تست واحد دارد.
+- **اعتبارسنجی:** تغییرات روی branch ثبت شده‌اند؛ Build/Test محلی اجرا نشده است. CI روی PR وابسته باید Build، SQL Server tests، strict EF snapshot gate و publish را تأیید کند. تا نتیجهٔ سبز وضعیت Verified نیست.
+- **دامنه داده:** هیچ Migration یا دیتابیس مشتری تغییر نکرده است. Issue #113 باز می‌ماند تا تمام معیارها و CI تأیید شوند.
