@@ -249,3 +249,12 @@ erDiagram
 - **کلید خصوصی صدور:** فقط محیط امن فروشنده (OD-07). **کلید خصوصی نصب:** فقط همان نصب (OD-08). کلید عمومی هر دو طرف در هر دو سو مجاز است.
 - **ارتباط `Company` با `CustomerAccount`:** فقط از مسیر `CustomerBoundary` در فروشنده و `Companies.CustomerBoundaryId` مات در نصب؛ مستقیم هرگز (D-038). یک `CustomerAccount` می‌تواند چند `Installation` و در هر نصب چند `Company` داشته باشد (D-020).
 - هیچ ستون یا FK از جداول نصب مشتری به جداول فروشنده نیست (بخش ۴ همین سند).
+
+
+## ۶) وضعیت واقعی persistence مدیریتی Vendor (2026-10-26)
+این بخش از جداول تجاری پیشنهادی بخش ۲ جداست:
+- `Vendor/Vendor.Persistence` اکنون یک DbContext مستقل دارد؛ schema پیش‌فرض آن `vendor` است.
+- Migration اولیه جداول Identity مدیران (`AdminUsers`, `AdminRoles` و جداول وابسته) و `AuditEvents` را می‌سازد. این جداول فقط در دیتابیس Vendor هستند؛ هیچ FK بین این دیتابیس و دیتابیس مشتری وجود ندارد.
+- وجود migration در شاخه به معنای اعمال‌شدن در محیط Production نیست. تست Integration باید آن را روی SQL Server آزمایشی واقعی اجرا کند.
+- موجودیت `VendorAuditEvent` هنوز فقط مدل ذخیره‌سازی است؛ تضمین append-only، محاسبه/اعتبارسنجی hash، جلوگیری از replay، و checkpoint بیرونی هنوز پیاده‌سازی نشده‌اند.
+- جدول‌های `CustomerAccount`, `Installation`, `Contract`, `License`, `LicenseRevision`, `ActivationRequest` و مدل نهایی صدور همچنان نیازمند Issueهای جدا و پیروی از D-045/D-047 هستند.
