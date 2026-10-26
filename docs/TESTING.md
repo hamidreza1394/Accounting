@@ -172,3 +172,9 @@ cd ClientApp && npm ci && npm run typecheck && npm test && npm run build && npm 
 - تست منفی از یک گراف XML مصنوعی و موقت استفاده می‌کند که وابستگی ترنزیتیو به `Vendor` دارد؛ تست باید آن را تشخیص دهد. این fixture کد اجرایی Vendor را build یا اجرا نمی‌کند.
 - در `Licensing.Contracts` نیز هر `ProjectReference`، هر وابستگی ASP.NET Core/EF Core/Vendor و هر `Compile`/`Content Link` بیرون از پوشه رد می‌شود. این گارد بخشی از `Template.sln` است و با فرمان‌های معمول `dotnet test Template.sln --configuration Release` اجرا می‌شود. نتیجهٔ واقعی CI روی PR باید قبل از اعلام `Verified` بررسی شود.
 - این تست جایگزین G2/G3 نیست؛ G2 خروجی Publish را بررسی می‌کند و G3 اسکن اسرار در CI است. G4/G5 و allow-list کامل Publish هنوز جداگانه باید تعیین/پیاده‌سازی شوند.
+
+## ممیزی Vendor (Issue #105)
+- `VendorAuditChainVerifierTests` آزمون‌های واحد برای رد metadata آزاد و شناسهٔ قابل‌شناسایی مانند ایمیل دارد.
+- `VendorAuditChainIntegrationTests` در SQL Server واقعی یک دیتابیس موقت `FaranouVendorTests_<guid>` می‌سازد؛ ۱۶ نویسنده با DbContext مستقل هم‌زمان رخداد ثبت می‌کنند، زنجیره بررسی می‌شود، سپس تغییر مستقیم محتوای رخداد باید خطای `event-content-mismatch` بدهد و دیتابیس آزمایش حذف می‌شود.
+- CI باید متغیرهای `FARANOU_VENDOR_TEST_SQLSERVER` و `FARANOU_REQUIRE_VENDOR_SQLSERVER=1` را فراهم کند تا نبود SQL Server باعث Skip ناخواسته نشود.
+- این PR در شاخهٔ `security/issue-105-vendor-audit-chain` است؛ تا نتیجهٔ واقعی CI روی HEAD نهایی، آزمون‌ها `NotVerified` هستند. اجرای محلی در این محیط انجام نشده است.
