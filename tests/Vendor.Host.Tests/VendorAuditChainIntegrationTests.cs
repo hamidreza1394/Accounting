@@ -2,6 +2,8 @@ using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Auditing;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Faranou.Vendor.Host.Tests;
@@ -30,21 +32,21 @@ public sealed class VendorAuditChainIntegrationTests
         {
             InitialCatalog = $"FaranouVendorTests_{Guid.NewGuid():N}"
         };
-        var options = new DbContextOptionsBuilder<VendorDbContext>()
-            .UseSqlServer(connection.ConnectionString)
-            .Options;
+        await using var provider = VendorTestServiceProviderFactory.Create(connection.ConnectionString);
 
         try
         {
-            await using (var setup = new VendorDbContext(options))
+            await using (var setupScope = provider.CreateAsyncScope())
             {
+                var setup = setupScope.ServiceProvider.GetRequiredService<VendorDbContext>();
                 await setup.Database.MigrateAsync(cancellationToken);
             }
 
             const int writersCount = 16;
             var writes = Enumerable.Range(0, writersCount).Select(async index =>
             {
-                await using var db = new VendorDbContext(options);
+                await using var scope = provider.CreateAsyncScope();
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
                 var writer = new VendorAuditWriter(db, TimeProvider.System);
                 return await writer.AppendAsync(new VendorAuditWriteRequest(
                     ActorUserId: null,
@@ -58,8 +60,9 @@ public sealed class VendorAuditChainIntegrationTests
             Assert.Equal(writersCount, receipts.Length);
             Assert.Equal(writersCount, receipts.Select(receipt => receipt.EventId).Distinct().Count());
 
-            await using (var verificationContext = new VendorDbContext(options))
+            await using (var verificationScope = provider.CreateAsyncScope())
             {
+                var verificationContext = verificationScope.ServiceProvider.GetRequiredService<VendorDbContext>();
                 var result = await VendorAuditChainVerifier.VerifyAsync(verificationContext, cancellationToken);
                 Assert.True(result.IsValid, $"Audit chain verification failed: {result.FailureCode}");
                 Assert.Equal(writersCount, result.EventCount);
@@ -75,8 +78,9 @@ public sealed class VendorAuditChainIntegrationTests
                     .ExecuteUpdateAsync(update => update.SetProperty(item => item.ActionCode, "tampered.audit-event"), cancellationToken);
             }
 
-            await using (var verificationAfterTampering = new VendorDbContext(options))
+            await using (var verificationAfterTamperingScope = provider.CreateAsyncScope())
             {
+                var verificationAfterTampering = verificationAfterTamperingScope.ServiceProvider.GetRequiredService<VendorDbContext>();
                 var result = await VendorAuditChainVerifier.VerifyAsync(verificationAfterTampering, cancellationToken);
                 Assert.False(result.IsValid);
                 Assert.Equal("event-content-mismatch", result.FailureCode);
@@ -85,7 +89,8 @@ public sealed class VendorAuditChainIntegrationTests
         }
         finally
         {
-            await using var cleanup = new VendorDbContext(options);
+            await using var cleanupScope = provider.CreateAsyncScope();
+            var cleanup = cleanupScope.ServiceProvider.GetRequiredService<VendorDbContext>();
             await cleanup.Database.EnsureDeletedAsync(cancellationToken);
         }
     }

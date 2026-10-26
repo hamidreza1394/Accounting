@@ -3,6 +3,8 @@ using Faranou.Vendor.Persistence.Auditing;
 using Faranou.Vendor.Persistence.Identity;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Faranou.Vendor.Host.Tests;
@@ -36,11 +38,9 @@ public sealed class VendorPersistenceIntegrationTests
             // Every test gets a unique, clearly disposable database. Never point the suite at a customer database.
             InitialCatalog = databaseName
         };
-        var options = new DbContextOptionsBuilder<VendorDbContext>()
-            .UseSqlServer(connection.ConnectionString)
-            .Options;
-
-        await using var db = new VendorDbContext(options);
+        await using var provider = VendorTestServiceProviderFactory.Create(connection.ConnectionString);
+        await using var scope = provider.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
         try
         {
             await db.Database.MigrateAsync(TestContext.Current.CancellationToken);

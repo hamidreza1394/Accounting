@@ -18,7 +18,10 @@ public sealed class VendorPersistenceTests
     [Fact]
     public void Model_uses_vendor_specific_tables_and_disables_admins_by_default()
     {
-        using var context = CreateModelOnlyContext();
+        using var provider = VendorTestServiceProviderFactory.Create(
+            "Server=localhost;Database=VendorModelOnly;Integrated Security=True;TrustServerCertificate=True");
+        using var scope = provider.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
         var model = context.Model;
 
         Assert.Equal("VendorAdminUsers", model.FindEntityType(typeof(VendorAdminUser))!.GetTableName());
@@ -105,12 +108,9 @@ public sealed class VendorPersistenceTests
         {
             InitialCatalog = $"FaranouVendorTests_{Guid.NewGuid():N}"
         }.ConnectionString;
-        var options = new DbContextOptionsBuilder<VendorDbContext>()
-            .UseSqlServer(testConnectionString, sql =>
-                sql.MigrationsAssembly(typeof(VendorDbContext).Assembly.FullName))
-            .Options;
-
-        await using var context = new VendorDbContext(options);
+        await using var provider = VendorTestServiceProviderFactory.Create(testConnectionString);
+        await using var scope = provider.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
         try
         {
             await context.Database.MigrateAsync();
@@ -149,12 +149,4 @@ public sealed class VendorPersistenceTests
         }
     }
 
-    private static VendorDbContext CreateModelOnlyContext()
-    {
-        var options = new DbContextOptionsBuilder<VendorDbContext>()
-            .UseSqlServer("Server=localhost;Database=VendorModelOnly;Integrated Security=True;TrustServerCertificate=True")
-            .Options;
-
-        return new VendorDbContext(options);
-    }
 }
