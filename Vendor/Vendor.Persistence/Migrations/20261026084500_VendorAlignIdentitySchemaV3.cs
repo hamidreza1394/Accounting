@@ -6,6 +6,14 @@ public sealed partial class VendorAlignIdentitySchemaV3 : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
+        migrationBuilder.DropPrimaryKey(
+            name: "PK_VendorAdminUserTokens",
+            table: "VendorAdminUserTokens");
+
+        migrationBuilder.DropPrimaryKey(
+            name: "PK_VendorAdminUserLogins",
+            table: "VendorAdminUserLogins");
+
         migrationBuilder.AlterColumn<string>(
             name: "Name",
             table: "VendorAdminUserTokens",
@@ -52,6 +60,16 @@ public sealed partial class VendorAlignIdentitySchemaV3 : Migration
             oldClrType: typeof(string),
             oldType: "nvarchar(450)");
 
+        migrationBuilder.AddPrimaryKey(
+            name: "PK_VendorAdminUserTokens",
+            table: "VendorAdminUserTokens",
+            columns: new[] { "UserId", "LoginProvider", "Name" });
+
+        migrationBuilder.AddPrimaryKey(
+            name: "PK_VendorAdminUserLogins",
+            table: "VendorAdminUserLogins",
+            columns: new[] { "LoginProvider", "ProviderKey" });
+
         migrationBuilder.CreateIndex(
             name: "IX_VendorAdminUserPasskeys_UserId",
             table: "VendorAdminUserPasskeys",
@@ -75,6 +93,14 @@ public sealed partial class VendorAlignIdentitySchemaV3 : Migration
         migrationBuilder.DropIndex(
             name: "IX_VendorAdminUserPasskeys_UserId",
             table: "VendorAdminUserPasskeys");
+
+        migrationBuilder.DropPrimaryKey(
+            name: "PK_VendorAdminUserTokens",
+            table: "VendorAdminUserTokens");
+
+        migrationBuilder.DropPrimaryKey(
+            name: "PK_VendorAdminUserLogins",
+            table: "VendorAdminUserLogins");
 
         migrationBuilder.AlterColumn<string>(
             name: "Name",
@@ -121,5 +147,15 @@ public sealed partial class VendorAlignIdentitySchemaV3 : Migration
             oldClrType: typeof(string),
             oldType: "nvarchar(128)",
             oldMaxLength: 128);
+
+        migrationBuilder.AddPrimaryKey(
+            name: "PK_VendorAdminUserTokens",
+            table: "VendorAdminUserTokens",
+            columns: new[] { "UserId", "LoginProvider", "Name" });
+
+        migrationBuilder.AddPrimaryKey(
+            name: "PK_VendorAdminUserLogins",
+            table: "VendorAdminUserLogins",
+            columns: new[] { "LoginProvider", "ProviderKey" });
     }
 }
