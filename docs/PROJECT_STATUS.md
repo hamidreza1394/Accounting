@@ -1,3 +1,5 @@
+> **Vendor UI — 2026-10-26 (Issue #126, شاخه feat/issue-126-vendor-ui-shell):** اسکلت مستقل Vendor/Vendor.Web شامل React/TypeScript strict/Vite/Tailwind و کامپوننت‌های shadcn، صفحه ورود RTL با password→TOTP متصل به APIهای واقعی، shell مدیریتی و build به Vendor/Vendor.Host/wwwroot ایجاد شده است. Host برای static assets و SPA routeها تغییر یافته و Vendor CI اکنون npm ci/typecheck/test/build و audit وابستگی‌های runtime را اجرا می‌کند. این تغییر هنوز فقط در شاخه است؛ تا CI واقعی سبز نشود Verified نیست و تا Merge در main وضعیت آن Implemented in branch است. صفحات مشتری/نصب/لایسنس placeholder هستند؛ bootstrap مدیر، RBAC و audit checkpoint مستقل همچنان مانع Production هستند. تست‌ها در این مرحله توسط این Agent اجرا نشده‌اند.
+
 > **UI component standard — 2026-10-26 (D-048):** shadcn/ui با RTL به‌عنوان استاندارد رابط React پذیرفته شده است. شاخهٔ `feat/shadcn-ui-foundation` پیکربندی پایه و `docs/UI_COMPONENTS.md` را اضافه می‌کند. این مرحله هنوز نصب CLI/dependencies، به‌روزرسانی lockfile و افزودن کامپوننت واقعی را انجام نداده؛ بنابراین shadcn/ui در وضعیت `Partially Implemented` است و تا CI مرحلهٔ نصب سبز نشود نباید به‌عنوان وابستگی قابل استفاده معرفی شود.
 
 # وضعیت پروژه
