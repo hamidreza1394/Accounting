@@ -204,3 +204,10 @@
 - **یافته‌های ممیزی مجدد:** AUD-2026-10-24-01..09 در `docs/REPOSITORY_AUDIT.md`؛ مهم‌ترین‌ها: نبود مسیر ساخت اولین شرکت/مدیر (01)، نبود گارد جداسازی بستهٔ مشتری و اسکن اسرار (06)، ممیزی قابل‌ویرایش (04)، ریسک حفاظت کلید در Linux (02).
 - **اصلاح انحراف مستندات (D-030):** D-031/D-036 در `main` موجودند (یادداشت در `DECISIONS.md`)؛ شمارهٔ ADR بعدی در `AGENTS.md`/`CLAUDE.md` اصلاح شد (D-045).
 - **گام بعدی (پس از تأیید مالک):** مرحلهٔ L1 در `docs/ROADMAP.md` فاز 8؛ پیش‌شرط: پاسخ OD-01، OD-02، OD-12.
+
+## وضعیت Vendor بعد از Issue #103 (2026-10-26)
+- D-047 باید به‌عنوان معماری پذیرفته‌شده خوانده شود؛ یادداشت تاریخی «پس از تأیید مالک» در بخش‌های قدیمی این فایل به‌روز نشده و دیگر وضعیت جاری نیست.
+- شاخهٔ security/issue-103-vendor-auth-mfa-v2 شامل APIهای Identity password→TOTP/passkey، Cookie session، antiforgery، rate limiting و fallback policy فعال/MFA است؛ هنوز در main نیست و CI/بازبینی migration باید موفق شود.
+- Migration ثبت‌شدهٔ `20261026045412_VendorAddPasskeySupport` و snapshot به شاخه افزوده شدند؛ workflow دیگر scaffolding موقت ندارد. CI جدید باید نبود drift مدل و اجرای migration را تأیید کند.
+- باقی‌مانده‌های اصلی: bootstrap امن نخستین مدیر، اتصال/تکمیل audit chain و checkpoint مستقل، RBAC و maker-checker، مدل مشتری/قرارداد/لایسنس، KMS/HSM، UI پنل و deployment واقعی.
+- هیچ schema/migration دیتابیس مشتری تغییر نکرده است.

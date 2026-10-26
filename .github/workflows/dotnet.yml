@@ -78,7 +78,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 10.0.402
       - name: Setup Python
         uses: actions/setup-python@v7
         with:
@@ -199,7 +199,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 10.0.402
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
@@ -233,7 +233,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 10.0.402
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
@@ -273,7 +273,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 10.0.402
       - name: Setup Node
         uses: actions/setup-node@v5
         with:

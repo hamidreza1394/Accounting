@@ -263,6 +263,20 @@ namespace Faranou.Vendor.Persistence.Migrations
                     b.ToTable("VendorAdminUserLogins", (string)null);
                 });
 
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserPasskey<System.Guid>", b =>
+                {
+                    b.Property<byte[]>("CredentialId")
+                        .HasMaxLength(1024)
+                        .HasColumnType("varbinary(1024)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("CredentialId");
+
+                    b.ToTable("VendorAdminUserPasskeys", (string)null);
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
                 {
                     b.Property<Guid>("UserId")
@@ -321,6 +335,47 @@ namespace Faranou.Vendor.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserPasskey<System.Guid>", b =>
+                {
+                    b.OwnsOne("Microsoft.AspNetCore.Identity.IdentityPasskeyData", "Data", b1 =>
+                    {
+                        b1.Property<byte[]>("IdentityUserPasskeyCredentialId");
+
+                        b1.Property<byte[]>("AttestationObject").IsRequired();
+
+                        b1.Property<byte[]>("ClientDataJson").IsRequired();
+
+                        b1.Property<DateTimeOffset>("CreatedAt");
+
+                        b1.Property<bool>("IsBackedUp");
+
+                        b1.Property<bool>("IsBackupEligible");
+
+                        b1.Property<bool>("IsUserVerified");
+
+                        b1.Property<string>("Name");
+
+                        b1.Property<byte[]>("PublicKey").IsRequired();
+
+                        b1.Property<long>("SignCount");
+
+                        b1.PrimitiveCollection<string>("Transports");
+
+                        b1.HasKey("IdentityUserPasskeyCredentialId");
+
+                        b1.ToTable("VendorAdminUserPasskeys");
+
+                        b1.ToJson("Data")
+                            .HasColumnType("nvarchar(max)");
+
+                        b1.WithOwner()
+                            .HasForeignKey("IdentityUserPasskeyCredentialId");
+                    });
+
+                    b.Navigation("Data")
                         .IsRequired();
                 });
 

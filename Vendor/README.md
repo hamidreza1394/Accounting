@@ -49,3 +49,21 @@ Host عمداً به ارائه‌دهندهٔ ابری خاصی وابسته ن
 - متغیر محیطی: `FARANO_VENDOR_ConnectionStrings__VendorDb` (به یک دیتابیس مستقل Vendor). `AddVendorPersistence` در مرحلهٔ Issue #117، DbContext و storeهای Identity را از همین اتصال ثبت می‌کند؛ هیچ fallback به تنظیم اتصال برنامهٔ مشتری مجاز نیست.
 - هیچ connection string پیش‌فرض، seed مدیر، ثبت‌نام عمومی یا endpoint مدیریتی ناشناس وجود ندارد.
 - قبل از استفادهٔ واقعی، پیاده‌سازی login/MFA و bootstrap باید تکمیل و کنترل‌های امنیتی/عملیاتی جداگانه تأیید شوند؛ وجود Schema به معنی آماده‌بودن پنل نیست.
+
+## احراز هویت Vendor — Issue #103 (شاخهٔ در حال بازبینی)
+- APIهای پایهٔ password→TOTP، passkey sign-in/enrollment، TOTP setup/confirmation، session/me و logout با ASP.NET Core Identity 10 در شاخه پیاده‌سازی شده‌اند؛ تا CI سبز و ادغام، Production-verified نیستند.
+- password-only برای حساب فاقد MFA رد می‌شود؛ کوکی موقت TOTP به‌تنهایی مجوز دسترسی به APIهای محافظت‌شده نیست.
+- Passkey assertion قبل از صدور نشست بررسی می‌شود؛ مدیر باید فعال باشد و شمارندهٔ credential به‌روزشده ذخیره شود.
+- کوکی‌ها host-only با پیشوند __Host-، Secure، HttpOnly، SameSite=Strict و عمر کوتاه‌اند. همهٔ POSTهای auth ضدجعل درخواست دارند و تلاش‌های credential بر اساس IP محدود می‌شوند.
+- Production به مسیر پایدار و مستقل Data Protection و دامنهٔ صریح passkey نیاز دارد؛ AllowedHosts wildcard ممنوع است.
+- bootstrap نخستین مدیر، UI پنل، RBAC ریزدانه، maker-checker و سرویس checkpoint ممیزی هنوز باقی‌اند.
+
+
+## Migration ثبت‌شده برای Passkey
+- Migration `20261026045412_VendorAddPasskeySupport` و تغییرات `VendorDbContextModelSnapshot` اکنون در source ثبت شده‌اند؛ workflow دیگر Migration تولید نمی‌کند و فقط `dotnet ef migrations has-pending-model-changes` را اجرا می‌کند.
+## زنجیرهٔ ممیزی Vendor — Issue #105
+- شاخهٔ کاری `security/issue-105-vendor-audit-chain` سرویس `IVendorAuditWriter` و verifier را اضافه می‌کند؛ تا ادغام PR و CI موفق، این قابلیت در وضعیت `NotVerified` است.
+- Writer فقط شناسه‌های محدود و متادیتای allow-listed می‌پذیرد؛ `MetadataJson` آزاد عمداً از درخواست حذف شده است. زمان از `TimeProvider` می‌آید و canonical hash نسخه‌دار SHA-256 روی فیلدهای ثابت و `PreviousHash` محاسبه می‌شود.
+- append با `sp_getapplock` در تراکنش SQL Server سریال می‌شود تا چند نمونهٔ Host یک شاخهٔ واحد بسازند. verifier ریشهٔ چندگانه، والد گمشده، fork، چرخه، رخداد جداشده و تغییر محتوا را گزارش می‌کند.
+- **محدودیت امنیتی:** زنجیره در همان دیتابیس مانع DBA دارای مجوز بازنویسی نمی‌شود. مجوز SQL مخصوص درج، اعتبارسنجی دوره‌ای و checkpoint/export مستقل به مقصدی با مجوز جداگانه همچنان قبل از استفادهٔ Production لازم‌اند.
+- هیچ endpointی هنوز این writer را صدا نمی‌زند؛ wiring به Host پس از تکمیل مسیر ورود/MFA و bootstrap، در PR مستقل انجام می‌شود.
