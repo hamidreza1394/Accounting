@@ -42,20 +42,10 @@ if (!string.IsNullOrWhiteSpace(keyDirectory))
     dataProtection.PersistKeysToFileSystem(new DirectoryInfo(fullKeyDirectory));
 }
 
-var vendorConnectionString = builder.Configuration.GetConnectionString("VendorDb");
-if (string.IsNullOrWhiteSpace(vendorConnectionString))
-{
-    throw new InvalidOperationException(
-        "Vendor database is not configured. Set FARANO_VENDOR_ConnectionStrings__VendorDb.");
-}
-
 builder.WebHost.ConfigureKestrel(options =>
 {
     options.Limits.MaxRequestBodySize = 128 * 1024;
 });
-
-builder.Services.AddDbContext<VendorDbContext>(options =>
-    options.UseSqlServer(vendorConnectionString));
 
 builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
     .AddIdentityCookies();
