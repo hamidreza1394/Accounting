@@ -79,7 +79,7 @@ public static class VendorAuthenticationEndpoints
             return Results.Json(new { error = GenericSignInFailure }, statusCode: StatusCodes.Status401Unauthorized);
         })
         .AllowAnonymous()
-        .RequireRateLimiting("vendor-auth");
+        .RequireRateLimiting("vendor-auth-attempt");
 
         auth.MapPost("/totp/verify", async (
             TotpSignInRequest request,
@@ -123,7 +123,7 @@ public static class VendorAuthenticationEndpoints
             return Results.Ok(new { authenticated = true });
         })
         .AllowAnonymous()
-        .RequireRateLimiting("vendor-auth");
+        .RequireRateLimiting("vendor-auth-attempt");
 
         auth.MapPost("/passkey/options", async (
             PasskeyOptionsRequest request,
@@ -200,7 +200,7 @@ public static class VendorAuthenticationEndpoints
             return Results.Ok(new { authenticated = true });
         })
         .AllowAnonymous()
-        .RequireRateLimiting("vendor-auth");
+        .RequireRateLimiting("vendor-auth-attempt");
 
         auth.MapPost("/passkey/creation-options", async (
             HttpContext context,
