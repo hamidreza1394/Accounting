@@ -217,6 +217,8 @@ builder.Services.Configure<IdentityPasskeyOptions>(options =>
 });
 
 builder.Services.AddScoped<IAuthorizationHandler, VendorAdminAccessHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, VendorPermissionAuthorizationHandler>();
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, VendorPermissionPolicyProvider>();
 builder.Services.AddAuthorization(VendorAuthorizationPolicies.Configure);
 
 var app = builder.Build();
