@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -61,11 +62,11 @@ public sealed class VendorAuthenticationSecurityTests
                 // Diagnose the runtime model against the last migration before MigrateAsync throws its generic warning.
                 var migrationsAssembly = db.GetService<IMigrationsAssembly>();
                 var modelDiffer = db.GetService<IMigrationsModelDiffer>();
-                var latestMigrationInfo = migrationsAssembly.Migrations.OrderBy(entry => entry.Key, StringComparer.Ordinal).Last().Value;
-                var latestMigration = migrationsAssembly.CreateMigration(latestMigrationInfo, db.Database.ProviderName!);
+                var migrationTargetModel = migrationsAssembly.ModelSnapshot!.Model;
+                var runtimeDesignTimeModel = db.GetService<IDesignTimeModel>().Model;
                 var modelDifferences = modelDiffer.GetDifferences(
-                    latestMigration.TargetModel.GetRelationalModel(),
-                    db.Model.GetRelationalModel());
+                    migrationTargetModel.GetRelationalModel(),
+                    runtimeDesignTimeModel.GetRelationalModel());
                 Assert.True(
                     modelDifferences.Count == 0,
                     "Runtime Vendor model differs from latest migration target: " +
