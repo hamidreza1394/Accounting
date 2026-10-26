@@ -554,3 +554,4 @@
 - **تست:** آزمون Integration جدید روی SQL Server واقعی دو تلاش هم‌زمان را اجرا می‌کند و باید فقط یک مدیر فعال و زنجیرهٔ ممیزی معتبر داشته باشد؛ همچنین مقایسهٔ راز تست واحد دارد.
 - **اعتبارسنجی:** تغییرات روی branch ثبت شده‌اند؛ Build/Test محلی اجرا نشده است. CI روی PR وابسته باید Build، SQL Server tests، strict EF snapshot gate و publish را تأیید کند. تا نتیجهٔ سبز وضعیت Verified نیست.
 - **دامنه داده:** هیچ Migration یا دیتابیس مشتری تغییر نکرده است. Issue #113 باز می‌ماند تا تمام معیارها و CI تأیید شوند.
+- **خطای CI و اصلاح DI:** Vendor CI run [40363406842](https://github.com/hamidreza1394/Accounting/actions/runs/40363406842) در آزمون Integration خطا داد: `DataProtectorTokenProvider<VendorAdminUser>` نمی‌توانست `IDataProtectionProvider` را resolve کند. علت این بود که command mode و ServiceCollection تست، Data Protection را ثبت نکرده بودند. ثبت سرویس و رعایت مسیر کلید persistent در Production اضافه شد؛ اجرای تازه لازم است.
