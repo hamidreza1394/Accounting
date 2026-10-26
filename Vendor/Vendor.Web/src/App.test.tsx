@@ -14,6 +14,8 @@ describe('Vendor control plane shell', () => {
     render(<App />);
     expect(await screen.findByRole('heading', { name: 'به پنل مرکزی وارد شوید' })).toBeInTheDocument();
     expect(screen.getByLabelText('نام کاربری یا ایمیل')).toBeRequired();
+    expect(screen.getByLabelText('نام کاربری یا ایمیل')).toHaveAttribute('dir', 'auto');
+    expect(screen.getByLabelText('رمز عبور')).toHaveAttribute('dir', 'ltr');
   });
 
   it('moves to TOTP only after the real password endpoint requests a second factor', async () => {

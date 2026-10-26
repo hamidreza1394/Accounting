@@ -1,3 +1,13 @@
+
+## Issue #130 — استاندارد RTL فارسی و کمبوباکس قابل مدیریت
+- فایل `Vendor/Vendor.Web/index.html` از قبل `lang="fa"` و `dir="rtl"` داشت؛ این مبنا حفظ شد.
+- استایل Vendor اکنون جهت/تراز فارسی را صریح می‌کند و برای کنترل‌های جهت‌دار از خواص منطقی CSS استفاده می‌کند. نام کاربری با `dir="auto"` برای متن فارسی/لاتین و رمز عبور و OTP با جهت LTR تعریف می‌شوند تا تایپ فنی به‌هم نریزد.
+- کامپوننت `ManagedSelect` برای فرم‌های Vendor اضافه شد: انتخاب اولین گزینه معتبر به‌صورت پیش‌فرض، امکان مقدار کنترل‌شده، label و پیام خطای دسترس‌پذیر، و نمایش «افزودن گزینه» فقط با `canManageOptions` و callback صریح.
+- این کامپوننت خودش گزینه‌ها را ذخیره نمی‌کند؛ مجوز باید از API سمت سرور بیاید و callback باید به endpoint واقعی متصل شود. هیچ API یا CRUD تجاری جعلی در این مرحله اضافه نشده است.
+- مرز معماری: شرکت‌های حسابداری (از جمله مستقل/مادر/زیرمجموعه) متعلق به دیتابیس نصب مشتری‌اند، نه دیتابیس تجاری Vendor. Vendor مشتری تجاری، نصب و مجوز را مدیریت می‌کند. ایجاد شرکت حسابداری از پنل مرکزی بدون طرح provisioning مستقل و تأییدشده انجام نمی‌شود.
+- تست‌های جدید برای جهت RTL، پیش‌فرض اولین گزینه، تغییر انتخاب، پنهان بودن مدیریت گزینه بدون مجوز و پیام خطا اضافه شده‌اند.
+- اعتبارسنجی محلی در این محیط اجرا نشد؛ وضعیت تا نتیجه Vendor CI روی PR **Implemented / Not yet Verified** است.
+
 > **Vendor CI follow-up — 2026-10-26:** در PR #129، اجرای run [40280056742](https://github.com/hamidreza1394/Accounting/actions/runs/40280056742) تأیید کرد TypeScript، تست‌های UI، runtime dependency audit، Vite build، بودجهٔ bundle، .NET build و EF CLI snapshot check موفق‌اند؛ اما `dotnet test` در تست احراز هویت به `PendingModelChangesWarning` هنگام Migration runtime برخورد کرد. بررسی Host دو ثبت `AddDbContext<VendorDbContext>` را یافت؛ ثبت تکراری حذف شد تا تنظیم Migration Assembly از `AddVendorPersistence` حفظ شود. این اصلاح هنوز به اجرای مجدد integration tests نیاز دارد؛ وضعیت Verified/سبز نیست. [PR #129](https://github.com/hamidreza1394/Accounting/pull/129).
 
 > **Vendor UI follow-up — Issue #128 (2026-10-26):** پس از ادغام PR #127، بررسی کد نشان داد UI هنوز endpointهای واقعی Passkey/WebAuthn و enrollment مربوط به TOTP را مصرف نمی‌کند. شاخهٔ `feat/issue-128-vendor-passkey-mfa-ui` این جریان‌ها را با WebAuthn بومی، نگهداری راز TOTP فقط در حافظه، پیام‌های خطای فارسی و تست‌های UI اضافه می‌کند. Vendor CI روی main در run [40279335977](https://github.com/hamidreza1394/Accounting/actions/runs/40279335977) شکست خورده بود: تست مسیر SPA با رفتار fallback ناسازگار بود و connection string تست با دیتابیس مورد انتظار authentication test تطبیق نداشت. این دو مورد در شاخه اصلاح شده‌اند؛ تا اجرای CI جدید، تغییرات **Verified نیستند**. هنوز CRUD تجاری و آمادگی Production خارج از این مرحله است.
