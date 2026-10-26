@@ -29,6 +29,8 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: ClientApp/package-lock.json
+      - name: Install required component primitives and utilities
+        run: npm install @base-ui/react class-variance-authority clsx tailwind-merge lucide-react --no-audit --no-fund
       - name: Generate official shadcn components
         run: npx --yes shadcn@latest add button card --yes
       - name: Resolve and lock generated dependencies
