@@ -1,5 +1,6 @@
 using System.Threading.RateLimiting;
 using Faranou.Vendor.Host.Authentication;
+using Faranou.Vendor.Host.Bootstrap;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Identity;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -8,10 +9,62 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
-var builder = WebApplication.CreateBuilder(args);
+var bootstrapCommandRequested = VendorBootstrapCommand.IsRequested(args);
+if (bootstrapCommandRequested && args.Length != 1)
+{
+    Console.Error.WriteLine("bootstrap-admin accepts no command-line arguments; enter all secrets interactively.");
+    Environment.ExitCode = 2;
+    return;
+}
+
+if (bootstrapCommandRequested && (Console.IsInputRedirected || Console.IsOutputRedirected))
+{
+    Console.Error.WriteLine("bootstrap-admin requires an interactive terminal; redirected input/output is refused.");
+    Environment.ExitCode = 2;
+    return;
+}
+
+// A bare command name is not valid input for the default command-line configuration provider.
+var builder = WebApplication.CreateBuilder(bootstrapCommandRequested ? Array.Empty<string>() : args);
 
 // Vendor has its own configuration namespace and never falls back to customer settings.
 builder.Configuration.AddEnvironmentVariables(prefix: "FARANO_VENDOR_");
+
+// This maintenance command intentionally bypasses the HTTP host and its web-only production
+// prerequisites. It uses the Vendor database only and never accepts credentials in arguments.
+if (bootstrapCommandRequested)
+{
+    builder.Services.AddVendorPersistence(builder.Configuration);
+    new IdentityBuilder(typeof(VendorAdminUser), builder.Services).AddDefaultTokenProviders();
+
+    // Identity's default token-provider set also requires Data Protection services, even though
+    // this command never issues an HTTP session. Production must use the same persistent key store.
+    var commandKeyDirectory = builder.Configuration["DataProtection:KeysDirectory"];
+    if (builder.Environment.IsProduction() &&
+        (string.IsNullOrWhiteSpace(commandKeyDirectory) || !Path.IsPathFullyQualified(commandKeyDirectory)))
+    {
+        throw new InvalidOperationException(
+            "Vendor Data Protection keys require a fully qualified persistent directory. Set FARANO_VENDOR_DataProtection__KeysDirectory.");
+    }
+
+    var commandDataProtection = builder.Services.AddDataProtection()
+        .SetApplicationName("Faranou.Vendor.ControlPlane");
+    if (!string.IsNullOrWhiteSpace(commandKeyDirectory))
+    {
+        var fullCommandKeyDirectory = Path.GetFullPath(commandKeyDirectory);
+        Directory.CreateDirectory(fullCommandKeyDirectory);
+        commandDataProtection.PersistKeysToFileSystem(new DirectoryInfo(fullCommandKeyDirectory));
+    }
+
+    var commandApp = builder.Build();
+    var exitCode = await VendorBootstrapCommand.RunAsync(
+        commandApp.Services,
+        builder.Configuration,
+        new ConsoleVendorBootstrapPrompt());
+    await commandApp.DisposeAsync();
+    Environment.ExitCode = exitCode;
+    return;
+}
 
 builder.Services.AddHealthChecks();
 builder.Services.AddVendorPersistence(builder.Configuration);

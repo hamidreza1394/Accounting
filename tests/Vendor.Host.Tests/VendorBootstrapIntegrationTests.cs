@@ -1,0 +1,169 @@
+using System.Security.Cryptography;
+using Faranou.Vendor.Host.Bootstrap;
+using Faranou.Vendor.Persistence;
+using Faranou.Vendor.Persistence.Auditing;
+using Faranou.Vendor.Persistence.Identity;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Xunit;
+
+namespace Faranou.Vendor.Host.Tests;
+
+public sealed class VendorBootstrapIntegrationTests
+{
+    private static readonly int[] RejectedBootstrapExitCodes = [7, 8];
+    [Fact]
+    public async Task BootstrapCreatesExactlyOneEnabledMfaAdministratorUnderConcurrentAttempts()
+    {
+        var baseConnectionString = Environment.GetEnvironmentVariable("FARANO_VENDOR_TEST_SQLSERVER");
+        if (string.IsNullOrWhiteSpace(baseConnectionString))
+        {
+            if (string.Equals(Environment.GetEnvironmentVariable("FARANO_REQUIRE_VENDOR_SQLSERVER"), "1", StringComparison.Ordinal))
+            {
+                Assert.Fail("CI requires FARANO_VENDOR_TEST_SQLSERVER for Vendor bootstrap integration tests.");
+            }
+
+            Assert.Skip("A disposable SQL Server connection is required for Vendor bootstrap integration tests.");
+            return;
+        }
+
+        var connectionBuilder = new SqlConnectionStringBuilder(baseConnectionString)
+        {
+            InitialCatalog = $"FaranouVendorBootstrapTests_{Guid.NewGuid():N}"
+        };
+        var bootstrapSecret = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ConnectionStrings:VendorDb"] = connectionBuilder.ConnectionString,
+                ["Bootstrap:Secret"] = bootstrapSecret
+            })
+            .Build();
+
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddDataProtection().SetApplicationName("Faranou.Vendor.ControlPlane");
+        services.AddVendorPersistence(configuration);
+        new IdentityBuilder(typeof(VendorAdminUser), services).AddDefaultTokenProviders();
+
+        await using var provider = services.BuildServiceProvider(
+            new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
+
+        try
+        {
+            await using (var setupScope = provider.CreateAsyncScope())
+            {
+                var db = setupScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                await db.Database.MigrateAsync(TestContext.Current.CancellationToken);
+            }
+
+            var rejectedSecretPrompt = new FakePrompt("incorrect-bootstrap-secret", "must-not-exist", "must-not-exist@example.invalid");
+            Assert.Equal(
+                3,
+                await VendorBootstrapCommand.RunAsync(
+                    provider, configuration, rejectedSecretPrompt, TestContext.Current.CancellationToken));
+
+            await using (var rejectedScope = provider.CreateAsyncScope())
+            {
+                var db = rejectedScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                Assert.Empty(await db.Users.AsNoTracking().ToListAsync(TestContext.Current.CancellationToken));
+            }
+
+            var promptA = new FakePrompt(bootstrapSecret, "bootstrap-a", "bootstrap-a@example.invalid");
+            var promptB = new FakePrompt(bootstrapSecret, "bootstrap-b", "bootstrap-b@example.invalid");
+
+            var results = await Task.WhenAll(
+                VendorBootstrapCommand.RunAsync(provider, configuration, promptA, TestContext.Current.CancellationToken),
+                VendorBootstrapCommand.RunAsync(provider, configuration, promptB, TestContext.Current.CancellationToken));
+
+            Assert.Single(results, result => result == 0);
+            var rejectedAttempt = Assert.Single(results, result => result != 0);
+            Assert.Contains(rejectedAttempt, RejectedBootstrapExitCodes);
+
+            await using (var verifyScope = provider.CreateAsyncScope())
+            {
+                var db = verifyScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var users = await db.Users.AsNoTracking().ToListAsync(TestContext.Current.CancellationToken);
+                var user = Assert.Single(users);
+                Assert.True(user.IsEnabled);
+                Assert.True(user.TwoFactorEnabled);
+                Assert.False(user.EmailConfirmed);
+                Assert.False(user.MustChangePassword);
+
+                var audit = await VendorAuditChainVerifier.VerifyAsync(db, TestContext.Current.CancellationToken);
+                Assert.True(audit.IsValid, audit.FailureCode);
+                Assert.Equal(4, audit.EventCount);
+            }
+        }
+        finally
+        {
+            await using var cleanupScope = provider.CreateAsyncScope();
+            var db = cleanupScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+            await db.Database.EnsureDeletedAsync(TestContext.Current.CancellationToken);
+        }
+    }
+
+    [Fact]
+    public void BootstrapSecretComparisonRejectsMissingAndDifferentValues()
+    {
+        const string expected = "random-test-secret-with-at-least-32-bytes";
+
+        Assert.True(VendorBootstrapCommand.MatchesSecret(expected, expected));
+        Assert.False(VendorBootstrapCommand.MatchesSecret(expected, "another-random-test-secret-value"));
+        Assert.False(VendorBootstrapCommand.MatchesSecret(expected, null));
+        Assert.False(VendorBootstrapCommand.MatchesSecret(null, expected));
+    }
+
+    private sealed class FakePrompt(string bootstrapSecret, string userName, string email) : IVendorBootstrapPrompt
+    {
+        private string? _authenticatorKey;
+        private int _lineReadCount;
+        private int _passwordReadCount;
+
+        public string? ReadLine(string prompt)
+        {
+            _ = prompt;
+            return _lineReadCount++ switch
+            {
+                0 => userName,
+                1 => email,
+                _ => VendorAuthenticationSecurityTests.GenerateTotpCode(_authenticatorKey ?? throw new InvalidOperationException("TOTP URI was not provided."))
+            };
+        }
+
+        public string ReadPassword(string prompt)
+        {
+            _ = prompt;
+            return _passwordReadCount++ switch
+            {
+                0 => bootstrapSecret,
+                _ => "Secure-Vendor#2026"
+            };
+        }
+
+        public void WriteLine(string message) => CaptureAuthenticatorUri(message);
+
+        public void WriteSensitiveLine(string message) => CaptureAuthenticatorUri(message);
+
+        private void CaptureAuthenticatorUri(string message)
+        {
+            if (!message.StartsWith("otpauth://totp/", StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            var uri = new Uri(message);
+            var secret = uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries)
+                .Select(part => part.Split('=', 2))
+                .Single(part => part[0] == "secret");
+            _authenticatorKey = Uri.UnescapeDataString(secret[1]);
+        }
+    }
+
+
+}
