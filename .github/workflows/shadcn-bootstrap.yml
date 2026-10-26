@@ -29,12 +29,18 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: ClientApp/package-lock.json
-      - name: Install required component primitives and utilities
-        run: npm install @base-ui/react class-variance-authority clsx tailwind-merge lucide-react --no-audit --no-fund
-      - name: Generate official shadcn components
-        run: npx --yes shadcn@latest add button card --yes
-      - name: Resolve and lock generated dependencies
-        run: npm install --no-audit --no-fund
+      - name: Install pinned CLI and required component primitives
+        run: |
+          npm install @base-ui/react class-variance-authority cn lucide-react --no-audit --no-fund
+          npm install --save-dev shadcn@4.22.1 --no-audit --no-fund
+      - name: Regenerate reviewed shadcn components
+        run: |
+          rm -f src/components/ui/button.tsx src/components/ui/card.tsx
+          npx shadcn add button card --yes
+      - name: Remove unused legacy merge utilities and lock dependencies
+        run: |
+          npm uninstall clsx tailwind-merge --no-audit --no-fund
+          npm install --no-audit --no-fund
       - name: Clean locked install
         run: npm ci --no-audit --no-fund
       - name: Type check
