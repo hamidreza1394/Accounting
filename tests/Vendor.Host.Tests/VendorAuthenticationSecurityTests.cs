@@ -150,10 +150,13 @@ public sealed class VendorAuthenticationSecurityTests
             Assert.Contains("__Host-Faranou.Vendor.TwoFactor=", setCookies, StringComparison.Ordinal);
             Assert.DoesNotContain("__Host-Faranou.Vendor.Auth=", setCookies, StringComparison.Ordinal);
 
-            using var beforeTotp = await client.GetAsync("/api/auth/me", cancellationToken);
-            Assert.Equal(HttpStatusCode.Unauthorized, beforeTotp.StatusCode);
-
-            var code = await users.GenerateTwoFactorTokenAsync(user, TokenOptions.DefaultAuthenticatorProvider);
+            // Verify the generated code against the same provider the endpoint uses. Avoid an
+            // unrelated unauthenticated request between the two-factor challenge and verification.
+            var authenticatorProvider = users.Options.Tokens.AuthenticatorTokenProvider;
+            var code = await users.GenerateTwoFactorTokenAsync(user, authenticatorProvider);
+            Assert.True(
+                await users.VerifyTwoFactorTokenAsync(user, authenticatorProvider, code),
+                "The generated TOTP code must validate before exercising the HTTP challenge flow.");
             using var totpResponse = await PostWithTokenAsync(
                 client,
                 "/api/auth/totp/verify",

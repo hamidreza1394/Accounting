@@ -14,6 +14,7 @@ public sealed class VendorPersistenceTests
 {
     private const string InitialMigration = "20261025180755_VendorInitialIdentityAndAudit";
     private const string PasskeyMigration = "20261026045412_VendorAddPasskeySupport";
+    private const string IdentitySchemaV3Migration = "20261026084500_VendorAlignIdentitySchemaV3";
 
     [Fact]
     public void Model_uses_vendor_specific_tables_and_disables_admins_by_default()
@@ -133,6 +134,7 @@ public sealed class VendorPersistenceTests
             var appliedMigrations = await context.Database.GetAppliedMigrationsAsync();
             Assert.Contains(InitialMigration, appliedMigrations);
             Assert.Contains(PasskeyMigration, appliedMigrations);
+            Assert.Contains(IdentitySchemaV3Migration, appliedMigrations);
 
             command.CommandText = """
                 SELECT COUNT(*)

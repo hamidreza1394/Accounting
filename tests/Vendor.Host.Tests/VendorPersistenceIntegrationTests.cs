@@ -47,6 +47,7 @@ public sealed class VendorPersistenceIntegrationTests
             Assert.Empty(await db.Database.GetPendingMigrationsAsync(TestContext.Current.CancellationToken));
             var appliedMigrations = await db.Database.GetAppliedMigrationsAsync(TestContext.Current.CancellationToken);
             Assert.Contains("20261026045412_VendorAddPasskeySupport", appliedMigrations);
+            Assert.Contains("20261026084500_VendorAlignIdentitySchemaV3", appliedMigrations);
             Assert.NotNull(db.Model.FindEntityType(typeof(Microsoft.AspNetCore.Identity.IdentityUserPasskey<Guid>)));
 
             var sqlConnection = db.Database.GetDbConnection();
