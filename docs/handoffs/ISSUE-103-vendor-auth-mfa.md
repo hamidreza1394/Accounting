@@ -22,7 +22,7 @@
 ## Migration و CI
 - `VendorDbContext` باید `IdentityUserPasskey<Guid>` را با کلید `CredentialId` و owned JSON data نگاشت کند.
 - Migration `20261026045412_VendorAddPasskeySupport.cs` و تغییر `VendorDbContextModelSnapshot.cs` از artifact run `40271317565` بازبینی و commit شدند. گام تولید/آپلود Migration از workflow حذف شده است؛ workflow فقط بررسی drift و تست Migration ثبت‌شده را اجرا می‌کند.
-- Build/Test محلی اجرا نشده؛ SDK در محیط ابزار موجود نبود. run `40271317565` به‌علت نبود `AddHealthChecks()` در تست‌های Host شکست خورد؛ این ثبت در کد اصلاح شده و CI مجدد باید build، snapshot check، تست SQL Server و secret scan را تأیید کند.
+- Build/Test محلی اجرا نشده؛ SDK در محیط ابزار موجود نبود. run `40271317565` به‌علت نبود `AddHealthChecks()` شکست خورد؛ run `40271756059` به‌علت نبود `dotnet-ef` در workflow شکست خورد و تست‌ها هم شکاف env/404 را آشکار کردند. همه اصلاح شده‌اند؛ CI جدید باید build، snapshot check، اجرای Migration و تست‌های SQL Server را تأیید کند.
 
 ## خارج از محدوده
 - bootstrap نخستین مدیر، registration عمومی، UI پنل React، RBAC ریزدانه، maker-checker و audit checkpoint خارجی.
