@@ -1,6 +1,7 @@
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Auditing;
 using Faranou.Vendor.Persistence.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
@@ -50,6 +51,28 @@ public sealed class VendorPersistenceTests
     }
 
     [Fact]
+    public void Persistence_registers_Identity_stores_without_opening_a_database_connection()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ConnectionStrings:VendorDb"] =
+                    "Server=localhost;Database=VendorStoreRegistration;User Id=sa;Password=NotARealPassword!;TrustServerCertificate=True"
+            })
+            .Build();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddVendorPersistence(configuration);
+
+        using var provider = services.BuildServiceProvider();
+        var userStore = provider.GetRequiredService<IUserStore<VendorAdminUser>>();
+        var roleStore = provider.GetRequiredService<IRoleStore<IdentityRole<Guid>>>();
+
+        Assert.NotNull(userStore);
+        Assert.NotNull(roleStore);
+    }
+
+    [Fact]
     public async Task Sql_server_migration_creates_isolated_identity_and_audit_tables()
     {
         var baseConnectionString = Environment.GetEnvironmentVariable("FARANO_VENDOR_TEST_SQLSERVER");
@@ -67,7 +90,19 @@ public sealed class VendorPersistenceTests
             return;
         }
 
-        var connectionString = new SqlConnectionStringBuilder(baseConnectionString)
+        var baseBuilder = new SqlConnectionStringBuilder(baseConnectionString);
+        var serverName = baseBuilder.DataSource
+            .Replace("tcp:", string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Split(',', StringSplitOptions.TrimEntries)[0]
+            .Split('\\\\', StringSplitOptions.TrimEntries)[0];
+        if (!new[] { "localhost", "127.0.0.1", "::1" }.Contains(serverName, StringComparer.OrdinalIgnoreCase)
+            || !string.Equals(baseBuilder.InitialCatalog, "FaranouVendorTests", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "Vendor SQL integration tests may only run against a loopback SQL Server using the dedicated FaranouVendorTests catalog. The test creates and deletes a uniquely named test database.");
+        }
+
+        var connectionString = new SqlConnectionStringBuilder(baseBuilder.ConnectionString)
         {
             InitialCatalog = $"FaranouVendorTests_{Guid.NewGuid():N}"
         }.ConnectionString;
