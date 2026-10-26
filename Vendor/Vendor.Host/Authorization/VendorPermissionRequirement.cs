@@ -1,3 +1,4 @@
+using Faranou.Vendor.Host.Authentication;
 using Faranou.Vendor.Persistence.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
