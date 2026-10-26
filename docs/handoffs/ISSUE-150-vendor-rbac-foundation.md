@@ -1,28 +1,33 @@
-# Handoff — Vendor RBAC foundation (Issue #150)
+# تحویل فنی — زیرساخت اولیه RBAC فروشنده (Issue #150)
 
-## Scope
-This change introduces the first slice of Vendor role-based authorization: a versioned permission catalog, named permission policies, role-claim-backed permission evaluation, and unit tests for policy composition.
+## دامنه این تغییر
+این مرحله نخستین بخش کنترل دسترسی مبتنی بر نقش و مجوز در سامانه Vendor را اضافه می‌کند: کاتالوگ نسخه‌دار مجوزها، سیاست‌های مجوز نام‌دار، ارزیابی مجوزهای متصل به نقش‌های ASP.NET Core Identity و آزمون‌های واحد برای ترکیب سیاست‌ها.
 
-## Architecture
-- Permission IDs are stable server-side identifiers; they are not role names or UI labels.
-- Permissions are assigned to ASP.NET Core Identity roles through claims of type `vendor:permission:v1`.
-- A named policy combines the existing enabled-account/MFA requirement with a specific permission requirement.
-- Unknown permission identifiers fail closed even when a caller constructs a policy name manually.
-- Existing authentication endpoints and customer accounting persistence are unchanged.
+## تصمیم‌های معماری و امنیتی
+- شناسه‌های مجوز قراردادهای پایدار سمت سرور هستند؛ نام نقش یا متن نمایشی رابط کاربری محسوب نمی‌شوند.
+- مجوزها از Claimهای نقش Identity با نوع `vendor:permission:v1` خوانده می‌شوند.
+- هر سیاست مجوزی، علاوه بر مجوز مشخص، گارد موجود مدیر فعال و احراز هویت چندمرحله‌ای را الزام می‌کند.
+- شناسه مجوز ناشناخته باید به‌صورت پیش‌فرض رد شود؛ ساختن نام سیاست دلخواه نباید دسترسی ایجاد کند.
+- endpointهای احراز هویت و لایه ذخیره‌سازی حسابداری مشتری تغییر نکرده‌اند.
 
-## Explicitly not complete
-- No role/permission management API or UI exists yet.
-- No resource-based authorization for customer/installation/contract/license resources exists yet.
-- Maker-checker is not implemented in this slice.
-- No Vendor schema or customer schema migration is included.
-- This code is not Production-verified until Vendor CI, SQL Server integration tests, EF snapshot validation, publish checks, and full repository CI pass on the PR SHA.
+## مواردی که هنوز تکمیل نشده‌اند
+- API یا رابط کاربری مدیریت نقش‌ها و مجوزها وجود ندارد.
+- کنترل دسترسی منبع‌محور برای مشتری، نصب، قرارداد و لایسنس هنوز پیاده‌سازی نشده است.
+- گردش‌کار تأیید دو نفره (Maker-Checker) در این مرحله وجود ندارد.
+- هیچ Migration برای دیتابیس Vendor یا مشتری در این تغییر اضافه نشده است.
+- تا موفقیت CI شامل تست‌های SQL Server، کنترل Snapshot مدل EF Core، انتشار و CI کامل مخزن، این تغییر تأییدشده برای Production محسوب نمی‌شود.
 
-## Validation plan
-1. Vendor UI typecheck/tests/build and runtime dependency audit.
-2. Vendor .NET Release build and tests on SQL Server.
-3. Strict Vendor EF Core pending-model-changes gate.
-4. Vendor publish/artifact scan.
-5. Full repository CI and manual review of the diff.
+## برنامه اعتبارسنجی
+1. بررسی نوع‌سنجی، تست، build و وابستگی‌های اجرایی رابط Vendor.
+2. Build نسخه Release و اجرای تست‌های Vendor روی SQL Server.
+3. اجرای گارد سخت‌گیرانه همگامی مدل و Snapshot در EF Core.
+4. انتشار Host مستقل و بررسی بسته خروجی برای نبود فایل کلید خصوصی.
+5. اجرای CI کامل مخزن و بازبینی نهایی تغییرات.
 
-## Next slice
-Add a route inventory test for authorization metadata, then implement resource-based authorization and maker-checker as separately reviewable changes under Issue #150.
+## خطای کامپایل آزمون و اصلاح
+- CI خطای CS0246 را در آزمون `VendorPermissionAuthorizationTests.cs` گزارش کرد؛ آزمون نوع `VendorAdminAccessRequirement` را استفاده می‌کرد ولی فضای نام `Faranou.Vendor.Host.Authentication` را وارد نکرده بود.
+- اصلاح: افزودن `using Faranou.Vendor.Host.Authentication;` به فایل آزمون. منطق Production، سیاست امنیتی و دیتابیس تغییر نکرده‌اند.
+- این اصلاح روی شاخه ثبت شده است؛ نتیجه CI جدید هنوز باید بررسی شود.
+
+## گام بعدی
+پس از سبزشدن CI، آزمون پوشش metadata مجوز روی endpointها اضافه شود. سپس مجوزدهی منبع‌محور و Maker-Checker در تغییرات جداگانه و قابل بازبینی پیاده‌سازی شوند.
