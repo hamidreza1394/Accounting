@@ -26,6 +26,8 @@ public sealed class VendorPersistenceIntegrationTests
             return;
         }
 
+        var baseBuilder = new SqlConnectionStringBuilder(baseConnectionString);
+        Assert.Contains("localhost", baseBuilder.DataSource, StringComparison.OrdinalIgnoreCase);
         var databaseName = $"FaranouVendorTests_{Guid.NewGuid():N}";
         var cancellationToken = TestContext.Current.CancellationToken;
         await CreateDatabaseAsync(baseConnectionString, databaseName, cancellationToken);
@@ -96,7 +98,7 @@ public sealed class VendorPersistenceIntegrationTests
                 PreviousHash = new string('0', 64),
                 EventHash = new string('a', 64)
             });
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var persistedAudit = await db.AuditEvents.SingleAsync(item => item.Id == auditId, TestContext.Current.CancellationToken);
             Assert.Equal(nonExistingActor, persistedAudit.ActorUserId);
@@ -105,7 +107,7 @@ public sealed class VendorPersistenceIntegrationTests
         finally
         {
             await db.Database.CloseConnectionAsync();
-            await db.Database.EnsureDeletedAsync(CancellationToken.None);
+            await db.Database.EnsureDeletedAsync(TestContext.Current.CancellationToken);
         }
     }
 
