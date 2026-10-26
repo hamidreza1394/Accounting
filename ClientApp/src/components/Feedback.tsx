@@ -1,3 +1,4 @@
+import { Button as ShadcnButton } from './ui/button';
 import type { ReactNode } from 'react';
 
 export function LoadingState({ label }: { label: string }) {
@@ -14,13 +15,15 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
     <div role="alert" className="rounded-xl border border-danger/30 bg-danger-soft p-5 text-danger">
       <p className="font-medium">{message}</p>
       {onRetry ? (
-        <button
+        <ShadcnButton
           type="button"
+          variant="outline"
+          size="lg"
           onClick={onRetry}
-          className="mt-3 rounded-lg border border-danger/40 bg-white px-4 py-2 text-sm font-medium text-danger hover:bg-danger-soft"
+          className="mt-3 h-auto min-h-10 border-danger/40 bg-white px-4 py-2 text-danger hover:bg-danger-soft"
         >
           تلاش دوباره
-        </button>
+        </ShadcnButton>
       ) : null}
     </div>
   );
