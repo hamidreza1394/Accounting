@@ -11,13 +11,13 @@
 - [x] اتصال صفحه ورود به endpointهای واقعی password/TOTP و ضدجعل درخواست
 - [x] Host برای static assets و SPA routes و جلوگیری از fallback ناشناخته API
 - [x] Vendor CI برای build/test UI و بسته‌بندی assetها به‌روزرسانی شد
-- [ ] CI مجدد پس از تنظیم connection string تست سبز شود و مرور بصری/مرورگری روی HTTPS انجام شود
+- [ ] CI مجدد پس از تنظیم connection string تست و افزودن بودجهٔ gzip سبز شود و مرور بصری/مرورگری روی HTTPS انجام شود
 - [ ] اثبات نهایی جداسازی بسته مشتری با CIهای اصلی
 
 ## خلاصه تغییرات
 - Vendor/Vendor.Web: React/TypeScript strict/Vite/Tailwind، شناسنامه shadcn، Button/Card source-owned، ورود MFA و پوسته مدیریتی اولیه.
 - Vendor/Vendor.Host/Program.cs: سرویس‌دهی فایل‌های محلی و fallback برای مسیرهای UI؛ مسیرهای API/health ناشناخته همچنان 404 می‌مانند. فایل‌های دارای hash در `/assets` یک سال `immutable` cache می‌شوند و `index.html` همچنان `no-store` است.
-- .github/workflows/vendor-ci.yml: npm ci/typecheck/test/build/audit و بررسی وجود فایل‌های bundle در خروجی publish.
+- .github/workflows/vendor-ci.yml: npm ci/typecheck/test/build/audit، بررسی bundle در publish و بودجهٔ gzip (JS حداکثر 100 KiB، CSS حداکثر 20 KiB). اندازهٔ build قبلی: JS 90.03 KiB gzip، CSS 7.29 KiB gzip؛ گارد جدید هنوز در اجرای تازه تأیید نشده است.
 - Vendor/README.md، docs/PROJECT_STATUS.md، docs/WORK_LOG.md: مستندسازی وضعیت واقعی و محدودیت‌ها.
 
 ## تصمیم‌های فنی
@@ -32,9 +32,10 @@
 | npm ci | موفق در run 40277399614 | وابستگی‌ها نصب شدند |
 | npm run typecheck | موفق در run 40277399614 | TypeScript strict |
 | npm test | موفق در run 40277399614 | تست‌های UI سبز شدند |
-| npm run build | موفق در run 40277399614 | خروجی Vite ساخته شد |
+| npm run build | موفق در run 40277399614 | خروجی Vite ساخته شد؛ run 40277588682 اندازهٔ JS برابر 90.03 KiB gzip و CSS برابر 7.29 KiB gzip گزارش کرد |
 | dotnet build Vendor.sln | ناموفق در run 40277399614 | usingهای لازم در Program.cs مفقود بودند؛ در commit 3d317ea اصلاح شد، اجرای مجدد در صف است |
 | dotnet test Vendor.sln | شکست در run 40277588682 | ۷ تست به علت نبود `FARANO_VENDOR_ConnectionStrings__VendorDb` در محیط تست Host شکست خوردند؛ workflow اکنون آن را از SQL Server تست تنظیم می‌کند و نیاز به اجرای مجدد دارد |
+| Asset gzip budget | افزوده شد، منتظر CI | JS حداکثر 100 KiB و CSS حداکثر 20 KiB؛ اندازهٔ baseline زیر سقف است |
 
 ## امنیت، داده و سازگاری
 - APIهای احراز هویت هم‌مبدأ و ضدجعل درخواست هستند؛ APIها همچنان authorization سمت سرور دارند.
