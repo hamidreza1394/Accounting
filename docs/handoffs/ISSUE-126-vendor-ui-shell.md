@@ -3,7 +3,7 @@
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/126
 - **Agent/مسئول:** ChatGPT / GitHub integration
 - **تاریخ:** 2026-10-26
-- **وضعیت:** UI اولیه ساخته شده؛ CI فرانت‌اند سبز، اما Vendor CI در تست‌های .NET شکست خورده و اصلاح پیکربندی تست در همین شاخه اعمال می‌شود؛ هنوز Verified/Production-ready نیست
+- **وضعیت:** PR #127 در 2026-10-26 ادغام شد. این handoff تاریخی است؛ پیگیری احراز هویت/CI در Issue #128 انجام می‌شود.
 
 ## هدف و معیارهای پذیرش
 - [x] پروژه UI مستقل از ClientApp با lockfile جدا
@@ -11,7 +11,7 @@
 - [x] اتصال صفحه ورود به endpointهای واقعی password/TOTP و ضدجعل درخواست
 - [x] Host برای static assets و SPA routes و جلوگیری از fallback ناشناخته API
 - [x] Vendor CI برای build/test UI و بسته‌بندی assetها به‌روزرسانی شد
-- [ ] CI مجدد پس از تنظیم connection string تست و افزودن بودجهٔ gzip سبز شود و مرور بصری/مرورگری روی HTTPS انجام شود
+- [x] PR #127 ادغام شد؛ [ ] CI اصلاحات بعدی و مرور بصری/مرورگری روی HTTPS هنوز لازم است
 - [ ] اثبات نهایی جداسازی بسته مشتری با CIهای اصلی
 
 ## خلاصه تغییرات
@@ -50,4 +50,4 @@
 ## شناسه‌های Git
 - Branch: feat/issue-126-vendor-ui-shell
 - آخرین commit شاخه در زمان ثبت اولیه: 952c025ca21fb5b30fc4e1531598cfaece26b288؛ اصلاحات جدید منتظر CI هستند.
-- Pull Request: https://github.com/hamidreza1394/Accounting/pull/127 (Draft; CI در انتظار اجرا/تکمیل).
+- Pull Request: https://github.com/hamidreza1394/Accounting/pull/127 (Merged). پیگیری: https://github.com/hamidreza1394/Accounting/issues/128.
