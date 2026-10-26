@@ -456,3 +456,11 @@
 - اجرای Vendor CI روی commit `c5aadd0`، پس از سبزشدن تمام گام‌های فرانت‌اند، در `dotnet test` شکست خورد: `PendingModelChangesWarning` هنگام اجرای Migration در تست احراز هویت؛ در همان run، دستور EF CLI برای بررسی pending model changes موفق بود.
 - بررسی `Vendor/Vendor.Host/Program.cs` دو ثبت مستقل `AddDbContext<VendorDbContext>` را نشان داد: یک ثبت در `AddVendorPersistence` با Migration Assembly صریح و یک ثبت تکراری در Host بدون آن تنظیم. ثبت تکراری حذف شد تا persistence module تنها منبع پیکربندی DbContext و Migration Assembly باشد. این اصلاح نیازمند اجرای دوبارهٔ integration test است؛ علت به‌عنوان قطعیِ حل‌شده اعلام نمی‌شود تا CI تأیید کند.
 - آخرین اصلاح: commit `a2af05b78fe5f8d5237d3b36aa92c786a171b783`. CI جدید هنوز باید بررسی شود.
+
+
+### پیگیری CI — حذف ثبت تکراری ASP.NET Core Identity
+- اجرای Vendor CI روی merge commit `d696ed44` همچنان در تست `PasswordOnlyIsDeniedAndTotpChallengeDoesNotIssueApplicationCookie` با `PendingModelChangesWarning` شکست خورد؛ بنابراین حذف ثبت تکراری DbContext به‌تنهایی کافی نبود.
+- بررسی بعدی، ثبت مستقل و دوگانهٔ `AddIdentityCore<VendorAdminUser>` را در Host و `AddVendorPersistence` نشان داد. تنظیم `IdentitySchemaVersions.Version3` فقط در Host ثبت شده بود، درحالی‌که پیکربندی persistence یک ثبت جداگانه با گزینه‌های متفاوت داشت.
+- اصلاح جدید: پیکربندی Identity (شامل SchemaVersion v3، سیاست رمز عبور، lockout، SignInManager و token providers) به یک نقطهٔ ثبت در `Vendor.Persistence/DependencyInjection.cs` منتقل شد و ثبت دوم از `Vendor.Host/Program.cs` حذف شد.
+- **وضعیت اعتبارسنجی: در انتظار CI روی commitهای جدید.** این اصلاح هنوز تأییدشده محسوب نمی‌شود؛ هشدار EF سرکوب نشده و تست integration حذف یا skip نشده است. تا اجرای مجدد SQL Server integration test، PR #129 نباید ادغام شود.
+- مراجع: [PR #129](https://github.com/hamidreza1394/Accounting/pull/129)، [Vendor CI run 40280390617](https://github.com/hamidreza1394/Accounting/actions/runs/40280390617).
