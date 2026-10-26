@@ -731,3 +731,6 @@ Cookie خودکفاست و بدون بررسی مجدد تا انقضا معتب
 - **مراجع:** D-045، D-046، Issue #89، `LICENSING_DATA_MODEL.md`، `LICENSING_THREAT_MODEL.md`، `AGENTS.md`.
 
 
+
+
+- **پیگیری Issue #103 (2026-10-26):** APIهای احراز هویت در شاخهٔ `security/issue-103-vendor-auth-mfa-v2` اضافه شده‌اند. Migration `20261026045412_VendorAddPasskeySupport` و Snapshot بازبینی‌شده ثبت شده‌اند؛ scaffolding موقت CI حذف شده است. اجرای قبلی `40271317565` Build را موفق کرد ولی تست‌ها به‌علت حذف ناخواستهٔ `AddHealthChecks()` شکست خوردند؛ registration به Host بازگردانده شد. وضعیت نهایی هنوز `NotVerified` تا CI مجدد سبز شود. Bootstrap نخستین مدیر، UI پنل و RBAC ریزدانه خارج از Issue #103 هستند.
