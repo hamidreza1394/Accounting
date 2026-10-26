@@ -103,18 +103,18 @@ jobs:
         run: |
           dotnet tool install --global dotnet-ef --version 10.0.13
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
-      - name: Verify Vendor EF model snapshot is current
-        env:
-          FARANO_VENDOR_ConnectionStrings__VendorDb: Server=localhost,1433;Database=master;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
-        run: |
-          dotnet ef migrations has-pending-model-changes --project Vendor/Vendor.Persistence/Vendor.Persistence.csproj --startup-project Vendor/Vendor.Host/Vendor.Host.csproj --context VendorDbContext
-
       - name: Test Vendor solution
         env:
           FARANO_VENDOR_ConnectionStrings__VendorDb: Server=localhost,1433;Database=FaranouVendorAuthTests;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
           FARANO_VENDOR_TEST_SQLSERVER: Server=localhost,1433;Database=FaranouVendorTests;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
           FARANO_REQUIRE_VENDOR_SQLSERVER: '1'
         run: dotnet test Vendor.sln --configuration Release
+
+      - name: Verify Vendor EF model snapshot is current
+        env:
+          FARANO_VENDOR_ConnectionStrings__VendorDb: Server=localhost,1433;Database=master;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
+        run: |
+          dotnet ef migrations has-pending-model-changes --project Vendor/Vendor.Persistence/Vendor.Persistence.csproj --startup-project Vendor/Vendor.Host/Vendor.Host.csproj --context VendorDbContext
       - name: Publish standalone Vendor host
         run: dotnet publish Vendor/Vendor.Host/Vendor.Host.csproj --no-restore --configuration Release --output "$RUNNER_TEMP/vendor-publish"
       - name: Check artifact contains the host and no private-key files
