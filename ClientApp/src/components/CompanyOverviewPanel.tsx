@@ -3,6 +3,7 @@ import { getCompanyOverview } from '../api/client';
 import type { CompanyOverview, FiscalPeriodStatus } from '../api/types';
 import { formatPersianDate } from '../lib/date';
 import { EmptyState, ErrorState, LoadingState } from './Feedback';
+import { Card } from './ui/card';
 
 type OverviewState =
   | { kind: 'loading' }
@@ -67,7 +68,8 @@ export function CompanyOverviewPanel({ companyId, currentPeriodId, onUnauthentic
 
   return (
     <div className="flex flex-col gap-6">
-      <section aria-labelledby="company-heading" className="rounded-2xl border border-line bg-white p-5 shadow-sm">
+      <section aria-labelledby="company-heading">
+        <Card className="gap-0 rounded-2xl border border-line bg-white p-5 shadow-sm ring-0">
         <h2 id="company-heading" className="text-lg font-bold text-navy">
           {company.name}
         </h2>
@@ -83,9 +85,11 @@ export function CompanyOverviewPanel({ companyId, currentPeriodId, onUnauthentic
             </dd>
           </div>
         </dl>
+        </Card>
       </section>
 
-      <section aria-labelledby="periods-heading" className="rounded-2xl border border-line bg-white p-5 shadow-sm">
+      <section aria-labelledby="periods-heading">
+        <Card className="gap-0 rounded-2xl border border-line bg-white p-5 shadow-sm ring-0">
         <h2 id="periods-heading" className="text-lg font-bold text-navy">
           دوره‌های مالی
         </h2>
@@ -159,6 +163,7 @@ export function CompanyOverviewPanel({ companyId, currentPeriodId, onUnauthentic
           اسناد حسابداری، سرفصل حساب‌ها و گزارش‌های مالی هنوز پیاده‌سازی نشده‌اند؛ به همین دلیل هیچ آمار مالی در این
           داشبورد نمایش داده نمی‌شود.
         </p>
+        </Card>
       </section>
     </div>
   );
