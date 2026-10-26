@@ -15,7 +15,9 @@ public static class VendorAuthorizationPolicies
 
         var baseline = new AuthorizationPolicyBuilder()
             .RequireAuthenticatedUser()
-            .AddRequirements(new VendorAdminAccessRequirement())
+            .AddRequirements(
+                new VendorAdminAccessRequirement(),
+                new VendorPermissionRequirement(VendorPermissionCatalog.PanelAccess))
             .Build();
 
         options.DefaultPolicy = baseline;
