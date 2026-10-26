@@ -17,6 +17,8 @@ builder.Services.AddHealthChecks();
 builder.Services.AddVendorPersistence(builder.Configuration);
 // SignInManager belongs to the ASP.NET Core host layer, not the persistence class library.
 builder.Services.AddSignInManager();
+// Token providers are registered by the ASP.NET Core Host, where the Identity UI extensions are available.
+new IdentityBuilder(typeof(VendorAdminUser), builder.Services).AddDefaultTokenProviders();
 var keyDirectory = builder.Configuration["DataProtection:KeysDirectory"];
 if (builder.Environment.IsProduction() &&
     (string.IsNullOrWhiteSpace(keyDirectory) || !Path.IsPathFullyQualified(keyDirectory)))
