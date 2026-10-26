@@ -520,3 +520,12 @@
 - **تست‌ها:** هنوز پس از اصلاح اجرا نشده‌اند؛ نتیجه باید از Vendor CI روی PR گرفته شود. در اجرای قبلی، فرانت‌اند و .NET Build موفق بودند اما تست Integration شکست خورد و EF snapshot/Publish اجرا نشدند.
 - **امنیت/داده:** هیچ تغییری در منطق runtime، سیاست امنیتی، Schema/Migration یا دیتابیس مشتری اعمال نشده است. این اصلاح فقط آزمون را با چرخه واقعی هویت هماهنگ می‌کند.
 - **وضعیت:** Implemented in branch / Not yet Verified. Merge نشود تا آزمون SQL Server، کل Vendor suite، EF snapshot gate و Publish موفق شوند.
+
+
+## 2026-10-26 — Issue #141: حفظ کوکی antiforgery هنگام تغییر هویت MFA
+- **شاهد CI:** Vendor CI run [40346746819](https://github.com/hamidreza1394/Accounting/actions/runs/40346746819) شکست آزمون PasswordOnlyIsDeniedAndTotpChallengeDoesNotIssueApplicationCookie را در helper دریافت توکن ثبت کرد: InvalidOperationException: The given header was not found. این خطا از انتظار قطعی برای وجود هدر Set-Cookie جدید ناشی می‌شد.
+- **تحلیل:** ASP.NET Core می‌تواند وقتی کوکی antiforgery قبلاً در درخواست وجود دارد، توکن درخواست تازه متناسب با هویت جاری صادر کند بدون اینکه کوکی را دوباره در Set-Cookie برگرداند. پس از تغییر هویت به TOTP یا Application باید همان کوکی antiforgery نیز صریحاً همراه کوکی هویت ارسال شود؛ صرفاً ساخت توکن جدید کافی نیست.
+- **اصلاح در شاخه fix/issue-141-antiforgery-cookie-reuse:** آزمون کوکی antiforgery قبلی را همراه کوکی TOTP/Application به endpoint توکن می‌فرستد؛ helper در صورت نبود Set-Cookie مجاز است همان کوکی ورودی را بازیابی کند، اما اگر هیچ‌کدام موجود نباشد با پیام روشن شکست می‌خورد. منطق Production و کنترل antiforgery دست‌نخورده است.
+- **اعتبارسنجی:** اصلاح روی GitHub ثبت شده؛ هنوز Vendor CI پس از این اصلاح اجرا/تأیید نشده است. تا سبز شدن آزمون SQL Server، کل Vendor suite، EF snapshot gate و Publish، Verified یا آماده ادغام محسوب نمی‌شود.
+- **ایمنی:** هیچ تغییر در دیتابیس مشتری، Migrationهای مشتری یا منطق احراز هویت Production انجام نشده است.
+- **مراجع:** Issue [#141](https://github.com/hamidreza1394/Accounting/issues/141)، PR follow-up پس از آماده شدن branch ایجاد می‌شود.
