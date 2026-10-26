@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Faranou.Vendor.Persistence.Migrations
 {
     [DbContext(typeof(VendorDbContext))]
-    [Migration("20261026045412_VendorAddPasskeySupport")]
-    partial class VendorAddPasskeySupport : Migration
+    [Migration("20261026084500_VendorAlignIdentitySchemaV3")]
+    partial class VendorAlignIdentitySchemaV3 : Migration
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -140,7 +140,8 @@ namespace Faranou.Vendor.Persistence.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PhoneNumber")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
@@ -247,10 +248,12 @@ namespace Faranou.Vendor.Persistence.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
                 {
                     b.Property<string>("LoginProvider")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.Property<string>("ProviderKey")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.Property<string>("ProviderDisplayName")
                         .HasColumnType("nvarchar(max)");
@@ -275,6 +278,8 @@ namespace Faranou.Vendor.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("CredentialId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("VendorAdminUserPasskeys", (string)null);
                 });
@@ -303,7 +308,8 @@ namespace Faranou.Vendor.Persistence.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Name")
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.Property<string>("Value")
                         .HasColumnType("nvarchar(max)");
@@ -342,6 +348,12 @@ namespace Faranou.Vendor.Persistence.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserPasskey<System.Guid>", b =>
                 {
+                    b.HasOne("Faranou.Vendor.Persistence.Identity.VendorAdminUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.OwnsOne("Microsoft.AspNetCore.Identity.IdentityPasskeyData", "Data", b1 =>
                     {
                         b1.Property<byte[]>("IdentityUserPasskeyCredentialId");
