@@ -12,11 +12,11 @@ public sealed class VendorPersistenceIntegrationTests
     [Fact]
     public async Task InitialMigrationCreatesOnlyVendorIdentityAndAuditTablesAndAdminIsDisabledByDefault()
     {
-        var baseConnectionString = Environment.GetEnvironmentVariable("FARANOU_VENDOR_TEST_SQLSERVER");
+        var baseConnectionString = Environment.GetEnvironmentVariable("FARANO_VENDOR_TEST_SQLSERVER");
         if (string.IsNullOrWhiteSpace(baseConnectionString))
         {
             var message = "Set FARANOU_VENDOR_TEST_SQLSERVER to a disposable SQL Server connection. " +
-                          "Use FARANOU_REQUIRE_VENDOR_SQLSERVER=1 to require this integration test in CI."; 
+                          "Use FARANO_REQUIRE_VENDOR_SQLSERVER=1 to require this integration test in CI."; 
             if (string.Equals(Environment.GetEnvironmentVariable("FARANOU_REQUIRE_VENDOR_SQLSERVER"), "1", StringComparison.Ordinal))
             {
                 Assert.Fail(message);
@@ -26,10 +26,13 @@ public sealed class VendorPersistenceIntegrationTests
             return;
         }
 
+        var databaseName = $"FaranouVendorTests_{Guid.NewGuid():N}";
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await CreateDatabaseAsync(baseConnectionString, databaseName, cancellationToken);
         var connection = new SqlConnectionStringBuilder(baseConnectionString)
         {
             // Every test gets a unique, clearly disposable database. Never point the suite at a customer database.
-            InitialCatalog = $"FaranouVendorTests_{Guid.NewGuid():N}"
+            InitialCatalog = databaseName
         };
         var options = new DbContextOptionsBuilder<VendorDbContext>()
             .UseSqlServer(connection.ConnectionString)
@@ -101,7 +104,31 @@ public sealed class VendorPersistenceIntegrationTests
         }
         finally
         {
+            await db.Database.CloseConnectionAsync();
             await db.Database.EnsureDeletedAsync(CancellationToken.None);
         }
+    }
+
+    private static async Task CreateDatabaseAsync(
+        string baseConnectionString,
+        string databaseName,
+        CancellationToken cancellationToken)
+    {
+        if (!databaseName.StartsWith("FaranouVendorTests_", StringComparison.Ordinal) ||
+            databaseName.Any(character => !char.IsAsciiLetterOrDigit(character) && character != '_'))
+        {
+            throw new InvalidOperationException("Refusing to create a non-test Vendor database.");
+        }
+
+        var masterConnectionString = new SqlConnectionStringBuilder(baseConnectionString)
+        {
+            InitialCatalog = "master"
+        }.ConnectionString;
+
+        await using var connection = new SqlConnection(masterConnectionString);
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = $"CREATE DATABASE [{databaseName}]";
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 }
