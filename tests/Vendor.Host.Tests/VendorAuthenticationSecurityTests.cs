@@ -142,6 +142,19 @@ public sealed class VendorAuthenticationSecurityTests
             using var meDocument = JsonDocument.Parse(await meResponse.Content.ReadAsStringAsync());
             Assert.True(meDocument.RootElement.GetProperty("totpEnabled").GetBoolean());
 
+            using var creationOptionsResponse = await PostWithTokenAsync(
+                client,
+                "/api/auth/passkey/creation-options",
+                new { },
+                token);
+            Assert.Equal(HttpStatusCode.OK, creationOptionsResponse.StatusCode);
+            using (var creationOptions = JsonDocument.Parse(await creationOptionsResponse.Content.ReadAsStringAsync()))
+            {
+                var authenticatorSelection = creationOptions.RootElement.GetProperty("authenticatorSelection");
+                Assert.Equal("required", authenticatorSelection.GetProperty("userVerification").GetString());
+                Assert.Equal("required", authenticatorSelection.GetProperty("residentKey").GetString());
+            }
+
             using var logoutResponse = await PostWithTokenAsync(client, "/api/auth/logout", new { }, token);
             Assert.Equal(HttpStatusCode.OK, logoutResponse.StatusCode);
             using var afterLogout = await client.GetAsync("/api/auth/me");
