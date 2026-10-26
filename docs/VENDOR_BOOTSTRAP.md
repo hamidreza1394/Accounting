@@ -13,7 +13,7 @@
 از پوشهٔ انتشار مستقل Vendor اجرا کنید:
 
 ```powershell
-dotnet Vendor.Host.dll bootstrap-admin
+dotnet Faranou.Vendor.Host.dll bootstrap-admin
 ```
 
 این فرمان وارد command mode می‌شود و HTTP listener را راه‌اندازی نمی‌کند. نام فرمان تنها آرگومان است؛ راز، نام کاربری، ایمیل و گذرواژه به‌صورت تعاملی وارد می‌شوند. ورودی گذرواژه در ترمینال echo نمی‌شود.
