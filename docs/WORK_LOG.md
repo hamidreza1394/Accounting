@@ -439,3 +439,14 @@
 - **گارد جلوگیری از regression:** به workflow، بررسی سقف gzip برای JavaScript برابر 100 KiB و CSS برابر 20 KiB افزوده شد. اگر رشد وابستگی‌ها یا CSS از این بودجه عبور کند، CI شکست می‌خورد تا قبل از انتشار بررسی شود. اجرای این گارد در CI بعدی باید تأیید شود.
 - **کش مرورگر:** assetهای hashدار یک سال immutable و index.html بدون cache باقی می‌ماند.
 - **مبنای فنی:** راهنمای رسمی Vite توضیح می‌دهد که build تولیدی، preload و CSS splitting را پشتیبانی می‌کند؛ از code splitting دستی تا وقتی bundle بزرگ یا مسیرهای واقعی ماژولار نشده‌اند پرهیز می‌کنیم تا درخواست‌های اضافی و پیچیدگی غیرضروری ایجاد نشود: https://vite.dev/guide/features و https://vite.dev/guide/performance.html.
+
+
+## 2026-10-26 — Vendor UI Issue #128: Passkey/TOTP UX و بازیابی CI
+- **مبنای کار:** PR #127 در main ادغام شده بود؛ Issue #128 برای پیگیری UX احراز هویت و خطاهای CI ایجاد شد. شاخه: `feat/issue-128-vendor-passkey-mfa-ui`.
+- **Passkey:** UI به endpointهای واقعی `/api/auth/passkey/options` و `/api/auth/passkey/sign-in` برای ورود، و `/api/auth/passkey/creation-options` و `/api/auth/passkey/register` برای ثبت کلید عبور متصل شده است. از WebAuthn native API استفاده می‌شود؛ کلید عمومی/خصوصی توسط مرورگر/Authenticator مدیریت می‌شود و verification نهایی سمت سرور است.
+- **TOTP:** UI از `/api/auth/totp/setup` و `/api/auth/totp/confirm` برای راه‌اندازی و تأیید استفاده می‌کند. shared key و URI فقط در state حافظه‌ای صفحه نمایش داده می‌شوند و با لغو، تأیید یا خروج پاک می‌شوند؛ Web Storage استفاده نشده است.
+- **UX:** پیام‌های خطای API برای 400/401/403/409/429 فارسی و عمومی شده‌اند؛ مرورگر فاقد WebAuthn یا اتصال غیرامن پیام روشن می‌گیرد. CSS فرم‌های امنیتی و تست‌های UI اضافه شده‌اند.
+- **CI:** Vendor CI run 40279335977 در main شکست داشت. تست قدیمی `UnknownPathReturnsNotFound` با طراحی SPA fallback تناقض داشت؛ اکنون تست، deep link واقعی UI را بررسی می‌کند و تست موجود unknown API همچنان 404 را بررسی می‌کند. connection string میزبان تست به `FaranouVendorAuthTests` تنظیم شد تا با انتظار integration test مطابقت داشته باشد.
+- **اعتبارسنجی:** در زمان ثبت، اجرای Vendor CI برای این شاخه پس از بازشدن PR هنوز انجام نشده/تأیید نشده است. تست‌های جدید UI، TypeScript، build، audit، تست‌های SQL Server و publish باید در GitHub Actions بررسی شوند. Build/Test محلی در این محیط اجرا نشده است.
+- **مرزها:** هیچ تغییری در ClientApp، Customer DB یا Migrationهای مشتری نیست. CRUD مشتری/نصب/قرارداد/لایسنس، bootstrap کامل، RBAC، maker-checker، audit checkpoint مستقل و KMS/HSM همچنان مانع آمادگی Production هستند.
+- **مراجع:** Issue #128 https://github.com/hamidreza1394/Accounting/issues/128؛ PR #127 merged https://github.com/hamidreza1394/Accounting/pull/127.
