@@ -3,7 +3,7 @@
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/126
 - **Agent/مسئول:** ChatGPT / GitHub integration
 - **تاریخ:** 2026-10-26
-- **وضعیت:** پیاده‌سازی اولیه در شاخه؛ CI اجرا نشده؛ نیازمند بازبینی
+- **وضعیت:** UI اولیه ساخته شده؛ CI فرانت‌اند سبز، اما Vendor CI در تست‌های .NET شکست خورده و اصلاح پیکربندی تست در همین شاخه اعمال می‌شود؛ هنوز Verified/Production-ready نیست
 
 ## هدف و معیارهای پذیرش
 - [x] پروژه UI مستقل از ClientApp با lockfile جدا
@@ -11,12 +11,12 @@
 - [x] اتصال صفحه ورود به endpointهای واقعی password/TOTP و ضدجعل درخواست
 - [x] Host برای static assets و SPA routes و جلوگیری از fallback ناشناخته API
 - [x] Vendor CI برای build/test UI و بسته‌بندی assetها به‌روزرسانی شد
-- [ ] CI مجدد روی commit 3d317ea سبز و مرور بصری/مرورگری روی HTTPS
+- [ ] CI مجدد پس از تنظیم connection string تست سبز شود و مرور بصری/مرورگری روی HTTPS انجام شود
 - [ ] اثبات نهایی جداسازی بسته مشتری با CIهای اصلی
 
 ## خلاصه تغییرات
 - Vendor/Vendor.Web: React/TypeScript strict/Vite/Tailwind، شناسنامه shadcn، Button/Card source-owned، ورود MFA و پوسته مدیریتی اولیه.
-- Vendor/Vendor.Host/Program.cs: سرویس‌دهی فایل‌های محلی و fallback برای مسیرهای UI؛ مسیرهای API/health ناشناخته همچنان 404 می‌مانند.
+- Vendor/Vendor.Host/Program.cs: سرویس‌دهی فایل‌های محلی و fallback برای مسیرهای UI؛ مسیرهای API/health ناشناخته همچنان 404 می‌مانند. فایل‌های دارای hash در `/assets` یک سال `immutable` cache می‌شوند و `index.html` همچنان `no-store` است.
 - .github/workflows/vendor-ci.yml: npm ci/typecheck/test/build/audit و بررسی وجود فایل‌های bundle در خروجی publish.
 - Vendor/README.md، docs/PROJECT_STATUS.md، docs/WORK_LOG.md: مستندسازی وضعیت واقعی و محدودیت‌ها.
 
@@ -34,7 +34,7 @@
 | npm test | موفق در run 40277399614 | تست‌های UI سبز شدند |
 | npm run build | موفق در run 40277399614 | خروجی Vite ساخته شد |
 | dotnet build Vendor.sln | ناموفق در run 40277399614 | usingهای لازم در Program.cs مفقود بودند؛ در commit 3d317ea اصلاح شد، اجرای مجدد در صف است |
-| dotnet test Vendor.sln | اجرا نشد در run 40277399614 | به‌دلیل شکست Build اجرا نشد؛ اجرای مجدد پس از اصلاح لازم است |
+| dotnet test Vendor.sln | شکست در run 40277588682 | ۷ تست به علت نبود `FARANO_VENDOR_ConnectionStrings__VendorDb` در محیط تست Host شکست خوردند؛ workflow اکنون آن را از SQL Server تست تنظیم می‌کند و نیاز به اجرای مجدد دارد |
 
 ## امنیت، داده و سازگاری
 - APIهای احراز هویت هم‌مبدأ و ضدجعل درخواست هستند؛ APIها همچنان authorization سمت سرور دارند.
@@ -48,5 +48,5 @@
 
 ## شناسه‌های Git
 - Branch: feat/issue-126-vendor-ui-shell
-- آخرین commit شاخه در زمان تحویل: 952c025ca21fb5b30fc4e1531598cfaece26b288.
+- آخرین commit شاخه در زمان ثبت اولیه: 952c025ca21fb5b30fc4e1531598cfaece26b288؛ اصلاحات جدید منتظر CI هستند.
 - Pull Request: https://github.com/hamidreza1394/Accounting/pull/127 (Draft; CI در انتظار اجرا/تکمیل).
