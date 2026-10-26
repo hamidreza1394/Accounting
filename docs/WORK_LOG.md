@@ -433,3 +433,9 @@
 - **اعتبارسنجی:** بهبود cache و اصلاح workflow در CI جدید باید تأیید شوند. UI هنوز در مرورگر واقعی/HTTPS و با Lighthouse بررسی نشده است؛ ادعای اندازه‌گیری سرعت یا آمادگی Production مطرح نیست.
 - **محدودیت‌ها:** صفحات مشتری/نصب/لایسنس هنوز placeholder هستند؛ bootstrap مدیر، RBAC، اتصال APIهای تجاری، و audit checkpoint مستقل کامل نشده‌اند.
 - **مرجع:** PR #127 — https://github.com/hamidreza1394/Accounting/pull/127.
+
+## 2026-10-26 — کنترل بودجهٔ bundle فرانت‌اند Vendor
+- **اندازه‌گیری مبنا:** خروجی build ثبت‌شده در Vendor CI run 40277588682 برابر بود با JavaScript خام 278.82 kB / gzip 90.03 kB و CSS خام 30.46 kB / gzip 7.29 kB؛ HTML خام 0.53 kB / gzip 0.37 kB. این‌ها اندازهٔ artifact هستند، نه اندازه‌گیری زمان واقعی بارگذاری.
+- **گارد جلوگیری از regression:** به workflow، بررسی سقف gzip برای JavaScript برابر 100 KiB و CSS برابر 20 KiB افزوده شد. اگر رشد وابستگی‌ها یا CSS از این بودجه عبور کند، CI شکست می‌خورد تا قبل از انتشار بررسی شود. اجرای این گارد در CI بعدی باید تأیید شود.
+- **کش مرورگر:** assetهای hashدار یک سال immutable و index.html بدون cache باقی می‌ماند.
+- **مبنای فنی:** راهنمای رسمی Vite توضیح می‌دهد که build تولیدی، preload و CSS splitting را پشتیبانی می‌کند؛ از code splitting دستی تا وقتی bundle بزرگ یا مسیرهای واقعی ماژولار نشده‌اند پرهیز می‌کنیم تا درخواست‌های اضافی و پیچیدگی غیرضروری ایجاد نشود: https://vite.dev/guide/features و https://vite.dev/guide/performance.html.
