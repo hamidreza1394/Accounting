@@ -737,3 +737,14 @@ Cookie خودکفاست و بدون بررسی مجدد تا انقضا معتب
 
 
 - **پیگیری Issue #103 (2026-10-26):** APIهای احراز هویت در شاخهٔ `security/issue-103-vendor-auth-mfa-v2` اضافه شده‌اند. Migration `20261026045412_VendorAddPasskeySupport` و Snapshot بازبینی‌شده ثبت شده‌اند؛ scaffolding موقت CI حذف شده است. اجرای قبلی `40271317565` Build را موفق کرد ولی تست‌ها به‌علت حذف ناخواستهٔ `AddHealthChecks()` شکست خوردند؛ registration به Host بازگردانده شد. وضعیت نهایی هنوز `NotVerified` تا CI مجدد سبز شود. Bootstrap نخستین مدیر، UI پنل و RBAC ریزدانه خارج از Issue #103 هستند.
+
+
+## D-048 — shadcn/ui برای کلاینت React با RTL فارسی
+
+- **وضعیت تصمیم:** `Accepted` (طبق درخواست صریح مالک محصول در 2026-10-26).
+- **وضعیت پیاده‌سازی:** `Partially Implemented` — پیکربندی پایه `ClientApp/components.json` و استاندارد `docs/UI_COMPONENTS.md` در شاخهٔ تغییر افزوده شده‌اند؛ CLI، وابستگی‌های npm/lockfile و کامپوننت‌های واقعی هنوز باید در مرحلهٔ اجرایی بعدی نصب و با CI تأیید شوند.
+- **دامنه:** فقط React + TypeScript در `ClientApp`; صفحات Razor موجود بدون نیازمندی مستقل بازنویسی نمی‌شوند.
+- **مبنای انتخاب:** کامپوننت‌ها به‌صورت source داخل مخزن نگهداری می‌شوند؛ با React 19 و Tailwind CSS v4 فعلی سازگار می‌مانند؛ RTL فارسی، دسترس‌پذیری و runtime آفلاین الزامی است.
+- **قیود:** هیچ دارایی runtime از CDN؛ هیچ ارتقای بی‌دلیل Tailwind/React؛ تغییر `package.json` همراه `package-lock.json`؛ فقط کامپوننت‌های موردنیاز؛ authorization و اعتبارسنجی سمت سرور مستقل از UI باقی می‌ماند.
+- **اعتبارسنجی:** تا اجرای `npm ci`, typecheck, tests, build و offline check روی PR نصب، وضعیت `Verified` ادعا نمی‌شود.
+- **منابع:** [راهنمای رسمی Vite](https://ui.shadcn.com/docs/installation/vite)، [RTL](https://ui.shadcn.com/docs/rtl)، [Tailwind v4](https://ui.shadcn.com/docs/tailwind-v4).
