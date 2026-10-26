@@ -12,12 +12,12 @@ public sealed class VendorAuditChainIntegrationTests
     public async Task ConcurrentWritersCreateOneValidChainAndDetectContentTampering()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
-        var baseConnectionString = Environment.GetEnvironmentVariable("FARANOU_VENDOR_TEST_SQLSERVER");
+        var baseConnectionString = Environment.GetEnvironmentVariable("FARANO_VENDOR_TEST_SQLSERVER");
         if (string.IsNullOrWhiteSpace(baseConnectionString))
         {
-            const string message = "Set FARANOU_VENDOR_TEST_SQLSERVER to a disposable SQL Server connection. " +
-                                   "Use FARANOU_REQUIRE_VENDOR_SQLSERVER=1 to require this integration test in CI.";
-            if (string.Equals(Environment.GetEnvironmentVariable("FARANOU_REQUIRE_VENDOR_SQLSERVER"), "1", StringComparison.Ordinal))
+            const string message = "Set FARANO_VENDOR_TEST_SQLSERVER to a disposable SQL Server connection. " +
+                                   "Use FARANO_REQUIRE_VENDOR_SQLSERVER=1 to require this integration test in CI.";
+            if (string.Equals(Environment.GetEnvironmentVariable("FARANO_REQUIRE_VENDOR_SQLSERVER"), "1", StringComparison.Ordinal))
             {
                 Assert.Fail(message);
             }

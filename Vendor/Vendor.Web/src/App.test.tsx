@@ -29,4 +29,32 @@ describe('Vendor control plane shell', () => {
     expect(await screen.findByLabelText('کد احراز هویت')).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith('/api/auth/password', expect.objectContaining({ method: 'POST' }));
   });
+
+  it('offers passkey sign-in and explains when WebAuthn is unavailable', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({}, 401)));
+    render(<App />);
+    expect(await screen.findByRole('button', { name: /ورود با کلید عبور/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /ورود با کلید عبور/ }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('HTTPS');
+  });
+
+  it('keeps TOTP setup secrets in the active UI flow and confirms enrollment through the API', async () => {
+    const storageWrite = vi.spyOn(Storage.prototype, 'setItem');
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response({ userName: 'vendor-admin', totpEnabled: false, passkeyCount: 1 }))
+      .mockResolvedValueOnce(response({ requestToken: 'csrf-one' }))
+      .mockResolvedValueOnce(response({ sharedKey: 'TESTSHAREDKEY', authenticatorUri: 'otpauth://totp/test' }))
+      .mockResolvedValueOnce(response({ requestToken: 'csrf-two' }))
+      .mockResolvedValueOnce(response({ enabled: true }))
+      .mockResolvedValueOnce(response({ userName: 'vendor-admin', totpEnabled: true, passkeyCount: 1 }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: /راه‌اندازی TOTP/ }));
+    expect(await screen.findByText('TESTSHAREDKEY')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('کد شش‌رقمی برای تأیید'), { target: { value: '123456' } });
+    fireEvent.click(screen.getByRole('button', { name: 'تأیید و فعال‌سازی TOTP' }));
+    expect(await screen.findByText('احراز هویت TOTP فعال شد. کلید مشترک را از این صفحه خارج نکنید.')).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith('/api/auth/totp/confirm', expect.objectContaining({ method: 'POST', cache: 'no-store' }));
+    expect(storageWrite).not.toHaveBeenCalled();
+  });
 });

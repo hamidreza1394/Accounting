@@ -4,12 +4,12 @@
 
 ## وضعیت
 
-- **UI اولیه در شاخه feat/issue-126-vendor-ui-shell پیاده‌سازی شده، اما تا Merge و CI سبز در main پیاده‌سازی تأییدشده محسوب نمی‌شود.** Vendor.Web پروژه React/TypeScript strict/Vite/Tailwind مستقلی است؛ خروجی محلی در Vendor.Host/wwwroot قرار می‌گیرد. ورود از endpointهای واقعی password → TOTP، antiforgery و Cookie هم‌مبدأ استفاده می‌کند. صفحات مشتری/نصب/لایسنس فعلاً فقط placeholder هستند و داده آماری ساختگی نمایش نمی‌دهند.
+- **پوستهٔ اولیهٔ Vendor UI در PR #127 ادغام شده است؛ این به معنی آمادگی Production نیست.** شاخهٔ `feat/issue-128-vendor-passkey-mfa-ui` اکنون ورود Passkey/WebAuthn، ثبت Passkey و راه‌اندازی/تأیید TOTP را به endpointهای موجود متصل می‌کند؛ این پیگیری هنوز CI تازه و بازبینی مرورگری لازم دارد. UI مستقل React/TypeScript strict/Vite/Tailwind با lockfile مستقل و assetهای محلی در `Vendor.Host/wwwroot` ساخته می‌شود. صفحات مشتری/نصب/لایسنس هنوز placeholder هستند و هیچ آمار تجاری ساختگی نمایش داده نمی‌شود.
 
 - اسکلت اولیهٔ Host روی `net10.0` ایجاد شده است.
 - `/health/live` فقط زنده‌بودن فرایند وب را اعلام می‌کند؛ وضعیت دیتابیس یا جزئیات عملیاتی را افشا نمی‌کند.
 - لایهٔ persistence مستقل (`VendorDbContext`، جداول Identity مجزا، `VendorAuditEvents` و Migration اولیه) در PR #102 ادغام شده است؛ CI آن PR هماهنگی مدل/Snapshot را بررسی کرده است. Issue #117 پوشش تکمیلی اجرای Migration روی SQL Server واقعی و ثبت storeهای Identity را اضافه می‌کند. تا سبز شدن CI آن PR، اجرای Migration روی SQL Server در تست اختصاصی `NotVerified` است.
-- ورود مدیر، سیاست MFA/passkey/TOTP، RBAC، bootstrap اولیه، سرویس ثبت/اعتبارسنجی زنجیرهٔ ممیزی، maker-checker، دادهٔ مشتری تجاری/قرارداد/لایسنس، صدور امضا و KMS/HSM هنوز پیاده‌سازی نشده‌اند.
+- APIهای پایهٔ MFA/passkey/TOTP و کنترل دسترسی عمومی سمت سرور در Host وجود دارند؛ UI آن‌ها در Issue #128 تکمیل می‌شود و هنوز CI آن شاخه باید سبز شود. bootstrap امن و جریان تغییر رمز، RBAC ریزدانه و مدیریت نقش‌ها، اتصال ممیزی به عملیات، checkpoint مستقل، maker-checker، مدل و API مشتری/نصب/قرارداد/لایسنس، صدور امضا و KMS/HSM هنوز کامل نیستند.
 - این اسکلت برای Production آماده نیست.
 
 ## توسعه و آزمون
@@ -86,3 +86,11 @@ Host عمداً به ارائه‌دهندهٔ ابری خاصی وابسته ن
 - فایل‌های hashدار `wwwroot/assets` با `Cache-Control: public,max-age=31536000,immutable` کش می‌شوند؛ `index.html` با `no-store` سرو می‌شود تا نسخه‌های جدید فوراً به assetهای hashدار جدید اشاره کنند.
 - Vendor CI سقف gzip برای bundle اصلی JavaScript برابر 100 KiB و CSS برابر 20 KiB را کنترل می‌کند. اندازهٔ مشاهده‌شده در build قبلی 90.03 KiB JS و 7.29 KiB CSS بود؛ گارد تازه باید در CI بعدی تأیید شود.
 - این اعداد اندازهٔ فایل هستند و جایگزین اندازه‌گیری Lighthouse، Core Web Vitals یا تست شبکه در مرورگر واقعی نیستند.
+
+
+### پیگیری Issue #128 — احراز هویت و CI
+- رابط passkey از WebAuthn بومی مرورگر و endpointهای موجود Host استفاده می‌کند؛ تبدیل Base64URL و serialization در UI انجام می‌شود و اعتبارسنجی نهایی همچنان مسئولیت سرور است.
+- ثبت Passkey و راه‌اندازی/تأیید TOTP به نشست MFA معتبر نیاز دارند. کلید مشترک TOTP فقط در state صفحه نگه‌داری می‌شود و پس از تأیید یا لغو پاک می‌شود؛ پاسخ‌های auth/enrollment با `no-store` سرو می‌شوند.
+- UI برای مرورگر ناسازگار/اتصال غیرامن پیام روشن می‌دهد؛ هیچ وابستگی runtime خارجی اضافه نشده است.
+- Vendor CI در main روی run 40279335977 شکست خورد: تست SPA مسیر مشتری را اشتباهاً 404 انتظار داشت و connection string تست با نام دیتابیس مورد انتظار تست احراز هویت هم‌خوان نبود. Issue #128 هر دو را اصلاح می‌کند بدون حذف یا تضعیف تست.
+- وضعیت این تغییرات تا اجرای Vendor CI روی PR #128: **Implemented in branch / Not yet Verified**.
