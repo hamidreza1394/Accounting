@@ -205,3 +205,12 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 6. Endpoint تشخیصی همه ردیف‌ها را بارگذاری می‌کند (فقط اپراتور، Rate Limit) و عضویت‌های پایان‌یافته/گروه‌های غیرفعال را محافظه‌کارانه می‌شمارد.
 7. کپی کامل VM آفلاین کنترل‌پذیر نیست (D-027) و مرز کنترل لایسنس نیست. درون‌ریزی یک شرکت به دیتابیس ابری مشترک باید با `null` وارد شود.
 8. اجرا نشده: Firefox/Safari، axe، HTTPS پشت Proxy، CI.
+
+## Vendor control-plane authentication (Issue #103)
+- Uses ASP.NET Core Identity 10 built-in TOTP and WebAuthn/passkey APIs; no custom cryptographic/WebAuthn protocol code.
+- Password-only sign-in is rejected for MFA-unenrolled accounts. Password+TOTP uses the short-lived Identity two-factor cookie, which is not sufficient for protected endpoints.
+- Passkey assertion is validated before the final application cookie is issued. The administrator must remain enabled and the updated credential counter is persisted.
+- The fallback authorization handler re-reads the administrator from the Vendor DB and requires an enabled account plus an amr claim matching an enrolled factor.
+- Every auth POST validates antiforgery; credential attempts are rate-limited by remote IP. Auth responses and WebAuthn/TOTP setup payloads are not cacheable.
+- Production requires a fully qualified persistent Data Protection key directory, an explicit non-wildcard AllowedHosts list, and an explicit passkey relying-party domain.
+- Branch-only until CI/review/committed migration complete. Bootstrap, granular RBAC, maker-checker, independent audit checkpoints, and UI remain out of scope.
