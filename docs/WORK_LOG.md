@@ -390,6 +390,13 @@
 - **امنیت/باقی‌مانده:** کلاس `VendorAuditEvent` فقط مدل زنجیرهٔ هش است؛ سرویس append-only، اعتبارسنجی زنجیره و checkpoint مستقل هنوز لازم است. ورود/MFA/RBAC و bootstrap هنوز فعال/قابل دسترس نیستند.
 - **گزارش تحویل:** `docs/handoffs/ISSUE-100-vendor-persistence-identity-audit.md`.
 
+
+## 2026-10-25 — پایدارسازی نصب SDK در CI (Issue #108)
+- **شاهد:** .NET CI run `40224122273` در PR #106 قبل از Restore/Build/Test در `actions/setup-dotnet@v6` شکست خورد؛ دانلود SDK `10.0.403` و Runtime `10.0.14` از `dotnetorigin.blob.core.windows.net` با HTTP 409 انجام نشد. همان اجرای Vendor با SDK `10.0.402` توانست Restore/Build/Test را اجرا کند.
+- **تغییر:** چهار اعلان SDK در `.github/workflows/dotnet.yml` از wildcard `10.0.x` به نسخهٔ دقیق `10.0.402` پین شدند تا build فعلاً از یک SDK قابل‌دریافت و قبلاً آزموده‌شده استفاده کند؛ `global.json`، NuGet package versions و کد runtime تغییر نکردند.
+- **سیاست ارتقا:** پس از تأیید دسترس‌پذیری SDK patch جدید، نسخه در یک Issue/PR مشخص ارتقا یافته و کل .NET CI روی SQL Server واقعی دوباره اجرا شود؛ پین دائمی و بدون بازبینی نیست.
+- **اعتبارسنجی:** Build/Test این PR هنوز اجرا نشده؛ CI باید نشان دهد Setup .NET، Restore، Build/Test و migration guards عبور می‌کنند. خطای اولیه از نصب SDK بود، نه شکست تست کد.
+- **گزارش تحویل:** `docs/handoffs/ISSUE-108-pin-dotnet-sdk.md`.
 ## 2026-10-25 — L2.4 زنجیرهٔ ممیزی Vendor (Issue #105)
 - **مبنای معماری:** D-047 ممیزی قابل‌کشف می‌خواهد و تصریح می‌کند hash-chain داخل همان DB به‌تنهایی در برابر DBA کافی نیست. جدول `VendorAuditEvents` در PRهای #101/#102 موجود است؛ این مرحله بدون تغییر مدل/مهاجرت اجرا می‌شود.
 - **پیاده‌سازی در شاخه:** `IVendorAuditWriter`, `VendorAuditWriter`, `VendorAuditChainVerifier` برای append تراکنشی SQL Server، hash نسخه‌دار SHA-256، شناسه‌های opaque و verification زنجیره افزوده شدند. قفل `sp_getapplock` با مالکیت تراکنش جلوی شاخه‌شدن ناشی از چند نمونه را می‌گیرد.
