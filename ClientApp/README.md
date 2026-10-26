@@ -4,9 +4,9 @@
 
 ## استاندارد کامپوننت‌های UI
 
-کامپوننت‌های جدید React بر اساس shadcn/ui طراحی می‌شوند؛ پیکربندی اولیه در `components.json` با هدف RTL فارسی ثبت شده است. راهنمای معماری، محدودیت‌های آفلاین، دسترس‌پذیری و فرآیند افزودن کامپوننت در [docs/UI_COMPONENTS.md](../docs/UI_COMPONENTS.md) است.
+کامپوننت‌های جدید React بر اساس shadcn/ui طراحی می‌شوند. CLI نسخهٔ `4.22.1` در `devDependencies` پین شده؛ کامپوننت‌های `src/components/ui/button.tsx` و `card.tsx` از CLI رسمی تولید شده‌اند و وابستگی‌ها در `package-lock.json` قفل شده‌اند. در `Feedback.tsx` از Button برای retry و در `CompanyOverviewPanel.tsx` از Card برای پنل‌ها استفاده شده است. جزئیات RTL، دسترس‌پذیری و runtime آفلاین در [docs/UI_COMPONENTS.md](../docs/UI_COMPONENTS.md) آمده است.
 
-> توجه: این commit فقط پیکربندی و استاندارد را ثبت می‌کند. CLI، وابستگی‌های npm، `src/lib/utils.ts` و کامپوننت‌های تولیدشده هنوز نصب/تولید نشده‌اند؛ تا تکمیل PR نصب و سبز شدن CI، از import کردن `@/components/ui/*` خودداری کنید. نصب باید `package.json` و `package-lock.json` را هماهنگ به‌روزرسانی کند.
+برای افزودن کامپوننت، از `npx shadcn add <component> --yes` استفاده کنید، diff تولیدشده را بررسی کنید و سپس `npm ci`, `npm run typecheck`, `npm test`, `npm run build` و `npm run check:offline` را اجرا کنید. نسخهٔ CLI را بی‌دلیل به `latest` تغییر ندهید.
 
 ## پیش‌نیاز
 - Node.js 22.12 یا بالاتر (CI از Node 24 و npm 11 استفاده می‌کند؛ `package-lock.json` با npm 11 ساخته شده است).

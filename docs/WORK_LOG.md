@@ -410,3 +410,15 @@
 - **محدودیت مهم:** این مرحله هنوز CLI، بسته‌های npm، lockfile یا کامپوننت‌های تولیدشده را تغییر نداده است؛ وضعیت صادقانه `Partially Implemented` است. مرحلهٔ بعد باید نصب و lockfile را با npm معتبر به‌روزرسانی و تست‌های CI را اجرا کند.
 - **اعتبارسنجی:** مستندات رسمی فعلی shadcn/ui برای Vite، RTL و Tailwind v4 بررسی شدند. Build/Test در این مرحله اجرا نشده است.
 - **دیتابیس:** هیچ تغییر دیتابیس یا Migration انجام نشد.
+
+
+## 2026-10-26 — نصب واقعی shadcn/ui و اتصال به UI فرانو (Issue #122)
+- **مبنای کار:** `main` پس از ادغام PR #121؛ Branch مستقل `feat/issue-122-shadcn-install`.
+- **علت ادامهٔ Issue:** بازبینی `main` نشان داد Issue #122 بسته شده بود اما `package.json` فقط React و ابزارهای قبلی را داشت؛ alias `@/*` و کامپوننت‌های واقعی shadcn نصب نشده بودند. Issue دوباره باز شد تا وضعیت واقعی با معیار پذیرش منطبق شود.
+- **تغییرات:** نصب از CLI رسمی و پین `shadcn@4.22.1`؛ تولید `button.tsx` و `card.tsx` با Base UI؛ ثبت `@base-ui/react`، `class-variance-authority`، `cn` و `lucide-react` در وابستگی‌ها؛ حذف `clsx` و `tailwind-merge` که در این مسیر استفاده نمی‌شوند؛ تولید lockfile با npm و clean install؛ alias در Vite/TypeScript؛ توکن‌های semantic هماهنگ با رنگ‌های فرانو.
+- **اتصال به محصول:** retry در `Feedback.tsx` از shadcn Button استفاده می‌کند؛ دو پنل اطلاعات شرکت و دوره مالی در `CompanyOverviewPanel.tsx` از Card استفاده می‌کنند؛ کامپوننت قدیمی `Button.tsx` به `FaranouButton.tsx` تغییر نام داده شد تا در ویندوز و TypeScript با `button.tsx` تداخل حروف بزرگ/کوچک نداشته باشد و رفتار قبلی حفظ شود.
+- **تست:** تست جدید Button برای فعال‌سازی صفحه‌کلید و disabled و تست Card برای عنوان/توضیح/محتوا افزوده شد. اجرای bootstrap پیش از این تست‌های تازه، clean `npm ci`، typecheck، تست‌های موجود، build، offline check و runtime audit را موفق گذراند؛ CI استاندارد باید تست‌های تازه را روی commit نهایی تأیید کند.
+- **امنیت/آفلاین:** کامپوننت‌ها در مخزن هستند؛ CDN، فونت خارجی یا runtime service اضافه نشده. بسته‌های npm فقط در زمان Build/Install لازم‌اند. هیچ دیتابیس مشتری یا Migration تغییر نکرد.
+- **Workflow:** workflow موقت bootstrap پس از تولید و تأیید اولیه حذف شد؛ در مخزن باقی نمی‌ماند. CI دائمی `.NET CI` مرجع نهایی خواهد بود.
+- **وضعیت:** `Implemented, awaiting final CI`؛ PR ادغام‌نشده است و هیچ ادعای Verified برای آخرین commit تا پایان CI نمی‌شود.
+- **Handoff:** `docs/handoffs/ISSUE-122-shadcn-ui-install.md`.

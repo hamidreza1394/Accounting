@@ -1,5 +1,55 @@
 @import "tailwindcss";
 
+/* shadcn/ui semantic tokens mapped to Farano's existing local navy/teal/gold palette. */
+:root {
+  --background: #f6f3ee;
+  --foreground: #22384b;
+  --card: #ffffff;
+  --card-foreground: #22384b;
+  --popover: #ffffff;
+  --popover-foreground: #22384b;
+  --primary: #1c3d5a;
+  --primary-foreground: #ffffff;
+  --secondary: #eef2f5;
+  --secondary-foreground: #22384b;
+  --muted: #eef2f5;
+  --muted-foreground: #4a5d6e;
+  --accent: #e8f4f5;
+  --accent-foreground: #1d6a70;
+  --destructive: #b3372f;
+  --border: #dfe6ec;
+  --input: #dfe6ec;
+  --ring: #1d6a70;
+  --radius: 0.625rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+
+
 /* Vazirmatn (variable, weights 100-900, SIL OFL) is served by the ASP.NET Core host from
    wwwroot/fonts/vazirmatn. No font, icon or stylesheet is loaded from a CDN. */
 @font-face {
