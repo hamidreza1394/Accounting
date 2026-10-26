@@ -49,11 +49,11 @@ public sealed class VendorAuthenticationSecurityTests
         var connectionBuilder = new SqlConnectionStringBuilder(configuredConnection);
         Assert.Contains("localhost", connectionBuilder.DataSource, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("FaranouVendorAuthTests", connectionBuilder.InitialCatalog);
+        await ResetTestDatabaseAsync(configuredConnection, cancellationToken);
 
         await using (var scope = factory.Services.CreateAsyncScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
-            await db.Database.EnsureDeletedAsync(cancellationToken);
             try
             {
                 await db.Database.MigrateAsync(cancellationToken);
@@ -170,6 +170,7 @@ public sealed class VendorAuthenticationSecurityTests
             }
             finally
             {
+                await db.Database.CloseConnectionAsync();
                 await db.Database.EnsureDeletedAsync(CancellationToken.None);
             }
         }
@@ -239,6 +240,30 @@ public sealed class VendorAuthenticationSecurityTests
         }, cancellationToken);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    private static async Task ResetTestDatabaseAsync(
+        string configuredConnection,
+        CancellationToken cancellationToken)
+    {
+        const string databaseName = "FaranouVendorAuthTests";
+        var masterConnectionString = new SqlConnectionStringBuilder(configuredConnection)
+        {
+            InitialCatalog = "master"
+        }.ConnectionString;
+
+        await using var connection = new SqlConnection(masterConnectionString);
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            IF DB_ID(N'FaranouVendorAuthTests') IS NOT NULL
+            BEGIN
+                ALTER DATABASE [FaranouVendorAuthTests] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+                DROP DATABASE [FaranouVendorAuthTests];
+            END;
+            CREATE DATABASE [FaranouVendorAuthTests];
+            """;
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     private static async Task<string> GetAntiforgeryTokenAsync(HttpClient client, CancellationToken cancellationToken)
