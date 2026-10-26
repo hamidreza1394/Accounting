@@ -1,5 +1,3 @@
-using System.Buffers.Binary;
-using System.Globalization;
 using System.Security.Cryptography;
 using Faranou.Vendor.Host.Bootstrap;
 using Faranou.Vendor.Persistence;
@@ -18,6 +16,7 @@ namespace Faranou.Vendor.Host.Tests;
 
 public sealed class VendorBootstrapIntegrationTests
 {
+    private static readonly int[] RejectedBootstrapExitCodes = [7, 8];
     [Fact]
     public async Task BootstrapCreatesExactlyOneEnabledMfaAdministratorUnderConcurrentAttempts()
     {
@@ -82,9 +81,9 @@ public sealed class VendorBootstrapIntegrationTests
                 VendorBootstrapCommand.RunAsync(provider, configuration, promptA, TestContext.Current.CancellationToken),
                 VendorBootstrapCommand.RunAsync(provider, configuration, promptB, TestContext.Current.CancellationToken));
 
-            Assert.Single(results.Where(result => result == 0));
-            var rejectedAttempt = Assert.Single(results.Where(result => result != 0));
-            Assert.Contains(rejectedAttempt, new[] { 7, 8 });
+            Assert.Single(results, result => result == 0);
+            var rejectedAttempt = Assert.Single(results, result => result != 0);
+            Assert.Contains(rejectedAttempt, RejectedBootstrapExitCodes);
 
             await using (var verifyScope = provider.CreateAsyncScope())
             {
@@ -133,7 +132,7 @@ public sealed class VendorBootstrapIntegrationTests
             {
                 0 => userName,
                 1 => email,
-                _ => GenerateTotpCode(_authenticatorKey ?? throw new InvalidOperationException("TOTP URI was not provided."))
+                _ => VendorAuthenticationSecurityTests.GenerateTotpCode(_authenticatorKey ?? throw new InvalidOperationException("TOTP URI was not provided."))
             };
         }
 
@@ -166,46 +165,5 @@ public sealed class VendorBootstrapIntegrationTests
         }
     }
 
-    private static string GenerateTotpCode(string base32Key)
-    {
-        var key = DecodeBase32(base32Key);
-        var counter = DateTimeOffset.UtcNow.ToUnixTimeSeconds() / 30;
-        Span<byte> counterBytes = stackalloc byte[sizeof(long)];
-        BinaryPrimitives.WriteInt64BigEndian(counterBytes, counter);
 
-        using var hmac = new HMACSHA1(key);
-        var hash = hmac.ComputeHash(counterBytes.ToArray());
-        var offset = hash[^1] & 0x0f;
-        var binaryCode = ((hash[offset] & 0x7f) << 24) |
-                         ((hash[offset + 1] & 0xff) << 16) |
-                         ((hash[offset + 2] & 0xff) << 8) |
-                         (hash[offset + 3] & 0xff);
-        return (binaryCode % 1_000_000).ToString("D6", CultureInfo.InvariantCulture);
-    }
-
-    private static byte[] DecodeBase32(string value)
-    {
-        const string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-        var output = new List<byte>();
-        var buffer = 0;
-        var bitsLeft = 0;
-        foreach (var character in value.TrimEnd('=').ToUpperInvariant())
-        {
-            var index = alphabet.IndexOf(character, StringComparison.Ordinal);
-            if (index < 0)
-            {
-                throw new FormatException("Invalid Base32 authenticator key.");
-            }
-
-            buffer = (buffer << 5) | index;
-            bitsLeft += 5;
-            if (bitsLeft >= 8)
-            {
-                output.Add((byte)((buffer >> (bitsLeft - 8)) & 0xff));
-                bitsLeft -= 8;
-            }
-        }
-
-        return output.ToArray();
-    }
 }
