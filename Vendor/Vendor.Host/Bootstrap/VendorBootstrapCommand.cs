@@ -112,7 +112,7 @@ public static class VendorBootstrapCommand
                     {
                         UserName = userName,
                         Email = email,
-                        EmailConfirmed = true,
+                        EmailConfirmed = false,
                         IsEnabled = false,
                         TwoFactorEnabled = false,
                         MustChangePassword = false,
