@@ -10,7 +10,7 @@ namespace Faranou.Vendor.Host.Tests;
 public sealed class VendorPersistenceIntegrationTests
 {
     [Fact]
-    public async Task InitialMigrationCreatesOnlyVendorIdentityAndAuditTables_AndAdminIsDisabledByDefault()
+    public async Task InitialMigrationCreatesOnlyVendorIdentityAndAuditTablesAndAdminIsDisabledByDefault()
     {
         var baseConnectionString = Environment.GetEnvironmentVariable("FARANOU_VENDOR_TEST_SQLSERVER");
         if (string.IsNullOrWhiteSpace(baseConnectionString))
@@ -38,12 +38,14 @@ public sealed class VendorPersistenceIntegrationTests
         await using var db = new VendorDbContext(options);
         try
         {
-            await db.Database.MigrateAsync();
-            Assert.Empty(await db.Database.GetPendingMigrationsAsync());
+            await db.Database.MigrateAsync(TestContext.Current.CancellationToken);
+            Assert.Empty(await db.Database.GetPendingMigrationsAsync(TestContext.Current.CancellationToken));
+            var appliedMigrations = await db.Database.GetAppliedMigrationsAsync(TestContext.Current.CancellationToken);
+            Assert.Contains("20261026045412_VendorAddPasskeySupport", appliedMigrations);
             Assert.NotNull(db.Model.FindEntityType(typeof(Microsoft.AspNetCore.Identity.IdentityUserPasskey<Guid>)));
 
             var sqlConnection = db.Database.GetDbConnection();
-            await sqlConnection.OpenAsync();
+            await sqlConnection.OpenAsync(TestContext.Current.CancellationToken);
             await using (var command = sqlConnection.CreateCommand())
             {
                 command.CommandText = """
@@ -54,7 +56,7 @@ public sealed class VendorPersistenceIntegrationTests
                         N'VendorAdminUserLogins', N'VendorAdminUserRoles', N'VendorAdminUserTokens',
                         N'VendorAdminRoleClaims', N'VendorAdminUserPasskeys', N'VendorAuditEvents');
                     """;
-                var tableCount = Convert.ToInt64(await command.ExecuteScalarAsync());
+                var tableCount = Convert.ToInt64(await command.ExecuteScalarAsync(TestContext.Current.CancellationToken), System.Globalization.CultureInfo.InvariantCulture);
                 Assert.Equal(9L, tableCount);
             }
 
@@ -70,9 +72,9 @@ public sealed class VendorPersistenceIntegrationTests
                 ConcurrencyStamp = Guid.NewGuid().ToString("N"),
                 CreatedAtUtc = DateTimeOffset.UtcNow
             });
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-            var persistedAdmin = await db.Users.SingleAsync(user => user.Id == adminId);
+            var persistedAdmin = await db.Users.SingleAsync(user => user.Id == adminId, TestContext.Current.CancellationToken);
             Assert.False(persistedAdmin.IsEnabled);
             Assert.True(persistedAdmin.MustChangePassword);
 
@@ -93,13 +95,13 @@ public sealed class VendorPersistenceIntegrationTests
             });
             await db.SaveChangesAsync();
 
-            var persistedAudit = await db.AuditEvents.SingleAsync(item => item.Id == auditId);
+            var persistedAudit = await db.AuditEvents.SingleAsync(item => item.Id == auditId, TestContext.Current.CancellationToken);
             Assert.Equal(nonExistingActor, persistedAudit.ActorUserId);
             Assert.Equal(64, persistedAudit.EventHash.Length);
         }
         finally
         {
-            await db.Database.EnsureDeletedAsync();
+            await db.Database.EnsureDeletedAsync(CancellationToken.None);
         }
     }
 }
