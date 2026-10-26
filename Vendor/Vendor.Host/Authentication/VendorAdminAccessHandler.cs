@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace Faranou.Vendor.Host.Authentication;
 
-public sealed class VendorAdminAccessRequirement : IAuthorizationRequirement;
+public sealed class VendorAdminAccessRequirement : IAuthorizationRequirement { }
 
 public sealed class VendorAdminAccessHandler(
     UserManager<VendorAdminUser> users)
