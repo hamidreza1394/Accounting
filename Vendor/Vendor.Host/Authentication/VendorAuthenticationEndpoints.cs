@@ -152,6 +152,12 @@ public static class VendorAuthenticationEndpoints
 
             // A null user intentionally enables discoverable-credential UX and avoids
             // revealing whether a username exists or has a registered passkey.
+            if (user is not null && (await users.GetPasskeysAsync(user)).Count >= 5)
+            {
+                return Results.Conflict(new { error = "The passkey limit for this account has been reached." });
+            }
+
+            context.Response.Headers["Cache-Control"] = "no-store";
             var optionsJson = await signInManager.MakePasskeyRequestOptionsAsync(user);
             return Results.Content(optionsJson, "application/json");
         })
@@ -264,6 +270,14 @@ public static class VendorAuthenticationEndpoints
                 passkey.Name = request.DisplayName.Trim()[..Math.Min(request.DisplayName.Trim().Length, 100)];
             }
 
+            var existingPasskeys = await users.GetPasskeysAsync(user);
+            var credentialAlreadyRegistered = existingPasskeys.Any(existing =>
+                existing.CredentialId.AsSpan().SequenceEqual(passkey.CredentialId));
+            if (!credentialAlreadyRegistered && existingPasskeys.Count >= 5)
+            {
+                return Results.Conflict(new { error = "The passkey limit for this account has been reached." });
+            }
+
             var result = await users.AddOrUpdatePasskeyAsync(user, passkey);
             if (!result.Succeeded)
             {
@@ -290,6 +304,9 @@ public static class VendorAuthenticationEndpoints
             {
                 return Results.Conflict(new { error = "Authenticator setup is unavailable." });
             }
+
+            context.Response.Headers["Cache-Control"] = "no-store";
+            context.Response.Headers["Pragma"] = "no-cache";
 
             var key = await users.GetAuthenticatorKeyAsync(user);
             if (string.IsNullOrWhiteSpace(key))
