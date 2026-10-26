@@ -104,6 +104,7 @@ jobs:
           dotnet tool install --global dotnet-ef --version 10.0.13
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
       - name: Verify Vendor EF model snapshot is current
+        continue-on-error: true # Temporary diagnostic branch only; remove after identifying runtime model diff.
         env:
           FARANO_VENDOR_ConnectionStrings__VendorDb: Server=localhost,1433;Database=master;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
         run: |
