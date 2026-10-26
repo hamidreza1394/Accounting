@@ -379,3 +379,13 @@
 - **اصلاح:** عنوان تب بر اساس صفحه، عدم‌شکست بازهٔ تاریخ، preload فونت محلی؛ دو تست جدید.
 - **اعتبارسنجی محلی:** typecheck، ۹۶ تست، build، check:offline و check_static_assets موفق؛ .NET اجرا نشد (کد تغییر نکرده).
 - **گزارش تحویل:** `docs/handoffs/ISSUE-UNNUMBERED-ui-selection-audit.md`.
+
+
+## 2026-10-26 — Issue #100: زیرساخت persistence مستقل Vendor
+- **هدف:** افزودن SQL Server/EF Core store مستقل برای Identity مدیران Vendor و رخدادهای ممیزی، بدون وابستگی به دیتابیس مشتری.
+- **تغییرات:** پروژهٔ `Vendor/Vendor.Persistence`، `VendorDbContext` با schema جداگانهٔ `vendor`، مدل `VendorAdminUser`، مدل `VendorAuditEvent` با hash-link fields، DI fail-closed با connection string مستقل، factory طراحی EF، migration اولیه و model snapshot.
+- **مرز امنیتی:** فقط `FARANO_VENDOR_ConnectionStrings__VendorDb` قابل استفاده است؛ هیچ fallback به connection string مشتری نیست. Host همچنان فقط liveness endpoint عمومی دارد؛ هیچ login/bootstrap/registration/admin endpoint ایجاد نشده است.
+- **تست‌ها:** تست مدل/Schema، نبود FK از audit به مدیر، ثبت persistence بدون connection string باید fail شود، و Integration Test روی SQL Server واقعی با دیتابیس تصادفی و migration. Workflow Vendor با SQL Server service اجرا می‌شود و CI متغیر اجباری می‌گذارد تا تست Integration در CI بی‌صدا skip نشود.
+- **محدودیت:** Build/Test محلی اجرا نشده (SDK .NET در محیط اجرا در دسترس نبود). نتیجهٔ واقعی باید از CI روی PR خوانده شود. Migration و snapshot به‌صورت دستی اضافه شده‌اند و باید از نظر EF tooling/migration drift در CI دقیقاً بررسی شوند.
+- **عدم تغییر:** هیچ کد اجرایی یا Migration دیتابیس مشتری تغییر نکرده است؛ هیچ secret، مدیر seed شده یا کلید خصوصی اضافه نشده است.
+- **گام بعدی:** پس از CI سبز، بازبینی مدل/migration؛ سپس Issue جدا برای bootstrap یک‌بارمصرف و Identity/MFA بدون endpoint قابل‌دسترسی پیش از تکمیل کنترل‌ها.
