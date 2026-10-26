@@ -496,3 +496,8 @@
 - **حفظ امنیت:** token providers حذف نشده‌اند؛ این موضوع برای جریان‌های token/TOTP مهم است. هیچ دیتابیس یا Migration مشتری تغییر نکرده است.
 - **اعتبارسنجی:** هنوز Build/Test پس از اصلاح اجرا نشده؛ نتیجهٔ معتبر فقط پس از Vendor CI جدید ثبت می‌شود.
 - **Issue/Branch:** [#134](https://github.com/hamidreza1394/Accounting/issues/134)؛ `fix/vendor-identity-token-providers`.
+
+
+### Issue #134 — نتیجهٔ CI اول و اصلاح دوم
+- اجرای Vendor CI [40288514593](https://github.com/hamidreza1394/Accounting/actions/runs/40288514593) ثابت کرد که `AddDefaultTokenProviders()` به Host منتقل شده اما خط قدیمی `builder.Services.AddSignInManager()` هنوز اشتباه است: extension متد روی `IdentityBuilder` قرار دارد، نه `IServiceCollection`.
+- اصلاح دوم در همان شاخه، `AddSignInManager()` و `AddDefaultTokenProviders()` را روی یک `IdentityBuilder` در Host ثبت می‌کند. پس از این اصلاح باید CI دوباره اجرا شود؛ هیچ تستی هنوز پس از اصلاح دوم موفق گزارش نشده است.
