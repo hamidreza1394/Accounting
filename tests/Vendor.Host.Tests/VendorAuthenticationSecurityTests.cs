@@ -186,9 +186,13 @@ public sealed class VendorAuthenticationSecurityTests
             using var meDocument = JsonDocument.Parse(await meResponse.Content.ReadAsStringAsync(cancellationToken));
             Assert.True(meDocument.RootElement.GetProperty("totpEnabled").GetBoolean());
 
+            // Identity's two-factor sign-in writes an application cookie, then the
+            // endpoint re-issues it with the verified-factor claim. Use the final cookie
+            // value from the response; asserting exactly one matching Set-Cookie header
+            // incorrectly treats this deliberate replacement as a failed sign-in.
             var applicationCookie = totpResponse.Headers.GetValues("Set-Cookie")
                 .Select(value => value.Split(';', 2)[0])
-                .Single(value => value.StartsWith("__Host-Faranou.Vendor.Auth=", StringComparison.Ordinal));
+                .Last(value => value.StartsWith("__Host-Faranou.Vendor.Auth=", StringComparison.Ordinal));
             // The application cookie establishes a new claims identity after TOTP; use a
             // request token minted for that authenticated identity for subsequent mutations.
             var (authenticatedToken, authenticatedAntiforgeryCookie) =
