@@ -590,3 +590,12 @@
 - **اعتبارسنجی:** اصلاح روی شاخه `feat/issue-150-vendor-rbac-foundation` ثبت شده است. CI پس از این commit باید نتیجه نهایی را تأیید کند؛ تا آن زمان وضعیت **اصلاح‌شده در شاخه، اما تأییدنشده** است.
 - **مستندات:** handoff فارسی `docs/handoffs/ISSUE-150-vendor-rbac-foundation.md` و بخش RBAC در `docs/SECURITY.md` به‌روزرسانی شدند.
 - **پیوند پیگیری:** [PR #153](https://github.com/hamidreza1394/Accounting/pull/153).
+
+
+## 2026-10-26 — Issue #154: پوشش metadata مجوزدهی Vendor
+- Issue #154 پس از بسته‌شدن زودهنگام بازگشایی شد؛ علت: آزمون پوشش endpointها و مجوزدهی منبع‌محور هنوز کامل نبود.
+- به VendorPermissionAuthorizationTests.cs آزمون integration اضافه شد که endpointهای /api/ را از EndpointDataSource استخراج می‌کند، نبود metadata دسترسی را رد می‌کند و فهرست مسیرهای AllowAnonymous را با فهرست مجاز ثابت مقایسه می‌کند.
+- آزمون‌های موجود برای DefaultPolicy/FallbackPolicy و الزام حساب فعال/MFA حفظ شدند.
+- **اعتبارسنجی:** آزمون اجرا نشده؛ CI باید اجرا و نتیجه ثبت شود. این تغییر هنوز Verified نیست.
+- **باقی‌مانده:** آزمون‌های منفی با احراز هویت واقعی، resource-level authorization/IDOR و maker-checker؛ هیچ Migration مشتری تغییر نکرده است.
+- Handoff: docs/handoffs/ISSUE-154-vendor-endpoint-authorization-coverage.md
