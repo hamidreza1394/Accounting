@@ -100,7 +100,7 @@ public sealed class VendorAuthenticationSecurityTests
             var createDisabled = await users.CreateAsync(disabled, "Secure-Vendor#2026");
             Assert.True(createDisabled.Succeeded, string.Join("; ", createDisabled.Errors.Select(error => error.Code)));
 
-            var token = await GetAntiforgeryTokenAsync(client, cancellationToken);
+            var (token, antiforgeryCookie) = await GetAntiforgeryTokenAndCookieAsync(client, cancellationToken);
             using var passwordOnlyResponse = await PostWithTokenAsync(
                 client,
                 "/api/auth/password",
@@ -157,12 +157,16 @@ public sealed class VendorAuthenticationSecurityTests
             Assert.True(
                 await users.VerifyTwoFactorTokenAsync(user, authenticatorProvider, code),
                 "The generated TOTP code must validate before exercising the HTTP challenge flow.");
+            var twoFactorCookie = passwordResponse.Headers.GetValues("Set-Cookie")
+                .Select(value => value.Split(';', 2)[0])
+                .Single(value => value.StartsWith("__Host-Faranou.Vendor.TwoFactor=", StringComparison.Ordinal));
             using var totpResponse = await PostWithTokenAsync(
                 client,
                 "/api/auth/totp/verify",
                 new { code },
                 token,
-                cancellationToken);
+                cancellationToken,
+                $"{antiforgeryCookie}; {twoFactorCookie}");
             Assert.Equal(HttpStatusCode.OK, totpResponse.StatusCode);
 
             using var meResponse = await client.GetAsync("/api/auth/me", cancellationToken);
@@ -303,6 +307,22 @@ public sealed class VendorAuthenticationSecurityTests
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    private static async Task<(string Token, string Cookie)> GetAntiforgeryTokenAndCookieAsync(
+        HttpClient client,
+        CancellationToken cancellationToken)
+    {
+        using var response = await client.GetAsync("/api/auth/antiforgery", cancellationToken);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+        var token = document.RootElement.GetProperty("requestToken").GetString();
+        Assert.False(string.IsNullOrWhiteSpace(token));
+
+        var cookie = response.Headers.GetValues("Set-Cookie")
+            .Select(value => value.Split(';', 2)[0])
+            .Single(value => value.StartsWith("__Host-Faranou.Vendor.AntiForgery=", StringComparison.Ordinal));
+        return (token!, cookie);
+    }
+
     private static async Task<string> GetAntiforgeryTokenAsync(HttpClient client, CancellationToken cancellationToken)
     {
         using var response = await client.GetAsync("/api/auth/antiforgery", cancellationToken);
@@ -318,13 +338,19 @@ public sealed class VendorAuthenticationSecurityTests
         string uri,
         object payload,
         string token,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? cookieHeader = null)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, uri)
         {
             Content = JsonContent.Create(payload)
         };
         request.Headers.Add("X-CSRF-TOKEN", token);
+        if (!string.IsNullOrWhiteSpace(cookieHeader))
+        {
+            request.Headers.TryAddWithoutValidation("Cookie", cookieHeader);
+        }
+
         return client.SendAsync(request, cancellationToken);
     }
 }
