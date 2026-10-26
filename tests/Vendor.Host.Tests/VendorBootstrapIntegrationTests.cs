@@ -69,7 +69,8 @@ public sealed class VendorBootstrapIntegrationTests
                 VendorBootstrapCommand.RunAsync(provider, configuration, promptB, TestContext.Current.CancellationToken));
 
             Assert.Single(results.Where(result => result == 0));
-            Assert.Single(results.Where(result => result != 0));
+            var rejectedAttempt = Assert.Single(results.Where(result => result != 0));
+            Assert.Contains(rejectedAttempt, new[] { 7, 8 });
 
             await using (var verifyScope = provider.CreateAsyncScope())
             {
@@ -82,7 +83,7 @@ public sealed class VendorBootstrapIntegrationTests
 
                 var audit = await VendorAuditChainVerifier.VerifyAsync(db, TestContext.Current.CancellationToken);
                 Assert.True(audit.IsValid, audit.FailureCode);
-                Assert.Equal(2, audit.EventCount);
+                Assert.Equal(3, audit.EventCount);
             }
         }
         finally
