@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { FiscalPeriodStatus } from '../api/types';
 import type { YearEntry, FiscalYear } from '../lib/fiscalYears';
-import { Button } from './ui/Button';
+import { Button } from './ui/FaranouButton';
 import { BuildingIcon, CalendarIcon, ChevronLeftIcon } from './ui/icons';
 
 type SelectionFooterProps = {
