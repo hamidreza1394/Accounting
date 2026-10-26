@@ -112,7 +112,7 @@ public sealed class VendorPersistenceTests
     private static VendorDbContext CreateModelOnlyContext()
     {
         var options = new DbContextOptionsBuilder<VendorDbContext>()
-            .UseSqlServer("Server=localhost;Database=VendorModelOnly;User Id=unused;Password=NotARealSecret!;TrustServerCertificate=True")
+            .UseSqlServer("Server=localhost;Database=VendorModelOnly;Integrated Security=True;TrustServerCertificate=True")
             .Options;
 
         return new VendorDbContext(options);
