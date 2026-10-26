@@ -1,5 +1,4 @@
 using Faranou.Vendor.Persistence;
-using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,17 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables(prefix: "FARANO_VENDOR_");
 
 builder.Services.AddHealthChecks();
-builder.Services.AddDbContext<VendorDbContext>(options =>
-{
-    var connectionString = builder.Configuration.GetConnectionString("VendorDb");
-    if (string.IsNullOrWhiteSpace(connectionString))
-    {
-        throw new InvalidOperationException(
-            "Vendor database is not configured. Set FARANO_VENDOR_ConnectionStrings__VendorDb.");
-    }
-
-    options.UseSqlServer(connectionString);
-});
+builder.Services.AddVendorPersistence(builder.Configuration);
 
 var app = builder.Build();
 
