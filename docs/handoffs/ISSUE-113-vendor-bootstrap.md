@@ -10,7 +10,7 @@
 پیاده‌سازی command-mode یک‌باره برای ایجاد اولین مدیر Vendor بدون public HTTP endpoint یا مدیر seed‌شده.
 
 ## تغییرات
-- `Vendor/Vendor.Host/Bootstrap/VendorBootstrapCommand.cs`: راز تصادفی از configuration/environment، مقایسهٔ ثابت‌زمان، ورودی تعاملی، ایجاد حساب غیرفعال، enrollment و تأیید TOTP، SQL Server transaction-scoped application lock، بازیابی حساب pending و audit events.
+- `Vendor/Vendor.Host/Bootstrap/VendorBootstrapCommand.cs`: راز تصادفی از configuration/environment، مقایسهٔ ثابت‌زمان، ورودی مخفی راز/گذرواژه، نمایش URI TOTP فقط در کنسول غیر redirect، ایجاد حساب غیرفعال، enrollment و تأیید TOTP، SQL Server transaction-scoped application lock، بازیابی حساب pending و audit events.
 - `Vendor/Vendor.Host/Program.cs`: اجرای فرمان پیش از پیکربندی/اجرای HTTP host؛ هیچ راز یا گذرواژه‌ای از آرگومان CLI دریافت نمی‌شود.
 - `Vendor/Vendor.Persistence/DependencyInjection.cs`: ثبت `IVendorAuditWriter` و `TimeProvider` برای استفادهٔ عملیاتی.
 - `tests/Vendor.Host.Tests/VendorBootstrapIntegrationTests.cs`: آزمون SQL Server واقعی برای دو تلاش هم‌زمان، فعال‌سازی فقط یک مدیر با MFA و صحت زنجیرهٔ ممیزی؛ تست واحد مقایسهٔ راز.
