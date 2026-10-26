@@ -29,8 +29,7 @@ public static class VendorAuthenticationEndpoints
             HttpContext context,
             IAntiforgery antiforgery,
             UserManager<VendorAdminUser> users,
-            SignInManager<VendorAdminUser> signInManager,
-            CancellationToken cancellationToken) =>
+            SignInManager<VendorAdminUser> signInManager) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context))
             {
