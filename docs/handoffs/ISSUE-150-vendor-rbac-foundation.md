@@ -5,7 +5,7 @@ This change introduces the first slice of Vendor role-based authorization: a ver
 
 ## Architecture
 - Permission IDs are stable server-side identifiers; they are not role names or UI labels.
-- Permissions are assigned to ASP.NET Core Identity roles through claims of type `vendor:permission`.
+- Permissions are assigned to ASP.NET Core Identity roles through claims of type `vendor:permission:v1`.
 - A named policy combines the existing enabled-account/MFA requirement with a specific permission requirement.
 - Unknown permission identifiers fail closed even when a caller constructs a policy name manually.
 - Existing authentication endpoints and customer accounting persistence are unchanged.
