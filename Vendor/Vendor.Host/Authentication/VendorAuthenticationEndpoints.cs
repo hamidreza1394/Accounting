@@ -17,9 +17,15 @@ public static class VendorAuthenticationEndpoints
     public static IEndpointRouteBuilder MapVendorAuthentication(this IEndpointRouteBuilder endpoints)
     {
         var auth = endpoints.MapGroup("/api/auth");
+        auth.AddEndpointFilter(async (context, next) =>
+        {
+            context.HttpContext.Response.Headers["Cache-Control"] = "no-store";
+            return await next(context);
+        });
 
         auth.MapGet("/antiforgery", (HttpContext context, IAntiforgery antiforgery) =>
         {
+            context.Response.Headers["Cache-Control"] = "no-store";
             var tokens = antiforgery.GetAndStoreTokens(context);
             return Results.Ok(new { requestToken = tokens.RequestToken });
         }).AllowAnonymous();
@@ -152,6 +158,7 @@ public static class VendorAuthenticationEndpoints
 
             // A null user intentionally enables discoverable-credential UX and avoids
             // revealing whether a username exists or has a registered passkey.
+            context.Response.Headers["Cache-Control"] = "no-store";
             if (user is not null && (await users.GetPasskeysAsync(user)).Count >= 5)
             {
                 return Results.Conflict(new { error = "The passkey limit for this account has been reached." });
