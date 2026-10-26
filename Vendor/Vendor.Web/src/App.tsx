@@ -8,7 +8,7 @@ type PasskeyRequestOptionsJson = Omit<PublicKeyCredentialRequestOptions, 'challe
 type PasskeyCreationOptionsJson = Omit<PublicKeyCredentialCreationOptions, 'challenge' | 'user' | 'excludeCredentials'> & { challenge: string; user: Omit<PublicKeyCredentialUserEntity, 'id'> & { id: string }; excludeCredentials?: Array<Omit<PublicKeyCredentialDescriptor, 'id'> & { id: string }> };
 type TotpSetup = { sharedKey: string; authenticatorUri: string };
 type ApiError = { error?: string; message?: string };
-async function apiError(response: Response) { try { const body = await response.json() as ApiError; return body.error ?? body.message ?? 'درخواست انجام نشد.'; } catch { return 'ارتباط با سامانه برقرار نشد.'; } }
+async function apiError(response: Response) { if(response.status===401)return 'احراز هویت ناموفق بود یا نشست شما منقضی شده است. دوباره تلاش کنید.';if(response.status===403)return 'برای این عملیات دسترسی کافی ندارید.';if(response.status===429)return 'تعداد تلاش‌ها زیاد است؛ کمی بعد دوباره امتحان کنید.';if(response.status===400)return 'درخواست معتبر نیست؛ اطلاعات را بررسی و دوباره تلاش کنید.';if(response.status===409)return 'این عملیات با وضعیت فعلی حساب سازگار نیست.';try { const body = await response.json() as ApiError; return body.error ?? body.message ?? 'درخواست انجام نشد.'; } catch { return 'ارتباط با سامانه برقرار نشد.'; } }
 
 function decodeBase64Url(value: string): ArrayBuffer {
  const normalized=value.replace(/-/g,'+').replace(/_/g,'/');
