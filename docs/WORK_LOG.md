@@ -482,3 +482,9 @@
 - بازبینی مستقیم `main` نشان داد فایل `20261026045412_VendorAddPasskeySupport.Designer.cs` اصلاً وجود نداشت؛ migration فقط `Up/Down` داشت و `BuildTargetModel` تولیدشده را نداشت. این نقص با شکست runtime `Database.MigrateAsync` و موفقیت بررسی snapshot از CLI سازگار است و علت مستقیم محتمل‌تری از ثبت تکراری Identity است.
 - همین شاخه اکنون designer را از snapshot جاری ساخته، `BuildModel` را به `BuildTargetModel` تبدیل کرده، metadata را در designer متمرکز کرده و تست SQL Server را برای وجود جدول `VendorAdminUserPasskeys` و اعمال هر دو migration تقویت می‌کند. ثبت Identity نیز جداگانه تک‌منبع شده است.
 - تا CI جدید سبز نشود، این علت/اصلاح تأییدشده محسوب نمی‌شود.
+
+
+## 2026-10-26 — Fix Vendor CI compile failure
+- CI run 40286276604 failed at compile time because `IdentityBuilder.AddSignInManager()` is not available to the plain `Microsoft.NET.Sdk` Persistence project with its current references.
+- Follow-up branch `fix/vendor-identity-signin-manager-registration` removes that host-layer extension call from Persistence and registers SignInManager in the ASP.NET Core Host after `AddVendorPersistence`; IdentityCore, roles, EF stores and token providers remain registered once in Persistence.
+- Must be validated by a fresh Vendor CI run; do not merge if compile or runtime migration tests fail.
