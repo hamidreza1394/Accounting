@@ -229,8 +229,14 @@ public static class VendorBootstrapCommand
         }
     }
 
-    private static string NormalizeCode(string? value) =>
-        new((value ?? string.Empty).Where(char.IsAsciiDigit).ToArray());
+    private static string NormalizeCode(string? value)
+    {
+        var normalized = (value ?? string.Empty).Replace(" ", string.Empty, StringComparison.Ordinal)
+            .Replace("-", string.Empty, StringComparison.Ordinal);
+        return normalized.Length == 6 && normalized.All(char.IsAsciiDigit)
+            ? normalized
+            : string.Empty;
+    }
 
     private static async Task AcquireApplicationLockAsync(
         VendorDbContext db,
