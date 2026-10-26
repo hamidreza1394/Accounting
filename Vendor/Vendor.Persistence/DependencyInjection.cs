@@ -1,3 +1,5 @@
+using Faranou.Vendor.Persistence.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,6 +27,18 @@ public static class DependencyInjection
         services.AddDbContext<VendorDbContext>(options =>
             options.UseSqlServer(connectionString, sql =>
                 sql.MigrationsAssembly(typeof(VendorDbContext).Assembly.FullName)));
+
+        // Register the real EF-backed Identity stores without exposing any sign-in,
+        // registration, or bootstrap endpoint at this persistence-only stage.
+        services.AddIdentityCore<VendorAdminUser>(options =>
+            {
+                options.User.RequireUniqueEmail = true;
+                options.Lockout.AllowedForNewUsers = true;
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+            })
+            .AddRoles<IdentityRole<Guid>>()
+            .AddEntityFrameworkStores<VendorDbContext>();
 
         return services;
     }
