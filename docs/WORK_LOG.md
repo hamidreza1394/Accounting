@@ -599,3 +599,10 @@
 - **حفاظت‌های حفظ‌شده:** Anti-forgery، rate limiting و no-store دست‌نخورده‌اند. هیچ دیتابیس یا Migration مشتری تغییر نکرده است.
 - **اعتبارسنجی:** تغییر از طریق GitHub API در commit 9b4ea03e45afc2de1af88293abf3ad998b02e565 ثبت شد. Build/Test محلی اجرا نشد؛ آزمون HTTP رگرسیون و اجرای CI هنوز باقی است. بنابراین این تغییر Implemented / Not Verified است و هنوز آماده ادغام نهایی محسوب نمی‌شود.
 - **Handoff:** docs/handoffs/ISSUE-152-passkey-options-enumeration.md؛ شاخه fix/issue-152-passkey-options-enumeration.
+
+
+## پیگیری Issue #152 — آزمون رگرسیون Passkey (2026-10-26)
+- به tests/Vendor.Host.Tests/VendorAuthenticationSecurityTests.cs آزمونی افزوده شد که endpoint options را با نام‌های کاربری متفاوت فراخوانی می‌کند و بررسی می‌کند فهرست allowCredentials غیرخالی برنگردد؛ هدر no-store نیز کنترل می‌شود.
+- آزمون با الگوی xUnit v3 و WebApplicationFactory موجود در پروژه نوشته شده است؛ پکیج جدید اضافه نشده است.
+- **محدودیت:** آزمون اجرا نشده و هنوز آزمون قوی‌تر با حساب دارای Passkey واقعی/credential ثبت‌شده لازم است. Build و CI تأیید نشده‌اند؛ وضعیت همچنان Implemented / Not Verified است.
+- Commit آزمون: 1a9c0bbcb60c3899af64d07bee6827f7787088d4.
