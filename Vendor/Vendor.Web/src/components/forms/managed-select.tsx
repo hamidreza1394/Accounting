@@ -24,9 +24,9 @@ export type ManagedSelectProps = {
 
 /**
  * Accessible native select for Vendor forms.
- * The first valid option is selected by default unless a valid defaultValue is supplied.
- * Option management is intentionally delegated to a caller with server-derived permission
- * and a real API callback; this component never persists reference data on its own.
+ * Defaults to the first enabled option unless a valid enabled defaultValue is supplied.
+ * Option management is delegated to a caller with server-derived permission and a real API
+ * callback; this component never persists reference data on its own.
  */
 export function ManagedSelect({
   label,
@@ -47,20 +47,30 @@ export function ManagedSelect({
   const id = name ? `vendor-select-${name}` : generatedId;
   const hintId = hint ? `${id}-hint` : undefined;
   const errorId = error ? `${id}-error` : undefined;
-  const firstValue = options.some((option) => option.value === defaultValue)
+  const firstEnabledValue = options.find((option) => !option.disabled)?.value ?? '';
+  const initialValue = options.some(
+    (option) => option.value === defaultValue && !option.disabled,
+  )
     ? defaultValue!
-    : options[0]?.value ?? '';
-  const [internalValue, setInternalValue] = useState(firstValue);
+    : firstEnabledValue;
+  const [internalValue, setInternalValue] = useState(initialValue);
   const selectedValue = value ?? internalValue;
+  const hasSelectedOption = options.some(
+    (option) => option.value === selectedValue && !option.disabled,
+  );
+  const effectiveValue = hasSelectedOption ? selectedValue : firstEnabledValue;
 
   useEffect(() => {
-    if (value === undefined && !options.some((option) => option.value === selectedValue)) {
-      setInternalValue(firstValue);
+    if (value === undefined && !options.some(
+      (option) => option.value === internalValue && !option.disabled,
+    )) {
+      setInternalValue(initialValue);
     }
-  }, [firstValue, options, selectedValue, value]);
+  }, [initialValue, internalValue, options, value]);
 
   const describedBy = [hintId, errorId].filter(Boolean).join(' ') || undefined;
   const canAdd = canManageOptions && typeof onAddOption === 'function';
+  const hasEnabledOptions = firstEnabledValue !== '';
 
   return (
     <div className="grid gap-2 text-start" dir="rtl">
@@ -72,9 +82,9 @@ export function ManagedSelect({
           id={id}
           name={name}
           dir="rtl"
-          value={selectedValue}
+          value={effectiveValue}
           required={required}
-          disabled={disabled || options.length === 0}
+          disabled={disabled || !hasEnabledOptions}
           aria-invalid={Boolean(error)}
           aria-describedby={describedBy}
           onChange={(event) => {
@@ -84,14 +94,14 @@ export function ManagedSelect({
           }}
           className="min-h-11 min-w-0 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {options.length === 0 ? (
-            <option value="">گزینه‌ای موجود نیست</option>
-          ) : (
+          {hasEnabledOptions ? (
             options.map((option) => (
               <option key={option.value} value={option.value} disabled={option.disabled}>
                 {option.label}
               </option>
             ))
+          ) : (
+            <option value="">گزینهٔ فعالی موجود نیست</option>
           )}
         </select>
         {canAdd && (
