@@ -208,6 +208,6 @@
 ## وضعیت Vendor بعد از Issue #103 (2026-10-26)
 - D-047 باید به‌عنوان معماری پذیرفته‌شده خوانده شود؛ یادداشت تاریخی «پس از تأیید مالک» در بخش‌های قدیمی این فایل به‌روز نشده و دیگر وضعیت جاری نیست.
 - شاخهٔ security/issue-103-vendor-auth-mfa-v2 شامل APIهای Identity password→TOTP/passkey، Cookie session، antiforgery، rate limiting و fallback policy فعال/MFA است؛ هنوز در main نیست و CI/بازبینی migration باید موفق شود.
-- migration passkey فعلاً در CI تولید می‌شود؛ پیش از merge باید به مخزن commit شود و scaffolding موقت حذف گردد.
+- Migration ثبت‌شدهٔ `20261026045412_VendorAddPasskeySupport` و snapshot به شاخه افزوده شدند؛ workflow دیگر scaffolding موقت ندارد. CI جدید باید نبود drift مدل و اجرای migration را تأیید کند.
 - باقی‌مانده‌های اصلی: bootstrap امن نخستین مدیر، اتصال/تکمیل audit chain و checkpoint مستقل، RBAC و maker-checker، مدل مشتری/قرارداد/لایسنس، KMS/HSM، UI پنل و deployment واقعی.
 - هیچ schema/migration دیتابیس مشتری تغییر نکرده است.
