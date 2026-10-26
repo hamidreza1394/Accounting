@@ -171,7 +171,7 @@ public sealed class VendorAuthenticationSecurityTests
             // Antiforgery request tokens are bound to the current claims identity. The TOTP
             // challenge cookie changes that identity, so refresh the token under the challenge.
             var (totpToken, totpAntiforgeryCookie) =
-                await GetAntiforgeryTokenAndCookieAsync(client, cancellationToken, twoFactorCookie);
+                await GetAntiforgeryTokenAndCookieAsync(client, cancellationToken, $"{antiforgeryCookie}; {twoFactorCookie}");
             using var totpResponse = await PostWithTokenAsync(
                 client,
                 "/api/auth/totp/verify",
@@ -192,7 +192,7 @@ public sealed class VendorAuthenticationSecurityTests
             // The application cookie establishes a new claims identity after TOTP; use a
             // request token minted for that authenticated identity for subsequent mutations.
             var (authenticatedToken, authenticatedAntiforgeryCookie) =
-                await GetAntiforgeryTokenAndCookieAsync(client, cancellationToken, applicationCookie);
+                await GetAntiforgeryTokenAndCookieAsync(client, cancellationToken, $"{antiforgeryCookie}; {applicationCookie}");
             var authenticatedCookieHeader = $"{authenticatedAntiforgeryCookie}; {applicationCookie}";
             using var creationOptionsResponse = await PostWithTokenAsync(
                 client,
@@ -385,10 +385,20 @@ public sealed class VendorAuthenticationSecurityTests
         var token = document.RootElement.GetProperty("requestToken").GetString();
         Assert.False(string.IsNullOrWhiteSpace(token));
 
-        var cookie = response.Headers.GetValues("Set-Cookie")
-            .Select(value => value.Split(';', 2)[0])
-            .Single(value => value.StartsWith("__Host-Faranou.Vendor.AntiForgery=", StringComparison.Ordinal));
-        return (token!, cookie);
+        // The antiforgery cookie may already be present in the client's cookie jar. In that
+        // case ASP.NET Core can issue a fresh request token without emitting another Set-Cookie.
+        var responseCookie = response.Headers.TryGetValues("Set-Cookie", out var responseCookies)
+            ? responseCookies
+                .Select(value => value.Split(';', 2)[0])
+                .SingleOrDefault(value => value.StartsWith("__Host-Faranou.Vendor.AntiForgery=", StringComparison.Ordinal))
+            : null;
+        var requestCookie = string.IsNullOrWhiteSpace(cookieHeader)
+            ? null
+            : cookieHeader.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                .SingleOrDefault(value => value.StartsWith("__Host-Faranou.Vendor.AntiForgery=", StringComparison.Ordinal));
+        var cookie = responseCookie ?? requestCookie;
+        Assert.False(string.IsNullOrWhiteSpace(cookie), "The antiforgery endpoint must provide or reuse its antiforgery cookie.");
+        return (token!, cookie!);
     }
 
     private static async Task<string> GetAntiforgeryTokenAsync(HttpClient client, CancellationToken cancellationToken)
