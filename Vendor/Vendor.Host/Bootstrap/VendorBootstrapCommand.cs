@@ -53,6 +53,7 @@ public static class VendorBootstrapCommand
         var expectedSecret = configuration["Bootstrap:Secret"];
         if (string.IsNullOrWhiteSpace(expectedSecret) || Encoding.UTF8.GetByteCount(expectedSecret) < 32)
         {
+            await TryAuditFailureAsync(services, "vendor.bootstrap.secret-missing", cancellationToken);
             prompt.WriteLine("راه‌اندازی امن متوقف شد: متغیر FARANO_VENDOR_Bootstrap__Secret باید حداقل ۳۲ بایت راز تصادفی داشته باشد.");
             return 2;
         }
@@ -60,6 +61,7 @@ public static class VendorBootstrapCommand
         var suppliedSecret = prompt.ReadLine("راز یک‌بارهٔ bootstrap را وارد کنید: ");
         if (!MatchesSecret(expectedSecret, suppliedSecret))
         {
+            await TryAuditFailureAsync(services, "vendor.bootstrap.secret-rejected", cancellationToken);
             prompt.WriteLine("راز bootstrap معتبر نیست. هیچ حسابی ایجاد یا فعال نشد.");
             return 3;
         }
@@ -74,6 +76,7 @@ public static class VendorBootstrapCommand
             string.IsNullOrEmpty(password) || password.Length > 1024 ||
             !string.Equals(password, passwordConfirmation, StringComparison.Ordinal))
         {
+            await TryAuditFailureAsync(services, "vendor.bootstrap.input-rejected", cancellationToken);
             prompt.WriteLine("ورودی مدیر معتبر نیست یا دو گذرواژه یکسان نیستند. هیچ حسابی فعال نشد.");
             return 4;
         }
@@ -119,6 +122,9 @@ public static class VendorBootstrapCommand
                     var createResult = await users.CreateAsync(user, password);
                     if (!createResult.Succeeded)
                     {
+                        await audit.AppendAsync(new VendorAuditWriteRequest(
+                            null, "vendor.bootstrap.account-create-rejected"), cancellationToken);
+                        await transaction.CommitAsync(cancellationToken);
                         prompt.WriteLine("ساخت حساب موقت انجام نشد. سیاست گذرواژه و یکتایی ایمیل را بررسی کنید؛ جزئیات محرمانه نمایش داده نمی‌شود.");
                         return 6;
                     }
@@ -134,6 +140,9 @@ public static class VendorBootstrapCommand
                 }
                 else
                 {
+                    await audit.AppendAsync(new VendorAuditWriteRequest(
+                        null, "vendor.bootstrap.rejected"), cancellationToken);
+                    await transaction.CommitAsync(cancellationToken);
                     prompt.WriteLine("Bootstrap قبلاً شروع شده یا مدیر دیگری وجود دارد؛ عملیات جدید رد شد.");
                     return 7;
                 }
@@ -154,6 +163,9 @@ public static class VendorBootstrapCommand
                 user.IsEnabled || user.TwoFactorEnabled ||
                 !await users.CheckPasswordAsync(user, password))
             {
+                await audit.AppendAsync(new VendorAuditWriteRequest(
+                    null, "vendor.bootstrap.rejected"), cancellationToken);
+                await enrollmentTransaction.CommitAsync(cancellationToken);
                 prompt.WriteLine("وضعیت حساب موقت تغییر کرده است؛ bootstrap به‌صورت امن متوقف شد.");
                 return 8;
             }
@@ -226,6 +238,26 @@ public static class VendorBootstrapCommand
                 exception.GetType().Name);
             prompt.WriteLine("Bootstrap ناموفق بود؛ جزئیات حساس ثبت یا نمایش داده نشدند. حساب موقت، در صورت وجود، باید غیرفعال بماند.");
             return 11;
+        }
+    }
+
+    private static async Task TryAuditFailureAsync(
+        IServiceProvider services,
+        string actionCode,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var scope = services.CreateAsyncScope();
+            var audit = scope.ServiceProvider.GetRequiredService<IVendorAuditWriter>();
+            await audit.AppendAsync(new VendorAuditWriteRequest(null, actionCode), cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            var logger = services.GetService<ILoggerFactory>()?.CreateLogger("VendorBootstrapCommand");
+            logger?.LogWarning(
+                "Could not persist Vendor bootstrap failure audit event. Exception type: {ExceptionType}; details omitted.",
+                exception.GetType().Name);
         }
     }
 
