@@ -204,3 +204,8 @@
 - **یافته‌های ممیزی مجدد:** AUD-2026-10-24-01..09 در `docs/REPOSITORY_AUDIT.md`؛ مهم‌ترین‌ها: نبود مسیر ساخت اولین شرکت/مدیر (01)، نبود گارد جداسازی بستهٔ مشتری و اسکن اسرار (06)، ممیزی قابل‌ویرایش (04)، ریسک حفاظت کلید در Linux (02).
 - **اصلاح انحراف مستندات (D-030):** D-031/D-036 در `main` موجودند (یادداشت در `DECISIONS.md`)؛ شمارهٔ ADR بعدی در `AGENTS.md`/`CLAUDE.md` اصلاح شد (D-045).
 - **گام بعدی (پس از تأیید مالک):** مرحلهٔ L1 در `docs/ROADMAP.md` فاز 8؛ پیش‌شرط: پاسخ OD-01، OD-02، OD-12.
+
+## Vendor authentication API — Issue #103 (branch-only, 2026-10-26)
+- On branch security/issue-103-vendor-auth-mfa: Identity-backed password→TOTP and passkey authentication endpoints, secure host-only cookies, anti-forgery, IP rate limits, and active-admin/MFA fallback authorization have been added.
+- The branch also adds integration coverage for SQL Server, MFA challenge isolation, TOTP success/logout, passkey creation requirements, and no public registration. Passkey schema migration is still temporarily scaffolded in CI and must be committed from reviewed output before merge.
+- Not in main until merged. CI must pass; local build was not available in the agent environment.
