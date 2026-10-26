@@ -390,22 +390,15 @@
 - **امنیت/باقی‌مانده:** کلاس `VendorAuditEvent` فقط مدل زنجیرهٔ هش است؛ سرویس append-only، اعتبارسنجی زنجیره و checkpoint مستقل هنوز لازم است. ورود/MFA/RBAC و bootstrap هنوز فعال/قابل دسترس نیستند.
 - **گزارش تحویل:** `docs/handoffs/ISSUE-100-vendor-persistence-identity-audit.md`.
 
+## 2026-10-26 — Issue #103: API احراز هویت Vendor با MFA
+- شاخهٔ security/issue-103-vendor-auth-mfa-v2 از main فعلی ساخته شد تا conflict با PRهای هم‌زمان رفع شود؛ کد persistence/MFA schema موجود حفظ شد.
+- APIهای password→TOTP، passkey options/assertion/enrollment، TOTP setup/confirm، me/logout و anti-forgery token اضافه شدند. نشست‌های محافظت‌شده نیازمند مدیر فعال و claim amr منطبق با TOTP یا passkey ثبت‌شده‌اند.
+- Passkey با PerformPasskeyAssertionAsync بررسی می‌شود؛ قبل از صدور cookie، فعال‌بودن مدیر کنترل و شمارندهٔ passkey ذخیره می‌شود. User verification و resident key اجباری‌اند.
+- Cookieهای host-only امن، ضدجعل، rate limiting جدا برای credential attempts، Data Protection persistent و تنظیمات production host/passkey domain افزوده شدند.
+- Integration tests شامل رد password-only/disabled account، challenge موقت TOTP بدون application cookie، تکمیل TOTP، passkey creation options، logout، rate limit، anti-forgery و نبود public registration هستند.
+- CI run `40271317565` Migration `20261026045412_VendorAddPasskeySupport` را با EF Core 10.0.13 تولید کرد؛ فایل migration از artifact بازبینی و در شاخه commit شد. Snapshot نیز به‌روزرسانی شد و گام scaffolding/آپلود موقت از workflow حذف شد. CI بعدی باید `has-pending-model-changes` و اجرای Migration ثبت‌شده را تأیید کند.
+- Build/Test محلی اجرا نشده‌اند؛ CI واقعی باید سبز باشد. دیتابیس مشتری و Migrationهای مشتری تغییر نکرده‌اند.
 
-## 2026-10-25 — پایدارسازی نصب SDK در CI (Issue #108)
-- **شاهد:** .NET CI run `40224122273` در PR #106 قبل از Restore/Build/Test در `actions/setup-dotnet@v6` شکست خورد؛ دانلود SDK `10.0.403` و Runtime `10.0.14` از `dotnetorigin.blob.core.windows.net` با HTTP 409 انجام نشد. همان اجرای Vendor با SDK `10.0.402` توانست Restore/Build/Test را اجرا کند.
-- **تغییر:** چهار اعلان SDK در `.github/workflows/dotnet.yml` از wildcard `10.0.x` به نسخهٔ دقیق `10.0.402` پین شدند تا build فعلاً از یک SDK قابل‌دریافت و قبلاً آزموده‌شده استفاده کند؛ `global.json`، NuGet package versions و کد runtime تغییر نکردند.
-- **سیاست ارتقا:** پس از تأیید دسترس‌پذیری SDK patch جدید، نسخه در یک Issue/PR مشخص ارتقا یافته و کل .NET CI روی SQL Server واقعی دوباره اجرا شود؛ پین دائمی و بدون بازبینی نیست.
-- **اعتبارسنجی:** Build/Test این PR هنوز اجرا نشده؛ CI باید نشان دهد Setup .NET، Restore، Build/Test و migration guards عبور می‌کنند. خطای اولیه از نصب SDK بود، نه شکست تست کد.
-- **گزارش تحویل:** `docs/handoffs/ISSUE-108-pin-dotnet-sdk.md`.
-## 2026-10-25 — L2.4 زنجیرهٔ ممیزی Vendor (Issue #105)
-- **مبنای معماری:** D-047 ممیزی قابل‌کشف می‌خواهد و تصریح می‌کند hash-chain داخل همان DB به‌تنهایی در برابر DBA کافی نیست. جدول `VendorAuditEvents` در PRهای #101/#102 موجود است؛ این مرحله بدون تغییر مدل/مهاجرت اجرا می‌شود.
-- **پیاده‌سازی در شاخه:** `IVendorAuditWriter`, `VendorAuditWriter`, `VendorAuditChainVerifier` برای append تراکنشی SQL Server، hash نسخه‌دار SHA-256، شناسه‌های opaque و verification زنجیره افزوده شدند. قفل `sp_getapplock` با مالکیت تراکنش جلوی شاخه‌شدن ناشی از چند نمونه را می‌گیرد.
-- **تست‌ها:** تست Integration روی SQL Server 2022 با ۱۶ نویسندهٔ هم‌زمان، verification و دستکاری محتوای رخداد؛ تست‌های واحد برای رد metadata آزاد و شناسهٔ شبه-PII.
-- **محدوده:** Host wiring و endpoint ایجاد نشده‌اند تا با PR #104 (ورود/MFA و schema Passkey) تداخل رخ ندهد. هیچ Schema/Migration، `Template.sln` یا دیتابیس مشتری تغییر نکرده است.
-- **اعتبارسنجی:** Build/Test محلی اجرا نشده‌اند؛ CI روی HEAD نهایی این PR باید اجرا شود. تا نتیجهٔ واقعی، status `NotVerified` است.
-- **باقی‌مانده:** SQL permissions append-only، checkpoint/export مستقل، پایش/alerting، سیاست retention و اتصال سرویس به Host پس از MFA/bootstrap باقی‌اند.
-- **تحویل:** `docs/handoffs/ISSUE-105-vendor-audit-chain.md`.
+- **اصلاح CI در Issue #103:** `AddHealthChecks()` به Host بازگردانده شد؛ run `40271317565` تست‌ها را به‌دلیل نبود این registration شکست داد، نه به‌دلیل migration. این خطا اصلاح شده و CI مجدد لازم است.
 
-- **CI finding:** run `40223605922` failed before Build/Test in `actions/setup-dotnet@v6` while fetching SDK `10.0.403` / runtime `10.0.14` from `dotnetorigin.blob.core.windows.net` (HTTP 409), not in project code. Vendor CI was pinned to SDK `10.0.402`, the last successfully provisioned SDK on this repository workflow, to make the rerun deterministic; verify future servicing updates separately. Build/Test from the earlier run had succeeded but the final publish step had not completed. A new run on the pinned version is required.
-
-- **یافتهٔ CI بعد از pin:** در اجرای `40223833470` نصب SDK دیگر مانع اصلی نبود؛ Build تست به‌علت یک فراخوانی باقی‌ماندهٔ instance به متد `VendorAuditChainVerifier.Verify` (پس از تبدیل به static) شکست خورد (`CS0176`). تمام فراخوانی‌های unit/integration به static API تغییر داده شدند و `VerifyAsync` نیز به‌دلیل نداشتن state استاتیک شد؛ CI روی HEAD جدید هنوز لازم است.
+- **پیگیری CI run `40271756059`:** Build سبز شد، ولی مرحلهٔ `has-pending-model-changes` ابتدا به‌دلیل نبود ابزار `dotnet-ef` شکست خورد؛ گام نصب ابزار به workflow اضافه شد. اجرای تست بعدی شکاف‌های واقعی را نشان داد: متغیرهای SQL integration با املای ناسازگار باعث Skip شدن تست auth شد و fallback authorization مسیرهای ناشناخته را به 401 تبدیل می‌کرد. متغیرها یکدست، provisioning دیتابیس‌های تصادفی روی `master` اضافه و fallback صریح 404 شد. CI جدید روی HEAD باید همهٔ این اصلاحات را تأیید کند.
