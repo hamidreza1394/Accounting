@@ -637,3 +637,5 @@
 - **مستندات:** `Vendor/README.md`, `docs/SECURITY.md`, این handoff و `docs/WORK_LOG.md` به‌روز می‌شوند.
 
 - **تکمیل API نقش‌ها:** افزوده شد endpoint خواندن کاتالوگ مجوز نسخه‌دار و لغو تخصیص نقش سفارشی؛ لغو یا تخصیص نقش `Vendor.SuperAdmin` از مسیر API ممنوع است. endpointهای جدید نیز زیر سیاست `administrators.manage` قرار دارند.
+
+- **بازبینی امنیتی CSRF:** چهار endpoint تغییردهندهٔ مدیریت نقش/مجوز اکنون پیش از هر اثر جانبی `IAntiforgery.IsRequestValidAsync` را بررسی می‌کنند؛ از اتکا به `UseAntiforgery` بدون بررسی صریح در endpointهای JSON اجتناب شد.
