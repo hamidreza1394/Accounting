@@ -167,6 +167,21 @@ describe('Vendor control plane shell', () => {
     expect(screen.queryByRole('button', { name: 'ویرایش قرارداد CTR-ACTIVE' })).not.toBeInTheDocument();
   });
 
+  it('shows license edit only for Draft records when the manager permission is present', async () => {
+    const licensePage = {
+      items: [
+        { id: 'license-draft', customerId: 'customer-1', contractId: null, installationId: null, rowVersion: 'AQIDBAUGBwg=', licenseNumber: 'LIC-DRAFT', productCode: 'FARANOU-BASE', status: 'Draft', validFromUtc: '2026-10-27T00:00:00Z', validUntilUtc: null, createdAtUtc: '2026-10-27T08:00:00Z' },
+        { id: 'license-active', customerId: 'customer-1', contractId: null, installationId: null, rowVersion: 'AQIDBAUGBwg=', licenseNumber: 'LIC-ACTIVE', productCode: 'FARANOU-BASE', status: 'Active', validFromUtc: '2026-10-27T00:00:00Z', validUntilUtc: null, createdAtUtc: '2026-10-27T08:00:00Z' },
+      ],
+      page: 1, pageSize: 25, totalCount: 2, totalPages: 1, hasPreviousPage: false, hasNextPage: false,
+    };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(licensePage)));
+    render(<BusinessLists section="licenses" permissions={['vendor.licenses.manage', 'vendor.customers.read']} />);
+    expect(await screen.findByRole('button', { name: 'ثبت لایسنس' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'ویرایش لایسنس LIC-DRAFT' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'ویرایش لایسنس LIC-ACTIVE' })).not.toBeInTheDocument();
+  });
+
   it('shows a permission-specific message when a business list returns 403', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
