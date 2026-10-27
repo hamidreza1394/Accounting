@@ -1,3 +1,34 @@
+# وضعیت جاری تأییدشده Vendor — 2026-10-27 (PR #196)
+
+این بخش، وضعیت جاری مبتنی بر کد و CI است؛ بخش‌های قدیمی‌تر این سند سابقهٔ تاریخی‌اند و نباید به‌عنوان وضعیت امروز خوانده شوند.
+
+## قابلیت‌های تأییدشده در main
+- **CRUD تجاری:** فرم‌های ثبت/ویرایش مشتری و نصب، ثبت/ویرایش قراردادهای Draft و ثبت/ویرایش metadata لایسنس‌های Draft به API واقعی Vendor متصل‌اند. ویرایش قرارداد/لایسنس پس از خروج از Draft در UI پنهان و در API رد می‌شود.
+- **کنترل‌های نوشتن:** مجوزدهی سمت سرور و resource authorization، antiforgery token تازه برای mutation، allow-list ورودی و RowVersion برای ویرایش؛ خطاهای تعارض و ورودی نامعتبر با پاسخ‌های مشخص مدیریت می‌شوند.
+- **روابط تجاری:** فهرست‌های قرارداد/نصب/لایسنس امکان فیلتر server-side بر اساس `customerId` دارند. ایجاد/ویرایش لایسنس در API بررسی می‌کند قرارداد و نصب انتخاب‌شده متعلق به همان مشتری باشند؛ این قاعده فقط به UI واگذار نشده است.
+- **Audit:** رخدادهای mutation در تراکنش داده نوشته می‌شوند؛ تست SQL Server rollback در صورت شکست audit و تست‌های HTTP احراز هویت/تغییر وضعیت در CI وجود دارند.
+- **رابط:** Vendor UI مستقل React + TypeScript strict + Vite + Tailwind/shadcn، فارسی RTL و assetهای محلی است. `ManagedSelect` گزینهٔ خالی معتبر مانند «بدون قرارداد» را در کنار گزینه‌های فعال پشتیبانی می‌کند.
+- **لایسنس:** فرم فعلی فقط metadata را ثبت/ویرایش می‌کند؛ این به معنی صدور لایسنس امضاشده، activation آفلاین یا اجرای سیاست لایسنس در برنامه مشتری نیست.
+
+## شواهد CI
+- PR #196 با merge commit `45e843ebe639b0013e9b0bc9d28106eb435e4742` ادغام شد.
+- Vendor CI روی head نهایی PR: [40550673063](https://github.com/hamidreza1394/Accounting/actions/runs/40550673063) — موفق؛ شامل تست‌های UI و SQL Server integration، build و publish مستقل Vendor.
+- .NET CI روی head نهایی PR: [40550672932](https://github.com/hamidreza1394/Accounting/actions/runs/40550672932) — موفق؛ شامل build/test، گاردهای Migration، E2E، انتشار Linux/Windows و secret scan.
+- شواهد بالا تأیید محدودهٔ تست‌شده‌اند و جایگزین آزمون نفوذ، عملیات Production یا بارسنجی نیستند.
+
+## شکاف‌های باقی‌مانده پیش از Production
+- فرایند bootstrap/recovery مدیر اول باید از نظر یک‌بارمصرف بودن، کنترل دسترسی و بازیابی امن به‌صورت عملیاتی بازبینی و تأیید شود.
+- RBAC ریزدانه و جداسازی وظایف برای عملیات حساس باید از نظر کامل بودن ماتریس مجوزها و تست‌های منفی نهایی شود.
+- maker-checker/تأیید دو نفره برای تغییرات حساس هنوز تکمیل نشده است.
+- checkpoint/export مستقل Audit با مجوز جدا از DBA و برنامهٔ اعتبارسنجی/نگهداری دوره‌ای لازم است؛ زنجیرهٔ hash در همان دیتابیس به‌تنهایی در برابر DBA دارای اختیار بازنویسی کافی نیست.
+- صدور امضاشده با کلید خارج از برنامه (KMS/HSM یا سرویس امضای تأییدشده)، activation آفلاین و چرخهٔ وضعیت لایسنس پیاده‌سازی و آزمون نشده‌اند.
+- تست مرورگر/عملیات روی محیط واقعی، backup/restore، بازیابی حادثه و ارزیابی ظرفیت/امنیت Production هنوز باید جداگانه انجام شوند.
+- ایجاد شرکت حسابداری، دیتابیس یا اعتبارنامهٔ مشتری از پنل Vendor عمداً انجام نمی‌شود؛ provisioning مشتری نیازمند معماری مستقل و تأییدشده است.
+
+**نتیجه:** CRUD و UI metadata تجاری در محدودهٔ PRهای ادغام‌شده Verified هستند؛ سامانهٔ Vendor هنوز Production-ready اعلام نمی‌شود تا شکاف‌های امنیتی/عملیاتی بالا بسته و تأیید شوند.
+
+---
+
 ## Vendor follow-up — Identity SchemaVersion 3 and migration drift (2026-10-26, PR #138)
 
 - **Confirmed root cause:** the SQL Server integration diagnostic compared the runtime design-time model with the migration snapshot and reported five Identity column changes plus a missing passkey UserId index/foreign key. The affected columns are VendorAdminUserTokens.Name, VendorAdminUserTokens.LoginProvider, VendorAdminUsers.PhoneNumber, and both key columns in VendorAdminUserLogins.
