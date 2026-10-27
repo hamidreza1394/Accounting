@@ -622,3 +622,16 @@
 - **CI و اصلاح مبتنی بر شواهد:** Vendor CI run [40451859716](https://github.com/hamidreza1394/Accounting/actions/runs/40451859716) در آزمون HTTP شکست خورد: انتظار `BadRequest` اما `TooManyRequests` دریافت شد، چون تست چند تلاش ورود و سپس تلاش تغییر رمز را با یک policy مشترک پنج‌در-دقیقه اجرا می‌کرد. Build، typecheck، UI tests، audit وابستگی‌ها و Vite build موفق بودند. برای جلوگیری از coupling غیرضروری، policy مستقل `vendor-password-change` با همان حد ۵ تلاش در دقیقه افزوده شد. این اصلاح هنوز باید با Vendor CI جدید تأیید شود.
 
 - **بازبینی تکمیلی ممیزی:** audit writer فقط correlation ID به‌شکل GUID یا W3C trace ID می‌پذیرد؛ `HttpContext.TraceIdentifier` این قالب را تضمین نمی‌کند. endpoint اصلاح شد تا از `Activity.Current.TraceId` یا GUID استفاده کند. همچنین تغییر هش، پاک‌کردن `MustChangePassword` و append زنجیرهٔ ممیزی اکنون در یک تراکنش SQL Server مشترک هستند؛ شکست ممیزی باید تغییر گذرواژه را rollback کند. CI جدید باید این مسیر را تأیید کند.
+
+
+## 2026-10-27 — Issue #161: مدیریت نقش Vendor و زیرساخت مجوزدهی منبع‌محور
+- **وضعیت مبنا:** PR #160 با commit ادغام `c4cc59bd93545e5b0e28f5cc35d76d97f731cccd` ادغام شده است؛ Vendor CI run `40452250226` و .NET CI run `40452250285` روی SHA پیش از ادغام موفق شدند.
+- **مدیریت نقش:** شاخه `feat/vendor-rbac-management-resource-authorization` APIهای فهرست/خواندن/ایجاد نقش، به‌روزرسانی مجموعهٔ مجوز و تخصیص نقش به مدیر موجود را اضافه می‌کند. همهٔ مسیرهای مدیریتی نیازمند `vendor.administrators.manage` و گارد MFA هستند.
+- **عدم ارتقای امتیاز:** نقش `Vendor.SuperAdmin` تغییرناپذیر است؛ API عادی نمی‌تواند این نقش یا مجوز `vendor.administrators.manage` را اعطا کند. bootstrap تعاملی یک‌باره، نقش SuperAdmin و مجوزهای نسخه‌دار را در تراکنش فعال‌سازی حساب ایجاد/تأیید و به مدیر اولیه تخصیص می‌دهد.
+- **ممیزی تراکنشی:** ساخت نقش، تغییر مجوزها، تخصیص نقش و تخصیص SuperAdmin رویداد ممیزی دارند. تغییرات مدیریتی با append ممیزی در یک تراکنش Vendor SQL Server انجام می‌شوند.
+- **گارد منبع‌محور:** `VendorResourcePermissionAuthorizationHandler` مجوز عمومی را با بررسی resource-specific ترکیب می‌کند؛ کاتالوگ فقط customer/installation/contract/license و عملیات متناظر را می‌پذیرد. adapter پیش‌فرض `DenyAllVendorResourceAccessEvaluator` است تا فقدان پیاده‌سازی منبع، مجوز ایجاد نکند.
+- **محدودیت دامنه:** هنوز entity/API واقعی مشتری، نصب، قرارداد و لایسنس در Vendor وجود ندارد. بنابراین IDOR برای رکوردهای واقعی حل‌شده تلقی نمی‌شود؛ adapter واقعی و آزمون cross-resource باید با مدل دامنه در مرحلهٔ تجاری اضافه شود.
+- **تست‌های افزوده:** آزمون عضویت و مجموعهٔ مجوزهای SuperAdmin پس از bootstrap، کاتالوگ منابع، deny-by-default، و الزام سیاست administrators.manage برای تمام endpointهای مدیریتی.
+- **اعتبارسنجی:** کد در GitHub ثبت شده است؛ Build/Test محلی اجرا نشده. Vendor CI و .NET CI روی آخرین SHA این شاخه باید موفق شوند؛ تا آن زمان وضعیت `Implemented / Not Verified` است.
+- **داده:** هیچ Migration دیتابیس Vendor یا مشتری اضافه نشده و هیچ دیتابیس مشتری تغییر نکرده است.
+- **مستندات:** `Vendor/README.md`, `docs/SECURITY.md`, این handoff و `docs/WORK_LOG.md` به‌روز می‌شوند.
