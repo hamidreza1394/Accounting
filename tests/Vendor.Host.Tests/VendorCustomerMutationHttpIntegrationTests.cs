@@ -680,6 +680,61 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
             using var createdJson = JsonDocument.Parse(await createdResponse.Content.ReadAsStringAsync(cancellationToken));
             var createdCustomerId = createdJson.RootElement.GetProperty("id").GetGuid();
 
+            // A distinct MFA-authenticated administrator can approve both requests.
+            using var reviewerClient = factory.CreateClient(new WebApplicationFactoryClientOptions
+            {
+                BaseAddress = new Uri("https://localhost"),
+                HandleCookies = true
+            });
+            var (reviewerAntiForgeryToken, _) = await GetAntiforgeryTokenAsync(reviewerClient, cancellationToken);
+            using (var passwordResponse = await PostWithTokenAsync(reviewerClient, "/api/auth/password",
+                new { userName = reviewerUserName, password = "Strong-Vendor#2026-Reviewer" },
+                reviewerAntiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, passwordResponse.StatusCode);
+                using var passwordJson = JsonDocument.Parse(await passwordResponse.Content.ReadAsStringAsync(cancellationToken));
+                Assert.True(passwordJson.RootElement.GetProperty("requiresSecondFactor").GetBoolean());
+            }
+
+            using (var verifyResponse = await PostWithTokenAsync(reviewerClient, "/api/auth/totp/verify",
+                new { code = GenerateTotpCode(reviewerAuthenticatorKey) },
+                reviewerAntiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, verifyResponse.StatusCode);
+            }
+            (reviewerAntiForgeryToken, _) = await GetAntiforgeryTokenAsync(reviewerClient, cancellationToken);
+
+            foreach (var approval in new[]
+            {
+                (Id: customerApprovalId, RowVersion: customerApprovalRowVersion),
+                (Id: installationApprovalId, RowVersion: installationApprovalRowVersion)
+            })
+            {
+                using var response = await PostWithTokenAsync(reviewerClient,
+                    $"/api/vendor/approvals/{approval.Id:D}/decision",
+                    new { decision = "Approved", rowVersion = approval.RowVersion, comment = "Reviewed by a distinct administrator" },
+                    reviewerAntiForgeryToken, cancellationToken);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("Approved", json.RootElement.GetProperty("status").GetString());
+                Assert.NotEqual(Guid.Empty, json.RootElement.GetProperty("reviewedByUserId").GetGuid());
+            }
+
+            await using (var approvalVerificationScope = factory.Services.CreateAsyncScope())
+            {
+                var db = approvalVerificationScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var customer = await db.Customers.AsNoTracking().SingleAsync(item => item.Id == customerId, cancellationToken);
+                var installation = await db.Installations.AsNoTracking().SingleAsync(item => item.Id == installationId, cancellationToken);
+                Assert.Equal("Suspended", customer.Status);
+                Assert.Equal("Suspended", installation.Status);
+                Assert.Equal(2, await db.ApprovalRequests.CountAsync(item => item.Status == "Approved", cancellationToken));
+                Assert.Equal(2, await db.AuditEvents.CountAsync(item =>
+                    item.ActionCode == "vendor.approval.approved", cancellationToken));
+                Assert.Equal(2, await db.AuditEvents.CountAsync(item =>
+                    item.ActionCode == "vendor.customer.status-changed" || item.ActionCode == "vendor.installation.status-changed",
+                    cancellationToken));
+            }
+
             await using (var raceVerificationScope = factory.Services.CreateAsyncScope())
             {
                 var db = raceVerificationScope.ServiceProvider.GetRequiredService<VendorDbContext>();
