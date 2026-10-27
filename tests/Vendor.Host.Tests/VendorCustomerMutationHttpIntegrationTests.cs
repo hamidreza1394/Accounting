@@ -146,6 +146,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
             var updateBody = new
             {
                 rowVersion = Convert.ToBase64String(initialRowVersion),
+                customerNumber = "IT-" + customerId.ToString("N")[..20],
                 legalName = "Integration Test Customer",
                 displayName = "After Update"
             };
@@ -174,6 +175,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Content = JsonContent.Create(new
                 {
                     rowVersion = "not-base64",
+                    customerNumber = "IT-" + customerId.ToString("N")[..20],
                     legalName = "Integration Test Customer",
                     displayName = "Must Not Persist"
                 })
@@ -220,7 +222,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
         }
         finally
         {
-            await DropDatabaseAsync(baseConnection, databaseName, cancellationToken);
+            await DropDatabaseAsync(baseConnection, databaseName, CancellationToken.None);
         }
     }
 
