@@ -177,7 +177,7 @@ describe('Vendor control plane shell', () => {
     };
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(licensePage)));
     render(<BusinessLists section="licenses" permissions={['vendor.licenses.manage', 'vendor.customers.read']} />);
-    expect(await screen.findByRole('button', { name: 'ثبت لایسنس' })).toBeDisabled();
+    expect(await screen.findByRole('button', { name: 'ثبت لایسنس' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'ویرایش لایسنس LIC-DRAFT' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'ویرایش لایسنس LIC-ACTIVE' })).not.toBeInTheDocument();
   });
