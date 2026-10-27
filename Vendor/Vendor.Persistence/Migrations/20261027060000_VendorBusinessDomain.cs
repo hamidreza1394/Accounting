@@ -1,12 +1,9 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Faranou.Vendor.Persistence.Migrations;
 
-[DbContext(typeof(VendorDbContext))]
-[Migration("20261027060000_VendorBusinessDomain")]
-public sealed class VendorBusinessDomain : Migration
+public sealed partial class VendorBusinessDomain : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
