@@ -234,3 +234,11 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - پیاده‌سازی در شاخه اصلاحی برای تمام درخواست‌ها از MakePasskeyRequestOptionsAsync(user: null) استفاده می‌کند؛ این روش برای discoverable credentials/ورود بدون نام کاربری مستند شده است.
 - وضعیت: Implemented / Not Verified تا زمانی که آزمون HTTP رگرسیون و CI کامل سبز شوند. Anti-forgery، rate limiting و Cache-Control: no-store باید حفظ شوند.
 - مرجع: https://learn.microsoft.com/en-us/aspnet/core/security/authentication/passkeys?view=aspnetcore-10.0
+
+
+## اجبار تغییر گذرواژهٔ اولیه در Vendor — Issue #159
+- حساب‌های bootstrap با `MustChangePassword=true` باید پیش از استفاده از APIهای مدیریتی گذرواژه را تغییر دهند؛ گارد در pipeline سمت سرور اعمال می‌شود، نه فقط در رابط کاربری.
+- مسیرهای مجاز در این حالت محدود به دریافت anti-forgery، مشاهدهٔ وضعیت نشست، تغییر گذرواژه و خروج‌اند. تغییر گذرواژه از `UserManager.ChangePasswordAsync` و سیاست فعلی Identity استفاده می‌کند.
+- endpoint تغییر رمز anti-forgery، بررسی رمز فعلی، اعتبارسنجی سیاست گذرواژه و محدودیت تلاش دارد؛ خطاها جزئیات حساس را افشا نمی‌کنند. رویداد `admin.password.changed` فقط شناسه‌ها و correlation ID را ثبت می‌کند، نه گذرواژه یا هش آن.
+- آزمون‌های HTTP با SQL Server و رابط کاربری افزوده شده‌اند؛ وضعیت تا عبور Vendor CI/.NET CI روی آخرین SHA **Implemented / Not Verified** است.
+- بدون Migration دیتابیس مشتری و بدون تغییر Schema در این مرحله.

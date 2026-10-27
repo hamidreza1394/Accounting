@@ -40,6 +40,25 @@ describe('Vendor control plane shell', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('HTTPS');
   });
 
+  it('requires the initial password change before showing the management workspace', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response({ userName: 'vendor-admin', totpEnabled: true, passkeyCount: 0, mustChangePassword: true }))
+      .mockResolvedValueOnce(response({ requestToken: 'csrf-token' }))
+      .mockResolvedValueOnce(response({ changed: true, mustChangePassword: false }))
+      .mockResolvedValueOnce(response({ userName: 'vendor-admin', totpEnabled: true, passkeyCount: 0, mustChangePassword: false }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: 'تغییر گذرواژه اولیه' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('گذرواژه فعلی'), { target: { value: 'Secure-Vendor#2026' } });
+    fireEvent.change(screen.getByLabelText('گذرواژه جدید'), { target: { value: 'Changed-Vendor#2026-Strong' } });
+    fireEvent.change(screen.getByLabelText('تکرار گذرواژه جدید'), { target: { value: 'Changed-Vendor#2026-Strong' } });
+    fireEvent.click(screen.getByRole('button', { name: 'تغییر گذرواژه و ادامه' }));
+
+    expect(await screen.findByRole('heading', { name: 'مرکز کنترل فرانو' })).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith('/api/auth/change-password', expect.objectContaining({ method: 'POST', cache: 'no-store' }));
+  });
+
   it('keeps TOTP setup secrets in the active UI flow and confirms enrollment through the API', async () => {
     const storageWrite = vi.spyOn(Storage.prototype, 'setItem');
     const fetchMock = vi.fn()
