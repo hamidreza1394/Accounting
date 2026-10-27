@@ -26,6 +26,7 @@ describe('Vendor contract form', () => {
     render(<ContractForm canReadCustomers onCancel={vi.fn()} onSaved={onSaved} />);
     const customerSelect = await screen.findByRole('combobox', { name: 'مشتری تجاری' });
     await waitFor(() => expect(customerSelect).toHaveValue('customer-1'));
+    expect(await screen.findByRole('combobox', { name: 'ارز قرارداد' })).toHaveValue('IRR');
     fireEvent.change(screen.getByLabelText('شماره قرارداد'), { target: { value: 'CTR-001' } });
     fireEvent.change(screen.getByLabelText('تاریخ شروع'), { target: { value: '2026-10-27' } });
     fireEvent.change(screen.getByLabelText('تاریخ پایان (اختیاری)'), { target: { value: '2027-10-26' } });
