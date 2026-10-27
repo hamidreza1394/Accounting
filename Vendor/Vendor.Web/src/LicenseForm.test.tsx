@@ -120,6 +120,23 @@ describe('Vendor license metadata form', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('rejects impossible calendar dates before sending a mutation', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      if (String(input).startsWith('/api/vendor/customers/?')) return Promise.resolve(response(customerPage));
+      return Promise.resolve(response({}, 404));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<LicenseForm canReadCustomers canReadContracts={false} canReadInstallations={false}
+      onCancel={vi.fn()} onSaved={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'مشتری تجاری' })).toHaveValue('customer-1'));
+    fireEvent.change(screen.getByLabelText('تاریخ شروع اعتبار'), { target: { value: '2026-02-31' } });
+
+    expect(screen.getByRole('button', { name: 'ثبت لایسنس پیش‌نویس' })).toBeDisabled();
+    expect(fetchMock).not.toHaveBeenCalledWith('/api/auth/antiforgery', expect.anything());
+    expect(fetchMock).not.toHaveBeenCalledWith('/api/vendor/licenses/', expect.anything());
+  });
+
   it('explains stale RowVersion conflicts without claiming the license was saved', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
