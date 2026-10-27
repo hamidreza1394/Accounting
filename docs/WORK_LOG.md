@@ -635,3 +635,5 @@
 - **اعتبارسنجی:** کد در GitHub ثبت شده است؛ Build/Test محلی اجرا نشده. Vendor CI و .NET CI روی آخرین SHA این شاخه باید موفق شوند؛ تا آن زمان وضعیت `Implemented / Not Verified` است.
 - **داده:** هیچ Migration دیتابیس Vendor یا مشتری اضافه نشده و هیچ دیتابیس مشتری تغییر نکرده است.
 - **مستندات:** `Vendor/README.md`, `docs/SECURITY.md`, این handoff و `docs/WORK_LOG.md` به‌روز می‌شوند.
+
+- **تکمیل API نقش‌ها:** افزوده شد endpoint خواندن کاتالوگ مجوز نسخه‌دار و لغو تخصیص نقش سفارشی؛ لغو یا تخصیص نقش `Vendor.SuperAdmin` از مسیر API ممنوع است. endpointهای جدید نیز زیر سیاست `administrators.manage` قرار دارند.
