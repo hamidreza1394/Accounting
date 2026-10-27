@@ -380,6 +380,20 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal("approval_required", json.RootElement.GetProperty("error").GetString());
             }
 
+            using (var response = await PostWithTokenAsync(client, "/api/vendor/approvals/status-change",
+                new
+                {
+                    resourceType = "customer",
+                    resourceId = customerId,
+                    targetStatus = "Draft",
+                    rowVersion = Convert.ToBase64String(customerStatusVersion)
+                }, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("invalid_status_transition", json.RootElement.GetProperty("error").GetString());
+            }
+
             var approvalBody = new
             {
                 resourceType = "customer",
@@ -395,6 +409,14 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 customerApprovalId = json.RootElement.GetProperty("id").GetGuid();
                 customerApprovalRowVersion = json.RootElement.GetProperty("rowVersion").GetString()!;
                 Assert.Equal("Pending", json.RootElement.GetProperty("status").GetString());
+            }
+
+            using (var response = await client.GetAsync("/api/vendor/approvals/?status=Pending&page=1&pageSize=25", cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal(1, json.RootElement.GetProperty("totalCount").GetInt32());
+                Assert.Equal(customerApprovalId, json.RootElement.GetProperty("items")[0].GetProperty("id").GetGuid());
             }
 
             using (var response = await PostWithTokenAsync(client, "/api/vendor/approvals/status-change",
