@@ -29,12 +29,13 @@ public sealed class VendorPageRequestTests
     }
 
     [Fact]
-    public void Skip_DoesNotOverflowForLargePageNumber()
+    public void Normalize_CapsLargePageToRepresentableOffset()
     {
         var result = VendorPageRequest.Normalize(int.MaxValue, 100);
 
-        Assert.Equal(int.MaxValue, result.Page);
-        Assert.Equal(int.MaxValue, result.Skip);
+        Assert.Equal((int)((long)int.MaxValue / 100) + 1, result.Page);
+        Assert.Equal((int)(((long)int.MaxValue / 100) * 100), result.Skip);
+        Assert.True(result.Skip >= 0);
     }
 
     [Fact]
