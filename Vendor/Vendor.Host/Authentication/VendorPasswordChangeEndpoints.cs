@@ -59,7 +59,7 @@ public static class VendorPasswordChangeEndpoints
             return Results.Ok(new { changed = true, mustChangePassword = false });
         })
         .RequireAuthorization()
-        .RequireRateLimiting("vendor-auth-attempt");
+        .RequireRateLimiting("vendor-password-change");
 
         return endpoints;
     }
