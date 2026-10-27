@@ -7,7 +7,7 @@ namespace Faranou.Vendor.Host.Authorization;
 public sealed record VendorResourceDescriptor(string ResourceType, Guid ResourceId, Guid? ParentResourceId = null);
 
 /// <summary>Authorization requirement for one operation on one concrete resource.</summary>
-public sealed record VendorResourcePermissionRequirement(string Permission) : IAuthorizationRequirement;
+public sealed record VendorResourcePermissionRequirement(string ResourceType, string Permission) : IAuthorizationRequirement;
 
 /// <summary>
 /// Domain adapter that must resolve the actual resource and enforce its parent/customer boundary.
@@ -37,6 +37,15 @@ public sealed class DenyAllVendorResourceAccessEvaluator : IVendorResourceAccess
 
 public static class VendorResourceCatalog
 {
+    public const string PolicyPrefix = "VendorResource:v1:";
+
+    public static string PolicyFor(string resourceType, string permission)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(resourceType);
+        ArgumentException.ThrowIfNullOrWhiteSpace(permission);
+        return PolicyPrefix + resourceType + ":" + permission;
+    }
+
     private static readonly Dictionary<string, IReadOnlySet<string>> Operations =
         new Dictionary<string, IReadOnlySet<string>>(StringComparer.Ordinal)
         {
@@ -71,7 +80,6 @@ public static class VendorResourceCatalog
 }
 
 public sealed class VendorResourcePermissionAuthorizationHandler(
-    IAuthorizationService authorization,
     IVendorResourceAccessEvaluator resourceAccess,
     Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor)
     : AuthorizationHandler<VendorResourcePermissionRequirement, VendorResourceDescriptor>
@@ -81,22 +89,16 @@ public sealed class VendorResourcePermissionAuthorizationHandler(
         VendorResourcePermissionRequirement requirement,
         VendorResourceDescriptor resource)
     {
-        if (!VendorResourceCatalog.Supports(resource.ResourceType, requirement.Permission) ||
+        if (!string.Equals(resource.ResourceType, requirement.ResourceType, StringComparison.Ordinal) ||
+            !VendorResourceCatalog.Supports(requirement.ResourceType, requirement.Permission) ||
             resource.ResourceId == Guid.Empty ||
             context.User.Identity?.IsAuthenticated != true)
         {
             return;
         }
 
-        var baseAuthorization = await authorization.AuthorizeAsync(
-            context.User,
-            resource,
-            VendorPermissionCatalog.PolicyFor(requirement.Permission));
-        if (!baseAuthorization.Succeeded)
-        {
-            return;
-        }
-
+        // The dynamic resource policy separately requires VendorAdminAccessRequirement and
+        // VendorPermissionRequirement; this handler adds the persisted resource-boundary check.
         var cancellationToken = httpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None;
         if (await resourceAccess.HasAccessAsync(
                 context.User,
