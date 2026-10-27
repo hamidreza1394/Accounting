@@ -182,15 +182,13 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.True(passwordJson.RootElement.GetProperty("requiresSecondFactor").GetBoolean());
             }
 
-            string testUserName;
             string authenticatorKey;
             await using (var scope = factory.Services.CreateAsyncScope())
             {
                 var users = scope.ServiceProvider.GetRequiredService<UserManager<VendorAdminUser>>();
                 var user = await users.FindByNameAsync(await GetTestUserNameAsync(factory, cancellationToken));
                 Assert.NotNull(user);
-                testUserName = user!.UserName!;
-                authenticatorKey = (await users.GetAuthenticatorKeyAsync(user))!;
+                authenticatorKey = (await users.GetAuthenticatorKeyAsync(user!))!;
             }
 
             using (var verifyResponse = await PostWithTokenAsync(client, "/api/auth/totp/verify",
