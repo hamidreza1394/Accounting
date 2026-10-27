@@ -695,3 +695,21 @@
 - **Explicit limitation:** this is an initial slice of Issue #176, not its full acceptance. It does not yet test authenticated permissions, anti-forgery validation, SQL Server persistence, rowversion conflicts, audit rollback, cross-resource validation, or concurrent unique-key races.
 - **Validation:** no local .NET execution was available in this connector-only workflow. CI must validate compilation and execution. Do not treat this commit as full integration coverage or production-readiness evidence.
 - **Isolation:** tests use the real Vendor host but anonymous requests should be rejected by authorization before business handlers execute. No database is seeded or mutated by these tests; no customer accounting database is involved.
+
+
+## 2026-10-27 — Authenticated customer mutation HTTP integration test
+
+- **Scope:** add a narrow SQL Server-backed integration test for customer metadata updates using a unique disposable Vendor database per test.
+- **Production path exercised:** ASP.NET Core host, real Identity password + TOTP flow, production role-claim permission handler, MFA administrator requirement, persisted resource authorization, anti-forgery, SQL Server rowversion, and audit writer.
+- **Assertions:** missing/invalid anti-forgery token is rejected; malformed RowVersion returns 400; a valid update succeeds; replaying the old RowVersion returns 409; the updated customer remains persisted and exactly one matching `vendor.customer.updated` audit event exists.
+- **Isolation:** database name is unique per test and cleanup drops only that generated Vendor test database. The test does not use or access any customer accounting database.
+- **Validation status:** CI is required; this connector workflow does not provide a local .NET execution environment. Do not claim the test passed until its workflow completes.
+- **Remaining:** equivalent successful/stale/malformed coverage for installation, contract, and license updates; cross-resource mismatch, draft-only lifecycle, operational status transitions, audit-failure rollback, and deterministic SQL Server duplicate-key race coverage.
+
+
+## 2026-10-27 — اصلاح شکست CI آزمون HTTP ویرایش مشتری Vendor
+- **شکست مشاهده‌شده:** Vendor CI run `40489907527`، آزمون `CustomerUpdateEnforcesAntiforgeryAndRowVersionAndAuditsOnlyCommittedWrites` شکست خورد؛ 68 آزمون موفق و 1 آزمون ناموفق بود. assertion روی `invalid_row_version` شکست خورد.
+- **علت ریشه‌ای از لاگ:** توکن ضد-CSRF قبل از ورود ناشناس دریافت شده و پس از ورود موفق با TOTP دوباره استفاده می‌شد. ASP.NET Core آن را به دلیل تعلق داشتن به هویت claims متفاوت رد می‌کرد؛ بنابراین درخواست پیش از رسیدن به اعتبارسنجی RowVersion رد می‌شد.
+- **اصلاح:** پس از تکمیل MFA، آزمون اکنون توکن ضد-CSRF تازه‌ای از `/api/auth/antiforgery` دریافت می‌کند و همان توکن را برای درخواست‌های تغییر داده استفاده می‌کند. توکن ناشناس فقط برای درخواست‌های ورود باقی می‌ماند.
+- **Commit اصلاح:** `86828e36ee2f3d9c473ef7fb8df01fca0dc24b93` روی `test/vendor-customer-mutation-http`.
+- **اعتبارسنجی:** هنوز اجرای CI پس از اصلاح تأیید نشده؛ تا تکمیل Vendor CI، آزمون را سبز تلقی نکنید. PR ادغام نشده است.
