@@ -231,7 +231,7 @@ builder.Services.AddScoped<IAuthorizationHandler, VendorPermissionAuthorizationH
 builder.Services.AddScoped<IAuthorizationHandler, VendorResourcePermissionAuthorizationHandler>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, VendorPermissionPolicyProvider>();
-builder.Services.AddSingleton<IVendorResourceAccessEvaluator, DenyAllVendorResourceAccessEvaluator>();
+builder.Services.AddScoped<IVendorResourceAccessEvaluator, VendorResourceAccessEvaluator>();
 builder.Services.AddAuthorization(VendorAuthorizationPolicies.Configure);
 
 var app = builder.Build();
