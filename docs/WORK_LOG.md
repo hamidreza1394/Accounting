@@ -605,3 +605,14 @@
 - افزوده شد: آزمون می‌سازد سیاست مؤثر هر endpoint محافظت‌شده API را با AuthorizationPolicy.CombineAsync و تأیید می‌کند VendorAdminAccessRequirement (گارد مدیر فعال/MFA) در همه آن‌ها وجود دارد؛ در کنار آزمون metadata دسترسی و فهرست مسیرهای عمومی مجاز.
 - Commit: 1708e1d7c4b67a51222690bc756b95e945db2eee.
 - وضعیت: تست/Build هنوز منتظر CI هستند؛ Verified اعلام نمی‌شود.
+
+
+## 2026-10-27 — Issue #159: اجبار تغییر گذرواژهٔ اولیه در Vendor
+- **یافته:** `VendorAdminUser.MustChangePassword` در مدل وجود داشت اما تا این تغییر، enforcement عمومی در API pipeline و فرم واقعی تغییر گذرواژه تکمیل نبود؛ فیلد به‌تنهایی مرز امنیتی نیست.
+- **پیاده‌سازی در شاخه `security/issue-159-force-password-change`:** endpoint `POST /api/auth/change-password` از Cookie هم‌مبدأ، anti-forgery، `UserManager.ChangePasswordAsync`، سیاست Identity موجود و rate limit استفاده می‌کند. خطاهای اعتبارسنجی و رمز فعلی پاسخ عمومی دارند.
+- **گارد سمت سرور:** تا وقتی `MustChangePassword=true` است، مسیرهای API مدیریتی مسدود می‌شوند؛ فقط دریافت anti-forgery، `/api/auth/me`، تغییر گذرواژه و خروج مجاز می‌مانند. UI فارسی RTL فرم اولیه و تأیید دوبارهٔ گذرواژه را نشان می‌دهد.
+- **ممیزی:** پس از تغییر موفق، رخداد `admin.password.changed` بدون رمز خام/هش نوشته می‌شود. اگر نوشتن ممیزی شکست بخورد endpoint پاسخ موفق صادر نمی‌کند؛ لازم است این رفتار در CI/بازبینی تأیید شود.
+- **تست:** آزمون Integration مسیر رد API قبل از تغییر، رد anti-forgery/رمز فعلی نامعتبر، تغییر موفق، پاک‌شدن پرچم، ثبت audit و بازشدن مجدد endpoint را پوشش می‌دهد. آزمون UI جریان اجباری را اضافه می‌کند.
+- **اعتبارسنجی:** اجرای محلی dotnet/npm در این محیط انجام نشد. Vendor CI، .NET CI، SQL Server integration، strict EF snapshot، publish و artifact scan روی آخرین SHA هنوز باید تأیید شوند. وضعیت **Implemented / Not Verified** است.
+- **دامنه داده:** هیچ Migration یا دیتابیس حسابداری مشتری تغییر نکرد؛ در این PR Migration Vendor نیز لازم نیست.
+- **مستندات:** `Vendor/README.md`، `docs/SECURITY.md` و `docs/handoffs/ISSUE-159-force-password-change.md` به‌روز شدند.
