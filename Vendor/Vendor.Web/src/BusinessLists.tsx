@@ -204,7 +204,7 @@ export function BusinessLists({ section, permissions = [] }: { section: Business
     </div>
 
     {notice && <p role="status" className="text-sm text-muted-foreground">{notice}</p>}
-    {showCustomerForm && canManageCustomers && <CustomerForm initial={editingCustomer ?? undefined} onCancel={closeCustomerForm} onSaved={customerSaved} />}
+    {showCustomerForm && canManageCustomers && <CustomerForm {...(editingCustomer ? { initial: editingCustomer } : {})} onCancel={closeCustomerForm} onSaved={customerSaved} />}
 
     <Card>
       <CardHeader className="border-b">
