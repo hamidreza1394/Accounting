@@ -3,7 +3,7 @@
 - **Issue:** [#195](https://github.com/hamidreza1394/Accounting/issues/195)
 - **Agent/مسئول:** ChatGPT / مهندسی Vendor
 - **تاریخ:** 2026-10-27
-- **وضعیت:** Implemented in branch / Not verified
+- **وضعیت:** Implemented in branch / Not verified — regression fix committed; awaiting latest-head CI
 
 ## هدف و معیارهای پذیرش
 - [x] فرم RTL برای ثبت لایسنس Draft و ویرایش metadata لایسنس Draft با endpointهای موجود.
@@ -38,7 +38,7 @@
 ## بررسی و آزمون
 | فرمان/آزمون | نتیجه واقعی | توضیح/کد خروج |
 |---|---|---|
-| Vendor UI typecheck / Vitest / build | در CI بررسی می‌شود | نتیجهٔ head نهایی هنوز در دست انتظار است |
+| Vendor UI typecheck / Vitest / build | CI قبلی ناموفق؛ CI جدید در صف | علت ریشه‌ای: ManagedSelect کنترل را به‌خاطر گزینهٔ معتبر با مقدار خالی غیرفعال می‌کرد؛ اصلاح و تست بازگشت در commit `2eb44a82d6d9a81baa8fc9f8ead868c8eb93d697` ثبت شد |
 | Vendor .NET build/test و SQL Server integration | در CI بررسی می‌شود | تست فیلتر مشتری اضافه شده؛ تا CI سبز Verified نیست |
 | .NET CI / E2E / Publish Linux و Windows | در CI بررسی می‌شود | نتیجهٔ head نهایی هنوز در دست انتظار است |
 | `git diff --check` | اجرا نشده در این رابط | CI و بازبینی diff لازم است |
@@ -56,5 +56,5 @@
 
 ## شناسه‌های Git
 - Branch: `feat/vendor-license-management-ui`
-- Commit: `367dbdebaa5b2f9eba1b68f19acf92f4e2e84e86`.
+- Commit فعلی هنگام آخرین به‌روزرسانی: `2eb44a82d6d9a81baa8fc9f8ead868c8eb93d697`.
 - Pull Request: [#196](https://github.com/hamidreza1394/Accounting/pull/196) — باز، CI در حال اجرا.
