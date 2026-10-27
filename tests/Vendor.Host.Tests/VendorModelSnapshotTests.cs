@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using Xunit;
 
 namespace Faranou.Vendor.Host.Tests;
@@ -22,7 +23,15 @@ public sealed class VendorModelSnapshotTests
         var snapshotModel = db.GetService<IModelRuntimeInitializer>().Initialize(snapshot!.Model, designTime: true);
         var currentDesignModel = db.GetService<IDesignTimeModel>().Model;
         var operations = differ.GetDifferences(snapshotModel.GetRelationalModel(), currentDesignModel.GetRelationalModel());
-        var summary = string.Join(Environment.NewLine, operations.Select(operation => operation.GetType().Name));
+        var summary = string.Join(Environment.NewLine, operations.Select(Describe));
         Assert.True(operations.Count == 0, "Pending EF model operations:" + Environment.NewLine + summary);
     }
+
+    private static string Describe(MigrationOperation operation) => operation switch
+    {
+        DropForeignKeyOperation item => $"DropForeignKey: table={item.Table}, name={item.Name}, schema={item.Schema}",
+        DropIndexOperation item => $"DropIndex: table={item.Table}, name={item.Name}, schema={item.Schema}",
+        AlterColumnOperation item => $"AlterColumn: table={item.Table}, name={item.Name}, type={item.ColumnType}, nullable={item.IsNullable}, oldType={item.OldColumn.ColumnType}, oldNullable={item.OldColumn.IsNullable}, schema={item.Schema}",
+        _ => $"{operation.GetType().Name}: {operation}"
+    };
 }
