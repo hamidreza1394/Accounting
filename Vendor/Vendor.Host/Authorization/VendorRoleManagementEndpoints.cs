@@ -65,12 +65,18 @@ public static partial class VendorRoleManagementEndpoints
         roles.MapPost("/", async (
             CreateRoleRequest request,
             HttpContext context,
+            Microsoft.AspNetCore.Antiforgery.IAntiforgery antiforgery,
             VendorDbContext db,
             RoleManager<IdentityRole<Guid>> roleManager,
             UserManager<VendorAdminUser> users,
             IVendorAuditWriter audit,
             CancellationToken cancellationToken) =>
         {
+            if (!await antiforgery.IsRequestValidAsync(context))
+            {
+                return Results.BadRequest(new { error = "invalid_antiforgery_token" });
+            }
+
             var name = request.Name?.Trim();
             if (string.IsNullOrWhiteSpace(name) ||
                 !RoleNameRegex().IsMatch(name) ||
@@ -131,12 +137,18 @@ public static partial class VendorRoleManagementEndpoints
             Guid roleId,
             UpdateRolePermissionsRequest request,
             HttpContext context,
+            Microsoft.AspNetCore.Antiforgery.IAntiforgery antiforgery,
             VendorDbContext db,
             RoleManager<IdentityRole<Guid>> roleManager,
             UserManager<VendorAdminUser> users,
             IVendorAuditWriter audit,
             CancellationToken cancellationToken) =>
         {
+            if (!await antiforgery.IsRequestValidAsync(context))
+            {
+                return Results.BadRequest(new { error = "invalid_antiforgery_token" });
+            }
+
             if (!TryNormalizePermissions(request.Permissions, out var permissions))
             {
                 return Results.BadRequest(new { error = "invalid_permission_set" });
@@ -215,12 +227,18 @@ public static partial class VendorRoleManagementEndpoints
             Guid userId,
             Guid roleId,
             HttpContext context,
+            Microsoft.AspNetCore.Antiforgery.IAntiforgery antiforgery,
             VendorDbContext db,
             UserManager<VendorAdminUser> users,
             RoleManager<IdentityRole<Guid>> roleManager,
             IVendorAuditWriter audit,
             CancellationToken cancellationToken) =>
         {
+            if (!await antiforgery.IsRequestValidAsync(context))
+            {
+                return Results.BadRequest(new { error = "invalid_antiforgery_token" });
+            }
+
             var user = await users.FindByIdAsync(userId.ToString("D"));
             var role = await roleManager.FindByIdAsync(roleId.ToString("D"));
             if (user is null || role is null)
@@ -272,12 +290,18 @@ public static partial class VendorRoleManagementEndpoints
             Guid userId,
             Guid roleId,
             HttpContext context,
+            Microsoft.AspNetCore.Antiforgery.IAntiforgery antiforgery,
             VendorDbContext db,
             UserManager<VendorAdminUser> users,
             RoleManager<IdentityRole<Guid>> roleManager,
             IVendorAuditWriter audit,
             CancellationToken cancellationToken) =>
         {
+            if (!await antiforgery.IsRequestValidAsync(context))
+            {
+                return Results.BadRequest(new { error = "invalid_antiforgery_token" });
+            }
+
             var user = await users.FindByIdAsync(userId.ToString("D"));
             var role = await roleManager.FindByIdAsync(roleId.ToString("D"));
             if (user is null || role is null)
