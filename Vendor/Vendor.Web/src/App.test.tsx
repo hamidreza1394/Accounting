@@ -78,4 +78,77 @@ describe('Vendor control plane shell', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/auth/totp/confirm', expect.objectContaining({ method: 'POST', cache: 'no-store' }));
     expect(storageWrite).not.toHaveBeenCalled();
   });
+  it('loads real customer data and follows server pagination metadata', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/auth/me') return Promise.resolve(response({ userName: 'vendor-admin', totpEnabled: true }));
+      if (url.startsWith('/api/vendor/customers/')) {
+        const page = Number(new URL(url, 'http://localhost').searchParams.get('page'));
+        return Promise.resolve(response({
+          items: [{ id: 'customer-1', customerNumber: 'C-001', legalName: 'شرکت نمونه', displayName: 'نمونه', status: 'Active', createdAtUtc: '2026-10-27T08:00:00Z' }],
+          page, pageSize: 25, totalCount: 26, totalPages: 2, hasPreviousPage: page > 1, hasNextPage: page < 2,
+        }));
+      }
+      return Promise.resolve(response({}, 404));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'مشتریان تجاری' }));
+    expect(await screen.findByText('شرکت نمونه')).toBeInTheDocument();
+    expect(screen.getByText(/تعداد کل:/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /بعدی/ }));
+    await screen.findByText('شرکت نمونه');
+    expect(fetchMock).toHaveBeenCalledWith('/api/vendor/customers/?page=2&pageSize=25', expect.objectContaining({ credentials: 'same-origin', cache: 'no-store' }));
+  });
+
+  it('shows a permission-specific message when a business list returns 403', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/auth/me') return Promise.resolve(response({ userName: 'vendor-admin', totpEnabled: true }));
+      if (url.startsWith('/api/vendor/contracts/')) return Promise.resolve(response({}, 403));
+      return Promise.resolve(response({}, 404));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'اشتراک‌ها و قراردادها' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('حساب شما مجوز مشاهده این بخش را ندارد.');
+  });
+
+  it('shows a truthful empty state when the API returns no records', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/auth/me') return Promise.resolve(response({ userName: 'vendor-admin', totpEnabled: true }));
+      if (url.startsWith('/api/vendor/licenses/')) return Promise.resolve(response({
+        items: [], page: 1, pageSize: 25, totalCount: 0, totalPages: 0, hasPreviousPage: false, hasNextPage: false,
+      }));
+      return Promise.resolve(response({}, 404));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'مجوزها و لایسنس‌ها' }));
+    expect(await screen.findByText('رکوردی برای نمایش وجود ندارد')).toBeInTheDocument();
+  });
+
+  it('loads the installations section from its own API endpoint', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/auth/me') return Promise.resolve(response({ userName: 'vendor-admin', totpEnabled: true }));
+      if (url.startsWith('/api/vendor/installations/')) return Promise.resolve(response({
+        items: [{ id: 'installation-1', installationCode: 'INS-001', name: 'نصب عملیاتی', environment: 'Production', status: 'Active', createdAtUtc: '2026-10-27T08:00:00Z', lastSeenAtUtc: null }],
+        page: 1, pageSize: 25, totalCount: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false,
+      }));
+      return Promise.resolve(response({}, 404));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'نصب‌ها' }));
+    expect(await screen.findByText('INS-001')).toBeInTheDocument();
+    expect(screen.getByText('عملیاتی')).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith('/api/vendor/installations/?page=1&pageSize=25', expect.objectContaining({ credentials: 'same-origin' }));
+  });
+
 });

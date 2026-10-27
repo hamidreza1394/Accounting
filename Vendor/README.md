@@ -9,7 +9,7 @@
 - اسکلت اولیهٔ Host روی `net10.0` ایجاد شده است.
 - `/health/live` فقط زنده‌بودن فرایند وب را اعلام می‌کند؛ وضعیت دیتابیس یا جزئیات عملیاتی را افشا نمی‌کند.
 - لایهٔ persistence مستقل (`VendorDbContext`، جداول Identity مجزا، `VendorAuditEvents` و Migration اولیه) در PR #102 ادغام شده است؛ CI آن PR هماهنگی مدل/Snapshot را بررسی کرده است. Issue #117 پوشش تکمیلی اجرای Migration روی SQL Server واقعی و ثبت storeهای Identity را اضافه می‌کند. تا سبز شدن CI آن PR، اجرای Migration روی SQL Server در تست اختصاصی `NotVerified` است.
-- APIهای MFA/passkey/TOTP و گارد عمومی دسترسی در Host وجود دارند. اجبار تغییر گذرواژهٔ اولیه در PR #160 و زیرساخت RBAC/گارد منبع‌محور در PR #162 ادغام شده‌اند. PR #164 ادغام شده است: موجودیت‌های VendorCustomer، VendorInstallation، VendorContract و VendorLicense، Migration مستقل Vendor، APIهای فهرست/جزئیات و ایجاد رکوردها، ممیزی تراکنشی عملیات ایجاد و evaluator منبع‌محور مبتنی بر رکورد پایدار در main قرار دارند. Issue #165 صفحه‌بندی bounded را به endpointهای فهرست اضافه می‌کند؛ شاخهٔ آن هنوز CI نهایی و بازبینی قرارداد API لازم دارد. ویرایش/چرخهٔ وضعیت کامل، UI تجاری، آزمون‌های cross-resource روی SQL Server، checkpoint مستقل، maker-checker، صدور امضای لایسنس و KMS/HSM هنوز کامل نیستند.
+- APIهای MFA/passkey/TOTP و گارد عمومی دسترسی در Host وجود دارند. اجبار تغییر گذرواژهٔ اولیه در PR #160 و زیرساخت RBAC/گارد منبع‌محور در PR #162 ادغام شده‌اند. PR #164 ادغام شده است: موجودیت‌های VendorCustomer، VendorInstallation، VendorContract و VendorLicense، Migration مستقل Vendor، APIهای فهرست/جزئیات و ایجاد رکوردها، ممیزی تراکنشی عملیات ایجاد و evaluator منبع‌محور مبتنی بر رکورد پایدار در main قرار دارند. صفحه‌بندی bounded برای endpointهای فهرست در main قرار دارد. Issue #168 لبه‌های offset/ترتیب را اصلاح می‌کند و Issue #169 اتصال فهرست‌های تجاری به UI واقعی را در حال انجام دارد؛ هیچ‌کدام تا CI سبز Verified محسوب نمی‌شوند. ویرایش/چرخهٔ وضعیت کامل، UI تجاری، آزمون‌های cross-resource روی SQL Server، checkpoint مستقل، maker-checker، صدور امضای لایسنس و KMS/HSM هنوز کامل نیستند.
 - این اسکلت برای Production آماده نیست.
 
 ## توسعه و آزمون
@@ -122,7 +122,7 @@ Host عمداً به ارائه‌دهندهٔ ابری خاصی وابسته ن
 - این مرحله به‌تنهایی سامانه را Production-ready نمی‌کند: RBAC ریزدانه، maker-checker، checkpoint مستقل ممیزی، تغییر اجباری گذرواژه (در صورت نیاز)، مدیریت مشتری/قرارداد/لایسنس و KMS/HSM هنوز مسیرهای مستقل دارند. هیچ Migration یا دیتابیس مشتری تغییر نمی‌کند.
 
 
-### Issue #165 — صفحه‌بندی APIهای فهرست
+### قرارداد صفحه‌بندی APIهای فهرست (Issue #165)
 - endpointهای فهرست مشتری، نصب، قرارداد و لایسنس از `page` و `pageSize` پشتیبانی می‌کنند؛ پیش‌فرض صفحه 1 و اندازه 25 است و اندازه صفحه حداکثر 100 خواهد بود.
 - پاسخ صفحه‌بندی شامل `items`, `page`, `pageSize`, `totalCount`, `totalPages`, `hasPreviousPage` و `hasNextPage` است. مصرف‌کننده‌ها باید پاسخ را به‌عنوان envelope صفحه‌بندی بخوانند، نه آرایه خام.
-- وضعیت این تغییر در شاخه `feat/issue-165-vendor-api-pagination`: Implemented / CI Not Yet Verified. این تغییر Migration دیتابیس ایجاد نمی‌کند.
+- وضعیت: قرارداد صفحه‌بندی در main موجود است؛ اصلاحات مرزی در PR #168 و اتصال UI در Issue #169 جداگانه در حال بررسی‌اند. این تغییرها Migration دیتابیس مشتری ایجاد نمی‌کنند.
