@@ -119,7 +119,7 @@ Lead برای هر کار تقسیم‌شده در گزارش پایانی می�
    | مستندات | `documentation-engineer` | `engineering:documentation` |
    | معماری و ADR فرانو | `architect` | `faranou-architecture-review` |
    | امنیت و جداسازی شرکت‌ها | `security-reviewer` | `faranou-security-multitenancy` |
-   | UI/UX فارسی و RTL | `frontend-developer` | `faranou-ui-ux-design` |
+   | UI/UX فارسی و RTL | `frontend-developer` | `faranou-ui-ux-design`؛ پیش از هر کار UI حتماً `docs/UI_COMPONENTS.md` را بخوان |
    | تست و کیفیت فرانو | `qa-engineer` | `faranou-testing-quality` |
    | حسابداری، مالی و قواعد داده | `backend-developer` / `database-engineer` | `faranou-accounting-domain` |
    | توسعه عمومی .NET/C# | `backend-developer` | `dotnet-patterns` |

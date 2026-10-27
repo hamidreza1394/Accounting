@@ -12,6 +12,7 @@ Read `AGENTS.md`, `docs/INDEX.md`, relevant UI requirements/design notes, curren
 - UI is Persian-first and RTL. Verify keyboard order, focus movement, mixed Persian/Latin numbers, currency/date alignment, screen-reader labels, validation messages and responsive behavior.
 - The React client is in `ClientApp`, served under `/app`; use the same-origin API contract and never access SQL directly.
 - Keep CSS, JS, fonts, icons and other runtime assets local and offline-capable. No external runtime CDN. Verify licenses for bundled assets.
+- Read `docs/UI_COMPONENTS.md` (D-048, D-049) before any UI work: approved grid/chart/date libraries (TanStack Table v8 + Virtual, shadcn charts on Recharts, shadcn Calendar with `react-day-picker/persian`), the rule that every component, library, font, icon and image is stored inside the project and never loaded from an external link at runtime, and the design, speed (measured numbers) and data-visual rules.
 - Follow the installed Tailwind version and its existing Vite pipeline. Do not introduce a second styling system or component library without evidence and approval.
 - Maintain visual consistency: typography scale, spacing, color tokens, focus/error/success states, loading/empty/error states, and data-dense financial table patterns.
 - Design for desktop accounting workflows first where requirements indicate, while remaining usable at smaller widths and under keyboard-only navigation.
