@@ -42,6 +42,26 @@ public static partial class VendorRoleManagementEndpoints
             return Results.Ok(result);
         });
 
+        roles.MapGet("/{roleId:guid}", async (
+            Guid roleId,
+            RoleManager<IdentityRole<Guid>> roleManager) =>
+        {
+            var role = await roleManager.FindByIdAsync(roleId.ToString("D"));
+            if (role is null)
+            {
+                return Results.NotFound();
+            }
+
+            var permissions = (await roleManager.GetClaimsAsync(role))
+                .Where(claim => claim.Type == PermissionClaimType)
+                .Select(claim => claim.Value)
+                .Where(VendorPermissionCatalog.Contains)
+                .Distinct(StringComparer.Ordinal)
+                .Order(StringComparer.Ordinal)
+                .ToArray();
+            return Results.Ok(new RoleResponse(role.Id, role.Name ?? string.Empty, permissions));
+        });
+
         roles.MapPost("/", async (
             CreateRoleRequest request,
             HttpContext context,
