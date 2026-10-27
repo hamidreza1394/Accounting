@@ -53,3 +53,11 @@ The test uses a generated Vendor-only database name and drops only that database
 - Commit `7bc21cf62dc2e1076353f652f724ec6ca4ab678a` adds an explicit comparison between the submitted token and the currently loaded rowversion in all six business update/status handlers. A stale token returns `409 stale_row_version` even for an identical payload. The database concurrency check remains in place to protect the race between the pre-check and `SaveChanges`.
 - Documentation commit: `fd6a038961e8bcb6af534ac4f0065251ef39d271`.
 - CI must pass before considering this fix verified; no local SQL Server execution was available here.
+
+
+## Operational status HTTP coverage increment (2026-10-27)
+
+- PR #179 was merged to `main` as part of merge commit `b425fd06856da30f187836b4c1b2de547921369a`.
+- Added regression paths in `VendorCustomerMutationHttpIntegrationTests` for customer and installation status transitions through the production HTTP host. Customer `Active -> Suspended -> Active` and installation `Active -> Suspended` must succeed using fresh SQL Server RowVersion values; invalid `Active -> Draft` transitions must return HTTP 409 with `invalid_status_transition`.
+- This increment is on branch `test/vendor-operational-status-http-coverage`. No local .NET execution was available through this connector; the new test is not considered verified until Vendor CI completes and proves the SQL Server integration test was executed (not skipped).
+- Remaining coverage: installation status transition checks, audit-writer failure rollback, deterministic duplicate-key race tests for SQL Server 2601/2627, and the post-fix CI evidence for PR #178 / merged PR #179.
