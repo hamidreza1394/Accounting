@@ -140,3 +140,7 @@ Host عمداً به ارائه‌دهندهٔ ابری خاصی وابسته ن
 
 ## Audit chain lookup indexes (Issue #202)
 - Migration 20261027190000_VendorAuditChainIndexes adds IX_VendorAuditEvents_PreviousHash and unique IX_VendorAuditEvents_EventHash for Vendor-only audit chain lookups. PR #203 merged this migration after the SQL Server integration suite and EF pending-model-change guard passed in Vendor CI and .NET CI.
+
+
+## Two-person status approvals (Issue #201, in progress)
+- The approval API and RTL approval queue are being implemented on branch `feat/vendor-maker-checker-main`. Direct customer/installation status mutation endpoints now return `approval_required` in this branch. Do not treat this as merged/verified until the complete CI suite passes and the PR is merged.
