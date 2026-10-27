@@ -132,6 +132,11 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal(HttpStatusCode.OK, verifyResponse.StatusCode);
             }
 
+            // Antiforgery request tokens are bound to the current claims identity.
+            // The anonymous token used for password/TOTP requests must not be reused
+            // after the authenticated application cookie is issued.
+            (antiForgeryToken, _) = await GetAntiforgeryTokenAsync(client, cancellationToken);
+
             Guid customerId;
             byte[] initialRowVersion;
             await using (var scope = factory.Services.CreateAsyncScope())
