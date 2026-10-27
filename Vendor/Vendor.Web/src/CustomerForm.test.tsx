@@ -52,6 +52,23 @@ describe('Vendor customer form', () => {
     expect(screen.queryByText('database internals')).not.toBeInTheDocument();
   });
 
+  it('shows an authorization message when the server rejects customer management', async () => {
+    const onSaved = vi.fn();
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response({ requestToken: 'csrf-denied' }))
+      .mockResolvedValueOnce(response({ error: 'forbidden' }, 403));
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<CustomerForm onCancel={vi.fn()} onSaved={onSaved} />);
+    fireEvent.change(screen.getByLabelText('شماره مشتری'), { target: { value: 'C-200' } });
+    fireEvent.change(screen.getByLabelText('نام حقوقی'), { target: { value: 'شرکت نمونه' } });
+    fireEvent.change(screen.getByLabelText('نام نمایشی'), { target: { value: 'نمونه' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ثبت مشتری' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('حساب شما مجوز مدیریت مشتریان را ندارد.');
+    expect(onSaved).not.toHaveBeenCalled();
+  });
+
   it('sends the current RowVersion when editing and explains stale conflicts', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(response({ requestToken: 'csrf-edit' }))
