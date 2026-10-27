@@ -224,7 +224,7 @@ public static class VendorBootstrapCommand
             }
 
             user.IsEnabled = true;
-            user.MustChangePassword = false;
+            user.MustChangePassword = true;
             var updateResult = await users.UpdateAsync(user);
             if (!updateResult.Succeeded)
             {
