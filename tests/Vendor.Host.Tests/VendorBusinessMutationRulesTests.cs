@@ -1,4 +1,5 @@
 using Faranou.Vendor.Host.Authorization;
+using Xunit;
 
 namespace Faranou.Vendor.Host.Tests;
 
