@@ -2,6 +2,7 @@
 
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/201
 - **Branch:** feat/vendor-maker-checker-main
+- **Pull Request:** https://github.com/hamidreza1394/Accounting/pull/206
 - **وضعیت:** پیاده‌سازی اولیه در حال بازبینی؛ CI هنوز اجرا نشده
 
 ## محدوده و تصمیم
