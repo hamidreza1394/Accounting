@@ -592,23 +592,16 @@
 - **پیوند پیگیری:** [PR #153](https://github.com/hamidreza1394/Accounting/pull/153).
 
 
-## 2026-10-26 — Issue #152: کاهش افشای وضعیت حساب در گزینه‌های Passkey
-- **یافته:** endpoint POST /api/auth/passkey/options نام کاربری دریافتی را resolve می‌کرد و در صورت وجود حساب فعال دارای Passkey، گزینه‌های مخصوص همان credentialها را تولید می‌کرد. این تفاوت پاسخ می‌تواند اطلاعاتی درباره وجود حساب/credential افشا کند.
-- **اصلاح در شاخه:** VendorAuthenticationEndpoints.cs دیگر نام کاربری را به UserManager نمی‌فرستد و برای تمام درخواست‌ها MakePasskeyRequestOptionsAsync(user: null) را اجرا می‌کند. بدنهٔ HTTP حفظ شده تا قرارداد کلاینت نشکند؛ هدر تکراری Cache-Control: no-store نیز حذف شد.
-- **مبنای فنی:** مستندات رسمی ASP.NET Core 10 می‌گوید کاربر مشخص باعث درج credentialهای همان کاربر در allow-list می‌شود و null برای discoverable credentials/ورود بدون نام کاربری مناسب است: https://learn.microsoft.com/en-us/aspnet/core/security/authentication/passkeys?view=aspnetcore-10.0
-- **حفاظت‌های حفظ‌شده:** Anti-forgery، rate limiting و no-store دست‌نخورده‌اند. هیچ دیتابیس یا Migration مشتری تغییر نکرده است.
-- **اعتبارسنجی:** تغییر از طریق GitHub API در commit 9b4ea03e45afc2de1af88293abf3ad998b02e565 ثبت شد. Build/Test محلی اجرا نشد؛ آزمون HTTP رگرسیون و اجرای CI هنوز باقی است. بنابراین این تغییر Implemented / Not Verified است و هنوز آماده ادغام نهایی محسوب نمی‌شود.
-- **Handoff:** docs/handoffs/ISSUE-152-passkey-options-enumeration.md؛ شاخه fix/issue-152-passkey-options-enumeration.
+## 2026-10-26 — Issue #154: پوشش metadata مجوزدهی Vendor
+- Issue #154 پس از بسته‌شدن زودهنگام بازگشایی شد؛ علت: آزمون پوشش endpointها و مجوزدهی منبع‌محور هنوز کامل نبود.
+- به VendorPermissionAuthorizationTests.cs آزمون integration اضافه شد که endpointهای /api/ را از EndpointDataSource استخراج می‌کند، نبود metadata دسترسی را رد می‌کند و فهرست مسیرهای AllowAnonymous را با فهرست مجاز ثابت مقایسه می‌کند.
+- آزمون‌های موجود برای DefaultPolicy/FallbackPolicy و الزام حساب فعال/MFA حفظ شدند.
+- **اعتبارسنجی:** آزمون اجرا نشده؛ CI باید اجرا و نتیجه ثبت شود. این تغییر هنوز Verified نیست.
+- **باقی‌مانده:** آزمون‌های منفی با احراز هویت واقعی، resource-level authorization/IDOR و maker-checker؛ هیچ Migration مشتری تغییر نکرده است.
+- Handoff: docs/handoffs/ISSUE-154-vendor-endpoint-authorization-coverage.md
 
 
-## پیگیری Issue #152 — آزمون رگرسیون Passkey (2026-10-26)
-- به tests/Vendor.Host.Tests/VendorAuthenticationSecurityTests.cs آزمونی افزوده شد که endpoint options را با نام‌های کاربری متفاوت فراخوانی می‌کند و بررسی می‌کند فهرست allowCredentials غیرخالی برنگردد؛ هدر no-store نیز کنترل می‌شود.
-- آزمون با الگوی xUnit v3 و WebApplicationFactory موجود در پروژه نوشته شده است؛ پکیج جدید اضافه نشده است.
-- **محدودیت:** آزمون اجرا نشده و هنوز آزمون قوی‌تر با حساب دارای Passkey واقعی/credential ثبت‌شده لازم است. Build و CI تأیید نشده‌اند؛ وضعیت همچنان Implemented / Not Verified است.
-- Commit آزمون: 1a9c0bbcb60c3899af64d07bee6827f7787088d4.
-
-
-## 2026-10-26 — نتیجه CI برای اصلاح Passkey (PR #157)
-- Vendor CI run 40388746698 به نتیجه موفق رسید؛ شامل UI type-check/test، Vendor build/test، EF model snapshot gate، publish و بررسی artifact نبودن فایل کلید خصوصی.
-- در .NET CI run 40388746692، build-and-test، migration guards و گزارش آسیب‌پذیری NuGet موفق شدند. E2E، publish و publish-windows هنگام آخرین بررسی هنوز در حال اجرا بودند؛ نتیجه نهایی این workflow هنوز نامشخص است.
-- آزمون HTTP اضافه‌شده اجرا شده و سبز است، اما هنوز حالت حسابی با Passkey واقعی را پوشش نمی‌دهد؛ این محدودیت باز می‌ماند.
+## تکمیل Issue #154 — آزمون سیاست مؤثر endpointهای محافظت‌شده
+- افزوده شد: آزمون می‌سازد سیاست مؤثر هر endpoint محافظت‌شده API را با AuthorizationPolicy.CombineAsync و تأیید می‌کند VendorAdminAccessRequirement (گارد مدیر فعال/MFA) در همه آن‌ها وجود دارد؛ در کنار آزمون metadata دسترسی و فهرست مسیرهای عمومی مجاز.
+- Commit: 1708e1d7c4b67a51222690bc756b95e945db2eee.
+- وضعیت: تست/Build هنوز منتظر CI هستند؛ Verified اعلام نمی‌شود.
