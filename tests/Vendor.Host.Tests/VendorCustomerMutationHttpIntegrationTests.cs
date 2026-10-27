@@ -8,13 +8,16 @@ using System.Text.Json;
 using Faranou.Vendor.Host.Authorization;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Domain;
+using Faranou.Vendor.Persistence.Auditing;
 using Faranou.Vendor.Persistence.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit;
 
 namespace Faranou.Vendor.Host.Tests;
@@ -45,11 +48,22 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
         try
         {
             await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(webHost =>
+            {
                 webHost.ConfigureAppConfiguration((_, configuration) =>
                     configuration.AddInMemoryCollection(new Dictionary<string, string?>
                     {
                         ["ConnectionStrings:VendorDb"] = testConnection
-                    })));
+                    }));
+                webHost.ConfigureTestServices(services =>
+                {
+                    services.RemoveAll<IVendorAuditWriter>();
+                    services.AddSingleton<AuditFailureSwitch>();
+                    services.AddScoped<IVendorAuditWriter>(provider => new SwitchableVendorAuditWriter(
+                        provider.GetRequiredService<VendorDbContext>(),
+                        provider.GetRequiredService<TimeProvider>(),
+                        provider.GetRequiredService<AuditFailureSwitch>()));
+                });
+            });
 
             await using (var setupScope = factory.Services.CreateAsyncScope())
             {
@@ -496,10 +510,79 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal(1, await db.AuditEvents.CountAsync(item =>
                     item.ActionCode == "vendor.license.metadata-updated" && item.SubjectId == licenseId.ToString("D"), cancellationToken));
             }
+
+            // A failed audit append must abort the enclosing business transaction.
+            byte[] rollbackRowVersion;
+            int customerAuditCountBeforeFailure;
+            await using (var rollbackScope = factory.Services.CreateAsyncScope())
+            {
+                var db = rollbackScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var currentCustomer = await db.Customers.AsNoTracking()
+                    .SingleAsync(item => item.Id == customerId, cancellationToken);
+                rollbackRowVersion = currentCustomer.RowVersion.ToArray();
+                customerAuditCountBeforeFailure = await db.AuditEvents.CountAsync(item =>
+                    item.ActionCode == "vendor.customer.updated" && item.SubjectId == customerId.ToString("D"), cancellationToken);
+            }
+
+            var auditFailureSwitch = factory.Services.GetRequiredService<AuditFailureSwitch>();
+            auditFailureSwitch.FailNextAppend = true;
+            var rollbackBody = new
+            {
+                rowVersion = Convert.ToBase64String(rollbackRowVersion),
+                customerNumber = "IT-" + customerId.ToString("N")[..20],
+                legalName = "Integration Test Customer",
+                displayName = "Must Roll Back"
+            };
+            var failureObserved = false;
+            try
+            {
+                using var response = await SendPutAsync(client, path, rollbackBody, antiForgeryToken, cancellationToken);
+                failureObserved = response.StatusCode == HttpStatusCode.InternalServerError;
+            }
+            catch (HttpRequestException)
+            {
+                // TestServer may surface an unhandled endpoint exception directly to the client.
+                failureObserved = true;
+            }
+            Assert.True(failureObserved, "The injected audit failure must fail the HTTP mutation.");
+
+            await using (var verificationScope = factory.Services.CreateAsyncScope())
+            {
+                var db = verificationScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var persistedCustomer = await db.Customers.AsNoTracking()
+                    .SingleAsync(item => item.Id == customerId, cancellationToken);
+                Assert.Equal("After Update", persistedCustomer.DisplayName);
+                Assert.Equal(customerAuditCountBeforeFailure, await db.AuditEvents.CountAsync(item =>
+                    item.ActionCode == "vendor.customer.updated" && item.SubjectId == customerId.ToString("D"), cancellationToken));
+            }
         }
         finally
         {
             await DropDatabaseAsync(baseConnection, databaseName, CancellationToken.None);
+        }
+    }
+
+    private sealed class AuditFailureSwitch
+    {
+        public bool FailNextAppend { get; set; }
+    }
+
+    private sealed class SwitchableVendorAuditWriter(
+        VendorDbContext dbContext,
+        TimeProvider timeProvider,
+        AuditFailureSwitch failureSwitch) : IVendorAuditWriter
+    {
+        public Task<VendorAuditWriteResult> AppendAsync(
+            VendorAuditWriteRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            if (failureSwitch.FailNextAppend)
+            {
+                failureSwitch.FailNextAppend = false;
+                throw new InvalidOperationException("Injected audit failure for rollback integration coverage.");
+            }
+
+            return new VendorAuditWriter(dbContext, timeProvider).AppendAsync(request, cancellationToken);
         }
     }
 
