@@ -80,22 +80,37 @@ public static class VendorBusinessEndpoints
 
         MapReadOnlyResource<InstallationResponse>(endpoints, "/api/vendor/installations", "installation",
             VendorPermissionCatalog.InstallationsRead,
-            db => db.Installations.AsNoTracking().OrderBy(item => item.InstallationCode).ThenBy(item => item.Id)
-                .Select(item => new InstallationResponse(item.Id, item.CustomerId, item.InstallationCode, item.Name, item.Environment, item.Status, item.CreatedAtUtc, item.LastSeenAtUtc, Convert.ToBase64String(item.RowVersion))),
+            (db, customerId) =>
+            {
+                IQueryable<VendorInstallation> query = db.Installations.AsNoTracking();
+                if (customerId.HasValue) query = query.Where(item => item.CustomerId == customerId.Value);
+                return query.OrderBy(item => item.InstallationCode).ThenBy(item => item.Id)
+                    .Select(item => new InstallationResponse(item.Id, item.CustomerId, item.InstallationCode, item.Name, item.Environment, item.Status, item.CreatedAtUtc, item.LastSeenAtUtc, Convert.ToBase64String(item.RowVersion)));
+            },
             async (db, id, ct) => await db.Installations.AsNoTracking().Where(item => item.Id == id)
                 .Select(item => new InstallationResponse(item.Id, item.CustomerId, item.InstallationCode, item.Name, item.Environment, item.Status, item.CreatedAtUtc, item.LastSeenAtUtc, Convert.ToBase64String(item.RowVersion))).SingleOrDefaultAsync(ct));
 
         MapReadOnlyResource<ContractResponse>(endpoints, "/api/vendor/contracts", "contract",
             VendorPermissionCatalog.ContractsRead,
-            db => db.Contracts.AsNoTracking().OrderBy(item => item.ContractNumber).ThenBy(item => item.Id)
-                .Select(item => new ContractResponse(item.Id, item.CustomerId, item.ContractNumber, item.Status, item.StartsAtUtc, item.EndsAtUtc, item.CurrencyCode, item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion))),
+            (db, customerId) =>
+            {
+                IQueryable<VendorContract> query = db.Contracts.AsNoTracking();
+                if (customerId.HasValue) query = query.Where(item => item.CustomerId == customerId.Value);
+                return query.OrderBy(item => item.ContractNumber).ThenBy(item => item.Id)
+                    .Select(item => new ContractResponse(item.Id, item.CustomerId, item.ContractNumber, item.Status, item.StartsAtUtc, item.EndsAtUtc, item.CurrencyCode, item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion)));
+            },
             async (db, id, ct) => await db.Contracts.AsNoTracking().Where(item => item.Id == id)
-                .Select(item => new ContractResponse(item.Id, item.CustomerId, item.ContractNumber, item.Status, item.StartsAtUtc, item.EndsAtUtc, item.CurrencyCode, item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion))).SingleOrDefaultAsync(ct));
+                .Select(item => new ContractResponse(item.Id, item.CustomerId, item.ContractNumber, item.Status, item.StartsAtUtc, item.EndsAtUtc, item.CurrencyCode, item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion)).SingleOrDefaultAsync(ct));
 
         MapReadOnlyResource<LicenseResponse>(endpoints, "/api/vendor/licenses", "license",
             VendorPermissionCatalog.LicensesRead,
-            db => db.Licenses.AsNoTracking().OrderBy(item => item.LicenseNumber).ThenBy(item => item.Id)
-                .Select(item => new LicenseResponse(item.Id, item.CustomerId, item.ContractId, item.InstallationId, item.LicenseNumber, item.ProductCode, item.Status, item.ValidFromUtc, item.ValidUntilUtc, item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion))),
+            (db, customerId) =>
+            {
+                IQueryable<VendorLicense> query = db.Licenses.AsNoTracking();
+                if (customerId.HasValue) query = query.Where(item => item.CustomerId == customerId.Value);
+                return query.OrderBy(item => item.LicenseNumber).ThenBy(item => item.Id)
+                    .Select(item => new LicenseResponse(item.Id, item.CustomerId, item.ContractId, item.InstallationId, item.LicenseNumber, item.ProductCode, item.Status, item.ValidFromUtc, item.ValidUntilUtc, item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion)));
+            },
             async (db, id, ct) => await db.Licenses.AsNoTracking().Where(item => item.Id == id)
                 .Select(item => new LicenseResponse(item.Id, item.CustomerId, item.ContractId, item.InstallationId, item.LicenseNumber, item.ProductCode, item.Status, item.ValidFromUtc, item.ValidUntilUtc, item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion))).SingleOrDefaultAsync(ct));
 
@@ -515,14 +530,14 @@ public static class VendorBusinessEndpoints
 
     private static void MapReadOnlyResource<T>(
         IEndpointRouteBuilder endpoints, string route, string resourceType, string permission,
-        Func<VendorDbContext, IQueryable<T>> query,
+        Func<VendorDbContext, Guid?, IQueryable<T>> query,
         Func<VendorDbContext, Guid, CancellationToken, Task<T?>> get)
     {
         var group = endpoints.MapGroup(route).RequireAuthorization(VendorPermissionCatalog.PolicyFor(permission));
-        group.MapGet("/", async (int? page, int? pageSize, VendorDbContext db, CancellationToken ct) =>
+        group.MapGet("/", async (int? page, int? pageSize, Guid? customerId, VendorDbContext db, CancellationToken ct) =>
         {
             var pagination = VendorPageRequest.Normalize(page, pageSize);
-            var orderedQuery = query(db);
+            var orderedQuery = query(db, customerId);
             var totalCount = await orderedQuery.CountAsync(ct);
             var items = await orderedQuery.Skip(pagination.Skip).Take(pagination.PageSize).ToListAsync(ct);
             return Results.Ok(new VendorPageResponse<T>(items, pagination.Page, pagination.PageSize, totalCount));
