@@ -63,6 +63,26 @@ public sealed class VendorPermissionPolicyProvider(
 {
     public override Task<AuthorizationPolicy?> GetPolicyAsync(string policyName)
     {
+        if (policyName.StartsWith(VendorResourceCatalog.PolicyPrefix, StringComparison.Ordinal))
+        {
+            var resourcePolicyValue = policyName[VendorResourceCatalog.PolicyPrefix.Length..];
+            var separator = resourcePolicyValue.IndexOf(':');
+            var resourceType = separator > 0 ? resourcePolicyValue[..separator] : string.Empty;
+            var permission = separator > 0 && separator < resourcePolicyValue.Length - 1
+                ? resourcePolicyValue[(separator + 1)..]
+                : string.Empty;
+
+            var resourcePolicy = new AuthorizationPolicyBuilder()
+                .RequireAuthenticatedUser()
+                .AddRequirements(
+                    new VendorAdminAccessRequirement(),
+                    new VendorPermissionRequirement(permission),
+                    new VendorResourcePermissionRequirement(resourceType, permission))
+                .Build();
+
+            return Task.FromResult<AuthorizationPolicy?>(resourcePolicy);
+        }
+
         if (!policyName.StartsWith(VendorPermissionCatalog.PolicyPrefix, StringComparison.Ordinal))
         {
             return base.GetPolicyAsync(policyName);
