@@ -29,7 +29,7 @@ describe('Vendor contract form', () => {
     fireEvent.change(screen.getByLabelText('شماره قرارداد'), { target: { value: 'CTR-001' } });
     fireEvent.change(screen.getByLabelText('تاریخ شروع'), { target: { value: '2026-10-27' } });
     fireEvent.change(screen.getByLabelText('تاریخ پایان (اختیاری)'), { target: { value: '2027-10-26' } });
-    fireEvent.change(screen.getByLabelText('کد ارز (سه حرف)'), { target: { value: 'IRR' } });
+    fireEvent.change(await screen.findByRole('combobox', { name: 'ارز قرارداد' }), { target: { value: 'IRR' } });
     fireEvent.click(screen.getByRole('button', { name: 'ثبت قرارداد' }));
 
     await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
@@ -48,6 +48,22 @@ describe('Vendor contract form', () => {
         currencyCode: 'IRR',
       }),
     }));
+  });
+
+  it('preserves an existing currency outside the common quick-select list', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({
+      customerNumber: 'C-001', displayName: 'شرکت نمونه',
+    })));
+
+    render(<ContractForm initial={{
+      id: 'contract-1', customerId: 'customer-1', rowVersion: 'AQIDBAUGBwg=',
+      contractNumber: 'CTR-001', startsAtUtc: '2026-01-01T00:00:00Z', endsAtUtc: '',
+      currencyCode: 'CAD', status: 'Draft',
+    }} canReadCustomers onCancel={vi.fn()} onSaved={vi.fn()} />);
+
+    const currencySelect = await screen.findByRole('combobox', { name: 'ارز قرارداد' });
+    expect(currencySelect).toHaveValue('CAD');
+    expect(screen.getByRole('option', { name: 'ارز فعلی ثبت‌شده (CAD)' })).toBeInTheDocument();
   });
 
   it('does not allow creation without customer-read permission or with reversed dates', async () => {
