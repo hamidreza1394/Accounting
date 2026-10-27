@@ -174,9 +174,9 @@ public static partial class VendorRoleManagementEndpoints
             var existing = (await roleManager.GetClaimsAsync(role))
                 .Where(claim => claim.Type == PermissionClaimType)
                 .ToArray();
-            if (existing.Length > 0)
+            foreach (var claim in existing)
             {
-                var remove = await roleManager.RemoveClaimsAsync(role, existing);
+                var remove = await roleManager.RemoveClaimAsync(role, claim);
                 if (!remove.Succeeded)
                 {
                     await transaction.RollbackAsync(CancellationToken.None);
