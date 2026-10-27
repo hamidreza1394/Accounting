@@ -224,6 +224,16 @@ public static class VendorApprovalEndpoints
                 actor.Id,
                 request.Decision == "Approved" ? "vendor.approval.approved" : "vendor.approval.rejected",
                 nameof(VendorApprovalRequest), approval.Id.ToString("D"), CorrelationId()), ct);
+            if (request.Decision == "Approved")
+            {
+                await audit.AppendAsync(new VendorAuditWriteRequest(
+                    actor.Id,
+                    approval.ResourceType == "customer"
+                        ? "vendor.customer.status-changed"
+                        : "vendor.installation.status-changed",
+                    approval.ResourceType == "customer" ? nameof(VendorCustomer) : nameof(VendorInstallation),
+                    approval.ResourceId.ToString("D"), CorrelationId()), ct);
+            }
             await tx.CommitAsync(ct);
             return Results.Ok(ToResponse(approval));
         }).RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.ApprovalsReview));
