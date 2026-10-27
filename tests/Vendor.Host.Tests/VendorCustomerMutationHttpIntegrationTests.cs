@@ -82,9 +82,13 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.True(roleResult.Succeeded, string.Join("; ", roleResult.Errors.Select(error => error.Code)));
                 foreach (var permission in new[]
                 {
+                    VendorPermissionCatalog.CustomersRead,
                     VendorPermissionCatalog.CustomersManage,
+                    VendorPermissionCatalog.InstallationsRead,
                     VendorPermissionCatalog.InstallationsManage,
+                    VendorPermissionCatalog.ContractsRead,
                     VendorPermissionCatalog.ContractsManage,
+                    VendorPermissionCatalog.LicensesRead,
                     VendorPermissionCatalog.LicensesManage
                 })
                 {
