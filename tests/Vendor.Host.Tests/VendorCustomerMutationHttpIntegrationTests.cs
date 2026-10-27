@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Data.Common;
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
@@ -15,6 +16,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -58,6 +60,9 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 {
                     services.RemoveAll<IVendorAuditWriter>();
                     services.AddSingleton<AuditFailureSwitch>();
+                    services.AddSingleton<CustomerInsertRaceGate>();
+                    services.ConfigureDbContext<VendorDbContext>((provider, options) =>
+                        options.AddInterceptors(provider.GetRequiredService<CustomerInsertRaceGate>()));
                     services.AddScoped<IVendorAuditWriter>(provider => new SwitchableVendorAuditWriter(
                         provider.GetRequiredService<VendorDbContext>(),
                         provider.GetRequiredService<TimeProvider>(),
@@ -555,11 +560,87 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal(customerAuditCountBeforeFailure, await db.AuditEvents.CountAsync(item =>
                     item.ActionCode == "vendor.customer.updated" && item.SubjectId == customerId.ToString("D"), cancellationToken));
             }
+
+            // Force two authenticated HTTP creates past the preflight duplicate check and
+            // into SQL Server INSERT concurrently. The unique index must arbitrate the race.
+            var raceGate = factory.Services.GetRequiredService<CustomerInsertRaceGate>();
+            var racedCustomerNumber = "RACE-" + Guid.NewGuid().ToString("N")[..20];
+            var racedCustomerBody = new
+            {
+                customerNumber = racedCustomerNumber,
+                legalName = "Unique Race Integration Customer",
+                displayName = "Unique Race Integration Customer"
+            };
+            raceGate.Enable();
+            using var firstRaceResponseTask = PostWithTokenAsync(
+                client, "/api/vendor/customers/", racedCustomerBody, antiForgeryToken, cancellationToken);
+            using var secondRaceResponseTask = PostWithTokenAsync(
+                client, "/api/vendor/customers/", racedCustomerBody, antiForgeryToken, cancellationToken);
+            using var firstRaceResponse = await firstRaceResponseTask;
+            using var secondRaceResponse = await secondRaceResponseTask;
+            raceGate.Disable();
+
+            var raceStatuses = new[] { firstRaceResponse.StatusCode, secondRaceResponse.StatusCode };
+            Assert.Single(raceStatuses, status => status == HttpStatusCode.Created);
+            Assert.Single(raceStatuses, status => status == HttpStatusCode.Conflict);
+            var conflictResponse = firstRaceResponse.StatusCode == HttpStatusCode.Conflict
+                ? firstRaceResponse
+                : secondRaceResponse;
+            using (var conflictJson = JsonDocument.Parse(await conflictResponse.Content.ReadAsStringAsync(cancellationToken)))
+                Assert.Equal("customer_number_exists", conflictJson.RootElement.GetProperty("error").GetString());
+
+            await using (var raceVerificationScope = factory.Services.CreateAsyncScope())
+            {
+                var db = raceVerificationScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                Assert.Equal(1, await db.Customers.CountAsync(item =>
+                    item.CustomerNumber == racedCustomerNumber, cancellationToken));
+                Assert.Equal(1, await db.AuditEvents.CountAsync(item =>
+                    item.ActionCode == "vendor.customer.created" && item.SubjectId != null &&
+                    db.Customers.Any(customer => customer.CustomerNumber == racedCustomerNumber &&
+                        customer.Id.ToString() == item.SubjectId), cancellationToken));
+            }
         }
         finally
         {
             await DropDatabaseAsync(baseConnection, databaseName, CancellationToken.None);
         }
+    }
+
+    private sealed class CustomerInsertRaceGate : DbCommandInterceptor
+    {
+        private TaskCompletionSource _bothArrived = NewCompletionSource();
+        private int _arrivals;
+        private int _enabled;
+
+        public void Enable()
+        {
+            Interlocked.Exchange(ref _arrivals, 0);
+            _bothArrived = NewCompletionSource();
+            Volatile.Write(ref _enabled, 1);
+        }
+
+        public void Disable() => Volatile.Write(ref _enabled, 0);
+
+        public override async ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (Volatile.Read(ref _enabled) == 1 &&
+                command.CommandText.Contains("INSERT INTO [VendorCustomers]", StringComparison.OrdinalIgnoreCase))
+            {
+                if (Interlocked.Increment(ref _arrivals) == 2)
+                    _bothArrived.TrySetResult();
+
+                await _bothArrived.Task.WaitAsync(TimeSpan.FromSeconds(15), cancellationToken);
+            }
+
+            return result;
+        }
+
+        private static TaskCompletionSource NewCompletionSource() =>
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
     }
 
     private sealed class AuditFailureSwitch
