@@ -151,4 +151,28 @@ public sealed class VendorPersistenceTests
         }
     }
 
+    [Fact]
+    public void Business_records_use_sql_server_rowversion_concurrency_tokens()
+    {
+        using var provider = VendorTestServiceProviderFactory.Create(
+            "Server=localhost;Database=VendorModelOnly;Integrated Security=True;TrustServerCertificate=True");
+        using var scope = provider.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+
+        foreach (var entityType in new[]
+        {
+            typeof(Faranou.Vendor.Persistence.Domain.VendorCustomer),
+            typeof(Faranou.Vendor.Persistence.Domain.VendorInstallation),
+            typeof(Faranou.Vendor.Persistence.Domain.VendorContract),
+            typeof(Faranou.Vendor.Persistence.Domain.VendorLicense)
+        })
+        {
+            var property = context.Model.FindEntityType(entityType)!.FindProperty("RowVersion");
+            Assert.NotNull(property);
+            Assert.True(property!.IsConcurrencyToken);
+            Assert.Equal(Microsoft.EntityFrameworkCore.Metadata.ValueGenerated.OnAddOrUpdate, property.ValueGenerated);
+            Assert.Equal("rowversion", property.GetColumnType());
+        }
+    }
+
 }
