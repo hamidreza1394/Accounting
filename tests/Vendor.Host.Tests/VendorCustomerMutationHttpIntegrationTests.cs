@@ -572,9 +572,9 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 displayName = "Unique Race Integration Customer"
             };
             raceGate.Enable();
-            using var firstRaceResponseTask = PostWithTokenAsync(
+            var firstRaceResponseTask = PostWithTokenAsync(
                 client, "/api/vendor/customers/", racedCustomerBody, antiForgeryToken, cancellationToken);
-            using var secondRaceResponseTask = PostWithTokenAsync(
+            var secondRaceResponseTask = PostWithTokenAsync(
                 client, "/api/vendor/customers/", racedCustomerBody, antiForgeryToken, cancellationToken);
             using var firstRaceResponse = await firstRaceResponseTask;
             using var secondRaceResponse = await secondRaceResponseTask;
@@ -586,8 +586,13 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
             var conflictResponse = firstRaceResponse.StatusCode == HttpStatusCode.Conflict
                 ? firstRaceResponse
                 : secondRaceResponse;
+            var createdResponse = firstRaceResponse.StatusCode == HttpStatusCode.Created
+                ? firstRaceResponse
+                : secondRaceResponse;
             using (var conflictJson = JsonDocument.Parse(await conflictResponse.Content.ReadAsStringAsync(cancellationToken)))
                 Assert.Equal("customer_number_exists", conflictJson.RootElement.GetProperty("error").GetString());
+            using var createdJson = JsonDocument.Parse(await createdResponse.Content.ReadAsStringAsync(cancellationToken));
+            var createdCustomerId = createdJson.RootElement.GetProperty("id").GetGuid();
 
             await using (var raceVerificationScope = factory.Services.CreateAsyncScope())
             {
@@ -595,9 +600,8 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal(1, await db.Customers.CountAsync(item =>
                     item.CustomerNumber == racedCustomerNumber, cancellationToken));
                 Assert.Equal(1, await db.AuditEvents.CountAsync(item =>
-                    item.ActionCode == "vendor.customer.created" && item.SubjectId != null &&
-                    db.Customers.Any(customer => customer.CustomerNumber == racedCustomerNumber &&
-                        customer.Id.ToString() == item.SubjectId), cancellationToken));
+                    item.ActionCode == "vendor.customer.created" &&
+                    item.SubjectId == createdCustomerId.ToString("D"), cancellationToken));
             }
         }
         finally
