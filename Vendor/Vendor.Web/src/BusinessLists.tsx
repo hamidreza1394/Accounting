@@ -109,6 +109,7 @@ export function BusinessLists({ section }: { section: BusinessSection }) {
   const [data, setData] = useState<PageResponse<Row> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -135,7 +136,7 @@ export function BusinessLists({ section }: { section: BusinessSection }) {
       }
     }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [resource.endpoint, page, pageSize]);
+  }, [resource.endpoint, page, pageSize, reloadKey]);
 
   function changePageSize(value: string) {
     const next = Number(value);
@@ -152,7 +153,7 @@ export function BusinessLists({ section }: { section: BusinessSection }) {
         <h1 id="business-page-title" className="mt-1 text-2xl font-bold text-[#193b57]">{resource.title}</h1>
         <p className="mt-2 text-sm leading-7 text-muted-foreground">{resource.description}</p>
       </div>
-      <Button type="button" variant="outline" onClick={() => { setData(null); setPage(current => current); }} disabled={loading}>
+      <Button type="button" variant="outline" onClick={() => { setData(null); setReloadKey(current => current + 1); }} disabled={loading}>
         <RefreshCw size={16}/> تازه‌سازی
       </Button>
     </div>
@@ -164,7 +165,7 @@ export function BusinessLists({ section }: { section: BusinessSection }) {
       </CardHeader>
       <CardContent className="pt-4">
         {loading ? <div className="flex min-h-36 items-center justify-center gap-3 text-sm text-muted-foreground" role="status"><LoaderCircle className="animate-spin" size={20}/> در حال دریافت اطلاعات…</div>
-        : error ? <div className="flex min-h-36 flex-col items-center justify-center gap-3 text-center" role="alert"><AlertCircle className="text-destructive" size={26}/><p className="max-w-xl text-sm leading-7 text-destructive">{error}</p><Button type="button" variant="outline" onClick={() => { setError(''); setLoading(true); setPage(current => current); }}>تلاش دوباره</Button></div>
+        : error ? <div className="flex min-h-36 flex-col items-center justify-center gap-3 text-center" role="alert"><AlertCircle className="text-destructive" size={26}/><p className="max-w-xl text-sm leading-7 text-destructive">{error}</p><Button type="button" variant="outline" onClick={() => { setError(''); setLoading(true); setReloadKey(current => current + 1); }}>تلاش دوباره</Button></div>
         : !data || data.items.length === 0 ? <div className="flex min-h-36 flex-col items-center justify-center gap-2 text-center"><span className="text-sm font-semibold">رکوردی برای نمایش وجود ندارد</span><p className="text-sm text-muted-foreground">پس از ثبت اطلاعات، موارد در این فهرست نمایش داده می‌شوند.</p></div>
         : <div className="overflow-x-auto">
           <table className="w-full min-w-[680px] border-separate border-spacing-0 text-right text-sm">
