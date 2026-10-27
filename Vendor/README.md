@@ -136,3 +136,7 @@ Host عمداً به ارائه‌دهندهٔ ابری خاصی وابسته ن
 - endpointهای فهرست مشتری، نصب، قرارداد و لایسنس از `page` و `pageSize` پشتیبانی می‌کنند؛ پیش‌فرض صفحه 1 و اندازه 25 است و اندازه صفحه حداکثر 100 خواهد بود.
 - پاسخ صفحه‌بندی شامل `items`, `page`, `pageSize`, `totalCount`, `totalPages`, `hasPreviousPage` و `hasNextPage` است. مصرف‌کننده‌ها باید پاسخ را به‌عنوان envelope صفحه‌بندی بخوانند، نه آرایه خام.
 - وضعیت: قرارداد صفحه‌بندی در main موجود است؛ اصلاحات مرزی در PR #168 و اتصال UI در Issue #169 جداگانه در حال بررسی‌اند. این تغییرها Migration دیتابیس مشتری ایجاد نمی‌کنند.
+
+
+## Audit chain lookup indexes (Issue #202)
+- Migration 20261027190000_VendorAuditChainIndexes adds IX_VendorAuditEvents_PreviousHash and unique IX_VendorAuditEvents_EventHash for Vendor-only audit chain lookups. This remains unverified until the SQL Server integration suite and EF pending-model-change guard pass in CI.
