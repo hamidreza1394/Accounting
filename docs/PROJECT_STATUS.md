@@ -267,3 +267,10 @@
 ### Issue #134 — CI follow-up 2
 - Vendor CI run [40288514593](https://github.com/hamidreza1394/Accounting/actions/runs/40288514593) تأیید کرد خطای قبلی Persistence برطرف شده، اما Build سپس در Host شکست خورد: `AddSignInManager` نیز extension روی `IdentityBuilder` است، نه `IServiceCollection`.
 - شاخهٔ PR #135 اصلاح شد تا `AddSignInManager()` و `AddDefaultTokenProviders()` هر دو از طریق یک `IdentityBuilder` در Host ثبت شوند. وضعیت همچنان **Not verified** تا اجرای تازهٔ CI.
+
+
+## Vendor Issue #195 — مدیریت metadata لایسنس (شاخهٔ در حال اعتبارسنجی)
+- **وضعیت:** `Implemented / Not yet Verified` تا موفقیت Vendor CI و .NET CI روی head نهایی.
+- فرم ثبت/ویرایش metadata لایسنس Draft به APIهای موجود متصل شده است؛ فهرست‌ها از `customerId` فیلتر می‌شوند تا قرارداد یا نصب مشتری دیگر در انتخاب‌گرها ظاهر نشود.
+- تست‌های UI برای ایجاد، روابط اختیاری، تاریخ UTC، مجوز، RowVersion و Draft-only؛ تست HTTP مبتنی بر SQL Server برای فیلتر customerId اضافه شده‌اند.
+- **خارج از محدوده:** صدور لایسنس امضاشده، KMS/HSM، activation آفلاین و اعمال لایسنس در برنامه مشتری هنوز پیاده‌سازی نشده‌اند و مانع Production هستند. هیچ migration یا دیتابیس حسابداری مشتری تغییر نکرده است.
