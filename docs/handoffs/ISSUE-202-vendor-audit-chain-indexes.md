@@ -37,7 +37,7 @@
 | dotnet test Template.sln -c Release | موفق در CI | .NET CI run 40563642237 |
 | SQL Server migration integration | موفق در CI | Vendor CI run 40563642222 |
 | dotnet ef migrations has-pending-model-changes | موفق در CI | Vendor CI run 40563642222 |
-| git diff --check | موفق در CI | بررسی انتشار/CI روی head نهایی |
+| git diff --check | اجرا نشده | در این محیط ابزار محلی مخزن در دسترس نبود؛ CI بررسی‌های انتشار را اجرا کرد |
 
 ## امنیت، داده و سازگاری
 - هیچ داده‌ای تغییر یا حذف نمی‌شود؛ فقط دو ایندکس افزوده می‌شوند.
