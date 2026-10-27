@@ -126,6 +126,7 @@ export function BusinessLists({ section, permissions = [] }: { section: Business
   const [notice, setNotice] = useState('');
   const canManageCustomers = section === 'customers' && permissions.includes('vendor.customers.manage');
   const canManageInstallations = section === 'installations' && permissions.includes('vendor.installations.manage');
+  const canRequestApprovals = permissions.includes('vendor.approvals.request');
   const canManageContracts = section === 'contracts' && permissions.includes('vendor.contracts.manage');
   const canManageLicenses = section === 'licenses' && permissions.includes('vendor.licenses.manage');
   const canReadCustomers = permissions.includes('vendor.customers.read');
@@ -318,12 +319,12 @@ export function BusinessLists({ section, permissions = [] }: { section: Business
       if (!tokenResponse.ok) throw new Error(errorFor(tokenResponse.status));
       const tokenBody = await tokenResponse.json() as { requestToken?: string };
       if (!tokenBody.requestToken) throw new Error('توکن امنیتی در پاسخ سرور وجود ندارد.');
-      const response = await fetch(`/api/vendor/installations/${row.id}/status`, {
+      const response = await fetch('/api/vendor/approvals/status-change', {
         method: 'POST',
         credentials: 'same-origin',
         cache: 'no-store',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': tokenBody.requestToken },
-        body: JSON.stringify({ status: nextStatus, rowVersion: row.rowVersion }),
+        body: JSON.stringify({ resourceType: 'installation', resourceId: row.id, targetStatus: nextStatus, rowVersion: row.rowVersion }),
       });
       if (!response.ok) {
         let code = '';
@@ -335,10 +336,11 @@ export function BusinessLists({ section, permissions = [] }: { section: Business
         }
         if (response.status === 409 && code === 'stale_row_version') throw new Error('اطلاعات نصب تغییر کرده است؛ فهرست را تازه‌سازی کنید.');
         if (response.status === 409 && code === 'invalid_status_transition') throw new Error('این تغییر وضعیت مجاز نیست.');
+        if (response.status === 409 && code === 'approval_already_pending') throw new Error('برای این نصب درخواست تأیید در انتظار وجود دارد.');
         if (response.status === 403) throw new Error('حساب شما مجوز تغییر وضعیت نصب را ندارد.');
         throw new Error(errorFor(response.status));
       }
-      setNotice(nextStatus === 'Suspended' ? 'نصب با موفقیت تعلیق شد.' : 'نصب با موفقیت فعال شد.');
+      setNotice('درخواست تغییر وضعیت نصب برای تأیید مدیر دیگر ثبت شد.');
       setData(null);
       setLoading(true);
       setReloadKey(current => current + 1);
@@ -427,7 +429,7 @@ export function BusinessLists({ section, permissions = [] }: { section: Business
               {(canManageCustomers || canManageInstallations || canManageContracts || canManageLicenses) && <td className="border-b border-border px-4 py-3"><div className="flex flex-wrap gap-2">
                 {canManageCustomers && <Button type="button" variant="outline" size="sm" onClick={() => openEditCustomer(row)} aria-label={`ویرایش مشتری ${String(row.displayName ?? row.customerNumber ?? '')}`}><Pencil size={15}/> ویرایش</Button>}
                 {canManageInstallations && <Button type="button" variant="outline" size="sm" onClick={() => openEditInstallation(row)} aria-label={`ویرایش نصب ${String(row.name ?? row.installationCode ?? '')}`}><Pencil size={15}/> ویرایش</Button>}
-                {canManageInstallations && (row.status === 'Active' || row.status === 'Suspended') && <Button type="button" variant="outline" size="sm" disabled={statusBusyId === row.id || Boolean(statusBusyId)} onClick={() => changeInstallationStatus(row)} aria-label={row.status === 'Active' ? `تعلیق نصب ${String(row.name ?? '')}` : `فعال‌سازی نصب ${String(row.name ?? '')}`}>{statusBusyId === row.id ? 'در حال ثبت…' : row.status === 'Active' ? 'تعلیق' : 'فعال‌سازی'}</Button>}
+                {canManageInstallations && canRequestApprovals && (row.status === 'Active' || row.status === 'Suspended') && <Button type="button" variant="outline" size="sm" disabled={statusBusyId === row.id || Boolean(statusBusyId)} onClick={() => changeInstallationStatus(row)} aria-label={row.status === 'Active' ? `تعلیق نصب ${String(row.name ?? '')}` : `فعال‌سازی نصب ${String(row.name ?? '')}`}>{statusBusyId === row.id ? 'در حال ثبت…' : row.status === 'Active' ? 'تعلیق' : 'فعال‌سازی'}</Button>}
                 {canManageContracts && row.status === 'Draft' && <Button type="button" variant="outline" size="sm" onClick={() => openEditContract(row)} aria-label={`ویرایش قرارداد ${String(row.contractNumber ?? '')}`}><Pencil size={15}/> ویرایش</Button>}
                 {canManageLicenses && row.status === 'Draft' && <Button type="button" variant="outline" size="sm" onClick={() => openEditLicense(row)} aria-label={`ویرایش لایسنس ${String(row.licenseNumber ?? '')}`}><Pencil size={15}/> ویرایش</Button>}
               </div></td>}
