@@ -778,3 +778,12 @@
 - **اصلاح:** workflow مستقل Vendor اکنون علاوه بر `main`، push شاخه‌های `feat/vendor-*`، `fix/vendor-*`، `test/vendor-*` و `ci/vendor-*` را نیز بررسی می‌کند؛ فیلتر مسیرهای Vendor و قراردادهای مرتبط حفظ شده‌اند، بنابراین تغییرات غیرمرتبط Accounting باعث اجرای این workflow نمی‌شوند.
 - **دلیل:** تضمین اجرای واقعی TypeScript/Vitest و تست‌های SQL Server Vendor روی head جاری، نه اتکا به نتیجهٔ commit قدیمی‌تر.
 - **اعتبارسنجی:** CI باید روی آخرین head این PR سبز شود؛ نتیجهٔ workflow قبل از تغییر trigger برای آخرین commit ادعا نمی‌شود.
+
+
+## 2026-10-27 — رابط کاربری مدیریت نصب‌های Vendor
+- **Issue:** #186.
+- **تغییر:** فرم RTL ثبت/ویرایش نصب به APIهای موجود وصل شد؛ انتخاب مشتری از فهرست واقعی صفحه‌بندی‌شده (100 مورد در هر صفحه)، محیط نصب با `ManagedSelect` و مقدار پیش‌فرض Production، ویرایش metadata با RowVersion و تغییر وضعیت Active/Suspended از مسیر مجزای API اضافه شد.
+- **کنترل دسترسی:** دکمه‌های ویرایش/وضعیت به `vendor.installations.manage` وابسته‌اند؛ ثبت نصب علاوه بر آن به `vendor.customers.read` نیاز دارد تا مشتری واقعی انتخاب شود. در نبود CustomersRead، ثبت نصب غیرفعال است. Authorization نهایی سمت سرور باقی می‌ماند.
+- **امنیت:** همهٔ عملیات نوشتن توکن antiforgery تازه و RowVersion را استفاده می‌کنند؛ conflictهای stale و انتقال وضعیت نامعتبر پیام فارسی دارند. دیتابیس حسابداری مشتری یا provisioning تغییر نمی‌کند.
+- **تست‌ها:** Vitest برای ایجاد، محیط پیش‌فرض، نبود مجوز مشتری، ویرایش با RowVersion و تعارض؛ تست‌های UI برای تغییر وضعیت نصب و stale conflict.
+- **اعتبارسنجی:** Vendor CI و .NET CI روی head نهایی باید سبز شوند؛ تا آن زمان `Implemented / Not yet Verified`.
