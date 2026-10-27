@@ -34,8 +34,14 @@ public sealed class VendorPersistenceTests
 
         var audit = model.FindEntityType(typeof(VendorAuditEvent));
         Assert.NotNull(audit);
+        Assert.Contains(audit!.GetIndexes(), index =>
+            index.Properties.Select(property => property.Name).SequenceEqual([nameof(VendorAuditEvent.PreviousHash)]) &&
+            !index.IsUnique);
+        Assert.Contains(audit.GetIndexes(), index =>
+            index.Properties.Select(property => property.Name).SequenceEqual([nameof(VendorAuditEvent.EventHash)]) &&
+            index.IsUnique);
         Assert.DoesNotContain(
-            audit!.GetForeignKeys(),
+            audit.GetForeignKeys(),
             foreignKey => foreignKey.PrincipalEntityType.ClrType == typeof(VendorAdminUser));
     }
 
