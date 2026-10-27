@@ -42,7 +42,7 @@ describe('Vendor approval queue', () => {
     expect(await screen.findByText('تعلیق')).toBeInTheDocument();
 
     fireEvent.click(await screen.findByRole('button', { name: 'تأیید درخواست approval-1' }));
-    expect(await screen.findByRole('status')).toHaveTextContent('درخواست با موفقیت تأیید و اعمال شد.');
+    expect(await screen.findByRole('status')).toHaveTextContent('درخواست تأیید و تغییر وضعیت اعمال شد.');
     expect(fetchMock).toHaveBeenCalledWith('/api/vendor/approvals/approval-1/decision', expect.objectContaining({
       method: 'POST',
       credentials: 'same-origin',
