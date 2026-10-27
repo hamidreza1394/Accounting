@@ -242,3 +242,12 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - endpoint تغییر رمز anti-forgery، بررسی رمز فعلی، اعتبارسنجی سیاست گذرواژه و محدودیت تلاش دارد؛ خطاها جزئیات حساس را افشا نمی‌کنند. رویداد `admin.password.changed` فقط شناسه‌ها و correlation ID را ثبت می‌کند، نه گذرواژه یا هش آن.
 - آزمون‌های HTTP با SQL Server و رابط کاربری افزوده شده‌اند؛ وضعیت تا عبور Vendor CI/.NET CI روی آخرین SHA **Implemented / Not Verified** است.
 - بدون Migration دیتابیس مشتری و بدون تغییر Schema در این مرحله.
+
+
+## Vendor: مدیریت نقش و مجوزدهی منبع‌محور (Issue #161)
+- endpointهای `/api/admin/roles` و `/api/admin/administrators` باید سیاست `vendor.administrators.manage` و گارد مدیر فعال با MFA داشته باشند.
+- API معمولی اجازهٔ ایجاد نقش `Vendor.SuperAdmin`، تغییر مجوزهای آن یا اعطای مجوز `vendor.administrators.manage` به نقش سفارشی را نمی‌دهد. تخصیص نقش SuperAdmin فقط در bootstrap تعاملی یک‌باره مجاز است.
+- تغییر نقش، تغییر مجوز و تخصیص نقش با رویداد ممیزی در همان تراکنش SQL Server انجام می‌شوند؛ در صورت شکست append ممیزی، تراکنش commit نمی‌شود.
+- `VendorResourcePermissionAuthorizationHandler` ابتدا سیاست پایهٔ مدیر/MFA و مجوز را بررسی می‌کند و سپس adapter منبع را فراخوانی می‌کند. adapter پیش‌فرض `DenyAllVendorResourceAccessEvaluator` است؛ تا وقتی resolver واقعی منبع از دیتابیس ثبت نشده، همهٔ دسترسی‌های منبع‌محور رد می‌شوند.
+- **محدودیت صریح:** این گارد زیرساختی به‌تنهایی اثبات جلوگیری از IDOR برای مشتری/نصب/قرارداد/لایسنس نیست. هنگام اضافه‌شدن مدل و APIهای واقعی، adapter باید رابطهٔ منبع و مشتری را از رکورد persisted resolve کند و آزمون‌های منفی با شناسهٔ منبع متعلق به مشتری دیگر اجرا شوند.
+- این تغییر هیچ Migration یا تغییری در دیتابیس حسابداری مشتری ایجاد نمی‌کند. وضعیت نهایی تا سبزشدن Vendor CI و .NET CI روی آخرین SHA، `Implemented / Not Verified` است.
