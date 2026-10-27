@@ -133,6 +133,31 @@ public sealed class VendorPermissionAuthorizationTests
     }
 
     [Fact]
+    public async Task EveryVendorAdminManagementEndpointRequiresAdministratorManagementPermission()
+    {
+        await using var factory = new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program>();
+        var dataSource = factory.Services.GetRequiredService<Microsoft.AspNetCore.Routing.EndpointDataSource>();
+        var policyProvider = factory.Services.GetRequiredService<IAuthorizationPolicyProvider>();
+        var adminEndpoints = dataSource.Endpoints
+            .OfType<Microsoft.AspNetCore.Routing.RouteEndpoint>()
+            .Where(endpoint => endpoint.RoutePattern.RawText?.StartsWith("/api/admin/", StringComparison.OrdinalIgnoreCase) == true)
+            .ToArray();
+
+        Assert.NotEmpty(adminEndpoints);
+        foreach (var endpoint in adminEndpoints)
+        {
+            var authorizeData = endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>();
+            Assert.NotEmpty(authorizeData);
+            var policy = await AuthorizationPolicy.CombineAsync(policyProvider, authorizeData);
+            Assert.NotNull(policy);
+            Assert.Contains(policy!.Requirements, requirement =>
+                requirement is VendorPermissionRequirement permission &&
+                permission.Permission == VendorPermissionCatalog.AdministratorsManage);
+            Assert.Contains(policy.Requirements, requirement => requirement is VendorAdminAccessRequirement);
+        }
+    }
+
+    [Fact]
     public void ResourceCatalogAllowsOnlyKnownResourceAndPermissionPairs()
     {
         Assert.True(VendorResourceCatalog.Supports("customer", VendorPermissionCatalog.CustomersRead));
