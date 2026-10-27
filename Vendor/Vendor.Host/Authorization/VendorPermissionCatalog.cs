@@ -21,6 +21,9 @@ public static class VendorPermissionCatalog
     public const string LicensesIssue = "vendor.licenses.issue";
     public const string AdministratorsManage = "vendor.administrators.manage";
     public const string AuditRead = "vendor.audit.read";
+    public const string ApprovalsRead = "vendor.approvals.read";
+    public const string ApprovalsRequest = "vendor.approvals.request";
+    public const string ApprovalsReview = "vendor.approvals.review";
 
     private static readonly HashSet<string> Permissions = new(StringComparer.Ordinal)
     {
@@ -34,7 +37,10 @@ public static class VendorPermissionCatalog
         LicensesManage,
         LicensesIssue,
         AdministratorsManage,
-        AuditRead
+        AuditRead,
+        ApprovalsRead,
+        ApprovalsRequest,
+        ApprovalsReview
     };
 
     public static IReadOnlyCollection<string> All { get; } =
