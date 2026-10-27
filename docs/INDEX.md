@@ -17,7 +17,7 @@
 | [`ROADMAP.md`](ROADMAP.md) | برنامه راه |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | معماری و جهت وابستگی |
 | [`WORK_CONTEXT_SELECTOR_UI.md`](WORK_CONTEXT_SELECTOR_UI.md) | طراحی بصری و رفتار صفحه انتخاب شرکت و دوره مالی (لوگو، فونت، مرور محصولات، اندازه‌گیری) |
-| [`DECISIONS.md`](DECISIONS.md) | ADRها D-001..D-047 (بعدی D-048)؛ مرز مشتری و برچسب‌های رابطه: D-037..D-040؛ مرز سامانه مرکزی، فعال‌سازی، هویت فروشنده و گذار: D-041..D-044؛ قرارداد لایسنس: D-045؛ امنیت و عملیات فروشنده: D-046؛ معماری اجرایی Vendor: D-047 (Accepted; implementation staged and not Production-ready) |
+| [`DECISIONS.md`](DECISIONS.md) | ADRها D-001..D-050 (بعدی D-051)؛ مرز مشتری و برچسب‌های رابطه: D-037..D-040؛ مرز سامانه مرکزی، فعال‌سازی، هویت فروشنده و گذار: D-041..D-044؛ قرارداد لایسنس: D-045؛ امنیت و عملیات فروشنده: D-046؛ معماری اجرایی Vendor: D-047 (Accepted; implementation staged and not Production-ready)؛ shadcn/ui: D-048؛ کتابخانه‌های جدول/نمودار/تاریخ، آفلاین‌بودن دارایی‌ها و قواعد طراحی/سرعت: D-049؛ استفادهٔ مشروط از بخش‌های رایگان KendoReact: D-050 |
 | [`CORPORATE_GROUPS.md`](CORPORATE_GROUPS.md) | گروه شرکتی، گزارش تجمیعی/تلفیقی، مجوزها و نقشه راه (D-033..D-035) |
 | [`CORPORATE_GROUPS_DATA_MODEL.md`](CORPORATE_GROUPS_DATA_MODEL.md) | جداول، کلیدها و راهبرد Migration گروه شرکتی |
 | [`PRODUCT_REQUIREMENTS.md`](PRODUCT_REQUIREMENTS.md) | نیازمندی‌های محصول |
@@ -34,7 +34,7 @@
 | [`TESTING.md`](TESTING.md) | تست |
 | [`DEPLOYMENT.md`](DEPLOYMENT.md), [`DEVELOPMENT.md`](DEVELOPMENT.md) | استقرار و توسعه |
 | [`CODING_STANDARDS.md`](CODING_STANDARDS.md) | استانداردها |
-| [`UI_COMPONENTS.md`](UI_COMPONENTS.md) | استاندارد shadcn/ui، RTL فارسی، دسترس‌پذیری و runtime آفلاین |
+| [`UI_COMPONENTS.md`](UI_COMPONENTS.md) | استاندارد shadcn/ui، RTL فارسی، دسترس‌پذیری و runtime آفلاین؛ کتابخانه‌های پذیرفته‌شدهٔ جدول/نمودار/تاریخ، قانون محلی‌سازی دارایی‌ها و قواعد طراحی/سرعت/ویژوال (D-048، D-049) |
 | [`REPOSITORY_AUDIT.md`](REPOSITORY_AUDIT.md) | ممیزی و ناهماهنگی‌ها |
 | [`CLOUD_CONCURRENCY_READINESS.md`](CLOUD_CONCURRENCY_READINESS.md) | ممیزی آمادگی بار ابری؛ ظرفیت ۱۰۰ کاربر فعلاً تأیید نشده |
 | [`AGENT_COORDINATION.md`](AGENT_COORDINATION.md), [`AGENT_START_PROMPT.md`](AGENT_START_PROMPT.md), [`prompts/`](prompts/), [`../CLAUDE.md`](../CLAUDE.md) | هماهنگی Agentها (شامل بخش «تقسیم کار بین Subagentهای Claude Code» و «Skill، Plugin و کنترل‌های قطعی»؛ تنظیمات Claude Code در [`../.claude/settings.json`](../.claude/settings.json)) |

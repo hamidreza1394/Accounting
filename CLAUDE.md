@@ -5,7 +5,7 @@
 این بخش فقط مخصوص Claude Code است و چیزی از `AGENTS.md` را تکرار نمی‌کند؛ قرارداد کاری، قواعد غیرقابل‌مذاکره، استانداردهای کدنویسی و دستورات مرجع همان فایل (بالا) است و باید کامل رعایت شود. اینجا صرفاً تیم Subagentهای این مخزن و نحوه استفاده از آن‌ها تعریف می‌شود.
 
 ### مرجع مستندات (2026-10-21)
-نقطه شروع: `docs/INDEX.md`. وضعیت قابلیت‌ها با واژگان D-030 (`Implemented`/`Verified`/`NotImplemented`/...) گفته می‌شود. لایسنس تجاری و زیرسیستم‌ها `NotImplemented` هستند؛ Activation قدیمی کد مرده است (D-028). ADR بعدی D-045 است (اصلاح 2026-10-24؛ پیش‌تر D-036 نوشته شده بود در حالی که `docs/DECISIONS.md` تا D-044 را ثبت کرده است؛ مرجع همیشه عنوان `docs/DECISIONS.md` است). گروه شرکتی و تلفیق: `docs/CORPORATE_GROUPS.md` (D-033..D-035)؛ در این مخزن `Company` همان Tenant است.
+نقطه شروع: `docs/INDEX.md`. وضعیت قابلیت‌ها با واژگان D-030 (`Implemented`/`Verified`/`NotImplemented`/...) گفته می‌شود. لایسنس تجاری و زیرسیستم‌ها `NotImplemented` هستند؛ Activation قدیمی کد مرده است (D-028). ADR بعدی D-051 است (اصلاح 2026-10-24؛ پیش‌تر D-036 نوشته شده بود در حالی که `docs/DECISIONS.md` تا D-044 را ثبت کرده است؛ مرجع همیشه عنوان `docs/DECISIONS.md` است). گروه شرکتی و تلفیق: `docs/CORPORATE_GROUPS.md` (D-033..D-035)؛ در این مخزن `Company` همان Tenant است.
 
 ### وضعیت واقعی تأییدشده (بررسی 2026-10-21)
 
@@ -119,7 +119,7 @@ Lead برای هر کار تقسیم‌شده در گزارش پایانی می�
    | مستندات | `documentation-engineer` | `engineering:documentation` |
    | معماری و ADR فرانو | `architect` | `faranou-architecture-review` |
    | امنیت و جداسازی شرکت‌ها | `security-reviewer` | `faranou-security-multitenancy` |
-   | UI/UX فارسی و RTL | `frontend-developer` | `faranou-ui-ux-design` |
+   | UI/UX فارسی و RTL | `frontend-developer` | `faranou-ui-ux-design`؛ پیش از هر کار UI حتماً `docs/UI_COMPONENTS.md` را بخوان |
    | تست و کیفیت فرانو | `qa-engineer` | `faranou-testing-quality` |
    | حسابداری، مالی و قواعد داده | `backend-developer` / `database-engineer` | `faranou-accounting-domain` |
    | توسعه عمومی .NET/C# | `backend-developer` | `dotnet-patterns` |
