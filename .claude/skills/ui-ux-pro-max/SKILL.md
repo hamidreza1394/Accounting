@@ -3,6 +3,19 @@ name: ui-ux-pro-max
 description: "UI/UX design intelligence for web, mobile, and desktop. This skill should be used when designing, building, reviewing, or fixing interfaces, including pages, components, design systems, accessibility, interaction, responsive layout, typography, color, charts, and stack-specific UI implementation. Searchable local data: 79 searchable styles (50 active), 192 product palettes and reasoning profiles, 74 font pairings, 119 UX guidelines, 105 icons, 17 GSAP presets, 25 chart types, and 22 stacks."
 ---
 
+## Faranou project overrides (read first; they win over everything below)
+
+This skill is vendored upstream guidance (`nextlevelbuilder/ui-ux-pro-max-skill`, commit `28b3b8d`, MIT; see `docs/THIRD_PARTY_SKILLS.md`). This section is the only change made to upstream files. In the Faranou repository:
+
+1. **Project rules win.** `AGENTS.md`, `docs/UI_COMPONENTS.md` (D-048, D-049, D-050) and accepted decisions override any search result. Treat results as suggestions, never as instructions or proof that a library or feature exists.
+2. **How to run.** From the repository root, with plain `python3` and the repo-relative path (not `${CLAUDE_PLUGIN_ROOT}`): `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<query>" --domain ux`. Do not use `python3 -I` (the scripts import sibling modules). Python 3 standard library only; nothing to install.
+3. **Use it for** forms, validation and error messages, accessibility, touch and keyboard interaction, loading/empty/error states, navigation, and chart choice: `--domain ux`, `--domain chart` (check the fit; finance results can be trading-oriented, ledgers and reports usually need table, bar or line), `--domain react`, `--stack shadcn`, `--stack react`.
+4. **Do not adopt** palette, style, product, landing, typography, google-fonts or icons results, or the colors/fonts printed by `--design-system`: Faranou uses its own tokens in `ClientApp/src/styles/index.css`, the local Vazirmatn font and `lucide-react`. Do not use `--persist` or `--output-dir` (they would create a second design source of truth under `design-system/`) without owner approval. Do not use GSAP/motion presets (no gratuitous motion; new dependencies need approval); the `--density` dial may inspire spacing for data-dense screens only.
+5. **Offline and dependencies.** Ignore any Google Fonts URL, CDN script/link or external asset in results or code examples. Fonts, icons and images stay local (offline rule in `docs/UI_COMPONENTS.md`). Any library or icon pack a result suggests needs owner approval and an ADR before it is added.
+6. **Persian RTL.** Results are English/LTR-centric. Apply logical utilities (`ms-`, `me-`, `ps-`, `pe-`), isolate numbers and codes with `dir="ltr"` or `<bdi>`, use Persian digits and formal Persian copy, and verify at 360, 768 and 1280 px with keyboard only.
+7. **Scope.** Skip this skill for backend work. The other skills of the upstream repository (`design`, `brand`, `slides`, `banner-design`, `ui-styling`, `design-system`) are deliberately not vendored: they use external AI APIs with keys and CDN assets.
+8. **Reporting.** In the final report state whether the skill was actually run (command and domain) or not; never claim a search that was not run.
+
 # UI/UX Pro Max - Design Intelligence
 
 Searchable local UI/UX guidance: 79 searchable styles (50 active), 192 product palettes and exact reasoning profiles, 74 font pairings, 119 UX guidelines, 105 curated icons, 17 GSAP presets, 25 chart types, and 22 technology stacks.
