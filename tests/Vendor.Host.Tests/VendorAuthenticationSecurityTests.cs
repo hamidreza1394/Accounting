@@ -276,6 +276,43 @@ public sealed class VendorAuthenticationSecurityTests
     }
 
     [Fact]
+    public async Task PasskeyOptionsUseDiscoverableCredentialsWithoutReturningAccountSpecificAllowList()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var factory = new WebApplicationFactory<Program>();
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://localhost")
+        });
+
+        var (token, cookie) = await GetAntiforgeryTokenAndCookieAsync(client, cancellationToken);
+        foreach (var userName in new[] { "unknown-" + Guid.NewGuid().ToString("N"), "administrator@example.invalid" })
+        {
+            using var response = await PostWithTokenAsync(
+                client,
+                "/api/auth/passkey/options",
+                new { userName },
+                token,
+                cancellationToken,
+                cookie);
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.True(response.Headers.CacheControl?.NoStore ?? false);
+
+            using var document = JsonDocument.Parse(
+                await response.Content.ReadAsStringAsync(cancellationToken));
+            var root = document.RootElement;
+            // Discoverable credentials must not return a per-account credential allow-list.
+            // The challenge is intentionally random per request and is not compared.
+            Assert.False(
+                root.TryGetProperty("allowCredentials", out var allowCredentials) &&
+                allowCredentials.ValueKind == JsonValueKind.Array &&
+                allowCredentials.GetArrayLength() > 0,
+                "Passkey options must not disclose account-specific credential identifiers.");
+        }
+    }
+
+    [Fact]
     public async Task PublicRegistrationEndpointIsNotMapped()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
