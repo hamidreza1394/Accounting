@@ -149,6 +149,24 @@ describe('Vendor control plane shell', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('اطلاعات نصب تغییر کرده است؛ فهرست را تازه‌سازی کنید.');
   });
 
+  it('allows contract edits only for Draft records and requires customer-read to create', async () => {
+    const contractPage = {
+      items: [
+        { id: 'contract-draft', customerId: 'customer-1', rowVersion: 'AQIDBAUGBwg=', contractNumber: 'CTR-DRAFT',
+          status: 'Draft', startsAtUtc: '2026-10-27T00:00:00Z', endsAtUtc: null, currencyCode: 'IRR', createdAtUtc: '2026-10-27T08:00:00Z' },
+        { id: 'contract-active', customerId: 'customer-1', rowVersion: 'AQIDBAUGBwg=', contractNumber: 'CTR-ACTIVE',
+          status: 'Active', startsAtUtc: '2026-10-27T00:00:00Z', endsAtUtc: null, currencyCode: 'IRR', createdAtUtc: '2026-10-27T08:00:00Z' },
+      ],
+      page: 1, pageSize: 25, totalCount: 2, totalPages: 1, hasPreviousPage: false, hasNextPage: false,
+    };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(contractPage)));
+    render(<BusinessLists section="contracts" permissions={['vendor.contracts.manage']} />);
+
+    expect(await screen.findByRole('button', { name: 'ثبت قرارداد' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'ویرایش قرارداد CTR-DRAFT' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'ویرایش قرارداد CTR-ACTIVE' })).not.toBeInTheDocument();
+  });
+
   it('shows a permission-specific message when a business list returns 403', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
