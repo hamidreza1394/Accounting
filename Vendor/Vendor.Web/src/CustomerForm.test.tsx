@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { CustomerForm } from './CustomerForm';
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
@@ -22,7 +22,7 @@ describe('Vendor customer form', () => {
     fireEvent.change(screen.getByLabelText('نام نمایشی'), { target: { value: 'نمونه' } });
     fireEvent.click(screen.getByRole('button', { name: 'ثبت مشتری' }));
 
-    expect(await screen.findByRole('status')).toHaveTextContent('مشتری تجاری با موفقیت ثبت شد.');
+    await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
     expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/auth/antiforgery', expect.objectContaining({
       credentials: 'same-origin', cache: 'no-store',
     }));
