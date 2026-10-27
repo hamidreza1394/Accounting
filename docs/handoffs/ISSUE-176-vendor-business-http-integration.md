@@ -24,7 +24,9 @@ The test uses a generated Vendor-only database name and drops only that database
 
 ## Verification status
 
-CI must complete before this branch is considered validated. No local build/test has been run from this connector-only workflow.
+- First Vendor CI attempt (`40489907527`) failed in the authenticated customer update test (68 passed, 1 failed). The log showed that the anonymous anti-forgery request token was reused after the TOTP login changed the claims identity; ASP.NET Core rejected it before RowVersion validation.
+- Fix committed as `86828e36ee2f3d9c473ef7fb8df01fca0dc24b93`: fetch a fresh anti-forgery token after successful MFA, then use it for mutation requests.
+- **CI after the fix is not yet confirmed.** No local build/test has been run from this connector-only workflow. Keep the PR unmerged until the new Vendor CI run succeeds.
 
 ## Remaining acceptance criteria
 
