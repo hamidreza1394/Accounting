@@ -15,6 +15,7 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
     public DbSet<Domain.VendorInstallation> Installations => Set<Domain.VendorInstallation>();
     public DbSet<Domain.VendorContract> Contracts => Set<Domain.VendorContract>();
     public DbSet<Domain.VendorLicense> Licenses => Set<Domain.VendorLicense>();
+    public DbSet<Domain.VendorApprovalRequest> ApprovalRequests => Set<Domain.VendorApprovalRequest>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -124,6 +125,24 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
                 .HasForeignKey(item => item.ContractId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(item => item.Installation).WithMany(installation => installation.Licenses)
                 .HasForeignKey(item => item.InstallationId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<Domain.VendorApprovalRequest>(entity =>
+        {
+            entity.ToTable("VendorApprovalRequests");
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.ResourceType).HasMaxLength(30).IsRequired();
+            entity.Property(item => item.TargetStatus).HasMaxLength(20).IsRequired();
+            entity.Property(item => item.ExpectedResourceRowVersion).HasColumnType("binary(8)").IsRequired();
+            entity.Property(item => item.Status).HasMaxLength(20).IsRequired();
+            entity.Property(item => item.ReviewComment).HasMaxLength(500);
+            entity.Property(item => item.RowVersion).IsRowVersion();
+            entity.HasIndex(item => new { item.ResourceType, item.ResourceId })
+                .IsUnique()
+                .HasFilter("[Status] = N'Pending'");
+            entity.HasIndex(item => new { item.Status, item.RequestedAtUtc });
+            entity.HasIndex(item => item.RequestedByUserId);
+            entity.HasIndex(item => item.ReviewedByUserId);
         });
 
         builder.Entity<VendorAuditEvent>(entity =>
