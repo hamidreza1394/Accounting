@@ -103,6 +103,52 @@ describe('Vendor control plane shell', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/vendor/customers/?page=2&pageSize=25', expect.objectContaining({ credentials: 'same-origin', cache: 'no-store' }));
   });
 
+  it('changes installation status through the real API with a fresh token and RowVersion', async () => {
+    const installationPage = {
+      items: [{ id: 'installation-1', customerId: 'customer-1', rowVersion: 'AQIDBAUGBwg=', installationCode: 'INS-001',
+        name: 'نصب عملیاتی', environment: 'Production', status: 'Active', createdAtUtc: '2026-10-27T08:00:00Z', lastSeenAtUtc: null }],
+      page: 1, pageSize: 25, totalCount: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false,
+    };
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith('/api/vendor/installations/') && url.endsWith('/status')) return Promise.resolve(response({ ...installationPage.items[0], status: 'Suspended' }));
+      if (url.startsWith('/api/vendor/installations/')) return Promise.resolve(response(installationPage));
+      if (url === '/api/auth/antiforgery') return Promise.resolve(response({ requestToken: 'csrf-status' }));
+      return Promise.resolve(response({}, 404));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<BusinessLists section="installations" permissions={['vendor.installations.manage']} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'تعلیق نصب نصب عملیاتی' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('نصب با موفقیت تعلیق شد.');
+    expect(fetchMock).toHaveBeenCalledWith('/api/vendor/installations/installation-1/status', expect.objectContaining({
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': 'csrf-status' },
+      body: JSON.stringify({ status: 'Suspended', rowVersion: 'AQIDBAUGBwg=' }),
+    }));
+  });
+
+  it('explains stale RowVersion when an installation status change conflicts', async () => {
+    const installationPage = {
+      items: [{ id: 'installation-1', customerId: 'customer-1', rowVersion: 'AQIDBAUGBwg=', installationCode: 'INS-001',
+        name: 'نصب عملیاتی', environment: 'Production', status: 'Active', createdAtUtc: '2026-10-27T08:00:00Z', lastSeenAtUtc: null }],
+      page: 1, pageSize: 25, totalCount: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false,
+    };
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith('/api/vendor/installations/') && url.endsWith('/status')) return Promise.resolve(response({ error: 'stale_row_version' }, 409));
+      if (url.startsWith('/api/vendor/installations/')) return Promise.resolve(response(installationPage));
+      if (url === '/api/auth/antiforgery') return Promise.resolve(response({ requestToken: 'csrf-status' }));
+      return Promise.resolve(response({}, 404));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<BusinessLists section="installations" permissions={['vendor.installations.manage']} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'تعلیق نصب نصب عملیاتی' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('اطلاعات نصب تغییر کرده است؛ فهرست را تازه‌سازی کنید.');
+  });
+
   it('shows a permission-specific message when a business list returns 403', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);

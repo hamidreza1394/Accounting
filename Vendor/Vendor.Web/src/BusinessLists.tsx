@@ -3,6 +3,7 @@ import { AlertCircle, ChevronLeft, ChevronRight, LoaderCircle, Pencil, Plus, Ref
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CustomerForm, type CustomerDraft } from './CustomerForm';
+import { InstallationForm, type InstallationDraft } from './InstallationForm';
 
 export type BusinessSection = 'customers' | 'installations' | 'contracts' | 'licenses';
 
@@ -113,8 +114,13 @@ export function BusinessLists({ section, permissions = [] }: { section: Business
   const [reloadKey, setReloadKey] = useState(0);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<CustomerDraft | null>(null);
+  const [showInstallationForm, setShowInstallationForm] = useState(false);
+  const [editingInstallation, setEditingInstallation] = useState<InstallationDraft | null>(null);
+  const [statusBusyId, setStatusBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
   const canManageCustomers = section === 'customers' && permissions.includes('vendor.customers.manage');
+  const canManageInstallations = section === 'installations' && permissions.includes('vendor.installations.manage');
+  const canReadCustomers = permissions.includes('vendor.customers.read');
 
   function openCreateCustomer() {
     setEditingCustomer(null);
@@ -151,6 +157,96 @@ export function BusinessLists({ section, permissions = [] }: { section: Business
     setData(null);
     setLoading(true);
     setReloadKey(current => current + 1);
+  }
+
+  function openCreateInstallation() {
+    setEditingInstallation(null);
+    setShowInstallationForm(true);
+    setNotice('');
+  }
+
+  function openEditInstallation(row: Row) {
+    if (typeof row.id !== 'string' || typeof row.customerId !== 'string' || typeof row.rowVersion !== 'string') {
+      setError('شناسه مشتری یا نسخه اطلاعات نصب موجود نیست؛ فهرست را تازه‌سازی کنید.');
+      return;
+    }
+    setEditingInstallation({
+      id: row.id,
+      customerId: row.customerId,
+      rowVersion: row.rowVersion,
+      installationCode: String(row.installationCode ?? ''),
+      name: String(row.name ?? ''),
+      environment: String(row.environment ?? 'Production'),
+      status: String(row.status ?? ''),
+    });
+    setShowInstallationForm(true);
+    setNotice('');
+  }
+
+  function closeInstallationForm() {
+    setShowInstallationForm(false);
+    setEditingInstallation(null);
+  }
+
+  function installationSaved() {
+    setShowInstallationForm(false);
+    setEditingInstallation(null);
+    setNotice(editingInstallation ? 'اطلاعات نصب به‌روزرسانی شد.' : 'نصب جدید ثبت شد.');
+    setPage(1);
+    setData(null);
+    setLoading(true);
+    setReloadKey(current => current + 1);
+  }
+
+  async function changeInstallationStatus(row: Row) {
+    if (statusBusyId) return;
+    if (typeof row.id !== 'string' || typeof row.rowVersion !== 'string') {
+      setError('نسخه اطلاعات نصب موجود نیست؛ فهرست را تازه‌سازی کنید.');
+      return;
+    }
+    const currentStatus = String(row.status ?? '');
+    const nextStatus = currentStatus === 'Active' ? 'Suspended' : currentStatus === 'Suspended' ? 'Active' : '';
+    if (!nextStatus) {
+      setError('فقط نصب فعال یا تعلیق‌شده را می‌توان تغییر وضعیت داد.');
+      return;
+    }
+    setStatusBusyId(row.id);
+    setError('');
+    setNotice('');
+    try {
+      const tokenResponse = await fetch('/api/auth/antiforgery', { credentials: 'same-origin', cache: 'no-store' });
+      if (!tokenResponse.ok) throw new Error(errorFor(tokenResponse.status));
+      const tokenBody = await tokenResponse.json() as { requestToken?: string };
+      if (!tokenBody.requestToken) throw new Error('توکن امنیتی در پاسخ سرور وجود ندارد.');
+      const response = await fetch(`/api/vendor/installations/${row.id}/status`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': tokenBody.requestToken },
+        body: JSON.stringify({ status: nextStatus, rowVersion: row.rowVersion }),
+      });
+      if (!response.ok) {
+        let code = '';
+        try {
+          const body = await response.json() as { error?: string; message?: string };
+          code = body.error ?? body.message ?? '';
+        } catch {
+          // Keep the public error generic when the response is not JSON.
+        }
+        if (response.status === 409 && code === 'stale_row_version') throw new Error('اطلاعات نصب تغییر کرده است؛ فهرست را تازه‌سازی کنید.');
+        if (response.status === 409 && code === 'invalid_status_transition') throw new Error('این تغییر وضعیت مجاز نیست.');
+        if (response.status === 403) throw new Error('حساب شما مجوز تغییر وضعیت نصب را ندارد.');
+        throw new Error(errorFor(response.status));
+      }
+      setNotice(nextStatus === 'Suspended' ? 'نصب با موفقیت تعلیق شد.' : 'نصب با موفقیت فعال شد.');
+      setData(null);
+      setLoading(true);
+      setReloadKey(current => current + 1);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'تغییر وضعیت نصب ناموفق بود.');
+    } finally {
+      setStatusBusyId(null);
+    }
   }
 
   useEffect(() => {
@@ -197,6 +293,7 @@ export function BusinessLists({ section, permissions = [] }: { section: Business
       </div>
       <div className="flex flex-wrap gap-2">
         {canManageCustomers && <Button type="button" onClick={openCreateCustomer}><Plus size={16}/> ثبت مشتری</Button>}
+        {canManageInstallations && <Button type="button" onClick={openCreateInstallation} disabled={!canReadCustomers} {...(!canReadCustomers ? { title: 'برای انتخاب مشتری، مجوز مشاهده مشتریان لازم است.' } : {})}><Plus size={16}/> ثبت نصب</Button>}
         <Button type="button" variant="outline" onClick={() => { setLoading(true); setError(''); setData(null); setReloadKey(current => current + 1); }} disabled={loading}>
           <RefreshCw size={16}/> تازه‌سازی
         </Button>
@@ -205,6 +302,7 @@ export function BusinessLists({ section, permissions = [] }: { section: Business
 
     {notice && <p role="status" className="text-sm text-muted-foreground">{notice}</p>}
     {showCustomerForm && canManageCustomers && <CustomerForm {...(editingCustomer ? { initial: editingCustomer } : {})} onCancel={closeCustomerForm} onSaved={customerSaved} />}
+    {showInstallationForm && canManageInstallations && <InstallationForm {...(editingInstallation ? { initial: editingInstallation } : {})} canReadCustomers={canReadCustomers} onCancel={closeInstallationForm} onSaved={installationSaved} />}
 
     <Card>
       <CardHeader className="border-b">
@@ -217,10 +315,14 @@ export function BusinessLists({ section, permissions = [] }: { section: Business
         : !data || data.items.length === 0 ? <div className="flex min-h-36 flex-col items-center justify-center gap-2 text-center"><span className="text-sm font-semibold">رکوردی برای نمایش وجود ندارد</span><p className="text-sm text-muted-foreground">پس از ثبت اطلاعات، موارد در این فهرست نمایش داده می‌شوند.</p></div>
         : <div className="overflow-x-auto">
           <table className="w-full min-w-[680px] border-separate border-spacing-0 text-right text-sm">
-            <thead><tr>{resource.columns.map(column => <th key={column.key} scope="col" className="border-b border-border bg-muted/60 px-4 py-3 font-semibold text-muted-foreground">{column.label}</th>)}{canManageCustomers && <th scope="col" className="border-b border-border bg-muted/60 px-4 py-3 font-semibold text-muted-foreground">عملیات</th>}</tr></thead>
+            <thead><tr>{resource.columns.map(column => <th key={column.key} scope="col" className="border-b border-border bg-muted/60 px-4 py-3 font-semibold text-muted-foreground">{column.label}</th>)}{(canManageCustomers || canManageInstallations) && <th scope="col" className="border-b border-border bg-muted/60 px-4 py-3 font-semibold text-muted-foreground">عملیات</th>}</tr></thead>
             <tbody>{data.items.map((row, index) => <tr key={String(row.id ?? row.customerNumber ?? row.installationCode ?? row.contractNumber ?? row.licenseNumber ?? index)} className="hover:bg-muted/30">
               {resource.columns.map(column => <td key={column.key} className="border-b border-border px-4 py-3 text-foreground">{formatValue(row[column.key], column.kind)}</td>)}
-              {canManageCustomers && <td className="border-b border-border px-4 py-3"><Button type="button" variant="outline" size="sm" onClick={() => openEditCustomer(row)} aria-label={`ویرایش مشتری ${String(row.displayName ?? row.customerNumber ?? '')}`}><Pencil size={15}/> ویرایش</Button></td>}
+              {(canManageCustomers || canManageInstallations) && <td className="border-b border-border px-4 py-3"><div className="flex flex-wrap gap-2">
+                {canManageCustomers && <Button type="button" variant="outline" size="sm" onClick={() => openEditCustomer(row)} aria-label={`ویرایش مشتری ${String(row.displayName ?? row.customerNumber ?? '')}`}><Pencil size={15}/> ویرایش</Button>}
+                {canManageInstallations && <Button type="button" variant="outline" size="sm" onClick={() => openEditInstallation(row)} aria-label={`ویرایش نصب ${String(row.name ?? row.installationCode ?? '')}`}><Pencil size={15}/> ویرایش</Button>}
+                {canManageInstallations && (row.status === 'Active' || row.status === 'Suspended') && <Button type="button" variant="outline" size="sm" disabled={statusBusyId === row.id || Boolean(statusBusyId)} onClick={() => changeInstallationStatus(row)} aria-label={row.status === 'Active' ? `تعلیق نصب ${String(row.name ?? '')}` : `فعال‌سازی نصب ${String(row.name ?? '')}`}>{statusBusyId === row.id ? 'در حال ثبت…' : row.status === 'Active' ? 'تعلیق' : 'فعال‌سازی'}</Button>}
+              </div></td>}
             </tr>)}</tbody>
           </table>
         </div>}
