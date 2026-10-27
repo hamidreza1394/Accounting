@@ -9,7 +9,7 @@
 - دریافت توکن antiforgery تازه از `/api/auth/antiforgery` برای هر عملیات نوشتن.
 - ارسال RowVersion فعلی در ویرایش و نمایش پیام مشخص برای `stale_row_version`.
 - دکمه‌های ثبت/ویرایش فقط در صورت وجود `vendor.customers.manage` در نمای نشست نشان داده می‌شوند؛ مجوز نهایی همچنان توسط endpoint و بررسی DB سمت سرور اعمال می‌شود.
-- `GET /api/auth/me` فهرست مرتب و یکتای permission claimهای نشست را برای کنترل‌های UI برمی‌گرداند.
+- `GET /api/auth/me` فهرست مرتب و یکتای permission claimهای موجود در نشست احراز‌شده را برای کنترل‌های UI برمی‌گرداند.
 
 ## تست و اعتبارسنجی
 - Vitest: ایجاد موفق، ارسال CSRF، conflict شماره مشتری، stale RowVersion و نمایش/پنهان‌سازی عملیات براساس مجوز.
