@@ -273,6 +273,9 @@ public static class VendorBootstrapCommand
                 throw new InvalidOperationException("Could not activate the verified Vendor administrator.");
             }
 
+            await audit.AppendAsync(new VendorAuditWriteRequest(
+                null, "vendor.bootstrap.superadmin-role-assigned", "VendorAdminUser", user.Id.ToString("N")), cancellationToken);
+
             // The local bootstrap operator is not authenticated as a Vendor admin yet;
             // do not falsely attribute this event to the account being created.
             await audit.AppendAsync(new VendorAuditWriteRequest(
