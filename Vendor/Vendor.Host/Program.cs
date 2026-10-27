@@ -252,11 +252,42 @@ app.Use(async (context, next) =>
 app.UseStaticFiles();
 app.UseRateLimiter();
 app.UseAuthentication();
+
+// A newly bootstrapped administrator may establish an MFA session, but must not use
+// management APIs until the initial password has been changed successfully.
+app.Use(async (context, next) =>
+{
+    if (context.User.Identity?.IsAuthenticated == true &&
+        context.Request.Path.StartsWithSegments("/api"))
+    {
+        var users = context.RequestServices.GetRequiredService<UserManager<VendorAdminUser>>();
+        var user = await users.GetUserAsync(context.User);
+        var path = context.Request.Path;
+        var allowedDuringForcedPasswordChange =
+            path.Equals("/api/auth/antiforgery", StringComparison.OrdinalIgnoreCase) ||
+            path.Equals("/api/auth/me", StringComparison.OrdinalIgnoreCase) ||
+            path.Equals("/api/auth/change-password", StringComparison.OrdinalIgnoreCase) ||
+            path.Equals("/api/auth/logout", StringComparison.OrdinalIgnoreCase);
+
+        if (user is { IsEnabled: true, MustChangePassword: true } && !allowedDuringForcedPasswordChange)
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            context.Response.Headers.CacheControl = "no-store";
+            await context.Response.WriteAsJsonAsync(
+                new { error = "password_change_required" },
+                context.RequestAborted);
+            return;
+        }
+    }
+
+    await next();
+});
 app.UseAuthorization();
 app.UseAntiforgery();
 
 app.MapHealthChecks("/health/live").AllowAnonymous();
 app.MapVendorAuthentication();
+app.MapVendorPasswordChange();
 app.MapFallback(async context =>
 {
     var path = context.Request.Path.Value ?? "/";
