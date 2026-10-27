@@ -24,6 +24,7 @@ It asserts:
 - updated database value persists and exactly one matching customer-update audit event exists;
 - installation and Draft contract updates succeed with the current RowVersion and reject stale replay with HTTP 409;
 - a license referencing a contract from another customer is rejected with `contract_customer_mismatch`;
+- a license with a valid contract but an installation from another customer is rejected with `installation_customer_mismatch`;
 - a valid license metadata update succeeds, stale replay is rejected, and exactly one audit event is recorded for each successful installation/contract/license update.
 
 The test uses a generated Vendor-only database name and drops only that database during cleanup. It never uses customer accounting database configuration.
