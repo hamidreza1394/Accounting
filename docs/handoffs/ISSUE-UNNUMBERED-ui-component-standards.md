@@ -52,3 +52,11 @@
 - Branch: `docs/ui-component-standards` (از `main` در commit `46944c2`)
 - Commit: `0ca2307`، `a0d945b`، `2a712fa`، `4b5b2e8`، `ddeaedd` (کامیت تحویل بعد از همین فایل)
 - Pull Request: ساخته نشد؛ Push هم انجام نشد (مجوز صریح داده نشده بود).
+
+## ادامه (2026-10-27): استفادهٔ مشروط از KendoReact Free و گزارش پیوت
+- **درخواست مالک:** بخش‌های رایگان و مفید Telerik در پروژه استفاده شود؛ اگر Pivot Grid لازم شد ابزار رایگان یا راه‌حل جایگزین مشخص باشد.
+- **تغییر:** ADR جدید `D-050` (اصلاح بند ۲ از D-049)؛ `docs/UI_COMPONENTS.md` بخش «KendoReact Free» و بخش «گزارش پیوت» گرفت؛ اشارهٔ ADR بعدی در `AGENTS.md`، `CLAUDE.md` و `docs/INDEX.md` به D-051 به‌روز شد.
+- **یافتهٔ کلیدی:** گرید رایگان Kendo گروه‌بندی/aggregate و خروجی Excel/PDF ندارد و PivotGrid کاملاً premium است؛ پس TanStack Table برای گزارش‌های حسابداری باقی ماند و Kendo Free فقط برای فهرست‌های ساده مجاز شد.
+- **بررسی واقعی:** `git diff --check` پیش از هر کامیت موفق. build/test اجرا نشد (فقط مستندات).
+- **باقی‌مانده:** انتخاب گرید پیش‌فرض پس از پایلوت (`NeedsApproval`)؛ RTL/ارقام فارسی/تقویم شمسی Kendo `NotVerified`؛ بازبینی توافق‌نامه و نسخهٔ دقیق؛ spike پیوت با Perspective فقط در صورت نیاز واقعی؛ هیچ بستهٔ Kendo نصب نشده است.
+- **Commitهای این بخش:** `793390d`، `c4a4bd3`، `e59c449` روی همان شاخه `docs/ui-component-standards`.

@@ -747,3 +747,10 @@
 - **تغییر:** `docs/UI_COMPONENTS.md` سه بخش گرفت (قواعد طراحی/سرعت/ویژوال؛ کتابخانه‌های پذیرفته‌شدهٔ جدول، نمودار و تاریخ؛ قانون محلی‌سازی دارایی‌ها). ADR جدید D-049 ثبت و ارجاع به آن در `AGENTS.md`، `CLAUDE.md`، `docs/INDEX.md` و Skillهای UI/مشترک افزوده شد. شمارهٔ «ADR بعدی» کهنه در `AGENTS.md` و `INDEX.md` به D-050 اصلاح شد.
 - **اعتبارسنجی:** `git diff --check` و `scripts/check_static_assets.py` موفق؛ build/test اجرا نشد چون تغییر فقط مستندات است. CI ندیده شده است.
 - **باقی‌مانده:** نصب هر کتابخانه کار جدا است؛ ساخت آفلاین `NeedsApproval`؛ سقف بودجهٔ سرعت `Deferred` تا اندازه‌گیری مبنا. جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-ui-component-standards.md`.
+
+
+## 2026-10-27 — استفادهٔ مشروط از KendoReact Free و مسیر گزارش پیوت (D-050)
+- **دامنه:** فقط مستندات، شاخهٔ `docs/ui-component-standards`؛ بدون کد، وابستگی یا Migration. Issue: `UNNUMBERED`.
+- **تغییر:** ADR `D-050` بند ممنوعیت KendoReact در D-049 را اصلاح کرد: فقط قابلیت‌های بدون نشان الماس، بدون PivotGrid و قابلیت پولی، یک گرید در هر صفحه، پایلوت پیش از پذیرش. `docs/UI_COMPONENTS.md` بخش KendoReact Free و بخش پیوت (Perspective کاندیدای آزمایشی؛ react-pivottable رهاشده) را گرفت.
+- **اعتبارسنجی:** `git diff --check` موفق؛ build/test اجرا نشد؛ CI ندیده شده. اطلاعات مجوز از مستندات رسمی Telerik و منابع ثانویه در 2026-10-27 است و پیش از نصب باید دوباره بررسی شود.
+- **باقی‌مانده:** نصب Kendo (در صورت تأیید) کار جدا با پایلوت و اندازه‌گیری باندل است؛ RTL/فارسی Kendo تأیید نشده. جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-ui-component-standards.md`.
