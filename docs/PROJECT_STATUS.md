@@ -15,12 +15,13 @@
 - PR #196 با merge commit `45e843ebe639b0013e9b0bc9d28106eb435e4742` ادغام شد.
 - Vendor CI روی head نهایی PR: [40550673063](https://github.com/hamidreza1394/Accounting/actions/runs/40550673063) — موفق؛ شامل تست‌های UI و SQL Server integration، build و publish مستقل Vendor.
 - .NET CI روی head نهایی PR: [40550672932](https://github.com/hamidreza1394/Accounting/actions/runs/40550672932) — موفق؛ شامل build/test، گاردهای Migration، E2E، انتشار Linux/Windows و secret scan.
+- PR #207 با merge commit `d644ab5d36d00b1ce3763b64f17fd6fe7ef9fbac` ادغام شد؛ Vendor CI [40570240409](https://github.com/hamidreza1394/Accounting/actions/runs/40570240409) و .NET CI [40570240205](https://github.com/hamidreza1394/Accounting/actions/runs/40570240205) روی HEAD نهایی موفق شدند؛ شامل UI/Vitest، asset budget، SQL Server integration، EF snapshot guard، E2E، انتشار Linux/Windows و secret scan.
 - شواهد بالا تأیید محدودهٔ تست‌شده‌اند و جایگزین آزمون نفوذ، عملیات Production یا بارسنجی نیستند.
 
 ## شکاف‌های باقی‌مانده پیش از Production
 - فرایند bootstrap/recovery مدیر اول باید از نظر یک‌بارمصرف بودن، کنترل دسترسی و بازیابی امن به‌صورت عملیاتی بازبینی و تأیید شود.
 - RBAC ریزدانه و جداسازی وظایف برای عملیات حساس باید از نظر کامل بودن ماتریس مجوزها و تست‌های منفی نهایی شود.
-- maker-checker/تأیید دو نفره برای تغییر وضعیت مشتری/نصب در PR #207 در حال اعتبارسنجی است؛ تا سبز شدن CI و ادغام، Verified نیست.
+- **Maker-Checker مشتری/نصب:** PR #207 با merge commit `d644ab5d36d00b1ce3763b64f17fd6fe7ef9fbac` ادغام و Verified شد؛ Vendor CI [40570240409](https://github.com/hamidreza1394/Accounting/actions/runs/40570240409) و .NET CI [40570240205](https://github.com/hamidreza1394/Accounting/actions/runs/40570240205) سبز هستند. این پوشش تغییر وضعیت مشتری/نصب است؛ تأیید دو نفره برای صدور/ابطال لایسنس هنوز باقی است.
 - checkpoint/export مستقل Audit با مجوز جدا از DBA و برنامهٔ اعتبارسنجی/نگهداری دوره‌ای لازم است؛ زنجیرهٔ hash در همان دیتابیس به‌تنهایی در برابر DBA دارای اختیار بازنویسی کافی نیست.
 - صدور امضاشده با کلید خارج از برنامه (KMS/HSM یا سرویس امضای تأییدشده)، activation آفلاین و چرخهٔ وضعیت لایسنس پیاده‌سازی و آزمون نشده‌اند.
 - تست مرورگر/عملیات روی محیط واقعی، backup/restore، بازیابی حادثه و ارزیابی ظرفیت/امنیت Production هنوز باید جداگانه انجام شوند.
