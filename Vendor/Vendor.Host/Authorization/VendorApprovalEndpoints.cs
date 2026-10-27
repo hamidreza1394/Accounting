@@ -203,7 +203,14 @@ public static class VendorApprovalEndpoints
                     approval.ReviewedAtUtc = now;
                     approval.ReviewComment = comment;
                     db.Entry(approval).Property(item => item.RowVersion).OriginalValue = expectedApprovalVersion;
-                    await db.SaveChangesAsync(ct);
+                    try
+                    {
+                        await db.SaveChangesAsync(ct);
+                    }
+                    catch (DbUpdateConcurrencyException)
+                    {
+                        return Results.Conflict(new { error = "stale_approval_version" });
+                    }
                     await audit.AppendAsync(new VendorAuditWriteRequest(
                         actor.Id, "vendor.approval.stale", nameof(VendorApprovalRequest),
                         approval.Id.ToString("D"), CorrelationId()), ct);
