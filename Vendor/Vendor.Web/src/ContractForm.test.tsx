@@ -91,6 +91,18 @@ describe('Vendor contract form', () => {
     expect(onSaved).not.toHaveBeenCalled();
   });
 
+  it('preserves a previously stored currency that is not in the common quick-select list', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(response({ id: 'customer-1', customerNumber: 'C-001', displayName: 'شرکت نمونه' }));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ContractForm initial={{
+      id: 'contract-1', customerId: 'customer-1', rowVersion: 'AQIDBAUGBwg=',
+      contractNumber: 'CTR-001', startsAtUtc: '2026-10-27T00:00:00Z',
+      endsAtUtc: null, currencyCode: 'CAD', status: 'Draft',
+    }} canReadCustomers onCancel={vi.fn()} onSaved={vi.fn()} />);
+    expect(await screen.findByRole('combobox', { name: 'ارز قرارداد' })).toHaveValue('CAD');
+    expect(screen.getByRole('option', { name: 'ارز فعلی ثبت‌شده (CAD)' })).toBeInTheDocument();
+  });
+
   it('prevents an end date before the start date', () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
