@@ -56,5 +56,5 @@
 
 ## شناسه‌های Git
 - Branch: `feat/vendor-license-management-ui`
-- Commit: آخرین commit شاخه هنگام بازبینی نهایی درج شود.
-- Pull Request: در انتظار ایجاد پس از تکمیل تغییرات.
+- Commit: `367dbdebaa5b2f9eba1b68f19acf92f4e2e84e86`.
+- Pull Request: [#196](https://github.com/hamidreza1394/Accounting/pull/196) — باز، CI در حال اجرا.
