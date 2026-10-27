@@ -372,7 +372,7 @@ export function LicenseForm({
     if (saved) onSaved();
   }
 
-  const currentRelationsCannotBeChanged = editing && (!canReadContracts || !canReadInstallations);
+  const currentRelationsCannotBeChanged = editing && ((!canReadContracts && Boolean(initial?.contractId)) || (!canReadInstallations && Boolean(initial?.installationId)));
   return <Card aria-labelledby="license-form-title" dir="rtl">
     <CardHeader className="border-b">
       <CardTitle id="license-form-title">{editing ? 'ویرایش لایسنس پیش‌نویس' : 'ثبت لایسنس جدید'}</CardTitle>
