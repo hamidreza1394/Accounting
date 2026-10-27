@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import App from './App';
+import { BusinessLists } from './BusinessLists';
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
@@ -149,6 +150,27 @@ describe('Vendor control plane shell', () => {
     expect(await screen.findByText('INS-001')).toBeInTheDocument();
     expect(screen.getByText('عملیاتی')).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith('/api/vendor/installations/?page=1&pageSize=25', expect.objectContaining({ credentials: 'same-origin' }));
+  });
+
+  it('hides customer write controls when the session lacks the manage permission', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({
+      items: [], page: 1, pageSize: 25, totalCount: 0, totalPages: 0, hasPreviousPage: false, hasNextPage: false,
+    })));
+    render(<BusinessLists section="customers" permissions={['vendor.customers.read']} />);
+
+    expect(await screen.findByText('رکوردی برای نمایش وجود ندارد')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'ثبت مشتری' })).not.toBeInTheDocument();
+  });
+
+  it('shows customer create and edit controls only with the manage permission', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({
+      items: [{ id: 'customer-1', rowVersion: 'AQIDBAUGBwg=', customerNumber: 'C-001', legalName: 'شرکت نمونه', displayName: 'نمونه', status: 'Active' }],
+      page: 1, pageSize: 25, totalCount: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false,
+    })));
+    render(<BusinessLists section="customers" permissions={['vendor.customers.manage']} />);
+
+    expect(await screen.findByRole('button', { name: 'ثبت مشتری' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ویرایش مشتری نمونه' })).toBeInTheDocument();
   });
 
 });
