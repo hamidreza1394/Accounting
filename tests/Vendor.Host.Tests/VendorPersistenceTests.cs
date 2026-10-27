@@ -27,6 +27,14 @@ public sealed class VendorPersistenceTests
 
         Assert.Equal("VendorAdminUsers", model.FindEntityType(typeof(VendorAdminUser))!.GetTableName());
         Assert.Equal("VendorAuditEvents", model.FindEntityType(typeof(VendorAuditEvent))!.GetTableName());
+        Assert.Equal("VendorApprovalRequests", model.FindEntityType(typeof(Faranou.Vendor.Persistence.Domain.VendorApprovalRequest))!.GetTableName());
+
+        var approvalModel = model.FindEntityType(typeof(Faranou.Vendor.Persistence.Domain.VendorApprovalRequest));
+        Assert.NotNull(approvalModel);
+        Assert.Contains(approvalModel!.GetIndexes(), index =>
+            index.Properties.Select(property => property.Name).SequenceEqual(["ResourceType", "ResourceId"]) &&
+            index.IsUnique && index.GetFilter() == "[Status] = N'Pending'");
+        Assert.True(approvalModel.FindProperty("RowVersion")!.IsConcurrencyToken);
 
         var enabled = model.FindEntityType(typeof(VendorAdminUser))!.FindProperty(nameof(VendorAdminUser.IsEnabled));
         Assert.NotNull(enabled);
@@ -142,6 +150,25 @@ public sealed class VendorPersistenceTests
             Assert.Contains(PasskeyMigration, appliedMigrations);
             Assert.Contains(IdentitySchemaV3Migration, appliedMigrations);
             Assert.Contains("20261027190000_VendorAuditChainIndexes", appliedMigrations);
+            Assert.Contains("20261027193000_VendorApprovalRequests", appliedMigrations);
+
+            command.CommandText = """
+                SELECT COUNT(*)
+                FROM sys.tables
+                WHERE name = N'VendorApprovalRequests';
+                """;
+            Assert.Equal(1, Convert.ToInt32(await command.ExecuteScalarAsync()));
+
+            command.CommandText = """
+                SELECT COUNT(*)
+                FROM sys.indexes AS i
+                INNER JOIN sys.tables AS t ON t.object_id = i.object_id
+                WHERE t.name = N'VendorApprovalRequests'
+                  AND i.name = N'IX_VendorApprovalRequests_ResourceType_ResourceId'
+                  AND i.is_unique = 1
+                  AND i.has_filter = 1;
+                """;
+            Assert.Equal(1, Convert.ToInt32(await command.ExecuteScalarAsync()));
 
             command.CommandText = """
                 SELECT COUNT(*)
