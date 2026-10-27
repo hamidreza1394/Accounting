@@ -1,8 +1,8 @@
 # تحویل وظیفه — ISSUE-201-vendor-maker-checker
 
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/201
-- **Branch:** feat/vendor-maker-checker-main
-- **Pull Request:** https://github.com/hamidreza1394/Accounting/pull/206
+- **Branch:** feat/vendor-maker-checker-clean
+- **Pull Request:** https://github.com/hamidreza1394/Accounting/pull/207
 - **وضعیت:** پیاده‌سازی اولیه در حال بازبینی؛ CI هنوز اجرا نشده
 
 ## محدوده و تصمیم
