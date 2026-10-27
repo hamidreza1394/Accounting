@@ -190,7 +190,9 @@ export function InstallationForm({ initial, canReadCustomers, onCancel, onSaved 
               required
               disabled={busy || customerLoading || !canReadCustomers}
               hint={customerLoading ? 'در حال دریافت مشتریان…' : `مجموع مشتریان: ${customerPages.totalCount}`}
-              error={!canReadCustomers ? 'برای انتخاب مشتری، مجوز مشاهده مشتریان لازم است.' : customerError || undefined}
+              {...(!canReadCustomers
+                ? { error: 'برای انتخاب مشتری، مجوز مشاهده مشتریان لازم است.' }
+                : customerError ? { error: customerError } : {})}
             />
             {canReadCustomers && (customerPages.hasPreviousPage || customerPages.hasNextPage) && (
               <div className="flex flex-wrap items-center gap-2">
