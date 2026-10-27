@@ -350,6 +350,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
             byte[] licenseRowVersion;
             Guid otherContractId;
             Guid otherInstallationId;
+            Guid validContractId;
             await using (var scope = factory.Services.CreateAsyncScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
@@ -359,6 +360,8 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 otherContractId = await db.Contracts.Where(item => item.ContractNumber.StartsWith("OTHER-CON-"))
                     .Select(item => item.Id).SingleAsync(cancellationToken);
                 otherInstallationId = await db.Installations.Where(item => item.InstallationCode.StartsWith("OTHER-INST-"))
+                    .Select(item => item.Id).SingleAsync(cancellationToken);
+                validContractId = await db.Contracts.Where(item => item.ContractNumber.StartsWith("IT-CON-"))
                     .Select(item => item.Id).SingleAsync(cancellationToken);
             }
             var licensePath = $"/api/vendor/licenses/{licenseId:D}";
@@ -379,16 +382,26 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal("contract_customer_mismatch", json.RootElement.GetProperty("error").GetString());
             }
 
-            // Correct the relationships and prove the update succeeds, then reject replay of the old version.
-            Guid validContractId;
-            Guid validInstallationId;
-            await using (var scope = factory.Services.CreateAsyncScope())
+            // A valid contract does not make a foreign installation acceptable.
+            var wrongInstallationLicenseBody = new
             {
-                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
-                validContractId = await db.Contracts.Where(item => item.ContractNumber.StartsWith("IT-CON-UPDATED-"))
-                    .Select(item => item.Id).SingleAsync(cancellationToken);
-                validInstallationId = installationId;
+                contractId = (Guid?)validContractId,
+                installationId = (Guid?)otherInstallationId,
+                licenseNumber = licenseBody.licenseNumber,
+                productCode = licenseBody.productCode,
+                validFromUtc = licenseBody.validFromUtc,
+                validUntilUtc = licenseBody.validUntilUtc,
+                rowVersion = Convert.ToBase64String(licenseRowVersion)
+            };
+            using (var response = await SendPutAsync(client, licensePath, wrongInstallationLicenseBody, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("installation_customer_mismatch", json.RootElement.GetProperty("error").GetString());
             }
+
+            // Correct the relationships and prove the update succeeds, then reject replay of the old version.
+            var validInstallationId = installationId;
             var validLicenseBody = new
             {
                 contractId = (Guid?)validContractId,
