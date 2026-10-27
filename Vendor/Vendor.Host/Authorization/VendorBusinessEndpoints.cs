@@ -100,7 +100,7 @@ public static class VendorBusinessEndpoints
                     .Select(item => new ContractResponse(item.Id, item.CustomerId, item.ContractNumber, item.Status, item.StartsAtUtc, item.EndsAtUtc, item.CurrencyCode, item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion)));
             },
             async (db, id, ct) => await db.Contracts.AsNoTracking().Where(item => item.Id == id)
-                .Select(item => new ContractResponse(item.Id, item.CustomerId, item.ContractNumber, item.Status, item.StartsAtUtc, item.EndsAtUtc, item.CurrencyCode, item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion)).SingleOrDefaultAsync(ct));
+                .Select(item => new ContractResponse(item.Id, item.CustomerId, item.ContractNumber, item.Status, item.StartsAtUtc, item.EndsAtUtc, item.CurrencyCode, item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion))).SingleOrDefaultAsync(ct));
 
         MapReadOnlyResource<LicenseResponse>(endpoints, "/api/vendor/licenses", "license",
             VendorPermissionCatalog.LicensesRead,
