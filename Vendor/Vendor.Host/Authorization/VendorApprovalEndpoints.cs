@@ -63,7 +63,7 @@ public static class VendorApprovalEndpoints
             if (!access.Succeeded) return Results.Forbid();
 
             string? currentStatus;
-            byte[]? currentVersion;
+            byte[] currentVersion;
             if (request.ResourceType == "customer")
             {
                 var resource = await db.Customers.AsNoTracking()
@@ -149,6 +149,8 @@ public static class VendorApprovalEndpoints
                 return Results.Conflict(new { error = "approval_already_decided" });
             if (approval.RequestedByUserId == actor.Id)
                 return Results.Forbid();
+            if (approval.ResourceType is not ("customer" or "installation"))
+                return Results.Conflict(new { error = "unsupported_approval_resource" });
 
             var managePermission = PermissionFor(approval.ResourceType);
             var access = await authorization.AuthorizeAsync(
@@ -215,7 +217,7 @@ public static class VendorApprovalEndpoints
             }
             catch (DbUpdateConcurrencyException)
             {
-                return Results.Conflict(new { error = "stale_approval_version" });
+                return Results.Conflict(new { error = "stale_approval_or_resource_version" });
             }
 
             await audit.AppendAsync(new VendorAuditWriteRequest(
