@@ -175,7 +175,15 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     ValidFromUtc = DateTimeOffset.UtcNow.AddDays(-1),
                     CreatedAtUtc = DateTimeOffset.UtcNow
                 };
-                db.Licenses.Add(license);
+                var otherLicense = new VendorLicense
+                {
+                    Id = Guid.NewGuid(), CustomerId = otherCustomer.Id,
+                    LicenseNumber = "OTHER-LIC-" + Guid.NewGuid().ToString("N")[..12],
+                    ProductCode = "FARANOU-BASE", Status = "Draft",
+                    ValidFromUtc = DateTimeOffset.UtcNow.AddDays(-1),
+                    CreatedAtUtc = DateTimeOffset.UtcNow
+                };
+                db.Licenses.AddRange(license, otherLicense);
                 await db.SaveChangesAsync(cancellationToken);
 
                 // Read server-generated SQL Server rowversions after inserts.
@@ -229,6 +237,18 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 var customer = await db.Customers.SingleAsync(item => item.CustomerNumber.StartsWith("IT-"), cancellationToken);
                 customerId = customer.Id;
                 initialRowVersion = customer.RowVersion.ToArray();
+            }
+
+            // Optional customerId filters must return only related records for dropdowns.
+            foreach (var resource in new[] { "installations", "contracts", "licenses" })
+            {
+                using var response = await client.GetAsync(
+                    $"/api/vendor/{resource}/?customerId={customerId:D}&page=1&pageSize=100", cancellationToken);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                var items = json.RootElement.GetProperty("items");
+                Assert.Single(items.EnumerateArray());
+                Assert.Equal(customerId.ToString("D"), items[0].GetProperty("customerId").GetString());
             }
 
             var path = $"/api/vendor/customers/{customerId:D}";
