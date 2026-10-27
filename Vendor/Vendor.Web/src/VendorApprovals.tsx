@@ -85,6 +85,7 @@ export function VendorApprovals({ permissions }: Props) {
       if (!response.ok) {
         let code = '';
         try { code = ((await response.json()) as { error?: string }).error ?? ''; } catch { /* use generic message */ }
+        if (response.status === 409) await load();
         throw new Error(errorMessage(response.status, code));
       }
       setNotice(decision === 'Approved' ? 'درخواست با موفقیت تأیید و اعمال شد.' : 'درخواست رد شد.');
