@@ -668,3 +668,13 @@
 - تست تکمیلی Issue #169: endpoint نصب‌ها نیز با پاسخ صفحه‌بندی و ترجمه محیط عملیاتی در UI پوشش داده شد؛ اجرای خودکار تست همچنان منتظر CI است.
 
 - بازبینی نهایی UI: هنگام تازه‌سازی loading/error پاک می‌شود پیش از خالی‌کردن داده تا پیام empty state لحظه‌ای و گمراه‌کننده نمایش داده نشود.
+
+## 2026-10-27 — Issue #171: ویرایش امن و کنترل هم‌زمانی APIهای تجاری Vendor
+- **دامنه:** افزودن PUTهای allow-list برای مشتری، نصب، قرارداد و metadata لایسنس؛ پاسخ DTOها RowVersion را به شکل Base64 ارائه می‌کنند و ورودی‌های نوشتن RowVersion هشت‌بایتی SQL Server را الزام می‌کنند.
+- **هم‌زمانی:** EF Core از OriginalValue روی concurrency token استفاده می‌کند؛ token نامعتبر پاسخ 400 و نسخهٔ stale پاسخ 409 می‌گیرد. RowVersion موجود استفاده شده و Migration جدیدی ساخته نشده است.
+- **اعتبارسنجی و امنیت:** عملیات تغییر Anti-forgery و permission policy دارند؛ دسترسی به رکورد با evaluator منبع‌محور بررسی می‌شود؛ CustomerId تغییرپذیر نیست و رابطهٔ Contract/Installation برای License از دیتابیس بررسی می‌شود. عملیات update و audit در یک تراکنش قرار دارند.
+- **وضعیت:** انتقال وضعیت فقط Active↔Suspended برای Customer و Installation مجاز است. Contract و License فقط در Draft ویرایش می‌شوند؛ انتقال وضعیت آن‌ها عمداً تا تعیین matrix پذیرفته‌شده و maker-checker انجام نمی‌شود. Metadata لایسنس به معنی صدور/ابطال رمزنگاری‌شده نیست.
+- **تست‌ها:** \`VendorBusinessMutationRulesTests\` برای rowversion/status/environment و \`VendorPersistenceTests.Business_records_use_sql_server_rowversion_concurrency_tokens\` برای metadata مدل اضافه شد. اجرای CI روی HEAD این شاخه هنوز نتیجه نداده است؛ وضعیت Implemented / Not Verified.
+- **محدودیت:** تست HTTP end-to-end برای هر چهار PUT، آزمون cross-resource واقعی و آزمون rollback در SQL Server هنوز به پوشش تکمیلی نیاز دارند؛ این PR آن‌ها را به‌عنوان انجام‌شده ادعا نمی‌کند.
+- **داده:** هیچ Migration یا تغییر Schema دیتابیس حسابداری مشتری؛ هیچ کلید خصوصی امضا یا API صدور واقعی لایسنس اضافه نشده است.
+- **Branch:** \`feat/issue-171-vendor-update-lifecycle\`; **Issue:** #171.
