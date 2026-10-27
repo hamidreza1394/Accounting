@@ -426,7 +426,7 @@ namespace Faranou.Vendor.Persistence.Migrations
                     b.Property<string>("Status").IsRequired().HasMaxLength(20).HasColumnType("nvarchar(20)");
                     b.Property<DateTimeOffset>("CreatedAtUtc").ValueGeneratedOnAdd().HasColumnType("datetimeoffset").HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
                     b.Property<DateTimeOffset>("UpdatedAtUtc").IsRequired().HasColumnType("datetimeoffset");
-                    b.Property<byte[]>("RowVersion").IsConcurrencyToken().ValueGeneratedOnAddOrUpdate().HasColumnType("rowversion");
+                    b.Property<byte[]>("RowVersion").IsRequired().IsConcurrencyToken().ValueGeneratedOnAddOrUpdate().HasColumnType("rowversion");
                     b.HasKey("Id");
                     b.HasIndex("CustomerNumber").IsUnique();
                     b.ToTable("VendorCustomers", (string)null);
@@ -442,7 +442,7 @@ namespace Faranou.Vendor.Persistence.Migrations
                     b.Property<string>("Status").IsRequired().HasMaxLength(20).HasColumnType("nvarchar(20)");
                     b.Property<DateTimeOffset>("CreatedAtUtc").ValueGeneratedOnAdd().HasColumnType("datetimeoffset").HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
                     b.Property<DateTimeOffset?>("LastSeenAtUtc").HasColumnType("datetimeoffset");
-                    b.Property<byte[]>("RowVersion").IsConcurrencyToken().ValueGeneratedOnAddOrUpdate().HasColumnType("rowversion");
+                    b.Property<byte[]>("RowVersion").IsRequired().IsConcurrencyToken().ValueGeneratedOnAddOrUpdate().HasColumnType("rowversion");
                     b.HasKey("Id");
                     b.HasIndex("CustomerId");
                     b.HasIndex("InstallationCode").IsUnique();
@@ -459,7 +459,7 @@ namespace Faranou.Vendor.Persistence.Migrations
                     b.Property<DateTimeOffset?>("EndsAtUtc").HasColumnType("datetimeoffset");
                     b.Property<string>("CurrencyCode").IsRequired().IsUnicode(false).HasMaxLength(3).HasColumnType("varchar(3)");
                     b.Property<DateTimeOffset>("CreatedAtUtc").ValueGeneratedOnAdd().HasColumnType("datetimeoffset").HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
-                    b.Property<byte[]>("RowVersion").IsConcurrencyToken().ValueGeneratedOnAddOrUpdate().HasColumnType("rowversion");
+                    b.Property<byte[]>("RowVersion").IsRequired().IsConcurrencyToken().ValueGeneratedOnAddOrUpdate().HasColumnType("rowversion");
                     b.HasKey("Id");
                     b.HasIndex("CustomerId");
                     b.HasIndex("CustomerId", "ContractNumber").IsUnique();
@@ -478,7 +478,7 @@ namespace Faranou.Vendor.Persistence.Migrations
                     b.Property<DateTimeOffset>("ValidFromUtc").HasColumnType("datetimeoffset");
                     b.Property<DateTimeOffset?>("ValidUntilUtc").HasColumnType("datetimeoffset");
                     b.Property<DateTimeOffset>("CreatedAtUtc").ValueGeneratedOnAdd().HasColumnType("datetimeoffset").HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
-                    b.Property<byte[]>("RowVersion").IsConcurrencyToken().ValueGeneratedOnAddOrUpdate().HasColumnType("rowversion");
+                    b.Property<byte[]>("RowVersion").IsRequired().IsConcurrencyToken().ValueGeneratedOnAddOrUpdate().HasColumnType("rowversion");
                     b.HasKey("Id");
                     b.HasIndex("CustomerId");
                     b.HasIndex("ContractId");
