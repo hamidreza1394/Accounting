@@ -103,7 +103,7 @@ describe('Vendor control plane shell', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/vendor/customers/?page=2&pageSize=25', expect.objectContaining({ credentials: 'same-origin', cache: 'no-store' }));
   });
 
-  it('changes installation status through the real API with a fresh token and RowVersion', async () => {
+  it('submits installation status changes for approval with a fresh token and RowVersion', async () => {
     const installationPage = {
       items: [{ id: 'installation-1', customerId: 'customer-1', rowVersion: 'AQIDBAUGBwg=', installationCode: 'INS-001',
         name: 'نصب عملیاتی', environment: 'Production', status: 'Active', createdAtUtc: '2026-10-27T08:00:00Z', lastSeenAtUtc: null }],
