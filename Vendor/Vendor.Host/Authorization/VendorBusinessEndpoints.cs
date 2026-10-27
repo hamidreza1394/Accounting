@@ -15,11 +15,15 @@ public static class VendorBusinessEndpoints
     public static IEndpointRouteBuilder MapVendorBusinessEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var customers = endpoints.MapGroup("/api/vendor/customers");
-        customers.MapGet("/", async (VendorDbContext db, CancellationToken ct) =>
-            Results.Ok(await db.Customers.AsNoTracking()
-                .OrderBy(item => item.CustomerNumber)
-                .Select(item => new CustomerResponse(item.Id, item.CustomerNumber, item.LegalName, item.DisplayName, item.Status, item.CreatedAtUtc, item.UpdatedAtUtc))
-                .ToListAsync(ct)))
+        customers.MapGet("/", async (int? page, int? pageSize, VendorDbContext db, CancellationToken ct) =>
+        {
+            var pagination = VendorPageRequest.Normalize(page, pageSize);
+            var query = db.Customers.AsNoTracking().OrderBy(item => item.CustomerNumber)
+                .Select(item => new CustomerResponse(item.Id, item.CustomerNumber, item.LegalName, item.DisplayName, item.Status, item.CreatedAtUtc, item.UpdatedAtUtc));
+            var totalCount = await query.CountAsync(ct);
+            var items = await query.Skip(pagination.Skip).Take(pagination.PageSize).ToListAsync(ct);
+            return Results.Ok(new VendorPageResponse<CustomerResponse>(items, pagination.Page, pagination.PageSize, totalCount));
+        })
             .RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.CustomersRead));
 
         customers.MapGet("/{id:guid}", async (
@@ -71,22 +75,22 @@ public static class VendorBusinessEndpoints
 
         MapReadOnlyResource<InstallationResponse>(endpoints, "/api/vendor/installations", "installation",
             VendorPermissionCatalog.InstallationsRead,
-            async (db, ct) => await db.Installations.AsNoTracking().OrderBy(item => item.InstallationCode)
-                .Select(item => new InstallationResponse(item.Id, item.CustomerId, item.InstallationCode, item.Name, item.Environment, item.Status, item.CreatedAtUtc, item.LastSeenAtUtc)).ToListAsync(ct),
+            db => db.Installations.AsNoTracking().OrderBy(item => item.InstallationCode)
+                .Select(item => new InstallationResponse(item.Id, item.CustomerId, item.InstallationCode, item.Name, item.Environment, item.Status, item.CreatedAtUtc, item.LastSeenAtUtc)),
             async (db, id, ct) => await db.Installations.AsNoTracking().Where(item => item.Id == id)
                 .Select(item => new InstallationResponse(item.Id, item.CustomerId, item.InstallationCode, item.Name, item.Environment, item.Status, item.CreatedAtUtc, item.LastSeenAtUtc)).SingleOrDefaultAsync(ct));
 
         MapReadOnlyResource<ContractResponse>(endpoints, "/api/vendor/contracts", "contract",
             VendorPermissionCatalog.ContractsRead,
-            async (db, ct) => await db.Contracts.AsNoTracking().OrderBy(item => item.ContractNumber)
-                .Select(item => new ContractResponse(item.Id, item.CustomerId, item.ContractNumber, item.Status, item.StartsAtUtc, item.EndsAtUtc, item.CurrencyCode, item.CreatedAtUtc)).ToListAsync(ct),
+            db => db.Contracts.AsNoTracking().OrderBy(item => item.ContractNumber)
+                .Select(item => new ContractResponse(item.Id, item.CustomerId, item.ContractNumber, item.Status, item.StartsAtUtc, item.EndsAtUtc, item.CurrencyCode, item.CreatedAtUtc)),
             async (db, id, ct) => await db.Contracts.AsNoTracking().Where(item => item.Id == id)
                 .Select(item => new ContractResponse(item.Id, item.CustomerId, item.ContractNumber, item.Status, item.StartsAtUtc, item.EndsAtUtc, item.CurrencyCode, item.CreatedAtUtc)).SingleOrDefaultAsync(ct));
 
         MapReadOnlyResource<LicenseResponse>(endpoints, "/api/vendor/licenses", "license",
             VendorPermissionCatalog.LicensesRead,
-            async (db, ct) => await db.Licenses.AsNoTracking().OrderBy(item => item.LicenseNumber)
-                .Select(item => new LicenseResponse(item.Id, item.CustomerId, item.ContractId, item.InstallationId, item.LicenseNumber, item.ProductCode, item.Status, item.ValidFromUtc, item.ValidUntilUtc, item.CreatedAtUtc)).ToListAsync(ct),
+            db => db.Licenses.AsNoTracking().OrderBy(item => item.LicenseNumber)
+                .Select(item => new LicenseResponse(item.Id, item.CustomerId, item.ContractId, item.InstallationId, item.LicenseNumber, item.ProductCode, item.Status, item.ValidFromUtc, item.ValidUntilUtc, item.CreatedAtUtc)),
             async (db, id, ct) => await db.Licenses.AsNoTracking().Where(item => item.Id == id)
                 .Select(item => new LicenseResponse(item.Id, item.CustomerId, item.ContractId, item.InstallationId, item.LicenseNumber, item.ProductCode, item.Status, item.ValidFromUtc, item.ValidUntilUtc, item.CreatedAtUtc)).SingleOrDefaultAsync(ct));
 
@@ -204,11 +208,18 @@ public static class VendorBusinessEndpoints
 
     private static void MapReadOnlyResource<T>(
         IEndpointRouteBuilder endpoints, string route, string resourceType, string permission,
-        Func<VendorDbContext, CancellationToken, Task<List<T>>> list,
+        Func<VendorDbContext, IQueryable<T>> query,
         Func<VendorDbContext, Guid, CancellationToken, Task<T?>> get)
     {
         var group = endpoints.MapGroup(route).RequireAuthorization(VendorPermissionCatalog.PolicyFor(permission));
-        group.MapGet("/", (VendorDbContext db, CancellationToken ct) => list(db, ct));
+        group.MapGet("/", async (int? page, int? pageSize, VendorDbContext db, CancellationToken ct) =>
+        {
+            var pagination = VendorPageRequest.Normalize(page, pageSize);
+            var orderedQuery = query(db);
+            var totalCount = await orderedQuery.CountAsync(ct);
+            var items = await orderedQuery.Skip(pagination.Skip).Take(pagination.PageSize).ToListAsync(ct);
+            return Results.Ok(new VendorPageResponse<T>(items, pagination.Page, pagination.PageSize, totalCount));
+        });
         group.MapGet("/{id:guid}", async (
             Guid id, HttpContext context, IAuthorizationService authorization, VendorDbContext db, CancellationToken ct) =>
         {
@@ -231,3 +242,30 @@ public sealed record LicenseResponse(Guid Id, Guid CustomerId, Guid? ContractId,
 public sealed record CreateInstallationRequest(Guid CustomerId, string? InstallationCode, string? Name, string? Environment);
 public sealed record CreateContractRequest(Guid CustomerId, string? ContractNumber, DateTimeOffset StartsAtUtc, DateTimeOffset? EndsAtUtc, string? CurrencyCode);
 public sealed record CreateLicenseRequest(Guid CustomerId, Guid? ContractId, Guid? InstallationId, string? LicenseNumber, string? ProductCode, DateTimeOffset ValidFromUtc, DateTimeOffset? ValidUntilUtc);
+
+
+/// <summary>Normalizes list paging to bounded, deterministic values.</summary>
+public readonly record struct VendorPageRequest(int Page, int PageSize)
+{
+    public const int DefaultPageSize = 25;
+    public const int MaximumPageSize = 100;
+
+    public int Skip => (int)Math.Min((long)(Page - 1) * PageSize, int.MaxValue);
+
+    public static VendorPageRequest Normalize(int? page, int? pageSize)
+    {
+        var normalizedPage = page.GetValueOrDefault(1);
+        var normalizedSize = pageSize.GetValueOrDefault(DefaultPageSize);
+        if (normalizedPage < 1) normalizedPage = 1;
+        if (normalizedSize < 1) normalizedSize = DefaultPageSize;
+        if (normalizedSize > MaximumPageSize) normalizedSize = MaximumPageSize;
+        return new VendorPageRequest(normalizedPage, normalizedSize);
+    }
+}
+
+public sealed record VendorPageResponse<T>(IReadOnlyList<T> Items, int Page, int PageSize, int TotalCount)
+{
+    public int TotalPages => TotalCount == 0 ? 0 : (int)Math.Ceiling(TotalCount / (double)PageSize);
+    public bool HasPreviousPage => Page > 1;
+    public bool HasNextPage => Page < TotalPages;
+}
