@@ -34,9 +34,9 @@ type PageResponse<T> = {
 type ApiError = { error?: string; message?: string };
 
 const currencies: SelectOption[] = [
+  { value: 'IRR', label: 'ریال ایران (IRR)' },
   { value: 'USD', label: 'دلار آمریکا (USD)' },
   { value: 'EUR', label: 'یورو (EUR)' },
-  { value: 'IRR', label: 'ریال ایران (IRR)' },
   { value: 'AED', label: 'درهم امارات (AED)' },
 ];
 
