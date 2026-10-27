@@ -20,6 +20,20 @@ Upstream source inspected: `affaan-m/ECC`, tree commit `90606c8315ee09cafc303515
 | `faranou-efcore-migrations` | Inspired by [ECC database-migrations](https://github.com/affaan-m/ECC/blob/90606c8315ee09cafc303515c5f33024db6b9882/skills/database-migrations/SKILL.md) | Rewritten for EF Core 10 + SQL Server and the commands/constraints already documented in `docs/database-migrations.md`; PostgreSQL/Prisma/Drizzle instructions were not imported. |
 | `faranou-architecture-decisions` | Inspired by [ECC architecture-decision-records](https://github.com/affaan-m/ECC/blob/90606c8315ee09cafc303515c5f33024db6b9882/skills/architecture-decision-records/SKILL.md) | Rewritten to extend `docs/DECISIONS.md` and its existing D-number/status scheme; no parallel `docs/adr/` system. |
 
+## UI/UX Pro Max (form and interface design guidance)
+
+| Local skill | Upstream source | Why retained / adaptation |
+|---|---|---|
+| `ui-ux-pro-max` | [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill/tree/28b3b8dee8c976df4fa3e94aed4e092ad43fcb03/.claude/skills/ui-ux-pro-max) at commit `28b3b8dee8c976df4fa3e94aed4e092ad43fcb03` (2026-10-26) | Searchable local UX guidance (forms, validation, accessibility, interaction states, chart choice, React/shadcn stack notes) to improve the quality of Faranou forms. Standard-library Python plus CSV data; no network calls in the search path. |
+
+- **License:** MIT, notice preserved in [`third_party/UI-UX-PRO-MAX-LICENSE.txt`](../third_party/UI-UX-PRO-MAX-LICENSE.txt).
+- **What was vendored:** the single folder `.claude/skills/ui-ux-pro-max/`, byte-identical to upstream except (1) `scripts/tests/` was not copied, and (2) a "Faranou project overrides" section was added at the top of `SKILL.md` (it restricts the skill to UX, chart, React and shadcn guidance and forbids adopting generic palettes, fonts, icon packs, CDN assets, `--persist` output and motion presets). `.gitattributes` exempts this path from the trailing-whitespace check so the copy stays verifiable.
+- **What was not vendored:** the upstream CLI (`uipro`), the Claude plugin, and the skills `design`, `brand`, `slides`, `banner-design`, `ui-styling` and `design-system`. Several of them call external AI APIs (Gemini, Atlas Cloud, MuAPI) with API keys or load Chart.js/Google Fonts from CDNs, which conflicts with the offline and no-external-service rules in `docs/UI_COMPONENTS.md`.
+- **Review performed (2026-10-27):** a static read of the Python scripts and the CLI source. The search path (`search.py`, `core.py`, `design_system.py`, `reasoning_contract.py`) uses only the standard library and makes no network calls; it writes files only with `--persist`. Smoke queries for `ux`, `chart` and `--stack shadcn` returned results. This is a review of the pinned commit, not a guarantee about later upstream versions.
+- **Use by other tools:** any assistant with a shell can run `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<query>" --domain ux` from the repository root; usage rules are in `docs/UI_COMPONENTS.md`.
+- **Do not install** the upstream plugin or `uipro init` globally on top of this copy.
+- **Refreshing:** pick a new upstream commit, diff it against this folder, re-review the scripts and data for network access, executable behavior and CDN assets, re-apply the Faranou overrides section, and update the commit above.
+
 ## Precedence and maintenance
 
 1. `AGENTS.md`, `docs/INDEX.md`, accepted decisions in `docs/DECISIONS.md`, and the current issue define project constraints.
