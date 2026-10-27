@@ -3,7 +3,8 @@
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/201
 - **Branch:** feat/vendor-maker-checker-clean
 - **Pull Request:** https://github.com/hamidreza1394/Accounting/pull/207
-- **وضعیت:** پیاده‌سازی اولیه در حال بازبینی؛ CI هنوز اجرا نشده
+- **وضعیت:** Verified و ادغام‌شده در PR #207
+- **Merge commit:** `d644ab5d36d00b1ce3763b64f17fd6fe7ef9fbac`
 
 ## محدوده و تصمیم
 - فقط Vendor و تست‌ها/مستندات اختصاصی آن تغییر می‌کنند؛ دیتابیس حسابداری مشتری دست‌نخورده می‌ماند.
@@ -20,9 +21,10 @@
 - تست UI برای ارسال درخواست و صف تأیید.
 
 ## اعتبارسنجی
-- Build محلی و dotnet test محلی: اجرا نشده؛ محیط جاری checkout محلی مخزن ندارد.
-- CI: هنوز اجرا نشده؛ تا سبز شدن Vendor CI و .NET CI هیچ‌کدام از این تغییرات Verified نیستند.
-- پس از PR باید بررسی شود: strict TypeScript/Vitest, .NET build/test, SQL Server migration integration, pending EF model changes, publish Linux/Windows, E2E, secret scan.
+- Build/test محلی: اجرا نشده؛ checkout محلی مخزن در این محیط موجود نبود.
+- Vendor CI [40570240409](https://github.com/hamidreza1394/Accounting/actions/runs/40570240409): موفق؛ TypeScript strict، Vitest، asset budget، build/test Vendor، SQL Server integration، EF snapshot guard و انتشار Vendor.
+- .NET CI [40570240205](https://github.com/hamidreza1394/Accounting/actions/runs/40570240205): موفق؛ client، secret scan، build/test، E2E، انتشار Linux و Windows.
+- شواهد بالا روی HEAD نهایی PR #207 اجرا شده‌اند؛ کد merge commit `d644ab5d36d00b1ce3763b64f17fd6fe7ef9fbac` است.
 
 ## ریسک‌های باقی‌مانده
 - این گردش فعلاً تغییر وضعیت Customer/Installation را پوشش می‌دهد؛ Maker-Checker برای صدور/ابطال امضاشدهٔ لایسنس پس از پیاده‌سازی signing service باید اضافه شود.
