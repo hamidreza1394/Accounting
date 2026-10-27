@@ -740,3 +740,10 @@
 - **باقی‌مانده:** آزمون انتقال وضعیت نصب، شکست Audit و Rollback، رقابت کلید یکتا برای SQL Server 2601/2627 و تأیید کامل CI پس از ادغام PR #179.
 
 - **گسترش تکمیلی:** همان آزمون، انتقال وضعیت نصب `Active -> Suspended` و رد `Suspended -> Draft` را نیز با HTTP واقعی و RowVersion تازه بررسی می‌کند. Commit: `77f3ce8b67660541c9c05d4593a8022b3bc1e3b5`.
+
+
+## 2026-10-27 — ثبت استاندارد کتابخانه‌ها، آفلاین‌بودن دارایی‌ها و قواعد طراحی/سرعت UI (D-049)
+- **دامنه:** فقط مستندات، شاخهٔ `docs/ui-component-standards`؛ بدون تغییر کد، وابستگی یا Migration. Issue: `UNNUMBERED`.
+- **تغییر:** `docs/UI_COMPONENTS.md` سه بخش گرفت (قواعد طراحی/سرعت/ویژوال؛ کتابخانه‌های پذیرفته‌شدهٔ جدول، نمودار و تاریخ؛ قانون محلی‌سازی دارایی‌ها). ADR جدید D-049 ثبت و ارجاع به آن در `AGENTS.md`، `CLAUDE.md`، `docs/INDEX.md` و Skillهای UI/مشترک افزوده شد. شمارهٔ «ADR بعدی» کهنه در `AGENTS.md` و `INDEX.md` به D-050 اصلاح شد.
+- **اعتبارسنجی:** `git diff --check` و `scripts/check_static_assets.py` موفق؛ build/test اجرا نشد چون تغییر فقط مستندات است. CI ندیده شده است.
+- **باقی‌مانده:** نصب هر کتابخانه کار جدا است؛ ساخت آفلاین `NeedsApproval`؛ سقف بودجهٔ سرعت `Deferred` تا اندازه‌گیری مبنا. جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-ui-component-standards.md`.
