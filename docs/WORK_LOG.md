@@ -869,3 +869,10 @@
 - **Issue #201 / PR #207 / شاخه feat/vendor-maker-checker-clean:** گردش تأیید دو نفره برای تغییر وضعیت مشتری/نصب در حال توسعه است. مدل درخواست تأیید، migration مستقل Vendor، endpointهای submit/review، منع self-approval، RowVersion و UI صف تأیید اضافه شده‌اند؛ تست‌های یکپارچه برای درخواست، تکرار، منع تأیید توسط خود درخواست‌کننده، تأیید مدیر مستقل و stale resource افزوده شده‌اند.
 - **وضعیت اعتبارسنجی Maker-Checker:** هنوز CI اجرا نشده؛ هیچ‌یک از قابلیت‌های جدید در این بخش Verified اعلام نمی‌شوند تا Build، تست‌های SQL Server، تست UI، snapshot guard و publish/E2E سبز شوند.
 - **محدوده:** فقط Vendor و تست‌ها/مستندات اختصاصی آن تغییر کرده‌اند؛ دیتابیس حسابداری مشتری دست‌نخورده است.
+
+## 2026-10-27 — تأیید نهایی Maker-Checker مشتری/نصب (PR #207)
+- **نتیجه:** PR #207 ادغام شد؛ merge commit `d644ab5d36d00b1ce3763b64f17fd6fe7ef9fbac`.
+- **Vendor CI:** run [40570240409](https://github.com/hamidreza1394/Accounting/actions/runs/40570240409) موفق؛ TypeScript strict، Vitest، asset budget، build/test Vendor، SQL Server integration، EF snapshot guard و انتشار Vendor.
+- **.NET CI:** run [40570240205](https://github.com/hamidreza1394/Accounting/actions/runs/40570240205) موفق؛ build/test، secret scan، E2E و انتشار Linux/Windows.
+- **رفتارهای آزموده‌شده:** endpoint مستقیم وضعیت دیگر bypass ندارد؛ درخواست تکراری و انتقال نامعتبر رد می‌شود؛ self-approval رد می‌شود؛ مدیر دوم با MFA می‌تواند درخواست را اعمال کند؛ stale RowVersion درخواست را Stale می‌کند؛ Audit در تراکنش ثبت می‌شود.
+- **محدوده:** فقط Vendor، تست‌ها و مستندات؛ دیتابیس حسابداری مشتری تغییر نکرده است. این کار به معنی تکمیل signing/KMS/HSM یا checkpoint مستقل Audit نیست.
