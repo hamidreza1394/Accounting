@@ -735,6 +735,60 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     cancellationToken));
             }
 
+            // A pending request becomes Stale if the resource RowVersion changes before review.
+            byte[] staleCustomerVersion;
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                staleCustomerVersion = (await db.Customers.AsNoTracking()
+                    .SingleAsync(item => item.Id == customerId, cancellationToken)).RowVersion.ToArray();
+            }
+
+            Guid staleApprovalId;
+            string staleApprovalRowVersion;
+            using (var response = await PostWithTokenAsync(client, "/api/vendor/approvals/status-change",
+                new
+                {
+                    resourceType = "customer",
+                    resourceId = customerId,
+                    targetStatus = "Active",
+                    rowVersion = Convert.ToBase64String(staleCustomerVersion)
+                }, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                staleApprovalId = json.RootElement.GetProperty("id").GetGuid();
+                staleApprovalRowVersion = json.RootElement.GetProperty("rowVersion").GetString()!;
+            }
+
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var customer = await db.Customers.SingleAsync(item => item.Id == customerId, cancellationToken);
+                customer.DisplayName = "Changed after approval request";
+                customer.UpdatedAtUtc = DateTimeOffset.UtcNow;
+                await db.SaveChangesAsync(cancellationToken);
+            }
+
+            using (var response = await PostWithTokenAsync(reviewerClient,
+                $"/api/vendor/approvals/{staleApprovalId:D}/decision",
+                new { decision = "Approved", rowVersion = staleApprovalRowVersion, comment = "stale resource check" },
+                reviewerAntiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("approval_resource_stale", json.RootElement.GetProperty("error").GetString());
+            }
+
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                Assert.Equal("Stale", (await db.ApprovalRequests.AsNoTracking()
+                    .SingleAsync(item => item.Id == staleApprovalId, cancellationToken)).Status);
+                Assert.Equal("Suspended", (await db.Customers.AsNoTracking()
+                    .SingleAsync(item => item.Id == customerId, cancellationToken)).Status);
+            }
+
             await using (var raceVerificationScope = factory.Services.CreateAsyncScope())
             {
                 var db = raceVerificationScope.ServiceProvider.GetRequiredService<VendorDbContext>();
