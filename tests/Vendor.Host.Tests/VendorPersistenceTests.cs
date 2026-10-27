@@ -34,8 +34,14 @@ public sealed class VendorPersistenceTests
 
         var audit = model.FindEntityType(typeof(VendorAuditEvent));
         Assert.NotNull(audit);
+        Assert.Contains(audit!.GetIndexes(), index =>
+            index.Properties.Select(property => property.Name).SequenceEqual([nameof(VendorAuditEvent.PreviousHash)]) &&
+            !index.IsUnique);
+        Assert.Contains(audit.GetIndexes(), index =>
+            index.Properties.Select(property => property.Name).SequenceEqual([nameof(VendorAuditEvent.EventHash)]) &&
+            index.IsUnique);
         Assert.DoesNotContain(
-            audit!.GetForeignKeys(),
+            audit.GetForeignKeys(),
             foreignKey => foreignKey.PrincipalEntityType.ClrType == typeof(VendorAdminUser));
     }
 
@@ -135,6 +141,16 @@ public sealed class VendorPersistenceTests
             Assert.Contains(InitialMigration, appliedMigrations);
             Assert.Contains(PasskeyMigration, appliedMigrations);
             Assert.Contains(IdentitySchemaV3Migration, appliedMigrations);
+            Assert.Contains("20261027190000_VendorAuditChainIndexes", appliedMigrations);
+
+            command.CommandText = """
+                SELECT COUNT(*)
+                FROM sys.indexes AS i
+                INNER JOIN sys.tables AS t ON t.object_id = i.object_id
+                WHERE t.name = N'VendorAuditEvents'
+                  AND i.name IN (N'IX_VendorAuditEvents_EventHash', N'IX_VendorAuditEvents_PreviousHash');
+                """;
+            Assert.Equal(2, Convert.ToInt32(await command.ExecuteScalarAsync()));
 
             command.CommandText = """
                 SELECT COUNT(*)
