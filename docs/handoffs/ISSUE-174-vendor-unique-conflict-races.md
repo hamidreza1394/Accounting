@@ -27,3 +27,10 @@ The preflight `AnyAsync` duplicate check improves error clarity but cannot preve
 - Acceptance assertions: exactly one request returns HTTP 201, the other returns HTTP 409 with `customer_number_exists`, exactly one customer persists, and exactly one matching create audit event exists.
 - The gate/interceptor is registered only by the test WebApplicationFactory and is enabled only around the two race requests. No production registration, schema, or customer accounting database is changed.
 - **Validation pending:** CI must compile the test and run it against SQL Server with `FARANO_REQUIRE_VENDOR_SQLSERVER=1`. If the interceptor does not observe both INSERT commands, the test intentionally times out/fails rather than silently passing.
+
+
+## Race-gate assertion hardening (2026-10-27)
+
+- Follow-up to merged PR #182: the HTTP 201/409 contract could also be satisfied by the preflight duplicate check if the interceptor's SQL text predicate did not match.
+- The test now asserts that exactly two INSERT commands were observed by the synchronization gate. A mismatch can no longer silently pass as a successful race test.
+- Evidence for PR #182's pre-hardening baseline: Vendor CI run [40531062507](https://github.com/hamidreza1394/Accounting/actions/runs/40531062507) passed with `FARANO_REQUIRE_VENDOR_SQLSERVER=1` and zero skipped tests; this follow-up requires its own CI run to verify the new assertion.
