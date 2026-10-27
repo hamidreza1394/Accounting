@@ -153,7 +153,7 @@ export function BusinessLists({ section }: { section: BusinessSection }) {
         <h1 id="business-page-title" className="mt-1 text-2xl font-bold text-[#193b57]">{resource.title}</h1>
         <p className="mt-2 text-sm leading-7 text-muted-foreground">{resource.description}</p>
       </div>
-      <Button type="button" variant="outline" onClick={() => { setData(null); setReloadKey(current => current + 1); }} disabled={loading}>
+      <Button type="button" variant="outline" onClick={() => { setLoading(true); setError(''); setData(null); setReloadKey(current => current + 1); }} disabled={loading}>
         <RefreshCw size={16}/> تازه‌سازی
       </Button>
     </div>
