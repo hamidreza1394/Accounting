@@ -8,7 +8,8 @@
 ## هدف و معیارهای پذیرش
 - [x] پاسخ گزینه‌های Passkey مستقل از نام کاربری و وضعیت ثبت credential باشد.
 - [x] حفظ Anti-forgery، محدودسازی نرخ و پاسخ بدون ذخیره‌سازی cache.
-- [ ] افزودن آزمون HTTP رگرسیون برای حساب ناموجود، غیرفعال، بدون Passkey و دارای Passkey.
+- [x] افزودن آزمون HTTP رگرسیون برای بررسی پاسخ discoverable options با نام‌های کاربری مختلف و نبود فهرست credentialهای اختصاصی.
+- [ ] تکمیل آزمون تفاضلی با حساب دارای Passkey واقعی و بررسی تمام حالت‌های حساب.
 - [ ] اجرای Build/Test و تأیید CI روی PR.
 
 ## خلاصه تغییرات
@@ -28,10 +29,10 @@
 | فرمان/آزمون | نتیجه واقعی | توضیح/کد خروج |
 |---|---|---|
 | بازبینی سورس و مستندات رسمی ASP.NET Core 10 | انجام شد | کاربر مشخص allow-list اختصاصی می‌سازد و null برای discoverable credentials پشتیبانی می‌شود. |
-| آزمون HTTP رگرسیون | اجرا نشده | هنوز باید به تست‌های Vendor افزوده شود. |
-| dotnet build | اجرا نشده | در این نوبت محیط اجرای مخزن در اختیار نبود. |
-| dotnet test | اجرا نشده | منتظر افزودن آزمون و اجرای CI. |
-| GitHub Actions | تأیید نشده | PR هنوز ایجاد نشده است. |
+| آزمون HTTP رگرسیون | موفق در Vendor CI | آزمون با نام‌های کاربری مختلف اجرا شد؛ هنوز باید با حساب دارای Passkey واقعی تکمیل شود. |
+| Vendor solution build | موفق در Vendor CI | run 40388746698، step Build Vendor solution. |
+| Vendor solution tests + EF snapshot + publish checks | موفق در Vendor CI | run 40388746698؛ تست Vendor، گارد EF snapshot، publish و بررسی artifact موفق شدند. |
+| GitHub Actions | جزئی | Vendor CI موفق؛ در .NET CI run 40388746692 تست، گاردهای Migration و اسکن NuGet موفق‌اند؛ E2E و انتشار مشتری هنوز در حال اجرا هستند. |
 
 ## امنیت، داده و سازگاری
 - پاسخ options دیگر برای وجود حساب/Passkey شناسه credential را فاش نمی‌کند.
@@ -46,4 +47,4 @@
 ## شناسه‌های Git
 - Branch: fix/issue-152-passkey-options-enumeration
 - Commit: 9b4ea03e45afc2de1af88293abf3ad998b02e565
-- Pull Request: در حال آماده‌سازی
+- Pull Request: https://github.com/hamidreza1394/Accounting/pull/157
