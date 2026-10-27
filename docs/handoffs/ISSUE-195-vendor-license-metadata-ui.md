@@ -3,7 +3,7 @@
 - **Issue:** [#195](https://github.com/hamidreza1394/Accounting/issues/195)
 - **Agent/مسئول:** ChatGPT / مهندسی Vendor
 - **تاریخ:** 2026-10-27
-- **وضعیت:** Implemented in branch / Not verified — regression fix committed; awaiting latest-head CI
+- **وضعیت:** Verified for the scoped metadata UI; merged in PR #196
 
 ## هدف و معیارهای پذیرش
 - [x] فرم RTL برای ثبت لایسنس Draft و ویرایش metadata لایسنس Draft با endpointهای موجود.
@@ -11,8 +11,8 @@
 - [x] حفظ RowVersion، دریافت antiforgery token تازه، مدیریت خطاهای 400/403/409/429/5xx و عدم ویرایش پس از خروج از Draft.
 - [x] تست‌های Vitest برای ایجاد، تاریخ UTC، روابط اختیاری، مجوز، RowVersion stale و Draft-only.
 - [x] تست HTTP روی SQL Server برای فیلتر customerId در فهرست‌های نصب، قرارداد و لایسنس.
-- [ ] Vendor CI و .NET CI روی آخرین commit سبز شوند.
-- [ ] PR بازبینی و ادغام شود؛ این handoff پس از نتیجه CI به‌روزرسانی خواهد شد.
+- [x] Vendor CI و .NET CI روی head نهایی سبز شدند: runs [40550673063](https://github.com/hamidreza1394/Accounting/actions/runs/40550673063) و [40550672932](https://github.com/hamidreza1394/Accounting/actions/runs/40550672932).
+- [x] PR #196 ادغام شد؛ merge commit `45e843ebe639b0013e9b0bc9d28106eb435e4742`.
 
 ## خلاصه تغییرات
 - فرم LicenseForm برای metadata ایجاد/ویرایش ساخته شده است؛ این فرم صدور فایل امضاشده یا activation انجام نمی‌دهد.
@@ -38,9 +38,9 @@
 ## بررسی و آزمون
 | فرمان/آزمون | نتیجه واقعی | توضیح/کد خروج |
 |---|---|---|
-| Vendor UI typecheck / Vitest / build | CI قبلی ناموفق؛ CI جدید در صف | علت ریشه‌ای: ManagedSelect کنترل را به‌خاطر گزینهٔ معتبر با مقدار خالی غیرفعال می‌کرد؛ اصلاح و تست بازگشت در commit `2eb44a82d6d9a81baa8fc9f8ead868c8eb93d697` ثبت شد |
-| Vendor .NET build/test و SQL Server integration | در CI بررسی می‌شود | تست فیلتر مشتری اضافه شده؛ تا CI سبز Verified نیست |
-| .NET CI / E2E / Publish Linux و Windows | در CI بررسی می‌شود | نتیجهٔ head نهایی هنوز در دست انتظار است |
+| Vendor UI typecheck / Vitest / build | موفق | Vendor CI run `40550673063` روی head نهایی PR؛ regression test گزینهٔ اختیاری خالی نیز موفق شد |
+| Vendor .NET build/test و SQL Server integration | موفق | Vendor CI run `40550673063` شامل build/test و تست SQL Server است |
+| .NET CI / E2E / Publish Linux و Windows | موفق | .NET CI run `40550672932`؛ همهٔ jobها سبز شدند |
 | `git diff --check` | اجرا نشده در این رابط | CI و بازبینی diff لازم است |
 
 ## امنیت، داده و سازگاری
@@ -57,4 +57,5 @@
 ## شناسه‌های Git
 - Branch: `feat/vendor-license-management-ui`
 - Commit فعلی هنگام آخرین به‌روزرسانی: `2eb44a82d6d9a81baa8fc9f8ead868c8eb93d697`.
-- Pull Request: [#196](https://github.com/hamidreza1394/Accounting/pull/196) — باز، CI در حال اجرا.
+- Pull Request: [#196](https://github.com/hamidreza1394/Accounting/pull/196) — ادغام‌شده.
+- Merge commit: `45e843ebe639b0013e9b0bc9d28106eb435e4742`.
