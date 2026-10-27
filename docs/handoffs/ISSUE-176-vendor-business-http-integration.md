@@ -2,28 +2,35 @@
 
 ## Current increment (2026-10-27)
 
-Branch: `test/vendor-business-http-integration`
-
-Added `tests/Vendor.Host.Tests/VendorBusinessMutationAuthorizationIntegrationTests.cs`:
+### Initial anonymous-boundary coverage — merged PR #177
 - Exercises the production ASP.NET Core host with `WebApplicationFactory<Program>`.
-- Asserts anonymous requests receive HTTP 401 for customer, installation, contract, and license collection reads.
-- Asserts anonymous PUT/status requests receive HTTP 401 for the six mutation routes.
+- Anonymous requests to Vendor customer, installation, contract, and license reads and mutation routes are rejected with HTTP 401.
+- CI passed for merged head `1c24c019f4d984524440620aba5ec66bb22a0499`; workflow run: https://github.com/hamidreza1394/Accounting/actions/runs/40487770454.
+
+### Authenticated customer update coverage — current branch `test/vendor-customer-mutation-http`
+File: `tests/Vendor.Host.Tests/VendorCustomerMutationHttpIntegrationTests.cs`
+
+The test creates a uniquely named disposable Vendor SQL Server database, applies Vendor migrations, creates an enabled administrator with TOTP MFA and the production `vendor.customers.manage` role permission, and uses the real HTTP password + TOTP flow.
+
+It asserts:
+- missing anti-forgery token => HTTP 400;
+- invalid anti-forgery token => HTTP 400;
+- malformed RowVersion => HTTP 400 with `invalid_row_version`;
+- valid update => HTTP 200;
+- replayed old RowVersion => HTTP 409 with `stale_row_version`;
+- updated database value persists and exactly one matching customer-update audit event exists.
+
+The test uses a generated Vendor-only database name and drops only that database during cleanup. It never uses customer accounting database configuration.
 
 ## Verification status
 
-- **Not yet run locally:** no repository shell/build execution is available in this connector workflow.
-- **CI required:** verify compilation and the test results before merge.
-- These tests establish only the anonymous access boundary. They are not a substitute for authenticated HTTP/SQL Server coverage.
+CI must complete before this branch is considered validated. No local build/test has been run from this connector-only workflow.
 
 ## Remaining acceptance criteria
 
-- Successful updates for all four resource types with current RowVersion.
-- Missing/malformed RowVersion => 400; stale RowVersion => 409 with no persistence.
-- Missing/invalid anti-forgery token rejected for authenticated mutation requests.
-- Anonymous and insufficient-permission denial, while retaining production authorization handlers.
-- License contract/installation/customer relationship validation.
-- Contract/license Draft-only edit policy and allowed operational status transitions.
-- Audit only after successful writes and rollback when audit append fails.
-- Duplicate unique-key race => stable 409 for SQL Server errors 2601/2627.
-- Disposable SQL Server DB isolation and deterministic cleanup under parallel CI.
-- CI green and documentation updated with observed evidence.
+- Equivalent successful/stale/malformed RowVersion coverage for installation, contract, and license.
+- Cross-resource mismatch validation for license contract/installation links.
+- Draft-only contract/license edits and Active↔Suspended status transitions.
+- Audit failure rolls back the business mutation.
+- Deterministic SQL Server duplicate-key race coverage for SQL errors 2601/2627.
+- Update this document with observed CI evidence after validation.
