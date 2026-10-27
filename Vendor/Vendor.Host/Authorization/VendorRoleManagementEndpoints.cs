@@ -200,8 +200,68 @@ public static partial class VendorRoleManagementEndpoints
             return Results.Ok(new RoleResponse(role.Id, role.Name ?? string.Empty, permissions));
         });
 
+        var permissionCatalog = endpoints.MapGroup("/api/admin/permissions")
+            .RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.AdministratorsManage));
+        permissionCatalog.MapGet("/", () => Results.Ok(new
+        {
+            version = VendorPermissionCatalog.Version,
+            permissions = VendorPermissionCatalog.All
+        }));
+
         var administrators = endpoints.MapGroup("/api/admin/administrators")
             .RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.AdministratorsManage));
+
+        administrators.MapDelete("/{userId:guid}/roles/{roleId:guid}", async (
+            Guid userId,
+            Guid roleId,
+            HttpContext context,
+            VendorDbContext db,
+            UserManager<VendorAdminUser> users,
+            RoleManager<IdentityRole<Guid>> roleManager,
+            IVendorAuditWriter audit,
+            CancellationToken cancellationToken) =>
+        {
+            var user = await users.FindByIdAsync(userId.ToString("D"));
+            var role = await roleManager.FindByIdAsync(roleId.ToString("D"));
+            if (user is null || role is null)
+            {
+                return Results.NotFound();
+            }
+
+            if (string.Equals(role.Name, BootstrapSuperAdminRole, StringComparison.OrdinalIgnoreCase))
+            {
+                return Results.Conflict(new { error = "bootstrap_super_admin_role_is_immutable" });
+            }
+
+            if (!await users.IsInRoleAsync(user, role.Name!))
+            {
+                return Results.NoContent();
+            }
+
+            await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+            var removal = await users.RemoveFromRoleAsync(user, role.Name!);
+            if (!removal.Succeeded)
+            {
+                await transaction.RollbackAsync(CancellationToken.None);
+                return Results.Conflict(new { error = "role_assignment_removal_failed" });
+            }
+
+            var actor = await users.GetUserAsync(context.User);
+            if (actor is null)
+            {
+                await transaction.RollbackAsync(CancellationToken.None);
+                return Results.Forbid();
+            }
+
+            await audit.AppendAsync(new VendorAuditWriteRequest(
+                actor.Id,
+                "vendor.rbac.role-revoked",
+                nameof(VendorAdminUser),
+                user.Id.ToString("D"),
+                System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return Results.NoContent();
+        });
 
         administrators.MapPost("/{userId:guid}/roles/{roleId:guid}", async (
             Guid userId,
