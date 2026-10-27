@@ -77,7 +77,12 @@ namespace Faranou.Vendor.Persistence.Migrations
 
                     b.HasIndex("ActorUserId");
 
+                    b.HasIndex("EventHash")
+                        .IsUnique();
+
                     b.HasIndex("OccurredAtUtc");
+
+                    b.HasIndex("PreviousHash");
 
                     b.ToTable("VendorAuditEvents", (string)null);
                 });
