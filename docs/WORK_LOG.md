@@ -822,3 +822,11 @@
 - **علت ریشه‌ای:** `ManagedSelect` وجود گزینهٔ فعال را با شرط `firstEnabledValue !== ''` تشخیص می‌داد. گزینهٔ معتبر «بدون قرارداد» مقدار خالی دارد؛ در نتیجه حتی وقتی گزینه‌های دیگر هم وجود داشتند، کنترل کاملاً غیرفعال و فهرست گزینه‌ها حذف می‌شد. متن CSS طولانی در گزارش تست فقط بخشی از DOM بود، نه علت خطا.
 - **اصلاح:** تشخیص به `options.some(option => !option.disabled)` تغییر کرد تا مقدار خالیِ مجاز از نبود گزینهٔ فعال تفکیک شود. تست بازگشت برای انتخاب خالیِ اختیاری و گزینهٔ قراردادی اضافه شد.
 - **اعتبارسنجی:** CI تازه برای commit `2eb44a82d6d9a81baa8fc9f8ead868c8eb93d697` در صف است؛ تا تکمیل Vendor CI و .NET CI نتیجهٔ اصلاح Verified نیست.
+
+
+## 2026-10-27 — تکمیل و تأیید Issue #195 / PR #196
+- **نتیجه نهایی:** PR #196 با merge commit `45e843ebe639b0013e9b0bc9d28106eb435e4742` ادغام شد.
+- **CI:** Vendor CI [40550673063](https://github.com/hamidreza1394/Accounting/actions/runs/40550673063) و .NET CI [40550672932](https://github.com/hamidreza1394/Accounting/actions/runs/40550672932) روی head نهایی PR موفق شدند؛ .NET CI شامل build/test، Migration guards، E2E و publish Linux/Windows بود.
+- **اصلاح regression:** `ManagedSelect` اکنون گزینهٔ معتبر با value خالی را به‌اشتباه غیرفعال نمی‌کند؛ تست اختصاصی این رفتار افزوده شد.
+- **دامنه:** metadata لایسنس Draft ثبت/ویرایش می‌شود؛ صدور امضاشده، KMS/HSM و activation آفلاین همچنان خارج از این Issue و مانع Production هستند.
+- **گام بعدی:** Issue #197 برای هم‌راستا کردن وضعیت مرکزی و مستندات Vendor با شواهد واقعی و فهرست صریح شکاف‌های Production ایجاد شد.
