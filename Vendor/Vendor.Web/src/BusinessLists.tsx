@@ -293,7 +293,7 @@ export function BusinessLists({ section, permissions = [] }: { section: Business
       </div>
       <div className="flex flex-wrap gap-2">
         {canManageCustomers && <Button type="button" onClick={openCreateCustomer}><Plus size={16}/> ثبت مشتری</Button>}
-        {canManageInstallations && <Button type="button" onClick={openCreateInstallation} disabled={!canReadCustomers} title={!canReadCustomers ? 'برای انتخاب مشتری، مجوز مشاهده مشتریان لازم است.' : undefined}><Plus size={16}/> ثبت نصب</Button>}
+        {canManageInstallations && <Button type="button" onClick={openCreateInstallation} disabled={!canReadCustomers} {...(!canReadCustomers ? { title: 'برای انتخاب مشتری، مجوز مشاهده مشتریان لازم است.' } : {})}><Plus size={16}/> ثبت نصب</Button>}
         <Button type="button" variant="outline" onClick={() => { setLoading(true); setError(''); setData(null); setReloadKey(current => current + 1); }} disabled={loading}>
           <RefreshCw size={16}/> تازه‌سازی
         </Button>
