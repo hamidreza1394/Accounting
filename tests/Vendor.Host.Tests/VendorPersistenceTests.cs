@@ -141,6 +141,16 @@ public sealed class VendorPersistenceTests
             Assert.Contains(InitialMigration, appliedMigrations);
             Assert.Contains(PasskeyMigration, appliedMigrations);
             Assert.Contains(IdentitySchemaV3Migration, appliedMigrations);
+            Assert.Contains("20261027190000_VendorAuditChainIndexes", appliedMigrations);
+
+            command.CommandText = """
+                SELECT COUNT(*)
+                FROM sys.indexes AS i
+                INNER JOIN sys.tables AS t ON t.object_id = i.object_id
+                WHERE t.name = N'VendorAuditEvents'
+                  AND i.name IN (N'IX_VendorAuditEvents_EventHash', N'IX_VendorAuditEvents_PreviousHash');
+                """;
+            Assert.Equal(2, Convert.ToInt32(await command.ExecuteScalarAsync()));
 
             command.CommandText = """
                 SELECT COUNT(*)
