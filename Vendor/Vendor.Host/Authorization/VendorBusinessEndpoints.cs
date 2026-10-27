@@ -5,6 +5,7 @@ using Faranou.Vendor.Persistence.Identity;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace Faranou.Vendor.Host.Authorization;
@@ -64,7 +65,11 @@ public static class VendorBusinessEndpoints
                 CreatedAtUtc = DateTimeOffset.UtcNow, UpdatedAtUtc = DateTimeOffset.UtcNow
             };
             db.Customers.Add(item);
-            await db.SaveChangesAsync(ct);
+            try { await db.SaveChangesAsync(ct); }
+            catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
+            {
+                return Results.Conflict(new { error = "customer_number_exists" });
+            }
             await audit.AppendAsync(new VendorAuditWriteRequest(actor.Id, "vendor.customer.created",
                 nameof(VendorCustomer), item.Id.ToString("D"),
                 System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
@@ -119,7 +124,11 @@ public static class VendorBusinessEndpoints
             var item = new VendorInstallation { Id = Guid.NewGuid(), CustomerId = request.CustomerId,
                 InstallationCode = code, Name = name, Environment = environment, Status = "Active", CreatedAtUtc = DateTimeOffset.UtcNow };
             db.Installations.Add(item);
-            await db.SaveChangesAsync(ct);
+            try { await db.SaveChangesAsync(ct); }
+            catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
+            {
+                return Results.Conflict(new { error = "installation_code_exists" });
+            }
             await audit.AppendAsync(new VendorAuditWriteRequest(actor.Id, "vendor.installation.created",
                 nameof(VendorInstallation), item.Id.ToString("D"),
                 System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
@@ -153,7 +162,11 @@ public static class VendorBusinessEndpoints
                 ContractNumber = number, Status = "Draft", StartsAtUtc = request.StartsAtUtc,
                 EndsAtUtc = request.EndsAtUtc, CurrencyCode = currency, CreatedAtUtc = DateTimeOffset.UtcNow };
             db.Contracts.Add(item);
-            await db.SaveChangesAsync(ct);
+            try { await db.SaveChangesAsync(ct); }
+            catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
+            {
+                return Results.Conflict(new { error = "contract_number_exists" });
+            }
             await audit.AppendAsync(new VendorAuditWriteRequest(actor.Id, "vendor.contract.created",
                 nameof(VendorContract), item.Id.ToString("D"),
                 System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
@@ -194,7 +207,11 @@ public static class VendorBusinessEndpoints
                 LicenseNumber = number, ProductCode = product, Status = "Draft",
                 ValidFromUtc = request.ValidFromUtc, ValidUntilUtc = request.ValidUntilUtc, CreatedAtUtc = DateTimeOffset.UtcNow };
             db.Licenses.Add(item);
-            await db.SaveChangesAsync(ct);
+            try { await db.SaveChangesAsync(ct); }
+            catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
+            {
+                return Results.Conflict(new { error = "license_number_exists" });
+            }
             await audit.AppendAsync(new VendorAuditWriteRequest(actor.Id, "vendor.license.created",
                 nameof(VendorLicense), item.Id.ToString("D"),
                 System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
@@ -245,6 +262,10 @@ public static class VendorBusinessEndpoints
             catch (DbUpdateConcurrencyException)
             {
                 return Results.Conflict(new { error = "stale_row_version" });
+            }
+            catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
+            {
+                return Results.Conflict(new { error = "customer_number_exists" });
             }
             await audit.AppendAsync(new VendorAuditWriteRequest(actor.Id, "vendor.customer.updated",
                 nameof(VendorCustomer), item.Id.ToString("D"),
@@ -320,6 +341,8 @@ public static class VendorBusinessEndpoints
             item.Environment = environment!;
             try { await db.SaveChangesAsync(ct); }
             catch (DbUpdateConcurrencyException) { return Results.Conflict(new { error = "stale_row_version" }); }
+            catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
+            { return Results.Conflict(new { error = "installation_code_exists" }); }
             await audit.AppendAsync(new VendorAuditWriteRequest(actor.Id, "vendor.installation.updated",
                 nameof(VendorInstallation), item.Id.ToString("D"),
                 System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
@@ -395,6 +418,8 @@ public static class VendorBusinessEndpoints
             item.CurrencyCode = currency;
             try { await db.SaveChangesAsync(ct); }
             catch (DbUpdateConcurrencyException) { return Results.Conflict(new { error = "stale_row_version" }); }
+            catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
+            { return Results.Conflict(new { error = "contract_number_exists" }); }
             await audit.AppendAsync(new VendorAuditWriteRequest(actor.Id, "vendor.contract.updated",
                 nameof(VendorContract), item.Id.ToString("D"),
                 System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
@@ -447,6 +472,8 @@ public static class VendorBusinessEndpoints
             item.ValidUntilUtc = request.ValidUntilUtc;
             try { await db.SaveChangesAsync(ct); }
             catch (DbUpdateConcurrencyException) { return Results.Conflict(new { error = "stale_row_version" }); }
+            catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
+            { return Results.Conflict(new { error = "license_number_exists" }); }
             await audit.AppendAsync(new VendorAuditWriteRequest(actor.Id, "vendor.license.metadata-updated",
                 nameof(VendorLicense), item.Id.ToString("D"),
                 System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
@@ -458,6 +485,9 @@ public static class VendorBusinessEndpoints
 
         return endpoints;
     }
+
+    private static bool IsUniqueConstraintViolation(DbUpdateException exception) =>
+        exception.GetBaseException() is SqlException { Number: 2601 or 2627 };
 
     private static void MapReadOnlyResource<T>(
         IEndpointRouteBuilder endpoints, string route, string resourceType, string permission,
