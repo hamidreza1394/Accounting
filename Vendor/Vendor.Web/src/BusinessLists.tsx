@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CustomerForm, type CustomerDraft } from './CustomerForm';
 import { InstallationForm, type InstallationDraft } from './InstallationForm';
+import { ContractForm, type ContractDraft } from './ContractForm';
 
 export type BusinessSection = 'customers' | 'installations' | 'contracts' | 'licenses';
 
@@ -116,10 +117,13 @@ export function BusinessLists({ section, permissions = [] }: { section: Business
   const [editingCustomer, setEditingCustomer] = useState<CustomerDraft | null>(null);
   const [showInstallationForm, setShowInstallationForm] = useState(false);
   const [editingInstallation, setEditingInstallation] = useState<InstallationDraft | null>(null);
+  const [showContractForm, setShowContractForm] = useState(false);
+  const [editingContract, setEditingContract] = useState<ContractDraft | null>(null);
   const [statusBusyId, setStatusBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
   const canManageCustomers = section === 'customers' && permissions.includes('vendor.customers.manage');
   const canManageInstallations = section === 'installations' && permissions.includes('vendor.installations.manage');
+  const canManageContracts = section === 'contracts' && permissions.includes('vendor.contracts.manage');
   const canReadCustomers = permissions.includes('vendor.customers.read');
 
   function openCreateCustomer() {
@@ -192,6 +196,50 @@ export function BusinessLists({ section, permissions = [] }: { section: Business
     setShowInstallationForm(false);
     setEditingInstallation(null);
     setNotice(editingInstallation ? 'اطلاعات نصب به‌روزرسانی شد.' : 'نصب جدید ثبت شد.');
+    setPage(1);
+    setData(null);
+    setLoading(true);
+    setReloadKey(current => current + 1);
+  }
+
+  function openCreateContract() {
+    setEditingContract(null);
+    setShowContractForm(true);
+    setNotice('');
+  }
+
+  function openEditContract(row: Row) {
+    if (row.status !== 'Draft') {
+      setError('فقط قرارداد پیش‌نویس قابل ویرایش است.');
+      return;
+    }
+    if (typeof row.id !== 'string' || typeof row.customerId !== 'string' || typeof row.rowVersion !== 'string') {
+      setError('شناسه مشتری یا نسخه اطلاعات قرارداد موجود نیست؛ فهرست را تازه‌سازی کنید.');
+      return;
+    }
+    setEditingContract({
+      id: row.id,
+      customerId: row.customerId,
+      rowVersion: row.rowVersion,
+      contractNumber: String(row.contractNumber ?? ''),
+      startsAtUtc: String(row.startsAtUtc ?? ''),
+      endsAtUtc: String(row.endsAtUtc ?? ''),
+      currencyCode: String(row.currencyCode ?? 'IRR'),
+      status: String(row.status ?? ''),
+    });
+    setShowContractForm(true);
+    setNotice('');
+  }
+
+  function closeContractForm() {
+    setShowContractForm(false);
+    setEditingContract(null);
+  }
+
+  function contractSaved() {
+    setShowContractForm(false);
+    setEditingContract(null);
+    setNotice(editingContract ? 'قرارداد پیش‌نویس به‌روزرسانی شد.' : 'قرارداد پیش‌نویس ثبت شد.');
     setPage(1);
     setData(null);
     setLoading(true);
@@ -294,6 +342,7 @@ export function BusinessLists({ section, permissions = [] }: { section: Business
       <div className="flex flex-wrap gap-2">
         {canManageCustomers && <Button type="button" onClick={openCreateCustomer}><Plus size={16}/> ثبت مشتری</Button>}
         {canManageInstallations && <Button type="button" onClick={openCreateInstallation} disabled={!canReadCustomers} {...(!canReadCustomers ? { title: 'برای انتخاب مشتری، مجوز مشاهده مشتریان لازم است.' } : {})}><Plus size={16}/> ثبت نصب</Button>}
+        {canManageContracts && <Button type="button" onClick={openCreateContract} disabled={!canReadCustomers} {...(!canReadCustomers ? { title: 'برای انتخاب مشتری، مجوز مشاهده مشتریان لازم است.' } : {})}><Plus size={16}/> ثبت قرارداد</Button>}
         <Button type="button" variant="outline" onClick={() => { setLoading(true); setError(''); setData(null); setReloadKey(current => current + 1); }} disabled={loading}>
           <RefreshCw size={16}/> تازه‌سازی
         </Button>
@@ -303,6 +352,7 @@ export function BusinessLists({ section, permissions = [] }: { section: Business
     {notice && <p role="status" className="text-sm text-muted-foreground">{notice}</p>}
     {showCustomerForm && canManageCustomers && <CustomerForm {...(editingCustomer ? { initial: editingCustomer } : {})} onCancel={closeCustomerForm} onSaved={customerSaved} />}
     {showInstallationForm && canManageInstallations && <InstallationForm {...(editingInstallation ? { initial: editingInstallation } : {})} canReadCustomers={canReadCustomers} onCancel={closeInstallationForm} onSaved={installationSaved} />}
+    {showContractForm && canManageContracts && <ContractForm {...(editingContract ? { initial: editingContract } : {})} canReadCustomers={canReadCustomers} onCancel={closeContractForm} onSaved={contractSaved} />}
 
     <Card>
       <CardHeader className="border-b">
@@ -315,13 +365,14 @@ export function BusinessLists({ section, permissions = [] }: { section: Business
         : !data || data.items.length === 0 ? <div className="flex min-h-36 flex-col items-center justify-center gap-2 text-center"><span className="text-sm font-semibold">رکوردی برای نمایش وجود ندارد</span><p className="text-sm text-muted-foreground">پس از ثبت اطلاعات، موارد در این فهرست نمایش داده می‌شوند.</p></div>
         : <div className="overflow-x-auto">
           <table className="w-full min-w-[680px] border-separate border-spacing-0 text-right text-sm">
-            <thead><tr>{resource.columns.map(column => <th key={column.key} scope="col" className="border-b border-border bg-muted/60 px-4 py-3 font-semibold text-muted-foreground">{column.label}</th>)}{(canManageCustomers || canManageInstallations) && <th scope="col" className="border-b border-border bg-muted/60 px-4 py-3 font-semibold text-muted-foreground">عملیات</th>}</tr></thead>
+            <thead><tr>{resource.columns.map(column => <th key={column.key} scope="col" className="border-b border-border bg-muted/60 px-4 py-3 font-semibold text-muted-foreground">{column.label}</th>)}{(canManageCustomers || canManageInstallations || canManageContracts) && <th scope="col" className="border-b border-border bg-muted/60 px-4 py-3 font-semibold text-muted-foreground">عملیات</th>}</tr></thead>
             <tbody>{data.items.map((row, index) => <tr key={String(row.id ?? row.customerNumber ?? row.installationCode ?? row.contractNumber ?? row.licenseNumber ?? index)} className="hover:bg-muted/30">
               {resource.columns.map(column => <td key={column.key} className="border-b border-border px-4 py-3 text-foreground">{formatValue(row[column.key], column.kind)}</td>)}
-              {(canManageCustomers || canManageInstallations) && <td className="border-b border-border px-4 py-3"><div className="flex flex-wrap gap-2">
+              {(canManageCustomers || canManageInstallations || canManageContracts) && <td className="border-b border-border px-4 py-3"><div className="flex flex-wrap gap-2">
                 {canManageCustomers && <Button type="button" variant="outline" size="sm" onClick={() => openEditCustomer(row)} aria-label={`ویرایش مشتری ${String(row.displayName ?? row.customerNumber ?? '')}`}><Pencil size={15}/> ویرایش</Button>}
                 {canManageInstallations && <Button type="button" variant="outline" size="sm" onClick={() => openEditInstallation(row)} aria-label={`ویرایش نصب ${String(row.name ?? row.installationCode ?? '')}`}><Pencil size={15}/> ویرایش</Button>}
                 {canManageInstallations && (row.status === 'Active' || row.status === 'Suspended') && <Button type="button" variant="outline" size="sm" disabled={statusBusyId === row.id || Boolean(statusBusyId)} onClick={() => changeInstallationStatus(row)} aria-label={row.status === 'Active' ? `تعلیق نصب ${String(row.name ?? '')}` : `فعال‌سازی نصب ${String(row.name ?? '')}`}>{statusBusyId === row.id ? 'در حال ثبت…' : row.status === 'Active' ? 'تعلیق' : 'فعال‌سازی'}</Button>}
+                {canManageContracts && row.status === 'Draft' && <Button type="button" variant="outline" size="sm" onClick={() => openEditContract(row)} aria-label={`ویرایش قرارداد ${String(row.contractNumber ?? '')}`}><Pencil size={15}/> ویرایش</Button>}
               </div></td>}
             </tr>)}</tbody>
           </table>
