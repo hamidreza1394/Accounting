@@ -72,7 +72,8 @@ public static class VendorResourceCatalog
 
 public sealed class VendorResourcePermissionAuthorizationHandler(
     IAuthorizationService authorization,
-    IVendorResourceAccessEvaluator resourceAccess)
+    IVendorResourceAccessEvaluator resourceAccess,
+    Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor)
     : AuthorizationHandler<VendorResourcePermissionRequirement, VendorResourceDescriptor>
 {
     protected override async Task HandleRequirementAsync(
@@ -96,8 +97,7 @@ public sealed class VendorResourcePermissionAuthorizationHandler(
             return;
         }
 
-        var httpContext = context.Resource as Microsoft.AspNetCore.Http.HttpContext;
-        var cancellationToken = httpContext?.RequestAborted ?? CancellationToken.None;
+        var cancellationToken = httpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None;
         if (await resourceAccess.HasAccessAsync(
                 context.User,
                 resource,
