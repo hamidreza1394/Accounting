@@ -7,6 +7,7 @@
 - **کنترل‌های نوشتن:** مجوزدهی سمت سرور و resource authorization، antiforgery token تازه برای mutation، allow-list ورودی و RowVersion برای ویرایش؛ خطاهای تعارض و ورودی نامعتبر با پاسخ‌های مشخص مدیریت می‌شوند.
 - **روابط تجاری:** فهرست‌های قرارداد/نصب/لایسنس امکان فیلتر server-side بر اساس `customerId` دارند. ایجاد/ویرایش لایسنس در API بررسی می‌کند قرارداد و نصب انتخاب‌شده متعلق به همان مشتری باشند؛ این قاعده فقط به UI واگذار نشده است.
 - **Audit:** رخدادهای mutation در تراکنش داده نوشته می‌شوند؛ تست SQL Server rollback در صورت شکست audit و تست‌های HTTP احراز هویت/تغییر وضعیت در CI وجود دارند.
+- **بهینه‌سازی Audit (Issue #202، در شاخهٔ PR):** ایندکس غیر یکتای PreviousHash و ایندکس یکتای EventHash برای lookup برگ/والد زنجیره اضافه شده‌اند؛ Migration فقط به VendorAuditEvents مربوط است. تا اجرای موفق SQL Server CI و گارد has-pending-model-changes، این تغییر Implemented / Not yet Verified است.
 - **رابط:** Vendor UI مستقل React + TypeScript strict + Vite + Tailwind/shadcn، فارسی RTL و assetهای محلی است. `ManagedSelect` گزینهٔ خالی معتبر مانند «بدون قرارداد» را در کنار گزینه‌های فعال پشتیبانی می‌کند.
 - **لایسنس:** فرم فعلی فقط metadata را ثبت/ویرایش می‌کند؛ این به معنی صدور لایسنس امضاشده، activation آفلاین یا اجرای سیاست لایسنس در برنامه مشتری نیست.
 
