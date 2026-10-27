@@ -52,11 +52,11 @@ export function VendorApprovals({ permissions }: Props) {
         headers: { Accept: 'application/json' },
       });
       if (!response.ok) throw new Error(errorMessage(response.status, ''));
-      const page = await response.json() as PageResponse<Approval>;
-      if (!Array.isArray(page.items) || typeof page.totalPages !== 'number' || typeof page.hasNextPage !== 'boolean' || typeof page.hasPreviousPage !== 'boolean') throw new Error('پاسخ فهرست درخواست‌ها معتبر نیست.');
-      setItems(page.items);
-      setTotalPages(page.totalPages);
-      if (page.items.length === 0 && page.page > 1 && page.page > page.totalPages) setPage(Math.max(1, page.totalPages));
+      const pageData = await response.json() as PageResponse<Approval>;
+      if (!Array.isArray(pageData.items) || typeof pageData.totalPages !== 'number' || typeof pageData.hasNextPage !== 'boolean' || typeof pageData.hasPreviousPage !== 'boolean') throw new Error('پاسخ فهرست درخواست‌ها معتبر نیست.');
+      setItems(pageData.items);
+      setTotalPages(pageData.totalPages);
+      if (pageData.items.length === 0 && pageData.page > 1 && pageData.page > pageData.totalPages) setPage(Math.max(1, pageData.totalPages));
     } catch (reason) {
       setItems([]);
       setError(reason instanceof Error ? reason.message : 'دریافت درخواست‌ها ناموفق بود.');
