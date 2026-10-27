@@ -580,6 +580,10 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
             using var secondRaceResponse = await secondRaceResponseTask;
             raceGate.Disable();
 
+            // The status assertions alone can pass through the preflight duplicate check.
+            // Require proof that both INSERT commands reached the SQL Server execution gate.
+            Assert.Equal(2, raceGate.ObservedInsertCount);
+
             var raceStatuses = new[] { firstRaceResponse.StatusCode, secondRaceResponse.StatusCode };
             Assert.Single(raceStatuses, status => status == HttpStatusCode.Created);
             Assert.Single(raceStatuses, status => status == HttpStatusCode.Conflict);
@@ -622,6 +626,8 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
             _bothArrived = NewCompletionSource();
             Volatile.Write(ref _enabled, 1);
         }
+
+        public int ObservedInsertCount => Volatile.Read(ref _arrivals);
 
         public void Disable() => Volatile.Write(ref _enabled, 0);
 
