@@ -90,6 +90,115 @@ public static class VendorBusinessEndpoints
             async (db, id, ct) => await db.Licenses.AsNoTracking().Where(item => item.Id == id)
                 .Select(item => new LicenseResponse(item.Id, item.CustomerId, item.ContractId, item.InstallationId, item.LicenseNumber, item.ProductCode, item.Status, item.ValidFromUtc, item.ValidUntilUtc, item.CreatedAtUtc)).SingleOrDefaultAsync(ct));
 
+        var installations = endpoints.MapGroup("/api/vendor/installations")
+            .RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.InstallationsManage));
+        installations.MapPost("/", async (
+            CreateInstallationRequest request, HttpContext context, IAntiforgery antiforgery,
+            VendorDbContext db, UserManager<VendorAdminUser> users, IVendorAuditWriter audit, CancellationToken ct) =>
+        {
+            if (!await antiforgery.IsRequestValidAsync(context))
+                return Results.BadRequest(new { error = "invalid_antiforgery_token" });
+            var code = request.InstallationCode?.Trim();
+            var name = request.Name?.Trim();
+            var environment = request.Environment?.Trim();
+            if (request.CustomerId == Guid.Empty || string.IsNullOrWhiteSpace(code) || code.Length > 64 ||
+                string.IsNullOrWhiteSpace(name) || name.Length > 200 ||
+                environment is not ("Production" or "Staging" or "Development"))
+                return Results.BadRequest(new { error = "invalid_installation" });
+            if (!await db.Customers.AnyAsync(item => item.Id == request.CustomerId, ct))
+                return Results.BadRequest(new { error = "customer_not_found" });
+            if (await db.Installations.AnyAsync(item => item.InstallationCode == code, ct))
+                return Results.Conflict(new { error = "installation_code_exists" });
+            var actor = await users.GetUserAsync(context.User);
+            if (actor is null) return Results.Forbid();
+            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            var item = new VendorInstallation { Id = Guid.NewGuid(), CustomerId = request.CustomerId,
+                InstallationCode = code, Name = name, Environment = environment, Status = "Active", CreatedAtUtc = DateTimeOffset.UtcNow };
+            db.Installations.Add(item);
+            await db.SaveChangesAsync(ct);
+            await audit.AppendAsync(new VendorAuditWriteRequest(actor.Id, "vendor.installation.created",
+                nameof(VendorInstallation), item.Id.ToString("D"),
+                System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
+            await tx.CommitAsync(ct);
+            return Results.Created($"/api/vendor/installations/{item.Id:D}",
+                new InstallationResponse(item.Id, item.CustomerId, item.InstallationCode, item.Name, item.Environment, item.Status, item.CreatedAtUtc, item.LastSeenAtUtc));
+        });
+
+        var contracts = endpoints.MapGroup("/api/vendor/contracts")
+            .RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.ContractsManage));
+        contracts.MapPost("/", async (
+            CreateContractRequest request, HttpContext context, IAntiforgery antiforgery,
+            VendorDbContext db, UserManager<VendorAdminUser> users, IVendorAuditWriter audit, CancellationToken ct) =>
+        {
+            if (!await antiforgery.IsRequestValidAsync(context))
+                return Results.BadRequest(new { error = "invalid_antiforgery_token" });
+            var number = request.ContractNumber?.Trim();
+            var currency = request.CurrencyCode?.Trim().ToUpperInvariant();
+            if (request.CustomerId == Guid.Empty || string.IsNullOrWhiteSpace(number) || number.Length > 64 ||
+                request.EndsAtUtc.HasValue && request.EndsAtUtc.Value < request.StartsAtUtc ||
+                currency is null || currency.Length != 3 || !currency.All(char.IsAsciiLetter))
+                return Results.BadRequest(new { error = "invalid_contract" });
+            if (!await db.Customers.AnyAsync(item => item.Id == request.CustomerId, ct))
+                return Results.BadRequest(new { error = "customer_not_found" });
+            if (await db.Contracts.AnyAsync(item => item.CustomerId == request.CustomerId && item.ContractNumber == number, ct))
+                return Results.Conflict(new { error = "contract_number_exists" });
+            var actor = await users.GetUserAsync(context.User);
+            if (actor is null) return Results.Forbid();
+            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            var item = new VendorContract { Id = Guid.NewGuid(), CustomerId = request.CustomerId,
+                ContractNumber = number, Status = "Draft", StartsAtUtc = request.StartsAtUtc,
+                EndsAtUtc = request.EndsAtUtc, CurrencyCode = currency, CreatedAtUtc = DateTimeOffset.UtcNow };
+            db.Contracts.Add(item);
+            await db.SaveChangesAsync(ct);
+            await audit.AppendAsync(new VendorAuditWriteRequest(actor.Id, "vendor.contract.created",
+                nameof(VendorContract), item.Id.ToString("D"),
+                System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
+            await tx.CommitAsync(ct);
+            return Results.Created($"/api/vendor/contracts/{item.Id:D}",
+                new ContractResponse(item.Id, item.CustomerId, item.ContractNumber, item.Status, item.StartsAtUtc, item.EndsAtUtc, item.CurrencyCode, item.CreatedAtUtc));
+        });
+
+        var licenses = endpoints.MapGroup("/api/vendor/licenses")
+            .RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.LicensesManage));
+        licenses.MapPost("/", async (
+            CreateLicenseRequest request, HttpContext context, IAntiforgery antiforgery,
+            VendorDbContext db, UserManager<VendorAdminUser> users, IVendorAuditWriter audit, CancellationToken ct) =>
+        {
+            if (!await antiforgery.IsRequestValidAsync(context))
+                return Results.BadRequest(new { error = "invalid_antiforgery_token" });
+            var number = request.LicenseNumber?.Trim();
+            var product = request.ProductCode?.Trim();
+            if (request.CustomerId == Guid.Empty || string.IsNullOrWhiteSpace(number) || number.Length > 64 ||
+                string.IsNullOrWhiteSpace(product) || product.Length > 64 ||
+                request.ValidUntilUtc.HasValue && request.ValidUntilUtc.Value < request.ValidFromUtc)
+                return Results.BadRequest(new { error = "invalid_license" });
+            if (!await db.Customers.AnyAsync(item => item.Id == request.CustomerId, ct))
+                return Results.BadRequest(new { error = "customer_not_found" });
+            if (request.ContractId.HasValue && !await db.Contracts.AnyAsync(item =>
+                    item.Id == request.ContractId.Value && item.CustomerId == request.CustomerId, ct))
+                return Results.BadRequest(new { error = "contract_customer_mismatch" });
+            if (request.InstallationId.HasValue && !await db.Installations.AnyAsync(item =>
+                    item.Id == request.InstallationId.Value && item.CustomerId == request.CustomerId, ct))
+                return Results.BadRequest(new { error = "installation_customer_mismatch" });
+            if (await db.Licenses.AnyAsync(item => item.LicenseNumber == number, ct))
+                return Results.Conflict(new { error = "license_number_exists" });
+            var actor = await users.GetUserAsync(context.User);
+            if (actor is null) return Results.Forbid();
+            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            var item = new VendorLicense { Id = Guid.NewGuid(), CustomerId = request.CustomerId,
+                ContractId = request.ContractId, InstallationId = request.InstallationId,
+                LicenseNumber = number, ProductCode = product, Status = "Draft",
+                ValidFromUtc = request.ValidFromUtc, ValidUntilUtc = request.ValidUntilUtc, CreatedAtUtc = DateTimeOffset.UtcNow };
+            db.Licenses.Add(item);
+            await db.SaveChangesAsync(ct);
+            await audit.AppendAsync(new VendorAuditWriteRequest(actor.Id, "vendor.license.created",
+                nameof(VendorLicense), item.Id.ToString("D"),
+                System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
+            await tx.CommitAsync(ct);
+            return Results.Created($"/api/vendor/licenses/{item.Id:D}",
+                new LicenseResponse(item.Id, item.CustomerId, item.ContractId, item.InstallationId, item.LicenseNumber, item.ProductCode, item.Status, item.ValidFromUtc, item.ValidUntilUtc, item.CreatedAtUtc));
+        });
+
         return endpoints;
     }
 
@@ -118,3 +227,7 @@ public sealed record CustomerResponse(Guid Id, string CustomerNumber, string Leg
 public sealed record InstallationResponse(Guid Id, Guid CustomerId, string InstallationCode, string Name, string Environment, string Status, DateTimeOffset CreatedAtUtc, DateTimeOffset? LastSeenAtUtc);
 public sealed record ContractResponse(Guid Id, Guid CustomerId, string ContractNumber, string Status, DateTimeOffset StartsAtUtc, DateTimeOffset? EndsAtUtc, string CurrencyCode, DateTimeOffset CreatedAtUtc);
 public sealed record LicenseResponse(Guid Id, Guid CustomerId, Guid? ContractId, Guid? InstallationId, string LicenseNumber, string ProductCode, string Status, DateTimeOffset ValidFromUtc, DateTimeOffset? ValidUntilUtc, DateTimeOffset CreatedAtUtc);
+
+public sealed record CreateInstallationRequest(Guid CustomerId, string? InstallationCode, string? Name, string? Environment);
+public sealed record CreateContractRequest(Guid CustomerId, string? ContractNumber, DateTimeOffset StartsAtUtc, DateTimeOffset? EndsAtUtc, string? CurrencyCode);
+public sealed record CreateLicenseRequest(Guid CustomerId, Guid? ContractId, Guid? InstallationId, string? LicenseNumber, string? ProductCode, DateTimeOffset ValidFromUtc, DateTimeOffset? ValidUntilUtc);
