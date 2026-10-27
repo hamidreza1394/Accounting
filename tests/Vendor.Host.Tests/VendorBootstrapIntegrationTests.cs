@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using Faranou.Vendor.Host.Bootstrap;
+using Faranou.Vendor.Host.Authorization;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Auditing;
 using Faranou.Vendor.Persistence.Identity;
@@ -95,9 +96,20 @@ public sealed class VendorBootstrapIntegrationTests
                 Assert.False(user.EmailConfirmed);
                 Assert.True(user.MustChangePassword);
 
+                var userManager = verifyScope.ServiceProvider.GetRequiredService<UserManager<VendorAdminUser>>();
+                var roleManager = verifyScope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+                Assert.True(await userManager.IsInRoleAsync(user, "Vendor.SuperAdmin"));
+                var superAdminRole = await roleManager.FindByNameAsync("Vendor.SuperAdmin");
+                Assert.NotNull(superAdminRole);
+                var permissions = await roleManager.GetClaimsAsync(superAdminRole!);
+                Assert.Equal(
+                    VendorPermissionCatalog.All.Order(StringComparer.Ordinal).ToArray(),
+                    permissions.Where(claim => claim.Type == VendorPermissionCatalog.ClaimType)
+                        .Select(claim => claim.Value).Order(StringComparer.Ordinal).ToArray());
+
                 var audit = await VendorAuditChainVerifier.VerifyAsync(db, TestContext.Current.CancellationToken);
                 Assert.True(audit.IsValid, audit.FailureCode);
-                Assert.Equal(4, audit.EventCount);
+                Assert.Equal(5, audit.EventCount);
             }
         }
         finally

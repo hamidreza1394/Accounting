@@ -1,4 +1,6 @@
 using System.Data;
+using System.Security.Claims;
+using Faranou.Vendor.Host.Authorization;
 using System.Security.Cryptography;
 using System.Text;
 using Faranou.Vendor.Persistence;
@@ -97,6 +99,7 @@ public static class VendorBootstrapCommand
         await using var scope = services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
         var users = scope.ServiceProvider.GetRequiredService<UserManager<VendorAdminUser>>();
+        var roles = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
         var audit = scope.ServiceProvider.GetRequiredService<IVendorAuditWriter>();
 
         if (!db.Database.IsSqlServer())
@@ -217,6 +220,45 @@ public static class VendorBootstrapCommand
                 return 9;
             }
 
+            // The one-time bootstrap path is the only path allowed to grant the immutable
+            // SuperAdmin role and its privileged administrator-management permission.
+            var superAdminRole = await roles.FindByNameAsync("Vendor.SuperAdmin");
+            if (superAdminRole is null)
+            {
+                superAdminRole = new IdentityRole<Guid> { Id = Guid.NewGuid(), Name = "Vendor.SuperAdmin" };
+                var createRole = await roles.CreateAsync(superAdminRole);
+                if (!createRole.Succeeded)
+                {
+                    throw new InvalidOperationException("Could not create the initial Vendor administrator role.");
+                }
+            }
+
+            foreach (var permission in VendorPermissionCatalog.All)
+            {
+                var existingClaims = await roles.GetClaimsAsync(superAdminRole);
+                if (!existingClaims.Any(claim =>
+                        claim.Type == VendorPermissionCatalog.ClaimType &&
+                        string.Equals(claim.Value, permission, StringComparison.Ordinal)))
+                {
+                    var addPermission = await roles.AddClaimAsync(
+                        superAdminRole,
+                        new Claim(VendorPermissionCatalog.ClaimType, permission));
+                    if (!addPermission.Succeeded)
+                    {
+                        throw new InvalidOperationException("Could not assign the initial Vendor administrator permissions.");
+                    }
+                }
+            }
+
+            if (!await users.IsInRoleAsync(user, superAdminRole.Name!))
+            {
+                var assignRole = await users.AddToRoleAsync(user, superAdminRole.Name!);
+                if (!assignRole.Succeeded)
+                {
+                    throw new InvalidOperationException("Could not assign the initial Vendor administrator role.");
+                }
+            }
+
             var enableMfa = await users.SetTwoFactorEnabledAsync(user, true);
             if (!enableMfa.Succeeded)
             {
@@ -230,6 +272,9 @@ public static class VendorBootstrapCommand
             {
                 throw new InvalidOperationException("Could not activate the verified Vendor administrator.");
             }
+
+            await audit.AppendAsync(new VendorAuditWriteRequest(
+                null, "vendor.bootstrap.superadmin-role-assigned", "VendorAdminUser", user.Id.ToString("N")), cancellationToken);
 
             // The local bootstrap operator is not authenticated as a Vendor admin yet;
             // do not falsely attribute this event to the account being created.

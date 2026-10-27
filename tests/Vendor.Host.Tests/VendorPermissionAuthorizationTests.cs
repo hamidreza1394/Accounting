@@ -133,6 +133,74 @@ public sealed class VendorPermissionAuthorizationTests
     }
 
     [Fact]
+    public async Task EveryVendorAdminManagementEndpointRequiresAdministratorManagementPermission()
+    {
+        await using var factory = new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program>();
+        var dataSource = factory.Services.GetRequiredService<Microsoft.AspNetCore.Routing.EndpointDataSource>();
+        var policyProvider = factory.Services.GetRequiredService<IAuthorizationPolicyProvider>();
+        var adminEndpoints = dataSource.Endpoints
+            .OfType<Microsoft.AspNetCore.Routing.RouteEndpoint>()
+            .Where(endpoint => endpoint.RoutePattern.RawText?.StartsWith("/api/admin/", StringComparison.OrdinalIgnoreCase) == true)
+            .ToArray();
+
+        Assert.NotEmpty(adminEndpoints);
+        foreach (var endpoint in adminEndpoints)
+        {
+            var authorizeData = endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>();
+            Assert.NotEmpty(authorizeData);
+            var policy = await AuthorizationPolicy.CombineAsync(policyProvider, authorizeData);
+            Assert.NotNull(policy);
+            Assert.Contains(policy!.Requirements, requirement =>
+                requirement is VendorPermissionRequirement permission &&
+                permission.Permission == VendorPermissionCatalog.AdministratorsManage);
+            Assert.Contains(policy.Requirements, requirement => requirement is VendorAdminAccessRequirement);
+        }
+    }
+
+    [Fact]
+    public async Task ResourcePolicyCombinesMfaPermissionAndResourceBoundaryRequirements()
+    {
+        var provider = new VendorPermissionPolicyProvider(Options.Create(new AuthorizationOptions()));
+
+        var policy = await provider.GetPolicyAsync(
+            VendorResourceCatalog.PolicyFor("license", VendorPermissionCatalog.LicensesIssue));
+
+        Assert.NotNull(policy);
+        Assert.Contains(policy!.Requirements, requirement => requirement is VendorAdminAccessRequirement);
+        Assert.Contains(policy.Requirements, requirement =>
+            requirement is VendorPermissionRequirement permission &&
+            permission.Permission == VendorPermissionCatalog.LicensesIssue);
+        Assert.Contains(policy.Requirements, requirement =>
+            requirement is VendorResourcePermissionRequirement resource &&
+            resource.ResourceType == "license" &&
+            resource.Permission == VendorPermissionCatalog.LicensesIssue);
+    }
+
+    [Fact]
+    public void ResourceCatalogAllowsOnlyKnownResourceAndPermissionPairs()
+    {
+        Assert.True(VendorResourceCatalog.Supports("customer", VendorPermissionCatalog.CustomersRead));
+        Assert.True(VendorResourceCatalog.Supports("license", VendorPermissionCatalog.LicensesIssue));
+        Assert.False(VendorResourceCatalog.Supports("customer", VendorPermissionCatalog.LicensesIssue));
+        Assert.False(VendorResourceCatalog.Supports("tenant", VendorPermissionCatalog.CustomersRead));
+        Assert.False(VendorResourceCatalog.Supports("customer", "vendor.superuser"));
+        Assert.False(VendorResourceCatalog.Supports(null, VendorPermissionCatalog.CustomersRead));
+    }
+
+    [Fact]
+    public async Task MissingResourceAdapterDeniesAllResourceAccess()
+    {
+        var evaluator = new DenyAllVendorResourceAccessEvaluator();
+        var result = await evaluator.HasAccessAsync(
+            new System.Security.Claims.ClaimsPrincipal(),
+            new VendorResourceDescriptor("customer", Guid.NewGuid()),
+            VendorPermissionCatalog.CustomersRead,
+            CancellationToken.None);
+
+        Assert.False(result);
+    }
+
+    [Fact]
     public async Task NonPermissionPoliciesDelegateToDefaultProvider()
     {
         var options = new AuthorizationOptions();

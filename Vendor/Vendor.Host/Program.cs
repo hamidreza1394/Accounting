@@ -228,7 +228,10 @@ builder.Services.Configure<IdentityPasskeyOptions>(options =>
 
 builder.Services.AddScoped<IAuthorizationHandler, VendorAdminAccessHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, VendorPermissionAuthorizationHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, VendorResourcePermissionAuthorizationHandler>();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, VendorPermissionPolicyProvider>();
+builder.Services.AddSingleton<IVendorResourceAccessEvaluator, DenyAllVendorResourceAccessEvaluator>();
 builder.Services.AddAuthorization(VendorAuthorizationPolicies.Configure);
 
 var app = builder.Build();
@@ -298,6 +301,7 @@ app.UseAntiforgery();
 app.MapHealthChecks("/health/live").AllowAnonymous();
 app.MapVendorAuthentication();
 app.MapVendorPasswordChange();
+app.MapVendorRoleManagement();
 app.MapFallback(async context =>
 {
     var path = context.Request.Path.Value ?? "/";
