@@ -854,3 +854,12 @@
 - **عمداً کپی نشد:** CLI، افزونه و مهارت‌های `design`، `brand`، `slides`، `banner-design`، `ui-styling`، `design-system` (API بیرونی با کلید و CDN).
 - **اعتبارسنجی:** مقایسهٔ بایتی با upstream، اجرای واقعی `search.py` (ux، shadcn، chart)، `check_static_assets.py` و `git diff --check` موفق؛ build/test اجرا نشد؛ CI ندیده شده.
 - **باقی‌مانده:** سنجش فایدهٔ واقعی روی یک فرم؛ در صورت لزوم کاهش حجم داده؛ جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-ui-ux-pro-max-skill.md`.
+
+
+## 2026-10-27 — بهینه‌سازی lookup زنجیره Audit در Vendor (Issue #202)
+- **هدف:** کاهش هزینهٔ جست‌وجوی برگ و والد زنجیره در VendorAuditWriter با ایندکس‌گذاری ستون‌هایی که در predicateهای PreviousHash و EventHash استفاده می‌شوند.
+- **تغییر:** افزودن ایندکس IX_VendorAuditEvents_PreviousHash و ایندکس یکتای IX_VendorAuditEvents_EventHash؛ Migration جدید 20261027190000_VendorAuditChainIndexes فقط این دو ایندکس را می‌سازد و در Down حذف می‌کند. Snapshot و target model با مدل جاری هماهنگ شدند.
+- **تست‌ها:** آزمون مدل برای یکتایی/وجود ایندکس‌ها و آزمون SQL Server برای Migration و وجود هر دو ایندکس افزوده شد.
+- **محدوده:** فقط Vendor و تست‌ها/مستندات Vendor؛ هیچ دیتابیس یا Migration حسابداری مشتری تغییر نکرده است. ایندکس یکتا عمداً درج hash تکراری را در سطح دیتابیس رد می‌کند؛ اگر دادهٔ موجود ناسالم و دارای hash تکراری باشد، Migration باید fail کند تا داده پنهانی نادیده گرفته نشود.
+- **اعتبارسنجی:** Build، تست .NET، SQL Server و CI هنوز اجرا/تأیید نشده‌اند در زمان ثبت این یادداشت؛ تغییر از GitHub API ثبت شده و باید از CI واقعی تأیید شود. تا آن زمان وضعیت Implemented / Not yet Verified است.
+- **Branch:** fix/vendor-audit-chain-indexes-main; **Issue:** #202.
