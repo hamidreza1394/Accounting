@@ -45,3 +45,11 @@ The test uses a generated Vendor-only database name and drops only that database
 - Audit failure rolls back the business mutation.
 - Deterministic SQL Server duplicate-key race coverage for SQL errors 2601/2627.
 - Update this document with observed CI evidence after validation.
+
+
+## RowVersion no-op replay fix (pending CI)
+
+- The integration run exposed a real edge case: replaying an old RowVersion with an identical request body could return `200 OK` because EF Core can skip issuing SQL `UPDATE` when no property value changes. SQL Server's rowversion predicate is therefore not evaluated for that no-op.
+- Commit `7bc21cf62dc2e1076353f652f724ec6ca4ab678a` adds an explicit comparison between the submitted token and the currently loaded rowversion in all six business update/status handlers. A stale token returns `409 stale_row_version` even for an identical payload. The database concurrency check remains in place to protect the race between the pre-check and `SaveChanges`.
+- Documentation commit: `fd6a038961e8bcb6af534ac4f0065251ef39d271`.
+- CI must pass before considering this fix verified; no local SQL Server execution was available here.
