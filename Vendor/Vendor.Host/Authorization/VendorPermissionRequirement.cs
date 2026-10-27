@@ -88,12 +88,12 @@ public sealed class VendorPermissionPolicyProvider(
             return base.GetPolicyAsync(policyName);
         }
 
-        var permission = policyName[VendorPermissionCatalog.PolicyPrefix.Length..];
+        var standardPermission = policyName[VendorPermissionCatalog.PolicyPrefix.Length..];
         var policy = new AuthorizationPolicyBuilder()
             .RequireAuthenticatedUser()
             .AddRequirements(
                 new VendorAdminAccessRequirement(),
-                new VendorPermissionRequirement(permission))
+                new VendorPermissionRequirement(standardPermission))
             .Build();
 
         return Task.FromResult<AuthorizationPolicy?>(policy);
