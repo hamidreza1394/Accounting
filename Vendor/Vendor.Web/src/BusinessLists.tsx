@@ -183,7 +183,7 @@ export function BusinessLists({ section }: { section: BusinessSection }) {
                 <option value={25}>۲۵</option><option value={50}>۵۰</option><option value={100}>۱۰۰</option>
               </select>
             </label>
-            <span>صفحه {new Intl.NumberFormat('fa-IR').format(data.page)} از {new Intl.NumberFormat('fa-IR').format(data.totalPages)}</span>
+            <span>صفحه {data.totalPages === 0 ? '—' : new Intl.NumberFormat('fa-IR').format(data.page)} از {data.totalPages === 0 ? '—' : new Intl.NumberFormat('fa-IR').format(data.totalPages)}</span>
           </div>
           <div className="flex items-center gap-2">
             <Button type="button" variant="outline" size="sm" disabled={!data.hasPreviousPage || loading} onClick={() => setPage(current => Math.max(1, current - 1))}><ChevronRight size={16}/> قبلی</Button>
