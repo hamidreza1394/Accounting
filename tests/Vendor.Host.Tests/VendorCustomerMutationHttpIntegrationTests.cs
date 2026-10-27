@@ -290,6 +290,43 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     item.ActionCode == "vendor.customer.updated" && item.SubjectId == customerId.ToString("D"), cancellationToken));
             }
 
+            // Operational status transitions are restricted to Active <-> Suspended.
+            byte[] customerStatusVersion;
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                customerStatusVersion = (await db.Customers.AsNoTracking()
+                    .SingleAsync(item => item.Id == customerId, cancellationToken)).RowVersion.ToArray();
+            }
+
+            string customerStatusVersionText;
+            using (var response = await PostWithTokenAsync(client, path + "/status",
+                new { status = "Suspended", rowVersion = Convert.ToBase64String(customerStatusVersion) },
+                antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                customerStatusVersionText = json.RootElement.GetProperty("rowVersion").GetString()!;
+            }
+
+            using (var response = await PostWithTokenAsync(client, path + "/status",
+                new { status = "Active", rowVersion = customerStatusVersionText },
+                antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                customerStatusVersionText = json.RootElement.GetProperty("rowVersion").GetString()!;
+            }
+
+            using (var response = await PostWithTokenAsync(client, path + "/status",
+                new { status = "Draft", rowVersion = customerStatusVersionText },
+                antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("invalid_status_transition", json.RootElement.GetProperty("error").GetString());
+            }
+
             // Installation update: real HTTP, current RowVersion succeeds, replay is rejected.
             Guid installationId;
             byte[] installationRowVersion;
