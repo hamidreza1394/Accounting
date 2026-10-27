@@ -137,13 +137,13 @@ describe('Vendor control plane shell', () => {
     };
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.startsWith('/api/vendor/installations/') && url.endsWith('/status')) return Promise.resolve(response({ error: 'stale_row_version' }, 409));
+      if (url === '/api/vendor/approvals/status-change') return Promise.resolve(response({ error: 'stale_row_version' }, 409));
       if (url.startsWith('/api/vendor/installations/')) return Promise.resolve(response(installationPage));
       if (url === '/api/auth/antiforgery') return Promise.resolve(response({ requestToken: 'csrf-status' }));
       return Promise.resolve(response({}, 404));
     });
     vi.stubGlobal('fetch', fetchMock);
-    render(<BusinessLists section="installations" permissions={['vendor.installations.manage']} />);
+    render(<BusinessLists section="installations" permissions={['vendor.installations.manage', 'vendor.approvals.request']} />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'تعلیق نصب نصب عملیاتی' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('اطلاعات نصب تغییر کرده است؛ فهرست را تازه‌سازی کنید.');
