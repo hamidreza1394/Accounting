@@ -32,6 +32,11 @@ const currencies: SelectOption[] = [
   { value: 'AED', label: 'درهم امارات (AED)' },
 ];
 
+function currencyOptionsFor(currentCode?: string): SelectOption[] {
+  if (!currentCode || currencies.some(option => option.value === currentCode)) return currencies;
+  return [{ value: currentCode, label: `ارز فعلی ثبت‌شده (${currentCode})` }, ...currencies];
+}
+
 function dateInput(value?: string | null): string {
   if (!value) return '';
   const date = new Date(value);
@@ -171,7 +176,7 @@ export function ContractForm({ initial, canReadCustomers, onCancel, onSaved }: C
               <div className="flex items-center justify-between text-xs text-muted-foreground"><Button type="button" variant="outline" size="sm" disabled={customerLoading || !customerPages.hasPreviousPage} onClick={() => setCustomerPage(current => Math.max(1, current - 1))}>مشتری‌های قبلی</Button><span>صفحه {customerPage}</span><Button type="button" variant="outline" size="sm" disabled={customerLoading || !customerPages.hasNextPage} onClick={() => setCustomerPage(current => current + 1)}>مشتری‌های بعدی</Button></div>
             </div>}
         <div className="grid gap-2 text-start"><label htmlFor="contract-number" className="text-sm font-semibold">شماره قرارداد *</label><input id="contract-number" required maxLength={64} value={contractNumber} onChange={event => setContractNumber(event.currentTarget.value)} autoComplete="off" className="min-h-11 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></div>
-        <ManagedSelect label="ارز قرارداد" name="contract-currency" options={currencies} value={currencyCode} onValueChange={setCurrencyCode} required />
+        <ManagedSelect label="ارز قرارداد" name="contract-currency" options={currencyOptionsFor(initial?.currencyCode)} value={currencyCode} onValueChange={setCurrencyCode} required />
         <div className="grid gap-2 text-start"><label htmlFor="contract-starts" className="text-sm font-semibold">شروع اعتبار *</label><input id="contract-starts" type="date" required value={startsAt} onChange={event => setStartsAt(event.currentTarget.value)} className="min-h-11 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></div>
         <div className="grid gap-2 text-start"><label htmlFor="contract-ends" className="text-sm font-semibold">پایان اعتبار (اختیاری)</label><input id="contract-ends" type="date" min={startsAt} value={endsAt} onChange={event => setEndsAt(event.currentTarget.value)} className="min-h-11 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></div>
         <div className="flex flex-wrap justify-end gap-2 sm:col-span-2"><Button type="button" variant="outline" onClick={onCancel} disabled={busy}>انصراف</Button><Button type="submit" disabled={busy || (!editing && (!canReadCustomers || !customerId)) || !contractNumber.trim() || !startsAt || Boolean(endsAt && endsAt < startsAt)}>{busy ? 'در حال ذخیره…' : editing ? 'ذخیره تغییرات' : 'ثبت قرارداد'}</Button></div>
