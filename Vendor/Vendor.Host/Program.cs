@@ -303,6 +303,7 @@ app.MapVendorAuthentication();
 app.MapVendorPasswordChange();
 app.MapVendorRoleManagement();
 app.MapVendorBusinessEndpoints();
+app.MapVendorApprovalEndpoints();
 app.MapFallback(async context =>
 {
     var path = context.Request.Path.Value ?? "/";
