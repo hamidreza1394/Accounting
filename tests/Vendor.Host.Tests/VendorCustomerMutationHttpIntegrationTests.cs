@@ -354,6 +354,34 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal("stale_row_version", json.RootElement.GetProperty("error").GetString());
             }
 
+            // Installation status follows the same allow-listed Active <-> Suspended state machine.
+            byte[] installationStatusVersion;
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                installationStatusVersion = (await db.Installations.AsNoTracking()
+                    .SingleAsync(item => item.Id == installationId, cancellationToken)).RowVersion.ToArray();
+            }
+
+            string installationStatusVersionText;
+            using (var response = await PostWithTokenAsync(client, installationPath + "/status",
+                new { status = "Suspended", rowVersion = Convert.ToBase64String(installationStatusVersion) },
+                antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                installationStatusVersionText = json.RootElement.GetProperty("rowVersion").GetString()!;
+            }
+
+            using (var response = await PostWithTokenAsync(client, installationPath + "/status",
+                new { status = "Draft", rowVersion = installationStatusVersionText },
+                antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("invalid_status_transition", json.RootElement.GetProperty("error").GetString());
+            }
+
             // Contract update is allowed while Draft and enforces RowVersion on replay.
             Guid contractId;
             byte[] contractRowVersion;
