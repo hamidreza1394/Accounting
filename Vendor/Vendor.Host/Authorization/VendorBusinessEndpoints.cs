@@ -14,7 +14,7 @@ public static class VendorBusinessEndpoints
 {
     public static IEndpointRouteBuilder MapVendorBusinessEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var customers = endpoints.MapGroup("/api/admin/customers");
+        var customers = endpoints.MapGroup("/api/vendor/customers");
         customers.MapGet("/", async (VendorDbContext db, CancellationToken ct) =>
             Results.Ok(await db.Customers.AsNoTracking()
                 .OrderBy(item => item.CustomerNumber)
@@ -65,25 +65,25 @@ public static class VendorBusinessEndpoints
                 nameof(VendorCustomer), item.Id.ToString("D"),
                 System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
             await tx.CommitAsync(ct);
-            return Results.Created($"/api/admin/customers/{item.Id:D}",
+            return Results.Created($"/api/vendor/customers/{item.Id:D}",
                 new CustomerResponse(item.Id, item.CustomerNumber, item.LegalName, item.DisplayName, item.Status, item.CreatedAtUtc, item.UpdatedAtUtc));
         }).RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.CustomersManage));
 
-        MapReadOnlyResource<InstallationResponse>(endpoints, "/api/admin/installations", "installation",
+        MapReadOnlyResource<InstallationResponse>(endpoints, "/api/vendor/installations", "installation",
             VendorPermissionCatalog.InstallationsRead,
             async (db, ct) => await db.Installations.AsNoTracking().OrderBy(item => item.InstallationCode)
                 .Select(item => new InstallationResponse(item.Id, item.CustomerId, item.InstallationCode, item.Name, item.Environment, item.Status, item.CreatedAtUtc, item.LastSeenAtUtc)).ToListAsync(ct),
             async (db, id, ct) => await db.Installations.AsNoTracking().Where(item => item.Id == id)
                 .Select(item => new InstallationResponse(item.Id, item.CustomerId, item.InstallationCode, item.Name, item.Environment, item.Status, item.CreatedAtUtc, item.LastSeenAtUtc)).SingleOrDefaultAsync(ct));
 
-        MapReadOnlyResource<ContractResponse>(endpoints, "/api/admin/contracts", "contract",
+        MapReadOnlyResource<ContractResponse>(endpoints, "/api/vendor/contracts", "contract",
             VendorPermissionCatalog.ContractsRead,
             async (db, ct) => await db.Contracts.AsNoTracking().OrderBy(item => item.ContractNumber)
                 .Select(item => new ContractResponse(item.Id, item.CustomerId, item.ContractNumber, item.Status, item.StartsAtUtc, item.EndsAtUtc, item.CurrencyCode, item.CreatedAtUtc)).ToListAsync(ct),
             async (db, id, ct) => await db.Contracts.AsNoTracking().Where(item => item.Id == id)
                 .Select(item => new ContractResponse(item.Id, item.CustomerId, item.ContractNumber, item.Status, item.StartsAtUtc, item.EndsAtUtc, item.CurrencyCode, item.CreatedAtUtc)).SingleOrDefaultAsync(ct));
 
-        MapReadOnlyResource<LicenseResponse>(endpoints, "/api/admin/licenses", "license",
+        MapReadOnlyResource<LicenseResponse>(endpoints, "/api/vendor/licenses", "license",
             VendorPermissionCatalog.LicensesRead,
             async (db, ct) => await db.Licenses.AsNoTracking().OrderBy(item => item.LicenseNumber)
                 .Select(item => new LicenseResponse(item.Id, item.CustomerId, item.ContractId, item.InstallationId, item.LicenseNumber, item.ProductCode, item.Status, item.ValidFromUtc, item.ValidUntilUtc, item.CreatedAtUtc)).ToListAsync(ct),
