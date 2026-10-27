@@ -854,3 +854,11 @@
 - **عمداً کپی نشد:** CLI، افزونه و مهارت‌های `design`، `brand`، `slides`، `banner-design`، `ui-styling`، `design-system` (API بیرونی با کلید و CDN).
 - **اعتبارسنجی:** مقایسهٔ بایتی با upstream، اجرای واقعی `search.py` (ux، shadcn، chart)، `check_static_assets.py` و `git diff --check` موفق؛ build/test اجرا نشد؛ CI ندیده شده.
 - **باقی‌مانده:** سنجش فایدهٔ واقعی روی یک فرم؛ در صورت لزوم کاهش حجم داده؛ جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-ui-ux-pro-max-skill.md`.
+
+
+## 2026-10-27 — کاهش مصرف توکن ثابت جلسه با افشای تدریجی اسناد (بدون حذف قاعده)
+- **دامنه:** فقط مستندات و فایل‌های راهنمای Agent، شاخهٔ `docs/reduce-agent-context-cost`؛ بدون تغییر کد برنامه، وابستگی یا Migration. Issue: `UNNUMBERED`.
+- **تغییر:** حذف بخش تکراری از `CLAUDE.md`؛ انتقال بخش‌های مرجع آن به `docs/AGENT_REFERENCE.md`؛ جدا کردن `docs/UI_LIBRARIES.md` از `docs/UI_COMPONENTS.md`؛ هماهنگی ارجاع‌ها در `AGENTS.md`، `CLAUDE.md`، `docs/INDEX.md` و Skillها.
+- **نتیجهٔ اندازه‌گیری (تخمین با توکنایزر جایگزین):** جمع فایل‌های همیشه‌بارشونده حدود ۱۵٫۹ ← ۱۲٫۰ هزار توکن؛ سند UI برای کار معمولی حدود ۱۰٫۹ ← ۶٫۱ هزار.
+- **اعتبارسنجی:** بررسی خودکار بی‌اتلافی (۰ خط گم‌شده در `CLAUDE.md`؛ فقط ۴ ارجاع عمداً اصلاح در UI)، لینک‌های محلی، `check_static_assets.py` و `git diff --check` موفق؛ build/test اجرا نشد؛ CI ندیده شده.
+- **باقی‌مانده:** سنجش مصرف واقعی روی چند کار؛ ریسک نخواندن سند مرجع در صورت نیاز؛ جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-reduce-agent-context-cost.md`.
