@@ -198,6 +198,72 @@ public sealed class VendorAuthenticationSecurityTests
             var (authenticatedToken, authenticatedAntiforgeryCookie) =
                 await GetAntiforgeryTokenAndCookieAsync(client, cancellationToken, $"{antiforgeryCookie}; {applicationCookie}");
             var authenticatedCookieHeader = $"{authenticatedAntiforgeryCookie}; {applicationCookie}";
+            // A bootstrap-created account must change its initial password before any management API is usable.
+            using (var blockedOptions = await PostWithTokenAsync(
+                client,
+                "/api/auth/passkey/creation-options",
+                new { },
+                authenticatedToken,
+                cancellationToken,
+                authenticatedCookieHeader))
+            {
+                Assert.Equal(HttpStatusCode.Forbidden, blockedOptions.StatusCode);
+                using var blockedBody = JsonDocument.Parse(await blockedOptions.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("password_change_required", blockedBody.RootElement.GetProperty("error").GetString());
+            }
+
+            using (var missingToken = await client.PostAsJsonAsync(
+                "/api/auth/change-password",
+                new { currentPassword = "Secure-Vendor#2026", newPassword = "Changed-Vendor#2026-Strong" },
+                cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.BadRequest, missingToken.StatusCode);
+            }
+
+            using (var wrongCurrentPassword = await PostWithTokenAsync(
+                client,
+                "/api/auth/change-password",
+                new { currentPassword = "wrong-current-password", newPassword = "Changed-Vendor#2026-Strong" },
+                authenticatedToken,
+                cancellationToken,
+                authenticatedCookieHeader))
+            {
+                Assert.Equal(HttpStatusCode.BadRequest, wrongCurrentPassword.StatusCode);
+            }
+
+            using (var beforeChange = await client.GetAsync("/api/auth/me", cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, beforeChange.StatusCode);
+                using var beforeDocument = JsonDocument.Parse(await beforeChange.Content.ReadAsStringAsync(cancellationToken));
+                Assert.True(beforeDocument.RootElement.GetProperty("mustChangePassword").GetBoolean());
+            }
+
+            using (var changePassword = await PostWithTokenAsync(
+                client,
+                "/api/auth/change-password",
+                new { currentPassword = "Secure-Vendor#2026", newPassword = "Changed-Vendor#2026-Strong" },
+                authenticatedToken,
+                cancellationToken,
+                authenticatedCookieHeader))
+            {
+                Assert.Equal(HttpStatusCode.OK, changePassword.StatusCode);
+                using var changedDocument = JsonDocument.Parse(await changePassword.Content.ReadAsStringAsync(cancellationToken));
+                Assert.True(changedDocument.RootElement.GetProperty("changed").GetBoolean());
+                Assert.False(changedDocument.RootElement.GetProperty("mustChangePassword").GetBoolean());
+            }
+
+            using (var afterChange = await client.GetAsync("/api/auth/me", cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, afterChange.StatusCode);
+                using var afterDocument = JsonDocument.Parse(await afterChange.Content.ReadAsStringAsync(cancellationToken));
+                Assert.False(afterDocument.RootElement.GetProperty("mustChangePassword").GetBoolean());
+            }
+
+            Assert.Contains(await db.AuditEvents.AsNoTracking()
+                .Where(item => item.ActionCode == "admin.password.changed")
+                .Select(item => item.ActionCode)
+                .ToListAsync(cancellationToken), action => action == "admin.password.changed");
+
             using var creationOptionsResponse = await PostWithTokenAsync(
                 client,
                 "/api/auth/passkey/creation-options",
