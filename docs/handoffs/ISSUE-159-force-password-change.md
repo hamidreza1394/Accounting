@@ -16,7 +16,7 @@
 
 ## خلاصه تغییرات
 - bootstrap اکنون پس از تکمیل MFA حساب مدیر را با `MustChangePassword=true` فعال می‌کند؛ قبل از MFA حساب همچنان غیرفعال است.
-- endpoint جدید `POST /api/auth/change-password` با بررسی anti-forgery، بررسی گذرواژه فعلی، حداقل طول ۱۴ نویسه و سیاست Identity؛ خطاها پیام عمومی دارند.
+- endpoint جدید `POST /api/auth/change-password` با بررسی anti-forgery، بررسی گذرواژه فعلی، حداقل طول ۱۴ نویسه و سیاست Identity؛ خطاها پیام عمومی دارند. rate limit این مسیر از rate limit ورود/TOTP جدا شده تا حملهٔ گذرواژه و نرخ ورود مستقل کنترل شوند.
 - پرچم `MustChangePassword` فقط در همان به‌روزرسانی Identity که هش رمز را ذخیره می‌کند پاک می‌شود؛ در خطا پاسخ موفق صادر نمی‌شود.
 - middleware در Host تا زمان تغییر موفق گذرواژه دسترسی API را محدود می‌کند.
 - صفحهٔ تغییر گذرواژه اولیه در رابط Vendor اضافه شد؛ رازها در Web Storage قرار نمی‌گیرند.
@@ -40,8 +40,8 @@
 ## بررسی و آزمون
 | فرمان/آزمون | نتیجه واقعی | توضیح/کد خروج |
 |---|---|---|
-| Vendor UI typecheck/tests/build | منتظر CI | در این محیط محلی اجرا نشد |
-| Vendor .NET build/tests | منتظر CI | آزمون HTTP به SQL Server واقعی وابسته است |
+| Vendor UI typecheck/tests/build | روی اجرای اولیه موفق | CI run 40451859716؛ آزمون UI و build موفق بودند |
+| Vendor .NET build/tests | اجرای اولیه: ۱ شکست / ۲۵ موفق | CI run 40451859716؛ شکست به‌علت اشتراک rate limit ورود با دو تلاش تست تغییر رمز بود؛ policy مستقل افزوده شد و اجرای جدید لازم است |
 | EF Core snapshot / migration guard | منتظر CI | مدل و Migration تغییر نکرده‌اند |
 | Publish و artifact scan | منتظر CI | باید روی آخرین commit اجرا شود |
 | بازبینی diff | ناقص تا مشاهده نتیجه CI | منبع از طریق GitHub API تغییر کرده؛ اجرای محلی `git diff --check` در این محیط انجام نشد |
