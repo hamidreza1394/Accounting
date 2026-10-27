@@ -1,5 +1,8 @@
 using Faranou.Vendor.Host.Authentication;
 using Faranou.Vendor.Host.Authorization;
+using Faranou.Vendor.Persistence;
+using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
@@ -155,6 +158,47 @@ public sealed class VendorPermissionAuthorizationTests
                 permission.Permission == VendorPermissionCatalog.AdministratorsManage);
             Assert.Contains(policy.Requirements, requirement => requirement is VendorAdminAccessRequirement);
         }
+    }
+
+    [Fact]
+    public async Task ResourceEvaluatorDeniesUnauthenticatedPrincipalWithoutQueryingDatabase()
+    {
+        var options = new DbContextOptionsBuilder<VendorDbContext>()
+            .UseSqlServer("Server=localhost;Database=VendorTest;User Id=invalid;Password=invalid;TrustServerCertificate=True")
+            .Options;
+        await using var db = new VendorDbContext(options);
+        var evaluator = new VendorResourceAccessEvaluator(db);
+        var principal = new ClaimsPrincipal(new ClaimsIdentity());
+
+        var allowed = await evaluator.HasAccessAsync(
+            principal,
+            new VendorResourceDescriptor("customer", Guid.NewGuid()),
+            VendorPermissionCatalog.CustomersRead,
+            CancellationToken.None);
+
+        Assert.False(allowed);
+    }
+
+    [Fact]
+    public async Task ResourceEvaluatorDeniesUnsupportedResourceTypeBeforeDatabaseAccess()
+    {
+        var options = new DbContextOptionsBuilder<VendorDbContext>()
+            .UseSqlServer("Server=localhost;Database=VendorTest;User Id=invalid;Password=invalid;TrustServerCertificate=True")
+            .Options;
+        await using var db = new VendorDbContext(options);
+        var evaluator = new VendorResourceAccessEvaluator(db);
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString("D"))
+        }, "test"));
+
+        var allowed = await evaluator.HasAccessAsync(
+            principal,
+            new VendorResourceDescriptor("unknown-resource", Guid.NewGuid()),
+            VendorPermissionCatalog.CustomersRead,
+            CancellationToken.None);
+
+        Assert.False(allowed);
     }
 
     [Fact]
