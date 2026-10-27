@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Data.Common;
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
@@ -8,13 +9,17 @@ using System.Text.Json;
 using Faranou.Vendor.Host.Authorization;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Domain;
+using Faranou.Vendor.Persistence.Auditing;
 using Faranou.Vendor.Persistence.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit;
 
 namespace Faranou.Vendor.Host.Tests;
@@ -45,11 +50,25 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
         try
         {
             await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(webHost =>
+            {
                 webHost.ConfigureAppConfiguration((_, configuration) =>
                     configuration.AddInMemoryCollection(new Dictionary<string, string?>
                     {
                         ["ConnectionStrings:VendorDb"] = testConnection
-                    })));
+                    }));
+                webHost.ConfigureTestServices(services =>
+                {
+                    services.RemoveAll<IVendorAuditWriter>();
+                    services.AddSingleton<AuditFailureSwitch>();
+                    services.AddSingleton<CustomerInsertRaceGate>();
+                    services.ConfigureDbContext<VendorDbContext>((provider, options) =>
+                        options.AddInterceptors(provider.GetRequiredService<CustomerInsertRaceGate>()));
+                    services.AddScoped<IVendorAuditWriter>(provider => new SwitchableVendorAuditWriter(
+                        provider.GetRequiredService<VendorDbContext>(),
+                        provider.GetRequiredService<TimeProvider>(),
+                        provider.GetRequiredService<AuditFailureSwitch>()));
+                });
+            });
 
             await using (var setupScope = factory.Services.CreateAsyncScope())
             {
@@ -63,9 +82,13 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.True(roleResult.Succeeded, string.Join("; ", roleResult.Errors.Select(error => error.Code)));
                 foreach (var permission in new[]
                 {
+                    VendorPermissionCatalog.CustomersRead,
                     VendorPermissionCatalog.CustomersManage,
+                    VendorPermissionCatalog.InstallationsRead,
                     VendorPermissionCatalog.InstallationsManage,
+                    VendorPermissionCatalog.ContractsRead,
                     VendorPermissionCatalog.ContractsManage,
+                    VendorPermissionCatalog.LicensesRead,
                     VendorPermissionCatalog.LicensesManage
                 })
                 {
@@ -156,7 +179,15 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     ValidFromUtc = DateTimeOffset.UtcNow.AddDays(-1),
                     CreatedAtUtc = DateTimeOffset.UtcNow
                 };
-                db.Licenses.Add(license);
+                var otherLicense = new VendorLicense
+                {
+                    Id = Guid.NewGuid(), CustomerId = otherCustomer.Id,
+                    LicenseNumber = "OTHER-LIC-" + Guid.NewGuid().ToString("N")[..12],
+                    ProductCode = "FARANOU-BASE", Status = "Draft",
+                    ValidFromUtc = DateTimeOffset.UtcNow.AddDays(-1),
+                    CreatedAtUtc = DateTimeOffset.UtcNow
+                };
+                db.Licenses.AddRange(license, otherLicense);
                 await db.SaveChangesAsync(cancellationToken);
 
                 // Read server-generated SQL Server rowversions after inserts.
@@ -210,6 +241,18 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 var customer = await db.Customers.SingleAsync(item => item.CustomerNumber.StartsWith("IT-"), cancellationToken);
                 customerId = customer.Id;
                 initialRowVersion = customer.RowVersion.ToArray();
+            }
+
+            // Optional customerId filters must return only related records for dropdowns.
+            foreach (var resource in new[] { "installations", "contracts", "licenses" })
+            {
+                using var response = await client.GetAsync(
+                    $"/api/vendor/{resource}/?customerId={customerId:D}&page=1&pageSize=100", cancellationToken);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                var items = json.RootElement.GetProperty("items");
+                Assert.Single(items.EnumerateArray());
+                Assert.Equal(customerId.ToString("D"), items[0].GetProperty("customerId").GetString());
             }
 
             var path = $"/api/vendor/customers/{customerId:D}";
@@ -496,10 +539,165 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal(1, await db.AuditEvents.CountAsync(item =>
                     item.ActionCode == "vendor.license.metadata-updated" && item.SubjectId == licenseId.ToString("D"), cancellationToken));
             }
+
+            // A failed audit append must abort the enclosing business transaction.
+            byte[] rollbackRowVersion;
+            int customerAuditCountBeforeFailure;
+            await using (var rollbackScope = factory.Services.CreateAsyncScope())
+            {
+                var db = rollbackScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var currentCustomer = await db.Customers.AsNoTracking()
+                    .SingleAsync(item => item.Id == customerId, cancellationToken);
+                rollbackRowVersion = currentCustomer.RowVersion.ToArray();
+                customerAuditCountBeforeFailure = await db.AuditEvents.CountAsync(item =>
+                    item.ActionCode == "vendor.customer.updated" && item.SubjectId == customerId.ToString("D"), cancellationToken);
+            }
+
+            var auditFailureSwitch = factory.Services.GetRequiredService<AuditFailureSwitch>();
+            auditFailureSwitch.FailNextAppend = true;
+            var rollbackBody = new
+            {
+                rowVersion = Convert.ToBase64String(rollbackRowVersion),
+                customerNumber = "IT-" + customerId.ToString("N")[..20],
+                legalName = "Integration Test Customer",
+                displayName = "Must Roll Back"
+            };
+            var failureObserved = false;
+            try
+            {
+                using var response = await SendPutAsync(client, path, rollbackBody, antiForgeryToken, cancellationToken);
+                failureObserved = response.StatusCode == HttpStatusCode.InternalServerError;
+            }
+            catch (HttpRequestException)
+            {
+                // TestServer may surface an unhandled endpoint exception directly to the client.
+                failureObserved = true;
+            }
+            Assert.True(failureObserved, "The injected audit failure must fail the HTTP mutation.");
+
+            await using (var verificationScope = factory.Services.CreateAsyncScope())
+            {
+                var db = verificationScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var persistedCustomer = await db.Customers.AsNoTracking()
+                    .SingleAsync(item => item.Id == customerId, cancellationToken);
+                Assert.Equal("After Update", persistedCustomer.DisplayName);
+                Assert.Equal(customerAuditCountBeforeFailure, await db.AuditEvents.CountAsync(item =>
+                    item.ActionCode == "vendor.customer.updated" && item.SubjectId == customerId.ToString("D"), cancellationToken));
+            }
+
+            // Force two authenticated HTTP creates past the preflight duplicate check and
+            // into SQL Server INSERT concurrently. The unique index must arbitrate the race.
+            var raceGate = factory.Services.GetRequiredService<CustomerInsertRaceGate>();
+            var racedCustomerNumber = "RACE-" + Guid.NewGuid().ToString("N")[..20];
+            var racedCustomerBody = new
+            {
+                customerNumber = racedCustomerNumber,
+                legalName = "Unique Race Integration Customer",
+                displayName = "Unique Race Integration Customer"
+            };
+            raceGate.Enable();
+            var firstRaceResponseTask = PostWithTokenAsync(
+                client, "/api/vendor/customers/", racedCustomerBody, antiForgeryToken, cancellationToken);
+            var secondRaceResponseTask = PostWithTokenAsync(
+                client, "/api/vendor/customers/", racedCustomerBody, antiForgeryToken, cancellationToken);
+            using var firstRaceResponse = await firstRaceResponseTask;
+            using var secondRaceResponse = await secondRaceResponseTask;
+            raceGate.Disable();
+
+            // The status assertions alone can pass through the preflight duplicate check.
+            // Require proof that both INSERT commands reached the SQL Server execution gate.
+            Assert.Equal(2, raceGate.ObservedInsertCount);
+
+            var raceStatuses = new[] { firstRaceResponse.StatusCode, secondRaceResponse.StatusCode };
+            Assert.Single(raceStatuses, status => status == HttpStatusCode.Created);
+            Assert.Single(raceStatuses, status => status == HttpStatusCode.Conflict);
+            var conflictResponse = firstRaceResponse.StatusCode == HttpStatusCode.Conflict
+                ? firstRaceResponse
+                : secondRaceResponse;
+            var createdResponse = firstRaceResponse.StatusCode == HttpStatusCode.Created
+                ? firstRaceResponse
+                : secondRaceResponse;
+            using (var conflictJson = JsonDocument.Parse(await conflictResponse.Content.ReadAsStringAsync(cancellationToken)))
+                Assert.Equal("customer_number_exists", conflictJson.RootElement.GetProperty("error").GetString());
+            using var createdJson = JsonDocument.Parse(await createdResponse.Content.ReadAsStringAsync(cancellationToken));
+            var createdCustomerId = createdJson.RootElement.GetProperty("id").GetGuid();
+
+            await using (var raceVerificationScope = factory.Services.CreateAsyncScope())
+            {
+                var db = raceVerificationScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                Assert.Equal(1, await db.Customers.CountAsync(item =>
+                    item.CustomerNumber == racedCustomerNumber, cancellationToken));
+                Assert.Equal(1, await db.AuditEvents.CountAsync(item =>
+                    item.ActionCode == "vendor.customer.created" &&
+                    item.SubjectId == createdCustomerId.ToString("D"), cancellationToken));
+            }
         }
         finally
         {
             await DropDatabaseAsync(baseConnection, databaseName, CancellationToken.None);
+        }
+    }
+
+    private sealed class CustomerInsertRaceGate : DbCommandInterceptor
+    {
+        private TaskCompletionSource _bothArrived = NewCompletionSource();
+        private int _arrivals;
+        private int _enabled;
+
+        public void Enable()
+        {
+            Interlocked.Exchange(ref _arrivals, 0);
+            _bothArrived = NewCompletionSource();
+            Volatile.Write(ref _enabled, 1);
+        }
+
+        public int ObservedInsertCount => Volatile.Read(ref _arrivals);
+
+        public void Disable() => Volatile.Write(ref _enabled, 0);
+
+        public override async ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (Volatile.Read(ref _enabled) == 1 &&
+                command.CommandText.Contains("INSERT INTO [VendorCustomers]", StringComparison.OrdinalIgnoreCase))
+            {
+                if (Interlocked.Increment(ref _arrivals) == 2)
+                    _bothArrived.TrySetResult();
+
+                await _bothArrived.Task.WaitAsync(TimeSpan.FromSeconds(15), cancellationToken);
+            }
+
+            return result;
+        }
+
+        private static TaskCompletionSource NewCompletionSource() =>
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+    }
+
+    private sealed class AuditFailureSwitch
+    {
+        public bool FailNextAppend { get; set; }
+    }
+
+    private sealed class SwitchableVendorAuditWriter(
+        VendorDbContext dbContext,
+        TimeProvider timeProvider,
+        AuditFailureSwitch failureSwitch) : IVendorAuditWriter
+    {
+        public Task<VendorAuditWriteResult> AppendAsync(
+            VendorAuditWriteRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            if (failureSwitch.FailNextAppend)
+            {
+                failureSwitch.FailNextAppend = false;
+                throw new InvalidOperationException("Injected audit failure for rollback integration coverage.");
+            }
+
+            return new VendorAuditWriter(dbContext, timeProvider).AppendAsync(request, cancellationToken);
         }
     }
 

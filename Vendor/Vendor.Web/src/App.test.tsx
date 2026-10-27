@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import App from './App';
+import { BusinessLists } from './BusinessLists';
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
@@ -102,6 +103,85 @@ describe('Vendor control plane shell', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/vendor/customers/?page=2&pageSize=25', expect.objectContaining({ credentials: 'same-origin', cache: 'no-store' }));
   });
 
+  it('changes installation status through the real API with a fresh token and RowVersion', async () => {
+    const installationPage = {
+      items: [{ id: 'installation-1', customerId: 'customer-1', rowVersion: 'AQIDBAUGBwg=', installationCode: 'INS-001',
+        name: 'نصب عملیاتی', environment: 'Production', status: 'Active', createdAtUtc: '2026-10-27T08:00:00Z', lastSeenAtUtc: null }],
+      page: 1, pageSize: 25, totalCount: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false,
+    };
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith('/api/vendor/installations/') && url.endsWith('/status')) return Promise.resolve(response({ ...installationPage.items[0], status: 'Suspended' }));
+      if (url.startsWith('/api/vendor/installations/')) return Promise.resolve(response(installationPage));
+      if (url === '/api/auth/antiforgery') return Promise.resolve(response({ requestToken: 'csrf-status' }));
+      return Promise.resolve(response({}, 404));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<BusinessLists section="installations" permissions={['vendor.installations.manage']} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'تعلیق نصب نصب عملیاتی' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('نصب با موفقیت تعلیق شد.');
+    expect(fetchMock).toHaveBeenCalledWith('/api/vendor/installations/installation-1/status', expect.objectContaining({
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': 'csrf-status' },
+      body: JSON.stringify({ status: 'Suspended', rowVersion: 'AQIDBAUGBwg=' }),
+    }));
+  });
+
+  it('explains stale RowVersion when an installation status change conflicts', async () => {
+    const installationPage = {
+      items: [{ id: 'installation-1', customerId: 'customer-1', rowVersion: 'AQIDBAUGBwg=', installationCode: 'INS-001',
+        name: 'نصب عملیاتی', environment: 'Production', status: 'Active', createdAtUtc: '2026-10-27T08:00:00Z', lastSeenAtUtc: null }],
+      page: 1, pageSize: 25, totalCount: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false,
+    };
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith('/api/vendor/installations/') && url.endsWith('/status')) return Promise.resolve(response({ error: 'stale_row_version' }, 409));
+      if (url.startsWith('/api/vendor/installations/')) return Promise.resolve(response(installationPage));
+      if (url === '/api/auth/antiforgery') return Promise.resolve(response({ requestToken: 'csrf-status' }));
+      return Promise.resolve(response({}, 404));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<BusinessLists section="installations" permissions={['vendor.installations.manage']} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'تعلیق نصب نصب عملیاتی' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('اطلاعات نصب تغییر کرده است؛ فهرست را تازه‌سازی کنید.');
+  });
+
+  it('allows contract edits only for Draft records and requires customer-read to create', async () => {
+    const contractPage = {
+      items: [
+        { id: 'contract-draft', customerId: 'customer-1', rowVersion: 'AQIDBAUGBwg=', contractNumber: 'CTR-DRAFT',
+          status: 'Draft', startsAtUtc: '2026-10-27T00:00:00Z', endsAtUtc: null, currencyCode: 'IRR', createdAtUtc: '2026-10-27T08:00:00Z' },
+        { id: 'contract-active', customerId: 'customer-1', rowVersion: 'AQIDBAUGBwg=', contractNumber: 'CTR-ACTIVE',
+          status: 'Active', startsAtUtc: '2026-10-27T00:00:00Z', endsAtUtc: null, currencyCode: 'IRR', createdAtUtc: '2026-10-27T08:00:00Z' },
+      ],
+      page: 1, pageSize: 25, totalCount: 2, totalPages: 1, hasPreviousPage: false, hasNextPage: false,
+    };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(contractPage)));
+    render(<BusinessLists section="contracts" permissions={['vendor.contracts.manage']} />);
+
+    expect(await screen.findByRole('button', { name: 'ثبت قرارداد' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'ویرایش قرارداد CTR-DRAFT' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'ویرایش قرارداد CTR-ACTIVE' })).not.toBeInTheDocument();
+  });
+
+  it('shows license edit only for Draft records when the manager permission is present', async () => {
+    const licensePage = {
+      items: [
+        { id: 'license-draft', customerId: 'customer-1', contractId: null, installationId: null, rowVersion: 'AQIDBAUGBwg=', licenseNumber: 'LIC-DRAFT', productCode: 'FARANOU-BASE', status: 'Draft', validFromUtc: '2026-10-27T00:00:00Z', validUntilUtc: null, createdAtUtc: '2026-10-27T08:00:00Z' },
+        { id: 'license-active', customerId: 'customer-1', contractId: null, installationId: null, rowVersion: 'AQIDBAUGBwg=', licenseNumber: 'LIC-ACTIVE', productCode: 'FARANOU-BASE', status: 'Active', validFromUtc: '2026-10-27T00:00:00Z', validUntilUtc: null, createdAtUtc: '2026-10-27T08:00:00Z' },
+      ],
+      page: 1, pageSize: 25, totalCount: 2, totalPages: 1, hasPreviousPage: false, hasNextPage: false,
+    };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(licensePage)));
+    render(<BusinessLists section="licenses" permissions={['vendor.licenses.manage', 'vendor.customers.read']} />);
+    expect(await screen.findByRole('button', { name: 'ثبت لایسنس' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'ویرایش لایسنس LIC-DRAFT' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'ویرایش لایسنس LIC-ACTIVE' })).not.toBeInTheDocument();
+  });
+
   it('shows a permission-specific message when a business list returns 403', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
@@ -149,6 +229,27 @@ describe('Vendor control plane shell', () => {
     expect(await screen.findByText('INS-001')).toBeInTheDocument();
     expect(screen.getByText('عملیاتی')).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith('/api/vendor/installations/?page=1&pageSize=25', expect.objectContaining({ credentials: 'same-origin' }));
+  });
+
+  it('hides customer write controls when the session lacks the manage permission', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({
+      items: [], page: 1, pageSize: 25, totalCount: 0, totalPages: 0, hasPreviousPage: false, hasNextPage: false,
+    })));
+    render(<BusinessLists section="customers" permissions={['vendor.customers.read']} />);
+
+    expect(await screen.findByText('رکوردی برای نمایش وجود ندارد')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'ثبت مشتری' })).not.toBeInTheDocument();
+  });
+
+  it('shows customer create and edit controls only with the manage permission', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({
+      items: [{ id: 'customer-1', rowVersion: 'AQIDBAUGBwg=', customerNumber: 'C-001', legalName: 'شرکت نمونه', displayName: 'نمونه', status: 'Active' }],
+      page: 1, pageSize: 25, totalCount: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false,
+    })));
+    render(<BusinessLists section="customers" permissions={['vendor.customers.manage']} />);
+
+    expect(await screen.findByRole('button', { name: 'ثبت مشتری' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ویرایش مشتری نمونه' })).toBeInTheDocument();
   });
 
 });

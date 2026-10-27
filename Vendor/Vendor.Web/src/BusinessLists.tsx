@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
-import { AlertCircle, ChevronLeft, ChevronRight, LoaderCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle, ChevronLeft, ChevronRight, LoaderCircle, Pencil, Plus, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { CustomerForm, type CustomerDraft } from './CustomerForm';
+import { InstallationForm, type InstallationDraft } from './InstallationForm';
+import { ContractForm, type ContractDraft } from './ContractForm';
+import { LicenseForm, type LicenseDraft } from './LicenseForm';
 
 export type BusinessSection = 'customers' | 'installations' | 'contracts' | 'licenses';
 
@@ -102,7 +106,7 @@ function errorFor(status: number): string {
   return 'دریافت اطلاعات ناموفق بود. وضعیت درخواست را بررسی و دوباره تلاش کنید.';
 }
 
-export function BusinessLists({ section }: { section: BusinessSection }) {
+export function BusinessLists({ section, permissions = [] }: { section: BusinessSection; permissions?: string[] }) {
   const resource = resources[section];
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -110,6 +114,240 @@ export function BusinessLists({ section }: { section: BusinessSection }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
+  const [showCustomerForm, setShowCustomerForm] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<CustomerDraft | null>(null);
+  const [showInstallationForm, setShowInstallationForm] = useState(false);
+  const [editingInstallation, setEditingInstallation] = useState<InstallationDraft | null>(null);
+  const [showContractForm, setShowContractForm] = useState(false);
+  const [editingContract, setEditingContract] = useState<ContractDraft | null>(null);
+  const [showLicenseForm, setShowLicenseForm] = useState(false);
+  const [editingLicense, setEditingLicense] = useState<LicenseDraft | null>(null);
+  const [statusBusyId, setStatusBusyId] = useState<string | null>(null);
+  const [notice, setNotice] = useState('');
+  const canManageCustomers = section === 'customers' && permissions.includes('vendor.customers.manage');
+  const canManageInstallations = section === 'installations' && permissions.includes('vendor.installations.manage');
+  const canManageContracts = section === 'contracts' && permissions.includes('vendor.contracts.manage');
+  const canManageLicenses = section === 'licenses' && permissions.includes('vendor.licenses.manage');
+  const canReadCustomers = permissions.includes('vendor.customers.read');
+  const canReadContracts = permissions.includes('vendor.contracts.read');
+  const canReadInstallations = permissions.includes('vendor.installations.read');
+
+  function openCreateCustomer() {
+    setEditingCustomer(null);
+    setShowCustomerForm(true);
+    setNotice('');
+  }
+
+  function openEditCustomer(row: Row) {
+    if (typeof row.id !== 'string' || typeof row.rowVersion !== 'string') {
+      setError('نسخه اطلاعات مشتری موجود نیست؛ فهرست را تازه‌سازی کنید.');
+      return;
+    }
+    setEditingCustomer({
+      id: row.id,
+      rowVersion: row.rowVersion,
+      customerNumber: String(row.customerNumber ?? ''),
+      legalName: String(row.legalName ?? ''),
+      displayName: String(row.displayName ?? ''),
+    });
+    setShowCustomerForm(true);
+    setNotice('');
+  }
+
+  function closeCustomerForm() {
+    setShowCustomerForm(false);
+    setEditingCustomer(null);
+  }
+
+  function customerSaved() {
+    setShowCustomerForm(false);
+    setEditingCustomer(null);
+    setNotice(editingCustomer ? 'اطلاعات مشتری به‌روزرسانی شد.' : 'مشتری تجاری ثبت شد.');
+    setPage(1);
+    setData(null);
+    setLoading(true);
+    setReloadKey(current => current + 1);
+  }
+
+  function openCreateInstallation() {
+    setEditingInstallation(null);
+    setShowInstallationForm(true);
+    setNotice('');
+  }
+
+  function openEditInstallation(row: Row) {
+    if (typeof row.id !== 'string' || typeof row.customerId !== 'string' || typeof row.rowVersion !== 'string') {
+      setError('شناسه مشتری یا نسخه اطلاعات نصب موجود نیست؛ فهرست را تازه‌سازی کنید.');
+      return;
+    }
+    setEditingInstallation({
+      id: row.id,
+      customerId: row.customerId,
+      rowVersion: row.rowVersion,
+      installationCode: String(row.installationCode ?? ''),
+      name: String(row.name ?? ''),
+      environment: String(row.environment ?? 'Production'),
+      status: String(row.status ?? ''),
+    });
+    setShowInstallationForm(true);
+    setNotice('');
+  }
+
+  function closeInstallationForm() {
+    setShowInstallationForm(false);
+    setEditingInstallation(null);
+  }
+
+  function installationSaved() {
+    setShowInstallationForm(false);
+    setEditingInstallation(null);
+    setNotice(editingInstallation ? 'اطلاعات نصب به‌روزرسانی شد.' : 'نصب جدید ثبت شد.');
+    setPage(1);
+    setData(null);
+    setLoading(true);
+    setReloadKey(current => current + 1);
+  }
+
+  function openCreateContract() {
+    setEditingContract(null);
+    setShowContractForm(true);
+    setNotice('');
+  }
+
+  function openEditContract(row: Row) {
+    if (row.status !== 'Draft') {
+      setError('فقط قرارداد پیش‌نویس قابل ویرایش است.');
+      return;
+    }
+    if (typeof row.id !== 'string' || typeof row.customerId !== 'string' || typeof row.rowVersion !== 'string') {
+      setError('شناسه مشتری یا نسخه اطلاعات قرارداد موجود نیست؛ فهرست را تازه‌سازی کنید.');
+      return;
+    }
+    setEditingContract({
+      id: row.id,
+      customerId: row.customerId,
+      rowVersion: row.rowVersion,
+      contractNumber: String(row.contractNumber ?? ''),
+      startsAtUtc: String(row.startsAtUtc ?? ''),
+      endsAtUtc: String(row.endsAtUtc ?? ''),
+      currencyCode: String(row.currencyCode ?? 'IRR'),
+      status: String(row.status ?? ''),
+    });
+    setShowContractForm(true);
+    setNotice('');
+  }
+
+  function closeContractForm() {
+    setShowContractForm(false);
+    setEditingContract(null);
+  }
+
+  function contractSaved() {
+    setShowContractForm(false);
+    setEditingContract(null);
+    setNotice(editingContract ? 'قرارداد پیش‌نویس به‌روزرسانی شد.' : 'قرارداد پیش‌نویس ثبت شد.');
+    setPage(1);
+    setData(null);
+    setLoading(true);
+    setReloadKey(current => current + 1);
+  }
+
+  function openCreateLicense() {
+    setEditingLicense(null);
+    setShowLicenseForm(true);
+    setNotice('');
+  }
+
+  function openEditLicense(row: Row) {
+    if (row.status !== 'Draft') {
+      setError('فقط لایسنس پیش‌نویس قابل ویرایش است.');
+      return;
+    }
+    if (typeof row.id !== 'string' || typeof row.customerId !== 'string' || typeof row.rowVersion !== 'string') {
+      setError('شناسه مشتری یا نسخه اطلاعات لایسنس موجود نیست؛ فهرست را تازه‌سازی کنید.');
+      return;
+    }
+    setEditingLicense({
+      id: row.id,
+      customerId: row.customerId,
+      contractId: typeof row.contractId === 'string' ? row.contractId : null,
+      installationId: typeof row.installationId === 'string' ? row.installationId : null,
+      rowVersion: row.rowVersion,
+      licenseNumber: String(row.licenseNumber ?? ''),
+      productCode: String(row.productCode ?? ''),
+      validFromUtc: String(row.validFromUtc ?? ''),
+      validUntilUtc: String(row.validUntilUtc ?? ''),
+      status: String(row.status ?? ''),
+    });
+    setShowLicenseForm(true);
+    setNotice('');
+  }
+
+  function closeLicenseForm() {
+    setShowLicenseForm(false);
+    setEditingLicense(null);
+  }
+
+  function licenseSaved() {
+    setShowLicenseForm(false);
+    setEditingLicense(null);
+    setNotice(editingLicense ? 'اطلاعات لایسنس پیش‌نویس به‌روزرسانی شد.' : 'لایسنس پیش‌نویس ثبت شد.');
+    setPage(1);
+    setData(null);
+    setLoading(true);
+    setReloadKey(current => current + 1);
+  }
+
+  async function changeInstallationStatus(row: Row) {
+    if (statusBusyId) return;
+    if (typeof row.id !== 'string' || typeof row.rowVersion !== 'string') {
+      setError('نسخه اطلاعات نصب موجود نیست؛ فهرست را تازه‌سازی کنید.');
+      return;
+    }
+    const currentStatus = String(row.status ?? '');
+    const nextStatus = currentStatus === 'Active' ? 'Suspended' : currentStatus === 'Suspended' ? 'Active' : '';
+    if (!nextStatus) {
+      setError('فقط نصب فعال یا تعلیق‌شده را می‌توان تغییر وضعیت داد.');
+      return;
+    }
+    setStatusBusyId(row.id);
+    setError('');
+    setNotice('');
+    try {
+      const tokenResponse = await fetch('/api/auth/antiforgery', { credentials: 'same-origin', cache: 'no-store' });
+      if (!tokenResponse.ok) throw new Error(errorFor(tokenResponse.status));
+      const tokenBody = await tokenResponse.json() as { requestToken?: string };
+      if (!tokenBody.requestToken) throw new Error('توکن امنیتی در پاسخ سرور وجود ندارد.');
+      const response = await fetch(`/api/vendor/installations/${row.id}/status`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': tokenBody.requestToken },
+        body: JSON.stringify({ status: nextStatus, rowVersion: row.rowVersion }),
+      });
+      if (!response.ok) {
+        let code = '';
+        try {
+          const body = await response.json() as { error?: string; message?: string };
+          code = body.error ?? body.message ?? '';
+        } catch {
+          // Keep the public error generic when the response is not JSON.
+        }
+        if (response.status === 409 && code === 'stale_row_version') throw new Error('اطلاعات نصب تغییر کرده است؛ فهرست را تازه‌سازی کنید.');
+        if (response.status === 409 && code === 'invalid_status_transition') throw new Error('این تغییر وضعیت مجاز نیست.');
+        if (response.status === 403) throw new Error('حساب شما مجوز تغییر وضعیت نصب را ندارد.');
+        throw new Error(errorFor(response.status));
+      }
+      setNotice(nextStatus === 'Suspended' ? 'نصب با موفقیت تعلیق شد.' : 'نصب با موفقیت فعال شد.');
+      setData(null);
+      setLoading(true);
+      setReloadKey(current => current + 1);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'تغییر وضعیت نصب ناموفق بود.');
+    } finally {
+      setStatusBusyId(null);
+    }
+  }
 
   useEffect(() => {
     let active = true;
@@ -153,10 +391,24 @@ export function BusinessLists({ section }: { section: BusinessSection }) {
         <h1 id="business-page-title" className="mt-1 text-2xl font-bold text-[#193b57]">{resource.title}</h1>
         <p className="mt-2 text-sm leading-7 text-muted-foreground">{resource.description}</p>
       </div>
-      <Button type="button" variant="outline" onClick={() => { setLoading(true); setError(''); setData(null); setReloadKey(current => current + 1); }} disabled={loading}>
-        <RefreshCw size={16}/> تازه‌سازی
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        {canManageCustomers && <Button type="button" onClick={openCreateCustomer}><Plus size={16}/> ثبت مشتری</Button>}
+        {canManageInstallations && <Button type="button" onClick={openCreateInstallation} disabled={!canReadCustomers} {...(!canReadCustomers ? { title: 'برای انتخاب مشتری، مجوز مشاهده مشتریان لازم است.' } : {})}><Plus size={16}/> ثبت نصب</Button>}
+        {canManageContracts && <Button type="button" onClick={openCreateContract} disabled={!canReadCustomers} {...(!canReadCustomers ? { title: 'برای انتخاب مشتری، مجوز مشاهده مشتریان لازم است.' } : {})}><Plus size={16}/> ثبت قرارداد</Button>}
+        {canManageLicenses && <Button type="button" onClick={openCreateLicense} disabled={!canReadCustomers} {...(!canReadCustomers ? { title: 'برای انتخاب مشتری، مجوز مشاهده مشتریان لازم است.' } : {})}><Plus size={16}/> ثبت لایسنس</Button>}
+        <Button type="button" variant="outline" onClick={() => { setLoading(true); setError(''); setData(null); setReloadKey(current => current + 1); }} disabled={loading}>
+          <RefreshCw size={16}/> تازه‌سازی
+        </Button>
+      </div>
     </div>
+
+    {notice && <p role="status" className="text-sm text-muted-foreground">{notice}</p>}
+    {showCustomerForm && canManageCustomers && <CustomerForm {...(editingCustomer ? { initial: editingCustomer } : {})} onCancel={closeCustomerForm} onSaved={customerSaved} />}
+    {showInstallationForm && canManageInstallations && <InstallationForm {...(editingInstallation ? { initial: editingInstallation } : {})} canReadCustomers={canReadCustomers} onCancel={closeInstallationForm} onSaved={installationSaved} />}
+    {showContractForm && canManageContracts && <ContractForm {...(editingContract ? { initial: editingContract } : {})} canReadCustomers={canReadCustomers} onCancel={closeContractForm} onSaved={contractSaved} />}
+    {showLicenseForm && canManageLicenses && <LicenseForm {...(editingLicense ? { initial: editingLicense } : {})}
+      canReadCustomers={canReadCustomers} canReadContracts={canReadContracts} canReadInstallations={canReadInstallations}
+      onCancel={closeLicenseForm} onSaved={licenseSaved} />}
 
     <Card>
       <CardHeader className="border-b">
@@ -169,9 +421,16 @@ export function BusinessLists({ section }: { section: BusinessSection }) {
         : !data || data.items.length === 0 ? <div className="flex min-h-36 flex-col items-center justify-center gap-2 text-center"><span className="text-sm font-semibold">رکوردی برای نمایش وجود ندارد</span><p className="text-sm text-muted-foreground">پس از ثبت اطلاعات، موارد در این فهرست نمایش داده می‌شوند.</p></div>
         : <div className="overflow-x-auto">
           <table className="w-full min-w-[680px] border-separate border-spacing-0 text-right text-sm">
-            <thead><tr>{resource.columns.map(column => <th key={column.key} scope="col" className="border-b border-border bg-muted/60 px-4 py-3 font-semibold text-muted-foreground">{column.label}</th>)}</tr></thead>
+            <thead><tr>{resource.columns.map(column => <th key={column.key} scope="col" className="border-b border-border bg-muted/60 px-4 py-3 font-semibold text-muted-foreground">{column.label}</th>)}{(canManageCustomers || canManageInstallations || canManageContracts || canManageLicenses) && <th scope="col" className="border-b border-border bg-muted/60 px-4 py-3 font-semibold text-muted-foreground">عملیات</th>}</tr></thead>
             <tbody>{data.items.map((row, index) => <tr key={String(row.id ?? row.customerNumber ?? row.installationCode ?? row.contractNumber ?? row.licenseNumber ?? index)} className="hover:bg-muted/30">
               {resource.columns.map(column => <td key={column.key} className="border-b border-border px-4 py-3 text-foreground">{formatValue(row[column.key], column.kind)}</td>)}
+              {(canManageCustomers || canManageInstallations || canManageContracts || canManageLicenses) && <td className="border-b border-border px-4 py-3"><div className="flex flex-wrap gap-2">
+                {canManageCustomers && <Button type="button" variant="outline" size="sm" onClick={() => openEditCustomer(row)} aria-label={`ویرایش مشتری ${String(row.displayName ?? row.customerNumber ?? '')}`}><Pencil size={15}/> ویرایش</Button>}
+                {canManageInstallations && <Button type="button" variant="outline" size="sm" onClick={() => openEditInstallation(row)} aria-label={`ویرایش نصب ${String(row.name ?? row.installationCode ?? '')}`}><Pencil size={15}/> ویرایش</Button>}
+                {canManageInstallations && (row.status === 'Active' || row.status === 'Suspended') && <Button type="button" variant="outline" size="sm" disabled={statusBusyId === row.id || Boolean(statusBusyId)} onClick={() => changeInstallationStatus(row)} aria-label={row.status === 'Active' ? `تعلیق نصب ${String(row.name ?? '')}` : `فعال‌سازی نصب ${String(row.name ?? '')}`}>{statusBusyId === row.id ? 'در حال ثبت…' : row.status === 'Active' ? 'تعلیق' : 'فعال‌سازی'}</Button>}
+                {canManageContracts && row.status === 'Draft' && <Button type="button" variant="outline" size="sm" onClick={() => openEditContract(row)} aria-label={`ویرایش قرارداد ${String(row.contractNumber ?? '')}`}><Pencil size={15}/> ویرایش</Button>}
+                {canManageLicenses && row.status === 'Draft' && <Button type="button" variant="outline" size="sm" onClick={() => openEditLicense(row)} aria-label={`ویرایش لایسنس ${String(row.licenseNumber ?? '')}`}><Pencil size={15}/> ویرایش</Button>}
+              </div></td>}
             </tr>)}</tbody>
           </table>
         </div>}

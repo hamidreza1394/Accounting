@@ -70,7 +70,7 @@ export function ManagedSelect({
 
   const describedBy = [hintId, errorId].filter(Boolean).join(' ') || undefined;
   const canAdd = canManageOptions && typeof onAddOption === 'function';
-  const hasEnabledOptions = firstEnabledValue !== '';
+  const hasEnabledOptions = options.some((option) => !option.disabled);
 
   return (
     <div className="grid gap-2 text-start" dir="rtl">

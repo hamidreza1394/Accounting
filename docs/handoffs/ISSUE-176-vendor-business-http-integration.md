@@ -61,3 +61,21 @@ The test uses a generated Vendor-only database name and drops only that database
 - Added regression paths in `VendorCustomerMutationHttpIntegrationTests` for customer and installation status transitions through the production HTTP host. Customer `Active -> Suspended -> Active` and installation `Active -> Suspended` must succeed using fresh SQL Server RowVersion values; invalid `Active -> Draft` transitions must return HTTP 409 with `invalid_status_transition`.
 - This increment is on branch `test/vendor-operational-status-http-coverage`. No local .NET execution was available through this connector; the new test is not considered verified until Vendor CI completes and proves the SQL Server integration test was executed (not skipped).
 - Remaining coverage: installation status transition checks, audit-writer failure rollback, deterministic duplicate-key race tests for SQL Server 2601/2627, and the post-fix CI evidence for PR #178 / merged PR #179.
+
+
+## Audit failure rollback coverage (2026-10-27)
+
+- Added an integration-only switchable audit writer in `VendorCustomerMutationHttpIntegrationTests`; it delegates to the production writer except when the test explicitly injects one failure.
+- The test submits a real authenticated HTTP customer update with a fresh SQL Server RowVersion, forces the audit append to fail, and then verifies the customer display name remains unchanged and the customer-update audit count does not increase.
+- The replacement is test-host-only; production registrations and endpoint behavior are unchanged. Test database remains a uniquely named disposable Vendor database; customer accounting databases are never touched.
+- Pending validation: Vendor CI and .NET CI must pass on the PR head; SQL Server integration execution is required (CI sets `FARANO_REQUIRE_VENDOR_SQLSERVER=1`).
+- Still outstanding: deterministic SQL Server duplicate-key race test for 2601/2627 and final acceptance review.
+
+
+## Deterministic unique-key race coverage (2026-10-27)
+
+- Branch: `test/vendor-unique-key-race-http`.
+- Added a test-host-only EF Core command interceptor to synchronize two authenticated customer-create requests at the SQL Server INSERT boundary, after both requests can pass the preflight duplicate check.
+- Expected contract: one HTTP 201 and one HTTP 409 `customer_number_exists`; exactly one customer row and one corresponding `vendor.customer.created` audit event remain.
+- The test uses the existing disposable Vendor SQL Server database and production authentication/authorization/antiforgery flow. No production service registration or customer accounting database is modified.
+- **Not yet verified:** CI has not run on this branch at the time this note was written. Require Vendor CI and .NET CI success and confirm SQL Server integration was executed, not skipped.
