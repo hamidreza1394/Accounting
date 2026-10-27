@@ -856,9 +856,16 @@
 - **باقی‌مانده:** سنجش فایدهٔ واقعی روی یک فرم؛ در صورت لزوم کاهش حجم داده؛ جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-ui-ux-pro-max-skill.md`.
 
 
-## 2026-10-27 — کاهش مصرف توکن ثابت جلسه با افشای تدریجی اسناد (بدون حذف قاعده)
-- **دامنه:** فقط مستندات و فایل‌های راهنمای Agent، شاخهٔ `docs/reduce-agent-context-cost`؛ بدون تغییر کد برنامه، وابستگی یا Migration. Issue: `UNNUMBERED`.
-- **تغییر:** حذف بخش تکراری از `CLAUDE.md`؛ انتقال بخش‌های مرجع آن به `docs/AGENT_REFERENCE.md`؛ جدا کردن `docs/UI_LIBRARIES.md` از `docs/UI_COMPONENTS.md`؛ هماهنگی ارجاع‌ها در `AGENTS.md`، `CLAUDE.md`، `docs/INDEX.md` و Skillها.
-- **نتیجهٔ اندازه‌گیری (تخمین با توکنایزر جایگزین):** جمع فایل‌های همیشه‌بارشونده حدود ۱۵٫۹ ← ۱۲٫۰ هزار توکن؛ سند UI برای کار معمولی حدود ۱۰٫۹ ← ۶٫۱ هزار.
-- **اعتبارسنجی:** بررسی خودکار بی‌اتلافی (۰ خط گم‌شده در `CLAUDE.md`؛ فقط ۴ ارجاع عمداً اصلاح در UI)، لینک‌های محلی، `check_static_assets.py` و `git diff --check` موفق؛ build/test اجرا نشد؛ CI ندیده شده.
-- **باقی‌مانده:** سنجش مصرف واقعی روی چند کار؛ ریسک نخواندن سند مرجع در صورت نیاز؛ جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-reduce-agent-context-cost.md`.
+## 2026-10-27 — بهینه‌سازی lookup زنجیره Audit در Vendor (Issue #202)
+- **هدف:** کاهش هزینهٔ جست‌وجوی برگ و والد زنجیره در VendorAuditWriter با ایندکس‌گذاری ستون‌هایی که در predicateهای PreviousHash و EventHash استفاده می‌شوند.
+- **تغییر:** افزودن ایندکس IX_VendorAuditEvents_PreviousHash و ایندکس یکتای IX_VendorAuditEvents_EventHash؛ Migration جدید 20261027190000_VendorAuditChainIndexes فقط این دو ایندکس را می‌سازد و در Down حذف می‌کند. Snapshot و target model با مدل جاری هماهنگ شدند.
+- **تست‌ها:** آزمون مدل برای یکتایی/وجود ایندکس‌ها و آزمون SQL Server برای Migration و وجود هر دو ایندکس افزوده شد.
+- **محدوده:** فقط Vendor و تست‌ها/مستندات Vendor؛ هیچ دیتابیس یا Migration حسابداری مشتری تغییر نکرده است. ایندکس یکتا عمداً درج hash تکراری را در سطح دیتابیس رد می‌کند؛ اگر دادهٔ موجود ناسالم و دارای hash تکراری باشد، Migration باید fail کند تا داده پنهانی نادیده گرفته نشود.
+- **اعتبارسنجی:** Build، تست .NET، SQL Server و CI هنوز اجرا/تأیید نشده‌اند در زمان ثبت این یادداشت؛ تغییر از GitHub API ثبت شده و باید از CI واقعی تأیید شود. تا آن زمان وضعیت Implemented / Not yet Verified است.
+- **Branch:** fix/vendor-audit-chain-indexes-main; **Issue:** #202.
+
+## 2026-10-27 — ادغام ایندکس‌های زنجیره Audit و شروع Maker-Checker
+- **PR #203:** Migration مستقل 20261027190000_VendorAuditChainIndexes، ایندکس PreviousHash و unique EventHash، تست مدل و SQL Server ادغام شدند. CI روی head نهایی موفق بود: Vendor CI run 40563642222 و .NET CI run 40563642237؛ merge commit dfd5d941c6249570f8010176d16187e88f6d6217.
+- **Issue #201 / PR #207 / شاخه feat/vendor-maker-checker-clean:** گردش تأیید دو نفره برای تغییر وضعیت مشتری/نصب در حال توسعه است. مدل درخواست تأیید، migration مستقل Vendor، endpointهای submit/review، منع self-approval، RowVersion و UI صف تأیید اضافه شده‌اند؛ تست‌های یکپارچه برای درخواست، تکرار، منع تأیید توسط خود درخواست‌کننده، تأیید مدیر مستقل و stale resource افزوده شده‌اند.
+- **وضعیت اعتبارسنجی Maker-Checker:** هنوز CI اجرا نشده؛ هیچ‌یک از قابلیت‌های جدید در این بخش Verified اعلام نمی‌شوند تا Build، تست‌های SQL Server، تست UI، snapshot guard و publish/E2E سبز شوند.
+- **محدوده:** فقط Vendor و تست‌ها/مستندات اختصاصی آن تغییر کرده‌اند؛ دیتابیس حسابداری مشتری دست‌نخورده است.

@@ -45,7 +45,9 @@ public sealed class VendorBusinessMutationAuthorizationIntegrationTests
             (HttpMethod.Put, $"/api/vendor/installations/{id:D}"),
             (HttpMethod.Post, $"/api/vendor/installations/{id:D}/status"),
             (HttpMethod.Put, $"/api/vendor/contracts/{id:D}"),
-            (HttpMethod.Put, $"/api/vendor/licenses/{id:D}")
+            (HttpMethod.Put, $"/api/vendor/licenses/{id:D}"),
+            (HttpMethod.Post, "/api/vendor/approvals/status-change"),
+            (HttpMethod.Post, $"/api/vendor/approvals/{id:D}/decision")
         };
 
         foreach (var (method, path) in requests)
@@ -75,7 +77,8 @@ public sealed class VendorBusinessMutationAuthorizationIntegrationTests
             "/api/vendor/customers/",
             "/api/vendor/installations/",
             "/api/vendor/contracts/",
-            "/api/vendor/licenses/"
+            "/api/vendor/licenses/",
+            "/api/vendor/approvals/"
         })
         {
             using var response = await client.GetAsync(path, TestContext.Current.CancellationToken);

@@ -103,7 +103,7 @@ describe('Vendor control plane shell', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/vendor/customers/?page=2&pageSize=25', expect.objectContaining({ credentials: 'same-origin', cache: 'no-store' }));
   });
 
-  it('changes installation status through the real API with a fresh token and RowVersion', async () => {
+  it('submits installation status changes for approval with a fresh token and RowVersion', async () => {
     const installationPage = {
       items: [{ id: 'installation-1', customerId: 'customer-1', rowVersion: 'AQIDBAUGBwg=', installationCode: 'INS-001',
         name: 'نصب عملیاتی', environment: 'Production', status: 'Active', createdAtUtc: '2026-10-27T08:00:00Z', lastSeenAtUtc: null }],
@@ -111,21 +111,21 @@ describe('Vendor control plane shell', () => {
     };
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.startsWith('/api/vendor/installations/') && url.endsWith('/status')) return Promise.resolve(response({ ...installationPage.items[0], status: 'Suspended' }));
+      if (url === '/api/vendor/approvals/status-change') return Promise.resolve(response({ id: 'approval-1', status: 'Pending' }, 202));
       if (url.startsWith('/api/vendor/installations/')) return Promise.resolve(response(installationPage));
       if (url === '/api/auth/antiforgery') return Promise.resolve(response({ requestToken: 'csrf-status' }));
       return Promise.resolve(response({}, 404));
     });
     vi.stubGlobal('fetch', fetchMock);
-    render(<BusinessLists section="installations" permissions={['vendor.installations.manage']} />);
+    render(<BusinessLists section="installations" permissions={['vendor.installations.manage', 'vendor.approvals.request']} />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'تعلیق نصب نصب عملیاتی' }));
-    expect(await screen.findByRole('status')).toHaveTextContent('نصب با موفقیت تعلیق شد.');
-    expect(fetchMock).toHaveBeenCalledWith('/api/vendor/installations/installation-1/status', expect.objectContaining({
+    expect(await screen.findByRole('status')).toHaveTextContent('درخواست تغییر وضعیت نصب برای تأیید مدیر دیگر ثبت شد.');
+    expect(fetchMock).toHaveBeenCalledWith('/api/vendor/approvals/status-change', expect.objectContaining({
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': 'csrf-status' },
-      body: JSON.stringify({ status: 'Suspended', rowVersion: 'AQIDBAUGBwg=' }),
+      body: JSON.stringify({ resourceType: 'installation', resourceId: 'installation-1', targetStatus: 'Suspended', rowVersion: 'AQIDBAUGBwg=' }),
     }));
   });
 
@@ -137,13 +137,13 @@ describe('Vendor control plane shell', () => {
     };
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.startsWith('/api/vendor/installations/') && url.endsWith('/status')) return Promise.resolve(response({ error: 'stale_row_version' }, 409));
+      if (url === '/api/vendor/approvals/status-change') return Promise.resolve(response({ error: 'stale_row_version' }, 409));
       if (url.startsWith('/api/vendor/installations/')) return Promise.resolve(response(installationPage));
       if (url === '/api/auth/antiforgery') return Promise.resolve(response({ requestToken: 'csrf-status' }));
       return Promise.resolve(response({}, 404));
     });
     vi.stubGlobal('fetch', fetchMock);
-    render(<BusinessLists section="installations" permissions={['vendor.installations.manage']} />);
+    render(<BusinessLists section="installations" permissions={['vendor.installations.manage', 'vendor.approvals.request']} />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'تعلیق نصب نصب عملیاتی' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('اطلاعات نصب تغییر کرده است؛ فهرست را تازه‌سازی کنید.');

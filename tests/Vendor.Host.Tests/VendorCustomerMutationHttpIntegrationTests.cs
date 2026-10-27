@@ -34,6 +34,12 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
     public async Task CustomerUpdateEnforcesAntiforgeryAndRowVersionAndAuditsOnlyCommittedWrites()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
+        var reviewerUserName = string.Empty;
+        var reviewerAuthenticatorKey = string.Empty;
+        var customerApprovalId = Guid.Empty;
+        var customerApprovalRowVersion = string.Empty;
+        var installationApprovalId = Guid.Empty;
+        var installationApprovalRowVersion = string.Empty;
         var baseConnection = Environment.GetEnvironmentVariable("FARANO_VENDOR_TEST_SQLSERVER");
         if (string.IsNullOrWhiteSpace(baseConnection))
         {
@@ -89,7 +95,10 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     VendorPermissionCatalog.ContractsRead,
                     VendorPermissionCatalog.ContractsManage,
                     VendorPermissionCatalog.LicensesRead,
-                    VendorPermissionCatalog.LicensesManage
+                    VendorPermissionCatalog.LicensesManage,
+                    VendorPermissionCatalog.ApprovalsRead,
+                    VendorPermissionCatalog.ApprovalsRequest,
+                    VendorPermissionCatalog.ApprovalsReview
                 })
                 {
                     var permissionResult = await roles.AddClaimAsync(role,
@@ -114,6 +123,26 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.True(keyResult.Succeeded);
                 var mfaResult = await users.SetTwoFactorEnabledAsync(user, true);
                 Assert.True(mfaResult.Succeeded);
+
+                var reviewer = new VendorAdminUser
+                {
+                    UserName = "reviewer-" + Guid.NewGuid().ToString("N"),
+                    Email = Guid.NewGuid().ToString("N") + "@example.invalid",
+                    EmailConfirmed = true,
+                    IsEnabled = true,
+                    MustChangePassword = false,
+                    CreatedAtUtc = DateTimeOffset.UtcNow
+                };
+                var reviewerResult = await users.CreateAsync(reviewer, "Strong-Vendor#2026-Reviewer");
+                Assert.True(reviewerResult.Succeeded, string.Join("; ", reviewerResult.Errors.Select(error => error.Code)));
+                var reviewerRoleResult = await users.AddToRoleAsync(reviewer, role.Name!);
+                Assert.True(reviewerRoleResult.Succeeded, string.Join("; ", reviewerRoleResult.Errors.Select(error => error.Code)));
+                var reviewerKeyResult = await users.ResetAuthenticatorKeyAsync(reviewer);
+                Assert.True(reviewerKeyResult.Succeeded);
+                var reviewerMfaResult = await users.SetTwoFactorEnabledAsync(reviewer, true);
+                Assert.True(reviewerMfaResult.Succeeded);
+                reviewerUserName = reviewer.UserName!;
+                reviewerAuthenticatorKey = (await users.GetAuthenticatorKeyAsync(reviewer))!;
 
                 var customer = new VendorCustomer
                 {
@@ -333,7 +362,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     item.ActionCode == "vendor.customer.updated" && item.SubjectId == customerId.ToString("D"), cancellationToken));
             }
 
-            // Operational status transitions are restricted to Active <-> Suspended.
+            // Direct status changes are blocked; a distinct administrator must approve the proposal.
             byte[] customerStatusVersion;
             await using (var scope = factory.Services.CreateAsyncScope())
             {
@@ -342,32 +371,78 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     .SingleAsync(item => item.Id == customerId, cancellationToken)).RowVersion.ToArray();
             }
 
-            string customerStatusVersionText;
             using (var response = await PostWithTokenAsync(client, path + "/status",
                 new { status = "Suspended", rowVersion = Convert.ToBase64String(customerStatusVersion) },
                 antiForgeryToken, cancellationToken))
             {
-                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
                 using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-                customerStatusVersionText = json.RootElement.GetProperty("rowVersion").GetString()!;
+                Assert.Equal("approval_required", json.RootElement.GetProperty("error").GetString());
             }
 
-            using (var response = await PostWithTokenAsync(client, path + "/status",
-                new { status = "Active", rowVersion = customerStatusVersionText },
-                antiForgeryToken, cancellationToken))
-            {
-                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-                customerStatusVersionText = json.RootElement.GetProperty("rowVersion").GetString()!;
-            }
-
-            using (var response = await PostWithTokenAsync(client, path + "/status",
-                new { status = "Draft", rowVersion = customerStatusVersionText },
-                antiForgeryToken, cancellationToken))
+            using (var response = await PostWithTokenAsync(client, "/api/vendor/approvals/status-change",
+                new
+                {
+                    resourceType = "customer",
+                    resourceId = customerId,
+                    targetStatus = "Draft",
+                    rowVersion = Convert.ToBase64String(customerStatusVersion)
+                }, antiForgeryToken, cancellationToken))
             {
                 Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
                 using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
                 Assert.Equal("invalid_status_transition", json.RootElement.GetProperty("error").GetString());
+            }
+
+            var approvalBody = new
+            {
+                resourceType = "customer",
+                resourceId = customerId,
+                targetStatus = "Suspended",
+                rowVersion = Convert.ToBase64String(customerStatusVersion)
+            };
+            using (var response = await PostWithTokenAsync(client, "/api/vendor/approvals/status-change",
+                approvalBody, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                customerApprovalId = json.RootElement.GetProperty("id").GetGuid();
+                customerApprovalRowVersion = json.RootElement.GetProperty("rowVersion").GetString()!;
+                Assert.Equal("Pending", json.RootElement.GetProperty("status").GetString());
+            }
+
+            using (var response = await client.GetAsync("/api/vendor/approvals/?status=Pending&page=1&pageSize=25", cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal(1, json.RootElement.GetProperty("totalCount").GetInt32());
+                Assert.Equal(customerApprovalId, json.RootElement.GetProperty("items")[0].GetProperty("id").GetGuid());
+            }
+
+            using (var response = await PostWithTokenAsync(client, "/api/vendor/approvals/status-change",
+                approvalBody, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("approval_already_pending", json.RootElement.GetProperty("error").GetString());
+            }
+
+            using (var response = await PostWithTokenAsync(client, $"/api/vendor/approvals/{customerApprovalId:D}/decision",
+                new { decision = "Approved", rowVersion = customerApprovalRowVersion, comment = "self approval must fail" },
+                antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            }
+
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var persisted = await db.Customers.AsNoTracking().SingleAsync(item => item.Id == customerId, cancellationToken);
+                Assert.Equal("Active", persisted.Status);
+                Assert.Equal(1, await db.ApprovalRequests.CountAsync(item =>
+                    item.Id == customerApprovalId && item.Status == "Pending", cancellationToken));
+                Assert.Equal(1, await db.AuditEvents.CountAsync(item =>
+                    item.ActionCode == "vendor.approval.requested" && item.SubjectId == customerApprovalId.ToString("D"), cancellationToken));
             }
 
             // Installation update: real HTTP, current RowVersion succeeds, replay is rejected.
@@ -397,7 +472,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal("stale_row_version", json.RootElement.GetProperty("error").GetString());
             }
 
-            // Installation status follows the same allow-listed Active <-> Suspended state machine.
+            // Direct installation status mutation is also blocked; submit a separate approval request.
             byte[] installationStatusVersion;
             await using (var scope = factory.Services.CreateAsyncScope())
             {
@@ -406,23 +481,28 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     .SingleAsync(item => item.Id == installationId, cancellationToken)).RowVersion.ToArray();
             }
 
-            string installationStatusVersionText;
             using (var response = await PostWithTokenAsync(client, installationPath + "/status",
                 new { status = "Suspended", rowVersion = Convert.ToBase64String(installationStatusVersion) },
                 antiForgeryToken, cancellationToken))
             {
-                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-                installationStatusVersionText = json.RootElement.GetProperty("rowVersion").GetString()!;
-            }
-
-            using (var response = await PostWithTokenAsync(client, installationPath + "/status",
-                new { status = "Draft", rowVersion = installationStatusVersionText },
-                antiForgeryToken, cancellationToken))
-            {
                 Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
                 using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-                Assert.Equal("invalid_status_transition", json.RootElement.GetProperty("error").GetString());
+                Assert.Equal("approval_required", json.RootElement.GetProperty("error").GetString());
+            }
+
+            using (var response = await PostWithTokenAsync(client, "/api/vendor/approvals/status-change",
+                new
+                {
+                    resourceType = "installation",
+                    resourceId = installationId,
+                    targetStatus = "Suspended",
+                    rowVersion = Convert.ToBase64String(installationStatusVersion)
+                }, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                installationApprovalId = json.RootElement.GetProperty("id").GetGuid();
+                installationApprovalRowVersion = json.RootElement.GetProperty("rowVersion").GetString()!;
             }
 
             // Contract update is allowed while Draft and enforces RowVersion on replay.
@@ -621,6 +701,115 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal("customer_number_exists", conflictJson.RootElement.GetProperty("error").GetString());
             using var createdJson = JsonDocument.Parse(await createdResponse.Content.ReadAsStringAsync(cancellationToken));
             var createdCustomerId = createdJson.RootElement.GetProperty("id").GetGuid();
+
+            // A distinct MFA-authenticated administrator can approve both requests.
+            using var reviewerClient = factory.CreateClient(new WebApplicationFactoryClientOptions
+            {
+                BaseAddress = new Uri("https://localhost"),
+                HandleCookies = true
+            });
+            var (reviewerAntiForgeryToken, _) = await GetAntiforgeryTokenAsync(reviewerClient, cancellationToken);
+            using (var passwordResponse = await PostWithTokenAsync(reviewerClient, "/api/auth/password",
+                new { userName = reviewerUserName, password = "Strong-Vendor#2026-Reviewer" },
+                reviewerAntiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, passwordResponse.StatusCode);
+                using var passwordJson = JsonDocument.Parse(await passwordResponse.Content.ReadAsStringAsync(cancellationToken));
+                Assert.True(passwordJson.RootElement.GetProperty("requiresSecondFactor").GetBoolean());
+            }
+
+            using (var verifyResponse = await PostWithTokenAsync(reviewerClient, "/api/auth/totp/verify",
+                new { code = GenerateTotpCode(reviewerAuthenticatorKey) },
+                reviewerAntiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, verifyResponse.StatusCode);
+            }
+            (reviewerAntiForgeryToken, _) = await GetAntiforgeryTokenAsync(reviewerClient, cancellationToken);
+
+            foreach (var approval in new[]
+            {
+                (Id: customerApprovalId, RowVersion: customerApprovalRowVersion),
+                (Id: installationApprovalId, RowVersion: installationApprovalRowVersion)
+            })
+            {
+                using var response = await PostWithTokenAsync(reviewerClient,
+                    $"/api/vendor/approvals/{approval.Id:D}/decision",
+                    new { decision = "Approved", rowVersion = approval.RowVersion, comment = "Reviewed by a distinct administrator" },
+                    reviewerAntiForgeryToken, cancellationToken);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("Approved", json.RootElement.GetProperty("status").GetString());
+                Assert.NotEqual(Guid.Empty, json.RootElement.GetProperty("reviewedByUserId").GetGuid());
+            }
+
+            await using (var approvalVerificationScope = factory.Services.CreateAsyncScope())
+            {
+                var db = approvalVerificationScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var customer = await db.Customers.AsNoTracking().SingleAsync(item => item.Id == customerId, cancellationToken);
+                var installation = await db.Installations.AsNoTracking().SingleAsync(item => item.Id == installationId, cancellationToken);
+                Assert.Equal("Suspended", customer.Status);
+                Assert.Equal("Suspended", installation.Status);
+                Assert.Equal(2, await db.ApprovalRequests.CountAsync(item => item.Status == "Approved", cancellationToken));
+                Assert.Equal(2, await db.AuditEvents.CountAsync(item =>
+                    item.ActionCode == "vendor.approval.approved", cancellationToken));
+                Assert.Equal(2, await db.AuditEvents.CountAsync(item =>
+                    item.ActionCode == "vendor.customer.status-changed" || item.ActionCode == "vendor.installation.status-changed",
+                    cancellationToken));
+            }
+
+            // A pending request becomes Stale if the resource RowVersion changes before review.
+            byte[] staleCustomerVersion;
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                staleCustomerVersion = (await db.Customers.AsNoTracking()
+                    .SingleAsync(item => item.Id == customerId, cancellationToken)).RowVersion.ToArray();
+            }
+
+            Guid staleApprovalId;
+            string staleApprovalRowVersion;
+            using (var response = await PostWithTokenAsync(client, "/api/vendor/approvals/status-change",
+                new
+                {
+                    resourceType = "customer",
+                    resourceId = customerId,
+                    targetStatus = "Active",
+                    rowVersion = Convert.ToBase64String(staleCustomerVersion)
+                }, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                staleApprovalId = json.RootElement.GetProperty("id").GetGuid();
+                staleApprovalRowVersion = json.RootElement.GetProperty("rowVersion").GetString()!;
+            }
+
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var customer = await db.Customers.SingleAsync(item => item.Id == customerId, cancellationToken);
+                customer.DisplayName = "Changed after approval request";
+                customer.UpdatedAtUtc = DateTimeOffset.UtcNow;
+                await db.SaveChangesAsync(cancellationToken);
+            }
+
+            using (var response = await PostWithTokenAsync(reviewerClient,
+                $"/api/vendor/approvals/{staleApprovalId:D}/decision",
+                new { decision = "Approved", rowVersion = staleApprovalRowVersion, comment = "stale resource check" },
+                reviewerAntiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("approval_resource_stale", json.RootElement.GetProperty("error").GetString());
+            }
+
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                Assert.Equal("Stale", (await db.ApprovalRequests.AsNoTracking()
+                    .SingleAsync(item => item.Id == staleApprovalId, cancellationToken)).Status);
+                Assert.Equal("Suspended", (await db.Customers.AsNoTracking()
+                    .SingleAsync(item => item.Id == customerId, cancellationToken)).Status);
+            }
 
             await using (var raceVerificationScope = factory.Services.CreateAsyncScope())
             {
