@@ -618,3 +618,5 @@
 - **مستندات:** `Vendor/README.md`، `docs/SECURITY.md` و `docs/handoffs/ISSUE-159-force-password-change.md` به‌روز شدند.
 
 - **اصلاح هم‌راستایی bootstrap (بازبینی تکمیلی):** بررسی مستقیم `VendorBootstrapCommand` نشان داد مسیر فعال‌سازی حساب در نسخه قبلی `MustChangePassword=false` می‌نوشت و بنابراین گارد جدید برای مدیر bootstrapشده فعال نمی‌شد. این مقدار به `true` تغییر کرد و آزمون Integration bootstrap اکنون همین invariant را assert می‌کند؛ حساب قبل از تکمیل TOTP همچنان غیرفعال می‌ماند.
+
+- **CI و اصلاح مبتنی بر شواهد:** Vendor CI run [40451859716](https://github.com/hamidreza1394/Accounting/actions/runs/40451859716) در آزمون HTTP شکست خورد: انتظار `BadRequest` اما `TooManyRequests` دریافت شد، چون تست چند تلاش ورود و سپس تلاش تغییر رمز را با یک policy مشترک پنج‌در-دقیقه اجرا می‌کرد. Build، typecheck، UI tests، audit وابستگی‌ها و Vite build موفق بودند. برای جلوگیری از coupling غیرضروری، policy مستقل `vendor-password-change` با همان حد ۵ تلاش در دقیقه افزوده شد. این اصلاح هنوز باید با Vendor CI جدید تأیید شود.
