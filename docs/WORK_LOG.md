@@ -865,7 +865,7 @@
 - **Branch:** fix/vendor-audit-chain-indexes-main; **Issue:** #202.
 
 ## 2026-10-27 — ادغام ایندکس‌های زنجیره Audit و شروع Maker-Checker
-- **PR #203:** Migration مستقل 20261027190000_VendorAuditChainIndexes، ایندکس PreviousHash و unique EventHash، تست مدل و SQL Server ادغام شدند. CI روی head نهایی موفق بود: Vendor CI run 40563642222 و .NET CI run 40563642237؛ merge commit df d5d941c6249570f8010176d16187e88f6d6217.
+- **PR #203:** Migration مستقل 20261027190000_VendorAuditChainIndexes، ایندکس PreviousHash و unique EventHash، تست مدل و SQL Server ادغام شدند. CI روی head نهایی موفق بود: Vendor CI run 40563642222 و .NET CI run 40563642237؛ merge commit dfd5d941c6249570f8010176d16187e88f6d6217.
 - **Issue #201 / شاخه feat/vendor-maker-checker-main:** گردش تأیید دو نفره برای تغییر وضعیت مشتری/نصب در حال توسعه است. مدل درخواست تأیید، migration مستقل Vendor، endpointهای submit/review، منع self-approval، RowVersion و UI صف تأیید اضافه شده‌اند؛ تست‌های یکپارچه برای درخواست، تکرار، منع تأیید توسط خود درخواست‌کننده، تأیید مدیر مستقل و stale resource افزوده شده‌اند.
 - **وضعیت اعتبارسنجی Maker-Checker:** هنوز CI اجرا نشده؛ هیچ‌یک از قابلیت‌های جدید در این بخش Verified اعلام نمی‌شوند تا Build، تست‌های SQL Server، تست UI، snapshot guard و publish/E2E سبز شوند.
 - **محدوده:** فقط Vendor و تست‌ها/مستندات اختصاصی آن تغییر کرده‌اند؛ دیتابیس حسابداری مشتری دست‌نخورده است.
