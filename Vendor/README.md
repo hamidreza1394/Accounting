@@ -139,4 +139,4 @@ Host عمداً به ارائه‌دهندهٔ ابری خاصی وابسته ن
 
 
 ## Audit chain lookup indexes (Issue #202)
-- Migration 20261027190000_VendorAuditChainIndexes adds IX_VendorAuditEvents_PreviousHash and unique IX_VendorAuditEvents_EventHash for Vendor-only audit chain lookups. This remains unverified until the SQL Server integration suite and EF pending-model-change guard pass in CI.
+- Migration 20261027190000_VendorAuditChainIndexes adds IX_VendorAuditEvents_PreviousHash and unique IX_VendorAuditEvents_EventHash for Vendor-only audit chain lookups. PR #203 merged this migration after the SQL Server integration suite and EF pending-model-change guard passed in Vendor CI and .NET CI.
