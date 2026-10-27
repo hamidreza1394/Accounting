@@ -37,7 +37,7 @@ public sealed class DenyAllVendorResourceAccessEvaluator : IVendorResourceAccess
 
 public static class VendorResourceCatalog
 {
-    private static readonly IReadOnlyDictionary<string, IReadOnlySet<string>> Operations =
+    private static readonly Dictionary<string, IReadOnlySet<string>> Operations =
         new Dictionary<string, IReadOnlySet<string>>(StringComparer.Ordinal)
         {
             ["customer"] = new HashSet<string>(StringComparer.Ordinal)
