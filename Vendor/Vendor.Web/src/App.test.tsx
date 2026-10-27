@@ -132,4 +132,23 @@ describe('Vendor control plane shell', () => {
     expect(await screen.findByText('رکوردی برای نمایش وجود ندارد')).toBeInTheDocument();
   });
 
+  it('loads the installations section from its own API endpoint', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/auth/me') return Promise.resolve(response({ userName: 'vendor-admin', totpEnabled: true }));
+      if (url.startsWith('/api/vendor/installations/')) return Promise.resolve(response({
+        items: [{ id: 'installation-1', installationCode: 'INS-001', name: 'نصب عملیاتی', environment: 'Production', status: 'Active', createdAtUtc: '2026-10-27T08:00:00Z', lastSeenAtUtc: null }],
+        page: 1, pageSize: 25, totalCount: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false,
+      }));
+      return Promise.resolve(response({}, 404));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'نصب‌ها' }));
+    expect(await screen.findByText('INS-001')).toBeInTheDocument();
+    expect(screen.getByText('عملیاتی')).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith('/api/vendor/installations/?page=1&pageSize=25', expect.objectContaining({ credentials: 'same-origin' }));
+  });
+
 });
