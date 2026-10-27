@@ -52,6 +52,22 @@ describe('Vendor customer form', () => {
     expect(screen.queryByText('database internals')).not.toBeInTheDocument();
   });
 
+  it('does not submit a mutation when the antiforgery token is missing', async () => {
+    const onSaved = vi.fn();
+    const fetchMock = vi.fn().mockResolvedValueOnce(response({}));
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<CustomerForm onCancel={vi.fn()} onSaved={onSaved} />);
+    fireEvent.change(screen.getByLabelText('شماره مشتری'), { target: { value: 'C-300' } });
+    fireEvent.change(screen.getByLabelText('نام حقوقی'), { target: { value: 'شرکت نمونه' } });
+    fireEvent.change(screen.getByLabelText('نام نمایشی'), { target: { value: 'نمونه' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ثبت مشتری' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('توکن امنیتی در پاسخ سرور وجود ندارد.');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(onSaved).not.toHaveBeenCalled();
+  });
+
   it('shows an authorization message when the server rejects customer management', async () => {
     const onSaved = vi.fn();
     const fetchMock = vi.fn()
