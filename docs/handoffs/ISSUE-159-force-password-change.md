@@ -15,6 +15,7 @@
 - [ ] بازبینی انسانی و تأیید Maintainer.
 
 ## خلاصه تغییرات
+- bootstrap اکنون پس از تکمیل MFA حساب مدیر را با `MustChangePassword=true` فعال می‌کند؛ قبل از MFA حساب همچنان غیرفعال است.
 - endpoint جدید `POST /api/auth/change-password` با بررسی anti-forgery، بررسی گذرواژه فعلی، حداقل طول ۱۴ نویسه و سیاست Identity؛ خطاها پیام عمومی دارند.
 - پرچم `MustChangePassword` فقط در همان به‌روزرسانی Identity که هش رمز را ذخیره می‌کند پاک می‌شود؛ در خطا پاسخ موفق صادر نمی‌شود.
 - middleware در Host تا زمان تغییر موفق گذرواژه دسترسی API را محدود می‌کند.
