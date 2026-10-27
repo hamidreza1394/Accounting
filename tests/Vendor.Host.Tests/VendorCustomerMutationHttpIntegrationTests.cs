@@ -34,6 +34,12 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
     public async Task CustomerUpdateEnforcesAntiforgeryAndRowVersionAndAuditsOnlyCommittedWrites()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
+        var reviewerUserName = string.Empty;
+        var reviewerAuthenticatorKey = string.Empty;
+        var customerApprovalId = Guid.Empty;
+        var customerApprovalRowVersion = string.Empty;
+        var installationApprovalId = Guid.Empty;
+        var installationApprovalRowVersion = string.Empty;
         var baseConnection = Environment.GetEnvironmentVariable("FARANO_VENDOR_TEST_SQLSERVER");
         if (string.IsNullOrWhiteSpace(baseConnection))
         {
@@ -117,6 +123,26 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.True(keyResult.Succeeded);
                 var mfaResult = await users.SetTwoFactorEnabledAsync(user, true);
                 Assert.True(mfaResult.Succeeded);
+
+                var reviewer = new VendorAdminUser
+                {
+                    UserName = "reviewer-" + Guid.NewGuid().ToString("N"),
+                    Email = Guid.NewGuid().ToString("N") + "@example.invalid",
+                    EmailConfirmed = true,
+                    IsEnabled = true,
+                    MustChangePassword = false,
+                    CreatedAtUtc = DateTimeOffset.UtcNow
+                };
+                var reviewerResult = await users.CreateAsync(reviewer, "Strong-Vendor#2026-Reviewer");
+                Assert.True(reviewerResult.Succeeded, string.Join("; ", reviewerResult.Errors.Select(error => error.Code)));
+                var reviewerRoleResult = await users.AddToRoleAsync(reviewer, role.Name!);
+                Assert.True(reviewerRoleResult.Succeeded, string.Join("; ", reviewerRoleResult.Errors.Select(error => error.Code)));
+                var reviewerKeyResult = await users.ResetAuthenticatorKeyAsync(reviewer);
+                Assert.True(reviewerKeyResult.Succeeded);
+                var reviewerMfaResult = await users.SetTwoFactorEnabledAsync(reviewer, true);
+                Assert.True(reviewerMfaResult.Succeeded);
+                reviewerUserName = reviewer.UserName!;
+                reviewerAuthenticatorKey = (await users.GetAuthenticatorKeyAsync(reviewer))!;
 
                 var customer = new VendorCustomer
                 {
