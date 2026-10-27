@@ -2,8 +2,10 @@ using System.Buffers.Binary;
 using System.Globalization;
 using System.Net;
 using System.Security.Cryptography;
+using System.Security.Claims;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Faranou.Vendor.Host.Authorization;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Identity;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -130,6 +132,9 @@ public sealed class VendorAuthenticationSecurityTests
             };
             var createUser = await users.CreateAsync(user, "Secure-Vendor#2026");
             Assert.True(createUser.Succeeded, string.Join("; ", createUser.Errors.Select(error => error.Code)));
+            var addPermission = await users.AddClaimAsync(user,
+                new Claim(VendorPermissionCatalog.ClaimType, VendorPermissionCatalog.CustomersManage));
+            Assert.True(addPermission.Succeeded, string.Join("; ", addPermission.Errors.Select(error => error.Code)));
             var resetKey = await users.ResetAuthenticatorKeyAsync(user);
             Assert.True(resetKey.Succeeded);
             var enableTotp = await users.SetTwoFactorEnabledAsync(user, true);
@@ -185,6 +190,10 @@ public sealed class VendorAuthenticationSecurityTests
             Assert.Equal(HttpStatusCode.OK, meResponse.StatusCode);
             using var meDocument = JsonDocument.Parse(await meResponse.Content.ReadAsStringAsync(cancellationToken));
             Assert.True(meDocument.RootElement.GetProperty("totpEnabled").GetBoolean());
+            Assert.Contains(
+                VendorPermissionCatalog.CustomersManage,
+                meDocument.RootElement.GetProperty("permissions").EnumerateArray()
+                    .Select(permission => permission.GetString()));
 
             // Identity's two-factor sign-in writes an application cookie, then the
             // endpoint re-issues it with the verified-factor claim. Use the final cookie

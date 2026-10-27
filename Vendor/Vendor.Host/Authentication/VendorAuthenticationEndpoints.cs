@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using Faranou.Vendor.Host.Authorization;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Identity;
 using Microsoft.AspNetCore.Antiforgery;
@@ -381,7 +382,12 @@ public static class VendorAuthenticationEndpoints
                 email = user.Email,
                 totpEnabled = user.TwoFactorEnabled,
                 passkeyCount = passkeys.Count,
-                mustChangePassword = user.MustChangePassword
+                mustChangePassword = user.MustChangePassword,
+                permissions = context.User.FindAll(VendorPermissionCatalog.ClaimType)
+                    .Select(claim => claim.Value)
+                    .Distinct(StringComparer.Ordinal)
+                    .Order(StringComparer.Ordinal)
+                    .ToArray()
             });
         }).RequireAuthorization();
 

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { AlertCircle, ChevronLeft, ChevronRight, LoaderCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle, ChevronLeft, ChevronRight, LoaderCircle, Pencil, Plus, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { CustomerForm, type CustomerDraft } from './CustomerForm';
 
 export type BusinessSection = 'customers' | 'installations' | 'contracts' | 'licenses';
 
@@ -102,7 +103,7 @@ function errorFor(status: number): string {
   return 'دریافت اطلاعات ناموفق بود. وضعیت درخواست را بررسی و دوباره تلاش کنید.';
 }
 
-export function BusinessLists({ section }: { section: BusinessSection }) {
+export function BusinessLists({ section, permissions = [] }: { section: BusinessSection; permissions?: string[] }) {
   const resource = resources[section];
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -110,6 +111,47 @@ export function BusinessLists({ section }: { section: BusinessSection }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
+  const [showCustomerForm, setShowCustomerForm] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<CustomerDraft | null>(null);
+  const [notice, setNotice] = useState('');
+  const canManageCustomers = section === 'customers' && permissions.includes('vendor.customers.manage');
+
+  function openCreateCustomer() {
+    setEditingCustomer(null);
+    setShowCustomerForm(true);
+    setNotice('');
+  }
+
+  function openEditCustomer(row: Row) {
+    if (typeof row.id !== 'string' || typeof row.rowVersion !== 'string') {
+      setError('نسخه اطلاعات مشتری موجود نیست؛ فهرست را تازه‌سازی کنید.');
+      return;
+    }
+    setEditingCustomer({
+      id: row.id,
+      rowVersion: row.rowVersion,
+      customerNumber: String(row.customerNumber ?? ''),
+      legalName: String(row.legalName ?? ''),
+      displayName: String(row.displayName ?? ''),
+    });
+    setShowCustomerForm(true);
+    setNotice('');
+  }
+
+  function closeCustomerForm() {
+    setShowCustomerForm(false);
+    setEditingCustomer(null);
+  }
+
+  function customerSaved() {
+    setShowCustomerForm(false);
+    setEditingCustomer(null);
+    setNotice(editingCustomer ? 'اطلاعات مشتری به‌روزرسانی شد.' : 'مشتری تجاری ثبت شد.');
+    setPage(1);
+    setData(null);
+    setLoading(true);
+    setReloadKey(current => current + 1);
+  }
 
   useEffect(() => {
     let active = true;
@@ -153,10 +195,16 @@ export function BusinessLists({ section }: { section: BusinessSection }) {
         <h1 id="business-page-title" className="mt-1 text-2xl font-bold text-[#193b57]">{resource.title}</h1>
         <p className="mt-2 text-sm leading-7 text-muted-foreground">{resource.description}</p>
       </div>
-      <Button type="button" variant="outline" onClick={() => { setLoading(true); setError(''); setData(null); setReloadKey(current => current + 1); }} disabled={loading}>
-        <RefreshCw size={16}/> تازه‌سازی
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        {canManageCustomers && <Button type="button" onClick={openCreateCustomer}><Plus size={16}/> ثبت مشتری</Button>}
+        <Button type="button" variant="outline" onClick={() => { setLoading(true); setError(''); setData(null); setReloadKey(current => current + 1); }} disabled={loading}>
+          <RefreshCw size={16}/> تازه‌سازی
+        </Button>
+      </div>
     </div>
+
+    {notice && <p role="status" className="text-sm text-muted-foreground">{notice}</p>}
+    {showCustomerForm && canManageCustomers && <CustomerForm {...(editingCustomer ? { initial: editingCustomer } : {})} onCancel={closeCustomerForm} onSaved={customerSaved} />}
 
     <Card>
       <CardHeader className="border-b">
@@ -169,9 +217,10 @@ export function BusinessLists({ section }: { section: BusinessSection }) {
         : !data || data.items.length === 0 ? <div className="flex min-h-36 flex-col items-center justify-center gap-2 text-center"><span className="text-sm font-semibold">رکوردی برای نمایش وجود ندارد</span><p className="text-sm text-muted-foreground">پس از ثبت اطلاعات، موارد در این فهرست نمایش داده می‌شوند.</p></div>
         : <div className="overflow-x-auto">
           <table className="w-full min-w-[680px] border-separate border-spacing-0 text-right text-sm">
-            <thead><tr>{resource.columns.map(column => <th key={column.key} scope="col" className="border-b border-border bg-muted/60 px-4 py-3 font-semibold text-muted-foreground">{column.label}</th>)}</tr></thead>
+            <thead><tr>{resource.columns.map(column => <th key={column.key} scope="col" className="border-b border-border bg-muted/60 px-4 py-3 font-semibold text-muted-foreground">{column.label}</th>)}{canManageCustomers && <th scope="col" className="border-b border-border bg-muted/60 px-4 py-3 font-semibold text-muted-foreground">عملیات</th>}</tr></thead>
             <tbody>{data.items.map((row, index) => <tr key={String(row.id ?? row.customerNumber ?? row.installationCode ?? row.contractNumber ?? row.licenseNumber ?? index)} className="hover:bg-muted/30">
               {resource.columns.map(column => <td key={column.key} className="border-b border-border px-4 py-3 text-foreground">{formatValue(row[column.key], column.kind)}</td>)}
+              {canManageCustomers && <td className="border-b border-border px-4 py-3"><Button type="button" variant="outline" size="sm" onClick={() => openEditCustomer(row)} aria-label={`ویرایش مشتری ${String(row.displayName ?? row.customerNumber ?? '')}`}><Pencil size={15}/> ویرایش</Button></td>}
             </tr>)}</tbody>
           </table>
         </div>}
