@@ -846,3 +846,12 @@
 - **باقی‌مانده:** نصب Kendo (در صورت تأیید) کار جدا با پایلوت و اندازه‌گیری باندل است؛ RTL/فارسی Kendo تأیید نشده. جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-ui-component-standards.md`.
 
 - **اصلاح (2026-10-27، همان روز):** عبارت «RTL Kendo تأیید نشد» در D-050 و `docs/UI_COMPONENTS.md` اصلاح شد: RTL عمومی و WCAG 2.2 AA گرید طبق مستندات رسمی Telerik تأیید شد؛ ارقام فارسی و تقویم شمسی همچنان تأیید نشده‌اند. build/test اجرا نشد (فقط مستندات).
+
+
+## 2026-10-27 — بهینه‌سازی lookup زنجیره Audit در Vendor (Issue #202)
+- **هدف:** کاهش هزینهٔ جست‌وجوی برگ و والد زنجیره در VendorAuditWriter با ایندکس‌گذاری ستون‌هایی که در predicateهای PreviousHash و EventHash استفاده می‌شوند.
+- **تغییر:** افزودن ایندکس IX_VendorAuditEvents_PreviousHash و ایندکس یکتای IX_VendorAuditEvents_EventHash؛ Migration جدید 20261027190000_VendorAuditChainIndexes فقط این دو ایندکس را می‌سازد و در Down حذف می‌کند. Snapshot و target model با مدل جاری هماهنگ شدند.
+- **تست‌ها:** آزمون مدل برای یکتایی/وجود ایندکس‌ها و آزمون SQL Server برای Migration و وجود هر دو ایندکس افزوده شد.
+- **محدوده:** فقط Vendor و تست‌ها/مستندات Vendor؛ هیچ دیتابیس یا Migration حسابداری مشتری تغییر نکرده است. ایندکس یکتا عمداً درج hash تکراری را در سطح دیتابیس رد می‌کند؛ اگر دادهٔ موجود ناسالم و دارای hash تکراری باشد، Migration باید fail کند تا داده پنهانی نادیده گرفته نشود.
+- **اعتبارسنجی:** Build، تست .NET، SQL Server و CI هنوز اجرا/تأیید نشده‌اند در زمان ثبت این یادداشت؛ تغییر از GitHub API ثبت شده و باید از CI واقعی تأیید شود. تا آن زمان وضعیت Implemented / Not yet Verified است.
+- **Branch:** fix/vendor-audit-chain-indexes; **Issue:** #202.
