@@ -294,41 +294,9 @@ public static class VendorBusinessEndpoints
                 item.Status, item.CreatedAtUtc, item.UpdatedAtUtc, Convert.ToBase64String(item.RowVersion)));
         });
 
-        customerMutations.MapPost("/{id:guid}/status", async (
-            Guid id, ChangeOperationalStatusRequest request, HttpContext context, IAntiforgery antiforgery,
-            IAuthorizationService authorization, VendorDbContext db, UserManager<VendorAdminUser> users,
-            IVendorAuditWriter audit, CancellationToken ct) =>
-        {
-            if (!await antiforgery.IsRequestValidAsync(context))
-                return Results.BadRequest(new { error = "invalid_antiforgery_token" });
-            if (!VendorBusinessMutationRules.TryDecodeRowVersion(request.RowVersion, out var expectedVersion))
-                return Results.BadRequest(new { error = "invalid_row_version" });
-            var access = await authorization.AuthorizeAsync(context.User, new VendorResourceDescriptor("customer", id),
-                VendorResourceCatalog.PolicyFor("customer", VendorPermissionCatalog.CustomersManage));
-            if (!access.Succeeded) return Results.Forbid();
-            var item = await db.Customers.SingleOrDefaultAsync(value => value.Id == id, ct);
-            if (item is null) return Results.NotFound();
-            // Reject stale tokens even when submitted values match current values.
-            // EF Core may skip UPDATE for no-op changes, bypassing SQL rowversion concurrency checks.
-            if (!item.RowVersion.AsSpan().SequenceEqual(expectedVersion))
-                return Results.Conflict(new { error = "stale_row_version" });
-            if (!VendorBusinessMutationRules.IsOperationalStatusTransitionAllowed(item.Status, request.Status))
-                return Results.Conflict(new { error = "invalid_status_transition" });
-            var actor = await users.GetUserAsync(context.User);
-            if (actor is null) return Results.Forbid();
-            await using var tx = await db.Database.BeginTransactionAsync(ct);
-            db.Entry(item).Property(value => value.RowVersion).OriginalValue = expectedVersion;
-            item.Status = request.Status!;
-            item.UpdatedAtUtc = DateTimeOffset.UtcNow;
-            try { await db.SaveChangesAsync(ct); }
-            catch (DbUpdateConcurrencyException) { return Results.Conflict(new { error = "stale_row_version" }); }
-            await audit.AppendAsync(new VendorAuditWriteRequest(actor.Id, "vendor.customer.status-changed",
-                nameof(VendorCustomer), item.Id.ToString("D"),
-                System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
-            await tx.CommitAsync(ct);
-            return Results.Ok(new CustomerResponse(item.Id, item.CustomerNumber, item.LegalName, item.DisplayName,
-                item.Status, item.CreatedAtUtc, item.UpdatedAtUtc, Convert.ToBase64String(item.RowVersion)));
-        });
+        // Legacy direct status changes are intentionally blocked. Use the Maker-Checker approval API.
+        customerMutations.MapPost("/{id:guid}/status", () =>
+            Results.Conflict(new { error = "approval_required" }));
 
         var installationMutations = endpoints.MapGroup("/api/vendor/installations")
             .RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.InstallationsManage));
@@ -378,40 +346,9 @@ public static class VendorBusinessEndpoints
                 item.Environment, item.Status, item.CreatedAtUtc, item.LastSeenAtUtc, Convert.ToBase64String(item.RowVersion)));
         });
 
-        installationMutations.MapPost("/{id:guid}/status", async (
-            Guid id, ChangeOperationalStatusRequest request, HttpContext context, IAntiforgery antiforgery,
-            IAuthorizationService authorization, VendorDbContext db, UserManager<VendorAdminUser> users,
-            IVendorAuditWriter audit, CancellationToken ct) =>
-        {
-            if (!await antiforgery.IsRequestValidAsync(context))
-                return Results.BadRequest(new { error = "invalid_antiforgery_token" });
-            if (!VendorBusinessMutationRules.TryDecodeRowVersion(request.RowVersion, out var expectedVersion))
-                return Results.BadRequest(new { error = "invalid_row_version" });
-            var access = await authorization.AuthorizeAsync(context.User, new VendorResourceDescriptor("installation", id),
-                VendorResourceCatalog.PolicyFor("installation", VendorPermissionCatalog.InstallationsManage));
-            if (!access.Succeeded) return Results.Forbid();
-            var item = await db.Installations.SingleOrDefaultAsync(value => value.Id == id, ct);
-            if (item is null) return Results.NotFound();
-            // Reject stale tokens even when submitted values match current values.
-            // EF Core may skip UPDATE for no-op changes, bypassing SQL rowversion concurrency checks.
-            if (!item.RowVersion.AsSpan().SequenceEqual(expectedVersion))
-                return Results.Conflict(new { error = "stale_row_version" });
-            if (!VendorBusinessMutationRules.IsOperationalStatusTransitionAllowed(item.Status, request.Status))
-                return Results.Conflict(new { error = "invalid_status_transition" });
-            var actor = await users.GetUserAsync(context.User);
-            if (actor is null) return Results.Forbid();
-            await using var tx = await db.Database.BeginTransactionAsync(ct);
-            db.Entry(item).Property(value => value.RowVersion).OriginalValue = expectedVersion;
-            item.Status = request.Status!;
-            try { await db.SaveChangesAsync(ct); }
-            catch (DbUpdateConcurrencyException) { return Results.Conflict(new { error = "stale_row_version" }); }
-            await audit.AppendAsync(new VendorAuditWriteRequest(actor.Id, "vendor.installation.status-changed",
-                nameof(VendorInstallation), item.Id.ToString("D"),
-                System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
-            await tx.CommitAsync(ct);
-            return Results.Ok(new InstallationResponse(item.Id, item.CustomerId, item.InstallationCode, item.Name,
-                item.Environment, item.Status, item.CreatedAtUtc, item.LastSeenAtUtc, Convert.ToBase64String(item.RowVersion)));
-        });
+        // Legacy direct status changes are intentionally blocked. Use the Maker-Checker approval API.
+        installationMutations.MapPost("/{id:guid}/status", () =>
+            Results.Conflict(new { error = "approval_required" }));
 
         var contractMutations = endpoints.MapGroup("/api/vendor/contracts")
             .RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.ContractsManage));
