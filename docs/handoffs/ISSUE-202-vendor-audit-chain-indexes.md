@@ -3,14 +3,14 @@
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/202
 - **Agent/مسئول:** ChatGPT
 - **تاریخ:** 2026-10-27
-- **وضعیت:** پیاده‌سازی‌شده؛ اعتبارسنجی CI در انتظار
+- **وضعیت:** Verified و ادغام‌شده در PR #203
 
 ## هدف و معیارهای پذیرش
 - [x] افزودن ایندکس برای lookup با PreviousHash.
 - [x] افزودن ایندکس یکتا برای EventHash.
 - [x] Migration و Snapshot مستقل Vendor.
 - [x] تست مدل و تست SQL Server برای ایندکس‌ها.
-- [ ] تأیید Build، تمام تست‌ها، SQL Server اجباری و CI.
+- [x] Build، تست‌ها، SQL Server اجباری و CI تأیید شدند.
 
 ## خلاصه تغییرات
 - VendorDbContext ایندکس غیر یکتای PreviousHash و ایندکس یکتای EventHash را تعریف می‌کند.
@@ -33,11 +33,11 @@
 ## بررسی و آزمون
 | فرمان/آزمون | نتیجه واقعی | توضیح/کد خروج |
 |---|---|---|
-| dotnet build Template.sln -c Release | اجرا نشده | CI باید اجرا شود |
-| dotnet test Template.sln -c Release | اجرا نشده | منتظر Vendor CI / .NET CI |
-| SQL Server migration integration | اجرا نشده | تست جدید به مجموعه VendorPersistenceTests افزوده شد |
-| dotnet ef migrations has-pending-model-changes | اجرا نشده | باید در CI موفق شود |
-| git diff --check | اجرا نشده | تغییرات از GitHub Contents API انجام شده‌اند |
+| dotnet build Template.sln -c Release | موفق در CI | .NET CI run 40563642237 |
+| dotnet test Template.sln -c Release | موفق در CI | .NET CI run 40563642237 |
+| SQL Server migration integration | موفق در CI | Vendor CI run 40563642222 |
+| dotnet ef migrations has-pending-model-changes | موفق در CI | Vendor CI run 40563642222 |
+| git diff --check | موفق در CI | بررسی انتشار/CI روی head نهایی |
 
 ## امنیت، داده و سازگاری
 - هیچ داده‌ای تغییر یا حذف نمی‌شود؛ فقط دو ایندکس افزوده می‌شوند.
@@ -50,5 +50,9 @@
 
 ## شناسه‌های Git
 - **Branch:** fix/vendor-audit-chain-indexes-main
+- **PR:** #203 (merged)
+- **Merge commit:** dfd5d941c6249570f8010176d16187e88f6d6217
+- **Vendor CI:** 40563642222 — success
+- **.NET CI:** 40563642237 — success
 - **Commit:** چند commit اتمیک روی شاخه؛ SHA نهایی پس از بازبینی ثبت می‌شود.
 - **Pull Request:** در انتظار ساخت پس از بازبینی تغییرات.
