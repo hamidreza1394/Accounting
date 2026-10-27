@@ -43,6 +43,16 @@ describe('ManagedSelect', () => {
     expect(screen.getByRole('combobox', { name: 'نوع شرکت' })).toBeDisabled();
   });
 
+  it('keeps an optional empty-value choice enabled when other options are available', () => {
+    render(<ManagedSelect label="قرارداد مرتبط" options={[{ value: '', label: 'بدون قرارداد' }, { value: 'contract-1', label: 'CTR-001' }]} />);
+
+    const select = screen.getByRole('combobox', { name: 'قرارداد مرتبط' });
+    expect(select).toBeEnabled();
+    expect(select).toHaveValue('');
+    expect(screen.getByRole('option', { name: 'بدون قرارداد' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'CTR-001' })).toBeInTheDocument();
+  });
+
   it('uses a valid explicit default and reports subsequent selections', () => {
     const onValueChange = vi.fn();
     render(
