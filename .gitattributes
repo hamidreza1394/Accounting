@@ -61,3 +61,6 @@
 #*.PDF   diff=astextplain
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
+
+# Vendored third-party skill (kept byte-identical to upstream; see docs/THIRD_PARTY_SKILLS.md).
+.claude/skills/ui-ux-pro-max/** whitespace=-trailing-space
