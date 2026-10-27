@@ -686,3 +686,12 @@
 - **تراکنش:** تعارض رخ‌داده پس از شروع تراکنش پیش از ثبت ممیزی برمی‌گردد؛ با خروج از scope تراکنش ناتمام rollback می‌شود. ممیزی برای عملیات ناموفق ثبت نمی‌شود.
 - **آزمون:** CI این شاخه باید compile/test/publish را تأیید کند. آزمون اختصاصی رقابت دو درخواست روی SQL Server هنوز باید اضافه شود؛ این تغییر ادعای پوشش race واقعی در تست را ندارد.
 - **Issue:** #174؛ **Branch:** `fix/vendor-unique-conflict-races`.
+
+
+## 2026-10-27 — Vendor business HTTP authorization regression coverage (Issue #176)
+
+- **Scope:** add production-host HTTP regression tests for the authentication boundary on customer, installation, contract, and license collection/read and mutation endpoints.
+- **Implementation:** `tests/Vendor.Host.Tests/VendorBusinessMutationAuthorizationIntegrationTests.cs` sends anonymous GET/PUT/status requests through `WebApplicationFactory<Program>` and asserts HTTP 401. This verifies that the real host's authorization middleware protects the business endpoints; it does not replace the production authorization handlers.
+- **Explicit limitation:** this is an initial slice of Issue #176, not its full acceptance. It does not yet test authenticated permissions, anti-forgery validation, SQL Server persistence, rowversion conflicts, audit rollback, cross-resource validation, or concurrent unique-key races.
+- **Validation:** no local .NET execution was available in this connector-only workflow. CI must validate compilation and execution. Do not treat this commit as full integration coverage or production-readiness evidence.
+- **Isolation:** tests use the real Vendor host but anonymous requests should be rejected by authorization before business handlers execute. No database is seeded or mutated by these tests; no customer accounting database is involved.
