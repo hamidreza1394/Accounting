@@ -1,10 +1,6 @@
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Faranou.Vendor.Persistence.Migrations;
-
-[DbContext(typeof(VendorDbContext))]
-[Migration("20261027190000_VendorAuditChainIndexes")]
 public partial class VendorAuditChainIndexes : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
