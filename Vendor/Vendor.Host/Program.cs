@@ -229,6 +229,7 @@ builder.Services.Configure<IdentityPasskeyOptions>(options =>
 builder.Services.AddScoped<IAuthorizationHandler, VendorAdminAccessHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, VendorPermissionAuthorizationHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, VendorResourcePermissionAuthorizationHandler>();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, VendorPermissionPolicyProvider>();
 builder.Services.AddSingleton<IVendorResourceAccessEvaluator, DenyAllVendorResourceAccessEvaluator>();
 builder.Services.AddAuthorization(VendorAuthorizationPolicies.Configure);
