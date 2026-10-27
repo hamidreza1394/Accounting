@@ -37,14 +37,13 @@ export function CustomerForm({ initial, onCancel, onSaved }: CustomerFormProps) 
   const [displayName, setDisplayName] = useState(initial?.displayName ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
     setBusy(true);
     setError('');
-    setNotice('');
+    let saved = false;
     try {
       const tokenResponse = await fetch('/api/auth/antiforgery', {
         credentials: 'same-origin',
@@ -78,13 +77,13 @@ export function CustomerForm({ initial, onCancel, onSaved }: CustomerFormProps) 
         throw new Error(errorMessage(response.status, code));
       }
 
-      setNotice(editing ? 'اطلاعات مشتری با موفقیت به‌روزرسانی شد.' : 'مشتری تجاری با موفقیت ثبت شد.');
-      onSaved();
+      saved = true;
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'ذخیره اطلاعات ناموفق بود.');
     } finally {
       setBusy(false);
     }
+    if (saved) onSaved();
   }
 
   return <Card aria-labelledby="customer-form-title" dir="rtl">
@@ -115,7 +114,6 @@ export function CustomerForm({ initial, onCancel, onSaved }: CustomerFormProps) 
           </div>
         </div>
         {error && <p role="alert" className="text-sm leading-6 text-destructive">{error}</p>}
-        {notice && <p role="status" className="text-sm leading-6 text-muted-foreground">{notice}</p>}
         <div className="flex flex-wrap gap-2">
           <Button type="submit" disabled={busy || !customerNumber.trim() || !legalName.trim() || !displayName.trim()}>
             {busy ? 'در حال ذخیره…' : editing ? 'ذخیره تغییرات' : 'ثبت مشتری'}
