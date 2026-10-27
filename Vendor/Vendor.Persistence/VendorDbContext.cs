@@ -142,6 +142,8 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
             entity.HasIndex(auditEvent => auditEvent.OccurredAtUtc);
             entity.HasIndex(auditEvent => auditEvent.ActorUserId);
             entity.HasIndex(auditEvent => auditEvent.ActionCode);
+            entity.HasIndex(auditEvent => auditEvent.PreviousHash);
+            entity.HasIndex(auditEvent => auditEvent.EventHash).IsUnique();
             entity.Property(auditEvent => auditEvent.OccurredAtUtc)
                 .HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
         });
