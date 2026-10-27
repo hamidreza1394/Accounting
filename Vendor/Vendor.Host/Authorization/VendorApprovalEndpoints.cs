@@ -32,13 +32,19 @@ public static class VendorApprovalEndpoints
             if (status is not null) query = query.Where(item => item.Status == status);
             query = query.OrderByDescending(item => item.RequestedAtUtc).ThenBy(item => item.Id);
             var totalCount = await query.CountAsync(ct);
-            var items = await query.Skip(paging.Skip).Take(paging.PageSize)
-                .Select(item => new VendorApprovalResponse(
+            var rows = await query.Skip(paging.Skip).Take(paging.PageSize)
+                .Select(item => new
+                {
                     item.Id, item.ResourceType, item.ResourceId, item.TargetStatus,
                     item.RequestedByUserId, item.RequestedAtUtc, item.Status,
-                    item.ReviewedByUserId, item.ReviewedAtUtc, item.ReviewComment,
-                    Convert.ToBase64String(item.RowVersion)))
+                    item.ReviewedByUserId, item.ReviewedAtUtc, item.ReviewComment, item.RowVersion
+                })
                 .ToListAsync(ct);
+            var items = rows.Select(item => new VendorApprovalResponse(
+                item.Id, item.ResourceType, item.ResourceId, item.TargetStatus,
+                item.RequestedByUserId, item.RequestedAtUtc, item.Status,
+                item.ReviewedByUserId, item.ReviewedAtUtc, item.ReviewComment,
+                Convert.ToBase64String(item.RowVersion))).ToArray();
             return Results.Ok(new VendorPageResponse<VendorApprovalResponse>(
                 items, paging.Page, paging.PageSize, totalCount));
         }).RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.ApprovalsRead));
