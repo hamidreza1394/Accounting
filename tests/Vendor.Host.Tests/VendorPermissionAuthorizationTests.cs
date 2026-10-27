@@ -158,6 +158,25 @@ public sealed class VendorPermissionAuthorizationTests
     }
 
     [Fact]
+    public async Task ResourcePolicyCombinesMfaPermissionAndResourceBoundaryRequirements()
+    {
+        var provider = new VendorPermissionPolicyProvider(Options.Create(new AuthorizationOptions()));
+
+        var policy = await provider.GetPolicyAsync(
+            VendorResourceCatalog.PolicyFor("license", VendorPermissionCatalog.LicensesIssue));
+
+        Assert.NotNull(policy);
+        Assert.Contains(policy!.Requirements, requirement => requirement is VendorAdminAccessRequirement);
+        Assert.Contains(policy.Requirements, requirement =>
+            requirement is VendorPermissionRequirement permission &&
+            permission.Permission == VendorPermissionCatalog.LicensesIssue);
+        Assert.Contains(policy.Requirements, requirement =>
+            requirement is VendorResourcePermissionRequirement resource &&
+            resource.ResourceType == "license" &&
+            resource.Permission == VendorPermissionCatalog.LicensesIssue);
+    }
+
+    [Fact]
     public void ResourceCatalogAllowsOnlyKnownResourceAndPermissionPairs()
     {
         Assert.True(VendorResourceCatalog.Supports("customer", VendorPermissionCatalog.CustomersRead));
