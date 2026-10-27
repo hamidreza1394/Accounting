@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Faranou.Vendor.Persistence.Migrations;
 
-public sealed partial class VendorBusinessDomain : Migration
+public partial class VendorBusinessDomain : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
