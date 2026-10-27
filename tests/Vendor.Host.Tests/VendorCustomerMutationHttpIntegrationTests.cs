@@ -61,9 +61,18 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 var role = new IdentityRole<Guid>("customer-mutation-test") { Id = Guid.NewGuid() };
                 var roleResult = await roles.CreateAsync(role);
                 Assert.True(roleResult.Succeeded, string.Join("; ", roleResult.Errors.Select(error => error.Code)));
-                var permissionResult = await roles.AddClaimAsync(role, new Claim(
-                    VendorPermissionCatalog.ClaimType, VendorPermissionCatalog.CustomersManage));
-                Assert.True(permissionResult.Succeeded, string.Join("; ", permissionResult.Errors.Select(error => error.Code)));
+                foreach (var permission in new[]
+                {
+                    VendorPermissionCatalog.CustomersManage,
+                    VendorPermissionCatalog.InstallationsManage,
+                    VendorPermissionCatalog.ContractsManage,
+                    VendorPermissionCatalog.LicensesManage
+                })
+                {
+                    var permissionResult = await roles.AddClaimAsync(role,
+                        new Claim(VendorPermissionCatalog.ClaimType, permission));
+                    Assert.True(permissionResult.Succeeded, string.Join("; ", permissionResult.Errors.Select(error => error.Code)));
+                }
 
                 var user = new VendorAdminUser
                 {
@@ -93,10 +102,68 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     CreatedAtUtc = DateTimeOffset.UtcNow,
                     UpdatedAtUtc = DateTimeOffset.UtcNow
                 };
-                db.Customers.Add(customer);
+                var otherCustomer = new VendorCustomer
+                {
+                    Id = Guid.NewGuid(),
+                    CustomerNumber = "OTHER-" + Guid.NewGuid().ToString("N")[..16],
+                    LegalName = "Other Integration Customer",
+                    DisplayName = "Other Customer",
+                    Status = "Active",
+                    CreatedAtUtc = DateTimeOffset.UtcNow,
+                    UpdatedAtUtc = DateTimeOffset.UtcNow
+                };
+                db.Customers.AddRange(customer, otherCustomer);
                 await db.SaveChangesAsync(cancellationToken);
-                // Read the server-generated SQL Server rowversion after insert.
+
+                var installation = new VendorInstallation
+                {
+                    Id = Guid.NewGuid(), CustomerId = customer.Id,
+                    InstallationCode = "IT-INST-" + Guid.NewGuid().ToString("N")[..12],
+                    Name = "Before Installation Update", Environment = "Production",
+                    Status = "Active", CreatedAtUtc = DateTimeOffset.UtcNow
+                };
+                var otherInstallation = new VendorInstallation
+                {
+                    Id = Guid.NewGuid(), CustomerId = otherCustomer.Id,
+                    InstallationCode = "OTHER-INST-" + Guid.NewGuid().ToString("N")[..12],
+                    Name = "Other Installation", Environment = "Staging",
+                    Status = "Active", CreatedAtUtc = DateTimeOffset.UtcNow
+                };
+                var contract = new VendorContract
+                {
+                    Id = Guid.NewGuid(), CustomerId = customer.Id,
+                    ContractNumber = "IT-CON-" + Guid.NewGuid().ToString("N")[..12],
+                    Status = "Draft", StartsAtUtc = DateTimeOffset.UtcNow.AddDays(-1),
+                    CurrencyCode = "EUR", CreatedAtUtc = DateTimeOffset.UtcNow
+                };
+                var otherContract = new VendorContract
+                {
+                    Id = Guid.NewGuid(), CustomerId = otherCustomer.Id,
+                    ContractNumber = "OTHER-CON-" + Guid.NewGuid().ToString("N")[..12],
+                    Status = "Draft", StartsAtUtc = DateTimeOffset.UtcNow.AddDays(-1),
+                    CurrencyCode = "EUR", CreatedAtUtc = DateTimeOffset.UtcNow
+                };
+                db.Installations.AddRange(installation, otherInstallation);
+                db.Contracts.AddRange(contract, otherContract);
+                await db.SaveChangesAsync(cancellationToken);
+
+                var license = new VendorLicense
+                {
+                    Id = Guid.NewGuid(), CustomerId = customer.Id,
+                    ContractId = contract.Id, InstallationId = installation.Id,
+                    LicenseNumber = "IT-LIC-" + Guid.NewGuid().ToString("N")[..12],
+                    ProductCode = "FARANOU-BASE", Status = "Draft",
+                    ValidFromUtc = DateTimeOffset.UtcNow.AddDays(-1),
+                    CreatedAtUtc = DateTimeOffset.UtcNow
+                };
+                db.Licenses.Add(license);
+                await db.SaveChangesAsync(cancellationToken);
+
+                // Read server-generated SQL Server rowversions after inserts.
                 await db.Entry(customer).ReloadAsync(cancellationToken);
+                await db.Entry(installation).ReloadAsync(cancellationToken);
+                await db.Entry(contract).ReloadAsync(cancellationToken);
+                await db.Entry(license).ReloadAsync(cancellationToken);
             }
 
             using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
@@ -115,15 +182,13 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.True(passwordJson.RootElement.GetProperty("requiresSecondFactor").GetBoolean());
             }
 
-            string testUserName;
             string authenticatorKey;
             await using (var scope = factory.Services.CreateAsyncScope())
             {
                 var users = scope.ServiceProvider.GetRequiredService<UserManager<VendorAdminUser>>();
                 var user = await users.FindByNameAsync(await GetTestUserNameAsync(factory, cancellationToken));
                 Assert.NotNull(user);
-                testUserName = user!.UserName!;
-                authenticatorKey = (await users.GetAuthenticatorKeyAsync(user))!;
+                authenticatorKey = (await users.GetAuthenticatorKeyAsync(user!))!;
             }
 
             using (var verifyResponse = await PostWithTokenAsync(client, "/api/auth/totp/verify",
@@ -224,6 +289,148 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal(1, await db.AuditEvents.CountAsync(item =>
                     item.ActionCode == "vendor.customer.updated" && item.SubjectId == customerId.ToString("D"), cancellationToken));
             }
+
+            // Installation update: real HTTP, current RowVersion succeeds, replay is rejected.
+            Guid installationId;
+            byte[] installationRowVersion;
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var installation = await db.Installations.SingleAsync(item => item.InstallationCode.StartsWith("IT-INST-"), cancellationToken);
+                installationId = installation.Id;
+                installationRowVersion = installation.RowVersion.ToArray();
+            }
+            var installationPath = $"/api/vendor/installations/{installationId:D}";
+            var installationBody = new
+            {
+                installationCode = "IT-INST-UPDATED-" + installationId.ToString("N")[..8],
+                name = "After Installation Update",
+                environment = "Staging",
+                rowVersion = Convert.ToBase64String(installationRowVersion)
+            };
+            using (var response = await SendPutAsync(client, installationPath, installationBody, antiForgeryToken, cancellationToken))
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            using (var response = await SendPutAsync(client, installationPath, installationBody, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("stale_row_version", json.RootElement.GetProperty("error").GetString());
+            }
+
+            // Contract update is allowed while Draft and enforces RowVersion on replay.
+            Guid contractId;
+            byte[] contractRowVersion;
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var contract = await db.Contracts.SingleAsync(item => item.ContractNumber.StartsWith("IT-CON-"), cancellationToken);
+                contractId = contract.Id;
+                contractRowVersion = contract.RowVersion.ToArray();
+            }
+            var contractPath = $"/api/vendor/contracts/{contractId:D}";
+            var contractBody = new
+            {
+                contractNumber = "IT-CON-UPDATED-" + contractId.ToString("N")[..8],
+                startsAtUtc = DateTimeOffset.UtcNow.AddDays(-2),
+                endsAtUtc = (DateTimeOffset?)DateTimeOffset.UtcNow.AddDays(365),
+                currencyCode = "EUR",
+                rowVersion = Convert.ToBase64String(contractRowVersion)
+            };
+            using (var response = await SendPutAsync(client, contractPath, contractBody, antiForgeryToken, cancellationToken))
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            using (var response = await SendPutAsync(client, contractPath, contractBody, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("stale_row_version", json.RootElement.GetProperty("error").GetString());
+            }
+
+            // License update must reject contract/installation references owned by another customer.
+            Guid licenseId;
+            byte[] licenseRowVersion;
+            Guid otherContractId;
+            Guid otherInstallationId;
+            Guid validContractId;
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var license = await db.Licenses.SingleAsync(item => item.LicenseNumber.StartsWith("IT-LIC-"), cancellationToken);
+                licenseId = license.Id;
+                licenseRowVersion = license.RowVersion.ToArray();
+                otherContractId = await db.Contracts.Where(item => item.ContractNumber.StartsWith("OTHER-CON-"))
+                    .Select(item => item.Id).SingleAsync(cancellationToken);
+                otherInstallationId = await db.Installations.Where(item => item.InstallationCode.StartsWith("OTHER-INST-"))
+                    .Select(item => item.Id).SingleAsync(cancellationToken);
+                validContractId = await db.Contracts.Where(item => item.ContractNumber.StartsWith("IT-CON-"))
+                    .Select(item => item.Id).SingleAsync(cancellationToken);
+            }
+            var licensePath = $"/api/vendor/licenses/{licenseId:D}";
+            var licenseBody = new
+            {
+                contractId = (Guid?)otherContractId,
+                installationId = (Guid?)otherInstallationId,
+                licenseNumber = "IT-LIC-UPDATED-" + licenseId.ToString("N")[..8],
+                productCode = "FARANOU-PRO",
+                validFromUtc = DateTimeOffset.UtcNow.AddDays(-1),
+                validUntilUtc = (DateTimeOffset?)DateTimeOffset.UtcNow.AddDays(365),
+                rowVersion = Convert.ToBase64String(licenseRowVersion)
+            };
+            using (var response = await SendPutAsync(client, licensePath, licenseBody, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("contract_customer_mismatch", json.RootElement.GetProperty("error").GetString());
+            }
+
+            // A valid contract does not make a foreign installation acceptable.
+            var wrongInstallationLicenseBody = new
+            {
+                contractId = (Guid?)validContractId,
+                installationId = (Guid?)otherInstallationId,
+                licenseNumber = licenseBody.licenseNumber,
+                productCode = licenseBody.productCode,
+                validFromUtc = licenseBody.validFromUtc,
+                validUntilUtc = licenseBody.validUntilUtc,
+                rowVersion = Convert.ToBase64String(licenseRowVersion)
+            };
+            using (var response = await SendPutAsync(client, licensePath, wrongInstallationLicenseBody, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("installation_customer_mismatch", json.RootElement.GetProperty("error").GetString());
+            }
+
+            // Correct the relationships and prove the update succeeds, then reject replay of the old version.
+            var validInstallationId = installationId;
+            var validLicenseBody = new
+            {
+                contractId = (Guid?)validContractId,
+                installationId = (Guid?)validInstallationId,
+                licenseNumber = licenseBody.licenseNumber,
+                productCode = licenseBody.productCode,
+                validFromUtc = licenseBody.validFromUtc,
+                validUntilUtc = licenseBody.validUntilUtc,
+                rowVersion = Convert.ToBase64String(licenseRowVersion)
+            };
+            using (var response = await SendPutAsync(client, licensePath, validLicenseBody, antiForgeryToken, cancellationToken))
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            using (var response = await SendPutAsync(client, licensePath, validLicenseBody, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("stale_row_version", json.RootElement.GetProperty("error").GetString());
+            }
+
+            await using (var auditScope = factory.Services.CreateAsyncScope())
+            {
+                var db = auditScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                Assert.Equal(1, await db.AuditEvents.CountAsync(item =>
+                    item.ActionCode == "vendor.installation.updated" && item.SubjectId == installationId.ToString("D"), cancellationToken));
+                Assert.Equal(1, await db.AuditEvents.CountAsync(item =>
+                    item.ActionCode == "vendor.contract.updated" && item.SubjectId == contractId.ToString("D"), cancellationToken));
+                Assert.Equal(1, await db.AuditEvents.CountAsync(item =>
+                    item.ActionCode == "vendor.license.metadata-updated" && item.SubjectId == licenseId.ToString("D"), cancellationToken));
+            }
         }
         finally
         {
@@ -255,6 +462,14 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
         HttpClient client, string path, object body, string token, CancellationToken ct)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, path) { Content = JsonContent.Create(body) };
+        request.Headers.TryAddWithoutValidation("X-CSRF-TOKEN", token);
+        return await client.SendAsync(request, ct);
+    }
+
+    private static async Task<HttpResponseMessage> SendPutAsync(
+        HttpClient client, string path, object body, string token, CancellationToken ct)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Put, path) { Content = JsonContent.Create(body) };
         request.Headers.TryAddWithoutValidation("X-CSRF-TOKEN", token);
         return await client.SendAsync(request, ct);
     }

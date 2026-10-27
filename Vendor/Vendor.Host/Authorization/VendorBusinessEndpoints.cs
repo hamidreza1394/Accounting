@@ -238,6 +238,10 @@ public static class VendorBusinessEndpoints
             if (!access.Succeeded) return Results.Forbid();
             var item = await db.Customers.SingleOrDefaultAsync(value => value.Id == id, ct);
             if (item is null) return Results.NotFound();
+            // Reject stale tokens even when submitted values match current values.
+            // EF Core may skip UPDATE for no-op changes, bypassing SQL rowversion concurrency checks.
+            if (!item.RowVersion.AsSpan().SequenceEqual(expectedVersion))
+                return Results.Conflict(new { error = "stale_row_version" });
             var number = request.CustomerNumber?.Trim();
             var legalName = request.LegalName?.Trim();
             var displayName = request.DisplayName?.Trim();
@@ -289,6 +293,10 @@ public static class VendorBusinessEndpoints
             if (!access.Succeeded) return Results.Forbid();
             var item = await db.Customers.SingleOrDefaultAsync(value => value.Id == id, ct);
             if (item is null) return Results.NotFound();
+            // Reject stale tokens even when submitted values match current values.
+            // EF Core may skip UPDATE for no-op changes, bypassing SQL rowversion concurrency checks.
+            if (!item.RowVersion.AsSpan().SequenceEqual(expectedVersion))
+                return Results.Conflict(new { error = "stale_row_version" });
             if (!VendorBusinessMutationRules.IsOperationalStatusTransitionAllowed(item.Status, request.Status))
                 return Results.Conflict(new { error = "invalid_status_transition" });
             var actor = await users.GetUserAsync(context.User);
@@ -323,6 +331,10 @@ public static class VendorBusinessEndpoints
             if (!access.Succeeded) return Results.Forbid();
             var item = await db.Installations.SingleOrDefaultAsync(value => value.Id == id, ct);
             if (item is null) return Results.NotFound();
+            // Reject stale tokens even when submitted values match current values.
+            // EF Core may skip UPDATE for no-op changes, bypassing SQL rowversion concurrency checks.
+            if (!item.RowVersion.AsSpan().SequenceEqual(expectedVersion))
+                return Results.Conflict(new { error = "stale_row_version" });
             var code = request.InstallationCode?.Trim();
             var name = request.Name?.Trim();
             var environment = request.Environment?.Trim();
@@ -365,6 +377,10 @@ public static class VendorBusinessEndpoints
             if (!access.Succeeded) return Results.Forbid();
             var item = await db.Installations.SingleOrDefaultAsync(value => value.Id == id, ct);
             if (item is null) return Results.NotFound();
+            // Reject stale tokens even when submitted values match current values.
+            // EF Core may skip UPDATE for no-op changes, bypassing SQL rowversion concurrency checks.
+            if (!item.RowVersion.AsSpan().SequenceEqual(expectedVersion))
+                return Results.Conflict(new { error = "stale_row_version" });
             if (!VendorBusinessMutationRules.IsOperationalStatusTransitionAllowed(item.Status, request.Status))
                 return Results.Conflict(new { error = "invalid_status_transition" });
             var actor = await users.GetUserAsync(context.User);
@@ -398,6 +414,10 @@ public static class VendorBusinessEndpoints
             if (!access.Succeeded) return Results.Forbid();
             var item = await db.Contracts.SingleOrDefaultAsync(value => value.Id == id, ct);
             if (item is null) return Results.NotFound();
+            // Reject stale tokens even when submitted values match current values.
+            // EF Core may skip UPDATE for no-op changes, bypassing SQL rowversion concurrency checks.
+            if (!item.RowVersion.AsSpan().SequenceEqual(expectedVersion))
+                return Results.Conflict(new { error = "stale_row_version" });
             if (!VendorBusinessMutationRules.IsDraft(item.Status))
                 return Results.Conflict(new { error = "contract_not_editable_after_draft" });
             var number = request.ContractNumber?.Trim();
@@ -444,6 +464,10 @@ public static class VendorBusinessEndpoints
             if (!access.Succeeded) return Results.Forbid();
             var item = await db.Licenses.SingleOrDefaultAsync(value => value.Id == id, ct);
             if (item is null) return Results.NotFound();
+            // Reject stale tokens even when submitted values match current values.
+            // EF Core may skip UPDATE for no-op changes, bypassing SQL rowversion concurrency checks.
+            if (!item.RowVersion.AsSpan().SequenceEqual(expectedVersion))
+                return Results.Conflict(new { error = "stale_row_version" });
             if (!VendorBusinessMutationRules.IsDraft(item.Status))
                 return Results.Conflict(new { error = "license_not_editable_after_draft" });
             var number = request.LicenseNumber?.Trim();
