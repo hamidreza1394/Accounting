@@ -228,6 +228,11 @@ public static partial class VendorRoleManagementEndpoints
                 return Results.NotFound();
             }
 
+            if (string.IsNullOrWhiteSpace(role.Name))
+            {
+                return Results.Conflict(new { error = "role_is_invalid" });
+            }
+
             if (string.Equals(role.Name, BootstrapSuperAdminRole, StringComparison.OrdinalIgnoreCase))
             {
                 return Results.Conflict(new { error = "bootstrap_super_admin_role_is_immutable" });
@@ -278,6 +283,11 @@ public static partial class VendorRoleManagementEndpoints
             if (user is null || role is null)
             {
                 return Results.NotFound();
+            }
+
+            if (string.IsNullOrWhiteSpace(role.Name))
+            {
+                return Results.Conflict(new { error = "role_is_invalid" });
             }
 
             if (!user.IsEnabled || string.Equals(role.Name, BootstrapSuperAdminRole, StringComparison.OrdinalIgnoreCase))
