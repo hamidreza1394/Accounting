@@ -103,9 +103,9 @@ public sealed class VendorBootstrapIntegrationTests
                 Assert.NotNull(superAdminRole);
                 var permissions = await roleManager.GetClaimsAsync(superAdminRole!);
                 Assert.Equal(
-                    VendorPermissionCatalog.All.Order(StringComparer.Ordinal),
+                    VendorPermissionCatalog.All.Order(StringComparer.Ordinal).ToArray(),
                     permissions.Where(claim => claim.Type == VendorPermissionCatalog.ClaimType)
-                        .Select(claim => claim.Value).Order(StringComparer.Ordinal));
+                        .Select(claim => claim.Value).Order(StringComparer.Ordinal).ToArray());
 
                 var audit = await VendorAuditChainVerifier.VerifyAsync(db, TestContext.Current.CancellationToken);
                 Assert.True(audit.IsValid, audit.FailureCode);
