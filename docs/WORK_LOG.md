@@ -846,3 +846,11 @@
 - **باقی‌مانده:** نصب Kendo (در صورت تأیید) کار جدا با پایلوت و اندازه‌گیری باندل است؛ RTL/فارسی Kendo تأیید نشده. جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-ui-component-standards.md`.
 
 - **اصلاح (2026-10-27، همان روز):** عبارت «RTL Kendo تأیید نشد» در D-050 و `docs/UI_COMPONENTS.md` اصلاح شد: RTL عمومی و WCAG 2.2 AA گرید طبق مستندات رسمی Telerik تأیید شد؛ ارقام فارسی و تقویم شمسی همچنان تأیید نشده‌اند. build/test اجرا نشد (فقط مستندات).
+
+
+## 2026-10-27 — افزودن مهارت ui-ux-pro-max برای کیفیت فرم‌ها
+- **دامنه:** مهارت/مستندات، شاخهٔ `docs/ui-ux-pro-max-skill` (روی شاخهٔ PR #199)؛ بدون تغییر کد برنامه، وابستگی runtime یا Migration. Issue: `UNNUMBERED`.
+- **تغییر:** کپی خام `.claude/skills/ui-ux-pro-max` از upstream کامیت `28b3b8dee8c976df4fa3e94aed4e092ad43fcb03` (MIT) بدون `scripts/tests/`؛ بند تقدم فرانو در `SKILL.md`؛ مجوز در `third_party/`؛ ثبت منشأ و بررسی در `docs/THIRD_PARTY_SKILLS.md`؛ راهنمای استفاده در `docs/UI_COMPONENTS.md` و ارجاع از `AGENTS.md`، `CLAUDE.md`، `docs/INDEX.md`.
+- **عمداً کپی نشد:** CLI، افزونه و مهارت‌های `design`، `brand`، `slides`، `banner-design`، `ui-styling`، `design-system` (API بیرونی با کلید و CDN).
+- **اعتبارسنجی:** مقایسهٔ بایتی با upstream، اجرای واقعی `search.py` (ux، shadcn، chart)، `check_static_assets.py` و `git diff --check` موفق؛ build/test اجرا نشد؛ CI ندیده شده.
+- **باقی‌مانده:** سنجش فایدهٔ واقعی روی یک فرم؛ در صورت لزوم کاهش حجم داده؛ جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-ui-ux-pro-max-skill.md`.
