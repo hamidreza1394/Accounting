@@ -599,3 +599,13 @@
 - **حفاظت‌های حفظ‌شده:** Anti-forgery، rate limiting و no-store دست‌نخورده‌اند. هیچ دیتابیس یا Migration مشتری تغییر نکرده است.
 - **اعتبارسنجی:** تغییر از طریق GitHub API در commit 9b4ea03e45afc2de1af88293abf3ad998b02e565 ثبت شد. Build/Test محلی اجرا نشد؛ آزمون HTTP رگرسیون و اجرای CI هنوز باقی است. بنابراین این تغییر Implemented / Not Verified است و هنوز آماده ادغام نهایی محسوب نمی‌شود.
 - **Handoff:** docs/handoffs/ISSUE-152-passkey-options-enumeration.md؛ شاخه fix/issue-152-passkey-options-enumeration.
+
+
+## 2026-10-26 — کتابخانه مشترک مهارت‌های Agent برای فرانو و Vendor
+- **هدف:** قراردادن VoltAgent Awesome Agent Skills به‌عنوان کتابخانه اصلی کشف مهارت‌ها و ایجاد دستورالعمل مشترک قابل کشف برای عامل‌هایی که مخزن را می‌خوانند.
+- **منبع اصلی بررسی‌شده:** https://github.com/VoltAgent/awesome-agent-skills ؛ فایل‌های رسمی OpenAI برای aspnet-core، security-best-practices و security-threat-model نیز از مخزن OpenAI باز شد و راهبردهای انتخاب مرحله‌ای مهارت، بررسی منبع و تهدیدمدل‌سازی به دستورالعمل عملیاتی منتقل شد.
+- **افزوده‌ها:** docs/AGENT_SKILL_LIBRARY.md؛ مهارت مشترک در .agents/skills/faranou-engineering/SKILL.md، .claude/skills/faranou-engineering/SKILL.md، .github/skills/faranou-engineering/SKILL.md و .cursor/skills/faranou-engineering/SKILL.md؛ ارجاع در AGENTS.md و CLAUDE.md؛ دستورالعمل‌های GitHub Copilot و Cursor؛ لینک در docs/INDEX.md.
+- **قواعد ثبت‌شده:** انتخاب مهارت بر اساس نوع کار؛ بررسی امنیتی diff و تاریخچه؛ عدم ادعای نصب/اجرا بدون شاهد؛ فارسی بودن Issue/PR/Work Log؛ عدم تغییر Migration مشتری بدون دلیل و تأیید؛ ثبت دقیق Build/Test/CI واقعی؛ عدم اعتماد کورکورانه به Skillهای ثالث.
+- **محدودیت مهم:** فایل‌های راهنمای این مخزن فقط برای عامل‌هایی قابل استفاده‌اند که مخزن و فایل‌های دستورالعمل را بخوانند. نمی‌توان از این تغییر تضمین کرد تمام مدل‌های متصل یا سرویس‌های خارجی به‌طور خودکار مهارت‌ها را بارگیری می‌کنند؛ تنظیم هر ابزار/اتصال جداگانه لازم است.
+- **اعتبارسنجی:** فایل‌ها از طریق GitHub API ثبت شده‌اند. Build و تست نرم‌افزار لازم نیستند چون تغییرات صرفاً دستورالعمل/مستندات‌اند؛ هنوز بررسی diff نهایی و CI PR باید انجام شود.
+- **شاخه:** chore/shared-agent-skill-library.
