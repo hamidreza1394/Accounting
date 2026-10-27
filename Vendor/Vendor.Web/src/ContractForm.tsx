@@ -33,6 +33,18 @@ type PageResponse<T> = {
 };
 type ApiError = { error?: string; message?: string };
 
+const currencies: SelectOption[] = [
+  { value: 'IRR', label: 'ریال ایران (IRR)' },
+  { value: 'USD', label: 'دلار آمریکا (USD)' },
+  { value: 'EUR', label: 'یورو (EUR)' },
+  { value: 'AED', label: 'درهم امارات (AED)' },
+];
+
+function currencyOptionsFor(currentCode?: string): SelectOption[] {
+  if (!currentCode || currencies.some(option => option.value === currentCode)) return currencies;
+  return [{ value: currentCode, label: `ارز فعلی ثبت‌شده (${currentCode})` }, ...currencies];
+}
+
 function todayUtcDate() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -205,12 +217,9 @@ export function ContractForm({ initial, canReadCustomers, onCancel, onSaved }: C
               className="h-10 w-full rounded-md border border-input bg-background px-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
               value={contractNumber} onChange={event => setContractNumber(event.target.value)} disabled={busy} />
           </div>
-          <div className="space-y-2">
-            <label htmlFor="contract-currency" className="text-sm font-medium">کد ارز (سه حرف)</label>
-            <input id="contract-currency" required maxLength={3} minLength={3} autoComplete="off" dir="ltr"
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-left uppercase outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-              value={currencyCode} onChange={event => setCurrencyCode(event.target.value.toUpperCase())} disabled={busy} />
-          </div>
+          <ManagedSelect label="ارز قرارداد" name="contract-currency"
+            options={currencyOptionsFor(initial?.currencyCode)} value={currencyCode}
+            onValueChange={setCurrencyCode} required disabled={busy} />
           <div className="space-y-2">
             <label htmlFor="contract-starts" className="text-sm font-medium">تاریخ شروع</label>
             <input id="contract-starts" type="date" required
