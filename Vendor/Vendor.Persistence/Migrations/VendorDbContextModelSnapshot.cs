@@ -417,7 +417,7 @@ namespace Faranou.Vendor.Persistence.Migrations
                 });
             modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorCustomer", b =>
                 {
-                    b.Property<Guid>("Id").HasColumnType("uniqueidentifier");
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
                     b.Property<string>("CustomerNumber").IsRequired().HasMaxLength(32).HasColumnType("nvarchar(32)");
                     b.Property<string>("LegalName").IsRequired().HasMaxLength(200).HasColumnType("nvarchar(200)");
                     b.Property<string>("DisplayName").IsRequired().HasMaxLength(200).HasColumnType("nvarchar(200)");
@@ -432,7 +432,7 @@ namespace Faranou.Vendor.Persistence.Migrations
 
             modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorInstallation", b =>
                 {
-                    b.Property<Guid>("Id").HasColumnType("uniqueidentifier");
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
                     b.Property<Guid>("CustomerId").HasColumnType("uniqueidentifier");
                     b.Property<string>("InstallationCode").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
                     b.Property<string>("Name").IsRequired().HasMaxLength(200).HasColumnType("nvarchar(200)");
@@ -449,7 +449,7 @@ namespace Faranou.Vendor.Persistence.Migrations
 
             modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorContract", b =>
                 {
-                    b.Property<Guid>("Id").HasColumnType("uniqueidentifier");
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
                     b.Property<Guid>("CustomerId").HasColumnType("uniqueidentifier");
                     b.Property<string>("ContractNumber").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
                     b.Property<string>("Status").IsRequired().HasMaxLength(20).HasColumnType("nvarchar(20)");
@@ -466,7 +466,7 @@ namespace Faranou.Vendor.Persistence.Migrations
 
             modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorLicense", b =>
                 {
-                    b.Property<Guid>("Id").HasColumnType("uniqueidentifier");
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
                     b.Property<Guid>("CustomerId").HasColumnType("uniqueidentifier");
                     b.Property<Guid?>("ContractId").HasColumnType("uniqueidentifier");
                     b.Property<Guid?>("InstallationId").HasColumnType("uniqueidentifier");
