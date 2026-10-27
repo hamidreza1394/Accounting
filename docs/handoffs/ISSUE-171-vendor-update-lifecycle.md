@@ -3,7 +3,7 @@
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/171
 - **Agent/مسئول:** ChatGPT / Faranou senior developer workflow
 - **تاریخ:** 2026-10-27
-- **وضعیت:** پیاده‌سازی اولیه انجام شده؛ CI و آزمون endpoint کامل هنوز تأیید نشده‌اند
+- **وضعیت:** پیاده‌سازی Issue #171 در PR #172 ادغام شده است؛ CI برای commit ادغام‌شده موفق بود. آزمون HTTP کامل و پوشش cross-resource/rollback همچنان کار تکمیلی‌اند.
 
 ## هدف و معیارهای پذیرش
 - [x] DTOهای allow-list برای ویرایش چهار منبع تجاری.
@@ -13,7 +13,7 @@
 - [x] قرارداد و لایسنس پس از خروج از Draft قابل ویرایش نیستند.
 - [x] Anti-forgery، permission policy، resource evaluator و audit در تراکنش در مسیرهای جدید.
 - [x] تست قواعد و metadata concurrency model.
-- [ ] Vendor CI و .NET CI روی HEAD این شاخه سبز شوند.
+- [x] Vendor CI و .NET CI روی commit شاخهٔ PR موفق شدند؛ Vendor CI run `40467317429` و .NET CI run `40467317576` تمام jobها از جمله `publish-windows` را با موفقیت گذراندند.
 - [ ] تست‌های endpoint HTTP و آزمون cross-resource/rollback واقعی روی SQL Server در کار تکمیلی پوشش داده شوند.
 
 ## خلاصه تغییرات
@@ -39,10 +39,10 @@
 ## بررسی و آزمون
 | فرمان/آزمون | نتیجه واقعی | توضیح |
 |---|---|---|
-| VendorBusinessMutationRulesTests | نوشته شده، اجرا نشده در این محیط | CI منتظر است |
-| VendorPersistenceTests rowversion mapping | نوشته شده، اجرا نشده در این محیط | از metadata مدل استفاده می‌کند |
-| Vendor CI | در انتظار | هنوز شاهد HEAD جدید وجود ندارد |
-| .NET CI | در انتظار | هنوز شاهد HEAD جدید وجود ندارد |
+| VendorBusinessMutationRulesTests | CI موفق | در اجرای PR #172 |
+| VendorPersistenceTests rowversion mapping | CI موفق | metadata مدل بررسی شد |
+| Vendor CI | موفق | run `40467317429` |
+| .NET CI | موفق | run `40467317576`؛ 569 تست .NET موفق، انتشار Windows/Linux و E2E نیز موفق |
 | HTTP integration / cross-resource / rollback | اجرا نشده | پوشش تکمیلی لازم است |
 
 ## امنیت، داده و سازگاری
