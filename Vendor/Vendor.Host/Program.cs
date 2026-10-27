@@ -302,6 +302,7 @@ app.MapHealthChecks("/health/live").AllowAnonymous();
 app.MapVendorAuthentication();
 app.MapVendorPasswordChange();
 app.MapVendorRoleManagement();
+app.MapVendorBusinessEndpoints();
 app.MapFallback(async context =>
 {
     var path = context.Request.Path.Value ?? "/";
