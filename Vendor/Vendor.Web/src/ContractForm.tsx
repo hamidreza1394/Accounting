@@ -103,6 +103,10 @@ export function ContractForm({ initial, canReadCustomers, onCancel, onSaved }: C
 
   useEffect(() => {
     if (!editing || !initial?.customerId) return;
+    if (!canReadCustomers) {
+      setCustomerLabel(initial.customerId);
+      return;
+    }
     let active = true;
     fetch(`/api/vendor/customers/${initial.customerId}`, {
       credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
