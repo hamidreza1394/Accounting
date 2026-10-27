@@ -133,6 +133,30 @@ public sealed class VendorPermissionAuthorizationTests
     }
 
     [Fact]
+    public void ResourceCatalogAllowsOnlyKnownResourceAndPermissionPairs()
+    {
+        Assert.True(VendorResourceCatalog.Supports("customer", VendorPermissionCatalog.CustomersRead));
+        Assert.True(VendorResourceCatalog.Supports("license", VendorPermissionCatalog.LicensesIssue));
+        Assert.False(VendorResourceCatalog.Supports("customer", VendorPermissionCatalog.LicensesIssue));
+        Assert.False(VendorResourceCatalog.Supports("tenant", VendorPermissionCatalog.CustomersRead));
+        Assert.False(VendorResourceCatalog.Supports("customer", "vendor.superuser"));
+        Assert.False(VendorResourceCatalog.Supports(null, VendorPermissionCatalog.CustomersRead));
+    }
+
+    [Fact]
+    public async Task MissingResourceAdapterDeniesAllResourceAccess()
+    {
+        var evaluator = new DenyAllVendorResourceAccessEvaluator();
+        var result = await evaluator.HasAccessAsync(
+            new System.Security.Claims.ClaimsPrincipal(),
+            new VendorResourceDescriptor("customer", Guid.NewGuid()),
+            VendorPermissionCatalog.CustomersRead,
+            CancellationToken.None);
+
+        Assert.False(result);
+    }
+
+    [Fact]
     public async Task NonPermissionPoliciesDelegateToDefaultProvider()
     {
         var options = new AuthorizationOptions();
