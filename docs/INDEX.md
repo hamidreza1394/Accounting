@@ -34,10 +34,12 @@
 | [`TESTING.md`](TESTING.md) | تست |
 | [`DEPLOYMENT.md`](DEPLOYMENT.md), [`DEVELOPMENT.md`](DEVELOPMENT.md) | استقرار و توسعه |
 | [`CODING_STANDARDS.md`](CODING_STANDARDS.md) | استانداردها |
-| [`UI_COMPONENTS.md`](UI_COMPONENTS.md) | استاندارد shadcn/ui، RTL فارسی، دسترس‌پذیری و runtime آفلاین؛ کتابخانه‌های پذیرفته‌شدهٔ جدول/نمودار/تاریخ، قانون محلی‌سازی دارایی‌ها و قواعد طراحی/سرعت/ویژوال (D-048، D-049) |
+| [`UI_COMPONENTS.md`](UI_COMPONENTS.md) | هستهٔ قواعد UI: shadcn/ui، RTL فارسی، دسترس‌پذیری، runtime آفلاین، قانون محلی‌سازی دارایی‌ها و قواعد طراحی/سرعت/ویژوال (D-048، D-049) |
+| [`UI_LIBRARIES.md`](UI_LIBRARIES.md) | مرجع کتابخانه‌ها: جدول/نمودار/تاریخ، استفادهٔ مشروط از KendoReact Free (D-050)، گزارش پیوت و راهنمای مهارت `ui-ux-pro-max`؛ هنگام انتخاب یا افزودن کتابخانه بخوان |
 | [`REPOSITORY_AUDIT.md`](REPOSITORY_AUDIT.md) | ممیزی و ناهماهنگی‌ها |
 | [`CLOUD_CONCURRENCY_READINESS.md`](CLOUD_CONCURRENCY_READINESS.md) | ممیزی آمادگی بار ابری؛ ظرفیت ۱۰۰ کاربر فعلاً تأیید نشده |
 | [`AGENT_COORDINATION.md`](AGENT_COORDINATION.md), [`AGENT_START_PROMPT.md`](AGENT_START_PROMPT.md), [`prompts/`](prompts/), [`../CLAUDE.md`](../CLAUDE.md) | هماهنگی Agentها (شامل بخش «تقسیم کار بین Subagentهای Claude Code» و «Skill، Plugin و کنترل‌های قطعی»؛ تنظیمات Claude Code در [`../.claude/settings.json`](../.claude/settings.json)) |
+| [`AGENT_REFERENCE.md`](AGENT_REFERENCE.md) | مرجع تکمیلی Claude Code منتقل‌شده از `CLAUDE.md` (بدون تغییر محتوا، 2026-10-27): جدول تیم Subagent، نحوهٔ فراخوانی، نگاشت گردش‌کار، جدول انتخاب Skill، کنترل‌های قطعی؛ فقط در صورت نیاز بخوان |
 | [`prompts/CLOUD_CONCURRENCY_IMPLEMENTATION_PROMPT.md`](prompts/CLOUD_CONCURRENCY_IMPLEMENTATION_PROMPT.md) | پرامپ اجرایی Issue #49 برای آزمون بار و اصلاح مبتنی بر شواهد |
 | [`../.claude/skills/faranou-senior-developer/SKILL.md`](../.claude/skills/faranou-senior-developer/SKILL.md) | Skill اصلی توسعه فرانو؛ فناوری، امنیت، تست و کنترل تغییرات |
 | [`../.claude/skills/faranou-architecture-review/SKILL.md`](../.claude/skills/faranou-architecture-review/SKILL.md), [`../.claude/skills/faranou-security-multitenancy/SKILL.md`](../.claude/skills/faranou-security-multitenancy/SKILL.md), [`../.claude/skills/faranou-testing-quality/SKILL.md`](../.claude/skills/faranou-testing-quality/SKILL.md) | Skillهای بازبینی معماری، امنیت چندشرکتی و کیفیت/تست |
