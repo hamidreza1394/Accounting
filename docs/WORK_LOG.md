@@ -616,3 +616,5 @@
 - **اعتبارسنجی:** اجرای محلی dotnet/npm در این محیط انجام نشد. Vendor CI، .NET CI، SQL Server integration، strict EF snapshot، publish و artifact scan روی آخرین SHA هنوز باید تأیید شوند. وضعیت **Implemented / Not Verified** است.
 - **دامنه داده:** هیچ Migration یا دیتابیس حسابداری مشتری تغییر نکرد؛ در این PR Migration Vendor نیز لازم نیست.
 - **مستندات:** `Vendor/README.md`، `docs/SECURITY.md` و `docs/handoffs/ISSUE-159-force-password-change.md` به‌روز شدند.
+
+- **اصلاح هم‌راستایی bootstrap (بازبینی تکمیلی):** بررسی مستقیم `VendorBootstrapCommand` نشان داد مسیر فعال‌سازی حساب در نسخه قبلی `MustChangePassword=false` می‌نوشت و بنابراین گارد جدید برای مدیر bootstrapشده فعال نمی‌شد. این مقدار به `true` تغییر کرد و آزمون Integration bootstrap اکنون همین invariant را assert می‌کند؛ حساب قبل از تکمیل TOTP همچنان غیرفعال می‌ماند.
