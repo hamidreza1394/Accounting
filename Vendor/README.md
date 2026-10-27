@@ -143,4 +143,4 @@ Host عمداً به ارائه‌دهندهٔ ابری خاصی وابسته ن
 
 
 ## Two-person status approvals (Issue #201, in progress)
-- The approval API and RTL approval queue are being implemented on branch `feat/vendor-maker-checker-main`. Direct customer/installation status mutation endpoints now return `approval_required` in this branch. Do not treat this as merged/verified until the complete CI suite passes and the PR is merged.
+- The approval API and RTL approval queue are under review in [PR #206](https://github.com/hamidreza1394/Accounting/pull/206) on branch `feat/vendor-maker-checker-main`. Direct customer/installation status mutation endpoints now return `approval_required` in this branch. Do not treat this as merged/verified until the complete CI suite passes and the PR is merged.
