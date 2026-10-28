@@ -157,3 +157,9 @@ Host عمداً به ارائه‌دهندهٔ ابری خاصی وابسته ن
 - PR #207 ادغام شده و CI کامل Vendor/.NET سبز است. endpointهای مستقیم قدیمی با `approval_required` پاسخ می‌دهند؛ ثبت درخواست، تصمیم مدیر مستقل، منع self-approval، RowVersion و Audit تراکنشی در API پیاده‌سازی شده‌اند.
 - صف تأیید فارسی RTL صفحه‌بندی server-side دارد. این کار فقط تغییر وضعیت مشتری/نصب را پوشش می‌دهد؛ Maker-Checker صدور/ابطال لایسنس تا تکمیل سرویس امضا همچنان باقی است.
 - شواهد: [Vendor CI 40570240409](https://github.com/hamidreza1394/Accounting/actions/runs/40570240409)، [.NET CI 40570240205](https://github.com/hamidreza1394/Accounting/actions/runs/40570240205).
+
+
+### Licensing v1 signing pipeline status
+- `VendorLicensePayloadBuilder` validates Vendor license and active-installation metadata before creating a deterministic contract payload.
+- `VendorLicenseEnvelopeFactory` (PR #220) passes exact canonical payload bytes to the injected `ILicenseSigningProvider`, checks provider metadata, and constructs a structurally valid envelope. It does not persist or issue the license.
+- The production approval endpoint remains fail-closed until durable Vendor-only envelope persistence, transactional sequence/state changes, approval integration and a configured production KMS/HSM or remote signer are implemented and verified. Never ship a private key or add a software-key fallback.
