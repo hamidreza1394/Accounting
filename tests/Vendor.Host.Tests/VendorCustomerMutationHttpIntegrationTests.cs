@@ -583,17 +583,21 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
             // Installation update: real HTTP, current RowVersion succeeds, replay is rejected.
             Guid installationId;
             byte[] installationRowVersion;
+            string installationCode;
             await using (var scope = factory.Services.CreateAsyncScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
                 var installation = await db.Installations.SingleAsync(item => item.InstallationCode.StartsWith("IT-INST-"), cancellationToken);
                 installationId = installation.Id;
+                installationCode = installation.InstallationCode;
                 installationRowVersion = installation.RowVersion.ToArray();
             }
             var installationPath = $"/api/vendor/installations/{installationId:D}";
             var installationBody = new
             {
-                installationCode = "IT-INST-UPDATED-" + installationId.ToString("N")[..8],
+                // Keep the installation identity stable: the provisioning request created earlier
+                // is intentionally bound to this installation code and must not be signed after it changes.
+                installationCode,
                 name = "After Installation Update",
                 environment = "Staging",
                 rowVersion = Convert.ToBase64String(installationRowVersion)
