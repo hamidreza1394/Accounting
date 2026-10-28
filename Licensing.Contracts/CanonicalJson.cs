@@ -53,6 +53,21 @@ public static class CanonicalJson
 		return JsonSerializer.Serialize(dto, Options);
 	}
 
+	public static string SerializeRevocationPayload(LicenseRevocationPayload payload)
+	{
+		ArgumentNullException.ThrowIfNull(payload);
+		var dto = new RevocationPayloadDto
+		{
+			FormatVersion = payload.FormatVersion,
+			LicenseId = payload.LicenseId,
+			InstallationId = payload.InstallationId,
+			ProductCode = payload.ProductCode,
+			Sequence = payload.Sequence,
+			RevokedAtUtc = payload.RevokedAtUtc.ToUniversalTime().ToString("O")
+		};
+		return JsonSerializer.Serialize(dto, Options);
+	}
+
 	public static byte[] GetUtf8Bytes(string json) => Encoding.UTF8.GetBytes(json);
 
 	public static bool TryParsePayload(string payloadJson, out LicensePayload? payload, out string? errorCode)
@@ -142,6 +157,16 @@ public static class CanonicalJson
 			System.Globalization.CultureInfo.InvariantCulture,
 			System.Globalization.DateTimeStyles.RoundtripKind,
 			out result);
+	}
+
+	private sealed class RevocationPayloadDto
+	{
+		public int FormatVersion { get; set; }
+		public string LicenseId { get; set; } = string.Empty;
+		public string InstallationId { get; set; } = string.Empty;
+		public string ProductCode { get; set; } = string.Empty;
+		public int Sequence { get; set; }
+		public string RevokedAtUtc { get; set; } = string.Empty;
 	}
 
 	private sealed class PayloadDto
