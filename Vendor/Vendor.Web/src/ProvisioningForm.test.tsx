@@ -141,8 +141,8 @@ describe('Vendor customer provisioning form', () => {
     vi.stubGlobal('crypto', { randomUUID: vi.fn().mockReturnValue('unused-request-id') });
     const OriginalURL = globalThis.URL;
     class TestURL extends OriginalURL {
-      static createObjectURL = vi.fn((_blob: Blob | MediaSource) => 'blob:provisioning-package');
-      static revokeObjectURL = vi.fn((_url: string) => undefined);
+      static override createObjectURL = vi.fn((_blob: Blob | MediaSource) => 'blob:provisioning-package');
+      static override revokeObjectURL = vi.fn((_url: string) => undefined);
     }
     vi.stubGlobal('URL', TestURL);
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
