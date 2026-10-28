@@ -937,8 +937,9 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal("provisioning_signing_unavailable", json.RootElement.GetProperty("error").GetString());
             }
 
-            using (var packageResponse = await reviewerClient.GetAsync(
-                $"/api/vendor/provisioning-requests/{provisioningRecordId:D}/package", cancellationToken))
+            using (var packageResponse = await PostWithTokenAsync(reviewerClient,
+                $"/api/vendor/provisioning-requests/{provisioningRecordId:D}/package/export",
+                new { }, reviewerAntiForgeryToken, cancellationToken))
             {
                 Assert.Equal(HttpStatusCode.Conflict, packageResponse.StatusCode);
             }
