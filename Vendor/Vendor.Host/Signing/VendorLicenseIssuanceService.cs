@@ -67,11 +67,12 @@ public sealed class VendorLicenseIssuanceService(
         var creation = await envelopeFactory.CreateAsync(payload, cancellationToken);
         if (!creation.Succeeded || creation.Envelope is null)
         {
-            var errorCode = creation.ErrorCode is
-                "signing_provider_unavailable" or "signing_failed" or "signing_provider_failed"
-                ? creation.ErrorCode
-                : "license_signing_failed";
-            return VendorLicenseIssuanceResult.Unavailable(errorCode);
+            if (creation.ErrorCode is
+                "signing_provider_unavailable" or "signing_failed" or "signing_provider_failed" or
+                "signing_result_invalid" or "signed_envelope_invalid")
+                return VendorLicenseIssuanceResult.Unavailable("license_issuance_unavailable");
+
+            return VendorLicenseIssuanceResult.Conflict(creation.ErrorCode ?? "license_payload_invalid");
         }
 
         var envelope = creation.Envelope;

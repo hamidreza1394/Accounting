@@ -794,6 +794,16 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
             }
             (reviewerAntiForgeryToken, _) = await GetAntiforgeryTokenAsync(reviewerClient, cancellationToken);
 
+            using (var licenseDecisionResponse = await PostWithTokenAsync(reviewerClient,
+                $"/api/vendor/approvals/{licenseApprovalId:D}/decision",
+                new { decision = "Approved", rowVersion = licenseApprovalRowVersion, comment = "must fail closed without signer" },
+                reviewerAntiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.ServiceUnavailable, licenseDecisionResponse.StatusCode);
+                using var json = JsonDocument.Parse(await licenseDecisionResponse.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("license_issuance_unavailable", json.RootElement.GetProperty("error").GetString());
+            }
+
             foreach (var approval in new[]
             {
                 (Id: customerApprovalId, RowVersion: customerApprovalRowVersion),
@@ -808,16 +818,6 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
                 Assert.Equal("Approved", json.RootElement.GetProperty("status").GetString());
                 Assert.NotEqual(Guid.Empty, json.RootElement.GetProperty("reviewedByUserId").GetGuid());
-            }
-
-            using (var licenseDecisionResponse = await PostWithTokenAsync(reviewerClient,
-                $"/api/vendor/approvals/{licenseApprovalId:D}/decision",
-                new { decision = "Approved", rowVersion = licenseApprovalRowVersion, comment = "must fail closed without signer" },
-                reviewerAntiForgeryToken, cancellationToken))
-            {
-                Assert.Equal(HttpStatusCode.ServiceUnavailable, licenseDecisionResponse.StatusCode);
-                using var json = JsonDocument.Parse(await licenseDecisionResponse.Content.ReadAsStringAsync(cancellationToken));
-                Assert.Equal("license_issuance_unavailable", json.RootElement.GetProperty("error").GetString());
             }
 
             await using (var licenseStateScope = factory.Services.CreateAsyncScope())
