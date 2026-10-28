@@ -6,6 +6,7 @@ using Faranou.Vendor.Host.Signing;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Auditing;
 using Faranou.Vendor.Persistence.Domain;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -95,6 +96,120 @@ public sealed class VendorLicenseIssuanceAtomicityTests
             Assert.Equal("Pending", (await db.ApprovalRequests.SingleAsync()).Status);
             Assert.Empty(await db.SignedLicenseEnvelopes.ToListAsync());
             Assert.Empty(await db.AuditEvents.ToListAsync());
+        }
+        finally
+        {
+            await fixture.Db.Database.EnsureDeletedAsync(TestContext.Current.CancellationToken);
+            fixture.Scope.Dispose();
+            await fixture.Provider.DisposeAsync();
+        }
+    }
+
+    [Fact]
+    public async Task DuplicateSequencePersistenceFailureRollsBackEveryIssuanceMutation()
+    {
+        var fixture = await OpenAsync();
+        if (fixture is null) return;
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        try
+        {
+            var db = fixture.Db;
+            db.SignedLicenseEnvelopes.Add(new VendorSignedLicenseEnvelope
+            {
+                Id = Guid.NewGuid(), LicenseId = await db.Licenses.Select(item => item.Id).SingleAsync(),
+                Sequence = 1, KeyId = "reserved-test-key",
+                Algorithm = LicenseAlgorithms.EcdsaP256Sha256,
+                EnvelopeJson = "{}", PayloadSha256 = new string('a', 64), CreatedAtUtc = DateTimeOffset.UtcNow
+            });
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var approval = await db.ApprovalRequests.SingleAsync();
+            var service = new VendorLicenseIssuanceService(
+                db, new VendorLicenseEnvelopeFactory(new TestSigner(key)),
+                new VendorAuditWriter(db, TimeProvider.System), TimeProvider.System);
+
+            await using (var tx = await db.Database.BeginTransactionAsync())
+            {
+                var result = await service.IssueApprovedAsync(
+                    approval, Guid.NewGuid(), approval.RowVersion.ToArray(), null,
+                    Guid.NewGuid().ToString("N"), TestContext.Current.CancellationToken);
+                Assert.False(result.Succeeded);
+                Assert.Equal("license_sequence_already_issued", result.ErrorCode);
+                await tx.RollbackAsync(TestContext.Current.CancellationToken);
+            }
+
+            db.ChangeTracker.Clear();
+            Assert.Equal("Draft", (await db.Licenses.SingleAsync()).Status);
+            Assert.Equal(0, (await db.Licenses.SingleAsync()).LastIssuedSequence);
+            Assert.Equal("Pending", (await db.ApprovalRequests.SingleAsync()).Status);
+            Assert.Equal(1, await db.SignedLicenseEnvelopes.CountAsync());
+            Assert.Empty(await db.AuditEvents.ToListAsync());
+        }
+        finally
+        {
+            await fixture.Db.Database.EnsureDeletedAsync(TestContext.Current.CancellationToken);
+            fixture.Scope.Dispose();
+            await fixture.Provider.DisposeAsync();
+        }
+    }
+
+    [Fact]
+    public async Task ConcurrentApprovalsProduceOnlyOneIssuedEnvelope()
+    {
+        var fixture = await OpenAsync();
+        if (fixture is null) return;
+        using var keyA = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        using var keyB = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        try
+        {
+            var dbA = fixture.Db;
+            await using var scopeB = fixture.Provider.CreateAsyncScope();
+            var dbB = scopeB.ServiceProvider.GetRequiredService<VendorDbContext>();
+            await using var txA = await dbA.Database.BeginTransactionAsync();
+            await using var txB = await dbB.Database.BeginTransactionAsync();
+
+            var approvalA = await dbA.ApprovalRequests.SingleAsync();
+            var approvalB = await dbB.ApprovalRequests.SingleAsync();
+            var expectedA = approvalA.RowVersion.ToArray();
+            var expectedB = approvalB.RowVersion.ToArray();
+            var serviceA = new VendorLicenseIssuanceService(
+                dbA, new VendorLicenseEnvelopeFactory(new TestSigner(keyA)),
+                new VendorAuditWriter(dbA, TimeProvider.System), TimeProvider.System);
+            var serviceB = new VendorLicenseIssuanceService(
+                dbB, new VendorLicenseEnvelopeFactory(new TestSigner(keyB)),
+                new VendorAuditWriter(dbB, TimeProvider.System), TimeProvider.System);
+
+            var taskA = serviceA.IssueApprovedAsync(
+                approvalA, Guid.NewGuid(), expectedA, "concurrent reviewer A",
+                Guid.NewGuid().ToString("N"), TestContext.Current.CancellationToken);
+            var taskB = serviceB.IssueApprovedAsync(
+                approvalB, Guid.NewGuid(), expectedB, "concurrent reviewer B",
+                Guid.NewGuid().ToString("N"), TestContext.Current.CancellationToken);
+
+            var firstTask = await Task.WhenAny(taskA, taskB);
+            var firstResult = await firstTask;
+            Assert.True(firstResult.Succeeded, firstResult.ErrorCode);
+            if (firstTask == taskA)
+                await txA.CommitAsync(TestContext.Current.CancellationToken);
+            else
+                await txB.CommitAsync(TestContext.Current.CancellationToken);
+
+            var secondResult = await (firstTask == taskA ? taskB : taskA);
+            Assert.False(secondResult.Succeeded);
+            Assert.Equal(StatusCodes.Status409Conflict, secondResult.StatusCode);
+            if (firstTask == taskA)
+                await txB.RollbackAsync(TestContext.Current.CancellationToken);
+            else
+                await txA.RollbackAsync(TestContext.Current.CancellationToken);
+
+            dbA.ChangeTracker.Clear();
+            var license = await dbA.Licenses.SingleAsync();
+            var approval = await dbA.ApprovalRequests.SingleAsync();
+            Assert.Equal("Issued", license.Status);
+            Assert.Equal(1, license.LastIssuedSequence);
+            Assert.Equal("Approved", approval.Status);
+            Assert.Single(await dbA.SignedLicenseEnvelopes.ToListAsync());
+            Assert.Equal(2, await dbA.AuditEvents.CountAsync());
         }
         finally
         {
