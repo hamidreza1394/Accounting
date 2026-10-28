@@ -70,4 +70,48 @@ describe('Vendor customer provisioning form', () => {
     expect(body).not.toHaveProperty('passwordHash');
     expect(screen.getByText(/هنوز بسته‌ای امضا یا به مشتری تحویل نشده/)).toBeInTheDocument();
   });
+
+  it('requests two-person approval with the persisted RowVersion and shows pending review state', async () => {
+    let approvalRequested = false;
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === '/api/vendor/installations/?customerId=customer-1&page=1&pageSize=100') {
+        return response({ items: [{ id: 'install-1', installationCode: 'INSTALL-01', name: 'نصب اصلی', status: 'Active' }] });
+      }
+      if (url === '/api/vendor/provisioning-requests?customerId=customer-1&page=1&pageSize=10') {
+        return response({ items: [{
+          id: 'provision-1', requestId: 'request-1', status: 'AwaitingSigner',
+          createdAtUtc: '2026-10-28T12:00:00Z', updatedAtUtc: '2026-10-28T12:00:00Z',
+          payloadSha256: 'a'.repeat(64), rowVersion: 'AQIDBAUGBwg=',
+          approvalStatus: approvalRequested ? 'Pending' : null,
+        }] });
+      }
+      if (url === '/api/auth/antiforgery') return response({ requestToken: 'csrf-approval' });
+      if (url === '/api/vendor/provisioning-requests/provision-1/approval-request' && init?.method === 'POST') {
+        approvalRequested = true;
+        return response({ id: 'approval-1', status: 'Pending', rowVersion: 'CAcGBQQDAgE=' }, 202);
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('crypto', { randomUUID: vi.fn().mockReturnValue('unused-request-id') });
+
+    render(<ProvisioningForm customerId="customer-1" customerName="مشتری نمونه"
+      onCancel={vi.fn()} onSaved={vi.fn()} canRequestApproval />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'ارسال برای تأیید دو نفره' }));
+    await screen.findByText('در انتظار بررسی دو نفره');
+    await screen.findByText(/درخواست برای بررسی دو نفره ارسال شد/);
+    expect(screen.queryByRole('button', { name: 'ارسال برای تأیید دو نفره' })).not.toBeInTheDocument();
+
+    const post = fetchMock.mock.calls.find(([url, init]) =>
+      String(url) === '/api/vendor/provisioning-requests/provision-1/approval-request' && init?.method === 'POST');
+    expect(post).toBeDefined();
+    const init = post?.[1] as RequestInit;
+    expect(init.headers).toEqual({
+      'Content-Type': 'application/json',
+      'X-CSRF-TOKEN': 'csrf-approval',
+    });
+    expect(JSON.parse(String(init.body))).toEqual({ rowVersion: 'AQIDBAUGBwg=' });
+  });
 });
