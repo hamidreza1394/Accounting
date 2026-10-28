@@ -2,6 +2,7 @@ using System.Threading.RateLimiting;
 using Faranou.Vendor.Host.Authentication;
 using Faranou.Vendor.Host.Authorization;
 using Faranou.Vendor.Host.Bootstrap;
+using Faranou.Vendor.Host.Signing;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Identity;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -9,6 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 var bootstrapCommandRequested = VendorBootstrapCommand.IsRequested(args);
 if (bootstrapCommandRequested && args.Length != 1)
@@ -69,6 +71,11 @@ if (bootstrapCommandRequested)
 
 builder.Services.AddHealthChecks();
 builder.Services.AddVendorPersistence(builder.Configuration);
+// Until a production KMS/HSM adapter is configured, signing is deliberately unavailable.
+// The default provider fails closed and never generates or stores a private key.
+builder.Services.TryAddSingleton<ILicenseSigningProvider, UnavailableLicenseSigningProvider>();
+builder.Services.AddScoped<VendorLicenseEnvelopeFactory>();
+builder.Services.AddScoped<VendorLicenseIssuanceService>();
 // SignInManager belongs to the ASP.NET Core host layer, not the persistence class library.
 // Sign-in manager and token providers are host-layer Identity services; register them on the same IdentityBuilder.
 new IdentityBuilder(typeof(VendorAdminUser), builder.Services)
