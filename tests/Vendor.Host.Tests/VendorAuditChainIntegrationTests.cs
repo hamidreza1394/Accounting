@@ -1,3 +1,4 @@
+using System.Globalization;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Auditing;
 using Microsoft.Data.SqlClient;
@@ -224,7 +225,7 @@ public sealed class VendorAuditChainIntegrationTests
                 await connectionForCheck.OpenAsync(cancellationToken);
                 await using var command = connectionForCheck.CreateCommand();
                 command.CommandText = "SELECT CASE WHEN COL_LENGTH('dbo.VendorAuditEvents', 'HashVersion') IS NULL THEN 0 ELSE 1 END";
-                var hashVersionColumnExists = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
+                var hashVersionColumnExists = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken), CultureInfo.InvariantCulture);
                 Assert.Equal(0, hashVersionColumnExists);
             }
         }
