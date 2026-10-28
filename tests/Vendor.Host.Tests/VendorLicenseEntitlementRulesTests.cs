@@ -38,19 +38,18 @@ public sealed class VendorLicenseEntitlementRulesTests
     }
 
     [Theory]
-    [InlineData("term", 25, 30, true, false, false)]
-    [InlineData("perpetual", 25, 30, false, true, false)]
-    [InlineData("term", 0, 30, true, false, false)]
-    [InlineData("term", 25, 91, true, false, false)]
+    [InlineData("term", 25, 30, false)]
+    [InlineData("perpetual", 25, 30, true)]
+    [InlineData("term", 0, 30, true)]
+    [InlineData("term", 25, 91, true)]
     public void RejectsInvalidEntitlementCombinations(
-        string kind, int maxCompanies, int graceDays, bool hasExpiry, bool forcePerpetualExpiry, bool ignored)
+        string kind, int maxCompanies, int graceDays, bool hasExpiry)
     {
         var validFrom = new DateTimeOffset(2026, 10, 28, 0, 0, 0, TimeSpan.Zero);
-        DateTimeOffset? validUntil = hasExpiry || forcePerpetualExpiry ? validFrom.AddDays(1) : null;
-        var actualKind = forcePerpetualExpiry ? "perpetual" : kind;
+        DateTimeOffset? validUntil = hasExpiry ? validFrom.AddDays(1) : null;
 
         var valid = VendorLicenseEntitlementRules.TryNormalize(
-            actualKind, maxCompanies, ["finance"], graceDays, validFrom, validUntil, out _);
+            kind, maxCompanies, ["finance"], graceDays, validFrom, validUntil, out _);
 
         Assert.False(valid);
     }
