@@ -164,9 +164,10 @@ describe('Vendor license metadata form', () => {
     render(<LicenseForm initial={{
       id: 'license-1', customerId: 'customer-1', contractId: null, installationId: null,
       rowVersion: 'AQIDBAUGBwg=', licenseNumber: 'LIC-001', productCode: 'FARANOU-BASE',
+      licenseKind: 'perpetual', subsystems: ['finance'], graceDays: 30,
       validFromUtc: '2026-01-01T00:00:00Z', validUntilUtc: '', status: 'Draft',
     }} canReadCustomers={false} canReadContracts={false} canReadInstallations={false}
-      onCancel={vi.fn()} onSaved={vi.fn()} />);
+      onCancel={vi.fn()} onSaved={onSaved} />);
 
     fireEvent.change(screen.getByLabelText('کد محصول'), { target: { value: 'FARANOU-PLUS' } });
     fireEvent.click(screen.getByRole('button', { name: 'ذخیره تغییرات' }));
