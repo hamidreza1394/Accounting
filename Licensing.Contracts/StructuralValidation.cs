@@ -101,6 +101,25 @@ public static class StructuralValidation
 		return errors;
 	}
 
+	public static IReadOnlyList<string> ValidateRevocationPayload(LicenseRevocationPayload payload)
+	{
+		ArgumentNullException.ThrowIfNull(payload);
+		var errors = new List<string>();
+		if (payload.FormatVersion != LicenseAlgorithms.CurrentFormatVersion)
+			errors.Add($"unsupported formatVersion: {payload.FormatVersion}");
+		if (payload.LicenseId is null || !IdPattern.IsMatch(payload.LicenseId))
+			errors.Add("licenseId is invalid");
+		if (payload.InstallationId is null || !IdPattern.IsMatch(payload.InstallationId))
+			errors.Add("installationId is invalid");
+		if (payload.ProductCode is null || !CodePattern.IsMatch(payload.ProductCode))
+			errors.Add("productCode is invalid");
+		if (payload.Sequence < 1)
+			errors.Add("sequence must be >= 1");
+		if (payload.RevokedAtUtc == default)
+			errors.Add("revokedAtUtc is required");
+		return errors;
+	}
+
 	public static IReadOnlyList<string> ValidateEnvelopeStructure(LicenseEnvelope envelope)
 	{
 		ArgumentNullException.ThrowIfNull(envelope);
