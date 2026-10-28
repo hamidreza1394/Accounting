@@ -162,3 +162,11 @@ Host عمداً به ارائه‌دهندهٔ ابری خاصی وابسته ن
 - `VendorLicensePayloadBuilder` validates Vendor license and active-installation metadata before creating a deterministic contract payload.
 - `VendorLicenseEnvelopeFactory` (PR #220) passes exact canonical payload bytes to the injected `ILicenseSigningProvider`, checks provider metadata, and constructs a structurally valid envelope. It does not persist or issue the license.
 - The production approval endpoint remains fail-closed until durable Vendor-only envelope persistence, transactional sequence/state changes, approval integration and a configured production KMS/HSM or remote signer are implemented and verified. Never ship a private key or add a software-key fallback.
+
+## Customer provisioning status (Issue #228)
+
+The customer setup form records a versioned provisioning request in the separate Vendor database. It collects the company setup, initial administrator username, target installation, and purchased subsystem selection. It does not collect or persist a customer password.
+
+Requests currently remain `AwaitingSigner`. This is deliberate: until a production signing provider and a trusted customer-side consumer are configured, no signed package is delivered and the UI must not claim that a customer company or administrator has been created. The API persists an idempotent request ID, unique nonce, canonical payload/hash, audit event, and status metadata in the Vendor database only.
+
+Production completion still requires a trusted key source outside Git, signing and one-time delivery, an idempotent customer-side consumer with atomic nonce claiming, signed acknowledgement, and recovery/retry tests for cloud, dedicated-server, and offline installations. Those capabilities are not implemented by the current Vendor UI/API slice.
