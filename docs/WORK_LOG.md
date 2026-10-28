@@ -925,3 +925,10 @@
 - **امنیت/محدوده:** هیچ provider تولیدی یا fallback نرم‌افزاری، کلید خصوصی، ذخیره‌سازی envelope، Migration یا تغییر `Server/**` اضافه نشد. endpoint صدور همچنان fail-closed است.
 - **مستندات:** `docs/PROJECT_STATUS.md`, `Vendor/README.md`, `docs/LICENSING_THREAT_MODEL.md` و handoff اختصاصی به‌روزرسانی شدند.
 - **اعتبارسنجی:** تست محلی در این محیط اجرا نشده؛ CI این شاخه باید نتیجهٔ Build/Test، SQL Server integration، EF guard و publish را تأیید کند. تا سبزشدن CI، این slice Verified محسوب نمی‌شود.
+
+
+## 2026-10-28 — Issue #214: payload builder and envelope factory
+- PR #219 adds `VendorLicensePayloadBuilder` to map Vendor metadata into a validated Licensing v1 payload; both Vendor CI and .NET CI passed on head `b8e5e860b8e8f08cffcce404c22d3d3bba71d328` and PR #219 was merged (merge commit `0477c06a0f8a7bcaacf48aa09a0a8e499ad45c11`).
+- Next slice adds `VendorLicenseEnvelopeFactory`: canonicalizes payload bytes, calls only the injected signing provider, validates provider output and envelope structure, and returns safe failure codes. Tests use a test-only ephemeral ECDSA key and cover successful verification, provider-unavailable fail-closed behavior, and invalid-payload rejection.
+- **Explicit limitations:** factory does not persist the envelope, update license sequence/status, or wire approval decisions to issuance. No production KMS/HSM implementation or private key is added. No customer DB or `Server/**` changes.
+- Status: PR opened; must wait for CI and merge only after all required checks pass. Issue #214 remains open.
