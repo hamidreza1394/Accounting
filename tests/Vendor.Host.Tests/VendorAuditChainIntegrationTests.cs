@@ -150,6 +150,21 @@ public sealed class VendorAuditChainIntegrationTests
 
                 setup.AuditEvents.Add(fork);
                 await Assert.ThrowsAsync<DbUpdateException>(() => setup.SaveChangesAsync(cancellationToken));
+
+                setup.ChangeTracker.Clear();
+                var duplicateHash = new VendorAuditEvent
+                {
+                    Id = Guid.NewGuid(),
+                    HashVersion = 1,
+                    OccurredAtUtc = DateTimeOffset.UtcNow,
+                    ActionCode = "test.duplicate-hash",
+                    SubjectType = "IntegrationTest",
+                    SubjectId = Guid.NewGuid().ToString("N"),
+                    PreviousHash = new string('d', 64),
+                    EventHash = root.EventHash
+                };
+                setup.AuditEvents.Add(duplicateHash);
+                await Assert.ThrowsAsync<DbUpdateException>(() => setup.SaveChangesAsync(cancellationToken));
             }
         }
         finally
