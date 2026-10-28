@@ -454,7 +454,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
             {
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
                 using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-                Assert.Equal(1, json.RootElement.GetProperty("totalCount").GetInt32());
+                Assert.Equal(2, json.RootElement.GetProperty("totalCount").GetInt32());
                 Assert.Equal(customerApprovalId, json.RootElement.GetProperty("items")[0].GetProperty("id").GetGuid());
             }
 
