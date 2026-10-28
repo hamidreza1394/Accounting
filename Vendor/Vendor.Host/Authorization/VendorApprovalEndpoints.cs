@@ -155,7 +155,7 @@ public static class VendorApprovalEndpoints
                 return Results.Conflict(new { error = "approval_already_decided" });
             if (approval.RequestedByUserId == actor.Id)
                 return Results.Forbid();
-            if (approval.ResourceType is not ("customer" or "installation"))
+            if (approval.ResourceType is not ("customer" or "installation" or "license"))
                 return Results.Conflict(new { error = "unsupported_approval_resource" });
 
             var managePermission = PermissionFor(approval.ResourceType);
@@ -165,9 +165,32 @@ public static class VendorApprovalEndpoints
                 VendorResourceCatalog.PolicyFor(approval.ResourceType, managePermission));
             if (!access.Succeeded) return Results.Forbid();
 
+            // License metadata is not a signed artifact. Validate current ownership/version/state,
+            // then fail closed until a production signer and durable envelope storage exist.
+            if (approval.ResourceType == "license" && request.Decision == "Approved")
+            {
+                var license = await db.Licenses.AsNoTracking()
+                    .Where(item => item.Id == approval.ResourceId)
+                    .Select(item => new { item.Status, item.RowVersion })
+                    .SingleOrDefaultAsync(ct);
+                if (license is null) return Results.NotFound();
+                var expectedStatus = approval.TargetStatus switch
+                {
+                    "Issued" => "Draft",
+                    "Revoked" => "Issued",
+                    _ => null
+                };
+                if (!license.RowVersion.AsSpan().SequenceEqual(approval.ExpectedResourceRowVersion) ||
+                    expectedStatus is null || license.Status != expectedStatus)
+                    return Results.Conflict(new { error = "approval_resource_stale" });
+
+                return Results.Json(new { error = "license_issuance_unavailable" },
+                    statusCode: StatusCodes.Status503ServiceUnavailable);
+            }
+
             var now = DateTimeOffset.UtcNow;
             var comment = string.IsNullOrWhiteSpace(request.Comment) ? null : request.Comment.Trim();
-            if (request.Decision == "Approved")
+            if (request.Decision == "Approved" && approval.ResourceType != "license")
             {
                 var resourceIsCurrent = false;
                 if (approval.ResourceType == "customer")
@@ -251,6 +274,72 @@ public static class VendorApprovalEndpoints
             return Results.Ok(ToResponse(approval));
         }).RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.ApprovalsReview));
 
+        var licenses = endpoints.MapGroup("/api/vendor/licenses");
+        licenses.MapPost("/{id:guid}/approval-request", async (
+            Guid id, CreateVendorLicenseApprovalRequest request, HttpContext context,
+            IAntiforgery antiforgery, IAuthorizationService authorization, VendorDbContext db,
+            UserManager<VendorAdminUser> users, IVendorAuditWriter audit, CancellationToken ct) =>
+        {
+            if (!await antiforgery.IsRequestValidAsync(context))
+                return Results.BadRequest(new { error = "invalid_antiforgery_token" });
+            if (request.Action is not ("issue" or "revoke") ||
+                !VendorBusinessMutationRules.TryDecodeRowVersion(request.RowVersion, out var expectedResourceVersion))
+                return Results.BadRequest(new { error = "invalid_license_approval_request" });
+
+            var access = await authorization.AuthorizeAsync(
+                context.User,
+                new VendorResourceDescriptor("license", id),
+                VendorResourceCatalog.PolicyFor("license", VendorPermissionCatalog.LicensesIssue));
+            if (!access.Succeeded) return Results.Forbid();
+
+            var license = await db.Licenses.AsNoTracking()
+                .Where(item => item.Id == id)
+                .Select(item => new { item.Id, item.Status, item.RowVersion })
+                .SingleOrDefaultAsync(ct);
+            if (license is null) return Results.NotFound();
+            if (!license.RowVersion.AsSpan().SequenceEqual(expectedResourceVersion))
+                return Results.Conflict(new { error = "stale_row_version" });
+
+            var targetStatus = request.Action == "issue" ? "Issued" : "Revoked";
+            var sourceStatusIsAllowed = request.Action == "issue"
+                ? license.Status == "Draft"
+                : license.Status == "Issued";
+            if (!sourceStatusIsAllowed)
+                return Results.Conflict(new { error = "invalid_license_transition" });
+
+            var actor = await users.GetUserAsync(context.User);
+            if (actor is null) return Results.Forbid();
+
+            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            var approval = new VendorApprovalRequest
+            {
+                Id = Guid.NewGuid(),
+                ResourceType = "license",
+                ResourceId = id,
+                TargetStatus = targetStatus,
+                ExpectedResourceRowVersion = expectedResourceVersion,
+                RequestedByUserId = actor.Id,
+                RequestedAtUtc = DateTimeOffset.UtcNow,
+                Status = "Pending"
+            };
+            db.ApprovalRequests.Add(approval);
+            try
+            {
+                await db.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
+            {
+                return Results.Conflict(new { error = "approval_already_pending" });
+            }
+
+            await audit.AppendAsync(new VendorAuditWriteRequest(
+                actor.Id, "vendor.license.approval-requested", nameof(VendorLicense),
+                id.ToString("D"), CorrelationId()), ct);
+            await tx.CommitAsync(ct);
+
+            return Results.Accepted($"/api/vendor/approvals/{approval.Id:D}", ToResponse(approval));
+        }).RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.LicensesIssue));
+
         return endpoints;
     }
 
@@ -258,6 +347,7 @@ public static class VendorApprovalEndpoints
     {
         "customer" => VendorPermissionCatalog.CustomersManage,
         "installation" => VendorPermissionCatalog.InstallationsManage,
+        "license" => VendorPermissionCatalog.LicensesIssue,
         _ => throw new ArgumentOutOfRangeException(nameof(resourceType))
     };
 
@@ -279,6 +369,8 @@ public sealed record CreateVendorApprovalRequest(
 
 public sealed record DecideVendorApprovalRequest(
     string? Decision, string? RowVersion, string? Comment);
+
+public sealed record CreateVendorLicenseApprovalRequest(string? Action, string? RowVersion);
 
 public sealed record VendorApprovalResponse(
     Guid Id, string ResourceType, Guid ResourceId, string TargetStatus,

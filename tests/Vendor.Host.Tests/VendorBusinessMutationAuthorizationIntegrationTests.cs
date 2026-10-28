@@ -46,6 +46,7 @@ public sealed class VendorBusinessMutationAuthorizationIntegrationTests
             (HttpMethod.Post, $"/api/vendor/installations/{id:D}/status"),
             (HttpMethod.Put, $"/api/vendor/contracts/{id:D}"),
             (HttpMethod.Put, $"/api/vendor/licenses/{id:D}"),
+            (HttpMethod.Post, $"/api/vendor/licenses/{id:D}/approval-request"),
             (HttpMethod.Post, "/api/vendor/approvals/status-change"),
             (HttpMethod.Post, $"/api/vendor/approvals/{id:D}/decision")
         };

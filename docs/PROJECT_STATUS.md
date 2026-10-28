@@ -11,6 +11,7 @@
 - **نسخه‌بندی و یکتایی زنجیرهٔ ممیزی (Issue #107، PR #212):** `HashVersion=1` برای رویدادهای قدیمی و جدید، رد fail-closed نسخهٔ ناشناخته، preflight دادهٔ ناسازگار و unique index روی `PreviousHash` اضافه شد. Vendor CI روی PR run 40650985169 (77/77 تست) و پس از ادغام run 40651677915 موفق است؛ .NET CI روی PR run 40650985057 موفق شد. مقصد مستقل checkpoint، اجرای مستقیم CLI `dotnet ef migrations add` و کنترل‌های عملیاتی Production هنوز تأیید نشده‌اند.
 - **رابط:** Vendor UI مستقل React + TypeScript strict + Vite + Tailwind/shadcn، فارسی RTL و assetهای محلی است. `ManagedSelect` گزینهٔ خالی معتبر مانند «بدون قرارداد» را در کنار گزینه‌های فعال پشتیبانی می‌کند.
 - **لایسنس:** فرم فعلی فقط metadata را ثبت/ویرایش می‌کند؛ این به معنی صدور لایسنس امضاشده، activation آفلاین یا اجرای سیاست لایسنس در برنامه مشتری نیست.
+- **Issue #214 — مرحلهٔ نخست گردش‌کار صدور/ابطال:** شاخهٔ `feat/vendor-license-approval-workflow` یک endpoint برای درخواست تأیید مستقل صدور/ابطال و ثبت درخواست در `VendorApprovalRequests` با snapshot از `RowVersion` اضافه می‌کند. تأیید درخواست لایسنس عمداً با `503 license_issuance_unavailable` fail-closed است؛ تا وقتی signer امن و ذخیره‌سازی پایدار envelope امضاشده پیاده و پیکربندی نشده، وضعیت لایسنس به `Issued`/`Revoked` تغییر نمی‌کند. این شاخه هنوز PR/CI-verified نیست و این فاز معادل تکمیل Issue #214 نیست.
 
 ## شواهد CI
 - PR #196 با merge commit `45e843ebe639b0013e9b0bc9d28106eb435e4742` ادغام شد.

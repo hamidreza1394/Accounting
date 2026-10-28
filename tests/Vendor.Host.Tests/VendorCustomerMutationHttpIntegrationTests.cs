@@ -40,6 +40,8 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
         var customerApprovalRowVersion = string.Empty;
         var installationApprovalId = Guid.Empty;
         var installationApprovalRowVersion = string.Empty;
+        var licenseApprovalId = Guid.Empty;
+        var licenseApprovalRowVersion = string.Empty;
         var baseConnection = Environment.GetEnvironmentVariable("FARANO_VENDOR_TEST_SQLSERVER");
         if (string.IsNullOrWhiteSpace(baseConnection))
         {
@@ -96,6 +98,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     VendorPermissionCatalog.ContractsManage,
                     VendorPermissionCatalog.LicensesRead,
                     VendorPermissionCatalog.LicensesManage,
+                    VendorPermissionCatalog.LicensesIssue,
                     VendorPermissionCatalog.ApprovalsRead,
                     VendorPermissionCatalog.ApprovalsRequest,
                     VendorPermissionCatalog.ApprovalsReview
@@ -415,8 +418,11 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
             {
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
                 using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                // At this point only the customer status request has been created.
+                // The license approval request is intentionally created later, after
+                // the license metadata RowVersion has been refreshed.
                 Assert.Equal(1, json.RootElement.GetProperty("totalCount").GetInt32());
-                Assert.Equal(customerApprovalId, json.RootElement.GetProperty("items")[0].GetProperty("id").GetGuid());
+                Assert.Contains(json.RootElement.GetProperty("items").EnumerateArray(), item => item.GetProperty("id").GetGuid() == customerApprovalId);
             }
 
             using (var response = await PostWithTokenAsync(client, "/api/vendor/approvals/status-change",
@@ -621,6 +627,56 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal("stale_row_version", json.RootElement.GetProperty("error").GetString());
             }
 
+            Guid approvalLicenseId;
+            byte[] licenseVersion;
+            await using (var licenseScope = factory.Services.CreateAsyncScope())
+            {
+                var db = licenseScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var license = await db.Licenses.AsNoTracking()
+                    .SingleAsync(item => item.LicenseNumber.StartsWith("IT-LIC-"), cancellationToken);
+                approvalLicenseId = license.Id;
+                licenseVersion = license.RowVersion.ToArray();
+            }
+
+            var licenseApprovalBody = new
+            {
+                action = "issue",
+                rowVersion = Convert.ToBase64String(licenseVersion)
+            };
+            using (var response = await PostWithTokenAsync(client,
+                $"/api/vendor/licenses/{approvalLicenseId:D}/approval-request",
+                licenseApprovalBody, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                licenseApprovalId = json.RootElement.GetProperty("id").GetGuid();
+                licenseApprovalRowVersion = json.RootElement.GetProperty("rowVersion").GetString()!;
+                Assert.Equal("Pending", json.RootElement.GetProperty("status").GetString());
+            }
+
+            using (var response = await PostWithTokenAsync(client,
+                $"/api/vendor/licenses/{approvalLicenseId:D}/approval-request",
+                licenseApprovalBody, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("approval_already_pending", json.RootElement.GetProperty("error").GetString());
+            }
+
+            using (var response = await client.GetAsync("/api/vendor/approvals/?status=Pending&page=1&pageSize=25", cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                // Customer and installation requests are still pending; license adds the third.
+                Assert.Equal(3, json.RootElement.GetProperty("totalCount").GetInt32());
+                var pendingIds = json.RootElement.GetProperty("items").EnumerateArray()
+                    .Select(item => item.GetProperty("id").GetGuid())
+                    .ToHashSet();
+                Assert.Contains(customerApprovalId, pendingIds);
+                Assert.Contains(installationApprovalId, pendingIds);
+                Assert.Contains(licenseApprovalId, pendingIds);
+            }
+
             await using (var auditScope = factory.Services.CreateAsyncScope())
             {
                 var db = auditScope.ServiceProvider.GetRequiredService<VendorDbContext>();
@@ -754,6 +810,25 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.NotEqual(Guid.Empty, json.RootElement.GetProperty("reviewedByUserId").GetGuid());
             }
 
+            using (var licenseDecisionResponse = await PostWithTokenAsync(reviewerClient,
+                $"/api/vendor/approvals/{licenseApprovalId:D}/decision",
+                new { decision = "Approved", rowVersion = licenseApprovalRowVersion, comment = "must fail closed without signer" },
+                reviewerAntiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.ServiceUnavailable, licenseDecisionResponse.StatusCode);
+                using var json = JsonDocument.Parse(await licenseDecisionResponse.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("license_issuance_unavailable", json.RootElement.GetProperty("error").GetString());
+            }
+
+            await using (var licenseStateScope = factory.Services.CreateAsyncScope())
+            {
+                var db = licenseStateScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var license = await db.Licenses.AsNoTracking().SingleAsync(item => item.Id == licenseId, cancellationToken);
+                Assert.Equal("Draft", license.Status);
+                Assert.Equal("Pending", (await db.ApprovalRequests.AsNoTracking()
+                    .SingleAsync(item => item.Id == licenseApprovalId, cancellationToken)).Status);
+            }
+
             await using (var approvalVerificationScope = factory.Services.CreateAsyncScope())
             {
                 var db = approvalVerificationScope.ServiceProvider.GetRequiredService<VendorDbContext>();
@@ -848,13 +923,58 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
         public void Enable()
         {
             Interlocked.Exchange(ref _arrivals, 0);
+            Interlocked.Exchange(ref _preflightArrivals, 0);
             _bothArrived = NewCompletionSource();
+            _bothPreflightChecks = NewCompletionSource();
             Volatile.Write(ref _enabled, 1);
         }
+
+        private TaskCompletionSource _bothPreflightChecks = NewCompletionSource();
+        private int _preflightArrivals;
 
         public int ObservedInsertCount => Volatile.Read(ref _arrivals);
 
         public void Disable() => Volatile.Write(ref _enabled, 0);
+
+        public override async ValueTask<object?> ScalarExecutedAsync(
+            DbCommand command,
+            CommandExecutedEventData eventData,
+            object? result,
+            CancellationToken cancellationToken = default)
+        {
+            await WaitForBothPreflightChecksAsync(command, cancellationToken);
+            return result;
+        }
+
+        public override async ValueTask<DbDataReader> ReaderExecutedAsync(
+            DbCommand command,
+            CommandExecutedEventData eventData,
+            DbDataReader result,
+            CancellationToken cancellationToken = default)
+        {
+            await WaitForBothPreflightChecksAsync(command, cancellationToken);
+            return result;
+        }
+
+        private async Task WaitForBothPreflightChecksAsync(
+            DbCommand command,
+            CancellationToken cancellationToken)
+        {
+            // EF Core may execute AnyAsync as either a scalar command or a reader,
+            // depending on query translation/provider. Gate the completed preflight
+            // in both paths so both requests observe the number as available before
+            // either INSERT reaches the unique index.
+            if (Volatile.Read(ref _enabled) == 1 &&
+                command.CommandText.Contains("VendorCustomers", StringComparison.OrdinalIgnoreCase) &&
+                command.CommandText.Contains("CustomerNumber", StringComparison.OrdinalIgnoreCase) &&
+                command.CommandText.Contains("EXISTS", StringComparison.OrdinalIgnoreCase))
+            {
+                if (Interlocked.Increment(ref _preflightArrivals) == 2)
+                    _bothPreflightChecks.TrySetResult();
+
+                await _bothPreflightChecks.Task.WaitAsync(TimeSpan.FromSeconds(15), cancellationToken);
+            }
+        }
 
         public override async ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
             DbCommand command,
