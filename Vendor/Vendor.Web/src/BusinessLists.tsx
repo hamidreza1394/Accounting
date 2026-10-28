@@ -11,6 +11,7 @@ const CustomerForm = lazy(() => import('./CustomerForm').then(module => ({ defau
 const InstallationForm = lazy(() => import('./InstallationForm').then(module => ({ default: module.InstallationForm })));
 const ContractForm = lazy(() => import('./ContractForm').then(module => ({ default: module.ContractForm })));
 const LicenseForm = lazy(() => import('./LicenseForm').then(module => ({ default: module.LicenseForm })));
+const ProvisioningForm = lazy(() => import('./ProvisioningForm').then(module => ({ default: module.ProvisioningForm })));
 
 export type BusinessSection = 'customers' | 'installations' | 'contracts' | 'licenses';
 
@@ -139,6 +140,7 @@ export function BusinessLists({ section, permissions = [] }: { section: Business
   const [error, setError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
+  const [provisioningCustomer, setProvisioningCustomer] = useState<{ id: string; name: string } | null>(null);
   const [editingCustomer, setEditingCustomer] = useState<CustomerDraft | null>(null);
   const [showInstallationForm, setShowInstallationForm] = useState(false);
   const [editingInstallation, setEditingInstallation] = useState<InstallationDraft | null>(null);
@@ -156,6 +158,7 @@ export function BusinessLists({ section, permissions = [] }: { section: Business
   const canReadCustomers = permissions.includes('vendor.customers.read');
   const canReadContracts = permissions.includes('vendor.contracts.read');
   const canReadInstallations = permissions.includes('vendor.installations.read');
+  const canProvisionCustomers = section === 'customers' && canManageCustomers && permissions.includes('vendor.installations.manage') && canReadCustomers && canReadInstallations;
 
   function openCreateCustomer() {
     setEditingCustomer(null);
@@ -179,6 +182,27 @@ export function BusinessLists({ section, permissions = [] }: { section: Business
     setNotice('');
   }
 
+  function openProvisioning(row: Row) {
+    if (typeof row.id !== 'string' || !canProvisionCustomers) {
+      setError('برای راه‌اندازی اولیه، شناسه مشتری و مجوزهای مشاهده/مدیریت مشتری و نصب لازم است.');
+      return;
+    }
+    setProvisioningCustomer({ id: row.id, name: String(row.displayName ?? row.legalName ?? row.customerNumber ?? '') });
+    setNotice('');
+    setError('');
+  }
+
+  function closeProvisioningForm() {
+    setProvisioningCustomer(null);
+  }
+
+  function provisioningSaved() {
+    setNotice('درخواست تنظیمات در سامانه مرکزی ثبت شد؛ تا اتصال امضاکننده و تأیید مشتری، راه‌اندازی انجام‌شده محسوب نمی‌شود.');
+    setPage(1);
+    setData(null);
+    setLoading(true);
+    setReloadKey(current => current + 1);
+  }
   function closeCustomerForm() {
     setShowCustomerForm(false);
     setEditingCustomer(null);
@@ -436,6 +460,7 @@ export function BusinessLists({ section, permissions = [] }: { section: Business
     {notice && <p role="status" className="text-sm text-muted-foreground">{notice}</p>}
     <Suspense fallback={<p role="status" className="py-3 text-sm text-muted-foreground">در حال بارگذاری فرم…</p>}>
       {showCustomerForm && canManageCustomers && <CustomerForm {...(editingCustomer ? { initial: editingCustomer } : {})} onCancel={closeCustomerForm} onSaved={customerSaved} />}
+      {provisioningCustomer && canProvisionCustomers && <ProvisioningForm customerId={provisioningCustomer.id} customerName={provisioningCustomer.name} onCancel={closeProvisioningForm} onSaved={provisioningSaved} />}
       {showInstallationForm && canManageInstallations && <InstallationForm {...(editingInstallation ? { initial: editingInstallation } : {})} canReadCustomers={canReadCustomers} onCancel={closeInstallationForm} onSaved={installationSaved} />}
       {showContractForm && canManageContracts && <ContractForm {...(editingContract ? { initial: editingContract } : {})} canReadCustomers={canReadCustomers} onCancel={closeContractForm} onSaved={contractSaved} />}
       {showLicenseForm && canManageLicenses && <LicenseForm {...(editingLicense ? { initial: editingLicense } : {})}
@@ -454,11 +479,12 @@ export function BusinessLists({ section, permissions = [] }: { section: Business
         : !data || data.items.length === 0 ? <div className="flex min-h-36 flex-col items-center justify-center gap-2 text-center"><span className="text-sm font-semibold">رکوردی برای نمایش وجود ندارد</span><p className="text-sm text-muted-foreground">پس از ثبت اطلاعات، موارد در این فهرست نمایش داده می‌شوند.</p></div>
         : <div className="overflow-x-auto">
           <table className="w-full min-w-[680px] border-separate border-spacing-0 text-right text-sm">
-            <thead><tr>{resource.columns.map(column => <th key={column.key} scope="col" className="border-b border-border bg-muted/60 px-4 py-3 font-semibold text-muted-foreground">{column.label}</th>)}{(canManageCustomers || canManageInstallations || canManageContracts || canManageLicenses) && <th scope="col" className="border-b border-border bg-muted/60 px-4 py-3 font-semibold text-muted-foreground">عملیات</th>}</tr></thead>
+            <thead><tr>{resource.columns.map(column => <th key={column.key} scope="col" className="border-b border-border bg-muted/60 px-4 py-3 font-semibold text-muted-foreground">{column.label}</th>)}{(canManageCustomers || canManageInstallations || canManageContracts || canManageLicenses || canProvisionCustomers) && <th scope="col" className="border-b border-border bg-muted/60 px-4 py-3 font-semibold text-muted-foreground">عملیات</th>}</tr></thead>
             <tbody>{data.items.map((row, index) => <tr key={String(row.id ?? row.customerNumber ?? row.installationCode ?? row.contractNumber ?? row.licenseNumber ?? index)} className="hover:bg-muted/30">
               {resource.columns.map(column => <td key={column.key} className="border-b border-border px-4 py-3 text-foreground">{formatValue(row[column.key], column.kind)}</td>)}
-              {(canManageCustomers || canManageInstallations || canManageContracts || canManageLicenses) && <td className="border-b border-border px-4 py-3"><div className="flex flex-wrap gap-2">
+              {(canManageCustomers || canManageInstallations || canManageContracts || canManageLicenses || canProvisionCustomers) && <td className="border-b border-border px-4 py-3"><div className="flex flex-wrap gap-2">
                 {canManageCustomers && <Button type="button" variant="outline" size="sm" onClick={() => openEditCustomer(row)} aria-label={`ویرایش مشتری ${String(row.displayName ?? row.customerNumber ?? '')}`}><Pencil size={15}/> ویرایش</Button>}
+                 {canProvisionCustomers && <Button type="button" variant="outline" size="sm" onClick={() => openProvisioning(row)} aria-label={`تنظیم راه‌اندازی مشتری ${String(row.displayName ?? row.customerNumber ?? '')}`}>راه‌اندازی اولیه</Button>}
                 {canManageInstallations && <Button type="button" variant="outline" size="sm" onClick={() => openEditInstallation(row)} aria-label={`ویرایش نصب ${String(row.name ?? row.installationCode ?? '')}`}><Pencil size={15}/> ویرایش</Button>}
                 {canManageInstallations && canRequestApprovals && (row.status === 'Active' || row.status === 'Suspended') && <Button type="button" variant="outline" size="sm" disabled={statusBusyId === row.id || Boolean(statusBusyId)} onClick={() => changeInstallationStatus(row)} aria-label={row.status === 'Active' ? `تعلیق نصب ${String(row.name ?? '')}` : `فعال‌سازی نصب ${String(row.name ?? '')}`}>{statusBusyId === row.id ? 'در حال ثبت…' : row.status === 'Active' ? 'تعلیق' : 'فعال‌سازی'}</Button>}
                 {canManageContracts && row.status === 'Draft' && <Button type="button" variant="outline" size="sm" onClick={() => openEditContract(row)} aria-label={`ویرایش قرارداد ${String(row.contractNumber ?? '')}`}><Pencil size={15}/> ویرایش</Button>}
