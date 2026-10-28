@@ -981,9 +981,25 @@
 - CI must execute the SQL Server integration test on the final PR SHA; local execution was not available in the GitHub-only session.
 - Handoff: docs/handoffs/ISSUE-228-provisioning-api-integration.md.
 
-## 2026-10-28 — Issue #107: fail-closed Production checkpoint readiness
-- Added IProductionVendorAuditCheckpointStore as an explicit marker for an independently permissioned production checkpoint adapter and VendorAuditCheckpointStartupGuard before host build.
-- Production startup now fails with an actionable error when no production adapter is registered; Development/test environments may run without a provider. A generic IVendorAuditCheckpointStore or fake test store does not satisfy the production gate.
-- This is an intentional fail-closed operational change: Vendor cannot start in Production until a real external adapter is configured. No local-file or same-database fallback is accepted.
-- Added guard tests for missing store, generic store only, Development, and explicit production adapter registration. The actual independent provider, credentials, retention, SQL principal separation, alerting and recovery remain open in Issue #107.
-- Handoff: docs/handoffs/ISSUE-107-checkpoint-runtime-guard.md. CI must verify the final PR SHA.
+## 2026-10-28 — Issue #236: provisioning maker-checker issuance slice
+- Added a Vendor-only issuance service that validates the stored canonical payload/hash, customer/installation binding, target active state, expiry and rowversion before calling the existing fail-closed signing provider.
+- Added a two-person approval request endpoint and integrated provisioning decisions with the existing approval transaction. The requester cannot approve their own request; a signer outage returns 503 and leaves the request AwaitingSigner and approval Pending.
+- Added an authorized no-store package export route that returns a signed package only after status PendingDelivery.
+- Extended the real SQL Server HTTP integration test to cover the approval request and the expected fail-closed response when the default unavailable signer is active.
+- No production KMS/HSM adapter was selected or implemented; no customer-side consumer/acknowledgement was implemented. See #235 and #236 and `docs/handoffs/ISSUE-236-provisioning-maker-checker.md`.
+- CI must verify the final PR SHA; no local build/test was available in the GitHub-only session.
+
+
+## 2026-10-28 — Issue #107: fail-closed Production checkpoint readiness (history preservation)
+- Preserved the Issue #107 operational requirement that Production startup fails unless an explicit `IProductionVendorAuditCheckpointStore` adapter is registered; a generic or fake store does not satisfy the production gate.
+- Vendor cannot start in Production until an independent external checkpoint provider is configured with separate credentials, suitable append-only/immutability retention, SQL principal separation, alerting and recovery. No local-file or same-database fallback is accepted.
+- Handoff: docs/handoffs/ISSUE-107-checkpoint-runtime-guard.md.
+- Documentation correction during Issue #236 review: the earlier edit had replaced this checkpoint section instead of retaining it. This entry restores the historical requirement; Issue #236 does not supersede it.
+
+
+## 2026-10-28 — Issue #236: اصلاح خطاهای Vendor CI و تست binding نصب
+- رفع خطای TypeScript در `Vendor/Vendor.Web/src/ProvisioningForm.test.tsx`: دو عضو استاتیک `TestURL` باید صریحاً `override` داشته باشند (commit `b1d355add0cc0a54561cc6cd9f8f1324599c4a90`).
+- CI بعدی نشان داد آزمون SQL Server پس از ساخت درخواست راه‌اندازی، کد نصب هدف را تغییر می‌داد؛ صدور با `provisioning_payload_invalid` رد شد. رفتار fail-closed درست بود و نباید تضعیف می‌شد.
+- اصلاح fixture در `tests/Vendor.Host.Tests/VendorCustomerMutationHttpIntegrationTests.cs`: کد نصب ثابت نگه داشته می‌شود و آزمون update از تغییر نام/محیط برای پوشش RowVersion استفاده می‌کند (commit `d30693f649a50edd2f2a493ab3b05648469174a1`).
+- شواهد Vendor CI روی SHA `d30693f649a50edd2f2a493ab3b05648469174a1` سبز: typecheck، تست UI، runtime dependency audit، build UI، build/test Vendor روی SQL Server، EF snapshot guard، publish و گارد نبود کلید خصوصی.
+- CI روی SHA نهایی مستندات باید مجدداً تأیید شود؛ .NET CI، E2E و انتشار Linux/Windows تا مشاهدهٔ نتیجهٔ نهایی این commit مستنداتی هنوز Verified محسوب نمی‌شوند.

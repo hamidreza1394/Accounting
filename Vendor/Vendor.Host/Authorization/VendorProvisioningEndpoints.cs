@@ -15,8 +15,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Faranou.Vendor.Host.Authorization;
 
 /// <summary>
-/// Persists Vendor-side provisioning intent only. Until a production signer and customer-side
-/// consumer are configured, requests remain AwaitingSigner and no company/admin is claimed created.
+/// Persists Vendor-side provisioning intent and exposes a two-person signing workflow. A package is
+/// only downloadable after successful signing; this API never claims customer-side provisioning is confirmed.
 /// </summary>
 public static class VendorProvisioningEndpoints
 {
@@ -139,6 +139,133 @@ public static class VendorProvisioningEndpoints
             return Results.Created($"/api/vendor/provisioning-requests/{item.Id:D}", ToResponse(item));
         }).RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.CustomersManage));
 
+        group.MapPost("/{id:guid}/approval-request", async (
+            Guid id, CreateVendorProvisioningApprovalRequest request, HttpContext context,
+            IAntiforgery antiforgery, IAuthorizationService authorization, VendorDbContext db,
+            UserManager<VendorAdminUser> users, IVendorAuditWriter audit, CancellationToken ct) =>
+        {
+            if (!await antiforgery.IsRequestValidAsync(context))
+                return Results.BadRequest(new { error = "invalid_antiforgery_token" });
+            if (!VendorBusinessMutationRules.TryDecodeRowVersion(request.RowVersion, out var expectedResourceVersion))
+                return Results.BadRequest(new { error = "invalid_provisioning_approval_request" });
+
+            var item = await db.ProvisioningRequests.AsNoTracking()
+                .SingleOrDefaultAsync(value => value.Id == id, ct);
+            if (item is null) return Results.NotFound();
+            if (item.Status != "AwaitingSigner")
+                return Results.Conflict(new { error = "provisioning_request_not_awaiting_signer" });
+            if (!item.RowVersion.AsSpan().SequenceEqual(expectedResourceVersion))
+                return Results.Conflict(new { error = "stale_row_version" });
+
+            var customerAccess = await authorization.AuthorizeAsync(
+                context.User,
+                new VendorResourceDescriptor("customer", item.CustomerId),
+                VendorResourceCatalog.PolicyFor("customer", VendorPermissionCatalog.CustomersManage));
+            var installationAccess = await authorization.AuthorizeAsync(
+                context.User,
+                new VendorResourceDescriptor("installation", item.InstallationId, item.CustomerId),
+                VendorResourceCatalog.PolicyFor("installation", VendorPermissionCatalog.InstallationsManage));
+            if (!customerAccess.Succeeded || !installationAccess.Succeeded)
+                return Results.Forbid();
+
+            var actor = await users.GetUserAsync(context.User);
+            if (actor is null) return Results.Forbid();
+
+            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            var approval = new VendorApprovalRequest
+            {
+                Id = Guid.NewGuid(),
+                ResourceType = "provisioning",
+                ResourceId = item.Id,
+                TargetStatus = "PendingDelivery",
+                ExpectedResourceRowVersion = expectedResourceVersion,
+                RequestedByUserId = actor.Id,
+                RequestedAtUtc = DateTimeOffset.UtcNow,
+                Status = "Pending"
+            };
+            db.ApprovalRequests.Add(approval);
+            try
+            {
+                await db.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
+            {
+                return Results.Conflict(new { error = "approval_already_pending" });
+            }
+
+            await audit.AppendAsync(new VendorAuditWriteRequest(
+                actor.Id, "vendor.provisioning.approval-requested", nameof(VendorProvisioningRequest),
+                item.Id.ToString("D"), System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
+            await tx.CommitAsync(ct);
+
+            return Results.Accepted($"/api/vendor/approvals/{approval.Id:D}", new
+            {
+                approval.Id, approval.ResourceType, approval.ResourceId, approval.TargetStatus,
+                approval.RequestedAtUtc, approval.Status, RowVersion = Convert.ToBase64String(approval.RowVersion)
+            });
+        }).RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.ApprovalsRequest));
+
+        group.MapPost("/{id:guid}/package/export", async (
+            Guid id, HttpContext context, IAntiforgery antiforgery,
+            IAuthorizationService authorization, VendorDbContext db,
+            UserManager<VendorAdminUser> users, IVendorAuditWriter audit,
+            TimeProvider timeProvider, CancellationToken ct) =>
+        {
+            if (!await antiforgery.IsRequestValidAsync(context))
+                return Results.BadRequest(new { error = "invalid_antiforgery_token" });
+
+            var item = await db.ProvisioningRequests
+                .SingleOrDefaultAsync(value => value.Id == id, ct);
+            if (item is null) return Results.NotFound();
+            var customerAccess = await authorization.AuthorizeAsync(
+                context.User,
+                new VendorResourceDescriptor("customer", item.CustomerId),
+                VendorResourceCatalog.PolicyFor("customer", VendorPermissionCatalog.CustomersRead));
+            var installationAccess = await authorization.AuthorizeAsync(
+                context.User,
+                new VendorResourceDescriptor("installation", item.InstallationId, item.CustomerId),
+                VendorResourceCatalog.PolicyFor("installation", VendorPermissionCatalog.InstallationsRead));
+            if (!customerAccess.Succeeded || !installationAccess.Succeeded)
+                return Results.Forbid();
+
+            if (item.Status != "PendingDelivery" ||
+                string.IsNullOrWhiteSpace(item.KeyId) ||
+                string.IsNullOrWhiteSpace(item.Algorithm) ||
+                string.IsNullOrWhiteSpace(item.SignatureBase64))
+                return Results.Conflict(new { error = "provisioning_package_not_ready" });
+
+            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            var now = timeProvider.GetUtcNow().ToUniversalTime();
+            if (item.DeliveredAtUtc is null)
+            {
+                item.DeliveredAtUtc = now;
+                item.UpdatedAtUtc = now;
+                try
+                {
+                    await db.SaveChangesAsync(ct);
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    return Results.Conflict(new { error = "stale_provisioning_version" });
+                }
+            }
+
+            var actor = await users.GetUserAsync(context.User);
+            if (actor is null) return Results.Forbid();
+
+            await audit.AppendAsync(new VendorAuditWriteRequest(
+                actor.Id,
+                "vendor.provisioning.package-exported", nameof(VendorProvisioningRequest),
+                item.Id.ToString("D"), System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
+
+            await tx.CommitAsync(ct);
+            context.Response.Headers["Cache-Control"] = "no-store";
+            context.Response.Headers["Pragma"] = "no-cache";
+            return Results.Ok(new CustomerProvisioningPackage(
+                CustomerProvisioningPackageValidator.CurrentFormatVersion,
+                item.KeyId!, item.Algorithm!, item.PayloadJson, item.SignatureBase64!));
+        }).RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.CustomersRead));
+
         group.MapGet("/", async (
             Guid? customerId, int? page, int? pageSize,
             HttpContext context, IAuthorizationService authorization, VendorDbContext db, CancellationToken ct) =>
@@ -161,7 +288,12 @@ public static class VendorProvisioningEndpoints
                 .Select(item => new ProvisioningRequestResponse(
                     item.Id, item.CustomerId, item.InstallationId, item.RequestId, item.Status,
                     item.CreatedAtUtc, item.UpdatedAtUtc, item.ConfirmedAtUtc, item.FailureCode,
-                    item.PayloadSha256, Convert.ToBase64String(item.RowVersion)))
+                    item.PayloadSha256, Convert.ToBase64String(item.RowVersion),
+                    db.ApprovalRequests.Where(approval =>
+                            approval.ResourceType == "provisioning" &&
+                            approval.ResourceId == item.Id &&
+                            approval.Status == "Pending")
+                        .Select(approval => approval.Status).FirstOrDefault()))
                 .ToListAsync(ct);
             return Results.Ok(new VendorPageResponse<ProvisioningRequestResponse>(
                 items, pagination.Page, pagination.PageSize, totalCount));
@@ -237,4 +369,7 @@ public sealed record ProvisioningRequestResponse(
     DateTimeOffset? ConfirmedAtUtc,
     string? FailureCode,
     string PayloadSha256,
-    string RowVersion);
+    string RowVersion,
+    string? ApprovalStatus = null);
+
+public sealed record CreateVendorProvisioningApprovalRequest(string? RowVersion);

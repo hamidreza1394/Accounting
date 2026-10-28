@@ -460,7 +460,7 @@ export function BusinessLists({ section, permissions = [] }: { section: Business
     {notice && <p role="status" className="text-sm text-muted-foreground">{notice}</p>}
     <Suspense fallback={<p role="status" className="py-3 text-sm text-muted-foreground">در حال بارگذاری فرم…</p>}>
       {showCustomerForm && canManageCustomers && <CustomerForm {...(editingCustomer ? { initial: editingCustomer } : {})} onCancel={closeCustomerForm} onSaved={customerSaved} />}
-      {provisioningCustomer && canProvisionCustomers && <ProvisioningForm customerId={provisioningCustomer.id} customerName={provisioningCustomer.name} onCancel={closeProvisioningForm} onSaved={provisioningSaved} />}
+      {provisioningCustomer && canProvisionCustomers && <ProvisioningForm customerId={provisioningCustomer.id} customerName={provisioningCustomer.name} onCancel={closeProvisioningForm} onSaved={provisioningSaved} canRequestApproval={permissions.includes('vendor.approvals.request')} canExportPackage={permissions.includes('vendor.customers.read') && permissions.includes('vendor.installations.read')} />}
       {showInstallationForm && canManageInstallations && <InstallationForm {...(editingInstallation ? { initial: editingInstallation } : {})} canReadCustomers={canReadCustomers} onCancel={closeInstallationForm} onSaved={installationSaved} />}
       {showContractForm && canManageContracts && <ContractForm {...(editingContract ? { initial: editingContract } : {})} canReadCustomers={canReadCustomers} onCancel={closeContractForm} onSaved={contractSaved} />}
       {showLicenseForm && canManageLicenses && <LicenseForm {...(editingLicense ? { initial: editingLicense } : {})}

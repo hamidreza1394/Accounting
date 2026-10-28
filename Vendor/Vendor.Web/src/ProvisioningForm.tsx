@@ -18,6 +18,8 @@ type ProvisioningRequest = {
   confirmedAtUtc?: string | null;
   failureCode?: string | null;
   payloadSha256: string;
+  rowVersion: string;
+  approvalStatus?: string | null;
 };
 type PageResponse<T> = { items: T[] };
 type Props = {
@@ -25,8 +27,11 @@ type Props = {
   customerName: string;
   onCancel: () => void;
   onSaved: () => void;
+  canRequestApproval?: boolean;
+  canExportPackage?: boolean;
 };
 type ApiError = { error?: string; message?: string };
+type CustomerProvisioningPackageFile = { formatVersion: number; keyId: string; algorithm: string; payloadJson: string; signatureBase64: string };
 
 const subsystemOptions = [
   { value: 'finance', label: 'مالی' },
@@ -70,7 +75,7 @@ function formatDate(value: string | null | undefined): string {
   }).format(date);
 }
 
-export function ProvisioningForm({ customerId, customerName, onCancel, onSaved }: Props) {
+export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, canRequestApproval = false, canExportPackage = false }: Props) {
   const [installations, setInstallations] = useState<Installation[]>([]);
   const [requests, setRequests] = useState<ProvisioningRequest[]>([]);
   const [installationId, setInstallationId] = useState('');
@@ -81,6 +86,8 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved }
   const [requestId, setRequestId] = useState(newRequestId);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [approvalBusyId, setApprovalBusyId] = useState<string | null>(null);
+  const [exportBusyId, setExportBusyId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -175,6 +182,98 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved }
     }
   }
 
+  async function requestApproval(item: ProvisioningRequest) {
+    if (!canRequestApproval || approvalBusyId) return;
+    setApprovalBusyId(item.id);
+    setError('');
+    setNotice('');
+    try {
+      const tokenResponse = await fetch('/api/auth/antiforgery', {
+        credentials: 'same-origin', cache: 'no-store',
+      });
+      if (!tokenResponse.ok) throw new Error(publicError(tokenResponse.status, ''));
+      const tokenBody = await tokenResponse.json() as { requestToken?: string };
+      if (!tokenBody.requestToken) throw new Error('توکن امنیتی در پاسخ سرور وجود ندارد.');
+
+      const response = await fetch(`/api/vendor/provisioning-requests/${encodeURIComponent(item.id)}/approval-request`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': tokenBody.requestToken },
+        body: JSON.stringify({ rowVersion: item.rowVersion }),
+      });
+      if (!response.ok) {
+        let code = '';
+        try {
+          const body = await response.json() as ApiError;
+          code = body.error ?? body.message ?? '';
+        } catch {
+          // Do not expose raw server errors.
+        }
+        throw new Error(response.status === 409 && code === 'approval_already_pending'
+          ? 'این درخواست قبلاً برای بررسی دو نفره ارسال شده است.'
+          : publicError(response.status, code));
+      }
+      setNotice('درخواست برای بررسی دو نفره ارسال شد؛ بسته هنوز امضا یا به مشتری تحویل نشده است.');
+      setRefreshKey(current => current + 1);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'ارسال برای بررسی ناموفق بود.');
+    } finally {
+      setApprovalBusyId(null);
+    }
+  }
+
+  async function exportPackage(item: ProvisioningRequest) {
+    if (!canExportPackage || exportBusyId) return;
+    setExportBusyId(item.id);
+    setError('');
+    setNotice('');
+    try {
+      const tokenResponse = await fetch('/api/auth/antiforgery', {
+        credentials: 'same-origin', cache: 'no-store',
+      });
+      if (!tokenResponse.ok) throw new Error(publicError(tokenResponse.status, ''));
+      const tokenBody = await tokenResponse.json() as { requestToken?: string };
+      if (!tokenBody.requestToken) throw new Error('توکن امنیتی در پاسخ سرور وجود ندارد.');
+
+      const response = await fetch(`/api/vendor/provisioning-requests/${encodeURIComponent(item.id)}/package/export`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': tokenBody.requestToken },
+        body: JSON.stringify({}),
+      });
+      if (!response.ok) {
+        let code = '';
+        try {
+          const body = await response.json() as ApiError;
+          code = body.error ?? body.message ?? '';
+        } catch {
+          // Keep the public error generic.
+        }
+        throw new Error(publicError(response.status, code));
+      }
+
+      const packageBody = await response.json() as CustomerProvisioningPackageFile;
+      const blob = new Blob([JSON.stringify(packageBody, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `faranou-provisioning-${item.requestId}.json`;
+      anchor.style.display = 'none';
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setNotice('بستهٔ امضاشده صادر و برای انتقال آفلاین دانلود شد؛ تأیید مشتری هنوز ثبت نشده است.');
+      setRefreshKey(current => current + 1);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'دریافت بسته ناموفق بود.');
+    } finally {
+      setExportBusyId(null);
+    }
+  }
+
   function toggleSubsystem(value: string, checked: boolean) {
     setSubsystems(current => checked
       ? (current.includes(value) ? current : [...current, value])
@@ -264,11 +363,25 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved }
                 <th className="border-b px-3 py-2 font-semibold text-muted-foreground">وضعیت</th>
                 <th className="border-b px-3 py-2 font-semibold text-muted-foreground">زمان ثبت</th>
                 <th className="border-b px-3 py-2 font-semibold text-muted-foreground">شناسه درخواست</th>
+                {(canRequestApproval || canExportPackage) && <th className="border-b px-3 py-2 font-semibold text-muted-foreground">عملیات</th>}
               </tr></thead>
               <tbody>{requests.map(item => <tr key={item.id}>
                 <td className="border-b px-3 py-2">{statusLabels[item.status] ?? item.status}</td>
                 <td className="border-b px-3 py-2 tabular-nums">{formatDate(item.createdAtUtc)}</td>
                 <td className="border-b px-3 py-2 font-mono text-xs" dir="ltr">{item.requestId}</td>
+                {(canRequestApproval || canExportPackage) && <td className="border-b px-3 py-2">
+                  {canExportPackage && item.status === 'PendingDelivery'
+                    ? <Button type="button" size="sm" variant="outline" onClick={() => void exportPackage(item)}
+                        disabled={busy || exportBusyId !== null}>
+                        {exportBusyId === item.id ? <><LoaderCircle size={14} className="animate-spin"/> در حال دریافت…</> : 'دانلود بستهٔ امضاشده'}
+                      </Button>
+                    : canRequestApproval && item.approvalStatus === 'Pending'
+                      ? <span className="text-xs text-muted-foreground">در انتظار بررسی دو نفره</span>
+                      : canRequestApproval && item.status === 'AwaitingSigner' && <Button type="button" size="sm" variant="outline"
+                        onClick={() => void requestApproval(item)} disabled={busy || approvalBusyId !== null || exportBusyId !== null || !item.rowVersion}>
+                        {approvalBusyId === item.id ? <><LoaderCircle size={14} className="animate-spin"/> در حال ارسال…</> : 'ارسال برای تأیید دو نفره'}
+                      </Button>}
+                </td>}
               </tr>)}</tbody>
             </table>
           </div>}

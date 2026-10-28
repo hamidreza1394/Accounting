@@ -135,7 +135,8 @@ public static class VendorApprovalEndpoints
             Guid id, DecideVendorApprovalRequest request, HttpContext context,
             IAntiforgery antiforgery, IAuthorizationService authorization,
             VendorDbContext db, UserManager<VendorAdminUser> users,
-            IVendorAuditWriter audit, VendorLicenseIssuanceService licenseIssuance, CancellationToken ct) =>
+            IVendorAuditWriter audit, VendorLicenseIssuanceService licenseIssuance,
+            VendorProvisioningIssuanceService provisioningIssuance, CancellationToken ct) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context))
                 return Results.BadRequest(new { error = "invalid_antiforgery_token" });
@@ -156,8 +157,71 @@ public static class VendorApprovalEndpoints
                 return Results.Conflict(new { error = "approval_already_decided" });
             if (approval.RequestedByUserId == actor.Id)
                 return Results.Forbid();
-            if (approval.ResourceType is not ("customer" or "installation" or "license"))
+            if (approval.ResourceType is not ("customer" or "installation" or "license" or "provisioning"))
                 return Results.Conflict(new { error = "unsupported_approval_resource" });
+
+            if (approval.ResourceType == "provisioning")
+            {
+                var provisioning = await db.ProvisioningRequests.SingleOrDefaultAsync(
+                    item => item.Id == approval.ResourceId, ct);
+                if (provisioning is null) return Results.NotFound();
+
+                var customerAccess = await authorization.AuthorizeAsync(
+                    context.User,
+                    new VendorResourceDescriptor("customer", provisioning.CustomerId),
+                    VendorResourceCatalog.PolicyFor("customer", VendorPermissionCatalog.CustomersManage));
+                var installationAccess = await authorization.AuthorizeAsync(
+                    context.User,
+                    new VendorResourceDescriptor("installation", provisioning.InstallationId, provisioning.CustomerId),
+                    VendorResourceCatalog.PolicyFor("installation", VendorPermissionCatalog.InstallationsManage));
+                if (!customerAccess.Succeeded || !installationAccess.Succeeded)
+                    return Results.Forbid();
+
+                if (request.Decision == "Approved")
+                {
+                    var issuance = await provisioningIssuance.IssueApprovedAsync(
+                        approval, actor.Id, expectedApprovalVersion,
+                        request.Comment, CorrelationId(), ct);
+                    if (!issuance.Succeeded)
+                        return Results.Json(new { error = issuance.ErrorCode }, statusCode: issuance.StatusCode);
+
+                    await tx.CommitAsync(ct);
+                    return Results.Ok(ToResponse(approval));
+                }
+
+                if (!provisioning.RowVersion.AsSpan().SequenceEqual(approval.ExpectedResourceRowVersion) ||
+                    provisioning.Status != "AwaitingSigner")
+                    return Results.Conflict(new { error = "provisioning_request_stale" });
+
+                var rejectedAt = DateTimeOffset.UtcNow;
+                db.Entry(provisioning).Property(item => item.RowVersion).OriginalValue =
+                    approval.ExpectedResourceRowVersion;
+                provisioning.Status = "Failed";
+                provisioning.FailureCode = "provisioning_rejected";
+                provisioning.UpdatedAtUtc = rejectedAt;
+                approval.Status = "Rejected";
+                approval.ReviewedByUserId = actor.Id;
+                approval.ReviewedAtUtc = rejectedAt;
+                approval.ReviewComment = string.IsNullOrWhiteSpace(request.Comment) ? null : request.Comment.Trim();
+                db.Entry(approval).Property(item => item.RowVersion).OriginalValue = expectedApprovalVersion;
+                try
+                {
+                    await db.SaveChangesAsync(ct);
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    return Results.Conflict(new { error = "stale_approval_or_provisioning_version" });
+                }
+
+                await audit.AppendAsync(new VendorAuditWriteRequest(
+                    actor.Id, "vendor.approval.rejected", nameof(VendorApprovalRequest),
+                    approval.Id.ToString("D"), CorrelationId()), ct);
+                await audit.AppendAsync(new VendorAuditWriteRequest(
+                    actor.Id, "vendor.provisioning.rejected", nameof(VendorProvisioningRequest),
+                    provisioning.Id.ToString("D"), CorrelationId()), ct);
+                await tx.CommitAsync(ct);
+                return Results.Ok(ToResponse(approval));
+            }
 
             var managePermission = PermissionFor(approval.ResourceType);
             var access = await authorization.AuthorizeAsync(
@@ -348,6 +412,7 @@ public static class VendorApprovalEndpoints
         "customer" => VendorPermissionCatalog.CustomersManage,
         "installation" => VendorPermissionCatalog.InstallationsManage,
         "license" => VendorPermissionCatalog.LicensesIssue,
+        "provisioning" => VendorPermissionCatalog.CustomersManage,
         _ => throw new ArgumentOutOfRangeException(nameof(resourceType))
     };
 

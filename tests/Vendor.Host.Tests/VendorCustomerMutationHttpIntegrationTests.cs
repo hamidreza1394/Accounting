@@ -6,7 +6,9 @@ using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Security.Claims;
 using System.Text.Json;
+using Faranou.Licensing.Contracts;
 using Faranou.Vendor.Host.Authorization;
+using Faranou.Vendor.Host.Signing;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Domain;
 using Faranou.Vendor.Persistence.Auditing;
@@ -42,6 +44,10 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
         var installationApprovalRowVersion = string.Empty;
         var licenseApprovalId = Guid.Empty;
         var licenseApprovalRowVersion = string.Empty;
+        var provisioningApprovalId = Guid.Empty;
+        var provisioningApprovalRowVersion = string.Empty;
+        var provisioningRequestRowVersion = string.Empty;
+        var installationCodeForProvisioning = string.Empty;
         var baseConnection = Environment.GetEnvironmentVariable("FARANO_VENDOR_TEST_SQLSERVER");
         if (string.IsNullOrWhiteSpace(baseConnection))
         {
@@ -67,6 +73,10 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 webHost.ConfigureTestServices(services =>
                 {
                     services.RemoveAll<IVendorAuditWriter>();
+                    services.RemoveAll<ILicenseSigningProvider>();
+                    services.AddSingleton<SequencedTestSigningProvider>(_ => new SequencedTestSigningProvider());
+                    services.AddSingleton<ILicenseSigningProvider>(provider =>
+                        provider.GetRequiredService<SequencedTestSigningProvider>());
                     services.AddSingleton<AuditFailureSwitch>();
                     services.AddSingleton<CustomerInsertRaceGate>();
                     services.ConfigureDbContext<VendorDbContext>((provider, options) =>
@@ -150,13 +160,14 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 var customer = new VendorCustomer
                 {
                     Id = Guid.NewGuid(),
-                    CustomerNumber = "IT-" + Guid.NewGuid().ToString("N")[..20],
+                    CustomerNumber = string.Empty,
                     LegalName = "Integration Test Customer",
                     DisplayName = "Before Update",
                     Status = "Active",
                     CreatedAtUtc = DateTimeOffset.UtcNow,
                     UpdatedAtUtc = DateTimeOffset.UtcNow
                 };
+                customer.CustomerNumber = "IT-" + customer.Id.ToString("N")[..20];
                 var otherCustomer = new VendorCustomer
                 {
                     Id = Guid.NewGuid(),
@@ -292,9 +303,11 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
             await using (var scope = factory.Services.CreateAsyncScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
-                installationIdForProvisioning = await db.Installations
+                var provisioningInstallation = await db.Installations
                     .Where(item => item.CustomerId == customerId)
-                    .Select(item => item.Id).SingleAsync(cancellationToken);
+                    .Select(item => new { item.Id, item.InstallationCode }).SingleAsync(cancellationToken);
+                installationIdForProvisioning = provisioningInstallation.Id;
+                installationCodeForProvisioning = provisioningInstallation.InstallationCode;
                 otherInstallationIdForProvisioning = await db.Installations
                     .Where(item => item.CustomerId != customerId)
                     .Select(item => item.Id).SingleAsync(cancellationToken);
@@ -327,6 +340,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
                 using var json = JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync(cancellationToken));
                 provisioningRecordId = json.RootElement.GetProperty("id").GetGuid();
+                provisioningRequestRowVersion = json.RootElement.GetProperty("rowVersion").GetString()!;
                 Assert.Equal("AwaitingSigner", json.RootElement.GetProperty("status").GetString());
                 Assert.False((await createResponse.Content.ReadAsStringAsync(cancellationToken))
                     .Contains("password", StringComparison.OrdinalIgnoreCase));
@@ -390,6 +404,17 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal(1, await db.AuditEvents.CountAsync(
                     item => item.ActionCode == "vendor.provisioning.requested" &&
                             item.SubjectId == provisioningRecordId.ToString("D"), cancellationToken));
+            }
+
+            using (var provisioningApprovalResponse = await PostWithTokenAsync(
+                client, $"/api/vendor/provisioning-requests/{provisioningRecordId:D}/approval-request",
+                new { rowVersion = provisioningRequestRowVersion }, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Accepted, provisioningApprovalResponse.StatusCode);
+                using var json = JsonDocument.Parse(await provisioningApprovalResponse.Content.ReadAsStringAsync(cancellationToken));
+                provisioningApprovalId = json.RootElement.GetProperty("id").GetGuid();
+                provisioningApprovalRowVersion = json.RootElement.GetProperty("rowVersion").GetString()!;
+                Assert.Equal("Pending", json.RootElement.GetProperty("status").GetString());
             }
 
             var path = $"/api/vendor/customers/{customerId:D}";
@@ -523,10 +548,9 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
             {
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
                 using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-                // At this point only the customer status request has been created.
-                // The license approval request is intentionally created later, after
-                // the license metadata RowVersion has been refreshed.
-                Assert.Equal(1, json.RootElement.GetProperty("totalCount").GetInt32());
+                // Customer status and provisioning issuance approvals are pending; the license
+                // approval is intentionally created later after its RowVersion is refreshed.
+                Assert.Equal(2, json.RootElement.GetProperty("totalCount").GetInt32());
                 Assert.Contains(json.RootElement.GetProperty("items").EnumerateArray(), item => item.GetProperty("id").GetGuid() == customerApprovalId);
             }
 
@@ -559,17 +583,21 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
             // Installation update: real HTTP, current RowVersion succeeds, replay is rejected.
             Guid installationId;
             byte[] installationRowVersion;
+            string installationCode;
             await using (var scope = factory.Services.CreateAsyncScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
                 var installation = await db.Installations.SingleAsync(item => item.InstallationCode.StartsWith("IT-INST-"), cancellationToken);
                 installationId = installation.Id;
+                installationCode = installation.InstallationCode;
                 installationRowVersion = installation.RowVersion.ToArray();
             }
             var installationPath = $"/api/vendor/installations/{installationId:D}";
             var installationBody = new
             {
-                installationCode = "IT-INST-UPDATED-" + installationId.ToString("N")[..8],
+                // Keep the installation identity stable: the provisioning request created earlier
+                // is intentionally bound to this installation code and must not be signed after it changes.
+                installationCode,
                 name = "After Installation Update",
                 environment = "Staging",
                 rowVersion = Convert.ToBase64String(installationRowVersion)
@@ -772,14 +800,15 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
             {
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
                 using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-                // Customer and installation requests are still pending; license adds the third.
-                Assert.Equal(3, json.RootElement.GetProperty("totalCount").GetInt32());
+                // Customer, installation, license, and provisioning requests are still pending.
+                Assert.Equal(4, json.RootElement.GetProperty("totalCount").GetInt32());
                 var pendingIds = json.RootElement.GetProperty("items").EnumerateArray()
                     .Select(item => item.GetProperty("id").GetGuid())
                     .ToHashSet();
                 Assert.Contains(customerApprovalId, pendingIds);
                 Assert.Contains(installationApprovalId, pendingIds);
                 Assert.Contains(licenseApprovalId, pendingIds);
+                Assert.Contains(provisioningApprovalId, pendingIds);
             }
 
             await using (var auditScope = factory.Services.CreateAsyncScope())
@@ -909,6 +938,57 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal("license_issuance_unavailable", json.RootElement.GetProperty("error").GetString());
             }
 
+            using (var provisioningDecisionResponse = await PostWithTokenAsync(reviewerClient,
+                $"/api/vendor/approvals/{provisioningApprovalId:D}/decision",
+                new { decision = "Approved", rowVersion = provisioningApprovalRowVersion, comment = "First attempt must fail closed" },
+                reviewerAntiForgeryToken, cancellationToken))
+            {
+                var provisioningDecisionBody = await provisioningDecisionResponse.Content.ReadAsStringAsync(cancellationToken);
+                Assert.True(provisioningDecisionResponse.StatusCode == HttpStatusCode.ServiceUnavailable,
+                    $"Expected signer-unavailable 503 but received {(int)provisioningDecisionResponse.StatusCode}: {provisioningDecisionBody}");
+                using var json = JsonDocument.Parse(provisioningDecisionBody);
+                Assert.Equal("provisioning_signing_unavailable", json.RootElement.GetProperty("error").GetString());
+            }
+
+            using (var packageResponse = await PostWithTokenAsync(reviewerClient,
+                $"/api/vendor/provisioning-requests/{provisioningRecordId:D}/package/export",
+                new { }, reviewerAntiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Conflict, packageResponse.StatusCode);
+            }
+
+            // The same pending approval is retryable after a transient signer outage.
+            using (var provisioningRetryResponse = await PostWithTokenAsync(reviewerClient,
+                $"/api/vendor/approvals/{provisioningApprovalId:D}/decision",
+                new { decision = "Approved", rowVersion = provisioningApprovalRowVersion, comment = "Retry after transient signer outage" },
+                reviewerAntiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, provisioningRetryResponse.StatusCode);
+                using var json = JsonDocument.Parse(await provisioningRetryResponse.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("Approved", json.RootElement.GetProperty("status").GetString());
+            }
+
+            using (var packageResponse = await PostWithTokenAsync(reviewerClient,
+                $"/api/vendor/provisioning-requests/{provisioningRecordId:D}/package/export",
+                new { }, reviewerAntiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, packageResponse.StatusCode);
+                Assert.Equal("no-store", packageResponse.Headers.CacheControl?.ToString());
+                using var json = JsonDocument.Parse(await packageResponse.Content.ReadAsStringAsync(cancellationToken));
+                var package = new CustomerProvisioningPackage(
+                    json.RootElement.GetProperty("formatVersion").GetInt32(),
+                    json.RootElement.GetProperty("keyId").GetString()!,
+                    json.RootElement.GetProperty("algorithm").GetString()!,
+                    json.RootElement.GetProperty("payloadJson").GetString()!,
+                    json.RootElement.GetProperty("signatureBase64").GetString()!);
+                var signer = factory.Services.GetRequiredService<SequencedTestSigningProvider>();
+                Assert.True(CustomerProvisioningPackageValidator.TryValidateAndVerify(
+                    package, signer.ExportPublicKey(), DateTimeOffset.UtcNow, out var parsedPayload, out var errorCode),
+                    $"Exported provisioning package failed signature validation: {errorCode}");
+                Assert.Equal(provisioningRequestId.ToString("D"), parsedPayload!.RequestId);
+                Assert.Equal(installationCodeForProvisioning, parsedPayload.InstallationId);
+            }
+
             foreach (var approval in new[]
             {
                 (Id: customerApprovalId, RowVersion: customerApprovalRowVersion),
@@ -941,8 +1021,8 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 var installation = await db.Installations.AsNoTracking().SingleAsync(item => item.Id == installationId, cancellationToken);
                 Assert.Equal("Suspended", customer.Status);
                 Assert.Equal("Suspended", installation.Status);
-                Assert.Equal(2, await db.ApprovalRequests.CountAsync(item => item.Status == "Approved", cancellationToken));
-                Assert.Equal(2, await db.AuditEvents.CountAsync(item =>
+                Assert.Equal(3, await db.ApprovalRequests.CountAsync(item => item.Status == "Approved", cancellationToken));
+                Assert.Equal(3, await db.AuditEvents.CountAsync(item =>
                     item.ActionCode == "vendor.approval.approved", cancellationToken));
                 Assert.Equal(2, await db.AuditEvents.CountAsync(item =>
                     item.ActionCode == "vendor.customer.status-changed" || item.ActionCode == "vendor.installation.status-changed",
@@ -1161,6 +1241,32 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
         using var request = new HttpRequestMessage(HttpMethod.Put, path) { Content = JsonContent.Create(body) };
         request.Headers.TryAddWithoutValidation("X-CSRF-TOKEN", token);
         return await client.SendAsync(request, ct);
+    }
+
+    private sealed class SequencedTestSigningProvider : ILicenseSigningProvider, IDisposable
+    {
+        private readonly ECDsa _key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        private int _calls;
+
+        public ValueTask<LicenseSigningResult> SignAsync(
+            ReadOnlyMemory<byte> canonicalPayload,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (Interlocked.Increment(ref _calls) <= 2)
+                return ValueTask.FromResult(LicenseSigningResult.Unavailable());
+
+            var signature = _key.SignData(
+                canonicalPayload.Span,
+                HashAlgorithmName.SHA256,
+                DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
+            return ValueTask.FromResult(LicenseSigningResult.Success(
+                "test-provisioning-key", LicenseAlgorithms.EcdsaP256Sha256, signature));
+        }
+
+        public byte[] ExportPublicKey() => _key.ExportSubjectPublicKeyInfo();
+
+        public void Dispose() => _key.Dispose();
     }
 
     private static string GenerateTotpCode(string base32Secret)
