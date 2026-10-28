@@ -787,14 +787,15 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
             {
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
                 using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-                // Customer and installation requests are still pending; license adds the third.
-                Assert.Equal(3, json.RootElement.GetProperty("totalCount").GetInt32());
+                // Customer, installation, license, and provisioning requests are still pending.
+                Assert.Equal(4, json.RootElement.GetProperty("totalCount").GetInt32());
                 var pendingIds = json.RootElement.GetProperty("items").EnumerateArray()
                     .Select(item => item.GetProperty("id").GetGuid())
                     .ToHashSet();
                 Assert.Contains(customerApprovalId, pendingIds);
                 Assert.Contains(installationApprovalId, pendingIds);
                 Assert.Contains(licenseApprovalId, pendingIds);
+                Assert.Contains(provisioningApprovalId, pendingIds);
             }
 
             await using (var auditScope = factory.Services.CreateAsyncScope())
