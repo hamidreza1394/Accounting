@@ -47,6 +47,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
         var provisioningApprovalId = Guid.Empty;
         var provisioningApprovalRowVersion = string.Empty;
         var provisioningRequestRowVersion = string.Empty;
+        var installationCodeForProvisioning = string.Empty;
         var baseConnection = Environment.GetEnvironmentVariable("FARANO_VENDOR_TEST_SQLSERVER");
         if (string.IsNullOrWhiteSpace(baseConnection))
         {
@@ -302,9 +303,11 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
             await using (var scope = factory.Services.CreateAsyncScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
-                installationIdForProvisioning = await db.Installations
+                var provisioningInstallation = await db.Installations
                     .Where(item => item.CustomerId == customerId)
-                    .Select(item => item.Id).SingleAsync(cancellationToken);
+                    .Select(item => new { item.Id, item.InstallationCode }).SingleAsync(cancellationToken);
+                installationIdForProvisioning = provisioningInstallation.Id;
+                installationCodeForProvisioning = provisioningInstallation.InstallationCode;
                 otherInstallationIdForProvisioning = await db.Installations
                     .Where(item => item.CustomerId != customerId)
                     .Select(item => item.Id).SingleAsync(cancellationToken);
@@ -979,7 +982,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     package, signer.ExportPublicKey(), DateTimeOffset.UtcNow, out var parsedPayload, out var errorCode),
                     $"Exported provisioning package failed signature validation: {errorCode}");
                 Assert.Equal(provisioningRequestId.ToString("D"), parsedPayload!.RequestId);
-                Assert.Equal("INSTALL-01", parsedPayload.InstallationId);
+                Assert.Equal(installationCodeForProvisioning, parsedPayload.InstallationId);
             }
 
             foreach (var approval in new[]
