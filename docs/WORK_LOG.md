@@ -988,3 +988,10 @@
 - Extended the real SQL Server HTTP integration test to cover the approval request and the expected fail-closed response when the default unavailable signer is active.
 - No production KMS/HSM adapter was selected or implemented; no customer-side consumer/acknowledgement was implemented. See #235 and #236 and `docs/handoffs/ISSUE-236-provisioning-maker-checker.md`.
 - CI must verify the final PR SHA; no local build/test was available in the GitHub-only session.
+
+
+## 2026-10-28 — Issue #107: fail-closed Production checkpoint readiness (history preservation)
+- Preserved the Issue #107 operational requirement that Production startup fails unless an explicit `IProductionVendorAuditCheckpointStore` adapter is registered; a generic or fake store does not satisfy the production gate.
+- Vendor cannot start in Production until an independent external checkpoint provider is configured with separate credentials, suitable append-only/immutability retention, SQL principal separation, alerting and recovery. No local-file or same-database fallback is accepted.
+- Handoff: docs/handoffs/ISSUE-107-checkpoint-runtime-guard.md.
+- Documentation correction during Issue #236 review: the earlier edit had replaced this checkpoint section instead of retaining it. This entry restores the historical requirement; Issue #236 does not supersede it.
