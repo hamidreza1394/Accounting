@@ -74,7 +74,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 {
                     services.RemoveAll<IVendorAuditWriter>();
                     services.RemoveAll<ILicenseSigningProvider>();
-                    services.AddSingleton<SequencedTestSigningProvider>();
+                    services.AddSingleton<SequencedTestSigningProvider>(_ => new SequencedTestSigningProvider());
                     services.AddSingleton<ILicenseSigningProvider>(provider =>
                         provider.GetRequiredService<SequencedTestSigningProvider>());
                     services.AddSingleton<AuditFailureSwitch>();
