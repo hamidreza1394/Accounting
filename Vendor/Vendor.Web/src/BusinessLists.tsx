@@ -1,11 +1,16 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { AlertCircle, ChevronLeft, ChevronRight, LoaderCircle, Pencil, Plus, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { CustomerForm, type CustomerDraft } from './CustomerForm';
-import { InstallationForm, type InstallationDraft } from './InstallationForm';
-import { ContractForm, type ContractDraft } from './ContractForm';
-import { LicenseForm, type LicenseDraft } from './LicenseForm';
+import type { CustomerDraft } from './CustomerForm';
+import type { InstallationDraft } from './InstallationForm';
+import type { ContractDraft } from './ContractForm';
+import type { LicenseDraft } from './LicenseForm';
+
+const CustomerForm = lazy(() => import('./CustomerForm').then(module => ({ default: module.CustomerForm })));
+const InstallationForm = lazy(() => import('./InstallationForm').then(module => ({ default: module.InstallationForm })));
+const ContractForm = lazy(() => import('./ContractForm').then(module => ({ default: module.ContractForm })));
+const LicenseForm = lazy(() => import('./LicenseForm').then(module => ({ default: module.LicenseForm })));
 
 export type BusinessSection = 'customers' | 'installations' | 'contracts' | 'licenses';
 
@@ -19,7 +24,7 @@ type PageResponse<T> = {
   hasNextPage: boolean;
 };
 type Row = Record<string, unknown>;
-type Column = { key: string; label: string; kind?: 'date' | 'status' | 'environment' };
+type Column = { key: string; label: string; kind?: 'date' | 'status' | 'environment' | 'licenseKind' | 'subsystems' };
 
 const resources: Record<BusinessSection, { title: string; description: string; endpoint: string; columns: Column[] }> = {
   customers: {
@@ -65,6 +70,9 @@ const resources: Record<BusinessSection, { title: string; description: string; e
     columns: [
       { key: 'licenseNumber', label: 'شماره لایسنس' },
       { key: 'productCode', label: 'محصول' },
+      { key: 'licenseKind', label: 'نوع', kind: 'licenseKind' },
+      { key: 'subsystems', label: 'زیرسیستم‌های خریداری‌شده', kind: 'subsystems' },
+      { key: 'maxCompanies', label: 'سقف شرکت' },
       { key: 'status', label: 'وضعیت', kind: 'status' },
       { key: 'validFromUtc', label: 'شروع اعتبار', kind: 'date' },
       { key: 'validUntilUtc', label: 'پایان اعتبار', kind: 'date' },
@@ -84,12 +92,28 @@ const environmentLabels: Record<string, string> = {
   Staging: 'آزمایشی',
   Development: 'توسعه',
 };
+const licenseKindLabels: Record<string, string> = {
+  term: 'مدت‌دار',
+  perpetual: 'دائمی',
+};
+const subsystemLabels: Record<string, string> = {
+  finance: 'مالی',
+  sales: 'فروش',
+  inventory: 'انبار',
+  treasury: 'خزانه',
+};
 
 function formatValue(value: unknown, kind?: Column['kind']): string {
   if (value === null || value === undefined || value === '') return '—';
   const raw = String(value);
   if (kind === 'status') return statusLabels[raw] ?? raw;
   if (kind === 'environment') return environmentLabels[raw] ?? raw;
+  if (kind === 'licenseKind') return licenseKindLabels[raw] ?? raw;
+  if (kind === 'subsystems') {
+    if (!Array.isArray(value)) return '—';
+    const labels = value.filter((code): code is string => typeof code === 'string').map(code => subsystemLabels[code] ?? code);
+    return labels.length ? labels.join('، ') : 'بدون زیرسیستم';
+  }
   if (kind === 'date') {
     const date = new Date(raw);
     if (Number.isNaN(date.getTime())) return '—';
@@ -276,6 +300,11 @@ export function BusinessLists({ section, permissions = [] }: { section: Business
       rowVersion: row.rowVersion,
       licenseNumber: String(row.licenseNumber ?? ''),
       productCode: String(row.productCode ?? ''),
+      licenseKind: String(row.licenseKind ?? (row.validUntilUtc ? 'term' : 'perpetual')),
+      maxCompanies: typeof row.maxCompanies === 'number' ? row.maxCompanies : null,
+      subsystems: Array.isArray(row.subsystems) ? row.subsystems.filter((item): item is string => typeof item === 'string') : [],
+      graceDays: typeof row.graceDays === 'number' ? row.graceDays : 30,
+      lastIssuedSequence: typeof row.lastIssuedSequence === 'number' ? row.lastIssuedSequence : 0,
       validFromUtc: String(row.validFromUtc ?? ''),
       validUntilUtc: String(row.validUntilUtc ?? ''),
       status: String(row.status ?? ''),
@@ -405,12 +434,14 @@ export function BusinessLists({ section, permissions = [] }: { section: Business
     </div>
 
     {notice && <p role="status" className="text-sm text-muted-foreground">{notice}</p>}
-    {showCustomerForm && canManageCustomers && <CustomerForm {...(editingCustomer ? { initial: editingCustomer } : {})} onCancel={closeCustomerForm} onSaved={customerSaved} />}
-    {showInstallationForm && canManageInstallations && <InstallationForm {...(editingInstallation ? { initial: editingInstallation } : {})} canReadCustomers={canReadCustomers} onCancel={closeInstallationForm} onSaved={installationSaved} />}
-    {showContractForm && canManageContracts && <ContractForm {...(editingContract ? { initial: editingContract } : {})} canReadCustomers={canReadCustomers} onCancel={closeContractForm} onSaved={contractSaved} />}
-    {showLicenseForm && canManageLicenses && <LicenseForm {...(editingLicense ? { initial: editingLicense } : {})}
-      canReadCustomers={canReadCustomers} canReadContracts={canReadContracts} canReadInstallations={canReadInstallations}
-      onCancel={closeLicenseForm} onSaved={licenseSaved} />}
+    <Suspense fallback={<p role="status" className="py-3 text-sm text-muted-foreground">در حال بارگذاری فرم…</p>}>
+      {showCustomerForm && canManageCustomers && <CustomerForm {...(editingCustomer ? { initial: editingCustomer } : {})} onCancel={closeCustomerForm} onSaved={customerSaved} />}
+      {showInstallationForm && canManageInstallations && <InstallationForm {...(editingInstallation ? { initial: editingInstallation } : {})} canReadCustomers={canReadCustomers} onCancel={closeInstallationForm} onSaved={installationSaved} />}
+      {showContractForm && canManageContracts && <ContractForm {...(editingContract ? { initial: editingContract } : {})} canReadCustomers={canReadCustomers} onCancel={closeContractForm} onSaved={contractSaved} />}
+      {showLicenseForm && canManageLicenses && <LicenseForm {...(editingLicense ? { initial: editingLicense } : {})}
+        canReadCustomers={canReadCustomers} canReadContracts={canReadContracts} canReadInstallations={canReadInstallations}
+        onCancel={closeLicenseForm} onSaved={licenseSaved} />}
+    </Suspense>
 
     <Card>
       <CardHeader className="border-b">

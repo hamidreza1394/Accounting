@@ -547,6 +547,11 @@ namespace Faranou.Vendor.Persistence.Migrations
                     b.Property<Guid?>("InstallationId").HasColumnType("uniqueidentifier");
                     b.Property<string>("LicenseNumber").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
                     b.Property<string>("ProductCode").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
+                    b.Property<int>("GraceDays").ValueGeneratedOnAdd().HasColumnType("int").HasDefaultValue(30);
+                    b.Property<string>("LicenseKind").IsRequired().HasMaxLength(16).HasColumnType("nvarchar(16)").HasDefaultValue("perpetual");
+                    b.Property<int?>("MaxCompanies").HasColumnType("int");
+                    b.Property<int>("LastIssuedSequence").ValueGeneratedOnAdd().HasColumnType("int").HasDefaultValue(0);
+                    b.Property<string>("SubsystemsJson").IsRequired().HasMaxLength(512).HasColumnType("nvarchar(512)").HasDefaultValue("[]");
                     b.Property<string>("Status").IsRequired().HasMaxLength(20).HasColumnType("nvarchar(20)");
                     b.Property<DateTimeOffset>("ValidFromUtc").HasColumnType("datetimeoffset");
                     b.Property<DateTimeOffset?>("ValidUntilUtc").HasColumnType("datetimeoffset");
@@ -557,7 +562,15 @@ namespace Faranou.Vendor.Persistence.Migrations
                     b.HasIndex("ContractId");
                     b.HasIndex("InstallationId");
                     b.HasIndex("LicenseNumber").IsUnique();
-                    b.ToTable("VendorLicenses", (string)null);
+                    b.ToTable("VendorLicenses", t =>
+                        {
+                            t.HasCheckConstraint("CK_VendorLicenses_GraceDays", "[GraceDays] >= 0 AND [GraceDays] <= 90");
+                            t.HasCheckConstraint("CK_VendorLicenses_LastIssuedSequence", "[LastIssuedSequence] >= 0");
+                            t.HasCheckConstraint("CK_VendorLicenses_LicenseKind", "[LicenseKind] IN (N'term', N'perpetual')");
+                            t.HasCheckConstraint("CK_VendorLicenses_KindExpiry", "([LicenseKind] = N'term' AND [ValidUntilUtc] IS NOT NULL) OR ([LicenseKind] = N'perpetual' AND [ValidUntilUtc] IS NULL)");
+                            t.HasCheckConstraint("CK_VendorLicenses_MaxCompanies", "[MaxCompanies] IS NULL OR [MaxCompanies] >= 1");
+                            t.HasCheckConstraint("CK_VendorLicenses_SubsystemsJson", "ISJSON([SubsystemsJson]) = 1");
+                        });
                 });
 
             modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorInstallation", b =>

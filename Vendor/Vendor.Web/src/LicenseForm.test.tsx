@@ -42,8 +42,13 @@ describe('Vendor license metadata form', () => {
 
     fireEvent.change(screen.getByLabelText('شماره لایسنس'), { target: { value: 'LIC-001' } });
     fireEvent.change(screen.getByLabelText('کد محصول'), { target: { value: 'FARANOU-BASE' } });
+    expect(screen.getByLabelText('نوع لایسنس')).toHaveValue('term');
+    expect(screen.getByLabelText('مالی (finance)')).not.toBeChecked();
+    fireEvent.change(screen.getByLabelText('حداکثر شرکت (اختیاری)'), { target: { value: '25' } });
+    fireEvent.click(screen.getByLabelText('مالی (finance)'));
+    fireEvent.click(screen.getByLabelText('فروش (sales)'));
     fireEvent.change(screen.getByLabelText('تاریخ شروع اعتبار'), { target: { value: '2026-10-27' } });
-    fireEvent.change(screen.getByLabelText('تاریخ پایان (اختیاری)'), { target: { value: '2027-10-26' } });
+    fireEvent.change(screen.getByLabelText('تاریخ پایان اعتبار (الزامی)'), { target: { value: '2027-10-26' } });
     fireEvent.change(contractSelect, { target: { value: 'contract-1' } });
     fireEvent.change(installationSelect, { target: { value: 'installation-1' } });
     fireEvent.click(screen.getByRole('button', { name: 'ثبت لایسنس پیش‌نویس' }));
@@ -66,6 +71,10 @@ describe('Vendor license metadata form', () => {
         installationId: 'installation-1',
         licenseNumber: 'LIC-001',
         productCode: 'FARANOU-BASE',
+        licenseKind: 'term',
+        maxCompanies: 25,
+        subsystems: ['finance', 'sales'],
+        graceDays: 30,
         validFromUtc: '2026-10-27T00:00:00.000Z',
         validUntilUtc: '2027-10-26T00:00:00.000Z',
       }),
@@ -87,6 +96,7 @@ describe('Vendor license metadata form', () => {
     render(<LicenseForm initial={{
       id: 'license-1', customerId: 'customer-1', contractId: 'contract-1', installationId: 'installation-1',
       rowVersion: 'AQIDBAUGBwg=', licenseNumber: 'LIC-001', productCode: 'FARANOU-BASE',
+      licenseKind: 'perpetual', maxCompanies: 10, subsystems: ['finance'], graceDays: 30,
       validFromUtc: '2026-01-01T00:00:00Z', validUntilUtc: '', status: 'Draft',
     }} canReadCustomers={false} canReadContracts={false} canReadInstallations={false}
       onCancel={vi.fn()} onSaved={onSaved} />);
@@ -102,6 +112,10 @@ describe('Vendor license metadata form', () => {
         installationId: 'installation-1',
         licenseNumber: 'LIC-UPDATED',
         productCode: 'FARANOU-BASE',
+        licenseKind: 'perpetual',
+        maxCompanies: 10,
+        subsystems: ['finance'],
+        graceDays: 30,
         validFromUtc: '2026-01-01T00:00:00.000Z',
         validUntilUtc: null,
         rowVersion: 'AQIDBAUGBwg=',
@@ -150,6 +164,7 @@ describe('Vendor license metadata form', () => {
     render(<LicenseForm initial={{
       id: 'license-1', customerId: 'customer-1', contractId: null, installationId: null,
       rowVersion: 'AQIDBAUGBwg=', licenseNumber: 'LIC-001', productCode: 'FARANOU-BASE',
+      licenseKind: 'perpetual', subsystems: ['finance'], graceDays: 30,
       validFromUtc: '2026-01-01T00:00:00Z', validUntilUtc: '', status: 'Draft',
     }} canReadCustomers={false} canReadContracts={false} canReadInstallations={false}
       onCancel={vi.fn()} onSaved={vi.fn()} />);
