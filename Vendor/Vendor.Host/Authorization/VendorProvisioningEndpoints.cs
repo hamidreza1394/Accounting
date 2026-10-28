@@ -217,12 +217,6 @@ public static class VendorProvisioningEndpoints
             var item = await db.ProvisioningRequests
                 .SingleOrDefaultAsync(value => value.Id == id, ct);
             if (item is null) return Results.NotFound();
-            if (item.Status != "PendingDelivery" ||
-                string.IsNullOrWhiteSpace(item.KeyId) ||
-                string.IsNullOrWhiteSpace(item.Algorithm) ||
-                string.IsNullOrWhiteSpace(item.SignatureBase64))
-                return Results.Conflict(new { error = "provisioning_package_not_ready" });
-
             var customerAccess = await authorization.AuthorizeAsync(
                 context.User,
                 new VendorResourceDescriptor("customer", item.CustomerId),
@@ -233,6 +227,12 @@ public static class VendorProvisioningEndpoints
                 VendorResourceCatalog.PolicyFor("installation", VendorPermissionCatalog.InstallationsRead));
             if (!customerAccess.Succeeded || !installationAccess.Succeeded)
                 return Results.Forbid();
+
+            if (item.Status != "PendingDelivery" ||
+                string.IsNullOrWhiteSpace(item.KeyId) ||
+                string.IsNullOrWhiteSpace(item.Algorithm) ||
+                string.IsNullOrWhiteSpace(item.SignatureBase64))
+                return Results.Conflict(new { error = "provisioning_package_not_ready" });
 
             await using var tx = await db.Database.BeginTransactionAsync(ct);
             var now = timeProvider.GetUtcNow().ToUniversalTime();
