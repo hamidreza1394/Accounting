@@ -569,6 +569,7 @@ namespace Faranou.Vendor.Persistence.Migrations
                             t.HasCheckConstraint("CK_VendorLicenses_GraceDays", "[GraceDays] >= 0 AND [GraceDays] <= 90");
                             t.HasCheckConstraint("CK_VendorLicenses_LastIssuedSequence", "[LastIssuedSequence] >= 0");
                             t.HasCheckConstraint("CK_VendorLicenses_LicenseKind", "[LicenseKind] IN (N'term', N'perpetual')");
+                            t.HasCheckConstraint("CK_VendorLicenses_KindExpiry", "([LicenseKind] = N'term' AND [ValidUntilUtc] IS NOT NULL) OR ([LicenseKind] = N'perpetual' AND [ValidUntilUtc] IS NULL)");
                             t.HasCheckConstraint("CK_VendorLicenses_MaxCompanies", "[MaxCompanies] IS NULL OR [MaxCompanies] >= 1");
                             t.HasCheckConstraint("CK_VendorLicenses_SubsystemsJson", "ISJSON([SubsystemsJson]) = 1");
                         });
