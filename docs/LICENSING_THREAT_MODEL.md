@@ -99,3 +99,10 @@
 - قرارداد اجازه نمی‌دهد پیاده‌سازی payload را deserialize و دوباره serialize کند؛ هر تغییر حتی whitespace باید امضا را نامعتبر کند. تست از کلید ECDSA موقت و فقط در حافظهٔ تست استفاده می‌کند.
 - این commit **هیچ** provider تولیدی، کلید نرم‌افزاری fallback، endpoint صدور، ذخیره‌سازی envelope، Migration یا تغییر در `Server/**` اضافه نمی‌کند. endpoint فعلی همچنان fail-closed است.
 - پیش از اتصال provider: انتخاب KMS/HSM یا سرویس امضای مورد تأیید، احراز هویت workload، محدودیت عملیات فقط-امضا، timeout/retry امن، rotation و retirement کلیدها، ثبت `kid` و تست end-to-end لازم‌اند. کلید خصوصی نباید در برنامه، repo، CI یا artifact قرار گیرد.
+
+
+## Provisioning signing-key separation — Issue #233 (2026-10-28)
+
+- Provisioning packages use the dedicated `IProvisioningSigningProvider` boundary; license issuance uses `ILicenseSigningProvider`. The registrations and key responsibilities must remain separate even when both contracts use the same ECDSA P-256 signature format.
+- The default provisioning provider is `UnavailableProvisioningSigningProvider`, which returns an unavailable result and honors cancellation. It does not create, persist, log, or package private-key material.
+- This is an architectural boundary, not a production signer. Production remains blocked until an approved external KMS/HSM or protected signing service uses a dedicated provisioning key, resolves key IDs from trusted server-side configuration, verifies signatures before persistence, and has documented rotation/recovery and operational tests. No provider-specific implementation is selected by this change.
