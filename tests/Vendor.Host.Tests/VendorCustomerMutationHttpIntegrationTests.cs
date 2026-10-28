@@ -73,10 +73,10 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 webHost.ConfigureTestServices(services =>
                 {
                     services.RemoveAll<IVendorAuditWriter>();
-                    services.RemoveAll<ILicenseSigningProvider>();
-                    services.AddSingleton<SequencedTestSigningProvider>(_ => new SequencedTestSigningProvider());
-                    services.AddSingleton<ILicenseSigningProvider>(provider =>
-                        provider.GetRequiredService<SequencedTestSigningProvider>());
+                    services.RemoveAll<IProvisioningSigningProvider>();
+                    services.AddSingleton<SequencedProvisioningSigningProvider>(_ => new SequencedProvisioningSigningProvider());
+                    services.AddSingleton<IProvisioningSigningProvider>(provider =>
+                        provider.GetRequiredService<SequencedProvisioningSigningProvider>());
                     services.AddSingleton<AuditFailureSwitch>();
                     services.AddSingleton<CustomerInsertRaceGate>();
                     services.ConfigureDbContext<VendorDbContext>((provider, options) =>
@@ -981,7 +981,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     json.RootElement.GetProperty("algorithm").GetString()!,
                     json.RootElement.GetProperty("payloadJson").GetString()!,
                     json.RootElement.GetProperty("signatureBase64").GetString()!);
-                var signer = factory.Services.GetRequiredService<SequencedTestSigningProvider>();
+                var signer = factory.Services.GetRequiredService<SequencedProvisioningSigningProvider>();
                 Assert.True(CustomerProvisioningPackageValidator.TryValidateAndVerify(
                     package, signer.ExportPublicKey(), DateTimeOffset.UtcNow, out var parsedPayload, out var errorCode),
                     $"Exported provisioning package failed signature validation: {errorCode}");
@@ -1243,7 +1243,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
         return await client.SendAsync(request, ct);
     }
 
-    private sealed class SequencedTestSigningProvider : ILicenseSigningProvider, IDisposable
+    private sealed class SequencedProvisioningSigningProvider : IProvisioningSigningProvider, IDisposable
     {
         private readonly ECDsa _key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         private int _calls;
@@ -1253,7 +1253,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (Interlocked.Increment(ref _calls) <= 2)
+            if (Interlocked.Increment(ref _calls) <= 1)
                 return ValueTask.FromResult(LicenseSigningResult.Unavailable());
 
             var signature = _key.SignData(
