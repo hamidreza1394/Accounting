@@ -925,9 +925,28 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
             object? result,
             CancellationToken cancellationToken = default)
         {
-            // Hold both requests after their duplicate-number preflight has completed.
-            // This ensures both observe the number as available before either INSERT runs,
-            // so the unique index—not request scheduling—arbitrates the race.
+            await WaitForBothPreflightChecksAsync(command, cancellationToken);
+            return result;
+        }
+
+        public override async ValueTask<DbDataReader> ReaderExecutedAsync(
+            DbCommand command,
+            CommandExecutedEventData eventData,
+            DbDataReader result,
+            CancellationToken cancellationToken = default)
+        {
+            await WaitForBothPreflightChecksAsync(command, cancellationToken);
+            return result;
+        }
+
+        private async Task WaitForBothPreflightChecksAsync(
+            DbCommand command,
+            CancellationToken cancellationToken)
+        {
+            // EF Core may execute AnyAsync as either a scalar command or a reader,
+            // depending on query translation/provider. Gate the completed preflight
+            // in both paths so both requests observe the number as available before
+            // either INSERT reaches the unique index.
             if (Volatile.Read(ref _enabled) == 1 &&
                 command.CommandText.Contains("VendorCustomers", StringComparison.OrdinalIgnoreCase) &&
                 command.CommandText.Contains("CustomerNumber", StringComparison.OrdinalIgnoreCase) &&
@@ -938,8 +957,6 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
 
                 await _bothPreflightChecks.Task.WaitAsync(TimeSpan.FromSeconds(15), cancellationToken);
             }
-
-            return result;
         }
 
         public override async ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
