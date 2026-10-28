@@ -94,6 +94,71 @@ namespace Faranou.Vendor.Persistence.Migrations
                     b.ToTable("VendorAuditEvents", (string)null);
                 });
 
+            modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorApprovalRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("ExpectedResourceRowVersion")
+                        .IsRequired()
+                        .HasColumnType("binary(8)");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("RequestedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ResourceType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<Guid>("ResourceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ReviewComment")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTimeOffset?>("ReviewedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("ReviewedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsRequired()
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("TargetStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequestedByUserId");
+
+                    b.HasIndex("ReviewedByUserId");
+
+                    b.HasIndex("ResourceType", "ResourceId")
+                        .IsUnique()
+                        .HasFilter("[Status] = N'Pending'");
+
+                    b.HasIndex("Status", "RequestedAtUtc");
+
+                    b.ToTable("VendorAuditHashVersionAndLinearChain", (string)null);
+                });
+
             modelBuilder.Entity("Faranou.Vendor.Persistence.Identity.VendorAdminUser", b =>
                 {
                     b.Property<Guid>("Id")
