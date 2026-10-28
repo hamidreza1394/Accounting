@@ -309,3 +309,9 @@
 - فرم ثبت/ویرایش metadata لایسنس Draft به APIهای موجود متصل شده است؛ فهرست‌ها از `customerId` فیلتر می‌شوند تا قرارداد یا نصب مشتری دیگر در انتخاب‌گرها ظاهر نشود.
 - تست‌های UI برای ایجاد، روابط اختیاری، تاریخ UTC، مجوز، RowVersion و Draft-only؛ تست HTTP مبتنی بر SQL Server برای فیلتر customerId اضافه شده‌اند.
 - **خارج از محدوده:** صدور لایسنس امضاشده، KMS/HSM، activation آفلاین و اعمال لایسنس در برنامه مشتری هنوز پیاده‌سازی نشده‌اند و مانع Production هستند. هیچ migration یا دیتابیس حسابداری مشتری تغییر نکرده است.
+
+
+## Issue #214 — next signing pipeline slice (2026-10-28)
+- PR #219 merged after both Vendor CI and .NET CI succeeded; it adds a validated Vendor-metadata-to-`LicensePayload` mapper and negative tests.
+- PR #220 (in progress) adds a provider-backed envelope factory that signs the exact canonical UTF-8 payload bytes and validates result metadata before producing `LicenseEnvelope`. Tests verify the envelope with a temporary test-only ECDSA key and ensure unavailable signer/invalid payloads fail closed.
+- Not production-ready: envelope persistence, atomic sequence/status update, approval integration, a real KMS/HSM or remote signer, key rotation/runbook, and operational issuance/revocation tests remain. No customer DB schema changes are permitted.
