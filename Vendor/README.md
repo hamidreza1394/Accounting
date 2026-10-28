@@ -170,3 +170,9 @@ The customer setup form records a versioned provisioning request in the separate
 Requests currently remain `AwaitingSigner`. This is deliberate: until a production signing provider and a trusted customer-side consumer are configured, no signed package is delivered and the UI must not claim that a customer company or administrator has been created. The API persists an idempotent request ID, unique nonce, canonical payload/hash, audit event, and status metadata in the Vendor database only.
 
 Production completion still requires a trusted key source outside Git, signing and one-time delivery, an idempotent customer-side consumer with atomic nonce claiming, signed acknowledgement, and recovery/retry tests for cloud, dedicated-server, and offline installations. Those capabilities are not implemented by the current Vendor UI/API slice.
+
+## Provisioning issuance workflow (Issue #236)
+
+Provisioning requests can now be submitted to the existing two-person approval workflow. The reviewer must be a different Vendor administrator from the requester. Approval calls the existing `ILicenseSigningProvider` with the exact canonical payload bytes and stores the signing metadata with the approval decision in one Vendor database transaction. The package export endpoint is available only for `PendingDelivery` requests and uses `Cache-Control: no-store`.
+
+The default provider remains `UnavailableLicenseSigningProvider`, so issuance fails closed with a generic 503 until an approved external KMS/HSM or signing-service adapter is configured. This code does not make the signing key available, generate a software key, or claim that a customer has imported or accepted the package. A trusted customer-side consumer and signed acknowledgement are tracked separately in #235.
