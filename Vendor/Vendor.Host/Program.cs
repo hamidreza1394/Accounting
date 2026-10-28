@@ -242,6 +242,8 @@ builder.Services.AddSingleton<IAuthorizationPolicyProvider, VendorPermissionPoli
 builder.Services.AddScoped<IVendorResourceAccessEvaluator, VendorResourceAccessEvaluator>();
 builder.Services.AddAuthorization(VendorAuthorizationPolicies.Configure);
 
+VendorAuditCheckpointStartupGuard.EnsureConfigured(builder.Environment.IsProduction(), builder.Services);
+
 var app = builder.Build();
 
 if (app.Environment.IsProduction())
