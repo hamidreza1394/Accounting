@@ -974,3 +974,9 @@
 - The UI explicitly says that requests are only saved in the Vendor control plane and remain AwaitingSigner; no password is collected and no customer creation is claimed before trusted signing and acknowledgement.
 - Added a Vitest/Testing Library regression test for request payload, CSRF header, subsystem defaults, status display and absence of password/passwordHash properties.
 - Updated Vendor README and handoff. CI must verify the final PR SHA before merge.
+
+## 2026-10-28 — Issue #228: provisioning HTTP integration regression
+- Extended the real SQL Server Vendor mutation integration test with provisioning API coverage: missing antiforgery token, successful creation, idempotent replay, conflicting RequestId reuse, cross-customer installation rejection, single persisted request, single audit event, and absence of password text in persisted payload.
+- The request remains AwaitingSigner; no signed package or customer creation is claimed.
+- CI must execute the SQL Server integration test on the final PR SHA; local execution was not available in the GitHub-only session.
+- Handoff: docs/handoffs/ISSUE-228-provisioning-api-integration.md.
