@@ -42,6 +42,9 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
         var installationApprovalRowVersion = string.Empty;
         var licenseApprovalId = Guid.Empty;
         var licenseApprovalRowVersion = string.Empty;
+        var provisioningApprovalId = Guid.Empty;
+        var provisioningApprovalRowVersion = string.Empty;
+        var provisioningRequestRowVersion = string.Empty;
         var baseConnection = Environment.GetEnvironmentVariable("FARANO_VENDOR_TEST_SQLSERVER");
         if (string.IsNullOrWhiteSpace(baseConnection))
         {
@@ -327,6 +330,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
                 using var json = JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync(cancellationToken));
                 provisioningRecordId = json.RootElement.GetProperty("id").GetGuid();
+                provisioningRequestRowVersion = json.RootElement.GetProperty("rowVersion").GetString()!;
                 Assert.Equal("AwaitingSigner", json.RootElement.GetProperty("status").GetString());
                 Assert.False((await createResponse.Content.ReadAsStringAsync(cancellationToken))
                     .Contains("password", StringComparison.OrdinalIgnoreCase));
@@ -390,6 +394,17 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal(1, await db.AuditEvents.CountAsync(
                     item => item.ActionCode == "vendor.provisioning.requested" &&
                             item.SubjectId == provisioningRecordId.ToString("D"), cancellationToken));
+            }
+
+            using (var provisioningApprovalResponse = await PostWithTokenAsync(
+                client, $"/api/vendor/provisioning-requests/{provisioningRecordId:D}/approval-request",
+                new { rowVersion = provisioningRequestRowVersion }, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Accepted, provisioningApprovalResponse.StatusCode);
+                using var json = JsonDocument.Parse(await provisioningApprovalResponse.Content.ReadAsStringAsync(cancellationToken));
+                provisioningApprovalId = json.RootElement.GetProperty("id").GetGuid();
+                provisioningApprovalRowVersion = json.RootElement.GetProperty("rowVersion").GetString()!;
+                Assert.Equal("Pending", json.RootElement.GetProperty("status").GetString());
             }
 
             var path = $"/api/vendor/customers/{customerId:D}";
@@ -907,6 +922,22 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal(HttpStatusCode.ServiceUnavailable, licenseDecisionResponse.StatusCode);
                 using var json = JsonDocument.Parse(await licenseDecisionResponse.Content.ReadAsStringAsync(cancellationToken));
                 Assert.Equal("license_issuance_unavailable", json.RootElement.GetProperty("error").GetString());
+            }
+
+            using (var provisioningDecisionResponse = await PostWithTokenAsync(reviewerClient,
+                $"/api/vendor/approvals/{provisioningApprovalId:D}/decision",
+                new { decision = "Approved", rowVersion = provisioningApprovalRowVersion, comment = "Must fail closed without a configured signer" },
+                reviewerAntiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.ServiceUnavailable, provisioningDecisionResponse.StatusCode);
+                using var json = JsonDocument.Parse(await provisioningDecisionResponse.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("provisioning_signing_unavailable", json.RootElement.GetProperty("error").GetString());
+            }
+
+            using (var packageResponse = await reviewerClient.GetAsync(
+                $"/api/vendor/provisioning-requests/{provisioningRecordId:D}/package", cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Conflict, packageResponse.StatusCode);
             }
 
             foreach (var approval in new[]
