@@ -134,7 +134,7 @@ public static class VendorApprovalEndpoints
             Guid id, DecideVendorApprovalRequest request, HttpContext context,
             IAntiforgery antiforgery, IAuthorizationService authorization,
             VendorDbContext db, UserManager<VendorAdminUser> users,
-            IVendorAuditWriter audit, CancellationToken ct) =>
+            IVendorAuditWriter audit, VendorLicenseIssuanceService licenseIssuance, CancellationToken ct) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context))
                 return Results.BadRequest(new { error = "invalid_antiforgery_token" });
@@ -163,29 +163,27 @@ public static class VendorApprovalEndpoints
                 context.User,
                 new VendorResourceDescriptor(approval.ResourceType, approval.ResourceId),
                 VendorResourceCatalog.PolicyFor(approval.ResourceType, managePermission));
-            if (!access.Succeeded) return Results.Forbid();
-
-            // License metadata is not a signed artifact. Validate current ownership/version/state,
-            // then fail closed until a production signer and durable envelope storage exist.
+            if             // Issuance writes the signed envelope, sequence, license state, approval decision and
+            // audit events inside this request's single Vendor database transaction.
             if (approval.ResourceType == "license" && request.Decision == "Approved")
             {
-                var license = await db.Licenses.AsNoTracking()
-                    .Where(item => item.Id == approval.ResourceId)
-                    .Select(item => new { item.Status, item.RowVersion })
-                    .SingleOrDefaultAsync(ct);
-                if (license is null) return Results.NotFound();
-                var expectedStatus = approval.TargetStatus switch
+                if (approval.TargetStatus == "Issued")
                 {
-                    "Issued" => "Draft",
-                    "Revoked" => "Issued",
-                    _ => null
-                };
-                if (!license.RowVersion.AsSpan().SequenceEqual(approval.ExpectedResourceRowVersion) ||
-                    expectedStatus is null || license.Status != expectedStatus)
-                    return Results.Conflict(new { error = "approval_resource_stale" });
+                    var issuance = await licenseIssuance.IssueApprovedAsync(
+                        approval, actor.Id, expectedApprovalVersion,
+                        request.Comment, CorrelationId(), ct);
+                    if (!issuance.Succeeded)
+                        return Results.Json(new { error = issuance.ErrorCode }, statusCode: issuance.StatusCode);
 
-                return Results.Json(new { error = "license_issuance_unavailable" },
+                    await tx.CommitAsync(ct);
+                    return Results.Ok(ToResponse(approval));
+                }
+
+                // Offline revocation semantics require a signed revocation artifact or a defined
+                // online revocation contract; do not mark a license revoked without that capability.
+                return Results.Json(new { error = "license_revocation_unavailable" },
                     statusCode: StatusCodes.Status503ServiceUnavailable);
+            }es.Status503ServiceUnavailable);
             }
 
             var now = DateTimeOffset.UtcNow;
