@@ -61,7 +61,12 @@ async function signIn(page, user, { rememberMe = false } = {}) {
     await page.locator('label.taraz-remember').click();
   }
   await expect(box).toBeChecked({ checked: rememberMe });
-  await page.locator('form.taraz-login-form button[type="submit"]').click();
+  // Wait for the successful POST/redirect/load to finish before callers clear cookies or navigate again.
+  // URL-only assertions can pass as soon as the redirect starts, which can race a subsequent page.goto().
+  await Promise.all([
+    page.waitForURL((url) => !url.pathname.toLowerCase().startsWith('/account/login'), { waitUntil: 'load' }),
+    page.locator('form.taraz-login-form button[type="submit"]').click(),
+  ]);
 }
 
 async function setUserActive(user, active) {
