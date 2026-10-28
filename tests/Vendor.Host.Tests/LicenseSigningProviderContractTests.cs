@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Faranou.Licensing.Contracts;
 using Faranou.Vendor.Host.Signing;
+using Xunit;
 
 namespace Faranou.Vendor.Host.Tests;
 
