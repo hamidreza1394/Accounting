@@ -11,7 +11,8 @@
 - استفاده از `ILicenseSigningProvider` موجود برای امضای دقیق بایت‌های canonical؛ هر نتیجهٔ نامعتبر یا عدم دسترسی به امضاکننده با پاسخ عمومی 503 fail-closed می‌شود.
 - تغییر وضعیت `AwaitingSigner` به `PendingDelivery` فقط پس از امضای موفق و ذخیرهٔ KeyId/algorithm/signature در همان تراکنش با تصمیم تأیید.
 - افزودن درخواست تأیید با کنترل Anti-forgery، مجوز مشتری/نصب، RowVersion، جلوگیری از تأیید توسط همان درخواست‌دهنده و ثبت ممیزی.
-- افزودن مسیر دانلود بستهٔ امضاشده فقط در وضعیت `PendingDelivery` با مجوز خواندن مشتری/نصب و هدرهای `no-store`.
+- افزودن مسیر export بستهٔ امضاشده فقط در وضعیت `PendingDelivery` با Anti-forgery، مجوز خواندن مشتری/نصب، هدرهای `no-store` و رویداد ممیزی تراکنشی.
+- افزودن دکمهٔ UI برای ارسال درخواست به بررسی دو نفره و دانلود فایل JSON بستهٔ امضاشده برای انتقال آفلاین؛ وضعیت تأیید مشتری همچنان جدا نگه داشته می‌شود.
 - رد تأیید، درخواست را با کد عمومی `provisioning_rejected` به `Failed` می‌برد؛ شکست امضاکننده درخواست را `AwaitingSigner` و تأیید را `Pending` نگه می‌دارد تا retry ممکن باشد.
 - گسترش آزمون integration موجود برای اثبات رفتار fail-closed وقتی امضاکنندهٔ پیش‌فرض در دسترس نیست.
 
@@ -38,5 +39,5 @@
 - `Vendor/Vendor.Host/Program.cs`
 - `tests/Vendor.Host.Tests/VendorCustomerMutationHttpIntegrationTests.cs`
 
-- **Branch:** feat/issue-236-provisioning-maker-checker
-- **PR:** در حال ایجاد
+- **Branch:** feat/vendor-issue-236-provisioning-maker-checker
+- **PR:** https://github.com/hamidreza1394/Accounting/pull/239
