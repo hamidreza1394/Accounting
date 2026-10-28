@@ -11,6 +11,9 @@ public sealed class VendorLicenseOperationRequest
     public VendorLicense License { get; set; } = null!;
     public string Action { get; set; } = string.Empty;
     public byte[] ExpectedLicenseRowVersion { get; set; } = [];
+    public byte[] ExpectedCustomerRowVersion { get; set; } = [];
+    public byte[]? ExpectedInstallationRowVersion { get; set; }
+    public byte[]? ExpectedContractRowVersion { get; set; }
     public Guid RequestedByUserId { get; set; }
     public DateTimeOffset RequestedAtUtc { get; set; }
     public string Status { get; set; } = "Pending";
