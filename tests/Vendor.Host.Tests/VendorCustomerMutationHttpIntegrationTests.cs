@@ -153,13 +153,14 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 var customer = new VendorCustomer
                 {
                     Id = Guid.NewGuid(),
-                    CustomerNumber = "IT-" + Guid.NewGuid().ToString("N")[..20],
+                    CustomerNumber = string.Empty,
                     LegalName = "Integration Test Customer",
                     DisplayName = "Before Update",
                     Status = "Active",
                     CreatedAtUtc = DateTimeOffset.UtcNow,
                     UpdatedAtUtc = DateTimeOffset.UtcNow
                 };
+                customer.CustomerNumber = "IT-" + customer.Id.ToString("N")[..20];
                 var otherCustomer = new VendorCustomer
                 {
                     Id = Guid.NewGuid(),
