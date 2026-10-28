@@ -980,3 +980,11 @@
 - The request remains AwaitingSigner; no signed package or customer creation is claimed.
 - CI must execute the SQL Server integration test on the final PR SHA; local execution was not available in the GitHub-only session.
 - Handoff: docs/handoffs/ISSUE-228-provisioning-api-integration.md.
+
+## 2026-10-28 — Issue #236: provisioning maker-checker issuance slice
+- Added a Vendor-only issuance service that validates the stored canonical payload/hash, customer/installation binding, target active state, expiry and rowversion before calling the existing fail-closed signing provider.
+- Added a two-person approval request endpoint and integrated provisioning decisions with the existing approval transaction. The requester cannot approve their own request; a signer outage returns 503 and leaves the request AwaitingSigner and approval Pending.
+- Added an authorized no-store package export route that returns a signed package only after status PendingDelivery.
+- Extended the real SQL Server HTTP integration test to cover the approval request and the expected fail-closed response when the default unavailable signer is active.
+- No production KMS/HSM adapter was selected or implemented; no customer-side consumer/acknowledgement was implemented. See #235 and #236 and `docs/handoffs/ISSUE-236-provisioning-maker-checker.md`.
+- CI must verify the final PR SHA; no local build/test was available in the GitHub-only session.
