@@ -1,7 +1,9 @@
 using System.Threading.RateLimiting;
+using Faranou.Licensing.Contracts;
 using Faranou.Vendor.Host.Authentication;
 using Faranou.Vendor.Host.Authorization;
 using Faranou.Vendor.Host.Bootstrap;
+using Faranou.Vendor.Host.Licensing;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Identity;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -234,6 +236,12 @@ builder.Services.AddSingleton<IAuthorizationPolicyProvider, VendorPermissionPoli
 builder.Services.AddScoped<IVendorResourceAccessEvaluator, VendorResourceAccessEvaluator>();
 builder.Services.AddAuthorization(VendorAuthorizationPolicies.Configure);
 
+// Signing is deliberately unavailable until an approved KMS/HSM adapter and trusted public-key
+// registry are configured. There is no software-key or embedded-private-key fallback.
+builder.Services.AddSingleton<IVendorLicenseSigner, UnconfiguredVendorLicenseSigner>();
+builder.Services.AddSingleton<ILicenseSignatureVerifier, EcdsaP256Sha256Verifier>();
+builder.Services.AddSingleton<ITrustedKeyResolver>(_ => new StaticTrustedKeyResolver(Array.Empty<TrustedPublicKey>()));
+
 var app = builder.Build();
 
 if (app.Environment.IsProduction())
@@ -304,6 +312,7 @@ app.MapVendorPasswordChange();
 app.MapVendorRoleManagement();
 app.MapVendorBusinessEndpoints();
 app.MapVendorApprovalEndpoints();
+app.MapVendorLicenseOperationEndpoints();
 app.MapFallback(async context =>
 {
     var path = context.Request.Path.Value ?? "/";
