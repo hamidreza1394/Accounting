@@ -45,7 +45,7 @@ dotnet Faranou.Vendor.Host.dll bootstrap-admin
 - در محیط Cloud و Dedicated Server، این runbook را با سازوکار Secret Store، حساب سرویس کم‌دسترسی، پشتیبان Data Protection و فرایند تغییرات سازمان تطبیق دهید.
 
 ## محدودیت‌ها و معیار Production
-این قابلیت به‌تنهایی Vendor را Production-ready نمی‌کند. پیش از استفادهٔ تجاری باید RBAC default-deny، مجوزدهی resource-based، maker-checker، audit checkpoint مستقل، مدیریت مشتری/نصب/قرارداد/لایسنس، کلید امضای KMS/HSM، مانیتورینگ و runbook بازیابی تکمیل و با تست/CI تأیید شوند. هیچ Migration یا دیتابیس مشتری در این تغییرات دست‌کاری نمی‌شود.
+این قابلیت به‌تنهایی Vendor را Production-ready نمی‌کند. RBAC پایه، مجوزدهی resource-based و Maker-Checker برای تغییر وضعیت مشتری/نصب در کد موجودند و CI آن‌ها سبز است؛ با این حال، بازبینی مستقل نهایی ماتریس مجوزها و جداسازی وظایف، Maker-Checker برای صدور/ابطال لایسنس پس از ایجاد سرویس امضا، checkpoint مستقل Audit، صدور امضاشده از طریق KMS/HSM، چرخه فعال‌سازی آفلاین، مانیتورینگ و runbook بازیابی هنوز باقی‌اند. مدیریت metadata مشتری/نصب/قرارداد/لایسنس در UI/API موجود است و معادل provisioning شرکت حسابداری مشتری یا صدور لایسنس امضاشده نیست. هیچ Migration یا دیتابیس مشتری در این تغییرات دست‌کاری نمی‌شود.
 
 ## آزمون‌ها و شواهد CI
 - Vendor CI run [40570240409](https://github.com/hamidreza1394/Accounting/actions/runs/40570240409) روی HEAD نهایی PR #207 موفق شد؛ job شامل restore/build/test پروژه Vendor، گارد EF snapshot و publish مستقل است.
