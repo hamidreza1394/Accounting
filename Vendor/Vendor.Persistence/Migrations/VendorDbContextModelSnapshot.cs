@@ -573,6 +573,59 @@ namespace Faranou.Vendor.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorLicenseOperationRequest", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
+                    b.Property<Guid>("LicenseId").HasColumnType("uniqueidentifier");
+                    b.Property<string>("Action").IsRequired().HasMaxLength(16).HasColumnType("nvarchar(16)");
+                    b.Property<byte[]>("ExpectedLicenseRowVersion").IsRequired().HasColumnType("binary(8)");
+                    b.Property<byte[]>("ExpectedCustomerRowVersion").IsRequired().HasColumnType("binary(8)");
+                    b.Property<byte[]>("ExpectedInstallationRowVersion").HasColumnType("binary(8)");
+                    b.Property<byte[]>("ExpectedContractRowVersion").HasColumnType("binary(8)");
+                    b.Property<Guid>("RequestedByUserId").HasColumnType("uniqueidentifier");
+                    b.Property<DateTimeOffset>("RequestedAtUtc").HasColumnType("datetimeoffset");
+                    b.Property<string>("Status").IsRequired().HasMaxLength(20).HasColumnType("nvarchar(20)").HasDefaultValue("Pending");
+                    b.Property<Guid?>("ReviewedByUserId").HasColumnType("uniqueidentifier");
+                    b.Property<DateTimeOffset?>("ReviewedAtUtc").HasColumnType("datetimeoffset");
+                    b.Property<string>("ReviewComment").HasMaxLength(500).HasColumnType("nvarchar(500)");
+                    b.Property<byte[]>("RowVersion").IsRequired().IsConcurrencyToken().ValueGeneratedOnAddOrUpdate().HasColumnType("rowversion");
+                    b.HasKey("Id");
+                    b.HasIndex("LicenseId").IsUnique().HasFilter("[Status] = N'Pending'");
+                    b.HasIndex("RequestedByUserId");
+                    b.HasIndex("ReviewedByUserId");
+                    b.HasIndex("Status", "RequestedAtUtc");
+                    b.ToTable("VendorLicenseOperationRequests", t =>
+                        {
+                            t.HasCheckConstraint("CK_VendorLicenseOperationRequests_Action", "[Action] IN (N'Issue', N'Revoke')");
+                            t.HasCheckConstraint("CK_VendorLicenseOperationRequests_Status", "[Status] IN (N'Pending', N'Approved', N'Rejected', N'Stale')");
+                        });
+                });
+
+            modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorLicenseArtifact", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
+                    b.Property<Guid>("LicenseId").HasColumnType("uniqueidentifier");
+                    b.Property<Guid>("OperationRequestId").HasColumnType("uniqueidentifier");
+                    b.Property<string>("ArtifactType").IsRequired().HasMaxLength(16).HasColumnType("nvarchar(16)");
+                    b.Property<int>("Sequence").HasColumnType("int");
+                    b.Property<string>("Kid").IsRequired().HasMaxLength(128).HasColumnType("nvarchar(128)");
+                    b.Property<string>("Algorithm").IsRequired().HasMaxLength(32).HasColumnType("nvarchar(32)");
+                    b.Property<string>("EnvelopeJson").IsRequired().HasMaxLength(20000).HasColumnType("nvarchar(max)");
+                    b.Property<DateTimeOffset>("CreatedAtUtc").ValueGeneratedOnAdd().HasColumnType("datetimeoffset").HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
+                    b.Property<Guid>("CreatedByUserId").HasColumnType("uniqueidentifier");
+                    b.Property<byte[]>("RowVersion").IsRequired().IsConcurrencyToken().ValueGeneratedOnAddOrUpdate().HasColumnType("rowversion");
+                    b.HasKey("Id");
+                    b.HasIndex("CreatedAtUtc");
+                    b.HasIndex("LicenseId", "ArtifactType", "Sequence").IsUnique();
+                    b.HasIndex("OperationRequestId").IsUnique();
+                    b.ToTable("VendorLicenseArtifacts", t =>
+                        {
+                            t.HasCheckConstraint("CK_VendorLicenseArtifacts_ArtifactType", "[ArtifactType] IN (N'License', N'Revocation')");
+                            t.HasCheckConstraint("CK_VendorLicenseArtifacts_EnvelopeJson", "ISJSON([EnvelopeJson]) = 1");
+                            t.HasCheckConstraint("CK_VendorLicenseArtifacts_Sequence", "[Sequence] >= 1");
+                        });
+                });
+
             modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorInstallation", b =>
                 {
                     b.HasOne("Faranou.Vendor.Persistence.Domain.VendorCustomer", "Customer")
@@ -598,6 +651,23 @@ namespace Faranou.Vendor.Persistence.Migrations
                     b.Navigation("Customer");
                     b.Navigation("Contract");
                     b.Navigation("Installation");
+                });
+
+            modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorLicenseOperationRequest", b =>
+                {
+                    b.HasOne("Faranou.Vendor.Persistence.Domain.VendorLicense", "License")
+                        .WithMany().HasForeignKey("LicenseId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.Navigation("License");
+                });
+
+            modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorLicenseArtifact", b =>
+                {
+                    b.HasOne("Faranou.Vendor.Persistence.Domain.VendorLicense", "License")
+                        .WithMany().HasForeignKey("LicenseId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.HasOne("Faranou.Vendor.Persistence.Domain.VendorLicenseOperationRequest", "OperationRequest")
+                        .WithMany().HasForeignKey("OperationRequestId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.Navigation("License");
+                    b.Navigation("OperationRequest");
                 });
 
             modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorCustomer", b =>
