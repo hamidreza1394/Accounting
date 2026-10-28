@@ -15,8 +15,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Faranou.Vendor.Host.Authorization;
 
 /// <summary>
-/// Persists Vendor-side provisioning intent only. Until a production signer and customer-side
-/// consumer are configured, requests remain AwaitingSigner and no company/admin is claimed created.
+/// Persists Vendor-side provisioning intent and exposes a two-person signing workflow. A package is
+/// only downloadable after successful signing; this API never claims customer-side provisioning is confirmed.
 /// </summary>
 public static class VendorProvisioningEndpoints
 {
