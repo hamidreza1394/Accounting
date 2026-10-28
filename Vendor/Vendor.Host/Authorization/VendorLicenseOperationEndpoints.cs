@@ -76,6 +76,10 @@ public static class VendorLicenseOperationEndpoints
             if (related is null) return Results.Conflict(new { error = "license_relationship_invalid" });
             var validation = ValidateOperationTarget(request.Action, license, related);
             if (validation is not null) return Results.Conflict(new { error = validation });
+            if (request.Action == "Revoke" && !await db.LicenseArtifacts.AnyAsync(item =>
+                    item.LicenseId == license.Id && item.ArtifactType == "License" &&
+                    item.Sequence == license.LastIssuedSequence, ct))
+                return Results.Conflict(new { error = "license_issue_missing" });
 
             var actor = await users.GetUserAsync(context.User);
             if (actor is null) return Results.Forbid();
@@ -159,11 +163,15 @@ public static class VendorLicenseOperationEndpoints
                 return await MarkStaleAsync(db, audit, initial.Id, expectedApprovalVersion, actor.Id, "related_resource_changed", ct);
 
             if (request.Decision == "Rejected")
-                return await DecideWithoutArtifactAsync(db, audit, initial.Id, expectedApprovalVersion,
+                return await DecideWithoutArtifactAsync(db, audit, initial, expectedApprovalVersion,
                     actor.Id, "Rejected", NormalizeComment(request.Comment), ct);
 
             if (!CanExecute(initial.Action, initialLicense, initialRelated, out var targetError))
                 return await MarkStaleAsync(db, audit, initial.Id, expectedApprovalVersion, actor.Id, targetError, ct);
+            if (initial.Action == "Revoke" && !await db.LicenseArtifacts.AnyAsync(item =>
+                    item.LicenseId == initialLicense.Id && item.ArtifactType == "License" &&
+                    item.Sequence == initialLicense.LastIssuedSequence, ct))
+                return await MarkStaleAsync(db, audit, initial.Id, expectedApprovalVersion, actor.Id, "license_issue_missing", ct);
 
             var now = DateTimeOffset.UtcNow;
             string payloadJson;
@@ -265,8 +273,12 @@ public static class VendorLicenseOperationEndpoints
                 await transaction.CommitAsync(ct);
                 return Results.Conflict(new { error = "approval_resource_stale" });
             }
-            if (!CanExecute(operation.Action, license, related, out var currentTargetError))
+            if (!CanExecute(operation.Action, license, related, out var currentTargetError) ||
+                operation.Action == "Revoke" && !await db.LicenseArtifacts.AnyAsync(item =>
+                    item.LicenseId == license.Id && item.ArtifactType == "License" &&
+                    item.Sequence == license.LastIssuedSequence, ct))
             {
+                currentTargetError ??= "license_issue_missing";
                 operation.Status = "Stale";
                 operation.ReviewedByUserId = actor.Id;
                 operation.ReviewedAtUtc = DateTimeOffset.UtcNow;
@@ -374,6 +386,10 @@ public static class VendorLicenseOperationEndpoints
         {
             if (license.Status is not ("Draft" or "Revoked"))
                 return "license_not_issuable";
+            if (license.LastIssuedSequence == int.MaxValue)
+                return "license_sequence_exhausted";
+            if (related.Customer.Status != "Active")
+                return "customer_not_active";
             if (related.Installation.Status != "Active")
                 return "installation_not_active";
             if (!TryBuildLicensePayload(license, Math.Max(1, license.LastIssuedSequence + 1),
@@ -511,16 +527,32 @@ public static class VendorLicenseOperationEndpoints
     }
 
     private static async Task<IResult> DecideWithoutArtifactAsync(
-        VendorDbContext db, IVendorAuditWriter audit, Guid id, byte[] expectedApprovalVersion,
-        Guid actorId, string decision, string? comment, CancellationToken ct)
+        VendorDbContext db, IVendorAuditWriter audit, VendorLicenseOperationRequest initial,
+        byte[] expectedApprovalVersion, Guid actorId, string decision, string? comment, CancellationToken ct)
     {
         await using var tx = await db.Database.BeginTransactionAsync(ct);
-        var operation = await db.LicenseOperationRequests.SingleOrDefaultAsync(item => item.Id == id, ct);
+        var operation = await db.LicenseOperationRequests.SingleOrDefaultAsync(item => item.Id == initial.Id, ct);
         if (operation is null) return Results.NotFound();
         if (!operation.RowVersion.AsSpan().SequenceEqual(expectedApprovalVersion))
             return Results.Conflict(new { error = "stale_approval_version" });
         if (operation.Status != "Pending")
             return Results.Conflict(new { error = "approval_already_decided" });
+        var license = await db.Licenses.SingleOrDefaultAsync(item => item.Id == operation.LicenseId, ct);
+        var related = license is null ? null : await LoadRelatedResourcesAsync(db, license, ct);
+        if (license is null || !VersionsMatch(operation, license, related))
+        {
+            operation.Status = "Stale";
+            operation.ReviewedByUserId = actorId;
+            operation.ReviewedAtUtc = DateTimeOffset.UtcNow;
+            operation.ReviewComment = "related_resource_changed";
+            db.Entry(operation).Property(item => item.RowVersion).OriginalValue = expectedApprovalVersion;
+            await db.SaveChangesAsync(ct);
+            await audit.AppendAsync(new VendorAuditWriteRequest(
+                actorId, "vendor.license.operation.stale", nameof(VendorLicenseOperationRequest),
+                operation.Id.ToString("D"), CorrelationId()), ct);
+            await tx.CommitAsync(ct);
+            return Results.Conflict(new { error = "approval_resource_stale" });
+        }
         operation.Status = decision;
         operation.ReviewedByUserId = actorId;
         operation.ReviewedAtUtc = DateTimeOffset.UtcNow;
@@ -538,11 +570,7 @@ public static class VendorLicenseOperationEndpoints
             actorId, "vendor.license.operation.rejected", nameof(VendorLicenseOperationRequest),
             operation.Id.ToString("D"), CorrelationId()), ct);
         await tx.CommitAsync(ct);
-        return Results.Ok(new VendorLicenseOperationResponse(
-            operation.Id, operation.LicenseId, string.Empty, string.Empty, operation.Action,
-            string.Empty, operation.Status, operation.RequestedByUserId, operation.RequestedAtUtc,
-            operation.ReviewedByUserId, operation.ReviewedAtUtc, operation.ReviewComment,
-            Convert.ToBase64String(operation.RowVersion), null));
+        return Results.Ok(ToResponse(operation, license, null));
     }
 
     private static async Task<IResult> MarkStaleAsync(
