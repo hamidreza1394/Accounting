@@ -278,7 +278,7 @@ public static class VendorLicenseOperationEndpoints
                     item.LicenseId == license.Id && item.ArtifactType == "License" &&
                     item.Sequence == license.LastIssuedSequence, ct))
             {
-                currentTargetError ??= "license_issue_missing";
+                if (string.IsNullOrEmpty(currentTargetError)) currentTargetError = "license_issue_missing";
                 operation.Status = "Stale";
                 operation.ReviewedByUserId = actor.Id;
                 operation.ReviewedAtUtc = DateTimeOffset.UtcNow;
@@ -412,7 +412,11 @@ public static class VendorLicenseOperationEndpoints
         error = "license_operation_target_invalid";
         if (related is null) return false;
         var targetError = ValidateOperationTarget(action, license, related);
-        if (targetError is null) return true;
+        if (targetError is null)
+        {
+            error = string.Empty;
+            return true;
+        }
         error = targetError;
         return false;
     }
@@ -445,6 +449,7 @@ public static class VendorLicenseOperationEndpoints
         related is not null &&
         license.RowVersion.AsSpan().SequenceEqual(request.ExpectedLicenseRowVersion) &&
         related.Customer.RowVersion.AsSpan().SequenceEqual(request.ExpectedCustomerRowVersion) &&
+        request.ExpectedInstallationRowVersion is not null &&
         related.Installation.RowVersion.AsSpan().SequenceEqual(request.ExpectedInstallationRowVersion) &&
         ((related.Contract is null && request.ExpectedContractRowVersion is null) ||
          (related.Contract is not null && request.ExpectedContractRowVersion is not null &&
