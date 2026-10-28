@@ -42,7 +42,7 @@ public partial class VendorAuditHashVersionAndLinearChain : Migration
 
             IF EXISTS (SELECT 1 FROM dbo.VendorAuditEvents)
             BEGIN
-                WITH Reachable AS (
+                ;WITH Reachable AS (
                     SELECT EventHash
                     FROM dbo.VendorAuditEvents
                     WHERE PreviousHash = @GenesisHash
