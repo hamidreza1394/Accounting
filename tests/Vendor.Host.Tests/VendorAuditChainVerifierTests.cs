@@ -28,6 +28,28 @@ public sealed class VendorAuditChainVerifierTests
     }
 
     [Fact]
+    public void VerifyRejectsUnknownHashVersionFailClosed()
+    {
+        var auditEvent = new VendorAuditEvent
+        {
+            Id = Guid.NewGuid(),
+            HashVersion = 99,
+            OccurredAtUtc = DateTimeOffset.UtcNow,
+            ActionCode = "auth.admin-disabled",
+            SubjectType = "VendorAdminUser",
+            SubjectId = Guid.NewGuid().ToString("N"),
+            PreviousHash = VendorAuditChainVerifier.GenesisHash,
+            EventHash = new string('0', 64)
+        };
+
+        var result = VendorAuditChainVerifier.Verify([auditEvent]);
+
+        Assert.False(result.IsValid);
+        Assert.Equal("unsupported-hash-version", result.FailureCode);
+        Assert.Null(result.HeadHash);
+    }
+
+    [Fact]
     public void VerifyRejectsNonOpaqueSubjectIdentifiers()
     {
         var auditEvent = new VendorAuditEvent
