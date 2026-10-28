@@ -68,7 +68,10 @@ public static class VendorResourceCatalog
             {
                 VendorPermissionCatalog.LicensesRead,
                 VendorPermissionCatalog.LicensesManage,
-                VendorPermissionCatalog.LicensesIssue
+                VendorPermissionCatalog.LicensesIssue,
+                VendorPermissionCatalog.LicensesRevoke,
+                VendorPermissionCatalog.LicensesIssueApprove,
+                VendorPermissionCatalog.LicensesRevokeApprove
             }
         };
 
