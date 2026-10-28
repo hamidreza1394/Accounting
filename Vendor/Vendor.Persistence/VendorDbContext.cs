@@ -16,6 +16,8 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
     public DbSet<Domain.VendorContract> Contracts => Set<Domain.VendorContract>();
     public DbSet<Domain.VendorLicense> Licenses => Set<Domain.VendorLicense>();
     public DbSet<Domain.VendorApprovalRequest> ApprovalRequests => Set<Domain.VendorApprovalRequest>();
+    public DbSet<Domain.VendorLicenseOperationRequest> LicenseOperationRequests => Set<Domain.VendorLicenseOperationRequest>();
+    public DbSet<Domain.VendorLicenseArtifact> LicenseArtifacts => Set<Domain.VendorLicenseArtifact>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -155,6 +157,51 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
             entity.HasIndex(item => new { item.Status, item.RequestedAtUtc });
             entity.HasIndex(item => item.RequestedByUserId);
             entity.HasIndex(item => item.ReviewedByUserId);
+        });
+
+        builder.Entity<Domain.VendorLicenseOperationRequest>(entity =>
+        {
+            entity.ToTable("VendorLicenseOperationRequests", table =>
+            {
+                table.HasCheckConstraint("CK_VendorLicenseOperationRequests_Action", "[Action] IN (N'Issue', N'Revoke')");
+                table.HasCheckConstraint("CK_VendorLicenseOperationRequests_Status", "[Status] IN (N'Pending', N'Approved', N'Rejected', N'Stale')");
+            });
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Action).HasMaxLength(16).IsRequired();
+            entity.Property(item => item.ExpectedLicenseRowVersion).HasColumnType("binary(8)").IsRequired();
+            entity.Property(item => item.Status).HasMaxLength(20).HasDefaultValue("Pending").IsRequired();
+            entity.Property(item => item.ReviewComment).HasMaxLength(500);
+            entity.Property(item => item.RowVersion).IsRowVersion();
+            entity.HasIndex(item => item.LicenseId).IsUnique().HasFilter("[Status] = N'Pending'");
+            entity.HasIndex(item => new { item.Status, item.RequestedAtUtc });
+            entity.HasIndex(item => item.RequestedByUserId);
+            entity.HasIndex(item => item.ReviewedByUserId);
+            entity.HasOne(item => item.License).WithMany()
+                .HasForeignKey(item => item.LicenseId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<Domain.VendorLicenseArtifact>(entity =>
+        {
+            entity.ToTable("VendorLicenseArtifacts", table =>
+            {
+                table.HasCheckConstraint("CK_VendorLicenseArtifacts_ArtifactType", "[ArtifactType] IN (N'License', N'Revocation')");
+                table.HasCheckConstraint("CK_VendorLicenseArtifacts_Sequence", "[Sequence] >= 1");
+                table.HasCheckConstraint("CK_VendorLicenseArtifacts_EnvelopeJson", "ISJSON([EnvelopeJson]) = 1");
+            });
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.ArtifactType).HasMaxLength(16).IsRequired();
+            entity.Property(item => item.Kid).HasMaxLength(128).IsRequired();
+            entity.Property(item => item.Algorithm).HasMaxLength(32).IsRequired();
+            entity.Property(item => item.EnvelopeJson).HasMaxLength(20000).IsRequired();
+            entity.Property(item => item.CreatedAtUtc).HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
+            entity.Property(item => item.RowVersion).IsRowVersion();
+            entity.HasIndex(item => new { item.LicenseId, item.ArtifactType, item.Sequence }).IsUnique();
+            entity.HasIndex(item => item.CreatedAtUtc);
+            entity.HasIndex(item => item.OperationRequestId).IsUnique();
+            entity.HasOne(item => item.License).WithMany()
+                .HasForeignKey(item => item.LicenseId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(item => item.OperationRequest).WithMany()
+                .HasForeignKey(item => item.OperationRequestId).OnDelete(DeleteBehavior.Restrict);
         });
 
         builder.Entity<VendorAuditEvent>(entity =>
