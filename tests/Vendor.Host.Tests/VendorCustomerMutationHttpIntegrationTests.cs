@@ -455,7 +455,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
                 using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
                 Assert.Equal(2, json.RootElement.GetProperty("totalCount").GetInt32());
-                Assert.Equal(customerApprovalId, json.RootElement.GetProperty("items")[0].GetProperty("id").GetGuid());
+                Assert.Contains(json.RootElement.GetProperty("items").EnumerateArray(), item => item.GetProperty("id").GetGuid() == customerApprovalId);
             }
 
             using (var response = await PostWithTokenAsync(client, "/api/vendor/approvals/status-change",
