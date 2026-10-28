@@ -9,6 +9,9 @@ public sealed class VendorAuditEvent
 {
     public Guid Id { get; set; }
 
+    /// <summary>Version of the canonical event-hash algorithm; existing events use version 1.</summary>
+    public int HashVersion { get; set; } = 1;
+
     public DateTimeOffset OccurredAtUtc { get; set; }
 
     public Guid? ActorUserId { get; set; }

@@ -1,7 +1,9 @@
+using System.Globalization;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Auditing;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -94,4 +96,145 @@ public sealed class VendorAuditChainIntegrationTests
             await cleanup.Database.EnsureDeletedAsync(cancellationToken);
         }
     }
+    [Fact]
+    public async Task DatabaseRejectsForksAndBackfillsHashVersion()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var baseConnectionString = Environment.GetEnvironmentVariable("FARANO_VENDOR_TEST_SQLSERVER");
+        if (string.IsNullOrWhiteSpace(baseConnectionString))
+        {
+            const string message = "Set FARANO_VENDOR_TEST_SQLSERVER to a disposable SQL Server connection. " +
+                                   "Use FARANO_REQUIRE_VENDOR_SQLSERVER=1 to require this integration test in CI.";
+            if (string.Equals(Environment.GetEnvironmentVariable("FARANO_REQUIRE_VENDOR_SQLSERVER"), "1", StringComparison.Ordinal))
+            {
+                Assert.Fail(message);
+            }
+
+            Assert.Skip(message);
+            return;
+        }
+
+        var connection = new SqlConnectionStringBuilder(baseConnectionString)
+        {
+            InitialCatalog = $"FaranouVendorTests_{Guid.NewGuid():N}"
+        };
+        await using var provider = VendorTestServiceProviderFactory.Create(connection.ConnectionString);
+
+        try
+        {
+            await using (var setupScope = provider.CreateAsyncScope())
+            {
+                var setup = setupScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                await setup.Database.MigrateAsync(cancellationToken);
+                var writer = new VendorAuditWriter(setup, TimeProvider.System);
+                await writer.AppendAsync(new VendorAuditWriteRequest(
+                    ActorUserId: null,
+                    ActionCode: "test.root-event",
+                    SubjectType: "IntegrationTest",
+                    SubjectId: Guid.NewGuid().ToString("N"),
+                    CorrelationId: Guid.NewGuid().ToString("N")), cancellationToken);
+
+                var root = await setup.AuditEvents.SingleAsync(
+                    item => item.PreviousHash == VendorAuditChainVerifier.GenesisHash, cancellationToken);
+                Assert.Equal(1, root.HashVersion);
+
+                var fork = new VendorAuditEvent
+                {
+                    Id = Guid.NewGuid(),
+                    HashVersion = 1,
+                    OccurredAtUtc = DateTimeOffset.UtcNow,
+                    ActionCode = "test.fork-event",
+                    SubjectType = "IntegrationTest",
+                    SubjectId = Guid.NewGuid().ToString("N"),
+                    PreviousHash = VendorAuditChainVerifier.GenesisHash,
+                    EventHash = new string('f', 64)
+                };
+
+                setup.AuditEvents.Add(fork);
+                await Assert.ThrowsAsync<DbUpdateException>(() => setup.SaveChangesAsync(cancellationToken));
+
+                setup.ChangeTracker.Clear();
+                var duplicateHash = new VendorAuditEvent
+                {
+                    Id = Guid.NewGuid(),
+                    HashVersion = 1,
+                    OccurredAtUtc = DateTimeOffset.UtcNow,
+                    ActionCode = "test.duplicate-hash",
+                    SubjectType = "IntegrationTest",
+                    SubjectId = Guid.NewGuid().ToString("N"),
+                    PreviousHash = new string('d', 64),
+                    EventHash = root.EventHash
+                };
+                setup.AuditEvents.Add(duplicateHash);
+                await Assert.ThrowsAsync<DbUpdateException>(() => setup.SaveChangesAsync(cancellationToken));
+            }
+        }
+        finally
+        {
+            await using var cleanupScope = provider.CreateAsyncScope();
+            var cleanup = cleanupScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+            await cleanup.Database.EnsureDeletedAsync(cancellationToken);
+        }
+    }
+
+    [Fact]
+    public async Task MigrationRefusesExistingForkedAuditDataWithoutRepairingIt()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var baseConnectionString = Environment.GetEnvironmentVariable("FARANO_VENDOR_TEST_SQLSERVER");
+        if (string.IsNullOrWhiteSpace(baseConnectionString))
+        {
+            const string message = "Set FARANO_VENDOR_TEST_SQLSERVER to a disposable SQL Server connection. " +
+                                   "Use FARANO_REQUIRE_VENDOR_SQLSERVER=1 to require this integration test in CI.";
+            if (string.Equals(Environment.GetEnvironmentVariable("FARANO_REQUIRE_VENDOR_SQLSERVER"), "1", StringComparison.Ordinal))
+            {
+                Assert.Fail(message);
+            }
+
+            Assert.Skip(message);
+            return;
+        }
+
+        var connection = new SqlConnectionStringBuilder(baseConnectionString)
+        {
+            InitialCatalog = $"FaranouVendorTests_{Guid.NewGuid():N}"
+        };
+        await using var provider = VendorTestServiceProviderFactory.Create(connection.ConnectionString);
+
+        try
+        {
+            await using (var setupScope = provider.CreateAsyncScope())
+            {
+                var setup = setupScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var migrator = setup.GetService<Microsoft.EntityFrameworkCore.Migrations.IMigrator>();
+                await migrator.MigrateAsync("20261027193000_VendorApprovalRequests", cancellationToken);
+
+                await setup.Database.ExecuteSqlRawAsync(
+                    """
+                    INSERT INTO dbo.VendorAuditEvents
+                        (Id, OccurredAtUtc, ActionCode, PreviousHash, EventHash)
+                    VALUES
+                        (NEWID(), SYSUTCDATETIME(), N'test.root-one', {0}, REPLICATE('a', 64)),
+                        (NEWID(), SYSUTCDATETIME(), N'test.root-two', {0}, REPLICATE('b', 64));
+                    """,
+                    new object[] { VendorAuditChainVerifier.GenesisHash },
+                    cancellationToken);
+
+                await Assert.ThrowsAsync<SqlException>(() => setup.Database.MigrateAsync(cancellationToken));
+                var connectionForCheck = setup.Database.GetDbConnection();
+                await connectionForCheck.OpenAsync(cancellationToken);
+                await using var command = connectionForCheck.CreateCommand();
+                command.CommandText = "SELECT CASE WHEN COL_LENGTH('dbo.VendorAuditEvents', 'HashVersion') IS NULL THEN 0 ELSE 1 END";
+                var hashVersionColumnExists = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken), CultureInfo.InvariantCulture);
+                Assert.Equal(0, hashVersionColumnExists);
+            }
+        }
+        finally
+        {
+            await using var cleanupScope = provider.CreateAsyncScope();
+            var cleanup = cleanupScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+            await cleanup.Database.EnsureDeletedAsync(cancellationToken);
+        }
+    }
+
 }

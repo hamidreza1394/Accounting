@@ -891,3 +891,12 @@
 - **تست‌ها:** تست‌های واحد canonicalization/version/tampering و تست Integration SQL Server برای advancement، idempotence و tampering اضافه شدند. Fake store فقط در تست وجود دارد؛ هیچ store محلی/DB fallback به برنامه اضافه نشده است.
 - **محدوده:** فقط Vendor persistence/tests/docs؛ هیچ Migration، `Template.sln` یا دیتابیس مشتری تغییر نکرد. ستون HashVersion برای هر رخداد، adapter مستقل Production، immutability/retention، SQL append-only permissions و alerting هنوز انجام نشده‌اند؛ Issue #107 باز می‌ماند.
 - **اعتبارسنجی:** CI روی HEAD این شاخه هنوز اجرا نشده؛ تست محلی در این محیط در دسترس نیست. تا سبز شدن Vendor CI و .NET CI، وضعیت Implemented / Not Verified است.
+
+
+## 2026-10-28 — Issue #107: نسخه‌بندی هش و یکتایی زنجیره ممیزی Vendor (در انتظار CI)
+- **هدف:** جلوگیری از fork در زنجیره ممیزی، ثبت نسخه الگوریتم هش برای هر رویداد و رد امن نسخه‌های ناشناخته.
+- **تغییرات:** `VendorAuditEvent.HashVersion` با backfill پیش‌فرض 1؛ dispatch verifier نسخه 1 و رد fail-closed نسخه ناشناخته؛ Migration مستقل Vendor با preflight برای duplicate parent/root، parent مفقود و رویدادهای جداافتاده؛ تبدیل ایندکس `PreviousHash` به unique و حفظ unique بودن `EventHash`.
+- **تست‌ها:** تست واحد نسخه ناشناخته؛ تست SQL Server برای backfill، رد fork/duplicate EventHash و rollback Migration در برابر دو root. اجرای محلی dotnet/SQL Server در این محیط انجام نشده و باید نتیجه CI بررسی شود.
+- **محدوده داده:** فقط `VendorDbContext` و Migration مستقل Vendor؛ هیچ تغییر در `Server/**` یا دیتابیس مشتری انجام نشد.
+- **مستندات:** handoff در `docs/handoffs/ISSUE-107-vendor-audit-hash-version.md`؛ Issue #107 پس از CI و ادغام باید بر اساس معیارهای باقی‌مانده به‌روزرسانی شود.
+- **وضعیت:** شاخه `fix/vendor-audit-hash-version-unique-parent`؛ PR/CI در انتظار.

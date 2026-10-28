@@ -150,6 +150,7 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
             entity.ToTable("VendorAuditEvents");
             entity.HasKey(auditEvent => auditEvent.Id);
             entity.Property(auditEvent => auditEvent.ActionCode).HasMaxLength(100).IsRequired();
+            entity.Property(auditEvent => auditEvent.HashVersion).HasDefaultValue(1).IsRequired();
             entity.Property(auditEvent => auditEvent.SubjectType).HasMaxLength(100);
             entity.Property(auditEvent => auditEvent.SubjectId).HasMaxLength(200);
             entity.Property(auditEvent => auditEvent.CorrelationId).HasMaxLength(100);
@@ -161,7 +162,7 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
             entity.HasIndex(auditEvent => auditEvent.OccurredAtUtc);
             entity.HasIndex(auditEvent => auditEvent.ActorUserId);
             entity.HasIndex(auditEvent => auditEvent.ActionCode);
-            entity.HasIndex(auditEvent => auditEvent.PreviousHash);
+            entity.HasIndex(auditEvent => auditEvent.PreviousHash).IsUnique();
             entity.HasIndex(auditEvent => auditEvent.EventHash).IsUnique();
             entity.Property(auditEvent => auditEvent.OccurredAtUtc)
                 .HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
