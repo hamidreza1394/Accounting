@@ -900,3 +900,11 @@
 - **محدوده داده:** فقط `VendorDbContext` و Migration مستقل Vendor؛ هیچ تغییر در `Server/**` یا دیتابیس مشتری انجام نشد.
 - **مستندات:** handoff در `docs/handoffs/ISSUE-107-vendor-audit-hash-version.md`؛ Issue #107 پس از CI و ادغام باید بر اساس معیارهای باقی‌مانده به‌روزرسانی شود.
 - **وضعیت:** شاخه `fix/vendor-audit-hash-version-unique-parent`؛ PR/CI در انتظار.
+
+## 2026-10-28 — تکمیل مرحلهٔ کد Issue #107 و ادغام PR #212
+- **نتیجه Git:** PR #212 با commit `4985908d395bb3856aec43d1a22d23555ae7d897` در `main` ادغام شد.
+- **Vendor CI:** PR run [40650985169](https://github.com/hamidreza1394/Accounting/actions/runs/40650985169) و post-merge run [40651677915](https://github.com/hamidreza1394/Accounting/actions/runs/40651677915) موفق؛ تست Vendor روی PR: 77 موفق، 0 ناموفق، 0 Skip؛ EF model snapshot guard و انتشار Linux Host موفق.
+- **.NET CI روی PR:** [40650985057](https://github.com/hamidreza1394/Accounting/actions/runs/40650985057) موفق؛ Build/Test، migration guards، E2E مرورگر، انتشار Linux و Windows موفق.
+- **پیاده‌سازی:** `HashVersion=1`، dispatch verifier، unique `PreviousHash`، preflight رد زنجیرهٔ forked/disconnected و تست‌های SQL Server برای تکرار EventHash، fork و رد Migration روی دو root.
+- **محدودیت‌های صریح:** فرمان محلی `dotnet ef migrations add` اجرا نشده؛ فایل Migration/Designer/Snapshot با Vendor CI و `has-pending-model-changes` بررسی شدند. checkpoint مستقل provider واقعی، fail-closed runtime wiring در Production، SQL permission separation، alerting و recovery runbook هنوز ناتمام‌اند. Issue #107 باز می‌ماند.
+- **محدوده:** فقط Vendor و تست/مستندات آن؛ هیچ تغییر در `Server/**` یا schema دیتابیس مشتری انجام نشد.
