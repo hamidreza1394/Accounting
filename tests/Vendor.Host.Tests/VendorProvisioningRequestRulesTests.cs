@@ -2,7 +2,7 @@ using Faranou.Licensing.Contracts;
 using Faranou.Vendor.Host.Authorization;
 using Xunit;
 
-namespace Vendor.Host.Tests;
+namespace Faranou.Vendor.Host.Tests;
 
 public sealed class VendorProvisioningRequestRulesTests
 {
