@@ -265,42 +265,6 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
             // after the authenticated application cookie is issued.
             (antiForgeryToken, _) = await GetAntiforgeryTokenAsync(client, cancellationToken);
 
-            Guid approvalLicenseId;
-            byte[] licenseVersion;
-            await using (var licenseScope = factory.Services.CreateAsyncScope())
-            {
-                var db = licenseScope.ServiceProvider.GetRequiredService<VendorDbContext>();
-                var license = await db.Licenses.AsNoTracking()
-                    .SingleAsync(item => item.LicenseNumber.StartsWith("IT-LIC-"), cancellationToken);
-                approvalLicenseId = license.Id;
-                licenseVersion = license.RowVersion.ToArray();
-            }
-
-            var licenseApprovalBody = new
-            {
-                action = "issue",
-                rowVersion = Convert.ToBase64String(licenseVersion)
-            };
-            using (var response = await PostWithTokenAsync(client,
-                $"/api/vendor/licenses/{approvalLicenseId:D}/approval-request",
-                licenseApprovalBody, antiForgeryToken, cancellationToken))
-            {
-                Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-                licenseApprovalId = json.RootElement.GetProperty("id").GetGuid();
-                licenseApprovalRowVersion = json.RootElement.GetProperty("rowVersion").GetString()!;
-                Assert.Equal("Pending", json.RootElement.GetProperty("status").GetString());
-            }
-
-            using (var response = await PostWithTokenAsync(client,
-                $"/api/vendor/licenses/{approvalLicenseId:D}/approval-request",
-                licenseApprovalBody, antiForgeryToken, cancellationToken))
-            {
-                Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
-                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-                Assert.Equal("approval_already_pending", json.RootElement.GetProperty("error").GetString());
-            }
-
             Guid customerId;
             byte[] initialRowVersion;
             await using (var scope = factory.Services.CreateAsyncScope())
@@ -658,6 +622,42 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
                 using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
                 Assert.Equal("stale_row_version", json.RootElement.GetProperty("error").GetString());
+            }
+
+            Guid approvalLicenseId;
+            byte[] licenseVersion;
+            await using (var licenseScope = factory.Services.CreateAsyncScope())
+            {
+                var db = licenseScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var license = await db.Licenses.AsNoTracking()
+                    .SingleAsync(item => item.LicenseNumber.StartsWith("IT-LIC-"), cancellationToken);
+                approvalLicenseId = license.Id;
+                licenseVersion = license.RowVersion.ToArray();
+            }
+
+            var licenseApprovalBody = new
+            {
+                action = "issue",
+                rowVersion = Convert.ToBase64String(licenseVersion)
+            };
+            using (var response = await PostWithTokenAsync(client,
+                $"/api/vendor/licenses/{approvalLicenseId:D}/approval-request",
+                licenseApprovalBody, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                licenseApprovalId = json.RootElement.GetProperty("id").GetGuid();
+                licenseApprovalRowVersion = json.RootElement.GetProperty("rowVersion").GetString()!;
+                Assert.Equal("Pending", json.RootElement.GetProperty("status").GetString());
+            }
+
+            using (var response = await PostWithTokenAsync(client,
+                $"/api/vendor/licenses/{approvalLicenseId:D}/approval-request",
+                licenseApprovalBody, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("approval_already_pending", json.RootElement.GetProperty("error").GetString());
             }
 
             await using (var auditScope = factory.Services.CreateAsyncScope())
