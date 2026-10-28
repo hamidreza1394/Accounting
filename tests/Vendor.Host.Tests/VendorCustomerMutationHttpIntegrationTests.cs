@@ -906,13 +906,41 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
         public void Enable()
         {
             Interlocked.Exchange(ref _arrivals, 0);
+            Interlocked.Exchange(ref _preflightArrivals, 0);
             _bothArrived = NewCompletionSource();
+            _bothPreflightChecks = NewCompletionSource();
             Volatile.Write(ref _enabled, 1);
         }
+
+        private TaskCompletionSource _bothPreflightChecks = NewCompletionSource();
+        private int _preflightArrivals;
 
         public int ObservedInsertCount => Volatile.Read(ref _arrivals);
 
         public void Disable() => Volatile.Write(ref _enabled, 0);
+
+        public override async ValueTask<object?> ScalarExecutedAsync(
+            DbCommand command,
+            CommandExecutedEventData eventData,
+            object? result,
+            CancellationToken cancellationToken = default)
+        {
+            // Hold both requests after their duplicate-number preflight has completed.
+            // This ensures both observe the number as available before either INSERT runs,
+            // so the unique index—not request scheduling—arbitrates the race.
+            if (Volatile.Read(ref _enabled) == 1 &&
+                command.CommandText.Contains("VendorCustomers", StringComparison.OrdinalIgnoreCase) &&
+                command.CommandText.Contains("CustomerNumber", StringComparison.OrdinalIgnoreCase) &&
+                command.CommandText.Contains("EXISTS", StringComparison.OrdinalIgnoreCase))
+            {
+                if (Interlocked.Increment(ref _preflightArrivals) == 2)
+                    _bothPreflightChecks.TrySetResult();
+
+                await _bothPreflightChecks.Task.WaitAsync(TimeSpan.FromSeconds(15), cancellationToken);
+            }
+
+            return result;
+        }
 
         public override async ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
             DbCommand command,
