@@ -40,6 +40,8 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
         var customerApprovalRowVersion = string.Empty;
         var installationApprovalId = Guid.Empty;
         var installationApprovalRowVersion = string.Empty;
+        var licenseApprovalId = Guid.Empty;
+        var licenseApprovalRowVersion = string.Empty;
         var baseConnection = Environment.GetEnvironmentVariable("FARANO_VENDOR_TEST_SQLSERVER");
         if (string.IsNullOrWhiteSpace(baseConnection))
         {
@@ -96,6 +98,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     VendorPermissionCatalog.ContractsManage,
                     VendorPermissionCatalog.LicensesRead,
                     VendorPermissionCatalog.LicensesManage,
+                    VendorPermissionCatalog.LicensesIssue,
                     VendorPermissionCatalog.ApprovalsRead,
                     VendorPermissionCatalog.ApprovalsRequest,
                     VendorPermissionCatalog.ApprovalsReview
@@ -261,6 +264,42 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
             // The anonymous token used for password/TOTP requests must not be reused
             // after the authenticated application cookie is issued.
             (antiForgeryToken, _) = await GetAntiforgeryTokenAsync(client, cancellationToken);
+
+            Guid licenseId;
+            byte[] licenseVersion;
+            await using (var licenseScope = factory.Services.CreateAsyncScope())
+            {
+                var db = licenseScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var license = await db.Licenses.AsNoTracking()
+                    .SingleAsync(item => item.LicenseNumber.StartsWith("IT-LIC-"), cancellationToken);
+                licenseId = license.Id;
+                licenseVersion = license.RowVersion.ToArray();
+            }
+
+            var licenseApprovalBody = new
+            {
+                action = "issue",
+                rowVersion = Convert.ToBase64String(licenseVersion)
+            };
+            using (var response = await PostWithTokenAsync(client,
+                $"/api/vendor/licenses/{licenseId:D}/approval-request",
+                licenseApprovalBody, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                licenseApprovalId = json.RootElement.GetProperty("id").GetGuid();
+                licenseApprovalRowVersion = json.RootElement.GetProperty("rowVersion").GetString()!;
+                Assert.Equal("Pending", json.RootElement.GetProperty("status").GetString());
+            }
+
+            using (var response = await PostWithTokenAsync(client,
+                $"/api/vendor/licenses/{licenseId:D}/approval-request",
+                licenseApprovalBody, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("approval_already_pending", json.RootElement.GetProperty("error").GetString());
+            }
 
             Guid customerId;
             byte[] initialRowVersion;
@@ -752,6 +791,25 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
                 Assert.Equal("Approved", json.RootElement.GetProperty("status").GetString());
                 Assert.NotEqual(Guid.Empty, json.RootElement.GetProperty("reviewedByUserId").GetGuid());
+            }
+
+            using (var licenseDecisionResponse = await PostWithTokenAsync(reviewerClient,
+                $"/api/vendor/approvals/{licenseApprovalId:D}/decision",
+                new { decision = "Approved", rowVersion = licenseApprovalRowVersion, comment = "must fail closed without signer" },
+                reviewerAntiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.ServiceUnavailable, licenseDecisionResponse.StatusCode);
+                using var json = JsonDocument.Parse(await licenseDecisionResponse.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("license_issuance_unavailable", json.RootElement.GetProperty("error").GetString());
+            }
+
+            await using (var licenseStateScope = factory.Services.CreateAsyncScope())
+            {
+                var db = licenseStateScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var license = await db.Licenses.AsNoTracking().SingleAsync(item => item.Id == licenseId, cancellationToken);
+                Assert.Equal("Draft", license.Status);
+                Assert.Equal("Pending", (await db.ApprovalRequests.AsNoTracking()
+                    .SingleAsync(item => item.Id == licenseApprovalId, cancellationToken)).Status);
             }
 
             await using (var approvalVerificationScope = factory.Services.CreateAsyncScope())
