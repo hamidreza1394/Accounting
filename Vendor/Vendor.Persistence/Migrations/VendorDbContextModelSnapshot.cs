@@ -539,6 +539,26 @@ namespace Faranou.Vendor.Persistence.Migrations
                     b.ToTable("VendorContracts", (string)null);
                 });
 
+            modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorSignedLicenseEnvelope", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
+                    b.Property<string>("Algorithm").IsRequired().IsUnicode(false).HasMaxLength(32).HasColumnType("varchar(32)");
+                    b.Property<DateTimeOffset>("CreatedAtUtc").ValueGeneratedOnAdd().HasColumnType("datetimeoffset").HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
+                    b.Property<string>("EnvelopeJson").IsRequired().HasColumnType("nvarchar(max)");
+                    b.Property<string>("KeyId").IsRequired().HasMaxLength(128).HasColumnType("nvarchar(128)");
+                    b.Property<Guid>("LicenseId").HasColumnType("uniqueidentifier");
+                    b.Property<string>("PayloadSha256").IsRequired().IsUnicode(false).HasMaxLength(64).IsFixedLength().HasColumnType("char(64)");
+                    b.Property<byte[]>("RowVersion").IsRequired().IsConcurrencyToken().ValueGeneratedOnAddOrUpdate().HasColumnType("rowversion");
+                    b.Property<int>("Sequence").HasColumnType("int");
+                    b.HasKey("Id");
+                    b.HasIndex("LicenseId", "Sequence").IsUnique();
+                    b.HasIndex("PayloadSha256");
+                    b.ToTable("VendorSignedLicenseEnvelopes", t =>
+                        {
+                            t.HasCheckConstraint("CK_VendorSignedLicenseEnvelopes_Sequence", "[Sequence] >= 1");
+                        });
+                });
+
             modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorLicense", b =>
                 {
                     b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
@@ -598,6 +618,12 @@ namespace Faranou.Vendor.Persistence.Migrations
                     b.Navigation("Customer");
                     b.Navigation("Contract");
                     b.Navigation("Installation");
+                });
+
+            modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorSignedLicenseEnvelope", b =>
+                {
+                    b.HasOne("Faranou.Vendor.Persistence.Domain.VendorLicense", null)
+                        .WithMany().HasForeignKey("LicenseId").OnDelete(DeleteBehavior.Restrict).IsRequired();
                 });
 
             modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorCustomer", b =>
