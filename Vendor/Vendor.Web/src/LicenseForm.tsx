@@ -501,7 +501,9 @@ export function LicenseForm({
               value={validFromUtc} onChange={event => setValidFromUtc(event.target.value)} disabled={busy || !editable} />
           </div>
           <div className="space-y-2">
-            <label htmlFor="license-valid-until" className="text-sm font-medium">تاریخ پایان (اختیاری)</label>
+            <label htmlFor="license-valid-until" className="text-sm font-medium">
+              {licenseKind === 'term' ? 'تاریخ پایان اعتبار (الزامی)' : 'تاریخ پایان اعتبار (برای لایسنس دائمی استفاده نمی‌شود)'}
+            </label>
             <input id="license-valid-until" type="date" min={validFromUtc || undefined}
               className="h-10 w-full rounded-md border border-input bg-background px-3 outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
               value={validUntilUtc} onChange={event => setValidUntilUtc(event.target.value)}
