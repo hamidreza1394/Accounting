@@ -1,6 +1,6 @@
 # راهنمای عملیاتی راه‌اندازی اولین مدیر Vendor
 
-وضعیت: **Implemented in branch / Not yet Verified** تا عبور CI کامل و ادغام PR.
+وضعیت: **Implemented / CI-Verified در محدوده تست‌های موجود**؛ اجرای عملیاتی در محیط واقعی و بازبینی استقرار Production همچنان لازم است.
 
 ## پیش‌نیازها
 - این راهنما فقط برای کنترل‌پلین مستقل Vendor است؛ برای دیتابیس حسابداری مشتری استفاده نشود.
@@ -45,15 +45,14 @@ dotnet Faranou.Vendor.Host.dll bootstrap-admin
 - در محیط Cloud و Dedicated Server، این runbook را با سازوکار Secret Store، حساب سرویس کم‌دسترسی، پشتیبان Data Protection و فرایند تغییرات سازمان تطبیق دهید.
 
 ## محدودیت‌ها و معیار Production
-این قابلیت به‌تنهایی Vendor را Production-ready نمی‌کند. پیش از استفادهٔ تجاری باید RBAC default-deny، مجوزدهی resource-based، maker-checker، audit checkpoint مستقل، مدیریت مشتری/نصب/قرارداد/لایسنس، کلید امضای KMS/HSM، مانیتورینگ و runbook بازیابی تکمیل و با تست/CI تأیید شوند. هیچ Migration یا دیتابیس مشتری در این تغییرات دست‌کاری نمی‌شود.
+این قابلیت به‌تنهایی Vendor را Production-ready نمی‌کند. RBAC پایه، مجوزدهی resource-based و Maker-Checker برای تغییر وضعیت مشتری/نصب در کد موجودند و CI آن‌ها سبز است؛ با این حال، بازبینی مستقل نهایی ماتریس مجوزها و جداسازی وظایف، Maker-Checker برای صدور/ابطال لایسنس پس از ایجاد سرویس امضا، checkpoint مستقل Audit، صدور امضاشده از طریق KMS/HSM، چرخه فعال‌سازی آفلاین، مانیتورینگ و runbook بازیابی هنوز باقی‌اند. مدیریت metadata مشتری/نصب/قرارداد/لایسنس در UI/API موجود است و معادل provisioning شرکت حسابداری مشتری یا صدور لایسنس امضاشده نیست. هیچ Migration یا دیتابیس مشتری در این تغییرات دست‌کاری نمی‌شود.
 
-## آزمون‌ها
-- CI باید آزمون Integration واقعی SQL Server را اجرا کند؛ اجرای SQLite یا صرفاً unit test جایگزین آن نیست.
-- تست هم‌زمانی باید ثابت کند از دو تلاش هم‌زمان فقط یک مدیر فعال ایجاد می‌شود.
-- تست باید زنجیرهٔ ممیزی را با `VendorAuditChainVerifier` اعتبارسنجی کند.
-- تا پایان Vendor CI، EF snapshot gate و publish مستقل، وضعیت این تغییر **Verified نیست**.
+## آزمون‌ها و شواهد CI
+- Vendor CI run [40570240409](https://github.com/hamidreza1394/Accounting/actions/runs/40570240409) روی HEAD نهایی PR #207 موفق شد؛ job شامل restore/build/test پروژه Vendor، گارد EF snapshot و publish مستقل است.
+- تست‌های Integration باید با SQL Server واقعی اجرا شوند؛ SQLite یا صرفاً unit test جایگزین آن نیست. گزارش CI سبز شاهد تست‌های خودکار است، نه اثبات اجرای bootstrap در محیط مشتری.
+- سناریوهای کلیدی موجود در تست‌ها شامل تلاش‌های هم‌زمان، فعال‌سازی تنها پس از تأیید MFA و بررسی زنجیره ممیزی است؛ برای تغییر این رفتارها تست‌های regression حفظ شوند.
+- خطای قدیمی run [40363406842](https://github.com/hamidreza1394/Accounting/actions/runs/40363406842) مربوط به ثبت‌نشدن `IDataProtectionProvider` در setup تست بود. کد تست فعلی Data Protection را ثبت می‌کند و اجرای تازهٔ Vendor CI سبز است.
 
-## اعتبارسنجی CI — 2026-10-26
-- در Vendor CI run [40363406842](https://github.com/hamidreza1394/Accounting/actions/runs/40363406842)، Build و تست‌های UI موفق بودند، اما آزمون `VendorBootstrapIntegrationTests` پیش از اجرای سناریوها به‌علت ثبت‌نشدن `IDataProtectionProvider` در ServiceCollection تست شکست خورد.
-- در نسخهٔ فعلی `main`، آزمون Integration سرویس `AddDataProtection().SetApplicationName("Faranou.Vendor.ControlPlane")` را ثبت می‌کند. این تغییر علت مشخص‌شده را هدف می‌گیرد؛ بااین‌حال، تا اجرای تازهٔ CI سبز نشود، bootstrap **Verified** نیست.
-- هشدارهای analyzer مربوط به آزمون و logging نیز در لاگ همان اجرا مشاهده شدند؛ در این PR تغییر رفتار Production یا کنترل امنیتی انجام نمی‌شود. هر اصلاح جداگانه باید با آزمون معتبر توجیه شود.
+## محدودیت عملیاتی
+- **Verified در CI** به معنی اجرای عملیاتی bootstrap روی Cloud یا Dedicated Server نیست. پیش از استفاده واقعی، اتصال فقط به دیتابیس Vendor، تزریق/حذف راز از Secret Store، پایداری و پشتیبان Data Protection، مجوز حساب سرویس، ثبت TOTP و بازیابی pending باید در محیط کنترل‌شده تأیید شود.
+- این runbook هیچ مجوزی برای استفاده از دیتابیس مشتری یا افزودن credential ثابت نمی‌دهد.

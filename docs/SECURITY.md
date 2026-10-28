@@ -248,9 +248,10 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - endpointهای `/api/admin/roles` و `/api/admin/administrators` باید سیاست `vendor.administrators.manage` و گارد مدیر فعال با MFA داشته باشند.
 - API معمولی اجازهٔ ایجاد نقش `Vendor.SuperAdmin`، تغییر مجوزهای آن یا اعطای مجوز `vendor.administrators.manage` به نقش سفارشی را نمی‌دهد. تخصیص نقش SuperAdmin فقط در bootstrap تعاملی یک‌باره مجاز است.
 - تغییر نقش، تغییر مجوز و تخصیص نقش با رویداد ممیزی در همان تراکنش SQL Server انجام می‌شوند؛ در صورت شکست append ممیزی، تراکنش commit نمی‌شود.
-- `VendorResourcePermissionAuthorizationHandler` ابتدا سیاست پایهٔ مدیر/MFA و مجوز را بررسی می‌کند و سپس adapter منبع را فراخوانی می‌کند. adapter پیش‌فرض `DenyAllVendorResourceAccessEvaluator` است؛ تا وقتی resolver واقعی منبع از دیتابیس ثبت نشده، همهٔ دسترسی‌های منبع‌محور رد می‌شوند.
-- **محدودیت صریح:** این گارد زیرساختی به‌تنهایی اثبات جلوگیری از IDOR برای مشتری/نصب/قرارداد/لایسنس نیست. هنگام اضافه‌شدن مدل و APIهای واقعی، adapter باید رابطهٔ منبع و مشتری را از رکورد persisted resolve کند و آزمون‌های منفی با شناسهٔ منبع متعلق به مشتری دیگر اجرا شوند.
-- این تغییر هیچ Migration یا تغییری در دیتابیس حسابداری مشتری ایجاد نمی‌کند. وضعیت نهایی تا سبزشدن Vendor CI و .NET CI روی آخرین SHA، `Implemented / Not Verified` است.
+- `VendorResourcePermissionAuthorizationHandler` ابتدا سیاست پایهٔ مدیر/MFA و مجوز را بررسی می‌کند و سپس `VendorResourceAccessEvaluator` را فراخوانی می‌کند. پیاده‌سازی فعلی شناسهٔ منبع را از رکورد ذخیره‌شده در `VendorDbContext` resolve می‌کند و برای installation/contract/license سازگاری رابطه با Customer را بررسی می‌کند؛ شناسهٔ parent ارسالی به‌تنهایی مدرک مالکیت نیست.
+- تست‌های `VendorResourceAuthorizationIntegrationTests` و `VendorPermissionAuthorizationTests` مسیرهای منبع‌محور را پوشش می‌دهند؛ Vendor CI run [40570240409](https://github.com/hamidreza1394/Accounting/actions/runs/40570240409) روی HEAD نهایی PR #207 موفق است.
+- **محدودیت صریح:** این شواهد معادل ممیزی نفوذ مستقل یا تأیید کامل ماتریس مجوزهای Production نیست. دسترسی resource-based باید در هر endpoint واقعی فراخوانی شود؛ برای هر مسیر جدید تست منفی cross-customer/IDOR لازم است. نقش‌ها و مجوزها نیز باید قبل از Production به‌صورت مستقل بازبینی شوند.
+- این بخش هیچ Migration یا تغییری در دیتابیس حسابداری مشتری ایجاد نمی‌کند. وضعیت پایه: `Implemented / CI-Verified` در محدوده تست‌های موجود؛ آمادگی کامل Production تأیید نشده است.
 
 
 ## وضعیت تأییدشده فعلی Vendor — Maker-Checker مشتری/نصب (2026-10-27, PR #207)

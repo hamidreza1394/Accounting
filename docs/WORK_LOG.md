@@ -876,3 +876,11 @@
 - **.NET CI:** run [40570240205](https://github.com/hamidreza1394/Accounting/actions/runs/40570240205) موفق؛ build/test، secret scan، E2E و انتشار Linux/Windows.
 - **رفتارهای آزموده‌شده:** endpoint مستقیم وضعیت دیگر bypass ندارد؛ درخواست تکراری و انتقال نامعتبر رد می‌شود؛ self-approval رد می‌شود؛ مدیر دوم با MFA می‌تواند درخواست را اعمال کند؛ stale RowVersion درخواست را Stale می‌کند؛ Audit در تراکنش ثبت می‌شود.
 - **محدوده:** فقط Vendor، تست‌ها و مستندات؛ دیتابیس حسابداری مشتری تغییر نکرده است. این کار به معنی تکمیل signing/KMS/HSM یا checkpoint مستقل Audit نیست.
+
+
+## 2026-10-28 — تطبیق شواهد Bootstrap و RBAC پس از PR #207 (Issue #209)
+- **هدف:** اصلاح وضعیت‌های تاریخی متناقض در اسناد امنیتی Vendor بر اساس کد فعلی و شواهد CI واقعی.
+- **شواهد:** PR #207 ادغام‌شده با merge commit `d644ab5d36d00b1ce3763b64f17fd6fe7ef9fbac`; Vendor CI [40570240409](https://github.com/hamidreza1394/Accounting/actions/runs/40570240409) و .NET CI [40570240205](https://github.com/hamidreza1394/Accounting/actions/runs/40570240205) هر دو موفق؛ PR #208 با commit `9f9b9024eb4581b3e674c155befb57f657dab2b9` ادغام شد.
+- **اصلاحات:** وضعیت فعلی PROJECT_STATUS، runbook bootstrap و توصیف evaluator منبع‌محور SECURITY با وضعیت واقعی هماهنگ شدند. از ادعای Production-ready پرهیز شده است؛ اجرای عملیاتی bootstrap، بازبینی نهایی ماتریس RBAC، checkpoint مستقل Audit و KMS/HSM همچنان شکاف‌اند.
+- **محدوده:** مستندات Vendor فقط؛ هیچ کد اجرایی، Migration، Schema یا دیتابیس مشتری تغییر نکرد.
+- **اعتبارسنجی:** شواهد CI از runهای فوق بررسی شدند؛ تست محلی اجرا نشد چون این تغییر مستنداتی است. CI خود PR باید پیش از ادغام سبز باشد.
