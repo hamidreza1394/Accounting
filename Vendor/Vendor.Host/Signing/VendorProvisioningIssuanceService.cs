@@ -15,7 +15,7 @@ namespace Faranou.Vendor.Host.Signing;
 /// </summary>
 public sealed class VendorProvisioningIssuanceService(
     VendorDbContext db,
-    ILicenseSigningProvider signingProvider,
+    IProvisioningSigningProvider signingProvider,
     IVendorAuditWriter audit,
     TimeProvider timeProvider)
 {
