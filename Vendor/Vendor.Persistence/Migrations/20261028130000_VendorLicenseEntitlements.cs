@@ -19,7 +19,7 @@ public partial class VendorLicenseEntitlements : Migration
             type: "nvarchar(16)",
             maxLength: 16,
             nullable: false,
-            defaultValue: "term");
+            defaultValue: "perpetual");
 
         migrationBuilder.AddColumn<int>(
             name: "MaxCompanies",
