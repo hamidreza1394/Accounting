@@ -173,7 +173,7 @@ Production completion still requires a trusted key source outside Git, signing a
 
 ## Provisioning issuance workflow (Issue #236)
 
-Provisioning requests can now be submitted to the existing two-person approval workflow. The reviewer must be a different Vendor administrator from the requester. Approval calls the existing `ILicenseSigningProvider` with the exact canonical payload bytes and stores the signing metadata with the approval decision in one Vendor database transaction. The package export endpoint is an antiforgery-protected POST available only for `PendingDelivery` requests. It checks customer and installation read authorization, records an audit event in the same transaction as the first export timestamp, and uses `Cache-Control: no-store`. The UI exposes the two-person approval action and downloads the exported signed JSON package for offline transfer.
+Provisioning requests can now be submitted to the existing two-person approval workflow. The reviewer must be a different Vendor administrator from the requester. Approval calls the dedicated `IProvisioningSigningProvider` with the exact canonical payload bytes and stores the signing metadata with the approval decision in one Vendor database transaction. Provisioning and license issuance have separate provider registrations and must use distinct signing keys. The package export endpoint is an antiforgery-protected POST available only for `PendingDelivery` requests. It checks customer and installation read authorization, records an audit event in the same transaction as the first export timestamp, and uses `Cache-Control: no-store`. The UI exposes the two-person approval action and downloads the exported signed JSON package for offline transfer.
 
 The default provider remains `UnavailableLicenseSigningProvider`, so issuance fails closed with a generic 503 until an approved external KMS/HSM or signing-service adapter is configured. This code does not make the signing key available, generate a software key, or claim that a customer has imported or accepted the package. A trusted customer-side consumer and signed acknowledgement are tracked separately in #235.
 
@@ -183,3 +183,8 @@ The default provider remains `UnavailableLicenseSigningProvider`, so issuance fa
 The Vendor host fails startup in the Production environment unless an explicit `IProductionVendorAuditCheckpointStore` adapter is registered. A hash chain stored only in the same Vendor SQL Server database is not an independent checkpoint.
 
 Until a real provider is selected and configured with separate credentials and appropriate append-only/immutability retention, the Vendor control plane is **not production-ready** and must not be launched with a fake store, local-file fallback, or Vendor-database fallback. Development and tests can run without the provider.
+
+
+### Dedicated provisioning signer boundary (Issue #233)
+
+Provisioning issuance now depends on `IProvisioningSigningProvider`, registered separately from `ILicenseSigningProvider`. The default `UnavailableProvisioningSigningProvider` fails closed. This interface separation prevents accidental reuse of the license-signing provider/key, but does not itself implement a production signer. A dedicated external KMS/HSM or protected signing service, trusted key ID/rotation configuration, signature verification, recovery runbook, and operational tests remain required before provisioning can be enabled in Production.
