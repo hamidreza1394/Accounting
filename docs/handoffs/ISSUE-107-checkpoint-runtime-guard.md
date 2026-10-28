@@ -1,7 +1,7 @@
 # تحویل وظیفه — ISSUE-107-checkpoint-runtime-guard
 
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/107
-- **وضعیت:** guard fail-closed و تست‌ها در شاخه؛ منتظر CI
+- **وضعیت:** guard fail-closed و تست‌ها در `main` ادغام شده و CI مربوط به PRها سبز است؛ provider مستقل واقعی هنوز انتخاب/پیکربندی نشده است
 
 ## تغییرات
 - افزودن marker interface با نام IProductionVendorAuditCheckpointStore؛ fake/test storeها نباید آن را پیاده‌سازی کنند مگر در تست صریح.
@@ -21,8 +21,8 @@
 - tests/Vendor.Host.Tests/VendorAuditCheckpointStartupGuardTests.cs
 - Vendor/README.md، docs/WORK_LOG.md و این handoff
 
-## آزمون
-- در انتظار CI برای .NET build/test، Vendor build/test، EF guard، E2E و publish Linux/Windows.
-
-- Branch: fix/vendor-audit-checkpoint-fail-closed
-- PR: در حال ایجاد
+## شواهد CI و وضعیت نهایی این برش
+- Guard و تست‌های آن در `main` هستند؛ این handoff دیگر شاخهٔ در انتظار CI نیست.
+- اجرای Vendor Production همچنان عمداً تا ثبت provider مستقل واقعی متوقف می‌شود.
+- موارد باقی‌مانده در Issue #107 عبارت‌اند از انتخاب و پیکربندی sink مستقل، credential/retention/immutability، جداسازی SQL principal، alerting و recovery runbook و شاهد اجرای مستقیم EF CLI migration در محیط کنترل‌شده.
+- شاخهٔ اولیه: `fix/vendor-audit-checkpoint-fail-closed`؛ وضعیت ادغام guard را با معیارهای باقیماندهٔ Issue #107 اشتباه نگیرید.

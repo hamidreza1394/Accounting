@@ -1011,3 +1011,10 @@
 - تست integration اکنون فقط provider provisioning را جایگزین می‌کند و signer لایسنس همچنان unavailable می‌ماند؛ sequence تست با یک شکست موقت و سپس امضای تستی موفق هماهنگ شده است. تست قرارداد برای unavailable/cancellation افزوده شد.
 - README و `docs/LICENSING_THREAT_MODEL.md` به‌روزرسانی شدند؛ handoff: `docs/handoffs/ISSUE-233-provisioning-dedicated-signer.md`.
 - **CI نهایی این شاخه هنوز اجرا/تأیید نشده است.** Provider تولیدی، trusted key ID/rotation، verify امضا قبل از persistence و runbook عملیاتی همچنان باقی‌اند.
+
+
+## 2026-10-28 — PR #241 merged and open Vendor blockers reconciled
+- PR #241 merged as `9ff7ae3a1cc9a2a2623335740f8adeb2b536417f`; both Vendor CI (`40745034125`) and .NET CI (`40745033978`) were green on the final PR head.
+- The provisioning signing interface is now distinct from the license signing interface. Both production signing and independent audit checkpoint adapters remain intentionally unconfigured and fail closed.
+- Added status comments to Issues #107, #214, #228, #233 and #236 to distinguish implemented/CI-verified work from deployment-approval blockers. Customer-side consumer/acknowledgement remains in Issues #234/#235 and is outside Vendor-only scope.
+- Corrected the Issue #107 handoff so it no longer says the merged startup guard is waiting for CI.

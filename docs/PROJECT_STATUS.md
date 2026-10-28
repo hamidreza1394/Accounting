@@ -318,3 +318,11 @@
 - PR #219 merged after both Vendor CI and .NET CI succeeded; it adds a validated Vendor-metadata-to-`LicensePayload` mapper and negative tests.
 - PR #220 (in progress) adds a provider-backed envelope factory that signs the exact canonical UTF-8 payload bytes and validates result metadata before producing `LicenseEnvelope`. Tests verify the envelope with a temporary test-only ECDSA key and ensure unavailable signer/invalid payloads fail closed.
 - Not production-ready: envelope persistence, atomic sequence/status update, approval integration, a real KMS/HSM or remote signer, key rotation/runbook, and operational issuance/revocation tests remain. No customer DB schema changes are permitted.
+
+
+## Vendor provisioning signer boundary — 2026-10-28 (PR #241)
+- PR [#241](https://github.com/hamidreza1394/Accounting/pull/241) merged as `9ff7ae3a1cc9a2a2623335740f8adeb2b536417f`; final PR head was `ca94836f9e46dd4c97b30665d2f1456b63f7300d`.
+- Vendor CI run [40745034125](https://github.com/hamidreza1394/Accounting/actions/runs/40745034125) and .NET CI run [40745033978](https://github.com/hamidreza1394/Accounting/actions/runs/40745033978) passed on that head. .NET CI included client/typecheck/tests/build, secret scan, build/test, migration guards, E2E, and Linux/Windows publish.
+- Provisioning issuance now injects `IProvisioningSigningProvider` separately from `ILicenseSigningProvider`; default provider remains unavailable/fail-closed. No private key, software fallback, customer-side DB/schema change, or production KMS/HSM adapter was added.
+- Vendor onboarding now has the versioned request/approval/export path, but this does **not** mean a customer company/admin was created or that entitlements were activated. A trusted customer-side consumer and signed acknowledgement remain in Issues #234/#235.
+- **Production blockers remain:** approved external provisioning/license signer with trusted key IDs and rotation, signature verification before persistence, independent immutable audit checkpoint provider/credentials, operational recovery/alerting, and controlled deployment/backup-restore verification. Vendor must not be described as production-ready until these are addressed and tested.
