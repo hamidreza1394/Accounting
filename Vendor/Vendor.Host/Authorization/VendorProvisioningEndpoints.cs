@@ -258,7 +258,12 @@ public static class VendorProvisioningEndpoints
                 .Select(item => new ProvisioningRequestResponse(
                     item.Id, item.CustomerId, item.InstallationId, item.RequestId, item.Status,
                     item.CreatedAtUtc, item.UpdatedAtUtc, item.ConfirmedAtUtc, item.FailureCode,
-                    item.PayloadSha256, Convert.ToBase64String(item.RowVersion)))
+                    item.PayloadSha256, Convert.ToBase64String(item.RowVersion),
+                    db.ApprovalRequests.Where(approval =>
+                            approval.ResourceType == "provisioning" &&
+                            approval.ResourceId == item.Id &&
+                            approval.Status == "Pending")
+                        .Select(approval => approval.Status).FirstOrDefault()))
                 .ToListAsync(ct);
             return Results.Ok(new VendorPageResponse<ProvisioningRequestResponse>(
                 items, pagination.Page, pagination.PageSize, totalCount));
@@ -334,6 +339,7 @@ public sealed record ProvisioningRequestResponse(
     DateTimeOffset? ConfirmedAtUtc,
     string? FailureCode,
     string PayloadSha256,
-    string RowVersion);
+    string RowVersion,
+    string? ApprovalStatus = null);
 
 public sealed record CreateVendorProvisioningApprovalRequest(string? RowVersion);
