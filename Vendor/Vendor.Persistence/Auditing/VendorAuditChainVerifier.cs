@@ -13,6 +13,7 @@ namespace Faranou.Vendor.Persistence.Auditing;
 /// </summary>
 public sealed class VendorAuditChainVerifier
 {
+    public const int CurrentHashVersion = 1;
     public const string GenesisHash = "0000000000000000000000000000000000000000000000000000000000000000";
 
     private static readonly JsonSerializerOptions CanonicalJsonOptions = new()
@@ -46,6 +47,11 @@ public sealed class VendorAuditChainVerifier
         var byHash = new Dictionary<string, VendorAuditEvent>(StringComparer.Ordinal);
         foreach (var entry in entries)
         {
+            if (entry.HashVersion != CurrentHashVersion)
+            {
+                return VendorAuditChainVerificationResult.Invalid(entries.Length, "unsupported-hash-version");
+            }
+
             if (entry.Id == Guid.Empty ||
                 !VendorAuditWriter.IsValidActionCode(entry.ActionCode) ||
                 !VendorAuditWriter.IsValidSubjectType(entry.SubjectType) ||
@@ -130,7 +136,13 @@ public sealed class VendorAuditChainVerifier
         return VendorAuditChainVerificationResult.Valid(entries.Length, current.EventHash);
     }
 
-    internal static string ComputeEventHash(VendorAuditEvent entry)
+    internal static string ComputeEventHash(VendorAuditEvent entry) => entry.HashVersion switch
+    {
+        1 => ComputeV1EventHash(entry),
+        _ => throw new NotSupportedException("unsupported-audit-hash-version")
+    };
+
+    private static string ComputeV1EventHash(VendorAuditEvent entry)
     {
         var canonical = new CanonicalAuditEvent(
             Version: 1,
