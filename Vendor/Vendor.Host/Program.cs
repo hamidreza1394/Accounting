@@ -71,9 +71,10 @@ if (bootstrapCommandRequested)
 
 builder.Services.AddHealthChecks();
 builder.Services.AddVendorPersistence(builder.Configuration);
-// Until a production KMS/HSM adapter is configured, signing is deliberately unavailable.
-// The default provider fails closed and never generates or stores a private key.
+// Until approved production KMS/HSM adapters are configured, signing is deliberately unavailable.
+// License and provisioning signing have separate provider registrations and key boundaries.
 builder.Services.TryAddSingleton<ILicenseSigningProvider, UnavailableLicenseSigningProvider>();
+builder.Services.TryAddSingleton<IProvisioningSigningProvider, UnavailableProvisioningSigningProvider>();
 builder.Services.AddScoped<VendorLicenseEnvelopeFactory>();
 builder.Services.AddScoped<VendorLicenseIssuanceService>();
 builder.Services.AddScoped<VendorProvisioningIssuanceService>();
