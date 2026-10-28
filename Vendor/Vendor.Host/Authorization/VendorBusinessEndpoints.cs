@@ -1,3 +1,5 @@
+using System.Text.Json;
+using Faranou.Licensing.Contracts;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Auditing;
 using Faranou.Vendor.Persistence.Domain;
@@ -109,10 +111,14 @@ public static class VendorBusinessEndpoints
                 IQueryable<VendorLicense> query = db.Licenses.AsNoTracking();
                 if (customerId.HasValue) query = query.Where(item => item.CustomerId == customerId.Value);
                 return query.OrderBy(item => item.LicenseNumber).ThenBy(item => item.Id)
-                    .Select(item => new LicenseResponse(item.Id, item.CustomerId, item.ContractId, item.InstallationId, item.LicenseNumber, item.ProductCode, item.Status, item.ValidFromUtc, item.ValidUntilUtc, item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion)));
+                    .Select(item => new LicenseResponse(item.Id, item.CustomerId, item.ContractId, item.InstallationId, item.LicenseNumber, item.ProductCode, item.Status, item.LicenseKind, item.MaxCompanies,
+                    ParseSubsystems(item.SubsystemsJson), item.GraceDays, item.LastIssuedSequence,
+                    item.ValidFromUtc, item.ValidUntilUtc, item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion)));
             },
             async (db, id, ct) => await db.Licenses.AsNoTracking().Where(item => item.Id == id)
-                .Select(item => new LicenseResponse(item.Id, item.CustomerId, item.ContractId, item.InstallationId, item.LicenseNumber, item.ProductCode, item.Status, item.ValidFromUtc, item.ValidUntilUtc, item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion))).SingleOrDefaultAsync(ct));
+                .Select(item => new LicenseResponse(item.Id, item.CustomerId, item.ContractId, item.InstallationId, item.LicenseNumber, item.ProductCode, item.Status, item.LicenseKind, item.MaxCompanies,
+                    ParseSubsystems(item.SubsystemsJson), item.GraceDays, item.LastIssuedSequence,
+                    item.ValidFromUtc, item.ValidUntilUtc, item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion))).SingleOrDefaultAsync(ct));
 
         var installations = endpoints.MapGroup("/api/vendor/installations")
             .RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.InstallationsManage));
@@ -202,7 +208,9 @@ public static class VendorBusinessEndpoints
             var product = request.ProductCode?.Trim();
             if (request.CustomerId == Guid.Empty || string.IsNullOrWhiteSpace(number) || number.Length > 64 ||
                 string.IsNullOrWhiteSpace(product) || product.Length > 64 ||
-                request.ValidUntilUtc.HasValue && request.ValidUntilUtc.Value < request.ValidFromUtc)
+                !TryNormalizeLicenseEntitlements(request.LicenseKind, request.MaxCompanies, request.Subsystems,
+                    request.GraceDays, request.ValidFromUtc, request.ValidUntilUtc,
+                    out var licenseKind, out var subsystemsJson, out var graceDays))
                 return Results.BadRequest(new { error = "invalid_license" });
             if (!await db.Customers.AnyAsync(item => item.Id == request.CustomerId, ct))
                 return Results.BadRequest(new { error = "customer_not_found" });
@@ -220,6 +228,8 @@ public static class VendorBusinessEndpoints
             var item = new VendorLicense { Id = Guid.NewGuid(), CustomerId = request.CustomerId,
                 ContractId = request.ContractId, InstallationId = request.InstallationId,
                 LicenseNumber = number, ProductCode = product, Status = "Draft",
+                LicenseKind = licenseKind, MaxCompanies = request.MaxCompanies, SubsystemsJson = subsystemsJson,
+                GraceDays = graceDays, LastIssuedSequence = 0,
                 ValidFromUtc = request.ValidFromUtc, ValidUntilUtc = request.ValidUntilUtc, CreatedAtUtc = DateTimeOffset.UtcNow };
             db.Licenses.Add(item);
             try { await db.SaveChangesAsync(ct); }
@@ -232,7 +242,9 @@ public static class VendorBusinessEndpoints
                 System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
             await tx.CommitAsync(ct);
             return Results.Created($"/api/vendor/licenses/{item.Id:D}",
-                new LicenseResponse(item.Id, item.CustomerId, item.ContractId, item.InstallationId, item.LicenseNumber, item.ProductCode, item.Status, item.ValidFromUtc, item.ValidUntilUtc, item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion)));
+                new LicenseResponse(item.Id, item.CustomerId, item.ContractId, item.InstallationId, item.LicenseNumber, item.ProductCode, item.Status, item.LicenseKind, item.MaxCompanies,
+                    ParseSubsystems(item.SubsystemsJson), item.GraceDays, item.LastIssuedSequence,
+                    item.ValidFromUtc, item.ValidUntilUtc, item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion)));
         });
 
 
@@ -426,7 +438,9 @@ public static class VendorBusinessEndpoints
             var product = request.ProductCode?.Trim();
             if (string.IsNullOrWhiteSpace(number) || number.Length > 64 ||
                 string.IsNullOrWhiteSpace(product) || product.Length > 64 ||
-                request.ValidUntilUtc.HasValue && request.ValidUntilUtc.Value < request.ValidFromUtc)
+                !TryNormalizeLicenseEntitlements(request.LicenseKind, request.MaxCompanies, request.Subsystems,
+                    request.GraceDays, request.ValidFromUtc, request.ValidUntilUtc,
+                    out var licenseKind, out var subsystemsJson, out var graceDays))
                 return Results.BadRequest(new { error = "invalid_license" });
             if (await db.Licenses.AnyAsync(value => value.Id != id && value.LicenseNumber == number, ct))
                 return Results.Conflict(new { error = "license_number_exists" });
@@ -444,6 +458,10 @@ public static class VendorBusinessEndpoints
             item.InstallationId = request.InstallationId;
             item.LicenseNumber = number;
             item.ProductCode = product;
+            item.LicenseKind = licenseKind;
+            item.MaxCompanies = request.MaxCompanies;
+            item.SubsystemsJson = subsystemsJson;
+            item.GraceDays = graceDays;
             item.ValidFromUtc = request.ValidFromUtc;
             item.ValidUntilUtc = request.ValidUntilUtc;
             try { await db.SaveChangesAsync(ct); }
@@ -455,11 +473,68 @@ public static class VendorBusinessEndpoints
                 System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
             await tx.CommitAsync(ct);
             return Results.Ok(new LicenseResponse(item.Id, item.CustomerId, item.ContractId, item.InstallationId,
-                item.LicenseNumber, item.ProductCode, item.Status, item.ValidFromUtc, item.ValidUntilUtc,
-                item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion)));
+                item.LicenseNumber, item.ProductCode, item.Status, item.LicenseKind, item.MaxCompanies,
+                ParseSubsystems(item.SubsystemsJson), item.GraceDays, item.LastIssuedSequence,
+                item.ValidFromUtc, item.ValidUntilUtc, item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion)));
         });
 
         return endpoints;
+    }
+
+    private static bool TryNormalizeLicenseEntitlements(
+        string? licenseKind,
+        int? maxCompanies,
+        IReadOnlyList<string>? subsystems,
+        int? requestedGraceDays,
+        DateTimeOffset validFromUtc,
+        DateTimeOffset? validUntilUtc,
+        out string normalizedKind,
+        out string normalizedSubsystemsJson,
+        out int normalizedGraceDays)
+    {
+        normalizedKind = string.IsNullOrWhiteSpace(licenseKind)
+            ? (validUntilUtc.HasValue ? LicensePayload.KindTerm : LicensePayload.KindPerpetual)
+            : licenseKind.Trim();
+        normalizedSubsystemsJson = "[]";
+        normalizedGraceDays = requestedGraceDays ?? LicensePayload.DefaultGraceDays;
+
+        if (normalizedKind is not (LicensePayload.KindTerm or LicensePayload.KindPerpetual) ||
+            maxCompanies.HasValue && maxCompanies.Value < 1 ||
+            normalizedGraceDays is < 0 or > LicensePayload.MaxGraceDaysCeiling ||
+            validUntilUtc.HasValue && validUntilUtc.Value < validFromUtc ||
+            normalizedKind == LicensePayload.KindTerm && !validUntilUtc.HasValue ||
+            normalizedKind == LicensePayload.KindPerpetual && validUntilUtc.HasValue)
+        {
+            return false;
+        }
+
+        var codes = (subsystems ?? Array.Empty<string>())
+            .Select(code => code?.Trim() ?? string.Empty)
+            .ToArray();
+        if (codes.Any(code => !LicenseSubsystemCodes.IsAllowed(code)) ||
+            codes.Distinct(StringComparer.Ordinal).Count() != codes.Length)
+        {
+            return false;
+        }
+
+        normalizedSubsystemsJson = JsonSerializer.Serialize(codes.Order(StringComparer.Ordinal).ToArray());
+        return true;
+    }
+
+    private static IReadOnlyList<string> ParseSubsystems(string? json)
+    {
+        try
+        {
+            var values = JsonSerializer.Deserialize<string[]>(string.IsNullOrWhiteSpace(json) ? "[]" : json);
+            return values is null
+                ? Array.Empty<string>()
+                : values.Where(LicenseSubsystemCodes.IsAllowed).Distinct(StringComparer.Ordinal)
+                    .Order(StringComparer.Ordinal).ToArray();
+        }
+        catch (JsonException)
+        {
+            return Array.Empty<string>();
+        }
     }
 
     private static bool IsUniqueConstraintViolation(DbUpdateException exception) =>
@@ -497,15 +572,15 @@ public sealed record UpdateCustomerRequest(string? CustomerNumber, string? Legal
 public sealed record ChangeOperationalStatusRequest(string? Status, string? RowVersion);
 public sealed record UpdateInstallationRequest(string? InstallationCode, string? Name, string? Environment, string? RowVersion);
 public sealed record UpdateContractRequest(string? ContractNumber, DateTimeOffset StartsAtUtc, DateTimeOffset? EndsAtUtc, string? CurrencyCode, string? RowVersion);
-public sealed record UpdateLicenseRequest(Guid? ContractId, Guid? InstallationId, string? LicenseNumber, string? ProductCode, DateTimeOffset ValidFromUtc, DateTimeOffset? ValidUntilUtc, string? RowVersion);
+public sealed record UpdateLicenseRequest(Guid? ContractId, Guid? InstallationId, string? LicenseNumber, string? ProductCode, DateTimeOffset ValidFromUtc, DateTimeOffset? ValidUntilUtc, string? RowVersion, string? LicenseKind = null, int? MaxCompanies = null, IReadOnlyList<string>? Subsystems = null, int? GraceDays = null);
 public sealed record CustomerResponse(Guid Id, string CustomerNumber, string LegalName, string DisplayName, string Status, DateTimeOffset CreatedAtUtc, DateTimeOffset UpdatedAtUtc, string RowVersion);
 public sealed record InstallationResponse(Guid Id, Guid CustomerId, string InstallationCode, string Name, string Environment, string Status, DateTimeOffset CreatedAtUtc, DateTimeOffset? LastSeenAtUtc, string RowVersion);
 public sealed record ContractResponse(Guid Id, Guid CustomerId, string ContractNumber, string Status, DateTimeOffset StartsAtUtc, DateTimeOffset? EndsAtUtc, string CurrencyCode, DateTimeOffset CreatedAtUtc, string RowVersion);
-public sealed record LicenseResponse(Guid Id, Guid CustomerId, Guid? ContractId, Guid? InstallationId, string LicenseNumber, string ProductCode, string Status, DateTimeOffset ValidFromUtc, DateTimeOffset? ValidUntilUtc, DateTimeOffset CreatedAtUtc, string RowVersion);
+public sealed record LicenseResponse(Guid Id, Guid CustomerId, Guid? ContractId, Guid? InstallationId, string LicenseNumber, string ProductCode, string Status, string LicenseKind, int? MaxCompanies, IReadOnlyList<string> Subsystems, int GraceDays, int LastIssuedSequence, DateTimeOffset ValidFromUtc, DateTimeOffset? ValidUntilUtc, DateTimeOffset CreatedAtUtc, string RowVersion);
 
 public sealed record CreateInstallationRequest(Guid CustomerId, string? InstallationCode, string? Name, string? Environment);
 public sealed record CreateContractRequest(Guid CustomerId, string? ContractNumber, DateTimeOffset StartsAtUtc, DateTimeOffset? EndsAtUtc, string? CurrencyCode);
-public sealed record CreateLicenseRequest(Guid CustomerId, Guid? ContractId, Guid? InstallationId, string? LicenseNumber, string? ProductCode, DateTimeOffset ValidFromUtc, DateTimeOffset? ValidUntilUtc);
+public sealed record CreateLicenseRequest(Guid CustomerId, Guid? ContractId, Guid? InstallationId, string? LicenseNumber, string? ProductCode, DateTimeOffset ValidFromUtc, DateTimeOffset? ValidUntilUtc, string? LicenseKind = null, int? MaxCompanies = null, IReadOnlyList<string>? Subsystems = null, int? GraceDays = null);
 
 
 /// <summary>Normalizes list paging to bounded, deterministic values.</summary>
