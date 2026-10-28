@@ -343,7 +343,7 @@ export function LicenseForm({
       }
       const parsedMaxCompanies = maxCompanies.trim() ? Number(maxCompanies) : null;
       const parsedGraceDays = Number(graceDays);
-      const allowedSubsystems = new Set(subsystemOptions.map(option => option.code));
+      const allowedSubsystems = new Set<string>(subsystemOptions.map(option => option.code));
       if (!number || number.length > 64 || !product || product.length > 64 ||
           !['term', 'perpetual'].includes(licenseKind) ||
           !isValidDateOnly(validFromUtc) ||
@@ -353,7 +353,7 @@ export function LicenseForm({
           (parsedMaxCompanies !== null && (!Number.isInteger(parsedMaxCompanies) || parsedMaxCompanies < 1)) ||
           !Number.isInteger(parsedGraceDays) || parsedGraceDays < 0 || parsedGraceDays > 90 ||
           subsystems.length === 0 || new Set(subsystems).size !== subsystems.length ||
-          subsystems.some(code => !allowedSubsystems.has(code as typeof subsystemOptions[number]['code']))) {
+          subsystems.some(code => !allowedSubsystems.has(code))) {
         throw new Error('نوع لایسنس، سقف شرکت، زیرسیستم‌ها یا بازه اعتبار معتبر نیست.');
       }
       const tokenResponse = await fetch('/api/auth/antiforgery', {
