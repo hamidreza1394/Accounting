@@ -143,6 +143,14 @@ Host عمداً به ارائه‌دهندهٔ ابری خاصی وابسته ن
 - Migration 20261027190000_VendorAuditChainIndexes adds IX_VendorAuditEvents_PreviousHash and unique IX_VendorAuditEvents_EventHash for Vendor-only audit chain lookups. PR #203 merged this migration after the SQL Server integration suite and EF pending-model-change guard passed in Vendor CI and .NET CI.
 
 
+## متادیتای حق لایسنس — پیگیری تکمیلی
+
+- شاخهٔ `feat/vendor-license-entitlements` فیلدهای `LicenseKind`، `MaxCompanies`، `SubsystemsJson`، `GraceDays` و `LastIssuedSequence` را به مدل مستقل Vendor اضافه می‌کند. Migration فقط جدول `VendorLicenses` در دیتابیس Vendor را تغییر می‌دهد و هیچ جدول یا Migration حسابداری مشتری را لمس نمی‌کند.
+- نوع `term` الزاماً تاریخ پایان دارد؛ نوع `perpetual` تاریخ پایان ندارد. این سازگاری در اعتبارسنجی API و Check Constraint دیتابیس اعمال می‌شود. سقف شرکت، بازهٔ مهلت ارفاق و فهرست زیرسیستم‌های مجاز نیز اعتبارسنجی می‌شوند.
+- UI فارسی RTL اطلاعات خریداری‌شده را در فهرست و فرم نمایش می‌دهد؛ فرم ویرایش مقدارهای موجود را بازیابی می‌کند و API هم ورودی را مستقل از اعتبارسنجی مرورگر بررسی می‌کند.
+- این قابلیت صرفاً **مدیریت metadata و entitlement** است؛ به‌تنهایی لایسنس رمزنگاری‌شده صادر نمی‌کند، امضای دیجیتال نمی‌سازد، فایل فعال‌سازی آفلاین تولید نمی‌کند و به مشتری اجازهٔ اجرا نمی‌دهد. قبل از Production همچنان سرویس امضای KMS/HSM، صدور/ابطال کنترل‌شده، Maker-Checker برای لایسنس، تست فعال‌سازی آفلاین و checkpoint مستقل ممیزی لازم است.
+- وضعیت CI باید از runهای جاری شاخه بررسی شود؛ افزودن migration به سورس، جایگزین اجرای واقعی SQL Server و تأیید `dotnet ef migrations has-pending-model-changes` نیست.
+
 ## Maker-Checker تغییر وضعیت مشتری/نصب — Issue #201
 - PR #207 ادغام شده و CI کامل Vendor/.NET سبز است. endpointهای مستقیم قدیمی با `approval_required` پاسخ می‌دهند؛ ثبت درخواست، تصمیم مدیر مستقل، منع self-approval، RowVersion و Audit تراکنشی در API پیاده‌سازی شده‌اند.
 - صف تأیید فارسی RTL صفحه‌بندی server-side دارد. این کار فقط تغییر وضعیت مشتری/نصب را پوشش می‌دهد؛ Maker-Checker صدور/ابطال لایسنس تا تکمیل سرویس امضا همچنان باقی است.
