@@ -114,4 +114,55 @@ describe('Vendor customer provisioning form', () => {
     });
     expect(JSON.parse(String(init.body))).toEqual({ rowVersion: 'AQIDBAUGBwg=' });
   });
+
+  it('exports only a signed PendingDelivery package through the antiforgery-protected endpoint', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === '/api/vendor/installations/?customerId=customer-1&page=1&pageSize=100') {
+        return response({ items: [{ id: 'install-1', installationCode: 'INSTALL-01', name: 'نصب اصلی', status: 'Active' }] });
+      }
+      if (url === '/api/vendor/provisioning-requests?customerId=customer-1&page=1&pageSize=10') {
+        return response({ items: [{
+          id: 'provision-1', requestId: 'request-1', status: 'PendingDelivery',
+          createdAtUtc: '2026-10-28T12:00:00Z', updatedAtUtc: '2026-10-28T12:00:00Z',
+          payloadSha256: 'a'.repeat(64), rowVersion: 'AQIDBAUGBwg=',
+        }] });
+      }
+      if (url === '/api/auth/antiforgery') return response({ requestToken: 'csrf-export' });
+      if (url === '/api/vendor/provisioning-requests/provision-1/package/export' && init?.method === 'POST') {
+        return response({
+          formatVersion: 1, keyId: 'vendor-key-v1', algorithm: 'ECDSA-P256-SHA256',
+          payloadJson: '{"schemaVersion":1}', signatureBase64: 'c2lnbmF0dXJl',
+        });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('crypto', { randomUUID: vi.fn().mockReturnValue('unused-request-id') });
+    const OriginalURL = globalThis.URL;
+    class TestURL extends OriginalURL {
+      static createObjectURL = vi.fn((_blob: Blob) => 'blob:provisioning-package');
+      static revokeObjectURL = vi.fn((_url: string) => undefined);
+    }
+    vi.stubGlobal('URL', TestURL);
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+
+    render(<ProvisioningForm customerId="customer-1" customerName="مشتری نمونه"
+      onCancel={vi.fn()} onSaved={vi.fn()} canExportPackage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'دانلود بستهٔ امضاشده' }));
+    await screen.findByText(/بستهٔ امضاشده صادر و برای انتقال آفلاین دانلود شد/);
+
+    const post = fetchMock.mock.calls.find(([url, init]) =>
+      String(url) === '/api/vendor/provisioning-requests/provision-1/package/export' && init?.method === 'POST');
+    expect(post).toBeDefined();
+    const init = post?.[1] as RequestInit;
+    expect(init.headers).toEqual({
+      'Content-Type': 'application/json',
+      'X-CSRF-TOKEN': 'csrf-export',
+    });
+    expect(JSON.parse(String(init.body))).toEqual({});
+    expect(TestURL.createObjectURL).toHaveBeenCalledOnce();
+    expect(click).toHaveBeenCalledOnce();
+  });
 });
