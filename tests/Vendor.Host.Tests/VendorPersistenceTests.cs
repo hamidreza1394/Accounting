@@ -44,7 +44,8 @@ public sealed class VendorPersistenceTests
         Assert.NotNull(audit);
         Assert.Contains(audit!.GetIndexes(), index =>
             index.Properties.Select(property => property.Name).SequenceEqual([nameof(VendorAuditEvent.PreviousHash)]) &&
-            !index.IsUnique);
+            index.IsUnique);
+        Assert.Equal(1, audit.FindProperty(nameof(VendorAuditEvent.HashVersion))!.GetDefaultValue());
         Assert.Contains(audit.GetIndexes(), index =>
             index.Properties.Select(property => property.Name).SequenceEqual([nameof(VendorAuditEvent.EventHash)]) &&
             index.IsUnique);
