@@ -215,10 +215,10 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - Production requires a fully qualified persistent Data Protection key directory, an explicit non-wildcard AllowedHosts list, and an explicit passkey relying-party domain.
 - Branch-only until CI/review/committed migration complete. Bootstrap, granular RBAC, maker-checker, independent audit checkpoints, and UI remain out of scope.
 ## سامانهٔ مرکزی Vendor — زنجیرهٔ ممیزی (Issue #105)
-- Writer زنجیرهٔ ممیزی در شاخهٔ Issue #105 با شناسه‌های قابل‌اعتبارسنجی، بدون متن آزاد/PII، hash نسخه‌دار و قفل تراکنشی SQL Server پیاده شده است؛ تا ادغام/CI `NotVerified` است.
+- Writer زنجیرهٔ ممیزی در main پیاده و با CI Vendor (از جمله تست SQL Server زنجیره روی HEAD نهایی PR #207) تأیید شده است؛ قفل تراکنشی SQL Server و hash رخدادها برقرار است. با این حال، HashVersion هنوز در هر رخداد ذخیره نمی‌شود و checkpoint مستقل عملیاتی هنوز وجود ندارد.
 - Hash-chain در همان پایگاه داده، تغییر یک رخداد را تشخیص می‌دهد اما بازنویسی کامل توسط DBA را متوقف نمی‌کند. برای Production، حساب SQL برنامه باید کمترین دسترسی لازم و بدون UPDATE/DELETE روی جدول ممیزی داشته باشد؛ مهاجرت/حساب اجرایی نیازمند تفکیک مجوز است.
 - پیش از ادغام عملیات حساس: Verify chain باید fail-closed عمل کند؛ شکست اعتبارسنجی نباید به صدور لایسنس، تغییر مدیر یا عملیات حساس اجازه دهد.
-- Checkpoint/export به مقصد مستقل، پایش شکست/انحراف، retention و runbook بازیابی هنوز پیاده نشده‌اند؛ هیچ ادعای ممیزی تغییرناپذیر/Production-ready مطرح نمی‌شود.
+- در شاخهٔ Issue #107 قرارداد versioned برای checkpoint، hash canonical و سرویس ایجاد checkpoint پس از verification کامل زنجیره اضافه شده است؛ این تغییر هنوز CI-Verified نیست و هیچ adapter مستقلی ثبت/انتخاب نشده است. مقصد مستقل با credential جدا و immutability/retention، مجوز SQL append-only، پایش شکست/انحراف و runbook بازیابی همچنان لازم‌اند؛ هیچ ادعای ممیزی تغییرناپذیر/Production-ready مطرح نمی‌شود.
 
 
 ## زیرساخت RBAC در Vendor — Issue #150 (هنوز تأیید Production نشده)

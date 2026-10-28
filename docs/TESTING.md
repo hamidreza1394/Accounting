@@ -173,8 +173,9 @@ cd ClientApp && npm ci && npm run typecheck && npm test && npm run build && npm 
 - در `Licensing.Contracts` نیز هر `ProjectReference`، هر وابستگی ASP.NET Core/EF Core/Vendor و هر `Compile`/`Content Link` بیرون از پوشه رد می‌شود. این گارد بخشی از `Template.sln` است و با فرمان‌های معمول `dotnet test Template.sln --configuration Release` اجرا می‌شود. نتیجهٔ واقعی CI روی PR باید قبل از اعلام `Verified` بررسی شود.
 - این تست جایگزین G2/G3 نیست؛ G2 خروجی Publish را بررسی می‌کند و G3 اسکن اسرار در CI است. G4/G5 و allow-list کامل Publish هنوز جداگانه باید تعیین/پیاده‌سازی شوند.
 
-## ممیزی Vendor (Issue #105)
-- `VendorAuditChainVerifierTests` آزمون‌های واحد برای رد metadata آزاد و شناسهٔ قابل‌شناسایی مانند ایمیل دارد.
-- `VendorAuditChainIntegrationTests` در SQL Server واقعی یک دیتابیس موقت `FaranouVendorTests_<guid>` می‌سازد؛ ۱۶ نویسنده با DbContext مستقل هم‌زمان رخداد ثبت می‌کنند، زنجیره بررسی می‌شود، سپس تغییر مستقیم محتوای رخداد باید خطای `event-content-mismatch` بدهد و دیتابیس آزمایش حذف می‌شود.
-- CI باید متغیرهای `FARANOU_VENDOR_TEST_SQLSERVER` و `FARANOU_REQUIRE_VENDOR_SQLSERVER=1` را فراهم کند تا نبود SQL Server باعث Skip ناخواسته نشود.
-- این PR در شاخهٔ `security/issue-105-vendor-audit-chain` است؛ تا نتیجهٔ واقعی CI روی HEAD نهایی، آزمون‌ها `NotVerified` هستند. اجرای محلی در این محیط انجام نشده است.
+## ممیزی Vendor و checkpoint مستقل (Issue #105 / #107)
+- `VendorAuditChainVerifierTests` آزمون‌های واحد برای رد metadata آزاد و شناسهٔ قابل‌شناسایی دارد.
+- `VendorAuditChainIntegrationTests` در SQL Server واقعی یک دیتابیس موقت `FaranouVendorTests_<guid>` می‌سازد؛ ۱۶ نویسنده با DbContext مستقل هم‌زمان رخداد ثبت می‌کنند، زنجیره بررسی می‌شود و دستکاری محتوا باید با `event-content-mismatch` رد شود.
+- در شاخهٔ `feat/issue-107-audit-checkpoint-contract`، `VendorAuditCheckpointTests` قرارداد canonical/versioned، نرمال‌سازی UTC، رد hash نامعتبر و تشخیص دستکاری را پوشش می‌دهد؛ `VendorAuditCheckpointIntegrationTests` روی SQL Server واقعی پیشروی checkpoint، جلوگیری از نوشتن تکراری و رد زنجیرهٔ دستکاری‌شده را بررسی می‌کند.
+- CI باید `FARANO_VENDOR_TEST_SQLSERVER` و `FARANO_REQUIRE_VENDOR_SQLSERVER=1` را فراهم کند تا تست SQL Server بدون زیرساخت به Skip تبدیل نشود.
+- **وضعیت این شاخه:** کد و تست‌ها ثبت شده‌اند، اما CI روی HEAD نهایی این PR هنوز اجرا/تأیید نشده است. هیچ store واقعی مستقل انتخاب یا ثبت نشده؛ fake store فقط برای تست قرارداد است و Production readiness اثبات نمی‌کند.

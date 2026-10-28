@@ -884,3 +884,10 @@
 - **اصلاحات:** وضعیت فعلی PROJECT_STATUS، runbook bootstrap و توصیف evaluator منبع‌محور SECURITY با وضعیت واقعی هماهنگ شدند. از ادعای Production-ready پرهیز شده است؛ اجرای عملیاتی bootstrap، بازبینی نهایی ماتریس RBAC، checkpoint مستقل Audit و KMS/HSM همچنان شکاف‌اند.
 - **محدوده:** مستندات Vendor فقط؛ هیچ کد اجرایی، Migration، Schema یا دیتابیس مشتری تغییر نکرد.
 - **اعتبارسنجی:** شواهد CI از runهای فوق بررسی شدند؛ تست محلی اجرا نشد چون این تغییر مستنداتی است. CI خود PR باید پیش از ادغام سبز باشد.
+
+## 2026-10-28 — قرارداد checkpoint مستقل زنجیره Audit در Vendor (Issue #107، مرحلهٔ اولیه)
+- **هدف:** ایجاد قرارداد canonical/versioned برای checkpoint ممیزی بدون ادعای استقلال مقصد تا انتخاب provider.
+- **تغییرات:** `VendorAuditCheckpoint` با SchemaVersion/HashVersion، شمار رخدادها، head hash، timestamp UTC و SHA-256 canonical؛ `IVendorAuditCheckpointStore` با قرارداد append/read-latest؛ `VendorAuditCheckpointService` که قبل از ایجاد checkpoint کل زنجیره را verify می‌کند، checkpoint قبلی را اعتبارسنجی می‌کند و rollback/divergence را رد می‌کند.
+- **تست‌ها:** تست‌های واحد canonicalization/version/tampering و تست Integration SQL Server برای advancement، idempotence و tampering اضافه شدند. Fake store فقط در تست وجود دارد؛ هیچ store محلی/DB fallback به برنامه اضافه نشده است.
+- **محدوده:** فقط Vendor persistence/tests/docs؛ هیچ Migration، `Template.sln` یا دیتابیس مشتری تغییر نکرد. ستون HashVersion برای هر رخداد، adapter مستقل Production، immutability/retention، SQL append-only permissions و alerting هنوز انجام نشده‌اند؛ Issue #107 باز می‌ماند.
+- **اعتبارسنجی:** CI روی HEAD این شاخه هنوز اجرا نشده؛ تست محلی در این محیط در دسترس نیست. تا سبز شدن Vendor CI و .NET CI، وضعیت Implemented / Not Verified است.
