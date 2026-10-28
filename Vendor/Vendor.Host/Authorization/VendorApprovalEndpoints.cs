@@ -158,18 +158,35 @@ public static class VendorApprovalEndpoints
             if (approval.ResourceType is not ("customer" or "installation" or "license"))
                 return Results.Conflict(new { error = "unsupported_approval_resource" });
 
-            // License metadata is not a signed artifact. Until a production signer and durable
-            // envelope storage are configured, never transition a license by approving metadata.
-            // Rejection remains available so an unsafe request can be closed with an audit trail.
-            if (approval.ResourceType == "license" && request.Decision == "Approved")
-                return Results.Json(new { error = "license_issuance_unavailable" }, statusCode: StatusCodes.Status503ServiceUnavailable);
-
             var managePermission = PermissionFor(approval.ResourceType);
             var access = await authorization.AuthorizeAsync(
                 context.User,
                 new VendorResourceDescriptor(approval.ResourceType, approval.ResourceId),
                 VendorResourceCatalog.PolicyFor(approval.ResourceType, managePermission));
             if (!access.Succeeded) return Results.Forbid();
+
+            // License metadata is not a signed artifact. Validate current ownership/version/state,
+            // then fail closed until a production signer and durable envelope storage exist.
+            if (approval.ResourceType == "license" && request.Decision == "Approved")
+            {
+                var license = await db.Licenses.AsNoTracking()
+                    .Where(item => item.Id == approval.ResourceId)
+                    .Select(item => new { item.Status, item.RowVersion })
+                    .SingleOrDefaultAsync(ct);
+                if (license is null) return Results.NotFound();
+                var expectedStatus = approval.TargetStatus switch
+                {
+                    "Issued" => "Draft",
+                    "Revoked" => "Issued",
+                    _ => null
+                };
+                if (!license.RowVersion.AsSpan().SequenceEqual(approval.ExpectedResourceRowVersion) ||
+                    expectedStatus is null || license.Status != expectedStatus)
+                    return Results.Conflict(new { error = "approval_resource_stale" });
+
+                return Results.Json(new { error = "license_issuance_unavailable" },
+                    statusCode: StatusCodes.Status503ServiceUnavailable);
+            }
 
             var now = DateTimeOffset.UtcNow;
             var comment = string.IsNullOrWhiteSpace(request.Comment) ? null : request.Comment.Trim();
