@@ -41,3 +41,12 @@
 
 - **Branch:** feat/issue-236-provisioning-release-check
 - **PR:** https://github.com/hamidreza1394/Accounting/pull/240
+
+
+## تکمیل رفع خطاهای CI — 2026-10-28
+
+- در اجرای Vendor CI شمارهٔ 40740242624، typecheck شکست خورد چون static members کلاس آزمایشی `TestURL`، متدهای استاتیک ارث‌رسیده از `URL` را بدون `override` تعریف کرده بودند. در commit `b1d355add0cc0a54561cc6cd9f8f1324599c4a90` اصلاح شد؛ در اجرای بعدی، typecheck، تست‌های UI، audit وابستگی‌های runtime و build رابط Vendor موفق شدند.
+- اجرای Integration روی SQL Server سپس به‌درستی درخواست صدور را با `provisioning_payload_invalid` رد کرد: خود fixture بعد از ایجاد درخواست، کد نصب را تغییر می‌داد؛ سرویس امضا عمداً payload را به هویت نصب فعلی bind می‌کند. این خطای تست بود و نباید validation تولیدی تضعیف می‌شد.
+- در commit `d30693f649a50edd2f2a493ab3b05648469174a1` fixture طوری اصلاح شد که کد نصب ثابت بماند و آزمون update همچنان نام و محیط نصب را تغییر دهد. اجرای Vendor CI شمارهٔ 40742478715 روی همین SHA موفق شد: typecheck، UI tests، audit وابستگی‌ها، build، تمام تست‌های Vendor روی SQL Server، EF snapshot guard، publish و بررسی نبود کلید خصوصی همگی موفق شدند.
+- اجرای .NET CI روی همین SHA باید تا تکمیل تمام jobها بررسی شود. هر commit مستنداتی بعد از این اجرا نیازمند CI مجدد روی SHA نهایی است.
+- اجرای محلی در محیط فعلی ممکن نبود؛ شواهد اعتبارسنجی از GitHub Actions است.
