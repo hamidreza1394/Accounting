@@ -581,6 +581,10 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 installationId = (Guid?)otherInstallationId,
                 licenseNumber = licenseBody.licenseNumber,
                 productCode = licenseBody.productCode,
+                licenseKind = licenseBody.licenseKind,
+                maxCompanies = licenseBody.maxCompanies,
+                subsystems = licenseBody.subsystems,
+                graceDays = licenseBody.graceDays,
                 validFromUtc = licenseBody.validFromUtc,
                 validUntilUtc = licenseBody.validUntilUtc,
                 rowVersion = Convert.ToBase64String(licenseRowVersion)
