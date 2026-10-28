@@ -142,5 +142,7 @@ Host عمداً به ارائه‌دهندهٔ ابری خاصی وابسته ن
 - Migration 20261027190000_VendorAuditChainIndexes adds IX_VendorAuditEvents_PreviousHash and unique IX_VendorAuditEvents_EventHash for Vendor-only audit chain lookups. PR #203 merged this migration after the SQL Server integration suite and EF pending-model-change guard passed in Vendor CI and .NET CI.
 
 
-## Two-person status approvals (Issue #201, in progress)
-- The approval API and RTL approval queue are under review in [PR #207](https://github.com/hamidreza1394/Accounting/pull/207) on branch `feat/vendor-maker-checker-clean`. Direct customer/installation status mutation endpoints now return `approval_required` in this branch. Do not treat this as merged/verified until the complete CI suite passes and the PR is merged.
+## Maker-Checker تغییر وضعیت مشتری/نصب — Issue #201
+- PR #207 ادغام شده و CI کامل Vendor/.NET سبز است. endpointهای مستقیم قدیمی با `approval_required` پاسخ می‌دهند؛ ثبت درخواست، تصمیم مدیر مستقل، منع self-approval، RowVersion و Audit تراکنشی در API پیاده‌سازی شده‌اند.
+- صف تأیید فارسی RTL صفحه‌بندی server-side دارد. این کار فقط تغییر وضعیت مشتری/نصب را پوشش می‌دهد؛ Maker-Checker صدور/ابطال لایسنس تا تکمیل سرویس امضا همچنان باقی است.
+- شواهد: [Vendor CI 40570240409](https://github.com/hamidreza1394/Accounting/actions/runs/40570240409)، [.NET CI 40570240205](https://github.com/hamidreza1394/Accounting/actions/runs/40570240205).

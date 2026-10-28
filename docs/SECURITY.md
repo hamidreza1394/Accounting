@@ -251,3 +251,10 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - `VendorResourcePermissionAuthorizationHandler` ابتدا سیاست پایهٔ مدیر/MFA و مجوز را بررسی می‌کند و سپس adapter منبع را فراخوانی می‌کند. adapter پیش‌فرض `DenyAllVendorResourceAccessEvaluator` است؛ تا وقتی resolver واقعی منبع از دیتابیس ثبت نشده، همهٔ دسترسی‌های منبع‌محور رد می‌شوند.
 - **محدودیت صریح:** این گارد زیرساختی به‌تنهایی اثبات جلوگیری از IDOR برای مشتری/نصب/قرارداد/لایسنس نیست. هنگام اضافه‌شدن مدل و APIهای واقعی، adapter باید رابطهٔ منبع و مشتری را از رکورد persisted resolve کند و آزمون‌های منفی با شناسهٔ منبع متعلق به مشتری دیگر اجرا شوند.
 - این تغییر هیچ Migration یا تغییری در دیتابیس حسابداری مشتری ایجاد نمی‌کند. وضعیت نهایی تا سبزشدن Vendor CI و .NET CI روی آخرین SHA، `Implemented / Not Verified` است.
+
+
+## وضعیت تأییدشده فعلی Vendor — Maker-Checker مشتری/نصب (2026-10-27, PR #207)
+- تغییر وضعیت مشتری و نصب فقط از مسیر درخواست تأیید انجام می‌شود؛ endpointهای قدیمی مستقیم با `approval_required` پاسخ می‌دهند.
+- درخواست‌کننده نمی‌تواند درخواست خودش را تأیید/رد کند. تصمیم مستقل، تغییر وضعیت و رویدادهای Audit در یک تراکنش ثبت می‌شوند؛ RowVersion منبع و درخواست از replay و تصمیم روی دادهٔ stale جلوگیری می‌کنند.
+- شاهد: merge commit `d644ab5d36d00b1ce3763b64f17fd6fe7ef9fbac`; Vendor CI 40570240409 و .NET CI 40570240205 موفق.
+- محدوده: این Verified فقط برای تغییر وضعیت مشتری/نصب است. تأیید دو نفره برای صدور/ابطال لایسنس، checkpoint مستقل Audit، bootstrap/recovery مدیر اول و KMS/HSM همچنان شکاف‌های Production هستند.
