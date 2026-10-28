@@ -418,7 +418,10 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
             {
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
                 using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-                Assert.Equal(2, json.RootElement.GetProperty("totalCount").GetInt32());
+                // At this point only the customer status request has been created.
+                // The license approval request is intentionally created later, after
+                // the license metadata RowVersion has been refreshed.
+                Assert.Equal(1, json.RootElement.GetProperty("totalCount").GetInt32());
                 Assert.Contains(json.RootElement.GetProperty("items").EnumerateArray(), item => item.GetProperty("id").GetGuid() == customerApprovalId);
             }
 
@@ -658,6 +661,18 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
                 using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
                 Assert.Equal("approval_already_pending", json.RootElement.GetProperty("error").GetString());
+            }
+
+            using (var response = await client.GetAsync("/api/vendor/approvals/?status=Pending&page=1&pageSize=25", cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal(2, json.RootElement.GetProperty("totalCount").GetInt32());
+                var pendingIds = json.RootElement.GetProperty("items").EnumerateArray()
+                    .Select(item => item.GetProperty("id").GetGuid())
+                    .ToHashSet();
+                Assert.Contains(customerApprovalId, pendingIds);
+                Assert.Contains(licenseApprovalId, pendingIds);
             }
 
             await using (var auditScope = factory.Services.CreateAsyncScope())
