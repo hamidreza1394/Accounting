@@ -1003,3 +1003,11 @@
 - اصلاح fixture در `tests/Vendor.Host.Tests/VendorCustomerMutationHttpIntegrationTests.cs`: کد نصب ثابت نگه داشته می‌شود و آزمون update از تغییر نام/محیط برای پوشش RowVersion استفاده می‌کند (commit `d30693f649a50edd2f2a493ab3b05648469174a1`).
 - شواهد Vendor CI روی SHA `d30693f649a50edd2f2a493ab3b05648469174a1` سبز: typecheck، تست UI، runtime dependency audit، build UI، build/test Vendor روی SQL Server، EF snapshot guard، publish و گارد نبود کلید خصوصی.
 - CI روی SHA نهایی مستندات باید مجدداً تأیید شود؛ .NET CI، E2E و انتشار Linux/Windows تا مشاهدهٔ نتیجهٔ نهایی این commit مستنداتی هنوز Verified محسوب نمی‌شوند.
+
+
+## 2026-10-28 — Issue #233: جداسازی signer راه‌اندازی مشتری از signer لایسنس
+- بازبینی پس از ادغام PR #240 نشان داد سرویس provisioning مستقیماً `ILicenseSigningProvider` را تزریق می‌کرد؛ این با الزام Issue #233 برای کلید provisioning مجزا از کلید لایسنس ناسازگار بود.
+- افزودن `IProvisioningSigningProvider` و `UnavailableProvisioningSigningProvider`، ثبت مستقل در DI و تغییر سرویس صدور provisioning به interface جدید. Provider پیش‌فرض همچنان fail-closed است؛ provider واقعی یا کلید نرم‌افزاری اضافه نشده است.
+- تست integration اکنون فقط provider provisioning را جایگزین می‌کند و signer لایسنس همچنان unavailable می‌ماند؛ sequence تست با یک شکست موقت و سپس امضای تستی موفق هماهنگ شده است. تست قرارداد برای unavailable/cancellation افزوده شد.
+- README و `docs/LICENSING_THREAT_MODEL.md` به‌روزرسانی شدند؛ handoff: `docs/handoffs/ISSUE-233-provisioning-dedicated-signer.md`.
+- **CI نهایی این شاخه هنوز اجرا/تأیید نشده است.** Provider تولیدی، trusted key ID/rotation، verify امضا قبل از persistence و runbook عملیاتی همچنان باقی‌اند.
