@@ -310,6 +310,7 @@ app.MapVendorAuthentication();
 app.MapVendorPasswordChange();
 app.MapVendorRoleManagement();
 app.MapVendorBusinessEndpoints();
+app.MapVendorProvisioningEndpoints();
 app.MapVendorApprovalEndpoints();
 app.MapFallback(async context =>
 {

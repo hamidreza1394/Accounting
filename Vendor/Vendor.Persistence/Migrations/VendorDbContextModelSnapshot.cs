@@ -539,6 +539,37 @@ namespace Faranou.Vendor.Persistence.Migrations
                     b.ToTable("VendorContracts", (string)null);
                 });
 
+            modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorProvisioningRequest", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
+                    b.Property<string>("Algorithm").HasMaxLength(32).IsUnicode(false).HasColumnType("varchar(32)");
+                    b.Property<DateTimeOffset?>( "ConfirmedAtUtc").HasColumnType("datetimeoffset");
+                    b.Property<Guid>("CustomerId").HasColumnType("uniqueidentifier");
+                    b.Property<DateTimeOffset>("CreatedAtUtc").ValueGeneratedOnAdd().HasColumnType("datetimeoffset").HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
+                    b.Property<DateTimeOffset?>( "DeliveredAtUtc").HasColumnType("datetimeoffset");
+                    b.Property<string>("FailureCode").HasMaxLength(128).IsUnicode(false).HasColumnType("varchar(128)");
+                    b.Property<Guid>("InstallationId").HasColumnType("uniqueidentifier");
+                    b.Property<string>("KeyId").HasMaxLength(128).HasColumnType("nvarchar(128)");
+                    b.Property<string>("Nonce").IsRequired().HasMaxLength(128).HasColumnType("nvarchar(128)");
+                    b.Property<string>("PayloadJson").IsRequired().HasColumnType("nvarchar(max)");
+                    b.Property<string>("PayloadSha256").IsRequired().IsUnicode(false).HasMaxLength(64).IsFixedLength().HasColumnType("char(64)");
+                    b.Property<string>("RequestId").IsRequired().HasMaxLength(36).HasColumnType("nvarchar(36)");
+                    b.Property<byte[]>("RowVersion").IsRequired().IsConcurrencyToken().ValueGeneratedOnAddOrUpdate().HasColumnType("rowversion");
+                    b.Property<string>("SignatureBase64").IsUnicode(false).HasMaxLength(128).HasColumnType("varchar(128)");
+                    b.Property<DateTimeOffset?>( "SignedAtUtc").HasColumnType("datetimeoffset");
+                    b.Property<string>("Status").IsRequired().HasMaxLength(24).HasColumnType("nvarchar(24)");
+                    b.Property<DateTimeOffset>("UpdatedAtUtc").HasColumnType("datetimeoffset");
+                    b.HasKey("Id");
+                    b.HasIndex("CustomerId");
+                    b.HasIndex("InstallationId");
+                    b.HasIndex("Nonce").IsUnique();
+                    b.HasIndex("RequestId").IsUnique();
+                    b.ToTable("VendorProvisioningRequests", t =>
+                        {
+                            t.HasCheckConstraint("CK_VendorProvisioningRequests_Status", "[Status] IN (N'AwaitingSigner', N'PendingDelivery', N'Confirmed', N'Failed')");
+                        });
+                });
+
             modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorSignedLicenseEnvelope", b =>
                 {
                     b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
@@ -624,6 +655,14 @@ namespace Faranou.Vendor.Persistence.Migrations
                 {
                     b.HasOne("Faranou.Vendor.Persistence.Domain.VendorLicense", null)
                         .WithMany().HasForeignKey("LicenseId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                });
+
+            modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorProvisioningRequest", b =>
+                {
+                    b.HasOne("Faranou.Vendor.Persistence.Domain.VendorCustomer", null)
+                        .WithMany().HasForeignKey("CustomerId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.HasOne("Faranou.Vendor.Persistence.Domain.VendorInstallation", null)
+                        .WithMany().HasForeignKey("InstallationId").OnDelete(DeleteBehavior.Restrict).IsRequired();
                 });
 
             modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorCustomer", b =>

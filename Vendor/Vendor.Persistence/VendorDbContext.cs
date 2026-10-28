@@ -17,6 +17,7 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
     public DbSet<Domain.VendorLicense> Licenses => Set<Domain.VendorLicense>();
     public DbSet<Domain.VendorApprovalRequest> ApprovalRequests => Set<Domain.VendorApprovalRequest>();
     public DbSet<Domain.VendorSignedLicenseEnvelope> SignedLicenseEnvelopes => Set<Domain.VendorSignedLicenseEnvelope>();
+    public DbSet<Domain.VendorProvisioningRequest> ProvisioningRequests => Set<Domain.VendorProvisioningRequest>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -137,6 +138,34 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
             entity.HasOne(item => item.Contract).WithMany(contract => contract.Licenses)
                 .HasForeignKey(item => item.ContractId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(item => item.Installation).WithMany(installation => installation.Licenses)
+                .HasForeignKey(item => item.InstallationId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<Domain.VendorProvisioningRequest>(entity =>
+        {
+            entity.ToTable("VendorProvisioningRequests", table =>
+                table.HasCheckConstraint("CK_VendorProvisioningRequests_Status",
+                    "[Status] IN (N'AwaitingSigner', N'PendingDelivery', N'Confirmed', N'Failed')"));
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.RequestId).HasMaxLength(36).IsRequired();
+            entity.Property(item => item.Nonce).HasMaxLength(128).IsRequired();
+            entity.Property(item => item.PayloadJson).IsRequired();
+            entity.Property(item => item.PayloadSha256).IsUnicode(false).HasMaxLength(64).IsFixedLength().IsRequired();
+            entity.Property(item => item.Status).HasMaxLength(24).IsRequired();
+            entity.Property(item => item.KeyId).HasMaxLength(128);
+            entity.Property(item => item.Algorithm).HasMaxLength(32).IsUnicode(false);
+            entity.Property(item => item.SignatureBase64).HasMaxLength(128).IsUnicode(false);
+            entity.Property(item => item.FailureCode).HasMaxLength(128).IsUnicode(false);
+            entity.Property(item => item.CreatedAtUtc)
+                .HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
+            entity.Property(item => item.RowVersion).IsRowVersion();
+            entity.HasIndex(item => item.RequestId).IsUnique();
+            entity.HasIndex(item => item.Nonce).IsUnique();
+            entity.HasIndex(item => item.CustomerId);
+            entity.HasIndex(item => item.InstallationId);
+            entity.HasOne<Domain.VendorCustomer>().WithMany()
+                .HasForeignKey(item => item.CustomerId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Domain.VendorInstallation>().WithMany()
                 .HasForeignKey(item => item.InstallationId).OnDelete(DeleteBehavior.Restrict);
         });
 
