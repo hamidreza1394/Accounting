@@ -952,3 +952,10 @@
 - Security boundary: this is a contract/verification slice, not end-to-end provisioning. The consumer must atomically persist/claim nonces to enforce replay protection; Vendor UI/API persistence, customer-side acknowledgement, idempotent provisioning, and one-time credential delivery remain unimplemented. No plaintext password, customer password hash, private key, customer DB schema, or Server/** change was added.
 - Validation: local .NET tests could not be executed from this GitHub-only tool session. CI must verify the final PR SHA before merge; do not mark this slice Verified until all required checks pass.
 - Handoff: docs/handoffs/ISSUE-228-provisioning-contract-v1.md. Issue #228 remains open.
+
+## 2026-10-28 — Issue #228: provisioning contract CI correction and verification
+- The first .NET CI run (40723205619) reported 2 failing new contract tests out of 576. Root cause: the canonical JSON uses camelCase names, while deserialization had no matching JsonNamingPolicy, so valid payloads were parsed with default values and rejected.
+- Fixed the deserialization options to use JsonNamingPolicy.CamelCase while retaining case-sensitive property matching; the modified-payload test now reaches signature verification and correctly rejects the altered payload.
+- Verification on code SHA 18e684a0c78f675ca35fecdc5b8d2d42c3b10916: .NET CI run 40723732882 passed all 576 tests (0 failed, 0 skipped), plus E2E, Linux/Windows publish, client and secret scan; Vendor CI run 40723732546 passed UI tests/build, Vendor build/test, EF snapshot guard and publish.
+- Documentation update is a new commit after the verified code SHA, so the final PR SHA must receive fresh green CI before merge.
+- Issue #228 remains open: the contract is not yet wired to Vendor API/UI or a customer-side consumer; atomic nonce claiming/replay protection, idempotent provisioning, status acknowledgement and secure one-time credential delivery remain follow-up work.
