@@ -48,7 +48,7 @@ describe('Vendor license metadata form', () => {
     fireEvent.click(screen.getByLabelText('مالی (finance)'));
     fireEvent.click(screen.getByLabelText('فروش (sales)'));
     fireEvent.change(screen.getByLabelText('تاریخ شروع اعتبار'), { target: { value: '2026-10-27' } });
-    fireEvent.change(screen.getByLabelText('تاریخ پایان (اختیاری)'), { target: { value: '2027-10-26' } });
+    fireEvent.change(screen.getByLabelText('تاریخ پایان اعتبار (الزامی)'), { target: { value: '2027-10-26' } });
     fireEvent.change(contractSelect, { target: { value: 'contract-1' } });
     fireEvent.change(installationSelect, { target: { value: 'installation-1' } });
     fireEvent.click(screen.getByRole('button', { name: 'ثبت لایسنس پیش‌نویس' }));
