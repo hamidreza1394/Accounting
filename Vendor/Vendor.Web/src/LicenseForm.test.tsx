@@ -44,7 +44,7 @@ describe('Vendor license metadata form', () => {
     fireEvent.change(screen.getByLabelText('کد محصول'), { target: { value: 'FARANOU-BASE' } });
     expect(screen.getByLabelText('نوع لایسنس')).toHaveValue('term');
     expect(screen.getByLabelText('مالی (finance)')).not.toBeChecked();
-    fireEvent.change(screen.getByLabelText('حداکثر شرکت'), { target: { value: '25' } });
+    fireEvent.change(screen.getByLabelText('حداکثر شرکت (اختیاری)'), { target: { value: '25' } });
     fireEvent.click(screen.getByLabelText('مالی (finance)'));
     fireEvent.click(screen.getByLabelText('فروش (sales)'));
     fireEvent.change(screen.getByLabelText('تاریخ شروع اعتبار'), { target: { value: '2026-10-27' } });
