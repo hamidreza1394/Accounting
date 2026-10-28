@@ -64,6 +64,11 @@ public partial class VendorLicenseEntitlements : Migration
             sql: "[LicenseKind] IN (N'term', N'perpetual')");
 
         migrationBuilder.AddCheckConstraint(
+            name: "CK_VendorLicenses_KindExpiry",
+            table: "VendorLicenses",
+            sql: "([LicenseKind] = N'term' AND [ValidUntilUtc] IS NOT NULL) OR ([LicenseKind] = N'perpetual' AND [ValidUntilUtc] IS NULL)");
+
+        migrationBuilder.AddCheckConstraint(
             name: "CK_VendorLicenses_MaxCompanies",
             table: "VendorLicenses",
             sql: "[MaxCompanies] IS NULL OR [MaxCompanies] >= 1");
@@ -78,6 +83,7 @@ public partial class VendorLicenseEntitlements : Migration
     {
         migrationBuilder.DropCheckConstraint("CK_VendorLicenses_SubsystemsJson", "VendorLicenses");
         migrationBuilder.DropCheckConstraint("CK_VendorLicenses_MaxCompanies", "VendorLicenses");
+        migrationBuilder.DropCheckConstraint("CK_VendorLicenses_KindExpiry", "VendorLicenses");
         migrationBuilder.DropCheckConstraint("CK_VendorLicenses_LicenseKind", "VendorLicenses");
         migrationBuilder.DropCheckConstraint("CK_VendorLicenses_LastIssuedSequence", "VendorLicenses");
         migrationBuilder.DropCheckConstraint("CK_VendorLicenses_GraceDays", "VendorLicenses");
