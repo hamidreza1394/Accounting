@@ -287,6 +287,111 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal(customerId.ToString("D"), items[0].GetProperty("customerId").GetString());
             }
 
+            Guid installationIdForProvisioning;
+            Guid otherInstallationIdForProvisioning;
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                installationIdForProvisioning = await db.Installations
+                    .Where(item => item.CustomerId == customerId)
+                    .Select(item => item.Id).SingleAsync(cancellationToken);
+                otherInstallationIdForProvisioning = await db.Installations
+                    .Where(item => item.CustomerId != customerId)
+                    .Select(item => item.Id).SingleAsync(cancellationToken);
+            }
+
+            var provisioningRequestId = Guid.NewGuid();
+            var provisioningBody = new
+            {
+                requestId = provisioningRequestId,
+                customerId,
+                installationId = installationIdForProvisioning,
+                companyName = "Provisioning Integration Company",
+                companyType = "independent",
+                initialAdminUserName = "initial-admin",
+                subsystems = new[] { "finance", "sales" }
+            };
+            using (var missingTokenRequest = new HttpRequestMessage(HttpMethod.Post, "/api/vendor/provisioning-requests/")
+            {
+                Content = JsonContent.Create(provisioningBody)
+            })
+            using (var response = await client.SendAsync(missingTokenRequest, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            }
+
+            Guid provisioningRecordId;
+            using (var createResponse = await PostWithTokenAsync(
+                client, "/api/vendor/provisioning-requests/", provisioningBody, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+                using var json = JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync(cancellationToken));
+                provisioningRecordId = json.RootElement.GetProperty("id").GetGuid();
+                Assert.Equal("AwaitingSigner", json.RootElement.GetProperty("status").GetString());
+                Assert.False((await createResponse.Content.ReadAsStringAsync(cancellationToken))
+                    .Contains("password", StringComparison.OrdinalIgnoreCase));
+            }
+
+            using (var replayResponse = await PostWithTokenAsync(
+                client, "/api/vendor/provisioning-requests/", provisioningBody, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, replayResponse.StatusCode);
+                using var json = JsonDocument.Parse(await replayResponse.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal(provisioningRecordId, json.RootElement.GetProperty("id").GetGuid());
+            }
+
+            using (var conflictingReplay = await PostWithTokenAsync(
+                client,
+                "/api/vendor/provisioning-requests/",
+                new
+                {
+                    requestId = provisioningRequestId,
+                    customerId,
+                    installationId = installationIdForProvisioning,
+                    companyName = "Different Company",
+                    companyType = "independent",
+                    initialAdminUserName = "initial-admin",
+                    subsystems = new[] { "finance", "sales" }
+                },
+                antiForgeryToken,
+                cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Conflict, conflictingReplay.StatusCode);
+            }
+
+            using (var crossCustomerInstallation = await PostWithTokenAsync(
+                client,
+                "/api/vendor/provisioning-requests/",
+                new
+                {
+                    requestId = Guid.NewGuid(),
+                    customerId,
+                    installationId = otherInstallationIdForProvisioning,
+                    companyName = "Provisioning Integration Company",
+                    companyType = "independent",
+                    initialAdminUserName = "initial-admin",
+                    subsystems = new[] { "finance" }
+                },
+                antiForgeryToken,
+                cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.NotFound, crossCustomerInstallation.StatusCode);
+            }
+
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var savedRequest = await db.ProvisioningRequests.SingleAsync(
+                    item => item.RequestId == provisioningRequestId.ToString("D"), cancellationToken);
+                Assert.Equal("AwaitingSigner", savedRequest.Status);
+                Assert.False(savedRequest.PayloadJson.Contains("password", StringComparison.OrdinalIgnoreCase));
+                Assert.Equal(1, await db.ProvisioningRequests.CountAsync(
+                    item => item.RequestId == provisioningRequestId.ToString("D"), cancellationToken));
+                Assert.Equal(1, await db.AuditEvents.CountAsync(
+                    item => item.ActionCode == "vendor.provisioning.requested" &&
+                            item.SubjectId == provisioningRecordId.ToString("D"), cancellationToken));
+            }
+
             var path = $"/api/vendor/customers/{customerId:D}";
             var updateBody = new
             {
