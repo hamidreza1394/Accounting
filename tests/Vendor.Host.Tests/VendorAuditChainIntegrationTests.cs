@@ -2,6 +2,7 @@ using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Auditing;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
