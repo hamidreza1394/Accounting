@@ -1,6 +1,7 @@
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Domain;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Xunit;
 
@@ -16,7 +17,7 @@ public sealed class VendorSignedLicenseEnvelopeModelTests
             .Options;
         using var db = new VendorDbContext(options);
 
-        var entity = db.Model.FindEntityType(typeof(VendorSignedLicenseEnvelope));
+        var entity = db.GetService<IDesignTimeModel>().Model.FindEntityType(typeof(VendorSignedLicenseEnvelope));
         Assert.NotNull(entity);
         Assert.Equal("VendorSignedLicenseEnvelopes", entity!.GetTableName());
         Assert.Equal(128, entity.FindProperty(nameof(VendorSignedLicenseEnvelope.KeyId))!.GetMaxLength());
