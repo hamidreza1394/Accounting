@@ -10,6 +10,11 @@ export type LicenseDraft = {
   installationId: string | null;
   licenseNumber: string;
   productCode: string;
+  licenseKind?: string;
+  maxCompanies?: number | null;
+  subsystems?: string[];
+  graceDays?: number;
+  lastIssuedSequence?: number;
   validFromUtc: string;
   validUntilUtc: string;
   status?: string;
@@ -41,6 +46,13 @@ type ApiError = { error?: string; message?: string };
 
 const noContract: SelectOption = { value: '', label: 'بدون قرارداد' };
 const noInstallation: SelectOption = { value: '', label: 'بدون نصب مشخص' };
+
+const subsystemOptions = [
+  { code: 'finance', label: 'مالی (finance)' },
+  { code: 'sales', label: 'فروش (sales)' },
+  { code: 'inventory', label: 'انبار (inventory)' },
+  { code: 'treasury', label: 'خزانه (treasury)' },
+] as const;
 
 function todayUtcDate() {
   return new Date().toISOString().slice(0, 10);
@@ -112,6 +124,10 @@ export function LicenseForm({
 
   const [licenseNumber, setLicenseNumber] = useState(initial?.licenseNumber ?? '');
   const [productCode, setProductCode] = useState(initial?.productCode ?? '');
+  const [licenseKind, setLicenseKind] = useState(initial?.licenseKind ?? 'term');
+  const [maxCompanies, setMaxCompanies] = useState(initial?.maxCompanies == null ? '' : String(initial.maxCompanies));
+  const [subsystems, setSubsystems] = useState<string[]>(initial?.subsystems ?? []);
+  const [graceDays, setGraceDays] = useState(String(initial?.graceDays ?? 30));
   const [validFromUtc, setValidFromUtc] = useState(initial?.validFromUtc?.slice(0, 10) ?? todayUtcDate());
   const [validUntilUtc, setValidUntilUtc] = useState(initial?.validUntilUtc?.slice(0, 10) ?? '');
   const [busy, setBusy] = useState(false);
@@ -325,10 +341,20 @@ export function LicenseForm({
       if (!editing && (!canReadCustomers || !customerId)) {
         throw new Error('برای ثبت لایسنس باید مجوز مشاهده مشتریان و یک مشتری معتبر داشته باشید.');
       }
+      const parsedMaxCompanies = maxCompanies.trim() ? Number(maxCompanies) : null;
+      const parsedGraceDays = Number(graceDays);
+      const allowedSubsystems = new Set(subsystemOptions.map(option => option.code));
       if (!number || number.length > 64 || !product || product.length > 64 ||
-          !isValidDateOnly(validFromUtc) || (validUntilUtc && !isValidDateOnly(validUntilUtc)) ||
-          (validUntilUtc && validUntilUtc < validFromUtc)) {
-        throw new Error('شماره لایسنس، کد محصول یا بازه اعتبار معتبر نیست.');
+          !['term', 'perpetual'].includes(licenseKind) ||
+          !isValidDateOnly(validFromUtc) ||
+          (licenseKind === 'term' && (!validUntilUtc || !isValidDateOnly(validUntilUtc))) ||
+          (licenseKind === 'perpetual' && Boolean(validUntilUtc)) ||
+          (validUntilUtc && validUntilUtc < validFromUtc) ||
+          (parsedMaxCompanies !== null && (!Number.isInteger(parsedMaxCompanies) || parsedMaxCompanies < 1)) ||
+          !Number.isInteger(parsedGraceDays) || parsedGraceDays < 0 || parsedGraceDays > 90 ||
+          subsystems.length === 0 || new Set(subsystems).size !== subsystems.length ||
+          subsystems.some(code => !allowedSubsystems.has(code as typeof subsystemOptions[number]['code']))) {
+        throw new Error('نوع لایسنس، سقف شرکت، زیرسیستم‌ها یا بازه اعتبار معتبر نیست.');
       }
       const tokenResponse = await fetch('/api/auth/antiforgery', {
         credentials: 'same-origin', cache: 'no-store',
@@ -343,6 +369,10 @@ export function LicenseForm({
         installationId: canReadInstallations ? (installationId || null) : (initial?.installationId ?? null),
         licenseNumber: number,
         productCode: product,
+        licenseKind,
+        maxCompanies: parsedMaxCompanies,
+        subsystems,
+        graceDays: parsedGraceDays,
         validFromUtc: asUtcDate(validFromUtc),
         validUntilUtc: validUntilUtc ? asUtcDate(validUntilUtc) : null,
         ...(editing ? { rowVersion: initial?.rowVersion ?? '' } : {}),
@@ -422,6 +452,49 @@ export function LicenseForm({
               value={productCode} onChange={event => setProductCode(event.target.value)} disabled={busy || !editable} />
           </div>
           <div className="space-y-2">
+            <label htmlFor="license-kind" className="text-sm font-medium">نوع لایسنس</label>
+            <select id="license-kind" value={licenseKind}
+              onChange={event => {
+                const nextKind = event.target.value;
+                setLicenseKind(nextKind);
+                if (nextKind === 'perpetual') setValidUntilUtc('');
+              }}
+              disabled={busy || !editable}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
+              <option value="term">مدت‌دار</option>
+              <option value="perpetual">دائمی</option>
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="license-max-companies" className="text-sm font-medium">حداکثر شرکت (اختیاری)</label>
+            <input id="license-max-companies" type="number" min={1} step={1} inputMode="numeric"
+              className="h-10 w-full rounded-md border border-input bg-background px-3 outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+              value={maxCompanies} onChange={event => setMaxCompanies(event.target.value)} disabled={busy || !editable} />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="license-grace-days" className="text-sm font-medium">مهلت ارفاق (روز، حداکثر ۹۰)</label>
+            <input id="license-grace-days" type="number" min={0} max={90} step={1} inputMode="numeric"
+              className="h-10 w-full rounded-md border border-input bg-background px-3 outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+              value={graceDays} onChange={event => setGraceDays(event.target.value)} disabled={busy || !editable} />
+          </div>
+          <fieldset className="space-y-2 rounded-md border border-input p-3 md:col-span-2">
+            <legend className="px-1 text-sm font-medium">زیرسیستم‌های خریداری‌شده</legend>
+            <p className="text-xs text-muted-foreground">برای جلوگیری از اعطای مجوز ناخواسته، هیچ زیرسیستمی به‌صورت پیش‌فرض انتخاب نشده است.</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {subsystemOptions.map(option => (
+                <label key={option.code} className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" value={option.code}
+                    checked={subsystems.includes(option.code)}
+                    onChange={event => setSubsystems(current => event.target.checked
+                      ? [...current, option.code]
+                      : current.filter(code => code !== option.code))}
+                    disabled={busy || !editable} />
+                  <span>{option.label}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <div className="space-y-2">
             <label htmlFor="license-valid-from" className="text-sm font-medium">تاریخ شروع اعتبار</label>
             <input id="license-valid-from" type="date" required
               className="h-10 w-full rounded-md border border-input bg-background px-3 outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
@@ -431,7 +504,8 @@ export function LicenseForm({
             <label htmlFor="license-valid-until" className="text-sm font-medium">تاریخ پایان (اختیاری)</label>
             <input id="license-valid-until" type="date" min={validFromUtc || undefined}
               className="h-10 w-full rounded-md border border-input bg-background px-3 outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-              value={validUntilUtc} onChange={event => setValidUntilUtc(event.target.value)} disabled={busy || !editable} />
+              value={validUntilUtc} onChange={event => setValidUntilUtc(event.target.value)}
+              disabled={busy || !editable || licenseKind === 'perpetual'} />
           </div>
           <div className="space-y-2">
             <ManagedSelect name="license-contract" label="قرارداد مرتبط (اختیاری)" options={contractSelectOptions} value={contractId}
