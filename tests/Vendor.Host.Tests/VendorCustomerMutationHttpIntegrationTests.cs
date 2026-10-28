@@ -6,7 +6,9 @@ using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Security.Claims;
 using System.Text.Json;
+using Faranou.Licensing.Contracts;
 using Faranou.Vendor.Host.Authorization;
+using Faranou.Vendor.Host.Licensing;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Domain;
 using Faranou.Vendor.Persistence.Auditing;
@@ -33,6 +35,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
     [Fact]
     public async Task CustomerUpdateEnforcesAntiforgeryAndRowVersionAndAuditsOnlyCommittedWrites()
     {
+        using var testSigner = new TestVendorLicenseSigner();
         var cancellationToken = TestContext.Current.CancellationToken;
         var reviewerUserName = string.Empty;
         var reviewerAuthenticatorKey = string.Empty;
@@ -64,6 +67,13 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     }));
                 webHost.ConfigureTestServices(services =>
                 {
+                    services.RemoveAll<IVendorLicenseSigner>();
+                    services.AddSingleton<IVendorLicenseSigner>(testSigner);
+                    services.RemoveAll<ITrustedKeyResolver>();
+                    services.AddSingleton<ITrustedKeyResolver>(_ => new StaticTrustedKeyResolver(new[]
+                    {
+                        new TrustedPublicKey(testSigner.Kid, LicenseAlgorithms.EcdsaP256Sha256, testSigner.PublicKeySpki)
+                    }));
                     services.RemoveAll<IVendorAuditWriter>();
                     services.AddSingleton<AuditFailureSwitch>();
                     services.AddSingleton<CustomerInsertRaceGate>();
@@ -96,6 +106,10 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     VendorPermissionCatalog.ContractsManage,
                     VendorPermissionCatalog.LicensesRead,
                     VendorPermissionCatalog.LicensesManage,
+                    VendorPermissionCatalog.LicensesIssue,
+                    VendorPermissionCatalog.LicensesRevoke,
+                    VendorPermissionCatalog.LicensesIssueApprove,
+                    VendorPermissionCatalog.LicensesRevokeApprove,
                     VendorPermissionCatalog.ApprovalsRead,
                     VendorPermissionCatalog.ApprovalsRequest,
                     VendorPermissionCatalog.ApprovalsReview
