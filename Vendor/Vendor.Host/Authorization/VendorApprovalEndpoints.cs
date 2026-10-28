@@ -164,7 +164,9 @@ public static class VendorApprovalEndpoints
                 context.User,
                 new VendorResourceDescriptor(approval.ResourceType, approval.ResourceId),
                 VendorResourceCatalog.PolicyFor(approval.ResourceType, managePermission));
-            if             // Issuance writes the signed envelope, sequence, license state, approval decision and
+            if (!access.Succeeded) return Results.Forbid();
+
+            // Issuance writes the signed envelope, sequence, license state, approval decision and
             // audit events inside this request's single Vendor database transaction.
             if (approval.ResourceType == "license" && request.Decision == "Approved")
             {
@@ -184,7 +186,6 @@ public static class VendorApprovalEndpoints
                 // online revocation contract; do not mark a license revoked without that capability.
                 return Results.Json(new { error = "license_revocation_unavailable" },
                     statusCode: StatusCodes.Status503ServiceUnavailable);
-            }es.Status503ServiceUnavailable);
             }
 
             var now = DateTimeOffset.UtcNow;
