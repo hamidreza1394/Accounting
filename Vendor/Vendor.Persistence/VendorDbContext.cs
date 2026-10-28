@@ -121,7 +121,7 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
             entity.Property(item => item.LicenseNumber).HasMaxLength(64).IsRequired();
             entity.Property(item => item.ProductCode).HasMaxLength(64).IsRequired();
             entity.Property(item => item.Status).HasMaxLength(20).IsRequired();
-            entity.Property(item => item.LicenseKind).HasMaxLength(16).HasDefaultValue("term").IsRequired();
+            entity.Property(item => item.LicenseKind).HasMaxLength(16).HasDefaultValue("perpetual").IsRequired();
             entity.Property(item => item.SubsystemsJson).HasMaxLength(512).HasDefaultValue("[]").IsRequired();
             entity.Property(item => item.GraceDays).HasDefaultValue(30).IsRequired();
             entity.Property(item => item.LastIssuedSequence).HasDefaultValue(0).IsRequired();
