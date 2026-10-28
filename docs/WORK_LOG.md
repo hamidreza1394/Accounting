@@ -908,3 +908,11 @@
 - **پیاده‌سازی:** `HashVersion=1`، dispatch verifier، unique `PreviousHash`، preflight رد زنجیرهٔ forked/disconnected و تست‌های SQL Server برای تکرار EventHash، fork و رد Migration روی دو root.
 - **محدودیت‌های صریح:** فرمان محلی `dotnet ef migrations add` اجرا نشده؛ فایل Migration/Designer/Snapshot با Vendor CI و `has-pending-model-changes` بررسی شدند. checkpoint مستقل provider واقعی، fail-closed runtime wiring در Production، SQL permission separation، alerting و recovery runbook هنوز ناتمام‌اند. Issue #107 باز می‌ماند.
 - **محدوده:** فقط Vendor و تست/مستندات آن؛ هیچ تغییر در `Server/**` یا schema دیتابیس مشتری انجام نشد.
+
+
+## 2026-10-28 — Issue #214: مرحلهٔ نخست درخواست تأیید صدور/ابطال لایسنس
+- **مبنای کار:** PR #216 ادغام شد؛ `main` در شروع این مرحله روی `8e5770f049a875f1c75968d18f7a159691c023b9` بود. شاخهٔ مستقل `feat/vendor-license-approval-workflow` ساخته شد.
+- **تغییر:** endpoint درخواست تأیید برای لایسنس با permission `vendor.licenses.issue`، بررسی resource authorization، اعتبارسنجی RowVersion، جلوگیری از درخواست تکراری با index Pending موجود و رخداد ممیزی اضافه شد. endpoint تصمیم Maker-Checker اجازه نمی‌دهد metadata لایسنس به‌تنهایی با تأیید به `Issued`/`Revoked` تبدیل شود؛ تأیید تا آماده‌شدن signer و persistence امن artifact با `503 license_issuance_unavailable` fail-closed است؛ رد درخواست قابل انجام است.
+- **تست:** مسیر جدید به تست HTTP موجود برای رد دسترسی ناشناس افزوده شد. اجرای CI/تست هنوز در انتظار PR است؛ این تغییر هنوز Verified نیست.
+- **امنیت/محدوده:** هیچ کلید خصوصی یا credential اضافه نشد؛ هیچ فایل `Server/**` یا schema دیتابیس مشتری تغییر نکرد. هنوز migration جدیدی برای Vendor ایجاد نشده است.
+- **باقی‌مانده:** تست integration برای درخواست صدور/ابطال، تست self-approval/stale version، ذخیرهٔ envelope امضاشده، provider-neutral signer با پیاده‌سازی production مبتنی بر KMS/HSM یا سرویس امضا، ابطال قابل‌اعتبارسنجی، migration/Snapshot افزایشی Vendor، و CI سبز. Issue #214 نباید بسته شود.
