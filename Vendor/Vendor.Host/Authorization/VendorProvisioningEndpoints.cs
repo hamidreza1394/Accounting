@@ -208,7 +208,8 @@ public static class VendorProvisioningEndpoints
         group.MapPost("/{id:guid}/package/export", async (
             Guid id, HttpContext context, IAntiforgery antiforgery,
             IAuthorizationService authorization, VendorDbContext db,
-            IVendorAuditWriter audit, TimeProvider timeProvider, CancellationToken ct) =>
+            UserManager<VendorAdminUser> users, IVendorAuditWriter audit,
+            TimeProvider timeProvider, CancellationToken ct) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context))
                 return Results.BadRequest(new { error = "invalid_antiforgery_token" });
@@ -249,18 +250,11 @@ public static class VendorProvisioningEndpoints
                 }
             }
 
+            var actor = await users.GetUserAsync(context.User);
+            if (actor is null) return Results.Forbid();
+
             await audit.AppendAsync(new VendorAuditWriteRequest(
-                (await new UserManager<VendorAdminUser>(
-                    context.RequestServices.GetRequiredService<IUserStore<VendorAdminUser>>(),
-                    context.RequestServices.GetRequiredService<Microsoft.Extensions.Options.IOptions<IdentityOptions>>(),
-                    context.RequestServices.GetRequiredService<IPasswordHasher<VendorAdminUser>>(),
-                    context.RequestServices.GetRequiredService<IEnumerable<IUserValidator<VendorAdminUser>>>(),
-                    context.RequestServices.GetRequiredService<IEnumerable<IPasswordValidator<VendorAdminUser>>>(),
-                    context.RequestServices.GetRequiredService<ILookupNormalizer>(),
-                    context.RequestServices.GetRequiredService<IdentityErrorDescriber>(),
-                    context.RequestServices.GetRequiredService<IServiceProvider>(),
-                    context.RequestServices.GetRequiredService<ILogger<UserManager<VendorAdminUser>>>())
-                    .GetUserAsync(context.User))?.Id ?? Guid.Empty,
+                actor.Id,
                 "vendor.provisioning.package-exported", nameof(VendorProvisioningRequest),
                 item.Id.ToString("D"), System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
 
