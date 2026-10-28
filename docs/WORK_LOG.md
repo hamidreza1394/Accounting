@@ -945,3 +945,17 @@
 - **اعتبارسنجی:** .NET CI روی PR head `62fd3e93f64c682a9141ab98d8875f591bcb1468` سبز شد: Browser tests، SQL Server E2E، publish Linux/Windows، build/test، client، publish-scripts و secret scan. runهای [PR CI 40700226645](https://github.com/hamidreza1394/Accounting/actions/runs/40700226645) و [push CI 40700217610](https://github.com/hamidreza1394/Accounting/actions/runs/40700217610).
 - **وضعیت لایسنس:** PRهای #221–#224 اکنون در main هستند: ذخیرهٔ envelope و صدور تراکنشی، تست rollback هنگام شکست audit، تعارض sequence و رقابت هم‌زمان. Provider واقعی KMS/HSM و پروتکل ابطال آفلاین همچنان blockers هستند؛ signer پیش‌فرض fail-closed است و Issue #214 باز می‌ماند.
 - **محدوده:** فقط آزمون E2E و مستندات Vendor؛ بدون تغییر `Server/**`، schema دیتابیس مشتری یا اسرار.
+## 2026-10-28 — Issue #228: versioned customer provisioning contract (PR slice)
+- Added CustomerProvisioningPayload and CustomerProvisioningPackage to Licensing.Contracts, with fixed-order canonical JSON and an explicit versioned envelope.
+- Added fail-closed validation for the supported schema, customer/installation references, company type, subsystem allow-list, bounded request lifetime, nonce shape, key ID, algorithm, P1363 signature size and ECDSA P-256/SHA-256 signature verification against a caller-resolved trusted public key.
+- Added contract tests for valid signatures, modified/non-canonical payloads, expired packages, duplicate/unknown subsystem codes, unknown schema versions and absence of password/secret properties.
+- Security boundary: this is a contract/verification slice, not end-to-end provisioning. The consumer must atomically persist/claim nonces to enforce replay protection; Vendor UI/API persistence, customer-side acknowledgement, idempotent provisioning, and one-time credential delivery remain unimplemented. No plaintext password, customer password hash, private key, customer DB schema, or Server/** change was added.
+- Validation: local .NET tests could not be executed from this GitHub-only tool session. CI must verify the final PR SHA before merge; do not mark this slice Verified until all required checks pass.
+- Handoff: docs/handoffs/ISSUE-228-provisioning-contract-v1.md. Issue #228 remains open.
+
+## 2026-10-28 — Issue #228: provisioning contract CI correction and verification
+- The first .NET CI run (40723205619) reported 2 failing new contract tests out of 576. Root cause: the canonical JSON uses camelCase names, while deserialization had no matching JsonNamingPolicy, so valid payloads were parsed with default values and rejected.
+- Fixed the deserialization options to use JsonNamingPolicy.CamelCase while retaining case-sensitive property matching; the modified-payload test now reaches signature verification and correctly rejects the altered payload.
+- Verification on code SHA 18e684a0c78f675ca35fecdc5b8d2d42c3b10916: .NET CI run 40723732882 passed all 576 tests (0 failed, 0 skipped), plus E2E, Linux/Windows publish, client and secret scan; Vendor CI run 40723732546 passed UI tests/build, Vendor build/test, EF snapshot guard and publish.
+- Documentation update is a new commit after the verified code SHA, so the final PR SHA must receive fresh green CI before merge.
+- Issue #228 remains open: the contract is not yet wired to Vendor API/UI or a customer-side consumer; atomic nonce claiming/replay protection, idempotent provisioning, status acknowledgement and secure one-time credential delivery remain follow-up work.
