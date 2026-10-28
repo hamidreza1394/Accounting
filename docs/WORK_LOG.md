@@ -932,3 +932,11 @@
 - Next slice adds `VendorLicenseEnvelopeFactory`: canonicalizes payload bytes, calls only the injected signing provider, validates provider output and envelope structure, and returns safe failure codes. Tests use a test-only ephemeral ECDSA key and cover successful verification, provider-unavailable fail-closed behavior, and invalid-payload rejection.
 - **Explicit limitations:** factory does not persist the envelope, update license sequence/status, or wire approval decisions to issuance. No production KMS/HSM implementation or private key is added. No customer DB or `Server/**` changes.
 - Status: PR opened; must wait for CI and merge only after all required checks pass. Issue #214 remains open.
+
+
+## 2026-10-28 — ذخیره‌سازی پایدار پاکت امضاشدهٔ لایسنس (شاخهٔ پیگیری پس از PR #220)
+- **پیش‌نیاز تأیید شد:** PR #220 با SHA نهایی `2381bce5844b398233f7ef10a5cb85b53e98f547` ادغام شده و Vendor CI [40682375836](https://github.com/hamidreza1394/Accounting/actions/runs/40682375836) و .NET CI [40682375621](https://github.com/hamidreza1394/Accounting/actions/runs/40682375621) موفق‌اند.
+- **دامنهٔ این شاخه:** `feat/vendor-signed-envelope-storage`؛ موجودیت `VendorSignedLicenseEnvelope`، DbSet و mapping مستقل Vendor، Migration افزایشی `20261028150000_VendorSignedLicenseEnvelopes`، snapshot/target model EF و تست invariants مدل اضافه شدند.
+- **قیود داده:** هر لایسنس در هر sequence فقط یک پاکت دارد (unique index)، sequence باید مثبت باشد، FK به `VendorLicenses` با حذف Restrict است، payload hash در ستون ثابت‌طول ذخیره می‌شود و RowVersion برای concurrency وجود دارد. پاکت JSON کامل ذخیره می‌شود؛ کلید خصوصی یا دیتابیس مشتری به این تغییر وارد نشده است.
+- **محدودیت فعلی:** هنوز repository/service تراکنشی برای ثبت پاکت و افزایش `LastIssuedSequence` وجود ندارد؛ endpoint تأیید صدور همچنان fail-closed است. این migration/schema تا اجرای CI و بررسی snapshot، Verified اعلام نمی‌شود.
+- **اعتبارسنجی:** در این محیط اجرای محلی .NET/SQL Server انجام نشده؛ PR و CI باید خطاهای کامپایل، model snapshot و migration را بررسی کنند.
