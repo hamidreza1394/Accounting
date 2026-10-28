@@ -23,6 +23,7 @@ public static class CustomerProvisioningPackageValidator
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         PropertyNameCaseInsensitive = false
     };
 
