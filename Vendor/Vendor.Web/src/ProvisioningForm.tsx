@@ -25,6 +25,7 @@ type Props = {
   customerName: string;
   onCancel: () => void;
   onSaved: () => void;
+  canRequestApproval?: boolean;
 };
 type ApiError = { error?: string; message?: string };
 
@@ -70,7 +71,7 @@ function formatDate(value: string | null | undefined): string {
   }).format(date);
 }
 
-export function ProvisioningForm({ customerId, customerName, onCancel, onSaved }: Props) {
+export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, canRequestApproval = false }: Props) {
   const [installations, setInstallations] = useState<Installation[]>([]);
   const [requests, setRequests] = useState<ProvisioningRequest[]>([]);
   const [installationId, setInstallationId] = useState('');
@@ -81,6 +82,7 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved }
   const [requestId, setRequestId] = useState(newRequestId);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [approvalBusyId, setApprovalBusyId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -175,6 +177,47 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved }
     }
   }
 
+  async function requestApproval(item: ProvisioningRequest) {
+    if (!canRequestApproval || approvalBusyId) return;
+    setApprovalBusyId(item.id);
+    setError('');
+    setNotice('');
+    try {
+      const tokenResponse = await fetch('/api/auth/antiforgery', {
+        credentials: 'same-origin', cache: 'no-store',
+      });
+      if (!tokenResponse.ok) throw new Error(publicError(tokenResponse.status, ''));
+      const tokenBody = await tokenResponse.json() as { requestToken?: string };
+      if (!tokenBody.requestToken) throw new Error('توکن امنیتی در پاسخ سرور وجود ندارد.');
+
+      const response = await fetch(`/api/vendor/provisioning-requests/${encodeURIComponent(item.id)}/approval-request`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': tokenBody.requestToken },
+        body: JSON.stringify({ rowVersion: item.rowVersion }),
+      });
+      if (!response.ok) {
+        let code = '';
+        try {
+          const body = await response.json() as ApiError;
+          code = body.error ?? body.message ?? '';
+        } catch {
+          // Do not expose raw server errors.
+        }
+        throw new Error(response.status === 409 && code === 'approval_already_pending'
+          ? 'این درخواست قبلاً برای بررسی دو نفره ارسال شده است.'
+          : publicError(response.status, code));
+      }
+      setNotice('درخواست برای بررسی دو نفره ارسال شد؛ بسته هنوز امضا یا به مشتری تحویل نشده است.');
+      setRefreshKey(current => current + 1);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'ارسال برای بررسی ناموفق بود.');
+    } finally {
+      setApprovalBusyId(null);
+    }
+  }
+
   function toggleSubsystem(value: string, checked: boolean) {
     setSubsystems(current => checked
       ? (current.includes(value) ? current : [...current, value])
@@ -264,11 +307,18 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved }
                 <th className="border-b px-3 py-2 font-semibold text-muted-foreground">وضعیت</th>
                 <th className="border-b px-3 py-2 font-semibold text-muted-foreground">زمان ثبت</th>
                 <th className="border-b px-3 py-2 font-semibold text-muted-foreground">شناسه درخواست</th>
+                {canRequestApproval && <th className="border-b px-3 py-2 font-semibold text-muted-foreground">عملیات</th>}
               </tr></thead>
               <tbody>{requests.map(item => <tr key={item.id}>
                 <td className="border-b px-3 py-2">{statusLabels[item.status] ?? item.status}</td>
                 <td className="border-b px-3 py-2 tabular-nums">{formatDate(item.createdAtUtc)}</td>
                 <td className="border-b px-3 py-2 font-mono text-xs" dir="ltr">{item.requestId}</td>
+                {canRequestApproval && <td className="border-b px-3 py-2">
+                  {item.status === 'AwaitingSigner' && <Button type="button" size="sm" variant="outline"
+                    onClick={() => void requestApproval(item)} disabled={busy || approvalBusyId !== null || !item.rowVersion}>
+                    {approvalBusyId === item.id ? <><LoaderCircle size={14} className="animate-spin"/> در حال ارسال…</> : 'ارسال برای تأیید دو نفره'}
+                  </Button>}
+                </td>}
               </tr>)}</tbody>
             </table>
           </div>}
