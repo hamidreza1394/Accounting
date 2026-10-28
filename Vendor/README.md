@@ -170,3 +170,9 @@ The customer setup form records a versioned provisioning request in the separate
 Requests currently remain `AwaitingSigner`. This is deliberate: until a production signing provider and a trusted customer-side consumer are configured, no signed package is delivered and the UI must not claim that a customer company or administrator has been created. The API persists an idempotent request ID, unique nonce, canonical payload/hash, audit event, and status metadata in the Vendor database only.
 
 Production completion still requires a trusted key source outside Git, signing and one-time delivery, an idempotent customer-side consumer with atomic nonce claiming, signed acknowledgement, and recovery/retry tests for cloud, dedicated-server, and offline installations. Those capabilities are not implemented by the current Vendor UI/API slice.
+
+## Production audit checkpoint readiness (Issue #107)
+
+The Vendor host now fails startup in the Production environment unless an explicit `IProductionVendorAuditCheckpointStore` adapter is registered. This is intentional: a hash chain stored only in the same Vendor SQL Server database is not an independent checkpoint.
+
+Until a real provider is selected and configured with separate credentials and appropriate append-only/immutability retention, the Vendor control plane is **not production-ready** and must not be launched with a fake store, local-file fallback, or Vendor-database fallback. Development and tests can run without the provider.

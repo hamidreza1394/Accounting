@@ -135,6 +135,14 @@ public interface IVendorAuditCheckpointStore
 }
 
 /// <summary>
+/// Marker for a production checkpoint adapter whose destination and credentials are independently
+/// controlled from Vendor SQL Server. Test fakes must implement only IVendorAuditCheckpointStore.
+/// </summary>
+public interface IProductionVendorAuditCheckpointStore : IVendorAuditCheckpointStore
+{
+}
+
+/// <summary>
 /// Creates checkpoints only after full chain verification and rejects rollback or divergence from a
 /// previously stored checkpoint. This service deliberately has no local-file or database fallback.
 /// </summary>

@@ -980,3 +980,10 @@
 - The request remains AwaitingSigner; no signed package or customer creation is claimed.
 - CI must execute the SQL Server integration test on the final PR SHA; local execution was not available in the GitHub-only session.
 - Handoff: docs/handoffs/ISSUE-228-provisioning-api-integration.md.
+
+## 2026-10-28 — Issue #107: fail-closed Production checkpoint readiness
+- Added IProductionVendorAuditCheckpointStore as an explicit marker for an independently permissioned production checkpoint adapter and VendorAuditCheckpointStartupGuard before host build.
+- Production startup now fails with an actionable error when no production adapter is registered; Development/test environments may run without a provider. A generic IVendorAuditCheckpointStore or fake test store does not satisfy the production gate.
+- This is an intentional fail-closed operational change: Vendor cannot start in Production until a real external adapter is configured. No local-file or same-database fallback is accepted.
+- Added guard tests for missing store, generic store only, Development, and explicit production adapter registration. The actual independent provider, credentials, retention, SQL principal separation, alerting and recovery remain open in Issue #107.
+- Handoff: docs/handoffs/ISSUE-107-checkpoint-runtime-guard.md. CI must verify the final PR SHA.
