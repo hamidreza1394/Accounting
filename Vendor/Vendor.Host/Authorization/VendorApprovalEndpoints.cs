@@ -162,7 +162,7 @@ public static class VendorApprovalEndpoints
             // envelope storage are configured, never transition a license by approving metadata.
             // Rejection remains available so an unsafe request can be closed with an audit trail.
             if (approval.ResourceType == "license" && request.Decision == "Approved")
-                return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+                return Results.Json(new { error = "license_issuance_unavailable" }, statusCode: StatusCodes.Status503ServiceUnavailable);
 
             var managePermission = PermissionFor(approval.ResourceType);
             var access = await authorization.AuthorizeAsync(
@@ -330,6 +330,7 @@ public static class VendorApprovalEndpoints
     {
         "customer" => VendorPermissionCatalog.CustomersManage,
         "installation" => VendorPermissionCatalog.InstallationsManage,
+        "license" => VendorPermissionCatalog.LicensesIssue,
         _ => throw new ArgumentOutOfRangeException(nameof(resourceType))
     };
 
