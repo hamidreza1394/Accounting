@@ -156,7 +156,7 @@ namespace Faranou.Vendor.Persistence.Migrations
 
                     b.HasIndex("Status", "RequestedAtUtc");
 
-                    b.ToTable("VendorAuditHashVersionAndLinearChain", (string)null);
+                    b.ToTable("VendorApprovalRequests", (string)null);
                 });
 
             modelBuilder.Entity("Faranou.Vendor.Persistence.Identity.VendorAdminUser", b =>
