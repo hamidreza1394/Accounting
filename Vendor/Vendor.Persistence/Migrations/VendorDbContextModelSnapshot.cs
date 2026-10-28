@@ -28,6 +28,10 @@ namespace Faranou.Vendor.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int>("HashVersion")
+                        .HasDefaultValue(1)
+                        .HasColumnType("int");
+
                     b.Property<string>("ActionCode")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -82,7 +86,8 @@ namespace Faranou.Vendor.Persistence.Migrations
 
                     b.HasIndex("OccurredAtUtc");
 
-                    b.HasIndex("PreviousHash");
+                    b.HasIndex("PreviousHash")
+                        .IsUnique();
 
                     b.ToTable("VendorAuditEvents", (string)null);
                 });
