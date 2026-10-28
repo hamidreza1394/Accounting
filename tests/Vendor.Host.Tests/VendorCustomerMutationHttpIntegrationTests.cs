@@ -265,14 +265,14 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
             // after the authenticated application cookie is issued.
             (antiForgeryToken, _) = await GetAntiforgeryTokenAsync(client, cancellationToken);
 
-            Guid licenseId;
+            Guid approvalLicenseId;
             byte[] licenseVersion;
             await using (var licenseScope = factory.Services.CreateAsyncScope())
             {
                 var db = licenseScope.ServiceProvider.GetRequiredService<VendorDbContext>();
                 var license = await db.Licenses.AsNoTracking()
                     .SingleAsync(item => item.LicenseNumber.StartsWith("IT-LIC-"), cancellationToken);
-                licenseId = license.Id;
+                approvalLicenseId = license.Id;
                 licenseVersion = license.RowVersion.ToArray();
             }
 
@@ -282,7 +282,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 rowVersion = Convert.ToBase64String(licenseVersion)
             };
             using (var response = await PostWithTokenAsync(client,
-                $"/api/vendor/licenses/{licenseId:D}/approval-request",
+                $"/api/vendor/licenses/{approvalLicenseId:D}/approval-request",
                 licenseApprovalBody, antiForgeryToken, cancellationToken))
             {
                 Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
@@ -293,7 +293,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
             }
 
             using (var response = await PostWithTokenAsync(client,
-                $"/api/vendor/licenses/{licenseId:D}/approval-request",
+                $"/api/vendor/licenses/{approvalLicenseId:D}/approval-request",
                 licenseApprovalBody, antiForgeryToken, cancellationToken))
             {
                 Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
