@@ -61,7 +61,7 @@ public sealed class VendorLicense
     public string LicenseNumber { get; set; } = string.Empty;
     public string ProductCode { get; set; } = string.Empty;
     public string Status { get; set; } = "Draft";
-    public string LicenseKind { get; set; } = "term";
+    public string LicenseKind { get; set; } = "perpetual";
     public int? MaxCompanies { get; set; }
     public string SubsystemsJson { get; set; } = "[]";
     public int GraceDays { get; set; } = 30;
