@@ -61,6 +61,7 @@ public sealed class VendorLicenseIssuanceAtomicityTests
         finally
         {
             await fixture.Db.Database.EnsureDeletedAsync(TestContext.Current.CancellationToken);
+            fixture.Scope.Dispose();
             await fixture.Provider.DisposeAsync();
         }
     }
@@ -97,6 +98,7 @@ public sealed class VendorLicenseIssuanceAtomicityTests
         finally
         {
             await fixture.Db.Database.EnsureDeletedAsync(TestContext.Current.CancellationToken);
+            fixture.Scope.Dispose();
             await fixture.Provider.DisposeAsync();
         }
     }
