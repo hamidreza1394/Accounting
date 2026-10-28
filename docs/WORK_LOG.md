@@ -995,3 +995,11 @@
 - Vendor cannot start in Production until an independent external checkpoint provider is configured with separate credentials, suitable append-only/immutability retention, SQL principal separation, alerting and recovery. No local-file or same-database fallback is accepted.
 - Handoff: docs/handoffs/ISSUE-107-checkpoint-runtime-guard.md.
 - Documentation correction during Issue #236 review: the earlier edit had replaced this checkpoint section instead of retaining it. This entry restores the historical requirement; Issue #236 does not supersede it.
+
+
+## 2026-10-28 — Issue #236: اصلاح خطاهای Vendor CI و تست binding نصب
+- رفع خطای TypeScript در `Vendor/Vendor.Web/src/ProvisioningForm.test.tsx`: دو عضو استاتیک `TestURL` باید صریحاً `override` داشته باشند (commit `b1d355add0cc0a54561cc6cd9f8f1324599c4a90`).
+- CI بعدی نشان داد آزمون SQL Server پس از ساخت درخواست راه‌اندازی، کد نصب هدف را تغییر می‌داد؛ صدور با `provisioning_payload_invalid` رد شد. رفتار fail-closed درست بود و نباید تضعیف می‌شد.
+- اصلاح fixture در `tests/Vendor.Host.Tests/VendorCustomerMutationHttpIntegrationTests.cs`: کد نصب ثابت نگه داشته می‌شود و آزمون update از تغییر نام/محیط برای پوشش RowVersion استفاده می‌کند (commit `d30693f649a50edd2f2a493ab3b05648469174a1`).
+- شواهد Vendor CI روی SHA `d30693f649a50edd2f2a493ab3b05648469174a1` سبز: typecheck، تست UI، runtime dependency audit، build UI، build/test Vendor روی SQL Server، EF snapshot guard، publish و گارد نبود کلید خصوصی.
+- CI روی SHA نهایی مستندات باید مجدداً تأیید شود؛ .NET CI، E2E و انتشار Linux/Windows تا مشاهدهٔ نتیجهٔ نهایی این commit مستنداتی هنوز Verified محسوب نمی‌شوند.
