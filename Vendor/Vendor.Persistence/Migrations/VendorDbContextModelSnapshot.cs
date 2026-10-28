@@ -548,7 +548,7 @@ namespace Faranou.Vendor.Persistence.Migrations
                     b.Property<string>("LicenseNumber").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
                     b.Property<string>("ProductCode").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
                     b.Property<int>("GraceDays").ValueGeneratedOnAdd().HasColumnType("int").HasDefaultValue(30);
-                    b.Property<string>("LicenseKind").IsRequired().HasMaxLength(16).HasColumnType("nvarchar(16)").HasDefaultValue("term");
+                    b.Property<string>("LicenseKind").IsRequired().HasMaxLength(16).HasColumnType("nvarchar(16)").HasDefaultValue("perpetual");
                     b.Property<int?>("MaxCompanies").HasColumnType("int");
                     b.Property<int>("LastIssuedSequence").ValueGeneratedOnAdd().HasColumnType("int").HasDefaultValue(0);
                     b.Property<string>("SubsystemsJson").IsRequired().HasMaxLength(512).HasColumnType("nvarchar(512)").HasDefaultValue("[]");
