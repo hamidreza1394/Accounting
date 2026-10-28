@@ -169,6 +169,9 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
             entity.HasKey(item => item.Id);
             entity.Property(item => item.Action).HasMaxLength(16).IsRequired();
             entity.Property(item => item.ExpectedLicenseRowVersion).HasColumnType("binary(8)").IsRequired();
+            entity.Property(item => item.ExpectedCustomerRowVersion).HasColumnType("binary(8)").IsRequired();
+            entity.Property(item => item.ExpectedInstallationRowVersion).HasColumnType("binary(8)");
+            entity.Property(item => item.ExpectedContractRowVersion).HasColumnType("binary(8)");
             entity.Property(item => item.Status).HasMaxLength(20).HasDefaultValue("Pending").IsRequired();
             entity.Property(item => item.ReviewComment).HasMaxLength(500);
             entity.Property(item => item.RowVersion).IsRowVersion();
