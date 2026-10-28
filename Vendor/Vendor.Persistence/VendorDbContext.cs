@@ -16,6 +16,7 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
     public DbSet<Domain.VendorContract> Contracts => Set<Domain.VendorContract>();
     public DbSet<Domain.VendorLicense> Licenses => Set<Domain.VendorLicense>();
     public DbSet<Domain.VendorApprovalRequest> ApprovalRequests => Set<Domain.VendorApprovalRequest>();
+    public DbSet<Domain.VendorSignedLicenseEnvelope> SignedLicenseEnvelopes => Set<Domain.VendorSignedLicenseEnvelope>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -137,6 +138,25 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
                 .HasForeignKey(item => item.ContractId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(item => item.Installation).WithMany(installation => installation.Licenses)
                 .HasForeignKey(item => item.InstallationId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<Domain.VendorSignedLicenseEnvelope>(entity =>
+        {
+            entity.ToTable("VendorSignedLicenseEnvelopes", table =>
+                table.HasCheckConstraint("CK_VendorSignedLicenseEnvelopes_Sequence", "[Sequence] >= 1"));
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.KeyId).HasMaxLength(128).IsRequired();
+            entity.Property(item => item.Algorithm).HasMaxLength(32).IsUnicode(false).IsRequired();
+            entity.Property(item => item.EnvelopeJson).IsRequired();
+            entity.Property(item => item.PayloadSha256).HasMaxLength(64).IsUnicode(false).IsFixedLength().IsRequired();
+            entity.Property(item => item.CreatedAtUtc).HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
+            entity.Property(item => item.RowVersion).IsRowVersion();
+            entity.HasIndex(item => new { item.LicenseId, item.Sequence }).IsUnique();
+            entity.HasIndex(item => item.PayloadSha256);
+            entity.HasOne<Domain.VendorLicense>()
+                .WithMany()
+                .HasForeignKey(item => item.LicenseId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         builder.Entity<Domain.VendorApprovalRequest>(entity =>
