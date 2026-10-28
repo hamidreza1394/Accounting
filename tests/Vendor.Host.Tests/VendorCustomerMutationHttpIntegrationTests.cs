@@ -853,6 +853,36 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
         }
     }
 
+    private sealed class TestVendorLicenseSigner : IVendorLicenseSigner, IDisposable
+    {
+        private readonly ECDsa _key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        private readonly object _gate = new();
+
+        public string Kid => "test-vendor-signing-key";
+        public byte[] PublicKeySpki => _key.ExportSubjectPublicKeyInfo();
+        public bool ReturnInvalidSignature { get; set; }
+
+        public Task<VendorLicenseSignature> SignAsync(
+            ReadOnlyMemory<byte> canonicalPayload,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            byte[] signature;
+            lock (_gate)
+            {
+                signature = ReturnInvalidSignature
+                    ? new byte[64]
+                    : _key.SignData(canonicalPayload.Span, HashAlgorithmName.SHA256,
+                        DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
+            }
+
+            return Task.FromResult(new VendorLicenseSignature(
+                Kid, LicenseAlgorithms.EcdsaP256Sha256, Convert.ToBase64String(signature)));
+        }
+
+        public void Dispose() => _key.Dispose();
+    }
+
     private sealed class CustomerInsertRaceGate : DbCommandInterceptor
     {
         private TaskCompletionSource _bothArrived = NewCompletionSource();
