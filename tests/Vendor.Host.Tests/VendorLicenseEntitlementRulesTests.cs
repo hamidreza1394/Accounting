@@ -5,6 +5,8 @@ namespace Faranou.Vendor.Host.Tests;
 
 public sealed class VendorLicenseEntitlementRulesTests
 {
+    private static readonly string[] FinanceAndSales = ["finance", "sales"];
+
     [Fact]
     public void NormalizesTermLicenseAndOrdersSubsystemsDeterministically()
     {
@@ -18,7 +20,7 @@ public sealed class VendorLicenseEntitlementRulesTests
         Assert.NotNull(result);
         Assert.Equal("term", result.LicenseKind);
         Assert.Equal(25, result.MaxCompanies);
-        Assert.Equal(new[] { "finance", "sales" }, result.Subsystems);
+        Assert.Equal(FinanceAndSales, result.Subsystems);
         Assert.Equal(30, result.GraceDays);
         Assert.Equal("[\"finance\",\"sales\"]", result.SubsystemsJson);
     }
