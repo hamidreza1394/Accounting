@@ -63,6 +63,9 @@ public sealed class VendorProvisioningIssuanceService(
             .SingleOrDefaultAsync(item => item.Id == request.InstallationId, cancellationToken);
         if (customer is null || installation is null || installation.CustomerId != customer.Id)
             return VendorProvisioningIssuanceResult.Conflict("provisioning_installation_mismatch");
+        if (!string.Equals(customer.Status, "Active", StringComparison.Ordinal) ||
+            !string.Equals(installation.Status, "Active", StringComparison.Ordinal))
+            return VendorProvisioningIssuanceResult.Conflict("provisioning_target_inactive");
 
         CustomerProvisioningPayload? payload;
         try
