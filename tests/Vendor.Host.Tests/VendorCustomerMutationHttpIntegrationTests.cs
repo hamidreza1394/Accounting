@@ -667,11 +667,13 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
             {
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
                 using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-                Assert.Equal(2, json.RootElement.GetProperty("totalCount").GetInt32());
+                // Customer and installation requests are still pending; license adds the third.
+                Assert.Equal(3, json.RootElement.GetProperty("totalCount").GetInt32());
                 var pendingIds = json.RootElement.GetProperty("items").EnumerateArray()
                     .Select(item => item.GetProperty("id").GetGuid())
                     .ToHashSet();
                 Assert.Contains(customerApprovalId, pendingIds);
+                Assert.Contains(installationApprovalId, pendingIds);
                 Assert.Contains(licenseApprovalId, pendingIds);
             }
 
