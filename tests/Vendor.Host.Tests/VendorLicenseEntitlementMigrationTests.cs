@@ -19,7 +19,10 @@ public sealed class VendorLicenseEntitlementMigrationTests
         {
             const string message = "Set FARANO_VENDOR_TEST_SQLSERVER to a disposable SQL Server connection. Use FARANO_REQUIRE_VENDOR_SQLSERVER=1 to require this integration test in CI.";
             if (string.Equals(Environment.GetEnvironmentVariable("FARANO_REQUIRE_VENDOR_SQLSERVER"), "1", StringComparison.Ordinal))
+            {
                 Assert.Fail(message);
+            }
+
             Assert.Skip(message);
             return;
         }
