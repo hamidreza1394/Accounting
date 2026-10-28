@@ -204,8 +204,12 @@ public sealed class VendorAuditChainIntegrationTests
                     cancellationToken);
 
                 await Assert.ThrowsAsync<SqlException>(() => setup.Database.MigrateAsync(cancellationToken));
-                Assert.Equal(0, await setup.Database.ExecuteSqlRawAsync(
-                    "IF COL_LENGTH('dbo.VendorAuditEvents', 'HashVersion') IS NOT NULL THROW 51010, 'Migration was not rolled back.', 1;"));
+                var connectionForCheck = setup.Database.GetDbConnection();
+                await connectionForCheck.OpenAsync(cancellationToken);
+                await using var command = connectionForCheck.CreateCommand();
+                command.CommandText = "SELECT CASE WHEN COL_LENGTH('dbo.VendorAuditEvents', 'HashVersion') IS NULL THEN 0 ELSE 1 END";
+                var hashVersionColumnExists = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
+                Assert.Equal(0, hashVersionColumnExists);
             }
         }
         finally
