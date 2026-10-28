@@ -91,3 +91,11 @@
 - Issue #105 شاخه‌ای برای Writer/Verifier زنجیرهٔ ممیزی اضافه می‌کند: hash نسخه‌دار SHA-256 روی شناسه‌های غیرحساس و لینک به رخداد قبلی، قفل تراکنشی SQL Server و آزمون تشخیص دستکاری.
 - تا CI/ادغام PR، کد `NotVerified` است و هنوز به Host متصل نشده است. نبود endpoint به معنای کامل‌بودن ممیزی نیست.
 - کنترل‌های باقی‌ماندهٔ Production: حساب SQL فاقد مجوز UPDATE/DELETE روی رخدادها، checkpoint/hash head به storage مستقل با permission جدا، هشدار روی شکست verifier، retention و runbook بازیابی. مهاجم DBA با دسترسی کامل می‌تواند کل زنجیره را بازنویسی کند مگر checkpoint بیرونی وجود داشته باشد.
+
+
+## قرارداد امضای Vendor — پیگیری Issue #214 (2026-10-28)
+
+- `ILicenseSigningProvider` یک مرز provider-neutral در `Vendor.Host` تعریف می‌کند: ورودی، بایت‌های دقیق UTF-8 payload canonical است؛ خروجی موفق باید `kid`، الگوریتم allowlist‌شدهٔ D-045 و امضای ECDSA P-256 با قالب IEEE P1363 ثابت ۶۴ بایتی داشته باشد.
+- قرارداد اجازه نمی‌دهد پیاده‌سازی payload را deserialize و دوباره serialize کند؛ هر تغییر حتی whitespace باید امضا را نامعتبر کند. تست از کلید ECDSA موقت و فقط در حافظهٔ تست استفاده می‌کند.
+- این commit **هیچ** provider تولیدی، کلید نرم‌افزاری fallback، endpoint صدور، ذخیره‌سازی envelope، Migration یا تغییر در `Server/**` اضافه نمی‌کند. endpoint فعلی همچنان fail-closed است.
+- پیش از اتصال provider: انتخاب KMS/HSM یا سرویس امضای مورد تأیید، احراز هویت workload، محدودیت عملیات فقط-امضا، timeout/retry امن، rotation و retirement کلیدها، ثبت `kid` و تست end-to-end لازم‌اند. کلید خصوصی نباید در برنامه، repo، CI یا artifact قرار گیرد.

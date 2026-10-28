@@ -916,3 +916,12 @@
 - **تست:** مسیر جدید به تست HTTP برای رد دسترسی ناشناس افزوده شد؛ تست Integration مبتنی بر SQL Server اکنون درخواست صدور، جلوگیری از Pending تکراری، پاسخ 503 هنگام تأیید بدون signer و حفظ وضعیت Draft/Pending را بررسی می‌کند. اجرای CI هنوز در انتظار PR است؛ این تغییر هنوز Verified نیست.
 - **امنیت/محدوده:** هیچ کلید خصوصی یا credential اضافه نشد؛ هیچ فایل `Server/**` یا schema دیتابیس مشتری تغییر نکرد. هنوز migration جدیدی برای Vendor ایجاد نشده است.
 - **باقی‌مانده:** تست integration برای درخواست صدور/ابطال، تست self-approval/stale version، ذخیرهٔ envelope امضاشده، provider-neutral signer با پیاده‌سازی production مبتنی بر KMS/HSM یا سرویس امضا، ابطال قابل‌اعتبارسنجی، migration/Snapshot افزایشی Vendor، و CI سبز. Issue #214 نباید بسته شود.
+
+
+## 2026-10-28 — Issue #214: قرارداد provider-neutral امضای لایسنس (در انتظار CI)
+- **وضعیت قبلی:** PR #217 با merge commit `a643451fb445ff97bb9069fbd1c5cb8f2984dfe1` ادغام شد؛ Vendor CI run [40677449281](https://github.com/hamidreza1394/Accounting/actions/runs/40677449281) و .NET CI run [40677449226](https://github.com/hamidreza1394/Accounting/actions/runs/40677449226) موفق‌اند. Issue #214 به‌طور خودکار بسته شده بود، با اینکه معیار پذیرش آن تصریح می‌کند تا انتخاب/پیکربندی signer واقعی و آزمون عملیاتی باز بماند؛ بنابراین Issue دوباره باز شد.
+- **تغییر:** قرارداد `ILicenseSigningProvider` و نتیجهٔ محدودشدهٔ `LicenseSigningResult` برای امضای بایت‌های دقیق payload canonical افزوده شد. الگوریتم باید از allowlist قرارداد Licensing v1 باشد و امضا باید ۶۴ بایت ECDSA P-256 / IEEE P1363 باشد.
+- **تست:** تست-only signer با کلید موقت ECDSA، تأیید امضا با `EcdsaP256Sha256Verifier` و رد payload تغییرکرده اضافه شد؛ همچنین الگوریتم و اندازهٔ امضای نامعتبر رد می‌شوند.
+- **امنیت/محدوده:** هیچ provider تولیدی یا fallback نرم‌افزاری، کلید خصوصی، ذخیره‌سازی envelope، Migration یا تغییر `Server/**` اضافه نشد. endpoint صدور همچنان fail-closed است.
+- **مستندات:** `docs/PROJECT_STATUS.md`, `Vendor/README.md`, `docs/LICENSING_THREAT_MODEL.md` و handoff اختصاصی به‌روزرسانی شدند.
+- **اعتبارسنجی:** تست محلی در این محیط اجرا نشده؛ CI این شاخه باید نتیجهٔ Build/Test، SQL Server integration، EF guard و publish را تأیید کند. تا سبزشدن CI، این slice Verified محسوب نمی‌شود.
