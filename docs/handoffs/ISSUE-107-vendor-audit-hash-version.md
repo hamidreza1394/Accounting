@@ -3,7 +3,7 @@
 - **Issue:** [#107 — L2.4 hardening: enforce audit-chain uniqueness and independent checkpoints](https://github.com/hamidreza1394/Accounting/issues/107)
 - **Agent/مسئول:** ChatGPT + GitHub integration
 - **تاریخ:** 2026-10-28
-- **وضعیت:** پیاده‌سازی روی شاخه؛ منتظر CI و بازبینی/ادغام
+- **وضعیت:** بخش کد ادغام‌شده و CI تأییدشده؛ Issue #107 همچنان باز برای provider مستقل و کنترل‌های عملیاتی
 
 ## هدف و معیارهای پذیرش
 - افزودن نسخهٔ الگوریتم هش به هر رویداد و رد fail-closed نسخهٔ ناشناخته.
@@ -38,11 +38,13 @@
 ## بررسی و آزمون
 | فرمان/آزمون | نتیجه واقعی | توضیح/کد خروج |
 |---|---|---|
-| `dotnet build` | اجرا نشده در این محیط | CI PR باید Build را اجرا کند |
-| `dotnet test` | اجرا نشده در این محیط | تست‌های SQL Server در صورت نبود secret/env مناسب Skip یا طبق گارد CI Fail می‌شوند |
-| `VendorModelSnapshotTests` | در انتظار CI | باید نبود pending model changes را اثبات کند |
+| `dotnet build` | موفق در Vendor CI و .NET CI PR | CI واقعی GitHub |
+| `dotnet test` | موفق در Vendor CI: 77/77؛ .NET CI نیز موفق | SQL Server Integration روی Vendor CI |
+| `VendorModelSnapshotTests` | موفق در Vendor CI | Snapshot با مدل جاری هم‌خوان است |
 | `git diff --check` | اجرا نشده در این محیط | از GitHub API برای تغییر فایل استفاده شده و shell محلی متصل نیست |
-| CI Vendor و .NET | در انتظار | پس از ایجاد PR بررسی می‌شود |
+| Vendor CI PR #212 | موفق: 77/77، 0 شکست، 0 Skip | [Run 40650985169](https://github.com/hamidreza1394/Accounting/actions/runs/40650985169) |
+| .NET CI PR #212 | موفق | [Run 40650985057](https://github.com/hamidreza1394/Accounting/actions/runs/40650985057) |
+| Vendor CI پس از merge | موفق | [Run 40651677915](https://github.com/hamidreza1394/Accounting/actions/runs/40651677915) |
 
 ## امنیت، داده و سازگاری
 - Migration روی تاریخچهٔ ناسازگار THROW می‌کند و داده را حذف/اصلاح نمی‌کند.
@@ -57,5 +59,5 @@
 
 ## شناسه‌های Git
 - **Branch:** `fix/vendor-audit-hash-version-unique-parent`
-- **Commit:** پس از اجرای CI ثبت می‌شود
-- **Pull Request:** پس از ایجاد ثبت می‌شود
+- **Commit:** `4985908d395bb3856aec43d1a22d23555ae7d897`
+- **Pull Request:** [#212](https://github.com/hamidreza1394/Accounting/pull/212)
