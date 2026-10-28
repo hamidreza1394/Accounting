@@ -205,11 +205,15 @@ public static class VendorProvisioningEndpoints
             });
         }).RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.ApprovalsRequest));
 
-        group.MapGet("/{id:guid}/package", async (
-            Guid id, HttpContext context, IAuthorizationService authorization,
-            VendorDbContext db, CancellationToken ct) =>
+        group.MapPost("/{id:guid}/package/export", async (
+            Guid id, HttpContext context, IAntiforgery antiforgery,
+            IAuthorizationService authorization, VendorDbContext db,
+            IVendorAuditWriter audit, TimeProvider timeProvider, CancellationToken ct) =>
         {
-            var item = await db.ProvisioningRequests.AsNoTracking()
+            if (!await antiforgery.IsRequestValidAsync(context))
+                return Results.BadRequest(new { error = "invalid_antiforgery_token" });
+
+            var item = await db.ProvisioningRequests
                 .SingleOrDefaultAsync(value => value.Id == id, ct);
             if (item is null) return Results.NotFound();
             if (item.Status != "PendingDelivery" ||
@@ -229,11 +233,43 @@ public static class VendorProvisioningEndpoints
             if (!customerAccess.Succeeded || !installationAccess.Succeeded)
                 return Results.Forbid();
 
+            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            var now = timeProvider.GetUtcNow().ToUniversalTime();
+            if (item.DeliveredAtUtc is null)
+            {
+                item.DeliveredAtUtc = now;
+                item.UpdatedAtUtc = now;
+                try
+                {
+                    await db.SaveChangesAsync(ct);
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    return Results.Conflict(new { error = "stale_provisioning_version" });
+                }
+            }
+
+            await audit.AppendAsync(new VendorAuditWriteRequest(
+                (await new UserManager<VendorAdminUser>(
+                    context.RequestServices.GetRequiredService<IUserStore<VendorAdminUser>>(),
+                    context.RequestServices.GetRequiredService<Microsoft.Extensions.Options.IOptions<IdentityOptions>>(),
+                    context.RequestServices.GetRequiredService<IPasswordHasher<VendorAdminUser>>(),
+                    context.RequestServices.GetRequiredService<IEnumerable<IUserValidator<VendorAdminUser>>>(),
+                    context.RequestServices.GetRequiredService<IEnumerable<IPasswordValidator<VendorAdminUser>>>(),
+                    context.RequestServices.GetRequiredService<ILookupNormalizer>(),
+                    context.RequestServices.GetRequiredService<IdentityErrorDescriber>(),
+                    context.RequestServices.GetRequiredService<IServiceProvider>(),
+                    context.RequestServices.GetRequiredService<ILogger<UserManager<VendorAdminUser>>>())
+                    .GetUserAsync(context.User))?.Id ?? Guid.Empty,
+                "vendor.provisioning.package-exported", nameof(VendorProvisioningRequest),
+                item.Id.ToString("D"), System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
+
+            await tx.CommitAsync(ct);
             context.Response.Headers["Cache-Control"] = "no-store";
             context.Response.Headers["Pragma"] = "no-cache";
             return Results.Ok(new CustomerProvisioningPackage(
                 CustomerProvisioningPackageValidator.CurrentFormatVersion,
-                item.KeyId, item.Algorithm, item.PayloadJson, item.SignatureBase64));
+                item.KeyId!, item.Algorithm!, item.PayloadJson, item.SignatureBase64!));
         }).RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.CustomersRead));
 
         group.MapGet("/", async (
