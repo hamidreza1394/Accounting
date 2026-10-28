@@ -229,8 +229,8 @@ public static class VendorProvisioningEndpoints
             if (!customerAccess.Succeeded || !installationAccess.Succeeded)
                 return Results.Forbid();
 
-            context.Response.Headers.CacheControl = "no-store";
-            context.Response.Headers.Pragma = "no-cache";
+            context.Response.Headers["Cache-Control"] = "no-store";
+            context.Response.Headers["Pragma"] = "no-cache";
             return Results.Ok(new CustomerProvisioningPackage(
                 CustomerProvisioningPackageValidator.CurrentFormatVersion,
                 item.KeyId, item.Algorithm, item.PayloadJson, item.SignatureBase64));
