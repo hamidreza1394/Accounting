@@ -837,6 +837,219 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     .SingleAsync(item => item.Id == customerId, cancellationToken)).Status);
             }
 
+            // License issuance/revocation uses operation-specific permissions, resource versions,
+            // an independently trusted signer, and one transaction for approval + artifact + audit.
+            Guid operationLicenseId;
+            byte[] operationLicenseVersion;
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var customer = await db.Customers.SingleAsync(item => item.Id == customerId, cancellationToken);
+                customer.Status = "Active";
+                customer.UpdatedAtUtc = DateTimeOffset.UtcNow;
+                var installation = await db.Installations.SingleAsync(item => item.CustomerId == customerId, cancellationToken);
+                installation.Status = "Active";
+                installation.Name = "Ready for license operation";
+                var license = await db.Licenses.SingleAsync(item => item.CustomerId == customerId, cancellationToken);
+                operationLicenseId = license.Id;
+                await db.SaveChangesAsync(cancellationToken);
+                await db.Entry(license).ReloadAsync(cancellationToken);
+                operationLicenseVersion = license.RowVersion.ToArray();
+            }
+
+            Guid staleLicenseOperationId;
+            string staleLicenseOperationVersion;
+            using (var response = await PostWithTokenAsync(client, $"/api/vendor/license-operations/{operationLicenseId:D}",
+                new { action = "Issue", rowVersion = Convert.ToBase64String(operationLicenseVersion) },
+                antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                staleLicenseOperationId = json.RootElement.GetProperty("id").GetGuid();
+                staleLicenseOperationVersion = json.RootElement.GetProperty("rowVersion").GetString()!;
+            }
+
+            using (var duplicateResponse = await PostWithTokenAsync(client, $"/api/vendor/license-operations/{operationLicenseId:D}",
+                new { action = "Issue", rowVersion = Convert.ToBase64String(operationLicenseVersion) },
+                antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Conflict, duplicateResponse.StatusCode);
+                using var json = JsonDocument.Parse(await duplicateResponse.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("license_operation_already_pending", json.RootElement.GetProperty("error").GetString());
+            }
+
+            using (var selfApproval = await PostWithTokenAsync(client,
+                $"/api/vendor/license-operations/{staleLicenseOperationId:D}/decision",
+                new { decision = "Approved", rowVersion = staleLicenseOperationVersion, comment = (string?)null },
+                antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Forbidden, selfApproval.StatusCode);
+            }
+
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var installation = await db.Installations.SingleAsync(item => item.CustomerId == customerId, cancellationToken);
+                installation.Name = "Changed after license approval request";
+                await db.SaveChangesAsync(cancellationToken);
+            }
+
+            using (var staleDecision = await PostWithTokenAsync(reviewerClient,
+                $"/api/vendor/license-operations/{staleLicenseOperationId:D}/decision",
+                new { decision = "Approved", rowVersion = staleLicenseOperationVersion, comment = "stale related resource" },
+                reviewerAntiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Conflict, staleDecision.StatusCode);
+                using var json = JsonDocument.Parse(await staleDecision.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("approval_resource_stale", json.RootElement.GetProperty("error").GetString());
+            }
+
+            Guid validLicenseOperationId;
+            string validLicenseOperationVersion;
+            byte[] currentLicenseVersion;
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var license = await db.Licenses.AsNoTracking().SingleAsync(item => item.Id == operationLicenseId, cancellationToken);
+                Assert.Equal("Draft", license.Status);
+                currentLicenseVersion = license.RowVersion.ToArray();
+            }
+
+            using (var response = await PostWithTokenAsync(client, $"/api/vendor/license-operations/{operationLicenseId:D}",
+                new { action = "Issue", rowVersion = Convert.ToBase64String(currentLicenseVersion) },
+                antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                validLicenseOperationId = json.RootElement.GetProperty("id").GetGuid();
+                validLicenseOperationVersion = json.RootElement.GetProperty("rowVersion").GetString()!;
+            }
+
+            testSigner.ReturnInvalidSignature = true;
+            using (var invalidSignatureResponse = await PostWithTokenAsync(reviewerClient,
+                $"/api/vendor/license-operations/{validLicenseOperationId:D}/decision",
+                new { decision = "Approved", rowVersion = validLicenseOperationVersion, comment = "invalid test signature" },
+                reviewerAntiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.ServiceUnavailable, invalidSignatureResponse.StatusCode);
+                using var json = JsonDocument.Parse(await invalidSignatureResponse.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("license_signature_invalid", json.RootElement.GetProperty("error").GetString());
+            }
+            testSigner.ReturnInvalidSignature = false;
+
+            var auditFailureSwitch = factory.Services.GetRequiredService<AuditFailureSwitch>();
+            auditFailureSwitch.FailNextAppend = true;
+            using (var auditFailureResponse = await PostWithTokenAsync(reviewerClient,
+                $"/api/vendor/license-operations/{validLicenseOperationId:D}/decision",
+                new { decision = "Approved", rowVersion = validLicenseOperationVersion, comment = "verify atomic audit rollback" },
+                reviewerAntiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.InternalServerError, auditFailureResponse.StatusCode);
+            }
+
+            await using (var rollbackScope = factory.Services.CreateAsyncScope())
+            {
+                var db = rollbackScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                Assert.Equal("Draft", (await db.Licenses.AsNoTracking()
+                    .SingleAsync(item => item.Id == operationLicenseId, cancellationToken)).Status);
+                Assert.Equal("Pending", (await db.LicenseOperationRequests.AsNoTracking()
+                    .SingleAsync(item => item.Id == validLicenseOperationId, cancellationToken)).Status);
+                Assert.Empty(await db.LicenseArtifacts.AsNoTracking()
+                    .Where(item => item.LicenseId == operationLicenseId).ToListAsync(cancellationToken));
+                Assert.Equal(0, await db.AuditEvents.CountAsync(item =>
+                    item.ActionCode == "vendor.license.issued", cancellationToken));
+            }
+
+            Guid issuedArtifactId;
+            using (var issueResponse = await PostWithTokenAsync(reviewerClient,
+                $"/api/vendor/license-operations/{validLicenseOperationId:D}/decision",
+                new { decision = "Approved", rowVersion = validLicenseOperationVersion, comment = "approved by second administrator" },
+                reviewerAntiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, issueResponse.StatusCode);
+                using var json = JsonDocument.Parse(await issueResponse.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("Approved", json.RootElement.GetProperty("status").GetString());
+                issuedArtifactId = json.RootElement.GetProperty("artifactId").GetGuid();
+            }
+
+            using (var artifactResponse = await client.GetAsync(
+                $"/api/vendor/licenses/{operationLicenseId:D}/artifacts/latest", cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, artifactResponse.StatusCode);
+                var envelope = await artifactResponse.Content.ReadFromJsonAsync<LicenseEnvelope>(cancellationToken);
+                Assert.NotNull(envelope);
+                Assert.Equal(testSigner.Kid, envelope!.Kid);
+                var verifier = factory.Services.GetRequiredService<ILicenseSignatureVerifier>();
+                Assert.True(verifier.TryVerify(envelope, testSigner.PublicKeySpki, out var verificationError), verificationError);
+                Assert.True(CanonicalJson.TryParsePayload(envelope.PayloadJson, out var signedPayload, out var parseError), parseError);
+                Assert.NotNull(signedPayload);
+                Assert.Equal(operationLicenseId.ToString("N"), signedPayload!.LicenseId);
+                Assert.Equal(1, signedPayload.Sequence);
+            }
+
+            byte[] issuedLicenseVersion;
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var license = await db.Licenses.AsNoTracking().SingleAsync(item => item.Id == operationLicenseId, cancellationToken);
+                Assert.Equal("Issued", license.Status);
+                Assert.Equal(1, license.LastIssuedSequence);
+                issuedLicenseVersion = license.RowVersion.ToArray();
+                Assert.Equal("License", (await db.LicenseArtifacts.AsNoTracking()
+                    .SingleAsync(item => item.Id == issuedArtifactId, cancellationToken)).ArtifactType);
+            }
+
+            Guid revokeOperationId;
+            string revokeOperationVersion;
+            using (var response = await PostWithTokenAsync(client, $"/api/vendor/license-operations/{operationLicenseId:D}",
+                new { action = "Revoke", rowVersion = Convert.ToBase64String(issuedLicenseVersion) },
+                antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                revokeOperationId = json.RootElement.GetProperty("id").GetGuid();
+                revokeOperationVersion = json.RootElement.GetProperty("rowVersion").GetString()!;
+            }
+
+            Guid revocationArtifactId;
+            using (var response = await PostWithTokenAsync(reviewerClient,
+                $"/api/vendor/license-operations/{revokeOperationId:D}/decision",
+                new { decision = "Approved", rowVersion = revokeOperationVersion, comment = "revocation approved by second administrator" },
+                reviewerAntiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                revocationArtifactId = json.RootElement.GetProperty("artifactId").GetGuid();
+            }
+
+            using (var artifactResponse = await client.GetAsync(
+                $"/api/vendor/licenses/{operationLicenseId:D}/artifacts/latest", cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, artifactResponse.StatusCode);
+                var envelope = await artifactResponse.Content.ReadFromJsonAsync<LicenseRevocationEnvelope>(cancellationToken);
+                Assert.NotNull(envelope);
+                Assert.Equal(testSigner.Kid, envelope!.Kid);
+                var verifier = factory.Services.GetRequiredService<ILicenseSignatureVerifier>();
+                var cryptoEnvelope = new LicenseEnvelope(
+                    envelope.FormatVersion, envelope.Kid, envelope.Algorithm, envelope.PayloadJson, envelope.SignatureBase64);
+                Assert.True(verifier.TryVerify(cryptoEnvelope, testSigner.PublicKeySpki, out var verificationError), verificationError);
+            }
+
+            await using (var operationVerificationScope = factory.Services.CreateAsyncScope())
+            {
+                var db = operationVerificationScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var license = await db.Licenses.AsNoTracking().SingleAsync(item => item.Id == operationLicenseId, cancellationToken);
+                Assert.Equal("Revoked", license.Status);
+                Assert.Equal(1, license.LastIssuedSequence);
+                Assert.Equal(2, await db.LicenseArtifacts.CountAsync(item => item.LicenseId == operationLicenseId, cancellationToken));
+                Assert.Equal("Revocation", (await db.LicenseArtifacts.AsNoTracking()
+                    .SingleAsync(item => item.Id == revocationArtifactId, cancellationToken)).ArtifactType);
+                Assert.Equal(1, await db.AuditEvents.CountAsync(item =>
+                    item.ActionCode == "vendor.license.issued" && item.SubjectId == issuedArtifactId.ToString("D"), cancellationToken));
+                Assert.Equal(1, await db.AuditEvents.CountAsync(item =>
+                    item.ActionCode == "vendor.license.revocation-signed" && item.SubjectId == revocationArtifactId.ToString("D"), cancellationToken));
+            }
+
             await using (var raceVerificationScope = factory.Services.CreateAsyncScope())
             {
                 var db = raceVerificationScope.ServiceProvider.GetRequiredService<VendorDbContext>();
