@@ -19,6 +19,9 @@ public static class VendorPermissionCatalog
     public const string LicensesRead = "vendor.licenses.read";
     public const string LicensesManage = "vendor.licenses.manage";
     public const string LicensesIssue = "vendor.licenses.issue";
+    public const string LicensesRevoke = "vendor.licenses.revoke";
+    public const string LicensesIssueApprove = "vendor.licenses.issue.approve";
+    public const string LicensesRevokeApprove = "vendor.licenses.revoke.approve";
     public const string AdministratorsManage = "vendor.administrators.manage";
     public const string AuditRead = "vendor.audit.read";
     public const string ApprovalsRead = "vendor.approvals.read";
@@ -36,6 +39,9 @@ public static class VendorPermissionCatalog
         LicensesRead,
         LicensesManage,
         LicensesIssue,
+        LicensesRevoke,
+        LicensesIssueApprove,
+        LicensesRevokeApprove,
         AdministratorsManage,
         AuditRead,
         ApprovalsRead,
