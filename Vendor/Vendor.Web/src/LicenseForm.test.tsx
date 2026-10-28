@@ -96,7 +96,7 @@ describe('Vendor license metadata form', () => {
     render(<LicenseForm initial={{
       id: 'license-1', customerId: 'customer-1', contractId: 'contract-1', installationId: 'installation-1',
       rowVersion: 'AQIDBAUGBwg=', licenseNumber: 'LIC-001', productCode: 'FARANOU-BASE',
-      licenseKind: 'term', maxCompanies: 10, subsystems: ['finance'], graceDays: 30,
+      licenseKind: 'perpetual', maxCompanies: 10, subsystems: ['finance'], graceDays: 30,
       validFromUtc: '2026-01-01T00:00:00Z', validUntilUtc: '', status: 'Draft',
     }} canReadCustomers={false} canReadContracts={false} canReadInstallations={false}
       onCancel={vi.fn()} onSaved={onSaved} />);
@@ -112,7 +112,7 @@ describe('Vendor license metadata form', () => {
         installationId: 'installation-1',
         licenseNumber: 'LIC-UPDATED',
         productCode: 'FARANOU-BASE',
-        licenseKind: 'term',
+        licenseKind: 'perpetual',
         maxCompanies: 10,
         subsystems: ['finance'],
         graceDays: 30,
