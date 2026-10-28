@@ -108,11 +108,22 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
 
         builder.Entity<Domain.VendorLicense>(entity =>
         {
-            entity.ToTable("VendorLicenses");
+            entity.ToTable("VendorLicenses", table =>
+            {
+                table.HasCheckConstraint("CK_VendorLicenses_LicenseKind", "[LicenseKind] IN (N'term', N'perpetual')");
+                table.HasCheckConstraint("CK_VendorLicenses_MaxCompanies", "[MaxCompanies] IS NULL OR [MaxCompanies] >= 1");
+                table.HasCheckConstraint("CK_VendorLicenses_GraceDays", "[GraceDays] >= 0 AND [GraceDays] <= 90");
+                table.HasCheckConstraint("CK_VendorLicenses_LastIssuedSequence", "[LastIssuedSequence] >= 0");
+                table.HasCheckConstraint("CK_VendorLicenses_SubsystemsJson", "ISJSON([SubsystemsJson]) = 1");
+            });
             entity.HasKey(item => item.Id);
             entity.Property(item => item.LicenseNumber).HasMaxLength(64).IsRequired();
             entity.Property(item => item.ProductCode).HasMaxLength(64).IsRequired();
             entity.Property(item => item.Status).HasMaxLength(20).IsRequired();
+            entity.Property(item => item.LicenseKind).HasMaxLength(16).HasDefaultValue("term").IsRequired();
+            entity.Property(item => item.SubsystemsJson).HasMaxLength(512).HasDefaultValue("[]").IsRequired();
+            entity.Property(item => item.GraceDays).HasDefaultValue(30).IsRequired();
+            entity.Property(item => item.LastIssuedSequence).HasDefaultValue(0).IsRequired();
             entity.Property(item => item.CreatedAtUtc).HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
             entity.Property(item => item.RowVersion).IsRowVersion();
             entity.HasIndex(item => item.LicenseNumber).IsUnique();
