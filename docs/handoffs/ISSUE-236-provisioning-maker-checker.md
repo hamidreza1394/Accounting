@@ -39,5 +39,5 @@
 - `Vendor/Vendor.Host/Program.cs`
 - `tests/Vendor.Host.Tests/VendorCustomerMutationHttpIntegrationTests.cs`
 
-- **Branch:** feat/vendor-issue-236-provisioning-maker-checker
-- **PR:** https://github.com/hamidreza1394/Accounting/pull/239
+- **Branch:** feat/issue-236-provisioning-release-check
+- **PR:** https://github.com/hamidreza1394/Accounting/pull/240
