@@ -6,7 +6,9 @@ using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Security.Claims;
 using System.Text.Json;
+using Faranou.Licensing.Contracts;
 using Faranou.Vendor.Host.Authorization;
+using Faranou.Vendor.Host.Signing;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Domain;
 using Faranou.Vendor.Persistence.Auditing;
@@ -70,6 +72,10 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 webHost.ConfigureTestServices(services =>
                 {
                     services.RemoveAll<IVendorAuditWriter>();
+                    services.RemoveAll<ILicenseSigningProvider>();
+                    services.AddSingleton<SequencedTestSigningProvider>();
+                    services.AddSingleton<ILicenseSigningProvider>(provider =>
+                        provider.GetRequiredService<SequencedTestSigningProvider>());
                     services.AddSingleton<AuditFailureSwitch>();
                     services.AddSingleton<CustomerInsertRaceGate>();
                     services.ConfigureDbContext<VendorDbContext>((provider, options) =>
@@ -927,7 +933,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
 
             using (var provisioningDecisionResponse = await PostWithTokenAsync(reviewerClient,
                 $"/api/vendor/approvals/{provisioningApprovalId:D}/decision",
-                new { decision = "Approved", rowVersion = provisioningApprovalRowVersion, comment = "Must fail closed without a configured signer" },
+                new { decision = "Approved", rowVersion = provisioningApprovalRowVersion, comment = "First attempt must fail closed" },
                 reviewerAntiForgeryToken, cancellationToken))
             {
                 var provisioningDecisionBody = await provisioningDecisionResponse.Content.ReadAsStringAsync(cancellationToken);
@@ -942,6 +948,38 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 new { }, reviewerAntiForgeryToken, cancellationToken))
             {
                 Assert.Equal(HttpStatusCode.Conflict, packageResponse.StatusCode);
+            }
+
+            // The same pending approval is retryable after a transient signer outage.
+            using (var provisioningRetryResponse = await PostWithTokenAsync(reviewerClient,
+                $"/api/vendor/approvals/{provisioningApprovalId:D}/decision",
+                new { decision = "Approved", rowVersion = provisioningApprovalRowVersion, comment = "Retry after transient signer outage" },
+                reviewerAntiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, provisioningRetryResponse.StatusCode);
+                using var json = JsonDocument.Parse(await provisioningRetryResponse.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("Approved", json.RootElement.GetProperty("status").GetString());
+            }
+
+            using (var packageResponse = await PostWithTokenAsync(reviewerClient,
+                $"/api/vendor/provisioning-requests/{provisioningRecordId:D}/package/export",
+                new { }, reviewerAntiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, packageResponse.StatusCode);
+                Assert.Equal("no-store", packageResponse.Headers.CacheControl?.ToString());
+                using var json = JsonDocument.Parse(await packageResponse.Content.ReadAsStringAsync(cancellationToken));
+                var package = new CustomerProvisioningPackage(
+                    json.RootElement.GetProperty("formatVersion").GetInt32(),
+                    json.RootElement.GetProperty("keyId").GetString()!,
+                    json.RootElement.GetProperty("algorithm").GetString()!,
+                    json.RootElement.GetProperty("payloadJson").GetString()!,
+                    json.RootElement.GetProperty("signatureBase64").GetString()!);
+                var signer = factory.Services.GetRequiredService<SequencedTestSigningProvider>();
+                Assert.True(CustomerProvisioningPackageValidator.TryValidateAndVerify(
+                    package, signer.ExportPublicKey(), DateTimeOffset.UtcNow, out var parsedPayload, out var errorCode),
+                    $"Exported provisioning package failed signature validation: {errorCode}");
+                Assert.Equal(provisioningRequestId.ToString("D"), parsedPayload!.RequestId);
+                Assert.Equal("INSTALL-01", parsedPayload.InstallationId);
             }
 
             foreach (var approval in new[]
@@ -976,8 +1014,8 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 var installation = await db.Installations.AsNoTracking().SingleAsync(item => item.Id == installationId, cancellationToken);
                 Assert.Equal("Suspended", customer.Status);
                 Assert.Equal("Suspended", installation.Status);
-                Assert.Equal(2, await db.ApprovalRequests.CountAsync(item => item.Status == "Approved", cancellationToken));
-                Assert.Equal(2, await db.AuditEvents.CountAsync(item =>
+                Assert.Equal(3, await db.ApprovalRequests.CountAsync(item => item.Status == "Approved", cancellationToken));
+                Assert.Equal(3, await db.AuditEvents.CountAsync(item =>
                     item.ActionCode == "vendor.approval.approved", cancellationToken));
                 Assert.Equal(2, await db.AuditEvents.CountAsync(item =>
                     item.ActionCode == "vendor.customer.status-changed" || item.ActionCode == "vendor.installation.status-changed",
@@ -1196,6 +1234,32 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
         using var request = new HttpRequestMessage(HttpMethod.Put, path) { Content = JsonContent.Create(body) };
         request.Headers.TryAddWithoutValidation("X-CSRF-TOKEN", token);
         return await client.SendAsync(request, ct);
+    }
+
+    private sealed class SequencedTestSigningProvider : ILicenseSigningProvider, IDisposable
+    {
+        private readonly ECDsa _key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        private int _calls;
+
+        public ValueTask<LicenseSigningResult> SignAsync(
+            ReadOnlyMemory<byte> canonicalPayload,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (Interlocked.Increment(ref _calls) <= 2)
+                return ValueTask.FromResult(LicenseSigningResult.Unavailable());
+
+            var signature = _key.SignData(
+                canonicalPayload.Span,
+                HashAlgorithmName.SHA256,
+                DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
+            return ValueTask.FromResult(LicenseSigningResult.Success(
+                "test-provisioning-key", LicenseAlgorithms.EcdsaP256Sha256, signature));
+        }
+
+        public byte[] ExportPublicKey() => _key.ExportSubjectPublicKeyInfo();
+
+        public void Dispose() => _key.Dispose();
     }
 
     private static string GenerateTotpCode(string base32Secret)
