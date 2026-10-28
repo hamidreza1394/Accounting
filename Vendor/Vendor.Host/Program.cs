@@ -76,6 +76,7 @@ builder.Services.AddVendorPersistence(builder.Configuration);
 builder.Services.TryAddSingleton<ILicenseSigningProvider, UnavailableLicenseSigningProvider>();
 builder.Services.AddScoped<VendorLicenseEnvelopeFactory>();
 builder.Services.AddScoped<VendorLicenseIssuanceService>();
+builder.Services.AddScoped<VendorProvisioningIssuanceService>();
 // SignInManager belongs to the ASP.NET Core host layer, not the persistence class library.
 // Sign-in manager and token providers are host-layer Identity services; register them on the same IdentityBuilder.
 new IdentityBuilder(typeof(VendorAdminUser), builder.Services)
