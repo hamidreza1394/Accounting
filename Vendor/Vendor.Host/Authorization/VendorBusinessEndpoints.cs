@@ -1,5 +1,3 @@
-using System.Text.Json;
-using Faranou.Licensing.Contracts;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Auditing;
 using Faranou.Vendor.Persistence.Domain;
