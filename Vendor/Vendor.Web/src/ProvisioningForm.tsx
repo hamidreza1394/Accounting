@@ -18,6 +18,8 @@ type ProvisioningRequest = {
   confirmedAtUtc?: string | null;
   failureCode?: string | null;
   payloadSha256: string;
+  rowVersion: string;
+  approvalStatus?: string | null;
 };
 type PageResponse<T> = { items: T[] };
 type Props = {
@@ -314,10 +316,12 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
                 <td className="border-b px-3 py-2 tabular-nums">{formatDate(item.createdAtUtc)}</td>
                 <td className="border-b px-3 py-2 font-mono text-xs" dir="ltr">{item.requestId}</td>
                 {canRequestApproval && <td className="border-b px-3 py-2">
-                  {item.status === 'AwaitingSigner' && <Button type="button" size="sm" variant="outline"
-                    onClick={() => void requestApproval(item)} disabled={busy || approvalBusyId !== null || !item.rowVersion}>
-                    {approvalBusyId === item.id ? <><LoaderCircle size={14} className="animate-spin"/> در حال ارسال…</> : 'ارسال برای تأیید دو نفره'}
-                  </Button>}
+                  {item.approvalStatus === 'Pending'
+                    ? <span className="text-xs text-muted-foreground">در انتظار بررسی دو نفره</span>
+                    : item.status === 'AwaitingSigner' && <Button type="button" size="sm" variant="outline"
+                      onClick={() => void requestApproval(item)} disabled={busy || approvalBusyId !== null || !item.rowVersion}>
+                      {approvalBusyId === item.id ? <><LoaderCircle size={14} className="animate-spin"/> در حال ارسال…</> : 'ارسال برای تأیید دو نفره'}
+                    </Button>}
                 </td>}
               </tr>)}</tbody>
             </table>
