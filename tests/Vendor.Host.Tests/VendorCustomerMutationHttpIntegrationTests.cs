@@ -538,10 +538,9 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
             {
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
                 using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-                // At this point only the customer status request has been created.
-                // The license approval request is intentionally created later, after
-                // the license metadata RowVersion has been refreshed.
-                Assert.Equal(1, json.RootElement.GetProperty("totalCount").GetInt32());
+                // Customer status and provisioning issuance approvals are pending; the license
+                // approval is intentionally created later after its RowVersion is refreshed.
+                Assert.Equal(2, json.RootElement.GetProperty("totalCount").GetInt32());
                 Assert.Contains(json.RootElement.GetProperty("items").EnumerateArray(), item => item.GetProperty("id").GetGuid() == customerApprovalId);
             }
 
