@@ -929,8 +929,10 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 new { decision = "Approved", rowVersion = provisioningApprovalRowVersion, comment = "Must fail closed without a configured signer" },
                 reviewerAntiForgeryToken, cancellationToken))
             {
-                Assert.Equal(HttpStatusCode.ServiceUnavailable, provisioningDecisionResponse.StatusCode);
-                using var json = JsonDocument.Parse(await provisioningDecisionResponse.Content.ReadAsStringAsync(cancellationToken));
+                var provisioningDecisionBody = await provisioningDecisionResponse.Content.ReadAsStringAsync(cancellationToken);
+                Assert.True(provisioningDecisionResponse.StatusCode == HttpStatusCode.ServiceUnavailable,
+                    $"Expected signer-unavailable 503 but received {(int)provisioningDecisionResponse.StatusCode}: {provisioningDecisionBody}");
+                using var json = JsonDocument.Parse(provisioningDecisionBody);
                 Assert.Equal("provisioning_signing_unavailable", json.RootElement.GetProperty("error").GetString());
             }
 
