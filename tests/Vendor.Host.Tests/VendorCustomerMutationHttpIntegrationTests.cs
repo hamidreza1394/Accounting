@@ -559,6 +559,10 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 installationId = (Guid?)otherInstallationId,
                 licenseNumber = "IT-LIC-UPDATED-" + licenseId.ToString("N")[..8],
                 productCode = "FARANOU-PRO",
+                licenseKind = "term",
+                maxCompanies = 25,
+                subsystems = new[] { "finance", "sales" },
+                graceDays = 30,
                 validFromUtc = DateTimeOffset.UtcNow.AddDays(-1),
                 validUntilUtc = (DateTimeOffset?)DateTimeOffset.UtcNow.AddDays(365),
                 rowVersion = Convert.ToBase64String(licenseRowVersion)
