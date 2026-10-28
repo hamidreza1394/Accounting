@@ -511,7 +511,8 @@ public static class VendorBusinessEndpoints
         var codes = (subsystems ?? Array.Empty<string>())
             .Select(code => code?.Trim() ?? string.Empty)
             .ToArray();
-        if (codes.Any(code => !LicenseSubsystemCodes.IsAllowed(code)) ||
+        if (codes.Length == 0 ||
+            codes.Any(code => !LicenseSubsystemCodes.IsAllowed(code)) ||
             codes.Distinct(StringComparer.Ordinal).Count() != codes.Length)
         {
             return false;
