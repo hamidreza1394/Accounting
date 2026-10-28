@@ -158,7 +158,7 @@ export function BusinessLists({ section, permissions = [] }: { section: Business
   const canReadCustomers = permissions.includes('vendor.customers.read');
   const canReadContracts = permissions.includes('vendor.contracts.read');
   const canReadInstallations = permissions.includes('vendor.installations.read');
-  const canProvisionCustomers = section === 'customers' && canManageCustomers && canManageInstallations && canReadCustomers && canReadInstallations;
+  const canProvisionCustomers = section === 'customers' && canManageCustomers && permissions.includes('vendor.installations.manage') && canReadCustomers && canReadInstallations;
 
   function openCreateCustomer() {
     setEditingCustomer(null);
