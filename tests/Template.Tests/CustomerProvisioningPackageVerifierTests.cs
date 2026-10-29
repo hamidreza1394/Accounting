@@ -83,9 +83,10 @@ public sealed class CustomerProvisioningPackageVerifierTests
     {
         using var signingKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         var verifier = CreateVerifier(signingKey, "customer-001", "install-001");
-        var package = Sign(signingKey, Sample("customer-001", "install-001")) with
+        var signedPackage = Sign(signingKey, Sample("customer-001", "install-001"));
+        var package = signedPackage with
         {
-            PayloadJson = Sign(signingKey, Sample("customer-001", "install-001")).PayloadJson
+            PayloadJson = signedPackage.PayloadJson
                 .Replace("Company Example", "Other Company", StringComparison.Ordinal)
         };
 
