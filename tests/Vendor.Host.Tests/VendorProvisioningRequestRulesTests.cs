@@ -6,6 +6,17 @@ namespace Faranou.Vendor.Host.Tests;
 
 public sealed class VendorProvisioningRequestRulesTests
 {
+
+    [Fact]
+    public void InitialAdminEmail_IsRequiredAndMustBeValid()
+    {
+        Assert.Equal("invalid_provisioning_admin_email",
+            VendorProvisioningRequestRules.Validate(ValidRequest() with { InitialAdminEmail = null }));
+        Assert.Equal("invalid_provisioning_admin_email",
+            VendorProvisioningRequestRules.Validate(ValidRequest() with { InitialAdminEmail = "not-an-email" }));
+        Assert.Null(VendorProvisioningRequestRules.Validate(ValidRequest() with { InitialAdminEmail = "admin@example.com" }));
+    }
+
     [Fact]
     public void ValidConfiguration_IsAccepted()
     {
@@ -116,7 +127,8 @@ public sealed class VendorProvisioningRequestRulesTests
             request.FiscalPeriodTitle,
             request.FiscalPeriodStartDate,
             request.FiscalPeriodEndDate,
-            request.ParentCompanyReference);
+            request.ParentCompanyReference,
+            request.InitialAdminEmail);
 
         Assert.True(VendorProvisioningRequestRules.MatchesExisting(payload, request, "customer-001", "install-001"));
     }
@@ -140,7 +152,8 @@ public sealed class VendorProvisioningRequestRulesTests
             request.FiscalPeriodTitle,
             request.FiscalPeriodStartDate,
             request.FiscalPeriodEndDate,
-            request.ParentCompanyReference);
+            request.ParentCompanyReference,
+            request.InitialAdminEmail);
 
         Assert.False(VendorProvisioningRequestRules.MatchesExisting(
             payload, request with { CompanyName = "Different Company" }, "customer-001", "install-001"));
@@ -156,5 +169,7 @@ public sealed class VendorProvisioningRequestRulesTests
         new[] { "inventory", "finance" },
         "سال مالی ۱۴۰۵",
         new DateOnly(2026, 3, 21),
-        new DateOnly(2027, 3, 20));
+        new DateOnly(2027, 3, 20),
+        null,
+        "admin@example.com");
 }

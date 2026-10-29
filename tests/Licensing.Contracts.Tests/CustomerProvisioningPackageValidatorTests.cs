@@ -251,6 +251,32 @@ public sealed class CustomerProvisioningPackageValidatorTests
             json, Now, out _, out _));
     }
 
+
+    [Fact]
+    public void V3Payload_RequiresAValidInitialAdminEmailAndPreservesV2Compatibility()
+    {
+        var v3 = SampleV3();
+        var json = CustomerProvisioningCanonicalJson.Serialize(v3);
+
+        Assert.True(CustomerProvisioningPackageValidator.TryValidatePayload(
+            json, Now, out var parsed, out var error), error);
+        Assert.Equal("admin@example.com", parsed!.InitialAdminEmail);
+
+        var missingEmail = CustomerProvisioningCanonicalJson.Serialize(v3 with { InitialAdminEmail = null });
+        Assert.False(CustomerProvisioningPackageValidator.TryValidatePayload(
+            missingEmail, Now, out _, out _));
+
+        var malformedEmail = CustomerProvisioningCanonicalJson.Serialize(v3 with { InitialAdminEmail = "admin at example.com" });
+        Assert.False(CustomerProvisioningPackageValidator.TryValidatePayload(
+            malformedEmail, Now, out _, out _));
+
+        var v2 = SampleV2();
+        var v2Json = CustomerProvisioningCanonicalJson.Serialize(v2);
+        Assert.True(CustomerProvisioningPackageValidator.TryValidatePayload(
+            v2Json, Now, out var parsedV2, out var v2Error), v2Error);
+        Assert.Null(parsedV2!.InitialAdminEmail);
+    }
+
     [Fact]
     public void PlaintextPasswordIsNotPartOfProvisioningPayloadContract()
     {
@@ -286,9 +312,15 @@ public sealed class CustomerProvisioningPackageValidatorTests
 
     private static CustomerProvisioningPayload SampleV2() => Sample() with
     {
-        SchemaVersion = CustomerProvisioningPackageValidator.CurrentPayloadSchemaVersion,
+        SchemaVersion = 2,
         FiscalPeriodTitle = "سال مالی ۱۴۰۵",
         FiscalPeriodStartDate = new DateOnly(2026, 1, 1),
         FiscalPeriodEndDate = new DateOnly(2027, 1, 1)
+    };
+
+    private static CustomerProvisioningPayload SampleV3() => SampleV2() with
+    {
+        SchemaVersion = CustomerProvisioningPackageValidator.CurrentPayloadSchemaVersion,
+        InitialAdminEmail = "admin@example.com"
     };
 }

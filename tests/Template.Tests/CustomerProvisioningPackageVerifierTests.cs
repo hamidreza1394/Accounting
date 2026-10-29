@@ -203,6 +203,7 @@ public sealed class CustomerProvisioningPackageVerifierTests
             "سال مالی ۱۴۰۵",
             new DateOnly(2026, 3, 21),
             new DateOnly(2027, 3, 20),
-            null);
+            null,
+            "admin@example.com");
     }
 }

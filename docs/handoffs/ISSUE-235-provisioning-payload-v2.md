@@ -59,3 +59,22 @@
 - Branch: `feat/customer-provisioning-consumer`
 - Migration: `20261029161402_AddCustomerProvisioningClaims`
 - Pull Request: https://github.com/hamidreza1394/Accounting/pull/302 (Draft; do not merge yet).
+
+## Schema v3 follow-up — 2026-10-29
+- Added `InitialAdminEmail` to schema v3 only. Canonical JSON for schema v1/v2 is unchanged.
+- Vendor onboarding now collects the initial administrator email, validates it server-side, includes it in the signed v3 payload, and compares it during same-request idempotency checks.
+- This closes a concrete contract gap: the customer `Users.EmailAddress` field is required, so the consumer must not invent a placeholder email.
+- The v3 email field is not a password or bootstrap secret. No credentials are sent or persisted by this change.
+- Added contract, Vendor validation and UI submission regression tests. Awaiting CI for the latest head.
+- Still not complete: transactional apply, secure one-time enrollment delivery, forced password-change enforcement, subsidiary parent-reference resolution, signed acknowledgement generation, and SQL Server replay/concurrency/rollback integration coverage.
+
+
+## PR separation note — 2026-10-29
+- The base customer trust verifier and claim-schema work is already present on `main`; schema-v3 administrator identity changes are isolated in [PR #303](https://github.com/hamidreza1394/Accounting/pull/303), branch `feat/provisioning-schema-v3-admin-email`.
+- PR #303 is Draft. Its CI must be checked on the final code head. It does not claim that the actual transactional consumer or enrollment workflow is complete.
+
+
+## Latest test-fixture correction — PR #304
+- Updated the three provisioning HTTP integration payloads to include the new schema-v3 administrator email.
+- Updated `CustomerProvisioningPackageVerifierTests.Sample` to supply the required email. This preserves the strict v3 requirement rather than allowing missing identity data.
+- Current PR: [#304](https://github.com/hamidreza1394/Accounting/pull/304), branch `feat/provisioning-schema-v3-admin-email-verified`; verify CI on the latest head before proceeding.

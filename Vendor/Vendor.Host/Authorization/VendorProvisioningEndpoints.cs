@@ -216,7 +216,8 @@ public static class VendorProvisioningEndpoints
                 request.FiscalPeriodTitle!.Trim(),
                 request.FiscalPeriodStartDate,
                 request.FiscalPeriodEndDate,
-                request.ParentCompanyReference?.Trim());
+                request.ParentCompanyReference?.Trim(),
+                request.InitialAdminEmail!.Trim());
             var payloadJson = CustomerProvisioningCanonicalJson.Serialize(payload);
             var payloadHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payloadJson))).ToLowerInvariant();
 

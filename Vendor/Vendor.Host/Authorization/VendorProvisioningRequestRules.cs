@@ -1,4 +1,5 @@
 using Faranou.Licensing.Contracts;
+using System.Net.Mail;
 
 namespace Faranou.Vendor.Host.Authorization;
 
@@ -13,7 +14,8 @@ public sealed record CreateVendorProvisioningRequest(
     string? FiscalPeriodTitle = null,
     DateOnly? FiscalPeriodStartDate = null,
     DateOnly? FiscalPeriodEndDate = null,
-    string? ParentCompanyReference = null);
+    string? ParentCompanyReference = null,
+    string? InitialAdminEmail = null);
 
 /// <summary>Pure validation rules for a Vendor-side provisioning request; no customer DB access.</summary>
 public static class VendorProvisioningRequestRules
@@ -40,6 +42,14 @@ public static class VendorProvisioningRequestRules
             string.IsNullOrWhiteSpace(adminUserName) || adminUserName.Length is < 3 or > 64 ||
             adminUserName.Any(char.IsControl))
             return "invalid_provisioning_configuration";
+
+        var adminEmail = request.InitialAdminEmail?.Trim();
+        if (string.IsNullOrWhiteSpace(adminEmail) ||
+            adminEmail.Length > 254 ||
+            adminEmail.Any(char.IsControl) ||
+            !MailAddress.TryCreate(adminEmail, out var parsedEmail) ||
+            !string.Equals(parsedEmail.Address, adminEmail, StringComparison.OrdinalIgnoreCase))
+            return "invalid_provisioning_admin_email";
 
         if (request.Subsystems is null || request.Subsystems.Count is < 1 or > 4 ||
             request.Subsystems.Any(code => string.IsNullOrWhiteSpace(code) || !Subsystems.Contains(code)) ||
@@ -84,6 +94,7 @@ public static class VendorProvisioningRequestRules
                string.Equals(existing.CompanyName, request.CompanyName?.Trim(), StringComparison.Ordinal) &&
                string.Equals(existing.CompanyType, request.CompanyType?.Trim(), StringComparison.Ordinal) &&
                string.Equals(existing.InitialAdminUserName, request.InitialAdminUserName?.Trim(), StringComparison.Ordinal) &&
+               string.Equals(existing.InitialAdminEmail, request.InitialAdminEmail?.Trim(), StringComparison.OrdinalIgnoreCase) &&
                existing.SchemaVersion == CustomerProvisioningPackageValidator.CurrentPayloadSchemaVersion &&
                string.Equals(existing.FiscalPeriodTitle, request.FiscalPeriodTitle?.Trim(), StringComparison.Ordinal) &&
                existing.FiscalPeriodStartDate == request.FiscalPeriodStartDate &&
