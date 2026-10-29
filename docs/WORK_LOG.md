@@ -1152,3 +1152,15 @@
 - **امنیت/داده:** هیچ رمز، password hash، secret، private key، Connection String، Migration یا تغییر Server/** اضافه نشده است. Consumer، replay protection و enrollment مدیر اولیه هنوز پیاده‌سازی نشده‌اند.
 - **آزمون واقعی:** dotnet test و git diff --check در این نشست اجرا نشدند؛ checkout محلی متصل به مخزن/SDK در دسترس نبود. نتیجهٔ CI باید قبل از Merge بررسی شود.
 - **Branch:** feat/provisioning-payload-v2. PR بعد از ثبت این گزارش ساخته می‌شود.
+
+
+## 2026-10-29 — Vendor provisioning payload v2 onboarding integration (Issue #228)
+
+- **Baseline:** `main` / `feat/vendor-remaining-work` were aligned by a fast-forward to `341e19a8cb93953dd9be6e9257f9ad504fcf96f6`; no force update or history rewrite.
+- **Vendor changes:** the onboarding API now creates schema-v2 payloads with fiscal-period title/start/end and parent-company reference; server validation rejects missing/invalid period ranges and invalid parent-reference rules. Existing request-ID idempotency compares the new fields.
+- **UI:** the Persian RTL provisioning form captures the initial fiscal period, conditionally requires the parent reference for subsidiaries, sends no password or password hash, and retains truthful pending/confirmed labels.
+- **Tests added/updated:** pure validation tests, idempotency coverage, SQL Server HTTP integration request fixtures and UI tests for schema-v2 metadata and subsidiary parent reference.
+- **Architecture:** D-051 records the owner-directed signed-package flow for #228/#235; OD-18 now references that decision. This does not claim that the customer-side consumer exists.
+- **Safety:** no `Server/**`, customer DB schema, customer migration, private key, KMS/HSM adapter, or fake audit sink was added in this Vendor-only slice. Production signing remains fail-closed (#236); independent audit destination remains blocked (#107).
+- **Verification:** local .NET/npm tests and `git diff --check` were not executable through the GitHub-only session. CI must run on the PR head; no claim of passing tests is made before observing those checks.
+- **Remaining:** customer-side consumer, unique nonce/request claim, transaction/recovery, one-time enrollment, signed acknowledgement generation, and offline revocation enforcement remain separate customer-side work under #235/#214.
