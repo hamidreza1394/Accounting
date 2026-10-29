@@ -18,6 +18,13 @@ const contractPage = page([{ id: 'contract-1', customerId: 'customer-1', contrac
 const installationPage = page([{ id: 'installation-1', customerId: 'customer-1', installationCode: 'INST-001', name: 'نصب اصلی', status: 'Active' }]);
 
 describe('Vendor license metadata form', () => {
+  it('keeps native browser constraint validation enabled', () => {
+    render(<LicenseForm canReadCustomers canReadContracts canReadInstallations onCancel={vi.fn()} onSaved={vi.fn()} />);
+
+    const form = screen.getByRole('button', { name: 'ثبت لایسنس پیش‌نویس' }).closest('form');
+    expect(form).not.toHaveAttribute('novalidate');
+  });
+
   it('creates a Draft license with customer-owned optional references, UTC dates and fresh antiforgery', async () => {
     const onSaved = vi.fn();
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {

@@ -187,7 +187,7 @@ export function ContractForm({ initial, canReadCustomers, onCancel, onSaved }: C
       <CardDescription>قرارداد جدید در وضعیت پیش‌نویس ثبت می‌شود؛ فقط قراردادهای پیش‌نویس قابل ویرایش هستند. این فرم دیتابیس حسابداری مشتری را تغییر نمی‌دهد.</CardDescription>
     </CardHeader>
     <CardContent className="pt-4">
-      <form className="space-y-4" onSubmit={submit} noValidate>
+      <form className="space-y-4" onSubmit={submit}>
         {editing ? (
           <div className="grid gap-2">
             <span className="text-sm font-semibold">مشتری مرتبط</span>

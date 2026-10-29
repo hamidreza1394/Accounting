@@ -173,7 +173,7 @@ export function InstallationForm({ initial, canReadCustomers, onCancel, onSaved 
       <CardDescription>این فرم فقط فرادادهٔ نصب را در سامانه مرکزی ثبت می‌کند؛ سرور یا دیتابیس حسابداری مشتری را ایجاد یا تغییر نمی‌دهد.</CardDescription>
     </CardHeader>
     <CardContent className="pt-4">
-      <form className="space-y-4" onSubmit={submit} noValidate>
+      <form className="space-y-4" onSubmit={submit}>
         {editing ? (
           <div className="grid gap-2" dir="rtl">
             <span className="text-sm font-semibold">مشتری مرتبط</span>
