@@ -6,7 +6,7 @@ namespace Faranou.Vendor.Host.Signing;
 /// </summary>
 public static class ProvisioningSigningExecution
 {
-    public static async Task<Faranou.Licensing.Contracts.LicenseSigningResult> SignWithTimeoutAsync(
+    public static async Task<LicenseSigningResult> SignWithTimeoutAsync(
         IProvisioningSigningProvider provider,
         ReadOnlyMemory<byte> canonicalPayload,
         TimeSpan timeout,
@@ -17,7 +17,7 @@ public static class ProvisioningSigningExecution
             throw new ArgumentOutOfRangeException(nameof(timeout), "Signing timeout must be positive and finite.");
 
         using var providerCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        Task<Faranou.Licensing.Contracts.LicenseSigningResult> signingTask;
+        Task<LicenseSigningResult> signingTask;
         try
         {
             signingTask = provider.SignAsync(canonicalPayload, providerCancellation.Token).AsTask();
@@ -26,12 +26,12 @@ public static class ProvisioningSigningExecution
         catch (TimeoutException)
         {
             providerCancellation.Cancel();
-            return Faranou.Licensing.Contracts.LicenseSigningResult.Unavailable();
+            return LicenseSigningResult.Unavailable();
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             providerCancellation.Cancel();
-            return Faranou.Licensing.Contracts.LicenseSigningResult.Unavailable();
+            return LicenseSigningResult.Unavailable();
         }
     }
 }
