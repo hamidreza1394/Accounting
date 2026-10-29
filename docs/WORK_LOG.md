@@ -1172,3 +1172,9 @@
 - Added tests for timeout, provider cancellation, caller cancellation, and invalid timeout values.
 - No KMS/HSM provider, private key, software-key fallback, customer DB change, or independent audit sink was added.
 - Local tests were not run in this GitHub-only session; CI must validate the PR head.
+
+## 2026-10-29 — Issue #107: provider-neutral checkpoint recovery runbook
+- Added `docs/runbooks/vendor-audit-checkpoint-recovery.md` with pre-deployment verification, SQL backup plus independent checkpoint preservation, restore reconciliation, sink outage handling, identity separation and Production exit criteria.
+- The runbook explicitly forbids local-file/Vendor-DB fallback and never lowers an external checkpoint to match an older restored database.
+- No provider-specific adapter, secret, credential, migration or fake Production sink was added. #107 remains blocked on provider selection and operational proof.
+- Documentation-only change; no local tests were run in this GitHub-only session.
