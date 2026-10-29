@@ -1189,3 +1189,14 @@
 - PR #302 remains draft. The current changes are not end-to-end provisioning and must not be merged yet.
 - Still missing: atomic claim + actual company/fiscal-period/role/membership application in one transaction, enrollment flow with forced password change, signed customer acknowledgement, parent-company external-reference mapping, SQL Server replay/concurrency/rollback tests, and final .NET CI on the current HEAD.
 - No plaintext password, password hash, private key, customer DB connection, or signing fallback was added.
+
+
+## 2026-10-29 — Issue #235: اصلاح RowVersion در مدل EF و Snapshot
+
+- **علت:** CI در run `40913297367` در مرحله Test شکست خورد؛ مدل runtime ویژگی `ProvisioningRequestClaim.RowVersion` را با `.IsRowVersion()` تنظیم می‌کرد اما ابزار مدل سفارشی `byte[]` و metadata rowversion را در Snapshot ثبت نمی‌کرد، که باعث `PendingModelChangesWarning` می‌شد.
+- **اصلاح:** استخراج‌کننده مدل، parser Snapshot و مولد Snapshot برای `byte[]` و `rowversion` اصلاح شدند؛ Snapshot و Designer مربوط به Migration موجود به‌روزرسانی شدند. Migration اجرایی و دیتابیس مشتری تغییر نکردند.
+- **تست بازگشت:** تست `ProvisioningClaims_RowVersionIsConfiguredAsSqlServerConcurrencyToken` اضافه شد تا CLR type، column type، concurrency token و `ValueGenerated.OnAddOrUpdate` را کنترل کند.
+- **اعتبارسنجی:** CI قبلی ناموفق است. در این نشست اجرای محلی .NET و اسکریپت‌های Python ممکن نشد چون شبکه نتوانست `github.com` را resolve کند؛ CI سبز روی آخرین HEAD هنوز تأیید نشده و باید پیش از ادغام بررسی شود.
+- **امنیت:** هشدار EF غیرفعال نشد، تستی حذف نشد و هیچ migration روی دیتابیس مشتری اجرا نشد.
+- **باقی‌مانده:** نتیجه CI روی آخرین HEAD؛ سپس تکمیل consumer تراکنشی، replay/idempotency، enrollment مدیر اولیه، acknowledgement امضاشده و نگاشت شرکت مادر. PR #302 همچنان Draft است و نباید merge شود.
+- **Branch:** `feat/customer-provisioning-consumer`; **PR:** https://github.com/hamidreza1394/Accounting/pull/302.
