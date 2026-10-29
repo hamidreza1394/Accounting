@@ -14,6 +14,45 @@ public sealed class VendorProvisioningRequestRulesTests
         Assert.Null(error);
     }
 
+    [Fact]
+    public void MissingOrInvalidFiscalPeriod_IsRejected()
+    {
+        var request = ValidRequest();
+
+        Assert.Equal("invalid_provisioning_fiscal_period",
+            VendorProvisioningRequestRules.Validate(request with { FiscalPeriodTitle = null }));
+        Assert.Equal("invalid_provisioning_fiscal_period",
+            VendorProvisioningRequestRules.Validate(request with
+            {
+                FiscalPeriodStartDate = new DateOnly(2027, 1, 1),
+                FiscalPeriodEndDate = new DateOnly(2026, 1, 1)
+            }));
+    }
+
+    [Fact]
+    public void ParentCompanyReference_IsRequiredOnlyForSubsidiaries()
+    {
+        var request = ValidRequest();
+
+        Assert.Equal("invalid_provisioning_parent_company_reference",
+            VendorProvisioningRequestRules.Validate(request with
+            {
+                CompanyType = "subsidiary",
+                ParentCompanyReference = null
+            }));
+        Assert.Equal("invalid_provisioning_parent_company_reference",
+            VendorProvisioningRequestRules.Validate(request with
+            {
+                CompanyType = "independent",
+                ParentCompanyReference = "parent-001"
+            }));
+        Assert.Null(VendorProvisioningRequestRules.Validate(request with
+        {
+            CompanyType = "subsidiary",
+            ParentCompanyReference = "parent-001"
+        }));
+    }
+
     [Theory]
     [InlineData("future-module")]
     [InlineData("finance")]
@@ -63,7 +102,7 @@ public sealed class VendorProvisioningRequestRulesTests
     {
         var request = ValidRequest();
         var payload = new CustomerProvisioningPayload(
-            1,
+            CustomerProvisioningPackageValidator.CurrentPayloadSchemaVersion,
             request.RequestId.ToString("D"),
             "customer-001",
             "install-001",
@@ -73,7 +112,11 @@ public sealed class VendorProvisioningRequestRulesTests
             request.Subsystems!,
             DateTimeOffset.UtcNow.AddMinutes(-1),
             DateTimeOffset.UtcNow.AddHours(1),
-            "abcdefghijklmnopqrstuvwxyz0123456789_-");
+            "abcdefghijklmnopqrstuvwxyz0123456789_-",
+            request.FiscalPeriodTitle,
+            request.FiscalPeriodStartDate,
+            request.FiscalPeriodEndDate,
+            request.ParentCompanyReference);
 
         Assert.True(VendorProvisioningRequestRules.MatchesExisting(payload, request, "customer-001", "install-001"));
     }
@@ -106,5 +149,8 @@ public sealed class VendorProvisioningRequestRulesTests
         "Company Example",
         "independent",
         "initial-admin",
-        new[] { "inventory", "finance" });
+        new[] { "inventory", "finance" },
+        "سال مالی ۱۴۰۵",
+        new DateOnly(2026, 3, 21),
+        new DateOnly(2027, 3, 20));
 }
