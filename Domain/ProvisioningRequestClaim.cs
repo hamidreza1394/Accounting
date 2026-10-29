@@ -24,6 +24,7 @@ public sealed class ProvisioningRequestClaim : Seedwork.Entity
 
     /// <summary>SHA-256 digest only; the one-time enrollment token is never persisted in plaintext.</summary>
     public string EnrollmentTokenHash { get; set; } = string.Empty;
+    /// <summary>UTC deadline after which the one-time enrollment token is rejected.</summary>
     public DateTime EnrollmentExpiresAtUtc { get; set; }
     public DateTime? EnrollmentConsumedAtUtc { get; set; }
     public DateTime AppliedAtUtc { get; set; }
