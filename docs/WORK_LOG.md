@@ -1043,5 +1043,6 @@
 - **اصلاح:** فهرست UI به نصب‌های دارای وضعیت `Active` محدود شد؛ انتخاب پیش‌فرض از میان نصب‌های فعال انجام می‌شود. اگر نصب فعالی وجود نداشته باشد، پیام راهنما صریحاً ثبت/فعال‌سازی نصب را درخواست می‌کند.
 - **تست رگرسیون:** تست UI نصب غیرفعال در پاسخ API را کنار نصب فعال قرار می‌دهد و بررسی می‌کند نصب غیرفعال قابل انتخاب نیست و اولین نصب فعال پیش‌فرض است.
 - **امنیت/داده:** اعتبارسنجی سمت سرور بدون تغییر باقی می‌ماند؛ این اصلاح صرفاً UX و دفاع لایهٔ UI است. بدون تغییر schema، migration، API، `Server/**` یا دیتابیس مشتری.
-- **اعتبارسنجی:** تست محلی در این نشست GitHub-only اجرا نشده؛ باید Vendor CI روی SHA نهایی PR موفق شود. وضعیت نهایی پس از CI ثبت می‌شود.
+- **اعتبارسنجی نهایی روی SHA `57d49c145445f13c356f1619571aa571bb8ed223`:** Vendor CI موفق [run 40829071732](https://github.com/hamidreza1394/Accounting/actions/runs/40829071732)، .NET CI با تمام jobها از جمله build-and-test، Linux publish، E2E و Windows publish موفق [run 40829071746](https://github.com/hamidreza1394/Accounting/actions/runs/40829071746)، CodeQL موفق [run 40829067402](https://github.com/hamidreza1394/Accounting/actions/runs/40829067402) و Semgrep موفق [run 40829071675](https://github.com/hamidreza1394/Accounting/actions/runs/40829071675). تست محلی Vitest در این نشست اجرا نشده است؛ آزمون Vendor CI موفق است.
+- **ادغام:** PR #273 با روش squash ادغام شد؛ merge commit: `a37b1c32b84d7622dbb7770f38aa852979058ae3`.
 - **Handoff:** `docs/handoffs/ISSUE-228-active-installation-filter.md`.
