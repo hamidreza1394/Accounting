@@ -485,7 +485,9 @@ public static class VendorProvisioningEndpoints
     private static ProvisioningRequestResponse ToResponse(VendorProvisioningRequest item) =>
         new(item.Id, item.CustomerId, item.InstallationId, item.RequestId, item.Status,
             item.CreatedAtUtc, item.UpdatedAtUtc, item.ConfirmedAtUtc, item.FailureCode,
-            item.PayloadSha256, Convert.ToBase64String(item.RowVersion));
+            item.PayloadSha256, Convert.ToBase64String(item.RowVersion),
+            AcknowledgementResult: item.AcknowledgementResult,
+            AcknowledgedAtUtc: item.AcknowledgedAtUtc);
 
     private static bool IsUniqueConstraintViolation(DbUpdateException exception)
     {
@@ -511,6 +513,8 @@ public sealed record ProvisioningRequestResponse(
     string? FailureCode,
     string PayloadSha256,
     string RowVersion,
-    string? ApprovalStatus = null);
+    string? ApprovalStatus = null,
+    string? AcknowledgementResult = null,
+    DateTimeOffset? AcknowledgedAtUtc = null);
 
 public sealed record CreateVendorProvisioningApprovalRequest(string? RowVersion);
