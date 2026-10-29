@@ -112,11 +112,12 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
         const requestBody = await requestResponse.json() as PageResponse<ProvisioningRequest>;
         if (cancelled) return;
         const nextInstallations = Array.isArray(installationBody.items) ? installationBody.items : [];
-        setInstallations(nextInstallations);
+        const activeInstallations = nextInstallations.filter(item => item.status === 'Active');
+        setInstallations(activeInstallations);
         setRequests(Array.isArray(requestBody.items) ? requestBody.items : []);
-        setInstallationId(current => nextInstallations.some(item => item.id === current)
+        setInstallationId(current => activeInstallations.some(item => item.id === current)
           ? current
-          : nextInstallations[0]?.id ?? '');
+          : activeInstallations[0]?.id ?? '');
       } catch (reason) {
         if (!cancelled) setError(reason instanceof Error ? reason.message : 'دریافت اطلاعات ناموفق بود.');
       } finally {
@@ -304,7 +305,7 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
               <option value="">انتخاب نصب</option>
               {installations.map(item => <option key={item.id} value={item.id}>{item.name} ({item.installationCode})</option>)}
             </select>
-            {!loading && installations.length === 0 && <p className="text-xs text-muted-foreground">ابتدا یک نصب برای این مشتری ثبت کنید.</p>}
+            {!loading && installations.length === 0 && <p className="text-xs text-muted-foreground">برای این مشتری نصب فعالی وجود ندارد؛ ابتدا یک نصب فعال ثبت یا فعال کنید.</p>}
           </div>
           <div className="space-y-2">
             <label htmlFor="provisioning-company-name" className="text-sm font-medium">نام شرکت حسابداری</label>
