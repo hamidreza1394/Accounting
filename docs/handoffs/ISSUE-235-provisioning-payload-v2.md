@@ -67,3 +67,8 @@
 - The v3 email field is not a password or bootstrap secret. No credentials are sent or persisted by this change.
 - Added contract, Vendor validation and UI submission regression tests. Awaiting CI for the latest head.
 - Still not complete: transactional apply, secure one-time enrollment delivery, forced password-change enforcement, subsidiary parent-reference resolution, signed acknowledgement generation, and SQL Server replay/concurrency/rollback integration coverage.
+
+
+## PR separation note — 2026-10-29
+- The base customer trust verifier and claim-schema work is already present on `main`; schema-v3 administrator identity changes are isolated in [PR #303](https://github.com/hamidreza1394/Accounting/pull/303), branch `feat/provisioning-schema-v3-admin-email`.
+- PR #303 is Draft. Its CI must be checked on the final code head. It does not claim that the actual transactional consumer or enrollment workflow is complete.
