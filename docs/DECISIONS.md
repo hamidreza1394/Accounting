@@ -785,3 +785,16 @@ Cookie خودکفاست و بدون بررسی مجدد تا انقضا معتب
 - **پیامدها:** دسترسی به گرید و چند کامپوننت آمادهٔ رایگان؛ در عوض، خطر دو سیستم UI و دو گرید، حجم بیشتر باندل و نیاز به هماهنگ‌سازی ظاهر. چون کد منبع بسته‌ها در دسترس نیست، اصلاح رفتار آن‌ها محدود است.
 - **موارد باز:** انتخاب گرید پیش‌فرض پس از پایلوت `NeedsApproval`؛ ارقام فارسی و تقویم شمسی Kendo `NotVerified` (RTL عمومی طبق مستندات تأیید شد، ولی باید در پایلوت عملاً دیده شود)؛ بازبینی توافق‌نامه و نسخهٔ دقیق `NeedsApproval`.
 - **مراجع:** D-048، D-049، `docs/UI_COMPONENTS.md`، [KendoReact Free](https://www.telerik.com/kendo-react-ui/components/free)، [KendoReact PivotGrid](https://www.telerik.com/kendo-react-ui/components/pivotgrid/).
+
+
+## D-051 — Signed customer provisioning package for onboarding (#228 / #235)
+
+- **وضعیت تصمیم:** `Accepted` بر اساس دستور صریح مالک محصول در 2026-10-29 برای اجرای فازهای B و D با `CustomerProvisioningPackage` امضاشده و consumer مستقل سمت مشتری.
+- **دامنه:** این تصمیم فقط مسیر provisioning مشتری را برای #228/#235 جایگزین گزینهٔ ردشدهٔ D-044/OD-14 می‌کند؛ سایر تصمیم‌های D-044 دربارهٔ مرزهای tenant، امنیت و عدم اتصال مستقیم Vendor به دیتابیس مشتری پابرجا هستند.
+- **تصمیم:** Vendor فقط intent و بستهٔ نسخه‌دار را در control-plane مستقل نگه می‌دارد؛ مصرف‌کنندهٔ مورد اعتماد داخل نصب مشتری، پس از اعتبارسنجی امضا با trust store مستقل، schema، تاریخ انقضا، مشتری/نصب، زیرسیستم‌ها و replay protection، عملیات محلی را انجام می‌دهد. Vendor هرگز مستقیماً به SQL مشتری متصل نمی‌شود.
+- **قرارداد:** payload v1 برای سازگاری حفظ می‌شود؛ payload v2 عنوان و تاریخ‌های دورهٔ مالی و مرجع صریح شرکت مادر را حمل می‌کند. شرکت تابعه بدون مرجع معتبر مادر رد می‌شود. Vendor تا دریافت acknowledgement معتبر و امضاشده، وضعیت `Confirmed` را ثبت نمی‌کند.
+- **Enrollment مدیر اولیه:** رمز، hash رمز، connection string و bootstrap secret قابل‌استفادهٔ مجدد داخل package قرار نمی‌گیرند. Enrollment باید یک‌بارمصرف، مستقل از package و همراه با اجبار تغییر رمز در اولین ورود باشد؛ تا تکمیل آن، consumer نباید ادعای ایجاد مدیر را ثبت کند.
+- **شرط پذیرش Production:** امضاکنندهٔ خارجی واقعی، trust/key lifecycle عملیاتی، consumer تراکنشی، claim یکتای request ID/nonce، acknowledgement امضاشده و آزمون cloud/dedicated/offline لازم‌اند. این تصمیم به معنی تأیید یا جعل KMS/HSM و credential عملیاتی نیست؛ #236 همچنان تا انتخاب و پیکربندی واقعی signer باز می‌ماند.
+- **گزینه‌های ردشده:** ساخت شرکت/مدیر در دیتابیس مشتری از Vendor؛ پذیرش KeyId بدون trust store مستقل؛ بستهٔ دارای رمز یا reusable secret؛ تأیید `Confirmed` با صرف export؛ software-key fallback در Production.
+- **پیامدها:** provisioning بین control-plane و customer installation جدا می‌ماند و در نصب آفلاین نیز با export/import و acknowledgement قابل ممیزی است؛ در مقابل، پیاده‌سازی consumer و enrollment در PR جدا و نیازمند migration صریح و تست SQL Server خواهد بود.
+- **مراجع:** D-044، OD-14 و OD-18؛ Issues #228، #235، #236؛ `Licensing.Contracts/CustomerProvisioningPackage.cs`.

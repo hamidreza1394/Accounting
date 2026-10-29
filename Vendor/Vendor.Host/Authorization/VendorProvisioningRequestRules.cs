@@ -9,7 +9,11 @@ public sealed record CreateVendorProvisioningRequest(
     string? CompanyName,
     string? CompanyType,
     string? InitialAdminUserName,
-    IReadOnlyList<string>? Subsystems);
+    IReadOnlyList<string>? Subsystems,
+    string? FiscalPeriodTitle = null,
+    DateOnly? FiscalPeriodStartDate = null,
+    DateOnly? FiscalPeriodEndDate = null,
+    string? ParentCompanyReference = null);
 
 /// <summary>Pure validation rules for a Vendor-side provisioning request; no customer DB access.</summary>
 public static class VendorProvisioningRequestRules
@@ -42,6 +46,22 @@ public static class VendorProvisioningRequestRules
             request.Subsystems.Distinct(StringComparer.Ordinal).Count() != request.Subsystems.Count)
             return "invalid_provisioning_subsystems";
 
+        var fiscalPeriodTitle = request.FiscalPeriodTitle?.Trim();
+        if (string.IsNullOrWhiteSpace(fiscalPeriodTitle) ||
+            fiscalPeriodTitle.Length > 100 ||
+            fiscalPeriodTitle.Any(char.IsControl) ||
+            request.FiscalPeriodStartDate is null ||
+            request.FiscalPeriodEndDate is null ||
+            request.FiscalPeriodStartDate.Value >= request.FiscalPeriodEndDate.Value)
+            return "invalid_provisioning_fiscal_period";
+
+        var parentReference = request.ParentCompanyReference?.Trim();
+        var hasValidParentReference = !string.IsNullOrWhiteSpace(parentReference) &&
+            parentReference.Length <= 128 &&
+            !parentReference.Any(char.IsControl);
+        if (companyType == "subsidiary" ? !hasValidParentReference : request.ParentCompanyReference is not null)
+            return "invalid_provisioning_parent_company_reference";
+
         return null;
     }
 
@@ -64,6 +84,11 @@ public static class VendorProvisioningRequestRules
                string.Equals(existing.CompanyName, request.CompanyName?.Trim(), StringComparison.Ordinal) &&
                string.Equals(existing.CompanyType, request.CompanyType?.Trim(), StringComparison.Ordinal) &&
                string.Equals(existing.InitialAdminUserName, request.InitialAdminUserName?.Trim(), StringComparison.Ordinal) &&
+               existing.SchemaVersion == CustomerProvisioningPackageValidator.CurrentPayloadSchemaVersion &&
+               string.Equals(existing.FiscalPeriodTitle, request.FiscalPeriodTitle?.Trim(), StringComparison.Ordinal) &&
+               existing.FiscalPeriodStartDate == request.FiscalPeriodStartDate &&
+               existing.FiscalPeriodEndDate == request.FiscalPeriodEndDate &&
+               string.Equals(existing.ParentCompanyReference, request.ParentCompanyReference?.Trim(), StringComparison.Ordinal) &&
                request.Subsystems is not null &&
                existing.Subsystems.Order(StringComparer.Ordinal)
                    .SequenceEqual(request.Subsystems.Order(StringComparer.Ordinal), StringComparer.Ordinal);

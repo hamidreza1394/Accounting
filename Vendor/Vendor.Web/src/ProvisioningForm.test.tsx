@@ -68,10 +68,53 @@ describe('Vendor customer provisioning form', () => {
       companyType: 'independent',
       initialAdminUserName: 'initial-admin',
       subsystems: ['finance', 'sales'],
+      fiscalPeriodTitle: 'سال مالی ۱۴۰۵',
+      fiscalPeriodStartDate: '2026-03-21',
+      fiscalPeriodEndDate: '2027-03-20',
+      parentCompanyReference: null,
     });
     expect(body).not.toHaveProperty('password');
     expect(body).not.toHaveProperty('passwordHash');
     expect(screen.getByText(/هنوز بسته‌ای امضا یا به مشتری تحویل نشده/)).toBeInTheDocument();
+  });
+
+  it('requires a parent-company reference for a subsidiary and sends it in schema v2 metadata', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === '/api/vendor/installations/?customerId=customer-1&page=1&pageSize=100') {
+        return response({ items: [{ id: 'install-1', installationCode: 'INSTALL-01', name: 'نصب اصلی', status: 'Active' }] });
+      }
+      if (url === '/api/vendor/provisioning-requests?customerId=customer-1&page=1&pageSize=10') return response({ items: [] });
+      if (url === '/api/auth/antiforgery') return response({ requestToken: 'csrf-subsidiary' });
+      if (url === '/api/vendor/provisioning-requests/' && init?.method === 'POST') {
+        return response({ id: 'provision-2', status: 'AwaitingSigner' }, 201);
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('crypto', { randomUUID: vi.fn().mockReturnValue('request-subsidiary') });
+
+    render(<ProvisioningForm customerId="customer-1" customerName="مشتری نمونه"
+      onCancel={vi.fn()} onSaved={vi.fn()} />);
+    await waitFor(() => expect(screen.getByLabelText('نصب مقصد')).toHaveValue('install-1'));
+    fireEvent.change(screen.getByLabelText('نوع شرکت'), { target: { value: 'subsidiary' } });
+    expect(screen.getByLabelText('مرجع شرکت مادر در نصب مشتری')).toBeRequired();
+    fireEvent.change(screen.getByLabelText('نام شرکت حسابداری'), { target: { value: 'شرکت تابعه نمونه' } });
+    fireEvent.change(screen.getByLabelText('نام کاربری مدیر اولیه'), { target: { value: 'initial-admin' } });
+    fireEvent.change(screen.getByLabelText('مرجع شرکت مادر در نصب مشتری'), { target: { value: 'parent-company-001' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ذخیره درخواست راه‌اندازی' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/vendor/provisioning-requests/', expect.objectContaining({ method: 'POST' })));
+    const post = fetchMock.mock.calls.find(([url, init]) =>
+      String(url) === '/api/vendor/provisioning-requests/' && init?.method === 'POST');
+    const body = JSON.parse(String((post?.[1] as RequestInit).body)) as Record<string, unknown>;
+    expect(body).toMatchObject({
+      companyType: 'subsidiary',
+      parentCompanyReference: 'parent-company-001',
+      fiscalPeriodTitle: 'سال مالی ۱۴۰۵',
+      fiscalPeriodStartDate: '2026-03-21',
+      fiscalPeriodEndDate: '2027-03-20',
+    });
   });
 
   it('requests two-person approval with the persisted RowVersion and shows pending review state', async () => {

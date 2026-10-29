@@ -14,13 +14,13 @@
 - هیچ تغییری در schema مشتری یا `Server/**` در PRهای #293/#294 ایجاد نشده است.
 
 ## شکاف‌های باقی‌مانده برای Production
-- **#228 / #235:** consumer سمت مشتری، claim اتمی request ID/nonce، ایجاد تراکنشی شرکت/دوره/مدیر و enrollment یک‌بارمصرف هنوز تکمیل نشده‌اند. D-044/OD-14 با الزام signed package در #228/#235 تعارض دارد؛ OD-18 در `LICENSING_OPEN_DECISIONS.md` این مورد را `NeedsApproval` ثبت می‌کند. همچنین v1 فاقد fiscal-period dates و parent-company reference است. تا تعیین‌تکلیف، consumer ناقص نباید `Applied` اعلام کند.
+- **#228 / #235:** payload schema v2 اکنون دوره مالی و مرجع شرکت مادر را تعریف می‌کند؛ شاخه کاری نیز فیلدهای آن را در فرم و API Vendor اعتبارسنجی و صادر می‌کند. consumer سمت مشتری، claim اتمی request ID/nonce، اعمال تراکنشی شرکت/دوره/مدیر، enrollment یک‌بارمصرف و تست SQL Server هنوز تکمیل نشده‌اند. D-051 و OD-18 تصمیم استفاده از signed package را برای #228/#235 ثبت می‌کنند. تا تکمیل consumer و side effects، هیچ وضعیت `Applied` یا `Confirmed` فرض نمی‌شود.
 - **#236:** provider امضای Production، تصمیم KMS/HSM، هویت دسترسی، چرخش و بازیابی کلید هنوز عملیاتی نشده‌اند؛ signer پیش‌فرض fail-closed باقی می‌ماند.
 - **#107:** مقصد مستقل checkpoint ممیزی، اعتبارنامه‌های جدا، retention/immutability و بازیابی باید تعیین و پیاده‌سازی شوند.
 - **#214:** قرارداد revocation آفلاین موجود است؛ مصرف‌کنندهٔ سمت مشتری، ذخیره‌سازی monotonic و enforcement/backup/restore هنوز باقی است.
 - **تحویل آفلاین:** جریان export/import و acknowledgement باید در نصب‌های cloud، dedicated-server و offline end-to-end آزموده شود.
 
-نتیجه: دو PR مربوط به Vendor acknowledgement ادغام و CI روی headهای آن‌ها موفق است؛ این به معنی آمادگی Production نیست. تصمیم‌های معماری/عملیاتی و consumer سمت مشتری همچنان باقی‌اند.
+نتیجه: Vendor package schema v2 و فیلدهای ورودی آن در این شاخه تکمیل می‌شوند؛ این موضوع consumer سمت مشتری یا آمادگی Production را اثبات نمی‌کند. KMS/HSM و مقصد مستقل Audit همچنان به تصمیم و credential عملیاتی وابسته‌اند.
 
 ---
 ## Snapshot تاریخی — وضعیت Vendor پس از PR #271

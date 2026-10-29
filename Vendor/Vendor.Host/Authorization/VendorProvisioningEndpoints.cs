@@ -202,7 +202,7 @@ public static class VendorProvisioningEndpoints
             var nonce = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
                 .TrimEnd('=').Replace('+', '-').Replace('/', '_');
             var payload = new CustomerProvisioningPayload(
-                CustomerProvisioningPackageValidator.CurrentFormatVersion,
+                CustomerProvisioningPackageValidator.CurrentPayloadSchemaVersion,
                 requestId,
                 customer.CustomerNumber,
                 installation.InstallationCode,
@@ -212,7 +212,11 @@ public static class VendorProvisioningEndpoints
                 request.Subsystems!.Order(StringComparer.Ordinal).ToArray(),
                 now,
                 now.AddHours(CustomerProvisioningPackageValidator.MaxPackageLifetimeHours),
-                nonce);
+                nonce,
+                request.FiscalPeriodTitle!.Trim(),
+                request.FiscalPeriodStartDate,
+                request.FiscalPeriodEndDate,
+                request.ParentCompanyReference?.Trim());
             var payloadJson = CustomerProvisioningCanonicalJson.Serialize(payload);
             var payloadHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payloadJson))).ToLowerInvariant();
 
