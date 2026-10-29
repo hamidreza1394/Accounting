@@ -1,0 +1,50 @@
+name: Semgrep (free static analysis)
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    # Weekly full scan (Sunday 03:00 UTC)
+    - cron: "0 3 * * 0"
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+jobs:
+  semgrep:
+    name: Semgrep scan
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep
+        run: |
+          semgrep scan \
+            --config=p/csharp \
+            --config=p/javascript \
+            --config=p/typescript \
+            --config=p/security-audit \
+            --sarif \
+            --output=semgrep.sarif \
+            --metrics=off \
+            --exclude=node_modules \
+            --exclude=**/bin \
+            --exclude=**/obj \
+            --exclude=**/wwwroot \
+            --exclude=third_party \
+            .
+        # Note: no --error so findings are reported but do not block the PR by default.
+        # You can add --error later after reviewing baseline findings.
+
+      - name: Upload SARIF
+        if: always() && hashFiles('semgrep.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
+        continue-on-error: true
