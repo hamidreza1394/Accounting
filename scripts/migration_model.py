@@ -37,6 +37,7 @@ CLR_TYPE_NAMES = {
     "long": "System.Int64",
     "short": "System.Int16",
     "byte": "System.Byte",
+    "byte[]": "System.Byte[]",
     "float": "System.Single",
     "double": "System.Double",
     "decimal": "System.Decimal",
@@ -169,7 +170,7 @@ def parse_generated_model(source: str) -> dict[str, Any]:
 
         properties: list[dict[str, Any]] = []
         for prop in re.finditer(
-            r'b\.Property<(?P<type>[\w\?]+)>\("(?P<name>[^"]+)"\)(?P<calls>[^;]*);',
+            r'b\.Property<(?P<type>[\w\[\?]+)>\("(?P<name>[^"]+)"\)(?P<calls>[^;]*);',
             body,
         ):
             calls = prop.group("calls")
@@ -185,7 +186,7 @@ def parse_generated_model(source: str) -> dict[str, Any]:
                     ),
                     "max_length": optional_int(re.search(r"HasMaxLength\((\d+)\)", calls)),
                     "unicode": _parse_unicode(calls),
-                    "value_generated": ".ValueGeneratedOnAdd()" in calls,
+                    "value_generated": bool(re.search(r"\.ValueGeneratedOnAdd\(\)", calls)),
                     "column_type": optional_string(
                         re.search(r'HasColumnType\("([^"]*)"\)', calls)
                     ),
