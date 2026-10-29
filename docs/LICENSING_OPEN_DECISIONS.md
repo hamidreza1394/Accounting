@@ -165,10 +165,9 @@
 
 ## OD-18 — تعارض معماری provisioning سمت مشتری (#228 / #235)
 
-- **وضعیت:** `NeedsApproval`; این تصمیم را نباید با تغییر کد یا بستن Issue به‌صورت ضمنی حل کرد.
-- **تعارض:** D-044 / OD-14 گزینهٔ «فایل provisioning امضاشده از Vendor که دادهٔ شرکت مشتری را حمل کند» را `Rejected` اعلام کرده و ویزارد اولین اجرا با توکن یک‌بارمصرف را پیشنهاد می‌دهد. Issueهای جدید #228 و #235، در مقابل، قرارداد `CustomerProvisioningPackage` امضاشده و consumer سمت مشتری را الزام می‌کنند.
-- **شکاف‌های قرارداد v1:** دادهٔ دورهٔ مالی (عنوان/شروع/پایان) وجود ندارد؛ برای نوع `subsidiary` شناسهٔ شرکت مادر وجود ندارد؛ روش تحویل امن و یک‌بارمصرف enrollment مدیر اولیه مشخص نشده است.
-- **گزینه A:** حفظ D-044: customer-side first-run wizard و توکن یک‌بارمصرف؛ Vendor فقط intent/licensing metadata را نگه می‌دارد و شرکت/مدیر را ایجاد نمی‌کند.
-- **گزینه B:** supersede صریح D-044 برای #228/#235: نسخه‌بندی جدید قرارداد provisioning با دادهٔ دورهٔ مالی و parent reference، consumer سمت مشتری، claim اتمی nonce/request ID، و مسیر enrollment یک‌بارمصرف مستقل از package. این گزینه نیازمند ثبت ADR جدید و تأیید صریح مالک است.
-- **ممنوع تا تصمیم:** تولید تاریخ دورهٔ مالی از حدس، اتصال subsidiary بر اساس نام مبهم، قرار دادن password/hash/reusable token در package، یا برگرداندن `Applied` پیش از تکمیل تمام side effects.
-- **منبع پیگیری:** [Issue #235](https://github.com/hamidreza1394/Accounting/issues/235) و [Issue #228](https://github.com/hamidreza1394/Accounting/issues/228).
+- **وضعیت:** `Accepted` در 2026-10-29 با دستور صریح مالک محصول؛ ADR مربوطه در [D-051](DECISIONS.md#d-051--signed-customer-provisioning-package-for-onboarding-228--235) ثبت شد.
+- **تصمیم منتخب:** گزینه B؛ برای #228/#235 قرارداد نسخه‌دار `CustomerProvisioningPackage` و consumer مستقل سمت مشتری اجرا می‌شود. این تصمیم فقط مسیر provisioning را supersede می‌کند و مرز عدم اتصال مستقیم Vendor به دیتابیس مشتری پابرجاست.
+- **سازگاری و داده:** payload v1 برای بسته‌های قدیمی حفظ می‌شود؛ v2 دوره مالی و مرجع صریح شرکت مادر را حمل می‌کند. فرم و API Vendor باید این فیلدها را اعتبارسنجی کنند؛ consumer باید مرجع شرکت مادر را در نصب مشتری resolve کند و بر اساس نام مبهم رابطه نسازد.
+- **Enrollment مدیر اولیه:** خارج از package و به‌صورت یک‌بارمصرف؛ هیچ رمز، hash رمز یا reusable secret در package ذخیره نمی‌شود و تغییر رمز در اولین ورود الزامی است.
+- **شرط Production:** consumer تراکنشی، claim یکتای request ID/nonce، acknowledgement امضاشده و آزمون cloud/dedicated/offline لازم است. signer واقعی KMS/HSM و چرخه عمر کلید همچنان در #236 مسدود به تصمیم و credential عملیاتی است؛ این تصمیم مجوز ساخت signer جعلی یا fallback نرم‌افزاری نیست.
+- **منبع پیگیری:** [Issue #235](https://github.com/hamidreza1394/Accounting/issues/235)، [Issue #228](https://github.com/hamidreza1394/Accounting/issues/228)، D-051.
