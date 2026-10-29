@@ -1117,4 +1117,4 @@
 - **Safety boundaries:** no private key; no production KMS/HSM adapter; no customer DB schema or `Server/**` change; no acknowledgement intake endpoint or false `Confirmed` state; no fake independent audit storage.
 - **Blockers recorded on Issues:** #236 requires an approved signing provider; #107 requires an independently permissioned checkpoint destination and deployment credentials; #235 customer-side consumer remains a separate reviewed change; #214 customer-side sequence persistence/enforcement remains separate.
 - **Tests:** not run locally in this tool session. GitHub Actions must verify the final branch SHA before merge readiness can be claimed.
-- **Next:** inspect CI on the final SHA, fix failures on this same branch, then open one consolidated PR after the branch diff is reviewed.
+- **PR:** [#292](https://github.com/hamidreza1394/Accounting/pull/292) is open for the consolidated branch; CI and security scans are running. If any check fails, fix it on this branch and re-check the new head SHA.
