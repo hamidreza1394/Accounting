@@ -276,6 +276,7 @@ public sealed class DatabaseModelTests
 
 		Assert.Contains("20251017120000_InitialCreate", migrations);
 		Assert.Contains("20261017090000_AlignSchemaWithModel", migrations);
+		Assert.Contains("20261029161402_AddCustomerProvisioningClaims", migrations);
 	}
 
 	[Fact]
