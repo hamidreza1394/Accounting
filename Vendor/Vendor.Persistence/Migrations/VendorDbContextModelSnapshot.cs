@@ -547,6 +547,10 @@ namespace Faranou.Vendor.Persistence.Migrations
                     b.Property<Guid>("CustomerId").HasColumnType("uniqueidentifier");
                     b.Property<DateTimeOffset>("CreatedAtUtc").ValueGeneratedOnAdd().HasColumnType("datetimeoffset").HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
                     b.Property<DateTimeOffset?>( "DeliveredAtUtc").HasColumnType("datetimeoffset");
+                    b.Property<DateTimeOffset?>("AcknowledgedAtUtc").HasColumnType("datetimeoffset");
+                    b.Property<string>("AcknowledgementKeyId").HasMaxLength(128).HasColumnType("nvarchar(128)");
+                    b.Property<string>("AcknowledgementResult").IsUnicode(false).HasMaxLength(16).HasColumnType("varchar(16)");
+                    b.Property<string>("AcknowledgementSha256").IsUnicode(false).HasMaxLength(64).IsFixedLength().HasColumnType("char(64)");
                     b.Property<string>("FailureCode").HasMaxLength(128).IsUnicode(false).HasColumnType("varchar(128)");
                     b.Property<Guid>("InstallationId").HasColumnType("uniqueidentifier");
                     b.Property<string>("KeyId").HasMaxLength(128).HasColumnType("nvarchar(128)");
