@@ -15,6 +15,13 @@ const customerPage = {
 };
 
 describe('Vendor installation form', () => {
+  it('keeps native browser constraint validation enabled', () => {
+    render(<InstallationForm canReadCustomers onCancel={vi.fn()} onSaved={vi.fn()} />);
+
+    const form = screen.getByRole('button', { name: 'ثبت نصب' }).closest('form');
+    expect(form).not.toHaveAttribute('novalidate');
+  });
+
   it('creates an installation with a real customer, default environment and fresh antiforgery token', async () => {
     const onSaved = vi.fn();
     const fetchMock = vi.fn()
