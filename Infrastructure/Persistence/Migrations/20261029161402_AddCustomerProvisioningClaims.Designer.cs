@@ -849,6 +849,11 @@ namespace Data.Migrations
                 b.Property<bool>("MustChangePassword")
                     .HasColumnType("bit");
 
+                b.Property<byte[]>("RowVersion")
+                    .IsConcurrencyToken()
+                    .ValueGeneratedOnAddOrUpdate()
+                    .HasColumnType("rowversion");
+
                 b.HasKey("Id");
 
                 b.HasIndex("RequestId")
