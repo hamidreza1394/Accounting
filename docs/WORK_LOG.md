@@ -1100,3 +1100,12 @@
 ## 2026-10-29 — تأیید وضعیت PR #283
 - بررسی فهرست PRهای بسته‌شدهٔ GitHub تأیید کرد PR #283 با عنوان «block export for inactive provisioning targets» در ساعت 08:45:55Z ادغام شده و merge commit آن `95a098895056a1fe34348fac93091bf2f82780b4` است.
 - مستندات وضعیت جاری اصلاح شد تا PR #283 را به‌درستی ادغام‌شده ثبت کند؛ هیچ ادعایی دربارهٔ provisioning end-to-end یا تأیید مشتری افزوده نشد.
+
+
+## 2026-10-29 — تأیید امضای provisioning پیش از parse (#228)
+- **یافته:** `CustomerProvisioningPackageValidator.TryValidateAndVerify` پیش از بررسی امضا، JSON ورودی را deserialize و اعتبارسنجی می‌کرد. اندازه محدود بود و state اعمال نمی‌شد، اما این ترتیب با الزام امنیتی «verify exact bytes before parsing» در Issue #235 هم‌راستا نبود.
+- **اصلاح در شاخه:** ابتدا envelope و اندازه بررسی می‌شود، سپس امضای ECDSA P-256/SHA-256 روی بایت‌های دقیق UTF-8 تأیید می‌شود؛ فقط پس از موفقیت امضا JSON parse و schema/canonicalization بررسی می‌شود.
+- **تست رگرسیون:** payload غیر JSON با امضای مربوط به payload دیگری باید `provisioning_signature_invalid` بدهد، نه خطای parser.
+- **دامنه:** فقط قرارداد مشترک و تست؛ هیچ تغییر در Server/**، دیتابیس مشتری یا migration انجام نشد.
+- **اعتبارسنجی:** تست محلی در این نشست اجرا نشده است؛ CI روی PR برای تأیید لازم است. Merge پیش از موفقیت بررسی‌های الزامی مجاز نیست.
+- **باقی‌مانده:** Issue #235 مصرف‌کننده و claim اتمی nonce؛ Issue #236 signer عملیاتی KMS/HSM و کلیدهای مورد اعتماد؛ #107 sink مستقل checkpoint ممیزی.

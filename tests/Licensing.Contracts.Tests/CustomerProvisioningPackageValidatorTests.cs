@@ -51,6 +51,25 @@ public sealed class CustomerProvisioningPackageValidatorTests
     }
 
     [Fact]
+    public void InvalidSignature_IsRejectedBeforePayloadParsing()
+    {
+        using var signingKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var validJson = CustomerProvisioningCanonicalJson.Serialize(Sample());
+        var signature = signingKey.SignData(
+            System.Text.Encoding.UTF8.GetBytes(validJson),
+            HashAlgorithmName.SHA256,
+            DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
+        var package = new CustomerProvisioningPackage(
+            1, "provisioning-key-1", LicenseAlgorithms.EcdsaP256Sha256,
+            "not-json", Convert.ToBase64String(signature));
+
+        Assert.False(CustomerProvisioningPackageValidator.TryValidateAndVerify(
+            package, signingKey.ExportSubjectPublicKeyInfo(), Now, out var parsed, out var error));
+        Assert.Null(parsed);
+        Assert.Equal("provisioning_signature_invalid", error);
+    }
+
+    [Fact]
     public void ExpiredPackage_IsRejected()
     {
         using var signingKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);

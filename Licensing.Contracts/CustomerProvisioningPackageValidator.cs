@@ -66,9 +66,8 @@ public static class CustomerProvisioningPackageValidator
             return false;
         }
 
-        if (!TryValidatePayload(package.PayloadJson, nowUtc, out payload, out errorCode))
-            return false;
-
+        // Authenticate the exact bounded UTF-8 bytes before deserializing attacker-controlled JSON.
+        // Schema/canonicalization checks run only after the signature has been verified.
         try
         {
             using var publicKey = ECDsa.Create();
@@ -80,17 +79,18 @@ public static class CustomerProvisioningPackageValidator
                     HashAlgorithmName.SHA256,
                     DSASignatureFormat.IeeeP1363FixedFieldConcatenation))
             {
-                payload = null;
                 errorCode = "provisioning_signature_invalid";
                 return false;
             }
         }
         catch (CryptographicException)
         {
-            payload = null;
             errorCode = "provisioning_trusted_key_invalid";
             return false;
         }
+
+        if (!TryValidatePayload(package.PayloadJson, nowUtc, out payload, out errorCode))
+            return false;
 
         errorCode = string.Empty;
         return true;
