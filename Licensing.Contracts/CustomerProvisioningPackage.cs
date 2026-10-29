@@ -7,7 +7,7 @@ namespace Faranou.Licensing.Contracts;
 /// <summary>
 /// Versioned, signed customer-side provisioning payload. It intentionally contains no password,
 /// password hash, reusable bootstrap secret, connection string, or customer accounting data.
-/// Schema v1 remains readable; v2 adds the initial fiscal period and explicit parent-company reference.
+/// Schema v1/v2 remain readable; v2 adds the initial fiscal period and v3 adds the initial administrator email.
 /// </summary>
 public sealed record CustomerProvisioningPayload(
     int SchemaVersion,
@@ -24,7 +24,8 @@ public sealed record CustomerProvisioningPayload(
     string? FiscalPeriodTitle = null,
     DateOnly? FiscalPeriodStartDate = null,
     DateOnly? FiscalPeriodEndDate = null,
-    string? ParentCompanyReference = null);
+    string? ParentCompanyReference = null,
+    string? InitialAdminEmail = null);
 
 /// <summary>
 /// Signed provisioning package transported to a trusted customer-side provisioning consumer.
@@ -72,6 +73,12 @@ public static class CustomerProvisioningCanonicalJson
                 writer.WriteString("fiscalPeriodStartDate", payload.FiscalPeriodStartDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
                 writer.WriteString("fiscalPeriodEndDate", payload.FiscalPeriodEndDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
                 writer.WriteString("parentCompanyReference", payload.ParentCompanyReference);
+            }
+
+            // v1/v2 canonical JSON is immutable for already-issued packages.
+            if (payload.SchemaVersion >= 3)
+            {
+                writer.WriteString("initialAdminEmail", payload.InitialAdminEmail);
             }
 
             writer.WriteEndObject();
