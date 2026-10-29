@@ -48,3 +48,8 @@
 - Branch: `feat/issue-107-audit-checkpoint-contract`
 - Implementation commits: `b4dbde9059ac63e86d1b551916658a9395489844`, `2a0787a8969bdf1e6228343b6c5a67ee2421e983`, `4959055880aafaef69fe785bfe5f34d9d2baad89`, `6973e9441d582806d99bdaf9efcb06e410934e78`.
 - Pull Request: [#211](https://github.com/hamidreza1394/Accounting/pull/211); use its latest head SHA for the final CI evidence.
+
+
+## Recovery runbook addition (2026-10-29)
+- Added provider-neutral operational guidance at `docs/runbooks/vendor-audit-checkpoint-recovery.md` covering preflight verification, backup, restore reconciliation, sink outage, SQL permission separation and exit criteria.
+- The runbook intentionally does not choose a provider, define fictional credentials or claim Production readiness. Issue #107 remains open until a real independently permissioned sink is selected and an environment restore drill is evidenced.
