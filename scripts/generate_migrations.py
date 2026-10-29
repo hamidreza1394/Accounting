@@ -435,6 +435,7 @@ def generate_model(entity_types: list[dict[str, Any]], indent: str) -> list[str]
             if column["nullable"] is False and provider_type in {
                 "string",
                 "object",
+                "byte[]",
             }:
                 lines.append(f"{indent}{INDENT * 2}.IsRequired()")
             if column.get("is_row_version"):
