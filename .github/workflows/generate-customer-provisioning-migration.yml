@@ -62,5 +62,4 @@ jobs:
             Infrastructure/Persistence/Migrations/*_AddCustomerProvisioningClaims.cs
             Infrastructure/Persistence/Migrations/*_AddCustomerProvisioningClaims.Designer.cs
             Infrastructure/Persistence/Migrations/DatabaseContextModelSnapshot.cs
-            scripts/generate_migrations.py
           if-no-files-found: error
