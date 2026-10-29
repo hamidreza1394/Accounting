@@ -1,3 +1,4 @@
+using System;
 using Faranou.Licensing.Contracts;
 using Microsoft.Extensions.Options;
 
