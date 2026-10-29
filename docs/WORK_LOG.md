@@ -1113,8 +1113,8 @@
 ## 2026-10-29 — Consolidated Vendor remaining-work branch
 
 - **Scope:** Issues #228, #235, #236, #107 and #214 on `feat/vendor-remaining-work`, based on `main` at `50d6977d7452b4ee2879c2379140ebbce3e455b9`.
-- **Implemented in branch:** registered the configured acknowledgement public-key trust store in Vendor Host; added a provider-neutral signed offline revocation-list contract and negative/rollback tests; added handoff documentation for trust configuration and revocation boundaries.
+- **Implemented in branch:** confirmed acknowledgement trust-store registration is already on `main` via PR #291 and aligned this branch with the updated `main`; added/updated the deployment handoff; added a provider-neutral signed offline revocation-list contract and negative/rollback tests.
 - **Safety boundaries:** no private key; no production KMS/HSM adapter; no customer DB schema or `Server/**` change; no acknowledgement intake endpoint or false `Confirmed` state; no fake independent audit storage.
 - **Blockers recorded on Issues:** #236 requires an approved signing provider; #107 requires an independently permissioned checkpoint destination and deployment credentials; #235 customer-side consumer remains a separate reviewed change; #214 customer-side sequence persistence/enforcement remains separate.
 - **Tests:** not run locally in this tool session. GitHub Actions must verify the final branch SHA before merge readiness can be claimed.
-- **PR:** [#292](https://github.com/hamidreza1394/Accounting/pull/292) is open for the consolidated branch; CI and security scans are running. If any check fails, fix it on this branch and re-check the new head SHA.
+- **PR:** [#292](https://github.com/hamidreza1394/Accounting/pull/292) is open for the consolidated branch. `main` advanced through merged PR #291 while this work was in progress; the branch now includes `main` as a merge parent and does not overwrite its trust-store registration. CI must pass on the final head SHA.
