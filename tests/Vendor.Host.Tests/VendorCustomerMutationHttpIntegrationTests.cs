@@ -323,6 +323,8 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 companyName = "Provisioning Integration Company",
                 companyType = "independent",
                 initialAdminUserName = "initial-admin",
+
+                initialAdminEmail = "admin@example.com",
                 subsystems = new[] { "finance", "sales" },
                 fiscalPeriodTitle = "سال مالی ۱۴۰۵",
                 fiscalPeriodStartDate = new DateOnly(2026, 3, 21),
@@ -370,6 +372,8 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     companyName = "Different Company",
                     companyType = "independent",
                     initialAdminUserName = "initial-admin",
+
+                    initialAdminEmail = "admin@example.com",
                     subsystems = new[] { "finance", "sales" },
                 fiscalPeriodTitle = "سال مالی ۱۴۰۵",
                 fiscalPeriodStartDate = new DateOnly(2026, 3, 21),
@@ -393,6 +397,8 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     companyName = "Provisioning Integration Company",
                     companyType = "independent",
                     initialAdminUserName = "initial-admin",
+
+                    initialAdminEmail = "admin@example.com",
                     subsystems = new[] { "finance" },
                     fiscalPeriodTitle = "سال مالی ۱۴۰۵",
                     fiscalPeriodStartDate = new DateOnly(2026, 3, 21),
