@@ -3,7 +3,7 @@
 - **Issue:** [#228 — Vendor onboarding](https://github.com/hamidreza1394/Accounting/issues/228)
 - **Agent/مسئول:** ChatGPT
 - **تاریخ:** 2026-10-29
-- **وضعیت:** پیاده‌سازی انجام شد؛ در انتظار CI و بازبینی
+- **وضعیت:** PR #273 ادغام شد؛ CI نهایی موفق است
 
 ## هدف و معیارهای پذیرش
 - [x] نصب‌های غیرفعال در فرم راه‌اندازی قابل انتخاب نباشند.
@@ -30,9 +30,9 @@
 | فرمان/آزمون | نتیجه واقعی | توضیح/کد خروج |
 |---|---|---|
 | تست محلی Vitest | اجرا نشده | این نشست دسترسی اجرای محلی مخزن ندارد؛ CI باید تست را اجرا کند. |
-| Vendor CI | موفق روی پیاده‌سازی اولیه | [run 40828321935](https://github.com/hamidreza1394/Accounting/actions/runs/40828321935)؛ پس از آخرین تغییر مستندات، باید CI مجدداً برای SHA نهایی بررسی شود. |
-| .NET CI / E2E | build-and-test، publish Linux و E2E موفق؛ Windows در حال اجرا در آخرین مشاهده | [run 40828322066](https://github.com/hamidreza1394/Accounting/actions/runs/40828322066)؛ تا پایان انتشار Windows، CI کامل نیست. |
-| CodeQL / Semgrep | موفق روی پیاده‌سازی اولیه | CodeQL: [run 40828321341](https://github.com/hamidreza1394/Accounting/actions/runs/40828321341)؛ Semgrep: [run 40828322097](https://github.com/hamidreza1394/Accounting/actions/runs/40828322097). پس از آخرین تغییر مستندات، بررسی مجدد لازم است. |
+| Vendor CI | موفق روی SHA نهایی | [run 40829071732](https://github.com/hamidreza1394/Accounting/actions/runs/40829071732) — موفق. |
+| .NET CI / E2E / انتشار Windows | همهٔ jobها موفق روی SHA نهایی | [run 40829071746](https://github.com/hamidreza1394/Accounting/actions/runs/40829071746) — build-and-test، publish، E2E و Windows publish همگی موفق. |
+| CodeQL / Semgrep | هر دو موفق روی SHA نهایی | CodeQL: [run 40829067402](https://github.com/hamidreza1394/Accounting/actions/runs/40829067402)؛ Semgrep: [run 40829071675](https://github.com/hamidreza1394/Accounting/actions/runs/40829071675). |
 
 ## امنیت، داده و سازگاری
 - این تغییر UX را با محدودیت فعال بودن نصب هم‌راستا می‌کند؛ کنترل امنیتی سمت سرور حذف یا تضعیف نشده است.
@@ -41,10 +41,10 @@
 ## ریسک‌ها و کارهای باقی‌مانده
 - فرض UI این است که API وضعیت را به‌صورت رشتهٔ `Active` برمی‌گرداند؛ تست و قرارداد فعلی همین مقدار را استفاده می‌کنند.
 - اگر نصب فعال وجود نداشته باشد، کاربر باید از گردش مدیریت نصب آن را فعال کند.
-- تا پایان CI و بازبینی diff، تغییر Verified محسوب نمی‌شود.
+- تغییر روی SHA نهایی بررسی شد و همهٔ CIهای ثبت‌شده موفق‌اند؛ تست محلی Vitest در این نشست اجرا نشده است.
 
 ## شناسه‌های Git
 - **Branch:** `fix/228-hide-inactive-provisioning-installations`
 - **پیاده‌سازی اصلی:** commit `ff80afcbd5193d879dd1ec6b2b36041b3baf5b35`.
 - **Pull Request:** [#273 — fix(vendor): only allow active provisioning installations](https://github.com/hamidreza1394/Accounting/pull/273).
-- **وضعیت ادغام:** باز است؛ فقط پس از موفقیت همهٔ بررسی‌های اجباری روی SHA نهایی قابل ادغام است.
+- **وضعیت ادغام:** ادغام‌شده؛ merge commit `a37b1c32b84d7622dbb7770f38aa852979058ae3`. PR #273 پس از موفقیت Vendor CI، .NET CI/E2E/انتشار Windows، CodeQL و Semgrep ادغام شد.
