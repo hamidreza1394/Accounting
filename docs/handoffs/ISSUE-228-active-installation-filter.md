@@ -30,8 +30,9 @@
 | فرمان/آزمون | نتیجه واقعی | توضیح/کد خروج |
 |---|---|---|
 | تست محلی Vitest | اجرا نشده | این نشست دسترسی اجرای محلی مخزن ندارد؛ CI باید تست را اجرا کند. |
-| Vendor CI | در انتظار | نتیجه باید برای SHA نهایی PR بررسی شود. |
-| .NET CI / E2E | در انتظار | باید نتیجهٔ PR بررسی شود. |
+| Vendor CI | موفق روی پیاده‌سازی اولیه | [run 40828321935](https://github.com/hamidreza1394/Accounting/actions/runs/40828321935)؛ پس از آخرین تغییر مستندات، باید CI مجدداً برای SHA نهایی بررسی شود. |
+| .NET CI / E2E | build-and-test، publish Linux و E2E موفق؛ Windows در حال اجرا در آخرین مشاهده | [run 40828322066](https://github.com/hamidreza1394/Accounting/actions/runs/40828322066)؛ تا پایان انتشار Windows، CI کامل نیست. |
+| CodeQL / Semgrep | موفق روی پیاده‌سازی اولیه | CodeQL: [run 40828321341](https://github.com/hamidreza1394/Accounting/actions/runs/40828321341)؛ Semgrep: [run 40828322097](https://github.com/hamidreza1394/Accounting/actions/runs/40828322097). پس از آخرین تغییر مستندات، بررسی مجدد لازم است. |
 
 ## امنیت، داده و سازگاری
 - این تغییر UX را با محدودیت فعال بودن نصب هم‌راستا می‌کند؛ کنترل امنیتی سمت سرور حذف یا تضعیف نشده است.
@@ -44,5 +45,6 @@
 
 ## شناسه‌های Git
 - **Branch:** `fix/228-hide-inactive-provisioning-installations`
-- **Commit:** در زمان ثبت این handoff شاخه در حال تکمیل است.
-- **Pull Request:** هنوز ایجاد نشده است.
+- **پیاده‌سازی اصلی:** commit `ff80afcbd5193d879dd1ec6b2b36041b3baf5b35`.
+- **Pull Request:** [#273 — fix(vendor): only allow active provisioning installations](https://github.com/hamidreza1394/Accounting/pull/273).
+- **وضعیت ادغام:** باز است؛ فقط پس از موفقیت همهٔ بررسی‌های اجباری روی SHA نهایی قابل ادغام است.
