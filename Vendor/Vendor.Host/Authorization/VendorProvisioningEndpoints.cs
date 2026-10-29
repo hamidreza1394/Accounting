@@ -113,18 +113,13 @@ public static class VendorProvisioningEndpoints
             item.AcknowledgedAtUtc = now;
             item.UpdatedAtUtc = now;
 
-            if (acknowledgement.Result is "Applied" or "AlreadyApplied")
-            {
-                item.Status = "Confirmed";
-                item.ConfirmedAtUtc = now;
-                item.FailureCode = null;
-            }
-            else
-            {
-                item.Status = "Failed";
-                item.ConfirmedAtUtc = null;
-                item.FailureCode = acknowledgement.ErrorCode;
-            }
+            if (!ProvisioningAcknowledgementStateRules.TryResolveOutcome(
+                    acknowledgement.Result, acknowledgement.ErrorCode, out var targetStatus, out var failureCode))
+                return Results.BadRequest(new { error = "provisioning_acknowledgement_payload_invalid" });
+
+            item.Status = targetStatus;
+            item.ConfirmedAtUtc = targetStatus == "Confirmed" ? now : null;
+            item.FailureCode = failureCode;
 
             try
             {
