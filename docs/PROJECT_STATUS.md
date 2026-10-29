@@ -1,4 +1,27 @@
-# وضعیت جاری تأییدشده Vendor — 2026-10-29 (پس از PR #271)
+# وضعیت جاری تأییدشده Vendor — 2026-10-29 (پس از PR #280)
+
+این بخش جدیدترین snapshot وضعیت است و جایگزین snapshot تاریخی پایین صفحه می‌شود. مبنای کد: `main` در `17038ae747aaf991aeea072c57c62c07f957586a`، merge commit مربوط به PR #280.
+
+## آخرین تغییرات امنیتی
+- PR #277: اعتبارسنجی سمت سرور برای رد مشتری/نصب غیرفعال؛ merge شده.
+- PR #278: بررسی وضعیت هدف پس از مجوزدهی منبع، برای جلوگیری از افشای وضعیت به کاربر غیرمجاز؛ merge شده.
+- PR #279: انتقال بررسی وضعیت و RowVersion درخواست تأیید پس از مجوزدهی مشتری و نصب؛ merge شده.
+- PR #280: پاسخ `404 Not Found` به‌جای `403 Forbidden` در چهار شاخهٔ شکست مجوزدهی منبع مشتری/نصب؛ merge شده.
+- PR CI برای PR #280: Vendor CI، .NET CI، Semgrep و workflow اختصاصی PR همگی موفق شدند. شواهد: [Vendor CI](https://github.com/hamidreza1394/Accounting/actions/runs/40839835705)، [.NET CI](https://github.com/hamidreza1394/Accounting/actions/runs/40839835703)، [Semgrep](https://github.com/hamidreza1394/Accounting/actions/runs/40839835699)، [PR #280](https://github.com/hamidreza1394/Accounting/actions/runs/40839832564).
+- پس از ادغام روی main: Vendor CI موفق است ([run 40840817584](https://github.com/hamidreza1394/Accounting/actions/runs/40840817584)) و Semgrep موفق است ([run 40840817594](https://github.com/hamidreza1394/Accounting/actions/runs/40840817594)). .NET CI و تحلیل CodeQL هنوز در حال اجرا بودند هنگام ثبت این snapshot؛ این سند موفقیت آن دو را ادعا نمی‌کند.
+
+## شکاف‌های مانع آمادگی Production
+- **Provisioning end-to-end (#228):** Vendor درخواست و metadata راه‌اندازی را ثبت می‌کند؛ ایجاد واقعی شرکت/مدیر در نصب مشتری تا زمان مصرف بستهٔ معتبر و دریافت acknowledgement قابل‌اعتماد تأییدشده محسوب نمی‌شود.
+- **مصرف‌کنندهٔ سمت مشتری (#235):** باید در Issue/PR مستقل پیاده‌سازی و بازبینی شود؛ شامل تأیید امضا و نصب مقصد، جلوگیری از replay، تراکنش اتمی، idempotency و acknowledgement امضاشده. تغییرات customer-side یا migration دیتابیس مشتری نباید داخل PR محدود به Vendor پنهان شوند.
+- **امضای Production (#236 و #214):** provider پیش‌فرض عمداً fail-closed است. انتخاب و پیکربندی KMS/HSM یا سرویس امضای مصوب، هویت/دسترسی عملیاتی و چرخهٔ کلید به تصمیم و پیکربندی واقعی نیاز دارد؛ fallback با کلید نرم‌افزاری اضافه نشود.
+- **checkpoint مستقل ممیزی (#107):** abstraction و کنترل زنجیرهٔ ممیزی داخل Vendor DB جایگزین sink مستقل با credential و retention جدا نیست. اتصال و بازیابی عملیاتی باید با provider واقعی آزموده شود.
+
+نتیجه: تغییرات #277–#280 در main هستند و PR #280 تمام بررسی‌های خودش را گذرانده است؛ اما تا رفع شکاف‌های بالا و تکمیل بررسی‌های Production، **ماژول Vendor آمادهٔ اعلام Production-ready نیست**.
+
+---
+
+## Snapshot تاریخی — وضعیت Vendor پس از PR #271
+
 
 این بخش وضعیت جاری را بر اساس کد و CI ثبت می‌کند؛ بخش‌های قدیمی‌تر سند سابقه‌اند. مبنای این بازبینی: `main` در `365b1b89a7370cba91c01de4f2c43219b5bf04ea`.
 
