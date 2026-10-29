@@ -1,31 +1,30 @@
-# وضعیت جاری تأییدشده Vendor — 2026-10-29 (پس از PR #284)
+# وضعیت جاری تأییدشده Vendor — 2026-10-29 (پس از PR #287)
 
-این snapshot بر اساس commit فعلی `main` است: `81ed5f64ed86ebbae47a433cea63e3655cb1d24b`.
+مبنای این snapshot: commit ادغام‌شدهٔ `d74ca15a517ddbb72d8711b55b0379381ecc34dd` (PR #287).
 
-## آخرین تغییرات امنیتی ادغام‌شده
-- PR #277: اعتبارسنجی سمت سرور برای رد مشتری/نصب غیرفعال؛ ادغام شد.
-- PR #278: بررسی وضعیت هدف پس از مجوزدهی منبع؛ ادغام شد.
-- PR #279: انتقال بررسی وضعیت و RowVersion درخواست تأیید پس از مجوزدهی مشتری و نصب؛ ادغام شد.
-- PR #280: پاسخ `404 Not Found` به‌جای `403 Forbidden` هنگام شکست مجوزدهی منابع مشتری/نصب؛ ادغام شد.
-- PR #282: اعتبارسنجی کامل قرارداد provisioning و payload canonical پیش از امضا؛ ادغام شد.
-- PR #283: جلوگیری از خروجی بستهٔ provisioning وقتی مشتری یا نصب هدف غیرفعال است؛ بررسی وضعیت هدف در تراکنش export؛ ادغام شد.
-- PR #284: مجوزدهی منبع درخواست تأیید پیش از بررسی RowVersion، وضعیت و خودتأییدی؛ برای هدف غیرقابل‌دسترسی/نوع پشتیبانی‌نشده پاسخ 404 و تست رگرسیون HTTP اضافه شد؛ ادغام شد.
-- PR #281: مستندات وضعیت قبلی به‌روزرسانی شده بود؛ این snapshot آن را با PRهای بعدی همگام می‌کند.
+## تغییرات اخیر ادغام‌شده
+- PR #286: اعتبارسنجی امضای بستهٔ provisioning پیش از parse کردن JSON؛ ادغام شد.
+- PR #287: قرارداد canonical و نسخه‌دار acknowledgement امضاشده، بررسی ECDSA P-256/SHA-256 روی بایت‌های دقیق پیش از parse، اتصال به request ID/nonce/hash/customer/installation و تست‌های قراردادی؛ ادغام شد.
+- CI مربوط به PR #287 موفق بود:
+  - [Vendor CI — run 40854670655](https://github.com/hamidreza1394/Accounting/actions/runs/40854670655)
+  - [.NET CI — run 40854670549](https://github.com/hamidreza1394/Accounting/actions/runs/40854670549)
+  - [Semgrep — run 40854670451](https://github.com/hamidreza1394/Accounting/actions/runs/40854670451)
+  - [PR checks — run 40854665623](https://github.com/hamidreza1394/Accounting/actions/runs/40854665623)
 
-## CI پس از ادغام PR #284
-- [Vendor CI — run 40845416309](https://github.com/hamidreza1394/Accounting/actions/runs/40845416309): موفق.
-- [.NET CI — run 40845416352](https://github.com/hamidreza1394/Accounting/actions/runs/40845416352): موفق.
-- [Semgrep — run 40845416374](https://github.com/hamidreza1394/Accounting/actions/runs/40845416374): موفق.
-- [Push on main — run 40845416241](https://github.com/hamidreza1394/Accounting/actions/runs/40845416241): موفق.
+## CI پس از ادغام PR #287
+- Vendor CI — run 40855628545: در حال اجرا در آخرین بررسی.
+- Semgrep — run 40855628381: در حال اجرا در آخرین بررسی.
+- .NET CI — run 40855628365: در حال اجرا در آخرین بررسی.
+- Push on main — run 40855628192: در حال اجرا در آخرین بررسی.
+- این اجراها باید تا پایان بررسی شوند؛ هنوز نمی‌توان وضعیت CI پس از ادغام را سبز اعلام کرد.
 
 ## شکاف‌های مانع آمادگی Production
-- **Provisioning end-to-end (#228):** Vendor درخواست و metadata راه‌اندازی را ثبت می‌کند؛ ایجاد واقعی شرکت/مدیر در نصب مشتری تا زمان مصرف بستهٔ معتبر و دریافت acknowledgement قابل‌اعتماد، تأییدشده محسوب نمی‌شود.
-- **مصرف‌کنندهٔ سمت مشتری (#235):** باید در Issue/PR مستقل پیاده‌سازی و بازبینی شود؛ شامل تأیید امضا و نصب مقصد، جلوگیری از replay، تراکنش اتمی، idempotency و acknowledgement امضاشده. تغییرات customer-side یا migration دیتابیس مشتری نباید داخل PR محدود به Vendor پنهان شوند.
-- **امضای Production (#236 و #214):** provider پیش‌فرض عمداً fail-closed است. انتخاب و پیکربندی KMS/HSM یا سرویس امضای مصوب، هویت/دسترسی عملیاتی و چرخهٔ کلید به تصمیم و پیکربندی واقعی نیاز دارد؛ fallback با کلید نرم‌افزاری اضافه نشود.
-- **checkpoint مستقل ممیزی (#107):** abstraction و کنترل زنجیرهٔ ممیزی داخل Vendor DB جایگزین sink مستقل با credential و retention جدا نیست. اتصال و بازیابی عملیاتی باید با provider واقعی آزموده شود.
-- **Provisioning export (#228 / PR #283):** PR #283 ادغام شده است؛ برای اجرای عملی در محیط مشتری همچنان باید سناریوهای نصب و acknowledgement end-to-end در دامنهٔ #235 پوشش داده شوند.
+- **Provisioning end-to-end (#228/#235):** قرارداد بسته و acknowledgement موجود است؛ مصرف‌کنندهٔ سمت مشتری، claim اتمی request ID/nonce، اجرای تراکنشی، retry/idempotency و انتقال Vendor به `Confirmed` پس از تأیید acknowledgement هنوز پیاده‌سازی نشده‌اند.
+- **امضای Production (#236/#214):** provider پیش‌فرض fail-closed است. انتخاب و پیکربندی KMS/HSM یا سرویس امضای مصوب، هویت/دسترسی عملیاتی، چرخش کلید و بازیابی نیازمند تصمیم و پیکربندی واقعی است؛ fallback نرم‌افزاری اضافه نشود.
+- **checkpoint مستقل ممیزی (#107):** زنجیرهٔ داخل Vendor DB جایگزین sink مستقل با مجوز و retention جدا نیست؛ adapter و آزمون عملیاتی واقعی باقی مانده است.
+- **آزمون دستی UI و تحویل آفلاین:** مسیر نصب مشتری، import/export و acknowledgement باید در محیط‌های پشتیبانی‌شده end-to-end آزموده شود.
 
-نتیجه: تغییرات #277–#280، #282 و #284 در main هستند و CI پس از #284 سبز است؛ اما تا رفع شکاف‌های بالا و تکمیل بررسی‌های Production، **ماژول Vendor آمادهٔ اعلام Production-ready نیست**.
+نتیجه: PR #286 و #287 ادغام شده‌اند، اما Vendor هنوز **Production-ready نیست** تا شکاف‌های بالا بسته و CI پس از ادغام نهایی شود.
 
 ---
 

@@ -21,5 +21,7 @@ No private key or production signing configuration was added. The customer ackno
 
 ## Validation status
 
-- Local build/tests were not available through the GitHub-only editing path used for this change.
-- Merge is blocked until required GitHub CI checks pass on this PR.
+- Local build/tests were not run through the GitHub-only editing path used for this change.
+- PR #287 was merged as commit `d74ca15a517ddbb72d8711b55b0379381ecc34dd`.
+- Vendor CI run `40854670655`, .NET CI run `40854670549`, Semgrep run `40854670451`, and PR checks run `40854665623` all completed successfully.
+- Post-merge main workflows `40855628545`, `40855628381`, `40855628365`, and `40855628192` were still in progress at the latest check; final main CI status remains pending.
