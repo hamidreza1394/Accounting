@@ -1209,3 +1209,13 @@
 - **اعتبارسنجی CI قبل از اصلاح:** `dotnet build` موفق، `dotnet test` موفق با ۶۱۳/۶۱۳، `generate_migrations.py --check` موفق؛ دو تست گارد شکست خوردند (ستون RowVersion شناسایی نمی‌شد و تست migration جدیدتر fixture منسوخ داشت). تست‌ها بعد از اصلاح باید در اجرای CI جدید تأیید شوند.
 - **امنیت/داده:** گاردها خاموش یا ضعیف نشده‌اند؛ Migration اجرایی و دیتابیس مشتری تغییر نکرده‌اند.
 - **Git:** شاخه `feat/customer-provisioning-consumer`؛ PR موجود [#302](https://github.com/hamidreza1394/Accounting/pull/302)، هنوز Draft است و نباید Merge شود تا مصرف‌کننده تراکنشی provisioning و آزمون‌های نهایی کامل شوند.
+
+
+## 2026-10-29 — Issue #235: provisioning payload schema v3 for administrator identity
+- **Motivation:** The customer-side `Users.EmailAddress` field is required, while the existing signed provisioning contract carried only `InitialAdminUserName`. Inventing a placeholder email during customer DB provisioning would create a false identity and could collide with login/account recovery semantics.
+- **Change:** Added schema v3 with `InitialAdminEmail`, canonicalized only for schema v3. Existing v1/v2 canonical JSON remains unchanged so previously issued signatures are not invalidated.
+- **Validation:** Schema v3 requires a bounded syntactically valid email; v1/v2 reject the new field and remain compatible. Vendor-side request validation, idempotency matching, payload issuance, RTL form and UI tests now carry the same email value. The email is metadata, not a credential; no password or token is included in the package.
+- **Tests added:** Contract validation for valid/missing/malformed v3 email and v2 compatibility; Vendor validation tests for missing/malformed email; UI submission test checks the email field.
+- **Verification:** New CI is required for the latest branch head; local tests were not run in this GitHub-only session.
+- **Remaining:** Implement the transactional customer consumer, one-time enrollment delivery and forced password-change enforcement, parent-reference mapping, signed customer acknowledgement generation, replay/concurrency/rollback SQL Server tests, and full E2E. Production customer acknowledgement signing remains fail-closed until a separate trusted signer is configured.
+- **Branch/PR:** `feat/customer-provisioning-consumer`, [PR #302](https://github.com/hamidreza1394/Accounting/pull/302). Do not merge until the remaining consumer path is implemented and validated.
