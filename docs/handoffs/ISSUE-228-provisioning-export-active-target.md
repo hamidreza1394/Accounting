@@ -48,5 +48,5 @@
 
 ## شناسه‌های Git
 - Branch: fix/228-provisioning-export-active-target
-- Commit: در تاریخچهٔ شاخه ثبت می‌شود.
-- Pull Request: پس از push تغییرات ایجاد می‌شود.
+- Commit پیاده‌سازی: fd390cb4af7e6af519305277cd0a73f45a2e6d2e (تغییر تکمیلی assertion در commit بعدی همین شاخه است).
+- Pull Request: [#283](https://github.com/hamidreza1394/Accounting/pull/283) — باز، منتظر CI.

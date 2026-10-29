@@ -983,6 +983,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
                 using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
                 Assert.Equal("Approved", json.RootElement.GetProperty("status").GetString());
+                Assert.NotEqual(Guid.Empty, json.RootElement.GetProperty("reviewedByUserId").GetGuid());
             }
 
             using (var inactiveTargetExport = await PostWithTokenAsync(reviewerClient,
