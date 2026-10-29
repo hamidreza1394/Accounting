@@ -108,6 +108,30 @@ public sealed class CustomerProvisioningPackageVerifierTests
     }
 
     [Fact]
+    public void ControlCharactersInConfiguredIdentity_FailClosed()
+    {
+        using var signingKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var verifier = CreateVerifier(signingKey, "customer-001\\n", "install-001");
+        var package = Sign(signingKey, Sample("customer-001", "install-001"));
+
+        Assert.False(verifier.TryVerify(package, out var payload, out var error));
+        Assert.Null(payload);
+        Assert.Equal("provisioning_consumer_not_configured", error);
+    }
+
+    [Fact]
+    public void OversizedConfiguredIdentity_FailsClosed()
+    {
+        using var signingKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var verifier = CreateVerifier(signingKey, new string('c', 129), "install-001");
+        var package = Sign(signingKey, Sample("customer-001", "install-001"));
+
+        Assert.False(verifier.TryVerify(package, out var payload, out var error));
+        Assert.Null(payload);
+        Assert.Equal("provisioning_consumer_not_configured", error);
+    }
+
+    [Fact]
     public void MalformedConfiguredPublicKey_IsNotAcceptedAsTrusted()
     {
         var configuration = new ConfigurationBuilder()
