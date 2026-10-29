@@ -126,7 +126,7 @@ public sealed class VendorProvisioningRequestRulesTests
     {
         var request = ValidRequest();
         var payload = new CustomerProvisioningPayload(
-            1,
+            CustomerProvisioningPackageValidator.CurrentPayloadSchemaVersion,
             request.RequestId.ToString("D"),
             "customer-001",
             "install-001",
@@ -136,7 +136,11 @@ public sealed class VendorProvisioningRequestRulesTests
             request.Subsystems!,
             DateTimeOffset.UtcNow.AddMinutes(-1),
             DateTimeOffset.UtcNow.AddHours(1),
-            "abcdefghijklmnopqrstuvwxyz0123456789_-");
+            "abcdefghijklmnopqrstuvwxyz0123456789_-",
+            request.FiscalPeriodTitle,
+            request.FiscalPeriodStartDate,
+            request.FiscalPeriodEndDate,
+            request.ParentCompanyReference);
 
         Assert.False(VendorProvisioningRequestRules.MatchesExisting(
             payload, request with { CompanyName = "Different Company" }, "customer-001", "install-001"));
