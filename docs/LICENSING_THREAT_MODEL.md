@@ -108,3 +108,11 @@
 - Provisioning packages use the dedicated `IProvisioningSigningProvider` boundary; license issuance uses `ILicenseSigningProvider`. The registrations and key responsibilities must remain separate even when both contracts use the same ECDSA P-256 signature format.
 - The default provisioning provider is `UnavailableProvisioningSigningProvider`, which returns an unavailable result and honors cancellation. It does not create, persist, log, or package private-key material.
 - This is an architectural boundary, not a production signer. Production remains blocked until an approved external KMS/HSM or protected signing service uses a dedicated provisioning key, resolves key IDs from trusted server-side configuration, verifies signatures before persistence, and has documented rotation/recovery and operational tests. No provider-specific implementation is selected by this change.
+
+
+## Provisioning signer timeout boundary (Issue #236, 2026-10-29)
+
+- Vendor issuance now bounds waiting for the external provisioning signer to 15 seconds and passes a linked cancellation token to the provider.
+- Timeout or signer-side cancellation maps to the same generic unavailable result; the issuance transaction does not persist a package or transition the request to `PendingDelivery` on this result.
+- Cancellation initiated by the HTTP/request caller remains cancellation and is not converted into a signer outage.
+- The default provider remains unavailable/fail-closed. This is timeout protection, not a KMS/HSM adapter, and does not make Production signing available.

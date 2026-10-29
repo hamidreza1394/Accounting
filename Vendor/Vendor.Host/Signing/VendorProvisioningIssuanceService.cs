@@ -78,7 +78,11 @@ public sealed class VendorProvisioningIssuanceService(
         LicenseSigningResult signing;
         try
         {
-            signing = await signingProvider.SignAsync(payloadBytes, cancellationToken);
+            signing = await ProvisioningSigningExecution.SignWithTimeoutAsync(
+                signingProvider,
+                payloadBytes,
+                TimeSpan.FromSeconds(15),
+                cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

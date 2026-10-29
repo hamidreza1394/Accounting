@@ -1164,3 +1164,11 @@
 - **Safety:** no `Server/**`, customer DB schema, customer migration, private key, KMS/HSM adapter, or fake audit sink was added in this Vendor-only slice. Production signing remains fail-closed (#236); independent audit destination remains blocked (#107).
 - **Verification:** local .NET/npm tests and `git diff --check` were not executable through the GitHub-only session. CI must run on the PR head; no claim of passing tests is made before observing those checks.
 - **Remaining:** customer-side consumer, unique nonce/request claim, transaction/recovery, one-time enrollment, signed acknowledgement generation, and offline revocation enforcement remain separate customer-side work under #235/#214.
+
+## 2026-10-29 — Issue #236: bounded wait for provisioning signer
+
+- Added provider-neutral timeout handling around the dedicated `IProvisioningSigningProvider` boundary. A timeout cancels the provider token and returns the generic unavailable result; caller cancellation is preserved.
+- Integrated a 15-second bound in `VendorProvisioningIssuanceService`. The service's existing fail-closed transaction behavior remains: no signed package/status/audit success is persisted when the signer is unavailable.
+- Added tests for timeout, provider cancellation, caller cancellation, and invalid timeout values.
+- No KMS/HSM provider, private key, software-key fallback, customer DB change, or independent audit sink was added.
+- Local tests were not run in this GitHub-only session; CI must validate the PR head.
