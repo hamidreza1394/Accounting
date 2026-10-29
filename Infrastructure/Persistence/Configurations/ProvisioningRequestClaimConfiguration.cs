@@ -11,8 +11,11 @@ internal sealed class ProvisioningRequestClaimConfiguration
         builder.ToTable("ProvisioningRequestClaims");
         builder.HasKey(claim => claim.Id);
 
+        builder.Property(claim => claim.Nonce).HasMaxLength(128).IsUnicode(false).IsRequired();
         builder.Property(claim => claim.NonceHash).HasMaxLength(64).IsUnicode(false).IsRequired();
         builder.Property(claim => claim.PayloadSha256).HasMaxLength(64).IsUnicode(false).IsRequired();
+        builder.Property(claim => claim.CompanyType).HasMaxLength(16).IsUnicode(false).IsRequired();
+        builder.Property(claim => claim.SubsystemsJson).HasMaxLength(1024).IsUnicode(false).IsRequired();
         builder.Property(claim => claim.CustomerReference).HasMaxLength(128).IsUnicode(false).IsRequired();
         builder.Property(claim => claim.InstallationId).HasMaxLength(128).IsUnicode(false).IsRequired();
         builder.Property(claim => claim.EnrollmentTokenHash).HasMaxLength(64).IsUnicode(false).IsRequired();
@@ -22,10 +25,12 @@ internal sealed class ProvisioningRequestClaimConfiguration
         builder.Property(claim => claim.RowVersion).IsRowVersion();
 
         builder.HasIndex(claim => claim.RequestId).IsUnique();
+        builder.HasIndex(claim => claim.Nonce).IsUnique();
         builder.HasIndex(claim => claim.NonceHash).IsUnique();
         builder.HasIndex(claim => claim.EnrollmentTokenHash).IsUnique();
         builder.HasIndex(claim => new { claim.AdminUserId, claim.MustChangePassword });
         builder.HasIndex(claim => new { claim.CustomerReference, claim.InstallationId });
+        builder.HasIndex(claim => claim.ParentCompanyId);
 
         // The composite FK guarantees the claimed fiscal period belongs to the same company.
         builder.HasOne<Domain.FiscalPeriod>()
