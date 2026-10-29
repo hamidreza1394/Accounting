@@ -1132,11 +1132,13 @@
 - **Verified CI:** Vendor CI [run 40869153676](https://github.com/hamidreza1394/Accounting/actions/runs/40869153676), .NET CI [run 40869153840](https://github.com/hamidreza1394/Accounting/actions/runs/40869153840), and Semgrep [run 40869153686](https://github.com/hamidreza1394/Accounting/actions/runs/40869153686) all succeeded on the merged head. Local .NET commands were not run in this tool session.
 - **Remaining:** customer-side provisioning consumer and atomic nonce claim remain separate under #235; D-044/OD-14 conflicts with the later signed-package requirement and is documented on #235. Production signer/KMS remains blocked under #236; independent audit checkpoint destination remains blocked under #107; customer-side offline revocation persistence/enforcement remains separate under #214.
 
-## 2026-10-29 — Vendor acknowledgement status UI (PR #294)
+## 2026-10-29 — Vendor acknowledgement status UI (PR #294, merged)
 
 - **Issue / PR:** [#228](https://github.com/hamidreza1394/Accounting/issues/228), [PR #294](https://github.com/hamidreza1394/Accounting/pull/294).
+- **Merged commit:** `07dc0a4f1f784dfd2800fb8da12a70f05b67a862`.
 - **Scope:** Vendor API response and React request-history UI only; no customer DB changes or secrets.
 - **Implementation:** Exposed the persisted acknowledgement result/time in the Vendor provisioning response and displayed them in the request history, distinguishing `Applied`, `AlreadyApplied`, and `Rejected` from the broader provisioning status.
-- **Tests:** Added a UI test asserting the verified customer outcome and acknowledgement timestamp render. Vendor UI typecheck/tests/build and .NET CI must pass on the final head.
+- **Tests:** Added a UI regression test asserting the verified customer outcome and acknowledgement timestamp render.
+- **Verified PR CI on implementation head `1a9f8c3f107f713940a4d95c92f6abe597f85f80`:** Vendor CI [40871773941](https://github.com/hamidreza1394/Accounting/actions/runs/40871773941), .NET CI [40871773973](https://github.com/hamidreza1394/Accounting/actions/runs/40871773973), Semgrep [40871774197](https://github.com/hamidreza1394/Accounting/actions/runs/40871774197), and CodeQL [40871768967](https://github.com/hamidreza1394/Accounting/actions/runs/40871768967) passed. Post-merge main CI is tracked separately; no local .NET build was run in this session.
 - **Measurements:** Bundle-size before/after and browser LCP/CLS were not measured; no new dependency or external runtime asset was added.
 - **Remaining:** UI display does not implement the customer-side consumer, one-time admin enrollment, fiscal-period provisioning inputs or parent-company relationship. These are tracked under #228/#235 and must not be represented as complete.

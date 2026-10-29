@@ -1,24 +1,26 @@
-# وضعیت جاری تأییدشده Vendor — 2026-10-29 (PR #293 merged; PR #294 pending)
+# وضعیت جاری تأییدشده Vendor — 2026-10-29 (PR #293 و #294 ادغام‌شده)
 
-## وضعیت ادغام‌شده
-- **PR #293** در `main` ادغام شد؛ commit: `2884c61ade381670f754a1b8027c496a6e8eb7b2`.
-- مسیر دریافت acknowledgement امضاشده با trust store مستقل، تطبیق request ID/nonce/hash/customer/installation، idempotency، conflict handling و ممیزی تراکنشی پیاده‌سازی شد.
-- Migration مخصوص Vendor برای ذخیره digest، key ID، نتیجه و زمان acknowledgement اضافه شد.
-- [Vendor CI](https://github.com/hamidreza1394/Accounting/actions/runs/40869153676)، [.NET CI](https://github.com/hamidreza1394/Accounting/actions/runs/40869153840) و [Semgrep](https://github.com/hamidreza1394/Accounting/actions/runs/40869153686) روی head ادغام‌شده موفق‌اند؛ تست SQL Server تأیید، retry دقیق و پاسخ متناقض را پوشش می‌دهد.
+## ادغام و شواهد CI
+- **PR #293** — دریافت acknowledgement امضاشده در Vendor: merge commit `2884c61ade381670f754a1b8027c496a6e8eb7b2`.
+- **PR #294** — نمایش نتیجه/زمان پاسخ مشتری در تاریخچهٔ provisioning: merge commit `07dc0a4f1f784dfd2800fb8da12a70f05b67a862`.
+- **PR #295** — اصلاح commit ناخواستهٔ مستندات روی `main`: merge commit `9d09944af559b68dc331d37816c7db8dad68f5b1`.
+- روی implementation head PR #293 موفق شدند: [Vendor CI 40869153676](https://github.com/hamidreza1394/Accounting/actions/runs/40869153676)، [.NET CI 40869153840](https://github.com/hamidreza1394/Accounting/actions/runs/40869153840)، [Semgrep 40869153686](https://github.com/hamidreza1394/Accounting/actions/runs/40869153686).
+- روی implementation head PR #294 موفق شدند: [Vendor CI 40871773941](https://github.com/hamidreza1394/Accounting/actions/runs/40871773941)، [.NET CI 40871773973](https://github.com/hamidreza1394/Accounting/actions/runs/40871773973)، [Semgrep 40871774197](https://github.com/hamidreza1394/Accounting/actions/runs/40871774197)، [CodeQL 40871768967](https://github.com/hamidreza1394/Accounting/actions/runs/40871768967).
+- **پس از ادغام:** CI مربوط به `main` در SHA `07dc0a4f1f784dfd2800fb8da12a70f05b67a862` جداگانه در حال اجراست؛ تا پایان runهای main، موفقیت پس از ادغام را اعلام نمی‌کنیم.
 
-## تغییر در حال بازبینی — PR #294
-- API پاسخ provisioning اکنون `AcknowledgementResult` و `AcknowledgedAtUtc` را در response برمی‌گرداند.
-- UI تاریخچهٔ درخواست، نتیجهٔ واقعی مشتری و زمان پاسخ را نمایش می‌دهد؛ نتیجهٔ acknowledgement از status کلی درخواست جداست.
-- [PR #294](https://github.com/hamidreza1394/Accounting/pull/294)؛ CI برای این head هنوز باید تکمیل شود.
+## وضعیت پیاده‌سازی فعلی
+- Vendor اکنون نتیجهٔ acknowledgement امضاشده را با trust store مستقل بررسی و به‌صورت تراکنشی ثبت می‌کند؛ retry دقیق idempotent است و پاسخ متناقض conflict می‌دهد.
+- UI تاریخچهٔ درخواست، نتیجهٔ واقعی مشتری (`Applied` / `AlreadyApplied` / `Rejected`) و زمان پاسخ را جدا از وضعیت کلی درخواست نشان می‌دهد.
+- هیچ تغییری در schema مشتری یا `Server/**` در PRهای #293/#294 ایجاد نشده است.
 
 ## شکاف‌های باقی‌مانده برای Production
-- **#228 / #235:** consumer سمت مشتری و claim اتمی request ID/nonce، ایجاد تراکنشی شرکت/دوره/مدیر و enrollment یک‌بارمصرف هنوز تکمیل نشده‌اند. D-044/OD-14 با الزام جدید signed provisioning package در #228/#235 تعارض دارد؛ این تعارض و نبود fiscal-period/parent-company fields در #235 ثبت شده است. تا تعیین‌تکلیف معماری، consumer ناقص نباید `Applied` اعلام کند.
+- **#228 / #235:** consumer سمت مشتری، claim اتمی request ID/nonce، ایجاد تراکنشی شرکت/دوره/مدیر و enrollment یک‌بارمصرف هنوز تکمیل نشده‌اند. D-044/OD-14 با الزام signed package در #228/#235 تعارض دارد؛ OD-18 در `LICENSING_OPEN_DECISIONS.md` این مورد را `NeedsApproval` ثبت می‌کند. همچنین v1 فاقد fiscal-period dates و parent-company reference است. تا تعیین‌تکلیف، consumer ناقص نباید `Applied` اعلام کند.
 - **#236:** provider امضای Production، تصمیم KMS/HSM، هویت دسترسی، چرخش و بازیابی کلید هنوز عملیاتی نشده‌اند؛ signer پیش‌فرض fail-closed باقی می‌ماند.
 - **#107:** مقصد مستقل checkpoint ممیزی، اعتبارنامه‌های جدا، retention/immutability و بازیابی باید تعیین و پیاده‌سازی شوند.
 - **#214:** قرارداد revocation آفلاین موجود است؛ مصرف‌کنندهٔ سمت مشتری، ذخیره‌سازی monotonic و enforcement/backup/restore هنوز باقی است.
 - **تحویل آفلاین:** جریان export/import و acknowledgement باید در نصب‌های cloud، dedicated-server و offline end-to-end آزموده شود.
 
-نتیجه: PR #293 ادغام و CI آن تأیید شده است. PR #294 فقط UI پاسخ مشتری را کامل‌تر می‌کند؛ Vendor همچنان **Production-ready نیست** تا شکاف‌های provisioning، KMS/HSM و checkpoint مستقل تعیین‌تکلیف و تأیید شوند.
+نتیجه: دو PR مربوط به Vendor acknowledgement ادغام و CI روی headهای آن‌ها موفق است؛ این به معنی آمادگی Production نیست. تصمیم‌های معماری/عملیاتی و consumer سمت مشتری همچنان باقی‌اند.
 
 ---
 ## Snapshot تاریخی — وضعیت Vendor پس از PR #271
