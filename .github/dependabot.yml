@@ -9,7 +9,6 @@ updates:
     open-pull-requests-limit: 2
     labels:
       - "dependencies"
-      - "nuget"
     commit-message:
       prefix: "deps(nuget)"
 
@@ -22,8 +21,6 @@ updates:
     open-pull-requests-limit: 2
     labels:
       - "dependencies"
-      - "npm"
-      - "frontend"
     commit-message:
       prefix: "deps(npm)"
 
@@ -36,7 +33,6 @@ updates:
     open-pull-requests-limit: 2
     labels:
       - "dependencies"
-      - "npm"
       - "vendor"
     commit-message:
       prefix: "deps(vendor-npm)"
@@ -49,6 +45,5 @@ updates:
     open-pull-requests-limit: 2
     labels:
       - "dependencies"
-      - "github-actions"
     commit-message:
       prefix: "deps(actions)"
