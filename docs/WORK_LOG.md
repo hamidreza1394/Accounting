@@ -1218,4 +1218,4 @@
 - **Tests added:** Contract validation for valid/missing/malformed v3 email and v2 compatibility; Vendor validation tests for missing/malformed email; UI submission test checks the email field.
 - **Verification:** New CI is required for the latest branch head; local tests were not run in this GitHub-only session.
 - **Remaining:** Implement the transactional customer consumer, one-time enrollment delivery and forced password-change enforcement, parent-reference mapping, signed customer acknowledgement generation, replay/concurrency/rollback SQL Server tests, and full E2E. Production customer acknowledgement signing remains fail-closed until a separate trusted signer is configured.
-- **Branch/PR:** `feat/customer-provisioning-consumer`, [PR #302](https://github.com/hamidreza1394/Accounting/pull/302). Do not merge until the remaining consumer path is implemented and validated.
+- **Branch/PR:** `feat/provisioning-schema-v3-admin-email`, [PR #303](https://github.com/hamidreza1394/Accounting/pull/303) (Draft). CI must validate this head; do not merge until the remaining consumer path is implemented and validated.
