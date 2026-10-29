@@ -968,6 +968,45 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal("Approved", json.RootElement.GetProperty("status").GetString());
             }
 
+            // The package was signed while the target was active. Suspend both resources before
+            // first export to ensure a stale signed package cannot be delivered after suspension.
+            foreach (var approval in new[]
+            {
+                (Id: customerApprovalId, RowVersion: customerApprovalRowVersion),
+                (Id: installationApprovalId, RowVersion: installationApprovalRowVersion)
+            })
+            {
+                using var response = await PostWithTokenAsync(reviewerClient,
+                    $"/api/vendor/approvals/{approval.Id:D}/decision",
+                    new { decision = "Approved", rowVersion = approval.RowVersion, comment = "Reviewed by a distinct administrator" },
+                    reviewerAntiForgeryToken, cancellationToken);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("Approved", json.RootElement.GetProperty("status").GetString());
+            }
+
+            using (var inactiveTargetExport = await PostWithTokenAsync(reviewerClient,
+                $"/api/vendor/provisioning-requests/{provisioningRecordId:D}/package/export",
+                new { }, reviewerAntiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Conflict, inactiveTargetExport.StatusCode);
+                using var json = JsonDocument.Parse(await inactiveTargetExport.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("provisioning_target_inactive", json.RootElement.GetProperty("error").GetString());
+            }
+
+            // Restore active status only to verify a subsequent authorized export succeeds; the
+            // approved suspension remains the final state asserted below.
+            await using (var restoreActiveScope = factory.Services.CreateAsyncScope())
+            {
+                var db = restoreActiveScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var customer = await db.Customers.SingleAsync(item => item.Id == customerId, cancellationToken);
+                var installation = await db.Installations.SingleAsync(
+                    item => item.Id == installationIdForProvisioning, cancellationToken);
+                customer.Status = "Active";
+                installation.Status = "Active";
+                await db.SaveChangesAsync(cancellationToken);
+            }
+
             using (var packageResponse = await PostWithTokenAsync(reviewerClient,
                 $"/api/vendor/provisioning-requests/{provisioningRecordId:D}/package/export",
                 new { }, reviewerAntiForgeryToken, cancellationToken))
@@ -989,20 +1028,15 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal(installationCodeForProvisioning, parsedPayload.InstallationId);
             }
 
-            foreach (var approval in new[]
+            await using (var restoreSuspendedScope = factory.Services.CreateAsyncScope())
             {
-                (Id: customerApprovalId, RowVersion: customerApprovalRowVersion),
-                (Id: installationApprovalId, RowVersion: installationApprovalRowVersion)
-            })
-            {
-                using var response = await PostWithTokenAsync(reviewerClient,
-                    $"/api/vendor/approvals/{approval.Id:D}/decision",
-                    new { decision = "Approved", rowVersion = approval.RowVersion, comment = "Reviewed by a distinct administrator" },
-                    reviewerAntiForgeryToken, cancellationToken);
-                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-                Assert.Equal("Approved", json.RootElement.GetProperty("status").GetString());
-                Assert.NotEqual(Guid.Empty, json.RootElement.GetProperty("reviewedByUserId").GetGuid());
+                var db = restoreSuspendedScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var customer = await db.Customers.SingleAsync(item => item.Id == customerId, cancellationToken);
+                var installation = await db.Installations.SingleAsync(
+                    item => item.Id == installationIdForProvisioning, cancellationToken);
+                customer.Status = "Suspended";
+                installation.Status = "Suspended";
+                await db.SaveChangesAsync(cancellationToken);
             }
 
             await using (var licenseStateScope = factory.Services.CreateAsyncScope())

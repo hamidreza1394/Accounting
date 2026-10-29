@@ -1068,3 +1068,11 @@
 - Added server-side validation requiring both the Vendor customer and selected installation to have the exact status `Active` before a new provisioning request is persisted.
 - Added pure rule tests for active, inactive, suspended, and missing status values. Inactive targets return a generic conflict response; no customer DB access, customer schema change, or credential handling was added.
 - Validation limitation: this GitHub-only change was not built or tested locally. Required Vendor CI and integration checks must pass on the PR head before merge.
+
+
+## 2026-10-29 — جلوگیری از تحویل بستهٔ Provisioning پس از تعلیق هدف (#228)
+- **یافته:** وضعیت مشتری و نصب هنگام ایجاد درخواست و امضا کنترل می‌شد، اما ممکن بود پس از امضای بسته و پیش از نخستین export، مشتری یا نصب تعلیق شود و endpoint همچنان بسته را تحویل دهد.
+- **اصلاح پیشنهادی در شاخه:** export اکنون داخل تراکنش Serializable وضعیت فعال مشتری و نصب مرتبط را دوباره بررسی می‌کند؛ هدف حذف‌شده/ناسازگار 404 و هدف غیرفعال 409 می‌گیرد. قفل‌های تراکنش از تغییر هم‌زمان وضعیت هدف تا ثبت تحویل/ممیزی جلوگیری می‌کنند.
+- **تست افزوده‌شده:** تست Integration موجود ابتدا درخواست را با signer آزمایشی امضا می‌کند، سپس تعلیق مشتری و نصب را از مسیر approval اعمال می‌کند و انتظار دارد export رد شود؛ پس از فعال‌سازی آزمایشی، export موفق و امضای بسته بررسی می‌شود و وضعیت نهایی تعلیق حفظ می‌شود.
+- **دامنه داده:** فقط Vendor DB آزمایشی؛ هیچ Server/** یا schema/migration مشتری تغییر نمی‌کند.
+- **اعتبارسنجی:** در این محیط اجرای محلی Build/Test و SQL Server انجام نشده؛ نتیجه باید از GitHub Actions روی PR و سپس main تأیید شود. تا سبزشدن CI، این تغییر Implemented / Not Verified است.
