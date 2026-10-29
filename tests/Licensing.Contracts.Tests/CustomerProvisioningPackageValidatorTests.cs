@@ -203,6 +203,18 @@ public sealed class CustomerProvisioningPackageValidatorTests
     }
 
     [Fact]
+    public void V2SignedPackage_VerifiesAndReturnsPeriodMetadata()
+    {
+        using var signingKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var package = Sign(signingKey, SampleV2());
+
+        Assert.True(CustomerProvisioningPackageValidator.TryValidateAndVerify(
+            package, signingKey.ExportSubjectPublicKeyInfo(), Now, out var parsed, out var error), error);
+        Assert.Equal(new DateOnly(2026, 1, 1), parsed!.FiscalPeriodStartDate);
+        Assert.Equal(new DateOnly(2027, 1, 1), parsed.FiscalPeriodEndDate);
+    }
+
+    [Fact]
     public void V2Payload_RequiresFiscalPeriodAndValidParentRelationship()
     {
         var payload = SampleV2();
