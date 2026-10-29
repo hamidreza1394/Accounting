@@ -1172,3 +1172,12 @@
 - Added tests for timeout, provider cancellation, caller cancellation, and invalid timeout values.
 - No KMS/HSM provider, private key, software-key fallback, customer DB change, or independent audit sink was added.
 - Local tests were not run in this GitHub-only session; CI must validate the PR head.
+
+## 2026-10-29 — Issue #235: customer-side trust boundary (WIP)
+
+- Added a customer-side trust store that resolves package KeyId only from independently configured public keys; malformed, oversized, non-P-256 and unknown keys fail closed.
+- Added a verifier wrapper that validates the signed canonical package and then compares the signed customer/installation references against local deployment settings before any database mutation.
+- Added tests for valid package verification, unknown/malformed key, customer mismatch, installation mismatch, expired package and payload tampering.
+- Opened draft PR #302 to run CI early while continuing the separate customer-consumer implementation.
+- **Not complete:** no database mutation, atomic replay claim, enrollment token, password-change enforcement or customer acknowledgement is implemented by this slice. Do not merge or close #235 on this basis.
+- Local tests were not run; CI is the current verification path.
