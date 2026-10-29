@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Faranou.Licensing.Contracts;
 using Microsoft.Extensions.Options;
 
