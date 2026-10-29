@@ -59,6 +59,8 @@ function publicError(status: number, code: string): string {
   if (status === 400 && code === 'invalid_antiforgery_token') return 'توکن امنیتی معتبر نیست؛ فرم را تازه‌سازی کنید.';
   if (status === 400 && code === 'invalid_provisioning_subsystems') return 'حداقل یک زیرسیستم مجاز انتخاب کنید و گزینه‌های تکراری را حذف کنید.';
   if (status === 400 && code === 'invalid_provisioning_configuration') return 'نام شرکت، نوع شرکت یا نام کاربری مدیر اولیه معتبر نیست.';
+  if (status === 400 && code === 'invalid_provisioning_fiscal_period') return 'عنوان و بازه دوره مالی را بررسی کنید؛ تاریخ پایان باید بعد از تاریخ شروع باشد.';
+  if (status === 400 && code === 'invalid_provisioning_parent_company_reference') return 'برای شرکت تابعه مرجع شرکت مادر لازم است و برای سایر انواع شرکت نباید وارد شود.';
   if (status === 400 && code === 'invalid_provisioning_request_id') return 'شناسه درخواست معتبر نیست؛ دوباره تلاش کنید.';
   if (status === 401) return 'نشست شما پایان یافته است؛ دوباره وارد شوید.';
   if (status === 403) return 'حساب شما مجوز ثبت درخواست راه‌اندازی را ندارد.';
@@ -89,6 +91,10 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
   const [installationId, setInstallationId] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [companyType, setCompanyType] = useState('independent');
+  const [fiscalPeriodTitle, setFiscalPeriodTitle] = useState('سال مالی ۱۴۰۵');
+  const [fiscalPeriodStartDate, setFiscalPeriodStartDate] = useState('2026-03-21');
+  const [fiscalPeriodEndDate, setFiscalPeriodEndDate] = useState('2027-03-20');
+  const [parentCompanyReference, setParentCompanyReference] = useState('');
   const [adminUserName, setAdminUserName] = useState('');
   const [subsystems, setSubsystems] = useState<string[]>(['finance']);
   const [requestId, setRequestId] = useState(newRequestId);
@@ -163,6 +169,10 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
           companyType,
           initialAdminUserName: adminUserName.trim(),
           subsystems: [...subsystems].sort(),
+          fiscalPeriodTitle: fiscalPeriodTitle.trim(),
+          fiscalPeriodStartDate,
+          fiscalPeriodEndDate,
+          parentCompanyReference: companyType === 'subsidiary' ? parentCompanyReference.trim() : null,
         }),
       });
       if (!response.ok) {
@@ -181,6 +191,10 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
       setCompanyName('');
       setAdminUserName('');
       setCompanyType('independent');
+      setFiscalPeriodTitle('سال مالی ۱۴۰۵');
+      setFiscalPeriodStartDate('2026-03-21');
+      setFiscalPeriodEndDate('2027-03-20');
+      setParentCompanyReference('');
       setSubsystems(['finance']);
       setRefreshKey(current => current + 1);
       onSaved();
@@ -323,13 +337,44 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
           </div>
           <div className="space-y-2">
             <label htmlFor="provisioning-company-type" className="text-sm font-medium">نوع شرکت</label>
-            <select id="provisioning-company-type" value={companyType} onChange={event => setCompanyType(event.target.value)} disabled={busy}
+            <select id="provisioning-company-type" value={companyType} onChange={event => {
+                const nextType = event.target.value;
+                setCompanyType(nextType);
+                if (nextType !== 'subsidiary') setParentCompanyReference('');
+              }} disabled={busy}
               className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
               <option value="independent">مستقل</option>
               <option value="parent">مادر</option>
               <option value="subsidiary">تابعه</option>
             </select>
           </div>
+          <div className="space-y-2">
+            <label htmlFor="provisioning-fiscal-period-title" className="text-sm font-medium">عنوان دوره مالی</label>
+            <input id="provisioning-fiscal-period-title" required maxLength={100} value={fiscalPeriodTitle}
+              onChange={event => setFiscalPeriodTitle(event.target.value)} disabled={busy}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"/>
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="provisioning-fiscal-period-start" className="text-sm font-medium">تاریخ شروع دوره مالی</label>
+            <input id="provisioning-fiscal-period-start" type="date" required value={fiscalPeriodStartDate}
+              onChange={event => setFiscalPeriodStartDate(event.target.value)} disabled={busy}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"/>
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="provisioning-fiscal-period-end" className="text-sm font-medium">تاریخ پایان دوره مالی</label>
+            <input id="provisioning-fiscal-period-end" type="date" required value={fiscalPeriodEndDate}
+              onChange={event => setFiscalPeriodEndDate(event.target.value)} disabled={busy}
+              min={fiscalPeriodStartDate || undefined}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"/>
+          </div>
+          {companyType === 'subsidiary' && <div className="space-y-2">
+            <label htmlFor="provisioning-parent-company-reference" className="text-sm font-medium">مرجع شرکت مادر در نصب مشتری</label>
+            <input id="provisioning-parent-company-reference" required maxLength={128} autoComplete="off" dir="ltr"
+              value={parentCompanyReference} onChange={event => setParentCompanyReference(event.target.value)} disabled={busy}
+              aria-describedby="provisioning-parent-company-help"
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"/>
+            <p id="provisioning-parent-company-help" className="text-xs leading-5 text-muted-foreground">این مرجع در نصب مشتری resolve می‌شود؛ Vendor به دیتابیس مشتری دسترسی مستقیم ندارد.</p>
+          </div>}
           <div className="space-y-2">
             <label htmlFor="provisioning-admin-username" className="text-sm font-medium">نام کاربری مدیر اولیه</label>
             <input id="provisioning-admin-username" required minLength={3} maxLength={64} autoComplete="off"
@@ -349,7 +394,10 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
         </fieldset>
 
         <div className="flex flex-wrap gap-2">
-          <Button type="submit" disabled={busy || loading || !installationId || !companyName.trim() || !adminUserName.trim() || subsystems.length === 0}>
+          <Button type="submit" disabled={busy || loading || !installationId || !companyName.trim() || !adminUserName.trim() ||
+            !fiscalPeriodTitle.trim() || !fiscalPeriodStartDate || !fiscalPeriodEndDate ||
+            (fiscalPeriodStartDate >= fiscalPeriodEndDate) ||
+            (companyType === 'subsidiary' && !parentCompanyReference.trim()) || subsystems.length === 0}>
             {busy ? <><LoaderCircle size={16} className="animate-spin"/> در حال ثبت…</> : 'ذخیره درخواست راه‌اندازی'}
           </Button>
           <Button type="button" variant="outline" onClick={onCancel} disabled={busy}>بستن</Button>
