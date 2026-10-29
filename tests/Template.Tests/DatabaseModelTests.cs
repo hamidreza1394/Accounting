@@ -211,6 +211,20 @@ public sealed class DatabaseModelTests
 	}
 
 	[Fact]
+	public void ProvisioningClaims_RowVersionIsConfiguredAsSqlServerConcurrencyToken()
+	{
+		var claim = Model.FindEntityType(typeof(Domain.ProvisioningRequestClaim));
+		Assert.NotNull(claim);
+
+		var rowVersion = claim!.FindProperty(nameof(Domain.ProvisioningRequestClaim.RowVersion));
+		Assert.NotNull(rowVersion);
+		Assert.Equal(typeof(byte[]), rowVersion!.ClrType);
+		Assert.Equal("rowversion", rowVersion.GetColumnType(), ignoreCase: true);
+		Assert.True(rowVersion.IsConcurrencyToken);
+		Assert.Equal(ValueGenerated.OnAddOrUpdate, rowVersion.ValueGenerated);
+	}
+
+	[Fact]
 	public void MoneyIsNeverStoredAsAFloatingPointNumber()
 	{
 		foreach (var entityType in Model.GetEntityTypes())
