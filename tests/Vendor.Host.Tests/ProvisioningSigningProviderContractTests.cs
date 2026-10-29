@@ -37,7 +37,7 @@ public sealed class ProvisioningSigningProviderContractTests
         var provider = new BlockingProvider();
 
         var result = await ProvisioningSigningExecution.SignWithTimeoutAsync(
-            provider, Encoding.UTF8.GetBytes("{\\"schemaVersion\\":2}"),
+            provider, Encoding.UTF8.GetBytes("{}"),
             TimeSpan.FromMilliseconds(30));
 
         Assert.False(result.Succeeded);
