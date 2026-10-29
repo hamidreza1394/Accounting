@@ -323,7 +323,11 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 companyName = "Provisioning Integration Company",
                 companyType = "independent",
                 initialAdminUserName = "initial-admin",
-                subsystems = new[] { "finance", "sales" }
+                subsystems = new[] { "finance", "sales" },
+                fiscalPeriodTitle = "سال مالی ۱۴۰۵",
+                fiscalPeriodStartDate = new DateOnly(2026, 3, 21),
+                fiscalPeriodEndDate = new DateOnly(2027, 3, 20),
+                parentCompanyReference = (string?)null
             };
             using (var missingTokenRequest = new HttpRequestMessage(HttpMethod.Post, "/api/vendor/provisioning-requests/")
             {
@@ -366,7 +370,11 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     companyName = "Different Company",
                     companyType = "independent",
                     initialAdminUserName = "initial-admin",
-                    subsystems = new[] { "finance", "sales" }
+                    subsystems = new[] { "finance", "sales" },
+                fiscalPeriodTitle = "سال مالی ۱۴۰۵",
+                fiscalPeriodStartDate = new DateOnly(2026, 3, 21),
+                fiscalPeriodEndDate = new DateOnly(2027, 3, 20),
+                parentCompanyReference = (string?)null
                 },
                 antiForgeryToken,
                 cancellationToken))
@@ -385,7 +393,11 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     companyName = "Provisioning Integration Company",
                     companyType = "independent",
                     initialAdminUserName = "initial-admin",
-                    subsystems = new[] { "finance" }
+                    subsystems = new[] { "finance" },
+                    fiscalPeriodTitle = "سال مالی ۱۴۰۵",
+                    fiscalPeriodStartDate = new DateOnly(2026, 3, 21),
+                    fiscalPeriodEndDate = new DateOnly(2027, 3, 20),
+                    parentCompanyReference = (string?)null
                 },
                 antiForgeryToken,
                 cancellationToken))
@@ -703,6 +715,10 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 licenseKind = "term",
                 maxCompanies = 25,
                 subsystems = new[] { "finance", "sales" },
+                fiscalPeriodTitle = "سال مالی ۱۴۰۵",
+                fiscalPeriodStartDate = new DateOnly(2026, 3, 21),
+                fiscalPeriodEndDate = new DateOnly(2027, 3, 20),
+                parentCompanyReference = (string?)null,
                 graceDays = 30,
                 validFromUtc = DateTimeOffset.UtcNow.AddDays(-1),
                 validUntilUtc = (DateTimeOffset?)DateTimeOffset.UtcNow.AddDays(365),
