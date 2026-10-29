@@ -78,6 +78,78 @@ public sealed class CustomerProvisioningPackageValidatorTests
     }
 
     [Fact]
+    public void PayloadValidation_AcceptsValidCanonicalPayloadWithoutRequiringSignature()
+    {
+        var json = CustomerProvisioningCanonicalJson.Serialize(Sample());
+
+        Assert.True(CustomerProvisioningPackageValidator.TryValidatePayload(
+            json, Now, out var parsed, out var error), error);
+        Assert.NotNull(parsed);
+        Assert.Equal(Sample().RequestId, parsed!.RequestId);
+    }
+
+    [Fact]
+    public void PayloadValidation_RejectsInvalidCompanyType()
+    {
+        var json = CustomerProvisioningCanonicalJson.Serialize(Sample() with { CompanyType = "unknown" });
+
+        Assert.False(CustomerProvisioningPackageValidator.TryValidatePayload(
+            json, Now, out var parsed, out var error));
+        Assert.Null(parsed);
+        Assert.Equal("provisioning_payload_invalid", error);
+    }
+
+    [Fact]
+    public void PayloadValidation_RejectsOversizedPayload()
+    {
+        var oversized = new string(' ', CustomerProvisioningPackageValidator.MaxPayloadJsonChars + 1);
+
+        Assert.False(CustomerProvisioningPackageValidator.TryValidatePayload(
+            oversized, Now, out var parsed, out var error));
+        Assert.Null(parsed);
+        Assert.Equal("provisioning_payload_invalid", error);
+    }
+
+    [Fact]
+    public void PayloadValidation_RejectsUnknownSubsystemWithoutRequiringSignature()
+    {
+        var json = CustomerProvisioningCanonicalJson.Serialize(
+            Sample() with { Subsystems = new[] { "future-module" } });
+
+        Assert.False(CustomerProvisioningPackageValidator.TryValidatePayload(
+            json, Now, out var parsed, out var error));
+        Assert.Null(parsed);
+        Assert.Equal("provisioning_payload_invalid", error);
+    }
+
+    [Fact]
+    public void PayloadValidation_RejectsExpiredPayloadWithoutRequiringSignature()
+    {
+        var json = CustomerProvisioningCanonicalJson.Serialize(Sample() with
+        {
+            IssuedAtUtc = Now.AddHours(-25),
+            ExpiresAtUtc = Now.AddHours(-1)
+        });
+
+        Assert.False(CustomerProvisioningPackageValidator.TryValidatePayload(
+            json, Now, out var parsed, out var error));
+        Assert.Null(parsed);
+        Assert.Equal("provisioning_payload_invalid", error);
+    }
+
+    [Fact]
+    public void PayloadValidation_RejectsNonCanonicalJson()
+    {
+        var canonical = CustomerProvisioningCanonicalJson.Serialize(Sample());
+        var nonCanonical = canonical.Replace("\"Company Example\"", "\"Company Example\", \"extra\": true", StringComparison.Ordinal);
+
+        Assert.False(CustomerProvisioningPackageValidator.TryValidatePayload(
+            nonCanonical, Now, out var parsed, out var error));
+        Assert.Null(parsed);
+        Assert.Equal("provisioning_payload_noncanonical", error);
+    }
+
+    [Fact]
     public void UnknownSubsystem_IsRejected()
     {
         using var signingKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
