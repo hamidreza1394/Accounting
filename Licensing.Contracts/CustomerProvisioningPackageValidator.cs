@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -11,6 +12,7 @@ namespace Faranou.Licensing.Contracts;
 public static class CustomerProvisioningPackageValidator
 {
     public const int CurrentFormatVersion = 1;
+    public const int CurrentPayloadSchemaVersion = 2;
     public const int MaxPayloadJsonChars = 64 * 1024;
     public const int MaxPackageLifetimeHours = 24;
     public const int ClockSkewMinutes = 2;
@@ -151,7 +153,10 @@ public static class CustomerProvisioningPackageValidator
 
     private static bool HasValidPayload(CustomerProvisioningPayload payload, DateTimeOffset nowUtc)
     {
-        if (payload.SchemaVersion != CurrentFormatVersion ||
+        var isV1 = payload.SchemaVersion == 1;
+        var isV2 = payload.SchemaVersion == CurrentPayloadSchemaVersion;
+
+        if ((!isV1 && !isV2) ||
             !Guid.TryParseExact(payload.RequestId, "D", out _) ||
             !IsBoundedText(payload.CustomerReference, 1, 128) ||
             !IsBoundedText(payload.InstallationId, 1, 128) ||
@@ -174,7 +179,30 @@ public static class CustomerProvisioningPackageValidator
             return false;
         }
 
-        return true;
+        if (isV1)
+        {
+            // v1 did not carry period or parent-company metadata.
+            return payload.FiscalPeriodTitle is null &&
+                payload.FiscalPeriodStartDate is null &&
+                payload.FiscalPeriodEndDate is null &&
+                payload.ParentCompanyReference is null;
+        }
+
+        if (!IsBoundedText(payload.FiscalPeriodTitle, 1, 100) ||
+            payload.FiscalPeriodStartDate is null ||
+            payload.FiscalPeriodEndDate is null ||
+            payload.FiscalPeriodStartDate.Value >= payload.FiscalPeriodEndDate.Value)
+        {
+            return false;
+        }
+
+        var hasParentReference = IsBoundedText(payload.ParentCompanyReference, 1, 128);
+        return payload.CompanyType switch
+        {
+            "subsidiary" => hasParentReference,
+            "independent" or "parent" => payload.ParentCompanyReference is null,
+            _ => false
+        };
     }
 
     private static bool IsBoundedText(string? value, int minLength, int maxLength) =>

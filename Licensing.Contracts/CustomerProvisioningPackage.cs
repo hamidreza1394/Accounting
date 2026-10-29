@@ -7,6 +7,7 @@ namespace Faranou.Licensing.Contracts;
 /// <summary>
 /// Versioned, signed customer-side provisioning payload. It intentionally contains no password,
 /// password hash, reusable bootstrap secret, connection string, or customer accounting data.
+/// Schema v1 remains readable; v2 adds the initial fiscal period and explicit parent-company reference.
 /// </summary>
 public sealed record CustomerProvisioningPayload(
     int SchemaVersion,
@@ -19,7 +20,11 @@ public sealed record CustomerProvisioningPayload(
     IReadOnlyList<string> Subsystems,
     DateTimeOffset IssuedAtUtc,
     DateTimeOffset ExpiresAtUtc,
-    string Nonce);
+    string Nonce,
+    string? FiscalPeriodTitle = null,
+    DateOnly? FiscalPeriodStartDate = null,
+    DateOnly? FiscalPeriodEndDate = null,
+    string? ParentCompanyReference = null);
 
 /// <summary>
 /// Signed provisioning package transported to a trusted customer-side provisioning consumer.
@@ -59,6 +64,16 @@ public static class CustomerProvisioningCanonicalJson
             writer.WriteString("issuedAtUtc", payload.IssuedAtUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
             writer.WriteString("expiresAtUtc", payload.ExpiresAtUtc.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
             writer.WriteString("nonce", payload.Nonce);
+
+            // Do not add fields to v1 canonical JSON: already issued v1 signatures must remain valid.
+            if (payload.SchemaVersion >= 2)
+            {
+                writer.WriteString("fiscalPeriodTitle", payload.FiscalPeriodTitle);
+                writer.WriteString("fiscalPeriodStartDate", payload.FiscalPeriodStartDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+                writer.WriteString("fiscalPeriodEndDate", payload.FiscalPeriodEndDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+                writer.WriteString("parentCompanyReference", payload.ParentCompanyReference);
+            }
+
             writer.WriteEndObject();
         }
 
