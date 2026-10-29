@@ -66,41 +66,8 @@ public static class CustomerProvisioningPackageValidator
             return false;
         }
 
-        try
-        {
-            payload = JsonSerializer.Deserialize<CustomerProvisioningPayload>(package.PayloadJson, JsonOptions);
-        }
-        catch (JsonException)
-        {
-            errorCode = "provisioning_payload_invalid";
+        if (!TryValidatePayload(package.PayloadJson, nowUtc, out payload, out errorCode))
             return false;
-        }
-
-        if (payload is null || !HasValidPayload(payload, nowUtc))
-        {
-            payload = null;
-            errorCode = "provisioning_payload_invalid";
-            return false;
-        }
-
-        string canonicalJson;
-        try
-        {
-            canonicalJson = CustomerProvisioningCanonicalJson.Serialize(payload);
-        }
-        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
-        {
-            payload = null;
-            errorCode = "provisioning_payload_invalid";
-            return false;
-        }
-
-        if (!string.Equals(canonicalJson, package.PayloadJson, StringComparison.Ordinal))
-        {
-            payload = null;
-            errorCode = "provisioning_payload_noncanonical";
-            return false;
-        }
 
         try
         {
@@ -122,6 +89,59 @@ public static class CustomerProvisioningPackageValidator
         {
             payload = null;
             errorCode = "provisioning_trusted_key_invalid";
+            return false;
+        }
+
+        errorCode = string.Empty;
+        return true;
+    }
+
+    /// <summary>
+    /// Validates the canonical payload independently of a signature. Issuers must apply the same
+    /// schema, allow-list, length, nonce, and expiry checks before requesting a signature.
+    /// </summary>
+    public static bool TryValidatePayload(
+        string? payloadJson,
+        DateTimeOffset nowUtc,
+        out CustomerProvisioningPayload? payload,
+        out string errorCode)
+    {
+        payload = null;
+        errorCode = "provisioning_payload_invalid";
+
+        if (string.IsNullOrEmpty(payloadJson) || payloadJson.Length > MaxPayloadJsonChars)
+            return false;
+
+        try
+        {
+            payload = JsonSerializer.Deserialize<CustomerProvisioningPayload>(payloadJson, JsonOptions);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+
+        if (payload is null || !HasValidPayload(payload, nowUtc))
+        {
+            payload = null;
+            return false;
+        }
+
+        string canonicalJson;
+        try
+        {
+            canonicalJson = CustomerProvisioningCanonicalJson.Serialize(payload);
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
+        {
+            payload = null;
+            return false;
+        }
+
+        if (!string.Equals(canonicalJson, payloadJson, StringComparison.Ordinal))
+        {
+            payload = null;
+            errorCode = "provisioning_payload_noncanonical";
             return false;
         }
 

@@ -67,35 +67,20 @@ public sealed class VendorProvisioningIssuanceService(
             !string.Equals(installation.Status, "Active", StringComparison.Ordinal))
             return VendorProvisioningIssuanceResult.Conflict("provisioning_target_inactive");
 
-        CustomerProvisioningPayload? payload;
-        try
-        {
-            payload = JsonSerializer.Deserialize<CustomerProvisioningPayload>(request.PayloadJson, PayloadOptions);
-        }
-        catch (JsonException)
-        {
-            return VendorProvisioningIssuanceResult.Conflict("provisioning_payload_invalid");
-        }
-
-        if (payload is null ||
-            !string.Equals(CustomerProvisioningCanonicalJson.Serialize(payload), request.PayloadJson, StringComparison.Ordinal) ||
+        var now = timeProvider.GetUtcNow().ToUniversalTime();
+        if (!CustomerProvisioningPackageValidator.TryValidatePayload(
+                request.PayloadJson, now, out var payload, out _) ||
+            payload is null ||
             !string.Equals(payload.RequestId, request.RequestId, StringComparison.Ordinal) ||
             !string.Equals(payload.Nonce, request.Nonce, StringComparison.Ordinal) ||
             !string.Equals(payload.CustomerReference, customer.CustomerNumber, StringComparison.Ordinal) ||
-            !string.Equals(payload.InstallationId, installation.InstallationCode, StringComparison.Ordinal) ||
-            payload.SchemaVersion != CustomerProvisioningPackageValidator.CurrentFormatVersion)
+            !string.Equals(payload.InstallationId, installation.InstallationCode, StringComparison.Ordinal))
             return VendorProvisioningIssuanceResult.Conflict("provisioning_payload_invalid");
 
         var payloadBytes = Encoding.UTF8.GetBytes(request.PayloadJson);
         var payloadHash = Convert.ToHexString(SHA256.HashData(payloadBytes)).ToLowerInvariant();
         if (!string.Equals(payloadHash, request.PayloadSha256, StringComparison.Ordinal))
             return VendorProvisioningIssuanceResult.Conflict("provisioning_payload_hash_mismatch");
-
-        var now = timeProvider.GetUtcNow().ToUniversalTime();
-        if (payload.IssuedAtUtc > now.AddMinutes(CustomerProvisioningPackageValidator.ClockSkewMinutes) ||
-            payload.ExpiresAtUtc <= now ||
-            payload.ExpiresAtUtc > payload.IssuedAtUtc.AddHours(CustomerProvisioningPackageValidator.MaxPackageLifetimeHours))
-            return VendorProvisioningIssuanceResult.Conflict("provisioning_payload_expired");
 
         LicenseSigningResult signing;
         try
