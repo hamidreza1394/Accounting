@@ -24,9 +24,9 @@ public sealed class ProvisioningRequestClaim : Seedwork.Entity
 
     /// <summary>SHA-256 digest only; the one-time enrollment token is never persisted in plaintext.</summary>
     public string EnrollmentTokenHash { get; set; } = string.Empty;
-    public DateTimeOffset EnrollmentExpiresAtUtc { get; set; }
-    public DateTimeOffset? EnrollmentConsumedAtUtc { get; set; }
-    public DateTimeOffset AppliedAtUtc { get; set; }
+    public DateTime EnrollmentExpiresAtUtc { get; set; }
+    public DateTime? EnrollmentConsumedAtUtc { get; set; }
+    public DateTime AppliedAtUtc { get; set; }
 
     /// <summary>When true, the first authenticated session must be restricted to password change.</summary>
     public bool MustChangePassword { get; set; } = true;
