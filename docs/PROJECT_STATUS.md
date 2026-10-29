@@ -8,7 +8,7 @@
 - PR #279: انتقال بررسی وضعیت و RowVersion درخواست تأیید پس از مجوزدهی مشتری و نصب؛ merge شده.
 - PR #280: پاسخ `404 Not Found` به‌جای `403 Forbidden` در چهار شاخهٔ شکست مجوزدهی منبع مشتری/نصب؛ merge شده.
 - PR CI برای PR #280: Vendor CI، .NET CI، Semgrep و workflow اختصاصی PR همگی موفق شدند. شواهد: [Vendor CI](https://github.com/hamidreza1394/Accounting/actions/runs/40839835705)، [.NET CI](https://github.com/hamidreza1394/Accounting/actions/runs/40839835703)، [Semgrep](https://github.com/hamidreza1394/Accounting/actions/runs/40839835699)، [PR #280](https://github.com/hamidreza1394/Accounting/actions/runs/40839832564).
-- پس از ادغام روی main: Vendor CI موفق است ([run 40840817584](https://github.com/hamidreza1394/Accounting/actions/runs/40840817584)) و Semgrep موفق است ([run 40840817594](https://github.com/hamidreza1394/Accounting/actions/runs/40840817594)). .NET CI و تحلیل CodeQL هنوز در حال اجرا بودند هنگام ثبت این snapshot؛ این سند موفقیت آن دو را ادعا نمی‌کند.
+- پس از ادغام روی main: Vendor CI موفق است ([run 40840817584](https://github.com/hamidreza1394/Accounting/actions/runs/40840817584))، Semgrep موفق است ([run 40840817594](https://github.com/hamidreza1394/Accounting/actions/runs/40840817594))، .NET CI موفق است ([run 40840817609](https://github.com/hamidreza1394/Accounting/actions/runs/40840817609)) و تحلیل CodeQL موفق است ([run 40840817734](https://github.com/hamidreza1394/Accounting/actions/runs/40840817734)).
 
 ## شکاف‌های مانع آمادگی Production
 - **Provisioning end-to-end (#228):** Vendor درخواست و metadata راه‌اندازی را ثبت می‌کند؛ ایجاد واقعی شرکت/مدیر در نصب مشتری تا زمان مصرف بستهٔ معتبر و دریافت acknowledgement قابل‌اعتماد تأییدشده محسوب نمی‌شود.
