@@ -12,4 +12,5 @@ public sealed class CustomerProvisioningSettings
 
     public string CustomerReference { get; set; } = string.Empty;
     public string InstallationId { get; set; } = string.Empty;
+    public Guid CustomerBoundaryId { get; set; }
 }
