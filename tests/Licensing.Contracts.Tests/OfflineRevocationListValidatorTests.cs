@@ -21,7 +21,7 @@ public sealed class OfflineRevocationListValidatorTests
 
         Assert.True(valid, error);
         Assert.NotNull(list);
-        Assert.Equal(8, list!.Sequence);
+        Assert.Equal(8L, list!.Sequence);
         Assert.Equal(["license-a", "license-z"], list.RevokedLicenseIds);
     }
 
