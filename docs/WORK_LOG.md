@@ -1109,3 +1109,12 @@
 - **دامنه:** فقط قرارداد مشترک و تست؛ هیچ تغییر در Server/**، دیتابیس مشتری یا migration انجام نشد.
 - **اعتبارسنجی:** تست محلی در این نشست اجرا نشده است؛ CI روی PR برای تأیید لازم است. Merge پیش از موفقیت بررسی‌های الزامی مجاز نیست.
 - **باقی‌مانده:** Issue #235 مصرف‌کننده و claim اتمی nonce؛ Issue #236 signer عملیاتی KMS/HSM و کلیدهای مورد اعتماد؛ #107 sink مستقل checkpoint ممیزی.
+
+## 2026-10-29 — Consolidated Vendor remaining-work branch
+
+- **Scope:** Issues #228, #235, #236, #107 and #214 on `feat/vendor-remaining-work`, based on `main` at `50d6977d7452b4ee2879c2379140ebbce3e455b9`.
+- **Implemented in branch:** registered the configured acknowledgement public-key trust store in Vendor Host; added a provider-neutral signed offline revocation-list contract and negative/rollback tests; added handoff documentation for trust configuration and revocation boundaries.
+- **Safety boundaries:** no private key; no production KMS/HSM adapter; no customer DB schema or `Server/**` change; no acknowledgement intake endpoint or false `Confirmed` state; no fake independent audit storage.
+- **Blockers recorded on Issues:** #236 requires an approved signing provider; #107 requires an independently permissioned checkpoint destination and deployment credentials; #235 customer-side consumer remains a separate reviewed change; #214 customer-side sequence persistence/enforcement remains separate.
+- **Tests:** not run locally in this tool session. GitHub Actions must verify the final branch SHA before merge readiness can be claimed.
+- **Next:** inspect CI on the final SHA, fix failures on this same branch, then open one consolidated PR after the branch diff is reviewed.
