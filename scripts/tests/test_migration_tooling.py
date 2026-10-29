@@ -316,3 +316,14 @@ class GuardScriptsTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class ParseMigrationColumnTests(unittest.TestCase):
+    def test_sql_server_rowversion_column_is_parsed(self):
+        source = '''RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false),'''
+        columns = verify_migration_model.parse_columns(source)
+        self.assertEqual(1, len(columns))
+        self.assertEqual("RowVersion", columns[0]["name"])
+        self.assertEqual("System.Byte[]", columns[0]["clr_type"])
+        self.assertEqual("rowversion", columns[0]["type"])
+        self.assertFalse(columns[0]["nullable"])
