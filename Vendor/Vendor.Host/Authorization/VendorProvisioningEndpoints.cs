@@ -63,7 +63,7 @@ public static class VendorProvisioningEndpoints
                 new VendorResourceDescriptor("installation", installation.Id, customer.Id),
                 VendorResourceCatalog.PolicyFor("installation", VendorPermissionCatalog.InstallationsManage));
             if (!customerAccess.Succeeded || !installationAccess.Succeeded)
-                return Results.Forbid();
+                return Results.NotFound();
 
             if (!VendorProvisioningRequestRules.IsTargetActive(customer.Status, installation.Status))
                 return Results.Conflict(new { error = "provisioning_target_inactive" });
@@ -165,7 +165,7 @@ public static class VendorProvisioningEndpoints
                 new VendorResourceDescriptor("installation", item.InstallationId, item.CustomerId),
                 VendorResourceCatalog.PolicyFor("installation", VendorPermissionCatalog.InstallationsManage));
             if (!customerAccess.Succeeded || !installationAccess.Succeeded)
-                return Results.Forbid();
+                return Results.NotFound();
 
             if (item.Status != "AwaitingSigner")
                 return Results.Conflict(new { error = "provisioning_request_not_awaiting_signer" });
@@ -230,7 +230,7 @@ public static class VendorProvisioningEndpoints
                 new VendorResourceDescriptor("installation", item.InstallationId, item.CustomerId),
                 VendorResourceCatalog.PolicyFor("installation", VendorPermissionCatalog.InstallationsRead));
             if (!customerAccess.Succeeded || !installationAccess.Succeeded)
-                return Results.Forbid();
+                return Results.NotFound();
 
             if (item.Status != "PendingDelivery" ||
                 string.IsNullOrWhiteSpace(item.KeyId) ||
@@ -319,7 +319,7 @@ public static class VendorProvisioningEndpoints
                 new VendorResourceDescriptor("installation", item.InstallationId, item.CustomerId),
                 VendorResourceCatalog.PolicyFor("installation", VendorPermissionCatalog.InstallationsRead));
             if (!customerAccess.Succeeded || !installationAccess.Succeeded)
-                return Results.Forbid();
+                return Results.NotFound();
 
             return Results.Ok(ToResponse(item));
         }).RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.CustomersRead));
