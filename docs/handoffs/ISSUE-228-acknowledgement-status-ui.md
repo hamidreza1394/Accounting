@@ -3,14 +3,14 @@
 - **Issue:** [#228 — Vendor customer onboarding](https://github.com/hamidreza1394/Accounting/issues/228)
 - **Agent/مسئول:** ChatGPT / GitHub tools
 - **تاریخ:** 2026-10-29
-- **وضعیت:** پیاده‌سازی در شاخه؛ در انتظار CI و بازبینی PR #294
+- **وضعیت:** `Verified` و ادغام‌شده از طریق PR #294.
 
 ## هدف و معیارهای پذیرش
 - [x] نمایش نتیجهٔ واقعی acknowledgement از API در تاریخچهٔ درخواست Vendor.
 - [x] نمایش زمان ثبت پاسخ مشتری جدا از زمان ایجاد درخواست.
 - [x] نگاشت روشن برای `Applied`, `AlreadyApplied`, `Rejected`؛ اگر پاسخ هنوز ثبت نشده، نمایش `—`.
 - [x] تست UI برای نتیجه و زمان پاسخ.
-- [ ] تأیید CI نهایی PR #294.
+- [x] Vendor UI typecheck/tests/build و .NET build/test روی implementation head موفق؛ CIهای بعد از ادغام main باید جداگانه بررسی شوند.
 
 ## خلاصه تغییرات
 - پاسخ API در `ProvisioningRequestResponse` دو فیلد اختیاری `AcknowledgementResult` و `AcknowledgedAtUtc` را برمی‌گرداند.
@@ -31,8 +31,8 @@
 ## بررسی و آزمون
 | فرمان/آزمون | نتیجه واقعی | توضیح/کد خروج |
 |---|---|---|
-| Vendor UI typecheck/tests/build | در انتظار | CI PR #294 |
-| .NET build/test | در انتظار | CI PR #294 |
+| Vendor UI typecheck/tests/build | موفق | Vendor CI run 40871773941؛ implementation head `1a9f8c3f107f713940a4d95c92f6abe597f85f80` |
+| .NET build/test | موفق | .NET CI run 40871773973؛ implementation head `1a9f8c3f107f713940a4d95c92f6abe597f85f80` |
 | اندازه باندل / LCP / CLS | اندازه‌گیری نشد | هیچ dependency جدیدی اضافه نشد |
 
 ## امنیت، داده و سازگاری
@@ -47,4 +47,5 @@
 
 ## شناسه‌های Git
 - Branch: `feat/vendor-acknowledgement-status-ui`
-- Pull Request: [#294](https://github.com/hamidreza1394/Accounting/pull/294)
+- Pull Request: [#294](https://github.com/hamidreza1394/Accounting/pull/294) — merged
+- Merge commit: `07dc0a4f1f784dfd2800fb8da12a70f05b67a862`
