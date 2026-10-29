@@ -155,10 +155,6 @@ public static class VendorProvisioningEndpoints
             var item = await db.ProvisioningRequests.AsNoTracking()
                 .SingleOrDefaultAsync(value => value.Id == id, ct);
             if (item is null) return Results.NotFound();
-            if (item.Status != "AwaitingSigner")
-                return Results.Conflict(new { error = "provisioning_request_not_awaiting_signer" });
-            if (!item.RowVersion.AsSpan().SequenceEqual(expectedResourceVersion))
-                return Results.Conflict(new { error = "stale_row_version" });
 
             var customerAccess = await authorization.AuthorizeAsync(
                 context.User,
@@ -170,6 +166,11 @@ public static class VendorProvisioningEndpoints
                 VendorResourceCatalog.PolicyFor("installation", VendorPermissionCatalog.InstallationsManage));
             if (!customerAccess.Succeeded || !installationAccess.Succeeded)
                 return Results.Forbid();
+
+            if (item.Status != "AwaitingSigner")
+                return Results.Conflict(new { error = "provisioning_request_not_awaiting_signer" });
+            if (!item.RowVersion.AsSpan().SequenceEqual(expectedResourceVersion))
+                return Results.Conflict(new { error = "stale_row_version" });
 
             var actor = await users.GetUserAsync(context.User);
             if (actor is null) return Results.Forbid();
