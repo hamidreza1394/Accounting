@@ -1179,11 +1179,13 @@
 - No provider-specific adapter, secret, credential, migration or fake Production sink was added. #107 remains blocked on provider selection and operational proof.
 - Documentation-only change; no local tests were run in this GitHub-only session.
 
-## 2026-10-29 — Issue #235: customer-side trust boundary (WIP)
+## 2026-10-29 — Issue #235: customer-side trust verifier and claim schema (WIP)
 
 - Added a customer-side trust store that resolves package KeyId only from independently configured public keys; malformed, oversized, non-P-256 and unknown keys fail closed.
-- Added a verifier wrapper that validates the signed canonical package and then compares the signed customer/installation references against local deployment settings before any database mutation.
-- Added tests for valid package verification, unknown/malformed key, customer mismatch, installation mismatch, expired package and payload tampering.
-- Opened draft PR #302 to run CI early while continuing the separate customer-consumer implementation.
-- **Not complete:** no database mutation, atomic replay claim, enrollment token, password-change enforcement or customer acknowledgement is implemented by this slice. Do not merge or close #235 on this basis.
-- Local tests were not run; CI is the current verification path.
+- Added a verifier wrapper that validates the signed canonical package and compares the signed customer/installation references against local deployment settings before any database mutation.
+- Added tests for valid signature, unknown/malformed key, customer mismatch, installation mismatch, expiry, payload tampering and malformed local identity settings.
+- Added ProvisioningRequestClaims with unique RequestId, nonce digest and enrollment-token digest indexes, rowversion, a composite fiscal-period/company FK and a restricted optional parent-company FK.
+- Generated migration 20261029161402_AddCustomerProvisioningClaims and model snapshot using the repository migration verifier. Generation workflow run 40909292917 passed and committed the files to this feature branch.
+- PR #302 remains draft. The current changes are not end-to-end provisioning and must not be merged yet.
+- Still missing: atomic claim + actual company/fiscal-period/role/membership application in one transaction, enrollment flow with forced password change, signed customer acknowledgement, parent-company external-reference mapping, SQL Server replay/concurrency/rollback tests, and final .NET CI on the current HEAD.
+- No plaintext password, password hash, private key, customer DB connection, or signing fallback was added.
