@@ -40,7 +40,8 @@ public static class CustomerProvisioningSubsystemCatalog
 
         var parts = permissionCode.Split('.', StringSplitOptions.None);
         return parts.Length >= 3 &&
-            parts.All(part => part.Length > 0) &&
+            parts.All(part => part.Length > 0 && part.All(character =>
+                character is >= 'a' and <= 'z' or >= '0' and <= '9' or '-' or '_')) &&
             string.Equals(parts[0], subsystemCode, StringComparison.Ordinal);
     }
 
