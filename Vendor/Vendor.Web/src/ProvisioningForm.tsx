@@ -294,7 +294,7 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
       {error && <div role="alert" className="flex items-start gap-2 text-sm text-destructive"><AlertCircle size={18} className="mt-0.5 shrink-0"/><p>{error}</p></div>}
       {notice && <p role="status" className="text-sm leading-6 text-muted-foreground">{notice}</p>}
 
-      <form className="space-y-4" onSubmit={submit} noValidate>
+      <form className="space-y-4" onSubmit={submit}>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <label htmlFor="provisioning-installation" className="text-sm font-medium">نصب مقصد</label>
