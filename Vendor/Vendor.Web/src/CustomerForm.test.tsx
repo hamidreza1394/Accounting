@@ -9,6 +9,13 @@ function response(body: unknown, status = 200) {
 }
 
 describe('Vendor customer form', () => {
+  it('keeps native browser constraint validation enabled', () => {
+    render(<CustomerForm onCancel={vi.fn()} onSaved={vi.fn()} />);
+
+    const form = screen.getByRole('button', { name: 'ثبت مشتری' }).closest('form');
+    expect(form).not.toHaveAttribute('novalidate');
+  });
+
   it('creates a commercial customer with a fresh antiforgery token', async () => {
     const onSaved = vi.fn();
     const fetchMock = vi.fn()
