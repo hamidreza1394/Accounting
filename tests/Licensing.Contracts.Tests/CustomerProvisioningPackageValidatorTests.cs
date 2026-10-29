@@ -78,6 +78,39 @@ public sealed class CustomerProvisioningPackageValidatorTests
     }
 
     [Fact]
+    public void PayloadValidation_AcceptsValidCanonicalPayloadWithoutRequiringSignature()
+    {
+        var json = CustomerProvisioningCanonicalJson.Serialize(Sample());
+
+        Assert.True(CustomerProvisioningPackageValidator.TryValidatePayload(
+            json, Now, out var parsed, out var error), error);
+        Assert.NotNull(parsed);
+        Assert.Equal(Sample().RequestId, parsed!.RequestId);
+    }
+
+    [Fact]
+    public void PayloadValidation_RejectsInvalidCompanyType()
+    {
+        var json = CustomerProvisioningCanonicalJson.Serialize(Sample() with { CompanyType = "unknown" });
+
+        Assert.False(CustomerProvisioningPackageValidator.TryValidatePayload(
+            json, Now, out var parsed, out var error));
+        Assert.Null(parsed);
+        Assert.Equal("provisioning_payload_invalid", error);
+    }
+
+    [Fact]
+    public void PayloadValidation_RejectsOversizedPayload()
+    {
+        var oversized = new string(' ', CustomerProvisioningPackageValidator.MaxPayloadJsonChars + 1);
+
+        Assert.False(CustomerProvisioningPackageValidator.TryValidatePayload(
+            oversized, Now, out var parsed, out var error));
+        Assert.Null(parsed);
+        Assert.Equal("provisioning_payload_invalid", error);
+    }
+
+    [Fact]
     public void PayloadValidation_RejectsUnknownSubsystemWithoutRequiringSignature()
     {
         var json = CustomerProvisioningCanonicalJson.Serialize(
