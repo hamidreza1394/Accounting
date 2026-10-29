@@ -7,8 +7,12 @@ namespace Domain;
 public sealed class ProvisioningRequestClaim : Seedwork.Entity
 {
     public Guid RequestId { get; set; }
+    public string Nonce { get; set; } = string.Empty;
     public string NonceHash { get; set; } = string.Empty;
     public string PayloadSha256 { get; set; } = string.Empty;
+    public string CompanyType { get; set; } = string.Empty;
+    public Guid? ParentCompanyId { get; set; }
+    public string SubsystemsJson { get; set; } = "[]";
     public string CustomerReference { get; set; } = string.Empty;
     public string InstallationId { get; set; } = string.Empty;
 
