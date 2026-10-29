@@ -1233,3 +1233,11 @@
 - **تست‌های افزوده‌شده:** `CustomerProvisioningSubsystemCatalogTests` برای allowlist، تطبیق دقیق زیرسیستم، کدهای نامعتبر، حذف تکرار و رفتار خالی fail-closed.
 - **محدودیت فعلی:** این تغییر فقط قاعدهٔ ownership را تثبیت می‌کند؛ transactional apply، ثبت مجوزها در role، enrollment یک‌بارمصرف، اجبار تغییر رمز و enforcement مجوزهای role در APIها هنوز تکمیل نشده‌اند. چون repository audit می‌گوید مجوزهای شرکتی در همه APIهای موجود enforce نمی‌شوند، نباید از این تغییر به‌عنوان مجوزدهی Production نتیجه‌گیری کرد.
 - **اعتبارسنجی:** کد و تست از طریق GitHub Contents API در شاخه `feat/customer-provisioning-transactional-apply` ثبت شده‌اند؛ اجرای محلی .NET در این محیط انجام نشده است. CI روی PR باید compile/test را تأیید کند.
+
+
+## 2026-10-29 — Customer provisioning: one-time enrollment token primitive
+- **هدف:** ایجاد پایهٔ مستقل برای enrollment امن مدیر اولیه بدون قرار دادن رمز، hash رمز یا secret قابل‌استفادهٔ مجدد در package.
+- **تغییر:** `CustomerProvisioningEnrollmentToken` توکن ۲۵۶ بیتی تصادفی با نمایش Base64URL بدون padding تولید می‌کند؛ فقط SHA-256 hex برای ذخیره‌سازی در DB مناسب است. بررسی token از مقایسهٔ constant-time استفاده می‌کند و ورودی‌های malformed را رد می‌کند.
+- **تست‌ها:** قالب canonical و طول ثابت، تولید مجدد غیر یکسان، تطبیق/عدم تطبیق digest، رد token/hash نامعتبر و رد token بدقالب در زمان hash.
+- **محدودیت مهم:** این commit فقط primitive رمزنگاری و تست آن است؛ endpoint مصرف یک‌باره، transaction/RowVersion، انقضا، audit، محدودسازی تلاش و گردش امن تحویل token هنوز پیاده‌سازی نشده‌اند. این primitive نباید به‌تنهایی به‌عنوان enrollment end-to-end یا Verified اعلام شود.
+- **اعتبارسنجی:** باید CI روی همین شاخه اجرا شود؛ اجرای محلی .NET در این محیط انجام نشده است.
