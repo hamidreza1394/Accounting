@@ -1218,4 +1218,10 @@
 - **Tests added:** Contract validation for valid/missing/malformed v3 email and v2 compatibility; Vendor validation tests for missing/malformed email; UI submission test checks the email field.
 - **Verification:** New CI is required for the latest branch head; local tests were not run in this GitHub-only session.
 - **Remaining:** Implement the transactional customer consumer, one-time enrollment delivery and forced password-change enforcement, parent-reference mapping, signed customer acknowledgement generation, replay/concurrency/rollback SQL Server tests, and full E2E. Production customer acknowledgement signing remains fail-closed until a separate trusted signer is configured.
-- **Branch/PR:** `feat/provisioning-schema-v3-admin-email`, [PR #303](https://github.com/hamidreza1394/Accounting/pull/303) (Draft). CI must validate this head; do not merge until the remaining consumer path is implemented and validated.
+- **Branch/PR:** `feat/provisioning-schema-v3-admin-email-verified`, [PR #304](https://github.com/hamidreza1394/Accounting/pull/304) (Draft). CI must validate the latest head; do not merge until the remaining consumer path is implemented and validated.
+
+
+## 2026-10-29 — PR #304 CI regression follow-up
+- Vendor CI exposed an existing provisioning HTTP integration fixture that omitted `initialAdminEmail`; the request now supplies a valid test email in all three related scenarios.
+- .NET CI exposed the customer verifier fixture still generating schema v3 without `InitialAdminEmail`; the fixture now includes `admin@example.com`. The failures were caused by stale test payloads after the schema version bump, not by weakening signature or identity validation.
+- The initial CI attempt was on the prior head and failed in those tests. Fresh CI is required on the updated head.
