@@ -92,7 +92,7 @@ export function CustomerForm({ initial, onCancel, onSaved }: CustomerFormProps) 
       <CardDescription>این فرم فقط اطلاعات تجاری سامانه مرکزی را ثبت می‌کند و در دیتابیس حسابداری مشتری تغییری ایجاد نمی‌کند.</CardDescription>
     </CardHeader>
     <CardContent className="pt-4">
-      <form className="space-y-4" onSubmit={submit} noValidate>
+      <form className="space-y-4" onSubmit={submit}>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <label htmlFor="customer-number" className="text-sm font-medium">شماره مشتری</label>
