@@ -46,6 +46,12 @@ public sealed class ProvisioningAcknowledgementTrustStore
                     "Provisioning acknowledgement trust configuration contains duplicate key IDs.");
             }
 
+            if (string.IsNullOrWhiteSpace(configuredKey.PublicKeySubjectPublicKeyInfoBase64))
+            {
+                throw new InvalidOperationException(
+                    "Provisioning acknowledgement trust configuration is missing public-key material.");
+            }
+
             byte[] encoded;
             try
             {
