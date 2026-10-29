@@ -6,6 +6,17 @@ namespace Faranou.Vendor.Host.Tests;
 
 public sealed class VendorProvisioningRequestRulesTests
 {
+
+    [Fact]
+    public void InitialAdminEmail_IsRequiredAndMustBeValid()
+    {
+        Assert.Equal("invalid_provisioning_admin_email",
+            VendorProvisioningRequestRules.Validate(ValidRequest() with { InitialAdminEmail = null }));
+        Assert.Equal("invalid_provisioning_admin_email",
+            VendorProvisioningRequestRules.Validate(ValidRequest() with { InitialAdminEmail = "not-an-email" }));
+        Assert.Null(VendorProvisioningRequestRules.Validate(ValidRequest() with { InitialAdminEmail = "admin@example.com" }));
+    }
+
     [Fact]
     public void ValidConfiguration_IsAccepted()
     {
