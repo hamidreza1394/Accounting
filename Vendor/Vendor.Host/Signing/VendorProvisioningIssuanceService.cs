@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using Faranou.Licensing.Contracts;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Auditing;
@@ -19,12 +18,6 @@ public sealed class VendorProvisioningIssuanceService(
     IVendorAuditWriter audit,
     TimeProvider timeProvider)
 {
-    private static readonly JsonSerializerOptions PayloadOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = false
-    };
-
     public async Task<VendorProvisioningIssuanceResult> IssueApprovedAsync(
         VendorApprovalRequest approval,
         Guid reviewerUserId,
