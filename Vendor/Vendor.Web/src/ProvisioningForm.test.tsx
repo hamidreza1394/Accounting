@@ -45,6 +45,7 @@ describe('Vendor customer provisioning form', () => {
 
     fireEvent.change(screen.getByLabelText('نام شرکت حسابداری'), { target: { value: 'شرکت حسابداری نمونه' } });
     fireEvent.change(screen.getByLabelText('نام کاربری مدیر اولیه'), { target: { value: 'initial-admin' } });
+    fireEvent.change(screen.getByLabelText('ایمیل مدیر اولیه'), { target: { value: 'admin@example.com' } });
     fireEvent.click(screen.getByLabelText('فروش'));
     fireEvent.click(screen.getByRole('button', { name: 'ذخیره درخواست راه‌اندازی' }));
 
@@ -67,6 +68,7 @@ describe('Vendor customer provisioning form', () => {
       companyName: 'شرکت حسابداری نمونه',
       companyType: 'independent',
       initialAdminUserName: 'initial-admin',
+      initialAdminEmail: 'admin@example.com',
       subsystems: ['finance', 'sales'],
       fiscalPeriodTitle: 'سال مالی ۱۴۰۵',
       fiscalPeriodStartDate: '2026-03-21',
@@ -101,6 +103,7 @@ describe('Vendor customer provisioning form', () => {
     expect(screen.getByLabelText('مرجع شرکت مادر در نصب مشتری')).toBeRequired();
     fireEvent.change(screen.getByLabelText('نام شرکت حسابداری'), { target: { value: 'شرکت تابعه نمونه' } });
     fireEvent.change(screen.getByLabelText('نام کاربری مدیر اولیه'), { target: { value: 'initial-admin' } });
+    fireEvent.change(screen.getByLabelText('ایمیل مدیر اولیه'), { target: { value: 'admin@example.com' } });
     fireEvent.change(screen.getByLabelText('مرجع شرکت مادر در نصب مشتری'), { target: { value: 'parent-company-001' } });
     fireEvent.click(screen.getByRole('button', { name: 'ذخیره درخواست راه‌اندازی' }));
 
