@@ -847,6 +847,7 @@ namespace Data.Migrations
                     .HasColumnType("bit");
 
                 b.Property<byte[]>("RowVersion")
+                    .IsRequired()
                     .IsConcurrencyToken()
                     .ValueGeneratedOnAddOrUpdate()
                     .HasColumnType("rowversion");
