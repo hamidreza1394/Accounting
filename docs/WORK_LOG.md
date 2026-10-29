@@ -1164,3 +1164,13 @@
 - **Safety:** no `Server/**`, customer DB schema, customer migration, private key, KMS/HSM adapter, or fake audit sink was added in this Vendor-only slice. Production signing remains fail-closed (#236); independent audit destination remains blocked (#107).
 - **Verification:** local .NET/npm tests and `git diff --check` were not executable through the GitHub-only session. CI must run on the PR head; no claim of passing tests is made before observing those checks.
 - **Remaining:** customer-side consumer, unique nonce/request claim, transaction/recovery, one-time enrollment, signed acknowledgement generation, and offline revocation enforcement remain separate customer-side work under #235/#214.
+
+
+## 2026-10-29 — Issue #235: customer-side trust boundary (WIP)
+
+- Added a customer-side trust store that resolves package KeyId only from independently configured public keys; malformed, oversized, non-P-256 and unknown keys fail closed.
+- Added a verifier wrapper that validates the signed canonical package and then compares the signed customer/installation references against local deployment settings before any database mutation.
+- Added tests for valid package verification, unknown/malformed key, customer mismatch, installation mismatch, expired package and payload tampering.
+- Opened draft PR #302 to run CI early while continuing the separate customer-consumer implementation.
+- **Not complete:** no database mutation, atomic replay claim, enrollment token, password-change enforcement or customer acknowledgement is implemented by this slice. Do not merge or close #235 on this basis.
+- Local tests were not run; CI is the current verification path.
