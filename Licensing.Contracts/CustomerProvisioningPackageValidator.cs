@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net.Mail;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -12,7 +13,7 @@ namespace Faranou.Licensing.Contracts;
 public static class CustomerProvisioningPackageValidator
 {
     public const int CurrentFormatVersion = 1;
-    public const int CurrentPayloadSchemaVersion = 2;
+    public const int CurrentPayloadSchemaVersion = 3;
     public const int MaxPayloadJsonChars = 64 * 1024;
     public const int MaxPackageLifetimeHours = 24;
     public const int ClockSkewMinutes = 2;
@@ -154,9 +155,10 @@ public static class CustomerProvisioningPackageValidator
     private static bool HasValidPayload(CustomerProvisioningPayload payload, DateTimeOffset nowUtc)
     {
         var isV1 = payload.SchemaVersion == 1;
-        var isV2 = payload.SchemaVersion == CurrentPayloadSchemaVersion;
+        var isV2 = payload.SchemaVersion == 2;
+        var isV3 = payload.SchemaVersion == CurrentPayloadSchemaVersion;
 
-        if ((!isV1 && !isV2) ||
+        if ((!isV1 && !isV2 && !isV3) ||
             !Guid.TryParseExact(payload.RequestId, "D", out _) ||
             !IsBoundedText(payload.CustomerReference, 1, 128) ||
             !IsBoundedText(payload.InstallationId, 1, 128) ||
@@ -185,7 +187,8 @@ public static class CustomerProvisioningPackageValidator
             return payload.FiscalPeriodTitle is null &&
                 payload.FiscalPeriodStartDate is null &&
                 payload.FiscalPeriodEndDate is null &&
-                payload.ParentCompanyReference is null;
+                payload.ParentCompanyReference is null &&
+                payload.InitialAdminEmail is null;
         }
 
         if (!IsBoundedText(payload.FiscalPeriodTitle, 1, 100) ||
@@ -196,6 +199,12 @@ public static class CustomerProvisioningPackageValidator
             return false;
         }
 
+        if (isV2 && payload.InitialAdminEmail is not null)
+            return false;
+
+        if (isV3 && !IsValidEmail(payload.InitialAdminEmail))
+            return false;
+
         var hasParentReference = IsBoundedText(payload.ParentCompanyReference, 1, 128);
         return payload.CompanyType switch
         {
@@ -204,6 +213,13 @@ public static class CustomerProvisioningPackageValidator
             _ => false
         };
     }
+
+    private static bool IsValidEmail(string? value) =>
+        !string.IsNullOrWhiteSpace(value) &&
+        value.Length <= 254 &&
+        !value.Any(char.IsControl) &&
+        MailAddress.TryCreate(value, out var parsed) &&
+        string.Equals(parsed.Address, value, StringComparison.OrdinalIgnoreCase);
 
     private static bool IsBoundedText(string? value, int minLength, int maxLength) =>
         !string.IsNullOrWhiteSpace(value) &&
