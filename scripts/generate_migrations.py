@@ -49,16 +49,16 @@ MIGRATIONS_DIRECTORY = os.path.join("Infrastructure", "Persistence", "Migrations
 # 'InitialCreate'. Its designer file is the starting point of the difference that the
 # current migration has to apply. ('AlignSchemaWithModel' and 'WidenUserPasswordHash'
 # are published history as well.)
-DELTA_MIGRATION_ID = "20261019071146"
-DELTA_MIGRATION_NAME = "WidenUserPasswordHash"
+DELTA_MIGRATION_ID = "20261023191000"
+DELTA_MIGRATION_NAME = "AddCompanyCustomerBoundary"
 
 # The most recent migration. Its operations are computed from the difference between
 # the model of the migration before it (DELTA_MIGRATION_*) and the model of the code
 # base, so the files can not drift apart from the snapshot. DELTA_MIGRATION_* is
 # published history and is never rewritten, exactly like 'InitialCreate'.
-CURRENT_MIGRATION_ID = "20261023191000"
-CURRENT_MIGRATION_NAME = "AddCompanyCustomerBoundary"
-CURRENT_MIGRATION_CLASS = "AddCompanyCustomerBoundary"
+CURRENT_MIGRATION_ID = "20261029170000"
+CURRENT_MIGRATION_NAME = "AddCustomerProvisioningClaims"
+CURRENT_MIGRATION_CLASS = "AddCustomerProvisioningClaims"
 
 # 'AddCorporateGroups' adds tables, which this generator can not render
 # ('compute_operations' refuses them). Its Up/Down were therefore written with 'dotnet ef
