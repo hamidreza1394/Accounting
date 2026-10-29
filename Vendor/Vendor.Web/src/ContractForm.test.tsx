@@ -15,6 +15,13 @@ const customerPage = {
 };
 
 describe('Vendor contract form', () => {
+  it('keeps native browser constraint validation enabled', () => {
+    render(<ContractForm canReadCustomers onCancel={vi.fn()} onSaved={vi.fn()} />);
+
+    const form = screen.getByRole('button', { name: 'ثبت قرارداد' }).closest('form');
+    expect(form).not.toHaveAttribute('novalidate');
+  });
+
   it('creates a Draft contract with a real customer, UTC dates, and a fresh antiforgery token', async () => {
     const onSaved = vi.fn();
     const fetchMock = vi.fn()
