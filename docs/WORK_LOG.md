@@ -1062,3 +1062,9 @@
 - **محدوده:** مستندات فقط؛ بدون تغییر کد اجرایی، signer، secret، API، schema، migration یا دیتابیس مشتری.
 - **اعتبارسنجی:** بررسی محتوای سند و تغییر هدفمند متن؛ CI و تست‌ها پس از ایجاد PR باید بررسی شوند.
 - **Branch:** `docs/clarify-threat-model-phase-zero-history`؛ مبنا `4f1ca368c33d5a5692a2ead34c993b5ad6ff2d8d`.
+
+
+## 2026-10-29 — Issue #228: reject provisioning requests for inactive targets
+- Added server-side validation requiring both the Vendor customer and selected installation to have the exact status `Active` before a new provisioning request is persisted.
+- Added pure rule tests for active, inactive, suspended, and missing status values. Inactive targets return a generic conflict response; no customer DB access, customer schema change, or credential handling was added.
+- Validation limitation: this GitHub-only change was not built or tested locally. Required Vendor CI and integration checks must pass on the PR head before merge.

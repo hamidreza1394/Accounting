@@ -54,6 +54,9 @@ public static class VendorProvisioningEndpoints
             if (customer is null || installation is null || installation.CustomerId != customer.Id)
                 return Results.NotFound();
 
+            if (!VendorProvisioningRequestRules.IsTargetActive(customer.Status, installation.Status))
+                return Results.Conflict(new { error = "provisioning_target_inactive" });
+
             var customerAccess = await authorization.AuthorizeAsync(
                 context.User,
                 new VendorResourceDescriptor("customer", customer.Id),
