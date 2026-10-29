@@ -175,6 +175,11 @@ if (!setupRequired)
     // The company and fiscal period a user chose for the current sign-in (D-031). The cookie
     // helper is stateless; the service validates every stored choice against the database.
     builder.Services.TryAddSingleton(TimeProvider.System);
+    builder.Services.Configure<Infrastructure.Provisioning.CustomerProvisioningSettings>(
+        builder.Configuration.GetSection(Infrastructure.Provisioning.CustomerProvisioningSettings.SectionName));
+    builder.Services.AddSingleton<Infrastructure.Provisioning.ICustomerProvisioningTrustStore,
+        Infrastructure.Provisioning.ConfigurationCustomerProvisioningTrustStore>();
+    builder.Services.AddSingleton<Infrastructure.Provisioning.CustomerProvisioningPackageVerifier>();
     builder.Services.AddSingleton<Infrastructure.Tenancy.WorkContextCookie>();
     builder.Services.AddScoped<Infrastructure.Tenancy.WorkContextService>();
 

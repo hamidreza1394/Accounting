@@ -60,6 +60,7 @@ public sealed class DatabaseModelTests
 				"PermissionDefinitions",
 				"Permissions",
 				"PostCategory",
+				"ProvisioningRequestClaims",
 				"Roles",
 				"SecurityAuditEvents",
 				"UserCompanyMemberships",
