@@ -7,6 +7,7 @@ namespace Domain;
 public sealed class ProvisioningRequestClaim : Seedwork.Entity
 {
     public Guid RequestId { get; set; }
+    /// <summary>Original protocol nonce used for exact protocol correlation; unique index prevents replay.</summary>
     public string Nonce { get; set; } = string.Empty;
     public string NonceHash { get; set; } = string.Empty;
     public string PayloadSha256 { get; set; } = string.Empty;
