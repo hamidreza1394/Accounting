@@ -227,7 +227,7 @@ describe('Vendor customer provisioning form', () => {
       dateStyle: 'medium',
       timeStyle: 'short',
     }).format(new Date('2026-10-29T11:00:00Z'));
-    expect(screen.getAllByText(expectedTime)).toHaveLength(2);
+    expect(screen.getByText(expectedTime)).toBeInTheDocument();
   });
 
 });
