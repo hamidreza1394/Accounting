@@ -197,6 +197,7 @@ def clr_type_name(clr_type: str) -> str:
         "System.Int64": "long",
         "System.Int16": "short",
         "System.Byte": "byte",
+        "System.Byte[]": "byte[]",
         "System.Single": "float",
         "System.Double": "double",
         "System.Decimal": "decimal",
@@ -436,7 +437,9 @@ def generate_model(entity_types: list[dict[str, Any]], indent: str) -> list[str]
                 "object",
             }:
                 lines.append(f"{indent}{INDENT * 2}.IsRequired()")
-            if value_generated_on_add(entity, column):
+            if column.get("is_row_version"):
+                lines.append(f"{indent}{INDENT * 2}.IsRowVersion()")
+            elif value_generated_on_add(entity, column):
                 lines.append(f"{indent}{INDENT * 2}.ValueGeneratedOnAdd()")
             if column["max_length"] is not None:
                 lines.append(f"{indent}{INDENT * 2}.HasMaxLength({column['max_length']})")
