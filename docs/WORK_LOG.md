@@ -1238,6 +1238,6 @@
 ## 2026-10-29 — Customer provisioning: one-time enrollment token primitive
 - **هدف:** ایجاد پایهٔ مستقل برای enrollment امن مدیر اولیه بدون قرار دادن رمز، hash رمز یا secret قابل‌استفادهٔ مجدد در package.
 - **تغییر:** `CustomerProvisioningEnrollmentToken` توکن ۲۵۶ بیتی تصادفی با نمایش Base64URL بدون padding تولید می‌کند؛ فقط SHA-256 hex برای ذخیره‌سازی در DB مناسب است. بررسی token از مقایسهٔ constant-time استفاده می‌کند و ورودی‌های malformed را رد می‌کند.
-- **تست‌ها:** قالب canonical و طول ثابت، تولید مجدد غیر یکسان، تطبیق/عدم تطبیق digest، رد token/hash نامعتبر و رد token بدقالب در زمان hash.
+- **تست‌ها:** قالب canonical و طول ثابت، تولید مجدد غیر یکسان، تطبیق/عدم تطبیق digest، رد token/hash نامعتبر، رد encoding غیرcanonical و رد token بدقالب در زمان hash. تست encoding غیرcanonical deterministic است و به تصادف وابسته نیست.
 - **محدودیت مهم:** این commit فقط primitive رمزنگاری و تست آن است؛ endpoint مصرف یک‌باره، transaction/RowVersion، انقضا، audit، محدودسازی تلاش و گردش امن تحویل token هنوز پیاده‌سازی نشده‌اند. این primitive نباید به‌تنهایی به‌عنوان enrollment end-to-end یا Verified اعلام شود.
 - **اعتبارسنجی:** باید CI روی همین شاخه اجرا شود؛ اجرای محلی .NET در این محیط انجام نشده است.
