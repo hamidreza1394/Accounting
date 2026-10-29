@@ -116,7 +116,8 @@ public sealed class VendorProvisioningRequestRulesTests
             request.FiscalPeriodTitle,
             request.FiscalPeriodStartDate,
             request.FiscalPeriodEndDate,
-            request.ParentCompanyReference);
+            request.ParentCompanyReference,
+            request.InitialAdminEmail);
 
         Assert.True(VendorProvisioningRequestRules.MatchesExisting(payload, request, "customer-001", "install-001"));
     }
@@ -156,5 +157,7 @@ public sealed class VendorProvisioningRequestRulesTests
         new[] { "inventory", "finance" },
         "سال مالی ۱۴۰۵",
         new DateOnly(2026, 3, 21),
-        new DateOnly(2027, 3, 20));
+        new DateOnly(2027, 3, 20),
+        null,
+        "admin@example.com");
 }
