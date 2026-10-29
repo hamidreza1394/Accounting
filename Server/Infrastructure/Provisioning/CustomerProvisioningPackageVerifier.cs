@@ -23,12 +23,17 @@ public sealed class CustomerProvisioningPackageVerifier(
         errorCode = "provisioning_consumer_not_configured";
 
         var settings = options.Value;
-        if (string.IsNullOrWhiteSpace(settings.CustomerReference) ||
-            string.IsNullOrWhiteSpace(settings.InstallationId))
+        if (!IsValidReference(settings.CustomerReference) ||
+            !IsValidReference(settings.InstallationId))
             return false;
 
-        if (package is null ||
-            !trustStore.TryGetPublicKey(package.KeyId, out var trustedPublicKey))
+        if (package is null)
+        {
+            errorCode = "provisioning_envelope_invalid";
+            return false;
+        }
+
+        if (!trustStore.TryGetPublicKey(package.KeyId, out var trustedPublicKey))
         {
             errorCode = "provisioning_trusted_key_unknown";
             return false;
@@ -59,4 +64,9 @@ public sealed class CustomerProvisioningPackageVerifier(
         errorCode = string.Empty;
         return true;
     }
+
+    private static bool IsValidReference(string? value) =>
+        !string.IsNullOrWhiteSpace(value) &&
+        value.Length <= 128 &&
+        !value.Any(char.IsControl);
 }
