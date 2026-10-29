@@ -57,3 +57,11 @@
 - **Branch:** `feat/customer-provisioning-consumer`
 - **آخرین commit شناخته‌شده در زمان نوشتن handoff:** باید با HEAD جاری PR #302 تطبیق داده شود.
 - **Pull Request:** [#302](https://github.com/hamidreza1394/Accounting/pull/302)
+
+
+## پیگیری CI در 2026-10-29
+- اجرای CI `40917960102`: Build موفق؛ .NET tests برابر 613 موفق و 0 شکست؛ `Check the generated migrations` موفق؛ اما `Test the migration guards (unit and mutation tests)` شکست خورد.
+- علت اول: parser گارد، `byte[]` را در `table.Column<byte[]>` تشخیص نمی‌داد؛ به همین دلیل ستون `ProvisioningRequestClaims.RowVersion` در بررسی migration غایب دیده می‌شد.
+- علت دوم: تست جهشی `test_newer_migration_than_the_constants` از فایل آزمایشی تاریخ‌دار `20261024000000` استفاده می‌کرد، در حالی که migration جاری `20261029161402` بود؛ فایل ساختگی از نظر ترتیب واقعاً جدیدتر نبود.
+- اصلاحات روی شاخه: parser از انواع آرایه‌ای پشتیبانی می‌کند؛ تست رگرسیون rowversion اضافه شده و تاریخ fixture به `20261030000000` تغییر کرده است.
+- **وضعیت:** منتظر CI جدید برای تأیید این اصلاحات. مصرف‌کننده واقعی provisioning، idempotency تراکنشی و E2E هنوز خارج از محدوده تکمیل‌شده‌اند؛ PR باید Draft بماند.
