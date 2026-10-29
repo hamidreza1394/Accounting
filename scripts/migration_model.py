@@ -170,7 +170,7 @@ def parse_generated_model(source: str) -> dict[str, Any]:
 
         properties: list[dict[str, Any]] = []
         for prop in re.finditer(
-            r'b\.Property<(?P<type>[\w\[\?]+)>\("(?P<name>[^"]+)"\)(?P<calls>[^;]*);',
+            r'b\.Property<(?P<type>[\w\[\]\?]+)>\("(?P<name>[^"]+)"\)(?P<calls>[^;]*);',
             body,
         ):
             calls = prop.group("calls")
