@@ -56,7 +56,7 @@ DELTA_MIGRATION_NAME = "AddCompanyCustomerBoundary"
 # the model of the migration before it (DELTA_MIGRATION_*) and the model of the code
 # base, so the files can not drift apart from the snapshot. DELTA_MIGRATION_* is
 # published history and is never rewritten, exactly like 'InitialCreate'.
-CURRENT_MIGRATION_ID = "20261029170000"
+CURRENT_MIGRATION_ID = "20261029161402"
 CURRENT_MIGRATION_NAME = "AddCustomerProvisioningClaims"
 CURRENT_MIGRATION_CLASS = "AddCustomerProvisioningClaims"
 

@@ -766,6 +766,108 @@ namespace Data.Migrations
                 b.ToTable("SecurityAuditEvents");
             });
 
+            modelBuilder.Entity("Domain.ProvisioningRequestClaim", b =>
+            {
+                b.Property<Guid>("Id")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<int>("Ordering")
+                    .HasColumnType("int");
+
+                b.Property<DateTime>("InsertDateTime")
+                    .HasColumnType("datetime2");
+
+                b.Property<Guid>("RequestId")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<string>("NonceHash")
+                    .IsRequired()
+                    .HasMaxLength(64)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(64)");
+
+                b.Property<string>("PayloadSha256")
+                    .IsRequired()
+                    .HasMaxLength(64)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(64)");
+
+                b.Property<string>("CompanyType")
+                    .IsRequired()
+                    .HasMaxLength(16)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(16)");
+
+                b.Property<Guid?>("ParentCompanyId")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<string>("SubsystemsJson")
+                    .IsRequired()
+                    .HasMaxLength(1024)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(1024)");
+
+                b.Property<string>("CustomerReference")
+                    .IsRequired()
+                    .HasMaxLength(128)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(128)");
+
+                b.Property<string>("InstallationId")
+                    .IsRequired()
+                    .HasMaxLength(128)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(128)");
+
+                b.Property<Guid>("CompanyId")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<Guid>("FiscalPeriodId")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<Guid>("AdminUserId")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<string>("EnrollmentTokenHash")
+                    .IsRequired()
+                    .HasMaxLength(64)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(64)");
+
+                b.Property<DateTime>("EnrollmentExpiresAtUtc")
+                    .HasColumnType("datetime2");
+
+                b.Property<DateTime?>("EnrollmentConsumedAtUtc")
+                    .HasColumnType("datetime2");
+
+                b.Property<DateTime>("AppliedAtUtc")
+                    .HasColumnType("datetime2");
+
+                b.Property<bool>("MustChangePassword")
+                    .HasColumnType("bit");
+
+                b.HasKey("Id");
+
+                b.HasIndex("RequestId")
+                    .IsUnique();
+
+                b.HasIndex("NonceHash")
+                    .IsUnique();
+
+                b.HasIndex("EnrollmentTokenHash")
+                    .IsUnique();
+
+                b.HasIndex("AdminUserId", "MustChangePassword");
+
+                b.HasIndex("CustomerReference", "InstallationId");
+
+                b.HasIndex("ParentCompanyId");
+
+                b.HasIndex("FiscalPeriodId", "CompanyId");
+
+                b.ToTable("ProvisioningRequestClaims");
+            });
+
             modelBuilder.Entity("Domain.CorporateGroup", b =>
             {
                 b.Property<Guid>("Id")
@@ -1182,6 +1284,21 @@ namespace Data.Migrations
                 b.HasOne("Domain.PermissionDefinition", "Permission")
                     .WithMany("RolePermissions")
                     .HasForeignKey("PermissionId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+            });
+
+            modelBuilder.Entity("Domain.ProvisioningRequestClaim", b =>
+            {
+                b.HasOne("Domain.Company", null)
+                    .WithMany()
+                    .HasForeignKey("ParentCompanyId")
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                b.HasOne("Domain.FiscalPeriod", null)
+                    .WithMany()
+                    .HasForeignKey("FiscalPeriodId", "CompanyId")
+                    .HasPrincipalKey("Id", "TenantId")
                     .OnDelete(DeleteBehavior.Restrict)
                     .IsRequired();
             });
