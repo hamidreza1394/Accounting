@@ -16,6 +16,8 @@ type ProvisioningRequest = {
   createdAtUtc: string;
   updatedAtUtc: string;
   confirmedAtUtc?: string | null;
+  acknowledgementResult?: string | null;
+  acknowledgedAtUtc?: string | null;
   failureCode?: string | null;
   payloadSha256: string;
   rowVersion: string;
@@ -39,6 +41,12 @@ const subsystemOptions = [
   { value: 'inventory', label: 'انبار' },
   { value: 'treasury', label: 'خزانه‌داری' },
 ] as const;
+
+const acknowledgementResultLabels: Record<string, string> = {
+  Applied: 'راه‌اندازی توسط مشتری اعمال شد',
+  AlreadyApplied: 'راه‌اندازی قبلاً اعمال شده بود',
+  Rejected: 'درخواست توسط مشتری رد شد',
+};
 
 const statusLabels: Record<string, string> = {
   AwaitingSigner: 'در انتظار پیکربندی امن امضا',
@@ -359,16 +367,22 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
         {loading ? <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><LoaderCircle size={16} className="animate-spin"/> در حال دریافت وضعیت…</p>
           : requests.length === 0 ? <p className="text-sm text-muted-foreground">هنوز درخواستی ثبت نشده است.</p>
           : <div className="overflow-x-auto">
-            <table className="w-full min-w-[520px] text-right text-sm">
+            <table className="w-full min-w-[760px] text-right text-sm">
               <thead><tr>
                 <th className="border-b px-3 py-2 font-semibold text-muted-foreground">وضعیت</th>
+                <th className="border-b px-3 py-2 font-semibold text-muted-foreground">نتیجه پاسخ مشتری</th>
                 <th className="border-b px-3 py-2 font-semibold text-muted-foreground">زمان ثبت</th>
+                <th className="border-b px-3 py-2 font-semibold text-muted-foreground">زمان پاسخ مشتری</th>
                 <th className="border-b px-3 py-2 font-semibold text-muted-foreground">شناسه درخواست</th>
                 {(canRequestApproval || canExportPackage) && <th className="border-b px-3 py-2 font-semibold text-muted-foreground">عملیات</th>}
               </tr></thead>
               <tbody>{requests.map(item => <tr key={item.id}>
                 <td className="border-b px-3 py-2">{statusLabels[item.status] ?? item.status}</td>
+                <td className="border-b px-3 py-2">{item.acknowledgementResult
+                  ? acknowledgementResultLabels[item.acknowledgementResult] ?? item.acknowledgementResult
+                  : <span className="text-muted-foreground">—</span>}</td>
                 <td className="border-b px-3 py-2 tabular-nums">{formatDate(item.createdAtUtc)}</td>
+                <td className="border-b px-3 py-2 tabular-nums">{formatDate(item.acknowledgedAtUtc)}</td>
                 <td className="border-b px-3 py-2 font-mono text-xs" dir="ltr">{item.requestId}</td>
                 {(canRequestApproval || canExportPackage) && <td className="border-b px-3 py-2">
                   {canExportPackage && item.status === 'PendingDelivery'

@@ -194,4 +194,40 @@ describe('Vendor customer provisioning form', () => {
     expect(screen.getByRole('option', { name: /نصب فعال/ })).toBeInTheDocument();
   });
 
+  it('shows the verified customer outcome and acknowledgement time in the request history', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/vendor/installations/?customerId=customer-1&page=1&pageSize=100') {
+        return response({ items: [{ id: 'install-1', installationCode: 'INSTALL-01', name: 'نصب اصلی', status: 'Active' }] });
+      }
+      if (url === '/api/vendor/provisioning-requests?customerId=customer-1&page=1&pageSize=10') {
+        return response({ items: [{
+          id: 'provision-1',
+          requestId: 'request-1',
+          status: 'Confirmed',
+          createdAtUtc: '2026-10-29T10:00:00Z',
+          updatedAtUtc: '2026-10-29T11:00:00Z',
+          confirmedAtUtc: '2026-10-29T11:00:00Z',
+          acknowledgementResult: 'Applied',
+          acknowledgedAtUtc: '2026-10-29T11:00:00Z',
+          payloadSha256: 'a'.repeat(64),
+        }] });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('crypto', { randomUUID: vi.fn().mockReturnValue('unused-request-id') });
+
+    render(<ProvisioningForm customerId="customer-1" customerName="مشتری نمونه"
+      onCancel={vi.fn()} onSaved={vi.fn()} />);
+
+    await screen.findByText('تأییدشده توسط مصرف‌کننده مشتری');
+    expect(screen.getByText('راه‌اندازی توسط مشتری اعمال شد')).toBeInTheDocument();
+    const expectedTime = new Intl.DateTimeFormat('fa-IR', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date('2026-10-29T11:00:00Z'));
+    expect(screen.getByText(expectedTime)).toBeInTheDocument();
+  });
+
 });

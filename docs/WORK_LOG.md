@@ -1120,14 +1120,23 @@
 - **PR:** [#292](https://github.com/hamidreza1394/Accounting/pull/292) is open for the consolidated branch. `main` advanced through merged PR #291 while this work was in progress; the branch now includes `main` as a merge parent and does not overwrite its trust-store registration. CI must pass on the final head SHA.
 
 
-## 2026-10-29 — Vendor acknowledgement intake (PR #293)
+## 2026-10-29 — Vendor acknowledgement intake (PR #293, merged)
 
 - **Issue / PR:** [#228](https://github.com/hamidreza1394/Accounting/issues/228), [#235](https://github.com/hamidreza1394/Accounting/issues/235), [PR #293](https://github.com/hamidreza1394/Accounting/pull/293).
+- **Merged commit:** `2884c61ade381670f754a1b8027c496a6e8eb7b2`.
 - **Scope:** Vendor control-plane intake only. No changes to `Server/**` or customer database schema.
-- **Implementation:** Added a request-ID-scoped acknowledgement endpoint. The endpoint resolves public keys from deployment configuration, verifies the signed canonical acknowledgement and its bindings (request ID, nonce, payload hash, customer reference and installation identity), and only then records the outcome.
-- **State integrity:** A verified `Applied` or `AlreadyApplied` response can move a delivered request to `Confirmed`; a verified `Rejected` response moves it to `Failed`. An exact signed retry is idempotent and audited; a different acknowledgement for the same request conflicts. The Vendor row update and audit append share a transaction.
-- **Persistence:** Added Vendor-only acknowledgement digest/key/result/time columns and migration `20261029130000_VendorProvisioningAcknowledgements`; updated EF model mapping and snapshot.
-- **Security:** The machine endpoint is not authenticated with the Vendor browser cookie; it is rate-limited and trusts only configured public keys. Unknown/revoked keys fail closed. No private key or customer credentials are stored.
-- **Tests added:** terminal outcome mapping tests and a host-level unknown-key rejection test.
-- **Validation:** Local .NET build/test and SQL Server integration tests were not run in this tool session. PR CI is the verification gate; migration/model parity and runtime endpoint behavior remain unverified until CI completes.
-- **Remaining:** customer-side provisioning consumer and atomic nonce claim are still a separate PR under #235; production signer/KMS decision remains open under #236; independent audit checkpoint destination remains open under #107; offline revocation rollout still requires customer-side monotonic persistence and operational runbook under #214.
+- **Implementation:** Added a request-ID-scoped acknowledgement endpoint. It resolves public keys from deployment configuration, verifies the signed canonical acknowledgement and binds request ID, nonce, payload hash, customer reference and installation identity before recording the outcome.
+- **State integrity:** Verified `Applied`/`AlreadyApplied` can move a delivered request to `Confirmed`; verified `Rejected` moves it to `Failed`. Exact signed retry is idempotent and audited; a different acknowledgement conflicts. State and audit share a transaction.
+- **Persistence:** Added Vendor-only acknowledgement digest/key/result/time columns and migration `20261029130000_VendorProvisioningAcknowledgements`; updated EF mapping, migration target model and snapshot.
+- **Tests:** outcome mapping unit tests, unknown-key host test, and SQL Server integration test for confirmation, exact retry, conflicting retry and audit persistence.
+- **Verified CI:** Vendor CI [run 40869153676](https://github.com/hamidreza1394/Accounting/actions/runs/40869153676), .NET CI [run 40869153840](https://github.com/hamidreza1394/Accounting/actions/runs/40869153840), and Semgrep [run 40869153686](https://github.com/hamidreza1394/Accounting/actions/runs/40869153686) all succeeded on the merged head. Local .NET commands were not run in this tool session.
+- **Remaining:** customer-side provisioning consumer and atomic nonce claim remain separate under #235; D-044/OD-14 conflicts with the later signed-package requirement and is documented on #235. Production signer/KMS remains blocked under #236; independent audit checkpoint destination remains blocked under #107; customer-side offline revocation persistence/enforcement remains separate under #214.
+
+## 2026-10-29 — Vendor acknowledgement status UI (PR #294)
+
+- **Issue / PR:** [#228](https://github.com/hamidreza1394/Accounting/issues/228), [PR #294](https://github.com/hamidreza1394/Accounting/pull/294).
+- **Scope:** Vendor API response and React request-history UI only; no customer DB changes or secrets.
+- **Implementation:** Exposed the persisted acknowledgement result/time in the Vendor provisioning response and displayed them in the request history, distinguishing `Applied`, `AlreadyApplied`, and `Rejected` from the broader provisioning status.
+- **Tests:** Added a UI test asserting the verified customer outcome and acknowledgement timestamp render. Vendor UI typecheck/tests/build and .NET CI must pass on the final head.
+- **Measurements:** Bundle-size before/after and browser LCP/CLS were not measured; no new dependency or external runtime asset was added.
+- **Remaining:** UI display does not implement the customer-side consumer, one-time admin enrollment, fiscal-period provisioning inputs or parent-company relationship. These are tracked under #228/#235 and must not be represented as complete.
