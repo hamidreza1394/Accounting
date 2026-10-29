@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Faranou.Licensing.Contracts;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Domain;
@@ -159,7 +160,7 @@ public sealed class ProvisioningAcknowledgementSqlServerIntegrationTests
                 Assert.Equal("Confirmed", stored.Status);
                 Assert.Equal("Applied", stored.AcknowledgementResult);
                 Assert.Equal(2, await db.AuditEvents.CountAsync(
-                    auditEvent => auditEvent.ActionCode is "vendor.provisioning.acknowledgement-confirmed" or "vendor.provisioning.acknowledgement-retried",
+                    auditEvent => auditEvent.ActionCode == "vendor.provisioning.acknowledgement-confirmed" || auditEvent.ActionCode == "vendor.provisioning.acknowledgement-retried",
                     cancellationToken));
             }
         }
