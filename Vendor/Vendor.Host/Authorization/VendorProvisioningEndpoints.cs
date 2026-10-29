@@ -7,6 +7,8 @@ using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Auditing;
 using Faranou.Vendor.Persistence.Domain;
 using Faranou.Vendor.Persistence.Identity;
+using Faranou.Vendor.Host.Signing;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -91,6 +93,9 @@ public static class VendorProvisioningEndpoints
                         Encoding.ASCII.GetBytes(item.AcknowledgementSha256),
                         Encoding.ASCII.GetBytes(acknowledgementDigest)))
                 {
+                    await audit.AppendAsync(new VendorAuditWriteRequest(
+                        null, "vendor.provisioning.acknowledgement-retried", nameof(VendorProvisioningRequest),
+                        item.Id.ToString("D"), System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
                     await tx.CommitAsync(ct);
                     return Results.Ok(new { status = item.Status, repeated = true });
                 }
