@@ -1,12 +1,44 @@
 version: 2
 updates:
+  # .NET / NuGet (solution root)
   - package-ecosystem: nuget
     directory: "/"
     schedule:
       interval: weekly
+      day: monday
     open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "nuget"
+    commit-message:
+      prefix: "deps(nuget)"
+
+  # React / ClientApp (npm)
+  - package-ecosystem: npm
+    directory: "/ClientApp"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "npm"
+      - "frontend"
+    commit-message:
+      prefix: "deps(npm)"
+    # Ignore major version bumps of React ecosystem if you prefer controlled upgrades
+    # ignore:
+    #   - dependency-name: "react"
+    #     update-types: ["version-update:semver-major"]
+
+  # GitHub Actions
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: monthly
     open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "deps(actions)"
