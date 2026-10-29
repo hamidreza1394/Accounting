@@ -76,6 +76,16 @@ public sealed class ProvisioningAcknowledgementTrustStoreTests
         };
         Assert.Throws<InvalidOperationException>(() => new ProvisioningAcknowledgementTrustStore(malformed));
 
+        var missing = new[]
+        {
+            new ProvisioningAcknowledgementTrustedKeyOptions
+            {
+                KeyId = "missing-material",
+                PublicKeySubjectPublicKeyInfoBase64 = ""
+            }
+        };
+        Assert.Throws<InvalidOperationException>(() => new ProvisioningAcknowledgementTrustStore(missing));
+
         using var key = ECDsa.Create(ECCurve.NamedCurves.nistP384);
         var wrongCurve = new[]
         {
