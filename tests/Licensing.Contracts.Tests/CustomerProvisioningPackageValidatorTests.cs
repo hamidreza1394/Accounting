@@ -183,11 +183,60 @@ public sealed class CustomerProvisioningPackageValidatorTests
     public void UnknownVersion_IsRejected()
     {
         using var signingKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-        var package = Sign(signingKey, Sample() with { SchemaVersion = 2 });
+        var package = Sign(signingKey, Sample() with { SchemaVersion = 3 });
 
         Assert.False(CustomerProvisioningPackageValidator.TryValidateAndVerify(
             package, signingKey.ExportSubjectPublicKeyInfo(), Now, out _, out var error));
         Assert.Equal("provisioning_payload_invalid", error);
+    }
+
+    [Fact]
+    public void V1CanonicalPayload_RemainsCompatibleAndOmitsV2Fields()
+    {
+        var json = CustomerProvisioningCanonicalJson.Serialize(Sample());
+
+        Assert.DoesNotContain("fiscalPeriodTitle", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("parentCompanyReference", json, StringComparison.Ordinal);
+        Assert.True(CustomerProvisioningPackageValidator.TryValidatePayload(
+            json, Now, out var parsed, out var error), error);
+        Assert.Equal(1, parsed!.SchemaVersion);
+    }
+
+    [Fact]
+    public void V2Payload_RequiresFiscalPeriodAndValidParentRelationship()
+    {
+        var payload = SampleV2();
+        var json = CustomerProvisioningCanonicalJson.Serialize(payload);
+
+        Assert.True(CustomerProvisioningPackageValidator.TryValidatePayload(
+            json, Now, out var parsed, out var error), error);
+        Assert.Equal(new DateOnly(2026, 1, 1), parsed!.FiscalPeriodStartDate);
+
+        var missingPeriod = CustomerProvisioningCanonicalJson.Serialize(payload with { FiscalPeriodStartDate = null });
+        Assert.False(CustomerProvisioningPackageValidator.TryValidatePayload(
+            missingPeriod, Now, out _, out _));
+
+        var subsidiaryWithoutParent = CustomerProvisioningCanonicalJson.Serialize(payload with
+        {
+            CompanyType = "subsidiary",
+            ParentCompanyReference = null
+        });
+        Assert.False(CustomerProvisioningPackageValidator.TryValidatePayload(
+            subsidiaryWithoutParent, Now, out _, out _));
+    }
+
+    [Fact]
+    public void V2Payload_RejectsReversedFiscalPeriodDates()
+    {
+        var payload = SampleV2() with
+        {
+            FiscalPeriodStartDate = new DateOnly(2027, 1, 1),
+            FiscalPeriodEndDate = new DateOnly(2026, 1, 1)
+        };
+        var json = CustomerProvisioningCanonicalJson.Serialize(payload);
+
+        Assert.False(CustomerProvisioningPackageValidator.TryValidatePayload(
+            json, Now, out _, out _));
     }
 
     [Fact]
@@ -222,4 +271,12 @@ public sealed class CustomerProvisioningPackageValidatorTests
         Now.AddMinutes(-1),
         Now.AddHours(1),
         "abcdefghijklmnopqrstuvwxyz0123456789_-");
+
+    private static CustomerProvisioningPayload SampleV2() => Sample() with
+    {
+        SchemaVersion = CustomerProvisioningPackageValidator.CurrentPayloadSchemaVersion,
+        FiscalPeriodTitle = "سال مالی ۱۴۰۵",
+        FiscalPeriodStartDate = new DateOnly(2026, 1, 1),
+        FiscalPeriodEndDate = new DateOnly(2027, 1, 1)
+    };
 }
