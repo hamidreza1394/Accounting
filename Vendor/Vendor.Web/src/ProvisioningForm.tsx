@@ -59,6 +59,7 @@ function publicError(status: number, code: string): string {
   if (status === 400 && code === 'invalid_antiforgery_token') return 'توکن امنیتی معتبر نیست؛ فرم را تازه‌سازی کنید.';
   if (status === 400 && code === 'invalid_provisioning_subsystems') return 'حداقل یک زیرسیستم مجاز انتخاب کنید و گزینه‌های تکراری را حذف کنید.';
   if (status === 400 && code === 'invalid_provisioning_configuration') return 'نام شرکت، نوع شرکت یا نام کاربری مدیر اولیه معتبر نیست.';
+  if (status === 400 && code === 'invalid_provisioning_admin_email') return 'نشانی ایمیل مدیر اولیه را به‌درستی وارد کنید.';
   if (status === 400 && code === 'invalid_provisioning_fiscal_period') return 'عنوان و بازه دوره مالی را بررسی کنید؛ تاریخ پایان باید بعد از تاریخ شروع باشد.';
   if (status === 400 && code === 'invalid_provisioning_parent_company_reference') return 'برای شرکت تابعه مرجع شرکت مادر لازم است و برای سایر انواع شرکت نباید وارد شود.';
   if (status === 400 && code === 'invalid_provisioning_request_id') return 'شناسه درخواست معتبر نیست؛ دوباره تلاش کنید.';
@@ -96,6 +97,7 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
   const [fiscalPeriodEndDate, setFiscalPeriodEndDate] = useState('2027-03-20');
   const [parentCompanyReference, setParentCompanyReference] = useState('');
   const [adminUserName, setAdminUserName] = useState('');
+  const [adminEmail, setAdminEmail] = useState('');
   const [subsystems, setSubsystems] = useState<string[]>(['finance']);
   const [requestId, setRequestId] = useState(newRequestId);
   const [loading, setLoading] = useState(true);
@@ -168,6 +170,7 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
           companyName: companyName.trim(),
           companyType,
           initialAdminUserName: adminUserName.trim(),
+          initialAdminEmail: adminEmail.trim(),
           subsystems: [...subsystems].sort(),
           fiscalPeriodTitle: fiscalPeriodTitle.trim(),
           fiscalPeriodStartDate,
@@ -190,6 +193,7 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
       setRequestId(newRequestId());
       setCompanyName('');
       setAdminUserName('');
+      setAdminEmail('');
       setCompanyType('independent');
       setFiscalPeriodTitle('سال مالی ۱۴۰۵');
       setFiscalPeriodStartDate('2026-03-21');
@@ -381,6 +385,13 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
               value={adminUserName} onChange={event => setAdminUserName(event.target.value)} disabled={busy}
               className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"/>
           </div>
+          <div className="space-y-2">
+            <label htmlFor="provisioning-admin-email" className="text-sm font-medium">ایمیل مدیر اولیه</label>
+            <input id="provisioning-admin-email" type="email" required maxLength={254} autoComplete="email" dir="ltr"
+              value={adminEmail} onChange={event => setAdminEmail(event.target.value)} disabled={busy}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"/>
+            <p className="text-xs leading-5 text-muted-foreground">این ایمیل برای هویت مدیر در نصب مشتری استفاده می‌شود؛ رمز عبور در بسته قرار نمی‌گیرد.</p>
+          </div>
         </div>
 
         <fieldset className="space-y-3">
@@ -394,7 +405,7 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
         </fieldset>
 
         <div className="flex flex-wrap gap-2">
-          <Button type="submit" disabled={busy || loading || !installationId || !companyName.trim() || !adminUserName.trim() ||
+          <Button type="submit" disabled={busy || loading || !installationId || !companyName.trim() || !adminUserName.trim() || !adminEmail.trim() ||
             !fiscalPeriodTitle.trim() || !fiscalPeriodStartDate || !fiscalPeriodEndDate ||
             (fiscalPeriodStartDate >= fiscalPeriodEndDate) ||
             (companyType === 'subsidiary' && !parentCompanyReference.trim()) || subsystems.length === 0}>
