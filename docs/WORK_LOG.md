@@ -1068,3 +1068,14 @@
 - Added server-side validation requiring both the Vendor customer and selected installation to have the exact status `Active` before a new provisioning request is persisted.
 - Added pure rule tests for active, inactive, suspended, and missing status values. Inactive targets return a generic conflict response; no customer DB access, customer schema change, or credential handling was added.
 - Validation limitation: this GitHub-only change was not built or tested locally. Required Vendor CI and integration checks must pass on the PR head before merge.
+
+## 2026-10-29 — سخت‌سازی مجوزدهی provisioning (PR #277–#280)
+- **PR #277** `3f5c6be34e17fce8eeca9c40ae9d43eef3355309`: درخواست provisioning فقط برای مشتری و نصب دارای وضعیت دقیق `Active` پذیرفته می‌شود؛ تست‌های وضعیت فعال/غیرفعال/معلق و مقدار تهی اضافه شدند.
+- **PR #278** `708eebc3c24d964e57087ab170c0fe20b720dca0`: بررسی وضعیت هدف پس از مجوزدهی منبع منتقل شد تا کاربر غیرمجاز نتواند وضعیت مشتری/نصب را استنباط کند.
+- **PR #279** `166289acff15afbec19fc8075476b438270893be`: بررسی وضعیت درخواست و RowVersion در endpoint درخواست تأیید پس از مجوزدهی مشتری و نصب انجام می‌شود.
+- **PR #280** `4c247bfab8c10a1fce75ecb06db138a1b522763b`, merge commit `17038ae747aaf991aeea072c57c62c07f957586a`: چهار شاخهٔ شکست مجوزدهی منبع در endpointهای provisioning به `404 Not Found` تغییر کرد تا افشای وجود منابع محدود شود.
+- **شواهد CI برای PR #280:** Vendor CI [40839835705]، .NET CI [40839835703]، Semgrep [40839835699] و workflow اختصاصی PR [40839832564] همگی موفق.
+- **پس از merge روی main:** Vendor CI [40840817584] و Semgrep [40840817594] موفق‌اند. .NET CI [40840817609] و CodeQL [40840817734] هنوز در حال اجرا بودند هنگام ثبت این گزارش.
+- **محدودیت اعتبارسنجی:** تست محلی/ساخت محلی در این نشست اجرا نشده است؛ وضعیت‌ها فقط بر اساس نتایج واقعی GitHub Actions گزارش شده‌اند.
+- **باقی‌مانده:** #228 جریان کامل provisioning، #235 مصرف‌کننده و acknowledgement سمت مشتری، #236 signer واقعی KMS/HSM و #107 sink مستقل checkpoint ممیزی هنوز شکاف‌های Production هستند؛ انتخاب provider و اعتبارنامه‌های عملیاتی را نباید جعل کرد.
+
