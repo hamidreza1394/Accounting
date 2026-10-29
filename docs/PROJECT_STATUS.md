@@ -1,26 +1,24 @@
-# وضعیت جاری تأییدشده Vendor — 2026-10-29 (به‌روزرسانی PR #293)
+# وضعیت جاری تأییدشده Vendor — 2026-10-29 (PR #293 merged; PR #294 pending)
 
-مبنای این یادداشت: شاخه `feat/vendor-acknowledgement-intake` روی PR #293؛ تا پایان CI، این تغییر **Implemented / Not Verified** است و هنوز نباید وضعیت Production-ready اعلام شود.
+## وضعیت ادغام‌شده
+- **PR #293** در `main` ادغام شد؛ commit: `2884c61ade381670f754a1b8027c496a6e8eb7b2`.
+- مسیر دریافت acknowledgement امضاشده با trust store مستقل، تطبیق request ID/nonce/hash/customer/installation، idempotency، conflict handling و ممیزی تراکنشی پیاده‌سازی شد.
+- Migration مخصوص Vendor برای ذخیره digest، key ID، نتیجه و زمان acknowledgement اضافه شد.
+- [Vendor CI](https://github.com/hamidreza1394/Accounting/actions/runs/40869153676)، [.NET CI](https://github.com/hamidreza1394/Accounting/actions/runs/40869153840) و [Semgrep](https://github.com/hamidreza1394/Accounting/actions/runs/40869153686) روی head ادغام‌شده موفق‌اند؛ تست SQL Server تأیید، retry دقیق و پاسخ متناقض را پوشش می‌دهد.
 
-## کارهای ثبت‌شده در PR #293
-- endpoint دریافت acknowledgement امضاشده در Vendor اضافه شده است؛ کلید عمومی فقط از trust store مستقل پیکربندی‌شده resolve می‌شود.
-- request ID، nonce، payload hash، customer reference و installation identity پیش از هر تغییر state تطبیق داده می‌شوند.
-- نتیجهٔ معتبر `Applied` / `AlreadyApplied` وضعیت را `Confirmed` می‌کند؛ `Rejected` وضعیت را `Failed` می‌کند. export بسته به‌تنهایی به معنی تأیید مشتری نیست.
-- digest پاسخ، key ID، نتیجه و زمان در Migration اختصاصی Vendor ذخیره می‌شوند؛ retry دقیق idempotent است و acknowledgement متفاوت برای همان درخواست conflict می‌دهد.
-- ممیزی و state update در یک تراکنش Vendor ثبت می‌شوند؛ endpoint دارای rate limit است.
-- تست‌های unit مربوط به نگاشت state و تست رد کلید ناشناخته اضافه شده‌اند.
-
-## شواهد اعتبارسنجی
-- [PR #293 — CI در انتظار نتیجهٔ head نهایی](https://github.com/hamidreza1394/Accounting/pull/293).
-- Build/Test محلی و آزمون SQL Server در این نشست اجرا نشده‌اند؛ نتیجه فقط پس از CI واقعی قابل ثبت است.
+## تغییر در حال بازبینی — PR #294
+- API پاسخ provisioning اکنون `AcknowledgementResult` و `AcknowledgedAtUtc` را در response برمی‌گرداند.
+- UI تاریخچهٔ درخواست، نتیجهٔ واقعی مشتری و زمان پاسخ را نمایش می‌دهد؛ نتیجهٔ acknowledgement از status کلی درخواست جداست.
+- [PR #294](https://github.com/hamidreza1394/Accounting/pull/294)؛ CI برای این head هنوز باید تکمیل شود.
 
 ## شکاف‌های باقی‌مانده برای Production
-- **#228 / #235:** consumer سمت مشتری، claim اتمی request ID/nonce، ایجاد تراکنشی شرکت/مدیر و تست end-to-end همچنان جداگانه لازم است؛ PR #293 فقط intake سمت Vendor را پیاده می‌کند.
-- **#236 / #214:** provider امضای Production، تصمیم KMS/HSM، هویت دسترسی، چرخش و بازیابی کلید هنوز عملیاتی نشده‌اند؛ signer پیش‌فرض fail-closed باقی می‌ماند.
+- **#228 / #235:** consumer سمت مشتری و claim اتمی request ID/nonce، ایجاد تراکنشی شرکت/دوره/مدیر و enrollment یک‌بارمصرف هنوز تکمیل نشده‌اند. D-044/OD-14 با الزام جدید signed provisioning package در #228/#235 تعارض دارد؛ این تعارض و نبود fiscal-period/parent-company fields در #235 ثبت شده است. تا تعیین‌تکلیف معماری، consumer ناقص نباید `Applied` اعلام کند.
+- **#236:** provider امضای Production، تصمیم KMS/HSM، هویت دسترسی، چرخش و بازیابی کلید هنوز عملیاتی نشده‌اند؛ signer پیش‌فرض fail-closed باقی می‌ماند.
 - **#107:** مقصد مستقل checkpoint ممیزی، اعتبارنامه‌های جدا، retention/immutability و بازیابی باید تعیین و پیاده‌سازی شوند.
-- **تحویل آفلاین:** جریان export/import و تأییدیه باید در نصب‌های cloud، dedicated-server و offline end-to-end آزموده شود.
+- **#214:** قرارداد revocation آفلاین موجود است؛ مصرف‌کنندهٔ سمت مشتری، ذخیره‌سازی monotonic و enforcement/backup/restore هنوز باقی است.
+- **تحویل آفلاین:** جریان export/import و acknowledgement باید در نصب‌های cloud، dedicated-server و offline end-to-end آزموده شود.
 
-نتیجه: PR #293 یک بخش مهم از گردش‌کار تأیید را پیاده می‌کند، اما تا سبز شدن CI و تکمیل consumer سمت مشتری و تصمیم‌های عملیاتی، Vendor **Production-ready نیست**.
+نتیجه: PR #293 ادغام و CI آن تأیید شده است. PR #294 فقط UI پاسخ مشتری را کامل‌تر می‌کند؛ Vendor همچنان **Production-ready نیست** تا شکاف‌های provisioning، KMS/HSM و checkpoint مستقل تعیین‌تکلیف و تأیید شوند.
 
 ---
 ## Snapshot تاریخی — وضعیت Vendor پس از PR #271
