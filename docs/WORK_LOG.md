@@ -1018,3 +1018,12 @@
 - The provisioning signing interface is now distinct from the license signing interface. Both production signing and independent audit checkpoint adapters remain intentionally unconfigured and fail closed.
 - Added status comments to Issues #107, #214, #228, #233 and #236 to distinguish implemented/CI-verified work from deployment-approval blockers. Customer-side consumer/acknowledgement remains in Issues #234/#235 and is outside Vendor-only scope.
 - Corrected the Issue #107 handoff so it no longer says the merged startup guard is waiting for CI.
+
+
+## 2026-10-29 — اعتبارسنجی بومی فرم‌های Vendor و وضعیت onboarding
+- **محدوده:** Issue #228؛ اصلاح رگرسیون در فرم درخواست provisioning، فرم مشتری، قرارداد، نصب و metadata لایسنس.
+- **یافته:** پنج فرم با `noValidate` اعتبارسنجی constraintهای بومی HTML را دور می‌زدند؛ این ویژگی با `required` و دیگر constraintهای تعریف‌شده سازگار نبود.
+- **اصلاحات ادغام‌شده:** PR #244 (provisioning، merge `96ecc4c49475d04fdaeb889e20f9d6b51354bc8e`)، PR #245 (customer، merge `381201b478363d5035e2b9d4dd9016ab497d71d8`) و PR #246 (contract/installation/license، merge `ecce57cbb5b8c0b058a1cea2643a27a870245b32`). برای هر فرم assertion رگرسیون اضافه شد. CIهای مربوطه روی headهای PR شامل تست‌های Vendor، Build/Test، E2E/انتشار و CodeQL موفق شدند.
+- **مرز امنیتی:** این اصلاح فقط UX اعتبارسنجی مرورگر است؛ اعتبارسنجی سمت سرور همچنان لازم است. هیچ رمز اولیه یا password hash در Vendor ذخیره نمی‌شود؛ این تغییرها API، دیتابیس مشتری و migration را دست نزدند.
+- **مانع بعدی:** provisioning همچنان intent ثبت‌شده در control plane است تا مصرف‌کنندهٔ مشتری بستهٔ امضاشده را تأیید و acknowledgement معتبر برگرداند. signer پیش‌فرض عمداً fail-closed است. Issueهای #228، #235، #236، #214 و #107 را تا ارائهٔ شواهد واقعی امنیتی/عملیاتی نباید بسته اعلام کرد.
+- **اعتبارسنجی پس از ادغام:** CI روی `main`@ `ecce57cbb5b8c0b058a1cea2643a27a870245b32` در زمان این ثبت هنوز در حال اجرا بود؛ نتیجهٔ نهایی باید بعداً بررسی شود.

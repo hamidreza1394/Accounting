@@ -36,7 +36,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Setup Node
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: npm
@@ -84,7 +84,7 @@ jobs:
         with:
           python-version: '3.x'
       - name: Setup Node
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7
         with:
           node-version: '24'
       - name: Check local-only static assets
@@ -201,7 +201,7 @@ jobs:
         with:
           dotnet-version: 10.0.402
       - name: Setup Node
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: npm
@@ -235,7 +235,7 @@ jobs:
         with:
           dotnet-version: 10.0.402
       - name: Setup Node
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: npm
@@ -275,7 +275,7 @@ jobs:
         with:
           dotnet-version: 10.0.402
       - name: Setup Node
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7
         with:
           node-version: '24'
       - name: Publish
@@ -307,7 +307,7 @@ jobs:
           if [ -d playwright-report ]; then echo "::notice title=E2E::report saved as artifact e2e-report"; fi
       - name: Keep the E2E report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-report
           path: |
