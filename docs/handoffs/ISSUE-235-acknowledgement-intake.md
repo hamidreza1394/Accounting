@@ -3,15 +3,15 @@
 - **Issue:** [#235 — trusted provisioning acknowledgement](https://github.com/hamidreza1394/Accounting/issues/235), related [#228](https://github.com/hamidreza1394/Accounting/issues/228)
 - **Agent/مسئول:** ChatGPT / GitHub tools
 - **تاریخ:** 2026-10-29
-- **وضعیت:** پیاده‌سازی شاخه‌ای؛ در انتظار CI و بازبینی
+- **وضعیت:** `Verified` برای Vendor-side intake؛ PR #293 ادغام شده است. Customer-side consumer همچنان مسدود به تصمیم معماری
 
 ## هدف و معیارهای پذیرش
 - [x] دریافت acknowledgement فقط از طریق envelope امضاشده و کلید عمومی مورد اعتماد مستقل از envelope.
 - [x] تطبیق request ID، nonce، payload hash، customer reference و installation identity پیش از تغییر state.
 - [x] جلوگیری از بازنویسی نتیجهٔ نهایی؛ retry دقیق idempotent و پاسخ متفاوت conflict.
 - [x] ثبت state و رخداد ممیزی در یک تراکنش Vendor.
-- [ ] اجرای تست‌ها روی SQL Server واقعی و تأیید CI نهایی.
-- [ ] پیاده‌سازی customer-side consumer در PR جداگانه؛ خارج از محدوده این PR.
+- [x] تست SQL Server برای تأیید، retry دقیق، پاسخ متناقض و audit در CI موفق اجرا شد.
+- [ ] پیاده‌سازی customer-side consumer در PR جداگانه؛ D-044/OD-14 و نیاز به fiscal period/parent reference/enrollment path باید تعیین‌تکلیف شود.
 
 ## خلاصه تغییرات
 - مسیر machine-to-machine برای دریافت acknowledgement افزوده شد؛ احراز هویت آن با امضای ECDSA و trust store تنظیم‌شده انجام می‌شود، نه کوکی مدیر Vendor.
@@ -43,8 +43,8 @@
 |---|---|---|
 | `dotnet build Template.sln --no-restore -c Release` | اجرا نشده | در این نشست محیط اجرای .NET محلی در دسترس نبود |
 | `dotnet test Template.sln --no-build -c Release` | اجرا نشده | باید CI روی head نهایی اجرا شود |
-| تست‌های SQL Server Vendor | اجرا نشده | نیازمند `FARANO_VENDOR_TEST_SQLSERVER` |
-| CI GitHub | در انتظار | PR #293 |
+| `ProvisioningAcknowledgementSqlServerIntegrationTests` | موفق در CI | Vendor CI run 40869153676؛ local اجرا نشد |
+| Vendor CI | موفق | [run 40869153676](https://github.com/hamidreza1394/Accounting/actions/runs/40869153676) |
 
 ## امنیت، داده و سازگاری
 - تغییر Schema فقط به دیتابیس Vendor محدود است.
@@ -61,4 +61,5 @@
 ## شناسه‌های Git
 - Branch: `feat/vendor-acknowledgement-intake`
 - Commit: head فعلی شاخه PR #293
-- Pull Request: [#293](https://github.com/hamidreza1394/Accounting/pull/293)
+- Pull Request: [#293](https://github.com/hamidreza1394/Accounting/pull/293) — merged
+- Merge commit: `2884c61ade381670f754a1b8027c496a6e8eb7b2`
