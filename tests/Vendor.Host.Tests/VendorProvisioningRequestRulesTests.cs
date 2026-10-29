@@ -46,6 +46,18 @@ public sealed class VendorProvisioningRequestRulesTests
         Assert.Equal(expectedError, VendorProvisioningRequestRules.Validate(request));
     }
 
+    [Theory]
+    [InlineData("Active", "Active", true)]
+    [InlineData("Inactive", "Active", false)]
+    [InlineData("Suspended", "Active", false)]
+    [InlineData("Active", "Inactive", false)]
+    [InlineData(null, "Active", false)]
+    [InlineData("Active", null, false)]
+    public void ProvisioningTargetMustBeActive(string? customerStatus, string? installationStatus, bool expected)
+    {
+        Assert.Equal(expected, VendorProvisioningRequestRules.IsTargetActive(customerStatus, installationStatus));
+    }
+
     [Fact]
     public void RepeatedRequestId_WithSameConfiguration_IsIdempotent()
     {

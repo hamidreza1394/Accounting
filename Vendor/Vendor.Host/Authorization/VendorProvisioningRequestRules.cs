@@ -45,6 +45,10 @@ public static class VendorProvisioningRequestRules
         return null;
     }
 
+    public static bool IsTargetActive(string? customerStatus, string? installationStatus) =>
+        string.Equals(customerStatus, "Active", StringComparison.Ordinal) &&
+        string.Equals(installationStatus, "Active", StringComparison.Ordinal);
+
     public static bool MatchesExisting(
         CustomerProvisioningPayload existing,
         CreateVendorProvisioningRequest request,
