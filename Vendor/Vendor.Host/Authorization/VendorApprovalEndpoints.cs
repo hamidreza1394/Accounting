@@ -151,18 +151,13 @@ public static class VendorApprovalEndpoints
             await using var tx = await db.Database.BeginTransactionAsync(ct);
             var approval = await db.ApprovalRequests.SingleOrDefaultAsync(item => item.Id == id, ct);
             if (approval is null) return Results.NotFound();
-            if (!approval.RowVersion.AsSpan().SequenceEqual(expectedApprovalVersion))
-                return Results.Conflict(new { error = "stale_approval_version" });
-            if (approval.Status != "Pending")
-                return Results.Conflict(new { error = "approval_already_decided" });
-            if (approval.RequestedByUserId == actor.Id)
-                return Results.Forbid();
             if (approval.ResourceType is not ("customer" or "installation" or "license" or "provisioning"))
-                return Results.Conflict(new { error = "unsupported_approval_resource" });
+                return Results.NotFound();
 
+            VendorProvisioningRequest? provisioning = null;
             if (approval.ResourceType == "provisioning")
             {
-                var provisioning = await db.ProvisioningRequests.SingleOrDefaultAsync(
+                provisioning = await db.ProvisioningRequests.SingleOrDefaultAsync(
                     item => item.Id == approval.ResourceId, ct);
                 if (provisioning is null) return Results.NotFound();
 
@@ -175,8 +170,28 @@ public static class VendorApprovalEndpoints
                     new VendorResourceDescriptor("installation", provisioning.InstallationId, provisioning.CustomerId),
                     VendorResourceCatalog.PolicyFor("installation", VendorPermissionCatalog.InstallationsManage));
                 if (!customerAccess.Succeeded || !installationAccess.Succeeded)
-                    return Results.Forbid();
+                    return Results.NotFound();
+            }
+            else
+            {
+                var managePermission = PermissionFor(approval.ResourceType);
+                var access = await authorization.AuthorizeAsync(
+                    context.User,
+                    new VendorResourceDescriptor(approval.ResourceType, approval.ResourceId),
+                    VendorResourceCatalog.PolicyFor(approval.ResourceType, managePermission));
+                if (!access.Succeeded) return Results.NotFound();
+            }
 
+            // Do not reveal approval state or row-version validity until its target resource is authorized.
+            if (!approval.RowVersion.AsSpan().SequenceEqual(expectedApprovalVersion))
+                return Results.Conflict(new { error = "stale_approval_version" });
+            if (approval.Status != "Pending")
+                return Results.Conflict(new { error = "approval_already_decided" });
+            if (approval.RequestedByUserId == actor.Id)
+                return Results.Forbid();
+
+            if (provisioning is not null)
+            {
                 if (request.Decision == "Approved")
                 {
                     var issuance = await provisioningIssuance.IssueApprovedAsync(
@@ -222,13 +237,6 @@ public static class VendorApprovalEndpoints
                 await tx.CommitAsync(ct);
                 return Results.Ok(ToResponse(approval));
             }
-
-            var managePermission = PermissionFor(approval.ResourceType);
-            var access = await authorization.AuthorizeAsync(
-                context.User,
-                new VendorResourceDescriptor(approval.ResourceType, approval.ResourceId),
-                VendorResourceCatalog.PolicyFor(approval.ResourceType, managePermission));
-            if (!access.Succeeded) return Results.Forbid();
 
             // Issuance writes the signed envelope, sequence, license state, approval decision and
             // audit events inside this request's single Vendor database transaction.
