@@ -1089,3 +1089,14 @@
 - **PR:** #283 (`fix/228-provisioning-export-active-target`، پیاده‌سازی اولیه `fd390cb4af7e6af519305277cd0a73f45a2e6d2e`).
 - **اعتبارسنجی:** در این محیط اجرای محلی Build/Test و SQL Server انجام نشده؛ نتیجه باید از GitHub Actions روی PR و سپس main تأیید شود. تا سبزشدن CI، این تغییر Implemented / Not Verified است.
 
+
+## 2026-10-29 — همگام‌سازی وضعیت Vendor پس از PR #282 و #284
+- **مبنای کد:** `main` در `81ed5f64ed86ebbae47a433cea63e3655cb1d24b`.
+- **تغییرات ثبت‌شده:** PR #282 اعتبارسنجی قرارداد payload پیش از امضا را اضافه کرد؛ PR #284 ترتیب مجوزدهی در تصمیم تأیید را اصلاح کرد و تست رگرسیون عدم افشای وضعیت منبع غیرقابل‌دسترسی را افزود. هر دو merge شده‌اند.
+- **اعتبارسنجی پس از merge:** Vendor CI [40845416309](https://github.com/hamidreza1394/Accounting/actions/runs/40845416309)، .NET CI [40845416352](https://github.com/hamidreza1394/Accounting/actions/runs/40845416352)، Semgrep [40845416374](https://github.com/hamidreza1394/Accounting/actions/runs/40845416374) و Push on main [40845416241](https://github.com/hamidreza1394/Accounting/actions/runs/40845416241) همگی موفق‌اند.
+- **شکاف‌های باز:** provisioning واقعی همچنان به consumer و acknowledgement سمت مشتری (#235)، provider امضای Production/KMS-HSM (#236/#214)، و sink مستقل ممیزی (#107) وابسته است. این موارد بدون زیرساخت واقعی تکمیل‌شده اعلام نمی‌شوند.
+- **دامنه:** فقط مستندات وضعیت Vendor؛ هیچ کد اجرایی، schema یا دیتابیس مشتری تغییر نکرده است. Build/Test محلی در این نشست اجرا نشده؛ شواهد آزمون از GitHub Actions است.
+
+## 2026-10-29 — تأیید وضعیت PR #283
+- بررسی فهرست PRهای بسته‌شدهٔ GitHub تأیید کرد PR #283 با عنوان «block export for inactive provisioning targets» در ساعت 08:45:55Z ادغام شده و merge commit آن `95a098895056a1fe34348fac93091bf2f82780b4` است.
+- مستندات وضعیت جاری اصلاح شد تا PR #283 را به‌درستی ادغام‌شده ثبت کند؛ هیچ ادعایی دربارهٔ provisioning end-to-end یا تأیید مشتری افزوده نشد.

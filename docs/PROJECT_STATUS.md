@@ -1,22 +1,31 @@
-# وضعیت جاری تأییدشده Vendor — 2026-10-29 (پس از PR #280)
+# وضعیت جاری تأییدشده Vendor — 2026-10-29 (پس از PR #284)
 
-این بخش جدیدترین snapshot وضعیت است و جایگزین snapshot تاریخی پایین صفحه می‌شود. مبنای کد: `main` در `17038ae747aaf991aeea072c57c62c07f957586a`، merge commit مربوط به PR #280.
+این snapshot بر اساس commit فعلی `main` است: `81ed5f64ed86ebbae47a433cea63e3655cb1d24b`.
 
-## آخرین تغییرات امنیتی
-- PR #277: اعتبارسنجی سمت سرور برای رد مشتری/نصب غیرفعال؛ merge شده.
-- PR #278: بررسی وضعیت هدف پس از مجوزدهی منبع، برای جلوگیری از افشای وضعیت به کاربر غیرمجاز؛ merge شده.
-- PR #279: انتقال بررسی وضعیت و RowVersion درخواست تأیید پس از مجوزدهی مشتری و نصب؛ merge شده.
-- PR #280: پاسخ `404 Not Found` به‌جای `403 Forbidden` در چهار شاخهٔ شکست مجوزدهی منبع مشتری/نصب؛ merge شده.
-- PR CI برای PR #280: Vendor CI، .NET CI، Semgrep و workflow اختصاصی PR همگی موفق شدند. شواهد: [Vendor CI](https://github.com/hamidreza1394/Accounting/actions/runs/40839835705)، [.NET CI](https://github.com/hamidreza1394/Accounting/actions/runs/40839835703)، [Semgrep](https://github.com/hamidreza1394/Accounting/actions/runs/40839835699)، [PR #280](https://github.com/hamidreza1394/Accounting/actions/runs/40839832564).
-- پس از ادغام روی main: Vendor CI موفق است ([run 40840817584](https://github.com/hamidreza1394/Accounting/actions/runs/40840817584))، Semgrep موفق است ([run 40840817594](https://github.com/hamidreza1394/Accounting/actions/runs/40840817594))، .NET CI موفق است ([run 40840817609](https://github.com/hamidreza1394/Accounting/actions/runs/40840817609)) و تحلیل CodeQL موفق است ([run 40840817734](https://github.com/hamidreza1394/Accounting/actions/runs/40840817734)).
+## آخرین تغییرات امنیتی ادغام‌شده
+- PR #277: اعتبارسنجی سمت سرور برای رد مشتری/نصب غیرفعال؛ ادغام شد.
+- PR #278: بررسی وضعیت هدف پس از مجوزدهی منبع؛ ادغام شد.
+- PR #279: انتقال بررسی وضعیت و RowVersion درخواست تأیید پس از مجوزدهی مشتری و نصب؛ ادغام شد.
+- PR #280: پاسخ `404 Not Found` به‌جای `403 Forbidden` هنگام شکست مجوزدهی منابع مشتری/نصب؛ ادغام شد.
+- PR #282: اعتبارسنجی کامل قرارداد provisioning و payload canonical پیش از امضا؛ ادغام شد.
+- PR #283: جلوگیری از خروجی بستهٔ provisioning وقتی مشتری یا نصب هدف غیرفعال است؛ بررسی وضعیت هدف در تراکنش export؛ ادغام شد.
+- PR #284: مجوزدهی منبع درخواست تأیید پیش از بررسی RowVersion، وضعیت و خودتأییدی؛ برای هدف غیرقابل‌دسترسی/نوع پشتیبانی‌نشده پاسخ 404 و تست رگرسیون HTTP اضافه شد؛ ادغام شد.
+- PR #281: مستندات وضعیت قبلی به‌روزرسانی شده بود؛ این snapshot آن را با PRهای بعدی همگام می‌کند.
+
+## CI پس از ادغام PR #284
+- [Vendor CI — run 40845416309](https://github.com/hamidreza1394/Accounting/actions/runs/40845416309): موفق.
+- [.NET CI — run 40845416352](https://github.com/hamidreza1394/Accounting/actions/runs/40845416352): موفق.
+- [Semgrep — run 40845416374](https://github.com/hamidreza1394/Accounting/actions/runs/40845416374): موفق.
+- [Push on main — run 40845416241](https://github.com/hamidreza1394/Accounting/actions/runs/40845416241): موفق.
 
 ## شکاف‌های مانع آمادگی Production
-- **Provisioning end-to-end (#228):** Vendor درخواست و metadata راه‌اندازی را ثبت می‌کند؛ ایجاد واقعی شرکت/مدیر در نصب مشتری تا زمان مصرف بستهٔ معتبر و دریافت acknowledgement قابل‌اعتماد تأییدشده محسوب نمی‌شود.
+- **Provisioning end-to-end (#228):** Vendor درخواست و metadata راه‌اندازی را ثبت می‌کند؛ ایجاد واقعی شرکت/مدیر در نصب مشتری تا زمان مصرف بستهٔ معتبر و دریافت acknowledgement قابل‌اعتماد، تأییدشده محسوب نمی‌شود.
 - **مصرف‌کنندهٔ سمت مشتری (#235):** باید در Issue/PR مستقل پیاده‌سازی و بازبینی شود؛ شامل تأیید امضا و نصب مقصد، جلوگیری از replay، تراکنش اتمی، idempotency و acknowledgement امضاشده. تغییرات customer-side یا migration دیتابیس مشتری نباید داخل PR محدود به Vendor پنهان شوند.
 - **امضای Production (#236 و #214):** provider پیش‌فرض عمداً fail-closed است. انتخاب و پیکربندی KMS/HSM یا سرویس امضای مصوب، هویت/دسترسی عملیاتی و چرخهٔ کلید به تصمیم و پیکربندی واقعی نیاز دارد؛ fallback با کلید نرم‌افزاری اضافه نشود.
 - **checkpoint مستقل ممیزی (#107):** abstraction و کنترل زنجیرهٔ ممیزی داخل Vendor DB جایگزین sink مستقل با credential و retention جدا نیست. اتصال و بازیابی عملیاتی باید با provider واقعی آزموده شود.
+- **Provisioning export (#228 / PR #283):** PR #283 ادغام شده است؛ برای اجرای عملی در محیط مشتری همچنان باید سناریوهای نصب و acknowledgement end-to-end در دامنهٔ #235 پوشش داده شوند.
 
-نتیجه: تغییرات #277–#280 در main هستند و PR #280 تمام بررسی‌های خودش را گذرانده است؛ اما تا رفع شکاف‌های بالا و تکمیل بررسی‌های Production، **ماژول Vendor آمادهٔ اعلام Production-ready نیست**.
+نتیجه: تغییرات #277–#280، #282 و #284 در main هستند و CI پس از #284 سبز است؛ اما تا رفع شکاف‌های بالا و تکمیل بررسی‌های Production، **ماژول Vendor آمادهٔ اعلام Production-ready نیست**.
 
 ---
 
