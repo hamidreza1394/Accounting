@@ -54,10 +54,33 @@ public static class CustomerProvisioningEnrollmentToken
         }
     }
 
-    private static bool IsValidToken(string? token) =>
-        token is { Length: EncodedTokenLength } &&
-        token.All(character =>
-            char.IsAsciiLetterOrDigit(character) || character is '-' or '_');
+    private static bool IsValidToken(string? token)
+    {
+        if (token is not { Length: EncodedTokenLength } ||
+            !token.All(character =>
+                char.IsAsciiLetterOrDigit(character) || character is '-' or '_'))
+        {
+            return false;
+        }
+
+        try
+        {
+            var bytes = Convert.FromBase64String(
+                token.Replace('-', '+').Replace('_', '/') + "=");
+            if (bytes.Length != RandomByteLength)
+                return false;
+
+            var canonical = Convert.ToBase64String(bytes)
+                .TrimEnd('=')
+                .Replace('+', '-')
+                .Replace('/', '_');
+            return string.Equals(canonical, token, StringComparison.Ordinal);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+    }
 
     private static bool IsValidHash(string? hash) =>
         hash is { Length: HashHexLength } &&
