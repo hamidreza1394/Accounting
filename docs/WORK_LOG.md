@@ -1152,3 +1152,12 @@
 - **امنیت/داده:** هیچ رمز، password hash، secret، private key، Connection String، Migration یا تغییر Server/** اضافه نشده است. Consumer، replay protection و enrollment مدیر اولیه هنوز پیاده‌سازی نشده‌اند.
 - **آزمون واقعی:** dotnet test و git diff --check در این نشست اجرا نشدند؛ checkout محلی متصل به مخزن/SDK در دسترس نبود. نتیجهٔ CI باید قبل از Merge بررسی شود.
 - **Branch:** feat/provisioning-payload-v2. PR بعد از ثبت این گزارش ساخته می‌شود.
+
+
+## 2026-10-29 — Issue #236: bounded wait for provisioning signer
+
+- Added provider-neutral timeout handling around the dedicated `IProvisioningSigningProvider` boundary. A timeout cancels the provider token and returns the generic unavailable result; caller cancellation is preserved.
+- Integrated a 15-second bound in `VendorProvisioningIssuanceService`. The service's existing fail-closed transaction behavior remains: no signed package/status/audit success is persisted when the signer is unavailable.
+- Added tests for timeout, provider cancellation, caller cancellation, and invalid timeout values.
+- No KMS/HSM provider, private key, software-key fallback, customer DB change, or independent audit sink was added.
+- Local tests were not run in this GitHub-only session; CI must validate the PR head.
