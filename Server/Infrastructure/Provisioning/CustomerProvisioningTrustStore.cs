@@ -35,7 +35,7 @@ public sealed class ConfigurationCustomerProvisioningTrustStore(IConfiguration c
         byte[] key;
         try
         {
-            key = Convert.FromBase64String(configuredValue);
+            key = System.Convert.FromBase64String(configuredValue);
         }
         catch (FormatException)
         {
