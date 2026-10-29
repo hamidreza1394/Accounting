@@ -54,7 +54,7 @@ public sealed class CustomerProvisioningEnrollmentTokenTests
     public void Verify_RejectsNonCanonicalBase64UrlEncoding()
     {
         var token = CustomerProvisioningEnrollmentToken.Generate();
-        var nonCanonical = token[..^1] + (token[^1] == 'A' ? 'B' : 'A');
+        var nonCanonical = token[..^1] + 'B';
 
         Assert.False(CustomerProvisioningEnrollmentToken.Verify(
             nonCanonical, CustomerProvisioningEnrollmentToken.ComputeHash(token)));
