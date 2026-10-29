@@ -1225,3 +1225,11 @@
 - Vendor CI exposed an existing provisioning HTTP integration fixture that omitted `initialAdminEmail`; the request now supplies a valid test email in all three related scenarios.
 - .NET CI exposed the customer verifier fixture still generating schema v3 without `InitialAdminEmail`; the fixture now includes `admin@example.com`. The failures were caused by stale test payloads after the schema version bump, not by weakening signature or identity validation.
 - The initial CI attempt was on the prior head and failed in those tests. Fresh CI is required on the updated head.
+
+
+## 2026-10-29 — Customer provisioning: fixed subsystem permission ownership map
+- **تصمیم:** پس از تأیید مالک محصول، مسیر نگاشت مجوزها به‌صورت کاتالوگ ثابت در کد انتخاب شد؛ Migration جدید برای افزودن `ModuleCode` در این slice ساخته نمی‌شود.
+- **تغییر:** `CustomerProvisioningSubsystemCatalog` در Server فهرست مجاز زیرسیستم‌ها را محدود به finance/sales/inventory/treasury می‌کند و فقط مجوزهای صریح با پیشوند زیرسیستم خریداری‌شده را از فهرست موجود می‌پذیرد. هیچ مجوزی از ورودی package ساخته نمی‌شود؛ wildcard، prefix مبهم، segment خالی و کد ناشناخته رد می‌شوند.
+- **تست‌های افزوده‌شده:** `CustomerProvisioningSubsystemCatalogTests` برای allowlist، تطبیق دقیق زیرسیستم، کدهای نامعتبر، حذف تکرار و رفتار خالی fail-closed.
+- **محدودیت فعلی:** این تغییر فقط قاعدهٔ ownership را تثبیت می‌کند؛ transactional apply، ثبت مجوزها در role، enrollment یک‌بارمصرف، اجبار تغییر رمز و enforcement مجوزهای role در APIها هنوز تکمیل نشده‌اند. چون repository audit می‌گوید مجوزهای شرکتی در همه APIهای موجود enforce نمی‌شوند، نباید از این تغییر به‌عنوان مجوزدهی Production نتیجه‌گیری کرد.
+- **اعتبارسنجی:** کد و تست از طریق GitHub Contents API در شاخه `feat/customer-provisioning-transactional-apply` ثبت شده‌اند؛ اجرای محلی .NET در این محیط انجام نشده است. CI روی PR باید compile/test را تأیید کند.
