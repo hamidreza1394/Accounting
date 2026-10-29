@@ -54,9 +54,6 @@ public static class VendorProvisioningEndpoints
             if (customer is null || installation is null || installation.CustomerId != customer.Id)
                 return Results.NotFound();
 
-            if (!VendorProvisioningRequestRules.IsTargetActive(customer.Status, installation.Status))
-                return Results.Conflict(new { error = "provisioning_target_inactive" });
-
             var customerAccess = await authorization.AuthorizeAsync(
                 context.User,
                 new VendorResourceDescriptor("customer", customer.Id),
@@ -67,6 +64,9 @@ public static class VendorProvisioningEndpoints
                 VendorResourceCatalog.PolicyFor("installation", VendorPermissionCatalog.InstallationsManage));
             if (!customerAccess.Succeeded || !installationAccess.Succeeded)
                 return Results.Forbid();
+
+            if (!VendorProvisioningRequestRules.IsTargetActive(customer.Status, installation.Status))
+                return Results.Conflict(new { error = "provisioning_target_inactive" });
 
             var requestId = request.RequestId.ToString("D");
             var existing = await db.ProvisioningRequests.AsNoTracking()
