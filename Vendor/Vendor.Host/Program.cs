@@ -75,12 +75,15 @@ builder.Services.AddVendorPersistence(builder.Configuration);
 // License and provisioning signing have separate provider registrations and key boundaries.
 builder.Services.TryAddSingleton<ILicenseSigningProvider, UnavailableLicenseSigningProvider>();
 builder.Services.TryAddSingleton<IProvisioningSigningProvider, UnavailableProvisioningSigningProvider>();
-var acknowledgementTrustKeys = builder.Configuration
-    .GetSection("ProvisioningAcknowledgementTrust:Keys")
-    .Get<ProvisioningAcknowledgementTrustedKeyOptions[]>() ?? [];
-// Empty trust is safe: no acknowledgement can be accepted until deployment supplies trusted public keys.
-// Malformed/duplicate entries fail host startup; private keys are never loaded by this trust store.
-builder.Services.AddSingleton(new ProvisioningAcknowledgementTrustStore(acknowledgementTrustKeys));
+// Customer acknowledgement trust is supplied independently by deployment configuration.
+// An empty key set fails closed; malformed configured keys prevent host startup.
+builder.Services.AddSingleton(sp =>
+{
+    var configuredKeys = sp.GetRequiredService<IConfiguration>()
+        .GetSection("ProvisioningAcknowledgementTrust:Keys")
+        .Get<ProvisioningAcknowledgementTrustedKeyOptions[]>() ?? [];
+    return new ProvisioningAcknowledgementTrustStore(configuredKeys);
+});
 builder.Services.AddScoped<VendorLicenseEnvelopeFactory>();
 builder.Services.AddScoped<VendorLicenseIssuanceService>();
 builder.Services.AddScoped<VendorProvisioningIssuanceService>();
