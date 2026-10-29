@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Configuration;
 
