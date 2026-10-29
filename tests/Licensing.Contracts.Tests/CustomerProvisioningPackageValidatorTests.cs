@@ -291,4 +291,10 @@ public sealed class CustomerProvisioningPackageValidatorTests
         FiscalPeriodStartDate = new DateOnly(2026, 1, 1),
         FiscalPeriodEndDate = new DateOnly(2027, 1, 1)
     };
-}
+
+    private static CustomerProvisioningPayload SampleV3() => SampleV2() with
+    {
+        SchemaVersion = CustomerProvisioningPackageValidator.CurrentPayloadSchemaVersion,
+        InitialAdminEmail = "admin@example.com"
+    };
+}\n
