@@ -1164,3 +1164,9 @@
 - **Safety:** no `Server/**`, customer DB schema, customer migration, private key, KMS/HSM adapter, or fake audit sink was added in this Vendor-only slice. Production signing remains fail-closed (#236); independent audit destination remains blocked (#107).
 - **Verification:** local .NET/npm tests and `git diff --check` were not executable through the GitHub-only session. CI must run on the PR head; no claim of passing tests is made before observing those checks.
 - **Remaining:** customer-side consumer, unique nonce/request claim, transaction/recovery, one-time enrollment, signed acknowledgement generation, and offline revocation enforcement remain separate customer-side work under #235/#214.
+
+## 2026-10-29 — Issue #107: provider-neutral checkpoint recovery runbook
+- Added `docs/runbooks/vendor-audit-checkpoint-recovery.md` with pre-deployment verification, SQL backup plus independent checkpoint preservation, restore reconciliation, sink outage handling, identity separation and Production exit criteria.
+- The runbook explicitly forbids local-file/Vendor-DB fallback and never lowers an external checkpoint to match an older restored database.
+- No provider-specific adapter, secret, credential, migration or fake Production sink was added. #107 remains blocked on provider selection and operational proof.
+- Documentation-only change; no local tests were run in this GitHub-only session.
