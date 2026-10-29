@@ -111,7 +111,7 @@ public sealed class CustomerProvisioningPackageVerifierTests
     public void ControlCharactersInConfiguredIdentity_FailClosed()
     {
         using var signingKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-        var verifier = CreateVerifier(signingKey, "customer-001\\n", "install-001");
+        var verifier = CreateVerifier(signingKey, "customer-001\n", "install-001");
         var package = Sign(signingKey, Sample("customer-001", "install-001"));
 
         Assert.False(verifier.TryVerify(package, out var payload, out var error));
