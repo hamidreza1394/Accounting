@@ -9,7 +9,7 @@
 ## تغییر در حال بازبینی — PR #294
 - API پاسخ provisioning اکنون `AcknowledgementResult` و `AcknowledgedAtUtc` را در response برمی‌گرداند.
 - UI تاریخچهٔ درخواست، نتیجهٔ واقعی مشتری و زمان پاسخ را نمایش می‌دهد؛ نتیجهٔ acknowledgement از status کلی درخواست جداست.
-- [PR #294](https://github.com/hamidreza1394/Accounting/pull/294)؛ CI برای این head هنوز باید تکمیل شود.
+- [PR #294](https://github.com/hamidreza1394/Accounting/pull/294): Vendor CI، .NET CI، Semgrep و CodeQL روی implementation head `1a9f8c3f107f713940a4d95c92f6abe597f85f80` سبز شدند. پس از افزودن handoff و به‌روزرسانی مستندات، CI باید روی head نهایی نیز دوباره تأیید شود.
 
 ## شکاف‌های باقی‌مانده برای Production
 - **#228 / #235:** consumer سمت مشتری و claim اتمی request ID/nonce، ایجاد تراکنشی شرکت/دوره/مدیر و enrollment یک‌بارمصرف هنوز تکمیل نشده‌اند. D-044/OD-14 با الزام جدید signed provisioning package در #228/#235 تعارض دارد؛ این تعارض و نبود fiscal-period/parent-company fields در #235 ثبت شده است. تا تعیین‌تکلیف معماری، consumer ناقص نباید `Applied` اعلام کند.
