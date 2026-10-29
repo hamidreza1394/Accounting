@@ -1200,3 +1200,12 @@
 - **امنیت:** هشدار EF غیرفعال نشد، تستی حذف نشد و هیچ migration روی دیتابیس مشتری اجرا نشد.
 - **باقی‌مانده:** نتیجه CI روی آخرین HEAD؛ سپس تکمیل consumer تراکنشی، replay/idempotency، enrollment مدیر اولیه، acknowledgement امضاشده و نگاشت شرکت مادر. PR #302 همچنان Draft است و نباید merge شود.
 - **Branch:** `feat/customer-provisioning-consumer`; **PR:** https://github.com/hamidreza1394/Accounting/pull/302.
+
+
+## 2026-10-29 — رفع شکست گارد Migration در PR #302
+- **دامنه:** CI run [40917960102](https://github.com/hamidreza1394/Accounting/actions/runs/40917960102)، برای شاخه `feat/customer-provisioning-consumer`.
+- **علت‌های ریشه‌ای:** ۶۱۳ تست .NET و گام بررسی Migrationهای تولیدشده موفق بودند؛ شکست در تست‌های گارد Migration بود. اول، `verify_migration_model.py` نوع CLR آرایه‌ای `byte[]` را در عبارت `table.Column<byte[]>` نمی‌پذیرفت، پس ستون معتبر SQL Server `rowversion` در Migration شناسایی نمی‌شد. دوم، تست جهشی «مهاجرت جدیدتر از ثابت‌ها» از تاریخ `2026-10-24` استفاده می‌کرد که از Migration فعلی `20261029161402` قدیمی‌تر است؛ بنابراین تغییر آزمایشی جدیدتر نبود و تست خطا را تشخیص نمی‌داد.
+- **اصلاح:** الگوی parser برای انواع CLR شامل `[]` گسترش یافت؛ تست رگرسیون parse ستون `byte[]/rowversion` اضافه شد؛ تاریخ Migration ساختگی تست جهشی به `2026-10-30` تغییر کرد تا از Migration جاری جدیدتر باشد.
+- **اعتبارسنجی CI قبل از اصلاح:** `dotnet build` موفق، `dotnet test` موفق با ۶۱۳/۶۱۳، `generate_migrations.py --check` موفق؛ دو تست گارد شکست خوردند (ستون RowVersion شناسایی نمی‌شد و تست migration جدیدتر fixture منسوخ داشت). تست‌ها بعد از اصلاح باید در اجرای CI جدید تأیید شوند.
+- **امنیت/داده:** گاردها خاموش یا ضعیف نشده‌اند؛ Migration اجرایی و دیتابیس مشتری تغییر نکرده‌اند.
+- **Git:** شاخه `feat/customer-provisioning-consumer`؛ PR موجود [#302](https://github.com/hamidreza1394/Accounting/pull/302)، هنوز Draft است و نباید Merge شود تا مصرف‌کننده تراکنشی provisioning و آزمون‌های نهایی کامل شوند.
