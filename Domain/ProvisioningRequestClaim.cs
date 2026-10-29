@@ -1,7 +1,7 @@
 namespace Domain;
 
 /// <summary>
-/// Durable idempotency and one-time-enrollment state for a signed customer provisioning package.
+/// Durable idempotency, replay protection and one-time-enrollment state for a signed customer provisioning package.
 /// The request ID, nonce digest and enrollment-token digest are uniquely indexed by the persistence model.
 /// </summary>
 public sealed class ProvisioningRequestClaim : Seedwork.Entity
