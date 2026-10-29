@@ -1142,3 +1142,13 @@
 - **Verified PR CI on implementation head `1a9f8c3f107f713940a4d95c92f6abe597f85f80`:** Vendor CI [40871773941](https://github.com/hamidreza1394/Accounting/actions/runs/40871773941), .NET CI [40871773973](https://github.com/hamidreza1394/Accounting/actions/runs/40871773973), Semgrep [40871774197](https://github.com/hamidreza1394/Accounting/actions/runs/40871774197), and CodeQL [40871768967](https://github.com/hamidreza1394/Accounting/actions/runs/40871768967) passed. Post-merge main CI is tracked separately; no local .NET build was run in this session.
 - **Measurements:** Bundle-size before/after and browser LCP/CLS were not measured; no new dependency or external runtime asset was added.
 - **Remaining:** UI display does not implement the customer-side consumer, one-time admin enrollment, fiscal-period provisioning inputs or parent-company relationship. These are tracked under #228/#235 and must not be represented as complete.
+
+
+## 2026-10-29 — Issue #235: provisioning payload schema v2 (contract slice)
+- **دامنه:** رفع شکاف قراردادی دورهٔ مالی و رابطهٔ شرکت مادر پیش از پیاده‌سازی consumer سمت مشتری.
+- **تغییر:** payload schema v2 فیلدهای عنوان/تاریخ شروع/پایان دورهٔ مالی و ParentCompanyReference را اضافه می‌کند؛ v1 canonical JSON قبلی را بدون فیلدهای جدید حفظ می‌کند.
+- **اعتبارسنجی:** v1 و v2 پشتیبانی می‌شوند؛ v2 به بازهٔ معتبر دورهٔ مالی نیاز دارد و فقط شرکت subsidiary می‌تواند/باید مرجع مادر داشته باشد.
+- **تست‌ها:** تست امضای v2، حفظ canonical v1، دورهٔ ناقص، تاریخ وارونه و نبود مرجع مادر برای subsidiary افزوده شد.
+- **امنیت/داده:** هیچ رمز، password hash، secret، private key، Connection String، Migration یا تغییر Server/** اضافه نشده است. Consumer، replay protection و enrollment مدیر اولیه هنوز پیاده‌سازی نشده‌اند.
+- **آزمون واقعی:** dotnet test و git diff --check در این نشست اجرا نشدند؛ checkout محلی متصل به مخزن/SDK در دسترس نبود. نتیجهٔ CI باید قبل از Merge بررسی شود.
+- **Branch:** feat/provisioning-payload-v2. PR بعد از ثبت این گزارش ساخته می‌شود.
