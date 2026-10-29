@@ -21,7 +21,7 @@ describe('Vendor license metadata form', () => {
   it('keeps native browser constraint validation enabled', () => {
     render(<LicenseForm canReadCustomers canReadContracts canReadInstallations onCancel={vi.fn()} onSaved={vi.fn()} />);
 
-    const form = screen.getByRole('button', { name: 'ثبت لایسنس' }).closest('form');
+    const form = screen.getByRole('button', { name: 'ثبت لایسنس پیش‌نویس' }).closest('form');
     expect(form).not.toHaveAttribute('novalidate');
   });
 
