@@ -259,3 +259,13 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - درخواست‌کننده نمی‌تواند درخواست خودش را تأیید/رد کند. تصمیم مستقل، تغییر وضعیت و رویدادهای Audit در یک تراکنش ثبت می‌شوند؛ RowVersion منبع و درخواست از replay و تصمیم روی دادهٔ stale جلوگیری می‌کنند.
 - شاهد: merge commit `d644ab5d36d00b1ce3763b64f17fd6fe7ef9fbac`; Vendor CI 40570240409 و .NET CI 40570240205 موفق.
 - محدوده: این Verified فقط برای تغییر وضعیت مشتری/نصب است. تأیید دو نفره برای صدور/ابطال لایسنس، checkpoint مستقل Audit، bootstrap/recovery مدیر اول و KMS/HSM همچنان شکاف‌های Production هستند.
+
+
+## Vendor provisioning acknowledgement intake (2026-10-29, PR #293)
+
+- `POST /api/vendor/provisioning-requests/{requestId}/acknowledgement` is a machine-to-machine endpoint. It intentionally does not rely on the Vendor administrator cookie or browser antiforgery token; the signed acknowledgement is authenticated with a public key from the independently configured `ProvisioningAcknowledgementTrustStore`.
+- Unknown/revoked key IDs are rejected. The endpoint verifies the exact canonical acknowledgement bytes and binds request ID, nonce, payload SHA-256, customer reference, and installation code before changing state.
+- Only a verified `Applied` / `AlreadyApplied` acknowledgement can set `Confirmed`; a verified `Rejected` acknowledgement sets `Failed`. Exporting a package alone never confirms provisioning.
+- The acknowledgement digest, key ID, outcome, timestamp, status transition, and metadata-only audit event are persisted in one Vendor DB transaction. Exact retries are idempotent and audited; a different acknowledgement for the same request is rejected as a conflict.
+- The endpoint has a dedicated IP-based rate limit and bounded request-body limits. This is not a replacement for TLS, host hardening, or independent key lifecycle management.
+- **Not production-ready by this change alone:** customer-side provisioning consumer, atomic nonce claim, SQL Server integration proof, and operational KMS/HSM signer remain separate work. No customer database schema or `Server/**` file is changed by the Vendor intake PR.
