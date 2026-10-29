@@ -22,6 +22,10 @@ public sealed class VendorProvisioningRequest
     public DateTimeOffset? SignedAtUtc { get; set; }
     public DateTimeOffset? DeliveredAtUtc { get; set; }
     public DateTimeOffset? ConfirmedAtUtc { get; set; }
+    public string? AcknowledgementSha256 { get; set; }
+    public string? AcknowledgementKeyId { get; set; }
+    public string? AcknowledgementResult { get; set; }
+    public DateTimeOffset? AcknowledgedAtUtc { get; set; }
     public string? FailureCode { get; set; }
     public byte[] RowVersion { get; set; } = [];
 }
