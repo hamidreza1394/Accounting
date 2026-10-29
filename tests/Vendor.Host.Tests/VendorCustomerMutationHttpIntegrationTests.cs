@@ -45,6 +45,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
         var licenseApprovalId = Guid.Empty;
         var licenseApprovalRowVersion = string.Empty;
         var provisioningApprovalId = Guid.Empty;
+        var inaccessibleProvisioningApprovalId = Guid.Empty;
         var provisioningApprovalRowVersion = string.Empty;
         var provisioningRequestRowVersion = string.Empty;
         var installationCodeForProvisioning = string.Empty;
@@ -416,6 +417,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 provisioningApprovalRowVersion = json.RootElement.GetProperty("rowVersion").GetString()!;
                 Assert.Equal("Pending", json.RootElement.GetProperty("status").GetString());
             }
+
 
             var path = $"/api/vendor/customers/{customerId:D}";
             var updateBody = new
@@ -811,6 +813,50 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Contains(provisioningApprovalId, pendingIds);
             }
 
+            // Seed a deliberately mismatched parent/installation record to prove authorization precedes
+            // row-version conflict responses for the approval decision endpoint.
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var users = scope.ServiceProvider.GetRequiredService<UserManager<VendorAdminUser>>();
+                var requester = await users.FindByNameAsync(await GetTestUserNameAsync(factory, cancellationToken));
+                Assert.NotNull(requester);
+                var original = await db.ProvisioningRequests.SingleAsync(
+                    item => item.Id == provisioningRecordId, cancellationToken);
+                var nonce = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
+                    .TrimEnd('=').Replace('+', '-').Replace('/', '_');
+                var mismatched = new VendorProvisioningRequest
+                {
+                    Id = Guid.NewGuid(),
+                    CustomerId = original.CustomerId,
+                    InstallationId = otherInstallationIdForProvisioning,
+                    RequestId = Guid.NewGuid().ToString("D"),
+                    Nonce = nonce,
+                    PayloadJson = original.PayloadJson,
+                    PayloadSha256 = original.PayloadSha256,
+                    Status = "AwaitingSigner",
+                    CreatedAtUtc = DateTimeOffset.UtcNow,
+                    UpdatedAtUtc = DateTimeOffset.UtcNow
+                };
+                db.ProvisioningRequests.Add(mismatched);
+                await db.SaveChangesAsync(cancellationToken);
+                await db.Entry(mismatched).ReloadAsync(cancellationToken);
+
+                var inaccessibleApproval = new VendorApprovalRequest
+                {
+                    Id = Guid.NewGuid(),
+                    ResourceType = "provisioning",
+                    ResourceId = mismatched.Id,
+                    TargetStatus = "PendingDelivery",
+                    ExpectedResourceRowVersion = mismatched.RowVersion.ToArray(),
+                    RequestedByUserId = requester!.Id,
+                    RequestedAtUtc = DateTimeOffset.UtcNow,
+                    Status = "Pending"
+                };
+                db.ApprovalRequests.Add(inaccessibleApproval);
+                await db.SaveChangesAsync(cancellationToken);
+                inaccessibleProvisioningApprovalId = inaccessibleApproval.Id;
+            }
             await using (var auditScope = factory.Services.CreateAsyncScope())
             {
                 var db = auditScope.ServiceProvider.GetRequiredService<VendorDbContext>();
@@ -927,6 +973,14 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal(HttpStatusCode.OK, verifyResponse.StatusCode);
             }
             (reviewerAntiForgeryToken, _) = await GetAntiforgeryTokenAsync(reviewerClient, cancellationToken);
+
+            using (var inaccessibleDecision = await PostWithTokenAsync(reviewerClient,
+                $"/api/vendor/approvals/{inaccessibleProvisioningApprovalId:D}/decision",
+                new { decision = "Approved", rowVersion = Convert.ToBase64String(new byte[8]), comment = "Must not reveal approval state" },
+                reviewerAntiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.NotFound, inaccessibleDecision.StatusCode);
+            }
 
             using (var licenseDecisionResponse = await PostWithTokenAsync(reviewerClient,
                 $"/api/vendor/approvals/{licenseApprovalId:D}/decision",
