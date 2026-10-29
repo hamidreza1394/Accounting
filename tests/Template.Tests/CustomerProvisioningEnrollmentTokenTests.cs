@@ -13,7 +13,7 @@ public sealed class CustomerProvisioningEnrollmentTokenTests
         Assert.Equal(CustomerProvisioningEnrollmentToken.EncodedTokenLength, token.Length);
         Assert.All(token, character =>
             Assert.True(char.IsAsciiLetterOrDigit(character) || character is '-' or '_'));
-        Assert.Equal(token, CustomerProvisioningEnrollmentToken.Generate());
+        Assert.NotEqual(token, CustomerProvisioningEnrollmentToken.Generate());
     }
 
     [Fact]
