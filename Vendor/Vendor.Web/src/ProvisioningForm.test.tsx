@@ -168,4 +168,30 @@ describe('Vendor customer provisioning form', () => {
     expect(TestURL.createObjectURL).toHaveBeenCalledOnce();
     expect(click).toHaveBeenCalledOnce();
   });
+  it('offers only active installations and selects the first active installation by default', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/vendor/installations/?customerId=customer-1&page=1&pageSize=100') {
+        return response({ items: [
+          { id: 'install-disabled', installationCode: 'INSTALL-OFF', name: 'نصب غیرفعال', status: 'Inactive' },
+          { id: 'install-active', installationCode: 'INSTALL-ON', name: 'نصب فعال', status: 'Active' },
+        ] });
+      }
+      if (url === '/api/vendor/provisioning-requests?customerId=customer-1&page=1&pageSize=10') {
+        return response({ items: [] });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('crypto', { randomUUID: vi.fn().mockReturnValue('unused-request-id') });
+
+    render(<ProvisioningForm customerId="customer-1" customerName="مشتری نمونه"
+      onCancel={vi.fn()} onSaved={vi.fn()} />);
+
+    const installationSelect = await screen.findByLabelText('نصب مقصد');
+    await waitFor(() => expect(installationSelect).toHaveValue('install-active'));
+    expect(screen.queryByRole('option', { name: /نصب غیرفعال/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /نصب فعال/ })).toBeInTheDocument();
+  });
+
 });
