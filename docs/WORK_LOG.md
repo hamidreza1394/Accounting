@@ -1118,3 +1118,16 @@
 - **Blockers recorded on Issues:** #236 requires an approved signing provider; #107 requires an independently permissioned checkpoint destination and deployment credentials; #235 customer-side consumer remains a separate reviewed change; #214 customer-side sequence persistence/enforcement remains separate.
 - **Tests:** not run locally in this tool session. GitHub Actions must verify the final branch SHA before merge readiness can be claimed.
 - **PR:** [#292](https://github.com/hamidreza1394/Accounting/pull/292) is open for the consolidated branch. `main` advanced through merged PR #291 while this work was in progress; the branch now includes `main` as a merge parent and does not overwrite its trust-store registration. CI must pass on the final head SHA.
+
+
+## 2026-10-29 — Vendor acknowledgement intake (PR #293)
+
+- **Issue / PR:** [#228](https://github.com/hamidreza1394/Accounting/issues/228), [#235](https://github.com/hamidreza1394/Accounting/issues/235), [PR #293](https://github.com/hamidreza1394/Accounting/pull/293).
+- **Scope:** Vendor control-plane intake only. No changes to `Server/**` or customer database schema.
+- **Implementation:** Added a request-ID-scoped acknowledgement endpoint. The endpoint resolves public keys from deployment configuration, verifies the signed canonical acknowledgement and its bindings (request ID, nonce, payload hash, customer reference and installation identity), and only then records the outcome.
+- **State integrity:** A verified `Applied` or `AlreadyApplied` response can move a delivered request to `Confirmed`; a verified `Rejected` response moves it to `Failed`. An exact signed retry is idempotent and audited; a different acknowledgement for the same request conflicts. The Vendor row update and audit append share a transaction.
+- **Persistence:** Added Vendor-only acknowledgement digest/key/result/time columns and migration `20261029130000_VendorProvisioningAcknowledgements`; updated EF model mapping and snapshot.
+- **Security:** The machine endpoint is not authenticated with the Vendor browser cookie; it is rate-limited and trusts only configured public keys. Unknown/revoked keys fail closed. No private key or customer credentials are stored.
+- **Tests added:** terminal outcome mapping tests and a host-level unknown-key rejection test.
+- **Validation:** Local .NET build/test and SQL Server integration tests were not run in this tool session. PR CI is the verification gate; migration/model parity and runtime endpoint behavior remain unverified until CI completes.
+- **Remaining:** customer-side provisioning consumer and atomic nonce claim are still a separate PR under #235; production signer/KMS decision remains open under #236; independent audit checkpoint destination remains open under #107; offline revocation rollout still requires customer-side monotonic persistence and operational runbook under #214.
