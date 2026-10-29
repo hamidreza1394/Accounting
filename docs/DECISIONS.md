@@ -798,3 +798,12 @@ Cookie خودکفاست و بدون بررسی مجدد تا انقضا معتب
 - **گزینه‌های ردشده:** ساخت شرکت/مدیر در دیتابیس مشتری از Vendor؛ پذیرش KeyId بدون trust store مستقل؛ بستهٔ دارای رمز یا reusable secret؛ تأیید `Confirmed` با صرف export؛ software-key fallback در Production.
 - **پیامدها:** provisioning بین control-plane و customer installation جدا می‌ماند و در نصب آفلاین نیز با export/import و acknowledgement قابل ممیزی است؛ در مقابل، پیاده‌سازی consumer و enrollment در PR جدا و نیازمند migration صریح و تست SQL Server خواهد بود.
 - **مراجع:** D-044، OD-14 و OD-18؛ Issues #228، #235، #236؛ `Licensing.Contracts/CustomerProvisioningPackage.cs`.
+
+
+## D-052 — کاتالوگ ثابت نگاشت زیرسیستم به مجوز عملیاتی در provisioning مشتری
+- **وضعیت تصمیم:** `Accepted` در 2026-10-29 با تأیید صریح مالک محصول؛ **پیاده‌سازی:** `In progress / Not Verified`.
+- **زمینه:** D-025 تفکیک لایسنس تجاری از مجوز عملیاتی را پذیرفته بود، اما انتخاب میان ستون `ModuleCode` و کاتالوگ ثابت در کد باز مانده بود. این فاز نباید Migration جدیدی فقط برای نگاشت زیرسیستم اضافه کند.
+- **تصمیم:** نگاشت مالکیت مجوزها با کاتالوگ ثابت و نسخه‌بندی‌شده در کد انجام می‌شود. کد زیرسیستم فقط یکی از `finance`، `sales`، `inventory`، `treasury` است. کد مجوز باید با قرارداد پایدار `<module>.<resource>.<action>` سازگار باشد؛ تغییر عنوان نمایشی کد را تغییر نمی‌دهد.
+- **قاعدهٔ fail-closed:** package نمی‌تواند تعریف مجوز جدید بسازد یا wildcard ایجاد کند. فقط کدهای دقیق موجود در `PermissionDefinitions` که به زیرسیستم خریداری‌شده تعلق دارند قابل تخصیص‌اند. زیرسیستم یا کد ناشناخته رد می‌شود؛ فهرست خالی مجوزها هرگز به معنی دسترسی گسترده نیست.
+- **مرز مهم:** این کاتالوگ به‌تنهایی مجوز مؤثر ایجاد نمی‌کند؛ تا زمانی که APIهای عملیاتی نقش شرکتی و مجوز زیرسیستم را واقعاً enforce نکنند، نباید ادعای اعمال کامل authorization کرد. Endpointهای قدیمی که از نقش legacy استفاده می‌کنند باید جداگانه audit و اصلاح شوند.
+- **مراجع:** D-025، D-051، OD-15، Issue #235؛ `Server/Infrastructure/Provisioning/CustomerProvisioningSubsystemCatalog.cs`.
