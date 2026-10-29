@@ -1046,3 +1046,11 @@
 - **اعتبارسنجی نهایی روی SHA `57d49c145445f13c356f1619571aa571bb8ed223`:** Vendor CI موفق [run 40829071732](https://github.com/hamidreza1394/Accounting/actions/runs/40829071732)، .NET CI با تمام jobها از جمله build-and-test، Linux publish، E2E و Windows publish موفق [run 40829071746](https://github.com/hamidreza1394/Accounting/actions/runs/40829071746)، CodeQL موفق [run 40829067402](https://github.com/hamidreza1394/Accounting/actions/runs/40829067402) و Semgrep موفق [run 40829071675](https://github.com/hamidreza1394/Accounting/actions/runs/40829071675). تست محلی Vitest در این نشست اجرا نشده است؛ آزمون Vendor CI موفق است.
 - **ادغام:** PR #273 با روش squash ادغام شد؛ merge commit: `a37b1c32b84d7622dbb7770f38aa852979058ae3`.
 - **Handoff:** `docs/handoffs/ISSUE-228-active-installation-filter.md`.
+
+
+## 2026-10-29 — هم‌ترازسازی وضعیت مدل تهدید Vendor با پیاده‌سازی واقعی
+- **یافته:** مقدمهٔ `docs/LICENSING_THREAT_MODEL.md` ادعا می‌کرد هیچ کنترلی پیاده‌سازی نشده است؛ این گزاره با کنترل‌های ادغام‌شدهٔ maker-checker، پاکت امضاشده و تراکنش، مرز signer، audit-chain و guard مربوط به checkpoint تناقض داشت و می‌توانست وضعیت را گمراه‌کننده نشان دهد.
+- **اصلاح:** مقدمه اکنون کنترل‌های مرحله‌ای موجود را از موانع Production جدا می‌کند؛ عنوان و متن بخش تاریخی Issue #214 نیز روشن می‌کند که بخشی از موارد بعداً ادغام شده‌اند.
+- **محدوده امنیتی:** مستندات فقط؛ هیچ کد اجرایی، تنظیمات signer، کلید، API، schema، migration یا دیتابیس مشتری تغییر نکرد. Production-ready اعلام نشده و موانع KMS/HSM، consumer/ack مشتری، ابطال آفلاین و checkpoint مستقل صریحاً باقی مانده‌اند.
+- **اعتبارسنجی:** بررسی متن و diff مستندات در این نشست؛ Build، تست‌ها و CI برای تغییر مستنداتی اجرا نشده‌اند و باید از PR/CI نهایی پیگیری شوند.
+- **Branch:** `docs/vendor-threat-model-status-reconciliation`؛ مبنا `df9256bf774e918c6ee540786fcda3490702431f`.
