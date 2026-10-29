@@ -158,7 +158,6 @@ public static class OfflineRevocationListValidator
             revocationList.SchemaVersion != CurrentSchemaVersion ||
             !HasBoundedValue(revocationList.ListId, MaxListIdLength) ||
             revocationList.Sequence <= 0 ||
-            revocationList.Sequence <= minimumSequenceExclusive ||
             revocationList.IssuedAtUtc == default ||
             revocationList.ExpiresAtUtc == default ||
             revocationList.IssuedAtUtc > now.AddMinutes(2) ||
@@ -170,9 +169,14 @@ public static class OfflineRevocationListValidator
             !AreLicenseIdsValidAndCanonical(revocationList.RevokedLicenseIds))
         {
             revocationList = null;
-            errorCode = revocationList is not null && revocationList.Sequence <= minimumSequenceExclusive
-                ? "offline_revocation_sequence_invalid"
-                : "offline_revocation_payload_invalid";
+            errorCode = "offline_revocation_payload_invalid";
+            return false;
+        }
+
+        if (revocationList.Sequence <= minimumSequenceExclusive)
+        {
+            revocationList = null;
+            errorCode = "offline_revocation_sequence_invalid";
             return false;
         }
 
