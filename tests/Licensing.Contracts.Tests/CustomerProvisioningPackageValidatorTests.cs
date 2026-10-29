@@ -286,7 +286,7 @@ public sealed class CustomerProvisioningPackageValidatorTests
 
     private static CustomerProvisioningPayload SampleV2() => Sample() with
     {
-        SchemaVersion = CustomerProvisioningPackageValidator.CurrentPayloadSchemaVersion,
+        SchemaVersion = 2,
         FiscalPeriodTitle = "سال مالی ۱۴۰۵",
         FiscalPeriodStartDate = new DateOnly(2026, 1, 1),
         FiscalPeriodEndDate = new DateOnly(2027, 1, 1)
@@ -297,4 +297,4 @@ public sealed class CustomerProvisioningPackageValidatorTests
         SchemaVersion = CustomerProvisioningPackageValidator.CurrentPayloadSchemaVersion,
         InitialAdminEmail = "admin@example.com"
     };
-}\n
+}
