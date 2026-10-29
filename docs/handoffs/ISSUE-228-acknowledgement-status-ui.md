@@ -3,14 +3,15 @@
 - **Issue:** [#228 — Vendor customer onboarding](https://github.com/hamidreza1394/Accounting/issues/228)
 - **Agent/مسئول:** ChatGPT / GitHub tools
 - **تاریخ:** 2026-10-29
-- **وضعیت:** پیاده‌سازی در شاخه؛ در انتظار CI و بازبینی PR #294
+- **وضعیت:** پیاده‌سازی تأییدشده روی head `1a9f8c3f107f713940a4d95c92f6abe597f85f80`; CI پس از commit مستندات باید روی head نهایی نیز اجرا شود.
 
 ## هدف و معیارهای پذیرش
 - [x] نمایش نتیجهٔ واقعی acknowledgement از API در تاریخچهٔ درخواست Vendor.
 - [x] نمایش زمان ثبت پاسخ مشتری جدا از زمان ایجاد درخواست.
 - [x] نگاشت روشن برای `Applied`, `AlreadyApplied`, `Rejected`؛ اگر پاسخ هنوز ثبت نشده، نمایش `—`.
 - [x] تست UI برای نتیجه و زمان پاسخ.
-- [ ] تأیید CI نهایی PR #294.
+- [x] Vendor CI، .NET CI، Semgrep و CodeQL روی head پیاده‌سازی موفق شدند; [PR #294](https://github.com/hamidreza1394/Accounting/pull/294).
+- [ ] تأیید CI روی head نهایی پس از تغییر مستندات.
 
 ## خلاصه تغییرات
 - پاسخ API در `ProvisioningRequestResponse` دو فیلد اختیاری `AcknowledgementResult` و `AcknowledgedAtUtc` را برمی‌گرداند.
@@ -31,8 +32,8 @@
 ## بررسی و آزمون
 | فرمان/آزمون | نتیجه واقعی | توضیح/کد خروج |
 |---|---|---|
-| Vendor UI typecheck/tests/build | در انتظار | CI PR #294 |
-| .NET build/test | در انتظار | CI PR #294 |
+| Vendor UI typecheck/tests/build | موفق روی head پیاده‌سازی | Vendor CI run 40871773941؛ head نهایی مستندات باید دوباره بررسی شود |
+| .NET build/test | موفق روی head پیاده‌سازی | .NET CI run 40871773973؛ head نهایی مستندات باید دوباره بررسی شود |
 | اندازه باندل / LCP / CLS | اندازه‌گیری نشد | هیچ dependency جدیدی اضافه نشد |
 
 ## امنیت، داده و سازگاری
