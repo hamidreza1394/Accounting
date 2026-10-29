@@ -28,8 +28,8 @@ jobs:
           python-version: '3.x'
       - name: Restore and build model
         run: |
-          dotnet restore Template.sln
-          dotnet build Template.sln --no-restore --configuration Release
+          dotnet restore Server/Server.csproj
+          dotnet build Server/Server.csproj --no-restore --configuration Release
       - name: Install EF CLI
         run: dotnet tool install --global dotnet-ef --version 10.0.13
       - name: Generate table migration with EF Core
