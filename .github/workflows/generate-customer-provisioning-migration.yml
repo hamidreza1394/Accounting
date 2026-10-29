@@ -5,6 +5,7 @@ on:
     branches:
       - feat/customer-provisioning-consumer
     paths:
+      - '.github/workflows/generate-customer-provisioning-migration.yml'
       - 'Domain/ProvisioningRequestClaim.cs'
       - 'Infrastructure/Persistence/Configurations/ProvisioningRequestClaimConfiguration.cs'
       - 'Infrastructure/Persistence/DatabaseContext.cs'
