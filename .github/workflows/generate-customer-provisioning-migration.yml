@@ -26,6 +26,8 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: '3.x'
+      - name: Install migration verifier parser
+        run: python3 -m pip install --disable-pip-version-check tree-sitter==0.25.2 tree-sitter-c-sharp==0.23.1
       - name: Restore and build model
         run: |
           dotnet restore Server/Server.csproj
