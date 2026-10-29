@@ -1152,3 +1152,10 @@
 - **امنیت/داده:** هیچ رمز، password hash، secret، private key، Connection String، Migration یا تغییر Server/** اضافه نشده است. Consumer، replay protection و enrollment مدیر اولیه هنوز پیاده‌سازی نشده‌اند.
 - **آزمون واقعی:** dotnet test و git diff --check در این نشست اجرا نشدند؛ checkout محلی متصل به مخزن/SDK در دسترس نبود. نتیجهٔ CI باید قبل از Merge بررسی شود.
 - **Branch:** feat/provisioning-payload-v2. PR بعد از ثبت این گزارش ساخته می‌شود.
+
+
+## 2026-10-29 — Issue #107: provider-neutral checkpoint recovery runbook
+- Added `docs/runbooks/vendor-audit-checkpoint-recovery.md` with pre-deployment verification, SQL backup plus independent checkpoint preservation, restore reconciliation, sink outage handling, identity separation and Production exit criteria.
+- The runbook explicitly forbids local-file/Vendor-DB fallback and never lowers an external checkpoint to match an older restored database.
+- No provider-specific adapter, secret, credential, migration or fake Production sink was added. #107 remains blocked on provider selection and operational proof.
+- Documentation-only change; no local tests were run in this GitHub-only session.
