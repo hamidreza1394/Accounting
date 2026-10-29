@@ -850,7 +850,6 @@ namespace Data.Migrations
                     .HasColumnType("bit");
 
                 b.Property<byte[]>("RowVersion")
-                    .IsRequired()
                     .IsRowVersion()
                     .HasColumnType("rowversion");
 
