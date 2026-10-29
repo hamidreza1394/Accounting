@@ -17,7 +17,7 @@ public static class CustomerProvisioningEnrollmentToken
     public static string Generate()
     {
         var bytes = RandomNumberGenerator.GetBytes(RandomByteLength);
-        return Convert.ToBase64String(bytes)
+        return System.Convert.ToBase64String(bytes)
             .TrimEnd('=')
             .Replace('+', '-')
             .Replace('/', '_');
@@ -30,7 +30,7 @@ public static class CustomerProvisioningEnrollmentToken
         if (!IsValidToken(token))
             throw new ArgumentException("Enrollment token format is invalid.", nameof(token));
 
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
+        return System.Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
     }
 
     /// <summary>
@@ -44,7 +44,7 @@ public static class CustomerProvisioningEnrollmentToken
 
         try
         {
-            var expected = Convert.FromHexString(storedHash!);
+            var expected = System.Convert.FromHexString(storedHash!);
             var actual = SHA256.HashData(Encoding.UTF8.GetBytes(token!));
             return CryptographicOperations.FixedTimeEquals(actual, expected);
         }
@@ -65,12 +65,12 @@ public static class CustomerProvisioningEnrollmentToken
 
         try
         {
-            var bytes = Convert.FromBase64String(
+            var bytes = System.Convert.FromBase64String(
                 token.Replace('-', '+').Replace('_', '/') + "=");
             if (bytes.Length != RandomByteLength)
                 return false;
 
-            var canonical = Convert.ToBase64String(bytes)
+            var canonical = System.Convert.ToBase64String(bytes)
                 .TrimEnd('=')
                 .Replace('+', '-')
                 .Replace('/', '_');
