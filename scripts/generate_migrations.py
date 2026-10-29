@@ -49,16 +49,16 @@ MIGRATIONS_DIRECTORY = os.path.join("Infrastructure", "Persistence", "Migrations
 # 'InitialCreate'. Its designer file is the starting point of the difference that the
 # current migration has to apply. ('AlignSchemaWithModel' and 'WidenUserPasswordHash'
 # are published history as well.)
-DELTA_MIGRATION_ID = "20261019071146"
-DELTA_MIGRATION_NAME = "WidenUserPasswordHash"
+DELTA_MIGRATION_ID = "20261023191000"
+DELTA_MIGRATION_NAME = "AddCompanyCustomerBoundary"
 
 # The most recent migration. Its operations are computed from the difference between
 # the model of the migration before it (DELTA_MIGRATION_*) and the model of the code
 # base, so the files can not drift apart from the snapshot. DELTA_MIGRATION_* is
 # published history and is never rewritten, exactly like 'InitialCreate'.
-CURRENT_MIGRATION_ID = "20261023191000"
-CURRENT_MIGRATION_NAME = "AddCompanyCustomerBoundary"
-CURRENT_MIGRATION_CLASS = "AddCompanyCustomerBoundary"
+CURRENT_MIGRATION_ID = "20261029161402"
+CURRENT_MIGRATION_NAME = "AddCustomerProvisioningClaims"
+CURRENT_MIGRATION_CLASS = "AddCustomerProvisioningClaims"
 
 # 'AddCorporateGroups' adds tables, which this generator can not render
 # ('compute_operations' refuses them). Its Up/Down were therefore written with 'dotnet ef
@@ -197,6 +197,7 @@ def clr_type_name(clr_type: str) -> str:
         "System.Int64": "long",
         "System.Int16": "short",
         "System.Byte": "byte",
+        "System.Byte[]": "byte[]",
         "System.Single": "float",
         "System.Double": "double",
         "System.Decimal": "decimal",
@@ -434,9 +435,12 @@ def generate_model(entity_types: list[dict[str, Any]], indent: str) -> list[str]
             if column["nullable"] is False and provider_type in {
                 "string",
                 "object",
+                "byte[]",
             }:
                 lines.append(f"{indent}{INDENT * 2}.IsRequired()")
-            if value_generated_on_add(entity, column):
+            if column.get("is_row_version"):
+                lines.append(f"{indent}{INDENT * 2}.IsRowVersion()")
+            elif value_generated_on_add(entity, column):
                 lines.append(f"{indent}{INDENT * 2}.ValueGeneratedOnAdd()")
             if column["max_length"] is not None:
                 lines.append(f"{indent}{INDENT * 2}.HasMaxLength({column['max_length']})")

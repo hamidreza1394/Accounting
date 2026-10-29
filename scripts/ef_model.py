@@ -54,6 +54,8 @@ CLR_TYPE_NAMES = {
     "short": "System.Int16",
     "System.Byte": "System.Byte",
     "byte": "System.Byte",
+    "System.Byte[]": "System.Byte[]",
+    "byte[]": "System.Byte[]",
     "System.Single": "System.Single",
     "float": "System.Single",
     "System.Double": "System.Double",
@@ -70,6 +72,7 @@ STORE_TYPE_INT = "int"
 STORE_TYPE_BIGINT = "bigint"
 STORE_TYPE_SMALLINT = "smallint"
 STORE_TYPE_TINYINT = "tinyint"
+STORE_TYPE_ROWVERSION = "rowversion"
 STORE_TYPE_REAL = "real"
 STORE_TYPE_FLOAT = "float"
 STORE_TYPE_DECIMAL = "decimal(18, 2)"
@@ -170,7 +173,7 @@ def collection_element_type(type_text: str) -> str | None:
 
 PROPERTY_PATTERN = re.compile(
     r"public\s+(?:virtual\s+|override\s+|new\s+)?"
-    r"(?P<type>[A-Za-z_][\w\.\?]*\s*(?:<[^>{}]*>)?)\s+"
+    r"(?P<type>[A-Za-z_][\w\.\?]*(?:\[\])?\s*(?:<[^>{}]*>)?)\s+"
     r"(?P<name>[A-Za-z_]\w*)\s*\{\s*get;\s*(?:private\s+|public\s+|protected\s+)?set;\s*\}",
     re.DOTALL,
 )
@@ -557,6 +560,8 @@ def apply_configuration_statement(
         column_type_match = re.search(r"\.HasColumnType\(\s*\"(?P<value>[^\"]+)\"", normalized)
         if column_type_match:
             settings["column_type"] = column_type_match.group("value")
+        if ".IsRowVersion()" in normalized:
+            settings["row_version"] = True
         return
 
     if re.search(r"\.Has(?:One|Many)\s*[<(]", normalized):
@@ -1335,6 +1340,10 @@ def build_column(
 
     if "required" in settings:
         nullable = not settings["required"]
+    is_row_version = bool(settings.get("row_version"))
+    if is_row_version:
+        nullable = False
+        value_generated = "OnAddOrUpdate"
 
     unicode = settings.get("unicode")
     max_length = settings.get("max_length")
@@ -1344,7 +1353,12 @@ def build_column(
     snapshot_clr_type = provider_clr_type
     snapshot_column_type = None
 
-    if simple == "String":
+    if is_row_version:
+        provider_clr_type = "System.Byte[]"
+        snapshot_clr_type = "System.Byte[]"
+        store_type = STORE_TYPE_ROWVERSION
+        snapshot_column_type = STORE_TYPE_ROWVERSION
+    elif simple == "String":
         is_ansi = unicode is False
         if max_length is not None:
             store_type = f"{'varchar' if is_ansi else 'nvarchar'}({max_length})"
@@ -1418,6 +1432,7 @@ def build_column(
         "unicode": unicode,
         "provider_clr_type": provider_clr_type,
         "value_generated": value_generated,
+        "is_row_version": is_row_version,
     }
 
 

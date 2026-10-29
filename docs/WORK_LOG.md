@@ -1178,3 +1178,34 @@
 - The runbook explicitly forbids local-file/Vendor-DB fallback and never lowers an external checkpoint to match an older restored database.
 - No provider-specific adapter, secret, credential, migration or fake Production sink was added. #107 remains blocked on provider selection and operational proof.
 - Documentation-only change; no local tests were run in this GitHub-only session.
+
+## 2026-10-29 — Issue #235: customer-side trust verifier and claim schema (WIP)
+
+- Added a customer-side trust store that resolves package KeyId only from independently configured public keys; malformed, oversized, non-P-256 and unknown keys fail closed.
+- Added a verifier wrapper that validates the signed canonical package and compares the signed customer/installation references against local deployment settings before any database mutation.
+- Added tests for valid signature, unknown/malformed key, customer mismatch, installation mismatch, expiry, payload tampering and malformed local identity settings.
+- Added ProvisioningRequestClaims with unique RequestId, nonce digest and enrollment-token digest indexes, rowversion, a composite fiscal-period/company FK and a restricted optional parent-company FK.
+- Generated migration 20261029161402_AddCustomerProvisioningClaims and model snapshot using the repository migration verifier. Generation workflow run 40909292917 passed and committed the files to this feature branch.
+- PR #302 remains draft. The current changes are not end-to-end provisioning and must not be merged yet.
+- Still missing: atomic claim + actual company/fiscal-period/role/membership application in one transaction, enrollment flow with forced password change, signed customer acknowledgement, parent-company external-reference mapping, SQL Server replay/concurrency/rollback tests, and final .NET CI on the current HEAD.
+- No plaintext password, password hash, private key, customer DB connection, or signing fallback was added.
+
+
+## 2026-10-29 — Issue #235: اصلاح RowVersion در مدل EF و Snapshot
+
+- **علت:** CI در run `40913297367` در مرحله Test شکست خورد؛ مدل runtime ویژگی `ProvisioningRequestClaim.RowVersion` را با `.IsRowVersion()` تنظیم می‌کرد اما ابزار مدل سفارشی `byte[]` و metadata rowversion را در Snapshot ثبت نمی‌کرد، که باعث `PendingModelChangesWarning` می‌شد.
+- **اصلاح:** استخراج‌کننده مدل، parser Snapshot و مولد Snapshot برای `byte[]` و `rowversion` اصلاح شدند؛ Snapshot و Designer مربوط به Migration موجود به‌روزرسانی شدند. Migration اجرایی و دیتابیس مشتری تغییر نکردند.
+- **تست بازگشت:** تست `ProvisioningClaims_RowVersionIsConfiguredAsSqlServerConcurrencyToken` اضافه شد تا CLR type، column type، concurrency token و `ValueGenerated.OnAddOrUpdate` را کنترل کند.
+- **اعتبارسنجی:** CI قبلی ناموفق است. در این نشست اجرای محلی .NET و اسکریپت‌های Python ممکن نشد چون شبکه نتوانست `github.com` را resolve کند؛ CI سبز روی آخرین HEAD هنوز تأیید نشده و باید پیش از ادغام بررسی شود.
+- **امنیت:** هشدار EF غیرفعال نشد، تستی حذف نشد و هیچ migration روی دیتابیس مشتری اجرا نشد.
+- **باقی‌مانده:** نتیجه CI روی آخرین HEAD؛ سپس تکمیل consumer تراکنشی، replay/idempotency، enrollment مدیر اولیه، acknowledgement امضاشده و نگاشت شرکت مادر. PR #302 همچنان Draft است و نباید merge شود.
+- **Branch:** `feat/customer-provisioning-consumer`; **PR:** https://github.com/hamidreza1394/Accounting/pull/302.
+
+
+## 2026-10-29 — رفع شکست گارد Migration در PR #302
+- **دامنه:** CI run [40917960102](https://github.com/hamidreza1394/Accounting/actions/runs/40917960102)، برای شاخه `feat/customer-provisioning-consumer`.
+- **علت‌های ریشه‌ای:** ۶۱۳ تست .NET و گام بررسی Migrationهای تولیدشده موفق بودند؛ شکست در تست‌های گارد Migration بود. اول، `verify_migration_model.py` نوع CLR آرایه‌ای `byte[]` را در عبارت `table.Column<byte[]>` نمی‌پذیرفت، پس ستون معتبر SQL Server `rowversion` در Migration شناسایی نمی‌شد. دوم، تست جهشی «مهاجرت جدیدتر از ثابت‌ها» از تاریخ `2026-10-24` استفاده می‌کرد که از Migration فعلی `20261029161402` قدیمی‌تر است؛ بنابراین تغییر آزمایشی جدیدتر نبود و تست خطا را تشخیص نمی‌داد.
+- **اصلاح:** الگوی parser برای انواع CLR شامل `[]` گسترش یافت؛ تست رگرسیون parse ستون `byte[]/rowversion` اضافه شد؛ تاریخ Migration ساختگی تست جهشی به `2026-10-30` تغییر کرد تا از Migration جاری جدیدتر باشد.
+- **اعتبارسنجی CI قبل از اصلاح:** `dotnet build` موفق، `dotnet test` موفق با ۶۱۳/۶۱۳، `generate_migrations.py --check` موفق؛ دو تست گارد شکست خوردند (ستون RowVersion شناسایی نمی‌شد و تست migration جدیدتر fixture منسوخ داشت). تست‌ها بعد از اصلاح باید در اجرای CI جدید تأیید شوند.
+- **امنیت/داده:** گاردها خاموش یا ضعیف نشده‌اند؛ Migration اجرایی و دیتابیس مشتری تغییر نکرده‌اند.
+- **Git:** شاخه `feat/customer-provisioning-consumer`؛ PR موجود [#302](https://github.com/hamidreza1394/Accounting/pull/302)، هنوز Draft است و نباید Merge شود تا مصرف‌کننده تراکنشی provisioning و آزمون‌های نهایی کامل شوند.

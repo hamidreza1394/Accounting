@@ -60,6 +60,7 @@ public sealed class DatabaseModelTests
 				"PermissionDefinitions",
 				"Permissions",
 				"PostCategory",
+				"ProvisioningRequestClaims",
 				"Roles",
 				"SecurityAuditEvents",
 				"UserCompanyMemberships",
@@ -180,6 +181,50 @@ public sealed class DatabaseModelTests
 	}
 
 	[Fact]
+	public void ProvisioningClaims_EnforceReplayUniquenessAndCompanyBoundaries()
+	{
+		var claim = Model.FindEntityType(typeof(Domain.ProvisioningRequestClaim));
+		Assert.NotNull(claim);
+
+		foreach (var propertyName in new[] { "RequestId", "NonceHash", "EnrollmentTokenHash" })
+		{
+			var index = Assert.Single(claim!.GetIndexes(), candidate =>
+				candidate.Properties.Select(property => property.Name).SequenceEqual(new[] { propertyName }));
+			Assert.True(index.IsUnique, $"Provisioning claim index '{propertyName}' must be unique.");
+		}
+
+		Assert.DoesNotContain(claim!.GetProperties(), property =>
+			property.Name is "EnrollmentToken" or "Password" or "PasswordHash");
+
+		var periodForeignKey = Assert.Single(claim.GetForeignKeys(),
+			candidate => candidate.PrincipalEntityType.ClrType == typeof(Domain.FiscalPeriod));
+		Assert.Equal(new[] { "FiscalPeriodId", "CompanyId" },
+			periodForeignKey.Properties.Select(property => property.Name).ToArray());
+		Assert.Equal(new[] { "Id", "TenantId" },
+			periodForeignKey.PrincipalKey.Properties.Select(property => property.Name).ToArray());
+
+		var parentForeignKey = Assert.Single(claim.GetForeignKeys(),
+			candidate => candidate.PrincipalEntityType.ClrType == typeof(Domain.Company));
+		Assert.Equal(new[] { "ParentCompanyId" },
+			parentForeignKey.Properties.Select(property => property.Name).ToArray());
+		Assert.Equal(DeleteBehavior.Restrict, parentForeignKey.DeleteBehavior);
+	}
+
+	[Fact]
+	public void ProvisioningClaims_RowVersionIsConfiguredAsSqlServerConcurrencyToken()
+	{
+		var claim = Model.FindEntityType(typeof(Domain.ProvisioningRequestClaim));
+		Assert.NotNull(claim);
+
+		var rowVersion = claim!.FindProperty(nameof(Domain.ProvisioningRequestClaim.RowVersion));
+		Assert.NotNull(rowVersion);
+		Assert.Equal(typeof(byte[]), rowVersion!.ClrType);
+		Assert.Equal("rowversion", rowVersion.GetColumnType(), ignoreCase: true);
+		Assert.True(rowVersion.IsConcurrencyToken);
+		Assert.Equal(ValueGenerated.OnAddOrUpdate, rowVersion.ValueGenerated);
+	}
+
+	[Fact]
 	public void MoneyIsNeverStoredAsAFloatingPointNumber()
 	{
 		foreach (var entityType in Model.GetEntityTypes())
@@ -245,6 +290,7 @@ public sealed class DatabaseModelTests
 
 		Assert.Contains("20251017120000_InitialCreate", migrations);
 		Assert.Contains("20261017090000_AlignSchemaWithModel", migrations);
+		Assert.Contains("20261029161402_AddCustomerProvisioningClaims", migrations);
 	}
 
 	[Fact]

@@ -57,7 +57,7 @@ class VerificationError(Exception):
 def parse_columns(body: str) -> list[dict[str, Any]]:
     """Reads the columns of a 'CreateTable' operation."""
     columns: list[dict[str, Any]] = []
-    for match in re.finditer(r"(?P<property>\w+) = table\.Column<(?P<type>[\w\?]+)>\(", body):
+    for match in re.finditer(r"(?P<property>\w+) = table\.Column<(?P<type>[\w\[\]\?]+)>\(", body):
         arguments, _ = mm.balanced_call(body, match.end() - 1)
         columns.append(
             {
