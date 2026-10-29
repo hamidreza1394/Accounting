@@ -1,3 +1,4 @@
+using System.Data;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -238,7 +239,27 @@ public static class VendorProvisioningEndpoints
                 string.IsNullOrWhiteSpace(item.SignatureBase64))
                 return Results.Conflict(new { error = "provisioning_package_not_ready" });
 
-            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            // Keep target status stable until delivery metadata and the audit event commit.
+            // A request can be signed while active and then suspended before the package is exported.
+            await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+            var target = await (
+                from installation in db.Installations.AsNoTracking()
+                join customer in db.Customers.AsNoTracking()
+                    on installation.CustomerId equals customer.Id
+                where installation.Id == item.InstallationId &&
+                      installation.CustomerId == item.CustomerId
+                select new
+                {
+                    CustomerStatus = customer.Status,
+                    InstallationStatus = installation.Status
+                }).SingleOrDefaultAsync(ct);
+
+            if (target is null)
+                return Results.NotFound();
+
+            if (!VendorProvisioningRequestRules.IsTargetActive(target.CustomerStatus, target.InstallationStatus))
+                return Results.Conflict(new { error = "provisioning_target_inactive" });
+
             var now = timeProvider.GetUtcNow().ToUniversalTime();
             if (item.DeliveredAtUtc is null)
             {
