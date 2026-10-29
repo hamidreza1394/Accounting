@@ -36,6 +36,9 @@ describe('Vendor customer provisioning form', () => {
     const onSaved = vi.fn();
     render(<ProvisioningForm customerId="customer-1" customerName="مشتری نمونه" onCancel={vi.fn()} onSaved={onSaved} />);
 
+    const form = screen.getByRole('button', { name: 'ذخیره درخواست راه‌اندازی' }).closest('form');
+    expect(form).not.toHaveAttribute('novalidate');
+
     await waitFor(() => expect(screen.getByLabelText('نصب مقصد')).toHaveValue('install-1'));
     expect(screen.getByLabelText('نوع شرکت')).toHaveValue('independent');
     expect(screen.getByLabelText('مالی')).toBeChecked();
