@@ -1,33 +1,28 @@
-# وضعیت جاری تأییدشده Vendor — 2026-10-29 (پس از PR #287)
+# وضعیت جاری تأییدشده Vendor — 2026-10-29 (به‌روزرسانی PR #293)
 
-مبنای این snapshot: commit ادغام‌شدهٔ `d74ca15a517ddbb72d8711b55b0379381ecc34dd` (PR #287).
+مبنای این یادداشت: شاخه `feat/vendor-acknowledgement-intake` روی PR #293؛ تا پایان CI، این تغییر **Implemented / Not Verified** است و هنوز نباید وضعیت Production-ready اعلام شود.
 
-## تغییرات اخیر ادغام‌شده
-- PR #286: اعتبارسنجی امضای بستهٔ provisioning پیش از parse کردن JSON؛ ادغام شد.
-- PR #287: قرارداد canonical و نسخه‌دار acknowledgement امضاشده، بررسی ECDSA P-256/SHA-256 روی بایت‌های دقیق پیش از parse، اتصال به request ID/nonce/hash/customer/installation و تست‌های قراردادی؛ ادغام شد.
-- CI مربوط به PR #287 موفق بود:
-  - [Vendor CI — run 40854670655](https://github.com/hamidreza1394/Accounting/actions/runs/40854670655)
-  - [.NET CI — run 40854670549](https://github.com/hamidreza1394/Accounting/actions/runs/40854670549)
-  - [Semgrep — run 40854670451](https://github.com/hamidreza1394/Accounting/actions/runs/40854670451)
-  - [PR checks — run 40854665623](https://github.com/hamidreza1394/Accounting/actions/runs/40854665623)
+## کارهای ثبت‌شده در PR #293
+- endpoint دریافت acknowledgement امضاشده در Vendor اضافه شده است؛ کلید عمومی فقط از trust store مستقل پیکربندی‌شده resolve می‌شود.
+- request ID، nonce، payload hash، customer reference و installation identity پیش از هر تغییر state تطبیق داده می‌شوند.
+- نتیجهٔ معتبر `Applied` / `AlreadyApplied` وضعیت را `Confirmed` می‌کند؛ `Rejected` وضعیت را `Failed` می‌کند. export بسته به‌تنهایی به معنی تأیید مشتری نیست.
+- digest پاسخ، key ID، نتیجه و زمان در Migration اختصاصی Vendor ذخیره می‌شوند؛ retry دقیق idempotent است و acknowledgement متفاوت برای همان درخواست conflict می‌دهد.
+- ممیزی و state update در یک تراکنش Vendor ثبت می‌شوند؛ endpoint دارای rate limit است.
+- تست‌های unit مربوط به نگاشت state و تست رد کلید ناشناخته اضافه شده‌اند.
 
-## CI پس از ادغام PR #287
-- Vendor CI — run 40855628545: در حال اجرا در آخرین بررسی.
-- Semgrep — run 40855628381: در حال اجرا در آخرین بررسی.
-- .NET CI — run 40855628365: در حال اجرا در آخرین بررسی.
-- Push on main — run 40855628192: در حال اجرا در آخرین بررسی.
-- این اجراها باید تا پایان بررسی شوند؛ هنوز نمی‌توان وضعیت CI پس از ادغام را سبز اعلام کرد.
+## شواهد اعتبارسنجی
+- [PR #293 — CI در انتظار نتیجهٔ head نهایی](https://github.com/hamidreza1394/Accounting/pull/293).
+- Build/Test محلی و آزمون SQL Server در این نشست اجرا نشده‌اند؛ نتیجه فقط پس از CI واقعی قابل ثبت است.
 
-## شکاف‌های مانع آمادگی Production
-- **Provisioning end-to-end (#228/#235):** قرارداد بسته و acknowledgement موجود است؛ مصرف‌کنندهٔ سمت مشتری، claim اتمی request ID/nonce، اجرای تراکنشی، retry/idempotency و انتقال Vendor به `Confirmed` پس از تأیید acknowledgement هنوز پیاده‌سازی نشده‌اند.
-- **امضای Production (#236/#214):** provider پیش‌فرض fail-closed است. انتخاب و پیکربندی KMS/HSM یا سرویس امضای مصوب، هویت/دسترسی عملیاتی، چرخش کلید و بازیابی نیازمند تصمیم و پیکربندی واقعی است؛ fallback نرم‌افزاری اضافه نشود.
-- **checkpoint مستقل ممیزی (#107):** زنجیرهٔ داخل Vendor DB جایگزین sink مستقل با مجوز و retention جدا نیست؛ adapter و آزمون عملیاتی واقعی باقی مانده است.
-- **آزمون دستی UI و تحویل آفلاین:** مسیر نصب مشتری، import/export و acknowledgement باید در محیط‌های پشتیبانی‌شده end-to-end آزموده شود.
+## شکاف‌های باقی‌مانده برای Production
+- **#228 / #235:** consumer سمت مشتری، claim اتمی request ID/nonce، ایجاد تراکنشی شرکت/مدیر و تست end-to-end همچنان جداگانه لازم است؛ PR #293 فقط intake سمت Vendor را پیاده می‌کند.
+- **#236 / #214:** provider امضای Production، تصمیم KMS/HSM، هویت دسترسی، چرخش و بازیابی کلید هنوز عملیاتی نشده‌اند؛ signer پیش‌فرض fail-closed باقی می‌ماند.
+- **#107:** مقصد مستقل checkpoint ممیزی، اعتبارنامه‌های جدا، retention/immutability و بازیابی باید تعیین و پیاده‌سازی شوند.
+- **تحویل آفلاین:** جریان export/import و تأییدیه باید در نصب‌های cloud، dedicated-server و offline end-to-end آزموده شود.
 
-نتیجه: PR #286 و #287 ادغام شده‌اند، اما Vendor هنوز **Production-ready نیست** تا شکاف‌های بالا بسته و CI پس از ادغام نهایی شود.
+نتیجه: PR #293 یک بخش مهم از گردش‌کار تأیید را پیاده می‌کند، اما تا سبز شدن CI و تکمیل consumer سمت مشتری و تصمیم‌های عملیاتی، Vendor **Production-ready نیست**.
 
 ---
-
 ## Snapshot تاریخی — وضعیت Vendor پس از PR #271
 
 

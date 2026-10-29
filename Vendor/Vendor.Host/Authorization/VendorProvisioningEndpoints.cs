@@ -7,6 +7,8 @@ using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Auditing;
 using Faranou.Vendor.Persistence.Domain;
 using Faranou.Vendor.Persistence.Identity;
+using Faranou.Vendor.Host.Signing;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -30,6 +32,120 @@ public static class VendorProvisioningEndpoints
     public static IEndpointRouteBuilder MapVendorProvisioningEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup("/api/vendor/provisioning-requests");
+
+        // Machine-to-machine endpoint: authenticate the signed acknowledgement using a
+        // deployment-configured trust key, not the browser session or an envelope-supplied key.
+        group.MapPost("/{requestId}/acknowledgement", async (
+            string requestId,
+            CustomerProvisioningAcknowledgementEnvelope envelope,
+            VendorDbContext db,
+            ProvisioningAcknowledgementTrustStore trustStore,
+            TimeProvider timeProvider,
+            IVendorAuditWriter audit,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            if (!Guid.TryParseExact(requestId, "D", out var parsedRequestId))
+                return Results.BadRequest(new { error = "invalid_provisioning_request_id" });
+
+            if (envelope is null ||
+                string.IsNullOrWhiteSpace(envelope.AcknowledgementJson) ||
+                envelope.AcknowledgementJson.Length > CustomerProvisioningAcknowledgementValidator.MaxAcknowledgementJsonChars)
+                return Results.BadRequest(new { error = "provisioning_acknowledgement_envelope_invalid" });
+
+            if (!trustStore.TryGetTrustedPublicKey(envelope.KeyId, out var trustedPublicKey))
+                return Results.Unauthorized();
+
+            await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+            var item = await db.ProvisioningRequests
+                .SingleOrDefaultAsync(value => value.RequestId == parsedRequestId.ToString("D"), ct);
+            if (item is null) return Results.NotFound();
+
+            var customer = await db.Customers.AsNoTracking()
+                .SingleOrDefaultAsync(value => value.Id == item.CustomerId, ct);
+            var installation = await db.Installations.AsNoTracking()
+                .SingleOrDefaultAsync(value => value.Id == item.InstallationId, ct);
+            if (customer is null || installation is null || installation.CustomerId != customer.Id)
+                return Results.NotFound();
+
+            if (!CustomerProvisioningAcknowledgementValidator.TryValidateAndVerify(
+                    envelope,
+                    trustedPublicKey.Span,
+                    item.RequestId,
+                    item.Nonce,
+                    item.PayloadSha256,
+                    customer.CustomerNumber,
+                    installation.InstallationCode,
+                    timeProvider.GetUtcNow().ToUniversalTime(),
+                    out var acknowledgement,
+                    out var validationError))
+                return Results.BadRequest(new { error = validationError });
+
+            var envelopeJson = JsonSerializer.Serialize(envelope);
+            var acknowledgementDigest = Convert.ToHexString(
+                SHA256.HashData(Encoding.UTF8.GetBytes(envelopeJson))).ToLowerInvariant();
+
+            // An exact signed retry is idempotent. A different signed outcome cannot rewrite
+            // an acknowledgement already accepted for this request.
+            if (item.AcknowledgementSha256 is not null)
+            {
+                if (CryptographicOperations.FixedTimeEquals(
+                        Encoding.ASCII.GetBytes(item.AcknowledgementSha256),
+                        Encoding.ASCII.GetBytes(acknowledgementDigest)))
+                {
+                    await audit.AppendAsync(new VendorAuditWriteRequest(
+                        null, "vendor.provisioning.acknowledgement-retried", nameof(VendorProvisioningRequest),
+                        item.Id.ToString("D"), System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
+                    await tx.CommitAsync(ct);
+                    return Results.Ok(new { status = item.Status, repeated = true });
+                }
+
+                return Results.Conflict(new { error = "provisioning_acknowledgement_conflict" });
+            }
+
+            if (item.Status != "PendingDelivery" || item.DeliveredAtUtc is null)
+                return Results.Conflict(new { error = "provisioning_request_not_delivered" });
+
+            var now = timeProvider.GetUtcNow().ToUniversalTime();
+            item.AcknowledgementSha256 = acknowledgementDigest;
+            item.AcknowledgementKeyId = envelope.KeyId;
+            item.AcknowledgementResult = acknowledgement!.Result;
+            item.AcknowledgedAtUtc = now;
+            item.UpdatedAtUtc = now;
+
+            if (!ProvisioningAcknowledgementStateRules.TryResolveOutcome(
+                    acknowledgement.Result, acknowledgement.ErrorCode, out var targetStatus, out var failureCode))
+                return Results.BadRequest(new { error = "provisioning_acknowledgement_payload_invalid" });
+
+            item.Status = targetStatus;
+            item.ConfirmedAtUtc = targetStatus == "Confirmed" ? now : null;
+            item.FailureCode = failureCode;
+
+            try
+            {
+                await db.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Results.Conflict(new { error = "stale_provisioning_version" });
+            }
+
+            await audit.AppendAsync(new VendorAuditWriteRequest(
+                null,
+                acknowledgement.Result == "Rejected"
+                    ? "vendor.provisioning.acknowledgement-rejected"
+                    : "vendor.provisioning.acknowledgement-confirmed",
+                nameof(VendorProvisioningRequest),
+                item.Id.ToString("D"),
+                System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
+
+            await tx.CommitAsync(ct);
+            context.Response.Headers.CacheControl = "no-store";
+            return Results.Ok(new { status = item.Status, repeated = false });
+        })
+        .AllowAnonymous()
+        .RequireRateLimiting("provisioning-acknowledgement");
+
 
         group.MapPost("/", async (
             CreateVendorProvisioningRequest request,

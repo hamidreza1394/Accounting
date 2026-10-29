@@ -156,6 +156,9 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
             entity.Property(item => item.Algorithm).HasMaxLength(32).IsUnicode(false);
             entity.Property(item => item.SignatureBase64).HasMaxLength(128).IsUnicode(false);
             entity.Property(item => item.FailureCode).HasMaxLength(128).IsUnicode(false);
+            entity.Property(item => item.AcknowledgementSha256).HasMaxLength(64).IsUnicode(false).IsFixedLength();
+            entity.Property(item => item.AcknowledgementKeyId).HasMaxLength(128);
+            entity.Property(item => item.AcknowledgementResult).HasMaxLength(16).IsUnicode(false);
             entity.Property(item => item.CreatedAtUtc)
                 .HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
             entity.Property(item => item.RowVersion).IsRowVersion();

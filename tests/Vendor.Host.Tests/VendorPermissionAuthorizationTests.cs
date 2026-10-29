@@ -101,7 +101,8 @@ public sealed class VendorPermissionAuthorizationTests
             "/api/auth/totp/verify",
             "/api/auth/passkey/options",
             "/api/auth/passkey/sign-in",
-            "/api/auth/logout"
+            "/api/auth/logout",
+            "/api/vendor/provisioning-requests/{requestId}/acknowledgement"
         };
 
         Assert.Subset(approvedPublicPaths, publicApiPaths);
