@@ -7,6 +7,7 @@ namespace Domain;
 public sealed class ProvisioningRequestClaim : Seedwork.Entity
 {
     public Guid RequestId { get; set; }
+    /// <summary>SHA-256 digest of the signed nonce, uniquely indexed to reject replays.</summary>
     public string NonceHash { get; set; } = string.Empty;
     public string PayloadSha256 { get; set; } = string.Empty;
     public string CompanyType { get; set; } = string.Empty;
