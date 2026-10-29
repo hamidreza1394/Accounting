@@ -413,7 +413,7 @@ export function LicenseForm({
       </CardDescription>
     </CardHeader>
     <CardContent className="pt-4">
-      <form className="space-y-4" onSubmit={submit} noValidate>
+      <form className="space-y-4" onSubmit={submit}>
         {!editable && <p role="alert" className="text-sm text-destructive">فقط لایسنس پیش‌نویس قابل ویرایش است؛ برای تغییر این رکورد از گردش‌کار مجاز استفاده کنید.</p>}
         {editing ? (
           <div className="grid gap-2">
