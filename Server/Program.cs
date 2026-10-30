@@ -180,6 +180,10 @@ if (!setupRequired)
     builder.Services.AddSingleton<Infrastructure.Provisioning.ICustomerProvisioningTrustStore,
         Infrastructure.Provisioning.ConfigurationCustomerProvisioningTrustStore>();
     builder.Services.AddSingleton<Infrastructure.Provisioning.CustomerProvisioningPackageVerifier>();
+    builder.Services.AddScoped<Infrastructure.Provisioning.CustomerProvisioningApplyService>();
+    builder.Services.TryAddSingleton<
+        Infrastructure.Provisioning.ICustomerProvisioningAcknowledgementSigningProvider,
+        Infrastructure.Provisioning.UnavailableCustomerProvisioningAcknowledgementSigningProvider>();
     builder.Services.AddSingleton<Infrastructure.Tenancy.WorkContextCookie>();
     builder.Services.AddScoped<Infrastructure.Tenancy.WorkContextService>();
 
