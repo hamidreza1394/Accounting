@@ -38,26 +38,22 @@ See D-054 in `docs/DECISIONS.md`. The approved model is one provisioning request
 - Vendor request rules: license required, optional subsystem subset, licenseId/sequence included in idempotency.
 - Vendor SQL Server resolver tests: signed entitlement derivation, subset acceptance/rejection, latest vs historical sequence, revoked signing key fail-closed, wrong customer/installation, suspended and expired licenses.
 - Vendor SQL Server issuance test: a newer signed sequence between request creation and approval blocks package signing.
-- Dual-host E2E (stacked PR #322): after first export, a newer signed sequence blocks re-export while the already-exported package remains applicable offline.
+- Dual-host E2E (stacked PR #323): after first export, a newer signed sequence blocks re-export while the already-exported package remains applicable offline.
 - Customer verifier fixture updated to use v4.
 
-## Important integration dependency: PR #317
+## Integration dependency: PR #323
 
-PR #317 contains the independent-host E2E test and currently targets the pre-v4 provisioning request shape. After this branch is merged, PR #317 must be updated to:
-- issue a test license and persist its signed envelope using a test signer/public key;
-- call the eligible-licenses API or use the known test license ID;
-- send only `licenseId` and optional subset (never client sequence or authoritative entitlement list);
-- assert the exported provisioning payload contains the expected licenseId and sequence;
-- retain the independent Vendor Host / Customer Host boundary and verify the full transfer through Confirmed.
+PR #323 contains the independent-host E2E test updated for schema v4. It is stacked on this branch and:
+PR #323 seeds a test license and independently signed envelope, calls the eligible-license API, submits only `licenseId` and optional subset, asserts schema v4 `licenseId`/`sequence`, exercises the independent Vendor/Customer hosts through signed acknowledgement and `Confirmed`, and verifies that a newer license sequence blocks a later export while the previously exported package remains usable offline.
 
-Do not merge PR #317 until that E2E test is updated and green. PR #318 separately fixes the malformed/truncated request body response path; it is not a substitute for the v4 integration work.
+Do not merge PR #317; it is the superseded v3 E2E. Close it only after PR #323 and owner review are complete. PR #318 separately fixes malformed/truncated request-body handling.
 
 ## Pending before merge
 
 1. Run all .NET tests, Vendor Host SQL Server tests, and Vendor UI tests via CI; fix every failure.
-2. Run the final CI on the latest PR #319 head and stacked PR #322 head; fix every remaining failure.
+2. Run the final CI on the latest PR #319 head and stacked PR #323 head; fix every remaining failure.
 3. Review API contract and trust-key configuration documentation, including operational key rotation/revocation.
-4. Merge PR #319 only after its own required checks are green; then retarget PR #322 to main and re-run both independent hosts through Confirmed.
+4. Merge PR #319 only after its own required checks are green; then retarget PR #323 to main and re-run both independent hosts through Confirmed.
 5. Keep MaxCompanies, existing-company module additions, and multi-license aggregation explicitly NotImplemented.
 6. Confirm no customer migration, unrelated schema change, or v3 backfill is present.
 7. Merge only after all required CI jobs are green and owner review is complete.
