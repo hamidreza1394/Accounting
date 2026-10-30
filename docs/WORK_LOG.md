@@ -1459,3 +1459,13 @@
 - تغییر: تنظیم `Provisioning:RevokedAcknowledgementKeys:<keyId>=true` اضافه شد؛ کلید revoked حتی با وجود SPKI در trusted set رد می‌شود. overlap rotation با نگه‌داشتن دو public key و revoke نسخه قدیمی پوشش داده شد.
 - تست: unit tests برای key resolution، revoked key، overlap نسخه جدید و مقدار malformed اضافه شدند. مرور اولیه نشان داد `bool.TryParse` نامعتبر را به‌اشتباه مانند «revoked=false» تلقی می‌کرد؛ حالا هر مقدار غیر null که boolean معتبر نباشد fail-closed است. CI باید روی PR نهایی اجرا شود؛ تست محلی اجرا نشده است.
 - محدودیت: این revocation مبتنی بر configuration است و در برابر restore کامل backup/config قدیمی به‌تنهایی anti-rollback مقاوم نیست؛ trust anchor مستقل/rollback-resistant هنوز نیازمند طراحی است.
+
+
+## 2026-10-30 — Issue #236: ادغام revocation کلید ACK و CI نهایی
+
+- PR #352 با merge commit `b6ee9419abf53997e28dec19105645d6ed9f8833` ادغام شد.
+- .NET CI run `41090537956` و Semgrep run `41090537922` موفق شدند؛ ۶۸۲ تست .NET شامل ۶۷۸ موفق، ۴ Skip و صفر شکست بود. تست CNG ویندوز، Windows/Linux publish و E2E نیز موفق شدند.
+- Trust Store مشتری اکنون `Provisioning:RevokedAcknowledgementKeys:<keyId>=true` را پشتیبانی می‌کند؛ SPKI برای audit باقی می‌ماند، KeyId revoked رد می‌شود، مقدار غیر null نامعتبر fail-closed است و rotation overlap با KeyId جدید فعال تست شده است.
+- محدودیت صریح: revocation فعلی در configuration است؛ restore کامل backup/config قدیمی می‌تواند trust قبلی را بازگرداند. anti-rollback مستقل هنوز نیازمند طراحی/تصمیم و anchor خارج از همان backup است.
+- PR #351 نیز ادغام شد و فیلتر xUnit v3/MTP در Windows CI به `--filter-class` تغییر کرد؛ تست CNG اکنون واقعاً کشف و اجرا می‌شود.
+- باقی‌مانده: enrollment عملیاتی SPKI در Trust Store مشتری و Vendor، durable metadata-only audit/readiness، تست TPM واقعی و ماتریس نسخه‌های Windows/Server؛ Linux backend در مرحلهٔ بعدی.
