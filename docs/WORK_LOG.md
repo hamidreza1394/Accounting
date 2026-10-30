@@ -1424,3 +1424,13 @@
 - اشکالات کشف‌شده و اصلاح‌شده در CI: ambiguity نام ISession؛ وابستگی Linux loader به libdl؛ جداسازی readiness امضا از liveness؛ و تست محیط Staging بدون تداخل session/module.
 - Production signer همچنان به‌صورت پیش‌فرض disabled/unavailable است؛ بودجهٔ HSM صفر و HSM واقعی provision نشده. هیچ Azure/AWS adapter یا software fallback اضافه نشد.
 - Customer ACK TPM/OS signer per-installation هنوز پیاده‌سازی نشده و باید بر اساس OS واقعی مشتری (Windows Server یا Linux) در PR مستقل انجام شود.
+
+
+## 2026-10-30 — Issue #236: Windows-first Customer ACK CNG signer
+
+- مالک مشخص کرد نصب‌های مشتری در مرحلهٔ فعلی Windows نسخه‌های مختلف و Windows Server هستند؛ Linux در مرحلهٔ بعد backend مستقل خواهد داشت.
+- Provider ویندوزی با Windows CNG اضافه شد؛ TPM KSP (`Microsoft Platform Crypto Provider`) پیش‌فرض است و OS Software KSP فقط با انتخاب صریح مجاز است. هیچ fallback خودکار TPM→Software وجود ندارد.
+- Key Provisioner یک کلید ECDSA P-256 signing-only با `CngExportPolicies.None` می‌سازد و فقط public SPKI را تحویل می‌دهد؛ Sign فقط کلید از قبل provision شده را باز می‌کند و هرگز کلید نمی‌سازد/جایگزین نمی‌کند.
+- DI به‌صورت opt-in و Windows-only است؛ در سایر حالت‌ها default unavailable/fail-closed باقی می‌ماند. تست‌ها روی Windows CI با Software KSP صرفاً به‌عنوان fixture اجرا می‌شوند؛ این تست سخت‌افزار TPM واقعی را اثبات نمی‌کند.
+- تست‌ها قبل از implementation نوشته شدند و CI Windows برای اجرای مجموعهٔ محدود CNG اضافه شد. اجرای محلی در این محیط انجام نشده؛ نتیجهٔ واقعی باید از CI PR نهایی ثبت شود.
+- باقی‌مانده: command امن Key Ceremony/Provisioning و ثبت public key در Trust Store مشتری/Vendor، audit durable metadata-only، health/readiness و تست سخت‌افزار TPM واقعی؛ حداقل نسخه Windows/Server هنوز certify نشده است. Linux در PR آینده.
