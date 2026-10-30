@@ -1336,3 +1336,13 @@
 - در تست SQL Server resolver پوشش رد مشتری/نصب دیگر، وضعیت Suspended، خارج از بازهٔ اعتبار، کلید لغوشده، subset خارج از entitlement، Sequence تاریخی و رد امضای Provisioning با Sequence قدیمی اضافه شد.
 - E2E دو میزبان نیز اکنون بعد از اولین Export موفق، Sequence جدیدتر صادر می‌کند؛ Export مجدد بستهٔ قدیمی باید 409 بگیرد، ولی فایل قبلاً Exportشده همچنان در Customer آفلاین قابل اعمال است و acknowledgement معتبر می‌تواند جریان را تکمیل کند.
 - اجرای مجدد روی SHA نهایی پس از این اصلاحات هنوز در انتظار CI است؛ شکست‌های runهای قبلی به‌عنوان نتیجهٔ نهایی تلقی نمی‌شوند.
+
+## 2026-10-30 — به‌روزرسانی E2E دو میزبان برای provisioning v4
+
+- آزمون مستقل Vendor Host / Customer Host در شاخهٔ test/issue-235-dual-host-e2e-v4 از قرارداد قدیمی به مدل D-054 ارتقا یافت.
+- یک LicenseEnvelope واقعیِ تستی با کلید ECDSA مستقل از provisioning package و acknowledgement ایجاد می‌شود؛ کلید عمومی از Licensing:TrustedSigningKeys به Vendor تزریق می‌شود و private key فقط در حافظه تست است.
+- آزمون endpoint eligible-licenses را اجرا می‌کند، licenseId و sequence را می‌سنجد، درخواست را فقط با licenseId و subset اختیاری می‌فرستد و payload خروجی را از نظر schemaVersion=4، licenseId و sequence بررسی می‌کند.
+- مرجع تست Vendor Host به Server با alias CustomerServer اضافه شد؛ Vendor CI اکنون SQL Server مستقل Customer را با Require guard اجرا می‌کند.
+- جریان کامل مستقل دو Host، انتقال فایل، رد بسته ناقص/دست‌کاری‌شده، apply هم‌زمان/replay، enrollment واقعی، acknowledgement امضاشده و Confirmed حفظ شده است.
+- این شاخه بر PR #319 بنا شده و به‌صورت stacked PR نگه داشته می‌شود تا E2E v4 از پیاده‌سازی binding مستقل بماند. PR قدیمی #317 تا جایگزینی و تأیید نهایی Merge نمی‌شود.
+- **اعتبارسنجی:** هنوز CI اجرا/تکمیل نشده است؛ هیچ نتیجهٔ موفقی ادعا نمی‌شود. تست دو ماشین/دو OS process و KMS/HSM واقعی همچنان خارج از این آزمون است.
