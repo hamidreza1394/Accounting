@@ -1307,3 +1307,11 @@
 - **PRهای باز #309–#311:** همچنان customer-side Issue #235 و خارج از PR محدود به Vendor هستند؛ هیچ‌کدام در این تغییر ادغام نشدند.
 - **تست محلی:** اجرا نشد؛ همهٔ شواهد بالا از check-runهای واقعی GitHub Actions هستند.
 - **محدودیت‌های Production:** اتصال provisioning به `VendorLicense.Id`/`Sequence` نیازمند تصمیم یک یا چند لایسنس برای هر installation است؛ KMS/HSM واقعی و مقصد مستقل Audit نیز به انتخاب و credential معتبر نیاز دارند.
+
+## 2026-10-30 — Issue #236: جلوگیری از بلعیدن بی‌صدای خطای provisioning signer
+- **یافته:** `VendorProvisioningIssuanceService` exception عمومی provider را بدون ثبت log به 503 عمومی تبدیل می‌کرد. رفتار fail-closed درست بود، اما observability با AGENTS.md/CODING_STANDARDS هم‌خوان نبود.
+- **اصلاح:** exception type-only با `ILogger<VendorProvisioningIssuanceService>` ثبت می‌شود؛ متن استثنا، stack trace، payload، KeyId و signature عمداً log نمی‌شوند. unsuccessful result و metadata نامعتبر نیز warning غیرحساس دارند.
+- **تست regression:** provider آزمایشی بار اول `InvalidOperationException` با متن ساختگی می‌دهد؛ پاسخ HTTP باید همچنان `provisioning_signing_unavailable` باشد، log فقط type را نشان دهد و retry همان approval موفق بماند.
+- **دامنه:** Vendor Host و تست/مستندات Vendor؛ بدون customer-side `Server/**`، schema یا migration.
+- **اعتبارسنجی:** تست محلی اجرا نشده؛ نتیجهٔ نهایی به CI روی PR وابسته است.
+- **Branch/PR:** `fix/vendor-provisioning-signer-exception-logging` / [PR #314](https://github.com/hamidreza1394/Accounting/pull/314).
