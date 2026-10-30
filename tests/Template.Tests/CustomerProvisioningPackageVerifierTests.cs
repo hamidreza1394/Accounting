@@ -163,7 +163,7 @@ public sealed class CustomerProvisioningPackageVerifierTests
             Options.Create(new CustomerProvisioningSettings
             {
                 CustomerReference = customerReference,
-                InstallationId = installationId
+                InstallationId = installationId,
                 CustomerBoundaryId = Guid.NewGuid()
             }),
             TimeProvider.System);
