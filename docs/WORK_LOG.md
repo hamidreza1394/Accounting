@@ -1358,3 +1358,6 @@
 - **Fail-closed:** خطای provider با exception type ثبت می‌شود، اما پیام/جزئیات احتمالی credential یا endpoint در log یا startup exception افشا نمی‌شود؛ startup با پیام ثابت شکست می‌خورد. لغو واقعی startup به‌صورت cancellation باقی می‌ماند.
 - **مرز:** هیچ provider، credential، private key، فایل محلی، fallback به Vendor DB، migration یا تغییر customer DB اضافه نشد. این تغییر جایگزین انتخاب sink، immutability/retention، alerting یا restore drill نیست و checkpoint دوره‌ای را هم تعریف نمی‌کند.
 - **تست محلی:** در این محیط اجرا نشد؛ نتیجهٔ CI روی head نهایی باید بررسی شود.
+
+
+- **بازبینی سخت‌گیرانهٔ DI:** startup guard اکنون دقیقاً یک `IProductionVendorAuditCheckpointStore` می‌خواهد؛ چند adapter مبهم رد می‌شوند. در Program همهٔ ثبت‌های عمومی `IVendorAuditCheckpointStore` قبل از alias کردن marker حذف می‌شوند تا یک store عمومی/آزمایشی نتواند adapter Production را shadow کند. تست رگرسیون برای چند ثبت marker اضافه شد.
