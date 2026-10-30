@@ -1327,3 +1327,13 @@
 - **محدودیت‌های صریح:** MaxCompanies، افزودن زیرسیستم به شرکت موجود و تجمیع چند لایسنس NotImplemented. درخواست‌های v3 backfill نمی‌شوند و Vendor آن‌ها را دوباره امضا/Export نمی‌کند.
 - **کار باقی‌مانده:** اجرای CI؛ رفع خطاهای کامپایل/تست؛ افزودن تست SQL Server برای revalidation در issuance/export؛ هماهنگ‌سازی E2E دو میزبان در PR #317 با API جدید v4 (ساخت لایسنس و انتخاب licenseId)؛ بررسی کلید عمومی واقعی در deployment docs؛ تکمیل handoff و به‌روزرسانی Issue #235.
 - **Branch:** feat/issue-235-single-license-v4 — وضعیت تا CI سبز: Implemented in branch / NotVerified؛ هنوز Merge نشده است.
+
+## 2026-10-30 — به‌روزرسانی E2E دو میزبان برای provisioning v4
+
+- آزمون مستقل Vendor Host / Customer Host در شاخهٔ test/issue-235-dual-host-e2e-v4 از قرارداد قدیمی به مدل D-054 ارتقا یافت.
+- یک LicenseEnvelope واقعیِ تستی با کلید ECDSA مستقل از provisioning package و acknowledgement ایجاد می‌شود؛ کلید عمومی از Licensing:TrustedSigningKeys به Vendor تزریق می‌شود و private key فقط در حافظه تست است.
+- آزمون endpoint eligible-licenses را اجرا می‌کند، licenseId و sequence را می‌سنجد، درخواست را فقط با licenseId و subset اختیاری می‌فرستد و payload خروجی را از نظر schemaVersion=4، licenseId و sequence بررسی می‌کند.
+- مرجع تست Vendor Host به Server با alias CustomerServer اضافه شد؛ Vendor CI اکنون SQL Server مستقل Customer را با Require guard اجرا می‌کند.
+- جریان کامل مستقل دو Host، انتقال فایل، رد بسته ناقص/دست‌کاری‌شده، apply هم‌زمان/replay، enrollment واقعی، acknowledgement امضاشده و Confirmed حفظ شده است.
+- این شاخه بر PR #319 بنا شده و به‌صورت stacked PR نگه داشته می‌شود تا E2E v4 از پیاده‌سازی binding مستقل بماند. PR قدیمی #317 تا جایگزینی و تأیید نهایی Merge نمی‌شود.
+- **اعتبارسنجی:** هنوز CI اجرا/تکمیل نشده است؛ هیچ نتیجهٔ موفقی ادعا نمی‌شود. تست دو ماشین/دو OS process و KMS/HSM واقعی همچنان خارج از این آزمون است.
