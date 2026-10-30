@@ -14,13 +14,14 @@
 - [x] تست Windows CNG در CI با KSP نرم‌افزاری صرفاً به‌عنوان fixture.
 - [ ] اجرای واقعی روی TPM سخت‌افزاری در Windows client و Windows Server.
 - [ ] حداقل نسخه‌های Windows/Server و ماتریس firmware/TPM certification.
-- [ ] فرمان اپراتوری Key Ceremony/Provisioning و ثبت public key در Trust Store مشتری و Vendor.
+- [x] فرمان اپراتوری آفلاین برای ایجاد کلید و خروجی public SPKI اضافه شد؛ ثبت public key در Trust Store مشتری و Vendor هنوز باقی است.
 - [ ] audit durable metadata-only، health/readiness و runbook جزئی Windows.
 - [ ] backend Linux در مرحلهٔ مستقل آینده.
 
 ## خلاصه تغییرات
 - WindowsCngCustomerProvisioningAcknowledgementSigningProvider به interface فعلی ICustomerProvisioningAcknowledgementSigningProvider اضافه شد.
 - WindowsCngCustomerAcknowledgementKeyProvisioner کلید ECDSA P-256 signing-only را با CngExportPolicies.None می‌سازد و فقط public SPKI را تحویل می‌دهد.
+- فرمان dotnet Server.dll --provisioning-ack-key create برای اجرای محلی Ceremony اضافه شد؛ ایجاد کلید مستقل از Enabled است و فرمان هیچ‌گاه runtime signer را فعال نمی‌کند.
 - TPM پیش‌فرض Microsoft Platform Crypto Provider است؛ Microsoft Software Key Storage Provider فقط با انتخاب صریح استفاده می‌شود و تضمین سخت‌افزاری TPM ندارد.
 - DI فقط روی Windows و با Provisioning:CustomerAcknowledgementSigning:Enabled=true provider را فعال می‌کند؛ در سایر حالت‌ها unavailable باقی می‌ماند.
 - CI Windows تست‌های محدود CNG را اجرا می‌کند.
@@ -57,13 +58,13 @@
 - حداقل نسخه‌های Windows/Server هنوز تأیید نشده‌اند؛ CNG/KSP ناموجود باعث fail-closed می‌شود.
 
 ## ریسک‌ها و کارهای باقی‌مانده
-- Provisioner هنوز فرمان console/operator برای اجرای ceremony و توزیع public key ندارد.
+- فرمان Provisioning کلید محلی اضافه شد؛ ثبت/تطبیق public key در Trust Store مشتری و Vendor و روند rotation/revocation هنوز باقی است.
 - Trust Store فعلی از configuration عمومی SPKI استفاده می‌کند؛ فرایند امن و versioned برای ثبت/چرخش/revocation دو سمت باید تکمیل شود.
 - Audit فعلی در این adapter structured application logging است؛ durable metadata-only audit record هنوز باید طراحی/پیاده‌سازی شود.
 - Hardware TPM، ACL واقعی حساب سرویس و بازیابی نصب باید روی Windows Server واقعی آزموده شوند.
 - Linux backend به‌صورت جداگانه در آینده پیاده‌سازی می‌شود.
 
 ## شناسه‌های Git
-- Branch: feat/customer-ack-windows-cng-signer
-- Commit: 5f580178ef47d2f43776a514c949b49ef27a4098 (آخرین تغییرات در زمان ایجاد handoff)
-- Pull Request: در انتظار ایجاد
+- Branch: feat/customer-ack-windows-cng-signer-rebased
+- Commit: پس از آخرین تغییرات PR #347 به‌روزرسانی شود
+- Pull Request: https://github.com/hamidreza1394/Accounting/pull/347
