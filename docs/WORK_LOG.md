@@ -1479,3 +1479,13 @@
 - هیچ endpoint، schema، migration، secret، private key یا دیتابیس مشتری تغییر نکرد. رمز اولیه در Vendor جمع‌آوری/ذخیره نمی‌شود؛ مدیر مشتری در Enrollment امن رمز خود را تعیین می‌کند.
 - handoff: docs/handoffs/ISSUE-228-vendor-onboarding-finalization.md. Issue #228 به‌دلیل HSM واقعی، checkpoint مستقل #107، revocation آفلاین #214 و آزمون میدانی هنوز Production-complete نیست.
 - اجرای محلی انجام نشد؛ .NET CI و Vendor CI و Semgrep باید روی PR اجرا شوند.
+
+
+## 2026-10-30 — Issue #228: ادغام PR #354 و شواهد CI
+
+- PR #354 با merge commit `31f1873ce9f26405beaf773e876bf99155c43fa2` ادغام شد.
+- Vendor CI `41095191395` موفق: typecheck، Vitest، build standalone UI، runtime dependency audit، asset budgets، Restore/Build/Test Vendor، EF snapshot guard، SoftHSM tests، publish و بررسی artifact.
+- .NET CI `41095191238` موفق: secret scan، client، build/test، migration guards، Linux publish، E2E مرورگر، Windows CNG tests و Windows publish.
+- Semgrep `41095191239` و CodeQL `41095184027` موفق شدند.
+- Post-merge CI روی main با SHA `31f1873ce9f26405beaf773e876bf99155c43fa2` در زمان ثبت این یادداشت هنوز در حال اجراست: .NET `41096833025`، Vendor `41096832981`، Semgrep `41096832996`.
+- PR #354 فقط متن داشبورد و آزمون آن را اصلاح کرد؛ هیچ endpoint، schema، migration، secret، private key یا customer DB تغییر نکرد. Issue #228 به‌دلیل HSM واقعی، checkpoint مستقل #107 و revocation آفلاین #214 Production-complete نیست.
