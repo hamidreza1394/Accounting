@@ -1440,5 +1440,5 @@
 
 - شکاف: Trust Store مشتری فقط وجود SPKI را بررسی می‌کرد و راه explicit برای revoke کردن KeyId بدون حذف کلید عمومی نداشت.
 - تغییر: تنظیم `Provisioning:RevokedAcknowledgementKeys:<keyId>=true` اضافه شد؛ کلید revoked حتی با وجود SPKI در trusted set رد می‌شود. overlap rotation با نگه‌داشتن دو public key و revoke نسخه قدیمی پوشش داده شد.
-- تست: unit tests برای key resolution، revoked key و overlap نسخه جدید اضافه شدند. CI باید روی PR نهایی اجرا شود؛ تست محلی اجرا نشده است.
+- تست: unit tests برای key resolution، revoked key، overlap نسخه جدید و مقدار malformed اضافه شدند. مرور اولیه نشان داد `bool.TryParse` نامعتبر را به‌اشتباه مانند «revoked=false» تلقی می‌کرد؛ حالا هر مقدار غیر null که boolean معتبر نباشد fail-closed است. CI باید روی PR نهایی اجرا شود؛ تست محلی اجرا نشده است.
 - محدودیت: این revocation مبتنی بر configuration است و در برابر restore کامل backup/config قدیمی به‌تنهایی anti-rollback مقاوم نیست؛ trust anchor مستقل/rollback-resistant هنوز نیازمند طراحی است.
