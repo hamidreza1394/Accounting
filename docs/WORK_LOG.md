@@ -1249,3 +1249,13 @@
 - Production signing فقط provider واقعی Issue #236؛ fail-closed برقرار می‌ماند.
 - پیشنهاد نوع والد پذیرفته‌شده در D-053: parent یا subsidiary می‌تواند والد مستقیم باشد؛ independent مجاز نیست تا ساختار چندسطحی پشتیبانی شود.
 - وضعیت این ثبت: تصمیم/تهدیدمُدل به‌روزرسانی می‌شود؛ این ثبت به معنی تکمیل کد یا تست نیست.
+
+
+## 2026-10-30 — Issue #235: enforce Vendor-issued parent references
+- **تغییرات:** ParentCompanyReference در قرارداد مشترک و قواعد Vendor فقط GUID canonical با قالب D می‌پذیرد؛ مقایسهٔ GUID case-insensitive است و مقادیر آزاد مانند parent-001 رد می‌شوند.
+- **Customer:** resolver جدید فقط از RequestId به ProvisioningRequestClaim و سپس CompanyId می‌رسد؛ claim باید AppliedAtUtc داشته باشد، CustomerReference و InstallationId دقیقاً منطبق باشند، شرکت فعال باشد و CustomerBoundaryId با تنظیمات نصب برابر باشد. تنظیم CustomerBoundaryId خالی در verifier نیز fail-closed رد می‌شود.
+- **Vendor:** انتخاب‌گر والد فقط درخواست‌های Confirmed با acknowledgement معتبر Applied/AlreadyApplied در همان Customer و Installation را نشان می‌دهد؛ create و issuance هر دو eligibility را server-side بررسی می‌کنند. این بررسی هیچ اتصال مستقیم به دیتابیس مشتری ندارد.
+- **محدودیت:** این slice هنوز apply service را صدا نمی‌زند؛ transactional company/admin/membership/entitlement creation، signed customer acknowledgement، one-time token response/reissue و force-password flow باقی‌اند.
+- **تست‌های اضافه‌شده:** unit tests برای GUID canonical و مقایسهٔ حروف؛ SQL Server integration test برای resolver و مرز مشتری. تست‌ها فقط به مخزن افزوده شده‌اند؛ در این محیط اجرا نشده‌اند.
+- **اعتبارسنجی:** build، unit tests، SQL Server integration، rollback، concurrent replay و E2E اجرا نشده‌اند. checkout محلی به علت خطای DNS برای github.com در دسترس نبود؛ CI روی PR نهایی لازم است.
+- **Git:** branch feat/issue-235-transactional-consumer؛ PR هنوز ساخته نشده؛ هیچ merge انجام نشده است.
