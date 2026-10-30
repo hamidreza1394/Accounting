@@ -76,4 +76,45 @@ describe('Customer provisioning import', () => {
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('شناسه درخواست در بسته معتبر نیست.'));
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+  it('saves the signed acknowledgement as a local file named by the validated request id', async () => {
+    const requestId = 'a0b1c2d3-e4f5-4678-9012-abcdefabcdef';
+    const acknowledgement = { formatVersion: 1, keyId: 'customer-ack-key-1', algorithm: 'ECDSA-P256-SHA256', acknowledgementJson: '{"result":"Applied"}', signatureBase64: 'c2ln' };
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/v1/antiforgery/token') return response({ headerName: 'X-XSRF-TOKEN', requestToken: 'csrf-token' });
+      if (url === '/api/v1/provisioning/apply') return response({ acknowledgement, replayed: false, enrollmentToken: 'one-time-enrollment-secret' });
+      throw new Error(`Unexpected request: ${url}`);
+    }));
+    const blobs: Blob[] = [];
+    const createObjectURL = vi.fn((blob: Blob) => { blobs.push(blob); return 'blob:ack'; });
+    const revokeObjectURL = vi.fn();
+    const originalCreate = URL.createObjectURL;
+    const originalRevoke = URL.revokeObjectURL;
+    URL.createObjectURL = createObjectURL as unknown as typeof URL.createObjectURL;
+    URL.revokeObjectURL = revokeObjectURL as unknown as typeof URL.revokeObjectURL;
+    const downloads: string[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) { downloads.push(this.download); });
+
+    try {
+      render(<CustomerProvisioningImportPage />);
+      const file = new File([JSON.stringify({ formatVersion: 1, keyId: 'vendor-key-1', algorithm: 'ECDSA_P256_SHA256', payloadJson: JSON.stringify({ requestId }), signatureBase64: 'signature' })], 'customer-package.json');
+      fireEvent.change(await screen.findByLabelText(/انتخاب فایل بسته/), { target: { files: [file] } });
+      const submit = screen.getByRole('button', { name: 'اعتبارسنجی و اعمال بسته' });
+      await waitFor(() => expect(submit).toBeEnabled());
+      fireEvent.click(submit);
+
+      fireEvent.click(await screen.findByRole('button', { name: /ذخیرهٔ فایل پاسخ برای ارسال به Vendor/ }));
+
+      expect(downloads).toEqual([`provisioning-acknowledgement-${requestId}.json`]);
+      const saved = blobs[0];
+      if (!saved) throw new Error('No acknowledgement file was created.');
+      const savedText = await saved.text();
+      expect(JSON.parse(savedText)).toEqual(acknowledgement);
+      expect(savedText).not.toContain('one-time-enrollment-secret');
+      expect(revokeObjectURL).toHaveBeenCalledWith('blob:ack');
+    } finally {
+      URL.createObjectURL = originalCreate;
+      URL.revokeObjectURL = originalRevoke;
+    }
+  });
 });

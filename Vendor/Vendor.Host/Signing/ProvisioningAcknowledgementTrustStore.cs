@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Security.Cryptography;
 
 namespace Faranou.Vendor.Host.Signing;
@@ -32,9 +33,7 @@ public sealed class ProvisioningAcknowledgementTrustStore
         var keys = new Dictionary<string, TrustedKey>(StringComparer.Ordinal);
         foreach (var configuredKey in configuredKeys)
         {
-            if (configuredKey is null ||
-                string.IsNullOrWhiteSpace(configuredKey.KeyId) ||
-                configuredKey.KeyId.Length > 128)
+            if (configuredKey is null || !IsValidKeyId(configuredKey.KeyId))
             {
                 throw new InvalidOperationException(
                     "Provisioning acknowledgement trust configuration contains an invalid key ID.");
@@ -100,8 +99,8 @@ public sealed class ProvisioningAcknowledgementTrustStore
     public bool TryGetTrustedPublicKey(string? keyId, out ReadOnlyMemory<byte> subjectPublicKeyInfo)
     {
         subjectPublicKeyInfo = ReadOnlyMemory<byte>.Empty;
-        if (string.IsNullOrWhiteSpace(keyId) ||
-            !_keys.TryGetValue(keyId, out var key) ||
+        if (!IsValidKeyId(keyId) ||
+            !_keys.TryGetValue(keyId!, out var key) ||
             key.Revoked)
         {
             return false;
@@ -110,6 +109,11 @@ public sealed class ProvisioningAcknowledgementTrustStore
         subjectPublicKeyInfo = key.SubjectPublicKeyInfo;
         return true;
     }
+
+    private static bool IsValidKeyId(string? keyId) =>
+        !string.IsNullOrWhiteSpace(keyId) &&
+        keyId.Length <= 128 &&
+        keyId.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_');
 
     private sealed record TrustedKey(byte[] SubjectPublicKeyInfo, bool Revoked);
 }

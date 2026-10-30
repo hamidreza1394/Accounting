@@ -1,7 +1,7 @@
 # تحویل وظیفه — ISSUE-236-provisioning-maker-checker
 
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/236
-- **وضعیت:** پیاده‌سازی اولیه در شاخه؛ منتظر CI و بازبینی امنیتی
+- **وضعیت:** maker-checker و fail-closed signer boundary در main ادغام شده‌اند؛ PR #314 برای ثبت امن خطای provider ادغام شده؛ بررسی رمزنگاری خروجی signer در PR مستقل جدید و منتظر CI است
 
 ## هدف
 افزودن مسیر تأیید دو نفره برای صدور بستهٔ راه‌اندازی مشتری، بدون قراردادن کلید خصوصی در برنامه یا مخزن.
@@ -50,3 +50,28 @@
 - در commit `d30693f649a50edd2f2a493ab3b05648469174a1` fixture طوری اصلاح شد که کد نصب ثابت بماند و آزمون update همچنان نام و محیط نصب را تغییر دهد. اجرای Vendor CI شمارهٔ 40742478715 روی همین SHA موفق شد: typecheck، UI tests، audit وابستگی‌ها، build، تمام تست‌های Vendor روی SQL Server، EF snapshot guard، publish و بررسی نبود کلید خصوصی همگی موفق شدند.
 - اجرای .NET CI روی همین SHA باید تا تکمیل تمام jobها بررسی شود. هر commit مستنداتی بعد از این اجرا نیازمند CI مجدد روی SHA نهایی است.
 - اجرای محلی در محیط فعلی ممکن نبود؛ شواهد اعتبارسنجی از GitHub Actions است.
+
+## 2026-10-30 — ثبت امن شکست provider در Issue #236
+
+- **یافته:** `VendorProvisioningIssuanceService` استثنای provider را بدون logging می‌گرفت و فقط 503 عمومی برمی‌گرداند؛ این با AGENTS.md و Coding Standards در مورد بلعیدن بی‌صدای Exception مغایر بود.
+- **اصلاح:** استثنا با `ILogger<VendorProvisioningIssuanceService>` ثبت می‌شود، اما فقط نوع استثنا؛ message/stack/payload/KeyId/signature log نمی‌شود. نتیجهٔ unsuccessful و metadata نامعتبر نیز با warning غیرحساس ثبت می‌شوند.
+- **تست regression:** provider تستی در اولین فراخوانی exception با متن تشخیصی ساختگی پرتاب می‌کند؛ HTTP همچنان فقط کد عمومی 503 می‌دهد، نوع exception در log دیده می‌شود و متن exception در log دیده نمی‌شود. تلاش دوم همان approval باید موفق شود.
+- **مرز:** فقط Vendor Host، تست integration Vendor و مستندات؛ هیچ تغییر در `Server/**`، دیتابیس مشتری یا Migration انجام نشده است.
+- **اعتبارسنجی:** تست محلی اجرا نشده؛ CI روی PR نهایی لازم است.
+- **Branch:** `fix/vendor-provisioning-signer-exception-logging`؛ PR پس از ایجاد ثبت می‌شود.
+
+## شناسهٔ پیگیری اصلاح observability
+- Branch: `fix/vendor-provisioning-signer-exception-logging`
+- PR: [#314](https://github.com/hamidreza1394/Accounting/pull/314)
+- Head پس از همگام‌سازی main: در CI همین PR بررسی می‌شود.
+
+
+## تأیید کلید عمومی و امضای خروجی Vendor — 2026-10-30
+
+- **یافته:** چک‌کردن طول signature به‌تنهایی اثبات نمی‌کند provider واقعاً payload را با کلید مورد اعتماد امضا کرده است. امضای ۶۴ بایتی تصادفی می‌توانست به `PendingDelivery` برسد و فقط بعداً در نصب مشتری رد شود.
+- **اصلاح:** `ProvisioningPackageSigningTrustStore` با public keyهای مستقل در `ProvisioningSigningTrust:Keys` اضافه شد. قبل از هر تغییر پایدار، امضای ECDSA P-256 روی payload دقیق با کلید فعال trust store تأیید می‌شود. KeyId با قاعدهٔ trust lookup مشتری هم‌تراز شد.
+- **تست regression:** در Integration SQL Server، provider ابتدا exception و در تلاش بعد امضای نامعتبر با طول صحیح برمی‌گرداند؛ هر دو باید 503 بدهند و وضعیت/approval قابل retry بماند؛ تلاش بعدی با امضای معتبر موفق می‌شود. تست واحد trust store نیز موارد duplicate/revoked/unknown/invalid key material را پوشش می‌دهد.
+- **محدوده:** Vendor Host، تست‌های Vendor و مستندات؛ بدون تغییر customer-side، `Server/**` یا Migration.
+- **اعتبارسنجی:** تست محلی اجرا نشده؛ CI روی PR لازم است.
+- **Branch:** `fix/vendor-verify-provisioning-signature`
+- **PR:** پس از ایجاد ثبت می‌شود.

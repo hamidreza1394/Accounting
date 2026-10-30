@@ -223,6 +223,119 @@ describe('Vendor customer provisioning form', () => {
     expect(TestURL.createObjectURL).toHaveBeenCalledOnce();
     expect(click).toHaveBeenCalledOnce();
   });
+  describe('customer acknowledgement file upload', () => {
+    const envelope = {
+      formatVersion: 1, keyId: 'customer-ack-key-1', algorithm: 'ECDSA-P256-SHA256',
+      acknowledgementJson: '{"schemaVersion":1,"result":"Applied"}', signatureBase64: 'c2lnbmF0dXJl',
+    };
+
+    function mockLists(uploadResponse?: () => ReturnType<typeof response>, status = 'PendingDelivery') {
+      const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url === '/api/vendor/installations/?customerId=customer-1&page=1&pageSize=100') {
+          return response({ items: [{ id: 'install-1', installationCode: 'INSTALL-01', name: 'نصب اصلی', status: 'Active' }] });
+        }
+        if (url === '/api/vendor/provisioning-requests?customerId=customer-1&page=1&pageSize=10') {
+          return response({ items: [{
+            id: 'provision-1', requestId: 'a0b1c2d3-e4f5-4678-9012-abcdefabcdef', status,
+            createdAtUtc: '2026-10-28T12:00:00Z', updatedAtUtc: '2026-10-28T12:00:00Z',
+            payloadSha256: 'a'.repeat(64), rowVersion: 'AQIDBAUGBwg=',
+          }] });
+        }
+        if (url === '/api/vendor/provisioning-requests/a0b1c2d3-e4f5-4678-9012-abcdefabcdef/acknowledgement' && init?.method === 'POST' && uploadResponse) {
+          return uploadResponse();
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      });
+      vi.stubGlobal('fetch', fetchMock);
+      vi.stubGlobal('crypto', { randomUUID: vi.fn().mockReturnValue('unused-request-id') });
+      return fetchMock;
+    }
+
+    const label = 'ثبت فایل پاسخ مشتری برای a0b1c2d3-e4f5-4678-9012-abcdefabcdef';
+
+    it('posts the signed file to the machine route without browser antiforgery and reports success', async () => {
+      const fetchMock = mockLists(() => response({ status: 'Confirmed', repeated: false }));
+      render(<ProvisioningForm customerId="customer-1" customerName="مشتری نمونه"
+        onCancel={vi.fn()} onSaved={vi.fn()} canExportPackage />);
+
+      const file = new File([JSON.stringify(envelope)], 'ack.json', { type: 'application/json' });
+      fireEvent.change(await screen.findByLabelText(label), { target: { files: [file] } });
+
+      await screen.findByText(/فایل پاسخ مشتری با کلید مورد اعتماد تأیید و ثبت شد/);
+      const post = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/acknowledgement'));
+      const init = post?.[1] as RequestInit;
+      expect(init.headers).toEqual({ 'Content-Type': 'application/json' });
+      expect(init.cache).toBe('no-store');
+      expect(JSON.parse(String(init.body))).toEqual(envelope);
+    });
+
+    it('says an exact retry was already recorded', async () => {
+      mockLists(() => response({ status: 'Confirmed', repeated: true }));
+      render(<ProvisioningForm customerId="customer-1" customerName="مشتری نمونه"
+        onCancel={vi.fn()} onSaved={vi.fn()} canExportPackage />);
+
+      fireEvent.change(await screen.findByLabelText(label), {
+        target: { files: [new File([JSON.stringify(envelope)], 'ack.json')] },
+      });
+
+      await screen.findByText(/این فایل پاسخ قبلاً ثبت شده بود/);
+    });
+
+    it('maps a rejected signature, an untrusted key and a conflicting second answer to clear messages', async () => {
+      let next: () => ReturnType<typeof response> = () => response({ error: 'provisioning_acknowledgement_signature_invalid' }, 400);
+      mockLists(() => next());
+      render(<ProvisioningForm customerId="customer-1" customerName="مشتری نمونه"
+        onCancel={vi.fn()} onSaved={vi.fn()} canExportPackage />);
+      const input = await screen.findByLabelText(label);
+      const pick = () => fireEvent.change(input, { target: { files: [new File([JSON.stringify(envelope)], 'ack.json')] } });
+
+      pick();
+      await screen.findByText(/امضای فایل پاسخ معتبر نیست/);
+
+      next = () => response({}, 401);
+      pick();
+      await screen.findByText(/در فهرست کلیدهای مورد اعتماد Vendor نیست/);
+
+      next = () => response({ error: 'provisioning_acknowledgement_conflict' }, 409);
+      pick();
+      await screen.findByText(/پاسخ دیگری قبلاً ثبت شده و قابل جایگزینی نیست/);
+    });
+
+    it('rejects a non-JSON file, a wrong structure and an oversized file before any request is sent', async () => {
+      const fetchMock = mockLists(() => response({}));
+      render(<ProvisioningForm customerId="customer-1" customerName="مشتری نمونه"
+        onCancel={vi.fn()} onSaved={vi.fn()} canExportPackage />);
+      const input = await screen.findByLabelText(label);
+
+      fireEvent.change(input, { target: { files: [new File(['not json'], 'ack.json')] } });
+      await screen.findByText('فایل پاسخ مشتری JSON معتبر نیست.');
+
+      fireEvent.change(input, { target: { files: [new File([JSON.stringify({ keyId: 1 })], 'ack.json')] } });
+      await screen.findByText('ساختار فایل پاسخ مشتری معتبر نیست.');
+
+      fireEvent.change(input, { target: { files: [new File(['x'.repeat(64 * 1024 + 1)], 'ack.json')] } });
+      await screen.findByText('حجم فایل پاسخ مشتری بیش از حد مجاز است.');
+
+      expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/acknowledgement'))).toBe(false);
+    });
+
+    it('does not offer the upload without the export permission or before the package is delivered', async () => {
+      mockLists(undefined, 'AwaitingSigner');
+      const { unmount } = render(<ProvisioningForm customerId="customer-1" customerName="مشتری نمونه"
+        onCancel={vi.fn()} onSaved={vi.fn()} canExportPackage />);
+      await screen.findByText('در انتظار پیکربندی امن امضا');
+      expect(screen.queryByLabelText(label)).not.toBeInTheDocument();
+      unmount();
+
+      mockLists();
+      render(<ProvisioningForm customerId="customer-1" customerName="مشتری نمونه"
+        onCancel={vi.fn()} onSaved={vi.fn()} />);
+      await screen.findByText(/آماده تحویل/);
+      expect(screen.queryByLabelText(label)).not.toBeInTheDocument();
+    });
+  });
+
   it('offers only active installations and selects the first active installation by default', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
