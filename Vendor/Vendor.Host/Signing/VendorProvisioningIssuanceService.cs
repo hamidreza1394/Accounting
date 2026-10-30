@@ -82,7 +82,7 @@ public sealed class VendorProvisioningIssuanceService(
 
         if (payload.SchemaVersion != CustomerProvisioningPackageValidator.CurrentPayloadSchemaVersion ||
             !Guid.TryParseExact(payload.LicenseId, "D", out var licenseId) ||
-            payload.Sequence is not int licenseSequence)
+            payload.Sequence is not int)
             return VendorProvisioningIssuanceResult.Conflict("provisioning_license_binding_required");
 
         var licenseBinding = await licenseResolver.ResolveLatestAsync(
