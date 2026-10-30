@@ -5,13 +5,15 @@
 
 ## تغییرات
 - افزودن marker interface با نام IProductionVendorAuditCheckpointStore؛ fake/test storeها نباید آن را پیاده‌سازی کنند مگر در تست صریح.
-- افزودن VendorAuditCheckpointStartupGuard و فراخوانی آن پیش از ساخت Host.
-- در Production، نبود ثبت adapter مستقل باعث شکست startup با پیام صریح می‌شود؛ Development و تست‌ها بدون provider اجرا می‌شوند.
+- افزودن VendorAuditCheckpointStartupGuard و فراخوانی آن پیش از ساخت Host؛ در Production دقیقاً یک marker adapter لازم است.
+- افزودن VendorAuditCheckpointStartupService به‌عنوان IHostedService؛ در Production پیش از readiness، زنجیرهٔ Audit را کامل verify و checkpoint مستقل را read/append می‌کند.
+- خطای read/append یا integrity باعث شکست startup با پیام عمومی می‌شود؛ فقط نوع exception ثبت می‌شود و متن احتمالی شامل endpoint/credential افشا نمی‌شود.
+- Development و تست‌ها بدون resolve کردن provider Production اجرا می‌شوند.
 - تست‌ها حالت Production بدون store، ثبت فقط store عمومی، Development و ثبت adapter production را پوشش می‌دهند.
 
 ## اثر عملیاتی عمدی
 - تا زمانی که provider مستقل واقعی با credential جدا و immutability/retention مناسب ثبت نشود، Vendor در محیط Production شروع به کار نخواهد کرد. این رفتار برای جلوگیری از ادعای امنیت ممیزی بدون checkpoint مستقل عمدی است.
-- این guard صرفاً ثبت نوع production adapter را کنترل می‌کند؛ adapter واقعی باید خودش اتصال، credential، write/read، retention و availability را بررسی کند. Provider هنوز انتخاب/پیکربندی نشده است.
+- guard ثبت marker را کنترل می‌کند و startup probe زنجیره را با checkpoint مستقل می‌سنجد؛ در نبود checkpoint یا پیشروی زنجیره، append واقعی نیز انجام می‌شود. اگر checkpoint موجود دقیقاً current باشد، startup برای آزمایش مصنوعی write یک checkpoint تکراری نمی‌نویسد. بنابراین read path در هر startup بررسی می‌شود و write path هنگام نیاز به append آزموده می‌شود؛ استقلال واقعی failure domain، credential، retention/immutability و alerting همچنان باید در محیط هدف بازبینی شود. Provider هنوز انتخاب/پیکربندی نشده است.
 - هیچ fallback به فایل محلی، Vendor SQL Server یا fake store مجاز نیست.
 
 ## فایل‌های تغییرکرده
