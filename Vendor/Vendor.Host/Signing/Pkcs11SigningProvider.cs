@@ -25,14 +25,27 @@ public sealed class Pkcs11SigningOptions
     public string? ApprovedTokenManufacturer { get; set; }
     public string? ApprovedTokenModel { get; set; }
     public string? UserPin { get; set; }
+    public string AssuranceLevel { get; set; } = string.Empty;
+    public bool AcceptSoftwareKeyRisk { get; set; }
     public Pkcs11SigningKeyOptions LicenseKey { get; set; } = new();
     public Pkcs11SigningKeyOptions ProvisioningKey { get; set; } = new();
 
     /// <summary>
     /// Validates non-secret configuration without exposing PIN values in exceptions or logs.
     /// </summary>
-    public void Validate()
+    public void Validate(bool isProduction = false)
     {
+        if (!string.Equals(AssuranceLevel, "Software", StringComparison.Ordinal) &&
+            !string.Equals(AssuranceLevel, "Hardware", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("Signing assurance level must be explicitly configured as Software or Hardware.");
+        }
+
+        if (isProduction && string.Equals(AssuranceLevel, "Software", StringComparison.Ordinal) && !AcceptSoftwareKeyRisk)
+        {
+            throw new InvalidOperationException("Production software signing requires explicit AcceptSoftwareKeyRisk=true.");
+        }
+
         if (LicenseKey is null || ProvisioningKey is null)
         {
             throw new InvalidOperationException("Separate license and provisioning signing key identifiers are required.");
@@ -198,7 +211,7 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
 
     private IPkcs11Library LoadLibrary()
     {
-        _options.Validate();
+        _options.Validate(_environment.IsProduction());
         var factories = new Pkcs11InteropFactories();
         return factories.Pkcs11LibraryFactory.LoadPkcs11Library(
             factories,
@@ -303,8 +316,13 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
             return selected;
         }
 
-        // Production/Staging accept only an explicitly allowlisted hardware token, never a soft token.
         var slotInfo = selected.GetSlotInfo();
+        if (string.Equals(_options.AssuranceLevel, "Software", StringComparison.Ordinal))
+        {
+            return slotInfo.SlotFlags.HardwareSlot ? null : selected;
+        }
+
+        // Hardware assurance requires an explicitly allowlisted physical token.
         var selectedTokenInfo = selected.GetTokenInfo();
         if (!slotInfo.SlotFlags.HardwareSlot ||
             string.IsNullOrWhiteSpace(_options.ApprovedTokenManufacturer) ||
@@ -526,15 +544,21 @@ public sealed class Pkcs11ProvisioningSigningProvider : Pkcs11SigningProviderBas
 }
 
 /// <summary>Readiness probe for the configured PKCS#11 module and both purpose-separated keys.</summary>
-public sealed class Pkcs11SigningHealthCheck(IPkcs11SigningModule module) : IHealthCheck
+public sealed class Pkcs11SigningHealthCheck(
+    IPkcs11SigningModule module,
+    IOptions<Pkcs11SigningOptions> options) : IHealthCheck
 {
     public async Task<HealthCheckResult> CheckHealthAsync(
         HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
         var available = await module.IsAvailableAsync(cancellationToken).ConfigureAwait(false);
+        var data = new Dictionary<string, object>
+        {
+            ["assuranceLevel"] = options.Value.AssuranceLevel
+        };
         return available
-            ? HealthCheckResult.Healthy()
-            : HealthCheckResult.Unhealthy("PKCS#11 signing provider is unavailable.");
+            ? HealthCheckResult.Healthy("PKCS#11 signing provider is available.", data)
+            : HealthCheckResult.Unhealthy("PKCS#11 signing provider is unavailable.", data: data);
     }
 }
