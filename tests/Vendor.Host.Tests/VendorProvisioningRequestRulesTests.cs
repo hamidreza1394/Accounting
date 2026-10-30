@@ -198,7 +198,9 @@ public sealed class VendorProvisioningRequestRulesTests
             request.FiscalPeriodStartDate,
             request.FiscalPeriodEndDate,
             request.ParentCompanyReference,
-            request.InitialAdminEmail);
+            request.InitialAdminEmail,
+            request.LicenseId.ToString("D"),
+            7);
 
         Assert.False(VendorProvisioningRequestRules.MatchesExisting(
             payload, request with { CompanyName = "Different Company" }, "customer-001", "install-001",
