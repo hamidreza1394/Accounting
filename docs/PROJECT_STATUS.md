@@ -4,7 +4,7 @@
 - PR #359 (D-056 software signing assurance) ادغام شده است؛ SoftHSM برای Development/Staging پذیرفته شده است.
 - PR #360 (runtime staged signing assurance) در 2026-10-30T19:14:22Z با merge commit `53b19e84a065a85de5434a695812e700622d128b` ادغام شد؛ .NET CI، Vendor CI، Semgrep و PR workflow روی HEAD موفق بودند.
 - PR #361 (Development/Test-only audit checkpoint file journal) باز است؛ adapter محلی هرگز Production sink نیست.
-- PR #362 (offline revocation consumer contract) باز است؛ هنوز durable customer persistence و اتصال به مسیر واقعی ارزیابی لایسنس باقی است.
+- PR #362 (offline revocation consumer) باز است؛ resolver مستقل، اعمال اتمیک sequence، وضعیت سه‌حالته `Unavailable/NotRevoked/Revoked` و `RevocationAwareLicenseEnvelopeValidator` اضافه شده‌اند. هنوز durable customer persistence و registration/use در runtime واقعی مشتری و trust anchor ضد rollback باقی است.
 - Issue #107 همچنان به provider مستقل Production، credential separation، retention/immutability، alerting و recovery نیاز دارد.
 - Issue #214 همچنان به پیاده‌سازی durable state store سمت مشتری، enforcement واقعی و محافظت در برابر restore backup قدیمی نیاز دارد.
 - Issueهای #228 و #235 تا تکمیل اتصال عملیاتی Provisioning/ACK و آزمون‌های لازم باز می‌مانند.
