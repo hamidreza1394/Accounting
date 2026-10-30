@@ -159,11 +159,13 @@ public sealed class WindowsCngCustomerProvisioningAcknowledgementSigningProvider
         if (!OperatingSystem.IsWindows() || !_options.Enabled)
             return Task.FromResult(Unavailable());
 
-        var keyId = SafeKeyId();
+        var keyId = "unconfigured";
         try
         {
             WindowsCngCustomerAcknowledgementKeyProvisioner.ValidateOptions(
                 _options, _customerSettings.InstallationId, requireEnabled: true);
+            keyId = WindowsCngCustomerAcknowledgementKeyProvisioner.GetKeyId(
+                _customerSettings.InstallationId, _options.KeyVersion);
 
             var keyName = WindowsCngCustomerAcknowledgementKeyProvisioner.GetKeyName(
                 _customerSettings.InstallationId, _options.KeyVersion);
@@ -204,19 +206,6 @@ public sealed class WindowsCngCustomerProvisioningAcknowledgementSigningProvider
                 keyId,
                 exception.GetType().Name);
             return Task.FromResult(Unavailable());
-        }
-    }
-
-    private string SafeKeyId()
-    {
-        try
-        {
-            return WindowsCngCustomerAcknowledgementKeyProvisioner.GetKeyId(
-                _customerSettings.InstallationId, _options.KeyVersion);
-        }
-        catch (ArgumentException)
-        {
-            return "unconfigured";
         }
     }
 
