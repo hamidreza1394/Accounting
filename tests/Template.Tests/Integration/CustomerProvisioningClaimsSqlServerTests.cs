@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using Faranou.Licensing.Contracts;
 using Infrastructure.Provisioning;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Infrastructure.Security;
 using Domain;
@@ -343,6 +344,23 @@ public sealed class CustomerProvisioningClaimsSqlServerTests
                 out var ackError), ackError);
             Assert.Equal("Applied", ack!.Result);
 
+            // Before the enrollment the initial administrator has no usable session or sign-in, even
+            // if a credential were somehow known (defense in depth; the provisioned one is random).
+            var pendingAdmin = await database.Users.SingleAsync(
+                item => item.Username == payload.InitialAdminUserName, TestContext.Current.CancellationToken);
+            Assert.False(await SessionIsValidAsync(database, pendingAdmin.Id, pendingAdmin.Password));
+
+            var authentication = new AuthenticationService(
+                database, Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance,
+                new Infrastructure.Settings.ApplicationSettings(), passwordHasher);
+            pendingAdmin.Password = passwordHasher.Hash("Known-Pending-Password-1");
+            var knownPendingHash = pendingAdmin.Password;
+            await database.SaveChangesAsync(TestContext.Current.CancellationToken);
+            var pendingLogin = await authentication.AuthenticateAsync(
+                payload.InitialAdminUserName, "Known-Pending-Password-1", "127.0.0.1");
+            Assert.Equal(LoginOutcome.InvalidCredentials, pendingLogin.Outcome);
+            Assert.False(await SessionIsValidAsync(database, pendingAdmin.Id, pendingAdmin.Password));
+
             var reissued = await service.ReissueEnrollmentTokenAsync(
                 Guid.Parse(payload.RequestId), "delivery_lost", null, TestContext.Current.CancellationToken);
             Assert.True(reissued.Success);
@@ -367,6 +385,14 @@ public sealed class CustomerProvisioningClaimsSqlServerTests
                 item => item.RequestId == Guid.Parse(payload.RequestId), TestContext.Current.CancellationToken);
             Assert.False(consumedClaim.MustChangePassword);
             Assert.NotNull(consumedClaim.EnrollmentConsumedAtUtc);
+
+            // After the enrollment the restriction is lifted: sign-in works with the new credential,
+            // its session is valid, and a session of the previous credential is not.
+            var completedLogin = await authentication.AuthenticateAsync(
+                payload.InitialAdminUserName, "Strong-Passphrase-2026", "127.0.0.1");
+            Assert.Equal(LoginOutcome.Succeeded, completedLogin.Outcome);
+            Assert.True(await SessionIsValidAsync(database, admin.Id, admin.Password));
+            Assert.False(await SessionIsValidAsync(database, admin.Id, knownPendingHash));
 
             var replayed = await service.ApplyAsync(package, TestContext.Current.CancellationToken);
             Assert.True(replayed.Success);
@@ -506,6 +532,27 @@ public sealed class CustomerProvisioningClaimsSqlServerTests
             Assert.NotNull(good.Acknowledgement);
             Assert.Equal(1, await database.Companies.CountAsync(TestContext.Current.CancellationToken));
         });
+    }
+
+    private static async Task<bool> SessionIsValidAsync(
+        Data.DatabaseContext database, Guid userId, string storedCredential)
+    {
+        using var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection()
+            .AddSingleton(database)
+            .BuildServiceProvider();
+        var principal = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(
+            [
+                new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, userId.ToString()),
+                new System.Security.Claims.Claim(
+                    Infrastructure.Tenancy.CompanyAccessService.AccountKindClaimType,
+                    Infrastructure.Tenancy.CompanyAccessService.UserAccountKind),
+                new System.Security.Claims.Claim(
+                    SessionValidator.CredentialStampClaimType,
+                    SessionValidator.ComputeCredentialStamp(storedCredential)),
+            ],
+            "Cookies"));
+        return await SessionValidator.IsSessionValidAsync(
+            principal, services, TestContext.Current.CancellationToken);
     }
 
     private sealed class TestAcknowledgementSigner(ECDsa key, string keyId = "customer-ack-test-key")
