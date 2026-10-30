@@ -1525,3 +1525,10 @@
 - تست پیش از اصلاح: CI شکست خورد با سه خطای CS1503 در تبدیل method group به `System.Action`.
 - تست پس از اصلاح: در انتظار CI روی commit جدید؛ اجرای محلی در این نشست انجام نشده است.
 - هیچ migration، schema، customer DB، secret یا کلید خصوصی تغییر نکرد.
+
+
+## 2026-10-30 — Issue #236 / PR #360: پوشش آزمون startup assurance
+- سه تست برای مسیر startup افزوده شد: ثبت رخداد metadata-only در Production با پذیرش ریسک Software، شکست startup در صورت شکست Audit، و عدم نیاز Development/Staging به sink ممیزی Production.
+- فایل: `tests/Vendor.Host.Tests/Pkcs11SigningProviderTests.cs`.
+- Commitهای تغییر: `be3836209bafd1fb8152b7e1d1a0635702c49a62` و `30da154a30350656d2c7b1f3a84a9ce81a5b8572`.
+- وضعیت: تست‌ها به CI سپرده شده‌اند؛ اجرای محلی انجام نشده و تا مشاهدهٔ نتیجهٔ CI، Verified نیستند.
