@@ -1,3 +1,17 @@
+# وضعیت اجرایی مرحلهٔ اول — به‌روزرسانی 2026-10-30
+
+- PR #358 (Enrollment password flow) ادغام شده است؛ تصمیم نهایی رمز مدیر در Enrollment ثبت شده و الزام تغییر رمز در اولین ورود superseded است.
+- PR #359 (D-056 software signing assurance) ادغام شده است؛ SoftHSM برای Development/Staging پذیرفته شده است.
+- PR #360 (runtime staged signing assurance) باز است؛ خطای قبلی CS1503 در commitهای اصلاحی برطرف شده و CI نهایی روی HEAD جاری هنوز در حال اجراست. این PR تا تکمیل E2E و انتشار Windows نباید Merge شود.
+- PR #361 (Development/Test-only audit checkpoint file journal) باز است؛ adapter محلی هرگز Production sink نیست.
+- PR #362 (offline revocation consumer contract) باز است؛ هنوز durable customer persistence و اتصال به مسیر واقعی ارزیابی لایسنس باقی است.
+- Issue #107 همچنان به provider مستقل Production، credential separation، retention/immutability، alerting و recovery نیاز دارد.
+- Issue #214 همچنان به پیاده‌سازی durable state store سمت مشتری، enforcement واقعی و محافظت در برابر restore backup قدیمی نیاز دارد.
+- Issueهای #228 و #235 تا تکمیل اتصال عملیاتی Provisioning/ACK و آزمون‌های لازم باز می‌مانند.
+- اجرای واقعی روی دو میزبان، Staging نهایی و recovery drill در انتهای مرحلهٔ اول انجام می‌شود؛ CI و تست خودکار هر PR همچنان الزامی‌اند.
+
+---
+
 # وضعیت جاری Vendor و شکاف‌های وابسته — 2026-10-30
 
 **مبنای بازبینی:** شاخه `main`، SHA `78afd4dc3ea02a9816e9e72a3d7d24b969a034dd` (پس از ادغام PRهای #344، #349، #351، #352، #353، #354 و #356).
@@ -22,7 +36,7 @@
 
 - مالک معماری deployment-neutral را پذیرفته است: Vendor روی سرور اختصاصی یا cloud قابل میزبانی است؛ دسترسی/مجوز Azure و AWS وجود ندارد؛ بودجهٔ فعلی HSM صفر است.
 - D-055 در main پذیرفته شده است؛ Runbook عملیاتی HSM/TPM در PR #341 و Vendor PKCS#11 adapter در PR #344 ادغام شدند. Adapter پشت interfaceهای موجود برای license و provisioning/package قرار دارد؛ کلیدها KeyId نسخه‌دار مجزا دارند، private-key object باید non-extractable باشد، و امضا ECDSA P-256/IEEE P1363 است.
-- SoftHSM فقط در محیط اختصاصی Testing مجاز است؛ در Development/Staging/Production، slot سخت‌افزاری و manufacturer/model allowlist‌شده لازم است. تست integration SoftHSM و تمام CIهای PR #344 موفق شدند.
+- مطابق تصمیم پذیرفته‌شده D-056 و PR #359، SoftHSM برای Development و Staging مجاز است. سطح اطمینان `Software|Hardware` باید صریح باشد؛ در Production سطح Software فقط با `AcceptSoftwareKeyRisk=true` و رخداد ممیزی در هر startup مجاز است. در نبود این پذیرش، startup fail-closed می‌ماند. HSM سخت‌افزاری واقعی شرط مرحلهٔ ۲ است، نه مانع تکمیل کد مرحلهٔ ۱.
 - با بودجهٔ صفر و نبود HSM واقعی، Signing:Pkcs11:Enabled در Production نباید فعال شود؛ providerهای پیش‌فرض unavailable/fail-closed باقی می‌مانند و صدور Production باید 503 بدهد.
 - **Customer ACK ویندوز:** PR #349 در main ادغام شده است؛ Windows CNG با KeyName/KeyId مشتق‌شده از InstallationId+KeyVersion، فرمان محلی `dotnet Server.dll --provisioning-ack-key create` و کلید ECDSA P-256 non-exportable اضافه شده است. TPM KSP پیش‌فرض است؛ Software KSP فقط با انتخاب صریح و بدون fallback خودکار مجاز است. PR #351 فیلتر تست را اصلاح کرد و تست‌های CNG واقعاً روی Windows CI اجرا و موفق شدند. این شواهد TPM فیزیکی یا سازگاری تمام نسخه‌های Windows/Server را اثبات نمی‌کند. Provider opt-in است و trust enrollment، durable audit/readiness و آزمون سخت‌افزار واقعی هنوز لازم‌اند. PR #352 ابطال صریح KeyId در Trust Store مشتری، حفظ SPKI برای audit، رد مقدار revocation نامعتبر و overlap چرخش کلید را اضافه کرده است؛ این ابطال config-based است و در برابر restore کامل backup ضد rollback نیست.
 
@@ -36,7 +50,7 @@
 - **قرارداد و entitlement:** PR #319 و D-054، schema v4 را به یک `VendorLicense.Id` و Sequence آخرین envelope امضاشده متصل می‌کنند؛ canonical v1-v3 حفظ شده است. انتخاب زیرسیستم از entitlement تأییدشدهٔ لایسنس می‌آید، نه ورودی قابل‌اعتماد فرض‌شده از مرورگر.
 - **مصرف‌کنندهٔ مشتری:** PRهای #302، #305، #306 و #307، trust store مستقل، verifier fail-closed، claim/replay یکتا، اعمال تراکنشی شرکت/دوره مالی/مدیر/عضویت و مجوزهای allow-list شده، enrollment یک‌بارمصرف و مسیر acknowledgement را اضافه کرده‌اند.
 - **ورود مدیر اولیه:** PR #308 ورود و ایجاد نشست را تا تکمیل Enrollment رد می‌کند. رمز توسط خود مدیر در Enrollment تعیین می‌شود؛ در این قرارداد رمز موقت قابل‌استفاده‌ای برای «تغییر در اولین ورود» صادر نمی‌شود.
-- **تفاوت D-053 که نیازمند تصمیم مالک است:** متن بند ۹ از تغییر رمز اجباری در اولین ورود می‌گوید؛ پیاده‌سازی فعلی رمز را در Enrollment تعیین می‌کند و پس از آن `MustChangePassword=false` است. تا پیش از Enrollment ورود و نشست ممنوع است، اما تغییر رمز پس از اولین login وجود ندارد. این رفتار باید صریحاً به‌عنوان جایگزین پذیرفته شود یا در PR جداگانه تکمیل شود؛ انطباق کامل ADR ادعا نمی‌شود.
+- **تصمیم نهایی Enrollment — PR #358:** مدیر اولیه رمز واقعی خود را در Enrollment تعیین می‌کند؛ تا تکمیل Enrollment ورود و ایجاد نشست مسدود است. پس از Enrollment الزام تغییر رمز در اولین ورود وجود ندارد و `MustChangePassword=false` عمدی است. این تصمیم جایگزین الزام قدیمی D-053 دربارهٔ تغییر رمز در اولین ورود شده است.
 - **دریافت acknowledgement در Vendor:** PR #293 اعتبارسنجی امضا و bindingهای درخواست، digest/idempotency و ثبت تراکنشی نتیجه را اضافه کرده؛ PR #294 نتیجه را در تاریخچه Provisioning نمایش می‌دهد.
 - **تست دو میزبان:** PR #329 دو TestServer مستقل را با دو اتصال SQL Server و دیتابیس مجزا اجرا می‌کند؛ بسته و acknowledgement از طریق فایل منتقل می‌شوند؛ دستکاری/کلید ناشناخته/فایل ناقص، replay و درخواست هم‌زمان، enrollment یک‌بارمصرف و Confirmed فقط پس از acknowledgement معتبر پوشش داده می‌شوند.
 - **اصلاح خطای ورودی HTTP:** PR #318 خطای JSON ناقص/بزرگ را به پاسخ عمومی با status صحیح تبدیل کرده است.
