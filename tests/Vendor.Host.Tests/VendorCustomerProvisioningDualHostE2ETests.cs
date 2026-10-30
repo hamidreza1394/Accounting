@@ -593,7 +593,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 tamperedAcknowledgement["signatureBase64"] =
                     (signature[0] == 'A' ? "B" : "A") + signature[1..];
                 using (var invalidAcknowledgement = await vendorClientPostAcknowledgementAsync(
-                    vendorFactory, provisioningRecordId, tamperedAcknowledgement.ToJsonString(), cancellationToken))
+                    vendorFactory, requestId, tamperedAcknowledgement.ToJsonString(), cancellationToken))
                 {
                     Assert.Equal(HttpStatusCode.BadRequest, invalidAcknowledgement.StatusCode);
                 }
@@ -606,7 +606,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 }
 
                 using (var acknowledgementResponse = await vendorClientPostAcknowledgementAsync(
-                    vendorFactory, provisioningRecordId, acknowledgementFromOfflineFile, cancellationToken))
+                    vendorFactory, requestId, acknowledgementFromOfflineFile, cancellationToken))
                 {
                     Assert.Equal(HttpStatusCode.OK, acknowledgementResponse.StatusCode);
                     using var json = JsonDocument.Parse(
@@ -616,7 +616,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 }
 
                 using (var exactAcknowledgementRetry = await vendorClientPostAcknowledgementAsync(
-                    vendorFactory, provisioningRecordId, acknowledgementFromOfflineFile, cancellationToken))
+                    vendorFactory, requestId, acknowledgementFromOfflineFile, cancellationToken))
                 {
                     Assert.Equal(HttpStatusCode.OK, exactAcknowledgementRetry.StatusCode);
                     using var json = JsonDocument.Parse(
@@ -750,7 +750,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
 
     private static async Task<HttpResponseMessage> vendorClientPostAcknowledgementAsync(
         WebApplicationFactory<Program> factory,
-        Guid provisioningRecordId,
+        Guid requestId,
         string acknowledgementJson,
         CancellationToken cancellationToken)
     {
@@ -761,7 +761,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
         });
         using var request = new HttpRequestMessage(
             HttpMethod.Post,
-            $"/api/vendor/provisioning-requests/{provisioningRecordId:D}/acknowledgement")
+            $"/api/vendor/provisioning-requests/{requestId:D}/acknowledgement")
         {
             Content = new StringContent(acknowledgementJson, Encoding.UTF8, "application/json")
         };
