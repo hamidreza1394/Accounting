@@ -101,6 +101,7 @@ public static class VendorProvisioningRequestRules
         ArgumentNullException.ThrowIfNull(licenseBinding);
 
         return licenseBinding.Succeeded &&
+               string.Equals(request.LicenseId.ToString("D"), licenseBinding.LicenseId, StringComparison.OrdinalIgnoreCase) &&
                string.Equals(existing.RequestId, request.RequestId.ToString("D"), StringComparison.OrdinalIgnoreCase) &&
                string.Equals(existing.CustomerReference, customerReference, StringComparison.Ordinal) &&
                string.Equals(existing.InstallationId, installationId, StringComparison.Ordinal) &&
