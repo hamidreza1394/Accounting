@@ -6,6 +6,7 @@ using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Domain;
 using Faranou.Vendor.Host.Signing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http;
 
 namespace Faranou.Vendor.Host.Authorization;
 
