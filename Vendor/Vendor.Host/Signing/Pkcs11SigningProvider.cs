@@ -296,7 +296,7 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
         }
 
         var selected = matchingSlots[0];
-        if (_environment.IsDevelopment() || _environment.IsEnvironment("Testing"))
+        if (_environment.IsEnvironment("Testing"))
         {
             return selected;
         }
