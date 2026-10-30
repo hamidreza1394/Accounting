@@ -1269,3 +1269,8 @@
 - **محدودیت force-password:** فرم enrollment رمز اولیه را پیش از اولین ورود عادی تعیین می‌کند و MustChangePassword را پس از آن false می‌کند. محدودسازی نشست و اجبار تغییر مجدد رمز در اولین login هنوز پیاده‌سازی نشده و معیار پذیرش باز است؛ این محدودیت در PR #307 شفاف شده است.
 - **تست:** تست SQL Server برای apply، signed acknowledgement، replay، reissue، ابطال token قبلی، مصرف یک‌بار، hash-only و عدم ایجاد گروه اضافه شده است. این تست‌ها در این نشست اجرا نشده‌اند؛ rollback و concurrent replay نیز اجرا نشده‌اند.
 - **CI:** اجرای اول PR #307 شکست کامپایل داشت: namespace مربوط به VendorProvisioningParentReferenceRules در IssuanceService وارد نشده بود. using اصلاح شد. اجرای جدید روی head جاری در زمان ثبت این log: secret-scan موفق؛ build-and-test، client، publish-scripts و Semgrep هنوز queued/in_progress. اجرای نهایی هنوز سبز نیست.
+
+## 2026-10-30 — Issue #235: first-login/enrollment guard for the provisioned administrator
+- **ممیزی:** مدیر اولیه با رمز تصادفیِ ناشناخته ساخته می‌شود و رمز واقعی را فقط در Enrollment تعیین می‌کند؛ پس «تغییر رمز در اولین ورود» از قبل ساختاری برقرار بود. معیار باز قبلی («محدودسازی نشست») به‌صورت لایهٔ دفاعی بسته شد.
+- **تغییر:** `SessionValidator` نشست کاربری را که claim با `MustChangePassword=true` دارد رد می‌کند؛ `AuthenticationService` ورود چنین کاربری را حتی با رمز درست با پاسخ عمومی `InvalidCredentials` رد و رویداد `LoginDeniedEnrollmentPending` را ثبت می‌کند (بدون افزایش شمارندهٔ قفل). بدون Schema/Migration/endpoint جدید.
+- **تست:** واحد (نشست و ورود) و SQL Server واقعی در مسیر apply ← reissue ← enrollment؛ اجرای کامل Template.sln: 660 کل، 658 موفق، 2 skipped، 0 ناموفق. بازبینی مستقل Subagent اجرا نشد. جزئیات: `docs/handoffs/ISSUE-235-first-login-enrollment-guard.md`.
