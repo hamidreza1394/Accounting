@@ -103,14 +103,24 @@ public static class SessionValidator
 			return false;
 		}
 
+		// One round trip: besides the account itself, the same query reports whether the
+		// account is the initial administrator of a provisioning request whose one-time
+		// enrollment is not completed (see ProvisioningRequestClaim.MustChangePassword).
 		var account = await databaseContext.Users
 			.AsNoTracking()
 			.Where(user => user.Id == userId.Value)
-			.Select(user => new { user.IsActive, user.Password })
+			.Select(user => new
+			{
+				user.IsActive,
+				user.Password,
+				EnrollmentPending = databaseContext.ProvisioningRequestClaims
+					.Any(claim => claim.AdminUserId == user.Id && claim.MustChangePassword),
+			})
 			.FirstOrDefaultAsync(cancellationToken);
 
 		return account is not null
 			&& account.IsActive
+			&& !account.EnrollmentPending
 			&& FixedTimeEquals(stamp, ComputeCredentialStamp(account.Password));
 	}
 

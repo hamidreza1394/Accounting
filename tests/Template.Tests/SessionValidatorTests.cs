@@ -97,6 +97,57 @@ public sealed class SessionValidatorTests
 	}
 
 	[Fact]
+	public async Task AnInitialAdministratorWithAPendingEnrollment_HasNoValidSession_UntilTheEnrollmentIsCompleted()
+	{
+		var (services, database) = CreateServices();
+		var user = AddUser(database, "hash-1");
+		var claim = new Domain.ProvisioningRequestClaim
+		{
+			RequestId = Guid.NewGuid(),
+			AdminUserId = user.Id,
+			MustChangePassword = true,
+		};
+		database.ProvisioningRequestClaims.Add(claim);
+		database.SaveChanges();
+
+		var principal = Principal("User", "session-user", user.Id,
+			Infrastructure.Security.SessionValidator.ComputeCredentialStamp("hash-1"));
+
+		Assert.False(await Infrastructure.Security.SessionValidator.IsSessionValidAsync(principal, services, default));
+
+		// The enrollment finishes: the flag is cleared and the credential changes, so a session of
+		// the new credential is valid while the stamp of the old (unknown) credential stays invalid.
+		claim.MustChangePassword = false;
+		user.Password = "hash-2";
+		database.SaveChanges();
+
+		Assert.False(await Infrastructure.Security.SessionValidator.IsSessionValidAsync(principal, services, default));
+		Assert.True(await Infrastructure.Security.SessionValidator.IsSessionValidAsync(
+			Principal("User", "session-user", user.Id,
+				Infrastructure.Security.SessionValidator.ComputeCredentialStamp("hash-2")),
+			services, default));
+	}
+
+	[Fact]
+	public async Task APendingEnrollmentOfAnotherUser_DoesNotAffectThisUsersSession()
+	{
+		var (services, database) = CreateServices();
+		var user = AddUser(database, "hash-1");
+		database.ProvisioningRequestClaims.Add(new Domain.ProvisioningRequestClaim
+		{
+			RequestId = Guid.NewGuid(),
+			AdminUserId = Guid.NewGuid(),
+			MustChangePassword = true,
+		});
+		database.SaveChanges();
+
+		Assert.True(await Infrastructure.Security.SessionValidator.IsSessionValidAsync(
+			Principal("User", "session-user", user.Id,
+				Infrastructure.Security.SessionValidator.ComputeCredentialStamp("hash-1")),
+			services, default));
+	}
+
+	[Fact]
 	public async Task ASessionOfAnEarlierRelease_WithoutAStamp_MustSignInAgain()
 	{
 		var (services, database) = CreateServices();
