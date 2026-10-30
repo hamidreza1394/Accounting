@@ -480,6 +480,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     requestId = Guid.NewGuid(),
                     customerId,
                     installationId = otherInstallationIdForProvisioning,
+                    licenseId = provisioningLicenseId,
                     companyName = "Provisioning Integration Company",
                     companyType = "independent",
                     initialAdminUserName = "initial-admin",
