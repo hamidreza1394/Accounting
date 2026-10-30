@@ -1532,3 +1532,26 @@
 - فایل: `tests/Vendor.Host.Tests/Pkcs11SigningProviderTests.cs`.
 - Commitهای تغییر: `be3836209bafd1fb8152b7e1d1a0635702c49a62` و `30da154a30350656d2c7b1f3a84a9ce81a5b8572`.
 - وضعیت: تست‌ها به CI سپرده شده‌اند؛ اجرای محلی انجام نشده و تا مشاهدهٔ نتیجهٔ CI، Verified نیستند.
+14: offline revocation consumer contract
+- قرارداد مصرف‌کنندهٔ سمت مشتری اضافه شد: resolver مستقل کلید ابطال، state store با عملیات atomic compare-and-apply، snapshot digest و sequence high-water mark.
+- `OfflineRevocationConsumer` قبل از apply امضا/زمان/ساختار snapshot را با کلید مستقل verify می‌کند؛ replay و race هم‌زمان باید در مرز atomic store رد شوند.
+- API خواندن وضعیت ابطال (`IsRevokedAsync`) برای اتصال به مسیر enforcement ارائه شد.
+- تست‌ها: اعمال snapshot معتبر، replay، کلید ناشناخته و دو درخواست هم‌زمان برای یک sequence.
+- محدودیت صریح: هنوز adapter پایدار مشتری، اتصال به مسیر واقعی LicenseEnvelopeValidator/LicenseEvaluator و مقابله با restore دیتابیس قدیمی پیاده نشده؛ هیچ customer DB migration ایجاد نشده است.
+- اجرای محلی .NET در این نشست در دسترس نیست؛ نتیجهٔ CI معیار تأیید است.
+
+
+### تکمیل fail-closed در بررسی وضعیت ابطال (#214)
+- بررسی ابطال دیگر `false` را برای نبود snapshot برنمی‌گرداند؛ نتیجه سه‌حالته `Unavailable/NotRevoked/Revoked` اضافه شد.
+- تاریخ انقضای snapshot در state نگهداری می‌شود؛ snapshot غایب یا منقضی‌شده `Unavailable` است و مصرف‌کننده باید fail-closed عمل کند.
+- تست‌های نبود snapshot و انقضای snapshot اضافه شدند. CI روی HEAD جدید باید این تغییرات را تأیید کند.
+
+
+### اتصال قرارداد ابطال به ارزیابی مجوز (#214)
+- `RevocationAwareLicenseEnvelopeValidator` اضافه شد: ابتدا امضای لایسنس و InstallationId را با `LicenseEnvelopeValidator` بررسی می‌کند، سپس وضعیت ابطال را می‌سنجد.
+- مجوز revoked با `license_revoked` رد می‌شود؛ نبود snapshot یا snapshot منقضی با `offline_revocation_unavailable` fail-closed می‌شود؛ فقط snapshot معتبر و current که شناسه را در فهرست ندارد اجازه عبور می‌دهد.
+- سه تست regression برای snapshot غایب، مجوز خارج از فهرست و مجوز باطل‌شده افزوده شد.
+- این adapter هنوز به runtime customer host متصل نشده و state store پایدار هم پیاده نشده؛ این PR قرارداد اتصال را آماده می‌کند، نه ادعای enforcement production.
+
+
+- تست‌های ترکیبی pipeline در همان فایل `tests/Licensing.Contracts.Tests/OfflineRevocationConsumerTests.cs` قرار گرفتند تا قرارداد consumer و validator در یک مجموعه تست هم‌خوان بمانند.
