@@ -313,11 +313,14 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
         return privateKey;
     }
 
-    private static void ValidateRequestedKey(Pkcs11SigningKeyOptions key)
+    private void ValidateRequestedKey(Pkcs11SigningKeyOptions key)
     {
         ArgumentNullException.ThrowIfNull(key);
-        if (string.IsNullOrWhiteSpace(key.KeyId))
-            throw new InvalidOperationException("PKCS#11 signing KeyId is not configured.");
+        if (!string.Equals(key.KeyId, _options.LicenseKey.KeyId, StringComparison.Ordinal) &&
+            !string.Equals(key.KeyId, _options.ProvisioningKey.KeyId, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("PKCS#11 signing KeyId is not configured for an approved Vendor signing purpose.");
+        }
     }
 
     public void Dispose()
