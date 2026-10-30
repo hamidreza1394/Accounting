@@ -43,6 +43,9 @@ public sealed record CustomerProvisioningApplyResult(
     CustomerProvisioningAcknowledgementEnvelope? Acknowledgement,
     string? EnrollmentToken);
 
+public sealed record CustomerProvisioningEnrollmentResult(bool Success, string? ErrorCode);
+public sealed record CustomerProvisioningTokenReissueResult(bool Success, string? ErrorCode, string? EnrollmentToken);
+
 /// <summary>
 /// Applies a verified provisioning package in one customer-database transaction.
 /// Raw enrollment tokens exist only in memory until the successful response is returned.
@@ -266,6 +269,120 @@ public sealed class CustomerProvisioningApplyService
         return new CustomerProvisioningApplyResult(true, false, null, signedAcknowledgement, enrollmentToken);
     }
 
+    public async Task<CustomerProvisioningTokenReissueResult> ReissueEnrollmentTokenAsync(
+        Guid requestId,
+        string reasonCode,
+        string? remoteIpAddress,
+        CancellationToken cancellationToken)
+    {
+        if (requestId == Guid.Empty ||
+            reasonCode is not ("delivery_lost" or "expired" or "suspected_exposure"))
+            return new CustomerProvisioningTokenReissueResult(false, "enrollment_reissue_invalid", null);
+
+        await using var transaction = await _database.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable, cancellationToken);
+        var claim = await _database.ProvisioningRequestClaims
+            .SingleOrDefaultAsync(item => item.RequestId == requestId, cancellationToken);
+        if (claim is null || !claim.MustChangePassword || claim.EnrollmentConsumedAtUtc is not null)
+            return new CustomerProvisioningTokenReissueResult(false, "enrollment_reissue_not_allowed", null);
+
+        var token = CreateOpaqueSecret();
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        claim.EnrollmentTokenHash = HashHex(token);
+        claim.EnrollmentExpiresAtUtc = now.Add(EnrollmentLifetime);
+        _database.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
+        {
+            TenantId = claim.CompanyId,
+            EventType = "ProvisioningEnrollmentTokenReissued",
+            EntityType = "ProvisioningRequestClaim",
+            EntityId = claim.Id.ToString("D"),
+            OccurredAtUtc = now,
+            IpAddress = NormalizeIp(remoteIpAddress),
+            DetailsJson = JsonSerializer.Serialize(new { reasonCode })
+        });
+
+        await _database.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return new CustomerProvisioningTokenReissueResult(true, null, token);
+    }
+
+    public async Task<CustomerProvisioningEnrollmentResult> CompleteEnrollmentAsync(
+        string? username,
+        string? enrollmentToken,
+        string? newPassword,
+        string? remoteIpAddress,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(username) || username.Length > 64 ||
+            string.IsNullOrWhiteSpace(enrollmentToken) || enrollmentToken.Length != 43 ||
+            enrollmentToken.Any(character => !(char.IsAsciiLetterOrDigit(character) || character is '-' or '_')) ||
+            string.IsNullOrWhiteSpace(newPassword) || newPassword.Length is < 12 or > 128 ||
+            newPassword.Any(char.IsControl))
+            return new CustomerProvisioningEnrollmentResult(false, "enrollment_invalid");
+
+        await using var transaction = await _database.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable, cancellationToken);
+        var user = await _database.Users.SingleOrDefaultAsync(
+            item => item.Username == username, cancellationToken);
+        if (user is null || !user.IsActive)
+            return new CustomerProvisioningEnrollmentResult(false, "enrollment_invalid");
+
+        var claim = await _database.ProvisioningRequestClaims
+            .SingleOrDefaultAsync(item => item.AdminUserId == user.Id && item.MustChangePassword, cancellationToken);
+        if (claim is null || claim.EnrollmentConsumedAtUtc is not null)
+            return new CustomerProvisioningEnrollmentResult(false, "enrollment_invalid");
+
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        if (claim.EnrollmentExpiresAtUtc <= now)
+            return new CustomerProvisioningEnrollmentResult(false, "enrollment_expired");
+
+        var recentFailures = await _database.SecurityAuditEvents.AsNoTracking()
+            .CountAsync(audit => audit.EventType == "ProvisioningEnrollmentFailed" &&
+                audit.EntityType == "ProvisioningRequestClaim" &&
+                audit.EntityId == claim.Id.ToString("D") &&
+                audit.OccurredAtUtc >= now.AddMinutes(-15), cancellationToken);
+        if (recentFailures >= 5)
+            return new CustomerProvisioningEnrollmentResult(false, "enrollment_rate_limited");
+
+        var suppliedHash = HashHex(enrollmentToken);
+        if (!FixedHashEquals(claim.EnrollmentTokenHash, suppliedHash))
+        {
+            _database.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
+            {
+                TenantId = claim.CompanyId,
+                EventType = "ProvisioningEnrollmentFailed",
+                EntityType = "ProvisioningRequestClaim",
+                EntityId = claim.Id.ToString("D"),
+                OccurredAtUtc = now,
+                IpAddress = NormalizeIp(remoteIpAddress),
+                DetailsJson = "{\"reasonCode\":\"invalid_token\"}"
+            });
+            await _database.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return new CustomerProvisioningEnrollmentResult(false, "enrollment_invalid");
+        }
+
+        claim.EnrollmentConsumedAtUtc = now;
+        claim.MustChangePassword = false;
+        user.Password = _passwordHasher.Hash(newPassword);
+        user.SetUpdateDateTime();
+        _database.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
+        {
+            UserId = user.Id,
+            TenantId = claim.CompanyId,
+            EventType = "ProvisioningEnrollmentCompleted",
+            EntityType = "ProvisioningRequestClaim",
+            EntityId = claim.Id.ToString("D"),
+            OccurredAtUtc = now,
+            IpAddress = NormalizeIp(remoteIpAddress),
+            DetailsJson = "{\"passwordSet\":true}"
+        });
+
+        await _database.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return new CustomerProvisioningEnrollmentResult(true, null);
+    }
+
     private async Task<CustomerProvisioningApplyResult> StoreRejectedAcknowledgementAsync(
         CustomerProvisioningPayload payload,
         string payloadHash,
@@ -365,6 +482,25 @@ public sealed class CustomerProvisioningApplyService
 
     private static CustomerProvisioningApplyResult Failure(string errorCode) =>
         new(false, false, errorCode, null, null);
+
+    private static bool FixedHashEquals(string storedHash, string suppliedHash)
+    {
+        if (storedHash.Length != 64 || suppliedHash.Length != 64)
+            return false;
+        try
+        {
+            return CryptographicOperations.FixedTimeEquals(
+                Convert.FromHexString(storedHash),
+                Convert.FromHexString(suppliedHash));
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+    }
+
+    private static string? NormalizeIp(string? value) =>
+        System.Net.IPAddress.TryParse(value, out var address) ? address.ToString() : null;
 
     private static string HashHex(string value) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
