@@ -112,6 +112,34 @@ public sealed class ProvisioningAcknowledgementSqlServerIntegrationTests
             }
 
             using var client = factory.CreateClient();
+
+            // A trusted signer must not be able to persist free-form diagnostic text or PII
+            // in the Vendor failureCode column. The package remains pending and retryable.
+            var unapprovedErrorEnvelope = CreateEnvelope(
+                signingKey, requestId, nonce, payloadHash, customerReference, installationCode,
+                "Rejected", now, "SqlException: database unavailable for admin@example.com");
+            using (var rejectedResponse = await client.PostAsJsonAsync(
+                $"/api/vendor/provisioning-requests/{requestId:D}/acknowledgement",
+                unapprovedErrorEnvelope,
+                cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.BadRequest, rejectedResponse.StatusCode);
+            }
+
+            await using (var unchangedScope = factory.Services.CreateAsyncScope())
+            {
+                var db = unchangedScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var unchanged = await db.ProvisioningRequests.SingleAsync(
+                    item => item.RequestId == requestId.ToString("D"), cancellationToken);
+                Assert.Equal("PendingDelivery", unchanged.Status);
+                Assert.Null(unchanged.AcknowledgementSha256);
+                Assert.Null(unchanged.AcknowledgementResult);
+                Assert.Null(unchanged.FailureCode);
+                Assert.Empty(await db.AuditEvents
+                    .Where(auditEvent => auditEvent.ActionCode.StartsWith("vendor.provisioning.acknowledgement-"))
+                    .ToListAsync(cancellationToken));
+            }
+
             var appliedEnvelope = CreateEnvelope(
                 signingKey, requestId, nonce, payloadHash, customerReference, installationCode, "Applied", now);
             using var firstResponse = await client.PostAsJsonAsync(
@@ -188,7 +216,8 @@ public sealed class ProvisioningAcknowledgementSqlServerIntegrationTests
         string customerReference,
         string installationCode,
         string result,
-        DateTimeOffset processedAtUtc)
+        DateTimeOffset processedAtUtc,
+        string? errorCode = null)
     {
         var acknowledgement = new CustomerProvisioningAcknowledgement(
             CustomerProvisioningAcknowledgementValidator.CurrentSchemaVersion,
@@ -199,7 +228,7 @@ public sealed class ProvisioningAcknowledgementSqlServerIntegrationTests
             installationCode,
             result,
             processedAtUtc,
-            result == "Rejected" ? "customer_validation_failed" : null);
+            result == "Rejected" ? errorCode ?? "provisioning_parent_reference_invalid" : null);
         var acknowledgementJson = CustomerProvisioningAcknowledgementValidator.Serialize(acknowledgement);
         var signature = signingKey.SignData(
             Encoding.UTF8.GetBytes(acknowledgementJson),

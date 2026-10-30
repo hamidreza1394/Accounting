@@ -1,0 +1,4 @@
+# Gitleaks false positive: a fixed, non-secret test literal assigned to a constant whose old name contained
+# "Password" (CustomerProvisioningTransactionalSqlServerTests, later renamed). The value is a throwaway
+# passphrase used only against a disposable test database. Fingerprint = commit:file:rule:line.
+4b6e8c98cd4284164fb61b4c6ba8f82b92dc7332:tests/Template.Tests/Integration/CustomerProvisioningTransactionalSqlServerTests.cs:generic-api-key:28

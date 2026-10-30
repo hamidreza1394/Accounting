@@ -1,3 +1,5 @@
+
+
 # گزارش کار و تحویل Agentها
 
 > گزارش‌ها را به انتهای فایل اضافه کن؛ سابقه قبلی را حذف یا بازنویسی نکن.
@@ -1284,3 +1286,35 @@
 - **باگ یافته و رفع‌شده:** Deadlock (1205) در درخواست‌های هم‌زمان تکراری apply/enrollment → خطای مدیریت‌نشده. رفع با `sp_getapplock` تراکنشی؛ تست‌ها پیش از رفع شکست خوردند و پس از رفع سه بار پشت‌سرهم موفق بودند. کل Template.sln: 664 کل، 662 موفق، 2 skipped، 0 ناموفق.
 - **انجام نشد:** E2E خودکار دو-میزبانه (Vendor + مشتری)؛ دلیل در handoff. جزئیات: `docs/handoffs/ISSUE-235-provisioning-e2e-tests.md`.
 
+
+## 2026-10-30 — Issue #235: first-login/enrollment guard for the provisioned administrator
+- **ممیزی:** مدیر اولیه با رمز تصادفیِ ناشناخته ساخته می‌شود و رمز واقعی را فقط در Enrollment تعیین می‌کند؛ پس «تغییر رمز در اولین ورود» از قبل ساختاری برقرار بود. معیار باز قبلی («محدودسازی نشست») به‌صورت لایهٔ دفاعی بسته شد.
+- **تغییر:** `SessionValidator` نشست کاربری را که claim با `MustChangePassword=true` دارد رد می‌کند؛ `AuthenticationService` ورود چنین کاربری را حتی با رمز درست با پاسخ عمومی `InvalidCredentials` رد و رویداد `LoginDeniedEnrollmentPending` را ثبت می‌کند (بدون افزایش شمارندهٔ قفل). بدون Schema/Migration/endpoint جدید.
+- **تست:** واحد (نشست و ورود) و SQL Server واقعی در مسیر apply ← reissue ← enrollment؛ اجرای کامل Template.sln: 660 کل، 658 موفق، 2 skipped، 0 ناموفق. بازبینی مستقل Subagent اجرا نشد. جزئیات: `docs/handoffs/ISSUE-235-first-login-enrollment-guard.md`.
+
+
+## 2026-10-30 — بازآشتی وضعیت Vendor پس از PR #281 و mergeهای بعدی
+- **مبنای بازبینی:** `main` در SHA `a5db9e3f3a04ebdb8cafd0f5f02767cdaa3f36f6`.
+- **PR #281:** در `2ee1edc52904833bc28eead5a679185377363c24` ادغام شد. snapshot بعدی PR #285 وضعیت پس از #284 را ثبت کرد؛ این ثبت، وضعیت را تا #308 دوباره تطبیق می‌دهد.
+- **mergeهای واقعی پس از #281:** #282 `f4a0462b0972e7686a686eca0febfaee680baecf`; #283 `95a098895056a1fe34348fac93091bf2f82780b4`; #284 `81ed5f64ed86ebbae47a433cea63e3655cb1d24b`; #285 `7abb33128c29f8eacbac67285e6acfd898c9af0b`; #286 `c139818e181db7cd37c47d9a82fae6449088663f`; #287 `d74ca15a517ddbb72d8711b55b0379381ecc34dd`; #288 `211b43d0c0792e52276e278faf9cb1e040ca55ca`; #289 `8a81f2d7cda38e08a4b43a1d1ddad1704fbff9e3`; #290 `50d6977d7452b4ee2879c2379140ebbce3e455b9`; #291 `8f12a38ee7bc15634f3aa559176948b1fb66b5f1`; #292 `a3690a567c692292d899bc26f968a093b7ba20cb`; #293 `2884c61ade381670f754a1b8027c496a6e8eb7b2`; #294 `07dc0a4f1f784dfd2800fb8da12a70f05b67a862`; #295 `9d09944af559b68dc331d37816c7db8dad68f5b1`; #296 `d1987fd37c2aeac1039cc6f05ff5f500801d42bf`; #297 `341e19a8cb93953dd9be6e9257f9ad504fcf96f6`; #298 `f9a2adf0ef20ff23e77ffef0cc0075e28e9e9555`; #299 `89ffada5d9f317ddbe9a1e379d23650409c7f3ee`; #300 `0ba6a8862001a838884abfa15394e83d21625f75`; #301 `5cbd224e594dcbb72a7ac04866b7abdd68954c0dd`; #302 `4c259280c40af7037901e9cb6f33c64206dbdaeb`; #304 `56e1f66132bbd0a8a193f27853c7220ebc76fa48`; #305 `769e0b8cce1da1b80e702427cd843999f98898ec`; #306 `ac3d481cf8d8091bd139295a9423aa30e0011fb7`; #307 `1bbcc6f45342111f7582ba0f59418f224b2ba618`; #308 `a5db9e3f3a04ebdb8cafd0f5f02767cdaa3f36f6`. PR #303 بسته شد و ادغام نشد.
+- **CI روی main:** .NET CI `41014946317` با تمام jobهای build/test، client، publish Linux/Windows، E2E، secret scan و publish scripts موفق؛ Semgrep `41014946340` و Push on main `41014946368` موفق. Vendor CI آخرین بار روی SHA `1bbcc6f...` با run `41010924327` موفق بود؛ برای SHA فعلی پس از PR #308 اجرای Vendor CI جداگانه وجود ندارد.
+- **PR #282 پس از merge:** run `40843073694` بخشی از jobها را موفق و build-and-test/e2e/publishها را cancelled ثبت کرد. rerun job build نیز لغو شد. اجرای کامل .NET CI و Vendor CI روی descendant SHA ادغام PR #284 موفق شد؛ این شاهد تغییرات #282 را در بر می‌گیرد، ولی run کامل روی SHA دقیق #282 نیست.
+- **PR #284:** ترتیب مجوزدهی target پیش از بررسی RowVersion/status در endpoint تصمیم approval، با تست رگرسیون، در main است؛ Vendor CI `40845416309`، .NET CI `40845416352`، Semgrep `40845416374` و Push on main `40845416241` موفق‌اند.
+- **شکست‌های تاریخی شاخهٔ customer-side #235:** در SHAهای superseded، build به علت shadow شدن `System.Convert` و ناسازگاری نوع آرگومان‌ها شکست خورد؛ یک اجرای client به علت نبودن فایل component در همان commit و اجرای بعدی به علت عدم تطابق متن label تست شکست خورد. اجرای دیگر شش تست verifier را به علت fixture بدون trust/installation settings و خطای `provisioning_consumer_not_configured` شکست داد. این موارد در head نهایی #307 با .NET CI `41010026198`، Vendor CI `41010026058` و Semgrep `41010026110` موفق شدند؛ #308 نیز روی head نهایی با .NET CI `41014003705` و Semgrep `41014003694` موفق شد. این اصلاحات customer-side هستند و در این PR Vendor تغییر داده نمی‌شوند.
+- **PRهای باز در زمان بازبینی:** #309، #310 و #311 همگی customer-side Issue #235 هستند؛ در این شاخه دست‌کاری یا merge نمی‌شوند.
+- **شکاف تصمیمی #228:** زیرسیستم‌ها در payload provisioning قرار می‌گیرند، اما اتصال قطعی آن‌ها به sequence/payload یک لایسنس صادرشده در Vendor contract موجود نیست؛ تعیین مدل یک/چند لایسنس برای نصب و binding آن باید جداگانه روشن شود.
+
+## 2026-10-30 — Issue #228: محدودسازی کد خطای acknowledgement در Vendor
+- **یافته:** قرارداد acknowledgement امضا را بررسی و binding درخواست را تأیید می‌کرد، اما Vendor هر `ErrorCode` متنی تا 128 نویسه را در نتیجهٔ `Rejected` می‌پذیرفت. امضای معتبر اصالت فرستنده را ثابت می‌کند، نه اینکه متن error فاقد PII، stack trace یا diagnostics باشد.
+- **اصلاح:** `ProvisioningAcknowledgementStateRules` فقط دو کد ثابت فعلی consumer یعنی `provisioning_parent_reference_invalid` و `provisioning_initial_admin_conflict` را می‌پذیرد. کد ناشناخته fail-closed رد می‌شود و transition/ack metadata/audit commit نمی‌شود.
+- **تست رگرسیون:** unit tests برای دو کد مجاز و متن آزاد/کد ناشناخته/PII-like؛ SQL Server integration test برای پاسخ 400 و باقی‌ماندن درخواست در `PendingDelivery` بدون ack digest یا audit.
+- **دامنه:** فقط Vendor Host، تست‌های Vendor و مستندات؛ هیچ تغییر در `Server/**`، customer schema یا migration انجام نشد.
+- **اعتبارسنجی:** تست محلی اجرا نشده؛ PR و CI لازم است. وضعیت این تغییر `Implemented / Not Verified` تا سبز شدن بررسی‌های الزامی است.
+- **Branch / PR:** `fix/vendor-acknowledgement-error-code-allowlist` / [PR #312](https://github.com/hamidreza1394/Accounting/pull/312).
+
+
+## 2026-10-30 — رفع یافتهٔ Gitleaks در تست provisioning (#235)
+- **شاهد شکست:** .NET CI run `41021431573` روی head قبلی PR #309 در job `secret-scan` شکست خورد؛ Gitleaks مقدار ثابت password-like را در fixture تست `CustomerProvisioningTransactionalSqlServerTests.cs` شناسایی کرد. این مقدار فقط دادهٔ آزمایشی بود و هیچ credential عملیاتی/مشتری نبود، اما نگه‌داشتن literal ثابت در repository غیرضروری و خلاف hardening بود.
+- **اصلاح:** مقدار ثابت حذف شد؛ رمزهای موردنیاز تست با `RandomNumberGenerator.GetBytes(32)` به‌صورت runtime و per-test تولید می‌شوند. تست همچنان بررسی می‌کند رمز و enrollment token در audit ذخیره نشده‌اند.
+- **دامنه:** فقط تست و handoff/work log در شاخهٔ مستقل Issue #235؛ بدون تغییر Vendor، دیتابیس مشتری، migration یا secret configuration.
+- **اعتبارسنجی:** Gitleaks روی SHA قبلی ناموفق بود؛ اجرای CI روی commit اصلاحی در انتظار است. هیچ نتیجهٔ سبزی برای SHA جدید ادعا نمی‌شود.
