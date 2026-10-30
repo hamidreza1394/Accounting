@@ -185,6 +185,16 @@ public static class VendorProvisioningEndpoints
             if (!VendorProvisioningRequestRules.IsTargetActive(customer.Status, installation.Status))
                 return Results.Conflict(new { error = "provisioning_target_inactive" });
 
+            var requestId = request.RequestId.ToString("D");
+            var existing = await db.ProvisioningRequests.AsNoTracking()
+                .SingleOrDefaultAsync(item => item.RequestId == requestId, ct);
+            if (existing is not null)
+            {
+                return IsSameRequest(existing, request, customer.CustomerNumber, installation.InstallationCode)
+                    ? Results.Ok(ToResponse(existing))
+                    : Results.Conflict(new { error = "provisioning_request_id_conflict" });
+            }
+
             if (string.Equals(request.CompanyType?.Trim(), "subsidiary", StringComparison.Ordinal) &&
                 !await VendorProvisioningParentReferenceRules.IsEligibleParentAsync(
                     db,
@@ -197,16 +207,6 @@ public static class VendorProvisioningEndpoints
                     ct))
             {
                 return Results.Conflict(new { error = "provisioning_parent_reference_invalid" });
-            }
-
-            var requestId = request.RequestId.ToString("D");
-            var existing = await db.ProvisioningRequests.AsNoTracking()
-                .SingleOrDefaultAsync(item => item.RequestId == requestId, ct);
-            if (existing is not null)
-            {
-                return IsSameRequest(existing, request, customer.CustomerNumber, installation.InstallationCode)
-                    ? Results.Ok(ToResponse(existing))
-                    : Results.Conflict(new { error = "provisioning_request_id_conflict" });
             }
 
             var actor = await users.GetUserAsync(context.User);
