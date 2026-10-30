@@ -48,7 +48,7 @@ describe('Vendor customer provisioning form', () => {
     await waitFor(() => expect(screen.getByLabelText('نصب مقصد')).toHaveValue('install-1'));
     await waitFor(() => expect(screen.getByLabelText('لایسنس صادرشده')).toHaveValue('license-1'));
     expect(screen.getByLabelText('نوع شرکت')).toHaveValue('independent');
-    expect(screen.getByLabelText('مالی')).toBeChecked();
+    await waitFor(() => expect(screen.getByLabelText('مالی')).toBeChecked());
 
     fireEvent.change(screen.getByLabelText('نام شرکت حسابداری'), { target: { value: 'شرکت حسابداری نمونه' } });
     fireEvent.change(screen.getByLabelText('نام کاربری مدیر اولیه'), { target: { value: 'initial-admin' } });
@@ -122,6 +122,7 @@ describe('Vendor customer provisioning form', () => {
       onCancel={vi.fn()} onSaved={vi.fn()} />);
     await waitFor(() => expect(screen.getByLabelText('نصب مقصد')).toHaveValue('install-1'));
     await waitFor(() => expect(screen.getByLabelText('لایسنس صادرشده')).toHaveValue('license-1'));
+    await waitFor(() => expect(screen.getByLabelText('مالی')).toBeChecked());
     fireEvent.change(screen.getByLabelText('نوع شرکت'), { target: { value: 'subsidiary' } });
     expect(screen.getByLabelText('شرکت مادر تأییدشده در همین نصب')).toBeRequired();
     await screen.findByRole('option', { name: /شرکت مادر نمونه/ });
