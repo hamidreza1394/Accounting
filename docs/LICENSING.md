@@ -23,8 +23,8 @@
 | جزء | توضیح | وضعیت |
 |---|---|---|
 | سامانه مرکزی فروشنده (Vendor Control Plane) | Host و پایهٔ persistence/Identity/audit مستقل در حال پیاده‌سازی مرحله‌ای؛ login/MFA، bootstrap، RBAC، مشتری/قرارداد، سرویس ممیزی، maker-checker و صدور/تمدید هنوز پیاده‌سازی کامل نشده‌اند | `Partially Implemented`; schema فقط پس از CI موفق روی migration ثبت‌شده `Verified` است |
-| سرویس صدور | امضای لایسنس با کلید خصوصی در محیط امن فروشنده | `NotImplemented` |
-| `Licensing.Contracts` | قرارداد نسخه‌دار آفلاین، مدل درخواست/پاسخ و اعتبارسنجی | `Implemented`؛ تست‌های قرارداد در CI اجرا می‌شوند. یکپارچه‌سازی کامل با Vendor و برنامهٔ مشتری `NotImplemented` است |
+| سرویس صدور Vendor | workflow دو نفره، ذخیرهٔ envelope و sequence در تراکنش Vendor پیاده‌سازی شده؛ provider واقعی KMS/HSM هنوز unavailable/fail-closed است | `Partially Implemented / NotProductionReady` |
+| `Licensing.Contracts` | قرارداد امضاشدهٔ لایسنس و provisioning؛ payload provisioning v1-v4 با canonical سازگار | `Implemented` در source؛ binding v4 و CI شاخهٔ #235 هنوز `NotVerified` |
 | ماژول لایسنس نصب | ورود فایل، ذخیره، ارزیابی وضعیت، ممیزی، محدودسازی سمت سرور | `NotImplemented` |
 | نمایش در React | فقط بازتاب وضعیت از API؛ منبع تصمیم نیست | `NotImplemented` |
 
@@ -67,3 +67,16 @@
 ## ۷) مرحله‌بندی پیشنهادی پیاده‌سازی
 
 تصمیم‌های OD-01/02/12 پذیرفته شده‌اند؛ گام L1 قرارداد در PR #82 ادغام شده است. تصمیم‌های مسدودکننده OD-07/09/11 در D-046 پذیرفته شده‌اند؛ گام بعدی طراحی/پیاده‌سازی کنترل‌شده L2 در Issue #83 است. پس از آن، مراحل مستقل: (۱) ماژول نصب با ارزیابی و ممیزی; (۲) نقطه مشترک سیاست Authorization و بررسی سقف شرکت; (۳) حالت محدودشده و خروجی; (۴) سامانه فروشنده و سرویس صدور; (۵) حذف کد مرده Activation (D-028). هیچ‌کدام از قابلیت‌های اجرایی لایسنس در حال حاضر فعال نیستند.
+
+
+## ۸) اتصال Provisioning به یک لایسنس (D-054، Issue #228/#235)
+
+- هر درخواست جدید باید به یک LicenseId و آخرین Sequence امضاشدهٔ همان لایسنس متصل باشد؛ چندلایسنس/تجمیع entitlement پشتیبانی نمی‌شود.
+- ورودی کلاینت فقط licenseId و زیرمجموعهٔ اختیاری زیرسیستم‌ها است. Vendor entitlementهای اصلی را از آخرین LicenseEnvelope معتبر و امضاشده استخراج می‌کند؛ کلاینت نمی‌تواند فهرست entitlement یا sequence را تعیین کند.
+- Vendor در زمان ایجاد درخواست، امضای Provisioning و Export دوباره، وضعیت Issued، Customer/Installation، تاریخ اعتبار، کلید عمومی مورد اعتماد، امضای envelope و Sequence آخر را دوباره بررسی می‌کند.
+- payload schema v4 شامل licenseId و sequence است. canonical نسخه‌های v1-v3 بدون تغییر باقی می‌ماند و verifier مشتری آن‌ها را می‌پذیرد. درخواست قدیمی v3 backfill یا به لایسنس حدس‌زده متصل نمی‌شود؛ Vendor آن را دوباره امضا/Export نمی‌کند.
+- کلید عمومی اعتبارسنجی envelope لایسنس از پیکربندی مستقل Licensing:TrustedSigningKeys می‌آید؛ کلید خصوصی فقط در signer خارجی قرار می‌گیرد. نبود/لغو کلید عمومی به معنی رد fail-closed است.
+- **MaxCompanies: NotImplemented.** تا ایجاد شمارش/رزرو اتمیک و مرجع authoritative برای شرکت‌های نصب آفلاین، هیچ enforcement یا تضمینی ادعا نمی‌شود.
+- افزودن زیرسیستم به شرکت موجود و تجمیع چند لایسنس نیز NotImplemented است.
+- **محدودیت آفلاین:** بسته‌ای که قبلاً Export شده، تعلیق یا Sequence جدیدتر Vendor را در نصب کاملاً آفلاین کشف نمی‌کند. این محدودیت در D-054 پذیرفته و باید در قرارداد/عملیات به‌روشنی اعلام شود.
+- وضعیت پیاده‌سازی این دامنه در شاخه feat/issue-235-single-license-v4 است؛ تا CI سبز و Merge، NotVerified باقی می‌ماند.
