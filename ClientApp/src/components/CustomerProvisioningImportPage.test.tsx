@@ -45,7 +45,9 @@ describe('Customer provisioning import', () => {
     render(<CustomerProvisioningImportPage />);
     const file = new File([JSON.stringify(packageDocument)], 'customer-package.json', { type: 'application/json' });
     fireEvent.change(await screen.findByLabelText('انتخاب فایل بستهٔ JSON'), { target: { files: [file] } });
-    fireEvent.click(screen.getByRole('button', { name: 'اعتبارسنجی و اعمال بسته' }));
+    const submit = screen.getByRole('button', { name: 'اعتبارسنجی و اعمال بسته' });
+    await waitFor(() => expect(submit).toBeEnabled());
+    fireEvent.click(submit);
 
     await screen.findByText('one-time-enrollment-secret');
     const applyCall = fetchMock.mock.calls.find(([url]) => String(url) === '/api/v1/provisioning/apply');
