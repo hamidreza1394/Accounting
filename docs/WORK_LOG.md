@@ -1386,3 +1386,11 @@
 - D-055 به وضعیت Accepted تغییر کرد. معماری deployment-neutral است و هیچ Azure/AWS adapter ساخته نمی‌شود.
 - توسعهٔ adapter PKCS#11 و تست‌های CI با SoftHSM (صرفاً تست) مجاز است؛ Production signing برای بسته و لایسنس تا تأمین HSM واقعی همچنان Blocked و fail-closed می‌ماند. SoftHSM یا software key جایگزین Production نیست.
 - ACK هر نصب فقط با TPM/OS secure store غیرقابل‌استخراج فعال می‌شود؛ نبود backend امن به معنی fail-closed است.
+
+
+## 2026-10-30 — Issue #236: Runbook عملیات HSM/TPM
+
+- Runbook مستقل برای Key Ceremony، کنترل دو نفره، نقش‌های HSM Custodian/Runtime، کلیدهای مجزای package/license و ACK نصب مشتری، CKAهای لازم، PIN/secret handling، rotation overlap، revocation، compromise response، Backup/Recovery، health/alerting و صورت‌جلسه اضافه شد.
+- رویهٔ ACK مشتری صریحاً offline و per-installation است؛ TPM/OS secure store باید non-exportable بودن را اثبات کند و در فقدان آن fail-closed می‌ماند.
+- Runbook به سازنده یا cloud خاص وابسته نیست و هیچ private-key export یا software fallback را مجاز نمی‌کند.
+- وضعیت اجرایی: بودجهٔ HSM صفر و HSM واقعی provision نشده؛ بخش Vendor HSM runbook فعلاً غیرقابل اجراست. SoftHSM صرفاً Testing/CI است.
