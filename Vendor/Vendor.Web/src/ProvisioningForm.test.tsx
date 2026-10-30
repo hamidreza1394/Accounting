@@ -136,6 +136,8 @@ describe('Vendor customer provisioning form', () => {
       String(url) === '/api/vendor/provisioning-requests/' && init?.method === 'POST');
     const body = JSON.parse(String((post?.[1] as RequestInit).body)) as Record<string, unknown>;
     expect(body).toMatchObject({
+      licenseId: 'license-1',
+      subsystems: null,
       companyType: 'subsidiary',
       parentCompanyReference: 'a0b1c2d3-e4f5-4678-9012-abcdefabcdef',
       fiscalPeriodTitle: 'سال مالی ۱۴۰۵',
