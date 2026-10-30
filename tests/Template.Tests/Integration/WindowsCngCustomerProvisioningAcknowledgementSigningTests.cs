@@ -115,6 +115,58 @@ public sealed class WindowsCngCustomerProvisioningAcknowledgementSigningTests
     }
 
     [Fact]
+    public async Task MissingTpmKey_DoesNotFallBackToAnOsSoftwareKeyWithTheSameName()
+    {
+        Assert.SkipWhen(!OperatingSystem.IsWindows(), "Windows CNG is available only on Windows.");
+
+        var suffix = Guid.NewGuid().ToString("N");
+        var keyName = "Faranou.Tests.NoFallback." + suffix;
+        var softwareOptions = new WindowsCngCustomerAcknowledgementSigningOptions
+        {
+            Enabled = true,
+            ProviderName = SoftwareKsp,
+            KeyName = keyName,
+            KeyId = "customer-ack-test-" + suffix + "-v1",
+            MachineKey = false,
+        };
+
+        try
+        {
+            _ = WindowsCngCustomerAcknowledgementKeyProvisioner.Create(softwareOptions);
+            var tpmOptions = new WindowsCngCustomerAcknowledgementSigningOptions
+            {
+                Enabled = true,
+                ProviderName = "Microsoft Platform Crypto Provider",
+                KeyName = keyName,
+                KeyId = softwareOptions.KeyId,
+                MachineKey = false,
+            };
+            var signer = new WindowsCngCustomerProvisioningAcknowledgementSigningProvider(
+                Options.Create(tpmOptions),
+                NullLogger<WindowsCngCustomerProvisioningAcknowledgementSigningProvider>.Instance);
+
+            var result = await signer.SignAsync(
+                Encoding.UTF8.GetBytes("{\"schemaVersion\":1}"), CancellationToken.None);
+
+            Assert.False(result.Success);
+            Assert.Equal("provisioning_acknowledgement_signer_unavailable", result.ErrorCode);
+            Assert.Null(result.SignatureBase64);
+        }
+        finally
+        {
+            try
+            {
+                using var key = CngKey.Open(keyName, new CngProvider(SoftwareKsp));
+                key.Delete();
+            }
+            catch (CryptographicException)
+            {
+                // The test may fail before the OS key is created.
+            }
+        }
+    }
+
+    [Fact]
     public void Provisioning_RejectsInvalidOrUnapprovedProviderConfiguration()
     {
         Assert.SkipWhen(!OperatingSystem.IsWindows(), "Windows CNG is available only on Windows.");
