@@ -141,7 +141,7 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
                 exception.RV.ToString());
             return LicenseSigningResult.Unavailable();
         }
-        catch (Exception exception)
+        catch (Exception exception) when (exception is not OutOfMemoryException and not AccessViolationException)
         {
             _logger.LogWarning(
                 "PKCS#11 signing provider is unavailable. FailureType={FailureType}.",
@@ -167,7 +167,7 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
         {
             throw;
         }
-        catch (Exception exception)
+        catch (Exception exception) when (exception is not OutOfMemoryException and not AccessViolationException)
         {
             _logger.LogWarning(
                 "PKCS#11 signing health probe failed. FailureType={FailureType}.",
@@ -370,7 +370,7 @@ public abstract class Pkcs11SigningProviderBase
                     Activity.Current?.TraceId.ToString()),
                 CancellationToken.None).ConfigureAwait(false);
         }
-        catch (Exception exception)
+        catch (Exception exception) when (exception is not OutOfMemoryException and not AccessViolationException)
         {
             // A signature is never returned to the caller if its audit event cannot be persisted.
             _logger.LogCritical(
