@@ -200,8 +200,12 @@ public sealed class CustomerProvisioningClaimsSqlServerTests
                 Assert.Null(resolved.ErrorCode);
                 Assert.Equal(parentCompany.Id, resolved.ParentCompanyId);
 
-                var wrongBoundary = settings with { };
-                wrongBoundary.CustomerBoundaryId = Guid.NewGuid();
+                var wrongBoundary = new Infrastructure.Provisioning.CustomerProvisioningSettings
+                {
+                    CustomerReference = settings.CustomerReference,
+                    InstallationId = settings.InstallationId,
+                    CustomerBoundaryId = Guid.NewGuid()
+                };
                 var rejected = await Infrastructure.Provisioning.CustomerProvisioningParentClaimResolver.ResolveAsync(
                     setup, "subsidiary", requestId.ToString("D"), wrongBoundary,
                     DateTime.UtcNow, TestContext.Current.CancellationToken);
