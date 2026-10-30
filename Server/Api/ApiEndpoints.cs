@@ -86,6 +86,8 @@ public static class ApiEndpoints
 		if (!await antiforgery.IsRequestValidAsync(httpContext))
 			return TypedResults.Problem(title: "درخواست نامعتبر است.", statusCode: StatusCodes.Status400BadRequest);
 
+		httpContext.Response.Headers.CacheControl = "no-store";
+		httpContext.Response.Headers.Pragma = "no-cache";
 		var result = await applyService.CompleteEnrollmentAsync(
 			request.Username,
 			request.EnrollmentToken,
@@ -122,6 +124,8 @@ public static class ApiEndpoints
 		if (!await antiforgery.IsRequestValidAsync(httpContext))
 			return TypedResults.Problem(title: "درخواست نامعتبر است.", statusCode: StatusCodes.Status400BadRequest);
 
+		httpContext.Response.Headers.CacheControl = "no-store";
+		httpContext.Response.Headers.Pragma = "no-cache";
 		var result = await applyService.ReissueEnrollmentTokenAsync(
 			requestId,
 			request.ReasonCode ?? string.Empty,
@@ -152,9 +156,9 @@ public static class ApiEndpoints
 				title: "درخواست نامعتبر است.",
 				statusCode: StatusCodes.Status400BadRequest);
 
-		var result = await applyService.ApplyAsync(package, cancellationToken);
 		httpContext.Response.Headers.CacheControl = "no-store";
 		httpContext.Response.Headers.Pragma = "no-cache";
+		var result = await applyService.ApplyAsync(package, cancellationToken);
 
 		if (result.Acknowledgement is not null)
 		{
@@ -234,6 +238,8 @@ public static class ApiEndpoints
 		HttpContext httpContext,
 		[FromServices] IAntiforgery antiforgery)
 	{
+		httpContext.Response.Headers.CacheControl = "no-store";
+		httpContext.Response.Headers.Pragma = "no-cache";
 		var tokens = antiforgery.GetAndStoreTokens(httpContext);
 
 		return TypedResults.Ok(new AntiforgeryTokenResponse(
