@@ -1368,3 +1368,13 @@
 - **وضعیت Production:** signerهای پیش‌فرض برای license/provisioning/ack همچنان unavailable/fail-closed هستند. KMS/HSM و چرخه کلید در #236، revocation آفلاین در #214 و checkpoint مستقل Audit در #107 به انتخاب provider/مقصد و دسترسی عملیاتی نیاز دارند.
 - **تست محلی این بازبینی:** اجرا نشد؛ فقط نتایج واقعی GitHub Actions بالا بررسی شدند.
 - **تغییرات این PR:** فقط مستندات وضعیت، handoff، work log و هم‌ترازی شماره ADR بعدی؛ هیچ کد runtime، schema یا migration تغییر نکرد.
+
+
+## 2026-10-30 — Issue #107: Production audit checkpoint startup verification
+
+- Added a Production-only hosted startup probe that verifies the complete Vendor audit chain against the independently permissioned checkpoint store before readiness.
+- The probe reads the latest checkpoint and appends only when no checkpoint exists or the chain has advanced; it does not perform a redundant append on an unchanged chain.
+- Startup fails closed on provider/read/append/integrity errors; logs contain only exception type. Production requires exactly one marker adapter; generic/test store registrations cannot shadow it.
+- Added SQL Server integration coverage for initial checkpoint, idempotent restart, unavailable provider, append failure, Development skip, and ambiguous adapter registrations.
+- No provider-specific cloud dependency, key, credential, local-file fallback, same-database fallback, or migration was introduced. External provider selection, failure-domain separation, immutable retention, periodic verification, alerting, and restore drills remain operational gates.
+- Local tests were not executed in this GitHub-only workflow; require .NET CI, Vendor CI, and Semgrep on the final PR head before merge.
