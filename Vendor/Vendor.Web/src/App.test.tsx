@@ -57,6 +57,10 @@ describe('Vendor control plane shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'تغییر گذرواژه و ادامه' }));
 
     expect(await screen.findByRole('heading', { name: 'مرکز کنترل فرانو' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'وضعیت عملیاتی Vendor' })).toBeInTheDocument();
+    expect(screen.getByText(/درخواست راه‌اندازی نسخه ۴، تأیید دو نفره، خروجی بسته و دریافت پاسخ امضاشده/)).toBeInTheDocument();
+    expect(screen.getByText(/امضای Production بسته و لایسنس تا تأمین HSM واقعی غیرفعال است/)).toBeInTheDocument();
+    expect(screen.queryByText('نسخه اولیه رابط')).not.toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith('/api/auth/change-password', expect.objectContaining({ method: 'POST', cache: 'no-store' }));
   });
 
