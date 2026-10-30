@@ -33,7 +33,9 @@ public sealed class Pkcs11SigningOptions
     /// <summary>
     /// Validates non-secret configuration without exposing PIN values in exceptions or logs.
     /// </summary>
-    public void Validate(bool isProduction = false)
+    public void Validate() => Validate(isProduction: false);
+
+    public void Validate(bool isProduction)
     {
         if (!string.Equals(AssuranceLevel, "Software", StringComparison.Ordinal) &&
             !string.Equals(AssuranceLevel, "Hardware", StringComparison.Ordinal))
