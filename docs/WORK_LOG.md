@@ -1469,3 +1469,13 @@
 - محدودیت صریح: revocation فعلی در configuration است؛ restore کامل backup/config قدیمی می‌تواند trust قبلی را بازگرداند. anti-rollback مستقل هنوز نیازمند طراحی/تصمیم و anchor خارج از همان backup است.
 - PR #351 نیز ادغام شد و فیلتر xUnit v3/MTP در Windows CI به `--filter-class` تغییر کرد؛ تست CNG اکنون واقعاً کشف و اجرا می‌شود.
 - باقی‌مانده: enrollment عملیاتی SPKI در Trust Store مشتری و Vendor، durable metadata-only audit/readiness، تست TPM واقعی و ماتریس نسخه‌های Windows/Server؛ Linux backend در مرحلهٔ بعدی.
+
+
+## 2026-10-30 — Issue #228: هم‌ترازی داشبورد Vendor با وضعیت واقعی Provisioning
+
+- بازبینی main نشان داد داشبورد هنوز متن‌های قدیمی «نسخه اولیه رابط»، «در حال توسعه» و «عملیات نوشتن در مراحل بعدی تکمیل می‌شود» را نمایش می‌دهد؛ درحالی‌که CRUD تجاری، گردش درخواست Provisioning v4، maker-checker، export بسته و intake پاسخ ACK در کد موجودند.
+- متن Overview اصلاح شد تا قابلیت‌های پیاده‌سازی‌شده را درست معرفی کند و هم‌زمان محدودیت Production را صریح بگوید: امضای بسته و لایسنس تا تأمین HSM واقعی disabled/fail-closed است.
+- تست رگرسیون App.test.tsx به‌روزرسانی شد تا متن جدید وضعیت عملیاتی، توضیح جریان ACK و حذف برچسب قدیمی را بررسی کند.
+- هیچ endpoint، schema، migration، secret، private key یا دیتابیس مشتری تغییر نکرد. رمز اولیه در Vendor جمع‌آوری/ذخیره نمی‌شود؛ مدیر مشتری در Enrollment امن رمز خود را تعیین می‌کند.
+- handoff: docs/handoffs/ISSUE-228-vendor-onboarding-finalization.md. Issue #228 به‌دلیل HSM واقعی، checkpoint مستقل #107، revocation آفلاین #214 و آزمون میدانی هنوز Production-complete نیست.
+- اجرای محلی انجام نشد؛ .NET CI و Vendor CI و Semgrep باید روی PR اجرا شوند.
