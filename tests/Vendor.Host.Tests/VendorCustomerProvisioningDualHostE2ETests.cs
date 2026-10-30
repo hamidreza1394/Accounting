@@ -463,7 +463,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                     ReadOptionalString(applyJsonA.RootElement, "enrollmentToken"),
                     ReadOptionalString(applyJsonB.RootElement, "enrollmentToken")
                 }.Where(value => !string.IsNullOrWhiteSpace(value)).ToArray();
-                var enrollmentToken = Assert.Single(enrollmentTokens);
+                var enrollmentToken = Assert.Single(enrollmentTokens)!;
                 var acknowledgementJson = applyJsonA.RootElement.GetProperty("acknowledgement").GetRawText();
                 Assert.Equal(
                     acknowledgementJson,
