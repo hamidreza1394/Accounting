@@ -89,10 +89,7 @@ public sealed class VendorProvisioningIssuanceService(
             licenseId, customer, installation, payload.Subsystems, cancellationToken);
         if (!licenseBinding.Succeeded)
             return new VendorProvisioningIssuanceResult(false, licenseBinding.StatusCode, licenseBinding.ErrorCode);
-        if (licenseBinding.Sequence != licenseSequence ||
-            !string.Equals(licenseBinding.LicenseId, payload.LicenseId, StringComparison.OrdinalIgnoreCase) ||
-            !payload.Subsystems.Order(StringComparer.Ordinal)
-                .SequenceEqual(licenseBinding.Subsystems!.Order(StringComparer.Ordinal), StringComparer.Ordinal))
+        if (!VendorProvisioningLicenseBindingRules.MatchesCurrentBinding(payload, licenseBinding))
             return VendorProvisioningIssuanceResult.Conflict("provisioning_license_sequence_stale");
 
         if (string.Equals(payload.CompanyType, "subsidiary", StringComparison.Ordinal) &&
