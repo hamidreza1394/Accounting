@@ -218,10 +218,6 @@ public sealed class WindowsCngCustomerProvisioningAcknowledgementSigningProvider
         {
             return "unconfigured";
         }
-        catch (ArgumentOutOfRangeException)
-        {
-            return "unconfigured";
-        }
     }
 
     private static CustomerProvisioningAcknowledgementSigningResult Unavailable() =>
