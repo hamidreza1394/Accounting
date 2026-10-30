@@ -1,26 +1,47 @@
-# وضعیت جاری تأییدشده Vendor — 2026-10-29 (PR #293 و #294 ادغام‌شده)
+# وضعیت جاری Vendor و شکاف‌های وابسته — 2026-10-30
 
-## ادغام و شواهد CI
-- **PR #293** — دریافت acknowledgement امضاشده در Vendor: merge commit `2884c61ade381670f754a1b8027c496a6e8eb7b2`.
-- **PR #294** — نمایش نتیجه/زمان پاسخ مشتری در تاریخچهٔ provisioning: merge commit `07dc0a4f1f784dfd2800fb8da12a70f05b67a862`.
-- **PR #295** — اصلاح commit ناخواستهٔ مستندات روی `main`: merge commit `9d09944af559b68dc331d37816c7db8dad68f5b1`.
-- روی implementation head PR #293 موفق شدند: [Vendor CI 40869153676](https://github.com/hamidreza1394/Accounting/actions/runs/40869153676)، [.NET CI 40869153840](https://github.com/hamidreza1394/Accounting/actions/runs/40869153840)، [Semgrep 40869153686](https://github.com/hamidreza1394/Accounting/actions/runs/40869153686).
-- روی implementation head PR #294 موفق شدند: [Vendor CI 40871773941](https://github.com/hamidreza1394/Accounting/actions/runs/40871773941)، [.NET CI 40871773973](https://github.com/hamidreza1394/Accounting/actions/runs/40871773973)، [Semgrep 40871774197](https://github.com/hamidreza1394/Accounting/actions/runs/40871774197)، [CodeQL 40871768967](https://github.com/hamidreza1394/Accounting/actions/runs/40871768967).
-- **پس از ادغام:** CI مربوط به `main` در SHA `07dc0a4f1f784dfd2800fb8da12a70f05b67a862` جداگانه در حال اجراست؛ تا پایان runهای main، موفقیت پس از ادغام را اعلام نمی‌کنیم.
+**مبنای بازبینی کد:** شاخه `main`، SHA `a5db9e3f3a04ebdb8cafd0f5f02767cdaa3f36f6`.
+این بخش وضعیت فعلی را ثبت می‌کند؛ snapshotهای بعدی سند سابقه‌اند و نباید به‌عنوان وضعیت امروز خوانده شوند.
 
-## وضعیت پیاده‌سازی فعلی
-- Vendor اکنون نتیجهٔ acknowledgement امضاشده را با trust store مستقل بررسی و به‌صورت تراکنشی ثبت می‌کند؛ retry دقیق idempotent است و پاسخ متناقض conflict می‌دهد.
-- UI تاریخچهٔ درخواست، نتیجهٔ واقعی مشتری (`Applied` / `AlreadyApplied` / `Rejected`) و زمان پاسخ را جدا از وضعیت کلی درخواست نشان می‌دهد.
-- هیچ تغییری در schema مشتری یا `Server/**` در PRهای #293/#294 ایجاد نشده است.
+## وضعیت GitHub Actions
 
-## شکاف‌های باقی‌مانده برای Production
-- **#228 / #235:** payload schema v2 اکنون دوره مالی و مرجع شرکت مادر را تعریف می‌کند؛ شاخه کاری نیز فیلدهای آن را در فرم و API Vendor اعتبارسنجی و صادر می‌کند. consumer سمت مشتری، claim اتمی request ID/nonce، اعمال تراکنشی شرکت/دوره/مدیر، enrollment یک‌بارمصرف و تست SQL Server هنوز تکمیل نشده‌اند. D-051 و OD-18 تصمیم استفاده از signed package را برای #228/#235 ثبت می‌کنند. تا تکمیل consumer و side effects، هیچ وضعیت `Applied` یا `Confirmed` فرض نمی‌شود.
-- **#236:** provider امضای Production، تصمیم KMS/HSM، هویت دسترسی، چرخش و بازیابی کلید هنوز عملیاتی نشده‌اند؛ signer پیش‌فرض fail-closed باقی می‌ماند.
-- **#107:** مقصد مستقل checkpoint ممیزی، اعتبارنامه‌های جدا، retention/immutability و بازیابی باید تعیین و پیاده‌سازی شوند.
-- **#214:** قرارداد revocation آفلاین موجود است؛ مصرف‌کنندهٔ سمت مشتری، ذخیره‌سازی monotonic و enforcement/backup/restore هنوز باقی است.
-- **تحویل آفلاین:** جریان export/import و acknowledgement باید در نصب‌های cloud، dedicated-server و offline end-to-end آزموده شود.
+- روی SHA فعلی main، اجرای [.NET CI 41014946317](https://github.com/hamidreza1394/Accounting/actions/runs/41014946317) موفق است؛ jobهای `secret-scan`، `client`، `publish-scripts`، `build-and-test`، `publish`، `publish-windows` و `e2e` همگی موفق‌اند.
+- روی همان SHA، [Semgrep 41014946340](https://github.com/hamidreza1394/Accounting/actions/runs/41014946340) و [Push on main 41014946368](https://github.com/hamidreza1394/Accounting/actions/runs/41014946368) موفق‌اند.
+- آخرین [Vendor CI روی main](https://github.com/hamidreza1394/Accounting/actions/runs/41010924327) روی SHA `1bbcc6f45342111f7582ba0f59418f224b2ba618` موفق است. PR #308 فقط guard ورود/نشست مدیر اولیه در سمت مشتری را تغییر داد؛ در SHA فعلی اجرای جداگانهٔ Vendor CI وجود ندارد و آن را ادعا نمی‌کنیم.
+- **PR #282 پس از merge:** روی merge SHA `f4a0462b0972e7686a686eca0febfaee680baecf`، secret-scan، client و publish-scripts موفق شدند؛ build-and-test و jobهای وابسته در run `40843073694` لغو شدند. تلاش برای rerun همان build-and-test نیز به نتیجهٔ موفق نرسید. با این حال، اجرای کامل .NET CI و Vendor CI روی descendant merge SHA مربوط به PR #284، یعنی `81ed5f64ed86ebbae47a433cea63e3655cb1d24b`، موفق شد؛ این شاهد شامل تغییرات #282 است، اما run کامل روی SHA دقیق #282 محسوب نمی‌شود.
+- **PR #284 پس از merge:** [Vendor CI 40845416309](https://github.com/hamidreza1394/Accounting/actions/runs/40845416309)، [.NET CI 40845416352](https://github.com/hamidreza1394/Accounting/actions/runs/40845416352)، [Semgrep 40845416374](https://github.com/hamidreza1394/Accounting/actions/runs/40845416374) و [Push on main 40845416241](https://github.com/hamidreza1394/Accounting/actions/runs/40845416241) همگی موفق‌اند.
+- PR #307 روی head نهایی `114c081854d275c8cf50a917a43e22abb3f8b1bc` با .NET CI، Vendor CI و Semgrep موفق شد؛ PR #308 نیز روی head نهایی خود با .NET CI و Semgrep موفق شد. شکست‌های زودتر این دو شاخه روی SHAهای superseded بودند و روی head نهایی تکرار نشدند.
 
-نتیجه: Vendor package schema v2 و فیلدهای ورودی آن در این شاخه تکمیل می‌شوند؛ این موضوع consumer سمت مشتری یا آمادگی Production را اثبات نمی‌کند. KMS/HSM و مقصد مستقل Audit همچنان به تصمیم و credential عملیاتی وابسته‌اند.
+## ادغام‌های واقعی پس از PR #281
+
+- PR #281 در `2ee1edc52904833bc28eead5a679185377363c24` ادغام شد؛ snapshot آن با PRهای مستنداتی بعدی به‌روزرسانی شد.
+- PRهای ادغام‌شدهٔ مرتبط با Vendor و provisioning: #282، #283، #284، #285، #286، #287، #288، #289، #290، #291، #292، #293، #294، #295، #296، #297، #298، #299، #300 و #301.
+- PRهای مرتبط با consumer سمت مشتری که جدا از Vendor ادغام شدند: #302، #304، #305، #306، #307 و #308. PR #303 بسته شد و merge نشد.
+- هیچ‌یک از PRهای باز #309، #310 و #311 در این بازبینی merge نشده‌اند؛ هر سه در محدودهٔ customer-side Issue #235 هستند و نباید داخل PR مخصوص Vendor ادغام شوند.
+
+## قابلیت‌های Vendor که در main پیاده‌سازی شده‌اند
+
+- ثبت intent راه‌اندازی در دیتابیس مستقل Vendor با RequestId/nonce یکتا، payload canonical و نسخه‌دار، hash، idempotency، RowVersion، antiforgery، resource authorization و audit تراکنشی.
+- قرارداد provisioning فعلی شامل اطلاعات شرکت، مدیر اولیه (نام کاربری و ایمیل؛ نه رمز)، دوره مالی، مرجع شرکت مادر و کدهای زیرسیستم است. اعتبارسنجی parent فقط درخواست Confirmed در همان Customer/Installation را می‌پذیرد.
+- جریان maker-checker برای امضای provisioning: درخواست‌کننده و reviewer باید متفاوت باشند؛ مجوز منبع قبل از بررسی RowVersion/status اعمال می‌شود؛ تغییر وضعیت درخواست، approval و audit در تراکنش انجام می‌شود.
+- امضاکنندهٔ provisioning دارای timeout و رفتار fail-closed است. provider پیش‌فرض `UnavailableProvisioningSigningProvider` است؛ تا پیکربندی provider خارجی معتبر، درخواست از `AwaitingSigner` به `PendingDelivery` نمی‌رود.
+- export فقط برای بستهٔ امضاشده و هدف فعال مجاز است؛ تحویل در تراکنش Serializable ثبت و پاسخ `no-store` می‌شود.
+- Vendor acknowledgement را از trust store مستقل اعتبارسنجی می‌کند، request ID/nonce/hash/customer/installation را bind می‌کند، retry دقیق را idempotent می‌پذیرد و نتیجهٔ متناقض را conflict می‌کند. فقط `Applied`/`AlreadyApplied` به `Confirmed` و `Rejected` به `Failed` می‌رسد.
+- UI تاریخچه نتیجه و زمان acknowledgement را نشان می‌دهد؛ export به‌تنهایی به معنی تأیید مشتری نیست.
+
+## شکاف‌های باقی‌مانده
+
+- **#228 — خرید و فعال‌سازی زیرسیستم‌ها:** کدهای `finance`، `sales`، `inventory` و `treasury` در فرم و payload امضاشده allow-list شده‌اند و consumer مشتری آن‌ها را به permissionهای موجود و دقیق map می‌کند. با این حال، در قرارداد Vendor فعلی شناسه/sequence یک لایسنس صادرشده به provisioning request متصل نیست و مسیر create/approval هنوز ثابت نمی‌کند مجموعهٔ انتخاب‌شده زیرمجموعهٔ entitlement لایسنس خریداری‌شدهٔ همان نصب است. بنابراین «انتخاب زیرسیستم در فرم» را معادل «خرید و enforcement لایسنس» اعلام نمی‌کنیم. تعیین رابطهٔ یک یا چند لایسنس برای یک نصب و binding به sequence/payload معتبر باید پیش از تکمیل این معیار مشخص شود.
+- **#235 — consumer سمت مشتری:** PRهای #302 و #304–#308 بخشی از verifier، apply تراکنشی، claim/replay، enrollment یک‌بارمصرف و guard نشست/ورود را به main آورده‌اند. provider امضای acknowledgement سمت مشتری عمداً unavailable است؛ در نتیجه apply در Production بدون provider معتبر fail-closed می‌ماند. PRهای باز #309–#311 کارهای جداگانهٔ customer-side هستند و خارج از PR Vendor باقی می‌مانند.
+- **#236/#214 — signer و maker-checker:** maker-checker، منع self-approval، resource authorization، RowVersion، audit تراکنشی و timeout در کد موجود است؛ اما KMS/HSM یا signing service واقعی، workload identity، sign-only access، rotation/recovery، توزیع کلید عمومی و آزمون عملیاتی هنوز انتخاب/پیکربندی نشده‌اند. revocation آفلاین نیز بدون artifact امضاشده و consumer monotonic در مشتری قابل تکمیل نیست.
+- **#107 — checkpoint مستقل ممیزی:** HashVersion، زنجیرهٔ خطی/unique index، checkpoint contract/service، Production startup guard و runbook وجود دارند؛ اما adapter واقعی مستقل با هویت و credential جدا، immutability/retention، alerting و restore drill هنوز وجود ندارد.
+- **تحویل cloud/dedicated/offline:** مسیر export/import و acknowledgement باید با signer واقعی و نصب‌های واقعی/آزمایشی در هر deployment mode end-to-end آزموده شود.
+
+## تغییر امنیتی در حال بررسی
+
+- PR [#312](https://github.com/hamidreza1394/Accounting/pull/312)، شاخه `fix/vendor-acknowledgement-error-code-allowlist`، فقط کدهای پایدار و غیرحساس شناخته‌شده را برای acknowledgement با نتیجهٔ `Rejected` می‌پذیرد؛ متن آزاد exception، SQL diagnostics و PII قبل از ذخیره در Vendor رد می‌شوند. تا موفقیت CI روی PR، این تغییر `Implemented / Not Verified` است.
+
+نتیجه: جریان Vendor در سطح ثبت درخواست، maker-checker، export و دریافت acknowledgement به‌طور قابل‌توجهی پیاده‌سازی شده است؛ اما purchased-entitlement binding، provider امضای Production و sink مستقل ممیزی هنوز مانع اعلام تکمیل Production هستند.
 
 ---
 ## Snapshot تاریخی — وضعیت Vendor پس از PR #271
