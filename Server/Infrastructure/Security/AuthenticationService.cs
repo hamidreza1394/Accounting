@@ -67,6 +67,7 @@ namespace Infrastructure.Security
 		private const string LoginSucceededEvent = "LoginSucceeded";
 		private const string LoginFailedEvent = "LoginFailed";
 		private const string LoginDeniedInactiveEvent = "LoginDeniedInactive";
+		private const string LoginDeniedEnrollmentPendingEvent = "LoginDeniedEnrollmentPending";
 		private const string UserEntityType = "User";
 		private const string MasterEntityType = "MasterAccount";
 		private const string UnknownUserIP = "0.0.0.0";
@@ -239,6 +240,29 @@ namespace Infrastructure.Security
 			{
 				await RegisterFailedAttemptAsync
 					(lockoutKey: lockoutKey, auditIP: auditIP, userId: user.Id);
+
+				return new LoginResult { Outcome = LoginOutcome.InvalidCredentials, };
+			}
+
+			// **************************************************
+			// The initial administrator of a provisioning request gets no session until the
+			// one-time enrollment has set the real credential (the provisioned password is a
+			// random value nobody knows). If a correct password is nevertheless presented
+			// while the enrollment is pending, the sign-in is refused with the same generic
+			// result as a wrong password, so the account state is not disclosed. The event
+			// type differs from LoginFailed, so the refusal does not feed the lockout counter.
+			// **************************************************
+			var isEnrollmentPending =
+				await DatabaseContext.ProvisioningRequestClaims
+				.AnyAsync(current => current.AdminUserId == user.Id && current.MustChangePassword);
+
+			if (isEnrollmentPending)
+			{
+				await WriteAuditEventAsync
+					(eventType: LoginDeniedEnrollmentPendingEvent, entityType: UserEntityType,
+					entityId: lockoutKey, userId: user.Id, auditIP: auditIP);
+
+				await DatabaseContext.SaveChangesAsync();
 
 				return new LoginResult { Outcome = LoginOutcome.InvalidCredentials, };
 			}
