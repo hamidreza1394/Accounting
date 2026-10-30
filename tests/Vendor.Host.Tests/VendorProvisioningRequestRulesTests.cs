@@ -208,6 +208,36 @@ public sealed class VendorProvisioningRequestRulesTests
                 request.Subsystems!, request.Subsystems!)));
     }
 
+    [Fact]
+    public void CurrentBindingComparisonRejectsOldSequenceWrongLicenseAndChangedSubsystems()
+    {
+        var request = ValidRequest();
+        var payload = new CustomerProvisioningPayload(
+            4, request.RequestId.ToString("D"), "customer-001", "install-001",
+            request.CompanyName!, request.CompanyType!, request.InitialAdminUserName!,
+            request.Subsystems!, DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddHours(1),
+            "abcdefghijklmnopqrstuvwxyz0123456789_-", request.FiscalPeriodTitle,
+            request.FiscalPeriodStartDate, request.FiscalPeriodEndDate,
+            request.ParentCompanyReference, request.InitialAdminEmail,
+            request.LicenseId.ToString("D"), 7);
+
+        var current = VendorProvisioningLicenseBindingResult.Success(
+            request.LicenseId.ToString("D"), 7, request.Subsystems!, request.Subsystems!);
+        Assert.True(VendorProvisioningLicenseBindingRules.MatchesCurrentBinding(payload, current));
+
+        Assert.False(VendorProvisioningLicenseBindingRules.MatchesCurrentBinding(
+            payload, VendorProvisioningLicenseBindingResult.Success(
+                request.LicenseId.ToString("D"), 8, request.Subsystems!, request.Subsystems!)));
+        Assert.False(VendorProvisioningLicenseBindingRules.MatchesCurrentBinding(
+            payload, VendorProvisioningLicenseBindingResult.Success(
+                Guid.NewGuid().ToString("D"), 7, request.Subsystems!, request.Subsystems!)));
+        Assert.False(VendorProvisioningLicenseBindingRules.MatchesCurrentBinding(
+            payload, VendorProvisioningLicenseBindingResult.Success(
+                request.LicenseId.ToString("D"), 7, ["finance"], ["finance", "sales"])));
+        Assert.False(VendorProvisioningLicenseBindingRules.MatchesCurrentBinding(
+            payload with { SchemaVersion = 3, LicenseId = null, Sequence = null }, current));
+    }
+
     private static CreateVendorProvisioningRequest ValidRequest() => new(
         Guid.Parse("9b0d2c4d-53bc-4bb2-a22c-90b30f2b58e8"),
         Guid.Parse("8b0d2c4d-53bc-4bb2-a22c-90b30f2b58e8"),
