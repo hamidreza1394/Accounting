@@ -57,7 +57,7 @@ public static class WindowsCngCustomerAcknowledgementKeyCommand
                 keyVersion = signingOptions.KeyVersion,
                 provider = signingOptions.ProviderName,
                 machineKey = signingOptions.MachineKey,
-                publicKeySubjectPublicKeyInfoBase64 = Convert.ToBase64String(
+                publicKeySubjectPublicKeyInfoBase64 = System.Convert.ToBase64String(
                     created.PublicKeySubjectPublicKeyInfo),
                 createdAtUtc = DateTimeOffset.UtcNow,
             }, new JsonSerializerOptions { WriteIndented = true }));
