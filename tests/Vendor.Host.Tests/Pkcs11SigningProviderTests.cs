@@ -3,6 +3,7 @@ using System.Text;
 using Faranou.Licensing.Contracts;
 using Faranou.Vendor.Host.Signing;
 using Faranou.Vendor.Persistence.Auditing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
