@@ -228,6 +228,15 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
 
                 var customerConfiguration = customerFactory.Services.GetRequiredService<IConfiguration>();
                 Assert.Equal(customerConnection, customerConfiguration.GetConnectionString("ConnectionString"));
+                var customerApplicationSettings = customerFactory.Services
+                    .GetRequiredService<Microsoft.Extensions.Options.IOptions<CustomerServer::Infrastructure.Settings.ApplicationSettings>>()
+                    .Value;
+                Assert.Equal(customerInfrastructureUsername, customerApplicationSettings.MasterUsername);
+                Assert.Equal(customerInfrastructurePasswordHash, customerApplicationSettings.MasterPassword);
+                Assert.Equal(
+                    CustomerSecurity.PasswordVerificationOutcome.Success,
+                    new CustomerSecurity.PasswordHashService().Verify(
+                        customerInfrastructurePasswordHash, customerInfrastructurePassword));
 
                 await using (var customerScope = customerFactory.Services.CreateAsyncScope())
                 {
@@ -366,7 +375,10 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 using (var infrastructureLoginB = await PostCustomerLoginAsync(
                     customerClientB, customerInfrastructureUsername, customerInfrastructurePassword, cancellationToken))
                 {
-                    Assert.Equal(HttpStatusCode.Redirect, infrastructureLoginB.StatusCode);
+                    var loginBodyB = await infrastructureLoginB.Content.ReadAsStringAsync(cancellationToken);
+                    Assert.True(
+                        infrastructureLoginB.StatusCode == HttpStatusCode.Redirect,
+                        $"Customer infrastructure login failed: {(int)infrastructureLoginB.StatusCode}; location={infrastructureLoginB.Headers.Location}; body={loginBodyB}");
                     Assert.Equal("/", infrastructureLoginB.Headers.Location?.ToString());
                     Assert.Contains(
                         infrastructureLoginB.Headers.TryGetValues("Set-Cookie", out var cookiesB)
