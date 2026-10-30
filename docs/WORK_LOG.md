@@ -1307,3 +1307,11 @@
 - **PRهای باز #309–#311:** همچنان customer-side Issue #235 و خارج از PR محدود به Vendor هستند؛ هیچ‌کدام در این تغییر ادغام نشدند.
 - **تست محلی:** اجرا نشد؛ همهٔ شواهد بالا از check-runهای واقعی GitHub Actions هستند.
 - **محدودیت‌های Production:** اتصال provisioning به `VendorLicense.Id`/`Sequence` نیازمند تصمیم یک یا چند لایسنس برای هر installation است؛ KMS/HSM واقعی و مقصد مستقل Audit نیز به انتخاب و credential معتبر نیاز دارند.
+
+## 2026-10-30 — Issue #235: offline acknowledgement exchange and SQL Server concurrency verification
+- تغییر UI آفلاین: صفحهٔ Import مشتری فایل پاسخ امضاشده را بدون enrollment token ذخیره می‌کند؛ پنل Vendor فایل را با محدودیت ۶۴ KiB دریافت و به endpoint ماشینی موجود ارسال می‌کند. اعتبار امضا و binding فقط در سرور Vendor بررسی می‌شود.
+- تست‌های کلاینت: handoff شاخهٔ منبع ۱۰۴ تست ClientApp و ۵۵ تست Vendor.Web، typecheck و offline/static checks را گزارش کرده است. در head PR #310، check-runهای client، build-test-package، build-and-test، e2e، publish، publish-windows، secret-scan، CodeQL و Semgrep همگی موفق بودند (run 41022725862 و runهای مرتبط).
+- تست‌های تراکنشی SQL Server: handoff شاخهٔ منبع ۷ تست Integration روی SQL Server 2022 را گزارش می‌کند؛ deadlock در apply/enrollment هم‌زمان با sp_getapplock تراکنشی اصلاح شده است. این گزارش نتیجهٔ اجرای محیط سازنده است؛ در این بازآشتی تست محلی اجرا نشده است.
+- محدودیت باقی‌مانده: E2E واحد دو میزبان Vendor و Customer و Playwright از آپلود تا وضعیت Confirmed هنوز NotImplemented است. بازگشت پاسخ امضاشدهٔ Vendor به مشتری نیز قرارداد مصوب ندارد و NeedsApproval باقی می‌ماند.
+- بازآشتی Git: تغییرات PR #310 روی آخرین main (پس از PRهای #311–#313) بازآشتی شدند؛ تغییرات قرارداد امضا که قبلاً در main موجود بود دوباره کپی نشد. فایل .gitleaksignore قدیمی وارد شاخه نشد، چون secret-scan روی head منبع سبز است و استثنای دائمی/منسوخ لازم نیست.
+- اعتبارسنجی بازآشتی: منتظر CI اختصاصی PR یکپارچه‌سازی هستیم؛ هیچ نتیجهٔ تستی برای commit جدید قبل از اجرای CI ادعا نمی‌شود.

@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Faranou.Licensing.Contracts;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -53,6 +54,12 @@ public sealed record CustomerProvisioningTokenReissueResult(bool Success, string
 /// </summary>
 public sealed class CustomerProvisioningApplyService
 {
+    // Provisioning and enrollment are rare, operator-driven actions. Each one takes a transaction-scoped
+    // application lock first, so concurrent duplicates queue instead of deadlocking under SERIALIZABLE.
+    private const string ApplyLockResource = "faranou:provisioning:apply";
+    private const string EnrollmentLockResource = "faranou:provisioning:enrollment";
+    private const int LockTimeoutMilliseconds = 15_000;
+
     private const string SignerUnavailable = "provisioning_acknowledgement_signer_unavailable";
     private const string SignerKeyUntrusted = "provisioning_acknowledgement_signer_key_untrusted";
     private const string SignatureInvalid = "provisioning_acknowledgement_signature_invalid";
@@ -107,6 +114,8 @@ public sealed class CustomerProvisioningApplyService
 
         await using var transaction = await _database.Database.BeginTransactionAsync(
             IsolationLevel.Serializable, cancellationToken);
+        if (!await TryAcquireTransactionLockAsync(ApplyLockResource, cancellationToken))
+            return Failure("provisioning_apply_busy");
 
         var storedAcknowledgement = await FindAcknowledgementAsync(payload.RequestId, cancellationToken);
         if (storedAcknowledgement is not null)
@@ -322,6 +331,8 @@ public sealed class CustomerProvisioningApplyService
 
         await using var transaction = await _database.Database.BeginTransactionAsync(
             IsolationLevel.Serializable, cancellationToken);
+        if (!await TryAcquireTransactionLockAsync(EnrollmentLockResource, cancellationToken))
+            return new CustomerProvisioningTokenReissueResult(false, "enrollment_busy", null);
         var claim = await _database.ProvisioningRequestClaims
             .SingleOrDefaultAsync(item => item.RequestId == requestId, cancellationToken);
         if (claim is null || !claim.MustChangePassword || claim.EnrollmentConsumedAtUtc is not null)
@@ -363,6 +374,8 @@ public sealed class CustomerProvisioningApplyService
 
         await using var transaction = await _database.Database.BeginTransactionAsync(
             IsolationLevel.Serializable, cancellationToken);
+        if (!await TryAcquireTransactionLockAsync(EnrollmentLockResource, cancellationToken))
+            return new CustomerProvisioningEnrollmentResult(false, "enrollment_busy");
         var user = await _database.Users.SingleOrDefaultAsync(
             item => item.Username == username, cancellationToken);
         if (user is null || !user.IsActive)
@@ -544,6 +557,33 @@ public sealed class CustomerProvisioningApplyService
         }
 
         return (envelope, null);
+    }
+
+    /// <summary>
+    /// Takes an exclusive SQL Server application lock owned by the current transaction (released on commit or
+    /// rollback). Without it, concurrent identical requests each take shared range locks under SERIALIZABLE and
+    /// then deadlock when they try to write. Raw SQL is used because EF Core has no API for application locks;
+    /// the resource name is a constant and passed as a parameter.
+    /// </summary>
+    private async Task<bool> TryAcquireTransactionLockAsync(string resource, CancellationToken cancellationToken)
+    {
+        if (!_database.Database.IsSqlServer())
+            return true;
+
+        var result = new SqlParameter("@result", SqlDbType.Int) { Direction = ParameterDirection.Output };
+        await _database.Database.ExecuteSqlRawAsync(
+            "EXEC @result = sp_getapplock @Resource = @resource, @LockMode = 'Exclusive', " +
+            "@LockOwner = 'Transaction', @LockTimeout = @timeout;",
+            new object[]
+            {
+                result,
+                new SqlParameter("@resource", resource),
+                new SqlParameter("@timeout", LockTimeoutMilliseconds),
+            },
+            cancellationToken);
+
+        // 0 = granted immediately, 1 = granted after waiting; negative values are timeout, cancellation, deadlock, error.
+        return result.Value is int code && code >= 0;
     }
 
     private static CustomerProvisioningAcknowledgement CreateAcknowledgement(
