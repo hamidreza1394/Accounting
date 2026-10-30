@@ -32,7 +32,7 @@ namespace Faranou.Vendor.Host.Tests;
 /// A narrow end-to-end mutation test: real Vendor SQL Server, Identity MFA cookie,
 /// production permission/resource handlers, anti-forgery, rowversion and audit writer.
 /// </summary>
-public sealed class VendorCustomerMutationHttpIntegrationTests
+public sealed partial class VendorCustomerMutationHttpIntegrationTests
 {
     [Fact]
     public async Task CustomerUpdateEnforcesAntiforgeryAndRowVersionAndAuditsOnlyCommittedWrites()
