@@ -25,7 +25,7 @@
 
 - "vendor-package-YYYY-vN" — امضای بستهٔ Provisioning
 - "vendor-license-YYYY-vN" — امضای لایسنس
-- "customer-<installation-reference>-ack-vN" — کلید ACK همان نصب، خارج از HSM مرکزی Vendor
+- "customer-INSTALLATION-REFERENCE-ack-vN" — کلید ACK همان نصب، خارج از HSM مرکزی Vendor
 
 کلیدهای بسته و لایسنس باید دو جفت‌کلید مستقل باشند، حتی اگر در یک HSM/partition قرار گیرند. کلید ACK هر نصب نیز مستقل است و هیچ‌گاه بین دو نصب کپی نمی‌شود.
 
