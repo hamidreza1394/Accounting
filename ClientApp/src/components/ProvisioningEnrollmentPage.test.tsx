@@ -31,6 +31,7 @@ describe('Customer provisioning enrollment', () => {
     fireEvent.change(screen.getByLabelText('توکن یک‌بارمصرف'), { target: { value: 'a'.repeat(43) } });
     fireEvent.change(screen.getByLabelText('گذرواژه جدید (حداقل ۱۲ نویسه)'), { target: { value: 'Strong-Passphrase-2026' } });
     fireEvent.change(screen.getByLabelText('تکرار گذرواژه'), { target: { value: 'Strong-Passphrase-2026' } });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'مصرف توکن و فعال‌سازی حساب' })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: 'مصرف توکن و فعال‌سازی حساب' }));
 
     await screen.findByText('حساب مدیر فعال شد. توکن مصرف شده و دیگر قابل استفاده نیست. اکنون می‌توانید وارد فرانو شوید.');
