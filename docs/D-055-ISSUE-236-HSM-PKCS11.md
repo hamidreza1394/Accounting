@@ -26,6 +26,6 @@
 
 - اولویت فعلی پیاده‌سازی مشتری Windows است: Windows 10/11 و Windows Serverهایی که Windows CNG و KSP انتخابی را پشتیبانی می‌کنند. حداقل نسخه‌های پشتیبانی‌شده هنوز certify نشده‌اند؛ پیش از اعلام پشتیبانی Production باید ماتریس نسخه/TPM روی سخت‌افزار واقعی ثبت شود.
 - KSP پیش‌فرض `Microsoft Platform Crypto Provider` برای TPM است. `Microsoft Software Key Storage Provider` فقط یک گزینهٔ صریح برای OS-protected key store است، با assurance سخت‌افزاری کمتر؛ انتخاب آن هرگز fallback خودکار از TPM نیست و باید با سیاست استقرار تأیید شود.
-- PR جاری Provider و Key Provisioner ویندوزی را اضافه می‌کند. امضا فقط کلید از قبل provision شده را باز می‌کند؛ کلید در مسیر Sign ساخته یا جایگزین نمی‌شود. Provisioning یک‌بارهٔ کلید فقط public SPKI را برمی‌گرداند.
+- PR #347 Provider و Key Provisioner ویندوزی را اضافه می‌کند. فرمان محلی `dotnet Server.dll --provisioning-ack-key create` فقط public SPKI را برمی‌گرداند و Enabled را تغییر نمی‌دهد؛ امضا فقط کلید از قبل provision شده را باز می‌کند و در مسیر Sign کلید ساخته یا جایگزین نمی‌شود.
 - تست CI روی Windows از Software KSP صرفاً به‌عنوان fixture استفاده می‌کند و وجود/سلامت TPM واقعی را اثبات نمی‌کند. آزمون TPM سخت‌افزاری روی سرور نصب مشتری پیش‌نیاز فعال‌سازی Production است.
 - Linux عمداً خارج از این مرحله است؛ بعداً یک backend مستقل برای TPM/OS secure storage لینوکس پشت همان interface نوشته می‌شود. هیچ کد Linux یا وابستگی cloud در این PR اضافه نشده است.

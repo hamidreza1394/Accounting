@@ -1434,3 +1434,13 @@
 - DI به‌صورت opt-in و Windows-only است؛ در سایر حالت‌ها default unavailable/fail-closed باقی می‌ماند. تست‌ها روی Windows CI با Software KSP صرفاً به‌عنوان fixture اجرا می‌شوند؛ این تست سخت‌افزار TPM واقعی را اثبات نمی‌کند.
 - تست‌ها قبل از implementation نوشته شدند و CI Windows برای اجرای مجموعهٔ محدود CNG اضافه شد. اجرای محلی در این محیط انجام نشده؛ نتیجهٔ واقعی باید از CI PR نهایی ثبت شود.
 - باقی‌مانده: command امن Key Ceremony/Provisioning و ثبت public key در Trust Store مشتری/Vendor، audit durable metadata-only، health/readiness و تست سخت‌افزار TPM واقعی؛ حداقل نسخه Windows/Server هنوز certify نشده است. Linux در PR آینده.
+
+
+## 2026-10-30 — Issue #236: تکمیل Windows ACK signer و فرمان Key Ceremony
+
+- نصب‌های مشتری در مرحله فعلی Windows نسخه‌های مختلف و Windows Server هستند؛ Linux به مرحله مستقل بعدی موکول شد.
+- Provider ویندوزی با Windows CNG و Key Storage Provider صریح اجرا می‌شود. TPM KSP پیش‌فرض است؛ Software KSP فقط انتخاب صریح OS-protected و بدون fallback خودکار است.
+- KeyName و KeyId از InstallationId معتبر و KeyVersion مشتق می‌شوند؛ هر نصب namespace مجزا دارد و rotation با نسخه جدید انجام می‌شود. کلید ECDSA P-256 با CngExportPolicies.None و KeyUsage.Signing ایجاد می‌شود؛ فقط public SPKI بازمی‌گردد.
+- فرمان آفلاین `dotnet Server.dll --provisioning-ack-key create` اضافه شد. فرمان به Enabled وابسته نیست و signer runtime را فعال نمی‌کند؛ پس از ثبت public key در هر دو Trust Store، اپراتور می‌تواند فعال‌سازی را جداگانه انجام دهد.
+- CI ویندوز تست‌های focused را اجرا می‌کند؛ Software KSP صرفاً fixture تست است و آزمون TPM واقعی روی Windows Server سخت‌افزاری هنوز لازم است.
+- PR #347 در حال CI است. Local build/test در این محیط اجرا نشده است. Audit durable metadata-only، trust enrollment/rotation/revocation workflow، readiness و ماتریس نسخه Windows/TPM همچنان باقی‌اند.
