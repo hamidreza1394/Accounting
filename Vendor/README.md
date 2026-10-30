@@ -180,7 +180,7 @@ The default provider remains `UnavailableLicenseSigningProvider`, so issuance fa
 
 ## Production audit checkpoint readiness (Issue #107)
 
-The Vendor host fails startup in the Production environment unless an explicit `IProductionVendorAuditCheckpointStore` adapter is registered. A hash chain stored only in the same Vendor SQL Server database is not an independent checkpoint.
+The Vendor host fails startup in the Production environment unless an explicit `IProductionVendorAuditCheckpointStore` adapter is registered. Before the host becomes ready, a hosted startup probe verifies the complete local audit chain against the independent checkpoint store and appends a new checkpoint when the chain has advanced. A required read/append/provider failure aborts startup with a generic message; provider exception text is not exposed. When the latest checkpoint already covers the current chain, startup verifies the read path without forcing a redundant append; write permission is exercised when an initial or advancing checkpoint must be appended. A hash chain stored only in the same Vendor SQL Server database is not an independent checkpoint.
 
 Until a real provider is selected and configured with separate credentials and appropriate append-only/immutability retention, the Vendor control plane is **not production-ready** and must not be launched with a fake store, local-file fallback, or Vendor-database fallback. Development and tests can run without the provider.
 
