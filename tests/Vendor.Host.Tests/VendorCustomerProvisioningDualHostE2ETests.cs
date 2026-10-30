@@ -472,7 +472,8 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 using var customerLoginClient = customerFactory.CreateClient(new WebApplicationFactoryClientOptions
                 {
                     BaseAddress = new Uri("https://localhost"),
-                    HandleCookies = true
+                    HandleCookies = true,
+                    AllowAutoRedirect = false
                 });
                 using (var deniedLogin = await PostCustomerLoginAsync(
                     customerLoginClient, adminUserName, preEnrollmentPassword, cancellationToken))
