@@ -1,0 +1,260 @@
+using System.Security.Cryptography;
+using System.Text;
+using Faranou.Licensing.Contracts;
+using Faranou.Vendor.Host.Authorization;
+using Faranou.Vendor.Host.Signing;
+using Faranou.Vendor.Persistence;
+using Faranou.Vendor.Persistence.Domain;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
+
+namespace Faranou.Vendor.Host.Tests;
+
+public sealed class VendorProvisioningLicenseResolverSqlServerTests
+{
+    [Fact]
+    public async Task UsesSignedLatestEntitlementsAndAllowsOnlyASubset()
+    {
+        var fixture = await OpenAsync();
+        if (fixture is null) return;
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        try
+        {
+            var seed = await SeedAsync(fixture.Db, key, 1, ["finance", "sales"]);
+            var resolver = CreateResolver(fixture.Db, key);
+
+            var all = await resolver.ResolveLatestAsync(
+                seed.License.Id, seed.Customer, seed.Installation, null, TestContext.Current.CancellationToken);
+            Assert.True(all.Succeeded, all.ErrorCode);
+            Assert.Equal(1, all.Sequence);
+            Assert.Equal(new[] { "finance", "sales" }, all.Subsystems);
+
+            var subset = await resolver.ResolveLatestAsync(
+                seed.License.Id, seed.Customer, seed.Installation, ["sales"], TestContext.Current.CancellationToken);
+            Assert.True(subset.Succeeded, subset.ErrorCode);
+            Assert.Equal(new[] { "sales" }, subset.Subsystems);
+
+            var unpurchased = await resolver.ResolveLatestAsync(
+                seed.License.Id, seed.Customer, seed.Installation, ["inventory"], TestContext.Current.CancellationToken);
+            Assert.False(unpurchased.Succeeded);
+            Assert.Equal("provisioning_subsystem_not_entitled", unpurchased.ErrorCode);
+        }
+        finally
+        {
+            await CleanupAsync(fixture);
+        }
+    }
+
+    [Fact]
+    public async Task LatestResolutionRejectsStaleSequenceButHistoricalResolutionCanVerifyAnExistingBinding()
+    {
+        var fixture = await OpenAsync();
+        if (fixture is null) return;
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        try
+        {
+            var seed = await SeedAsync(fixture.Db, key, 1, ["finance", "sales"]);
+            await AddEnvelopeAsync(fixture.Db, seed.License, seed.Installation, key, 2, ["finance"]);
+            seed.License.LastIssuedSequence = 2;
+            await fixture.Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+            var resolver = CreateResolver(fixture.Db, key);
+
+            var latest = await resolver.ResolveLatestAsync(
+                seed.License.Id, seed.Customer, seed.Installation, null, TestContext.Current.CancellationToken);
+            Assert.True(latest.Succeeded, latest.ErrorCode);
+            Assert.Equal(2, latest.Sequence);
+            Assert.Equal(new[] { "finance" }, latest.Subsystems);
+
+            var historical = await resolver.ResolveSequenceAsync(
+                seed.License.Id, 1, seed.Customer, seed.Installation, null, TestContext.Current.CancellationToken);
+            Assert.True(historical.Succeeded, historical.ErrorCode);
+            Assert.Equal(1, historical.Sequence);
+            Assert.Equal(new[] { "finance", "sales" }, historical.Subsystems);
+        }
+        finally
+        {
+            await CleanupAsync(fixture);
+        }
+    }
+
+    [Fact]
+    public async Task RevokedOrUnknownSigningKeyFailsClosed()
+    {
+        var fixture = await OpenAsync();
+        if (fixture is null) return;
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        try
+        {
+            var seed = await SeedAsync(fixture.Db, key, 1, ["finance"]);
+            var trustStore = CreateTrustStore(key, revoked: true);
+            var resolver = new VendorProvisioningLicenseResolver(fixture.Db, trustStore, TimeProvider.System);
+
+            var result = await resolver.ResolveLatestAsync(
+                seed.License.Id, seed.Customer, seed.Installation, null, TestContext.Current.CancellationToken);
+            Assert.False(result.Succeeded);
+            Assert.Equal(StatusCodes.Status503ServiceUnavailable, result.StatusCode);
+            Assert.Equal("provisioning_license_signing_key_untrusted", result.ErrorCode);
+        }
+        finally
+        {
+            await CleanupAsync(fixture);
+        }
+    }
+
+    private static VendorProvisioningLicenseResolver CreateResolver(VendorDbContext db, ECDsa key) =>
+        new(db, CreateTrustStore(key), TimeProvider.System);
+
+    private static LicenseSigningTrustStore CreateTrustStore(ECDsa key, bool revoked = false)
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Licensing:TrustedSigningKeys:license-test-key:PublicKeySubjectPublicKeyInfoBase64"] =
+                    Convert.ToBase64String(key.ExportSubjectPublicKeyInfo()),
+                ["Licensing:TrustedSigningKeys:license-test-key:Revoked"] = revoked.ToString()
+            })
+            .Build();
+        return new LicenseSigningTrustStore(configuration);
+    }
+
+    private static async Task<SeededLicense> SeedAsync(
+        VendorDbContext db, ECDsa key, int sequence, string[] subsystems)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var customer = new VendorCustomer
+        {
+            Id = Guid.NewGuid(),
+            CustomerNumber = "C-" + Guid.NewGuid().ToString("N")[..12],
+            LegalName = "Provisioning license test customer",
+            DisplayName = "Provisioning license test",
+            Status = "Active",
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now
+        };
+        var installation = new VendorInstallation
+        {
+            Id = Guid.NewGuid(),
+            CustomerId = customer.Id,
+            Customer = customer,
+            InstallationCode = "I-" + Guid.NewGuid().ToString("N")[..12],
+            Name = "Provisioning test installation",
+            Environment = "Production",
+            Status = "Active",
+            CreatedAtUtc = now
+        };
+        var license = new VendorLicense
+        {
+            Id = Guid.NewGuid(),
+            CustomerId = customer.Id,
+            Customer = customer,
+            InstallationId = installation.Id,
+            Installation = installation,
+            LicenseNumber = "L-" + Guid.NewGuid().ToString("N")[..12],
+            ProductCode = "FARANOU",
+            Status = "Issued",
+            LicenseKind = LicensePayload.KindPerpetual,
+            MaxCompanies = 10,
+            SubsystemsJson = "[\"finance\",\"sales\"]",
+            GraceDays = 30,
+            LastIssuedSequence = sequence,
+            ValidFromUtc = now.AddMinutes(-1),
+            CreatedAtUtc = now
+        };
+
+        db.AddRange(customer, installation, license);
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        await AddEnvelopeAsync(db, license, installation, key, sequence, subsystems);
+        return new SeededLicense(customer, installation, license);
+    }
+
+    private static async Task AddEnvelopeAsync(
+        VendorDbContext db,
+        VendorLicense license,
+        VendorInstallation installation,
+        ECDsa key,
+        int sequence,
+        string[] subsystems)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var payload = new LicensePayload(
+            1,
+            license.Id.ToString("D"),
+            installation.Id.ToString("D"),
+            license.ProductCode,
+            license.LicenseKind,
+            now,
+            license.ValidFromUtc,
+            license.ValidUntilUtc,
+            license.GraceDays,
+            sequence,
+            new LicenseLimits(license.MaxCompanies, subsystems));
+        var payloadJson = CanonicalJson.SerializePayload(payload);
+        var signature = key.SignData(
+            Encoding.UTF8.GetBytes(payloadJson),
+            HashAlgorithmName.SHA256,
+            DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
+        var envelope = new LicenseEnvelope(
+            1, "license-test-key", LicenseAlgorithms.EcdsaP256Sha256,
+            payloadJson, Convert.ToBase64String(signature));
+        db.SignedLicenseEnvelopes.Add(new VendorSignedLicenseEnvelope
+        {
+            Id = Guid.NewGuid(),
+            LicenseId = license.Id,
+            Sequence = sequence,
+            KeyId = envelope.Kid,
+            Algorithm = envelope.Algorithm,
+            EnvelopeJson = System.Text.Json.JsonSerializer.Serialize(envelope),
+            PayloadSha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payloadJson))).ToLowerInvariant(),
+            CreatedAtUtc = now
+        });
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+    }
+
+    private static async Task<Fixture?> OpenAsync()
+    {
+        var baseConnection = Environment.GetEnvironmentVariable("FARANO_VENDOR_TEST_SQLSERVER");
+        if (string.IsNullOrWhiteSpace(baseConnection))
+        {
+            const string message = "A disposable SQL Server is required for Vendor provisioning license resolver tests.";
+            if (Environment.GetEnvironmentVariable("FARANOU_REQUIRE_VENDOR_SQLSERVER") == "1") Assert.Fail(message);
+            Assert.Skip(message);
+            return null;
+        }
+
+        var connection = new SqlConnectionStringBuilder(baseConnection)
+        {
+            InitialCatalog = $"FaranouVendorTests_{Guid.NewGuid():N}"
+        }.ConnectionString;
+        var provider = VendorTestServiceProviderFactory.Create(connection);
+        try
+        {
+            var scope = provider.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+            await db.Database.MigrateAsync(TestContext.Current.CancellationToken);
+            return new Fixture(provider, scope, db);
+        }
+        catch
+        {
+            await provider.DisposeAsync();
+            throw;
+        }
+    }
+
+    private static async Task CleanupAsync(Fixture fixture)
+    {
+        await fixture.Db.Database.EnsureDeletedAsync(TestContext.Current.CancellationToken);
+        fixture.Scope.Dispose();
+        await fixture.Provider.DisposeAsync();
+    }
+
+    private sealed record SeededLicense(
+        VendorCustomer Customer, VendorInstallation Installation, VendorLicense License);
+
+    private sealed record Fixture(
+        Microsoft.Extensions.DependencyInjection.ServiceProvider Provider,
+        Microsoft.Extensions.DependencyInjection.IServiceScope Scope,
+        VendorDbContext Db);
+}
