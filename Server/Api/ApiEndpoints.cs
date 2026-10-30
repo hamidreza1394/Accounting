@@ -206,6 +206,20 @@ public static class ApiEndpoints
 		var exception = httpContext.Features
 			.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
 
+		// Request-body binding failures are client errors, not unexpected server faults.
+		// Preserve the framework-selected status while returning only a generic response;
+		// malformed or truncated input must not produce an Error-level application log.
+		if (exception is BadHttpRequestException badRequestException)
+		{
+			httpContext.Response.Headers.CacheControl = "no-store";
+
+			await TypedResults.Problem(
+				title: "درخواست نامعتبر است.",
+				statusCode: badRequestException.StatusCode)
+				.ExecuteAsync(httpContext);
+			return;
+		}
+
 		httpContext.RequestServices
 			.GetRequiredService<ILoggerFactory>()
 			.CreateLogger(typeof(ApiEndpoints).FullName!)
