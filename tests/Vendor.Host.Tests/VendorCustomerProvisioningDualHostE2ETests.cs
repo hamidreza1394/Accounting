@@ -14,8 +14,8 @@ using Faranou.Vendor.Host.Signing;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Domain;
 using Faranou.Vendor.Persistence.Identity;
-using Infrastructure.Provisioning;
-using Infrastructure.Security;
+using CustomerProvisioning = CustomerServer::Infrastructure.Provisioning;
+using CustomerSecurity = CustomerServer::Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -465,7 +465,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 {
                     var db = scope.ServiceProvider.GetRequiredService<Data.DatabaseContext>();
                     var admin = await db.Users.SingleAsync(item => item.Username == adminUserName, cancellationToken);
-                    admin.Password = new PasswordHashService().Hash(preEnrollmentPassword);
+                    admin.Password = new CustomerSecurity.PasswordHashService().Hash(preEnrollmentPassword);
                     await db.SaveChangesAsync(cancellationToken);
                 }
 
@@ -509,9 +509,9 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                         item => item.RequestId == requestId, cancellationToken);
                     Assert.False(claim.MustChangePassword);
                     Assert.NotNull(claim.EnrollmentConsumedAtUtc);
-                    var authentication = scope.ServiceProvider.GetRequiredService<AuthenticationService>();
+                    var authentication = scope.ServiceProvider.GetRequiredService<CustomerSecurity.AuthenticationService>();
                     var accepted = await authentication.AuthenticateAsync(adminUserName, adminPassword, "127.0.0.1");
-                    Assert.Equal(LoginOutcome.Succeeded, accepted.Outcome);
+                    Assert.Equal(CustomerSecurity.LoginOutcome.Succeeded, accepted.Outcome);
                 }
 
                 using (var successfulLogin = await PostCustomerLoginAsync(
@@ -769,9 +769,9 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
     }
 
     private sealed class DualHostAcknowledgementSigner(ECDsa key)
-        : ICustomerProvisioningAcknowledgementSigningProvider
+        : CustomerProvisioning.ICustomerProvisioningAcknowledgementSigningProvider
     {
-        public Task<CustomerProvisioningAcknowledgementSigningResult> SignAsync(
+        public Task<CustomerProvisioning.CustomerProvisioningAcknowledgementSigningResult> SignAsync(
             ReadOnlyMemory<byte> canonicalAcknowledgementUtf8,
             CancellationToken cancellationToken)
         {
@@ -780,7 +780,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 canonicalAcknowledgementUtf8.Span,
                 HashAlgorithmName.SHA256,
                 DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
-            return Task.FromResult(new CustomerProvisioningAcknowledgementSigningResult(
+            return Task.FromResult(new CustomerProvisioning.CustomerProvisioningAcknowledgementSigningResult(
                 true,
                 DualHostAcknowledgementKeyId,
                 Convert.ToBase64String(signature),
