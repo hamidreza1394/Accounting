@@ -215,7 +215,7 @@ jobs:
         run: dotnet test tests/Licensing.Contracts.Tests/Licensing.Contracts.Tests.csproj --configuration Release
       - name: Windows CNG customer acknowledgement tests
         shell: pwsh
-        run: dotnet test tests/Template.Tests/Template.Tests.csproj --configuration Release --filter FullyQualifiedName~WindowsCngCustomerProvisioningAcknowledgementSigningTests
+        run: dotnet test tests/Template.Tests/Template.Tests.csproj --configuration Release --filter-class Template.Tests.Integration.WindowsCngCustomerProvisioningAcknowledgementSigningTests
       - name: Publish with scripts/publish.ps1
         shell: pwsh
         run: ./scripts/publish.ps1 -Output (Join-Path $env:RUNNER_TEMP 'faranou-publish')

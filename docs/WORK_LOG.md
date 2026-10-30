@@ -1444,3 +1444,11 @@
 - فرمان آفلاین `dotnet Server.dll --provisioning-ack-key create` اضافه شد. فرمان به Enabled وابسته نیست و signer runtime را فعال نمی‌کند؛ پس از ثبت public key در هر دو Trust Store، اپراتور می‌تواند فعال‌سازی را جداگانه انجام دهد.
 - CI ویندوز تست‌های focused را اجرا می‌کند؛ Software KSP صرفاً fixture تست است و آزمون TPM واقعی روی Windows Server سخت‌افزاری هنوز لازم است.
 - PR #347 در حال CI است. Local build/test در این محیط اجرا نشده است. Audit durable metadata-only، trust enrollment/rotation/revocation workflow، readiness و ماتریس نسخه Windows/TPM همچنان باقی‌اند.
+
+
+## 2026-10-30 — Issue #236: اصلاح فیلتر تست Windows CNG در MTP
+
+- **علت ریشه‌ای:** `Template.Tests.csproj` از xUnit v3 و Microsoft Testing Platform استفاده می‌کند؛ دستور CI از نحو فیلتر VSTest یعنی `--filter FullyQualifiedName~...` استفاده می‌کرد. MTP در xUnit v3 این نحو را پشتیبانی نمی‌کند و در نتیجه `Zero tests ran` با exit code 8 می‌داد.
+- **اصلاح:** فیلتر به `--filter-class Template.Tests.Integration.WindowsCngCustomerProvisioningAcknowledgementSigningTests` تغییر کرد تا دقیقاً کلاس Windows CNG اجرا شود؛ هیچ تستی حذف یا Skip نشده است.
+- **مستندات:** فرمان صحیح در `docs/TESTING.md` ثبت شد.
+- **اعتبارسنجی:** علت با لاگ Windows CI run `41085741694` و مستندات رسمی xUnit v3/Microsoft Testing Platform تأیید شد؛ CI روی شاخهٔ اصلاحی هنوز باید اجرا شود.

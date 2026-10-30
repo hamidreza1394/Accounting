@@ -184,6 +184,6 @@ cd ClientApp && npm ci && npm run typecheck && npm test && npm run build && npm 
 ## Windows CNG customer acknowledgement signer (Issue #236)
 
 - `tests/Template.Tests/Integration/WindowsCngCustomerProvisioningAcknowledgementSigningTests.cs` verifies key creation with export disabled, ECDSA P-256/64-byte P1363 signing, verification against the returned public SPKI, exact-payload binding, missing-key fail-closed behavior, explicit KSP selection and no TPM-to-Software-KSP fallback.
-- The tests run in the Windows `publish-windows` job using `dotnet test tests/Template.Tests/Template.Tests.csproj --configuration Release --filter FullyQualifiedName~WindowsCngCustomerProvisioningAcknowledgementSigningTests`.
+- The tests run in the Windows `publish-windows` job using xUnit v3's Microsoft Testing Platform filter: `dotnet test tests/Template.Tests/Template.Tests.csproj --configuration Release --filter-class Template.Tests.Integration.WindowsCngCustomerProvisioningAcknowledgementSigningTests`. Do not use VSTest's `--filter FullyQualifiedName~...` syntax with this MTP-enabled xUnit v3 project; it can select zero tests and fail the job.
 - The Windows CI fixture uses `Microsoft Software Key Storage Provider` because hosted runners do not guarantee a TPM. This proves Windows CNG API behavior only; it does not prove a real TPM or any particular Windows Server TPM firmware/provider combination. A hardware acceptance test remains mandatory before Production enablement.
 - Linux runs skip the Windows-only test class; no Linux ACK provider is included in this stage.
