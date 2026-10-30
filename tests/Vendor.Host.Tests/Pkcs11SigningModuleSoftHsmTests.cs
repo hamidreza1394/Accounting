@@ -75,6 +75,11 @@ public sealed class Pkcs11SigningModuleSoftHsmTests
                     SHA256.HashData(packagePayload),
                     packageResult.Signature.Span,
                     DSASignatureFormat.IeeeP1363FixedFieldConcatenation));
+
+                var unconfiguredKey = await module.SignAsync(
+                    new Pkcs11SigningKeyOptions { KeyId = "attacker-key-v1" },
+                    Encoding.UTF8.GetBytes("must-not-sign-with-unconfigured-key"));
+                Assert.False(unconfiguredKey.Succeeded);
             }
 
             using var productionModule = new Pkcs11SigningModule(
