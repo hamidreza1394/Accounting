@@ -1314,3 +1314,12 @@
 - **اصلاح:** مقدار ثابت حذف شد؛ رمزهای موردنیاز تست با `RandomNumberGenerator.GetBytes(32)` به‌صورت runtime و per-test تولید می‌شوند. تست همچنان بررسی می‌کند رمز و enrollment token در audit ذخیره نشده‌اند.
 - **دامنه:** فقط تست و handoff/work log در شاخهٔ مستقل Issue #235؛ بدون تغییر Vendor، دیتابیس مشتری، migration یا secret configuration.
 - **اعتبارسنجی:** Gitleaks روی SHA قبلی ناموفق بود؛ اجرای CI روی commit اصلاحی در انتظار است. هیچ نتیجهٔ سبزی برای SHA جدید ادعا نمی‌شود.
+
+## 2026-10-30 — Issue #235: آزمون E2E تبادل آفلاین بین دو Host مستقل
+
+- **دامنه:** PR [#317](https://github.com/hamidreza1394/Accounting/pull/317) روی شاخه `feat/issue-235-dual-host-e2e` یک آزمون HTTP end-to-end به `Vendor.Host.Tests` اضافه می‌کند. پروژه تست اکنون Server را با alias مستقل ارجاع می‌دهد تا دو نوع `Program` بدون تداخل قابل میزبانی باشند.
+- **جریان:** دو `WebApplicationFactory` مستقل و دو دیتابیس SQL Server مجزا؛ ورود Vendor با دو حساب و TOTP؛ ساخت درخواست و Maker-Checker؛ امضای بسته با کلید ECDSA موقت تست؛ Export به فایل؛ اعتبارسنجی Customer با Trust Store مستقل؛ دو apply هم‌زمان و replay؛ Enrollment و guard ورود؛ انتقال acknowledgement از فایل؛ رد ack دست‌کاری‌شده؛ تأیید `Confirmed` فقط پس از ack معتبر و idempotent.
+- **امنیت:** کلیدهای تست فقط در حافظه ساخته می‌شوند؛ Providerهای Production تغییر نکرده و همچنان fail-closed هستند. هیچ کلید خصوصی یا secret عملیاتی به repo اضافه نشده است.
+- **CI:** Vendor workflow متغیرهای `FARANO_VENDOR_TEST_SQLSERVER` و `FARANOU_TEST_SQLSERVER` را به SQL Server 2022 سرویس‌شده متصل می‌کند و هر دو Require guard را فعال می‌کند تا تست به‌صورت Skip عبور نکند.
+- **محدودیت دقیق:** دو Host و دو TestServer مستقل در یک test process و دو دیتابیس مستقل اجرا می‌شوند؛ این هنوز تست دو ماشین/دو OS process، قطع فیزیکی شبکه یا KMS/HSM Production نیست. جزئیات در `docs/handoffs/ISSUE-235-dual-host-e2e.md`.
+- **اعتبارسنجی در زمان ثبت:** PR #317 باز و Draft است؛ CI هنوز در حال اجراست. Build/Test موفق یا اجرای این آزمون تا دریافت نتیجه واقعی CI ادعا نمی‌شود.
