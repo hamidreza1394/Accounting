@@ -2,9 +2,9 @@
 
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/235
 - **PR مبنا:** https://github.com/hamidreza1394/Accounting/pull/319 (single-license v4)
-- **PR این مرحله:** در حال آماده‌سازی روی شاخه test/issue-235-dual-host-e2e-v4
+- **PR این مرحله:** #329 — شاخه test/issue-235-dual-host-e2e-v4-main
 - **تاریخ:** 2026-10-30
-- **وضعیت:** آزمون HTTP دو میزبان با قرارداد v4 به‌روزرسانی شده؛ CI هنوز نتیجه نداده است.
+- **وضعیت:** PR #329 روی main باز است؛ CI نهایی این شاخه در حال اجراست.
 
 ## هدف
 
@@ -58,5 +58,5 @@ Require guardها مانع سبزشدن تست با Skip خاموش می‌شو�
 
 - اجرای CI روی SHA نهایی این شاخه و رفع تمام شکست‌ها.
 - تأیید Vendor CI، .NET CI، Semgrep، تست SQL Server و تست‌های E2E.
-- پس از ادغام PR #319، بازبینی و ادغام PR مستقل این مرحله؛ سپس بستن PR قدیمی #317 به‌عنوان superseded.
+- پس از سبزشدن CI شاخهٔ تمیز PR #329، ادغام آن؛ PRهای قدیمی #317 و #328 به‌عنوان superseded بسته شده‌اند.
 - Production E2E روی دو پردازه/ماشین و KMS/HSM واقعی همچنان نیازمند staging و تصمیم عملیاتی جداگانه است.
