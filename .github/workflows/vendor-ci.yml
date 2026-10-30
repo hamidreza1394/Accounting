@@ -120,6 +120,14 @@ jobs:
           export SOFTHSM2_CONF="$config_file"
           module_path="$(find /usr/lib -name 'libsofthsm2.so' -print -quit)"
           test -n "$module_path"
+          # Pkcs11Interop's Linux loader imports libdl; Ubuntu ships the versioned runtime
+          # soname, so provide a job-local compatibility name without modifying the host.
+          native_compat_dir="$RUNNER_TEMP/pkcs11-native"
+          mkdir -p "$native_compat_dir"
+          libdl_path="$(ldconfig -p | awk '/libdl.so.2/{print $NF; exit}')"
+          test -n "$libdl_path"
+          ln -sf "$libdl_path" "$native_compat_dir/libdl.so"
+          echo "LD_LIBRARY_PATH=$native_compat_dir${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
           softhsm2-util --init-token --free --label FaranouVendorCI --so-pin 12345678 --pin 123456
           {
             echo "SOFTHSM2_CONF=$config_file"
