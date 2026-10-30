@@ -84,21 +84,25 @@ public sealed class Pkcs11SigningModuleSoftHsmTests
                 Assert.False(unconfiguredKey.Succeeded);
             }
 
-            using var productionModule = new Pkcs11SigningModule(
+            using (var productionModule = new Pkcs11SigningModule(
                 Options.Create(options),
                 new TestHostEnvironment(Environments.Production),
-                NullLogger<Pkcs11SigningModule>.Instance);
-            Assert.False(await productionModule.IsAvailableAsync());
-            var blocked = await productionModule.SignAsync(
-                options.LicenseKey,
-                Encoding.UTF8.GetBytes("must-not-sign-in-production-with-softhsm"));
-            Assert.False(blocked.Succeeded);
+                NullLogger<Pkcs11SigningModule>.Instance))
+            {
+                Assert.False(await productionModule.IsAvailableAsync());
+                var blocked = await productionModule.SignAsync(
+                    options.LicenseKey,
+                    Encoding.UTF8.GetBytes("must-not-sign-in-production-with-softhsm"));
+                Assert.False(blocked.Succeeded);
+            }
 
-            using var stagingModule = new Pkcs11SigningModule(
+            using (var stagingModule = new Pkcs11SigningModule(
                 Options.Create(options),
                 new TestHostEnvironment(Environments.Staging),
-                NullLogger<Pkcs11SigningModule>.Instance);
-            Assert.False(await stagingModule.IsAvailableAsync());
+                NullLogger<Pkcs11SigningModule>.Instance))
+            {
+                Assert.False(await stagingModule.IsAvailableAsync());
+            }
         }
         finally
         {
