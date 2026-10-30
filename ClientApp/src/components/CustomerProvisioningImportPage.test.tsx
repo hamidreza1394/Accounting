@@ -44,7 +44,7 @@ describe('Customer provisioning import', () => {
 
     render(<CustomerProvisioningImportPage />);
     const file = new File([JSON.stringify(packageDocument)], 'customer-package.json', { type: 'application/json' });
-    fireEvent.change(await screen.findByLabelText('انتخاب فایل بستهٔ JSON'), { target: { files: [file] } });
+    fireEvent.change(await screen.findByLabelText(/انتخاب فایل بسته/), { target: { files: [file] } });
     const submit = screen.getByRole('button', { name: 'اعتبارسنجی و اعمال بسته' });
     await waitFor(() => expect(submit).toBeEnabled());
     fireEvent.click(submit);
@@ -71,7 +71,7 @@ describe('Customer provisioning import', () => {
       payloadJson: JSON.stringify({ requestId: 'not-a-guid' }),
       signatureBase64: 'signature',
     })], 'invalid-package.json', { type: 'application/json' });
-    fireEvent.change(await screen.findByLabelText('انتخاب فایل بستهٔ JSON'), { target: { files: [file] } });
+    fireEvent.change(await screen.findByLabelText(/انتخاب فایل بسته/), { target: { files: [file] } });
 
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('شناسه درخواست در بسته معتبر نیست.'));
     expect(fetchMock).toHaveBeenCalledTimes(1);
