@@ -324,9 +324,10 @@ public sealed class CustomerProvisioningPackageValidatorTests
     public void V3CanonicalPayload_RemainsByteForByteUnchanged()
     {
         const string expected =
-            "{\"schemaVersion\":3,\"requestId\":\"9b0d2c4d-53bc-4bb2-a22c-90b30f2b58e8\",\"customerReference\":\"customer-ref-001\",\"installationId\":\"installation-001\",\"companyName\":\"Company Example\",\"companyType\":\"independent\",\"initialAdminUserName\":\"initial-admin\",\"subsystems\":[\"finance\",\"inventory\"],\"issuedAtUtc\":\"2026-10-28T11:59:00.0000000\\u002B00:00\",\"expiresAtUtc\":\"2026-10-28T13:00:00.0000000\\u002B00:00\",\"nonce\":\"abcdefghijklmnopqrstuvwxyz0123456789_-\",\"fiscalPeriodTitle\":\"سال مالی ۱۴۰۵\",\"fiscalPeriodStartDate\":\"2026-01-01\",\"fiscalPeriodEndDate\":\"2027-01-01\",\"parentCompanyReference\":null,\"initialAdminEmail\":\"admin@example.com\"}";
+            "{\"schemaVersion\":3,\"requestId\":\"9b0d2c4d-53bc-4bb2-a22c-90b30f2b58e8\",\"customerReference\":\"customer-ref-001\",\"installationId\":\"installation-001\",\"companyName\":\"Company Example\",\"companyType\":\"independent\",\"initialAdminUserName\":\"initial-admin\",\"subsystems\":[\"finance\",\"inventory\"],\"issuedAtUtc\":\"2026-10-28T11:59:00.0000000\\u002B00:00\",\"expiresAtUtc\":\"2026-10-28T13:00:00.0000000\\u002B00:00\",\"nonce\":\"abcdefghijklmnopqrstuvwxyz0123456789_-\",\"fiscalPeriodTitle\":\"Fiscal year 1405\",\"fiscalPeriodStartDate\":\"2026-01-01\",\"fiscalPeriodEndDate\":\"2027-01-01\",\"parentCompanyReference\":null,\"initialAdminEmail\":\"admin@example.com\"}";
 
-        Assert.Equal(expected, CustomerProvisioningCanonicalJson.Serialize(SampleV3()));
+        var payload = SampleV3() with { FiscalPeriodTitle = "Fiscal year 1405" };
+        Assert.Equal(expected, CustomerProvisioningCanonicalJson.Serialize(payload));
     }
 
     [Fact]
