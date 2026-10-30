@@ -1269,3 +1269,8 @@
 - **محدودیت force-password:** فرم enrollment رمز اولیه را پیش از اولین ورود عادی تعیین می‌کند و MustChangePassword را پس از آن false می‌کند. محدودسازی نشست و اجبار تغییر مجدد رمز در اولین login هنوز پیاده‌سازی نشده و معیار پذیرش باز است؛ این محدودیت در PR #307 شفاف شده است.
 - **تست:** تست SQL Server برای apply، signed acknowledgement، replay، reissue، ابطال token قبلی، مصرف یک‌بار، hash-only و عدم ایجاد گروه اضافه شده است. این تست‌ها در این نشست اجرا نشده‌اند؛ rollback و concurrent replay نیز اجرا نشده‌اند.
 - **CI:** اجرای اول PR #307 شکست کامپایل داشت: namespace مربوط به VendorProvisioningParentReferenceRules در IssuanceService وارد نشده بود. using اصلاح شد. اجرای جدید روی head جاری در زمان ثبت این log: secret-scan موفق؛ build-and-test، client، publish-scripts و Semgrep هنوز queued/in_progress. اجرای نهایی هنوز سبز نیست.
+
+## 2026-10-30 — Issue #235: offline verification of customer acknowledgement signatures
+- **شکاف:** نتیجهٔ Provider امضا فقط از نظر شکل بررسی و همراه شرکت ساخته‌شده ذخیره می‌شد؛ امضای معیوب ack غیرقابل‌تأیید دائمی می‌ساخت.
+- **تغییر:** Trust Store مستقل `Provisioning:TrustedAcknowledgementKeys` و راستی‌آزمایی آفلاین پیش از ذخیره؛ کدهای `provisioning_acknowledgement_signer_unavailable|signer_key_untrusted|signature_invalid` (503)؛ Exception ارائه‌دهنده گرفته و فقط نوع آن لاگ می‌شود؛ مستندات قرارداد Provider در SECURITY.md.
+- **تست:** SQL Server واقعی: پنج Provider خراب در مسیر موفق و Rejected بدون هیچ رکورد؛ شاهد مثبت؛ بررسی جهش؛ کل Template.sln: 657 کل، 655 موفق، 2 skipped، 0 ناموفق. Provider واقعی `Blocked` روی #236. جزئیات: `docs/handoffs/ISSUE-235-ack-signing-provider-contract.md`.
