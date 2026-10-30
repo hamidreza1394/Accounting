@@ -1356,3 +1356,12 @@
 - **Boundary:** only the signed snapshot contract/validator is implemented. Customer-side durable sequence persistence, installed-license enforcement, backup-restore rollback handling, and production signer are still not implemented/configured.
 - **Architecture note:** a database-only high-water mark cannot prove rollback resistance after restoring an older full database backup unless its trust anchor is held outside that backup failure domain.
 - **Changes:** handoff and this work-log entry only; no runtime code, schema, migration or key material changed.
+
+
+## 2026-10-30 — Issue #236: reconcile signer boundary and signature-verification status
+
+- **PR #314:** provider exception logging safely records only exception type; .NET CI `41023761020` succeeded, initial Vendor run `41023760808` was cancelled, and final Vendor rerun `41023761189` succeeded; Semgrep runs `41023760815` and `41023761032` succeeded.
+- **PR #316:** provisioning package signature is verified against independently configured public trust before durable state changes; .NET CI `41026182788`, Vendor CI `41026182882`, and Semgrep `41026182656` succeeded.
+- **Current boundary:** signing and provisioning trust are separate; default providers remain unavailable/fail-closed. These changes do not supply a production KMS/HSM or prove private-key custody.
+- **Remaining:** provider selection, workload identity/sign-only access, key provisioning/rotation/recovery, public-key distribution, operational failure/recovery drills, and production two-admin/MFA operations.
+- **Changes:** handoff and work-log status only; no runtime code, secret, key, schema or migration changed.
