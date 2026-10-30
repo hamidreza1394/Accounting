@@ -121,3 +121,4 @@ public static class VendorProvisioningRequestRules
                    .SequenceEqual(licenseBinding.Subsystems.Order(StringComparer.Ordinal), StringComparer.Ordinal);
 
 }
+}
