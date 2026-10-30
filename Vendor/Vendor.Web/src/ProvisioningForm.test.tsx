@@ -87,6 +87,14 @@ describe('Vendor customer provisioning form', () => {
         return response({ items: [{ id: 'install-1', installationCode: 'INSTALL-01', name: 'نصب اصلی', status: 'Active' }] });
       }
       if (url === '/api/vendor/provisioning-requests?customerId=customer-1&page=1&pageSize=10') return response({ items: [] });
+      if (url === '/api/vendor/provisioning-requests/eligible-parents?customerId=customer-1&installationId=install-1') {
+        return response({ items: [{
+          requestId: 'a0b1c2d3-e4f5-4678-9012-abcdefabcdef',
+          companyName: 'شرکت مادر نمونه',
+          companyType: 'parent',
+          confirmedAtUtc: '2026-10-29T11:00:00Z',
+        }] });
+      }
       if (url === '/api/auth/antiforgery') return response({ requestToken: 'csrf-subsidiary' });
       if (url === '/api/vendor/provisioning-requests/' && init?.method === 'POST') {
         return response({ id: 'provision-2', status: 'AwaitingSigner' }, 201);
@@ -100,11 +108,12 @@ describe('Vendor customer provisioning form', () => {
       onCancel={vi.fn()} onSaved={vi.fn()} />);
     await waitFor(() => expect(screen.getByLabelText('نصب مقصد')).toHaveValue('install-1'));
     fireEvent.change(screen.getByLabelText('نوع شرکت'), { target: { value: 'subsidiary' } });
-    expect(screen.getByLabelText('مرجع شرکت مادر در نصب مشتری')).toBeRequired();
+    expect(screen.getByLabelText('شرکت مادر تأییدشده در همین نصب')).toBeRequired();
+    await screen.findByRole('option', { name: /شرکت مادر نمونه/ });
     fireEvent.change(screen.getByLabelText('نام شرکت حسابداری'), { target: { value: 'شرکت تابعه نمونه' } });
     fireEvent.change(screen.getByLabelText('نام کاربری مدیر اولیه'), { target: { value: 'initial-admin' } });
     fireEvent.change(screen.getByLabelText('ایمیل مدیر اولیه'), { target: { value: 'admin@example.com' } });
-    fireEvent.change(screen.getByLabelText('مرجع شرکت مادر در نصب مشتری'), { target: { value: 'parent-company-001' } });
+    fireEvent.change(screen.getByLabelText('شرکت مادر تأییدشده در همین نصب'), { target: { value: 'a0b1c2d3-e4f5-4678-9012-abcdefabcdef' } });
     fireEvent.click(screen.getByRole('button', { name: 'ذخیره درخواست راه‌اندازی' }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/vendor/provisioning-requests/', expect.objectContaining({ method: 'POST' })));
@@ -113,7 +122,7 @@ describe('Vendor customer provisioning form', () => {
     const body = JSON.parse(String((post?.[1] as RequestInit).body)) as Record<string, unknown>;
     expect(body).toMatchObject({
       companyType: 'subsidiary',
-      parentCompanyReference: 'parent-company-001',
+      parentCompanyReference: 'a0b1c2d3-e4f5-4678-9012-abcdefabcdef',
       fiscalPeriodTitle: 'سال مالی ۱۴۰۵',
       fiscalPeriodStartDate: '2026-03-21',
       fiscalPeriodEndDate: '2027-03-20',
