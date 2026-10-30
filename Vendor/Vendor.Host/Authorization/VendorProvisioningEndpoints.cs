@@ -185,7 +185,7 @@ public static class VendorProvisioningEndpoints
             if (!VendorProvisioningRequestRules.IsTargetActive(customer.Status, installation.Status))
                 return Results.Conflict(new { error = "provisioning_target_inactive" });
 
-            if (string.Equals(request.CompanyType, "subsidiary", StringComparison.Ordinal) &&
+            if (string.Equals(request.CompanyType?.Trim(), "subsidiary", StringComparison.Ordinal) &&
                 !await VendorProvisioningParentReferenceRules.IsEligibleParentAsync(
                     db,
                     request.ParentCompanyReference,
