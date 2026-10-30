@@ -145,7 +145,7 @@
 ## Customer acknowledgement signing-key revocation (D-055 / Issue #236)
 
 - Customer-side ACK verification uses the independent public-key set `Provisioning:TrustedAcknowledgementKeys:<keyId>`; private keys remain in the per-installation Windows CNG/TPM or approved OS secure store.
-- A key can be explicitly revoked without deleting its public key by setting `Provisioning:RevokedAcknowledgementKeys:<keyId>=true`. The customer trust store rejects revoked KeyIds even if the SPKI entry remains present.
+- A key can be explicitly revoked without deleting its public key by setting `Provisioning:RevokedAcknowledgementKeys:<keyId>=true`. The customer trust store rejects revoked KeyIds even if the SPKI entry remains present; malformed non-null revocation values also fail closed rather than being interpreted as active trust.
 - During rotation, configure the new versioned KeyId/SPKI first and leave it active while the old key remains active; after the Vendor trust set is updated and the cutover is approved, mark the old KeyId revoked. Vendor-side trust independently retains its existing `Revoked` flag.
 - A revoked customer KeyId makes the customer's local post-signature verification fail closed; no acknowledgement is committed. No database migration or internet lookup is required.
 - This is configuration-based revocation, not an independently rollback-resistant trust anchor. An administrator restoring old configuration or an old full-system backup may restore prior trust; operational anti-rollback remains a separate control and must be addressed before claiming tamper-resistant revocation.
