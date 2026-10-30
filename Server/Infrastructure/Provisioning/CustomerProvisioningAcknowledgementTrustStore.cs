@@ -31,8 +31,13 @@ public sealed class ConfigurationCustomerProvisioningAcknowledgementTrustStore(I
         if (!IsValidKeyId(keyId))
             return false;
 
-        if (bool.TryParse(configuration[RevokedSectionPath + ":" + keyId], out var revoked) && revoked)
+        var revocationValue = configuration[RevokedSectionPath + ":" + keyId];
+        if (revocationValue is not null &&
+            (!bool.TryParse(revocationValue, out var revoked) || revoked))
+        {
+            // A malformed revocation flag is a configuration error; never treat it as active trust.
             return false;
+        }
 
         return ConfigurationTrustedPublicKeys.TryRead(configuration, SectionPath, keyId, out subjectPublicKeyInfo);
     }
