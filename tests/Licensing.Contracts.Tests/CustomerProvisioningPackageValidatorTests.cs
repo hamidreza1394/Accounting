@@ -320,6 +320,60 @@ public sealed class CustomerProvisioningPackageValidatorTests
         }
     }
 
+    [Fact]
+    public void V3CanonicalPayload_RemainsByteForByteUnchanged()
+    {
+        const string expected =
+            "{\"schemaVersion\":3,\"requestId\":\"9b0d2c4d-53bc-4bb2-a22c-90b30f2b58e8\",\"customerReference\":\"customer-ref-001\",\"installationId\":\"installation-001\",\"companyName\":\"Company Example\",\"companyType\":\"independent\",\"initialAdminUserName\":\"initial-admin\",\"subsystems\":[\"finance\",\"inventory\"],\"issuedAtUtc\":\"2026-10-28T11:59:00.0000000+00:00\",\"expiresAtUtc\":\"2026-10-28T13:00:00.0000000+00:00\",\"nonce\":\"abcdefghijklmnopqrstuvwxyz0123456789_-\",\"fiscalPeriodTitle\":\"سال مالی ۱۴۰۵\",\"fiscalPeriodStartDate\":\"2026-01-01\",\"fiscalPeriodEndDate\":\"2027-01-01\",\"parentCompanyReference\":null,\"initialAdminEmail\":\"admin@example.com\"}";
+
+        Assert.Equal(expected, CustomerProvisioningCanonicalJson.Serialize(SampleV3()));
+    }
+
+    [Fact]
+    public void V4Payload_RequiresCanonicalLicenseIdAndPositiveSequence()
+    {
+        var valid = CustomerProvisioningCanonicalJson.Serialize(SampleV4());
+        Assert.True(CustomerProvisioningPackageValidator.TryValidatePayload(
+            valid, Now, out var parsed, out var error), error);
+        Assert.Equal("0a5f7d20-3a2c-4c8d-9e1f-2a6b7c8d9e10", parsed!.LicenseId);
+        Assert.Equal(7, parsed.Sequence);
+
+        foreach (var invalid in new[]
+        {
+            SampleV4() with { LicenseId = null },
+            SampleV4() with { LicenseId = "license-001" },
+            SampleV4() with { LicenseId = Guid.Empty.ToString("D") },
+            SampleV4() with { Sequence = null },
+            SampleV4() with { Sequence = 0 },
+            SampleV4() with { Sequence = -1 }
+        })
+        {
+            Assert.False(CustomerProvisioningPackageValidator.TryValidatePayload(
+                CustomerProvisioningCanonicalJson.Serialize(invalid), Now, out var rejected, out _));
+            Assert.Null(rejected);
+        }
+    }
+
+    [Fact]
+    public void V4SignedPackage_VerifiesLicenseBindingAndKeepsLegacySchemasUnchanged()
+    {
+        using var signingKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var package = Sign(signingKey, SampleV4());
+
+        Assert.True(CustomerProvisioningPackageValidator.TryValidateAndVerify(
+            package, signingKey.ExportSubjectPublicKeyInfo(), Now, out var parsed, out var error), error);
+        Assert.Equal(SampleV4().LicenseId, parsed!.LicenseId);
+        Assert.Equal(SampleV4().Sequence, parsed.Sequence);
+
+        var legacyWithLicenseFields = SampleV3() with
+        {
+            LicenseId = SampleV4().LicenseId,
+            Sequence = SampleV4().Sequence
+        };
+        Assert.False(CustomerProvisioningPackageValidator.TryValidatePayload(
+            CustomerProvisioningCanonicalJson.Serialize(legacyWithLicenseFields), Now, out _, out _));
+    }
+
     private static CustomerProvisioningPackage Sign(ECDsa key, CustomerProvisioningPayload payload)
     {
         var json = CustomerProvisioningCanonicalJson.Serialize(payload);
@@ -354,7 +408,14 @@ public sealed class CustomerProvisioningPackageValidatorTests
 
     private static CustomerProvisioningPayload SampleV3() => SampleV2() with
     {
-        SchemaVersion = CustomerProvisioningPackageValidator.CurrentPayloadSchemaVersion,
+        SchemaVersion = 3,
         InitialAdminEmail = "admin@example.com"
+    };
+
+    private static CustomerProvisioningPayload SampleV4() => SampleV3() with
+    {
+        SchemaVersion = 4,
+        LicenseId = "0a5f7d20-3a2c-4c8d-9e1f-2a6b7c8d9e10",
+        Sequence = 7
     };
 }
