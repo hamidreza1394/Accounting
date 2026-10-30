@@ -1508,3 +1508,10 @@
 - هیچ کد اجرایی، API، schema، migration، secret، private key یا customer DB تغییر نکرد.
 - موانع Production همچنان واقعی‌اند: HSM مرکزی provision نشده (بودجه صفر)، sink مستقل Audit هنوز provider/credential ندارد، revocation آفلاین هنوز consumer/enforcement ضد rollback ندارد، و آزمون فیزیکی TPM/دو ماشین و backup/restore انجام نشده است.
 - PR #356: https://github.com/hamidreza1394/Accounting/pull/356
+
+
+## 2026-10-30 — D-056: پذیرش امضای نرم‌افزاری برای Stage 1
+- مالک محصول استفاده از همان Provider مبتنی بر PKCS#11 با SoftHSM در Development و Staging را تأیید کرد؛ Production software فقط با پذیرش ریسک صریح و Audit در هر startup مجاز است.
+- Stage 1: کد کامل + Staging روی سیستم مالک/سرور ابری + نصب مشتری روی ماشین دوم؛ Stage 2: HSM واقعی، دو میزبان واقعی و بازیابی شواهد پیش‌نیاز برچسب Production کامل.
+- این PR فقط تصمیم و اسناد را ثبت می‌کند؛ تغییر کد Assurance، استقرار واقعی، آزمون دو میزبان فیزیکی و بازیابی هنوز انجام نشده‌اند.
+- فایل‌ها: D-055، D-056، DECISIONS.md، INDEX.md، WORK_LOG.md.
