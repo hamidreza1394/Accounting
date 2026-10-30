@@ -1434,3 +1434,11 @@
 - DI به‌صورت opt-in و Windows-only است؛ در سایر حالت‌ها default unavailable/fail-closed باقی می‌ماند. تست‌ها روی Windows CI با Software KSP صرفاً به‌عنوان fixture اجرا می‌شوند؛ این تست سخت‌افزار TPM واقعی را اثبات نمی‌کند.
 - تست‌ها قبل از implementation نوشته شدند و CI Windows برای اجرای مجموعهٔ محدود CNG اضافه شد. اجرای محلی در این محیط انجام نشده؛ نتیجهٔ واقعی باید از CI PR نهایی ثبت شود.
 - باقی‌مانده: command امن Key Ceremony/Provisioning و ثبت public key در Trust Store مشتری/Vendor، audit durable metadata-only، health/readiness و تست سخت‌افزار TPM واقعی؛ حداقل نسخه Windows/Server هنوز certify نشده است. Linux در PR آینده.
+
+
+## 2026-10-30 — Issue #236: customer ACK trust revocation and rotation overlap
+
+- شکاف: Trust Store مشتری فقط وجود SPKI را بررسی می‌کرد و راه explicit برای revoke کردن KeyId بدون حذف کلید عمومی نداشت.
+- تغییر: تنظیم `Provisioning:RevokedAcknowledgementKeys:<keyId>=true` اضافه شد؛ کلید revoked حتی با وجود SPKI در trusted set رد می‌شود. overlap rotation با نگه‌داشتن دو public key و revoke نسخه قدیمی پوشش داده شد.
+- تست: unit tests برای key resolution، revoked key و overlap نسخه جدید اضافه شدند. CI باید روی PR نهایی اجرا شود؛ تست محلی اجرا نشده است.
+- محدودیت: این revocation مبتنی بر configuration است و در برابر restore کامل backup/config قدیمی به‌تنهایی anti-rollback مقاوم نیست؛ trust anchor مستقل/rollback-resistant هنوز نیازمند طراحی است.

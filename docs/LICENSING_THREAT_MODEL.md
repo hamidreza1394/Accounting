@@ -140,3 +140,12 @@
 - PKCS#11 opt-in و پیش‌فرض خاموش است. فقط محیط اختصاصی Testing، SoftHSM را می‌پذیرد؛ در Development/Staging/Production، slot سخت‌افزاری و manufacturer/model دقیقاً allowlist‌شده الزامی است. با بودجهٔ فعلی صفر و نبود HSM واقعی، signerهای Production باید unavailable/fail-closed باقی بمانند.
 - هر تلاش امضا audit metadata-only با purpose، KeyId نسخه‌دار و نتیجه ثبت می‌کند؛ payload/signature/private material ثبت نمی‌شوند. شکست audit نتیجه امضا را دور می‌اندازد. `/health/signing` برای monitoring بیرونی 503 می‌دهد وقتی provider unavailable است.
 - CI در PR #344 با SoftHSM موفق است، اما این اثبات HSM واقعی یا HA نیست. اجرای Key Ceremony، rotation/revocation، recovery، workload identity و sign-only operator controls به HSM واقعی وابسته است؛ ACK key per-customer TPM/OS و enrollment آفلاین نیز هنوز adapter اجرایی ندارد.
+
+
+## Customer acknowledgement signing-key revocation (D-055 / Issue #236)
+
+- Customer-side ACK verification uses the independent public-key set `Provisioning:TrustedAcknowledgementKeys:<keyId>`; private keys remain in the per-installation Windows CNG/TPM or approved OS secure store.
+- A key can be explicitly revoked without deleting its public key by setting `Provisioning:RevokedAcknowledgementKeys:<keyId>=true`. The customer trust store rejects revoked KeyIds even if the SPKI entry remains present.
+- During rotation, configure the new versioned KeyId/SPKI first and leave it active while the old key remains active; after the Vendor trust set is updated and the cutover is approved, mark the old KeyId revoked. Vendor-side trust independently retains its existing `Revoked` flag.
+- A revoked customer KeyId makes the customer's local post-signature verification fail closed; no acknowledgement is committed. No database migration or internet lookup is required.
+- This is configuration-based revocation, not an independently rollback-resistant trust anchor. An administrator restoring old configuration or an old full-system backup may restore prior trust; operational anti-rollback remains a separate control and must be addressed before claiming tamper-resistant revocation.

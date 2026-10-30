@@ -187,3 +187,10 @@ cd ClientApp && npm ci && npm run typecheck && npm test && npm run build && npm 
 - The tests run in the Windows `publish-windows` job using `dotnet test tests/Template.Tests/Template.Tests.csproj --configuration Release --filter FullyQualifiedName~WindowsCngCustomerProvisioningAcknowledgementSigningTests`.
 - The Windows CI fixture uses `Microsoft Software Key Storage Provider` because hosted runners do not guarantee a TPM. This proves Windows CNG API behavior only; it does not prove a real TPM or any particular Windows Server TPM firmware/provider combination. A hardware acceptance test remains mandatory before Production enablement.
 - Linux runs skip the Windows-only test class; no Linux ACK provider is included in this stage.
+
+
+## Customer ACK trust rotation and revocation (Issue #236)
+
+- `CustomerProvisioningAcknowledgementTrustStoreTests` covers configured public-key resolution, explicit revocation while retaining the public key for audit, and overlap rotation where the new version remains trusted while the previous version is revoked.
+- Revocation is deployment configuration under `Provisioning:RevokedAcknowledgementKeys:<keyId>=true`; a revoked KeyId cannot verify a newly produced ACK, so the customer apply transaction remains fail-closed (503) and persists no acknowledgement.
+- The tests are pure configuration/cryptography tests and require no SQL Server or external provider.
