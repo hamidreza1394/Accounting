@@ -282,3 +282,14 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - Under SERIALIZABLE isolation, concurrent identical requests each took shared range locks and then deadlocked on write (SQL Server error 1205); the losers surfaced as unhandled HTTP 500. No duplicate company was created, but the behavior was not idempotent. Found by the SQL Server concurrency tests.
 - `CustomerProvisioningApplyService` now takes a transaction-owned `sp_getapplock` (exclusive, 15 s timeout, released on commit/rollback) as the first statement of apply (`faranou:provisioning:apply`) and of enrollment completion/reissue (`faranou:provisioning:enrollment`). Concurrent duplicates queue, then take the normal replay path. A lock timeout returns `provisioning_apply_busy` / `enrollment_busy` (HTTP 409, retryable). Raw SQL is used because EF Core has no application-lock API; the resource is a constant passed as a parameter.
 - Status: `Implemented`; verified on SQL Server 2022 (8 parallel apply requests, 4 parallel enrollment attempts).
+
+
+## Vendor license-envelope trust for provisioning (D-054 / Issue #235)
+
+- Vendor provisioning must not trust license subsystem values supplied by the browser. It resolves the latest stored signed license envelope and verifies its exact payload bytes before deriving entitlements.
+- The Vendor host uses a separate deployment-supplied public-key trust set under `Licensing:TrustedSigningKeys`. Each child key is a key ID and contains `PublicKeySubjectPublicKeyInfoBase64` plus optional `Revoked` (boolean). Public keys must be ECDSA P-256 SubjectPublicKeyInfo; key IDs are bounded ASCII letters/digits, hyphen or underscore.
+- Unknown, revoked, malformed, or mismatched keys fail closed. An empty trust set rejects all license envelopes. This trust set is independent of the provisioning-package signing trust set and customer acknowledgement trust set.
+- Only public verification material may be present in Vendor configuration. The license private key remains in the approved external KMS/HSM signing provider; it must not be stored in source, appsettings, CI variables exposed to build logs, or any customer installation.
+- Rotation procedure: add the new public key before issuing with its key ID; keep the old public key trusted for historical signed envelopes while they remain valid; set Revoked only under the approved revocation procedure. Revoking a key prevents new Vendor provisioning operations that depend on envelopes signed by that key.
+- A customer that has already received a package while fully offline cannot discover later Vendor-side suspension, key revocation or a newer sequence. This is a protocol limitation, not a claim of offline revocation.
+- This branch adds no database migration and no Customer DB schema change. MaxCompanies enforcement, module additions to existing companies and multi-license aggregation remain NotImplemented.
