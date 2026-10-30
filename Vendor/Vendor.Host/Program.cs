@@ -90,6 +90,7 @@ if (builder.Configuration.GetValue<bool>("Signing:Pkcs11:Enabled"))
     builder.Services.AddSingleton<IPkcs11SigningModule, Pkcs11SigningModule>();
     builder.Services.AddScoped<ILicenseSigningProvider, Pkcs11LicenseSigningProvider>();
     builder.Services.AddScoped<IProvisioningSigningProvider, Pkcs11ProvisioningSigningProvider>();
+    builder.Services.AddHostedService<Pkcs11SigningAssuranceStartupService>();
     builder.Services.AddHealthChecks().AddCheck<Pkcs11SigningHealthCheck>(
         "vendor-signing-provider",
         tags: new[] { "signing" });
