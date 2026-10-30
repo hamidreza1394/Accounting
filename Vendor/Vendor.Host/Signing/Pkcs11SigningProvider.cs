@@ -17,7 +17,7 @@ namespace Faranou.Vendor.Host.Signing;
 public sealed class Pkcs11SigningOptions
 {
     private static readonly Regex VersionedKeyIdPattern = new(
-        "^[a-z0-9][a-z0-9_-]{0,54}-v[1-9][0-9]*$",
+        "^[a-z0-9][a-z0-9-]{0,49}-v[1-9][0-9]*$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     public string? ModulePath { get; set; }
@@ -52,7 +52,7 @@ public sealed class Pkcs11SigningOptions
 
     private static void ValidateKeyId(string? keyId)
     {
-        if (keyId is null || keyId.Length > 64 || !VersionedKeyIdPattern.IsMatch(keyId))
+        if (keyId is null || keyId.Length > 60 || !VersionedKeyIdPattern.IsMatch(keyId))
             throw new InvalidOperationException("PKCS#11 signing KeyId must be a unique, versioned lower-case identifier.");
     }
 }
@@ -361,7 +361,7 @@ public abstract class Pkcs11SigningProviderBase
             await _auditWriter.AppendAsync(
                 new VendorAuditWriteRequest(
                     null,
-                    $"vendor.signing.{_purpose}.{outcome}",
+                    $"vendor.signing.{_purpose}.{key.KeyId}.{outcome}",
                     "signing_operation",
                     null,
                     Activity.Current?.TraceId.ToString()),
