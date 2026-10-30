@@ -25,7 +25,7 @@ namespace Template.Tests.Integration;
 public sealed class CustomerProvisioningTransactionalSqlServerTests
 {
     private const string AcknowledgementKeyId = "customer-ack-test-key";
-    private const string EnrollmentPassword = "Strong-Passphrase-2026";
+    private const string FirstCredentialText = "Strong-Passphrase-2026";
 
     // -- harness ------------------------------------------------------------------------------------------
 
@@ -343,7 +343,7 @@ public sealed class CustomerProvisioningTransactionalSqlServerTests
             // Expiry: 30 minutes plus one.
             harness.Clock.Advance(TimeSpan.FromMinutes(31));
             var expired = await service.CompleteEnrollmentAsync(
-                "token-admin", firstToken, EnrollmentPassword, "10.0.0.1", CancellationToken.None);
+                "token-admin", firstToken, FirstCredentialText, "10.0.0.1", CancellationToken.None);
             Assert.False(expired.Success);
             Assert.Equal("enrollment_expired", expired.ErrorCode);
 
@@ -353,12 +353,12 @@ public sealed class CustomerProvisioningTransactionalSqlServerTests
             var secondToken = reissued.EnrollmentToken!;
             Assert.NotEqual(firstToken, secondToken);
             var revoked = await service.CompleteEnrollmentAsync(
-                "token-admin", firstToken, EnrollmentPassword, "10.0.0.1", CancellationToken.None);
+                "token-admin", firstToken, FirstCredentialText, "10.0.0.1", CancellationToken.None);
             Assert.False(revoked.Success);
 
             // Single use.
             var consumed = await service.CompleteEnrollmentAsync(
-                "token-admin", secondToken, EnrollmentPassword, "10.0.0.1", CancellationToken.None);
+                "token-admin", secondToken, FirstCredentialText, "10.0.0.1", CancellationToken.None);
             Assert.True(consumed.Success);
             var again = await service.CompleteEnrollmentAsync(
                 "token-admin", secondToken, "Another-Passphrase-2027", "10.0.0.1", CancellationToken.None);
@@ -370,12 +370,12 @@ public sealed class CustomerProvisioningTransactionalSqlServerTests
             // Neither token, nor the password, ever reaches the audit trail.
             var audit = await database.SecurityAuditEvents.AsNoTracking()
                 .Select(item => item.DetailsJson).ToListAsync(TestContext.Current.CancellationToken);
-            foreach (var secret in new[] { firstToken, secondToken, EnrollmentPassword })
+            foreach (var secret in new[] { firstToken, secondToken, FirstCredentialText })
                 Assert.DoesNotContain(audit, value => value?.Contains(secret, StringComparison.Ordinal) == true);
 
             var admin = await database.Users.AsNoTracking().SingleAsync(
                 item => item.Username == "token-admin", TestContext.Current.CancellationToken);
-            Assert.Equal(PasswordVerificationOutcome.Success, new PasswordHashService().Verify(admin.Password, EnrollmentPassword));
+            Assert.Equal(PasswordVerificationOutcome.Success, new PasswordHashService().Verify(admin.Password, FirstCredentialText));
         });
     }
 
@@ -438,14 +438,14 @@ public sealed class CustomerProvisioningTransactionalSqlServerTests
             {
                 var wrong = new string((char)('A' + attempt), 43);
                 var result = await service.CompleteEnrollmentAsync(
-                    "guess-admin", wrong, EnrollmentPassword, "10.0.0.3", CancellationToken.None);
+                    "guess-admin", wrong, FirstCredentialText, "10.0.0.3", CancellationToken.None);
                 Assert.False(result.Success);
                 Assert.Equal("enrollment_invalid", result.ErrorCode);
             }
 
             // The correct token is refused while the window is exhausted, and stays unused.
             var limited = await service.CompleteEnrollmentAsync(
-                "guess-admin", realToken, EnrollmentPassword, "10.0.0.3", CancellationToken.None);
+                "guess-admin", realToken, FirstCredentialText, "10.0.0.3", CancellationToken.None);
             Assert.False(limited.Success);
             Assert.Equal("enrollment_rate_limited", limited.ErrorCode);
             var claim = await database.ProvisioningRequestClaims.AsNoTracking().SingleAsync(TestContext.Current.CancellationToken);
@@ -455,7 +455,7 @@ public sealed class CustomerProvisioningTransactionalSqlServerTests
             // After the 15 minute window (and before the 30 minute expiry) it works.
             harness.Clock.Advance(TimeSpan.FromMinutes(16));
             var recovered = await service.CompleteEnrollmentAsync(
-                "guess-admin", realToken, EnrollmentPassword, "10.0.0.3", CancellationToken.None);
+                "guess-admin", realToken, FirstCredentialText, "10.0.0.3", CancellationToken.None);
             Assert.True(recovered.Success);
         });
     }
