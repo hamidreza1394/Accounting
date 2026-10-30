@@ -231,7 +231,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
 
                 await using (var customerScope = customerFactory.Services.CreateAsyncScope())
                 {
-                    var db = customerScope.ServiceProvider.GetRequiredService<CustomerServer::Data.DatabaseContext>();
+                    var db = customerScope.ServiceProvider.GetRequiredService<Data.DatabaseContext>();
                     await db.Database.MigrateAsync(cancellationToken);
                 }
 
@@ -435,7 +435,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
 
                 await using (var scope = customerFactory.Services.CreateAsyncScope())
                 {
-                    var db = scope.ServiceProvider.GetRequiredService<CustomerServer::Data.DatabaseContext>();
+                    var db = scope.ServiceProvider.GetRequiredService<Data.DatabaseContext>();
                     Assert.Empty(await db.Companies.ToListAsync(cancellationToken));
                     Assert.Empty(await db.ProvisioningRequestClaims.ToListAsync(cancellationToken));
                 }
@@ -479,7 +479,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
 
                 await using (var scope = customerFactory.Services.CreateAsyncScope())
                 {
-                    var db = scope.ServiceProvider.GetRequiredService<CustomerServer::Data.DatabaseContext>();
+                    var db = scope.ServiceProvider.GetRequiredService<Data.DatabaseContext>();
                     Assert.Equal(1, await db.Companies.CountAsync(item => item.Name == companyName, cancellationToken));
                     Assert.Equal(1, await db.Users.CountAsync(item => item.Username == adminUserName, cancellationToken));
                     var claim = await db.ProvisioningRequestClaims.SingleAsync(
@@ -496,7 +496,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 var preEnrollmentPassword = "Known-Before-Enrollment-" + Guid.NewGuid().ToString("N");
                 await using (var scope = customerFactory.Services.CreateAsyncScope())
                 {
-                    var db = scope.ServiceProvider.GetRequiredService<CustomerServer::Data.DatabaseContext>();
+                    var db = scope.ServiceProvider.GetRequiredService<Data.DatabaseContext>();
                     var admin = await db.Users.SingleAsync(item => item.Username == adminUserName, cancellationToken);
                     admin.Password = new CustomerSecurity.PasswordHashService().Hash(preEnrollmentPassword);
                     await db.SaveChangesAsync(cancellationToken);
@@ -537,7 +537,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
 
                 await using (var scope = customerFactory.Services.CreateAsyncScope())
                 {
-                    var db = scope.ServiceProvider.GetRequiredService<CustomerServer::Data.DatabaseContext>();
+                    var db = scope.ServiceProvider.GetRequiredService<Data.DatabaseContext>();
                     var claim = await db.ProvisioningRequestClaims.SingleAsync(
                         item => item.RequestId == requestId, cancellationToken);
                     Assert.False(claim.MustChangePassword);
