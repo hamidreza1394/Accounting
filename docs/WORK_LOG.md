@@ -1406,5 +1406,5 @@
 - PKCS#11 opt-in و default disabled؛ فقط محیط اختصاصی Testing، SoftHSM را قبول می‌کند؛ سایر محیط‌ها slot سخت‌افزاری و manufacturer/model allowlist‌شده می‌خواهند. `/health/signing` provider disabled/unavailable را با 503 نشان می‌دهد.
 - هر تلاش امضا audit metadata-only با purpose، KeyId نسخه‌دار و نتیجه دارد؛ payload/signature/private key در audit/log ثبت نمی‌شوند. اگر audit append شکست بخورد، signature به caller تحویل نمی‌شود.
 - تست واحد قرارداد provider و integration تست SoftHSM برای امضای هر دو key، verification با public key و رد SoftHSM در Production اضافه شد. Vendor CI اکنون SoftHSM را فقط در job تست نصب/initialise می‌کند.
-- با بودجهٔ HSM صفر، هیچ تنظیم Production فعال نشده است؛ providerهای Production پیش‌فرض unavailable/fail-closed می‌مانند تا HSM واقعی provision شود. Key Ceremony، rotation/revocation، HA/DR، backup/recovery و ACK TPM مشتری در PRهای بعدی/Runbook باقی‌اند.
+- با بودجهٔ HSM صفر، هیچ تنظیم Production فعال نشده است؛ providerهای Production پیش‌فرض unavailable/fail-closed می‌مانند تا HSM واقعی provision شود. Runbook عملیاتی در PR #341 ادغام شد؛ اجرای واقعی Key Ceremony، rotation/revocation، HA/DR و backup/recovery به تأمین HSM وابسته است. پیاده‌سازی ACK TPM مشتری همچنان باقی است.
 - Local build/test اجرا نشد (محیط GitHub-only)؛ نتایج واقعی .NET CI، Vendor CI و Semgrep روی SHA نهایی PR باید بررسی شوند.
