@@ -9,9 +9,11 @@ using Faranou.Vendor.Persistence.Identity;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 var bootstrapCommandRequested = VendorBootstrapCommand.IsRequested(args);
 if (bootstrapCommandRequested && args.Length != 1)
@@ -76,6 +78,30 @@ builder.Services.AddVendorPersistence(builder.Configuration);
 // License and provisioning signing have separate provider registrations and key boundaries.
 builder.Services.TryAddSingleton<ILicenseSigningProvider, UnavailableLicenseSigningProvider>();
 builder.Services.TryAddSingleton<IProvisioningSigningProvider, UnavailableProvisioningSigningProvider>();
+
+// PKCS#11 is opt-in and disabled by default. With no provisioned hardware HSM, Production
+// remains on the unavailable providers and signing endpoints fail closed with HTTP 503.
+if (builder.Configuration.GetValue<bool>("Signing:Pkcs11:Enabled"))
+{
+    builder.Services.Configure<Pkcs11SigningOptions>(
+        builder.Configuration.GetSection("Signing:Pkcs11"));
+    builder.Services.RemoveAll<ILicenseSigningProvider>();
+    builder.Services.RemoveAll<IProvisioningSigningProvider>();
+    builder.Services.AddSingleton<IPkcs11SigningModule, Pkcs11SigningModule>();
+    builder.Services.AddScoped<ILicenseSigningProvider, Pkcs11LicenseSigningProvider>();
+    builder.Services.AddScoped<IProvisioningSigningProvider, Pkcs11ProvisioningSigningProvider>();
+    builder.Services.AddHealthChecks().AddCheck<Pkcs11SigningHealthCheck>(
+        "vendor-signing-provider",
+        tags: new[] { "signing" });
+}
+else
+{
+    builder.Services.AddHealthChecks().AddCheck(
+        "vendor-signing-provider",
+        () => HealthCheckResult.Unhealthy("PKCS#11 signing provider is not configured."),
+        tags: new[] { "signing" });
+}
+
 // Customer acknowledgement trust is supplied independently by deployment configuration.
 // An empty key set fails closed; malformed configured keys prevent host startup.
 builder.Services.AddSingleton(sp =>
@@ -353,7 +379,14 @@ app.Use(async (context, next) =>
 app.UseAuthorization();
 app.UseAntiforgery();
 
-app.MapHealthChecks("/health/live").AllowAnonymous();
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = _ => false
+}).AllowAnonymous();
+app.MapHealthChecks("/health/signing", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("signing")
+}).AllowAnonymous();
 app.MapVendorAuthentication();
 app.MapVendorPasswordChange();
 app.MapVendorRoleManagement();
