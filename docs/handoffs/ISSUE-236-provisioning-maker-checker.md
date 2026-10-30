@@ -1,7 +1,7 @@
 # تحویل وظیفه — ISSUE-236-provisioning-maker-checker
 
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/236
-- **وضعیت:** maker-checker و fail-closed signer boundary در main ادغام شده‌اند؛ PR #314 برای ثبت امن خطای provider ادغام شده؛ بررسی رمزنگاری خروجی signer در PR مستقل جدید و منتظر CI است
+- **وضعیت بازبینی 2026-10-30:** maker-checker، fail-closed signer boundary، ثبت امن خطای provider و اعتبارسنجی رمزنگاری signature در main ادغام و CI-verified هستند (PRهای #314 و #316). Provider واقعی KMS/HSM، هویت workload و چرخه کلید هنوز انتخاب/پیکربندی نشده‌اند؛ صدور Production عمداً unavailable/fail-closed است.
 
 ## هدف
 افزودن مسیر تأیید دو نفره برای صدور بستهٔ راه‌اندازی مشتری، بدون قراردادن کلید خصوصی در برنامه یا مخزن.
@@ -74,4 +74,14 @@
 - **محدوده:** Vendor Host، تست‌های Vendor و مستندات؛ بدون تغییر customer-side، `Server/**` یا Migration.
 - **اعتبارسنجی:** تست محلی اجرا نشده؛ CI روی PR لازم است.
 - **Branch:** `fix/vendor-verify-provisioning-signature`
-- **PR:** پس از ایجاد ثبت می‌شود.
+- **PR:** [#316](https://github.com/hamidreza1394/Accounting/pull/316) — merged؛ .NET CI، Vendor CI و Semgrep روی head نهایی موفق.
+
+
+## وضعیت عملیاتی فعلی — 2026-10-30
+
+- `ILicenseSigningProvider` و `IProvisioningSigningProvider` مرزهای جدا دارند؛ provider پیش‌فرض هر دو unavailable/fail-closed است. قرارداد امضا و اعتبارسنجی نتیجه از provider واقعی مستقل‌اند.
+- PR #314 خطاهای provider را با ثبت فقط نوع exception ایمن می‌کند؛ متن/stack/payload/key ID/signature در log نوشته نمی‌شوند. Timeout صدور Provisioning در PR #300 به ۱۵ ثانیه محدود شده است.
+- PR #316 قبل از تغییر وضعیت پایدار، ذخیره envelope یا append ممیزی، signature را روی بایت‌های دقیق payload با کلید عمومی مورد اعتماد بررسی می‌کند؛ unknown/revoked key و signature نامعتبر fail-closed رد می‌شوند.
+- این کنترل‌ها مانع پذیرش امضای جعلی از یک provider بدپیکربندی‌شده‌اند؛ **جایگزین KMS/HSM نیستند** و مالکیت/حفاظت کلید خصوصی را اثبات نمی‌کنند.
+- **Production blockers:** انتخاب provider عملیاتی برای cloud و dedicated server؛ workload identity و مجوز sign-only؛ provision/rotation/recovery/retirement کلید؛ انتشار امن public keyها؛ تست عملیاتی availability/timeout/failure؛ حداقل دو مدیر فعال واجد MFA و مراسم maker-checker واقعی.
+- هیچ credential یا key material عملیاتی در این handoff ثبت نمی‌شود. Issue #236 تا تکمیل و آزمون محیط واقعی باز می‌ماند.
