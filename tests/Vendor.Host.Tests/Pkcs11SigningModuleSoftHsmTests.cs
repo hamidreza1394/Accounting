@@ -93,6 +93,12 @@ public sealed class Pkcs11SigningModuleSoftHsmTests
                 options.LicenseKey,
                 Encoding.UTF8.GetBytes("must-not-sign-in-production-with-softhsm"));
             Assert.False(blocked.Succeeded);
+
+            using var stagingModule = new Pkcs11SigningModule(
+                Options.Create(options),
+                new TestHostEnvironment(Environments.Staging),
+                NullLogger<Pkcs11SigningModule>.Instance);
+            Assert.False(await stagingModule.IsAvailableAsync());
         }
         finally
         {
