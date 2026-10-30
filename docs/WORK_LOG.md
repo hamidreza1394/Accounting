@@ -1378,3 +1378,11 @@
 - Added SQL Server integration coverage for initial checkpoint, idempotent restart, unavailable provider, append failure, Development skip, and ambiguous adapter registrations.
 - No provider-specific cloud dependency, key, credential, local-file fallback, same-database fallback, or migration was introduced. External provider selection, failure-domain separation, immutable retention, periodic verification, alerting, and restore drills remain operational gates.
 - Local tests were not executed in this GitHub-only workflow; require .NET CI, Vendor CI, and Semgrep on the final PR head before merge.
+
+
+## 2026-10-30 — Issue #236: مالک تصمیم امضای HSM/PKCS#11 را پذیرفت
+
+- پاسخ مالک ثبت شد: Vendor می‌تواند روی سیستم/سرور اختصاصی یا سرور ابری اجرا شود؛ Azure/AWS دسترسی/مجوز ندارد؛ بودجهٔ HSM فعلاً صفر است.
+- D-055 به وضعیت Accepted تغییر کرد. معماری deployment-neutral است و هیچ Azure/AWS adapter ساخته نمی‌شود.
+- توسعهٔ adapter PKCS#11 و تست‌های CI با SoftHSM (صرفاً تست) مجاز است؛ Production signing برای بسته و لایسنس تا تأمین HSM واقعی همچنان Blocked و fail-closed می‌ماند. SoftHSM یا software key جایگزین Production نیست.
+- ACK هر نصب فقط با TPM/OS secure store غیرقابل‌استخراج فعال می‌شود؛ نبود backend امن به معنی fail-closed است.
