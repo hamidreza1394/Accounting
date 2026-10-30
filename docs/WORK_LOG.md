@@ -1322,3 +1322,14 @@
 - **دامنه:** Vendor Host و تست/مستندات Vendor؛ بدون customer-side `Server/**`، schema یا migration.
 - **اعتبارسنجی:** تست محلی اجرا نشده؛ نتیجهٔ نهایی به CI روی PR وابسته است.
 - **Branch/PR:** `fix/vendor-provisioning-signer-exception-logging` / [PR #314](https://github.com/hamidreza1394/Accounting/pull/314).
+
+
+## 2026-10-30 — Issue #236: تأیید رمزنگاری خروجی signer پیش از تحویل
+- **یافته:** Vendor فقط طول امضای ۶۴ بایت، الگوریتم و طول KeyId را بررسی می‌کرد؛ امضای تصادفی با طول صحیح می‌توانست در وضعیت `PendingDelivery` ذخیره شود، هرچند consumer مشتری آن را رد می‌کرد. همچنین قرارداد KeyId باید با trust lookup مشتری یکسان باشد.
+- **اصلاح:** trust store مستقل و provider-neutral برای کلیدهای عمومی بستهٔ Vendor با مسیر پیکربندی `ProvisioningSigningTrust:Keys` افزوده شد. فقط کلید عمومی ECDSA P-256 پذیرفته می‌شود؛ شناسهٔ کلید فقط ASCII alphanumeric، خط تیره و underscore است؛ کلید ناشناخته/لغوشده یا امضای نامعتبر با 503 عمومی رد می‌شود.
+- **ترتیب:** امضای دقیق payload با کلید عمومی مورد اعتماد، پیش از ذخیرهٔ signature، تغییر وضعیت درخواست و ثبت audit تأیید می‌شود. trust set خالی عمداً همهٔ خروجی‌ها را رد می‌کند.
+- **تست regression:** integration test SQL Server اکنون پس از یک exception موقت، یک امضای ۶۴ بایتی نامعتبر را هم تزریق می‌کند؛ باید 503 بدهد، export ممکن نباشد و همان approval با همان RowVersion پس از آن با امضای معتبر قابل retry باشد. تست‌های trust store برای کلید ناشناخته/لغوشده، duplicate، KeyId نامعتبر و SPKI/curve نامعتبر اضافه شدند.
+- **دامنه:** فقط Vendor Host، تست‌های Vendor و مستندات؛ بدون `Server/**`، customer schema، migration یا secret. کلید خصوصی تولید نشد و provider واقعی انتخاب/پیکربندی نشد.
+- **اعتبارسنجی:** تست محلی در این محیط اجرا نشده؛ CI روی PR برای Build/Test، SQL Server integration، secret scan، E2E و publish لازم است.
+- **وضعیت:** Implemented / Awaiting CI؛ Production signing همچنان Blocked تا انتخاب provider و credential/identity عملیاتی.
+
