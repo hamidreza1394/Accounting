@@ -838,7 +838,9 @@ Cookie خودکفاست و بدون بررسی مجدد تا انقضا معتب
 
 
 ### Implementation status note — 2026-10-30
-The branch feat/issue-235-transactional-consumer now contains a partial customer apply service, signed-ack outbox persistence, one-time enrollment/reissue endpoints, and React operator/admin screens. This does not change the Accepted decision above. The production acknowledgement signing provider is deliberately unavailable by default. The strict post-authentication first-login password-change restriction, end-to-end SQL Server rollback/concurrent replay validation, and final CI are not yet verified; therefore D-053 remains NotVerified for implementation.
+The customer consumer, claim/replay, transactional apply, one-time Enrollment/reissue and login guard are merged in main through PRs #302, #305–#308; Vendor acknowledgement intake/UI are in #293/#294; v4 single-license binding is in #319; and dual-TestServer E2E is in #329. CI evidence for the relevant implementation slices is recorded above and in `docs/PROJECT_STATUS.md`. The E2E uses two TestServer instances and two SQL Server databases in one test process; it does not prove two physical machines or two independent OS processes.
+
+**Remaining D-053 conformance gap:** accepted item 9 requires a post-authentication first-login session restricted to password change. Current implementation instead blocks login/session until Enrollment; the administrator sets the real password during Enrollment and `MustChangePassword=false` afterward. No post-enrollment forced password-change flow exists. This difference requires explicit owner acceptance as an alternative or a separate implementation PR; full D-053 conformance is not claimed. Production acknowledgement signing remains unavailable/fail-closed under #236.
 
 
 ## D-054 — اتصال Provisioning به یک لایسنس امضاشدهٔ مشخص (Issue #228 / #235)
