@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Faranou.Licensing.Contracts;
+using Faranou.Vendor.Host.Authorization;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Auditing;
 using Faranou.Vendor.Persistence.Domain;
