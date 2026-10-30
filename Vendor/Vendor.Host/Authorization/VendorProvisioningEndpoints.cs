@@ -425,7 +425,7 @@ public static class VendorProvisioningEndpoints
 
             if (exportPayload is null || exportPayload.SchemaVersion != 4 ||
                 !Guid.TryParseExact(exportPayload.LicenseId, "D", out var exportLicenseId) ||
-                exportPayload.Sequence is not int exportSequence)
+                exportPayload.Sequence is not int)
                 return Results.Conflict(new { error = "provisioning_license_binding_required" });
 
             var exportBinding = await licenseResolver.ResolveLatestAsync(
