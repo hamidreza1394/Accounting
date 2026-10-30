@@ -1401,3 +1401,17 @@
 - متن قدیمی SECURITY.md که می‌گفت private key در نصب مشتری نگهداری نمی‌شود و انتخاب HSM هنوز NeedsApproval است، با تصمیم پذیرفته‌شده D-055 مغایرت داشت.
 - قرارداد اصلاح شد: کلید ACK برای هر نصب جدا و non-exportable در TPM/OS secure store همان نصب می‌ماند؛ امضا محلی/offline است و کلید به Vendor منتقل نمی‌شود.
 - Vendor package/license همچنان به PKCS#11 HSM واقعی با کلیدهای مجزا نیاز دارد؛ با بودجه صفر Production signing unavailable/fail-closed می‌ماند. Customer ACK adapter هنوز پیاده‌سازی نشده و default unavailable است.
+
+
+
+
+## 2026-10-30 — Issue #236: adapter امضای PKCS#11 و تست SoftHSM
+
+- افزودن Pkcs11Interop 5.3.0 (Apache-2.0) و adapter پشت interfaceهای موجود `ILicenseSigningProvider` و `IProvisioningSigningProvider`؛ بدون Adapter ابری.
+- جداسازی purpose و KeyId نسخه‌دار برای لایسنس و provisioning/package؛ adapter فقط private-key object موجود را پیدا می‌کند و کلید تولید یا export نمی‌کند.
+- enforce کردن ECDSA P-256، `CKM_ECDSA` روی SHA-256 digest، امضای IEEE P1363 ثابت ۶۴ بایتی و صفات `SENSITIVE/EXTRACTABLE/ALWAYS_SENSITIVE/NEVER_EXTRACTABLE/SIGN/EC_PARAMS`.
+- PKCS#11 opt-in و default disabled؛ فقط محیط اختصاصی Testing، SoftHSM را قبول می‌کند؛ سایر محیط‌ها slot سخت‌افزاری و manufacturer/model allowlist‌شده می‌خواهند. `/health/signing` provider disabled/unavailable را با 503 نشان می‌دهد.
+- هر تلاش امضا audit metadata-only با purpose، KeyId نسخه‌دار و نتیجه دارد؛ payload/signature/private key در audit/log ثبت نمی‌شوند. اگر audit append شکست بخورد، signature به caller تحویل نمی‌شود.
+- تست واحد قرارداد provider و integration تست SoftHSM برای امضای هر دو key، verification با public key و رد SoftHSM در Production اضافه شد. Vendor CI اکنون SoftHSM را فقط در job تست نصب/initialise می‌کند.
+- با بودجهٔ HSM صفر، هیچ تنظیم Production فعال نشده است؛ providerهای Production پیش‌فرض unavailable/fail-closed می‌مانند تا HSM واقعی provision شود. Runbook عملیاتی در PR #341 ادغام شد؛ اجرای واقعی Key Ceremony، rotation/revocation، HA/DR و backup/recovery به تأمین HSM وابسته است. پیاده‌سازی ACK TPM مشتری همچنان باقی است.
+- Local build/test اجرا نشد (محیط GitHub-only)؛ نتایج واقعی .NET CI، Vendor CI و Semgrep روی SHA نهایی PR باید بررسی شوند.
