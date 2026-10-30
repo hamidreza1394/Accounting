@@ -164,6 +164,7 @@ public sealed class CustomerProvisioningPackageVerifierTests
             {
                 CustomerReference = customerReference,
                 InstallationId = installationId
+                CustomerBoundaryId = Guid.NewGuid()
             }),
             TimeProvider.System);
     }
