@@ -325,7 +325,7 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
     private static bool SupportsEcdsa(ISlot slot) =>
         slot.GetMechanismList().Contains(CKM.CKM_ECDSA);
 
-    private static IObjectHandle? FindAndValidatePrivateKey(ISession session, Pkcs11SigningKeyOptions key)
+    private static IObjectHandle? FindAndValidatePrivateKey(Net.Pkcs11Interop.HighLevelAPI.ISession session, Pkcs11SigningKeyOptions key)
     {
         var keyId = Encoding.ASCII.GetBytes(key.KeyId);
         var searchTemplate = new List<IObjectAttribute>
