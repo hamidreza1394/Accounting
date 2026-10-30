@@ -1,6 +1,6 @@
 # D-055 — سرویس امضای مستقل HSM/TPM با PKCS#11 برای Vendor و ACK مشتری
 
-- **وضعیت: NeedsApproval.** پاسخ‌های مالک در 2026-10-30 ثبت شده‌اند؛ تأیید نهایی معماری و تصمیم دربارهٔ تأمین HSM هنوز لازم است. تا آن زمان کد امضای Production نوشته نمی‌شود.
+- **وضعیت: Accepted (2026-10-30).** مالک معماری و پاسخ‌های استقرار/بودجه را صریحاً تأیید کرده است. پیاده‌سازی PKCS#11 و تست‌های SoftHSM مجاز است؛ فعال‌سازی امضای Production تا تأمین HSM واقعی همچنان Blocked می‌ماند.
 - **دامنه:** امضای بستهٔ Provisioning، لایسنس Vendor و acknowledgement نصب مشتری. هر دامنه کلید مستقل دارد؛ اشتراک کلید یا KeyId ممنوع است.
 - **مبنای مستقل از برند ابری:** سرویس امضای اختصاصی تحت کنترل ما، پشت interfaceهای امضای موجود، با اتصال HSM از طریق استاندارد PKCS#11. Azure Key Vault و AWS KMS صرفاً Adapter اختیاری آینده‌اند و بدون تأیید جداگانه ساخته نمی‌شوند.
 - **پاسخ مالک — میزبانی:** Vendor ممکن است روی سیستم/سرور اختصاصی خودمان یا سرور ابری میزبانی شود؛ طراحی باید deployment-neutral باشد و به یک cloud خاص وابسته نشود.
@@ -15,7 +15,7 @@
 - **Fail-closed:** نبودن، خرابی، timeout یا عدم دسترسی Provider یعنی امضا انجام نمی‌شود و API پاسخ عمومی 503 می‌دهد. هیچ software fallback، کلید آزمایشی یا cache امضای قابل استفاده در Production مجاز نیست.
 - **سلامت و هشدار:** readiness/health، telemetry و alert برای availability، latency و خطای Provider؛ بدون افشای endpoint، credential یا key material.
 - **تست:** SoftHSM فقط برای تست محلی و CI؛ هرگز Provider مجاز Production نیست. پوشش لازم: ECDSA P-256، عدم استخراج private key، تفکیک purpose/key، KeyId versioning، rotation overlap، revocation، unavailable/timeout/503، audit بدون دادهٔ حساس و ACK آفلاین.
-- **ترتیب اجرا پس از تصویب و تأمین سخت‌افزار:** ۱) تأیید نهایی ADR و مدل استقرار؛ ۲) Adapter PKCS#11 و تست‌ها؛ ۳) Runbook عملیاتی HSM/TPM، Key Ceremony، rotation/revocation، backup/recovery، incident response و alerting. هر مرحله PR کوچک مستقل. کارهای تستی با SoftHSM می‌توانند از Production deployment جداگانه انجام شوند، اما هیچ SoftHSM adapter به مسیر Production وصل نمی‌شود.
+- **ترتیب اجرا:** ۱) ADR پذیرفته شد؛ ۲) Adapter PKCS#11 و تست‌های CI با SoftHSM (فقط محیط تست)؛ ۳) Runbook عملیاتی HSM/TPM، Key Ceremony، rotation/revocation، backup/recovery، incident response و alerting. هر مرحله PR کوچک مستقل. هیچ SoftHSM adapter به مسیر Production وصل نمی‌شود.
 - **مواردی که فعلاً انتخاب نمی‌شوند:** سازنده/مدل HSM، مکان فیزیکی، HA/DR، قرارداد پشتیبانی، استقرار دقیق سرویس و هر cloud adapter.
-- **وضعیت فعلی:** interfaceهای امضا و providerهای unavailable/fail-closed موجود حفظ می‌شوند. با توجه به بودجهٔ صفر، تا تأمین HSM واقعی و تأیید نهایی ADR، هیچ PKCS#11 adapter متصل به Production، سرویس امضای Production، کلید، secret، migration یا تنظیم استقرار Production اضافه نمی‌شود.
+- **وضعیت فعلی:** interfaceهای امضا و providerهای unavailable/fail-closed موجود حفظ می‌شوند. با توجه به بودجهٔ صفر، adapter و تست‌های PKCS#11 می‌توانند ساخته شوند، اما Production wiring/enablement و ایجاد/استفاده از کلید واقعی تا تأمین HSM واقعی ممنوع است. Provider پیش‌فرض unavailable/fail-closed باقی می‌ماند؛ هیچ کلید، secret، migration یا تنظیم استقرار Production اضافه نمی‌شود.
 - **مراجع:** D-046 تا D-054؛ Issues #233، #235، #236؛ docs/handoffs/ISSUE-236-provisioning-maker-checker.md و docs/LICENSING_THREAT_MODEL.md.
