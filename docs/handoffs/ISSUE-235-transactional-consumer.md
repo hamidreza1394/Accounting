@@ -3,7 +3,7 @@
 - **Issue:** [#235](https://github.com/hamidreza1394/Accounting/issues/235)
 - **Agent/مسئول:** ChatGPT / GitHub connector
 - **تاریخ:** 2026-10-30
-- **وضعیت:** تصمیم‌های معماری پذیرفته و ثبت‌شده؛ پیاده‌سازی consumer هنوز انجام نشده است.
+- **وضعیت:** تصمیم‌های معماری پذیرفته؛ parent-reference validation به‌صورت جزئی پیاده‌سازی شده؛ transactional consumer هنوز تکمیل نشده است.
 
 ## هدف و معیارهای پذیرش
 - [ ] verify بسته و binding customer/install قبل از هر mutation.
@@ -39,8 +39,8 @@
 | concurrent replay | اجرا نشده | consumer هنوز پیاده‌سازی نشده |
 
 ## امنیت، داده و سازگاری
-- در این slice هیچ کد runtime یا schema مشتری تغییر نکرده است.
-- هیچ Company schema جدیدی اضافه نشده است.
+- کد runtime برای validation و resolve مرجع والد تغییر کرده است؛ هنوز apply endpoint/service وجود ندارد.
+- هیچ schema یا Migration مشتری تغییر نکرده است و هیچ Company schema جدیدی اضافه نشده است.
 - Vendor و Customer همچنان از نظر دیتابیس جدا هستند.
 
 ## ریسک‌ها و کارهای باقی‌مانده
