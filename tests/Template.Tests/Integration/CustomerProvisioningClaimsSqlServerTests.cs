@@ -149,6 +149,70 @@ public sealed class CustomerProvisioningClaimsSqlServerTests
         });
     }
 
+    [Fact]
+    public async Task ParentResolver_UsesOnlyAppliedClaimWithinExactCustomerInstallationAndBoundary()
+    {
+        Assert.SkipUnless(SqlServerAvailable(), "SQL Server is not configured (FARANOU_TEST_SQLSERVER).");
+
+        await WithDatabaseAsync(async name =>
+        {
+            await using (var setup = CreateContext(name))
+            {
+                await setup.Database.MigrateAsync(TestContext.Current.CancellationToken);
+                var boundaryId = Guid.NewGuid();
+                var parentCompany = new Company
+                {
+                    Name = "شرکت مادر",
+                    CustomerBoundaryId = boundaryId,
+                    IsActive = true
+                };
+                setup.Companies.Add(parentCompany);
+                await setup.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+                var period = new FiscalPeriod
+                {
+                    TenantId = parentCompany.Id,
+                    Title = "سال مالی مادر",
+                    StartDate = new DateOnly(2026, 3, 21),
+                    EndDate = new DateOnly(2027, 3, 20)
+                };
+                setup.FiscalPeriods.Add(period);
+                await setup.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+                var requestId = Guid.NewGuid();
+                var claim = NewClaim(requestId, Hash("parent-nonce"), parentCompany.Id, period.Id);
+                claim.CompanyType = "parent";
+                claim.CustomerReference = "customer-ref";
+                claim.InstallationId = "installation-ref";
+                setup.ProvisioningRequestClaims.Add(claim);
+                await setup.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+                var settings = new Infrastructure.Provisioning.CustomerProvisioningSettings
+                {
+                    CustomerReference = "customer-ref",
+                    InstallationId = "installation-ref",
+                    CustomerBoundaryId = boundaryId
+                };
+                var resolved = await Infrastructure.Provisioning.CustomerProvisioningParentClaimResolver.ResolveAsync(
+                    setup, "subsidiary", requestId.ToString("D"), settings,
+                    DateTime.UtcNow, TestContext.Current.CancellationToken);
+
+                Assert.Null(resolved.ErrorCode);
+                Assert.Equal(parentCompany.Id, resolved.ParentCompanyId);
+
+                var wrongBoundary = settings with { };
+                wrongBoundary.CustomerBoundaryId = Guid.NewGuid();
+                var rejected = await Infrastructure.Provisioning.CustomerProvisioningParentClaimResolver.ResolveAsync(
+                    setup, "subsidiary", requestId.ToString("D"), wrongBoundary,
+                    DateTime.UtcNow, TestContext.Current.CancellationToken);
+                Assert.Null(rejected.ParentCompanyId);
+                Assert.Equal(
+                    Infrastructure.Provisioning.CustomerProvisioningParentClaimResolver.InvalidParentReferenceError,
+                    rejected.ErrorCode);
+            }
+        });
+    }
+
     private static ProvisioningRequestClaim NewClaim(
         Guid requestId,
         string nonceHash,
