@@ -68,9 +68,6 @@ public sealed class CustomerProvisioningAcknowledgementTrustStoreTests
 
         Assert.False(trustStore.TryGetPublicKey(oldKeyId, out _));
         Assert.True(trustStore.TryGetPublicKey(newKeyId, out var trustedNewKey));
-        using var verifier = ECDsa.Create();
-        verifier.ImportSubjectPublicKeyInfo(newKey.ExportSubjectPublicKeyInfo(), out var bytesRead);
-        Assert.Equal(newKey.ExportSubjectPublicKeyInfo().Length, bytesRead);
-        Assert.NotEmpty(trustedNewKey);
+        Assert.Equal(newKey.ExportSubjectPublicKeyInfo(), trustedNewKey);
     }
 }
