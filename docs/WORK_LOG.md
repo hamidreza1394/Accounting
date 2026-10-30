@@ -1347,3 +1347,14 @@
 ## 2026-10-30 — همگام‌سازی E2E با اصلاح PR #318
 - PR #319 از نظر محتوای Server branch هنوز فاقد fix ادغام‌شدهٔ PR #318 بود، چون شاخه از commit پیش از آن منشعب شده بود؛ نسخهٔ merged فایل ApiEndpoints و تست regression به شاخهٔ #319 منتقل شد.
 - شاخهٔ E2E جدید از آخرین HEAD #319 ساخته شد تا تست فایل ناقص در Customer Host نیز پاسخ 400 عمومی را از همان کد ادغام‌شده دریافت کند.
+
+
+## 2026-10-30 — Issue #107: fail-closed startup verification of independent audit checkpoint
+
+- **هدف:** ثبت adapter Production به‌تنهایی کافی نیست؛ اگر sink از نظر شبکه/credential/permission در دسترس نباشد، Vendor نباید با تصور آمادگی Audit بالا بیاید.
+- **تست ابتدا:** PR #332 ابتدا تست‌های SQL Server برای ساخت checkpoint اولیه در Production startup، idempotency در restart، fail-closed هنگام unavailable بودن store و عدم resolve در Development را اضافه کرد.
+- **پیاده‌سازی:** `VendorAuditCheckpointStartupService` به‌عنوان hosted service در Production، `VendorAuditCheckpointService.CreateCheckpointAsync` را پیش از readiness اجرا می‌کند؛ زنجیره کامل را verify می‌کند، آخرین checkpoint مستقل را می‌خواند و در صورت پیشروی زنجیره checkpoint جدید append می‌کند. تکرار startup بدون رخداد جدید checkpoint تکراری نمی‌سازد.
+- **DI:** `IProductionVendorAuditCheckpointStore` از طریق قرارداد مشترک `IVendorAuditCheckpointStore` به سرویس داده می‌شود؛ ثبت marker همچنان با startup guard الزامی است.
+- **Fail-closed:** خطای provider با exception type ثبت می‌شود، اما پیام/جزئیات احتمالی credential یا endpoint در log یا startup exception افشا نمی‌شود؛ startup با پیام ثابت شکست می‌خورد. لغو واقعی startup به‌صورت cancellation باقی می‌ماند.
+- **مرز:** هیچ provider، credential، private key، فایل محلی، fallback به Vendor DB، migration یا تغییر customer DB اضافه نشد. این تغییر جایگزین انتخاب sink، immutability/retention، alerting یا restore drill نیست و checkpoint دوره‌ای را هم تعریف نمی‌کند.
+- **تست محلی:** در این محیط اجرا نشد؛ نتیجهٔ CI روی head نهایی باید بررسی شود.
