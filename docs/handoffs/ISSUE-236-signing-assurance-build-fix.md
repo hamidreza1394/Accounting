@@ -8,7 +8,7 @@
 ## هدف و معیارهای پذیرش
 - [x] رفع خطای کامپایل CS1503 در تست‌های PKCS#11
 - [x] حفظ اعتبارسنجی صریح Production و سازگاری فراخوانی‌های بدون پارامتر
-- [ ] تأیید Build/Test روی CI پس از commit اصلاحی
+- [ ] تأیید Build/Test روی CI پس از commit اصلاحی و تست‌های startup
 
 ## خلاصه تغییرات
 - متد بدون پارامتر `Validate()` به‌عنوان overload سازگار اضافه شد و به `Validate(isProduction: false)` واگذار می‌کند.
@@ -42,3 +42,8 @@
 - Branch: `feat/issue-236-signing-assurance-stage1`
 - Commit: `fd9f0e9f9135d498266cc847bb0479a650913121`
 - Pull Request: [#360](https://github.com/hamidreza1394/Accounting/pull/360)
+
+## پوشش تکمیلی startup
+- سه تست جدید برای ثبت audit در Production، fail-closed شدن startup هنگام شکست audit و عدم نیاز به sink Production در Staging اضافه شد.
+- فایل تست: `tests/Vendor.Host.Tests/Pkcs11SigningProviderTests.cs`.
+- این تست‌ها هنوز تا تکمیل CI روی HEAD جدید `Verified` محسوب نمی‌شوند.
