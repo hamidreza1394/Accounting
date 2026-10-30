@@ -37,25 +37,35 @@ public sealed class Pkcs11SigningOptions
         }
 
         if (string.IsNullOrWhiteSpace(ModulePath) || !Path.IsPathFullyQualified(ModulePath))
+        {
             throw new InvalidOperationException("PKCS#11 module path must be an absolute path.");
+        }
 
         if (string.IsNullOrWhiteSpace(TokenLabel) || Encoding.UTF8.GetByteCount(TokenLabel) > 32)
+        {
             throw new InvalidOperationException("PKCS#11 token label is missing or invalid.");
+        }
 
         if (string.IsNullOrWhiteSpace(UserPin))
+        {
             throw new InvalidOperationException("PKCS#11 user PIN is not configured.");
+        }
 
         ValidateKeyId(LicenseKey?.KeyId);
         ValidateKeyId(ProvisioningKey?.KeyId);
 
         if (string.Equals(LicenseKey.KeyId, ProvisioningKey.KeyId, StringComparison.Ordinal))
+        {
             throw new InvalidOperationException("License and provisioning signing keys must have distinct versioned KeyIds.");
+        }
     }
 
     private static void ValidateKeyId(string? keyId)
     {
         if (keyId is null || keyId.Length > 60 || !VersionedKeyIdPattern.IsMatch(keyId))
+        {
             throw new InvalidOperationException("PKCS#11 signing KeyId must be a unique, versioned lower-case identifier.");
+        }
     }
 }
 
@@ -199,7 +209,9 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
 
         var slot = FindConfiguredSlot();
         if (slot is null || !SupportsEcdsa(slot))
+        {
             return LicenseSigningResult.Unavailable();
+        }
 
         using var session = slot.OpenSession(SessionType.ReadOnly);
         var loggedIn = false;
@@ -210,7 +222,9 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
 
             var privateKey = FindAndValidatePrivateKey(session, key);
             if (privateKey is null)
+            {
                 return LicenseSigningResult.Unavailable();
+            }
 
             // CKM_ECDSA accepts a digest, not the original message. Hash exactly once with SHA-256.
             var digest = SHA256.HashData(canonicalPayload);
@@ -240,7 +254,9 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
         _options.Validate();
         var slot = FindConfiguredSlot();
         if (slot is null || !SupportsEcdsa(slot))
+        {
             return false;
+        }
 
         using var session = slot.OpenSession(SessionType.ReadOnly);
         var loggedIn = false;
@@ -254,7 +270,9 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
         finally
         {
             if (loggedIn)
+            {
                 session.Logout();
+            }
         }
     }
 
@@ -265,16 +283,22 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
         {
             var tokenInfo = slot.GetTokenInfo();
             if (string.Equals(tokenInfo.Label.Trim(), _options.TokenLabel, StringComparison.Ordinal))
+            {
                 matchingSlots.Add(slot);
+            }
         }
 
         if (matchingSlots.Count != 1)
+        {
             return null;
+        }
 
         var selected = matchingSlots[0];
         // SoftHSM and other software tokens are never accepted by a Production host.
         if (_environment.IsProduction() && !selected.GetSlotInfo().SlotFlags.HardwareSlot)
+        {
             return null;
+        }
 
         return selected;
     }
