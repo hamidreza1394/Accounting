@@ -50,7 +50,7 @@ public static class WindowsCngCustomerAcknowledgementKeyProvisioner
         if (!OperatingSystem.IsWindows())
             throw new PlatformNotSupportedException("Windows CNG key provisioning is available only on Windows.");
 
-        ValidateOptions(options, installationId, requireEnabled: true);
+        ValidateOptions(options, installationId, requireEnabled: false);
 
         var keyName = GetKeyName(installationId, options.KeyVersion);
         var keyId = GetKeyId(installationId, options.KeyVersion);
