@@ -15,11 +15,11 @@
 
 ## سناریوهای پوشش‌داده‌شده در آزمون
 1. Migration هر دو دیتابیس آزمایشی و راه‌اندازی دو Host مستقل.
-2. ورود دو اپراتور Vendor با Password + TOTP و مجوزهای server-side.
+2. ورود دو اپراتور Vendor با Password + TOTP و مجوزهای server-side؛ ورود Infrastructure در Customer نیز با MasterUsername/MasterPassword هش‌شدهٔ runtime و صفحه واقعی Razor Login انجام می‌شود (بدون Test Authentication Handler یا جعل Claim).
 3. ساخت درخواست provisioning، maker-checker با دو کاربر متفاوت، امضای بسته و Export.
 4. انتقال فایل بسته به Customer؛ رد KeyId ناشناخته و payload دست‌کاری‌شده قبل از هر تغییر داده.
 5. دو درخواست هم‌زمان HTTP برای همان بسته؛ انتظار یک apply و یک replay، با فقط یک Company، User و ProvisioningRequestClaim.
-6. بررسی وضعیت Enrollment در دیتابیس و رد ورود با credential معتبرِ آزمایشی تا قبل از Enrollment.
+6. بررسی وضعیت Enrollment در دیتابیس؛ صفحه واقعی Razor Login با credential معتبرِ آزمایشی قبل از Enrollment از صدور Cookie منع می‌شود و پس از Enrollment ورود موفق و صدور Cookie بررسی می‌شود.
 7. تکمیل Enrollment با token یک‌بارمصرف؛ پذیرش ورود پس از آن و رد مصرف مجدد token.
 8. replay بسته و بازگشت acknowledgement اصلی بدون صدور مجدد enrollment token.
 9. انتقال acknowledgement از طریق فایل؛ رد امضای دست‌کاری‌شده در Vendor، حفظ `PendingDelivery` و تغییر به `Confirmed` فقط پس از acknowledgement معتبر.
