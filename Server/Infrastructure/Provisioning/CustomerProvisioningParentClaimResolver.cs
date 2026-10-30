@@ -55,8 +55,9 @@ public static class CustomerProvisioningParentClaimResolver
             .Take(2)
             .ToListAsync(cancellationToken);
 
-        return matches.Count == 1
-            ? (matches[0].CompanyId, null)
-            : (null, InvalidParentReferenceError);
+        if (matches.Count == 1)
+            return (matches[0].CompanyId, null);
+
+        return (null, InvalidParentReferenceError);
     }
 }
