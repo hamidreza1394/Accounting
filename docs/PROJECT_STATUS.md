@@ -1,6 +1,6 @@
 # وضعیت جاری Vendor و شکاف‌های وابسته — 2026-10-30
 
-**مبنای بازبینی:** شاخه `main`، SHA `31f1873ce9f26405beaf773e876bf99155c43fa2` (پس از ادغام PRهای #344، #349، #351، #352، #353 و #354).
+**مبنای بازبینی:** شاخه `main`، SHA `78afd4dc3ea02a9816e9e72a3d7d24b969a034dd` (پس از ادغام PRهای #344، #349، #351، #352، #353، #354 و #356).
 این بخش وضعیت جاری است؛ snapshotهای بعدی سند سابقه‌اند و نباید به‌عنوان وضعیت امروز خوانده شوند.
 
 ## وضعیت آخرین تغییر و CI
@@ -15,7 +15,8 @@
 - **PR #351 — xUnit v3/MTP Windows filter:** ادغام شد؛ .NET CI run [41088538581](https://github.com/hamidreza1394/Accounting/actions/runs/41088538581) و Semgrep run [41088538577](https://github.com/hamidreza1394/Accounting/actions/runs/41088538577) موفق؛ Windows CNG tests، Windows publish، Linux publish و E2E نیز موفق.
 - **PR #352 — Customer ACK key revocation:** ادغام شد؛ .NET CI run [41090537956](https://github.com/hamidreza1394/Accounting/actions/runs/41090537956) و Semgrep run [41090537922](https://github.com/hamidreza1394/Accounting/actions/runs/41090537922) موفق. ۶۸۲ تست .NET (۶۷۸ موفق، ۴ Skip، صفر شکست)، تست CNG ویندوز، انتشار Windows/Linux و E2E موفق شدند.
 - **PR #354 — Vendor dashboard readiness:** ادغام شد؛ متن‌های قدیمی «نسخه اولیه رابط» و «عملیات نوشتن در مراحل بعدی» با وضعیت واقعی Vendor جایگزین شدند. Vendor CI `41095191395`، .NET CI `41095191238`، Semgrep `41095191239` و CodeQL `41095184027` همگی موفق شدند؛ شامل Vendor SQL Server integration/EF snapshot/SoftHSM، .NET E2E، Linux/Windows publish و Windows CNG tests.
-- **مقایسه main:** SHA فعلی `31f1873ce9f26405beaf773e876bf99155c43fa2` است؛ PR #354 پس از PR #353 ادغام شد. Post-merge CI در زمان این به‌روزرسانی هنوز در حال اجراست: .NET `41096833025`، Vendor `41096832981`، Semgrep `41096832996`. Vendor HSM واقعی هنوز provision نشده است.
+- **PR #356 — کارت‌های وضعیت داشبورد:** ادغام شد؛ چهار KPI خالی با وضعیت قابلیت‌های مدیریت تجاری، Provisioning v4، Maker-Checker و محدودیت امضای Production جایگزین شدند. Vendor CI `41097366027`، .NET CI `41097365977` و Semgrep `41097366191` روی head PR موفق شدند.
+- **مبنای جاری main:** SHA `78afd4dc3ea02a9816e9e72a3d7d24b969a034dd`؛ PR #356 در `2026-10-30T17:35:16Z` ادغام شد. Post-merge .NET CI `41100114950` و Vendor CI `41100114963` در زمان این بازبینی هنوز در حال اجرا هستند؛ Semgrep پس از merge در run `41100115088` موفق است. موفقیت CI پس از merge تا تکمیل دو run دیگر اعلام نمی‌شود. HSM واقعی هنوز provision نشده است.
 
 ## وضعیت تصمیم امضا #236 — D-055 Accepted
 

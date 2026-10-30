@@ -4,7 +4,7 @@
 - **PR مبنا:** https://github.com/hamidreza1394/Accounting/pull/319 (single-license v4)
 - **PR این مرحله:** #329 — شاخه test/issue-235-dual-host-e2e-v4-main
 - **تاریخ:** 2026-10-30
-- **وضعیت:** PR #329 روی main باز است؛ CI نهایی این شاخه در حال اجراست.
+- **وضعیت:** PR #329 با merge commit `43d28253eb9f0f38ff25d0dfea143aeacdb06871` در main ادغام و CI آن تأیید شده است.
 
 ## هدف
 
@@ -56,7 +56,7 @@ Require guardها مانع سبزشدن تست با Skip خاموش می‌شو�
 
 ## باقی‌مانده
 
-- اجرای CI روی SHA نهایی این شاخه و رفع تمام شکست‌ها.
-- تأیید Vendor CI، .NET CI، Semgrep، تست SQL Server و تست‌های E2E.
-- پس از سبزشدن CI شاخهٔ تمیز PR #329، ادغام آن؛ PRهای قدیمی #317 و #328 به‌عنوان superseded بسته شده‌اند.
+- اجرای CI روی PR #329 انجام و موفق شد: .NET CI `41052515115` (هر ۷ job موفق)، Vendor CI `41052515292` و Semgrep `41052515389`.
+- PR #329 در `2026-10-30T12:19:52Z` ادغام شد؛ PRهای قدیمی #317 و #328 به‌عنوان superseded بسته شده‌اند.
 - Production E2E روی دو پردازه/ماشین و KMS/HSM واقعی همچنان نیازمند staging و تصمیم عملیاتی جداگانه است.
+- وضعیت signer در main پس از PR #344/#349/#352: adapter PKCS#11 و Windows CNG ACK پیاده‌سازی شده‌اند، اما HSM مرکزی واقعی provision نشده و providerهای Production عمداً fail-closed هستند.
