@@ -75,6 +75,20 @@ public sealed class VendorProvisioningIssuanceService(
         if (!string.Equals(payloadHash, request.PayloadSha256, StringComparison.Ordinal))
             return VendorProvisioningIssuanceResult.Conflict("provisioning_payload_hash_mismatch");
 
+        if (string.Equals(payload.CompanyType, "subsidiary", StringComparison.Ordinal) &&
+            !await VendorProvisioningParentReferenceRules.IsEligibleParentAsync(
+                db,
+                payload.ParentCompanyReference,
+                customer.Id,
+                installation.Id,
+                Guid.Parse(request.RequestId),
+                customer.CustomerNumber,
+                installation.InstallationCode,
+                cancellationToken))
+        {
+            return VendorProvisioningIssuanceResult.Conflict("provisioning_parent_reference_invalid");
+        }
+
         LicenseSigningResult signing;
         try
         {
