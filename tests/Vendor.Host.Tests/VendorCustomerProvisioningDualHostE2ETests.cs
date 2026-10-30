@@ -769,7 +769,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
     }
 
     private sealed class DualHostAcknowledgementSigner(ECDsa key)
-        : CustomerProvisioning.CustomerProvisioning.ICustomerProvisioningAcknowledgementSigningProvider
+        : CustomerProvisioning.ICustomerProvisioningAcknowledgementSigningProvider
     {
         public Task<CustomerProvisioning.CustomerProvisioningAcknowledgementSigningResult> SignAsync(
             ReadOnlyMemory<byte> canonicalAcknowledgementUtf8,
