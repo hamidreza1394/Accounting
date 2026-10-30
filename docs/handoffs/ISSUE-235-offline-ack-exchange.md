@@ -3,7 +3,7 @@
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/235
 - **Agent/مسئول:** Claude Code
 - **تاریخ:** 2026-10-30
-- **وضعیت:** مسیر مشتری ← Vendor پیاده‌سازی شده؛ بازگشت پاسخ Vendor به مشتری همچنان نیازمند قرارداد مستقل و تصمیم مالک است.
+- **وضعیت:** ناقص عمدی (مسیر مشتری ← Vendor انجام شد؛ بازگشت پاسخ Vendor به مشتری قرارداد ندارد)
 
 ## هدف و معیارهای پذیرش
 - [x] خروجی‌گرفتن فایل پاسخ امضاشده (ack) در سمت مشتری.
@@ -46,5 +46,5 @@
 - تست E2E مرورگر از آپلود تا وضعیت `Confirmed`: مرحلهٔ ۴.
 
 ## شناسه‌های Git
-- Branch منبع: `feat/issue-235-offline-ack-exchange`
-- PR منبع: #310؛ بازآشتی نهایی روی `fix/issue-235-reconcile-main` در PR #315 انجام شده است.
+- Branch: `feat/issue-235-offline-ack-exchange`
+- Pull Request: پس از ساخت PR ثبت می‌شود.
