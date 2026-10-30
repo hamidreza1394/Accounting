@@ -94,3 +94,12 @@
 - SoftHSM فقط در Vendor CI/test استفاده می‌شود؛ slot نرم‌افزاری خارج از محیط اختصاصی `Testing` رد می‌شود؛ در Development/Staging/Production علاوه بر HardwareSlot، manufacturer/model باید دقیقاً در allowlist استقرار ثبت شده باشند. در حال حاضر HSM واقعی provision نشده و `Signing:Pkcs11:Enabled` نباید در Production فعال شود.
 - PIN فقط از secret/environment injection می‌آید؛ هیچ private key generation/export یا cloud adapter اضافه نشده است. `/health/signing` سلامت signer را بدون افشای جزئیات حساس نشان می‌دهد و audit metadata-only برای هر تلاش امضا ثبت می‌شود.
 - **محدودیت شواهد:** اجرای محلی در محیط GitHub-only ممکن نیست؛ تست واقعی SoftHSM و CI نهایی این PR هنوز باید تکمیل شوند. این adapter، Key Ceremony، key rotation/revocation، provisioning/recovery واقعی HSM، توزیع public trust و ACK TPM سمت مشتری را به‌تنهایی کامل نمی‌کند.
+
+
+## وضعیت نهایی PR #344 — 2026-10-30
+
+- PR #344 با merge commit `5a9717ca08ec2009305e480dbf6443683bf2e60f` ادغام شد.
+- .NET CI run `41078370910`، Vendor CI run `41078370887` (شامل integration test واقعی SoftHSM) و Semgrep run `41078370883` همگی success هستند؛ publish Linux/Windows و E2E نیز در .NET CI موفق شدند.
+- Adapter فقط در صورت opt-in و با دو KeyId مجزا برای license و package فعال می‌شود. در محیط غیر از Testing، Hardware Slot و manufacturer/model allowlist دقیق لازم است. `/health/signing` جدا از liveness است.
+- با بودجهٔ صفر و نبود HSM واقعی، config فعال نشده است؛ signerهای Production همچنان unavailable و fail-closed هستند. SoftHSM فقط برای CI/test است و fallback Production نیست.
+- Customer ACK signer per-installation در TPM/OS secure store هنوز پیاده‌سازی نشده است. برای ادامهٔ کدنویسی آن باید سیستم‌عامل هدف نصب‌های مشتری (Windows Server یا Linux) مشخص شود؛ تا آن زمان default provider unavailable باقی می‌ماند.

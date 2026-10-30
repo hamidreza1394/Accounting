@@ -1415,3 +1415,12 @@
 - تست واحد قرارداد provider و integration تست SoftHSM برای امضای هر دو key، verification با public key و رد SoftHSM در Production اضافه شد. Vendor CI اکنون SoftHSM را فقط در job تست نصب/initialise می‌کند.
 - با بودجهٔ HSM صفر، هیچ تنظیم Production فعال نشده است؛ providerهای Production پیش‌فرض unavailable/fail-closed می‌مانند تا HSM واقعی provision شود. Runbook عملیاتی در PR #341 ادغام شد؛ اجرای واقعی Key Ceremony، rotation/revocation، HA/DR و backup/recovery به تأمین HSM وابسته است. پیاده‌سازی ACK TPM مشتری همچنان باقی است.
 - Local build/test اجرا نشد (محیط GitHub-only)؛ نتایج واقعی .NET CI، Vendor CI و Semgrep روی SHA نهایی PR باید بررسی شوند.
+
+
+## 2026-10-30 — Issue #236: ادغام PKCS#11 adapter و CI نهایی
+
+- PR #344 با merge commit `5a9717ca08ec2009305e480dbf6443683bf2e60f` ادغام شد.
+- .NET CI `41078370910`، Vendor CI `41078370887` و Semgrep `41078370883` موفق شدند. Vendor CI شامل تست integration واقعی SoftHSM برای امضای دو کلید و verify با public key بود؛ .NET CI شامل E2E و publish Linux/Windows نیز موفق بود.
+- اشکالات کشف‌شده و اصلاح‌شده در CI: ambiguity نام ISession؛ وابستگی Linux loader به libdl؛ جداسازی readiness امضا از liveness؛ و تست محیط Staging بدون تداخل session/module.
+- Production signer همچنان به‌صورت پیش‌فرض disabled/unavailable است؛ بودجهٔ HSM صفر و HSM واقعی provision نشده. هیچ Azure/AWS adapter یا software fallback اضافه نشد.
+- Customer ACK TPM/OS signer per-installation هنوز پیاده‌سازی نشده و باید بر اساس OS واقعی مشتری (Windows Server یا Linux) در PR مستقل انجام شود.
