@@ -426,6 +426,78 @@ public static class VendorProvisioningEndpoints
                 item.KeyId!, item.Algorithm!, item.PayloadJson, item.SignatureBase64!));
         }).RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.CustomersRead));
 
+        group.MapGet("/eligible-parents", async (
+            Guid? customerId, Guid? installationId,
+            HttpContext context, IAuthorizationService authorization, VendorDbContext db, CancellationToken ct) =>
+        {
+            if (customerId is null || customerId == Guid.Empty ||
+                installationId is null || installationId == Guid.Empty)
+                return Results.BadRequest(new { error = "provisioning_target_required" });
+
+            var customerAccess = await authorization.AuthorizeAsync(
+                context.User,
+                new VendorResourceDescriptor("customer", customerId.Value),
+                VendorResourceCatalog.PolicyFor("customer", VendorPermissionCatalog.CustomersRead));
+            var installationAccess = await authorization.AuthorizeAsync(
+                context.User,
+                new VendorResourceDescriptor("installation", installationId.Value, customerId.Value),
+                VendorResourceCatalog.PolicyFor("installation", VendorPermissionCatalog.InstallationsRead));
+            if (!customerAccess.Succeeded || !installationAccess.Succeeded)
+                return Results.NotFound();
+
+            var target = await db.Installations.AsNoTracking()
+                .SingleOrDefaultAsync(item => item.Id == installationId.Value &&
+                    item.CustomerId == customerId.Value && item.Status == "Active", ct);
+            if (target is null) return Results.NotFound();
+
+            var customer = await db.Customers.AsNoTracking()
+                .SingleOrDefaultAsync(item => item.Id == customerId.Value && item.Status == "Active", ct);
+            if (customer is null) return Results.NotFound();
+
+            var candidates = await db.ProvisioningRequests.AsNoTracking()
+                .Where(item => item.CustomerId == customerId.Value &&
+                    item.InstallationId == installationId.Value &&
+                    item.Status == "Confirmed" &&
+                    item.ConfirmedAtUtc != null &&
+                    item.AcknowledgedAtUtc != null &&
+                    item.AcknowledgementSha256 != null &&
+                    (item.AcknowledgementResult == "Applied" || item.AcknowledgementResult == "AlreadyApplied"))
+                .OrderByDescending(item => item.ConfirmedAtUtc)
+                .Take(100)
+                .Select(item => new { item.RequestId, item.PayloadJson, item.ConfirmedAtUtc })
+                .ToListAsync(ct);
+
+            var eligible = new List<EligibleProvisioningParentResponse>();
+            foreach (var candidate in candidates)
+            {
+                try
+                {
+                    var payload = JsonSerializer.Deserialize<CustomerProvisioningPayload>(
+                        candidate.PayloadJson, PayloadJsonOptions);
+                    if (payload is null ||
+                        payload.CompanyType is not ("parent" or "subsidiary") ||
+                        !Guid.TryParseExact(payload.RequestId, "D", out var payloadId) ||
+                        !Guid.TryParseExact(candidate.RequestId, "D", out var requestId) ||
+                        payloadId != requestId ||
+                        !string.Equals(payload.CustomerReference, customer.CustomerNumber, StringComparison.Ordinal) ||
+                        !string.Equals(payload.InstallationId, target.InstallationCode, StringComparison.Ordinal) ||
+                        !string.Equals(CustomerProvisioningCanonicalJson.Serialize(payload),
+                            candidate.PayloadJson, StringComparison.Ordinal))
+                        continue;
+
+                    eligible.Add(new EligibleProvisioningParentResponse(
+                        requestId.ToString("D"), payload.CompanyName, payload.CompanyType, candidate.ConfirmedAtUtc));
+                }
+                catch (JsonException)
+                {
+                    // Corrupt historical requests are excluded; never use a best-effort parent match.
+                }
+            }
+
+            context.Response.Headers.CacheControl = "no-store";
+            return Results.Ok(new { items = eligible });
+        }).RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.CustomersRead));
+
         group.MapGet("/", async (
             Guid? customerId, int? page, int? pageSize,
             HttpContext context, IAuthorizationService authorization, VendorDbContext db, CancellationToken ct) =>
@@ -520,7 +592,7 @@ public static class VendorProvisioningEndpoints
     }
 }
 
-public sealed record ProvisioningRequestResponse(
+public sealed record EligibleProvisioningParentResponse(string RequestId, string CompanyName, string CompanyType, DateTimeOffset? ConfirmedAtUtc);\n\npublic sealed record ProvisioningRequestResponse(
     Guid Id,
     Guid CustomerId,
     Guid InstallationId,
