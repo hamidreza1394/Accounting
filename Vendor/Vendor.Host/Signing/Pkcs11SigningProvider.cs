@@ -436,6 +436,7 @@ public abstract class Pkcs11SigningProviderBase
         ReadOnlyMemory<byte> canonicalPayload,
         CancellationToken cancellationToken)
     {
+        var auditKeyId = string.IsNullOrWhiteSpace(key?.KeyId) ? "unconfigured-v0" : key.KeyId;
         var result = await _module.SignAsync(key, canonicalPayload, cancellationToken).ConfigureAwait(false);
         var outcome = result.Succeeded ? "succeeded" : "failed";
 
@@ -444,7 +445,7 @@ public abstract class Pkcs11SigningProviderBase
             await _auditWriter.AppendAsync(
                 new VendorAuditWriteRequest(
                     null,
-                    $"vendor.signing.{_purpose}.{key.KeyId}.{outcome}",
+                    $"vendor.signing.{_purpose}.{auditKeyId}.{outcome}",
                     "signing_operation",
                     null,
                     Activity.Current?.TraceId.ToString()),
@@ -456,7 +457,7 @@ public abstract class Pkcs11SigningProviderBase
             _logger.LogCritical(
                 "Vendor signing audit append failed; signature result was discarded. Purpose={Purpose} KeyId={KeyId} FailureType={FailureType}.",
                 _purpose,
-                key.KeyId,
+                auditKeyId,
                 exception.GetType().Name);
             return LicenseSigningResult.Unavailable();
         }
@@ -466,7 +467,7 @@ public abstract class Pkcs11SigningProviderBase
             _logger.LogInformation(
                 "Vendor signing operation completed. Purpose={Purpose} KeyId={KeyId} Result={Result}.",
                 _purpose,
-                key.KeyId,
+                auditKeyId,
                 outcome);
         }
         else
