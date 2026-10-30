@@ -1452,3 +1452,10 @@
 - **اصلاح:** فیلتر به `--filter-class Template.Tests.Integration.WindowsCngCustomerProvisioningAcknowledgementSigningTests` تغییر کرد تا دقیقاً کلاس Windows CNG اجرا شود؛ هیچ تستی حذف یا Skip نشده است.
 - **مستندات:** فرمان صحیح در `docs/TESTING.md` ثبت شد.
 - **اعتبارسنجی:** علت با لاگ Windows CI run `41085741694` و مستندات رسمی xUnit v3/Microsoft Testing Platform تأیید شد؛ CI روی شاخهٔ اصلاحی هنوز باید اجرا شود.
+
+## 2026-10-30 — Issue #236: customer ACK trust revocation and rotation overlap
+
+- شکاف: Trust Store مشتری فقط وجود SPKI را بررسی می‌کرد و راه explicit برای revoke کردن KeyId بدون حذف کلید عمومی نداشت.
+- تغییر: تنظیم `Provisioning:RevokedAcknowledgementKeys:<keyId>=true` اضافه شد؛ کلید revoked حتی با وجود SPKI در trusted set رد می‌شود. overlap rotation با نگه‌داشتن دو public key و revoke نسخه قدیمی پوشش داده شد.
+- تست: unit tests برای key resolution، revoked key، overlap نسخه جدید و مقدار malformed اضافه شدند. مرور اولیه نشان داد `bool.TryParse` نامعتبر را به‌اشتباه مانند «revoked=false» تلقی می‌کرد؛ حالا هر مقدار غیر null که boolean معتبر نباشد fail-closed است. CI باید روی PR نهایی اجرا شود؛ تست محلی اجرا نشده است.
+- محدودیت: این revocation مبتنی بر configuration است و در برابر restore کامل backup/config قدیمی به‌تنهایی anti-rollback مقاوم نیست؛ trust anchor مستقل/rollback-resistant هنوز نیازمند طراحی است.
