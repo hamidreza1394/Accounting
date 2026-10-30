@@ -20,7 +20,9 @@ public sealed class LicenseSigningTrustStore
         {
             var keyId = section.Key;
             var encodedValue = section["PublicKeySubjectPublicKeyInfoBase64"];
-            var revoked = bool.TryParse(section["Revoked"], out var isRevoked) && isRevoked;
+            var revoked = false;
+            if (section["Revoked"] is { } revokedValue && !bool.TryParse(revokedValue, out revoked))
+                throw new InvalidOperationException("License signing trust revocation state is invalid.");
 
             if (!IsValidKeyId(keyId) || string.IsNullOrWhiteSpace(encodedValue) || keys.ContainsKey(keyId))
                 throw new InvalidOperationException("License signing trust configuration is invalid.");
@@ -34,6 +36,9 @@ public sealed class LicenseSigningTrustStore
             {
                 throw new InvalidOperationException("License signing trust public key encoding is invalid.", exception);
             }
+
+            if (encoded.Length is 0 or > 1024)
+                throw new InvalidOperationException("License signing trust public keys must be between 1 and 1024 bytes.");
 
             try
             {
