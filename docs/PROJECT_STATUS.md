@@ -413,7 +413,7 @@
 - License status, validity, customer/installation binding, envelope digest/signature and sequence are checked at request creation, provisioning signing and each export. Provisioning approval uses Serializable isolation to prevent a concurrent license sequence update racing the signing decision.
 - Explicitly NotImplemented: atomic MaxCompanies enforcement, adding modules to an existing company, multi-license aggregation. Existing v3 requests are not backfilled or guessed.
 - No Vendor DB migration and no Customer DB schema/migration were added in this slice.
-- PR #317 remains open and must be updated to create/use a signed test license and exercise schema v4 across independent Vendor/Customer hosts through signed acknowledgement and Confirmed. Owner review is still required for its workflow SQL Server service wiring and aliased Server project reference.
+- PR #323 is the stacked schema-v4 dual-host E2E update; it must pass CI and owner review of its SQL Server workflow wiring and aliased Server project reference before merge. PR #317 is the superseded v3 test and must not be merged.
 - Production signing remains unavailable by default. A deployment must configure the independent public trust set Licensing:TrustedSigningKeys and the approved external private-key signer; the branch does not create or embed a production key.
 
 
