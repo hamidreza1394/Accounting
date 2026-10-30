@@ -102,3 +102,28 @@ pwsh scripts/publish.ps1 -Output D:\Deploy\Faranou\release-2026-10-20   # Window
 - برای چند نمونه، Data Protection keys باید در محل امن مشترک و پایدار مدیریت شوند؛ Cookie/session، فایل‌های موقت، health/readiness، graceful shutdown، reverse proxy و TLS termination را قبل از rollout بررسی کنید.
 - اجرای load/stress/soak فقط در محیط مجاز و ایزوله، با داده مصنوعی، سقف هزینه و شرط توقف. هرگز آزمون سنگین را روی Production بدون تأیید صریح اجرا نکنید.
 - جزئیات معیارهای بار و گزارش نتایج: `docs/CLOUD_CONCURRENCY_READINESS.md`.
+
+
+## Vendor license-envelope public trust configuration (D-054)
+
+The Vendor host verifies license envelopes before using their entitlements for provisioning. Configure public verification keys separately from the external private signing provider:
+
+```json
+{
+  "Licensing": {
+    "TrustedSigningKeys": {
+      "license-key-2026-01": {
+        "PublicKeySubjectPublicKeyInfoBase64": "<ECDSA-P256-SPKI-public-key-base64>",
+        "Revoked": false
+      }
+    }
+  }
+}
+```
+
+- The example is a shape only; never commit production key material to the repository.
+- Supply this configuration through the deployment's protected configuration provider. Do not place private key material in this section.
+- An empty trust set, unknown key ID, revoked key, malformed SPKI or signature mismatch fails closed and makes that license ineligible for new provisioning.
+- This trust set is distinct from ProvisioningSigningTrust and ProvisioningAcknowledgementTrust. Each signing boundary has its own key ID and public trust configuration.
+- During rotation, deploy the new public key before the external signer begins using its key ID. Retain old public keys for historical envelopes until the approved retirement/revocation date.
+- A fully offline customer cannot learn about later Vendor revocation or a newer sequence after a signed provisioning package has already been exported; this limitation is recorded in D-054.
