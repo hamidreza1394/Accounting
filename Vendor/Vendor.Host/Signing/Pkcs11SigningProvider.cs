@@ -32,7 +32,9 @@ public sealed class Pkcs11SigningOptions
     public void Validate()
     {
         if (LicenseKey is null || ProvisioningKey is null)
+        {
             throw new InvalidOperationException("Separate license and provisioning signing key identifiers are required.");
+        }
 
         if (string.IsNullOrWhiteSpace(ModulePath) || !Path.IsPathFullyQualified(ModulePath))
             throw new InvalidOperationException("PKCS#11 module path must be an absolute path.");
@@ -212,10 +214,12 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
 
             // CKM_ECDSA accepts a digest, not the original message. Hash exactly once with SHA-256.
             var digest = SHA256.HashData(canonicalPayload);
-            var mechanism = session.Factories.MechanismFactory.Create(CKM.CKM_ECDSA);
+            using var mechanism = session.Factories.MechanismFactory.Create(CKM.CKM_ECDSA);
             var signature = session.Sign(mechanism, privateKey, digest);
             if (signature.Length != 64)
+            {
                 return LicenseSigningResult.Unavailable();
+            }
 
             return LicenseSigningResult.Success(
                 key.KeyId,
@@ -225,7 +229,9 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
         finally
         {
             if (loggedIn)
+            {
                 session.Logout();
+            }
         }
     }
 
@@ -290,12 +296,16 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
 
         var matches = session.FindAllObjects(searchTemplate);
         if (matches.Count != 1)
+        {
             return null;
+        }
 
         var privateKey = matches[0];
         var attributes = session.GetAttributeValue(privateKey, PrivateKeyAttributes.ToList());
         if (attributes.Count != PrivateKeyAttributes.Length || attributes.Any(attribute => attribute.CannotBeRead))
+        {
             return null;
+        }
 
         var isSensitive = attributes[0].GetValueAsBool();
         var isExtractable = attributes[1].GetValueAsBool();
@@ -326,7 +336,9 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
     public void Dispose()
     {
         if (_library.IsValueCreated)
+        {
             _library.Value.Dispose();
+        }
         _operationGate.Dispose();
     }
 }
