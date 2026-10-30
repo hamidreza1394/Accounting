@@ -389,15 +389,15 @@ public static class VendorProvisioningEndpoints
             // A request can be signed while active and then suspended before the package is exported.
             await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
             var target = await (
-                from installation in db.Installations.AsNoTracking()
-                join customer in db.Customers.AsNoTracking()
-                    on installation.CustomerId equals customer.Id
-                where installation.Id == item.InstallationId &&
-                      installation.CustomerId == item.CustomerId
+                from targetInstallation in db.Installations.AsNoTracking()
+                join targetCustomer in db.Customers.AsNoTracking()
+                    on targetInstallation.CustomerId equals targetCustomer.Id
+                where targetInstallation.Id == item.InstallationId &&
+                      targetInstallation.CustomerId == item.CustomerId
                 select new
                 {
-                    CustomerStatus = customer.Status,
-                    InstallationStatus = installation.Status
+                    CustomerStatus = targetCustomer.Status,
+                    InstallationStatus = targetInstallation.Status
                 }).SingleOrDefaultAsync(ct);
 
             if (target is null)
