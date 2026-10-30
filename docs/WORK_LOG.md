@@ -1347,3 +1347,12 @@
 ## 2026-10-30 — همگام‌سازی E2E با اصلاح PR #318
 - PR #319 از نظر محتوای Server branch هنوز فاقد fix ادغام‌شدهٔ PR #318 بود، چون شاخه از commit پیش از آن منشعب شده بود؛ نسخهٔ merged فایل ApiEndpoints و تست regression به شاخهٔ #319 منتقل شد.
 - شاخهٔ E2E جدید از آخرین HEAD #319 ساخته شد تا تست فایل ناقص در Customer Host نیز پاسخ 400 عمومی را از همان کد ادغام‌شده دریافت کند.
+
+
+## 2026-10-30 — Issue #214: reconcile offline revocation contract status
+
+- **Finding:** `docs/handoffs/ISSUE-214-offline-revocation-contract.md` still said "Implemented in branch; CI verification pending", although PR #292 had already merged the contract into main.
+- **Correction:** handoff now records PR #292 and the successful .NET CI run `40864326688`, Vendor CI run `40864326665`, and Semgrep run `40864326732`.
+- **Boundary:** only the signed snapshot contract/validator is implemented. Customer-side durable sequence persistence, installed-license enforcement, backup-restore rollback handling, and production signer are still not implemented/configured.
+- **Architecture note:** a database-only high-water mark cannot prove rollback resistance after restoring an older full database backup unless its trust anchor is held outside that backup failure domain.
+- **Changes:** handoff and this work-log entry only; no runtime code, schema, migration or key material changed.
