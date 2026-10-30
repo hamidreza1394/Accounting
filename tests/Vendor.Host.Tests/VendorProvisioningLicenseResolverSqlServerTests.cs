@@ -181,6 +181,87 @@ public sealed class VendorProvisioningLicenseResolverSqlServerTests
     }
 
     [Fact]
+    public async Task RejectsLicenseForAnotherCustomerOrInstallation()
+    {
+        var fixture = await OpenAsync();
+        if (fixture is null) return;
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        try
+        {
+            var seed = await SeedAsync(fixture.Db, key, 1, ["finance"]);
+            var otherCustomer = new VendorCustomer
+            {
+                Id = Guid.NewGuid(),
+                CustomerNumber = "C-" + Guid.NewGuid().ToString("N")[..12],
+                LegalName = "Other customer",
+                DisplayName = "Other customer",
+                Status = "Active",
+                CreatedAtUtc = DateTimeOffset.UtcNow,
+                UpdatedAtUtc = DateTimeOffset.UtcNow
+            };
+            var otherInstallation = new VendorInstallation
+            {
+                Id = Guid.NewGuid(),
+                CustomerId = seed.Customer.Id,
+                InstallationCode = "I-" + Guid.NewGuid().ToString("N")[..12],
+                Name = "Other installation",
+                Environment = "Production",
+                Status = "Active",
+                CreatedAtUtc = DateTimeOffset.UtcNow
+            };
+            fixture.Db.AddRange(otherCustomer, otherInstallation);
+            await fixture.Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var resolver = CreateResolver(fixture.Db, key);
+            var wrongCustomer = await resolver.ResolveLatestAsync(
+                seed.License.Id, otherCustomer, otherInstallation, null, TestContext.Current.CancellationToken);
+            Assert.False(wrongCustomer.Succeeded);
+            Assert.Equal(StatusCodes.Status404NotFound, wrongCustomer.StatusCode);
+
+            var wrongInstallation = await resolver.ResolveLatestAsync(
+                seed.License.Id, seed.Customer, otherInstallation, null, TestContext.Current.CancellationToken);
+            Assert.False(wrongInstallation.Succeeded);
+            Assert.Equal(StatusCodes.Status404NotFound, wrongInstallation.StatusCode);
+        }
+        finally
+        {
+            await CleanupAsync(fixture);
+        }
+    }
+
+    [Fact]
+    public async Task RejectsSuspendedAndOutOfValidityLicenses()
+    {
+        var fixture = await OpenAsync();
+        if (fixture is null) return;
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        try
+        {
+            var seed = await SeedAsync(fixture.Db, key, 1, ["finance"]);
+            var resolver = CreateResolver(fixture.Db, key);
+
+            seed.License.Status = "Suspended";
+            await fixture.Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+            var suspended = await resolver.ResolveLatestAsync(
+                seed.License.Id, seed.Customer, seed.Installation, null, TestContext.Current.CancellationToken);
+            Assert.False(suspended.Succeeded);
+            Assert.Equal("provisioning_license_inactive", suspended.ErrorCode);
+
+            seed.License.Status = "Issued";
+            seed.License.ValidUntilUtc = DateTimeOffset.UtcNow.AddMinutes(-1);
+            await fixture.Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+            var expired = await resolver.ResolveLatestAsync(
+                seed.License.Id, seed.Customer, seed.Installation, null, TestContext.Current.CancellationToken);
+            Assert.False(expired.Succeeded);
+            Assert.Equal("provisioning_license_outside_validity", expired.ErrorCode);
+        }
+        finally
+        {
+            await CleanupAsync(fixture);
+        }
+    }
+
+    [Fact]
     public async Task RevokedOrUnknownSigningKeyFailsClosed()
     {
         var fixture = await OpenAsync();
