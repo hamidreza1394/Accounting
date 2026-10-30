@@ -180,6 +180,10 @@ if (!setupRequired)
     builder.Services.AddSingleton<Infrastructure.Provisioning.ICustomerProvisioningTrustStore,
         Infrastructure.Provisioning.ConfigurationCustomerProvisioningTrustStore>();
     builder.Services.AddSingleton<Infrastructure.Provisioning.CustomerProvisioningPackageVerifier>();
+    builder.Services.AddScoped<Infrastructure.Provisioning.CustomerProvisioningApplyService>();
+    builder.Services.TryAddSingleton<
+        Infrastructure.Provisioning.ICustomerProvisioningAcknowledgementSigningProvider,
+        Infrastructure.Provisioning.UnavailableCustomerProvisioningAcknowledgementSigningProvider>();
     builder.Services.AddSingleton<Infrastructure.Tenancy.WorkContextCookie>();
     builder.Services.AddScoped<Infrastructure.Tenancy.WorkContextService>();
 
@@ -366,6 +370,14 @@ if (!setupRequired)
     // index.html is revalidated on every visit so a new release is picked up immediately;
     // the hashed files under /app/assets can be cached by the browser.
     app.MapFallbackToFile("/app/{*path:nonfile}", "app/index.html", new StaticFileOptions
+    {
+        OnPrepareResponse = context => context.Context.Response.Headers.CacheControl = "no-cache",
+    });
+    app.MapFallbackToFile("/enroll", "app/index.html", new StaticFileOptions
+    {
+        OnPrepareResponse = context => context.Context.Response.Headers.CacheControl = "no-cache",
+    });
+    app.MapFallbackToFile("/provisioning/import", "app/index.html", new StaticFileOptions
     {
         OnPrepareResponse = context => context.Context.Response.Headers.CacheControl = "no-cache",
     });

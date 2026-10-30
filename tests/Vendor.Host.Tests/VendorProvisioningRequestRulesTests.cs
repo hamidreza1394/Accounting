@@ -55,12 +55,24 @@ public sealed class VendorProvisioningRequestRulesTests
             VendorProvisioningRequestRules.Validate(request with
             {
                 CompanyType = "independent",
+                ParentCompanyReference = "a0b1c2d3-e4f5-4678-9012-abcdefabcdef"
+            }));
+        Assert.Null(VendorProvisioningRequestRules.Validate(request with
+        {
+            CompanyType = "subsidiary",
+            ParentCompanyReference = "a0b1c2d3-e4f5-4678-9012-abcdefabcdef"
+        }));
+
+        Assert.Equal("invalid_provisioning_parent_company_reference",
+            VendorProvisioningRequestRules.Validate(request with
+            {
+                CompanyType = "subsidiary",
                 ParentCompanyReference = "parent-001"
             }));
         Assert.Null(VendorProvisioningRequestRules.Validate(request with
         {
             CompanyType = "subsidiary",
-            ParentCompanyReference = "parent-001"
+            ParentCompanyReference = "A0B1C2D3-E4F5-4678-9012-ABCDEFABCDEF"
         }));
     }
 

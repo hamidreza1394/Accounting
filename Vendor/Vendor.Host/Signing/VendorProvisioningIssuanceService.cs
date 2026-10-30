@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Faranou.Licensing.Contracts;
+using Faranou.Vendor.Host.Authorization;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Auditing;
 using Faranou.Vendor.Persistence.Domain;
@@ -74,6 +75,20 @@ public sealed class VendorProvisioningIssuanceService(
         var payloadHash = Convert.ToHexString(SHA256.HashData(payloadBytes)).ToLowerInvariant();
         if (!string.Equals(payloadHash, request.PayloadSha256, StringComparison.Ordinal))
             return VendorProvisioningIssuanceResult.Conflict("provisioning_payload_hash_mismatch");
+
+        if (string.Equals(payload.CompanyType, "subsidiary", StringComparison.Ordinal) &&
+            !await VendorProvisioningParentReferenceRules.IsEligibleParentAsync(
+                db,
+                payload.ParentCompanyReference,
+                customer.Id,
+                installation.Id,
+                Guid.Parse(request.RequestId),
+                customer.CustomerNumber,
+                installation.InstallationCode,
+                cancellationToken))
+        {
+            return VendorProvisioningIssuanceResult.Conflict("provisioning_parent_reference_invalid");
+        }
 
         LicenseSigningResult signing;
         try

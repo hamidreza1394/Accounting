@@ -9,6 +9,12 @@ type Installation = {
   name: string;
   status: string;
 };
+type EligibleParent = {
+  requestId: string;
+  companyName: string;
+  companyType: 'parent' | 'subsidiary';
+  confirmedAtUtc?: string | null;
+};
 type ProvisioningRequest = {
   id: string;
   requestId: string;
@@ -61,7 +67,8 @@ function publicError(status: number, code: string): string {
   if (status === 400 && code === 'invalid_provisioning_configuration') return 'نام شرکت، نوع شرکت یا نام کاربری مدیر اولیه معتبر نیست.';
   if (status === 400 && code === 'invalid_provisioning_admin_email') return 'نشانی ایمیل مدیر اولیه را به‌درستی وارد کنید.';
   if (status === 400 && code === 'invalid_provisioning_fiscal_period') return 'عنوان و بازه دوره مالی را بررسی کنید؛ تاریخ پایان باید بعد از تاریخ شروع باشد.';
-  if (status === 400 && code === 'invalid_provisioning_parent_company_reference') return 'برای شرکت تابعه مرجع شرکت مادر لازم است و برای سایر انواع شرکت نباید وارد شود.';
+  if (status === 400 && code === 'invalid_provisioning_parent_company_reference') return 'برای شرکت تابعه باید یک شرکت مادر معتبر انتخاب کنید.';
+  if (status === 409 && code === 'provisioning_parent_reference_invalid') return 'شرکت مادر انتخاب‌شده در همین مشتری و نصب، اعمال و تأیید نشده یا دیگر واجد شرایط نیست. فهرست را تازه‌سازی کنید.';
   if (status === 400 && code === 'invalid_provisioning_request_id') return 'شناسه درخواست معتبر نیست؛ دوباره تلاش کنید.';
   if (status === 401) return 'نشست شما پایان یافته است؛ دوباره وارد شوید.';
   if (status === 403) return 'حساب شما مجوز ثبت درخواست راه‌اندازی را ندارد.';
@@ -89,6 +96,8 @@ function formatDate(value: string | null | undefined): string {
 export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, canRequestApproval = false, canExportPackage = false }: Props) {
   const [installations, setInstallations] = useState<Installation[]>([]);
   const [requests, setRequests] = useState<ProvisioningRequest[]>([]);
+  const [eligibleParents, setEligibleParents] = useState<EligibleParent[]>([]);
+  const [parentsLoading, setParentsLoading] = useState(false);
   const [installationId, setInstallationId] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [companyType, setCompanyType] = useState('independent');
@@ -143,6 +152,43 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
     void load();
     return () => { cancelled = true; };
   }, [customerId, refreshKey]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadEligibleParents() {
+      if (companyType !== 'subsidiary' || !installationId) {
+        setEligibleParents([]);
+        setParentCompanyReference('');
+        setParentsLoading(false);
+        return;
+      }
+
+      setParentsLoading(true);
+      try {
+        const response = await fetch(
+          `/api/vendor/provisioning-requests/eligible-parents?customerId=${encodeURIComponent(customerId)}&installationId=${encodeURIComponent(installationId)}`,
+          { credentials: 'same-origin', cache: 'no-store' },
+        );
+        if (!response.ok) throw new Error(publicError(response.status, ''));
+        const body = await response.json() as PageResponse<EligibleParent>;
+        if (cancelled) return;
+        const items = Array.isArray(body.items) ? body.items : [];
+        setEligibleParents(items);
+        setParentCompanyReference(current => items.some(item => item.requestId === current) ? current : '');
+      } catch (reason) {
+        if (!cancelled) {
+          setEligibleParents([]);
+          setParentCompanyReference('');
+          setError(reason instanceof Error ? reason.message : 'دریافت شرکت‌های مادر واجد شرایط ناموفق بود.');
+        }
+      } finally {
+        if (!cancelled) setParentsLoading(false);
+      }
+    }
+
+    void loadEligibleParents();
+    return () => { cancelled = true; };
+  }, [customerId, installationId, companyType]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -372,12 +418,21 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
               className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"/>
           </div>
           {companyType === 'subsidiary' && <div className="space-y-2">
-            <label htmlFor="provisioning-parent-company-reference" className="text-sm font-medium">مرجع شرکت مادر در نصب مشتری</label>
-            <input id="provisioning-parent-company-reference" required maxLength={128} autoComplete="off" dir="ltr"
-              value={parentCompanyReference} onChange={event => setParentCompanyReference(event.target.value)} disabled={busy}
+            <label htmlFor="provisioning-parent-company-reference" className="text-sm font-medium">شرکت مادر تأییدشده در همین نصب</label>
+            <select id="provisioning-parent-company-reference" required dir="ltr"
+              value={parentCompanyReference} onChange={event => setParentCompanyReference(event.target.value)}
+              disabled={busy || parentsLoading || eligibleParents.length === 0}
               aria-describedby="provisioning-parent-company-help"
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"/>
-            <p id="provisioning-parent-company-help" className="text-xs leading-5 text-muted-foreground">این مرجع در نصب مشتری resolve می‌شود؛ Vendor به دیتابیس مشتری دسترسی مستقیم ندارد.</p>
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
+              <option value="">{parentsLoading ? 'در حال دریافت فهرست…' : 'انتخاب شرکت مادر اعمال‌شده'}</option>
+              {eligibleParents.map(item => <option key={item.requestId} value={item.requestId}>
+                {item.companyName} — {item.companyType === 'parent' ? 'مادر' : 'تابعه'} — {item.requestId}
+              </option>)}
+            </select>
+            <p id="provisioning-parent-company-help" className="text-xs leading-5 text-muted-foreground">
+              فقط درخواست‌های مادر که در همین مشتری و نصب اعمال و acknowledgement آن‌ها تأیید شده باشد نمایش داده می‌شوند.
+              {eligibleParents.length === 0 && !parentsLoading ? ' هنوز گزینهٔ واجد شرایطی وجود ندارد.' : ''}
+            </p>
           </div>}
           <div className="space-y-2">
             <label htmlFor="provisioning-admin-username" className="text-sm font-medium">نام کاربری مدیر اولیه</label>
@@ -408,7 +463,7 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
           <Button type="submit" disabled={busy || loading || !installationId || !companyName.trim() || !adminUserName.trim() || !adminEmail.trim() ||
             !fiscalPeriodTitle.trim() || !fiscalPeriodStartDate || !fiscalPeriodEndDate ||
             (fiscalPeriodStartDate >= fiscalPeriodEndDate) ||
-            (companyType === 'subsidiary' && !parentCompanyReference.trim()) || subsystems.length === 0}>
+            (companyType === 'subsidiary' && (!parentCompanyReference.trim() || parentsLoading || eligibleParents.length === 0)) || subsystems.length === 0}>
             {busy ? <><LoaderCircle size={16} className="animate-spin"/> در حال ثبت…</> : 'ذخیره درخواست راه‌اندازی'}
           </Button>
           <Button type="button" variant="outline" onClick={onCancel} disabled={busy}>بستن</Button>

@@ -25,7 +25,8 @@ public sealed class CustomerProvisioningPackageVerifier(
 
         var settings = options.Value;
         if (!IsValidReference(settings.CustomerReference) ||
-            !IsValidReference(settings.InstallationId))
+            !IsValidReference(settings.InstallationId) ||
+            settings.CustomerBoundaryId == Guid.Empty)
             return false;
 
         if (package is null)

@@ -1241,3 +1241,31 @@
 - **تست‌ها:** قالب canonical و طول ثابت، تولید مجدد غیر یکسان، تطبیق/عدم تطبیق digest، رد token/hash نامعتبر، رد encoding غیرcanonical و رد token بدقالب در زمان hash. تست encoding غیرcanonical deterministic است و به تصادف وابسته نیست.
 - **محدودیت مهم:** این commit فقط primitive رمزنگاری و تست آن است؛ endpoint مصرف یک‌باره، transaction/RowVersion، انقضا، audit، محدودسازی تلاش و گردش امن تحویل token هنوز پیاده‌سازی نشده‌اند. این primitive نباید به‌تنهایی به‌عنوان enrollment end-to-end یا Verified اعلام شود.
 - **اعتبارسنجی:** باید CI روی همین شاخه اجرا شود؛ اجرای محلی .NET در این محیط انجام نشده است.
+
+
+## 2026-10-30 — D-053: تصمیم‌های قطعی Issue #235
+- مالک محصول صریحاً تأیید کرد: ParentCompanyReference همان RequestId بستهٔ مادر با GUID canonical D است؛ resolve فقط از claim به CompanyId محلی؛ اعتبارسنجی Vendor و Customer؛ والدهای مجاز parent/subsidiary؛ فقط ParentCompanyId روی claim و عدم ایجاد روابط گروه/مالکیت؛ شرکت‌های قدیمی خارج از دامنه و بدون Company migration.
+- Enrollment: token فقط در پاسخ همان apply پس از commit، hash-only در DB، no-store و بدون log/audit/ack/URL/cache؛ replay فقط acknowledgement؛ reissue مستقل با ابطال token قبلی، audit و مجوز صریح؛ expiry کوتاه، مصرف اتمیک، محدودیت تلاش و اجبار تغییر رمز. در ابر مشترک اپراتور فقط کارکنان میزبان است و هیچ دسترسی ماندگار پس از bootstrap ندارد.
+- Production signing فقط provider واقعی Issue #236؛ fail-closed برقرار می‌ماند.
+- پیشنهاد نوع والد پذیرفته‌شده در D-053: parent یا subsidiary می‌تواند والد مستقیم باشد؛ independent مجاز نیست تا ساختار چندسطحی پشتیبانی شود.
+- وضعیت این ثبت: تصمیم/تهدیدمُدل به‌روزرسانی می‌شود؛ این ثبت به معنی تکمیل کد یا تست نیست.
+
+
+## 2026-10-30 — Issue #235: enforce Vendor-issued parent references
+- **تغییرات:** ParentCompanyReference در قرارداد مشترک و قواعد Vendor فقط GUID canonical با قالب D می‌پذیرد؛ مقایسهٔ GUID case-insensitive است و مقادیر آزاد مانند parent-001 رد می‌شوند.
+- **Customer:** resolver جدید فقط از RequestId به ProvisioningRequestClaim و سپس CompanyId می‌رسد؛ claim باید AppliedAtUtc داشته باشد، CustomerReference و InstallationId دقیقاً منطبق باشند، شرکت فعال باشد و CustomerBoundaryId با تنظیمات نصب برابر باشد. تنظیم CustomerBoundaryId خالی در verifier نیز fail-closed رد می‌شود.
+- **Vendor:** انتخاب‌گر والد فقط درخواست‌های Confirmed با acknowledgement معتبر Applied/AlreadyApplied در همان Customer و Installation را نشان می‌دهد؛ create و issuance هر دو eligibility را server-side بررسی می‌کنند. این بررسی هیچ اتصال مستقیم به دیتابیس مشتری ندارد.
+- **محدودیت:** این slice هنوز apply service را صدا نمی‌زند؛ transactional company/admin/membership/entitlement creation، signed customer acknowledgement، one-time token response/reissue و force-password flow باقی‌اند.
+- **تست‌های اضافه‌شده:** unit tests برای GUID canonical و مقایسهٔ حروف؛ SQL Server integration test برای resolver و مرز مشتری. تست‌ها فقط به مخزن افزوده شده‌اند؛ در این محیط اجرا نشده‌اند.
+- **اعتبارسنجی:** build، unit tests، SQL Server integration، rollback، concurrent replay و E2E اجرا نشده‌اند. checkout محلی به علت خطای DNS برای github.com در دسترس نبود؛ CI روی PR نهایی لازم است.
+- **Git:** branch feat/issue-235-transactional-consumer؛ PR هنوز ساخته نشده؛ هیچ merge انجام نشده است.
+
+
+## 2026-10-30 — Issue #235: transactional apply and one-time enrollment slice
+- **پیاده‌سازی:** CustomerProvisioningApplyService با transaction در سطح Serializable؛ verify بسته قبل از mutation؛ claim یکتا برای RequestId/nonce؛ ایجاد Company، FiscalPeriod، User، CompanyRole، Membership و permissionهای دقیق موجود در D-052؛ ParentCompanyId فقط در claim؛ بدون ساخت گروه یا OwnershipRelationship.
+- **Idempotency:** acknowledgement امضاشده در SecurityAuditEvents به‌عنوان outbox/audit در همان transaction ذخیره می‌شود؛ replay با همان request/hash/nonce همان envelope را برمی‌گرداند و token را null می‌کند. برای rejection معتبر نیز envelope ثابت ذخیره و replay می‌شود.
+- **Enrollment:** token تصادفی ۲۵۶بیتی، فقط hash در claim؛ انقضای ۳۰ دقیقه؛ token فقط پس از commit در response apply؛ reissue مستقل با reasonCode مجاز، ابطال digest قبلی و audit بدون token؛ مصرف تراکنشی؛ ۵ تلاش ناموفق در ۱۵ دقیقه؛ no-store در endpointها. UI اپراتور در /provisioning/import و فرم مدیر اولیه در /enroll اضافه شدند.
+- **محدودیت Production:** ICustomerProvisioningAcknowledgementSigningProvider به‌صورت interface تعریف شده و provider پیش‌فرض unavailable است؛ بنابراین تا اتصال provider امن و مورد تأیید، apply با 503 fail-closed می‌ماند. هیچ کلید خصوصی یا fallback نرم‌افزاری اضافه نشده است.
+- **محدودیت force-password:** فرم enrollment رمز اولیه را پیش از اولین ورود عادی تعیین می‌کند و MustChangePassword را پس از آن false می‌کند. محدودسازی نشست و اجبار تغییر مجدد رمز در اولین login هنوز پیاده‌سازی نشده و معیار پذیرش باز است؛ این محدودیت در PR #307 شفاف شده است.
+- **تست:** تست SQL Server برای apply، signed acknowledgement، replay، reissue، ابطال token قبلی، مصرف یک‌بار، hash-only و عدم ایجاد گروه اضافه شده است. این تست‌ها در این نشست اجرا نشده‌اند؛ rollback و concurrent replay نیز اجرا نشده‌اند.
+- **CI:** اجرای اول PR #307 شکست کامپایل داشت: namespace مربوط به VendorProvisioningParentReferenceRules در IssuanceService وارد نشده بود. using اصلاح شد. اجرای جدید روی head جاری در زمان ثبت این log: secret-scan موفق؛ build-and-test، client، publish-scripts و Semgrep هنوز queued/in_progress. اجرای نهایی هنوز سبز نیست.

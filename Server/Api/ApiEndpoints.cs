@@ -52,6 +52,18 @@ public static class ApiEndpoints
 		api.MapGet("/companies/{companyId:guid}/overview", GetCompanyOverviewAsync);
 		api.MapWorkContextEndpoints();
 		api.MapCustomerBoundaryEndpoints();
+		api.MapGet("/provisioning/enrollment/antiforgery", GetAntiforgeryToken)
+			.AllowAnonymous()
+			.RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+		api.MapPost("/provisioning/enrollment/complete", CompleteProvisioningEnrollmentAsync)
+			.AllowAnonymous()
+			.RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+		api.MapPost("/provisioning/{requestId:guid}/enrollment/reissue", ReissueProvisioningEnrollmentAsync)
+			.RequireAuthorization(policy => policy.RequireClaim("AccountKind", "Infrastructure"))
+			.RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+		api.MapPost("/provisioning/apply", ApplyProvisioningAsync)
+			.RequireAuthorization(policy => policy.RequireClaim("AccountKind", "Infrastructure"))
+			.RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
 
 		return endpoints;
 	}
@@ -59,6 +71,125 @@ public static class ApiEndpoints
 	public static bool IsApiRequest(PathString path)
 	{
 		return path.StartsWithSegments(RoutePrefix, StringComparison.OrdinalIgnoreCase);
+	}
+
+
+
+	/// <summary>Completes the first administrator credential setup using the one-time enrollment token.</summary>
+	public static async Task<IResult> CompleteProvisioningEnrollmentAsync(
+		HttpContext httpContext,
+		[FromBody] CompleteProvisioningEnrollmentRequest request,
+		[FromServices] IAntiforgery antiforgery,
+		[FromServices] Infrastructure.Provisioning.CustomerProvisioningApplyService applyService,
+		CancellationToken cancellationToken)
+	{
+		if (!await antiforgery.IsRequestValidAsync(httpContext))
+			return TypedResults.Problem(title: "درخواست نامعتبر است.", statusCode: StatusCodes.Status400BadRequest);
+
+		httpContext.Response.Headers.CacheControl = "no-store";
+		httpContext.Response.Headers.Pragma = "no-cache";
+		var result = await applyService.CompleteEnrollmentAsync(
+			request.Username,
+			request.EnrollmentToken,
+			request.NewPassword,
+			httpContext.Connection.RemoteIpAddress?.ToString(),
+			cancellationToken);
+		httpContext.Response.Headers.CacheControl = "no-store";
+		httpContext.Response.Headers.Pragma = "no-cache";
+
+		if (result.Success)
+			return TypedResults.NoContent();
+
+		var status = result.ErrorCode switch
+		{
+			"enrollment_expired" => StatusCodes.Status410Gone,
+			"enrollment_rate_limited" => StatusCodes.Status429TooManyRequests,
+			_ => StatusCodes.Status400BadRequest
+		};
+		return TypedResults.Problem(
+			title: "فعال‌سازی حساب مدیر انجام نشد.",
+			detail: result.ErrorCode ?? "enrollment_invalid",
+			statusCode: status);
+	}
+
+	/// <summary>Issues a replacement enrollment token to an authenticated infrastructure operator.</summary>
+	public static async Task<IResult> ReissueProvisioningEnrollmentAsync(
+		Guid requestId,
+		HttpContext httpContext,
+		[FromBody] ReissueProvisioningEnrollmentRequest request,
+		[FromServices] IAntiforgery antiforgery,
+		[FromServices] Infrastructure.Provisioning.CustomerProvisioningApplyService applyService,
+		CancellationToken cancellationToken)
+	{
+		if (!await antiforgery.IsRequestValidAsync(httpContext))
+			return TypedResults.Problem(title: "درخواست نامعتبر است.", statusCode: StatusCodes.Status400BadRequest);
+
+		httpContext.Response.Headers.CacheControl = "no-store";
+		httpContext.Response.Headers.Pragma = "no-cache";
+		var result = await applyService.ReissueEnrollmentTokenAsync(
+			requestId,
+			request.ReasonCode ?? string.Empty,
+			httpContext.Connection.RemoteIpAddress?.ToString(),
+			cancellationToken);
+		httpContext.Response.Headers.CacheControl = "no-store";
+		httpContext.Response.Headers.Pragma = "no-cache";
+
+		if (!result.Success || result.EnrollmentToken is null)
+			return TypedResults.Conflict(new { error = result.ErrorCode ?? "enrollment_reissue_not_allowed" });
+
+		return TypedResults.Ok(new { enrollmentToken = result.EnrollmentToken });
+	}
+
+	/// <summary>
+	/// POST /api/v1/provisioning/apply — operator-only package application.
+	/// The enrollment token is returned only after the database transaction commits.
+	/// </summary>
+	public static async Task<IResult> ApplyProvisioningAsync(
+		HttpContext httpContext,
+		[FromBody] Faranou.Licensing.Contracts.CustomerProvisioningPackage package,
+		[FromServices] IAntiforgery antiforgery,
+		[FromServices] Infrastructure.Provisioning.CustomerProvisioningApplyService applyService,
+		CancellationToken cancellationToken)
+	{
+		if (!await antiforgery.IsRequestValidAsync(httpContext))
+			return TypedResults.Problem(
+				title: "درخواست نامعتبر است.",
+				statusCode: StatusCodes.Status400BadRequest);
+
+		httpContext.Response.Headers.CacheControl = "no-store";
+		httpContext.Response.Headers.Pragma = "no-cache";
+		var result = await applyService.ApplyAsync(package, cancellationToken);
+
+		if (result.Acknowledgement is not null)
+		{
+			if (result.Success)
+				return TypedResults.Ok(new
+				{
+					result.Acknowledgement,
+					result.Replayed,
+					EnrollmentToken = result.EnrollmentToken
+				});
+
+			return TypedResults.Conflict(new
+			{
+				Error = result.ErrorCode ?? "provisioning_rejected",
+				result.Acknowledgement,
+				result.Replayed
+			});
+		}
+
+		var status = result.ErrorCode switch
+		{
+			"provisioning_acknowledgement_signer_unavailable" => StatusCodes.Status503ServiceUnavailable,
+			"provisioning_request_id_conflict" or "provisioning_nonce_replayed" or
+				"provisioning_acknowledgement_missing" => StatusCodes.Status409Conflict,
+			_ => StatusCodes.Status400BadRequest
+		};
+
+		return TypedResults.Problem(
+			title: "بستهٔ راه‌اندازی قابل اعمال نیست.",
+			detail: result.ErrorCode ?? "provisioning_apply_failed",
+			statusCode: status);
 	}
 
 	/// <summary>
@@ -107,6 +238,8 @@ public static class ApiEndpoints
 		HttpContext httpContext,
 		[FromServices] IAntiforgery antiforgery)
 	{
+		httpContext.Response.Headers.CacheControl = "no-store";
+		httpContext.Response.Headers.Pragma = "no-cache";
 		var tokens = antiforgery.GetAndStoreTokens(httpContext);
 
 		return TypedResults.Ok(new AntiforgeryTokenResponse(
@@ -239,6 +372,11 @@ public sealed record SessionResponse(
 	string FullName,
 	string AccountKind,
 	bool IsAdministrator);
+
+public sealed record CompleteProvisioningEnrollmentRequest(
+	string? Username, string? EnrollmentToken, string? NewPassword);
+
+public sealed record ReissueProvisioningEnrollmentRequest(string? ReasonCode);
 
 public sealed record AntiforgeryTokenResponse(
 	string HeaderName,

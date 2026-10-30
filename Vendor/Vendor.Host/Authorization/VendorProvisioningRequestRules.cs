@@ -66,13 +66,21 @@ public static class VendorProvisioningRequestRules
             return "invalid_provisioning_fiscal_period";
 
         var parentReference = request.ParentCompanyReference?.Trim();
-        var hasValidParentReference = !string.IsNullOrWhiteSpace(parentReference) &&
-            parentReference.Length <= 128 &&
-            !parentReference.Any(char.IsControl);
+        var hasValidParentReference = Guid.TryParseExact(parentReference, "D", out var parentRequestId) &&
+            parentRequestId != Guid.Empty &&
+            string.Equals(parentReference, parentRequestId.ToString("D"), StringComparison.OrdinalIgnoreCase);
         if (companyType == "subsidiary" ? !hasValidParentReference : request.ParentCompanyReference is not null)
             return "invalid_provisioning_parent_company_reference";
 
         return null;
+    }
+
+    private static bool SameRequestReference(string? left, string? right)
+    {
+        if (left is null || right is null) return left is null && right is null;
+        return Guid.TryParseExact(left, "D", out var leftId) &&
+               Guid.TryParseExact(right.Trim(), "D", out var rightId) &&
+               leftId == rightId;
     }
 
     public static bool IsTargetActive(string? customerStatus, string? installationStatus) =>
@@ -99,7 +107,7 @@ public static class VendorProvisioningRequestRules
                string.Equals(existing.FiscalPeriodTitle, request.FiscalPeriodTitle?.Trim(), StringComparison.Ordinal) &&
                existing.FiscalPeriodStartDate == request.FiscalPeriodStartDate &&
                existing.FiscalPeriodEndDate == request.FiscalPeriodEndDate &&
-               string.Equals(existing.ParentCompanyReference, request.ParentCompanyReference?.Trim(), StringComparison.Ordinal) &&
+               SameRequestReference(existing.ParentCompanyReference, request.ParentCompanyReference) &&
                request.Subsystems is not null &&
                existing.Subsystems.Order(StringComparer.Ordinal)
                    .SequenceEqual(request.Subsystems.Order(StringComparer.Ordinal), StringComparer.Ordinal);

@@ -286,6 +286,40 @@ public sealed class CustomerProvisioningPackageValidatorTests
         Assert.DoesNotContain(names, name => name.Contains("secret", StringComparison.OrdinalIgnoreCase));
     }
 
+
+    [Fact]
+    public void PayloadValidation_RequiresCanonicalVendorRequestIdForParentReference()
+    {
+        var validReference = "a0b1c2d3-e4f5-4678-9012-abcdefabcdef";
+        var valid = CustomerProvisioningCanonicalJson.Serialize(SampleV3() with
+        {
+            CompanyType = "subsidiary",
+            ParentCompanyReference = validReference
+        });
+        Assert.True(CustomerProvisioningPackageValidator.TryValidatePayload(
+            valid, Now, out _, out var validError), validError);
+
+        var uppercase = CustomerProvisioningCanonicalJson.Serialize(SampleV3() with
+        {
+            CompanyType = "subsidiary",
+            ParentCompanyReference = validReference.ToUpperInvariant()
+        });
+        Assert.True(CustomerProvisioningPackageValidator.TryValidatePayload(
+            uppercase, Now, out _, out var uppercaseError), uppercaseError);
+
+        foreach (var invalidReference in new[] { "parent-001", "{" + validReference + "}", "not-a-guid", Guid.Empty.ToString("D") })
+        {
+            var invalid = CustomerProvisioningCanonicalJson.Serialize(SampleV3() with
+            {
+                CompanyType = "subsidiary",
+                ParentCompanyReference = invalidReference
+            });
+            Assert.False(CustomerProvisioningPackageValidator.TryValidatePayload(
+                invalid, Now, out var parsed, out _));
+            Assert.Null(parsed);
+        }
+    }
+
     private static CustomerProvisioningPackage Sign(ECDsa key, CustomerProvisioningPayload payload)
     {
         var json = CustomerProvisioningCanonicalJson.Serialize(payload);
