@@ -415,3 +415,12 @@
 - No Vendor DB migration and no Customer DB schema/migration were added in this slice.
 - PR #317 remains open and must be updated to create/use a signed test license and exercise schema v4 across independent Vendor/Customer hosts through signed acknowledgement and Confirmed. Owner review is still required for its workflow SQL Server service wiring and aliased Server project reference.
 - Production signing remains unavailable by default. A deployment must configure the independent public trust set Licensing:TrustedSigningKeys and the approved external private-key signer; the branch does not create or embed a production key.
+
+
+### CI feedback on D-054 branch (2026-10-30)
+
+- Earlier Vendor CI identified a C# query range-variable collision in the Export endpoint; fixed by renaming the query variables.
+- Earlier .NET CI identified one incorrect v3 canonical test vector caused by System.Text.Json escaping; the vector now uses stable ASCII and the canonical + escape.
+- SQL Server tests now cover wrong customer/installation, suspended/expired license, revoked key, historical sequence, and stale sequence rejection at provisioning signing.
+- Dual-host E2E adds a second export attempt after a newer license sequence is issued; re-export must fail while the previously exported package remains usable by the offline Customer Host.
+- The above are fixes to prior failing runs; final CI on the latest branch heads is still pending. No PR is approved for Merge on the basis of those earlier runs.
