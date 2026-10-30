@@ -466,7 +466,21 @@ public sealed class CustomerProvisioningApplyService
             Encoding.UTF8.GetBytes(canonicalJson), cancellationToken);
         if (!signing.Success ||
             string.IsNullOrWhiteSpace(signing.KeyId) ||
+            signing.KeyId.Length > 128 ||
             string.IsNullOrWhiteSpace(signing.SignatureBase64))
+            return null;
+
+        byte[] signatureBytes;
+        try
+        {
+            signatureBytes = Convert.FromBase64String(signing.SignatureBase64);
+        }
+        catch (FormatException)
+        {
+            return null;
+        }
+
+        if (signatureBytes.Length != 64)
             return null;
 
         return new CustomerProvisioningAcknowledgementEnvelope(
