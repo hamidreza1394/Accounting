@@ -3,6 +3,8 @@ using System.Text;
 using Faranou.Licensing.Contracts;
 using Faranou.Vendor.Host.Signing;
 using Faranou.Vendor.Persistence.Auditing;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Xunit;
@@ -41,6 +43,64 @@ public sealed class Pkcs11SigningProviderTests
         var options = ValidOptions();
         options.AssuranceLevel = "Automatic";
         Assert.Throws<InvalidOperationException>(options.Validate);
+    }
+
+    [Fact]
+    public async Task ProductionSoftwareAssurance_AuditsExplicitRiskAcceptanceBeforeStartupCompletes()
+    {
+        var options = ValidOptions();
+        options.AssuranceLevel = "Software";
+        options.AcceptSoftwareKeyRisk = true;
+        var audit = new RecordingAuditWriter();
+        var services = new ServiceCollection();
+        services.AddScoped<IVendorAuditWriter>(_ => audit);
+        await using var provider = services.BuildServiceProvider();
+        var service = new Pkcs11SigningAssuranceStartupService(
+            Options.Create(options),
+            new TestHostEnvironment(Environments.Production),
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<Pkcs11SigningAssuranceStartupService>.Instance);
+
+        await service.StartAsync(CancellationToken.None);
+
+        Assert.Equal("vendor.signing.assurance.software-risk-accepted", audit.LastRequest?.ActionCode);
+        Assert.Equal("signing_assurance", audit.LastRequest?.SubjectType);
+    }
+
+    [Fact]
+    public async Task ProductionSoftwareAssurance_AuditFailurePreventsStartup()
+    {
+        var options = ValidOptions();
+        options.AssuranceLevel = "Software";
+        options.AcceptSoftwareKeyRisk = true;
+        var audit = new RecordingAuditWriter { Fail = true };
+        var services = new ServiceCollection();
+        services.AddScoped<IVendorAuditWriter>(_ => audit);
+        await using var provider = services.BuildServiceProvider();
+        var service = new Pkcs11SigningAssuranceStartupService(
+            Options.Create(options),
+            new TestHostEnvironment(Environments.Production),
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<Pkcs11SigningAssuranceStartupService>.Instance);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.StartAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task StagingSoftwareAssurance_DoesNotRequireProductionAuditSink()
+    {
+        var options = ValidOptions();
+        options.AssuranceLevel = "Software";
+        var services = new ServiceCollection();
+        await using var provider = services.BuildServiceProvider();
+        var service = new Pkcs11SigningAssuranceStartupService(
+            Options.Create(options),
+            new TestHostEnvironment(Environments.Staging),
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<Pkcs11SigningAssuranceStartupService>.Instance);
+
+        await service.StartAsync(CancellationToken.None);
     }
 
     [Fact]
@@ -130,6 +190,14 @@ public sealed class Pkcs11SigningProviderTests
 
         public ValueTask<bool> IsAvailableAsync(CancellationToken cancellationToken = default) =>
             ValueTask.FromResult(true);
+    }
+
+    private sealed class TestHostEnvironment(string environmentName) : IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = environmentName;
+        public string ApplicationName { get; set; } = "Faranou.Vendor.Host.Tests";
+        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
     }
 
     private sealed class RecordingAuditWriter : IVendorAuditWriter
