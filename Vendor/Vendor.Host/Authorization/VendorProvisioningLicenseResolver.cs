@@ -53,19 +53,29 @@ public sealed class VendorProvisioningLicenseResolver(
         ArgumentNullException.ThrowIfNull(customer);
         ArgumentNullException.ThrowIfNull(installation);
 
-        if (licenseId == Guid.Empty || customer.Id == Guid.Empty || installation.Id == Guid.Empty ||
-            installation.CustomerId != customer.Id)
+        if (licenseId == Guid.Empty || customer.Id == Guid.Empty || installation.Id == Guid.Empty)
             return VendorProvisioningLicenseBindingResult.NotFound("provisioning_license_not_found");
+
+        // Never trust target status values captured before the current transaction began.
+        var currentCustomer = await db.Customers.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == customer.Id, cancellationToken);
+        var currentInstallation = await db.Installations.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == installation.Id, cancellationToken);
+        if (currentCustomer is null || currentInstallation is null ||
+            currentInstallation.CustomerId != currentCustomer.Id)
+            return VendorProvisioningLicenseBindingResult.NotFound("provisioning_license_not_found");
+
+        if (!string.Equals(currentCustomer.Status, "Active", StringComparison.Ordinal) ||
+            !string.Equals(currentInstallation.Status, "Active", StringComparison.Ordinal))
+            return VendorProvisioningLicenseBindingResult.Conflict("provisioning_license_inactive");
 
         var license = await db.Licenses.AsNoTracking()
             .SingleOrDefaultAsync(item => item.Id == licenseId, cancellationToken);
         if (license is null || license.CustomerId != customer.Id ||
-            license.InstallationId is Guid boundInstallation && boundInstallation != installation.Id)
+            license.InstallationId is Guid boundInstallation && boundInstallation != currentInstallation.Id)
             return VendorProvisioningLicenseBindingResult.NotFound("provisioning_license_not_found");
 
-        if (license.Status != "Issued" ||
-            !string.Equals(customer.Status, "Active", StringComparison.Ordinal) ||
-            !string.Equals(installation.Status, "Active", StringComparison.Ordinal))
+        if (license.Status != "Issued")
             return VendorProvisioningLicenseBindingResult.Conflict("provisioning_license_inactive");
 
         var now = timeProvider.GetUtcNow().ToUniversalTime();
@@ -119,7 +129,7 @@ public sealed class VendorProvisioningLicenseResolver(
             ]),
             new EcdsaP256Sha256Verifier(),
             new LicenseEvaluator(timeProvider));
-        var validation = validator.Validate(envelope, installation.Id.ToString("D"));
+        var validation = validator.Validate(envelope, currentInstallation.Id.ToString("D"));
         if (!validation.Success || validation.Payload is null ||
             validation.Status is LicenseStatus.Grace or LicenseStatus.Restricted or LicenseStatus.Invalid)
             return VendorProvisioningLicenseBindingResult.Conflict("provisioning_license_signature_or_payload_invalid");
@@ -128,7 +138,7 @@ public sealed class VendorProvisioningLicenseResolver(
         if (!Guid.TryParseExact(payload.LicenseId, "D", out var payloadLicenseId) ||
             payloadLicenseId != license.Id ||
             payload.Sequence != storedEnvelope.Sequence ||
-            !string.Equals(payload.InstallationId, installation.Id.ToString("D"), StringComparison.Ordinal) ||
+            !string.Equals(payload.InstallationId, currentInstallation.Id.ToString("D"), StringComparison.Ordinal) ||
             !string.Equals(payload.ProductCode, license.ProductCode, StringComparison.Ordinal) ||
             !string.Equals(payload.LicenseKind, license.LicenseKind, StringComparison.Ordinal) ||
             payload.GraceDays != license.GraceDays ||
