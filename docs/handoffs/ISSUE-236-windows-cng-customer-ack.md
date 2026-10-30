@@ -28,6 +28,7 @@
 
 ## فایل‌های مهم تغییرکرده
 - Server/Infrastructure/Provisioning/WindowsCngCustomerProvisioningAcknowledgementSigningProvider.cs
+- Server/Infrastructure/Provisioning/WindowsCngCustomerAcknowledgementKeyCommand.cs
 - Server/Program.cs
 - tests/Template.Tests/Integration/WindowsCngCustomerProvisioningAcknowledgementSigningTests.cs
 - .github/workflows/dotnet.yml
@@ -35,6 +36,8 @@
 - docs/SECURITY.md
 - docs/TESTING.md
 - docs/WORK_LOG.md
+- docs/runbooks/ISSUE-236-HSM-TPM-KEY-OPERATIONS.md
+- docs/PROJECT_STATUS.md
 
 ## تصمیم‌های فنی
 - انتخاب KSP صریح است؛ نبود TPM یا کلید TPM باعث خطای عمومی unavailable می‌شود و به Software KSP fallback نمی‌کند.
@@ -66,5 +69,5 @@
 
 ## شناسه‌های Git
 - Branch: feat/customer-ack-windows-cng-signer-rebased
-- Commit: پس از آخرین تغییرات PR #347 به‌روزرسانی شود
+- Commit: current PR head (see GitHub PR #347)
 - Pull Request: https://github.com/hamidreza1394/Accounting/pull/347
