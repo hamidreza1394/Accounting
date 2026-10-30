@@ -135,8 +135,8 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                         }));
                     webHost.ConfigureTestServices(services =>
                     {
-                        services.RemoveAll<ICustomerProvisioningAcknowledgementSigningProvider>();
-                        services.AddSingleton<ICustomerProvisioningAcknowledgementSigningProvider>(
+                        services.RemoveAll<CustomerProvisioning.ICustomerProvisioningAcknowledgementSigningProvider>();
+                        services.AddSingleton<CustomerProvisioning.ICustomerProvisioningAcknowledgementSigningProvider>(
                             new DualHostAcknowledgementSigner(acknowledgementKey));
                         services.AddAuthentication(CustomerE2EAuthenticationScheme)
                             .AddScheme<AuthenticationSchemeOptions, ProvisioningE2EAuthenticationHandler>(
@@ -769,7 +769,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
     }
 
     private sealed class DualHostAcknowledgementSigner(ECDsa key)
-        : CustomerProvisioning.ICustomerProvisioningAcknowledgementSigningProvider
+        : CustomerProvisioning.CustomerProvisioning.ICustomerProvisioningAcknowledgementSigningProvider
     {
         public Task<CustomerProvisioning.CustomerProvisioningAcknowledgementSigningResult> SignAsync(
             ReadOnlyMemory<byte> canonicalAcknowledgementUtf8,
