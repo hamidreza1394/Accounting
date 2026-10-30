@@ -350,6 +350,24 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 var packageFromOfflineFile = await File.ReadAllTextAsync(
                     packageFile, Encoding.UTF8, cancellationToken);
 
+                // Simulate an interrupted removable-media/file copy. A truncated envelope
+                // must be rejected without a partial company or claim; the intact file is retried below.
+                var interruptedPackageFile = Path.Combine(exchangeDirectory, "customer-provisioning-package.partial");
+                await File.WriteAllTextAsync(
+                    interruptedPackageFile,
+                    packageFromOfflineFile[..(packageFromOfflineFile.Length / 2)],
+                    Encoding.UTF8,
+                    cancellationToken);
+                using (var interruptedTransfer = await PostCustomerJsonAsync(
+                    customerClientA,
+                    "/api/v1/provisioning/apply",
+                    await File.ReadAllTextAsync(interruptedPackageFile, Encoding.UTF8, cancellationToken),
+                    customerTokenA,
+                    cancellationToken))
+                {
+                    Assert.Equal(HttpStatusCode.BadRequest, interruptedTransfer.StatusCode);
+                }
+
                 // Export is a transport operation, not customer confirmation. A lost/ignored
                 // acknowledgement must leave the Vendor request in PendingDelivery.
                 await using (var pendingScope = vendorFactory.Services.CreateAsyncScope())
