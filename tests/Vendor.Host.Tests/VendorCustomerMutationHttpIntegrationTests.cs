@@ -454,6 +454,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                     requestId = provisioningRequestId,
                     customerId,
                     installationId = installationIdForProvisioning,
+                    licenseId = provisioningLicenseId,
                     companyName = "Different Company",
                     companyType = "independent",
                     initialAdminUserName = "initial-admin",
