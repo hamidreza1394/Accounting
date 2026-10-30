@@ -1347,3 +1347,12 @@
 ## 2026-10-30 — همگام‌سازی E2E با اصلاح PR #318
 - PR #319 از نظر محتوای Server branch هنوز فاقد fix ادغام‌شدهٔ PR #318 بود، چون شاخه از commit پیش از آن منشعب شده بود؛ نسخهٔ merged فایل ApiEndpoints و تست regression به شاخهٔ #319 منتقل شد.
 - شاخهٔ E2E جدید از آخرین HEAD #319 ساخته شد تا تست فایل ناقص در Customer Host نیز پاسخ 400 عمومی را از همان کد ادغام‌شده دریافت کند.
+
+
+## 2026-10-30 — Issue #236: reconcile signer boundary and signature-verification status
+
+- **PR #314:** provider exception logging safely records only exception type; .NET CI `41023761020` succeeded, initial Vendor run `41023760808` was cancelled, and final Vendor rerun `41023761189` succeeded; Semgrep runs `41023760815` and `41023761032` succeeded.
+- **PR #316:** provisioning package signature is verified against independently configured public trust before durable state changes; .NET CI `41026182788`, Vendor CI `41026182882`, and Semgrep `41026182656` succeeded.
+- **Current boundary:** signing and provisioning trust are separate; default providers remain unavailable/fail-closed. These changes do not supply a production KMS/HSM or prove private-key custody.
+- **Remaining:** provider selection, workload identity/sign-only access, key provisioning/rotation/recovery, public-key distribution, operational failure/recovery drills, and production two-admin/MFA operations.
+- **Changes:** handoff and work-log status only; no runtime code, secret, key, schema or migration changed.
