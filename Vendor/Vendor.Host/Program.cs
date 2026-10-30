@@ -280,7 +280,9 @@ if (builder.Environment.IsProduction())
 {
     // The production adapter is registered by the deployment-specific provider integration.
     // Resolve it through the shared contract and verify/read+append the checkpoint before readiness.
-    builder.Services.TryAddScoped<IVendorAuditCheckpointStore>(
+    // Do not let a generic/test store registration shadow the production marker adapter.
+    builder.Services.RemoveAll<IVendorAuditCheckpointStore>();
+    builder.Services.AddScoped<IVendorAuditCheckpointStore>(
         services => services.GetRequiredService<IProductionVendorAuditCheckpointStore>());
     builder.Services.AddScoped<VendorAuditCheckpointService>();
 }
