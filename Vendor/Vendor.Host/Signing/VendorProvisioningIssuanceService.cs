@@ -19,6 +19,7 @@ public sealed class VendorProvisioningIssuanceService(
     IProvisioningSigningProvider signingProvider,
     ProvisioningPackageSigningTrustStore signingTrustStore,
     IVendorAuditWriter audit,
+    VendorProvisioningLicenseResolver licenseResolver,
     TimeProvider timeProvider,
     ILogger<VendorProvisioningIssuanceService> logger)
 {
@@ -78,6 +79,21 @@ public sealed class VendorProvisioningIssuanceService(
         var payloadHash = Convert.ToHexString(SHA256.HashData(payloadBytes)).ToLowerInvariant();
         if (!string.Equals(payloadHash, request.PayloadSha256, StringComparison.Ordinal))
             return VendorProvisioningIssuanceResult.Conflict("provisioning_payload_hash_mismatch");
+
+        if (payload.SchemaVersion != CustomerProvisioningPackageValidator.CurrentPayloadSchemaVersion ||
+            !Guid.TryParseExact(payload.LicenseId, "D", out var licenseId) ||
+            payload.Sequence is not int licenseSequence)
+            return VendorProvisioningIssuanceResult.Conflict("provisioning_license_binding_required");
+
+        var licenseBinding = await licenseResolver.ResolveLatestAsync(
+            licenseId, customer, installation, payload.Subsystems, cancellationToken);
+        if (!licenseBinding.Succeeded)
+            return new VendorProvisioningIssuanceResult(false, licenseBinding.StatusCode, licenseBinding.ErrorCode);
+        if (licenseBinding.Sequence != licenseSequence ||
+            !string.Equals(licenseBinding.LicenseId, payload.LicenseId, StringComparison.OrdinalIgnoreCase) ||
+            !payload.Subsystems.Order(StringComparer.Ordinal)
+                .SequenceEqual(licenseBinding.Subsystems!.Order(StringComparer.Ordinal), StringComparer.Ordinal))
+            return VendorProvisioningIssuanceResult.Conflict("provisioning_license_sequence_stale");
 
         if (string.Equals(payload.CompanyType, "subsidiary", StringComparison.Ordinal) &&
             !await VendorProvisioningParentReferenceRules.IsEligibleParentAsync(
