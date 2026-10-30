@@ -151,14 +151,16 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
         catch (Pkcs11Exception exception)
         {
             _logger.LogWarning(
-                "PKCS#11 signing failed. FailureCode={FailureCode}.",
+                "PKCS#11 signing failed. KeyId={KeyId} FailureCode={FailureCode}.",
+                key?.KeyId ?? "unknown",
                 exception.RV.ToString());
             return LicenseSigningResult.Unavailable();
         }
         catch (Exception exception) when (exception is not OutOfMemoryException and not AccessViolationException)
         {
             _logger.LogWarning(
-                "PKCS#11 signing provider is unavailable. FailureType={FailureType}.",
+                "PKCS#11 signing provider is unavailable. KeyId={KeyId} FailureType={FailureType}.",
+                key?.KeyId ?? "unknown",
                 exception.GetType().Name);
             return LicenseSigningResult.Unavailable();
         }
@@ -405,6 +407,7 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
             _library.Value.Dispose();
         }
         _operationGate.Dispose();
+        GC.SuppressFinalize(this);
     }
 }
 
@@ -451,8 +454,9 @@ public abstract class Pkcs11SigningProviderBase
         {
             // A signature is never returned to the caller if its audit event cannot be persisted.
             _logger.LogCritical(
-                "Vendor signing audit append failed; signature result was discarded. Purpose={Purpose} FailureType={FailureType}.",
+                "Vendor signing audit append failed; signature result was discarded. Purpose={Purpose} KeyId={KeyId} FailureType={FailureType}.",
                 _purpose,
+                key.KeyId,
                 exception.GetType().Name);
             return LicenseSigningResult.Unavailable();
         }
