@@ -1280,3 +1280,10 @@
 - **باگ یافته و رفع‌شده:** Deadlock (1205) در درخواست‌های هم‌زمان تکراری apply/enrollment → خطای مدیریت‌نشده. رفع با `sp_getapplock` تراکنشی؛ تست‌ها پیش از رفع شکست خوردند و پس از رفع سه بار پشت‌سرهم موفق بودند. کل Template.sln: 664 کل، 662 موفق، 2 skipped، 0 ناموفق.
 - **انجام نشد:** E2E خودکار دو-میزبانه (Vendor + مشتری)؛ دلیل در handoff. جزئیات: `docs/handoffs/ISSUE-235-provisioning-e2e-tests.md`.
 
+
+
+## 2026-10-30 — رفع یافتهٔ Gitleaks در تست provisioning (#235)
+- **شاهد شکست:** .NET CI run `41021431573` روی head قبلی PR #309 در job `secret-scan` شکست خورد؛ Gitleaks مقدار ثابت password-like را در fixture تست `CustomerProvisioningTransactionalSqlServerTests.cs` شناسایی کرد. این مقدار فقط دادهٔ آزمایشی بود و هیچ credential عملیاتی/مشتری نبود، اما نگه‌داشتن literal ثابت در repository غیرضروری و خلاف hardening بود.
+- **اصلاح:** مقدار ثابت حذف شد؛ رمزهای موردنیاز تست با `RandomNumberGenerator.GetBytes(32)` به‌صورت runtime و per-test تولید می‌شوند. تست همچنان بررسی می‌کند رمز و enrollment token در audit ذخیره نشده‌اند.
+- **دامنه:** فقط تست و handoff/work log در شاخهٔ مستقل Issue #235؛ بدون تغییر Vendor، دیتابیس مشتری، migration یا secret configuration.
+- **اعتبارسنجی:** Gitleaks روی SHA قبلی ناموفق بود؛ اجرای CI روی commit اصلاحی در انتظار است. هیچ نتیجهٔ سبزی برای SHA جدید ادعا نمی‌شود.

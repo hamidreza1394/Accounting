@@ -3,7 +3,7 @@
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/235
 - **Agent/مسئول:** Claude Code
 - **تاریخ:** 2026-10-30
-- **وضعیت:** ناقص عمدی (تست‌های SQL Server کامل و یک باگ همزمانی رفع شد؛ E2E دو-میزبانه انجام نشد)
+- **وضعیت:** ناقص عمدی (تست‌های SQL Server و رفع باگ همزمانی انجام شده؛ E2E دو-میزبانه انجام نشده؛ رفع مقدار ثابت password-like در fixture ثبت شده و CI روی head جدید در انتظار است)
 - **وابستگی:** این شاخه روی `feat/issue-235-ack-signing-provider-contract` ساخته شده است (سازندهٔ `CustomerProvisioningApplyService` در آن PR تغییر کرد). تا ادغام آن PR، PR این شاخه را با base همان شاخه باز کنید.
 
 ## هدف و معیارهای پذیرش
@@ -37,6 +37,7 @@
 | `dotnet test Template.sln -c Release` (با SQL Server) | موفق | 664 کل، 662 موفق، 2 skipped، 0 ناموفق |
 | Playwright E2E / Vendor.sln / کلاینت | اجرا نشد | تغییری در آن‌ها نبود |
 | بازبینی مستقل Subagent | اجرا نشد | Subagent فراخوانی نشد؛ بازبینی Diff توسط نویسنده |
+| GitHub secret-scan، run `41021431573` روی SHA قبلی | ناموفق | Gitleaks یک مقدار ثابت password-like فقط در fixture تست را گزارش کرد؛ credential عملیاتی نبود، اما از کد حذف و با مقدار تصادفی runtime جایگزین شد. CI روی commit اصلاحی هنوز اجرا/تأیید نشده است |
 
 ## چرا E2E دو-میزبانه ساخته نشد
 - هر دو پروژه `public partial class Program` در فضای نام سراسری دارند؛ یک پروژه تست که هر دو را ارجاع دهد به alias بیرونی و پیکربندی جداگانهٔ دو پایگاه داده نیاز دارد.
@@ -50,6 +51,11 @@
 ## ریسک‌ها و کارهای باقی‌مانده
 - E2E دو-میزبانه و Playwright از آپلود ack تا وضعیت `Confirmed`.
 - قفل سراسری یعنی applyهای همزمان صف می‌شوند؛ در حجم بالا (نامحتمل برای این کار اپراتوری) باید بازنگری شود.
+
+## امنیت و اصلاح Secret Scan
+- مقدار ثابت password-like فقط در تست integration وجود داشت؛ هیچ رمز Production یا customer credential در اختیار این تست قرار نگرفته بود.
+- برای حذف الگوی قابل‌تشخیص و جلوگیری از هرگونه credential ثابت، رمزهای تست در هر اجرای تست با `RandomNumberGenerator.GetBytes(32)` تولید می‌شوند و در log یا audit ثبت نمی‌شوند.
+- نتیجهٔ Gitleaks پس از این اصلاح باید روی SHA جدید دوباره تأیید شود.
 
 ## شناسه‌های Git
 - Branch: `feat/issue-235-provisioning-e2e-tests`
