@@ -132,6 +132,32 @@ public sealed class CustomerProvisioningPackageVerifierTests
     }
 
     [Fact]
+    public void MissingCustomerBoundaryId_FailsClosed()
+    {
+        using var signingKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Provisioning:TrustedVendorKeys:vendor-key-1"] =
+                    Convert.ToBase64String(signingKey.ExportSubjectPublicKeyInfo())
+            })
+            .Build();
+        var verifier = new CustomerProvisioningPackageVerifier(
+            new ConfigurationCustomerProvisioningTrustStore(configuration),
+            Options.Create(new CustomerProvisioningSettings
+            {
+                CustomerReference = "customer-001",
+                InstallationId = "install-001"
+            }),
+            TimeProvider.System);
+
+        Assert.False(verifier.TryVerify(Sign(signingKey, Sample("customer-001", "install-001")),
+            out var payload, out var error));
+        Assert.Null(payload);
+        Assert.Equal("provisioning_consumer_not_configured", error);
+    }
+
+    [Fact]
     public void MalformedConfiguredPublicKey_IsNotAcceptedAsTrusted()
     {
         var configuration = new ConfigurationBuilder()
@@ -163,7 +189,8 @@ public sealed class CustomerProvisioningPackageVerifierTests
             Options.Create(new CustomerProvisioningSettings
             {
                 CustomerReference = customerReference,
-                InstallationId = installationId
+                InstallationId = installationId,
+                CustomerBoundaryId = Guid.Parse("a0b1c2d3-e4f5-4678-9012-abcdefabcdef")
             }),
             TimeProvider.System);
     }
