@@ -1515,3 +1515,11 @@
 - Stage 1: کد کامل + Staging روی سیستم مالک/سرور ابری + نصب مشتری روی ماشین دوم؛ Stage 2: HSM واقعی، دو میزبان واقعی و بازیابی شواهد پیش‌نیاز برچسب Production کامل.
 - این PR فقط تصمیم و اسناد را ثبت می‌کند؛ تغییر کد Assurance، استقرار واقعی، آزمون دو میزبان فیزیکی و بازیابی هنوز انجام نشده‌اند.
 - فایل‌ها: D-055، D-056، DECISIONS.md، INDEX.md، WORK_LOG.md.
+
+
+## 2026-10-30 — Issue #107: Development/Test checkpoint journal
+- تست‌های اولیه برای append/read monotonic، رد sequence تکراری/کاهشی، تشخیص دستکاری checkpoint و الزام مسیر مطلق اضافه شد.
+- پیاده‌سازی `DevelopmentFileVendorAuditCheckpointStore` به‌عنوان adapter محلی append-only با lock بین پردازه‌ای، اعتبارسنجی تمام رکوردها، sequence صعودی و flush روی دیسک اضافه شد.
+- این کلاس فقط `IVendorAuditCheckpointStore` را پیاده‌سازی می‌کند و عمداً `IProductionVendorAuditCheckpointStore` نیست؛ هیچ Production fallback یا wiring خودکاری ایجاد نشده است.
+- اجرای محلی .NET در این نشست در دسترس نیست؛ تأیید compile/test به CI واگذار شده و تا نتیجه آن ادعای موفقیت تست نمی‌شود.
+- فایل‌ها: `Vendor/Vendor.Persistence/Auditing/DevelopmentFileVendorAuditCheckpointStore.cs` و `tests/Vendor.Host.Tests/DevelopmentFileVendorAuditCheckpointStoreTests.cs`.
