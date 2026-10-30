@@ -100,9 +100,29 @@ public sealed class CustomerProvisioningApplyService
         var storedAcknowledgement = await FindAcknowledgementAsync(payload.RequestId, cancellationToken);
         if (storedAcknowledgement is not null)
         {
+            CustomerProvisioningAcknowledgement? storedPayload;
+            try
+            {
+                storedPayload = JsonSerializer.Deserialize<CustomerProvisioningAcknowledgement>(
+                    storedAcknowledgement.AcknowledgementJson, JsonOptions);
+            }
+            catch (JsonException)
+            {
+                return Failure("provisioning_acknowledgement_corrupt");
+            }
+
+            if (storedPayload is null ||
+                !string.Equals(storedPayload.RequestId, payload.RequestId, StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals(storedPayload.Nonce, payload.Nonce, StringComparison.Ordinal) ||
+                !string.Equals(storedPayload.PayloadSha256, payloadHash, StringComparison.Ordinal) ||
+                !string.Equals(storedPayload.CustomerReference, payload.CustomerReference, StringComparison.Ordinal) ||
+                !string.Equals(storedPayload.InstallationId, payload.InstallationId, StringComparison.Ordinal))
+                return Failure("provisioning_request_id_conflict");
+
             var claim = await _database.ProvisioningRequestClaims.AsNoTracking()
                 .SingleOrDefaultAsync(item => item.RequestId == requestId, cancellationToken);
             if (claim is not null &&
+                storedPayload.Result is "Applied" or "AlreadyApplied" &&
                 string.Equals(claim.PayloadSha256, payloadHash, StringComparison.Ordinal) &&
                 string.Equals(claim.NonceHash, nonceHash, StringComparison.Ordinal))
             {
@@ -110,7 +130,7 @@ public sealed class CustomerProvisioningApplyService
                 return new CustomerProvisioningApplyResult(true, true, null, storedAcknowledgement, null);
             }
 
-            if (claim is null)
+            if (claim is null && storedPayload.Result == "Rejected")
             {
                 // A stored rejection is replayed exactly; no side effect or new secret is produced.
                 await transaction.CommitAsync(cancellationToken);
