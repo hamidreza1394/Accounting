@@ -1241,3 +1241,11 @@
 - **تست‌ها:** قالب canonical و طول ثابت، تولید مجدد غیر یکسان، تطبیق/عدم تطبیق digest، رد token/hash نامعتبر، رد encoding غیرcanonical و رد token بدقالب در زمان hash. تست encoding غیرcanonical deterministic است و به تصادف وابسته نیست.
 - **محدودیت مهم:** این commit فقط primitive رمزنگاری و تست آن است؛ endpoint مصرف یک‌باره، transaction/RowVersion، انقضا، audit، محدودسازی تلاش و گردش امن تحویل token هنوز پیاده‌سازی نشده‌اند. این primitive نباید به‌تنهایی به‌عنوان enrollment end-to-end یا Verified اعلام شود.
 - **اعتبارسنجی:** باید CI روی همین شاخه اجرا شود؛ اجرای محلی .NET در این محیط انجام نشده است.
+
+
+## 2026-10-30 — D-053: تصمیم‌های قطعی Issue #235
+- مالک محصول صریحاً تأیید کرد: ParentCompanyReference همان RequestId بستهٔ مادر با GUID canonical D است؛ resolve فقط از claim به CompanyId محلی؛ اعتبارسنجی Vendor و Customer؛ والدهای مجاز parent/subsidiary؛ فقط ParentCompanyId روی claim و عدم ایجاد روابط گروه/مالکیت؛ شرکت‌های قدیمی خارج از دامنه و بدون Company migration.
+- Enrollment: token فقط در پاسخ همان apply پس از commit، hash-only در DB، no-store و بدون log/audit/ack/URL/cache؛ replay فقط acknowledgement؛ reissue مستقل با ابطال token قبلی، audit و مجوز صریح؛ expiry کوتاه، مصرف اتمیک، محدودیت تلاش و اجبار تغییر رمز. در ابر مشترک اپراتور فقط کارکنان میزبان است و هیچ دسترسی ماندگار پس از bootstrap ندارد.
+- Production signing فقط provider واقعی Issue #236؛ fail-closed برقرار می‌ماند.
+- پیشنهاد نوع والد پذیرفته‌شده در D-053: parent یا subsidiary می‌تواند والد مستقیم باشد؛ independent مجاز نیست تا ساختار چندسطحی پشتیبانی شود.
+- وضعیت این ثبت: تصمیم/تهدیدمُدل به‌روزرسانی می‌شود؛ این ثبت به معنی تکمیل کد یا تست نیست.
