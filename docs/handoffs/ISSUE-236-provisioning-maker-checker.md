@@ -103,3 +103,13 @@
 - Adapter فقط در صورت opt-in و با دو KeyId مجزا برای license و package فعال می‌شود. در محیط غیر از Testing، Hardware Slot و manufacturer/model allowlist دقیق لازم است. `/health/signing` جدا از liveness است.
 - با بودجهٔ صفر و نبود HSM واقعی، config فعال نشده است؛ signerهای Production همچنان unavailable و fail-closed هستند. SoftHSM فقط برای CI/test است و fallback Production نیست.
 - Customer ACK signer per-installation در TPM/OS secure store هنوز پیاده‌سازی نشده است. برای ادامهٔ کدنویسی آن باید سیستم‌عامل هدف نصب‌های مشتری (Windows Server یا Linux) مشخص شود؛ تا آن زمان default provider unavailable باقی می‌ماند.
+
+
+## وضعیت پس از Windows CNG و اصلاح تست‌ها — 2026-10-30
+
+- یادداشت‌های قبلی که Customer ACK signer را «پیاده‌سازی‌نشده» می‌دانستند، پیش از PR #349 نوشته شده‌اند و دیگر وضعیت جاری نیستند.
+- PR #349 در main ادغام شد: Windows CNG signer per-installation، کلید ECDSA P-256 غیرقابل‌استخراج، KeyName/KeyId نسخه‌دار مشتق‌شده از InstallationId و فرمان آفلاین تولید کلید اضافه شد. TPM KSP پیش‌فرض است؛ Software KSP فقط با انتخاب صریح مجاز است و fallback خودکار وجود ندارد.
+- PR #351 فیلتر تست xUnit v3/MTP را اصلاح کرد. .NET CI run `41088538581` و Semgrep run `41088538577` موفق‌اند؛ Windows CNG tests، Windows/Linux publish و E2E اجرا و موفق شدند.
+- تست CI از Software KSP استفاده می‌کند و TPM فیزیکی، ACL حساب سرویس Production یا همه نسخه‌های Windows/Windows Server را تأیید نمی‌کند. تا آزمون سخت‌افزاری واقعی، Production enablement ACK signer ممنوع است.
+- PR #352 (در حال بررسی) revocation صریح Customer ACK KeyId، نگهداری SPKI برای audit، fail-closed در برابر مقدار revocation نامعتبر و overlap rotation را اضافه می‌کند. محدودیت ضد rollback در برابر restore کامل backup همچنان برقرار است.
+- باقی‌ماندهٔ #236: HSM واقعی Vendor (بودجه صفر و fail-closed)، ثبت public SPKI در Trust Store مشتری و Vendor با روند امن، durable metadata-only audit/readiness، آزمون TPM واقعی و ACL، backup/recovery عملیاتی و Linux backend در مرحلهٔ آتی.

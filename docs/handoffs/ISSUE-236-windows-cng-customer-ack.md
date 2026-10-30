@@ -71,3 +71,12 @@
 - Branch: feat/customer-ack-windows-cng-signer-rebased
 - Commit: current PR head (see GitHub PR #347)
 - Pull Request: https://github.com/hamidreza1394/Accounting/pull/347
+
+## وضعیت پس از ادغام Windows CNG و اصلاح فیلتر تست — 2026-10-30
+
+- یادداشت‌های اولیهٔ بالا مربوط به PR #347 و پیش از ادغام هستند؛ وضعیت جاری با این بخش جایگزین می‌شود.
+- PR #349 با merge commit `e1150a15235c932e3e762bcd727f641fa059038c` ادغام شد و Provider ویندوزی CNG، KeyName/KeyId مشتق‌شده از InstallationId+KeyVersion و فرمان آفلاین `--provisioning-ack-key create` را به main آورد.
+- PR #351 فیلتر قدیمی VSTest را با فیلتر xUnit v3/MTP یعنی `--filter-class Template.Tests.Integration.WindowsCngCustomerProvisioningAcknowledgementSigningTests` جایگزین کرد. .NET CI run `41088538581` و Semgrep run `41088538577` موفق شدند؛ تست CNG واقعاً اجرا شد و موفق بود.
+- Hosted Windows CI از Software KSP فقط به‌عنوان fixture استفاده می‌کند؛ این نتیجه TPM سخت‌افزاری یا ماتریس نسخه‌های Windows و Windows Server را تأیید نمی‌کند. Production enablement تا آزمون روی سخت‌افزار TPM واقعی و حساب سرویس واقعی ممنوع است.
+- PR #352 در حال افزودن revocation صریح Trust Store مشتری و تست rotation overlap است؛ تا CI نهایی آن را ادغام‌شده/Verified تلقی نکنید.
+- باقی‌مانده: enrollment public SPKI در Trust Store مشتری و Vendor با رویهٔ عملیاتی، durable metadata-only audit و readiness، آزمون TPM واقعی/ACL حساب سرویس، و پیاده‌سازی Linux backend در مرحلهٔ بعدی.
