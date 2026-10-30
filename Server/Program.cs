@@ -377,6 +377,10 @@ if (!setupRequired)
     {
         OnPrepareResponse = context => context.Context.Response.Headers.CacheControl = "no-cache",
     });
+    app.MapFallbackToFile("/provisioning/import", "app/index.html", new StaticFileOptions
+    {
+        OnPrepareResponse = context => context.Context.Response.Headers.CacheControl = "no-cache",
+    });
 }
 
 app.Run();
