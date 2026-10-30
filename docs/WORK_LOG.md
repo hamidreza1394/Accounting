@@ -1259,3 +1259,13 @@
 - **تست‌های اضافه‌شده:** unit tests برای GUID canonical و مقایسهٔ حروف؛ SQL Server integration test برای resolver و مرز مشتری. تست‌ها فقط به مخزن افزوده شده‌اند؛ در این محیط اجرا نشده‌اند.
 - **اعتبارسنجی:** build، unit tests، SQL Server integration، rollback، concurrent replay و E2E اجرا نشده‌اند. checkout محلی به علت خطای DNS برای github.com در دسترس نبود؛ CI روی PR نهایی لازم است.
 - **Git:** branch feat/issue-235-transactional-consumer؛ PR هنوز ساخته نشده؛ هیچ merge انجام نشده است.
+
+
+## 2026-10-30 — Issue #235: transactional apply and one-time enrollment slice
+- **پیاده‌سازی:** CustomerProvisioningApplyService با transaction در سطح Serializable؛ verify بسته قبل از mutation؛ claim یکتا برای RequestId/nonce؛ ایجاد Company، FiscalPeriod، User، CompanyRole، Membership و permissionهای دقیق موجود در D-052؛ ParentCompanyId فقط در claim؛ بدون ساخت گروه یا OwnershipRelationship.
+- **Idempotency:** acknowledgement امضاشده در SecurityAuditEvents به‌عنوان outbox/audit در همان transaction ذخیره می‌شود؛ replay با همان request/hash/nonce همان envelope را برمی‌گرداند و token را null می‌کند. برای rejection معتبر نیز envelope ثابت ذخیره و replay می‌شود.
+- **Enrollment:** token تصادفی ۲۵۶بیتی، فقط hash در claim؛ انقضای ۳۰ دقیقه؛ token فقط پس از commit در response apply؛ reissue مستقل با reasonCode مجاز، ابطال digest قبلی و audit بدون token؛ مصرف تراکنشی؛ ۵ تلاش ناموفق در ۱۵ دقیقه؛ no-store در endpointها. UI اپراتور در /provisioning/import و فرم مدیر اولیه در /enroll اضافه شدند.
+- **محدودیت Production:** ICustomerProvisioningAcknowledgementSigningProvider به‌صورت interface تعریف شده و provider پیش‌فرض unavailable است؛ بنابراین تا اتصال provider امن و مورد تأیید، apply با 503 fail-closed می‌ماند. هیچ کلید خصوصی یا fallback نرم‌افزاری اضافه نشده است.
+- **محدودیت force-password:** فرم enrollment رمز اولیه را پیش از اولین ورود عادی تعیین می‌کند و MustChangePassword را پس از آن false می‌کند. محدودسازی نشست و اجبار تغییر مجدد رمز در اولین login هنوز پیاده‌سازی نشده و معیار پذیرش باز است؛ این محدودیت در PR #307 شفاف شده است.
+- **تست:** تست SQL Server برای apply، signed acknowledgement، replay، reissue، ابطال token قبلی، مصرف یک‌بار، hash-only و عدم ایجاد گروه اضافه شده است. این تست‌ها در این نشست اجرا نشده‌اند؛ rollback و concurrent replay نیز اجرا نشده‌اند.
+- **CI:** اجرای اول PR #307 شکست کامپایل داشت: namespace مربوط به VendorProvisioningParentReferenceRules در IssuanceService وارد نشده بود. using اصلاح شد. اجرای جدید روی head جاری در زمان ثبت این log: secret-scan موفق؛ build-and-test، client، publish-scripts و Semgrep هنوز queued/in_progress. اجرای نهایی هنوز سبز نیست.
