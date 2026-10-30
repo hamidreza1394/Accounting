@@ -25,7 +25,7 @@ function getRequestId(packageText: string): string {
     throw new Error('ساختار بسته معتبر نیست یا بخش payloadJson وجود ندارد.');
   }
   const payload = JSON.parse(parsed.payloadJson) as { requestId?: unknown };
-  if (typeof payload.requestId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(payload.requestId)) {
+  if (typeof payload.requestId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.requestId)) {
     throw new Error('شناسه درخواست در بسته معتبر نیست.');
   }
   return payload.requestId;
