@@ -1,7 +1,7 @@
 using System;
+using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
-using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -11,8 +11,8 @@ namespace Infrastructure.Provisioning;
 
 /// <summary>
 /// Explicit Windows CNG configuration for one installation's customer acknowledgement key.
-/// Provider selection is explicit: the TPM KSP is the default and the OS software KSP may be
-/// selected deliberately when the installation policy permits it. No provider fallback occurs.
+/// The installation identifier is sourced from trusted deployment configuration; the key name
+/// and versioned KeyId are derived from it to prevent accidental cross-installation key reuse.
 /// </summary>
 public sealed class WindowsCngCustomerAcknowledgementSigningOptions
 {
@@ -22,14 +22,13 @@ public sealed class WindowsCngCustomerAcknowledgementSigningOptions
 
     public string ProviderName { get; set; } = "Microsoft Platform Crypto Provider";
 
-    public string KeyName { get; set; } = string.Empty;
-
-    public string KeyId { get; set; } = string.Empty;
+    public int KeyVersion { get; set; } = 1;
 
     public bool MachineKey { get; set; } = true;
 }
 
 public sealed record WindowsCngCustomerAcknowledgementKeyProvisioningResult(
+    string KeyName,
     string KeyId,
     byte[] PublicKeySubjectPublicKeyInfo);
 
@@ -44,14 +43,17 @@ public static class WindowsCngCustomerAcknowledgementKeyProvisioner
     private const string OsProvider = "Microsoft Software Key Storage Provider";
 
     public static WindowsCngCustomerAcknowledgementKeyProvisioningResult Create(
-        WindowsCngCustomerAcknowledgementSigningOptions options)
+        WindowsCngCustomerAcknowledgementSigningOptions options,
+        string installationId)
     {
         ArgumentNullException.ThrowIfNull(options);
         if (!OperatingSystem.IsWindows())
             throw new PlatformNotSupportedException("Windows CNG key provisioning is available only on Windows.");
 
-        ValidateOptions(options, requireEnabled: true);
+        ValidateOptions(options, installationId, requireEnabled: false);
 
+        var keyName = GetKeyName(installationId, options.KeyVersion);
+        var keyId = GetKeyId(installationId, options.KeyVersion);
         var parameters = new CngKeyCreationParameters
         {
             Provider = new CngProvider(options.ProviderName),
@@ -62,18 +64,31 @@ public static class WindowsCngCustomerAcknowledgementKeyProvisioner
                 : CngKeyCreationOptions.None,
         };
 
-        // CngKey.Create does not replace an existing key with the same name. A new version must
-        // use a new KeyName and KeyId; this prevents accidental key rotation by overwrite.
-        using var key = CngKey.Create(CngAlgorithm.ECDsaP256, options.KeyName, parameters);
+        // CngKey.Create does not replace an existing key with the same name. Rotation must use
+        // a new version; silently overwriting an existing installation key is forbidden.
+        using var key = CngKey.Create(CngAlgorithm.ECDsaP256, keyName, parameters);
         EnsureKeyContract(key);
 
         using var signer = new ECDsaCng(key);
         var publicKey = signer.ExportSubjectPublicKeyInfo();
-        return new WindowsCngCustomerAcknowledgementKeyProvisioningResult(options.KeyId, publicKey);
+        return new WindowsCngCustomerAcknowledgementKeyProvisioningResult(keyName, keyId, publicKey);
+    }
+
+    public static string GetKeyName(string installationId, int keyVersion)
+    {
+        ValidateInstallationIdentity(installationId, keyVersion);
+        return "Faranou.CustomerAck." + installationId + ".v" + keyVersion.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    public static string GetKeyId(string installationId, int keyVersion)
+    {
+        ValidateInstallationIdentity(installationId, keyVersion);
+        return "customer-ack-" + installationId + "-v" + keyVersion.ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
 
     internal static void ValidateOptions(
         WindowsCngCustomerAcknowledgementSigningOptions options,
+        string installationId,
         bool requireEnabled)
     {
         if (requireEnabled && !options.Enabled)
@@ -82,16 +97,25 @@ public static class WindowsCngCustomerAcknowledgementKeyProvisioner
         if (options.ProviderName is not (TpmProvider or OsProvider))
             throw new ArgumentException("The configured Windows key storage provider is not approved.", nameof(options));
 
-        if (string.IsNullOrWhiteSpace(options.KeyName) ||
-            options.KeyName.Length > 128 ||
-            !Regex.IsMatch(options.KeyName, "^[A-Za-z0-9._-]+$", RegexOptions.CultureInvariant))
-            throw new ArgumentException("The configured Windows key name is invalid.", nameof(options));
-
-        if (string.IsNullOrWhiteSpace(options.KeyId) ||
-            options.KeyId.Length > 128 ||
-            !Regex.IsMatch(options.KeyId, "^[A-Za-z0-9_-]+$", RegexOptions.CultureInvariant))
-            throw new ArgumentException("The configured acknowledgement KeyId is invalid.", nameof(options));
+        ValidateInstallationIdentity(installationId, options.KeyVersion);
     }
+
+    private static void ValidateInstallationIdentity(string installationId, int keyVersion)
+    {
+        if (string.IsNullOrWhiteSpace(installationId) ||
+            installationId.Length > 103 ||
+            !Regex.IsMatch(installationId, "^[A-Za-z0-9._-]{8,103}$", RegexOptions.CultureInvariant))
+            throw new ArgumentException("The configured installation identity is invalid.", nameof(installationId));
+
+        if (keyVersion < 1)
+            throw new ArgumentOutOfRangeException(nameof(keyVersion), "Key versions must be positive.");
+
+        if (GetKeyIdLength(installationId, keyVersion) > 128)
+            throw new ArgumentException("The derived acknowledgement KeyId exceeds the supported length.", nameof(installationId));
+    }
+
+    private static int GetKeyIdLength(string installationId, int keyVersion) =>
+        "customer-ack-".Length + installationId.Length + 2 + keyVersion.ToString(System.Globalization.CultureInfo.InvariantCulture).Length;
 
     internal static void EnsureKeyContract(CngKey key)
     {
@@ -113,13 +137,16 @@ public sealed class WindowsCngCustomerProvisioningAcknowledgementSigningProvider
     private const string SignerUnavailable = "provisioning_acknowledgement_signer_unavailable";
 
     private readonly WindowsCngCustomerAcknowledgementSigningOptions _options;
+    private readonly CustomerProvisioningSettings _customerSettings;
     private readonly ILogger<WindowsCngCustomerProvisioningAcknowledgementSigningProvider> _logger;
 
     public WindowsCngCustomerProvisioningAcknowledgementSigningProvider(
         IOptions<WindowsCngCustomerAcknowledgementSigningOptions> options,
+        IOptions<CustomerProvisioningSettings> customerSettings,
         ILogger<WindowsCngCustomerProvisioningAcknowledgementSigningProvider> logger)
     {
         _options = options.Value;
+        _customerSettings = customerSettings.Value;
         _logger = logger;
     }
 
@@ -132,12 +159,18 @@ public sealed class WindowsCngCustomerProvisioningAcknowledgementSigningProvider
         if (!OperatingSystem.IsWindows() || !_options.Enabled)
             return Task.FromResult(Unavailable());
 
+        var keyId = "unconfigured";
         try
         {
-            WindowsCngCustomerAcknowledgementKeyProvisioner.ValidateOptions(_options, requireEnabled: true);
+            WindowsCngCustomerAcknowledgementKeyProvisioner.ValidateOptions(
+                _options, _customerSettings.InstallationId, requireEnabled: true);
+            keyId = WindowsCngCustomerAcknowledgementKeyProvisioner.GetKeyId(
+                _customerSettings.InstallationId, _options.KeyVersion);
 
+            var keyName = WindowsCngCustomerAcknowledgementKeyProvisioner.GetKeyName(
+                _customerSettings.InstallationId, _options.KeyVersion);
             using var key = CngKey.Open(
-                _options.KeyName,
+                keyName,
                 new CngProvider(_options.ProviderName),
                 _options.MachineKey ? CngKeyOpenOptions.MachineKey : CngKeyOpenOptions.None);
             WindowsCngCustomerAcknowledgementKeyProvisioner.EnsureKeyContract(key);
@@ -154,12 +187,12 @@ public sealed class WindowsCngCustomerProvisioningAcknowledgementSigningProvider
             _logger.LogInformation(
                 "Customer acknowledgement signing attempt completed. Purpose={Purpose}, KeyId={KeyId}, Result={Result}.",
                 "customer-ack",
-                _options.KeyId,
+                keyId,
                 "success");
 
             return Task.FromResult(new CustomerProvisioningAcknowledgementSigningResult(
                 true,
-                _options.KeyId,
+                keyId,
                 System.Convert.ToBase64String(signature),
                 null));
         }
@@ -170,17 +203,11 @@ public sealed class WindowsCngCustomerProvisioningAcknowledgementSigningProvider
             _logger.LogWarning(
                 "Customer acknowledgement signing failed closed. Purpose={Purpose}, KeyId={KeyId}, ExceptionType={ExceptionType}.",
                 "customer-ack",
-                SafeKeyId(),
+                keyId,
                 exception.GetType().Name);
             return Task.FromResult(Unavailable());
         }
     }
-
-    private string SafeKeyId() =>
-        _options.KeyId.Length is > 0 and <= 128 &&
-        Regex.IsMatch(_options.KeyId, "^[A-Za-z0-9_-]+$", RegexOptions.CultureInvariant)
-            ? _options.KeyId
-            : "unconfigured";
 
     private static CustomerProvisioningAcknowledgementSigningResult Unavailable() =>
         new(false, null, null, SignerUnavailable);

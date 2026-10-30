@@ -1,6 +1,6 @@
 # وضعیت جاری Vendor و شکاف‌های وابسته — 2026-10-30
 
-**مبنای بازبینی:** شاخه `main`، SHA `5a9717ca08ec2009305e480dbf6443683bf2e60f` (پس از ادغام PRهای #337، #338، #339، #341، #343 و #344).
+**مبنای بازبینی:** شاخه `main`، SHA `5f580178ef47d2f43776a514c949b49ef27a4098` (پس از ادغام PR #344 و ثبت مستندات تکمیلی).
 این بخش وضعیت جاری است؛ snapshotهای بعدی سند سابقه‌اند و نباید به‌عنوان وضعیت امروز خوانده شوند.
 
 ## وضعیت آخرین تغییر و CI
@@ -19,7 +19,10 @@
 - D-055 در main پذیرفته شده است؛ Runbook عملیاتی HSM/TPM در PR #341 و Vendor PKCS#11 adapter در PR #344 ادغام شدند. Adapter پشت interfaceهای موجود برای license و provisioning/package قرار دارد؛ کلیدها KeyId نسخه‌دار مجزا دارند، private-key object باید non-extractable باشد، و امضا ECDSA P-256/IEEE P1363 است.
 - SoftHSM فقط در محیط اختصاصی Testing مجاز است؛ در Development/Staging/Production، slot سخت‌افزاری و manufacturer/model allowlist‌شده لازم است. تست integration SoftHSM و تمام CIهای PR #344 موفق شدند.
 - با بودجهٔ صفر و نبود HSM واقعی، Signing:Pkcs11:Enabled در Production نباید فعال شود؛ providerهای پیش‌فرض unavailable/fail-closed باقی می‌مانند و صدور Production باید 503 بدهد.
-- Customer ACK key per-installation در TPM/OS secure storage هنوز پیاده‌سازی نشده است؛ provider پیش‌فرض unavailable باقی می‌ماند و مرحلهٔ بعد باید بر اساس سیستم‌عامل واقعی نصب‌های مشتری انتخاب شود.
+- **Customer ACK ویندوز:** اسکلت اولیهٔ CNG/DI در main وجود دارد، اما نسخهٔ اولیه هنوز KeyName/KeyId را مستقیم از config می‌گرفت و تست اجرایی/فرمان ceremony نداشت. PR #347 آن را با KeyName/KeyId مشتق‌شده از InstallationId+KeyVersion، فرمان محلی تولید کلید، تست Windows CNG و عدم fallback بین KSPها تکمیل می‌کند؛ CI PR در حال اجراست. این وضعیت به معنی تأیید TPM سخت‌افزاری یا آمادگی Production نیست. Provider به‌صورت opt-in است و تا تکمیل trust enrollment، audit/readiness و آزمون سخت‌افزار فعال نشود.
+
+
+- **PR #347 — Windows CNG Customer ACK:** پیاده‌سازی نسخه‌دار و per-installation، فرمان `dotnet Server.dll --provisioning-ack-key create` و تست‌های CNG در شاخهٔ PR اضافه شده‌اند؛ هنوز merge/Verified نیستند. Windows Software KSP در CI فقط fixture تست است، نه اثبات TPM واقعی.
 
 ## وضعیت Provisioning در main
 

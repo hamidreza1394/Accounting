@@ -73,6 +73,16 @@
 6. امضای ACK با ECDSA P-256 روی بایت‌های canonical دقیق و بدون تماس شبکه انجام شود.
 7. در تعویض مادربرد/TPM، خرابی OS keystore یا نصب مجددی که key handle را از بین می‌برد، کلید قبلی قابل بازیابی فرض نشود: نصب جدید باید کلید تازه بسازد، public key را دوباره enroll کند و KeyId قبلی revoke شود.
 
+### فرمان فعلی Key Provisioning برای Windows
+
+- در نسخهٔ Windows، اپراتور محلی با حسابی که باید مالک/دارندهٔ دسترسی کلید نصب باشد، فرمان زیر را اجرا می‌کند:
+  `dotnet Server.dll --provisioning-ack-key create`
+- فرمان فقط روی Windows اجرا می‌شود و InstallationId را از تنظیمات معتبر نصب، ProviderName/KeyVersion/MachineKey را از بخش Provisioning:CustomerAcknowledgementSigning می‌خواند.
+- خروجی فقط metadata و Base64 کلید عمومی SubjectPublicKeyInfo را چاپ می‌کند؛ private key هرگز export یا نمایش داده نمی‌شود. ایجاد کلید موجود با همان نسخه رد می‌شود؛ برای rotation باید KeyVersion جدید تعیین شود.
+- این فرمان Enabled را تغییر نمی‌دهد. تا ثبت و تطبیق public key در Trust Store مشتری و Vendor و تأیید ceremony، گزینهٔ Enabled باید false بماند.
+- Provider پیش‌فرض Microsoft Platform Crypto Provider است. اگر TPM/KSP موجود یا قابل‌استفاده نباشد، فرمان fail-closed می‌شود؛ انتخاب Microsoft Software Key Storage Provider فقط با تغییر صریح تنظیمات و پذیرش assurance پایین‌تر مجاز است.
+- برای MachineKey=true، کلید را تحت identity سرویس اجرا/ایجاد کنید یا ACL دقیق کلید را طبق سیاست Windows تنظیم کنید؛ دسترسی Administrator عمومی یا حساب‌های غیرمرتبط اضافه نشود. پیکربندی نهایی ACL باید در آزمون استقرار واقعی تأیید شود.
+
 ## 6. PIN، credential و Runtime access
 
 - PIN و credential فقط از Secret Store یا Environment امن همان میزبان به process تزریق شوند؛ هرگز در Git، appsettings tracked، command line، package، crash dump یا log قرار نگیرند.
