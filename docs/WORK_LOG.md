@@ -1356,3 +1356,17 @@
 - **Boundary:** only the signed snapshot contract/validator is implemented. Customer-side durable sequence persistence, installed-license enforcement, backup-restore rollback handling, and production signer are still not implemented/configured.
 - **Architecture note:** a database-only high-water mark cannot prove rollback resistance after restoring an older full database backup unless its trust anchor is held outside that backup failure domain.
 - **Changes:** handoff and this work-log entry only; no runtime code, schema, migration or key material changed.
+
+
+## 2026-10-30 — Issue #107: fail-closed startup verification of independent audit checkpoint
+
+- **هدف:** ثبت adapter Production به‌تنهایی کافی نیست؛ اگر sink از نظر شبکه/credential/permission در دسترس نباشد، Vendor نباید با تصور آمادگی Audit بالا بیاید.
+- **تست ابتدا:** PR #332 ابتدا تست‌های SQL Server برای ساخت checkpoint اولیه در Production startup، idempotency در restart، fail-closed هنگام unavailable بودن store و عدم resolve در Development را اضافه کرد.
+- **پیاده‌سازی:** `VendorAuditCheckpointStartupService` به‌عنوان hosted service در Production، `VendorAuditCheckpointService.CreateCheckpointAsync` را پیش از readiness اجرا می‌کند؛ زنجیره کامل را verify می‌کند، آخرین checkpoint مستقل را می‌خواند و در صورت پیشروی زنجیره checkpoint جدید append می‌کند. تکرار startup بدون رخداد جدید checkpoint تکراری نمی‌سازد.
+- **DI:** `IProductionVendorAuditCheckpointStore` از طریق قرارداد مشترک `IVendorAuditCheckpointStore` به سرویس داده می‌شود؛ ثبت marker همچنان با startup guard الزامی است.
+- **Fail-closed:** خطای provider با exception type ثبت می‌شود، اما پیام/جزئیات احتمالی credential یا endpoint در log یا startup exception افشا نمی‌شود؛ startup با پیام ثابت شکست می‌خورد. لغو واقعی startup به‌صورت cancellation باقی می‌ماند.
+- **مرز:** هیچ provider، credential، private key، فایل محلی، fallback به Vendor DB، migration یا تغییر customer DB اضافه نشد. این تغییر جایگزین انتخاب sink، immutability/retention، alerting یا restore drill نیست و checkpoint دوره‌ای را هم تعریف نمی‌کند.
+- **تست محلی:** در این محیط اجرا نشد؛ نتیجهٔ CI روی head نهایی باید بررسی شود.
+
+
+- **بازبینی سخت‌گیرانهٔ DI:** startup guard اکنون دقیقاً یک `IProductionVendorAuditCheckpointStore` می‌خواهد؛ چند adapter مبهم رد می‌شوند. در Program همهٔ ثبت‌های عمومی `IVendorAuditCheckpointStore` قبل از alias کردن marker حذف می‌شوند تا یک store عمومی/آزمایشی نتواند adapter Production را shadow کند. تست رگرسیون برای چند ثبت marker اضافه شد.
