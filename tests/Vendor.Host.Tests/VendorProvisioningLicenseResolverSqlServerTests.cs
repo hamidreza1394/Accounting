@@ -82,6 +82,105 @@ public sealed class VendorProvisioningLicenseResolverSqlServerTests
     }
 
     [Fact]
+    public async Task ProvisioningIssuanceRejectsLicenseSequenceChangedAfterRequestCreation()
+    {
+        var fixture = await OpenAsync();
+        if (fixture is null) return;
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        try
+        {
+            var seed = await SeedAsync(fixture.Db, key, 1, ["finance", "sales"]);
+            var now = DateTimeOffset.UtcNow;
+            var requestId = Guid.NewGuid();
+            const string nonce = "0123456789abcdefghijklmnopqrstuvwxyz";
+            var payload = new CustomerProvisioningPayload(
+                4,
+                requestId.ToString("D"),
+                seed.Customer.CustomerNumber,
+                seed.Installation.InstallationCode,
+                "Provisioning sequence test",
+                "independent",
+                "initial-admin",
+                ["finance", "sales"],
+                now,
+                now.AddHours(24),
+                nonce,
+                "سال مالی ۱۴۰۵",
+                new DateOnly(2026, 3, 21),
+                new DateOnly(2027, 3, 20),
+                null,
+                "admin@example.com",
+                seed.License.Id.ToString("D"),
+                1);
+            var payloadJson = CustomerProvisioningCanonicalJson.Serialize(payload);
+            var provisioningRequest = new VendorProvisioningRequest
+            {
+                Id = Guid.NewGuid(),
+                CustomerId = seed.Customer.Id,
+                InstallationId = seed.Installation.Id,
+                RequestId = requestId.ToString("D"),
+                Nonce = nonce,
+                PayloadJson = payloadJson,
+                PayloadSha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payloadJson))).ToLowerInvariant(),
+                Status = "AwaitingSigner",
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now
+            };
+            fixture.Db.ProvisioningRequests.Add(provisioningRequest);
+            await fixture.Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var approval = new VendorApprovalRequest
+            {
+                Id = Guid.NewGuid(),
+                ResourceType = "provisioning",
+                ResourceId = provisioningRequest.Id,
+                TargetStatus = "PendingDelivery",
+                ExpectedResourceRowVersion = provisioningRequest.RowVersion.ToArray(),
+                RequestedByUserId = Guid.NewGuid(),
+                RequestedAtUtc = now,
+                Status = "Pending"
+            };
+            fixture.Db.ApprovalRequests.Add(approval);
+            await fixture.Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            // A newer signed revision with the same entitlements must still invalidate the old sequence.
+            await AddEnvelopeAsync(fixture.Db, seed.License, seed.Installation, key, 2, ["finance", "sales"]);
+            seed.License.LastIssuedSequence = 2;
+            await fixture.Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var resolver = CreateResolver(fixture.Db, key);
+            var service = new VendorProvisioningIssuanceService(
+                fixture.Db,
+                new UnavailableProvisioningSigningProvider(),
+                new ProvisioningPackageSigningTrustStore([]),
+                new VendorAuditWriter(fixture.Db, TimeProvider.System),
+                resolver,
+                TimeProvider.System,
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<VendorProvisioningIssuanceService>.Instance);
+
+            await using var transaction = await fixture.Db.Database.BeginTransactionAsync(
+                TestContext.Current.CancellationToken);
+            var result = await service.IssueApprovedAsync(
+                approval,
+                Guid.NewGuid(),
+                approval.RowVersion.ToArray(),
+                "sequence revalidation",
+                Guid.NewGuid().ToString("N"),
+                TestContext.Current.CancellationToken);
+
+            Assert.False(result.Succeeded);
+            Assert.Equal(StatusCodes.Status409Conflict, result.StatusCode);
+            Assert.Equal("provisioning_license_sequence_stale", result.ErrorCode);
+            Assert.Equal("AwaitingSigner", provisioningRequest.Status);
+            Assert.Equal("Pending", approval.Status);
+        }
+        finally
+        {
+            await CleanupAsync(fixture);
+        }
+    }
+
+    [Fact]
     public async Task RevokedOrUnknownSigningKeyFailsClosed()
     {
         var fixture = await OpenAsync();
