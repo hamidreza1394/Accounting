@@ -134,9 +134,9 @@
 
 ## PKCS#11 signing adapter — Issue #236 / D-055 (2026-10-30)
 
-- `ILicenseSigningProvider` و `IProvisioningSigningProvider` اکنون در PR مستقل به adapter مشترک PKCS#11 متصل می‌شوند، اما هر purpose دارای KeyId نسخه‌دار و private-key object مستقل است. اشتراک کلید ممنوع است.
+- PR #344 در main، `ILicenseSigningProvider` و `IProvisioningSigningProvider` را به adapter مشترک PKCS#11 متصل کرده است؛ هر purpose دارای KeyId نسخه‌دار و private-key object مستقل است. اشتراک کلید ممنوع است.
 - Adapter فقط `CKM_ECDSA` روی digest SHA-256 بایت‌های canonical را اجرا می‌کند و امضای ۶۴ بایتی IEEE P1363 را می‌پذیرد. private-key object باید `CKA_SENSITIVE=true`، `CKA_EXTRACTABLE=false`، `CKA_ALWAYS_SENSITIVE=true`، `CKA_NEVER_EXTRACTABLE=true` و `CKA_SIGN=true` داشته باشد و `CKA_EC_PARAMS` دقیقاً P-256 باشد.
-- برنامه کلید تولید یا export نمی‌کند. Key Ceremony و توزیع public key خارج از این PR باقی است. PIN فقط از secret/environment injection می‌آید و هرگز log نمی‌شود.
+- برنامه کلید تولید یا export نمی‌کند. رویهٔ Key Ceremony و توزیع public key در Runbook ادغام‌شدهٔ PR #341 مستند است؛ اجرای واقعی آن به تأمین HSM بستگی دارد. PIN فقط از secret/environment injection می‌آید و هرگز log نمی‌شود.
 - PKCS#11 opt-in و پیش‌فرض خاموش است. فقط محیط اختصاصی Testing، SoftHSM را می‌پذیرد؛ در Development/Staging/Production، slot سخت‌افزاری و manufacturer/model دقیقاً allowlist‌شده الزامی است. با بودجهٔ فعلی صفر و نبود HSM واقعی، signerهای Production باید unavailable/fail-closed باقی بمانند.
 - هر تلاش امضا audit metadata-only با purpose، KeyId نسخه‌دار و نتیجه ثبت می‌کند؛ payload/signature/private material ثبت نمی‌شوند. شکست audit نتیجه امضا را دور می‌اندازد. `/health/signing` برای monitoring بیرونی 503 می‌دهد وقتی provider unavailable است.
-- این پیاده‌سازی هنوز اثبات HSM واقعی، HA، key ceremony، rotation/revocation، recovery، workload identity، sign-only operator controls یا ACK key per-customer TPM را ارائه نمی‌کند.
+- CI در PR #344 با SoftHSM موفق است، اما این اثبات HSM واقعی یا HA نیست. اجرای Key Ceremony، rotation/revocation، recovery، workload identity و sign-only operator controls به HSM واقعی وابسته است؛ ACK key per-customer TPM/OS و enrollment آفلاین نیز هنوز adapter اجرایی ندارد.
