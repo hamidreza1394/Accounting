@@ -4,6 +4,7 @@ using Faranou.Vendor.Host.Authorization;
 using Faranou.Vendor.Host.Bootstrap;
 using Faranou.Vendor.Host.Signing;
 using Faranou.Vendor.Persistence;
+using Faranou.Vendor.Persistence.Auditing;
 using Faranou.Vendor.Persistence.Identity;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
@@ -275,6 +276,18 @@ builder.Services.AddScoped<IVendorResourceAccessEvaluator, VendorResourceAccessE
 builder.Services.AddAuthorization(VendorAuthorizationPolicies.Configure);
 
 VendorAuditCheckpointStartupGuard.EnsureConfigured(builder.Environment.IsProduction(), builder.Services);
+if (builder.Environment.IsProduction())
+{
+    // The production adapter is registered by the deployment-specific provider integration.
+    // Resolve it through the shared contract and verify/read+append the checkpoint before readiness.
+    // Do not let a generic/test store registration shadow the production marker adapter.
+    builder.Services.RemoveAll<IVendorAuditCheckpointStore>();
+    builder.Services.AddScoped<IVendorAuditCheckpointStore>(
+        services => services.GetRequiredService<IProductionVendorAuditCheckpointStore>());
+    builder.Services.AddScoped<VendorAuditCheckpointService>();
+}
+
+builder.Services.AddHostedService<VendorAuditCheckpointStartupService>();
 
 var app = builder.Build();
 
