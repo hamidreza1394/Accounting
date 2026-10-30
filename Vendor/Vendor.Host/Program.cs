@@ -4,6 +4,7 @@ using Faranou.Vendor.Host.Authorization;
 using Faranou.Vendor.Host.Bootstrap;
 using Faranou.Vendor.Host.Signing;
 using Faranou.Vendor.Persistence;
+using Faranou.Vendor.Persistence.Auditing;
 using Faranou.Vendor.Persistence.Identity;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
