@@ -323,14 +323,14 @@ public sealed class CustomerProvisioningClaimsSqlServerTests
                 .ToListAsync(TestContext.Current.CancellationToken);
             Assert.DoesNotContain(auditJson, value => value?.Contains(applied.EnrollmentToken, StringComparison.Ordinal) == true);
 
-            var ackHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(applied.Acknowledgement!.AcknowledgementJson)))
+            var payloadHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payloadJson)))
                 .ToLowerInvariant();
             Assert.True(CustomerProvisioningAcknowledgementValidator.TryValidateAndVerify(
                 applied.Acknowledgement,
                 acknowledgementKey.ExportSubjectPublicKeyInfo(),
                 payload.RequestId,
                 payload.Nonce,
-                ackHash,
+                payloadHash,
                 payload.CustomerReference,
                 payload.InstallationId,
                 DateTimeOffset.UtcNow,
