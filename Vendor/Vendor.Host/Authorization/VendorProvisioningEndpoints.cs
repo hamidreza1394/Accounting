@@ -592,7 +592,9 @@ public static class VendorProvisioningEndpoints
     }
 }
 
-public sealed record EligibleProvisioningParentResponse(string RequestId, string CompanyName, string CompanyType, DateTimeOffset? ConfirmedAtUtc);\n\npublic sealed record ProvisioningRequestResponse(
+public sealed record EligibleProvisioningParentResponse(string RequestId, string CompanyName, string CompanyType, DateTimeOffset? ConfirmedAtUtc);
+
+public sealed record ProvisioningRequestResponse(
     Guid Id,
     Guid CustomerId,
     Guid InstallationId,
