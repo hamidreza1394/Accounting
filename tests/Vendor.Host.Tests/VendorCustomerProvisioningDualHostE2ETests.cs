@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Encodings.Web;
+using System.Text.RegularExpressions;
 using Faranou.Licensing.Contracts;
 using Faranou.Vendor.Host.Authorization;
 using Faranou.Vendor.Host.Signing;
@@ -344,6 +345,8 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                     BaseAddress = new Uri("https://localhost"),
                     HandleCookies = true
                 });
+                customerClientA.DefaultRequestHeaders.Add("X-Provisioning-E2E-Infrastructure", "1");
+                customerClientB.DefaultRequestHeaders.Add("X-Provisioning-E2E-Infrastructure", "1");
                 var customerTokenA = await GetCustomerAntiforgeryTokenAsync(customerClientA, cancellationToken);
                 var customerTokenB = await GetCustomerAntiforgeryTokenAsync(customerClientB, cancellationToken);
 
@@ -455,18 +458,31 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                     var admin = await db.Users.SingleAsync(item => item.Username == adminUserName, cancellationToken);
                 }
 
-                // Even if a password were set by an out-of-band operator, pending enrollment must deny sign-in.
-                var preEnrollmentPassword = "Known-Before-Enrollment-" + "test";
-                // Replace the test credential with a deterministic known value solely to exercise the login guard.
+                // Even if an out-of-band operator sets a known credential, the real Razor login
+                // endpoint must refuse to issue a session while the one-time enrollment is pending.
+                var preEnrollmentPassword = "Known-Before-Enrollment-" + Guid.NewGuid().ToString("N");
                 await using (var scope = customerFactory.Services.CreateAsyncScope())
                 {
                     var db = scope.ServiceProvider.GetRequiredService<Data.DatabaseContext>();
                     var admin = await db.Users.SingleAsync(item => item.Username == adminUserName, cancellationToken);
                     admin.Password = new PasswordHashService().Hash(preEnrollmentPassword);
                     await db.SaveChangesAsync(cancellationToken);
-                    var authentication = scope.ServiceProvider.GetRequiredService<AuthenticationService>();
-                    var denied = await authentication.AuthenticateAsync(adminUserName, preEnrollmentPassword, "127.0.0.1");
-                    Assert.Equal(LoginOutcome.InvalidCredentials, denied.Outcome);
+                }
+
+                using var customerLoginClient = customerFactory.CreateClient(new WebApplicationFactoryClientOptions
+                {
+                    BaseAddress = new Uri("https://localhost"),
+                    HandleCookies = true
+                });
+                using (var deniedLogin = await PostCustomerLoginAsync(
+                    customerLoginClient, adminUserName, preEnrollmentPassword, cancellationToken))
+                {
+                    Assert.Equal(HttpStatusCode.OK, deniedLogin.StatusCode);
+                    var cookies = deniedLogin.Headers.TryGetValues("Set-Cookie", out var deniedCookies)
+                        ? deniedCookies.ToArray()
+                        : Array.Empty<string>();
+                    Assert.DoesNotContain(cookies, value =>
+                        value.StartsWith(".Faranou.Authentication=", StringComparison.Ordinal));
                 }
 
                 var enrollmentTokenForPost = await GetCustomerAntiforgeryTokenAsync(customerClientA, cancellationToken);
@@ -495,6 +511,18 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                     var authentication = scope.ServiceProvider.GetRequiredService<AuthenticationService>();
                     var accepted = await authentication.AuthenticateAsync(adminUserName, adminPassword, "127.0.0.1");
                     Assert.Equal(LoginOutcome.Succeeded, accepted.Outcome);
+                }
+
+                using (var successfulLogin = await PostCustomerLoginAsync(
+                    customerLoginClient, adminUserName, adminPassword, cancellationToken))
+                {
+                    Assert.Equal(HttpStatusCode.Redirect, successfulLogin.StatusCode);
+                    Assert.StartsWith("/app/", successfulLogin.Headers.Location?.ToString());
+                    var cookies = successfulLogin.Headers.TryGetValues("Set-Cookie", out var successCookies)
+                        ? successCookies.ToArray()
+                        : Array.Empty<string>();
+                    Assert.Contains(cookies, value =>
+                        value.StartsWith(".Faranou.Authentication=", StringComparison.Ordinal));
                 }
 
                 using (var repeatedEnrollment = await PostCustomerJsonAsync(
@@ -636,6 +664,35 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
         return (await GetAntiforgeryTokenAsync(client, cancellationToken)).Token;
     }
 
+    private static async Task<HttpResponseMessage> PostCustomerLoginAsync(
+        HttpClient client,
+        string userName,
+        string password,
+        CancellationToken cancellationToken)
+    {
+        using var page = await client.GetAsync("/Account/Login", cancellationToken);
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        var html = await page.Content.ReadAsStringAsync(cancellationToken);
+        var tokenMatch = Regex.Match(
+            html,
+            @"<input(?=[^>]*\bname=""__RequestVerificationToken"")(?=[^>]*\bvalue=""([^""]+)"")[^>]*>",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        Assert.True(tokenMatch.Success, "The login page must emit an antiforgery form token.");
+        var requestToken = System.Net.WebUtility.HtmlDecode(tokenMatch.Groups[1].Value);
+
+        return await client.PostAsync(
+            "/Account/Login",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = requestToken,
+                ["ViewModel.Username"] = userName,
+                ["ViewModel.Password"] = password,
+                ["ViewModel.RememberMe"] = "false",
+                ["ReturnUrl"] = string.Empty
+            }),
+            cancellationToken);
+    }
+
     private static async Task<string> GetCustomerAntiforgeryTokenAsync(
         HttpClient client,
         CancellationToken cancellationToken)
@@ -738,6 +795,9 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
     {
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
+            if (!Request.Headers.ContainsKey("X-Provisioning-E2E-Infrastructure"))
+                return Task.FromResult(AuthenticateResult.NoResult());
+
             var claims = new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, "dual-host-e2e-infrastructure"),
