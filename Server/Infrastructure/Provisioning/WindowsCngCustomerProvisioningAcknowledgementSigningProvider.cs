@@ -103,8 +103,8 @@ public static class WindowsCngCustomerAcknowledgementKeyProvisioner
     private static void ValidateInstallationIdentity(string installationId, int keyVersion)
     {
         if (string.IsNullOrWhiteSpace(installationId) ||
-            installationId.Length > 80 ||
-            !Regex.IsMatch(installationId, "^[A-Za-z0-9_-]+$", RegexOptions.CultureInvariant))
+            installationId.Length > 103 ||
+            !Regex.IsMatch(installationId, "^[A-Za-z0-9._-]{8,103}$", RegexOptions.CultureInvariant))
             throw new ArgumentException("The configured installation identity is invalid.", nameof(installationId));
 
         if (keyVersion < 1)
