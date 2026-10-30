@@ -1327,3 +1327,12 @@
 - **محدودیت‌های صریح:** MaxCompanies، افزودن زیرسیستم به شرکت موجود و تجمیع چند لایسنس NotImplemented. درخواست‌های v3 backfill نمی‌شوند و Vendor آن‌ها را دوباره امضا/Export نمی‌کند.
 - **کار باقی‌مانده:** اجرای CI؛ رفع خطاهای کامپایل/تست؛ افزودن تست SQL Server برای revalidation در issuance/export؛ هماهنگ‌سازی E2E دو میزبان در PR #317 با API جدید v4 (ساخت لایسنس و انتخاب licenseId)؛ بررسی کلید عمومی واقعی در deployment docs؛ تکمیل handoff و به‌روزرسانی Issue #235.
 - **Branch:** feat/issue-235-single-license-v4 — وضعیت تا CI سبز: Implemented in branch / NotVerified؛ هنوز Merge نشده است.
+
+
+## 2026-10-30 — بازخورد CI و اصلاحات v4
+
+- Vendor CI run 851 روی commit قبلی، به علت تداخل نام range variable در LINQ query مربوط به Export، با CS1931 شکست خورد؛ نام متغیرهای query به targetCustomer/targetInstallation تغییر کرد.
+- .NET CI run 2763 روی commit قبلی، یک شکست در تست canonical v3 داشت؛ JsonWriter کاراکترهای + و متن غیر ASCII را escape می‌کند. vector تست به رشتهٔ ASCII ثابت و escape صحیح + تغییر کرد تا آزمون byte-for-byte پایدار بماند.
+- در تست SQL Server resolver پوشش رد مشتری/نصب دیگر، وضعیت Suspended، خارج از بازهٔ اعتبار، کلید لغوشده، subset خارج از entitlement، Sequence تاریخی و رد امضای Provisioning با Sequence قدیمی اضافه شد.
+- E2E دو میزبان نیز اکنون بعد از اولین Export موفق، Sequence جدیدتر صادر می‌کند؛ Export مجدد بستهٔ قدیمی باید 409 بگیرد، ولی فایل قبلاً Exportشده همچنان در Customer آفلاین قابل اعمال است و acknowledgement معتبر می‌تواند جریان را تکمیل کند.
+- اجرای مجدد روی SHA نهایی پس از این اصلاحات هنوز در انتظار CI است؛ شکست‌های runهای قبلی به‌عنوان نتیجهٔ نهایی تلقی نمی‌شوند.
