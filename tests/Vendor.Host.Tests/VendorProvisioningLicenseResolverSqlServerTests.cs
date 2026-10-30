@@ -249,8 +249,12 @@ public sealed class VendorProvisioningLicenseResolverSqlServerTests
             Assert.Equal("provisioning_license_inactive", suspended.ErrorCode);
 
             seed.License.Status = "Issued";
+            seed.License.LicenseKind = LicensePayload.KindTerm;
+            seed.License.ValidFromUtc = DateTimeOffset.UtcNow.AddDays(-5);
             seed.License.ValidUntilUtc = DateTimeOffset.UtcNow.AddMinutes(-1);
+            seed.License.LastIssuedSequence = 2;
             await fixture.Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+            await AddEnvelopeAsync(fixture.Db, seed.License, seed.Installation, key, 2, ["finance"]);
             var expired = await resolver.ResolveLatestAsync(
                 seed.License.Id, seed.Customer, seed.Installation, null, TestContext.Current.CancellationToken);
             Assert.False(expired.Succeeded);
