@@ -1,6 +1,6 @@
 # وضعیت جاری Vendor و شکاف‌های وابسته — 2026-10-30
 
-**مبنای بازبینی:** شاخه `main`، SHA `43d28253eb9f0f38ff25d0dfea143aeacdb06871` (پس از ادغام PR #329).
+**مبنای بازبینی:** شاخه `main`، SHA `5083ed3f2255828c6c7e476d55d4b436072de606` (پس از ادغام PRهای #337، #338 و #339).
 این بخش وضعیت جاری است؛ snapshotهای بعدی سند سابقه‌اند و نباید به‌عنوان وضعیت امروز خوانده شوند.
 
 ## وضعیت آخرین تغییر و CI
@@ -10,6 +10,14 @@
 - **Vendor CI** run [41052515292](https://github.com/hamidreza1394/Accounting/actions/runs/41052515292): موفق.
 - **Semgrep** run [41052515389](https://github.com/hamidreza1394/Accounting/actions/runs/41052515389): موفق.
 - **مقایسه main:** `main` با merge commit PR #329 یکسان است؛ این گزارش تغییر بعدی روی main را فرض نمی‌کند.
+
+## وضعیت تصمیم امضا #236 — D-055 Accepted
+
+- مالک معماری deployment-neutral را پذیرفته است: Vendor روی سرور اختصاصی یا cloud قابل میزبانی است؛ دسترسی/مجوز Azure و AWS وجود ندارد؛ بودجهٔ فعلی HSM صفر است.
+- D-055 در main پذیرفته شده است. PR جاری adapter opt-in PKCS#11 را پشت interfaceهای موجود برای license و provisioning/package پیاده می‌کند؛ کلیدها KeyId نسخه‌دار مجزا دارند، private-key object باید non-extractable باشد، و امضا ECDSA P-256/IEEE P1363 است.
+- SoftHSM فقط در محیط اختصاصی Testing مجاز است؛ در Development/Staging/Production، slot سخت‌افزاری و manufacturer/model allowlist‌شده لازم است. اجرای CI نهایی این PR هنوز pending است؛ پیاده‌سازی در این شاخه به معنی Verified/merged نیست.
+- با بودجهٔ صفر و نبود HSM واقعی، Signing:Pkcs11:Enabled در Production نباید فعال شود؛ providerهای پیش‌فرض unavailable/fail-closed باقی می‌مانند و صدور Production باید 503 بدهد.
+- Customer ACK key per-installation در TPM/OS secure storage هنوز مسیر مستقل خود را می‌خواهد؛ این PR آن را پیاده‌سازی نمی‌کند.
 
 ## وضعیت Provisioning در main
 
@@ -37,7 +45,7 @@
 
 ## شکاف‌های باقی‌مانده و وابستگی‌های عملیاتی
 
-- **#236 — KMS/HSM و چرخه کلید:** انتخاب provider واقعی، workload identity، sign-only permission، key provisioning/rotation/recovery، توزیع کلید عمومی و تست عملیاتی نیازمند تصمیم و دسترسی محیط است. هیچ کلید نرم‌افزاری یا provider فرضی نباید جایگزین شود.
+- **#236 — KMS/HSM و چرخه کلید:** D-055 پذیرفته شده و adapter PKCS#11 در PR جاری توسعه یافته است؛ اما HSM واقعی provision نشده و بودجه صفر است. Production signing همچنان Blocked/fail-closed می‌ماند. Key Ceremony، rotation/revocation، backup/recovery، public trust distribution و تست عملیاتی واقعی هنوز باقی‌اند.
 - **#107 — checkpoint مستقل Audit:** قرارداد، زنجیره نسخه‌دار، startup guard و runbook وجود دارند؛ adapter واقعی با failure domain، credential، retention/immutability و alerting مستقل هنوز به انتخاب مقصد و دسترسی نیاز دارد. Production Vendor بدون آن باید fail-closed بماند.
 - **#214 — ابطال آفلاین:** پروتکل امضاشدهٔ revocation، consumer ضد rollback، انتقال آفلاین و آزمون backup/restore/upgrade هنوز کامل نیستند؛ تغییر Status در Vendor به‌تنهایی لایسنس نصب آفلاین را باطل نمی‌کند.
 - **#228 و #235:** مسیر نرم‌افزاری provisioning و تست آن در main موجود است؛ وضعیت Production به signer مورد تأیید و تست عملیاتی وابسته است. #228/#235 را تا تکمیل وابستگی‌های امنیتی/عملیاتی و بازبینی نهایی نباید به‌عنوان Production-ready بسته‌شده معرفی کرد.
