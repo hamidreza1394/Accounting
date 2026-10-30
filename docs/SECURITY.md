@@ -277,3 +277,10 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - **Fail-closed codes (HTTP 503, nothing persisted):** `provisioning_acknowledgement_signer_unavailable` (provider missing, `Success=false`, malformed result, or provider exception; only the exception type is logged), `provisioning_acknowledgement_signer_key_untrusted` (KeyId not in the trusted set), `provisioning_acknowledgement_signature_invalid` (wrong length, bad Base64, or does not verify). The business-rejection acknowledgement uses the same path.
 - **Provider requirements:** return `KeyId` (<=128 chars, letters/digits/`-`/`_`), a raw IEEE P1363 ECDSA P-256/SHA-256 signature (64 bytes) over exactly the supplied bytes; never throw provider messages, endpoints or key identifiers into logs or results; support cancellation.
 - **Status:** the contract and the verification are `Implemented` and covered by the SQL Server test `AcknowledgementSigningFailsClosedAndPersistsNothingUnlessTheSignatureVerifiesOffline`. A production provider is `Blocked` on #236; a test key must never be configured in Production.
+
+
+## Vendor provisioning signer failure handling — Issue #236
+
+- Provider exceptions are converted to the same public `503 provisioning_signing_unavailable` response; the exception type alone is logged through `ILogger<VendorProvisioningIssuanceService>`.
+- Exception messages, stack traces, payload bytes, key IDs and signatures are not written to logs. Unsuccessful provider results and invalid signing metadata are logged as warnings without signer material.
+- Caller cancellation is propagated; the pending approval and provisioning request remain retryable and no package transitions to `PendingDelivery` unless signing succeeds and metadata passes validation.

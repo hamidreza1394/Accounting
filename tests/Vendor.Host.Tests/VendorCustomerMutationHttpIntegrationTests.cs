@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Collections.Concurrent;
 using System.Data.Common;
 using System.Globalization;
 using System.Net;
@@ -22,6 +23,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Xunit;
 
 namespace Faranou.Vendor.Host.Tests;
@@ -60,6 +62,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
 
         var databaseName = "FaranouVendorMutation_" + Guid.NewGuid().ToString("N");
         var testConnection = new SqlConnectionStringBuilder(baseConnection) { InitialCatalog = databaseName }.ConnectionString;
+        var signerLogs = new CapturingLoggerProvider();
         await CreateDatabaseAsync(baseConnection, databaseName, cancellationToken);
 
         try
@@ -73,6 +76,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     }));
                 webHost.ConfigureTestServices(services =>
                 {
+                    services.AddLogging(logging => logging.AddProvider(signerLogs));
                     services.RemoveAll<IVendorAuditWriter>();
                     services.RemoveAll<IProvisioningSigningProvider>();
                     services.AddSingleton<SequencedProvisioningSigningProvider>(_ => new SequencedProvisioningSigningProvider());
@@ -1024,6 +1028,10 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     $"Expected signer-unavailable 503 but received {(int)provisioningDecisionResponse.StatusCode}: {provisioningDecisionBody}");
                 using var json = JsonDocument.Parse(provisioningDecisionBody);
                 Assert.Equal("provisioning_signing_unavailable", json.RootElement.GetProperty("error").GetString());
+                Assert.Contains(signerLogs.Messages, message =>
+                    message.Contains(nameof(InvalidOperationException), StringComparison.Ordinal));
+                Assert.DoesNotContain(signerLogs.Messages, message =>
+                    message.Contains("simulated provider failure detail", StringComparison.Ordinal));
             }
 
             using (var packageResponse = await PostWithTokenAsync(reviewerClient,
@@ -1354,6 +1362,39 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
         return await client.SendAsync(request, ct);
     }
 
+    private sealed class CapturingLoggerProvider : ILoggerProvider
+    {
+        private readonly ConcurrentQueue<string> _messages = new();
+
+        public string[] Messages => _messages.ToArray();
+
+        public ILogger CreateLogger(string categoryName) => new CapturingLogger(categoryName, _messages);
+
+        public void Dispose()
+        {
+        }
+
+        private sealed class CapturingLogger(
+            string categoryName,
+            ConcurrentQueue<string> messages) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Warning;
+
+            public void Log<TState>(
+                LogLevel logLevel,
+                EventId eventId,
+                TState state,
+                Exception? exception,
+                Func<TState, Exception?, string> formatter)
+            {
+                if (IsEnabled(logLevel))
+                    messages.Enqueue($"{categoryName}|{logLevel}|{formatter(state, exception)}");
+            }
+        }
+    }
+
     private sealed class SequencedProvisioningSigningProvider : IProvisioningSigningProvider, IDisposable
     {
         private readonly ECDsa _key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
@@ -1365,7 +1406,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (Interlocked.Increment(ref _calls) <= 1)
-                return ValueTask.FromResult(LicenseSigningResult.Unavailable());
+                throw new InvalidOperationException("simulated provider failure detail");
 
             var signature = _key.SignData(
                 canonicalPayload.Span,
