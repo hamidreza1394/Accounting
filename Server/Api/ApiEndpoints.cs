@@ -104,6 +104,7 @@ public static class ApiEndpoints
 		{
 			"enrollment_expired" => StatusCodes.Status410Gone,
 			"enrollment_rate_limited" => StatusCodes.Status429TooManyRequests,
+			"enrollment_busy" => StatusCodes.Status409Conflict,
 			_ => StatusCodes.Status400BadRequest
 		};
 		return TypedResults.Problem(
@@ -181,8 +182,11 @@ public static class ApiEndpoints
 		var status = result.ErrorCode switch
 		{
 			"provisioning_acknowledgement_signer_unavailable" => StatusCodes.Status503ServiceUnavailable,
+			"provisioning_acknowledgement_signer_key_untrusted" => StatusCodes.Status503ServiceUnavailable,
+			"provisioning_acknowledgement_signature_invalid" => StatusCodes.Status503ServiceUnavailable,
 			"provisioning_request_id_conflict" or "provisioning_nonce_replayed" or
-				"provisioning_acknowledgement_missing" => StatusCodes.Status409Conflict,
+				"provisioning_acknowledgement_missing" or "provisioning_apply_conflict" or
+				"provisioning_apply_busy" => StatusCodes.Status409Conflict,
 			_ => StatusCodes.Status400BadRequest
 		};
 

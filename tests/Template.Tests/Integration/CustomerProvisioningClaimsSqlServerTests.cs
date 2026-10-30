@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using Faranou.Licensing.Contracts;
 using Infrastructure.Provisioning;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Infrastructure.Security;
 using Domain;
@@ -251,7 +252,9 @@ public sealed class CustomerProvisioningClaimsSqlServerTests
                 .AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["Provisioning:TrustedVendorKeys:vendor-key-1"] =
-                        Convert.ToBase64String(vendorKey.ExportSubjectPublicKeyInfo())
+                        Convert.ToBase64String(vendorKey.ExportSubjectPublicKeyInfo()),
+                    [ConfigurationCustomerProvisioningAcknowledgementTrustStore.SectionPath + ":customer-ack-test-key"] =
+                        Convert.ToBase64String(acknowledgementKey.ExportSubjectPublicKeyInfo())
                 })
                 .Build();
             var verifier = new CustomerProvisioningPackageVerifier(
@@ -261,7 +264,10 @@ public sealed class CustomerProvisioningClaimsSqlServerTests
             var signer = new TestAcknowledgementSigner(acknowledgementKey);
             var passwordHasher = new PasswordHashService();
             var service = new CustomerProvisioningApplyService(
-                database, verifier, signer, Options.Create(settings), passwordHasher, TimeProvider.System);
+                database, verifier, signer,
+                new ConfigurationCustomerProvisioningAcknowledgementTrustStore(configuration),
+                Options.Create(settings), passwordHasher, TimeProvider.System,
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<CustomerProvisioningApplyService>.Instance);
 
             var now = DateTimeOffset.UtcNow;
             var payload = new CustomerProvisioningPayload(
@@ -338,6 +344,23 @@ public sealed class CustomerProvisioningClaimsSqlServerTests
                 out var ackError), ackError);
             Assert.Equal("Applied", ack!.Result);
 
+            // Before the enrollment the initial administrator has no usable session or sign-in, even
+            // if a credential were somehow known (defense in depth; the provisioned one is random).
+            var pendingAdmin = await database.Users.SingleAsync(
+                item => item.Username == payload.InitialAdminUserName, TestContext.Current.CancellationToken);
+            Assert.False(await SessionIsValidAsync(database, pendingAdmin.Id, pendingAdmin.Password));
+
+            var authentication = new AuthenticationService(
+                database, Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance,
+                new Infrastructure.Settings.ApplicationSettings(), passwordHasher);
+            pendingAdmin.Password = passwordHasher.Hash("Known-Pending-Password-1");
+            var knownPendingHash = pendingAdmin.Password;
+            await database.SaveChangesAsync(TestContext.Current.CancellationToken);
+            var pendingLogin = await authentication.AuthenticateAsync(
+                payload.InitialAdminUserName, "Known-Pending-Password-1", "127.0.0.1");
+            Assert.Equal(LoginOutcome.InvalidCredentials, pendingLogin.Outcome);
+            Assert.False(await SessionIsValidAsync(database, pendingAdmin.Id, pendingAdmin.Password));
+
             var reissued = await service.ReissueEnrollmentTokenAsync(
                 Guid.Parse(payload.RequestId), "delivery_lost", null, TestContext.Current.CancellationToken);
             Assert.True(reissued.Success);
@@ -363,6 +386,14 @@ public sealed class CustomerProvisioningClaimsSqlServerTests
             Assert.False(consumedClaim.MustChangePassword);
             Assert.NotNull(consumedClaim.EnrollmentConsumedAtUtc);
 
+            // After the enrollment the restriction is lifted: sign-in works with the new credential,
+            // its session is valid, and a session of the previous credential is not.
+            var completedLogin = await authentication.AuthenticateAsync(
+                payload.InitialAdminUserName, "Strong-Passphrase-2026", "127.0.0.1");
+            Assert.Equal(LoginOutcome.Succeeded, completedLogin.Outcome);
+            Assert.True(await SessionIsValidAsync(database, admin.Id, admin.Password));
+            Assert.False(await SessionIsValidAsync(database, admin.Id, knownPendingHash));
+
             var replayed = await service.ApplyAsync(package, TestContext.Current.CancellationToken);
             Assert.True(replayed.Success);
             Assert.True(replayed.Replayed);
@@ -372,7 +403,159 @@ public sealed class CustomerProvisioningClaimsSqlServerTests
         });
     }
 
-    private sealed class TestAcknowledgementSigner(ECDsa key)
+    [Fact]
+    public async Task AcknowledgementSigningFailsClosedAndPersistsNothingUnlessTheSignatureVerifiesOffline()
+    {
+        Assert.SkipUnless(SqlServerAvailable(), "SQL Server is not configured (FARANOU_TEST_SQLSERVER).");
+
+        await WithDatabaseAsync(async name =>
+        {
+            await using var database = CreateContext(name);
+            await database.Database.MigrateAsync(TestContext.Current.CancellationToken);
+
+            var settings = new CustomerProvisioningSettings
+            {
+                CustomerReference = "customer-ref",
+                InstallationId = "installation-ref",
+                CustomerBoundaryId = Guid.NewGuid()
+            };
+            database.PermissionDefinitions.Add(
+                new PermissionDefinition { Code = "finance.invoice.create", Name = "Create invoice" });
+            await database.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            using var vendorKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+            using var acknowledgementKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+            using var attackerKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Provisioning:TrustedVendorKeys:vendor-key-1"] =
+                        Convert.ToBase64String(vendorKey.ExportSubjectPublicKeyInfo()),
+                    [ConfigurationCustomerProvisioningAcknowledgementTrustStore.SectionPath + ":customer-ack-test-key"] =
+                        Convert.ToBase64String(acknowledgementKey.ExportSubjectPublicKeyInfo())
+                })
+                .Build();
+            var verifier = new CustomerProvisioningPackageVerifier(
+                new ConfigurationCustomerProvisioningTrustStore(configuration),
+                Options.Create(settings),
+                TimeProvider.System);
+
+            CustomerProvisioningApplyService ServiceWith(ICustomerProvisioningAcknowledgementSigningProvider signer) =>
+                new(database, verifier, signer,
+                    new ConfigurationCustomerProvisioningAcknowledgementTrustStore(configuration),
+                    Options.Create(settings), new PasswordHashService(), TimeProvider.System,
+                    Microsoft.Extensions.Logging.Abstractions.NullLogger<CustomerProvisioningApplyService>.Instance);
+
+            CustomerProvisioningPackage NewPackage(string companyType, string? parentReference, string adminName)
+            {
+                var now = DateTimeOffset.UtcNow;
+                var payload = new CustomerProvisioningPayload(
+                    3,
+                    Guid.NewGuid().ToString("D"),
+                    settings.CustomerReference,
+                    settings.InstallationId,
+                    "شرکت آزمایشی " + adminName,
+                    companyType,
+                    adminName,
+                    new[] { "finance" },
+                    now.AddMinutes(-1),
+                    now.AddHours(1),
+                    Guid.NewGuid().ToString("N"),
+                    "سال مالی ۱۴۰۵",
+                    new DateOnly(2026, 3, 21),
+                    new DateOnly(2027, 3, 20),
+                    parentReference,
+                    adminName + "@example.test");
+                var json = CustomerProvisioningCanonicalJson.Serialize(payload);
+                var signature = vendorKey.SignData(
+                    Encoding.UTF8.GetBytes(json),
+                    HashAlgorithmName.SHA256,
+                    DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
+                return new CustomerProvisioningPackage(
+                    CustomerProvisioningPackageValidator.CurrentFormatVersion,
+                    "vendor-key-1",
+                    LicenseAlgorithms.EcdsaP256Sha256,
+                    json,
+                    Convert.ToBase64String(signature));
+            }
+
+            async Task AssertNothingPersistedAsync()
+            {
+                Assert.Equal(0, await database.Companies.CountAsync(TestContext.Current.CancellationToken));
+                Assert.Equal(0, await database.Users.CountAsync(TestContext.Current.CancellationToken));
+                Assert.Equal(0, await database.ProvisioningRequestClaims.CountAsync(TestContext.Current.CancellationToken));
+                Assert.Equal(0, await database.SecurityAuditEvents.CountAsync(
+                    item => item.EventType == "ProvisioningApplied" || item.EventType == "ProvisioningRejected",
+                    TestContext.Current.CancellationToken));
+            }
+
+            var failingCases = new (string Name, ICustomerProvisioningAcknowledgementSigningProvider Signer, string ExpectedError)[]
+            {
+                ("unavailable", new UnavailableCustomerProvisioningAcknowledgementSigningProvider(),
+                    "provisioning_acknowledgement_signer_unavailable"),
+                ("throws", new ThrowingAcknowledgementSigner(),
+                    "provisioning_acknowledgement_signer_unavailable"),
+                ("garbage", new GarbageSignatureAcknowledgementSigner(),
+                    "provisioning_acknowledgement_signature_invalid"),
+                ("wrongkey", new TestAcknowledgementSigner(attackerKey),
+                    "provisioning_acknowledgement_signature_invalid"),
+                ("untrustedkid", new TestAcknowledgementSigner(acknowledgementKey, "unknown-ack-key"),
+                    "provisioning_acknowledgement_signer_key_untrusted"),
+            };
+
+            foreach (var (caseName, signer, expectedError) in failingCases)
+            {
+                var service = ServiceWith(signer);
+
+                var applied = await service.ApplyAsync(
+                    NewPackage("independent", null, "admin-" + caseName), TestContext.Current.CancellationToken);
+                Assert.False(applied.Success);
+                Assert.Equal(expectedError, applied.ErrorCode);
+                Assert.Null(applied.Acknowledgement);
+                Assert.Null(applied.EnrollmentToken);
+                await AssertNothingPersistedAsync();
+
+                // The business-rejection path signs too: an unverifiable signature must not be stored there either.
+                var rejected = await service.ApplyAsync(
+                    NewPackage("subsidiary", Guid.NewGuid().ToString("D"), "rej-" + caseName),
+                    TestContext.Current.CancellationToken);
+                Assert.False(rejected.Success);
+                Assert.Equal(expectedError, rejected.ErrorCode);
+                Assert.Null(rejected.Acknowledgement);
+                await AssertNothingPersistedAsync();
+            }
+
+            // Control: the same package applies once a provider returns a signature that verifies offline.
+            var good = await ServiceWith(new TestAcknowledgementSigner(acknowledgementKey)).ApplyAsync(
+                NewPackage("independent", null, "admin-good"), TestContext.Current.CancellationToken);
+            Assert.True(good.Success);
+            Assert.NotNull(good.Acknowledgement);
+            Assert.Equal(1, await database.Companies.CountAsync(TestContext.Current.CancellationToken));
+        });
+    }
+
+    private static async Task<bool> SessionIsValidAsync(
+        Data.DatabaseContext database, Guid userId, string storedCredential)
+    {
+        using var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection()
+            .AddSingleton(database)
+            .BuildServiceProvider();
+        var principal = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(
+            [
+                new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, userId.ToString()),
+                new System.Security.Claims.Claim(
+                    Infrastructure.Tenancy.CompanyAccessService.AccountKindClaimType,
+                    Infrastructure.Tenancy.CompanyAccessService.UserAccountKind),
+                new System.Security.Claims.Claim(
+                    SessionValidator.CredentialStampClaimType,
+                    SessionValidator.ComputeCredentialStamp(storedCredential)),
+            ],
+            "Cookies"));
+        return await SessionValidator.IsSessionValidAsync(
+            principal, services, TestContext.Current.CancellationToken);
+    }
+
+    private sealed class TestAcknowledgementSigner(ECDsa key, string keyId = "customer-ack-test-key")
         : ICustomerProvisioningAcknowledgementSigningProvider
     {
         public Task<CustomerProvisioningAcknowledgementSigningResult> SignAsync(
@@ -384,8 +567,25 @@ public sealed class CustomerProvisioningClaimsSqlServerTests
                 HashAlgorithmName.SHA256,
                 DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
             return Task.FromResult(new CustomerProvisioningAcknowledgementSigningResult(
-                true, "customer-ack-test-key", Convert.ToBase64String(signature), null));
+                true, keyId, Convert.ToBase64String(signature), null));
         }
+    }
+
+    private sealed class ThrowingAcknowledgementSigner : ICustomerProvisioningAcknowledgementSigningProvider
+    {
+        public Task<CustomerProvisioningAcknowledgementSigningResult> SignAsync(
+            ReadOnlyMemory<byte> canonicalAcknowledgementUtf8,
+            CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("provider secret detail must never be logged or returned");
+    }
+
+    private sealed class GarbageSignatureAcknowledgementSigner : ICustomerProvisioningAcknowledgementSigningProvider
+    {
+        public Task<CustomerProvisioningAcknowledgementSigningResult> SignAsync(
+            ReadOnlyMemory<byte> canonicalAcknowledgementUtf8,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new CustomerProvisioningAcknowledgementSigningResult(
+                true, "customer-ack-test-key", Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)), null));
     }
 
     private static ProvisioningRequestClaim NewClaim(

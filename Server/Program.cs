@@ -179,6 +179,8 @@ if (!setupRequired)
         builder.Configuration.GetSection(Infrastructure.Provisioning.CustomerProvisioningSettings.SectionName));
     builder.Services.AddSingleton<Infrastructure.Provisioning.ICustomerProvisioningTrustStore,
         Infrastructure.Provisioning.ConfigurationCustomerProvisioningTrustStore>();
+    builder.Services.AddSingleton<Infrastructure.Provisioning.ICustomerProvisioningAcknowledgementTrustStore,
+        Infrastructure.Provisioning.ConfigurationCustomerProvisioningAcknowledgementTrustStore>();
     builder.Services.AddSingleton<Infrastructure.Provisioning.CustomerProvisioningPackageVerifier>();
     builder.Services.AddScoped<Infrastructure.Provisioning.CustomerProvisioningApplyService>();
     builder.Services.TryAddSingleton<

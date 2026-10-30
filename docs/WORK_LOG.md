@@ -1273,3 +1273,14 @@
 ## 2026-10-30 — Issue #235: offline acknowledgement exchange (customer file → Vendor panel)
 - **تغییر:** ذخیرهٔ فایل ack در صفحهٔ import مشتری و «ثبت فایل پاسخ مشتری» در جدول درخواست‌های Vendor که به endpoint ماشینی موجود POST می‌کند. بدون تغییر سرور/Schema/قرارداد.
 - **تست:** ClientApp 104 و Vendor.Web 55 تست موفق، typecheck و offline/static check موفق. `NotImplemented`: رسید امضاشدهٔ Vendor به مشتری (قرارداد ندارد، نیاز به تصمیم مالک و #236). E2E مرورگر در مرحلهٔ ۴. جزئیات: `docs/handoffs/ISSUE-235-offline-ack-exchange.md`.
+
+## 2026-10-30 — Issue #235: offline verification of customer acknowledgement signatures
+- **شکاف:** نتیجهٔ Provider امضا فقط از نظر شکل بررسی و همراه شرکت ساخته‌شده ذخیره می‌شد؛ امضای معیوب ack غیرقابل‌تأیید دائمی می‌ساخت.
+- **تغییر:** Trust Store مستقل `Provisioning:TrustedAcknowledgementKeys` و راستی‌آزمایی آفلاین پیش از ذخیره؛ کدهای `provisioning_acknowledgement_signer_unavailable|signer_key_untrusted|signature_invalid` (503)؛ Exception ارائه‌دهنده گرفته و فقط نوع آن لاگ می‌شود؛ مستندات قرارداد Provider در SECURITY.md.
+- **تست:** SQL Server واقعی: پنج Provider خراب در مسیر موفق و Rejected بدون هیچ رکورد؛ شاهد مثبت؛ بررسی جهش؛ کل Template.sln: 657 کل، 655 موفق، 2 skipped، 0 ناموفق. Provider واقعی `Blocked` روی #236. جزئیات: `docs/handoffs/ISSUE-235-ack-signing-provider-contract.md`.
+
+## 2026-10-30 — Issue #235: SQL Server transactional/security tests and a concurrency fix
+- **تست:** هفت تست روی SQL Server واقعی: هم‌زمانی apply، rollback و retry، انقضا/یک‌بارمصرف/ابطال توکن، حدس‌زنی و rate limit، مصرف هم‌زمان توکن، مجوزهای دقیق زیرسیستم‌ها و جداسازی شرکت‌ها، replay و استفادهٔ مجدد متعارض.
+- **باگ یافته و رفع‌شده:** Deadlock (1205) در درخواست‌های هم‌زمان تکراری apply/enrollment → خطای مدیریت‌نشده. رفع با `sp_getapplock` تراکنشی؛ تست‌ها پیش از رفع شکست خوردند و پس از رفع سه بار پشت‌سرهم موفق بودند. کل Template.sln: 664 کل، 662 موفق، 2 skipped، 0 ناموفق.
+- **انجام نشد:** E2E خودکار دو-میزبانه (Vendor + مشتری)؛ دلیل در handoff. جزئیات: `docs/handoffs/ISSUE-235-provisioning-e2e-tests.md`.
+

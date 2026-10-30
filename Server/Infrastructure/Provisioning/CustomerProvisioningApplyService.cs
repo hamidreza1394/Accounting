@@ -3,7 +3,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Faranou.Licensing.Contracts;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Provisioning;
@@ -52,6 +54,16 @@ public sealed record CustomerProvisioningTokenReissueResult(bool Success, string
 /// </summary>
 public sealed class CustomerProvisioningApplyService
 {
+    // Provisioning and enrollment are rare, operator-driven actions. Each one takes a transaction-scoped
+    // application lock first, so concurrent duplicates queue instead of deadlocking under SERIALIZABLE.
+    private const string ApplyLockResource = "faranou:provisioning:apply";
+    private const string EnrollmentLockResource = "faranou:provisioning:enrollment";
+    private const int LockTimeoutMilliseconds = 15_000;
+
+    private const string SignerUnavailable = "provisioning_acknowledgement_signer_unavailable";
+    private const string SignerKeyUntrusted = "provisioning_acknowledgement_signer_key_untrusted";
+    private const string SignatureInvalid = "provisioning_acknowledgement_signature_invalid";
+
     private static readonly TimeSpan EnrollmentLifetime = TimeSpan.FromMinutes(30);
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -61,6 +73,8 @@ public sealed class CustomerProvisioningApplyService
     private readonly Data.DatabaseContext _database;
     private readonly CustomerProvisioningPackageVerifier _verifier;
     private readonly ICustomerProvisioningAcknowledgementSigningProvider _acknowledgementSigner;
+    private readonly ICustomerProvisioningAcknowledgementTrustStore _acknowledgementTrustStore;
+    private readonly ILogger<CustomerProvisioningApplyService> _logger;
     private readonly CustomerProvisioningSettings _settings;
     private readonly Security.PasswordHashService _passwordHasher;
     private readonly TimeProvider _timeProvider;
@@ -69,13 +83,17 @@ public sealed class CustomerProvisioningApplyService
         Data.DatabaseContext database,
         CustomerProvisioningPackageVerifier verifier,
         ICustomerProvisioningAcknowledgementSigningProvider acknowledgementSigner,
+        ICustomerProvisioningAcknowledgementTrustStore acknowledgementTrustStore,
         IOptions<CustomerProvisioningSettings> settings,
         Security.PasswordHashService passwordHasher,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        ILogger<CustomerProvisioningApplyService> logger)
     {
         _database = database;
         _verifier = verifier;
         _acknowledgementSigner = acknowledgementSigner;
+        _acknowledgementTrustStore = acknowledgementTrustStore;
+        _logger = logger;
         _settings = settings.Value;
         _passwordHasher = passwordHasher;
         _timeProvider = timeProvider;
@@ -96,6 +114,8 @@ public sealed class CustomerProvisioningApplyService
 
         await using var transaction = await _database.Database.BeginTransactionAsync(
             IsolationLevel.Serializable, cancellationToken);
+        if (!await TryAcquireTransactionLockAsync(ApplyLockResource, cancellationToken))
+            return Failure("provisioning_apply_busy");
 
         var storedAcknowledgement = await FindAcknowledgementAsync(payload.RequestId, cancellationToken);
         if (storedAcknowledgement is not null)
@@ -260,9 +280,9 @@ public sealed class CustomerProvisioningApplyService
         };
 
         var acknowledgement = CreateAcknowledgement(payload, payloadHash, "Applied", null, now);
-        var signedAcknowledgement = await SignAcknowledgementAsync(acknowledgement, cancellationToken);
+        var (signedAcknowledgement, signingError) = await SignAcknowledgementAsync(acknowledgement, cancellationToken);
         if (signedAcknowledgement is null)
-            return Failure("provisioning_acknowledgement_signer_unavailable");
+            return Failure(signingError ?? SignerUnavailable);
 
         _database.Companies.Add(company);
         _database.FiscalPeriods.Add(fiscalPeriod);
@@ -311,6 +331,8 @@ public sealed class CustomerProvisioningApplyService
 
         await using var transaction = await _database.Database.BeginTransactionAsync(
             IsolationLevel.Serializable, cancellationToken);
+        if (!await TryAcquireTransactionLockAsync(EnrollmentLockResource, cancellationToken))
+            return new CustomerProvisioningTokenReissueResult(false, "enrollment_busy", null);
         var claim = await _database.ProvisioningRequestClaims
             .SingleOrDefaultAsync(item => item.RequestId == requestId, cancellationToken);
         if (claim is null || !claim.MustChangePassword || claim.EnrollmentConsumedAtUtc is not null)
@@ -352,6 +374,8 @@ public sealed class CustomerProvisioningApplyService
 
         await using var transaction = await _database.Database.BeginTransactionAsync(
             IsolationLevel.Serializable, cancellationToken);
+        if (!await TryAcquireTransactionLockAsync(EnrollmentLockResource, cancellationToken))
+            return new CustomerProvisioningEnrollmentResult(false, "enrollment_busy");
         var user = await _database.Users.SingleOrDefaultAsync(
             item => item.Username == username, cancellationToken);
         if (user is null || !user.IsActive)
@@ -422,9 +446,9 @@ public sealed class CustomerProvisioningApplyService
         CancellationToken cancellationToken)
     {
         var acknowledgement = CreateAcknowledgement(payload, payloadHash, "Rejected", errorCode, now);
-        var envelope = await SignAcknowledgementAsync(acknowledgement, cancellationToken);
+        var (envelope, signingError) = await SignAcknowledgementAsync(acknowledgement, cancellationToken);
         if (envelope is null)
-            return Failure("provisioning_acknowledgement_signer_unavailable");
+            return Failure(signingError ?? SignerUnavailable);
 
         _database.SecurityAuditEvents.Add(CreateAcknowledgementAudit(
             null, payload.RequestId, envelope, "ProvisioningRejected", now));
@@ -457,18 +481,38 @@ public sealed class CustomerProvisioningApplyService
         }
     }
 
-    private async Task<CustomerProvisioningAcknowledgementEnvelope?> SignAcknowledgementAsync(
+    /// <summary>
+    /// Signs through the protected provider and then verifies the result offline against the customer-side
+    /// trusted acknowledgement keys. Nothing the provider returns is stored before that verification,
+    /// and every failure is fail-closed with a distinct, non-sensitive error code.
+    /// </summary>
+    private async Task<(CustomerProvisioningAcknowledgementEnvelope? Envelope, string? ErrorCode)> SignAcknowledgementAsync(
         CustomerProvisioningAcknowledgement acknowledgement,
         CancellationToken cancellationToken)
     {
         var canonicalJson = CustomerProvisioningAcknowledgementValidator.Serialize(acknowledgement);
-        var signing = await _acknowledgementSigner.SignAsync(
-            Encoding.UTF8.GetBytes(canonicalJson), cancellationToken);
-        if (!signing.Success ||
+
+        CustomerProvisioningAcknowledgementSigningResult signing;
+        try
+        {
+            signing = await _acknowledgementSigner.SignAsync(
+                Encoding.UTF8.GetBytes(canonicalJson), cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // Only the exception type is logged; provider messages may contain key or endpoint details.
+            _logger.LogError(
+                "The acknowledgement signing provider failed with {ExceptionType}.",
+                exception.GetType().Name);
+            return (null, SignerUnavailable);
+        }
+
+        if (signing is null ||
+            !signing.Success ||
             string.IsNullOrWhiteSpace(signing.KeyId) ||
             signing.KeyId.Length > 128 ||
             string.IsNullOrWhiteSpace(signing.SignatureBase64))
-            return null;
+            return (null, SignerUnavailable);
 
         byte[] signatureBytes;
         try
@@ -477,18 +521,69 @@ public sealed class CustomerProvisioningApplyService
         }
         catch (FormatException)
         {
-            return null;
+            return (null, SignatureInvalid);
         }
 
         if (signatureBytes.Length != 64)
-            return null;
+            return (null, SignatureInvalid);
 
-        return new CustomerProvisioningAcknowledgementEnvelope(
+        var envelope = new CustomerProvisioningAcknowledgementEnvelope(
             CustomerProvisioningAcknowledgementValidator.CurrentSchemaVersion,
             signing.KeyId,
             LicenseAlgorithms.EcdsaP256Sha256,
             canonicalJson,
             signing.SignatureBase64);
+
+        if (!_acknowledgementTrustStore.TryGetPublicKey(signing.KeyId, out var trustedPublicKey))
+        {
+            _logger.LogError("The acknowledgement signing key is not in the trusted acknowledgement key set.");
+            return (null, SignerKeyUntrusted);
+        }
+
+        if (!CustomerProvisioningAcknowledgementValidator.TryValidateAndVerify(
+                envelope,
+                trustedPublicKey,
+                acknowledgement.RequestId,
+                acknowledgement.Nonce,
+                acknowledgement.PayloadSha256,
+                acknowledgement.CustomerReference,
+                acknowledgement.InstallationId,
+                _timeProvider.GetUtcNow(),
+                out _,
+                out _))
+        {
+            _logger.LogError("The acknowledgement signing provider returned a signature that does not verify.");
+            return (null, SignatureInvalid);
+        }
+
+        return (envelope, null);
+    }
+
+    /// <summary>
+    /// Takes an exclusive SQL Server application lock owned by the current transaction (released on commit or
+    /// rollback). Without it, concurrent identical requests each take shared range locks under SERIALIZABLE and
+    /// then deadlock when they try to write. Raw SQL is used because EF Core has no API for application locks;
+    /// the resource name is a constant and passed as a parameter.
+    /// </summary>
+    private async Task<bool> TryAcquireTransactionLockAsync(string resource, CancellationToken cancellationToken)
+    {
+        if (!_database.Database.IsSqlServer())
+            return true;
+
+        var result = new SqlParameter("@result", SqlDbType.Int) { Direction = ParameterDirection.Output };
+        await _database.Database.ExecuteSqlRawAsync(
+            "EXEC @result = sp_getapplock @Resource = @resource, @LockMode = 'Exclusive', " +
+            "@LockOwner = 'Transaction', @LockTimeout = @timeout;",
+            new object[]
+            {
+                result,
+                new SqlParameter("@resource", resource),
+                new SqlParameter("@timeout", LockTimeoutMilliseconds),
+            },
+            cancellationToken);
+
+        // 0 = granted immediately, 1 = granted after waiting; negative values are timeout, cancellation, deadlock, error.
+        return result.Value is int code && code >= 0;
     }
 
     private static CustomerProvisioningAcknowledgement CreateAcknowledgement(

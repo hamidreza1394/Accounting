@@ -256,6 +256,66 @@ public sealed class LoginAuthenticationTests
 	private const string PageSuccess = "PageSuccess";
 	#endregion /Harness
 
+	#region Pending provisioning enrollment
+	[Fact]
+	public async Task CorrectPassword_WithAPendingEnrollment_IssuesNoCookie_AndLooksLikeAWrongPassword()
+	{
+		using var harness = new Harness();
+		var user = harness.AddUser
+			(username: "first-admin",
+			passwordHash: harness.PasswordHashService.Hash(password: "Correct-Password-1"));
+
+		harness.Database.ProvisioningRequestClaims.Add(new Domain.ProvisioningRequestClaim
+		{
+			RequestId = Guid.NewGuid(),
+			AdminUserId = user.Id,
+			MustChangePassword = true,
+		});
+		harness.Database.SaveChanges();
+
+		var model = harness.CreateModel(username: "first-admin", password: "Correct-Password-1");
+
+		var result = await model.OnPostAsync();
+
+		Assert.IsType<PageResult>(result);
+		Assert.Equal(0, harness.Authentication.SignInCount);
+
+		var messages = harness.GetMessages(type: PageError);
+		Assert.NotNull(messages);
+		Assert.Contains(messages, message =>
+			message == Resources.Messages.Errors.InvalidUsernameOrPassword);
+
+		Assert.Contains(harness.Database.SecurityAuditEvents, audit =>
+			audit.EventType == "LoginDeniedEnrollmentPending" && audit.UserId == user.Id);
+		Assert.DoesNotContain(harness.Database.SecurityAuditEvents, audit =>
+			audit.EventType == "LoginFailed");
+		Assert.Empty(harness.Database.LoginLogs);
+	}
+
+	[Fact]
+	public async Task CorrectPassword_AfterTheEnrollmentIsCompleted_SignsIn()
+	{
+		using var harness = new Harness();
+		var user = harness.AddUser
+			(username: "first-admin",
+			passwordHash: harness.PasswordHashService.Hash(password: "Correct-Password-1"));
+
+		harness.Database.ProvisioningRequestClaims.Add(new Domain.ProvisioningRequestClaim
+		{
+			RequestId = Guid.NewGuid(),
+			AdminUserId = user.Id,
+			MustChangePassword = false,
+		});
+		harness.Database.SaveChanges();
+
+		var model = harness.CreateModel(username: "first-admin", password: "Correct-Password-1");
+
+		await model.OnPostAsync();
+
+		Assert.Equal(1, harness.Authentication.SignInCount);
+	}
+	#endregion /Pending provisioning enrollment
+
 	#region Scenario (a): empty or invalid fields
 	[Fact]
 	public async Task EmptyFields_ShowTheRequiredMessage_AndIssueNoCookie()
