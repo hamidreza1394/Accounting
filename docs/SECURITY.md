@@ -282,3 +282,9 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - Under SERIALIZABLE isolation, concurrent identical requests each took shared range locks and then deadlocked on write (SQL Server error 1205); the losers surfaced as unhandled HTTP 500. No duplicate company was created, but the behavior was not idempotent. Found by the SQL Server concurrency tests.
 - `CustomerProvisioningApplyService` now takes a transaction-owned `sp_getapplock` (exclusive, 15 s timeout, released on commit/rollback) as the first statement of apply (`faranou:provisioning:apply`) and of enrollment completion/reissue (`faranou:provisioning:enrollment`). Concurrent duplicates queue, then take the normal replay path. A lock timeout returns `provisioning_apply_busy` / `enrollment_busy` (HTTP 409, retryable). Raw SQL is used because EF Core has no application-lock API; the resource is a constant passed as a parameter.
 - Status: `Implemented`; verified on SQL Server 2022 (8 parallel apply requests, 4 parallel enrollment attempts).
+
+## Vendor provisioning signer failure handling — Issue #236
+
+- Provider exceptions are converted to the same public `503 provisioning_signing_unavailable` response; the exception type alone is logged through `ILogger<VendorProvisioningIssuanceService>`.
+- Exception messages, stack traces, payload bytes, key IDs and signatures are not written to logs. Unsuccessful provider results and invalid signing metadata are logged as warnings without signer material.
+- Caller cancellation is propagated; the pending approval and provisioning request remain retryable and no package transitions to `PendingDelivery` unless signing succeeds and metadata passes validation.

@@ -1315,3 +1315,10 @@
 - محدودیت باقی‌مانده: E2E واحد دو میزبان Vendor و Customer و Playwright از آپلود تا وضعیت Confirmed هنوز NotImplemented است. بازگشت پاسخ امضاشدهٔ Vendor به مشتری نیز قرارداد مصوب ندارد و NeedsApproval باقی می‌ماند.
 - بازآشتی Git: تغییرات PR #310 روی آخرین main (پس از PRهای #311–#313) بازآشتی شدند؛ تغییرات قرارداد امضا که قبلاً در main موجود بود دوباره کپی نشد. فایل .gitleaksignore قدیمی وارد شاخه نشد، چون secret-scan روی head منبع سبز است و استثنای دائمی/منسوخ لازم نیست.
 - اعتبارسنجی بازآشتی: منتظر CI اختصاصی PR یکپارچه‌سازی هستیم؛ هیچ نتیجهٔ تستی برای commit جدید قبل از اجرای CI ادعا نمی‌شود.
+## 2026-10-30 — Issue #236: جلوگیری از بلعیدن بی‌صدای خطای provisioning signer
+- **یافته:** `VendorProvisioningIssuanceService` exception عمومی provider را بدون ثبت log به 503 عمومی تبدیل می‌کرد. رفتار fail-closed درست بود، اما observability با AGENTS.md/CODING_STANDARDS هم‌خوان نبود.
+- **اصلاح:** exception type-only با `ILogger<VendorProvisioningIssuanceService>` ثبت می‌شود؛ متن استثنا، stack trace، payload، KeyId و signature عمداً log نمی‌شوند. unsuccessful result و metadata نامعتبر نیز warning غیرحساس دارند.
+- **تست regression:** provider آزمایشی بار اول `InvalidOperationException` با متن ساختگی می‌دهد؛ پاسخ HTTP باید همچنان `provisioning_signing_unavailable` باشد، log فقط type را نشان دهد و retry همان approval موفق بماند.
+- **دامنه:** Vendor Host و تست/مستندات Vendor؛ بدون customer-side `Server/**`، schema یا migration.
+- **اعتبارسنجی:** تست محلی اجرا نشده؛ نتیجهٔ نهایی به CI روی PR وابسته است.
+- **Branch/PR:** `fix/vendor-provisioning-signer-exception-logging` / [PR #314](https://github.com/hamidreza1394/Accounting/pull/314).

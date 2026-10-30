@@ -6,6 +6,7 @@ using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Auditing;
 using Faranou.Vendor.Persistence.Domain;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Faranou.Vendor.Host.Signing;
 
@@ -17,7 +18,8 @@ public sealed class VendorProvisioningIssuanceService(
     VendorDbContext db,
     IProvisioningSigningProvider signingProvider,
     IVendorAuditWriter audit,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    ILogger<VendorProvisioningIssuanceService> logger)
 {
     public async Task<VendorProvisioningIssuanceResult> IssueApprovedAsync(
         VendorApprovalRequest approval,
@@ -103,17 +105,32 @@ public sealed class VendorProvisioningIssuanceService(
         {
             throw;
         }
-        catch
+        catch (Exception exception)
         {
+            // Do not log the provider exception, message, payload, key ID or signature.
+            // The exception type is enough to diagnose the failure without exposing signer data.
+            logger.LogError(
+                "Provisioning signing provider failed with exception type {ExceptionType}.",
+                exception.GetType().Name);
             return VendorProvisioningIssuanceResult.Unavailable("provisioning_signing_unavailable");
         }
 
-        if (!signing.Succeeded ||
-            string.IsNullOrWhiteSpace(signing.KeyId) ||
+        if (!signing.Succeeded)
+        {
+            logger.LogWarning(
+                "Provisioning signing provider returned an unsuccessful result; issuance remains unavailable.");
+            return VendorProvisioningIssuanceResult.Unavailable("provisioning_signing_unavailable");
+        }
+
+        if (string.IsNullOrWhiteSpace(signing.KeyId) ||
             signing.KeyId.Length > 128 ||
             !string.Equals(signing.Algorithm, LicenseAlgorithms.EcdsaP256Sha256, StringComparison.Ordinal) ||
             signing.Signature.Length != 64)
+        {
+            logger.LogWarning(
+                "Provisioning signing provider returned invalid signing metadata; issuance remains unavailable.");
             return VendorProvisioningIssuanceResult.Unavailable("provisioning_signing_unavailable");
+        }
 
         request.KeyId = signing.KeyId;
         request.Algorithm = signing.Algorithm;
