@@ -29,6 +29,17 @@ public sealed class VendorAuditCheckpointStartupGuardTests
     }
 
     [Fact]
+    public void ProductionWithMultipleProductionStores_FailsClosed()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IProductionVendorAuditCheckpointStore, TestStore>();
+        services.AddSingleton<IProductionVendorAuditCheckpointStore, TestStore>();
+
+        Assert.Throws<InvalidOperationException>(() =>
+            VendorAuditCheckpointStartupGuard.EnsureConfigured(isProduction: true, services));
+    }
+
+    [Fact]
     public void DevelopmentMayRunWithoutIndependentStore()
     {
         var services = new ServiceCollection();
