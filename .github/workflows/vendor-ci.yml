@@ -118,7 +118,7 @@ jobs:
           log.level = ERROR
           EOF
           export SOFTHSM2_CONF="$config_file"
-          module_path="$(find /usr/lib -type f -name 'libsofthsm2.so' -print -quit)"
+          module_path="$(find /usr/lib -name 'libsofthsm2.so' -print -quit)"
           test -n "$module_path"
           softhsm2-util --init-token --free --label FaranouVendorCI --so-pin 12345678 --pin 123456
           {
