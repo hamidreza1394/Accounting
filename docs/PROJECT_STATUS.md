@@ -1,6 +1,6 @@
 # وضعیت جاری Vendor و شکاف‌های وابسته — 2026-10-30
 
-**مبنای بازبینی:** شاخه `main`، SHA `2755f73cfdaf73c0f567fd41889f4bb7a2e6e00e` (پس از ادغام PRهای #344، #349 و #351).
+**مبنای بازبینی:** شاخه `main`، SHA `b6ee9419abf53997e28dec19105645d6ed9f8833` (پس از ادغام PRهای #344، #349، #351 و #352).
 این بخش وضعیت جاری است؛ snapshotهای بعدی سند سابقه‌اند و نباید به‌عنوان وضعیت امروز خوانده شوند.
 
 ## وضعیت آخرین تغییر و CI
@@ -13,7 +13,8 @@
 - **CI PR #344:** .NET CI run 41078370910، Vendor CI run 41078370887 (شامل SoftHSM test) و Semgrep run 41078370883 همگی موفق.
 - **PR #349 — Windows CNG Customer ACK:** ادغام شد؛ .NET CI در PR #351 تست‌های اختصاصی CNG را با فیلتر صحیح MTP کشف و اجرا کرد.
 - **PR #351 — xUnit v3/MTP Windows filter:** ادغام شد؛ .NET CI run [41088538581](https://github.com/hamidreza1394/Accounting/actions/runs/41088538581) و Semgrep run [41088538577](https://github.com/hamidreza1394/Accounting/actions/runs/41088538577) موفق؛ Windows CNG tests، Windows publish، Linux publish و E2E نیز موفق.
-- **مقایسه main:** SHA فعلی با merge commit PR #351 یکسان است؛ Vendor HSM واقعی هنوز provision نشده است.
+- **PR #352 — Customer ACK key revocation:** ادغام شد؛ .NET CI run [41090537956](https://github.com/hamidreza1394/Accounting/actions/runs/41090537956) و Semgrep run [41090537922](https://github.com/hamidreza1394/Accounting/actions/runs/41090537922) موفق. ۶۸۲ تست .NET (۶۷۸ موفق، ۴ Skip، صفر شکست)، تست CNG ویندوز، انتشار Windows/Linux و E2E موفق شدند.
+- **مقایسه main:** SHA فعلی با merge commit PR #352 یکسان است؛ Vendor HSM واقعی هنوز provision نشده است.
 
 ## وضعیت تصمیم امضا #236 — D-055 Accepted
 
@@ -21,7 +22,7 @@
 - D-055 در main پذیرفته شده است؛ Runbook عملیاتی HSM/TPM در PR #341 و Vendor PKCS#11 adapter در PR #344 ادغام شدند. Adapter پشت interfaceهای موجود برای license و provisioning/package قرار دارد؛ کلیدها KeyId نسخه‌دار مجزا دارند، private-key object باید non-extractable باشد، و امضا ECDSA P-256/IEEE P1363 است.
 - SoftHSM فقط در محیط اختصاصی Testing مجاز است؛ در Development/Staging/Production، slot سخت‌افزاری و manufacturer/model allowlist‌شده لازم است. تست integration SoftHSM و تمام CIهای PR #344 موفق شدند.
 - با بودجهٔ صفر و نبود HSM واقعی، Signing:Pkcs11:Enabled در Production نباید فعال شود؛ providerهای پیش‌فرض unavailable/fail-closed باقی می‌مانند و صدور Production باید 503 بدهد.
-- **Customer ACK ویندوز:** PR #349 در main ادغام شده است؛ Windows CNG با KeyName/KeyId مشتق‌شده از InstallationId+KeyVersion، فرمان محلی `dotnet Server.dll --provisioning-ack-key create` و کلید ECDSA P-256 non-exportable اضافه شده است. TPM KSP پیش‌فرض است؛ Software KSP فقط با انتخاب صریح و بدون fallback خودکار مجاز است. PR #351 فیلتر تست را اصلاح کرد و تست‌های CNG واقعاً روی Windows CI اجرا و موفق شدند. این شواهد TPM فیزیکی یا سازگاری تمام نسخه‌های Windows/Server را اثبات نمی‌کند. Provider opt-in است و trust enrollment، durable audit/readiness و آزمون سخت‌افزار واقعی هنوز لازم‌اند.
+- **Customer ACK ویندوز:** PR #349 در main ادغام شده است؛ Windows CNG با KeyName/KeyId مشتق‌شده از InstallationId+KeyVersion، فرمان محلی `dotnet Server.dll --provisioning-ack-key create` و کلید ECDSA P-256 non-exportable اضافه شده است. TPM KSP پیش‌فرض است؛ Software KSP فقط با انتخاب صریح و بدون fallback خودکار مجاز است. PR #351 فیلتر تست را اصلاح کرد و تست‌های CNG واقعاً روی Windows CI اجرا و موفق شدند. این شواهد TPM فیزیکی یا سازگاری تمام نسخه‌های Windows/Server را اثبات نمی‌کند. Provider opt-in است و trust enrollment، durable audit/readiness و آزمون سخت‌افزار واقعی هنوز لازم‌اند. PR #352 ابطال صریح KeyId در Trust Store مشتری، حفظ SPKI برای audit، رد مقدار revocation نامعتبر و overlap چرخش کلید را اضافه کرده است؛ این ابطال config-based است و در برابر restore کامل backup ضد rollback نیست.
 
 
 - **PR #349 — Windows CNG Customer ACK:** ادغام شد. کلیدها per-installation و versioned هستند؛ فرمان ceremony فقط public SPKI را برمی‌گرداند و signer runtime را فعال نمی‌کند. Windows CI با Software KSP فقط رفتار CNG را می‌آزماید، نه TPM فیزیکی. PR #351 فیلتر MTP را اصلاح کرد؛ تست CNG در run `41088538581` موفق اجرا شد.
@@ -52,7 +53,7 @@
 
 ## شکاف‌های باقی‌مانده و وابستگی‌های عملیاتی
 
-- **#236 — HSM و چرخه کلید:** D-055 و adapter PKCS#11 ادغام شده‌اند، اما HSM واقعی provision نشده و بودجه صفر است؛ Production package/license signing همچنان Blocked/fail-closed است. Runbook مستند است، ولی اجرای واقعی Key Ceremony، rotation/revocation، backup/recovery، HA/DR و آزمون سخت‌افزار باقی‌اند. Customer ACK Windows CNG و فرمان محلی ceremony پیاده‌سازی شده‌اند؛ ثبت امن public key در هر دو Trust Store، rotation/revocation عملیاتی، durable audit/readiness و آزمون TPM واقعی باقی‌اند. Linux backend در فاز بعدی و جداگانه پیاده‌سازی می‌شود.
+- **#236 — HSM و چرخه کلید:** D-055 و adapter PKCS#11 ادغام شده‌اند، اما HSM واقعی provision نشده و بودجه صفر است؛ Production package/license signing همچنان Blocked/fail-closed است. Runbook مستند است، ولی اجرای واقعی Key Ceremony، rotation/revocation عملیاتی، backup/recovery، HA/DR و آزمون سخت‌افزار Vendor باقی‌اند. Customer ACK Windows CNG، فرمان محلی ceremony، revocation پیکربندی‌شده و تست overlap rotation پیاده‌سازی شده‌اند؛ ثبت/توزیع عملیاتی public key در هر دو Trust Store، durable audit/readiness و آزمون TPM واقعی باقی‌اند. ابطال config-based در برابر restore کامل backup مقاوم نیست. Linux backend در فاز بعدی و جداگانه پیاده‌سازی می‌شود.
 - **#107 — checkpoint مستقل Audit:** قرارداد، زنجیره نسخه‌دار، startup guard و runbook وجود دارند؛ adapter واقعی با failure domain، credential، retention/immutability و alerting مستقل هنوز به انتخاب مقصد و دسترسی نیاز دارد. Production Vendor بدون آن باید fail-closed بماند.
 - **#214 — ابطال آفلاین:** پروتکل امضاشدهٔ revocation، consumer ضد rollback، انتقال آفلاین و آزمون backup/restore/upgrade هنوز کامل نیستند؛ تغییر Status در Vendor به‌تنهایی لایسنس نصب آفلاین را باطل نمی‌کند.
 - **#228 و #235:** مسیر نرم‌افزاری provisioning و تست آن در main موجود است؛ وضعیت Production به signer مورد تأیید و تست عملیاتی وابسته است. #228/#235 را تا تکمیل وابستگی‌های امنیتی/عملیاتی و بازبینی نهایی نباید به‌عنوان Production-ready بسته‌شده معرفی کرد.
