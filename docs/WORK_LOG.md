@@ -1314,3 +1314,31 @@
 - **اصلاح:** مقدار ثابت حذف شد؛ رمزهای موردنیاز تست با `RandomNumberGenerator.GetBytes(32)` به‌صورت runtime و per-test تولید می‌شوند. تست همچنان بررسی می‌کند رمز و enrollment token در audit ذخیره نشده‌اند.
 - **دامنه:** فقط تست و handoff/work log در شاخهٔ مستقل Issue #235؛ بدون تغییر Vendor، دیتابیس مشتری، migration یا secret configuration.
 - **اعتبارسنجی:** Gitleaks روی SHA قبلی ناموفق بود؛ اجرای CI روی commit اصلاحی در انتظار است. هیچ نتیجهٔ سبزی برای SHA جدید ادعا نمی‌شود.
+
+
+## 2026-10-30 — Issue #235: اتصال provisioning به یک لایسنس امضاشده (D-054)
+
+- **تصمیم مالک محصول:** مدل تک‌لایسنس تأیید شد؛ کلاینت فقط licenseId و subset اختیاری زیرسیستم را می‌فرستد؛ Vendor باید entitlement و sequence را از آخرین envelope امضاشده استخراج کند؛ v4 با licenseId/sequence و سازگاری canonical v1-v3؛ revalidation در صدور و export؛ محدودیت آفلاین مستند؛ MaxCompanies یا atomic enforcement یا NotImplemented؛ افزودن ماژول به شرکت موجود و تجمیع چند لایسنس NotImplemented؛ v3 backfill نمی‌شود.
+- **قرارداد:** payload schema به v4 ارتقا یافت و دو فیلد licenseId و sequence اضافه شد. canonical writer برای v1-v3 تغییری نمی‌کند؛ تست byte-for-byte برای canonical v3 افزوده شد؛ validator v1-v4 را می‌پذیرد و binding را در v4 اجباری می‌کند.
+- **Vendor:** LicenseSigningTrustStore برای کلید عمومی مستقل Licensing:TrustedSigningKeys؛ VendorProvisioningLicenseResolver برای اعتبارسنجی envelope، امضا، digest، customer/installation، وضعیت، تاریخ و sequence؛ API انتخاب لایسنس معتبر؛ ایجاد request فقط با licenseId و subset اختیاری؛ revalidation در issuance و export؛ idempotency شامل licenseId و sequence.
+- **UI:** فرم Provisioning اکنون لایسنس معتبر را انتخاب می‌کند؛ زیرسیستم‌ها از entitlementهای برگردانده‌شده توسط API نمایش داده می‌شوند؛ نبود subset به معنی همهٔ entitlementهای امضاشده است.
+- **تست‌ها:** تست canonical v3، v4 schema/signature، idempotency licenseId+sequence، UI selection/subset و SQL Server resolver برای subset، sequence تاریخی و کلید لغوشده اضافه شد. اجرای محلی هنوز انجام نشده و CI تا ایجاد PR باید نتیجه بدهد.
+- **Migration:** Migration جدیدی اضافه نشد؛ binding در payload امضاشده ذخیره می‌شود. هیچ تغییر schema در دیتابیس Customer انجام نشده است.
+- **محدودیت‌های صریح:** MaxCompanies، افزودن زیرسیستم به شرکت موجود و تجمیع چند لایسنس NotImplemented. درخواست‌های v3 backfill نمی‌شوند و Vendor آن‌ها را دوباره امضا/Export نمی‌کند.
+- **کار باقی‌مانده:** اجرای CI؛ رفع خطاهای کامپایل/تست؛ افزودن تست SQL Server برای revalidation در issuance/export؛ هماهنگ‌سازی E2E دو میزبان در PR #317 با API جدید v4 (ساخت لایسنس و انتخاب licenseId)؛ بررسی کلید عمومی واقعی در deployment docs؛ تکمیل handoff و به‌روزرسانی Issue #235.
+- **Branch:** feat/issue-235-single-license-v4 — وضعیت تا CI سبز: Implemented in branch / NotVerified؛ هنوز Merge نشده است.
+
+
+## 2026-10-30 — بازخورد CI و اصلاحات v4
+
+- Vendor CI run 851 روی commit قبلی، به علت تداخل نام range variable در LINQ query مربوط به Export، با CS1931 شکست خورد؛ نام متغیرهای query به targetCustomer/targetInstallation تغییر کرد.
+- .NET CI run 2763 روی commit قبلی، یک شکست در تست canonical v3 داشت؛ JsonWriter کاراکترهای + و متن غیر ASCII را escape می‌کند. vector تست به رشتهٔ ASCII ثابت و escape صحیح + تغییر کرد تا آزمون byte-for-byte پایدار بماند.
+- در تست SQL Server resolver پوشش رد مشتری/نصب دیگر، وضعیت Suspended، خارج از بازهٔ اعتبار، کلید لغوشده، subset خارج از entitlement، Sequence تاریخی و رد امضای Provisioning با Sequence قدیمی اضافه شد.
+- E2E دو میزبان نیز اکنون بعد از اولین Export موفق، Sequence جدیدتر صادر می‌کند؛ Export مجدد بستهٔ قدیمی باید 409 بگیرد، ولی فایل قبلاً Exportشده همچنان در Customer آفلاین قابل اعمال است و acknowledgement معتبر می‌تواند جریان را تکمیل کند.
+- اجرای مجدد روی SHA نهایی پس از این اصلاحات هنوز در انتظار CI است؛ شکست‌های runهای قبلی به‌عنوان نتیجهٔ نهایی تلقی نمی‌شوند.
+
+
+## 2026-10-30 — اصلاح build و همگام‌سازی E2E نسخه ۴
+- شکست Vendor CI روی PR #319 و #323 ریشه‌یابی شد: دو fixture JSON در C# به‌اشتباه double-escaped شده بودند و باعث CS1003/CS1056 می‌شدند.
+- fixture سمت Vendor در شاخه #319 اصلاح شد؛ همان fixture در تست دو میزبان PR #323 نیز اصلاح شد. اجرای CI جدید روی SHAهای جدید آغاز شده است؛ نتیجه هنوز نهایی نیست.
+- توضیح PR #319 و handoff به PR #323 به‌روزرسانی شد؛ PR #317 قدیمی v3 همچنان ممنوع از Merge است.

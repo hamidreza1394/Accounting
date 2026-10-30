@@ -9,6 +9,13 @@ type Installation = {
   name: string;
   status: string;
 };
+type EligibleLicense = {
+  licenseId: string;
+  licenseNumber: string;
+  productCode: string;
+  sequence: number;
+  subsystems: string[];
+};
 type EligibleParent = {
   requestId: string;
   companyName: string;
@@ -89,7 +96,14 @@ const statusLabels: Record<string, string> = {
 
 function publicError(status: number, code: string): string {
   if (status === 400 && code === 'invalid_antiforgery_token') return 'توکن امنیتی معتبر نیست؛ فرم را تازه‌سازی کنید.';
-  if (status === 400 && code === 'invalid_provisioning_subsystems') return 'حداقل یک زیرسیستم مجاز انتخاب کنید و گزینه‌های تکراری را حذف کنید.';
+  if (status === 400 && code === 'invalid_provisioning_subsystems') return 'زیرسیستم‌های انتخابی معتبر نیستند یا گزینهٔ تکراری دارند.';
+  if (status === 404 && code === 'provisioning_license_not_found') return 'لایسنس انتخاب‌شده به این مشتری یا نصب تعلق ندارد.';
+  if (status === 409 && code === 'provisioning_license_inactive') return 'لایسنس یا نصب مقصد فعال نیست.';
+  if (status === 409 && code === 'provisioning_license_outside_validity') return 'بازهٔ اعتبار لایسنس آغاز نشده یا پایان یافته است.';
+  if (status === 409 && code === 'provisioning_license_envelope_missing') return 'برای این لایسنس نسخهٔ امضاشده‌ای وجود ندارد.';
+  if (status === 409 && code === 'provisioning_license_sequence_stale') return 'نسخهٔ لایسنس تغییر کرده است؛ فهرست لایسنس‌ها را تازه‌سازی کنید.';
+  if (status === 409 && code === 'provisioning_subsystem_not_entitled') return 'یکی از زیرسیستم‌های انتخابی در لایسنس امضاشده وجود ندارد.';
+  if (status === 503 && code === 'provisioning_license_signing_key_untrusted') return 'کلید عمومی لایسنس در فهرست کلیدهای مورد اعتماد Vendor پیکربندی نشده است.';
   if (status === 400 && code === 'invalid_provisioning_configuration') return 'نام شرکت، نوع شرکت یا نام کاربری مدیر اولیه معتبر نیست.';
   if (status === 400 && code === 'invalid_provisioning_admin_email') return 'نشانی ایمیل مدیر اولیه را به‌درستی وارد کنید.';
   if (status === 400 && code === 'invalid_provisioning_fiscal_period') return 'عنوان و بازه دوره مالی را بررسی کنید؛ تاریخ پایان باید بعد از تاریخ شروع باشد.';
@@ -122,9 +136,12 @@ function formatDate(value: string | null | undefined): string {
 export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, canRequestApproval = false, canExportPackage = false }: Props) {
   const [installations, setInstallations] = useState<Installation[]>([]);
   const [requests, setRequests] = useState<ProvisioningRequest[]>([]);
+  const [eligibleLicenses, setEligibleLicenses] = useState<EligibleLicense[]>([]);
+  const [licenseLoading, setLicenseLoading] = useState(false);
   const [eligibleParents, setEligibleParents] = useState<EligibleParent[]>([]);
   const [parentsLoading, setParentsLoading] = useState(false);
   const [installationId, setInstallationId] = useState('');
+  const [licenseId, setLicenseId] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [companyType, setCompanyType] = useState('independent');
   const [fiscalPeriodTitle, setFiscalPeriodTitle] = useState('سال مالی ۱۴۰۵');
@@ -133,7 +150,8 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
   const [parentCompanyReference, setParentCompanyReference] = useState('');
   const [adminUserName, setAdminUserName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
-  const [subsystems, setSubsystems] = useState<string[]>(['finance']);
+  // Empty means "all entitlements" from the selected signed license revision.
+  const [subsystems, setSubsystems] = useState<string[]>([]);
   const [requestId, setRequestId] = useState(newRequestId);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -179,6 +197,46 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
     void load();
     return () => { cancelled = true; };
   }, [customerId, refreshKey]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadEligibleLicenses() {
+      if (!installationId) {
+        setEligibleLicenses([]);
+        setLicenseId('');
+        setSubsystems([]);
+        setLicenseLoading(false);
+        return;
+      }
+
+      setLicenseLoading(true);
+      try {
+        const response = await fetch(
+          `/api/vendor/provisioning-requests/eligible-licenses?customerId=${encodeURIComponent(customerId)}&installationId=${encodeURIComponent(installationId)}`,
+          { credentials: 'same-origin', cache: 'no-store' },
+        );
+        if (!response.ok) throw new Error(publicError(response.status, ''));
+        const body = await response.json() as PageResponse<EligibleLicense>;
+        if (cancelled) return;
+        const next = Array.isArray(body.items) ? body.items : [];
+        setEligibleLicenses(next);
+        setLicenseId(current => next.some(item => item.licenseId === current)
+          ? current
+          : next[0]?.licenseId ?? '');
+      } catch (reason) {
+        if (!cancelled) {
+          setEligibleLicenses([]);
+          setLicenseId('');
+          setError(reason instanceof Error ? reason.message : 'دریافت لایسنس‌های معتبر ناموفق بود.');
+        }
+      } finally {
+        if (!cancelled) setLicenseLoading(false);
+      }
+    }
+
+    void loadEligibleLicenses();
+    return () => { cancelled = true; };
+  }, [customerId, installationId, refreshKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -240,11 +298,15 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
           requestId,
           customerId,
           installationId,
+          licenseId,
           companyName: companyName.trim(),
           companyType,
           initialAdminUserName: adminUserName.trim(),
           initialAdminEmail: adminEmail.trim(),
-          subsystems: [...subsystems].sort(),
+          subsystems: selectedLicense && subsystems.length === selectedLicense.subsystems.length &&
+            selectedLicense.subsystems.every(item => subsystems.includes(item))
+            ? null
+            : [...subsystems].sort(),
           fiscalPeriodTitle: fiscalPeriodTitle.trim(),
           fiscalPeriodStartDate,
           fiscalPeriodEndDate,
@@ -272,7 +334,7 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
       setFiscalPeriodStartDate('2026-03-21');
       setFiscalPeriodEndDate('2027-03-20');
       setParentCompanyReference('');
-      setSubsystems(['finance']);
+      setSubsystems([]);
       setRefreshKey(current => current + 1);
       onSaved();
     } catch (reason) {
@@ -422,6 +484,12 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
     }
   }
 
+  const selectedLicense = eligibleLicenses.find(item => item.licenseId === licenseId);
+
+  useEffect(() => {
+    setSubsystems(selectedLicense?.subsystems ?? []);
+  }, [licenseId, eligibleLicenses]);
+
   function toggleSubsystem(value: string, checked: boolean) {
     setSubsystems(current => checked
       ? (current.includes(value) ? current : [...current, value])
@@ -453,6 +521,22 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
               {installations.map(item => <option key={item.id} value={item.id}>{item.name} ({item.installationCode})</option>)}
             </select>
             {!loading && installations.length === 0 && <p className="text-xs text-muted-foreground">برای این مشتری نصب فعالی وجود ندارد؛ ابتدا یک نصب فعال ثبت یا فعال کنید.</p>}
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="provisioning-license" className="text-sm font-medium">لایسنس صادرشده</label>
+            <select id="provisioning-license" required value={licenseId}
+              onChange={event => { setLicenseId(event.target.value); setSubsystems([]); }}
+              disabled={busy || licenseLoading || eligibleLicenses.length === 0}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+              <option value="">انتخاب لایسنس</option>
+              {eligibleLicenses.map(item => <option key={item.licenseId} value={item.licenseId}>
+                {item.licenseNumber} — {item.productCode} — نسخه {item.sequence}
+              </option>)}
+            </select>
+            {licenseLoading ? <p className="text-xs text-muted-foreground">در حال بررسی امضای لایسنس‌ها…</p>
+              : eligibleLicenses.length === 0
+                ? <p className="text-xs text-muted-foreground">برای این نصب لایسنس امضاشده، فعال و معتبر پیدا نشد.</p>
+                : <p className="text-xs text-muted-foreground">اعتبار و زیرسیستم‌ها در سرور از آخرین نسخهٔ امضاشده استخراج و دوباره بررسی می‌شوند.</p>}
           </div>
           <div className="space-y-2">
             <label htmlFor="provisioning-company-name" className="text-sm font-medium">نام شرکت حسابداری</label>
@@ -525,17 +609,23 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
         </div>
 
         <fieldset className="space-y-3">
-          <legend className="text-sm font-semibold">زیرسیستم‌های خریداری‌شده</legend>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {subsystemOptions.map(option => <label key={option.value} className="flex items-center gap-2 rounded-md border border-border p-3 text-sm">
-              <input type="checkbox" checked={subsystems.includes(option.value)} onChange={event => toggleSubsystem(option.value, event.target.checked)} disabled={busy}/>
-              <span>{option.label}</span>
-            </label>)}
-          </div>
+          <legend className="text-sm font-semibold">زیرسیستم‌های مجاز در لایسنس انتخاب‌شده</legend>
+          {!selectedLicense ? <p className="text-xs text-muted-foreground">ابتدا یک لایسنس معتبر انتخاب کنید.</p>
+            : <>
+              <p className="text-xs leading-5 text-muted-foreground">همهٔ موارد به‌صورت پیش‌فرض انتخاب شده‌اند. برای محدودکردن بسته، فقط زیرمجموعهٔ موردنیاز از entitlementهای امضاشده را نگه دارید.</p>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {subsystemOptions.filter(option => selectedLicense.subsystems.includes(option.value)).map(option => <label key={option.value} className="flex items-center gap-2 rounded-md border border-border p-3 text-sm">
+                  <input type="checkbox"
+                    checked={subsystems.includes(option.value)}
+                    onChange={event => toggleSubsystem(option.value, event.target.checked)} disabled={busy}/>
+                  <span>{option.label}</span>
+                </label>)}
+              </div>
+            </>}
         </fieldset>
 
         <div className="flex flex-wrap gap-2">
-          <Button type="submit" disabled={busy || loading || !installationId || !companyName.trim() || !adminUserName.trim() || !adminEmail.trim() ||
+          <Button type="submit" disabled={busy || loading || !installationId || licenseLoading || !licenseId || !companyName.trim() || !adminUserName.trim() || !adminEmail.trim() ||
             !fiscalPeriodTitle.trim() || !fiscalPeriodStartDate || !fiscalPeriodEndDate ||
             (fiscalPeriodStartDate >= fiscalPeriodEndDate) ||
             (companyType === 'subsidiary' && (!parentCompanyReference.trim() || parentsLoading || eligibleParents.length === 0)) || subsystems.length === 0}>

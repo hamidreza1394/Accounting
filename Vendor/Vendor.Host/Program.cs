@@ -93,6 +93,9 @@ builder.Services.AddSingleton(sp =>
         .Get<ProvisioningPackageSigningTrustedKeyOptions[]>() ?? [];
     return new ProvisioningPackageSigningTrustStore(configuredKeys);
 });
+// License signing public keys are configured independently from the private KMS/HSM signer.
+builder.Services.AddSingleton<LicenseSigningTrustStore>();
+builder.Services.AddScoped<VendorProvisioningLicenseResolver>();
 builder.Services.AddScoped<VendorLicenseEnvelopeFactory>();
 builder.Services.AddScoped<VendorLicenseIssuanceService>();
 builder.Services.AddScoped<VendorProvisioningIssuanceService>();

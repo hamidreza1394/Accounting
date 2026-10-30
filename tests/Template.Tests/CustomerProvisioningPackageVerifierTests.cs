@@ -205,6 +205,8 @@ public sealed class CustomerProvisioningPackageVerifierTests
             new DateOnly(2026, 3, 21),
             new DateOnly(2027, 3, 20),
             null,
-            "admin@example.com");
+            "admin@example.com",
+            "0a5f7d20-3a2c-4c8d-9e1f-2a6b7c8d9e10",
+            1);
     }
 }

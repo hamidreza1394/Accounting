@@ -7,6 +7,7 @@ public sealed record CreateVendorProvisioningRequest(
     Guid RequestId,
     Guid CustomerId,
     Guid InstallationId,
+    Guid LicenseId,
     string? CompanyName,
     string? CompanyType,
     string? InitialAdminUserName,
@@ -30,7 +31,7 @@ public static class VendorProvisioningRequestRules
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        if (request.RequestId == Guid.Empty || request.CustomerId == Guid.Empty || request.InstallationId == Guid.Empty)
+        if (request.RequestId == Guid.Empty || request.CustomerId == Guid.Empty || request.InstallationId == Guid.Empty || request.LicenseId == Guid.Empty)
             return "invalid_provisioning_request_id";
 
         var companyName = request.CompanyName?.Trim();
@@ -51,9 +52,10 @@ public static class VendorProvisioningRequestRules
             !string.Equals(parsedEmail.Address, adminEmail, StringComparison.OrdinalIgnoreCase))
             return "invalid_provisioning_admin_email";
 
-        if (request.Subsystems is null || request.Subsystems.Count is < 1 or > 4 ||
-            request.Subsystems.Any(code => string.IsNullOrWhiteSpace(code) || !Subsystems.Contains(code)) ||
-            request.Subsystems.Distinct(StringComparer.Ordinal).Count() != request.Subsystems.Count)
+        if (request.Subsystems is not null &&
+            (request.Subsystems.Count is < 1 or > 4 ||
+             request.Subsystems.Any(code => string.IsNullOrWhiteSpace(code) || !Subsystems.Contains(code)) ||
+             request.Subsystems.Distinct(StringComparer.Ordinal).Count() != request.Subsystems.Count))
             return "invalid_provisioning_subsystems";
 
         var fiscalPeriodTitle = request.FiscalPeriodTitle?.Trim();
@@ -91,14 +93,20 @@ public static class VendorProvisioningRequestRules
         CustomerProvisioningPayload existing,
         CreateVendorProvisioningRequest request,
         string customerReference,
-        string installationId)
+        string installationId,
+        VendorProvisioningLicenseBindingResult licenseBinding)
     {
         ArgumentNullException.ThrowIfNull(existing);
         ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(licenseBinding);
 
-        return string.Equals(existing.RequestId, request.RequestId.ToString("D"), StringComparison.OrdinalIgnoreCase) &&
+        return licenseBinding.Succeeded &&
+               string.Equals(request.LicenseId.ToString("D"), licenseBinding.LicenseId, StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(existing.RequestId, request.RequestId.ToString("D"), StringComparison.OrdinalIgnoreCase) &&
                string.Equals(existing.CustomerReference, customerReference, StringComparison.Ordinal) &&
                string.Equals(existing.InstallationId, installationId, StringComparison.Ordinal) &&
+               string.Equals(existing.LicenseId, licenseBinding.LicenseId, StringComparison.OrdinalIgnoreCase) &&
+               existing.Sequence == licenseBinding.Sequence &&
                string.Equals(existing.CompanyName, request.CompanyName?.Trim(), StringComparison.Ordinal) &&
                string.Equals(existing.CompanyType, request.CompanyType?.Trim(), StringComparison.Ordinal) &&
                string.Equals(existing.InitialAdminUserName, request.InitialAdminUserName?.Trim(), StringComparison.Ordinal) &&
@@ -108,8 +116,9 @@ public static class VendorProvisioningRequestRules
                existing.FiscalPeriodStartDate == request.FiscalPeriodStartDate &&
                existing.FiscalPeriodEndDate == request.FiscalPeriodEndDate &&
                SameRequestReference(existing.ParentCompanyReference, request.ParentCompanyReference) &&
-               request.Subsystems is not null &&
+               licenseBinding.Subsystems is not null &&
                existing.Subsystems.Order(StringComparer.Ordinal)
-                   .SequenceEqual(request.Subsystems.Order(StringComparer.Ordinal), StringComparer.Ordinal);
-    }
+                   .SequenceEqual(licenseBinding.Subsystems.Order(StringComparer.Ordinal), StringComparer.Ordinal);
+
+}
 }

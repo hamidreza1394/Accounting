@@ -403,3 +403,24 @@
 - **محدودهٔ تأیید:** این PRها اعتبارسنجی سمت مرورگر را اصلاح می‌کنند؛ جایگزین اعتبارسنجی سمت سرور نیستند و ایجاد شرکت/مدیر در دیتابیس مشتری را انجام نمی‌دهند. در این PRها هیچ API، schema یا migration مشتری تغییر نکرد.
 - **وضعیت پس از ادغام:** اجرای CI روی آخرین `main` با SHA `ecce57cbb5b8c0b058a1cea2643a27a870245b32` آغاز شده است؛ تا زمان تکمیل runهای [40817730196](https://github.com/hamidreza1394/Accounting/actions/runs/40817730196)، [40817728004](https://github.com/hamidreza1394/Accounting/actions/runs/40817728004) و [40817727539](https://github.com/hamidreza1394/Accounting/actions/runs/40817727539)، نتیجهٔ پس از ادغام را موفق اعلام نمی‌کنیم.
 - **شکاف‌های مستقل باقی‌مانده:** مصرف‌کنندهٔ قابل‌اعتماد سمت مشتری (#235)، provisioning end-to-end (#228)، signer واقعی KMS/HSM و maker-checker صدور بسته (#236/#214)، و sink مستقل checkpoint ممیزی (#107) هنوز باز هستند. بدون تصمیم/دسترسی زیرساختی، این موارد با کلید نرم‌افزاری یا تأیید جعلی جایگزین نمی‌شوند.
+
+
+## Issue #235 / D-054 — single-license provisioning v4 (2026-10-30)
+
+- PR [#318](https://github.com/hamidreza1394/Accounting/pull/318) merged. Its regression fix preserves the original HTTP status for BadHttpRequestException, returns a generic problem response and avoids Error-level logging for malformed request bodies. .NET CI and Semgrep succeeded on the PR head.
+- PR [#319](https://github.com/hamidreza1394/Accounting/pull/319) is open and implements the approved single-license binding. Its current head is being validated; do not treat it as merged or verified.
+- The Vendor UI selects an eligible signed license. The server derives entitlements from the latest verified envelope and accepts only an optional subset. Payload schema v4 carries licenseId and sequence; canonical v1-v3 is preserved.
+- License status, validity, customer/installation binding, envelope digest/signature and sequence are checked at request creation, provisioning signing and each export. Provisioning approval uses Serializable isolation to prevent a concurrent license sequence update racing the signing decision.
+- Explicitly NotImplemented: atomic MaxCompanies enforcement, adding modules to an existing company, multi-license aggregation. Existing v3 requests are not backfilled or guessed.
+- No Vendor DB migration and no Customer DB schema/migration were added in this slice.
+- PR #323 is the stacked schema-v4 dual-host E2E update; it must pass CI and owner review of its SQL Server workflow wiring and aliased Server project reference before merge. PR #317 is the superseded v3 test and must not be merged.
+- Production signing remains unavailable by default. A deployment must configure the independent public trust set Licensing:TrustedSigningKeys and the approved external private-key signer; the branch does not create or embed a production key.
+
+
+### CI feedback on D-054 branch (2026-10-30)
+
+- Earlier Vendor CI identified a C# query range-variable collision in the Export endpoint; fixed by renaming the query variables.
+- Earlier .NET CI identified one incorrect v3 canonical test vector caused by System.Text.Json escaping; the vector now uses stable ASCII and the canonical + escape.
+- SQL Server tests now cover wrong customer/installation, suspended/expired license, revoked key, historical sequence, and stale sequence rejection at provisioning signing.
+- Dual-host E2E adds a second export attempt after a newer license sequence is issued; re-export must fail while the previously exported package remains usable by the offline Customer Host.
+- The above are fixes to prior failing runs; final CI on the latest branch heads is still pending. No PR is approved for Merge on the basis of those earlier runs.

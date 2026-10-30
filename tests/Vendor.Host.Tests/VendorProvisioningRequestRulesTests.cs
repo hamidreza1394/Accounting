@@ -140,9 +140,42 @@ public sealed class VendorProvisioningRequestRulesTests
             request.FiscalPeriodStartDate,
             request.FiscalPeriodEndDate,
             request.ParentCompanyReference,
-            request.InitialAdminEmail);
+            request.InitialAdminEmail,
+            request.LicenseId.ToString("D"),
+            7);
 
-        Assert.True(VendorProvisioningRequestRules.MatchesExisting(payload, request, "customer-001", "install-001"));
+        Assert.True(VendorProvisioningRequestRules.MatchesExisting(payload, request, "customer-001", "install-001",
+            VendorProvisioningLicenseBindingResult.Success(request.LicenseId.ToString("D"), 7,
+                request.Subsystems!, request.Subsystems!)));
+    }
+
+    [Fact]
+    public void LicenseIdIsRequiredAndSubsystemSelectionMayBeOmitted()
+    {
+        Assert.Equal("invalid_provisioning_request_id",
+            VendorProvisioningRequestRules.Validate(ValidRequest() with { LicenseId = Guid.Empty }));
+        Assert.Null(VendorProvisioningRequestRules.Validate(ValidRequest() with { Subsystems = null }));
+    }
+
+    [Fact]
+    public void RepeatedRequestId_RequiresSameLicenseAndSequence()
+    {
+        var request = ValidRequest();
+        var payload = new CustomerProvisioningPayload(
+            4, request.RequestId.ToString("D"), "customer-001", "install-001",
+            request.CompanyName!, request.CompanyType!, request.InitialAdminUserName!,
+            request.Subsystems!, DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddHours(1),
+            "abcdefghijklmnopqrstuvwxyz0123456789_-", request.FiscalPeriodTitle,
+            request.FiscalPeriodStartDate, request.FiscalPeriodEndDate,
+            request.ParentCompanyReference, request.InitialAdminEmail,
+            request.LicenseId.ToString("D"), 7);
+
+        Assert.False(VendorProvisioningRequestRules.MatchesExisting(payload, request with { LicenseId = Guid.NewGuid() },
+            "customer-001", "install-001", VendorProvisioningLicenseBindingResult.Success(
+                Guid.NewGuid().ToString("D"), 7, request.Subsystems!, request.Subsystems!)));
+        Assert.False(VendorProvisioningRequestRules.MatchesExisting(payload, request,
+            "customer-001", "install-001", VendorProvisioningLicenseBindingResult.Success(
+                request.LicenseId.ToString("D"), 8, request.Subsystems!, request.Subsystems!)));
     }
 
     [Fact]
@@ -165,16 +198,51 @@ public sealed class VendorProvisioningRequestRulesTests
             request.FiscalPeriodStartDate,
             request.FiscalPeriodEndDate,
             request.ParentCompanyReference,
-            request.InitialAdminEmail);
+            request.InitialAdminEmail,
+            request.LicenseId.ToString("D"),
+            7);
 
         Assert.False(VendorProvisioningRequestRules.MatchesExisting(
-            payload, request with { CompanyName = "Different Company" }, "customer-001", "install-001"));
+            payload, request with { CompanyName = "Different Company" }, "customer-001", "install-001",
+            VendorProvisioningLicenseBindingResult.Success(request.LicenseId.ToString("D"), 7,
+                request.Subsystems!, request.Subsystems!)));
+    }
+
+    [Fact]
+    public void CurrentBindingComparisonRejectsOldSequenceWrongLicenseAndChangedSubsystems()
+    {
+        var request = ValidRequest();
+        var payload = new CustomerProvisioningPayload(
+            4, request.RequestId.ToString("D"), "customer-001", "install-001",
+            request.CompanyName!, request.CompanyType!, request.InitialAdminUserName!,
+            request.Subsystems!, DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddHours(1),
+            "abcdefghijklmnopqrstuvwxyz0123456789_-", request.FiscalPeriodTitle,
+            request.FiscalPeriodStartDate, request.FiscalPeriodEndDate,
+            request.ParentCompanyReference, request.InitialAdminEmail,
+            request.LicenseId.ToString("D"), 7);
+
+        var current = VendorProvisioningLicenseBindingResult.Success(
+            request.LicenseId.ToString("D"), 7, request.Subsystems!, request.Subsystems!);
+        Assert.True(VendorProvisioningLicenseBindingRules.MatchesCurrentBinding(payload, current));
+
+        Assert.False(VendorProvisioningLicenseBindingRules.MatchesCurrentBinding(
+            payload, VendorProvisioningLicenseBindingResult.Success(
+                request.LicenseId.ToString("D"), 8, request.Subsystems!, request.Subsystems!)));
+        Assert.False(VendorProvisioningLicenseBindingRules.MatchesCurrentBinding(
+            payload, VendorProvisioningLicenseBindingResult.Success(
+                Guid.NewGuid().ToString("D"), 7, request.Subsystems!, request.Subsystems!)));
+        Assert.False(VendorProvisioningLicenseBindingRules.MatchesCurrentBinding(
+            payload, VendorProvisioningLicenseBindingResult.Success(
+                request.LicenseId.ToString("D"), 7, ["finance"], ["finance", "sales"])));
+        Assert.False(VendorProvisioningLicenseBindingRules.MatchesCurrentBinding(
+            payload with { SchemaVersion = 3, LicenseId = null, Sequence = null }, current));
     }
 
     private static CreateVendorProvisioningRequest ValidRequest() => new(
         Guid.Parse("9b0d2c4d-53bc-4bb2-a22c-90b30f2b58e8"),
         Guid.Parse("8b0d2c4d-53bc-4bb2-a22c-90b30f2b58e8"),
         Guid.Parse("7b0d2c4d-53bc-4bb2-a22c-90b30f2b58e8"),
+        Guid.Parse("6b0d2c4d-53bc-4bb2-a22c-90b30f2b58e8"),
         "Company Example",
         "independent",
         "initial-admin",

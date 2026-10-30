@@ -13,7 +13,7 @@ namespace Faranou.Licensing.Contracts;
 public static class CustomerProvisioningPackageValidator
 {
     public const int CurrentFormatVersion = 1;
-    public const int CurrentPayloadSchemaVersion = 3;
+    public const int CurrentPayloadSchemaVersion = 4;
     public const int MaxPayloadJsonChars = 64 * 1024;
     public const int MaxPackageLifetimeHours = 24;
     public const int ClockSkewMinutes = 2;
@@ -156,9 +156,10 @@ public static class CustomerProvisioningPackageValidator
     {
         var isV1 = payload.SchemaVersion == 1;
         var isV2 = payload.SchemaVersion == 2;
-        var isV3 = payload.SchemaVersion == CurrentPayloadSchemaVersion;
+        var isV3 = payload.SchemaVersion == 3;
+        var isV4 = payload.SchemaVersion == CurrentPayloadSchemaVersion;
 
-        if ((!isV1 && !isV2 && !isV3) ||
+        if ((!isV1 && !isV2 && !isV3 && !isV4) ||
             !Guid.TryParseExact(payload.RequestId, "D", out _) ||
             !IsBoundedText(payload.CustomerReference, 1, 128) ||
             !IsBoundedText(payload.InstallationId, 1, 128) ||
@@ -188,7 +189,9 @@ public static class CustomerProvisioningPackageValidator
                 payload.FiscalPeriodStartDate is null &&
                 payload.FiscalPeriodEndDate is null &&
                 payload.ParentCompanyReference is null &&
-                payload.InitialAdminEmail is null;
+                payload.InitialAdminEmail is null &&
+                payload.LicenseId is null &&
+                payload.Sequence is null;
         }
 
         if (!IsBoundedText(payload.FiscalPeriodTitle, 1, 100) ||
@@ -199,10 +202,16 @@ public static class CustomerProvisioningPackageValidator
             return false;
         }
 
-        if (isV2 && payload.InitialAdminEmail is not null)
+        if (isV2 && (payload.InitialAdminEmail is not null || payload.LicenseId is not null || payload.Sequence is not null))
             return false;
 
-        if (isV3 && !IsValidEmail(payload.InitialAdminEmail))
+        if ((isV3 || isV4) && !IsValidEmail(payload.InitialAdminEmail))
+            return false;
+
+        if (!isV4 && (payload.LicenseId is not null || payload.Sequence is not null))
+            return false;
+
+        if (isV4 && (!IsCanonicalLicenseId(payload.LicenseId) || payload.Sequence is not >= 1))
             return false;
 
         var hasParentReference = IsVendorIssuedRequestReference(payload.ParentCompanyReference);
@@ -213,6 +222,11 @@ public static class CustomerProvisioningPackageValidator
             _ => false
         };
     }
+
+    private static bool IsCanonicalLicenseId(string? value) =>
+        Guid.TryParseExact(value, "D", out var licenseId) &&
+        licenseId != Guid.Empty &&
+        string.Equals(value, licenseId.ToString("D"), StringComparison.OrdinalIgnoreCase);
 
     private static bool IsVendorIssuedRequestReference(string? value) =>
         Guid.TryParseExact(value, "D", out var requestId) &&

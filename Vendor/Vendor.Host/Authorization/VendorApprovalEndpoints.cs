@@ -1,3 +1,4 @@
+using System.Data;
 using System.Diagnostics;
 using Faranou.Vendor.Host.Signing;
 using Faranou.Vendor.Persistence;
@@ -148,7 +149,16 @@ public static class VendorApprovalEndpoints
             var actor = await users.GetUserAsync(context.User);
             if (actor is null) return Results.Forbid();
 
-            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            var resourceType = await db.ApprovalRequests.AsNoTracking()
+                .Where(item => item.Id == id)
+                .Select(item => item.ResourceType)
+                .SingleOrDefaultAsync(ct);
+            if (resourceType is null) return Results.NotFound();
+
+            // Provisioning issuance must hold a serializable view of the license row and its latest
+            // signed sequence until the package signature and approval decision commit together.
+            await using var tx = await db.Database.BeginTransactionAsync(
+                resourceType == "provisioning" ? IsolationLevel.Serializable : IsolationLevel.ReadCommitted, ct);
             var approval = await db.ApprovalRequests.SingleOrDefaultAsync(item => item.Id == id, ct);
             if (approval is null) return Results.NotFound();
             if (approval.ResourceType is not ("customer" or "installation" or "license" or "provisioning"))

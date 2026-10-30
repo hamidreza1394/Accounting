@@ -16,6 +16,12 @@ describe('Vendor customer provisioning form', () => {
       if (url === '/api/vendor/installations/?customerId=customer-1&page=1&pageSize=100') {
         return response({ items: [{ id: 'install-1', installationCode: 'INSTALL-01', name: 'نصب اصلی', status: 'Active' }] });
       }
+      if (url === '/api/vendor/provisioning-requests/eligible-licenses?customerId=customer-1&installationId=install-1') {
+        return response({ items: [{
+          licenseId: 'license-1', licenseNumber: 'LIC-001', productCode: 'FARANOU',
+          sequence: 7, subsystems: ['finance', 'sales'],
+        }] });
+      }
       if (url === '/api/vendor/provisioning-requests?customerId=customer-1&page=1&pageSize=10') {
         return response({ items: created ? [{
           id: 'provision-1', requestId: 'request-1', status: 'AwaitingSigner',
@@ -40,8 +46,9 @@ describe('Vendor customer provisioning form', () => {
     expect(form).not.toHaveAttribute('novalidate');
 
     await waitFor(() => expect(screen.getByLabelText('نصب مقصد')).toHaveValue('install-1'));
+    await waitFor(() => expect(screen.getByLabelText('لایسنس صادرشده')).toHaveValue('license-1'));
     expect(screen.getByLabelText('نوع شرکت')).toHaveValue('independent');
-    expect(screen.getByLabelText('مالی')).toBeChecked();
+    await waitFor(() => expect(screen.getByLabelText('مالی')).toBeChecked());
 
     fireEvent.change(screen.getByLabelText('نام شرکت حسابداری'), { target: { value: 'شرکت حسابداری نمونه' } });
     fireEvent.change(screen.getByLabelText('نام کاربری مدیر اولیه'), { target: { value: 'initial-admin' } });
@@ -65,11 +72,12 @@ describe('Vendor customer provisioning form', () => {
       requestId: 'request-1',
       customerId: 'customer-1',
       installationId: 'install-1',
+      licenseId: 'license-1',
       companyName: 'شرکت حسابداری نمونه',
       companyType: 'independent',
       initialAdminUserName: 'initial-admin',
       initialAdminEmail: 'admin@example.com',
-      subsystems: ['finance', 'sales'],
+      subsystems: ['finance'],
       fiscalPeriodTitle: 'سال مالی ۱۴۰۵',
       fiscalPeriodStartDate: '2026-03-21',
       fiscalPeriodEndDate: '2027-03-20',
@@ -85,6 +93,12 @@ describe('Vendor customer provisioning form', () => {
       const url = String(input);
       if (url === '/api/vendor/installations/?customerId=customer-1&page=1&pageSize=100') {
         return response({ items: [{ id: 'install-1', installationCode: 'INSTALL-01', name: 'نصب اصلی', status: 'Active' }] });
+      }
+      if (url === '/api/vendor/provisioning-requests/eligible-licenses?customerId=customer-1&installationId=install-1') {
+        return response({ items: [{
+          licenseId: 'license-1', licenseNumber: 'LIC-001', productCode: 'FARANOU',
+          sequence: 7, subsystems: ['finance', 'sales'],
+        }] });
       }
       if (url === '/api/vendor/provisioning-requests?customerId=customer-1&page=1&pageSize=10') return response({ items: [] });
       if (url === '/api/vendor/provisioning-requests/eligible-parents?customerId=customer-1&installationId=install-1') {
@@ -107,6 +121,8 @@ describe('Vendor customer provisioning form', () => {
     render(<ProvisioningForm customerId="customer-1" customerName="مشتری نمونه"
       onCancel={vi.fn()} onSaved={vi.fn()} />);
     await waitFor(() => expect(screen.getByLabelText('نصب مقصد')).toHaveValue('install-1'));
+    await waitFor(() => expect(screen.getByLabelText('لایسنس صادرشده')).toHaveValue('license-1'));
+    await waitFor(() => expect(screen.getByLabelText('مالی')).toBeChecked());
     fireEvent.change(screen.getByLabelText('نوع شرکت'), { target: { value: 'subsidiary' } });
     expect(screen.getByLabelText('شرکت مادر تأییدشده در همین نصب')).toBeRequired();
     await screen.findByRole('option', { name: /شرکت مادر نمونه/ });
@@ -121,6 +137,8 @@ describe('Vendor customer provisioning form', () => {
       String(url) === '/api/vendor/provisioning-requests/' && init?.method === 'POST');
     const body = JSON.parse(String((post?.[1] as RequestInit).body)) as Record<string, unknown>;
     expect(body).toMatchObject({
+      licenseId: 'license-1',
+      subsystems: null,
       companyType: 'subsidiary',
       parentCompanyReference: 'a0b1c2d3-e4f5-4678-9012-abcdefabcdef',
       fiscalPeriodTitle: 'سال مالی ۱۴۰۵',
@@ -135,6 +153,12 @@ describe('Vendor customer provisioning form', () => {
       const url = String(input);
       if (url === '/api/vendor/installations/?customerId=customer-1&page=1&pageSize=100') {
         return response({ items: [{ id: 'install-1', installationCode: 'INSTALL-01', name: 'نصب اصلی', status: 'Active' }] });
+      }
+      if (url === '/api/vendor/provisioning-requests/eligible-licenses?customerId=customer-1&installationId=install-1') {
+        return response({ items: [{
+          licenseId: 'license-1', licenseNumber: 'LIC-001', productCode: 'FARANOU',
+          sequence: 7, subsystems: ['finance', 'sales'],
+        }] });
       }
       if (url === '/api/vendor/provisioning-requests?customerId=customer-1&page=1&pageSize=10') {
         return response({ items: [{
@@ -178,6 +202,12 @@ describe('Vendor customer provisioning form', () => {
       const url = String(input);
       if (url === '/api/vendor/installations/?customerId=customer-1&page=1&pageSize=100') {
         return response({ items: [{ id: 'install-1', installationCode: 'INSTALL-01', name: 'نصب اصلی', status: 'Active' }] });
+      }
+      if (url === '/api/vendor/provisioning-requests/eligible-licenses?customerId=customer-1&installationId=install-1') {
+        return response({ items: [{
+          licenseId: 'license-1', licenseNumber: 'LIC-001', productCode: 'FARANOU',
+          sequence: 7, subsystems: ['finance', 'sales'],
+        }] });
       }
       if (url === '/api/vendor/provisioning-requests?customerId=customer-1&page=1&pageSize=10') {
         return response({ items: [{
@@ -234,6 +264,12 @@ describe('Vendor customer provisioning form', () => {
         const url = String(input);
         if (url === '/api/vendor/installations/?customerId=customer-1&page=1&pageSize=100') {
           return response({ items: [{ id: 'install-1', installationCode: 'INSTALL-01', name: 'نصب اصلی', status: 'Active' }] });
+        }
+        if (url === '/api/vendor/provisioning-requests/eligible-licenses?customerId=customer-1&installationId=install-1') {
+          return response({ items: [{
+            licenseId: 'license-1', licenseNumber: 'LIC-001', productCode: 'FARANOU',
+            sequence: 7, subsystems: ['finance', 'sales'],
+          }] });
         }
         if (url === '/api/vendor/provisioning-requests?customerId=customer-1&page=1&pageSize=10') {
           return response({ items: [{
@@ -345,6 +381,12 @@ describe('Vendor customer provisioning form', () => {
           { id: 'install-active', installationCode: 'INSTALL-ON', name: 'نصب فعال', status: 'Active' },
         ] });
       }
+      if (url === '/api/vendor/provisioning-requests/eligible-licenses?customerId=customer-1&installationId=install-active') {
+        return response({ items: [{
+          licenseId: 'license-active', licenseNumber: 'LIC-ACTIVE', productCode: 'FARANOU',
+          sequence: 2, subsystems: ['finance'],
+        }] });
+      }
       if (url === '/api/vendor/provisioning-requests?customerId=customer-1&page=1&pageSize=10') {
         return response({ items: [] });
       }
@@ -367,6 +409,12 @@ describe('Vendor customer provisioning form', () => {
       const url = String(input);
       if (url === '/api/vendor/installations/?customerId=customer-1&page=1&pageSize=100') {
         return response({ items: [{ id: 'install-1', installationCode: 'INSTALL-01', name: 'نصب اصلی', status: 'Active' }] });
+      }
+      if (url === '/api/vendor/provisioning-requests/eligible-licenses?customerId=customer-1&installationId=install-1') {
+        return response({ items: [{
+          licenseId: 'license-1', licenseNumber: 'LIC-001', productCode: 'FARANOU',
+          sequence: 7, subsystems: ['finance', 'sales'],
+        }] });
       }
       if (url === '/api/vendor/provisioning-requests?customerId=customer-1&page=1&pageSize=10') {
         return response({ items: [{
