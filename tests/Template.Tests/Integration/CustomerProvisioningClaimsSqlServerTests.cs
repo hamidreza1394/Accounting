@@ -3,6 +3,12 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using Faranou.Licensing.Contracts;
+using Infrastructure.Provisioning;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
+using Infrastructure.Security;
 using Domain;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -215,6 +221,171 @@ public sealed class CustomerProvisioningClaimsSqlServerTests
                     rejected.ErrorCode);
             }
         });
+    }
+
+    [Fact]
+    public async Task ApplyIsAtomicIdempotentAndEnrollmentTokenCanBeReissuedAndConsumedOnce()
+    {
+        Assert.SkipUnless(SqlServerAvailable(), "SQL Server is not configured (FARANOU_TEST_SQLSERVER).");
+
+        await WithDatabaseAsync(async name =>
+        {
+            await using var database = CreateContext(name);
+            await database.Database.MigrateAsync(TestContext.Current.CancellationToken);
+
+            var boundaryId = Guid.NewGuid();
+            var settings = new CustomerProvisioningSettings
+            {
+                CustomerReference = "customer-ref",
+                InstallationId = "installation-ref",
+                CustomerBoundaryId = boundaryId
+            };
+            database.PermissionDefinitions.AddRange(
+                new PermissionDefinition { Code = "finance.invoice.create", Name = "Create invoice" },
+                new PermissionDefinition { Code = "sales.customer.read", Name = "Read customer" });
+            await database.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            using var vendorKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+            using var acknowledgementKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Provisioning:TrustedVendorKeys:vendor-key-1"] =
+                        Convert.ToBase64String(vendorKey.ExportSubjectPublicKeyInfo())
+                })
+                .Build();
+            var verifier = new CustomerProvisioningPackageVerifier(
+                new ConfigurationCustomerProvisioningTrustStore(configuration),
+                Options.Create(settings),
+                TimeProvider.System);
+            var signer = new TestAcknowledgementSigner(acknowledgementKey);
+            var passwordHasher = new PasswordHashService();
+            var service = new CustomerProvisioningApplyService(
+                database, verifier, signer, Options.Create(settings), passwordHasher, TimeProvider.System);
+
+            var now = DateTimeOffset.UtcNow;
+            var payload = new CustomerProvisioningPayload(
+                3,
+                Guid.NewGuid().ToString("D"),
+                settings.CustomerReference,
+                settings.InstallationId,
+                "شرکت راه‌اندازی‌شده",
+                "parent",
+                "initial-admin",
+                new[] { "finance" },
+                now.AddMinutes(-1),
+                now.AddHours(1),
+                "0123456789abcdefghijklmnopqrstuv",
+                "سال مالی ۱۴۰۵",
+                new DateOnly(2026, 3, 21),
+                new DateOnly(2027, 3, 20),
+                null,
+                "admin@example.test");
+            var payloadJson = CustomerProvisioningCanonicalJson.Serialize(payload);
+            var signature = vendorKey.SignData(
+                Encoding.UTF8.GetBytes(payloadJson),
+                HashAlgorithmName.SHA256,
+                DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
+            var package = new CustomerProvisioningPackage(
+                CustomerProvisioningPackageValidator.CurrentFormatVersion,
+                "vendor-key-1",
+                LicenseAlgorithms.EcdsaP256Sha256,
+                payloadJson,
+                Convert.ToBase64String(signature));
+
+            var applied = await service.ApplyAsync(package, TestContext.Current.CancellationToken);
+            Assert.True(applied.Success);
+            Assert.False(applied.Replayed);
+            Assert.NotNull(applied.EnrollmentToken);
+            Assert.NotNull(applied.Acknowledgement);
+            Assert.Equal(43, applied.EnrollmentToken!.Length);
+
+            var company = await database.Companies.SingleAsync(
+                item => item.Name == payload.CompanyName, TestContext.Current.CancellationToken);
+            Assert.Equal(boundaryId, company.CustomerBoundaryId);
+            Assert.True(company.IsActive);
+            Assert.Equal(1, await database.FiscalPeriods.CountAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(1, await database.Users.CountAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(1, await database.UserCompanyMemberships.CountAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(1, await database.CompanyRoles.CountAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(1, await database.CompanyRolePermissions.CountAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(0, await database.CorporateGroupMembers.CountAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(0, await database.OwnershipRelationships.CountAsync(TestContext.Current.CancellationToken));
+
+            var claim = await database.ProvisioningRequestClaims.SingleAsync(
+                item => item.RequestId == Guid.Parse(payload.RequestId), TestContext.Current.CancellationToken);
+            Assert.Equal(applied.EnrollmentToken is null ? string.Empty : Hash(applied.EnrollmentToken), claim.EnrollmentTokenHash);
+            Assert.True(claim.MustChangePassword);
+            Assert.Null(claim.EnrollmentConsumedAtUtc);
+            Assert.True(claim.EnrollmentExpiresAtUtc <= DateTime.UtcNow.AddMinutes(31));
+
+            var auditJson = await database.SecurityAuditEvents.Select(item => item.DetailsJson)
+                .ToListAsync(TestContext.Current.CancellationToken);
+            Assert.DoesNotContain(auditJson, value => value?.Contains(applied.EnrollmentToken, StringComparison.Ordinal) == true);
+
+            var ackHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(applied.Acknowledgement!.AcknowledgementJson)))
+                .ToLowerInvariant();
+            Assert.True(CustomerProvisioningAcknowledgementValidator.TryValidateAndVerify(
+                applied.Acknowledgement,
+                acknowledgementKey.ExportSubjectPublicKeyInfo(),
+                payload.RequestId,
+                payload.Nonce,
+                ackHash,
+                payload.CustomerReference,
+                payload.InstallationId,
+                DateTimeOffset.UtcNow,
+                out var ack,
+                out var ackError), ackError);
+            Assert.Equal("Applied", ack!.Result);
+
+            var reissued = await service.ReissueEnrollmentTokenAsync(
+                Guid.Parse(payload.RequestId), "delivery_lost", null, TestContext.Current.CancellationToken);
+            Assert.True(reissued.Success);
+            Assert.NotNull(reissued.EnrollmentToken);
+            Assert.NotEqual(applied.EnrollmentToken, reissued.EnrollmentToken);
+
+            var oldToken = await service.CompleteEnrollmentAsync(
+                payload.InitialAdminUserName, applied.EnrollmentToken, "Strong-Passphrase-2026",
+                null, TestContext.Current.CancellationToken);
+            Assert.False(oldToken.Success);
+
+            var enrolled = await service.CompleteEnrollmentAsync(
+                payload.InitialAdminUserName, reissued.EnrollmentToken, "Strong-Passphrase-2026",
+                null, TestContext.Current.CancellationToken);
+            Assert.True(enrolled.Success);
+
+            var admin = await database.Users.SingleAsync(
+                item => item.Username == payload.InitialAdminUserName, TestContext.Current.CancellationToken);
+            Assert.Equal(PasswordVerificationOutcome.Success,
+                passwordHasher.Verify(admin.Password, "Strong-Passphrase-2026"));
+            var consumedClaim = await database.ProvisioningRequestClaims.SingleAsync(
+                item => item.RequestId == Guid.Parse(payload.RequestId), TestContext.Current.CancellationToken);
+            Assert.False(consumedClaim.MustChangePassword);
+            Assert.NotNull(consumedClaim.EnrollmentConsumedAtUtc);
+
+            var replayed = await service.ApplyAsync(package, TestContext.Current.CancellationToken);
+            Assert.True(replayed.Success);
+            Assert.True(replayed.Replayed);
+            Assert.Null(replayed.EnrollmentToken);
+            Assert.Equal(1, await database.Companies.CountAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(1, await database.Users.CountAsync(TestContext.Current.CancellationToken));
+        });
+    }
+
+    private sealed class TestAcknowledgementSigner(ECDsa key)
+        : ICustomerProvisioningAcknowledgementSigningProvider
+    {
+        public Task<CustomerProvisioningAcknowledgementSigningResult> SignAsync(
+            ReadOnlyMemory<byte> canonicalAcknowledgementUtf8,
+            CancellationToken cancellationToken)
+        {
+            var signature = key.SignData(
+                canonicalAcknowledgementUtf8.Span,
+                HashAlgorithmName.SHA256,
+                DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
+            return Task.FromResult(new CustomerProvisioningAcknowledgementSigningResult(
+                true, "customer-ack-test-key", Convert.ToBase64String(signature), null));
+        }
     }
 
     private static ProvisioningRequestClaim NewClaim(
