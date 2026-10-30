@@ -155,6 +155,7 @@ public static class VendorProvisioningEndpoints
             VendorDbContext db,
             UserManager<VendorAdminUser> users,
             IVendorAuditWriter audit,
+            VendorProvisioningLicenseResolver licenseResolver,
             CancellationToken ct) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context))
@@ -190,10 +191,13 @@ public static class VendorProvisioningEndpoints
                 .SingleOrDefaultAsync(item => item.RequestId == requestId, ct);
             if (existing is not null)
             {
-                return IsSameRequest(existing, request, customer.CustomerNumber, installation.InstallationCode)
+                return await IsSameRequestAsync(
+                    existing, request, customer, installation, licenseResolver, ct)
                     ? Results.Ok(ToResponse(existing))
                     : Results.Conflict(new { error = "provisioning_request_id_conflict" });
             }
+
+            await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
 
             if (string.Equals(request.CompanyType?.Trim(), "subsidiary", StringComparison.Ordinal) &&
                 !await VendorProvisioningParentReferenceRules.IsEligibleParentAsync(
@@ -209,6 +213,11 @@ public static class VendorProvisioningEndpoints
                 return Results.Conflict(new { error = "provisioning_parent_reference_invalid" });
             }
 
+            var licenseBinding = await licenseResolver.ResolveLatestAsync(
+                request.LicenseId, customer, installation, request.Subsystems, ct);
+            if (!licenseBinding.Succeeded)
+                return Results.Json(new { error = licenseBinding.ErrorCode }, statusCode: licenseBinding.StatusCode);
+
             var actor = await users.GetUserAsync(context.User);
             if (actor is null) return Results.Forbid();
 
@@ -223,7 +232,7 @@ public static class VendorProvisioningEndpoints
                 request.CompanyName!.Trim(),
                 request.CompanyType!.Trim(),
                 request.InitialAdminUserName!.Trim(),
-                request.Subsystems!.Order(StringComparer.Ordinal).ToArray(),
+                licenseBinding.Subsystems!,
                 now,
                 now.AddHours(CustomerProvisioningPackageValidator.MaxPackageLifetimeHours),
                 nonce,
@@ -231,7 +240,9 @@ public static class VendorProvisioningEndpoints
                 request.FiscalPeriodStartDate,
                 request.FiscalPeriodEndDate,
                 request.ParentCompanyReference?.Trim(),
-                request.InitialAdminEmail!.Trim());
+                request.InitialAdminEmail!.Trim(),
+                licenseBinding.LicenseId,
+                licenseBinding.Sequence);
             var payloadJson = CustomerProvisioningCanonicalJson.Serialize(payload);
             var payloadHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payloadJson))).ToLowerInvariant();
 
@@ -249,7 +260,6 @@ public static class VendorProvisioningEndpoints
                 UpdatedAtUtc = now
             };
 
-            await using var tx = await db.Database.BeginTransactionAsync(ct);
             db.ProvisioningRequests.Add(item);
             try
             {
@@ -262,7 +272,7 @@ public static class VendorProvisioningEndpoints
                 var concurrent = await db.ProvisioningRequests.AsNoTracking()
                     .SingleOrDefaultAsync(value => value.RequestId == requestId, ct);
                 if (concurrent is not null &&
-                    IsSameRequest(concurrent, request, customer.CustomerNumber, installation.InstallationCode))
+                    await IsSameRequestAsync(concurrent, request, customer, installation, licenseResolver, ct))
                     return Results.Ok(ToResponse(concurrent));
                 return Results.Conflict(new { error = "provisioning_request_id_conflict" });
             }
@@ -349,6 +359,7 @@ public static class VendorProvisioningEndpoints
             Guid id, HttpContext context, IAntiforgery antiforgery,
             IAuthorizationService authorization, VendorDbContext db,
             UserManager<VendorAdminUser> users, IVendorAuditWriter audit,
+            VendorProvisioningLicenseResolver licenseResolver,
             TimeProvider timeProvider, CancellationToken ct) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context))
@@ -394,6 +405,37 @@ public static class VendorProvisioningEndpoints
 
             if (!VendorProvisioningRequestRules.IsTargetActive(target.CustomerStatus, target.InstallationStatus))
                 return Results.Conflict(new { error = "provisioning_target_inactive" });
+
+            var customer = await db.Customers.AsNoTracking()
+                .SingleOrDefaultAsync(value => value.Id == item.CustomerId, ct);
+            var installation = await db.Installations.AsNoTracking()
+                .SingleOrDefaultAsync(value => value.Id == item.InstallationId, ct);
+            if (customer is null || installation is null || installation.CustomerId != customer.Id)
+                return Results.NotFound();
+
+            CustomerProvisioningPayload? exportPayload;
+            try
+            {
+                exportPayload = JsonSerializer.Deserialize<CustomerProvisioningPayload>(item.PayloadJson, PayloadJsonOptions);
+            }
+            catch (JsonException)
+            {
+                return Results.Conflict(new { error = "provisioning_license_binding_required" });
+            }
+
+            if (exportPayload is null || exportPayload.SchemaVersion != 4 ||
+                !Guid.TryParseExact(exportPayload.LicenseId, "D", out var exportLicenseId) ||
+                exportPayload.Sequence is not int exportSequence)
+                return Results.Conflict(new { error = "provisioning_license_binding_required" });
+
+            var exportBinding = await licenseResolver.ResolveLatestAsync(
+                exportLicenseId, customer, installation, exportPayload.Subsystems, ct);
+            if (!exportBinding.Succeeded)
+                return Results.Json(new { error = exportBinding.ErrorCode }, statusCode: exportBinding.StatusCode);
+            if (exportBinding.Sequence != exportSequence ||
+                !exportPayload.Subsystems.Order(StringComparer.Ordinal)
+                    .SequenceEqual(exportBinding.Subsystems!.Order(StringComparer.Ordinal), StringComparer.Ordinal))
+                return Results.Conflict(new { error = "provisioning_license_sequence_stale" });
 
             var now = timeProvider.GetUtcNow().ToUniversalTime();
             if (item.DeliveredAtUtc is null)
@@ -555,17 +597,28 @@ public static class VendorProvisioningEndpoints
         return endpoints;
     }
 
-    private static bool IsSameRequest(
+    private static async Task<bool> IsSameRequestAsync(
         VendorProvisioningRequest existing,
         CreateVendorProvisioningRequest request,
-        string customerReference,
-        string installationCode)
+        VendorCustomer customer,
+        VendorInstallation installation,
+        VendorProvisioningLicenseResolver licenseResolver,
+        CancellationToken cancellationToken)
     {
         try
         {
             var payload = JsonSerializer.Deserialize<CustomerProvisioningPayload>(existing.PayloadJson, PayloadJsonOptions);
-            return payload is not null &&
-                   VendorProvisioningRequestRules.MatchesExisting(payload, request, customerReference, installationCode);
+            if (payload is null || payload.SchemaVersion != 4 ||
+                payload.Sequence is not int sequence ||
+                !Guid.TryParseExact(payload.LicenseId, "D", out var payloadLicenseId) ||
+                payloadLicenseId != request.LicenseId)
+                return false;
+
+            var binding = await licenseResolver.ResolveSequenceAsync(
+                request.LicenseId, sequence, customer, installation, request.Subsystems, cancellationToken);
+            return binding.Succeeded &&
+                   VendorProvisioningRequestRules.MatchesExisting(
+                       payload, request, customer.CustomerNumber, installation.InstallationCode, binding);
         }
         catch (JsonException)
         {
