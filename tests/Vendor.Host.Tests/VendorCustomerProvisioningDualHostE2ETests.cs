@@ -458,10 +458,16 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 Assert.Contains(false, replayFlags);
                 Assert.Contains(true, replayFlags);
 
-                var enrollmentToken = ReadOptionalString(applyJsonA.RootElement, "enrollmentToken")
-                    ?? ReadOptionalString(applyJsonB.RootElement, "enrollmentToken");
-                Assert.False(string.IsNullOrWhiteSpace(enrollmentToken));
+                var enrollmentTokens = new[]
+                {
+                    ReadOptionalString(applyJsonA.RootElement, "enrollmentToken"),
+                    ReadOptionalString(applyJsonB.RootElement, "enrollmentToken")
+                }.Where(value => !string.IsNullOrWhiteSpace(value)).ToArray();
+                var enrollmentToken = Assert.Single(enrollmentTokens);
                 var acknowledgementJson = applyJsonA.RootElement.GetProperty("acknowledgement").GetRawText();
+                Assert.Equal(
+                    acknowledgementJson,
+                    applyJsonB.RootElement.GetProperty("acknowledgement").GetRawText());
 
                 await using (var scope = customerFactory.Services.CreateAsyncScope())
                 {
