@@ -175,7 +175,7 @@ Production completion still requires a trusted key source outside Git, signing a
 
 Provisioning requests can now be submitted to the existing two-person approval workflow. The reviewer must be a different Vendor administrator from the requester. Approval calls the dedicated `IProvisioningSigningProvider` with the exact canonical payload bytes and stores the signing metadata with the approval decision in one Vendor database transaction. Provisioning and license issuance have separate provider registrations and must use distinct signing keys. The package export endpoint is an antiforgery-protected POST available only for `PendingDelivery` requests. It checks customer and installation read authorization, records an audit event in the same transaction as the first export timestamp, and uses `Cache-Control: no-store`. The UI exposes the two-person approval action and downloads the exported signed JSON package for offline transfer.
 
-The default provider remains `UnavailableLicenseSigningProvider`, so issuance fails closed with a generic 503 until an approved external KMS/HSM or signing-service adapter is configured. This code does not make the signing key available, generate a software key, or claim that a customer has imported or accepted the package. A trusted customer-side consumer and signed acknowledgement are tracked separately in #235.
+The default provider remains `UnavailableLicenseSigningProvider`, so issuance fails closed with a generic 503 unless the opt-in PKCS#11 adapter is explicitly configured against a real hardware token. The adapter does not generate keys or make private key material exportable. With the current zero HSM budget, leave `Signing:Pkcs11:Enabled` unset/false; Production signing stays unavailable. A trusted customer-side consumer and signed acknowledgement are tracked separately in #235.
 
 
 ## Production audit checkpoint readiness (Issue #107)
@@ -188,3 +188,14 @@ Until a real provider is selected and configured with separate credentials and a
 ### Dedicated provisioning signer boundary (Issue #233)
 
 Provisioning issuance now depends on `IProvisioningSigningProvider`, registered separately from `ILicenseSigningProvider`. The default `UnavailableProvisioningSigningProvider` fails closed. This interface separation prevents accidental reuse of the license-signing provider/key, but does not itself implement a production signer. A dedicated external KMS/HSM or protected signing service, trusted key ID/rotation configuration, signature verification, recovery runbook, and operational tests remain required before provisioning can be enabled in Production.
+
+
+## Vendor PKCS#11 signing adapter — Issue #236 (D-055 Accepted)
+
+The Vendor Host now contains an opt-in PKCS#11 ECDSA P-256 adapter behind the existing `ILicenseSigningProvider` and `IProvisioningSigningProvider` interfaces. License and provisioning/package signing use separate versioned KeyIds and distinct PKCS#11 private-key objects. The adapter signs the SHA-256 digest of the exact canonical payload using `CKM_ECDSA`, requires a 64-byte IEEE P1363 result, and verifies that the private-key object is sensitive, non-extractable, always-sensitive, never-extractable, sign-enabled, and configured for the P-256 curve. It never generates or exports private keys.
+
+Enablement is opt-in through `FARANO_VENDOR_Signing__Pkcs11__Enabled=true`. Configure the module path, token label, license KeyId, provisioning KeyId, and PIN through deployment environment/secret injection; never place the PIN in tracked settings. KeyIds must be unique and versioned. The HSM Key Ceremony must create the key objects and register their public keys in the corresponding Vendor/customer trust stores before issuance is enabled.
+
+Production additionally requires the PKCS#11 slot to report the hardware-slot flag. SoftHSM and other software slots are rejected in Production and are used only by the Vendor CI integration test. The default remains disabled/unavailable; no HSM is currently provisioned, so do not enable the adapter in Production. `/health/signing` reports 503 when the provider is disabled or unavailable. Every signing attempt appends a metadata-only Vendor audit action containing purpose, versioned public KeyId, and result; payload bytes and private material are never audited. Audit failure discards the signature and fails closed.
+
+The module serializes token login/session operations because PKCS#11 login state is token-scoped. If the target HSM supports safe parallel sessions, concurrency tuning must be validated against that specific hardware before changing this guard.
