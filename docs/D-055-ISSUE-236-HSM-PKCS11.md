@@ -20,3 +20,12 @@
 - **وضعیت فعلی:** interfaceهای امضا و providerهای unavailable/fail-closed موجود حفظ می‌شوند. با توجه به بودجهٔ صفر، adapter و تست‌های PKCS#11 می‌توانند ساخته شوند، اما Production wiring/enablement و ایجاد/استفاده از کلید واقعی تا تأمین HSM واقعی ممنوع است. Provider پیش‌فرض unavailable/fail-closed باقی می‌ماند؛ هیچ کلید، secret، migration یا تنظیم استقرار Production اضافه نمی‌شود.
 - **Runbook عملیاتی:** docs/runbooks/ISSUE-236-HSM-TPM-KEY-OPERATIONS.md (Key Ceremony، دو نفره، rotation/revocation، Backup/Recovery، TPM مشتری، outage/alerting). این سند تا تأمین HSM واقعی و provision شدن secure backend نصب مشتری قابل اجرا نیست.
 - **مراجع:** D-046 تا D-054؛ Issues #233، #235، #236؛ docs/handoffs/ISSUE-236-provisioning-maker-checker.md و docs/LICENSING_THREAT_MODEL.md.
+
+
+## پیوست اجرایی — Customer ACK در Windows (2026-10-30)
+
+- اولویت فعلی پیاده‌سازی مشتری Windows است: Windows 10/11 و Windows Serverهایی که Windows CNG و KSP انتخابی را پشتیبانی می‌کنند. حداقل نسخه‌های پشتیبانی‌شده هنوز certify نشده‌اند؛ پیش از اعلام پشتیبانی Production باید ماتریس نسخه/TPM روی سخت‌افزار واقعی ثبت شود.
+- KSP پیش‌فرض `Microsoft Platform Crypto Provider` برای TPM است. `Microsoft Software Key Storage Provider` فقط یک گزینهٔ صریح برای OS-protected key store است، با assurance سخت‌افزاری کمتر؛ انتخاب آن هرگز fallback خودکار از TPM نیست و باید با سیاست استقرار تأیید شود.
+- PR جاری Provider و Key Provisioner ویندوزی را اضافه می‌کند. امضا فقط کلید از قبل provision شده را باز می‌کند؛ کلید در مسیر Sign ساخته یا جایگزین نمی‌شود. Provisioning یک‌بارهٔ کلید فقط public SPKI را برمی‌گرداند.
+- تست CI روی Windows از Software KSP صرفاً به‌عنوان fixture استفاده می‌کند و وجود/سلامت TPM واقعی را اثبات نمی‌کند. آزمون TPM سخت‌افزاری روی سرور نصب مشتری پیش‌نیاز فعال‌سازی Production است.
+- Linux عمداً خارج از این مرحله است؛ بعداً یک backend مستقل برای TPM/OS secure storage لینوکس پشت همان interface نوشته می‌شود. هیچ کد Linux یا وابستگی cloud در این PR اضافه نشده است.
