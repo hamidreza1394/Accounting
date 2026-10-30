@@ -15,7 +15,7 @@
 
 - مالک معماری deployment-neutral را پذیرفته است: Vendor روی سرور اختصاصی یا cloud قابل میزبانی است؛ دسترسی/مجوز Azure و AWS وجود ندارد؛ بودجهٔ فعلی HSM صفر است.
 - D-055 در main پذیرفته شده است. PR جاری adapter opt-in PKCS#11 را پشت interfaceهای موجود برای license و provisioning/package پیاده می‌کند؛ کلیدها KeyId نسخه‌دار مجزا دارند، private-key object باید non-extractable باشد، و امضا ECDSA P-256/IEEE P1363 است.
-- SoftHSM فقط برای تست/CI است و در Production به‌دلیل HardwareSlot=false رد می‌شود. اجرای CI نهایی این PR هنوز pending است؛ پیاده‌سازی در این شاخه به معنی Verified/merged نیست.
+- SoftHSM فقط در محیط اختصاصی Testing مجاز است؛ در Development/Staging/Production، slot سخت‌افزاری و manufacturer/model allowlist‌شده لازم است. اجرای CI نهایی این PR هنوز pending است؛ پیاده‌سازی در این شاخه به معنی Verified/merged نیست.
 - با بودجهٔ صفر و نبود HSM واقعی، Signing:Pkcs11:Enabled در Production نباید فعال شود؛ providerهای پیش‌فرض unavailable/fail-closed باقی می‌مانند و صدور Production باید 503 بدهد.
 - Customer ACK key per-installation در TPM/OS secure storage هنوز مسیر مستقل خود را می‌خواهد؛ این PR آن را پیاده‌سازی نمی‌کند.
 
