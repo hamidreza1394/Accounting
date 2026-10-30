@@ -1,7 +1,7 @@
 # تصمیمات معماری (ADR Index)
 
 > **بازبینی:** 2026-10-21 روی `main` @ `1d39dbf9e0843045e00441bf2778267e9764a3f6`.
-> متن تصمیمات D-001..D-019 بازنویسی نشده است؛ فقط «فهرست وضعیت‌ها» و یادداشت‌های تکمیلی (با برچسب «توضیح 2026-10-21») افزوده شده‌اند. تصمیمات جدید از **D-020** شروع می‌شوند و شماره ADR بعدی **D-054** است (به‌روزرسانی 2026-10-24 پس از ثبت D-041..D-044 در فاز صفر لایسنس؛ پیش‌تر D-041 پس از ثبت D-038..D-040 در 2026-10-23؛ پیش‌تر D-037 پس از ثبت D-036؛ پیش‌تر D-036 بود، به‌روزرسانی 2026-10-22؛ عدد «D-033» در متن D-030 مربوط به زمان نگارش آن است). شماره هیچ ADR بازشماری یا دوباره‌استفاده نمی‌شود؛ تصمیم جایگزین‌شده با ADR جدید و برچسب `Deprecated` مشخص می‌شود (D-030).
+> متن تصمیمات D-001..D-019 بازنویسی نشده است؛ فقط «فهرست وضعیت‌ها» و یادداشت‌های تکمیلی (با برچسب «توضیح 2026-10-21») افزوده شده‌اند. تصمیمات جدید از **D-020** شروع می‌شوند و شماره ADR بعدی **D-055** است (به‌روزرسانی 2026-10-24 پس از ثبت D-041..D-044 در فاز صفر لایسنس؛ پیش‌تر D-041 پس از ثبت D-038..D-040 در 2026-10-23؛ پیش‌تر D-037 پس از ثبت D-036؛ پیش‌تر D-036 بود، به‌روزرسانی 2026-10-22؛ عدد «D-033» در متن D-030 مربوط به زمان نگارش آن است). شماره هیچ ADR بازشماری یا دوباره‌استفاده نمی‌شود؛ تصمیم جایگزین‌شده با ADR جدید و برچسب `Deprecated` مشخص می‌شود (D-030).
 
 ## راهنمای وضعیت‌ها
 هر تصمیم دو وضعیت جدا دارد: وضعیت **تصمیم** و وضعیت **پیاده‌سازی/شواهد**. این‌ها با هم یکی گرفته نمی‌شوند.
@@ -811,7 +811,7 @@ Cookie خودکفاست و بدون بررسی مجدد تا انقضا معتب
 
 ## D-053 — مرجع والد Vendor-issued، اعمال تراکنشی و Enrollment اپراتور نصب (#235)
 
-- **وضعیت تصمیم:** Accepted؛ تأیید صریح مالک محصول در 2026-10-30. **وضعیت پیاده‌سازی:** NotImplemented / NotVerified تا تکمیل consumer و تست‌های مرتبط.
+- **وضعیت تصمیم:** Accepted؛ تأیید صریح مالک محصول در 2026-10-30. **وضعیت پیاده‌سازی:** بخش اصلی consumer، claim/replay، apply تراکنشی و Enrollment در PRهای #302، #305–#308 پیاده‌سازی و با CI تأیید شده؛ Vendor acknowledgement intake در #293/#294 و E2E v4 در #329 نیز در main هستند. **انطباق کامل D-053 هنوز نیازمند تصمیم است:** بند ۹ دربارهٔ تغییر رمز در اولین ورود دقیقاً با جریان فعلی یکسان نیست؛ کاربر رمز واقعی را در Enrollment تعیین می‌کند و تا پیش از آن ورود/نشست رد می‌شود، سپس `MustChangePassword=false` است. مسیر تغییر رمز پس از اولین ورود اضافه نشده است. این تفاوت باید با تأیید مالک محصول به‌عنوان رفتار جایگزین پذیرفته یا با پیاده‌سازی مجزا تکمیل شود. Provider امضای Production همچنان unavailable/fail-closed و وابسته به #236 است.
 - **Issue:** [#235 — trusted customer-side provisioning consumer and acknowledgement](https://github.com/hamidreza1394/Accounting/issues/235).
 - **زمینه و مسئله:** بستهٔ provisioning شناسهٔ داخلی شرکت مشتری را نمی‌داند و نباید شناسهٔ ملی یا متن آزاد را برای اتصال شرکت‌ها به‌کار گیرد. claim مشتری از قبل RequestId را به CompanyId محلی متصل می‌کند. provisioning باید شرکت/دوره/مدیر را اتمیک ایجاد کند و Enrollment اولیه بدون رمز در package انجام شود.
 - **تصمیم‌های پذیرفته‌شده:**
@@ -827,6 +827,7 @@ Cookie خودکفاست و بدون بررسی مجدد تا انقضا معتب
   10. در ابر مشترک، اپراتور نصب فقط کارکنان میزبانِ احراز هویت‌شده و دارای مجوز عملیاتی است، نه مشتری. پس از مصرف توکن و تعیین رمز توسط مدیر، هیچ نقش، عضویت، نشست یا دسترسی ماندگار برای اپراتور نصب ایجاد نمی‌شود. توکن صرفاً امکان bootstrap مدیر اولیه را می‌دهد.
   11. ایمیل InitialAdminEmail در این مرحله مسیر تحویل token نیست؛ ارسال ایمیل به زیرساخت مستقل و تصمیم جدا موکول است.
   12. امضای Production فقط با provider واقعی و مورد تأیید Issue #236 مجاز است. provider پیش‌فرض unavailable/fail-closed می‌ماند؛ کلید آزمایشی، کلید خصوصی نرم‌افزاری داخل برنامه، یا fallback در Production ممنوع است.
+- **شاهد و انحراف پیاده‌سازی (2026-10-30):** PR #307 با .NET CI `41010026198` و Vendor CI `41010026058`، PR #308 با .NET CI `41014003705` و PR #329 با E2E دو میزبان در .NET CI `41052515115` (۷ job)، Vendor CI `41052515292` و Semgrep `41052515389` موفق شده‌اند. با این حال، رفتار فعلی به‌جای رمز موقت و تغییر رمز در اولین login، تا Enrollment هرگونه login/session را منع می‌کند و مدیر در Enrollment رمز خود را تعیین می‌کند. این رفتار fail-closed است اما انطباق لفظی بند ۹ نیست؛ تا تأیید مالک محصول، وضعیت آن `NeedsApproval` برای تعیین تکلیف تفاوت است.
 - **گزینه‌های ردشده:** GUID داخلی مشتری در قرارداد Vendor؛ NationalId یا کد تجاری/متن آزاد؛ resolve بر اساس نام؛ والد از نوع independent؛ ایجاد خودکار گروه یا درصد مالکیت؛ تحویل مجدد token در replay؛ token در log/audit/ack/URL؛ حساب پشتیبان دائمی برای اپراتور؛ ایمیل بدون زیرساخت تأییدشده؛ software-key fallback در Production.
 - **پیامدهای مثبت:** قرارداد مرجع بدون PII و مستقل از دیتابیس مشتری؛ اتصال قطعی و idempotent؛ جلوگیری از parent spoofing و cross-customer/install؛ bootstrap بدون رمز ثابت؛ امکان بازیابی کنترل‌شدهٔ token ازدست‌رفته.
 - **پیامدها و ریسک‌ها:** schema فعلی claim برای شمارش تلاش، وضعیت ابطال/نسخهٔ token و شاید ثبت رسید اعمال نیازمند بررسی است؛ هر تغییر schema فقط در محدودهٔ #235 با Migration افزایشی، تست SQL Server و طرح rollback انجام می‌شود. افشای token به اپراتور مجاز همچنان یک رخداد حساس است؛ باید پاسخ یک‌باره، کنترل دسترسی، no-store و عدم ثبت در telemetry اعمال شود. مشتری دارای کنترل کامل ماشین می‌تواند محدودیت‌های محلی را دور بزند؛ امنیت مطلق آفلاین ادعا نمی‌شود.
@@ -837,12 +838,14 @@ Cookie خودکفاست و بدون بررسی مجدد تا انقضا معتب
 
 
 ### Implementation status note — 2026-10-30
-The branch feat/issue-235-transactional-consumer now contains a partial customer apply service, signed-ack outbox persistence, one-time enrollment/reissue endpoints, and React operator/admin screens. This does not change the Accepted decision above. The production acknowledgement signing provider is deliberately unavailable by default. The strict post-authentication first-login password-change restriction, end-to-end SQL Server rollback/concurrent replay validation, and final CI are not yet verified; therefore D-053 remains NotVerified for implementation.
+The customer consumer, claim/replay, transactional apply, one-time Enrollment/reissue and login guard are merged in main through PRs #302, #305–#308; Vendor acknowledgement intake/UI are in #293/#294; v4 single-license binding is in #319; and dual-TestServer E2E is in #329. CI evidence for the relevant implementation slices is recorded above and in `docs/PROJECT_STATUS.md`. The E2E uses two TestServer instances and two SQL Server databases in one test process; it does not prove two physical machines or two independent OS processes.
+
+**Remaining D-053 conformance gap:** accepted item 9 requires a post-authentication first-login session restricted to password change. Current implementation instead blocks login/session until Enrollment; the administrator sets the real password during Enrollment and `MustChangePassword=false` afterward. No post-enrollment forced password-change flow exists. This difference requires explicit owner acceptance as an alternative or a separate implementation PR; full D-053 conformance is not claimed. Production acknowledgement signing remains unavailable/fail-closed under #236.
 
 
 ## D-054 — اتصال Provisioning به یک لایسنس امضاشدهٔ مشخص (Issue #228 / #235)
 
-- **وضعیت:** Accepted — تصمیم مالک محصول در 2026-10-30؛ پیاده‌سازی در شاخهٔ feat/issue-235-single-license-v4 در حال انجام و تا CI سبز، NotVerified.
+- **وضعیت:** Accepted — تصمیم مالک محصول در 2026-10-30؛ پیاده‌سازی در main با PR #319 و E2E v4 در PR #329 ادغام و CI-Verified شده است (main @ `43d28253eb9f0f38ff25d0dfea143aeacdb06871`). امضای عملیاتی Production همچنان به KMS/HSM در #236 وابسته است.
 - **مسئله:** payload راه‌اندازی قبلی زیرسیستم‌ها را از ورودی درخواست Vendor می‌گرفت و به یک لایسنس صادرشده و revision مشخص متصل نبود. این مسیر امکان entitlement spoofing و ابهام در ممیزی را ایجاد می‌کرد.
 - **تصمیم:** هر درخواست Provisioning جدید دقیقاً به یک VendorLicense.Id و آخرین VendorSignedLicenseEnvelope.Sequence همان لایسنس در لحظهٔ صدور بسته متصل می‌شود. تجمیع چند لایسنس یا union کردن entitlementها ممنوع است.
 - **قرارداد ورودی:** کلاینت فقط licenseId و در صورت نیاز یک زیرمجموعهٔ اختیاری از کدهای زیرسیستم را می‌فرستد. sequence و فهرست entitlement مرجع از کلاینت پذیرفته نمی‌شود. نبود زیرمجموعه یعنی تمام زیرسیستم‌های موجود در آخرین envelope امضاشده.
