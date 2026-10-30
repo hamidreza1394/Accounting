@@ -5,6 +5,7 @@ using Faranou.Vendor.Host.Authorization;
 using Faranou.Vendor.Host.Signing;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Domain;
+using Faranou.Vendor.Persistence.Auditing;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
