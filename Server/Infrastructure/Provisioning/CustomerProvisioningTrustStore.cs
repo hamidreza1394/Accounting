@@ -19,13 +19,27 @@ public sealed class ConfigurationCustomerProvisioningTrustStore(IConfiguration c
 {
     private const string SectionPath = "Provisioning:TrustedVendorKeys";
 
-    public bool TryGetPublicKey(string? keyId, out byte[] subjectPublicKeyInfo)
+    public bool TryGetPublicKey(string? keyId, out byte[] subjectPublicKeyInfo) =>
+        ConfigurationTrustedPublicKeys.TryRead(configuration, SectionPath, keyId, out subjectPublicKeyInfo);
+}
+
+/// <summary>
+/// Reads an ECDSA P-256 public key (Base64 SubjectPublicKeyInfo) from a configuration section whose
+/// entries are keyed by an untrusted lookup hint. Only public key material is ever read here.
+/// </summary>
+internal static class ConfigurationTrustedPublicKeys
+{
+    public static bool TryRead(
+        IConfiguration configuration,
+        string sectionPath,
+        string? keyId,
+        out byte[] subjectPublicKeyInfo)
     {
         subjectPublicKeyInfo = Array.Empty<byte>();
         if (!IsValidKeyId(keyId))
             return false;
 
-        var configuredValue = configuration.GetSection(SectionPath)
+        var configuredValue = configuration.GetSection(sectionPath)
             .GetChildren()
             .FirstOrDefault(entry => string.Equals(entry.Key, keyId, StringComparison.Ordinal))
             ?.Value;
