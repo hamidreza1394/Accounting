@@ -108,6 +108,8 @@ jobs:
           FARANO_VENDOR_ConnectionStrings__VendorDb: Server=localhost,1433;Database=FaranouVendorAuthTests;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
           FARANO_VENDOR_TEST_SQLSERVER: Server=localhost,1433;Database=FaranouVendorTests;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
           FARANO_REQUIRE_VENDOR_SQLSERVER: '1'
+          FARANOU_TEST_SQLSERVER: Server=localhost,1433;Database=FaranouTests;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
+          FARANOU_REQUIRE_SQLSERVER: '1'
         run: dotnet test Vendor.sln --configuration Release
 
       - name: Verify Vendor EF model snapshot is current
