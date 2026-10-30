@@ -63,6 +63,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
         var databaseName = "FaranouVendorMutation_" + Guid.NewGuid().ToString("N");
         var testConnection = new SqlConnectionStringBuilder(baseConnection) { InitialCatalog = databaseName }.ConnectionString;
         var signerLogs = new CapturingLoggerProvider();
+        using var licenseSigningKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         await CreateDatabaseAsync(baseConnection, databaseName, cancellationToken);
 
         try
@@ -72,7 +73,9 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 webHost.ConfigureAppConfiguration((_, configuration) =>
                     configuration.AddInMemoryCollection(new Dictionary<string, string?>
                     {
-                        ["ConnectionStrings:VendorDb"] = testConnection
+                        ["ConnectionStrings:VendorDb"] = testConnection,
+                        ["Licensing:TrustedSigningKeys:test-license-key:PublicKeySubjectPublicKeyInfoBase64"] =
+                            Convert.ToBase64String(licenseSigningKey.ExportSubjectPublicKeyInfo())
                     }));
                 webHost.ConfigureTestServices(services =>
                 {
@@ -318,6 +321,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
 
             Guid installationIdForProvisioning;
             Guid otherInstallationIdForProvisioning;
+            Guid provisioningLicenseId;
             await using (var scope = factory.Services.CreateAsyncScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
@@ -331,12 +335,76 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     .Select(item => item.Id).SingleAsync(cancellationToken);
             }
 
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var customer = await db.Customers.SingleAsync(item => item.Id == customerId, cancellationToken);
+                var installation = await db.Installations.SingleAsync(item => item.Id == installationIdForProvisioning, cancellationToken);
+                var now = DateTimeOffset.UtcNow;
+                var signedLicense = new VendorLicense
+                {
+                    Id = Guid.NewGuid(),
+                    CustomerId = customer.Id,
+                    InstallationId = installation.Id,
+                    LicenseNumber = "IT-PROVISION-" + Guid.NewGuid().ToString("N")[..8],
+                    ProductCode = "FARANOU-BASE",
+                    Status = "Issued",
+                    LicenseKind = LicensePayload.KindPerpetual,
+                    MaxCompanies = 10,
+                    SubsystemsJson = "[\\"finance\\",\\"sales\\"]",
+                    GraceDays = 30,
+                    LastIssuedSequence = 1,
+                    ValidFromUtc = now.AddMinutes(-5),
+                    CreatedAtUtc = now
+                };
+                var licensePayload = new LicensePayload(
+                    1, signedLicense.Id.ToString("D"), installation.Id.ToString("D"),
+                    signedLicense.ProductCode, signedLicense.LicenseKind, now,
+                    signedLicense.ValidFromUtc, null, signedLicense.GraceDays, 1,
+                    new LicenseLimits(signedLicense.MaxCompanies, ["finance", "sales"]));
+                var licensePayloadJson = CanonicalJson.SerializePayload(licensePayload);
+                var licenseSignature = licenseSigningKey.SignData(
+                    System.Text.Encoding.UTF8.GetBytes(licensePayloadJson),
+                    HashAlgorithmName.SHA256,
+                    DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
+                var licenseEnvelope = new LicenseEnvelope(
+                    1, "test-license-key", LicenseAlgorithms.EcdsaP256Sha256,
+                    licensePayloadJson, Convert.ToBase64String(licenseSignature));
+                db.Licenses.Add(signedLicense);
+                db.SignedLicenseEnvelopes.Add(new VendorSignedLicenseEnvelope
+                {
+                    Id = Guid.NewGuid(),
+                    LicenseId = signedLicense.Id,
+                    Sequence = 1,
+                    KeyId = licenseEnvelope.Kid,
+                    Algorithm = licenseEnvelope.Algorithm,
+                    EnvelopeJson = JsonSerializer.Serialize(licenseEnvelope),
+                    PayloadSha256 = Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(licensePayloadJson))).ToLowerInvariant(),
+                    CreatedAtUtc = now
+                });
+                await db.SaveChangesAsync(cancellationToken);
+                provisioningLicenseId = signedLicense.Id;
+            }
+
+            using (var eligibleResponse = await client.GetAsync(
+                $"/api/vendor/provisioning-requests/eligible-licenses?customerId={customerId:D}&installationId={installationIdForProvisioning:D}",
+                cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, eligibleResponse.StatusCode);
+                using var eligibleJson = JsonDocument.Parse(await eligibleResponse.Content.ReadAsStringAsync(cancellationToken));
+                var eligible = eligibleJson.RootElement.GetProperty("items");
+                Assert.Contains(eligible.EnumerateArray(), item =>
+                    item.GetProperty("licenseId").GetGuid() == provisioningLicenseId &&
+                    item.GetProperty("sequence").GetInt32() == 1);
+            }
+
             var provisioningRequestId = Guid.NewGuid();
             var provisioningBody = new
             {
                 requestId = provisioningRequestId,
                 customerId,
                 installationId = installationIdForProvisioning,
+                licenseId = provisioningLicenseId,
                 companyName = "Provisioning Integration Company",
                 companyType = "independent",
                 initialAdminUserName = "initial-admin",
