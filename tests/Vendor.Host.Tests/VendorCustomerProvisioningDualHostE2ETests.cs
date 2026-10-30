@@ -121,6 +121,10 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
 
                 await using var customerFactory = new WebApplicationFactory<CustomerProgram>().WithWebHostBuilder(webHost =>
                 {
+                    webHost.UseSetting("ConnectionStrings:ConnectionString", customerConnection);
+                    webHost.UseSetting("ApplicationSettings:MasterUsername", customerInfrastructureUsername);
+                    webHost.UseSetting("ApplicationSettings:MasterPassword", customerInfrastructurePasswordHash);
+                    webHost.UseSetting("ApplicationSettings:AllowLegacyMasterPasswordHash", "false");
                     webHost.ConfigureAppConfiguration((_, configuration) =>
                         configuration.AddInMemoryCollection(new Dictionary<string, string?>
                         {
@@ -221,6 +225,9 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                     db.Installations.Add(installation);
                     await db.SaveChangesAsync(cancellationToken);
                 }
+
+                var customerConfiguration = customerFactory.Services.GetRequiredService<IConfiguration>();
+                Assert.Equal(customerConnection, customerConfiguration.GetConnectionString("ConnectionString"));
 
                 await using (var customerScope = customerFactory.Services.CreateAsyncScope())
                 {
