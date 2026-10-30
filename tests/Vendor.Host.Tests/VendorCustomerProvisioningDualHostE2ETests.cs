@@ -350,6 +350,15 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 var packageFromOfflineFile = await File.ReadAllTextAsync(
                     packageFile, Encoding.UTF8, cancellationToken);
 
+                // Export is a transport operation, not customer confirmation. A lost/ignored
+                // acknowledgement must leave the Vendor request in PendingDelivery.
+                await using (var pendingScope = vendorFactory.Services.CreateAsyncScope())
+                {
+                    var db = pendingScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                    Assert.Equal("PendingDelivery", (await db.ProvisioningRequests.SingleAsync(
+                        item => item.Id == provisioningRecordId, cancellationToken)).Status);
+                }
+
                 var unknownKeyPackage = JsonNode.Parse(packageFromOfflineFile)!.AsObject();
                 unknownKeyPackage["keyId"] = "not-in-customer-trust-store";
                 using (var unknownKeyResponse = await PostCustomerJsonAsync(
@@ -426,8 +435,6 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                     Assert.NotEqual(enrollmentToken, claim.EnrollmentTokenHash);
 
                     var admin = await db.Users.SingleAsync(item => item.Username == adminUserName, cancellationToken);
-                    admin.Password = new PasswordHashService().Hash("Known-Before-Enrollment-" + Guid.NewGuid().ToString("N"));
-                    await db.SaveChangesAsync(cancellationToken);
                 }
 
                 // Even if a password were set by an out-of-band operator, pending enrollment must deny sign-in.
