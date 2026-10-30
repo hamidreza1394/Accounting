@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Collections.Concurrent;
 using System.Data.Common;
 using System.Globalization;
 using System.Net;
@@ -22,6 +23,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Xunit;
 
 namespace Faranou.Vendor.Host.Tests;
@@ -60,6 +62,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
 
         var databaseName = "FaranouVendorMutation_" + Guid.NewGuid().ToString("N");
         var testConnection = new SqlConnectionStringBuilder(baseConnection) { InitialCatalog = databaseName }.ConnectionString;
+        var signerLogs = new CapturingLoggerProvider();
         await CreateDatabaseAsync(baseConnection, databaseName, cancellationToken);
 
         try
@@ -73,11 +76,25 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     }));
                 webHost.ConfigureTestServices(services =>
                 {
+                    services.AddLogging(logging => logging.AddProvider(signerLogs));
                     services.RemoveAll<IVendorAuditWriter>();
                     services.RemoveAll<IProvisioningSigningProvider>();
+                    services.RemoveAll<ProvisioningPackageSigningTrustStore>();
                     services.AddSingleton<SequencedProvisioningSigningProvider>(_ => new SequencedProvisioningSigningProvider());
                     services.AddSingleton<IProvisioningSigningProvider>(provider =>
                         provider.GetRequiredService<SequencedProvisioningSigningProvider>());
+                    services.AddSingleton(provider =>
+                    {
+                        var signer = provider.GetRequiredService<SequencedProvisioningSigningProvider>();
+                        return new ProvisioningPackageSigningTrustStore(
+                        [
+                            new ProvisioningPackageSigningTrustedKeyOptions
+                            {
+                                KeyId = "test-provisioning-key",
+                                PublicKeySubjectPublicKeyInfoBase64 = Convert.ToBase64String(signer.ExportPublicKey())
+                            }
+                        ]);
+                    });
                     services.AddSingleton<AuditFailureSwitch>();
                     services.AddSingleton<CustomerInsertRaceGate>();
                     services.ConfigureDbContext<VendorDbContext>((provider, options) =>
@@ -1024,6 +1041,10 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     $"Expected signer-unavailable 503 but received {(int)provisioningDecisionResponse.StatusCode}: {provisioningDecisionBody}");
                 using var json = JsonDocument.Parse(provisioningDecisionBody);
                 Assert.Equal("provisioning_signing_unavailable", json.RootElement.GetProperty("error").GetString());
+                Assert.Contains(signerLogs.Messages, message =>
+                    message.Contains(nameof(InvalidOperationException), StringComparison.Ordinal));
+                Assert.DoesNotContain(signerLogs.Messages, message =>
+                    message.Contains("simulated provider failure detail", StringComparison.Ordinal));
             }
 
             using (var packageResponse = await PostWithTokenAsync(reviewerClient,
@@ -1033,10 +1054,33 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal(HttpStatusCode.Conflict, packageResponse.StatusCode);
             }
 
-            // The same pending approval is retryable after a transient signer outage.
+            // A provider result with a correctly sized but cryptographically invalid signature must
+            // remain unavailable and leave the same approval/request retryable.
+            using (var invalidSignatureResponse = await PostWithTokenAsync(reviewerClient,
+                $"/api/vendor/approvals/{provisioningApprovalId:D}/decision",
+                new { decision = "Approved", rowVersion = provisioningApprovalRowVersion, comment = "Invalid signer output must fail closed" },
+                reviewerAntiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.ServiceUnavailable, invalidSignatureResponse.StatusCode);
+                using var json = JsonDocument.Parse(await invalidSignatureResponse.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("provisioning_signing_unavailable", json.RootElement.GetProperty("error").GetString());
+                Assert.Contains(signerLogs.Messages, message =>
+                    message.Contains("does not verify", StringComparison.Ordinal));
+                Assert.DoesNotContain(signerLogs.Messages, message =>
+                    message.Contains("test-provisioning-key", StringComparison.Ordinal));
+            }
+
+            using (var packageAfterInvalidSignature = await PostWithTokenAsync(reviewerClient,
+                $"/api/vendor/provisioning-requests/{provisioningRecordId:D}/package/export",
+                new { }, reviewerAntiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Conflict, packageAfterInvalidSignature.StatusCode);
+            }
+
+            // The same pending approval is retryable after the invalid signer result is rejected.
             using (var provisioningRetryResponse = await PostWithTokenAsync(reviewerClient,
                 $"/api/vendor/approvals/{provisioningApprovalId:D}/decision",
-                new { decision = "Approved", rowVersion = provisioningApprovalRowVersion, comment = "Retry after transient signer outage" },
+                new { decision = "Approved", rowVersion = provisioningApprovalRowVersion, comment = "Retry after invalid signature was rejected" },
                 reviewerAntiForgeryToken, cancellationToken))
             {
                 Assert.Equal(HttpStatusCode.OK, provisioningRetryResponse.StatusCode);
@@ -1354,6 +1398,39 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
         return await client.SendAsync(request, ct);
     }
 
+    private sealed class CapturingLoggerProvider : ILoggerProvider
+    {
+        private readonly ConcurrentQueue<string> _messages = new();
+
+        public string[] Messages => _messages.ToArray();
+
+        public ILogger CreateLogger(string categoryName) => new CapturingLogger(categoryName, _messages);
+
+        public void Dispose()
+        {
+        }
+
+        private sealed class CapturingLogger(
+            string categoryName,
+            ConcurrentQueue<string> messages) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Warning;
+
+            public void Log<TState>(
+                LogLevel logLevel,
+                EventId eventId,
+                TState state,
+                Exception? exception,
+                Func<TState, Exception?, string> formatter)
+            {
+                if (IsEnabled(logLevel))
+                    messages.Enqueue($"{categoryName}|{logLevel}|{formatter(state, exception)}");
+            }
+        }
+    }
+
     private sealed class SequencedProvisioningSigningProvider : IProvisioningSigningProvider, IDisposable
     {
         private readonly ECDsa _key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
@@ -1364,8 +1441,15 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (Interlocked.Increment(ref _calls) <= 1)
-                return ValueTask.FromResult(LicenseSigningResult.Unavailable());
+            var attempt = Interlocked.Increment(ref _calls);
+            if (attempt == 1)
+                throw new InvalidOperationException("simulated provider failure detail");
+            if (attempt == 2)
+            {
+                // Correct length, wrong cryptographic signature: Vendor must verify before persistence.
+                return ValueTask.FromResult(LicenseSigningResult.Success(
+                    "test-provisioning-key", LicenseAlgorithms.EcdsaP256Sha256, new byte[64]));
+            }
 
             var signature = _key.SignData(
                 canonicalPayload.Span,

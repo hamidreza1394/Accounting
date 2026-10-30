@@ -1,3 +1,4 @@
+using System.Linq;
 using Faranou.Licensing.Contracts;
 
 namespace Faranou.Vendor.Host.Signing;
@@ -54,6 +55,10 @@ public sealed record LicenseSigningResult
         ArgumentException.ThrowIfNullOrWhiteSpace(keyId);
         if (keyId.Length > 128)
             throw new ArgumentOutOfRangeException(nameof(keyId));
+        if (keyId.Any(character => !char.IsAsciiLetterOrDigit(character) && character is not ('-' or '_')))
+            throw new ArgumentException(
+                "The signing key ID must contain only ASCII letters, digits, hyphen or underscore.",
+                nameof(keyId));
         if (!LicenseAlgorithms.IsAllowed(algorithm))
             throw new ArgumentException("The signing algorithm is not allowed by the license contract.", nameof(algorithm));
         if (signature.Length != 64)

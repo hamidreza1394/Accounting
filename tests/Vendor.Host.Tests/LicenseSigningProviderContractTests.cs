@@ -34,7 +34,7 @@ public sealed class LicenseSigningProviderContractTests
     }
 
     [Fact]
-    public void SuccessRejectsUnsupportedAlgorithmsAndMalformedSignatures()
+    public void SuccessRejectsUnsupportedAlgorithmsMalformedSignaturesAndInvalidKeyIds()
     {
         Assert.Throws<ArgumentException>(() =>
             LicenseSigningResult.Success("kid", "none", new byte[64]));
@@ -42,6 +42,12 @@ public sealed class LicenseSigningProviderContractTests
             LicenseSigningResult.Success("kid", LicenseAlgorithms.EcdsaP256Sha256, new byte[63]));
         Assert.Throws<ArgumentOutOfRangeException>(() =>
             LicenseSigningResult.Success(new string('k', 129), LicenseAlgorithms.EcdsaP256Sha256, new byte[64]));
+        Assert.Throws<ArgumentException>(() =>
+            LicenseSigningResult.Success("vendor:key/1", LicenseAlgorithms.EcdsaP256Sha256, new byte[64]));
+        Assert.Throws<ArgumentException>(() =>
+            LicenseSigningResult.Success("vendor key", LicenseAlgorithms.EcdsaP256Sha256, new byte[64]));
+        Assert.Throws<ArgumentException>(() =>
+            LicenseSigningResult.Success("کلید", LicenseAlgorithms.EcdsaP256Sha256, new byte[64]));
     }
 
     [Fact]
