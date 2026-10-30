@@ -17,6 +17,7 @@ namespace Faranou.Vendor.Host.Signing;
 public sealed class VendorProvisioningIssuanceService(
     VendorDbContext db,
     IProvisioningSigningProvider signingProvider,
+    ProvisioningPackageSigningTrustStore signingTrustStore,
     IVendorAuditWriter audit,
     TimeProvider timeProvider,
     ILogger<VendorProvisioningIssuanceService> logger)
@@ -129,6 +130,31 @@ public sealed class VendorProvisioningIssuanceService(
         {
             logger.LogWarning(
                 "Provisioning signing provider returned invalid signing metadata; issuance remains unavailable.");
+            return VendorProvisioningIssuanceResult.Unavailable("provisioning_signing_unavailable");
+        }
+
+        if (!signingTrustStore.TryGetTrustedPublicKey(signing.KeyId, out var trustedPublicKey))
+        {
+            logger.LogWarning(
+                "Provisioning signing provider returned a key ID outside the configured trust set; issuance remains unavailable.");
+            return VendorProvisioningIssuanceResult.Unavailable("provisioning_signing_unavailable");
+        }
+
+        var signedPackage = new CustomerProvisioningPackage(
+            CustomerProvisioningPackageValidator.CurrentFormatVersion,
+            signing.KeyId,
+            signing.Algorithm!,
+            request.PayloadJson,
+            Convert.ToBase64String(signing.Signature.Span));
+        if (!CustomerProvisioningPackageValidator.TryValidateAndVerify(
+                signedPackage,
+                trustedPublicKey.Span,
+                now,
+                out _,
+                out _))
+        {
+            logger.LogWarning(
+                "Provisioning signing provider returned a signature that does not verify against the configured trust key; issuance remains unavailable.");
             return VendorProvisioningIssuanceResult.Unavailable("provisioning_signing_unavailable");
         }
 

@@ -284,3 +284,11 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - Provider exceptions are converted to the same public `503 provisioning_signing_unavailable` response; the exception type alone is logged through `ILogger<VendorProvisioningIssuanceService>`.
 - Exception messages, stack traces, payload bytes, key IDs and signatures are not written to logs. Unsuccessful provider results and invalid signing metadata are logged as warnings without signer material.
 - Caller cancellation is propagated; the pending approval and provisioning request remain retryable and no package transitions to `PendingDelivery` unless signing succeeds and metadata passes validation.
+
+
+## Vendor provisioning package signing trust — Issue #236
+
+- The Vendor host resolves its own provisioning-package signing public keys from the independent deployment section `ProvisioningSigningTrust:Keys`. Each entry contains a `KeyId`, Base64 ECDSA P-256 SubjectPublicKeyInfo, and optional `Revoked` flag; it contains public material only.
+- Before persisting `PendingDelivery`, `VendorProvisioningIssuanceService` resolves the returned key ID from this trust store and verifies the signature over the exact package payload bytes with `CustomerProvisioningPackageValidator`. Unknown/revoked keys, malformed metadata and signatures that do not verify return the same generic 503 and leave the approval/request retryable.
+- The key ID contract is at most 128 ASCII letters/digits, hyphen or underscore, matching the customer-side trust lookup. Duplicate IDs, malformed SPKI and non-P-256 keys fail host startup. An empty trust set rejects every signing result.
+- This is provider-neutral verification, not a KMS/HSM adapter. Production remains unavailable until an approved external signer, public-key distribution/rotation and deployment credentials are configured. Private keys never enter Vendor configuration, Git, logs or artifacts.

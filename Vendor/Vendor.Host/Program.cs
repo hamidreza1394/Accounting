@@ -84,6 +84,15 @@ builder.Services.AddSingleton(sp =>
         .Get<ProvisioningAcknowledgementTrustedKeyOptions[]>() ?? [];
     return new ProvisioningAcknowledgementTrustStore(configuredKeys);
 });
+// Vendor package-signing public keys are independently configured and contain no private material.
+// An empty trust set blocks issuance; malformed or duplicate entries prevent host startup.
+builder.Services.AddSingleton(sp =>
+{
+    var configuredKeys = sp.GetRequiredService<IConfiguration>()
+        .GetSection("ProvisioningSigningTrust:Keys")
+        .Get<ProvisioningPackageSigningTrustedKeyOptions[]>() ?? [];
+    return new ProvisioningPackageSigningTrustStore(configuredKeys);
+});
 builder.Services.AddScoped<VendorLicenseEnvelopeFactory>();
 builder.Services.AddScoped<VendorLicenseIssuanceService>();
 builder.Services.AddScoped<VendorProvisioningIssuanceService>();

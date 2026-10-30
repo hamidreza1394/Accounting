@@ -64,6 +64,24 @@ public sealed class ProvisioningAcknowledgementTrustStoreTests
     }
 
     [Fact]
+    public void RejectsKeyIdsOutsideTheCustomerTrustLookupContract()
+    {
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var invalid = new[]
+        {
+            new ProvisioningAcknowledgementTrustedKeyOptions
+            {
+                KeyId = "customer:key/1",
+                PublicKeySubjectPublicKeyInfoBase64 = Convert.ToBase64String(key.ExportSubjectPublicKeyInfo())
+            }
+        };
+
+        Assert.Throws<InvalidOperationException>(() => new ProvisioningAcknowledgementTrustStore(invalid));
+        var store = new ProvisioningAcknowledgementTrustStore([]);
+        Assert.False(store.TryGetTrustedPublicKey("customer:key/1", out _));
+    }
+
+    [Fact]
     public void RejectsMalformedAndNonP256PublicKeysAtConstruction()
     {
         var malformed = new[]
