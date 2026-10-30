@@ -379,7 +379,10 @@ app.Use(async (context, next) =>
 app.UseAuthorization();
 app.UseAntiforgery();
 
-app.MapHealthChecks("/health/live").AllowAnonymous();
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = _ => false
+}).AllowAnonymous();
 app.MapHealthChecks("/health/signing", new HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("signing")
