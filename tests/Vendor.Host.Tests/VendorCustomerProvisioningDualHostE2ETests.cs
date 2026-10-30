@@ -787,7 +787,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
         }
     }
 
-    private sealed class ProvisioningE2EAuthenticationHandler(
+    public sealed class ProvisioningE2EAuthenticationHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options,
         ILoggerFactory logger,
         UrlEncoder encoder)
