@@ -1314,3 +1314,16 @@
 - **اصلاح:** مقدار ثابت حذف شد؛ رمزهای موردنیاز تست با `RandomNumberGenerator.GetBytes(32)` به‌صورت runtime و per-test تولید می‌شوند. تست همچنان بررسی می‌کند رمز و enrollment token در audit ذخیره نشده‌اند.
 - **دامنه:** فقط تست و handoff/work log در شاخهٔ مستقل Issue #235؛ بدون تغییر Vendor، دیتابیس مشتری، migration یا secret configuration.
 - **اعتبارسنجی:** Gitleaks روی SHA قبلی ناموفق بود؛ اجرای CI روی commit اصلاحی در انتظار است. هیچ نتیجهٔ سبزی برای SHA جدید ادعا نمی‌شود.
+
+
+## 2026-10-30 — Issue #235: اتصال provisioning به یک لایسنس امضاشده (D-054)
+
+- **تصمیم مالک محصول:** مدل تک‌لایسنس تأیید شد؛ کلاینت فقط licenseId و subset اختیاری زیرسیستم را می‌فرستد؛ Vendor باید entitlement و sequence را از آخرین envelope امضاشده استخراج کند؛ v4 با licenseId/sequence و سازگاری canonical v1-v3؛ revalidation در صدور و export؛ محدودیت آفلاین مستند؛ MaxCompanies یا atomic enforcement یا NotImplemented؛ افزودن ماژول به شرکت موجود و تجمیع چند لایسنس NotImplemented؛ v3 backfill نمی‌شود.
+- **قرارداد:** payload schema به v4 ارتقا یافت و دو فیلد licenseId و sequence اضافه شد. canonical writer برای v1-v3 تغییری نمی‌کند؛ تست byte-for-byte برای canonical v3 افزوده شد؛ validator v1-v4 را می‌پذیرد و binding را در v4 اجباری می‌کند.
+- **Vendor:** LicenseSigningTrustStore برای کلید عمومی مستقل Licensing:TrustedSigningKeys؛ VendorProvisioningLicenseResolver برای اعتبارسنجی envelope، امضا، digest، customer/installation، وضعیت، تاریخ و sequence؛ API انتخاب لایسنس معتبر؛ ایجاد request فقط با licenseId و subset اختیاری؛ revalidation در issuance و export؛ idempotency شامل licenseId و sequence.
+- **UI:** فرم Provisioning اکنون لایسنس معتبر را انتخاب می‌کند؛ زیرسیستم‌ها از entitlementهای برگردانده‌شده توسط API نمایش داده می‌شوند؛ نبود subset به معنی همهٔ entitlementهای امضاشده است.
+- **تست‌ها:** تست canonical v3، v4 schema/signature، idempotency licenseId+sequence، UI selection/subset و SQL Server resolver برای subset، sequence تاریخی و کلید لغوشده اضافه شد. اجرای محلی هنوز انجام نشده و CI تا ایجاد PR باید نتیجه بدهد.
+- **Migration:** Migration جدیدی اضافه نشد؛ binding در payload امضاشده ذخیره می‌شود. هیچ تغییر schema در دیتابیس Customer انجام نشده است.
+- **محدودیت‌های صریح:** MaxCompanies، افزودن زیرسیستم به شرکت موجود و تجمیع چند لایسنس NotImplemented. درخواست‌های v3 backfill نمی‌شوند و Vendor آن‌ها را دوباره امضا/Export نمی‌کند.
+- **کار باقی‌مانده:** اجرای CI؛ رفع خطاهای کامپایل/تست؛ افزودن تست SQL Server برای revalidation در issuance/export؛ هماهنگ‌سازی E2E دو میزبان در PR #317 با API جدید v4 (ساخت لایسنس و انتخاب licenseId)؛ بررسی کلید عمومی واقعی در deployment docs؛ تکمیل handoff و به‌روزرسانی Issue #235.
+- **Branch:** feat/issue-235-single-license-v4 — وضعیت تا CI سبز: Implemented in branch / NotVerified؛ هنوز Merge نشده است.
