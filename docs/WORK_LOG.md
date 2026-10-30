@@ -1347,3 +1347,15 @@
 ## 2026-10-30 — همگام‌سازی E2E با اصلاح PR #318
 - PR #319 از نظر محتوای Server branch هنوز فاقد fix ادغام‌شدهٔ PR #318 بود، چون شاخه از commit پیش از آن منشعب شده بود؛ نسخهٔ merged فایل ApiEndpoints و تست regression به شاخهٔ #319 منتقل شد.
 - شاخهٔ E2E جدید از آخرین HEAD #319 ساخته شد تا تست فایل ناقص در Customer Host نیز پاسخ 400 عمومی را از همان کد ادغام‌شده دریافت کند.
+
+
+## 2026-10-30 — بازبینی نهایی Issue #235 پس از PR #329
+
+- **مبنای بازبینی:** `main` @ `43d28253eb9f0f38ff25d0dfea143aeacdb06871`؛ compare با `main` برابر identical بود.
+- **اصلاح وضعیت:** handoff قبلی #235 هنوز consumer را NotImplemented معرفی می‌کرد؛ این وضعیت پس از PRهای #302، #305–#308، #293–#294، #318، #319 و #329 منسوخ شده بود. handoff و بخش جاری PROJECT_STATUS با شواهد merge/CI به‌روز شدند؛ snapshotهای تاریخی دست‌نخورده باقی ماندند.
+- **E2E v4:** PR #329 با merge commit بالا ادغام شد. .NET CI run `41052515115` (۷ job)، Vendor CI run `41052515292` و Semgrep run `41052515389` موفق‌اند.
+- **شواهد consumer:** PR #307 با .NET CI `41010026198`، Vendor CI `41010026058` و Semgrep `41010026110` موفق؛ PR #308 با .NET CI `41014003705` و Semgrep `41014003694` موفق.
+- **دامنه اثبات:** E2E دو TestServer و دو دیتابیس SQL Server مستقل را در یک test process اجرا می‌کند؛ دو ماشین/دو OS process واقعی یا staging شبکه‌ای را اثبات نمی‌کند.
+- **وضعیت Production:** signerهای پیش‌فرض برای license/provisioning/ack همچنان unavailable/fail-closed هستند. KMS/HSM و چرخه کلید در #236، revocation آفلاین در #214 و checkpoint مستقل Audit در #107 به انتخاب provider/مقصد و دسترسی عملیاتی نیاز دارند.
+- **تست محلی این بازبینی:** اجرا نشد؛ فقط نتایج واقعی GitHub Actions بالا بررسی شدند.
+- **تغییرات این PR:** فقط مستندات وضعیت، handoff، work log و هم‌ترازی شماره ADR بعدی؛ هیچ کد runtime، schema یا migration تغییر نکرد.
