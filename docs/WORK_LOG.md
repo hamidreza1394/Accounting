@@ -1272,10 +1272,6 @@
 - **تست:** تست SQL Server برای apply، signed acknowledgement، replay، reissue، ابطال token قبلی، مصرف یک‌بار، hash-only و عدم ایجاد گروه اضافه شده است. این تست‌ها در این نشست اجرا نشده‌اند؛ rollback و concurrent replay نیز اجرا نشده‌اند.
 - **CI:** اجرای اول PR #307 شکست کامپایل داشت: namespace مربوط به VendorProvisioningParentReferenceRules در IssuanceService وارد نشده بود. using اصلاح شد. اجرای جدید روی head جاری در زمان ثبت این log: secret-scan موفق؛ build-and-test، client، publish-scripts و Semgrep هنوز queued/in_progress. اجرای نهایی هنوز سبز نیست.
 
-## 2026-10-30 — Issue #235: offline acknowledgement exchange (customer file → Vendor panel)
-- **تغییر:** ذخیرهٔ فایل ack در صفحهٔ import مشتری و «ثبت فایل پاسخ مشتری» در جدول درخواست‌های Vendor که به endpoint ماشینی موجود POST می‌کند. بدون تغییر سرور/Schema/قرارداد.
-- **تست:** ClientApp 104 و Vendor.Web 55 تست موفق، typecheck و offline/static check موفق. `NotImplemented`: رسید امضاشدهٔ Vendor به مشتری (قرارداد ندارد، نیاز به تصمیم مالک و #236). E2E مرورگر در مرحلهٔ ۴. جزئیات: `docs/handoffs/ISSUE-235-offline-ack-exchange.md`.
-
 ## 2026-10-30 — Issue #235: offline verification of customer acknowledgement signatures
 - **شکاف:** نتیجهٔ Provider امضا فقط از نظر شکل بررسی و همراه شرکت ساخته‌شده ذخیره می‌شد؛ امضای معیوب ack غیرقابل‌تأیید دائمی می‌ساخت.
 - **تغییر:** Trust Store مستقل `Provisioning:TrustedAcknowledgementKeys` و راستی‌آزمایی آفلاین پیش از ذخیره؛ کدهای `provisioning_acknowledgement_signer_unavailable|signer_key_untrusted|signature_invalid` (503)؛ Exception ارائه‌دهنده گرفته و فقط نوع آن لاگ می‌شود؛ مستندات قرارداد Provider در SECURITY.md.
