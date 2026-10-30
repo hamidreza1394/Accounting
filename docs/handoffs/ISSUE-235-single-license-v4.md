@@ -36,7 +36,9 @@ See D-054 in `docs/DECISIONS.md`. The approved model is one provisioning request
 
 - Licensing contract tests: v3 canonical bytes unchanged; v4 binding fields required and signature verified.
 - Vendor request rules: license required, optional subsystem subset, licenseId/sequence included in idempotency.
-- Vendor SQL Server resolver tests: signed entitlement derivation, subset acceptance/rejection, latest vs historical sequence, revoked signing key fail-closed.
+- Vendor SQL Server resolver tests: signed entitlement derivation, subset acceptance/rejection, latest vs historical sequence, revoked signing key fail-closed, wrong customer/installation, suspended and expired licenses.
+- Vendor SQL Server issuance test: a newer signed sequence between request creation and approval blocks package signing.
+- Dual-host E2E (stacked PR #322): after first export, a newer signed sequence blocks re-export while the already-exported package remains applicable offline.
 - Customer verifier fixture updated to use v4.
 
 ## Important integration dependency: PR #317
@@ -53,9 +55,9 @@ Do not merge PR #317 until that E2E test is updated and green. PR #318 separatel
 ## Pending before merge
 
 1. Run all .NET tests, Vendor Host SQL Server tests, and Vendor UI tests via CI; fix every failure.
-2. Add/confirm SQL Server integration coverage that a changed sequence or expired/suspended license blocks both issuance and re-export.
+2. Run the final CI on the latest PR #319 head and stacked PR #322 head; fix every remaining failure.
 3. Review API contract and trust-key configuration documentation, including operational key rotation/revocation.
-4. Update PR #317 E2E to schema v4 after this PR lands; re-run both independent hosts and assert Confirmed.
+4. Merge PR #319 only after its own required checks are green; then retarget PR #322 to main and re-run both independent hosts through Confirmed.
 5. Keep MaxCompanies, existing-company module additions, and multi-license aggregation explicitly NotImplemented.
 6. Confirm no customer migration, unrelated schema change, or v3 backfill is present.
 7. Merge only after all required CI jobs are green and owner review is complete.
