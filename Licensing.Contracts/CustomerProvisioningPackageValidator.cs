@@ -205,7 +205,7 @@ public static class CustomerProvisioningPackageValidator
         if (isV3 && !IsValidEmail(payload.InitialAdminEmail))
             return false;
 
-        var hasParentReference = IsBoundedText(payload.ParentCompanyReference, 1, 128);
+        var hasParentReference = IsVendorIssuedRequestReference(payload.ParentCompanyReference);
         return payload.CompanyType switch
         {
             "subsidiary" => hasParentReference,
@@ -213,6 +213,11 @@ public static class CustomerProvisioningPackageValidator
             _ => false
         };
     }
+
+    private static bool IsVendorIssuedRequestReference(string? value) =>
+        Guid.TryParseExact(value, "D", out var requestId) &&
+        requestId != Guid.Empty &&
+        string.Equals(value, requestId.ToString("D"), StringComparison.OrdinalIgnoreCase);
 
     private static bool IsValidEmail(string? value) =>
         !string.IsNullOrWhiteSpace(value) &&
