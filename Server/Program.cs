@@ -186,6 +186,19 @@ if (!setupRequired)
     builder.Services.TryAddSingleton<
         Infrastructure.Provisioning.ICustomerProvisioningAcknowledgementSigningProvider,
         Infrastructure.Provisioning.UnavailableCustomerProvisioningAcknowledgementSigningProvider>();
+    builder.Services.Configure<Infrastructure.Provisioning.WindowsCngCustomerAcknowledgementSigningOptions>(
+        builder.Configuration.GetSection(
+            Infrastructure.Provisioning.WindowsCngCustomerAcknowledgementSigningOptions.SectionName));
+    // The Windows CNG signer is opt-in and uses only the explicitly configured KSP. A missing
+    // TPM/OS key never falls back to another provider; non-Windows hosts keep the unavailable signer.
+    if (OperatingSystem.IsWindows() &&
+        builder.Configuration.GetValue<bool>(
+            Infrastructure.Provisioning.WindowsCngCustomerAcknowledgementSigningOptions.SectionName + ":Enabled"))
+    {
+        builder.Services.AddSingleton<
+            Infrastructure.Provisioning.ICustomerProvisioningAcknowledgementSigningProvider,
+            Infrastructure.Provisioning.WindowsCngCustomerProvisioningAcknowledgementSigningProvider>();
+    }
     builder.Services.AddSingleton<Infrastructure.Tenancy.WorkContextCookie>();
     builder.Services.AddScoped<Infrastructure.Tenancy.WorkContextService>();
 
