@@ -72,7 +72,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
         var companyName = "شرکت آزمون دو میزبان " + Guid.NewGuid().ToString("N")[..8];
         var adminUserName = "customer-admin-" + Guid.NewGuid().ToString("N")[..10];
         var adminPassword = CreateE2ETestPassword();
-        var customerInfrastructureUsername = "dual-host-infrastructure";
+        var customerInfrastructureUsername = "dual-host-infrastructure-" + Guid.NewGuid().ToString("N")[..8];
         var customerInfrastructurePassword = CreateE2ETestPassword();
         var customerInfrastructurePasswordHash = new CustomerSecurity.PasswordHashService().Hash(customerInfrastructurePassword);
         var requesterPassword = CreateE2ETestPassword();
