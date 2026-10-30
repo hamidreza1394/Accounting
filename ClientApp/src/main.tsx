@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+import { ProvisioningEnrollmentPage } from './components/ProvisioningEnrollmentPage';
 import './styles/index.css';
 
 const container = document.getElementById('root');
@@ -11,6 +12,6 @@ if (!container) {
 
 createRoot(container).render(
   <StrictMode>
-    <App />
+    {window.location.pathname === '/enroll' ? <ProvisioningEnrollmentPage /> : <App />}
   </StrictMode>,
 );
