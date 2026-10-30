@@ -1497,3 +1497,14 @@
 - آن‌ها با کارت‌های وضعیت قابلیت جایگزین شدند: مدیریت تجاری، Provisioning v4، تأیید دو نفره و وضعیت مسدود بودن امضای Production تا تأمین HSM واقعی.
 - تست UI وجود چهار کارت و نبود placeholder آماری را بررسی می‌کند.
 - هیچ API یا DB تغییر نکرد؛ کارت‌ها ادعای تعداد رکورد یا آمادگی Production نمی‌کنند.
+
+
+## 2026-10-30 — Vendor status reconciliation after PR #356
+
+- Main اکنون روی SHA `78afd4dc3ea02a9816e9e72a3d7d24b969a034dd` است؛ PR #356 کارت‌های وضعیت داشبورد را ادغام کرد.
+- PR #356 checks روی head موفق بودند: Vendor CI `41097366027`، .NET CI `41097365977` و Semgrep `41097366191`.
+- Handoffهای #228 و #235 با وضعیت ادغام PR #356 و #329 هم‌تراز شدند؛ متن قدیمی «PR #329 باز است» حذف شد.
+- Post-merge CI main در زمان ثبت: Semgrep `41100115088` موفق؛ .NET CI `41100114950` و Vendor CI `41100114963` هنوز در حال اجرا. موفقیت پس از merge تا تکمیل آن‌ها اعلام نمی‌شود.
+- هیچ کد اجرایی، API، schema، migration، secret، private key یا customer DB تغییر نکرد.
+- موانع Production همچنان واقعی‌اند: HSM مرکزی provision نشده (بودجه صفر)، sink مستقل Audit هنوز provider/credential ندارد، revocation آفلاین هنوز consumer/enforcement ضد rollback ندارد، و آزمون فیزیکی TPM/دو ماشین و backup/restore انجام نشده است.
+- PR #356: https://github.com/hamidreza1394/Accounting/pull/356
