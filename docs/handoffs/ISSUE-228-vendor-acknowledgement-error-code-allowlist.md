@@ -3,13 +3,13 @@
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/228
 - **Agent/مسئول:** ChatGPT
 - **تاریخ:** 2026-10-30
-- **وضعیت:** پیاده‌سازی در شاخه؛ منتظر CI و بازبینی
+- **وضعیت:** ادغام‌شده و CI-Verified پس از merge در main
 
 ## هدف و معیارهای پذیرش
 - [x] نتیجهٔ `Rejected` فقط با کد خطای ثابت و غیرحساس به وضعیت `Failed` تبدیل شود.
 - [x] متن آزاد exception، SQL diagnostics، PII و کد ناشناخته پیش از ذخیره در Vendor رد شود.
 - [x] تست SQL Server نشان دهد acknowledgement ردشده با کد ناشناخته، درخواست را در `PendingDelivery` نگه می‌دارد و هیچ audit/ack metadata ثبت نمی‌کند.
-- [ ] CI الزامی روی SHA نهایی موفق شود.
+- [x] CI الزامی روی SHA نهایی PR موفق شد و post-merge CI روی main نیز موفق شد.
 
 ## خلاصه تغییرات
 - allow-list Vendor برای rejection codeها محدود به `provisioning_parent_reference_invalid` و `provisioning_initial_admin_conflict` شد؛ این دو کد با مسیرهای فعلی `StoreRejectedAcknowledgementAsync` در consumer مشتری منطبق‌اند.
@@ -32,7 +32,13 @@
 | تست محلی .NET | اجرا نشد | در این نشست checkout/SDK محلی اجرا نشد. |
 | `ProvisioningAcknowledgementStateRulesTests` | در CI | روی PR جدید باید اجرا شود. |
 | `ProvisioningAcknowledgementSqlServerIntegrationTests` | در CI | نیازمند SQL Server واقعی در Workflow. |
-| .NET CI / Vendor CI / secret scan | در انتظار | Merge فقط پس از موفقیت بررسی‌های الزامی. |
+| .NET CI روی head نهایی PR | موفق | run `41020652505`؛ build/test، E2E و انتشار Linux/Windows موفق. |
+| Vendor CI روی head نهایی PR | موفق | run `41020652414`؛ build/test/package موفق. |
+| Semgrep / CodeQL | موفق | runs `41020652448` و `41020647837`. |
+| .NET CI پس از merge روی main | موفق | run `41021709995`؛ تمام ۷ job موفق. |
+| Vendor CI پس از merge روی main | موفق | run `41021709933`. |
+| Semgrep / Push on main پس از merge | موفق | runs `41021709965` و `41021708889`. |
+| تست محلی .NET | اجرا نشد | در این نشست checkout/SDK محلی اجرا نشد؛ شواهد از GitHub Actions است. |
 
 ## امنیت، داده و سازگاری
 - فقط Vendor Host، تست‌های Vendor و مستندات تغییر می‌کنند؛ هیچ فایل `Server/**`، Migration مشتری یا schema مشتری تغییر نکرده است.
@@ -44,5 +50,6 @@
 
 ## شناسه‌های Git
 - Branch: `fix/vendor-acknowledgement-error-code-allowlist`
-- Commit: پس از ساخت
+- Commit PR head: `c903e87d9965aa4ed63775aed793eb651645c7d1`
+- Merge commit: `2d9e045145398a3ba1ea824e4dca736426cf4850`
 - Pull Request: https://github.com/hamidreza1394/Accounting/pull/312

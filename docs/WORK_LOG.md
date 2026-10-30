@@ -1295,3 +1295,15 @@
 - **دامنه:** فقط Vendor Host، تست‌های Vendor و مستندات؛ هیچ تغییر در `Server/**`، customer schema یا migration انجام نشد.
 - **اعتبارسنجی:** تست محلی اجرا نشده؛ PR و CI لازم است. وضعیت این تغییر `Implemented / Not Verified` تا سبز شدن بررسی‌های الزامی است.
 - **Branch / PR:** `fix/vendor-acknowledgement-error-code-allowlist` / [PR #312](https://github.com/hamidreza1394/Accounting/pull/312).
+
+## 2026-10-30 — تأیید پس از merge PR #312 و بازآشتی شواهد #281/#282/#284
+- **main:** SHA `2d9e045145398a3ba1ea824e4dca736426cf4850`.
+- **PR #312:** merge commit همین SHA؛ روی head نهایی PR، .NET CI `41020652505`، Vendor CI `41020652414`، Semgrep `41020652448` و CodeQL `41020647837` موفق بودند.
+- **CI پس از merge #312:** .NET CI `41021709995` با هفت job موفق (client، secret-scan، publish-scripts، build-and-test، E2E، publish Linux و publish Windows)؛ Vendor CI `41021709933`، Semgrep `41021709965` و Push on main `41021708889` نیز موفق‌اند.
+- **PR #281:** merge commit `2ee1edc52904833bc28eead5a679185377363c24`؛ تمام check-runهای همان commit موفق‌اند.
+- **PR #282:** merge commit `f4a0462b0972e7686a686eca0febfaee680baecf`؛ پس از یک اجرای اولیهٔ cancelled، تمام check-runهای نهایی روی همان merge SHA موفق شدند.
+- **PR #284:** merge commit `81ed5f64ed86ebbae47a433cea63e3655cb1d24b`؛ تمام check-runهای همان commit موفق‌اند. ترتیب authorization پیش از بررسی conflict/status در تصمیم approval و تست رگرسیون تأیید شده‌اند.
+- **PR #312:** allow-list کدهای ثابت `Rejected` در Vendor فقط `provisioning_parent_reference_invalid` و `provisioning_initial_admin_conflict` را می‌پذیرد؛ متن آزاد/diagnostic/PII رد می‌شود. Handoff و PROJECT_STATUS بر اساس merge و CI واقعی به‌روزرسانی شدند.
+- **PRهای باز #309–#311:** همچنان customer-side Issue #235 و خارج از PR محدود به Vendor هستند؛ هیچ‌کدام در این تغییر ادغام نشدند.
+- **تست محلی:** اجرا نشد؛ همهٔ شواهد بالا از check-runهای واقعی GitHub Actions هستند.
+- **محدودیت‌های Production:** اتصال provisioning به `VendorLicense.Id`/`Sequence` نیازمند تصمیم یک یا چند لایسنس برای هر installation است؛ KMS/HSM واقعی و مقصد مستقل Audit نیز به انتخاب و credential معتبر نیاز دارند.
