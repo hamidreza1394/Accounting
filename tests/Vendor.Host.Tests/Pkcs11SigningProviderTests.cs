@@ -25,6 +25,25 @@ public sealed class Pkcs11SigningProviderTests
     }
 
     [Fact]
+    public void ProductionSoftwareSigningRequiresExplicitRiskAcceptance()
+    {
+        var options = ValidOptions();
+        options.AssuranceLevel = "Software";
+        Assert.Throws<InvalidOperationException>(() => options.Validate(isProduction: true));
+
+        options.AcceptSoftwareKeyRisk = true;
+        options.Validate(isProduction: true);
+    }
+
+    [Fact]
+    public void UnknownAssuranceLevelIsRejected()
+    {
+        var options = ValidOptions();
+        options.AssuranceLevel = "Automatic";
+        Assert.Throws<InvalidOperationException>(options.Validate);
+    }
+
+    [Fact]
     public async Task LicenseProviderSignsCanonicalBytesAndWritesMetadataOnlyAudit()
     {
         var payload = Encoding.UTF8.GetBytes("{\"license\":\"canonical\"}");
@@ -89,6 +108,7 @@ public sealed class Pkcs11SigningProviderTests
         ModulePath = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "pkcs11-test-module")),
         TokenLabel = "FaranouVendorCI",
         UserPin = "test-only-pin",
+        AssuranceLevel = "Software",
         LicenseKey = new Pkcs11SigningKeyOptions { KeyId = "vendor-license-2026-v1" },
         ProvisioningKey = new Pkcs11SigningKeyOptions { KeyId = "vendor-package-2026-v1" }
     };
