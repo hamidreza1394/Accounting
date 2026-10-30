@@ -1,6 +1,6 @@
 # وضعیت جاری Vendor و شکاف‌های وابسته — 2026-10-30
 
-**مبنای بازبینی:** شاخه `main`، SHA `b6ee9419abf53997e28dec19105645d6ed9f8833` (پس از ادغام PRهای #344، #349، #351 و #352).
+**مبنای بازبینی:** شاخه `main`، SHA `31f1873ce9f26405beaf773e876bf99155c43fa2` (پس از ادغام PRهای #344، #349، #351، #352، #353 و #354).
 این بخش وضعیت جاری است؛ snapshotهای بعدی سند سابقه‌اند و نباید به‌عنوان وضعیت امروز خوانده شوند.
 
 ## وضعیت آخرین تغییر و CI
@@ -14,7 +14,8 @@
 - **PR #349 — Windows CNG Customer ACK:** ادغام شد؛ .NET CI در PR #351 تست‌های اختصاصی CNG را با فیلتر صحیح MTP کشف و اجرا کرد.
 - **PR #351 — xUnit v3/MTP Windows filter:** ادغام شد؛ .NET CI run [41088538581](https://github.com/hamidreza1394/Accounting/actions/runs/41088538581) و Semgrep run [41088538577](https://github.com/hamidreza1394/Accounting/actions/runs/41088538577) موفق؛ Windows CNG tests، Windows publish، Linux publish و E2E نیز موفق.
 - **PR #352 — Customer ACK key revocation:** ادغام شد؛ .NET CI run [41090537956](https://github.com/hamidreza1394/Accounting/actions/runs/41090537956) و Semgrep run [41090537922](https://github.com/hamidreza1394/Accounting/actions/runs/41090537922) موفق. ۶۸۲ تست .NET (۶۷۸ موفق، ۴ Skip، صفر شکست)، تست CNG ویندوز، انتشار Windows/Linux و E2E موفق شدند.
-- **مقایسه main:** SHA فعلی با merge commit PR #352 یکسان است؛ Vendor HSM واقعی هنوز provision نشده است.
+- **PR #354 — Vendor dashboard readiness:** ادغام شد؛ متن‌های قدیمی «نسخه اولیه رابط» و «عملیات نوشتن در مراحل بعدی» با وضعیت واقعی Vendor جایگزین شدند. Vendor CI `41095191395`، .NET CI `41095191238`، Semgrep `41095191239` و CodeQL `41095184027` همگی موفق شدند؛ شامل Vendor SQL Server integration/EF snapshot/SoftHSM، .NET E2E، Linux/Windows publish و Windows CNG tests.
+- **مقایسه main:** SHA فعلی `31f1873ce9f26405beaf773e876bf99155c43fa2` است؛ PR #354 پس از PR #353 ادغام شد. Post-merge CI در زمان این به‌روزرسانی هنوز در حال اجراست: .NET `41096833025`، Vendor `41096832981`، Semgrep `41096832996`. Vendor HSM واقعی هنوز provision نشده است.
 
 ## وضعیت تصمیم امضا #236 — D-055 Accepted
 
