@@ -179,6 +179,7 @@ public sealed class CustomerProvisioningApplyService
         };
         var fiscalPeriod = new Domain.FiscalPeriod
         {
+            TenantId = company.Id,
             Company = company,
             Title = payload.FiscalPeriodTitle!,
             StartDate = payload.FiscalPeriodStartDate!.Value,
@@ -187,6 +188,7 @@ public sealed class CustomerProvisioningApplyService
         };
         var role = new Domain.CompanyRole
         {
+            TenantId = company.Id,
             Company = company,
             Code = "company-admin",
             Name = "مدیر شرکت",
@@ -208,7 +210,9 @@ public sealed class CustomerProvisioningApplyService
         };
         var membership = new Domain.UserCompanyMembership
         {
+            TenantId = company.Id,
             Company = company,
+            RoleId = role.Id,
             Role = role,
             UserId = admin.Id,
             IsActive = true,
@@ -225,7 +229,13 @@ public sealed class CustomerProvisioningApplyService
             .ToListAsync(cancellationToken);
         foreach (var permission in permissions)
         {
-            role.RolePermissions.Add(new Domain.CompanyRolePermission { Role = role, Permission = permission });
+            role.RolePermissions.Add(new Domain.CompanyRolePermission
+            {
+                RoleId = role.Id,
+                Role = role,
+                PermissionId = permission.Id,
+                Permission = permission
+            });
         }
 
         var enrollmentToken = CreateOpaqueSecret();
