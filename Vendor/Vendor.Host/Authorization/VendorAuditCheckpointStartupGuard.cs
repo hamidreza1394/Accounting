@@ -17,12 +17,13 @@ public static class VendorAuditCheckpointStartupGuard
             return;
         }
 
-        if (!services.Any(descriptor =>
-                descriptor.ServiceType == typeof(IProductionVendorAuditCheckpointStore)))
+        var productionStoreRegistrations = services.Count(descriptor =>
+            descriptor.ServiceType == typeof(IProductionVendorAuditCheckpointStore));
+        if (productionStoreRegistrations != 1)
         {
             throw new InvalidOperationException(
-                "Vendor Production requires an independently permissioned append-only audit checkpoint store. " +
-                "Configure an approved provider with separate credentials and retention controls; no local-file or Vendor-database fallback is permitted.");
+                "Vendor Production requires exactly one independently permissioned append-only audit checkpoint store. " +
+                "Configure one approved provider with separate credentials and retention controls; no local-file or Vendor-database fallback is permitted.");
         }
     }
 }
