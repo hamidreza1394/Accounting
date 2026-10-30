@@ -1,47 +1,49 @@
 # وضعیت جاری Vendor و شکاف‌های وابسته — 2026-10-30
 
-**مبنای بازبینی کد:** شاخه `main`، SHA `2d9e045145398a3ba1ea824e4dca736426cf4850`.
+**مبنای بازبینی:** شاخه `main`، SHA `43d28253eb9f0f38ff25d0dfea143aeacdb06871` (پس از ادغام PR #329).
 این بخش وضعیت جاری است؛ snapshotهای بعدی سند سابقه‌اند و نباید به‌عنوان وضعیت امروز خوانده شوند.
 
-## وضعیت GitHub Actions روی main پس از PR #312
+## وضعیت آخرین تغییر و CI
 
-- **.NET CI:** run [41021709995](https://github.com/hamidreza1394/Accounting/actions/runs/41021709995) روی SHA فعلی موفق است؛ هر هفت job شامل `client`، `secret-scan`، `publish-scripts`، `build-and-test`، `e2e`، `publish` و `publish-windows` موفق شدند.
-- **Vendor CI:** run [41021709933](https://github.com/hamidreza1394/Accounting/actions/runs/41021709933) موفق است.
-- **Semgrep:** run [41021709965](https://github.com/hamidreza1394/Accounting/actions/runs/41021709965) موفق است.
-- **Push on main:** run [41021708889](https://github.com/hamidreza1394/Accounting/actions/runs/41021708889) موفق است.
+- **PR #329** — تست E2E نسخه ۴ بین Vendor Host و Customer Host ادغام شد؛ merge commit همان SHA مبنای این بازبینی است.
+- **.NET CI** run [41052515115](https://github.com/hamidreza1394/Accounting/actions/runs/41052515115): هر ۷ job شامل client، secret-scan، build-and-test، publish-scripts، E2E و انتشار Linux/Windows موفق.
+- **Vendor CI** run [41052515292](https://github.com/hamidreza1394/Accounting/actions/runs/41052515292): موفق.
+- **Semgrep** run [41052515389](https://github.com/hamidreza1394/Accounting/actions/runs/41052515389): موفق.
+- **مقایسه main:** `main` با merge commit PR #329 یکسان است؛ این گزارش تغییر بعدی روی main را فرض نمی‌کند.
 
-## ادغام‌های مورد پیگیری و شواهد پس از merge
+## وضعیت Provisioning در main
 
-- **PR #281** — merge commit `2ee1edc52904833bc28eead5a679185377363c24`. تمام check-runهای متصل به همین merge commit، شامل .NET build/test، E2E، انتشار Linux/Windows، secret scan، client، Semgrep و CodeQL موفق‌اند.
-- **PR #282** — merge commit `f4a0462b0972e7686a686eca0febfaee680baecf`. اجرای اولیهٔ post-merge بخشی از jobها را cancelled ثبت کرد؛ اجرای نهایی مجدد روی همان merge SHA همهٔ check-runها را موفق ثبت کرده است، شامل build/test، E2E، انتشار Linux/Windows، Vendor package، secret scan، client، Semgrep و CodeQL.
-- **PR #284** — merge commit `81ed5f64ed86ebbae47a433cea63e3655cb1d24b`. همهٔ check-runهای همان SHA موفق‌اند؛ ترتیب مجوزدهی target پیش از بررسی RowVersion/status در تصمیم approval با تست رگرسیون در main تأیید شده است.
-- **PR #312** — allow-list کدهای rejection در Vendor با merge commit `2d9e045145398a3ba1ea824e4dca736426cf4850` ادغام شد. روی head نهایی PR، .NET CI [41020652505](https://github.com/hamidreza1394/Accounting/actions/runs/41020652505)، Vendor CI [41020652414](https://github.com/hamidreza1394/Accounting/actions/runs/41020652414)، Semgrep [41020652448](https://github.com/hamidreza1394/Accounting/actions/runs/41020652448) و CodeQL [41020647837](https://github.com/hamidreza1394/Accounting/actions/runs/41020647837) موفق بودند؛ CI کامل پس از merge نیز روی main در runهای بالا موفق شد.
+### قابلیت‌های پیاده‌سازی‌شده و CI-verified
 
-## PRهای باز فعلی
+- **قرارداد و entitlement:** PR #319 و D-054، schema v4 را به یک `VendorLicense.Id` و Sequence آخرین envelope امضاشده متصل می‌کنند؛ canonical v1-v3 حفظ شده است. انتخاب زیرسیستم از entitlement تأییدشدهٔ لایسنس می‌آید، نه ورودی قابل‌اعتماد فرض‌شده از مرورگر.
+- **مصرف‌کنندهٔ مشتری:** PRهای #302، #305، #306 و #307، trust store مستقل، verifier fail-closed، claim/replay یکتا، اعمال تراکنشی شرکت/دوره مالی/مدیر/عضویت و مجوزهای allow-list شده، enrollment یک‌بارمصرف و مسیر acknowledgement را اضافه کرده‌اند.
+- **ورود مدیر اولیه:** PR #308 ورود و ایجاد نشست را تا تکمیل Enrollment رد می‌کند. رمز توسط خود مدیر در Enrollment تعیین می‌شود؛ در این قرارداد رمز موقت قابل‌استفاده‌ای برای «تغییر در اولین ورود» صادر نمی‌شود.
+- **دریافت acknowledgement در Vendor:** PR #293 اعتبارسنجی امضا و bindingهای درخواست، digest/idempotency و ثبت تراکنشی نتیجه را اضافه کرده؛ PR #294 نتیجه را در تاریخچه Provisioning نمایش می‌دهد.
+- **تست دو میزبان:** PR #329 دو TestServer مستقل را با دو اتصال SQL Server و دیتابیس مجزا اجرا می‌کند؛ بسته و acknowledgement از طریق فایل منتقل می‌شوند؛ دستکاری/کلید ناشناخته/فایل ناقص، replay و درخواست هم‌زمان، enrollment یک‌بارمصرف و Confirmed فقط پس از acknowledgement معتبر پوشش داده می‌شوند.
+- **اصلاح خطای ورودی HTTP:** PR #318 خطای JSON ناقص/بزرگ را به پاسخ عمومی با status صحیح تبدیل کرده است.
 
-- **#309** — تست‌های تراکنشی/هم‌زمانی customer-side در Issue #235. Gitleaks روی SHA قبلی یک مقدار ثابت password-like در fixture تست پیدا کرد؛ مقدار حذف و با رمز تصادفی runtime جایگزین شد. head فعلی `b5b5af551faedc25efac3d4f42ea2e3b39b689eb` هنوز mergeable نیست و CI کامل روی همین head تأیید نشده؛ ادغام ممنوع تا رفع وضعیت شاخه و سبزشدن همهٔ بررسی‌ها.
-- **#310** — تبادل آفلاین فایل acknowledgement در Issue #235؛ Vendor CI و Semgrep روی head مشاهده‌شده موفق، اما .NET CI هنوز در حال اجرا بود و شاخه نسبت به main نیازمند همگام‌سازی است.
-- **#311** — قرارداد/trust store امضای acknowledgement سمت مشتری در Issue #235؛ head مشاهده‌شده mergeable بود اما build/test و تحلیل‌های جاری هنوز کامل نشده بودند.
-- هر سه PR فوق customer-side یا تبادل مستقل هستند؛ نباید در PR محدود به Vendor ادغام شوند.
+## شواهد CI مربوط به consumer و E2E
 
-## قابلیت‌های تأییدشدهٔ Vendor در main
+- **PR #307:** .NET CI [41010026198](https://github.com/hamidreza1394/Accounting/actions/runs/41010026198)، Vendor CI [41010026058](https://github.com/hamidreza1394/Accounting/actions/runs/41010026058) و Semgrep [41010026110](https://github.com/hamidreza1394/Accounting/actions/runs/41010026110) موفق.
+- **PR #308:** .NET CI [41014003705](https://github.com/hamidreza1394/Accounting/actions/runs/41014003705) و Semgrep [41014003694](https://github.com/hamidreza1394/Accounting/actions/runs/41014003694) موفق.
+- **PR #329:** .NET CI [41052515115](https://github.com/hamidreza1394/Accounting/actions/runs/41052515115)، Vendor CI [41052515292](https://github.com/hamidreza1394/Accounting/actions/runs/41052515292) و Semgrep [41052515389](https://github.com/hamidreza1394/Accounting/actions/runs/41052515389) موفق؛ jobهای .NET و Vendor روی همان head کامل شدند.
 
-- ثبت intent راه‌اندازی در دیتابیس مستقل Vendor با RequestId/nonce یکتا، payload canonical و نسخه‌دار، hash، idempotency، RowVersion، antiforgery، resource authorization و audit تراکنشی.
-- قرارداد provisioning شامل اطلاعات شرکت، مدیر اولیه (نام کاربری و ایمیل؛ نه رمز)، دوره مالی، مرجع شرکت مادر و کدهای زیرسیستم است. اعتبارسنجی parent فقط درخواست Confirmed در همان Customer/Installation را می‌پذیرد.
-- maker-checker برای امضای provisioning برقرار است: درخواست‌کننده و reviewer متفاوت‌اند؛ مجوز منبع پیش از افشای وضعیت/RowVersion بررسی می‌شود؛ تغییر وضعیت، approval و audit در تراکنش انجام می‌شود.
-- signer پیش‌فرض `UnavailableProvisioningSigningProvider` و fail-closed است؛ بدون provider خارجی معتبر، درخواست از `AwaitingSigner` به `PendingDelivery` نمی‌رود.
-- export فقط برای بستهٔ امضاشده و مقصد فعال مجاز است؛ تحویل در تراکنش Serializable ثبت و پاسخ `no-store` می‌شود.
-- acknowledgement در Vendor با trust store مستقل، binding به request ID/nonce/hash/customer/installation و idempotency بررسی می‌شود. فقط `Applied`/`AlreadyApplied` به `Confirmed` و `Rejected` با کد allow-list شده به `Failed` می‌رسد؛ متن آزاد exception/SQL/PII ذخیره نمی‌شود.
+## محدودیت‌های آزمون و Production
 
-## شکاف‌های باقی‌مانده و مرز تصمیم
+- PR #329 دو میزبان HTTP و دو دیتابیس مستقل را در یک فرایند تست اجرا می‌کند؛ **آزمون دو ماشین فیزیکی، دو OS process مستقل یا شبکه واقعی قطع/وصل‌شونده نیست**.
+- کلیدهای ECDSA این E2E موقت و test-only هستند. Provider پیش‌فرض امضای لایسنس، provisioning package و acknowledgement همچنان unavailable/fail-closed است؛ بنابراین CI سبز به معنی امکان صدور/اعمال Production نیست.
+- تست‌های CI شواهد کد و محیط آزمایش هستند؛ استقرار واقعی cloud/dedicated/offline، backup/restore و بازیابی حادثه هنوز آزمون عملیاتی نشده‌اند.
 
-- **#228 — purchased subsystem binding:** کدهای `finance`، `sales`، `inventory` و `treasury` در payload allow-list شده‌اند، اما provisioning request هنوز به یک `VendorLicense.Id` و `Sequence` صادرشده متصل نیست. مدل Vendor اجازهٔ چند رکورد لایسنس برای یک Installation را می‌دهد؛ قبل از enforcement باید مالک محصول مشخص کند entitlement از یک لایسنس صادرشدهٔ مشخص می‌آید یا اجتماع چند لایسنس معتبر. پیشنهاد فنی برای سادگی ممیزی: binding صریح به یک لایسنس `Issued` همان Installation و sequence دقیق؛ این پیشنهاد تا تصویب، مبنای کد نیست.
-- **#235 — consumer سمت مشتری:** بخشی از verifier، apply تراکنشی، claim/replay، enrollment و guard ورود در PRهای قبلی به main آمده‌اند؛ provider امضای acknowledgement سمت مشتری همچنان unavailable است. PRهای #309–#311 جداگانه و هنوز بازند.
-- **#236/#214 — signer و revocation:** maker-checker، منع self-approval، resource authorization، RowVersion، audit و timeout پیاده‌سازی شده‌اند؛ KMS/HSM یا signing service واقعی، workload identity، sign-only access، rotation/recovery، توزیع کلید عمومی و آزمون عملیاتی هنوز به انتخاب/credential معتبر نیاز دارند. revocation آفلاین نیز به consumer monotonic و backup/restore سمت مشتری وابسته است.
-- **#107 — checkpoint مستقل ممیزی:** قرارداد، HashVersion، زنجیرهٔ خطی، startup guard و runbook وجود دارند؛ adapter مستقل واقعی با هویت/credential جدا، immutability/retention، alerting و restore drill هنوز انتخاب و عملیاتی نشده است.
-- **استقرار cloud/dedicated/offline:** جریان کامل export/import/ack باید با signer و مقصد ممیزی واقعی در هر deployment mode آزموده شود.
+## شکاف‌های باقی‌مانده و وابستگی‌های عملیاتی
 
-نتیجه: Vendor در سطح ثبت درخواست، maker-checker، export و دریافت acknowledgement پیاده‌سازی و روی main CI-verified است؛ اما purchased-entitlement binding، signer عملیاتی و sink مستقل ممیزی مانع اعلام تکمیل Production هستند.
+- **#236 — KMS/HSM و چرخه کلید:** انتخاب provider واقعی، workload identity، sign-only permission، key provisioning/rotation/recovery، توزیع کلید عمومی و تست عملیاتی نیازمند تصمیم و دسترسی محیط است. هیچ کلید نرم‌افزاری یا provider فرضی نباید جایگزین شود.
+- **#107 — checkpoint مستقل Audit:** قرارداد، زنجیره نسخه‌دار، startup guard و runbook وجود دارند؛ adapter واقعی با failure domain، credential، retention/immutability و alerting مستقل هنوز به انتخاب مقصد و دسترسی نیاز دارد. Production Vendor بدون آن باید fail-closed بماند.
+- **#214 — ابطال آفلاین:** پروتکل امضاشدهٔ revocation، consumer ضد rollback، انتقال آفلاین و آزمون backup/restore/upgrade هنوز کامل نیستند؛ تغییر Status در Vendor به‌تنهایی لایسنس نصب آفلاین را باطل نمی‌کند.
+- **#228 و #235:** مسیر نرم‌افزاری provisioning و تست آن در main موجود است؛ وضعیت Production به signer مورد تأیید و تست عملیاتی وابسته است. #228/#235 را تا تکمیل وابستگی‌های امنیتی/عملیاتی و بازبینی نهایی نباید به‌عنوان Production-ready بسته‌شده معرفی کرد.
+- **موارد صریحاً خارج از دامنه D-054:** تجمیع چند لایسنس، افزودن زیرسیستم به شرکت موجود و enforcement اتمیک MaxCompanies پیاده‌سازی نشده‌اند و نباید با fallback ضمنی انجام شوند.
+
+**نتیجه:** جریان Provisioning نسخه ۴ از نظر پیاده‌سازی نرم‌افزاری و تست CI بین دو میزبان آزمایشی تکمیل و تأیید شده است. محصول Vendor هنوز Production-ready نیست؛ موانع اصلی باقی‌مانده، signer خارجی واقعی، checkpoint مستقل Audit، revocation آفلاین و تست عملیاتی است.
+
 ---
 ## Snapshot تاریخی — وضعیت Vendor پس از PR #271
 
