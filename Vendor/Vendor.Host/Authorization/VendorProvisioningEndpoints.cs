@@ -432,9 +432,7 @@ public static class VendorProvisioningEndpoints
                 exportLicenseId, customer, installation, exportPayload.Subsystems, ct);
             if (!exportBinding.Succeeded)
                 return Results.Json(new { error = exportBinding.ErrorCode }, statusCode: exportBinding.StatusCode);
-            if (exportBinding.Sequence != exportSequence ||
-                !exportPayload.Subsystems.Order(StringComparer.Ordinal)
-                    .SequenceEqual(exportBinding.Subsystems!.Order(StringComparer.Ordinal), StringComparer.Ordinal))
+            if (!VendorProvisioningLicenseBindingRules.MatchesCurrentBinding(exportPayload, exportBinding))
                 return Results.Conflict(new { error = "provisioning_license_sequence_stale" });
 
             var now = timeProvider.GetUtcNow().ToUniversalTime();
