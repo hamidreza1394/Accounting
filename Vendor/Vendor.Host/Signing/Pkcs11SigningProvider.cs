@@ -31,6 +31,9 @@ public sealed class Pkcs11SigningOptions
     /// </summary>
     public void Validate()
     {
+        if (LicenseKey is null || ProvisioningKey is null)
+            throw new InvalidOperationException("Separate license and provisioning signing key identifiers are required.");
+
         if (string.IsNullOrWhiteSpace(ModulePath) || !Path.IsPathFullyQualified(ModulePath))
             throw new InvalidOperationException("PKCS#11 module path must be an absolute path.");
 
@@ -99,6 +102,7 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
     private readonly IHostEnvironment _environment;
     private readonly ILogger<Pkcs11SigningModule> _logger;
     private readonly Lazy<IPkcs11Library> _library;
+    private readonly SemaphoreSlim _operationGate = new(1, 1);
 
     public Pkcs11SigningModule(
         IOptions<Pkcs11SigningOptions> options,
@@ -119,6 +123,7 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
         cancellationToken.ThrowIfCancellationRequested();
         var payloadCopy = canonicalPayload.ToArray();
 
+        await _operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             return await Task.Run(
@@ -143,12 +148,17 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
                 exception.GetType().Name);
             return LicenseSigningResult.Unavailable();
         }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
 
     public async ValueTask<bool> IsAvailableAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        await _operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             return await Task.Run(CheckAvailableCore, cancellationToken).ConfigureAwait(false);
@@ -163,6 +173,10 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
                 "PKCS#11 signing health probe failed. FailureType={FailureType}.",
                 exception.GetType().Name);
             return false;
+        }
+        finally
+        {
+            _operationGate.Release();
         }
     }
 
@@ -310,6 +324,7 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
     {
         if (_library.IsValueCreated)
             _library.Value.Dispose();
+        _operationGate.Dispose();
     }
 }
 
