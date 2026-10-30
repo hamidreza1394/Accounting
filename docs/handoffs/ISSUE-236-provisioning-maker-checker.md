@@ -24,13 +24,17 @@
 
 - یک شکست CI نشان داد که تست integration پس از ایجاد intent، شناسهٔ تجاری مشتری را تغییر می‌داد؛ fixture اصلاح شده تا binding امضاشونده ثابت بماند و تست به مسیر واقعی signer-unavailable برسد. کنترل تولیدی که تغییر binding را رد می‌کند حفظ شده است.
 
-## آزمون‌ها
-| مورد | وضعیت |
+## آزمون‌ها و شواهد CI
+
+| PR / بررسی | نتیجه |
 |---|---|
-| Vendor CI | در انتظار نتیجهٔ PR |
-| .NET CI و تست integration روی SQL Server | در انتظار نتیجهٔ PR |
-| E2E و انتشار Linux/Windows | در انتظار نتیجهٔ PR |
-| اجرای محلی | در این محیط GitHub-only اجرا نشده |
+| #314 — .NET CI | موفق — [41023761020](https://github.com/hamidreza1394/Accounting/actions/runs/41023761020) |
+| #314 — Vendor CI | اجرای اول cancelled؛ rerun نهایی موفق — [41023761189](https://github.com/hamidreza1394/Accounting/actions/runs/41023761189) |
+| #314 — Semgrep | موفق — [41023760815](https://github.com/hamidreza1394/Accounting/actions/runs/41023760815)، [41023761032](https://github.com/hamidreza1394/Accounting/actions/runs/41023761032) |
+| #316 — .NET CI | موفق — [41026182788](https://github.com/hamidreza1394/Accounting/actions/runs/41026182788) |
+| #316 — Vendor CI | موفق — [41026182882](https://github.com/hamidreza1394/Accounting/actions/runs/41026182882) |
+| #316 — Semgrep | موفق — [41026182656](https://github.com/hamidreza1394/Accounting/actions/runs/41026182656) |
+| اجرای محلی در این بازبینی | اجرا نشد؛ شواهد از GitHub Actions است |
 
 ## فایل‌های مهم
 - `Vendor/Vendor.Host/Signing/VendorProvisioningIssuanceService.cs`
@@ -62,9 +66,9 @@
 
 ## شناسهٔ پیگیری اصلاح observability
 - Branch: `fix/vendor-provisioning-signer-exception-logging`
-- PR: [#314](https://github.com/hamidreza1394/Accounting/pull/314)
-- Head پس از همگام‌سازی main: در CI همین PR بررسی می‌شود.
-
+- PR: [#314](https://github.com/hamidreza1394/Accounting/pull/314) — merged.
+- .NET CI `41023761020` and final Vendor CI rerun `41023761189` succeeded; initial Vendor run was cancelled and is not treated as final evidence.
+- Semgrep runs `41023760815` and `41023761032` succeeded.
 
 ## تأیید کلید عمومی و امضای خروجی Vendor — 2026-10-30
 
