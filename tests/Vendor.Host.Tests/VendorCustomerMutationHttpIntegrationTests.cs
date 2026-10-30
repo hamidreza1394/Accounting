@@ -351,7 +351,7 @@ public sealed class VendorCustomerMutationHttpIntegrationTests
                     Status = "Issued",
                     LicenseKind = LicensePayload.KindPerpetual,
                     MaxCompanies = 10,
-                    SubsystemsJson = "[\\"finance\\",\\"sales\\"]",
+                    SubsystemsJson = "[\"finance\",\"sales\"]",
                     GraceDays = 30,
                     LastIssuedSequence = 1,
                     ValidFromUtc = now.AddMinutes(-5),
