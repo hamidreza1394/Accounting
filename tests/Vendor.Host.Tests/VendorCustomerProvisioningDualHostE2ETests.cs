@@ -1,12 +1,10 @@
 extern alias CustomerServer;
 
 using System.Net;
-using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text.Encodings.Web;
 using System.Text.RegularExpressions;
 using Faranou.Licensing.Contracts;
 using Faranou.Vendor.Host.Authorization;
@@ -16,7 +14,6 @@ using Faranou.Vendor.Persistence.Domain;
 using Faranou.Vendor.Persistence.Identity;
 using CustomerProvisioning = CustomerServer::Infrastructure.Provisioning;
 using CustomerSecurity = CustomerServer::Infrastructure.Security;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -26,8 +23,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Xunit;
 
 using CustomerProgram = CustomerServer::Program;
@@ -38,7 +33,6 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
 {
     private const string DualHostVendorKeyId = "dual-host-vendor-key";
     private const string DualHostAcknowledgementKeyId = "dual-host-customer-ack-key";
-    private const string CustomerE2EAuthenticationScheme = "ProvisioningDualHostE2E";
 
     [Fact]
     public async Task Provisioning_TransfersSignedPackageAndAcknowledgementBetweenIndependentHosts_AndConfirmsOnlyAfterEnrollment()
@@ -77,6 +71,9 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
         var companyName = "شرکت آزمون دو میزبان " + Guid.NewGuid().ToString("N")[..8];
         var adminUserName = "customer-admin-" + Guid.NewGuid().ToString("N")[..10];
         var adminPassword = CreateE2ETestPassword();
+        var customerInfrastructureUsername = "dual-host-infrastructure";
+        var customerInfrastructurePassword = CreateE2ETestPassword();
+        var customerInfrastructurePasswordHash = new CustomerSecurity.PasswordHashService().Hash(customerInfrastructurePassword);
         var requesterPassword = CreateE2ETestPassword();
         var reviewerPassword = CreateE2ETestPassword();
         var requesterName = "mutation-" + Guid.NewGuid().ToString("N");
@@ -127,6 +124,9 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                         configuration.AddInMemoryCollection(new Dictionary<string, string?>
                         {
                             ["ConnectionStrings:ConnectionString"] = customerConnection,
+                            ["ApplicationSettings:MasterUsername"] = customerInfrastructureUsername,
+                            ["ApplicationSettings:MasterPassword"] = customerInfrastructurePasswordHash,
+                            ["ApplicationSettings:AllowLegacyMasterPasswordHash"] = "false",
                             ["Provisioning:CustomerReference"] = customerReference,
                             ["Provisioning:InstallationId"] = installationCode,
                             ["Provisioning:CustomerBoundaryId"] = customerBoundaryId.ToString("D"),
@@ -138,9 +138,6 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                         services.RemoveAll<CustomerProvisioning.ICustomerProvisioningAcknowledgementSigningProvider>();
                         services.AddSingleton<CustomerProvisioning.ICustomerProvisioningAcknowledgementSigningProvider>(
                             new DualHostAcknowledgementSigner(acknowledgementKey));
-                        services.AddAuthentication(CustomerE2EAuthenticationScheme)
-                            .AddScheme<AuthenticationSchemeOptions, ProvisioningE2EAuthenticationHandler>(
-                                CustomerE2EAuthenticationScheme, _ => { });
                     });
                 });
 
@@ -338,15 +335,37 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 using var customerClientA = customerFactory.CreateClient(new WebApplicationFactoryClientOptions
                 {
                     BaseAddress = new Uri("https://localhost"),
-                    HandleCookies = true
+                    HandleCookies = true,
+                    AllowAutoRedirect = false
                 });
                 using var customerClientB = customerFactory.CreateClient(new WebApplicationFactoryClientOptions
                 {
                     BaseAddress = new Uri("https://localhost"),
-                    HandleCookies = true
+                    HandleCookies = true,
+                    AllowAutoRedirect = false
                 });
-                customerClientA.DefaultRequestHeaders.Add("X-Provisioning-E2E-Infrastructure", "1");
-                customerClientB.DefaultRequestHeaders.Add("X-Provisioning-E2E-Infrastructure", "1");
+                using (var infrastructureLoginA = await PostCustomerLoginAsync(
+                    customerClientA, customerInfrastructureUsername, customerInfrastructurePassword, cancellationToken))
+                {
+                    Assert.Equal(HttpStatusCode.Redirect, infrastructureLoginA.StatusCode);
+                    Assert.Equal("/", infrastructureLoginA.Headers.Location?.ToString());
+                    Assert.Contains(
+                        infrastructureLoginA.Headers.TryGetValues("Set-Cookie", out var cookiesA)
+                            ? cookiesA
+                            : Array.Empty<string>(),
+                        value => value.StartsWith(".Faranou.Authentication=", StringComparison.Ordinal));
+                }
+                using (var infrastructureLoginB = await PostCustomerLoginAsync(
+                    customerClientB, customerInfrastructureUsername, customerInfrastructurePassword, cancellationToken))
+                {
+                    Assert.Equal(HttpStatusCode.Redirect, infrastructureLoginB.StatusCode);
+                    Assert.Equal("/", infrastructureLoginB.Headers.Location?.ToString());
+                    Assert.Contains(
+                        infrastructureLoginB.Headers.TryGetValues("Set-Cookie", out var cookiesB)
+                            ? cookiesB
+                            : Array.Empty<string>(),
+                        value => value.StartsWith(".Faranou.Authentication=", StringComparison.Ordinal));
+                }
                 var customerTokenA = await GetCustomerAntiforgeryTokenAsync(customerClientA, cancellationToken);
                 var customerTokenB = await GetCustomerAntiforgeryTokenAsync(customerClientB, cancellationToken);
 
@@ -788,27 +807,4 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
         }
     }
 
-    public sealed class ProvisioningE2EAuthenticationHandler(
-        IOptionsMonitor<AuthenticationSchemeOptions> options,
-        ILoggerFactory logger,
-        UrlEncoder encoder)
-        : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
-    {
-        protected override Task<AuthenticateResult> HandleAuthenticateAsync()
-        {
-            if (!Request.Headers.ContainsKey("X-Provisioning-E2E-Infrastructure"))
-                return Task.FromResult(AuthenticateResult.NoResult());
-
-            var claims = new[]
-            {
-                new Claim(ClaimTypes.NameIdentifier, "dual-host-e2e-infrastructure"),
-                new Claim(ClaimTypes.Name, "dual-host-e2e-infrastructure"),
-                new Claim("AccountKind", "Infrastructure")
-            };
-            var identity = new ClaimsIdentity(claims, Scheme.Name);
-            var principal = new ClaimsPrincipal(identity);
-            return Task.FromResult(AuthenticateResult.Success(
-                new AuthenticationTicket(principal, Scheme.Name)));
-        }
-    }
 }
