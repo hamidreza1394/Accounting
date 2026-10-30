@@ -223,7 +223,6 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
         setLicenseId(current => next.some(item => item.licenseId === current)
           ? current
           : next[0]?.licenseId ?? '');
-        setSubsystems([]);
       } catch (reason) {
         if (!cancelled) {
           setEligibleLicenses([]);
@@ -304,7 +303,10 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
           companyType,
           initialAdminUserName: adminUserName.trim(),
           initialAdminEmail: adminEmail.trim(),
-          subsystems: subsystems.length === 0 ? null : [...subsystems].sort(),
+          subsystems: selectedLicense && subsystems.length === selectedLicense.subsystems.length &&
+            selectedLicense.subsystems.every(item => subsystems.includes(item))
+            ? null
+            : [...subsystems].sort(),
           fiscalPeriodTitle: fiscalPeriodTitle.trim(),
           fiscalPeriodStartDate,
           fiscalPeriodEndDate,
@@ -484,18 +486,14 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
 
   const selectedLicense = eligibleLicenses.find(item => item.licenseId === licenseId);
 
+  useEffect(() => {
+    setSubsystems(selectedLicense?.subsystems ?? []);
+  }, [licenseId, eligibleLicenses]);
+
   function toggleSubsystem(value: string, checked: boolean) {
-    if (!selectedLicense) return;
-    setSubsystems(current => {
-      const selected = current.length === 0 ? [...selectedLicense.subsystems] : [...current];
-      const next = checked
-        ? (selected.includes(value) ? selected : [...selected, value])
-        : selected.filter(item => item !== value);
-      return next.length === selectedLicense.subsystems.length &&
-        selectedLicense.subsystems.every(item => next.includes(item))
-        ? []
-        : next;
-    });
+    setSubsystems(current => checked
+      ? (current.includes(value) ? current : [...current, value])
+      : current.filter(item => item !== value));
   }
 
   return <Card dir="rtl" aria-labelledby="provisioning-form-title">
@@ -614,11 +612,11 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
           <legend className="text-sm font-semibold">زیرسیستم‌های مجاز در لایسنس انتخاب‌شده</legend>
           {!selectedLicense ? <p className="text-xs text-muted-foreground">ابتدا یک لایسنس معتبر انتخاب کنید.</p>
             : <>
-              <p className="text-xs leading-5 text-muted-foreground">همهٔ موارد به‌صورت پیش‌فرض فعال‌اند. در صورت نیاز فقط زیرمجموعه‌ای از entitlementهای امضاشده را انتخاب کنید؛ خالی‌گذاشتن انتخاب به معنی همهٔ زیرسیستم‌های لایسنس است.</p>
+              <p className="text-xs leading-5 text-muted-foreground">همهٔ موارد به‌صورت پیش‌فرض انتخاب شده‌اند. برای محدودکردن بسته، فقط زیرمجموعهٔ موردنیاز از entitlementهای امضاشده را نگه دارید.</p>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {subsystemOptions.filter(option => selectedLicense.subsystems.includes(option.value)).map(option => <label key={option.value} className="flex items-center gap-2 rounded-md border border-border p-3 text-sm">
                   <input type="checkbox"
-                    checked={subsystems.length === 0 || subsystems.includes(option.value)}
+                    checked={subsystems.includes(option.value)}
                     onChange={event => toggleSubsystem(option.value, event.target.checked)} disabled={busy}/>
                   <span>{option.label}</span>
                 </label>)}
@@ -630,7 +628,7 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
           <Button type="submit" disabled={busy || loading || !installationId || licenseLoading || !licenseId || !companyName.trim() || !adminUserName.trim() || !adminEmail.trim() ||
             !fiscalPeriodTitle.trim() || !fiscalPeriodStartDate || !fiscalPeriodEndDate ||
             (fiscalPeriodStartDate >= fiscalPeriodEndDate) ||
-            (companyType === 'subsidiary' && (!parentCompanyReference.trim() || parentsLoading || eligibleParents.length === 0))}>
+            (companyType === 'subsidiary' && (!parentCompanyReference.trim() || parentsLoading || eligibleParents.length === 0)) || subsystems.length === 0}>
             {busy ? <><LoaderCircle size={16} className="animate-spin"/> در حال ثبت…</> : 'ذخیره درخواست راه‌اندازی'}
           </Button>
           <Button type="button" variant="outline" onClick={onCancel} disabled={busy}>بستن</Button>
