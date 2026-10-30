@@ -355,7 +355,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 using (var infrastructureLoginA = await PostCustomerLoginAsync(
                     customerClientA, customerInfrastructureUsername, customerInfrastructurePassword, cancellationToken))
                 {
-                    Assert.Equal(HttpStatusCode.Redirect, infrastructureLoginA.StatusCode);
+                    Assert.Equal(HttpStatusCode.Redirect, infrastructureLoginA.StatusCode, await infrastructureLoginA.Content.ReadAsStringAsync(cancellationToken));
                     Assert.Equal("/", infrastructureLoginA.Headers.Location?.ToString());
                     Assert.Contains(
                         infrastructureLoginA.Headers.TryGetValues("Set-Cookie", out var cookiesA)
