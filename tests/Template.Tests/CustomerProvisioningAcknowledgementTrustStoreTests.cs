@@ -48,6 +48,25 @@ public sealed class CustomerProvisioningAcknowledgementTrustStoreTests
     }
 
     [Fact]
+    public void MalformedRevocationFlag_FailsClosed()
+    {
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        const string keyId = "customer-ack-installation-a-v1";
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [ConfigurationCustomerProvisioningAcknowledgementTrustStore.SectionPath + ":" + keyId] =
+                    Convert.ToBase64String(key.ExportSubjectPublicKeyInfo()),
+                [ConfigurationCustomerProvisioningAcknowledgementTrustStore.RevokedSectionPath + ":" + keyId] = "not-a-boolean",
+            })
+            .Build();
+        var trustStore = new ConfigurationCustomerProvisioningAcknowledgementTrustStore(configuration);
+
+        Assert.False(trustStore.TryGetPublicKey(keyId, out var rejected));
+        Assert.Empty(rejected);
+    }
+
+    [Fact]
     public void Rotation_AllowsNewVersionWhileOldVersionIsRevoked()
     {
         using var oldKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
