@@ -179,3 +179,11 @@ cd ClientApp && npm ci && npm run typecheck && npm test && npm run build && npm 
 - در شاخهٔ `feat/issue-107-audit-checkpoint-contract`، `VendorAuditCheckpointTests` قرارداد canonical/versioned، نرمال‌سازی UTC، رد hash نامعتبر و تشخیص دستکاری را پوشش می‌دهد؛ `VendorAuditCheckpointIntegrationTests` روی SQL Server واقعی پیشروی checkpoint، جلوگیری از نوشتن تکراری و رد زنجیرهٔ دستکاری‌شده را بررسی می‌کند.
 - CI باید `FARANO_VENDOR_TEST_SQLSERVER` و `FARANO_REQUIRE_VENDOR_SQLSERVER=1` را فراهم کند تا تست SQL Server بدون زیرساخت به Skip تبدیل نشود.
 - **وضعیت این شاخه:** کد و تست‌ها ثبت شده‌اند، اما CI روی HEAD نهایی این PR هنوز اجرا/تأیید نشده است. هیچ store واقعی مستقل انتخاب یا ثبت نشده؛ fake store فقط برای تست قرارداد است و Production readiness اثبات نمی‌کند.
+
+
+## Windows CNG customer acknowledgement signer (Issue #236)
+
+- `tests/Template.Tests/Integration/WindowsCngCustomerProvisioningAcknowledgementSigningTests.cs` verifies key creation with export disabled, ECDSA P-256/64-byte P1363 signing, verification against the returned public SPKI, exact-payload binding, missing-key fail-closed behavior, explicit KSP selection and no TPM-to-Software-KSP fallback.
+- The tests run in the Windows `publish-windows` job using `dotnet test tests/Template.Tests/Template.Tests.csproj --configuration Release --filter FullyQualifiedName~WindowsCngCustomerProvisioningAcknowledgementSigningTests`.
+- The Windows CI fixture uses `Microsoft Software Key Storage Provider` because hosted runners do not guarantee a TPM. This proves Windows CNG API behavior only; it does not prove a real TPM or any particular Windows Server TPM firmware/provider combination. A hardware acceptance test remains mandatory before Production enablement.
+- Linux runs skip the Windows-only test class; no Linux ACK provider is included in this stage.
