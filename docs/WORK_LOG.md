@@ -1394,3 +1394,10 @@
 - رویهٔ ACK مشتری صریحاً offline و per-installation است؛ TPM/OS secure store باید non-exportable بودن را اثبات کند و در فقدان آن fail-closed می‌ماند.
 - Runbook به سازنده یا cloud خاص وابسته نیست و هیچ private-key export یا software fallback را مجاز نمی‌کند.
 - وضعیت اجرایی: بودجهٔ HSM صفر و HSM واقعی provision نشده؛ بخش Vendor HSM runbook فعلاً غیرقابل اجراست. SoftHSM صرفاً Testing/CI است.
+
+
+## 2026-10-30 — Issue #236: هم‌ترازی Security contract برای Customer ACK
+
+- متن قدیمی SECURITY.md که می‌گفت private key در نصب مشتری نگهداری نمی‌شود و انتخاب HSM هنوز NeedsApproval است، با تصمیم پذیرفته‌شده D-055 مغایرت داشت.
+- قرارداد اصلاح شد: کلید ACK برای هر نصب جدا و non-exportable در TPM/OS secure store همان نصب می‌ماند؛ امضا محلی/offline است و کلید به Vendor منتقل نمی‌شود.
+- Vendor package/license همچنان به PKCS#11 HSM واقعی با کلیدهای مجزا نیاز دارد؛ با بودجه صفر Production signing unavailable/fail-closed می‌ماند. Customer ACK adapter هنوز پیاده‌سازی نشده و default unavailable است.
