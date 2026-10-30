@@ -185,6 +185,20 @@ public static class VendorProvisioningEndpoints
             if (!VendorProvisioningRequestRules.IsTargetActive(customer.Status, installation.Status))
                 return Results.Conflict(new { error = "provisioning_target_inactive" });
 
+            if (string.Equals(request.CompanyType, "subsidiary", StringComparison.Ordinal) &&
+                !await VendorProvisioningParentReferenceRules.IsEligibleParentAsync(
+                    db,
+                    request.ParentCompanyReference,
+                    customer.Id,
+                    installation.Id,
+                    request.RequestId,
+                    customer.CustomerNumber,
+                    installation.InstallationCode,
+                    ct))
+            {
+                return Results.Conflict(new { error = "provisioning_parent_reference_invalid" });
+            }
+
             var requestId = request.RequestId.ToString("D");
             var existing = await db.ProvisioningRequests.AsNoTracking()
                 .SingleOrDefaultAsync(item => item.RequestId == requestId, ct);
