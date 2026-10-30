@@ -102,7 +102,7 @@ public sealed class VendorAuditCheckpointStartupServiceTests
             Assert.Equal(
                 "Vendor Production cannot start because the independent audit checkpoint could not be verified and advanced.",
                 exception.Message);
-            Assert.DoesNotContain("private-connection-detail", exception.Message, StringComparison.Ordinal);
+            Assert.DoesNotContain("private-connection-detail", exception.Message);
         }
         finally
         {
@@ -148,9 +148,9 @@ public sealed class VendorAuditCheckpointStartupServiceTests
         }
 
         const string message = "Set FARANO_VENDOR_TEST_SQLSERVER to a disposable SQL Server connection. " +
-                               "Use FARANOU_REQUIRE_VENDOR_SQLSERVER=1 to require this integration test in CI.";
+                               "Use FARANO_REQUIRE_VENDOR_SQLSERVER=1 to require this integration test in CI.";
         if (string.Equals(
-                Environment.GetEnvironmentVariable("FARANOU_REQUIRE_VENDOR_SQLSERVER"),
+                Environment.GetEnvironmentVariable("FARANO_REQUIRE_VENDOR_SQLSERVER"),
                 "1",
                 StringComparison.Ordinal))
         {
