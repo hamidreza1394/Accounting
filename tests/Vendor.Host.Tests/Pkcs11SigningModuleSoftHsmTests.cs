@@ -16,7 +16,7 @@ namespace Faranou.Vendor.Host.Tests;
 public sealed class Pkcs11SigningModuleSoftHsmTests
 {
     [Fact]
-    public async Task SoftHsmSignsWithSeparateNonExtractableP256KeysAndIsRejectedInProduction()
+    public async Task SoftHsmSignsWithSeparateNonExtractableP256KeysAndIsAllowedInStagingButRiskGatedInProduction()
     {
         var modulePath = Environment.GetEnvironmentVariable("FARANO_TEST_PKCS11_MODULE_PATH");
         var tokenLabel = Environment.GetEnvironmentVariable("FARANO_TEST_PKCS11_TOKEN_LABEL");
@@ -45,6 +45,7 @@ public sealed class Pkcs11SigningModuleSoftHsmTests
             ModulePath = modulePath,
             TokenLabel = tokenLabel,
             UserPin = pin,
+            AssuranceLevel = "Software",
             LicenseKey = new Pkcs11SigningKeyOptions { KeyId = licenseKeyId },
             ProvisioningKey = new Pkcs11SigningKeyOptions { KeyId = provisioningKeyId }
         };
@@ -101,7 +102,7 @@ public sealed class Pkcs11SigningModuleSoftHsmTests
                 new TestHostEnvironment(Environments.Staging),
                 NullLogger<Pkcs11SigningModule>.Instance))
             {
-                Assert.False(await stagingModule.IsAvailableAsync());
+                Assert.True(await stagingModule.IsAvailableAsync());
             }
         }
         finally
