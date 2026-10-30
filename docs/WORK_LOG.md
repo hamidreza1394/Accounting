@@ -1515,3 +1515,20 @@
 - Stage 1: کد کامل + Staging روی سیستم مالک/سرور ابری + نصب مشتری روی ماشین دوم؛ Stage 2: HSM واقعی، دو میزبان واقعی و بازیابی شواهد پیش‌نیاز برچسب Production کامل.
 - این PR فقط تصمیم و اسناد را ثبت می‌کند؛ تغییر کد Assurance، استقرار واقعی، آزمون دو میزبان فیزیکی و بازیابی هنوز انجام نشده‌اند.
 - فایل‌ها: D-055، D-056، DECISIONS.md، INDEX.md، WORK_LOG.md.
+
+
+## 2026-10-30 — Issue #236 / PR #360: رفع خطای Build در Validate options
+- CI در Job `build-test-package` سه خطای کامپایل `CS1503` در `tests/Vendor.Host.Tests/Pkcs11SigningProviderTests.cs` نشان داد: متد `Validate(bool isProduction = false)` به‌صورت method group دیگر با `Action` سازگار نبود.
+- اصلاح: overload بدون پارامتر `Validate()` اضافه شد که به `Validate(isProduction: false)` واگذار می‌کند؛ overload بولی بدون مقدار پیش‌فرض باقی ماند تا فراخوانی‌های محیط Production همچنان صریح باشند و method-groupهای تست/مصرف‌کنندگان قدیمی سازگار بمانند.
+- فایل تغییرکرده: `Vendor/Vendor.Host/Signing/Pkcs11SigningProvider.cs`.
+- Commit: `fd9f0e9f9135d498266cc847bb0479a650913121`.
+- تست پیش از اصلاح: CI شکست خورد با سه خطای CS1503 در تبدیل method group به `System.Action`.
+- تست پس از اصلاح: در انتظار CI روی commit جدید؛ اجرای محلی در این نشست انجام نشده است.
+- هیچ migration، schema، customer DB، secret یا کلید خصوصی تغییر نکرد.
+
+
+## 2026-10-30 — Issue #236 / PR #360: پوشش آزمون startup assurance
+- سه تست برای مسیر startup افزوده شد: ثبت رخداد metadata-only در Production با پذیرش ریسک Software، شکست startup در صورت شکست Audit، و عدم نیاز Development/Staging به sink ممیزی Production.
+- فایل: `tests/Vendor.Host.Tests/Pkcs11SigningProviderTests.cs`.
+- Commitهای تغییر: `be3836209bafd1fb8152b7e1d1a0635702c49a62` و `30da154a30350656d2c7b1f3a84a9ce81a5b8572`.
+- وضعیت: تست‌ها به CI سپرده شده‌اند؛ اجرای محلی انجام نشده و تا مشاهدهٔ نتیجهٔ CI، Verified نیستند.

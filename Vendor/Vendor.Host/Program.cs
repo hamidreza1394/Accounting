@@ -1,4 +1,5 @@
 using System.Threading.RateLimiting;
+using System.Text.Json;
 using Faranou.Vendor.Host.Authentication;
 using Faranou.Vendor.Host.Authorization;
 using Faranou.Vendor.Host.Bootstrap;
@@ -90,6 +91,7 @@ if (builder.Configuration.GetValue<bool>("Signing:Pkcs11:Enabled"))
     builder.Services.AddSingleton<IPkcs11SigningModule, Pkcs11SigningModule>();
     builder.Services.AddScoped<ILicenseSigningProvider, Pkcs11LicenseSigningProvider>();
     builder.Services.AddScoped<IProvisioningSigningProvider, Pkcs11ProvisioningSigningProvider>();
+    builder.Services.AddHostedService<Pkcs11SigningAssuranceStartupService>();
     builder.Services.AddHealthChecks().AddCheck<Pkcs11SigningHealthCheck>(
         "vendor-signing-provider",
         tags: new[] { "signing" });
@@ -385,7 +387,23 @@ app.MapHealthChecks("/health/live", new HealthCheckOptions
 }).AllowAnonymous();
 app.MapHealthChecks("/health/signing", new HealthCheckOptions
 {
-    Predicate = check => check.Tags.Contains("signing")
+    Predicate = check => check.Tags.Contains("signing"),
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json; charset=utf-8";
+        var entries = report.Entries.ToDictionary(
+            entry => entry.Key,
+            entry => new
+            {
+                status = entry.Value.Status.ToString(),
+                description = entry.Value.Description,
+                data = entry.Value.Data
+            });
+        await JsonSerializer.SerializeAsync(
+            context.Response.Body,
+            new { status = report.Status.ToString(), entries },
+            cancellationToken: context.RequestAborted);
+    }
 }).AllowAnonymous();
 app.MapVendorAuthentication();
 app.MapVendorPasswordChange();
