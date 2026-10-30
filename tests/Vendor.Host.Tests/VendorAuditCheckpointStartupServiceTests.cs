@@ -112,6 +112,49 @@ public sealed class VendorAuditCheckpointStartupServiceTests
         }
     }
 
+    [Fact]
+    public async Task Production_WhenRequiredCheckpointAppendFails_FailsStartupWithoutExposingProviderMessage()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var baseConnectionString = GetTestConnectionString();
+        if (baseConnectionString is null)
+        {
+            return;
+        }
+
+        var connection = new SqlConnectionStringBuilder(baseConnectionString)
+        {
+            InitialCatalog = $"FaranouVendorCheckpointAppendUnavailable_{Guid.NewGuid():N}"
+        };
+        await using var provider = CreateProvider(connection.ConnectionString, new AppendUnavailableProductionStore());
+
+        try
+        {
+            await using (var scope = provider.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                await db.Database.MigrateAsync(cancellationToken);
+                var writer = new VendorAuditWriter(db, TimeProvider.System);
+                await writer.AppendAsync(new VendorAuditWriteRequest(null, "test.checkpoint-append-failure"), cancellationToken);
+            }
+
+            var service = CreateStartupService(provider);
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+                () => service.StartAsync(cancellationToken));
+
+            Assert.Equal(
+                "Vendor Production cannot start because the independent audit checkpoint could not be verified and advanced.",
+                exception.Message);
+            Assert.DoesNotContain("private-connection-detail", exception.Message);
+        }
+        finally
+        {
+            await using var cleanupScope = provider.CreateAsyncScope();
+            var cleanup = cleanupScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+            await cleanup.Database.EnsureDeletedAsync(cancellationToken);
+        }
+    }
+
     private static VendorAuditCheckpointStartupService CreateStartupService(ServiceProvider provider) =>
         new(
             provider.GetRequiredService<IServiceScopeFactory>(),
@@ -195,6 +238,18 @@ public sealed class VendorAuditCheckpointStartupServiceTests
             History.Add(checkpoint);
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class AppendUnavailableProductionStore : IProductionVendorAuditCheckpointStore
+    {
+        public Task<VendorAuditCheckpoint?> ReadLatestAsync(CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult<VendorAuditCheckpoint?>(null);
+        }
+
+        public Task AppendAsync(VendorAuditCheckpoint checkpoint, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("private-connection-detail");
     }
 
     private sealed class UnavailableProductionStore : IProductionVendorAuditCheckpointStore
