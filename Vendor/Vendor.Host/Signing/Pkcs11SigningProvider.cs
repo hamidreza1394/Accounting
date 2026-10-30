@@ -22,6 +22,8 @@ public sealed class Pkcs11SigningOptions
 
     public string? ModulePath { get; set; }
     public string? TokenLabel { get; set; }
+    public string? ApprovedTokenManufacturer { get; set; }
+    public string? ApprovedTokenModel { get; set; }
     public string? UserPin { get; set; }
     public Pkcs11SigningKeyOptions LicenseKey { get; set; } = new();
     public Pkcs11SigningKeyOptions ProvisioningKey { get; set; } = new();
@@ -294,8 +296,25 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
         }
 
         var selected = matchingSlots[0];
-        // SoftHSM and other software tokens are never accepted by a Production host.
-        if (_environment.IsProduction() && !selected.GetSlotInfo().SlotFlags.HardwareSlot)
+        if (_environment.IsDevelopment() || _environment.IsEnvironment("Testing"))
+        {
+            return selected;
+        }
+
+        // Production/Staging accept only an explicitly allowlisted hardware token, never a soft token.
+        var slotInfo = selected.GetSlotInfo();
+        var selectedTokenInfo = selected.GetTokenInfo();
+        if (!slotInfo.SlotFlags.HardwareSlot ||
+            string.IsNullOrWhiteSpace(_options.ApprovedTokenManufacturer) ||
+            string.IsNullOrWhiteSpace(_options.ApprovedTokenModel) ||
+            !string.Equals(
+                selectedTokenInfo.ManufacturerId.Trim(),
+                _options.ApprovedTokenManufacturer,
+                StringComparison.Ordinal) ||
+            !string.Equals(
+                selectedTokenInfo.Model.Trim(),
+                _options.ApprovedTokenModel,
+                StringComparison.Ordinal))
         {
             return null;
         }
