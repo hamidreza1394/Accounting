@@ -263,6 +263,60 @@ public sealed class VendorProvisioningLicenseResolverSqlServerTests
     }
 
     [Fact]
+    public async Task RejectsStoredEnvelopeDigestMismatch()
+    {
+        var fixture = await OpenAsync();
+        if (fixture is null) return;
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        try
+        {
+            var seed = await SeedAsync(fixture.Db, key, 1, ["finance"]);
+            var stored = await fixture.Db.SignedLicenseEnvelopes
+                .SingleAsync(item => item.LicenseId == seed.License.Id, TestContext.Current.CancellationToken);
+            stored.PayloadSha256 = new string('0', 64);
+            await fixture.Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var result = await CreateResolver(fixture.Db, key).ResolveLatestAsync(
+                seed.License.Id, seed.Customer, seed.Installation, null, TestContext.Current.CancellationToken);
+
+            Assert.False(result.Succeeded);
+            Assert.Equal("provisioning_license_envelope_invalid", result.ErrorCode);
+        }
+        finally
+        {
+            await CleanupAsync(fixture);
+        }
+    }
+
+    [Fact]
+    public async Task RejectsEnvelopeWithInvalidSignatureEvenWhenPayloadDigestMatches()
+    {
+        var fixture = await OpenAsync();
+        if (fixture is null) return;
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        try
+        {
+            var seed = await SeedAsync(fixture.Db, key, 1, ["finance"]);
+            var stored = await fixture.Db.SignedLicenseEnvelopes
+                .SingleAsync(item => item.LicenseId == seed.License.Id, TestContext.Current.CancellationToken);
+            var envelope = System.Text.Json.JsonSerializer.Deserialize<LicenseEnvelope>(stored.EnvelopeJson)!;
+            stored.EnvelopeJson = System.Text.Json.JsonSerializer.Serialize(
+                envelope with { SignatureBase64 = Convert.ToBase64String(new byte[64]) });
+            await fixture.Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var result = await CreateResolver(fixture.Db, key).ResolveLatestAsync(
+                seed.License.Id, seed.Customer, seed.Installation, null, TestContext.Current.CancellationToken);
+
+            Assert.False(result.Succeeded);
+            Assert.Equal("provisioning_license_signature_or_payload_invalid", result.ErrorCode);
+        }
+        finally
+        {
+            await CleanupAsync(fixture);
+        }
+    }
+
+    [Fact]
     public async Task RevokedOrUnknownSigningKeyFailsClosed()
     {
         var fixture = await OpenAsync();
