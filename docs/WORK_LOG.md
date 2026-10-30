@@ -1293,4 +1293,4 @@
 - **تست رگرسیون:** unit tests برای دو کد مجاز و متن آزاد/کد ناشناخته/PII-like؛ SQL Server integration test برای پاسخ 400 و باقی‌ماندن درخواست در `PendingDelivery` بدون ack digest یا audit.
 - **دامنه:** فقط Vendor Host، تست‌های Vendor و مستندات؛ هیچ تغییر در `Server/**`، customer schema یا migration انجام نشد.
 - **اعتبارسنجی:** تست محلی اجرا نشده؛ PR و CI لازم است. وضعیت این تغییر `Implemented / Not Verified` تا سبز شدن بررسی‌های الزامی است.
-- **Branch:** `fix/vendor-acknowledgement-error-code-allowlist`.
+- **Branch / PR:** `fix/vendor-acknowledgement-error-code-allowlist` / [PR #312](https://github.com/hamidreza1394/Accounting/pull/312).

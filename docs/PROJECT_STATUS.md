@@ -39,7 +39,7 @@
 
 ## تغییر امنیتی در حال بررسی
 
-- شاخه `fix/vendor-acknowledgement-error-code-allowlist` فقط کدهای پایدار و غیرحساس شناخته‌شده را برای acknowledgement با نتیجهٔ `Rejected` می‌پذیرد؛ متن آزاد exception، SQL diagnostics و PII قبل از ذخیره در Vendor رد می‌شوند. تا موفقیت CI روی PR، این تغییر `Implemented / Not Verified` است.
+- PR [#312](https://github.com/hamidreza1394/Accounting/pull/312)، شاخه `fix/vendor-acknowledgement-error-code-allowlist`، فقط کدهای پایدار و غیرحساس شناخته‌شده را برای acknowledgement با نتیجهٔ `Rejected` می‌پذیرد؛ متن آزاد exception، SQL diagnostics و PII قبل از ذخیره در Vendor رد می‌شوند. تا موفقیت CI روی PR، این تغییر `Implemented / Not Verified` است.
 
 نتیجه: جریان Vendor در سطح ثبت درخواست، maker-checker، export و دریافت acknowledgement به‌طور قابل‌توجهی پیاده‌سازی شده است؛ اما purchased-entitlement binding، provider امضای Production و sink مستقل ممیزی هنوز مانع اعلام تکمیل Production هستند.
 

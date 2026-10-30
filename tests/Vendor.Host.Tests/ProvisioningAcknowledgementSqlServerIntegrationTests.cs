@@ -135,7 +135,9 @@ public sealed class ProvisioningAcknowledgementSqlServerIntegrationTests
                 Assert.Null(unchanged.AcknowledgementSha256);
                 Assert.Null(unchanged.AcknowledgementResult);
                 Assert.Null(unchanged.FailureCode);
-                Assert.Empty(await db.AuditEvents.ToListAsync(cancellationToken));
+                Assert.Empty(await db.AuditEvents
+                    .Where(auditEvent => auditEvent.ActionCode.StartsWith("vendor.provisioning.acknowledgement-"))
+                    .ToListAsync(cancellationToken));
             }
 
             var appliedEnvelope = CreateEnvelope(

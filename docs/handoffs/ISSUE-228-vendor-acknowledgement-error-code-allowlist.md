@@ -45,4 +45,4 @@
 ## شناسه‌های Git
 - Branch: `fix/vendor-acknowledgement-error-code-allowlist`
 - Commit: پس از ساخت
-- Pull Request: پس از ساخت
+- Pull Request: https://github.com/hamidreza1394/Accounting/pull/312
