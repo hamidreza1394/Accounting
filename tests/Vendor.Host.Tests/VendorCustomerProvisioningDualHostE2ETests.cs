@@ -427,6 +427,56 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 var packageFile = Path.Combine(exchangeDirectory, "customer-provisioning-package.json");
                 await File.WriteAllTextAsync(packageFile, packageResponseText, Encoding.UTF8, cancellationToken);
 
+                // The already-exported file remains verifiable offline, but Vendor must refuse
+                // to export it again after a newer signed license sequence has been issued.
+                await using (var scope = vendorFactory.Services.CreateAsyncScope())
+                {
+                    var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                    var license = await db.Licenses.SingleAsync(item => item.Id == licenseId, cancellationToken);
+                    var installation = await db.Installations.SingleAsync(item => item.Id == installationId, cancellationToken);
+                    var revisionNow = DateTimeOffset.UtcNow;
+                    var revisionPayload = new LicensePayload(
+                        1, license.Id.ToString("D"), installation.Id.ToString("D"),
+                        license.ProductCode, license.LicenseKind, revisionNow,
+                        license.ValidFromUtc, license.ValidUntilUtc, license.GraceDays, 2,
+                        new LicenseLimits(license.MaxCompanies, ["finance", "sales"]));
+                    var revisionPayloadJson = CanonicalJson.SerializePayload(revisionPayload);
+                    var revisionSignature = licenseKey.SignData(
+                        Encoding.UTF8.GetBytes(revisionPayloadJson),
+                        HashAlgorithmName.SHA256,
+                        DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
+                    var revisionEnvelope = new LicenseEnvelope(
+                        1, DualHostLicenseKeyId, LicenseAlgorithms.EcdsaP256Sha256,
+                        revisionPayloadJson, Convert.ToBase64String(revisionSignature));
+                    db.SignedLicenseEnvelopes.Add(new VendorSignedLicenseEnvelope
+                    {
+                        Id = Guid.NewGuid(),
+                        LicenseId = license.Id,
+                        Sequence = 2,
+                        KeyId = revisionEnvelope.Kid,
+                        Algorithm = revisionEnvelope.Algorithm,
+                        EnvelopeJson = JsonSerializer.Serialize(revisionEnvelope),
+                        PayloadSha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(revisionPayloadJson))).ToLowerInvariant(),
+                        CreatedAtUtc = revisionNow
+                    });
+                    license.LastIssuedSequence = 2;
+                    await db.SaveChangesAsync(cancellationToken);
+                }
+
+                using (var staleReExport = await PostWithTokenAsync(
+                    reviewerClient,
+                    $"/api/vendor/provisioning-requests/{provisioningRecordId:D}/package/export",
+                    new { },
+                    reviewerToken,
+                    cancellationToken))
+                {
+                    Assert.Equal(HttpStatusCode.Conflict, staleReExport.StatusCode);
+                    using var staleJson = JsonDocument.Parse(
+                        await staleReExport.Content.ReadAsStringAsync(cancellationToken));
+                    Assert.Equal("provisioning_license_sequence_stale",
+                        staleJson.RootElement.GetProperty("error").GetString());
+                }
+
                 using var customerClientA = customerFactory.CreateClient(new WebApplicationFactoryClientOptions
                 {
                     BaseAddress = new Uri("https://localhost"),
