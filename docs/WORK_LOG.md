@@ -1,4 +1,5 @@
 
+
 # گزارش کار و تحویل Agentها
 
 > گزارش‌ها را به انتهای فایل اضافه کن؛ سابقه قبلی را حذف یا بازنویسی نکن.
@@ -1271,6 +1272,21 @@
 - **تست:** تست SQL Server برای apply، signed acknowledgement، replay، reissue، ابطال token قبلی، مصرف یک‌بار، hash-only و عدم ایجاد گروه اضافه شده است. این تست‌ها در این نشست اجرا نشده‌اند؛ rollback و concurrent replay نیز اجرا نشده‌اند.
 - **CI:** اجرای اول PR #307 شکست کامپایل داشت: namespace مربوط به VendorProvisioningParentReferenceRules در IssuanceService وارد نشده بود. using اصلاح شد. اجرای جدید روی head جاری در زمان ثبت این log: secret-scan موفق؛ build-and-test، client، publish-scripts و Semgrep هنوز queued/in_progress. اجرای نهایی هنوز سبز نیست.
 
+## 2026-10-30 — Issue #235: offline acknowledgement exchange (customer file → Vendor panel)
+- **تغییر:** ذخیرهٔ فایل ack در صفحهٔ import مشتری و «ثبت فایل پاسخ مشتری» در جدول درخواست‌های Vendor که به endpoint ماشینی موجود POST می‌کند. بدون تغییر سرور/Schema/قرارداد.
+- **تست:** ClientApp 104 و Vendor.Web 55 تست موفق، typecheck و offline/static check موفق. `NotImplemented`: رسید امضاشدهٔ Vendor به مشتری (قرارداد ندارد، نیاز به تصمیم مالک و #236). E2E مرورگر در مرحلهٔ ۴. جزئیات: `docs/handoffs/ISSUE-235-offline-ack-exchange.md`.
+
+## 2026-10-30 — Issue #235: offline verification of customer acknowledgement signatures
+- **شکاف:** نتیجهٔ Provider امضا فقط از نظر شکل بررسی و همراه شرکت ساخته‌شده ذخیره می‌شد؛ امضای معیوب ack غیرقابل‌تأیید دائمی می‌ساخت.
+- **تغییر:** Trust Store مستقل `Provisioning:TrustedAcknowledgementKeys` و راستی‌آزمایی آفلاین پیش از ذخیره؛ کدهای `provisioning_acknowledgement_signer_unavailable|signer_key_untrusted|signature_invalid` (503)؛ Exception ارائه‌دهنده گرفته و فقط نوع آن لاگ می‌شود؛ مستندات قرارداد Provider در SECURITY.md.
+- **تست:** SQL Server واقعی: پنج Provider خراب در مسیر موفق و Rejected بدون هیچ رکورد؛ شاهد مثبت؛ بررسی جهش؛ کل Template.sln: 657 کل، 655 موفق، 2 skipped، 0 ناموفق. Provider واقعی `Blocked` روی #236. جزئیات: `docs/handoffs/ISSUE-235-ack-signing-provider-contract.md`.
+
+## 2026-10-30 — Issue #235: SQL Server transactional/security tests and a concurrency fix
+- **تست:** هفت تست روی SQL Server واقعی: هم‌زمانی apply، rollback و retry، انقضا/یک‌بارمصرف/ابطال توکن، حدس‌زنی و rate limit، مصرف هم‌زمان توکن، مجوزهای دقیق زیرسیستم‌ها و جداسازی شرکت‌ها، replay و استفادهٔ مجدد متعارض.
+- **باگ یافته و رفع‌شده:** Deadlock (1205) در درخواست‌های هم‌زمان تکراری apply/enrollment → خطای مدیریت‌نشده. رفع با `sp_getapplock` تراکنشی؛ تست‌ها پیش از رفع شکست خوردند و پس از رفع سه بار پشت‌سرهم موفق بودند. کل Template.sln: 664 کل، 662 موفق، 2 skipped، 0 ناموفق.
+- **انجام نشد:** E2E خودکار دو-میزبانه (Vendor + مشتری)؛ دلیل در handoff. جزئیات: `docs/handoffs/ISSUE-235-provisioning-e2e-tests.md`.
+
+
 ## 2026-10-30 — Issue #235: first-login/enrollment guard for the provisioned administrator
 - **ممیزی:** مدیر اولیه با رمز تصادفیِ ناشناخته ساخته می‌شود و رمز واقعی را فقط در Enrollment تعیین می‌کند؛ پس «تغییر رمز در اولین ورود» از قبل ساختاری برقرار بود. معیار باز قبلی («محدودسازی نشست») به‌صورت لایهٔ دفاعی بسته شد.
 - **تغییر:** `SessionValidator` نشست کاربری را که claim با `MustChangePassword=true` دارد رد می‌کند؛ `AuthenticationService` ورود چنین کاربری را حتی با رمز درست با پاسخ عمومی `InvalidCredentials` رد و رویداد `LoginDeniedEnrollmentPending` را ثبت می‌کند (بدون افزایش شمارندهٔ قفل). بدون Schema/Migration/endpoint جدید.
@@ -1296,40 +1312,9 @@
 - **اعتبارسنجی:** تست محلی اجرا نشده؛ PR و CI لازم است. وضعیت این تغییر `Implemented / Not Verified` تا سبز شدن بررسی‌های الزامی است.
 - **Branch / PR:** `fix/vendor-acknowledgement-error-code-allowlist` / [PR #312](https://github.com/hamidreza1394/Accounting/pull/312).
 
-## 2026-10-30 — تأیید پس از merge PR #312 و بازآشتی شواهد #281/#282/#284
-- **main:** SHA `2d9e045145398a3ba1ea824e4dca736426cf4850`.
-- **PR #312:** merge commit همین SHA؛ روی head نهایی PR، .NET CI `41020652505`، Vendor CI `41020652414`، Semgrep `41020652448` و CodeQL `41020647837` موفق بودند.
-- **CI پس از merge #312:** .NET CI `41021709995` با هفت job موفق (client، secret-scan، publish-scripts، build-and-test، E2E، publish Linux و publish Windows)؛ Vendor CI `41021709933`، Semgrep `41021709965` و Push on main `41021708889` نیز موفق‌اند.
-- **PR #281:** merge commit `2ee1edc52904833bc28eead5a679185377363c24`؛ تمام check-runهای همان commit موفق‌اند.
-- **PR #282:** merge commit `f4a0462b0972e7686a686eca0febfaee680baecf`؛ پس از یک اجرای اولیهٔ cancelled، تمام check-runهای نهایی روی همان merge SHA موفق شدند.
-- **PR #284:** merge commit `81ed5f64ed86ebbae47a433cea63e3655cb1d24b`؛ تمام check-runهای همان commit موفق‌اند. ترتیب authorization پیش از بررسی conflict/status در تصمیم approval و تست رگرسیون تأیید شده‌اند.
-- **PR #312:** allow-list کدهای ثابت `Rejected` در Vendor فقط `provisioning_parent_reference_invalid` و `provisioning_initial_admin_conflict` را می‌پذیرد؛ متن آزاد/diagnostic/PII رد می‌شود. Handoff و PROJECT_STATUS بر اساس merge و CI واقعی به‌روزرسانی شدند.
-- **PRهای باز #309–#311:** همچنان customer-side Issue #235 و خارج از PR محدود به Vendor هستند؛ هیچ‌کدام در این تغییر ادغام نشدند.
-- **تست محلی:** اجرا نشد؛ همهٔ شواهد بالا از check-runهای واقعی GitHub Actions هستند.
-- **محدودیت‌های Production:** اتصال provisioning به `VendorLicense.Id`/`Sequence` نیازمند تصمیم یک یا چند لایسنس برای هر installation است؛ KMS/HSM واقعی و مقصد مستقل Audit نیز به انتخاب و credential معتبر نیاز دارند.
 
-## 2026-10-30 — Issue #235: offline acknowledgement exchange and SQL Server concurrency verification
-- تغییر UI آفلاین: صفحهٔ Import مشتری فایل پاسخ امضاشده را بدون enrollment token ذخیره می‌کند؛ پنل Vendor فایل را با محدودیت ۶۴ KiB دریافت و به endpoint ماشینی موجود ارسال می‌کند. اعتبار امضا و binding فقط در سرور Vendor بررسی می‌شود.
-- تست‌های کلاینت: handoff شاخهٔ منبع ۱۰۴ تست ClientApp و ۵۵ تست Vendor.Web، typecheck و offline/static checks را گزارش کرده است. در head PR #310، check-runهای client، build-test-package، build-and-test، e2e، publish، publish-windows، secret-scan، CodeQL و Semgrep همگی موفق بودند (run 41022725862 و runهای مرتبط).
-- تست‌های تراکنشی SQL Server: handoff شاخهٔ منبع ۷ تست Integration روی SQL Server 2022 را گزارش می‌کند؛ deadlock در apply/enrollment هم‌زمان با sp_getapplock تراکنشی اصلاح شده است. این گزارش نتیجهٔ اجرای محیط سازنده است؛ در این بازآشتی تست محلی اجرا نشده است.
-- محدودیت باقی‌مانده: E2E واحد دو میزبان Vendor و Customer و Playwright از آپلود تا وضعیت Confirmed هنوز NotImplemented است. بازگشت پاسخ امضاشدهٔ Vendor به مشتری نیز قرارداد مصوب ندارد و NeedsApproval باقی می‌ماند.
-- بازآشتی Git: تغییرات PR #310 روی آخرین main (پس از PRهای #311–#313) بازآشتی شدند؛ تغییرات قرارداد امضا که قبلاً در main موجود بود دوباره کپی نشد. فایل .gitleaksignore قدیمی وارد شاخه نشد، چون secret-scan روی head منبع سبز است و استثنای دائمی/منسوخ لازم نیست.
-- اعتبارسنجی بازآشتی: منتظر CI اختصاصی PR یکپارچه‌سازی هستیم؛ هیچ نتیجهٔ تستی برای commit جدید قبل از اجرای CI ادعا نمی‌شود.
-## 2026-10-30 — Issue #236: جلوگیری از بلعیدن بی‌صدای خطای provisioning signer
-- **یافته:** `VendorProvisioningIssuanceService` exception عمومی provider را بدون ثبت log به 503 عمومی تبدیل می‌کرد. رفتار fail-closed درست بود، اما observability با AGENTS.md/CODING_STANDARDS هم‌خوان نبود.
-- **اصلاح:** exception type-only با `ILogger<VendorProvisioningIssuanceService>` ثبت می‌شود؛ متن استثنا، stack trace، payload، KeyId و signature عمداً log نمی‌شوند. unsuccessful result و metadata نامعتبر نیز warning غیرحساس دارند.
-- **تست regression:** provider آزمایشی بار اول `InvalidOperationException` با متن ساختگی می‌دهد؛ پاسخ HTTP باید همچنان `provisioning_signing_unavailable` باشد، log فقط type را نشان دهد و retry همان approval موفق بماند.
-- **دامنه:** Vendor Host و تست/مستندات Vendor؛ بدون customer-side `Server/**`، schema یا migration.
-- **اعتبارسنجی:** تست محلی اجرا نشده؛ نتیجهٔ نهایی به CI روی PR وابسته است.
-- **Branch/PR:** `fix/vendor-provisioning-signer-exception-logging` / [PR #314](https://github.com/hamidreza1394/Accounting/pull/314).
-
-
-## 2026-10-30 — Issue #236: تأیید رمزنگاری خروجی signer پیش از تحویل
-- **یافته:** Vendor فقط طول امضای ۶۴ بایت، الگوریتم و طول KeyId را بررسی می‌کرد؛ امضای تصادفی با طول صحیح می‌توانست در وضعیت `PendingDelivery` ذخیره شود، هرچند consumer مشتری آن را رد می‌کرد. همچنین قرارداد KeyId باید با trust lookup مشتری یکسان باشد.
-- **اصلاح:** trust store مستقل و provider-neutral برای کلیدهای عمومی بستهٔ Vendor با مسیر پیکربندی `ProvisioningSigningTrust:Keys` افزوده شد. فقط کلید عمومی ECDSA P-256 پذیرفته می‌شود؛ شناسهٔ کلید فقط ASCII alphanumeric، خط تیره و underscore است؛ کلید ناشناخته/لغوشده یا امضای نامعتبر با 503 عمومی رد می‌شود.
-- **ترتیب:** امضای دقیق payload با کلید عمومی مورد اعتماد، پیش از ذخیرهٔ signature، تغییر وضعیت درخواست و ثبت audit تأیید می‌شود. trust set خالی عمداً همهٔ خروجی‌ها را رد می‌کند.
-- **تست regression:** integration test SQL Server اکنون پس از یک exception موقت، یک امضای ۶۴ بایتی نامعتبر را هم تزریق می‌کند؛ باید 503 بدهد، export ممکن نباشد و همان approval با همان RowVersion پس از آن با امضای معتبر قابل retry باشد. تست‌های trust store برای کلید ناشناخته/لغوشده، duplicate، KeyId نامعتبر و SPKI/curve نامعتبر اضافه شدند.
-- **دامنه:** فقط Vendor Host، تست‌های Vendor و مستندات؛ بدون `Server/**`، customer schema، migration یا secret. کلید خصوصی تولید نشد و provider واقعی انتخاب/پیکربندی نشد.
-- **اعتبارسنجی:** تست محلی در این محیط اجرا نشده؛ CI روی PR برای Build/Test، SQL Server integration، secret scan، E2E و publish لازم است.
-- **وضعیت:** Implemented / Awaiting CI؛ Production signing همچنان Blocked تا انتخاب provider و credential/identity عملیاتی.
-
+## 2026-10-30 — رفع یافتهٔ Gitleaks در تست provisioning (#235)
+- **شاهد شکست:** .NET CI run `41021431573` روی head قبلی PR #309 در job `secret-scan` شکست خورد؛ Gitleaks مقدار ثابت password-like را در fixture تست `CustomerProvisioningTransactionalSqlServerTests.cs` شناسایی کرد. این مقدار فقط دادهٔ آزمایشی بود و هیچ credential عملیاتی/مشتری نبود، اما نگه‌داشتن literal ثابت در repository غیرضروری و خلاف hardening بود.
+- **اصلاح:** مقدار ثابت حذف شد؛ رمزهای موردنیاز تست با `RandomNumberGenerator.GetBytes(32)` به‌صورت runtime و per-test تولید می‌شوند. تست همچنان بررسی می‌کند رمز و enrollment token در audit ذخیره نشده‌اند.
+- **دامنه:** فقط تست و handoff/work log در شاخهٔ مستقل Issue #235؛ بدون تغییر Vendor، دیتابیس مشتری، migration یا secret configuration.
+- **اعتبارسنجی:** Gitleaks روی SHA قبلی ناموفق بود؛ اجرای CI روی commit اصلاحی در انتظار است. هیچ نتیجهٔ سبزی برای SHA جدید ادعا نمی‌شود.

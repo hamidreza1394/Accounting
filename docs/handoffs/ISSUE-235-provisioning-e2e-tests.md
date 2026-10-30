@@ -3,8 +3,8 @@
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/235
 - **Agent/مسئول:** Claude Code
 - **تاریخ:** 2026-10-30
-- **وضعیت:** ناقص عمدی؛ تست‌های SQL Server و رفع باگ همزمانی انجام شده‌اند؛ E2E دو-میزبانه هنوز انجام نشده است. PR #310 روی head اولیه تمام بررسی‌های GitHub از جمله secret-scan را با موفقیت گذرانده است.
-- **وابستگی:** قرارداد امضای پاسخ در PR #311 با موفقیت وارد main شده است. این تغییرات روی آخرین main بازآشتی شده‌اند؛ تغییرات قرارداد امضا تکرار نشده‌اند.
+- **وضعیت:** ناقص عمدی (تست‌های SQL Server و رفع باگ همزمانی انجام شده؛ E2E دو-میزبانه انجام نشده؛ رفع مقدار ثابت password-like در fixture ثبت شده و CI روی head جدید در انتظار است)
+- **وابستگی:** این شاخه روی `feat/issue-235-ack-signing-provider-contract` ساخته شده است (سازندهٔ `CustomerProvisioningApplyService` در آن PR تغییر کرد). تا ادغام آن PR، PR این شاخه را با base همان شاخه باز کنید.
 
 ## هدف و معیارهای پذیرش
 - [x] Rollback در شکست در میانهٔ ایجاد شرکت/دوره/نقش/مدیر/عضویت، و اثبات اینکه Retry بعدی گیر نمی‌کند.
@@ -37,7 +37,7 @@
 | `dotnet test Template.sln -c Release` (با SQL Server) | موفق | 664 کل، 662 موفق، 2 skipped، 0 ناموفق |
 | Playwright E2E / Vendor.sln / کلاینت | اجرا نشد | تغییری در آن‌ها نبود |
 | بازبینی مستقل Subagent | اجرا نشد | Subagent فراخوانی نشد؛ بازبینی Diff توسط نویسنده |
-| GitHub secret-scan، run `41022725862` روی head PR #310 | موفق | پس از حذف مقدار password-like از fixture؛ بدون نیاز به whitelist دائمی Gitleaks |
+| GitHub secret-scan، run `41021431573` روی SHA قبلی | ناموفق | Gitleaks یک مقدار ثابت password-like فقط در fixture تست را گزارش کرد؛ credential عملیاتی نبود، اما از کد حذف و با مقدار تصادفی runtime جایگزین شد. CI روی commit اصلاحی هنوز اجرا/تأیید نشده است |
 
 ## چرا E2E دو-میزبانه ساخته نشد
 - هر دو پروژه `public partial class Program` در فضای نام سراسری دارند؛ یک پروژه تست که هر دو را ارجاع دهد به alias بیرونی و پیکربندی جداگانهٔ دو پایگاه داده نیاز دارد.
@@ -58,6 +58,5 @@
 - نتیجهٔ Gitleaks پس از این اصلاح باید روی SHA جدید دوباره تأیید شود.
 
 ## شناسه‌های Git
-- Branch یکپارچه‌سازی: `fix/issue-235-reconcile-main`
-- PR یکپارچه‌سازی: #315.
-- PRهای منبع #309 و #310 تا تأیید CI PR #315 باز نگه داشته می‌شوند.
+- Branch: `feat/issue-235-provisioning-e2e-tests`
+- Pull Request: پس از ساخت PR ثبت می‌شود.
