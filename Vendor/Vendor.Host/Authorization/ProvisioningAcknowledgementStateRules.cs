@@ -17,14 +17,18 @@ public static class ProvisioningAcknowledgementStateRules
             case "Applied":
             case "AlreadyApplied":
                 if (errorCode is not null)
+                {
                     return false;
+                }
                 status = "Confirmed";
                 return true;
             case "Rejected":
                 // Persist only stable, non-sensitive outcome codes emitted by the customer
                 // consumer. Never store free-form exception text, connection details or PII.
                 if (!IsAllowedRejectionCode(errorCode))
+                {
                     return false;
+                }
                 status = "Failed";
                 failureCode = errorCode;
                 return true;
