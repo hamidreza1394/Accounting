@@ -25,7 +25,7 @@ public sealed class WindowsCngCustomerProvisioningAcknowledgementSigningTests
         var installationId = "test-installation-" + suffix;
         var options = new WindowsCngCustomerAcknowledgementSigningOptions
         {
-            Enabled = true,
+            Enabled = false,
             ProviderName = SoftwareKsp,
             KeyVersion = 1,
             MachineKey = false,
@@ -46,8 +46,15 @@ public sealed class WindowsCngCustomerProvisioningAcknowledgementSigningTests
                 Assert.Throws<CryptographicException>(() => key.Export(CngKeyBlobFormat.EccPrivateBlob));
             }
 
+            var enabledSigningOptions = new WindowsCngCustomerAcknowledgementSigningOptions
+            {
+                Enabled = true,
+                ProviderName = options.ProviderName,
+                KeyVersion = options.KeyVersion,
+                MachineKey = options.MachineKey,
+            };
             var signer = new WindowsCngCustomerProvisioningAcknowledgementSigningProvider(
-                Options.Create(options),
+                Options.Create(enabledSigningOptions),
                 Options.Create(new CustomerProvisioningSettings { InstallationId = installationId }),
                 NullLogger<WindowsCngCustomerProvisioningAcknowledgementSigningProvider>.Instance);
             var canonicalBytes = Encoding.UTF8.GetBytes("{\"schemaVersion\":1,\"requestId\":\"exact-bytes\"}");
