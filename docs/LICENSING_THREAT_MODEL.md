@@ -116,3 +116,17 @@
 - Timeout or signer-side cancellation maps to the same generic unavailable result; the issuance transaction does not persist a package or transition the request to `PendingDelivery` on this result.
 - Cancellation initiated by the HTTP/request caller remains cancellation and is not converted into a signer outage.
 - The default provider remains unavailable/fail-closed. This is timeout protection, not a KMS/HSM adapter, and does not make Production signing available.
+
+
+## Customer provisioning consumer and operator enrollment — D-053 / Issue #235 (2026-10-30)
+
+- **مرجع شرکت مادر:** ParentCompanyReference یک GUID canonical با قالب D و همان Vendor-issued RequestId بستهٔ provisioning مادر است. تنها resolve مجاز RequestId → ProvisioningRequestClaim → CompanyId است؛ هیچ fallback بر اساس نام، NationalId یا متن آزاد وجود ندارد.
+- **تفکیک کنترل توزیع‌شده:** Vendor پیش از صدور/امضا، مادر را در همان Customer و Installation و در وضعیت Confirmed پس از acknowledgement امضاشده بررسی می‌کند. Customer در زمان apply، claim مادرِ قبلاً اعمال‌شده، مرز دقیق Customer/Installation/CompanyBoundary و فعال‌بودن شرکت را کنترل می‌کند. نوع مجاز والد parent یا subsidiary است؛ independent رد می‌شود. هر mismatch کل بسته را رد می‌کند.
+- **عدم ساخت گروه:** فقط ParentCompanyId در claim فرزند ثبت می‌شود؛ هیچ CorporateGroupMember یا OwnershipRelationship و درصد مالکیتی به‌طور خودکار ساخته نمی‌شود.
+- **شرکت قدیمی:** نبود claim به معنی رد بسته است. افزودن شناسهٔ مرجع یکتا به Company خارج از D-053 و نیازمند ADR/تأیید مستقل است؛ این تصمیم هیچ schema جدیدی برای Company مجاز نمی‌کند.
+- **تحویل Enrollment:** token تصادفی فقط در پاسخ apply پس از commit و فقط یک بار به اپراتور نصب مجاز برگردانده می‌شود؛ فقط hash در DB ذخیره می‌شود. پاسخ no-store است و token نباید در log، audit، acknowledgement، URL، telemetry یا cache ظاهر شود. replay فقط acknowledgement را برمی‌گرداند.
+- **بازیابی:** از دست رفتن پاسخ با retry حل نمی‌شود. اپراتور مجاز باید از endpoint مستقل reissue استفاده کند که در تراکنش token قبلی را باطل، digest جدید و expiry کوتاه ثبت و audit بدون secret تولید کند. reissue باید rate-limited و محدود به اپراتور میزبان باشد.
+- **ابر مشترک:** اپراتور نصب کارکنان میزبان است، نه مشتری. Enrollment token پس از مصرف، دسترسی یا عضویت ماندگار برای اپراتور ایجاد نمی‌کند. مدیر اولیه رمز خود را تعیین می‌کند و اولین ورود تا تغییر رمز محدود است.
+- **محدودیت تلاش:** مصرف token اتمیک و یک‌بارمصرف؛ تلاش ناموفق محدود و پس از سقف مشخص، token قفل/باطل می‌شود. شمارنده و وضعیت لازم باید با schema claim و concurrency token سازگار باشد.
+- **Production signing:** فقط provider واقعی مورد تأیید Issue #236؛ provider پیش‌فرض unavailable و fail-closed می‌ماند. کلید آزمایشی یا software fallback در Production ممنوع است.
+- **محدودیت تأیید:** این بخش ثبت تصمیم و threat requirements است، نه اثبات پیاده‌سازی. تا اجرای تست SQL Server، replay هم‌زمان، rollback، endpointهای apply/reissue و CI روی commit نهایی، کنترل‌ها NotVerified هستند.
