@@ -221,7 +221,7 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
 
     private LicenseSigningResult SignCore(Pkcs11SigningKeyOptions key, byte[] canonicalPayload)
     {
-        _options.Validate();
+        _options.Validate(_environment.IsProduction());
         ValidateRequestedKey(key);
 
         var slot = FindConfiguredSlot();
@@ -268,7 +268,7 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
 
     private bool CheckAvailableCore()
     {
-        _options.Validate();
+        _options.Validate(_environment.IsProduction());
         var slot = FindConfiguredSlot();
         if (slot is null || !SupportsEcdsa(slot))
         {
