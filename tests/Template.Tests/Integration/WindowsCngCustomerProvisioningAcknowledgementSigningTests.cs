@@ -22,23 +22,23 @@ public sealed class WindowsCngCustomerProvisioningAcknowledgementSigningTests
         Assert.SkipWhen(!OperatingSystem.IsWindows(), "Windows CNG is available only on Windows.");
 
         var suffix = Guid.NewGuid().ToString("N");
+        var installationId = "test-installation-" + suffix;
         var options = new WindowsCngCustomerAcknowledgementSigningOptions
         {
             Enabled = true,
             ProviderName = SoftwareKsp,
-            KeyName = "Faranou.Tests.CustomerAck." + suffix,
-            KeyId = "customer-ack-test-" + suffix + "-v1",
+            KeyVersion = 1,
             MachineKey = false,
         };
 
         try
         {
-            var provisioned = WindowsCngCustomerAcknowledgementKeyProvisioner.Create(options);
+            var provisioned = WindowsCngCustomerAcknowledgementKeyProvisioner.Create(options, installationId);
 
-            Assert.Equal(options.KeyId, provisioned.KeyId);
+            Assert.Equal("customer-ack-" + installationId + "-v1", provisioned.KeyId);
             Assert.NotEmpty(provisioned.PublicKeySubjectPublicKeyInfo);
 
-            using (var key = CngKey.Open(options.KeyName, new CngProvider(options.ProviderName)))
+            using (var key = CngKey.Open(provisioned.KeyName, new CngProvider(options.ProviderName)))
             {
                 Assert.Equal(CngAlgorithm.ECDsaP256, key.Algorithm);
                 Assert.Equal(256, key.KeySize);
@@ -48,13 +48,14 @@ public sealed class WindowsCngCustomerProvisioningAcknowledgementSigningTests
 
             var signer = new WindowsCngCustomerProvisioningAcknowledgementSigningProvider(
                 Options.Create(options),
+                Options.Create(new CustomerProvisioningSettings { InstallationId = installationId }),
                 NullLogger<WindowsCngCustomerProvisioningAcknowledgementSigningProvider>.Instance);
             var canonicalBytes = Encoding.UTF8.GetBytes("{\"schemaVersion\":1,\"requestId\":\"exact-bytes\"}");
 
             var result = await signer.SignAsync(canonicalBytes, CancellationToken.None);
 
             Assert.True(result.Success);
-            Assert.Equal(options.KeyId, result.KeyId);
+            Assert.Equal(provisioned.KeyId, result.KeyId);
             Assert.Null(result.ErrorCode);
             var signature = Convert.FromBase64String(result.SignatureBase64!);
             Assert.Equal(64, signature.Length);
@@ -73,7 +74,9 @@ public sealed class WindowsCngCustomerProvisioningAcknowledgementSigningTests
         {
             try
             {
-                using var key = CngKey.Open(options.KeyName, new CngProvider(options.ProviderName));
+                using var key = CngKey.Open(
+                    WindowsCngCustomerAcknowledgementKeyProvisioner.GetKeyName(installationId, options.KeyVersion),
+                    new CngProvider(options.ProviderName));
                 key.Delete();
             }
             catch (CryptographicException)
@@ -89,16 +92,17 @@ public sealed class WindowsCngCustomerProvisioningAcknowledgementSigningTests
         Assert.SkipWhen(!OperatingSystem.IsWindows(), "Windows CNG is available only on Windows.");
 
         var suffix = Guid.NewGuid().ToString("N");
+        var installationId = "missing-installation-" + suffix;
         var options = new WindowsCngCustomerAcknowledgementSigningOptions
         {
             Enabled = true,
             ProviderName = SoftwareKsp,
-            KeyName = "Faranou.Tests.MissingAck." + suffix,
-            KeyId = "customer-ack-test-" + suffix + "-v1",
+            KeyVersion = 1,
             MachineKey = false,
         };
         var signer = new WindowsCngCustomerProvisioningAcknowledgementSigningProvider(
             Options.Create(options),
+            Options.Create(new CustomerProvisioningSettings { InstallationId = installationId }),
             NullLogger<WindowsCngCustomerProvisioningAcknowledgementSigningProvider>.Instance);
 
         var result = await signer.SignAsync(
@@ -110,7 +114,9 @@ public sealed class WindowsCngCustomerProvisioningAcknowledgementSigningTests
         Assert.Equal("provisioning_acknowledgement_signer_unavailable", result.ErrorCode);
         Assert.Throws<CryptographicException>(() =>
         {
-            using var unexpected = CngKey.Open(options.KeyName, new CngProvider(options.ProviderName));
+            using var unexpected = CngKey.Open(
+                WindowsCngCustomerAcknowledgementKeyProvisioner.GetKeyName(installationId, options.KeyVersion),
+                new CngProvider(options.ProviderName));
         });
     }
 
@@ -120,29 +126,28 @@ public sealed class WindowsCngCustomerProvisioningAcknowledgementSigningTests
         Assert.SkipWhen(!OperatingSystem.IsWindows(), "Windows CNG is available only on Windows.");
 
         var suffix = Guid.NewGuid().ToString("N");
-        var keyName = "Faranou.Tests.NoFallback." + suffix;
+        var installationId = "no-fallback-installation-" + suffix;
         var softwareOptions = new WindowsCngCustomerAcknowledgementSigningOptions
         {
             Enabled = true,
             ProviderName = SoftwareKsp,
-            KeyName = keyName,
-            KeyId = "customer-ack-test-" + suffix + "-v1",
+            KeyVersion = 1,
             MachineKey = false,
         };
 
         try
         {
-            _ = WindowsCngCustomerAcknowledgementKeyProvisioner.Create(softwareOptions);
+            _ = WindowsCngCustomerAcknowledgementKeyProvisioner.Create(softwareOptions, installationId);
             var tpmOptions = new WindowsCngCustomerAcknowledgementSigningOptions
             {
                 Enabled = true,
                 ProviderName = "Microsoft Platform Crypto Provider",
-                KeyName = keyName,
-                KeyId = softwareOptions.KeyId,
+                KeyVersion = softwareOptions.KeyVersion,
                 MachineKey = false,
             };
             var signer = new WindowsCngCustomerProvisioningAcknowledgementSigningProvider(
                 Options.Create(tpmOptions),
+                Options.Create(new CustomerProvisioningSettings { InstallationId = installationId }),
                 NullLogger<WindowsCngCustomerProvisioningAcknowledgementSigningProvider>.Instance);
 
             var result = await signer.SignAsync(
@@ -156,7 +161,9 @@ public sealed class WindowsCngCustomerProvisioningAcknowledgementSigningTests
         {
             try
             {
-                using var key = CngKey.Open(keyName, new CngProvider(SoftwareKsp));
+                using var key = CngKey.Open(
+                    WindowsCngCustomerAcknowledgementKeyProvisioner.GetKeyName(installationId, softwareOptions.KeyVersion),
+                    new CngProvider(SoftwareKsp));
                 key.Delete();
             }
             catch (CryptographicException)
@@ -175,11 +182,11 @@ public sealed class WindowsCngCustomerProvisioningAcknowledgementSigningTests
         {
             Enabled = true,
             ProviderName = "Untrusted Third Party KSP",
-            KeyName = "Faranou.Tests.InvalidProvider",
-            KeyId = "customer-ack-test-invalid-v1",
+            KeyVersion = 1,
             MachineKey = false,
         };
 
-        Assert.Throws<ArgumentException>(() => WindowsCngCustomerAcknowledgementKeyProvisioner.Create(invalid));
+        Assert.Throws<ArgumentException>(() =>
+            WindowsCngCustomerAcknowledgementKeyProvisioner.Create(invalid, "valid-installation-id"));
     }
 }
