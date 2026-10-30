@@ -52,6 +52,9 @@ public static class ApiEndpoints
 		api.MapGet("/companies/{companyId:guid}/overview", GetCompanyOverviewAsync);
 		api.MapWorkContextEndpoints();
 		api.MapCustomerBoundaryEndpoints();
+		api.MapPost("/provisioning/apply", ApplyProvisioningAsync)
+			.RequireAuthorization(policy => policy.RequireClaim("AccountKind", "Infrastructure"))
+			.RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
 
 		return endpoints;
 	}
@@ -59,6 +62,59 @@ public static class ApiEndpoints
 	public static bool IsApiRequest(PathString path)
 	{
 		return path.StartsWithSegments(RoutePrefix, StringComparison.OrdinalIgnoreCase);
+	}
+
+
+	/// <summary>
+	/// POST /api/v1/provisioning/apply — operator-only package application.
+	/// The enrollment token is returned only after the database transaction commits.
+	/// </summary>
+	public static async Task<IResult> ApplyProvisioningAsync(
+		HttpContext httpContext,
+		[FromBody] Faranou.Licensing.Contracts.CustomerProvisioningPackage package,
+		[FromServices] IAntiforgery antiforgery,
+		[FromServices] Infrastructure.Provisioning.CustomerProvisioningApplyService applyService,
+		CancellationToken cancellationToken)
+	{
+		if (!await antiforgery.IsRequestValidAsync(httpContext))
+			return TypedResults.Problem(
+				title: "درخواست نامعتبر است.",
+				statusCode: StatusCodes.Status400BadRequest);
+
+		var result = await applyService.ApplyAsync(package, cancellationToken);
+		httpContext.Response.Headers.CacheControl = "no-store";
+		httpContext.Response.Headers.Pragma = "no-cache";
+
+		if (result.Acknowledgement is not null)
+		{
+			if (result.Success)
+				return TypedResults.Ok(new
+				{
+					result.Acknowledgement,
+					result.Replayed,
+					EnrollmentToken = result.EnrollmentToken
+				});
+
+			return TypedResults.Conflict(new
+			{
+				Error = result.ErrorCode ?? "provisioning_rejected",
+				result.Acknowledgement,
+				result.Replayed
+			});
+		}
+
+		var status = result.ErrorCode switch
+		{
+			"provisioning_acknowledgement_signer_unavailable" => StatusCodes.Status503ServiceUnavailable,
+			"provisioning_request_id_conflict" or "provisioning_nonce_replayed" or
+				"provisioning_acknowledgement_missing" => StatusCodes.Status409Conflict,
+			_ => StatusCodes.Status400BadRequest
+		};
+
+		return TypedResults.Problem(
+			title: "بستهٔ راه‌اندازی قابل اعمال نیست.",
+			detail: result.ErrorCode ?? "provisioning_apply_failed",
+			statusCode: status);
 	}
 
 	/// <summary>
