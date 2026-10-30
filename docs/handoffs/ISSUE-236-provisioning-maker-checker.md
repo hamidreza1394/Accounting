@@ -75,3 +75,13 @@
 - **اعتبارسنجی:** تست محلی اجرا نشده؛ CI روی PR لازم است.
 - **Branch:** `fix/vendor-verify-provisioning-signature`
 - **PR:** پس از ایجاد ثبت می‌شود.
+
+
+## D-055 پذیرفته‌شده و Adapter PKCS#11 — 2026-10-30
+
+- مالک تصمیم معماری را پذیرفته است: Vendor deployment-neutral روی سرور خودمان یا cloud؛ Azure/AWS بدون دسترسی/مجوز و خارج از محدوده؛ بودجهٔ HSM فعلاً صفر.
+- D-055 در `docs/D-055-ISSUE-236-HSM-PKCS11.md` وضعیت Accepted دارد. Production package/license signing تا تأمین HSM سخت‌افزاری واقعی Blocked و fail-closed باقی می‌ماند.
+- PR جاری adapter opt-in PKCS#11 را پشت interfaceهای موجود برای license و provisioning/package اضافه می‌کند. کلیدها با KeyId نسخه‌دار مجزا انتخاب می‌شوند؛ private key باید در token حساس، non-extractable، always-sensitive و never-extractable باشد. الگوریتم ECDSA P-256 و خروجی ۶۴ بایت IEEE P1363 است.
+- SoftHSM فقط در Vendor CI/test استفاده می‌شود؛ slot نرم‌افزاری در Production با `HardwareSlot=false` رد می‌شود. در حال حاضر HSM واقعی provision نشده و `Signing:Pkcs11:Enabled` نباید در Production فعال شود.
+- PIN فقط از secret/environment injection می‌آید؛ هیچ private key generation/export یا cloud adapter اضافه نشده است. `/health/signing` سلامت signer را بدون افشای جزئیات حساس نشان می‌دهد و audit metadata-only برای هر تلاش امضا ثبت می‌شود.
+- **محدودیت شواهد:** اجرای محلی در محیط GitHub-only ممکن نیست؛ تست واقعی SoftHSM و CI نهایی این PR هنوز باید تکمیل شوند. این adapter، Key Ceremony، key rotation/revocation، provisioning/recovery واقعی HSM، توزیع public trust و ACK TPM سمت مشتری را به‌تنهایی کامل نمی‌کند.
