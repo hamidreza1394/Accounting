@@ -318,7 +318,19 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
             session.Factories.ObjectAttributeFactory.Create(CKA.CKA_SIGN, true)
         };
 
-        var matches = session.FindAllObjects(searchTemplate);
+        List<IObjectHandle> matches;
+        try
+        {
+            matches = session.FindAllObjects(searchTemplate);
+        }
+        finally
+        {
+            foreach (var attribute in searchTemplate)
+            {
+                attribute.Dispose();
+            }
+        }
+
         if (matches.Count != 1)
         {
             return null;
@@ -326,25 +338,35 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
 
         var privateKey = matches[0];
         var attributes = session.GetAttributeValue(privateKey, PrivateKeyAttributes.ToList());
-        if (attributes.Count != PrivateKeyAttributes.Length || attributes.Any(attribute => attribute.CannotBeRead))
+        try
         {
-            return null;
+            if (attributes.Count != PrivateKeyAttributes.Length || attributes.Any(attribute => attribute.CannotBeRead))
+            {
+                return null;
+            }
+
+            var isSensitive = attributes[0].GetValueAsBool();
+            var isExtractable = attributes[1].GetValueAsBool();
+            var alwaysSensitive = attributes[2].GetValueAsBool();
+            var neverExtractable = attributes[3].GetValueAsBool();
+            var canSign = attributes[4].GetValueAsBool();
+            var ecParameters = attributes[5].GetValueAsByteArray();
+
+            if (!isSensitive || isExtractable || !alwaysSensitive || !neverExtractable || !canSign ||
+                !CryptographicOperations.FixedTimeEquals(ecParameters, P256EcParameters))
+            {
+                return null;
+            }
+
+            return privateKey;
         }
-
-        var isSensitive = attributes[0].GetValueAsBool();
-        var isExtractable = attributes[1].GetValueAsBool();
-        var alwaysSensitive = attributes[2].GetValueAsBool();
-        var neverExtractable = attributes[3].GetValueAsBool();
-        var canSign = attributes[4].GetValueAsBool();
-        var ecParameters = attributes[5].GetValueAsByteArray();
-
-        if (!isSensitive || isExtractable || !alwaysSensitive || !neverExtractable || !canSign ||
-            !CryptographicOperations.FixedTimeEquals(ecParameters, P256EcParameters))
+        finally
         {
-            return null;
+            foreach (var attribute in attributes)
+            {
+                attribute.Dispose();
+            }
         }
-
-        return privateKey;
     }
 
     private void ValidateRequestedKey(Pkcs11SigningKeyOptions key)
