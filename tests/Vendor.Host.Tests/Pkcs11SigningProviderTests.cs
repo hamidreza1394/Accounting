@@ -43,7 +43,7 @@ public sealed class Pkcs11SigningProviderTests
         Assert.Equal(payload, module.LastPayload);
         Assert.Equal("vendor-license-2026-v1", module.LastKey?.KeyId);
         Assert.NotNull(audit.LastRequest);
-        Assert.Equal("vendor.signing.license.succeeded", audit.LastRequest.ActionCode);
+        Assert.Equal("vendor.signing.license.vendor-license-2026-v1.succeeded", audit.LastRequest.ActionCode);
         Assert.Equal("signing_operation", audit.LastRequest.SubjectType);
         Assert.Null(audit.LastRequest.SubjectId);
     }
@@ -63,7 +63,7 @@ public sealed class Pkcs11SigningProviderTests
 
         Assert.False(result.Succeeded);
         Assert.Equal("vendor-package-2026-v1", module.LastKey?.KeyId);
-        Assert.Equal("vendor.signing.provisioning.failed", audit.LastRequest?.ActionCode);
+        Assert.Equal("vendor.signing.provisioning.vendor-package-2026-v1.failed", audit.LastRequest?.ActionCode);
     }
 
     [Fact]
