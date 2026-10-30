@@ -1394,3 +1394,17 @@
 - رویهٔ ACK مشتری صریحاً offline و per-installation است؛ TPM/OS secure store باید non-exportable بودن را اثبات کند و در فقدان آن fail-closed می‌ماند.
 - Runbook به سازنده یا cloud خاص وابسته نیست و هیچ private-key export یا software fallback را مجاز نمی‌کند.
 - وضعیت اجرایی: بودجهٔ HSM صفر و HSM واقعی provision نشده؛ بخش Vendor HSM runbook فعلاً غیرقابل اجراست. SoftHSM صرفاً Testing/CI است.
+
+
+
+
+## 2026-10-30 — Issue #236: adapter امضای PKCS#11 و تست SoftHSM
+
+- افزودن Pkcs11Interop 5.3.0 (Apache-2.0) و adapter پشت interfaceهای موجود `ILicenseSigningProvider` و `IProvisioningSigningProvider`؛ بدون Adapter ابری.
+- جداسازی purpose و KeyId نسخه‌دار برای لایسنس و provisioning/package؛ adapter فقط private-key object موجود را پیدا می‌کند و کلید تولید یا export نمی‌کند.
+- enforce کردن ECDSA P-256، `CKM_ECDSA` روی SHA-256 digest، امضای IEEE P1363 ثابت ۶۴ بایتی و صفات `SENSITIVE/EXTRACTABLE/ALWAYS_SENSITIVE/NEVER_EXTRACTABLE/SIGN/EC_PARAMS`.
+- PKCS#11 opt-in و default disabled؛ فقط محیط اختصاصی Testing، SoftHSM را قبول می‌کند؛ سایر محیط‌ها slot سخت‌افزاری و manufacturer/model allowlist‌شده می‌خواهند. `/health/signing` provider disabled/unavailable را با 503 نشان می‌دهد.
+- هر تلاش امضا audit metadata-only با purpose، KeyId نسخه‌دار و نتیجه دارد؛ payload/signature/private key در audit/log ثبت نمی‌شوند. اگر audit append شکست بخورد، signature به caller تحویل نمی‌شود.
+- تست واحد قرارداد provider و integration تست SoftHSM برای امضای هر دو key، verification با public key و رد SoftHSM در Production اضافه شد. Vendor CI اکنون SoftHSM را فقط در job تست نصب/initialise می‌کند.
+- با بودجهٔ HSM صفر، هیچ تنظیم Production فعال نشده است؛ providerهای Production پیش‌فرض unavailable/fail-closed می‌مانند تا HSM واقعی provision شود. Key Ceremony، rotation/revocation، HA/DR، backup/recovery و ACK TPM مشتری در PRهای بعدی/Runbook باقی‌اند.
+- Local build/test اجرا نشد (محیط GitHub-only)؛ نتایج واقعی .NET CI، Vendor CI و Semgrep روی SHA نهایی PR باید بررسی شوند.
