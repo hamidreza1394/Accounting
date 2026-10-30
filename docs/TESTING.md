@@ -191,6 +191,6 @@ cd ClientApp && npm ci && npm run typecheck && npm test && npm run build && npm 
 
 ## Customer ACK trust rotation and revocation (Issue #236)
 
-- `CustomerProvisioningAcknowledgementTrustStoreTests` covers configured public-key resolution, explicit revocation while retaining the public key for audit, and overlap rotation where the new version remains trusted while the previous version is revoked.
+- `CustomerProvisioningAcknowledgementTrustStoreTests` covers configured public-key resolution, explicit revocation while retaining the public key for audit, overlap rotation where the new version remains trusted while the previous version is revoked, and fail-closed handling of malformed revocation flags.
 - Revocation is deployment configuration under `Provisioning:RevokedAcknowledgementKeys:<keyId>=true`; a revoked KeyId cannot verify a newly produced ACK, so the customer apply transaction remains fail-closed (503) and persists no acknowledgement.
 - The tests are pure configuration/cryptography tests and require no SQL Server or external provider.
