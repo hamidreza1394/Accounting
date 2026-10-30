@@ -16,16 +16,27 @@ public sealed class ProvisioningAcknowledgementStateRulesTests
         Assert.Null(failureCode);
     }
 
-    [Fact]
-    public void RejectedOutcomeFailsAndRetainsOnlyBoundedErrorCode()
+    [Theory]
+    [InlineData("provisioning_parent_reference_invalid")]
+    [InlineData("provisioning_initial_admin_conflict")]
+    public void RejectedOutcomeAcceptsOnlyKnownStableErrorCodes(string errorCode)
     {
         Assert.True(ProvisioningAcknowledgementStateRules.TryResolveOutcome(
-            "Rejected", "customer_validation_failed", out var status, out var failureCode));
+            "Rejected", errorCode, out var status, out var failureCode));
         Assert.Equal("Failed", status);
-        Assert.Equal("customer_validation_failed", failureCode);
+        Assert.Equal(errorCode, failureCode);
+    }
 
+    [Theory]
+    [InlineData("customer_validation_failed")]
+    [InlineData("provisioning_apply_conflict")]
+    [InlineData("SqlException: database unavailable")]
+    [InlineData("admin@example.com")]
+    [InlineData("provisioning_parent_reference_invalid\nstack trace")]
+    public void RejectedOutcomeRejectsUnknownOrPotentiallySensitiveErrorCodes(string errorCode)
+    {
         Assert.False(ProvisioningAcknowledgementStateRules.TryResolveOutcome(
-            "Rejected", new string('x', 129), out _, out _));
+            "Rejected", errorCode, out _, out _));
     }
 
     [Theory]

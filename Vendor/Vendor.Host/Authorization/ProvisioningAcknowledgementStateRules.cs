@@ -21,8 +21,9 @@ public static class ProvisioningAcknowledgementStateRules
                 status = "Confirmed";
                 return true;
             case "Rejected":
-                if (string.IsNullOrWhiteSpace(errorCode) || errorCode.Length > 128 ||
-                    errorCode.Any(char.IsControl))
+                // Persist only stable, non-sensitive outcome codes emitted by the customer
+                // consumer. Never store free-form exception text, connection details or PII.
+                if (!IsAllowedRejectionCode(errorCode))
                     return false;
                 status = "Failed";
                 failureCode = errorCode;
@@ -31,4 +32,8 @@ public static class ProvisioningAcknowledgementStateRules
                 return false;
         }
     }
+
+    private static bool IsAllowedRejectionCode(string? errorCode) =>
+        errorCode is "provisioning_parent_reference_invalid"
+            or "provisioning_initial_admin_conflict";
 }
