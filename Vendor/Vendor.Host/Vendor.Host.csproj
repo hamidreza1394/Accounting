@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Vendor.Persistence\Vendor.Persistence.csproj" />
     <ProjectReference Include="..\..\Licensing.Contracts\Licensing.Contracts.csproj" />
+    <PackageReference Include="Pkcs11Interop" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
