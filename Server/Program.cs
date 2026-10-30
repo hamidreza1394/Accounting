@@ -23,6 +23,14 @@ if (args.Any(arg => string.Equals(arg, Infrastructure.DatabaseSetup.MasterCreden
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Explicit offline operator command: creates a non-exportable customer ACK key and emits only its public key.
+if (Infrastructure.Provisioning.WindowsCngCustomerAcknowledgementKeyCommand.IsCommand(args))
+{
+    Environment.ExitCode = Infrastructure.Provisioning.WindowsCngCustomerAcknowledgementKeyCommand.RunOnConsole(
+        args, builder.Configuration);
+    return;
+}
+
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddRouting(options =>
