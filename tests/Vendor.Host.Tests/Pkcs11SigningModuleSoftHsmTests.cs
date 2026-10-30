@@ -27,7 +27,9 @@ public sealed class Pkcs11SigningModuleSoftHsmTests
             string.IsNullOrWhiteSpace(pin))
         {
             if (Environment.GetEnvironmentVariable("FARANO_REQUIRE_PKCS11") == "1")
+            {
                 Assert.Fail("Vendor CI requires the SoftHSM PKCS#11 test environment.");
+            }
 
             Assert.Skip("SoftHSM integration is run in Vendor CI; local runs may omit the test token.");
         }
@@ -188,7 +190,9 @@ public sealed class Pkcs11SigningModuleSoftHsmTests
                 session.Factories.ObjectAttributeFactory.Create(CKA.CKA_ID, Encoding.ASCII.GetBytes(keyId))
             };
             foreach (var objectHandle in session.FindAllObjects(template))
+            {
                 session.DestroyObject(objectHandle);
+            }
         }
         finally
         {
