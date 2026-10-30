@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { AlertCircle, LoaderCircle, RefreshCw, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -47,6 +47,32 @@ const subsystemOptions = [
   { value: 'inventory', label: 'انبار' },
   { value: 'treasury', label: 'خزانه‌داری' },
 ] as const;
+
+const MAX_ACKNOWLEDGEMENT_FILE_BYTES = 64 * 1024;
+
+const acknowledgementErrorMessages: Record<string, string> = {
+  provisioning_acknowledgement_envelope_invalid: 'ساختار فایل پاسخ مشتری معتبر نیست.',
+  provisioning_acknowledgement_signature_invalid: 'امضای فایل پاسخ معتبر نیست؛ فایل دست‌کاری یا با کلید نامعتبر امضا شده است.',
+  provisioning_acknowledgement_payload_invalid: 'محتوای فایل پاسخ مشتری معتبر نیست.',
+  provisioning_acknowledgement_binding_mismatch: 'فایل پاسخ به این درخواست راه‌اندازی تعلق ندارد.',
+  provisioning_acknowledgement_trusted_key_invalid: 'پیکربندی کلید مورد اعتماد پاسخ مشتری معتبر نیست.',
+  provisioning_acknowledgement_conflict: 'برای این درخواست پاسخ دیگری قبلاً ثبت شده و قابل جایگزینی نیست.',
+  provisioning_request_not_delivered: 'ابتدا بستهٔ امضاشده باید صادر و تحویل داده شود.',
+};
+
+function acknowledgementUploadError(status: number, code: string): string {
+  if (status === 401) return 'کلید امضای فایل پاسخ در فهرست کلیدهای مورد اعتماد Vendor نیست.';
+  if (status === 404) return 'درخواست راه‌اندازی یافت نشد.';
+  if (status === 429) return 'تعداد تلاش‌ها زیاد است؛ کمی بعد دوباره تلاش کنید.';
+  return acknowledgementErrorMessages[code] ?? 'ثبت فایل پاسخ مشتری ناموفق بود.';
+}
+
+function isAcknowledgementEnvelope(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null) return false;
+  const envelope = value as Record<string, unknown>;
+  return typeof envelope.formatVersion === 'number'
+    && ['keyId', 'algorithm', 'acknowledgementJson', 'signatureBase64'].every(key => typeof envelope[key] === 'string');
+}
 
 const acknowledgementResultLabels: Record<string, string> = {
   Applied: 'راه‌اندازی توسط مشتری اعمال شد',
@@ -113,6 +139,7 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
   const [busy, setBusy] = useState(false);
   const [approvalBusyId, setApprovalBusyId] = useState<string | null>(null);
   const [exportBusyId, setExportBusyId] = useState<string | null>(null);
+  const [acknowledgementBusyId, setAcknowledgementBusyId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -347,6 +374,54 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
     }
   }
 
+  async function submitAcknowledgementFile(item: ProvisioningRequest, event: ChangeEvent<HTMLInputElement>) {
+    const input = event.target;
+    const file = input.files?.[0];
+    if (!file || acknowledgementBusyId) return;
+    setAcknowledgementBusyId(item.id);
+    setError('');
+    setNotice('');
+    try {
+      if (file.size > MAX_ACKNOWLEDGEMENT_FILE_BYTES) throw new Error('حجم فایل پاسخ مشتری بیش از حد مجاز است.');
+      let envelope: unknown;
+      try {
+        envelope = JSON.parse(await file.text());
+      } catch {
+        throw new Error('فایل پاسخ مشتری JSON معتبر نیست.');
+      }
+      if (!isAcknowledgementEnvelope(envelope)) throw new Error('ساختار فایل پاسخ مشتری معتبر نیست.');
+
+      // Machine-to-machine route: the signature, verified against the Vendor trust store, is the proof.
+      const response = await fetch(`/api/vendor/provisioning-requests/${encodeURIComponent(item.requestId)}/acknowledgement`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(envelope),
+      });
+      if (!response.ok) {
+        let code = '';
+        try {
+          const body = await response.json() as ApiError;
+          code = body.error ?? body.message ?? '';
+        } catch {
+          // Keep the public error generic.
+        }
+        throw new Error(acknowledgementUploadError(response.status, code));
+      }
+      const body = await response.json().catch(() => ({})) as { repeated?: boolean };
+      setNotice(body.repeated
+        ? 'این فایل پاسخ قبلاً ثبت شده بود؛ وضعیت تغییری نکرد.'
+        : 'فایل پاسخ مشتری با کلید مورد اعتماد تأیید و ثبت شد.');
+      setRefreshKey(current => current + 1);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'ثبت فایل پاسخ مشتری ناموفق بود.');
+    } finally {
+      input.value = '';
+      setAcknowledgementBusyId(null);
+    }
+  }
+
   function toggleSubsystem(value: string, checked: boolean) {
     setSubsystems(current => checked
       ? (current.includes(value) ? current : [...current, value])
@@ -500,10 +575,19 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
                 <td className="border-b px-3 py-2 font-mono text-xs" dir="ltr">{item.requestId}</td>
                 {(canRequestApproval || canExportPackage) && <td className="border-b px-3 py-2">
                   {canExportPackage && item.status === 'PendingDelivery'
-                    ? <Button type="button" size="sm" variant="outline" onClick={() => void exportPackage(item)}
-                        disabled={busy || exportBusyId !== null}>
+                    ? <div className="flex flex-wrap items-center gap-2">
+                      <Button type="button" size="sm" variant="outline" onClick={() => void exportPackage(item)}
+                        disabled={busy || exportBusyId !== null || acknowledgementBusyId !== null}>
                         {exportBusyId === item.id ? <><LoaderCircle size={14} className="animate-spin"/> در حال دریافت…</> : 'دانلود بستهٔ امضاشده'}
                       </Button>
+                      <label className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-md border border-input bg-background px-3 text-xs font-medium hover:bg-muted">
+                        {acknowledgementBusyId === item.id ? <><LoaderCircle size={14} className="animate-spin"/> در حال بررسی…</> : 'ثبت فایل پاسخ مشتری'}
+                        <input type="file" accept=".json,application/json" className="sr-only"
+                          aria-label={`ثبت فایل پاسخ مشتری برای ${item.requestId}`}
+                          disabled={busy || exportBusyId !== null || acknowledgementBusyId !== null}
+                          onChange={event => void submitAcknowledgementFile(item, event)}/>
+                      </label>
+                    </div>
                     : canRequestApproval && item.approvalStatus === 'Pending'
                       ? <span className="text-xs text-muted-foreground">در انتظار بررسی دو نفره</span>
                       : canRequestApproval && item.status === 'AwaitingSigner' && <Button type="button" size="sm" variant="outline"

@@ -1,5 +1,5 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
-import { AlertCircle, CheckCircle2, FileUp, KeyRound, ShieldCheck } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Download, FileUp, KeyRound, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -29,6 +29,36 @@ function getRequestId(packageText: string): string {
     throw new Error('شناسه درخواست در بسته معتبر نیست.');
   }
   return payload.requestId;
+}
+
+const GUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Builds a safe local file name; only a validated GUID is ever put into it. */
+function acknowledgementFileName(requestId: string): string {
+  return GUID_PATTERN.test(requestId)
+    ? `provisioning-acknowledgement-${requestId.toLowerCase()}.json`
+    : 'provisioning-acknowledgement.json';
+}
+
+/** Saves the signed acknowledgement locally so it can be carried to the Vendor panel offline. */
+function saveAcknowledgementFile(content: string, requestId: string) {
+  const url = URL.createObjectURL(new Blob([content], { type: 'application/json' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = acknowledgementFileName(requestId);
+  link.rel = 'noopener';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function tryGetRequestId(packageText: string): string {
+  try {
+    return getRequestId(packageText);
+  } catch {
+    return '';
+  }
 }
 
 export function CustomerProvisioningImportPage() {
@@ -176,7 +206,13 @@ export function CustomerProvisioningImportPage() {
               <CardTitle className="flex items-center gap-2"><CheckCircle2 className="size-5" /> پاسخ امضاشدهٔ مشتری</CardTitle>
               <CardDescription>شناسه درخواست: <span dir="ltr" className="font-mono">{requestId || 'در پاسخ'}</span>{replayed ? ' — پاسخ تکراری' : ''}</CardDescription>
             </CardHeader>
-            <CardContent><pre dir="ltr" className="max-h-64 overflow-auto rounded-md bg-muted p-3 text-xs leading-6">{acknowledgement}</pre></CardContent>
+            <CardContent className="space-y-3">
+              <pre dir="ltr" className="max-h-64 overflow-auto rounded-md bg-muted p-3 text-xs leading-6">{acknowledgement}</pre>
+              <Button type="button" variant="outline" className="w-full" onClick={() => saveAcknowledgementFile(acknowledgement, requestId || tryGetRequestId(packageText))}>
+                <Download className="size-4" /> ذخیرهٔ فایل پاسخ برای ارسال به Vendor
+              </Button>
+              <p className="text-xs leading-6 text-muted-foreground">فایل شامل شناسه‌ها و امضا است و رمز یا توکن ندارد. آن را از مسیر امن به اپراتور Vendor برسانید تا در پنل Vendor ثبت شود.</p>
+            </CardContent>
           </Card>
         )}
 
