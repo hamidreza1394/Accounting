@@ -53,7 +53,7 @@ public sealed class Pkcs11SigningModuleSoftHsmTests
         {
             using (var module = new Pkcs11SigningModule(
                 Options.Create(options),
-                new TestHostEnvironment(Environments.Development),
+                new TestHostEnvironment("Testing"),
                 NullLogger<Pkcs11SigningModule>.Instance))
             {
                 Assert.True(await module.IsAvailableAsync());
