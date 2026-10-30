@@ -193,7 +193,7 @@ public sealed class WindowsCngCustomerProvisioningAcknowledgementSigningProvider
             return Task.FromResult(new CustomerProvisioningAcknowledgementSigningResult(
                 true,
                 keyId,
-                Convert.ToBase64String(signature),
+                System.Convert.ToBase64String(signature),
                 null));
         }
         catch (Exception exception) when (exception is CryptographicException or
