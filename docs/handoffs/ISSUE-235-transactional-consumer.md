@@ -1,56 +1,69 @@
 # تحویل وظیفه — ISSUE-235-transactional-consumer
 
 - **Issue:** [#235](https://github.com/hamidreza1394/Accounting/issues/235)
-- **Agent/مسئول:** ChatGPT / GitHub connector
-- **تاریخ:** 2026-10-30
-- **وضعیت:** تصمیم‌های معماری پذیرفته؛ parent-reference validation به‌صورت جزئی پیاده‌سازی شده؛ transactional consumer هنوز تکمیل نشده است.
+- **تاریخ بازبینی:** 2026-10-30
+- **مبنای کد:** `main` @ `43d28253eb9f0f38ff25d0dfea143aeacdb06871`
+- **وضعیت:** پیاده‌سازی اصلی consumer و E2E نسخه ۴ در main ادغام و CI-verified است؛ فعال‌سازی Production به signer خارجی مورد تأیید در #236 وابسته است.
 
-## هدف و معیارهای پذیرش
-- [ ] verify بسته و binding customer/install قبل از هر mutation.
-- [ ] resolve مرجع مادر فقط با RequestId canonical و claim محلی.
-- [ ] apply اتمیک Company/FiscalPeriod/Admin/Membership/entitlements/claim.
-- [ ] replay هم‌زمان و retry idempotent بدون duplicate side effect.
-- [ ] enrollment یک‌باره، reissue مجوزدار، expiry، attempt limit و force password change.
-- [ ] acknowledgement امضاشده با نتیجه Applied/AlreadyApplied/Rejected و کد خطای ثابت.
-- [ ] تست SQL Server، rollback، replay هم‌زمان و E2E.
+## خلاصه نتیجه
 
-## تصمیم‌های فنی
-- D-053 در 2026-10-30 با تأیید صریح مالک محصول Accepted.
-- ParentCompanyReference = Vendor RequestId؛ parent و subsidiary والد مجاز، independent رد؛ فقط ParentCompanyId ذخیره می‌شود.
-- شرکت‌های قدیمی بدون claim رد می‌شوند؛ هیچ Company column یا migration برای مرجع قدیمی در این scope.
-- Enrollment token فقط پس از commit در پاسخ اولیه؛ replay فقط ack؛ reissue endpoint مستقل و audit-safe.
-- Production signer فقط provider واقعی Issue #236 و fail-closed.
+Issue #235 دیگر در وضعیت «consumer پیاده‌سازی نشده» نیست. مسیر تست‌شده شامل اعتبارسنجی بسته، claim/replay، apply تراکنشی، Enrollment یک‌بارمصرف، acknowledgement امضاشده در تست و intake سمت Vendor است. Providerهای پیش‌فرض Production عمداً unavailable/fail-closed باقی مانده‌اند.
 
-## فایل‌های تغییرکرده در این slice
-- docs/DECISIONS.md — D-053
-- docs/LICENSING_THREAT_MODEL.md — تهدیدها و کنترل‌های Enrollment/parent reference
-- docs/INDEX.md — فهرست ADR
-- docs/WORK_LOG.md — سابقه تصمیم
-- AGENTS.md — شماره ADR بعدی
-- docs/handoffs/ISSUE-235-transactional-consumer.md — این handoff
+## PRهای ادغام‌شده
 
-## بررسی و آزمون
-| فرمان/آزمون | نتیجه واقعی | توضیح |
-|---|---|---|
-| بررسی PR #302 و merge commit | موفق | merge 4c259280c40af7037901e9cb6f33c64206dbdaeb؛ CI .NET/Semgrep/Push on main موفق |
-| بررسی PR #306 و merge commit | موفق | merge ac3d481cf8d8091bd139295a9423aa30e0011fb7؛ CI .NET/Semgrep/Push on main موفق |
-| dotnet build | اجرا نشده | checkout محلی در این محیط به‌دلیل DNS شبکه ممکن نشد |
-| SQL Server integration / rollback | اجرا نشده | consumer هنوز پیاده‌سازی نشده |
-| concurrent replay | اجرا نشده | consumer هنوز پیاده‌سازی نشده |
+| PR | نتیجه |
+|---|---|
+| #302 | Trust store مشتری، verifier و migration/claim پایه |
+| #305 | کاتالوگ permissionهای مجاز و fail-closed |
+| #306 | primitive توکن Enrollment تصادفی و hash-only |
+| #307 | apply تراکنشی، claim/replay، reissue، Enrollment و acknowledgement |
+| #308 | منع ورود/نشست مدیر تا تکمیل Enrollment |
+| #293 | دریافت و اعتبارسنجی acknowledgement امضاشده در Vendor |
+| #294 | نمایش نتیجه acknowledgement در تاریخچه Provisioning |
+| #318 | حفظ status عمومی برای JSON ناقص/بزرگ |
+| #319 | binding بسته به یک لایسنس امضاشده و Sequence در schema v4 (D-054) |
+| #329 | E2E دو میزبان آزمایشی، دو دیتابیس مستقل و انتقال فایل |
 
-## امنیت، داده و سازگاری
-- کد runtime برای validation و resolve مرجع والد تغییر کرده است؛ هنوز apply endpoint/service وجود ندارد.
-- هیچ schema یا Migration مشتری تغییر نکرده است و هیچ Company schema جدیدی اضافه نشده است.
-- Vendor و Customer همچنان از نظر دیتابیس جدا هستند.
+## رفتار امنیتی تأییدشده
 
-## ریسک‌ها و کارهای باقی‌مانده
-- پیاده‌سازی کامل سرویس/endpointهای apply و reissue و transaction boundary.
-- بررسی نیاز دقیق schema برای شمارنده تلاش و reissue metadata؛ هر migration افزایشی فقط در #235 و همراه SQL Server tests.
-- پیاده‌سازی parent validation در Vendor create/issuance و customer consumer.
-- تست واقعی rollback و replay هم‌زمان و تست CI روی head نهایی.
-- production signing تا Issue #236 مسدود است.
+- Customer trust store مستقل از metadata بسته است؛ کلید ناشناخته، امضای نامعتبر یا binding نادرست fail-closed می‌شود.
+- claim یکتا برای RequestId/nonce و تراکنش Serializable مانع apply تکراری و ایجاد شرکت/مدیر تکراری است.
+- ایجاد Company، FiscalPeriod، User، CompanyRole، Membership و مجوزهای دقیق زیرسیستم در مرز تراکنش Customer انجام می‌شود.
+- Enrollment token تصادفی ۲۵۶بیتی است؛ فقط digest ذخیره می‌شود، انقضا و سقف تلاش دارد، مصرف یک‌باره و reissue ممیزی‌شده دارد و token در replay دوباره افشا نمی‌شود.
+- مدیر اولیه تا تکمیل Enrollment اجازه ورود یا ایجاد نشست ندارد. رمز واقعی را مدیر در Enrollment تعیین می‌کند؛ پس از آن `MustChangePassword=false` است. بنابراین نباید این رفتار را «تغییر رمز اجباری پس از اولین ورود» توصیف کرد.
+- Vendor فقط acknowledgement معتبر و منطبق با request/nonce/hash/customer/installation را می‌پذیرد؛ نتیجه‌های مجاز Applied/AlreadyApplied به Confirmed و rejection مجاز به Failed منتهی می‌شوند؛ وضعیت و Audit تراکنشی‌اند.
 
-## شناسه‌های Git
-- **Branch:** feat/issue-235-transactional-consumer
-- **Commit:** پس از ثبت این مستندات اعلام می‌شود.
-- **Pull Request:** هنوز ایجاد نشده است.
+## شواهد CI
+
+- **PR #307:** .NET CI [41010026198](https://github.com/hamidreza1394/Accounting/actions/runs/41010026198)، Vendor CI [41010026058](https://github.com/hamidreza1394/Accounting/actions/runs/41010026058)، Semgrep [41010026110](https://github.com/hamidreza1394/Accounting/actions/runs/41010026110) — همگی موفق.
+- **PR #308:** .NET CI [41014003705](https://github.com/hamidreza1394/Accounting/actions/runs/41014003705)، Semgrep [41014003694](https://github.com/hamidreza1394/Accounting/actions/runs/41014003694) — موفق.
+- **PR #329:** .NET CI [41052515115](https://github.com/hamidreza1394/Accounting/actions/runs/41052515115)، Vendor CI [41052515292](https://github.com/hamidreza1394/Accounting/actions/runs/41052515292)، Semgrep [41052515389](https://github.com/hamidreza1394/Accounting/actions/runs/41052515389) — موفق. .NET شامل هفت job موفق است.
+
+## دامنه و محدودیت‌های E2E
+
+- دو WebApplicationFactory/TestServer و دو دیتابیس SQL Server مستقل در یک test process اجرا می‌شوند؛ این آزمون دو ماشین فیزیکی یا دو OS process مستقل نیست.
+- کلیدهای E2E در حافظه و فقط برای تست ساخته می‌شوند؛ هیچ کلید خصوصی Production در repository یا customer installation وجود ندارد.
+- پس از تحویل بسته به Customer کاملاً آفلاین، تعلیق بعدی یا Sequence جدیدتر Vendor به‌صورت فوری قابل کشف نیست.
+- MaxCompanies، تجمیع چند لایسنس و افزودن ماژول به شرکت موجود طبق D-054 NotImplemented هستند.
+
+## موارد باز
+
+1. **#236:** پیکربندی Provider واقعی KMS/HSM برای امضای license/provisioning/ack با workload identity، حداقل دسترسی، rotation/recovery و تست عملیاتی. Providerهای پیش‌فرض باید fail-closed بمانند.
+2. **#214:** پروتکل revocation آفلاین و consumer ضد rollback، انتقال/بازیابی و تست عملیاتی.
+3. **#107:** مقصد مستقل checkpoint ممیزی با هویت و credential جدا، retention/immutability، alerting و restore drill.
+4. **Staging:** اجرای واقعی دو process/host، cloud/dedicated/offline، backup/restore و recovery پس از انتخاب providerها.
+
+## مواردی که در این handoff اجرا نشده‌اند
+
+- تست دو ماشین یا دو OS process مستقل.
+- تست با KMS/HSM واقعی یا credential عملیاتی.
+- تست revocation آفلاین و rollback-resistant consumer.
+- تست عملیاتی backup/restore و disaster recovery.
+- اجرای محلی جدید توسط این بازبینی؛ شواهد تست به CIهای لینک‌شده محدود است.
+
+## مرجع
+
+- D-053 و D-054 در `docs/DECISIONS.md`
+- Issue #228، #235، #236، #214 و #107
+- PRهای جدول بالا
+- وضعیت تجمیعی در `docs/PROJECT_STATUS.md`
