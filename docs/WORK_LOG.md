@@ -1269,3 +1269,7 @@
 - **محدودیت force-password:** فرم enrollment رمز اولیه را پیش از اولین ورود عادی تعیین می‌کند و MustChangePassword را پس از آن false می‌کند. محدودسازی نشست و اجبار تغییر مجدد رمز در اولین login هنوز پیاده‌سازی نشده و معیار پذیرش باز است؛ این محدودیت در PR #307 شفاف شده است.
 - **تست:** تست SQL Server برای apply، signed acknowledgement، replay، reissue، ابطال token قبلی، مصرف یک‌بار، hash-only و عدم ایجاد گروه اضافه شده است. این تست‌ها در این نشست اجرا نشده‌اند؛ rollback و concurrent replay نیز اجرا نشده‌اند.
 - **CI:** اجرای اول PR #307 شکست کامپایل داشت: namespace مربوط به VendorProvisioningParentReferenceRules در IssuanceService وارد نشده بود. using اصلاح شد. اجرای جدید روی head جاری در زمان ثبت این log: secret-scan موفق؛ build-and-test، client، publish-scripts و Semgrep هنوز queued/in_progress. اجرای نهایی هنوز سبز نیست.
+
+## 2026-10-30 — Issue #235: offline acknowledgement exchange (customer file → Vendor panel)
+- **تغییر:** ذخیرهٔ فایل ack در صفحهٔ import مشتری و «ثبت فایل پاسخ مشتری» در جدول درخواست‌های Vendor که به endpoint ماشینی موجود POST می‌کند. بدون تغییر سرور/Schema/قرارداد.
+- **تست:** ClientApp 104 و Vendor.Web 55 تست موفق، typecheck و offline/static check موفق. `NotImplemented`: رسید امضاشدهٔ Vendor به مشتری (قرارداد ندارد، نیاز به تصمیم مالک و #236). E2E مرورگر در مرحلهٔ ۴. جزئیات: `docs/handoffs/ISSUE-235-offline-ack-exchange.md`.
