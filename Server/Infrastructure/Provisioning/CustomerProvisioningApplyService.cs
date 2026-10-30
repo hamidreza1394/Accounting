@@ -89,7 +89,7 @@ public sealed class CustomerProvisioningApplyService
             return Failure(verificationError);
 
         var requestId = Guid.ParseExact(payload.RequestId, "D");
-        var payloadHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(package.PayloadJson)))
+        var payloadHash = System.Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(package.PayloadJson)))
             .ToLowerInvariant();
         var nonceHash = HashHex(payload.Nonce);
         var now = _timeProvider.GetUtcNow().UtcDateTime;
@@ -473,7 +473,7 @@ public sealed class CustomerProvisioningApplyService
         byte[] signatureBytes;
         try
         {
-            signatureBytes = Convert.FromBase64String(signing.SignatureBase64);
+            signatureBytes = System.Convert.FromBase64String(signing.SignatureBase64);
         }
         catch (FormatException)
         {
@@ -534,8 +534,8 @@ public sealed class CustomerProvisioningApplyService
         try
         {
             return CryptographicOperations.FixedTimeEquals(
-                Convert.FromHexString(storedHash),
-                Convert.FromHexString(suppliedHash));
+                System.Convert.FromHexString(storedHash),
+                System.Convert.FromHexString(suppliedHash));
         }
         catch (FormatException)
         {
@@ -547,11 +547,11 @@ public sealed class CustomerProvisioningApplyService
         System.Net.IPAddress.TryParse(value, out var address) ? address.ToString() : null;
 
     private static string HashHex(string value) =>
-        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
+        System.Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
 
     private static string CreateOpaqueSecret()
     {
         var bytes = RandomNumberGenerator.GetBytes(32);
-        return Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        return System.Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
     }
 }
