@@ -123,7 +123,9 @@ public sealed class Pkcs11SigningProviderTests
         {
             LastRequest = request;
             if (Fail)
+            {
                 throw new InvalidOperationException("simulated audit failure");
+            }
 
             return Task.FromResult(new VendorAuditWriteResult(Guid.NewGuid(), new string('a', 64), new string('b', 64)));
         }
