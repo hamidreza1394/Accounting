@@ -75,3 +75,10 @@
 - **اعتبارسنجی:** تست محلی اجرا نشده؛ CI روی PR لازم است.
 - **Branch:** `fix/vendor-verify-provisioning-signature`
 - **PR:** پس از ایجاد ثبت می‌شود.
+
+
+## Runbook عملیاتی HSM/TPM — 2026-10-30
+
+- Runbook در `docs/runbooks/ISSUE-236-HSM-TPM-KEY-OPERATIONS.md` اضافه شد: نقش‌ها و کنترل دو نفره، Key Ceremony، کلیدهای مجزای package/license/ACK، CKAها، enrollment آفلاین TPM، rotation overlap، revocation، Backup/Recovery، outage و alerting.
+- Runbook برند ابری یا سازندهٔ HSM فرض نمی‌کند؛ فرمان‌های اجرایی باید از راهنمای HSM واقعی و پس از تأیید مدل گرفته شوند. هیچ دستور key export یا backup فایل‌محور برای private key مجاز نیست.
+- با بودجهٔ HSM صفر و نبود hardware واقعی، Runbook بخش HSM را صریحاً غیرقابل اجرا می‌داند. SoftHSM فقط Testing/CI است؛ ACK مشتری نیز تا backend غیرقابل‌استخراج و enrollment آفلاین فعال نمی‌شود.
