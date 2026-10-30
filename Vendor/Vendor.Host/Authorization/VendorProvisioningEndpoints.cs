@@ -468,6 +468,59 @@ public static class VendorProvisioningEndpoints
                 item.KeyId!, item.Algorithm!, item.PayloadJson, item.SignatureBase64!));
         }).RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.CustomersRead));
 
+        group.MapGet("/eligible-licenses", async (
+            Guid? customerId, Guid? installationId,
+            HttpContext context, IAuthorizationService authorization,
+            VendorDbContext db, VendorProvisioningLicenseResolver licenseResolver,
+            CancellationToken ct) =>
+        {
+            if (customerId is null || customerId == Guid.Empty ||
+                installationId is null || installationId == Guid.Empty)
+                return Results.BadRequest(new { error = "provisioning_target_required" });
+
+            var customerAccess = await authorization.AuthorizeAsync(
+                context.User,
+                new VendorResourceDescriptor("customer", customerId.Value),
+                VendorResourceCatalog.PolicyFor("customer", VendorPermissionCatalog.CustomersRead));
+            var installationAccess = await authorization.AuthorizeAsync(
+                context.User,
+                new VendorResourceDescriptor("installation", installationId.Value, customerId.Value),
+                VendorResourceCatalog.PolicyFor("installation", VendorPermissionCatalog.InstallationsRead));
+            if (!customerAccess.Succeeded || !installationAccess.Succeeded)
+                return Results.NotFound();
+
+            var customer = await db.Customers.AsNoTracking()
+                .SingleOrDefaultAsync(item => item.Id == customerId.Value && item.Status == "Active", ct);
+            var installation = await db.Installations.AsNoTracking()
+                .SingleOrDefaultAsync(item => item.Id == installationId.Value &&
+                    item.CustomerId == customerId.Value && item.Status == "Active", ct);
+            if (customer is null || installation is null)
+                return Results.NotFound();
+
+            var licenses = await db.Licenses.AsNoTracking()
+                .Where(item => item.CustomerId == customer.Id && item.Status == "Issued" &&
+                    (item.InstallationId == null || item.InstallationId == installation.Id))
+                .OrderBy(item => item.LicenseNumber)
+                .Take(100)
+                .ToListAsync(ct);
+
+            var eligible = new List<EligibleProvisioningLicenseResponse>();
+            foreach (var license in licenses)
+            {
+                var binding = await licenseResolver.ResolveLatestAsync(
+                    license.Id, customer, installation, requestedSubsystems: null, ct);
+                if (!binding.Succeeded)
+                    continue;
+
+                eligible.Add(new EligibleProvisioningLicenseResponse(
+                    license.Id, license.LicenseNumber, license.ProductCode,
+                    binding.Sequence, binding.Subsystems!));
+            }
+
+            context.Response.Headers.CacheControl = "no-store";
+            return Results.Ok(new { items = eligible });
+        }).RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.CustomersRead));
+
         group.MapGet("/eligible-parents", async (
             Guid? customerId, Guid? installationId,
             HttpContext context, IAuthorizationService authorization, VendorDbContext db, CancellationToken ct) =>
@@ -644,6 +697,9 @@ public static class VendorProvisioningEndpoints
         return false;
     }
 }
+
+public sealed record EligibleProvisioningLicenseResponse(
+    Guid LicenseId, string LicenseNumber, string ProductCode, int Sequence, IReadOnlyList<string> Subsystems);
 
 public sealed record EligibleProvisioningParentResponse(string RequestId, string CompanyName, string CompanyType, DateTimeOffset? ConfirmedAtUtc);
 
