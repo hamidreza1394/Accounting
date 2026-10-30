@@ -146,15 +146,33 @@ public sealed class Pkcs11SigningModuleSoftHsmTests
                 session.Factories.ObjectAttributeFactory.Create(CKA.CKA_SIGN, true)
             };
 
-            session.GenerateKeyPair(
-                session.Factories.MechanismFactory.Create(CKM.CKM_EC_KEY_PAIR_GEN),
-                publicTemplate,
-                privateTemplate,
-                out var publicKey,
-                out _);
+            IObjectHandle publicKey;
+            try
+            {
+                using var mechanism = session.Factories.MechanismFactory.Create(CKM.CKM_EC_KEY_PAIR_GEN);
+                session.GenerateKeyPair(
+                    mechanism,
+                    publicTemplate,
+                    privateTemplate,
+                    out publicKey,
+                    out _);
+            }
+            finally
+            {
+                DisposeAttributes(publicTemplate);
+                DisposeAttributes(privateTemplate);
+            }
 
-            var pointDer = session.GetAttributeValue(publicKey, new List<CKA> { CKA.CKA_EC_POINT })[0]
-                .GetValueAsByteArray();
+            var pointAttribute = session.GetAttributeValue(publicKey, new List<CKA> { CKA.CKA_EC_POINT })[0];
+            byte[] pointDer;
+            try
+            {
+                pointDer = pointAttribute.GetValueAsByteArray();
+            }
+            finally
+            {
+                pointAttribute.Dispose();
+            }
             var asnReader = new AsnReader(pointDer, AsnEncodingRules.DER);
             var point = asnReader.ReadOctetString();
             asnReader.ThrowIfNotEmpty();
@@ -195,7 +213,17 @@ public sealed class Pkcs11SigningModuleSoftHsmTests
                 session.Factories.ObjectAttributeFactory.Create(CKA.CKA_LABEL, keyId),
                 session.Factories.ObjectAttributeFactory.Create(CKA.CKA_ID, Encoding.ASCII.GetBytes(keyId))
             };
-            foreach (var objectHandle in session.FindAllObjects(template))
+            List<IObjectHandle> objects;
+            try
+            {
+                objects = session.FindAllObjects(template);
+            }
+            finally
+            {
+                DisposeAttributes(template);
+            }
+
+            foreach (var objectHandle in objects)
             {
                 session.DestroyObject(objectHandle);
             }
@@ -203,6 +231,14 @@ public sealed class Pkcs11SigningModuleSoftHsmTests
         finally
         {
             session.Logout();
+        }
+    }
+
+    private static void DisposeAttributes(IEnumerable<IObjectAttribute> attributes)
+    {
+        foreach (var attribute in attributes)
+        {
+            attribute.Dispose();
         }
     }
 
