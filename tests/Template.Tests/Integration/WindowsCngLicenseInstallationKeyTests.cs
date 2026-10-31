@@ -2,6 +2,7 @@ using System;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 using Infrastructure.Licensing;
 using Xunit;
 using Microsoft.Extensions.Options;
