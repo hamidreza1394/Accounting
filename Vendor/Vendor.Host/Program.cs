@@ -77,9 +77,10 @@ builder.Services.AddHealthChecks();
 builder.Services.AddSingleton<VendorAuditCheckpointHealthState>();
 builder.Services.AddVendorPersistence(builder.Configuration);
 // Until approved production KMS/HSM adapters are configured, signing is deliberately unavailable.
-// License and provisioning signing have separate provider registrations and key boundaries.
+// License, provisioning and offline-revocation signing have separate provider registrations and key boundaries.
 builder.Services.TryAddSingleton<ILicenseSigningProvider, UnavailableLicenseSigningProvider>();
 builder.Services.TryAddSingleton<IProvisioningSigningProvider, UnavailableProvisioningSigningProvider>();
+builder.Services.TryAddSingleton<IOfflineRevocationSigningProvider, UnavailableOfflineRevocationSigningProvider>();
 
 // PKCS#11 is opt-in and disabled by default. With no provisioned hardware HSM, Production
 // remains on the unavailable providers and signing endpoints fail closed with HTTP 503.
@@ -89,9 +90,11 @@ if (builder.Configuration.GetValue<bool>("Signing:Pkcs11:Enabled"))
         builder.Configuration.GetSection("Signing:Pkcs11"));
     builder.Services.RemoveAll<ILicenseSigningProvider>();
     builder.Services.RemoveAll<IProvisioningSigningProvider>();
+    builder.Services.RemoveAll<IOfflineRevocationSigningProvider>();
     builder.Services.AddSingleton<IPkcs11SigningModule, Pkcs11SigningModule>();
     builder.Services.AddScoped<ILicenseSigningProvider, Pkcs11LicenseSigningProvider>();
     builder.Services.AddScoped<IProvisioningSigningProvider, Pkcs11ProvisioningSigningProvider>();
+    builder.Services.AddScoped<IOfflineRevocationSigningProvider, Pkcs11OfflineRevocationSigningProvider>();
     builder.Services.AddHostedService<Pkcs11SigningAssuranceStartupService>();
     builder.Services.AddHealthChecks().AddCheck<Pkcs11SigningHealthCheck>(
         "vendor-signing-provider",
