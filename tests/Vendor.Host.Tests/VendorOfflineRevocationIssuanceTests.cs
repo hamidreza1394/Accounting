@@ -96,6 +96,10 @@ public sealed class VendorOfflineRevocationIssuanceTests
             var audit = await VendorAuditChainVerifier.VerifyAsync(db, TestContext.Current.CancellationToken);
             Assert.True(audit.IsValid, audit.FailureCode);
             Assert.Equal(3, audit.EventCount);
+
+            await Assert.ThrowsAsync<SqlException>(() => db.Database.ExecuteSqlInterpolatedAsync(
+                $"UPDATE [dbo].[VendorSignedRevocationSnapshots] SET [EnvelopeJson] = [EnvelopeJson] WHERE [Id] = {snapshot.Id}",
+                TestContext.Current.CancellationToken));
         }
         finally
         {
