@@ -17,7 +17,12 @@ public sealed class TradeDbContextModelTests
 
         using var context = new TradeDbContext(options);
 
-        Assert.Empty(context.Model.GetEntityTypes());
+        var entityTypes = context.Model.GetEntityTypes().ToArray();
+
+        Assert.DoesNotContain(entityTypes, entity =>
+            entity.ClrType.Name is "FiscalPeriod" or "TradeOperationalPeriod");
+        Assert.DoesNotContain(entityTypes, entity =>
+            entity.GetTableName() is "FiscalPeriods" or "TradeOperationalPeriods");
     }
 
     [Fact]

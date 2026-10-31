@@ -1813,3 +1813,15 @@
 - مستندات Trade و Development و handoff Issue #404 به‌روز شدند.
 - Commitهای ثبت‌شده روی شاخه اختصاصی: `0b008e9`, `9ca353a`, `c179b91`, `faa5bba`, `799344c` و commitهای مستندات.
 - Build و تست .NET هنوز اجرا نشده‌اند؛ نتیجه CI باید روی PR بررسی شود. هیچ Migration یا تغییر Schema و هیچ دیتابیس مشتری اجرا/تغییر داده نشده است.
+
+## 2026-10-31 — Issue #406: مدل داده پایه Party و Product
+
+- پروپوزال `Faranou-Trade-Import-Proposal-v1.2.docx`، بخش‌های ۷-۸، ۸-۱، ۸-۲-۱، ۸-۲-۲ و ۸-۲-۳۷ مبنای این برش قرار گرفت.
+- `TradeEntity` با شناسه Guid، TenantId، audit UTC، RowVersion و Soft Delete افزوده شد؛ برای جلوگیری از TPH ناخواسته، کلاس پایه با `NotMapped` از Entity hierarchy مستقل نگه داشته شد.
+- Aggregateهای Party و Product و فرزندان PartyRoleAssignment، PartyBankAccount و ProductIdentifier افزوده شدند. Party/Product دوره‌محور نیستند.
+- حساب بانکی با وضعیت Pending/Verified/Rejected، ثبت تأییدکننده و زمان، دلیل رد و بازگشت به Pending پس از تغییر مشخصات پیاده شد.
+- GTIN و IRC دو شناسه متنی جدا هستند؛ کد HS، شماره حساب، IBAN و شناسه‌ها به عدد تبدیل نمی‌شوند. تاریخ اعتبار شناسه کالا اجباری است.
+- EF mappingها در schema `trade`، با alternate key مرکب TenantId/Id، FKهای tenant-aware، RowVersion، و unique filtered index برای کدها و شناسه‌های فعال افزوده شدند. Global Query Filter عمداً اضافه نشد.
+- تست‌های Domain و metadata مدل برای tenant scope، schema، نبود FiscalPeriodId، rowversion، unique index و FK مرکب نوشته شدند.
+- هیچ Migration تولید یا اجرا نشده؛ هیچ داده نمونه یا داده مشتری seed نشده است. Build و تست‌ها از محیط حاضر اجرا نشده‌اند و باید CI PR #406 آن‌ها را تأیید کند.
+- PR #405 CI یک شکست تست داشت که از مقایسه رشته خام Connection String ناشی می‌شد؛ تست به مقایسه اجزای نرمال‌شده SqlConnectionStringBuilder اصلاح شد و اجرای مجدد CI روی commit `7104d10` در جریان است.

@@ -1,3 +1,5 @@
+using Faranou.Modules.Trade.Domain.Parties;
+using Faranou.Modules.Trade.Domain.Products;
 using Microsoft.EntityFrameworkCore;
 
 namespace Faranou.Modules.Trade.Infrastructure.Persistence;
@@ -10,6 +12,16 @@ namespace Faranou.Modules.Trade.Infrastructure.Persistence;
 /// </remarks>
 public sealed class TradeDbContext(DbContextOptions<TradeDbContext> options) : DbContext(options)
 {
+    public DbSet<Party> Parties => Set<Party>();
+
+    public DbSet<PartyRoleAssignment> PartyRoleAssignments => Set<PartyRoleAssignment>();
+
+    public DbSet<PartyBankAccount> PartyBankAccounts => Set<PartyBankAccount>();
+
+    public DbSet<Product> Products => Set<Product>();
+
+    public DbSet<ProductIdentifier> ProductIdentifiers => Set<ProductIdentifier>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
