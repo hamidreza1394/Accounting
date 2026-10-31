@@ -97,7 +97,7 @@ public sealed class WindowsCngLicenseInstallationIdentityProofVerifier
             !string.Equals(metadata.OsInstallationMarkerDigest, identity.OsInstallationMarkerDigest, StringComparison.Ordinal) ||
             !CryptographicOperations.FixedTimeEquals(
                 metadata.PublicKeySubjectPublicKeyInfo,
-                Convert.FromBase64String(identity.PublicKeySubjectPublicKeyInfoBase64)))
+                System.Convert.FromBase64String(identity.PublicKeySubjectPublicKeyInfoBase64)))
             return InstallationIdentityProofStatus.InstallationChanged;
 
         var challenge = RandomNumberGenerator.GetBytes(32);
@@ -107,7 +107,7 @@ public sealed class WindowsCngLicenseInstallationIdentityProofVerifier
             challenge,
             softwareConsentRecorded);
 
-        var storedPublicKey = Convert.FromBase64String(identity.PublicKeySubjectPublicKeyInfoBase64);
+        var storedPublicKey = System.Convert.FromBase64String(identity.PublicKeySubjectPublicKeyInfoBase64);
         using var verifier = ECDsa.Create();
         verifier.ImportSubjectPublicKeyInfo(storedPublicKey, out var bytesRead);
         if (bytesRead != storedPublicKey.Length ||
