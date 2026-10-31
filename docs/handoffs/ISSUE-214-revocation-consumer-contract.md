@@ -40,3 +40,36 @@
 
 
 - تست‌های ترکیبی pipeline در همان فایل `tests/Licensing.Contracts.Tests/OfflineRevocationConsumerTests.cs` قرار گرفتند تا قرارداد consumer و validator در یک مجموعه تست هم‌خوان بمانند.
+
+
+## وضعیت بازبینی‌شده روی main — 2026-10-31
+
+این handoff ابتدا قراردادهای مصرف‌کننده را توصیف می‌کرد. پس از ادغام PRهای بعدی، باید بین «قرارداد»، «adapter پایدار» و «اتصال runtime» تفکیک شود:
+
+### اجزای موجود در main
+- قرارداد `OfflineRevocationList` و `OfflineRevocationListEnvelope`، serialization canonical و اعتبارسنجی امضا/sequence/expiry در `Licensing.Contracts/OfflineRevocationList.cs`.
+- `OfflineRevocationConsumer` و `RevocationAwareLicenseEnvelopeValidator` در Licensing.Contracts؛ وجود adapter به تنهایی تضمین نمی‌کند همه مسیرهای واقعی customer host از آن استفاده کنند.
+- persistence ضد rollback و TPM anchor در `Infrastructure/Persistence/TpmAnchoredOfflineRevocationStateStore.cs` و migration مشتری `20261031120000_AddCustomerOfflineRevocationState` در PR #366. این تغییر قبلاً جداگانه ادغام شده است؛ این handoff مجوز تغییرات schema بیشتر در Customer DB نیست.
+- trust resolver مستقل revocation در `Server/Infrastructure/Licensing/OfflineRevocationTrustProviders.cs`.
+- `IOfflineRevocationSigningProvider` و adapter PKCS#11 مجزا با KeyId اختصاصی در PR #371؛ DI پیش‌فرض همچنان unavailable/fail-closed است. وجود adapter به معنی provision شدن کلید یا HSM واقعی نیست.
+
+### شکاف قطعی در Vendor control plane
+- `VendorApprovalEndpoints` برای approval با `TargetStatus == "Revoked"` هنوز `503 license_revocation_unavailable` برمی‌گرداند.
+- `VendorLicenseIssuanceService` فقط صدور پاکت license را انجام می‌دهد؛ سرویس متناظر تولید snapshot ابطال وجود ندارد.
+- در `VendorDbContext` مدل/DbSet تاریخچه snapshotهای ابطال و sequence پایدار Vendor وجود ندارد.
+- endpoint مجاز export snapshot امضاشده و کنترل cache برای artifact وجود ندارد.
+
+### ترتیب الزامی پیاده‌سازی بعدی
+1. افزودن مدل immutable مانند `VendorSignedRevocationSnapshot` در Vendor.Persistence، شامل sequence یکتا، KeyId، algorithm، envelope JSON، payload hash و timestamp؛ بدون ذخیره private key.
+2. افزودن counter/sequence پایدار Vendor با concurrency control در سطح SQL Server. sequence نباید از timestamp یا شمارش ساده رکوردها استنتاج شود.
+3. افزودن سرویس تولید snapshot با `OfflineRevocationListValidator.Serialize` و `IOfflineRevocationSigningProvider`; ترتیب شناسه‌ها ordinal و canonical باشد و bounds قرارداد رعایت شود.
+4. در یک تراکنش واحد: بررسی RowVersion و وضعیت license، تأیید maker-checker، ساخت و امضای snapshot، ذخیره artifact، تغییر status و ثبت audit. در صورت شکست signer/audit هیچ state یا sequence commit نشود.
+5. افزودن endpoint فقط-خواندنی و مجاز برای export آخرین envelope؛ پاسخ `Cache-Control: no-store` داشته باشد و اطلاعات کلید خصوصی/پیکربندی حساس افشا نکند.
+6. تست SQL Server برای sequence monotonic/unique، دو revoke هم‌زمان، rollback در signer/audit failure، approval stale، عدم self-approval و export آخرین artifact.
+7. در slice جداگانه، مسیر واقعی customer runtime را audit و `RevocationAwareLicenseEnvelopeValidator` را در تمام مسیرهای صدور/بارگذاری/استفاده license متصل کن؛ اگر snapshot موجود/معتبر نیست یا منقضی شده، fail-closed باقی بماند.
+
+### معیار بستن Issue #214
+Issue فقط وقتی قابل بستن است که تولید و انتشار snapshot در Vendor، enforcement در مسیر واقعی Customer runtime، تست‌های SQL Server و CI سبز باشند. تست‌های واقعی سخت‌افزار/دو میزبان و رویه backup/restore باید به‌عنوان معیارهای عملیاتی مستقل ثبت شوند؛ ادغام قرارداد یا اجرای unit test به‌تنهایی کافی نیست.
+
+### محدودیت محیط اجرای این نشست
+این بازبینی مستندات را دقیق می‌کند. پیش از تغییر کد و ساخت migration جدید باید Build و تست‌های Vendor اجرا شوند؛ این نشست checkout اجرایی .NET/SQL Server ندارد. هیچ ادعایی درباره اجرای محلی یا موفقیت تست‌های جدید مطرح نشده است.
