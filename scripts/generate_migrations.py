@@ -49,22 +49,21 @@ MIGRATIONS_DIRECTORY = os.path.join("Infrastructure", "Persistence", "Migrations
 # 'InitialCreate'. Its designer file is the starting point of the difference that the
 # current migration has to apply. ('AlignSchemaWithModel' and 'WidenUserPasswordHash'
 # are published history as well.)
-DELTA_MIGRATION_ID = "20261023191000"
-DELTA_MIGRATION_NAME = "AddCompanyCustomerBoundary"
+DELTA_MIGRATION_ID = "20261029161402"
+DELTA_MIGRATION_NAME = "AddCustomerProvisioningClaims"
 
 # The most recent migration. Its operations are computed from the difference between
 # the model of the migration before it (DELTA_MIGRATION_*) and the model of the code
 # base, so the files can not drift apart from the snapshot. DELTA_MIGRATION_* is
 # published history and is never rewritten, exactly like 'InitialCreate'.
-CURRENT_MIGRATION_ID = "20261029161402"
-CURRENT_MIGRATION_NAME = "AddCustomerProvisioningClaims"
-CURRENT_MIGRATION_CLASS = "AddCustomerProvisioningClaims"
+CURRENT_MIGRATION_ID = "20261031120000"
+CURRENT_MIGRATION_NAME = "AddCustomerOfflineRevocationState"
+CURRENT_MIGRATION_CLASS = "AddCustomerOfflineRevocationState"
 
-# 'AddCorporateGroups' adds tables, which this generator can not render
-# ('compute_operations' refuses them). Its Up/Down were therefore written with 'dotnet ef
-# migrations add' and are verified by 'verify_migration_model.py'; this generator still
-# writes (and '--check' still compares byte by byte) its designer file and the model
-# snapshot, and '--check' verifies that the hand written SQL statements below are in it.
+# The current migration adds a new table, which this generator does not render as
+# structural operations. Its reviewed Up/Down are written in EF Core migration form and
+# verified against the generated designer/model by 'verify_migration_model.py'. This
+# generator still writes (and '--check' compares byte by byte) the designer and snapshot.
 CURRENT_MIGRATION_WRITTEN_BY_EF_TOOLS = True
 
 # Statements that have to run before the structural operations of the current
