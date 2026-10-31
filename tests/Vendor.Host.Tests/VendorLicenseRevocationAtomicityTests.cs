@@ -34,7 +34,7 @@ public sealed class VendorLicenseRevocationAtomicityTests
                     approval, Guid.NewGuid(), approval.RowVersion.ToArray(), "approved revoke",
                     Guid.NewGuid().ToString("N"), TestContext.Current.CancellationToken);
                 Assert.True(result.Succeeded, result.ErrorCode);
-                Assert.Equal(1, result.Sequence);
+                Assert.Equal(1L, result.Sequence.GetValueOrDefault());
                 await tx.CommitAsync(TestContext.Current.CancellationToken);
             }
 
@@ -55,6 +55,10 @@ public sealed class VendorLicenseRevocationAtomicityTests
             Assert.Equal(snapshot.ListId, payload.ListId);
             Assert.Equal(snapshot.IssuedAtUtc, payload.IssuedAtUtc);
             Assert.Equal(snapshot.ExpiresAtUtc, payload.ExpiresAtUtc);
+            await Assert.ThrowsAsync<SqlException>(() =>
+                db.Database.ExecuteSqlRawAsync(
+                    "UPDATE [dbo].[VendorOfflineRevocationSnapshots] SET [KeyId] = [KeyId] WHERE [Sequence] = 1;",
+                    TestContext.Current.CancellationToken));
             var audit = await VendorAuditChainVerifier.VerifyAsync(db, TestContext.Current.CancellationToken);
             Assert.True(audit.IsValid, audit.FailureCode);
             Assert.Equal(3, audit.EventCount);
