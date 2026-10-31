@@ -67,12 +67,13 @@ public sealed class TradeAuthorizationAdapter(
 
         var requestedScopes = scopes.Distinct().ToArray();
         if (requestedScopes.Any(scope =>
-                scope.TenantId == Guid.Empty || scope.FiscalPeriodId == Guid.Empty))
+                scope is null || scope.TenantId == Guid.Empty || scope.FiscalPeriodId == Guid.Empty))
         {
             return false;
         }
 
-        if (GetAuthenticatedContext(userId) is null)
+        var httpContext = GetAuthenticatedContext(userId);
+        if (httpContext is null || WorkContextCookie.GetSessionId(httpContext.User) is null)
         {
             return false;
         }
