@@ -3,7 +3,7 @@
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/364
 - **Agent/مسئول:** ChatGPT
 - **تاریخ:** 2026-10-31
-- **وضعیت:** پیاده‌سازی نرم‌افزاری در PR #366؛ CI و hardware verification هنوز نهایی نشده‌اند.
+- **وضعیت:** پیاده‌سازی نرم‌افزاری PR #366 در main ادغام شده و .NET CI، Vendor CI و Semgrep روی SHA نهایی سبز هستند؛ hardware verification و runtime enforcement هنوز باز است.
 
 ## هدف و معیارهای پذیرش
 - [x] تصمیم D-057 با تأیید مالک محصول ثبت شد.
@@ -18,7 +18,8 @@
 - [x] ابزار create-only provisioning برای Windows/TBS اضافه شد.
 - [x] اسکریپت create-only provisioning لینوکس با tpm2-tools و TCTI محلی اضافه شد.
 - [ ] اجرای provisioning و secret delivery/rotation عملیاتی روی سخت‌افزار واقعی.
-- [ ] اجرای تست‌های SQL Server و CI روی آخرین SHA.
+- [x] اجرای CI روی SHA نهایی PR #366: .NET CI (شامل build/test، publish، E2E و Windows publish)، Vendor CI و Semgrep موفق.
+- [ ] اجرای مستقل/میدانی SQL Server migration/restore روی محیط عملیاتی؛ سبز بودن CI جایگزین این آزمون است.
 - [ ] تست واقعی روی TPM سخت‌افزاری Windows 10/11، Windows Server و Linux.
 - [ ] انتقال همهٔ call-siteهای runtime مشتری به RevocationAwareLicenseEnvelopeValidator و اثبات enforcement.
 
@@ -80,4 +81,13 @@
 - CI initially found that the generated migration Designer contained one extra blank line; the file was aligned with the current model generator output.
 - The migration-guard mutation test still used a fixture timestamp 20261030000000 older than the newly added migration 20261031120000, so the test no longer exercised a newer migration. The fixture was moved to 20261101000000; the guard itself was not weakened.
 - A second review confirmed GetCurrentAsync already acquires the same SQL Server session application lock as TryApplyAsync before entering recovery logic. No production locking code was changed. Added a SQL Server regression test that blocks an in-flight TPM Extend and verifies a concurrent GetCurrentAsync waits rather than performing a second Extend.
-- CI after these fixes is pending on the latest branch SHA. SQL Server integration tests and physical TPM tests are not claimed locally executed.
+- PR #366 با SHA d2005b618528b416c3773ed7632d09a8627685db در main ادغام شد. آخرین .NET CI run 41175579282، Vendor CI 41175579288 و Semgrep 41175579255 هر سه با conclusion=success تمام شدند.
+- .NET CI jobs: client، secret-scan، build-and-test، publish-scripts، e2e، publish و publish-windows همگی موفق‌اند.
+- این نتایج اجرای فیزیکی TPM روی Windows/Linux یا provisioning/secret delivery عملیاتی را اثبات نمی‌کنند. همچنین migration روی دیتابیس واقعی اجرا نشده است.
+
+
+## وضعیت پس از ادغام PR #366 — 2026-10-31
+
+- کد state store و TPM anti-rollback در main قرار دارد؛ این milestone نرم‌افزاری تکمیل شد.
+- CI نهایی هر سه pipeline موفق است؛ لینک‌ها: [.NET CI](https://github.com/hamidreza1394/Accounting/actions/runs/41175579282)، [Vendor CI](https://github.com/hamidreza1394/Accounting/actions/runs/41175579288)، [Semgrep](https://github.com/hamidreza1394/Accounting/actions/runs/41175579255).
+- Issue #364 همچنان باز می‌ماند تا آزمون روی TPM واقعی، provisioning NV index و مدیریت secret، و اتصال call-site واقعی مشتری به RevocationAwareLicenseEnvelopeValidator انجام و شواهد ثبت شود.
