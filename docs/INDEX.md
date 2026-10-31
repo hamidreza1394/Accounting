@@ -13,7 +13,7 @@
 | [AGENT_SKILL_LIBRARY.md](AGENT_SKILL_LIBRARY.md) | کتابخانه مهارت‌های مشترک Agentها و قواعد استفاده از VoltAgent |
 | سند | کاربرد |
 |---|---|
-| [TRADE_MODULE.md](TRADE_MODULE.md) | معماری، امنیت چندشرکتی، دوره‌ها، فرم‌ها، گزارش‌ها و مسیر استخراج ماژول بازرگانی (D-061) |
+| [TRADE_MODULE.md](TRADE_MODULE.md) | معماری، امنیت چندشرکتی، استفاده مشترک از دوره‌های مالی، فرم‌ها، گزارش‌ها و مسیر استخراج ماژول بازرگانی (D-061/D-062) |
 | [`PROJECT_STATUS.md`](PROJECT_STATUS.md) | وضعیت تأییدشده فعلی |
 | [`ROADMAP.md`](ROADMAP.md) | برنامه راه |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | معماری و جهت وابستگی |
