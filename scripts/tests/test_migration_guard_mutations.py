@@ -164,7 +164,7 @@ class ReviewedSqlMutationTests(MutationBase):
                     "generate", "can not be compared")
 
     def test_newer_migration_than_the_constants(self):
-        extra = self.path("20261030000000_Unregistered.cs")
+        extra = self.path("20261101000000_Unregistered.cs")
         with open(self.path(f"{BOUNDARY}.cs"), encoding="utf-8") as file:
             text = file.read().replace("AddCompanyCustomerBoundary", "Unregistered")
         try:

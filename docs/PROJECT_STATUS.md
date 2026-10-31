@@ -3,10 +3,10 @@
 - PR #358 (Enrollment password flow) ادغام شده است؛ تصمیم نهایی رمز مدیر در Enrollment ثبت شده و الزام تغییر رمز در اولین ورود superseded است.
 - PR #359 (D-056 software signing assurance) ادغام شده است؛ SoftHSM برای Development/Staging پذیرفته شده است.
 - PR #360 (runtime staged signing assurance) در 2026-10-30T19:14:22Z با merge commit `53b19e84a065a85de5434a695812e700622d128b` ادغام شد؛ .NET CI، Vendor CI، Semgrep و PR workflow روی HEAD موفق بودند.
-- PR #361 (Development/Test-only audit checkpoint file journal) باز است؛ adapter محلی هرگز Production sink نیست.
-- PR #362 (offline revocation consumer) باز است؛ resolver مستقل، اعمال اتمیک sequence، وضعیت سه‌حالته `Unavailable/NotRevoked/Revoked` و `RevocationAwareLicenseEnvelopeValidator` اضافه شده‌اند. هنوز durable customer persistence و registration/use در runtime واقعی مشتری و trust anchor ضد rollback باقی است.
+- PR #361 (Development/Test-only audit checkpoint file journal) در main ادغام شده است؛ adapter محلی هرگز Production sink نیست.
+- PR #362 (offline revocation consumer contract) در main ادغام شده است؛ resolver مستقل، اعمال اتمیک sequence، وضعیت سه‌حالته `Unavailable/NotRevoked/Revoked` و `RevocationAwareLicenseEnvelopeValidator` اضافه شده‌اند. اتصال به مسیر نهایی LicenseEvaluator/host مشتری همچنان باقی است.
 - Issue #107 همچنان به provider مستقل Production، credential separation، retention/immutability، alerting و recovery نیاز دارد.
-- Issue #214 همچنان به پیاده‌سازی durable state store سمت مشتری، enforcement واقعی و محافظت در برابر restore backup قدیمی نیاز دارد.
+- Issue #214: قرارداد مصرف‌کننده در PR #362 ادغام شده است؛ durable customer state store و TPM NV Extend adapter در PR #366 در حال بازبینی است. provisioning index، hardware verification و runtime enforcement نهایی باقی است.
 - Issueهای #228 و #235 تا تکمیل اتصال عملیاتی Provisioning/ACK و آزمون‌های لازم باز می‌مانند.
 - اجرای واقعی روی دو میزبان، Staging نهایی و recovery drill در انتهای مرحلهٔ اول انجام می‌شود؛ CI و تست خودکار هر PR همچنان الزامی‌اند.
 
@@ -459,3 +459,15 @@
 - SQL Server tests now cover wrong customer/installation, suspended/expired license, revoked key, historical sequence, and stale sequence rejection at provisioning signing.
 - Dual-host E2E adds a second export attempt after a newer license sequence is issued; re-export must fail while the previously exported package remains usable by the offline Customer Host.
 - The above are fixes to prior failing runs; final CI on the latest branch heads is still pending. No PR is approved for Merge on the basis of those earlier runs.
+
+
+## 2026-10-31 — Issue #364: customer offline revocation anti-rollback (implementation in progress)
+- مالک محصول Migration مستقل دیتابیس مشتری و TPM-based anti-rollback را تأیید کرد؛ تصمیم D-057 پذیرفته شد.
+- Branch: `feat/issue-364-tpm-revocation-state-current-main`.
+- PR جاری: [#366](https://github.com/hamidreza1394/Accounting/pull/366)؛ CI روی آخرین SHA در حال اجراست.
+- Customer-only schema افزوده شد: `CustomerOfflineRevocationStates` در `Data.DatabaseContext` و migration `20261031120000_AddCustomerOfflineRevocationState`. هیچ تغییر VendorDbContext/schema انجام نشده است.
+- State store دو مرحله‌ای، SQL Server session application lock، pending signed envelope، recovery از crash قبل/بعد از TPM extend، نگهداری envelope امضاشده و بررسی مجدد digest/hash-chain در هر read را پیاده‌سازی می‌کند.
+- TPM NV Extend hash-chain adapter با Microsoft.TSS پیاده‌سازی شده: Windows از TBS و Linux از strict local TPM device استفاده می‌کند؛ هیچ simulator fallback وجود ندارد. بدون TPM section پیکربندی، provider عمداً unavailable/fail-closed است.
+- ابزار create-only provisioning برای Windows/TBS و اسکریپت Linux/tpm2-tools محدود به /dev/tpmrm0 افزوده شده‌اند؛ trust resolverهای مستقل license/revocation و DI برای RevocationAwareLicenseEnvelopeValidator نیز ثبت شده‌اند. provisioning واقعی و secret delivery/rotation هنوز اجرا/تأیید نشده‌اند.
+- تست‌های SQL Server برای apply، restore قدیمی، recovery دو crash window و concurrency بین دو DbContext و تست‌های config provider اضافه شده‌اند؛ اجرای محلی انجام نشده و CI PR #366 در حال اجراست.
+- تست فیزیکی TPM روی Windows 10/11، Windows Server و Linux و اتصال call-site عملیاتی به RevocationAwareLicenseEnvelopeValidator باقی است؛ این مرحله هنوز Production-ready یا Hardware-verified نیست و Issue #364 باز می‌ماند.

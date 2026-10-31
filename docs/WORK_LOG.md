@@ -1582,3 +1582,26 @@
 - Added SQLCMD permission script to keep Vendor runtime append-only on dbo.VendorAuditEvents and require a separate migration principal.
 - Recovery runbook now covers periodic verification/alerting and SQL permission deployment.
 - Provider selection, separate external credentials, immutability/retention, real alert receiver, SQL permission execution and a target-environment restore drill remain open. No Production sink is claimed.
+
+## 2026-10-31 — Issue #364 / D-057: TPM NV Extend customer revocation state
+- تأیید مالک محصول برای Migration مستقل customer DB و anti-rollback مبتنی بر TPM دریافت شد.
+- معماری از TPM NV Extend با SHA-256 hash-chain استفاده می‌کند؛ generation و digest payload در extension data bind می‌شوند. NV index باید خارج از backup دیتابیس باشد.
+- جدول singleton مشتری، migration افزایشی، rowversion، pending/accepted signed envelope و anchor digestهای قبلی/جاری افزوده شدند.
+- Store در SQL Server با session-level sp_getapplock عملیات چندپردازه‌ای را serialize می‌کند و پروتکل prepare → TPM NV_Extend → finalize را با recovery crash window اجرا می‌کند.
+- هر read، TPM digest، chain hash، signature، payload digest، sequence، expiry و فهرست revoked را دوباره تطبیق می‌دهد؛ backup قدیمی یا tamper به Unavailable منجر می‌شود.
+- adapter TPM با Microsoft.TSS برای Windows TBS و Linux local TPM device اضافه شد؛ Linux از StrictLinuxTpmDevice استفاده می‌کند تا simulator fallback کتابخانه فعال نشود. default provider بدون section پیکربندی صریح unavailable است. ابزار create-only provisioning برای Windows/TBS و اسکریپت Linux/tpm2-tools با TCTI محلی اضافه شدند؛ اجرای واقعی، secret delivery/rotation و hardware tests هنوز NotImplemented/NotVerified هستند.
+- تست‌های SQL Server اضافه شده‌اند اما اجرای محلی .NET در این نشست ممکن نبود؛ نتیجهٔ CI روی PR معیار بعدی است.
+
+
+### Issue #364 follow-up — customer validator registration
+- ConfigurationLicenseTrustStore به‌صورت مستقل از revocation-list trust set افزوده شد؛ کلیدها فقط ECDSA P-256 SPKI عمومی هستند و retirement flag نامعتبر fail-closed است.
+- Server DI اکنون LicenseEnvelopeValidator، OfflineRevocationConsumer و RevocationAwareLicenseEnvelopeValidator را register می‌کند؛ بدون TPM config، revocation provider unavailable می‌ماند.
+- تست‌های config برای unknown key، malformed retirement flag و retired key اضافه شدند.
+- محدودیت: هنوز باید تمام call-siteهای runtime مشتری به RevocationAwareLicenseEnvelopeValidator منتقل شوند؛ صرف DI registration به‌تنهایی enforcement را اثبات نمی‌کند.
+
+
+## 2026-10-31 — Issue #364 CI regression fixes
+- Aligned the migration Designer generated output and corrected the mutation-test fixture so its synthetic migration is newer than the current migration constants.
+- Added SQL Server regression coverage proving a concurrent GetCurrentAsync waits on the existing session application lock while TryApplyAsync is between prepare and TPM Extend; the test asserts only one Extend is issued.
+- Re-reviewed the production store: the session lock already protects both GetCurrentAsync and TryApplyAsync. No unnecessary production code change was made.
+- Latest CI result is pending; no local .NET/SQL Server or physical TPM execution is claimed.

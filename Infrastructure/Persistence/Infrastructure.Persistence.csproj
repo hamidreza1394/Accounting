@@ -12,6 +12,7 @@
 		<ProjectReference Include="..\..\Constants\Constants.csproj" />
 		<ProjectReference Include="..\..\Dtat\Dtat.csproj" />
 		<ProjectReference Include="..\..\Domain\Domain.csproj" />
+		<ProjectReference Include="..\..\Licensing.Contracts\Licensing.Contracts.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

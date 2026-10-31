@@ -241,7 +241,8 @@ erDiagram
 | `TrustedSigningKey` | `Kid`، کلید عمومی، بازهٔ اعتبار، امضای ریشه | فقط کش «بستهٔ اعتماد»: ردیفی که با کلید ریشهٔ داخل برنامه امضا نشده باشد نادیده گرفته می‌شود (T29)؛ چرخش: OD-07. |
 | `LicenseAuditEntry` | رخدادهای ورود/رد/تغییر وضعیت | ممیزی محلی؛ انتخاب بین جدول جدا و `SecurityAuditEvent` در ADR آتی. |
 | `LicenseTimeHighWater` | بیشینهٔ زمان مشاهده‌شده | برای «ساعت مؤثر» (OD-05). |
-
+| `CustomerOfflineRevocationState` | آخرین sequence، payload digest، revoked IDs، previous/current TPM anchor digest، generation و envelope امضاشده؛ pending envelope برای recovery | فقط دیتابیس همان نصب مشتری؛ singleton با RowVersion؛ migration مستقل `20261031120000_AddCustomerOfflineRevocationState`. TPM NV Extend hash-chain خارج از backup دیتابیس است (D-057). |
+ 
 ### ت) قواعد مالکیت داده
 
 - **داده حسابداری، کاربران و شرکت‌های مشتری:** فقط در دیتابیس نصب؛ هرگز در فروشنده.

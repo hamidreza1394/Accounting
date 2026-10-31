@@ -162,3 +162,72 @@
 - مدل و سازندهٔ HSM، محل فیزیکی، HA/DR و قرارداد پشتیبانی هنوز انتخاب نشده‌اند؛ در نتیجه بخش‌های HSM این Runbook فعلاً **قابل اجرا نیستند**.
 - Customer ACK production signing نیز تا پیاده‌سازی و اثبات backend غیرقابل‌استخراج TPM/OS و trust enrollment آفلاین فعال نمی‌شود.
 - این سند راهنمای عملیاتی است؛ اجرای آن بدون HSM واقعی، دو Custodian و تأیید Security Owner مجاز نیست.
+
+## 13. Customer offline-revocation TPM NV Extend index (D-057 / Issue #364)
+
+این NV index با کلید امضای ACK یا کلید رمزنگاری/امضای TPM مشتری یکی نیست. کاربرد آن فقط ثبت hash-chain غیرقابل بازگشت برای وضعیت ابطال آفلاین است.
+
+### 13.1 مشخصات index و مالکیت
+
+- نوع NV index: TPM_NT_EXTEND، الگوریتم نام/هش SHA-256، اندازهٔ NV برابر 32 بایت.
+- مقدار اولیه باید 32 بایت صفر باشد؛ runtime در صورت مقدار اولیهٔ متفاوت، وضعیت را Unavailable می‌کند و مجاز به reset یا redefine نیست.
+- Runtime فقط مجوز Read و Extend روی همان index را دریافت می‌کند. مجوز Owner/Platform برای Define/Undefine/ChangeAuth فقط در Ceremony اپراتور مجاز باقی می‌ماند.
+- Authorization باید با TPM policy مناسب به هویت سرویس محدود شود؛ PIN/auth value در command line، appsettings، Git، log یا telemetry قرار نمی‌گیرد. تحویل secret از Windows Credential Manager/DPAPI سازمانی یا systemd credentials/secret manager انجام می‌شود.
+- NV index باید از هر backup دیتابیس مشتری مستقل باشد. Backup دیتابیس شامل envelope و anchor digestهاست، نه NV state یا TPM authorization.
+
+### 13.2 Ceremony تعریف index
+
+1. دو Custodian مجاز هویت TPM، firmware، فعال‌بودن TPM 2.0، SHA-256 و دسترسی runtime را ثبت کنند.
+2. index با handle رزروشده و ثبت‌شده در inventory سازمان تعریف شود؛ انتخاب handle نباید با indexهای موجود تداخل داشته باشد.
+3. TPM_NT_EXTEND، SHA-256 و dataSize=32 و policyهای Read/Extend/عدم امکان حذف توسط runtime بررسی شوند.
+4. یک مقدار آزمایشی غیرعملیاتی Extend شود؛ read-back باید دقیقاً با SHA-256 مقدار قبلی به‌علاوه extension data برابر باشد.
+5. index عملیاتی فقط با مقدار صفر provision شود. پس از پذیرش اولین snapshot، هرگز به صفر برگردانده یا دوباره تعریف نمی‌شود.
+6. handle، policy digest، fingerprint عمومی TPM، مدل/firmware، Custodianها و نتیجهٔ آزمون ثبت شود؛ هیچ auth value یا secret ثبت نشود.
+
+#### ابزار Provisioning ویندوز
+
+ابزار create-only در tools/TpmNvIndexProvisioner قرار دارد و در Template.sln build می‌شود. آن را فقط در نشست Administrator کنترل‌شده و با secret injection اجرا کنید:
+
+- FARANOU_TPM_NV_AUTH_BASE64 الزامی است و مقدار auth تصادفی 1 تا 32 بایت برای index است.
+- FARANOU_TPM_PLATFORM_AUTH_BASE64 در صورت تنظیم‌شدن Platform hierarchy auth لازم است؛ در غیر این صورت خالی می‌ماند.
+- این دو مقدار را در command line یا PowerShell history قرار ندهید؛ از secret manager یا محیط اجرای موقت امن استفاده کنید.
+- اجرا: dotnet run --project tools/TpmNvIndexProvisioner -- 0x1234
+- ابزار فقط NvDefineSpace با Platform hierarchy را اجرا می‌کند، read-back و مقدار اولیه صفر را بررسی می‌کند و هیچ مسیر Undefine/Reset ندارد. اگر index از قبل تعریف شده باشد، عملیات باید fail شود.
+- پس از provisioning، همان NV auth را از secret manager به Licensing:OfflineRevocation:Tpm:NvIndexAuthValueBase64 تزریق کنید و offset را در NvIndexOffset تنظیم کنید.
+
+#### ابزار Provisioning لینوکس
+
+برای Linux، ابزار scripts/provision-offline-revocation-nv-index.sh از tpm2-tools و فقط TCTI محلی /dev/tpmrm0 استفاده می‌کند. آن را با فایل‌های secret مدیریت‌شده اجرا کنید:
+
+- FARANOU_TPM_PLATFORM_AUTH_BASE64 در این script استفاده نمی‌شود؛ مسیر Platform auth از فایل ورودی اول خوانده می‌شود.
+- فایل اول Platform hierarchy authorization و فایل دوم NV index authorization خام هستند؛ فایل‌ها باید خارج از repo، با permission محدود و بدون newline ناخواسته نگهداری شوند.
+- اجرا: bash scripts/provision-offline-revocation-nv-index.sh 0x1234 /secure/platform-auth.bin /secure/nv-index-auth.bin
+- اسکریپت TPM2TOOLS_TCTI را به device:/dev/tpmrm0 محدود می‌کند، index را فقط define می‌کند، readback را بررسی می‌کند و هیچ دستور undefine/reset ندارد. مستندات رسمی: [tpm2_nvdefine](https://github.com/tpm2-software/tpm2-tools/blob/master/man/tpm2_nvdefine.1.md)، [tpm2_nvread](https://github.com/tpm2-software/tpm2-tools/blob/master/man/tpm2_nvread.1.md)، [Authorization Formatting](https://github.com/tpm2-software/tpm2-tools/blob/master/man/common/authorizations.md).
+- پس از provisioning، مقدار index auth را از همان secret manager به Licensing:OfflineRevocation:Tpm:NvIndexAuthValueBase64 تزریق کنید. اسکریپت Linux نیز هنوز روی TPM سخت‌افزاری این پروژه اجرا/تأیید نشده است.
+
+### 13.3 Runtime و Recovery
+
+- Windows: adapter از TSS.MSR TbsDevice و TPM Base Services (TBS) استفاده می‌کند.
+- Linux: StrictLinuxTpmDevice مستقیماً به /dev/tpmrm0 یا /dev/tpm0 متصل می‌شود؛ از LinuxTpmDevice کتابخانه استفاده نمی‌شود چون fallback به TCP simulator دارد.
+- در هر دو پلتفرم هیچ TCP simulator، device fallback یا software fallback مجاز نیست.
+- پیکربندی runtime از Licensing:OfflineRevocation:Tpm خوانده می‌شود: NvIndexOffset، NvIndexAuthValueBase64 و LinuxDevicePath. مقدار AuthValue فقط از secret injection محیط استقرار وارد شود؛ در appsettings/Git ثبت نشود.
+- هر عملیات Extend باید current digest را بخواند، مقدار مورد انتظار را کنترل کند، دقیقاً یک NV_Extend انجام دهد و مقدار را مجدداً بخواند.
+- Crash قبل از Extend با pending معتبر و TPM digest قبلی recover می‌شود؛ crash پس از Extend با TPM digest مورد انتظار finalize می‌شود. هر مقدار دیگر، missing pending، mismatch یا خطای TPM fail-closed است.
+- TPM Clear، تعویض سخت‌افزار، حذف index یا فقدان authorization با تعریف index جدید و restore دیتابیس حل نمی‌شود. نصب باید وارد فرایند recovery/re-enrollment کنترل‌شده شود.
+- قبل از Production، آزمون فیزیکی Windows 10/11، Windows Server و Linux، power-loss در هر crash window، restore backup قدیمی، TPM clear و عدم امکان Undefine توسط Runtime الزامی است.
+
+### 13.4 وضعیت فعلی
+
+- D-057 پذیرفته شده و migration/state store customer-side در شاخهٔ Issue #364 در حال پیاده‌سازی است.
+- قرارداد NV Extend و default provider unavailable/fail-closed ثبت شده است.
+- Adapter با Microsoft.TSS پیاده‌سازی شده است: Windows از TBS و Linux از device محلی strict استفاده می‌کند؛ LinuxTpmDevice کتابخانه استفاده نمی‌شود چون امکان fallback به simulator دارد. Runtime هیچ مسیر TCP یا simulator ندارد.
+- ابزار create-only provisioning برای Windows/TBS و Linux/tpm2-tools اضافه شده است؛ provisioning واقعی، secret delivery/rotation و تست روی TPM سخت‌افزاری هنوز NotVerified هستند. تا آن زمان هیچ نصب Production نباید این کنترل را فعال یا ادعای anti-rollback سخت‌افزاری کند.
+
+### 13.5 Customer runtime configuration contract
+
+- License signer public keys: Licensing:TrustedLicenseKeys:<kid> = Base64 ECDSA P-256 SubjectPublicKeyInfo.
+- Retired license signer IDs: Licensing:RetiredLicenseKeys:<kid> = true/false. A malformed flag is treated as untrusted.
+- Offline revocation public keys: Licensing:OfflineRevocation:TrustedKeys:<keyId> = Base64 ECDSA P-256 SubjectPublicKeyInfo. This trust set is independent from license-signing keys.
+- TPM configuration: Licensing:OfflineRevocation:Tpm:NvIndexOffset is the NV index offset (not the full 0x01xxxxxx handle); LinuxDevicePath is restricted to /dev/tpmrm0 or /dev/tpm0.
+- Licensing:OfflineRevocation:Tpm:NvIndexAuthValueBase64 is a secret and must be injected from deployment secret management. Never store it in appsettings.json, user-secrets checked into a profile, command line, logs or Git.
+- Server DI registers LicenseEnvelopeValidator and RevocationAwareLicenseEnvelopeValidator. A customer runtime call site must use RevocationAwareLicenseEnvelopeValidator, not LicenseEnvelopeValidator alone, to enforce revocation. If the TPM or current signed revocation snapshot is unavailable, the result is offline_revocation_unavailable and must not be treated as valid.

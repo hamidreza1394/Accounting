@@ -183,6 +183,37 @@ if (!setupRequired)
     // The company and fiscal period a user chose for the current sign-in (D-031). The cookie
     // helper is stateless; the service validates every stored choice against the database.
     builder.Services.TryAddSingleton(TimeProvider.System);
+
+    // Customer-side offline revocation is registered fail-closed. A real TPM provider is
+    // selected only when the deployment explicitly supplies its TPM NV index configuration.
+    var offlineRevocationTpmSection = builder.Configuration.GetSection("Licensing:OfflineRevocation:Tpm");
+    builder.Services.Configure<Infrastructure.Licensing.TpmNvExtendOptions>(offlineRevocationTpmSection);
+    if (offlineRevocationTpmSection.Exists())
+    {
+        builder.Services.AddSingleton<Faranou.Licensing.Contracts.IOfflineRevocationRollbackAnchor,
+            Infrastructure.Licensing.Tpm2NvExtendRollbackAnchor>();
+    }
+    else
+    {
+        builder.Services.TryAddSingleton<Faranou.Licensing.Contracts.IOfflineRevocationRollbackAnchor,
+            Infrastructure.Licensing.UnavailableOfflineRevocationRollbackAnchor>();
+    }
+
+    builder.Services.TryAddSingleton<Faranou.Licensing.Contracts.IOfflineRevocationKeyResolver,
+        Infrastructure.Licensing.ConfigurationOfflineRevocationKeyResolver>();
+    builder.Services.AddScoped<Faranou.Licensing.Contracts.IOfflineRevocationStateStore,
+        Data.TpmAnchoredOfflineRevocationStateStore>();
+    builder.Services.AddScoped<Faranou.Licensing.Contracts.OfflineRevocationConsumer>();
+
+    // License signature and revocation checks are composed into one customer-side validator.
+    // Missing trust keys or TPM configuration remain fail-closed; no unsigned fallback exists.
+    builder.Services.TryAddSingleton<Faranou.Licensing.Contracts.ITrustedKeyResolver,
+        Infrastructure.Licensing.ConfigurationLicenseTrustStore>();
+    builder.Services.TryAddSingleton<Faranou.Licensing.Contracts.ILicenseSignatureVerifier,
+        Faranou.Licensing.Contracts.EcdsaP256Sha256Verifier>();
+    builder.Services.TryAddSingleton<Faranou.Licensing.Contracts.LicenseEvaluator>();
+    builder.Services.AddScoped<Faranou.Licensing.Contracts.LicenseEnvelopeValidator>();
+    builder.Services.AddScoped<Faranou.Licensing.Contracts.RevocationAwareLicenseEnvelopeValidator>();
     builder.Services.Configure<Infrastructure.Provisioning.CustomerProvisioningSettings>(
         builder.Configuration.GetSection(Infrastructure.Provisioning.CustomerProvisioningSettings.SectionName));
     builder.Services.AddSingleton<Infrastructure.Provisioning.ICustomerProvisioningTrustStore,

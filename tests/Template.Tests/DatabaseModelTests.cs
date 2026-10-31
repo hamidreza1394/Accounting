@@ -51,6 +51,7 @@ public sealed class DatabaseModelTests
 				"ConsolidationRuns",
 				"CorporateGroupMembers",
 				"CorporateGroups",
+				"CustomerOfflineRevocationStates",
 				"FiscalPeriods",
 				"LoginLogs",
 				"MenuItems",
@@ -67,6 +68,22 @@ public sealed class DatabaseModelTests
 				"Users",
 			},
 			tables);
+	}
+
+	[Fact]
+	public void CustomerOfflineRevocationState_IsSingletonAndUsesRowVersionConcurrency()
+	{
+		var state = Model.FindEntityType(typeof(Domain.CustomerOfflineRevocationState));
+		Assert.NotNull(state);
+		Assert.Equal("CustomerOfflineRevocationStates", state!.GetTableName());
+		Assert.Equal("Id", Assert.Single(state.FindPrimaryKey()!.Properties).Name);
+
+		var rowVersion = state.FindProperty(nameof(Domain.CustomerOfflineRevocationState.RowVersion));
+		Assert.NotNull(rowVersion);
+		Assert.Equal("rowversion", rowVersion!.GetColumnType(), ignoreCase: true);
+		Assert.True(rowVersion.IsConcurrencyToken);
+		Assert.Equal(ValueGenerated.OnAddOrUpdate, rowVersion.ValueGenerated);
+		Assert.Null(state.FindProperty("InstallationId"));
 	}
 
 	[Fact]

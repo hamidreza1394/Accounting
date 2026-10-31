@@ -52,6 +52,7 @@ public class DatabaseContext : Microsoft.EntityFrameworkCore.DbContext
     public Microsoft.EntityFrameworkCore.DbSet<Domain.CompanyRolePermission> CompanyRolePermissions { get; set; }
     public Microsoft.EntityFrameworkCore.DbSet<Domain.SecurityAuditEvent> SecurityAuditEvents { get; set; }
     public Microsoft.EntityFrameworkCore.DbSet<Domain.ProvisioningRequestClaim> ProvisioningRequestClaims { get; set; }
+    public Microsoft.EntityFrameworkCore.DbSet<Domain.CustomerOfflineRevocationState> CustomerOfflineRevocationStates { get; set; }
     public Microsoft.EntityFrameworkCore.DbSet<Domain.CorporateGroup> CorporateGroups { get; set; }
     public Microsoft.EntityFrameworkCore.DbSet<Domain.CorporateGroupMember> CorporateGroupMembers { get; set; }
     public Microsoft.EntityFrameworkCore.DbSet<Domain.OwnershipRelationship> OwnershipRelationships { get; set; }
