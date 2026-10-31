@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Faranou.Modules.Trade.Application.Authorization;
 using Infrastructure.Tenancy;
 using Infrastructure.Trade;
 using Microsoft.AspNetCore.DataProtection;
