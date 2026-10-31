@@ -300,7 +300,8 @@ erDiagram
 
 ### 9.3 Customer Deployment & Sync
 - InstallationIdentity / InstalledLicense — موجودیت‌های Customer موجود/در حال تکمیل در #384؛ وضعیت دقیق کد باید در PRها بررسی شود.
-- ActivationRequest — nonce، request ID، Installation binding، public-key fingerprint، schema version، expiry و وضعیت پردازش؛ private key ندارد.
+- ActivationCodeGrant — کد فعال‌سازی یک‌بارمصرف، hash امن، CustomerAccount/Installation binding، زمان انقضا/مصرف و وضعیت؛ مقدار خام پس از صدور مجدد قابل بازیابی نیست.
+- ActivationRequest — nonce، request ID، Installation binding، public-key fingerprint، schema version، expiry و وضعیت پردازش؛ private key یا activation code ندارد.
 - ActivationReceipt / SyncAcknowledgement — ACK امضاشده و idempotency key/hash/sequence.
 - CompanySetupRecord — پیوند opaque entitlement reference به Company محلی و وضعیت setup؛ نباید credential در آن ذخیره شود.
 - SyncCheckpoint — LastSyncedAt، sequence/cursor و freshness metadata؛ payload telemetry باید حداقلی و قابل ممیزی باشد.
