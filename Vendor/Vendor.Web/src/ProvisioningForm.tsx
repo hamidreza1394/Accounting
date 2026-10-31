@@ -521,7 +521,7 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
               <option value="">انتخاب نصب</option>
               {installations.map(item => <option key={item.id} value={item.id}>{item.name} ({item.installationCode})</option>)}
             </select>
-            <p id="provisioning-installation-help" className="text-xs leading-5 text-muted-foreground">انتخاب نصب مقصد عمداً پیش‌فرض ندارد تا بسته برای نصب اشتباه صادر نشود.</p>
+            <p id="provisioning-installation-help" className="text-xs leading-5 text-muted-foreground">اولین نصب فعال به‌صورت پیش‌فرض انتخاب می‌شود؛ پیش از ثبت، نام و کد نصب مقصد را بررسی کنید.</p>
             {!loading && installations.length === 0 && <p className="text-xs text-muted-foreground">برای این مشتری نصب فعالی وجود ندارد؛ ابتدا یک نصب فعال ثبت یا فعال کنید.</p>}
           </div>
           <div className="space-y-2">
@@ -536,7 +536,7 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
                 {item.licenseNumber} — {item.productCode} — نسخه {item.sequence}
               </option>)}
             </select>
-            <p id="provisioning-license-help" className="text-xs leading-5 text-muted-foreground">انتخاب لایسنس عمداً صریح است؛ فقط entitlementهای امضاشده و معتبر این نصب قابل انتخاب‌اند.</p>
+            <p id="provisioning-license-help" className="text-xs leading-5 text-muted-foreground">اولین لایسنس امضاشده و معتبر این نصب به‌صورت پیش‌فرض انتخاب می‌شود؛ شماره، محصول و sequence را پیش از ثبت بررسی کنید.</p>
             {licenseLoading ? <p className="text-xs text-muted-foreground">در حال بررسی امضای لایسنس‌ها…</p>
               : eligibleLicenses.length === 0
                 ? <p className="text-xs text-muted-foreground">برای این نصب لایسنس امضاشده، فعال و معتبر پیدا نشد.</p>
