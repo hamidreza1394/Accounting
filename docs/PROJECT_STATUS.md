@@ -488,3 +488,11 @@
 - SQL Server tests cover successful issuance, unavailable signer, audit rollback and concurrent monotonic sequence/cumulative snapshots; trust-store negative coverage is included. No local .NET/SQL Server execution is claimed.
 - Current PR head is awaiting fresh .NET CI, Vendor CI, EF migration/snapshot guards and Semgrep; no merge or Verified claim until every required check succeeds.
 - Remaining independent gaps: customer runtime enforcement/anti-rollback integration in #235/#364, production key ceremony/provider access under #236, and independent audit checkpoint sink under #107. No customer-side consumer, `Server/**` or customer DB migration is included in PR #375.
+
+
+## 2026-10-31 — Issue #214: consolidated Vendor offline revocation path (PR #375)
+- PR [#375](https://github.com/hamidreza1394/Accounting/pull/375) now contains the Vendor-side signed revocation flow: canonical snapshot factory, independent revocation public trust store, signed snapshot history tied to approval/license, application-lock serialized global sequence, atomic maker-checker/license/snapshot/audit transaction, and authorized antiforgery-protected no-cache export.
+- Signature is verified against the configured independent public trust store before any revocation state can commit. A SQL Server trigger now rejects UPDATE/DELETE on persisted signed snapshot rows.
+- CI on previous head `0508c553e4cab42f967bc6bcd86e48cefac2ec9a` failed due to missing logger injection and a Gitleaks false positive in a test-only key ID. Both were corrected; latest head `2a9e227b28d9e54dfc08a4378642abaf4395b533` is awaiting fresh CI. Do not claim green until the new runs complete.
+- PRs #376/#377 were closed as duplicate stacked implementations; their unique immutable-history hardening is now included in #375.
+- Still NotVerified/Blocked: actual customer runtime revocation enforcement call-sites; provisioned Production HSM/KMS signer and independent public-key trust distribution; physical multi-host/offline and backup/restore operational tests.
