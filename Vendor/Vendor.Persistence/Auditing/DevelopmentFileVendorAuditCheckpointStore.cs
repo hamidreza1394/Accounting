@@ -83,7 +83,7 @@ public sealed class DevelopmentFileVendorAuditCheckpointStore : IVendorAuditChec
             throw new InvalidOperationException("Only valid audit checkpoints may be appended.");
         }
 
-        await using var gate = await AcquireLockAsync(cancellationToken);
+        await using var gate = new LockLease(await AcquireLockAsync(cancellationToken));
         var latest = await ReadLatestWhileLockedAsync(cancellationToken);
         if (latest is not null && checkpoint.EventCount <= latest.EventCount)
         {
