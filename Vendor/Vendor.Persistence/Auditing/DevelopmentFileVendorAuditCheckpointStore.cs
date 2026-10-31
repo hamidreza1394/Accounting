@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 
@@ -162,6 +163,7 @@ public sealed class DevelopmentFileVendorAuditCheckpointStore : IVendorAuditChec
             }
 
             Directory.CreateDirectory(directory);
+            var lockWait = Stopwatch.StartNew();
             while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -169,7 +171,7 @@ public sealed class DevelopmentFileVendorAuditCheckpointStore : IVendorAuditChec
                 {
                     return new FileStream(_lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
                 }
-                catch (IOException)
+                catch (IOException) when (lockWait.Elapsed < TimeSpan.FromSeconds(15))
                 {
                     await Task.Delay(TimeSpan.FromMilliseconds(25), cancellationToken);
                 }
@@ -186,8 +188,14 @@ public sealed class DevelopmentFileVendorAuditCheckpointStore : IVendorAuditChec
     {
         public async ValueTask DisposeAsync()
         {
-            await stream.DisposeAsync();
-            ProcessGate.Release();
+            try
+            {
+                await stream.DisposeAsync();
+            }
+            finally
+            {
+                ProcessGate.Release();
+            }
         }
     }
 }
