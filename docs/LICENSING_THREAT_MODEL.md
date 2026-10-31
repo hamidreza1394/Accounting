@@ -193,3 +193,5 @@
 - **T49 — درخواست آفلاین تکراری/منقضی/برای نصب دیگر:** nonce/request ID، InstallationId، expiry، key version، sequence و idempotency در درخواست و پاسخ bind شوند؛ duplicate یک نتیجه را بازگرداند و replay/wrong-install رد شود.
 - **T50 — تداخل مسئولیت سه حوزه:** Commercial حق صدور/تغییر entitlement بدون Engine approval/signing ندارد؛ Engine نباید password یا accounting data نگهدارد؛ Deployment/Sync فقط قرارداد امضاشده را مصرف کند و Vendor به Customer DB وصل نشود.
 - **T51 — downgrade یا stale response در فایل آفلاین:** Customer بالاترین sequence پذیرفته‌شده را durable نگه دارد؛ پاسخ قدیمی/نامرتبط reject شود. ACK و usage نیز idempotent و دارای freshness باشند.
+
+- **T52 — حدس/سرقت activation code:** کد یک‌بارمصرف با entropy کافی، hash-at-rest، rate limit، expiry قابل تنظیم، CustomerAccount/Installation binding، ثبت تلاش و invalidation پس از مصرف داشته باشد؛ کد خام در log/telemetry/file قرار نگیرد. Redeem باید اتمیک باشد تا دو درخواست هم‌زمان دوبار مصرف نشوند.
