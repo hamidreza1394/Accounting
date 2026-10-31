@@ -45,7 +45,7 @@ public sealed class TradeDbContextModelTests
     public void Operational_period_is_owned_by_trade_schema_and_has_no_core_foreign_key()
     {
         var options = new DbContextOptionsBuilder<TradeDbContext>()
-            .UseSqlServer("Server=localhost;Database=TradeModelOnly;User Id=sa;Password=NotARealPassword123!;TrustServerCertificate=True")
+            .UseSqlServer("Server=localhost;Database=TradeModelOnly;Trusted_Connection=True;TrustServerCertificate=True")
             .Options;
 
         using var context = new TradeDbContext(options);
