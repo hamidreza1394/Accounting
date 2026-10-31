@@ -11,7 +11,7 @@
 - [x] تعریف قراردادهای authorization و entitlement؛ دوره مستقل Trade طبق D-062 حذف شد و از FiscalPeriod مشترک استفاده می‌شود.
 - [x] تعریف قرارداد گزارش چندشرکتی all-or-nothing.
 - [ ] اتصال adapterهای Host به CompanyAccessService و License entitlement.
-- [ ] پیاده‌سازی مجوز دوره/فرم در API و UI و تست‌های منفی cross-company.
+- [ ] پیاده‌سازی اعتبارسنجی دوره مالی مشترک و مجوزهای تخصصی فرم/عملیات در API و UI و تست‌های منفی cross-company.
 - [ ] پیاده‌سازی گزارش‌های شرکت و چندشرکتی.
 - [ ] Migration مستقل Trade پس از review و تأیید جداگانه.
 
