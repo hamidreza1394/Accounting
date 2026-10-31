@@ -16,10 +16,22 @@ public sealed class LicenseEvaluator
 	}
 
 	public LicenseStatus Evaluate(LicensePayload payload, string localInstallationId)
+		=> Evaluate(payload, localInstallationId, localInstallationKeyFingerprint: null);
+
+	public LicenseStatus Evaluate(
+		LicensePayload payload,
+		string localInstallationId,
+		string? localInstallationKeyFingerprint)
 	{
 		ArgumentNullException.ThrowIfNull(payload);
 		if (string.IsNullOrEmpty(localInstallationId)
 		    || !string.Equals(payload.InstallationId, localInstallationId, StringComparison.Ordinal))
+			return LicenseStatus.Invalid;
+		if (payload.FormatVersion == 2 &&
+		    (string.IsNullOrWhiteSpace(localInstallationKeyFingerprint) ||
+		     !string.Equals(payload.InstallationKeyFingerprint, localInstallationKeyFingerprint, StringComparison.Ordinal)))
+			return LicenseStatus.Invalid;
+		if (payload.FormatVersion == 1 && !string.IsNullOrWhiteSpace(localInstallationKeyFingerprint))
 			return LicenseStatus.Invalid;
 
 		var structural = StructuralValidation.ValidatePayload(payload);
