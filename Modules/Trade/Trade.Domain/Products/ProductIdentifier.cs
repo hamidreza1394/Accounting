@@ -85,7 +85,7 @@ public sealed class ProductIdentifier : TradeEntity
             throw new ArgumentException("At least one of GTIN or IRC is required.");
         }
 
-        var normalizedSupplierId = supplierPartyId is null
+        Guid? normalizedSupplierId = supplierPartyId is null
             ? null
             : RequireIdentifier(supplierPartyId.Value, nameof(supplierPartyId));
         var normalizedSource = OptionalText(registrationSourceCode, 64, nameof(registrationSourceCode));
