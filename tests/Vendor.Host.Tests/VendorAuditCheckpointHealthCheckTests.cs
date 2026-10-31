@@ -44,6 +44,18 @@ public sealed class VendorAuditCheckpointHealthCheckTests
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
     }
 
+    [Fact]
+    public void Options_RejectMaximumStalenessShorterThanTwoIntervals()
+    {
+        var options = new VendorAuditCheckpointOptions
+        {
+            IntervalSeconds = 300,
+            MaximumStalenessSeconds = 500
+        };
+
+        Assert.Throws<InvalidOperationException>(options.Validate);
+    }
+
     private static VendorAuditCheckpointHealthCheck CreateCheck(
         VendorAuditCheckpointHealthState state,
         ManualTimeProvider time) =>
