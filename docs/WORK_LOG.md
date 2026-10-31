@@ -1678,3 +1678,13 @@
 - Added a scoped dual-host DI assertion proving the safe interface resolves while neither raw nor concrete validator is directly registered; unit coverage now targets the interface contract.
 - This prevents accidental DI bypass, but is **not end-to-end license enforcement**. Production call-sites, customer envelope storage/import, authorization/audit policy, installation binding and approved OD-03/04 expiry/grace behavior remain unresolved. TPM hardware provisioning and real Windows/Linux verification remain NotVerified.
 - Rebuilt this change from current `main` to resolve PR #381's divergence; CI must run on the replacement PR head. No local .NET/SQL Server execution is claimed.
+
+
+## 2026-10-31 — به‌روزرسانی وضعیت Issue #364 پس از ادغام PR #382
+
+- **PR #382:** تعارض PR #381 با بازسازی تغییر روی main حل شد؛ PR #382 با merge commit `f4027d83d1275204167464928c54ed9a185a68bf` ادغام شد.
+- **CI واقعی روی head PR:** .NET CI run `41185957406`، Vendor CI run `41185957429` و Semgrep run `41185957415` همگی conclusion=success دارند.
+- **تغییر تأییدشده:** فقط interface امن `ICustomerLicenseEnvelopeValidator` در DI در دسترس است؛ validator خام dependency داخلی pipeline است؛ تست unit و DI dual-host اضافه شده‌اند.
+- **مرز صادقانه:** این PR اجرای end-to-end ایجاد نمی‌کند. مسیر import/storage لایسنس مشتری و runtime call-site enforcement همچنان NotImplemented است. OD-03/04 و OD-05 نیز نیازمند تصمیم مالک‌اند.
+- **محدودیت محیط:** اجرای محلی .NET/SQL Server، migration روی دیتابیس واقعی و آزمون TPM سخت‌افزاری انجام نشد.
+- **مستندات:** وضعیت جاری در PROJECT_STATUS و LICENSING و handoff همین Issue همگام شد؛ snapshotهای تاریخی حفظ شدند.

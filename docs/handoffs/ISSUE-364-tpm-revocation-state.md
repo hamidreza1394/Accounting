@@ -93,8 +93,11 @@
 - Issue #364 همچنان باز می‌ماند تا آزمون روی TPM واقعی، provisioning NV index و مدیریت secret، و اتصال call-site واقعی مشتری به RevocationAwareLicenseEnvelopeValidator انجام و شواهد ثبت شود.
 
 
-## 2026-10-31 — customer validator DI boundary (rebased conflict resolution)
-- Reapplied on the current mainline: introduced `ICustomerLicenseEnvelopeValidator`; `RevocationAwareLicenseEnvelopeValidator` implements it; Server DI exposes only the interface and constructs the raw signature/time validator as an internal dependency.
-- Added a scoped dual-host DI assertion proving the safe interface resolves while neither raw nor concrete validator is directly registered; unit coverage now targets the interface contract.
-- This prevents accidental DI bypass, but is **not end-to-end license enforcement**. Production call-sites, customer envelope storage/import, authorization/audit policy, installation binding and approved OD-03/04 expiry/grace behavior remain unresolved. TPM hardware provisioning and real Windows/Linux verification remain NotVerified.
-- Rebuilt this change from current `main` to resolve PR #381's divergence; CI must run on the replacement PR head. No local .NET/SQL Server execution is claimed.
+## وضعیت پس از PR #382 — 2026-10-31
+
+- PR #382 با merge commit `f4027d83d1275204167464928c54ed9a185a68bf` ادغام شد.
+- .NET CI run `41185957406`، Vendor CI run `41185957429` و Semgrep run `41185957415` روی head نهایی PR موفق شدند.
+- `ICustomerLicenseEnvelopeValidator` تنها قرارداد ثبت‌شده در DI است؛ validator خام فقط dependency داخلی pipeline است. تست DI دو-host این مرز را بررسی می‌کند.
+- این تغییر call-site اجرایی ایجاد نکرده است. در main هنوز مسیر ورود/ذخیرهٔ LicenseEnvelope مشتری و مصرف‌کنندهٔ runtime که پیش از عملیات تجاری validator را اجرا کند وجود ندارد.
+- باقی‌ماندهٔ #364: طراحی و پیاده‌سازی import/storage و audit لایسنس مشتری، اتصال validator به مسیرهای اجرایی، تأیید سیاست OD-03/04 و OD-05، ceremony/secret delivery واقعی TPM و آزمون سخت‌افزاری Windows/Linux.
+- هیچ اجرای محلی .NET/SQL Server یا آزمون TPM فیزیکی در این مرحله ادعا نمی‌شود.
