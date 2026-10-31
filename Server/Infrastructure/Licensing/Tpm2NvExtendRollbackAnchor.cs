@@ -160,7 +160,9 @@ public sealed class Tpm2NvExtendRollbackAnchor : IOfflineRevocationRollbackAncho
         }
 
         var handle = TpmHandle.NV(_options.NvIndexOffset);
-        handle.SetAuth(new AuthValue(auth));
+        var authValue = new AuthValue(auth);
+        handle.SetAuth(authValue);
+        CryptographicOperations.ZeroMemory(authValue.AuthVal);
         CryptographicOperations.ZeroMemory(auth);
         return handle;
     }
