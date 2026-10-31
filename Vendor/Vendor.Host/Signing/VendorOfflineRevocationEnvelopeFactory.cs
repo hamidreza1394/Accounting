@@ -93,12 +93,12 @@ public sealed class VendorOfflineRevocationEnvelopeFactory(
             !string.Equals(signing.Algorithm, LicenseAlgorithms.EcdsaP256Sha256, StringComparison.Ordinal) ||
             signing.Signature.Length != 64)
         {
-            return OfflineRevocationEnvelopeCreationResult.Failed("offline_revocation_signing_result_invalid");
+            return OfflineRevocationEnvelopeCreationResult.Unavailable("offline_revocation_signing_result_invalid");
         }
 
         if (!_keyResolver.TryResolve(signing.KeyId, out var trustedPublicKey) || trustedPublicKey.IsEmpty)
         {
-            return OfflineRevocationEnvelopeCreationResult.Failed("offline_revocation_signing_key_untrusted");
+            return OfflineRevocationEnvelopeCreationResult.Unavailable("offline_revocation_signing_key_untrusted");
         }
 
         var envelope = new OfflineRevocationListEnvelope(
@@ -116,7 +116,9 @@ public sealed class VendorOfflineRevocationEnvelopeFactory(
                 out _,
                 out var verificationError))
         {
-            return OfflineRevocationEnvelopeCreationResult.Failed(verificationError);
+            return verificationError is "offline_revocation_signature_invalid" or "offline_revocation_trusted_key_invalid"
+                ? OfflineRevocationEnvelopeCreationResult.Unavailable(verificationError)
+                : OfflineRevocationEnvelopeCreationResult.Failed(verificationError);
         }
 
         return OfflineRevocationEnvelopeCreationResult.Success(envelope);
