@@ -91,3 +91,11 @@
 - کد state store و TPM anti-rollback در main قرار دارد؛ این milestone نرم‌افزاری تکمیل شد.
 - CI نهایی هر سه pipeline موفق است؛ لینک‌ها: [.NET CI](https://github.com/hamidreza1394/Accounting/actions/runs/41175579282)، [Vendor CI](https://github.com/hamidreza1394/Accounting/actions/runs/41175579288)، [Semgrep](https://github.com/hamidreza1394/Accounting/actions/runs/41175579255).
 - Issue #364 همچنان باز می‌ماند تا آزمون روی TPM واقعی، provisioning NV index و مدیریت secret، و اتصال call-site واقعی مشتری به RevocationAwareLicenseEnvelopeValidator انجام و شواهد ثبت شود.
+
+
+## 2026-10-31 — customer license validator DI boundary
+- Added `ICustomerLicenseEnvelopeValidator`; `RevocationAwareLicenseEnvelopeValidator` implements it. Server DI exposes only the interface and constructs the raw signature/time validator internally, preventing accidental DI bypass of offline revocation checks.
+- A dual-host integration assertion resolves the safe interface from Customer Server DI and confirms neither the raw validator nor the concrete revocation-aware validator is directly resolvable.
+- This is a dependency-boundary hardening, **not end-to-end license enforcement**. Static audit found no production runtime call-site consuming the validator/evaluator, no customer license-envelope store/import endpoint, and no shared authorization policy. `docs/LICENSING.md` still marks the installation license module NotImplemented.
+- Full runtime integration requires an approved local signed-file vs customer DB source, import/replace authorization and audit, installation identity binding, and approved OD-03/04 expiry/grace behavior. Do not invent global middleware behavior that may lock out setup or change commercial access policy.
+- TPM NV persistence/adapter exists, but hardware provisioning, secret delivery/rotation, and real Windows/Linux TPM verification remain NotVerified.
