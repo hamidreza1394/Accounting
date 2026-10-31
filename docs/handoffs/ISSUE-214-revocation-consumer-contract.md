@@ -83,3 +83,15 @@ Issue فقط وقتی قابل بستن است که تولید و انتشار s
 - **Verification:** no local .NET SDK is available in this environment. On head `d689db2eb28f31fdc268abf6a2627b23df0274a3`, .NET CI and Vendor CI were observed in progress; Semgrep completed successfully. No build/test success is claimed before completion of the runs.
 - **Security boundary:** no private key, customer DB migration, or production signer configuration is introduced. The default revocation signer remains unavailable/fail-closed.
 - **Next implementation order:** Vendor snapshot history + sequence model/migration; transactionally couple approval, license state, snapshot and audit; add authorized export; then integrate the customer runtime validation entry point and add SQL Server/concurrency/fail-closed tests.
+
+
+## 2026-10-31 — Vendor revocation snapshot persistence schema (stacked PR #376)
+
+- **Status:** persistence schema slice authored; awaiting CI and SQL Server verification; not merged.
+- Added Vendor-owned `VendorOfflineRevocationSnapshot` history with global unique monotonic sequence, unique ListId, exact serialized envelope, payload SHA-256, key/algorithm metadata, issued/expiry timestamps and RowVersion.
+- Added singleton `VendorOfflineRevocationSequence` row seeded at sequence 0. The intended allocator must update this row atomically inside the same Vendor DB transaction as snapshot insertion; allocator/service is not part of this schema slice yet.
+- Added SQL check constraints for positive sequence, valid expiry order and singleton counter identity. Added a SQL Server INSTEAD OF UPDATE/DELETE trigger to prevent mutation of persisted snapshot history.
+- Added Vendor EF mapping, migration and model snapshot plus model-invariant test. Customer `Server/**` and customer database schema are untouched.
+- **Migration tooling limitation:** no local .NET SDK is installed, so `dotnet ef migrations add` was not run. Migration and designer target model were authored against the existing EF 10.0.13 snapshot; CI pending-model guard and SQL Server migration tests must verify them before merge. This is not claimed as CLI-generated or verified.
+- **Not yet implemented:** transactional sequence allocation; revocation approval transaction linking approval/license status/snapshot/audit; authorized no-store snapshot export; customer runtime validation call-sites; SQL Server concurrency/rollback tests for the full flow.
+- **Security:** no signing private key, production signer configuration, customer DB migration or plaintext secret is introduced. Existing Revoked approval path must continue returning 503 until the full chain is ready.
