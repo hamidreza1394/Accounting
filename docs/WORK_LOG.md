@@ -1640,3 +1640,12 @@
 - Added Vendor migration, migration target model, updated EF snapshot and a model invariant test. No Customer DB or `Server/**` changes.
 - No local .NET SDK is installed; `dotnet ef migrations add`, build, tests and SQL Server migration execution were not run. Migration/Designer were authored to match the existing EF model conventions; CI model guard and SQL Server verification are still required. Do not merge until those checks pass.
 - Sequence allocator service, transactional revoke workflow, snapshot export and customer runtime enforcement remain separate next slices; revoked approvals remain fail-closed.
+
+
+## 2026-10-31 — Issue #214: transactional revocation and snapshot export (stacked PR #377)
+- Added SQL Server atomic global sequence allocator using UPDATE/OUTPUT and a required caller-owned transaction. The allocator lock is acquired before reading the revoked set to keep concurrent snapshots complete and monotonically ordered.
+- Added `VendorLicenseRevocationService` to require a current issued envelope and distinct requester/reviewer, create a signed snapshot, persist the immutable snapshot, update license and approval state, and append audit events in the same Vendor transaction.
+- Wired approved revoke decisions through the new service; signer failure returns generic 503 and leaves the outer transaction uncommitted so sequence/license/approval/snapshot roll back.
+- Added authorized, audited, expiry-aware latest-snapshot export with no-store/no-cache headers.
+- Added SQL Server integration coverage for success/signature verification, unavailable signer rollback, audit failure rollback, concurrent sequence allocation and immutable-row trigger enforcement.
+- No local .NET SDK or SQL Server is available; no build/test/migration execution is claimed. CI on the PR head is required. Customer runtime call-site enforcement and production HSM/trust provisioning remain open.
