@@ -15,7 +15,8 @@ public sealed record LicensePayload(
 	DateTimeOffset? ExpiresAtUtc,
 	int GraceDays,
 	int Sequence,
-	LicenseLimits Limits)
+	LicenseLimits Limits,
+	string InstallationKeyFingerprint = "")
 {
 	public const string KindPerpetual = "perpetual";
 	public const string KindTerm = "term";
