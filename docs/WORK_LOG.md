@@ -1664,3 +1664,10 @@
 - اصلاح در commit `f8743aa80ff5b2821cc64e6bc254d0396c207f64` انجام شد: `migrationBuilder.Sql` اکنون داخل `Up` است و `Down` trigger را پیش از حذف جدول برمی‌دارد.
 - تست SQL Server برای immutability گسترش یافت تا UPDATE و DELETE را رد کند و شمار رکورد snapshot پس از هر دو تلاش یک باقی بماند.
 - **اعتبارسنجی:** این تست در CI جدید باید همراه migration/pending-model guard اجرا شود؛ اجرای محلی .NET/SQL Server انجام نشده است.
+
+
+## 2026-10-31 — independent-process checkpoint regression
+- Added a helper executable and a regression test launching eight independent .NET processes that concurrently append the same sequence to one development JSONL checkpoint journal. Exactly one append must succeed; the other seven must reject the duplicate; the final journal must contain one valid record.
+- Added a Windows/Linux matrix to the existing Vendor CI workflow (rather than introducing a workflow that cannot run until merged).
+- This verifies cross-process locking for the Development/Test adapter only. It does not create a Production checkpoint sink or satisfy independent failure-domain, external retention/immutability, alerting or recovery requirements.
+- Local .NET execution was unavailable; the matrix must pass before verification.
