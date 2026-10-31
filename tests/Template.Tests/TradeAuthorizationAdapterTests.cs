@@ -97,7 +97,7 @@ public sealed class TradeAuthorizationAdapterTests : IDisposable
         };
 
         Assert.False(await adapter.HasPermissionForAllCompanyPeriodsAsync(
-            userId, scopes, permission, TradeAccessIntent.Read));
+            userId, scopes, permission, TradeAccessIntent.Read, TestContext.Current.CancellationToken));
 
         AddPermission(companyB.RoleId, permission);
         await database.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -117,7 +117,8 @@ public sealed class TradeAuthorizationAdapterTests : IDisposable
             userId,
             [new TradePeriodScope(company.CompanyId, company.PeriodId)],
             permission,
-            TradeAccessIntent.Read, TestContext.Current.CancellationToken));
+            TradeAccessIntent.Read,
+            TestContext.Current.CancellationToken));
     }
 
     [Fact]
