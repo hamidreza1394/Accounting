@@ -14,7 +14,8 @@
 - [x] fail-closed default provider و dedicated revocation public-key resolver ثبت شدند.
 - [x] Backend Windows TBS با Microsoft.TSS برای TPM NV Extend اضافه شد.
 - [x] Backend Linux local TPM device بدون simulator fallback اضافه شد.
-- [ ] NV index provisioning command/ceremony و secret delivery.
+- [x] ابزار create-only provisioning برای Windows/TBS و مستندات ceremony اضافه شد.
+- [ ] ابزار provisioning Linux و secret delivery/rotation عملیاتی.
 - [ ] اجرای تست‌های SQL Server و CI روی آخرین SHA.
 - [ ] تست واقعی روی TPM سخت‌افزاری Windows 10/11، Windows Server و Linux.
 - [ ] runtime enforcement در مسیر نهایی LicenseEvaluator/host پس از تأیید provider.
@@ -63,6 +64,6 @@
 - provider فعلی عمداً unavailable/fail-closed است.
 
 ## گام بعدی
-1. تکمیل provisioning ceremony اجرایی برای NV index platform-created و secure auth delivery.
+1. تکمیل ابزار provisioning Linux و secure auth delivery/rotation.
 2. اجرای CI، رفع تمام شکست‌ها و ساخت PR مستقل برای هر مرحله.
 3. تست روی TPM واقعی Windows 10/11، Windows Server و Linux.
