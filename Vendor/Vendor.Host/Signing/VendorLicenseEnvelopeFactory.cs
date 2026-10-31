@@ -61,7 +61,7 @@ public sealed class VendorLicenseEnvelopeFactory(ILicenseSigningProvider signing
             return LicenseEnvelopeCreationResult.Failed("signing_result_invalid");
 
         var envelope = new LicenseEnvelope(
-            FormatVersion: 1,
+            FormatVersion: payload.FormatVersion,
             Kid: signing.KeyId,
             Algorithm: signing.Algorithm!,
             PayloadJson: payloadJson,
