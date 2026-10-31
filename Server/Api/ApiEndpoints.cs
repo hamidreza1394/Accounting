@@ -494,7 +494,9 @@ public sealed record SessionResponse(
 public sealed record CompleteProvisioningEnrollmentRequest(
 	string? Username, string? EnrollmentToken, string? NewPassword);
 
-public sealed record ReissueProvisioningEnrollmentRequest(string? ReasonCode);\n\npublic sealed record CustomerInstallationIdentityEnrollmentRequest(bool ConfirmSoftwareProviderRisk);
+public sealed record ReissueProvisioningEnrollmentRequest(string? ReasonCode);
+
+public sealed record CustomerInstallationIdentityEnrollmentRequest(bool ConfirmSoftwareProviderRisk);
 
 public sealed record CustomerLicenseImportRequest(string? EnvelopeJson);
 
