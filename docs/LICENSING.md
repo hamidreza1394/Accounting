@@ -117,3 +117,11 @@
 - Cloud تصمیم entitlement را سمت سرور می‌گیرد؛ Offline آخرین entitlement امضاشده پذیرفته‌شده را تا sync حفظ می‌کند. تبادل online authenticated و signed file exchange هر دو پشتیبانی می‌شوند.
 - bootstrap مدیر اولیه در Offline محلی است؛ رمز فقط روی Customer Host تعیین و با ASP.NET Core Identity hash می‌شود و به Vendor/package/log/telemetry نمی‌رود.
 - ترتیب اجرا: #395 → #390 → #391/#392 → #393 → #394. پذیرش تصمیم به معنی پیاده‌سازی نیست.
+
+
+### وضعیت Issue #384 / PR #388 در زمان ثبت D-059
+
+- PR #387 ادغام شده و Customer-only persistence schema در main است؛ Migration روی دیتابیس واقعی اجرا نشده است.
+- PR #388 در حال تکمیل enrollment هویت نصب CNG و import/replace تراکنشی از طریق ICustomerLicenseEnvelopeValidator است. endpointها Infrastructure-only، antiforgery-protected، rate-limited و no-store هستند؛ InstallationId از configuration سمت سرور خوانده می‌شود.
+- طبق D-059، import باید یک envelope امضاشده با status برابر Restricted را نیز persist کند تا Customer بتواند به read/export/recovery محدود شود؛ Grace رد می‌شود چون grace ضمنی پذیرفته نشده است. اتصال این status به runtime policy همچنان در #391/#384 باقی است.
+- Startup reload/revalidation، enforcement در call-siteهای عملیات حسابداری، Cloud authoritative entitlement resolution و recovery عملیاتی هنوز تکمیل نشده‌اند. PR #388 تا CI کامل و ادغام، Implemented/Verified در main محسوب نمی‌شود.
