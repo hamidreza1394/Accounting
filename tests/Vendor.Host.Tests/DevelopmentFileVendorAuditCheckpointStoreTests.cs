@@ -115,7 +115,13 @@ public sealed class DevelopmentFileVendorAuditCheckpointStoreTests
 
         try
         {
-            var helperDll = Path.Combine(AppContext.BaseDirectory, "Vendor.CheckpointProcessHelper.dll");
+            var configuration = Directory.GetParent(AppContext.BaseDirectory.TrimEnd(
+                Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))?.Name
+                ?? throw new InvalidOperationException("Test configuration directory could not be resolved.");
+            var helperProject = Path.GetFullPath(Path.Combine(
+                AppContext.BaseDirectory, "../../../../Vendor.CheckpointProcessHelper"));
+            var helperDll = Path.Combine(helperProject, "bin", configuration, "net10.0",
+                "Vendor.CheckpointProcessHelper.dll");
             Assert.True(File.Exists(helperDll), $"Cross-process helper was not built: {helperDll}");
 
             var attempts = Enumerable.Range(0, 8)
