@@ -85,6 +85,99 @@ public sealed class EnvelopeValidatorTests
 	}
 
 	[Fact]
+	public void FormatV2_RequiresMatchingLocalInstallationKeyFingerprint()
+	{
+		using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+		var fingerprint = new string('a', 64);
+		var payload = Sample() with
+		{
+			FormatVersion = 2,
+			InstallationKeyFingerprint = fingerprint
+		};
+		var json = CanonicalJson.SerializePayload(payload);
+		var envelope = new LicenseEnvelope(
+			2, "test-kid-1", LicenseAlgorithms.EcdsaP256Sha256,
+			json, Convert.ToBase64String(Sign(key, json)));
+		var resolver = new StaticTrustedKeyResolver(new[]
+		{
+			new TrustedPublicKey("test-kid-1", LicenseAlgorithms.EcdsaP256Sha256,
+				key.ExportSubjectPublicKeyInfo())
+		});
+		var validator = NewValidator(resolver);
+
+		var accepted = validator.Validate(envelope, "inst-001", fingerprint);
+		Assert.True(accepted.Success, accepted.ErrorCode);
+		Assert.Equal(fingerprint, accepted.Payload!.InstallationKeyFingerprint);
+
+		var missingLocalBinding = validator.Validate(envelope, "inst-001");
+		Assert.False(missingLocalBinding.Success);
+		Assert.Equal("installation_key_fingerprint_required", missingLocalBinding.ErrorCode);
+
+		var mismatchedBinding = validator.Validate(envelope, "inst-001", new string('b', 64));
+		Assert.False(mismatchedBinding.Success);
+		Assert.Equal("installation_key_mismatch", mismatchedBinding.ErrorCode);
+	}
+
+	[Fact]
+	public void FormatV2_EnvelopeAndPayloadVersionsMustMatch()
+	{
+		using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+		var payload = Sample() with
+		{
+			FormatVersion = 2,
+			InstallationKeyFingerprint = new string('a', 64)
+		};
+		var json = CanonicalJson.SerializePayload(payload);
+		var envelope = new LicenseEnvelope(
+			1, "test-kid-1", LicenseAlgorithms.EcdsaP256Sha256,
+			json, Convert.ToBase64String(Sign(key, json)));
+		var resolver = new StaticTrustedKeyResolver(new[]
+		{
+			new TrustedPublicKey("test-kid-1", LicenseAlgorithms.EcdsaP256Sha256,
+				key.ExportSubjectPublicKeyInfo())
+		});
+
+		var result = NewValidator(resolver).Validate(envelope, "inst-001", new string('a', 64));
+		Assert.False(result.Success);
+		Assert.Equal("envelope_payload_version_mismatch", result.ErrorCode);
+	}
+
+	[Fact]
+	public void FormatV2_RejectsMissingOrMalformedInstallationFingerprint()
+	{
+		var missing = Sample() with { FormatVersion = 2, InstallationKeyFingerprint = "" };
+		Assert.Contains(StructuralValidation.ValidatePayload(missing),
+			error => error.Contains("installationKeyFingerprint", StringComparison.Ordinal));
+
+		var malformed = Sample() with { FormatVersion = 2, InstallationKeyFingerprint = "not-a-fingerprint" };
+		Assert.Contains(StructuralValidation.ValidatePayload(malformed),
+			error => error.Contains("installationKeyFingerprint", StringComparison.Ordinal));
+	}
+
+	[Fact]
+	public void FormatV1_RemainsCanonicalButCannotBeUsedWhenLocalKeyBindingIsRequired()
+	{
+		using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+		var payload = Sample();
+		var json = CanonicalJson.SerializePayload(payload);
+		Assert.DoesNotContain("installationKeyFingerprint", json, StringComparison.Ordinal);
+		var envelope = new LicenseEnvelope(
+			1, "test-kid-1", LicenseAlgorithms.EcdsaP256Sha256,
+			json, Convert.ToBase64String(Sign(key, json)));
+		var resolver = new StaticTrustedKeyResolver(new[]
+		{
+			new TrustedPublicKey("test-kid-1", LicenseAlgorithms.EcdsaP256Sha256,
+				key.ExportSubjectPublicKeyInfo())
+		});
+		var validator = NewValidator(resolver);
+
+		Assert.True(validator.Validate(envelope, "inst-001").Success);
+		var boundRuntime = validator.Validate(envelope, "inst-001", new string('a', 64));
+		Assert.False(boundRuntime.Success);
+		Assert.Equal("legacy_license_not_installation_bound", boundRuntime.ErrorCode);
+	}
+
+	[Fact]
 	public void PerpetualWithExpiry_FailsStructure()
 	{
 		var payload = Sample() with
