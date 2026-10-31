@@ -3,8 +3,8 @@
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/235
 - **Agent/مسئول:** Claude Code
 - **تاریخ:** 2026-10-30
-- **وضعیت:** ناقص عمدی (تست‌های SQL Server و رفع باگ همزمانی انجام شده؛ E2E دو-میزبانه انجام نشده؛ رفع مقدار ثابت password-like در fixture ثبت شده و CI روی head جدید در انتظار است)
-- **وابستگی:** این شاخه روی `feat/issue-235-ack-signing-provider-contract` ساخته شده است (سازندهٔ `CustomerProvisioningApplyService` در آن PR تغییر کرد). تا ادغام آن PR، PR این شاخه را با base همان شاخه باز کنید.
+- **وضعیت بازبینی‌شده:** E2E خودکار دو میزبان منطقی در PR #329 ادغام و در Vendor CI اجرا شده است؛ اجرای دو ماشین فیزیکی/دو OS process و تست عملیاتی همچنان انجام نشده است.
+- **مبنای فعلی:** `main` پس از merge commit `43d28253eb9f0f38ff25d0dfea143aeacdb06871` (PR #329). یادداشت‌های قبلی دربارهٔ ساخته‌نشدن E2E و انتظار CI روی head قدیمی‌اند و با این وضعیت جایگزین می‌شوند.
 
 ## هدف و معیارهای پذیرش
 - [x] Rollback در شکست در میانهٔ ایجاد شرکت/دوره/نقش/مدیر/عضویت، و اثبات اینکه Retry بعدی گیر نمی‌کند.
@@ -12,7 +12,8 @@
 - [x] انقضا، مصرف یک‌باره و ابطال توکن قبلی؛ محدودسازی حدس؛ مصرف هم‌زمان.
 - [x] مجوزهای دقیق زیرسیستم‌های خریداری‌شده و جداسازی بین شرکت‌ها.
 - [x] Replay، استفادهٔ مجدد متعارض از RequestId/Nonce، بستهٔ دست‌کاری‌شده و نصب بیگانه.
-- [ ] E2E خودکار که هر دو میزبان (Vendor و مشتری) را در یک تست بالا بیاورد: اجرا نشد (توضیح پایین).
+- [x] E2E خودکار دو میزبان منطقی Vendor و Customer با دو TestServer و دو SQL Server database مستقل، انتقال فایل بسته و acknowledgement، Enrollment و Confirmed فقط پس از ACK معتبر (PR #329؛ Vendor CI run `41052515292`: 166/166 موفق، 0 شکست، 0 skipped).
+- [ ] اجرای عملیاتی روی دو ماشین/دو OS process مستقل و شبکه واقعی: هنوز اجرا نشده؛ تست #329 در یک process و با دو WebApplicationFactory اجرا می‌شود.
 
 ## یافتهٔ مهم (باگ واقعی، رفع شد)
 - تست هم‌زمانی نشان داد ۷ از ۸ درخواست هم‌زمان تکراری apply و ۳ از ۴ درخواست هم‌زمان enrollment با **Deadlock Victim** (SQL Server 1205) خطای مدیریت‌نشده می‌دادند (HTTP 500). رکورد تکراری ساخته نمی‌شد، ولی رفتار idempotent نبود.
@@ -35,28 +36,30 @@
 | CustomerProvisioningTransactionalSqlServerTests (SQL Server 2022 واقعی) پیش از رفع | 2 ناموفق از 7 | Deadlock در apply و enrollment هم‌زمان |
 | همان تست‌ها پس از رفع، سه بار پشت‌سرهم | 7 از 7 موفق در هر سه اجرا | |
 | `dotnet test Template.sln -c Release` (با SQL Server) | موفق | 664 کل، 662 موفق، 2 skipped، 0 ناموفق |
-| Playwright E2E / Vendor.sln / کلاینت | اجرا نشد | تغییری در آن‌ها نبود |
+| Vendor CI روی PR #329 | موفق | 166 تست، 0 شکست، 0 skipped؛ شامل تست dual-host با دو دیتابیس مستقل و انتقال package/ACK. .NET CI روی همان PR نیز طبق PR summary موفق بود. |
 | بازبینی مستقل Subagent | اجرا نشد | Subagent فراخوانی نشد؛ بازبینی Diff توسط نویسنده |
 | GitHub secret-scan، run `41021431573` روی SHA قبلی | ناموفق | Gitleaks یک مقدار ثابت password-like فقط در fixture تست را گزارش کرد؛ credential عملیاتی نبود، اما از کد حذف و با مقدار تصادفی runtime جایگزین شد. CI روی commit اصلاحی هنوز اجرا/تأیید نشده است |
 
-## چرا E2E دو-میزبانه ساخته نشد
-- هر دو پروژه `public partial class Program` در فضای نام سراسری دارند؛ یک پروژه تست که هر دو را ارجاع دهد به alias بیرونی و پیکربندی جداگانهٔ دو پایگاه داده نیاز دارد.
-- مسیر Vendor تا بستهٔ امضاشده (دو مدیر با TOTP، تأیید دو نفره، Signer) در `VendorCustomerMutationHttpIntegrationTests` صدها خط fixture دارد.
-- جایگزین موجود: هر نیمه با همان قرارداد مشترک تست شده است: بستهٔ صادرشده از Vendor با `CustomerProvisioningPackageValidator` اعتبارسنجی می‌شود (تست Vendor)، و ack تولیدشدهٔ مشتری با `CustomerProvisioningAcknowledgementValidator` (همان اعتبارسنج endpoint Vendor) و bindingهای Vendor تأیید می‌شود (تست SQL Server مشتری). تست یکپارچهٔ واحد هر دو میزبان نیازمند پروژهٔ تست جدا و تصمیم مالک دربارهٔ هزینهٔ آن است.
+## وضعیت E2E دو میزبان پس از PR #329
+- PR #329 پروژهٔ تست Vendor را با `extern alias CustomerServer` به هر دو Host متصل می‌کند و دو `WebApplicationFactory` مستقل با دو SQL Server database جدا بالا می‌آورد.
+- جریان کامل شامل ایجاد لایسنس و trust test-only، ساخت درخواست، تأیید دو نفره، امضای package، انتقال package از طریق فایل، رد package ناقص/کلید ناشناخته/دست‌کاری‌شده، apply و replay هم‌زمان، Enrollment یک‌بارمصرف، انتقال ACK امضاشده و Confirmed فقط پس از ACK معتبر است.
+- Vendor CI run `41052515292` در 2026-10-30: مرحلهٔ `Test Vendor solution` موفق؛ 166 تست، 166 موفق، 0 شکست، 0 skipped. لاگ همان job ایجاد دو دیتابیس مستقل `FaranouVendorProvisioningE2E_*` و `FaranouTests_ProvisioningDualHost_*` را نشان می‌دهد.
+- این E2E دو میزبان نرم‌افزاری را در یک process تست می‌کند؛ این معادل دو ماشین فیزیکی، دو OS process مستقل یا شبکهٔ واقعی نیست. تست‌های عملیاتی آن‌ها به Staging موکول‌اند.
 
 ## امنیت، داده و سازگاری
 - بدون Schema/Migration جدید. قفل فقط رفتار هم‌زمانی را تغییر می‌دهد و هیچ مسیر دسترسی تازه‌ای نمی‌سازد.
 - هیچ توکن/رمز در Audit وارد نمی‌شود (در تست انقضا بررسی شد).
 
 ## ریسک‌ها و کارهای باقی‌مانده
-- E2E دو-میزبانه و Playwright از آپلود ack تا وضعیت `Confirmed`.
+- اجرای دو ماشین/دو OS process مستقل، شبکه واقعی، سناریوهای قطع/وصل انتقال فایل و عملیات recovery در Staging.
 - قفل سراسری یعنی applyهای همزمان صف می‌شوند؛ در حجم بالا (نامحتمل برای این کار اپراتوری) باید بازنگری شود.
 
 ## امنیت و اصلاح Secret Scan
 - مقدار ثابت password-like فقط در تست integration وجود داشت؛ هیچ رمز Production یا customer credential در اختیار این تست قرار نگرفته بود.
 - برای حذف الگوی قابل‌تشخیص و جلوگیری از هرگونه credential ثابت، رمزهای تست در هر اجرای تست با `RandomNumberGenerator.GetBytes(32)` تولید می‌شوند و در log یا audit ثبت نمی‌شوند.
-- نتیجهٔ Gitleaks پس از این اصلاح باید روی SHA جدید دوباره تأیید شود.
+- نتیجهٔ Gitleaks باید فقط بر اساس اجرای CI روی SHA نهایی هر تغییر جدید گزارش شود؛ نتیجهٔ قدیمی run `41021431573` برای SHA قبل از اصلاح، نتیجهٔ فعلی محسوب نمی‌شود.
 
 ## شناسه‌های Git
 - Branch: `feat/issue-235-provisioning-e2e-tests`
-- Pull Request: پس از ساخت PR ثبت می‌شود.
+- PR E2E ادغام‌شده: [#329](https://github.com/hamidreza1394/Accounting/pull/329) — merge commit `43d28253eb9f0f38ff25d0dfea143aeacdb06871`.
+- CI evidence: [Vendor CI #41052515292](https://github.com/hamidreza1394/Accounting/actions/runs/41052515292).
