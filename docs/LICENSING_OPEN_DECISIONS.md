@@ -94,11 +94,12 @@
 - **نیاز به تأیید مالک:** خیر؛ جزئیات ارائه‌دهنده/استقرار در طراحی اجرایی بررسی می‌شود.
 
 ## OD-08 — حفاظت و بازیابی کلید خصوصی نصب مشتری
-- **شواهد وضع فعلی:** `Server/Infrastructure/DatabaseSetup/DatabaseConnectionSettingsStore.cs` یک `DataProtectionProvider` اختصاصی برای تنظیمات اتصال می‌سازد؛ `ProtectKeysWithDpapi()` فقط در Windows اعمال می‌شود (حدود خطوط 410–415)؛ در Linux/macOS حلقهٔ کلید روی دیسک بدون رمزنگاری در سطح کلید می‌ماند و حفاظت به مجوز فایل‌سیستم وابسته است. `AddDataProtection` سراسری در `Program` نیست (AUD-2026-10-23-02).
-- **گزینه‌ها:** (a) ستون عادی دیتابیس (`Rejected`: Backup دیتابیس کلید را لو می‌دهد)؛ (b) Data Protection + پوشهٔ تنظیمات D-036؛ (c) Windows certificate store / TPM / فایل با مجوز 0600؛ (d) رمزگذاری با عبارت عبور مدیر برای نسخهٔ پشتیبان.
-- **ریسک:** کلید داخل Backup هم بازیابی را ممکن می‌کند و هم کپی را آسان می‌کند (D-027).
-- **پیشنهاد (`Proposed`):** (b) برای اجرا + (d) برای خروجی Backup کامل؛ ابتدا AUD-2026-10-23-02 تعیین تکلیف شود. گم‌شدن کلید = مسیر «اتصال مجدد» (OD-06).
-- **نیاز به تأیید مالک:** بله.
+- **وضعیت تصمیم provider:** `Accepted` با تأیید صریح مالک محصول در 2026-10-31 (D-058 / Issue #384).
+- **انتخاب پذیرفته‌شده در Windows:** CNG ECDSA P-256 با کلید non-exportable و MachineKey. TPM 2.0 / `Microsoft Platform Crypto Provider` مسیر پیش‌فرض و ترجیحی است. در نبود TPM، `Microsoft Software Key Storage Provider` با حفاظت Windows software key store/DPAPI فقط پس از تأیید صریح اپراتور در فرمان provisioning مجاز است. SoftwareProtected سطح اطمینان پایین‌تری از HardwareTpm دارد؛ این تفاوت باید در دیتابیس مشتری و audit ثبت شود. هیچ fallback خودکار یا تغییر provider بی‌صدا مجاز نیست.
+- **قید امنیتی:** private key هرگز در DB، backup عادی، Git، log یا package ذخیره نمی‌شود. فرمان provisioning فقط SPKI و metadata عمومی را خروجی می‌دهد. کلید machine-scoped است؛ provisioning باید با حساب/ACL قابل دسترسی برای هویت سرویس برنامه انجام شود.
+- **محدودیت:** Software KSP/DPAPI در برابر مدیر محلی مخرب یا clone کامل OS/host تضمین TPM را ندارد. TPM واقعی یا vTPM فقط پس از تست محیط هدف HardwareTpm گزارش می‌شود؛ Windows CI با Software KSP فقط قرارداد CNG را می‌آزماید.
+- **باقی‌ماندهٔ OD-08:** روش backup/recovery، rotation و re-enrollment پس از فقدان کلید، TPM clear یا تعویض سخت‌افزار همچنان نیازمند طراحی/آزمون است و با OD-06 (انتقال/بازیابی Installation) هماهنگ می‌شود. کلید گم‌شده هرگز خودکار بازتولید و به هویت قدیمی متصل نمی‌شود.
+- **شواهد فعلی کد:** PR #386 در حال پیاده‌سازی provisioning command و provider؛ تا ادغام و CI سبز، وضعیت کد `NotVerified` است.
 
 ## OD-09 — فعال‌سازی آنلاین: تماس دوره‌ای اجباری یا اختیاری؟
 - **وضعیت:** `Accepted` (D-046، 2026-10-25). ارتباط آنلاین اختیاری است؛ heartbeat اجباری وجود ندارد؛ عملیات حسابداری به شبکه وابسته نیست. مسیر آنلاین از همان قرارداد/اعتبارسنج آفلاین استفاده می‌کند، ضد-Replay و Rate Limit دارد و دادهٔ حسابداری ارسال نمی‌کند. قطع اینترنت به‌خودی‌خود لایسنس معتبر را نامعتبر نمی‌کند. پیاده‌سازی `NotImplemented` است.
@@ -173,10 +174,10 @@
 - **شرط Production باقی‌مانده:** signer واقعی KMS/HSM و چرخه عمر کلید در #236؛ signer واقعی acknowledgement سمت مشتری؛ آزمون عملیاتی روی deployment modes. رفتار بند ۹ D-053 دربارهٔ تغییر رمز پس از اولین login نیز با جریان فعلی (تعیین رمز در Enrollment و منع ورود تا آن زمان) یکسان نیست و نیازمند تأیید مالک یا PR جدا است. این تصمیم مجوز ساخت signer جعلی یا fallback نرم‌افزاری نیست.
 - **منبع پیگیری:** [Issue #235](https://github.com/hamidreza1394/Accounting/issues/235)، [Issue #228](https://github.com/hamidreza1394/Accounting/issues/228)، D-051، D-053 و D-054.
 
-## OD-18 — فعال‌سازی پایدار در Restart و تشخیص نصب مجدد Windows
-- **وضعیت:** Accepted برای رفتار محصول (D-058، 2026-10-31)؛ جزئیات پیاده‌سازی وابسته به OD-08 و Issue #384.
+## OD-19 — فعال‌سازی پایدار در Restart و تشخیص نصب مجدد Windows
+- **وضعیت:** Accepted برای رفتار محصول (D-058، 2026-10-31)؛ جزئیات پیاده‌سازی provider طبق OD-08 پذیرفته شده؛ persistence و recovery در Issue #384 باقی است.
 - **تصمیم پذیرفته‌شده:** یک‌بار import/activation برای هر Installation؛ restart/reboot/recycle برنامه یا سرویس نباید درخواست مجدد لایسنس کند. نصب مجدد/re-image ویندوز که OS-installation identity را تغییر دهد reactivation لازم دارد؛ Windows servicing/patch که همان OS installation را حفظ کند نباید فعال‌سازی را باطل کند.
 - **Cloud:** server-side authoritative license/entitlement decision؛ client فقط نمایش وضعیت. از round-trip به Vendor برای هر درخواست حسابداری اجتناب شود؛ cache فقط server-controlled و versioned.
 - **کنترل امنیتی:** MachineGuid به‌تنهایی کافی نیست؛ marker نصب سیستم‌عامل با public-key fingerprint یک کلید نصب non-exportable در TPM/CNG یا provider امن معادل bind شود. فقدان secure key یا عدم تطبیق identity نباید به fallback نرم‌افزاری silent منجر شود.
-- **موارد باز:** OD-08 همچنان برای انتخاب دقیق provider، provisioning و recovery نیازمند تصمیم است؛ OD-06 برای انتقال/restore installation همچنان NeedsApproval. سیاست OD-03/04/05 تغییری نکرده است.
+- **موارد باز:** OD-08 انتخاب provider را تعیین کرده؛ recovery کلید با OD-06 هماهنگ می‌شود. OD-06 برای انتقال/restore installation همچنان NeedsApproval. سیاست OD-03/04/05 تغییری نکرده است.
 - **پیگیری:** Issue #384؛ هیچ schema یا Migration تا ADR اجرایی و طرح persistence بررسی‌شده، اجرا نشده است.

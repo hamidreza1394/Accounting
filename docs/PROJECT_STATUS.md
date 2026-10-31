@@ -519,3 +519,8 @@
 - این فقط تصمیم و scope است؛ import/storage، installation identity binding و runtime enforcement هنوز NotImplemented هستند.
 - InstalledLicenses/InstallationIdentity schema و Migration هنوز ایجاد نشده‌اند. قبل از DDL نهایی، OD-08 (secure key provider/provisioning/recovery) و جزئیات OS marker باید در Issue #384 بررسی شوند. OD-06 و OD-03/04/05 همچنان بازند.
 - تست واقعی دو میزبان، TPM سخت‌افزاری و recovery drill طبق برنامه به انتهای پروژه موکول است؛ تست‌های کد/CI در PRهای پیاده‌سازی لازم‌اند.
+
+## 2026-10-31 — Issue #384: تأیید سیاست دوحالته کلید هویت نصب
+- مالک محصول TPM 2.0 / Microsoft Platform Crypto Provider را مسیر پیش‌فرض تأیید کرد؛ Software CNG / DPAPI فقط با تأیید صریح و ثبت AssuranceLevel پایین‌تر مجاز است. هیچ fallback خودکار مجاز نیست.
+- PR #386 در حال پیاده‌سازی Windows CNG installation proof key، فرمان provisioning صریح و تست‌های CNG است؛ تا CI و ادغام، این تغییر در main پیاده‌سازی‌شده محسوب نمی‌شود.
+- Persistence دیتابیس مشتری، ثبت durable رضایت/سطح اطمینان، InstalledLicenses import/replace، runtime enforcement و Cloud entitlement resolution هنوز باقی‌اند. OD-06 انتقال/بازیابی و بخش recovery از OD-08 همچنان باز است.
