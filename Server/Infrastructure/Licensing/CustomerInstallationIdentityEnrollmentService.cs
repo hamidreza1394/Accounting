@@ -28,6 +28,7 @@ public sealed class CustomerInstallationIdentityEnrollmentService
 
     private readonly Data.DatabaseContext _database;
     private readonly WindowsCngLicenseInstallationKeyOptions _keyOptions;
+    private readonly ILocalInstallationKeyMetadataProvider _keyMetadataProvider;
     private readonly string _installationId;
     private readonly IInstallationIdentityProofVerifier _proofVerifier;
     private readonly TimeProvider _timeProvider;
@@ -36,12 +37,14 @@ public sealed class CustomerInstallationIdentityEnrollmentService
         Data.DatabaseContext database,
         IOptions<WindowsCngLicenseInstallationKeyOptions> keyOptions,
         IOptions<Infrastructure.Provisioning.CustomerProvisioningSettings> provisioningSettings,
+        ILocalInstallationKeyMetadataProvider keyMetadataProvider,
         IInstallationIdentityProofVerifier proofVerifier,
         TimeProvider timeProvider)
     {
         _database = database ?? throw new ArgumentNullException(nameof(database));
         _keyOptions = keyOptions.Value;
         _installationId = provisioningSettings.Value.InstallationId ?? string.Empty;
+        _keyMetadataProvider = keyMetadataProvider ?? throw new ArgumentNullException(nameof(keyMetadataProvider));
         _proofVerifier = proofVerifier ?? throw new ArgumentNullException(nameof(proofVerifier));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
@@ -54,9 +57,6 @@ public sealed class CustomerInstallationIdentityEnrollmentService
         if (actorUserId == Guid.Empty || string.IsNullOrWhiteSpace(_installationId))
             return Failure("installation_identity_configuration_invalid");
 
-        if (!OperatingSystem.IsWindows())
-            return Failure("installation_identity_platform_unsupported");
-
         if (_keyOptions.ProviderName == WindowsCngLicenseInstallationKeyProvisioner.SoftwareProviderName &&
             !confirmSoftwareProviderRisk)
             return Failure("software_provider_explicit_consent_required");
@@ -64,8 +64,7 @@ public sealed class CustomerInstallationIdentityEnrollmentService
         WindowsCngLicenseInstallationKeyProvisioningResult metadata;
         try
         {
-            metadata = WindowsCngLicenseInstallationKeyProvisioner.ReadExisting(
-                _keyOptions, _installationId, confirmSoftwareProviderRisk);
+            metadata = _keyMetadataProvider.ReadExisting(_installationId, confirmSoftwareProviderRisk);
         }
         catch (Exception exception) when (exception is CryptographicException or
             UnauthorizedAccessException or InvalidOperationException or ArgumentException or
