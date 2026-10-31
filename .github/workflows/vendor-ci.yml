@@ -33,6 +33,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  checkpoint-cross-process:
+    name: ${{ matrix.os }} checkpoint file-lock regression
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.402
+      - name: Restore focused tests
+        run: dotnet restore tests/Vendor.Host.Tests/Vendor.Host.Tests.csproj
+      - name: Run cross-process checkpoint regression
+        run: dotnet test tests/Vendor.Host.Tests/Vendor.Host.Tests.csproj --configuration Release --no-restore --filter "FullyQualifiedName~AppendAcrossIndependentProcessesRejectsDuplicateSequenceWithoutCorruptingJournal" --verbosity minimal
   build-test-package:
     runs-on: ubuntu-latest
     env:
