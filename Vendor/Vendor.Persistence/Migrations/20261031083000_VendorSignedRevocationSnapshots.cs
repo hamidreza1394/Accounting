@@ -63,8 +63,20 @@ public partial class VendorSignedRevocationSnapshots : Migration
             unique: true);
     }
 
+        migrationBuilder.Sql("""
+            CREATE TRIGGER [dbo].[TR_VendorSignedRevocationSnapshots_Immutable]
+            ON [dbo].[VendorSignedRevocationSnapshots]
+            INSTEAD OF UPDATE, DELETE
+            AS
+            BEGIN
+                SET NOCOUNT ON;
+                THROW 51000, 'Vendor signed revocation snapshots are immutable.', 1;
+            END;
+            """);
+
     protected override void Down(MigrationBuilder migrationBuilder)
     {
+        migrationBuilder.Sql("DROP TRIGGER IF EXISTS [dbo].[TR_VendorSignedRevocationSnapshots_Immutable];");
         migrationBuilder.DropTable(name: "VendorSignedRevocationSnapshots");
     }
 }
