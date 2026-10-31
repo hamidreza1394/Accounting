@@ -871,3 +871,16 @@ The customer consumer, claim/replay, transactional apply, one-time Enrollment/re
 - **وابستگی:** 'Pkcs11Interop' در 'Directory.Packages.props' نسخهٔ مرکزی دارد؛ پیش از ارتقا یا افزودن وابستگی جدید، مجوز و زنجیرهٔ وابستگی بررسی و در ADR ثبت شود. KMS ابری خارج از دامنه است.
 - **مرزهای مرحله‌ای:** Stage 1 می‌تواند کد و Staging تأییدشده باشد، اما برچسب 'Production-ready' یا 'Production complete' نمی‌گیرد. Stage 2 نیازمند HSM واقعی، دو میزبان واقعی و آزمون restore/recovery شواهد audit است.
 - **مراجع:** D-055، Issue #236، #107، #214، #228 و #235.
+
+
+## D-057 — TPM 2.0 monotonic anchor برای ضدبازگشت وضعیت ابطال آفلاین مشتری (2026-10-31)
+
+- **وضعیت تصمیم:** `Accepted` — تأیید صریح مالک محصول در 2026-10-31 برای Migration مستقل دیتابیس مشتری و state store مبتنی بر TPM.
+- **مسئله:** نگهداری آخرین sequence ابطال فقط در SQL Server کافی نیست؛ restore یک backup قدیمی می‌تواند high-water mark را عقب ببرد و snapshot منقضی/قدیمی را دوباره قابل استفاده کند.
+- **تصمیم:** هر نصب مشتری یک TPM 2.0 NV monotonic counter مستقل از دیتابیس دارد. این counter تعداد snapshotهای ابطال پذیرفته‌شده را anchor می‌کند؛ مقدار آن با sequence Vendor یکی نیست و فقط با هر پذیرش موفق دقیقاً یک واحد افزایش می‌یابد. دیتابیس، sequence، digest، expiry، فهرست شناسه‌های revoked و generation متناظر TPM را نگه می‌دارد.
+- **پروتکل crash-consistent:** (۱) envelope امضاشده و تأییدشده به‌عنوان pending همراه expected generation در دیتابیس commit می‌شود؛ (۲) TPM NV counter با compare/increment به generation مورد انتظار افزایش می‌یابد؛ (۳) state جاری از pending نهایی و pending پاک می‌شود. در startup/read، اگر counter برابر generation قبلی باشد، عملیات pending می‌تواند پس از re-verification ادامه یابد؛ اگر برابر expected generation باشد، finalize انجام می‌شود؛ هر مقدار دیگر، نبود pending همراه با اختلاف generation، خطای TPM، یا عدم تطبیق digest به `Unavailable` و fail-closed منجر می‌شود.
+- **قواعد امنیتی:** TPM NV counter باید خارج از backup دیتابیس و غیرقابل reset توسط هویت Runtime باشد. تعریف/حذف NV index فقط در provisioning ceremony با اپراتور مجاز انجام می‌شود. هیچ software counter، DPAPI، فایل محلی یا SQL-only high-water mark به‌عنوان anti-rollback پذیرفته نیست. TPM clear، تعویض مادربرد/TPM یا گم‌شدن NV index به معنی نیاز به recovery/re-enrollment کنترل‌شده است؛ counter جدید نباید بی‌صدا با دیتابیس قدیمی جفت شود.
+- **پلتفرم:** Windows 10/11 و Windows Server اولویت پیاده‌سازی‌اند؛ interface باید برای Linux TPM2/TSS قابل توسعه باشد. هر backend تا تست روی TPM سخت‌افزاری واقعی همان پلتفرم `Implemented / NotVerified` می‌ماند. TPM emulator فقط برای تست قرارداد/پروتکل است و Hardware assurance محسوب نمی‌شود.
+- **مرز داده:** جدول و migration در دیتابیس مشتری از `Data.DatabaseContext` و `Infrastructure/Persistence/Migrations` است؛ هیچ تغییری در VendorDbContext/schema مجاز نیست. Migration روی دیتابیس واقعی/Production بدون برنامه backup و تأیید اپراتور اجرا نمی‌شود.
+- **Fail-closed:** نبود TPM، عدم دسترسی NV counter، mismatch، خطای integrity، pending غیرقابل بازیابی یا snapshot غایب/منقضی هرگز به `NotRevoked` تبدیل نمی‌شود. مسیر اعتبارسنجی لایسنس باید از validator آگاه از revocation استفاده کند.
+- **مراجع:** D-045، D-046، D-054، D-056؛ Issues #214 و #364؛ `OfflineRevocationConsumer`, `IOfflineRevocationStateStore`, `RevocationAwareLicenseEnvelopeValidator`.
