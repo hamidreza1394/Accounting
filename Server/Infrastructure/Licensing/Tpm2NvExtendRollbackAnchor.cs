@@ -80,20 +80,27 @@ public sealed class Tpm2NvExtendRollbackAnchor : IOfflineRevocationRollbackAncho
             return ExecuteTpm(tpm =>
             {
                 var index = CreateAuthorizedIndexHandle();
-                var current = ReadDigest(tpm, index);
-                if (!string.Equals(current, expectedCurrentDigest, StringComparison.Ordinal))
+                try
                 {
-                    throw new OfflineRevocationRollbackAnchorUnavailableException();
-                }
+                    var current = ReadDigest(tpm, index);
+                    if (!string.Equals(current, expectedCurrentDigest, StringComparison.Ordinal))
+                    {
+                        throw new OfflineRevocationRollbackAnchorUnavailableException();
+                    }
 
-                tpm.NvExtend(index, index, data);
-                var actual = ReadDigest(tpm, index);
-                if (!string.Equals(actual, expectedResultDigest, StringComparison.Ordinal))
+                    tpm.NvExtend(index, index, data);
+                    var actual = ReadDigest(tpm, index);
+                    if (!string.Equals(actual, expectedResultDigest, StringComparison.Ordinal))
+                    {
+                        throw new OfflineRevocationRollbackAnchorUnavailableException();
+                    }
+
+                    return actual;
+                }
+                finally
                 {
-                    throw new OfflineRevocationRollbackAnchorUnavailableException();
+                    CryptographicOperations.ZeroMemory(index.Auth);
                 }
-
-                return actual;
             });
         }, cancellationToken);
     }
@@ -101,7 +108,14 @@ public sealed class Tpm2NvExtendRollbackAnchor : IOfflineRevocationRollbackAncho
     private string ReadDigest(Tpm2 tpm)
     {
         var index = CreateAuthorizedIndexHandle();
-        return ReadDigest(tpm, index);
+        try
+        {
+            return ReadDigest(tpm, index);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(index.Auth);
+        }
     }
 
     private string ReadDigest(Tpm2 tpm, TpmHandle index)
@@ -185,9 +199,9 @@ public sealed class Tpm2NvExtendRollbackAnchor : IOfflineRevocationRollbackAncho
         }
     }
 
-    private static bool IsDigest(string value)
+    private static bool IsDigest(string? value)
     {
-        if (value.Length != 64)
+        if (string.IsNullOrEmpty(value) || value.Length != 64)
             return false;
 
         try
