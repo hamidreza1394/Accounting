@@ -222,3 +222,12 @@
 - قرارداد NV Extend و default provider unavailable/fail-closed ثبت شده است.
 - Adapter با Microsoft.TSS پیاده‌سازی شده است: Windows از TBS و Linux از device محلی strict استفاده می‌کند؛ LinuxTpmDevice کتابخانه استفاده نمی‌شود چون امکان fallback به simulator دارد. Runtime هیچ مسیر TCP یا simulator ندارد.
 - ابزار create-only provisioning برای Windows/TBS و Linux/tpm2-tools اضافه شده است؛ provisioning واقعی، secret delivery/rotation و تست روی TPM سخت‌افزاری هنوز NotVerified هستند. تا آن زمان هیچ نصب Production نباید این کنترل را فعال یا ادعای anti-rollback سخت‌افزاری کند.
+
+### 13.5 Customer runtime configuration contract
+
+- License signer public keys: Licensing:TrustedLicenseKeys:<kid> = Base64 ECDSA P-256 SubjectPublicKeyInfo.
+- Retired license signer IDs: Licensing:RetiredLicenseKeys:<kid> = true/false. A malformed flag is treated as untrusted.
+- Offline revocation public keys: Licensing:OfflineRevocation:TrustedKeys:<keyId> = Base64 ECDSA P-256 SubjectPublicKeyInfo. This trust set is independent from license-signing keys.
+- TPM configuration: Licensing:OfflineRevocation:Tpm:NvIndexOffset is the NV index offset (not the full 0x01xxxxxx handle); LinuxDevicePath is restricted to /dev/tpmrm0 or /dev/tpm0.
+- Licensing:OfflineRevocation:Tpm:NvIndexAuthValueBase64 is a secret and must be injected from deployment secret management. Never store it in appsettings.json, user-secrets checked into a profile, command line, logs or Git.
+- Server DI registers LicenseEnvelopeValidator and RevocationAwareLicenseEnvelopeValidator. A customer runtime call site must use RevocationAwareLicenseEnvelopeValidator, not LicenseEnvelopeValidator alone, to enforce revocation. If the TPM or current signed revocation snapshot is unavailable, the result is offline_revocation_unavailable and must not be treated as valid.
