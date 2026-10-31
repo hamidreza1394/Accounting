@@ -152,3 +152,22 @@ flowchart TD
 6. idempotency شامل licenseId و sequence امضاشده، به‌علاوهٔ تنظیمات و زیرسیستم مؤثر است. retry یک requestId قدیمی به revision تاریخی خودش متصل می‌ماند و به revision جدیدتر منتقل نمی‌شود.
 7. درخواست‌های تاریخی v3 نه backfill می‌شوند و نه به لایسنس حدس‌زده وصل می‌شوند. verifier مشتری همچنان v1-v3 را برای سازگاری بسته‌های قبلی می‌پذیرد؛ Vendor درخواست v3 را دوباره امضا یا Export نمی‌کند.
 8. MaxCompanies، افزودن زیرسیستم به شرکت موجود و تجمیع چند لایسنس NotImplemented هستند؛ هیچ کنترل ناقص یا تخمینی جایگزین آن‌ها نمی‌شود.
+
+
+## ۱۴) Add-on amendment، bootstrap و entitlement sync (D-059)
+
+### خرید افزونه
+1. Vendor سفارش/خرید افزونه را برای CustomerAccount و Installation مشخص ثبت می‌کند؛ Company scope برای Seat/Module/Feature صریح است.
+2. پس از کنترل تجاری و maker-checker لازم، amendment روی همان LicenseId صادر می‌شود؛ sequence از آخرین revision پذیرفته‌شده بزرگ‌تر است.
+3. payload دقیق امضا می‌شود؛ Customer signature، Installation binding، LicenseId و sequence را بررسی و اتمیک import می‌کند.
+4. replay، downgrade، amendment متعلق به نصب/شرکت دیگر و revision نامعتبر رد و ممیزی می‌شود.
+
+### bootstrap مدیر Offline و ساخت شرکت
+1. اولین مدیر در Customer Host رمز را محلی تعیین می‌کند؛ رمز یا hash از مرز Customer عبور نمی‌کند.
+2. bootstrap یک‌بارمصرف و اتمیک است؛ تا تکمیل آن login عادی ممنوع است.
+3. ساخت Company جدید با maxCompanies بررسی می‌شود؛ Cloud از authority مرکزی و Offline از entitlement امضاشده آخرین revision استفاده می‌کند.
+
+### همگام‌سازی
+- Online: درخواست/پاسخ احراز هویت‌شده و ضد replay؛ بدون ارسال داده حسابداری/رمز مدیر.
+- Offline: export/import فایل امضاشده با همان validation، sequence و binding.
+- قطع شبکه نباید license معتبر پذیرفته‌شده را باطل کند؛ usage داده نشده در Vendor stale است تا sync بعدی.
