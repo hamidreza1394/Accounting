@@ -101,6 +101,11 @@ public sealed class DatabaseModelTests
 		Assert.Equal(new[] { "Id", "InstallationId" },
 			installationAlternateKey.Properties.Select(property => property.Name).ToArray());
 
+		var installationAlternateKey = Assert.Single(
+			identity.GetKeys().Where(key => !key.IsPrimaryKey()));
+		Assert.Equal(new[] { "Id", "InstallationId" },
+			installationAlternateKey.Properties.Select(property => property.Name).ToArray());
+
 		var versionIndex = Assert.Single(identity.GetIndexes(), index =>
 			index.Properties.Select(property => property.Name)
 				.SequenceEqual(new[] { "InstallationId", "KeyVersion" }));
@@ -138,8 +143,10 @@ public sealed class DatabaseModelTests
 
 		var identityForeignKey = Assert.Single(license.GetForeignKeys(), key =>
 			key.PrincipalEntityType.ClrType == typeof(Domain.InstallationIdentity));
-		Assert.Equal(new[] { "InstallationIdentityId" },
+		Assert.Equal(new[] { "InstallationIdentityId", "InstallationId" },
 			identityForeignKey.Properties.Select(property => property.Name).ToArray());
+		Assert.Equal(new[] { "Id", "InstallationId" },
+			identityForeignKey.PrincipalKey.Properties.Select(property => property.Name).ToArray());
 		Assert.Equal(DeleteBehavior.Restrict, identityForeignKey.DeleteBehavior);
 
 		foreach (var columns in new[]
