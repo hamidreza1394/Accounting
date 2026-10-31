@@ -538,3 +538,12 @@
 - D-059 و نقشه اجرایی در LICENSING_IMPLEMENTATION_PLAN.md ثبت شده‌اند. وضعیت تصمیم Accepted است؛ قابلیت‌های #390–#394 تا زمان پیاده‌سازی و CI همچنان NotImplemented محسوب می‌شوند.
 - ترتیب اجرا: #390 قرارداد نسخه‌دار → #391 enforcement و #392 bootstrap/company creation → #393 add-on issuance → #394 online/offline sync.
 - PR #388 هنوز باز است؛ خطای CI روی head قبلی مشاهده شد؛ اصلاح build روی head جدید PR #388 اعمال شده و منتظر نتیجه CI جدید است. این PR هنوز startup revalidation یا runtime enforcement کامل را تحویل نمی‌دهد.
+
+
+## 2026-10-31 — D-060: معماری سه‌حوزه‌ای و License-first activation
+
+- مالک محصول سه مرز منطقی Vendor CRM & Commercial، Licensing & Entitlement Engine و Customer Deployment & Sync را تأیید کرد. این‌ها ماژول‌های مسئولیتی در Modular Monolith هستند؛ Microservice/DB جدا تحمیل نمی‌شود.
+- مسیر Customer باید پیش از Login وضعیت لایسنس را سمت سرور بررسی کند: بدون envelope → Activation Wizard؛ envelope معتبر → Login؛ Restricted → ورود محدود برای read/export/recovery؛ وضعیت نامعتبر → fail-closed/recovery.
+- فرم فعال‌سازی چندشرکتی Company referenceهای مجاز را از envelope می‌گیرد و زیرسیستم‌ها/Feature/Seat را فقط نمایش می‌دهد؛ مدیر محلی هر شرکت روی Customer Host ایجاد می‌شود و رمز هرگز به Vendor یا فایل انتقال نمی‌رود.
+- Offline exchange با .request.json و .license.json امضاشده است؛ .txt فقط wrapper متنی بایت‌های دقیق بسته است. QR فقط برای challenge کوچک/شناسه اختیاری است.
+- D-060 در DECISIONS.md و Issue #396 ثبت شده؛ تمام قابلیت‌های تازه Accepted / NotImplemented هستند. Issue #396 به #384/#390/#392/#394 وابسته است.
