@@ -86,18 +86,23 @@ public sealed class DevelopmentFileVendorAuditCheckpointStoreTests
         var path = Path.Combine(directory, "checkpoints.jsonl");
         Directory.CreateDirectory(directory);
 
-        var store = new DevelopmentFileVendorAuditCheckpointStore(path);
-        await using var heldLock = new FileStream(path + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
-        using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
-
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => store.ReadLatestAsync(cancellation.Token));
-
-        await heldLock.DisposeAsync();
-        Assert.Null(await store.ReadLatestAsync());
-
-        if (Directory.Exists(directory))
+        try
         {
-            Directory.Delete(directory, recursive: true);
+            var store = new DevelopmentFileVendorAuditCheckpointStore(path);
+            await using var heldLock = new FileStream(path + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => store.ReadLatestAsync(cancellation.Token));
+
+            await heldLock.DisposeAsync();
+            Assert.Null(await store.ReadLatestAsync());
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
         }
     }
 
