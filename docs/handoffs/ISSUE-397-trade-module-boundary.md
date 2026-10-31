@@ -19,7 +19,7 @@
 - ایجاد پروژه‌های Trade.Domain، Trade.Application و Trade.Infrastructure.
 - ایجاد TradeDbContext با default schema برابر trade؛ بدون DbSet یا جدول دوره مستقل.
 - تعریف ITradeAuthorization و ITradeModuleEntitlement به‌عنوان portهای host-provided.
-- افزودن تست‌های دامنه، مدل EF و guard جهت وابستگی پروژه‌ها.
+- افزودن تست‌های معماری برای نبود دوره مستقل Trade و guard جهت وابستگی پروژه‌ها.
 - ثبت D-061 و هم‌ترازی مستندات معماری/نقشه راه/ردیابی.
 
 ## فایل‌های مهم تغییرکرده
