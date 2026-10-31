@@ -1,4 +1,5 @@
 using System.Data;
+using Microsoft.Data.SqlClient;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -22,6 +23,8 @@ public sealed record CustomerLicenseImportResult(
 public sealed class CustomerLicenseImportService
 {
     private const int MaximumEnvelopeJsonLength = 300_000;
+    private const string ImportLockResource = "faranou:licensing:customer-import";
+    private const int LockTimeoutMilliseconds = 15_000;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly Data.DatabaseContext _database;
@@ -88,6 +91,13 @@ public sealed class CustomerLicenseImportService
                 transaction = await _database.Database.BeginTransactionAsync(
                     IsolationLevel.Serializable, cancellationToken);
 
+            if (!await TryAcquireTransactionLockAsync(cancellationToken))
+            {
+                await RollbackQuietlyAsync(transaction, cancellationToken);
+                return await RejectAsync("license_import_busy", localInstallationId,
+                    payload.LicenseId, actorUserId, cancellationToken);
+            }
+
             var identity = await _database.InstallationIdentities
                 .SingleOrDefaultAsync(item =>
                     item.InstallationId == localInstallationId &&
@@ -115,7 +125,8 @@ public sealed class CustomerLicenseImportService
                 current.Sequence == payload.Sequence &&
                 string.Equals(current.PayloadDigest, payloadDigest, StringComparison.Ordinal))
             {
-                await transaction?.CommitAsync(cancellationToken);
+                if (transaction is not null)
+                    await transaction.CommitAsync(cancellationToken);
                 return new CustomerLicenseImportResult(true, true, null, validation.Status);
             }
 
@@ -164,18 +175,21 @@ public sealed class CustomerLicenseImportService
                 new { payload.Sequence, payloadDigest, validation.Status }));
 
             await _database.SaveChangesAsync(cancellationToken);
-            await transaction?.CommitAsync(cancellationToken);
+            if (transaction is not null)
+                await transaction.CommitAsync(cancellationToken);
             return new CustomerLicenseImportResult(true, false, null, validation.Status);
         }
         catch (DbUpdateConcurrencyException)
         {
             await RollbackQuietlyAsync(transaction, cancellationToken);
+            _database.ChangeTracker.Clear();
             return await RejectAsync("license_import_concurrency_conflict",
                 localInstallationId, payload.LicenseId, actorUserId, cancellationToken);
         }
         catch (DbUpdateException exception)
         {
             await RollbackQuietlyAsync(transaction, cancellationToken);
+            _database.ChangeTracker.Clear();
             _logger.LogWarning(exception, "Customer license import conflicted with persisted state.");
             return await RejectAsync("license_import_conflict",
                 localInstallationId, payload.LicenseId, actorUserId, cancellationToken);
@@ -199,7 +213,8 @@ public sealed class CustomerLicenseImportService
             "LicenseImportRejected", installationId, licenseId, actorUserId,
             _timeProvider.GetUtcNow().UtcDateTime, new { errorCode }));
         await _database.SaveChangesAsync(cancellationToken);
-        await transaction?.CommitAsync(cancellationToken);
+        if (transaction is not null)
+            await transaction.CommitAsync(cancellationToken);
         return new CustomerLicenseImportResult(false, false, errorCode, LicenseStatus.Invalid);
     }
 
@@ -244,6 +259,29 @@ public sealed class CustomerLicenseImportService
             details
         }, JsonOptions)
     };
+
+    private async Task<bool> TryAcquireTransactionLockAsync(CancellationToken cancellationToken)
+    {
+        if (!_database.Database.IsSqlServer())
+            return true;
+
+        var result = new SqlParameter("@result", SqlDbType.Int)
+        {
+            Direction = System.Data.ParameterDirection.Output
+        };
+        await _database.Database.ExecuteSqlRawAsync(
+            "EXEC @result = sp_getapplock @Resource = @resource, @LockMode = 'Exclusive', " +
+            "@LockOwner = 'Transaction', @LockTimeout = @timeout;",
+            new object[]
+            {
+                result,
+                new SqlParameter("@resource", ImportLockResource),
+                new SqlParameter("@timeout", LockTimeoutMilliseconds)
+            },
+            cancellationToken);
+
+        return result.Value is int code && code >= 0;
+    }
 
     private static async Task RollbackQuietlyAsync(
         IDbContextTransaction? transaction,
