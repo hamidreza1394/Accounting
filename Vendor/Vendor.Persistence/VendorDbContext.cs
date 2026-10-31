@@ -13,6 +13,7 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
     public DbSet<VendorAuditEvent> AuditEvents => Set<VendorAuditEvent>();
     public DbSet<Domain.VendorCustomer> Customers => Set<Domain.VendorCustomer>();
     public DbSet<Domain.VendorInstallation> Installations => Set<Domain.VendorInstallation>();
+    public DbSet<Domain.VendorInstallationIdentity> InstallationIdentities => Set<Domain.VendorInstallationIdentity>();
     public DbSet<Domain.VendorContract> Contracts => Set<Domain.VendorContract>();
     public DbSet<Domain.VendorLicense> Licenses => Set<Domain.VendorLicense>();
     public DbSet<Domain.VendorApprovalRequest> ApprovalRequests => Set<Domain.VendorApprovalRequest>();
@@ -92,6 +93,37 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
             entity.HasIndex(item => item.CustomerId);
             entity.HasOne(item => item.Customer).WithMany(customer => customer.Installations)
                 .HasForeignKey(item => item.CustomerId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<Domain.VendorInstallationIdentity>(entity =>
+        {
+            entity.ToTable("VendorInstallationIdentities", table =>
+            {
+                table.HasCheckConstraint("CK_VendorInstallationIdentities_KeyVersion", "[KeyVersion] >= 1");
+                table.HasCheckConstraint("CK_VendorInstallationIdentities_State", "[State] IN (N'Current', N'Retired')");
+                table.HasCheckConstraint("CK_VendorInstallationIdentities_AssuranceProvider",
+                    "([AssuranceLevel] = 'HardwareTpm' AND [ProviderName] = 'Microsoft Platform Crypto Provider') OR ([AssuranceLevel] = 'SoftwareProtected' AND [ProviderName] = 'Microsoft Software Key Storage Provider')");
+                table.HasCheckConstraint("CK_VendorInstallationIdentities_SoftwareConsent",
+                    "([AssuranceLevel] = 'SoftwareProtected' AND [SoftwareProviderRiskAcceptedAtUtc] IS NOT NULL AND [SoftwareProviderRiskAcceptedBy] IS NOT NULL AND [SoftwareProviderConsentReceiptJson] IS NOT NULL) OR ([AssuranceLevel] = 'HardwareTpm' AND [SoftwareProviderRiskAcceptedAtUtc] IS NULL AND [SoftwareProviderRiskAcceptedBy] IS NULL AND [SoftwareProviderConsentReceiptJson] IS NULL)");
+            });
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.KeyId).HasMaxLength(128).IsUnicode(false).IsRequired();
+            entity.Property(item => item.ProviderName).HasMaxLength(100).IsUnicode(false).IsRequired();
+            entity.Property(item => item.AssuranceLevel).HasMaxLength(24).IsUnicode(false).IsRequired();
+            entity.Property(item => item.OsInstallationMarkerDigest).HasMaxLength(64).IsUnicode(false).IsFixedLength().IsRequired();
+            entity.Property(item => item.PublicKeyFingerprint).HasMaxLength(64).IsUnicode(false).IsFixedLength().IsRequired();
+            entity.Property(item => item.PublicKeySubjectPublicKeyInfoBase64).HasMaxLength(512).IsUnicode(false).IsRequired();
+            entity.Property(item => item.SoftwareProviderRiskAcceptedBy).HasMaxLength(256);
+            entity.Property(item => item.SoftwareProviderConsentReceiptJson).HasMaxLength(2048);
+            entity.Property(item => item.State).HasMaxLength(16).IsUnicode(false).IsRequired();
+            entity.Property(item => item.RegisteredAtUtc).IsRequired();
+            entity.Property(item => item.RowVersion).IsRowVersion();
+            entity.HasIndex(item => new { item.InstallationId, item.KeyVersion }).IsUnique();
+            entity.HasIndex(item => item.KeyId).IsUnique();
+            entity.HasIndex(item => item.PublicKeyFingerprint).IsUnique();
+            entity.HasIndex(item => item.InstallationId).IsUnique().HasFilter("[State] = N'Current'");
+            entity.HasOne<Domain.VendorInstallation>().WithMany()
+                .HasForeignKey(item => item.InstallationId).OnDelete(DeleteBehavior.Restrict);
         });
 
         builder.Entity<Domain.VendorContract>(entity =>
