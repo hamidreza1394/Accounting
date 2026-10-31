@@ -480,6 +480,11 @@ public sealed class TpmAnchoredOfflineRevocationStateStore : IOfflineRevocationS
             var expiresAt = document.RootElement.GetProperty("expiresAtUtc").GetDateTimeOffset();
             if (expiresAt <= now)
             {
+                if (expiresAt <= DateTimeOffset.MinValue.AddTicks(1))
+                {
+                    return false;
+                }
+
                 validationTime = expiresAt.AddTicks(-1);
             }
         }
