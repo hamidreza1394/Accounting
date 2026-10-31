@@ -30,7 +30,7 @@ public sealed class VendorOfflineRevocationSnapshotModelTests
         Assert.NotNull(sequence);
         Assert.Equal("VendorOfflineRevocationSequences", sequence!.GetTableName());
         var seed = Assert.Single(sequence.GetSeedData());
-        Assert.Equal(1, seed[nameof(Domain.VendorOfflineRevocationSequence.Id)]);
-        Assert.Equal(0L, seed[nameof(Domain.VendorOfflineRevocationSequence.LastSequence)]);
+        Assert.Equal(1, (int)seed[nameof(Faranou.Vendor.Persistence.Domain.VendorOfflineRevocationSequence.Id)]!);
+        Assert.Equal(0L, (long)seed[nameof(Faranou.Vendor.Persistence.Domain.VendorOfflineRevocationSequence.LastSequence)]!);
     }
 }
