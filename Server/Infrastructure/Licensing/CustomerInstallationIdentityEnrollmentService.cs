@@ -79,7 +79,6 @@ public sealed class CustomerInstallationIdentityEnrollmentService
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var identity = new Domain.InstallationIdentity
         {
-            Id = Guid.NewGuid(),
             InstallationId = _installationId,
             KeyId = metadata.KeyId,
             KeyVersion = _keyOptions.KeyVersion,
@@ -87,7 +86,7 @@ public sealed class CustomerInstallationIdentityEnrollmentService
             AssuranceLevel = metadata.Assurance.ToString(),
             OsInstallationMarkerDigest = metadata.OsInstallationMarkerDigest,
             PublicKeyFingerprint = metadata.PublicKeyFingerprint,
-            PublicKeySubjectPublicKeyInfoBase64 = Convert.ToBase64String(metadata.PublicKeySubjectPublicKeyInfo),
+            PublicKeySubjectPublicKeyInfoBase64 = System.Convert.ToBase64String(metadata.PublicKeySubjectPublicKeyInfo),
             SoftwareProviderRiskAcceptedAtUtc = metadata.Assurance == LicenseInstallationKeyAssurance.SoftwareProtected
                 ? now
                 : null,
@@ -237,7 +236,7 @@ public sealed class CustomerInstallationIdentityEnrollmentService
         EntityType = "InstallationIdentity",
         EntityId = identity is null
             ? null
-            : Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity.InstallationId))).ToLowerInvariant(),
+            : System.Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity.InstallationId))).ToLowerInvariant(),
         OccurredAtUtc = occurredAtUtc,
         DetailsJson = JsonSerializer.Serialize(new
         {
