@@ -64,6 +64,9 @@ public static class ApiEndpoints
 		api.MapPost("/provisioning/apply", ApplyProvisioningAsync)
 			.RequireAuthorization(policy => policy.RequireClaim("AccountKind", "Infrastructure"))
 			.RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+		api.MapPost("/licensing/import", ImportCustomerLicenseAsync)
+			.RequireAuthorization(policy => policy.RequireClaim("AccountKind", "Infrastructure"))
+			.RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
 
 		return endpoints;
 	}
@@ -367,6 +370,55 @@ public static class ApiEndpoints
 				.ToList()));
 	}
 
+	/// <summary>Imports a customer license for the installation configured by the server, never by the request.</summary>
+	public static async Task<IResult> ImportCustomerLicenseAsync(
+		HttpContext httpContext,
+		[FromBody] CustomerLicenseImportRequest request,
+		[FromServices] IAntiforgery antiforgery,
+		[FromServices] Infrastructure.Licensing.CustomerLicenseImportService importService,
+		[FromServices] Microsoft.Extensions.Options.IOptions<Infrastructure.Provisioning.CustomerProvisioningSettings> settings,
+		CancellationToken cancellationToken)
+	{
+		if (!await antiforgery.IsRequestValidAsync(httpContext))
+			return TypedResults.Problem(title: "درخواست نامعتبر است.", statusCode: StatusCodes.Status400BadRequest);
+
+		httpContext.Response.Headers.CacheControl = "no-store";
+		httpContext.Response.Headers.Pragma = "no-cache";
+
+		var installationId = settings.Value.InstallationId;
+		if (string.IsNullOrWhiteSpace(installationId))
+			return TypedResults.Problem(title: "هویت نصب پیکربندی نشده است.", statusCode: StatusCodes.Status503ServiceUnavailable);
+
+		var userIdValue = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+		if (!Guid.TryParse(userIdValue, out var userId))
+			return TypedResults.Unauthorized();
+
+		var result = await importService.ImportAsync(
+			request.EnvelopeJson ?? string.Empty,
+			installationId,
+			userId,
+			cancellationToken);
+
+		if (result.Success)
+			return TypedResults.Ok(new
+			{
+				result.AlreadyInstalled,
+				Status = result.Status?.ToString()
+			});
+
+		var statusCode = result.ErrorCode is "license_audit_unavailable" or
+			"installation_identity_proof_unavailable" or "offline_revocation_unavailable"
+			? StatusCodes.Status503ServiceUnavailable
+			: result.ErrorCode == "license_import_busy"
+				? StatusCodes.Status409Conflict
+				: StatusCodes.Status400BadRequest;
+
+		return TypedResults.Problem(
+			title: "فعال‌سازی مجوز انجام نشد.",
+			detail: result.ErrorCode,
+			statusCode: statusCode);
+	}
+
 	private static bool IsCompanyUser(ClaimsPrincipal user)
 	{
 		return string.Equals(
@@ -394,7 +446,7 @@ public sealed record SessionResponse(
 public sealed record CompleteProvisioningEnrollmentRequest(
 	string? Username, string? EnrollmentToken, string? NewPassword);
 
-public sealed record ReissueProvisioningEnrollmentRequest(string? ReasonCode);
+public sealed record ReissueProvisioningEnrollmentRequest(string? ReasonCode);\n\npublic sealed record CustomerLicenseImportRequest(string? EnvelopeJson);
 
 public sealed record AntiforgeryTokenResponse(
 	string HeaderName,
