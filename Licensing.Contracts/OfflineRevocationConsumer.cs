@@ -94,9 +94,9 @@ public sealed record OfflineRevocationApplyResult(bool Success, long? AcceptedSe
 }
 
 /// <summary>
-/// Verifies and applies signed offline revocation snapshots. The state store is the atomic
-/// anti-replay boundary; this class does not claim rollback protection if that store is restored
-/// from an older backup or shares the same rollback domain as the customer database.
+/// Verifies and applies signed offline revocation snapshots. Sequence replay protection is
+/// provided by the state store. Backup rollback protection is provided only when the store is
+/// backed by a hardware TPM NV Extend anchor outside the customer database backup domain.
 /// </summary>
 public sealed class OfflineRevocationConsumer
 {
