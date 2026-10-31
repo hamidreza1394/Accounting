@@ -12,6 +12,7 @@
 - [x] TPM NV Extend abstraction و hash-chain generation binding افزوده شد.
 - [x] SQL Server session application lock برای serialization بین پردازه‌ها افزوده شد.
 - [x] fail-closed default provider و dedicated revocation public-key resolver ثبت شدند.
+- [x] customer license trust resolver و DI برای RevocationAwareLicenseEnvelopeValidator ثبت شدند.
 - [x] Backend Windows TBS با Microsoft.TSS برای TPM NV Extend اضافه شد.
 - [x] Backend Linux local TPM device بدون simulator fallback اضافه شد.
 - [x] ابزار create-only provisioning برای Windows/TBS اضافه شد.
@@ -19,7 +20,7 @@
 - [ ] اجرای provisioning و secret delivery/rotation عملیاتی روی سخت‌افزار واقعی.
 - [ ] اجرای تست‌های SQL Server و CI روی آخرین SHA.
 - [ ] تست واقعی روی TPM سخت‌افزاری Windows 10/11، Windows Server و Linux.
-- [ ] runtime enforcement در مسیر نهایی LicenseEvaluator/host پس از تأیید provider.
+- [ ] انتقال همهٔ call-siteهای runtime مشتری به RevocationAwareLicenseEnvelopeValidator و اثبات enforcement.
 
 ## خلاصه تغییرات
 - Entity و جدول CustomerOfflineRevocationStates در Customer Database.
@@ -37,6 +38,7 @@
 - Infrastructure/Persistence/Migrations/20261031120000_AddCustomerOfflineRevocationState.Designer.cs
 - Licensing.Contracts/OfflineRevocationConsumer.cs
 - Server/Infrastructure/Licensing/OfflineRevocationTrustProviders.cs
+- Server/Infrastructure/Licensing/ConfigurationLicenseTrustStore.cs
 - Server/Infrastructure/Licensing/Tpm2NvExtendRollbackAnchor.cs
 - Server/Program.cs
 - tools/TpmNvIndexProvisioner/Program.cs
