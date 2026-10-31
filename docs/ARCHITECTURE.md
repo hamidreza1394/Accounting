@@ -175,7 +175,7 @@ flowchart LR
 - طبق D-013، Global Query Filter عمداً مرز امنیتی نیست؛ queryهای Trade باید TenantId تأییدشده را صریحاً اعمال کنند.
 - Company access از CompanyAccessService adapter می‌شود؛ شناسه‌های کلاینت فقط درخواست‌اند، نه منبع مجوز.
 - TRADE_IMPORT entitlement تجاری است و از permissionهای فرم/عملیات/گزارش جدا می‌ماند.
-- دوره عملیاتی Trade موجودیت مستقل است؛ از FiscalPeriod حسابداری استفاده نمی‌کند. وضعیت دوره، permission دوره و permission فرم جداگانه بررسی می‌شوند.
+- Trade از همان `Domain.FiscalPeriod` و `WorkContext` هسته استفاده می‌کند؛ هیچ موجودیت یا انتخابگر دوره مستقل ندارد (D-062). مجوزهای تخصصی فرم/عملیات بازرگانی در کاتالوگ مشترک نقش‌های شرکت تعریف می‌شوند؛ وضعیت دوره طبق `FiscalPeriodSelectionPolicy` مشترک است.
 - گزارش چندشرکتی all-or-nothing است: هر شرکت داخل scope باید مجوز لازم داشته باشد؛ scope خالی یا دسترسی جزئی رد می‌شود.
 
 ### استخراج آینده
