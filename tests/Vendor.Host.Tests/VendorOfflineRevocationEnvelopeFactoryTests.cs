@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using Faranou.Licensing.Contracts;
 using Faranou.Vendor.Host.Signing;
 using Xunit;
+using Microsoft.AspNetCore.Http;
 
 namespace Faranou.Vendor.Host.Tests;
 
@@ -52,6 +53,7 @@ public sealed class VendorOfflineRevocationEnvelopeFactoryTests
 
         Assert.False(result.Succeeded);
         Assert.Equal("offline_revocation_signing_key_untrusted", result.ErrorCode);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, result.StatusCode);
         Assert.Null(result.Envelope);
     }
 
@@ -70,6 +72,7 @@ public sealed class VendorOfflineRevocationEnvelopeFactoryTests
 
         Assert.False(result.Succeeded);
         Assert.Equal("offline_revocation_signature_invalid", result.ErrorCode);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, result.StatusCode);
         Assert.Null(result.Envelope);
     }
 
