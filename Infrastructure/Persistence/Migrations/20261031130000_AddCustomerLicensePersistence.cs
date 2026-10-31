@@ -37,6 +37,7 @@ namespace Data.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_InstallationIdentities", x => x.Id);
+                    table.UniqueConstraint("AK_InstallationIdentities_Id_InstallationId", x => new { x.Id, x.InstallationId });
                 });
 
             migrationBuilder.CreateTable(
@@ -66,9 +67,9 @@ namespace Data.Migrations
                     table.PrimaryKey("PK_InstalledLicenses", x => x.Id);
                     table.ForeignKey(
                         name: "FK_InstalledLicenses_InstallationIdentities_InstallationIdentityId",
-                        column: x => x.InstallationIdentityId,
+                        columns: x => new { x.InstallationIdentityId, x.InstallationId },
                         principalTable: "InstallationIdentities",
-                        principalColumn: "Id",
+                        principalColumns: new[] { "Id", "InstallationId" },
                         onDelete: ReferentialAction.Restrict);
                 });
 
@@ -111,9 +112,9 @@ namespace Data.Migrations
                 filter: "[State] = 'Current'");
 
             migrationBuilder.CreateIndex(
-                name: "IX_InstalledLicenses_InstallationIdentityId",
+                name: "IX_InstalledLicenses_InstallationIdentityId_InstallationId",
                 table: "InstalledLicenses",
-                column: "InstallationIdentityId");
+                columns: new[] { "InstallationIdentityId", "InstallationId" });
 
             migrationBuilder.Sql("ALTER TABLE [InstallationIdentities] ADD CONSTRAINT [CK_InstallationIdentities_AssuranceLevel] CHECK ([AssuranceLevel] IN ('HardwareTpm', 'SoftwareProtected'));");
             migrationBuilder.Sql("ALTER TABLE [InstallationIdentities] ADD CONSTRAINT [CK_InstallationIdentities_State] CHECK ([State] IN ('Current', 'Retired', 'ReactivationRequired'));");
