@@ -1796,3 +1796,9 @@
 - Build، تست .NET، تست SQL Server، `generate_migrations.py --check`، `verify_migration_model.py` و `git diff --check` در این محیط اجرا نشده‌اند؛ هیچ نتیجه Verified ادعا نمی‌شود. Migration روی دیتابیس مشتری اجرا نشده است.
 
 - **اصلاح CI پس از اولین Build:** اجرای .NET CI روی commit `b755c2b` با خطای `CS0272` در تست SQL Server شکست خورد؛ تست به‌اشتباه setter محافظت‌شده `Entity.Id` را مقداردهی می‌کرد. تست اصلاح شد تا شناسه از سازنده `PermissionDefinition` گرفته شود (commit `17229c2`). اجرای CI روی head جدید هنوز مشاهده نشده و تا آن زمان Verified نیست.
+## 2026-10-31 — S1-a: دروازه دسترسی fail-closed ماژول Trade (Issue #403)
+
+- `ITradeAuthorization` به دو مرحله شکسته شد (`ResolveCurrentContextAsync` و `HasPermissionAsync(TradeAccessContext, …)`) تا entitlement میان اعتبارسنجی دوره و مجوز قرار گیرد؛ context فقط با `ReferenceEquals` همان درخواست پذیرفته می‌شود.
+- `TradeAccessGate`، `DenyAllTradeModuleEntitlement` (تنها پیاده‌سازی `ITradeModuleEntitlement` در Server)، `TradeAccessFilter` و `GET /api/v1/trade/capabilities` افزوده شدند؛ endpoint بدون متادیتای صریح Trade رد می‌شود.
+- تست‌های Gate، adapter، معماری (هر endpoint Trade دارای دروازه) و HTTP افزوده شدند؛ fake مجازکننده فقط در tests/ است.
+- اتصال به envelope امضاشده انجام نشد (Blocked: #390، #384/#391). Migration یا تغییر داده انجام نشد. CI و SQL Server اجرا نشد.

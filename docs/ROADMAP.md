@@ -210,6 +210,7 @@
 
 ### S1 — امنیت دسترسی و فعال‌سازی ماژول
 - [ ] اتصال ITradeModuleEntitlement به Licensing runtime و entitlement شرکت‌محور TRADE_IMPORT؛ fail-closed در Production.
+  - S1-a (Issue #403): دروازه، پیش‌فرض DenyAll، route gating و capabilities پیاده‌سازی شده‌اند (Implemented، CI تأییدنشده). اتصال به envelope امضاشده `Blocked` است تا ادغام #390 (قرارداد entitlement شرکتی) و تأمین حالت لایسنس runtime (#384/#391).
 - [ ] تعریف PermissionDefinitions با کدهای پایدار فرم/عملیات/گزارش و seed ایدمپوتنت؛ عدم ایجاد role/permission store موازی.
 - [ ] API و route gating سمت سرور؛ ترتیب کنترل نشست، membership، WorkContext/FiscalPeriod، entitlement، permission و سپس use case.
 - [ ] تست منفی کاربر بدون entitlement، کاربر بدون permission، شرکت/دوره بیگانه، دوره Closed و دستکاری شناسه‌ها.
