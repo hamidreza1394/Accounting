@@ -26,6 +26,8 @@
 
 ## فایل‌های مهم تغییرکرده
 - Modules/Trade/** — foundation ماژول.
+- Server/Infrastructure/Trade/TradeAuthorizationAdapter.cs، Server/Program.cs و Server/Server.csproj — adapter مجوز و ثبت Host.
+- Modules/Trade/Trade.Application/Authorization/TradeAccessIntent.cs — تعیین صریح read/write.
 - tests/Template.Tests/TradeModuleFoundationTests.cs — تست معماری نبود دوره مستقل و مرز وابستگی.
 - tests/Template.Tests/TradeAuthorizationAdapterTests.cs — تست‌های مجوز دوره باز/بسته، شرکت/دوره بیگانه، کاربر و scope چندشرکتی.
 - Template.sln و tests/Template.Tests/Template.Tests.csproj — اتصال پروژه‌ها به build/test.
