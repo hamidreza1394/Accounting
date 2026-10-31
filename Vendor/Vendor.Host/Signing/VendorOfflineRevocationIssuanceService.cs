@@ -130,7 +130,8 @@ public sealed class VendorOfflineRevocationIssuanceService(
             throw new InvalidOperationException("License revocation must run inside the approval transaction.");
 
         if (approval.ResourceType != "license" || approval.TargetStatus != "Revoked" ||
-            approval.Status != "Pending" || approval.RequestedByUserId == reviewerUserId ||
+            approval.Status != "Pending" || reviewerUserId == Guid.Empty ||
+            approval.RequestedByUserId == reviewerUserId ||
             approval.ResourceId == Guid.Empty || expectedApprovalVersion.Length != 8 ||
             !approval.RowVersion.AsSpan().SequenceEqual(expectedApprovalVersion))
             return VendorOfflineRevocationIssuanceResult.Conflict("stale_approval_version");
