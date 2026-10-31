@@ -17,7 +17,7 @@ public sealed class CustomerLicenseImportServiceTests
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     [Fact]
-    public async Task ImportAsync_PersistsValidatedEnvelopeAndAuditAtomically()
+    public async Task ImportAsync_PersistsValidatedEnvelopeAndAudit()
     {
         await using var database = CreateDatabase();
         var identity = AddCurrentIdentity(database);
