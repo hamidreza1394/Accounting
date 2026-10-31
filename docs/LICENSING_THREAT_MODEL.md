@@ -180,3 +180,16 @@
 - **T40 — اختلاط authority مرکزی و محلی:** Cloud entitlement را server-side resolve می‌کند؛ Offline آخرین revision امضاشده پذیرفته‌شده را حفظ می‌کند. قطع شبکه مجوز معتبر را باطل نمی‌کند. Vendor هرگز مستقیماً به Customer DB وصل نمی‌شود.
 - **T41 — داده مصرف آفلاین stale به‌عنوان real-time:** usage آفلاین تا sync بعدی stale است؛ Vendor UI باید LastSyncedAt/freshness را نمایش دهد و آن را به‌عنوان وضعیت زنده نشان ندهد.
 - **T42 — تغییر سیاست با کاهش entitlement:** Seat reduction برابر block-new و feature limit reduction برابر منع create/expand است؛ هیچ کاهش entitlement مجوز پاک‌کردن داده یا deactivate خودکار membership نیست.
+
+
+## تهدیدهای Activation Wizard و سه حوزه D-060 (2026-10-31)
+
+- **T43 — دور زدن License-first gate با URL/API مستقیم:** gate فقط در React نباشد؛ server middleware/endpoint policy روی مسیرهای ورود/کار عادی enforce شود. فقط activation، health و recovery محدود در حالت Unlicensed مجازند. تست مستقیم URL و API لازم است.
+- **T44 — اشتباه گرفتن Unlicensed با Restricted یا Invalid:** stateها مجزا باشند. Restricted باید دسترسی محدود read/export/recovery را حفظ کند؛ InvalidOrUntrusted fail-closed شود؛ نبود envelope تنها حالت Activation Wizard است.
+- **T45 — افشای credential مدیر Company:** password/password hash/token فقط در Customer Identity store؛ نه Vendor CRM، نه License/Provisioning/Sync package، نه audit/log/telemetry. Secret-canary tests الزامی‌اند.
+- **T46 — دستکاری entitlement در فرم چندشرکتی:** Company names و local admin fields داده محلی‌اند؛ module/feature/seats/maxCompanies فقط از signed envelope. server-side revalidation مانع over-posting و تغییر entitlement می‌شود.
+- **T47 — افشای کلید خصوصی در Offline key exchange:** فقط public SPKI و proof-of-possession در request file؛ private key non-exportable در Customer Host. متن .txt فقط wrapper بایت‌های signed package است، نه کلید قابل کپی.
+- **T48 — تغییر بایت‌های signed package در انتقال متنی:** Base64/armored decode باید بایت‌های دقیق original را برگرداند؛ هیچ reserialize/canonicalize پس از امضا. payload hash، signature و exact bytes validate شود.
+- **T49 — درخواست آفلاین تکراری/منقضی/برای نصب دیگر:** nonce/request ID، InstallationId، expiry، key version، sequence و idempotency در درخواست و پاسخ bind شوند؛ duplicate یک نتیجه را بازگرداند و replay/wrong-install رد شود.
+- **T50 — تداخل مسئولیت سه حوزه:** Commercial حق صدور/تغییر entitlement بدون Engine approval/signing ندارد؛ Engine نباید password یا accounting data نگهدارد؛ Deployment/Sync فقط قرارداد امضاشده را مصرف کند و Vendor به Customer DB وصل نشود.
+- **T51 — downgrade یا stale response در فایل آفلاین:** Customer بالاترین sequence پذیرفته‌شده را durable نگه دارد؛ پاسخ قدیمی/نامرتبط reject شود. ACK و usage نیز idempotent و دارای freshness باشند.
