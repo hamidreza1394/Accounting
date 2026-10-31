@@ -94,7 +94,14 @@
 ## 2026-10-31 — فعال‌سازی پایدار و کنترل Cloud (D-058 / Issue #384)
 - مالک محصول تأیید کرد هر LicenseEnvelope برای هر Installation فقط یک‌بار وارد شود؛ Restart/reboot/recycle برنامه یا سرویس نباید باعث درخواست مجدد فایل لایسنس یا قفل شود.
 - نصب مشتری باید envelope امضاشده و وضعیت نصب را به‌صورت durable نگه دارد و در startup/نقاط سیاست سرور دوباره اعتبارسنجی کند. وجود ردیف DB به‌تنهایی اعتبار نیست.
-- در نصب اختصاصی Windows، OS reinstall/re-image که هویت OS installation را تغییر دهد نیازمند reactivation است؛ Windows servicing/patch و restart نباید فعال‌سازی را بی‌دلیل باطل کنند. MachineGuid به‌تنهایی کافی نیست؛ binding باید با کلید نصب غیرقابل‌export و provider امن ترکیب شود. جزئیات OD-08 هنوز NeedsApproval است.
+- در نصب اختصاصی Windows، OS reinstall/re-image که هویت OS installation را تغییر دهد نیازمند reactivation است؛ Windows servicing/patch و restart نباید فعال‌سازی را بی‌دلیل باطل کنند. MachineGuid به‌تنهایی کافی نیست؛ binding باید با کلید نصب غیرقابل‌export و provider امن ترکیب شود. انتخاب provider در OD-08 با D-058 پذیرفته شده؛ recovery کلید همچنان باز است.
 - در Cloud، مرجع نهایی entitlement و license در سرور است؛ React/browser فقط projection هستند. درخواست حسابداری نباید برای هر عملیات یک تماس جداگانه به Vendor داشته باشد.
 - D-046 پابرجاست: نصب اختصاصی آفلاین معتبر با قطع اینترنت باطل نمی‌شود. Cloud-hosted server از مرجع server-side خود استفاده می‌کند.
 - **وضعیت پیاده‌سازی:** این‌ها تصمیم پذیرفته‌شده و دامنه Issue #384 هستند؛ import/storage، installation binding و enforcement هنوز NotImplemented. هیچ Migration یا کد اجرایی در این ثبت تصمیم انجام نشده است.
+
+## Windows customer installation identity — D-058 / OD-08
+- مسیر پیش‌فرض کلید هویت نصب، CNG با TPM 2.0 و Microsoft Platform Crypto Provider است؛ کلید ECDSA P-256، machine-scoped و non-exportable است.
+- مسیر جایگزین Microsoft Software Key Storage Provider با حفاظت Windows software key store/DPAPI فقط با تأیید صریح اپراتور در ceremony مجاز است؛ سطح اطمینان `SoftwareProtected` پایین‌تر از `HardwareTpm` ثبت می‌شود و fallback خودکار ممنوع است.
+- فرمان provisioning فقط metadata و public SPKI را چاپ می‌کند: `dotnet Server.dll --license-installation-key create`. برای مسیر نرم‌افزاری باید `--confirm-software-provider-risk` نیز صریحاً داده شود و ProviderName در configuration به Software KSP انتخاب شده باشد.
+- این فرمان باید با هویت/ACL سازگار با حساب اجرای سرویس اجرا شود. فرمان کلید موجود را overwrite نمی‌کند؛ rotation نیازمند KeyVersion جدید و مسیر کنترل‌شده است.
+- کد این PR هنوز persistence و audit consent را در دیتابیس کامل نمی‌کند؛ تا آن زمان خروجی command به‌تنهایی فعال‌سازی License نیست.

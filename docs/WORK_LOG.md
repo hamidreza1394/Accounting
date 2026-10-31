@@ -1695,3 +1695,10 @@
 - در Cloud، مرجع نهایی بررسی license/entitlements سمت سرور است و Client/React فقط وضعیت را نمایش می‌دهد؛ برای هر درخواست حسابداری تماس مجزا با Vendor انجام نمی‌شود.
 - Issue #384 ایجاد شد. D-058 و اسناد طرح/تهدید/مدل داده به‌روزرسانی شدند.
 - این PR فقط تصمیم و مستندات است؛ هیچ کد اجرایی، schema، Migration یا تست اجرایی اضافه نشده است. OD-08 و OD-06 و OD-03/04/05 همچنان نیازمند تعیین تکلیف‌اند.
+
+## 2026-10-31 — Issue #384: تأیید سیاست provider کلید نصب و شروع پیاده‌سازی
+- مالک محصول تأیید کرد TPM 2.0 مسیر ترجیحی و Software CNG + DPAPI فقط با تأیید صریح و Assurance پایین‌تر باشد.
+- Issue #384 comment ثبت شد؛ PR کاری از head مستندات #385 ساخته شد.
+- تست‌های Windows CNG برای رد software بدون consent، کلید non-exportable، امضای challenge و خواندن مجدد کلید پس از restart افزوده شد.
+- پیاده‌سازی اولیه در PR کاری شامل CNG key provisioner، metadata شامل OS MachineGuid digest و public-key fingerprint، و فرمان مستقل `--license-installation-key create` است. فرمان هیچ private key را خروجی نمی‌دهد و کلید را خودکار در startup ایجاد نمی‌کند.
+- هنوز تست/build CI برای این PR اجرا نشده؛ persistence دیتابیس و audit consent در PRهای بعدی Issue #384 تکمیل می‌شود. تست TPM واقعی انجام نشده است.

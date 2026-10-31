@@ -31,7 +31,7 @@
 - OS reinstall identity change باید reactivation ایجاد کند؛ patch/servicing نباید.
 - MachineGuid به‌تنهایی هویت امن نیست؛ secure key binding لازم است.
 - Cloud تصمیم را server-side می‌گیرد؛ UI مرجع نیست.
-- OD-08 و OD-06 هنوز بازند.
+- انتخاب provider در OD-08 طبق D-058 پذیرفته شد؛ recovery کلید و انتقال/restore در OD-06/OD-08 هنوز بازند.
 
 ## بررسی و آزمون
 | فرمان/آزمون | نتیجه واقعی | توضیح |
@@ -55,3 +55,9 @@
 - Branch: docs/issue-384-restart-safe-license-activation
 - Commit: در PR درج می‌شود.
 - Pull Request: در انتظار ایجاد.
+
+## تکمیل تصمیم OD-08 — سیاست کلید نصب
+- مالک محصول تأیید کرد TPM 2.0 / Microsoft Platform Crypto Provider مسیر پیش‌فرض باشد.
+- Software KSP با DPAPI فقط با flag صریح `--confirm-software-provider-risk` در ceremony مجاز است؛ AssuranceLevel باید `SoftwareProtected` و پایین‌تر از `HardwareTpm` ثبت شود.
+- PR کاری فعلی: `feat/issue-384-windows-license-installation-key`. تغییرات شامل Windows CNG provisioner، فرمان یک‌باره و تست‌های Windows CNG است.
+- این PR هنوز Build/Test/CI نشده؛ Migration، persistence consent/audit، import/replace و runtime enforcement باقی‌اند.

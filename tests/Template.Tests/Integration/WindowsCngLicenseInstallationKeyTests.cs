@@ -1,0 +1,129 @@
+using System;
+using System.Runtime.Versioning;
+using System.Security.Cryptography;
+using System.Text;
+using Infrastructure.Licensing;
+using Xunit;
+
+namespace Template.Tests.Integration;
+
+[SupportedOSPlatform("windows")]
+public sealed class WindowsCngLicenseInstallationKeyTests
+{
+    private const string SoftwareKsp = "Microsoft Software Key Storage Provider";
+
+    [Fact]
+    public void SoftwareProvider_RequiresExplicitConsent()
+    {
+        Assert.SkipWhen(!OperatingSystem.IsWindows(), "Windows CNG is available only on Windows.");
+
+        var installationId = "license-test-" + Guid.NewGuid().ToString("N");
+        var options = new WindowsCngLicenseInstallationKeyOptions
+        {
+            ProviderName = SoftwareKsp,
+            KeyVersion = 1,
+            MachineKey = false,
+        };
+
+        Assert.Throws<InvalidOperationException>(() =>
+            WindowsCngLicenseInstallationKeyProvisioner.Create(
+                options, installationId, confirmSoftwareProviderRisk: false));
+    }
+
+    [Fact]
+    public void SoftwareProvider_CreatesNonExportableKey_AndSignsChallenge()
+    {
+        Assert.SkipWhen(!OperatingSystem.IsWindows(), "Windows CNG is available only on Windows.");
+
+        var installationId = "license-test-" + Guid.NewGuid().ToString("N");
+        var options = new WindowsCngLicenseInstallationKeyOptions
+        {
+            ProviderName = SoftwareKsp,
+            KeyVersion = 1,
+            MachineKey = false,
+        };
+
+        try
+        {
+            var created = WindowsCngLicenseInstallationKeyProvisioner.Create(
+                options, installationId, confirmSoftwareProviderRisk: true);
+
+            Assert.Equal(LicenseInstallationKeyAssurance.SoftwareProtected, created.Assurance);
+            Assert.Equal(SoftwareKsp, created.ProviderName);
+            Assert.NotEmpty(created.PublicKeySubjectPublicKeyInfo);
+            Assert.Matches("^[a-f0-9]{64}$", created.PublicKeyFingerprint);
+            Assert.Matches("^[a-f0-9]{64}$", created.OsInstallationMarkerDigest);
+
+            using (var key = CngKey.Open(created.KeyName, new CngProvider(SoftwareKsp)))
+            {
+                Assert.Equal(CngAlgorithm.ECDsaP256, key.Algorithm);
+                Assert.Equal(256, key.KeySize);
+                Assert.Equal(CngExportPolicies.None, key.ExportPolicy);
+                Assert.Throws<CryptographicException>(() => key.Export(CngKeyBlobFormat.EccPrivateBlob));
+            }
+
+            var challenge = Encoding.UTF8.GetBytes("faranou-license-installation-proof-v1");
+            var signature = WindowsCngLicenseInstallationKeyProvisioner.SignChallenge(
+                options, installationId, challenge, softwareProviderRiskConsentRecorded: true);
+            Assert.Equal(64, signature.Length);
+
+            using var verifier = ECDsa.Create();
+            verifier.ImportSubjectPublicKeyInfo(created.PublicKeySubjectPublicKeyInfo, out var read);
+            Assert.Equal(created.PublicKeySubjectPublicKeyInfo.Length, read);
+            Assert.True(verifier.VerifyData(
+                challenge, signature, HashAlgorithmName.SHA256,
+                DSASignatureFormat.IeeeP1363FixedFieldConcatenation));
+            Assert.False(verifier.VerifyData(
+                Encoding.UTF8.GetBytes("different-challenge"), signature,
+                HashAlgorithmName.SHA256,
+                DSASignatureFormat.IeeeP1363FixedFieldConcatenation));
+
+            Assert.Throws<InvalidOperationException>(() =>
+                WindowsCngLicenseInstallationKeyProvisioner.ReadExisting(
+                    options, installationId, softwareProviderRiskConsentRecorded: false));
+            Assert.Throws<InvalidOperationException>(() =>
+                WindowsCngLicenseInstallationKeyProvisioner.SignChallenge(
+                    options, installationId, challenge, softwareProviderRiskConsentRecorded: false));
+
+            // Simulate an application restart: read the existing key, do not provision another.
+            var afterRestart = WindowsCngLicenseInstallationKeyProvisioner.ReadExisting(
+                options, installationId, softwareProviderRiskConsentRecorded: true);
+            Assert.Equal(created.KeyId, afterRestart.KeyId);
+            Assert.Equal(created.PublicKeyFingerprint, afterRestart.PublicKeyFingerprint);
+            Assert.Equal(created.OsInstallationMarkerDigest, afterRestart.OsInstallationMarkerDigest);
+            Assert.Equal(created.Assurance, afterRestart.Assurance);
+        }
+        finally
+        {
+            try
+            {
+                using var key = CngKey.Open(
+                    WindowsCngLicenseInstallationKeyProvisioner.GetKeyName(installationId, options.KeyVersion),
+                    new CngProvider(options.ProviderName));
+                key.Delete();
+            }
+            catch (CryptographicException)
+            {
+                // A failed test may not have created a key.
+            }
+        }
+    }
+
+    [Fact]
+    public void UnsupportedProvider_IsRejectedBeforeKeyCreation()
+    {
+        Assert.SkipWhen(!OperatingSystem.IsWindows(), "Windows CNG is available only on Windows.");
+
+        var options = new WindowsCngLicenseInstallationKeyOptions
+        {
+            ProviderName = "Untrusted Third Party KSP",
+            KeyVersion = 1,
+            MachineKey = false,
+        };
+
+        Assert.Throws<ArgumentException>(() =>
+            WindowsCngLicenseInstallationKeyProvisioner.Create(
+                options, "license-test-" + Guid.NewGuid().ToString("N"),
+                confirmSoftwareProviderRisk: true));
+    }
+}

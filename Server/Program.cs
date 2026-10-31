@@ -31,6 +31,15 @@ if (Infrastructure.Provisioning.WindowsCngCustomerAcknowledgementKeyCommand.IsCo
     return;
 }
 
+// Explicit, one-time customer license installation identity key ceremony. This command never
+// runs during normal startup and never creates a replacement key automatically.
+if (Infrastructure.Licensing.WindowsCngLicenseInstallationKeyCommand.IsCommand(args))
+{
+    Environment.ExitCode = Infrastructure.Licensing.WindowsCngLicenseInstallationKeyCommand.RunOnConsole(
+        args, builder.Configuration);
+    return;
+}
+
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddRouting(options =>

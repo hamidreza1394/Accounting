@@ -167,3 +167,5 @@
 - **T34 — حذف/restore DB برای برگرداندن activation قدیمی:** sequence، signed envelope، installation binding و concurrency بررسی می‌شوند؛ state گم/ناسازگار fail-closed و فقط از مسیر recovery مجاز OD-06/08 بازسازی می‌شود.
 - **Cloud trust boundary:** مرجع license و entitlements فقط server-side است؛ کلاینت فقط نمایش می‌دهد. Cache احتمالی فقط server-controlled، versioned و با expiry/invalidation مشخص است. قطع ارتباط cloud با مرجع authoritative باید طبق availability policy صریح مدیریت شود و به مجوز ساختگی یا fail-open منجر نشود.
 - **محدودیت:** TPM-backed identity نیز در برابر مالک/ادمین با کنترل کامل سیستم یا compromise باینری مصونیت مطلق نمی‌دهد؛ clone کامل VM/host و بازیابی کامل ماشین در حالت آفلاین همچنان محدودیت‌های پذیرفته‌شده‌اند.
+
+- **T35 — downgrade پنهانی از TPM به Software KSP:** ProviderName صریح و allow-list شده؛ نبود TPM به Software fallback نمی‌کند. Software KSP فقط با flag تأیید صریح در provisioning command مجاز است؛ AssuranceLevel و رضایت باید در DB/audit ثبت شوند. SoftwareProtected به‌عنوان TPM/Hardware گزارش نمی‌شود و در برابر مدیر محلی مخرب یا clone کامل host ضمانت سخت‌افزاری ندارد.

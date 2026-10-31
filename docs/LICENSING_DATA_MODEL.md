@@ -255,7 +255,7 @@ erDiagram
 مالک محصول رفتار restart-safe و الزام reactivation پس از تغییر OS-installation identity را تأیید کرده است. این بخش هنوز ERD/DDL نهایی یا Migration نیست.
 
 ### موجودیت‌های مشتری
-- InstallationIdentity: یک ردیف authoritative برای هویت نصب مشتری شامل InstallationId، OS-installation marker digest، public-key fingerprint کلید نصب، provider/key reference غیرحساس، وضعیت و RowVersion. هیچ private key یا secret در جدول ذخیره نمی‌شود.
+- InstallationIdentity: یک ردیف authoritative برای هویت نصب مشتری شامل InstallationId، OS-installation marker digest، public-key fingerprint، KeyId/KeyVersion، ProviderName، AssuranceLevel (`HardwareTpm` یا `SoftwareProtected`)، زمان/فاعل تأیید ریسک نرم‌افزاری (در صورت انتخاب)، وضعیت، LastVerifiedAtUtc و RowVersion. هیچ private key یا secret در جدول ذخیره نمی‌شود. انتخاب SoftwareProtected فقط پس از تأیید صریح و ثبت audit مجاز است.
 - InstalledLicense: تاریخچهٔ پاکت‌های امضاشده شامل LicenseId، Sequence، InstallationId، Kid، exact signed envelope bytes، payload digest، زمان import و وضعیت (Current/Superseded/Rejected)؛ قید یکتایی روی (LicenseId, Sequence) و کنترل concurrency برای جلوگیری از downgrade/duplicate.
 - وضعیت current باید با قاعدهٔ یکتا/تراکنشی مشخص شود؛ تاریخچه حذف نمی‌شود. هر import ابتدا signature، trusted key، payload، installation binding، sequence، time و revocation را اعتبارسنجی می‌کند؛ سپس ثبت اتمیک انجام می‌شود.
 - restart فقط state را load و دوباره verify می‌کند؛ فایل ورودی دوباره درخواست نمی‌شود مگر نصب identity mismatch/خرابی state/recovery کنترل‌شده.
