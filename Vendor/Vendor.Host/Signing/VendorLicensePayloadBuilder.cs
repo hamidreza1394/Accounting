@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Faranou.Licensing.Contracts;
 using Faranou.Vendor.Persistence.Domain;
@@ -33,11 +35,7 @@ public static class VendorLicensePayloadBuilder
             license.CustomerId != installation.CustomerId)
             return Fail("license_not_issuable", out errorCode);
 
-        if (installationIdentity.InstallationId != installation.Id ||
-            installationIdentity.State != VendorInstallationIdentity.StateCurrent ||
-            installationIdentity.KeyVersion < 1 ||
-            !System.Text.RegularExpressions.Regex.IsMatch(
-                installationIdentity.PublicKeyFingerprint, "^[a-f0-9]{64}$", System.Text.RegularExpressions.RegexOptions.CultureInvariant))
+        if (!IsCurrentInstallationIdentity(installationIdentity, installation.Id, issuedAtUtc))
             return Fail("installation_identity_not_registered", out errorCode);
 
         if (string.IsNullOrWhiteSpace(license.ProductCode) ||
@@ -90,6 +88,88 @@ public static class VendorLicensePayloadBuilder
 
         return true;
     }
+
+    private static bool IsCurrentInstallationIdentity(
+        VendorInstallationIdentity identity,
+        Guid installationId,
+        DateTimeOffset issuedAtUtc)
+    {
+        if (identity.InstallationId != installationId ||
+            identity.State != VendorInstallationIdentity.StateCurrent ||
+            identity.KeyVersion < 1 ||
+            !IsLowerHexSha256(identity.OsInstallationMarkerDigest) ||
+            !IsLowerHexSha256(identity.PublicKeyFingerprint))
+            return false;
+
+        var expectedProvider = identity.AssuranceLevel switch
+        {
+            VendorInstallationIdentity.AssuranceHardwareTpm => "Microsoft Platform Crypto Provider",
+            VendorInstallationIdentity.AssuranceSoftwareProtected => InstallationKeyConsentReceiptVerifier.SoftwareProviderName,
+            _ => null
+        };
+        if (expectedProvider is null || !string.Equals(identity.ProviderName, expectedProvider, StringComparison.Ordinal))
+            return false;
+
+        var expectedKeyIdHash = Convert.ToHexString(
+            SHA256.HashData(Encoding.UTF8.GetBytes(installationId.ToString("D")))).ToLowerInvariant()[..24];
+        if (!string.Equals(identity.KeyId, $"license-install-{expectedKeyIdHash}-v{identity.KeyVersion}", StringComparison.Ordinal))
+            return false;
+
+        byte[] publicKeyBytes;
+        try
+        {
+            publicKeyBytes = Convert.FromBase64String(identity.PublicKeySubjectPublicKeyInfoBase64);
+            if (!string.Equals(Convert.ToBase64String(publicKeyBytes), identity.PublicKeySubjectPublicKeyInfoBase64, StringComparison.Ordinal))
+                return false;
+            using var publicKey = ECDsa.Create();
+            publicKey.ImportSubjectPublicKeyInfo(publicKeyBytes, out var bytesRead);
+            if (bytesRead != publicKeyBytes.Length || publicKey.KeySize != 256)
+                return false;
+        }
+        catch (Exception exception) when (exception is FormatException or CryptographicException or ArgumentException)
+        {
+            return false;
+        }
+
+        var actualFingerprint = Convert.ToHexString(SHA256.HashData(publicKeyBytes)).ToLowerInvariant();
+        if (!string.Equals(actualFingerprint, identity.PublicKeyFingerprint, StringComparison.Ordinal))
+            return false;
+
+        if (identity.AssuranceLevel == VendorInstallationIdentity.AssuranceHardwareTpm)
+        {
+            return identity.SoftwareProviderRiskAcceptedAtUtc is null &&
+                identity.SoftwareProviderRiskAcceptedBy is null &&
+                identity.SoftwareProviderConsentReceiptJson is null;
+        }
+
+        if (string.IsNullOrWhiteSpace(identity.SoftwareProviderConsentReceiptJson) ||
+            identity.SoftwareProviderRiskAcceptedAtUtc is null ||
+            string.IsNullOrWhiteSpace(identity.SoftwareProviderRiskAcceptedBy))
+            return false;
+
+        InstallationKeyConsentReceipt? receipt;
+        try
+        {
+            receipt = JsonSerializer.Deserialize<InstallationKeyConsentReceipt>(
+                identity.SoftwareProviderConsentReceiptJson,
+                new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+
+        return receipt is not null &&
+            receipt.AcceptedAtUtc == identity.SoftwareProviderRiskAcceptedAtUtc.Value &&
+            string.Equals(receipt.AcceptedBy, identity.SoftwareProviderRiskAcceptedBy, StringComparison.Ordinal) &&
+            InstallationKeyConsentReceiptVerifier.TryVerify(
+                receipt, publicKeyBytes, installationId.ToString("D"), identity.KeyId,
+                identity.PublicKeyFingerprint, issuedAtUtc, out _);
+    }
+
+    private static bool IsLowerHexSha256(string? value) =>
+        value is { Length: 64 } && value.All(character =>
+            character is >= '0' and <= '9' or >= 'a' and <= 'f');
 
     private static bool Fail(string code, out string? errorCode)
     {
