@@ -1,21 +1,26 @@
-# وضعیت اجرایی مرحلهٔ اول — به‌روزرسانی 2026-10-30
+# وضعیت اجرایی مرحلهٔ اول — به‌روزرسانی 2026-10-31
 
-- PR #358 (Enrollment password flow) ادغام شده است؛ تصمیم نهایی رمز مدیر در Enrollment ثبت شده و الزام تغییر رمز در اولین ورود superseded است.
-- PR #359 (D-056 software signing assurance) ادغام شده است؛ SoftHSM برای Development/Staging پذیرفته شده است.
-- PR #360 (runtime staged signing assurance) در 2026-10-30T19:14:22Z با merge commit `53b19e84a065a85de5434a695812e700622d128b` ادغام شد؛ .NET CI، Vendor CI، Semgrep و PR workflow روی HEAD موفق بودند.
-- PR #361 (Development/Test-only audit checkpoint file journal) در main ادغام شده است؛ adapter محلی هرگز Production sink نیست.
-- PR #362 (offline revocation consumer contract) در main ادغام شده است؛ resolver مستقل، اعمال اتمیک sequence، وضعیت سه‌حالته `Unavailable/NotRevoked/Revoked` و `RevocationAwareLicenseEnvelopeValidator` اضافه شده‌اند. اتصال به مسیر نهایی LicenseEvaluator/host مشتری همچنان باقی است.
-- Issue #107 همچنان به provider مستقل Production، credential separation، retention/immutability، alerting و recovery نیاز دارد.
-- Issue #214/#364: PR #366 با SHA d2005b618528b416c3773ed7632d09a8627685db در main ادغام شد؛ .NET CI، Vendor CI و Semgrep همگی موفق‌اند. durable customer state store، TPM NV Extend adapter، migration مشتری و crash recovery پیاده‌سازی شده‌اند. provisioning سخت‌افزار واقعی، مدیریت secret، TPM hardware verification و اتصال runtime call-site هنوز باز هستند.
-- Issueهای #228 و #235 تا تکمیل اتصال عملیاتی Provisioning/ACK و آزمون‌های لازم باز می‌مانند.
-- اجرای واقعی روی دو میزبان، Staging نهایی و recovery drill در انتهای مرحلهٔ اول انجام می‌شود؛ CI و تست خودکار هر PR همچنان الزامی‌اند.
+**مبنای این به‌روزرسانی:** main پس از ادغام PR #382؛ merge commit برابر `f4027d83d1275204167464928c54ed9a185a68bf`.
+
+- **PR #366 / Issue #364:** state store پایدار مشتری، migration مستقل مشتری، TPM NV Extend adapter برای Windows/Linux، recovery و تست‌های SQL Server اضافه و ادغام شده‌اند. CI نهایی PR #366 سبز بوده است؛ اجرای TPM فیزیکی، ceremony واقعی NV index و secret delivery/rotation هنوز انجام نشده‌اند.
+- **PR #362:** قرارداد مصرف snapshot ابطال و `RevocationAwareLicenseEnvelopeValidator` اضافه شده است.
+- **PR #382:** فقط `ICustomerLicenseEnvelopeValidator` از DI قابل تزریق است؛ validator خام به‌عنوان dependency داخلی ساخته می‌شود. .NET CI run `41185957406`، Vendor CI run `41185957429` و Semgrep run `41185957415` همگی موفق؛ PR با merge commit بالا ادغام شد.
+- **محدودیت مهم #364:** مسیر end-to-end ورود/ذخیرهٔ LicenseEnvelope مشتری و call-site اجرایی که اعتبارسنج revocation-aware را پیش از عملیات تجاری فراخوانی کند، هنوز وجود ندارد. DI registration به‌تنهایی enforcement نیست.
+- **سیاست‌های مسدودکننده:** OD-03/04 (grace و عملیات مجاز در حالت Restricted) و OD-05 (عقب‌گرد ساعت) همچنان `NeedsApproval` هستند؛ تا تصویب، رفتار محدودکنندهٔ جدید فعال نمی‌شود.
+- **Issue #107:** journal محلی Development/Test و تست قفل بین‌پردازه‌ای ادغام شده‌اند؛ sink مستقل Production، credential separation، retention/immutability، alerting و recovery drill باقی است.
+- **Issue #235:** provisioning v4 و تست دو TestServer/دو دیتابیس ادغام شده‌اند؛ آزمون دو ماشین/دو فرایند و عملیات deployment واقعی باقی است. signerهای Production تا provision شدن provider معتبر fail-closed هستند.
+- **Issue #236:** PKCS#11/SoftHSM و assurance مرحله‌ای در کد وجود دارد؛ انتخاب و provision واقعی HSM/KMS و عملیات کلید Production هنوز باید جداگانه اثبات شود.
+
+**وضعیت کلی:** بخش‌هایی از زیرساخت Vendor و قراردادهای licensing پیاده‌سازی و CI-verified شده‌اند؛ سامانهٔ لایسنس مشتری end-to-end و کل سامانهٔ Vendor هنوز Production-ready اعلام نمی‌شود.
 
 ---
 
-# وضعیت جاری Vendor و شکاف‌های وابسته — 2026-10-30
+---
+
+# snapshot تاریخی Vendor و شکاف‌های وابسته — 2026-10-30
 
 **مبنای بازبینی:** شاخه `main`، SHA `78afd4dc3ea02a9816e9e72a3d7d24b969a034dd` (پس از ادغام PRهای #344، #349، #351، #352، #353، #354 و #356).
-این بخش وضعیت جاری است؛ snapshotهای بعدی سند سابقه‌اند و نباید به‌عنوان وضعیت امروز خوانده شوند.
+این بخش snapshot تاریخی در تاریخ 2026-10-30 است؛ وضعیت جاری در ابتدای سند آمده است.
 
 ## وضعیت آخرین تغییر و CI
 
