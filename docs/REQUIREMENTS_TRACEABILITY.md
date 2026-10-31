@@ -36,3 +36,22 @@
 | Offline usage freshness | D-059 / #394 | last-sync metadata + stale UI projection tests | Accepted / NotImplemented |
 
 کد و تست هدف تا زمان ادغام PRهای مربوطه به‌عنوان شاهد موجود تلقی نمی‌شوند. مرجع ترتیب و معیار پذیرش: [LICENSING_IMPLEMENTATION_PLAN.md](LICENSING_IMPLEMENTATION_PLAN.md).
+
+
+## ردیابی D-060 — سه حوزه و تجربه فعال‌سازی Customer (2026-10-31)
+
+| نیازمندی | تصمیم/Issue | کد/تست هدف | وضعیت |
+|---|---|---|---|
+| تفکیک Vendor CRM & Commercial | D-060 / #389 | commercial customer/contract/order/payment/support workflows | Accepted / NotImplemented |
+| جداسازی Licensing & Entitlement Engine | D-059/D-060 / #390–#391, #393 | versioned contracts, signer, amendments, enforcement | Accepted / Partial foundation |
+| Customer Deployment & Sync | D-060 / #384, #392, #394 | installation identity, bootstrap, API, offline packages, ACK | Accepted / Partial foundation |
+| License-first startup gate | D-060 / #396 | server-side activation state middleware/endpoint tests | Accepted / NotImplemented |
+| Valid license → normal sign-in | D-060 / #396 | server state resolver + login integration tests | Accepted / NotImplemented |
+| No license → Activation Wizard | D-060 / #396 | route gate + direct URL/API negative tests | Accepted / NotImplemented |
+| Restricted vs Unlicensed vs Invalid states | D-059/D-060 / #391, #396 | state machine and read/export/recovery authorization tests | Accepted / NotImplemented |
+| Multi-company setup form with company-scoped entitlements | D-059/D-060 / #390, #392, #396 | local company setup, Identity, membership and no over-posting tests | Accepted / NotImplemented |
+| Offline installation request and signed license response | D-060 / #394, #396 | request/response JSON contract, exact-byte, signature, replay tests | Accepted / NotImplemented |
+| Optional armored text transport | D-060 / #394, #396 | byte-preserving encode/decode tests | Accepted / NotImplemented |
+| Customer ACK/status export | D-059/D-060 / #394 | signed ACK, idempotency, freshness tests | Accepted / NotImplemented |
+
+وضعیت‌های Partial foundation فقط به معنای وجود زیرساخت‌های قبلی است؛ به معنی تکمیل end-to-end نیست. مرجع اجرایی: LICENSING_IMPLEMENTATION_PLAN.md.
