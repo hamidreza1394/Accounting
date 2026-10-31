@@ -55,3 +55,17 @@
 | Customer ACK/status export | D-059/D-060 / #394 | signed ACK, idempotency, freshness tests | Accepted / NotImplemented |
 
 وضعیت‌های Partial foundation فقط به معنای وجود زیرساخت‌های قبلی است؛ به معنی تکمیل end-to-end نیست. مرجع اجرایی: LICENSING_IMPLEMENTATION_PLAN.md.
+
+
+## ردیابی D-061 — ماژول بازرگانی خارجی
+
+| نیازمندی | تصمیم/Issue | شاهد کد/تست هدف | وضعیت |
+|---|---|---|---|
+| ماژول مستقل در Accounting با امکان استخراج آتی | D-061 / #397 | Modules/Trade/* و TradeModuleFoundationTests | Foundation در حال اجرا |
+| Company = TenantId و جداسازی داده | D-013/D-061 | ITradeAuthorization + query predicates + cross-company tests | Contract/Foundation؛ runtime enforcement NotImplemented |
+| دوره عملیاتی مستقل از FiscalPeriod | D-061 / #397 | TradeOperationalPeriod و TradeDbContext | Foundation |
+| permission مجزا برای دوره و فرم | D-061 / #397 | TradePermissionCodes و ITradeAuthorization | ContractOnly تا اتصال Host و UI |
+| entitlement مستقل TRADE_IMPORT | D-025/D-059/D-061 | TradeModuleIdentity و ITradeModuleEntitlement | ContractOnly؛ licensing runtime NotImplemented |
+| گزارش چندشرکتی با مجوز همه شرکت‌ها | D-034/D-061 | ITradeAuthorization.HasPermissionForAllCompaniesAsync | ContractOnly؛ report use case NotImplemented |
+| دیتابیس فیزیکی مشترک، schema مستقل trade | D-061 / #397 | TradeDbContext و model test | Foundation؛ Migration ایجاد نشده |
+| اتصال آتی به مالی بدون coupling مستقیم | D-061 / #397 | dependency architecture tests | Foundation |
