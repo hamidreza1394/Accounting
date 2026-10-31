@@ -40,7 +40,7 @@
 ## بررسی و آزمون
 | فرمان/آزمون | نتیجه واقعی | توضیح/کد خروج |
 |---|---|---|
-| dotnet build Template.sln --no-restore --configuration Release | ناموفق در commit قبلی | CI خطای CS0272 داد؛ تست مقدار Id را مستقیم set کرده بود، در حالی که setter در Entity protected است. در commit 17229 اصلاح شد تا Id از constructor تولید شود؛ اجرای مجدد روی head جدید pending است. |
+| dotnet build Template.sln --no-restore --configuration Release | موفق روی commit ec04edb | .NET CI پس از اصلاح تست، Build را با موفقیت گذراند. |
 | تست TradePermissionCatalogTests | اجرا نشده | تست اضافه شده؛ نیازمند اجرای CI یا محیط .NET است. |
 | تست TradePermissionCatalogSqlServerTests | اجرا نشده | فقط با FARANOU_TEST_SQLSERVER اجرا می‌شود. |
 | python3 scripts/generate_migrations.py --check | اجرا نشده | SQL در registry ثبت شده؛ byte-for-byte generation verification pending است. |
