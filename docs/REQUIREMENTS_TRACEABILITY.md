@@ -66,6 +66,6 @@
 | استفاده از دوره مالی مشترک فرانو | D-062 / #397 | WorkContext/FiscalPeriodSelectionPolicy + TradePeriodScope + TradeAuthorizationAdapter؛ بدون Trade period entity | Adapter implemented؛ مصرف در use case pending |
 | مجوز تخصصی فرم/عملیات بازرگانی در سازوکار نقش مشترک | D-062 / #397 | TradePermissionCodes + TradeAuthorizationAdapter + CompanyAccessService | Adapter implemented؛ permission catalog seed/role UI/API enforcement pending |
 | entitlement مستقل TRADE_IMPORT | D-025/D-059/D-061 | TradeModuleIdentity و ITradeModuleEntitlement | ContractOnly؛ licensing runtime NotImplemented |
-| گزارش چندشرکتی با مجوز همه شرکت‌ها | D-034/D-061 | ITradeAuthorization.HasPermissionForAllCompanyPeriodsAsync | ContractOnly؛ report use case NotImplemented |
+| گزارش چندشرکتی با مجوز همه شرکت‌ها | D-034/D-061/D-062 | TradeAuthorizationAdapter.HasPermissionForAllCompanyPeriodsAsync | Adapter all-or-nothing implemented؛ report use case و audit NotImplemented |
 | دیتابیس فیزیکی مشترک، schema مستقل trade | D-061 / #397 | TradeDbContext و model test | Foundation؛ Migration ایجاد نشده |
 | اتصال آتی به مالی بدون coupling مستقیم | D-061 / #397 | dependency architecture tests | Foundation |
