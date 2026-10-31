@@ -17,12 +17,26 @@ public sealed class RevocationAwareLicenseEnvelopeValidator : ICustomerLicenseEn
         _revocationConsumer = revocationConsumer ?? throw new ArgumentNullException(nameof(revocationConsumer));
     }
 
-    public async Task<LicenseValidationResult> ValidateAsync(
+    public Task<LicenseValidationResult> ValidateAsync(
         LicenseEnvelope envelope,
         string localInstallationId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        ValidateCoreAsync(envelope, localInstallationId, null, cancellationToken);
+
+    public Task<LicenseValidationResult> ValidateAsync(
+        LicenseEnvelope envelope,
+        string localInstallationId,
+        string localInstallationKeyFingerprint,
+        CancellationToken cancellationToken = default) =>
+        ValidateCoreAsync(envelope, localInstallationId, localInstallationKeyFingerprint, cancellationToken);
+
+    private async Task<LicenseValidationResult> ValidateCoreAsync(
+        LicenseEnvelope envelope,
+        string localInstallationId,
+        string? localInstallationKeyFingerprint,
+        CancellationToken cancellationToken)
     {
-        var licenseResult = _licenseValidator.Validate(envelope, localInstallationId);
+        var licenseResult = _licenseValidator.Validate(envelope, localInstallationId, localInstallationKeyFingerprint);
         if (!licenseResult.Success || licenseResult.Payload is null)
         {
             return licenseResult;
