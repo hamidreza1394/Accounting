@@ -6,6 +6,13 @@ namespace Domain;
 /// </summary>
 public sealed class CustomerOfflineRevocationState : Seedwork.Entity
 {
+    public static readonly Guid SingletonId = new("5f7f1e73-6c8a-4c45-8c6f-6a8b3a5d0001");
+
+    public CustomerOfflineRevocationState()
+    {
+        Id = SingletonId;
+    }
+
     public long Sequence { get; set; }
     public string? SnapshotDigest { get; set; }
     public DateTime? ExpiresAtUtc { get; set; }
