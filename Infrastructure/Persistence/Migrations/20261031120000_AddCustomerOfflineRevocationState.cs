@@ -22,9 +22,13 @@ namespace Data.Migrations
                     SnapshotDigest = table.Column<string>(type: "varchar(64)", unicode: false, maxLength: 64, nullable: true),
                     ExpiresAtUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
                     RevokedLicenseIdsJson = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PreviousAnchorDigest = table.Column<string>(type: "varchar(64)", unicode: false, maxLength: 64, nullable: false),
+                    AnchorDigest = table.Column<string>(type: "varchar(64)", unicode: false, maxLength: 64, nullable: false),
                     AnchorGeneration = table.Column<long>(type: "bigint", nullable: false),
+                    AcceptedEnvelopeJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     PendingEnvelopeJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     PendingExpectedGeneration = table.Column<long>(type: "bigint", nullable: true),
+                    PendingExpectedAnchorDigest = table.Column<string>(type: "varchar(64)", unicode: false, maxLength: 64, nullable: true),
                     RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
