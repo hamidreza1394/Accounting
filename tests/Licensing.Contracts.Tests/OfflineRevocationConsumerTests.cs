@@ -201,7 +201,7 @@ public sealed class RevocationAwareLicenseEnvelopeValidatorTests
     {
         using var licenseKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         using var revocationKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-        var pipeline = new RevocationAwareLicenseEnvelopeValidator(
+        ICustomerLicenseEnvelopeValidator pipeline = new RevocationAwareLicenseEnvelopeValidator(
             CreateValidator(licenseKey),
             CreateConsumer(revocationKey, null));
 
