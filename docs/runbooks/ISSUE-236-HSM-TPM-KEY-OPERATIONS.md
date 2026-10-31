@@ -1,7 +1,7 @@
 # Runbook عملیات کلید HSM/TPM — Issue #236 / D-055
 
 - **وضعیت:** مستند عملیاتی آمادهٔ بازبینی؛ اجرای Production تا تأمین HSM واقعی و provision شدن backend امن هر نصب مشتری **Blocked** است.
-- **دامنه:** کلید مرکزی Vendor برای امضای بسته و لایسنس، و کلید مستقل هر نصب مشتری برای ACK.
+- **دامنه:** کلیدهای مرکزی Vendor برای امضای بسته، لایسنس و revocation آفلاین، و کلید مستقل هر نصب مشتری برای ACK.
 - **اصل غیرقابل‌مذاکره:** کلید خصوصی هرگز export، serialize، backup به‌صورت فایل، commit، log یا داخل بستهٔ Provisioning نمی‌شود. هیچ software fallback یا کلید SoftHSM در Production وجود ندارد.
 - **مبنای استقرار:** deployment-neutral؛ Vendor می‌تواند روی سرور اختصاصی یا میزبان ابری اجرا شود. این Runbook به Azure/AWS وابسته نیست.
 
@@ -25,9 +25,10 @@
 
 - "vendor-package-YYYY-vN" — امضای بستهٔ Provisioning
 - "vendor-license-YYYY-vN" — امضای لایسنس
+- "vendor-revocation-YYYY-vN" — امضای snapshot ابطال آفلاین مشتری
 - "customer-INSTALLATION-REFERENCE-ack-vN" — کلید ACK همان نصب، خارج از HSM مرکزی Vendor
 
-کلیدهای بسته و لایسنس باید دو جفت‌کلید مستقل باشند، حتی اگر در یک HSM/partition قرار گیرند. کلید ACK هر نصب نیز مستقل است و هیچ‌گاه بین دو نصب کپی نمی‌شود.
+کلیدهای بسته، لایسنس و revocation باید سه جفت‌کلید مستقل باشند، حتی اگر در یک HSM/partition قرار گیرند. کلید ACK هر نصب نیز مستقل است و هیچ‌گاه بین دو نصب کپی نمی‌شود. هیچ purpose مجاز به استفاده از KeyId purpose دیگر نیست.
 
 برای private-key objectهای Vendor، Key Ceremony باید این ویژگی‌ها را تأیید کند:
 
@@ -54,14 +55,23 @@
 ## 4. اجرای Key Ceremony برای Vendor
 
 1. دو Custodian هویت، وضعیت فیزیکی/firmware و token/partition را با هم بررسی و ثبت کنند.
-2. برای package و license به‌صورت جداگانه جفت‌کلید ECDSA P-256 داخل HSM تولید شود؛ private key باید از ابتدا non-extractable باشد.
+2. برای package، license و offline-revocation به‌صورت جداگانه سه جفت‌کلید ECDSA P-256 داخل HSM تولید شود؛ private key هر سه باید از ابتدا non-extractable باشد.
 3. برای هر private key، KeyId جدید و غیرقابل‌استفادهٔ مجدد تعیین و به‌عنوان CKA_LABEL و CKA_ID ثبت شود.
-4. با read-back صفات عمومی، non-extractable بودن، حساسیت، مجوز sign و curve بررسی شود. اگر هر attribute قابل‌خواندن/تأیید نیست، کلید تا رفع ابهام فعال نشود.
+4. با read-back صفات عمومی هر سه کلید، non-extractable بودن، حساسیت، مجوز sign و curve بررسی شود. اگر هر attribute قابل‌خواندن/تأیید نیست، کلید تا رفع ابهام فعال نشود.
 5. فقط public key متناظر استخراج شود؛ fingerprint آن با ابزار مستقل محاسبه و توسط هر دو Custodian امضا/تأیید شود.
 6. public key و KeyId در trust storeهای Vendor و مصرف‌کنندگان مجاز ثبت شود. هیچ private key یا backup حاوی private key از HSM خارج نشود.
-7. Runtime identity فقط دسترسی لازم برای دو KeyId مجاز دریافت کند. دسترسی مدیریتی و عملیات کلید در اختیار Runtime قرار نگیرد.
+7. Runtime identity فقط دسترسی لازم برای سه KeyId مجاز دریافت کند. دسترسی مدیریتی و عملیات کلید در اختیار Runtime قرار نگیرد.
 8. آزمون sign/verify با payload تستی غیرحساس انجام شود؛ سپس هر دو Custodian نتیجه، fingerprint، KeyId، token model، firmware و زمان را در صورت‌جلسه ثبت کنند.
 9. خروجی جلسه شامل public keys، fingerprints، تنظیمات غیرمحرمانه و صورت‌جلسه باشد؛ PIN، private key، token backup secret و دادهٔ حساس در گزارش ثبت نشود.
+
+
+## 4.1. کلید مستقل snapshot ابطال آفلاین — Issue #214
+
+- Vendor از IOfflineRevocationSigningProvider جدا از ILicenseSigningProvider و IProvisioningSigningProvider استفاده می‌کند.
+- تنظیم کلید PKCS#11 از مسیر Signing:Pkcs11:OfflineRevocationKey:KeyId دریافت می‌شود و باید با دو KeyId دیگر متفاوت و نسخه‌دار باشد.
+- Public key این purpose باید در trust set مستقل مصرف‌کنندهٔ revocation ثبت شود؛ قرار دادن آن فقط در trust set لایسنس مجاز نیست.
+- Default provider برای revocation نیز unavailable/fail-closed است. فعال شدن PKCS#11 مستلزم provision شدن هر سه private-key object و verify شدن صفات هر سه است.
+- این تفکیک فقط قابلیت امضا را فراهم می‌کند؛ صدور/ذخیره/توزیع snapshot ابطال و اتصال آن به Maker-Checker در Issue #214 مرحلهٔ جداگانه دارد.
 
 ## 5. کلید ACK در نصب مشتری — TPM/OS secure storage
 
@@ -93,7 +103,7 @@
 
 ## 7. Rotation و هم‌پوشانی Trust Store
 
-1. پیش از rotation، KeyId جدید و بازهٔ اعتبار آن تصویب شود؛ کلید قدیمی حذف یا overwrite نشود.
+1. پیش از rotation، purpose مشخص (package/license/offline-revocation/ACK)، KeyId جدید و بازهٔ اعتبار آن تصویب شود؛ کلید قدیمی حذف یا overwrite نشود.
 2. جفت‌کلید جدید داخل HSM تولید و public key آن در Trust Storeهای Vendor و مشتریان هدف اضافه شود.
 3. پیش از تغییر signer، verifierهای همهٔ مسیرهای مصرف باید هر دو KeyId جاری و جدید را بپذیرند.
 4. signer به KeyId جدید تغییر کند؛ تست sign/verify واقعی و audit ثبت شود.
@@ -144,7 +154,7 @@
 برای هر Ceremony/rotation/revoke/recovery یک رکورد غیرمحرمانه نگهداری شود:
 
 - شناسهٔ Ceremony و Issue/Change request
-- Purpose (package/license/customer-ack)، KeyId و نسخه
+- Purpose (package/license/offline-revocation/customer-ack)، KeyId و نسخه
 - نوع/مدل/firmware/token serial یا installation reference
 - fingerprint public key و hash تنظیمات trust store
 - صفات کلیدی تأییدشده (بدون مقادیر محرمانه)
@@ -157,7 +167,7 @@
 
 ## 12. وضعیت اجرایی فعلی
 
-- HSM واقعی خریداری/اجاره نشده و بودجهٔ فعلی صفر است؛ بنابراین Vendor Production package/license signing باید disabled و fail-closed بماند.
+- HSM واقعی خریداری/اجاره نشده و بودجهٔ فعلی صفر است؛ بنابراین Vendor Production package/license/offline-revocation signing باید disabled و fail-closed بماند.
 - SoftHSM فقط در محیط اختصاصی Testing و CI برای تست adapter استفاده می‌شود؛ هیچ token نرم‌افزاری در Development، Staging یا Production مجاز نیست.
 - مدل و سازندهٔ HSM، محل فیزیکی، HA/DR و قرارداد پشتیبانی هنوز انتخاب نشده‌اند؛ در نتیجه بخش‌های HSM این Runbook فعلاً **قابل اجرا نیستند**.
 - Customer ACK production signing نیز تا پیاده‌سازی و اثبات backend غیرقابل‌استخراج TPM/OS و trust enrollment آفلاین فعال نمی‌شود.
