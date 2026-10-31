@@ -529,7 +529,7 @@
 - PR #386 ادغام شد (commit `010571779e5bbbef9419f7748aa13d3700bd48ec`): Windows CNG installation proof-key ceremony، TPM پیش‌فرض و Software KSP با consent صریح؛ تمام CI checks روی head ادغام‌شده سبز بودند. تست TPM فیزیکی اجرا نشده است.
 - PR کاری #387 شامل entity/configurationهای Customer-only برای `InstallationIdentities` و `InstalledLicenses`، RowVersion، history، unique filtered current indexes، FK با Restrict، check constraints و Migration افزایشی `20261031130000_AddCustomerLicensePersistence` است.
 - PR #387 ادغام شده و Migration مشتری به‌صورت افزایشی در کد موجود است؛ اجرای Migration روی محیط واقعی همچنان تأیید نشده است. هیچ Vendor schema در این مرحله تغییر نکرده است.
-- PR #388 برای customer identity enrollment و license import باز است؛ آخرین CI build-and-test روی head قبلی به‌دلیل ۸ خطای کامپایل شکست خورد؛ اصلاحات روی همان شاخه PR #388 push شده و CI head جدید در حال اجراست.
+- PR #388 در 2026-10-31 با commit ادغام `75b0af84d5543a2bfb935d893d8bfc37ee330eef` ادغام شد؛ تمام ۷ Job شامل secret-scan، client، build-and-test، publish-scripts، e2e، publish و publish-windows موفق بودند. تست فیزیکی TPM و دو میزبان در این ادغام اجرا نشده است.
 - Startup reload/revalidation، runtime enforcement در عملیات حسابداری و Cloud server-side entitlement resolution هنوز تکمیل نشده‌اند.
 
 
@@ -537,7 +537,7 @@
 
 - D-059 و نقشه اجرایی در LICENSING_IMPLEMENTATION_PLAN.md ثبت شده‌اند. وضعیت تصمیم Accepted است؛ قابلیت‌های #390–#394 تا زمان پیاده‌سازی و CI همچنان NotImplemented محسوب می‌شوند.
 - ترتیب اجرا: #390 قرارداد نسخه‌دار → #391 enforcement و #392 bootstrap/company creation → #393 add-on issuance → #394 online/offline sync.
-- PR #388 هنوز باز است؛ خطای CI روی head قبلی مشاهده شد؛ اصلاح build روی head جدید PR #388 اعمال شده و منتظر نتیجه CI جدید است. این PR هنوز startup revalidation یا runtime enforcement کامل را تحویل نمی‌دهد.
+- PR #388 ادغام شده است؛ enrollment هویت نصب و import پایدار لایسنس تحویل شده‌اند. Startup reload/revalidation، gate ورود، runtime enforcement و Cloud authoritative entitlement resolution هنوز در Issues بعدی باقی‌اند.
 
 
 ## 2026-10-31 — D-060: معماری سه‌حوزه‌ای و License-first activation
