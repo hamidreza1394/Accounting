@@ -237,7 +237,8 @@ public sealed class VendorOfflineRevocationIssuanceService(
             !verified.RevokedLicenseIds.SequenceEqual(canonicalIds, StringComparer.Ordinal))
             return VendorOfflineRevocationIssuanceResult.Unavailable("offline_revocation_signing_unavailable");
 
-        var now = verified.IssuedAtUtc.ToUniversalTime();
+        var snapshotIssuedAt = verified.IssuedAtUtc.ToUniversalTime();
+        var reviewedAt = timeProvider.GetUtcNow().ToUniversalTime();
         var listId = verified.ListId;
         var payloadBytes = Encoding.UTF8.GetBytes(envelope.PayloadJson);
         var envelopeJson = JsonSerializer.Serialize(envelope, EnvelopeJsonOptions);
@@ -250,7 +251,7 @@ public sealed class VendorOfflineRevocationIssuanceService(
         db.Entry(approval).Property(item => item.RowVersion).OriginalValue = expectedApprovalVersion;
         approval.Status = "Approved";
         approval.ReviewedByUserId = reviewerUserId;
-        approval.ReviewedAtUtc = now;
+        approval.ReviewedAtUtc = reviewedAt;
         approval.ReviewComment = string.IsNullOrWhiteSpace(reviewComment) ? null : reviewComment.Trim();
 
         var snapshot = new VendorSignedRevocationSnapshot
@@ -264,7 +265,7 @@ public sealed class VendorOfflineRevocationIssuanceService(
             Algorithm = envelope.Algorithm,
             EnvelopeJson = envelopeJson,
             PayloadSha256 = payloadHash,
-            CreatedAtUtc = now
+            CreatedAtUtc = snapshotIssuedAt
         };
         db.SignedRevocationSnapshots.Add(snapshot);
 

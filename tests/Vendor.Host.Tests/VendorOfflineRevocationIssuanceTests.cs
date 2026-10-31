@@ -144,6 +144,48 @@ public sealed class VendorOfflineRevocationIssuanceTests
     }
 
     [Fact]
+    public async Task InvalidSignatureFailsClosedWithoutChangingLicenseOrApproval()
+    {
+        var fixture = await OpenAsync();
+        if (fixture is null) return;
+        using var trustedKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        using var wrongKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        try
+        {
+            var db = fixture.Db;
+            var licenseId = fixture.LicenseIds.Single();
+            var approval = await db.ApprovalRequests.SingleAsync(
+                item => item.Id == fixture.ApprovalIds[licenseId], TestContext.Current.CancellationToken);
+            var service = CreateService(
+                db, trustedKey, new VendorAuditWriter(db, TimeProvider.System),
+                new TestSigner(wrongKey, "vendor-revocation-test-v1"));
+
+            await using (var tx = await db.Database.BeginTransactionAsync(TestContext.Current.CancellationToken))
+            {
+                var result = await service.RevokeApprovedAsync(
+                    approval, Guid.NewGuid(), approval.RowVersion.ToArray(), null,
+                    Guid.NewGuid().ToString("N"), TestContext.Current.CancellationToken);
+                Assert.False(result.Succeeded);
+                Assert.Equal(StatusCodes.Status503ServiceUnavailable, result.StatusCode);
+                Assert.Equal("offline_revocation_signing_unavailable", result.ErrorCode);
+                await tx.RollbackAsync(TestContext.Current.CancellationToken);
+            }
+
+            db.ChangeTracker.Clear();
+            Assert.Equal("Issued", (await db.Licenses.SingleAsync(
+                item => item.Id == licenseId, TestContext.Current.CancellationToken)).Status);
+            Assert.Equal("Pending", (await db.ApprovalRequests.SingleAsync(
+                item => item.Id == approval.Id, TestContext.Current.CancellationToken)).Status);
+            Assert.Empty(await db.SignedRevocationSnapshots.ToListAsync(TestContext.Current.CancellationToken));
+            Assert.Empty(await db.AuditEvents.ToListAsync(TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            await CloseAsync(fixture);
+        }
+    }
+
+    [Fact]
     public async Task AuditFailureRollsBackRevocationSnapshotLicenseAndApproval()
     {
         var fixture = await OpenAsync();
