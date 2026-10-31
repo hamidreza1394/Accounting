@@ -1664,3 +1664,11 @@
 - اصلاح در commit `f8743aa80ff5b2821cc64e6bc254d0396c207f64` انجام شد: `migrationBuilder.Sql` اکنون داخل `Up` است و `Down` trigger را پیش از حذف جدول برمی‌دارد.
 - تست SQL Server برای immutability گسترش یافت تا UPDATE و DELETE را رد کند و شمار رکورد snapshot پس از هر دو تلاش یک باقی بماند.
 - **اعتبارسنجی:** این تست در CI جدید باید همراه migration/pending-model guard اجرا شود؛ اجرای محلی .NET/SQL Server انجام نشده است.
+
+
+## 2026-10-31 — customer license validator DI boundary
+- Added `ICustomerLicenseEnvelopeValidator`; `RevocationAwareLicenseEnvelopeValidator` implements it. Server DI exposes only the interface and constructs the raw signature/time validator internally, preventing accidental DI bypass of offline revocation checks.
+- A dual-host integration assertion resolves the safe interface from Customer Server DI and confirms neither the raw validator nor the concrete revocation-aware validator is directly resolvable.
+- This is a dependency-boundary hardening, **not end-to-end license enforcement**. Static audit found no production runtime call-site consuming the validator/evaluator, no customer license-envelope store/import endpoint, and no shared authorization policy. `docs/LICENSING.md` still marks the installation license module NotImplemented.
+- Full runtime integration requires an approved local signed-file vs customer DB source, import/replace authorization and audit, installation identity binding, and approved OD-03/04 expiry/grace behavior. Do not invent global middleware behavior that may lock out setup or change commercial access policy.
+- TPM NV persistence/adapter exists, but hardware provisioning, secret delivery/rotation, and real Windows/Linux TPM verification remain NotVerified.
