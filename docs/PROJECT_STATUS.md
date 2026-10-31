@@ -3,10 +3,10 @@
 - PR #358 (Enrollment password flow) ادغام شده است؛ تصمیم نهایی رمز مدیر در Enrollment ثبت شده و الزام تغییر رمز در اولین ورود superseded است.
 - PR #359 (D-056 software signing assurance) ادغام شده است؛ SoftHSM برای Development/Staging پذیرفته شده است.
 - PR #360 (runtime staged signing assurance) در 2026-10-30T19:14:22Z با merge commit `53b19e84a065a85de5434a695812e700622d128b` ادغام شد؛ .NET CI، Vendor CI، Semgrep و PR workflow روی HEAD موفق بودند.
-- PR #361 (Development/Test-only audit checkpoint file journal) باز است؛ adapter محلی هرگز Production sink نیست.
-- PR #362 (offline revocation consumer) باز است؛ resolver مستقل، اعمال اتمیک sequence، وضعیت سه‌حالته `Unavailable/NotRevoked/Revoked` و `RevocationAwareLicenseEnvelopeValidator` اضافه شده‌اند. هنوز durable customer persistence و registration/use در runtime واقعی مشتری و trust anchor ضد rollback باقی است.
+- PR #361 (Development/Test-only audit checkpoint file journal) در main ادغام شده است؛ adapter محلی هرگز Production sink نیست.
+- PR #362 (offline revocation consumer contract) در main ادغام شده است؛ resolver مستقل، اعمال اتمیک sequence، وضعیت سه‌حالته `Unavailable/NotRevoked/Revoked` و `RevocationAwareLicenseEnvelopeValidator` اضافه شده‌اند. اتصال به مسیر نهایی LicenseEvaluator/host مشتری همچنان باقی است.
 - Issue #107 همچنان به provider مستقل Production، credential separation، retention/immutability، alerting و recovery نیاز دارد.
-- Issue #214 همچنان به پیاده‌سازی durable state store سمت مشتری، enforcement واقعی و محافظت در برابر restore backup قدیمی نیاز دارد.
+- Issue #214: قرارداد مصرف‌کننده در PR #362 ادغام شده است؛ durable customer state store و TPM NV Extend adapter در PR #366 در حال بازبینی است. provisioning index، hardware verification و runtime enforcement نهایی باقی است.
 - Issueهای #228 و #235 تا تکمیل اتصال عملیاتی Provisioning/ACK و آزمون‌های لازم باز می‌مانند.
 - اجرای واقعی روی دو میزبان، Staging نهایی و recovery drill در انتهای مرحلهٔ اول انجام می‌شود؛ CI و تست خودکار هر PR همچنان الزامی‌اند.
 
