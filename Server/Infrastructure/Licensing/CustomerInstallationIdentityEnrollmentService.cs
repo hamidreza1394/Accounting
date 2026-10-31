@@ -136,6 +136,8 @@ public sealed class CustomerInstallationIdentityEnrollmentService
                 current.OsInstallationMarkerDigest == identity.OsInstallationMarkerDigest &&
                 current.PublicKeyFingerprint == identity.PublicKeyFingerprint)
             {
+                current.LastVerifiedAtUtc = now;
+                await _database.SaveChangesAsync(cancellationToken);
                 if (transaction is not null)
                     await transaction.CommitAsync(cancellationToken);
                 return new CustomerInstallationIdentityEnrollmentResult(
