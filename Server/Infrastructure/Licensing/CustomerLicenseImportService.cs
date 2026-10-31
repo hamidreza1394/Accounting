@@ -77,9 +77,10 @@ public sealed class CustomerLicenseImportService
             return await RejectAsync(validation.ErrorCode ?? "license_validation_failed",
                 localInstallationId, null, actorUserId, cancellationToken);
 
-        // OD-03/04 are intentionally unresolved. Do not silently activate Grace or Restricted
-        // states until the product owner approves their operational semantics.
-        if (validation.Status is not (LicenseStatus.Valid or LicenseStatus.ExpiringSoon))
+        // D-059 accepts Restricted as a valid signed entitlement state so the customer can
+        // persist it and later enter read/export/recovery mode. Grace is not accepted:
+        // term expiry has no implicit grace period. Runtime enforcement is a separate slice.
+        if (validation.Status is not (LicenseStatus.Valid or LicenseStatus.ExpiringSoon or LicenseStatus.Restricted))
             return await RejectAsync("license_status_policy_unapproved",
                 localInstallationId, validation.Payload.LicenseId, actorUserId, cancellationToken);
 
