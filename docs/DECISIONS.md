@@ -970,6 +970,8 @@ The customer consumer, claim/replay, transactional apply, one-time Enrollment/re
 ### تبادل کلید و بسته‌های Offline
 - کلید خصوصی Installation identity روی Customer Host تولید و non-exportable می‌ماند؛ برای درخواست فعال‌سازی فقط metadata، public key/SPKI، Installation binding، nonce/request ID، assurance level و proof امضاشده صادر می‌شود.
 - قالب استاندارد انتقال، بسته نسخه‌دار JSON است: درخواست مشتری (.request.json) و پاسخ امضاشده Vendor (.license.json). فایل متنی (.txt) در صورت نیاز فقط Base64/armored wrapper همان بایت‌های دقیق بسته است؛ متن قابل ویرایش و فاقد امضا هرگز entitlement محسوب نمی‌شود.
+- کد فعال‌سازی تجاری یک‌بارمصرف، دارای مدت اعتبار قابل تنظیم توسط Vendor و bind‌شده به CustomerAccount/Installation است؛ کد فقط مجوز شروع صدور/فعال‌سازی است و جای LicenseEnvelope امضاشده را نمی‌گیرد. در Vendor به‌صورت امن (ترجیحاً hash) نگهداری، rate-limit و پس از مصرف/انقضا غیرقابل استفاده مجدد می‌شود.
+- مسیر UI آنلاین می‌تواند کد فعال‌سازی را در Customer Host دریافت و از طریق API احراز هویت‌شده redeem کند. در Offline، Customer درخواست را export می‌کند؛ اپراتور Vendor درخواست و کد را در Vendor Host بررسی/redeem می‌کند و پاسخ امضاشده را برمی‌گرداند. کد فعال‌سازی داخل فایل درخواست/پاسخ، log یا telemetry قرار نمی‌گیرد.
 - مسیر UI شامل Download Request، انتقال به دستگاه Vendor، Upload Response و اعتبارسنجی/ثبت اتمیک است. در صورت اتصال، همان قرارداد از طریق Cloud API احراز هویت‌شده انجام می‌شود.
 - QR یا کد کوتاه فقط گزینه کمکی برای payload کوچک/شناسه درخواست است؛ جایگزین فایل امضاشده یا ریشه اعتماد نیست. کلید خصوصی یا رمز عبور هرگز در QR/کد/فایل انتقال قرار نمی‌گیرد.
 - ارسال وضعیت/ACK/usage از Customer به Vendor نیز با بسته پاسخ/گزارش امضاشده و sequence/idempotency انجام می‌شود؛ در نبود شبکه وضعیت Vendor stale می‌ماند و زمان آخرین sync نشان داده می‌شود.
