@@ -412,25 +412,28 @@ app.MapHealthChecks("/health/signing", new HealthCheckOptions
             cancellationToken: context.RequestAborted);
     }
 }).AllowAnonymous();
-app.MapHealthChecks("/health/audit-checkpoint", new HealthCheckOptions
+if (app.Environment.IsProduction())
 {
-    Predicate = check => check.Tags.Contains("audit-checkpoint"),
-    ResponseWriter = async (context, report) =>
+    app.MapHealthChecks("/health/audit-checkpoint", new HealthCheckOptions
     {
-        context.Response.ContentType = "application/json; charset=utf-8";
-        var entries = report.Entries.ToDictionary(
-            entry => entry.Key,
-            entry => new
-            {
-                status = entry.Value.Status.ToString(),
-                description = entry.Value.Description
-            });
-        await JsonSerializer.SerializeAsync(
-            context.Response.Body,
-            new { status = report.Status.ToString(), entries },
-            cancellationToken: context.RequestAborted);
-    }
-}).AllowAnonymous();
+        Predicate = check => check.Tags.Contains("audit-checkpoint"),
+        ResponseWriter = async (context, report) =>
+        {
+            context.Response.ContentType = "application/json; charset=utf-8";
+            var entries = report.Entries.ToDictionary(
+                entry => entry.Key,
+                entry => new
+                {
+                    status = entry.Value.Status.ToString(),
+                    description = entry.Value.Description
+                });
+            await JsonSerializer.SerializeAsync(
+                context.Response.Body,
+                new { status = report.Status.ToString(), entries },
+                cancellationToken: context.RequestAborted);
+        }
+    }).AllowAnonymous();
+}
 app.MapVendorAuthentication();
 app.MapVendorPasswordChange();
 app.MapVendorRoleManagement();
