@@ -1,12 +1,11 @@
 namespace Faranou.Modules.Trade.Application.Authorization;
 
-/// <summary>Stable operational permission codes, separate from commercial entitlement.</summary>
+/// <summary>
+/// Stable Trade operation permission codes, assigned through the shared company-role
+/// permission system. Fiscal-period selection/access is inherited from the Core work context.
+/// </summary>
 public static class TradePermissionCodes
 {
-    public const string PeriodView = "trade.period.view";
-    public const string PeriodCreate = "trade.period.create";
-    public const string PeriodUpdate = "trade.period.update";
-    public const string PeriodClose = "trade.period.close";
     public const string CompanyReportView = "trade.reports.company.view";
     public const string MultiCompanyReportView = "trade.reports.multicompany.view";
 
