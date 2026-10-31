@@ -1572,3 +1572,13 @@
 - تست cancellation هنگام اشغال lock اضافه شد تا آزادشدن ProcessGate پس از لغو انتظار بررسی شود.
 - تست واقعی چندپردازه‌ای و تأیید cross-platform هنوز انجام نشده‌اند؛ این محدودیت صریحاً در handoff ثبت شد.
 - اجرای محلی .NET ممکن نبود؛ نتیجهٔ نهایی به CI روی آخرین SHA وابسته است.
+
+
+## 2026-10-31 — Issue #107 operational hardening
+- HashVersion=1 per VendorAuditEvent, versioned verifier dispatch and unique PreviousHash/EventHash indexes are already in main (Issue #107/#202).
+- Production fail-closed guard and startup verification against exactly one IProductionVendorAuditCheckpointStore are already in main; no provider is selected, so Production intentionally cannot start until an approved adapter is registered.
+- Added VendorAuditCheckpointBackgroundService to verify/advance the independent checkpoint every configured interval (default 300s).
+- Added VendorAuditCheckpointHealthState and /health/audit-checkpoint; failures and stale verification become Unhealthy, with sanitized status only.
+- Added SQLCMD permission script to keep Vendor runtime append-only on dbo.VendorAuditEvents and require a separate migration principal.
+- Recovery runbook now covers periodic verification/alerting and SQL permission deployment.
+- Provider selection, separate external credentials, immutability/retention, real alert receiver, SQL permission execution and a target-environment restore drill remain open. No Production sink is claimed.
