@@ -131,6 +131,14 @@ builder.Services.AddSingleton<LicenseSigningTrustStore>();
 builder.Services.AddScoped<VendorProvisioningLicenseResolver>();
 builder.Services.AddScoped<VendorLicenseEnvelopeFactory>();
 builder.Services.AddScoped<VendorLicenseIssuanceService>();
+builder.Services.AddScoped<VendorOfflineRevocationSnapshotFactory>();
+builder.Services.AddScoped<VendorOfflineRevocationSequenceAllocator>();
+builder.Services.AddScoped<VendorLicenseRevocationService>();
+builder.Services.AddOptions<VendorOfflineRevocationOptions>()
+    .Bind(builder.Configuration.GetSection(VendorOfflineRevocationOptions.SectionName))
+    .Validate(options => options.SnapshotValidityDays is >= 1 and <= 365,
+        "Vendor offline revocation snapshot validity must be between 1 and 365 days.")
+    .ValidateOnStart();
 builder.Services.AddScoped<VendorProvisioningIssuanceService>();
 // SignInManager belongs to the ASP.NET Core host layer, not the persistence class library.
 // Sign-in manager and token providers are host-layer Identity services; register them on the same IdentityBuilder.
