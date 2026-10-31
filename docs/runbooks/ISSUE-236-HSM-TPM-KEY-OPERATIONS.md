@@ -201,8 +201,8 @@
 
 - FARANOU_TPM_PLATFORM_AUTH_BASE64 در این script استفاده نمی‌شود؛ مسیر Platform auth از فایل ورودی اول خوانده می‌شود.
 - فایل اول Platform hierarchy authorization و فایل دوم NV index authorization خام هستند؛ فایل‌ها باید خارج از repo، با permission محدود و بدون newline ناخواسته نگهداری شوند.
-- اجرا: scripts/provision-offline-revocation-nv-index.sh 0x1234 /secure/platform-auth.bin /secure/nv-index-auth.bin
-- اسکریپت TPM2TOOLS_TCTI را به device:/dev/tpmrm0 محدود می‌کند، index را فقط define می‌کند، readback را بررسی می‌کند و هیچ دستور undefine/reset ندارد.
+- اجرا: bash scripts/provision-offline-revocation-nv-index.sh 0x1234 /secure/platform-auth.bin /secure/nv-index-auth.bin
+- اسکریپت TPM2TOOLS_TCTI را به device:/dev/tpmrm0 محدود می‌کند، index را فقط define می‌کند، readback را بررسی می‌کند و هیچ دستور undefine/reset ندارد. مستندات رسمی: [tpm2_nvdefine](https://github.com/tpm2-software/tpm2-tools/blob/master/man/tpm2_nvdefine.1.md)، [tpm2_nvread](https://github.com/tpm2-software/tpm2-tools/blob/master/man/tpm2_nvread.1.md)، [Authorization Formatting](https://github.com/tpm2-software/tpm2-tools/blob/master/man/common/authorizations.md).
 - پس از provisioning، مقدار index auth را از همان secret manager به Licensing:OfflineRevocation:Tpm:NvIndexAuthValueBase64 تزریق کنید. اسکریپت Linux نیز هنوز روی TPM سخت‌افزاری این پروژه اجرا/تأیید نشده است.
 
 ### 13.3 Runtime و Recovery
