@@ -14,41 +14,74 @@ public sealed class TradeAuthorizationAdapter(
     WorkContextService workContextService,
     IHttpContextAccessor httpContextAccessor) : ITradeAuthorization
 {
-    public async Task<bool> HasPermissionAsync(
+    private const string TradePermissionPrefix = "trade.";
+    // A private object key (not a string) so no other code can read or overwrite the resolved context.
+    private static readonly object ResolvedContextItemKey = new();
+
+    public async Task<TradeAccessContext?> ResolveCurrentContextAsync(
         Guid userId,
-        Guid tenantId,
-        Guid fiscalPeriodId,
-        string permissionCode,
-        TradeAccessIntent accessIntent,
         CancellationToken cancellationToken = default)
     {
-        if (!IsValidRequest(userId, permissionCode, accessIntent) ||
-            tenantId == Guid.Empty ||
-            fiscalPeriodId == Guid.Empty)
+        if (userId == Guid.Empty)
         {
-            return false;
+            return null;
         }
 
         var httpContext = GetAuthenticatedContext(userId);
         var sessionId = WorkContextCookie.GetSessionId(httpContext?.User);
         if (httpContext is null || sessionId is null)
         {
-            return false;
+            return null;
         }
 
         var current = await workContextService.GetCurrentAsync(
             httpContext, userId, sessionId.Value, cancellationToken);
+        if (current is null)
+        {
+            return null;
+        }
 
-        if (current is null ||
-            current.Company.CompanyId != tenantId ||
-            current.FiscalPeriod.Id != fiscalPeriodId ||
-            (accessIntent == TradeAccessIntent.Write && !current.AllowsWrites))
+        var resolved = new TradeAccessContext(
+            userId, current.Company.CompanyId, current.FiscalPeriod.Id, current.AllowsWrites);
+        httpContext.Items[ResolvedContextItemKey] = resolved;
+        return resolved;
+    }
+
+    public async Task<bool> HasPermissionAsync(
+        TradeAccessContext context,
+        string permissionCode,
+        TradeAccessIntent accessIntent,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsResolvedInThisRequest(context) ||
+            !IsValidRequest(context.UserId, permissionCode, accessIntent) ||
+            (accessIntent == TradeAccessIntent.Write && !context.AllowsWrites))
         {
             return false;
         }
 
         return await companyAccessService.HasPermissionAsync(
-            userId, tenantId, permissionCode, cancellationToken);
+            context.UserId, context.TenantId, permissionCode, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<string>> GetGrantedTradePermissionsAsync(
+        TradeAccessContext context,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsResolvedInThisRequest(context))
+        {
+            return [];
+        }
+
+        return await companyAccessService.GetGrantedPermissionCodesAsync(
+            context.UserId, context.TenantId, TradePermissionPrefix, cancellationToken);
+    }
+
+    private bool IsResolvedInThisRequest(TradeAccessContext? context)
+    {
+        return context is not null &&
+            httpContextAccessor.HttpContext?.Items.TryGetValue(ResolvedContextItemKey, out var stored) == true &&
+            ReferenceEquals(stored, context);
     }
 
     public async Task<bool> HasPermissionForAllCompanyPeriodsAsync(

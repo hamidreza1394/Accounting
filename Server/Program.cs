@@ -269,6 +269,9 @@ if (!setupRequired)
     // validated company/fiscal-period work context (D-062).
     builder.Services.AddScoped<Faranou.Modules.Trade.Application.Authorization.ITradeAuthorization,
         Infrastructure.Trade.TradeAuthorizationAdapter>();
+    builder.Services.AddScoped<Faranou.Modules.Trade.Application.Licensing.ITradeModuleEntitlement,
+        Infrastructure.Trade.DenyAllTradeModuleEntitlement>();
+    builder.Services.AddScoped<Faranou.Modules.Trade.Application.Authorization.TradeAccessGate>();
 
     // Corporate groups, ownership and the scope of group report runs (D-033, D-034). Every
     // permission is decided by CompanyAccessService; a group membership grants no access.
