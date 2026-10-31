@@ -58,14 +58,15 @@ public sealed class TradeAuthorizationAdapterTests : IDisposable
     [Fact]
     public async Task ClosedPeriod_AllowsReadButDeniesWriteEvenWhenPermissionIsGranted()
     {
-        var permission = TradePermissionCodes.FormUpdate("import-order");
-        var company = AddCompany(Domain.FiscalPeriodStatus.Closed, [permission]);
+        var viewPermission = TradePermissionCodes.FormView("import-order");
+        var writePermission = TradePermissionCodes.FormUpdate("import-order");
+        var company = AddCompany(Domain.FiscalPeriodStatus.Closed, [viewPermission, writePermission]);
         var adapter = CreateAdapter(company.CompanyId, company.PeriodId);
 
         Assert.True(await adapter.HasPermissionAsync(
-            userId, company.CompanyId, company.PeriodId, permission, TradeAccessIntent.Read));
+            userId, company.CompanyId, company.PeriodId, viewPermission, TradeAccessIntent.Read));
         Assert.False(await adapter.HasPermissionAsync(
-            userId, company.CompanyId, company.PeriodId, permission, TradeAccessIntent.Write));
+            userId, company.CompanyId, company.PeriodId, writePermission, TradeAccessIntent.Write));
     }
 
     [Fact]
