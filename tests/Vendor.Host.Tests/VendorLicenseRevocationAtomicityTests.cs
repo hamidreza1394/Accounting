@@ -169,7 +169,7 @@ public sealed class VendorLicenseRevocationAtomicityTests
             else
                 await txA.CommitAsync(TestContext.Current.CancellationToken);
 
-            Assert.Equal(new long[] { 1, 2 }, new[] { firstSequence, secondSequence }.Order().ToArray());
+            Assert.Equal(new long[] { 1, 2 }, new[] { firstSequence, secondSequence }.OrderBy(value => value).ToArray());
             dbA.ChangeTracker.Clear();
             Assert.Equal(2L, await dbA.OfflineRevocationSequences.Select(item => item.LastSequence).SingleAsync());
         }
