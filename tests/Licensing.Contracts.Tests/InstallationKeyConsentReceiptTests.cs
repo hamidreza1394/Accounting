@@ -12,7 +12,7 @@ public sealed class InstallationKeyConsentReceiptTests
         using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         var publicKey = key.ExportSubjectPublicKeyInfo();
         var fingerprint = Convert.ToHexString(SHA256.HashData(publicKey)).ToLowerInvariant();
-        var receipt = CreateReceipt(key, fingerprint);
+        var receipt = CreateReceipt(key);
 
         Assert.True(InstallationKeyConsentReceiptVerifier.TryVerify(
             receipt, publicKey, "inst-001", "key-001", fingerprint,
@@ -53,7 +53,7 @@ public sealed class InstallationKeyConsentReceiptTests
         Assert.Equal("software_consent_receipt_invalid", errorCode);
     }
 
-    private static InstallationKeyConsentReceipt CreateReceipt(ECDsa key, string fingerprint)
+    private static InstallationKeyConsentReceipt CreateReceipt(ECDsa key)
     {
         var unsigned = new InstallationKeyConsentReceipt(
             1,
