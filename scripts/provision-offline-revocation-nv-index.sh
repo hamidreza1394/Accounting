@@ -12,6 +12,15 @@ platform_auth_file="$2"
 nv_auth_file="$3"
 
 [[ "$offset" =~ ^(0x[0-9a-fA-F]+|[0-9]+)$ ]] || { echo "Invalid NV index offset." >&2; exit 2; }
+if [[ "$offset" == 0x* ]]; then
+  numeric_offset=$((offset))
+else
+  numeric_offset=$((10#$offset))
+fi
+(( numeric_offset >= 0x1000 && numeric_offset <= 0x00FFFFFF )) || {
+  echo "NV index offset must be between 0x1000 and 0x00FFFFFF." >&2
+  exit 2
+}
 [[ -r "$platform_auth_file" ]] || { echo "Platform authorization file is not readable." >&2; exit 2; }
 [[ -r "$nv_auth_file" ]] || { echo "NV index authorization file is not readable." >&2; exit 2; }
 [[ -c /dev/tpmrm0 ]] || { echo "Local TPM resource-manager device /dev/tpmrm0 is unavailable." >&2; exit 1; }
