@@ -32,3 +32,11 @@
 - PR #347 Provider و Key Provisioner ویندوزی را اضافه می‌کند. فرمان محلی `dotnet Server.dll --provisioning-ack-key create` فقط public SPKI را برمی‌گرداند و Enabled را تغییر نمی‌دهد؛ امضا فقط کلید از قبل provision شده را باز می‌کند و در مسیر Sign کلید ساخته یا جایگزین نمی‌شود.
 - تست CI روی Windows از Software KSP صرفاً به‌عنوان fixture استفاده می‌کند و وجود/سلامت TPM واقعی را اثبات نمی‌کند. آزمون TPM سخت‌افزاری روی سرور نصب مشتری پیش‌نیاز فعال‌سازی Production است.
 - Linux عمداً خارج از این مرحله است؛ بعداً یک backend مستقل برای TPM/OS secure storage لینوکس پشت همان interface نوشته می‌شود. هیچ کد Linux یا وابستگی cloud در این PR اضافه نشده است.
+
+
+## Clarification for Issue #214 — dedicated offline revocation key (2026-10-31)
+
+- Offline revocation snapshot signing is a separate Vendor purpose and must use its own versioned PKCS#11 KeyId/private-key object, distinct from package and license signing. It must never reuse either existing key.
+- The customer revocation verifier receives the matching public key through its independent revocation trust set; it must not fall back to the license trust store.
+- This is a security tightening for the accepted offline-revocation protocol, not a change to D-055/D-056 deployment, assurance, budget or Production gates. Default signing remains unavailable; SoftHSM remains test-only/Development-Staging as already accepted, and real Production remains gated by an approved HSM and ceremony.
+- PR scope adds the provider boundary, PKCS#11 purpose separation and SoftHSM verification only. It does not claim that revocation snapshots are yet generated, persisted, distributed or enforced end-to-end.
