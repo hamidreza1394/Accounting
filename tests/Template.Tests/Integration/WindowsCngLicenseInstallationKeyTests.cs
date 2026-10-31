@@ -2,8 +2,10 @@ using System;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 using Infrastructure.Licensing;
 using Xunit;
+using Microsoft.Extensions.Options;
 
 namespace Template.Tests.Integration;
 
@@ -92,6 +94,63 @@ public sealed class WindowsCngLicenseInstallationKeyTests
             Assert.Equal(created.PublicKeyFingerprint, afterRestart.PublicKeyFingerprint);
             Assert.Equal(created.OsInstallationMarkerDigest, afterRestart.OsInstallationMarkerDigest);
             Assert.Equal(created.Assurance, afterRestart.Assurance);
+        }
+        finally
+        {
+            try
+            {
+                using var key = CngKey.Open(
+                    WindowsCngLicenseInstallationKeyProvisioner.GetKeyName(installationId, options.KeyVersion),
+                    new CngProvider(options.ProviderName), CngKeyOpenOptions.MachineKey);
+                key.Delete();
+            }
+            catch (CryptographicException)
+            {
+                // A failed test may not have created a key.
+            }
+        }
+    }
+
+    [Fact]
+    public async Task IdentityProofVerifier_ValidatesExistingKeyAndDetectsOsMarkerChange()
+    {
+        Assert.SkipWhen(!OperatingSystem.IsWindows(), "Windows CNG is available only on Windows.");
+
+        var installationId = "license-proof-" + Guid.NewGuid().ToString("N");
+        var options = new WindowsCngLicenseInstallationKeyOptions
+        {
+            ProviderName = SoftwareKsp,
+            KeyVersion = 1,
+            MachineKey = true,
+        };
+
+        try
+        {
+            var created = WindowsCngLicenseInstallationKeyProvisioner.Create(
+                options, installationId, confirmSoftwareProviderRisk: true);
+            var identity = new Domain.InstallationIdentity
+            {
+                InstallationId = installationId,
+                KeyId = created.KeyId,
+                KeyVersion = options.KeyVersion,
+                ProviderName = created.ProviderName,
+                AssuranceLevel = created.Assurance.ToString(),
+                OsInstallationMarkerDigest = created.OsInstallationMarkerDigest,
+                PublicKeyFingerprint = created.PublicKeyFingerprint,
+                PublicKeySubjectPublicKeyInfoBase64 = Convert.ToBase64String(
+                    created.PublicKeySubjectPublicKeyInfo),
+                SoftwareProviderRiskAcceptedAtUtc = DateTime.UtcNow,
+                SoftwareProviderRiskAcceptedBy = Guid.NewGuid().ToString("D"),
+                State = Domain.InstallationIdentity.StateCurrent,
+            };
+
+            var verifier = new WindowsCngLicenseInstallationIdentityProofVerifier(Options.Create(options));
+            var valid = await verifier.VerifyAsync(identity);
+            Assert.Equal(InstallationIdentityProofStatus.Valid, valid);
+
+            identity.OsInstallationMarkerDigest = new string('0', 64);
+            var changed = await verifier.VerifyAsync(identity);
+            Assert.Equal(InstallationIdentityProofStatus.InstallationChanged, changed);
         }
         finally
         {

@@ -229,6 +229,15 @@ if (!setupRequired)
             Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance<
                 Faranou.Licensing.Contracts.LicenseEnvelopeValidator>(serviceProvider),
             serviceProvider.GetRequiredService<Faranou.Licensing.Contracts.OfflineRevocationConsumer>()));
+    builder.Services.Configure<Infrastructure.Licensing.WindowsCngLicenseInstallationKeyOptions>(
+        builder.Configuration.GetSection(
+            Infrastructure.Licensing.WindowsCngLicenseInstallationKeyOptions.SectionName));
+    builder.Services.AddScoped<Infrastructure.Licensing.IInstallationIdentityProofVerifier,
+        Infrastructure.Licensing.WindowsCngLicenseInstallationIdentityProofVerifier>();
+    builder.Services.AddScoped<Infrastructure.Licensing.ILocalInstallationKeyMetadataProvider,
+        Infrastructure.Licensing.WindowsCngLocalInstallationKeyMetadataProvider>();
+    builder.Services.AddScoped<Infrastructure.Licensing.CustomerLicenseImportService>();
+    builder.Services.AddScoped<Infrastructure.Licensing.CustomerInstallationIdentityEnrollmentService>();
     builder.Services.Configure<Infrastructure.Provisioning.CustomerProvisioningSettings>(
         builder.Configuration.GetSection(Infrastructure.Provisioning.CustomerProvisioningSettings.SectionName));
     builder.Services.AddSingleton<Infrastructure.Provisioning.ICustomerProvisioningTrustStore,
