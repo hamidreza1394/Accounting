@@ -487,3 +487,5 @@
 - A focused static audit found that no production runtime call-site currently consumes the validator/evaluator and there is no customer license-envelope storage/import endpoint/shared authorization policy. This is consistent with `docs/LICENSING.md` marking the customer installation license module NotImplemented.
 - Full runtime enforcement requires an explicit design decision for local signed-file vs customer DB storage, import/replace authorization and audit, installation identity binding, and the still-unapproved OD-03/04 expiry restrictions. Do not invent global middleware behavior that could lock out setup or change commercial access policy.
 - TPM state store and adapters are in main; actual hardware NV provisioning, secret delivery/rotation and real Windows/Linux TPM proof remain NotVerified.
+
+- Added a dual-host integration assertion that resolves `ICustomerLicenseEnvelopeValidator` from the actual Customer Server DI container and confirms `LicenseEnvelopeValidator` is not directly resolvable.
