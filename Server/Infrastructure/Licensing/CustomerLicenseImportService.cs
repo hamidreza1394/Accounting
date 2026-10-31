@@ -29,17 +29,20 @@ public sealed class CustomerLicenseImportService
 
     private readonly Data.DatabaseContext _database;
     private readonly ICustomerLicenseEnvelopeValidator _validator;
+    private readonly IInstallationIdentityProofVerifier _identityProofVerifier;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<CustomerLicenseImportService> _logger;
 
     public CustomerLicenseImportService(
         Data.DatabaseContext database,
         ICustomerLicenseEnvelopeValidator validator,
+        IInstallationIdentityProofVerifier identityProofVerifier,
         TimeProvider timeProvider,
         ILogger<CustomerLicenseImportService> logger)
     {
         _database = database ?? throw new ArgumentNullException(nameof(database));
         _validator = validator ?? throw new ArgumentNullException(nameof(validator));
+        _identityProofVerifier = identityProofVerifier ?? throw new ArgumentNullException(nameof(identityProofVerifier));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -107,6 +110,27 @@ public sealed class CustomerLicenseImportService
             if (identity is null)
                 return await RejectWithinTransactionAsync(
                     transaction, "installation_identity_missing", localInstallationId,
+                    payload.LicenseId, actorUserId, cancellationToken);
+
+            var identityProof = await _identityProofVerifier.VerifyAsync(identity, cancellationToken);
+            if (identityProof == InstallationIdentityProofStatus.InstallationChanged)
+            {
+                var changedAt = _timeProvider.GetUtcNow().UtcDateTime;
+                identity.State = Domain.InstallationIdentity.StateReactivationRequired;
+                identity.RetiredAtUtc = changedAt;
+                _database.SecurityAuditEvents.Add(CreateAudit(
+                    "InstallationIdentityChanged", localInstallationId, payload.LicenseId,
+                    actorUserId, changedAt, new { reasonCode = "os_installation_or_key_changed" }));
+                await _database.SaveChangesAsync(cancellationToken);
+                if (transaction is not null)
+                    await transaction.CommitAsync(cancellationToken);
+                return new CustomerLicenseImportResult(
+                    false, false, "installation_identity_changed_reactivation_required", LicenseStatus.Invalid);
+            }
+
+            if (identityProof != InstallationIdentityProofStatus.Valid)
+                return await RejectWithinTransactionAsync(
+                    transaction, "installation_identity_proof_unavailable", localInstallationId,
                     payload.LicenseId, actorUserId, cancellationToken);
 
             var current = await _database.InstalledLicenses
@@ -251,7 +275,7 @@ public sealed class CustomerLicenseImportService
         UserId = actorUserId,
         EventType = eventType,
         EntityType = "Installation",
-        EntityId = installationId,
+        EntityId = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(installationId))).ToLowerInvariant(),
         OccurredAtUtc = occurredAtUtc,
         DetailsJson = JsonSerializer.Serialize(new
         {
