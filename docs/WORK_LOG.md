@@ -1719,3 +1719,13 @@
 - sync دوحالته است: online authenticated وقتی اتصال موجود است و signed file exchange همیشه. Cloud server-authoritative است؛ Offline آخرین entitlement امضاشده پذیرفته‌شده را حفظ می‌کند.
 - نقشه اجرا: #395 → #390 → #391/#392 → #393 → #394. مستندات مرجع در docs/LICENSING_IMPLEMENTATION_PLAN.md قرار گرفتند.
 - این تغییر فقط مستندسازی و ثبت تصمیم است؛ هیچ قابلیت اجرایی، Migration یا Production readiness را ادعا نمی‌کند.
+
+
+## 2026-10-31 — Issue #384 / PR #388: customer identity enrollment and import status
+
+- PR #387 merged: Customer-only InstallationIdentity/InstalledLicense persistence schema is on main; no real customer database migration was run.
+- PR #388 adds audited enrollment of an existing Windows CNG installation key, live OS-marker and proof-of-possession validation, explicit SoftwareProtected consent actor/time, and transactional license import/replace through ICustomerLicenseEnvelopeValidator.
+- API endpoints are Infrastructure-only, antiforgery-protected, rate-limited and no-store; InstallationId is read from server configuration. Private key material is never persisted or returned.
+- CI initially found 8 server compile errors (framework Convert name collision, protected Entity.Id assignment and type mismatch). Those source errors were corrected. The next CI pass exposed test fixture tuple call sites and another protected Id assignment; these were corrected on the same PR branch. Latest head CI is pending at the time of this log entry.
+- D-059 changes the accepted status policy: signed Restricted envelopes are persisted for later restricted-mode enforcement; Grace is rejected because there is no implicit grace period. Runtime call-site enforcement remains a separate implementation slice.
+- No local .NET/SQL Server execution, physical TPM verification or independent-host E2E is claimed. Startup reload/revalidation, operational authorization enforcement and Cloud authoritative entitlement resolution remain open.
