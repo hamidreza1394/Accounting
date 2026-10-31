@@ -899,14 +899,34 @@ namespace Data.Migrations
                     .IsRequired()
                     .HasColumnType("nvarchar(max)");
 
+                b.Property<string>("PreviousAnchorDigest")
+                    .IsRequired()
+                    .HasMaxLength(64)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(64)");
+
+                b.Property<string>("AnchorDigest")
+                    .IsRequired()
+                    .HasMaxLength(64)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(64)");
+
                 b.Property<long>("AnchorGeneration")
                     .HasColumnType("bigint");
+
+                b.Property<string>("AcceptedEnvelopeJson")
+                    .HasColumnType("nvarchar(max)");
 
                 b.Property<string>("PendingEnvelopeJson")
                     .HasColumnType("nvarchar(max)");
 
                 b.Property<long?>("PendingExpectedGeneration")
                     .HasColumnType("bigint");
+
+                b.Property<string>("PendingExpectedAnchorDigest")
+                    .HasMaxLength(64)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(64)");
 
                 b.Property<byte[]>("RowVersion")
                     .IsRequired()
