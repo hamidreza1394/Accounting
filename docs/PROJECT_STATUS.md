@@ -493,3 +493,10 @@
 - Snapshot rows have a unique global sequence and ListId, payload SHA-256, exact signed envelope JSON, signer metadata, timestamps, RowVersion, check constraints and a SQL Server trigger rejecting UPDATE/DELETE. The counter is seeded at zero; atomic allocation is not yet implemented.
 - No Customer database or `Server/**` changes. Local .NET SDK is unavailable; EF CLI generation, build, tests and SQL Server migration execution are not claimed. CI pending-model guard and SQL Server verification are required before merge.
 - Next slices: transactional sequence allocation + approval/license/snapshot/audit, authorized no-store export, then customer runtime call-site enforcement. Revoked approvals remain fail-closed.
+
+
+## 2026-10-31 — Issue #214: transactional revocation and snapshot export (stacked PR #377)
+- Stacked PR [#377](https://github.com/hamidreza1394/Accounting/pull/377) adds atomic Vendor SQL sequence allocation, maker-checker revocation service, transactional snapshot/license/approval/audit persistence and authorized no-store latest-snapshot export.
+- Sequence allocation locks the singleton counter before reading the revoked-license set, so concurrent snapshots are ordered and later snapshots include prior committed revocations. Signer outage returns 503 and the enclosing transaction must roll back.
+- SQL Server integration tests were added for signed success, unavailable signer rollback, audit rollback, concurrent sequence allocation and immutable snapshot UPDATE rejection. No local .NET SDK/SQL Server is available; these tests are not claimed as run.
+- Remaining: customer runtime call-site enforcement is not yet present; production HSM signer/trust distribution and physical deployment tests remain NotVerified/Blocked. PR #377 is stacked on #376, which is stacked on #375; each PR requires its own CI evidence.
