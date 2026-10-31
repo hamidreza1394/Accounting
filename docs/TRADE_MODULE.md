@@ -1,0 +1,119 @@
+# ماژول بازرگانی خارجی — معماری و قواعد اجرایی
+
+**مرجع تصمیم:** D-061  
+**Issue:** #397  
+**وضعیت:** تصمیم Accepted؛ foundation در حال پیاده‌سازی؛ عملیات تجاری و enforcement کامل هنوز NotImplemented.
+
+## 1. معماری و استقرار
+
+در فاز اول ماژول در مخزن و Host فعلی Accounting اجرا می‌شود؛ اما یک Bounded Context مستقل است.
+
+    Modules/Trade/
+      Trade.Domain/
+      Trade.Application/
+      Trade.Infrastructure/
+    ClientApp/src/modules/trade/
+    tests/Template.Tests/
+
+- Domain هیچ ProjectReference به Core یا Server ندارد.
+- Application فقط به Trade.Domain وابسته است و قراردادهای Port برای مرزهای بیرونی تعریف می‌کند.
+- Infrastructure فقط Trade.Application/Domain را Reference می‌کند؛ مالک TradeDbContext و EF mapping است.
+- Server در آینده Composition Root و محل adapterها خواهد بود؛ هیچ منطق دامنه‌ای در Server قرار نمی‌گیرد.
+- پروژه‌های UI و API بعد از تثبیت use caseها اضافه می‌شوند؛ UI هیچ مرجع امنیتی نیست.
+
+این یک Modular Monolith است، نه Microservice توزیع‌شده. مسیر استخراج به Microservice در بخش ۹ آمده است.
+
+## 2. دیتابیس و مالکیت داده
+
+- در فاز اول یک SQL Server database فیزیکی مشترک استفاده می‌شود.
+- تمام جداول ماژول تحت schema مستقل trade قرار می‌گیرند.
+- TradeDbContext و assembly مهاجرت Trade مستقل‌اند؛ migration history آن نیز باید جدا باشد.
+- هیچ FK از Trade به جداول تراکنشی حسابداری ایجاد نمی‌شود.
+- شناسه شرکت مرجع منطقی است؛ حذف/غیرفعال‌سازی شرکت باید از مسیر هسته و با سیاست lifecycle هماهنگ شود.
+- Migration مشتری بدون Issue مستقل، تست SQL Server، rollout/rollback و تأیید اجرا نمی‌شود.
+
+## 3. Tenant و جداسازی شرکت
+
+در این مخزن طبق D-013، Company.Id همان TenantId است. Tenant entity جدید نسازید.
+
+1. تمام داده‌های متعلق به شرکت باید TenantId داشته باشند.
+2. TenantId از درخواست کلاینت یا Claim شرکت پذیرفته نمی‌شود؛ سرور آن را از Work Context معتبر و CompanyAccessService تأیید می‌کند.
+3. هر query، update، delete، export، attachment و report باید TenantId را صریحاً در scope داشته باشد.
+4. Global Query Filter به‌تنهایی کنترل امنیتی نیست و در این مخزن عمداً جایگزین predicate صریح نمی‌شود.
+5. تست منفی باید دسترسی به رکورد شرکت دیگر را با شناسه معتبر اما غیرمجاز رد کند؛ بدون افشای وجود داده.
+
+## 4. دوره عملیاتی Trade
+
+- دوره‌های بازرگانی مدل مستقل خود را دارند؛ از Domain.FiscalPeriod حسابداری استفاده نمی‌شود.
+- دوره دارای TenantId، کد یکتا در محدوده شرکت، عنوان، بازه تاریخ و وضعیت lifecycle است.
+- وضعیت دوره و دسترسی کاربر مستقل‌اند. وجود دوره Open به‌تنهایی مجوز کاربر ایجاد نمی‌کند.
+- مجوزهای دوره‌ای حداقل مشاهده، ایجاد/ویرایش و بستن/بازگشایی را تفکیک می‌کنند.
+- کاربر فقط دوره‌هایی را می‌بیند که هم به شرکت دسترسی دارد و هم مجوز دوره لازم را داراست.
+- انتخاب دوره باید در سرور مجدداً اعتبارسنجی شود؛ UI صرفاً projection نتیجه سرور است.
+- ورود خودکار به دوره قبلی ممنوع است؛ هر نشست جدید باید context معتبر را دوباره تعیین کند.
+
+## 5. مجوز فرم‌ها و عملیات
+
+برای هر فرم/منبع کد مجوز مستقل و پایدار تعریف می‌شود:
+
+- trade.form.<form-code>.view
+- trade.form.<form-code>.create
+- trade.form.<form-code>.update
+- trade.form.<form-code>.approve
+- trade.form.<form-code>.delete
+- trade.form.<form-code>.export
+
+مجوزهای دوره و گزارش نیز مستقل‌اند. فهرست فرم‌های واقعی و کدهای نهایی با نیازمندی‌های فرایند واردات در Issueهای دامنه‌ای تکمیل می‌شوند.
+
+**قانون امنیتی:** منو، فرم، دکمه یا فیلد پنهان‌شده به معنی مجازبودن یا غیرمجازبودن درخواست نیست. API و Application use case باید permission را مستقل از UI بررسی کنند. هیچ endpoint فقط به‌خاطر دسترسی به منوی والد قابل استفاده نیست.
+
+## 6. لایسنس و مجوز عملیاتی
+
+- شناسه تجاری ماژول: TRADE_IMPORT.
+- entitlement تجاری می‌گوید شرکت حق استفاده از ماژول را دارد.
+- permission عملیاتی می‌گوید کاربر مشخص در شرکت/دوره مشخص چه عملیاتی می‌تواند انجام دهد.
+- این دو قابل جایگزینی نیستند.
+- ترتیب کنترل: نشست معتبر → Company membership → entitlement ماژول → permission عملیاتی → permission دوره → اجرای use case.
+- قرارداد entitlement فعلاً Port است؛ runtime اتصال به Licensing فقط پس از هم‌ترازی با D-059 و Issue مستقل انجام می‌شود.
+
+## 7. گزارش تک‌شرکتی و چندشرکتی
+
+### گزارش شرکت
+- TenantId و دوره باید از context معتبر یا درخواست اعتبارسنجی‌شده گرفته شوند.
+- مجوز گزارش همان شرکت و دوره بررسی می‌شود.
+- داده‌های گزارش باید query predicate صریح TenantId داشته باشند.
+
+### گزارش چندشرکتی
+- scope شرکت‌ها از درخواست arbitrary کلاینت پذیرفته نمی‌شود؛ ابتدا scope مجاز (مثلاً گروه شرکتی) از منبع معتبر سرور حل می‌شود.
+- کاربر باید مجوز گزارش تجمیعی را در تمام شرکت‌های scope داشته باشد.
+- empty scope یا partial permission رد می‌شود؛ خروجی ناقص و بی‌اعلام ممنوع است.
+- scope، شرکت‌ها، دوره‌ها، کاربر، زمان، فیلترها و شناسه همبستگی audit می‌شوند.
+- گزارش عملیاتی Trade فقط داده Trade را جمع می‌زند. گزارش تلفیقی عددی حسابداری مشمول D-034 است و بدون Ledger/Chart-of-Accounts ادعا نمی‌شود.
+
+## 8. اتصال به سیستم مالی
+
+Trade به جداول یا Entityهای حسابداری دسترسی مستقیم ندارد و نمی‌تواند مستقیم سند حسابداری ایجاد/تغییر دهد. اتصال آتی با قراردادهای نسخه‌دار و Integration Events خواهد بود. پیام‌ها باید شناسه همبستگی، نسخه قرارداد، idempotency و audit داشته باشند. Outbox/Inbox فقط زمانی اضافه می‌شود که جریان واقعی نیاز به سازگاری بین دو bounded context داشته باشد.
+
+## 9. مسیر استخراج به Microservice
+
+در صورت نیاز آینده:
+1. API و Integration Contracts نسخه‌دار و identity سرویس‌به‌سرویس تعریف شود.
+2. schema trade به دیتابیس مستقل منتقل و مالکیت backup/restore/migration جدا شود.
+3. Company authorization و license entitlement از adapter درون‌فرایندی به API امن بین‌سرویسی تبدیل شود.
+4. Outbox/Inbox و idempotency برای جریان‌های بین‌سرویسی اضافه شود.
+5. deployment، health/readiness، observability، secrets، scaling و CI/CD مستقل شوند.
+6. تست قرارداد و migration داده قبل از cutover اجرا شود.
+
+استخراج آتی نیازمند تغییرات عملیاتی و داده‌ای است؛ این طراحی coupling را کاهش می‌دهد، اما ادعای «استخراج بدون کار» ندارد.
+
+## 10. موارد ممنوع
+
+- ایجاد Tenant entity موازی یا استفاده از TenantId ارسالی کلاینت.
+- Reference به Core Accounting Domain/DbContext از Trade.Domain یا Trade.Application.
+- FK به اسناد/جداول تراکنشی حسابداری.
+- استفاده از FiscalPeriod حسابداری در Trade.
+- اعتماد به مخفی‌کردن فرم/دکمه به‌عنوان Authorization.
+- گزارش چندشرکتی با دسترسی جزئی یا scope اعلام‌نشده.
+- یکی‌گرفتن entitlement تجاری و permission کاربر.
+- افزودن broker، Event Bus، دیتابیس جدا یا Kubernetes بدون Issue و نیاز اثبات‌شده.
+- اجرای Migration مشتری بدون تأیید مستقل.
