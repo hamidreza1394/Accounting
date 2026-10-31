@@ -193,3 +193,17 @@
 - [ ] **Offline file exchange:** درخواست .request.json و پاسخ .license.json؛ .txt فقط wrapper Base64 بایت‌های دقیق signed package.
 
 این موارد در D-060 Accepted هستند اما پیاده‌سازی و Verified محسوب نمی‌شوند. جزئیات در LICENSING_IMPLEMENTATION_PLAN.md.
+
+
+## ماژول بازرگانی خارجی (D-061 / Issue #397)
+
+1. **Foundation:** ثبت ADR، مرز پروژه‌ها، قراردادهای authorization و entitlement، schema مستقل trade و تست‌های معماری.
+2. **Company/Period Security:** adapter به CompanyAccessService، دوره عملیاتی Trade، مجوزهای دوره‌ای، تست دستکاری TenantId و cross-company.
+3. **Forms & Workflows:** permission catalog برای هر فرم و هر عملیات؛ منو/فرم براساس permissionهای سرور؛ enforcement در endpoint و use case.
+4. **Trade Business Domains:** نیازمندی‌سنجی و پیاده‌سازی گام‌به‌گام پرونده واردات، سفارش، اسناد، حمل، گمرک، تخصیص ارز و گردش کار با Issueهای مستقل.
+5. **Reports:** گزارش شرکت، دوره و گزارش چندشرکتی با کنترل مجوز همه شرکت‌های scope، audit، خروجی Excel/PDF و تست عدم نشت.
+6. **License:** اتصال به entitlement مستقل TRADE_IMPORT پس از تکمیل قراردادهای Licensing و Issue مستقل؛ لایسنس جایگزین مجوز عملیاتی نیست.
+7. **Financial Integration:** قراردادهای نسخه‌دار و رویدادهای دامنه؛ بدون FK یا نوشتن مستقیم در جداول حسابداری.
+8. **Microservice extraction (Deferred):** فقط در صورت نیاز کسب‌وکار/مقیاس/استقرار، با جداسازی دیتابیس، API، هویت سرویس، Outbox/Inbox و CI/CD مستقل.
+
+**قاعده:** در فاز اول یک دیتابیس فیزیکی و Modular Monolith؛ جداسازی schema و DbContext مالکیت داده را روشن می‌کند اما دیتابیس مستقل یا Microservice را ادعا نمی‌کند.
