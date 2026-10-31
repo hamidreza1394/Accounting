@@ -6,7 +6,7 @@ using Infrastructure.Licensing;
 using Microsoft.Extensions.Configuration;
 using Xunit;
 
-namespace Template.Tests.Infrastructure;
+namespace Template.Tests.Licensing;
 
 public sealed class ConfigurationLicenseTrustStoreTests
 {
