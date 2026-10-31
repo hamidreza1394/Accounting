@@ -43,7 +43,7 @@ public sealed class Tpm2NvExtendRollbackAnchor : IOfflineRevocationRollbackAncho
         byte[] configuredAuth;
         try
         {
-            configuredAuth = Convert.FromBase64String(_options.NvIndexAuthValueBase64);
+            configuredAuth = System.Convert.FromBase64String(_options.NvIndexAuthValueBase64);
         }
         catch (FormatException exception)
         {
@@ -160,7 +160,7 @@ public sealed class Tpm2NvExtendRollbackAnchor : IOfflineRevocationRollbackAncho
             throw new OfflineRevocationRollbackAnchorUnavailableException();
         }
 
-        return Convert.ToHexString(value).ToLowerInvariant();
+        return System.Convert.ToHexString(value).ToLowerInvariant();
     }
 
     private TpmHandle CreateAuthorizedIndexHandle()
@@ -168,7 +168,7 @@ public sealed class Tpm2NvExtendRollbackAnchor : IOfflineRevocationRollbackAncho
         byte[] auth;
         try
         {
-            auth = Convert.FromBase64String(_options.NvIndexAuthValueBase64!);
+            auth = System.Convert.FromBase64String(_options.NvIndexAuthValueBase64!);
         }
         catch (FormatException exception)
         {
@@ -230,7 +230,7 @@ public sealed class Tpm2NvExtendRollbackAnchor : IOfflineRevocationRollbackAncho
 
         try
         {
-            return Convert.FromHexString(value).Length == 32;
+            return System.Convert.FromHexString(value).Length == 32;
         }
         catch (FormatException)
         {
