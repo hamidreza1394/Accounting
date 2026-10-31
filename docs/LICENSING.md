@@ -135,5 +135,6 @@
 - این سه بخش مرز مسئولیت در Modular Monolith هستند؛ Microservice یا دیتابیس جدا الزامی نیست. Vendor و Customer persistence جدا می‌مانند.
 - قبل از Login، Customer Host وضعیت لایسنس را سمت سرور می‌سنجد: بدون envelope به Activation Wizard؛ envelope معتبر به Login؛ Restricted به ورود کنترل‌شده read/export/recovery؛ InvalidOrUntrusted به fail-closed/recovery.
 - فرم فعال‌سازی Company referenceهای مجاز را از envelope می‌گیرد و زیرسیستم/Feature/Seat را نمایش می‌دهد؛ مدیر هر شرکت محلی ساخته می‌شود و رمز فقط به Identity hash روی Customer Host تبدیل می‌شود.
+- کد فعال‌سازی Vendor یک‌بارمصرف، با مدت اعتبار قابل تنظیم و bind‌شده به CustomerAccount/Installation است؛ فقط مجوز شروع صدور است، نه جایگزین LicenseEnvelope. در Cloud از API احراز هویت‌شده و در Offline توسط اپراتور Vendor روی Vendor Host redeem می‌شود؛ هرگز داخل فایل انتقال/log/telemetry قرار نمی‌گیرد.
 - Offline: درخواست نسخه‌دار .request.json با public SPKI و proof-of-possession؛ پاسخ امضاشده .license.json. فایل .txt فقط Base64/armored wrapper همان بایت‌های دقیق است؛ QR صرفاً برای challenge کوچک اختیاری است. هیچ private key/password صادر نمی‌شود.
 - جزئیات و معیار پذیرش در [LICENSING_IMPLEMENTATION_PLAN.md](LICENSING_IMPLEMENTATION_PLAN.md)، [D-060](DECISIONS.md) و Issue #396 است. این قابلیت‌ها Accepted / NotImplemented هستند.
