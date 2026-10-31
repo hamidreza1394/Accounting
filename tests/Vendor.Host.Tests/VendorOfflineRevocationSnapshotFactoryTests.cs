@@ -1,5 +1,4 @@
 using System.Security.Cryptography;
-using System.Text;
 using Faranou.Licensing.Contracts;
 using Faranou.Vendor.Host.Signing;
 using Xunit;
@@ -35,7 +34,7 @@ public sealed class VendorOfflineRevocationSnapshotFactoryTests
             out var errorCode), errorCode);
         Assert.NotNull(payload);
         Assert.Equal(7, payload.Sequence);
-        Assert.Equal(["license-a", "license-z"], payload.RevokedLicenseIds);
+        Assert.Equal(new[] { "license-a", "license-z" }, payload.RevokedLicenseIds);
         Assert.Equal(now, payload.IssuedAtUtc);
         Assert.Equal(now.AddDays(7), payload.ExpiresAtUtc);
     }
@@ -101,7 +100,7 @@ public sealed class VendorOfflineRevocationSnapshotFactoryTests
     {
         var factory = CreateFactory(new UnavailableOfflineRevocationSigningProvider());
         using var cancellation = new CancellationTokenSource();
-        await cancellation.CancelAsync();
+        cancellation.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
             await factory.CreateAsync(1, ["license-1"], TimeSpan.FromDays(1), cancellation.Token));
