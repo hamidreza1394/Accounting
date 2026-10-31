@@ -496,3 +496,11 @@
 - CI on previous head `0508c553e4cab42f967bc6bcd86e48cefac2ec9a` failed due to missing logger injection and a Gitleaks false positive in a test-only key ID. Both were corrected; latest head `2a9e227b28d9e54dfc08a4378642abaf4395b533` is awaiting fresh CI. Do not claim green until the new runs complete.
 - PRs #376/#377 were closed as duplicate stacked implementations; their unique immutable-history hardening is now included in #375.
 - Still NotVerified/Blocked: actual customer runtime revocation enforcement call-sites; provisioned Production HSM/KMS signer and independent public-key trust distribution; physical multi-host/offline and backup/restore operational tests.
+
+
+## 2026-10-31 — customer license validator DI boundary
+- Added `ICustomerLicenseEnvelopeValidator`; `RevocationAwareLicenseEnvelopeValidator` implements it. Server DI exposes only the interface and constructs the raw signature/time validator internally, preventing accidental DI bypass of offline revocation checks.
+- A dual-host integration assertion resolves the safe interface from Customer Server DI and confirms neither the raw validator nor the concrete revocation-aware validator is directly resolvable.
+- This is a dependency-boundary hardening, **not end-to-end license enforcement**. Static audit found no production runtime call-site consuming the validator/evaluator, no customer license-envelope store/import endpoint, and no shared authorization policy. `docs/LICENSING.md` still marks the installation license module NotImplemented.
+- Full runtime integration requires an approved local signed-file vs customer DB source, import/replace authorization and audit, installation identity binding, and approved OD-03/04 expiry/grace behavior. Do not invent global middleware behavior that may lock out setup or change commercial access policy.
+- TPM NV persistence/adapter exists, but hardware provisioning, secret delivery/rotation, and real Windows/Linux TPM verification remain NotVerified.
