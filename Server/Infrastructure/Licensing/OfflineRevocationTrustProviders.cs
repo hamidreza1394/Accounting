@@ -29,7 +29,7 @@ public sealed class ConfigurationOfflineRevocationKeyResolver : IOfflineRevocati
             byte[] publicKey;
             try
             {
-                publicKey = Convert.FromBase64String(entry.Value);
+                publicKey = System.Convert.FromBase64String(entry.Value);
                 using var parsed = ECDsa.Create();
                 parsed.ImportSubjectPublicKeyInfo(publicKey, out var bytesRead);
                 if (bytesRead != publicKey.Length || parsed.KeySize != 256)
