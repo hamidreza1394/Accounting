@@ -1582,3 +1582,11 @@
 - Added SQLCMD permission script to keep Vendor runtime append-only on dbo.VendorAuditEvents and require a separate migration principal.
 - Recovery runbook now covers periodic verification/alerting and SQL permission deployment.
 - Provider selection, separate external credentials, immutability/retention, real alert receiver, SQL permission execution and a target-environment restore drill remain open. No Production sink is claimed.
+
+
+## 2026-10-31 — Issue #236/#214: dedicated offline revocation signing key
+- Added IOfflineRevocationSigningProvider and an unavailable fail-closed default; PKCS#11 provider signs only with OfflineRevocationKey and emits purpose-specific metadata-only audit events.
+- PKCS#11 configuration now requires three distinct versioned key IDs (license, provisioning/package, offline-revocation); health/readiness verifies all three private-key objects and their required attributes.
+- Added unit coverage for purpose separation, duplicate/invalid IDs, fail-closed default, and SoftHSM signing/verification using a third independent non-extractable P-256 key.
+- Updated Vendor README, HSM runbook and D-055/D-056 clarification. This does not implement snapshot issuance, persistence, export or customer enforcement; those remain Issue #214 work.
+- No real HSM/production key was provisioned; CI is pending after PR creation.
