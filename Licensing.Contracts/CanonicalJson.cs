@@ -37,6 +37,7 @@ public static class CanonicalJson
 			FormatVersion = payload.FormatVersion,
 			LicenseId = payload.LicenseId,
 			InstallationId = payload.InstallationId,
+			InstallationKeyFingerprint = payload.FormatVersion >= 2 ? payload.InstallationKeyFingerprint : null,
 			ProductCode = payload.ProductCode,
 			LicenseKind = payload.LicenseKind,
 			IssuedAtUtc = payload.IssuedAtUtc.ToUniversalTime().ToString("O"),
@@ -127,7 +128,8 @@ public static class CanonicalJson
 			exp,
 			dto.GraceDays,
 			dto.Sequence,
-			new LicenseLimits(dto.Limits?.MaxCompanies, subsystems));
+			new LicenseLimits(dto.Limits?.MaxCompanies, subsystems),
+			dto.InstallationKeyFingerprint ?? "");
 		return true;
 	}
 
@@ -149,6 +151,7 @@ public static class CanonicalJson
 		public int FormatVersion { get; set; }
 		public string? LicenseId { get; set; }
 		public string? InstallationId { get; set; }
+		public string? InstallationKeyFingerprint { get; set; }
 		public string? ProductCode { get; set; }
 		public string? LicenseKind { get; set; }
 		public string? IssuedAtUtc { get; set; }
