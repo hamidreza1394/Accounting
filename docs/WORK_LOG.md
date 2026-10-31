@@ -1605,3 +1605,10 @@
 - Added SQL Server regression coverage proving a concurrent GetCurrentAsync waits on the existing session application lock while TryApplyAsync is between prepare and TPM Extend; the test asserts only one Extend is issued.
 - Re-reviewed the production store: the session lock already protects both GetCurrentAsync and TryApplyAsync. No unnecessary production code change was made.
 - Latest CI result is pending; no local .NET/SQL Server or physical TPM execution is claimed.
+
+
+## 2026-10-31 — PR #366 merged and CI verified
+- PR #366 (feat(licensing): add TPM-anchored customer revocation state store) merged into main at head SHA d2005b618528b416c3773ed7632d09a8627685db.
+- .NET CI run 41175579282 succeeded across client, secret-scan, build-and-test, publish-scripts, E2E, publish and Windows publish; Vendor CI 41175579288 and Semgrep 41175579255 also succeeded.
+- Updated Issue #364 handoff and project status to distinguish merged software implementation from still-open hardware provisioning/verification and production runtime enforcement.
+- No physical TPM test, production NV provisioning, secret delivery/rotation or production database migration is claimed.

@@ -6,7 +6,7 @@
 - PR #361 (Development/Test-only audit checkpoint file journal) در main ادغام شده است؛ adapter محلی هرگز Production sink نیست.
 - PR #362 (offline revocation consumer contract) در main ادغام شده است؛ resolver مستقل، اعمال اتمیک sequence، وضعیت سه‌حالته `Unavailable/NotRevoked/Revoked` و `RevocationAwareLicenseEnvelopeValidator` اضافه شده‌اند. اتصال به مسیر نهایی LicenseEvaluator/host مشتری همچنان باقی است.
 - Issue #107 همچنان به provider مستقل Production، credential separation، retention/immutability، alerting و recovery نیاز دارد.
-- Issue #214: قرارداد مصرف‌کننده در PR #362 ادغام شده است؛ durable customer state store و TPM NV Extend adapter در PR #366 در حال بازبینی است. provisioning index، hardware verification و runtime enforcement نهایی باقی است.
+- Issue #214/#364: PR #366 با SHA d2005b618528b416c3773ed7632d09a8627685db در main ادغام شد؛ .NET CI، Vendor CI و Semgrep همگی موفق‌اند. durable customer state store، TPM NV Extend adapter، migration مشتری و crash recovery پیاده‌سازی شده‌اند. provisioning سخت‌افزار واقعی، مدیریت secret، TPM hardware verification و اتصال runtime call-site هنوز باز هستند.
 - Issueهای #228 و #235 تا تکمیل اتصال عملیاتی Provisioning/ACK و آزمون‌های لازم باز می‌مانند.
 - اجرای واقعی روی دو میزبان، Staging نهایی و recovery drill در انتهای مرحلهٔ اول انجام می‌شود؛ CI و تست خودکار هر PR همچنان الزامی‌اند.
 
@@ -461,7 +461,7 @@
 - The above are fixes to prior failing runs; final CI on the latest branch heads is still pending. No PR is approved for Merge on the basis of those earlier runs.
 
 
-## 2026-10-31 — Issue #364: customer offline revocation anti-rollback (implementation in progress)
+## 2026-10-31 — Issue #364: customer offline revocation anti-rollback (software milestone merged)
 - مالک محصول Migration مستقل دیتابیس مشتری و TPM-based anti-rollback را تأیید کرد؛ تصمیم D-057 پذیرفته شد.
 - Branch: `feat/issue-364-tpm-revocation-state-current-main`.
 - PR جاری: [#366](https://github.com/hamidreza1394/Accounting/pull/366)؛ CI روی آخرین SHA در حال اجراست.
@@ -469,5 +469,5 @@
 - State store دو مرحله‌ای، SQL Server session application lock، pending signed envelope، recovery از crash قبل/بعد از TPM extend، نگهداری envelope امضاشده و بررسی مجدد digest/hash-chain در هر read را پیاده‌سازی می‌کند.
 - TPM NV Extend hash-chain adapter با Microsoft.TSS پیاده‌سازی شده: Windows از TBS و Linux از strict local TPM device استفاده می‌کند؛ هیچ simulator fallback وجود ندارد. بدون TPM section پیکربندی، provider عمداً unavailable/fail-closed است.
 - ابزار create-only provisioning برای Windows/TBS و اسکریپت Linux/tpm2-tools محدود به /dev/tpmrm0 افزوده شده‌اند؛ trust resolverهای مستقل license/revocation و DI برای RevocationAwareLicenseEnvelopeValidator نیز ثبت شده‌اند. provisioning واقعی و secret delivery/rotation هنوز اجرا/تأیید نشده‌اند.
-- تست‌های SQL Server برای apply، restore قدیمی، recovery دو crash window و concurrency بین دو DbContext و تست‌های config provider اضافه شده‌اند؛ اجرای محلی انجام نشده و CI PR #366 در حال اجراست.
-- تست فیزیکی TPM روی Windows 10/11، Windows Server و Linux و اتصال call-site عملیاتی به RevocationAwareLicenseEnvelopeValidator باقی است؛ این مرحله هنوز Production-ready یا Hardware-verified نیست و Issue #364 باز می‌ماند.
+- تست‌های SQL Server برای apply، restore قدیمی، recovery دو crash window و concurrency بین دو DbContext و تست‌های config provider اضافه شده‌اند. PR #366 در SHA نهایی ادغام شد؛ .NET CI run 41175579282 و تمام jobهایش، Vendor CI 41175579288 و Semgrep 41175579255 موفق‌اند.
+- تست فیزیکی TPM روی Windows 10/11، Windows Server و Linux، اجرای provisioning و secret delivery/rotation، و اتصال call-site عملیاتی مشتری به RevocationAwareLicenseEnvelopeValidator باقی است؛ این مرحله هنوز Production-ready یا Hardware-verified نیست و Issue #364 باز می‌ماند.
