@@ -17,8 +17,12 @@ public sealed class CustomerOfflineRevocationState : Seedwork.Entity
     public string? SnapshotDigest { get; set; }
     public DateTime? ExpiresAtUtc { get; set; }
     public string RevokedLicenseIdsJson { get; set; } = "[]";
+    public string PreviousAnchorDigest { get; set; } = new('0', 64);
+    public string AnchorDigest { get; set; } = new('0', 64);
     public long AnchorGeneration { get; set; }
+    public string? AcceptedEnvelopeJson { get; set; }
     public string? PendingEnvelopeJson { get; set; }
     public long? PendingExpectedGeneration { get; set; }
+    public string? PendingExpectedAnchorDigest { get; set; }
     public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 }
