@@ -90,3 +90,14 @@ Issue فقط وقتی قابل بستن است که تولید و انتشار s
 - This PR still awaits final CI and merge; do not mark the feature Verified until .NET CI, Vendor SQL Server integration/EF snapshot guards and Semgrep are green on the final head.
 - The remaining Issue #214 acceptance boundary is customer runtime enforcement/anti-rollback and operational recovery. Customer-side work stays separate under #235/#364; no customer schema or `Server/**` change is in PR #375.
 - Production signing remains unavailable by default. The deployment must explicitly configure a 1..365 day snapshot validity and a separate public revocation trust set; no private key or provider credential is checked in.
+
+
+## 2026-10-31 — consolidated Vendor offline revocation implementation and CI repair
+
+- PR #375 now contains the consolidated Vendor-side offline revocation path: canonical signed snapshot factory; separate revocation public trust store; immutable snapshot history tied to the maker-checker approval and triggering license; application-lock serialized global sequence; transactional license/approval/snapshot/audit updates; and authorized antiforgery-protected no-cache export.
+- The issuance service verifies the just-created envelope against the separately configured revocation public trust store before it mutates approval/license state. It also checks the verified sequence and exact canonical revoked-license set.
+- Added a SQL Server trigger rejecting UPDATE/DELETE of persisted signed revocation snapshot rows. The application uses append-only inserts; the trigger enforces immutability at the table boundary.
+- CI on prior head `0508c553e4cab42f967bc6bcd86e48cefac2ec9a` found two concrete issues: missing `ILogger<VendorOfflineRevocationIssuanceService>` constructor dependency (compile failure) and a Gitleaks generic-api-key false positive in a test key identifier. Fixed by injecting the logger and using a non-secret test key ID. The migration trigger and a SQL Server immutability assertion were also added.
+- **Current head:** latest commit `2a9e227b28d9e54dfc08a4378642abaf4395b533`; new CI runs were queued/in progress when recorded. Do not claim these fixes green until the latest runs finish.
+- PRs #376 and #377 were closed as superseded duplicates to avoid competing snapshot schemas and sequence strategies; their useful immutable-row hardening was ported into #375.
+- **Still blocked/not implemented:** customer runtime call-site enforcement is not yet present; production HSM/KMS signer and independent public trust distribution are not provisioned; physical multi-host/offline operational proof and deployment backup/restore remain to be executed. Vendor-side snapshot issuance/export is not equivalent to complete customer-side revocation enforcement.
