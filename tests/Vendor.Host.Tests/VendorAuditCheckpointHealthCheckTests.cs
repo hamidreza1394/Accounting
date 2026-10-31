@@ -15,7 +15,7 @@ public sealed class VendorAuditCheckpointHealthCheckTests
         var state = new VendorAuditCheckpointHealthState();
         var check = CreateCheck(state, time);
 
-        var initial = await check.CheckHealthAsync(CreateContext());
+        var initial = await check.CheckHealthAsync(null!);
         Assert.Equal(HealthStatus.Unhealthy, initial.Status);
 
         state.MarkSuccess(now);
@@ -55,27 +55,6 @@ public sealed class VendorAuditCheckpointHealthCheckTests
                 MaximumStalenessSeconds = 900
             }),
             time);
-
-    private static HealthCheckContext CreateContext()
-    {
-        var placeholder = new PlaceholderHealthCheck();
-        return new HealthCheckContext
-        {
-            Registration = new HealthCheckRegistration(
-                "vendor-audit-checkpoint",
-                _ => placeholder,
-                HealthStatus.Unhealthy,
-                Array.Empty<string>())
-        };
-    }
-
-    private sealed class PlaceholderHealthCheck : IHealthCheck
-    {
-        public Task<HealthCheckResult> CheckHealthAsync(
-            HealthCheckContext context,
-            CancellationToken cancellationToken = default) =>
-            Task.FromResult(HealthCheckResult.Healthy());
-    }
 
     private sealed class ManualTimeProvider(DateTimeOffset current) : TimeProvider
     {
