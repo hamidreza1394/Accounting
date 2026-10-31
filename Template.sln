@@ -45,11 +45,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Licensing.Contracts.Tests",
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TpmNvIndexProvisioner", "tools\TpmNvIndexProvisioner\TpmNvIndexProvisioner.csproj", "{A1E4B6C8-D0F2-4A68-9B10-2C3D4E5F6071}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Trade.Domain", "Modules\Trade\Trade.Domain\Trade.Domain.csproj", "{D1111111-1111-4111-8111-111111111111}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Trade.Domain", "Modules\Trade\Trade.Domain\Trade.Domain.csproj", "{D1111111-1111-4111-8111-111111111111}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Trade.Application", "Modules\Trade\Trade.Application\Trade.Application.csproj", "{A1111111-1111-4111-8111-111111111111}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Trade.Application", "Modules\Trade\Trade.Application\Trade.Application.csproj", "{A1111111-1111-4111-8111-111111111111}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Trade.Infrastructure", "Modules\Trade\Trade.Infrastructure\Trade.Infrastructure.csproj", "{F1111111-1111-4111-8111-111111111111}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Trade.Infrastructure", "Modules\Trade\Trade.Infrastructure\Trade.Infrastructure.csproj", "{F1111111-1111-4111-8111-111111111111}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
