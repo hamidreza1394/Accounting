@@ -116,7 +116,7 @@ namespace Data.Migrations
                 table: "InstalledLicenses",
                 columns: new[] { "InstallationIdentityId", "InstallationId" });
 
-            migrationBuilder.Sql("ALTER TABLE [InstallationIdentities] ADD CONSTRAINT [CK_InstallationIdentities_AssuranceLevel] CHECK ([AssuranceLevel] IN ('HardwareTpm', 'SoftwareProtected'));");
+            migrationBuilder.Sql("ALTER TABLE [InstallationIdentities] ADD CONSTRAINT [CK_InstallationIdentities_AssuranceLevel] CHECK (([AssuranceLevel] = 'HardwareTpm' AND [ProviderName] = 'Microsoft Platform Crypto Provider') OR ([AssuranceLevel] = 'SoftwareProtected' AND [ProviderName] = 'Microsoft Software Key Storage Provider'));");
             migrationBuilder.Sql("ALTER TABLE [InstallationIdentities] ADD CONSTRAINT [CK_InstallationIdentities_State] CHECK ([State] IN ('Current', 'Retired', 'ReactivationRequired'));");
             migrationBuilder.Sql("ALTER TABLE [InstallationIdentities] ADD CONSTRAINT [CK_InstallationIdentities_SoftwareConsent] CHECK (([AssuranceLevel] <> 'SoftwareProtected' OR ([SoftwareProviderRiskAcceptedAtUtc] IS NOT NULL AND [SoftwareProviderRiskAcceptedBy] IS NOT NULL)) AND ([AssuranceLevel] <> 'HardwareTpm' OR ([SoftwareProviderRiskAcceptedAtUtc] IS NULL AND [SoftwareProviderRiskAcceptedBy] IS NULL)));");
             migrationBuilder.Sql("ALTER TABLE [InstalledLicenses] ADD CONSTRAINT [CK_InstalledLicenses_PositiveSequence] CHECK ([Sequence] > 0);");
