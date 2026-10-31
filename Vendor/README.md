@@ -1,6 +1,19 @@
 # سامانهٔ مرکزی فروشندهٔ فرانو
 
-## وضعیت جاری Vendor (2026-10-28، پس از PR #226)
+## وضعیت جاری Vendor — 2026-10-31 (Issue #214 PR pending)
+
+- **Offline revocation در PR #375:** مسیر maker-checker برای `TargetStatus=Revoked` اکنون فقط پس از ساخت و verify شدن snapshot canonical، ذخیرهٔ envelope، تغییر License، تصمیم approval و audit در transaction واحد موفق می‌شود. این تغییر هنوز merge نشده و CI نهایی آن باید روی head نهایی PR تأیید شود.
+- **توالی و تاریخچه:** sequence با قفل تراکنشی SQL Server و unique index کنترل می‌شود؛ snapshotها immutable و به approval و license محرک متصل‌اند. export از `POST /api/vendor/offline-revocations/latest/export` با antiforgery، مجوز `LicensesRead`، audit و no-store انجام می‌شود.
+- **پیکربندی لازم:** `OfflineRevocation:SnapshotValidityDays` باید صریحاً ۱..۳۶۵ باشد؛ trust set مستقل `OfflineRevocationSigningTrust:Keys` فقط public SPKI دارد. نبود policy/trust یا signer معتبر به fail-closed/503 منجر می‌شود.
+- **امضاکننده:** `UnavailableOfflineRevocationSigningProvider` پیش‌فرض باقی است؛ PKCS#11 adapter و KeyId purpose-specific در main وجود دارند، اما هیچ KMS/HSM/credential واقعی در این PR انتخاب یا provision نمی‌شود.
+- **مرز:** این PR فقط Vendor control plane و Vendor DB را تغییر می‌دهد. customer-side consumer/enforcement در #235، checkpoint مستقل ممیزی در #107 و provisioning واقعی کلید در #236 همچنان جداگانه‌اند.
+
+> وضعیت CI PR #375 تا پایان اجرا در حال بررسی است؛ تست محلی .NET/SQL Server اجرا نشده است.
+
+---
+
+
+## Snapshot تاریخی — وضعیت Vendor (2026-10-28، پس از PR #226)
 
 - **UI و CRUD تجاری:** مدیریت مشتری، نصب، قرارداد Draft و metadata لایسنس به API واقعی Vendor متصل است؛ کنترل‌های سمت سرور شامل permission/resource authorization، antiforgery، RowVersion و audit هستند.
 - **Maker-checker و صدور لایسنس:** PRهای #217–#224 در main ادغام شده‌اند. پاکت امضاشده، key ID، الگوریتم، هش payload و sequence در دیتابیس Vendor ذخیره می‌شوند؛ وضعیت لایسنس، تصمیم approval و رویدادهای audit در تراکنش واحد ثبت می‌شوند. تست SQL Server برای صدور موفق، rollback در شکست audit، تعارض sequence و رقابت هم‌زمان وجود دارد.

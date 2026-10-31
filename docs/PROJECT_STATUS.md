@@ -480,3 +480,19 @@
 - CI روی head نهایی PR #371 با SHA `5d1a5974972978e8cd3f97534a7a3e394404abc0` موفق شد: .NET CI run [41178574826](https://github.com/hamidreza1394/Accounting/actions/runs/41178574826)، Vendor CI run [41178574828](https://github.com/hamidreza1394/Accounting/actions/runs/41178574828)، Semgrep run [41178574818](https://github.com/hamidreza1394/Accounting/actions/runs/41178574818).
 - PR [#369](https://github.com/hamidreza1394/Accounting/pull/369) پس از ثبت توضیح superseded-by-#371 بسته شد؛ هیچ تغییر منحصربه‌فردی از دست نرفت. PR [#370](https://github.com/hamidreza1394/Accounting/pull/370) نیز با موفقیت ادغام شده و شواهد CI مربوط به PR #366 را ثبت می‌کند.
 - محدودیت‌ها: این merge به معنی صدور/ذخیره/انتشار signed revocation snapshot، provision شدن HSM فیزیکی، اجرای Key Ceremony عملیاتی یا اتصال نهایی validator به مسیرهای runtime مشتری نیست. این موارد همچنان در #214/#236/#364 پیگیری می‌شوند؛ provider پیش‌فرض fail-closed باقی می‌ماند.
+
+
+## 2026-10-31 — Issue #214: signed offline revocation snapshot factory (PR #375)
+- PR [#375](https://github.com/hamidreza1394/Accounting/pull/375) now combines the canonical snapshot factory with the Vendor transactional workflow: durable immutable snapshot history, global sequence serialization, maker-checker license revocation, and authorized no-store export.
+- The service verifies the exact canonical payload signature against an independent public-key trust set before it can persist `Revoked`; license state, approval, snapshot and three audit events share one Vendor transaction. Signer/trust/sequence/audit failures remain fail-closed.
+- SQL Server tests cover successful issuance, unavailable signer, audit rollback and concurrent monotonic sequence/cumulative snapshots; trust-store negative coverage is included. No local .NET/SQL Server execution is claimed.
+- Current PR head is awaiting fresh .NET CI, Vendor CI, EF migration/snapshot guards and Semgrep; no merge or Verified claim until every required check succeeds.
+- Remaining independent gaps: customer runtime enforcement/anti-rollback integration in #235/#364, production key ceremony/provider access under #236, and independent audit checkpoint sink under #107. No customer-side consumer, `Server/**` or customer DB migration is included in PR #375.
+
+
+## 2026-10-31 — Issue #214: consolidated Vendor offline revocation path (PR #375)
+- PR [#375](https://github.com/hamidreza1394/Accounting/pull/375) now contains the Vendor-side signed revocation flow: canonical snapshot factory, independent revocation public trust store, signed snapshot history tied to approval/license, application-lock serialized global sequence, atomic maker-checker/license/snapshot/audit transaction, and authorized antiforgery-protected no-cache export.
+- Signature is verified against the configured independent public trust store before any revocation state can commit. A SQL Server trigger now rejects UPDATE/DELETE on persisted signed snapshot rows.
+- CI on previous head `0508c553e4cab42f967bc6bcd86e48cefac2ec9a` failed due to missing logger injection and a Gitleaks false positive in a test-only key ID. Both were corrected; latest head `2a9e227b28d9e54dfc08a4378642abaf4395b533` is awaiting fresh CI. Do not claim green until the new runs complete.
+- PRs #376/#377 were closed as duplicate stacked implementations; their unique immutable-history hardening is now included in #375.
+- Still NotVerified/Blocked: actual customer runtime revocation enforcement call-sites; provisioned Production HSM/KMS signer and independent public-key trust distribution; physical multi-host/offline and backup/restore operational tests.

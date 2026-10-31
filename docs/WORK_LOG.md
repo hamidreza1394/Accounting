@@ -1625,3 +1625,42 @@
 - .NET CI run 41175579282 succeeded across client, secret-scan, build-and-test, publish-scripts, E2E, publish and Windows publish; Vendor CI 41175579288 and Semgrep 41175579255 also succeeded.
 - Updated Issue #364 handoff and project status to distinguish merged software implementation from still-open hardware provisioning/verification and production runtime enforcement.
 - No physical TPM test, production NV provisioning, secret delivery/rotation or production database migration is claimed.
+
+
+## 2026-10-31 — Issue #214: canonical offline revocation snapshot factory (PR #375)
+- Added Vendor-side `VendorOfflineRevocationSnapshotFactory` to validate bounded inputs, ordinal-sort/deduplicate revoked license IDs, serialize the canonical contract and sign the exact UTF-8 bytes with the dedicated revocation signer.
+- Added tests for signature verification, canonicalization, invalid input bounds, unavailable signer and cancellation.
+- This is only the factory slice: durable sequence/history, atomic maker-checker revocation + license state + audit, no-store export and customer runtime enforcement remain open. The Vendor default signer remains unavailable/fail-closed; no private key or customer DB migration was added.
+- No local .NET SDK/build/test was available. On head `d689db2eb28f31fdc268abf6a2627b23df0274a3`, .NET CI and Vendor CI were in progress and Semgrep had succeeded when recorded; no unverified test result is claimed.
+
+
+## 2026-10-31 — Issue #214: durable Vendor revocation workflow added to PR #375
+- PR #375 expanded from the canonical snapshot factory to the complete Vendor-side issuance slice: immutable `VendorSignedRevocationSnapshots` table/migration, monotonic sequence serialized with transaction-owned `sp_getapplock`, and unique constraints for sequence/list/approval/triggering license.
+- Maker-checker approval for `TargetStatus=Revoked` now calls the shared `VendorOfflineRevocationSnapshotFactory`, verifies the returned envelope against an independent public trust set, and atomically persists the snapshot, License status, approval decision and three audit events.
+- Added authorized antiforgery POST export at `/api/vendor/offline-revocations/latest/export`; the response is audited and marked no-store/no-cache.
+- Snapshot validity is explicit deployment configuration (1..365 days); missing policy, empty/unknown/revoked trust entry, unavailable signer, invalid signature, sequence lock failure or audit failure does not commit a revocation.
+- Added SQL Server integration tests for success, signer unavailable, audit rollback and concurrent sequence/cumulative-list behavior, plus trust-store negative tests. The earlier factory unit tests remain in PR #375.
+- **Validation:** local .NET/SQL Server tests were not run. Fresh .NET CI, Vendor CI (including EF snapshot/migration and SQL Server tests), and Semgrep on final PR head are required before merge.
+- **Boundary:** no customer-side consumer, `Server/**`, customer database schema or production private key/credential is changed. #235/#364, #236 and #107 remain separate work.
+
+
+## 2026-10-31 — Issue #214: consolidated revocation workflow and CI fixes (PR #375)
+- Consolidated Vendor-side revocation factory, independent public trust store, signed snapshot persistence, application-lock global sequence, transactional maker-checker revocation, audit writes and antiforgery-protected no-cache export into PR #375.
+- Service verifies the newly signed envelope against the independent trust store before committing license/approval state. Added SQL Server trigger rejecting UPDATE/DELETE on signed snapshot history and an integration assertion for immutability.
+- Fixed CI compile error by injecting `ILogger<VendorOfflineRevocationIssuanceService>`; fixed Gitleaks false positive by changing the test-only key ID from a high-entropy-looking label to `test-kid`.
+- Previous CI head `0508c553e4cab42f967bc6bcd86e48cefac2ec9a` failed on those two issues; latest head `2a9e227b28d9e54dfc08a4378642abaf4395b533` has fresh CI runs pending/in progress. No green result is claimed yet.
+- Duplicate stacked PRs #376/#377 were closed as superseded; immutable-row trigger was ported into #375. Customer runtime enforcement and production signer/trust provisioning remain open.
+
+
+## 2026-10-31 — Issue #214 / PR #375: suppress only the historical test-KeyId false positive
+- **تکرارپذیری شکست:** پس از تغییر مقدار فعلی fixture از شناسهٔ بلند به `test-kid`، Gitleaks همچنان همان finding را گزارش کرد؛ fingerprint به commit قدیمی `0508c553e4cab42f967bc6bcd86e48cefac2ec9a`، فایل تست، rule `generic-api-key` و خط 161 اشاره می‌کند. علت این است که اسکنر کل commit range مربوط به PR را بررسی می‌کند، نه فقط working tree نهایی.
+- **اصلاح حداقلی:** فقط fingerprint دقیق تاریخی در `.gitleaksignore` اضافه شد؛ rule، مسیر فایل یا الگوی عمومی مستثنا نشده است. مقدار فعلی fixture همچنان یک KeyId عمومی و غیرمحرمانه است و هیچ private key/credential در مخزن وجود ندارد.
+- **اعتبارسنجی:** .NET CI run `41183238913` روی head قبلی `6e089f4f017ea1321c42acbd24e099bdd592760e` به علت همین finding شکست خورد؛ Vendor CI run `41183238859` در زمان ثبت هنوز در حال اجرا بود. اجرای جدید پس از این commit لازم است.
+- **محدوده:** فقط اسکن اسرار و مستندات Vendor؛ بدون تغییر منطق runtime، دیتابیس مشتری یا migration مشتری.
+
+
+## 2026-10-31 — Issue #214 / PR #375: migration syntax regression coverage
+- Vendor CI run `41183238859` روی head `6e089f4f017ea1321c42acbd24e099bdd592760e` در کامپایل migration با `CS1519/CS1031/CS8124` شکست خورد؛ علت بسته‌شدن زودهنگام متد `Up` قبل از تعریف trigger بود.
+- اصلاح در commit `f8743aa80ff5b2821cc64e6bc254d0396c207f64` انجام شد: `migrationBuilder.Sql` اکنون داخل `Up` است و `Down` trigger را پیش از حذف جدول برمی‌دارد.
+- تست SQL Server برای immutability گسترش یافت تا UPDATE و DELETE را رد کند و شمار رکورد snapshot پس از هر دو تلاش یک باقی بماند.
+- **اعتبارسنجی:** این تست در CI جدید باید همراه migration/pending-model guard اجرا شود؛ اجرای محلی .NET/SQL Server انجام نشده است.
