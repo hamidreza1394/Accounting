@@ -97,6 +97,11 @@ public sealed class CustomerLicenseImportService
             if (!await TryAcquireTransactionLockAsync(cancellationToken))
             {
                 await RollbackQuietlyAsync(transaction, cancellationToken);
+                if (transaction is not null)
+                {
+                    await transaction.DisposeAsync();
+                    transaction = null;
+                }
                 return await RejectAsync("license_import_busy", localInstallationId,
                     payload.LicenseId, actorUserId, cancellationToken);
             }
@@ -206,6 +211,11 @@ public sealed class CustomerLicenseImportService
         catch (DbUpdateConcurrencyException)
         {
             await RollbackQuietlyAsync(transaction, cancellationToken);
+            if (transaction is not null)
+            {
+                await transaction.DisposeAsync();
+                transaction = null;
+            }
             _database.ChangeTracker.Clear();
             return await RejectAsync("license_import_concurrency_conflict",
                 localInstallationId, payload.LicenseId, actorUserId, cancellationToken);
@@ -213,6 +223,11 @@ public sealed class CustomerLicenseImportService
         catch (DbUpdateException exception)
         {
             await RollbackQuietlyAsync(transaction, cancellationToken);
+            if (transaction is not null)
+            {
+                await transaction.DisposeAsync();
+                transaction = null;
+            }
             _database.ChangeTracker.Clear();
             _logger.LogWarning(exception, "Customer license import conflicted with persisted state.");
             return await RejectAsync("license_import_conflict",
