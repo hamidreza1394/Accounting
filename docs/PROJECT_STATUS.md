@@ -530,3 +530,13 @@
 - PR کاری #387 شامل entity/configurationهای Customer-only برای `InstallationIdentities` و `InstalledLicenses`، RowVersion، history، unique filtered current indexes، FK با Restrict، check constraints و Migration افزایشی `20261031130000_AddCustomerLicensePersistence` است.
 - #387 هنوز در انتظار CI است؛ Migration به هیچ دیتابیس مشتری یا Vendor اعمال نشده است. هیچ Vendor schema تغییر نکرده.
 - Import/replace service، durable audit workflow، startup revalidation و Cloud server-side entitlement enforcement هنوز در مراحل بعدی Issue #384 هستند.
+
+## 2026-10-31 — Issue #384: Customer identity enrollment and license import (PR in progress)
+
+- PR [#387](https://github.com/hamidreza1394/Accounting/pull/387) **merged** at commit `65c2cb4762a8f05e3f1deb2592579ac8fba0b6d6`. The Customer-only schema for `InstallationIdentities` and `InstalledLicenses` is now on `main`; no Vendor schema was changed. The migration has not been applied to a real customer database.
+- Branch `feat/issue-384-customer-license-import` now implements the first operational slice: explicit enrollment of an already-provisioned Windows CNG key, persistence of public identity metadata and software-provider consent, proof-of-possession/OS-marker verification, transactional license import/replacement, sequence downgrade protection, duplicate idempotency, and audit events.
+- The import endpoint uses the server-configured InstallationId (never a client-supplied identifier), requires the Infrastructure account and anti-forgery validation, and is rate-limited/no-store.
+- Grace/Restricted license states remain rejected pending OD-03/04 approval. No automatic key creation or TPM-to-software fallback is introduced.
+- This branch does **not** yet implement startup revalidation, authorization enforcement at accounting operation call-sites, Cloud authoritative entitlement resolution, or production recovery/restore behavior. It is not Production-ready until those slices and CI verification complete.
+- New automated tests cover enrollment, consent, key rotation, import persistence/idempotency, downgrade rejection, unresolved license states and OS identity change. Local .NET/SQL Server execution has not been performed in this environment; CI is pending after PR creation.
+- Real independent-host E2E and physical TPM/recovery tests remain deferred to the end of the implementation as requested.
