@@ -1709,3 +1709,41 @@
 - Migration افزایشی `20261031130000_AddCustomerLicensePersistence` و designer/snapshot به‌روزرسانی شد؛ generator migration برای migration جدید با hand-written CHECK constraints تنظیم شد.
 - مدل تاریخچهٔ کلیدهای نصب را حفظ می‌کند؛ برای هر InstallationId تنها یک identity جاری و یک license جاری مجاز است. کلید خصوصی در دیتابیس نیست؛ SoftwareProtected فقط با consent timestamp/actor قابل ثبت است.
 - PR #387 هنوز CI نشده/ادغام نشده؛ هیچ Migration روی دیتابیس واقعی اجرا نشده و Vendor schema تغییر نکرده است.
+
+
+## 2026-10-31 — Issue #395 / D-059: entitlement architecture and execution roadmap
+
+- ثبت D-059 با تأیید مالک محصول: Base License واحد برای هر Installation؛ Company-scoped Module/Feature/UserSeat؛ maxCompanies در سطح Installation؛ add-on با amendment امضاشده و sequence افزایشی روی همان LicenseId.
+- سیاست کاهش Seat برابر block-new است؛ عضویت‌های فعال حفظ می‌شوند. کاهش Feature limit داده را حذف نمی‌کند و ایجاد/گسترش جدید را مسدود می‌کند. انقضای Term به restricted می‌رود، بدون grace ضمنی، با حفظ read/export/recovery.
+- bootstrap مدیر اولیه Offline روی Customer Host و محلی است؛ رمز/hash به Vendor، package، log یا telemetry منتقل نمی‌شود.
+- sync دوحالته است: online authenticated وقتی اتصال موجود است و signed file exchange همیشه. Cloud server-authoritative است؛ Offline آخرین entitlement امضاشده پذیرفته‌شده را حفظ می‌کند.
+- نقشه اجرا: #395 → #390 → #391/#392 → #393 → #394. مستندات مرجع در docs/LICENSING_IMPLEMENTATION_PLAN.md قرار گرفتند.
+- این تغییر فقط مستندسازی و ثبت تصمیم است؛ هیچ قابلیت اجرایی، Migration یا Production readiness را ادعا نمی‌کند.
+
+
+## 2026-10-31 — Issue #384 / PR #388: customer identity enrollment and import status
+
+- PR #387 merged: Customer-only InstallationIdentity/InstalledLicense persistence schema is on main; no real customer database migration was run.
+- PR #388 adds audited enrollment of an existing Windows CNG installation key, live OS-marker and proof-of-possession validation, explicit SoftwareProtected consent actor/time, and transactional license import/replace through ICustomerLicenseEnvelopeValidator.
+- API endpoints are Infrastructure-only, antiforgery-protected, rate-limited and no-store; InstallationId is read from server configuration. Private key material is never persisted or returned.
+- CI initially found 8 server compile errors (framework Convert name collision, protected Entity.Id assignment and type mismatch). Those source errors were corrected. The next CI pass exposed test fixture tuple call sites and another protected Id assignment; these were corrected on the same PR branch. Latest head CI is pending at the time of this log entry.
+- D-059 changes the accepted status policy: signed Restricted envelopes are persisted for later restricted-mode enforcement; Grace is rejected because there is no implicit grace period. Runtime call-site enforcement remains a separate implementation slice.
+- No local .NET/SQL Server execution, physical TPM verification or independent-host E2E is claimed. Startup reload/revalidation, operational authorization enforcement and Cloud authoritative entitlement resolution remain open.
+
+
+## 2026-10-31 — D-060: سه حوزه Vendor و دروازه فعال‌سازی Customer
+
+- ثبت D-060 در DECISIONS.md: Vendor CRM & Commercial، Licensing & Entitlement Engine و Customer Deployment & Sync به‌عنوان مرزهای منطقی Modular Monolith.
+- مستندسازی state machine شروع Customer: Unlicensed به Activation Wizard؛ Active به Login؛ Restricted به مسیر read/export/recovery؛ InvalidOrUntrusted fail-closed؛ ReactivationRequired مسیر recovery.
+- مستندسازی فرم چندشرکتی بر اساس Company referenceهای داخل LicenseEnvelope، نمایش فقط‌خواندنی ماژول/Feature/Seat و bootstrap مدیر محلی با Identity hash؛ هیچ رمز یا hash به Vendor/package/log/telemetry نمی‌رود.
+- مستندسازی تبادل Offline: درخواست نسخه‌دار .request.json با public SPKI و proof-of-possession؛ پاسخ .license.json امضاشده؛ .txt فقط Base64/armored wrapper همان بایت‌های دقیق؛ QR صرفاً کمک اختیاری برای challenge کوچک.
+- Issue #396 برای startup gate و Activation Wizard ایجاد شد و به #384/#390/#392/#394 متصل است. کد و UI هنوز پیاده‌سازی نشده‌اند.
+- فایل‌های مستندات این PR به‌روزرسانی شدند؛ هیچ کد اجرایی، Migration یا تست واقعی در این تغییر انجام نشده است.
+
+
+## 2026-10-31 — PR #388 merged and CI verified
+
+- PR #388 merged as `75b0af84d5543a2bfb935d893d8bfc37ee330eef`.
+- All 7 CI jobs succeeded: secret-scan, client, build-and-test, publish-scripts, e2e, publish and publish-windows. Earlier compile/test fixture failures were fixed before merge.
+- Customer installation identity enrollment and durable license import/replace are now on main. This does not imply startup gate, startup reload/revalidation, accounting-operation enforcement or Cloud authority are complete.
+- Physical TPM, independent two-host and recovery drills remain deferred to the final operational test phase.

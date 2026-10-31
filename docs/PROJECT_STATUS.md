@@ -528,5 +528,22 @@
 ## 2026-10-31 — Issue #384: customer license persistence in PR #387
 - PR #386 ادغام شد (commit `010571779e5bbbef9419f7748aa13d3700bd48ec`): Windows CNG installation proof-key ceremony، TPM پیش‌فرض و Software KSP با consent صریح؛ تمام CI checks روی head ادغام‌شده سبز بودند. تست TPM فیزیکی اجرا نشده است.
 - PR کاری #387 شامل entity/configurationهای Customer-only برای `InstallationIdentities` و `InstalledLicenses`، RowVersion، history، unique filtered current indexes، FK با Restrict، check constraints و Migration افزایشی `20261031130000_AddCustomerLicensePersistence` است.
-- #387 هنوز در انتظار CI است؛ Migration به هیچ دیتابیس مشتری یا Vendor اعمال نشده است. هیچ Vendor schema تغییر نکرده.
-- Import/replace service، durable audit workflow، startup revalidation و Cloud server-side entitlement enforcement هنوز در مراحل بعدی Issue #384 هستند.
+- PR #387 ادغام شده و Migration مشتری به‌صورت افزایشی در کد موجود است؛ اجرای Migration روی محیط واقعی همچنان تأیید نشده است. هیچ Vendor schema در این مرحله تغییر نکرده است.
+- PR #388 در 2026-10-31 با commit ادغام `75b0af84d5543a2bfb935d893d8bfc37ee330eef` ادغام شد؛ تمام ۷ Job شامل secret-scan، client، build-and-test، publish-scripts، e2e، publish و publish-windows موفق بودند. تست فیزیکی TPM و دو میزبان در این ادغام اجرا نشده است.
+- Startup reload/revalidation، runtime enforcement در عملیات حسابداری و Cloud server-side entitlement resolution هنوز تکمیل نشده‌اند.
+
+
+## 2026-10-31 — وضعیت نیازمندی‌های entitlement پس از D-059
+
+- D-059 و نقشه اجرایی در LICENSING_IMPLEMENTATION_PLAN.md ثبت شده‌اند. وضعیت تصمیم Accepted است؛ قابلیت‌های #390–#394 تا زمان پیاده‌سازی و CI همچنان NotImplemented محسوب می‌شوند.
+- ترتیب اجرا: #390 قرارداد نسخه‌دار → #391 enforcement و #392 bootstrap/company creation → #393 add-on issuance → #394 online/offline sync.
+- PR #388 ادغام شده است؛ enrollment هویت نصب و import پایدار لایسنس تحویل شده‌اند. Startup reload/revalidation، gate ورود، runtime enforcement و Cloud authoritative entitlement resolution هنوز در Issues بعدی باقی‌اند.
+
+
+## 2026-10-31 — D-060: معماری سه‌حوزه‌ای و License-first activation
+
+- مالک محصول سه مرز منطقی Vendor CRM & Commercial، Licensing & Entitlement Engine و Customer Deployment & Sync را تأیید کرد. این‌ها ماژول‌های مسئولیتی در Modular Monolith هستند؛ Microservice/DB جدا تحمیل نمی‌شود.
+- مسیر Customer باید پیش از Login وضعیت لایسنس را سمت سرور بررسی کند: بدون envelope → Activation Wizard؛ envelope معتبر → Login؛ Restricted → ورود محدود برای read/export/recovery؛ وضعیت نامعتبر → fail-closed/recovery.
+- فرم فعال‌سازی چندشرکتی Company referenceهای مجاز را از envelope می‌گیرد و زیرسیستم‌ها/Feature/Seat را فقط نمایش می‌دهد؛ مدیر محلی هر شرکت روی Customer Host ایجاد می‌شود و رمز هرگز به Vendor یا فایل انتقال نمی‌رود.
+- Offline exchange با .request.json و .license.json امضاشده است؛ .txt فقط wrapper متنی بایت‌های دقیق بسته است. QR فقط برای challenge کوچک/شناسه اختیاری است.
+- D-060 در DECISIONS.md و Issue #396 ثبت شده؛ تمام قابلیت‌های تازه Accepted / NotImplemented هستند. Issue #396 به #384/#390/#392/#394 وابسته است.

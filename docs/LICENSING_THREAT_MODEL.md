@@ -169,3 +169,29 @@
 - **محدودیت:** TPM-backed identity نیز در برابر مالک/ادمین با کنترل کامل سیستم یا compromise باینری مصونیت مطلق نمی‌دهد؛ clone کامل VM/host و بازیابی کامل ماشین در حالت آفلاین همچنان محدودیت‌های پذیرفته‌شده‌اند.
 
 - **T35 — downgrade پنهانی از TPM به Software KSP:** ProviderName صریح و allow-list شده؛ نبود TPM به Software fallback نمی‌کند. Software KSP فقط با flag تأیید صریح در provisioning command مجاز است؛ AssuranceLevel و رضایت باید در DB/audit ثبت شوند. SoftwareProtected به‌عنوان TPM/Hardware گزارش نمی‌شود و در برابر مدیر محلی مخرب یا clone کامل host ضمانت سخت‌افزاری ندارد.
+
+
+## تهدیدهای جدید بر اساس D-059 (2026-10-31)
+
+- **T36 — سرقت/نشت رمز bootstrap مدیر آفلاین:** رمز فقط در فرم/فرمان محلی Customer Host دریافت می‌شود و فقط hash استاندارد ASP.NET Core Identity ذخیره می‌شود. رمز، hash، token قابل استفاده مجدد یا credential در Vendor، provisioning/license package، audit detail، log و telemetry قرار نمی‌گیرد. bootstrap باید یک‌بارمصرف و اتمیک باشد؛ تا تکمیل آن login/session عادی ممنوع است.
+- **T37 — دور زدن سقف Seat با درخواست هم‌زمان:** شمارش عضویت فعال و ایجاد عضویت باید در مرز تراکنشی/قفل مناسب انجام شود؛ UI check کافی نیست. Seat در سطح Company است و عضویت یک User در دو Company دو Seat مصرف می‌کند. کاهش Seat از نوع block-new است و عضویت موجود را حذف نمی‌کند.
+- **T38 — کاهش Feature/Module و حذف داده:** entitlement limit کاهش‌یافته نباید منجر به delete یا update مخرب داده موجود شود. عملیات create/expand مسدود و over-limit برای مدیر قابل مشاهده باشد.
+- **T39 — replay/downgrade در amendment:** amendment به همان LicenseId و Installation bind می‌شود؛ sequence باید strictly increasing و امضای payload روی بایت دقیق باشد. revision قدیمی، تکراری یا متعلق به Company/Installation دیگر رد و audit شود.
+- **T40 — اختلاط authority مرکزی و محلی:** Cloud entitlement را server-side resolve می‌کند؛ Offline آخرین revision امضاشده پذیرفته‌شده را حفظ می‌کند. قطع شبکه مجوز معتبر را باطل نمی‌کند. Vendor هرگز مستقیماً به Customer DB وصل نمی‌شود.
+- **T41 — داده مصرف آفلاین stale به‌عنوان real-time:** usage آفلاین تا sync بعدی stale است؛ Vendor UI باید LastSyncedAt/freshness را نمایش دهد و آن را به‌عنوان وضعیت زنده نشان ندهد.
+- **T42 — تغییر سیاست با کاهش entitlement:** Seat reduction برابر block-new و feature limit reduction برابر منع create/expand است؛ هیچ کاهش entitlement مجوز پاک‌کردن داده یا deactivate خودکار membership نیست.
+
+
+## تهدیدهای Activation Wizard و سه حوزه D-060 (2026-10-31)
+
+- **T43 — دور زدن License-first gate با URL/API مستقیم:** gate فقط در React نباشد؛ server middleware/endpoint policy روی مسیرهای ورود/کار عادی enforce شود. فقط activation، health و recovery محدود در حالت Unlicensed مجازند. تست مستقیم URL و API لازم است.
+- **T44 — اشتباه گرفتن Unlicensed با Restricted یا Invalid:** stateها مجزا باشند. Restricted باید دسترسی محدود read/export/recovery را حفظ کند؛ InvalidOrUntrusted fail-closed شود؛ نبود envelope تنها حالت Activation Wizard است.
+- **T45 — افشای credential مدیر Company:** password/password hash/token فقط در Customer Identity store؛ نه Vendor CRM، نه License/Provisioning/Sync package، نه audit/log/telemetry. Secret-canary tests الزامی‌اند.
+- **T46 — دستکاری entitlement در فرم چندشرکتی:** Company names و local admin fields داده محلی‌اند؛ module/feature/seats/maxCompanies فقط از signed envelope. server-side revalidation مانع over-posting و تغییر entitlement می‌شود.
+- **T47 — افشای کلید خصوصی در Offline key exchange:** فقط public SPKI و proof-of-possession در request file؛ private key non-exportable در Customer Host. متن .txt فقط wrapper بایت‌های signed package است، نه کلید قابل کپی.
+- **T48 — تغییر بایت‌های signed package در انتقال متنی:** Base64/armored decode باید بایت‌های دقیق original را برگرداند؛ هیچ reserialize/canonicalize پس از امضا. payload hash، signature و exact bytes validate شود.
+- **T49 — درخواست آفلاین تکراری/منقضی/برای نصب دیگر:** nonce/request ID، InstallationId، expiry، key version، sequence و idempotency در درخواست و پاسخ bind شوند؛ duplicate یک نتیجه را بازگرداند و replay/wrong-install رد شود.
+- **T50 — تداخل مسئولیت سه حوزه:** Commercial حق صدور/تغییر entitlement بدون Engine approval/signing ندارد؛ Engine نباید password یا accounting data نگهدارد؛ Deployment/Sync فقط قرارداد امضاشده را مصرف کند و Vendor به Customer DB وصل نشود.
+- **T51 — downgrade یا stale response در فایل آفلاین:** Customer بالاترین sequence پذیرفته‌شده را durable نگه دارد؛ پاسخ قدیمی/نامرتبط reject شود. ACK و usage نیز idempotent و دارای freshness باشند.
+
+- **T52 — حدس/سرقت activation code:** کد یک‌بارمصرف با entropy کافی، hash-at-rest، rate limit، expiry قابل تنظیم، CustomerAccount/Installation binding، ثبت تلاش و invalidation پس از مصرف داشته باشد؛ کد خام در log/telemetry/file قرار نگیرد. Redeem باید اتمیک باشد تا دو درخواست هم‌زمان دوبار مصرف نشوند.

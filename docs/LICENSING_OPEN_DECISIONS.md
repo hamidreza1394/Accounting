@@ -181,3 +181,21 @@
 - **کنترل امنیتی:** MachineGuid به‌تنهایی کافی نیست؛ marker نصب سیستم‌عامل با public-key fingerprint یک کلید نصب non-exportable در TPM/CNG یا provider امن معادل bind شود. فقدان secure key یا عدم تطبیق identity نباید به fallback نرم‌افزاری silent منجر شود.
 - **موارد باز:** OD-08 انتخاب provider را تعیین کرده؛ recovery کلید با OD-06 هماهنگ می‌شود. OD-06 برای انتقال/restore installation همچنان NeedsApproval. سیاست OD-03/04/05 تغییری نکرده است.
 - **پیگیری:** Issue #384؛ هیچ schema یا Migration تا ADR اجرایی و طرح persistence بررسی‌شده، اجرا نشده است.
+
+
+## وضعیت تصمیم‌ها پس از D-059 (2026-10-31)
+
+D-059 در Issue #389 با تأیید مالک محصول پذیرفته شد؛ بنابراین بخش‌های زیر از حالت پیشنهادی/باز قبلی superseded هستند:
+
+- **OD-02 / maxUsers:** فقط بخش Deferred بودن maxUsers superseded است؛ Seatهای کاربر اکنون Company-scoped هستند. maxCompanies همچنان Installation-scoped است.
+- **OD-03/04 / grace و restricted:** سیاست محصول تعیین شد: Term expiry به restricted می‌رود، بدون grace ضمنی؛ read/export/recovery مجاز و عملیات عادی نوشتن محدود است. جزئیات enforcement در #391 است.
+- **OD-09 / online:** sync دوحالته پذیرفته شد؛ online authenticated در صورت دسترسی و signed file exchange همیشه در دسترس. Offline validity وابسته به اتصال نیست.
+- **OD-14 / bootstrap:** مدیر اولیه در نصب Offline روی Customer Host username/password را محلی تعیین می‌کند؛ bootstrap یک‌بارمصرف و اتمیک است؛ هیچ رمز یا hash به Vendor/package/log/telemetry نمی‌رود.
+- **OD-15 / module-feature mapping:** Company-scoped module/feature catalog با valueهای typed (enabled/max_count/enum) پذیرفته شد.
+
+مواردی که همچنان باز هستند: OD-05 سیاست ساعت؛ OD-06 انتقال/بازیابی نصب؛ recovery کلید در OD-08؛ OD-10 گذار نصب‌های قدیمی؛ OD-13 تصمیم جداسازی مخزن (Deferred)؛ OD-17 پشتیبانی راه دور. اینها با D-059 حل‌شده تلقی نمی‌شوند.
+
+پیاده‌سازی تصمیم‌های پذیرفته‌شده به‌ترتیب #390، #391/#392، #393 و #394 انجام می‌شود؛ یکپارچه‌سازی startup gate و Activation Wizard در #396 پس از آماده‌شدن قرارداد، identity و مسیرهای bootstrap/transport انجام می‌شود. وضعیت کد تا PR/CI مربوطه NotImplemented است.
+
+
+D-060 سه حوزه معماری و state machine شروع برنامه را ثبت کرده است؛ این تصمیم پرسش‌های باز OD-05، OD-06، OD-08 recovery، OD-10، OD-13 و OD-17 را نمی‌بندد. Issue اجرایی: #396.

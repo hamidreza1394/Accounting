@@ -152,3 +152,62 @@ flowchart TD
 6. idempotency شامل licenseId و sequence امضاشده، به‌علاوهٔ تنظیمات و زیرسیستم مؤثر است. retry یک requestId قدیمی به revision تاریخی خودش متصل می‌ماند و به revision جدیدتر منتقل نمی‌شود.
 7. درخواست‌های تاریخی v3 نه backfill می‌شوند و نه به لایسنس حدس‌زده وصل می‌شوند. verifier مشتری همچنان v1-v3 را برای سازگاری بسته‌های قبلی می‌پذیرد؛ Vendor درخواست v3 را دوباره امضا یا Export نمی‌کند.
 8. MaxCompanies، افزودن زیرسیستم به شرکت موجود و تجمیع چند لایسنس NotImplemented هستند؛ هیچ کنترل ناقص یا تخمینی جایگزین آن‌ها نمی‌شود.
+
+
+## ۱۴) Add-on amendment، bootstrap و entitlement sync (D-059)
+
+### خرید افزونه
+1. Vendor سفارش/خرید افزونه را برای CustomerAccount و Installation مشخص ثبت می‌کند؛ Company scope برای Seat/Module/Feature صریح است.
+2. پس از کنترل تجاری و maker-checker لازم، amendment روی همان LicenseId صادر می‌شود؛ sequence از آخرین revision پذیرفته‌شده بزرگ‌تر است.
+3. payload دقیق امضا می‌شود؛ Customer signature، Installation binding، LicenseId و sequence را بررسی و اتمیک import می‌کند.
+4. replay، downgrade، amendment متعلق به نصب/شرکت دیگر و revision نامعتبر رد و ممیزی می‌شود.
+
+### bootstrap مدیر Offline و ساخت شرکت
+1. اولین مدیر در Customer Host رمز را محلی تعیین می‌کند؛ رمز یا hash از مرز Customer عبور نمی‌کند.
+2. bootstrap یک‌بارمصرف و اتمیک است؛ تا تکمیل آن login عادی ممنوع است.
+3. ساخت Company جدید با maxCompanies بررسی می‌شود؛ Cloud از authority مرکزی و Offline از entitlement امضاشده آخرین revision استفاده می‌کند.
+
+### همگام‌سازی
+- Online: درخواست/پاسخ احراز هویت‌شده و ضد replay؛ بدون ارسال داده حسابداری/رمز مدیر.
+- Offline: export/import فایل امضاشده با همان validation، sequence و binding.
+- قطع شبکه نباید license معتبر پذیرفته‌شده را باطل کند؛ usage داده نشده در Vendor stale است تا sync بعدی.
+
+
+## ۱۴) دروازه شروع برنامه و Activation Wizard (D-060 / #396)
+
+### 14.1 بررسی وضعیت قبل از ورود
+1. Customer Host در Startup و روی هر درخواست حساس، state نصب را از persistence/authority سمت سرور می‌خواند؛ React/browser state یا InstallationId ارسالی کاربر معتبر نیست.
+2. Unlicensed: صفحه ورود عادی نمایش داده نمی‌شود؛ کاربر به Activation Wizard هدایت می‌شود.
+3. Active: هویت نصب و envelope معتبرند؛ صفحه ورود عادی نمایش داده می‌شود.
+4. Restricted: لایسنس معتبر ولی مدت‌دار منقضی است؛ مسیر ورود کنترل‌شده برای read/export/recovery مجاز باقی می‌ماند و UI وضعیت تمدید را نشان می‌دهد.
+5. InvalidOrUntrusted: امضا، sequence، installation binding یا revocation نامعتبر/نامعلوم است؛ fail-closed و مسیر پشتیبانی/recovery نمایش داده می‌شود.
+6. ReactivationRequired: OS identity یا کلید نصب تغییر کرده؛ فرایند کنترل‌شده recovery/reactivation لازم است.
+
+Unlicensed با Restricted یا InvalidOrUntrusted یکی نیست. تصمیم دسترسی سمت سرور enforce می‌شود؛ مخفی‌کردن صفحه یا route در React کنترل امنیتی نیست.
+
+### 14.2 فرم نصب چندشرکتی
+- فرم Company referenceهای داخل envelope را نشان می‌دهد؛ کاربر نام و اطلاعات محلی شرکت الف/ب را برای هر reference تکمیل/تأیید می‌کند.
+- زیرسیستم‌ها، Featureها، سقف شرکت/کاربر و مقادیر خریداری‌شده برای هر Company از payload امضاشده پر می‌شوند و UI حق افزایش آن‌ها را ندارد.
+- برای هر Company مدیر اولیه محلی و عضویت/نقش ساخته می‌شود. حساب User در سطح نصب یکتا است؛ می‌توان مدیرهای جدا برای شرکت‌ها تعریف کرد و یک User هم می‌تواند عضو چند Company باشد. عضویت چندشرکتی برای هر Company یک Seat مصرف می‌کند.
+- رمز هر مدیر فقط در فرم محلی Customer Host گرفته و به Identity hash تبدیل می‌شود. رمز/hash/token در Vendor، فایل تبادل، log، audit detail یا telemetry قرار نمی‌گیرد.
+- ایجاد Companyهای بعدی پس از فعال‌سازی تحت #392 و maxCompanies است؛ اطلاعات provisioning v4 تکرار/جایگزین نمی‌شود.
+
+## ۱۵) تبادل فایل کلید/لایسنس در Offline (D-060 / #394 / #396)
+
+### 15.1 کد فعال‌سازی و بسته درخواست Customer
+
+کد فعال‌سازی را Vendor با مدت اعتبار قابل تنظیم و مصرف یک‌باره صادر می‌کند و به CustomerAccount/Installation مشخص bind می‌کند. کد مجوز امضاشده نیست؛ فقط اجازه شروع/تکمیل صدور LicenseEnvelope را می‌دهد. در Cloud کد در Customer Wizard و از طریق API احراز هویت‌شده redeem می‌شود. در Offline اپراتور کد را در Vendor Host و پس از دریافت درخواست Installation redeem می‌کند. کد در فایل انتقال، log یا telemetry قرار نمی‌گیرد.
+
+### 15.1 بسته درخواست Customer
+Customer Host یک .request.json نسخه‌دار صادر می‌کند که فقط metadata لازم، InstallationId، public SPKI/key version، assurance level، nonce/request ID، زمان/انقضا، contract version و proof-of-possession را حمل می‌کند. Private key، password و داده حسابداری در آن نیست.
+
+### 15.2 پاسخ Vendor
+Vendor پس از بررسی Customer/Installation و خرید/تأیید، یک .license.json شامل envelope یا amendment امضاشده صادر می‌کند. Customer فایل را import می‌کند؛ signature، exact signed bytes، Installation binding، nonce، sequence، validity، revocation و idempotency بررسی و سپس به‌صورت اتمیک ذخیره می‌شود.
+
+### 15.3 انتقال متن/رسانه
+- .txt فقط wrapper متنی Base64/armored برای همان بایت‌های دقیق بسته است؛ متن قابل ویرایش و بدون امضا مجوز نیست.
+- QR فقط برای شناسه/challenge کوتاه‌عمر و کوچک اختیاری است؛ payload کامل entitlement و private key داخل QR قرار نمی‌گیرد.
+- انتقال می‌تواند از طریق USB یا شبکه داخلی انجام شود؛ هیچ مسیر به Vendor برای اتصال به Customer DB وجود ندارد.
+- Customer برای ACK/usage/status یک بسته امضاشده جدا صادر می‌کند؛ Vendor sequence و request ID را idempotently ثبت می‌کند و freshness را با زمان آخرین sync نشان می‌دهد.
+
+این گردش‌کار هنوز Accepted / NotImplemented است تا PR کد و CI مرتبط ادغام شوند.

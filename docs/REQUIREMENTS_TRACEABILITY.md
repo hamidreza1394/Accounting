@@ -18,3 +18,40 @@
 ## ناهماهنگی‌های ثبت‌شده
 - بیان نیازمندی «مصرف مجوز عملیاتی» با D-025 و کد فعلی ناهمخوان است (انحراف پیاده‌سازی از هدف، نه از تصمیم).
 - نام کلاس‌های تست با `grep` روی `tests/Template.Tests` در تاریخ 2026-10-21 تأیید شد.
+
+
+## ردیابی D-059 — entitlement و sync (2026-10-31)
+
+| نیازمندی | تصمیم/Issue | کد/تست هدف | وضعیت در زمان ثبت |
+|---|---|---|---|
+| Base License واحد برای Installation و amendment همان LicenseId | D-059 / #390 | Licensing.Contracts schema/version + validator tests | Accepted / NotImplemented |
+| Company-scoped Module/Feature/UserSeat | D-059 / #390 | typed entitlement contract + serialization/signature vectors | Accepted / NotImplemented |
+| Seat reduction = block-new | D-059 / #391 | central customer policy + concurrency/authorization tests | Accepted / NotImplemented |
+| Feature limit reduction بدون حذف داده | D-059 / #391 | policy enforcement + over-limit tests | Accepted / NotImplemented |
+| Term expiry = restricted، بدون grace ضمنی | D-059 / #391 | operation policy matrix + read/export/recovery tests | Accepted / NotImplemented |
+| ساخت Company با maxCompanies | D-059 / #392 | customer company creation use case + concurrent limit tests | Accepted / NotImplemented |
+| Offline local admin bootstrap | D-059 / #392 | one-time bootstrap + Identity + secret-boundary tests | Accepted / NotImplemented |
+| Vendor add-on purchase و signed amendment | D-059 / #393 | commercial order + maker-checker + signer + audit tests | Accepted / NotImplemented |
+| online/offline dual sync | D-059 / #394 | authenticated API + signed file import/export + replay tests | Accepted / NotImplemented |
+| Offline usage freshness | D-059 / #394 | last-sync metadata + stale UI projection tests | Accepted / NotImplemented |
+
+کد و تست هدف تا زمان ادغام PRهای مربوطه به‌عنوان شاهد موجود تلقی نمی‌شوند. مرجع ترتیب و معیار پذیرش: [LICENSING_IMPLEMENTATION_PLAN.md](LICENSING_IMPLEMENTATION_PLAN.md).
+
+
+## ردیابی D-060 — سه حوزه و تجربه فعال‌سازی Customer (2026-10-31)
+
+| نیازمندی | تصمیم/Issue | کد/تست هدف | وضعیت |
+|---|---|---|---|
+| تفکیک Vendor CRM & Commercial | D-060 / #389 | commercial customer/contract/order/payment/support workflows | Accepted / NotImplemented |
+| جداسازی Licensing & Entitlement Engine | D-059/D-060 / #390–#391, #393 | versioned contracts, signer, amendments, enforcement | Accepted / Partial foundation |
+| Customer Deployment & Sync | D-060 / #384, #392, #394 | installation identity, bootstrap, API, offline packages, ACK | Accepted / Partial foundation |
+| License-first startup gate | D-060 / #396 | server-side activation state middleware/endpoint tests | Accepted / NotImplemented |
+| Valid license → normal sign-in | D-060 / #396 | server state resolver + login integration tests | Accepted / NotImplemented |
+| No license → Activation Wizard | D-060 / #396 | route gate + direct URL/API negative tests | Accepted / NotImplemented |
+| Restricted vs Unlicensed vs Invalid states | D-059/D-060 / #391, #396 | state machine and read/export/recovery authorization tests | Accepted / NotImplemented |
+| Multi-company setup form with company-scoped entitlements | D-059/D-060 / #390, #392, #396 | local company setup, Identity, membership and no over-posting tests | Accepted / NotImplemented |
+| Offline installation request and signed license response | D-060 / #394, #396 | request/response JSON contract, exact-byte, signature, replay tests | Accepted / NotImplemented |
+| Optional armored text transport | D-060 / #394, #396 | byte-preserving encode/decode tests | Accepted / NotImplemented |
+| Customer ACK/status export | D-059/D-060 / #394 | signed ACK, idempotency, freshness tests | Accepted / NotImplemented |
+
+وضعیت‌های Partial foundation فقط به معنای وجود زیرساخت‌های قبلی است؛ به معنی تکمیل end-to-end نیست. مرجع اجرایی: LICENSING_IMPLEMENTATION_PLAN.md.

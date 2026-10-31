@@ -899,3 +899,86 @@ The customer consumer, claim/replay, transactional apply, one-time Enrollment/re
 - **نتیجه:** Issue #384 دامنهٔ پیاده‌سازی customer import/storage، identity binding و server-side enforcement را دنبال می‌کند. تا تکمیل کد، migration، تست و CI، وضعیت قابلیت NotImplemented است؛ این تصمیم به‌تنهایی Production readiness ایجاد نمی‌کند.
 
 - **تکمیل D-058 با تأیید صریح مالک محصول (2026-10-31):** کلید هویت نصب Windows با CNG و ECDSA P-256، non-exportable و MachineKey است. مسیر پیش‌فرض TPM 2.0 با Microsoft Platform Crypto Provider است. مسیر جایگزین Microsoft Software Key Storage Provider با حفاظت Windows software key store/DPAPI فقط با تأیید صریح اپراتور در ceremony مجاز است؛ هیچ fallback خودکار مجاز نیست. سطح اطمینان `HardwareTpm` یا `SoftwareProtected` باید در InstallationIdentity ذخیره و در ممیزی/وضعیت قابل مشاهده باشد. SoftwareProtected معادل TPM نیست و ریسک مدیر محلی/clone کامل میزبان را دارد. این تصمیم بخش provider از OD-08 را تعیین می‌کند؛ بازیابی/انتقال نصب در OD-06 و جزئیات recovery کلید همچنان باز می‌ماند.
+
+## D-059 — entitlementهای مستقل در سطح شرکت، ظرفیت کاربر، bootstrap مدیر آفلاین و همگام‌سازی (2026-10-31)
+
+- **وضعیت:** Accepted — تأیید صریح مالک محصول در 2026-10-31؛ مرجع اجرایی Issue #389.
+- **دامنه:** این تصمیم مدل تجاری و entitlement را برای Vendor و Customer مشخص می‌کند؛ ثبت تصمیم به‌تنهایی به معنی پیاده‌سازی یا Verified شدن قابلیت‌ها نیست.
+
+### مدل مجوز و دامنه
+1. برای هر Installation دقیقاً یک LicenseEnvelope پایه وجود دارد. Company، Module، Feature و UserSeat entitlementهای مستقل و scope شده‌اند؛ برای خرید افزونه LicenseId/Installation جدید ساخته نمی‌شود.
+2. سقف شرکت (maxCompanies) در سطح Installation است. ماژول‌ها، Featureها و ظرفیت کاربر در سطح Company اعمال می‌شوند؛ یک User که عضو دو Company باشد در هر Company یک Seat مصرف می‌کند.
+3. کاتالوگ Feature توسعه‌پذیر و نوع‌دار است: enabled، max_count و enum. نمونه‌ها: تعداد/سطح حساب تحلیلی، مرکز هزینه، بودجه، انبار و POS. مقادیر از payload امضاشده می‌آیند؛ ورودی کلاینت منبع حقیقت نیست.
+4. خرید یا افزایش ظرفیت در Cloud و Offline برای Installation/Company موجود مجاز است. Vendor یک amendment امضاشده با sequence یکنواخت افزایشی برای همان LicenseId صادر می‌کند؛ Customer فقط revision معتبرتر همان Installation را می‌پذیرد.
+
+### سیاست کاهش و انقضا
+5. کاهش Seat از نوع block-new است: عضویت‌های فعال موجود حذف یا غیرفعال نمی‌شوند؛ ایجاد/فعال‌سازی عضویت جدید تا بازگشت مصرف به سقف مجاز مسدود می‌شود.
+6. کاهش حد Feature/Module داده را حذف یا تغییر نمی‌دهد. اگر مصرف موجود بالاتر از حد جدید باشد، وضعیت over-limit گزارش می‌شود و ایجاد یا گسترش مورد جدید ممنوع است.
+7. انقضای مجوز مدت‌دار به restricted می‌رود: داده حفظ می‌شود؛ عملیات عادی نوشتن/تجاری محدود می‌شود؛ خواندن مجاز، خروجی‌گرفتن و بازیابی مجاز باقی می‌ماند. Grace period ضمنی وجود ندارد. لایسنس دائمی با پایان پشتیبانی/به‌روزرسانی منقضی نمی‌شود؛ این entitlementها جدا هستند.
+
+### Cloud، Offline و تبادل
+8. Cloud: مرجع نهایی تصمیم entitlement سمت سرور Vendor/Control Plane است. درخواست‌های حسابداری نباید برای هر عملیات round-trip به Vendor داشته باشند؛ cache فقط server-controlled، نسخه‌دار و قابل invalidation است.
+9. Offline/Dedicated: آخرین entitlement امضاشده و پذیرفته‌شده در Customer Host مرجع عملیاتی تا زمان sync است؛ قطع اینترنت به‌تنهایی اعتبار را باطل نمی‌کند.
+10. همگام‌سازی both است: در صورت دسترسی، تبادل آنلاین احراز هویت‌شده؛ در همه حال امکان export/import فایل امضاشده برای نصب آفلاین. sequence، امضا، installation binding و anti-replay در هر دو مسیر یکسان‌اند.
+11. گزارش usage آفلاین تا sync بعدی در Vendor stale است و نباید به‌عنوان داده زنده نمایش داده شود. Vendor مستقیماً به دیتابیس Customer متصل نمی‌شود.
+
+### ایجاد شرکت و مدیر اولیه آفلاین
+12. در نصب Offline، مدیر اولیه روی خود Customer Host و در مرحله bootstrap محلی username/password را تعیین می‌کند. رمز/hash آن هرگز به Vendor، فایل License/Provisioning، Log یا telemetry ارسال نمی‌شود؛ فقط با ASP.NET Core Identity hash و ذخیره می‌شود.
+13. bootstrap یک‌بارمصرف، اتمیک و قابل ممیزی است؛ تا تکمیل آن ورود عادی/ایجاد نشست کاری مجاز نیست. رمز پیش‌فرض یا مشترک وجود ندارد.
+14. Customer می‌تواند Company جدید بسازد، مشروط به maxCompanies: Cloud با مرجع مرکزی و Offline با آخرین entitlement امضاشده محلی اعتبارسنجی می‌کند. اگر اتصال در دسترس باشد می‌توان درخواست آنلاین احراز هویت‌شده انجام داد؛ در نبود اتصال، مسیر محلی معتبر باقی می‌ماند.
+
+### امنیت و مرزها
+15. CustomerAccount (خریدار)، Installation (استقرار/سرور) و Company (Tenant حسابداری) مفاهیم مستقل می‌مانند. Vendor و Customer persistence جدا هستند؛ هیچ اتصال مستقیم Vendor به Customer DB مجاز نیست.
+16. هر amendment با payload دقیق امضاشده، LicenseId ثابت، Installation binding و sequence افزایشی محافظت می‌شود؛ downgrade/replay رد و تمام تغییرات مهم audit می‌شوند.
+17. entitlement تجاری جایگزین Authorization عملیاتی نیست. ترتیب کنترل Customer: هویت/نشست، عضویت فعال و دسترسی شرکت، entitlement تجاری، مجوز عملیاتی، سپس وضعیت دوره مالی. هیچ شناسه یا شمارنده ارسالی کلاینت قابل اعتماد نیست.
+18. این تصمیم provider هویت نصب D-058 و ضد rollback snapshot ابطال D-057 را تغییر نمی‌دهد؛ TPM ترجیحی و Software CNG/DPAPI فقط با رضایت صریح و assurance پایین‌تر باقی است.
+
+### ترتیب پیاده‌سازی مصوب
+#395 docs → #390 contract/versioning → #391 enforcement و #392 company/bootstrap → #393 Vendor add-on issuance → #394 online/offline sync؛ تست end-to-end واقعی دو میزبان، TPM فیزیکی و recovery drill در انتهای فاز اجرا می‌شود. تست واحد/Integration/CI هر PR همچنان الزامی است.
+
+- **Issues:** #390، #391، #392، #393، #394 و #395.
+- **وضعیت کد در زمان ثبت:** این ADR فقط Accepted است؛ قرارداد نسخه‌دار، enforcement، bootstrap، add-on issuance و sync تا زمانی که PR و CI مربوطه تکمیل نشود NotImplemented محسوب می‌شوند.
+
+
+## D-060 — سه حوزه مسئولیتی Vendor/Customer و دروازه فعال‌سازی در شروع برنامه (2026-10-31)
+
+- **وضعیت:** Accepted — تأیید مالک محصول در 2026-10-31؛ مرجع نیازمندی اجرایی Issue #396 و نقشه LICENSING_IMPLEMENTATION_PLAN.md.
+- **زمینه:** چرخه لایسنس فقط صدور کلید نیست؛ باید چرخه تجاری فروشنده، اعمال entitlement و نصب/فعال‌سازی/همگام‌سازی مشتری را پوشش دهد. مسیر شروع برنامه نیز باید قبل از ورود عادی، وضعیت مجوز نصب را از مرجع معتبر سرور تعیین کند.
+
+### سه بخش معماری
+1. **Vendor CRM & Commercial:** مدیریت CustomerAccount، مخاطبان/اطلاعات مشتری، قرارداد، سفارش، اقلام خرید، پرداخت و تطبیق، تمدید، پشتیبانی، SLA/تاریخ پشتیبانی و سوابق تجاری. این بخش مرجع تجاری است و نباید رمز کاربران Customer یا داده حسابداری مشتری را نگهداری کند.
+2. **Licensing & Entitlement Engine:** کاتالوگ محصول/ماژول/Feature، LicenseEnvelope پایه، ظرفیت Company/UserSeat، amendment و sequence، اعتبارسنجی قرارداد، امضا، ابطال، audit و projection entitlement. سفارش تجاری فقط از مسیر مجاز آن به entitlement امضاشده تبدیل می‌شود.
+3. **Customer Deployment & Sync:** نصب Cloud/Dedicated/Offline، Installation identity و enrollment، bootstrap مدیر محلی، دروازه شروع برنامه، import پایدار، Cloud API، درخواست/پاسخ آنلاین، export/import فایل آفلاین، sync cursor، ACK و freshness. این بخش مالک اجرای محلی و انتقال امن است.
+
+این سه بخش **مرزهای منطقی و ماژول‌های مسئولیتی در Modular Monolith فعلی** هستند؛ الزام به Microservice، مخزن، VM یا دیتابیس جداگانه برای هر بخش ایجاد نمی‌کنند. Vendor persistence و Customer persistence همچنان جدا می‌مانند و Vendor به DB مشتری وصل نمی‌شود.
+
+### دروازه شروع و تجربه فعال‌سازی Customer
+1. پیش از نمایش ورود عادی، Customer Host وضعیت Installation identity و LicenseEnvelope را از persistence/authority سمت سرور بررسی می‌کند. React یا ورودی مرورگر مرجع تصمیم نیست.
+2. اگر نصب هویت معتبر و LicenseEnvelope معتبر و جاری دارد، صفحه ورود عادی نمایش داده می‌شود.
+3. اگر هیچ LicenseEnvelope نصب نشده است، صفحه ورود عادی بسته می‌ماند و کاربر به Activation Wizard هدایت می‌شود.
+4. اگر LicenseEnvelope امضاشده منقضی و در وضعیت Restricted است، آن را با «بدون لایسنس» اشتباه نگیریم؛ مسیر ورود مجاز برای کاربر احراز هویت‌شده جهت read/export/recovery و صفحه وضعیت تمدید نمایش داده می‌شود. هیچ Grace ضمنی ایجاد نمی‌شود.
+5. اگر امضا، installation binding، sequence، revocation یا اثبات کلید قابل اعتماد نیست، fail-closed و مسیر خطای امن/بازیابی نمایش داده می‌شود؛ مجوزدهی پیش‌فرض انجام نمی‌شود.
+6. پس از فعال‌سازی موفق، وضعیت سمت سرور دوباره بارگذاری می‌شود و کاربر به ورود عادی می‌رود. Restart/reboot/recycle درخواست فعال‌سازی مجدد ایجاد نمی‌کند.
+
+### فرم فعال‌سازی چندشرکتی
+- فرم، Companyهای مجاز داخل LicenseEnvelope را نمایش می‌دهد (برای مثال شرکت الف و شرکت ب) و نام/اطلاعات محلی هر شرکت را به رکورد Company متناظر متصل می‌کند؛ کلاینت حق افزودن Company یا entitlement خارج از payload را ندارد.
+- برای هر Company، زیرسیستم‌ها، Featureها، سقف کاربران و سقف‌های نوع‌دار دقیقاً از entitlement امضاشده خوانده و به‌صورت فقط‌خواندنی/قابل توضیح نمایش داده می‌شوند.
+- برای هر Company مدیر اولیه محلی و عضویت/نقش مربوط تنظیم می‌شود. رمز عبور فقط روی Customer Host دریافت و فقط به شکل ASP.NET Core Identity hash ذخیره می‌شود؛ به Vendor، license/provisioning/sync file، log یا telemetry نمی‌رود.
+- حساب User در مدل هویت Customer در سطح نصب یکتا است؛ می‌توان برای هر شرکت مدیر اولیه جدا تعریف کرد. اگر یک شخص در چند شرکت عضو باشد، همان User به چند membership متصل می‌شود و برای هر Company یک Seat مصرف می‌کند. این فرم نباید به معنی ایجاد جدول User/Password موازی در Vendor یا رمز مستقل در فایل لایسنس تلقی شود.
+- Company، Tenant حسابداری است؛ CustomerAccount و Installation با آن یکی نیستند. LicenseId برای هر Company جدا صادر نمی‌شود.
+
+### تبادل کلید و بسته‌های Offline
+- کلید خصوصی Installation identity روی Customer Host تولید و non-exportable می‌ماند؛ برای درخواست فعال‌سازی فقط metadata، public key/SPKI، Installation binding، nonce/request ID، assurance level و proof امضاشده صادر می‌شود.
+- قالب استاندارد انتقال، بسته نسخه‌دار JSON است: درخواست مشتری (.request.json) و پاسخ امضاشده Vendor (.license.json). فایل متنی (.txt) در صورت نیاز فقط Base64/armored wrapper همان بایت‌های دقیق بسته است؛ متن قابل ویرایش و فاقد امضا هرگز entitlement محسوب نمی‌شود.
+- کد فعال‌سازی تجاری یک‌بارمصرف، دارای مدت اعتبار قابل تنظیم توسط Vendor و bind‌شده به CustomerAccount/Installation است؛ کد فقط مجوز شروع صدور/فعال‌سازی است و جای LicenseEnvelope امضاشده را نمی‌گیرد. در Vendor به‌صورت امن (ترجیحاً hash) نگهداری، rate-limit و پس از مصرف/انقضا غیرقابل استفاده مجدد می‌شود.
+- مسیر UI آنلاین می‌تواند کد فعال‌سازی را در Customer Host دریافت و از طریق API احراز هویت‌شده redeem کند. در Offline، Customer درخواست را export می‌کند؛ اپراتور Vendor درخواست و کد را در Vendor Host بررسی/redeem می‌کند و پاسخ امضاشده را برمی‌گرداند. کد فعال‌سازی داخل فایل درخواست/پاسخ، log یا telemetry قرار نمی‌گیرد.
+- مسیر UI شامل Download Request، انتقال به دستگاه Vendor، Upload Response و اعتبارسنجی/ثبت اتمیک است. در صورت اتصال، همان قرارداد از طریق Cloud API احراز هویت‌شده انجام می‌شود.
+- QR یا کد کوتاه فقط گزینه کمکی برای payload کوچک/شناسه درخواست است؛ جایگزین فایل امضاشده یا ریشه اعتماد نیست. کلید خصوصی یا رمز عبور هرگز در QR/کد/فایل انتقال قرار نمی‌گیرد.
+- ارسال وضعیت/ACK/usage از Customer به Vendor نیز با بسته پاسخ/گزارش امضاشده و sequence/idempotency انجام می‌شود؛ در نبود شبکه وضعیت Vendor stale می‌ماند و زمان آخرین sync نشان داده می‌شود.
+
+### قیود و وضعیت
+- License check باید محلی/سمت سرور باشد؛ برای هر Login یا عملیات حسابداری round-trip به Vendor ممنوع است.
+- مسیر فعال‌سازی باید از API/Middleware سمت سرور enforce شود؛ صرف مخفی‌کردن لینک ورود در React کافی نیست.
+- صفحات Razor موجود، از جمله Login، تا جایگزینی کامل و E2E موفق حفظ می‌شوند؛ cutover فقط در PR مجزا و پس از تأیید انجام می‌شود.
+- این تصمیم رفتار و مرز مسئولیت را Accepted می‌کند؛ CRM تجاری کامل، Activation Wizard، UI فرم چندشرکتی و offline key exchange تا پیاده‌سازی و CI مربوطه NotImplemented می‌مانند.
+- **Issues:** #390 قرارداد؛ #391 enforcement؛ #392 شرکت و مدیر اولیه؛ #393 فروش افزونه؛ #394 sync؛ #396 دروازه شروع و Activation Wizard.
