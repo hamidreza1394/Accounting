@@ -184,7 +184,7 @@
 ### 11.1 چرخه درخواست/پاسخ
 1. Customer Host در زمان نصب، کلید هویت Installation را محلی و non-exportable تولید/ثبت می‌کند؛ TPM ترجیحی و SoftwareProtected فقط با consent صریح طبق D-058.
 2. Customer از Wizard یک درخواست نسخه‌دار .request.json صادر می‌کند. درخواست شامل InstallationId، public SPKI/key version، assurance level، nonce/request ID، زمان/انقضا، نسخه قرارداد و proof-of-possession است؛ private key، رمز و داده حسابداری ندارد.
-3. اپراتور فایل را به Vendor Host منتقل/آپلود می‌کند. Vendor identity و binding را بررسی و پس از خرید/تأیید تجاری، LicenseEnvelope یا amendment را از مسیر signer امن صادر می‌کند.
+3. اپراتور فایل را به Vendor Host منتقل/آپلود می‌کند. Vendor identity و binding را بررسی می‌کند؛ activation code یک‌بارمصرف و bind‌شده به CustomerAccount/Installation را در Vendor Host redeem می‌کند و پس از خرید/تأیید تجاری، LicenseEnvelope یا amendment را از مسیر signer امن صادر می‌کند. کد داخل فایل درخواست نیست.
 4. Vendor پاسخ .license.json امضاشده را می‌دهد. Customer آن را از Wizard وارد می‌کند؛ امضا، installation binding، request nonce، sequence، زمان، revocation و policy validate و سپس transactionally ذخیره می‌شود.
 5. در صورت نیاز به انتقال متنی، .txt فقط Base64/armored wrapper بایت‌های دقیق فایل canonical است. پس از decode باید همان payload/signature bytes به دست آید؛ متن ویرایش‌شده، signature نامعتبر یا JSON reserialized جایگزین امضای اصلی نمی‌شود.
 6. Customer ACK/status را با بسته مجزای امضاشده و request/sequence متناظر صادر می‌کند؛ Vendor پس از import آن را idempotently ثبت می‌کند.
