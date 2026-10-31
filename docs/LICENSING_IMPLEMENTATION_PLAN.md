@@ -131,3 +131,76 @@
 - Installation identity/import: #384
 - Provisioning: #228 و #235
 - Issuance/revocation: #214؛ signer/key operations: #236
+
+
+## 9. معماری سه‌حوزه‌ای Vendor/Customer (D-060)
+
+این ساختار، مبنای دسته‌بندی تمام Issueها، پروژه‌ها و صفحات UI است. سه بخش در یک Modular Monolith می‌توانند Deploy شوند؛ جداسازی، جداسازی مسئولیت و مرز داده است، نه الزام Microservice.
+
+### 9.1 Vendor CRM & Commercial
+- CustomerAccount و مخاطبان/اطلاعات حقوقی و عملیاتی مشتری.
+- قرارداد، سفارش، اقلام خرید، پرداخت/تطبیق، تمدید، تعهد پشتیبانی، SLA و تاریخچه تجاری.
+- ارتباط پشتیبانی و سوابق تجاری قابل ممیزی؛ بدون حساب کاربری/رمز Customer و بدون داده حسابداری مشتری.
+- سفارش پرداخت‌شده/تأییدشده درخواست تغییر entitlement را به Engine تحویل می‌دهد؛ Commercial خودش LicenseEnvelope امضا نمی‌کند.
+
+### 9.2 Licensing & Entitlement Engine
+- کاتالوگ محصول، Module، Feature و سیاست‌های ظرفیت.
+- Base LicenseEnvelope، revision/amendment، LicenseId ثابت، sequence، signature، revocation و audit.
+- اعمال entitlement در دامنه Installation/Company و اعتبارسنجی قراردادهای نسخه‌دار.
+- کلید امضا در signer امن مستقل؛ Commercial order و entitlement فنی با شناسه/رابطه auditپذیر مرتبط می‌شوند.
+
+### 9.3 Customer Deployment & Sync
+- Customer installation/setup، identity enrollment، license-first startup gate، local admin bootstrap.
+- Cloud API و customer-side authoritative policy، Dedicated/Offline file exchange، import/export، ACK، sync cursor و freshness.
+- provisioning v4 و ACK موجود (#228/#235) مصرف/گسترش داده می‌شوند؛ پروتکل موازی ساخته نمی‌شود.
+
+## 10. گردش شروع Customer و فرم فعال‌سازی
+
+### 10.1 State machine سمت سرور
+
+| وضعیت نصب | تجربه کاربر | رفتار امنیتی |
+|---|---|---|
+| Unlicensed — envelope وجود ندارد | Activation Wizard؛ ورود عادی مسدود | فقط مسیرهای فعال‌سازی، health و پشتیبانی محدود در دسترس |
+| Active — امضا، binding، sequence و revocation معتبر | صفحه ورود عادی | احراز هویت و سپس عضویت/entitlement/permission بررسی می‌شود |
+| Restricted — envelope معتبر ولی Term منقضی | ورود کنترل‌شده و صفحه حالت محدود | read/export/recovery طبق نقش مجاز؛ عملیات عادی نوشتن مسدود؛ بدون grace |
+| InvalidOrUntrusted — امضا/کلید/sequence/revocation نامعتبر یا نامعلوم | صفحه خطای امن/بازیابی | fail-closed؛ هیچ دسترسی کاری اعطا نمی‌شود |
+| ReactivationRequired — OS identity یا کلید نصب تغییر کرده/از دست رفته | مسیر recovery/reactivation | انتقال نصب یا recovery فقط با فرایند کنترل‌شده؛ MachineGuid به‌تنهایی کافی نیست |
+
+- بررسی در Startup و درخواست‌های سرور انجام می‌شود؛ UI state فقط projection است.
+- Login و Activation routeها از نظر دسترسی تفکیک می‌شوند؛ عدم وجود لایسنس نباید با انقضا/ابطال/خرابی هویت یکی شود.
+- بعد از import موفق، سرویس state را reload می‌کند؛ restartهای عادی درخواست activation جدید نمی‌سازند.
+- تا زمان تکمیل و تست مسیر جدید، Razor Login موجود حفظ می‌شود و تغییر مسیر سراسری فقط با cutover مجزا انجام می‌شود (AGENTS.md).
+
+### 10.2 Wizard چندشرکتی و entitlement per-company
+1. فایل/پاسخ آنلاین امضاشده اعتبارسنجی و در Installation ذخیره می‌شود.
+2. Wizard فقط Company referenceهای مجاز را از payload می‌خواند و اطلاعات محلی/حقوقی شرکت (مانند نام شرکت الف و ب) را به هر مرجع متصل می‌کند.
+3. زیرسیستم‌های finance/sales/inventory/treasury، Featureهای type-safe، max_countها و UserSeat هر Company از payload پر می‌شوند؛ فرم حق ارتقای entitlement را ندارد.
+4. برای هر Company یک مدیر اولیه محلی/عضویت/نقش تعریف می‌شود. هویت User در Customer در سطح نصب یکتا است؛ User می‌تواند membership چند شرکت داشته باشد و در هر شرکت یک Seat مصرف کند. رمز فقط روی Customer Host گرفته و با Identity hash ذخیره می‌شود.
+5. اطلاعات رمز، hash، token ورود و secret هرگز به Vendor، فایل‌های انتقال، audit payload یا telemetry راه نمی‌یابد.
+6. ایجاد Company بعدی پس از setup همچنان تحت #392 و maxCompanies است؛ import شرکت/دوره مالی موجود از provisioning v4 دوباره‌سازی نمی‌شود.
+
+## 11. Offline activation key exchange و مسیر سریع نصب
+
+### 11.1 چرخه درخواست/پاسخ
+1. Customer Host در زمان نصب، کلید هویت Installation را محلی و non-exportable تولید/ثبت می‌کند؛ TPM ترجیحی و SoftwareProtected فقط با consent صریح طبق D-058.
+2. Customer از Wizard یک درخواست نسخه‌دار .request.json صادر می‌کند. درخواست شامل InstallationId، public SPKI/key version، assurance level، nonce/request ID، زمان/انقضا، نسخه قرارداد و proof-of-possession است؛ private key، رمز و داده حسابداری ندارد.
+3. اپراتور فایل را به Vendor Host منتقل/آپلود می‌کند. Vendor identity و binding را بررسی و پس از خرید/تأیید تجاری، LicenseEnvelope یا amendment را از مسیر signer امن صادر می‌کند.
+4. Vendor پاسخ .license.json امضاشده را می‌دهد. Customer آن را از Wizard وارد می‌کند؛ امضا، installation binding، request nonce، sequence، زمان، revocation و policy validate و سپس transactionally ذخیره می‌شود.
+5. در صورت نیاز به انتقال متنی، .txt فقط Base64/armored wrapper بایت‌های دقیق فایل canonical است. پس از decode باید همان payload/signature bytes به دست آید؛ متن ویرایش‌شده، signature نامعتبر یا JSON reserialized جایگزین امضای اصلی نمی‌شود.
+6. Customer ACK/status را با بسته مجزای امضاشده و request/sequence متناظر صادر می‌کند؛ Vendor پس از import آن را idempotently ثبت می‌کند.
+
+### 11.2 انتقال آنلاین و گزینه‌های کمکی
+- Online: همان قراردادها با HTTPS و authentication مبتنی بر Installation identity/client proof؛ انتقال مستقیم entitlement به Customer API مجاز است فقط با authorization و signature validation.
+- Offline: Download Request → انتقال فایل → Upload Response؛ انتقال از طریق USB/شبکه داخلی/رسانه مجاز سازمانی، بدون اتصال مستقیم DB.
+- QR/deep-link صرفاً برای request ID یا challenge کوچک و کوتاه‌عمر؛ فایل امضاشده منبع کامل entitlement باقی می‌ماند. هیچ private key/password در QR یا URL قرار نمی‌گیرد.
+- sync دوطرفه باید request ID، nonce، InstallationId، payload hash، schema version، sequence، idempotency و ACK را کنترل کند؛ stale telemetry با LastSyncedAt مشخص است.
+
+## 12. تقسیم Issueها در سه حوزه
+
+| حوزه | Issues | مالکیت اصلی |
+|---|---|---|
+| Vendor CRM & Commercial | #228 (onboarding/provisioning metadata)، #393 و Issueهای تجاری بعدی | مشتری تجاری، قرارداد، خرید، پرداخت، تمدید، پشتیبانی و سوابق |
+| Licensing & Entitlement Engine | #214، #236، #390، #391 | قرارداد لایسنس، entitlement، امضا، ابطال، sequence و enforcement |
+| Customer Deployment & Sync | #235، #384، #392، #394، #396 | نصب، identity، bootstrap، startup gate، API، فایل، sync و ACK |
+
+Issue #396 فقط مسئول startup gate و Activation Wizard است؛ contract schema در #390، سیاست enforcement در #391، Company/admin provisioning در #392، فروش add-on در #393 و transport/reconciliation در #394 باقی می‌ماند.
