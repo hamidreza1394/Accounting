@@ -59,8 +59,14 @@ public sealed class VendorLicenseIssuanceService(
         if (installation is null)
             return VendorLicenseIssuanceResult.Conflict("license_installation_mismatch");
 
+        var installationIdentity = await db.InstallationIdentities.SingleOrDefaultAsync(
+            item => item.InstallationId == installation.Id && item.State == VendorInstallationIdentity.StateCurrent,
+            cancellationToken);
+        if (installationIdentity is null)
+            return VendorLicenseIssuanceResult.Conflict("installation_identity_not_registered");
+
         var now = timeProvider.GetUtcNow().ToUniversalTime();
-        if (!VendorLicensePayloadBuilder.TryBuild(license, installation, now, out var payload, out var payloadError) ||
+        if (!VendorLicensePayloadBuilder.TryBuild(license, installation, installationIdentity, now, out var payload, out var payloadError) ||
             payload is null)
             return VendorLicenseIssuanceResult.Conflict(payloadError ?? "license_metadata_invalid");
 
