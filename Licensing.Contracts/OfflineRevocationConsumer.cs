@@ -23,7 +23,25 @@ public interface IOfflineRevocationStateStore
 
     Task<bool> TryApplyAsync(
         OfflineRevocationList list,
+        OfflineRevocationListEnvelope envelope,
         string snapshotDigest,
+        CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Hardware-backed monotonic generation outside the customer database backup domain.
+/// Implementations must fail when the TPM NV counter is unavailable, reset, or inconsistent.
+/// </summary>
+public interface IOfflineRevocationRollbackAnchor
+{
+    Task<long> ReadGenerationAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Advances exactly once only when the current generation equals expectedCurrentGeneration.
+    /// The implementation must verify the observed post-increment value before returning.
+    /// </summary>
+    Task<long> AdvanceAsync(
+        long expectedCurrentGeneration,
         CancellationToken cancellationToken = default);
 }
 
@@ -34,7 +52,11 @@ public sealed record OfflineRevocationState(
     long Sequence,
     string SnapshotDigest,
     DateTimeOffset ExpiresAtUtc,
-    IReadOnlySet<string> RevokedLicenseIds);
+    IReadOnlySet<string> RevokedLicenseIds)
+{
+    /// <summary>The TPM generation that anchors this state outside the database backup domain.</summary>
+    public long AnchorGeneration { get; init; }
+}
 
 public enum OfflineRevocationCheckStatus
 {
@@ -107,7 +129,7 @@ public sealed class OfflineRevocationConsumer
 
         var payloadBytes = Encoding.UTF8.GetBytes(envelope.PayloadJson);
         var digest = Convert.ToHexString(SHA256.HashData(payloadBytes)).ToLowerInvariant();
-        var applied = await _stateStore.TryApplyAsync(list, digest, cancellationToken);
+        var applied = await _stateStore.TryApplyAsync(list, envelope, digest, cancellationToken);
         return applied
             ? OfflineRevocationApplyResult.Applied(list.Sequence)
             : OfflineRevocationApplyResult.Rejected("offline_revocation_sequence_invalid");
