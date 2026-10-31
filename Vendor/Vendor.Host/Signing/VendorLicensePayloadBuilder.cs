@@ -5,7 +5,7 @@ using Faranou.Vendor.Persistence.Domain;
 namespace Faranou.Vendor.Host.Signing;
 
 /// <summary>
-/// Builds the exact v1 payload from Vendor control-plane metadata. This does not sign, persist,
+/// Builds the exact v2 payload from Vendor control-plane metadata and the current registered installation identity. This does not sign, persist,
 /// or change license state; those actions remain gated behind the approval workflow.
 /// </summary>
 public static class VendorLicensePayloadBuilder
@@ -13,12 +13,14 @@ public static class VendorLicensePayloadBuilder
     public static bool TryBuild(
         VendorLicense license,
         VendorInstallation installation,
+        VendorInstallationIdentity installationIdentity,
         DateTimeOffset issuedAtUtc,
         out LicensePayload? payload,
         out string? errorCode)
     {
         ArgumentNullException.ThrowIfNull(license);
         ArgumentNullException.ThrowIfNull(installation);
+        ArgumentNullException.ThrowIfNull(installationIdentity);
         payload = null;
         errorCode = null;
 
@@ -30,6 +32,13 @@ public static class VendorLicensePayloadBuilder
             installation.Status != "Active" ||
             license.CustomerId != installation.CustomerId)
             return Fail("license_not_issuable", out errorCode);
+
+        if (installationIdentity.InstallationId != installation.Id ||
+            installationIdentity.State != VendorInstallationIdentity.StateCurrent ||
+            installationIdentity.KeyVersion < 1 ||
+            !System.Text.RegularExpressions.Regex.IsMatch(
+                installationIdentity.PublicKeyFingerprint, "^[a-f0-9]{64}$", System.Text.RegularExpressions.RegexOptions.CultureInvariant))
+            return Fail("installation_identity_not_registered", out errorCode);
 
         if (string.IsNullOrWhiteSpace(license.ProductCode) ||
             license.ProductCode.Length > 64 ||
@@ -64,7 +73,7 @@ public static class VendorLicensePayloadBuilder
             return Fail("license_company_limit_invalid", out errorCode);
 
         payload = new LicensePayload(
-            FormatVersion: 1,
+            FormatVersion: LicenseAlgorithms.CurrentFormatVersion,
             LicenseId: license.Id.ToString("D"),
             InstallationId: installation.Id.ToString("D"),
             ProductCode: license.ProductCode,
@@ -76,7 +85,8 @@ public static class VendorLicensePayloadBuilder
             Sequence: license.LastIssuedSequence + 1,
             Limits: new LicenseLimits(
                 license.MaxCompanies,
-                subsystems.OrderBy(code => code, StringComparer.Ordinal).ToArray()));
+                subsystems.OrderBy(code => code, StringComparer.Ordinal).ToArray()),
+            InstallationKeyFingerprint: installationIdentity.PublicKeyFingerprint);
 
         return true;
     }
