@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Data;
 using System.Security.Cryptography;
 using System.Text;
@@ -8,13 +9,15 @@ using Microsoft.EntityFrameworkCore;
 namespace Data;
 
 /// <summary>
-/// SQL Server durable store whose accepted snapshot is anchored to a hardware TPM NV counter.
-/// The two-phase pending envelope allows recovery if the process stops between the database
-/// prepare, TPM increment, and database finalize steps.
+/// SQL Server durable state whose accepted snapshot is bound to a TPM 2.0 NV Extend hash-chain.
+/// The pending envelope and expected TPM digest make the DB/TPM boundary recoverable after a crash.
 /// </summary>
 public sealed class TpmAnchoredOfflineRevocationStateStore : IOfflineRevocationStateStore
 {
+    public const string InitialAnchorDigest = "0000000000000000000000000000000000000000000000000000000000000000";
+    private static readonly byte[] DomainSeparator = Encoding.ASCII.GetBytes("FARANOU-OFFLINE-REVOCATION-V1\0");
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
     private readonly DatabaseContext _database;
     private readonly IOfflineRevocationRollbackAnchor _rollbackAnchor;
     private readonly IOfflineRevocationKeyResolver _keyResolver;
@@ -32,6 +35,28 @@ public sealed class TpmAnchoredOfflineRevocationStateStore : IOfflineRevocationS
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
+    /// <summary>
+    /// Computes the value TPM2_NV_Extend must produce from the current NV digest and the
+    /// generation-bound snapshot digest. The TPM performs SHA-256(current || extensionData).
+    /// </summary>
+    public static string ComputeExpectedAnchorDigest(
+        string currentAnchorDigest,
+        long nextGeneration,
+        string snapshotDigest)
+    {
+        if (nextGeneration <= 0 || !IsSha256Digest(currentAnchorDigest) || !IsSha256Digest(snapshotDigest))
+        {
+            throw new ArgumentException("The TPM anchor input is invalid.");
+        }
+
+        var extensionData = BuildExtensionData(nextGeneration, snapshotDigest);
+        var current = Convert.FromHexString(currentAnchorDigest);
+        var input = new byte[current.Length + extensionData.Length];
+        Buffer.BlockCopy(current, 0, input, 0, current.Length);
+        Buffer.BlockCopy(extensionData, 0, input, current.Length, extensionData.Length);
+        return Convert.ToHexString(SHA256.HashData(input)).ToLowerInvariant();
+    }
+
     public async Task<OfflineRevocationState?> GetCurrentAsync(CancellationToken cancellationToken = default)
     {
         await using var transaction = await _database.Database.BeginTransactionAsync(
@@ -39,15 +64,12 @@ public sealed class TpmAnchoredOfflineRevocationStateStore : IOfflineRevocationS
         try
         {
             var row = await LoadForUpdateAsync(cancellationToken);
-            var generation = await _rollbackAnchor.ReadGenerationAsync(cancellationToken);
-            if (generation < 0)
-            {
-                return null;
-            }
+            var hardwareDigest = NormalizeDigest(
+                await _rollbackAnchor.ReadDigestAsync(cancellationToken));
 
             if (row is null)
             {
-                if (generation != 0)
+                if (!string.Equals(hardwareDigest, InitialAnchorDigest, StringComparison.Ordinal))
                 {
                     return null;
                 }
@@ -58,36 +80,71 @@ public sealed class TpmAnchoredOfflineRevocationStateStore : IOfflineRevocationS
 
             if (row.PendingEnvelopeJson is null)
             {
-                if (row.PendingExpectedGeneration is not null || generation != row.AnchorGeneration)
+                if (row.PendingExpectedGeneration is not null ||
+                    row.PendingExpectedAnchorDigest is not null ||
+                    !string.Equals(hardwareDigest, row.AnchorDigest, StringComparison.Ordinal))
+                {
+                    return null;
+                }
+
+                if (row.Sequence == 0)
+                {
+                    if (!IsInitialState(row))
+                    {
+                        return null;
+                    }
+
+                    await transaction.CommitAsync(cancellationToken);
+                    return null;
+                }
+
+                if (!TryReadAcceptedEnvelope(row, out var acceptedState))
                 {
                     return null;
                 }
 
                 await transaction.CommitAsync(cancellationToken);
-                return ToState(row);
+                return acceptedState;
             }
 
-            var expected = row.PendingExpectedGeneration;
-            if (expected is null || expected != checked(row.AnchorGeneration + 1))
-            {
-                return null;
-            }
-
-            if (generation == row.AnchorGeneration)
-            {
-                generation = await _rollbackAnchor.AdvanceAsync(row.AnchorGeneration, cancellationToken);
-            }
-
-            if (generation != expected.Value ||
+            var expectedGeneration = row.PendingExpectedGeneration;
+            if (expectedGeneration is null ||
+                expectedGeneration != checked(row.AnchorGeneration + 1) ||
                 !TryReadPendingEnvelope(row, out var pendingList, out var pendingDigest))
             {
                 return null;
             }
 
-            ApplyPending(row, pendingList!, pendingDigest!, expected.Value);
+            var expectedDigest = ComputeExpectedAnchorDigest(row.AnchorDigest, expectedGeneration.Value, pendingDigest!);
+            if (!string.Equals(row.PendingExpectedAnchorDigest, expectedDigest, StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            if (string.Equals(hardwareDigest, row.AnchorDigest, StringComparison.Ordinal))
+            {
+                hardwareDigest = NormalizeDigest(await _rollbackAnchor.ExtendAsync(
+                    row.AnchorDigest,
+                    BuildExtensionData(expectedGeneration.Value, pendingDigest!),
+                    expectedDigest,
+                    cancellationToken));
+            }
+
+            if (!string.Equals(hardwareDigest, expectedDigest, StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            ApplyPending(row, pendingList!, pendingDigest!, expectedGeneration.Value, expectedDigest);
             await _database.SaveChangesAsync(cancellationToken);
+
+            if (!TryReadAcceptedEnvelope(row, out var recoveredState))
+            {
+                return null;
+            }
+
             await transaction.CommitAsync(cancellationToken);
-            return ToState(row);
+            return recoveredState;
         }
         catch (OfflineRevocationRollbackAnchorUnavailableException)
         {
@@ -108,26 +165,23 @@ public sealed class TpmAnchoredOfflineRevocationStateStore : IOfflineRevocationS
         ArgumentNullException.ThrowIfNull(list);
         ArgumentNullException.ThrowIfNull(envelope);
 
-        // This also recovers an interrupted earlier apply. A null result is valid only for an
-        // empty installation with a TPM generation of zero; the locked check below distinguishes it.
+        // Recover any interrupted prior operation before preparing another generation.
         _ = await GetCurrentAsync(cancellationToken);
 
         long expectedGeneration;
+        string expectedDigest;
+        string currentDigest;
         await using (var transaction = await _database.Database.BeginTransactionAsync(
             IsolationLevel.Serializable, cancellationToken))
         {
             try
             {
                 var row = await LoadForUpdateAsync(cancellationToken);
-                var generation = await _rollbackAnchor.ReadGenerationAsync(cancellationToken);
-                if (generation < 0)
-                {
-                    return false;
-                }
+                currentDigest = NormalizeDigest(await _rollbackAnchor.ReadDigestAsync(cancellationToken));
 
                 if (row is null)
                 {
-                    if (generation != 0)
+                    if (!string.Equals(currentDigest, InitialAnchorDigest, StringComparison.Ordinal))
                     {
                         return false;
                     }
@@ -138,15 +192,33 @@ public sealed class TpmAnchoredOfflineRevocationStateStore : IOfflineRevocationS
                         SnapshotDigest = null,
                         ExpiresAtUtc = null,
                         RevokedLicenseIdsJson = "[]",
+                        PreviousAnchorDigest = InitialAnchorDigest,
+                        AnchorDigest = InitialAnchorDigest,
                         AnchorGeneration = 0
                     };
                     _database.CustomerOfflineRevocationStates.Add(row);
                 }
-                else if (row.PendingEnvelopeJson is not null ||
-                         row.PendingExpectedGeneration is not null ||
-                         row.AnchorGeneration != generation)
+                else
                 {
-                    return false;
+                    if (row.PendingEnvelopeJson is not null ||
+                        row.PendingExpectedGeneration is not null ||
+                        row.PendingExpectedAnchorDigest is not null ||
+                        !string.Equals(currentDigest, row.AnchorDigest, StringComparison.Ordinal))
+                    {
+                        return false;
+                    }
+
+                    if (row.Sequence == 0)
+                    {
+                        if (!IsInitialState(row))
+                        {
+                            return false;
+                        }
+                    }
+                    else if (!TryReadAcceptedEnvelope(row, out _))
+                    {
+                        return false;
+                    }
                 }
 
                 if (list.Sequence <= row.Sequence ||
@@ -160,9 +232,11 @@ public sealed class TpmAnchoredOfflineRevocationStateStore : IOfflineRevocationS
                     return false;
                 }
 
-                expectedGeneration = checked(generation + 1);
+                expectedGeneration = checked(row.AnchorGeneration + 1);
+                expectedDigest = ComputeExpectedAnchorDigest(row.AnchorDigest, expectedGeneration, snapshotDigest);
                 row.PendingEnvelopeJson = JsonSerializer.Serialize(envelope, JsonOptions);
                 row.PendingExpectedGeneration = expectedGeneration;
+                row.PendingExpectedAnchorDigest = expectedDigest;
                 await _database.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
             }
@@ -178,13 +252,17 @@ public sealed class TpmAnchoredOfflineRevocationStateStore : IOfflineRevocationS
 
         try
         {
-            var advanced = await _rollbackAnchor.AdvanceAsync(expectedGeneration - 1, cancellationToken);
-            if (advanced != expectedGeneration)
+            var extendedDigest = NormalizeDigest(await _rollbackAnchor.ExtendAsync(
+                currentDigest,
+                BuildExtensionData(expectedGeneration, snapshotDigest),
+                expectedDigest,
+                cancellationToken));
+            if (!string.Equals(extendedDigest, expectedDigest, StringComparison.Ordinal))
             {
                 return false;
             }
 
-            return await FinalizePendingAsync(expectedGeneration, cancellationToken);
+            return await FinalizePendingAsync(expectedGeneration, expectedDigest, cancellationToken);
         }
         catch (OfflineRevocationRollbackAnchorUnavailableException)
         {
@@ -192,7 +270,10 @@ public sealed class TpmAnchoredOfflineRevocationStateStore : IOfflineRevocationS
         }
     }
 
-    private async Task<bool> FinalizePendingAsync(long expectedGeneration, CancellationToken cancellationToken)
+    private async Task<bool> FinalizePendingAsync(
+        long expectedGeneration,
+        string expectedDigest,
+        CancellationToken cancellationToken)
     {
         await using var transaction = await _database.Database.BeginTransactionAsync(
             IsolationLevel.Serializable, cancellationToken);
@@ -200,14 +281,27 @@ public sealed class TpmAnchoredOfflineRevocationStateStore : IOfflineRevocationS
         if (row is null ||
             row.PendingEnvelopeJson is null ||
             row.PendingExpectedGeneration != expectedGeneration ||
-            await _rollbackAnchor.ReadGenerationAsync(cancellationToken) != expectedGeneration ||
-            !TryReadPendingEnvelope(row, out var list, out var digest))
+            !string.Equals(row.PendingExpectedAnchorDigest, expectedDigest, StringComparison.Ordinal) ||
+            !string.Equals(
+                NormalizeDigest(await _rollbackAnchor.ReadDigestAsync(cancellationToken)),
+                expectedDigest,
+                StringComparison.Ordinal) ||
+            !TryReadPendingEnvelope(row, out var list, out var digest) ||
+            !string.Equals(
+                ComputeExpectedAnchorDigest(row.AnchorDigest, expectedGeneration, digest!),
+                expectedDigest,
+                StringComparison.Ordinal))
         {
             return false;
         }
 
-        ApplyPending(row, list!, digest!, expectedGeneration);
+        ApplyPending(row, list!, digest!, expectedGeneration, expectedDigest);
         await _database.SaveChangesAsync(cancellationToken);
+        if (!TryReadAcceptedEnvelope(row, out _))
+        {
+            return false;
+        }
+
         await transaction.CommitAsync(cancellationToken);
         return true;
     }
@@ -241,12 +335,62 @@ public sealed class TpmAnchoredOfflineRevocationStateStore : IOfflineRevocationS
             return false;
         }
 
-        if (envelope is null ||
-            !TryVerifyEnvelope(envelope, row.Sequence, _timeProvider.GetUtcNow(), out list, out digest))
+        return envelope is not null &&
+            TryVerifyEnvelope(envelope, row.Sequence, _timeProvider.GetUtcNow(), out list, out digest);
+    }
+
+    private bool TryReadAcceptedEnvelope(
+        Domain.CustomerOfflineRevocationState row,
+        out OfflineRevocationState? state)
+    {
+        state = null;
+        if (row.Sequence <= 0 ||
+            row.AnchorGeneration <= 0 ||
+            row.SnapshotDigest is null ||
+            row.ExpiresAtUtc is null ||
+            string.IsNullOrWhiteSpace(row.AcceptedEnvelopeJson) ||
+            !IsSha256Digest(row.PreviousAnchorDigest) ||
+            !IsSha256Digest(row.AnchorDigest))
         {
             return false;
         }
 
+        OfflineRevocationListEnvelope? envelope;
+        try
+        {
+            envelope = JsonSerializer.Deserialize<OfflineRevocationListEnvelope>(row.AcceptedEnvelopeJson, JsonOptions);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+
+        if (envelope is null ||
+            !TryVerifyEnvelope(envelope, 0, _timeProvider.GetUtcNow(), out var list, out var digest) ||
+            list is null ||
+            list.Sequence != row.Sequence ||
+            !string.Equals(digest, row.SnapshotDigest, StringComparison.Ordinal) ||
+            !string.Equals(
+                JsonSerializer.Serialize(list.RevokedLicenseIds, JsonOptions),
+                row.RevokedLicenseIdsJson,
+                StringComparison.Ordinal) ||
+            list.ExpiresAtUtc.UtcDateTime != DateTime.SpecifyKind(row.ExpiresAtUtc.Value, DateTimeKind.Utc) ||
+            !string.Equals(
+                ComputeExpectedAnchorDigest(row.PreviousAnchorDigest, row.AnchorGeneration, row.SnapshotDigest),
+                row.AnchorDigest,
+                StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        state = new OfflineRevocationState(
+            row.Sequence,
+            row.SnapshotDigest,
+            new DateTimeOffset(DateTime.SpecifyKind(row.ExpiresAtUtc.Value, DateTimeKind.Utc)),
+            new HashSet<string>(list.RevokedLicenseIds, StringComparer.Ordinal))
+        {
+            AnchorGeneration = row.AnchorGeneration
+        };
         return true;
     }
 
@@ -264,9 +408,9 @@ public sealed class TpmAnchoredOfflineRevocationStateStore : IOfflineRevocationS
             return false;
         }
 
-        // Pending snapshots may be finalized after their validity window elapsed. Verify their
-        // signature and canonical structure at the last instant before expiry; the returned state
-        // remains expired and therefore unavailable to license validation.
+        // A pending/accepted envelope may be recovered after expiry. Verify signature and
+        // canonical structure at the last instant before expiry; the state remains expired
+        // and the consumer still reports Unavailable for authorization decisions.
         DateTimeOffset validationTime = now;
         try
         {
@@ -277,7 +421,8 @@ public sealed class TpmAnchoredOfflineRevocationStateStore : IOfflineRevocationS
                 validationTime = expiresAt.AddTicks(-1);
             }
         }
-        catch (Exception exception) when (exception is JsonException or InvalidOperationException or FormatException)
+        catch (Exception exception) when (
+            exception is JsonException or InvalidOperationException or FormatException)
         {
             return false;
         }
@@ -302,44 +447,76 @@ public sealed class TpmAnchoredOfflineRevocationStateStore : IOfflineRevocationS
         Domain.CustomerOfflineRevocationState row,
         OfflineRevocationList list,
         string digest,
-        long anchorGeneration)
+        long generation,
+        string expectedAnchorDigest)
     {
+        row.PreviousAnchorDigest = row.AnchorDigest;
+        row.AnchorDigest = expectedAnchorDigest;
+        row.AnchorGeneration = generation;
         row.Sequence = list.Sequence;
         row.SnapshotDigest = digest;
         row.ExpiresAtUtc = list.ExpiresAtUtc.UtcDateTime;
         row.RevokedLicenseIdsJson = JsonSerializer.Serialize(list.RevokedLicenseIds, JsonOptions);
-        row.AnchorGeneration = anchorGeneration;
+        row.AcceptedEnvelopeJson = row.PendingEnvelopeJson;
         row.PendingEnvelopeJson = null;
         row.PendingExpectedGeneration = null;
+        row.PendingExpectedAnchorDigest = null;
     }
 
-    private static OfflineRevocationState? ToState(Domain.CustomerOfflineRevocationState row)
+    private static bool IsInitialState(Domain.CustomerOfflineRevocationState row) =>
+        row.Sequence == 0 &&
+        row.AnchorGeneration == 0 &&
+        row.SnapshotDigest is null &&
+        row.ExpiresAtUtc is null &&
+        row.AcceptedEnvelopeJson is null &&
+        row.PendingEnvelopeJson is null &&
+        row.PendingExpectedGeneration is null &&
+        row.PendingExpectedAnchorDigest is null &&
+        string.Equals(row.PreviousAnchorDigest, InitialAnchorDigest, StringComparison.Ordinal) &&
+        string.Equals(row.AnchorDigest, InitialAnchorDigest, StringComparison.Ordinal) &&
+        string.Equals(row.RevokedLicenseIdsJson, "[]", StringComparison.Ordinal);
+
+    private static byte[] BuildExtensionData(long generation, string snapshotDigest)
     {
-        if (row.Sequence <= 0 || row.SnapshotDigest is null || row.ExpiresAtUtc is null)
+        if (generation <= 0 || !IsSha256Digest(snapshotDigest))
         {
-            return null;
+            throw new ArgumentException("The TPM extension data is invalid.");
+        }
+
+        var generationBytes = new byte[sizeof(long)];
+        BinaryPrimitives.WriteInt64BigEndian(generationBytes, generation);
+        var snapshotBytes = Convert.FromHexString(snapshotDigest);
+        var result = new byte[DomainSeparator.Length + generationBytes.Length + snapshotBytes.Length];
+        Buffer.BlockCopy(DomainSeparator, 0, result, 0, DomainSeparator.Length);
+        Buffer.BlockCopy(generationBytes, 0, result, DomainSeparator.Length, generationBytes.Length);
+        Buffer.BlockCopy(snapshotBytes, 0, result, DomainSeparator.Length + generationBytes.Length, snapshotBytes.Length);
+        return result;
+    }
+
+    private static bool IsSha256Digest(string? value)
+    {
+        if (value is null || value.Length != 64)
+        {
+            return false;
         }
 
         try
         {
-            var revokedIds = JsonSerializer.Deserialize<string[]>(row.RevokedLicenseIdsJson, JsonOptions);
-            if (revokedIds is null)
-            {
-                return null;
-            }
-
-            return new OfflineRevocationState(
-                row.Sequence,
-                row.SnapshotDigest,
-                new DateTimeOffset(DateTime.SpecifyKind(row.ExpiresAtUtc.Value, DateTimeKind.Utc)),
-                new HashSet<string>(revokedIds, StringComparer.Ordinal))
-            {
-                AnchorGeneration = row.AnchorGeneration
-            };
+            return Convert.FromHexString(value).Length == 32;
         }
-        catch (JsonException)
+        catch (FormatException)
         {
-            return null;
+            return false;
         }
+    }
+
+    private static string NormalizeDigest(string digest)
+    {
+        if (!IsSha256Digest(digest))
+        {
+            throw new OfflineRevocationRollbackAnchorUnavailableException();
+        }
+
+        return digest.ToLowerInvariant();
     }
 }
