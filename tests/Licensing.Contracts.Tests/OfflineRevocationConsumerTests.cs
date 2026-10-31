@@ -166,6 +166,7 @@ public sealed class OfflineRevocationConsumerTests
 
         public async Task<bool> TryApplyAsync(
             OfflineRevocationList list,
+            OfflineRevocationListEnvelope envelope,
             string snapshotDigest,
             CancellationToken cancellationToken = default)
         {
@@ -299,6 +300,7 @@ public sealed class RevocationAwareLicenseEnvelopeValidatorTests
 
         public Task<bool> TryApplyAsync(
             OfflineRevocationList list,
+            OfflineRevocationListEnvelope envelope,
             string snapshotDigest,
             CancellationToken cancellationToken = default) => Task.FromResult(false);
     }
