@@ -12,8 +12,8 @@
 - [x] TPM NV Extend abstraction و hash-chain generation binding افزوده شد.
 - [x] SQL Server session application lock برای serialization بین پردازه‌ها افزوده شد.
 - [x] fail-closed default provider و dedicated revocation public-key resolver ثبت شدند.
-- [ ] Backend واقعی Windows TBS برای TPM NV Extend.
-- [ ] Backend Linux TPM2/TSS بدون simulator fallback.
+- [x] Backend Windows TBS با Microsoft.TSS برای TPM NV Extend اضافه شد.
+- [x] Backend Linux local TPM device بدون simulator fallback اضافه شد.
 - [ ] NV index provisioning command/ceremony و secret delivery.
 - [ ] اجرای تست‌های SQL Server و CI روی آخرین SHA.
 - [ ] تست واقعی روی TPM سخت‌افزاری Windows 10/11، Windows Server و Linux.
@@ -25,7 +25,7 @@
 - TPM NV Extend hash-chain، نگهداری envelope امضاشده و re-verification هر state read.
 - پروتکل prepare → TPM extend/read-back → finalize با recovery دو crash window.
 - SQL Server sp_getapplock در سطح Session برای جلوگیری از Extend هم‌زمان در چند process.
-- default provider unavailable است؛ هیچ software fallback وجود ندارد.
+- default provider بدون پیکربندی TPM unavailable است؛ در پیکربندی صریح، Windows TBS یا Linux strict local device انتخاب می‌شود و هیچ software/simulator fallback وجود ندارد.
 
 ## فایل‌های مهم تغییرکرده
 - Domain/CustomerOfflineRevocationState.cs
@@ -54,7 +54,7 @@
 | Licensing.Contracts tests | اجرا نشده | CI پس از PR لازم است |
 | SQL Server integration | اجرا نشده | تست‌ها نوشته شده‌اند؛ نیازمند FARANOU_TEST_SQLSERVER |
 | Migration up/down | اجرا نشده | CI باید بررسی کند |
-| TPM hardware | اجرا نشده | provider واقعی هنوز پیاده نشده |
+| TPM hardware | اجرا نشده | provider پیاده شده ولی هنوز روی سخت‌افزار واقعی verify نشده |
 
 ## امنیت، داده و سازگاری
 - هیچ تغییری در VendorDbContext/schema انجام نشده است.
@@ -63,6 +63,6 @@
 - provider فعلی عمداً unavailable/fail-closed است.
 
 ## گام بعدی
-1. افزودن TSS.Net provider با Windows TBS و Linux TPM resource manager، بدون simulator fallback.
-2. افزودن provisioning ceremony و NV index policy/auth.
-3. اجرای CI، رفع تمام شکست‌ها و ساخت PR مستقل برای هر مرحله.
+1. تکمیل provisioning ceremony اجرایی برای NV index platform-created و secure auth delivery.
+2. اجرای CI، رفع تمام شکست‌ها و ساخت PR مستقل برای هر مرحله.
+3. تست روی TPM واقعی Windows 10/11، Windows Server و Linux.
