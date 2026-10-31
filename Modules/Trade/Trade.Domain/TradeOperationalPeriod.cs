@@ -32,9 +32,15 @@ public sealed class TradeOperationalPeriod
             throw new ArgumentException("A valid company tenant is required.", nameof(tenantId));
         }
 
-        if (string.IsNullOrWhiteSpace(code) || code.Trim().Length > 64)
+        var normalizedCode = code?.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedCode) ||
+            normalizedCode.Length > 64 ||
+            normalizedCode.Any(character =>
+                !char.IsAsciiLetterOrDigit(character) && character != '-' && character != '_'))
         {
-            throw new ArgumentException("The period code must contain between 1 and 64 characters.", nameof(code));
+            throw new ArgumentException(
+                "The period code must contain 1 to 64 ASCII letters, digits, dashes or underscores.",
+                nameof(code));
         }
 
         if (string.IsNullOrWhiteSpace(title) || title.Trim().Length > 160)
@@ -51,7 +57,7 @@ public sealed class TradeOperationalPeriod
         {
             Id = Guid.NewGuid(),
             TenantId = tenantId,
-            Code = code.Trim().ToUpperInvariant(),
+            Code = normalizedCode.ToUpperInvariant(),
             Title = title.Trim(),
             StartDate = startDate,
             EndDate = endDate,
