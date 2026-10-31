@@ -61,13 +61,13 @@
 
 | نیازمندی | تصمیم/Issue | شاهد کد/تست هدف | وضعیت |
 |---|---|---|---|
-| ماژول مستقل در Accounting با امکان استخراج آتی | D-061 / #397 | Modules/Trade/* و TradeModuleFoundationTests | Foundation در حال اجرا |
-| Company = TenantId و جداسازی داده | D-013/D-061/D-062 | TradeAuthorizationAdapter + CompanyAccessService + WorkContextService | Adapter implemented؛ مصرف در endpoint/use case و تست SQL Server pending |
+| ماژول مستقل در Accounting با امکان استخراج آتی | D-061 / #397 | Modules/Trade/* و TradeModuleFoundationTests | Foundation در main ادغام‌شده (PR #398) |
+| Company = TenantId و جداسازی داده | D-013/D-061/D-062 | TradeAuthorizationAdapter + CompanyAccessService + WorkContextService | Adapter و تست‌های foundation در main؛ اتصال endpoint/use case و تست SQL Server اختصاصی باقی است |
 | استفاده از دوره مالی مشترک فرانو | D-062 / #397 | WorkContext/FiscalPeriodSelectionPolicy + TradePeriodScope + TradeAuthorizationAdapter؛ بدون Trade period entity | Adapter implemented؛ مصرف در use case pending |
 | مجوز تخصصی فرم/عملیات بازرگانی در سازوکار نقش مشترک | D-062 / #397 | TradePermissionCodes + TradeAuthorizationAdapter + CompanyAccessService | Adapter implemented؛ permission catalog seed/role UI/API enforcement pending |
-| entitlement مستقل TRADE_IMPORT | D-025/D-059/D-061 | TradeModuleIdentity و ITradeModuleEntitlement | ContractOnly؛ licensing runtime NotImplemented |
-| گزارش چندشرکتی با مجوز همه شرکت‌ها | D-034/D-061/D-062 | TradeAuthorizationAdapter.HasPermissionForAllCompanyPeriodsAsync | Adapter all-or-nothing implemented؛ report use case و audit NotImplemented |
-| دیتابیس فیزیکی مشترک، schema مستقل trade | D-061 / #397 | TradeDbContext و model test | Foundation؛ Migration ایجاد نشده |
+| entitlement مستقل TRADE_IMPORT | D-025/D-059/D-061 | TradeModuleIdentity و ITradeModuleEntitlement | Port موجود؛ entitlement runtime از S1 طبق D-063 NotImplemented |
+| گزارش چندشرکتی با مجوز همه شرکت‌ها | D-034/D-061/D-062 | TradeAuthorizationAdapter.HasPermissionForAllCompanyPeriodsAsync | Adapter all-or-nothing موجود؛ گزارش عملیاتی چندشرکتی از موج اول Accepted اما use case و audit NotImplemented |
+| دیتابیس فیزیکی مشترک، schema مستقل trade | D-061 / #397 | TradeDbContext و model test | TradeDbContext موجود؛ DI و migration design-time/history مستقل هنوز ممیزی/تکمیل نشده؛ Migration ایجاد نشده |
 | اتصال آتی به مالی بدون coupling مستقیم | D-061 / #397 | dependency architecture tests | Foundation |
 
 
