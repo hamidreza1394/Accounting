@@ -70,5 +70,5 @@
 
 ## شناسه‌های Git
 - **Branch:** `feat/issue-384-customer-license-import`
-- **Commit:** پس از آخرین تغییر branch از GitHub دریافت شود.
-- **Pull Request:** در زمان تهیه این handoff هنوز ایجاد نشده است.
+- **Commit:** `2d184ef20f7baf062a2e241a6abd845ef328cb9c` (آخرین head مشاهده‌شده هنگام به‌روزرسانی این handoff؛ در صورت commit بعدی، PR head ملاک است).
+- **Pull Request:** [#388](https://github.com/hamidreza1394/Accounting/pull/388) — باز؛ CI در حال اجرا.
