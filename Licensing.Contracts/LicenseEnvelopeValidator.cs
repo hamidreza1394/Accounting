@@ -23,6 +23,12 @@ public sealed class LicenseEnvelopeValidator
 	}
 
 	public LicenseValidationResult Validate(LicenseEnvelope envelope, string localInstallationId)
+		=> Validate(envelope, localInstallationId, localInstallationKeyFingerprint: null);
+
+	public LicenseValidationResult Validate(
+		LicenseEnvelope envelope,
+		string localInstallationId,
+		string? localInstallationKeyFingerprint)
 	{
 		if (envelope is null)
 			return LicenseValidationResult.Fail("envelope_null");
@@ -54,7 +60,22 @@ public sealed class LicenseEnvelopeValidator
 		if (payloadErrors.Count > 0)
 			return LicenseValidationResult.Fail("payload_structure_invalid");
 
-		var status = _evaluator.Evaluate(payload, localInstallationId);
+		if (envelope.FormatVersion != payload.FormatVersion)
+			return LicenseValidationResult.Fail("envelope_payload_version_mismatch");
+
+		if (payload.FormatVersion == 2)
+		{
+			if (string.IsNullOrWhiteSpace(localInstallationKeyFingerprint))
+				return LicenseValidationResult.Fail("installation_key_fingerprint_required");
+			if (!string.Equals(payload.InstallationKeyFingerprint, localInstallationKeyFingerprint, StringComparison.Ordinal))
+				return LicenseValidationResult.Fail("installation_key_mismatch");
+		}
+		else if (!string.IsNullOrWhiteSpace(localInstallationKeyFingerprint))
+		{
+			return LicenseValidationResult.Fail("legacy_license_not_installation_bound");
+		}
+
+		var status = _evaluator.Evaluate(payload, localInstallationId, localInstallationKeyFingerprint);
 		if (status == LicenseStatus.Invalid)
 			return LicenseValidationResult.Fail("evaluation_invalid", LicenseStatus.Invalid);
 
