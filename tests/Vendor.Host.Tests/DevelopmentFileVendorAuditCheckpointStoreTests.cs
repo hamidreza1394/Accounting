@@ -122,7 +122,16 @@ public sealed class DevelopmentFileVendorAuditCheckpointStoreTests
                 AppContext.BaseDirectory, "../../../../Vendor.CheckpointProcessHelper"));
             var helperDll = Path.Combine(helperProject, "bin", configuration, "net10.0",
                 "Vendor.CheckpointProcessHelper.dll");
-            Assert.True(File.Exists(helperDll), $"Cross-process helper was not built: {helperDll}");
+            if (!File.Exists(helperDll))
+            {
+                var alternateConfiguration = string.Equals(configuration, "Release", StringComparison.Ordinal)
+                    ? "Debug"
+                    : "Release";
+                helperDll = Path.Combine(helperProject, "bin", alternateConfiguration, "net10.0",
+                    "Vendor.CheckpointProcessHelper.dll");
+            }
+
+            Assert.True(File.Exists(helperDll), $"Cross-process helper was not built in Debug or Release: {helperDll}");
 
             var attempts = Enumerable.Range(0, 8)
                 .Select(_ => RunAppendProcessAsync(helperDll, path, sequence: 1, new string('a', 64)))
