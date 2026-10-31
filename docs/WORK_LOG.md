@@ -1564,3 +1564,11 @@
 - این کلاس فقط `IVendorAuditCheckpointStore` را پیاده‌سازی می‌کند و عمداً `IProductionVendorAuditCheckpointStore` نیست؛ هیچ Production fallback یا wiring خودکاری ایجاد نشده است.
 - اجرای محلی .NET در این نشست در دسترس نیست؛ تأیید compile/test به CI واگذار شده و تا نتیجه آن ادعای موفقیت تست نمی‌شود.
 - فایل‌ها: `Vendor/Vendor.Persistence/Auditing/DevelopmentFileVendorAuditCheckpointStore.cs` و `tests/Vendor.Host.Tests/DevelopmentFileVendorAuditCheckpointStoreTests.cs`.
+
+
+## 2026-10-31 — Issue #107: harden Development checkpoint lock
+- بازبینی PR #361 نشان داد انتظار lock در برابر IOExceptionهای دائمی می‌توانست نامحدود شود و Dispose خطادار می‌توانست semaphore درون‌پردازه را آزاد نکند.
+- انتظار lock به ۱۵ ثانیه محدود شد و آزادسازی semaphore در finally تضمین شد.
+- تست cancellation هنگام اشغال lock اضافه شد تا آزادشدن ProcessGate پس از لغو انتظار بررسی شود.
+- تست واقعی چندپردازه‌ای و تأیید cross-platform هنوز انجام نشده‌اند؛ این محدودیت صریحاً در handoff ثبت شد.
+- اجرای محلی .NET ممکن نبود؛ نتیجهٔ نهایی به CI روی آخرین SHA وابسته است.
