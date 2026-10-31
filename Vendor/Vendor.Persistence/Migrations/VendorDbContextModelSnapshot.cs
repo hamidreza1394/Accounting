@@ -539,6 +539,14 @@ namespace Faranou.Vendor.Persistence.Migrations
                     b.ToTable("VendorContracts", (string)null);
                 });
 
+            modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorSignedRevocationSnapshot", b =>
+                {
+                    b.HasOne("Faranou.Vendor.Persistence.Domain.VendorApprovalRequest", null)
+                        .WithMany().HasForeignKey("ApprovalRequestId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.HasOne("Faranou.Vendor.Persistence.Domain.VendorLicense", null)
+                        .WithMany().HasForeignKey("TriggeringLicenseId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                });
+
             modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorProvisioningRequest", b =>
                 {
                     b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
@@ -591,6 +599,30 @@ namespace Faranou.Vendor.Persistence.Migrations
                     b.ToTable("VendorSignedLicenseEnvelopes", t =>
                         {
                             t.HasCheckConstraint("CK_VendorSignedLicenseEnvelopes_Sequence", "[Sequence] >= 1");
+                        });
+                });
+
+            modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorSignedRevocationSnapshot", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
+                    b.Property<Guid>("ApprovalRequestId").HasColumnType("uniqueidentifier");
+                    b.Property<Guid>("TriggeringLicenseId").HasColumnType("uniqueidentifier");
+                    b.Property<long>("Sequence").HasColumnType("bigint");
+                    b.Property<string>("ListId").IsRequired().HasMaxLength(36).HasColumnType("nvarchar(36)");
+                    b.Property<string>("KeyId").IsRequired().HasMaxLength(128).HasColumnType("nvarchar(128)");
+                    b.Property<string>("Algorithm").IsRequired().IsUnicode(false).HasMaxLength(32).HasColumnType("varchar(32)");
+                    b.Property<string>("EnvelopeJson").IsRequired().HasColumnType("nvarchar(max)");
+                    b.Property<string>("PayloadSha256").IsRequired().IsUnicode(false).HasMaxLength(64).IsFixedLength().HasColumnType("char(64)");
+                    b.Property<DateTimeOffset>("CreatedAtUtc").ValueGeneratedOnAdd().HasColumnType("datetimeoffset").HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
+                    b.Property<byte[]>("RowVersion").IsRequired().IsConcurrencyToken().ValueGeneratedOnAddOrUpdate().HasColumnType("rowversion");
+                    b.HasKey("Id");
+                    b.HasIndex("ApprovalRequestId").IsUnique();
+                    b.HasIndex("ListId").IsUnique();
+                    b.HasIndex("Sequence").IsUnique();
+                    b.HasIndex("TriggeringLicenseId").IsUnique();
+                    b.ToTable("VendorSignedRevocationSnapshots", t =>
+                        {
+                            t.HasCheckConstraint("CK_VendorSignedRevocationSnapshots_Sequence", "[Sequence] >= 1");
                         });
                 });
 

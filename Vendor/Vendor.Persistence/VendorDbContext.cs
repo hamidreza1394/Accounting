@@ -17,6 +17,7 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
     public DbSet<Domain.VendorLicense> Licenses => Set<Domain.VendorLicense>();
     public DbSet<Domain.VendorApprovalRequest> ApprovalRequests => Set<Domain.VendorApprovalRequest>();
     public DbSet<Domain.VendorSignedLicenseEnvelope> SignedLicenseEnvelopes => Set<Domain.VendorSignedLicenseEnvelope>();
+    public DbSet<Domain.VendorSignedRevocationSnapshot> SignedRevocationSnapshots => Set<Domain.VendorSignedRevocationSnapshot>();
     public DbSet<Domain.VendorProvisioningRequest> ProvisioningRequests => Set<Domain.VendorProvisioningRequest>();
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -188,6 +189,32 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
             entity.HasOne<Domain.VendorLicense>()
                 .WithMany()
                 .HasForeignKey(item => item.LicenseId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<Domain.VendorSignedRevocationSnapshot>(entity =>
+        {
+            entity.ToTable("VendorSignedRevocationSnapshots", table =>
+                table.HasCheckConstraint("CK_VendorSignedRevocationSnapshots_Sequence", "[Sequence] >= 1"));
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.ListId).HasMaxLength(36).IsRequired();
+            entity.Property(item => item.KeyId).HasMaxLength(128).IsRequired();
+            entity.Property(item => item.Algorithm).HasMaxLength(32).IsUnicode(false).IsRequired();
+            entity.Property(item => item.EnvelopeJson).IsRequired();
+            entity.Property(item => item.PayloadSha256).HasMaxLength(64).IsUnicode(false).IsFixedLength().IsRequired();
+            entity.Property(item => item.CreatedAtUtc).HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
+            entity.Property(item => item.RowVersion).IsRowVersion();
+            entity.HasIndex(item => item.Sequence).IsUnique();
+            entity.HasIndex(item => item.ListId).IsUnique();
+            entity.HasIndex(item => item.ApprovalRequestId).IsUnique();
+            entity.HasIndex(item => item.TriggeringLicenseId).IsUnique();
+            entity.HasOne<Domain.VendorApprovalRequest>()
+                .WithMany()
+                .HasForeignKey(item => item.ApprovalRequestId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Domain.VendorLicense>()
+                .WithMany()
+                .HasForeignKey(item => item.TriggeringLicenseId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
