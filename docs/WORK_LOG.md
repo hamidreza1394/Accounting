@@ -1632,3 +1632,11 @@
 - Added tests for signature verification, canonicalization, invalid input bounds, unavailable signer and cancellation.
 - This is only the factory slice: durable sequence/history, atomic maker-checker revocation + license state + audit, no-store export and customer runtime enforcement remain open. The Vendor default signer remains unavailable/fail-closed; no private key or customer DB migration was added.
 - No local .NET SDK/build/test was available. On head `d689db2eb28f31fdc268abf6a2627b23df0274a3`, .NET CI and Vendor CI were in progress and Semgrep had succeeded when recorded; no unverified test result is claimed.
+
+
+## 2026-10-31 — Issue #214: Vendor revocation snapshot persistence schema (stacked PR #376)
+- Added Vendor-only entities and EF mappings for immutable signed revocation snapshot history and a singleton global sequence counter seeded at zero.
+- Added a unique global sequence index, unique ListId, payload hash index, expiry/sequence/singleton constraints, RowVersion, and SQL Server trigger rejecting UPDATE/DELETE against snapshot history.
+- Added Vendor migration, migration target model, updated EF snapshot and a model invariant test. No Customer DB or `Server/**` changes.
+- No local .NET SDK is installed; `dotnet ef migrations add`, build, tests and SQL Server migration execution were not run. Migration/Designer were authored to match the existing EF model conventions; CI model guard and SQL Server verification are still required. Do not merge until those checks pass.
+- Sequence allocator service, transactional revoke workflow, snapshot export and customer runtime enforcement remain separate next slices; revoked approvals remain fail-closed.
