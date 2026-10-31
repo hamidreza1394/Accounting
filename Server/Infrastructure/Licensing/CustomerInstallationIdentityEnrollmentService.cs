@@ -5,6 +5,7 @@ using System.Text.Json;
 using Faranou.Licensing.Contracts;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Licensing;
@@ -101,20 +102,24 @@ public sealed class CustomerInstallationIdentityEnrollmentService
             return await RecordFailureAsync(
                 "installation_identity_proof_failed", actorUserId, identity.KeyId, cancellationToken);
 
-        await using var transaction = _database.Database.IsRelational()
+        IDbContextTransaction? transaction = _database.Database.IsRelational()
             ? await _database.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken)
             : null;
 
-        if (!await TryAcquireTransactionLockAsync(cancellationToken))
-        {
-            if (transaction is not null)
-                await transaction.RollbackAsync(cancellationToken);
-            return await RecordFailureAsync(
-                "installation_identity_enrollment_busy", actorUserId, identity.KeyId, cancellationToken);
-        }
-
         try
         {
+            if (!await TryAcquireTransactionLockAsync(cancellationToken))
+            {
+                if (transaction is not null)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    await transaction.DisposeAsync();
+                    transaction = null;
+                }
+                return await RecordFailureAsync(
+                    "installation_identity_enrollment_busy", actorUserId, identity.KeyId, cancellationToken);
+            }
+
             var identities = await _database.InstallationIdentities
                 .Where(item => item.InstallationId == _installationId)
                 .OrderByDescending(item => item.KeyVersion)
@@ -165,10 +170,19 @@ public sealed class CustomerInstallationIdentityEnrollmentService
         catch (DbUpdateException)
         {
             if (transaction is not null)
+            {
                 await transaction.RollbackAsync(cancellationToken);
+                await transaction.DisposeAsync();
+                transaction = null;
+            }
             _database.ChangeTracker.Clear();
             return await RecordFailureAsync(
                 "installation_identity_enrollment_conflict", actorUserId, identity.KeyId, cancellationToken);
+        }
+        finally
+        {
+            if (transaction is not null)
+                await transaction.DisposeAsync();
         }
     }
 
