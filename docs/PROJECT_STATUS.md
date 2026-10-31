@@ -513,3 +513,9 @@
 - Added a scoped dual-host DI assertion proving the safe interface resolves while neither raw nor concrete validator is directly registered; unit coverage now targets the interface contract.
 - This prevents accidental DI bypass, but is **not end-to-end license enforcement**. Production call-sites, customer envelope storage/import, authorization/audit policy, installation binding and approved OD-03/04 expiry/grace behavior remain unresolved. TPM hardware provisioning and real Windows/Linux verification remain NotVerified.
 - Rebuilt this change from current `main` to resolve PR #381's divergence; CI must run on the replacement PR head. No local .NET/SQL Server execution is claimed.
+
+## 2026-10-31 — تصمیم پذیرفته‌شده برای restart-safe license activation (Issue #384)
+- D-058 ثبت شد: LicenseEnvelope برای هر Installation یک‌بار وارد می‌شود؛ restart/reboot/recycle نباید درخواست مجدد ایجاد کند؛ OS reinstall که OS identity را تغییر دهد reactivation می‌خواهد؛ Cloud تصمیم license/entitlement را server-side می‌گیرد.
+- این فقط تصمیم و scope است؛ import/storage، installation identity binding و runtime enforcement هنوز NotImplemented هستند.
+- InstalledLicenses/InstallationIdentity schema و Migration هنوز ایجاد نشده‌اند. قبل از DDL نهایی، OD-08 (secure key provider/provisioning/recovery) و جزئیات OS marker باید در Issue #384 بررسی شوند. OD-06 و OD-03/04/05 همچنان بازند.
+- تست واقعی دو میزبان، TPM سخت‌افزاری و recovery drill طبق برنامه به انتهای پروژه موکول است؛ تست‌های کد/CI در PRهای پیاده‌سازی لازم‌اند.
