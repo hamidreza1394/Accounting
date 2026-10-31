@@ -118,7 +118,7 @@ public sealed class CorporateGroupSqlServerTests
 				Assert.Equal(1, await context.UserCompanyMemberships.CountAsync(TestContext.Current.CancellationToken));
 				Assert.Equal("شرکت موجود", (await context.Companies.SingleAsync(TestContext.Current.CancellationToken)).Name);
 
-								// PermissionDefinitions is shared across modules; inspect only this module's catalog.
+												// PermissionDefinitions is shared across modules; inspect only this module's catalog.
 				var catalog = await context.PermissionDefinitions
 					.Where(permission => CorporateGroupScenario.AllPermissionCodes.Contains(permission.Code))
 					.ToListAsync(TestContext.Current.CancellationToken);
@@ -166,7 +166,10 @@ public sealed class CorporateGroupSqlServerTests
 
 				// 4. Up again.
 				await after.Database.MigrateAsync(TestContext.Current.CancellationToken);
-				Assert.Equal(CorporateGroupScenario.AllPermissionCodes.Length, await after.PermissionDefinitions.CountAsync(TestContext.Current.CancellationToken));
+				Assert.Equal(
+					CorporateGroupScenario.AllPermissionCodes.Length,
+					await after.PermissionDefinitions
+						.CountAsync(permission => CorporateGroupScenario.AllPermissionCodes.Contains(permission.Code), TestContext.Current.CancellationToken));
 			}
 		});
 	}
