@@ -207,3 +207,51 @@
 8. **Microservice extraction (Deferred):** فقط در صورت نیاز کسب‌وکار/مقیاس/استقرار، با جداسازی دیتابیس، API، هویت سرویس، Outbox/Inbox و CI/CD مستقل.
 
 **قاعده:** در فاز اول یک دیتابیس فیزیکی و Modular Monolith؛ جداسازی schema و DbContext مالکیت داده را روشن می‌کند اما دیتابیس مستقل یا Microservice را ادعا نمی‌کند.
+
+
+## برنامه اجرایی ماژول بازرگانی خارجی — تصمیم‌های S0 (D-063 / Issue #399)
+
+### S0 — هم‌ترازی معماری و مستندات
+- [ ] ثبت D-063: Voyage با یک شرکت مالک و allocation برای سایر شرکت‌ها؛ ImportCase چنددوره‌ای با اسناد دوره‌محور؛ گزارش عملیاتی چندشرکتی از موج اول؛ entitlement از S1.
+- [ ] اصلاح اسناد تاریخی متعارض بدون بازنویسی D-061/D-062.
+- [ ] ممیزی DI، design-time factory، migrations assembly/history و ثبت TradeDbContext؛ هیچ Migration مشتری اجرا نشود.
+- [ ] تثبیت مدل master data tenant-scoped در برابر اسناد period-scoped و سیاست ادامه پرونده در دوره جدید.
+- [ ] ثبت handoff و traceability؛ CI/تست فقط با شاهد واقعی به Verified ارتقا یابد.
+
+### S1 — امنیت دسترسی و فعال‌سازی ماژول
+- [ ] اتصال ITradeModuleEntitlement به Licensing runtime و entitlement شرکت‌محور TRADE_IMPORT؛ fail-closed در Production.
+- [ ] تعریف PermissionDefinitions با کدهای پایدار فرم/عملیات/گزارش و seed ایدمپوتنت؛ عدم ایجاد role/permission store موازی.
+- [ ] API و route gating سمت سرور؛ ترتیب کنترل نشست، membership، WorkContext/FiscalPeriod، entitlement، permission و سپس use case.
+- [ ] تست منفی کاربر بدون entitlement، کاربر بدون permission، شرکت/دوره بیگانه، دوره Closed و دستکاری شناسه‌ها.
+- [ ] مسیر ورود به Trade و نمایش منو/فرم براساس capabilityهای تأییدشده سرور؛ UI مرجع امنیت نیست.
+
+### S2 — داده‌های پایه و زیرساخت persistence
+- [ ] تکمیل TradeDbContext DI، design-time factory، migrations assembly و history table مستقل؛ بدون دیتابیس فیزیکی جدا.
+- [ ] طراحی و Migration افزایشی schema trade فقط پس از review، تست SQL Server و rollout/rollback؛ هیچ Migration مشتری بدون تأیید مستقل اجرا نشود.
+- [ ] فرم‌ها و APIهای Party، Product و lookupهای مرجع (Country, Port, Currency, Unit, Incoterm, Bank, PermitType) با scope شرکت و مجوز.
+- [ ] پیاده‌سازی attachment storage پشت interface قابل استفاده در on-prem/cloud؛ provider نهایی پس از تصمیم جداگانه.
+
+### S3 — درخواست خرید و پرونده واردات
+- [ ] Purchase Request → Supplier Inquiry/Quotation → Comparison → Proforma → Contract → ImportCase.
+- [ ] هر سند تراکنشی FiscalPeriodId دوره واقعی ثبت را نگه دارد؛ پرونده مادر می‌تواند چنددوره‌ای باشد.
+- [ ] workflow/status و audit append-only با قواعد transition سمت سرور.
+
+### S4 — جریان فیزیکی، حمل و گمرک
+- [ ] Order Registration، permits، Voyage، Shipment، Bill of Lading، Warehouse Receipt، Customs Declaration، Exit/Delivery.
+- [ ] یک Company مالک Voyage/Bill of Lading؛ allocation/share lines برای شرکت‌های دیگر؛ کنترل دسترسی به هر دو سطح.
+- [ ] جداسازی مالکیت سند از سهم هزینه/کالا؛ جلوگیری از دسترسی ضمنی cross-tenant.
+
+### S5 — ارز و بانک
+- [ ] currency allocation، خرید ارز، حواله/انتقال، منشأ ارز، تعهدات و رفع تعهد.
+- [ ] جریان ارز/بانک مستقل از وضعیت فیزیکی کالا و با event/status مستقل.
+
+### S6 — هزینه، claims و گزارش
+- [ ] landed cost، هزینه‌های مشترک و سهم‌بندی، claims و محاسبات با دقت decimal.
+- [ ] گزارش تک‌شرکتی و عملیاتی چندشرکتی از موج اول؛ all-or-nothing scope، audit و تست عدم نشت.
+- [ ] گزارش تلفیقی حسابداری تا پیاده‌سازی Ledger/Chart mapping خارج از محدوده است.
+
+### S7 — مهاجرت داده و پایلوت
+- [ ] ابزار import داده‌های اولیه و فایل‌ها با validation و گزارش خطا.
+- [ ] آزمون سناریوهای end-to-end، کاربر/شرکت/دوره واقعی و بازیابی؛ پایلوت فقط پس از تکمیل کنترل‌های امنیتی و تأیید جداگانه.
+
+**ترتیب پیاده‌سازی UI:** پس از آماده‌شدن S1/S2، ابتدا Party و Product؛ سپس Purchase Request، مقایسه استعلام/پیشنهاد و Proforma. فرم‌های بعدی به‌صورت vertical slice و نه scaffold یک‌جای همه فرم‌ها ساخته شوند.
