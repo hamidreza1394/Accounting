@@ -14,7 +14,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Faranou.Vendor.Host.Authorization;
 
 /// <summary>
-/// Two-person review for customer and installation status changes.
+/// Two-person review for customer/installation status changes, license issuance and license revocation.
 /// A request is only a proposal; the persisted resource is changed inside the review transaction.
 /// </summary>
 public static class VendorApprovalEndpoints
@@ -251,8 +251,8 @@ public static class VendorApprovalEndpoints
                 return Results.Ok(ToResponse(approval));
             }
 
-            // Issuance writes the signed envelope, sequence, license state, approval decision and
-            // audit events inside this request's single Vendor database transaction.
+            // License issuance and revocation write their signed artifacts, sequence, resource state,
+            // approval decision and audit events inside this request's single Vendor transaction.
             if (approval.ResourceType == "license" && request.Decision == "Approved")
             {
                 if (approval.TargetStatus == "Issued")
