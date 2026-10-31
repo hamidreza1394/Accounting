@@ -17,6 +17,7 @@ public interface ITradeAuthorization
         Guid tenantId,
         Guid fiscalPeriodId,
         string permissionCode,
+        TradeAccessIntent accessIntent,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -27,5 +28,6 @@ public interface ITradeAuthorization
         Guid userId,
         IReadOnlyCollection<TradePeriodScope> scopes,
         string permissionCode,
+        TradeAccessIntent accessIntent,
         CancellationToken cancellationToken = default);
 }
