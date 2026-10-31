@@ -1,6 +1,9 @@
-# معماری لایسنس و فعال‌سازی (طرح هدف)
+# معماری لایسنس و فعال‌سازی
 
-> **وضعیت قابلیت در کد: `NotImplemented`.** لایسنس، مشتری تجاری، نصب و زیرسیستم هنوز در برنامه پیاده‌سازی نشده‌اند. تصمیم‌های OD-01/02/12 با D-045 و OD-07/09/11 با D-046 پذیرفته شده‌اند؛ D-047 معماری اجرایی Vendor را `Accepted` می‌داند؛ اسکلت Host مستقل در PR #92 ادغام شده و بقیهٔ کنترل‌پلین هنوز در حال پیاده‌سازی مرحله‌ای است. این تصمیم‌ها رفتار اجرایی موجود را تغییر نمی‌دهند. تصمیم‌های پایه: D-020 تا D-029 و D-041 تا D-047 در [`DECISIONS.md`](DECISIONS.md)؛ موارد باز: [`LICENSING_OPEN_DECISIONS.md`](LICENSING_OPEN_DECISIONS.md). مدل داده: [`LICENSING_DATA_MODEL.md`](LICENSING_DATA_MODEL.md). گردش‌کارها: [`LICENSING_WORKFLOWS.md`](LICENSING_WORKFLOWS.md). تهدیدها: [`LICENSING_THREAT_MODEL.md`](LICENSING_THREAT_MODEL.md).
+> **وضعیت واقعی در main (2026-10-31):** قراردادهای امضاشدهٔ لایسنس و provisioning، Vendor control-plane مرحله‌ای، workflow صدور/ابطال، provisioning v4، مصرف snapshot ابطال آفلاین، state store مشتری و TPM NV Extend adapter پیاده‌سازی شده‌اند. PR #382 مرز DI را طوری سخت کرده که فقط `ICustomerLicenseEnvelopeValidator` قابل تزریق باشد. بااین‌حال **ورود و ذخیرهٔ LicenseEnvelope در نصب مشتری، call-site اجرایی enforcement، سیاست مشترک Authorization و audit لایسنس هنوز NotImplemented هستند**؛ بنابراین هیچ کنترل لایسنس end-to-end در عملیات حسابداری فعال نیست و سامانه Production-ready نیست. Providerهای امضای Production تا provision و پیکربندی معتبر fail-closed باقی می‌مانند. Hardware verification و عملیات واقعی TPM نیز NotVerified هستند.
+>
+> تصمیم‌ها: D-020 تا D-057 در [`DECISIONS.md`](DECISIONS.md)؛ موارد باز در [`LICENSING_OPEN_DECISIONS.md`](LICENSING_OPEN_DECISIONS.md)؛ مدل داده در [`LICENSING_DATA_MODEL.md`](LICENSING_DATA_MODEL.md)؛ گردش‌کارها در [`LICENSING_WORKFLOWS.md`](LICENSING_WORKFLOWS.md)؛ تهدیدها در [`LICENSING_THREAT_MODEL.md`](LICENSING_THREAT_MODEL.md).
+
 
 ## ۱) وضعیت فعلی (واقعی)
 
@@ -22,9 +25,9 @@
 
 | جزء | توضیح | وضعیت |
 |---|---|---|
-| سامانه مرکزی فروشنده (Vendor Control Plane) | Host و پایهٔ persistence/Identity/audit مستقل در حال پیاده‌سازی مرحله‌ای؛ login/MFA، bootstrap، RBAC، مشتری/قرارداد، سرویس ممیزی، maker-checker و صدور/تمدید هنوز پیاده‌سازی کامل نشده‌اند | `Partially Implemented`; schema فقط پس از CI موفق روی migration ثبت‌شده `Verified` است |
-| سرویس صدور Vendor | workflow دو نفره، ذخیرهٔ envelope و sequence در تراکنش Vendor پیاده‌سازی شده؛ provider واقعی KMS/HSM هنوز unavailable/fail-closed است | `Partially Implemented / NotProductionReady` |
-| `Licensing.Contracts` | قرارداد امضاشدهٔ لایسنس و provisioning؛ payload provisioning v1-v4 با canonical سازگار | `Implemented` در source؛ binding v4 و CI شاخهٔ #235 هنوز `NotVerified` |
+| سامانه مرکزی فروشنده (Vendor Control Plane) | Host، persistence، هویت/مجوز، ممیزی، maker-checker، workflow صدور/ابطال و داشبورد در مراحل مختلف پیاده‌سازی شده‌اند؛ provider امضای Production و sink مستقل ممیزی هنوز مانع Production هستند | `Partially Implemented / NotProductionReady` |
+| سرویس صدور Vendor | workflow دو نفره و ذخیرهٔ envelope/sequence پیاده‌سازی شده؛ adapter PKCS#11 و SoftHSM توسعه/آزمون موجود است؛ provider Production فقط با پیکربندی و پذیرش ریسک معتبر قابل فعال‌سازی است | `Partially Implemented / NotProductionReady` |
+| `Licensing.Contracts` | قرارداد LicenseEnvelope، اعتبارسنج امضا/زمان، revocation-aware validator و provisioning payload v1-v4 با canonical سازگار | `Implemented`; تست‌های CI مربوط به قرارداد و DI موفق‌اند |
 | ماژول لایسنس نصب | ورود فایل، ذخیره، ارزیابی وضعیت، ممیزی، محدودسازی سمت سرور | `NotImplemented` |
 | نمایش در React | فقط بازتاب وضعیت از API؛ منبع تصمیم نیست | `NotImplemented` |
 
