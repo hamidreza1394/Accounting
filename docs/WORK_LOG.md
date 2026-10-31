@@ -1582,3 +1582,10 @@
 - هر read، TPM digest، chain hash، signature، payload digest، sequence، expiry و فهرست revoked را دوباره تطبیق می‌دهد؛ backup قدیمی یا tamper به Unavailable منجر می‌شود.
 - adapter TPM با Microsoft.TSS برای Windows TBS و Linux local TPM device اضافه شد؛ Linux از StrictLinuxTpmDevice استفاده می‌کند تا simulator fallback کتابخانه فعال نشود. default provider بدون section پیکربندی صریح unavailable است. ابزار create-only provisioning برای Windows/TBS و اسکریپت Linux/tpm2-tools با TCTI محلی اضافه شدند؛ اجرای واقعی، secret delivery/rotation و hardware tests هنوز NotImplemented/NotVerified هستند.
 - تست‌های SQL Server اضافه شده‌اند اما اجرای محلی .NET در این نشست ممکن نبود؛ نتیجهٔ CI روی PR معیار بعدی است.
+
+
+### Issue #364 follow-up — customer validator registration
+- ConfigurationLicenseTrustStore به‌صورت مستقل از revocation-list trust set افزوده شد؛ کلیدها فقط ECDSA P-256 SPKI عمومی هستند و retirement flag نامعتبر fail-closed است.
+- Server DI اکنون LicenseEnvelopeValidator، OfflineRevocationConsumer و RevocationAwareLicenseEnvelopeValidator را register می‌کند؛ بدون TPM config، revocation provider unavailable می‌ماند.
+- تست‌های config برای unknown key، malformed retirement flag و retired key اضافه شدند.
+- محدودیت: هنوز باید تمام call-siteهای runtime مشتری به RevocationAwareLicenseEnvelopeValidator منتقل شوند؛ صرف DI registration به‌تنهایی enforcement را اثبات نمی‌کند.
