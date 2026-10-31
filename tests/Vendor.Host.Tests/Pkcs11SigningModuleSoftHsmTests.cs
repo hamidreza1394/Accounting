@@ -38,10 +38,6 @@ public sealed class Pkcs11SigningModuleSoftHsmTests
         var licenseKeyId = $"vendor-license-{suffix}-v1";
         var provisioningKeyId = $"vendor-package-{suffix}-v1";
         var revocationKeyId = $"vendor-revocation-{suffix}-v1";
-        var licensePublicKey = CreateKeyPair(modulePath, tokenLabel, pin, licenseKeyId);
-        var provisioningPublicKey = CreateKeyPair(modulePath, tokenLabel, pin, provisioningKeyId);
-        var revocationPublicKey = CreateKeyPair(modulePath, tokenLabel, pin, revocationKeyId);
-
         var options = new Pkcs11SigningOptions
         {
             ModulePath = modulePath,
@@ -55,6 +51,10 @@ public sealed class Pkcs11SigningModuleSoftHsmTests
 
         try
         {
+            var licensePublicKey = CreateKeyPair(modulePath, tokenLabel, pin, licenseKeyId);
+            var provisioningPublicKey = CreateKeyPair(modulePath, tokenLabel, pin, provisioningKeyId);
+            var revocationPublicKey = CreateKeyPair(modulePath, tokenLabel, pin, revocationKeyId);
+
             using (var module = new Pkcs11SigningModule(
                 Options.Create(options),
                 new TestHostEnvironment("Testing"),
