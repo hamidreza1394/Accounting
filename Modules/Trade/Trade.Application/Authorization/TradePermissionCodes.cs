@@ -11,6 +11,8 @@ public static class TradePermissionCodes
 
     private const string FormPrefix = "trade.form.";
 
+    private static readonly string[] ReadActionSuffixes = [".view", ".export", ".read", ".list", ".download"];
+
     private static readonly string[] WriteActionSuffixes =
     [
         ".create", ".update", ".approve", ".delete", ".submit", ".cancel", ".post",
@@ -26,14 +28,26 @@ public static class TradePermissionCodes
     public static string FormExport(string formCode) => FormCode(formCode) + ".export";
 
     /// <summary>
-    /// Identifies permission codes that represent state-changing operations. The adapter
-    /// rejects these codes when a caller incorrectly requests only read access.
+    /// Ensures the permission action and the requested read/write intent agree.
+    /// Unknown action suffixes fail closed until explicitly classified.
     /// </summary>
-    public static bool RequiresWriteIntent(string permissionCode)
+    public static bool IsAccessIntentCompatible(string permissionCode, TradeAccessIntent accessIntent)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(permissionCode);
-        return WriteActionSuffixes.Any(suffix =>
-            permissionCode.EndsWith(suffix, StringComparison.Ordinal));
+
+        if (WriteActionSuffixes.Any(suffix =>
+                permissionCode.EndsWith(suffix, StringComparison.Ordinal)))
+        {
+            return accessIntent == TradeAccessIntent.Write;
+        }
+
+        if (ReadActionSuffixes.Any(suffix =>
+                permissionCode.EndsWith(suffix, StringComparison.Ordinal)))
+        {
+            return accessIntent == TradeAccessIntent.Read;
+        }
+
+        return false;
     }
 
     private static string FormCode(string formCode)
