@@ -168,3 +168,17 @@
 - [ ] پیش‌نیاز: سرفصل حساب و سند (FR-AC-02)؛ سپس نگاشت کدینگ و گزارش تجمیعی مانده آزمایشی.
 - [ ] تعدیلات تلفیقی، تطبیق درون‌گروهی، حذف معاملات داخلی، تبدیل ارز، دوره‌های ناهم‌زمان، منافع فاقد حق کنترل.
 - [ ] گزارش‌گیری بین نصب‌ها با بسته امضاشده (D-035، نیازمند تأیید).
+
+
+## تکمیل Licensing و Vendor بر اساس D-059 (2026-10-31)
+
+ترتیب مصوب در Issue #389 و سند [LICENSING_IMPLEMENTATION_PLAN.md](LICENSING_IMPLEMENTATION_PLAN.md):
+
+- [ ] **#395 — مستندسازی D-059 و هم‌ترازی ADR/مدل/گردش‌کار/تهدیدها**؛ این PR مستندات را ثبت می‌کند، اما merge و CI لازم است.
+- [ ] **#390 — قرارداد نسخه‌دار Company-scoped Module/Feature/UserSeat و amendment**؛ حفظ LicenseId و sequence افزایشی.
+- [ ] **#391 — enforcement سمت Customer**؛ seat block-new، feature over-limit، restricted term expiry، بدون حذف داده.
+- [ ] **#392 — ایجاد Company و bootstrap مدیر Offline**؛ local-only password، Identity hash، یک‌بارمصرف و اتمیک.
+- [ ] **#393 — Vendor add-on sale/issuance**؛ amendment امضاشده برای همان Installation/LicenseId.
+- [ ] **#394 — online authenticated sync و signed offline file exchange**؛ stale telemetry واضح.
+
+تست‌های واحد/Integration/CI برای هر PR الزامی‌اند. تست واقعی دو میزبان، TPM فیزیکی و recovery drill در انتهای پیاده‌سازی انجام می‌شوند. این چک‌لیست برنامه است، نه ادعای تکمیل.
