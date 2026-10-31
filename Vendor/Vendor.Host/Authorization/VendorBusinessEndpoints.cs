@@ -440,8 +440,9 @@ public static class VendorBusinessEndpoints
                     return Results.BadRequest(new { error = "software_provider_consent_invalid" });
                 }
 
-                if (consentReceipt is null ||
-                    !InstallationKeyConsentReceiptVerifier.TryVerify(
+                if (consentReceipt is null)
+                    return Results.BadRequest(new { error = "software_provider_consent_invalid" });
+                if (!InstallationKeyConsentReceiptVerifier.TryVerify(
                         consentReceipt, publicKeyBytes, id.ToString("D"), request.KeyId,
                         publicKeyFingerprint, timeProvider.GetUtcNow(), out var consentError))
                     return Results.BadRequest(new { error = consentError ?? "software_provider_consent_invalid" });
