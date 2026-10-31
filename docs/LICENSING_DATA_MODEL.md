@@ -250,3 +250,19 @@ erDiagram
 - **کلید خصوصی صدور:** فقط محیط امن فروشنده (OD-07). **کلید خصوصی نصب:** فقط همان نصب (OD-08). کلید عمومی هر دو طرف در هر دو سو مجاز است.
 - **ارتباط `Company` با `CustomerAccount`:** فقط از مسیر `CustomerBoundary` در فروشنده و `Companies.CustomerBoundaryId` مات در نصب؛ مستقیم هرگز (D-038). یک `CustomerAccount` می‌تواند چند `Installation` و در هر نصب چند `Company` داشته باشد (D-020).
 - هیچ ستون یا FK از جداول نصب مشتری به جداول فروشنده نیست (بخش ۴ همین سند).
+
+## ۶) طرح تکمیلی Issue #384 — persistence فعال‌سازی restart-safe (Approved behavior; schema pending review)
+مالک محصول رفتار restart-safe و الزام reactivation پس از تغییر OS-installation identity را تأیید کرده است. این بخش هنوز ERD/DDL نهایی یا Migration نیست.
+
+### موجودیت‌های مشتری
+- InstallationIdentity: یک ردیف authoritative برای هویت نصب مشتری شامل InstallationId، OS-installation marker digest، public-key fingerprint کلید نصب، provider/key reference غیرحساس، وضعیت و RowVersion. هیچ private key یا secret در جدول ذخیره نمی‌شود.
+- InstalledLicense: تاریخچهٔ پاکت‌های امضاشده شامل LicenseId، Sequence، InstallationId، Kid، exact signed envelope bytes، payload digest، زمان import و وضعیت (Current/Superseded/Rejected)؛ قید یکتایی روی (LicenseId, Sequence) و کنترل concurrency برای جلوگیری از downgrade/duplicate.
+- وضعیت current باید با قاعدهٔ یکتا/تراکنشی مشخص شود؛ تاریخچه حذف نمی‌شود. هر import ابتدا signature، trusted key، payload، installation binding، sequence، time و revocation را اعتبارسنجی می‌کند؛ سپس ثبت اتمیک انجام می‌شود.
+- restart فقط state را load و دوباره verify می‌کند؛ فایل ورودی دوباره درخواست نمی‌شود مگر نصب identity mismatch/خرابی state/recovery کنترل‌شده.
+- CustomerOfflineRevocationState از D-057 مستقل باقی می‌ماند؛ InstalledLicense جایگزین revocation state store نیست.
+
+### هویت OS و کلید نصب
+- MachineGuid به‌تنهایی نه راز است و نه اثبات سخت‌افزاری؛ فقط marker کمکی است.
+- طراحی باید marker نصب ویندوز را با کلید نصب non-exportable و امضای challenge/اثبات possession bind کند. Private key در DB، backup عادی، log یا package قرار نمی‌گیرد.
+- نصب مجدد OS با marker جدید، حتی اگر سخت‌افزار ثابت باشد، activation جدید می‌خواهد. patch/update عادی که marker نصب را حفظ کند، activation را حفظ می‌کند.
+- schema نهایی و Migration پس از انتخاب provider و روش recovery در OD-08/Issue #384 نهایی می‌شود.

@@ -172,3 +172,11 @@
 - **وضعیت پیاده‌سازی (2026-10-30):** consumer تراکنشی، claim یکتا، Enrollment/reissue، Vendor acknowledgement و binding لایسنس در main پیاده‌سازی و CI-verified شده‌اند (PRهای #302، #305–#308، #293/#294، #319 و E2E #329). تست #329 دو TestServer و دو دیتابیس SQL Server را در یک process اجرا می‌کند؛ آزمون دو ماشین/دو process و استقرار واقعی cloud/dedicated/offline هنوز انجام نشده است.
 - **شرط Production باقی‌مانده:** signer واقعی KMS/HSM و چرخه عمر کلید در #236؛ signer واقعی acknowledgement سمت مشتری؛ آزمون عملیاتی روی deployment modes. رفتار بند ۹ D-053 دربارهٔ تغییر رمز پس از اولین login نیز با جریان فعلی (تعیین رمز در Enrollment و منع ورود تا آن زمان) یکسان نیست و نیازمند تأیید مالک یا PR جدا است. این تصمیم مجوز ساخت signer جعلی یا fallback نرم‌افزاری نیست.
 - **منبع پیگیری:** [Issue #235](https://github.com/hamidreza1394/Accounting/issues/235)، [Issue #228](https://github.com/hamidreza1394/Accounting/issues/228)، D-051، D-053 و D-054.
+
+## OD-18 — فعال‌سازی پایدار در Restart و تشخیص نصب مجدد Windows
+- **وضعیت:** Accepted برای رفتار محصول (D-058، 2026-10-31)؛ جزئیات پیاده‌سازی وابسته به OD-08 و Issue #384.
+- **تصمیم پذیرفته‌شده:** یک‌بار import/activation برای هر Installation؛ restart/reboot/recycle برنامه یا سرویس نباید درخواست مجدد لایسنس کند. نصب مجدد/re-image ویندوز که OS-installation identity را تغییر دهد reactivation لازم دارد؛ Windows servicing/patch که همان OS installation را حفظ کند نباید فعال‌سازی را باطل کند.
+- **Cloud:** server-side authoritative license/entitlement decision؛ client فقط نمایش وضعیت. از round-trip به Vendor برای هر درخواست حسابداری اجتناب شود؛ cache فقط server-controlled و versioned.
+- **کنترل امنیتی:** MachineGuid به‌تنهایی کافی نیست؛ marker نصب سیستم‌عامل با public-key fingerprint یک کلید نصب non-exportable در TPM/CNG یا provider امن معادل bind شود. فقدان secure key یا عدم تطبیق identity نباید به fallback نرم‌افزاری silent منجر شود.
+- **موارد باز:** OD-08 همچنان برای انتخاب دقیق provider، provisioning و recovery نیازمند تصمیم است؛ OD-06 برای انتقال/restore installation همچنان NeedsApproval. سیاست OD-03/04/05 تغییری نکرده است.
+- **پیگیری:** Issue #384؛ هیچ schema یا Migration تا ADR اجرایی و طرح persistence بررسی‌شده، اجرا نشده است.
