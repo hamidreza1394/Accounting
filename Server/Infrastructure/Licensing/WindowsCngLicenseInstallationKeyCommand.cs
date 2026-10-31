@@ -80,7 +80,7 @@ public static class WindowsCngLicenseInstallationKeyCommand
                 softwareProviderRiskAccepted = created.SoftwareProviderRiskAccepted,
                 publicKeyFingerprintSha256 = created.PublicKeyFingerprint,
                 osInstallationMarkerSha256 = created.OsInstallationMarkerDigest,
-                publicKeySubjectPublicKeyInfoBase64 = Convert.ToBase64String(
+                publicKeySubjectPublicKeyInfoBase64 = System.Convert.ToBase64String(
                     created.PublicKeySubjectPublicKeyInfo),
                 createdAtUtc = DateTimeOffset.UtcNow,
             }, new JsonSerializerOptions { WriteIndented = true }));
