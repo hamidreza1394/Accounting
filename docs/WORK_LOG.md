@@ -1632,3 +1632,5 @@
 - Updated a contracts test to consume the safe interface and preserve fail-closed behavior for a missing revocation snapshot.
 - Static audit found no production runtime call-sites for either validator/evaluator, and no customer license-envelope store/import endpoint/shared authorization policy. `docs/LICENSING.md` still correctly marks the license installation module NotImplemented.
 - Full enforcement is blocked on an unapproved source/import design and unresolved OD-03/04 expiry restrictions; do not invent a middleware policy. The remaining design must define local-file vs customer DB storage, installation binding, admin import/replace/audit and valid/grace/restricted behavior.
+
+- Added a dual-host integration assertion that resolves `ICustomerLicenseEnvelopeValidator` from the actual Customer Server DI container and confirms `LicenseEnvelopeValidator` is not directly resolvable.
