@@ -60,6 +60,31 @@ public sealed class CustomerLicenseImportServiceTests
     }
 
     [Fact]
+    public async Task ImportAsync_RejectsDifferentEnvelopeAtTheSameSequence()
+    {
+        await using var database = CreateDatabase();
+        var identity = AddCurrentIdentity(database);
+        var (envelope, payload) = CreateEnvelope(sequence: 1);
+        var alteredEnvelope = envelope with { SignatureBase64 = "different-signature" };
+        var validation = LicenseValidationResult.Ok(LicenseStatus.Valid, payload);
+        var validator = new TestValidator(
+            (envelope, validation),
+            (alteredEnvelope, validation));
+        var service = CreateService(database, validator, InstallationIdentityProofStatus.Valid);
+
+        var first = await service.ImportAsync(
+            JsonSerializer.Serialize(envelope, JsonOptions), identity.InstallationId, null);
+        var altered = await service.ImportAsync(
+            JsonSerializer.Serialize(alteredEnvelope, JsonOptions), identity.InstallationId, null);
+
+        Assert.True(first.Success, first.ErrorCode);
+        Assert.False(altered.Success);
+        Assert.Equal("license_sequence_replay_or_downgrade", altered.ErrorCode);
+        Assert.Single(database.InstalledLicenses);
+        Assert.Equal(envelope.SignatureBase64, (await database.InstalledLicenses.SingleAsync()).SignatureBase64);
+    }
+
+    [Fact]
     public async Task ImportAsync_RejectsSequenceDowngradeAndPreservesCurrentLicense()
     {
         await using var database = CreateDatabase();
@@ -224,13 +249,18 @@ public sealed class CustomerLicenseImportServiceTests
         public TestValidator(
             params (LicenseEnvelope Envelope, LicenseValidationResult Result)[] values)
         {
-            _results = values.ToDictionary(item => item.Envelope.PayloadJson, item => item.Result);
+            _results = values.ToDictionary(
+                item => GetEnvelopeKey(item.Envelope),
+                item => item.Result);
         }
 
         public Task<LicenseValidationResult> ValidateAsync(
             LicenseEnvelope envelope,
             string localInstallationId,
             CancellationToken cancellationToken = default) =>
-            Task.FromResult(_results[envelope.PayloadJson]);
+            Task.FromResult(_results[GetEnvelopeKey(envelope)]);
+
+        private static string GetEnvelopeKey(LicenseEnvelope envelope) =>
+            envelope.PayloadJson + "\\0" + envelope.SignatureBase64;
     }
 }
