@@ -78,6 +78,9 @@ public static class WindowsCngLicenseInstallationKeyCommand
                 provider = created.ProviderName,
                 assurance = created.Assurance.ToString(),
                 softwareProviderRiskAccepted = created.SoftwareProviderRiskAccepted,
+                softwareProviderRiskAcceptedAtUtc = created.SoftwareProviderRiskAcceptedAtUtc,
+                softwareProviderRiskAcceptedBy = created.SoftwareProviderRiskAcceptedBy,
+                softwareProviderConsentReceiptJson = created.SoftwareProviderConsentReceiptJson,
                 publicKeyFingerprintSha256 = created.PublicKeyFingerprint,
                 osInstallationMarkerSha256 = created.OsInstallationMarkerDigest,
                 publicKeySubjectPublicKeyInfoBase64 = System.Convert.ToBase64String(
