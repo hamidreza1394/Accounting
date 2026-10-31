@@ -161,7 +161,6 @@ public sealed class CustomerOfflineRevocationSqlServerTests
 
     private static void AddPendingRow(Data.DatabaseContext database, OfflineRevocationListEnvelope envelope)
     {
-        var digest = SnapshotDigest(envelope);
         database.CustomerOfflineRevocationStates.Add(new Domain.CustomerOfflineRevocationState
         {
             Sequence = 0,
