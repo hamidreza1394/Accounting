@@ -15,6 +15,17 @@ namespace Faranou.Vendor.Host.Tests;
 public sealed class Pkcs11SigningProviderTests
 {
     [Fact]
+    public async Task UnavailableOfflineRevocationProviderFailsClosed()
+    {
+        var provider = new UnavailableOfflineRevocationSigningProvider();
+
+        var result = await provider.SignAsync(Encoding.UTF8.GetBytes("{\\"sequence\\":1}"));
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("signing_provider_unavailable", result.ErrorCode);
+    }
+
+    [Fact]
     public void OptionsRequireDistinctVersionedPurposeSpecificKeyIds()
     {
         var options = ValidOptions();
