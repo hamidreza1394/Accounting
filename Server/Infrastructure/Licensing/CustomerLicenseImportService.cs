@@ -94,7 +94,7 @@ public sealed class CustomerLicenseImportService
                 transaction = await _database.Database.BeginTransactionAsync(
                     IsolationLevel.Serializable, cancellationToken);
 
-            if (!await TryAcquireTransactionLockAsync(cancellationToken))
+            if (!await TryAcquireTransactionLockAsync(localInstallationId, cancellationToken))
             {
                 await RollbackQuietlyAsync(transaction, cancellationToken);
                 if (transaction is not null)
@@ -302,7 +302,7 @@ public sealed class CustomerLicenseImportService
         }, JsonOptions)
     };
 
-    private async Task<bool> TryAcquireTransactionLockAsync(CancellationToken cancellationToken)
+    private async Task<bool> TryAcquireTransactionLockAsync(string installationId, CancellationToken cancellationToken)
     {
         if (!_database.Database.IsSqlServer())
             return true;
@@ -317,7 +317,7 @@ public sealed class CustomerLicenseImportService
             new object[]
             {
                 result,
-                new SqlParameter("@resource", ImportLockResource),
+                new SqlParameter("@resource", ImportLockResource + ":" + installationId),
                 new SqlParameter("@timeout", LockTimeoutMilliseconds)
             },
             cancellationToken);
