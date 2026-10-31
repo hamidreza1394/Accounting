@@ -1747,3 +1747,13 @@
 - All 7 CI jobs succeeded: secret-scan, client, build-and-test, publish-scripts, e2e, publish and publish-windows. Earlier compile/test fixture failures were fixed before merge.
 - Customer installation identity enrollment and durable license import/replace are now on main. This does not imply startup gate, startup reload/revalidation, accounting-operation enforcement or Cloud authority are complete.
 - Physical TPM, independent two-host and recovery drills remain deferred to the final operational test phase.
+
+
+## 2026-10-31 — Issue #397 / D-061: آغاز ماژول بازرگانی خارجی در Accounting
+
+- مالک محصول انتقال توسعه بازرگانی خارجی به مخزن Accounting، ماژول مستقل، کد لایسنس TRADE_IMPORT، دیتابیس فیزیکی مشترک و جداسازی داده با TenantId، دوره‌های عملیاتی مستقل، مجوزهای سطح شرکت/دوره/فرم و گزارش‌های تک‌شرکتی/چندشرکتی را تأیید کرد.
+- تصمیم اجرایی: فاز اول Modular Monolith با مرزهای استخراج‌پذیر به Microservice؛ این تصمیم D-002 را برای هسته فعلی حفظ می‌کند و ساخت سرویس توزیع‌شده/دیتابیس جدا/Event Bus را تا نیاز واقعی Deferred می‌کند.
+- Issue #397 و شاخه feat/issue-397-trade-module-boundary ایجاد شدند.
+- در foundation، پروژه‌های Domain/Application/Infrastructure، دوره عملیاتی Trade، قراردادهای authorization و entitlement، schema trade و تست‌های معماری/دامنه افزوده شدند.
+- هیچ Migration ساخته یا روی دیتابیس مشتری اجرا نشده؛ Host هنوز adapterها و runtime enforcement را ثبت نمی‌کند.
+- تست‌های محلی .NET/SQL Server در این محیط اجرا نشده‌اند؛ CI شاخه باید build/test را تأیید کند.
