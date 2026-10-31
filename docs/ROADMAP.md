@@ -198,7 +198,7 @@
 ## ماژول بازرگانی خارجی (D-061 / Issue #397)
 
 1. **Foundation:** ثبت ADR، مرز پروژه‌ها، قراردادهای authorization و entitlement، schema مستقل trade و تست‌های معماری.
-2. **Company/Period Security:** adapter به CompanyAccessService و WorkContext/FiscalPeriodSelectionPolicy موجود؛ اعتبارسنجی FiscalPeriodId متعلق به TenantId؛ مجوزهای تخصصی فرم/عملیات Trade در PermissionDefinitions مشترک؛ تست دستکاری TenantId/FiscalPeriodId و cross-company.
+2. **Company/Period Security:** adapter اولیه به CompanyAccessService و WorkContext/FiscalPeriodSelectionPolicy پیاده‌سازی شد؛ تکمیل اتصال API/use case، ثبت و تخصیص PermissionDefinitions بازرگانی، تست SQL Server و تست‌های منفی TenantId/FiscalPeriodId باقی است.
 3. **Forms & Workflows:** permission catalog برای هر فرم و هر عملیات؛ منو/فرم براساس permissionهای سرور؛ enforcement در endpoint و use case.
 4. **Trade Business Domains:** نیازمندی‌سنجی و پیاده‌سازی گام‌به‌گام پرونده واردات، سفارش، اسناد، حمل، گمرک، تخصیص ارز و گردش کار با Issueهای مستقل.
 5. **Reports:** گزارش شرکت، دوره و گزارش چندشرکتی با کنترل مجوز همه شرکت‌های scope، audit، خروجی Excel/PDF و تست عدم نشت.
