@@ -1729,3 +1729,13 @@
 - CI initially found 8 server compile errors (framework Convert name collision, protected Entity.Id assignment and type mismatch). Those source errors were corrected. The next CI pass exposed test fixture tuple call sites and another protected Id assignment; these were corrected on the same PR branch. Latest head CI is pending at the time of this log entry.
 - D-059 changes the accepted status policy: signed Restricted envelopes are persisted for later restricted-mode enforcement; Grace is rejected because there is no implicit grace period. Runtime call-site enforcement remains a separate implementation slice.
 - No local .NET/SQL Server execution, physical TPM verification or independent-host E2E is claimed. Startup reload/revalidation, operational authorization enforcement and Cloud authoritative entitlement resolution remain open.
+
+
+## 2026-10-31 — D-060: سه حوزه Vendor و دروازه فعال‌سازی Customer
+
+- ثبت D-060 در DECISIONS.md: Vendor CRM & Commercial، Licensing & Entitlement Engine و Customer Deployment & Sync به‌عنوان مرزهای منطقی Modular Monolith.
+- مستندسازی state machine شروع Customer: Unlicensed به Activation Wizard؛ Active به Login؛ Restricted به مسیر read/export/recovery؛ InvalidOrUntrusted fail-closed؛ ReactivationRequired مسیر recovery.
+- مستندسازی فرم چندشرکتی بر اساس Company referenceهای داخل LicenseEnvelope، نمایش فقط‌خواندنی ماژول/Feature/Seat و bootstrap مدیر محلی با Identity hash؛ هیچ رمز یا hash به Vendor/package/log/telemetry نمی‌رود.
+- مستندسازی تبادل Offline: درخواست نسخه‌دار .request.json با public SPKI و proof-of-possession؛ پاسخ .license.json امضاشده؛ .txt فقط Base64/armored wrapper همان بایت‌های دقیق؛ QR صرفاً کمک اختیاری برای challenge کوچک.
+- Issue #396 برای startup gate و Activation Wizard ایجاد شد و به #384/#390/#392/#394 متصل است. کد و UI هنوز پیاده‌سازی نشده‌اند.
+- فایل‌های مستندات این PR به‌روزرسانی شدند؛ هیچ کد اجرایی، Migration یا تست واقعی در این تغییر انجام نشده است.
