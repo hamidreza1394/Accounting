@@ -16,4 +16,10 @@ public interface ICustomerLicenseEnvelopeValidator
         string localInstallationId,
         string localInstallationKeyFingerprint,
         CancellationToken cancellationToken = default);
+
+    Task<LicenseValidationResult> ValidateAsync(
+        LicenseEnvelope envelope,
+        string localInstallationId,
+        string localInstallationKeyFingerprint,
+        CancellationToken cancellationToken = default);
 }
