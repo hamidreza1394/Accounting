@@ -83,3 +83,10 @@ Issue فقط وقتی قابل بستن است که تولید و انتشار s
 - **Verification:** no local .NET SDK is available in this environment. On head `d689db2eb28f31fdc268abf6a2627b23df0274a3`, .NET CI and Vendor CI were observed in progress; Semgrep completed successfully. No build/test success is claimed before completion of the runs.
 - **Security boundary:** no private key, customer DB migration, or production signer configuration is introduced. The default revocation signer remains unavailable/fail-closed.
 - **Next implementation order:** Vendor snapshot history + sequence model/migration; transactionally couple approval, license state, snapshot and audit; add authorized export; then integrate the customer runtime validation entry point and add SQL Server/concurrency/fail-closed tests.
+
+
+## 2026-10-31 — Vendor snapshot issuance expanded in PR #375
+- The Vendor-side part of Issue #214 is now implemented in PR #375: canonical snapshot factory, immutable snapshot persistence, transaction-locked sequence, maker-checker revocation, signature verification against a separate trust set, audit rollback and authorized no-store export.
+- This PR still awaits final CI and merge; do not mark the feature Verified until .NET CI, Vendor SQL Server integration/EF snapshot guards and Semgrep are green on the final head.
+- The remaining Issue #214 acceptance boundary is customer runtime enforcement/anti-rollback and operational recovery. Customer-side work stays separate under #235/#364; no customer schema or `Server/**` change is in PR #375.
+- Production signing remains unavailable by default. The deployment must explicitly configure a 1..365 day snapshot validity and a separate public revocation trust set; no private key or provider credential is checked in.

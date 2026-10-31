@@ -483,6 +483,8 @@
 
 
 ## 2026-10-31 — Issue #214: signed offline revocation snapshot factory (PR #375)
-- PR [#375](https://github.com/hamidreza1394/Accounting/pull/375) adds a Vendor factory for bounded, canonical signed revocation snapshots and unit coverage for signature verification, canonicalization, invalid inputs, signer outage and cancellation.
-- The factory is not yet merged or CI-verified at this status snapshot. No local .NET SDK was available; .NET CI and Vendor CI were in progress and Semgrep had succeeded on head `d689db2eb28f31fdc268abf6a2627b23df0274a3`.
-- Still not implemented: durable monotonic snapshot sequence/history, atomic approval + license status + snapshot + audit, authorized no-store export, and runtime customer call-site enforcement. The default revocation signer remains unavailable/fail-closed. No private key or customer schema change is included.
+- PR [#375](https://github.com/hamidreza1394/Accounting/pull/375) now combines the canonical snapshot factory with the Vendor transactional workflow: durable immutable snapshot history, global sequence serialization, maker-checker license revocation, and authorized no-store export.
+- The service verifies the exact canonical payload signature against an independent public-key trust set before it can persist `Revoked`; license state, approval, snapshot and three audit events share one Vendor transaction. Signer/trust/sequence/audit failures remain fail-closed.
+- SQL Server tests cover successful issuance, unavailable signer, audit rollback and concurrent monotonic sequence/cumulative snapshots; trust-store negative coverage is included. No local .NET/SQL Server execution is claimed.
+- Current PR head is awaiting fresh .NET CI, Vendor CI, EF migration/snapshot guards and Semgrep; no merge or Verified claim until every required check succeeds.
+- Remaining independent gaps: customer runtime enforcement/anti-rollback integration in #235/#364, production key ceremony/provider access under #236, and independent audit checkpoint sink under #107. No customer-side consumer, `Server/**` or customer DB migration is included in PR #375.

@@ -1632,3 +1632,13 @@
 - Added tests for signature verification, canonicalization, invalid input bounds, unavailable signer and cancellation.
 - This is only the factory slice: durable sequence/history, atomic maker-checker revocation + license state + audit, no-store export and customer runtime enforcement remain open. The Vendor default signer remains unavailable/fail-closed; no private key or customer DB migration was added.
 - No local .NET SDK/build/test was available. On head `d689db2eb28f31fdc268abf6a2627b23df0274a3`, .NET CI and Vendor CI were in progress and Semgrep had succeeded when recorded; no unverified test result is claimed.
+
+
+## 2026-10-31 — Issue #214: durable Vendor revocation workflow added to PR #375
+- PR #375 expanded from the canonical snapshot factory to the complete Vendor-side issuance slice: immutable `VendorSignedRevocationSnapshots` table/migration, monotonic sequence serialized with transaction-owned `sp_getapplock`, and unique constraints for sequence/list/approval/triggering license.
+- Maker-checker approval for `TargetStatus=Revoked` now calls the shared `VendorOfflineRevocationSnapshotFactory`, verifies the returned envelope against an independent public trust set, and atomically persists the snapshot, License status, approval decision and three audit events.
+- Added authorized antiforgery POST export at `/api/vendor/offline-revocations/latest/export`; the response is audited and marked no-store/no-cache.
+- Snapshot validity is explicit deployment configuration (1..365 days); missing policy, empty/unknown/revoked trust entry, unavailable signer, invalid signature, sequence lock failure or audit failure does not commit a revocation.
+- Added SQL Server integration tests for success, signer unavailable, audit rollback and concurrent sequence/cumulative-list behavior, plus trust-store negative tests. The earlier factory unit tests remain in PR #375.
+- **Validation:** local .NET/SQL Server tests were not run. Fresh .NET CI, Vendor CI (including EF snapshot/migration and SQL Server tests), and Semgrep on final PR head are required before merge.
+- **Boundary:** no customer-side consumer, `Server/**`, customer database schema or production private key/credential is changed. #235/#364, #236 and #107 remain separate work.
