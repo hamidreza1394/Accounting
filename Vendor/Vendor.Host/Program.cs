@@ -447,6 +447,7 @@ app.MapVendorRoleManagement();
 app.MapVendorBusinessEndpoints();
 app.MapVendorProvisioningEndpoints();
 app.MapVendorApprovalEndpoints();
+app.MapVendorOfflineRevocationEndpoints();
 app.MapFallback(async context =>
 {
     var path = context.Request.Path.Value ?? "/";
