@@ -69,3 +69,13 @@
 | گزارش چندشرکتی با مجوز همه شرکت‌ها | D-034/D-061/D-062 | TradeAuthorizationAdapter.HasPermissionForAllCompanyPeriodsAsync | Adapter all-or-nothing implemented؛ report use case و audit NotImplemented |
 | دیتابیس فیزیکی مشترک، schema مستقل trade | D-061 / #397 | TradeDbContext و model test | Foundation؛ Migration ایجاد نشده |
 | اتصال آتی به مالی بدون coupling مستقیم | D-061 / #397 | dependency architecture tests | Foundation |
+
+
+## ردیابی نیازمندی‌های تأییدشده Trade — D-063 / Issue #399
+| نیازمندی | تصمیم/Issue | شاهد کد/تست هدف | وضعیت |
+|---|---|---|---|
+| مالکیت یکتای Voyage و تخصیص سهم سایر شرکت‌ها | D-063 / #399 | Trade Voyage aggregate، allocation rows، authorization tests | Accepted؛ NotImplemented |
+| ادامه ImportCase در چند دوره و ثبت دوره واقعی هر سند | D-062/D-063 / #399 | WorkContext، FiscalPeriodId روی اسناد، تست عدم انتقال سند بین دوره‌ها | Accepted؛ NotImplemented |
+| گزارش عملیاتی چندشرکتی در موج اول | D-063 / #399 | all-company-period authorization، scope audit، تست عدم نشت | Accepted؛ NotImplemented |
+| entitlement مستقل TRADE_IMPORT از S1 | D-025/D-059/D-063 / #399 | Licensing runtime adapter، server route/API gate، fail-closed tests | Accepted؛ Port موجود، runtime NotImplemented |
+| Foundation ماژول Trade | D-061/D-062 / #397، PR #398 | Modules/Trade، TradeDbContext، TradeAuthorizationAdapter، foundation tests | Implemented در main؛ PR #398 ادغام‌شده |
