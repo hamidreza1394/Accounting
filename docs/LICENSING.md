@@ -80,3 +80,7 @@
 - افزودن زیرسیستم به شرکت موجود و تجمیع چند لایسنس نیز NotImplemented است.
 - **محدودیت آفلاین:** بسته‌ای که قبلاً Export شده، تعلیق یا Sequence جدیدتر Vendor را در نصب کاملاً آفلاین کشف نمی‌کند. این محدودیت در D-054 پذیرفته و باید در قرارداد/عملیات به‌روشنی اعلام شود.
 - وضعیت پیاده‌سازی این دامنه در شاخه feat/issue-235-single-license-v4 است؛ تا CI سبز و Merge، NotVerified باقی می‌ماند.
+
+
+### Runtime integration status (2026-10-31)
+The contracts now expose `ICustomerLicenseEnvelopeValidator`, and Server DI exposes only its revocation-aware implementation; the raw `LicenseEnvelopeValidator` is not registered as a consumer-facing service. This is a safe dependency boundary, **not runtime enforcement**: no production endpoint/service currently calls the interface, and there is still no customer license-envelope store/import endpoint or shared authorization policy. The installation license module remains `NotImplemented`. Full integration must follow an approved local-file vs customer-DB source decision and approved expiry/restricted-mode policy (OD-03/04).
