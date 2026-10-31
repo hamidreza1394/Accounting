@@ -459,3 +459,13 @@
 - SQL Server tests now cover wrong customer/installation, suspended/expired license, revoked key, historical sequence, and stale sequence rejection at provisioning signing.
 - Dual-host E2E adds a second export attempt after a newer license sequence is issued; re-export must fail while the previously exported package remains usable by the offline Customer Host.
 - The above are fixes to prior failing runs; final CI on the latest branch heads is still pending. No PR is approved for Merge on the basis of those earlier runs.
+
+
+## 2026-10-31 — Issue #364: customer offline revocation anti-rollback (implementation in progress)
+- مالک محصول Migration مستقل دیتابیس مشتری و TPM-based anti-rollback را تأیید کرد؛ تصمیم D-057 پذیرفته شد.
+- Branch: `feat/issue-364-tpm-revocation-state`.
+- Customer-only schema افزوده شد: `CustomerOfflineRevocationStates` در `Data.DatabaseContext` و migration `20261031120000_AddCustomerOfflineRevocationState`. هیچ تغییر VendorDbContext/schema انجام نشده است.
+- State store دو مرحله‌ای، SQL Server session application lock، pending signed envelope، recovery از crash قبل/بعد از TPM extend، نگهداری envelope امضاشده و بررسی مجدد digest/hash-chain در هر read را پیاده‌سازی می‌کند.
+- TPM contract به NV Extend hash-chain تغییر یافته است؛ default runtime provider عمداً unavailable/fail-closed است. Backend واقعی TBS/Linux TPM device، NV index provisioning ceremony و آزمون TPM سخت‌افزاری هنوز تکمیل نشده‌اند.
+- تست‌های SQL Server برای apply، restore قدیمی، recovery دو crash window و concurrency بین دو DbContext اضافه شده‌اند؛ اجرای محلی/CI هنوز انجام نشده است.
+- این مرحله هنوز Production-ready یا Hardware-verified نیست؛ Issue #364 باز می‌ماند تا provider پلتفرمی و تست واقعی تکمیل شود.
