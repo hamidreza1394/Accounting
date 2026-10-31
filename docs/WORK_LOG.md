@@ -1625,3 +1625,10 @@
 - .NET CI run 41175579282 succeeded across client, secret-scan, build-and-test, publish-scripts, E2E, publish and Windows publish; Vendor CI 41175579288 and Semgrep 41175579255 also succeeded.
 - Updated Issue #364 handoff and project status to distinguish merged software implementation from still-open hardware provisioning/verification and production runtime enforcement.
 - No physical TPM test, production NV provisioning, secret delivery/rotation or production database migration is claimed.
+
+
+## 2026-10-31 — Issue #214: canonical offline revocation snapshot factory (PR #375)
+- Added Vendor-side `VendorOfflineRevocationSnapshotFactory` to validate bounded inputs, ordinal-sort/deduplicate revoked license IDs, serialize the canonical contract and sign the exact UTF-8 bytes with the dedicated revocation signer.
+- Added tests for signature verification, canonicalization, invalid input bounds, unavailable signer and cancellation.
+- This is only the factory slice: durable sequence/history, atomic maker-checker revocation + license state + audit, no-store export and customer runtime enforcement remain open. The Vendor default signer remains unavailable/fail-closed; no private key or customer DB migration was added.
+- No local .NET SDK/build/test was available. On head `d689db2eb28f31fdc268abf6a2627b23df0274a3`, .NET CI and Vendor CI were in progress and Semgrep had succeeded when recorded; no unverified test result is claimed.
