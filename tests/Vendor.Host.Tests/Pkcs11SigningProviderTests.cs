@@ -19,7 +19,7 @@ public sealed class Pkcs11SigningProviderTests
     {
         var provider = new UnavailableOfflineRevocationSigningProvider();
 
-        var result = await provider.SignAsync(Encoding.UTF8.GetBytes("{\\"sequence\\":1}"));
+        var result = await provider.SignAsync(Encoding.UTF8.GetBytes("{\"sequence\":1}"));
 
         Assert.False(result.Succeeded);
         Assert.Equal("signing_provider_unavailable", result.ErrorCode);
@@ -167,7 +167,7 @@ public sealed class Pkcs11SigningProviderTests
     [Fact]
     public async Task OfflineRevocationProviderUsesItsOwnKeyAndAuditsMetadataOnly()
     {
-        var payload = Encoding.UTF8.GetBytes("{\\"schemaVersion\\":1,\\"sequence\\":12}");
+        var payload = Encoding.UTF8.GetBytes("{\"schemaVersion\":1,\"sequence\":12}");
         var module = new RecordingPkcs11SigningModule(
             LicenseSigningResult.Success("vendor-revocation-2026-v1", LicenseAlgorithms.EcdsaP256Sha256, new byte[64]));
         var audit = new RecordingAuditWriter();
