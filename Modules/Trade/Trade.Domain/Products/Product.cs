@@ -83,8 +83,8 @@ public sealed class Product : TradeEntity
             ?? throw new InvalidOperationException("The product identifier does not exist.");
 
         if (IsDeleted) throw new InvalidOperationException("A deleted product cannot be changed.");
-        identifier.SoftDelete(removedByUserId, removedAtUtc);
         RecordUpdate(removedByUserId, removedAtUtc);
+        identifier.SoftDelete(removedByUserId, removedAtUtc);
     }
 
     public void UpdateDetails(
