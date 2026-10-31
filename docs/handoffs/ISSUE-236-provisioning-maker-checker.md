@@ -123,3 +123,7 @@
 - SoftHSM integration test اکنون سه کلید مستقل می‌سازد و امضای revocation را با public key متناظر verify می‌کند؛ تست‌ها همچنین fail-closed بودن provider پیش‌فرض و رد KeyId تکراری/نامعتبر را پوشش می‌دهند.
 - Runbook، Vendor README و D-055/D-056 clarification به‌روزرسانی شدند. این PR فقط زیرساخت امضا را اضافه می‌کند؛ صدور/ذخیره/توزیع revocation snapshot هنوز در مرحلهٔ بعدی Issue #214 است.
 - HSM واقعی provision نشده؛ هیچ Production signing enablement ادعا نمی‌شود. CI نهایی پس از ایجاد PR لازم است.
+
+
+### PR #369 CI correction — 2026-10-31
+- First Vendor CI exposed C# syntax errors caused by over-escaped JSON test literals. Corrected to normal escaped C# JSON strings in both unit and SoftHSM integration tests. Awaiting fresh CI on the latest head.
