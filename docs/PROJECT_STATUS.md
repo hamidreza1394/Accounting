@@ -1,5 +1,12 @@
 # وضعیت اجرایی مرحلهٔ اول — به‌روزرسانی 2026-10-30
 
+## 2026-10-31 — Issue #214: Vendor offline revocation issuance (PR pending)
+- در شاخهٔ اختصاصی Vendor، تولید snapshot امضاشده، persistence با sequence سراسری transaction-locked، maker-checker و endpoint export پیاده شده است؛ هنوز CI/merge روی main تأیید نشده و وضعیت آن `Implemented / Not Verified` است.
+- snapshot validity به تنظیم صریح ۱..۳۶۵ روز نیاز دارد؛ trust set revocation مستقل و مبتنی بر public SPKI است. signer پیش‌فرض unavailable/fail-closed باقی مانده و هیچ credential یا KMS/HSM واقعی provision نشده است.
+- تست‌های SQL Server success/unavailable/rollback/concurrency و trust-store negative اضافه شده‌اند؛ اجرای محلی انجام نشده و CI شاخه باید نتیجه را تعیین کند.
+- این تغییر فقط Vendor DB/Host است؛ consumer و enforcement سمت مشتری در #235، sink مستقل ممیزی در #107 و provider عملیاتی امضا همچنان موانع جداگانه‌اند.
+
+
 - PR #358 (Enrollment password flow) ادغام شده است؛ تصمیم نهایی رمز مدیر در Enrollment ثبت شده و الزام تغییر رمز در اولین ورود superseded است.
 - PR #359 (D-056 software signing assurance) ادغام شده است؛ SoftHSM برای Development/Staging پذیرفته شده است.
 - PR #360 (runtime staged signing assurance) در 2026-10-30T19:14:22Z با merge commit `53b19e84a065a85de5434a695812e700622d128b` ادغام شد؛ .NET CI، Vendor CI، Semgrep و PR workflow روی HEAD موفق بودند.

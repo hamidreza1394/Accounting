@@ -1625,3 +1625,13 @@
 - .NET CI run 41175579282 succeeded across client, secret-scan, build-and-test, publish-scripts, E2E, publish and Windows publish; Vendor CI 41175579288 and Semgrep 41175579255 also succeeded.
 - Updated Issue #364 handoff and project status to distinguish merged software implementation from still-open hardware provisioning/verification and production runtime enforcement.
 - No physical TPM test, production NV provisioning, secret delivery/rotation or production database migration is claimed.
+
+
+## 2026-10-31 — Issue #214: Vendor offline revocation issuance (PR branch)
+- بخش Vendor control-plane ابطال آفلاین پیاده شد: مدل immutable و migration مستقل Vendor برای snapshot امضاشده؛ sequence سراسری با transaction-owned `sp_getapplock` و unique index؛ فهرست کامل licenseهای Revoked با ترتیب canonical؛ امضای purpose-specific؛ بررسی KeyId در trust set مستقل و verify مجدد signature/format/expiry/sequence.
+- approval با `TargetStatus=Revoked` فقط پس از ذخیرهٔ snapshot و audit می‌تواند License را Revoked کند. license، approval، snapshot و audit در transaction واحد ثبت می‌شوند؛ signer/trust/audit failure fail-closed است.
+- endpoint export فقط POST، antiforgery، permission `LicensesRead`، audit و no-store دارد.
+- سیاست `OfflineRevocation:SnapshotValidityDays` بدون default اجباری است (۱..۳۶۵)؛ trust store فقط public SPKI می‌پذیرد. هیچ KMS/HSM، credential یا private key عملیاتی انتخاب/ثبت نشده است.
+- تست‌های SQL Server برای success، signer unavailable، rollback در audit failure و دو revoke هم‌زمان، به‌علاوهٔ trust-store negative test افزوده شدند.
+- **اعتبارسنجی:** اجرای محلی .NET/SQL Server در این نشست انجام نشد؛ Vendor CI و .NET CI روی SHA نهایی شاخه باید اجرا و سبز شوند. تا آن زمان هیچ تستی Verified اعلام نمی‌شود.
+- **مرز:** هیچ تغییری در `Server/**`، customer consumer یا migration دیتابیس مشتری انجام نشد. #235 همچنان یک کار مستقل است.

@@ -1,11 +1,7 @@
-using Faranou.Vendor.Persistence;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Faranou.Vendor.Persistence.Migrations;
 
-[DbContext(typeof(VendorDbContext))]
-[Migration("20261031083000_VendorSignedRevocationSnapshots")]
 public partial class VendorSignedRevocationSnapshots : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
