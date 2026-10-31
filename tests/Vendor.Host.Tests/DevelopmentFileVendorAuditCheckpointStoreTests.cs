@@ -80,6 +80,28 @@ public sealed class DevelopmentFileVendorAuditCheckpointStoreTests
     }
 
     [Fact]
+    public async Task ReadLatest_WhenLockWaitIsCancelled_ReleasesProcessGate()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "FaranouAuditCheckpointTests", Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(directory, "checkpoints.jsonl");
+        Directory.CreateDirectory(directory);
+
+        var store = new DevelopmentFileVendorAuditCheckpointStore(path);
+        await using var heldLock = new FileStream(path + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => store.ReadLatestAsync(cancellation.Token));
+
+        await heldLock.DisposeAsync();
+        Assert.Null(await store.ReadLatestAsync());
+
+        if (Directory.Exists(directory))
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
     public void Constructor_RequiresFullyQualifiedPath()
     {
         Assert.Throws<ArgumentException>(() => new DevelopmentFileVendorAuditCheckpointStore("relative/checkpoints.jsonl"));
