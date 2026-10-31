@@ -195,7 +195,15 @@
 - ابزار فقط NvDefineSpace با Platform hierarchy را اجرا می‌کند، read-back و مقدار اولیه صفر را بررسی می‌کند و هیچ مسیر Undefine/Reset ندارد. اگر index از قبل تعریف شده باشد، عملیات باید fail شود.
 - پس از provisioning، همان NV auth را از secret manager به Licensing:OfflineRevocation:Tpm:NvIndexAuthValueBase64 تزریق کنید و offset را در NvIndexOffset تنظیم کنید.
 
-این utility فعلاً Windows/TBS-only است؛ provisioning در Linux هنوز ابزار اجرایی جداگانه ندارد و تا تکمیل آن، Linux hardware deployment مجاز نیست.
+#### ابزار Provisioning لینوکس
+
+برای Linux، ابزار scripts/provision-offline-revocation-nv-index.sh از tpm2-tools و فقط TCTI محلی /dev/tpmrm0 استفاده می‌کند. آن را با فایل‌های secret مدیریت‌شده اجرا کنید:
+
+- FARANOU_TPM_PLATFORM_AUTH_BASE64 در این script استفاده نمی‌شود؛ مسیر Platform auth از فایل ورودی اول خوانده می‌شود.
+- فایل اول Platform hierarchy authorization و فایل دوم NV index authorization خام هستند؛ فایل‌ها باید خارج از repo، با permission محدود و بدون newline ناخواسته نگهداری شوند.
+- اجرا: scripts/provision-offline-revocation-nv-index.sh 0x1234 /secure/platform-auth.bin /secure/nv-index-auth.bin
+- اسکریپت TPM2TOOLS_TCTI را به device:/dev/tpmrm0 محدود می‌کند، index را فقط define می‌کند، readback را بررسی می‌کند و هیچ دستور undefine/reset ندارد.
+- پس از provisioning، مقدار index auth را از همان secret manager به Licensing:OfflineRevocation:Tpm:NvIndexAuthValueBase64 تزریق کنید. اسکریپت Linux نیز هنوز روی TPM سخت‌افزاری این پروژه اجرا/تأیید نشده است.
 
 ### 13.3 Runtime و Recovery
 
