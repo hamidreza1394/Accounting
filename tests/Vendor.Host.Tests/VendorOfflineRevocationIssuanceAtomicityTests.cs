@@ -299,7 +299,7 @@ public sealed class VendorOfflineRevocationIssuanceAtomicityTests
                 InstallationId = installation.Id, Installation = installation,
                 LicenseNumber = $"R{index}-{Guid.NewGuid():N}"[..14], ProductCode = "FARANOU",
                 Status = "Issued", LicenseKind = LicensePayload.KindPerpetual,
-                SubsystemsJson = "[\\"finance\\",\\"sales\\"]", GraceDays = 30,
+                SubsystemsJson = JsonSerializer.Serialize(new[] { "finance", "sales" }), GraceDays = 30,
                 LastIssuedSequence = 1, ValidFromUtc = now.AddMinutes(-1), CreatedAtUtc = now
             }).ToArray();
             db.AddRange(customer, installation);
