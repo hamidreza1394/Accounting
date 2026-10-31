@@ -101,11 +101,6 @@ public sealed class DatabaseModelTests
 		Assert.Equal(new[] { "Id", "InstallationId" },
 			installationAlternateKey.Properties.Select(property => property.Name).ToArray());
 
-		var installationAlternateKey = Assert.Single(
-			identity.GetKeys().Where(key => !key.IsPrimaryKey()));
-		Assert.Equal(new[] { "Id", "InstallationId" },
-			installationAlternateKey.Properties.Select(property => property.Name).ToArray());
-
 		var versionIndex = Assert.Single(identity.GetIndexes(), index =>
 			index.Properties.Select(property => property.Name)
 				.SequenceEqual(new[] { "InstallationId", "KeyVersion" }));
