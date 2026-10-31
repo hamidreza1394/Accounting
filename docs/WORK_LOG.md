@@ -1709,3 +1709,13 @@
 - Migration افزایشی `20261031130000_AddCustomerLicensePersistence` و designer/snapshot به‌روزرسانی شد؛ generator migration برای migration جدید با hand-written CHECK constraints تنظیم شد.
 - مدل تاریخچهٔ کلیدهای نصب را حفظ می‌کند؛ برای هر InstallationId تنها یک identity جاری و یک license جاری مجاز است. کلید خصوصی در دیتابیس نیست؛ SoftwareProtected فقط با consent timestamp/actor قابل ثبت است.
 - PR #387 هنوز CI نشده/ادغام نشده؛ هیچ Migration روی دیتابیس واقعی اجرا نشده و Vendor schema تغییر نکرده است.
+
+
+## 2026-10-31 — Issue #395 / D-059: entitlement architecture and execution roadmap
+
+- ثبت D-059 با تأیید مالک محصول: Base License واحد برای هر Installation؛ Company-scoped Module/Feature/UserSeat؛ maxCompanies در سطح Installation؛ add-on با amendment امضاشده و sequence افزایشی روی همان LicenseId.
+- سیاست کاهش Seat برابر block-new است؛ عضویت‌های فعال حفظ می‌شوند. کاهش Feature limit داده را حذف نمی‌کند و ایجاد/گسترش جدید را مسدود می‌کند. انقضای Term به restricted می‌رود، بدون grace ضمنی، با حفظ read/export/recovery.
+- bootstrap مدیر اولیه Offline روی Customer Host و محلی است؛ رمز/hash به Vendor، package، log یا telemetry منتقل نمی‌شود.
+- sync دوحالته است: online authenticated وقتی اتصال موجود است و signed file exchange همیشه. Cloud server-authoritative است؛ Offline آخرین entitlement امضاشده پذیرفته‌شده را حفظ می‌کند.
+- نقشه اجرا: #395 → #390 → #391/#392 → #393 → #394. مستندات مرجع در docs/LICENSING_IMPLEMENTATION_PLAN.md قرار گرفتند.
+- این تغییر فقط مستندسازی و ثبت تصمیم است؛ هیچ قابلیت اجرایی، Migration یا Production readiness را ادعا نمی‌کند.
