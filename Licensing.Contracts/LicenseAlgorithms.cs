@@ -6,7 +6,7 @@ namespace Faranou.Licensing.Contracts;
 public static class LicenseAlgorithms
 {
 	public const string EcdsaP256Sha256 = "ECDSA-P256-SHA256";
-	public const int CurrentFormatVersion = 1;
+	public const int CurrentFormatVersion = 2;\n\tpublic static bool IsSupportedFormatVersion(int version) => version is 1 or CurrentFormatVersion;
 
 	/// <summary>Explicit allowlist — unknown algorithms are rejected.</summary>
 	public static bool IsAllowed(string? algorithm)
