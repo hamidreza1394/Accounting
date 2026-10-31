@@ -12,6 +12,10 @@ public static class StructuralValidation
 		@"^[A-Za-z0-9._-]{1," + LicenseInputLimits.MaxCodeChars + "}$",
 		RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
+	private static readonly Regex InstallationKeyFingerprintPattern = new(
+		"^[a-f0-9]{64}$",
+		RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
 	private static readonly Regex KidPattern = new(
 		@"^[A-Za-z0-9._-]{1," + LicenseInputLimits.MaxKidChars + "}$",
 		RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -39,8 +43,12 @@ public static class StructuralValidation
 	{
 		ArgumentNullException.ThrowIfNull(payload);
 		var errors = new List<string>();
-		if (payload.FormatVersion != LicenseAlgorithms.CurrentFormatVersion)
+		if (!LicenseAlgorithms.IsSupportedFormatVersion(payload.FormatVersion))
 			errors.Add($"unsupported formatVersion: {payload.FormatVersion}");
+		if (payload.FormatVersion == 2 && !InstallationKeyFingerprintPattern.IsMatch(payload.InstallationKeyFingerprint ?? ""))
+			errors.Add("installationKeyFingerprint must be a lowercase SHA-256 fingerprint for format v2");
+		if (payload.FormatVersion == 1 && !string.IsNullOrEmpty(payload.InstallationKeyFingerprint))
+			errors.Add("format v1 must not contain installationKeyFingerprint");
 		if (payload.LicenseId is null || !IdPattern.IsMatch(payload.LicenseId))
 			errors.Add("licenseId is invalid");
 		if (payload.InstallationId is null || !IdPattern.IsMatch(payload.InstallationId))
@@ -105,7 +113,7 @@ public static class StructuralValidation
 	{
 		ArgumentNullException.ThrowIfNull(envelope);
 		var errors = new List<string>();
-		if (envelope.FormatVersion != LicenseAlgorithms.CurrentFormatVersion)
+		if (!LicenseAlgorithms.IsSupportedFormatVersion(envelope.FormatVersion))
 			errors.Add($"unsupported envelope formatVersion: {envelope.FormatVersion}");
 		if (envelope.Kid is null || !KidPattern.IsMatch(envelope.Kid))
 			errors.Add("kid is invalid");
