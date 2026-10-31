@@ -1563,5 +1563,5 @@
 - جدول singleton مشتری، migration افزایشی، rowversion، pending/accepted signed envelope و anchor digestهای قبلی/جاری افزوده شدند.
 - Store در SQL Server با session-level sp_getapplock عملیات چندپردازه‌ای را serialize می‌کند و پروتکل prepare → TPM NV_Extend → finalize را با recovery crash window اجرا می‌کند.
 - هر read، TPM digest، chain hash، signature، payload digest، sequence، expiry و فهرست revoked را دوباره تطبیق می‌دهد؛ backup قدیمی یا tamper به Unavailable منجر می‌شود.
-- runtime registration دارای default unavailable TPM provider است؛ هیچ software fallback وجود ندارد. Backend واقعی Windows TBS و Linux TPM، provisioning NV index و hardware tests هنوز NotImplemented/NotVerified هستند.
+- adapter TPM با Microsoft.TSS برای Windows TBS و Linux local TPM device اضافه شد؛ Linux از StrictLinuxTpmDevice استفاده می‌کند تا simulator fallback کتابخانه فعال نشود. default provider بدون section پیکربندی صریح unavailable است. provisioning NV index و hardware tests هنوز NotImplemented/NotVerified هستند.
 - تست‌های SQL Server اضافه شده‌اند اما اجرای محلی .NET در این نشست ممکن نبود؛ نتیجهٔ CI روی PR معیار بعدی است.
