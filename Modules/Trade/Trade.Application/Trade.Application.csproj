@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><RootNamespace>Faranou.Modules.Trade.Application</RootNamespace></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Trade.Domain\Trade.Domain.csproj" />
+  </ItemGroup>
+</Project>
