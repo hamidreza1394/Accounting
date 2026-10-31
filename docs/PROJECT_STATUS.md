@@ -486,3 +486,10 @@
 - PR [#375](https://github.com/hamidreza1394/Accounting/pull/375) adds a Vendor factory for bounded, canonical signed revocation snapshots and unit coverage for signature verification, canonicalization, invalid inputs, signer outage and cancellation.
 - The factory is not yet merged or CI-verified at this status snapshot. No local .NET SDK was available; .NET CI and Vendor CI were in progress and Semgrep had succeeded on head `d689db2eb28f31fdc268abf6a2627b23df0274a3`.
 - Still not implemented: durable monotonic snapshot sequence/history, atomic approval + license status + snapshot + audit, authorized no-store export, and runtime customer call-site enforcement. The default revocation signer remains unavailable/fail-closed. No private key or customer schema change is included.
+
+
+## 2026-10-31 — Issue #214: Vendor revocation snapshot persistence schema (stacked PR #376)
+- Stacked PR [#376](https://github.com/hamidreza1394/Accounting/pull/376) adds Vendor-only immutable revocation snapshot history and a singleton monotonic sequence-counter schema, including EF mapping/snapshot, a migration and a model invariant test.
+- Snapshot rows have a unique global sequence and ListId, payload SHA-256, exact signed envelope JSON, signer metadata, timestamps, RowVersion, check constraints and a SQL Server trigger rejecting UPDATE/DELETE. The counter is seeded at zero; atomic allocation is not yet implemented.
+- No Customer database or `Server/**` changes. Local .NET SDK is unavailable; EF CLI generation, build, tests and SQL Server migration execution are not claimed. CI pending-model guard and SQL Server verification are required before merge.
+- Next slices: transactional sequence allocation + approval/license/snapshot/audit, authorized no-store export, then customer runtime call-site enforcement. Revoked approvals remain fail-closed.
