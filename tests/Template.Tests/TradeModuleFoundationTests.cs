@@ -1,69 +1,35 @@
 using System.Xml.Linq;
-using Faranou.Modules.Trade.Domain;
+using Faranou.Modules.Trade.Application.Authorization;
 using Faranou.Modules.Trade.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace Template.Tests;
 
-public sealed class TradeOperationalPeriodTests
-{
-    [Fact]
-    public void CreateRequiresAValidTenant()
-    {
-        Assert.Throws<ArgumentException>(() => TradeOperationalPeriod.Create(
-            Guid.Empty, "2026", "سال عملیاتی ۲۰۲۶",
-            new DateOnly(2026, 1, 1), new DateOnly(2026, 12, 31)));
-    }
-
-    [Fact]
-    public void CreateNormalizesCodeAndStartsInDraft()
-    {
-        var tenantId = Guid.NewGuid();
-        var period = TradeOperationalPeriod.Create(
-            tenantId, "  fy-2026 ", "  سال عملیاتی ۲۰۲۶  ",
-            new DateOnly(2026, 1, 1), new DateOnly(2026, 12, 31));
-
-        Assert.Equal(tenantId, period.TenantId);
-        Assert.Equal("FY-2026", period.Code);
-        Assert.Equal("سال عملیاتی ۲۰۲۶", period.Title);
-        Assert.Equal(TradeOperationalPeriodStatus.Draft, period.Status);
-    }
-
-
-    [Fact]
-    public void CreateRejectsNonAsciiPeriodCodes()
-    {
-        Assert.Throws<ArgumentException>(() => TradeOperationalPeriod.Create(
-            Guid.NewGuid(), "سال-۱۴۰۵", "سال عملیاتی",
-            new DateOnly(2026, 1, 1), new DateOnly(2026, 12, 31)));
-    }
-
-    [Fact]
-    public void CreateRejectsAnInvalidDateRange()
-    {
-        Assert.Throws<ArgumentException>(() => TradeOperationalPeriod.Create(
-            Guid.NewGuid(), "FY-2026", "سال عملیاتی ۲۰۲۶",
-            new DateOnly(2026, 12, 31), new DateOnly(2026, 1, 1)));
-    }
-}
-
 public sealed class TradeDbContextModelTests
 {
     [Fact]
-    public void OperationalPeriodIsOwnedByTradeSchemaAndHasNoCoreForeignKey()
+    public void TradeContextDoesNotOwnFiscalPeriodEntitiesOrTables()
     {
         var options = new DbContextOptionsBuilder<TradeDbContext>()
             .UseSqlServer("Server=localhost;Database=TradeModelOnly;Trusted_Connection=True;TrustServerCertificate=True")
             .Options;
 
         using var context = new TradeDbContext(options);
-        var entity = context.Model.FindEntityType(typeof(TradeOperationalPeriod));
 
-        Assert.NotNull(entity);
-        Assert.Equal("OperationalPeriods", entity!.GetTableName());
-        Assert.Equal("trade", entity.GetSchema());
-        Assert.Empty(entity.GetForeignKeys());
+        Assert.Empty(context.Model.GetEntityTypes());
+    }
+
+    [Fact]
+    public void TradePeriodScopeReferencesTheSharedCoreFiscalPeriod()
+    {
+        var tenantId = Guid.NewGuid();
+        var fiscalPeriodId = Guid.NewGuid();
+
+        var scope = new TradePeriodScope(tenantId, fiscalPeriodId);
+
+        Assert.Equal(tenantId, scope.TenantId);
+        Assert.Equal(fiscalPeriodId, scope.FiscalPeriodId);
     }
 
     [Fact]
