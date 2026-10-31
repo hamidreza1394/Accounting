@@ -88,6 +88,34 @@ public sealed class CustomerLicenseImportServiceTests
     }
 
     [Fact]
+    public async Task ImportAsync_SupersedesPreviousCurrentEnvelopeOnHigherSequence()
+    {
+        await using var database = CreateDatabase();
+        var identity = AddCurrentIdentity(database);
+        var (firstEnvelope, firstPayload) = CreateEnvelope(sequence: 1);
+        var (nextEnvelope, nextPayload) = CreateEnvelope(sequence: 2);
+        var validator = new TestValidator(
+            (firstEnvelope, LicenseValidationResult.Ok(LicenseStatus.Valid, firstPayload)),
+            (nextEnvelope, LicenseValidationResult.Ok(LicenseStatus.ExpiringSoon, nextPayload)));
+        var service = CreateService(database, validator, InstallationIdentityProofStatus.Valid);
+
+        var first = await service.ImportAsync(
+            JsonSerializer.Serialize(firstEnvelope, JsonOptions), identity.InstallationId, null);
+        var replacement = await service.ImportAsync(
+            JsonSerializer.Serialize(nextEnvelope, JsonOptions), identity.InstallationId, null);
+
+        Assert.True(first.Success, first.ErrorCode);
+        Assert.True(replacement.Success, replacement.ErrorCode);
+        Assert.False(replacement.AlreadyInstalled);
+        Assert.Equal(2, await database.InstalledLicenses.CountAsync());
+        Assert.Single(database.InstalledLicenses.Where(item =>
+            item.State == Domain.InstalledLicense.StateCurrent && item.Sequence == 2));
+        Assert.Single(database.InstalledLicenses.Where(item =>
+            item.State == Domain.InstalledLicense.StateSuperseded && item.Sequence == 1));
+        Assert.Contains(database.SecurityAuditEvents, item => item.EventType == "LicenseReplaced");
+    }
+
+    [Fact]
     public async Task ImportAsync_RequiresExplicitlyApprovedLicenseState()
     {
         await using var database = CreateDatabase();
