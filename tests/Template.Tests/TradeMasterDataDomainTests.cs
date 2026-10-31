@@ -76,7 +76,7 @@ public sealed class TradeMasterDataDomainTests
         Assert.Throws<ArgumentException>(() => party.RemoveRole(PartyRole.Seller, Guid.Empty, Now.AddMinutes(1)));
 
         Assert.False(role.IsDeleted);
-        Assert.Null(party.UpdatedAtUtc);
+        Assert.Equal(Now, party.UpdatedAtUtc);
     }
 
     [Fact]
@@ -91,7 +91,7 @@ public sealed class TradeMasterDataDomainTests
             identifier.Id, UserId, DateTime.SpecifyKind(Now.AddMinutes(1), DateTimeKind.Local)));
 
         Assert.False(identifier.IsDeleted);
-        Assert.Null(product.UpdatedAtUtc);
+        Assert.Equal(Now, product.UpdatedAtUtc);
     }
 
     [Fact]
