@@ -2,7 +2,7 @@
 
 **مرجع تصمیم:** D-061 و D-062  
 **Issue:** #397  
-**وضعیت:** تصمیم Accepted؛ foundation در حال پیاده‌سازی؛ عملیات تجاری و enforcement کامل هنوز NotImplemented.
+**وضعیت:** D-061/D-062/D-063 Accepted؛ foundation معماری در main ادغام شده است (PR #398، commit 6c09765cefe8742668c34deda1c86b881f970332). قابلیت‌های عملیاتی، seed مجوزها، enforcement کامل entitlement و گردش‌کارها هنوز NotImplemented هستند.
 
 ## 1. معماری و استقرار
 
@@ -27,7 +27,7 @@
 
 - در فاز اول یک SQL Server database فیزیکی مشترک استفاده می‌شود.
 - تمام جداول ماژول تحت schema مستقل trade قرار می‌گیرند.
-- TradeDbContext و assembly مهاجرت Trade مستقل‌اند؛ migration history آن نیز باید جدا باشد.
+- TradeDbContext و assembly مهاجرت Trade مستقل‌اند؛ migration history آن نیز باید جدا باشد. وضعیت واقعی فعلی: TradeDbContext موجود است، اما ثبت DI، design-time factory، migrations assembly/history مستقل و مسیر deployment هنوز باید ممیزی/تکمیل شوند؛ وجود DbContext به‌تنهایی اثبات‌کننده جداسازی migration نیست.
 - هیچ FK از Trade به جداول تراکنشی حسابداری ایجاد نمی‌شود.
 - شناسه شرکت مرجع منطقی است؛ حذف/غیرفعال‌سازی شرکت باید از مسیر هسته و با سیاست lifecycle هماهنگ شود.
 - Migration مشتری بدون Issue مستقل، تست SQL Server، rollout/rollback و تأیید اجرا نمی‌شود.
@@ -45,7 +45,8 @@
 ## 4. دوره‌های مالی مشترک با هسته فرانو
 
 - تنها مرجع تعریف، انتخاب و چرخه عمر دوره مالی، موجودیت `Domain.FiscalPeriod` در هسته فرانو است؛ Trade هیچ `OperationalPeriod`، جدول یا سرویس موازی ندارد.
-- هر رکورد شرکت‌محور بازرگانی که به دوره وابسته است، شناسه‌های `TenantId` و `FiscalPeriodId` را نگه می‌دارد؛ `TenantId` همان `Company.Id` و `FiscalPeriodId` همان `FiscalPeriod.Id` است.
+- داده‌های مرجع tenant-scoped مانند Party و Product به‌طور معمول `TenantId` دارند و `FiscalPeriodId` نمی‌گیرند. اسناد و عملیات تراکنشی period-scoped هر دو شناسه `TenantId` و `FiscalPeriodId` را نگه می‌دارند؛ `TenantId` همان `Company.Id` و `FiscalPeriodId` همان `FiscalPeriod.Id` است.
+- مطابق D-063، پرونده ImportCase می‌تواند چنددوره‌ای باشد: دوره افتتاح روی پرونده ثبت می‌شود، اما هر سند/عملیات فرزند دوره انتخاب‌شده واقعی خود را ثبت می‌کند. انتقال به دوره بعد اسناد قبلی را منتقل یا بازنویسی نمی‌کند؛ هر عملیات جدید باید دوباره WorkContext، تعلق دوره، وضعیت دوره و permission را اعتبارسنجی کند.
 - Trade.Domain و Trade.Application برای حفظ مرز ماژول به Core Domain/DbContext Reference نمی‌دهند. Host باید پیش از اجرای use case بررسی کند که `FiscalPeriod.TenantId == TenantId` و دوره از طریق `WorkContext` معتبر انتخاب شده است. این ارجاع منطقی است و FK بین schemaها ایجاد نمی‌شود.
 - انتخاب شرکت/دوره، فهرست دوره‌های قابل انتخاب و سیاست وضعیت دوره از `WorkContext` و `FiscalPeriodSelectionPolicy` مشترک پیروی می‌کند؛ هیچ دسترسی جداگانه‌ای برای «دوره بازرگانی» تعریف نمی‌شود.
 - سیاست مشترک دوره حفظ می‌شود: دوره Open قابل ورود با رعایت مجوز عملیات است؛ دوره Closed برای مشاهده/گزارش فقط خواندنی است و عملیات نوشتن با قواعد مشترک بسته می‌شود؛ Archived مطابق سیاست هسته قابل انتخاب نیست.
@@ -57,7 +58,7 @@
 - `Server/Infrastructure/Trade/TradeAuthorizationAdapter.cs` هویت را از principal احراز‌شده می‌گیرد و با `WorkContextService` زمینه جاری را دوباره از Cookie محافظت‌شده و دیتابیس اعتبارسنجی می‌کند.
 - `CompanyAccessService` مرجع سنجش مجوز نقش در شرکت است. Adapter تعلق `FiscalPeriodId` به شرکت جاری را کنترل می‌کند و سپس مجوز تخصصی عملیات را از سازوکار مشترک می‌سنجد.
 - شناسه دوره در اینجا context اجرای مجوز است، نه مجوز مستقل دوره‌ای. سطح دسترسی به وضعیت Open/Closed/Archived از سیاست مشترک `FiscalPeriodSelectionPolicy` می‌آید؛ `TradeAccessIntent.Write` در دوره بسته رد می‌شود.
-- برای گزارش چندشرکتی، مجوز نقش باید در تمام شرکت‌ها وجود داشته باشد و هر جفت `TenantId/FiscalPeriodId` نیز جداگانه اعتبارسنجی شود؛ نتیجه جزئی پذیرفته نیست.
+- طبق D-063، گزارش عملیاتی چندشرکتی از موج اول لازم است؛ مجوز نقش باید در تمام شرکت‌ها وجود داشته باشد و هر جفت `TenantId/FiscalPeriodId` جداگانه اعتبارسنجی شود؛ نتیجه جزئی پذیرفته نیست. این گزارش، گزارش تلفیقی حسابداری نیست.
 
 برای هر فرم/منبع کد مجوز مستقل و پایدار تعریف می‌شود:
 
@@ -79,7 +80,7 @@
 - permission عملیاتی می‌گوید کاربر مشخص در شرکت/دوره مشخص چه عملیاتی می‌تواند انجام دهد.
 - این دو قابل جایگزینی نیستند.
 - ترتیب کنترل: نشست معتبر → Company membership و تطبیق TenantId → انتخاب/اعتبارسنجی FiscalPeriod مشترک → entitlement ماژول → permission تخصصی بازرگانی از سیستم مشترک → اجرای use case با رعایت ReadOnly بودن دوره بسته.
-- قرارداد entitlement فعلاً Port است؛ runtime اتصال به Licensing فقط پس از هم‌ترازی با D-059 و Issue مستقل انجام می‌شود.
+- قرارداد entitlement فعلاً Port است؛ runtime باید در S1 به قراردادهای واقعی Licensing متصل شود و پیش از هر قابلیت Trade در Production fail-closed باشد. entitlement برای همان Company بررسی می‌شود و از permission کاربر جداست.
 
 ## 7. گزارش تک‌شرکتی و چندشرکتی
 
@@ -122,3 +123,10 @@ Trade به جداول یا Entityهای حسابداری دسترسی مستقی
 - یکی‌گرفتن entitlement تجاری و permission کاربر.
 - افزودن broker، Event Bus، دیتابیس جدا یا Kubernetes بدون Issue و نیاز اثبات‌شده.
 - اجرای Migration مشتری بدون تأیید مستقل.
+
+
+## 11. سیاست‌های اجرایی تأییدشده (D-063)
+- Voyage/Shipment یک شرکت مالک دارد؛ شرکت‌های دیگر فقط allocation/share line دارند. سهم تخصیص‌یافته مجوز مشاهده اسناد شرکت مالک نیست.
+- ImportCase می‌تواند بین دوره‌ها ادامه یابد؛ هر سند و عملیات تراکنشی FiscalPeriodId دوره انتخاب‌شده همان عملیات را ثبت می‌کند. هیچ انتقال خودکار اسناد بین دوره‌ها انجام نمی‌شود.
+- گزارش چندشرکتی عملیاتی از موج اول با مجوز all-or-nothing و audit کامل scope عرضه می‌شود؛ گزارش تلفیقی مالی خارج از این دامنه است.
+- entitlement مستقل TRADE_IMPORT از S1 و قبل از دسترسی به قابلیت Trade enforce می‌شود؛ Production در نبود/خطای اعتبارسنجی fail-closed است.
