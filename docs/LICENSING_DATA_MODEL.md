@@ -266,3 +266,14 @@ erDiagram
 - طراحی باید marker نصب ویندوز را با کلید نصب non-exportable و امضای challenge/اثبات possession bind کند. Private key در DB، backup عادی، log یا package قرار نمی‌گیرد.
 - نصب مجدد OS با marker جدید، حتی اگر سخت‌افزار ثابت باشد، activation جدید می‌خواهد. patch/update عادی که marker نصب را حفظ کند، activation را حفظ می‌کند.
 - Migration افزایشی مشتری `20261031130000_AddCustomerLicensePersistence` در PR #387 افزوده شده است؛ هیچ جدول Vendor تغییر نمی‌کند. recovery و re-enrollment پس از فقدان کلید همچنان تابع OD-06/OD-08 است.
+
+
+## ۹) تکمیل مدل بر اساس D-059 — Company-scoped entitlements
+
+- Installation یک Base License/LicenseId دارد؛ Revision یا Amendment تغییرات افزونه را به همان LicenseId و Installation متصل می‌کند و sequence را strictly increasing نگه می‌دارد.
+- maxCompanies در scope نصب باقی می‌ماند. UserSeat، Module و Feature در scope هر Company نگهداری/ارزیابی می‌شوند.
+- Feature entitlement نوع‌دار است (enabled، max_count یا enum) و کاتالوگ آن توسعه‌پذیر است. کدهای نمونه: analytic account levels/count، cost centers، budgeting، warehouses و POS.
+- Seat count بر اساس عضویت فعال هر Company محاسبه می‌شود؛ یک User در دو Company دو Seat مصرف می‌کند.
+- کاهش حد، هیچ داده یا عضویت موجودی را حذف نمی‌کند. وضعیت over-limit قابل گزارش است؛ ایجاد/افزایش جدید تا رفع overage رد می‌شود.
+- Offline از آخرین envelope/amendment معتبر و پذیرفته‌شده استفاده می‌کند؛ sync آنلاین یا فایل امضاشده است و telemetry دارای LastSyncedAt/freshness است.
+- این بخش مدل منطقی مصوب است؛ schema/EF entities/migration فقط در Issues #390–#394 با بررسی جداگانه و Customer/Vendor DB boundary مناسب ایجاد می‌شوند. D-059 به‌تنهایی مجوز migration نیست.
