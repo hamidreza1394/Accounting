@@ -53,6 +53,8 @@ public sealed class DatabaseModelTests
 				"CorporateGroups",
 				"CustomerOfflineRevocationStates",
 				"FiscalPeriods",
+				"InstallationIdentities",
+				"InstalledLicenses",
 				"LoginLogs",
 				"MenuItems",
 				"OwnershipRelationships",
@@ -84,6 +86,88 @@ public sealed class DatabaseModelTests
 		Assert.True(rowVersion.IsConcurrencyToken);
 		Assert.Equal(ValueGenerated.OnAddOrUpdate, rowVersion.ValueGenerated);
 		Assert.Null(state.FindProperty("InstallationId"));
+	}
+
+	[Fact]
+	public void InstallationIdentities_KeepVersionedPublicIdentityAndAssuranceWithConcurrency()
+	{
+		var identity = Model.FindEntityType(typeof(Domain.InstallationIdentity));
+		Assert.NotNull(identity);
+		Assert.Equal("InstallationIdentities", identity!.GetTableName());
+		Assert.Equal("Id", Assert.Single(identity.FindPrimaryKey()!.Properties).Name);
+
+		var versionIndex = Assert.Single(identity.GetIndexes(), index =>
+			index.Properties.Select(property => property.Name)
+				.SequenceEqual(new[] { "InstallationId", "KeyVersion" }));
+		Assert.True(versionIndex.IsUnique);
+
+		var keyIdIndex = Assert.Single(identity.GetIndexes(), index =>
+			index.Properties.Select(property => property.Name).SequenceEqual(new[] { "KeyId" }));
+		Assert.True(keyIdIndex.IsUnique);
+
+		var currentIndex = Assert.Single(identity.GetIndexes(), index =>
+			index.IsUnique &&
+			index.Properties.Select(property => property.Name).SequenceEqual(new[] { "InstallationId" }) &&
+			index.GetFilter()!.Contains("Current", StringComparison.Ordinal));
+		Assert.NotNull(currentIndex);
+
+		var rowVersion = identity.FindProperty(nameof(Domain.InstallationIdentity.RowVersion));
+		Assert.NotNull(rowVersion);
+		Assert.Equal("rowversion", rowVersion!.GetColumnType(), ignoreCase: true);
+		Assert.True(rowVersion.IsConcurrencyToken);
+		Assert.Equal(ValueGenerated.OnAddOrUpdate, rowVersion.ValueGenerated);
+
+		Assert.DoesNotContain(identity.GetProperties(), property =>
+			property.Name.Contains("PrivateKey", StringComparison.OrdinalIgnoreCase) ||
+			property.Name.Contains("Secret", StringComparison.OrdinalIgnoreCase));
+		Assert.Equal(24, identity.FindProperty(nameof(Domain.InstallationIdentity.AssuranceLevel))!.GetMaxLength());
+	}
+
+	[Fact]
+	public void InstalledLicenses_PreserveSignedEnvelopeHistoryAndEnforceSingleCurrentLicense()
+	{
+		var license = Model.FindEntityType(typeof(Domain.InstalledLicense));
+		Assert.NotNull(license);
+		Assert.Equal("InstalledLicenses", license!.GetTableName());
+		Assert.Equal("Id", Assert.Single(license.FindPrimaryKey()!.Properties).Name);
+
+		var identityForeignKey = Assert.Single(license.GetForeignKeys(), key =>
+			key.PrincipalEntityType.ClrType == typeof(Domain.InstallationIdentity));
+		Assert.Equal(new[] { "InstallationIdentityId" },
+			identityForeignKey.Properties.Select(property => property.Name).ToArray());
+		Assert.Equal(DeleteBehavior.Restrict, identityForeignKey.DeleteBehavior);
+
+		foreach (var columns in new[]
+		{
+			new[] { "InstallationId", "Sequence" },
+			new[] { "LicenseId", "Sequence" },
+		})
+		{
+			var index = Assert.Single(license.GetIndexes(), candidate =>
+				candidate.Properties.Select(property => property.Name).SequenceEqual(columns));
+			Assert.True(index.IsUnique);
+		}
+
+		var currentIndex = Assert.Single(license.GetIndexes(), index =>
+			index.IsUnique &&
+			index.Properties.Select(property => property.Name).SequenceEqual(new[] { "InstallationId" }) &&
+			index.GetFilter()!.Contains("Current", StringComparison.Ordinal));
+		Assert.NotNull(currentIndex);
+
+		foreach (var propertyName in new[] { "EnvelopeJson", "PayloadJson", "SignatureBase64", "PayloadDigest" })
+		{
+			var property = license.FindProperty(propertyName);
+			Assert.NotNull(property);
+			Assert.False(property!.IsNullable);
+		}
+
+		var rowVersion = license.FindProperty(nameof(Domain.InstalledLicense.RowVersion));
+		Assert.NotNull(rowVersion);
+		Assert.Equal("rowversion", rowVersion!.GetColumnType(), ignoreCase: true);
+		Assert.True(rowVersion.IsConcurrencyToken);
+		Assert.DoesNotContain(license.GetProperties(), property =>
+			property.Name.Contains("PrivateKey", StringComparison.OrdinalIgnoreCase) ||
+			property.Name.Contains("Secret", StringComparison.OrdinalIgnoreCase));
 	}
 
 	[Fact]
@@ -308,6 +392,8 @@ public sealed class DatabaseModelTests
 		Assert.Contains("20251017120000_InitialCreate", migrations);
 		Assert.Contains("20261017090000_AlignSchemaWithModel", migrations);
 		Assert.Contains("20261029161402_AddCustomerProvisioningClaims", migrations);
+		Assert.Contains("20261031120000_AddCustomerOfflineRevocationState", migrations);
+		Assert.Contains("20261031130000_AddCustomerLicensePersistence", migrations);
 	}
 
 	[Fact]

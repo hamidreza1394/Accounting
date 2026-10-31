@@ -938,6 +938,200 @@ namespace Data.Migrations
                 b.ToTable("CustomerOfflineRevocationStates");
             });
 
+            modelBuilder.Entity("Domain.InstallationIdentity", b =>
+            {
+                b.Property<Guid>("Id")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<int>("Ordering")
+                    .HasColumnType("int");
+
+                b.Property<DateTime>("InsertDateTime")
+                    .HasColumnType("datetime2");
+
+                b.Property<string>("InstallationId")
+                    .IsRequired()
+                    .HasMaxLength(128)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(128)");
+
+                b.Property<string>("KeyId")
+                    .IsRequired()
+                    .HasMaxLength(128)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(128)");
+
+                b.Property<int>("KeyVersion")
+                    .HasColumnType("int");
+
+                b.Property<string>("ProviderName")
+                    .IsRequired()
+                    .HasMaxLength(100)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(100)");
+
+                b.Property<string>("AssuranceLevel")
+                    .IsRequired()
+                    .HasMaxLength(24)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(24)");
+
+                b.Property<string>("OsInstallationMarkerDigest")
+                    .IsRequired()
+                    .HasMaxLength(64)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(64)");
+
+                b.Property<string>("PublicKeyFingerprint")
+                    .IsRequired()
+                    .HasMaxLength(64)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(64)");
+
+                b.Property<string>("PublicKeySubjectPublicKeyInfoBase64")
+                    .IsRequired()
+                    .HasMaxLength(512)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(512)");
+
+                b.Property<DateTime?>("SoftwareProviderRiskAcceptedAtUtc")
+                    .HasColumnType("datetime2");
+
+                b.Property<string>("SoftwareProviderRiskAcceptedBy")
+                    .HasMaxLength(256)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(256)");
+
+                b.Property<string>("State")
+                    .IsRequired()
+                    .HasMaxLength(24)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(24)");
+
+                b.Property<DateTime>("ProvisionedAtUtc")
+                    .HasColumnType("datetime2");
+
+                b.Property<DateTime?>("LastVerifiedAtUtc")
+                    .HasColumnType("datetime2");
+
+                b.Property<DateTime?>("RetiredAtUtc")
+                    .HasColumnType("datetime2");
+
+                b.Property<byte[]>("RowVersion")
+                    .IsRequired()
+                    .IsRowVersion()
+                    .HasColumnType("rowversion");
+
+                b.HasKey("Id");
+
+                b.HasIndex("InstallationId", "KeyVersion")
+                    .IsUnique();
+
+                b.HasIndex("KeyId")
+                    .IsUnique();
+
+                b.HasIndex("InstallationId")
+                    .IsUnique()
+                    .HasFilter("[State] = 'Current'");
+
+                b.ToTable("InstallationIdentities");
+            });
+
+            modelBuilder.Entity("Domain.InstalledLicense", b =>
+            {
+                b.Property<Guid>("Id")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<int>("Ordering")
+                    .HasColumnType("int");
+
+                b.Property<DateTime>("InsertDateTime")
+                    .HasColumnType("datetime2");
+
+                b.Property<Guid>("InstallationIdentityId")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<string>("InstallationId")
+                    .IsRequired()
+                    .HasMaxLength(128)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(128)");
+
+                b.Property<string>("LicenseId")
+                    .IsRequired()
+                    .HasMaxLength(128)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(128)");
+
+                b.Property<int>("Sequence")
+                    .HasColumnType("int");
+
+                b.Property<int>("FormatVersion")
+                    .HasColumnType("int");
+
+                b.Property<string>("Kid")
+                    .IsRequired()
+                    .HasMaxLength(128)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(128)");
+
+                b.Property<string>("Algorithm")
+                    .IsRequired()
+                    .HasMaxLength(32)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(32)");
+
+                b.Property<string>("PayloadJson")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
+
+                b.Property<string>("SignatureBase64")
+                    .IsRequired()
+                    .HasMaxLength(128)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(128)");
+
+                b.Property<string>("EnvelopeJson")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
+
+                b.Property<string>("PayloadDigest")
+                    .IsRequired()
+                    .HasMaxLength(64)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(64)");
+
+                b.Property<DateTime>("ImportedAtUtc")
+                    .HasColumnType("datetime2");
+
+                b.Property<string>("State")
+                    .IsRequired()
+                    .HasMaxLength(16)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(16)");
+
+                b.Property<byte[]>("RowVersion")
+                    .IsRequired()
+                    .IsRowVersion()
+                    .HasColumnType("rowversion");
+
+                b.HasKey("Id");
+
+                b.HasIndex("InstallationId", "Sequence")
+                    .IsUnique();
+
+                b.HasIndex("LicenseId", "Sequence")
+                    .IsUnique();
+
+                b.HasIndex("InstallationId")
+                    .IsUnique()
+                    .HasFilter("[State] = 'Current'");
+
+                b.HasIndex("InstallationIdentityId");
+
+                b.ToTable("InstalledLicenses");
+            });
+
             modelBuilder.Entity("Domain.CorporateGroup", b =>
             {
                 b.Property<Guid>("Id")
@@ -1369,6 +1563,15 @@ namespace Data.Migrations
                     .WithMany()
                     .HasForeignKey("FiscalPeriodId", "CompanyId")
                     .HasPrincipalKey("Id", "TenantId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+            });
+
+            modelBuilder.Entity("Domain.InstalledLicense", b =>
+            {
+                b.HasOne("Domain.InstallationIdentity", null)
+                    .WithMany()
+                    .HasForeignKey("InstallationIdentityId")
                     .OnDelete(DeleteBehavior.Restrict)
                     .IsRequired();
             });

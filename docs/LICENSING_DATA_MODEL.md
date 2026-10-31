@@ -135,7 +135,7 @@ erDiagram
 |---|---|
 | نگاشت `PermissionDefinition` به `ModuleCode` (ستون یا کاتالوگ ثابت) | `NeedsApproval` (D-025) |
 | رابطه `Company` ابری با `CustomerAccount` (ستون ارجاعی یا جدول رابط در دیتابیس ابری) | **تعیین‌تکلیف‌شده با D-038 (2026-10-23):** ستون ارجاعی به `CustomerAccount` ساخته **نمی‌شود**؛ فقط شناسه مرز مات و تصادفی `Companies.CustomerBoundaryId` (هرگز برابر `CustomerAccount.Id`). نگاشت `CustomerAccount` ← (نصب، مرز) فقط در سامانه کنترلی فروشنده است: `NotImplemented` |
-| محل ذخیره کلید خصوصی نصب | `NeedsApproval` |
+| محل ذخیره کلید خصوصی نصب | انتخاب provider طبق D-058/OD-08 پذیرفته شده؛ recovery و انتقال همچنان باز است |
 | جایگزینی/اصلاح FK برای `UserCompanyMemberships.UserId` | تصمیم جداگانه؛ بدون اثر بر این طرح |
 | لایسنس در سطح نصب یا شرکت (پیش‌فرض: نصب) | `NeedsApproval` |
 
@@ -251,13 +251,13 @@ erDiagram
 - **ارتباط `Company` با `CustomerAccount`:** فقط از مسیر `CustomerBoundary` در فروشنده و `Companies.CustomerBoundaryId` مات در نصب؛ مستقیم هرگز (D-038). یک `CustomerAccount` می‌تواند چند `Installation` و در هر نصب چند `Company` داشته باشد (D-020).
 - هیچ ستون یا FK از جداول نصب مشتری به جداول فروشنده نیست (بخش ۴ همین سند).
 
-## ۶) طرح تکمیلی Issue #384 — persistence فعال‌سازی restart-safe (Approved behavior; schema pending review)
-مالک محصول رفتار restart-safe و الزام reactivation پس از تغییر OS-installation identity را تأیید کرده است. این بخش هنوز ERD/DDL نهایی یا Migration نیست.
+## ۶) طرح تکمیلی Issue #384 — persistence فعال‌سازی restart-safe (Approved behavior; schema in PR #387)
+مالک محصول رفتار restart-safe، الزام reactivation پس از تغییر OS-installation identity و ایجاد جداول مشتری را تأیید کرده است. طرح schema در PR #387 در حال بررسی CI است؛ تا merge و migration test، روی main اعمال‌شده محسوب نمی‌شود.
 
 ### موجودیت‌های مشتری
-- InstallationIdentity: یک ردیف authoritative برای هویت نصب مشتری شامل InstallationId، OS-installation marker digest، public-key fingerprint، KeyId/KeyVersion، ProviderName، AssuranceLevel (`HardwareTpm` یا `SoftwareProtected`)، زمان/فاعل تأیید ریسک نرم‌افزاری (در صورت انتخاب)، وضعیت، LastVerifiedAtUtc و RowVersion. هیچ private key یا secret در جدول ذخیره نمی‌شود. انتخاب SoftwareProtected فقط پس از تأیید صریح و ثبت audit مجاز است.
-- InstalledLicense: تاریخچهٔ پاکت‌های امضاشده شامل LicenseId، Sequence، InstallationId، Kid، exact signed envelope bytes، payload digest، زمان import و وضعیت (Current/Superseded/Rejected)؛ قید یکتایی روی (LicenseId, Sequence) و کنترل concurrency برای جلوگیری از downgrade/duplicate.
-- وضعیت current باید با قاعدهٔ یکتا/تراکنشی مشخص شود؛ تاریخچه حذف نمی‌شود. هر import ابتدا signature، trusted key، payload، installation binding، sequence، time و revocation را اعتبارسنجی می‌کند؛ سپس ثبت اتمیک انجام می‌شود.
+- InstallationIdentity: تاریخچهٔ نسخه‌دار کلیدهای هویت نصب شامل InstallationId، OS-installation marker digest، public-key fingerprint و SPKI، KeyId/KeyVersion، ProviderName، AssuranceLevel (`HardwareTpm` یا `SoftwareProtected`)، زمان/فاعل تأیید ریسک نرم‌افزاری (در صورت انتخاب)، State، LastVerifiedAtUtc و RowVersion. برای هر InstallationId فقط یک ردیف Current با filtered unique index مجاز است؛ نسخه‌های Retired حفظ می‌شوند. هیچ private key یا secret در جدول ذخیره نمی‌شود. انتخاب SoftwareProtected فقط پس از تأیید صریح و ثبت زمان/عامل مجاز است.
+- InstalledLicense: تاریخچهٔ پاکت‌های معتبر شامل InstallationIdentityId، LicenseId، Sequence، InstallationId، Kid، Algorithm، PayloadJson دقیق امضاشده، SignatureBase64، EnvelopeJson اصلی، PayloadDigest، زمان import، State (Current/Superseded) و RowVersion. قید FK با DeleteBehavior.Restrict به InstallationIdentity؛ unique index روی (InstallationId, Sequence) و (LicenseId, Sequence)، و filtered unique index برای یک Current به ازای هر InstallationId. پاکت نامعتبر در این جدول ذخیره نمی‌شود و فقط رخداد رد در audit ثبت می‌شود.
+- جایگزینی license در تراکنش: ابتدا signature، trusted key، payload، installation binding، sequence، time و revocation اعتبارسنجی می‌شود؛ سپس رکورد قبلی Current به Superseded و رکورد جدید به Current تبدیل و audit ثبت می‌شود. unique filtered index و RowVersion رقابت همزمان را مهار می‌کنند؛ تاریخچه حذف نمی‌شود.
 - restart فقط state را load و دوباره verify می‌کند؛ فایل ورودی دوباره درخواست نمی‌شود مگر نصب identity mismatch/خرابی state/recovery کنترل‌شده.
 - CustomerOfflineRevocationState از D-057 مستقل باقی می‌ماند؛ InstalledLicense جایگزین revocation state store نیست.
 
@@ -265,4 +265,4 @@ erDiagram
 - MachineGuid به‌تنهایی نه راز است و نه اثبات سخت‌افزاری؛ فقط marker کمکی است.
 - طراحی باید marker نصب ویندوز را با کلید نصب non-exportable و امضای challenge/اثبات possession bind کند. Private key در DB، backup عادی، log یا package قرار نمی‌گیرد.
 - نصب مجدد OS با marker جدید، حتی اگر سخت‌افزار ثابت باشد، activation جدید می‌خواهد. patch/update عادی که marker نصب را حفظ کند، activation را حفظ می‌کند.
-- schema نهایی و Migration پس از انتخاب provider و روش recovery در OD-08/Issue #384 نهایی می‌شود.
+- Migration افزایشی مشتری `20261031130000_AddCustomerLicensePersistence` در PR #387 افزوده شده است؛ هیچ جدول Vendor تغییر نمی‌کند. recovery و re-enrollment پس از فقدان کلید همچنان تابع OD-06/OD-08 است.
