@@ -59,6 +59,9 @@ public static class InstallationKeyConsentReceiptVerifier
             !string.Equals(receipt.AssuranceLevel, SoftwareAssuranceLevel, StringComparison.Ordinal) ||
             string.IsNullOrWhiteSpace(receipt.AcceptedBy) ||
             receipt.AcceptedBy.Length > 256 ||
+            receipt.AcceptedBy.Contains('\\n') ||
+            receipt.AcceptedBy.Contains('\\r') ||
+            string.IsNullOrWhiteSpace(receipt.SignatureBase64) ||
             receipt.AcceptedAtUtc == default ||
             receipt.AcceptedAtUtc > nowUtc.ToUniversalTime().AddMinutes(MaximumClockSkewMinutes))
         {
@@ -116,7 +119,7 @@ public static class InstallationKeyConsentReceiptVerifier
                 return false;
             }
         }
-        catch (CryptographicException)
+        catch (Exception exception) when (exception is CryptographicException or ArgumentException)
         {
             errorCode = "installation_public_key_invalid";
             return false;
