@@ -1757,3 +1757,13 @@
 - در foundation، پروژه‌های Domain/Application/Infrastructure، دوره عملیاتی Trade، قراردادهای authorization و entitlement، schema trade و تست‌های معماری/دامنه افزوده شدند.
 - هیچ Migration ساخته یا روی دیتابیس مشتری اجرا نشده؛ Host هنوز adapterها و runtime enforcement را ثبت نمی‌کند.
 - تست‌های محلی .NET/SQL Server در این محیط اجرا نشده‌اند؛ CI شاخه باید build/test را تأیید کند.
+
+
+## 2026-10-31 — اصلاح D-061 طبق D-062: دوره مالی مشترک بازرگانی
+
+- تصمیم جدید مالک محصول ثبت شد: Trade دقیقاً از دوره‌های مالی موجود در Core (FiscalPeriod) و همان انتخاب شرکت/دوره و سیاست WorkContext استفاده می‌کند.
+- مدل، enum و EF configuration دوره مستقل Trade حذف شدند؛ TradeDbContext دیگر DbSet دوره ندارد.
+- قرارداد authorization به FiscalPeriodId مشترک تغییر کرد و scope گزارش چندشرکتی به جفت شرکت/دوره تبدیل شد.
+- مجوزهای trade.period.* حذف شدند؛ مجوزهای فرم/عملیات/گزارش Trade همچنان تخصصی‌اند اما از کاتالوگ و تخصیص نقش مشترک فرانو استفاده می‌کنند.
+- هیچ Migration یا تغییری در جدول FiscalPeriods یا دیتابیس مشتری ایجاد/اجرا نشد.
+- تست معماری برای اطمینان از نبود Entity دوره در Trade جایگزین تست‌های دوره مستقل شد؛ اجرای آن باید در CI تأیید شود.
