@@ -182,3 +182,14 @@
 - [ ] **#394 — online authenticated sync و signed offline file exchange**؛ stale telemetry واضح.
 
 تست‌های واحد/Integration/CI برای هر PR الزامی‌اند. تست واقعی دو میزبان، TPM فیزیکی و recovery drill در انتهای پیاده‌سازی انجام می‌شوند. این چک‌لیست برنامه است، نه ادعای تکمیل.
+
+
+## تکمیل تجربه نصب و معماری سه‌حوزه‌ای D-060
+
+- [ ] **Vendor CRM & Commercial:** چرخه مشتری، قرارداد، سفارش، پرداخت، تمدید و پشتیبانی؛ مالک تجاری entitlement است نه signer.
+- [ ] **Licensing & Entitlement Engine:** قرارداد نسخه‌دار، ظرفیت‌ها، ماژول‌ها، Featureها، amendment، امضا و ابطال.
+- [ ] **Customer Deployment & Sync:** license-first startup، Activation Wizard، مدیر محلی، Cloud API، درخواست/پاسخ فایل آفلاین و ACK.
+- [ ] **#396:** دروازه سمت سرور؛ بدون License به Wizard، با License معتبر به Login، Restricted به مسیر read/export/recovery و وضعیت نامعتبر به recovery/fail-closed.
+- [ ] **Offline file exchange:** درخواست .request.json و پاسخ .license.json؛ .txt فقط wrapper Base64 بایت‌های دقیق signed package.
+
+این موارد در D-060 Accepted هستند اما پیاده‌سازی و Verified محسوب نمی‌شوند. جزئیات در LICENSING_IMPLEMENTATION_PLAN.md.
