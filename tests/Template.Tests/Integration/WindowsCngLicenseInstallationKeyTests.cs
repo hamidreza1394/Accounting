@@ -40,7 +40,7 @@ public sealed class WindowsCngLicenseInstallationKeyTests
         {
             ProviderName = SoftwareKsp,
             KeyVersion = 1,
-            MachineKey = false,
+            MachineKey = true,
         };
 
         try
@@ -54,7 +54,7 @@ public sealed class WindowsCngLicenseInstallationKeyTests
             Assert.Matches("^[a-f0-9]{64}$", created.PublicKeyFingerprint);
             Assert.Matches("^[a-f0-9]{64}$", created.OsInstallationMarkerDigest);
 
-            using (var key = CngKey.Open(created.KeyName, new CngProvider(SoftwareKsp)))
+            using (var key = CngKey.Open(created.KeyName, new CngProvider(SoftwareKsp), CngKeyOpenOptions.MachineKey))
             {
                 Assert.Equal(CngAlgorithm.ECDsaP256, key.Algorithm);
                 Assert.Equal(256, key.KeySize);
@@ -99,7 +99,7 @@ public sealed class WindowsCngLicenseInstallationKeyTests
             {
                 using var key = CngKey.Open(
                     WindowsCngLicenseInstallationKeyProvisioner.GetKeyName(installationId, options.KeyVersion),
-                    new CngProvider(options.ProviderName));
+                    new CngProvider(options.ProviderName), CngKeyOpenOptions.MachineKey);
                 key.Delete();
             }
             catch (CryptographicException)
