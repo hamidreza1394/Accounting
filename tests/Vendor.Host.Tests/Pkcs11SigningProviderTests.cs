@@ -25,6 +25,13 @@ public sealed class Pkcs11SigningProviderTests
 
         options.ProvisioningKey.KeyId = "vendor-package";
         Assert.Throws<InvalidOperationException>(options.Validate);
+
+        options.ProvisioningKey.KeyId = "vendor-package-2026-v1";
+        options.OfflineRevocationKey.KeyId = options.LicenseKey.KeyId;
+        Assert.Throws<InvalidOperationException>(options.Validate);
+
+        options.OfflineRevocationKey.KeyId = "vendor-revocation";
+        Assert.Throws<InvalidOperationException>(options.Validate);
     }
 
     [Fact]
@@ -147,6 +154,29 @@ public sealed class Pkcs11SigningProviderTests
     }
 
     [Fact]
+    public async Task OfflineRevocationProviderUsesItsOwnKeyAndAuditsMetadataOnly()
+    {
+        var payload = Encoding.UTF8.GetBytes("{\\"schemaVersion\\":1,\\"sequence\\":12}");
+        var module = new RecordingPkcs11SigningModule(
+            LicenseSigningResult.Success("vendor-revocation-2026-v1", LicenseAlgorithms.EcdsaP256Sha256, new byte[64]));
+        var audit = new RecordingAuditWriter();
+        var provider = new Pkcs11OfflineRevocationSigningProvider(
+            module,
+            Options.Create(ValidOptions()),
+            audit,
+            NullLogger<Pkcs11OfflineRevocationSigningProvider>.Instance);
+
+        var result = await provider.SignAsync(payload);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(payload, module.LastPayload);
+        Assert.Equal("vendor-revocation-2026-v1", module.LastKey?.KeyId);
+        Assert.Equal("vendor.signing.offline-revocation.vendor-revocation-2026-v1.succeeded", audit.LastRequest?.ActionCode);
+        Assert.Equal("signing_operation", audit.LastRequest?.SubjectType);
+        Assert.Null(audit.LastRequest?.SubjectId);
+    }
+
+    [Fact]
     public async Task AuditFailureDiscardsSuccessfulSignatureAndFailsClosed()
     {
         var module = new RecordingPkcs11SigningModule(
@@ -171,7 +201,8 @@ public sealed class Pkcs11SigningProviderTests
         UserPin = "test-only-pin",
         AssuranceLevel = "Software",
         LicenseKey = new Pkcs11SigningKeyOptions { KeyId = "vendor-license-2026-v1" },
-        ProvisioningKey = new Pkcs11SigningKeyOptions { KeyId = "vendor-package-2026-v1" }
+        ProvisioningKey = new Pkcs11SigningKeyOptions { KeyId = "vendor-package-2026-v1" },
+        OfflineRevocationKey = new Pkcs11SigningKeyOptions { KeyId = "vendor-revocation-2026-v1" }
     };
 
     private sealed class RecordingPkcs11SigningModule(LicenseSigningResult result) : IPkcs11SigningModule
