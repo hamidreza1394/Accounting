@@ -6,7 +6,7 @@ namespace Faranou.Licensing.Contracts;
 
 /// <summary>
 /// Project-specific deterministic UTF-8 JSON for signing (NOT RFC 8785).
-/// Contract v1: fixed DTO property order, camelCase, nulls omitted, subsystems sorted Ordinal,
+/// Contracts v1/v2: fixed DTO property order, camelCase, nulls omitted, subsystems sorted Ordinal; v2 adds the signed installation-key fingerprint,
 /// DateTimeOffset as round-trip "O" UTC. Options are private and not mutable from outside.
 /// </summary>
 public static class CanonicalJson
