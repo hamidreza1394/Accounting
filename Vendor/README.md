@@ -201,3 +201,13 @@ Configuration names include `FARANO_VENDOR_Signing__Pkcs11__AssuranceLevel` (`So
 With `AssuranceLevel=Software`, a software PKCS#11 token (including SoftHSM) is accepted in Development and Staging. Production rejects Software assurance unless `AcceptSoftwareKeyRisk=true` is explicitly set; every such Production startup writes a metadata-only audit event before serving. With `AssuranceLevel=Hardware`, the selected slot must report the hardware-slot flag and its manufacturer/model must exactly match the deployment allowlist. The assurance level is logged at startup and exposed in `/health/signing`. Missing/unknown assurance values fail closed. The default adapter remains disabled/unavailable; do not enable Production signing without completing the approved key ceremony and trust-store configuration. `/health/signing` reports 503 when the provider is disabled or unavailable. Every signing attempt appends a metadata-only Vendor audit action containing purpose, versioned public KeyId, and result; payload bytes and private material are never audited. Audit failure discards the signature and fails closed.
 
 The module serializes token login/session operations because PKCS#11 login state is token-scoped. If the target HSM supports safe parallel sessions, concurrency tuning must be validated against that specific hardware before changing this guard.
+
+
+## Issue #107 — Production audit checkpoint operations
+
+- Production startup requires exactly one IProductionVendorAuditCheckpointStore; no local file, Vendor SQL or fake fallback is permitted.
+- Startup verifies the complete audit chain against the independent checkpoint before the host becomes ready.
+- A background service re-verifies/advances the checkpoint every 300 seconds by default. Configure AuditCheckpoint:IntervalSeconds (30–3600) and AuditCheckpoint:MaximumStalenessSeconds (at least two intervals, default 900).
+- Production exposes /health/audit-checkpoint with only sanitized Healthy/Unhealthy status. External monitoring must alert on Unhealthy, timeout or non-200.
+- scripts/sql/vendor-audit-runtime-permissions.sql configures the runtime principal as append-only on dbo.VendorAuditEvents while keeping migration credentials separate. Run only after DBA review.
+- The independent provider, its credential boundary, retention/immutability policy, notification receiver and restore drill remain deployment blockers. Do not claim Production audit readiness until they are selected and evidenced.
