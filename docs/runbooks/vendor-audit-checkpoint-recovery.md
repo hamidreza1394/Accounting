@@ -83,3 +83,27 @@ Do not close #107 until all of the following are evidenced in the target deploym
 - [ ] Backup and restore drill succeeds, including a deliberate older-database-versus-newer-checkpoint scenario in a test environment.
 - [ ] Runbook values and provider-specific steps are completed without placing secrets in Git.
 - [ ] SQL Server integration tests and all required CI checks pass on the final SHA.
+
+
+## 8. SQL Server append-only runtime permissions
+
+A reviewed starting script is available at scripts/sql/vendor-audit-runtime-permissions.sql. It is not executed automatically and must be reviewed/applied by a DBA against the Vendor database after migrations:
+
+1. Create two distinct database users mapped to separate logins/workload identities: one for Vendor runtime and one for migrations.
+2. Run the script in SQLCMD mode with VendorRuntimeUser and VendorMigrationUser variables.
+3. The runtime user receives db_datareader/db_datawriter for ordinary Vendor application tables, plus membership in VendorAuditAppendOnly. That role grants SELECT/INSERT and denies UPDATE/DELETE/ALTER on dbo.VendorAuditEvents.
+4. The script refuses a runtime principal in sysadmin, db_owner, db_ddladmin, db_securityadmin or db_accessadmin. Do not bypass this check.
+5. The migration principal is deliberately not modified by the script. Keep its DDL permissions out of the running host's connection string.
+6. Validate the resulting effective permissions with a least-privilege test login before deployment. Test that SELECT/INSERT succeeds and UPDATE/DELETE/TRUNCATE/ALTER fails on VendorAuditEvents while required application DML on other tables still works.
+
+This is a SQL permission boundary, not an independent immutable checkpoint sink. It does not protect against sysadmin, database owner, a compromised migration identity or a privileged DBA. The independent checkpoint provider remains mandatory.
+
+
+## 9. Periodic verification and alerting
+
+- Production runs a full chain verification/checkpoint advance at startup and every configured interval (default 300 seconds).
+- Configuration keys: AuditCheckpoint:IntervalSeconds (30–3600) and AuditCheckpoint:MaximumStalenessSeconds (at least two intervals, at most 86400; default 900).
+- The endpoint /health/audit-checkpoint reports only Healthy/Unhealthy and a generic description. It does not expose checkpoint hashes, event details, provider endpoints or credentials.
+- Configure the external monitoring system to poll /health/audit-checkpoint at least once per minute and alert on HTTP 503, Unhealthy, endpoint timeout or prolonged lack of successful verification.
+- A background checkpoint failure records only the exception type, emits a Critical log event without provider message details, and leaves health Unhealthy until a subsequent full verification succeeds.
+- The health endpoint is not a substitute for an alert receiver, on-call ownership or a tested notification path. Those remain deployment-specific.
