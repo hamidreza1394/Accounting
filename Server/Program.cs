@@ -183,6 +183,17 @@ if (!setupRequired)
     // The company and fiscal period a user chose for the current sign-in (D-031). The cookie
     // helper is stateless; the service validates every stored choice against the database.
     builder.Services.TryAddSingleton(TimeProvider.System);
+
+    // Customer-side offline revocation is registered fail-closed. The default anchor is
+    // unavailable until a platform TPM 2.0 NV Extend provider is explicitly supplied.
+    builder.Services.TryAddSingleton<Faranou.Licensing.Contracts.IOfflineRevocationRollbackAnchor,
+        Infrastructure.Licensing.UnavailableOfflineRevocationRollbackAnchor>();
+    builder.Services.TryAddSingleton<Faranou.Licensing.Contracts.IOfflineRevocationKeyResolver,
+        Infrastructure.Licensing.ConfigurationOfflineRevocationKeyResolver>();
+    builder.Services.AddScoped<Faranou.Licensing.Contracts.IOfflineRevocationStateStore,
+        Data.TpmAnchoredOfflineRevocationStateStore>();
+    builder.Services.AddScoped<Faranou.Licensing.Contracts.OfflineRevocationConsumer>();
+    builder.Services.AddScoped<Faranou.Licensing.Contracts.RevocationAwareLicenseEnvelopeValidator>();
     builder.Services.Configure<Infrastructure.Provisioning.CustomerProvisioningSettings>(
         builder.Configuration.GetSection(Infrastructure.Provisioning.CustomerProvisioningSettings.SectionName));
     builder.Services.AddSingleton<Infrastructure.Provisioning.ICustomerProvisioningTrustStore,
