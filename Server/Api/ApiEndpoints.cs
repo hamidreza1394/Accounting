@@ -381,6 +381,9 @@ public static class ApiEndpoints
 		[FromServices] Infrastructure.Licensing.CustomerInstallationIdentityEnrollmentService enrollmentService,
 		CancellationToken cancellationToken)
 	{
+		if (request is null)
+			return TypedResults.Problem(title: "درخواست نامعتبر است.", statusCode: StatusCodes.Status400BadRequest);
+
 		if (!await antiforgery.IsRequestValidAsync(httpContext))
 			return TypedResults.Problem(title: "درخواست نامعتبر است.", statusCode: StatusCodes.Status400BadRequest);
 
@@ -427,6 +430,9 @@ public static class ApiEndpoints
 		[FromServices] Microsoft.Extensions.Options.IOptions<Infrastructure.Provisioning.CustomerProvisioningSettings> settings,
 		CancellationToken cancellationToken)
 	{
+		if (request is null)
+			return TypedResults.Problem(title: "درخواست نامعتبر است.", statusCode: StatusCodes.Status400BadRequest);
+
 		if (!await antiforgery.IsRequestValidAsync(httpContext))
 			return TypedResults.Problem(title: "درخواست نامعتبر است.", statusCode: StatusCodes.Status400BadRequest);
 
@@ -457,7 +463,11 @@ public static class ApiEndpoints
 		var statusCode = result.ErrorCode is "license_audit_unavailable" or
 			"installation_identity_proof_unavailable" or "offline_revocation_unavailable"
 			? StatusCodes.Status503ServiceUnavailable
-			: result.ErrorCode == "license_import_busy"
+			: result.ErrorCode is "license_import_busy" or
+				"license_import_conflict" or "license_import_concurrency_conflict" or
+				"license_sequence_replay_or_downgrade" or
+				"license_id_change_requires_reactivation" or
+				"installation_identity_changed_reactivation_required"
 				? StatusCodes.Status409Conflict
 				: StatusCodes.Status400BadRequest;
 
