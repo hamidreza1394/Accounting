@@ -51,6 +51,7 @@ public static class VendorOfflineRevocationEndpoints
             context.Response.Headers.CacheControl = "no-store";
             context.Response.Headers.Pragma = "no-cache";
             context.Response.Headers.Expires = "0";
+            context.Response.Headers.ContentDisposition = "attachment; filename=\"offline-revocation.json\"";
             return Results.Text(snapshot.EnvelopeJson, "application/json", Encoding.UTF8);
         }).RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.LicensesRead));
 

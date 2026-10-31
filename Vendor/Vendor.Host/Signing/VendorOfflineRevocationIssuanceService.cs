@@ -159,7 +159,24 @@ public sealed class VendorOfflineRevocationIssuanceService(
         if (!hasIssuedEnvelope)
             return VendorOfflineRevocationIssuanceResult.Conflict("license_issuance_record_missing");
 
-        if (!await TryAcquireSequenceLockAsync(cancellationToken))
+        bool sequenceLockAcquired;
+        try
+        {
+            sequenceLockAcquired = await TryAcquireSequenceLockAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException and not AccessViolationException)
+        {
+            logger.LogError(
+                "Offline revocation sequence lock failed with exception type {ExceptionType}.",
+                exception.GetType().Name);
+            return VendorOfflineRevocationIssuanceResult.Unavailable("offline_revocation_sequence_unavailable");
+        }
+
+        if (!sequenceLockAcquired)
             return VendorOfflineRevocationIssuanceResult.Unavailable("offline_revocation_sequence_unavailable");
 
         var previousSequence = await db.SignedRevocationSnapshots.AsNoTracking()
