@@ -46,18 +46,18 @@ public sealed class TradeAuthorizationAdapterTests : IDisposable
     }
 
     [Fact]
-    public async Task OpenPeriod_AllowsWriteWhenCompanyRoleHasTradePermission()
+    public async Task OpenPeriodAllowsWriteWhenCompanyRoleHasTradePermission()
     {
         var permission = TradePermissionCodes.FormUpdate("import-order");
         var company = AddCompany(Domain.FiscalPeriodStatus.Open, [permission]);
         var adapter = CreateAdapter(company.CompanyId, company.PeriodId);
 
         Assert.True(await adapter.HasPermissionAsync(
-            userId, company.CompanyId, company.PeriodId, permission, TradeAccessIntent.Write));
+            userId, company.CompanyId, company.PeriodId, permission, TradeAccessIntent.Write, TestContext.Current.CancellationToken));
     }
 
     [Fact]
-    public async Task ClosedPeriod_AllowsReadButDeniesWriteEvenWhenPermissionIsGranted()
+    public async Task ClosedPeriodAllowsReadButDeniesWriteEvenWhenPermissionIsGranted()
     {
         var viewPermission = TradePermissionCodes.FormView("import-order");
         var writePermission = TradePermissionCodes.FormUpdate("import-order");
@@ -65,13 +65,13 @@ public sealed class TradeAuthorizationAdapterTests : IDisposable
         var adapter = CreateAdapter(company.CompanyId, company.PeriodId);
 
         Assert.True(await adapter.HasPermissionAsync(
-            userId, company.CompanyId, company.PeriodId, viewPermission, TradeAccessIntent.Read));
+            userId, company.CompanyId, company.PeriodId, viewPermission, TradeAccessIntent.Read, TestContext.Current.CancellationToken));
         Assert.False(await adapter.HasPermissionAsync(
-            userId, company.CompanyId, company.PeriodId, writePermission, TradeAccessIntent.Write));
+            userId, company.CompanyId, company.PeriodId, writePermission, TradeAccessIntent.Write, TestContext.Current.CancellationToken));
     }
 
     [Fact]
-    public async Task PeriodFromAnotherCompany_IsRejected()
+    public async Task PeriodFromAnotherCompanyIsRejected()
     {
         var permission = TradePermissionCodes.FormView("import-order");
         var companyA = AddCompany(Domain.FiscalPeriodStatus.Open, [permission]);
@@ -79,7 +79,7 @@ public sealed class TradeAuthorizationAdapterTests : IDisposable
         var adapter = CreateAdapter(companyA.CompanyId, companyB.PeriodId);
 
         Assert.False(await adapter.HasPermissionAsync(
-            userId, companyA.CompanyId, companyB.PeriodId, permission, TradeAccessIntent.Read));
+            userId, companyA.CompanyId, companyB.PeriodId, permission, TradeAccessIntent.Read, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -100,7 +100,7 @@ public sealed class TradeAuthorizationAdapterTests : IDisposable
             userId, scopes, permission, TradeAccessIntent.Read));
 
         AddPermission(companyB.RoleId, permission);
-        await database.SaveChangesAsync();
+        await database.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         Assert.True(await adapter.HasPermissionForAllCompanyPeriodsAsync(
             userId, scopes, permission, TradeAccessIntent.Read));
@@ -117,7 +117,7 @@ public sealed class TradeAuthorizationAdapterTests : IDisposable
             userId,
             [new TradePeriodScope(company.CompanyId, company.PeriodId)],
             permission,
-            TradeAccessIntent.Read));
+            TradeAccessIntent.Read, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -128,7 +128,7 @@ public sealed class TradeAuthorizationAdapterTests : IDisposable
         var adapter = CreateAdapter(company.CompanyId, company.PeriodId);
 
         Assert.False(await adapter.HasPermissionAsync(
-            Guid.NewGuid(), company.CompanyId, company.PeriodId, permission, TradeAccessIntent.Read));
+            Guid.NewGuid(), company.CompanyId, company.PeriodId, permission, TradeAccessIntent.Read, TestContext.Current.CancellationToken));
     }
 
     public void Dispose() => database.Dispose();
