@@ -480,3 +480,10 @@
 - CI روی head نهایی PR #371 با SHA `5d1a5974972978e8cd3f97534a7a3e394404abc0` موفق شد: .NET CI run [41178574826](https://github.com/hamidreza1394/Accounting/actions/runs/41178574826)، Vendor CI run [41178574828](https://github.com/hamidreza1394/Accounting/actions/runs/41178574828)، Semgrep run [41178574818](https://github.com/hamidreza1394/Accounting/actions/runs/41178574818).
 - PR [#369](https://github.com/hamidreza1394/Accounting/pull/369) پس از ثبت توضیح superseded-by-#371 بسته شد؛ هیچ تغییر منحصربه‌فردی از دست نرفت. PR [#370](https://github.com/hamidreza1394/Accounting/pull/370) نیز با موفقیت ادغام شده و شواهد CI مربوط به PR #366 را ثبت می‌کند.
 - محدودیت‌ها: این merge به معنی صدور/ذخیره/انتشار signed revocation snapshot، provision شدن HSM فیزیکی، اجرای Key Ceremony عملیاتی یا اتصال نهایی validator به مسیرهای runtime مشتری نیست. این موارد همچنان در #214/#236/#364 پیگیری می‌شوند؛ provider پیش‌فرض fail-closed باقی می‌ماند.
+
+
+## 2026-10-31 — Issue #364: safe customer license validation DI contract
+- PR in progress: `feat/issue-364-revocation-aware-validation-contract` introduces `ICustomerLicenseEnvelopeValidator` and exposes only the revocation-aware pipeline through Server DI; the raw validator is no longer directly injectable.
+- A focused static audit found that no production runtime call-site currently consumes the validator/evaluator and there is no customer license-envelope storage/import endpoint/shared authorization policy. This is consistent with `docs/LICENSING.md` marking the customer installation license module NotImplemented.
+- Full runtime enforcement requires an explicit design decision for local signed-file vs customer DB storage, import/replace authorization and audit, installation identity binding, and the still-unapproved OD-03/04 expiry restrictions. Do not invent global middleware behavior that could lock out setup or change commercial access policy.
+- TPM state store and adapters are in main; actual hardware NV provisioning, secret delivery/rotation and real Windows/Linux TPM proof remain NotVerified.
