@@ -137,6 +137,7 @@ public static class VendorApprovalEndpoints
             IAntiforgery antiforgery, IAuthorizationService authorization,
             VendorDbContext db, UserManager<VendorAdminUser> users,
             IVendorAuditWriter audit, VendorLicenseIssuanceService licenseIssuance,
+            VendorLicenseRevocationService licenseRevocation,
             VendorProvisioningIssuanceService provisioningIssuance, CancellationToken ct) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context))
@@ -264,10 +265,19 @@ public static class VendorApprovalEndpoints
                     return Results.Ok(ToResponse(approval));
                 }
 
-                // Offline revocation semantics require a signed revocation artifact or a defined
-                // online revocation contract; do not mark a license revoked without that capability.
-                return Results.Json(new { error = "license_revocation_unavailable" },
-                    statusCode: StatusCodes.Status503ServiceUnavailable);
+                if (approval.TargetStatus == "Revoked")
+                {
+                    var revocation = await licenseRevocation.RevokeApprovedAsync(
+                        approval, actor.Id, expectedApprovalVersion,
+                        request.Comment, CorrelationId(), ct);
+                    if (!revocation.Succeeded)
+                        return Results.Json(new { error = revocation.ErrorCode }, statusCode: revocation.StatusCode);
+
+                    await tx.CommitAsync(ct);
+                    return Results.Ok(ToResponse(approval));
+                }
+
+                return Results.Conflict(new { error = "invalid_license_approval_target" });
             }
 
             var now = DateTimeOffset.UtcNow;
