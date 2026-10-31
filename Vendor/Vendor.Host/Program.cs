@@ -1,5 +1,6 @@
 using System.Threading.RateLimiting;
 using System.Text.Json;
+using Faranou.Licensing.Contracts;
 using Faranou.Vendor.Host.Authentication;
 using Faranou.Vendor.Host.Authorization;
 using Faranou.Vendor.Host.Bootstrap;
@@ -126,11 +127,14 @@ builder.Services.AddSingleton(sp =>
         .Get<ProvisioningPackageSigningTrustedKeyOptions[]>() ?? [];
     return new ProvisioningPackageSigningTrustStore(configuredKeys);
 });
-// License signing public keys are configured independently from the private KMS/HSM signer.
+// License and offline-revocation public keys use independent trust stores.
 builder.Services.AddSingleton<LicenseSigningTrustStore>();
+builder.Services.AddSingleton<IOfflineRevocationKeyResolver, VendorOfflineRevocationKeyResolver>();
 builder.Services.AddScoped<VendorProvisioningLicenseResolver>();
 builder.Services.AddScoped<VendorLicenseEnvelopeFactory>();
 builder.Services.AddScoped<VendorLicenseIssuanceService>();
+builder.Services.AddScoped<VendorOfflineRevocationEnvelopeFactory>();
+builder.Services.AddScoped<VendorOfflineRevocationIssuanceService>();
 builder.Services.AddScoped<VendorProvisioningIssuanceService>();
 // SignInManager belongs to the ASP.NET Core host layer, not the persistence class library.
 // Sign-in manager and token providers are host-layer Identity services; register them on the same IdentityBuilder.
