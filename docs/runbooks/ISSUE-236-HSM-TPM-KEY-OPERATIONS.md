@@ -162,3 +162,39 @@
 - مدل و سازندهٔ HSM، محل فیزیکی، HA/DR و قرارداد پشتیبانی هنوز انتخاب نشده‌اند؛ در نتیجه بخش‌های HSM این Runbook فعلاً **قابل اجرا نیستند**.
 - Customer ACK production signing نیز تا پیاده‌سازی و اثبات backend غیرقابل‌استخراج TPM/OS و trust enrollment آفلاین فعال نمی‌شود.
 - این سند راهنمای عملیاتی است؛ اجرای آن بدون HSM واقعی، دو Custodian و تأیید Security Owner مجاز نیست.
+
+## 13. Customer offline-revocation TPM NV Extend index (D-057 / Issue #364)
+
+این NV index با کلید امضای ACK یا کلید رمزنگاری/امضای TPM مشتری یکی نیست. کاربرد آن فقط ثبت hash-chain غیرقابل بازگشت برای وضعیت ابطال آفلاین است.
+
+### 13.1 مشخصات index و مالکیت
+
+- نوع NV index: TPM_NT_EXTEND، الگوریتم نام/هش SHA-256، اندازهٔ NV برابر 32 بایت.
+- مقدار اولیه باید 32 بایت صفر باشد؛ runtime در صورت مقدار اولیهٔ متفاوت، وضعیت را Unavailable می‌کند و مجاز به reset یا redefine نیست.
+- Runtime فقط مجوز Read و Extend روی همان index را دریافت می‌کند. مجوز Owner/Platform برای Define/Undefine/ChangeAuth فقط در Ceremony اپراتور مجاز باقی می‌ماند.
+- Authorization باید با TPM policy مناسب به هویت سرویس محدود شود؛ PIN/auth value در command line، appsettings، Git، log یا telemetry قرار نمی‌گیرد. تحویل secret از Windows Credential Manager/DPAPI سازمانی یا systemd credentials/secret manager انجام می‌شود.
+- NV index باید از هر backup دیتابیس مشتری مستقل باشد. Backup دیتابیس شامل envelope و anchor digestهاست، نه NV state یا TPM authorization.
+
+### 13.2 Ceremony تعریف index
+
+1. دو Custodian مجاز هویت TPM، firmware، فعال‌بودن TPM 2.0، SHA-256 و دسترسی runtime را ثبت کنند.
+2. index با handle رزروشده و ثبت‌شده در inventory سازمان تعریف شود؛ انتخاب handle نباید با indexهای موجود تداخل داشته باشد.
+3. TPM_NT_EXTEND، SHA-256 و dataSize=32 و policyهای Read/Extend/عدم امکان حذف توسط runtime بررسی شوند.
+4. یک مقدار آزمایشی غیرعملیاتی Extend شود؛ read-back باید دقیقاً با SHA-256 مقدار قبلی به‌علاوه extension data برابر باشد.
+5. index عملیاتی فقط با مقدار صفر provision شود. پس از پذیرش اولین snapshot، هرگز به صفر برگردانده یا دوباره تعریف نمی‌شود.
+6. handle، policy digest، fingerprint عمومی TPM، مدل/firmware، Custodianها و نتیجهٔ آزمون ثبت شود؛ هیچ auth value یا secret ثبت نشود.
+
+### 13.3 Runtime و Recovery
+
+- Windows: ارتباط فقط از TPM Base Services (TBS) و بدون fallback نرم‌افزاری.
+- Linux: ارتباط مستقیم با TPM resource manager مانند /dev/tpmrm0؛ هیچ TCP simulator یا device fallback مجاز نیست.
+- هر عملیات Extend باید current digest را بخواند، مقدار مورد انتظار را کنترل کند، دقیقاً یک NV_Extend انجام دهد و مقدار را مجدداً بخواند.
+- Crash قبل از Extend با pending معتبر و TPM digest قبلی recover می‌شود؛ crash پس از Extend با TPM digest مورد انتظار finalize می‌شود. هر مقدار دیگر، missing pending، mismatch یا خطای TPM fail-closed است.
+- TPM Clear، تعویض سخت‌افزار، حذف index یا فقدان authorization با تعریف index جدید و restore دیتابیس حل نمی‌شود. نصب باید وارد فرایند recovery/re-enrollment کنترل‌شده شود.
+- قبل از Production، آزمون فیزیکی Windows 10/11، Windows Server و Linux، power-loss در هر crash window، restore backup قدیمی، TPM clear و عدم امکان Undefine توسط Runtime الزامی است.
+
+### 13.4 وضعیت فعلی
+
+- D-057 پذیرفته شده و migration/state store customer-side در شاخهٔ Issue #364 در حال پیاده‌سازی است.
+- قرارداد NV Extend و default provider unavailable/fail-closed ثبت شده است.
+- Backend واقعی TBS/Linux، provisioning command/ceremony اجرایی و تست روی TPM سخت‌افزاری هنوز NotImplemented / NotVerified هستند. تا آن زمان هیچ نصب Production نباید این کنترل را فعال یا ادعای anti-rollback سخت‌افزاری کند.
