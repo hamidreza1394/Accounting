@@ -221,4 +221,4 @@
 - D-057 پذیرفته شده و migration/state store customer-side در شاخهٔ Issue #364 در حال پیاده‌سازی است.
 - قرارداد NV Extend و default provider unavailable/fail-closed ثبت شده است.
 - Adapter با Microsoft.TSS پیاده‌سازی شده است: Windows از TBS و Linux از device محلی strict استفاده می‌کند؛ LinuxTpmDevice کتابخانه استفاده نمی‌شود چون امکان fallback به simulator دارد. Runtime هیچ مسیر TCP یا simulator ندارد.
-- NV index provisioning ceremony اجرایی و تست روی TPM سخت‌افزاری هنوز NotImplemented / NotVerified هستند. تا آن زمان هیچ نصب Production نباید این کنترل را فعال یا ادعای anti-rollback سخت‌افزاری کند.
+- ابزار create-only provisioning برای Windows/TBS و Linux/tpm2-tools اضافه شده است؛ provisioning واقعی، secret delivery/rotation و تست روی TPM سخت‌افزاری هنوز NotVerified هستند. تا آن زمان هیچ نصب Production نباید این کنترل را فعال یا ادعای anti-rollback سخت‌افزاری کند.
