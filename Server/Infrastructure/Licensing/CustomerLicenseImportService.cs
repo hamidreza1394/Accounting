@@ -84,7 +84,7 @@ public sealed class CustomerLicenseImportService
                 localInstallationId, validation.Payload.LicenseId, actorUserId, cancellationToken);
 
         var payload = validation.Payload;
-        var payloadDigest = Convert.ToHexString(
+        var payloadDigest = System.Convert.ToHexString(
             SHA256.HashData(Encoding.UTF8.GetBytes(envelope.PayloadJson))).ToLowerInvariant();
 
         IDbContextTransaction? transaction = null;
@@ -293,7 +293,7 @@ public sealed class CustomerLicenseImportService
         UserId = actorUserId,
         EventType = eventType,
         EntityType = "Installation",
-        EntityId = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(installationId))).ToLowerInvariant(),
+        EntityId = System.Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(installationId))).ToLowerInvariant(),
         OccurredAtUtc = occurredAtUtc,
         DetailsJson = JsonSerializer.Serialize(new
         {
