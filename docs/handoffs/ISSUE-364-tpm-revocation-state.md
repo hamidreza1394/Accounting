@@ -91,3 +91,14 @@
 - کد state store و TPM anti-rollback در main قرار دارد؛ این milestone نرم‌افزاری تکمیل شد.
 - CI نهایی هر سه pipeline موفق است؛ لینک‌ها: [.NET CI](https://github.com/hamidreza1394/Accounting/actions/runs/41175579282)، [Vendor CI](https://github.com/hamidreza1394/Accounting/actions/runs/41175579288)، [Semgrep](https://github.com/hamidreza1394/Accounting/actions/runs/41175579255).
 - Issue #364 همچنان باز می‌ماند تا آزمون روی TPM واقعی، provisioning NV index و مدیریت secret، و اتصال call-site واقعی مشتری به RevocationAwareLicenseEnvelopeValidator انجام و شواهد ثبت شود.
+
+
+## 2026-10-31 — narrow the customer runtime DI bypass surface
+
+- Added `ICustomerLicenseEnvelopeValidator` as the only customer runtime validation contract; `RevocationAwareLicenseEnvelopeValidator` implements it.
+- Removed direct DI registration of raw `LicenseEnvelopeValidator`. Server DI now creates the raw validator only as an internal dependency of the revocation-aware pipeline and exposes only `ICustomerLicenseEnvelopeValidator` to runtime consumers. This prevents a future consumer from accidentally resolving the raw signature/time validator and bypassing revocation checks.
+- Updated a contract test to consume the safe interface and still assert fail-closed behavior when no current revocation snapshot exists.
+- **Static architecture audit:** no production call-site currently consumes `LicenseEnvelopeValidator`, `RevocationAwareLicenseEnvelopeValidator`, `LicenseEvaluator` or `ICustomerLicenseEnvelopeValidator`. There is also no customer license-envelope file store, DbSet/table, import endpoint or shared authorization policy. `docs/LICENSING.md` correctly marks the installation license module as `NotImplemented`.
+- **Why full enforcement is not safe to invent in this slice:** D-025 describes local-file licensing or cloud central storage, but no approved file path/import/admin workflow is implemented. OD-03/04 restrictions after expiry are still `NeedsApproval`; a middleware that blocks all requests or turns expired states into read-only access would invent commercial policy and could lock out initial setup.
+- **Remaining required design/implementation:** agree the customer license envelope source (local signed file vs a new customer DB table), import/replace authorization and audit, installation identity binding, shared authorization policy for valid/grace/restricted/missing states, and real endpoint call-sites. Then add integration tests proving revoked/missing/expired snapshot denies protected operations.
+- TPM NV state persistence/adapter remains implemented but hardware provisioning, secret delivery/rotation and real Windows/Linux TPM verification remain NotVerified.
