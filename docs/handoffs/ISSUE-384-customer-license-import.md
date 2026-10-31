@@ -3,7 +3,7 @@
 - **Issue:** [#384](https://github.com/hamidreza1394/Accounting/issues/384)
 - **Agent/مسئول:** ChatGPT
 - **تاریخ:** 2026-10-31
-- **وضعیت:** پیاده‌سازی اولیه در شاخه؛ CI و بازبینی نهایی در انتظار
+- **وضعیت:** پیاده‌سازی اولیه در شاخه؛ اصلاح خطاهای CI روی head جدید انجام شده؛ CI نهایی در انتظار
 
 ## هدف و معیارهای پذیرش
 - [x] استفاده از schema مشتری ادغام‌شده در PR #387؛ بدون تغییر Vendor schema.
@@ -22,7 +22,7 @@
 - شاخه کاری `feat/issue-384-customer-license-import` شامل enrollment هویت نصب و import/replace لایسنس است.
 - APIهای جدید زیر `/api/v1/licensing/installation-identity/enroll` و `/api/v1/licensing/import` هستند؛ هر دو فقط برای AccountKind=Infrastructure، با Anti-forgery، rate limit و no-store.
 - InstallationId از `Provisioning:InstallationId` سمت سرور خوانده می‌شود؛ از بدنه درخواست گرفته نمی‌شود.
-- Grace/Restricted تا تعیین تکلیف OD-03/04 فعال نمی‌شوند.
+- طبق D-059، envelope امضاشده با status برابر Restricted پذیرفته و ذخیره می‌شود تا runtime به حالت read/export/recovery برود؛ Grace رد می‌شود چون grace ضمنی پذیرفته نشده است.
 
 ## فایل‌های مهم تغییرکرده
 - `Server/Infrastructure/Licensing/CustomerInstallationIdentityEnrollmentService.cs` — ثبت metadata کلید نصب موجود و rotation نسخه‌دار، با تراکنش و audit.
@@ -42,7 +42,7 @@
 - جایگزینی identity مستلزم KeyVersion بالاتر است؛ هویت قبلی Retired و هویت جدید Current می‌شود.
 - اعتبارسنجی از `ICustomerLicenseEnvelopeValidator` عبور می‌کند؛ مسیر raw signature validator به مصرف‌کننده تزریق نمی‌شود.
 - sequence باید از بیشترین sequence ثبت‌شده برای InstallationId بیشتر باشد؛ LicenseId موجود در جریان replace تغییر نمی‌کند.
-- تنها statusهای Valid و ExpiringSoon برای import پذیرفته می‌شوند. Grace/Restricted تا تصمیم مالک محصول رد می‌شوند.
+- statusهای Valid، ExpiringSoon و Restricted برای import پذیرفته می‌شوند؛ Grace رد می‌شود. پذیرش Restricted به معنی پیاده‌سازی runtime restricted-mode نیست.
 
 ## بررسی و آزمون
 | فرمان/آزمون | نتیجه واقعی | توضیح/کد خروج |
