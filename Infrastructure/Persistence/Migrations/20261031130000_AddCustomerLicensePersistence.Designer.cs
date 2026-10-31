@@ -1027,6 +1027,8 @@ namespace Data.Migrations
 
                 b.HasKey("Id");
 
+                b.HasAlternateKey("Id", "InstallationId");
+
                 b.HasIndex("InstallationId", "KeyVersion")
                     .IsUnique();
 
@@ -1130,7 +1132,7 @@ namespace Data.Migrations
                     .IsUnique()
                     .HasFilter("[State] = 'Current'");
 
-                b.HasIndex("InstallationIdentityId");
+                b.HasIndex("InstallationIdentityId", "InstallationId");
 
                 b.ToTable("InstalledLicenses");
             });
@@ -1574,7 +1576,8 @@ namespace Data.Migrations
             {
                 b.HasOne("Domain.InstallationIdentity", null)
                     .WithMany()
-                    .HasForeignKey("InstallationIdentityId")
+                    .HasForeignKey("InstallationIdentityId", "InstallationId")
+                    .HasPrincipalKey("Id", "InstallationId")
                     .OnDelete(DeleteBehavior.Restrict)
                     .IsRequired();
             });
