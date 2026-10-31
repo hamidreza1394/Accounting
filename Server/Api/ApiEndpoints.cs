@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Server.Api.Trade;
 
 namespace Server.Api;
 
@@ -51,6 +52,7 @@ public static class ApiEndpoints
 		api.MapGet("/companies", GetCompaniesAsync);
 		api.MapGet("/companies/{companyId:guid}/overview", GetCompanyOverviewAsync);
 		api.MapWorkContextEndpoints();
+		api.MapTradeEndpoints();
 		api.MapCustomerBoundaryEndpoints();
 		api.MapGet("/provisioning/enrollment/antiforgery", GetAntiforgeryToken)
 			.AllowAnonymous()

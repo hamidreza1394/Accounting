@@ -7,6 +7,7 @@
 - **رفتار Migration:** فقط PermissionDefinitions درج می‌شود؛ هیچ CompanyRolePermission یا تخصیص نقش ایجاد نمی‌شود. Down فقط ردیف‌های متعلق به همین Migration را که هیچ نقش شرکتی به آن‌ها ارجاع نداده حذف می‌کند.
 - **موارد باقی‌مانده S1:** entitlement runtime و API/route gating در #401 (وابسته به قرارداد #390 و مسیر پذیرش/اعتبارسنجی #384)، و UI تخصیص مجوزها. کاتالوگ به‌تنهایی مجوزدهی عملیاتی را فعال نمی‌کند.
 - **محدودیت Migration:** Migration فقط به مخزن افزوده شده و روی هیچ دیتابیس مشتری اجرا نشده است. Migrationهای TradeDbContext و ثبت DI/design-time آن همچنان در کار بعدی هستند.
+- **S1-a (Issue #403، شاخه `feat/issue-403-trade-access-gate`):** دروازه دسترسی Trade با ترتیب نشست ← عضویت ← WorkContext/دوره ← entitlement ← مجوز، `DenyAllTradeModuleEntitlement` و endpoint capabilities پیاده‌سازی شده‌اند. وضعیت: Implemented محلی؛ تست‌های محلی موفق، CI و SQL Server اجرا نشده؛ Verified نیست. **Blocked:** استخراج entitlement `TRADE_IMPORT` از LicenseEnvelope به #390 و حالت لایسنس runtime وابسته است؛ تا آن زمان Trade در همه محیط‌ها بسته است.
 
 ---
 
