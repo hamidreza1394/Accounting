@@ -23,6 +23,82 @@ public sealed class VendorOfflineRevocationIssuanceService(
     IVendorAuditWriter audit,
     TimeProvider timeProvider)
 {
+    public async Task<VendorOfflineRevocationIssuanceResult> EnsureInitialSnapshotAsync(
+        Guid actorUserId,
+        string correlationId,
+        CancellationToken cancellationToken)
+    {
+        if (db.Database.CurrentTransaction is null)
+            throw new InvalidOperationException("Initial revocation snapshot must run inside a Vendor database transaction.");
+        if (actorUserId == Guid.Empty)
+            return VendorOfflineRevocationIssuanceResult.Conflict("revocation_snapshot_actor_required");
+
+        if (!await AcquireSequenceLockAsync(cancellationToken).ConfigureAwait(false))
+            return VendorOfflineRevocationIssuanceResult.Unavailable("offline_revocation_sequence_lock_unavailable");
+
+        var currentSequence = await db.OfflineRevocationSnapshots
+            .Select(item => (long?)item.Sequence)
+            .MaxAsync(cancellationToken) ?? 0;
+        if (currentSequence > 0)
+            return VendorOfflineRevocationIssuanceResult.Success(currentSequence);
+        if (currentSequence == long.MaxValue)
+            return VendorOfflineRevocationIssuanceResult.Conflict("offline_revocation_sequence_exhausted");
+
+        var revokedLicenseIds = await db.Licenses.AsNoTracking()
+            .Where(item => item.Status == "Revoked")
+            .Select(item => item.Id)
+            .ToListAsync(cancellationToken);
+        if (revokedLicenseIds.Count > OfflineRevocationListValidator.MaxRevokedLicenseIds)
+            return VendorOfflineRevocationIssuanceResult.Conflict("offline_revocation_snapshot_limit_exceeded");
+
+        var now = timeProvider.GetUtcNow().ToUniversalTime();
+        var payload = new OfflineRevocationList(
+            OfflineRevocationListValidator.CurrentSchemaVersion,
+            Guid.NewGuid().ToString("D"),
+            1,
+            now,
+            now.AddDays(30),
+            revokedLicenseIds
+                .Select(id => id.ToString("D"))
+                .Order(StringComparer.Ordinal)
+                .ToArray());
+        var creation = await envelopeFactory.CreateAsync(payload, 0, cancellationToken).ConfigureAwait(false);
+        if (!creation.Succeeded || creation.Envelope is null)
+        {
+            return creation.StatusCode == StatusCodes.Status503ServiceUnavailable
+                ? VendorOfflineRevocationIssuanceResult.Unavailable(
+                    creation.ErrorCode ?? "offline_revocation_signing_unavailable")
+                : VendorOfflineRevocationIssuanceResult.Conflict(
+                    creation.ErrorCode ?? "offline_revocation_snapshot_invalid");
+        }
+
+        var envelope = creation.Envelope;
+        var payloadBytes = Encoding.UTF8.GetBytes(envelope.PayloadJson);
+        var snapshot = new VendorOfflineRevocationSnapshot
+        {
+            Id = Guid.NewGuid(),
+            Sequence = payload.Sequence,
+            KeyId = envelope.KeyId,
+            Algorithm = envelope.Algorithm,
+            EnvelopeJson = JsonSerializer.Serialize(envelope, JsonSerializerOptions.Web),
+            PayloadSha256 = Convert.ToHexString(SHA256.HashData(payloadBytes)).ToLowerInvariant(),
+            IssuedAtUtc = payload.IssuedAtUtc,
+            ExpiresAtUtc = payload.ExpiresAtUtc,
+            CreatedAtUtc = now
+        };
+        db.OfflineRevocationSnapshots.Add(snapshot);
+        await db.SaveChangesAsync(cancellationToken);
+
+        await audit.AppendAsync(new VendorAuditWriteRequest(
+            actorUserId,
+            "vendor.revocation.snapshot.initialized",
+            nameof(VendorOfflineRevocationSnapshot),
+            snapshot.Id.ToString("D"),
+            correlationId), cancellationToken);
+
+        return VendorOfflineRevocationIssuanceResult.Success(payload.Sequence);
+    }
+
     public async Task<VendorOfflineRevocationIssuanceResult> RevokeApprovedAsync(
         VendorApprovalRequest approval,
         Guid reviewerUserId,
