@@ -2,6 +2,8 @@ using System.Diagnostics;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Auditing;
 using Faranou.Vendor.Persistence.Domain;
+using Faranou.Vendor.Persistence.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace Faranou.Vendor.Host.Authorization;
@@ -17,8 +19,12 @@ public static class VendorOfflineRevocationEndpoints
             HttpContext context,
             VendorDbContext db,
             IVendorAuditWriter audit,
+            UserManager<VendorAdminUser> users,
             CancellationToken cancellationToken) =>
         {
+            var actor = await users.GetUserAsync(context.User);
+            if (actor is null) return Results.Forbid();
+
             await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
             var snapshot = await db.OfflineRevocationSnapshots.AsNoTracking()
                 .OrderByDescending(item => item.Sequence)
@@ -31,16 +37,16 @@ public static class VendorOfflineRevocationEndpoints
             }
 
             await audit.AppendAsync(new VendorAuditWriteRequest(
-                null,
+                actor.Id,
                 "vendor.revocation.snapshot.exported",
                 nameof(VendorOfflineRevocationSnapshot),
                 snapshot.Id.ToString("D"),
                 CorrelationId()), cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 
-            context.Response.Headers.CacheControl = "no-store, no-cache";
-            context.Response.Headers.Pragma = "no-cache";
-            context.Response.Headers.Expires = "0";
+            context.Response.Headers["Cache-Control"] = "no-store, no-cache";
+            context.Response.Headers["Pragma"] = "no-cache";
+            context.Response.Headers["Expires"] = "0";
             return Results.Content(snapshot.EnvelopeJson, "application/json; charset=utf-8");
         }).RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.LicensesIssue));
 
