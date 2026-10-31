@@ -14,5 +14,8 @@
     <ProjectReference Include="..\..\Dtat\Dtat.csproj" />
     <ProjectReference Include="..\..\Infrastructure\Persistence\Infrastructure.Persistence.csproj" />
     <ProjectReference Include="..\..\Server\Server.csproj" />
+    <ProjectReference Include="..\..\Modules\Trade\Trade.Domain\Trade.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules\Trade\Trade.Application\Trade.Application.csproj" />
+    <ProjectReference Include="..\..\Modules\Trade\Trade.Infrastructure\Trade.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

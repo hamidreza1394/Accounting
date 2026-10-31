@@ -1747,3 +1747,33 @@
 - All 7 CI jobs succeeded: secret-scan, client, build-and-test, publish-scripts, e2e, publish and publish-windows. Earlier compile/test fixture failures were fixed before merge.
 - Customer installation identity enrollment and durable license import/replace are now on main. This does not imply startup gate, startup reload/revalidation, accounting-operation enforcement or Cloud authority are complete.
 - Physical TPM, independent two-host and recovery drills remain deferred to the final operational test phase.
+
+
+## 2026-10-31 — Issue #397 / D-061: آغاز ماژول بازرگانی خارجی در Accounting
+
+- مالک محصول انتقال توسعه بازرگانی خارجی به مخزن Accounting، ماژول مستقل، کد لایسنس TRADE_IMPORT، دیتابیس فیزیکی مشترک و جداسازی داده با TenantId، دوره‌های عملیاتی مستقل، مجوزهای سطح شرکت/دوره/فرم و گزارش‌های تک‌شرکتی/چندشرکتی را تأیید کرد.
+- تصمیم اجرایی: فاز اول Modular Monolith با مرزهای استخراج‌پذیر به Microservice؛ این تصمیم D-002 را برای هسته فعلی حفظ می‌کند و ساخت سرویس توزیع‌شده/دیتابیس جدا/Event Bus را تا نیاز واقعی Deferred می‌کند.
+- Issue #397 و شاخه feat/issue-397-trade-module-boundary ایجاد شدند.
+- در foundation، پروژه‌های Domain/Application/Infrastructure، دوره عملیاتی Trade، قراردادهای authorization و entitlement، schema trade و تست‌های معماری/دامنه افزوده شدند.
+- هیچ Migration ساخته یا روی دیتابیس مشتری اجرا نشده؛ Host هنوز adapterها و runtime enforcement را ثبت نمی‌کند.
+- تست‌های محلی .NET/SQL Server در این محیط اجرا نشده‌اند؛ CI شاخه باید build/test را تأیید کند.
+
+
+## 2026-10-31 — اصلاح D-061 طبق D-062: دوره مالی مشترک بازرگانی
+
+- تصمیم جدید مالک محصول ثبت شد: Trade دقیقاً از دوره‌های مالی موجود در Core (FiscalPeriod) و همان انتخاب شرکت/دوره و سیاست WorkContext استفاده می‌کند.
+- مدل، enum و EF configuration دوره مستقل Trade حذف شدند؛ TradeDbContext دیگر DbSet دوره ندارد.
+- قرارداد authorization به FiscalPeriodId مشترک تغییر کرد و scope گزارش چندشرکتی به جفت شرکت/دوره تبدیل شد.
+- مجوزهای trade.period.* حذف شدند؛ مجوزهای فرم/عملیات/گزارش Trade همچنان تخصصی‌اند اما از کاتالوگ و تخصیص نقش مشترک فرانو استفاده می‌کنند.
+- هیچ Migration یا تغییری در جدول FiscalPeriods یا دیتابیس مشتری ایجاد/اجرا نشد.
+- تست معماری برای اطمینان از نبود Entity دوره در Trade جایگزین تست‌های دوره مستقل شد؛ اجرای آن باید در CI تأیید شود.
+
+
+## 2026-10-31 — اتصال authorization بازرگانی به هسته فرانو
+
+- `TradeAuthorizationAdapter` در Host اضافه شد و `ITradeAuthorization` از DI قابل دریافت است.
+- شناسه کاربر ورودی با کاربر principal احراز‌شده تطبیق داده می‌شود؛ برای عملیات تک‌شرکتی، WorkContext محافظت‌شده با `WorkContextService` دوباره از دیتابیس اعتبارسنجی و شرکت/دوره جاری با scope عملیات تطبیق داده می‌شود.
+- مجوز نقش با `CompanyAccessService` و `CompanyRolePermissions` سنجیده می‌شود؛ مجوز دوره موازی ساخته نشده است.
+- `TradeAccessIntent` خواندن/نوشتن را صریح می‌کند؛ دوره Closed برای Read مجاز و برای Write رد می‌شود. گزارش چندشرکتی، permission را در تمام شرکت‌ها و تعلق هر FiscalPeriod به TenantId را به‌صورت all-or-nothing کنترل می‌کند.
+- تست‌های adapter برای دوره Open/Closed، دوره متعلق به شرکت دیگر، تطبیق principal و مجوز همه شرکت/دوره‌ها افزوده شدند.
+- کاتالوگ/seed کدهای Trade، UI تخصیص permission به نقش، مصرف adapter در API/use case، entitlement runtime و تست SQL Server هنوز باقی‌اند. هیچ Migration یا تغییر دیتابیس اجرا نشده است.

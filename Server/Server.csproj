@@ -19,6 +19,7 @@
 		<ProjectReference Include="..\Domain\Domain.csproj" />
 		<ProjectReference Include="..\Constants\Constants.csproj" />
 		<ProjectReference Include="..\Licensing.Contracts\Licensing.Contracts.csproj" />
+		<ProjectReference Include="..\Modules\Trade\Trade.Application\Trade.Application.csproj" />
 		<ProjectReference Include="..\Resources\Resources.csproj" />
 		<ProjectReference Include="..\ViewModels\ViewModels.csproj" />
 	</ItemGroup>

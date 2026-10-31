@@ -160,3 +160,23 @@ flowchart LR
 - **تصمیم دسترسی:** همه از `CompanyAccessService` (عضویت فعال + `HasPermissionAsync`)؛ عضویت شرکت در گروه دسترسی نمی‌دهد (D-034).
 - **مرز نصب:** نصب فقط مرز استقرار/دیتابیس است، نه مرز مشتری؛ مشتری/مستأجر همان `CustomerAccount` (D-020، `NotImplemented`) است و فقط در نصب اختصاصی با نصب منطبق است. گروه فقط شرکت‌های همان دیتابیس را می‌پذیرد؛ نصب‌های دیگر فقط از راه بسته داده امضاشده در آینده (D-035). معماری توزیع‌شده پیاده نشد. گروه/مالکیت بین شرکت‌های چند مشتری در نصب ابری مشترک تصمیم باز (`NeedsApproval`) و پیش‌شرط API/UI گروه است (D-033 اصلاح، `CORPORATE_GROUPS.md` ۶.۱).
 - **خارج از این مرحله:** API/UI گروه، دفتر و سند، گزارش عددی، تعدیلات، تطبیق درون‌گروهی (`docs/CORPORATE_GROUPS.md` بخش ۸).
+
+
+## ماژول بازرگانی خارجی — D-061 / Issue #397
+
+### مرز اجرایی فاز اول
+- Trade یک Bounded Context مستقل درون مخزن است؛ Domain/Application/Infrastructure آن در Modules/Trade نگهداری می‌شود.
+- در فاز اول همان Host و همان SQL Server database استفاده می‌شود؛ جدول‌های Trade فقط در schema trade قرار می‌گیرند و TradeDbContext/Migration history خود را دارند.
+- پروژه‌های Trade به پروژه‌های حسابداری، Server یا Infrastructure/Persistence حسابداری Reference نمی‌دهند. Host بعداً adapterهای authorization، entitlement و composition را پیاده می‌کند.
+- فعلاً Event Bus، broker، سرویس توزیع‌شده یا دیتابیس جدا اضافه نمی‌شود. مرزهای داخلی و قراردادهای port، مسیر استخراج آینده را حفظ می‌کنند.
+
+### مرزهای امنیتی و داده
+- در این مخزن Company.Id = TenantId؛ هر رکورد شرکت‌محور Trade باید TenantId داشته باشد.
+- طبق D-013، Global Query Filter عمداً مرز امنیتی نیست؛ queryهای Trade باید TenantId تأییدشده را صریحاً اعمال کنند.
+- `TradeAuthorizationAdapter` در Host از principal احراز‌شده، `WorkContextService` و `CompanyAccessService` استفاده می‌کند؛ شناسه‌های کلاینت فقط درخواست‌اند، نه منبع مجوز. این adapter هنوز به endpointهای تجاری متصل نشده است.
+- TRADE_IMPORT entitlement تجاری است و از permissionهای فرم/عملیات/گزارش جدا می‌ماند.
+- Trade از همان `Domain.FiscalPeriod` و `WorkContext` هسته استفاده می‌کند؛ هیچ موجودیت یا انتخابگر دوره مستقل ندارد (D-062). مجوزهای تخصصی فرم/عملیات بازرگانی در کاتالوگ مشترک نقش‌های شرکت تعریف می‌شوند؛ وضعیت دوره طبق `FiscalPeriodSelectionPolicy` مشترک است.
+- گزارش چندشرکتی all-or-nothing است: هر شرکت داخل scope باید مجوز لازم داشته باشد؛ scope خالی یا دسترسی جزئی رد می‌شود.
+
+### استخراج آینده
+برای Microservice واقعی، Trade باید دیتابیس مستقل، قرارداد API/Integration نسخه‌دار، هویت سرویس‌به‌سرویس، Outbox/Inbox در نقاط consistency، deployment و observability مستقل بگیرد. این گام‌ها Deferred هستند تا نیاز واقعی/تصمیم مستقل وجود داشته باشد؛ modularity به‌تنهایی Microservice نیست.

@@ -265,6 +265,11 @@ if (!setupRequired)
     builder.Services.AddSingleton<Infrastructure.Tenancy.WorkContextCookie>();
     builder.Services.AddScoped<Infrastructure.Tenancy.WorkContextService>();
 
+    // Trade authorization composes the shared company-role permissions with the
+    // validated company/fiscal-period work context (D-062).
+    builder.Services.AddScoped<Faranou.Modules.Trade.Application.Authorization.ITradeAuthorization,
+        Infrastructure.Trade.TradeAuthorizationAdapter>();
+
     // Corporate groups, ownership and the scope of group report runs (D-033, D-034). Every
     // permission is decided by CompanyAccessService; a group membership grants no access.
     builder.Services.AddScoped<Infrastructure.CorporateGroups.CorporateGroupService>();

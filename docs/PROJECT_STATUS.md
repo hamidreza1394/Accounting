@@ -1,3 +1,12 @@
+## شاخه کاری ماژول بازرگانی — Issue #397 (2026-10-31)
+
+- D-061 با تأیید مالک محصول ثبت شده است: Trade در مخزن Accounting، لایسنس مستقل TRADE_IMPORT، دیتابیس فیزیکی مشترک با schema مستقل trade و مرزهای استخراج‌پذیر به Microservice.
+- Foundation اولیه در شاخه feat/issue-397-trade-module-boundary ایجاد شده است: پروژه‌های Domain/Application/Infrastructure، قراردادهای authorization/entitlement و تست‌های معماری. طبق D-062، Trade از FiscalPeriod/WorkContext مشترک استفاده می‌کند و هیچ دوره عملیاتی مستقل ندارد.
+- این تغییرات هنوز روی main نیستند و تا موفقیت CI، Verified محسوب نمی‌شوند.
+- `TradeAuthorizationAdapter` و اتصال آن به `CompanyAccessService`/`WorkContextService` در PR #398 پیاده‌سازی شده‌اند؛ هنوز از endpoint/use case تجاری فراخوانی نمی‌شود. API/UI، ثبت و تخصیص permissionهای Trade، entitlement runtime، گزارش‌ها و migration داده‌های واقعی Trade باقی‌اند. هیچ migration مشتری اجرا نشده است.
+
+---
+
 # وضعیت اجرایی مرحلهٔ اول — به‌روزرسانی 2026-10-31
 
 **مبنای این به‌روزرسانی:** main پس از ادغام PR #382؛ merge commit برابر `f4027d83d1275204167464928c54ed9a185a68bf`.
