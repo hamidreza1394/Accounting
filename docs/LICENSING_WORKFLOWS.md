@@ -194,6 +194,10 @@ Unlicensed با Restricted یا InvalidOrUntrusted یکی نیست. تصمیم �
 
 ## ۱۵) تبادل فایل کلید/لایسنس در Offline (D-060 / #394 / #396)
 
+### 15.1 کد فعال‌سازی و بسته درخواست Customer
+
+کد فعال‌سازی را Vendor با مدت اعتبار قابل تنظیم و مصرف یک‌باره صادر می‌کند و به CustomerAccount/Installation مشخص bind می‌کند. کد مجوز امضاشده نیست؛ فقط اجازه شروع/تکمیل صدور LicenseEnvelope را می‌دهد. در Cloud کد در Customer Wizard و از طریق API احراز هویت‌شده redeem می‌شود. در Offline اپراتور کد را در Vendor Host و پس از دریافت درخواست Installation redeem می‌کند. کد در فایل انتقال، log یا telemetry قرار نمی‌گیرد.
+
 ### 15.1 بسته درخواست Customer
 Customer Host یک .request.json نسخه‌دار صادر می‌کند که فقط metadata لازم، InstallationId، public SPKI/key version، assurance level، nonce/request ID، زمان/انقضا، contract version و proof-of-possession را حمل می‌کند. Private key، password و داده حسابداری در آن نیست.
 
