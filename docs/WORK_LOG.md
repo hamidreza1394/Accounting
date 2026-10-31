@@ -1598,3 +1598,10 @@
 - Server DI اکنون LicenseEnvelopeValidator، OfflineRevocationConsumer و RevocationAwareLicenseEnvelopeValidator را register می‌کند؛ بدون TPM config، revocation provider unavailable می‌ماند.
 - تست‌های config برای unknown key، malformed retirement flag و retired key اضافه شدند.
 - محدودیت: هنوز باید تمام call-siteهای runtime مشتری به RevocationAwareLicenseEnvelopeValidator منتقل شوند؛ صرف DI registration به‌تنهایی enforcement را اثبات نمی‌کند.
+
+
+## 2026-10-31 — Issue #364 CI regression fixes
+- Aligned the migration Designer generated output and corrected the mutation-test fixture so its synthetic migration is newer than the current migration constants.
+- Added SQL Server regression coverage proving a concurrent GetCurrentAsync waits on the existing session application lock while TryApplyAsync is between prepare and TPM Extend; the test asserts only one Extend is issued.
+- Re-reviewed the production store: the session lock already protects both GetCurrentAsync and TryApplyAsync. No unnecessary production code change was made.
+- Latest CI result is pending; no local .NET/SQL Server or physical TPM execution is claimed.
