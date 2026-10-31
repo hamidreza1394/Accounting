@@ -468,6 +468,6 @@
 - Customer-only schema افزوده شد: `CustomerOfflineRevocationStates` در `Data.DatabaseContext` و migration `20261031120000_AddCustomerOfflineRevocationState`. هیچ تغییر VendorDbContext/schema انجام نشده است.
 - State store دو مرحله‌ای، SQL Server session application lock، pending signed envelope، recovery از crash قبل/بعد از TPM extend، نگهداری envelope امضاشده و بررسی مجدد digest/hash-chain در هر read را پیاده‌سازی می‌کند.
 - TPM NV Extend hash-chain adapter با Microsoft.TSS پیاده‌سازی شده: Windows از TBS و Linux از strict local TPM device استفاده می‌کند؛ هیچ simulator fallback وجود ندارد. بدون TPM section پیکربندی، provider عمداً unavailable/fail-closed است.
-- ابزار create-only provisioning برای Windows/TBS و اسکریپت Linux/tpm2-tools محدود به /dev/tpmrm0 افزوده شده‌اند؛ provisioning واقعی و secret delivery/rotation هنوز اجرا/تأیید نشده‌اند.
+- ابزار create-only provisioning برای Windows/TBS و اسکریپت Linux/tpm2-tools محدود به /dev/tpmrm0 افزوده شده‌اند؛ trust resolverهای مستقل license/revocation و DI برای RevocationAwareLicenseEnvelopeValidator نیز ثبت شده‌اند. provisioning واقعی و secret delivery/rotation هنوز اجرا/تأیید نشده‌اند.
 - تست‌های SQL Server برای apply، restore قدیمی، recovery دو crash window و concurrency بین دو DbContext و تست‌های config provider اضافه شده‌اند؛ اجرای محلی انجام نشده و CI PR #366 در حال اجراست.
-- تست فیزیکی TPM روی Windows 10/11، Windows Server و Linux و اتصال نهایی به LicenseEvaluator باقی است؛ این مرحله هنوز Production-ready یا Hardware-verified نیست و Issue #364 باز می‌ماند.
+- تست فیزیکی TPM روی Windows 10/11، Windows Server و Linux و اتصال call-site عملیاتی به RevocationAwareLicenseEnvelopeValidator باقی است؛ این مرحله هنوز Production-ready یا Hardware-verified نیست و Issue #364 باز می‌ماند.
