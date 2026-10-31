@@ -1625,3 +1625,10 @@
 - .NET CI run 41175579282 succeeded across client, secret-scan, build-and-test, publish-scripts, E2E, publish and Windows publish; Vendor CI 41175579288 and Semgrep 41175579255 also succeeded.
 - Updated Issue #364 handoff and project status to distinguish merged software implementation from still-open hardware provisioning/verification and production runtime enforcement.
 - No physical TPM test, production NV provisioning, secret delivery/rotation or production database migration is claimed.
+
+
+## 2026-10-31 — Issue #107: cross-process checkpoint lock regression test
+- Added a standalone test helper executable and a regression test that launches eight independent .NET processes concurrently to append the same checkpoint sequence to one development JSONL journal. Exactly one append must succeed; all others must reject the duplicate; the journal must remain a single valid record.
+- Added a dedicated Windows/Linux GitHub Actions matrix to run the focused checkpoint file-lock tests on both OS families.
+- No production sink or production registration was added. The local journal remains Development/Test-only and cannot satisfy the independent failure-domain requirement.
+- No local .NET SDK is available; CI results are required before verification.
