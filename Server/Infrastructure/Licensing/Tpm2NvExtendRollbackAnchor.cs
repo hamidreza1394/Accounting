@@ -40,6 +40,28 @@ public sealed class Tpm2NvExtendRollbackAnchor : IOfflineRevocationRollbackAncho
             throw new InvalidOperationException("The TPM NV index authorization is not configured.");
         }
 
+        byte[] configuredAuth;
+        try
+        {
+            configuredAuth = Convert.FromBase64String(_options.NvIndexAuthValueBase64);
+        }
+        catch (FormatException exception)
+        {
+            throw new InvalidOperationException("The TPM NV index authorization encoding is invalid.", exception);
+        }
+
+        try
+        {
+            if (configuredAuth.Length is < 1 or > 32)
+            {
+                throw new InvalidOperationException("The TPM NV index authorization length is invalid.");
+            }
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(configuredAuth);
+        }
+
         if (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux())
         {
             throw new PlatformNotSupportedException("TPM 2.0 NV Extend is supported only on Windows and Linux.");
