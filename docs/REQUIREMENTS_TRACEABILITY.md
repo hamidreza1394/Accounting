@@ -63,7 +63,7 @@
 |---|---|---|---|
 | ماژول مستقل در Accounting با امکان استخراج آتی | D-061 / #397 | Modules/Trade/* و TradeModuleFoundationTests | Foundation در حال اجرا |
 | Company = TenantId و جداسازی داده | D-013/D-061 | ITradeAuthorization + query predicates + cross-company tests | Contract/Foundation؛ runtime enforcement NotImplemented |
-| دوره عملیاتی مستقل از FiscalPeriod | D-061 / #397 | TradeOperationalPeriod و TradeDbContext | Foundation |
+| استفاده از دوره مالی مشترک فرانو | D-062 / #397 | WorkContext/FiscalPeriodSelectionPolicy + TradePeriodScope؛ بدون Trade period entity | Contract/Test؛ Host enforcement NotImplemented |
 | permission مجزا برای دوره و فرم | D-061 / #397 | TradePermissionCodes و ITradeAuthorization | ContractOnly تا اتصال Host و UI |
 | entitlement مستقل TRADE_IMPORT | D-025/D-059/D-061 | TradeModuleIdentity و ITradeModuleEntitlement | ContractOnly؛ licensing runtime NotImplemented |
 | گزارش چندشرکتی با مجوز همه شرکت‌ها | D-034/D-061 | ITradeAuthorization.HasPermissionForAllCompaniesAsync | ContractOnly؛ report use case NotImplemented |
