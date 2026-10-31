@@ -50,6 +50,7 @@ internal sealed class InstallationIdentityConfiguration
         builder.Property(identity => identity.ProvisionedAtUtc).IsRequired();
         builder.Property(identity => identity.RowVersion).IsRowVersion();
 
+        builder.HasAlternateKey(identity => new { identity.Id, identity.InstallationId });
         builder.HasIndex(identity => new { identity.InstallationId, identity.KeyVersion })
             .IsUnique();
         builder.HasIndex(identity => identity.KeyId)
