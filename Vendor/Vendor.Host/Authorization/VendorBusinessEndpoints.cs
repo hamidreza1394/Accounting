@@ -1,3 +1,7 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using Faranou.Licensing.Contracts;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Auditing;
 using Faranou.Vendor.Persistence.Domain;
@@ -355,6 +359,175 @@ public static class VendorBusinessEndpoints
                 item.Environment, item.Status, item.CreatedAtUtc, item.LastSeenAtUtc, Convert.ToBase64String(item.RowVersion)));
         });
 
+        installationMutations.MapPost("/{id:guid}/identity", async (
+            Guid id, RegisterInstallationIdentityRequest request, HttpContext context,
+            IAntiforgery antiforgery, IAuthorizationService authorization, VendorDbContext db,
+            UserManager<VendorAdminUser> users, IVendorAuditWriter audit, TimeProvider timeProvider,
+            CancellationToken ct) =>
+        {
+            if (!await antiforgery.IsRequestValidAsync(context))
+                return Results.BadRequest(new { error = "invalid_antiforgery_token" });
+            var access = await authorization.AuthorizeAsync(context.User,
+                new VendorResourceDescriptor("installation", id),
+                VendorResourceCatalog.PolicyFor("installation", VendorPermissionCatalog.InstallationsManage));
+            if (!access.Succeeded) return Results.Forbid();
+
+            var installation = await db.Installations.SingleOrDefaultAsync(item => item.Id == id, ct);
+            if (installation is null) return Results.NotFound();
+            if (installation.Status != "Active")
+                return Results.Conflict(new { error = "installation_not_active" });
+
+            var providerName = request.ProviderName?.Trim();
+            var assuranceLevel = request.AssuranceLevel?.Trim();
+            var expectedProvider = assuranceLevel switch
+            {
+                VendorInstallationIdentity.AssuranceHardwareTpm => "Microsoft Platform Crypto Provider",
+                VendorInstallationIdentity.AssuranceSoftwareProtected => "Microsoft Software Key Storage Provider",
+                _ => null
+            };
+            if (expectedProvider is null || !string.Equals(providerName, expectedProvider, StringComparison.Ordinal) ||
+                request.KeyVersion < 1 || string.IsNullOrWhiteSpace(request.KeyId) || request.KeyId.Length > 128 ||
+                !IsLowerHexSha256(request.OsInstallationMarkerDigest) ||
+                string.IsNullOrWhiteSpace(request.PublicKeySubjectPublicKeyInfoBase64) ||
+                request.PublicKeySubjectPublicKeyInfoBase64.Length > 512)
+                return Results.BadRequest(new { error = "invalid_installation_identity" });
+
+            var expectedKeyIdHash = System.Convert.ToHexString(
+                SHA256.HashData(Encoding.UTF8.GetBytes(id.ToString("D")))).ToLowerInvariant()[..24];
+            var expectedKeyId = $"license-install-{expectedKeyIdHash}-v{request.KeyVersion}";
+            if (!string.Equals(request.KeyId, expectedKeyId, StringComparison.Ordinal))
+                return Results.BadRequest(new { error = "installation_key_id_mismatch" });
+
+            byte[] publicKeyBytes;
+            try
+            {
+                publicKeyBytes = System.Convert.FromBase64String(request.PublicKeySubjectPublicKeyInfoBase64);
+            }
+            catch (FormatException)
+            {
+                return Results.BadRequest(new { error = "installation_public_key_invalid" });
+            }
+
+            string publicKeyFingerprint;
+            try
+            {
+                using var publicKey = ECDsa.Create();
+                publicKey.ImportSubjectPublicKeyInfo(publicKeyBytes, out var bytesRead);
+                if (bytesRead != publicKeyBytes.Length || publicKey.KeySize != 256 ||
+                    !publicKey.ExportSubjectPublicKeyInfo().AsSpan().SequenceEqual(publicKeyBytes))
+                    return Results.BadRequest(new { error = "installation_public_key_invalid" });
+                publicKeyFingerprint = System.Convert.ToHexString(SHA256.HashData(publicKeyBytes)).ToLowerInvariant();
+            }
+            catch (CryptographicException)
+            {
+                return Results.BadRequest(new { error = "installation_public_key_invalid" });
+            }
+
+            InstallationKeyConsentReceipt? consentReceipt = null;
+            if (assuranceLevel == VendorInstallationIdentity.AssuranceSoftwareProtected)
+            {
+                if (string.IsNullOrWhiteSpace(request.SoftwareProviderConsentReceiptJson) ||
+                    request.SoftwareProviderConsentReceiptJson.Length > 2048)
+                    return Results.BadRequest(new { error = "software_provider_consent_required" });
+                try
+                {
+                    consentReceipt = JsonSerializer.Deserialize<InstallationKeyConsentReceipt>(
+                        request.SoftwareProviderConsentReceiptJson,
+                        new JsonSerializerOptions(JsonSerializerDefaults.Web));
+                }
+                catch (JsonException)
+                {
+                    return Results.BadRequest(new { error = "software_provider_consent_invalid" });
+                }
+
+                if (consentReceipt is null ||
+                    !InstallationKeyConsentReceiptVerifier.TryVerify(
+                        consentReceipt, publicKeyBytes, id.ToString("D"), request.KeyId,
+                        publicKeyFingerprint, timeProvider.GetUtcNow(), out var consentError))
+                    return Results.BadRequest(new { error = consentError ?? "software_provider_consent_invalid" });
+            }
+            else if (!string.IsNullOrWhiteSpace(request.SoftwareProviderConsentReceiptJson))
+            {
+                return Results.BadRequest(new { error = "unexpected_software_provider_consent" });
+            }
+
+            var actor = await users.GetUserAsync(context.User);
+            if (actor is null) return Results.Forbid();
+
+            await using var tx = await db.Database.BeginTransactionAsync(
+                System.Data.IsolationLevel.Serializable, ct);
+            var history = await db.InstallationIdentities
+                .Where(item => item.InstallationId == id)
+                .OrderByDescending(item => item.KeyVersion)
+                .ToListAsync(ct);
+            var current = history.SingleOrDefault(item => item.State == VendorInstallationIdentity.StateCurrent);
+            var latestVersion = history.Select(item => item.KeyVersion).DefaultIfEmpty(0).Max();
+            if (request.KeyVersion <= latestVersion)
+                return Results.Conflict(new { error = "installation_key_version_must_increase" });
+
+            if (current is not null)
+            {
+                if (!VendorBusinessMutationRules.TryDecodeRowVersion(
+                        request.ExpectedCurrentIdentityRowVersion, out var expectedCurrentVersion) ||
+                    !current.RowVersion.AsSpan().SequenceEqual(expectedCurrentVersion))
+                    return Results.Conflict(new { error = "stale_installation_identity_version" });
+                current.State = VendorInstallationIdentity.StateRetired;
+                current.RetiredAtUtc = timeProvider.GetUtcNow().ToUniversalTime();
+            }
+            else if (!string.IsNullOrWhiteSpace(request.ExpectedCurrentIdentityRowVersion))
+            {
+                return Results.Conflict(new { error = "stale_installation_identity_version" });
+            }
+
+            var now = timeProvider.GetUtcNow().ToUniversalTime();
+            var identity = new VendorInstallationIdentity
+            {
+                Id = Guid.NewGuid(),
+                InstallationId = id,
+                KeyId = request.KeyId,
+                KeyVersion = request.KeyVersion,
+                ProviderName = providerName!,
+                AssuranceLevel = assuranceLevel!,
+                OsInstallationMarkerDigest = request.OsInstallationMarkerDigest!,
+                PublicKeyFingerprint = publicKeyFingerprint,
+                PublicKeySubjectPublicKeyInfoBase64 = request.PublicKeySubjectPublicKeyInfoBase64,
+                SoftwareProviderRiskAcceptedAtUtc = consentReceipt?.AcceptedAtUtc,
+                SoftwareProviderRiskAcceptedBy = consentReceipt?.AcceptedBy,
+                SoftwareProviderConsentReceiptJson = consentReceipt is null ? null : request.SoftwareProviderConsentReceiptJson,
+                State = VendorInstallationIdentity.StateCurrent,
+                RegisteredAtUtc = now
+            };
+            db.InstallationIdentities.Add(identity);
+            try
+            {
+                await db.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Results.Conflict(new { error = "stale_installation_identity_version" });
+            }
+            catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
+            {
+                return Results.Conflict(new { error = "installation_identity_already_registered" });
+            }
+
+            var correlationId = System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N");
+            if (current is not null)
+                await audit.AppendAsync(new VendorAuditWriteRequest(actor.Id, "vendor.installation.identity.retired",
+                    nameof(VendorInstallationIdentity), current.Id.ToString("D"), correlationId), ct);
+            await audit.AppendAsync(new VendorAuditWriteRequest(actor.Id, "vendor.installation.identity.registered",
+                nameof(VendorInstallationIdentity), identity.Id.ToString("D"), correlationId), ct);
+            await tx.CommitAsync(ct);
+
+            return Results.Created($"/api/vendor/installations/{id:D}/identity",
+                new InstallationIdentityResponse(identity.Id, identity.InstallationId, identity.KeyId,
+                    identity.KeyVersion, identity.ProviderName, identity.AssuranceLevel,
+                    identity.OsInstallationMarkerDigest, identity.PublicKeyFingerprint, identity.State,
+                    identity.RegisteredAtUtc, identity.RetiredAtUtc,
+                    identity.SoftwareProviderRiskAcceptedAtUtc, identity.SoftwareProviderRiskAcceptedBy,
+                    System.Convert.ToBase64String(identity.RowVersion)));
+        });
+
         // Legacy direct status changes are intentionally blocked. Use the Maker-Checker approval API.
         installationMutations.MapPost("/{id:guid}/status", () =>
             Results.Conflict(new { error = "approval_required" }));
@@ -480,6 +653,10 @@ public static class VendorBusinessEndpoints
     private static bool IsUniqueConstraintViolation(DbUpdateException exception) =>
         exception.GetBaseException() is SqlException { Number: 2601 or 2627 };
 
+    private static bool IsLowerHexSha256(string? value) =>
+        value is { Length: 64 } && value.All(character =>
+            character is >= '0' and <= '9' or >= 'a' and <= 'f');
+
     private static void MapReadOnlyResource<T>(
         IEndpointRouteBuilder endpoints, string route, string resourceType, string permission,
         Func<VendorDbContext, Guid?, IQueryable<T>> query,
@@ -519,6 +696,21 @@ public sealed record ContractResponse(Guid Id, Guid CustomerId, string ContractN
 public sealed record LicenseResponse(Guid Id, Guid CustomerId, Guid? ContractId, Guid? InstallationId, string LicenseNumber, string ProductCode, string Status, string LicenseKind, int? MaxCompanies, IReadOnlyList<string> Subsystems, int GraceDays, int LastIssuedSequence, DateTimeOffset ValidFromUtc, DateTimeOffset? ValidUntilUtc, DateTimeOffset CreatedAtUtc, string RowVersion);
 
 public sealed record CreateInstallationRequest(Guid CustomerId, string? InstallationCode, string? Name, string? Environment);
+public sealed record RegisterInstallationIdentityRequest(
+    string? KeyId,
+    int KeyVersion,
+    string? ProviderName,
+    string? AssuranceLevel,
+    string? OsInstallationMarkerDigest,
+    string? PublicKeySubjectPublicKeyInfoBase64,
+    string? SoftwareProviderConsentReceiptJson,
+    string? ExpectedCurrentIdentityRowVersion);
+public sealed record InstallationIdentityResponse(
+    Guid Id, Guid InstallationId, string KeyId, int KeyVersion, string ProviderName,
+    string AssuranceLevel, string OsInstallationMarkerDigest, string PublicKeyFingerprint,
+    string State, DateTimeOffset RegisteredAtUtc, DateTimeOffset? RetiredAtUtc,
+    DateTimeOffset? SoftwareProviderRiskAcceptedAtUtc, string? SoftwareProviderRiskAcceptedBy,
+    string RowVersion);
 public sealed record CreateContractRequest(Guid CustomerId, string? ContractNumber, DateTimeOffset StartsAtUtc, DateTimeOffset? EndsAtUtc, string? CurrencyCode);
 public sealed record CreateLicenseRequest(Guid CustomerId, Guid? ContractId, Guid? InstallationId, string? LicenseNumber, string? ProductCode, DateTimeOffset ValidFromUtc, DateTimeOffset? ValidUntilUtc, string? LicenseKind = null, int? MaxCompanies = null, IReadOnlyList<string>? Subsystems = null, int? GraceDays = null);
 
