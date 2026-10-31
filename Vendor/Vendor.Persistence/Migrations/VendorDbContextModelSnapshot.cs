@@ -574,6 +574,43 @@ namespace Faranou.Vendor.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorOfflineRevocationSequence", b =>
+                {
+                    b.Property<int>("Id").ValueGeneratedNever().HasColumnType("int");
+                    b.Property<long>("LastSequence").HasColumnType("bigint");
+                    b.HasKey("Id");
+                    b.ToTable("VendorOfflineRevocationSequences", t =>
+                        {
+                            t.HasCheckConstraint("CK_VendorOfflineRevocationSequences_Singleton", "[Id] = 1");
+                            t.HasCheckConstraint("CK_VendorOfflineRevocationSequences_LastSequence", "[LastSequence] >= 0");
+                        });
+                    b.HasData(new { Id = 1, LastSequence = 0L });
+                });
+
+            modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorOfflineRevocationSnapshot", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
+                    b.Property<long>("Sequence").HasColumnType("bigint");
+                    b.Property<string>("ListId").IsRequired().HasMaxLength(128).HasColumnType("nvarchar(128)");
+                    b.Property<string>("KeyId").IsRequired().HasMaxLength(128).HasColumnType("nvarchar(128)");
+                    b.Property<string>("Algorithm").IsRequired().IsUnicode(false).HasMaxLength(32).HasColumnType("varchar(32)");
+                    b.Property<string>("EnvelopeJson").IsRequired().HasColumnType("nvarchar(max)");
+                    b.Property<string>("PayloadSha256").IsRequired().IsUnicode(false).HasMaxLength(64).HasColumnType("char(64)").IsFixedLength();
+                    b.Property<DateTimeOffset>("IssuedAtUtc").HasColumnType("datetimeoffset");
+                    b.Property<DateTimeOffset>("ExpiresAtUtc").HasColumnType("datetimeoffset");
+                    b.Property<DateTimeOffset>("CreatedAtUtc").ValueGeneratedOnAdd().HasColumnType("datetimeoffset").HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
+                    b.Property<byte[]>("RowVersion").IsRequired().IsConcurrencyToken().ValueGeneratedOnAddOrUpdate().HasColumnType("rowversion");
+                    b.HasKey("Id");
+                    b.HasIndex("ListId").IsUnique();
+                    b.HasIndex("PayloadSha256");
+                    b.HasIndex("Sequence").IsUnique();
+                    b.ToTable("VendorOfflineRevocationSnapshots", t =>
+                        {
+                            t.HasCheckConstraint("CK_VendorOfflineRevocationSnapshots_Sequence", "[Sequence] >= 1");
+                            t.HasCheckConstraint("CK_VendorOfflineRevocationSnapshots_Expiry", "[ExpiresAtUtc] > [IssuedAtUtc]");
+                        });
+                });
+
             modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorSignedLicenseEnvelope", b =>
                 {
                     b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
