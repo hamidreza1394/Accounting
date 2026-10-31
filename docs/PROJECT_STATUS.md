@@ -528,5 +528,13 @@
 ## 2026-10-31 — Issue #384: customer license persistence in PR #387
 - PR #386 ادغام شد (commit `010571779e5bbbef9419f7748aa13d3700bd48ec`): Windows CNG installation proof-key ceremony، TPM پیش‌فرض و Software KSP با consent صریح؛ تمام CI checks روی head ادغام‌شده سبز بودند. تست TPM فیزیکی اجرا نشده است.
 - PR کاری #387 شامل entity/configurationهای Customer-only برای `InstallationIdentities` و `InstalledLicenses`، RowVersion، history، unique filtered current indexes، FK با Restrict، check constraints و Migration افزایشی `20261031130000_AddCustomerLicensePersistence` است.
-- #387 هنوز در انتظار CI است؛ Migration به هیچ دیتابیس مشتری یا Vendor اعمال نشده است. هیچ Vendor schema تغییر نکرده.
-- Import/replace service، durable audit workflow، startup revalidation و Cloud server-side entitlement enforcement هنوز در مراحل بعدی Issue #384 هستند.
+- PR #387 ادغام شده و Migration مشتری به‌صورت افزایشی در کد موجود است؛ اجرای Migration روی محیط واقعی همچنان تأیید نشده است. هیچ Vendor schema در این مرحله تغییر نکرده است.
+- PR #388 برای customer identity enrollment و license import باز است؛ آخرین CI build-and-test به‌دلیل خطاهای کامپایل در سه فایل licensing شکست خورده و اصلاح آن در PR جداگانه پیگیری می‌شود.
+- Startup reload/revalidation، runtime enforcement در عملیات حسابداری و Cloud server-side entitlement resolution هنوز تکمیل نشده‌اند.
+
+
+## 2026-10-31 — وضعیت نیازمندی‌های entitlement پس از D-059
+
+- D-059 و نقشه اجرایی در LICENSING_IMPLEMENTATION_PLAN.md ثبت شده‌اند. وضعیت تصمیم Accepted است؛ قابلیت‌های #390–#394 تا زمان پیاده‌سازی و CI همچنان NotImplemented محسوب می‌شوند.
+- ترتیب اجرا: #390 قرارداد نسخه‌دار → #391 enforcement و #392 bootstrap/company creation → #393 add-on issuance → #394 online/offline sync.
+- PR #388 هنوز باز است؛ خطای CI در آخرین run مشاهده شد و اصلاح build در branch مستقل دنبال می‌شود. این PR هنوز startup revalidation یا runtime enforcement کامل را تحویل نمی‌دهد.
