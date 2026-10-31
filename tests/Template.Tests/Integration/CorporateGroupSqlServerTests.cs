@@ -118,7 +118,10 @@ public sealed class CorporateGroupSqlServerTests
 				Assert.Equal(1, await context.UserCompanyMemberships.CountAsync(TestContext.Current.CancellationToken));
 				Assert.Equal("شرکت موجود", (await context.Companies.SingleAsync(TestContext.Current.CancellationToken)).Name);
 
-				var catalog = await context.PermissionDefinitions.ToListAsync(TestContext.Current.CancellationToken);
+								// PermissionDefinitions is shared across modules; inspect only this module's catalog.
+				var catalog = await context.PermissionDefinitions
+					.Where(permission => CorporateGroupScenario.AllPermissionCodes.Contains(permission.Code))
+					.ToListAsync(TestContext.Current.CancellationToken);
 				Assert.Equal(CorporateGroupScenario.AllPermissionCodes.Length, catalog.Count);
 				Assert.All(CorporateGroupScenario.AllPermissionCodes, code => Assert.Single(catalog, permission => permission.Code == code));
 				var view = catalog.Single(permission => permission.Code == CorporateGroupPermissions.View);
@@ -131,7 +134,10 @@ public sealed class CorporateGroupSqlServerTests
 					await context.Database.ExecuteSqlRawAsync(statement, TestContext.Current.CancellationToken);
 				}
 
-				Assert.Equal(CorporateGroupScenario.AllPermissionCodes.Length, await context.PermissionDefinitions.CountAsync(TestContext.Current.CancellationToken));
+				Assert.Equal(
+					CorporateGroupScenario.AllPermissionCodes.Length,
+					await context.PermissionDefinitions
+						.CountAsync(permission => CorporateGroupScenario.AllPermissionCodes.Contains(permission.Code), TestContext.Current.CancellationToken));
 
 				// A role uses one of the seeded permissions.
 				var roleId = await context.CompanyRoles.Select(role => role.Id).SingleAsync(TestContext.Current.CancellationToken);
