@@ -11,6 +11,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace Faranou.Vendor.Host.Tests;
@@ -21,7 +22,7 @@ public sealed class VendorOfflineRevocationIssuanceTests
     public void EmptyOrRevokedTrustEntriesNeverTrustAnOfflineRevocationSigner()
     {
         using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-        var keyId = "vendor-revocation-test-v1";
+        var keyId = "test-kid";
         var empty = new OfflineRevocationSigningTrustStore(Array.Empty<OfflineRevocationSigningTrustedKeyOptions>());
         Assert.False(empty.TryGetTrustedPublicKey(keyId, out var missing));
         Assert.True(missing.IsEmpty);
@@ -79,7 +80,7 @@ public sealed class VendorOfflineRevocationIssuanceTests
             Assert.Equal(1, snapshot.Sequence);
             Assert.Equal(approval.Id, snapshot.ApprovalRequestId);
             Assert.Equal(licenseId, snapshot.TriggeringLicenseId);
-            Assert.Equal("vendor-revocation-test-v1", snapshot.KeyId);
+            Assert.Equal("test-kid", snapshot.KeyId);
             Assert.NotNull(envelope);
             Assert.Equal(snapshot.KeyId, envelope!.KeyId);
             Assert.Equal(snapshot.Algorithm, envelope.Algorithm);
@@ -158,7 +159,7 @@ public sealed class VendorOfflineRevocationIssuanceTests
                 item => item.Id == fixture.ApprovalIds[licenseId], TestContext.Current.CancellationToken);
             var service = CreateService(
                 db, trustedKey, new VendorAuditWriter(db, TimeProvider.System),
-                new TestSigner(wrongKey, "vendor-revocation-test-v1"));
+                new TestSigner(wrongKey, "test-kid"));
 
             await using (var tx = await db.Database.BeginTransactionAsync(TestContext.Current.CancellationToken))
             {
@@ -298,7 +299,7 @@ public sealed class VendorOfflineRevocationIssuanceTests
         IVendorAuditWriter audit,
         IOfflineRevocationSigningProvider? signingProvider = null)
     {
-        var keyId = "vendor-revocation-test-v1";
+        var keyId = "test-kid";
         var trustStore = new OfflineRevocationSigningTrustStore(new[]
         {
             new OfflineRevocationSigningTrustedKeyOptions
@@ -315,7 +316,8 @@ public sealed class VendorOfflineRevocationIssuanceTests
             trustStore,
             Options.Create(new VendorOfflineRevocationOptions { SnapshotValidityDays = 30 }),
             audit,
-            TimeProvider.System);
+            TimeProvider.System,
+            NullLogger<VendorOfflineRevocationIssuanceService>.Instance);
     }
 
     private static async Task<Fixture?> OpenAsync(int licenseCount = 1)
