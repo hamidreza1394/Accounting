@@ -73,3 +73,13 @@ Issue فقط وقتی قابل بستن است که تولید و انتشار s
 
 ### محدودیت محیط اجرای این نشست
 این بازبینی مستندات را دقیق می‌کند. پیش از تغییر کد و ساخت migration جدید باید Build و تست‌های Vendor اجرا شوند؛ این نشست checkout اجرایی .NET/SQL Server ندارد. هیچ ادعایی درباره اجرای محلی یا موفقیت تست‌های جدید مطرح نشده است.
+
+## 2026-10-31 — Vendor signed offline revocation snapshot factory (PR #375)
+
+- **Status:** implementation slice added; awaiting CI verification; not merged.
+- Added `VendorOfflineRevocationSnapshotFactory` in Vendor Host. It validates positive sequence, bounded validity and revoked-ID collection, canonicalizes IDs using ordinal sort/deduplication, serializes through `OfflineRevocationListValidator.Serialize`, and signs the exact UTF-8 payload bytes using the dedicated `IOfflineRevocationSigningProvider`.
+- The factory fails closed for unavailable/throwing/malformed signer results and propagates caller cancellation. Unit tests cover signature verification, canonical order/deduplication, invalid inputs, unavailable signer and cancellation.
+- **Explicitly not implemented in this slice:** durable monotonic sequence allocation, immutable snapshot persistence, transactional maker-checker revocation decision + license state + audit, authorized no-store export endpoint, and customer runtime call-site enforcement. No successful `Revoked` transition may be enabled until those pieces are complete.
+- **Verification:** no local .NET SDK is available in this environment. On head `d689db2eb28f31fdc268abf6a2627b23df0274a3`, .NET CI and Vendor CI were observed in progress; Semgrep completed successfully. No build/test success is claimed before completion of the runs.
+- **Security boundary:** no private key, customer DB migration, or production signer configuration is introduced. The default revocation signer remains unavailable/fail-closed.
+- **Next implementation order:** Vendor snapshot history + sequence model/migration; transactionally couple approval, license state, snapshot and audit; add authorized export; then integrate the customer runtime validation entry point and add SQL Server/concurrency/fail-closed tests.
