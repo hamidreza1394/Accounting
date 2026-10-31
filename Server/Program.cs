@@ -212,8 +212,14 @@ if (!setupRequired)
     builder.Services.TryAddSingleton<Faranou.Licensing.Contracts.ILicenseSignatureVerifier,
         Faranou.Licensing.Contracts.EcdsaP256Sha256Verifier>();
     builder.Services.TryAddSingleton<Faranou.Licensing.Contracts.LicenseEvaluator>();
-    builder.Services.AddScoped<Faranou.Licensing.Contracts.LicenseEnvelopeValidator>();
-    builder.Services.AddScoped<Faranou.Licensing.Contracts.RevocationAwareLicenseEnvelopeValidator>();
+    // Expose only the revocation-aware customer validation contract through DI. The raw
+    // signature/time validator remains an internal dependency of this pipeline, not a
+    // service that runtime consumers can accidentally inject to bypass revocation checks.
+    builder.Services.AddScoped<Faranou.Licensing.Contracts.ICustomerLicenseEnvelopeValidator>(serviceProvider =>
+        new Faranou.Licensing.Contracts.RevocationAwareLicenseEnvelopeValidator(
+            Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance<
+                Faranou.Licensing.Contracts.LicenseEnvelopeValidator>(serviceProvider),
+            serviceProvider.GetRequiredService<Faranou.Licensing.Contracts.OfflineRevocationConsumer>()));
     builder.Services.Configure<Infrastructure.Provisioning.CustomerProvisioningSettings>(
         builder.Configuration.GetSection(Infrastructure.Provisioning.CustomerProvisioningSettings.SectionName));
     builder.Services.AddSingleton<Infrastructure.Provisioning.ICustomerProvisioningTrustStore,
