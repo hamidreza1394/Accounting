@@ -48,7 +48,8 @@ public sealed class PartyBankAccount : TradeEntity
 
     public string? RejectionReason { get; private set; }
 
-    /// <summary>Account-level check; payment use cases must also verify the owning Party is active.</summary>\n    public bool IsPaymentEligible =>
+    /// <summary>Account-level check; payment use cases must also verify the owning Party is active.</summary>
+    public bool IsPaymentEligible =>
         !IsDeleted && VerificationStatus == BankAccountVerificationStatus.Verified;
 
     public void Verify(Guid verifiedByUserId, DateTime verifiedAtUtc)
