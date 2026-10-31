@@ -80,7 +80,9 @@
 - permission عملیاتی می‌گوید کاربر مشخص در شرکت/دوره مشخص چه عملیاتی می‌تواند انجام دهد.
 - این دو قابل جایگزینی نیستند.
 - ترتیب کنترل: نشست معتبر → Company membership و تطبیق TenantId → انتخاب/اعتبارسنجی FiscalPeriod مشترک → entitlement ماژول → permission تخصصی بازرگانی از سیستم مشترک → اجرای use case با رعایت ReadOnly بودن دوره بسته.
-- قرارداد entitlement فعلاً Port است؛ runtime باید در S1 به قراردادهای واقعی Licensing متصل شود و پیش از هر قابلیت Trade در Production fail-closed باشد. entitlement برای همان Company بررسی می‌شود و از permission کاربر جداست.
+- کاتالوگ اولیه مجوزها در `TradePermissionCatalog` تعریف می‌شود و در `PermissionDefinitions` مشترک ذخیره می‌شود؛ هیچ نقش یا Permission store موازی وجود ندارد. Migration `20261031140000_SeedTradePermissionCatalog` فقط ردیف‌های کاتالوگ را درج می‌کند و هیچ `CompanyRolePermission`ای را خودکار تخصیص نمی‌دهد.
+- کاتالوگ این برش شامل ۴۶ مجوز برای Party، Product، Purchase Request، Supplier Inquiry، Quotation Comparison، Proforma، Contract، Import Case و دو نوع گزارش است؛ این فهرست، همه فرم‌های ۹۰ صفحه پیشنهاد را پوشش نمی‌دهد و فرم‌های بعدی در Issueهای جدا اضافه می‌شوند.
+- entitlement runtime هنوز Port است؛ باید در S1 به قرارداد واقعی Licensing متصل و پیش از هر قابلیت Trade در Production fail-closed شود. entitlement برای همان Company بررسی می‌شود و از permission کاربر جداست.
 
 ## 7. گزارش تک‌شرکتی و چندشرکتی
 

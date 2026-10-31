@@ -64,7 +64,7 @@
 | ماژول مستقل در Accounting با امکان استخراج آتی | D-061 / #397 | Modules/Trade/* و TradeModuleFoundationTests | Foundation در main ادغام‌شده (PR #398) |
 | Company = TenantId و جداسازی داده | D-013/D-061/D-062 | TradeAuthorizationAdapter + CompanyAccessService + WorkContextService | Adapter و تست‌های foundation در main؛ اتصال endpoint/use case و تست SQL Server اختصاصی باقی است |
 | استفاده از دوره مالی مشترک فرانو | D-062 / #397 | WorkContext/FiscalPeriodSelectionPolicy + TradePeriodScope + TradeAuthorizationAdapter؛ بدون Trade period entity | Adapter implemented؛ مصرف در use case pending |
-| مجوز تخصصی فرم/عملیات بازرگانی در سازوکار نقش مشترک | D-062 / #397 | TradePermissionCodes + TradeAuthorizationAdapter + CompanyAccessService | Adapter implemented؛ permission catalog seed/role UI/API enforcement pending |
+| مجوز تخصصی فرم/عملیات بازرگانی در سازوکار نقش مشترک | D-062 / #397, #402 | TradePermissionCodes + TradePermissionCatalog + migration + SQL Server tests | کاتالوگ و Migration در شاخه PR #403؛ CI/SQL Server verification pending؛ تخصیص نقش و enforcement API pending |
 | entitlement مستقل TRADE_IMPORT | D-025/D-059/D-061 | TradeModuleIdentity و ITradeModuleEntitlement | Port موجود؛ entitlement runtime از S1 طبق D-063 NotImplemented |
 | گزارش چندشرکتی با مجوز همه شرکت‌ها | D-034/D-061/D-062 | TradeAuthorizationAdapter.HasPermissionForAllCompanyPeriodsAsync | Adapter all-or-nothing موجود؛ گزارش عملیاتی چندشرکتی از موج اول Accepted اما use case و audit NotImplemented |
 | دیتابیس فیزیکی مشترک، schema مستقل trade | D-061 / #397 | TradeDbContext و model test | TradeDbContext موجود؛ DI و migration design-time/history مستقل هنوز ممیزی/تکمیل نشده؛ Migration ایجاد نشده |
@@ -79,3 +79,6 @@
 | گزارش عملیاتی چندشرکتی در موج اول | D-063 / #399 | all-company-period authorization، scope audit، تست عدم نشت | Accepted؛ NotImplemented |
 | entitlement مستقل TRADE_IMPORT از S1 | D-025/D-059/D-063 / #399 | Licensing runtime adapter، server route/API gate، fail-closed tests | Accepted؛ Port موجود، runtime NotImplemented |
 | Foundation ماژول Trade | D-061/D-062 / #397، PR #398 | Modules/Trade، TradeDbContext، TradeAuthorizationAdapter، foundation tests | Implemented در main؛ PR #398 ادغام‌شده |
+
+
+| کاتالوگ اولیه مجوزهای Trade | D-062/D-063 / #402 | TradePermissionCatalog، SeedTradePermissionCatalog، TradePermissionCatalogTests و TradePermissionCatalogSqlServerTests | ۴۶ کد strongly-typed و Migration داده‌ای در شاخه PR #403؛ تست‌ها نوشته شده، اجرا/CI هنوز تأیید نشده |

@@ -1785,3 +1785,14 @@
 - D-063 و هم‌ترازی اولیه DECISIONS، TRADE_MODULE، PROJECT_STATUS و ROADMAP روی شاخه ثبت شدند. این تغییرات هنوز PR/merge نشده‌اند.
 - ممیزی read-only نشان داد PR #398 در main ادغام شده است؛ اما TradeDbContext هنوز در Server/DI یا migration design-time path به‌طور کامل قابل اثبات نیست. هیچ migration مشتری اجرا نشده است.
 - تست محلی یا CI برای این شاخه اجرا نشده؛ تا اجرای checks، اسناد و D-063 فقط در شاخه کاری هستند و Verified نیستند.
+
+
+## 2026-10-31 — Issue #402: کاتالوگ اولیه مجوزهای بازرگانی
+- شاخه `feat/issue-402-trade-permission-catalog` بر مبنای شاخه مستندات S0 ایجاد شد تا PR #403 به‌صورت stacked نسبت به PR #400 بازبینی شود.
+- `TradePermissionCatalog` با ۴۶ مجوز برای هشت فرم موج اول و دو گزارش تعریف شد؛ کدها ASCII، پایدار و با سقف ۱۲۰ کاراکتر کاتالوگ مشترک سازگارند. هر مجوز intent خواندن/نوشتن دارد و با suffix همان کد کنترل می‌شود.
+- Migration داده‌ای `20261031140000_SeedTradePermissionCatalog` به PermissionDefinitions مشترک اضافه شد. درج با IF NOT EXISTS است؛ ردیف موجود مدیر بازنویسی نمی‌شود؛ هیچ CompanyRolePermission خودکار ساخته نمی‌شود؛ Down فقط ردیف‌های seedشده بدون ارجاع نقش را حذف می‌کند.
+- تست واحد برای یکتایی/طول/ASCII/intent و تست SQL Server برای upgrade، حفظ ردیف سفارشی، عدم تخصیص خودکار، Down/Up و حفظ مجوز تخصیص‌یافته نوشته شد.
+- `scripts/generate_migrations.py` به شناسه Migration جدید و SQL بازبینی‌شده متصل شد؛ Designer از مدل فعلی کپی/هم‌تراز شده و مدل EF تغییر نکرده است.
+- Build، تست .NET، تست SQL Server، `generate_migrations.py --check`، `verify_migration_model.py` و `git diff --check` در این محیط اجرا نشده‌اند؛ هیچ نتیجه Verified ادعا نمی‌شود. Migration روی دیتابیس مشتری اجرا نشده است.
+
+- **اصلاح CI پس از اولین Build:** اجرای .NET CI روی commit `b755c2b` با خطای `CS0272` در تست SQL Server شکست خورد؛ تست به‌اشتباه setter محافظت‌شده `Entity.Id` را مقداردهی می‌کرد. تست اصلاح شد تا شناسه از سازنده `PermissionDefinition` گرفته شود (commit `17229c2`). اجرای CI روی head جدید هنوز مشاهده نشده و تا آن زمان Verified نیست.
