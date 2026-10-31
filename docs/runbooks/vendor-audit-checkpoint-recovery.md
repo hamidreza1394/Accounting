@@ -97,3 +97,13 @@ A reviewed starting script is available at scripts/sql/vendor-audit-runtime-perm
 6. Validate the resulting effective permissions with a least-privilege test login before deployment. Test that SELECT/INSERT succeeds and UPDATE/DELETE/TRUNCATE/ALTER fails on VendorAuditEvents while required application DML on other tables still works.
 
 This is a SQL permission boundary, not an independent immutable checkpoint sink. It does not protect against sysadmin, database owner, a compromised migration identity or a privileged DBA. The independent checkpoint provider remains mandatory.
+
+
+## 9. Periodic verification and alerting
+
+- Production runs a full chain verification/checkpoint advance at startup and every configured interval (default 300 seconds).
+- Configuration keys: AuditCheckpoint:IntervalSeconds (30–3600) and AuditCheckpoint:MaximumStalenessSeconds (at least two intervals, at most 86400; default 900).
+- The endpoint /health/audit-checkpoint reports only Healthy/Unhealthy and a generic description. It does not expose checkpoint hashes, event details, provider endpoints or credentials.
+- Configure the external monitoring system to poll /health/audit-checkpoint at least once per minute and alert on HTTP 503, Unhealthy, endpoint timeout or prolonged lack of successful verification.
+- A background checkpoint failure records only the exception type, emits a Critical log event without provider message details, and leaves health Unhealthy until a subsequent full verification succeeds.
+- The health endpoint is not a substitute for an alert receiver, on-call ownership or a tested notification path. Those remain deployment-specific.
