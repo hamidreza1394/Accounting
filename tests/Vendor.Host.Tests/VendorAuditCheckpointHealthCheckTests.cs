@@ -19,11 +19,11 @@ public sealed class VendorAuditCheckpointHealthCheckTests
         Assert.Equal(HealthStatus.Unhealthy, initial.Status);
 
         state.MarkSuccess(now);
-        var healthy = await check.CheckHealthAsync(CreateContext());
+        var healthy = await check.CheckHealthAsync(null!);
         Assert.Equal(HealthStatus.Healthy, healthy.Status);
 
         state.MarkFailure("IOException");
-        var failed = await check.CheckHealthAsync(CreateContext());
+        var failed = await check.CheckHealthAsync(null!);
         Assert.Equal(HealthStatus.Unhealthy, failed.Status);
         Assert.DoesNotContain("private-connection-detail", failed.Description);
     }
@@ -39,7 +39,7 @@ public sealed class VendorAuditCheckpointHealthCheckTests
         time.SetUtcNow(verifiedAt.AddMinutes(16));
         var check = CreateCheck(state, time);
 
-        var result = await check.CheckHealthAsync(CreateContext());
+        var result = await check.CheckHealthAsync(null!);
 
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
     }
