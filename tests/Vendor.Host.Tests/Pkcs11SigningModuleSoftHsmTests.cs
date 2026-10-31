@@ -82,7 +82,7 @@ public sealed class Pkcs11SigningModuleSoftHsmTests
                     packageResult.Signature.Span,
                     DSASignatureFormat.IeeeP1363FixedFieldConcatenation));
 
-                var revocationPayload = Encoding.UTF8.GetBytes("{\\"purpose\\":\\"offline-revocation\\"}");
+                var revocationPayload = Encoding.UTF8.GetBytes("{\"purpose\":\"offline-revocation\"}");
                 var revocationResult = await module.SignAsync(options.OfflineRevocationKey, revocationPayload);
                 Assert.True(revocationResult.Succeeded);
                 Assert.Equal(revocationKeyId, revocationResult.KeyId);
