@@ -150,9 +150,13 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                     });
                 });
 
-                Assert.NotNull(customerFactory.Services.GetRequiredService<ICustomerLicenseEnvelopeValidator>());
-                Assert.Null(customerFactory.Services.GetService<LicenseEnvelopeValidator>());
-                Assert.Null(customerFactory.Services.GetService<RevocationAwareLicenseEnvelopeValidator>());
+                await using (var customerValidationScope = customerFactory.Services.CreateAsyncScope())
+                {
+                    var customerServices = customerValidationScope.ServiceProvider;
+                    Assert.NotNull(customerServices.GetRequiredService<ICustomerLicenseEnvelopeValidator>());
+                    Assert.Null(customerServices.GetService<LicenseEnvelopeValidator>());
+                    Assert.Null(customerServices.GetService<RevocationAwareLicenseEnvelopeValidator>());
+                }
 
                 await using (var vendorScope = vendorFactory.Services.CreateAsyncScope())
                 {
