@@ -113,7 +113,8 @@ public sealed class ProductIdentifier : TradeEntity
         return value;
     }
 
-\n    private static string? NormalizeCountryCode(string? value)
+
+    private static string? NormalizeCountryCode(string? value)
     {
         var normalized = OptionalText(value, 2, nameof(value));
         if (normalized is not null &&
