@@ -1625,3 +1625,10 @@
 - .NET CI run 41175579282 succeeded across client, secret-scan, build-and-test, publish-scripts, E2E, publish and Windows publish; Vendor CI 41175579288 and Semgrep 41175579255 also succeeded.
 - Updated Issue #364 handoff and project status to distinguish merged software implementation from still-open hardware provisioning/verification and production runtime enforcement.
 - No physical TPM test, production NV provisioning, secret delivery/rotation or production database migration is claimed.
+
+
+## 2026-10-31 — Issue #364: prevent raw customer license validator DI bypass
+- Added `ICustomerLicenseEnvelopeValidator`; the revocation-aware validator implements it. Server DI no longer registers raw `LicenseEnvelopeValidator` as a resolvable service; it constructs it only inside the revocation-aware pipeline and exposes only the safe interface.
+- Updated a contracts test to consume the safe interface and preserve fail-closed behavior for a missing revocation snapshot.
+- Static audit found no production runtime call-sites for either validator/evaluator, and no customer license-envelope store/import endpoint/shared authorization policy. `docs/LICENSING.md` still correctly marks the license installation module NotImplemented.
+- Full enforcement is blocked on an unapproved source/import design and unresolved OD-03/04 expiry restrictions; do not invent a middleware policy. The remaining design must define local-file vs customer DB storage, installation binding, admin import/replace/audit and valid/grace/restricted behavior.
