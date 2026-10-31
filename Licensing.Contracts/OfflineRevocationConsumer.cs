@@ -46,19 +46,22 @@ public sealed class OfflineRevocationRollbackAnchorUnavailableException : Except
     }
 }
 
+/// <summary>
+/// Hardware-backed TPM 2.0 NV Extend index outside the customer database backup domain.
+/// ReadDigestAsync returns the current 32-byte SHA-256 NV value as lowercase hexadecimal.
+/// ExtendAsync must compare the current value, issue one NV_Extend, read it back and verify
+/// the expected result; it must never emulate the operation in software.
+/// </summary>
 public interface IOfflineRevocationRollbackAnchor
 {
-    Task<long> ReadGenerationAsync(CancellationToken cancellationToken = default);
+    Task<string> ReadDigestAsync(CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// Advances exactly once only when the current generation equals expectedCurrentGeneration.
-    /// The implementation must verify the observed post-increment value before returning.
-    /// </summary>
-    Task<long> AdvanceAsync(
-        long expectedCurrentGeneration,
+    Task<string> ExtendAsync(
+        string expectedCurrentDigest,
+        ReadOnlyMemory<byte> extensionData,
+        string expectedResultDigest,
         CancellationToken cancellationToken = default);
 }
-
 /// <summary>
 /// Current accepted revocation state. The digest is SHA-256 over the exact signed payload bytes.
 /// </summary>
