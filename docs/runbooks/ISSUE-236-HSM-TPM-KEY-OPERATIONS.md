@@ -186,8 +186,10 @@
 
 ### 13.3 Runtime و Recovery
 
-- Windows: ارتباط فقط از TPM Base Services (TBS) و بدون fallback نرم‌افزاری.
-- Linux: ارتباط مستقیم با TPM resource manager مانند /dev/tpmrm0؛ هیچ TCP simulator یا device fallback مجاز نیست.
+- Windows: adapter از TSS.MSR TbsDevice و TPM Base Services (TBS) استفاده می‌کند.
+- Linux: StrictLinuxTpmDevice مستقیماً به /dev/tpmrm0 یا /dev/tpm0 متصل می‌شود؛ از LinuxTpmDevice کتابخانه استفاده نمی‌شود چون fallback به TCP simulator دارد.
+- در هر دو پلتفرم هیچ TCP simulator، device fallback یا software fallback مجاز نیست.
+- پیکربندی runtime از Licensing:OfflineRevocation:Tpm خوانده می‌شود: NvIndexOffset، NvIndexAuthValueBase64 و LinuxDevicePath. مقدار AuthValue فقط از secret injection محیط استقرار وارد شود؛ در appsettings/Git ثبت نشود.
 - هر عملیات Extend باید current digest را بخواند، مقدار مورد انتظار را کنترل کند، دقیقاً یک NV_Extend انجام دهد و مقدار را مجدداً بخواند.
 - Crash قبل از Extend با pending معتبر و TPM digest قبلی recover می‌شود؛ crash پس از Extend با TPM digest مورد انتظار finalize می‌شود. هر مقدار دیگر، missing pending، mismatch یا خطای TPM fail-closed است.
 - TPM Clear، تعویض سخت‌افزار، حذف index یا فقدان authorization با تعریف index جدید و restore دیتابیس حل نمی‌شود. نصب باید وارد فرایند recovery/re-enrollment کنترل‌شده شود.
@@ -197,4 +199,5 @@
 
 - D-057 پذیرفته شده و migration/state store customer-side در شاخهٔ Issue #364 در حال پیاده‌سازی است.
 - قرارداد NV Extend و default provider unavailable/fail-closed ثبت شده است.
-- Backend واقعی TBS/Linux، provisioning command/ceremony اجرایی و تست روی TPM سخت‌افزاری هنوز NotImplemented / NotVerified هستند. تا آن زمان هیچ نصب Production نباید این کنترل را فعال یا ادعای anti-rollback سخت‌افزاری کند.
+- Adapter با Microsoft.TSS پیاده‌سازی شده است: Windows از TBS و Linux از device محلی strict استفاده می‌کند؛ LinuxTpmDevice کتابخانه استفاده نمی‌شود چون امکان fallback به simulator دارد. Runtime هیچ مسیر TCP یا simulator ندارد.
+- NV index provisioning ceremony اجرایی و تست روی TPM سخت‌افزاری هنوز NotImplemented / NotVerified هستند. تا آن زمان هیچ نصب Production نباید این کنترل را فعال یا ادعای anti-rollback سخت‌افزاری کند.
