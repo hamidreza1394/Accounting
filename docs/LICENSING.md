@@ -125,3 +125,15 @@
 - PR #388 در حال تکمیل enrollment هویت نصب CNG و import/replace تراکنشی از طریق ICustomerLicenseEnvelopeValidator است. endpointها Infrastructure-only، antiforgery-protected، rate-limited و no-store هستند؛ InstallationId از configuration سمت سرور خوانده می‌شود.
 - طبق D-059، import باید یک envelope امضاشده با status برابر Restricted را نیز persist کند تا Customer بتواند به read/export/recovery محدود شود؛ Grace رد می‌شود چون grace ضمنی پذیرفته نشده است. اتصال این status به runtime policy همچنان در #391/#384 باقی است.
 - Startup reload/revalidation، enforcement در call-siteهای عملیات حسابداری، Cloud authoritative entitlement resolution و recovery عملیاتی هنوز تکمیل نشده‌اند. PR #388 تا CI کامل و ادغام، Implemented/Verified در main محسوب نمی‌شود.
+
+
+## ۱۱) معماری سه‌حوزه‌ای و تجربه License-first (D-060)
+
+- Vendor CRM & Commercial مالک اطلاعات مشتری تجاری، قرارداد، سفارش، پرداخت، تمدید، پشتیبانی و سوابق تجاری است.
+- Licensing & Entitlement Engine مالک قرارداد نسخه‌دار، entitlement، LicenseEnvelope/amendment، امضا، sequence، ابطال و enforcement است.
+- Customer Deployment & Sync مالک نصب، identity enrollment، bootstrap محلی، startup gate، Activation Wizard، Cloud API، تبادل فایل Offline، sync و ACK است.
+- این سه بخش مرز مسئولیت در Modular Monolith هستند؛ Microservice یا دیتابیس جدا الزامی نیست. Vendor و Customer persistence جدا می‌مانند.
+- قبل از Login، Customer Host وضعیت لایسنس را سمت سرور می‌سنجد: بدون envelope به Activation Wizard؛ envelope معتبر به Login؛ Restricted به ورود کنترل‌شده read/export/recovery؛ InvalidOrUntrusted به fail-closed/recovery.
+- فرم فعال‌سازی Company referenceهای مجاز را از envelope می‌گیرد و زیرسیستم/Feature/Seat را نمایش می‌دهد؛ مدیر هر شرکت محلی ساخته می‌شود و رمز فقط به Identity hash روی Customer Host تبدیل می‌شود.
+- Offline: درخواست نسخه‌دار .request.json با public SPKI و proof-of-possession؛ پاسخ امضاشده .license.json. فایل .txt فقط Base64/armored wrapper همان بایت‌های دقیق است؛ QR صرفاً برای challenge کوچک اختیاری است. هیچ private key/password صادر نمی‌شود.
+- جزئیات و معیار پذیرش در [LICENSING_IMPLEMENTATION_PLAN.md](LICENSING_IMPLEMENTATION_PLAN.md)، [D-060](DECISIONS.md) و Issue #396 است. این قابلیت‌ها Accepted / NotImplemented هستند.
