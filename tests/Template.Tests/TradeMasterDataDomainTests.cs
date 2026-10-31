@@ -67,6 +67,34 @@ public sealed class TradeMasterDataDomainTests
     }
 
     [Fact]
+    public void RemovingPartyRoleWithInvalidAuditActorDoesNotPartiallyDeleteChild()
+    {
+        var party = new Party(TenantId, "SUP-ATOMIC", "Atomic Supplier", UserId, Now);
+        party.AddRole(PartyRole.Seller, UserId, Now);
+
+        var role = Assert.Single(party.Roles);
+        Assert.Throws<ArgumentException>(() => party.RemoveRole(PartyRole.Seller, Guid.Empty, Now.AddMinutes(1)));
+
+        Assert.False(role.IsDeleted);
+        Assert.Null(party.UpdatedAtUtc);
+    }
+
+    [Fact]
+    public void RemovingProductIdentifierWithNonUtcTimestampDoesNotPartiallyDeleteChild()
+    {
+        var product = new Product(TenantId, "ATOMIC-01", "Atomic Product", UserId, Now);
+        var identifier = product.AddIdentifier(
+            null, "SEED", "US", "ATOMIC", "00012345678905", null,
+            new DateOnly(2027, 1, 1), false, UserId, Now);
+
+        Assert.Throws<ArgumentException>(() => product.RemoveIdentifier(
+            identifier.Id, UserId, DateTime.SpecifyKind(Now.AddMinutes(1), DateTimeKind.Local)));
+
+        Assert.False(identifier.IsDeleted);
+        Assert.Null(product.UpdatedAtUtc);
+    }
+
+    [Fact]
     public void Product_PreservesHsAndIdentifiersAsText_AndKeepsGtinSeparateFromIrc()
     {
         var product = new Product(TenantId, "RICE-1121", "Parboiled Rice 1121", UserId, Now,
