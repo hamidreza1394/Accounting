@@ -70,7 +70,10 @@ public sealed class Party : TradeEntity
         var assignment = _roles.SingleOrDefault(existing => !existing.IsDeleted && existing.Role == role)
             ?? throw new InvalidOperationException("The counterparty does not have this role.");
 
-        if (IsDeleted) throw new InvalidOperationException("A deleted counterparty cannot be changed.");
+        if (IsDeleted)
+        {
+            throw new InvalidOperationException("A deleted counterparty cannot be changed.");
+        }
         RecordUpdate(removedByUserId, removedAtUtc);
         assignment.SoftDelete(removedByUserId, removedAtUtc);
     }
