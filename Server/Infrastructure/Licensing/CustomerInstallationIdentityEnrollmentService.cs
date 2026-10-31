@@ -70,7 +70,8 @@ public sealed class CustomerInstallationIdentityEnrollmentService
             UnauthorizedAccessException or InvalidOperationException or ArgumentException or
             PlatformNotSupportedException)
         {
-            return Failure("installation_identity_key_unavailable");
+            return await RecordFailureAsync(
+                "installation_identity_key_unavailable", actorUserId, null, cancellationToken);
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
@@ -96,7 +97,8 @@ public sealed class CustomerInstallationIdentityEnrollmentService
         };
 
         if (await _proofVerifier.VerifyAsync(identity, cancellationToken) != InstallationIdentityProofStatus.Valid)
-            return Failure("installation_identity_proof_failed");
+            return await RecordFailureAsync(
+                "installation_identity_proof_failed", actorUserId, identity.KeyId, cancellationToken);
 
         await using var transaction = _database.Database.IsRelational()
             ? await _database.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken)
@@ -106,7 +108,8 @@ public sealed class CustomerInstallationIdentityEnrollmentService
         {
             if (transaction is not null)
                 await transaction.RollbackAsync(cancellationToken);
-            return Failure("installation_identity_enrollment_busy");
+            return await RecordFailureAsync(
+                "installation_identity_enrollment_busy", actorUserId, identity.KeyId, cancellationToken);
         }
 
         try
