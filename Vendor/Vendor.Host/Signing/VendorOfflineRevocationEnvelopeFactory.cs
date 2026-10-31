@@ -124,6 +124,31 @@ public sealed class VendorOfflineRevocationEnvelopeFactory(
         return OfflineRevocationEnvelopeCreationResult.Success(envelope);
     }
 
+    public bool TryVerifyEnvelope(
+        OfflineRevocationListEnvelope? envelope,
+        DateTimeOffset nowUtc,
+        long minimumSequenceExclusive,
+        out OfflineRevocationList? payload,
+        out string errorCode)
+    {
+        payload = null;
+        if (envelope is null ||
+            !_keyResolver.TryResolve(envelope.KeyId, out var trustedPublicKey) ||
+            trustedPublicKey.IsEmpty)
+        {
+            errorCode = "offline_revocation_signing_key_untrusted";
+            return false;
+        }
+
+        return OfflineRevocationListValidator.TryValidateAndVerify(
+            envelope,
+            trustedPublicKey.Span,
+            nowUtc,
+            minimumSequenceExclusive,
+            out payload,
+            out errorCode);
+    }
+
     private static bool AreLicenseIdsCanonical(IReadOnlyList<string> ids)
     {
         string? previous = null;
