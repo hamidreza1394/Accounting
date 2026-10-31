@@ -2,6 +2,8 @@ using System;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
+using Faranou.Licensing.Contracts;
 using Infrastructure.Licensing;
 using Xunit;
 
@@ -53,6 +55,23 @@ public sealed class WindowsCngLicenseInstallationKeyTests
             Assert.NotEmpty(created.PublicKeySubjectPublicKeyInfo);
             Assert.Matches("^[a-f0-9]{64}$", created.PublicKeyFingerprint);
             Assert.Matches("^[a-f0-9]{64}$", created.OsInstallationMarkerDigest);
+
+            Assert.True(created.SoftwareProviderRiskAccepted);
+            Assert.NotNull(created.SoftwareProviderRiskAcceptedAtUtc);
+            Assert.False(string.IsNullOrWhiteSpace(created.SoftwareProviderRiskAcceptedBy));
+            Assert.False(string.IsNullOrWhiteSpace(created.SoftwareProviderConsentReceiptJson));
+            var consentReceipt = JsonSerializer.Deserialize<InstallationKeyConsentReceipt>(
+                created.SoftwareProviderConsentReceiptJson!,
+                new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            Assert.NotNull(consentReceipt);
+            Assert.True(InstallationKeyConsentReceiptVerifier.TryVerify(
+                consentReceipt!,
+                created.PublicKeySubjectPublicKeyInfo,
+                installationId,
+                created.KeyId,
+                created.PublicKeyFingerprint,
+                created.SoftwareProviderRiskAcceptedAtUtc!.Value,
+                out var consentError), consentError);
 
             using (var key = CngKey.Open(created.KeyName, new CngProvider(SoftwareKsp), CngKeyOpenOptions.MachineKey))
             {
