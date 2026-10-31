@@ -41,7 +41,7 @@
 - `type` = `Perpetual` | `Term`; `validFrom`, `validUntil` (برای Term)
 - `supportUntil`, `updatesUntil` (مستقل از حق استفاده)
 - `modules[]` با کدهای پایدار نسخهٔ اول: `finance`, `sales`, `inventory`, `treasury` (D-045 `Accepted`; پیاده‌سازی هنوز انجام نشده)
-- `limits.maxCompanies` (نسخهٔ اول); `maxUsers` صریحاً `Deferred` است (D-045)
+- `limits.maxCompanies` در سطح Installation؛ user seats و Module/Feature entitlement طبق D-059 در سطح Company هستند. D-059 بخش `maxUsers Deferred` از D-045 را supersede می‌کند.
 - امضا: ECDSA P-256/SHA-256، IEEE P1363 با طول ثابت 64 بایت؛ اعتبارسنجی روی بایت‌های دقیق Payload (D-045). قالب پاکت/Canonicalization باید در L1 به‌صورت دقیق و نسخه‌دار تعریف شود.
 - `issuedAt`
 
@@ -105,3 +105,15 @@
 - فرمان provisioning فقط metadata و public SPKI را چاپ می‌کند: `dotnet Server.dll --license-installation-key create`. برای مسیر نرم‌افزاری باید `--confirm-software-provider-risk` نیز صریحاً داده شود و ProviderName در configuration به Software KSP انتخاب شده باشد.
 - این فرمان باید با هویت/ACL سازگار با حساب اجرای سرویس اجرا شود. فرمان کلید موجود را overwrite نمی‌کند؛ rotation نیازمند KeyVersion جدید و مسیر کنترل‌شده است.
 - کد این PR هنوز persistence و audit consent را در دیتابیس کامل نمی‌کند؛ تا آن زمان خروجی command به‌تنهایی فعال‌سازی License نیست.
+
+
+## ۱۰) تصمیم پذیرفته‌شده D-059 و برنامه اجرایی
+
+در 2026-10-31 مالک محصول D-059 را تأیید کرد. مدل قبلی که maxUsers را Deferred می‌دانست برای بخش user-seat superseded است: Seatها در سطح Company هستند؛ Module و Feature نیز مستقل و Company-scoped هستند؛ maxCompanies در سطح Installation باقی می‌ماند. برای جزئیات سیاست‌ها، معیارهای پذیرش و ترتیب کار به [LICENSING_IMPLEMENTATION_PLAN.md](LICENSING_IMPLEMENTATION_PLAN.md) مراجعه کنید.
+
+- هر Installation یک Base LicenseEnvelope دارد؛ خرید افزونه با amendment امضاشده و sequence افزایشی برای همان LicenseId انجام می‌شود.
+- کاهش Seat از نوع block-new است؛ عضویت‌های فعلی حذف نمی‌شوند. کاهش Feature limit داده را حذف نمی‌کند و فقط ایجاد/گسترش جدید را مسدود می‌کند.
+- انقضای Term به restricted می‌رود؛ بدون grace ضمنی؛ read/export/recovery مجاز باقی می‌ماند. پشتیبانی/به‌روزرسانی از حق استفاده دائمی جدا است.
+- Cloud تصمیم entitlement را سمت سرور می‌گیرد؛ Offline آخرین entitlement امضاشده پذیرفته‌شده را تا sync حفظ می‌کند. تبادل online authenticated و signed file exchange هر دو پشتیبانی می‌شوند.
+- bootstrap مدیر اولیه در Offline محلی است؛ رمز فقط روی Customer Host تعیین و با ASP.NET Core Identity hash می‌شود و به Vendor/package/log/telemetry نمی‌رود.
+- ترتیب اجرا: #395 → #390 → #391/#392 → #393 → #394. پذیرش تصمیم به معنی پیاده‌سازی نیست.
