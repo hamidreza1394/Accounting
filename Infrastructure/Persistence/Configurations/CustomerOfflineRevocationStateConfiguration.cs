@@ -17,8 +17,21 @@ internal sealed class CustomerOfflineRevocationStateConfiguration
         builder.Property(state => state.RevokedLicenseIdsJson)
             .HasColumnType("nvarchar(max)")
             .IsRequired();
+        builder.Property(state => state.PreviousAnchorDigest)
+            .HasMaxLength(64)
+            .IsUnicode(false)
+            .IsRequired();
+        builder.Property(state => state.AnchorDigest)
+            .HasMaxLength(64)
+            .IsUnicode(false)
+            .IsRequired();
+        builder.Property(state => state.AcceptedEnvelopeJson)
+            .HasColumnType("nvarchar(max)");
         builder.Property(state => state.PendingEnvelopeJson)
             .HasColumnType("nvarchar(max)");
+        builder.Property(state => state.PendingExpectedAnchorDigest)
+            .HasMaxLength(64)
+            .IsUnicode(false);
         builder.Property(state => state.Sequence).IsRequired();
         builder.Property(state => state.AnchorGeneration).IsRequired();
         builder.Property(state => state.RowVersion).IsRowVersion();
