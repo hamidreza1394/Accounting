@@ -3,12 +3,12 @@
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/397
 - **Agent/مسئول:** ChatGPT / GitHub engineering workflow
 - **تاریخ:** 2026-10-31
-- **وضعیت:** Foundation اولیه؛ نیازمند CI و ادامه کار
+- **وضعیت:** Foundation اصلاح‌شده طبق D-062؛ نیازمند CI و ادامه کار
 
 ## هدف و معیارهای پذیرش
 - [x] ثبت D-061 و ساختار مستقل Trade Domain/Application/Infrastructure.
 - [x] تعریف Tenant boundary براساس Company.Id و عدم وابستگی Trade به مدل‌های حسابداری.
-- [x] تعریف دوره عملیاتی مستقل و قراردادهای authorization و entitlement.
+- [x] تعریف قراردادهای authorization و entitlement؛ دوره مستقل Trade طبق D-062 حذف شد و از FiscalPeriod مشترک استفاده می‌شود.
 - [x] تعریف قرارداد گزارش چندشرکتی all-or-nothing.
 - [ ] اتصال adapterهای Host به CompanyAccessService و License entitlement.
 - [ ] پیاده‌سازی مجوز دوره/فرم در API و UI و تست‌های منفی cross-company.
@@ -17,8 +17,7 @@
 
 ## خلاصه تغییرات
 - ایجاد پروژه‌های Trade.Domain، Trade.Application و Trade.Infrastructure.
-- ایجاد TradeOperationalPeriod با TenantId و invariantهای اولیه.
-- ایجاد TradeDbContext با default schema برابر trade و mapping دوره عملیاتی.
+- ایجاد TradeDbContext با default schema برابر trade؛ بدون DbSet یا جدول دوره مستقل.
 - تعریف ITradeAuthorization و ITradeModuleEntitlement به‌عنوان portهای host-provided.
 - افزودن تست‌های دامنه، مدل EF و guard جهت وابستگی پروژه‌ها.
 - ثبت D-061 و هم‌ترازی مستندات معماری/نقشه راه/ردیابی.
@@ -31,6 +30,8 @@
 - docs/handoffs/ISSUE-397-trade-module-boundary.md — این گزارش.
 
 ## تصمیم‌های فنی
+- D-062: شرکت/دوره و سیاست انتخاب دوره از WorkContext/FiscalPeriodSelectionPolicy مشترک؛ مجوزهای فرم و عملیات Trade در همان سازوکار PermissionDefinitions/CompanyRolePermissions تعریف می‌شوند.
+- رکوردهای Trade دوره‌محور در آینده TenantId و FiscalPeriodId را به‌صورت ارجاع منطقی نگه می‌دارند؛ Host تعلق دوره به شرکت را بررسی می‌کند.
 - فاز اول Modular Monolith و یک دیتابیس فیزیکی؛ schema و DbContext مستقل.
 - Trade.Domain/Application به Core Accounting وابسته نیست.
 - Global Query Filter استفاده نشده؛ predicate صریح TenantId الزامی است.
@@ -51,7 +52,7 @@
 
 ## ریسک‌ها و کارهای باقی‌مانده
 - اتصال واقعی به Host و اعتبارسنجی membership/permission باید پیش از هر endpoint تجاری تکمیل شود.
-- مجوزهای دوره‌ای هنوز مدل persistence/assignment ندارند.
+- Host adapter هنوز باید تعلق FiscalPeriodId به TenantId و وضعیت انتخاب‌پذیری دوره را بررسی کند؛ مجوزهای تخصصی Trade هنوز در runtime enforce نشده‌اند.
 - گزارش چندشرکتی و audit scope هنوز use case اجرایی ندارند.
 - migration history جداگانه و tooling طراحی EF برای Trade باید پیش از اولین migration تثبیت شود.
 - CI روی PR باید build، unit و model tests را اجرا کند.
