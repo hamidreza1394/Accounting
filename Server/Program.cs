@@ -184,10 +184,21 @@ if (!setupRequired)
     // helper is stateless; the service validates every stored choice against the database.
     builder.Services.TryAddSingleton(TimeProvider.System);
 
-    // Customer-side offline revocation is registered fail-closed. The default anchor is
-    // unavailable until a platform TPM 2.0 NV Extend provider is explicitly supplied.
-    builder.Services.TryAddSingleton<Faranou.Licensing.Contracts.IOfflineRevocationRollbackAnchor,
-        Infrastructure.Licensing.UnavailableOfflineRevocationRollbackAnchor>();
+    // Customer-side offline revocation is registered fail-closed. A real TPM provider is
+    // selected only when the deployment explicitly supplies its TPM NV index configuration.
+    var offlineRevocationTpmSection = builder.Configuration.GetSection("Licensing:OfflineRevocation:Tpm");
+    builder.Services.Configure<Infrastructure.Licensing.TpmNvExtendOptions>(offlineRevocationTpmSection);
+    if (offlineRevocationTpmSection.Exists())
+    {
+        builder.Services.AddSingleton<Faranou.Licensing.Contracts.IOfflineRevocationRollbackAnchor,
+            Infrastructure.Licensing.Tpm2NvExtendRollbackAnchor>();
+    }
+    else
+    {
+        builder.Services.TryAddSingleton<Faranou.Licensing.Contracts.IOfflineRevocationRollbackAnchor,
+            Infrastructure.Licensing.UnavailableOfflineRevocationRollbackAnchor>();
+    }
+
     builder.Services.TryAddSingleton<Faranou.Licensing.Contracts.IOfflineRevocationKeyResolver,
         Infrastructure.Licensing.ConfigurationOfflineRevocationKeyResolver>();
     builder.Services.AddScoped<Faranou.Licensing.Contracts.IOfflineRevocationStateStore,
