@@ -110,6 +110,7 @@ public static class VendorOfflineRevocationEndpoints
             var now = timeProvider.GetUtcNow();
             var integrityValid = false;
             if (envelope is not null &&
+                !string.IsNullOrEmpty(envelope.PayloadJson) &&
                 string.Equals(envelope.KeyId, snapshot.KeyId, StringComparison.Ordinal) &&
                 string.Equals(envelope.Algorithm, snapshot.Algorithm, StringComparison.Ordinal))
             {
