@@ -9,7 +9,7 @@ namespace Template.Tests;
 public sealed class TradeOperationalPeriodTests
 {
     [Fact]
-    public void Create_requires_a_valid_tenant()
+    public void CreateRequiresAValidTenant()
     {
         Assert.Throws<ArgumentException>(() => TradeOperationalPeriod.Create(
             Guid.Empty, "2026", "سال عملیاتی ۲۰۲۶",
@@ -17,7 +17,7 @@ public sealed class TradeOperationalPeriodTests
     }
 
     [Fact]
-    public void Create_normalizes_code_and_starts_in_draft()
+    public void CreateNormalizesCodeAndStartsInDraft()
     {
         var tenantId = Guid.NewGuid();
         var period = TradeOperationalPeriod.Create(
@@ -32,7 +32,7 @@ public sealed class TradeOperationalPeriodTests
 
 
     [Fact]
-    public void Create_rejects_non_ascii_period_codes()
+    public void CreateRejectsNonAsciiPeriodCodes()
     {
         Assert.Throws<ArgumentException>(() => TradeOperationalPeriod.Create(
             Guid.NewGuid(), "سال-۱۴۰۵", "سال عملیاتی",
@@ -40,7 +40,7 @@ public sealed class TradeOperationalPeriodTests
     }
 
     [Fact]
-    public void Create_rejects_an_invalid_date_range()
+    public void CreateRejectsAnInvalidDateRange()
     {
         Assert.Throws<ArgumentException>(() => TradeOperationalPeriod.Create(
             Guid.NewGuid(), "FY-2026", "سال عملیاتی ۲۰۲۶",
@@ -51,7 +51,7 @@ public sealed class TradeOperationalPeriodTests
 public sealed class TradeDbContextModelTests
 {
     [Fact]
-    public void Operational_period_is_owned_by_trade_schema_and_has_no_core_foreign_key()
+    public void OperationalPeriodIsOwnedByTradeSchemaAndHasNoCoreForeignKey()
     {
         var options = new DbContextOptionsBuilder<TradeDbContext>()
             .UseSqlServer("Server=localhost;Database=TradeModelOnly;Trusted_Connection=True;TrustServerCertificate=True")
@@ -67,7 +67,7 @@ public sealed class TradeDbContextModelTests
     }
 
     [Fact]
-    public void Trade_projects_have_only_the_approved_intra_module_dependencies()
+    public void TradeProjectsHaveOnlyApprovedIntraModuleDependencies()
     {
         var root = FindRepositoryRoot();
         AssertProjectReferences(
