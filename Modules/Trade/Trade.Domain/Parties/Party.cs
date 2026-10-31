@@ -68,8 +68,8 @@ public sealed class Party : TradeEntity
             ?? throw new InvalidOperationException("The counterparty does not have this role.");
 
         if (IsDeleted) throw new InvalidOperationException("A deleted counterparty cannot be changed.");
-        assignment.SoftDelete(removedByUserId, removedAtUtc);
         RecordUpdate(removedByUserId, removedAtUtc);
+        assignment.SoftDelete(removedByUserId, removedAtUtc);
     }
 
     public PartyBankAccount AddBankAccount(
