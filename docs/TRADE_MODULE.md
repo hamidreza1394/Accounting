@@ -18,7 +18,7 @@
 - Domain هیچ ProjectReference به Core یا Server ندارد.
 - Application فقط به Trade.Domain وابسته است و قراردادهای Port برای مرزهای بیرونی تعریف می‌کند.
 - Infrastructure فقط Trade.Application/Domain را Reference می‌کند؛ مالک TradeDbContext و EF mapping است.
-- Server در آینده Composition Root و محل adapterها خواهد بود؛ هیچ منطق دامنه‌ای در Server قرار نمی‌گیرد.
+- Server Composition Root و محل adapterهای Host است؛ `TradeAuthorizationAdapter` مجوزهای تخصصی را با CompanyAccessService و WorkContext مشترک ترکیب می‌کند و هیچ منطق دامنه‌ای در Server قرار نمی‌گیرد.
 - پروژه‌های UI و API بعد از تثبیت use caseها اضافه می‌شوند؛ UI هیچ مرجع امنیتی نیست.
 
 این یک Modular Monolith است، نه Microservice توزیع‌شده. مسیر استخراج به Microservice در بخش ۹ آمده است.
