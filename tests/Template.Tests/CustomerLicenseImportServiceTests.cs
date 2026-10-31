@@ -22,7 +22,7 @@ public sealed class CustomerLicenseImportServiceTests
         await using var database = CreateDatabase();
         var identity = AddCurrentIdentity(database);
         var (envelope, payload) = CreateEnvelope(sequence: 1);
-        var validator = new TestValidator(envelope, LicenseValidationResult.Ok(LicenseStatus.Valid, payload));
+        var validator = new TestValidator((envelope, LicenseValidationResult.Ok(LicenseStatus.Valid, payload)));
         var service = CreateService(database, validator, InstallationIdentityProofStatus.Valid);
 
         var result = await service.ImportAsync(
@@ -45,7 +45,7 @@ public sealed class CustomerLicenseImportServiceTests
         await using var database = CreateDatabase();
         var identity = AddCurrentIdentity(database);
         var (envelope, payload) = CreateEnvelope(sequence: 1);
-        var validator = new TestValidator(envelope, LicenseValidationResult.Ok(LicenseStatus.Valid, payload));
+        var validator = new TestValidator((envelope, LicenseValidationResult.Ok(LicenseStatus.Valid, payload)));
         var service = CreateService(database, validator, InstallationIdentityProofStatus.Valid);
         var raw = JsonSerializer.Serialize(envelope, JsonOptions);
 
@@ -146,7 +146,7 @@ public sealed class CustomerLicenseImportServiceTests
         await using var database = CreateDatabase();
         var identity = AddCurrentIdentity(database);
         var (envelope, payload) = CreateEnvelope(sequence: 1);
-        var validator = new TestValidator(envelope, LicenseValidationResult.Ok(LicenseStatus.Restricted, payload));
+        var validator = new TestValidator((envelope, LicenseValidationResult.Ok(LicenseStatus.Restricted, payload)));
         var service = CreateService(database, validator, InstallationIdentityProofStatus.Valid);
 
         var result = await service.ImportAsync(
@@ -165,7 +165,7 @@ public sealed class CustomerLicenseImportServiceTests
         await using var database = CreateDatabase();
         var identity = AddCurrentIdentity(database);
         var (envelope, payload) = CreateEnvelope(sequence: 1);
-        var validator = new TestValidator(envelope, LicenseValidationResult.Ok(LicenseStatus.Grace, payload));
+        var validator = new TestValidator((envelope, LicenseValidationResult.Ok(LicenseStatus.Grace, payload)));
         var service = CreateService(database, validator, InstallationIdentityProofStatus.Valid);
 
         var result = await service.ImportAsync(
@@ -183,7 +183,7 @@ public sealed class CustomerLicenseImportServiceTests
         await using var database = CreateDatabase();
         var identity = AddCurrentIdentity(database);
         var (envelope, payload) = CreateEnvelope(sequence: 1);
-        var validator = new TestValidator(envelope, LicenseValidationResult.Ok(LicenseStatus.Valid, payload));
+        var validator = new TestValidator((envelope, LicenseValidationResult.Ok(LicenseStatus.Valid, payload)));
         var service = CreateService(database, validator, InstallationIdentityProofStatus.InstallationChanged);
 
         var result = await service.ImportAsync(
