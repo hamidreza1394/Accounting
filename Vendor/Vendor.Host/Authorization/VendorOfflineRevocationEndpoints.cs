@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Text;
-using Faranou.Vendor.Host.Signing;
 using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Auditing;
 using Faranou.Vendor.Persistence.Domain;
