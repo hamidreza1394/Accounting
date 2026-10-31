@@ -37,9 +37,7 @@ public sealed class Pkcs11SigningModuleSoftHsmTests
         var suffix = Guid.NewGuid().ToString("N");
         var licenseKeyId = $"vendor-license-{suffix}-v1";
         var provisioningKeyId = $"vendor-package-{suffix}-v1";
-        var licensePublicKey = CreateKeyPair(modulePath, tokenLabel, pin, licenseKeyId);
-        var provisioningPublicKey = CreateKeyPair(modulePath, tokenLabel, pin, provisioningKeyId);
-
+        var revocationKeyId = $"vendor-revocation-{suffix}-v1";
         var options = new Pkcs11SigningOptions
         {
             ModulePath = modulePath,
@@ -47,11 +45,16 @@ public sealed class Pkcs11SigningModuleSoftHsmTests
             UserPin = pin,
             AssuranceLevel = "Software",
             LicenseKey = new Pkcs11SigningKeyOptions { KeyId = licenseKeyId },
-            ProvisioningKey = new Pkcs11SigningKeyOptions { KeyId = provisioningKeyId }
+            ProvisioningKey = new Pkcs11SigningKeyOptions { KeyId = provisioningKeyId },
+            OfflineRevocationKey = new Pkcs11SigningKeyOptions { KeyId = revocationKeyId }
         };
 
         try
         {
+            var licensePublicKey = CreateKeyPair(modulePath, tokenLabel, pin, licenseKeyId);
+            var provisioningPublicKey = CreateKeyPair(modulePath, tokenLabel, pin, provisioningKeyId);
+            var revocationPublicKey = CreateKeyPair(modulePath, tokenLabel, pin, revocationKeyId);
+
             using (var module = new Pkcs11SigningModule(
                 Options.Create(options),
                 new TestHostEnvironment("Testing"),
@@ -77,6 +80,16 @@ public sealed class Pkcs11SigningModuleSoftHsmTests
                 Assert.True(packageVerifier.VerifyHash(
                     SHA256.HashData(packagePayload),
                     packageResult.Signature.Span,
+                    DSASignatureFormat.IeeeP1363FixedFieldConcatenation));
+
+                var revocationPayload = Encoding.UTF8.GetBytes("{\"purpose\":\"offline-revocation\"}");
+                var revocationResult = await module.SignAsync(options.OfflineRevocationKey, revocationPayload);
+                Assert.True(revocationResult.Succeeded);
+                Assert.Equal(revocationKeyId, revocationResult.KeyId);
+                using var revocationVerifier = ECDsa.Create(revocationPublicKey);
+                Assert.True(revocationVerifier.VerifyHash(
+                    SHA256.HashData(revocationPayload),
+                    revocationResult.Signature.Span,
                     DSASignatureFormat.IeeeP1363FixedFieldConcatenation));
 
                 var unconfiguredKey = await module.SignAsync(
@@ -109,6 +122,7 @@ public sealed class Pkcs11SigningModuleSoftHsmTests
         {
             DestroyKeyPair(modulePath, tokenLabel, pin, licenseKeyId);
             DestroyKeyPair(modulePath, tokenLabel, pin, provisioningKeyId);
+            DestroyKeyPair(modulePath, tokenLabel, pin, revocationKeyId);
         }
     }
 
