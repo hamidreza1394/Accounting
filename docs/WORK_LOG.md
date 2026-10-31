@@ -1574,6 +1574,15 @@
 - اجرای محلی .NET ممکن نبود؛ نتیجهٔ نهایی به CI روی آخرین SHA وابسته است.
 
 
+## 2026-10-31 — Issue #107 operational hardening
+- HashVersion=1 per VendorAuditEvent, versioned verifier dispatch and unique PreviousHash/EventHash indexes are already in main (Issue #107/#202).
+- Production fail-closed guard and startup verification against exactly one IProductionVendorAuditCheckpointStore are already in main; no provider is selected, so Production intentionally cannot start until an approved adapter is registered.
+- Added VendorAuditCheckpointBackgroundService to verify/advance the independent checkpoint every configured interval (default 300s).
+- Added VendorAuditCheckpointHealthState and /health/audit-checkpoint; failures and stale verification become Unhealthy, with sanitized status only.
+- Added SQLCMD permission script to keep Vendor runtime append-only on dbo.VendorAuditEvents and require a separate migration principal.
+- Recovery runbook now covers periodic verification/alerting and SQL permission deployment.
+- Provider selection, separate external credentials, immutability/retention, real alert receiver, SQL permission execution and a target-environment restore drill remain open. No Production sink is claimed.
+
 ## 2026-10-31 — Issue #364 / D-057: TPM NV Extend customer revocation state
 - تأیید مالک محصول برای Migration مستقل customer DB و anti-rollback مبتنی بر TPM دریافت شد.
 - معماری از TPM NV Extend با SHA-256 hash-chain استفاده می‌کند؛ generation و digest payload در extension data bind می‌شوند. NV index باید خارج از backup دیتابیس باشد.

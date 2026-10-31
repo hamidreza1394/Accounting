@@ -13,6 +13,8 @@ namespace Faranou.Vendor.Host.Authorization;
 public sealed class VendorAuditCheckpointStartupService(
     IServiceScopeFactory scopeFactory,
     IHostEnvironment environment,
+    VendorAuditCheckpointHealthState healthState,
+    TimeProvider timeProvider,
     ILogger<VendorAuditCheckpointStartupService> logger) : IHostedService
 {
     private const string StartupFailureMessage =
@@ -30,6 +32,7 @@ public sealed class VendorAuditCheckpointStartupService(
             await using var scope = scopeFactory.CreateAsyncScope();
             var checkpointService = scope.ServiceProvider.GetRequiredService<VendorAuditCheckpointService>();
             await checkpointService.CreateCheckpointAsync(cancellationToken);
+            healthState.MarkSuccess(timeProvider.GetUtcNow());
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -37,6 +40,7 @@ public sealed class VendorAuditCheckpointStartupService(
         }
         catch (Exception exception)
         {
+            healthState.MarkFailure(exception.GetType().Name);
             // Provider exception messages may contain endpoints or credential details.
             // Log only the exception type and fail startup with a stable, non-sensitive message.
             logger.LogCritical(

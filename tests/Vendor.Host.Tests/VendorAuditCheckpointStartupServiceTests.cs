@@ -21,6 +21,8 @@ public sealed class VendorAuditCheckpointStartupServiceTests
         var service = new VendorAuditCheckpointStartupService(
             provider.GetRequiredService<IServiceScopeFactory>(),
             new TestHostEnvironment(Environments.Development),
+            new VendorAuditCheckpointHealthState(),
+            TimeProvider.System,
             NullLogger<VendorAuditCheckpointStartupService>.Instance);
 
         await service.StartAsync(TestContext.Current.CancellationToken);
@@ -159,6 +161,8 @@ public sealed class VendorAuditCheckpointStartupServiceTests
         new(
             provider.GetRequiredService<IServiceScopeFactory>(),
             new TestHostEnvironment(Environments.Production),
+            provider.GetRequiredService<VendorAuditCheckpointHealthState>(),
+            provider.GetRequiredService<TimeProvider>(),
             NullLogger<VendorAuditCheckpointStartupService>.Instance);
 
     private static ServiceProvider CreateProvider(
@@ -175,6 +179,7 @@ public sealed class VendorAuditCheckpointStartupServiceTests
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddVendorPersistence(configuration);
+        services.AddSingleton<VendorAuditCheckpointHealthState>();
         services.AddSingleton<IProductionVendorAuditCheckpointStore>(store);
         services.AddScoped<IVendorAuditCheckpointStore>(
             provider => provider.GetRequiredService<IProductionVendorAuditCheckpointStore>());

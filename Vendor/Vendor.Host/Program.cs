@@ -74,6 +74,7 @@ if (bootstrapCommandRequested)
 }
 
 builder.Services.AddHealthChecks();
+builder.Services.AddSingleton<VendorAuditCheckpointHealthState>();
 builder.Services.AddVendorPersistence(builder.Configuration);
 // Until approved production KMS/HSM adapters are configured, signing is deliberately unavailable.
 // License and provisioning signing have separate provider registrations and key boundaries.
@@ -313,6 +314,12 @@ if (builder.Environment.IsProduction())
     builder.Services.AddScoped<IVendorAuditCheckpointStore>(
         services => services.GetRequiredService<IProductionVendorAuditCheckpointStore>());
     builder.Services.AddScoped<VendorAuditCheckpointService>();
+    builder.Services.Configure<VendorAuditCheckpointOptions>(
+        builder.Configuration.GetSection("AuditCheckpoint"));
+    builder.Services.AddHostedService<VendorAuditCheckpointBackgroundService>();
+    builder.Services.AddHealthChecks().AddCheck<VendorAuditCheckpointHealthCheck>(
+        "vendor-audit-checkpoint",
+        tags: new[] { "audit-checkpoint", "ready" });
 }
 
 builder.Services.AddHostedService<VendorAuditCheckpointStartupService>();
@@ -405,6 +412,28 @@ app.MapHealthChecks("/health/signing", new HealthCheckOptions
             cancellationToken: context.RequestAborted);
     }
 }).AllowAnonymous();
+if (app.Environment.IsProduction())
+{
+    app.MapHealthChecks("/health/audit-checkpoint", new HealthCheckOptions
+    {
+        Predicate = check => check.Tags.Contains("audit-checkpoint"),
+        ResponseWriter = async (context, report) =>
+        {
+            context.Response.ContentType = "application/json; charset=utf-8";
+            var entries = report.Entries.ToDictionary(
+                entry => entry.Key,
+                entry => new
+                {
+                    status = entry.Value.Status.ToString(),
+                    description = entry.Value.Description
+                });
+            await JsonSerializer.SerializeAsync(
+                context.Response.Body,
+                new { status = report.Status.ToString(), entries },
+                cancellationToken: context.RequestAborted);
+        }
+    }).AllowAnonymous();
+}
 app.MapVendorAuthentication();
 app.MapVendorPasswordChange();
 app.MapVendorRoleManagement();
