@@ -102,6 +102,37 @@ public sealed class CustomerOfflineRevocationSqlServerTests
     }
 
     [Fact]
+    public async Task ApplyAsync_ConcurrentSameSequenceAcrossContextsOnlyAcceptsOneSnapshot()
+    {
+        Assert.SkipUnless(SqlServerAvailable(), "SQL Server is not configured (FARANOU_TEST_SQLSERVER).");
+
+        await WithDatabaseAsync(async name =>
+        {
+            await using var firstDatabase = CreateContext(name);
+            await using var secondDatabase = CreateContext(name);
+            await firstDatabase.Database.MigrateAsync();
+
+            using var signingKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+            var envelope = Sign(signingKey, Sample(DateTimeOffset.UtcNow, 7));
+            var publicKey = signingKey.ExportSubjectPublicKeyInfo();
+            var anchor = new FakeRollbackAnchor();
+            var first = CreateConsumer(firstDatabase, anchor, envelope.KeyId, publicKey);
+            var second = CreateConsumer(secondDatabase, anchor, envelope.KeyId, publicKey);
+
+            var results = await Task.WhenAll(first.ApplyAsync(envelope), second.ApplyAsync(envelope));
+
+            Assert.Single(results, result => result.Success);
+            Assert.Single(results, result => !result.Success);
+            Assert.Equal(ExpectedAnchorDigest(envelope, 1), anchor.Digest);
+
+            await using var verify = CreateContext(name);
+            var state = await verify.CustomerOfflineRevocationStates.SingleAsync();
+            Assert.Equal(7, state.Sequence);
+            Assert.Equal(1, state.AnchorGeneration);
+        });
+    }
+
+    [Fact]
     public async Task GetCurrentAsync_RecoversPendingSnapshotWhenCrashHappenedBeforeTpmExtend()
     {
         Assert.SkipUnless(SqlServerAvailable(), "SQL Server is not configured (FARANOU_TEST_SQLSERVER).");
