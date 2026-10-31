@@ -138,6 +138,8 @@ public sealed class CustomerLicenseImportService
                     transaction, "installation_identity_proof_unavailable", localInstallationId,
                     payload.LicenseId, actorUserId, cancellationToken);
 
+            identity.LastVerifiedAtUtc = _timeProvider.GetUtcNow().UtcDateTime;
+
             var current = await _database.InstalledLicenses
                 .SingleOrDefaultAsync(item =>
                     item.InstallationId == localInstallationId &&
@@ -154,6 +156,7 @@ public sealed class CustomerLicenseImportService
                 current.Sequence == payload.Sequence &&
                 string.Equals(current.PayloadDigest, payloadDigest, StringComparison.Ordinal))
             {
+                await _database.SaveChangesAsync(cancellationToken);
                 if (transaction is not null)
                     await transaction.CommitAsync(cancellationToken);
                 return new CustomerLicenseImportResult(true, true, null, validation.Status);
