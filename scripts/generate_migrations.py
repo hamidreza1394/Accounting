@@ -136,7 +136,7 @@ HAND_WRITTEN_SQL: dict[str, tuple[list[str], list[str]]] = {
     "20261022150943": (ADD_CORPORATE_GROUPS_EPILOGUE, ADD_CORPORATE_GROUPS_DOWN_PRELUDE),
     "20261031130000": (
         [
-            "ALTER TABLE [InstallationIdentities] ADD CONSTRAINT [CK_InstallationIdentities_AssuranceLevel] CHECK ([AssuranceLevel] IN ('HardwareTpm', 'SoftwareProtected'));",
+            "ALTER TABLE [InstallationIdentities] ADD CONSTRAINT [CK_InstallationIdentities_AssuranceLevel] CHECK (([AssuranceLevel] = 'HardwareTpm' AND [ProviderName] = 'Microsoft Platform Crypto Provider') OR ([AssuranceLevel] = 'SoftwareProtected' AND [ProviderName] = 'Microsoft Software Key Storage Provider'));",
             "ALTER TABLE [InstallationIdentities] ADD CONSTRAINT [CK_InstallationIdentities_State] CHECK ([State] IN ('Current', 'Retired', 'ReactivationRequired'));",
             "ALTER TABLE [InstallationIdentities] ADD CONSTRAINT [CK_InstallationIdentities_SoftwareConsent] CHECK (([AssuranceLevel] <> 'SoftwareProtected' OR ([SoftwareProviderRiskAcceptedAtUtc] IS NOT NULL AND [SoftwareProviderRiskAcceptedBy] IS NOT NULL)) AND ([AssuranceLevel] <> 'HardwareTpm' OR ([SoftwareProviderRiskAcceptedAtUtc] IS NULL AND [SoftwareProviderRiskAcceptedBy] IS NULL)));",
             "ALTER TABLE [InstalledLicenses] ADD CONSTRAINT [CK_InstalledLicenses_PositiveSequence] CHECK ([Sequence] > 0);",
