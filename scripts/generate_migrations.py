@@ -49,16 +49,16 @@ MIGRATIONS_DIRECTORY = os.path.join("Infrastructure", "Persistence", "Migrations
 # 'InitialCreate'. Its designer file is the starting point of the difference that the
 # current migration has to apply. ('AlignSchemaWithModel' and 'WidenUserPasswordHash'
 # are published history as well.)
-DELTA_MIGRATION_ID = "20261029161402"
-DELTA_MIGRATION_NAME = "AddCustomerProvisioningClaims"
+DELTA_MIGRATION_ID = "20261031120000"
+DELTA_MIGRATION_NAME = "AddCustomerOfflineRevocationState"
 
 # The most recent migration. Its operations are computed from the difference between
 # the model of the migration before it (DELTA_MIGRATION_*) and the model of the code
 # base, so the files can not drift apart from the snapshot. DELTA_MIGRATION_* is
 # published history and is never rewritten, exactly like 'InitialCreate'.
-CURRENT_MIGRATION_ID = "20261031120000"
-CURRENT_MIGRATION_NAME = "AddCustomerOfflineRevocationState"
-CURRENT_MIGRATION_CLASS = "AddCustomerOfflineRevocationState"
+CURRENT_MIGRATION_ID = "20261031130000"
+CURRENT_MIGRATION_NAME = "AddCustomerLicensePersistence"
+CURRENT_MIGRATION_CLASS = "AddCustomerLicensePersistence"
 
 # The current migration adds a new table, which this generator does not render as
 # structural operations. Its reviewed Up/Down are written in EF Core migration form and
@@ -134,6 +134,17 @@ HAND_WRITTEN_SQL: dict[str, tuple[list[str], list[str]]] = {
         [],
     ),
     "20261022150943": (ADD_CORPORATE_GROUPS_EPILOGUE, ADD_CORPORATE_GROUPS_DOWN_PRELUDE),
+    "20261031130000": (
+        [
+            "ALTER TABLE [InstallationIdentities] ADD CONSTRAINT [CK_InstallationIdentities_AssuranceLevel] CHECK (([AssuranceLevel] = 'HardwareTpm' AND [ProviderName] = 'Microsoft Platform Crypto Provider') OR ([AssuranceLevel] = 'SoftwareProtected' AND [ProviderName] = 'Microsoft Software Key Storage Provider'));",
+            "ALTER TABLE [InstallationIdentities] ADD CONSTRAINT [CK_InstallationIdentities_State] CHECK ([State] IN ('Current', 'Retired', 'ReactivationRequired'));",
+            "ALTER TABLE [InstallationIdentities] ADD CONSTRAINT [CK_InstallationIdentities_SoftwareConsent] CHECK (([AssuranceLevel] <> 'SoftwareProtected' OR ([SoftwareProviderRiskAcceptedAtUtc] IS NOT NULL AND [SoftwareProviderRiskAcceptedBy] IS NOT NULL)) AND ([AssuranceLevel] <> 'HardwareTpm' OR ([SoftwareProviderRiskAcceptedAtUtc] IS NULL AND [SoftwareProviderRiskAcceptedBy] IS NULL)));",
+            "ALTER TABLE [InstalledLicenses] ADD CONSTRAINT [CK_InstalledLicenses_PositiveSequence] CHECK ([Sequence] > 0);",
+            "ALTER TABLE [InstalledLicenses] ADD CONSTRAINT [CK_InstalledLicenses_PositiveFormatVersion] CHECK ([FormatVersion] > 0);",
+            "ALTER TABLE [InstalledLicenses] ADD CONSTRAINT [CK_InstalledLicenses_State] CHECK ([State] IN ('Current', 'Superseded'));",
+        ],
+        [],
+    ),
 }
 CURRENT_MIGRATION_EPILOGUE, CURRENT_MIGRATION_DOWN_PRELUDE = HAND_WRITTEN_SQL.get(
     CURRENT_MIGRATION_ID, ([], [])

@@ -1702,3 +1702,10 @@
 - تست‌های Windows CNG برای رد software بدون consent، کلید non-exportable، امضای challenge و خواندن مجدد کلید پس از restart افزوده شد.
 - پیاده‌سازی اولیه در PR کاری شامل CNG key provisioner، metadata شامل OS MachineGuid digest و public-key fingerprint، و فرمان مستقل `--license-installation-key create` است. فرمان هیچ private key را خروجی نمی‌دهد و کلید را خودکار در startup ایجاد نمی‌کند.
 - هنوز تست/build CI برای این PR اجرا نشده؛ persistence دیتابیس و audit consent در PRهای بعدی Issue #384 تکمیل می‌شود. تست TPM واقعی انجام نشده است.
+
+## 2026-10-31 — Issue #384: persistence مشتری و Migration افزایشی
+- PR #386 با CI کامل سبز ادغام شد؛ commit `010571779e5bbbef9419f7748aa13d3700bd48ec`.
+- در branch مربوط به PR #387 تست‌های مدل ابتدا افزوده شدند؛ سپس entityهای `InstallationIdentity` و `InstalledLicense`، configurationها و DbSetهای Customer Database اضافه شدند.
+- Migration افزایشی `20261031130000_AddCustomerLicensePersistence` و designer/snapshot به‌روزرسانی شد؛ generator migration برای migration جدید با hand-written CHECK constraints تنظیم شد.
+- مدل تاریخچهٔ کلیدهای نصب را حفظ می‌کند؛ برای هر InstallationId تنها یک identity جاری و یک license جاری مجاز است. کلید خصوصی در دیتابیس نیست؛ SoftwareProtected فقط با consent timestamp/actor قابل ثبت است.
+- PR #387 هنوز CI نشده/ادغام نشده؛ هیچ Migration روی دیتابیس واقعی اجرا نشده و Vendor schema تغییر نکرده است.

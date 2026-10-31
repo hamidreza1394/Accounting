@@ -524,3 +524,9 @@
 - مالک محصول TPM 2.0 / Microsoft Platform Crypto Provider را مسیر پیش‌فرض تأیید کرد؛ Software CNG / DPAPI فقط با تأیید صریح و ثبت AssuranceLevel پایین‌تر مجاز است. هیچ fallback خودکار مجاز نیست.
 - PR #386 در حال پیاده‌سازی Windows CNG installation proof key، فرمان provisioning صریح و تست‌های CNG است؛ تا CI و ادغام، این تغییر در main پیاده‌سازی‌شده محسوب نمی‌شود.
 - Persistence دیتابیس مشتری، ثبت durable رضایت/سطح اطمینان، InstalledLicenses import/replace، runtime enforcement و Cloud entitlement resolution هنوز باقی‌اند. OD-06 انتقال/بازیابی و بخش recovery از OD-08 همچنان باز است.
+
+## 2026-10-31 — Issue #384: customer license persistence in PR #387
+- PR #386 ادغام شد (commit `010571779e5bbbef9419f7748aa13d3700bd48ec`): Windows CNG installation proof-key ceremony، TPM پیش‌فرض و Software KSP با consent صریح؛ تمام CI checks روی head ادغام‌شده سبز بودند. تست TPM فیزیکی اجرا نشده است.
+- PR کاری #387 شامل entity/configurationهای Customer-only برای `InstallationIdentities` و `InstalledLicenses`، RowVersion، history، unique filtered current indexes، FK با Restrict، check constraints و Migration افزایشی `20261031130000_AddCustomerLicensePersistence` است.
+- #387 هنوز در انتظار CI است؛ Migration به هیچ دیتابیس مشتری یا Vendor اعمال نشده است. هیچ Vendor schema تغییر نکرده.
+- Import/replace service، durable audit workflow، startup revalidation و Cloud server-side entitlement enforcement هنوز در مراحل بعدی Issue #384 هستند.

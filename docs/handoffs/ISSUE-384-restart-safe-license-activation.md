@@ -61,3 +61,10 @@
 - Software KSP با DPAPI فقط با flag صریح `--confirm-software-provider-risk` در ceremony مجاز است؛ AssuranceLevel باید `SoftwareProtected` و پایین‌تر از `HardwareTpm` ثبت شود.
 - PR کاری فعلی: `feat/issue-384-windows-license-installation-key`. تغییرات شامل Windows CNG provisioner، فرمان یک‌باره و تست‌های Windows CNG است.
 - این PR هنوز Build/Test/CI نشده؛ Migration، persistence consent/audit، import/replace و runtime enforcement باقی‌اند.
+
+## پیشرفت اجرایی بعدی — PR #386 و #387
+- PR #386 merged شد؛ Windows CNG installation proof key، TPM default، Software KSP با تأیید صریح و تست‌های Windows CI سبز.
+- PR #387 در branch `feat/issue-384-customer-license-persistence` شامل `InstallationIdentities` و `InstalledLicenses`، configurationها، model snapshot/designer و migration `20261031130000_AddCustomerLicensePersistence` است.
+- Migration فقط Customer Database را تغییر می‌دهد؛ هیچ Vendor schema تغییر نمی‌کند.
+- #387 تا CI/merge pending است؛ Migration روی دیتابیس واقعی اعمال نشده.
+- پس از این PR: پیاده‌سازی transactional import/replace، ثبت durable consent/audit، startup reload/revalidation و server-side Cloud entitlements.
