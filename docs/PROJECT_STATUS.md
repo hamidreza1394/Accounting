@@ -496,3 +496,10 @@
 - CI on previous head `0508c553e4cab42f967bc6bcd86e48cefac2ec9a` failed due to missing logger injection and a Gitleaks false positive in a test-only key ID. Both were corrected; latest head `2a9e227b28d9e54dfc08a4378642abaf4395b533` is awaiting fresh CI. Do not claim green until the new runs complete.
 - PRs #376/#377 were closed as duplicate stacked implementations; their unique immutable-history hardening is now included in #375.
 - Still NotVerified/Blocked: actual customer runtime revocation enforcement call-sites; provisioned Production HSM/KMS signer and independent public-key trust distribution; physical multi-host/offline and backup/restore operational tests.
+
+
+## 2026-10-31 — independent-process checkpoint regression
+- Added a helper executable and a regression test launching eight independent .NET processes that concurrently append the same sequence to one development JSONL checkpoint journal. Exactly one append must succeed; the other seven must reject the duplicate; the final journal must contain one valid record.
+- Added a Windows/Linux matrix to the existing Vendor CI workflow (rather than introducing a workflow that cannot run until merged).
+- This verifies cross-process locking for the Development/Test adapter only. It does not create a Production checkpoint sink or satisfy independent failure-domain, external retention/immutability, alerting or recovery requirements.
+- Local .NET execution was unavailable; the matrix must pass before verification.
