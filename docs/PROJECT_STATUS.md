@@ -471,3 +471,12 @@
 - ابزار create-only provisioning برای Windows/TBS و اسکریپت Linux/tpm2-tools محدود به /dev/tpmrm0 افزوده شده‌اند؛ trust resolverهای مستقل license/revocation و DI برای RevocationAwareLicenseEnvelopeValidator نیز ثبت شده‌اند. provisioning واقعی و secret delivery/rotation هنوز اجرا/تأیید نشده‌اند.
 - تست‌های SQL Server برای apply، restore قدیمی، recovery دو crash window و concurrency بین دو DbContext و تست‌های config provider اضافه شده‌اند. PR #366 در SHA نهایی ادغام شد؛ .NET CI run 41175579282 و تمام jobهایش، Vendor CI 41175579288 و Semgrep 41175579255 موفق‌اند.
 - تست فیزیکی TPM روی Windows 10/11، Windows Server و Linux، اجرای provisioning و secret delivery/rotation، و اتصال call-site عملیاتی مشتری به RevocationAwareLicenseEnvelopeValidator باقی است؛ این مرحله هنوز Production-ready یا Hardware-verified نیست و Issue #364 باز می‌ماند.
+
+
+## 2026-10-31 — تکمیل کلید مستقل ابطال آفلاین (PR #371)
+
+- PR [#371](https://github.com/hamidreza1394/Accounting/pull/371) با merge commit `6f1a2972e5540de768ffd541f799ce40444c86a0` در `main` ادغام شد؛ این PR نسخهٔ بازسازی‌شدهٔ تغییرات PR #369 روی main به‌روز بود و تغییرات جدیدتر main را حفظ کرد.
+- تغییرات: abstraction مستقل `IOfflineRevocationSigningProvider` با پیش‌فرض unavailable/fail-closed؛ الزام سه KeyId نسخه‌دار و متمایز برای license، provisioning/package و offline revocation؛ مسیر PKCS#11 مجزا برای کلید revocation؛ readiness برای هر سه کلید P-256 non-extractable؛ تست واحد و SoftHSM و به‌روزرسانی runbook/key ceremony.
+- CI روی head نهایی PR #371 با SHA `5d1a5974972978e8cd3f97534a7a3e394404abc0` موفق شد: .NET CI run [41178574826](https://github.com/hamidreza1394/Accounting/actions/runs/41178574826)، Vendor CI run [41178574828](https://github.com/hamidreza1394/Accounting/actions/runs/41178574828)، Semgrep run [41178574818](https://github.com/hamidreza1394/Accounting/actions/runs/41178574818).
+- PR [#369](https://github.com/hamidreza1394/Accounting/pull/369) پس از ثبت توضیح superseded-by-#371 بسته شد؛ هیچ تغییر منحصربه‌فردی از دست نرفت. PR [#370](https://github.com/hamidreza1394/Accounting/pull/370) نیز با موفقیت ادغام شده و شواهد CI مربوط به PR #366 را ثبت می‌کند.
+- محدودیت‌ها: این merge به معنی صدور/ذخیره/انتشار signed revocation snapshot، provision شدن HSM فیزیکی، اجرای Key Ceremony عملیاتی یا اتصال نهایی validator به مسیرهای runtime مشتری نیست. این موارد همچنان در #214/#236/#364 پیگیری می‌شوند؛ provider پیش‌فرض fail-closed باقی می‌ماند.
