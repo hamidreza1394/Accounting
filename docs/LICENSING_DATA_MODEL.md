@@ -277,3 +277,35 @@ erDiagram
 - کاهش حد، هیچ داده یا عضویت موجودی را حذف نمی‌کند. وضعیت over-limit قابل گزارش است؛ ایجاد/افزایش جدید تا رفع overage رد می‌شود.
 - Offline از آخرین envelope/amendment معتبر و پذیرفته‌شده استفاده می‌کند؛ sync آنلاین یا فایل امضاشده است و telemetry دارای LastSyncedAt/freshness است.
 - این بخش مدل منطقی مصوب است؛ schema/EF entities/migration فقط در Issues #390–#394 با بررسی جداگانه و Customer/Vendor DB boundary مناسب ایجاد می‌شوند. D-059 به‌تنهایی مجوز migration نیست.
+
+
+## ۹) مدل پیشنهادی برای سه حوزه و Activation Wizard (D-060) — NotImplemented
+
+این بخش مدل مفهومی است، نه مجوز ساخت Migration. نام جدول/Entity نهایی باید در Issueهای کدنویسی و با بررسی مدل موجود تثبیت شود.
+
+### 9.1 Vendor CRM & Commercial
+- CustomerAccount — طرف تجاری/خریدار.
+- CustomerContact — مخاطب مجاز تجاری/فنی (بدون credential مشتری).
+- CommercialContract — قرارداد، دوره، شرایط و پشتیبانی.
+- SalesOrder و SalesOrderLine — خرید پایه یا add-on برای Installation/Company.
+- PaymentRecord / PaymentAllocation — پرداخت و تطبیق؛ مرجع مالی تجاری، نه دفتر حسابداری مشتری.
+- SupportEntitlement / SupportCase — سطح/تاریخ پشتیبانی و سابقه درخواست.
+
+### 9.2 Licensing & Entitlement Engine
+- InstallationLicense — یک LicenseId پایه برای Installation.
+- LicenseRevision / LicenseAmendment — sequence و payload امضاشدهٔ revisionهای همان LicenseId.
+- CompanyEntitlement — نگاشت opaque Company reference به سقف‌ها/ماژول‌ها/Featureها/Seat.
+- FeatureDefinition — کاتالوگ پایدار و type-safe Featureها.
+- LicenseRevocation / SigningKeyReference / EntitlementAudit — وضعیت ابطال، شناسه provider کلید و ممیزی؛ private key در DB ذخیره نمی‌شود.
+
+### 9.3 Customer Deployment & Sync
+- InstallationIdentity / InstalledLicense — موجودیت‌های Customer موجود/در حال تکمیل در #384؛ وضعیت دقیق کد باید در PRها بررسی شود.
+- ActivationRequest — nonce، request ID، Installation binding، public-key fingerprint، schema version، expiry و وضعیت پردازش؛ private key ندارد.
+- ActivationReceipt / SyncAcknowledgement — ACK امضاشده و idempotency key/hash/sequence.
+- CompanySetupRecord — پیوند opaque entitlement reference به Company محلی و وضعیت setup؛ نباید credential در آن ذخیره شود.
+- SyncCheckpoint — LastSyncedAt، sequence/cursor و freshness metadata؛ payload telemetry باید حداقلی و قابل ممیزی باشد.
+
+### 9.4 مرز هویت و رمز
+User/Identity در Customer Host محلی است. برای هر Company می‌توان مدیر اولیه جدا و membership مستقل ایجاد کرد؛ یک User می‌تواند در چند Company عضویت داشته باشد. Password فقط به شکل ASP.NET Core Identity hash در store موجود Customer ذخیره می‌شود. هیچ Password، password hash، refresh token یا credential در Vendor Commercial tables یا request/license/ACK files قرار نمی‌گیرد.
+
+**وضعیت:** همه موارد بالا به‌جز موجودیت‌های صریحاً ذکرشده در کد فعلی، صرفاً مدل پیشنهادی و NotImplemented هستند؛ قبل از هر DDL باید schema فعلی، روابط، unique constraints، tenant isolation و migration rollout جداگانه بررسی و تأیید شوند.
