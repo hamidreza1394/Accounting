@@ -113,3 +113,17 @@
 - تست CI از Software KSP استفاده می‌کند و TPM فیزیکی، ACL حساب سرویس Production یا همه نسخه‌های Windows/Windows Server را تأیید نمی‌کند. تا آزمون سخت‌افزاری واقعی، Production enablement ACK signer ممنوع است.
 - PR #352 ادغام شد: revocation صریح Customer ACK KeyId، نگهداری SPKI برای audit، fail-closed در برابر مقدار revocation نامعتبر و overlap rotation اضافه شدند. .NET CI `41090537956` و Semgrep `41090537922` موفق؛ ۶۸۲ تست .NET (۶۷۸ موفق، ۴ Skip)، CNG ویندوز، انتشار Windows/Linux و E2E موفق. محدودیت ضد rollback در برابر restore کامل backup همچنان برقرار است.
 - باقی‌ماندهٔ #236: HSM واقعی Vendor (بودجه صفر و fail-closed)، ثبت public SPKI در Trust Store مشتری و Vendor با روند امن، durable metadata-only audit/readiness، آزمون TPM واقعی و ACL، backup/recovery عملیاتی و Linux backend در مرحلهٔ آتی.
+
+
+## کلید مستقل امضای Offline Revocation — 2026-10-31
+
+- Issue #214 به سه purpose مرکزی Vendor نیاز دارد: license، provisioning/package و offline-revocation؛ هرکدام KeyId نسخه‌دار و private-key object مستقل دارند.
+- قرارداد IOfflineRevocationSigningProvider و default unavailable/fail-closed اضافه شد. Provider PKCS#11 فقط کلید purpose خودش را می‌پذیرد و همان audit metadata-only را با purpose مستقل ثبت می‌کند.
+- Pkcs11SigningOptions اکنون سه KeyId متمایز را اجباری می‌کند؛ module readiness وجود/صفات هر سه کلید را بررسی می‌کند. DI در حالت PKCS#11 غیرفعال همچنان unavailable است.
+- SoftHSM integration test اکنون سه کلید مستقل می‌سازد و امضای revocation را با public key متناظر verify می‌کند؛ تست‌ها همچنین fail-closed بودن provider پیش‌فرض و رد KeyId تکراری/نامعتبر را پوشش می‌دهند.
+- Runbook، Vendor README و D-055/D-056 clarification به‌روزرسانی شدند. این PR فقط زیرساخت امضا را اضافه می‌کند؛ صدور/ذخیره/توزیع revocation snapshot هنوز در مرحلهٔ بعدی Issue #214 است.
+- HSM واقعی provision نشده؛ هیچ Production signing enablement ادعا نمی‌شود. CI نهایی پس از ایجاد PR لازم است.
+
+
+### PR #369 CI correction — 2026-10-31
+- First Vendor CI exposed C# syntax errors caused by over-escaped JSON test literals. Corrected to normal escaped C# JSON strings in both unit and SoftHSM integration tests. Awaiting fresh CI on the latest head.

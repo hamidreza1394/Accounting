@@ -1583,6 +1583,19 @@
 - Recovery runbook now covers periodic verification/alerting and SQL permission deployment.
 - Provider selection, separate external credentials, immutability/retention, real alert receiver, SQL permission execution and a target-environment restore drill remain open. No Production sink is claimed.
 
+
+## 2026-10-31 — Issue #236/#214: dedicated offline revocation signing key
+- Added IOfflineRevocationSigningProvider and an unavailable fail-closed default; PKCS#11 provider signs only with OfflineRevocationKey and emits purpose-specific metadata-only audit events.
+- PKCS#11 configuration now requires three distinct versioned key IDs (license, provisioning/package, offline-revocation); health/readiness verifies all three private-key objects and their required attributes.
+- Added unit coverage for purpose separation, duplicate/invalid IDs, fail-closed default, and SoftHSM signing/verification using a third independent non-extractable P-256 key.
+- Updated Vendor README, HSM runbook and D-055/D-056 clarification. This does not implement snapshot issuance, persistence, export or customer enforcement; those remain Issue #214 work.
+- No real HSM/production key was provisioned; CI is pending after PR creation.
+
+
+## 2026-10-31 — PR #369 CI syntax correction
+- Vendor CI caught over-escaped JSON string literals in the new offline-revocation tests (CS1003/CS1056). Corrected the C# string escaping in the unit and SoftHSM integration tests; no production code or test assertions were weakened.
+- Latest branch head triggers a fresh .NET CI, Vendor CI and Semgrep run. The prior Vendor CI failure is superseded by the corrected head; success is not claimed until the new runs complete.
+
 ## 2026-10-31 — Issue #364 / D-057: TPM NV Extend customer revocation state
 - تأیید مالک محصول برای Migration مستقل customer DB و anti-rollback مبتنی بر TPM دریافت شد.
 - معماری از TPM NV Extend با SHA-256 hash-chain استفاده می‌کند؛ generation و digest payload در extension data bind می‌شوند. NV index باید خارج از backup دیتابیس باشد.
