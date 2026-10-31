@@ -204,6 +204,16 @@ if (!setupRequired)
     builder.Services.AddScoped<Faranou.Licensing.Contracts.IOfflineRevocationStateStore,
         Data.TpmAnchoredOfflineRevocationStateStore>();
     builder.Services.AddScoped<Faranou.Licensing.Contracts.OfflineRevocationConsumer>();
+
+    // License signature and revocation checks are composed into one customer-side validator.
+    // Missing trust keys or TPM configuration remain fail-closed; no unsigned fallback exists.
+    builder.Services.TryAddSingleton<Faranou.Licensing.Contracts.ITrustedKeyResolver,
+        Infrastructure.Licensing.ConfigurationLicenseTrustStore>();
+    builder.Services.TryAddSingleton<Faranou.Licensing.Contracts.ILicenseSignatureVerifier,
+        Faranou.Licensing.Contracts.EcdsaP256Sha256Verifier>();
+    builder.Services.TryAddSingleton<Faranou.Licensing.Contracts.LicenseEvaluator>();
+    builder.Services.AddScoped<Faranou.Licensing.Contracts.LicenseEnvelopeValidator>();
+    builder.Services.AddScoped<Faranou.Licensing.Contracts.RevocationAwareLicenseEnvelopeValidator>();
     builder.Services.Configure<Infrastructure.Provisioning.CustomerProvisioningSettings>(
         builder.Configuration.GetSection(Infrastructure.Provisioning.CustomerProvisioningSettings.SectionName));
     builder.Services.AddSingleton<Infrastructure.Provisioning.ICustomerProvisioningTrustStore,
