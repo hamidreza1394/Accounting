@@ -59,6 +59,10 @@ public sealed class VendorLicenseRevocationService(
         if (!hasIssuedEnvelope)
             return VendorLicenseRevocationResult.Conflict("license_signed_envelope_missing");
 
+        // Acquire the global sequence row lock before reading the revoked set. This ensures
+        // concurrent revocations serialize both sequence allocation and the snapshot's contents.
+        var sequence = await sequenceAllocator.AllocateNextAsync(cancellationToken);
+
         var existingRevokedIds = await db.Licenses.AsNoTracking()
             .Where(item => item.Status == "Revoked")
             .Select(item => item.Id)
@@ -68,8 +72,6 @@ public sealed class VendorLicenseRevocationService(
             .Distinct()
             .Select(id => id.ToString("D"))
             .ToArray();
-
-        var sequence = await sequenceAllocator.AllocateNextAsync(cancellationToken);
         var validity = TimeSpan.FromDays(options.Value.SnapshotValidityDays);
         var creation = await snapshotFactory.CreateAsync(
             sequence, revokedLicenseIds, validity, cancellationToken);
@@ -77,15 +79,23 @@ public sealed class VendorLicenseRevocationService(
             return VendorLicenseRevocationResult.Unavailable("license_revocation_unavailable");
 
         string listId;
+        DateTimeOffset issuedAtUtc;
+        DateTimeOffset expiresAtUtc;
         try
         {
             using var payloadDocument = JsonDocument.Parse(creation.Envelope.PayloadJson);
-            listId = payloadDocument.RootElement.GetProperty("listId").GetString()
+            var root = payloadDocument.RootElement;
+            listId = root.GetProperty("listId").GetString()
                 ?? throw new JsonException("Missing revocation list ID.");
-            if (payloadDocument.RootElement.GetProperty("sequence").GetInt64() != sequence)
+            if (root.GetProperty("sequence").GetInt64() != sequence)
                 return VendorLicenseRevocationResult.Conflict("offline_revocation_snapshot_sequence_mismatch");
+            issuedAtUtc = root.GetProperty("issuedAtUtc").GetDateTimeOffset().ToUniversalTime();
+            expiresAtUtc = root.GetProperty("expiresAtUtc").GetDateTimeOffset().ToUniversalTime();
+            if (expiresAtUtc <= issuedAtUtc)
+                throw new JsonException("Invalid revocation snapshot validity window.");
         }
-        catch (JsonException)
+        catch (Exception exception) when (
+            exception is JsonException or InvalidOperationException or FormatException)
         {
             return VendorLicenseRevocationResult.Unavailable("license_revocation_unavailable");
         }
@@ -113,8 +123,8 @@ public sealed class VendorLicenseRevocationService(
             Algorithm = creation.Envelope.Algorithm,
             EnvelopeJson = JsonSerializer.Serialize(creation.Envelope),
             PayloadSha256 = payloadHash,
-            IssuedAtUtc = now,
-            ExpiresAtUtc = now.Add(validity),
+            IssuedAtUtc = issuedAtUtc,
+            ExpiresAtUtc = expiresAtUtc,
             CreatedAtUtc = now
         });
 
