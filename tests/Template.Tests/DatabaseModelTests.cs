@@ -51,6 +51,7 @@ public sealed class DatabaseModelTests
 				"ConsolidationRuns",
 				"CorporateGroupMembers",
 				"CorporateGroups",
+				"CustomerOfflineRevocationStates",
 				"FiscalPeriods",
 				"LoginLogs",
 				"MenuItems",
