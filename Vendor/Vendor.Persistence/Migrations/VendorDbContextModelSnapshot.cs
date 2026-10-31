@@ -522,6 +522,38 @@ namespace Faranou.Vendor.Persistence.Migrations
                     b.ToTable("VendorInstallations", (string)null);
                 });
 
+            modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorInstallationIdentity", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
+                    b.Property<Guid>("InstallationId").HasColumnType("uniqueidentifier");
+                    b.Property<string>("KeyId").IsRequired().IsUnicode(false).HasMaxLength(128).HasColumnType("varchar(128)");
+                    b.Property<int>("KeyVersion").HasColumnType("int");
+                    b.Property<string>("ProviderName").IsRequired().IsUnicode(false).HasMaxLength(100).HasColumnType("varchar(100)");
+                    b.Property<string>("AssuranceLevel").IsRequired().IsUnicode(false).HasMaxLength(24).HasColumnType("varchar(24)");
+                    b.Property<string>("OsInstallationMarkerDigest").IsRequired().IsUnicode(false).HasMaxLength(64).IsFixedLength().HasColumnType("char(64)");
+                    b.Property<string>("PublicKeyFingerprint").IsRequired().IsUnicode(false).HasMaxLength(64).IsFixedLength().HasColumnType("char(64)");
+                    b.Property<string>("PublicKeySubjectPublicKeyInfoBase64").IsRequired().IsUnicode(false).HasMaxLength(512).HasColumnType("varchar(512)");
+                    b.Property<DateTimeOffset?>("SoftwareProviderRiskAcceptedAtUtc").HasColumnType("datetimeoffset");
+                    b.Property<string>("SoftwareProviderRiskAcceptedBy").HasMaxLength(256).HasColumnType("nvarchar(256)");
+                    b.Property<string>("SoftwareProviderConsentReceiptJson").HasMaxLength(2048).HasColumnType("nvarchar(2048)");
+                    b.Property<string>("State").IsRequired().IsUnicode(false).HasMaxLength(16).HasColumnType("varchar(16)");
+                    b.Property<DateTimeOffset>("RegisteredAtUtc").HasColumnType("datetimeoffset");
+                    b.Property<DateTimeOffset?>("RetiredAtUtc").HasColumnType("datetimeoffset");
+                    b.Property<byte[]>("RowVersion").IsRequired().IsConcurrencyToken().ValueGeneratedOnAddOrUpdate().HasColumnType("rowversion");
+                    b.HasKey("Id");
+                    b.HasIndex("InstallationId", "KeyVersion").IsUnique();
+                    b.HasIndex("KeyId").IsUnique();
+                    b.HasIndex("PublicKeyFingerprint").IsUnique();
+                    b.HasIndex("InstallationId").IsUnique().HasFilter("[State] = N'Current'");
+                    b.ToTable("VendorInstallationIdentities", t =>
+                        {
+                            t.HasCheckConstraint("CK_VendorInstallationIdentities_AssuranceProvider", "([AssuranceLevel] = 'HardwareTpm' AND [ProviderName] = 'Microsoft Platform Crypto Provider') OR ([AssuranceLevel] = 'SoftwareProtected' AND [ProviderName] = 'Microsoft Software Key Storage Provider')");
+                            t.HasCheckConstraint("CK_VendorInstallationIdentities_KeyVersion", "[KeyVersion] >= 1");
+                            t.HasCheckConstraint("CK_VendorInstallationIdentities_SoftwareConsent", "([AssuranceLevel] = 'SoftwareProtected' AND [SoftwareProviderRiskAcceptedAtUtc] IS NOT NULL AND [SoftwareProviderRiskAcceptedBy] IS NOT NULL AND [SoftwareProviderConsentReceiptJson] IS NOT NULL) OR ([AssuranceLevel] = 'HardwareTpm' AND [SoftwareProviderRiskAcceptedAtUtc] IS NULL AND [SoftwareProviderRiskAcceptedBy] IS NULL AND [SoftwareProviderConsentReceiptJson] IS NULL)");
+                            t.HasCheckConstraint("CK_VendorInstallationIdentities_State", "[State] IN (N'Current', N'Retired')");
+                        });
+                });
+
             modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorContract", b =>
                 {
                     b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
@@ -665,6 +697,12 @@ namespace Faranou.Vendor.Persistence.Migrations
                     b.HasOne("Faranou.Vendor.Persistence.Domain.VendorCustomer", "Customer")
                         .WithMany("Installations").HasForeignKey("CustomerId").OnDelete(DeleteBehavior.Restrict).IsRequired();
                     b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorInstallationIdentity", b =>
+                {
+                    b.HasOne("Faranou.Vendor.Persistence.Domain.VendorInstallation", null)
+                        .WithMany().HasForeignKey("InstallationId").OnDelete(DeleteBehavior.Restrict).IsRequired();
                 });
 
             modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorContract", b =>
