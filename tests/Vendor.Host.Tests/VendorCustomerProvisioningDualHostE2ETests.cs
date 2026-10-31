@@ -152,6 +152,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
 
                 Assert.NotNull(customerFactory.Services.GetRequiredService<ICustomerLicenseEnvelopeValidator>());
                 Assert.Null(customerFactory.Services.GetService<LicenseEnvelopeValidator>());
+                Assert.Null(customerFactory.Services.GetService<RevocationAwareLicenseEnvelopeValidator>());
 
                 await using (var vendorScope = vendorFactory.Services.CreateAsyncScope())
                 {
