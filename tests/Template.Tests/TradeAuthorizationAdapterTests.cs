@@ -107,6 +107,20 @@ public sealed class TradeAuthorizationAdapterTests : IDisposable
     }
 
     [Fact]
+    public async Task MultiCompanyPermissionRequiresCurrentSignInSession()
+    {
+        var permission = TradePermissionCodes.MultiCompanyReportView;
+        var company = AddCompany(Domain.FiscalPeriodStatus.Open, [permission]);
+        var adapter = CreateAdapter(company.CompanyId, company.PeriodId, includeSessionId: false);
+
+        Assert.False(await adapter.HasPermissionForAllCompanyPeriodsAsync(
+            userId,
+            [new TradePeriodScope(company.CompanyId, company.PeriodId)],
+            permission,
+            TradeAccessIntent.Read));
+    }
+
+    [Fact]
     public async Task RequestedUserMustMatchAuthenticatedPrincipal()
     {
         var permission = TradePermissionCodes.FormView("import-order");
@@ -184,18 +198,23 @@ public sealed class TradeAuthorizationAdapterTests : IDisposable
         }
     }
 
-    private TradeAuthorizationAdapter CreateAdapter(Guid companyId, Guid periodId)
+    private TradeAuthorizationAdapter CreateAdapter(Guid companyId, Guid periodId, bool includeSessionId = true)
     {
         var sessionId = Guid.NewGuid();
         var services = new ServiceCollection();
         services.AddSingleton<IHostEnvironment>(new TestHostEnvironment());
         var context = new DefaultHttpContext { RequestServices = services.BuildServiceProvider() };
-        context.User = new ClaimsPrincipal(new ClaimsIdentity(
-        [
-            new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-            new Claim(CompanyAccessService.AccountKindClaimType, CompanyAccessService.UserAccountKind),
-            new Claim(WorkContextCookie.SessionIdClaimType, sessionId.ToString()),
-        ], "test"));
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, userId.ToString()),
+            new(CompanyAccessService.AccountKindClaimType, CompanyAccessService.UserAccountKind),
+        };
+        if (includeSessionId)
+        {
+            claims.Add(new Claim(WorkContextCookie.SessionIdClaimType, sessionId.ToString()));
+        }
+
+        context.User = new ClaimsPrincipal(new ClaimsIdentity(claims, "test"));
 
         cookie.Write(context, userId, sessionId, companyId, periodId);
         var setCookie = context.Response.Headers.SetCookie.ToString();
