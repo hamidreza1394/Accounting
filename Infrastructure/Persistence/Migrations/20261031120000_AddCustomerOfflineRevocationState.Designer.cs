@@ -1545,7 +1545,6 @@ namespace Data.Migrations
             {
                 b.Navigation("SubCategories");
             });
-
             #pragma warning restore 612, 618
         }
     }
