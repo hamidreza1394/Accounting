@@ -1,5 +1,4 @@
 using System.Security.Cryptography;
-using System.Text;
 using Faranou.Licensing.Contracts;
 using Faranou.Vendor.Host.Signing;
 using Xunit;
@@ -88,7 +87,7 @@ public sealed class VendorOfflineRevocationEnvelopeFactoryTests
         var result = await factory.CreateAsync(CreatePayload(now), minimumSequenceExclusive: 1);
 
         Assert.False(result.Succeeded);
-        Assert.Equal("offline_revocation_payload_invalid", result.ErrorCode);
+        Assert.Equal("offline_revocation_sequence_invalid", result.ErrorCode);
     }
 
     private static OfflineRevocationList CreatePayload(DateTimeOffset now) =>
