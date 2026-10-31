@@ -85,7 +85,10 @@ public sealed class Product : TradeEntity
         var identifier = _identifiers.SingleOrDefault(item => item.Id == identifierId && !item.IsDeleted)
             ?? throw new InvalidOperationException("The product identifier does not exist.");
 
-        if (IsDeleted) throw new InvalidOperationException("A deleted product cannot be changed.");
+        if (IsDeleted)
+        {
+            throw new InvalidOperationException("A deleted product cannot be changed.");
+        }
         RecordUpdate(removedByUserId, removedAtUtc);
         identifier.SoftDelete(removedByUserId, removedAtUtc);
     }
