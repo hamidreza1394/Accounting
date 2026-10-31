@@ -23,6 +23,5 @@ internal sealed class CustomerOfflineRevocationStateConfiguration
         builder.Property(state => state.AnchorGeneration).IsRequired();
         builder.Property(state => state.RowVersion).IsRowVersion();
 
-        builder.HasIndex(state => state.Sequence);
     }
 }
