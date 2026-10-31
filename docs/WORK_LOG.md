@@ -1777,3 +1777,11 @@
 - `TradeAccessIntent` خواندن/نوشتن را صریح می‌کند؛ دوره Closed برای Read مجاز و برای Write رد می‌شود. گزارش چندشرکتی، permission را در تمام شرکت‌ها و تعلق هر FiscalPeriod به TenantId را به‌صورت all-or-nothing کنترل می‌کند.
 - تست‌های adapter برای دوره Open/Closed، دوره متعلق به شرکت دیگر، تطبیق principal و مجوز همه شرکت/دوره‌ها افزوده شدند.
 - کاتالوگ/seed کدهای Trade، UI تخصیص permission به نقش، مصرف adapter در API/use case، entitlement runtime و تست SQL Server هنوز باقی‌اند. هیچ Migration یا تغییر دیتابیس اجرا نشده است.
+
+
+## 2026-10-31 — Issue #399: S0 decisions and Trade architecture alignment
+- مالک محصول چهار تصمیم را تأیید کرد: ADR-B گزینه A (یک شرکت مالک Voyage و allocation برای دیگران)، سیاست دوره selected (پرونده ImportCase چنددوره‌ای و اسناد/عملیات با FiscalPeriod واقعی هر عملیات)، گزارش عملیاتی چندشرکتی از موج اول، و enforcement entitlement مستقل TRADE_IMPORT از S1.
+- Issue #399 به‌عنوان کار S0 ایجاد شد و شاخه `docs/issue-399-trade-s0-alignment` از main ساخته شد.
+- D-063 و هم‌ترازی اولیه DECISIONS، TRADE_MODULE، PROJECT_STATUS و ROADMAP روی شاخه ثبت شدند. این تغییرات هنوز PR/merge نشده‌اند.
+- ممیزی read-only نشان داد PR #398 در main ادغام شده است؛ اما TradeDbContext هنوز در Server/DI یا migration design-time path به‌طور کامل قابل اثبات نیست. هیچ migration مشتری اجرا نشده است.
+- تست محلی یا CI برای این شاخه اجرا نشده؛ تا اجرای checks، اسناد و D-063 فقط در شاخه کاری هستند و Verified نیستند.

@@ -180,3 +180,11 @@ flowchart LR
 
 ### استخراج آینده
 برای Microservice واقعی، Trade باید دیتابیس مستقل، قرارداد API/Integration نسخه‌دار، هویت سرویس‌به‌سرویس، Outbox/Inbox در نقاط consistency، deployment و observability مستقل بگیرد. این گام‌ها Deferred هستند تا نیاز واقعی/تصمیم مستقل وجود داشته باشد؛ modularity به‌تنهایی Microservice نیست.
+
+
+## تکمیل سیاست‌های اجرایی Trade — D-063 / Issue #399
+- بنیاد ماژول در PR #398 در main ادغام شده است؛ کد مبنا `6c09765cefe8742668c34deda1c86b881f970332` است. این موضوع به معنی تکمیل قابلیت‌های تجاری یا entitlement runtime نیست.
+- هر Voyage یک شرکت مالک دارد؛ شرکت‌های دیگر با allocation/share line مشارکت می‌کنند و این تخصیص به‌تنهایی دسترسی به اسناد شرکت مالک نمی‌دهد.
+- ImportCase می‌تواند چند دوره را پوشش دهد؛ هر سند/عملیات تراکنشی FiscalPeriodId دوره جاری WorkContext را ذخیره می‌کند. اسناد دوره قبل immutable از نظر انتساب دوره باقی می‌مانند و به دوره جدید منتقل نمی‌شوند.
+- گزارش چندشرکتی عملیاتی از موج اول با all-or-nothing authorization در همه جفت‌های Company/FiscalPeriod و audit scope ارائه می‌شود؛ این قابلیت گزارش تلفیقی مالی نیست.
+- entitlement تجاری TRADE_IMPORT از S1 و پیش از استفاده از قابلیت‌های Trade enforce می‌شود؛ Production در نبود یا خطای اعتبارسنجی fail-closed است.
