@@ -128,10 +128,22 @@ builder.Services.AddSingleton(sp =>
 });
 // License signing public keys are configured independently from the private KMS/HSM signer.
 builder.Services.AddSingleton<LicenseSigningTrustStore>();
+// Offline revocation uses a distinct public trust set; an empty set deliberately blocks issuance.
+builder.Services.AddSingleton(sp =>
+{
+    var configuredKeys = sp.GetRequiredService<IConfiguration>()
+        .GetSection("OfflineRevocationSigningTrust:Keys")
+        .Get<OfflineRevocationSigningTrustedKeyOptions[]>() ?? [];
+    return new OfflineRevocationSigningTrustStore(configuredKeys);
+});
+builder.Services.Configure<VendorOfflineRevocationOptions>(
+    builder.Configuration.GetSection("OfflineRevocation"));
 builder.Services.AddScoped<VendorProvisioningLicenseResolver>();
 builder.Services.AddScoped<VendorLicenseEnvelopeFactory>();
 builder.Services.AddScoped<VendorLicenseIssuanceService>();
 builder.Services.AddScoped<VendorProvisioningIssuanceService>();
+builder.Services.AddScoped<VendorOfflineRevocationSnapshotFactory>();
+builder.Services.AddScoped<VendorOfflineRevocationIssuanceService>();
 // SignInManager belongs to the ASP.NET Core host layer, not the persistence class library.
 // Sign-in manager and token providers are host-layer Identity services; register them on the same IdentityBuilder.
 new IdentityBuilder(typeof(VendorAdminUser), builder.Services)
@@ -443,6 +455,7 @@ app.MapVendorRoleManagement();
 app.MapVendorBusinessEndpoints();
 app.MapVendorProvisioningEndpoints();
 app.MapVendorApprovalEndpoints();
+app.MapVendorOfflineRevocationEndpoints();
 app.MapFallback(async context =>
 {
     var path = context.Request.Path.Value ?? "/";
