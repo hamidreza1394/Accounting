@@ -169,3 +169,14 @@
 - **محدودیت:** TPM-backed identity نیز در برابر مالک/ادمین با کنترل کامل سیستم یا compromise باینری مصونیت مطلق نمی‌دهد؛ clone کامل VM/host و بازیابی کامل ماشین در حالت آفلاین همچنان محدودیت‌های پذیرفته‌شده‌اند.
 
 - **T35 — downgrade پنهانی از TPM به Software KSP:** ProviderName صریح و allow-list شده؛ نبود TPM به Software fallback نمی‌کند. Software KSP فقط با flag تأیید صریح در provisioning command مجاز است؛ AssuranceLevel و رضایت باید در DB/audit ثبت شوند. SoftwareProtected به‌عنوان TPM/Hardware گزارش نمی‌شود و در برابر مدیر محلی مخرب یا clone کامل host ضمانت سخت‌افزاری ندارد.
+
+
+## تهدیدهای جدید بر اساس D-059 (2026-10-31)
+
+- **T36 — سرقت/نشت رمز bootstrap مدیر آفلاین:** رمز فقط در فرم/فرمان محلی Customer Host دریافت می‌شود و فقط hash استاندارد ASP.NET Core Identity ذخیره می‌شود. رمز، hash، token قابل استفاده مجدد یا credential در Vendor، provisioning/license package، audit detail، log و telemetry قرار نمی‌گیرد. bootstrap باید یک‌بارمصرف و اتمیک باشد؛ تا تکمیل آن login/session عادی ممنوع است.
+- **T37 — دور زدن سقف Seat با درخواست هم‌زمان:** شمارش عضویت فعال و ایجاد عضویت باید در مرز تراکنشی/قفل مناسب انجام شود؛ UI check کافی نیست. Seat در سطح Company است و عضویت یک User در دو Company دو Seat مصرف می‌کند. کاهش Seat از نوع block-new است و عضویت موجود را حذف نمی‌کند.
+- **T38 — کاهش Feature/Module و حذف داده:** entitlement limit کاهش‌یافته نباید منجر به delete یا update مخرب داده موجود شود. عملیات create/expand مسدود و over-limit برای مدیر قابل مشاهده باشد.
+- **T39 — replay/downgrade در amendment:** amendment به همان LicenseId و Installation bind می‌شود؛ sequence باید strictly increasing و امضای payload روی بایت دقیق باشد. revision قدیمی، تکراری یا متعلق به Company/Installation دیگر رد و audit شود.
+- **T40 — اختلاط authority مرکزی و محلی:** Cloud entitlement را server-side resolve می‌کند؛ Offline آخرین revision امضاشده پذیرفته‌شده را حفظ می‌کند. قطع شبکه مجوز معتبر را باطل نمی‌کند. Vendor هرگز مستقیماً به Customer DB وصل نمی‌شود.
+- **T41 — داده مصرف آفلاین stale به‌عنوان real-time:** usage آفلاین تا sync بعدی stale است؛ Vendor UI باید LastSyncedAt/freshness را نمایش دهد و آن را به‌عنوان وضعیت زنده نشان ندهد.
+- **T42 — تغییر سیاست با کاهش entitlement:** Seat reduction برابر block-new و feature limit reduction برابر منع create/expand است؛ هیچ کاهش entitlement مجوز پاک‌کردن داده یا deactivate خودکار membership نیست.
