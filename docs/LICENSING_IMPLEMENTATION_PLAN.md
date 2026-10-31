@@ -99,7 +99,7 @@
 - خرید اولیه → صدور base license → enrollment/import → ساخت شرکت → add-on → sync/file exchange → expiry/restricted → recovery.
 - TPM فیزیکی، software consent path، Windows client/server و بعداً Linux adapter.
 - backup/restore، OS reinstall، TPM clear/key loss و recovery drills.
-- تست واقعی طبق درخواست مالک تا انتهای پیاده‌سازی موکول است؛ unit/integration/CI در هر مرحله الزامی است.
+- تست واقعی طبق درخواست مالک تا انتهای پیاده‌سازی موکول است؛ unit/integration/CI در هر مرحله الزامی است. در پایان #396 مسیر startup gate و Activation Wizard پس از آماده‌شدن #384/#390/#392/#394 یکپارچه می‌شود.
 
 ## 6. تفکیک وضعیت و ادعای تکمیل
 - **Accepted:** تصمیم محصول پذیرفته شده، نه لزوماً کدنویسی.
