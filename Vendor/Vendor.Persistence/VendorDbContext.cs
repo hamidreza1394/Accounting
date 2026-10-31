@@ -17,6 +17,8 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
     public DbSet<Domain.VendorLicense> Licenses => Set<Domain.VendorLicense>();
     public DbSet<Domain.VendorApprovalRequest> ApprovalRequests => Set<Domain.VendorApprovalRequest>();
     public DbSet<Domain.VendorSignedLicenseEnvelope> SignedLicenseEnvelopes => Set<Domain.VendorSignedLicenseEnvelope>();
+    public DbSet<Domain.VendorOfflineRevocationSnapshot> OfflineRevocationSnapshots => Set<Domain.VendorOfflineRevocationSnapshot>();
+    public DbSet<Domain.VendorOfflineRevocationSequence> OfflineRevocationSequences => Set<Domain.VendorOfflineRevocationSequence>();
     public DbSet<Domain.VendorProvisioningRequest> ProvisioningRequests => Set<Domain.VendorProvisioningRequest>();
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -189,6 +191,40 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
                 .WithMany()
                 .HasForeignKey(item => item.LicenseId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<Domain.VendorOfflineRevocationSnapshot>(entity =>
+        {
+            entity.ToTable("VendorOfflineRevocationSnapshots", table =>
+            {
+                table.HasCheckConstraint("CK_VendorOfflineRevocationSnapshots_Sequence", "[Sequence] >= 1");
+                table.HasCheckConstraint("CK_VendorOfflineRevocationSnapshots_Expiry", "[ExpiresAtUtc] > [IssuedAtUtc]");
+            });
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.ListId).HasMaxLength(128).IsRequired();
+            entity.Property(item => item.KeyId).HasMaxLength(128).IsRequired();
+            entity.Property(item => item.Algorithm).HasMaxLength(32).IsUnicode(false).IsRequired();
+            entity.Property(item => item.EnvelopeJson).IsRequired();
+            entity.Property(item => item.PayloadSha256).HasMaxLength(64).IsUnicode(false).IsFixedLength().IsRequired();
+            entity.Property(item => item.CreatedAtUtc)
+                .HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
+            entity.Property(item => item.RowVersion).IsRowVersion();
+            entity.HasIndex(item => item.Sequence).IsUnique();
+            entity.HasIndex(item => item.ListId).IsUnique();
+            entity.HasIndex(item => item.PayloadSha256);
+        });
+
+        builder.Entity<Domain.VendorOfflineRevocationSequence>(entity =>
+        {
+            entity.ToTable("VendorOfflineRevocationSequences", table =>
+            {
+                table.HasCheckConstraint("CK_VendorOfflineRevocationSequences_Singleton", "[Id] = 1");
+                table.HasCheckConstraint("CK_VendorOfflineRevocationSequences_LastSequence", "[LastSequence] >= 0");
+            });
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Id).ValueGeneratedNever();
+            entity.Property(item => item.LastSequence).IsRequired();
+            entity.HasData(new Domain.VendorOfflineRevocationSequence { Id = 1, LastSequence = 0 });
         });
 
         builder.Entity<Domain.VendorApprovalRequest>(entity =>
