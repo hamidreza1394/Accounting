@@ -1642,3 +1642,11 @@
 - Added SQL Server integration tests for success, signer unavailable, audit rollback and concurrent sequence/cumulative-list behavior, plus trust-store negative tests. The earlier factory unit tests remain in PR #375.
 - **Validation:** local .NET/SQL Server tests were not run. Fresh .NET CI, Vendor CI (including EF snapshot/migration and SQL Server tests), and Semgrep on final PR head are required before merge.
 - **Boundary:** no customer-side consumer, `Server/**`, customer database schema or production private key/credential is changed. #235/#364, #236 and #107 remain separate work.
+
+
+## 2026-10-31 — Issue #214: consolidated revocation workflow and CI fixes (PR #375)
+- Consolidated Vendor-side revocation factory, independent public trust store, signed snapshot persistence, application-lock global sequence, transactional maker-checker revocation, audit writes and antiforgery-protected no-cache export into PR #375.
+- Service verifies the newly signed envelope against the independent trust store before committing license/approval state. Added SQL Server trigger rejecting UPDATE/DELETE on signed snapshot history and an integration assertion for immutability.
+- Fixed CI compile error by injecting `ILogger<VendorOfflineRevocationIssuanceService>`; fixed Gitleaks false positive by changing the test-only key ID from a high-entropy-looking label to `test-kid`.
+- Previous CI head `0508c553e4cab42f967bc6bcd86e48cefac2ec9a` failed on those two issues; latest head `2a9e227b28d9e54dfc08a4378642abaf4395b533` has fresh CI runs pending/in progress. No green result is claimed yet.
+- Duplicate stacked PRs #376/#377 were closed as superseded; immutable-row trigger was ported into #375. Customer runtime enforcement and production signer/trust provisioning remain open.
