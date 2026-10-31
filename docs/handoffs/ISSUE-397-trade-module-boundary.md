@@ -10,8 +10,9 @@
 - [x] تعریف Tenant boundary براساس Company.Id و عدم وابستگی Trade به مدل‌های حسابداری.
 - [x] تعریف قراردادهای authorization و entitlement؛ دوره مستقل Trade طبق D-062 حذف شد و از FiscalPeriod مشترک استفاده می‌شود.
 - [x] تعریف قرارداد گزارش چندشرکتی all-or-nothing.
-- [ ] اتصال adapterهای Host به CompanyAccessService و License entitlement.
-- [ ] پیاده‌سازی اعتبارسنجی دوره مالی مشترک و مجوزهای تخصصی فرم/عملیات در API و UI و تست‌های منفی cross-company.
+- [x] پیاده‌سازی adapter مجوز بازرگانی با CompanyAccessService و WorkContext/FiscalPeriodSelectionPolicy.
+- [ ] اتصال entitlement runtime و مصرف ITradeAuthorization در endpoint/use caseهای تجاری.
+- [ ] ثبت/تخصیص permission codeهای Trade در PermissionDefinitions و فرم مدیریت نقش؛ اتصال مجوزها به API/UI و تست‌های منفی cross-company.
 - [ ] پیاده‌سازی گزارش‌های شرکت و چندشرکتی.
 - [ ] Migration مستقل Trade پس از review و تأیید جداگانه.
 
@@ -19,12 +20,14 @@
 - ایجاد پروژه‌های Trade.Domain، Trade.Application و Trade.Infrastructure.
 - ایجاد TradeDbContext با default schema برابر trade؛ بدون DbSet یا جدول دوره مستقل.
 - تعریف ITradeAuthorization و ITradeModuleEntitlement به‌عنوان portهای host-provided.
+- پیاده‌سازی TradeAuthorizationAdapter در Server برای بررسی principal، WorkContext، FiscalPeriod متعلق به شرکت، CompanyAccessService و all-or-nothing scope چندشرکتی.
 - افزودن تست‌های معماری برای نبود دوره مستقل Trade و guard جهت وابستگی پروژه‌ها.
 - ثبت D-061 و هم‌ترازی مستندات معماری/نقشه راه/ردیابی.
 
 ## فایل‌های مهم تغییرکرده
 - Modules/Trade/** — foundation ماژول.
-- tests/Template.Tests/TradeModuleFoundationTests.cs — تست دامنه، مدل و معماری.
+- tests/Template.Tests/TradeModuleFoundationTests.cs — تست معماری نبود دوره مستقل و مرز وابستگی.
+- tests/Template.Tests/TradeAuthorizationAdapterTests.cs — تست‌های مجوز دوره باز/بسته، شرکت/دوره بیگانه، کاربر و scope چندشرکتی.
 - Template.sln و tests/Template.Tests/Template.Tests.csproj — اتصال پروژه‌ها به build/test.
 - docs/DECISIONS.md, docs/TRADE_MODULE.md, docs/ARCHITECTURE.md, docs/ROADMAP.md, docs/INDEX.md, docs/REQUIREMENTS_TRACEABILITY.md, docs/WORK_LOG.md — تصمیم و ردیابی.
 - docs/handoffs/ISSUE-397-trade-module-boundary.md — این گزارش.
@@ -47,12 +50,13 @@
 
 ## امنیت، داده و سازگاری
 - شناسه شرکت در Trade به Company.Id اشاره منطقی دارد؛ FK به جداول حسابداری ایجاد نشده است.
-- authorization و entitlement فعلاً قرارداد هستند؛ runtime adapter هنوز پیاده‌سازی نشده.
+- adapter مجوز بازرگانی پیاده‌سازی شده اما هنوز از endpoint/use case تجاری فراخوانی نمی‌شود؛ entitlement همچنان port است.
 - هیچ migration ایجاد/اجرا نشده؛ بنابراین دیتابیس مشتری تغییر نکرده است.
 
 ## ریسک‌ها و کارهای باقی‌مانده
 - اتصال واقعی به Host و اعتبارسنجی membership/permission باید پیش از هر endpoint تجاری تکمیل شود.
-- Host adapter هنوز باید تعلق FiscalPeriodId به TenantId و وضعیت انتخاب‌پذیری دوره را بررسی کند؛ مجوزهای تخصصی Trade هنوز در runtime enforce نشده‌اند.
+- کاتالوگ PermissionDefinitions و UI تخصیص نقش برای مجوزهای Trade هنوز seed/تکمیل نشده‌اند؛ تا آن زمان نقش‌ها مجوزهای Trade قابل تخصیص ندارند.
+- adapter هنوز به endpoint/use case تجاری متصل نشده و entitlement runtime پیاده‌سازی نشده است.
 - گزارش چندشرکتی و audit scope هنوز use case اجرایی ندارند.
 - migration history جداگانه و tooling طراحی EF برای Trade باید پیش از اولین migration تثبیت شود.
 - CI روی PR باید build، unit و model tests را اجرا کند.
