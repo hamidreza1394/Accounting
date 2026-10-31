@@ -19,7 +19,7 @@ public sealed class DevelopmentFileVendorAuditCheckpointStoreTests
             await store.AppendAsync(first);
             await store.AppendAsync(second);
 
-            var latest = await store.ReadLatestAsync();
+            var latest = await store.ReadLatestAsync(TestContext.Current.CancellationToken);
             Assert.Equal(second, latest);
         }
         finally
@@ -107,7 +107,7 @@ public sealed class DevelopmentFileVendorAuditCheckpointStoreTests
     }
 
     [Fact]
-    public async Task AppendAcrossIndependentProcesses_RejectsDuplicateSequenceWithoutCorruptingJournal()
+    public async Task AppendAcrossIndependentProcessesRejectsDuplicateSequenceWithoutCorruptingJournal()
     {
         var directory = Path.Combine(Path.GetTempPath(), "FaranouAuditCheckpointProcessTests", Guid.NewGuid().ToString("N"));
         var path = Path.Combine(directory, "checkpoints.jsonl");
@@ -115,13 +115,7 @@ public sealed class DevelopmentFileVendorAuditCheckpointStoreTests
 
         try
         {
-            var configuration = Directory.GetParent(AppContext.BaseDirectory.TrimEnd(
-                Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))?.Name
-                ?? throw new InvalidOperationException("Test configuration directory could not be resolved.");
-            var helperProject = Path.GetFullPath(Path.Combine(
-                AppContext.BaseDirectory, "../../../../Vendor.CheckpointProcessHelper"));
-            var helperDll = Path.Combine(helperProject, "bin", configuration, "net10.0",
-                "Vendor.CheckpointProcessHelper.dll");
+            var helperDll = Path.Combine(AppContext.BaseDirectory, "Vendor.CheckpointProcessHelper.dll");
             Assert.True(File.Exists(helperDll), $"Cross-process helper was not built: {helperDll}");
 
             var attempts = Enumerable.Range(0, 8)
@@ -129,7 +123,7 @@ public sealed class DevelopmentFileVendorAuditCheckpointStoreTests
                 .ToArray();
             var results = await Task.WhenAll(attempts);
 
-            Assert.Single(results.Where(result => result.ExitCode == 0));
+            Assert.Single(results, result => result.ExitCode == 0);
             Assert.Equal(7, results.Count(result => result.ExitCode != 0));
             Assert.All(results.Where(result => result.ExitCode != 0), result =>
                 Assert.Contains("InvalidOperationException", result.StandardError, StringComparison.Ordinal));
@@ -138,12 +132,14 @@ public sealed class DevelopmentFileVendorAuditCheckpointStoreTests
             var latest = await store.ReadLatestAsync();
             Assert.NotNull(latest);
             Assert.Equal(1, latest.EventCount);
-            Assert.Single(await File.ReadAllLinesAsync(path));
+            Assert.Single(await File.ReadAllLinesAsync(path, TestContext.Current.CancellationToken));
         }
         finally
         {
             if (Directory.Exists(directory))
+            {
                 Directory.Delete(directory, recursive: true);
+            }
         }
     }
 
@@ -169,9 +165,10 @@ public sealed class DevelopmentFileVendorAuditCheckpointStoreTests
 
         using var process = System.Diagnostics.Process.Start(startInfo)
             ?? throw new InvalidOperationException("Could not start checkpoint helper process.");
-        var stdout = process.StandardOutput.ReadToEndAsync();
-        var stderr = process.StandardError.ReadToEndAsync();
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var stdout = process.StandardOutput.ReadToEndAsync(TestContext.Current.CancellationToken);
+        var stderr = process.StandardError.ReadToEndAsync(TestContext.Current.CancellationToken);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(30));
         try
         {
             await process.WaitForExitAsync(timeout.Token);
