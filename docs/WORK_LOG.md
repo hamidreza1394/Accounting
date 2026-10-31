@@ -1739,3 +1739,11 @@
 - مستندسازی تبادل Offline: درخواست نسخه‌دار .request.json با public SPKI و proof-of-possession؛ پاسخ .license.json امضاشده؛ .txt فقط Base64/armored wrapper همان بایت‌های دقیق؛ QR صرفاً کمک اختیاری برای challenge کوچک.
 - Issue #396 برای startup gate و Activation Wizard ایجاد شد و به #384/#390/#392/#394 متصل است. کد و UI هنوز پیاده‌سازی نشده‌اند.
 - فایل‌های مستندات این PR به‌روزرسانی شدند؛ هیچ کد اجرایی، Migration یا تست واقعی در این تغییر انجام نشده است.
+
+
+## 2026-10-31 — PR #388 merged and CI verified
+
+- PR #388 merged as `75b0af84d5543a2bfb935d893d8bfc37ee330eef`.
+- All 7 CI jobs succeeded: secret-scan, client, build-and-test, publish-scripts, e2e, publish and publish-windows. Earlier compile/test fixture failures were fixed before merge.
+- Customer installation identity enrollment and durable license import/replace are now on main. This does not imply startup gate, startup reload/revalidation, accounting-operation enforcement or Cloud authority are complete.
+- Physical TPM, independent two-host and recovery drills remain deferred to the final operational test phase.
