@@ -59,8 +59,8 @@ public static class InstallationKeyConsentReceiptVerifier
             !string.Equals(receipt.AssuranceLevel, SoftwareAssuranceLevel, StringComparison.Ordinal) ||
             string.IsNullOrWhiteSpace(receipt.AcceptedBy) ||
             receipt.AcceptedBy.Length > 256 ||
-            receipt.AcceptedBy.Contains('\\n') ||
-            receipt.AcceptedBy.Contains('\\r') ||
+            receipt.AcceptedBy.Contains('\n') ||
+            receipt.AcceptedBy.Contains('\r') ||
             string.IsNullOrWhiteSpace(receipt.SignatureBase64) ||
             receipt.AcceptedAtUtc == default ||
             receipt.AcceptedAtUtc > nowUtc.ToUniversalTime().AddMinutes(MaximumClockSkewMinutes))
@@ -75,7 +75,7 @@ public static class InstallationKeyConsentReceiptVerifier
             return false;
         }
 
-        var fingerprint = Convert.ToHexString(SHA256.HashData(publicKeySubjectPublicKeyInfo)).ToLowerInvariant();
+        var fingerprint = System.Convert.ToHexString(SHA256.HashData(publicKeySubjectPublicKeyInfo)).ToLowerInvariant();
         if (!string.Equals(fingerprint, expectedPublicKeyFingerprint, StringComparison.Ordinal))
         {
             errorCode = "installation_public_key_fingerprint_mismatch";
@@ -85,7 +85,7 @@ public static class InstallationKeyConsentReceiptVerifier
         byte[] signature;
         try
         {
-            signature = Convert.FromBase64String(receipt.SignatureBase64);
+            signature = System.Convert.FromBase64String(receipt.SignatureBase64);
         }
         catch (FormatException)
         {
