@@ -480,3 +480,9 @@
 - CI روی head نهایی PR #371 با SHA `5d1a5974972978e8cd3f97534a7a3e394404abc0` موفق شد: .NET CI run [41178574826](https://github.com/hamidreza1394/Accounting/actions/runs/41178574826)، Vendor CI run [41178574828](https://github.com/hamidreza1394/Accounting/actions/runs/41178574828)، Semgrep run [41178574818](https://github.com/hamidreza1394/Accounting/actions/runs/41178574818).
 - PR [#369](https://github.com/hamidreza1394/Accounting/pull/369) پس از ثبت توضیح superseded-by-#371 بسته شد؛ هیچ تغییر منحصربه‌فردی از دست نرفت. PR [#370](https://github.com/hamidreza1394/Accounting/pull/370) نیز با موفقیت ادغام شده و شواهد CI مربوط به PR #366 را ثبت می‌کند.
 - محدودیت‌ها: این merge به معنی صدور/ذخیره/انتشار signed revocation snapshot، provision شدن HSM فیزیکی، اجرای Key Ceremony عملیاتی یا اتصال نهایی validator به مسیرهای runtime مشتری نیست. این موارد همچنان در #214/#236/#364 پیگیری می‌شوند؛ provider پیش‌فرض fail-closed باقی می‌ماند.
+
+
+## 2026-10-31 — Issue #214: signed offline revocation snapshot factory (PR #375)
+- PR [#375](https://github.com/hamidreza1394/Accounting/pull/375) adds a Vendor factory for bounded, canonical signed revocation snapshots and unit coverage for signature verification, canonicalization, invalid inputs, signer outage and cancellation.
+- The factory is not yet merged or CI-verified at this status snapshot. No local .NET SDK was available; .NET CI and Vendor CI were in progress and Semgrep had succeeded on head `d689db2eb28f31fdc268abf6a2627b23df0274a3`.
+- Still not implemented: durable monotonic snapshot sequence/history, atomic approval + license status + snapshot + audit, authorized no-store export, and runtime customer call-site enforcement. The default revocation signer remains unavailable/fail-closed. No private key or customer schema change is included.
