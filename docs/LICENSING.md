@@ -119,12 +119,12 @@
 - ترتیب اجرا: #395 → #390 → #391/#392 → #393 → #394. پذیرش تصمیم به معنی پیاده‌سازی نیست.
 
 
-### وضعیت Issue #384 / PR #388 در زمان ثبت D-059
+### وضعیت Issue #384 / PR #388 پس از ادغام (2026-10-31)
 
 - PR #387 ادغام شده و Customer-only persistence schema در main است؛ Migration روی دیتابیس واقعی اجرا نشده است.
-- PR #388 در حال تکمیل enrollment هویت نصب CNG و import/replace تراکنشی از طریق ICustomerLicenseEnvelopeValidator است. endpointها Infrastructure-only، antiforgery-protected، rate-limited و no-store هستند؛ InstallationId از configuration سمت سرور خوانده می‌شود.
+- PR #388 با commit `75b0af84d5543a2bfb935d893d8bfc37ee330eef` ادغام شد. Enrollment هویت نصب CNG و import/replace تراکنشی از طریق ICustomerLicenseEnvelopeValidator، endpointهای Infrastructure-only، antiforgery-protected، rate-limited و no-store و InstallationId سمت سرور تحویل شدند. تمام ۷ Job CI موفق بودند.
 - طبق D-059، import باید یک envelope امضاشده با status برابر Restricted را نیز persist کند تا Customer بتواند به read/export/recovery محدود شود؛ Grace رد می‌شود چون grace ضمنی پذیرفته نشده است. اتصال این status به runtime policy همچنان در #391/#384 باقی است.
-- Startup reload/revalidation، enforcement در call-siteهای عملیات حسابداری، Cloud authoritative entitlement resolution و recovery عملیاتی هنوز تکمیل نشده‌اند. PR #388 تا CI کامل و ادغام، Implemented/Verified در main محسوب نمی‌شود.
+- Startup reload/revalidation، license-first gate، Activation Wizard، enforcement در call-siteهای عملیات حسابداری، Cloud authoritative entitlement resolution و recovery عملیاتی هنوز تکمیل نشده‌اند؛ Issues #391 و #396 و ادامه #384 این موارد را پوشش می‌دهند. تست فیزیکی TPM/دو میزبان اجرا نشده است.
 
 
 ## ۱۱) معماری سه‌حوزه‌ای و تجربه License-first (D-060)
