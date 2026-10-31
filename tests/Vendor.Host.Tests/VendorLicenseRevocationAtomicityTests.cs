@@ -43,7 +43,7 @@ public sealed class VendorLicenseRevocationAtomicityTests
             Assert.Equal("Approved", (await db.ApprovalRequests.SingleAsync()).Status);
             var snapshot = await db.OfflineRevocationSnapshots.SingleAsync();
             Assert.Equal(1, snapshot.Sequence);
-            Assert.Equal(0L, await db.OfflineRevocationSequences.Select(item => item.LastSequence).SingleAsync());
+            Assert.Equal(1L, await db.OfflineRevocationSequences.Select(item => item.LastSequence).SingleAsync());
             var envelope = JsonSerializer.Deserialize<OfflineRevocationListEnvelope>(snapshot.EnvelopeJson);
             Assert.NotNull(envelope);
             Assert.True(OfflineRevocationListValidator.TryValidateAndVerify(
@@ -156,12 +156,20 @@ public sealed class VendorLicenseRevocationAtomicityTests
 
             var taskA = allocatorA.AllocateNextAsync(TestContext.Current.CancellationToken);
             var taskB = allocatorB.AllocateNextAsync(TestContext.Current.CancellationToken);
-            var sequenceA = await taskA;
-            await txA.CommitAsync(TestContext.Current.CancellationToken);
-            var sequenceB = await taskB;
-            await txB.CommitAsync(TestContext.Current.CancellationToken);
+            var firstTask = await Task.WhenAny(taskA, taskB);
+            var firstSequence = await firstTask;
+            if (firstTask == taskA)
+                await txA.CommitAsync(TestContext.Current.CancellationToken);
+            else
+                await txB.CommitAsync(TestContext.Current.CancellationToken);
 
-            Assert.Equal(new long[] { 1, 2 }, new[] { sequenceA, sequenceB }.Order().ToArray());
+            var secondSequence = await (firstTask == taskA ? taskB : taskA);
+            if (firstTask == taskA)
+                await txB.CommitAsync(TestContext.Current.CancellationToken);
+            else
+                await txA.CommitAsync(TestContext.Current.CancellationToken);
+
+            Assert.Equal(new long[] { 1, 2 }, new[] { firstSequence, secondSequence }.Order().ToArray());
             dbA.ChangeTracker.Clear();
             Assert.Equal(2L, await dbA.OfflineRevocationSequences.Select(item => item.LastSequence).SingleAsync());
         }
