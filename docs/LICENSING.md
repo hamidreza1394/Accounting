@@ -90,3 +90,11 @@
 - Added a scoped dual-host DI assertion proving the safe interface resolves while neither raw nor concrete validator is directly registered; unit coverage now targets the interface contract.
 - This prevents accidental DI bypass, but is **not end-to-end license enforcement**. Production call-sites, customer envelope storage/import, authorization/audit policy, installation binding and approved OD-03/04 expiry/grace behavior remain unresolved. TPM hardware provisioning and real Windows/Linux verification remain NotVerified.
 - Rebuilt this change from current `main` to resolve PR #381's divergence; CI must run on the replacement PR head. No local .NET/SQL Server execution is claimed.
+
+## 2026-10-31 — فعال‌سازی پایدار و کنترل Cloud (D-058 / Issue #384)
+- مالک محصول تأیید کرد هر LicenseEnvelope برای هر Installation فقط یک‌بار وارد شود؛ Restart/reboot/recycle برنامه یا سرویس نباید باعث درخواست مجدد فایل لایسنس یا قفل شود.
+- نصب مشتری باید envelope امضاشده و وضعیت نصب را به‌صورت durable نگه دارد و در startup/نقاط سیاست سرور دوباره اعتبارسنجی کند. وجود ردیف DB به‌تنهایی اعتبار نیست.
+- در نصب اختصاصی Windows، OS reinstall/re-image که هویت OS installation را تغییر دهد نیازمند reactivation است؛ Windows servicing/patch و restart نباید فعال‌سازی را بی‌دلیل باطل کنند. MachineGuid به‌تنهایی کافی نیست؛ binding باید با کلید نصب غیرقابل‌export و provider امن ترکیب شود. جزئیات OD-08 هنوز NeedsApproval است.
+- در Cloud، مرجع نهایی entitlement و license در سرور است؛ React/browser فقط projection هستند. درخواست حسابداری نباید برای هر عملیات یک تماس جداگانه به Vendor داشته باشد.
+- D-046 پابرجاست: نصب اختصاصی آفلاین معتبر با قطع اینترنت باطل نمی‌شود. Cloud-hosted server از مرجع server-side خود استفاده می‌کند.
+- **وضعیت پیاده‌سازی:** این‌ها تصمیم پذیرفته‌شده و دامنه Issue #384 هستند؛ import/storage، installation binding و enforcement هنوز NotImplemented. هیچ Migration یا کد اجرایی در این ثبت تصمیم انجام نشده است.
