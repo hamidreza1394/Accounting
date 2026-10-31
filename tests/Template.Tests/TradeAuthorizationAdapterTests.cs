@@ -102,6 +102,22 @@ public sealed class TradeAuthorizationAdapterTests : IDisposable
     }
 
     [Fact]
+    public async Task ReadPermissionCannotAuthorizeAWriteIntent()
+    {
+        var viewPermission = TradePermissionCodes.FormView("import-order");
+        var company = AddCompany(Domain.FiscalPeriodStatus.Open, [viewPermission]);
+        var adapter = CreateAdapter(company.CompanyId, company.PeriodId);
+
+        Assert.False(await adapter.HasPermissionAsync(
+            userId,
+            company.CompanyId,
+            company.PeriodId,
+            viewPermission,
+            TradeAccessIntent.Write,
+            TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task PeriodFromAnotherCompanyIsRejected()
     {
         var permission = TradePermissionCodes.FormView("import-order");
