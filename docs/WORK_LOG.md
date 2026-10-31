@@ -1590,3 +1590,8 @@
 - Added unit coverage for purpose separation, duplicate/invalid IDs, fail-closed default, and SoftHSM signing/verification using a third independent non-extractable P-256 key.
 - Updated Vendor README, HSM runbook and D-055/D-056 clarification. This does not implement snapshot issuance, persistence, export or customer enforcement; those remain Issue #214 work.
 - No real HSM/production key was provisioned; CI is pending after PR creation.
+
+
+## 2026-10-31 — PR #369 CI syntax correction
+- Vendor CI caught over-escaped JSON string literals in the new offline-revocation tests (CS1003/CS1056). Corrected the C# string escaping in the unit and SoftHSM integration tests; no production code or test assertions were weakened.
+- Latest branch head triggers a fresh .NET CI, Vendor CI and Semgrep run. The prior Vendor CI failure is superseded by the corrected head; success is not claimed until the new runs complete.
