@@ -899,3 +899,42 @@ The customer consumer, claim/replay, transactional apply, one-time Enrollment/re
 - **نتیجه:** Issue #384 دامنهٔ پیاده‌سازی customer import/storage، identity binding و server-side enforcement را دنبال می‌کند. تا تکمیل کد، migration، تست و CI، وضعیت قابلیت NotImplemented است؛ این تصمیم به‌تنهایی Production readiness ایجاد نمی‌کند.
 
 - **تکمیل D-058 با تأیید صریح مالک محصول (2026-10-31):** کلید هویت نصب Windows با CNG و ECDSA P-256، non-exportable و MachineKey است. مسیر پیش‌فرض TPM 2.0 با Microsoft Platform Crypto Provider است. مسیر جایگزین Microsoft Software Key Storage Provider با حفاظت Windows software key store/DPAPI فقط با تأیید صریح اپراتور در ceremony مجاز است؛ هیچ fallback خودکار مجاز نیست. سطح اطمینان `HardwareTpm` یا `SoftwareProtected` باید در InstallationIdentity ذخیره و در ممیزی/وضعیت قابل مشاهده باشد. SoftwareProtected معادل TPM نیست و ریسک مدیر محلی/clone کامل میزبان را دارد. این تصمیم بخش provider از OD-08 را تعیین می‌کند؛ بازیابی/انتقال نصب در OD-06 و جزئیات recovery کلید همچنان باز می‌ماند.
+
+## D-059 — entitlementهای مستقل در سطح شرکت، ظرفیت کاربر، bootstrap مدیر آفلاین و همگام‌سازی (2026-10-31)
+
+- **وضعیت:** Accepted — تأیید صریح مالک محصول در 2026-10-31؛ مرجع اجرایی Issue #389.
+- **دامنه:** این تصمیم مدل تجاری و entitlement را برای Vendor و Customer مشخص می‌کند؛ ثبت تصمیم به‌تنهایی به معنی پیاده‌سازی یا Verified شدن قابلیت‌ها نیست.
+
+### مدل مجوز و دامنه
+1. برای هر Installation دقیقاً یک LicenseEnvelope پایه وجود دارد. Company، Module، Feature و UserSeat entitlementهای مستقل و scope شده‌اند؛ برای خرید افزونه LicenseId/Installation جدید ساخته نمی‌شود.
+2. سقف شرکت (maxCompanies) در سطح Installation است. ماژول‌ها، Featureها و ظرفیت کاربر در سطح Company اعمال می‌شوند؛ یک User که عضو دو Company باشد در هر Company یک Seat مصرف می‌کند.
+3. کاتالوگ Feature توسعه‌پذیر و نوع‌دار است: enabled، max_count و enum. نمونه‌ها: تعداد/سطح حساب تحلیلی، مرکز هزینه، بودجه، انبار و POS. مقادیر از payload امضاشده می‌آیند؛ ورودی کلاینت منبع حقیقت نیست.
+4. خرید یا افزایش ظرفیت در Cloud و Offline برای Installation/Company موجود مجاز است. Vendor یک amendment امضاشده با sequence یکنواخت افزایشی برای همان LicenseId صادر می‌کند؛ Customer فقط revision معتبرتر همان Installation را می‌پذیرد.
+
+### سیاست کاهش و انقضا
+5. کاهش Seat از نوع block-new است: عضویت‌های فعال موجود حذف یا غیرفعال نمی‌شوند؛ ایجاد/فعال‌سازی عضویت جدید تا بازگشت مصرف به سقف مجاز مسدود می‌شود.
+6. کاهش حد Feature/Module داده را حذف یا تغییر نمی‌دهد. اگر مصرف موجود بالاتر از حد جدید باشد، وضعیت over-limit گزارش می‌شود و ایجاد یا گسترش مورد جدید ممنوع است.
+7. انقضای مجوز مدت‌دار به restricted می‌رود: داده حفظ می‌شود؛ عملیات عادی نوشتن/تجاری محدود می‌شود؛ خواندن مجاز، خروجی‌گرفتن و بازیابی مجاز باقی می‌ماند. Grace period ضمنی وجود ندارد. لایسنس دائمی با پایان پشتیبانی/به‌روزرسانی منقضی نمی‌شود؛ این entitlementها جدا هستند.
+
+### Cloud، Offline و تبادل
+8. Cloud: مرجع نهایی تصمیم entitlement سمت سرور Vendor/Control Plane است. درخواست‌های حسابداری نباید برای هر عملیات round-trip به Vendor داشته باشند؛ cache فقط server-controlled، نسخه‌دار و قابل invalidation است.
+9. Offline/Dedicated: آخرین entitlement امضاشده و پذیرفته‌شده در Customer Host مرجع عملیاتی تا زمان sync است؛ قطع اینترنت به‌تنهایی اعتبار را باطل نمی‌کند.
+10. همگام‌سازی both است: در صورت دسترسی، تبادل آنلاین احراز هویت‌شده؛ در همه حال امکان export/import فایل امضاشده برای نصب آفلاین. sequence، امضا، installation binding و anti-replay در هر دو مسیر یکسان‌اند.
+11. گزارش usage آفلاین تا sync بعدی در Vendor stale است و نباید به‌عنوان داده زنده نمایش داده شود. Vendor مستقیماً به دیتابیس Customer متصل نمی‌شود.
+
+### ایجاد شرکت و مدیر اولیه آفلاین
+12. در نصب Offline، مدیر اولیه روی خود Customer Host و در مرحله bootstrap محلی username/password را تعیین می‌کند. رمز/hash آن هرگز به Vendor، فایل License/Provisioning، Log یا telemetry ارسال نمی‌شود؛ فقط با ASP.NET Core Identity hash و ذخیره می‌شود.
+13. bootstrap یک‌بارمصرف، اتمیک و قابل ممیزی است؛ تا تکمیل آن ورود عادی/ایجاد نشست کاری مجاز نیست. رمز پیش‌فرض یا مشترک وجود ندارد.
+14. Customer می‌تواند Company جدید بسازد، مشروط به maxCompanies: Cloud با مرجع مرکزی و Offline با آخرین entitlement امضاشده محلی اعتبارسنجی می‌کند. اگر اتصال در دسترس باشد می‌توان درخواست آنلاین احراز هویت‌شده انجام داد؛ در نبود اتصال، مسیر محلی معتبر باقی می‌ماند.
+
+### امنیت و مرزها
+15. CustomerAccount (خریدار)، Installation (استقرار/سرور) و Company (Tenant حسابداری) مفاهیم مستقل می‌مانند. Vendor و Customer persistence جدا هستند؛ هیچ اتصال مستقیم Vendor به Customer DB مجاز نیست.
+16. هر amendment با payload دقیق امضاشده، LicenseId ثابت، Installation binding و sequence افزایشی محافظت می‌شود؛ downgrade/replay رد و تمام تغییرات مهم audit می‌شوند.
+17. entitlement تجاری جایگزین Authorization عملیاتی نیست. ترتیب کنترل Customer: هویت/نشست، عضویت فعال و دسترسی شرکت، entitlement تجاری، مجوز عملیاتی، سپس وضعیت دوره مالی. هیچ شناسه یا شمارنده ارسالی کلاینت قابل اعتماد نیست.
+18. این تصمیم provider هویت نصب D-058 و ضد rollback snapshot ابطال D-057 را تغییر نمی‌دهد؛ TPM ترجیحی و Software CNG/DPAPI فقط با رضایت صریح و assurance پایین‌تر باقی است.
+
+### ترتیب پیاده‌سازی مصوب
+#395 docs → #390 contract/versioning → #391 enforcement و #392 company/bootstrap → #393 Vendor add-on issuance → #394 online/offline sync؛ تست end-to-end واقعی دو میزبان، TPM فیزیکی و recovery drill در انتهای فاز اجرا می‌شود. تست واحد/Integration/CI هر PR همچنان الزامی است.
+
+- **Issues:** #390، #391، #392، #393، #394 و #395.
+- **وضعیت کد در زمان ثبت:** این ADR فقط Accepted است؛ قرارداد نسخه‌دار، enforcement، bootstrap، add-on issuance و sync تا زمانی که PR و CI مربوطه تکمیل نشود NotImplemented محسوب می‌شوند.
