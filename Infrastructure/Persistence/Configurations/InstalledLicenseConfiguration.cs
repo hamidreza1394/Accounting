@@ -52,7 +52,8 @@ internal sealed class InstalledLicenseConfiguration
 
         builder.HasOne<Domain.InstallationIdentity>()
             .WithMany()
-            .HasForeignKey(license => license.InstallationIdentityId)
+            .HasForeignKey(license => new { license.InstallationIdentityId, license.InstallationId })
+            .HasPrincipalKey(identity => new { identity.Id, identity.InstallationId })
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(license => new { license.InstallationId, license.Sequence })
