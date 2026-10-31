@@ -1,4 +1,5 @@
 using Faranou.Modules.Trade.Domain.Common;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Faranou.Modules.Trade.Infrastructure.Persistence.Configurations;
