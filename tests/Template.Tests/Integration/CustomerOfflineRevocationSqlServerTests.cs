@@ -1,8 +1,8 @@
 using System;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Faranou.Licensing.Contracts;
 using Microsoft.Data.SqlClient;
@@ -65,14 +65,13 @@ public sealed class CustomerOfflineRevocationSqlServerTests
             await database.Database.MigrateAsync();
 
             using var signingKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-            var now = DateTimeOffset.UtcNow;
-            var envelope = Sign(signingKey, Sample(now, 1));
+            var envelope = Sign(signingKey, Sample(DateTimeOffset.UtcNow, 1));
             var anchor = new FakeRollbackAnchor();
             var consumer = CreateConsumer(database, anchor, envelope.KeyId, signingKey.ExportSubjectPublicKeyInfo());
 
             var applied = await consumer.ApplyAsync(envelope);
             Assert.True(applied.Success, applied.ErrorCode);
-            Assert.Equal(1, anchor.Generation);
+            Assert.NotEqual(Data.TpmAnchoredOfflineRevocationStateStore.InitialAnchorDigest, anchor.Digest);
 
             var accepted = await consumer.CheckAsync("license-not-revoked");
             Assert.Equal(OfflineRevocationCheckStatus.NotRevoked, accepted.Status);
@@ -80,15 +79,20 @@ public sealed class CustomerOfflineRevocationSqlServerTests
             var row = await database.CustomerOfflineRevocationStates.SingleAsync();
             Assert.Equal(1, row.Sequence);
             Assert.Equal(1, row.AnchorGeneration);
+            Assert.Equal(anchor.Digest, row.AnchorDigest);
 
-            // Simulate restoring an older customer DB backup while the TPM NV counter remains newer.
+            // Simulate restoring an older customer DB backup while the TPM NV Extend value remains newer.
             row.Sequence = 0;
             row.SnapshotDigest = null;
             row.ExpiresAtUtc = null;
             row.RevokedLicenseIdsJson = "[]";
+            row.PreviousAnchorDigest = Data.TpmAnchoredOfflineRevocationStateStore.InitialAnchorDigest;
+            row.AnchorDigest = Data.TpmAnchoredOfflineRevocationStateStore.InitialAnchorDigest;
             row.AnchorGeneration = 0;
+            row.AcceptedEnvelopeJson = null;
             row.PendingEnvelopeJson = null;
             row.PendingExpectedGeneration = null;
+            row.PendingExpectedAnchorDigest = null;
             await database.SaveChangesAsync();
 
             var afterRestore = await consumer.CheckAsync("license-not-revoked");
@@ -98,7 +102,7 @@ public sealed class CustomerOfflineRevocationSqlServerTests
     }
 
     [Fact]
-    public async Task GetCurrentAsync_RecoversPendingSnapshotWhenCrashHappenedBeforeTpmIncrement()
+    public async Task GetCurrentAsync_RecoversPendingSnapshotWhenCrashHappenedBeforeTpmExtend()
     {
         Assert.SkipUnless(SqlServerAvailable(), "SQL Server is not configured (FARANOU_TEST_SQLSERVER).");
 
@@ -109,14 +113,7 @@ public sealed class CustomerOfflineRevocationSqlServerTests
 
             using var signingKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
             var envelope = Sign(signingKey, Sample(DateTimeOffset.UtcNow, 4));
-            database.CustomerOfflineRevocationStates.Add(new Domain.CustomerOfflineRevocationState
-            {
-                Sequence = 0,
-                RevokedLicenseIdsJson = "[]",
-                AnchorGeneration = 0,
-                PendingEnvelopeJson = JsonSerializer.Serialize(envelope, new JsonSerializerOptions(JsonSerializerDefaults.Web)),
-                PendingExpectedGeneration = 1
-            });
+            AddPendingRow(database, envelope);
             await database.SaveChangesAsync();
 
             var anchor = new FakeRollbackAnchor();
@@ -128,13 +125,13 @@ public sealed class CustomerOfflineRevocationSqlServerTests
             Assert.NotNull(state);
             Assert.Equal(4, state!.Sequence);
             Assert.Equal(1, state.AnchorGeneration);
-            Assert.Equal(1, anchor.Generation);
+            Assert.Equal(ExpectedAnchorDigest(envelope, 1), anchor.Digest);
             Assert.Contains("license-a", state.RevokedLicenseIds);
         });
     }
 
     [Fact]
-    public async Task GetCurrentAsync_FinalizesPendingSnapshotWhenCrashHappenedAfterTpmIncrement()
+    public async Task GetCurrentAsync_FinalizesPendingSnapshotWhenCrashHappenedAfterTpmExtend()
     {
         Assert.SkipUnless(SqlServerAvailable(), "SQL Server is not configured (FARANOU_TEST_SQLSERVER).");
 
@@ -145,17 +142,11 @@ public sealed class CustomerOfflineRevocationSqlServerTests
 
             using var signingKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
             var envelope = Sign(signingKey, Sample(DateTimeOffset.UtcNow, 5));
-            database.CustomerOfflineRevocationStates.Add(new Domain.CustomerOfflineRevocationState
-            {
-                Sequence = 0,
-                RevokedLicenseIdsJson = "[]",
-                AnchorGeneration = 0,
-                PendingEnvelopeJson = JsonSerializer.Serialize(envelope, new JsonSerializerOptions(JsonSerializerDefaults.Web)),
-                PendingExpectedGeneration = 1
-            });
+            AddPendingRow(database, envelope);
             await database.SaveChangesAsync();
 
-            var anchor = new FakeRollbackAnchor(initialGeneration: 1);
+            var expectedDigest = ExpectedAnchorDigest(envelope, 1);
+            var anchor = new FakeRollbackAnchor(expectedDigest);
             var store = new Data.TpmAnchoredOfflineRevocationStateStore(
                 database, anchor, new TestKeyResolver(envelope.KeyId, signingKey.ExportSubjectPublicKeyInfo()), TimeProvider.System);
 
@@ -164,7 +155,23 @@ public sealed class CustomerOfflineRevocationSqlServerTests
             Assert.NotNull(state);
             Assert.Equal(5, state!.Sequence);
             Assert.Equal(1, state.AnchorGeneration);
-            Assert.Equal(1, anchor.Generation);
+            Assert.Equal(expectedDigest, anchor.Digest);
+        });
+    }
+
+    private static void AddPendingRow(Data.DatabaseContext database, OfflineRevocationListEnvelope envelope)
+    {
+        var digest = SnapshotDigest(envelope);
+        database.CustomerOfflineRevocationStates.Add(new Domain.CustomerOfflineRevocationState
+        {
+            Sequence = 0,
+            RevokedLicenseIdsJson = "[]",
+            PreviousAnchorDigest = Data.TpmAnchoredOfflineRevocationStateStore.InitialAnchorDigest,
+            AnchorDigest = Data.TpmAnchoredOfflineRevocationStateStore.InitialAnchorDigest,
+            AnchorGeneration = 0,
+            PendingEnvelopeJson = JsonSerializer.Serialize(envelope, new JsonSerializerOptions(JsonSerializerDefaults.Web)),
+            PendingExpectedGeneration = 1,
+            PendingExpectedAnchorDigest = ExpectedAnchorDigest(envelope, 1)
         });
     }
 
@@ -191,6 +198,15 @@ public sealed class CustomerOfflineRevocationSqlServerTests
             1, "revocation-key-sql-test", LicenseAlgorithms.EcdsaP256Sha256, json, Convert.ToBase64String(signature));
     }
 
+    private static string SnapshotDigest(OfflineRevocationListEnvelope envelope) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(envelope.PayloadJson))).ToLowerInvariant();
+
+    private static string ExpectedAnchorDigest(OfflineRevocationListEnvelope envelope, long generation) =>
+        Data.TpmAnchoredOfflineRevocationStateStore.ComputeExpectedAnchorDigest(
+            Data.TpmAnchoredOfflineRevocationStateStore.InitialAnchorDigest,
+            generation,
+            SnapshotDigest(envelope));
+
     private sealed class TestKeyResolver(string keyId, byte[] publicKey) : IOfflineRevocationKeyResolver
     {
         public bool TryResolve(string requestedKeyId, out ReadOnlyMemory<byte> trustedPublicKeySpki)
@@ -202,22 +218,37 @@ public sealed class CustomerOfflineRevocationSqlServerTests
         }
     }
 
-    private sealed class FakeRollbackAnchor(long initialGeneration = 0) : IOfflineRevocationRollbackAnchor
+    private sealed class FakeRollbackAnchor(string initialDigest = Data.TpmAnchoredOfflineRevocationStateStore.InitialAnchorDigest)
+        : IOfflineRevocationRollbackAnchor
     {
-        public long Generation { get; private set; } = initialGeneration;
+        public string Digest { get; private set; } = initialDigest;
 
-        public Task<long> ReadGenerationAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult(Generation);
+        public Task<string> ReadDigestAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(Digest);
 
-        public Task<long> AdvanceAsync(long expectedCurrentGeneration, CancellationToken cancellationToken = default)
+        public Task<string> ExtendAsync(
+            string expectedCurrentDigest,
+            ReadOnlyMemory<byte> extensionData,
+            string expectedResultDigest,
+            CancellationToken cancellationToken = default)
         {
-            if (Generation != expectedCurrentGeneration)
+            if (!string.Equals(Digest, expectedCurrentDigest, StringComparison.Ordinal))
             {
                 throw new OfflineRevocationRollbackAnchorUnavailableException();
             }
 
-            Generation = checked(Generation + 1);
-            return Task.FromResult(Generation);
+            var current = Convert.FromHexString(Digest);
+            var input = new byte[current.Length + extensionData.Length];
+            Buffer.BlockCopy(current, 0, input, 0, current.Length);
+            extensionData.CopyTo(input.AsMemory(current.Length));
+            var actual = Convert.ToHexString(SHA256.HashData(input)).ToLowerInvariant();
+            if (!string.Equals(actual, expectedResultDigest, StringComparison.Ordinal))
+            {
+                throw new OfflineRevocationRollbackAnchorUnavailableException();
+            }
+
+            Digest = actual;
+            return Task.FromResult(Digest);
         }
     }
 }
