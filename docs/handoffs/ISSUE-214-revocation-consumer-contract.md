@@ -95,3 +95,16 @@ Issue فقط وقتی قابل بستن است که تولید و انتشار s
 - **Migration tooling limitation:** no local .NET SDK is installed, so `dotnet ef migrations add` was not run. Migration and designer target model were authored against the existing EF 10.0.13 snapshot; CI pending-model guard and SQL Server migration tests must verify them before merge. This is not claimed as CLI-generated or verified.
 - **Not yet implemented:** transactional sequence allocation; revocation approval transaction linking approval/license status/snapshot/audit; authorized no-store snapshot export; customer runtime validation call-sites; SQL Server concurrency/rollback tests for the full flow.
 - **Security:** no signing private key, production signer configuration, customer DB migration or plaintext secret is introduced. Existing Revoked approval path must continue returning 503 until the full chain is ready.
+
+
+## 2026-10-31 — transactional revocation, sequence allocation and export (stacked PR #377)
+
+- **Status:** implementation and SQL Server integration tests authored; awaiting CI; not merged.
+- Added `VendorOfflineRevocationSequenceAllocator`: an atomic SQL Server UPDATE/OUTPUT against the singleton counter, requiring the caller's existing transaction. The row lock is held until commit/rollback.
+- The revocation workflow acquires the sequence lock before reading the revoked-license set. This ordering ensures concurrent revocations cannot produce a later sequence whose snapshot omits an earlier committed revocation.
+- Added `VendorLicenseRevocationService`: validates maker-checker and row versions, requires the currently issued signed envelope, builds a signed snapshot using the dedicated revocation signer, persists the snapshot and updates the license/approval in the caller's transaction, then appends audit events. Signer unavailability returns 503; the caller's uncommitted transaction rolls back sequence, status and approval.
+- Wired approved `TargetStatus=Revoked` decisions through this service. The former unconditional 503 remains the fail-closed result when the signer is unavailable; a license is not marked revoked unless the signed snapshot and audit writes are part of the transaction.
+- Added authorized `GET /api/vendor/offline-revocations/latest` export with audit event, expiry check, attachment response and `Cache-Control: no-store`, `Pragma: no-cache`, `Expires: 0`.
+- Added SQL Server tests for successful signed revocation, signature verification, atomic rollback on unavailable signer/audit failure, monotonic concurrent sequence allocation and rejection of UPDATE against immutable snapshot rows.
+- **Not yet implemented:** customer runtime call-site enforcement remains absent; trust/public-key provisioning and real HSM remain unavailable; operational physical-host tests are deferred. Vendor-side sequence + snapshot + approval + license + audit and export are now represented in code but must be CI-verified before considered verified.
+- **Verification:** no local .NET SDK/SQL Server is available in this environment. Build, tests and migration execution are not claimed; Vendor CI, .NET CI and SQL Server integration CI are required.
