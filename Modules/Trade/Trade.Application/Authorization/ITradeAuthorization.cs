@@ -8,7 +8,7 @@ namespace Faranou.Modules.Trade.Application.Authorization;
 /// <remarks>
 /// Period selection and period lifecycle are shared with Accounting through WorkContext and
 /// FiscalPeriodSelectionPolicy. This port adds Trade operation permissions to that verified
-/// context; it does not create a second period-access system.
+/// context; it does not create a second period-access system. The host must also enforce WorkContext.AllowsWrites so a closed period cannot be modified even when a Trade write permission is granted.
 /// </remarks>
 public interface ITradeAuthorization
 {
