@@ -3,7 +3,7 @@
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/364
 - **Agent/مسئول:** ChatGPT
 - **تاریخ:** 2026-10-31
-- **وضعیت:** ناقص؛ persistence slice پیاده‌سازی شده، TPM platform provider و hardware verification باقی است.
+- **وضعیت:** پیاده‌سازی نرم‌افزاری در PR #366؛ CI و hardware verification هنوز نهایی نشده‌اند.
 
 ## هدف و معیارهای پذیرش
 - [x] تصمیم D-057 با تأیید مالک محصول ثبت شد.
@@ -37,7 +37,11 @@
 - Infrastructure/Persistence/Migrations/20261031120000_AddCustomerOfflineRevocationState.Designer.cs
 - Licensing.Contracts/OfflineRevocationConsumer.cs
 - Server/Infrastructure/Licensing/OfflineRevocationTrustProviders.cs
+- Server/Infrastructure/Licensing/Tpm2NvExtendRollbackAnchor.cs
 - Server/Program.cs
+- tools/TpmNvIndexProvisioner/Program.cs
+- scripts/provision-offline-revocation-nv-index.sh
+- Directory.Packages.props, Template.sln, THIRD_PARTY_NOTICES.md
 - tests/Template.Tests/Integration/CustomerOfflineRevocationSqlServerTests.cs
 - tests/Template.Tests/DatabaseModelTests.cs
 - docs/DECISIONS.md (D-057), docs/LICENSING_THREAT_MODEL.md, docs/LICENSING_DATA_MODEL.md, docs/PROJECT_STATUS.md, docs/WORK_LOG.md
