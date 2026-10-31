@@ -95,7 +95,8 @@ public sealed class CustomerInstallationIdentityEnrollmentService
                 ? actorUserId.ToString("D")
                 : null,
             State = Domain.InstallationIdentity.StateCurrent,
-            ProvisionedAtUtc = now
+            ProvisionedAtUtc = now,
+            LastVerifiedAtUtc = now
         };
 
         if (await _proofVerifier.VerifyAsync(identity, cancellationToken) != InstallationIdentityProofStatus.Valid)
