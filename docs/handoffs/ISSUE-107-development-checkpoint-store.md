@@ -33,3 +33,10 @@
 - تست واقعی قفل بین‌پردازه‌ای روی Windows و Linux؛ در صورت عدم پشتیبانی، محدودکردن ادعای portability.
 - در صورت نیاز wiring صریح Development از config (بدون Production registration).
 - انتخاب و پیاده‌سازی provider مستقل Production، credential separation، retention/immutability، alerting و recovery.
+
+
+## 2026-10-31 — independent-process checkpoint regression
+- Added a helper executable and a regression test launching eight independent .NET processes that concurrently append the same sequence to one development JSONL checkpoint journal. Exactly one append must succeed; the other seven must reject the duplicate; the final journal must contain one valid record.
+- Added a Windows/Linux matrix to the existing Vendor CI workflow (rather than introducing a workflow that cannot run until merged).
+- This verifies cross-process locking for the Development/Test adapter only. It does not create a Production checkpoint sink or satisfy independent failure-domain, external retention/immutability, alerting or recovery requirements.
+- Local .NET execution was unavailable; the matrix must pass before verification.
