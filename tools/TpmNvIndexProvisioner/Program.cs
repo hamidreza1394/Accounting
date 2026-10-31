@@ -31,10 +31,10 @@ try
     var nvAuthText = Environment.GetEnvironmentVariable("FARANOU_TPM_NV_AUTH_BASE64");
     platformAuth = string.IsNullOrWhiteSpace(platformAuthText)
         ? []
-        : Convert.FromBase64String(platformAuthText);
+        : System.Convert.FromBase64String(platformAuthText);
     nvAuth = string.IsNullOrWhiteSpace(nvAuthText)
         ? throw new InvalidOperationException("FARANOU_TPM_NV_AUTH_BASE64 is required.")
-        : Convert.FromBase64String(nvAuthText);
+        : System.Convert.FromBase64String(nvAuthText);
 
     if (platformAuth.Length > 32 || nvAuth.Length is < 1 or > 32)
         throw new InvalidOperationException("TPM authorization length is invalid.");
