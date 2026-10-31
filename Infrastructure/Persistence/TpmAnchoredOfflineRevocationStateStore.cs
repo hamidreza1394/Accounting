@@ -59,6 +59,12 @@ public sealed class TpmAnchoredOfflineRevocationStateStore : IOfflineRevocationS
 
     public async Task<OfflineRevocationState?> GetCurrentAsync(CancellationToken cancellationToken = default)
     {
+        await using var applicationLock = await AcquireApplicationLockAsync(cancellationToken);
+        return await GetCurrentCoreAsync(cancellationToken);
+    }
+
+    private async Task<OfflineRevocationState?> GetCurrentCoreAsync(CancellationToken cancellationToken)
+    {
         await using var transaction = await _database.Database.BeginTransactionAsync(
             IsolationLevel.Serializable, cancellationToken);
         try
@@ -165,8 +171,11 @@ public sealed class TpmAnchoredOfflineRevocationStateStore : IOfflineRevocationS
         ArgumentNullException.ThrowIfNull(list);
         ArgumentNullException.ThrowIfNull(envelope);
 
-        // Recover any interrupted prior operation before preparing another generation.
-        _ = await GetCurrentAsync(cancellationToken);
+        // Hold a SQL Server session application lock across the DB prepare, TPM NV_Extend,
+        // and DB finalize phases. This prevents two processes from extending the same pending
+        // generation concurrently while still allowing the prepare transaction to commit first.
+        await using var applicationLock = await AcquireApplicationLockAsync(cancellationToken);
+        _ = await GetCurrentCoreAsync(cancellationToken);
 
         long expectedGeneration;
         string expectedDigest;
@@ -304,6 +313,59 @@ public sealed class TpmAnchoredOfflineRevocationStateStore : IOfflineRevocationS
 
         await transaction.CommitAsync(cancellationToken);
         return true;
+    }
+
+    private async Task<IAsyncDisposable> AcquireApplicationLockAsync(CancellationToken cancellationToken)
+    {
+        await _database.Database.OpenConnectionAsync(cancellationToken);
+        try
+        {
+            var connection = _database.Database.GetDbConnection();
+            await using var command = connection.CreateCommand();
+            command.CommandText = """
+                DECLARE @result int;
+                EXEC @result = sys.sp_getapplock
+                    @Resource = N'Faranou.CustomerOfflineRevocationState',
+                    @LockMode = N'Exclusive',
+                    @LockOwner = N'Session',
+                    @LockTimeout = 15000;
+                SELECT @result;
+                """;
+            var result = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
+            if (result < 0)
+            {
+                throw new InvalidOperationException("The customer revocation state lock could not be acquired.");
+            }
+
+            return new ApplicationLockLease(_database);
+        }
+        catch
+        {
+            await _database.Database.CloseConnectionAsync();
+            throw;
+        }
+    }
+
+    private sealed class ApplicationLockLease(DatabaseContext database) : IAsyncDisposable
+    {
+        public async ValueTask DisposeAsync()
+        {
+            try
+            {
+                var connection = database.Database.GetDbConnection();
+                await using var command = connection.CreateCommand();
+                command.CommandText = """
+                    EXEC sys.sp_releaseapplock
+                        @Resource = N'Faranou.CustomerOfflineRevocationState',
+                        @LockOwner = N'Session';
+                    """;
+                await command.ExecuteNonQueryAsync();
+            }
+            finally
+            {
+                await database.Database.CloseConnectionAsync();
+            }
+        }
     }
 
     private Task<Domain.CustomerOfflineRevocationState?> LoadForUpdateAsync(CancellationToken cancellationToken) =>
