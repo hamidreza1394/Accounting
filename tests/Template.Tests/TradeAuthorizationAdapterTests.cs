@@ -86,6 +86,22 @@ public sealed class TradeAuthorizationAdapterTests : IDisposable
     }
 
     [Fact]
+    public async Task ClosedPeriodWritePermissionCannotBeDowngradedToReadIntent()
+    {
+        var writePermission = TradePermissionCodes.FormUpdate("import-order");
+        var company = AddCompany(Domain.FiscalPeriodStatus.Closed, [writePermission]);
+        var adapter = CreateAdapter(company.CompanyId, company.PeriodId);
+
+        Assert.False(await adapter.HasPermissionAsync(
+            userId,
+            company.CompanyId,
+            company.PeriodId,
+            writePermission,
+            TradeAccessIntent.Read,
+            TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task PeriodFromAnotherCompanyIsRejected()
     {
         var permission = TradePermissionCodes.FormView("import-order");
