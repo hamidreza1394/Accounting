@@ -141,6 +141,25 @@ public sealed class CustomerLicenseImportServiceTests
     }
 
     [Fact]
+    public async Task ImportAsync_PersistsRestrictedLicenseForReadOnlyEnforcement()
+    {
+        await using var database = CreateDatabase();
+        var identity = AddCurrentIdentity(database);
+        var (envelope, payload) = CreateEnvelope(sequence: 1);
+        var validator = new TestValidator(envelope, LicenseValidationResult.Ok(LicenseStatus.Restricted, payload));
+        var service = CreateService(database, validator, InstallationIdentityProofStatus.Valid);
+
+        var result = await service.ImportAsync(
+            JsonSerializer.Serialize(envelope, JsonOptions), identity.InstallationId, null);
+
+        Assert.True(result.Success, result.ErrorCode);
+        Assert.Equal(LicenseStatus.Restricted, result.Status);
+        var installed = await database.InstalledLicenses.SingleAsync();
+        Assert.Equal(Domain.InstalledLicense.StateCurrent, installed.State);
+        Assert.Contains(database.SecurityAuditEvents, item => item.EventType == "LicenseImported");
+    }
+
+    [Fact]
     public async Task ImportAsync_RequiresExplicitlyApprovedLicenseState()
     {
         await using var database = CreateDatabase();
@@ -187,7 +206,6 @@ public sealed class CustomerLicenseImportServiceTests
     {
         var identity = new Domain.InstallationIdentity
         {
-            Id = Guid.NewGuid(),
             InstallationId = "install-123",
             KeyId = "key-123",
             KeyVersion = 1,
