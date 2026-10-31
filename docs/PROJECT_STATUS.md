@@ -3,9 +3,10 @@
 - **Foundation:** PR #398 ادغام‌شده در main، commit `6c09765cefe8742668c34deda1c86b881f970332`. پروژه‌های Trade.Domain/Application/Infrastructure، schema پیش‌فرض trade، قراردادهای authorization/entitlement و adapter اولیه در کد وجود دارند.
 - **شواهد CI:** طبق بررسی PR #398، هر ۱۲ check نهایی موفق بوده‌اند؛ این شواهد فقط بنیاد و تست‌های همان PR را پوشش می‌دهد و به معنی تکمیل API/use case یا عملیات تجاری نیست.
 - **تصمیم‌ها:** D-061/D-062 حفظ شده‌اند؛ D-063 در Issue #399 تصمیم‌های مالکیت Voyage، ادامه پرونده بین دوره‌ها، گزارش چندشرکتی موج اول و enforce لایسنس از S1 را ثبت می‌کند.
-- **وضعیت اجرایی:** هنوز فرم‌ها، APIهای عملیاتی، seed و تخصیص مجوزهای Trade، entitlement runtime، persistence عملیاتی، گزارش‌ها و تست‌های end-to-end تجاری تکمیل نشده‌اند.
-- **محدودیت Migration:** هیچ migration Trade یا migration مشتری اجرا نشده است. ثبت DI و design-time/migration history مستقل Trade باید پیش از اولین schema migration تکمیل و بازبینی شود.
-- **اقدام جاری:** Issue #399 برای هم‌ترازی S0 و ممیزی foundation باز است؛ پس از آن S1 شامل entitlement fail-closed، permission catalog و API/route gating خواهد بود.
+- **S1 / Issue #402:** در شاخه `feat/issue-402-trade-permission-catalog` کاتالوگ strongly-typed شامل ۴۶ مجوز اولیه و Migration داده‌ای `20261031140000_SeedTradePermissionCatalog` اضافه شده است. تست واحد و تست Integration مخصوص SQL Server نیز نوشته شده‌اند؛ هنوز Build/Test/CI این شاخه اجرا و تأیید نشده‌اند.
+- **رفتار Migration:** فقط PermissionDefinitions درج می‌شود؛ هیچ CompanyRolePermission یا تخصیص نقش ایجاد نمی‌شود. Down فقط ردیف‌های متعلق به همین Migration را که هیچ نقش شرکتی به آن‌ها ارجاع نداده حذف می‌کند.
+- **موارد باقی‌مانده S1:** entitlement runtime و API/route gating در #401 (وابسته به قرارداد #390 و مسیر پذیرش/اعتبارسنجی #384)، و UI تخصیص مجوزها. کاتالوگ به‌تنهایی مجوزدهی عملیاتی را فعال نمی‌کند.
+- **محدودیت Migration:** Migration فقط به مخزن افزوده شده و روی هیچ دیتابیس مشتری اجرا نشده است. Migrationهای TradeDbContext و ثبت DI/design-time آن همچنان در کار بعدی هستند.
 
 ---
 

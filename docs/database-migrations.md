@@ -355,3 +355,10 @@ applied all migrations to a scratch database and the second run applied nothing;
 `CorporateGroupSqlServerTests` upgrades a database that already holds companies, fiscal
 periods, memberships and a catalog row with one of the new codes, checks the data is kept,
 runs Down and Up again. **Not applied to any customer or production database.**
+
+
+## 6. Data-only catalog migrations
+
+A data-only migration still belongs to the versioned EF migration chain. For the initial Trade permission catalog, `20261031140000_SeedTradePermissionCatalog` adds rows to the existing `PermissionDefinitions` table without changing the EF model or creating a new table. Its `Up` and `Down` SQL are pinned in `scripts/generate_migrations.py` under `HAND_WRITTEN_SQL`; `generate_migrations.py --check` rejects unreviewed SQL or a mismatch in statement order. `verify_migration_model.py` verifies that the migration has no unreviewed schema operations and that its designer matches the current model.
+
+The migration is additive and idempotent by permission Code. It never overwrites an existing catalog row or grants permissions to roles. `Down` deletes only the fixed IDs inserted by this migration and only when no `CompanyRolePermissions` row references them. This is a rollback safeguard, not permission to apply or roll back the migration on a customer database without an independently reviewed deployment plan.

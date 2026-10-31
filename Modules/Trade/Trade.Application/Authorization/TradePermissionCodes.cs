@@ -25,6 +25,7 @@ public static class TradePermissionCodes
     public static string FormUpdate(string formCode) => FormCode(formCode) + ".update";
     public static string FormApprove(string formCode) => FormCode(formCode) + ".approve";
     public static string FormDelete(string formCode) => FormCode(formCode) + ".delete";
+    public static string FormClose(string formCode) => FormCode(formCode) + ".close";
     public static string FormExport(string formCode) => FormCode(formCode) + ".export";
 
     /// <summary>
