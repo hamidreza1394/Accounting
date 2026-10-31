@@ -3,6 +3,8 @@ using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Text.Json;
+using Faranou.Licensing.Contracts;
 using Microsoft.Win32;
 
 namespace Infrastructure.Licensing;
@@ -44,7 +46,10 @@ public sealed record WindowsCngLicenseInstallationKeyProvisioningResult(
     byte[] PublicKeySubjectPublicKeyInfo,
     string PublicKeyFingerprint,
     string OsInstallationMarkerDigest,
-    bool SoftwareProviderRiskAccepted);
+    bool SoftwareProviderRiskAccepted,
+    DateTimeOffset? SoftwareProviderRiskAcceptedAtUtc,
+    string? SoftwareProviderRiskAcceptedBy,
+    string? SoftwareProviderConsentReceiptJson);
 
 /// <summary>
 /// Provisions and uses a non-exportable ECDSA P-256 installation proof key in an explicitly
@@ -82,6 +87,9 @@ public static class WindowsCngLicenseInstallationKeyProvisioner
         EnsureKeyContract(key);
         using var signer = new ECDsaCng(key);
         var publicKey = signer.ExportSubjectPublicKeyInfo();
+        var consentReceipt = assurance == LicenseInstallationKeyAssurance.SoftwareProtected
+            ? CreateSoftwareConsentReceipt(installationId, GetKeyId(installationId, options.KeyVersion), options.ProviderName, signer)
+            : null;
 
         return CreateResult(
             installationId,
@@ -89,7 +97,8 @@ public static class WindowsCngLicenseInstallationKeyProvisioner
             assurance,
             keyName,
             publicKey,
-            softwareProviderRiskAccepted: assurance == LicenseInstallationKeyAssurance.SoftwareProtected);
+            softwareProviderRiskAccepted: assurance == LicenseInstallationKeyAssurance.SoftwareProtected,
+            consentReceipt);
     }
 
     /// <summary>
@@ -116,7 +125,8 @@ public static class WindowsCngLicenseInstallationKeyProvisioner
             assurance,
             keyName,
             signer.ExportSubjectPublicKeyInfo(),
-            softwareProviderRiskAccepted: assurance == LicenseInstallationKeyAssurance.SoftwareProtected);
+            softwareProviderRiskAccepted: assurance == LicenseInstallationKeyAssurance.SoftwareProtected,
+            consentReceipt: null);
     }
 
     /// <summary>
@@ -216,7 +226,8 @@ public static class WindowsCngLicenseInstallationKeyProvisioner
         LicenseInstallationKeyAssurance assurance,
         string keyName,
         byte[] publicKey,
-        bool softwareProviderRiskAccepted)
+        bool softwareProviderRiskAccepted,
+        (DateTimeOffset AcceptedAtUtc, string AcceptedBy, string Json)? consentReceipt)
     {
         var publicKeyFingerprint = System.Convert.ToHexString(SHA256.HashData(publicKey)).ToLowerInvariant();
         return new WindowsCngLicenseInstallationKeyProvisioningResult(
@@ -227,7 +238,39 @@ public static class WindowsCngLicenseInstallationKeyProvisioner
             publicKey,
             publicKeyFingerprint,
             GetOsInstallationMarkerDigest(),
-            softwareProviderRiskAccepted);
+            softwareProviderRiskAccepted,
+            consentReceipt?.AcceptedAtUtc,
+            consentReceipt?.AcceptedBy,
+            consentReceipt?.Json);
+    }
+
+    private static (DateTimeOffset AcceptedAtUtc, string AcceptedBy, string Json) CreateSoftwareConsentReceipt(
+        string installationId,
+        string keyId,
+        string providerName,
+        ECDsaCng signer)
+    {
+        var acceptedAtUtc = DateTimeOffset.UtcNow;
+        var acceptedBy = Environment.UserDomainName + "\\" + Environment.UserName;
+        if (string.IsNullOrWhiteSpace(acceptedBy) || acceptedBy.Length > 256)
+            throw new InvalidOperationException("The local operator identity is unavailable for software-provider consent.");
+
+        var unsignedReceipt = new InstallationKeyConsentReceipt(
+            1,
+            installationId,
+            keyId,
+            providerName,
+            InstallationKeyConsentReceiptVerifier.SoftwareAssuranceLevel,
+            acceptedAtUtc,
+            acceptedBy,
+            string.Empty);
+        var signature = signer.SignData(
+            InstallationKeyConsentReceiptVerifier.GetSigningBytes(unsignedReceipt),
+            HashAlgorithmName.SHA256,
+            DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
+        var receipt = unsignedReceipt with { SignatureBase64 = System.Convert.ToBase64String(signature) };
+        var json = JsonSerializer.Serialize(receipt, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        return (acceptedAtUtc, acceptedBy, json);
     }
 
     private static void EnsureKeyContract(CngKey key)
