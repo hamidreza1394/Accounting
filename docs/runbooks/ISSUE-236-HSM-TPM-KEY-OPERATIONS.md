@@ -184,6 +184,19 @@
 5. index عملیاتی فقط با مقدار صفر provision شود. پس از پذیرش اولین snapshot، هرگز به صفر برگردانده یا دوباره تعریف نمی‌شود.
 6. handle، policy digest، fingerprint عمومی TPM، مدل/firmware، Custodianها و نتیجهٔ آزمون ثبت شود؛ هیچ auth value یا secret ثبت نشود.
 
+#### ابزار Provisioning ویندوز
+
+ابزار create-only در tools/TpmNvIndexProvisioner قرار دارد و در Template.sln build می‌شود. آن را فقط در نشست Administrator کنترل‌شده و با secret injection اجرا کنید:
+
+- FARANOU_TPM_NV_AUTH_BASE64 الزامی است و مقدار auth تصادفی 1 تا 32 بایت برای index است.
+- FARANOU_TPM_PLATFORM_AUTH_BASE64 در صورت تنظیم‌شدن Platform hierarchy auth لازم است؛ در غیر این صورت خالی می‌ماند.
+- این دو مقدار را در command line یا PowerShell history قرار ندهید؛ از secret manager یا محیط اجرای موقت امن استفاده کنید.
+- اجرا: dotnet run --project tools/TpmNvIndexProvisioner -- 0x1234
+- ابزار فقط NvDefineSpace با Platform hierarchy را اجرا می‌کند، read-back و مقدار اولیه صفر را بررسی می‌کند و هیچ مسیر Undefine/Reset ندارد. اگر index از قبل تعریف شده باشد، عملیات باید fail شود.
+- پس از provisioning، همان NV auth را از secret manager به Licensing:OfflineRevocation:Tpm:NvIndexAuthValueBase64 تزریق کنید و offset را در NvIndexOffset تنظیم کنید.
+
+این utility فعلاً Windows/TBS-only است؛ provisioning در Linux هنوز ابزار اجرایی جداگانه ندارد و تا تکمیل آن، Linux hardware deployment مجاز نیست.
+
 ### 13.3 Runtime و Recovery
 
 - Windows: adapter از TSS.MSR TbsDevice و TPM Base Services (TBS) استفاده می‌کند.
