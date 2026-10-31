@@ -28,10 +28,6 @@ public interface IOfflineRevocationStateStore
         CancellationToken cancellationToken = default);
 }
 
-/// <summary>
-/// Hardware-backed monotonic generation outside the customer database backup domain.
-/// Implementations must fail when the TPM NV counter is unavailable, reset, or inconsistent.
-/// </summary>
 /// <summary>Raised when the configured hardware rollback anchor cannot be trusted or accessed.</summary>
 public sealed class OfflineRevocationRollbackAnchorUnavailableException : Exception
 {
@@ -62,6 +58,7 @@ public interface IOfflineRevocationRollbackAnchor
         string expectedResultDigest,
         CancellationToken cancellationToken = default);
 }
+
 /// <summary>
 /// Current accepted revocation state. The digest is SHA-256 over the exact signed payload bytes.
 /// </summary>
