@@ -30,6 +30,15 @@ public sealed class TradeOperationalPeriodTests
         Assert.Equal(TradeOperationalPeriodStatus.Draft, period.Status);
     }
 
+
+    [Fact]
+    public void Create_rejects_non_ascii_period_codes()
+    {
+        Assert.Throws<ArgumentException>(() => TradeOperationalPeriod.Create(
+            Guid.NewGuid(), "سال-۱۴۰۵", "سال عملیاتی",
+            new DateOnly(2026, 1, 1), new DateOnly(2026, 12, 31)));
+    }
+
     [Fact]
     public void Create_rejects_an_invalid_date_range()
     {
