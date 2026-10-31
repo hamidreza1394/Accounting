@@ -127,6 +127,8 @@ public sealed class TradeAuthorizationAdapter(
     {
         return userId != Guid.Empty &&
             !string.IsNullOrWhiteSpace(permissionCode) &&
-            accessIntent is TradeAccessIntent.Read or TradeAccessIntent.Write;
+            accessIntent is TradeAccessIntent.Read or TradeAccessIntent.Write &&
+            (!TradePermissionCodes.RequiresWriteIntent(permissionCode) ||
+                accessIntent == TradeAccessIntent.Write);
     }
 }
