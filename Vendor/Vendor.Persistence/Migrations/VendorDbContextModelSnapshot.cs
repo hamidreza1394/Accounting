@@ -686,6 +686,28 @@ namespace Faranou.Vendor.Persistence.Migrations
                     b.Navigation("Licenses");
                 });
 
+            modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorOfflineRevocationSnapshot", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
+                    b.Property<string>("Algorithm").IsRequired().IsUnicode(false).HasMaxLength(32).HasColumnType("varchar(32)");
+                    b.Property<DateTimeOffset>("CreatedAtUtc").ValueGeneratedOnAdd().HasColumnType("datetimeoffset").HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
+                    b.Property<string>("EnvelopeJson").IsRequired().HasColumnType("nvarchar(max)");
+                    b.Property<DateTimeOffset>("ExpiresAtUtc").HasColumnType("datetimeoffset");
+                    b.Property<DateTimeOffset>("IssuedAtUtc").HasColumnType("datetimeoffset");
+                    b.Property<string>("KeyId").IsRequired().HasMaxLength(128).HasColumnType("nvarchar(128)");
+                    b.Property<string>("PayloadSha256").IsRequired().IsUnicode(false).HasMaxLength(64).IsFixedLength().HasColumnType("char(64)");
+                    b.Property<byte[]>("RowVersion").IsRequired().IsConcurrencyToken().ValueGeneratedOnAddOrUpdate().HasColumnType("rowversion");
+                    b.Property<long>("Sequence").HasColumnType("bigint");
+                    b.HasKey("Id");
+                    b.HasIndex("PayloadSha256");
+                    b.HasIndex("Sequence").IsUnique();
+                    b.ToTable("VendorOfflineRevocationSnapshots", t =>
+                        {
+                            t.HasCheckConstraint("CK_VendorOfflineRevocationSnapshots_Sequence", "[Sequence] >= 1");
+                            t.HasCheckConstraint("CK_VendorOfflineRevocationSnapshots_Validity", "[ExpiresAtUtc] > [IssuedAtUtc]");
+                        });
+                });
+
 #pragma warning restore 612, 618
         }
     }
