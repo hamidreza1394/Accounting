@@ -130,7 +130,6 @@ public sealed class WindowsCngLicenseInstallationKeyTests
                 options, installationId, confirmSoftwareProviderRisk: true);
             var identity = new Domain.InstallationIdentity
             {
-                Id = Guid.NewGuid(),
                 InstallationId = installationId,
                 KeyId = created.KeyId,
                 KeyVersion = options.KeyVersion,
