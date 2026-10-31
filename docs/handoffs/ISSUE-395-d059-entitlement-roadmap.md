@@ -48,3 +48,11 @@
 - Branch: docs/issue-395-d059-entitlement-roadmap
 - Commit: پس از ایجاد PR ثبت می‌شود.
 - Pull Request: پس از ایجاد ثبت می‌شود.
+
+
+## D-060 افزوده‌شده (2026-10-31)
+- سه حوزه منطقی: Vendor CRM & Commercial، Licensing & Entitlement Engine، Customer Deployment & Sync.
+- License-first startup state machine و Activation Wizard چندشرکتی در Issue #396 ثبت شد.
+- Offline exchange: .request.json و .license.json؛ .txt فقط wrapper بایت‌های دقیق signed package؛ private key/password هرگز export نمی‌شود.
+- مستندات تکمیلی: DECISIONS.md، LICENSING_IMPLEMENTATION_PLAN.md، LICENSING_WORKFLOWS.md، LICENSING_DATA_MODEL.md، LICENSING_THREAT_MODEL.md، REQUIREMENTS_TRACEABILITY.md، ROADMAP.md، PROJECT_STATUS.md و WORK_LOG.md.
+- همه موارد جدید Accepted / NotImplemented هستند؛ PR مستنداتی به معنی تحویل کد یا Production readiness نیست.
