@@ -61,7 +61,6 @@ public partial class VendorSignedRevocationSnapshots : Migration
             table: "VendorSignedRevocationSnapshots",
             column: "TriggeringLicenseId",
             unique: true);
-    }
 
         migrationBuilder.Sql("""
             CREATE TRIGGER [dbo].[TR_VendorSignedRevocationSnapshots_Immutable]
@@ -73,6 +72,7 @@ public partial class VendorSignedRevocationSnapshots : Migration
                 THROW 51000, 'Vendor signed revocation snapshots are immutable.', 1;
             END;
             """);
+    }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
