@@ -159,7 +159,7 @@ public static class VendorApprovalEndpoints
             // Provisioning issuance must hold a serializable view of the license row and its latest
             // signed sequence until the package signature and approval decision commit together.
             await using var tx = await db.Database.BeginTransactionAsync(
-                resourceType is "provisioning" or "license"
+                resourceType == "provisioning"
                     ? IsolationLevel.Serializable
                     : IsolationLevel.ReadCommitted, ct);
             var approval = await db.ApprovalRequests.SingleOrDefaultAsync(item => item.Id == id, ct);
