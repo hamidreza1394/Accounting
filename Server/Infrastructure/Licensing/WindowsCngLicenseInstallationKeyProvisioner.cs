@@ -150,7 +150,7 @@ public static class WindowsCngLicenseInstallationKeyProvisioner
     public static string GetKeyName(string installationId, int keyVersion)
     {
         ValidateInstallationId(installationId, keyVersion);
-        var installationDigest = Convert.ToHexString(
+        var installationDigest = System.Convert.ToHexString(
             SHA256.HashData(Encoding.UTF8.GetBytes(installationId))).ToLowerInvariant();
         return "Faranou.License.Installation." + installationDigest + ".v" +
             keyVersion.ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -159,7 +159,7 @@ public static class WindowsCngLicenseInstallationKeyProvisioner
     public static string GetKeyId(string installationId, int keyVersion)
     {
         ValidateInstallationId(installationId, keyVersion);
-        var installationDigest = Convert.ToHexString(
+        var installationDigest = System.Convert.ToHexString(
             SHA256.HashData(Encoding.UTF8.GetBytes(installationId))).ToLowerInvariant();
         return "license-install-" + installationDigest[..24] + "-v" +
             keyVersion.ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -173,7 +173,7 @@ public static class WindowsCngLicenseInstallationKeyProvisioner
         if (string.IsNullOrWhiteSpace(machineGuid))
             throw new CryptographicException("The Windows OS installation marker is unavailable.");
 
-        return Convert.ToHexString(SHA256.HashData(
+        return System.Convert.ToHexString(SHA256.HashData(
             Encoding.UTF8.GetBytes(machineGuid.Trim().ToUpperInvariant()))).ToLowerInvariant();
     }
 
@@ -218,7 +218,7 @@ public static class WindowsCngLicenseInstallationKeyProvisioner
         byte[] publicKey,
         bool softwareProviderRiskAccepted)
     {
-        var publicKeyFingerprint = Convert.ToHexString(SHA256.HashData(publicKey)).ToLowerInvariant();
+        var publicKeyFingerprint = System.Convert.ToHexString(SHA256.HashData(publicKey)).ToLowerInvariant();
         return new WindowsCngLicenseInstallationKeyProvisioningResult(
             keyName,
             GetKeyId(installationId, options.KeyVersion),
