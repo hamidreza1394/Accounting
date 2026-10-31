@@ -10,6 +10,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 
 namespace Faranou.Vendor.Host.Signing;
 
@@ -111,7 +112,8 @@ public sealed class VendorOfflineRevocationIssuanceService(
     OfflineRevocationSigningTrustStore trustStore,
     IOptions<VendorOfflineRevocationOptions> options,
     IVendorAuditWriter audit,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    ILogger<VendorOfflineRevocationIssuanceService> logger)
 {
     private static readonly JsonSerializerOptions EnvelopeJsonOptions = new()
     {
