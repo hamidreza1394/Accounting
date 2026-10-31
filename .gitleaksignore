@@ -2,3 +2,6 @@
 # "Password" (CustomerProvisioningTransactionalSqlServerTests, later renamed). The value is a throwaway
 # passphrase used only against a disposable test database. Fingerprint = commit:file:rule:line.
 4b6e8c98cd4284164fb61b4c6ba8f82b92dc7332:tests/Template.Tests/Integration/CustomerProvisioningTransactionalSqlServerTests.cs:generic-api-key:28
+# Gitleaks false positive: public, non-secret test KeyId passed to TestSigner in an integration fixture.
+# Gitleaks scans the entire PR commit range, so changing the current literal alone cannot clear this historical match.
+0508c553e4cab42f967bc6bcd86e48cefac2ec9a:tests/Vendor.Host.Tests/VendorOfflineRevocationIssuanceTests.cs:generic-api-key:161

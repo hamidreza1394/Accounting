@@ -1650,3 +1650,10 @@
 - Fixed CI compile error by injecting `ILogger<VendorOfflineRevocationIssuanceService>`; fixed Gitleaks false positive by changing the test-only key ID from a high-entropy-looking label to `test-kid`.
 - Previous CI head `0508c553e4cab42f967bc6bcd86e48cefac2ec9a` failed on those two issues; latest head `2a9e227b28d9e54dfc08a4378642abaf4395b533` has fresh CI runs pending/in progress. No green result is claimed yet.
 - Duplicate stacked PRs #376/#377 were closed as superseded; immutable-row trigger was ported into #375. Customer runtime enforcement and production signer/trust provisioning remain open.
+
+
+## 2026-10-31 — Issue #214 / PR #375: suppress only the historical test-KeyId false positive
+- **تکرارپذیری شکست:** پس از تغییر مقدار فعلی fixture از شناسهٔ بلند به `test-kid`، Gitleaks همچنان همان finding را گزارش کرد؛ fingerprint به commit قدیمی `0508c553e4cab42f967bc6bcd86e48cefac2ec9a`، فایل تست، rule `generic-api-key` و خط 161 اشاره می‌کند. علت این است که اسکنر کل commit range مربوط به PR را بررسی می‌کند، نه فقط working tree نهایی.
+- **اصلاح حداقلی:** فقط fingerprint دقیق تاریخی در `.gitleaksignore` اضافه شد؛ rule، مسیر فایل یا الگوی عمومی مستثنا نشده است. مقدار فعلی fixture همچنان یک KeyId عمومی و غیرمحرمانه است و هیچ private key/credential در مخزن وجود ندارد.
+- **اعتبارسنجی:** .NET CI run `41183238913` روی head قبلی `6e089f4f017ea1321c42acbd24e099bdd592760e` به علت همین finding شکست خورد؛ Vendor CI run `41183238859` در زمان ثبت هنوز در حال اجرا بود. اجرای جدید پس از این commit لازم است.
+- **محدوده:** فقط اسکن اسرار و مستندات Vendor؛ بدون تغییر منطق runtime، دیتابیس مشتری یا migration مشتری.

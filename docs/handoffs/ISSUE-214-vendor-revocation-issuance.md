@@ -52,3 +52,10 @@
 - **PR:** https://github.com/hamidreza1394/Accounting/pull/375
 - **Branch:** `feat/issue-214-revocation-snapshot-factory`
 - **وضعیت merge:** انجام نشده؛ هیچ بررسی ناتمام/ناموفق merge نخواهد شد.
+
+
+## CI failure follow-up — 2026-10-31
+- .NET CI روی head `6e089f4f017ea1321c42acbd24e099bdd592760e` فقط در Job `secret-scan` شکست خورد؛ Build/Test و مراحل بعدی به علت dependency از آن job اجرا نشدند.
+- Job log نشان داد finding دقیقاً همان fingerprint تاریخی commit `0508c553e4cab42f967bc6bcd86e48cefac2ec9a` در fixture تستی است؛ مقدار KeyId عمومی است، نه private key یا credential.
+- تغییر literal به `test-kid` به‌تنهایی کافی نبود چون Gitleaks کل تاریخچهٔ commitهای PR را اسکن می‌کند. فقط همان fingerprint در `.gitleaksignore` اضافه شد.
+- Vendor CI run `41183238859` هنگام بررسی در حال اجرا بود؛ نتیجهٔ نهایی آن و CI جدید روی commit بعدی هنوز تأیید نشده‌اند. هیچ merge انجام نشده است.
