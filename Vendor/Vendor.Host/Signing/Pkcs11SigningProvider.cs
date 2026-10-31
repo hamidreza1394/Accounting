@@ -13,7 +13,7 @@ using Net.Pkcs11Interop.HighLevelAPI;
 
 namespace Faranou.Vendor.Host.Signing;
 
-/// <summary>Configuration for one PKCS#11 module and two purpose-separated signing keys.</summary>
+/// <summary>Configuration for one PKCS#11 module and three purpose-separated signing keys.</summary>
 public sealed class Pkcs11SigningOptions
 {
     private static readonly Regex VersionedKeyIdPattern = new(
@@ -29,6 +29,7 @@ public sealed class Pkcs11SigningOptions
     public bool AcceptSoftwareKeyRisk { get; set; }
     public Pkcs11SigningKeyOptions LicenseKey { get; set; } = new();
     public Pkcs11SigningKeyOptions ProvisioningKey { get; set; } = new();
+    public Pkcs11SigningKeyOptions OfflineRevocationKey { get; set; } = new();
 
     /// <summary>
     /// Validates non-secret configuration without exposing PIN values in exceptions or logs.
@@ -48,9 +49,9 @@ public sealed class Pkcs11SigningOptions
             throw new InvalidOperationException("Production software signing requires explicit AcceptSoftwareKeyRisk=true.");
         }
 
-        if (LicenseKey is null || ProvisioningKey is null)
+        if (LicenseKey is null || ProvisioningKey is null || OfflineRevocationKey is null)
         {
-            throw new InvalidOperationException("Separate license and provisioning signing key identifiers are required.");
+            throw new InvalidOperationException("Separate license, provisioning and offline-revocation signing key identifiers are required.");
         }
 
         if (string.IsNullOrWhiteSpace(ModulePath) || !Path.IsPathFullyQualified(ModulePath))
@@ -68,12 +69,19 @@ public sealed class Pkcs11SigningOptions
             throw new InvalidOperationException("PKCS#11 user PIN is not configured.");
         }
 
-        ValidateKeyId(LicenseKey?.KeyId);
-        ValidateKeyId(ProvisioningKey?.KeyId);
+        ValidateKeyId(LicenseKey.KeyId);
+        ValidateKeyId(ProvisioningKey.KeyId);
+        ValidateKeyId(OfflineRevocationKey.KeyId);
 
-        if (string.Equals(LicenseKey.KeyId, ProvisioningKey.KeyId, StringComparison.Ordinal))
+        var configuredKeyIds = new HashSet<string>(StringComparer.Ordinal)
         {
-            throw new InvalidOperationException("License and provisioning signing keys must have distinct versioned KeyIds.");
+            LicenseKey.KeyId,
+            ProvisioningKey.KeyId,
+            OfflineRevocationKey.KeyId
+        };
+        if (configuredKeyIds.Count != 3)
+        {
+            throw new InvalidOperationException("License, provisioning and offline-revocation signing keys must have distinct versioned KeyIds.");
         }
     }
 
@@ -284,7 +292,8 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
             session.Login(CKU.CKU_USER, _options.UserPin!);
             loggedIn = true;
             return FindAndValidatePrivateKey(session, _options.LicenseKey) is not null &&
-                   FindAndValidatePrivateKey(session, _options.ProvisioningKey) is not null;
+                   FindAndValidatePrivateKey(session, _options.ProvisioningKey) is not null &&
+                   FindAndValidatePrivateKey(session, _options.OfflineRevocationKey) is not null;
         }
         finally
         {
@@ -414,7 +423,8 @@ public sealed class Pkcs11SigningModule : IPkcs11SigningModule, IDisposable
     {
         ArgumentNullException.ThrowIfNull(key);
         if (!string.Equals(key.KeyId, _options.LicenseKey.KeyId, StringComparison.Ordinal) &&
-            !string.Equals(key.KeyId, _options.ProvisioningKey.KeyId, StringComparison.Ordinal))
+            !string.Equals(key.KeyId, _options.ProvisioningKey.KeyId, StringComparison.Ordinal) &&
+            !string.Equals(key.KeyId, _options.OfflineRevocationKey.KeyId, StringComparison.Ordinal))
         {
             throw new InvalidOperationException("PKCS#11 signing KeyId is not configured for an approved Vendor signing purpose.");
         }
@@ -545,7 +555,28 @@ public sealed class Pkcs11ProvisioningSigningProvider : Pkcs11SigningProviderBas
         base.SignAsync(_key, canonicalPayload, cancellationToken);
 }
 
-/// <summary>Readiness probe for the configured PKCS#11 module and both purpose-separated keys.</summary>
+/// <summary>PKCS#11-backed Vendor offline-revocation signer using its dedicated revocation-only KeyId.</summary>
+public sealed class Pkcs11OfflineRevocationSigningProvider : Pkcs11SigningProviderBase, IOfflineRevocationSigningProvider
+{
+    private readonly Pkcs11SigningKeyOptions _key;
+
+    public Pkcs11OfflineRevocationSigningProvider(
+        IPkcs11SigningModule module,
+        IOptions<Pkcs11SigningOptions> options,
+        IVendorAuditWriter auditWriter,
+        ILogger<Pkcs11OfflineRevocationSigningProvider> logger)
+        : base(module, auditWriter, logger, "offline-revocation")
+    {
+        _key = options.Value.OfflineRevocationKey;
+    }
+
+    public ValueTask<LicenseSigningResult> SignAsync(
+        ReadOnlyMemory<byte> canonicalPayload,
+        CancellationToken cancellationToken = default) =>
+        base.SignAsync(_key, canonicalPayload, cancellationToken);
+}
+
+/// <summary>Readiness probe for the configured PKCS#11 module and all three purpose-separated keys.</summary>
 public sealed class Pkcs11SigningHealthCheck(
     IPkcs11SigningModule module,
     IOptions<Pkcs11SigningOptions> options) : IHealthCheck
