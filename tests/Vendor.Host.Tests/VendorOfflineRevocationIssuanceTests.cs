@@ -100,6 +100,11 @@ public sealed class VendorOfflineRevocationIssuanceTests
             await Assert.ThrowsAsync<SqlException>(() => db.Database.ExecuteSqlInterpolatedAsync(
                 $"UPDATE [dbo].[VendorSignedRevocationSnapshots] SET [EnvelopeJson] = [EnvelopeJson] WHERE [Id] = {snapshot.Id}",
                 TestContext.Current.CancellationToken));
+
+            await Assert.ThrowsAsync<SqlException>(() => db.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM [dbo].[VendorSignedRevocationSnapshots] WHERE [Id] = {snapshot.Id}",
+                TestContext.Current.CancellationToken));
+            Assert.Equal(1, await db.SignedRevocationSnapshots.CountAsync(TestContext.Current.CancellationToken));
         }
         finally
         {

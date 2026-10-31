@@ -59,3 +59,10 @@
 - Job log نشان داد finding دقیقاً همان fingerprint تاریخی commit `0508c553e4cab42f967bc6bcd86e48cefac2ec9a` در fixture تستی است؛ مقدار KeyId عمومی است، نه private key یا credential.
 - تغییر literal به `test-kid` به‌تنهایی کافی نبود چون Gitleaks کل تاریخچهٔ commitهای PR را اسکن می‌کند. فقط همان fingerprint در `.gitleaksignore` اضافه شد.
 - Vendor CI run `41183238859` هنگام بررسی در حال اجرا بود؛ نتیجهٔ نهایی آن و CI جدید روی commit بعدی هنوز تأیید نشده‌اند. هیچ merge انجام نشده است.
+
+
+## CI failure follow-up — Vendor migration syntax
+- Vendor CI run `41183238859` روی head `6e089f4f017ea1321c42acbd24e099bdd592760e` در Build Vendor solution با `CS1519`, `CS1031` و `CS8124` در فایل migration شکست خورد.
+- علت، بسته‌شدن زودهنگام متد `Up` قبل از `migrationBuilder.Sql` برای trigger immutable بود. Commit `f8743aa80ff5b2821cc64e6bc254d0396c207f64` فراخوانی SQL را به داخل `Up` منتقل کرد.
+- تست SQL Server اکنون UPDATE و DELETE را جداگانه رد می‌کند و وجود snapshot را بعد از هر دو تلاش assert می‌کند.
+- CI روی head نهایی باید Build، EF pending-model guard و SQL Server integration را تأیید کند؛ تا آن زمان PR ادغام نمی‌شود.

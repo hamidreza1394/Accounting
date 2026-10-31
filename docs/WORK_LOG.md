@@ -1657,3 +1657,10 @@
 - **اصلاح حداقلی:** فقط fingerprint دقیق تاریخی در `.gitleaksignore` اضافه شد؛ rule، مسیر فایل یا الگوی عمومی مستثنا نشده است. مقدار فعلی fixture همچنان یک KeyId عمومی و غیرمحرمانه است و هیچ private key/credential در مخزن وجود ندارد.
 - **اعتبارسنجی:** .NET CI run `41183238913` روی head قبلی `6e089f4f017ea1321c42acbd24e099bdd592760e` به علت همین finding شکست خورد؛ Vendor CI run `41183238859` در زمان ثبت هنوز در حال اجرا بود. اجرای جدید پس از این commit لازم است.
 - **محدوده:** فقط اسکن اسرار و مستندات Vendor؛ بدون تغییر منطق runtime، دیتابیس مشتری یا migration مشتری.
+
+
+## 2026-10-31 — Issue #214 / PR #375: migration syntax regression coverage
+- Vendor CI run `41183238859` روی head `6e089f4f017ea1321c42acbd24e099bdd592760e` در کامپایل migration با `CS1519/CS1031/CS8124` شکست خورد؛ علت بسته‌شدن زودهنگام متد `Up` قبل از تعریف trigger بود.
+- اصلاح در commit `f8743aa80ff5b2821cc64e6bc254d0396c207f64` انجام شد: `migrationBuilder.Sql` اکنون داخل `Up` است و `Down` trigger را پیش از حذف جدول برمی‌دارد.
+- تست SQL Server برای immutability گسترش یافت تا UPDATE و DELETE را رد کند و شمار رکورد snapshot پس از هر دو تلاش یک باقی بماند.
+- **اعتبارسنجی:** این تست در CI جدید باید همراه migration/pending-model guard اجرا شود؛ اجرای محلی .NET/SQL Server انجام نشده است.
