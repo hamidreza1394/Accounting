@@ -50,7 +50,7 @@ public sealed class WindowsCngLicenseInstallationIdentityProofVerifier
         }
         catch (Exception exception) when (exception is CryptographicException or
             UnauthorizedAccessException or InvalidOperationException or
-            ArgumentException or PlatformNotSupportedException)
+            ArgumentException or FormatException or PlatformNotSupportedException)
         {
             return Task.FromResult(InstallationIdentityProofStatus.Unavailable);
         }
@@ -69,27 +69,24 @@ public sealed class WindowsCngLicenseInstallationIdentityProofVerifier
             !string.IsNullOrWhiteSpace(identity.SoftwareProviderRiskAcceptedBy);
 
         if (identity.AssuranceLevel == Domain.InstallationIdentity.AssuranceHardwareTpm &&
-            identity.ProviderName != WindowsCngLicenseInstallationKeyProvisioner.TpmProviderName)
+            _options.ProviderName != WindowsCngLicenseInstallationKeyProvisioner.TpmProviderName)
             return InstallationIdentityProofStatus.Unavailable;
 
         if (identity.AssuranceLevel == Domain.InstallationIdentity.AssuranceSoftwareProtected &&
-            identity.ProviderName != WindowsCngLicenseInstallationKeyProvisioner.SoftwareProviderName)
+            (_options.ProviderName != WindowsCngLicenseInstallationKeyProvisioner.SoftwareProviderName ||
+             !softwareConsentRecorded))
             return InstallationIdentityProofStatus.Unavailable;
 
         if (identity.AssuranceLevel is not (
             Domain.InstallationIdentity.AssuranceHardwareTpm or
-            Domain.InstallationIdentity.AssuranceSoftwareProtected))
+            Domain.InstallationIdentity.AssuranceSoftwareProtected) ||
+            identity.ProviderName != _options.ProviderName ||
+            identity.KeyVersion != _options.KeyVersion ||
+            !_options.MachineKey)
             return InstallationIdentityProofStatus.Unavailable;
 
-        var options = new WindowsCngLicenseInstallationKeyOptions
-        {
-            ProviderName = identity.ProviderName,
-            KeyVersion = identity.KeyVersion,
-            MachineKey = true
-        };
-
         var metadata = WindowsCngLicenseInstallationKeyProvisioner.ReadExisting(
-            options,
+            _options,
             identity.InstallationId,
             softwareConsentRecorded);
 
@@ -105,16 +102,15 @@ public sealed class WindowsCngLicenseInstallationIdentityProofVerifier
 
         var challenge = RandomNumberGenerator.GetBytes(32);
         var signature = WindowsCngLicenseInstallationKeyProvisioner.SignChallenge(
-            options,
+            _options,
             identity.InstallationId,
             challenge,
             softwareConsentRecorded);
 
+        var storedPublicKey = Convert.FromBase64String(identity.PublicKeySubjectPublicKeyInfoBase64);
         using var verifier = ECDsa.Create();
-        verifier.ImportSubjectPublicKeyInfo(
-            Convert.FromBase64String(identity.PublicKeySubjectPublicKeyInfoBase64),
-            out var bytesRead);
-        if (bytesRead != Convert.FromBase64String(identity.PublicKeySubjectPublicKeyInfoBase64).Length ||
+        verifier.ImportSubjectPublicKeyInfo(storedPublicKey, out var bytesRead);
+        if (bytesRead != storedPublicKey.Length ||
             !verifier.VerifyData(
                 challenge,
                 signature,
