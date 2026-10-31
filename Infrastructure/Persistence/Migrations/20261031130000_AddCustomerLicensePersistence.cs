@@ -66,7 +66,7 @@ namespace Data.Migrations
                 {
                     table.PrimaryKey("PK_InstalledLicenses", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_InstalledLicenses_InstallationIdentities_InstallationIdentityId",
+                        name: "FK_InstalledLicenses_InstallationIdentities_InstallationIdentityId_InstallationId",
                         columns: x => new { x.InstallationIdentityId, x.InstallationId },
                         principalTable: "InstallationIdentities",
                         principalColumns: new[] { "Id", "InstallationId" },
