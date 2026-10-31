@@ -480,3 +480,9 @@
 - CI روی head نهایی PR #371 با SHA `5d1a5974972978e8cd3f97534a7a3e394404abc0` موفق شد: .NET CI run [41178574826](https://github.com/hamidreza1394/Accounting/actions/runs/41178574826)، Vendor CI run [41178574828](https://github.com/hamidreza1394/Accounting/actions/runs/41178574828)، Semgrep run [41178574818](https://github.com/hamidreza1394/Accounting/actions/runs/41178574818).
 - PR [#369](https://github.com/hamidreza1394/Accounting/pull/369) پس از ثبت توضیح superseded-by-#371 بسته شد؛ هیچ تغییر منحصربه‌فردی از دست نرفت. PR [#370](https://github.com/hamidreza1394/Accounting/pull/370) نیز با موفقیت ادغام شده و شواهد CI مربوط به PR #366 را ثبت می‌کند.
 - محدودیت‌ها: این merge به معنی صدور/ذخیره/انتشار signed revocation snapshot، provision شدن HSM فیزیکی، اجرای Key Ceremony عملیاتی یا اتصال نهایی validator به مسیرهای runtime مشتری نیست. این موارد همچنان در #214/#236/#364 پیگیری می‌شوند؛ provider پیش‌فرض fail-closed باقی می‌ماند.
+
+
+## 2026-10-31 — Issue #107: cross-process checkpoint lock coverage
+- PR in progress: `test/issue-107-cross-process-checkpoint` adds an eight-process duplicate-sequence race against the real development file checkpoint store and a dedicated Windows/Linux CI matrix.
+- Expected invariant: one process appends; all others reject after acquiring the file lock; one valid journal record remains.
+- This is only Development/Test adapter hardening. Production still has no independently provisioned checkpoint sink, separate credentials/failure domain, retention/immutability policy, alerting or recovery drill. No Production readiness is claimed.
