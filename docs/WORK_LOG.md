@@ -1767,3 +1767,13 @@
 - مجوزهای trade.period.* حذف شدند؛ مجوزهای فرم/عملیات/گزارش Trade همچنان تخصصی‌اند اما از کاتالوگ و تخصیص نقش مشترک فرانو استفاده می‌کنند.
 - هیچ Migration یا تغییری در جدول FiscalPeriods یا دیتابیس مشتری ایجاد/اجرا نشد.
 - تست معماری برای اطمینان از نبود Entity دوره در Trade جایگزین تست‌های دوره مستقل شد؛ اجرای آن باید در CI تأیید شود.
+
+
+## 2026-10-31 — اتصال authorization بازرگانی به هسته فرانو
+
+- `TradeAuthorizationAdapter` در Host اضافه شد و `ITradeAuthorization` از DI قابل دریافت است.
+- شناسه کاربر ورودی با کاربر principal احراز‌شده تطبیق داده می‌شود؛ برای عملیات تک‌شرکتی، WorkContext محافظت‌شده با `WorkContextService` دوباره از دیتابیس اعتبارسنجی و شرکت/دوره جاری با scope عملیات تطبیق داده می‌شود.
+- مجوز نقش با `CompanyAccessService` و `CompanyRolePermissions` سنجیده می‌شود؛ مجوز دوره موازی ساخته نشده است.
+- `TradeAccessIntent` خواندن/نوشتن را صریح می‌کند؛ دوره Closed برای Read مجاز و برای Write رد می‌شود. گزارش چندشرکتی، permission را در تمام شرکت‌ها و تعلق هر FiscalPeriod به TenantId را به‌صورت all-or-nothing کنترل می‌کند.
+- تست‌های adapter برای دوره Open/Closed، دوره متعلق به شرکت دیگر، تطبیق principal و مجوز همه شرکت/دوره‌ها افزوده شدند.
+- کاتالوگ/seed کدهای Trade، UI تخصیص permission به نقش، مصرف adapter در API/use case، entitlement runtime و تست SQL Server هنوز باقی‌اند. هیچ Migration یا تغییر دیتابیس اجرا نشده است.
