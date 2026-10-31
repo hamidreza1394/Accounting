@@ -32,6 +32,20 @@ public interface IOfflineRevocationStateStore
 /// Hardware-backed monotonic generation outside the customer database backup domain.
 /// Implementations must fail when the TPM NV counter is unavailable, reset, or inconsistent.
 /// </summary>
+/// <summary>Raised when the configured hardware rollback anchor cannot be trusted or accessed.</summary>
+public sealed class OfflineRevocationRollbackAnchorUnavailableException : Exception
+{
+    public OfflineRevocationRollbackAnchorUnavailableException()
+        : base("The offline revocation rollback anchor is unavailable.")
+    {
+    }
+
+    public OfflineRevocationRollbackAnchorUnavailableException(Exception innerException)
+        : base("The offline revocation rollback anchor is unavailable.", innerException)
+    {
+    }
+}
+
 public interface IOfflineRevocationRollbackAnchor
 {
     Task<long> ReadGenerationAsync(CancellationToken cancellationToken = default);
