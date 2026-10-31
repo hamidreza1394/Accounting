@@ -74,3 +74,10 @@
 1. اجرای ابزارهای provisioning و بررسی policy/auth در TPM واقعی؛ تکمیل secret delivery/rotation.
 2. اجرای CI، رفع تمام شکست‌ها و ساخت PR مستقل برای هر مرحله.
 3. تست روی TPM واقعی Windows 10/11، Windows Server و Linux.
+
+## CI feedback and regression coverage — 2026-10-31
+
+- CI initially found that the generated migration Designer contained one extra blank line; the file was aligned with the current model generator output.
+- The migration-guard mutation test still used a fixture timestamp 20261030000000 older than the newly added migration 20261031120000, so the test no longer exercised a newer migration. The fixture was moved to 20261101000000; the guard itself was not weakened.
+- A second review confirmed GetCurrentAsync already acquires the same SQL Server session application lock as TryApplyAsync before entering recovery logic. No production locking code was changed. Added a SQL Server regression test that blocks an in-flight TPM Extend and verifies a concurrent GetCurrentAsync waits rather than performing a second Extend.
+- CI after these fixes is pending on the latest branch SHA. SQL Server integration tests and physical TPM tests are not claimed locally executed.
