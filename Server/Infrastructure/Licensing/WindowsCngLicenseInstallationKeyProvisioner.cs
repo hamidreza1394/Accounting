@@ -98,7 +98,7 @@ public static class WindowsCngLicenseInstallationKeyProvisioner
             keyName,
             publicKey,
             softwareProviderRiskAccepted: assurance == LicenseInstallationKeyAssurance.SoftwareProtected,
-            consentReceipt);
+            consentReceipt: consentReceipt);
     }
 
     /// <summary>
