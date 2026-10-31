@@ -23,7 +23,39 @@ public interface IOfflineRevocationStateStore
 
     Task<bool> TryApplyAsync(
         OfflineRevocationList list,
+        OfflineRevocationListEnvelope envelope,
         string snapshotDigest,
+        CancellationToken cancellationToken = default);
+}
+
+/// <summary>Raised when the configured hardware rollback anchor cannot be trusted or accessed.</summary>
+public sealed class OfflineRevocationRollbackAnchorUnavailableException : Exception
+{
+    public OfflineRevocationRollbackAnchorUnavailableException()
+        : base("The offline revocation rollback anchor is unavailable.")
+    {
+    }
+
+    public OfflineRevocationRollbackAnchorUnavailableException(Exception innerException)
+        : base("The offline revocation rollback anchor is unavailable.", innerException)
+    {
+    }
+}
+
+/// <summary>
+/// Hardware-backed TPM 2.0 NV Extend index outside the customer database backup domain.
+/// ReadDigestAsync returns the current 32-byte SHA-256 NV value as lowercase hexadecimal.
+/// ExtendAsync must compare the current value, issue one NV_Extend, read it back and verify
+/// the expected result; it must never emulate the operation in software.
+/// </summary>
+public interface IOfflineRevocationRollbackAnchor
+{
+    Task<string> ReadDigestAsync(CancellationToken cancellationToken = default);
+
+    Task<string> ExtendAsync(
+        string expectedCurrentDigest,
+        ReadOnlyMemory<byte> extensionData,
+        string expectedResultDigest,
         CancellationToken cancellationToken = default);
 }
 
@@ -34,7 +66,11 @@ public sealed record OfflineRevocationState(
     long Sequence,
     string SnapshotDigest,
     DateTimeOffset ExpiresAtUtc,
-    IReadOnlySet<string> RevokedLicenseIds);
+    IReadOnlySet<string> RevokedLicenseIds)
+{
+    /// <summary>The TPM generation that anchors this state outside the database backup domain.</summary>
+    public long AnchorGeneration { get; init; }
+}
 
 public enum OfflineRevocationCheckStatus
 {
@@ -107,7 +143,7 @@ public sealed class OfflineRevocationConsumer
 
         var payloadBytes = Encoding.UTF8.GetBytes(envelope.PayloadJson);
         var digest = Convert.ToHexString(SHA256.HashData(payloadBytes)).ToLowerInvariant();
-        var applied = await _stateStore.TryApplyAsync(list, digest, cancellationToken);
+        var applied = await _stateStore.TryApplyAsync(list, envelope, digest, cancellationToken);
         return applied
             ? OfflineRevocationApplyResult.Applied(list.Sequence)
             : OfflineRevocationApplyResult.Rejected("offline_revocation_sequence_invalid");
