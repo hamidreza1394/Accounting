@@ -23,13 +23,26 @@ public sealed class VendorOfflineRevocationIssuanceService(
     IVendorAuditWriter audit,
     TimeProvider timeProvider)
 {
-    public async Task<VendorOfflineRevocationIssuanceResult> EnsureInitialSnapshotAsync(
+    public Task<VendorOfflineRevocationIssuanceResult> EnsureInitialSnapshotAsync(
         Guid actorUserId,
         string correlationId,
+        CancellationToken cancellationToken) =>
+        CreateSnapshotAsync(actorUserId, correlationId, onlyIfMissing: true, cancellationToken);
+
+    public Task<VendorOfflineRevocationIssuanceResult> RefreshCurrentSnapshotAsync(
+        Guid actorUserId,
+        string correlationId,
+        CancellationToken cancellationToken) =>
+        CreateSnapshotAsync(actorUserId, correlationId, onlyIfMissing: false, cancellationToken);
+
+    private async Task<VendorOfflineRevocationIssuanceResult> CreateSnapshotAsync(
+        Guid actorUserId,
+        string correlationId,
+        bool onlyIfMissing,
         CancellationToken cancellationToken)
     {
         if (db.Database.CurrentTransaction is null)
-            throw new InvalidOperationException("Initial revocation snapshot must run inside a Vendor database transaction.");
+            throw new InvalidOperationException("Revocation snapshot creation must run inside a Vendor database transaction.");
         if (actorUserId == Guid.Empty)
             return VendorOfflineRevocationIssuanceResult.Conflict("revocation_snapshot_actor_required");
 
@@ -39,7 +52,7 @@ public sealed class VendorOfflineRevocationIssuanceService(
         var currentSequence = await db.OfflineRevocationSnapshots
             .Select(item => (long?)item.Sequence)
             .MaxAsync(cancellationToken) ?? 0;
-        if (currentSequence > 0)
+        if (onlyIfMissing && currentSequence > 0)
             return VendorOfflineRevocationIssuanceResult.Success(currentSequence);
         if (currentSequence == long.MaxValue)
             return VendorOfflineRevocationIssuanceResult.Conflict("offline_revocation_sequence_exhausted");
@@ -55,14 +68,15 @@ public sealed class VendorOfflineRevocationIssuanceService(
         var payload = new OfflineRevocationList(
             OfflineRevocationListValidator.CurrentSchemaVersion,
             Guid.NewGuid().ToString("D"),
-            1,
+            currentSequence + 1,
             now,
             now.AddDays(30),
             revokedLicenseIds
                 .Select(id => id.ToString("D"))
                 .Order(StringComparer.Ordinal)
                 .ToArray());
-        var creation = await envelopeFactory.CreateAsync(payload, 0, cancellationToken).ConfigureAwait(false);
+        var creation = await envelopeFactory.CreateAsync(payload, currentSequence, cancellationToken)
+            .ConfigureAwait(false);
         if (!creation.Succeeded || creation.Envelope is null)
         {
             return creation.StatusCode == StatusCodes.Status503ServiceUnavailable
@@ -91,7 +105,9 @@ public sealed class VendorOfflineRevocationIssuanceService(
 
         await audit.AppendAsync(new VendorAuditWriteRequest(
             actorUserId,
-            "vendor.revocation.snapshot.initialized",
+            onlyIfMissing
+                ? "vendor.revocation.snapshot.initialized"
+                : "vendor.revocation.snapshot.refreshed",
             nameof(VendorOfflineRevocationSnapshot),
             snapshot.Id.ToString("D"),
             correlationId), cancellationToken);
