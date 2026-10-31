@@ -71,7 +71,10 @@ public sealed class Product : TradeEntity
             createdByUserId,
             createdAtUtc);
 
-        if (IsDeleted) throw new InvalidOperationException("A deleted product cannot be changed.");
+        if (IsDeleted)
+        {
+            throw new InvalidOperationException("A deleted product cannot be changed.");
+        }
         RecordUpdate(createdByUserId, createdAtUtc);
         _identifiers.Add(identifier);
         return identifier;
