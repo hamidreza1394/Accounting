@@ -154,7 +154,7 @@ public sealed class CustomerLicenseImportService
             if (current is not null &&
                 current.LicenseId == payload.LicenseId &&
                 current.Sequence == payload.Sequence &&
-                string.Equals(current.PayloadDigest, payloadDigest, StringComparison.Ordinal))
+                string.Equals(current.EnvelopeJson, envelopeJson, StringComparison.Ordinal))
             {
                 await _database.SaveChangesAsync(cancellationToken);
                 if (transaction is not null)
