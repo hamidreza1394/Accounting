@@ -873,6 +873,51 @@ namespace Data.Migrations
                 b.ToTable("ProvisioningRequestClaims");
             });
 
+            modelBuilder.Entity("Domain.CustomerOfflineRevocationState", b =>
+            {
+                b.Property<Guid>("Id")
+                    .HasColumnType("uniqueidentifier");
+
+                b.Property<int>("Ordering")
+                    .HasColumnType("int");
+
+                b.Property<DateTime>("InsertDateTime")
+                    .HasColumnType("datetime2");
+
+                b.Property<long>("Sequence")
+                    .HasColumnType("bigint");
+
+                b.Property<string>("SnapshotDigest")
+                    .HasMaxLength(64)
+                    .IsUnicode(false)
+                    .HasColumnType("varchar(64)");
+
+                b.Property<DateTime?>("ExpiresAtUtc")
+                    .HasColumnType("datetime2");
+
+                b.Property<string>("RevokedLicenseIdsJson")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
+
+                b.Property<long>("AnchorGeneration")
+                    .HasColumnType("bigint");
+
+                b.Property<string>("PendingEnvelopeJson")
+                    .HasColumnType("nvarchar(max)");
+
+                b.Property<long?>("PendingExpectedGeneration")
+                    .HasColumnType("bigint");
+
+                b.Property<byte[]>("RowVersion")
+                    .IsRequired()
+                    .IsRowVersion()
+                    .HasColumnType("rowversion");
+
+                b.HasKey("Id");
+
+                b.ToTable("CustomerOfflineRevocationStates");
+            });
+
             modelBuilder.Entity("Domain.CorporateGroup", b =>
             {
                 b.Property<Guid>("Id")
