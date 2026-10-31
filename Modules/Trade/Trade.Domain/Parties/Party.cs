@@ -56,7 +56,10 @@ public sealed class Party : TradeEntity
             throw new InvalidOperationException("The counterparty already has this role.");
         }
 
-        if (IsDeleted) throw new InvalidOperationException("A deleted counterparty cannot be changed.");
+        if (IsDeleted)
+        {
+            throw new InvalidOperationException("A deleted counterparty cannot be changed.");
+        }
         var assignment = new PartyRoleAssignment(TenantId, Id, role, createdByUserId, createdAtUtc);
         RecordUpdate(createdByUserId, createdAtUtc);
         _roles.Add(assignment);
