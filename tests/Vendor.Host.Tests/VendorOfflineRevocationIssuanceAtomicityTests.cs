@@ -183,12 +183,17 @@ public sealed class VendorOfflineRevocationIssuanceAtomicityTests
             var dbB = scopeB.ServiceProvider.GetRequiredService<VendorDbContext>();
             var spki = key.ExportSubjectPublicKeyInfo();
 
-            async Task<VendorOfflineRevocationIssuanceResult> RevokeAsync(VendorDbContext db)
+            var approvalIds = await dbA.ApprovalRequests
+                .OrderBy(item => item.ResourceId)
+                .Select(item => item.Id)
+                .ToArrayAsync();
+
+            async Task<VendorOfflineRevocationIssuanceResult> RevokeAsync(
+                VendorDbContext db,
+                Guid approvalId)
             {
                 await using var transaction = await db.Database.BeginTransactionAsync();
-                var approval = await db.ApprovalRequests
-                    .OrderBy(item => item.ResourceId)
-                    .FirstOrDefaultAsync(item => item.Status == "Pending");
+                var approval = await db.ApprovalRequests.SingleOrDefaultAsync(item => item.Id == approvalId);
                 Assert.NotNull(approval);
                 var service = CreateService(db, key, new VendorAuditWriter(db, TimeProvider.System), spki);
                 var result = await service.RevokeApprovedAsync(
@@ -205,7 +210,9 @@ public sealed class VendorOfflineRevocationIssuanceAtomicityTests
                 return result;
             }
 
-            var results = await Task.WhenAll(RevokeAsync(dbA), RevokeAsync(dbB));
+            var results = await Task.WhenAll(
+                RevokeAsync(dbA, approvalIds[0]),
+                RevokeAsync(dbB, approvalIds[1]));
             Assert.All(results, result => Assert.True(result.Succeeded, result.ErrorCode));
             Assert.Equal(new long[] { 1, 2 }, results.Select(item => item.Sequence!.Value).Order().ToArray());
 
@@ -321,7 +328,7 @@ public sealed class VendorOfflineRevocationIssuanceAtomicityTests
 
     private sealed class TestSigner(ECDsa key, string keyId) : IOfflineRevocationSigningProvider
     {
-        private readonly object _gate = new();
+        private static readonly object SharedGate = new();
 
         public ValueTask<LicenseSigningResult> SignAsync(
             ReadOnlyMemory<byte> canonicalPayload,
@@ -329,7 +336,7 @@ public sealed class VendorOfflineRevocationIssuanceAtomicityTests
         {
             cancellationToken.ThrowIfCancellationRequested();
             byte[] signature;
-            lock (_gate)
+            lock (SharedGate)
             {
                 signature = key.SignData(
                     canonicalPayload.Span,
