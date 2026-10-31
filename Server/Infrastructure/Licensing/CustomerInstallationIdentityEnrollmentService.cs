@@ -59,7 +59,8 @@ public sealed class CustomerInstallationIdentityEnrollmentService
 
         if (_keyOptions.ProviderName == WindowsCngLicenseInstallationKeyProvisioner.SoftwareProviderName &&
             !confirmSoftwareProviderRisk)
-            return Failure("software_provider_explicit_consent_required");
+            return await RecordFailureAsync(
+                "software_provider_explicit_consent_required", actorUserId, null, cancellationToken);
 
         WindowsCngLicenseInstallationKeyProvisioningResult metadata;
         try
