@@ -17,6 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="../../Vendor/Vendor.Host/Vendor.Host.csproj" />
     <ProjectReference Include="../../Vendor/Vendor.Persistence/Vendor.Persistence.csproj" />
+    <ProjectReference Include="../Vendor.CheckpointProcessHelper/Vendor.CheckpointProcessHelper.csproj"  />
     <ProjectReference Include="../../Server/Server.csproj" Aliases="CustomerServer" />
   </ItemGroup>
 </Project>
