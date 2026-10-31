@@ -1802,3 +1802,14 @@
 - `TradeAccessGate`، `DenyAllTradeModuleEntitlement` (تنها پیاده‌سازی `ITradeModuleEntitlement` در Server)، `TradeAccessFilter` و `GET /api/v1/trade/capabilities` افزوده شدند؛ endpoint بدون متادیتای صریح Trade رد می‌شود.
 - تست‌های Gate، adapter، معماری (هر endpoint Trade دارای دروازه) و HTTP افزوده شدند؛ fake مجازکننده فقط در tests/ است.
 - اتصال به envelope امضاشده انجام نشد (Blocked: #390، #384/#391). Migration یا تغییر داده انجام نشد. CI و SQL Server اجرا نشد.
+
+## 2026-10-31 — Issue #404: ثبت persistence ماژول Trade در Host
+
+- شاخه اولیه Issue #404 بر مبنای پیش از ادغام PR #402 بود؛ برای جلوگیری از توسعه روی مبنای عقب‌مانده، شاخه `feat/issue-404-trade-persistence-registration-v2` از main فعلی (پس از merge PR #402) ساخته شد.
+- Extension ثبت DI برای `TradeDbContext` اضافه شد؛ ثبت فقط در شاخه دارای Connection String معتبر و خارج از Database Setup انجام می‌شود و lifetime برابر Scoped است.
+- پروژه Server به Trade.Infrastructure ارجاع داده شد. تنظیمات از `TradeDbContextOptionsConfiguration` استفاده می‌کنند تا SQL Server مشترک، migration assembly Trade و history مستقل `dbo.__TradeMigrationsHistory` حفظ شود.
+- Factory طراحی EF با اولویت `FARANO_TRADE_CONNECTIONSTRING`، سپس متغیرهای اتصال مشترک و در نهایت LocalDB توسعه اضافه شد.
+- تست‌ها lifetime، عدم نیاز به اتصال هنگام resolve، provider، connection string، migration assembly/history و رد connection string خالی را پوشش می‌دهند.
+- مستندات Trade و Development و handoff Issue #404 به‌روز شدند.
+- Commitهای ثبت‌شده روی شاخه اختصاصی: `0b008e9`, `9ca353a`, `c179b91`, `faa5bba`, `799344c` و commitهای مستندات.
+- Build و تست .NET هنوز اجرا نشده‌اند؛ نتیجه CI باید روی PR بررسی شود. هیچ Migration یا تغییر Schema و هیچ دیتابیس مشتری اجرا/تغییر داده نشده است.

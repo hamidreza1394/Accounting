@@ -27,7 +27,7 @@
 
 - در فاز اول یک SQL Server database فیزیکی مشترک استفاده می‌شود.
 - تمام جداول ماژول تحت schema مستقل trade قرار می‌گیرند.
-- TradeDbContext و assembly مهاجرت Trade مستقل‌اند؛ migration history آن نیز باید جدا باشد. وضعیت واقعی فعلی: TradeDbContext موجود است، اما ثبت DI، design-time factory، migrations assembly/history مستقل و مسیر deployment هنوز باید ممیزی/تکمیل شوند؛ وجود DbContext به‌تنهایی اثبات‌کننده جداسازی migration نیست.
+- `TradeDbContext` در پروژه Infrastructure نگهداری می‌شود؛ `TradeDbContextOptionsConfiguration` از SQL Server مشترک، migration assembly خود Trade و history table مستقل `dbo.__TradeMigrationsHistory` استفاده می‌کند. Host فقط در شاخه دارای Connection String معتبر (خارج از Database Setup) آن را با lifetime برابر Scoped ثبت می‌کند. Factory طراحی EF نیز مستقل از boot شدن Server موجود است. این برش فقط ثبت و پیکربندی را پیاده‌سازی می‌کند؛ هنوز Migration یا مسیر deployment عملیاتی Trade ایجاد نشده و وضعیت نهایی به CI نیاز دارد.
 - هیچ FK از Trade به جداول تراکنشی حسابداری ایجاد نمی‌شود.
 - شناسه شرکت مرجع منطقی است؛ حذف/غیرفعال‌سازی شرکت باید از مسیر هسته و با سیاست lifecycle هماهنگ شود.
 - Migration مشتری بدون Issue مستقل، تست SQL Server، rollout/rollback و تأیید اجرا نمی‌شود.

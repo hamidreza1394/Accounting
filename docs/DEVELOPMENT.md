@@ -68,6 +68,14 @@ dotnet ef migrations list --project Infrastructure/Persistence/Infrastructure.Pe
 # dotnet ef migrations add <DescriptiveName> --project Infrastructure/Persistence/Infrastructure.Persistence.csproj --startup-project Server/Server.csproj
 ```
 
+## EF Core tooling for Trade
+
+`TradeDbContext` از همان دیتابیس فیزیکی حسابداری استفاده می‌کند، اما schema و migration history مستقل دارد. ابزار EF را با پروژه Infrastructure اجرا کنید؛ Factory طراحی از متغیر `FARANO_TRADE_CONNECTIONSTRING` (اولویت اول)، سپس `FARANO_CONNECTIONSTRING`، `TARAZAVA_CONNECTIONSTRING` یا `ConnectionStrings__ConnectionString` استفاده می‌کند و در نبود آن‌ها فقط یک مقدار LocalDB مخصوص توسعه برمی‌گزیند. برای هر دستور متصل‌شونده به دیتابیس، اتصال آزمایشی/توسعه را صریح تنظیم کنید. هیچ دستور Migration را روی دیتابیس مشتری اجرا نکنید مگر پس از Issue و تأیید جداگانه.
+
+```powershell
+dotnet ef migrations list --project Modules/Trade/Trade.Infrastructure/Trade.Infrastructure.csproj --startup-project Server/Server.csproj --context Faranou.Modules.Trade.Infrastructure.Persistence.TradeDbContext
+```
+
 ## نکته نسخه پلتفرم
 هدف فعلی پروژه .NET 10 LTS است. Visual Studio 2026 نسخه 18.0 یا بالاتر برای هدف‌گذاری رسمی net10.0 لازم است. پیش از ادغام تغییرات، Restore/Build/Test در CI و روی دستگاه توسعه باید موفق باشند.
 

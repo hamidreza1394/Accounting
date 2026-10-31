@@ -11,6 +11,7 @@ using Server.Api;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Infrastructure.Security;
 using Infrastructure.Hosting;
+using Faranou.Modules.Trade.Infrastructure.Persistence;
 // **************************************************
 
 // Operator command: produce a new infrastructure (Master) credential and exit. It runs before
@@ -184,6 +185,10 @@ if (!setupRequired)
     // DatabaseSchemaMigrator depends on DatabaseContext; register it only when the same
     // branch has registered and configured that context.
     builder.Services.AddScoped<Data.IDatabaseSchemaMigrator, Data.DatabaseSchemaMigrator>();
+
+    // Trade uses the same physical database, with its own schema and migration history.
+    // Register it only after the shared connection is configured; setup mode stays DB-free.
+    builder.Services.AddTradePersistence(connectionString!);
 
     // The single server-side decision point for company (tenant) access. It reads the
     // memberships from the database on each request; it never trusts a client tenant id.
