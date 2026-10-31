@@ -190,6 +190,54 @@ public sealed class CustomerOfflineRevocationSqlServerTests
         });
     }
 
+    [Fact]
+    public async Task GetCurrentAsync_WaitsForInFlightApplyBeforeRecoveringPendingAnchor()
+    {
+        Assert.SkipUnless(SqlServerAvailable(), "SQL Server is not configured (FARANOU_TEST_SQLSERVER).");
+
+        await WithDatabaseAsync(async name =>
+        {
+            await using var firstDatabase = CreateContext(name);
+            await using var secondDatabase = CreateContext(name);
+            await firstDatabase.Database.MigrateAsync();
+
+            using var signingKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+            var envelope = Sign(signingKey, Sample(DateTimeOffset.UtcNow, 9));
+            var publicKey = signingKey.ExportSubjectPublicKeyInfo();
+            var anchor = new BlockingRollbackAnchor();
+            var consumer = CreateConsumer(firstDatabase, anchor, envelope.KeyId, publicKey);
+            var store = new Data.TpmAnchoredOfflineRevocationStateStore(
+                secondDatabase,
+                anchor,
+                new TestKeyResolver(envelope.KeyId, publicKey),
+                TimeProvider.System);
+
+            var applyTask = consumer.ApplyAsync(envelope);
+            await anchor.ExtendStarted.WaitAsync(TimeSpan.FromSeconds(10));
+
+            var readTask = store.GetCurrentAsync();
+            try
+            {
+                await Task.Delay(250);
+                Assert.False(readTask.IsCompleted);
+                Assert.Equal(1, anchor.ExtendCalls);
+            }
+            finally
+            {
+                anchor.ReleaseExtend();
+            }
+
+            var applied = await applyTask;
+            var current = await readTask;
+
+            Assert.True(applied.Success, applied.ErrorCode);
+            Assert.NotNull(current);
+            Assert.Equal(9, current!.Sequence);
+            Assert.Equal(ExpectedAnchorDigest(envelope, 1), anchor.Digest);
+            Assert.Equal(1, anchor.ExtendCalls);
+        });
+    }
+
     private static void AddPendingRow(Data.DatabaseContext database, OfflineRevocationListEnvelope envelope)
     {
         database.CustomerOfflineRevocationStates.Add(new Domain.CustomerOfflineRevocationState
@@ -246,6 +294,45 @@ public sealed class CustomerOfflineRevocationSqlServerTests
                 : ReadOnlyMemory<byte>.Empty;
             return !trustedPublicKeySpki.IsEmpty;
         }
+    }
+
+    private sealed class BlockingRollbackAnchor : IOfflineRevocationRollbackAnchor
+    {
+        private readonly FakeRollbackAnchor _inner = new();
+        private readonly TaskCompletionSource<bool> _extendStarted =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource<bool> _releaseExtend =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _extendCalls;
+
+        public Task ExtendStarted => _extendStarted.Task;
+        public int ExtendCalls => Volatile.Read(ref _extendCalls);
+        public string Digest => _inner.Digest;
+
+        public Task<string> ReadDigestAsync(CancellationToken cancellationToken = default) =>
+            _inner.ReadDigestAsync(cancellationToken);
+
+        public async Task<string> ExtendAsync(
+            string expectedCurrentDigest,
+            ReadOnlyMemory<byte> extensionData,
+            string expectedResultDigest,
+            CancellationToken cancellationToken = default)
+        {
+            var call = Interlocked.Increment(ref _extendCalls);
+            if (call == 1)
+            {
+                _extendStarted.TrySetResult(true);
+                await _releaseExtend.Task.WaitAsync(cancellationToken);
+            }
+
+            return await _inner.ExtendAsync(
+                expectedCurrentDigest,
+                extensionData,
+                expectedResultDigest,
+                cancellationToken);
+        }
+
+        public void ReleaseExtend() => _releaseExtend.TrySetResult(true);
     }
 
     private sealed class FakeRollbackAnchor(string initialDigest = Data.TpmAnchoredOfflineRevocationStateStore.InitialAnchorDigest)
