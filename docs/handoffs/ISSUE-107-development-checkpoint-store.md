@@ -33,3 +33,13 @@
 - تست واقعی قفل بین‌پردازه‌ای روی Windows و Linux؛ در صورت عدم پشتیبانی، محدودکردن ادعای portability.
 - در صورت نیاز wiring صریح Development از config (بدون Production registration).
 - انتخاب و پیاده‌سازی provider مستقل Production، credential separation، retention/immutability، alerting و recovery.
+
+
+## 2026-10-31 — real cross-process lock regression test
+
+- Added a small standalone helper process that invokes the actual `DevelopmentFileVendorAuditCheckpointStore`; the test launches eight independent .NET processes concurrently against the same journal and same sequence.
+- Acceptance: exactly one process appends successfully; the remaining processes must observe the committed sequence and reject the duplicate; the final JSONL journal must contain exactly one valid record.
+- Added a dedicated GitHub Actions matrix workflow for `ubuntu-latest` and `windows-latest` so the file-lock contract is exercised on both operating systems, not inferred from `FileShare.None` documentation.
+- The helper emits only exception type on failure; no payload/path/credential data is logged.
+- **Scope boundary:** this remains Development/Test-only. It does not implement or imply an independent Production checkpoint sink. Production still requires a selected external provider, separate credentials/failure domain, immutability/retention, alerting and an exercised recovery drill.
+- **Verification:** no local .NET SDK is available in this environment. The new Windows/Linux workflow must run on the PR head before this test is marked verified.
