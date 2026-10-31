@@ -136,6 +136,8 @@ public sealed class DatabaseModelTests
 		Assert.Equal("InstalledLicenses", license!.GetTableName());
 		Assert.Equal("Id", Assert.Single(license.FindPrimaryKey()!.Properties).Name);
 
+		// The composite FK prevents a license row from claiming a different InstallationId
+		// than the versioned identity row it is bound to.
 		var identityForeignKey = Assert.Single(license.GetForeignKeys(), key =>
 			key.PrincipalEntityType.ClrType == typeof(Domain.InstallationIdentity));
 		Assert.Equal(new[] { "InstallationIdentityId", "InstallationId" },
