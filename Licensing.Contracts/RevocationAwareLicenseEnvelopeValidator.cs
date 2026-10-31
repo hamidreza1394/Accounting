@@ -4,7 +4,7 @@ namespace Faranou.Licensing.Contracts;
 /// Customer-side asynchronous validation pipeline that refuses to treat a license as usable
 /// until a current, trusted offline revocation snapshot is available.
 /// </summary>
-public sealed class RevocationAwareLicenseEnvelopeValidator
+public sealed class RevocationAwareLicenseEnvelopeValidator : ICustomerLicenseEnvelopeValidator
 {
     private readonly LicenseEnvelopeValidator _licenseValidator;
     private readonly OfflineRevocationConsumer _revocationConsumer;

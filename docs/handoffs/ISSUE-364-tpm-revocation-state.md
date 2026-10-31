@@ -91,3 +91,10 @@
 - کد state store و TPM anti-rollback در main قرار دارد؛ این milestone نرم‌افزاری تکمیل شد.
 - CI نهایی هر سه pipeline موفق است؛ لینک‌ها: [.NET CI](https://github.com/hamidreza1394/Accounting/actions/runs/41175579282)، [Vendor CI](https://github.com/hamidreza1394/Accounting/actions/runs/41175579288)، [Semgrep](https://github.com/hamidreza1394/Accounting/actions/runs/41175579255).
 - Issue #364 همچنان باز می‌ماند تا آزمون روی TPM واقعی، provisioning NV index و مدیریت secret، و اتصال call-site واقعی مشتری به RevocationAwareLicenseEnvelopeValidator انجام و شواهد ثبت شود.
+
+
+## 2026-10-31 — customer validator DI boundary (rebased conflict resolution)
+- Reapplied on the current mainline: introduced `ICustomerLicenseEnvelopeValidator`; `RevocationAwareLicenseEnvelopeValidator` implements it; Server DI exposes only the interface and constructs the raw signature/time validator as an internal dependency.
+- Added a scoped dual-host DI assertion proving the safe interface resolves while neither raw nor concrete validator is directly registered; unit coverage now targets the interface contract.
+- This prevents accidental DI bypass, but is **not end-to-end license enforcement**. Production call-sites, customer envelope storage/import, authorization/audit policy, installation binding and approved OD-03/04 expiry/grace behavior remain unresolved. TPM hardware provisioning and real Windows/Linux verification remain NotVerified.
+- Rebuilt this change from current `main` to resolve PR #381's divergence; CI must run on the replacement PR head. No local .NET/SQL Server execution is claimed.
