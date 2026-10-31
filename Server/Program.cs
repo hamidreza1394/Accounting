@@ -193,7 +193,6 @@ if (!setupRequired)
     builder.Services.AddScoped<Faranou.Licensing.Contracts.IOfflineRevocationStateStore,
         Data.TpmAnchoredOfflineRevocationStateStore>();
     builder.Services.AddScoped<Faranou.Licensing.Contracts.OfflineRevocationConsumer>();
-    builder.Services.AddScoped<Faranou.Licensing.Contracts.RevocationAwareLicenseEnvelopeValidator>();
     builder.Services.Configure<Infrastructure.Provisioning.CustomerProvisioningSettings>(
         builder.Configuration.GetSection(Infrastructure.Provisioning.CustomerProvisioningSettings.SectionName));
     builder.Services.AddSingleton<Infrastructure.Provisioning.ICustomerProvisioningTrustStore,
