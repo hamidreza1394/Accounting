@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Activity, Bell, BookOpen, Boxes, Building2, CalendarDays, ChevronDown, CircleHelp, ClipboardList, FileBarChart, Headphones, LayoutDashboard, LogOut, Menu, Package, PanelRightClose, Settings2, ShieldCheck, ShoppingCart, Wallet, X } from 'lucide-react';
 import type { SelectedContext, Session } from '../api/types';
-import { formatPersianDate } from '../lib/date';
 import { Button } from './ui/FaranouButton';
 import { FaranouLogo } from './ui/FaranouLogo';
 
@@ -131,7 +130,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
               <div className="flex min-w-0 items-center gap-2 text-xs text-muted"><Building2 size={16} className="shrink-0 text-navy" /><span className="truncate font-semibold text-ink">{context.company.name}</span><span className="text-slate-300">/</span><span className="truncate">{context.fiscalPeriod.title}</span></div>
               <div className="flex items-center gap-2">
                 {readOnly ? <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-bold text-amber-800">دوره فقط‌خواندنی</span> : <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-800">دوره باز</span>}
-                <Button variant="secondary" onClick={onChangeContext} className="min-h-8 px-3 py-1 text-xs">تغییر زمینه کاری</Button>
+                <Button variant="secondary" onClick={onChangeContext}>تغییر زمینه کاری</Button>
               </div>
             </div>
             {logoutError ? <div role="alert" className="mb-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-danger">{logoutError}</div> : null}
