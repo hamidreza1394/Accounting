@@ -46,7 +46,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
   const readOnly = context.fiscalPeriod.accessMode === 'readOnly';
 
   return (
-    <div dir="rtl" className="min-h-screen bg-[#edf3fc] text-ink">
+    <div dir="rtl" className="min-h-screen bg-period text-ink">
       <header className="faranou-topbar on-dark sticky top-0 z-40 border-b border-white/10 text-white shadow-xl">
         <div className="flex min-h-[76px] items-center justify-between gap-3 px-4 sm:px-6 xl:px-8">
           <div className="flex min-w-0 items-center gap-3">
@@ -103,8 +103,8 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
               {navigation.map(({ label, icon: Icon, active, divider }) => (
                 <li key={label} className={divider ? 'mt-5 border-t border-white/10 pt-5' : undefined}>
                   {active ? (
-                    <a href="/app/" aria-current="page" onClick={() => setMobileMenuOpen(false)} className="faranou-nav-active flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-sm font-bold text-[#152b47] shadow-lg">
-                      <Icon size={19} strokeWidth={2.2} /><span>{label}</span><span className="ms-auto size-1.5 rounded-full bg-[#173454]" />
+                    <a href="/app/" aria-current="page" onClick={() => setMobileMenuOpen(false)} className="faranou-nav-active flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-sm font-bold text-title shadow-lg">
+                      <Icon size={19} strokeWidth={2.2} /><span>{label}</span><span className="ms-auto size-1.5 rounded-full bg-navy" />
                     </a>
                   ) : (
                     <div aria-disabled="true" title="این بخش در مرحله بعدی توسعه فعال می‌شود." className="flex min-h-11 cursor-not-allowed items-center gap-3 rounded-xl px-3.5 text-sm text-blue-50/55">
