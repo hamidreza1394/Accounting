@@ -21,6 +21,16 @@ describe('Dashboard', () => {
     expect(screen.getByText('اطلاعات واقعی شرکت')).toBeInTheDocument();
   });
 
+  it('uses the refreshed workspace visual hierarchy while preserving the existing dashboard sections', () => {
+    render(<Dashboard session={session} context={context} onUnauthenticated={vi.fn(() => false)} />);
+
+    expect(screen.getByRole('heading', { name: /به فرانو خوش آمدید/ }).closest('section')).toHaveClass('faranou-welcome');
+    expect(screen.getByText('اسناد و دفاتر مالی').closest('[aria-disabled="true"]')).toHaveClass('faranou-module-card');
+    expect(document.querySelectorAll('.faranou-summary-card')).toHaveLength(4);
+    expect(document.querySelectorAll('.faranou-panel')).toHaveLength(3);
+    expect(screen.getByText('داده‌ای برای ترسیم نمودار در دسترس نیست').closest('div')).toHaveClass('faranou-empty-state');
+  });
+
   it('does not present fabricated financial figures or pretend unfinished modules are active', () => {
     render(<Dashboard session={session} context={context} onUnauthenticated={vi.fn(() => false)} />);
     expect(screen.getByText('داده‌ای برای ترسیم نمودار در دسترس نیست')).toBeInTheDocument();
