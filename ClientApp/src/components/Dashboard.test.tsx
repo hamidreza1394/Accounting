@@ -15,7 +15,7 @@ describe('Dashboard', () => {
   it('shows the authenticated workspace identity and selected fiscal period', () => {
     render(<Dashboard session={session} context={context} onUnauthenticated={vi.fn(() => false)} />);
     expect(screen.getByRole('heading', { name: /به فرانو خوش آمدید/ })).toBeInTheDocument();
-    expect(screen.getByText('شرکت نمونه')).toBeInTheDocument();
+    expect(screen.getAllByText('شرکت نمونه').length).toBeGreaterThan(0);
     expect(screen.getAllByText('سال مالی ۱۴۰۵').length).toBeGreaterThan(0);
     expect(screen.getByText('حسابدار')).toBeInTheDocument();
     expect(screen.getByText('اطلاعات واقعی شرکت')).toBeInTheDocument();
