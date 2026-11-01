@@ -56,5 +56,5 @@
 
 ## شناسه‌های Git
 - Branch: feat/issue-409-main-dashboard
-- Commit: پس از ثبت
-- Pull Request: پس از ثبت
+- Commit: تاریخچه شاخه feat/issue-409-main-dashboard (سه commit متوالی؛ آخرین commit هنگام تکمیل PR ثبت می‌شود)
+- Pull Request: https://github.com/hamidreza1394/Accounting/pull/409
