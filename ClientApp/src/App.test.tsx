@@ -45,7 +45,7 @@ describe('App', () => {
     render(<App navigate={vi.fn()} />);
 
     // No selection screen: the dashboard of the confirmed choice appears.
-    expect(await screen.findByRole('heading', { name: 'داشبورد' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /به فرانو خوش آمدید/ })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'فرانو - دوره مالی' })).not.toBeInTheDocument();
 
     const post = fetchMock.mock.calls.find((call) => (call[1] as RequestInit | undefined)?.method === 'POST');
@@ -94,7 +94,7 @@ describe('App', () => {
 
     render(<App navigate={vi.fn()} />);
 
-    expect(await screen.findByRole('heading', { name: 'داشبورد' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /به فرانو خوش آمدید/ })).toBeInTheDocument();
     await waitFor(() => expect(document.title).toBe('فرانو — داشبورد'));
   });
 
@@ -116,7 +116,7 @@ describe('App', () => {
     render(<App navigate={vi.fn()} />);
 
     expect(await screen.findByRole('heading', { name: 'فرانو - دوره مالی' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'داشبورد' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /به فرانو خوش آمدید/ })).not.toBeInTheDocument();
   });
 
   it('asks the user to choose when there are several companies, and enters only after both choices', async () => {
@@ -150,7 +150,7 @@ describe('App', () => {
 
     await userEvent.click(enter);
 
-    expect(await screen.findByRole('heading', { name: 'داشبورد' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /به فرانو خوش آمدید/ })).toBeInTheDocument();
     expect(postBodies).toEqual([{ companyId: 'b', fiscalPeriodId: 'p2' }]);
   });
 
@@ -174,7 +174,7 @@ describe('App', () => {
 
     await userEvent.click(screen.getByRole('radio', { name: /سال مالی ۱۴۰۴/ }));
     expect(screen.getByRole('radio', { name: /شرکت الف/ })).toBeChecked();
-    expect(screen.getByText('فقط مشاهده و گزارش‌گیری')).toBeInTheDocument();
+    expect(screen.getAllByText('فقط مشاهده و گزارش‌گیری').length).toBeGreaterThan(0);
   });
 
   it('enters a closed year as view-only and shows the read-only mode on the dashboard', async () => {
@@ -201,9 +201,9 @@ describe('App', () => {
     await userEvent.click(screen.getByRole('radio', { name: /سال مالی ۱۴۰۴/ }));
     await userEvent.click(screen.getByRole('button', { name: /ورود به محیط کاری/ }));
 
-    expect(await screen.findByRole('heading', { name: 'داشبورد' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /به فرانو خوش آمدید/ })).toBeInTheDocument();
     expect(postBodies).toEqual([{ companyId: 'a', fiscalPeriodId: 'p0' }]);
-    expect(screen.getByText('فقط مشاهده و گزارش‌گیری')).toBeInTheDocument();
+    expect(screen.getAllByText('فقط مشاهده و گزارش‌گیری').length).toBeGreaterThan(0);
   });
 
   it('drops the data of the previous company when the user switches, and loads the new one', async () => {
@@ -223,7 +223,7 @@ describe('App', () => {
     });
 
     render(<App navigate={vi.fn()} />);
-    await screen.findByRole('heading', { name: 'داشبورد' });
+    await screen.findByRole('heading', { name: /به فرانو خوش آمدید/ });
     await userEvent.click(await screen.findByRole('button', { name: /تغییر شرکت یا دوره/ }));
     // The current choice (company A, year 1405) is shown; moving to 1406 clears A and pre-selects B.
     expect(await screen.findByRole('radio', { name: /شرکت الف/ })).toBeChecked();
@@ -246,7 +246,7 @@ describe('App', () => {
     render(<App navigate={vi.fn()} />);
 
     expect(await screen.findByRole('heading', { name: 'شرکتی برای ورود در دسترس نیست' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'داشبورد' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /به فرانو خوش آمدید/ })).not.toBeInTheDocument();
     expect(fetchMock.mock.calls.some((call) => String(call[0]).includes('/overview'))).toBe(false);
   });
 
@@ -266,7 +266,7 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: 'دوره مالی قابل ورودی وجود ندارد' })).toBeInTheDocument();
     expect(screen.getByText('شرکت الف')).toBeInTheDocument();
     expect(screen.getByText('بدون دوره مالی قابل ورود')).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'داشبورد' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /به فرانو خوش آمدید/ })).not.toBeInTheDocument();
   });
 
   it('keeps the validated choice of the same sign-in after a reload, without asking again', async () => {
@@ -282,7 +282,7 @@ describe('App', () => {
 
     render(<App navigate={vi.fn()} />);
 
-    expect(await screen.findByRole('heading', { name: 'داشبورد' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /به فرانو خوش آمدید/ })).toBeInTheDocument();
     expect(fetchMock.mock.calls.some((call) => (call[1] as RequestInit | undefined)?.method === 'POST')).toBe(false);
   });
 
@@ -310,7 +310,7 @@ describe('App', () => {
     expect(fetchMock.mock.calls.filter((call) => call[0] === '/api/v1/context')).toHaveLength(2);
 
     await userEvent.click(screen.getByRole('button', { name: 'انصراف' }));
-    expect(await screen.findByRole('heading', { name: 'داشبورد' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /به فرانو خوش آمدید/ })).toBeInTheDocument();
   });
 
   it('sends one request even when the entry button is activated twice quickly', async () => {
@@ -339,7 +339,7 @@ describe('App', () => {
 
     await userEvent.dblClick(enter);
 
-    await screen.findByRole('heading', { name: 'داشبورد' });
+    await screen.findByRole('heading', { name: /به فرانو خوش آمدید/ });
     expect(posts).toBe(1);
   });
 
@@ -360,7 +360,7 @@ describe('App', () => {
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('دسترسی شما به این شرکت یا دوره مالی تغییر کرده است');
     await waitFor(() => expect(alert).toHaveFocus());
-    expect(screen.queryByRole('heading', { name: 'داشبورد' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /به فرانو خوش آمدید/ })).not.toBeInTheDocument();
 
     const isContextGet = (call: unknown[]) =>
       call[0] === '/api/v1/context' && ((call[1] as RequestInit | undefined)?.method ?? 'GET') === 'GET';
