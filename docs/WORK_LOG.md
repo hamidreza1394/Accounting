@@ -1960,3 +1960,5 @@
 - گزارش: `docs/handoffs/ISSUE-422-dashboard-reference-layout.md`.
 
 - **اصلاح CI در PR #423:** TypeScript ابتدا importهای بدون استفاده را گزارش کرد؛ سپس Vitest نشان داد assertionهای قدیمی App/E2E هنوز heading قبلی را انتظار دارند. importها حذف و انتظارهای تست با heading جدید هماهنگ شدند؛ تست AppShell نیز برای label تکراری اصلاح شد. نتیجه نهایی CI روی head جدید باید بررسی شود.
+
+- **اصلاح مسیر asset در PR #423:** check:offline فایل SVG را در مسیر `/images/` سایت پیدا نمی‌کرد، چون فایل در `ClientApp/public` بود و خروجی کلاینت زیر `/app` قرار می‌گیرد. فایل به `Server/wwwroot/images/` منتقل و کپی اشتباه حذف شد؛ CI head جدید باید check:offline را دوباره تأیید کند.
