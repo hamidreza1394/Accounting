@@ -60,4 +60,4 @@
 ## شناسه‌های Git
 - **Branch:** feat/issue-420-login-dashboard-visual-refresh
 - **Commit:** در شاخه ثبت شده؛ head نهایی پس از PR ثبت می‌شود.
-- **Pull Request:** در انتظار ایجاد
+- **Pull Request:** [#421](https://github.com/hamidreza1394/Accounting/pull/421)
