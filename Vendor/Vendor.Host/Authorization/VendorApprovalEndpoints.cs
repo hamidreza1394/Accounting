@@ -54,7 +54,7 @@ public static class VendorApprovalEndpoints
         approvals.MapPost("/status-change", async (
             CreateVendorApprovalRequest request, HttpContext context, IAntiforgery antiforgery,
             IAuthorizationService authorization, VendorDbContext db,
-            UserManager<VendorAdminUser> users, IVendorAuditWriter audit, CancellationToken ct) =>
+            UserManager<VendorAdminUser> users, IVendorAuditWriter audit, TimeProvider timeProvider, CancellationToken ct) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context))
                 return Results.BadRequest(new { error = "invalid_antiforgery_token" });
@@ -110,7 +110,7 @@ public static class VendorApprovalEndpoints
                 TargetStatus = request.TargetStatus!,
                 ExpectedResourceRowVersion = expectedResourceVersion,
                 RequestedByUserId = actor.Id,
-                RequestedAtUtc = DateTimeOffset.UtcNow,
+                RequestedAtUtc = timeProvider.GetUtcNow().ToUniversalTime(),
                 Status = "Pending"
             };
             db.ApprovalRequests.Add(approval);
@@ -138,7 +138,8 @@ public static class VendorApprovalEndpoints
             VendorDbContext db, UserManager<VendorAdminUser> users,
             IVendorAuditWriter audit, VendorLicenseIssuanceService licenseIssuance,
             VendorProvisioningIssuanceService provisioningIssuance,
-            VendorOfflineRevocationIssuanceService offlineRevocationIssuance, CancellationToken ct) =>
+            VendorOfflineRevocationIssuanceService offlineRevocationIssuance,
+            TimeProvider timeProvider, CancellationToken ct) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context))
                 return Results.BadRequest(new { error = "invalid_antiforgery_token" });
@@ -219,7 +220,7 @@ public static class VendorApprovalEndpoints
                     provisioning.Status != "AwaitingSigner")
                     return Results.Conflict(new { error = "provisioning_request_stale" });
 
-                var rejectedAt = DateTimeOffset.UtcNow;
+                var rejectedAt = timeProvider.GetUtcNow().ToUniversalTime();
                 db.Entry(provisioning).Property(item => item.RowVersion).OriginalValue =
                     approval.ExpectedResourceRowVersion;
                 provisioning.Status = "Failed";
@@ -280,7 +281,7 @@ public static class VendorApprovalEndpoints
                 return Results.Conflict(new { error = "unsupported_license_approval_target" });
             }
 
-            var now = DateTimeOffset.UtcNow;
+            var now = timeProvider.GetUtcNow().ToUniversalTime();
             var comment = string.IsNullOrWhiteSpace(request.Comment) ? null : request.Comment.Trim();
             if (request.Decision == "Approved" && approval.ResourceType != "license")
             {
@@ -370,7 +371,7 @@ public static class VendorApprovalEndpoints
         licenses.MapPost("/{id:guid}/approval-request", async (
             Guid id, CreateVendorLicenseApprovalRequest request, HttpContext context,
             IAntiforgery antiforgery, IAuthorizationService authorization, VendorDbContext db,
-            UserManager<VendorAdminUser> users, IVendorAuditWriter audit, CancellationToken ct) =>
+            UserManager<VendorAdminUser> users, IVendorAuditWriter audit, TimeProvider timeProvider, CancellationToken ct) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context))
                 return Results.BadRequest(new { error = "invalid_antiforgery_token" });
@@ -411,7 +412,7 @@ public static class VendorApprovalEndpoints
                 TargetStatus = targetStatus,
                 ExpectedResourceRowVersion = expectedResourceVersion,
                 RequestedByUserId = actor.Id,
-                RequestedAtUtc = DateTimeOffset.UtcNow,
+                RequestedAtUtc = timeProvider.GetUtcNow().ToUniversalTime(),
                 Status = "Pending"
             };
             db.ApprovalRequests.Add(approval);

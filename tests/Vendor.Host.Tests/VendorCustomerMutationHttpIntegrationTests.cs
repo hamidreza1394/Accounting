@@ -63,6 +63,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
         var databaseName = "FaranouVendorMutation_" + Guid.NewGuid().ToString("N");
         var testConnection = new SqlConnectionStringBuilder(baseConnection) { InitialCatalog = databaseName }.ConnectionString;
         var signerLogs = new CapturingLoggerProvider();
+        var timeProvider = new MutableTimeProvider(DateTimeOffset.UtcNow);
         using var licenseSigningKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         await CreateDatabaseAsync(baseConnection, databaseName, cancellationToken);
 
@@ -80,6 +81,8 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 webHost.ConfigureTestServices(services =>
                 {
                     services.AddLogging(logging => logging.AddProvider(signerLogs));
+                    services.RemoveAll<TimeProvider>();
+                    services.AddSingleton<TimeProvider>(timeProvider);
                     services.RemoveAll<IVendorAuditWriter>();
                     services.RemoveAll<IProvisioningSigningProvider>();
                     services.RemoveAll<ProvisioningPackageSigningTrustStore>();
@@ -291,6 +294,9 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
             {
                 Assert.Equal(HttpStatusCode.OK, verifyResponse.StatusCode);
             }
+
+            var provisioningCreatedAtUtc = DateTimeOffset.UtcNow.AddSeconds(30).ToUniversalTime();
+            timeProvider.SetUtcNow(provisioningCreatedAtUtc);
 
             // Antiforgery request tokens are bound to the current claims identity.
             // The anonymous token used for password/TOTP requests must not be reused
@@ -504,6 +510,8 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 var savedRequest = await db.ProvisioningRequests.SingleAsync(
                     item => item.RequestId == provisioningRequestId.ToString("D"), cancellationToken);
                 Assert.Equal("AwaitingSigner", savedRequest.Status);
+                Assert.Equal(provisioningCreatedAtUtc, savedRequest.CreatedAtUtc);
+                Assert.Equal(provisioningCreatedAtUtc, savedRequest.UpdatedAtUtc);
                 Assert.False(savedRequest.PayloadJson.Contains("password", StringComparison.OrdinalIgnoreCase));
                 Assert.Equal(1, await db.ProvisioningRequests.CountAsync(
                     item => item.RequestId == provisioningRequestId.ToString("D"), cancellationToken));
@@ -1066,6 +1074,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 HandleCookies = true
             });
             var (reviewerAntiForgeryToken, _) = await GetAntiforgeryTokenAsync(reviewerClient, cancellationToken);
+            timeProvider.SetUtcNow(DateTimeOffset.UtcNow);
             using (var passwordResponse = await PostWithTokenAsync(reviewerClient, "/api/auth/password",
                 new { userName = reviewerUserName, password = "Strong-Vendor#2026-Reviewer" },
                 reviewerAntiForgeryToken, cancellationToken))
@@ -1082,6 +1091,8 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal(HttpStatusCode.OK, verifyResponse.StatusCode);
             }
             (reviewerAntiForgeryToken, _) = await GetAntiforgeryTokenAsync(reviewerClient, cancellationToken);
+            var approvalReviewedAtUtc = DateTimeOffset.UtcNow.AddMinutes(5).ToUniversalTime();
+            timeProvider.SetUtcNow(approvalReviewedAtUtc);
 
             using (var inaccessibleDecision = await PostWithTokenAsync(reviewerClient,
                 $"/api/vendor/approvals/{inaccessibleProvisioningApprovalId:D}/decision",
@@ -1246,6 +1257,21 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 var installation = await db.Installations.AsNoTracking().SingleAsync(item => item.Id == installationId, cancellationToken);
                 Assert.Equal("Suspended", customer.Status);
                 Assert.Equal("Suspended", installation.Status);
+                var provisioningApproval = await db.ApprovalRequests.AsNoTracking()
+                    .SingleAsync(item => item.Id == provisioningApprovalId, cancellationToken);
+                var customerApproval = await db.ApprovalRequests.AsNoTracking()
+                    .SingleAsync(item => item.Id == customerApprovalId, cancellationToken);
+                var installationApproval = await db.ApprovalRequests.AsNoTracking()
+                    .SingleAsync(item => item.Id == installationApprovalId, cancellationToken);
+                var licenseApproval = await db.ApprovalRequests.AsNoTracking()
+                    .SingleAsync(item => item.Id == licenseApprovalId, cancellationToken);
+                Assert.Equal(provisioningCreatedAtUtc, provisioningApproval.RequestedAtUtc);
+                Assert.Equal(provisioningCreatedAtUtc, customerApproval.RequestedAtUtc);
+                Assert.Equal(provisioningCreatedAtUtc, installationApproval.RequestedAtUtc);
+                Assert.Equal(provisioningCreatedAtUtc, licenseApproval.RequestedAtUtc);
+                Assert.Equal(approvalReviewedAtUtc, provisioningApproval.ReviewedAtUtc);
+                Assert.Equal(approvalReviewedAtUtc, customerApproval.ReviewedAtUtc);
+                Assert.Equal(approvalReviewedAtUtc, installationApproval.ReviewedAtUtc);
                 Assert.Equal(3, await db.ApprovalRequests.CountAsync(item => item.Status == "Approved", cancellationToken));
                 Assert.Equal(3, await db.AuditEvents.CountAsync(item =>
                     item.ActionCode == "vendor.approval.approved", cancellationToken));
@@ -1572,6 +1598,19 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
         await using var command = connection.CreateCommand();
         command.CommandText = $"CREATE DATABASE [{databaseName}]";
         await command.ExecuteNonQueryAsync(ct);
+    }
+
+    private sealed class MutableTimeProvider : TimeProvider
+    {
+        private long _utcTicks;
+
+        public MutableTimeProvider(DateTimeOffset initialUtcNow) => SetUtcNow(initialUtcNow);
+
+        public override DateTimeOffset GetUtcNow() =>
+            new(Interlocked.Read(ref _utcTicks), TimeSpan.Zero);
+
+        public void SetUtcNow(DateTimeOffset value) =>
+            Interlocked.Exchange(ref _utcTicks, value.ToUniversalTime().Ticks);
     }
 
     private static async Task DropDatabaseAsync(string configuredConnection, string databaseName, CancellationToken ct)
