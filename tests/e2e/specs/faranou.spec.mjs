@@ -223,7 +223,7 @@ async function chooseOption(page, companyName, periodPattern) {
   await page.locator('label', { has: companyRadio }).click();
   await expect(companyRadio).toBeChecked();
   await page.getByRole('button', { name: /ورود به محیط کاری/ }).click();
-  await expect(page.getByRole('heading', { name: 'به فرانو خوش آمدید' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'به سامانه یکپارچه فرانو خوش آمدید' })).toBeVisible();
 }
 
 test('several companies: the user chooses, a closed period is view-only and foreign data is not offered', async ({ page }) => {
@@ -260,7 +260,7 @@ test('right after sign-in, with no manual navigation, every account kind reaches
 
   // Exactly one company with one open period: direct entry (D-031).
   await signIn(page, bob);
-  await expect(page.getByRole('heading', { name: 'به فرانو خوش آمدید' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'به سامانه یکپارچه فرانو خوش آمدید' })).toBeVisible();
   await expect(page.getByLabel('زمینه کاری جاری')).toContainText(b.name);
   await page.context().clearCookies();
 
@@ -286,7 +286,7 @@ test('a single company with a single open period is entered directly', async ({ 
   await signIn(page, bob);
   await page.goto('/app/');
 
-  await expect(page.getByRole('heading', { name: 'به فرانو خوش آمدید' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'به سامانه یکپارچه فرانو خوش آمدید' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'فرانو - دوره مالی' })).toHaveCount(0);
   await expect(page.getByLabel('زمینه کاری جاری')).toContainText(b.name);
   await expectCleanPage(page);
@@ -297,7 +297,7 @@ test('a company without a fiscal period blocks the entry with an explanation', a
   await page.goto('/app/');
 
   await expect(page.getByRole('heading', { name: 'دوره مالی قابل ورودی وجود ندارد' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'به فرانو خوش آمدید' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'به سامانه یکپارچه فرانو خوش آمدید' })).toHaveCount(0);
   await expectCleanPage(page);
 });
 
@@ -309,7 +309,7 @@ test('a closed period opens for viewing only, and switching back leaves nothing 
   await expect(page.getByLabel('زمینه کاری جاری')).toContainText('فقط مشاهده و گزارش‌گیری');
 
   // Switching in the same sign-in: no new login, the badge belongs to the closed period only.
-  await page.getByRole('button', { name: /تغییر شرکت یا دوره/ }).click();
+  await page.getByRole('button', { name: 'تغییر شرکت' }).click();
   await expect(page.getByRole('heading', { name: 'فرانو - دوره مالی' })).toBeVisible();
   await chooseOption(page, a.name, /سال مالی ۱۴۰۵/);
   await expect(page.getByLabel('زمینه کاری جاری')).not.toContainText('فقط مشاهده و گزارش‌گیری');
@@ -321,7 +321,7 @@ test('a user without any company is blocked with an explanation', async ({ page 
   await page.goto('/app/');
 
   await expect(page.getByRole('heading', { name: 'شرکتی برای ورود در دسترس نیست' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'به فرانو خوش آمدید' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'به سامانه یکپارچه فرانو خوش آمدید' })).toHaveCount(0);
   await expectCleanPage(page);
 });
 
@@ -335,7 +335,7 @@ test('every new sign-in asks again; the previous choice is not restored', async 
   await signIn(page, alice);
   await page.goto('/app/');
   await expect(page.getByRole('heading', { name: 'فرانو - دوره مالی' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'به فرانو خوش آمدید' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'به سامانه یکپارچه فرانو خوش آمدید' })).toHaveCount(0);
 });
 
 test('year first: same-name companies are told apart by their national id, and an archived year cannot be chosen', async ({ page }) => {
@@ -382,7 +382,7 @@ test('year first: the chosen pair enters once, with a loading state and no doubl
   });
   const enter = page.getByRole('button', { name: /ورود به محیط کاری/ });
   await enter.dblclick();
-  await expect(page.getByRole('heading', { name: 'به فرانو خوش آمدید' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'به سامانه یکپارچه فرانو خوش آمدید' })).toBeVisible();
   expect(posts).toBe(1);
   await expect(page.getByLabel('زمینه کاری جاری')).toContainText(d.name.slice(0, 20));
 });

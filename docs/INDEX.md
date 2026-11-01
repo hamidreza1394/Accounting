@@ -53,7 +53,7 @@
 | [`../.claude/skills/change-impact/SKILL.md`](../.claude/skills/change-impact/SKILL.md), [`../.claude/skills/faranou-efcore-migrations/SKILL.md`](../.claude/skills/faranou-efcore-migrations/SKILL.md), [`../.claude/skills/faranou-architecture-decisions/SKILL.md`](../.claude/skills/faranou-architecture-decisions/SKILL.md) | تحلیل اثر تغییرات، Migrationهای EF Core و تصمیمات معماری |
 | [`THIRD_PARTY_SKILLS.md`](THIRD_PARTY_SKILLS.md), [`../THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md), [`../third_party/MICROSOFT-TSS-LICENSE.txt`](../third_party/MICROSOFT-TSS-LICENSE.txt), [`../third_party/ECC-LICENSE.txt`](../third_party/ECC-LICENSE.txt), [`../third_party/UI-UX-PRO-MAX-LICENSE.txt`](../third_party/UI-UX-PRO-MAX-LICENSE.txt), [`../.claude/skills/ui-ux-pro-max/SKILL.md`](../.claude/skills/ui-ux-pro-max/SKILL.md) | منشأ، مجوز و قواعد نگهداری Skillها و کتابخانه‌های شخص ثالث |
 | [`handoffs/ISSUE-214-vendor-revocation-issuance.md`](handoffs/ISSUE-214-vendor-revocation-issuance.md) | تحویل پیاده‌سازی Vendor برای snapshot امضاشده و گردش maker-checker ابطال آفلاین؛ CI شاخه باید پیش از Verified بررسی شود |
-| [`WORK_LOG.md`](WORK_LOG.md), [`handoffs/`](handoffs/) | سوابق تحویل |
+| [`WORK_LOG.md`](WORK_LOG.md), [`handoffs/`](handoffs/) | سوابق تحویل؛ Issue #422: هم‌ترازی داشبورد با تصویر مرجع |
 
 
 - **D-061..D-063:** ماژول مستقل Trade، استفاده از FiscalPeriod مشترک و سیاست‌های اجرایی مالکیت Voyage، پرونده چنددوره‌ای، گزارش عملیاتی چندشرکتی موج اول و entitlement از S1 در `DECISIONS.md` و `TRADE_MODULE.md` ثبت شده‌اند.
