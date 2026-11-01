@@ -1825,3 +1825,16 @@
 - تست‌های Domain و metadata مدل برای tenant scope، schema، نبود FiscalPeriodId، rowversion، unique index و FK مرکب نوشته شدند.
 - هیچ Migration تولید یا اجرا نشده؛ هیچ داده نمونه یا داده مشتری seed نشده است. Build و تست‌ها از محیط حاضر اجرا نشده‌اند و باید CI PR #406 آن‌ها را تأیید کند.
 - PR #405 CI یک شکست تست داشت که از مقایسه رشته خام Connection String ناشی می‌شد؛ تست به مقایسه اجزای نرمال‌شده SqlConnectionStringBuilder اصلاح شد و اجرای مجدد CI روی commit `7104d10` در جریان است.
+
+
+## 2026-11-01 — یکسان‌سازی منبع زمان در Provisioning و Approval سمت Vendor (#228)
+
+- **مبنای بازبینی:** `main` در SHA `94b45fce6c260909bb0828b8fa67686936e2f99e`. فقط PR باز #409 وجود داشت و تغییرات آن مربوط به UI داشبورد و خارج از محدوده Vendor بود.
+- **یافته:** مسیرهای create provisioning، درخواست Approval برای provisioning/license/customer/installation و تصمیم Approval در `VendorApprovalEndpoints` و `VendorProvisioningEndpoints` از `DateTimeOffset.UtcNow` مستقیم استفاده می‌کردند؛ در حالی که signer، resolver، audit writer و ACK از `TimeProvider` تزریق‌شده استفاده می‌کنند. این ناهمسانی، کنترل ساعت و آزمون مرزهای expiry/review را در جریان حساس Vendor دشوار می‌کرد.
+- **اصلاح:** همان `TimeProvider` ثبت‌شده در DI به endpointهای مربوط تزریق شد و timestampهای ایجاد، درخواست و رد/تصمیم از `GetUtcNow().ToUniversalTime()` گرفته می‌شوند. هیچ policy، ترتیب authorization، transaction، entitlement یا schema تغییر نکرد.
+- **Regression test:** تست Integration موجود با SQL Server واقعی، TimeProvider کنترل‌شده را پس از MFA جایگزین می‌کند و timestampهای Provisioning، درخواست‌های Approval و زمان ReviewedAtUtc را دقیقاً بررسی می‌کند. ساعت پیش از ورود MFA بازبین به زمان جاری برگردانده می‌شود تا آزمون TOTP تحت تأثیر clock test قرار نگیرد.
+- **دامنه:** فقط `Vendor/Vendor.Host/Authorization/**` و تست `tests/Vendor.Host.Tests/VendorCustomerMutationHttpIntegrationTests.cs` به‌علاوه مستندات Vendor؛ هیچ `Server/**`، customer migration یا customer database تغییر نکرد.
+- **اعتبارسنجی:** تست محلی .NET/SQL Server در این نشست اجرا نشده؛ باید Vendor CI روی PR این تست Integration را با `FARANO_VENDOR_TEST_SQLSERVER` اجرا کند. نتیجه تا دریافت check نهایی `Not Verified` است.
+- **وضعیت مرتبط:** post-merge CI مربوط به #282 روی merge commit `f4a0462b0972e7686a686eca0febfaee680baecf` و #284 روی `81ed5f64ed86ebbae47a433cea63e3655cb1d24b` شامل Vendor CI، .NET CI، Semgrep و Push on main همگی موفق است. روی main فعلی `94b45fce6c260909bb0828b8fa67686936e2f99e`، .NET CI، Semgrep و Push on main نیز موفق‌اند؛ آخرین Vendor CI موفق روی `f4027d83d1275204167464928c54ed9a185a68bf` است و در diff تا main فعلی فایل Vendor تغییر نکرده است.
+- **باقی‌مانده:** consumer سمت مشتری #235 جداست؛ signer Production در #236 به انتخاب و credential معتبر HSM/KMS نیاز دارد؛ sink مستقل checkpoint در #107 به مقصد و credential جدا نیاز دارد.
+- **ثبت Git:** PR [#410](https://github.com/hamidreza1394/Accounting/pull/410)؛ commit پیاده‌سازی `a8d8a686fa9faa95f44afb37f727603ab81ddb29` روی شاخه `fix/vendor-provisioning-time-provider`. پس از ثبت این handoff، SHA نهایی PR باید از head جاری خوانده شود.
