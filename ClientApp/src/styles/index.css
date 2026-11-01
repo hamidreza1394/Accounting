@@ -694,3 +694,15 @@
   .faranou-sidebar { top: 128px; inset-block-start: 128px; }
   .faranou-mobile-scrim { inset-block-start: 128px; }
 }
+
+.faranou-desktop-menu-mark {
+  display: inline-flex;
+  width: 2.65rem;
+  height: 2.65rem;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+@media (max-width: 767px) {
+  .faranou-desktop-menu-mark { display: none; }
+}
