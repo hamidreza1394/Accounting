@@ -1958,3 +1958,5 @@
 - تست‌های regression برای هدر/ناوبری و تصویر/ساختار داشبورد اضافه شدند. API، مجوز، احراز هویت، دیتابیس و Migration تغییر نکردند.
 - اجرای typecheck/Vitest/build/check:offline و مرورگر در این نشست انجام نشد؛ نتایج CI پس از PR باید بررسی شود.
 - گزارش: `docs/handoffs/ISSUE-422-dashboard-reference-layout.md`.
+
+- **اصلاح CI در PR #423:** TypeScript ابتدا importهای بدون استفاده را گزارش کرد؛ سپس Vitest نشان داد assertionهای قدیمی App/E2E هنوز heading قبلی را انتظار دارند. importها حذف و انتظارهای تست با heading جدید هماهنگ شدند؛ تست AppShell نیز برای label تکراری اصلاح شد. نتیجه نهایی CI روی head جدید باید بررسی شود.
