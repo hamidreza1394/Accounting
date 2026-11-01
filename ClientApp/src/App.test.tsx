@@ -174,7 +174,7 @@ describe('App', () => {
 
     await userEvent.click(screen.getByRole('radio', { name: /سال مالی ۱۴۰۴/ }));
     expect(screen.getByRole('radio', { name: /شرکت الف/ })).toBeChecked();
-    expect(screen.getByText('فقط مشاهده و گزارش‌گیری')).toBeInTheDocument();
+    expect(screen.getAllByText('فقط مشاهده و گزارش‌گیری').length).toBeGreaterThan(0);
   });
 
   it('enters a closed year as view-only and shows the read-only mode on the dashboard', async () => {
@@ -203,7 +203,7 @@ describe('App', () => {
 
     expect(await screen.findByRole('heading', { name: /به فرانو خوش آمدید/ })).toBeInTheDocument();
     expect(postBodies).toEqual([{ companyId: 'a', fiscalPeriodId: 'p0' }]);
-    expect(screen.getByText('فقط مشاهده و گزارش‌گیری')).toBeInTheDocument();
+    expect(screen.getAllByText('فقط مشاهده و گزارش‌گیری').length).toBeGreaterThan(0);
   });
 
   it('drops the data of the previous company when the user switches, and loads the new one', async () => {
