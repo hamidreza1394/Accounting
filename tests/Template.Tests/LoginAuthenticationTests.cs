@@ -1152,10 +1152,22 @@ public sealed class LoginConfigurationTests
 		var stylesheet = ReadRepositoryFile("Server/wwwroot/css/rtl/taraz-login.css");
 
 		Assert.Contains("@media (min-width: 961px) and (max-height: 960px)", stylesheet);
-		Assert.Contains("--fn-stage-height: clamp(520px, calc(100dvh - 2 * var(--fn-stage-pad)), 860px);", stylesheet);
+		Assert.Contains("--fn-stage-height: clamp(520px, calc(100dvh - 2 * var(--fn-stage-pad)), 960px);", stylesheet);
 		Assert.Contains(".fn-chart {", stylesheet);
 		Assert.Contains("bottom: clamp(16px, 2.5vh, 24px);", stylesheet);
 		Assert.Contains("@media (min-width: 961px) and (max-height: 700px)", stylesheet);
+	}
+
+	[Fact]
+	public void TheLoginPage_UsesBalancedDesktopPanelProportions()
+	{
+		var stylesheet = ReadRepositoryFile("Server/wwwroot/css/rtl/taraz-login.css");
+
+		Assert.Contains("grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);", stylesheet);
+		Assert.Contains("width: min(100%, 520px);", stylesheet);
+		Assert.Contains("width: min(100%, 460px);", stylesheet);
+		Assert.Contains("transform: translateY(-10px);", stylesheet);
+		Assert.Contains("transform: scale(0.92);", stylesheet);
 	}
 
 	[Fact]
