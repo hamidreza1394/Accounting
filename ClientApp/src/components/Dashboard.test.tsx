@@ -17,7 +17,7 @@ describe('Dashboard', () => {
     expect(screen.getByRole('heading', { name: /به فرانو خوش آمدید/ })).toBeInTheDocument();
     expect(screen.getAllByText('شرکت نمونه').length).toBeGreaterThan(0);
     expect(screen.getAllByText('سال مالی ۱۴۰۵').length).toBeGreaterThan(0);
-    expect(screen.getByText('حسابدار')).toBeInTheDocument();
+    expect(screen.getAllByText('حسابدار').length).toBeGreaterThan(0);
     expect(screen.getByText('اطلاعات واقعی شرکت')).toBeInTheDocument();
   });
 
