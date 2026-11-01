@@ -64,3 +64,9 @@
 - Branch: feat/issue-409-main-dashboard
 - Commit: تاریخچه شاخه feat/issue-409-main-dashboard (سه commit متوالی؛ آخرین commit هنگام تکمیل PR ثبت می‌شود)
 - Pull Request: https://github.com/hamidreza1394/Accounting/pull/409
+
+
+## اصلاح دوم پس از اجرای مجدد CI
+- CI روی commit اصلاح اول: TypeScript موفق، 106/107 تست موفق؛ شکست واحد به‌علت چند نتیجه برای متن «حسابدار» در Dashboard.test بود.
+- تست به query چندنتیجه‌ای تغییر کرد تا نمایش نقش در چند ناحیه UI معتبر باشد.
+- اجرای مجدد کامل CI روی head جدید در انتظار است.
