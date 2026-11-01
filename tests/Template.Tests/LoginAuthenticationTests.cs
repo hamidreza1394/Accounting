@@ -1151,7 +1151,7 @@ public sealed class LoginConfigurationTests
 	{
 		var stylesheet = ReadRepositoryFile("Server/wwwroot/css/rtl/taraz-login.css");
 
-		Assert.Contains("@media (min-width: 961px) and (max-height: 960px)", stylesheet);
+		Assert.Contains("@media (min-width: 1440px) and (max-height: 960px)", stylesheet);
 		Assert.Contains("--fn-stage-height: clamp(520px, calc(100dvh - 2 * var(--fn-stage-pad)), 960px);", stylesheet);
 		Assert.Contains(".fn-chart {", stylesheet);
 		Assert.Contains("bottom: clamp(16px, 2.5vh, 24px);", stylesheet);
