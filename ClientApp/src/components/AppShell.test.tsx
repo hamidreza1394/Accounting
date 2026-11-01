@@ -22,6 +22,7 @@ describe('AppShell', () => {
   it('keeps unfinished navigation items disabled and the current dashboard active', () => {
     render(<AppShell session={session} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
     expect(screen.getByRole('link', { name: /داشبورد/ })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByText('حسابداری').closest('[aria-disabled="true"]')).toBeInTheDocument();
+    const accountingLabels = screen.getAllByText('حسابداری');
+    expect(accountingLabels.some((label) => label.closest('[aria-disabled="true"]'))).toBe(true);
   });
 });
