@@ -138,21 +138,155 @@
   }
 }
 
-/* Authenticated workspace: restrained navy/gold chrome with a cool, low-contrast canvas. */
+
+/* Authenticated workspace: brighter Faranou blues, restrained gold and calm financial surfaces. */
+:root {
+  --workspace-blue-950: #153654;
+  --workspace-blue-900: #1b4772;
+  --workspace-blue-800: #245d91;
+  --workspace-blue-700: #2f75ad;
+  --workspace-blue-600: #3b8bc8;
+  --workspace-blue-100: #eaf4fd;
+  --workspace-blue-050: #f4f8fd;
+}
+
+.faranou-workspace {
+  background:
+    radial-gradient(ellipse at 82% 0%, rgb(111 174 226 / .12), transparent 36%),
+    linear-gradient(135deg, #edf4fc 0%, var(--color-period) 48%, #f5f8fd 100%);
+}
+
 .faranou-topbar {
-  background: radial-gradient(ellipse at 18% -65%, rgb(74 144 219 / .42), transparent 48%), linear-gradient(112deg, var(--color-night) 0%, var(--color-navy) 48%, var(--color-navy-deep) 100%);
+  background:
+    radial-gradient(ellipse at 16% -65%, rgb(130 198 245 / .34), transparent 48%),
+    linear-gradient(112deg, var(--workspace-blue-800) 0%, var(--workspace-blue-700) 48%, var(--workspace-blue-900) 100%);
+  box-shadow: 0 8px 26px rgb(21 54 84 / .16);
 }
+
 .faranou-sidebar {
-  background: radial-gradient(ellipse at 80% 100%, rgb(39 95 151 / .22), transparent 48%), linear-gradient(180deg, var(--color-navy) 0%, var(--color-night) 56%, var(--color-navy-deep) 100%);
+  background:
+    radial-gradient(ellipse at 82% 100%, rgb(82 164 225 / .2), transparent 48%),
+    linear-gradient(180deg, #245783 0%, var(--workspace-blue-900) 48%, var(--workspace-blue-950) 100%);
+  border-inline-start: 1px solid rgb(255 255 255 / .14);
 }
-.faranou-nav-active { background: linear-gradient(105deg, var(--color-cta-soft) 0%, var(--color-gold) 55%, var(--color-gold-deep) 100%); }
+
+.faranou-sidebar nav li > div[aria-disabled="true"] {
+  color: rgb(239 247 255 / .78);
+}
+
+.faranou-sidebar nav li > div[aria-disabled="true"] span:last-child {
+  color: rgb(226 240 255 / .72);
+  border-color: rgb(255 255 255 / .2);
+}
+
+.faranou-nav-active {
+  background: linear-gradient(105deg, #e7f6ff 0%, #b8e2fb 56%, #8bcaf0 100%);
+  box-shadow: 0 5px 16px rgb(8 35 62 / .18), inset 0 1px 0 rgb(255 255 255 / .75);
+}
+
 .faranou-welcome {
-  background: radial-gradient(ellipse at 10% 100%, rgb(83 159 225 / .28), transparent 42%), radial-gradient(ellipse at 85% 0%, rgb(255 255 255 / .12), transparent 35%), linear-gradient(115deg, var(--color-night) 0%, var(--color-navy) 52%, var(--color-navy-deep) 100%);
+  background:
+    radial-gradient(ellipse at 8% 105%, rgb(95 190 240 / .28), transparent 42%),
+    radial-gradient(ellipse at 88% 0%, rgb(255 255 255 / .16), transparent 35%),
+    linear-gradient(115deg, #1d4d79 0%, #286da5 54%, #1d527f 100%);
+  box-shadow: 0 14px 36px rgb(35 91 139 / .17);
 }
-.faranou-summary-card { display:flex; min-width:0; align-items:center; gap:.9rem; border:1px solid; border-radius:1.15rem; background:rgb(255 255 255 / .88); padding:1rem; box-shadow:0 6px 22px rgb(31 65 111 / .055); }
-.faranou-summary-icon { display:inline-flex; width:2.8rem; height:2.8rem; flex:0 0 auto; align-items:center; justify-content:center; border-radius:1rem; }
-.faranou-panel { min-width:0; border:1px solid rgb(255 255 255 / .95); border-radius:1.25rem; background:rgb(255 255 255 / .82); padding:1.15rem; box-shadow:0 8px 28px rgb(31 65 111 / .055); }
-.faranou-panel-icon { display:inline-flex; width:2.5rem; height:2.5rem; flex:0 0 auto; align-items:center; justify-content:center; border-radius:.9rem; background:var(--color-period); }
-@media (prefers-reduced-motion:no-preference) { .faranou-nav-active { transition:filter 160ms ease, transform 160ms ease; } .faranou-nav-active:hover { filter:brightness(1.04); transform:translateY(-1px); } }
-@media (max-width:1023px) { .faranou-sidebar { box-shadow:-18px 0 50px rgb(5 20 40 / .28); } }
-@media (max-width:639px) { .faranou-summary-card { padding:.85rem; } .faranou-panel { padding:1rem; } }
+
+.faranou-summary-card {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: .9rem;
+  border: 1px solid #d9e8f6;
+  border-radius: 1.15rem;
+  background: linear-gradient(145deg, #fff 0%, #f8fbff 100%);
+  padding: 1rem;
+  box-shadow: 0 5px 18px rgb(31 65 111 / .055), inset 0 1px 0 rgb(255 255 255 / .95);
+}
+
+.faranou-summary-icon {
+  display: inline-flex;
+  width: 2.8rem;
+  height: 2.8rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1rem;
+}
+
+.faranou-panel {
+  min-width: 0;
+  border: 1px solid #dce9f6;
+  border-radius: 1.25rem;
+  background: linear-gradient(150deg, #fff 0%, #fbfdff 100%);
+  padding: 1.15rem;
+  box-shadow: 0 7px 22px rgb(31 65 111 / .055), inset 0 1px 0 rgb(255 255 255 / .95);
+}
+
+.faranou-panel-icon {
+  display: inline-flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: .9rem;
+  background: linear-gradient(145deg, #eaf4fd, #dcecfb);
+}
+
+.faranou-context-bar {
+  border-color: #dce9f6;
+  background: rgb(255 255 255 / .82);
+  box-shadow: 0 4px 16px rgb(31 65 111 / .045);
+}
+
+.faranou-workspace-footer {
+  border-color: #dce9f6;
+  background: rgb(255 255 255 / .72);
+}
+
+.faranou-module-card {
+  border-color: #d8e8f6;
+  background: linear-gradient(150deg, #fff 0%, #f2f8fe 100%);
+  box-shadow: 0 5px 18px rgb(31 65 111 / .055), inset 0 1px 0 rgb(255 255 255 / .95);
+}
+
+.faranou-empty-state {
+  border-color: #c9def1;
+  background: linear-gradient(145deg, #f5faff 0%, #edf5fd 100%);
+}
+
+.faranou-quick-action {
+  border-color: #d7e7f5;
+  background: linear-gradient(150deg, #fff 0%, #edf6fe 100%);
+  box-shadow: 0 3px 12px rgb(31 65 111 / .045);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .faranou-nav-active {
+    transition: filter 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+  }
+
+  .faranou-nav-active:hover {
+    filter: brightness(1.035);
+    transform: translateY(-1px);
+    box-shadow: 0 7px 18px rgb(8 35 62 / .2), inset 0 1px 0 rgb(255 255 255 / .8);
+  }
+
+  .faranou-topbar,
+  .faranou-sidebar,
+  .faranou-welcome {
+    transition: background-color 160ms ease;
+  }
+}
+
+@media (max-width: 1023px) {
+  .faranou-sidebar {
+    box-shadow: -18px 0 50px rgb(5 20 40 / .24);
+  }
+}
+
+@media (max-width: 639px) {
+  .faranou-summary-card { padding: .85rem; }
+  .faranou-panel { padding: 1rem; }
+}
