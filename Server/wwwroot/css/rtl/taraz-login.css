@@ -1154,3 +1154,70 @@
 	.fn-brand-panel { transform: translateY(-6px); }
 	.fn-chart { transform: scale(0.82); }
 }
+
+/* ---------- Wide desktop composition: right-anchored tall sign-in, balanced brand column ---------- */
+@media (min-width: 1440px) and (min-height: 820px) {
+	:root {
+		--fn-stage-pad: 24px;
+		--fn-stage-height: clamp(720px, calc(100dvh - 2 * var(--fn-stage-pad)), 920px);
+	}
+
+	.taraz-login__shell {
+		width: 100%;
+		max-width: 1800px;
+		min-height: 100dvh;
+		padding: var(--fn-stage-pad);
+		grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+		column-gap: clamp(32px, 3vw, 56px);
+	}
+
+	.taraz-login__panel,
+	.taraz-login__visual {
+		min-height: var(--fn-stage-height);
+	}
+
+	/* RTL inline-start is the physical right edge: anchor the form there instead of centering it. */
+	.taraz-login[dir="rtl"] .taraz-login__panel {
+		align-items: flex-start;
+	}
+
+	.taraz-panel-card {
+		width: min(100%, 560px);
+		min-height: clamp(720px, calc(100dvh - 150px), 820px);
+		padding: 38px clamp(30px, 2.5vw, 42px) 34px;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		gap: 14px;
+	}
+
+	/* The existing content and chart are retained; only the brand column is enlarged and raised. */
+	.fn-brand-panel {
+		width: min(100%, 500px);
+		gap: clamp(16px, 2vh, 24px);
+		transform: translateY(-28px);
+	}
+
+	.fn-mark--lg {
+		width: 80px;
+		height: 94px;
+		border-radius: 23px;
+	}
+
+	.fn-mark--lg img {
+		width: 52px;
+		height: 64px;
+	}
+
+	.fn-benefits { gap: 10px; }
+	.fn-benefits li { padding: 10px 16px; }
+	.fn-benefit-icon { width: 48px; height: 48px; }
+
+	.fn-chart {
+		bottom: 12px;
+		transform: scale(1);
+		transform-origin: bottom left;
+	}
+}
+
+/* Keep the existing compact and scroll-safe behavior below the large desktop breakpoint. */
