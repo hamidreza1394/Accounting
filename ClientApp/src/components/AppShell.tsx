@@ -46,7 +46,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
   const readOnly = context.fiscalPeriod.accessMode === 'readOnly';
 
   return (
-    <div dir="rtl" className="min-h-screen bg-period text-ink">
+    <div dir="rtl" className="faranou-workspace min-h-screen bg-period text-ink">
       <header className="faranou-topbar on-dark sticky top-0 z-40 border-b border-white/10 text-white shadow-xl">
         <div className="flex min-h-[76px] items-center justify-between gap-3 px-4 sm:px-6 xl:px-8">
           <div className="flex min-w-0 items-center gap-3">
@@ -127,7 +127,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
 
         <main id="main" className="min-w-0 flex-1">
           <div className="mx-auto w-full max-w-[1800px] px-4 py-5 sm:px-6 sm:py-7 xl:px-9 xl:py-8">
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/80 bg-white/65 px-4 py-3 shadow-sm backdrop-blur sm:px-5">
+            <div className="faranou-context-bar mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/80 bg-white/65 px-4 py-3 shadow-sm backdrop-blur sm:px-5">
               <div className="flex min-w-0 items-center gap-2 text-xs text-muted"><Building2 size={16} className="shrink-0 text-navy" /><span className="truncate font-semibold text-ink">{context.company.name}</span><span className="text-slate-300">/</span><span className="truncate">{context.fiscalPeriod.title}</span></div>
               <div className="flex items-center gap-2">
                 {readOnly ? <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-bold text-amber-800">دوره فقط‌خواندنی</span> : <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-800">دوره باز</span>}
@@ -136,7 +136,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
             </div>
             {logoutError ? <div role="alert" className="mb-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-danger">{logoutError}</div> : null}
             {children}
-            <footer className="mt-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-blue-200/70 bg-white/55 px-4 py-3 text-[11px] text-muted shadow-sm">
+            <footer className="faranou-workspace-footer mt-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-blue-200/70 bg-white/55 px-4 py-3 text-[11px] text-muted shadow-sm">
               <span className="flex items-center gap-2"><ShieldCheck size={15} className="text-emerald-600" />محیط کاری شما با کنترل دسترسی سمت سرور محافظت می‌شود.</span>
               <span className="flex items-center gap-2"><Activity size={15} className="text-teal" />{readOnly ? 'دسترسی فقط مشاهده و گزارش‌گیری' : 'دوره مالی با امکان ثبت عملیات'}</span>
               <span dir="ltr" className="font-semibold tracking-wider text-navy/55">FARANOU</span>
