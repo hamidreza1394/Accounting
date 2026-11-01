@@ -1852,3 +1852,11 @@
 - **محدوده:** این commit فقط مستندات Vendor را همگام می‌کند؛ هیچ کد اجرایی، customer `Server/**`، customer schema/migration یا دیتابیس مشتری تغییر نمی‌کند.
 - **تست محلی:** اجرا نشد؛ این نشست checkout محلی و SDK/SQL Server اجرایی ندارد. نتیجه‌های بالا فقط از GitHub Actions و log واقعی job استخراج شده‌اند.
 - **باقی‌مانده:** consumer/ACK مشتری در #235 فقط در کار جداگانه؛ provider/credential و HSM Production در #236؛ sink مستقل checkpoint در #107؛ و تکمیل post-merge .NET CI `41285195040`.
+
+
+## 2026-11-01 — تکمیل post-merge .NET CI برای PR #410
+
+- اجرای .NET CI پس از merge روی main، run `41285195040`، پس از snapshot قبلی تکمیل شد و با conclusion=`success` پایان یافت.
+- هر ۷ job موفق‌اند: client، secret-scan، publish-scripts، build-and-test، E2E، Linux publish و Windows publish.
+- در نتیجه تمام workflowهای اصلی ثبت‌شده روی SHA `e26ecc4f387b46da2b703cabbda8e4105bc1d2f7` موفق‌اند: Vendor CI `41285195060`، Semgrep `41285195043`، Push on main/CodeQL `41285194925` و .NET CI `41285195040`.
+- این ثبت صرفاً تکمیل شواهد CI است؛ هیچ کد اجرایی یا schema تغییر نکرده و تست محلی اجرا نشده است.

@@ -10,7 +10,7 @@
 - [x] تست Integration مسیر ایجاد Provisioning، درخواست Approval و تصمیم Approval را با ساعت کنترل‌شده بررسی کند.
 - [x] Vendor CI و .NET CI روی SHA نهایی PR موفق شوند.
 - [x] Semgrep و CodeQL روی SHA نهایی PR موفق شوند.
-- [ ] تمام jobهای .NET CI پس از merge روی main تکمیل شوند؛ در snapshot ثبت، E2E و دو publish هنوز در حال اجرا بودند.
+- [x] تمام jobهای .NET CI پس از merge روی main تکمیل و موفق شدند.
 
 ## خلاصه تغییرات
 - استفاده مستقیم از `DateTimeOffset.UtcNow` در endpointهای Approval و Provisioning با `TimeProvider.GetUtcNow().ToUniversalTime()` جایگزین شد.
@@ -35,7 +35,7 @@
 | SQL Server Integration regression | موفق در CI | Vendor CI run `41284398065`؛ log job نشان می‌دهد SQL Server test connection تنظیم شده، Test run summary برابر Passed و failed=0 است. |
 | .NET CI روی head PR | موفق | run `41284398083`؛ ۷ job از جمله E2E و Linux/Windows publish موفق. |
 | Semgrep / CodeQL روی head PR | موفق | runs `41284398117` و `41284394919`. |
-| CI پس از merge روی main | جزئی/در حال اجرا | Vendor CI `41285195060`، Semgrep `41285195043` و Push on main/CodeQL `41285194925` موفق؛ .NET CI `41285195040`: client، secret-scan، publish-scripts و build-and-test موفق، E2E و Linux/Windows publish در حال اجرا در زمان ثبت. |
+| CI پس از merge روی main | موفق | Vendor CI `41285195060`، Semgrep `41285195043`، Push on main/CodeQL `41285194925` و .NET CI `41285195040` همگی موفق؛ هر ۷ job .NET CI شامل E2E و Linux/Windows publish تکمیل شدند. |
 | `git diff --check` محلی | اجرا نشده | این نشست checkout محلی ندارد؛ نتیجهٔ CI جایگزین اجرای محلی این فرمان نیست. |
 
 ## امنیت، داده و سازگاری
@@ -46,7 +46,7 @@
 ## ریسک‌ها و کارهای باقی‌مانده
 - consumer سمت مشتری #235 مستقل می‌ماند.
 - signer Production در #236 و sink مستقل Production در #107 به انتخاب و دسترسی عملیاتی انسانی وابسته‌اند.
-- تکمیل post-merge .NET CI روی main باید با بررسی run `41285195040` تأیید شود.
+- post-merge .NET CI روی main با run `41285195040` تکمیل و موفق شد.
 
 ## شناسه‌های Git
 - Branch: `fix/vendor-provisioning-time-provider`

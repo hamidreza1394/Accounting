@@ -17,7 +17,7 @@
   - Vendor CI `41285195060`: موفق؛ build/test/package و regression قفل فایل روی Ubuntu و Windows موفق.
   - Semgrep `41285195043`: موفق.
   - Push on main / CodeQL `41285194925`: موفق؛ تحلیل‌های C#, JavaScript/TypeScript, Python و Actions تکمیل شدند.
-  - .NET CI `41285195040`: در آخرین مشاهده هنوز `in_progress`. jobهای client، secret-scan، publish-scripts و build-and-test موفق‌اند؛ E2E، Linux publish و Windows publish هنوز در حال اجرا هستند. موفقیت کامل post-merge .NET CI تا پایان این سه job اعلام نمی‌شود.
+  - .NET CI `41285195040`: موفق؛ هر ۷ job شامل client، secret-scan، publish-scripts، build-and-test، E2E، Linux publish و Windows publish تکمیل و موفق شدند.
 - **PRهای باز:** تنها PR باز در snapshot این بازبینی #409 با عنوان داشبورد RTL است؛ تغییرات آن UI و خارج از محدوده Vendor است و در این کار تغییر داده نمی‌شود. هیچ PR باز Vendor در snapshot وجود ندارد.
 
 ## وضعیت قابلیت‌ها و شکاف‌های Vendor
