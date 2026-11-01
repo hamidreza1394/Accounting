@@ -1825,3 +1825,14 @@
 - تست‌های Domain و metadata مدل برای tenant scope، schema، نبود FiscalPeriodId، rowversion، unique index و FK مرکب نوشته شدند.
 - هیچ Migration تولید یا اجرا نشده؛ هیچ داده نمونه یا داده مشتری seed نشده است. Build و تست‌ها از محیط حاضر اجرا نشده‌اند و باید CI PR #406 آن‌ها را تأیید کند.
 - PR #405 CI یک شکست تست داشت که از مقایسه رشته خام Connection String ناشی می‌شد؛ تست به مقایسه اجزای نرمال‌شده SqlConnectionStringBuilder اصلاح شد و اجرای مجدد CI روی commit `7104d10` در جریان است.
+
+
+## 2026-11-01 — Issue #409: بازطراحی پوسته و داشبورد اصلی فرانو
+
+- بر مبنای main در commit 94b45fce6c260909bb0828b8fa67686936e2f99e، شاخه feat/issue-409-main-dashboard ایجاد شد.
+- پوسته React با هدر سرمه‌ای/طلایی، context bar متصل به WorkContext، سایدبار راست، وضعیت responsive و footer امنیت/وضعیت بازطراحی شد.
+- داشبورد شامل welcome banner، کارت‌های زیرسیستم، خلاصه شرکت/دوره/نقش/وضعیت، empty state نمودار و فعالیت، میان‌برهای آماده و نمای واقعی اطلاعات شرکت است.
+- برای جلوگیری از داده مالی گمراه‌کننده، هیچ KPI/مبلغ/تعداد ساختگی نمایش داده نمی‌شود؛ قابلیت‌های فاقد route و مجوز runtime با «به‌زودی» غیرفعال هستند.
+- تست‌های Dashboard برای هویت شرکت/دوره، نبود ارقام ساختگی و دوره فقط‌خواندنی افزوده شدند.
+- هیچ وابستگی، API، مجوز، لایسنس، Schema یا Migration تغییر نکرد.
+- محیط محلی نتوانست GitHub را clone کند (Could not resolve host: github.com)؛ typecheck، Vitest، build، check:offline، diff check و آزمون مرورگر در این مرحله اجرا نشده‌اند و باید CI/بازبینی بعدی آن‌ها را تأیید کند.
