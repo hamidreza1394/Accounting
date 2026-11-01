@@ -1,3 +1,33 @@
+# وضعیت فعلی ماژول Vendor — 2026-11-01
+
+**مبنای بازبینی کد:** شاخه `main`، SHA `94b45fce6c260909bb0828b8fa67686936e2f99e`.
+
+## وضعیت GitHub و CI تأییدشده
+
+- PRهای #281، #282 و #284 ادغام شده‌اند؛ merge commit و CI پس از merge:
+  - #281 → `2ee1edc52904833bc28eead5a679185377363c24`: .NET CI `40843230825`، Semgrep `40843230797` و Push on main `40843230369` همگی موفق.
+  - #282 → `f4a0462b0972e7686a686eca0febfaee680baecf`: Vendor CI `40843073693`، .NET CI `40843073694`، Semgrep `40843073640` و Push on main `40843073179` همگی موفق.
+  - #284 → `81ed5f64ed86ebbae47a433cea63e3655cb1d24b`: Vendor CI `40845416309`، .NET CI `40845416352`، Semgrep `40845416374` و Push on main `40845416241` همگی موفق.
+- روی HEAD فعلی main، .NET CI `41234882464`، Semgrep `41234882487` و Push on main `41234882389` موفق‌اند.
+- آخرین Vendor CI موفق مشاهده‌شده `41186551599` روی SHA `f4027d83d1275204167464928c54ed9a185a68bf` است. مقایسه آن SHA با main فعلی هیچ فایل `Vendor/**` را در تغییرات بعدی نشان نمی‌دهد؛ بنابراین کد Vendor از آن اجرای موفق تغییر نکرده است. این موضوع را به‌عنوان اجرای Vendor CI روی SHA فعلی معرفی نمی‌کنیم.
+- در snapshot اولیهٔ main، پیش از ایجاد تغییر جاری، فقط PR باز #409 با تغییرات UI داشبورد وجود داشت و خارج از محدوده Vendor بود. پس از آن PR #410 برای اصلاح timestampهای Provisioning/Approval در همین محدوده Vendor ایجاد شد. اجرای .NET CI آن PR در run `41283450318` در job کلاینت شکست داشت: تست‌های RTL به‌علت استفاده از query یکتای `getByText` برای متن‌هایی که در کارت خوشامد و خلاصه زمینه تکرار شده‌اند، خطای چندعنصری می‌گیرند. لاگ job خوانده شد؛ این شکست متعلق به PR رابط کاربری است و در این تغییر Vendor دست‌کاری نمی‌شود. Semgrep آن PR موفق و job مربوط به build-and-test در آخرین مشاهده در حال اجرا بود.
+
+## وضعیت قابلیت‌ها و شکاف‌های Vendor
+
+- **#228 — onboarding/provisioning سمت Vendor:** فرم و API ثبت intent، اعتبارسنجی License/Installation، انتخاب فقط زیرسیستم‌های مجاز از entitlement امضاشده، nonce/sequence، درخواست و تأیید Maker-Checker، امضای بسته، Export و دریافت/اعتبارسنجی ACK در کد وجود دارند. ثبت Vendor به‌تنهایی Company یا مدیر مشتری را ایجاد نمی‌کند؛ تأیید نهایی وابسته به ACK معتبر است. تغییرات consumer سمت مشتری متعلق به #235 و خارج از PR Vendor است.
+- **#214 — issuance/revocation:** کنترل‌های Maker-Checker، تراکنش اتمیک، زنجیره ممیزی، sequence و snapshot ابطال در Vendor پیاده‌سازی شده‌اند. امضاکننده Production باید fail-closed بماند تا provider و credential معتبر انتخاب و provision شوند.
+- **#236 — signing:** adapter PKCS#11 و assurance مرحله‌ای در کد وجود دارند؛ SoftHSM برای Development/Staging است. HSM/KMS واقعی، ceremony، rotation و آزمون عملیاتی Production هنوز تأیید نشده‌اند. هیچ provider یا secret عملیاتی فرض نمی‌شود.
+- **#107 — audit checkpoint:** قرارداد، verifier، checkpoint و تست قفل بین‌پردازه‌ای فایل توسعه وجود دارند؛ sink مستقل Production با credential/failure-domain جدا، retention/immutability، alerting و recovery drill هنوز فراهم نیست. فایل محلی Development مقصد مستقل Production محسوب نمی‌شود.
+- **#235 — customer-side consumer/ACK:** مرز کار جداگانه است؛ تغییرات آن در PR محدود به Vendor وارد نمی‌شود.
+
+## تغییر جاری
+
+- PR جدید این بازبینی، استفاده از `TimeProvider` تزریق‌شده را در timestampهای endpointهای Provisioning و Approval یکسان می‌کند. این تغییر رفتار مجوزدهی یا schema را عوض نمی‌کند؛ تست Integration SQL Server زمان ایجاد درخواست و زمان درخواست/تصمیم Approval را با ساعت کنترل‌شده بررسی می‌کند.
+- تا پایان CI این PR، وضعیت تغییر `Implemented / Not Verified` است؛ تست محلی در این محیط اجرا نشده است.
+- **PR جاری:** [#410](https://github.com/hamidreza1394/Accounting/pull/410)، شاخه `fix/vendor-provisioning-time-provider`؛ CI باید روی آخرین SHA شاخه کامل شود.
+
+---
+
 ## وضعیت ماژول بازرگانی خارجی — S0/S1 (2026-10-31)
 
 - **Foundation:** PR #398 ادغام‌شده در main، commit `6c09765cefe8742668c34deda1c86b881f970332`. پروژه‌های Trade.Domain/Application/Infrastructure، schema پیش‌فرض trade، قراردادهای authorization/entitlement و adapter اولیه در کد وجود دارند.
