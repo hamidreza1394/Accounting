@@ -14,36 +14,28 @@ const context: SelectedContext = {
 describe('Dashboard', () => {
   it('shows the authenticated workspace identity and selected fiscal period', () => {
     render(<Dashboard session={session} context={context} onUnauthenticated={vi.fn(() => false)} />);
-    expect(screen.getByRole('heading', { name: /به فرانو خوش آمدید/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /به سامانه یکپارچه فرانو خوش آمدید/ })).toBeInTheDocument();
     expect(screen.getAllByText('شرکت نمونه').length).toBeGreaterThan(0);
     expect(screen.getAllByText('سال مالی ۱۴۰۵').length).toBeGreaterThan(0);
     expect(screen.getAllByText('حسابدار').length).toBeGreaterThan(0);
     expect(screen.getByText('اطلاعات واقعی شرکت')).toBeInTheDocument();
   });
 
-  it('uses the refreshed workspace visual hierarchy while preserving the existing dashboard sections', () => {
+  it('uses the local Tehran panorama and the wide welcome composition', () => {
     render(<Dashboard session={session} context={context} onUnauthenticated={vi.fn(() => false)} />);
+    const panorama = screen.getByAltText('');
+    expect(panorama).toHaveAttribute('src', '/images/dashboard-tehran-panorama.svg');
+    expect(panorama).toHaveAttribute('aria-hidden', 'true');
+    expect(panorama.closest('section')).toHaveClass('faranou-welcome');
+    expect(screen.getByRole('heading', { name: /به سامانه یکپارچه فرانو خوش آمدید/ }).closest('section')).toHaveClass('faranou-welcome');
+  });
 
-    expect(screen.getByRole('heading', { name: /به فرانو خوش آمدید/ }).closest('section')).toHaveClass('faranou-welcome');
-    expect(screen.getByText('اسناد و دفاتر مالی').closest('[aria-disabled="true"]')).toHaveClass('faranou-module-card');
+  it('uses the reference dashboard hierarchy without inventing financial metrics', () => {
+    render(<Dashboard session={session} context={context} onUnauthenticated={vi.fn(() => false)} />);
     expect(document.querySelectorAll('.faranou-summary-card')).toHaveLength(4);
     expect(document.querySelectorAll('.faranou-panel')).toHaveLength(3);
-    expect(screen.getByText('داده‌ای برای ترسیم نمودار در دسترس نیست').closest('div')).toHaveClass('faranou-empty-state');
-  });
-
-
-  it('uses a cohesive blue and teal palette for the module tiles', () => {
-    render(<Dashboard session={session} context={context} onUnauthenticated={vi.fn(() => false)} />);
-    const accountingCard = screen.getByText('اسناد و دفاتر مالی').closest('[aria-disabled="true"]');
-    expect(accountingCard?.querySelector('span')).toHaveClass('bg-sky-100', 'text-sky-800');
-    expect(document.querySelector('.faranou-module-card')).not.toHaveClass('bg-violet-100');
-  });
-
-  it('does not present fabricated financial figures or pretend unfinished modules are active', () => {
-    render(<Dashboard session={session} context={context} onUnauthenticated={vi.fn(() => false)} />);
     expect(screen.getByText('داده‌ای برای ترسیم نمودار در دسترس نیست')).toBeInTheDocument();
-    expect(screen.getByText('هنوز رویدادی برای نمایش وجود ندارد')).toBeInTheDocument();
-    expect(screen.getAllByText('به‌زودی').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('در حال توسعه').length).toBe(6);
     expect(screen.queryByText(/۱۲۳,۴۵۰,۰۰۰/)).not.toBeInTheDocument();
   });
 
