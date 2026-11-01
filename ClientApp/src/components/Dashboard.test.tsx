@@ -31,6 +31,14 @@ describe('Dashboard', () => {
     expect(screen.getByText('داده‌ای برای ترسیم نمودار در دسترس نیست').closest('div')).toHaveClass('faranou-empty-state');
   });
 
+
+  it('uses a cohesive blue and teal palette for the module tiles', () => {
+    render(<Dashboard session={session} context={context} onUnauthenticated={vi.fn(() => false)} />);
+    const accountingCard = screen.getByText('اسناد و دفاتر مالی').closest('[aria-disabled="true"]');
+    expect(accountingCard?.querySelector('span')).toHaveClass('bg-sky-100', 'text-sky-800');
+    expect(document.querySelector('.faranou-module-card')).not.toHaveClass('bg-violet-100');
+  });
+
   it('does not present fabricated financial figures or pretend unfinished modules are active', () => {
     render(<Dashboard session={session} context={context} onUnauthenticated={vi.fn(() => false)} />);
     expect(screen.getByText('داده‌ای برای ترسیم نمودار در دسترس نیست')).toBeInTheDocument();
