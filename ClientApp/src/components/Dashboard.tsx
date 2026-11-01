@@ -19,12 +19,12 @@ const modules: ModuleItem[] = [
   { label: 'گزارش‌ها', description: 'گزارش‌های مدیریتی', icon: BarChart3, tone: 'indigo' },
 ];
 const toneClasses: Record<string, string> = {
-  violet: 'bg-violet-100 text-violet-700 ring-violet-200',
-  cyan: 'bg-cyan-100 text-cyan-700 ring-cyan-200',
-  blue: 'bg-blue-100 text-blue-700 ring-blue-200',
-  amber: 'bg-amber-100 text-amber-700 ring-amber-200',
-  teal: 'bg-teal-100 text-teal-700 ring-teal-200',
-  indigo: 'bg-indigo-100 text-indigo-700 ring-indigo-200',
+  violet: 'bg-sky-100 text-sky-800 ring-sky-200',
+  cyan: 'bg-cyan-100 text-cyan-800 ring-cyan-200',
+  blue: 'bg-blue-100 text-blue-800 ring-blue-200',
+  amber: 'bg-amber-100 text-amber-800 ring-amber-200',
+  teal: 'bg-teal-100 text-teal-800 ring-teal-200',
+  indigo: 'bg-blue-100 text-blue-800 ring-blue-200',
 };
 
 export function Dashboard({ session, context, onUnauthenticated }: DashboardProps) {
