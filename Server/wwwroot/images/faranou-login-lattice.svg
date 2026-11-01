@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="84" height="84" viewBox="0 0 84 84" aria-hidden="true">
+  <!-- Faranou sign-in backdrop tile: a faint diamond lattice with bright nodes. Repeated by faranou-login-legacy-background.css. -->
+  <path d="M0 42 L42 0 L84 42 L42 84 Z" fill="none" stroke="#82c3ff" stroke-opacity="0.12" stroke-width="1"/>
+  <circle cx="42" cy="0" r="1.7" fill="#96e1ff" fill-opacity="0.5"/>
+  <circle cx="0" cy="42" r="1.7" fill="#96e1ff" fill-opacity="0.5"/>
+</svg>
