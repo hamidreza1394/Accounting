@@ -46,5 +46,5 @@
 
 ## شناسه‌های Git
 - Branch: fix/vendor-provisioning-time-provider
-- Commit: پس از ساخت
-- Pull Request: پس از ساخت
+- Commit پیاده‌سازی: `a8d8a686fa9faa95f44afb37f727603ab81ddb29`
+- Pull Request: [#410](https://github.com/hamidreza1394/Accounting/pull/410)
