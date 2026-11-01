@@ -26,7 +26,7 @@
 - `ClientApp/src/components/AppShell.tsx` — هدر و سایدبار.
 - `ClientApp/src/components/Dashboard.tsx` — بنر و سلسله‌مراتب محتوای داشبورد.
 - `ClientApp/src/styles/index.css` — اندازه‌ها، رنگ‌ها، responsive و reduced-motion.
-- `ClientApp/public/images/dashboard-tehran-panorama.svg` — تصویر محلی پانوراما.
+- `Server/wwwroot/images/dashboard-tehran-panorama.svg` — تصویر محلی پانوراما.
 - `ClientApp/src/components/AppShell.test.tsx` — تست ساختار هدر/ناوبری.
 - `ClientApp/src/components/Dashboard.test.tsx` — تست تصویر محلی، ساختار و عدم جعل داده.
 - `docs/handoffs/ISSUE-422-dashboard-reference-layout.md` و `docs/WORK_LOG.md`.
@@ -46,6 +46,9 @@
 | `npm run check:offline` | اجرا نشده | CI لازم است |
 | `git diff --check` | اجرا نشده | تغییرات از GitHub API ثبت شدند؛ CI/بازبینی diff لازم است |
 | مرورگر و responsive | اجرا نشده | CI و مرورگر واقعی لازم است |
+
+## اصلاح دارایی محلی
+- بررسی `check:offline` نشان داد فایل در `ClientApp/public` به مسیر مطلق سایت `/images/` کپی نمی‌شود؛ دارایی به `Server/wwwroot/images/` منتقل شد تا با مسیر موجود تصاویر برند و static host یکسان باشد. آزمون آفلاین باید روی head جدید دوباره اجرا شود.
 
 ## امنیت، داده و سازگاری
 - انتخاب شرکت/دوره همچنان callback قبلی را اجرا می‌کند؛ مرجع معتبر همچنان WorkContext سرور است.
