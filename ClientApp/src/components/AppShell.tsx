@@ -62,7 +62,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
             </div>
           </div>
 
-          <div className="flex min-w-0 flex-1 items-center justify-center gap-2 sm:gap-3">
+          <div className="flex min-w-0 flex-1 items-center justify-center gap-2 sm:gap-3" aria-label="زمینه کاری جاری">
             <button type="button" onClick={onChangeContext} className="group flex min-w-0 max-w-[48%] items-center gap-2 rounded-2xl border border-white/15 bg-white/[0.08] px-3 py-2 text-start transition hover:border-amber-200/50 hover:bg-white/[0.13] sm:px-4" aria-label="تغییر شرکت یا دوره مالی">
               <Building2 className="hidden shrink-0 text-amber-200 sm:block" size={19} />
               <span className="min-w-0"><span className="block text-[10px] text-blue-100/65 sm:text-[11px]">شرکت جاری</span><strong className="block truncate text-xs sm:text-sm">{context.company.name}</strong></span>
@@ -79,7 +79,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
             <span className="hidden items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-2 text-xs font-medium text-emerald-100 xl:inline-flex"><span className="size-2 rounded-full bg-emerald-300" />سامانه فعال</span>
             <span className="hidden size-10 items-center justify-center rounded-xl text-white/75 sm:inline-flex" title="راهنما"><CircleHelp size={20} /></span>
             <span className="hidden size-10 items-center justify-center rounded-xl text-white/75 sm:inline-flex" title="اعلان‌ها"><Bell size={19} /></span>
-            <button type="button" onClick={() => void handleLogout()} disabled={loggingOut} className="inline-flex size-10 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white transition hover:bg-rose-400/15 disabled:opacity-60 sm:w-auto sm:gap-2 sm:px-3" aria-label="خروج از حساب" title="خروج">
+            <button type="button" onClick={() => void handleLogout()} disabled={loggingOut} className="inline-flex size-10 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white transition hover:bg-rose-400/15 disabled:opacity-60 sm:w-auto sm:gap-2 sm:px-3" aria-label="خروج" title="خروج">
               <LogOut size={18} /><span className="hidden text-xs font-semibold sm:inline">{loggingOut ? 'در حال خروج…' : 'خروج'}</span>
             </button>
           </div>
@@ -89,7 +89,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
 
       <div className="flex min-h-[calc(100vh-77px)]">
         {mobileMenuOpen ? <button type="button" aria-label="بستن منو" className="fixed inset-0 z-30 bg-slate-950/50 lg:hidden" onClick={() => setMobileMenuOpen(false)} /> : null}
-        <aside id="main-navigation" className={'faranou-sidebar fixed inset-y-[77px] right-0 z-40 flex w-[278px] flex-col text-white shadow-2xl transition-transform duration-200 lg:sticky lg:top-[77px] lg:z-20 lg:h-[calc(100vh-77px)] lg:translate-x-0 lg:shrink-0 ' + (mobileMenuOpen ? 'translate-x-0' : 'translate-x-full')} aria-label="ناوبری فرانو">
+        <aside id="main-navigation" className={'faranou-sidebar fixed inset-y-[77px] right-0 z-40 flex w-[278px] flex-col text-white shadow-2xl transition-transform duration-200 invisible lg:visible lg:sticky lg:top-[77px] lg:z-20 lg:h-[calc(100vh-77px)] lg:translate-x-0 lg:shrink-0 ' + (mobileMenuOpen ? 'visible translate-x-0' : 'invisible translate-x-full')} aria-label="ناوبری فرانو">
           <div className="border-b border-white/10 px-6 py-6">
             <div className="flex items-center justify-between gap-3">
               <FaranouLogo size={43} tone="dark" />
