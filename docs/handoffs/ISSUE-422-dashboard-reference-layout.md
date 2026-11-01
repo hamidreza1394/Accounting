@@ -62,3 +62,5 @@
 - Branch: `feat/issue-422-dashboard-reference-layout`
 - Commit: در PR ثبت می‌شود.
 - Pull Request: پس از ثبت تغییرات ساخته می‌شود.
+
+- **اصلاح CI در PR #423:** TypeScript ابتدا importهای بدون استفاده را گزارش کرد؛ سپس Vitest نشان داد assertionهای قدیمی App/E2E هنوز heading قبلی را انتظار دارند. importها حذف و انتظارهای تست با heading جدید هماهنگ شدند؛ تست AppShell نیز برای label تکراری اصلاح شد. نتیجه نهایی CI روی head جدید باید بررسی شود.
