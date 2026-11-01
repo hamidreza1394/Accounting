@@ -25,4 +25,15 @@ describe('AppShell', () => {
     const accountingLabels = screen.getAllByText('حسابداری');
     expect(accountingLabels.some((label) => label.closest('[aria-disabled="true"]'))).toBe(true);
   });
+  it('shows the full read-only and reporting-only access explanation', () => {
+    const readOnlyContext: SelectedContext = {
+      ...context,
+      fiscalPeriod: { ...context.fiscalPeriod, accessMode: 'readOnly' },
+    };
+
+    render(<AppShell session={session} context={readOnlyContext} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
+
+    expect(screen.getByLabelText('زمینه کاری جاری')).toHaveTextContent('فقط مشاهده و گزارش‌گیری');
+  });
+
 });
