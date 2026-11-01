@@ -1159,6 +1159,18 @@ public sealed class LoginConfigurationTests
 	}
 
 	[Fact]
+	public void TheLoginPage_UsesABalancedWiderFormColumnAndSlightlyRaisedBrandPanel()
+	{
+		var stylesheet = ReadRepositoryFile("Server/wwwroot/css/rtl/taraz-login.css");
+
+		Assert.Contains("grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);", stylesheet);
+		Assert.Contains("width: min(100%, 520px);", stylesheet);
+		Assert.Contains("width: min(100%, 460px);", stylesheet);
+		Assert.Contains("transform: translateY(-10px);", stylesheet);
+		Assert.Contains("--fn-stage-height: clamp(520px, calc(100dvh - 2 * var(--fn-stage-pad)), 960px);", stylesheet);
+	}
+
+	[Fact]
 	public void Program_ResolvesTheAuthenticationServiceFromTheContainer()
 	{
 		var program = ReadRepositoryFile("Server/Program.cs");
