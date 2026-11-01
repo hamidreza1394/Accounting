@@ -1221,3 +1221,23 @@
 }
 
 /* Keep the existing compact and scroll-safe behavior below the large desktop breakpoint. */
+
+
+/* ---------- Owner-requested brand-column geometry on wide RTL desktops ---------- */
+/* 1cm is 37.8 CSS px by the CSS absolute-unit definition.
+   Keep the form untouched; move only the left brand/illustration column. */
+@media (min-width: 1440px) and (min-height: 820px) {
+	.taraz-login[dir="rtl"] .taraz-login__visual {
+		width: calc(100% - 2cm);
+		justify-self: start;
+		transform: translate(3cm, -2cm);
+	}
+
+	.taraz-login[dir="rtl"] .fn-brand-panel {
+		width: min(100%, 424px);
+	}
+
+	.taraz-login[dir="rtl"] .fn-chart {
+		right: 0;
+	}
+}
