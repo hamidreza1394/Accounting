@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import {
   Bell, BookOpen, Boxes, Building2, CalendarDays, ChevronDown, ClipboardList,
   FileBarChart, Headphones, LayoutDashboard, LogOut, Menu, Package,
-  PanelRightClose, Settings2, ShieldCheck, ShoppingCart, Wallet, X,
+  Settings2, ShieldCheck, ShoppingCart, Wallet, X,
 } from 'lucide-react';
 import type { SelectedContext, Session } from '../api/types';
 import { FaranouLogo } from './ui/FaranouLogo';
