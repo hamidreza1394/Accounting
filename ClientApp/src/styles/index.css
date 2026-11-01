@@ -147,7 +147,6 @@
   --workspace-blue-700: #2f75ad;
   --workspace-blue-600: #3b8bc8;
   --workspace-blue-100: #eaf4fd;
-  --workspace-blue-050: #f4f8fd;
 }
 
 .faranou-workspace {
@@ -172,6 +171,14 @@
 
 .faranou-sidebar nav li > div[aria-disabled="true"] {
   color: rgb(239 247 255 / .78);
+}
+
+.faranou-sidebar p[class*="text-blue-100/"] {
+  color: rgb(235 245 255 / .82);
+}
+
+.faranou-topbar [class*="text-blue-100/"] {
+  color: rgb(239 247 255 / .9);
 }
 
 .faranou-sidebar nav li > div[aria-disabled="true"] span:last-child {
@@ -273,11 +280,6 @@
     box-shadow: 0 7px 18px rgb(8 35 62 / .2), inset 0 1px 0 rgb(255 255 255 / .8);
   }
 
-  .faranou-topbar,
-  .faranou-sidebar,
-  .faranou-welcome {
-    transition: background-color 160ms ease;
-  }
 }
 
 @media (max-width: 1023px) {
