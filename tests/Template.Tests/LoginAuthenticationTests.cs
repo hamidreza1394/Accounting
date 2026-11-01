@@ -1186,6 +1186,21 @@ public sealed class LoginConfigurationTests
 		Assert.Contains("transform: scale(1);", stylesheet);
 	}
 
+
+	[Fact]
+	public void TheLoginPage_AdjustsOnlyTheRequestedDesktopPanelGeometry()
+	{
+		var stylesheet = ReadRepositoryFile("Server/wwwroot/css/rtl/taraz-login.css");
+
+		Assert.Contains(".taraz-login[dir=\"rtl\"] .taraz-login__panel", stylesheet);
+		Assert.Contains("transform: translateX(-3cm);", stylesheet);
+		Assert.Contains("width: min(calc(560px - 2cm), 100%);", stylesheet);
+		Assert.Contains(".taraz-login[dir=\"rtl\"] .taraz-login__visual", stylesheet);
+		Assert.Contains("transform: translateY(-2cm);", stylesheet);
+		Assert.DoesNotContain("transform: translate(3cm, -2cm);", stylesheet);
+		Assert.DoesNotContain(".taraz-login[dir=\"rtl\"] .fn-brand-panel {\n\t\twidth: min(100%, 424px);", stylesheet);
+	}
+
 	[Fact]
 	public void Program_ResolvesTheAuthenticationServiceFromTheContainer()
 	{

@@ -1221,3 +1221,22 @@
 }
 
 /* Keep the existing compact and scroll-safe behavior below the large desktop breakpoint. */
+
+
+/* ---------- Owner-requested RTL login panel geometry on wide desktops ---------- */
+/* 1cm is 37.8 CSS px by the CSS absolute-unit definition.
+   Keep the established brand-panel sizing/positioning; move it upward only.
+   Shift the right-hand form left and reduce its card width without changing its content. */
+@media (min-width: 1440px) and (min-height: 820px) {
+	.taraz-login[dir="rtl"] .taraz-login__panel {
+		transform: translateX(-3cm);
+	}
+
+	.taraz-login[dir="rtl"] .taraz-panel-card {
+		width: min(calc(560px - 2cm), 100%);
+	}
+
+	.taraz-login[dir="rtl"] .taraz-login__visual {
+		transform: translateY(-2cm);
+	}
+}
