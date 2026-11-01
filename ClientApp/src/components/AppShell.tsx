@@ -62,6 +62,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
             >
               {mobileMenuOpen ? <X size={21} /> : <Menu size={21} />}
             </button>
+            <span className="faranou-desktop-menu-mark" aria-hidden="true"><Menu size={23} /></span>
             <FaranouLogo size={45} tone="dark" />
           </div>
 
