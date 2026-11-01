@@ -1,7 +1,8 @@
 /* Faranou sign-in page - isolated stylesheet (loaded by Pages/Account/Login).
-   Dark navy surface, teal for actions, gold for accents. The page backdrop lives in
-   faranou-login-legacy-background.css. No inline styles are allowed by the CSP, so every
-   visual rule of these pages belongs in one of these two files. */
+   Two equal columns on one canvas: a dark glass form card and a brand panel with a local 3D finance chart.
+   The page backdrop (gradient, lattice, glows) lives in faranou-login-legacy-background.css.
+   No inline styles are allowed by the CSP, so every visual rule of this page belongs in one of these two files.
+   Chart markup: Pages/Shared/PartialViews/_LoginBrandChart.cshtml (classes fn-chart*, fn-bar*, fn-line*, fn-coin*). */
 
 /* ---------- Fonts: IRANSansX (files present in wwwroot/fonts, real weights only) ---------- */
 @font-face {
@@ -42,28 +43,31 @@
 
 /* ---------- Design tokens ---------- */
 :root {
-	/* Surfaces */
-	--fn-surface: rgba(7, 28, 52, 0.88);
-	--fn-surface-soft: rgba(255, 255, 255, 0.045);
-	--fn-line: rgba(154, 216, 231, 0.18);
-	--fn-line-strong: #547892;
-
-	/* Text (contrast on the card surface: text 15:1, soft 11:1, muted 8:1) */
+	/* Text (contrast on the card surface: text 15:1, soft 12:1, muted 8:1) */
 	--fn-text: #f2f8fc;
-	--fn-text-soft: #c9dae6;
-	--fn-text-muted: #9db6c7;
+	--fn-text-soft: #d3e4f5;
+	--fn-text-muted: #a9c3de;
 
-	/* Brand accents: teal acts, gold highlights */
-	--fn-teal: #2cc3d3;
-	--fn-teal-bright: #35d5e8;
-	--fn-teal-ice: #86dde8;
-	--fn-gold: #d9a24b;
+	/* Lines: the field border keeps >= 3:1 against the card for non-text contrast */
+	--fn-line: rgba(120, 190, 255, 0.32);
+	--fn-line-strong: #6a9ad0;
+
+	/* Brand accents: cyan acts, gold highlights */
+	--fn-cyan: #5cebf6;
+	--fn-cyan-soft: #8ff0fa;
+	--fn-sky: #2fbbf5;
+	--fn-blue: #3590f5;
+	--fn-gold: #f4c96b;
 	--fn-gold-soft: #f0d5a0;
-	--fn-ink: #042038;
+	--fn-ink: #03203b;
 
-	/* Form */
-	--fn-field-bg: rgba(2, 17, 35, 0.72);
-	--fn-placeholder: #8aa3b5;
+	/* Surfaces */
+	--fn-card-top: rgba(12, 36, 82, 0.9);
+	--fn-card-bottom: rgba(6, 22, 58, 0.92);
+	--fn-field-bg: rgba(3, 14, 44, 0.72);
+	--fn-placeholder: #8fb0d6;
+	--fn-tile-bg: rgba(60, 215, 245, 0.14);
+	--fn-tile-line: rgba(100, 230, 250, 0.45);
 
 	/* Feedback */
 	--fn-error: #ffd0c8;
@@ -77,16 +81,17 @@
 	--fn-success-line: rgba(150, 224, 187, 0.4);
 
 	/* Shape and depth */
-	--fn-radius-card: 20px;
-	--fn-radius-field: 12px;
-	--fn-shadow-card: 0 28px 70px rgba(0, 0, 0, 0.38), inset 0 1px rgba(255, 255, 255, 0.06);
+	--fn-radius-card: 30px;
+	--fn-radius-field: 16px;
+	--fn-stage-pad: clamp(20px, 4vw, 56px);
+	--fn-stage-height: clamp(640px, calc(100vh - 2 * var(--fn-stage-pad)), 860px);
 }
 
-/* ---------- Page shell ---------- */
+/* ---------- Page shell: two equal columns of equal height ---------- */
 .taraz-login-page {
 	margin: 0;
 	min-width: 320px;
-	background: #041225;
+	background: #050f2a;
 }
 
 .taraz-login-page .taraz-login {
@@ -106,34 +111,31 @@
 
 .taraz-login__shell {
 	display: grid;
-	grid-template-columns: minmax(380px, 0.85fr) minmax(0, 1.15fr);
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	align-items: stretch;
+	align-content: center;
 	width: 100%;
-	max-width: 1360px;
+	max-width: 1320px;
 	min-height: 100vh;
 	min-height: 100dvh;
 	margin: 0 auto;
-	padding: clamp(24px, 4vw, 56px);
-	gap: clamp(28px, 4.5vw, 72px);
-	align-items: center;
+	padding: var(--fn-stage-pad);
+	column-gap: clamp(28px, 5vw, 88px);
 }
 
-.taraz-login[dir="ltr"] .taraz-login__shell {
-	grid-template-columns: minmax(0, 1.15fr) minmax(380px, 0.85fr);
-}
-
-/* Both columns share row 1; without it the column that comes second in the DOM but first on screen wraps to a new row (LTR). */
+/* Both columns share row 1; the form comes first in the DOM and on the start side (right in RTL, left in LTR is the brand). */
 .taraz-login[dir="rtl"] .taraz-login__panel { grid-column: 1; grid-row: 1; }
 .taraz-login[dir="rtl"] .taraz-login__visual { grid-column: 2; grid-row: 1; }
 .taraz-login[dir="ltr"] .taraz-login__panel { grid-column: 2; grid-row: 1; }
 .taraz-login[dir="ltr"] .taraz-login__visual { grid-column: 1; grid-row: 1; }
 
-/* ---------- Brand mark: the mark is designed for light surfaces, so on the dark page it sits on a light tile ---------- */
+/* ---------- Brand mark: designed for light surfaces, so it sits on a light tile ---------- */
 .fn-mark {
 	flex: none;
 	display: inline-grid;
 	place-items: center;
-	background: linear-gradient(160deg, #fbfdfe 0%, #e1ecf3 100%);
-	box-shadow: inset 0 1px rgba(255, 255, 255, 0.8), 0 10px 26px rgba(0, 0, 0, 0.28);
+	background: linear-gradient(160deg, #ffffff 0%, #dceaf7 100%);
+	box-shadow: inset 0 1px rgba(255, 255, 255, 0.9), 0 10px 26px rgba(0, 6, 30, 0.5), 0 0 26px rgba(80, 215, 250, 0.25);
 }
 
 .fn-mark img {
@@ -142,47 +144,100 @@
 }
 
 .fn-mark--sm {
-	width: 46px;
-	height: 46px;
-	border-radius: 13px;
+	width: 50px;
+	height: 60px;
+	border-radius: 15px;
 }
 
 .fn-mark--lg {
-	width: 104px;
-	height: 104px;
-	border-radius: 27px;
-	outline: 1px solid rgba(217, 162, 75, 0.45);
-	outline-offset: 6px;
+	width: 96px;
+	height: 112px;
+	border-radius: 26px;
+	box-shadow: inset 0 1px #ffffff, 0 20px 44px rgba(0, 6, 30, 0.55), 0 0 40px rgba(70, 215, 250, 0.3);
 }
 
-/* ---------- Form panel ---------- */
+/* ---------- Form column ---------- */
 .taraz-login__panel {
+	position: relative;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
+	gap: 18px;
 	min-width: 0;
+	min-height: var(--fn-stage-height);
+}
+
+/* Soft colour halos behind the card keep the dark glass alive. */
+.taraz-login__panel::before,
+.taraz-login__panel::after {
+	content: "";
+	position: absolute;
+	width: 260px;
+	height: 260px;
+	border-radius: 50%;
+	pointer-events: none;
+}
+
+.taraz-login__panel::before {
+	top: 2%;
+	inset-inline-end: -8%;
+	background: radial-gradient(circle, rgba(70, 225, 250, 0.38), rgba(70, 225, 250, 0) 68%);
+}
+
+.taraz-login__panel::after {
+	bottom: 6%;
+	inset-inline-start: -10%;
+	background: radial-gradient(circle, rgba(70, 120, 255, 0.38), rgba(70, 120, 255, 0) 68%);
 }
 
 .taraz-panel-card {
-	width: min(100%, 440px);
-	padding: clamp(28px, 3vw, 40px);
-	border: 1px solid var(--fn-line);
+	position: relative;
+	z-index: 1;
+	width: min(100%, 484px);
+	padding: clamp(28px, 3vw, 36px) clamp(22px, 3vw, 42px) 30px;
+	border: 1.5px solid transparent;
 	border-radius: var(--fn-radius-card);
-	background: var(--fn-surface);
-	box-shadow: var(--fn-shadow-card);
+	background:
+		linear-gradient(165deg, var(--fn-card-top) 0%, var(--fn-card-bottom) 100%) padding-box,
+		linear-gradient(140deg, #67e8f9 0%, rgba(59, 130, 246, 0.4) 38%, rgba(59, 130, 246, 0.18) 64%, #f4c96b 100%) border-box;
+	-webkit-backdrop-filter: blur(18px);
+	backdrop-filter: blur(18px);
+	box-shadow: 0 34px 80px rgba(1, 8, 36, 0.6), 0 0 70px rgba(50, 200, 245, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
-.taraz-brand {
-	display: flex;
-	align-items: center;
-	gap: 14px;
+/* Cyan light along the top edge of the card. */
+.taraz-panel-card::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	border-radius: var(--fn-radius-card);
+	background: radial-gradient(420px 200px at 50% 0%, rgba(80, 215, 250, 0.2), rgba(80, 215, 250, 0) 70%);
+	pointer-events: none;
+}
+
+.taraz-panel-card > * {
+	position: relative;
 }
 
 .taraz-brand--form {
-	margin-bottom: 28px;
-	padding-bottom: 24px;
-	border-bottom: 1px solid var(--fn-line);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 16px;
+}
+
+.taraz-brand__row {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 14px;
+}
+
+.taraz-login[dir="ltr"] .taraz-brand__row,
+.taraz-login[dir="ltr"] .fn-brand-hero__row {
+	flex-direction: row-reverse;
 }
 
 .taraz-brand__text {
@@ -191,65 +246,69 @@
 
 .taraz-brand__name {
 	display: flex;
-	align-items: baseline;
-	gap: 10px;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
 	margin: 0;
 }
 
 .taraz-brand__name strong {
-	color: var(--fn-text);
-	font-size: 1.3rem;
+	color: #ffffff;
+	font-size: 1.75rem;
 	font-weight: 700;
 	line-height: 1.3;
 }
 
 .taraz-brand__latin {
-	color: var(--fn-teal-ice);
-	font-size: 0.68rem;
-	font-weight: 600;
-	letter-spacing: 0.2em;
+	color: #bfd9f2;
+	font-size: 0.69rem;
+	font-weight: 500;
+	letter-spacing: 0.4em;
 	line-height: 1;
+	text-indent: 0.4em;
 }
 
 .taraz-brand__descriptor {
-	margin: 4px 0 0;
-	color: var(--fn-text-muted);
-	font-size: 0.76rem;
+	margin: 0;
+	color: #b5cee8;
+	font-size: 0.85rem;
 	line-height: 1.7;
 }
 
+/* Heading: the greeting is the large line, the page title (h1) is the quiet line under it. */
+.taraz-form-heading {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	margin-bottom: 18px;
+	text-align: center;
+}
+
 .taraz-eyebrow {
-	margin: 0 0 6px;
-	color: var(--fn-teal-ice);
-	font-size: 0.8rem;
-	font-weight: 600;
-	line-height: 1.6;
+	margin: 0;
+	color: #ffffff;
+	font-size: clamp(1.8rem, 2.6vw, 2.2rem);
+	font-weight: 700;
+	line-height: 1.4;
 }
 
 .taraz-form-heading h1 {
-	margin: 0 0 8px;
-	color: var(--fn-text);
-	font-size: 1.6rem;
-	font-weight: 700;
-	line-height: 1.45;
-}
-
-.taraz-form-heading > p:last-child {
-	margin: 0 0 24px;
-	color: var(--fn-text-muted);
-	font-size: 0.86rem;
-	line-height: 1.9;
+	margin: 2px 0 0;
+	color: #b5cee8;
+	font-size: 1rem;
+	font-weight: 500;
+	line-height: 1.7;
 }
 
 .taraz-field {
-	margin-bottom: 18px;
+	margin-bottom: 14px;
 }
 
 .taraz-field label {
 	display: block;
 	margin-bottom: 8px;
-	color: var(--fn-text-soft);
-	font-size: 0.84rem;
+	color: #f0f7fd;
+	font-size: 0.88rem;
 	font-weight: 600;
 	line-height: 1.6;
 }
@@ -262,30 +321,27 @@
 
 .taraz-input-wrap input {
 	width: 100%;
-	height: 52px;
-	padding-inline-start: 46px;
-	padding-inline-end: 16px;
-	color: var(--fn-text);
+	height: 54px;
+	padding-inline-start: 18px;
+	padding-inline-end: 64px;
+	color: #ffffff;
 	border: 1px solid var(--fn-line-strong);
 	border-radius: var(--fn-radius-field);
 	background: var(--fn-field-bg);
+	box-shadow: inset 0 2px 10px rgba(0, 4, 24, 0.5);
 	font: inherit;
-	font-size: 0.9rem;
+	font-size: 1rem;
 	outline: none;
 	transition: border-color 0.18s, box-shadow 0.18s;
 }
 
-.taraz-input-wrap input.taraz-input--with-action {
-	padding-inline-end: 54px;
-}
-
 .taraz-input-wrap input:hover {
-	border-color: #6f93ab;
+	border-color: #86b4e6;
 }
 
 .taraz-input-wrap input:focus {
-	border-color: var(--fn-teal-ice);
-	box-shadow: 0 0 0 3px rgba(134, 221, 232, 0.24);
+	border-color: var(--fn-cyan);
+	box-shadow: inset 0 2px 10px rgba(0, 4, 24, 0.5), 0 0 0 3px rgba(92, 235, 246, 0.28);
 }
 
 .taraz-input-wrap input::placeholder {
@@ -296,49 +352,56 @@
 .taraz-input-wrap input:-webkit-autofill,
 .taraz-input-wrap input:-webkit-autofill:hover,
 .taraz-input-wrap input:-webkit-autofill:focus {
-	-webkit-text-fill-color: var(--fn-text);
-	caret-color: var(--fn-text);
-	-webkit-box-shadow: 0 0 0 100px #06203a inset;
+	-webkit-text-fill-color: #ffffff;
+	caret-color: #ffffff;
+	-webkit-box-shadow: 0 0 0 100px #06183f inset;
 	transition: background-color 9999s ease-out;
+}
+
+/* Icon tiles sit at the end of the field (left in RTL) like the approved design. */
+.taraz-input-icon,
+.taraz-password-icon {
+	display: inline-grid;
+	place-items: center;
+	width: 38px;
+	height: 38px;
+	color: var(--fn-cyan-soft);
+	border: 1px solid var(--fn-tile-line);
+	border-radius: 12px;
+	background: var(--fn-tile-bg);
+	box-shadow: 0 0 16px rgba(60, 215, 245, 0.25);
 }
 
 .taraz-input-icon {
 	position: absolute;
-	inset-inline-start: 15px;
-	display: inline-flex;
-	color: var(--fn-teal-ice);
+	inset-inline-end: 10px;
 	pointer-events: none;
 }
 
 /* Password visibility: an icon button; the text label stays for assistive technology. */
 .taraz-password-toggle {
 	position: absolute;
-	inset-inline-end: 4px;
+	inset-inline-end: 7px;
 	display: inline-grid;
 	place-items: center;
 	width: 44px;
 	height: 44px;
 	padding: 0;
-	color: var(--fn-teal-ice);
+	color: var(--fn-cyan-soft);
 	border: 0;
-	border-radius: 10px;
+	border-radius: 14px;
 	background: transparent;
 	font: inherit;
 	cursor: pointer;
-	transition: background-color 0.15s;
 }
 
-.taraz-password-toggle:hover {
-	background: rgba(134, 221, 232, 0.14);
+.taraz-password-toggle:hover .taraz-password-icon {
+	background: rgba(60, 215, 245, 0.26);
 }
 
 .taraz-password-toggle:focus-visible {
-	outline: 2px solid var(--fn-teal-ice);
+	outline: 2px solid var(--fn-cyan);
 	outline-offset: 1px;
-}
-
-.taraz-password-icon {
-	display: inline-flex;
 }
 
 .taraz-password-label {
@@ -403,12 +466,12 @@
 
 .taraz-validation--summary:not(:empty) {
 	padding: 12px 16px;
-	border-radius: 10px;
+	border-radius: 12px;
 }
 
 .taraz-message {
 	padding: 12px 16px;
-	border-radius: 10px;
+	border-radius: 12px;
 	font-size: 0.82rem;
 	line-height: 1.9;
 }
@@ -434,16 +497,26 @@
 	background: var(--fn-success-bg);
 }
 
-/* Remember me: the native checkbox stays in the DOM (keyboard and label click) and is drawn as .taraz-check. */
+/* Remember me + secure chip share one balanced row. */
+.taraz-form-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 8px 12px;
+	margin-bottom: 4px;
+}
+
+/* The native checkbox stays in the DOM (keyboard and label click) and is drawn as .taraz-check. */
 .taraz-remember {
 	position: relative;
 	display: inline-flex;
 	align-items: center;
 	gap: 10px;
 	min-height: 44px;
-	margin: 0 0 12px;
-	color: var(--fn-text-soft);
-	font-size: 0.84rem;
+	margin: 0;
+	color: #f0f7fd;
+	font-size: 0.88rem;
 	cursor: pointer;
 }
 
@@ -457,10 +530,10 @@
 .taraz-check {
 	position: relative;
 	flex: none;
-	width: 20px;
-	height: 20px;
-	border: 1.5px solid #7f9bb0;
-	border-radius: 6px;
+	width: 22px;
+	height: 22px;
+	border: 1.5px solid #86b4e6;
+	border-radius: 7px;
 	background: var(--fn-field-bg);
 	transition: background-color 0.15s, border-color 0.15s;
 }
@@ -469,9 +542,9 @@
 	content: "";
 	position: absolute;
 	top: 3px;
-	inset-inline-start: 6px;
+	inset-inline-start: 7px;
 	width: 5px;
-	height: 9px;
+	height: 10px;
 	border: solid var(--fn-ink);
 	border-width: 0 2px 2px 0;
 	opacity: 0;
@@ -479,12 +552,12 @@
 }
 
 .taraz-remember:hover .taraz-check {
-	border-color: var(--fn-teal-ice);
+	border-color: var(--fn-cyan);
 }
 
 .taraz-remember input:checked + .taraz-check {
-	border-color: var(--fn-teal-ice);
-	background: var(--fn-teal-ice);
+	border-color: var(--fn-cyan);
+	background: var(--fn-cyan);
 }
 
 .taraz-remember input:checked + .taraz-check::after {
@@ -492,8 +565,21 @@
 }
 
 .taraz-remember input:focus-visible + .taraz-check {
-	outline: 2px solid var(--fn-teal-ice);
+	outline: 2px solid var(--fn-cyan);
 	outline-offset: 2px;
+}
+
+.taraz-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 5px 12px;
+	color: #bdf4fb;
+	border: 1px solid var(--fn-tile-line);
+	border-radius: 999px;
+	background: var(--fn-tile-bg);
+	font-size: 0.76rem;
+	line-height: 1.5;
 }
 
 /* Primary action */
@@ -503,26 +589,45 @@
 	align-items: center;
 	justify-content: center;
 	width: 100%;
-	height: 52px;
-	padding-inline: 48px;
+	height: 58px;
+	padding-inline: 56px;
+	overflow: hidden;
 	color: var(--fn-ink);
 	border: 0;
-	border-radius: var(--fn-radius-field);
-	background: linear-gradient(100deg, #1fb9c9, var(--fn-teal-bright));
-	font: 700 0.95rem IRANSansX, Tahoma, Arial, sans-serif;
+	border-radius: 18px;
+	background: linear-gradient(90deg, #62eefa 0%, var(--fn-sky) 55%, var(--fn-blue) 100%);
+	font: 700 1.1rem IRANSansX, Tahoma, Arial, sans-serif;
 	cursor: pointer;
-	box-shadow: 0 12px 28px rgba(23, 184, 197, 0.2);
+	box-shadow: 0 18px 44px rgba(40, 195, 250, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.7);
 	transition: transform 0.18s, box-shadow 0.18s, filter 0.18s;
+}
+
+/* A soft light sweeps across the button now and then. */
+.taraz-submit::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	inset-inline-start: 0;
+	width: 70px;
+	background: linear-gradient(100deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0));
+	transform: translateX(-200%);
+	animation: fn-shine 4.2s ease-in-out 1.5s infinite;
+	pointer-events: none;
+}
+
+.taraz-login[dir="rtl"] .taraz-submit::before {
+	animation-name: fn-shine-rtl;
 }
 
 .taraz-submit:hover {
 	filter: brightness(1.06);
 	transform: translateY(-1px);
-	box-shadow: 0 16px 32px rgba(23, 184, 197, 0.3);
+	box-shadow: 0 22px 48px rgba(40, 195, 250, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .taraz-submit:focus-visible {
-	outline: 2px solid var(--fn-gold-soft);
+	outline: 3px solid var(--fn-gold-soft);
 	outline-offset: 3px;
 }
 
@@ -535,8 +640,13 @@
 
 .taraz-submit-arrow {
 	position: absolute;
-	inset-inline-end: 18px;
-	display: inline-flex;
+	inset-inline-end: 14px;
+	display: inline-grid;
+	place-items: center;
+	width: 34px;
+	height: 34px;
+	border-radius: 50%;
+	background: rgba(3, 32, 59, 0.18);
 }
 
 .taraz-login[dir="ltr"] .taraz-submit-arrow svg {
@@ -560,7 +670,7 @@
 .taraz-spinner {
 	width: 16px;
 	height: 16px;
-	border: 2px solid rgba(4, 32, 56, 0.28);
+	border: 2px solid rgba(3, 32, 59, 0.28);
 	border-top-color: var(--fn-ink);
 	border-radius: 50%;
 	animation: taraz-spin 0.8s linear infinite;
@@ -570,13 +680,22 @@
 	to { transform: rotate(360deg); }
 }
 
+@keyframes fn-shine {
+	0% { transform: translateX(-200%); }
+	55%, 100% { transform: translateX(600%); }
+}
+
+@keyframes fn-shine-rtl {
+	0% { transform: translateX(200%); }
+	55%, 100% { transform: translateX(-600%); }
+}
+
 .taraz-support-note {
-	margin: 24px 0 0;
-	padding-top: 20px;
-	border-top: 1px solid var(--fn-line);
-	color: var(--fn-text-muted);
-	font-size: 0.78rem;
-	line-height: 2;
+	margin: 14px 0 0;
+	color: #b3c9df;
+	font-size: 0.75rem;
+	line-height: 1.85;
+	text-align: center;
 }
 
 .taraz-security-note {
@@ -584,37 +703,121 @@
 	align-items: center;
 	justify-content: center;
 	gap: 8px;
-	margin: 14px 0 0;
+	margin: 4px 0 12px;
 	color: var(--fn-text-muted);
-	font-size: 0.74rem;
+	font-size: 0.72rem;
+	line-height: 1.75;
+	text-align: center;
+}
+
+.taraz-security-note--connection {
+	margin: 6px 0 0;
 }
 
 .taraz-security-note svg {
 	flex: none;
-	color: var(--fn-teal-ice);
+	color: var(--fn-cyan-soft);
 }
 
 .taraz-copyright {
-	margin: 20px 0 0;
+	position: relative;
+	z-index: 1;
+	margin: 0;
 	color: var(--fn-text-muted);
-	font-size: 0.74rem;
+	font-size: 0.8rem;
 }
 
-/* ---------- Brand column: mark, benefits and the illustrative dashboard ---------- */
+/* ---------- Brand column: mark, tagline, benefits and the finance chart ---------- */
 .taraz-login__visual {
+	position: relative;
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
-	align-items: stretch;
+	align-items: center;
 	min-width: 0;
+	min-height: var(--fn-stage-height);
+}
+
+/* The chart is a fixed left-to-right picture: it grows toward the form side (physical right) and may reach into the column gap. */
+.fn-chart {
+	position: absolute;
+	left: 0;
+	right: -64px;
+	bottom: 0;
+	pointer-events: none;
+}
+
+.fn-chart svg {
+	display: block;
+	width: 100%;
+	height: auto;
+	overflow: visible;
+	direction: ltr;
+}
+
+.fn-chart-grid line { stroke: rgba(150, 225, 255, 0.1); stroke-width: 1; }
+.fn-chart-net line { stroke: rgba(120, 222, 255, 0.34); stroke-width: 1; }
+
+.fn-bar {
+	transform-box: fill-box;
+	transform-origin: 50% 100%;
+	animation: fn-bar-rise 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.fn-bar:nth-child(2) { animation-delay: 0.07s; }
+.fn-bar:nth-child(3) { animation-delay: 0.14s; }
+.fn-bar:nth-child(4) { animation-delay: 0.21s; }
+.fn-bar:nth-child(5) { animation-delay: 0.28s; }
+.fn-bar:nth-child(6) { animation-delay: 0.35s; }
+.fn-bar:nth-child(7) { animation-delay: 0.42s; }
+.fn-bar:nth-child(8) { animation-delay: 0.49s; }
+.fn-bar:nth-child(9) { animation-delay: 0.56s; }
+.fn-bar:nth-child(10) { animation-delay: 0.63s; }
+.fn-bar:nth-child(11) { animation-delay: 0.7s; }
+
+.fn-bar-face { stroke: rgba(160, 245, 255, 0.85); stroke-width: 1.2; }
+.fn-bar-top { stroke: rgba(220, 252, 255, 0.9); stroke-width: 1; }
+.fn-bar-shine { stroke: rgba(255, 255, 255, 0.22); stroke-width: 1.5; stroke-linecap: round; }
+
+.fn-line {
+	fill: none;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	stroke-dasharray: 1000;
+	stroke-dashoffset: 1000;
+	animation: fn-line-draw 2.2s ease-out 0.5s forwards;
+}
+
+.fn-line--glow { stroke: #5edbff; stroke-width: 9; opacity: 0.4; filter: blur(5px); }
+.fn-line--core { stroke: url(#fncLine); stroke-width: 2.6; }
+
+.fn-pulse { animation: fn-pulse 2.6s ease-in-out 2.6s infinite; }
+
+.fn-coin-rim { fill: none; stroke: rgba(190, 245, 255, 0.5); stroke-width: 1; }
+.fn-coin-top { stroke: rgba(235, 253, 255, 0.9); stroke-width: 1; }
+.fn-coin-ring { fill: none; stroke: #2a78d8; stroke-opacity: 0.55; stroke-width: 1.5; }
+
+@keyframes fn-bar-rise {
+	from { transform: scaleY(0.04); opacity: 0.15; }
+	to { transform: scaleY(1); opacity: 1; }
+}
+
+@keyframes fn-line-draw {
+	to { stroke-dashoffset: 0; }
+}
+
+@keyframes fn-pulse {
+	0%, 100% { opacity: 0.3; }
+	50% { opacity: 0.75; }
 }
 
 .fn-brand-panel {
-	width: min(100%, 540px);
-	margin-inline: auto;
+	position: relative;
+	width: min(100%, 440px);
+	margin-right: auto;
 	display: flex;
 	flex-direction: column;
-	gap: clamp(20px, 3vh, 28px);
+	gap: clamp(18px, 3vh, 28px);
 	pointer-events: none;
 	user-select: none;
 	font-family: IRANSansX, Tahoma, Arial, sans-serif;
@@ -627,263 +830,134 @@
 	text-align: center;
 }
 
+.fn-brand-hero__row {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 22px;
+}
+
+.fn-brand-hero__title {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+}
+
 .fn-brand-name {
-	margin: 20px 0 0;
-	color: var(--fn-text);
-	font-size: clamp(1.8rem, 2.6vw, 2.2rem);
+	margin: 0;
+	color: #ffffff;
+	font-size: clamp(3.2rem, 5.2vw, 4.5rem);
 	font-weight: 700;
-	line-height: 1.3;
+	line-height: 1.15;
+	text-shadow: 0 6px 34px rgba(30, 150, 255, 0.45);
 }
 
 .fn-brand-latin {
-	margin: 6px 0 0;
-	color: var(--fn-gold-soft);
-	font-size: 0.8rem;
-	font-weight: 600;
-	letter-spacing: 0.34em;
+	margin: 0;
+	color: #d5e8fa;
+	font-size: 1.05rem;
+	font-weight: 500;
+	letter-spacing: 0.46em;
 	line-height: 1.4;
-	text-indent: 0.34em;
+	text-indent: 0.46em;
 }
 
 .fn-brand-tagline {
-	margin: 16px 0 6px;
-	color: var(--fn-teal-ice);
-	font-size: 1rem;
-	font-weight: 600;
+	margin: 22px 0 0;
+	color: #ffffff;
+	font-size: 1.35rem;
+	font-weight: 500;
 	line-height: 1.7;
-}
-
-.fn-brand-lead {
-	margin: 0;
-	max-width: 30rem;
-	color: var(--fn-text-soft);
-	font-size: 0.9rem;
-	line-height: 1.95;
 }
 
 .fn-benefits {
 	list-style: none;
 	margin: 0;
 	padding: 0;
-	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	grid-auto-rows: 1fr;
-	gap: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
 }
 
 .fn-benefits li {
 	display: flex;
 	align-items: center;
-	gap: 12px;
-	min-height: 68px;
-	padding: 12px 14px;
-	border-radius: 14px;
-	background: var(--fn-surface-soft);
-	border: 1px solid var(--fn-line);
-	color: #e2eef5;
-	font-size: 0.86rem;
-	line-height: 1.7;
+	gap: 18px;
+	padding: 14px 20px;
+	border: 1px solid rgba(110, 195, 255, 0.34);
+	border-radius: 22px;
+	background: linear-gradient(165deg, rgba(14, 42, 94, 0.84), rgba(7, 26, 66, 0.88));
+	box-shadow: 0 16px 36px rgba(0, 6, 30, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 .fn-benefit-icon {
 	flex: none;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 36px;
-	height: 36px;
-	border-radius: 10px;
-	background: rgba(53, 213, 232, 0.12);
-	color: var(--fn-teal-ice);
-}
-
-.fn-dash {
-	padding: 16px;
-	border-radius: 18px;
-	background: rgba(5, 22, 43, 0.55);
-	border: 1px solid var(--fn-line);
-	box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22), inset 0 1px rgba(255, 255, 255, 0.05);
-}
-
-.fn-dash-header {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 12px;
-	margin-bottom: 14px;
-}
-
-.fn-dash-header__title {
-	color: var(--fn-text);
-	font-size: 0.95rem;
-	font-weight: 600;
-	line-height: 1.4;
-}
-
-.fn-dash-header__badge {
-	flex: none;
-	padding: 4px 10px;
-	border-radius: 999px;
-	background: rgba(217, 162, 75, 0.16);
-	border: 1px solid rgba(217, 162, 75, 0.32);
-	color: var(--fn-gold-soft);
-	font-size: 0.72rem;
-	font-weight: 600;
-	line-height: 1.3;
-}
-
-.fn-dash-cards {
-	display: grid;
-	grid-template-columns: repeat(3, minmax(0, 1fr));
-	gap: 10px;
-	margin-bottom: 12px;
-}
-
-.fn-dash-card {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto;
-	grid-template-areas:
-		"head head"
-		"value trend";
-	align-items: end;
-	row-gap: 10px;
-	padding: 12px;
-	border-radius: 14px;
-	background: var(--fn-surface-soft);
-	border: 1px solid var(--fn-line);
-}
-
-.fn-dash-card__head {
-	grid-area: head;
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 6px;
-	color: var(--fn-text-muted);
-	font-size: 0.78rem;
-	font-weight: 500;
-	line-height: 1.4;
-}
-
-.fn-dash-card__head svg {
-	flex: none;
-	color: var(--fn-teal-ice);
-}
-
-.fn-dash-card__value {
-	grid-area: value;
-	color: var(--fn-text);
-	font-size: clamp(0.92rem, 1.5vw, 1.08rem);
-	font-weight: 700;
-	font-variant-numeric: tabular-nums;
-	line-height: 1.3;
-	white-space: nowrap;
-}
-
-.fn-dash-card__trend {
-	grid-area: trend;
 	display: inline-grid;
 	place-items: center;
-	width: 22px;
-	height: 22px;
-	border-radius: 50%;
-	background: rgba(53, 213, 232, 0.14);
-	color: var(--fn-teal-ice);
-	font-size: 0.78rem;
-	font-weight: 700;
-	line-height: 1;
+	width: 52px;
+	height: 52px;
+	color: var(--fn-cyan-soft);
+	border: 1px solid rgba(100, 230, 250, 0.5);
+	border-radius: 16px;
+	background: rgba(60, 215, 245, 0.13);
+	box-shadow: 0 0 20px rgba(60, 215, 245, 0.3);
 }
 
-.fn-dash-charts {
-	display: grid;
-	grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
-	gap: 10px;
-}
-
-.fn-dash-line,
-.fn-dash-donut {
-	padding: 12px;
-	border-radius: 14px;
-	background: var(--fn-surface-soft);
-	border: 1px solid var(--fn-line);
-}
-
-.fn-dash-line__title,
-.fn-dash-donut__title {
-	margin: 0 0 8px;
-	color: var(--fn-text-muted);
-	font-size: 0.8rem;
-	font-weight: 600;
-	line-height: 1.4;
-}
-
-.fn-dash-line svg {
-	display: block;
-	width: 100%;
-	height: auto;
-}
-
-.fn-dash-donut__body {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-}
-
-.fn-dash-donut__body svg {
-	flex: none;
-	width: 80px;
-	height: 80px;
-}
-
-.fn-dash-legend {
-	list-style: none;
-	margin: 0;
-	padding: 0;
+.fn-benefit-body {
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
-	color: var(--fn-text-soft);
-	font-size: 0.74rem;
-	line-height: 1.45;
-	white-space: nowrap;
+	gap: 2px;
+	min-width: 0;
 }
 
-.fn-dash-legend i {
-	display: inline-block;
-	width: 8px;
-	height: 8px;
-	border-radius: 50%;
-	margin-inline-end: 8px;
-	vertical-align: middle;
+.fn-benefit-title {
+	color: #ffffff;
+	font-size: 1.1rem;
+	font-weight: 600;
+	line-height: 1.5;
 }
 
-/* ---------- Shorter laptop screens: keep the brand column on one screen ---------- */
-@media (min-width: 961px) and (max-height: 820px) {
+.fn-benefit-text {
+	color: #c5daee;
+	font-size: 0.88rem;
+	line-height: 1.6;
+}
+
+/* ---------- Short desktop screens ---------- */
+@media (min-width: 961px) and (max-height: 860px) {
 	.fn-mark--lg {
 		width: 84px;
-		height: 84px;
+		height: 98px;
 		border-radius: 22px;
 	}
 
-	.fn-mark--lg img {
-		width: 46px;
-		height: 56px;
-	}
+	.fn-mark--lg img { width: 54px; height: 66px; }
+	.fn-brand-panel { gap: 14px; }
+	.fn-brand-tagline { margin-top: 12px; }
+	.fn-benefits { gap: 10px; }
+	.fn-benefits li { padding-block: 10px; }
 
-	.fn-brand-panel { gap: 16px; }
-	.fn-brand-name { margin-top: 16px; }
-	.fn-brand-tagline { margin-top: 10px; }
-	.fn-benefits li { min-height: 58px; padding-block: 8px; }
-	.fn-dash { padding: 12px; }
-	.fn-dash-header { margin-bottom: 10px; }
+	.taraz-panel-card { padding-block: 24px 22px; }
+	.taraz-brand--form { margin-bottom: 10px; }
+	.fn-mark--sm { width: 44px; height: 52px; border-radius: 13px; }
+	.fn-mark--sm img { width: 26px; height: 32px; }
+	.taraz-brand__name strong { font-size: 1.5rem; }
+	.taraz-form-heading { margin-bottom: 12px; }
+	.taraz-field { margin-bottom: 10px; }
+	.taraz-field label { margin-bottom: 6px; }
+	.taraz-input-wrap input { height: 50px; }
+	.taraz-remember { min-height: 40px; }
+	.taraz-submit { height: 54px; }
+	.taraz-support-note { margin-top: 10px; }
 }
 
-/* ---------- Tablet and below: the form comes first, the brand column follows ---------- */
+/* ---------- Tablet and below: one column, the form first; the chart is dropped ---------- */
 @media (max-width: 960px) {
 	.taraz-login__shell,
 	.taraz-login[dir="ltr"] .taraz-login__shell {
-		grid-template-columns: 1fr;
-		gap: 36px;
+		grid-template-columns: minmax(0, 1fr);
+		row-gap: 40px;
 		padding: 28px 18px 40px;
 	}
 
@@ -893,96 +967,71 @@
 	.taraz-login[dir="ltr"] .taraz-login__visual {
 		grid-column: 1 / -1;
 		grid-row: auto;
+		min-height: 0;
 	}
 
 	.taraz-login__panel { order: 1; }
 	.taraz-login__visual { order: 2; }
-
-	.taraz-panel-card { width: min(100%, 480px); }
-	.fn-brand-panel { width: min(100%, 520px); }
+	.fn-chart { display: none; }
+	.fn-brand-panel { margin-inline: auto; }
+	.taraz-panel-card { width: min(100%, 500px); }
 }
 
-/* The decorative dashboard only earns its space beside the form or on a wide single column. */
-@media (max-width: 820px) {
-	.fn-dash { display: none; }
-}
-
-/* ---------- Phones: the decorative dashboard is dropped, the intro is compact ---------- */
+/* ---------- Phones: compact brand intro ---------- */
 @media (max-width: 700px) {
 	.taraz-login__shell,
 	.taraz-login[dir="ltr"] .taraz-login__shell {
-		gap: 28px;
+		row-gap: 28px;
 		padding: 20px 14px 32px;
 	}
 
 	.fn-mark--lg {
-		width: 76px;
-		height: 76px;
+		width: 72px;
+		height: 84px;
 		border-radius: 20px;
-		outline-offset: 5px;
 	}
 
-	.fn-mark--lg img {
-		width: 42px;
-		height: 51px;
-	}
-
-	.fn-brand-name { margin-top: 18px; font-size: 1.7rem; }
-	.fn-benefits { grid-template-columns: 1fr; gap: 10px; }
-	.fn-benefits li { min-height: 56px; padding-block: 8px; }
+	.fn-mark--lg img { width: 46px; height: 56px; }
+	.fn-brand-name { font-size: 2.6rem; }
+	.fn-brand-latin { font-size: 0.9rem; }
+	.fn-brand-tagline { font-size: 1.1rem; }
+	.fn-benefit-icon { width: 46px; height: 46px; }
 }
 
 @media (max-width: 420px) {
-	.taraz-panel-card {
-		padding: 24px 18px;
-	}
-
-	.taraz-brand--form {
-		margin-bottom: 22px;
-		padding-bottom: 20px;
-	}
-
-	.taraz-form-heading h1 { font-size: 1.45rem; }
-	.taraz-input-wrap input { height: 50px; }
-	.taraz-submit { height: 50px; }
+	.taraz-panel-card { padding: 24px 18px; }
+	.taraz-eyebrow { font-size: 1.75rem; }
+	.taraz-input-wrap input { height: 54px; }
+	.taraz-submit { height: 56px; font-size: 1rem; }
+	.fn-benefits li { padding: 12px 14px; gap: 14px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
 	.taraz-submit,
 	.taraz-input-wrap input,
-	.taraz-check,
-	.taraz-password-toggle {
+	.taraz-check {
 		transition: none;
 	}
 
-	.taraz-submit:hover {
-		transform: none;
-	}
-
-	.taraz-spinner {
-		animation: none;
-	}
+	.taraz-submit:hover { transform: none; }
+	.taraz-submit::before { animation: none; display: none; }
+	.taraz-spinner { animation: none; }
+	.fn-bar,
+	.fn-pulse { animation: none; }
+	.fn-line { animation: none; stroke-dashoffset: 0; }
 }
 
 @media (forced-colors: active) {
 	.taraz-input-wrap input,
 	.taraz-submit,
-	.taraz-check {
+	.taraz-check,
+	.taraz-panel-card {
 		border: 1px solid CanvasText;
 	}
 
 	.fn-mark {
 		forced-color-adjust: none;
 	}
+
+	.fn-chart { display: none; }
 }
-
-/* ---------- Moved from inline markup (Content-Security-Policy: no inline styles) ---------- */
-/* Login.cshtml: legend dots of the illustrative dashboard (same colours as the chart). */
-.fn-dash-legend__dot--net { background: #35d5e8; }
-.fn-dash-legend__dot--costs { background: #e0a94a; }
-.fn-dash-legend__dot--other { background: #7aa2c9; }
-
-/* LoginSuccess.cshtml: a single, centered column (the page shows one confirmation only).
-   The [dir] selectors must outrank the direction-specific two-column rules above. */
-.taraz-login[dir] .taraz-login__shell--single { grid-template-columns: minmax(0, 1fr); }
-.taraz-login[dir] .taraz-login__shell--single .taraz-login__panel { grid-column: 1 / -1; }

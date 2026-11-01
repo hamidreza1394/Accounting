@@ -21,17 +21,18 @@
         <section class="taraz-login__panel" aria-labelledby="login-title">
             <div class="taraz-panel-card">
                 <div class="taraz-brand taraz-brand--form">
-                    <span class="fn-mark fn-mark--sm"><img src="~/images/faranou-logo-mark.svg" alt="" width="26" height="32" /></span>
-                    <div class="taraz-brand__text">
-                        <p class="taraz-brand__name"><strong>فرانو</strong><span class="taraz-brand__latin" lang="en" dir="ltr">FARANOU</span></p>
-                        <p class="taraz-brand__descriptor">@(isRightToLeft ? "نرم‌افزار حسابداری هوشمند" : "Smart Accounting Software")</p>
+                    <div class="taraz-brand__row">
+                        <div class="taraz-brand__text">
+                            <p class="taraz-brand__name"><strong>فرانو</strong><span class="taraz-brand__latin" lang="en" dir="ltr">FARANOU</span></p>
+                        </div>
+                        <span class="fn-mark fn-mark--sm"><img src="~/images/faranou-logo-mark.svg" alt="" width="30" height="36" /></span>
                     </div>
+                    <p class="taraz-brand__descriptor">@(isRightToLeft ? "نرم‌افزار حسابداری هوشمند" : "Smart Accounting Software")</p>
                 </div>
 
                 <div class="taraz-form-heading">
                     <p class="taraz-eyebrow">@(isRightToLeft ? "خوش آمدید" : "Welcome")</p>
                     <h1 id="login-title">@(isRightToLeft ? "ورود به حساب" : "Sign in to your account")</h1>
-                    <p>@(isRightToLeft ? "برای ادامه، نام کاربری و کلمه عبور خود را وارد کنید." : "Enter your username and password to continue.")</p>
                 </div>
 
                 <form method="post" class="taraz-login-form" novalidate>
@@ -47,8 +48,8 @@
                     <div class="taraz-field">
                         <label asp-for="ViewModel.Username">@Resources.DataDictionary.Username</label>
                         <div class="taraz-input-wrap">
-                            <span class="taraz-input-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
                             <input asp-for="ViewModel.Username" autocomplete="username" inputmode="text" placeholder="@(isRightToLeft ? "نام کاربری خود را وارد کنید" : "Enter your username")" autofocus />
+                            <span class="taraz-input-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
                         </div>
                         <span asp-validation-for="ViewModel.Username" class="taraz-field-error"></span>
                     </div>
@@ -56,131 +57,78 @@
                     <div class="taraz-field">
                         <label asp-for="ViewModel.Password">@Resources.DataDictionary.Password</label>
                         <div class="taraz-input-wrap">
-                            <span class="taraz-input-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
                             <input asp-for="ViewModel.Password" class="taraz-input--with-action" autocomplete="current-password" placeholder="@(isRightToLeft ? "کلمه عبور خود را وارد کنید" : "Enter your password")" />
                             <button type="button" class="taraz-password-toggle" data-password-toggle="ViewModel_Password" data-label-show="@(isRightToLeft ? "نمایش رمز" : "Show password")" data-label-hide="@(isRightToLeft ? "پنهان کردن رمز" : "Hide password")" data-aria-show="@(isRightToLeft ? "نمایش رمز" : "Show password")" data-aria-hide="@(isRightToLeft ? "پنهان کردن رمز" : "Hide password")" aria-controls="ViewModel_Password" aria-label="@(isRightToLeft ? "نمایش رمز" : "Show password")" title="@(isRightToLeft ? "نمایش رمز" : "Show password")" aria-pressed="false"><span class="taraz-password-icon" data-password-icon aria-hidden="true"><svg class="taraz-eye taraz-eye--show" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><svg class="taraz-eye taraz-eye--hide" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></svg></span><span class="taraz-password-label" data-password-label>@(isRightToLeft ? "نمایش رمز" : "Show password")</span></button>
                         </div>
                         <span asp-validation-for="ViewModel.Password" class="taraz-field-error"></span>
                     </div>
 
-                    <label class="taraz-remember" asp-for="ViewModel.RememberMe"><input asp-for="ViewModel.RememberMe" /><span class="taraz-check" aria-hidden="true"></span><span>@Resources.DataDictionary.RememberMe</span></label>
+                    <div class="taraz-form-row">
+                        <label class="taraz-remember" asp-for="ViewModel.RememberMe"><input asp-for="ViewModel.RememberMe" /><span class="taraz-check" aria-hidden="true"></span><span>@Resources.DataDictionary.RememberMe</span></label>
+                        <span class="taraz-chip"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3l7.5 3v5.5c0 4.6-3.1 8.2-7.5 9.5-4.4-1.3-7.5-4.9-7.5-9.5V6z"/><path d="M9.2 12l2 2 3.8-4"/></svg>@(isRightToLeft ? "اتصال امن" : "Secure connection")</span>
+                    </div>
                     <p class="taraz-security-note">@(isRightToLeft ? "فرانو فقط نام کاربری را ذخیره می‌کند، نه رمز عبور. برای ذخیره رمز عبور، پیشنهاد ذخیره‌سازی مرورگر را تأیید کنید." : "Faranou stores only your username, never your password. To save your password, accept your browser’s password-manager prompt.")</p>
-                    <button type="submit" class="taraz-submit"><span class="taraz-submit-label">@Resources.ButtonCaptions.Login</span><span class="taraz-submit-status" hidden><span class="taraz-spinner" aria-hidden="true"></span>@(isRightToLeft ? "در حال بررسی..." : "Checking...")</span><span class="taraz-submit-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg></span></button>
+                    <button type="submit" class="taraz-submit"><span class="taraz-submit-label">@Resources.ButtonCaptions.Login</span><span class="taraz-submit-status" hidden><span class="taraz-spinner" aria-hidden="true"></span>@(isRightToLeft ? "در حال بررسی..." : "Checking...")</span><span class="taraz-submit-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg></span></button>
                 </form>
                 <p class="taraz-support-note">@(isRightToLeft ? "در صورت فراموشی اطلاعات ورود یا بروز مشکل در ورود، با مدیر سامانه یا پشتیبانی تماس بگیرید." : "If you have forgotten your sign-in details or need help, contact the system administrator or support.")</p>
-                <p class="taraz-security-note"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>@(isRightToLeft ? "ارتباط شما با سامانه به‌صورت امن برقرار می‌شود." : "Your connection to the system is secure.")</p>
+                <p class="taraz-security-note taraz-security-note--connection"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>@(isRightToLeft ? "ارتباط شما با سامانه به‌صورت امن برقرار می‌شود." : "Your connection to the system is secure.")</p>
             </div>
             <p class="taraz-copyright">© فرانو — @(isRightToLeft ? "نرم‌افزار حسابداری هوشمند" : "Smart Accounting Software")</p>
         </section>
 
-        <section class="taraz-login__visual" aria-label="@(isRightToLeft ? "معرفی برند فرانو و پیش‌نمایش نمایشی" : "Faranou brand introduction and illustrative preview")">
+        <section class="taraz-login__visual" aria-label="@(isRightToLeft ? "معرفی برند فرانو" : "Faranou brand introduction")">
+            <partial name="PartialViews/_LoginBrandChart" />
+
             <div class="fn-brand-panel" inert>
                 <div class="fn-brand-hero">
-                    <span class="fn-mark fn-mark--lg" aria-hidden="true"><img src="~/images/faranou-logo-mark.svg" alt="" width="58" height="70" /></span>
-                    <h2 class="fn-brand-name">فرانو</h2>
-                    <p class="fn-brand-latin" lang="en" dir="ltr">FARANOU</p>
+                    <div class="fn-brand-hero__row">
+                        <div class="fn-brand-hero__title">
+                            <h2 class="fn-brand-name">فرانو</h2>
+                            <p class="fn-brand-latin" lang="en" dir="ltr">FARANOU</p>
+                        </div>
+                        <span class="fn-mark fn-mark--lg" aria-hidden="true"><img src="~/images/faranou-logo-mark.svg" alt="" width="62" height="75" /></span>
+                    </div>
                     <p class="fn-brand-tagline">@(isRightToLeft ? "فرانو؛ فراتر از ایده‌ها، تا واقعیت" : "Faranou — Beyond ideas, into reality")</p>
-                    <p class="fn-brand-lead">@(isRightToLeft ? "مدیریت مالی کسب‌وکار خود را با دقت، نظم و اطمینان تجربه کنید." : "Experience precise, orderly and confident financial management for your business.")</p>
                 </div>
 
                 <ul class="fn-benefits" role="list">
                     <li>
                         <span class="fn-benefit-icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></svg>
+                            <svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2.5"/><rect x="8" y="6" width="8" height="3.5" rx="0.8"/><path d="M8.5 13h.01M12 13h.01M15.5 13h.01M8.5 16.5h.01M12 16.5h.01M15.5 16.5h.01"/></svg>
                         </span>
-                        <span>@(isRightToLeft ? "مدیریت مالی دقیق و هوشمند" : "Precise & smart financial management")</span>
+                        <span class="fn-benefit-body">
+                            <span class="fn-benefit-title">@(isRightToLeft ? "حسابداری دقیق و هوشمند" : "Precise, smart accounting")</span>
+                            <span class="fn-benefit-text">@(isRightToLeft ? "ثبت دقیق، محاسبات هوشمند" : "Accurate recording, smart calculations")</span>
+                        </span>
                     </li>
                     <li>
                         <span class="fn-benefit-icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l7 4v5c0 5-3 8-7 9-4-1-7-4-7-9V7l7-4z"/><path d="M9.5 12l1.8 1.8L15 10"/></svg>
+                            <svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.6A9 9 0 0 1 20.4 9H15z"/></svg>
                         </span>
-                        <span>@(isRightToLeft ? "حسابداری دقیق، تصمیم‌گیری مطمئن" : "Accurate accounting, confident decisions")</span>
+                        <span class="fn-benefit-body">
+                            <span class="fn-benefit-title">@(isRightToLeft ? "مدیریت مالی یکپارچه" : "Unified financial management")</span>
+                            <span class="fn-benefit-text">@(isRightToLeft ? "اتصال همه فرایندهای مالی در یک پلتفرم" : "All financial processes in one platform")</span>
+                        </span>
                     </li>
                     <li>
                         <span class="fn-benefit-icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 19V5M4 19h16"/><path d="M8 15l3-4 3 2 4-6"/></svg>
+                            <svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M5 15l4-4 3 3 6-7"/><path d="M15 7h3v3"/></svg>
                         </span>
-                        <span>@(isRightToLeft ? "نظم مالی، مسیر رشد کسب‌وکار" : "Financial order, path to growth")</span>
+                        <span class="fn-benefit-body">
+                            <span class="fn-benefit-title">@(isRightToLeft ? "گزارش‌های لحظه‌ای و تحلیلی" : "Live reports and analytics")</span>
+                            <span class="fn-benefit-text">@(isRightToLeft ? "تصمیم‌گیری سریع با داده‌های واقعی" : "Faster decisions with real data")</span>
+                        </span>
                     </li>
                     <li>
                         <span class="fn-benefit-icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 18a5 5 0 0 1 0-10 6.5 6.5 0 0 1 12.4 2A4 4 0 0 1 18 18H7z"/></svg>
+                            <svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7.5 3v5.5c0 4.6-3.1 8.2-7.5 9.5-4.4-1.3-7.5-4.9-7.5-9.5V6z"/><rect x="9" y="10.5" width="6" height="5" rx="1.2"/><path d="M10.2 10.5V9a1.8 1.8 0 0 1 3.6 0v1.5"/></svg>
                         </span>
-                        <span>@(isRightToLeft ? "ابزارهای یکپارچه برای مدیریت مالی" : "Integrated tools for financial management")</span>
+                        <span class="fn-benefit-body">
+                            <span class="fn-benefit-title">@(isRightToLeft ? "امنیت بانکی و رمزنگاری پیشرفته" : "Banking-grade security and encryption")</span>
+                            <span class="fn-benefit-text">@(isRightToLeft ? "حفاظت از داده‌ها در سطح استانداردهای جهانی" : "Data protected to international standards")</span>
+                        </span>
                     </li>
                 </ul>
-
-                <div class="fn-dash" aria-hidden="true">
-                    <div class="fn-dash-header">
-                        <span class="fn-dash-header__title">@(isRightToLeft ? "نمای کلی مالی" : "Financial overview")</span>
-                        <span class="fn-dash-header__badge">@(isRightToLeft ? "نمونه نمایشی" : "Preview only")</span>
-                    </div>
-
-                    <div class="fn-dash-cards">
-                        <div class="fn-dash-card">
-                            <div class="fn-dash-card__head">
-                                <span>@(isRightToLeft ? "فروش امروز" : "Sales today")</span>
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L21 8H7"/></svg>
-                            </div>
-                            <div class="fn-dash-card__value">12,480,000</div>
-                            <div class="fn-dash-card__trend">↑</div>
-                        </div>
-                        <div class="fn-dash-card">
-                            <div class="fn-dash-card__head">
-                                <span>@(isRightToLeft ? "دریافت‌ها" : "Receipts")</span>
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 9h8M8 13h5"/></svg>
-                            </div>
-                            <div class="fn-dash-card__value">8,350,000</div>
-                            <div class="fn-dash-card__trend">↑</div>
-                        </div>
-                        <div class="fn-dash-card">
-                            <div class="fn-dash-card__head">
-                                <span>@(isRightToLeft ? "پرداخت‌ها" : "Payments")</span>
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/></svg>
-                            </div>
-                            <div class="fn-dash-card__value">4,120,000</div>
-                            <div class="fn-dash-card__trend">↑</div>
-                        </div>
-                    </div>
-
-                    <div class="fn-dash-charts">
-                        <div class="fn-dash-line">
-                            <div class="fn-dash-line__title">@(isRightToLeft ? "روند فروش" : "Sales trend")</div>
-                            <svg viewBox="0 0 280 96" width="100%" height="96" focusable="false">
-                                <defs>
-                                    <linearGradient id="fnLineFill" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stop-color="#35d5e8" stop-opacity="0.32"/>
-                                        <stop offset="100%" stop-color="#35d5e8" stop-opacity="0"/>
-                                    </linearGradient>
-                                </defs>
-                                <line x1="24" y1="16" x2="24" y2="76" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
-                                <line x1="24" y1="76" x2="264" y2="76" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
-                                <line x1="24" y1="46" x2="264" y2="46" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="4 4"/>
-                                <path d="M24 70 L56 60 L88 54 L120 50 L152 42 L184 36 L216 28 L248 20 L264 14" fill="none" stroke="#35d5e8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                <path d="M24 70 L56 60 L88 54 L120 50 L152 42 L184 36 L216 28 L248 20 L264 14 L264 76 L24 76 Z" fill="url(#fnLineFill)"/>
-                                <circle cx="264" cy="14" r="4" fill="#e0a94a" stroke="#0a1f33" stroke-width="1.5"/>
-                            </svg>
-                        </div>
-                        <div class="fn-dash-donut">
-                            <div class="fn-dash-donut__title">@(isRightToLeft ? "توزیع سود" : "Profit mix")</div>
-                            <div class="fn-dash-donut__body">
-                                <svg viewBox="0 0 88 88" width="80" height="80" focusable="false">
-                                    <circle cx="44" cy="44" r="30" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="11"/>
-                                    <circle cx="44" cy="44" r="30" fill="none" stroke="#35d5e8" stroke-width="11" stroke-dasharray="126.0 62.2" stroke-dashoffset="0" transform="rotate(-90 44 44)"/>
-                                    <circle cx="44" cy="44" r="30" fill="none" stroke="#e0a94a" stroke-width="11" stroke-dasharray="43.3 144.9" stroke-dashoffset="-126.0" transform="rotate(-90 44 44)"/>
-                                    <circle cx="44" cy="44" r="30" fill="none" stroke="#7aa2c9" stroke-width="11" stroke-dasharray="18.8 169.4" stroke-dashoffset="-169.3" transform="rotate(-90 44 44)"/>
-                                    <text x="44" y="42" text-anchor="middle" fill="#f5fbff" font-size="15" font-weight="700" font-family="IRANSansX, Tahoma, sans-serif">67%</text>
-                                    <text x="44" y="56" text-anchor="middle" fill="#a9bfd1" font-size="8" font-family="IRANSansX, Tahoma, sans-serif">@(isRightToLeft ? "سود خالص" : "Net profit")</text>
-                                </svg>
-                                <ul class="fn-dash-legend">
-                                    <li><i class="fn-dash-legend__dot fn-dash-legend__dot--net"></i>@(isRightToLeft ? "سود خالص ۶۷٪" : "Net 67%")</li>
-                                    <li><i class="fn-dash-legend__dot fn-dash-legend__dot--costs"></i>@(isRightToLeft ? "هزینه‌ها ۲۳٪" : "Costs 23%")</li>
-                                    <li><i class="fn-dash-legend__dot fn-dash-legend__dot--other"></i>@(isRightToLeft ? "سایر ۱۰٪" : "Other 10%")</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </section>
     </main>
