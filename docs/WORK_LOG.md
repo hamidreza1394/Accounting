@@ -1838,3 +1838,17 @@
 - **وضعیت مرتبط:** post-merge CI مربوط به #282 روی merge commit `f4a0462b0972e7686a686eca0febfaee680baecf` و #284 روی `81ed5f64ed86ebbae47a433cea63e3655cb1d24b` شامل Vendor CI، .NET CI، Semgrep و Push on main همگی موفق است. روی main فعلی `94b45fce6c260909bb0828b8fa67686936e2f99e`، .NET CI، Semgrep و Push on main نیز موفق‌اند؛ آخرین Vendor CI موفق روی `f4027d83d1275204167464928c54ed9a185a68bf` است و در diff تا main فعلی فایل Vendor تغییر نکرده است.
 - **باقی‌مانده:** consumer سمت مشتری #235 جداست؛ signer Production در #236 به انتخاب و credential معتبر HSM/KMS نیاز دارد؛ sink مستقل checkpoint در #107 به مقصد و credential جدا نیاز دارد.
 - **ثبت Git:** PR [#410](https://github.com/hamidreza1394/Accounting/pull/410)؛ commit پیاده‌سازی `a8d8a686fa9faa95f44afb37f727603ab81ddb29` روی شاخه `fix/vendor-provisioning-time-provider`. پس از ثبت این handoff، SHA نهایی PR باید از head جاری خوانده شود.
+
+
+## 2026-11-01 — ثبت ادغام PR #410 و همگام‌سازی وضعیت Vendor
+
+- **مبنای بازبینی:** `main` در SHA `e26ecc4f387b46da2b703cabbda8e4105bc1d2f7`. تمام PRهای باز بررسی شدند؛ تنها #409 باز بود و تغییرات UI داشبورد RTL آن خارج از محدوده Vendor است.
+- **PR #410:** شاخه `fix/vendor-provisioning-time-provider` با head `875f3090098020e964fed257e83108122fb2e6b4` در `2026-11-01T07:32:31Z` ادغام شد؛ merge commit `e26ecc4f387b46da2b703cabbda8e4105bc1d2f7`.
+- **CI روی head PR:** .NET CI `41284398083` (تمام ۷ job)، Vendor CI `41284398065` (شامل SQL Server integration و آزمون قفل checkpoint روی Ubuntu/Windows)، Semgrep `41284398117` و CodeQL `41284394919` موفق بودند. لاگ Vendor job دارای `Test run summary: Passed` و `failed: 0` است.
+- **CI پس از merge روی main:** Vendor CI `41285195060`، Semgrep `41285195043` و Push on main/CodeQL `41285194925` موفق‌اند. .NET CI `41285195040` در آخرین snapshot هنوز در حال اجرا بود: client، secret-scan، publish-scripts و build-and-test موفق؛ E2E، Linux publish و Windows publish ناتمام. بنابراین post-merge .NET CI در این ثبت InProgress است، نه موفق.
+- **تغییر کد PR #410:** endpointهای Provisioning و Approval از ساعت مستقیم سیستم به TimeProvider تزریق‌شده منتقل شدند؛ regression تست SQL Server timestampهای ایجاد intent، درخواست Approval و تصمیم بازبین را با ساعت کنترل‌شده بررسی می‌کند.
+- **همگام‌سازی تصمیم خرید زیرسیستم:** D-054 در `docs/DECISIONS.md` از 2026-10-30 Accepted است و binding تک‌لایسنس در PR #319/#329 پیاده‌سازی شده؛ یادداشت قدیمی Issue #228 که انتخاب تجاری را باز می‌دانست، دیگر وضعیت جاری نیست. درخواست جدید به یک LicenseId و آخرین Sequence همان لایسنس متصل است؛ تجمیع چند لایسنس ممنوع است.
+- **بازبینی PRهای اولویت‌دار:** #281، #282 و #284 ادغام شده‌اند و شواهد CI پس از merge هر سه در PROJECT_STATUS ثبت شد؛ به‌خصوص تمام بررسی‌های پس از merge #282 موفق بوده‌اند.
+- **محدوده:** این commit فقط مستندات Vendor را همگام می‌کند؛ هیچ کد اجرایی، customer `Server/**`، customer schema/migration یا دیتابیس مشتری تغییر نمی‌کند.
+- **تست محلی:** اجرا نشد؛ این نشست checkout محلی و SDK/SQL Server اجرایی ندارد. نتیجه‌های بالا فقط از GitHub Actions و log واقعی job استخراج شده‌اند.
+- **باقی‌مانده:** consumer/ACK مشتری در #235 فقط در کار جداگانه؛ provider/credential و HSM Production در #236؛ sink مستقل checkpoint در #107؛ و تکمیل post-merge .NET CI `41285195040`.
