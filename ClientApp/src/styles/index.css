@@ -681,3 +681,16 @@
 @media (prefers-reduced-motion: reduce) {
   .faranou-context-choice, .faranou-logout-button, .faranou-sidebar { transition: none; }
 }
+
+/* Keep the sticky navigation below the wrapped tablet/mobile header. */
+@media (min-width: 768px) and (max-width: 1100px) {
+  .faranou-header-inner { min-height: 150px; }
+  .faranou-workspace-body { min-height: calc(100vh - 150px); }
+  .faranou-sidebar { top: 150px; height: calc(100vh - 150px); }
+}
+@media (max-width: 767px) {
+  .faranou-header-inner { min-height: 128px; }
+  .faranou-workspace-body { min-height: calc(100vh - 128px); }
+  .faranou-sidebar { top: 128px; inset-block-start: 128px; }
+  .faranou-mobile-scrim { inset-block-start: 128px; }
+}
