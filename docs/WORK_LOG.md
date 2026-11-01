@@ -1905,3 +1905,12 @@
 - PageModel، نام فیلدها، `ReturnUrl`، anti-forgery و `taraz-login.js` تغییر نکرد؛ بدون inline style/script و بدون دارایی بیرونی.
 - نتایج واقعی: build موفق (۰ خطا)؛ ۸۰۰ تست .NET با ۷۵۴ موفق، ۰ ناموفق، ۴۶ ردشده (SQL Server در محیط نیست)؛ ۷ از ۷ تست jsdom؛ `check_static_assets.py` موفق؛ رندر Chromium در شش عرض بدون اسکرول افقی و بدون خطا. E2E اجرا نشد و بازبینی مستقل Agent انجام نشد.
 - جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-login-equal-panels-3d-chart.md`. تا دیدن نتیجهٔ CI، تغییر Verified محسوب نمی‌شود.
+
+## 2026-11-01 — Issue #413: متناسب‌سازی ارتفاع صفحه ورود فرانو
+
+- در شاخه `fix/issue-413-login-viewport-fit`، قواعد CSS صفحه ورود برای viewportهای دسکتاپ تا ارتفاع 960px فشرده شد؛ padding عمودی و ارتفاع دو ستون با `100dvh` همگام می‌شوند.
+- کارت ورود و پنل برند با حفظ پالت، پس‌زمینه، ترتیب، محتوای فرم و چهار مزیت معرفی جمع‌وجورتر شدند؛ نمودار سه‌بعدی SVG محلی حفظ، کمی کوچک و بالاتر قرار گرفت.
+- در ارتفاع‌های بسیار کم، حداقل ارتفاع ستون‌ها حذف شد تا صفحه به‌جای بریدن فیلدها و دکمه ورود، امکان رشد و اسکرول طبیعی داشته باشد.
+- PageModel، احراز هویت، Remember Me، Cookie، anti-forgery، JavaScript، API و Schema تغییر نکردند؛ dependency یا asset بیرونی افزوده نشد.
+- تست ایستای CSS در `LoginConfigurationTests` اضافه شد. Build/Test و رندر مرورگر در این محیط اجرا نشدند؛ وضعیت تا دریافت CI و تأیید بصری `Implemented / Not Verified` است.
+- گزارش: `docs/handoffs/ISSUE-413-login-viewport-fit.md`.

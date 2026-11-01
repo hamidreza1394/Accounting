@@ -1147,6 +1147,18 @@ public sealed class LoginConfigurationTests
 	}
 
 	[Fact]
+	public void TheLoginPage_UsesViewportAwareCompactDesktopLayout_AndKeepsTheFinanceChart()
+	{
+		var stylesheet = ReadRepositoryFile("Server/wwwroot/css/rtl/taraz-login.css");
+
+		Assert.Contains("@media (min-width: 961px) and (max-height: 960px)", stylesheet);
+		Assert.Contains("--fn-stage-height: clamp(520px, calc(100dvh - 2 * var(--fn-stage-pad)), 860px);", stylesheet);
+		Assert.Contains(".fn-chart {", stylesheet);
+		Assert.Contains("bottom: clamp(16px, 2.5vh, 24px);", stylesheet);
+		Assert.Contains("@media (min-width: 961px) and (max-height: 700px)", stylesheet);
+	}
+
+	[Fact]
 	public void Program_ResolvesTheAuthenticationServiceFromTheContainer()
 	{
 		var program = ReadRepositoryFile("Server/Program.cs");
