@@ -1117,3 +1117,40 @@
 	.fn-benefits li { padding-block: 6px; }
 	.fn-chart { bottom: 8px; transform: scale(0.78); }
 }
+
+/* ---------- Balanced desktop proportions: a wider/taller form, aligned brand panel ---------- */
+@media (min-width: 961px) and (max-height: 960px) {
+	:root {
+		--fn-stage-height: clamp(520px, calc(100dvh - 2 * var(--fn-stage-pad)), 960px);
+	}
+
+	.taraz-login__shell {
+		grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+		column-gap: clamp(24px, 3.8vw, 64px);
+	}
+
+	/* In RTL, the first grid track is the form on the right; its wider track moves
+	   the card's left edge outward while keeping the page's right edge aligned. */
+	.taraz-panel-card {
+		width: min(100%, 520px);
+		padding-block: clamp(20px, 2.5vh, 26px);
+	}
+
+	/* Give the left brand group a little more room and lift it to balance the form. */
+	.fn-brand-panel {
+		width: min(100%, 460px);
+		transform: translateY(-10px);
+	}
+
+	.fn-chart {
+		transform: scale(0.92);
+		transform-origin: bottom left;
+	}
+}
+
+/* On short desktop screens retain the compact density and never force the panels beyond the viewport. */
+@media (min-width: 961px) and (max-height: 700px) {
+	.taraz-panel-card { padding-block: 14px; }
+	.fn-brand-panel { transform: translateY(-6px); }
+	.fn-chart { transform: scale(0.82); }
+}
