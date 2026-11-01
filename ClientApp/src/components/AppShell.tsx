@@ -83,7 +83,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
               </span>
               <CalendarDays className="shrink-0 text-sky-200" size={22} />
             </button>
-            {readOnly ? <span className="faranou-readonly-chip">فقط مشاهده</span> : null}
+            {readOnly ? <span className="faranou-readonly-chip">فقط مشاهده و گزارش‌گیری</span> : null}
           </div>
 
           <div className="faranou-header-user">
