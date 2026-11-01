@@ -73,6 +73,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
               <span className="min-w-0"><span className="block text-[10px] text-blue-100/65 sm:text-[11px]">دوره مالی</span><strong className="block truncate text-xs sm:text-sm">{context.fiscalPeriod.title}</strong></span>
               <ChevronDown className="shrink-0 text-blue-100/70" size={16} />
             </button>
+            {readOnly ? <span className="hidden shrink-0 rounded-full border border-amber-200/30 bg-amber-300/15 px-2.5 py-1.5 text-[10px] font-bold text-amber-100 sm:inline-flex">فقط مشاهده و گزارش‌گیری</span> : null}
           </div>
 
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
