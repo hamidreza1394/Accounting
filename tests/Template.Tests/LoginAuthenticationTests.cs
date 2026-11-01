@@ -1171,6 +1171,22 @@ public sealed class LoginConfigurationTests
 	}
 
 	[Fact]
+	public void TheLoginPage_UsesTheFullDesktopCanvasAndAnchorsTheFormNearTheRightEdge()
+	{
+		var stylesheet = ReadRepositoryFile("Server/wwwroot/css/rtl/taraz-login.css");
+
+		Assert.Contains("max-width: 1800px;", stylesheet);
+		Assert.Contains("grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);", stylesheet);
+		Assert.Contains(".taraz-login[dir=\"rtl\"] .taraz-login__panel", stylesheet);
+		Assert.Contains("align-items: flex-start;", stylesheet);
+		Assert.Contains("min-height: clamp(720px, calc(100dvh - 150px), 820px);", stylesheet);
+		Assert.Contains("width: min(100%, 560px);", stylesheet);
+		Assert.Contains("width: min(100%, 500px);", stylesheet);
+		Assert.Contains("transform: translateY(-28px);", stylesheet);
+		Assert.Contains("transform: scale(1);", stylesheet);
+	}
+
+	[Fact]
 	public void Program_ResolvesTheAuthenticationServiceFromTheContainer()
 	{
 		var program = ReadRepositoryFile("Server/Program.cs");
