@@ -111,8 +111,9 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
               <strong className="max-w-36 truncate text-sm font-bold">{session.fullName}</strong>
               <span className="mt-1 max-w-36 truncate text-[11px] text-blue-100/75">{context.company.roleName}</span>
             </span>
-            <span className="faranou-header-icon" title="اعلان‌ها" aria-label="اعلان‌ها">
+            <span className="faranou-header-icon faranou-header-icon--notify" title="اعلان‌ها" aria-label="اعلان‌ها">
               <Bell size={20} />
+              <span className="faranou-notify-dot" aria-hidden="true" />
             </span>
             <button
               type="button"
@@ -139,17 +140,17 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
         ) : null}
         <aside
           id="main-navigation"
-          className={'faranou-sidebar faranou-sidebar--light ' + (mobileMenuOpen ? 'is-open' : '')}
+          className={'faranou-sidebar faranou-sidebar--premium ' + (mobileMenuOpen ? 'is-open' : '')}
           aria-label="ناوبری فرانو"
         >
           <div className="faranou-sidebar-brand">
-            <FaranouLogo size={36} tone="light" />
+            <FaranouLogo size={36} tone="dark" />
           </div>
           <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-3" aria-label="منوی اصلی">
-            <p className="mb-3 px-3 text-[10px] font-bold tracking-wide text-slate-600">منوی اصلی</p>
+            <p className="mb-3 px-3 text-[10px] font-bold tracking-wide text-sky-200/70">منوی اصلی</p>
             <ul className="space-y-1.5">
               {navigation.map(({ label, icon: Icon, active, divider }) => (
-                <li key={label} className={divider ? 'mt-4 border-t border-slate-200 pt-4' : undefined}>
+                <li key={label} className={divider ? 'mt-4 border-t border-white/10 pt-4' : undefined}>
                   {active ? (
                     <a
                       href="/app/"
@@ -168,7 +169,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
                     >
                       <Icon size={20} />
                       <span>{label}</span>
-                      <span className="ms-auto rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[9px] font-semibold text-slate-600">
+                      <span className="ms-auto rounded-md border border-white/15 bg-white/5 px-1.5 py-0.5 text-[9px] font-semibold text-sky-100/70">
                         به‌زودی
                       </span>
                     </div>
@@ -178,11 +179,11 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
             </ul>
           </nav>
           <div className="faranou-sidebar-footer">
-            <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800">
+            <div className="flex items-center gap-2 text-xs font-semibold text-emerald-200">
               <ShieldCheck size={17} />
               محیط کاری امن
             </div>
-            <p className="mt-1 text-[10px] leading-5 text-slate-600">
+            <p className="mt-1 text-[10px] leading-5 text-sky-100/65">
               اطلاعات این محیط بر اساس دسترسی معتبر شما نمایش داده می‌شود.
             </p>
           </div>
