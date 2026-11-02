@@ -169,6 +169,7 @@ public static class UserAdministrationEndpoints
         [FromServices] IAntiforgery antiforgery,
         Data.DatabaseContext database,
         Infrastructure.Security.PasswordHashService passwordHashService,
+        [FromServices] TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
         var authorization = await AuthorizeInstallationAdministratorAsync(principal, database, cancellationToken);
@@ -185,8 +186,10 @@ public static class UserAdministrationEndpoints
         var password = request.Password;
 
         if (string.IsNullOrWhiteSpace(email) ||
+            email.Length > Constants.MaxLength.EmailAddress ||
             !new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(email) ||
             string.IsNullOrWhiteSpace(username) ||
+            username.Length < Constants.MinLength.Username ||
             username.Length > Constants.MaxLength.Username ||
             (firstName?.Length > Constants.MaxLength.FirstName) ||
             (lastName?.Length > Constants.MaxLength.LastName) ||
@@ -226,7 +229,7 @@ public static class UserAdministrationEndpoints
             EventType = "UserCreated",
             EntityType = "User",
             EntityId = user.Id.ToString(),
-            OccurredAtUtc = DateTime.UtcNow,
+            OccurredAtUtc = timeProvider.GetUtcNow().UtcDateTime,
             CorrelationId = System.Diagnostics.Activity.Current?.Id,
             IpAddress = httpContext.Connection.RemoteIpAddress?.ToString(),
             DetailsJson = System.Text.Json.JsonSerializer.Serialize(new
@@ -256,6 +259,7 @@ public static class UserAdministrationEndpoints
         [FromBody] UpdateUserRequest request,
         [FromServices] IAntiforgery antiforgery,
         Data.DatabaseContext database,
+        [FromServices] TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
         var authorization = await AuthorizeInstallationAdministratorAsync(principal, database, cancellationToken);
@@ -278,8 +282,10 @@ public static class UserAdministrationEndpoints
         var cellPhone = Dtat.Utility.FixText(request.CellPhoneNumber);
 
         if (string.IsNullOrWhiteSpace(email) ||
+            email.Length > Constants.MaxLength.EmailAddress ||
             !new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(email) ||
             string.IsNullOrWhiteSpace(username) ||
+            username.Length < Constants.MinLength.Username ||
             username.Length > Constants.MaxLength.Username ||
             (firstName?.Length > Constants.MaxLength.FirstName) ||
             (lastName?.Length > Constants.MaxLength.LastName) ||
