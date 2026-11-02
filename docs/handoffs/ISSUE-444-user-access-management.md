@@ -57,6 +57,11 @@
 - بررسی exact permission inventory و Trade permission catalog.
 - طراحی و اجرای مرحله‌ای با TDD.
 
+## S3 — گروه‌های دسترسی
+- CompanyRole و CompanyRolePermissions موجود بازاستفاده می‌شوند؛ جدول موازی AccessGroup ایجاد نمی‌شود.
+- کاتالوگ مجوز فعلی فقط شامل مجوزهای ثبت‌شده بازرگانی خارجی است؛ templateهای حسابداری/خزانه‌داری/انبارداری تا inventory و enforcement واقعی ایجاد نمی‌شوند.
+- APIهای فهرست گروه، کاتالوگ مجوز، الگوهای Trade، ایجاد/ویرایش گروه و تخصیص membership در PR #454 قرار دارند.
+
 ## Git
 - Branch: feature/admin-identity-access-management-444
 - آخرین Commit شاخه در زمان این handoff: 1743242ccc9bc3de43942ffd26d7a783e837cc2c
