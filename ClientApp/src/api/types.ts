@@ -271,3 +271,194 @@ export function parseAntiforgeryToken(value: unknown): AntiforgeryToken {
     requestToken: readString(value, 'requestToken', 'antiforgery'),
   };
 }
+
+export type MyProfile = {
+  username: string;
+  firstName: string | null;
+  lastName: string | null;
+  emailAddress: string | null;
+  cellPhoneNumber: string | null;
+  isEmailAddressVerified: boolean;
+  isCellPhoneNumberVerified: boolean;
+  lastLoginDateTime: string | null;
+  insertDateTime: string;
+};
+
+export type LoginHistoryEventType =
+  | 'LoginSucceeded'
+  | 'LoginFailed'
+  | 'LoginDeniedInactive'
+  | 'LoginDeniedEnrollmentPending'
+  | 'LogoutSucceeded';
+
+export type LoginHistoryItem = {
+  eventType: LoginHistoryEventType;
+  occurredAtUtc: string;
+  ipAddress: string | null;
+};
+
+export type ChangeMyPasswordRequest = {
+  currentPassword: string;
+  newPassword: string;
+  confirmNewPassword: string;
+};
+
+const loginHistoryEventTypes: readonly LoginHistoryEventType[] = [
+  'LoginSucceeded',
+  'LoginFailed',
+  'LoginDeniedInactive',
+  'LoginDeniedEnrollmentPending',
+  'LogoutSucceeded',
+];
+
+function readIsoDateTime(source: JsonObject, key: string, what: string, nullable = false): string | null {
+  const value = readNullableString(source, key, what);
+  if (value === null) {
+    if (nullable) return null;
+    throw new ContractError(`${what}.${key}`);
+  }
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$/.test(value) || !Number.isFinite(Date.parse(value))) {
+    throw new ContractError(`${what}.${key}`);
+  }
+  return value;
+}
+
+export function parseMyProfile(value: unknown): MyProfile {
+  if (!isObject(value)) throw new ContractError('myProfile');
+  return {
+    username: readString(value, 'username', 'myProfile'),
+    firstName: readNullableString(value, 'firstName', 'myProfile'),
+    lastName: readNullableString(value, 'lastName', 'myProfile'),
+    emailAddress: readNullableString(value, 'emailAddress', 'myProfile'),
+    cellPhoneNumber: readNullableString(value, 'cellPhoneNumber', 'myProfile'),
+    isEmailAddressVerified: readBoolean(value, 'isEmailAddressVerified', 'myProfile'),
+    isCellPhoneNumberVerified: readBoolean(value, 'isCellPhoneNumberVerified', 'myProfile'),
+    lastLoginDateTime: readIsoDateTime(value, 'lastLoginDateTime', 'myProfile', true),
+    insertDateTime: readIsoDateTime(value, 'insertDateTime', 'myProfile')!,
+  };
+}
+
+export function parseLoginHistory(value: unknown): LoginHistoryItem[] {
+  if (!Array.isArray(value)) throw new ContractError('loginHistory');
+  return value.map((item) => {
+    if (!isObject(item)) throw new ContractError('loginHistory.item');
+    const eventType = readString(item, 'eventType', 'loginHistory.item');
+    if (!(loginHistoryEventTypes as readonly string[]).includes(eventType)) {
+      throw new ContractError('loginHistory.item.eventType');
+    }
+    return {
+      eventType: eventType as LoginHistoryEventType,
+      occurredAtUtc: readIsoDateTime(item, 'occurredAtUtc', 'loginHistory.item')!,
+      ipAddress: readNullableString(item, 'ipAddress', 'loginHistory.item'),
+    };
+  });
+}
+
+export type AdminUserListItem = {
+  id: string;
+  username: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  emailAddress: string;
+  cellPhoneNumber: string | null;
+  isActive: boolean;
+  lastLoginDateTime: string | null;
+  insertDateTime: string;
+  activeCompanyCount: number;
+};
+
+export type AdminUserListResponse = {
+  items: AdminUserListItem[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+};
+
+export type AdminUserMembership = {
+  companyId: string;
+  companyName: string;
+  roleCode: string;
+  roleName: string;
+  isActive: boolean;
+  createdAtUtc: string;
+};
+
+export type AdminUserDetails = AdminUserListItem & {
+  isEmailAddressVerified: boolean;
+  isCellPhoneNumberVerified: boolean;
+  updateDateTime: string;
+  legacyRoleName: string | null;
+  memberships: AdminUserMembership[];
+};
+
+export function parseAdminUserList(value: unknown): AdminUserListResponse {
+  if (!isObject(value) || !Array.isArray(value['items'])) throw new ContractError('adminUsers');
+  const number = (key: string): number => {
+    const v = value[key];
+    if (typeof v !== 'number' || !Number.isInteger(v) || v < 0) throw new ContractError('adminUsers.' + key);
+    return v;
+  };
+  const items = value['items'].map((item): AdminUserListItem => {
+    if (!isObject(item)) throw new ContractError('adminUsers.item');
+    const activeCompanyCount = item['activeCompanyCount'];
+    if (typeof activeCompanyCount !== 'number' || !Number.isInteger(activeCompanyCount) || activeCompanyCount < 0) {
+      throw new ContractError('adminUsers.item.activeCompanyCount');
+    }
+    return {
+      id: readString(item, 'id', 'adminUsers.item'),
+      username: readNullableString(item, 'username', 'adminUsers.item'),
+      firstName: readNullableString(item, 'firstName', 'adminUsers.item'),
+      lastName: readNullableString(item, 'lastName', 'adminUsers.item'),
+      emailAddress: readString(item, 'emailAddress', 'adminUsers.item'),
+      cellPhoneNumber: readNullableString(item, 'cellPhoneNumber', 'adminUsers.item'),
+      isActive: readBoolean(item, 'isActive', 'adminUsers.item'),
+      lastLoginDateTime: readIsoDateTime(item, 'lastLoginDateTime', 'adminUsers.item', true),
+      insertDateTime: readIsoDateTime(item, 'insertDateTime', 'adminUsers.item')!,
+      activeCompanyCount,
+    };
+  });
+  const page = number('page');
+  const pageSize = number('pageSize');
+  if (page < 1 || pageSize < 1 || pageSize > 100) throw new ContractError('adminUsers.pagination');
+  return { items, totalCount: number('totalCount'), page, pageSize };
+}
+
+export function parseAdminUserDetails(value: unknown): AdminUserDetails {
+  if (!isObject(value) || !Array.isArray(value['memberships'])) throw new ContractError('adminUser');
+  const memberships = value['memberships'].map((item): AdminUserMembership => {
+    if (!isObject(item)) throw new ContractError('adminUser.membership');
+    return {
+      companyId: readString(item, 'companyId', 'adminUser.membership'),
+      companyName: readString(item, 'companyName', 'adminUser.membership'),
+      roleCode: readString(item, 'roleCode', 'adminUser.membership'),
+      roleName: readString(item, 'roleName', 'adminUser.membership'),
+      isActive: readBoolean(item, 'isActive', 'adminUser.membership'),
+      createdAtUtc: readIsoDateTime(item, 'createdAtUtc', 'adminUser.membership')!,
+    };
+  });
+  const base = parseAdminUserList({
+    items: [{
+      id: value['id'],
+      username: value['username'],
+      firstName: value['firstName'],
+      lastName: value['lastName'],
+      emailAddress: value['emailAddress'],
+      cellPhoneNumber: value['cellPhoneNumber'],
+      isActive: value['isActive'],
+      lastLoginDateTime: value['lastLoginDateTime'],
+      insertDateTime: value['insertDateTime'],
+      activeCompanyCount: memberships.filter(x => x.isActive).length,
+    }],
+    totalCount: 1,
+    page: 1,
+    pageSize: 1,
+  }).items[0];
+  return {
+    ...base,
+    isEmailAddressVerified: readBoolean(value, 'isEmailAddressVerified', 'adminUser'),
+    isCellPhoneNumberVerified: readBoolean(value, 'isCellPhoneNumberVerified', 'adminUser'),
+    updateDateTime: readIsoDateTime(value, 'updateDateTime', 'adminUser')!,
+    legacyRoleName: readNullableString(value, 'legacyRoleName', 'adminUser'),
+    memberships,
+  };
+}
