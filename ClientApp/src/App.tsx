@@ -113,6 +113,11 @@ export function App({ navigate = defaultNavigate }: { navigate?: Navigate }) {
     navigate(loginPath);
   }, [navigate]);
 
+  const handlePasswordChanged = useCallback(() => {
+    setState({ kind: 'redirecting' });
+    navigate(buildLoginUrl(window.location));
+  }, [navigate]);
+
   const handleLogoutFromScreen = useCallback(() => {
     void handleLogout().catch((error: unknown) => {
       if (!handleUnauthenticated(error)) {
@@ -218,6 +223,8 @@ export function App({ navigate = defaultNavigate }: { navigate?: Navigate }) {
         reload();
       }}
       onLogout={handleLogout}
+      onPasswordChanged={handlePasswordChanged}
+      onUnauthenticated={handleUnauthenticated}
     >
       <Dashboard
         key={`${context.current.company.id}:${context.current.fiscalPeriod.id}`}
