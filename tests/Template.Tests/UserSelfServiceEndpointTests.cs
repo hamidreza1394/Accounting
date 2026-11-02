@@ -79,7 +79,7 @@ public sealed class UserSelfServiceEndpointTests
             TenantFixture.CompanyUser(fixture.Alice.Id),
             fixture.Database,
             take: 50,
-            default);
+            cancellationToken: default);
 
         var ok = Assert.IsType<Ok<IReadOnlyList<Server.Api.LoginHistoryItemResponse>>>(result.Result);
         Assert.Equal(2, ok.Value!.Count);
@@ -95,7 +95,7 @@ public sealed class UserSelfServiceEndpointTests
             TenantFixture.CompanyUser(fixture.Alice.Id),
             fixture.Database,
             take: 0,
-            default);
+            cancellationToken: default);
 
         var ok = Assert.IsType<Ok<IReadOnlyList<Server.Api.LoginHistoryItemResponse>>>(result.Result);
         Assert.Empty(ok.Value!);
