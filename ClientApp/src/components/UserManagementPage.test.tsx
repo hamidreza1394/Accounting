@@ -43,6 +43,10 @@ describe('user administration navigation', () => {
     expect(await screen.findByText('حسابدار · ACCOUNTANT')).toBeInTheDocument();
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain('/api/v1/admin/users?');
     expect(String(fetchMock.mock.calls[1]?.[0])).toBe('/api/v1/admin/users/user-1');
+    fireEvent.click(screen.getByRole('button', { name: 'کاربر جدید' }));
+    expect(screen.getByRole('dialog', { name: 'ایجاد کاربر جدید' })).toBeInTheDocument();
+    expect(screen.getByLabelText('رمز عبور اولیه')).toBeRequired();
+    expect(screen.getByLabelText('تکرار رمز عبور')).toBeRequired();
   });
 
   it('does not show installation administration navigation to a regular user', () => {
