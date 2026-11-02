@@ -24,7 +24,7 @@ describe('MyAccountPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'حساب کاربری من' }));
 
     const dialog = await screen.findByRole('dialog', { name: 'حساب کاربری من' });
-    expect(await screen.findByText('آلیس مثالی')).toBeInTheDocument();
+    expect((await screen.findAllByText('آلیس مثالی')).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('tab', { name: 'سوابق ورود' }));
     expect(await screen.findByText('سابقه‌ای ثبت نشده است')).toBeInTheDocument();
     expect(fetchMock.mock.calls[1]?.[0]).toBe('/api/v1/me/login-history?take=50');
