@@ -41,8 +41,10 @@
 |---|---|
 | Graphify semantic inspection | اجرا شد |
 | GitHub source inspection | اجرا شد |
-| Build/Test | اجرا نشده؛ تغییرات منو و تست نیازمند اجرای کلاینت‌اند |
-| git diff --check | اجرا نشده؛ تغییرات از GitHub Contents API ثبت می‌شوند |
+| Client CI (run 41500624984) | Typecheck، Vitest، Build، offline check و runtime dependency audit موفق |
+| .NET CI (run 41500624984) | Restore، Build، Test، migration guards و model snapshot check موفق؛ E2E/Publish هنگام آخرین مشاهده هنوز در حال اجرا بود |
+| Semgrep (run 41500625011) | موفق |
+| git diff --check | از checkout محلی در دسترس نبود؛ CI migration/static checks موفق بودند |
 
 ## ریسک‌ها و کارهای باقی‌مانده
 - مدل legacy Users.RoleId/Role و مدل شرکتی UserCompanyMemberships/CompanyRole مستقل‌اند و نباید بدون تصمیم معماری ادغام شوند.
@@ -56,5 +58,5 @@
 
 ## Git
 - Branch: feature/admin-identity-access-management-444
-- آخرین Commit شاخه در زمان این handoff: 7f3cf10b91def7bbd8b77e9920427abb6b1a1902
+- آخرین Commit شاخه در زمان این handoff: 1743242ccc9bc3de43942ffd26d7a783e837cc2c
 - PR: #445 (Draft) — https://github.com/hamidreza1394/Accounting/pull/445
