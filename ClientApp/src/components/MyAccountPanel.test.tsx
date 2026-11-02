@@ -20,7 +20,7 @@ describe('MyAccountPanel', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } }));
     vi.stubGlobal('fetch', fetchMock);
 
-    const trigger = render(<AppShell session={session} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)} />);
+    const trigger = render(<AppShell session={session} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای آزمایشی</main></AppShell>);
     fireEvent.click(screen.getByRole('button', { name: 'حساب کاربری من' }));
 
     const dialog = await screen.findByRole('dialog', { name: 'حساب کاربری من' });
