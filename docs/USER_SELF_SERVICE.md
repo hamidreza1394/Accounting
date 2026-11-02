@@ -1,0 +1,44 @@
+# API خودخدمتی حساب کاربر
+
+- **Issue:** #444
+- **مرحله:** S1 — بخش اولیه self-service
+- **وضعیت:** پیاده‌سازی اولیه؛ منتظر CI و بازبینی
+
+## قراردادها
+
+### GET /api/v1/me/profile
+- فقط برای principal با AccountKind=User.
+- شناسه کاربر فقط از Claim معتبر NameIdentifier توسط CompanyAccessService استخراج می‌شود.
+- خروجی whitelist شده: نام کاربری، نام، نام خانوادگی، ایمیل، موبایل، وضعیت تأیید تماس‌ها و زمان آخرین ورود/ایجاد.
+- Password، hash، RoleId، membership و فیلدهای مدیریتی هرگز serialize نمی‌شوند.
+- پاسخ no-store است.
+
+### GET /api/v1/me/login-history?take=50
+- فقط رخدادهای UserId خود کاربر.
+- page size بین 1 تا 100 محدود می‌شود.
+- رخدادهای پشتیبانی‌شده: LoginSucceeded، LoginFailed، LoginDeniedInactive، LoginDeniedEnrollmentPending و LogoutSucceeded.
+- خروج صریح API ثبت می‌شود؛ پایان نشست ناشی از بستن مرورگر، قطع شبکه یا انقضای کوکی به‌عنوان Logout جعل نمی‌شود.
+- تلاش ناموفق برای نام کاربری ناشناخته ممکن است UserId نداشته باشد و در تاریخچه شخصی حساب قابل انتساب نیست.
+- پاسخ no-store است.
+
+### POST /api/v1/me/password
+- فقط برای AccountKind=User و با Anti-forgery header موجود.
+- ورودی شامل رمز فعلی، رمز جدید و تکرار رمز جدید است؛ UserId از کلاینت دریافت نمی‌شود.
+- حداقل 8 و حداکثر 128 نویسه؛ فهرست رمزهای رایج فعلی رد می‌شود؛ الگوی ترکیب اجباری حروف/عدد/نماد اضافه نشده است.
+- رمز فعلی با PasswordHashService بررسی و رمز جدید با همان سرویس هش می‌شود.
+- استفاده مجدد از رمز فعلی رد می‌شود.
+- تغییر رمز و SecurityAuditEvent با یک SaveChanges ثبت می‌شوند؛ هیچ رمز یا hash در Audit نوشته نمی‌شود.
+- بعد از موفقیت، کوکی جاری sign-out و WorkContext حذف می‌شود. CredentialStamp موجود در SessionValidator سایر نشست‌های قدیمی را در درخواست بعدی باطل می‌کند؛ نشست جدید باید با رمز جدید ساخته شود.
+- endpoint از rate limit حساس موجود استفاده می‌کند.
+
+## ثبت خروج
+Logout API رویداد LogoutSucceeded را برای کاربر شرکتی ثبت می‌کند. اگر ذخیره Audit با خطا مواجه شود، sign-out همچنان انجام می‌شود تا کاربر به‌خاطر خرابی مخزن Audit از خروج محروم نشود؛ خطا فقط در log سرور ثبت می‌شود.
+
+## عدم تغییر Schema
+این مرحله از Users، SecurityAuditEvents، PasswordHashService و SessionValidator موجود استفاده می‌کند؛ Migration و جدول جدید ندارد.
+
+## محدودیت‌های باقی‌مانده
+- تاریخچه نشست هنوز duration، device/browser و logout ناشی از expiry را نشان نمی‌دهد.
+- پروفایل فعلاً read-only است؛ تغییر ایمیل/موبایل باید با verification workflow انجام شود.
+- تاریخچه ورود کاربر، سوابق تغییرات مدیریتی نیست؛ Audit Trail کامل در مرحله بعدی جداگانه پیاده‌سازی می‌شود.
+- UI React برای نمایش این APIها در مرحله بعد به پوسته حساب کاربر متصل می‌شود.
