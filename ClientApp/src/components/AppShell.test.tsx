@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { SelectedContext, Session } from '../api/types';
 import { AppShell } from './AppShell';
@@ -74,8 +74,7 @@ describe('AppShell', () => {
     fireEvent.change(screen.getByLabelText('تکرار رمز جدید'), { target: { value: 'New-Long-Phrase-1406!' } });
     fireEvent.click(screen.getByRole('button', { name: 'تغییر رمز و خروج' }));
 
-    await screen.findByText('تغییر رمز و خروج');
-    expect(onPasswordChanged).toHaveBeenCalledOnce();
+    await waitFor(() => expect(onPasswordChanged).toHaveBeenCalledOnce());
     expect(fetchMock.mock.calls[2]?.[0]).toBe('/api/v1/me/password');
   });
 
