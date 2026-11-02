@@ -4,6 +4,7 @@ import { App } from './App';
 import { ProvisioningEnrollmentPage } from './components/ProvisioningEnrollmentPage';
 import { CustomerProvisioningImportPage } from './components/CustomerProvisioningImportPage';
 import './styles/index.css';
+import './styles/premium-dashboard.css';
 
 const container = document.getElementById('root');
 
