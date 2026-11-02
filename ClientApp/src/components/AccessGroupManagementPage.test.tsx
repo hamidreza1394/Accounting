@@ -41,6 +41,6 @@ describe('access group management', () => {
     fireEvent.click(screen.getByRole('button', { name: 'گروه جدید' }));
     expect(screen.getByRole('dialog', { name: 'ساخت گروه دسترسی' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('الگوی اولیه'), { target: { value: 'trade.operator' } });
-    expect(screen.getByLabelText('ایجاد طرف حساب')).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: /ایجاد طرف حساب/ })).toBeChecked();
   });
 });
