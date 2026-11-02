@@ -22,7 +22,10 @@ describe('user administration navigation', () => {
         }],
         totalCount: 1, page: 1, pageSize: 20,
       }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
-      .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+       .mockResolvedValueOnce(new Response(JSON.stringify([{
+        id: 'role-1', companyId: 'company-1', code: 'ACCOUNTANT', name: 'حسابدار',
+        isSystemRole: false, isActive: true, permissionCount: 3, activeMemberCount: 1, permissionCodes: [],
+      }]), { status: 200, headers: { 'Content-Type': 'application/json' } }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
         id: 'user-1', username: 'alice', firstName: 'آلیس', lastName: 'مثالی',
         emailAddress: 'alice@example.test', cellPhoneNumber: null, isEmailAddressVerified: true,
@@ -45,6 +48,8 @@ describe('user administration navigation', () => {
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain('/api/v1/admin/users?');
     expect(String(fetchMock.mock.calls[1]?.[0])).toBe('/api/v1/admin/companies/company-1/roles');
     expect(String(fetchMock.mock.calls[2]?.[0])).toBe('/api/v1/admin/users/user-1');
+    expect(screen.getByRole('combobox', { name: 'گروه دسترسی شرکت' })).toHaveValue('role-1');
+    expect(screen.getByRole('button', { name: 'ایجاد عضویت و تخصیص گروه' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'کاربر جدید' }));
     expect(screen.getByRole('dialog', { name: 'ایجاد کاربر جدید' })).toBeInTheDocument();
     expect(screen.getByLabelText('رمز عبور اولیه')).toBeRequired();
