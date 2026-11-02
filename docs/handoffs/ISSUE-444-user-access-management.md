@@ -32,9 +32,10 @@
 - Role → Permission → ApplicationHandler قدیمی در runtime به‌عنوان authorization enforce نمی‌شود؛ فعلاً نباید مبنای امنیت API باشد.
 - مدیریت سراسری نصب و مدیریت شرکتی دو scope متفاوت‌اند؛ مرز مدیر سراسری/مدیر شرکت پیش از APIهای مدیریت کاربران باید طراحی و تست شود.
 - پروفایل و تغییر رمز Razor فعلی placeholder هستند (OnGet خالی)؛ API self-service وجود ندارد.
-- عدم ساخت جدول موازی پیش از S0.
+- عدم ساخت جدول موازی برای مجوزهای عملیاتی شرکتی؛ CompanyRole/CompanyRolePermissions مرجع فعال‌اند.
 - حفظ مرز Company/Tenant و FiscalPeriod مشترک.
-- عدم پیاده‌سازی entitlement لایسنس در این Issue.
+- بخشی از customer-side license import/signature/revocation موجود است؛ Trade entitlement هنوز DenyAll است و خارج از S1 مدیریت کاربران باقی می‌ماند.
+- D-064 تفکیک مدیر سراسری نصب از مدیر شرکتی را به‌صورت Proposed ثبت کرده است.
 
 ## آزمون
 | آزمون | نتیجه |
