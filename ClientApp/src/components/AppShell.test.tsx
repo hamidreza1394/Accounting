@@ -47,6 +47,33 @@ describe('AppShell', () => {
     expect(screen.getByText('لیست کاربران فعال').closest('[aria-disabled="true"]')).toBeTruthy();
   });
 
+  it('keeps full nested menu labels readable instead of truncating them', () => {
+    // Note (Issue #442 review, Finding 4): JSDOM has no real layout engine, so this test
+    // is a proxy — it confirms the label keeps its full text and the `truncate`/
+    // `whitespace-normal` classes that drive wrapping, not that the text actually avoids
+    // clipping in a rendered browser at narrow widths. That was confirmed separately with
+    // a real Playwright screenshot of the built app's sidebar (see handoff for Issue #442).
+    render(<AppShell session={session} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
+    const longLabel = screen.getByText('مشاهده ورود و خروج کاربران');
+    expect(longLabel).toHaveTextContent('مشاهده ورود و خروج کاربران');
+    expect(longLabel.className).not.toContain('truncate');
+    expect(longLabel.className).toContain('whitespace-normal');
+  });
+
+  it('keeps the "coming soon" badge visible (not hover/screen-reader-only) on nested disabled items', () => {
+    // Issue #442 review (Finding 3): a bare dot that only surfaced its meaning via a
+    // `title` tooltip or a visually-hidden span was invisible to touch users. Nested rows
+    // now carry the same always-visible text badge as top-level rows, just smaller.
+    render(<AppShell session={session} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
+    const nestedItem = screen.getByText('مدیریت کاربران').closest('[aria-disabled="true"]') as HTMLElement;
+    expect(nestedItem).toBeTruthy();
+    expect(nestedItem).toHaveTextContent('به‌زودی');
+    expect(nestedItem.querySelector('.faranou-nav-soon-dot')).toBeFalsy();
+
+    const topLevelItem = screen.getByText('حسابداری').closest('[aria-disabled="true"]') as HTMLElement;
+    expect(topLevelItem).toHaveTextContent('به‌زودی');
+  });
+
   it('shows the full read-only and reporting-only access explanation', () => {
     const readOnlyContext: SelectedContext = {
       ...context,

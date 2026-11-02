@@ -68,15 +68,19 @@
 }
 
 .faranou-sidebar.faranou-sidebar--premium {
+  /* Issue #442: widened (252->276px) and deepened so the nested "مدیریت کاربری"
+     sub-menu has room and stays above WCAG AA contrast; this compound-class rule has
+     higher specificity than the plain `.faranou-sidebar` rule in index.css, so it is
+     the one actually rendered and must carry the real values. */
   isolation: isolate;
   color: #eaf5fc;
-  width: 252px;
-  flex: 0 0 252px;
-  border-inline-start: 1px solid rgb(100 170 210 / .18);
+  width: 276px;
+  flex: 0 0 276px;
+  border-inline-start: 1px solid rgb(140 180 214 / .18);
   background:
-    radial-gradient(ellipse at 100% 0%, rgb(55 145 205 / .28), transparent 42%),
-    radial-gradient(ellipse at 0% 100%, rgb(20 90 130 / .22), transparent 40%),
-    linear-gradient(180deg, #0c2d4a 0%, #0a2740 45%, #071e34 100%);
+    radial-gradient(ellipse at 100% 0%, rgb(40 92 158 / .24), transparent 42%),
+    radial-gradient(ellipse at 0% 100%, rgb(20 90 130 / .18), transparent 40%),
+    linear-gradient(180deg, #0d1f36 0%, #0b1a2e 48%, #0a1628 100%);
   box-shadow: -10px 0 36px rgb(4 22 44 / .2), inset 1px 0 0 rgb(255 255 255 / .04);
   overflow: hidden;
 }
@@ -321,7 +325,10 @@
 
 @media (max-width: 767px) {
   .faranou-welcome.faranou-welcome--milad { min-height: 220px !important; border-radius: 16px; }
-  .faranou-sidebar--premium { width: 260px; flex-basis: 260px; }
+  /* Issue #442: kept in step with the index.css drawer rule (min(300px, 86vw)) — this
+     selector has equal specificity and loads after index.css, so its value is the one
+     that actually renders; must not silently diverge from it again. */
+  .faranou-sidebar--premium { width: min(300px, 86vw); flex-basis: min(300px, 86vw); }
 }
 
 /* Colored nav icons */
@@ -329,7 +336,7 @@
   display: inline-flex;
   width: 1.85rem;
   height: 1.85rem;
-  flex-shrink: 0;
+  flex: 0 0 auto; /* Issue #442 review: merged from index.css's duplicate rule — no shrink/grow, fixed size. */
   align-items: center;
   justify-content: center;
   border-radius: 9px;
@@ -348,6 +355,12 @@
 .faranou-nav-icon--slate { background: linear-gradient(145deg, #94a3b8, #475569); }
 .faranou-nav-icon--blue { background: linear-gradient(145deg, #60a5fa, #2563eb); }
 .faranou-nav-icon--green { background: linear-gradient(145deg, #4ade80, #16a34a); }
+/* Issue #442: nested sub-menu rows use a visibly smaller icon box than top-level items. */
+.faranou-nav-icon.faranou-nav-icon--sm {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 7px;
+}
 
 .faranou-nav-divider {
   list-style: none;

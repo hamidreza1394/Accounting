@@ -110,10 +110,10 @@ const toneClass: Record<Tone, string> = {
   green: 'faranou-nav-icon--green',
 };
 
-function NavIcon({ icon: Icon, tone }: { icon: LucideIcon; tone: Tone }) {
+function NavIcon({ icon: Icon, tone, size = 'md' }: { icon: LucideIcon; tone: Tone; size?: 'md' | 'sm' }) {
   return (
-    <span className={'faranou-nav-icon ' + toneClass[tone]} aria-hidden="true">
-      <Icon size={16} strokeWidth={2.2} />
+    <span className={'faranou-nav-icon ' + toneClass[tone] + (size === 'sm' ? ' faranou-nav-icon--sm' : '')} aria-hidden="true">
+      <Icon size={size === 'sm' ? 14 : 16} strokeWidth={2.2} />
     </span>
   );
 }
@@ -124,15 +124,25 @@ function DisabledItem({ label, icon, tone, nested }: { label: string; icon: Luci
       aria-disabled="true"
       title="این بخش پس از تکمیل مسیر و مجوز مربوط فعال می‌شود."
       className={
-        'faranou-nav-disabled flex min-h-11 cursor-not-allowed items-center gap-2.5 rounded-xl px-3 text-sm ' +
-        (nested ? 'ps-3' : '')
+        'faranou-nav-disabled flex cursor-not-allowed items-center gap-2.5 rounded-xl ' +
+        (nested ? 'min-h-10 ps-3 pe-2 text-[12px]' : 'min-h-11 px-3 text-[13px] font-semibold')
       }
     >
-      <NavIcon icon={icon} tone={tone} />
-      <span className="min-w-0 flex-1 truncate">{label}</span>
-      <span className="ms-auto shrink-0 rounded-md border border-white/15 bg-white/5 px-1.5 py-0.5 text-[9px] font-semibold text-sky-100/70">
-        به‌زودی
-      </span>
+      <NavIcon icon={icon} tone={tone} size={nested ? 'sm' : 'md'} />
+      <span className="min-w-0 flex-1 whitespace-normal leading-snug">{label}</span>
+      {nested ? (
+        /* Issue #442 review (Finding 3): a bare dot relying on `title` is invisible to
+           touch users (no hover) and conveys nothing on its own to sighted users who
+           aren't using a screen reader. Keep a compact-but-visible text badge instead,
+           smaller than the top-level one to fit the narrower nested row. */
+        <span className="ms-auto shrink-0 rounded-md border border-white/15 bg-white/5 px-1 py-0.5 text-[8px] font-semibold text-sky-100/70">
+          به‌زودی
+        </span>
+      ) : (
+        <span className="ms-auto shrink-0 rounded-md border border-white/15 bg-white/5 px-1.5 py-0.5 text-[9px] font-semibold text-sky-100/70">
+          به‌زودی
+        </span>
+      )}
     </div>
   );
 }
@@ -255,12 +265,12 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
                     <li key={entry.label} className="space-y-1">
                       <button
                         type="button"
-                        className="faranou-nav-group flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 text-sm font-semibold"
+                        className="faranou-nav-group flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 text-[13px] font-semibold"
                         aria-expanded={settingsOpen}
                         onClick={() => setSettingsOpen((open) => !open)}
                       >
                         <NavIcon icon={entry.icon} tone={entry.tone} />
-                        <span className="min-w-0 flex-1 truncate text-start">{entry.label}</span>
+                        <span className="min-w-0 flex-1 whitespace-normal text-start leading-snug">{entry.label}</span>
                         <ChevronDown
                           size={16}
                           className={'shrink-0 text-sky-100/70 transition-transform ' + (settingsOpen ? 'rotate-180' : '')}
@@ -268,18 +278,18 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
                         />
                       </button>
                       {settingsOpen ? (
-                        <ul className="faranou-nav-sub space-y-1 border-s border-white/10 ms-4 ps-2">
+                        <ul className="faranou-nav-sub space-y-2 ms-4 ps-2">
                           <li>
                             <button
                               type="button"
-                              className="faranou-nav-group flex min-h-10 w-full items-center gap-2.5 rounded-xl px-2.5 text-[13px] font-semibold"
+                              className="faranou-nav-group flex min-h-10 w-full items-center gap-2.5 rounded-xl px-2.5 text-[12px] font-semibold"
                               aria-expanded={userMgmtOpen}
                               onClick={() => setUserMgmtOpen((open) => !open)}
                             >
-                              <NavIcon icon={Users} tone="blue" />
-                              <span className="min-w-0 flex-1 truncate text-start">مدیریت کاربری</span>
+                              <NavIcon icon={Users} tone="blue" size="sm" />
+                              <span className="min-w-0 flex-1 whitespace-normal text-start leading-snug">مدیریت کاربری</span>
                               <ChevronDown
-                                size={15}
+                                size={14}
                                 className={
                                   'shrink-0 text-sky-100/70 transition-transform ' + (userMgmtOpen ? 'rotate-180' : '')
                                 }
@@ -287,7 +297,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
                               />
                             </button>
                             {userMgmtOpen ? (
-                              <ul className="mt-1 space-y-1 border-s border-white/10 ms-3 ps-2">
+                              <ul className="faranou-nav-sub mt-1 space-y-2 ms-3 ps-2">
                                 <li>
                                   <DisabledItem label="مدیریت کاربران" icon={Users} tone="sky" nested />
                                 </li>
@@ -320,10 +330,10 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
                         href="/app/"
                         aria-current="page"
                         onClick={() => setMobileMenuOpen(false)}
-                        className="faranou-nav-active flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-sm font-bold"
+                        className="faranou-nav-active flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-[13px] font-semibold"
                       >
                         <NavIcon icon={entry.icon} tone={entry.tone} />
-                        <span>{entry.label}</span>
+                        <span className="min-w-0 flex-1 whitespace-normal leading-snug">{entry.label}</span>
                       </a>
                     </li>
                   );

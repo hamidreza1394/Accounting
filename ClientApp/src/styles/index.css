@@ -162,12 +162,9 @@
   box-shadow: 0 8px 26px rgb(21 54 84 / .16);
 }
 
-.faranou-sidebar {
-  background:
-    radial-gradient(ellipse at 82% 100%, rgb(82 164 225 / .2), transparent 48%),
-    linear-gradient(180deg, #245783 0%, var(--workspace-blue-900) 48%, var(--workspace-blue-950) 100%);
-  border-inline-start: 1px solid rgb(255 255 255 / .14);
-}
+/* Issue #442: this base-rule background/border is fully superseded by the later
+   `.faranou-sidebar` declarations further down this file (same selector, later source
+   order wins for the properties it sets) and never paints on screen; removed as dead CSS. */
 
 .faranou-sidebar nav li > div[aria-disabled="true"] {
   color: rgb(239 247 255 / .78);
@@ -321,12 +318,8 @@
   box-shadow: 0 8px 28px rgb(24 91 145 / .22);
 }
 
-.faranou-sidebar {
-  background:
-    radial-gradient(ellipse at 78% 2%, rgb(96 183 237 / .28), transparent 42%),
-    linear-gradient(180deg, #216da5 0%, #18588f 52%, #123f6a 100%);
-  border-inline-start: 1px solid rgb(255 255 255 / .2);
-}
+/* Issue #442: same dead-CSS situation as the earlier removed block — a later
+   `.faranou-sidebar` rule in this file always wins for background/border-inline-start. */
 
 .faranou-sidebar nav li > div[aria-disabled="true"] {
   color: rgb(246 251 255 / .88);
@@ -557,19 +550,18 @@
 .faranou-logout-button:hover { background: rgb(244 63 94 / .16); }
 .faranou-workspace-body { display: flex; min-height: calc(100vh - 92px); }
 .faranou-sidebar {
+  /* Issue #442 review: `<aside>` always carries `faranou-sidebar--premium` alongside this
+     class (AppShell.tsx), so the compound selector `.faranou-sidebar.faranou-sidebar--premium`
+     in premium-dashboard.css (higher specificity, loaded after this file) is the single real
+     source of truth for width/flex/background/border-inline-start — removed here rather than
+     kept as a second, easy-to-drift copy of the same numbers. */
   position: sticky;
   top: 92px;
   z-index: 20;
   display: flex;
-  width: 238px;
   height: calc(100vh - 92px);
-  flex: 0 0 238px;
   flex-direction: column;
   overflow: hidden;
-  border-inline-start: 1px solid rgb(255 255 255 / .1);
-  background:
-    radial-gradient(ellipse at 70% 100%, rgb(51 119 181 / .22), transparent 42%),
-    linear-gradient(180deg, #132f53 0%, #10294a 62%, #0d2341 100%);
   color: white;
 }
 .faranou-sidebar nav { padding-block: 1.35rem; }
@@ -580,6 +572,28 @@
 }
 .faranou-nav-disabled { color: rgb(235 243 255 / .9); }
 .faranou-nav-disabled > span:last-child { color: rgb(211 226 246 / .75); }
+
+/* Issue #442: readable nested sub-menu — continuous guide line + icon sizing. */
+/* Issue #442 review: the `.faranou-nav-icon` sizing rule lives in premium-dashboard.css
+   (it's the only one that actually applies, since that file loads after this one and the
+   real markup always uses the compound `.faranou-sidebar.faranou-sidebar--premium` class
+   tree); `flex: 0 0 auto;` was merged there instead of duplicated here. */
+.faranou-nav-sub {
+  position: relative;
+}
+.faranou-nav-sub::before {
+  position: absolute;
+  inset-inline-start: 0;
+  top: .2rem;
+  bottom: .2rem;
+  width: 1px;
+  background: rgb(255 255 255 / .14);
+  content: "";
+}
+/* Issue #442 review (Finding 3): `.faranou-nav-soon-dot` was dropped from the nested
+   DisabledItem markup — a bare dot relying on `title` is invisible to touch users and
+   conveys nothing to sighted non-screen-reader users. Nested rows now reuse the same
+   visible "به‌زودی" text badge as top-level rows (smaller, to fit the narrower row). */
 .faranou-sidebar-footer {
   margin: auto .85rem .9rem;
   padding: .9rem;
@@ -660,7 +674,7 @@
     inset-block: 76px 0;
     right: 0;
     top: 76px;
-    width: min(280px, 86vw);
+    width: min(300px, 86vw);
     height: auto;
     transform: translateX(105%);
     transition: transform 180ms ease;
@@ -736,15 +750,11 @@
   border-color: rgb(111 213 199 / .62);
   background: rgb(255 255 255 / .13);
 }
-.faranou-sidebar {
-  isolation: isolate;
-  border-inline-start-color: rgb(112 198 188 / .2);
-  background:
-    radial-gradient(ellipse at 12% 8%, rgb(47 151 146 / .24), transparent 38%),
-    radial-gradient(ellipse at 100% 82%, rgb(207 158 82 / .12), transparent 34%),
-    linear-gradient(180deg, #102f3b 0%, #123b48 42%, #0d2938 100%);
-  box-shadow: inset -1px 0 0 rgb(255 255 255 / .035), 8px 0 30px rgb(13 43 52 / .06);
-}
+/* Issue #442 review: this plain `.faranou-sidebar` block used to redeclare isolation/
+   border-inline-start-color/background/box-shadow — always overridden by the higher-
+   specificity `.faranou-sidebar.faranou-sidebar--premium` rule in premium-dashboard.css
+   (see that file for the real deep-navy WCAG-AA background and the `--sm` icon size).
+   Removed to avoid a second, driftable copy of the same values. */
 .faranou-sidebar::before {
   position: absolute;
   z-index: -1;
