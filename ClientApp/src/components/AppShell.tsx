@@ -49,7 +49,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
 
   return (
     <div dir="rtl" className="faranou-workspace min-h-screen text-ink">
-      <header className="faranou-topbar on-dark sticky top-0 z-40 text-white">
+      <header className="faranou-topbar faranou-topbar--login-palette on-dark sticky top-0 z-40 text-white">
         <div className="faranou-header-inner">
           <div className="faranou-header-brand">
             <button
@@ -109,7 +109,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
         ) : null}
         <aside
           id="main-navigation"
-          className={'faranou-sidebar ' + (mobileMenuOpen ? 'is-open' : '')}
+          className={'faranou-sidebar faranou-sidebar--light ' + (mobileMenuOpen ? 'is-open' : '')}
           aria-label="ناوبری فرانو"
         >
           <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4" aria-label="منوی اصلی">
