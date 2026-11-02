@@ -12,8 +12,8 @@ const context: SelectedContext = {
 describe('AppShell', () => {
   it('places the Faranou brand, company and fiscal period selectors, and user identity in the header', () => {
     render(<AppShell session={session} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
-    const marks = screen.getAllByRole('img', { name: 'نشان فرانو' });
-    expect(marks.length).toBeGreaterThanOrEqual(2);
+    // Brand mark only in the topbar (sidebar no longer duplicates the logo).
+    expect(screen.getByRole('img', { name: 'نشان فرانو' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'تغییر شرکت' })).toHaveTextContent('شرکت نمونه');
     expect(screen.getByRole('button', { name: 'تغییر دوره مالی' })).toHaveTextContent('سال مالی ۱۴۰۵');
     expect(screen.getByText('حمید رضایی')).toBeInTheDocument();
