@@ -2013,3 +2013,13 @@
 - بدون تغییر API، مجوز، احراز هویت، دیتابیس، migration یا dependency خارجی؛ فقط `ClientApp/src/components/AppShell.tsx`, `AppShell.test.tsx`, `styles/index.css`, `styles/premium-dashboard.css`.
 - تست/Build واقعاً در این نشست اجرا شد: `tsc --noEmit` موفق، `vitest run` کامل (12 فایل/115 تست) موفق، `npm run build` موفق، `npm run check:offline` موفق، `scripts/check_static_assets.py` موفق، `git diff --check` موفق. علاوه‌براین با اسکرین‌شات Playwright واقعی روی build واقعی تأیید شد: عرض رندرشدهٔ سایدبار = 276px و برچسب‌های تودرتو بدون بریدگی.
 - گزارش: docs/handoffs/ISSUE-442-sidebar-readability.md.
+
+
+## 2026-11-02 — Issue #444: مرکز مدیریت کاربران و دسترسی‌ها
+- Issue #444 ایجاد و شاخه feature/admin-identity-access-management-444 ساخته شد.
+- ممیزی اولیه با Graphify و GitHub نشان داد Users، UserCompanyMemberships، CompanyRoles، PermissionDefinitions، CompanyRolePermissions، CompanyAccessService، LoginLogs و SecurityAuditEvents موجودند؛ از ساخت موتور موازی دسترسی جلوگیری می‌شود.
+- صفحات قدیمی مدیریت کاربران و نقش‌ها در Razor Pages با نقش سراسری Admin محافظت می‌شوند؛ مسیر جدید باید تدریجی در React/API ساخته شود و تا جایگزینی کامل حذف نشوند.
+- منوی React فعلی «تنظیمات سیستم / مدیریت کاربری» دارای placeholderهای غیرفعال است. ساختار هدف به آیتم‌های مستقل مدیریت کاربران، ساختار سازمانی و سمت‌ها، گروه‌های دسترسی، کاتالوگ مجوزها و گزارش امنیتی تقسیم شد؛ «لیست کاربران فعال» به فیلتر و سوابق ورود به گزارش امنیت منتقل می‌شود.
+- سند طراحی و معیارهای پذیرش در docs/USER_ACCESS_MANAGEMENT.md و گزارش در docs/handoffs/ISSUE-444-user-access-management.md ثبت شد.
+- هیچ Migration، Entity، API اجرایی یا تغییر schema در این مرحله انجام نشده است. لایسنس/Entitlement مشتری طبق اسناد فعلی NotImplemented است و در این Issue فقط مرز اتصال آن رعایت می‌شود.
+- Build/Test اجرا نشده؛ مرحله S0 ممیزی endpointها، DI، mappingها، migrationها، permission catalog و routing کلاینت باید پیش از هر تغییر رفتاری تکمیل شود.
