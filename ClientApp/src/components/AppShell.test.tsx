@@ -37,25 +37,21 @@ describe('AppShell', () => {
     expect(sidebar?.querySelector('.faranou-sidebar-footer p')).toBeTruthy();
   });
 
-  it('nests user-management items under system settings as disabled placeholders', () => {
+  it('shows the focused system-administration menu and removes redundant user-list shortcuts', () => {
     render(<AppShell session={session} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
-    expect(screen.getByRole('button', { name: /تنظیمات سیستم/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /مدیریت کاربری/ })).toBeInTheDocument();
-    expect(screen.getByText('مدیریت کاربران').closest('[aria-disabled="true"]')).toBeTruthy();
-    expect(screen.getByText('مدیریت دسترسی‌ها').closest('[aria-disabled="true"]')).toBeTruthy();
-    expect(screen.getByText('مشاهده ورود و خروج کاربران').closest('[aria-disabled="true"]')).toBeTruthy();
-    expect(screen.getByText('لیست کاربران فعال').closest('[aria-disabled="true"]')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /مدیریت سیستم/ })).toBeInTheDocument();
+    for (const label of ['مدیریت کاربران', 'ساختار سازمانی و سمت‌ها', 'گروه‌های دسترسی', 'کاتالوگ و جزئیات مجوزها', 'گزارش امنیت و سوابق', 'سیاست‌های امنیتی']) {
+      expect(screen.getByText(label).closest('[aria-disabled="true"]')).toBeTruthy();
+    }
+    expect(screen.queryByText('لیست کاربران فعال')).toBeNull();
+    expect(screen.queryByText('مشاهده ورود و خروج کاربران')).toBeNull();
   });
 
-  it('keeps full nested menu labels readable instead of truncating them', () => {
-    // Note (Issue #442 review, Finding 4): JSDOM has no real layout engine, so this test
-    // is a proxy — it confirms the label keeps its full text and the `truncate`/
-    // `whitespace-normal` classes that drive wrapping, not that the text actually avoids
-    // clipping in a rendered browser at narrow widths. That was confirmed separately with
-    // a real Playwright screenshot of the built app's sidebar (see handoff for Issue #442).
+  it('keeps the new administration labels readable without truncation', () => {
+    // JSDOM cannot measure visual wrapping, but it can guard the full label and wrapping classes.
     render(<AppShell session={session} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
-    const longLabel = screen.getByText('مشاهده ورود و خروج کاربران');
-    expect(longLabel).toHaveTextContent('مشاهده ورود و خروج کاربران');
+    const longLabel = screen.getByText('ساختار سازمانی و سمت‌ها');
+    expect(longLabel).toHaveTextContent('ساختار سازمانی و سمت‌ها');
     expect(longLabel.className).not.toContain('truncate');
     expect(longLabel.className).toContain('whitespace-normal');
   });

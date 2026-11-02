@@ -2013,3 +2013,41 @@
 - بدون تغییر API، مجوز، احراز هویت، دیتابیس، migration یا dependency خارجی؛ فقط `ClientApp/src/components/AppShell.tsx`, `AppShell.test.tsx`, `styles/index.css`, `styles/premium-dashboard.css`.
 - تست/Build واقعاً در این نشست اجرا شد: `tsc --noEmit` موفق، `vitest run` کامل (12 فایل/115 تست) موفق، `npm run build` موفق، `npm run check:offline` موفق، `scripts/check_static_assets.py` موفق، `git diff --check` موفق. علاوه‌براین با اسکرین‌شات Playwright واقعی روی build واقعی تأیید شد: عرض رندرشدهٔ سایدبار = 276px و برچسب‌های تودرتو بدون بریدگی.
 - گزارش: docs/handoffs/ISSUE-442-sidebar-readability.md.
+
+
+## 2026-11-02 — Issue #444: مرکز مدیریت کاربران و دسترسی‌ها
+- Issue #444 ایجاد و شاخه feature/admin-identity-access-management-444 ساخته شد.
+- ممیزی اولیه با Graphify و GitHub نشان داد Users، UserCompanyMemberships، CompanyRoles، PermissionDefinitions، CompanyRolePermissions، CompanyAccessService، LoginLogs و SecurityAuditEvents موجودند؛ از ساخت موتور موازی دسترسی جلوگیری می‌شود.
+- صفحات قدیمی مدیریت کاربران و نقش‌ها در Razor Pages با نقش سراسری Admin محافظت می‌شوند؛ مسیر جدید باید تدریجی در React/API ساخته شود و تا جایگزینی کامل حذف نشوند.
+- منوی React فعلی «تنظیمات سیستم / مدیریت کاربری» دارای placeholderهای غیرفعال است. ساختار هدف به آیتم‌های مستقل مدیریت کاربران، ساختار سازمانی و سمت‌ها، گروه‌های دسترسی، کاتالوگ مجوزها و گزارش امنیتی تقسیم شد؛ «لیست کاربران فعال» به فیلتر و سوابق ورود به گزارش امنیت منتقل می‌شود.
+- سند طراحی و معیارهای پذیرش در docs/USER_ACCESS_MANAGEMENT.md و گزارش در docs/handoffs/ISSUE-444-user-access-management.md ثبت شد.
+- هیچ Migration، Entity، API اجرایی یا تغییر schema در این مرحله انجام نشده است. لایسنس/Entitlement مشتری طبق اسناد فعلی NotImplemented است و در این Issue فقط مرز اتصال آن رعایت می‌شود.
+- Build/Test اجرا نشده؛ مرحله S0 ممیزی endpointها، DI، mappingها، migrationها، permission catalog و routing کلاینت باید پیش از هر تغییر رفتاری تکمیل شود.
+
+
+### تکمیل ممیزی اولیه و بازآرایی منوی مدیریت سیستم — Issue #444
+- مدل legacy Users.RoleId → Role و نقش‌های صفحات Razor با Constants.Role.Admin از مدل شرکتی CompanyRole → CompanyRolePermissions جدا هستند؛ یکپارچه‌سازی بدون تصمیم و tracing ممنوع.
+- User فعلی فیلدهای هویتی/تماس و وضعیت را در خود دارد؛ ایجاد UserProfile مستقل هنوز اثبات نشده و باید از ایجاد جدول تکراری پرهیز شود.
+- CompanyRole به TenantId (Company) محدود است؛ UserCompanyMembership کلید خارجی مرکب RoleId/TenantId دارد. CompanyAccessService کاربر فعال، عضویت، شرکت و نقش فعال را کنترل می‌کند و مجوز را از کاتالوگ PermissionDefinitions می‌خواند.
+- PermissionDefinitions دارای Code یکتا است؛ CompanyRolePermissions رابطه نقش-مجوز را ثبت می‌کند. Trade نیز کاتالوگ strongly typed و مجوزهای فرم/عملیات مستقل دارد؛ inventory باید با آن تطبیق یابد.
+- LoginLog فقط UserId و IP را دارد؛ SecurityAuditEvent فیلدهای رویداد، زمان، correlation، IP و DetailsJson دارد. این دو برای history نشست کامل کافی نیستند.
+- App.tsx در حال حاضر flow تک‌صفحه‌ای است؛ AppShell فقط /app/ را فعال می‌کند و routeهای مدیریتی هنوز وجود ندارند. بنابراین منو به شش گروه هدف بازآرایی شد، اما همه موارد غیرفعال باقی ماندند تا route/API واقعی و authorization اضافه شود.
+- «لیست کاربران فعال» به فیلتر داخل مدیریت کاربران منتقل شد؛ ورود/خروج در گزارش امنیت ادغام شد؛ گروه‌های دسترسی از کاتالوگ جزئی مجوزها جدا شدند.
+- AppShell.test.tsx با ساختار جدید هماهنگ شد. تست هنوز اجرا نشده است؛ Build/Typecheck/Vitest و مرورگر باید در محیط دارای checkout اجرا شوند.
+
+
+### تکمیل ممیزی مدل مجوز و حساب شخصی — Issue #444
+- مدل legacy شامل Role → Permission → ApplicationHandler است، اما جستجوی call-siteهای تولیدی هیچ enforcement runtime برای Permission/ApplicationHandler در API یا handlerها نشان نداد. RouteFinder فقط PageModelهای Razor را ثبت می‌کند؛ پس این مدل به‌تنهایی کاتالوگ امنیتی APIهای React نیست.
+- CompanyRole/PermissionDefinitions/CompanyRolePermissions در CompanyAccessService و Trade واقعاً بررسی می‌شوند و نقش/مجوز company-scoped هستند.
+- User.Role.Name به Claim نقش در زمان ورود تبدیل می‌شود؛ Infrastructure master نیز Claim نقش Admin می‌گیرد. صفحات قدیمی Users با Role.Admin محافظت شده و فهرست آن‌ها بدون scope شرکت است. scope مدیر سراسری و مدیر شرکتی باید پیش از APIهای جدید تفکیک و تست شود.
+- Profile PageModel و ChangePassword PageModel فعلی فقط OnGet خالی دارند؛ API برای پروفایل/تغییر رمز وجود ندارد. بنابراین self-service هنوز پیاده‌سازی نشده است.
+- LoginLog فقط در ورود موفق ثبت می‌شود و فقط UserId/IP دارد؛ ورودهای ناموفق در SecurityAuditEvents ثبت می‌شوند. API خروج فعلی رویداد logout ثبت نمی‌کند.
+- Customer-side license import/signature/revocation در بخشی از کد وجود دارد؛ اما Trade entitlement با DenyAllTradeModuleEntitlement ثبت شده و مجوز مؤثر زیرسیستم هنوز فعال نیست.
+- PR #445 Draft باز است. Client CI (typecheck, unit tests, build, offline check, runtime dependency audit) موفق؛ Semgrep موفق؛ .NET Build/Test در آخرین مشاهده موفق شده و job در مرحله گزارش آسیب‌پذیری/جمع‌بندی بود. نتیجه نهایی باید مجدداً poll شود.
+
+
+### D-064 پیشنهادی — Issue #444
+- تفکیک مدیر سراسری نصب از مدیر شرکتی به‌صورت Proposed در docs/DECISIONS.md ثبت شد.
+- پیشنهاد: Role.Admin برای مدیریت سراسری کاربران همان نصب؛ CompanyRole/CompanyRolePermissions برای دسترسی عملیاتی در هر شرکت. در APIهای جدید نقش مدیر سراسری باید از DB در هر درخواست بررسی شود تا claim قدیمی پس از لغو نقش معتبر نماند.
+- CompanyRole به‌عنوان گروه دسترسی شرکتی استفاده می‌شود؛ تا اثبات نیاز نسخه‌بندی/مالکیت مستقل، AccessGroup جدا ساخته نمی‌شود.
+- سمت/واحد سازمانی از مجوز تفکیک و در S2 طراحی می‌شود. هیچ Migration در این مرحله انجام نشد.

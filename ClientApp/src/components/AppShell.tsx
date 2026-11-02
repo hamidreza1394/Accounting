@@ -18,7 +18,6 @@ import {
   Settings2,
   ShieldCheck,
   ShoppingCart,
-  UserCheck,
   Users,
   Wallet,
   X,
@@ -79,17 +78,10 @@ const navigation: NavEntry[] = [
   { kind: 'divider' },
   {
     kind: 'group',
-    label: 'تنظیمات سیستم',
+    label: 'مدیریت سیستم',
     icon: Settings2,
     tone: 'slate',
-    children: [
-      {
-        kind: 'item',
-        label: 'مدیریت کاربری',
-        icon: Users,
-        tone: 'blue',
-      },
-    ],
+    children: [],
   },
   { kind: 'item', label: 'اطلاعات پایه', icon: ClipboardList, tone: 'teal' },
   { kind: 'item', label: 'راهنما و پشتیبانی', icon: Headphones, tone: 'orange' },
@@ -153,7 +145,6 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(true);
-  const [userMgmtOpen, setUserMgmtOpen] = useState(true);
   const readOnly = context.fiscalPeriod.accessMode === 'readOnly';
 
   async function handleLogout() {
@@ -260,7 +251,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
                   );
                 }
 
-                if (entry.kind === 'group' && entry.label === 'تنظیمات سیستم') {
+                if (entry.kind === 'group' && entry.label === 'مدیریت سیستم') {
                   return (
                     <li key={entry.label} className="space-y-1">
                       <button
@@ -279,40 +270,12 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
                       </button>
                       {settingsOpen ? (
                         <ul className="faranou-nav-sub space-y-2 ms-4 ps-2">
-                          <li>
-                            <button
-                              type="button"
-                              className="faranou-nav-group flex min-h-10 w-full items-center gap-2.5 rounded-xl px-2.5 text-[12px] font-semibold"
-                              aria-expanded={userMgmtOpen}
-                              onClick={() => setUserMgmtOpen((open) => !open)}
-                            >
-                              <NavIcon icon={Users} tone="blue" size="sm" />
-                              <span className="min-w-0 flex-1 whitespace-normal text-start leading-snug">مدیریت کاربری</span>
-                              <ChevronDown
-                                size={14}
-                                className={
-                                  'shrink-0 text-sky-100/70 transition-transform ' + (userMgmtOpen ? 'rotate-180' : '')
-                                }
-                                aria-hidden="true"
-                              />
-                            </button>
-                            {userMgmtOpen ? (
-                              <ul className="faranou-nav-sub mt-1 space-y-2 ms-3 ps-2">
-                                <li>
-                                  <DisabledItem label="مدیریت کاربران" icon={Users} tone="sky" nested />
-                                </li>
-                                <li>
-                                  <DisabledItem label="مدیریت دسترسی‌ها" icon={KeyRound} tone="violet" nested />
-                                </li>
-                                <li>
-                                  <DisabledItem label="مشاهده ورود و خروج کاربران" icon={Activity} tone="amber" nested />
-                                </li>
-                                <li>
-                                  <DisabledItem label="لیست کاربران فعال" icon={UserCheck} tone="emerald" nested />
-                                </li>
-                              </ul>
-                            ) : null}
-                          </li>
+                          <li><DisabledItem label="مدیریت کاربران" icon={Users} tone="sky" nested /></li>
+                          <li><DisabledItem label="ساختار سازمانی و سمت‌ها" icon={Building2} tone="blue" nested /></li>
+                          <li><DisabledItem label="گروه‌های دسترسی" icon={ShieldCheck} tone="violet" nested /></li>
+                          <li><DisabledItem label="کاتالوگ و جزئیات مجوزها" icon={KeyRound} tone="amber" nested /></li>
+                          <li><DisabledItem label="گزارش امنیت و سوابق" icon={Activity} tone="emerald" nested /></li>
+                          <li><DisabledItem label="سیاست‌های امنیتی" icon={Settings2} tone="slate" nested /></li>
                         </ul>
                       ) : null}
                     </li>
