@@ -212,6 +212,14 @@ export async function createCompanyRole(companyId: string, request: CreateCompan
 export async function updateCompanyRole(companyId: string, roleId: string, request: UpdateCompanyRoleRequest): Promise<void> {
   await sendJson('PUT', `/admin/companies/${encodeURIComponent(companyId)}/roles/${encodeURIComponent(roleId)}`, request);
 }
+ 
+export async function assignUserCompanyRole(companyId: string, roleId: string, userId: string): Promise<void> {
+  await sendJson(
+    'POST',
+    `/admin/companies/${encodeURIComponent(companyId)}/roles/${encodeURIComponent(roleId)}/members/${encodeURIComponent(userId)}`,
+  );
+}
+
 
 
 
