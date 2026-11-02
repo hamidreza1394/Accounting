@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { SelectedContext, Session } from '../api/types';
 import { AppShell } from './AppShell';
@@ -17,6 +17,39 @@ describe('AppShell', () => {
     expect(screen.getByRole('button', { name: 'تغییر دوره مالی' })).toHaveTextContent('سال مالی ۱۴۰۵');
     expect(screen.getByText('حمید رضایی')).toBeInTheDocument();
     expect(screen.getByText('مدیر مالی')).toBeInTheDocument();
+  });
+
+  it('opens the personal account center, loads only self data, and supports accessible tabs', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        username: 'alice',
+        firstName: 'آلیس',
+        lastName: 'مثالی',
+        emailAddress: 'alice@example.test',
+        cellPhoneNumber: '09120000000',
+        isEmailAddressVerified: true,
+        isCellPhoneNumberVerified: false,
+        lastLoginDateTime: '2026-11-02T08:00:00Z',
+        insertDateTime: '2026-10-01T09:00:00Z',
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<AppShell session={session} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
+    const trigger = screen.getByRole('button', { name: 'حساب کاربری من' });
+    fireEvent.click(trigger);
+
+    const dialog = await screen.findByRole('dialog', { name: 'حساب کاربری من' });
+    expect(await screen.findByText('آلیس مثالی')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'مشخصات من' })).toHaveAttribute('aria-selected', 'true');
+
+    fireEvent.click(screen.getByRole('tab', { name: 'سوابق ورود' }));
+    expect(await screen.findByText('سابقه‌ای ثبت نشده است')).toBeInTheDocument();
+    expect(fetchMock.mock.calls[1]?.[0]).toBe('/api/v1/me/login-history?take=50');
+
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(trigger);
   });
 
   it('keeps unfinished navigation items disabled and the current dashboard active', () => {
