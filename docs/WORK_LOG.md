@@ -1964,3 +1964,13 @@
 - **اصلاح مسیر asset در PR #423:** check:offline فایل SVG را در مسیر `/images/` سایت پیدا نمی‌کرد، چون فایل در `ClientApp/public` بود و خروجی کلاینت زیر `/app` قرار می‌گیرد. فایل به `Server/wwwroot/images/` منتقل و کپی اشتباه حذف شد؛ CI head جدید باید check:offline را دوباره تأیید کند.
 
 - **رفع خطای E2E در PR #423:** اجرای Playwright سناریوی دوره بسته را شکست می‌داد؛ تست قرارداد موجود «فقط مشاهده و گزارش‌گیری» را بررسی می‌کرد، اما بازطراحی فقط «فقط مشاهده» را در هدر نشان می‌داد. برچسب کامل به UI بازگردانده شد و تست واحد AppShell برای حالت `readOnly` افزوده شد. اجرای مجدد CI روی commit `501844e` در حال انجام است.
+
+
+## 2026-11-02 — یکسان‌سازی TimeProvider در عملیات تجاری Vendor (#228)
+- **مبنای کد:** main در SHA `ed86c011b6731c1b496395b701441654b15e3a20`؛ در شروع این اجرا هیچ PR بازی وجود نداشت.
+- **یافته:** پنج timestamp در APIهای ساخت/ویرایش Customer، Installation، Contract و License از `DateTimeOffset.UtcNow` مستقیم استفاده می‌کردند، درحالی‌که Provisioning و Approval قبلاً به `TimeProvider` تزریق‌شده منتقل شده بودند.
+- **اصلاح در شاخه:** تمام پنج مسیر از `TimeProvider.GetUtcNow().ToUniversalTime()` استفاده می‌کنند؛ برای ساخت Customer یک timestamp واحد به هر دو فیلد Created/Updated داده می‌شود.
+- **Regression:** تست SQL Server موجود اکنون زمان ایجاد Customer در رقابت دو POST، ویرایش Customer، ایجاد Installation، Contract و License را با ساعت کنترل‌شده assert می‌کند.
+- **دامنه:** فقط Vendor Host، تست Vendor و مستندات تحویل؛ هیچ `Server/**`، migration یا Customer DB تغییر نکرده است.
+- **اعتبارسنجی:** تست محلی اجرا نشده؛ CI روی PR برای اثبات build، SQL Server integration، E2E و static analysis لازم است. وضعیت تا تکمیل CI، Implemented / Not Verified است.
+- **باقی‌مانده:** یک timestamp مستقیم در command-mode `VendorBootstrapCommand` باقی است و در این slice تغییر نمی‌کند؛ #235 customer consumer، #236 signer واقعی و #107 sink مستقل Production موانع جداگانه‌اند.

@@ -41,7 +41,8 @@ public static class VendorBusinessEndpoints
 
         customers.MapPost("/", async (
             CreateCustomerRequest request, HttpContext context, IAntiforgery antiforgery,
-            VendorDbContext db, UserManager<VendorAdminUser> users, IVendorAuditWriter audit, CancellationToken ct) =>
+            VendorDbContext db, UserManager<VendorAdminUser> users, IVendorAuditWriter audit,
+            TimeProvider timeProvider, CancellationToken ct) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context))
                 return Results.BadRequest(new { error = "invalid_antiforgery_token" });
@@ -58,11 +59,12 @@ public static class VendorBusinessEndpoints
             var actor = await users.GetUserAsync(context.User);
             if (actor is null) return Results.Forbid();
             await using var tx = await db.Database.BeginTransactionAsync(ct);
+            var now = timeProvider.GetUtcNow().ToUniversalTime();
             var item = new VendorCustomer
             {
                 Id = Guid.NewGuid(), CustomerNumber = number, LegalName = legalName,
                 DisplayName = displayName, Status = "Active",
-                CreatedAtUtc = DateTimeOffset.UtcNow, UpdatedAtUtc = DateTimeOffset.UtcNow
+                CreatedAtUtc = now, UpdatedAtUtc = now
             };
             db.Customers.Add(item);
             try { await db.SaveChangesAsync(ct); }
@@ -122,7 +124,8 @@ public static class VendorBusinessEndpoints
             .RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.InstallationsManage));
         installations.MapPost("/", async (
             CreateInstallationRequest request, HttpContext context, IAntiforgery antiforgery,
-            VendorDbContext db, UserManager<VendorAdminUser> users, IVendorAuditWriter audit, CancellationToken ct) =>
+            VendorDbContext db, UserManager<VendorAdminUser> users, IVendorAuditWriter audit,
+            TimeProvider timeProvider, CancellationToken ct) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context))
                 return Results.BadRequest(new { error = "invalid_antiforgery_token" });
@@ -140,8 +143,9 @@ public static class VendorBusinessEndpoints
             var actor = await users.GetUserAsync(context.User);
             if (actor is null) return Results.Forbid();
             await using var tx = await db.Database.BeginTransactionAsync(ct);
+            var now = timeProvider.GetUtcNow().ToUniversalTime();
             var item = new VendorInstallation { Id = Guid.NewGuid(), CustomerId = request.CustomerId,
-                InstallationCode = code, Name = name, Environment = environment, Status = "Active", CreatedAtUtc = DateTimeOffset.UtcNow };
+                InstallationCode = code, Name = name, Environment = environment, Status = "Active", CreatedAtUtc = now };
             db.Installations.Add(item);
             try { await db.SaveChangesAsync(ct); }
             catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
@@ -160,7 +164,8 @@ public static class VendorBusinessEndpoints
             .RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.ContractsManage));
         contracts.MapPost("/", async (
             CreateContractRequest request, HttpContext context, IAntiforgery antiforgery,
-            VendorDbContext db, UserManager<VendorAdminUser> users, IVendorAuditWriter audit, CancellationToken ct) =>
+            VendorDbContext db, UserManager<VendorAdminUser> users, IVendorAuditWriter audit,
+            TimeProvider timeProvider, CancellationToken ct) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context))
                 return Results.BadRequest(new { error = "invalid_antiforgery_token" });
@@ -177,9 +182,10 @@ public static class VendorBusinessEndpoints
             var actor = await users.GetUserAsync(context.User);
             if (actor is null) return Results.Forbid();
             await using var tx = await db.Database.BeginTransactionAsync(ct);
+            var now = timeProvider.GetUtcNow().ToUniversalTime();
             var item = new VendorContract { Id = Guid.NewGuid(), CustomerId = request.CustomerId,
                 ContractNumber = number, Status = "Draft", StartsAtUtc = request.StartsAtUtc,
-                EndsAtUtc = request.EndsAtUtc, CurrencyCode = currency, CreatedAtUtc = DateTimeOffset.UtcNow };
+                EndsAtUtc = request.EndsAtUtc, CurrencyCode = currency, CreatedAtUtc = now };
             db.Contracts.Add(item);
             try { await db.SaveChangesAsync(ct); }
             catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
@@ -198,7 +204,8 @@ public static class VendorBusinessEndpoints
             .RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.LicensesManage));
         licenses.MapPost("/", async (
             CreateLicenseRequest request, HttpContext context, IAntiforgery antiforgery,
-            VendorDbContext db, UserManager<VendorAdminUser> users, IVendorAuditWriter audit, CancellationToken ct) =>
+            VendorDbContext db, UserManager<VendorAdminUser> users, IVendorAuditWriter audit,
+            TimeProvider timeProvider, CancellationToken ct) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context))
                 return Results.BadRequest(new { error = "invalid_antiforgery_token" });
@@ -222,12 +229,13 @@ public static class VendorBusinessEndpoints
             var actor = await users.GetUserAsync(context.User);
             if (actor is null) return Results.Forbid();
             await using var tx = await db.Database.BeginTransactionAsync(ct);
+            var now = timeProvider.GetUtcNow().ToUniversalTime();
             var item = new VendorLicense { Id = Guid.NewGuid(), CustomerId = request.CustomerId,
                 ContractId = request.ContractId, InstallationId = request.InstallationId,
                 LicenseNumber = number, ProductCode = product, Status = "Draft",
                 LicenseKind = entitlements!.LicenseKind, MaxCompanies = entitlements.MaxCompanies,
                 SubsystemsJson = entitlements.SubsystemsJson, GraceDays = entitlements.GraceDays, LastIssuedSequence = 0,
-                ValidFromUtc = request.ValidFromUtc, ValidUntilUtc = request.ValidUntilUtc, CreatedAtUtc = DateTimeOffset.UtcNow };
+                ValidFromUtc = request.ValidFromUtc, ValidUntilUtc = request.ValidUntilUtc, CreatedAtUtc = now };
             db.Licenses.Add(item);
             try { await db.SaveChangesAsync(ct); }
             catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
@@ -251,7 +259,7 @@ public static class VendorBusinessEndpoints
         customerMutations.MapPut("/{id:guid}", async (
             Guid id, UpdateCustomerRequest request, HttpContext context, IAntiforgery antiforgery,
             IAuthorizationService authorization, VendorDbContext db, UserManager<VendorAdminUser> users,
-            IVendorAuditWriter audit, CancellationToken ct) =>
+            IVendorAuditWriter audit, TimeProvider timeProvider, CancellationToken ct) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context))
                 return Results.BadRequest(new { error = "invalid_antiforgery_token" });
@@ -282,7 +290,7 @@ public static class VendorBusinessEndpoints
             item.CustomerNumber = number;
             item.LegalName = legalName;
             item.DisplayName = displayName;
-            item.UpdatedAtUtc = DateTimeOffset.UtcNow;
+            item.UpdatedAtUtc = timeProvider.GetUtcNow().ToUniversalTime();
             try
             {
                 await db.SaveChangesAsync(ct);
