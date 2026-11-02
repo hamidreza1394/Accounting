@@ -1,34 +1,69 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1800" height="360" viewBox="0 0 1800 360" role="img" aria-labelledby="title desc">
-<title id="title">چشم‌انداز شهر تهران و برج میلاد</title><desc id="desc">نمای پانورامای شهر تهران در هوای روشن، رشته‌کوه البرز و برج میلاد</desc>
+<title id="title">چشم‌انداز روشن تهران با برج میلاد</title>
+<desc id="desc">تصویرسازی پانورامای رنگی از برج میلاد با سازهٔ شاخص، خط آسمان تهران، کوه‌های البرز و آسمان روشن فیروزه‌ای و طلایی</desc>
 <defs>
- <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#69c6d4"/><stop offset=".58" stop-color="#c6f0e7"/><stop offset="1" stop-color="#ffe0b5"/></linearGradient>
- <linearGradient id="mountain" x2="0" y2="1"><stop stop-color="#fff2d8"/><stop offset=".45" stop-color="#78aeb0"/><stop offset="1" stop-color="#426f80"/></linearGradient>
- <linearGradient id="city" x2="0" y2="1"><stop stop-color="#28777b"/><stop offset="1" stop-color="#153e50"/></linearGradient>
- <linearGradient id="overlay" x2="1"><stop stop-color="#103b49" stop-opacity=".96"/><stop offset=".48" stop-color="#1a6c72" stop-opacity=".35"/><stop offset="1" stop-color="#e5ad5d" stop-opacity=".02"/></linearGradient>
- <pattern id="windows" width="18" height="16" patternUnits="userSpaceOnUse"><path d="M4 4h4v5H4zM12 4h3v5h-3z" fill="#b7d9ef" opacity=".42"/></pattern>
- <filter id="soft"><feGaussianBlur stdDeviation="13"/></filter>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#8de8f3"/><stop offset=".48" stop-color="#d5f5f4"/><stop offset="1" stop-color="#fff0d7"/></linearGradient>
+  <linearGradient id="mountain" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fffdf0"/><stop offset=".45" stop-color="#b4dfe2"/><stop offset="1" stop-color="#76b9c8"/></linearGradient>
+  <linearGradient id="city" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#3d9dbb"/><stop offset="1" stop-color="#22628e"/></linearGradient>
+  <linearGradient id="tower" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#f8ffff"/><stop offset=".3" stop-color="#a9e6ed"/><stop offset=".62" stop-color="#ffffff"/><stop offset="1" stop-color="#69b8d0"/></linearGradient>
+  <linearGradient id="towerHead" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffffff"/><stop offset=".5" stop-color="#8bd9e8"/><stop offset="1" stop-color="#4b9fc0"/></linearGradient>
+  <linearGradient id="goldGlow" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#f6c76c" stop-opacity="0"/><stop offset=".5" stop-color="#f6c76c" stop-opacity=".34"/><stop offset="1" stop-color="#f6c76c" stop-opacity="0"/></linearGradient>
+  <pattern id="windows" width="22" height="18" patternUnits="userSpaceOnUse"><rect x="5" y="4" width="4" height="7" rx="1" fill="#d9f8ff" opacity=".7"/><rect x="14" y="4" width="4" height="7" rx="1" fill="#fce5b8" opacity=".6"/></pattern>
+  <filter id="blur"><feGaussianBlur stdDeviation="18"/></filter>
+  <filter id="soft"><feGaussianBlur stdDeviation="5"/></filter>
 </defs>
 <rect width="1800" height="360" fill="url(#sky)"/>
-<circle cx="1320" cy="55" r="82" fill="#fff" opacity=".22" filter="url(#soft)"/>
-<path d="M0 207 100 175 210 195 325 132 430 180 550 91 670 170 790 77 900 158 1030 82 1155 173 1290 112 1430 186 1570 120 1800 184V360H0Z" fill="url(#mountain)" opacity=".8"/>
-<path d="m0 234 135-38 125 31 125-85 120 74 122-111 108 96 130-126 126 117 130-91 117 89 145-68 137 81 120-48 160 65v79H0Z" fill="#d8e6f2" opacity=".72"/>
-<path d="M0 265 120 240 240 254 370 221 500 255 650 214 800 256 930 225 1070 254 1200 216 1350 252 1500 226 1650 251 1800 220V360H0Z" fill="#7bb6aa" opacity=".48"/>
-<!-- Milad tower -->
-<g fill="#f3f7fb" stroke="#597b9d" stroke-width="2" opacity=".96">
- <path d="M895 344 907 177 916 150 925 177 937 344Z"/>
- <path d="M903 180 911 145 920 145 929 180 923 187 909 187Z"/>
- <path d="M906 151 911 120 916 97 920 120 925 151Z"/>
- <path d="M911 97 916 57 920 97Z"/>
- <path d="M899 177 906 166 934 166 940 177 934 187 906 187Z"/>
- <path d="M911 54 916 28 921 54Z"/>
- <path d="M916 28V4" fill="none" stroke-width="3"/>
+<circle cx="410" cy="58" r="94" fill="#fff" opacity=".28" filter="url(#blur)"/>
+<circle cx="410" cy="58" r="39" fill="#fff7dc" opacity=".52"/>
+<path d="M0 188 110 150 215 177 332 114 438 165 545 103 657 160 772 91 880 151 1004 82 1122 148 1235 105 1355 161 1476 109 1595 164 1710 120 1800 151V360H0Z" fill="url(#mountain)" opacity=".88"/>
+<path d="m0 222 128-38 116 25 116-75 122 68 120-96 118 76 132-94 125 81 127-65 124 69 132-47 118 64 122-45 120 63v152H0Z" fill="#eaf8f5" opacity=".82"/>
+<path d="M0 254 150 229 290 246 430 214 570 245 710 208 850 244 1000 211 1140 243 1285 208 1430 239 1575 211 1710 237 1800 222V360H0Z" fill="#8ec9cb" opacity=".55"/>
+<ellipse cx="970" cy="330" rx="420" ry="34" fill="#fff2d1" opacity=".62" filter="url(#soft)"/>
+<rect y="316" width="1800" height="44" fill="#d3f0ed" opacity=".65"/>
+<!-- skyline, foreground towers -->
+<g fill="#3985a7" opacity=".82">
+ <path d="M0 324V259h44v65H0zm55 0V233h38v91H55zm49 0V270h58v54h-58zm69 0V214h45v110h-45zm57 0V246h32v78h-32zm42 0V198h51v126h-51zm62 0V238h39v86h-39zm49 0V218h48v106h-48zm58 0V257h34v67h-34zm44 0V225h60v99h-60zm70 0V246h39v78h-39zm47 0V204h46v120h-46zm57 0V233h44v91h-44zm54 0V257h46v67h-46z"/>
+ <path d="M1115 324V245h43v79h-43zm52 0V214h58v110h-58zm68 0V238h42v86h-42zm52 0V196h50v128h-50zm60 0V230h46v94h-46zm56 0V211h62v113h-62zm72 0V250h48v74h-48zm58 0V220h55v104h-55zm65 0V245h51v79h-51zm61 0V207h46v117h-46zm56 0V238h59v86h-59z"/>
 </g>
-<g fill="#174a58" opacity=".94">
- <path d="M0 300h55v-73h22v73h31v-54h29v54h26v-91h38v91h26v-65h31v65h26v-83h40v83h23v-45h33v45h27v-100h43v100h30v-66h34v66h25v-82h40v82h26v-55h31v55h31v-75h38v75h29v-91h38v91h28v-58h38v58h30v-80h43v80h31v-54h36v54h30v-98h44v98h28v-61h37v61h28v-80h42v80h30v-53h39v53h30v-72h43v72h32v-98h44v98h31v-60h38v60h34v-80h42v80h28v-58h36v58h42v-94h46v94h38v-62h34v62h45v-80h38v80h44v-50h35v50h34v-69h44v69h42v-48h36v48h36v-82h44v82h30v-56h34v56h36v-77h42v77h40v-58h38v58h35v-89h42v89h34v-54h34v54h35v-72h42v72h36v-53h38v53h20v60H0Z"/>
+<g fill="url(#windows)" opacity=".74">
+ <path d="M55 233h38v91H55zm114-19h45v110h-45zm99-16h51v126h-51zm149 18h48v106h-48zm158-14h46v120h-46zm540 12h58v110h-58zm120-18h50v128h-50zm116 15h62v113h-62zm128-7h55v104h-55z"/>
 </g>
-<path d="M0 276h1800v84H0z" fill="url(#city)" opacity=".65"/>
-<path d="M0 225h1800v135H0z" fill="url(#windows)" opacity=".55"/>
-<path d="M0 0h1800v360H0z" fill="url(#overlay)"/>
-<path d="M1550 0h250v360h-250l-130-180Z" fill="#5eb4f0" opacity=".2"/>
-<path d="m1660 0 140 0v360h-140l-125-180Z" fill="#b7e0ff" opacity=".16"/>
+<g fill="none" stroke="#2d789e" stroke-width="3" opacity=".58">
+ <path d="M18 324v-65h27v65m34-91v91m92-110v110m26-82h-26m85-32v114m49-126v126m102-106v106m59-88v88m45-120v120m54-91v91m575-79v79m49-110v110m57-86v86m72-128v128m58-94v94m65-113v113m72-86v86m66-117v117m67-79v79"/>
+</g>
+<!-- iconic Milad Tower: antenna, crown, observation pod and tapered shaft -->
+<g transform="translate(0 0)">
+ <ellipse cx="982" cy="333" rx="90" ry="12" fill="#4c9fbb" opacity=".18" filter="url(#soft)"/>
+ <path d="M975 316 989 170 1002 316Z" fill="url(#tower)" stroke="#4e9ab7" stroke-width="2"/>
+ <path d="M979 318 989 183 995 318" fill="none" stroke="#ffffff" stroke-width="3" opacity=".9"/>
+ <path d="M989 184 989 52" stroke="#f7ffff" stroke-width="5" stroke-linecap="round"/>
+ <path d="M989 53 989 13" stroke="#3f8eae" stroke-width="2.5" stroke-linecap="round"/>
+ <path d="M975 178 965 160 969 139 978 126 1000 126 1009 139 1013 160 1003 178Z" fill="url(#towerHead)" stroke="#4c94b1" stroke-width="2"/>
+ <path d="M969 143 1009 143M966 157 1012 157M975 128 1003 128" stroke="#ffffff" stroke-width="2" opacity=".85"/>
+ <path d="M974 137 1004 170M1004 137 974 170M968 150 1010 150" stroke="#4b98b5" stroke-width="1.5" opacity=".72"/>
+ <path d="M978 125 982 110 989 103 996 110 1000 125Z" fill="#d9f8f6" stroke="#4d99b7" stroke-width="1.5"/>
+ <path d="M989 103V26" stroke="#f9ffff" stroke-width="4" stroke-linecap="round"/>
+ <path d="M982 190 975 316M996 190 1003 316" stroke="#4c9ab7" stroke-width="1.5" opacity=".55"/>
+ <path d="M978 212 1000 212M977 239 1001 239M975 270 1003 270M973 296 1005 296" stroke="#ffffff" stroke-width="2" opacity=".8"/>
+ <path d="M979 180 989 197 999 180M977 210 989 228 1001 210M975 240 989 259 1003 240M973 271 989 291 1005 271" fill="none" stroke="#5aa5bf" stroke-width="1.6" opacity=".75"/>
+ <path d="M956 316 989 301 1022 316" fill="none" stroke="#4c98b4" stroke-width="2" opacity=".6"/>
+</g>
+<!-- foreground skyline and glass office silhouettes -->
+<g fill="#246a91" opacity=".9">
+ <path d="M0 360V320h80v40zm88 0V298h44v62zm52 0V312h62v48zm70 0V286h58v74zm66 0V308h72v52zm82 0V278h50v82zm60 0V315h82v45zm92 0V300h48v60zm550 0V307h64v53zm72 0V284h52v76zm60 0V311h78v49zm88 0V291h52v69zm60 0V310h74v50zm82 0V277h58v83zm68 0V302h74v58zm84 0V287h62v73zm72 0V312h70v48z"/>
+</g>
+<g fill="url(#windows)" opacity=".75">
+ <path d="M0 320h80v40H0zm88-22h44v62H88zm122-12h58v74h-58zm82 22h72v52h-72zm82-30h50v82h-50zm60 37h82v45h-82zm550-8h64v53h-64zm72-23h52v76h-52zm60 27h78v49h-78zm88-20h52v69h-52zm60 19h74v50h-74zm82-33h58v83h-58zm68 25h74v58h-74z"/>
+</g>
+<!-- luminous architectural and finance motifs -->
+<g fill="none" stroke="#ffffff" stroke-linecap="round" opacity=".7">
+ <path d="M110 88h140M110 100h92M270 65v62m13-52h66m-66 13h48m-48 13h61" stroke-width="2"/>
+ <circle cx="322" cy="76" r="35" stroke="#4eafd0" stroke-width="2"/><path d="M322 41v35l28 20" stroke="#4eafd0" stroke-width="3"/>
+ <path d="M580 68v70m18-54v54m18-88v88m18-40v40" stroke="#42a9d1" stroke-width="5" opacity=".55"/>
+ <path d="M1215 78h85m-85 14h58m-58 14h72" stroke="#58b5ce" stroke-width="2"/>
+ <circle cx="1390" cy="88" r="24" stroke="#57b8d0" stroke-width="2"/><path d="M1390 64v24l19 10" stroke="#57b8d0" stroke-width="2"/>
+</g>
+<g fill="#fff" opacity=".68"><circle cx="170" cy="54" r="3"/><circle cx="190" cy="72" r="2"/><circle cx="740" cy="64" r="3"/><circle cx="1150" cy="62" r="2.5"/><circle cx="1275" cy="120" r="2"/></g>
+<path d="M0 326H1800" stroke="#fff" stroke-width="3" opacity=".6"/>
+<path d="M0 345H1800" stroke="url(#goldGlow)" stroke-width="10" opacity=".75"/>
 </svg>
