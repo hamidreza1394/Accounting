@@ -143,10 +143,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
           className={'faranou-sidebar faranou-sidebar--premium ' + (mobileMenuOpen ? 'is-open' : '')}
           aria-label="ناوبری فرانو"
         >
-          <div className="faranou-sidebar-brand">
-            <FaranouLogo size={36} tone="dark" />
-          </div>
-          <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-3" aria-label="منوی اصلی">
+          <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4" aria-label="منوی اصلی">
             <p className="mb-3 px-3 text-[10px] font-bold tracking-wide text-sky-200/70">منوی اصلی</p>
             <ul className="space-y-1.5">
               {navigation.map(({ label, icon: Icon, active, divider }) => (
