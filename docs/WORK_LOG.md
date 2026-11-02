@@ -1985,3 +1985,12 @@
 - تست regression برای متن ثابت خوشامدگویی و حذف نام کاربر از زیرعنوان اضافه شد.
 - بدون تغییر API، مجوز، احراز هویت، دیتابیس، migration یا وابستگی؛ تست‌ها/Build و مرورگر در این نشست اجرا نشده‌اند و باید CI بررسی شود.
 - گزارش: docs/handoffs/ISSUE-425-dashboard-vibrant-visuals.md.
+
+
+## 2026-11-02 — Issue #427: روشن‌سازی سایدبار و بازطراحی برج میلاد
+- علت بازخورد #426 پذیرفته شد: سایدبار تیره بود و تصویر برج میلاد به‌صورت قابل تشخیص بازطراحی نشده بود.
+- هدر اکنون از طیف navy/cyan/blue/gold صفحه ورود استفاده می‌کند؛ سایدبار به سطح روشن white/ice-blue با متن تیره و active state آبی-فیروزه‌ای تغییر کرد.
+- پانورامای SVG به‌صورت کامل جایگزین شد: برج میلاد با تاج، سکوی دید، آنتن و شفت سازه‌ای، skyline تهران و البرز، آسمان فیروزه‌ای و نور گرم. overlay بنر روشن شد تا جزئیات تصویر حفظ شود.
+- توکن‌های CSS برای پالت UI تعریف شد؛ asset تصویر محلی باقی ماند؛ هیچ dependency، CDN، API، authorization، authentication، tenant/fiscal-period یا schema تغییر نکرد.
+- تست‌های AppShell و Dashboard برای variantهای بصری جدید اضافه شدند. اجرای Vitest/typecheck/build/check:offline و visual QA در این نشست انجام نشده و باید در CI/مرورگر تأیید شوند.
+- گزارش: docs/handoffs/ISSUE-427-light-luminous-dashboard.md.
