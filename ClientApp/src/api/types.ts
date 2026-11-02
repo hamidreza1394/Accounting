@@ -271,3 +271,85 @@ export function parseAntiforgeryToken(value: unknown): AntiforgeryToken {
     requestToken: readString(value, 'requestToken', 'antiforgery'),
   };
 }
+
+export type MyProfile = {
+  username: string;
+  firstName: string | null;
+  lastName: string | null;
+  emailAddress: string | null;
+  cellPhoneNumber: string | null;
+  isEmailAddressVerified: boolean;
+  isCellPhoneNumberVerified: boolean;
+  lastLoginDateTime: string | null;
+  insertDateTime: string;
+};
+
+export type LoginHistoryEventType =
+  | 'LoginSucceeded'
+  | 'LoginFailed'
+  | 'LoginDeniedInactive'
+  | 'LoginDeniedEnrollmentPending'
+  | 'LogoutSucceeded';
+
+export type LoginHistoryItem = {
+  eventType: LoginHistoryEventType;
+  occurredAtUtc: string;
+  ipAddress: string | null;
+};
+
+export type ChangeMyPasswordRequest = {
+  currentPassword: string;
+  newPassword: string;
+  confirmNewPassword: string;
+};
+
+const loginHistoryEventTypes: readonly LoginHistoryEventType[] = [
+  'LoginSucceeded',
+  'LoginFailed',
+  'LoginDeniedInactive',
+  'LoginDeniedEnrollmentPending',
+  'LogoutSucceeded',
+];
+
+function readIsoDateTime(source: JsonObject, key: string, what: string, nullable = false): string | null {
+  const value = readNullableString(source, key, what);
+  if (value === null) {
+    if (nullable) return null;
+    throw new ContractError(`${what}.${key}`);
+  }
+  if (!Number.isFinite(Date.parse(value))) {
+    throw new ContractError(`${what}.${key}`);
+  }
+  return value;
+}
+
+export function parseMyProfile(value: unknown): MyProfile {
+  if (!isObject(value)) throw new ContractError('myProfile');
+  return {
+    username: readString(value, 'username', 'myProfile'),
+    firstName: readNullableString(value, 'firstName', 'myProfile'),
+    lastName: readNullableString(value, 'lastName', 'myProfile'),
+    emailAddress: readNullableString(value, 'emailAddress', 'myProfile'),
+    cellPhoneNumber: readNullableString(value, 'cellPhoneNumber', 'myProfile'),
+    isEmailAddressVerified: readBoolean(value, 'isEmailAddressVerified', 'myProfile'),
+    isCellPhoneNumberVerified: readBoolean(value, 'isCellPhoneNumberVerified', 'myProfile'),
+    lastLoginDateTime: readIsoDateTime(value, 'lastLoginDateTime', 'myProfile', true),
+    insertDateTime: readIsoDateTime(value, 'insertDateTime', 'myProfile')!,
+  };
+}
+
+export function parseLoginHistory(value: unknown): LoginHistoryItem[] {
+  if (!Array.isArray(value)) throw new ContractError('loginHistory');
+  return value.map((item) => {
+    if (!isObject(item)) throw new ContractError('loginHistory.item');
+    const eventType = readString(item, 'eventType', 'loginHistory.item');
+    if (!(loginHistoryEventTypes as readonly string[]).includes(eventType)) {
+      throw new ContractError('loginHistory.item.eventType');
+    }
+    return {
+      eventType: eventType as LoginHistoryEventType,
+      occurredAtUtc: readIsoDateTime(item, 'occurredAtUtc', 'loginHistory.item')!,
+      ipAddress: readNullableString(item, 'ipAddress', 'loginHistory.item'),
+    };
+  });
+}
