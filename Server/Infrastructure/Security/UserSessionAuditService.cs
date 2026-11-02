@@ -23,7 +23,7 @@ public sealed class UserSessionAuditService
         string? correlationId,
         CancellationToken cancellationToken = default)
     {
-        var userId = Tenancy.CompanyAccessService.GetUserId(principal);
+        var userId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal);
         if (userId is null)
         {
             return;
