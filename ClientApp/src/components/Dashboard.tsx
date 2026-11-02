@@ -42,7 +42,7 @@ export function Dashboard({ session, context, onUnauthenticated }: DashboardProp
           </span>
           <h1 className="mt-3 text-2xl font-black leading-tight sm:text-3xl xl:text-[34px]">به سامانه یکپارچه فرانو خوش آمدید</h1>
           <p className="mt-2 max-w-xl text-sm leading-7 text-blue-50/90 sm:text-base">
-            {session.fullName}، مدیریت هوشمند کسب‌وکار با دقت، شفافیت و امنیت بیشتر.
+            مدیریت هوشمند کسب‌وکار با دقت، شفافیت و امنیت بیشتر.
           </p>
         </div>
       </section>

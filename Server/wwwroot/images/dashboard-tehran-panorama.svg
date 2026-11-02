@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1800" height="360" viewBox="0 0 1800 360" role="img" aria-labelledby="title desc">
 <title id="title">چشم‌انداز شهر تهران و برج میلاد</title><desc id="desc">نمای پانورامای شهر تهران در هوای روشن، رشته‌کوه البرز و برج میلاد</desc>
 <defs>
- <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#8cc8f4"/><stop offset=".58" stop-color="#d5eaff"/><stop offset="1" stop-color="#f4e9d6"/></linearGradient>
- <linearGradient id="mountain" x2="0" y2="1"><stop stop-color="#e8f2fa"/><stop offset=".45" stop-color="#7899b9"/><stop offset="1" stop-color="#496d91"/></linearGradient>
- <linearGradient id="city" x2="0" y2="1"><stop stop-color="#284f76"/><stop offset="1" stop-color="#102f52"/></linearGradient>
- <linearGradient id="overlay" x2="1"><stop stop-color="#102f58" stop-opacity=".96"/><stop offset=".48" stop-color="#174d7e" stop-opacity=".45"/><stop offset="1" stop-color="#1e73b9" stop-opacity=".04"/></linearGradient>
+ <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#69c6d4"/><stop offset=".58" stop-color="#c6f0e7"/><stop offset="1" stop-color="#ffe0b5"/></linearGradient>
+ <linearGradient id="mountain" x2="0" y2="1"><stop stop-color="#fff2d8"/><stop offset=".45" stop-color="#78aeb0"/><stop offset="1" stop-color="#426f80"/></linearGradient>
+ <linearGradient id="city" x2="0" y2="1"><stop stop-color="#28777b"/><stop offset="1" stop-color="#153e50"/></linearGradient>
+ <linearGradient id="overlay" x2="1"><stop stop-color="#103b49" stop-opacity=".96"/><stop offset=".48" stop-color="#1a6c72" stop-opacity=".35"/><stop offset="1" stop-color="#e5ad5d" stop-opacity=".02"/></linearGradient>
  <pattern id="windows" width="18" height="16" patternUnits="userSpaceOnUse"><path d="M4 4h4v5H4zM12 4h3v5h-3z" fill="#b7d9ef" opacity=".42"/></pattern>
  <filter id="soft"><feGaussianBlur stdDeviation="13"/></filter>
 </defs>
@@ -12,7 +12,7 @@
 <circle cx="1320" cy="55" r="82" fill="#fff" opacity=".22" filter="url(#soft)"/>
 <path d="M0 207 100 175 210 195 325 132 430 180 550 91 670 170 790 77 900 158 1030 82 1155 173 1290 112 1430 186 1570 120 1800 184V360H0Z" fill="url(#mountain)" opacity=".8"/>
 <path d="m0 234 135-38 125 31 125-85 120 74 122-111 108 96 130-126 126 117 130-91 117 89 145-68 137 81 120-48 160 65v79H0Z" fill="#d8e6f2" opacity=".72"/>
-<path d="M0 265 120 240 240 254 370 221 500 255 650 214 800 256 930 225 1070 254 1200 216 1350 252 1500 226 1650 251 1800 220V360H0Z" fill="#6689aa" opacity=".42"/>
+<path d="M0 265 120 240 240 254 370 221 500 255 650 214 800 256 930 225 1070 254 1200 216 1350 252 1500 226 1650 251 1800 220V360H0Z" fill="#7bb6aa" opacity=".48"/>
 <!-- Milad tower -->
 <g fill="#f3f7fb" stroke="#597b9d" stroke-width="2" opacity=".96">
  <path d="M895 344 907 177 916 150 925 177 937 344Z"/>
@@ -23,7 +23,7 @@
  <path d="M911 54 916 28 921 54Z"/>
  <path d="M916 28V4" fill="none" stroke-width="3"/>
 </g>
-<g fill="#173d63" opacity=".94">
+<g fill="#174a58" opacity=".94">
  <path d="M0 300h55v-73h22v73h31v-54h29v54h26v-91h38v91h26v-65h31v65h26v-83h40v83h23v-45h33v45h27v-100h43v100h30v-66h34v66h25v-82h40v82h26v-55h31v55h31v-75h38v75h29v-91h38v91h28v-58h38v58h30v-80h43v80h31v-54h36v54h30v-98h44v98h28v-61h37v61h28v-80h42v80h30v-53h39v53h30v-72h43v72h32v-98h44v98h31v-60h38v60h34v-80h42v80h28v-58h36v58h42v-94h46v94h38v-62h34v62h45v-80h38v80h44v-50h35v50h34v-69h44v69h42v-48h36v48h36v-82h44v82h30v-56h34v56h36v-77h42v77h40v-58h38v58h35v-89h42v89h34v-54h34v54h35v-72h42v72h36v-53h38v53h20v60H0Z"/>
 </g>
 <path d="M0 276h1800v84H0z" fill="url(#city)" opacity=".65"/>
