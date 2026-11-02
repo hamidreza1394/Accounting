@@ -872,12 +872,49 @@
 }
 
 
+/* Issue #427 visual tokens sourced from the existing Faranou login palette. */
+:root {
+  --faranou-login-navy-950: #050f2a;
+  --faranou-login-navy-900: #08224f;
+  --faranou-login-navy-800: #0b3170;
+  --faranou-login-cyan: #5cebf6;
+  --faranou-login-cyan-soft: #8ff0fa;
+  --faranou-login-sky: #2fbbf5;
+  --faranou-login-blue: #3590f5;
+  --faranou-login-gold: #f4c96b;
+  --faranou-workspace-ice-white: #fbfeff;
+  --faranou-workspace-ice: #f0f8ff;
+  --faranou-workspace-ice-bg: #f2f8ff;
+  --faranou-workspace-paper: #f9fbff;
+  --faranou-workspace-paper-blue: #eef7ff;
+  --faranou-workspace-ink: #173a5f;
+  --faranou-workspace-muted: #47749a;
+  --faranou-workspace-nav: #294d70;
+  --faranou-workspace-nav-hover: #124e84;
+  --faranou-workspace-subtle: #557797;
+  --faranou-workspace-border: #cfe5f8;
+  --faranou-workspace-divider: #d5e7f5;
+  --faranou-workspace-chip-border: #c6dced;
+  --faranou-workspace-chip-bg: #f7fbff;
+  --faranou-workspace-hover-border: #c9e6f8;
+  --faranou-workspace-active-start: #147fca;
+  --faranou-workspace-active-mid: #258fe0;
+  --faranou-workspace-active-end: #326cce;
+  --faranou-workspace-footer-title: #126a9e;
+  --faranou-workspace-footer-text: #55738e;
+  --faranou-welcome-cyan: #d8f4f8;
+  --faranou-welcome-ice: #effaff;
+  --faranou-welcome-warm: #ffefd5;
+  --faranou-welcome-title: #12345a;
+  --faranou-welcome-copy: #285574;
+  --faranou-welcome-label: #17608f;
+}
 /* Issue #427 — bright login-aligned palette: luminous navy header + airy, light navigation. */
 .faranou-workspace {
   background:
     radial-gradient(ellipse at 78% 0%, rgb(77 190 246 / .14), transparent 34%),
     radial-gradient(ellipse at 8% 68%, rgb(244 201 107 / .13), transparent 30%),
-    linear-gradient(135deg, #f2f8ff 0%, #f9fbff 48%, #eef7ff 100%);
+    linear-gradient(135deg, var(--faranou-workspace-ice-bg) 0%, var(--faranou-workspace-paper) 48%, var(--faranou-workspace-paper-blue) 100%);
 }
 .faranou-topbar--login-palette {
   background:
@@ -903,7 +940,7 @@
   border-color: rgb(92 235 246 / .72);
   background: linear-gradient(120deg, rgb(92 235 246 / .2), rgb(53 144 245 / .14));
 }
-.faranou-topbar--login-palette .faranou-context-chevron { color: #8ff0fa; }
+.faranou-topbar--login-palette .faranou-context-chevron { color: var(--faranou-login-cyan-soft); }
 .faranou-topbar--login-palette .faranou-header-user { color: #f5fbff; }
 .faranou-topbar--login-palette .faranou-user-avatar {
   border-color: #8cefff;
@@ -918,13 +955,13 @@
 .faranou-sidebar--light {
   position: sticky;
   isolation: isolate;
-  border-inline-start: 1px solid #cfe5f8;
+  border-inline-start: 1px solid var(--faranou-workspace-border);
   background:
     radial-gradient(ellipse at 10% 5%, rgb(92 235 246 / .23), transparent 36%),
     radial-gradient(ellipse at 96% 88%, rgb(244 201 107 / .2), transparent 34%),
     radial-gradient(ellipse at 88% 36%, rgb(53 144 245 / .10), transparent 34%),
-    linear-gradient(180deg, #fbfeff 0%, #f0f8ff 48%, #e9f4ff 100%);
-  color: #173a5f;
+    linear-gradient(180deg, var(--faranou-workspace-ice-white) 0%, var(--faranou-workspace-ice) 48%, #e9f4ff 100%);
+  color: var(--faranou-workspace-ink);
   box-shadow: 7px 0 26px rgb(29 87 139 / .08), inset -1px 0 0 rgb(255 255 255 / .9);
 }
 .faranou-sidebar--light::before {
@@ -941,24 +978,24 @@
 }
 .faranou-sidebar--light nav { position: relative; z-index: 1; }
 .faranou-sidebar--light nav > p {
-  color: #47749a;
+  color: var(--faranou-workspace-muted);
   letter-spacing: .045em;
 }
-.faranou-sidebar--light nav li.border-t { border-color: #d5e7f5; }
+.faranou-sidebar--light nav li.border-t { border-color: var(--faranou-workspace-divider); }
 .faranou-sidebar--light .faranou-nav-disabled {
   border: 1px solid transparent;
-  color: #294d70;
+  color: var(--faranou-workspace-nav);
   transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
 }
 .faranou-sidebar--light .faranou-nav-disabled:hover {
-  border-color: #c9e6f8;
+  border-color: var(--faranou-workspace-hover-border);
   background: rgb(255 255 255 / .76);
-  color: #124e84;
+  color: var(--faranou-workspace-nav-hover);
 }
 .faranou-sidebar--light .faranou-nav-disabled > span:last-child {
-  border-color: #c6dced;
-  background: #f7fbff;
-  color: #557797;
+  border-color: var(--faranou-workspace-chip-border);
+  background: var(--faranou-workspace-chip-bg);
+  color: var(--faranou-workspace-subtle);
 }
 .faranou-sidebar--light .faranou-nav-active {
   position: relative;
@@ -966,7 +1003,7 @@
   border: 1px solid rgb(92 190 242 / .48);
   background:
     radial-gradient(ellipse at 12% 0%, rgb(255 255 255 / .32), transparent 52%),
-    linear-gradient(112deg, #147fca 0%, #258fe0 52%, #326cce 100%);
+    linear-gradient(112deg, var(--faranou-workspace-active-start) 0%, var(--faranou-workspace-active-mid) 52%, var(--faranou-workspace-active-end) 100%);
   color: #fff;
   box-shadow: 0 8px 20px rgb(30 111 184 / .22), inset 0 1px 0 rgb(255 255 255 / .28);
 }
@@ -976,7 +1013,7 @@
   inset-inline-start: 0;
   width: 3px;
   border-radius: 4px;
-  background: #f4c96b;
+  background: var(--faranou-login-gold);
   content: "";
 }
 .faranou-sidebar--light .faranou-sidebar-footer {
@@ -989,13 +1026,13 @@
   box-shadow: 0 6px 18px rgb(34 103 153 / .08), inset 0 1px 0 #fff;
   backdrop-filter: blur(10px);
 }
-.faranou-sidebar--light .faranou-sidebar-footer > div { color: #126a9e; }
-.faranou-sidebar--light .faranou-sidebar-footer p { color: #55738e; }
+.faranou-sidebar--light .faranou-sidebar-footer > div { color: var(--faranou-workspace-footer-title); }
+.faranou-sidebar--light .faranou-sidebar-footer p { color: var(--faranou-workspace-footer-text); }
 .faranou-welcome--milad {
   border-color: rgb(255 255 255 / .95);
   background:
     radial-gradient(ellipse at 8% 100%, rgb(92 235 246 / .24), transparent 42%),
-    linear-gradient(115deg, #d8f4f8 0%, #effaff 52%, #ffefd5 100%);
+    linear-gradient(115deg, var(--faranou-welcome-cyan) 0%, var(--faranou-welcome-ice) 52%, var(--faranou-welcome-warm) 100%);
   box-shadow: 0 16px 38px rgb(30 104 158 / .14), inset 0 1px 0 #fff;
 }
 .faranou-welcome--milad .faranou-welcome-image {
@@ -1011,17 +1048,17 @@
     rgb(237 249 252 / .02) 76%);
 }
 .faranou-welcome--milad h1 {
-  color: #12345a;
+  color: var(--faranou-welcome-title);
   text-shadow: 0 1px 0 rgb(255 255 255 / .65), 0 4px 18px rgb(255 255 255 / .42);
 }
 .faranou-welcome--milad p {
-  color: #285574;
+  color: var(--faranou-welcome-copy);
   text-shadow: 0 1px 0 rgb(255 255 255 / .75);
 }
 .faranou-welcome--milad > div.relative > span {
   border-color: rgb(46 137 193 / .22);
   background: linear-gradient(110deg, rgb(255 255 255 / .92), rgb(223 246 252 / .88));
-  color: #17608f;
+  color: var(--faranou-welcome-label);
   box-shadow: 0 4px 14px rgb(37 111 164 / .09), inset 0 1px 0 #fff;
 }
 .faranou-welcome--milad > div.pointer-events-none {
