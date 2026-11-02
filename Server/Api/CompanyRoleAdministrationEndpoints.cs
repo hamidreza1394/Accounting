@@ -80,15 +80,16 @@ public static class CompanyRoleAdministrationEndpoints
         var authorization = await UserAdministrationEndpoints.AuthorizeInstallationAdministratorAsync(principal, database, cancellationToken);
         if (authorization is not null) return authorization;
 
-        var permissions = await database.PermissionDefinitions.AsNoTracking()
+        var registeredPermissions = await database.PermissionDefinitions.AsNoTracking()
             .OrderBy(permission => permission.Code)
-            .Select(permission => new PermissionCatalogItemResponse(
-                permission.Id,
-                permission.Code,
-                permission.Name,
-                permission.Description,
-                permission.Code.Split('.')[0]))
+            .Select(permission => new { permission.Id, permission.Code, permission.Name, permission.Description })
             .ToListAsync(cancellationToken);
+        var permissions = registeredPermissions.Select(permission => new PermissionCatalogItemResponse(
+            permission.Id,
+            permission.Code,
+            permission.Name,
+            permission.Description,
+            permission.Code.Split('.')[0])).ToArray();
 
         SetNoStore(httpContext);
         return TypedResults.Ok(permissions);
@@ -259,8 +260,10 @@ public static class CompanyRoleAdministrationEndpoints
         var role = await database.CompanyRoles.FirstOrDefaultAsync(
             current => current.Id == roleId && current.TenantId == companyId && current.IsActive,
             cancellationToken);
+        var company = await database.Companies.FirstOrDefaultAsync(
+            current => current.Id == companyId && current.IsActive, cancellationToken);
         var user = await database.Users.FirstOrDefaultAsync(current => current.Id == userId && current.IsActive, cancellationToken);
-        if (role is null || user is null) return TypedResults.NotFound();
+        if (role is null || company is null || user is null) return TypedResults.NotFound();
 
         var membership = await database.UserCompanyMemberships.FirstOrDefaultAsync(
             current => current.UserId == userId && current.TenantId == companyId,
@@ -272,7 +275,7 @@ public static class CompanyRoleAdministrationEndpoints
             {
                 UserId = userId,
                 TenantId = companyId,
-                Company = role.Company,
+                Company = company,
                 RoleId = roleId,
                 Role = role,
                 IsActive = true,
