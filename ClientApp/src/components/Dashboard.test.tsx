@@ -29,6 +29,7 @@ describe('Dashboard', () => {
     expect(panorama).toHaveAttribute('src', '/images/dashboard-tehran-panorama.svg');
     expect(panorama).toHaveAttribute('aria-hidden', 'true');
     expect(panorama.closest('section')).toHaveClass('faranou-welcome');
+    expect(panorama.closest('section')).toHaveClass('faranou-welcome--milad');
     expect(screen.getByRole('heading', { name: /به سامانه یکپارچه فرانو خوش آمدید/ }).closest('section')).toHaveClass('faranou-welcome');
   });
 
