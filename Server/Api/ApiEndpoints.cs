@@ -45,9 +45,12 @@ public static class ApiEndpoints
 			.AddEndpointFilter<ApiResponseFilter>();
 
 		api.MapGet("/session", GetSession);
-		api.MapGet("/me/profile", GetMyProfileAsync);
-		api.MapGet("/me/login-history", GetMyLoginHistoryAsync);
+		api.MapGet("/me/profile", GetMyProfileAsync)
+			.RequireAuthorization(policy => policy.RequireClaim("AccountKind", "User"));
+		api.MapGet("/me/login-history", GetMyLoginHistoryAsync)
+			.RequireAuthorization(policy => policy.RequireClaim("AccountKind", "User"));
 		api.MapPost("/me/password", ChangeMyPasswordAsync)
+			.RequireAuthorization(policy => policy.RequireClaim("AccountKind", "User"))
 			.RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
 		api.MapPost("/session/logout", LogoutAsync)
 			.RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
