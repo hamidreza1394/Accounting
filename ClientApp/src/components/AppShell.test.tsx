@@ -25,6 +25,12 @@ describe('AppShell', () => {
     const accountingLabels = screen.getAllByText('حسابداری');
     expect(accountingLabels.some((label) => label.closest('[aria-disabled="true"]'))).toBe(true);
   });
+  it('uses the bright login-aligned header and light sidebar visual variants', () => {
+    render(<AppShell session={session} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
+    expect(document.querySelector('.faranou-topbar')).toHaveClass('faranou-topbar--login-palette');
+    expect(document.querySelector('.faranou-sidebar')).toHaveClass('faranou-sidebar--light');
+  });
+
   it('shows the full read-only and reporting-only access explanation', () => {
     const readOnlyContext: SelectedContext = {
       ...context,
