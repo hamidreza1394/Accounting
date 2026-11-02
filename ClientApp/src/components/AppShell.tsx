@@ -161,7 +161,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, onPasswo
   const [settingsOpen, setSettingsOpen] = useState(true);
   const [userMgmtOpen, setUserMgmtOpen] = useState(true);
   const [accountOpen, setAccountOpen] = useState(false);
-  const accountTriggerRef = useRef<HTMLButtonElement>(null);
+  const accountTriggerRef = useRef<HTMLButtonElement | null>(null);
   const readOnly = context.fiscalPeriod.accessMode === 'readOnly';
 
   async function handleLogout() {
