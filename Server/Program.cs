@@ -193,6 +193,8 @@ if (!setupRequired)
     // The single server-side decision point for company (tenant) access. It reads the
     // memberships from the database on each request; it never trusts a client tenant id.
     builder.Services.AddScoped<Infrastructure.Tenancy.CompanyAccessService>();
+    builder.Services.AddScoped<Infrastructure.Security.UserPasswordService>();
+    builder.Services.AddScoped<Infrastructure.Security.UserSessionAuditService>();
 
     // The company and fiscal period a user chose for the current sign-in (D-031). The cookie
     // helper is stateless; the service validates every stored choice against the database.
