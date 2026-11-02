@@ -45,6 +45,10 @@ public static class ApiEndpoints
 			.AddEndpointFilter<ApiResponseFilter>();
 
 		api.MapGet("/session", GetSession);
+		api.MapGet("/me/profile", GetMyProfileAsync);
+		api.MapGet("/me/login-history", GetMyLoginHistoryAsync);
+		api.MapPost("/me/password", ChangeMyPasswordAsync)
+			.RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
 		api.MapPost("/session/logout", LogoutAsync)
 			.RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
 		api.MapGet("/antiforgery/token", GetAntiforgeryToken)
@@ -276,7 +280,8 @@ public static class ApiEndpoints
 	/// <summary>POST /api/v1/session/logout — ends the session (anti-forgery protected).</summary>
 	public static async Task<Results<NoContent, ProblemHttpResult>> LogoutAsync(
 		HttpContext httpContext,
-		[FromServices] IAntiforgery antiforgery)
+		[FromServices] IAntiforgery antiforgery,
+		CancellationToken cancellationToken)
 	{
 		if (!await antiforgery.IsRequestValidAsync(httpContext))
 		{
@@ -285,11 +290,163 @@ public static class ApiEndpoints
 				statusCode: StatusCodes.Status400BadRequest);
 		}
 
-		await httpContext.SignOutAsync(Infrastructure.Security.Utility.AuthenticationScheme);
+		// Logout must never be blocked by an unavailable audit store. Record the explicit
+		// event when the customer database is available, then always clear the authentication
+		// and work-context cookies.
+		var sessionAudit = httpContext.RequestServices.GetService<Infrastructure.Security.UserSessionAuditService>();
+		if (sessionAudit is not null)
+		{
+			try
+			{
+				await sessionAudit.RecordLogoutAsync(
+					httpContext.User,
+					httpContext.Connection.RemoteIpAddress?.ToString(),
+					System.Diagnostics.Activity.Current?.Id ?? httpContext.TraceIdentifier,
+					cancellationToken);
+			}
+			catch (Exception exception)
+			{
+				httpContext.RequestServices.GetService<ILoggerFactory>()?
+					.CreateLogger(typeof(ApiEndpoints).FullName!)?
+					.LogError(exception, "Could not persist the explicit logout audit event.");
+			}
+		}
 
+		await httpContext.SignOutAsync(Infrastructure.Security.Utility.AuthenticationScheme);
 		httpContext.RequestServices.GetService<Infrastructure.Tenancy.WorkContextCookie>()?.Delete(httpContext);
+		httpContext.Response.Headers.CacheControl = "no-store";
 
 		return TypedResults.NoContent();
+	}
+
+	/// <summary>GET /api/v1/me/profile — safe profile fields of the authenticated company user only.</summary>
+	public static async Task<Results<Ok<MyProfileResponse>, UnauthorizedHttpResult, NotFound>> GetMyProfileAsync(
+		HttpContext httpContext,
+		ClaimsPrincipal user,
+		[FromServices] Data.DatabaseContext databaseContext,
+		CancellationToken cancellationToken)
+	{
+		var userId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(user);
+		if (userId is null)
+		{
+			return TypedResults.Unauthorized();
+		}
+
+		httpContext.Response.Headers.CacheControl = "no-store";
+		httpContext.Response.Headers.Pragma = "no-cache";
+
+		var profile = await databaseContext.Users
+			.AsNoTracking()
+			.Where(account => account.Id == userId.Value)
+			.Select(account => new MyProfileResponse(
+				account.Username ?? string.Empty,
+				account.FirstName,
+				account.LastName,
+				account.EmailAddress,
+				account.CellPhoneNumber,
+				account.IsEmailAddressVerified,
+				account.IsCellPhoneNumberVerified,
+				account.LastLoginDateTime,
+				account.InsertDateTime))
+			.FirstOrDefaultAsync(cancellationToken);
+
+		return profile is null ? TypedResults.NotFound() : TypedResults.Ok(profile);
+	}
+
+	/// <summary>GET /api/v1/me/login-history — authentication events of the current user only.</summary>
+	public static async Task<Results<Ok<IReadOnlyList<LoginHistoryItemResponse>>, UnauthorizedHttpResult>> GetMyLoginHistoryAsync(
+		HttpContext httpContext,
+		ClaimsPrincipal user,
+		[FromServices] Data.DatabaseContext databaseContext,
+		int take,
+		CancellationToken cancellationToken)
+	{
+		var userId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(user);
+		if (userId is null)
+		{
+			return TypedResults.Unauthorized();
+		}
+
+		httpContext.Response.Headers.CacheControl = "no-store";
+		httpContext.Response.Headers.Pragma = "no-cache";
+		var pageSize = Math.Clamp(take, 1, 100);
+
+		var events = await databaseContext.SecurityAuditEvents
+			.AsNoTracking()
+			.Where(item => item.UserId == userId.Value)
+			.Where(item =>
+				item.EventType == "LoginSucceeded" ||
+				item.EventType == "LoginFailed" ||
+				item.EventType == "LoginDeniedInactive" ||
+				item.EventType == "LoginDeniedEnrollmentPending" ||
+				item.EventType == "LogoutSucceeded")
+			.OrderByDescending(item => item.OccurredAtUtc)
+			.ThenByDescending(item => item.Id)
+			.Take(pageSize)
+			.Select(item => new LoginHistoryItemResponse(
+				item.EventType,
+				item.OccurredAtUtc,
+				item.IpAddress))
+			.ToListAsync(cancellationToken);
+
+		return TypedResults.Ok<IReadOnlyList<LoginHistoryItemResponse>>(events);
+	}
+
+	/// <summary>POST /api/v1/me/password — changes the password of the authenticated company user.</summary>
+	public static async Task<IResult> ChangeMyPasswordAsync(
+		HttpContext httpContext,
+		[FromBody] ChangeMyPasswordRequest request,
+		[FromServices] IAntiforgery antiforgery,
+		[FromServices] Infrastructure.Security.UserPasswordService passwordService,
+		CancellationToken cancellationToken)
+	{
+		if (request is null || !await antiforgery.IsRequestValidAsync(httpContext))
+		{
+			return TypedResults.Problem(
+				title: "درخواست نامعتبر است. صفحه را دوباره بارگذاری کنید.",
+				statusCode: StatusCodes.Status400BadRequest);
+		}
+
+		var userId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(httpContext.User);
+		if (userId is null)
+		{
+			return TypedResults.Unauthorized();
+		}
+
+		httpContext.Response.Headers.CacheControl = "no-store";
+		httpContext.Response.Headers.Pragma = "no-cache";
+
+		var result = await passwordService.ChangePasswordAsync(
+			userId.Value,
+			request.CurrentPassword,
+			request.NewPassword,
+			request.ConfirmNewPassword,
+			httpContext.Connection.RemoteIpAddress?.ToString(),
+			cancellationToken);
+
+		if (result.Outcome == Infrastructure.Security.ChangePasswordOutcome.Changed)
+		{
+			// The credential stamp invalidates every old cookie on its next request. Sign out
+			// this browser immediately as well, so the user explicitly signs in with the new secret.
+			await httpContext.SignOutAsync(Infrastructure.Security.Utility.AuthenticationScheme);
+			httpContext.RequestServices.GetService<Infrastructure.Tenancy.WorkContextCookie>()?.Delete(httpContext);
+			return TypedResults.NoContent();
+		}
+
+		var (title, statusCode) = result.Outcome switch
+		{
+			Infrastructure.Security.ChangePasswordOutcome.AccountUnavailable =>
+				("حساب کاربری در دسترس نیست.", StatusCodes.Status404NotFound),
+			Infrastructure.Security.ChangePasswordOutcome.CurrentPasswordInvalid =>
+				("رمز فعلی صحیح نیست.", StatusCodes.Status400BadRequest),
+			Infrastructure.Security.ChangePasswordOutcome.ConfirmationMismatch =>
+				("رمز جدید و تکرار آن یکسان نیست.", StatusCodes.Status400BadRequest),
+			Infrastructure.Security.ChangePasswordOutcome.NewPasswordMustDiffer =>
+				("رمز جدید باید با رمز فعلی متفاوت باشد.", StatusCodes.Status400BadRequest),
+			_ => ("رمز جدید شرایط امنیتی لازم را ندارد.", StatusCodes.Status400BadRequest),
+		};
+
+		return TypedResults.Problem(title: title, statusCode: statusCode);
 	}
 
 	/// <summary>GET /api/v1/companies — the companies the user may work in.</summary>
@@ -496,6 +653,27 @@ public static class ApiEndpoints
 			RoleName: access.RoleName);
 	}
 }
+
+public sealed record MyProfileResponse(
+	string Username,
+	string? FirstName,
+	string? LastName,
+	string? EmailAddress,
+	string? CellPhoneNumber,
+	bool IsEmailAddressVerified,
+	bool IsCellPhoneNumberVerified,
+	DateTime? LastLoginDateTime,
+	DateTime InsertDateTime);
+
+public sealed record LoginHistoryItemResponse(
+	string EventType,
+	DateTime OccurredAtUtc,
+	string? IpAddress);
+
+public sealed record ChangeMyPasswordRequest(
+	string? CurrentPassword,
+	string? NewPassword,
+	string? ConfirmNewPassword);
 
 public sealed record SessionResponse(
 	string Username,
