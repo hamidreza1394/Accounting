@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import {
+  Activity,
   Bell,
   BookOpen,
   Boxes,
@@ -9,6 +10,7 @@ import {
   ClipboardList,
   FileBarChart,
   Headphones,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -16,8 +18,11 @@ import {
   Settings2,
   ShieldCheck,
   ShoppingCart,
+  UserCheck,
+  Users,
   Wallet,
   X,
+  type LucideIcon,
 } from 'lucide-react';
 import type { SelectedContext, Session } from '../api/types';
 import { FaranouLogo } from './ui/FaranouLogo';
@@ -30,25 +35,115 @@ type AppShellProps = {
   children: ReactNode;
 };
 
-const navigation = [
-  { label: 'داشبورد', icon: LayoutDashboard, active: true },
-  { label: 'حسابداری', icon: BookOpen },
-  { label: 'خزانه‌داری', icon: Wallet },
-  { label: 'فروش', icon: ShoppingCart },
-  { label: 'انبار', icon: Boxes },
-  { label: 'بازرگانی خارجی', icon: Package },
-  { label: 'گزارش‌ها', icon: FileBarChart, divider: true },
-  { label: 'مدیریت دسترسی', icon: ShieldCheck },
-  { label: 'اطلاعات پایه', icon: ClipboardList },
-  { label: 'تنظیمات سیستم', icon: Settings2 },
-  { label: 'راهنما و پشتیبانی', icon: Headphones },
+type Tone =
+  | 'sky'
+  | 'emerald'
+  | 'amber'
+  | 'rose'
+  | 'violet'
+  | 'cyan'
+  | 'indigo'
+  | 'teal'
+  | 'orange'
+  | 'slate'
+  | 'blue'
+  | 'green';
+
+type NavLeaf = {
+  kind: 'item';
+  label: string;
+  icon: LucideIcon;
+  tone: Tone;
+  active?: boolean;
+};
+
+type NavGroup = {
+  kind: 'group';
+  label: string;
+  icon: LucideIcon;
+  tone: Tone;
+  children: NavLeaf[];
+};
+
+type NavEntry = NavLeaf | NavGroup | { kind: 'divider' };
+
+/** Presentation-only navigation. Unfinished routes stay disabled until real paths and server permissions exist. */
+const navigation: NavEntry[] = [
+  { kind: 'item', label: 'داشبورد', icon: LayoutDashboard, tone: 'sky', active: true },
+  { kind: 'item', label: 'حسابداری', icon: BookOpen, tone: 'emerald' },
+  { kind: 'item', label: 'خزانه‌داری', icon: Wallet, tone: 'amber' },
+  { kind: 'item', label: 'فروش', icon: ShoppingCart, tone: 'rose' },
+  { kind: 'item', label: 'انبار', icon: Boxes, tone: 'violet' },
+  { kind: 'item', label: 'بازرگانی خارجی', icon: Package, tone: 'cyan' },
+  { kind: 'item', label: 'گزارش‌ها', icon: FileBarChart, tone: 'indigo' },
+  { kind: 'divider' },
+  {
+    kind: 'group',
+    label: 'تنظیمات سیستم',
+    icon: Settings2,
+    tone: 'slate',
+    children: [
+      {
+        kind: 'item',
+        label: 'مدیریت کاربری',
+        icon: Users,
+        tone: 'blue',
+      },
+    ],
+  },
+  { kind: 'item', label: 'اطلاعات پایه', icon: ClipboardList, tone: 'teal' },
+  { kind: 'item', label: 'راهنما و پشتیبانی', icon: Headphones, tone: 'orange' },
 ];
+
+const toneClass: Record<Tone, string> = {
+  sky: 'faranou-nav-icon--sky',
+  emerald: 'faranou-nav-icon--emerald',
+  amber: 'faranou-nav-icon--amber',
+  rose: 'faranou-nav-icon--rose',
+  violet: 'faranou-nav-icon--violet',
+  cyan: 'faranou-nav-icon--cyan',
+  indigo: 'faranou-nav-icon--indigo',
+  teal: 'faranou-nav-icon--teal',
+  orange: 'faranou-nav-icon--orange',
+  slate: 'faranou-nav-icon--slate',
+  blue: 'faranou-nav-icon--blue',
+  green: 'faranou-nav-icon--green',
+};
+
+function NavIcon({ icon: Icon, tone }: { icon: LucideIcon; tone: Tone }) {
+  return (
+    <span className={'faranou-nav-icon ' + toneClass[tone]} aria-hidden="true">
+      <Icon size={16} strokeWidth={2.2} />
+    </span>
+  );
+}
+
+function DisabledItem({ label, icon, tone, nested }: { label: string; icon: LucideIcon; tone: Tone; nested?: boolean }) {
+  return (
+    <div
+      aria-disabled="true"
+      title="این بخش پس از تکمیل مسیر و مجوز مربوط فعال می‌شود."
+      className={
+        'faranou-nav-disabled flex min-h-11 cursor-not-allowed items-center gap-2.5 rounded-xl px-3 text-sm ' +
+        (nested ? 'ps-3' : '')
+      }
+    >
+      <NavIcon icon={icon} tone={tone} />
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      <span className="ms-auto shrink-0 rounded-md border border-white/15 bg-white/5 px-1.5 py-0.5 text-[9px] font-semibold text-sky-100/70">
+        به‌زودی
+      </span>
+    </div>
+  );
+}
 
 /** Main authenticated frame. The server-validated WorkContext remains authoritative. */
 export function AppShell({ session, context, onChangeContext, onLogout, children }: AppShellProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(true);
+  const [userMgmtOpen, setUserMgmtOpen] = useState(true);
   const readOnly = context.fiscalPeriod.accessMode === 'readOnly';
 
   async function handleLogout() {
@@ -145,34 +240,101 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
         >
           <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4" aria-label="منوی اصلی">
             <p className="mb-3 px-3 text-[10px] font-bold tracking-wide text-sky-200/70">منوی اصلی</p>
-            <ul className="space-y-1.5">
-              {navigation.map(({ label, icon: Icon, active, divider }) => (
-                <li key={label} className={divider ? 'mt-4 border-t border-white/10 pt-4' : undefined}>
-                  {active ? (
-                    <a
-                      href="/app/"
-                      aria-current="page"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="faranou-nav-active flex min-h-12 items-center gap-3 rounded-xl px-3.5 text-sm font-bold"
-                    >
-                      <Icon size={20} strokeWidth={2.2} />
-                      <span>{label}</span>
-                    </a>
-                  ) : (
-                    <div
-                      aria-disabled="true"
-                      title="این بخش پس از تکمیل مسیر و مجوز مربوط فعال می‌شود."
-                      className="faranou-nav-disabled flex min-h-12 cursor-not-allowed items-center gap-3 rounded-xl px-3.5 text-sm"
-                    >
-                      <Icon size={20} />
-                      <span>{label}</span>
-                      <span className="ms-auto rounded-md border border-white/15 bg-white/5 px-1.5 py-0.5 text-[9px] font-semibold text-sky-100/70">
-                        به‌زودی
-                      </span>
-                    </div>
-                  )}
-                </li>
-              ))}
+            <ul className="space-y-1">
+              {navigation.map((entry, index) => {
+                if (entry.kind === 'divider') {
+                  return (
+                    <li key={'divider-' + index} className="faranou-nav-divider" aria-hidden="true">
+                      <span />
+                    </li>
+                  );
+                }
+
+                if (entry.kind === 'group' && entry.label === 'تنظیمات سیستم') {
+                  return (
+                    <li key={entry.label} className="space-y-1">
+                      <button
+                        type="button"
+                        className="faranou-nav-group flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 text-sm font-semibold"
+                        aria-expanded={settingsOpen}
+                        onClick={() => setSettingsOpen((open) => !open)}
+                      >
+                        <NavIcon icon={entry.icon} tone={entry.tone} />
+                        <span className="min-w-0 flex-1 truncate text-start">{entry.label}</span>
+                        <ChevronDown
+                          size={16}
+                          className={'shrink-0 text-sky-100/70 transition-transform ' + (settingsOpen ? 'rotate-180' : '')}
+                          aria-hidden="true"
+                        />
+                      </button>
+                      {settingsOpen ? (
+                        <ul className="faranou-nav-sub space-y-1 border-s border-white/10 ms-4 ps-2">
+                          <li>
+                            <button
+                              type="button"
+                              className="faranou-nav-group flex min-h-10 w-full items-center gap-2.5 rounded-xl px-2.5 text-[13px] font-semibold"
+                              aria-expanded={userMgmtOpen}
+                              onClick={() => setUserMgmtOpen((open) => !open)}
+                            >
+                              <NavIcon icon={Users} tone="blue" />
+                              <span className="min-w-0 flex-1 truncate text-start">مدیریت کاربری</span>
+                              <ChevronDown
+                                size={15}
+                                className={
+                                  'shrink-0 text-sky-100/70 transition-transform ' + (userMgmtOpen ? 'rotate-180' : '')
+                                }
+                                aria-hidden="true"
+                              />
+                            </button>
+                            {userMgmtOpen ? (
+                              <ul className="mt-1 space-y-1 border-s border-white/10 ms-3 ps-2">
+                                <li>
+                                  <DisabledItem label="مدیریت کاربران" icon={Users} tone="sky" nested />
+                                </li>
+                                <li>
+                                  <DisabledItem label="مدیریت دسترسی‌ها" icon={KeyRound} tone="violet" nested />
+                                </li>
+                                <li>
+                                  <DisabledItem label="مشاهده ورود و خروج کاربران" icon={Activity} tone="amber" nested />
+                                </li>
+                                <li>
+                                  <DisabledItem label="لیست کاربران فعال" icon={UserCheck} tone="emerald" nested />
+                                </li>
+                              </ul>
+                            ) : null}
+                          </li>
+                        </ul>
+                      ) : null}
+                    </li>
+                  );
+                }
+
+                if (entry.kind !== 'item') {
+                  return null;
+                }
+
+                if (entry.active) {
+                  return (
+                    <li key={entry.label}>
+                      <a
+                        href="/app/"
+                        aria-current="page"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="faranou-nav-active flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-sm font-bold"
+                      >
+                        <NavIcon icon={entry.icon} tone={entry.tone} />
+                        <span>{entry.label}</span>
+                      </a>
+                    </li>
+                  );
+                }
+
+                return (
+                  <li key={entry.label}>
+                    <DisabledItem label={entry.label} icon={entry.icon} tone={entry.tone} />
+                  </li>
+                );
+              })}
             </ul>
           </nav>
           <div className="faranou-sidebar-footer">
