@@ -91,8 +91,8 @@ export function MyAccountPanel({ open, onClose, onPasswordChanged, onUnauthentic
   const [showPasswords, setShowPasswords] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
