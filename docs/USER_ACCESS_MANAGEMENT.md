@@ -85,7 +85,13 @@
 - LoginLogs
 - SecurityAuditEvents
 
-دو مسیر موجود از هم مستقل‌اند: Users.RoleId به Domain.Role سراسری اشاره می‌کند و UserCompanyMemberships به CompanyRole شرکتی با کلید مرکب RoleId/TenantId متصل است. Role قدیمی به Permission و آن به ApplicationHandler وصل است؛ اما جستجوی call-siteهای تولیدی نشان نداد که این Permissionها در runtime برای مجوزدهی endpoint یا handler بررسی شوند. ApplicationHandler نیز از PageModelهای Razor با RouteFinder کشف می‌شود و پوشش APIهای React را ندارد. بنابراین این ساختار فعلاً کاتالوگ/داده legacy است، نه مرجع امنیتی قابل اتکا. CompanyRolePermissions/PermissionDefinitions در CompanyAccessService و Trade واقعاً enforce می‌شوند. از ادغام بی‌بررسی یا ساخت موتور موازی پرهیز شود؛ برای مدیریت سراسری نصب، مرز مجوز جداگانه باید در ADR تعیین شود. اگر AccessGroup صرفاً الگوی بسته‌بندی نقش‌های موجود است، بدون نیاز به موجودیت مستقل مدل شود؛ اگر نسخه‌بندی/مالکیت/تخصیص آن نیاز داده‌ای جدید می‌خواهد، ADR و طرح داده جدا لازم است.
+دو مسیر موجود از هم مستقل‌اند: Users.RoleId به Domain.Role سراسری اشاره می‌کند و UserCompanyMemberships به CompanyRole شرکتی با کلید مرکب RoleId/TenantId متصل است. تفکیک scope مدیر سراسری نصب از مدیر شرکتی در D-064 به‌صورت Proposed ثبت شده است. Role قدیمی به Permission و آن به ApplicationHandler وصل است؛ اما جستجوی call-siteهای تولیدی نشان نداد که این Permissionها در runtime برای مجوزدهی endpoint یا handler بررسی شوند. ApplicationHandler نیز از PageModelهای Razor با RouteFinder کشف می‌شود و پوشش APIهای React را ندارد. بنابراین این ساختار فعلاً کاتالوگ/داده legacy است، نه مرجع امنیتی قابل اتکا. CompanyRolePermissions/PermissionDefinitions در CompanyAccessService و Trade واقعاً enforce می‌شوند. از ادغام بی‌بررسی یا ساخت موتور موازی پرهیز شود؛ برای مدیریت سراسری نصب، مرز مجوز جداگانه باید در ADR تعیین شود. اگر AccessGroup صرفاً الگوی بسته‌بندی نقش‌های موجود است، بدون نیاز به موجودیت مستقل مدل شود؛ اگر نسخه‌بندی/مالکیت/تخصیص آن نیاز داده‌ای جدید می‌خواهد، ADR و طرح داده جدا لازم است.
+
+### تفکیک scope پیشنهادی (D-064 — Proposed)
+- مدیر سیستم سراسری با Role.Admin می‌تواند همه حساب‌های همان نصب را مدیریت کند؛ در API جدید نقش فعال باید از DB بررسی شود، نه Claim قدیمی.
+- مدیر شرکتی فقط کاربران دارای عضویت در همان Company و مجوزهای CompanyRole را مدیریت می‌کند.
+- CompanyRole خودِ گروه دسترسی شرکتی است؛ فعلاً AccessGroup جدا نمی‌سازیم.
+- سمت/واحد سازمانی مستقل از مجوز است و در S2 مدل می‌شود.
 
 ### قواعد قطعی
 - Company در مدل فعلی همان مرز Tenant است؛ Tenant entity جدید نسازید.
