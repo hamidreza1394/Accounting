@@ -52,6 +52,33 @@ describe('AppShell', () => {
     expect(document.activeElement).toBe(trigger);
   });
 
+  it('submits the authenticated user password change and invokes reauthentication', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        username: 'alice', firstName: 'آلیس', lastName: 'مثالی', emailAddress: null, cellPhoneNumber: null,
+        isEmailAddressVerified: false, isCellPhoneNumberVerified: false,
+        lastLoginDateTime: null, insertDateTime: '2026-10-01T09:00:00Z',
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ headerName: 'X-XSRF-TOKEN', requestToken: 'token-123' }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const onPasswordChanged = vi.fn();
+
+    render(<AppShell session={session} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)} onPasswordChanged={onPasswordChanged}><main>محتوای صفحه</main></AppShell>);
+    fireEvent.click(screen.getByRole('button', { name: 'حساب کاربری من' }));
+    await screen.findByRole('dialog', { name: 'حساب کاربری من' });
+    fireEvent.click(screen.getByRole('tab', { name: 'امنیت حساب' }));
+
+    fireEvent.change(screen.getByLabelText('رمز فعلی'), { target: { value: 'Current-Phrase-1405!' } });
+    fireEvent.change(screen.getByLabelText('رمز جدید'), { target: { value: 'New-Long-Phrase-1406!' } });
+    fireEvent.change(screen.getByLabelText('تکرار رمز جدید'), { target: { value: 'New-Long-Phrase-1406!' } });
+    fireEvent.click(screen.getByRole('button', { name: 'تغییر رمز و خروج' }));
+
+    await screen.findByText('تغییر رمز و خروج');
+    expect(onPasswordChanged).toHaveBeenCalledOnce();
+    expect(fetchMock.mock.calls[2]?.[0]).toBe('/api/v1/me/password');
+  });
+
   it('keeps unfinished navigation items disabled and the current dashboard active', () => {
     render(<AppShell session={session} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
     expect(screen.getByRole('link', { name: /داشبورد/ })).toHaveAttribute('aria-current', 'page');
