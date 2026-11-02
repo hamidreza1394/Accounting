@@ -53,5 +53,5 @@
 
 ## شناسه‌های Git
 - Branch: `ui/issue-442-sidebar-readability`
-- Commit: (پس از Commit تکمیل می‌شود)
-- Pull Request: (پس از ایجاد تکمیل می‌شود)
+- Commit: `4e56f05`
+- Pull Request: https://github.com/hamidreza1394/Accounting/pull/443 (باز، merge نشده — منتظر تأیید صریح مالک مخزن)
