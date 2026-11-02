@@ -17,6 +17,8 @@
 - Issue #444 ایجاد و شاخه اختصاصی ساخته شد.
 - بررسی اولیه Graphify و GitHub روی مدل‌ها، API و AppShell انجام شد.
 - سند جامع طراحی و معیارهای پذیرش تهیه شد.
+- منوی مدیریت سیستم در AppShell به شش بخش هدف بازآرایی شد؛ «لیست کاربران فعال» حذف و ورود/خروج در گزارش امنیت ادغام شد. آیتم‌ها عمداً تا ایجاد route و API واقعی غیرفعال‌اند.
+- تست AppShell برای ساختار جدید به‌روزرسانی شد.
 - هنوز Migration، Entity یا API اجرایی تغییر نکرده است.
 
 ## فایل‌های مهم
@@ -35,10 +37,13 @@
 |---|---|
 | Graphify semantic inspection | اجرا شد |
 | GitHub source inspection | اجرا شد |
-| Build/Test | اجرا نشده؛ کد اجرایی هنوز تغییر نکرده |
+| Build/Test | اجرا نشده؛ تغییرات منو و تست نیازمند اجرای کلاینت‌اند |
 | git diff --check | اجرا نشده؛ تغییرات از GitHub Contents API ثبت می‌شوند |
 
 ## ریسک‌ها و کارهای باقی‌مانده
+- مدل legacy Users.RoleId/Role و مدل شرکتی UserCompanyMemberships/CompanyRole مستقل‌اند و نباید بدون تصمیم معماری ادغام شوند.
+- User هم‌اکنون داده‌های هویتی و تماس را نگه می‌دارد؛ ساخت UserProfile جدا هنوز توجیه نشده است.
+- App.tsx routing مستقل ندارد؛ menu items فعلاً placeholder هستند.
 - ممیزی کامل endpointها، DI، mappingها، migrationها و React app flow.
 - تصمیم route strategy و API contracts.
 - بررسی exact permission inventory و Trade permission catalog.
