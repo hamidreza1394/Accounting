@@ -37,14 +37,14 @@ describe('AppShell', () => {
     expect(sidebar?.querySelector('.faranou-sidebar-footer p')).toBeTruthy();
   });
 
-  it('nests user-management items under system settings as disabled placeholders', () => {
+  it('shows the focused system-administration menu and removes redundant user-list shortcuts', () => {
     render(<AppShell session={session} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
-    expect(screen.getByRole('button', { name: /تنظیمات سیستم/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /مدیریت کاربری/ })).toBeInTheDocument();
-    expect(screen.getByText('مدیریت کاربران').closest('[aria-disabled="true"]')).toBeTruthy();
-    expect(screen.getByText('مدیریت دسترسی‌ها').closest('[aria-disabled="true"]')).toBeTruthy();
-    expect(screen.getByText('مشاهده ورود و خروج کاربران').closest('[aria-disabled="true"]')).toBeTruthy();
-    expect(screen.getByText('لیست کاربران فعال').closest('[aria-disabled="true"]')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /مدیریت سیستم/ })).toBeInTheDocument();
+    for (const label of ['مدیریت کاربران', 'ساختار سازمانی و سمت‌ها', 'گروه‌های دسترسی', 'کاتالوگ و جزئیات مجوزها', 'گزارش امنیت و سوابق', 'سیاست‌های امنیتی']) {
+      expect(screen.getByText(label).closest('[aria-disabled="true"]')).toBeTruthy();
+    }
+    expect(screen.queryByText('لیست کاربران فعال')).toBeNull();
+    expect(screen.queryByText('مشاهده ورود و خروج کاربران')).toBeNull();
   });
 
   it('keeps full nested menu labels readable instead of truncating them', () => {
