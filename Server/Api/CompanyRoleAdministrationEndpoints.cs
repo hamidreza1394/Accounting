@@ -208,12 +208,18 @@ public static class CompanyRoleAdministrationEndpoints
         if (authorization is not null) return authorization;
         if (!await antiforgery.IsRequestValidAsync(httpContext))
             return TypedResults.Problem(title: "درخواست نامعتبر است.", statusCode: StatusCodes.Status400BadRequest);
+        if (!await IsActiveCompanyAsync(database, companyId, cancellationToken)) return TypedResults.NotFound();
 
         var role = await database.CompanyRoles
             .Include(current => current.RolePermissions)
             .FirstOrDefaultAsync(current => current.Id == roleId && current.TenantId == companyId, cancellationToken);
         if (role is null) return TypedResults.NotFound();
         if (role.IsSystemRole) return TypedResults.Conflict(new { error = "گروه سیستمی قابل ویرایش نیست." });
+        if (role.IsActive && !request.IsActive &&
+            await database.UserCompanyMemberships.AnyAsync(
+                membership => membership.TenantId == companyId && membership.RoleId == roleId && membership.IsActive,
+                cancellationToken))
+            return TypedResults.Conflict(new { error = "ابتدا اعضای فعال این گروه را به گروه دیگری منتقل کنید." });
 
         var name = Dtat.Utility.FixText(request.Name);
         if (string.IsNullOrWhiteSpace(name) || name.Length > 120)
