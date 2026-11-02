@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import {
   Activity,
   Bell,
@@ -26,12 +26,15 @@ import {
 } from 'lucide-react';
 import type { SelectedContext, Session } from '../api/types';
 import { FaranouLogo } from './ui/FaranouLogo';
+import { MyAccountPanel } from './MyAccountPanel';
 
 type AppShellProps = {
   session: Session;
   context: SelectedContext;
   onChangeContext: () => void;
   onLogout: () => Promise<void>;
+  onPasswordChanged?: () => void;
+  onUnauthenticated?: (error: unknown) => boolean;
   children: ReactNode;
 };
 
@@ -148,12 +151,17 @@ function DisabledItem({ label, icon, tone, nested }: { label: string; icon: Luci
 }
 
 /** Main authenticated frame. The server-validated WorkContext remains authoritative. */
-export function AppShell({ session, context, onChangeContext, onLogout, children }: AppShellProps) {
+const ignoreUnauthenticated = (_error: unknown) => false;
+const noop = () => undefined;
+
+export function AppShell({ session, context, onChangeContext, onLogout, onPasswordChanged = noop, onUnauthenticated = ignoreUnauthenticated, children }: AppShellProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(true);
   const [userMgmtOpen, setUserMgmtOpen] = useState(true);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountTriggerRef = useRef<HTMLButtonElement>(null);
   const readOnly = context.fiscalPeriod.accessMode === 'readOnly';
 
   async function handleLogout() {
@@ -209,9 +217,19 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
           </div>
 
           <div className="faranou-header-user">
-            <span className="faranou-user-avatar" aria-label={'تصویر نمایه ' + session.fullName}>
-              {session.fullName.trim().slice(0, 1) || 'ف'}
-            </span>
+            <button
+              ref={accountTriggerRef}
+              type="button"
+              onClick={() => setAccountOpen(true)}
+              className="rounded-full focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-2 focus:ring-offset-[#102b4c]"
+              aria-label="حساب کاربری من"
+              aria-haspopup="dialog"
+              aria-expanded={accountOpen}
+            >
+              <span className="faranou-user-avatar" aria-hidden="true">
+                {session.fullName.trim().slice(0, 1) || 'ف'}
+              </span>
+            </button>
             <span className="hidden min-w-0 flex-col leading-tight sm:flex">
               <strong className="max-w-36 truncate text-sm font-bold">{session.fullName}</strong>
               <span className="mt-1 max-w-36 truncate text-[11px] text-blue-100/75">{context.company.roleName}</span>
@@ -367,6 +385,15 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
           {children}
         </main>
       </div>
+      <MyAccountPanel
+        open={accountOpen}
+        onClose={() => {
+          setAccountOpen(false);
+          accountTriggerRef.current?.focus();
+        }}
+        onPasswordChanged={onPasswordChanged}
+        onUnauthenticated={onUnauthenticated}
+      />
     </div>
   );
 }
