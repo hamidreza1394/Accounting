@@ -55,20 +55,33 @@ public static class CompanyRoleAdministrationEndpoints
         var roles = await database.CompanyRoles.AsNoTracking()
             .Where(role => role.TenantId == companyId)
             .OrderBy(role => role.Name)
-            .Select(role => new CompanyRoleResponse(
+            .Select(role => new
+            {
                 role.Id,
                 role.TenantId,
                 role.Code,
                 role.Name,
                 role.IsSystemRole,
                 role.IsActive,
-                database.CompanyRolePermissions.Count(permission => permission.RoleId == role.Id),
-                database.UserCompanyMemberships.Count(membership =>
-                    membership.TenantId == companyId && membership.RoleId == role.Id && membership.IsActive)))
+                PermissionCount = role.RolePermissions.Count,
+                ActiveMemberCount = database.UserCompanyMemberships.Count(membership =>
+                    membership.TenantId == companyId && membership.RoleId == role.Id && membership.IsActive),
+            })
             .ToListAsync(cancellationToken);
+        var roleIds = roles.Select(role => role.Id).ToArray();
+        var permissions = await database.CompanyRolePermissions.AsNoTracking()
+            .Where(permission => roleIds.Contains(permission.RoleId))
+            .Select(permission => new { permission.RoleId, permission.Permission.Code })
+            .ToListAsync(cancellationToken);
+        var result = roles.Select(role => new CompanyRoleResponse(
+            role.Id, role.TenantId, role.Code, role.Name, role.IsSystemRole, role.IsActive,
+            role.PermissionCount, role.ActiveMemberCount,
+            permissions.Where(permission => permission.RoleId == role.Id)
+                .Select(permission => permission.Code).OrderBy(code => code).ToArray()))
+            .ToArray();
 
         SetNoStore(httpContext);
-        return TypedResults.Ok(roles);
+        return TypedResults.Ok(result);
     }
 
     public static async Task<IResult> GetPermissionCatalogAsync(
@@ -378,7 +391,7 @@ public static class CompanyRoleAdministrationEndpoints
 
 public sealed record CompanyRoleResponse(
     Guid Id, Guid CompanyId, string Code, string Name, bool IsSystemRole, bool IsActive,
-    int PermissionCount, int ActiveMemberCount);
+    int PermissionCount, int ActiveMemberCount, IReadOnlyList<string> PermissionCodes);
 public sealed record PermissionCatalogItemResponse(Guid Id, string Code, string Name, string? Description, string SubsystemCode);
 public sealed record CompanyRoleTemplateResponse(string Code, string Name, IReadOnlyList<string> PermissionCodes);
 public sealed record CreateCompanyRoleRequest(string? Code, string? Name, string? TemplateCode, IReadOnlyCollection<string>? PermissionCodes);
