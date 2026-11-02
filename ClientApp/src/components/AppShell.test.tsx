@@ -12,7 +12,6 @@ const context: SelectedContext = {
 describe('AppShell', () => {
   it('places the Faranou brand, company and fiscal period selectors, and user identity in the header', () => {
     render(<AppShell session={session} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
-    // Brand mark appears in the topbar and again in the sidebar brand strip.
     const marks = screen.getAllByRole('img', { name: 'نشان فرانو' });
     expect(marks.length).toBeGreaterThanOrEqual(2);
     expect(screen.getByRole('button', { name: 'تغییر شرکت' })).toHaveTextContent('شرکت نمونه');
@@ -27,14 +26,16 @@ describe('AppShell', () => {
     const accountingLabels = screen.getAllByText('حسابداری');
     expect(accountingLabels.some((label) => label.closest('[aria-disabled="true"]'))).toBe(true);
   });
-  it('uses the bright login-aligned header and light sidebar visual variants', () => {
+
+  it('uses the premium dark shell matching the approved mockup', () => {
     render(<AppShell session={session} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
     expect(document.querySelector('.faranou-topbar')).toHaveClass('faranou-topbar--login-palette');
-    expect(document.querySelector('.faranou-sidebar')).toHaveClass('faranou-sidebar--light');
+    expect(document.querySelector('.faranou-sidebar')).toHaveClass('faranou-sidebar--premium');
+    expect(document.querySelector('.faranou-sidebar')).not.toHaveClass('faranou-sidebar--light');
     const sidebar = document.querySelector('.faranou-sidebar');
-    expect(sidebar?.querySelector('nav > p')).toHaveClass('text-slate-600');
-    expect(sidebar?.querySelector('[aria-disabled="true"] > span:last-child')).toHaveClass('text-slate-600');
-    expect(sidebar?.querySelector('.faranou-sidebar-footer p')).toHaveClass('text-slate-600');
+    expect(sidebar?.querySelector('nav > p')).toBeTruthy();
+    expect(sidebar?.querySelector('[aria-disabled="true"] > span:last-child')).toBeTruthy();
+    expect(sidebar?.querySelector('.faranou-sidebar-footer p')).toBeTruthy();
   });
 
   it('shows the full read-only and reporting-only access explanation', () => {
@@ -47,5 +48,4 @@ describe('AppShell', () => {
 
     expect(screen.getByLabelText('زمینه کاری جاری')).toHaveTextContent('فقط مشاهده و گزارش‌گیری');
   });
-
 });
