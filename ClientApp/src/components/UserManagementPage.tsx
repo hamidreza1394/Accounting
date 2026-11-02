@@ -228,8 +228,14 @@ export function UserManagementPage({ onUnauthenticated }: Props) {
             setSaveError(null);
             try {
               if (editingUser) {
-                const { password: _password, confirmPassword: _confirmation, ...update } = values;
-                const request: UpdateAdminUserRequest = update;
+                const request: UpdateAdminUserRequest = {
+                  username: values.username,
+                  firstName: values.firstName,
+                  lastName: values.lastName,
+                  emailAddress: values.emailAddress,
+                  cellPhoneNumber: values.cellPhoneNumber,
+                  isActive: values.isActive,
+                };
                 await updateAdminUser(editingUser.id, request);
                 setDetails(await getAdminUser(editingUser.id));
                 setSelectedId(editingUser.id);
@@ -292,7 +298,7 @@ function UserEditor({ initialUser, saving, error, onClose, onSave }: {
             <Field label="نام خانوادگی" value={lastName} onChange={setLastName} required />
             <Field label="نام کاربری" value={username} onChange={setUsername} required dir="ltr" />
             <Field label="ایمیل" value={emailAddress} onChange={setEmailAddress} required type="email" dir="ltr" />
-            <Field label="شماره همراه" value={cellPhoneNumber} onChange={setCellPhoneNumber} dir="ltr" />
+            <Field label="شماره همراه" value={cellPhoneNumber} onChange={setCellPhoneNumber} dir="ltr" type="tel" />
             {!initialUser ? <><Field label="رمز عبور اولیه" value={password} onChange={setPassword} required type="password" dir="ltr" /><Field label="تکرار رمز عبور" value={confirmPassword} onChange={setConfirmPassword} required type="password" dir="ltr" /></> : null}
           </div>
           <label className="flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700"><input type="checkbox" checked={isActive} onChange={(event) => setIsActive(event.target.checked)} /> حساب کاربری فعال باشد</label>
@@ -311,7 +317,7 @@ function UserEditor({ initialUser, saving, error, onClose, onSave }: {
 function Field({ label, value, onChange, required = false, type = 'text', dir = 'rtl' }: {
   label: string; value: string; onChange: (value: string) => void; required?: boolean; type?: string; dir?: 'rtl' | 'ltr';
 }) {
-  return <label className="block min-w-0"><span className="mb-1.5 block text-xs font-semibold text-slate-600">{label}</span><input type={type} dir={dir} value={value} onChange={(event) => onChange(event.target.value)} required={required} maxLength={type === 'email' ? 254 : 100} className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100" /></label>;
+  return <label className="block min-w-0"><span className="mb-1.5 block text-xs font-semibold text-slate-600">{label}</span><input type={type} dir={dir} value={value} onChange={(event) => onChange(event.target.value)} required={required} maxLength={type === 'email' ? 254 : type === 'tel' ? 32 : type === 'password' ? 128 : 100} className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100" /></label>;
 }
 
 function UserRow({ user, selected, onSelect }: { user: AdminUserListItem; selected: boolean; onSelect: () => void }) {
