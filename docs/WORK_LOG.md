@@ -2034,3 +2034,13 @@
 - App.tsx در حال حاضر flow تک‌صفحه‌ای است؛ AppShell فقط /app/ را فعال می‌کند و routeهای مدیریتی هنوز وجود ندارند. بنابراین منو به شش گروه هدف بازآرایی شد، اما همه موارد غیرفعال باقی ماندند تا route/API واقعی و authorization اضافه شود.
 - «لیست کاربران فعال» به فیلتر داخل مدیریت کاربران منتقل شد؛ ورود/خروج در گزارش امنیت ادغام شد؛ گروه‌های دسترسی از کاتالوگ جزئی مجوزها جدا شدند.
 - AppShell.test.tsx با ساختار جدید هماهنگ شد. تست هنوز اجرا نشده است؛ Build/Typecheck/Vitest و مرورگر باید در محیط دارای checkout اجرا شوند.
+
+
+### تکمیل ممیزی مدل مجوز و حساب شخصی — Issue #444
+- مدل legacy شامل Role → Permission → ApplicationHandler است، اما جستجوی call-siteهای تولیدی هیچ enforcement runtime برای Permission/ApplicationHandler در API یا handlerها نشان نداد. RouteFinder فقط PageModelهای Razor را ثبت می‌کند؛ پس این مدل به‌تنهایی کاتالوگ امنیتی APIهای React نیست.
+- CompanyRole/PermissionDefinitions/CompanyRolePermissions در CompanyAccessService و Trade واقعاً بررسی می‌شوند و نقش/مجوز company-scoped هستند.
+- User.Role.Name به Claim نقش در زمان ورود تبدیل می‌شود؛ Infrastructure master نیز Claim نقش Admin می‌گیرد. صفحات قدیمی Users با Role.Admin محافظت شده و فهرست آن‌ها بدون scope شرکت است. scope مدیر سراسری و مدیر شرکتی باید پیش از APIهای جدید تفکیک و تست شود.
+- Profile PageModel و ChangePassword PageModel فعلی فقط OnGet خالی دارند؛ API برای پروفایل/تغییر رمز وجود ندارد. بنابراین self-service هنوز پیاده‌سازی نشده است.
+- LoginLog فقط در ورود موفق ثبت می‌شود و فقط UserId/IP دارد؛ ورودهای ناموفق در SecurityAuditEvents ثبت می‌شوند. API خروج فعلی رویداد logout ثبت نمی‌کند.
+- Customer-side license import/signature/revocation در بخشی از کد وجود دارد؛ اما Trade entitlement با DenyAllTradeModuleEntitlement ثبت شده و مجوز مؤثر زیرسیستم هنوز فعال نیست.
+- PR #445 Draft باز است. Client CI (typecheck, unit tests, build, offline check, runtime dependency audit) موفق؛ Semgrep موفق؛ .NET Build/Test در آخرین مشاهده موفق شده و job در مرحله گزارش آسیب‌پذیری/جمع‌بندی بود. نتیجه نهایی باید مجدداً poll شود.
