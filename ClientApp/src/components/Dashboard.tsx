@@ -24,7 +24,7 @@ export function Dashboard({ session, context, onUnauthenticated }: DashboardProp
 
   return (
     <div className="flex flex-col gap-5 sm:gap-6">
-      <section className="faranou-welcome relative isolate flex min-h-[220px] items-center overflow-hidden rounded-[22px] border border-white/80 px-6 py-7 text-white sm:min-h-[230px] sm:px-10 xl:px-14">
+      <section className="faranou-welcome faranou-welcome--milad relative isolate flex min-h-[220px] items-center overflow-hidden rounded-[22px] border border-white/80 px-6 py-7 text-white sm:min-h-[230px] sm:px-10 xl:px-14">
         <img
           src="/images/dashboard-tehran-panorama.svg"
           alt=""
