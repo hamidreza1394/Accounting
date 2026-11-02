@@ -252,7 +252,7 @@ export function MyAccountPanel({ open, onClose, onPasswordChanged, onUnauthentic
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
           {activeTab === 'profile' ? (
-            <div id="my-account-panel-profile" role="tabpanel" aria-labelledby="my-account-tab-profile" className="space-y-4">
+            <div id="my-account-panel-profile" role="tabpanel" aria-labelledby="my-account-tab-profile" tabIndex={0} className="space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h3 className="font-extrabold text-slate-800">مشخصات حساب</h3>
@@ -276,7 +276,7 @@ export function MyAccountPanel({ open, onClose, onPasswordChanged, onUnauthentic
           ) : null}
 
           {activeTab === 'security' ? (
-            <div id="my-account-panel-security" role="tabpanel" aria-labelledby="my-account-tab-security" className="space-y-4">
+            <div id="my-account-panel-security" role="tabpanel" aria-labelledby="my-account-tab-security" tabIndex={0} className="space-y-4">
               <div>
                 <h3 className="font-extrabold text-slate-800">تغییر رمز عبور</h3>
                 <p className="mt-1 text-xs leading-6 text-slate-500">برای تغییر رمز، رمز فعلی را وارد کنید. پس از موفقیت از همه نشست‌های قبلی خارج می‌شوید و باید دوباره وارد شوید.</p>
@@ -322,7 +322,7 @@ export function MyAccountPanel({ open, onClose, onPasswordChanged, onUnauthentic
           ) : null}
 
           {activeTab === 'history' ? (
-            <div id="my-account-panel-history" role="tabpanel" aria-labelledby="my-account-tab-history" className="space-y-4">
+            <div id="my-account-panel-history" role="tabpanel" aria-labelledby="my-account-tab-history" tabIndex={0} className="space-y-4">
               <div>
                 <h3 className="font-extrabold text-slate-800">سوابق ورود و خروج من</h3>
                 <p className="mt-1 text-xs leading-6 text-slate-500">فقط رخدادهای قابل انتساب به همین حساب نمایش داده می‌شوند. پایان ناشناخته نشست، خروج موفق تلقی نمی‌شود.</p>
