@@ -1,44 +1,42 @@
-/* Premium Faranou shell — visual match to approved mockup.
-   Presentation only. No invented financial metrics. Offline assets only. */
+/* Premium Faranou shell v2 — mockup-aligned, readable, offline.
+   No invented financial metrics. */
 
 .faranou-workspace {
   background:
-    radial-gradient(ellipse at 78% 0%, rgb(56 140 210 / .12), transparent 36%),
-    linear-gradient(145deg, #e8f0f8 0%, #f4f7fb 48%, #e6eef6 100%);
+    radial-gradient(ellipse at 80% 0%, rgb(70 150 210 / .1), transparent 34%),
+    linear-gradient(150deg, #e9f0f7 0%, #f5f8fc 50%, #e8eef6 100%);
 }
 
 .faranou-topbar.faranou-topbar--login-palette {
   background:
-    radial-gradient(ellipse at 18% -70%, rgb(80 170 230 / .32), transparent 48%),
-    radial-gradient(ellipse at 88% 130%, rgb(30 120 170 / .18), transparent 42%),
-    linear-gradient(112deg, #0a233c 0%, #0f3558 46%, #0c2b48 100%);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 12px 36px rgb(6 28 52 / .28);
-  border-bottom: 1px solid rgb(120 180 220 / .12);
+    radial-gradient(ellipse at 20% -80%, rgb(90 180 230 / .3), transparent 46%),
+    linear-gradient(112deg, #081c33 0%, #0d2f4f 48%, #0a243f 100%);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 10px 32px rgb(5 24 48 / .3);
+  border-bottom: 1px solid rgb(120 180 220 / .14);
 }
 
 .faranou-context-choice {
-  border-radius: 16px;
-  border: 1px solid rgb(160 210 245 / .28);
-  background: linear-gradient(130deg, rgb(255 255 255 / .14), rgb(255 255 255 / .04));
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / .14), 0 6px 18px rgb(4 24 48 / .16);
-  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+  border-radius: 14px;
+  border: 1px solid rgb(160 210 245 / .3);
+  background: linear-gradient(125deg, rgb(255 255 255 / .15), rgb(255 255 255 / .05));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .12), 0 4px 14px rgb(4 20 40 / .15);
+  transition: border-color 150ms ease, background 150ms ease, transform 150ms ease;
 }
 .faranou-context-choice:hover {
-  border-color: rgb(120 210 245 / .55);
-  background: rgb(255 255 255 / .16);
-  box-shadow: 0 10px 24px rgb(4 24 48 / .22);
+  border-color: rgb(130 210 245 / .55);
+  background: rgb(255 255 255 / .18);
 }
 @media (prefers-reduced-motion: no-preference) {
   .faranou-context-choice:hover { transform: translateY(-1px); }
 }
 
 .faranou-user-avatar {
-  background: linear-gradient(145deg, #3ec4e0 0%, #1a88c4 50%, #0e5f9a 100%);
+  background: linear-gradient(145deg, #4ec8e4 0%, #1b88c0 55%, #0e5a96 100%);
   color: #fff;
-  border: 2px solid rgb(160 220 250 / .55);
-  box-shadow: 0 0 0 3px rgb(40 140 200 / .25), 0 6px 16px rgb(8 50 90 / .35);
+  border: 2px solid rgb(170 220 250 / .55);
+  box-shadow: 0 0 0 3px rgb(40 130 190 / .22), 0 4px 12px rgb(8 50 90 / .3);
   font-weight: 800;
 }
 
@@ -56,16 +54,14 @@
   height: 7px;
   border-radius: 50%;
   background: #f43f5e;
-  box-shadow: 0 0 0 2px rgb(12 40 70 / .9);
+  box-shadow: 0 0 0 2px rgb(10 35 60 / .9);
 }
 @media (prefers-reduced-motion: no-preference) {
-  .faranou-notify-dot {
-    animation: faranou-pulse 1.8s ease-in-out infinite;
-  }
+  .faranou-notify-dot { animation: faranou-pulse 1.8s ease-in-out infinite; }
 }
 @keyframes faranou-pulse {
   0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.25); opacity: .75; }
+  50% { transform: scale(1.2); opacity: .7; }
 }
 @media (prefers-reduced-motion: reduce) {
   .faranou-notify-dot { animation: none; }
@@ -73,94 +69,90 @@
 
 .faranou-sidebar.faranou-sidebar--premium {
   isolation: isolate;
-  color: #e8f4fc;
-  border-inline-start: 1px solid rgb(100 170 210 / .2);
+  color: #eaf5fc;
+  width: 252px;
+  flex: 0 0 252px;
+  border-inline-start: 1px solid rgb(100 170 210 / .18);
   background:
-    radial-gradient(ellipse at 100% 0%, rgb(50 140 200 / .28), transparent 44%),
-    radial-gradient(ellipse at 0% 100%, rgb(20 90 130 / .2), transparent 40%),
-    linear-gradient(180deg, #0d2f4d 0%, #0a2742 42%, #081f36 100%);
-  box-shadow: -12px 0 40px rgb(4 24 48 / .22), inset 1px 0 0 rgb(255 255 255 / .04);
+    radial-gradient(ellipse at 100% 0%, rgb(55 145 205 / .32), transparent 42%),
+    linear-gradient(180deg, #0c2d4a 0%, #0a2740 45%, #071e34 100%);
+  box-shadow: -10px 0 36px rgb(4 22 44 / .2), inset 1px 0 0 rgb(255 255 255 / .04);
 }
 
 .faranou-sidebar--premium .faranou-sidebar-brand {
   display: flex;
   align-items: center;
   gap: .65rem;
-  padding: 1rem 1rem .85rem;
+  padding: 1.05rem 1rem .9rem;
   border-bottom: 1px solid rgb(255 255 255 / .1);
-  background: linear-gradient(180deg, rgb(255 255 255 / .06), transparent);
+  background: linear-gradient(180deg, rgb(255 255 255 / .07), transparent);
 }
 
 .faranou-sidebar--premium nav > p {
-  color: rgb(160 210 240 / .7);
-  letter-spacing: .04em;
+  color: rgb(170 215 245 / .72);
+  letter-spacing: .05em;
 }
 
 .faranou-sidebar--premium .faranou-nav-active {
   position: relative;
   overflow: hidden;
-  color: #fff;
-  border: 1px solid rgb(90 190 230 / .35);
-  background: linear-gradient(112deg, #1278c8 0%, #1598d4 52%, #18a8b8 100%);
-  box-shadow: 0 10px 24px rgb(8 60 110 / .35), inset 0 1px 0 rgb(255 255 255 / .28);
+  color: #fff !important;
+  border: 1px solid rgb(100 195 235 / .4);
+  background: linear-gradient(112deg, #1280d0 0%, #15a0d8 55%, #17b0b8 100%);
+  box-shadow: 0 8px 20px rgb(10 70 120 / .35), inset 0 1px 0 rgb(255 255 255 / .28);
 }
 .faranou-sidebar--premium .faranou-nav-active::before {
   position: absolute;
-  inset-block: 8px;
+  inset-block: 9px;
   inset-inline-start: 0;
   width: 3px;
   border-radius: 4px;
-  background: linear-gradient(180deg, #ffe09a, #f0b84a);
+  background: linear-gradient(180deg, #ffe8a8, #f0b84a);
   content: "";
 }
 @media (prefers-reduced-motion: no-preference) {
   .faranou-sidebar--premium .faranou-nav-active {
-    transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
+    transition: filter 150ms ease, transform 150ms ease;
   }
   .faranou-sidebar--premium .faranou-nav-active:hover {
-    filter: brightness(1.06);
+    filter: brightness(1.05);
     transform: translateX(-2px);
   }
 }
 
 .faranou-sidebar--premium .faranou-nav-disabled {
-  color: rgb(200 230 250 / .78);
+  color: rgb(205 230 250 / .82);
   border: 1px solid transparent;
   border-radius: .85rem;
-  transition: background-color 160ms ease, border-color 160ms ease;
 }
 .faranou-sidebar--premium .faranou-nav-disabled:hover {
-  border-color: rgb(140 200 230 / .14);
+  border-color: rgb(140 200 230 / .12);
   background: rgb(255 255 255 / .05);
 }
 .faranou-sidebar--premium .faranou-nav-disabled > span:last-child {
-  color: rgb(180 220 245 / .72);
-  border-color: rgb(255 255 255 / .15);
-  background: rgb(255 255 255 / .06);
+  color: rgb(185 220 245 / .75);
+  border-color: rgb(255 255 255 / .14);
+  background: rgb(255 255 255 / .07);
 }
 
 .faranou-sidebar--premium .faranou-sidebar-footer {
-  margin: .5rem .75rem .9rem;
-  padding: .9rem 1rem;
+  margin: .45rem .7rem .85rem;
+  padding: .85rem 1rem;
   border-radius: 14px;
-  border: 1px solid rgb(120 200 180 / .22);
-  background: linear-gradient(155deg, rgb(255 255 255 / .1), rgb(40 120 100 / .12));
+  border: 1px solid rgb(110 200 175 / .25);
+  background: linear-gradient(155deg, rgb(255 255 255 / .1), rgb(35 110 95 / .14));
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .08);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(8px);
 }
 
 .faranou-welcome.faranou-welcome--milad {
-  min-height: 250px;
-  border-radius: 24px;
-  border: 1px solid rgb(255 255 255 / .55);
-  background:
-    radial-gradient(ellipse at 10% 100%, rgb(50 190 210 / .38), transparent 44%),
-    radial-gradient(ellipse at 92% -8%, rgb(255 200 120 / .2), transparent 36%),
-    linear-gradient(115deg, #0c3d58 0%, #157a96 42%, #0f5a72 100%);
-  box-shadow:
-    0 24px 52px rgb(16 80 100 / .28),
-    inset 0 1px 0 rgb(255 255 255 / .35);
+  min-height: 268px;
+  border-radius: 22px;
+  border: 1px solid rgb(255 255 255 / .2);
+  background: linear-gradient(115deg, #061526 0%, #0a2f4a 38%, #0d4560 100%);
+  box-shadow: 0 20px 48px rgb(8 40 70 / .28), inset 0 1px 0 rgb(255 255 255 / .12);
   overflow: hidden;
+  color: #fff;
 }
 
 .faranou-welcome-image {
@@ -169,29 +161,41 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: 78% center;
-  opacity: .48;
-  mix-blend-mode: soft-light;
+  object-position: 72% center;
+  opacity: .92;
+  mix-blend-mode: normal;
   pointer-events: none;
-  z-index: -2;
-  filter: saturate(1.1) contrast(1.05);
+  z-index: 0;
+  filter: none;
 }
 
 .faranou-welcome-shade {
   position: absolute;
   inset: 0;
-  z-index: -1;
-  background:
-    linear-gradient(270deg,
-      rgb(6 36 52 / .92) 0%,
-      rgb(10 55 72 / .78) 28%,
-      rgb(14 85 100 / .35) 62%,
-      rgb(16 95 110 / .08) 100%);
+  z-index: 1;
   pointer-events: none;
+  background:
+    linear-gradient(
+      to left,
+      rgb(4 18 36 / .94) 0%,
+      rgb(6 28 48 / .82) 28%,
+      rgb(8 40 62 / .45) 55%,
+      rgb(10 50 72 / .12) 78%,
+      transparent 100%
+    );
+}
+
+.faranou-welcome .relative.z-10 {
+  z-index: 2;
 }
 
 .faranou-welcome h1 {
-  text-shadow: 0 2px 24px rgb(4 30 45 / .4);
+  color: #ffffff;
+  text-shadow: 0 2px 20px rgb(0 20 40 / .45);
+}
+
+.faranou-welcome p {
+  color: rgb(220 240 255 / .92) !important;
 }
 
 .faranou-summary-card {
@@ -199,91 +203,88 @@
   align-items: center;
   gap: .85rem;
   padding: 1rem 1.1rem;
-  border-radius: 18px;
-  border: 1px solid rgb(255 255 255 / .95);
-  background: linear-gradient(160deg, #ffffff 0%, #f3f8fc 100%);
-  box-shadow: 0 12px 30px rgb(28 70 110 / .08);
-  transition: transform 160ms ease, box-shadow 160ms ease;
+  border-radius: 16px;
+  border: 1px solid #e2eef6;
+  background: linear-gradient(165deg, #ffffff 0%, #f4f9fc 100%);
+  box-shadow: 0 8px 24px rgb(30 70 110 / .06);
+  transition: transform 150ms ease, box-shadow 150ms ease;
 }
-.faranou-summary-card:nth-child(1) { border-top: 3px solid #5ba3d9; }
+.faranou-summary-card:nth-child(1) { border-top: 3px solid #4a9fd4; }
 .faranou-summary-card:nth-child(2) { border-top: 3px solid #3b8bc8; }
 .faranou-summary-card:nth-child(3) { border-top: 3px solid #2f9a9c; }
 .faranou-summary-card:nth-child(4) { border-top: 3px solid #3cb07a; }
 @media (prefers-reduced-motion: no-preference) {
   .faranou-summary-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 18px 36px rgb(28 70 110 / .13);
+    box-shadow: 0 14px 30px rgb(30 70 110 / .1);
   }
 }
 
 .faranou-summary-icon {
   display: inline-flex;
-  width: 2.65rem;
-  height: 2.65rem;
+  width: 2.6rem;
+  height: 2.6rem;
   align-items: center;
   justify-content: center;
-  border-radius: 14px;
+  border-radius: 12px;
   flex-shrink: 0;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / .7);
 }
 
 .faranou-panel {
-  padding: 1.15rem 1.2rem;
-  border-radius: 20px;
-  border: 1px solid rgb(255 255 255 / .95);
-  background: linear-gradient(165deg, #ffffff 0%, #f4f9fc 100%);
-  box-shadow: 0 14px 34px rgb(26 65 100 / .08);
+  padding: 1.1rem 1.15rem;
+  border-radius: 18px;
+  border: 1px solid #e2eef6;
+  background: linear-gradient(165deg, #ffffff 0%, #f5f9fc 100%);
+  box-shadow: 0 10px 28px rgb(28 65 100 / .06);
 }
 
 .faranou-panel-icon {
   display: inline-flex;
-  width: 2.35rem;
-  height: 2.35rem;
+  width: 2.3rem;
+  height: 2.3rem;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
+  border-radius: 11px;
   background: linear-gradient(145deg, #e8f4fc, #d4ebf7);
-  box-shadow: inset 0 1px 0 #fff;
 }
 
 .faranou-module-row {
   display: flex;
   align-items: center;
   gap: .7rem;
-  min-height: 2.75rem;
-  padding: .45rem .65rem;
-  border-radius: 12px;
-  border: 1px solid #e2eef6;
-  background: linear-gradient(90deg, #f7fbfd 0%, #ffffff 100%);
-  transition: background 140ms ease, border-color 140ms ease;
+  min-height: 2.7rem;
+  padding: .4rem .6rem;
+  border-radius: 11px;
+  border: 1px solid #e4eef5;
+  background: #f8fbfd;
 }
 .faranou-module-row:hover {
   border-color: #c5ddf0;
-  background: #ffffff;
+  background: #fff;
 }
 
 .faranou-module-row-icon {
   display: inline-flex;
-  width: 2rem;
-  height: 2rem;
+  width: 1.95rem;
+  height: 1.95rem;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
+  border-radius: 9px;
   background: linear-gradient(145deg, #eaf4fb, #dcecf6);
   color: #1a6fa0;
 }
 
 .faranou-empty-state {
   background:
-    radial-gradient(ellipse at 50% 30%, rgb(180 220 245 / .35), transparent 60%),
-    linear-gradient(180deg, #f4fafd 0%, #eef6fb 100%);
+    radial-gradient(ellipse at 50% 28%, rgb(180 220 245 / .3), transparent 58%),
+    linear-gradient(180deg, #f5fafd 0%, #eef5fb 100%);
 }
 
 .faranou-main-content {
-  padding: 1.15rem 1.25rem 1.75rem;
+  padding: 1.1rem 1.2rem 1.7rem;
 }
 
 @media (max-width: 767px) {
-  .faranou-welcome.faranou-welcome--milad { min-height: 210px; border-radius: 18px; }
-  .faranou-sidebar--premium .faranou-sidebar-brand { padding: .85rem; }
+  .faranou-welcome.faranou-welcome--milad { min-height: 220px; border-radius: 16px; }
+  .faranou-sidebar--premium { width: 260px; flex-basis: 260px; }
 }
