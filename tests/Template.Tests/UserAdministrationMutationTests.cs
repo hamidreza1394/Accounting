@@ -22,7 +22,7 @@ public sealed class UserAdministrationMutationTests
 
         var result = await Server.Api.UserAdministrationEndpoints.CreateUserAsync(
             new DefaultHttpContext(), Principal(admin.Id), request, new AllowAntiforgery(),
-            fixture.Database, hasher, default);
+            fixture.Database, hasher, TimeProvider.System, default);
 
         Assert.Equal(StatusCodes.Status201Created, (result as IStatusCodeHttpResult)?.StatusCode);
         var created = await fixture.Database.Users.SingleAsync(x => x.Username == "new.user");
@@ -46,7 +46,7 @@ public sealed class UserAdministrationMutationTests
 
         var result = await Server.Api.UserAdministrationEndpoints.CreateUserAsync(
             new DefaultHttpContext(), Principal(admin.Id), request, new AllowAntiforgery(),
-            fixture.Database, new Infrastructure.Security.PasswordHashService(), default);
+            fixture.Database, new Infrastructure.Security.PasswordHashService(), TimeProvider.System, default);
 
         Assert.Equal(StatusCodes.Status400BadRequest, (result as IStatusCodeHttpResult)?.StatusCode);
         Assert.False(await fixture.Database.Users.AnyAsync(x => x.Username == "new.user"));
@@ -63,7 +63,7 @@ public sealed class UserAdministrationMutationTests
 
         var result = await Server.Api.UserAdministrationEndpoints.UpdateUserAsync(
             admin.Id, new DefaultHttpContext(), Principal(admin.Id), request,
-            new AllowAntiforgery(), fixture.Database, default);
+            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
 
         Assert.Equal(StatusCodes.Status409Conflict, (result as IStatusCodeHttpResult)?.StatusCode);
         Assert.True((await fixture.Database.Users.SingleAsync(x => x.Id == admin.Id)).IsActive);
