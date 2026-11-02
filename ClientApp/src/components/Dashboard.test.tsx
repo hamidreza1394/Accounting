@@ -18,6 +18,8 @@ describe('Dashboard', () => {
     expect(screen.getAllByText('شرکت نمونه').length).toBeGreaterThan(0);
     expect(screen.getAllByText('سال مالی ۱۴۰۵').length).toBeGreaterThan(0);
     expect(screen.getAllByText('حسابدار').length).toBeGreaterThan(0);
+    expect(screen.getByText('مدیریت هوشمند کسب‌وکار با دقت، شفافیت و امنیت بیشتر.')).toBeInTheDocument();
+    expect(screen.getByText('مدیریت هوشمند کسب‌وکار با دقت، شفافیت و امنیت بیشتر.').closest('section')).not.toHaveTextContent('کاربر آزمایشی');
     expect(screen.getByText('اطلاعات واقعی شرکت')).toBeInTheDocument();
   });
 
