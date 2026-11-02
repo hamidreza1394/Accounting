@@ -29,6 +29,10 @@ describe('AppShell', () => {
     render(<AppShell session={session} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
     expect(document.querySelector('.faranou-topbar')).toHaveClass('faranou-topbar--login-palette');
     expect(document.querySelector('.faranou-sidebar')).toHaveClass('faranou-sidebar--light');
+    const sidebar = document.querySelector('.faranou-sidebar');
+    expect(sidebar?.querySelector('nav > p')).toHaveClass('text-slate-600');
+    expect(sidebar?.querySelector('[aria-disabled="true"] > span:last-child')).toHaveClass('text-slate-600');
+    expect(sidebar?.querySelector('.faranou-sidebar-footer p')).toHaveClass('text-slate-600');
   });
 
   it('shows the full read-only and reporting-only access explanation', () => {

@@ -1074,3 +1074,40 @@
 @media (max-width: 1023px) {
   .faranou-sidebar--light { box-shadow: -14px 0 36px rgb(26 72 115 / .16); }
 }
+
+
+/* Issue #429: enforce readable contrast in the light navigation surface.
+   These selectors intentionally outrank legacy dark-sidebar declarations above. */
+.faranou-sidebar--light nav > p { color: #526b83; }
+.faranou-sidebar--light nav li > div.faranou-nav-disabled[aria-disabled="true"] {
+  color: #243f59;
+  background: rgb(255 255 255 / .46);
+}
+.faranou-sidebar--light nav li > div.faranou-nav-disabled[aria-disabled="true"]:hover {
+  color: #123b61;
+  background: #ffffff;
+  border-color: #b9d9ee;
+}
+.faranou-sidebar--light nav li > div.faranou-nav-disabled[aria-disabled="true"] > span:last-child {
+  color: #49647d;
+  background: #e8f2fa;
+  border: 1px solid #d2e2ef;
+}
+.faranou-sidebar--light nav li > div.faranou-nav-disabled[aria-disabled="true"] > svg { color: #287c9e; }
+.faranou-sidebar--light nav li.border-t { border-color: #d7e5ef; }
+.faranou-sidebar--light .faranou-sidebar-footer {
+  border-color: #c9deec;
+  background: linear-gradient(145deg, #ffffff 0%, #eaf5fb 100%);
+}
+.faranou-sidebar--light .faranou-sidebar-footer > div { color: #087b70; }
+.faranou-sidebar--light .faranou-sidebar-footer p { color: #526b83; }
+.faranou-sidebar--light .faranou-nav-active {
+  color: #ffffff;
+  background: linear-gradient(112deg, #1266b5 0%, #168ed0 58%, #16a6b0 100%);
+  border-color: #4eb8df;
+  box-shadow: 0 8px 20px rgb(15 91 145 / .24), inset 0 1px 0 rgb(255 255 255 / .25);
+}
+.faranou-sidebar--light .faranou-nav-active::before { background: #f4c96b; }
+@media (prefers-reduced-motion: reduce) {
+  .faranou-sidebar--light .faranou-nav-disabled { transition: none; }
+}
