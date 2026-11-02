@@ -182,6 +182,7 @@ public static class UserAdministrationEndpoints
         var firstName = Dtat.Utility.FixText(request.FirstName);
         var lastName = Dtat.Utility.FixText(request.LastName);
         var cellPhone = Dtat.Utility.FixText(request.CellPhoneNumber);
+        var password = request.Password;
 
         if (string.IsNullOrWhiteSpace(email) ||
             !new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(email) ||
@@ -189,12 +190,12 @@ public static class UserAdministrationEndpoints
             username.Length > Constants.MaxLength.Username ||
             (firstName?.Length > Constants.MaxLength.FirstName) ||
             (lastName?.Length > Constants.MaxLength.LastName) ||
-            (cellPhone?.Length > Constants.MaxLength.CellPhoneNumber) ||
-            string.IsNullOrWhiteSpace(request.Password) ||
-            request.Password.Length < Constants.MinLength.UserPassword ||
-            request.Password.Length > Constants.MaxLength.UserPassword ||
-            !new ViewModels.Validation.NotCommonPasswordAttribute().IsValid(request.Password) ||
-            !string.Equals(request.Password, request.ConfirmPassword, StringComparison.Ordinal))
+            (cellPhone?.Length > 32) ||
+            string.IsNullOrWhiteSpace(password) ||
+            password.Length < Constants.MinLength.UserPassword ||
+            password.Length > Constants.MaxLength.UserPassword ||
+            !new ViewModels.Validation.NotCommonPasswordAttribute().IsValid(password) ||
+            !string.Equals(password, request.ConfirmPassword, StringComparison.Ordinal))
             return TypedResults.BadRequest(new { error = "اطلاعات کاربر یا سیاست رمز عبور معتبر نیست." });
 
         var duplicate = await database.Users.AsNoTracking().AnyAsync(user =>
@@ -212,7 +213,7 @@ public static class UserAdministrationEndpoints
             FirstName = firstName,
             LastName = lastName,
             CellPhoneNumber = cellPhone,
-            Password = passwordHashService.Hash(request.Password),
+            Password = passwordHashService.Hash(password!),
             IsActive = request.IsActive,
             IsSystemic = false,
             IsUndeletable = false,
