@@ -76,6 +76,7 @@
 
 ### مدل موجود برای بازاستفاده
 - Users و Role سراسری legacy
+- Permission و ApplicationHandler قدیمی (ارتباط Role → Permission → ApplicationHandler)
 - UserCompanyMemberships
 - CompanyRoles
 - PermissionDefinitions
@@ -84,22 +85,25 @@
 - LoginLogs
 - SecurityAuditEvents
 
-این دو مدل در بررسی اولیه مستقل به نظر می‌رسند: Users.RoleId به Domain.Role سراسری اشاره می‌کند و صفحات قدیمی Users/Roles با Constants.Role.Admin محافظت می‌شوند؛ UserCompanyMemberships به CompanyRole شرکتی با کلید مرکب RoleId/TenantId اشاره می‌کند و مجوزها از CompanyRolePermissions/PermissionDefinitions می‌آیند. این دو را بدون tracing و تصمیم مهاجرت به هم متصل نکنید. از جدول موازی برای Role/Permission/AccessGroup پرهیز شود. اگر AccessGroup صرفاً الگوی بسته‌بندی نقش‌های موجود است، بدون نیاز به موجودیت مستقل مدل شود؛ اگر نسخه‌بندی/مالکیت/تخصیص آن نیاز داده‌ای جدید می‌خواهد، ADR و طرح داده جدا لازم است.
+دو مسیر موجود از هم مستقل‌اند: Users.RoleId به Domain.Role سراسری اشاره می‌کند و UserCompanyMemberships به CompanyRole شرکتی با کلید مرکب RoleId/TenantId متصل است. Role قدیمی به Permission و آن به ApplicationHandler وصل است؛ اما جستجوی call-siteهای تولیدی نشان نداد که این Permissionها در runtime برای مجوزدهی endpoint یا handler بررسی شوند. ApplicationHandler نیز از PageModelهای Razor با RouteFinder کشف می‌شود و پوشش APIهای React را ندارد. بنابراین این ساختار فعلاً کاتالوگ/داده legacy است، نه مرجع امنیتی قابل اتکا. CompanyRolePermissions/PermissionDefinitions در CompanyAccessService و Trade واقعاً enforce می‌شوند. از ادغام بی‌بررسی یا ساخت موتور موازی پرهیز شود؛ برای مدیریت سراسری نصب، مرز مجوز جداگانه باید در ADR تعیین شود. اگر AccessGroup صرفاً الگوی بسته‌بندی نقش‌های موجود است، بدون نیاز به موجودیت مستقل مدل شود؛ اگر نسخه‌بندی/مالکیت/تخصیص آن نیاز داده‌ای جدید می‌خواهد، ADR و طرح داده جدا لازم است.
 
 ### قواعد قطعی
 - Company در مدل فعلی همان مرز Tenant است؛ Tenant entity جدید نسازید.
 - TenantId/CompanyId ارسالی کلاینت یا Claim مرجع مجوز داده نیست؛ عضویت و مجوز از CompanyAccessService و دیتابیس معتبر بررسی شود.
 - UserId هدف در self-service از هویت احراز‌شده استخراج شود.
-- لایسنس/Entitlement با مجوز عملیاتی کاربر متفاوت است؛ entitlement مشتری فعلاً NotImplemented است. این Issue فقط قرارداد/نقطه اتصال آینده را مشخص می‌کند و entitlement جعلی ایجاد نمی‌کند.
+- لایسنس با مجوز عملیاتی کاربر متفاوت است. بخشی از customer-side license import/signature/revocation در کد موجود است، اما Trade فعلاً از DenyAllTradeModuleEntitlement استفاده می‌کند؛ entitlement مؤثر زیرسیستم هنوز به مجوزدهنده فعال و آزمون‌شده متصل نیست. این Issue فقط قرارداد اتصال را بررسی می‌کند و entitlement جعلی ایجاد نمی‌کند.
 - FiscalPeriod از Core مشترک باقی می‌ماند؛ دوره مستقل برای زیرسیستم ساخته نمی‌شود.
 - کنترل‌ها fail-closed، عملیات تغییردهنده دارای Anti-forgery و Audit.
 - خودافزایی نقش/مجوز و تفویض اختیاراتی که مدیر خودش ندارد ممنوع.
 - گروه شرکتی به‌تنهایی مجوز داده‌ای ایجاد نمی‌کند؛ تصمیمات D-033..D-035 رعایت شوند.
 
 ## 8. سوابق و امنیت حساب
-مدل User فعلی شامل نام، نام خانوادگی، ایمیل، موبایل، نام کاربری و فیلدهای وضعیت/تأیید است؛ بنابراین UserProfile جداگانه یا EmployeeId/Position جدید فقط پس از بررسی کامل مدل و نیاز اتصال Payroll پیشنهاد می‌شود. LoginLog فعلی فقط UserId و IP را نگه می‌دارد؛ به‌تنهایی تاریخچه کامل نشست، خروج، دستگاه، MFA و علت شکست نیست. SecurityAuditEvent شامل UserId/TenantId، نوع رویداد، نوع/شناسه موجودیت، زمان UTC، CorrelationId، IP و DetailsJson است و باید از نظر retention، ساختار payload و queryability بررسی شود. AuthenticationService و SecurityAuditEvents باید بررسی شوند تا رویدادهای فعلی مشخص شوند.
+مدل User فعلی شامل نام، نام خانوادگی، ایمیل، موبایل، نام کاربری و فیلدهای وضعیت/تأیید است؛ بنابراین UserProfile جداگانه یا EmployeeId/Position جدید فقط پس از بررسی کامل مدل و نیاز اتصال Payroll پیشنهاد می‌شود. LoginLog فعلی فقط UserId و IP را نگه می‌دارد و در مسیر ورود موفق ساخته می‌شود؛ شکست‌های ورود در SecurityAuditEvents ثبت می‌شوند (برای نام کاربری ناشناخته UserId می‌تواند null باشد). Logout API فعلی فقط کوکی و work-context را پاک می‌کند و رویداد خروج/نشست ثبت نمی‌کند. SecurityAuditEvent شامل UserId/TenantId، نوع رویداد، نوع/شناسه موجودیت، زمان UTC، CorrelationId، IP و DetailsJson است. این ساختار برای رخدادهای Audit مفید است، اما بدون قرارداد event و lifecycle نشست نباید از آن duration یا logout استنتاج کرد.
 
 رویدادهای موردنیاز: ورود موفق/ناموفق، خروج صریح، انقضای نشست، ابطال توسط مدیر و پایان نامشخص نشست. نباید خروج قطعی یا مدت نشست را از داده ناقص حدس زد. Audit Trail مستقل از Login History است و تغییر نقش، مجوز، عضویت و وضعیت حساب را ثبت می‌کند. رمز، hash، token یا secret در Audit/Log ممنوع است. IP و metadata دستگاه نیازمند دسترسی محدود و retention مشخص‌اند.
+
+### شکاف‌های فعلی حساب شخصی
+صفحه Razor پروفایل فقط OnGet خالی دارد و صفحه ChangePassword نیز در PageModel فعلی فقط OnGet خالی دارد؛ API پروفایل یا تغییر رمز در ApiEndpoints وجود ندارد. بنابراین self-service موردنظر هنوز پیاده‌سازی نشده و باید به‌صورت API جدید با UserId استخراج‌شده از ClaimsPrincipal ساخته شود. صفحه‌های قدیمی تا جایگزینی کامل حفظ می‌شوند.
 
 ## 9. قرارداد API و فرانت‌اند
 API هم‌مبدأ با Cookie HttpOnly و Anti-forgery موجود حفظ شود؛ توکن نشست در localStorage ذخیره نشود. DTO از Entity جدا، جستجو/صفحه‌بندی سمت سرور، CancellationToken، پاسخ‌های 401/403/404 و authorization server-side رعایت شوند.
@@ -141,6 +145,7 @@ API هم‌مبدأ با Cookie HttpOnly و Anti-forgery موجود حفظ شو�
 - Users.RoleId و CompanyRole هم‌زمان وجود دارند؛ یکپارچه‌سازی بدون tracing ممکن است رفتار فعلی را بشکند.
 - LoginLog فعلی چرخه عمر نشست را پوشش نمی‌دهد.
 - routing فعلی ClientApp باید پیش از فعال‌سازی لینک‌ها بررسی شود.
-- لایسنس/entitlement مشتری فعلاً پیاده‌سازی‌نشده است و خارج از دامنه این Issue است.
+- نقش قدیمی Admin در claims از Role.Name برای کاربران و به‌صورت ثابت برای Infrastructure master صادر می‌شود؛ صفحات Razor مدیریت کاربران همه Users را بدون فیلتر شرکت فهرست می‌کنند. قبل از جایگزینی این صفحات، محدوده مدیر سراسری و مدیر شرکتی باید صریح و با تست cross-company تثبیت شود.
+- customer license import/signature/revocation در بخشی از کد پیاده‌سازی شده، اما Trade entitlement در DI با DenyAllTradeModuleEntitlement بسته است؛ اتصال entitlement مؤثر خارج از فازهای اولیه این Issue است.
 - هیچ Migration تا پایان S0 و تصویب طرح داده ساخته نمی‌شود.
 - صفحات Razor قدیمی تا جایگزینی کامل و تست‌شده حذف نمی‌شوند.
