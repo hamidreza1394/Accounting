@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ApiError, UnauthenticatedError, buildLoginUrl, getCompanies, getCompanyOverview, getWorkContext, logout, setDefaultCompany } from './client';
+import { ApiError, UnauthenticatedError, buildLoginUrl, getCompanies, getCompanyOverview, getWorkContext, getMyProfile, getMyLoginHistory, changeMyPassword, logout, setDefaultCompany } from './client';
 import { ContractError } from './types';
 
 function jsonResponse(status: number, body: unknown, contentType = 'application/json'): Response {
@@ -132,6 +132,80 @@ describe('api client', () => {
     })));
 
     await expect(getWorkContext()).rejects.toBeInstanceOf(ContractError);
+  });
+
+  it('parses only the safe self profile contract and uses no-store', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, {
+      username: 'alice',
+      firstName: 'آلیس',
+      lastName: 'مثالی',
+      emailAddress: 'alice@example.test',
+      cellPhoneNumber: '09120000000',
+      isEmailAddressVerified: true,
+      isCellPhoneNumberVerified: false,
+      lastLoginDateTime: '2026-11-02T08:00:00Z',
+      insertDateTime: '2026-10-01T09:00:00Z',
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const profile = await getMyProfile();
+
+    expect(profile.username).toBe('alice');
+    expect(profile.emailAddress).toBe('alice@example.test');
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/api/v1/me/profile');
+    expect(init.cache).toBe('no-store');
+    expect(init.credentials).toBe('same-origin');
+  });
+
+  it('loads only the current-user login history with a bounded page size', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, [{
+      eventType: 'LoginSucceeded',
+      occurredAtUtc: '2026-11-02T08:00:00Z',
+      ipAddress: '192.0.2.10',
+    }]));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const history = await getMyLoginHistory(undefined, 500);
+
+    expect(history).toHaveLength(1);
+    expect(history[0]?.eventType).toBe('LoginSucceeded');
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/v1/me/login-history?take=100');
+  });
+
+  it('rejects unknown self login history event types', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, [{
+      eventType: 'RoleChanged',
+      occurredAtUtc: '2026-11-02T08:00:00Z',
+      ipAddress: null,
+    }])));
+
+    await expect(getMyLoginHistory()).rejects.toBeInstanceOf(ContractError);
+  });
+
+  it('sends a self password change with anti-forgery and no user identifier', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(200, { headerName: 'X-XSRF-TOKEN', requestToken: 'token-123' }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await changeMyPassword({
+      currentPassword: 'Current-Phrase-1405!',
+      newPassword: 'New-Long-Phrase-1406!',
+      confirmNewPassword: 'New-Long-Phrase-1406!',
+    });
+
+    const [url, init] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(url).toBe('/api/v1/me/password');
+    expect(init.method).toBe('POST');
+    expect((init.headers as Record<string, string>)['X-XSRF-TOKEN']).toBe('token-123');
+    expect(JSON.parse(String(init.body))).toEqual({
+      currentPassword: 'Current-Phrase-1405!',
+      newPassword: 'New-Long-Phrase-1406!',
+      confirmNewPassword: 'New-Long-Phrase-1406!',
+    });
+    expect(String(init.body)).not.toContain('userId');
   });
 
   it('builds a login URL that returns to a local path only', () => {
