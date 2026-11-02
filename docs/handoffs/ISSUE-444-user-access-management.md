@@ -3,7 +3,7 @@
 - Issue: #444
 - Agent: ChatGPT
 - تاریخ: 2026-11-02
-- وضعیت: در حال انجام؛ ممیزی اولیه و مستند طراحی آغاز شده، پیاده‌سازی رفتاری هنوز آغاز نشده است.
+- وضعیت: در حال انجام؛ مستندات و بازآرایی منو در PR #445 باز است؛ S0 ممیزی مدل/امنیت تکمیل‌تر شده، پیاده‌سازی API هنوز آغاز نشده است.
 
 ## هدف و معیارهای پذیرش
 - [ ] کاربر عادی فقط اطلاعات خودش را ببیند و رمز خودش را تغییر دهد.
@@ -20,6 +20,7 @@
 - منوی مدیریت سیستم در AppShell به شش بخش هدف بازآرایی شد؛ «لیست کاربران فعال» حذف و ورود/خروج در گزارش امنیت ادغام شد. آیتم‌ها عمداً تا ایجاد route و API واقعی غیرفعال‌اند.
 - تست AppShell برای ساختار جدید به‌روزرسانی شد.
 - هنوز Migration، Entity یا API اجرایی تغییر نکرده است.
+- PR #445 به‌صورت Draft باز شد. Client CI، .NET Build/Test و Semgrep در runهای PR در حال/در انتظار تکمیل‌اند؛ نتیجه نهایی هنوز دریافت نشده است.
 
 ## فایل‌های مهم
 - docs/USER_ACCESS_MANAGEMENT.md — طراحی هدف و مراحل.
@@ -27,7 +28,10 @@
 - docs/INDEX.md، docs/WORK_LOG.md و docs/ROADMAP.md — ثبت کار و ارجاع.
 
 ## تصمیم فنی
-- بازاستفاده از PermissionDefinitions، CompanyRoles و CompanyRolePermissions.
+- بازاستفاده از PermissionDefinitions، CompanyRoles و CompanyRolePermissions برای مجوزهای شرکتی.
+- Role → Permission → ApplicationHandler قدیمی در runtime به‌عنوان authorization enforce نمی‌شود؛ فعلاً نباید مبنای امنیت API باشد.
+- مدیریت سراسری نصب و مدیریت شرکتی دو scope متفاوت‌اند؛ مرز مدیر سراسری/مدیر شرکت پیش از APIهای مدیریت کاربران باید طراحی و تست شود.
+- پروفایل و تغییر رمز Razor فعلی placeholder هستند (OnGet خالی)؛ API self-service وجود ندارد.
 - عدم ساخت جدول موازی پیش از S0.
 - حفظ مرز Company/Tenant و FiscalPeriod مشترک.
 - عدم پیاده‌سازی entitlement لایسنس در این Issue.
@@ -44,12 +48,13 @@
 - مدل legacy Users.RoleId/Role و مدل شرکتی UserCompanyMemberships/CompanyRole مستقل‌اند و نباید بدون تصمیم معماری ادغام شوند.
 - User هم‌اکنون داده‌های هویتی و تماس را نگه می‌دارد؛ ساخت UserProfile جدا هنوز توجیه نشده است.
 - App.tsx routing مستقل ندارد؛ menu items فعلاً placeholder هستند.
-- ممیزی کامل endpointها، DI، mappingها، migrationها و React app flow.
+- بررسی کامل همه call-siteهای legacy permission و inventory کاتالوگ زیرسیستم‌ها.
+- ممیزی کامل API/DI و migration snapshot؛ مسیرهای اصلی بررسی شده‌اند اما call-siteهای کامل باید تکمیل شوند.
 - تصمیم route strategy و API contracts.
 - بررسی exact permission inventory و Trade permission catalog.
 - طراحی و اجرای مرحله‌ای با TDD.
 
 ## Git
 - Branch: feature/admin-identity-access-management-444
-- Commit: ثبت نشده
-- PR: ایجاد نشده
+- آخرین Commit شاخه در زمان این handoff: 7f3cf10b91def7bbd8b77e9920427abb6b1a1902
+- PR: #445 (Draft) — https://github.com/hamidreza1394/Accounting/pull/445
