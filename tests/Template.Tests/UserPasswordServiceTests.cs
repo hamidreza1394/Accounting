@@ -1,0 +1,151 @@
+using Microsoft.EntityFrameworkCore;
+using Xunit;
+
+namespace Template.Tests;
+
+public sealed class UserPasswordServiceTests
+{
+    [Fact]
+    public async Task ChangePasswordAsync_WithValidCurrentPassword_UpdatesCredentialAndAuditsChange()
+    {
+        await using var fixture = new Fixture();
+        var result = await fixture.Service.ChangePasswordAsync(
+            fixture.User.Id,
+            "Old-Password-1405!",
+            "New-Long-Phrase-1406!",
+            "New-Long-Phrase-1406!",
+            "192.0.2.10");
+
+        Assert.Equal(Infrastructure.Security.ChangePasswordOutcome.Changed, result.Outcome);
+        var updated = await fixture.Database.Users.SingleAsync(user => user.Id == fixture.User.Id);
+        Assert.Equal(
+            Infrastructure.Security.PasswordVerificationOutcome.Success,
+            fixture.Hasher.Verify(updated.Password, "New-Long-Phrase-1406!"));
+        Assert.Equal(
+            Infrastructure.Security.PasswordVerificationOutcome.Failed,
+            fixture.Hasher.Verify(updated.Password, "Old-Password-1405!"));
+
+        var audit = await fixture.Database.SecurityAuditEvents.SingleAsync();
+        Assert.Equal("PasswordChanged", audit.EventType);
+        Assert.Equal(fixture.User.Id, audit.UserId);
+        Assert.Equal("192.0.2.10", audit.IpAddress);
+        Assert.DoesNotContain("New-Long-Phrase-1406!", audit.DetailsJson ?? string.Empty);
+        Assert.DoesNotContain("Old-Password-1405!", audit.DetailsJson ?? string.Empty);
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_WithWrongCurrentPassword_DoesNotChangeCredentialOrAudit()
+    {
+        await using var fixture = new Fixture();
+        var oldHash = fixture.User.Password;
+
+        var result = await fixture.Service.ChangePasswordAsync(
+            fixture.User.Id,
+            "Wrong-Password-1405!",
+            "New-Long-Phrase-1406!",
+            "New-Long-Phrase-1406!",
+            "192.0.2.10");
+
+        Assert.Equal(Infrastructure.Security.ChangePasswordOutcome.CurrentPasswordInvalid, result.Outcome);
+        var unchanged = await fixture.Database.Users.SingleAsync(user => user.Id == fixture.User.Id);
+        Assert.Equal(oldHash, unchanged.Password);
+        Assert.Empty(await fixture.Database.SecurityAuditEvents.ToListAsync());
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_WithMismatchedConfirmation_IsRejected()
+    {
+        await using var fixture = new Fixture();
+
+        var result = await fixture.Service.ChangePasswordAsync(
+            fixture.User.Id,
+            "Old-Password-1405!",
+            "New-Long-Phrase-1406!",
+            "Different-Long-Phrase-1406!",
+            "192.0.2.10");
+
+        Assert.Equal(Infrastructure.Security.ChangePasswordOutcome.ConfirmationMismatch, result.Outcome);
+        Assert.Empty(await fixture.Database.SecurityAuditEvents.ToListAsync());
+    }
+
+    [Theory]
+    [InlineData("short")]
+    [InlineData("password123")]
+    public async Task ChangePasswordAsync_RejectsShortOrCommonPasswords(string newPassword)
+    {
+        await using var fixture = new Fixture();
+
+        var result = await fixture.Service.ChangePasswordAsync(
+            fixture.User.Id,
+            "Old-Password-1405!",
+            newPassword,
+            newPassword,
+            "192.0.2.10");
+
+        Assert.Equal(Infrastructure.Security.ChangePasswordOutcome.PasswordPolicyRejected, result.Outcome);
+        Assert.Empty(await fixture.Database.SecurityAuditEvents.ToListAsync());
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_RejectsReusingCurrentPassword()
+    {
+        await using var fixture = new Fixture();
+
+        var result = await fixture.Service.ChangePasswordAsync(
+            fixture.User.Id,
+            "Old-Password-1405!",
+            "Old-Password-1405!",
+            "Old-Password-1405!",
+            "192.0.2.10");
+
+        Assert.Equal(Infrastructure.Security.ChangePasswordOutcome.NewPasswordMustDiffer, result.Outcome);
+        Assert.Empty(await fixture.Database.SecurityAuditEvents.ToListAsync());
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_DoesNotAllowInactiveAccounts()
+    {
+        await using var fixture = new Fixture(isActive: false);
+
+        var result = await fixture.Service.ChangePasswordAsync(
+            fixture.User.Id,
+            "Old-Password-1405!",
+            "New-Long-Phrase-1406!",
+            "New-Long-Phrase-1406!",
+            "192.0.2.10");
+
+        Assert.Equal(Infrastructure.Security.ChangePasswordOutcome.AccountUnavailable, result.Outcome);
+        Assert.Empty(await fixture.Database.SecurityAuditEvents.ToListAsync());
+    }
+
+    private sealed class Fixture : IAsyncDisposable
+    {
+        public Fixture(bool isActive = true)
+        {
+            var options = new DbContextOptionsBuilder<Data.DatabaseContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                .Options;
+            Database = new Data.DatabaseContext(options);
+            Hasher = new Infrastructure.Security.PasswordHashService();
+            User = new Domain.User("self-service@example.test")
+            {
+                Username = "self-service",
+                IsActive = isActive,
+                Password = Hasher.Hash("Old-Password-1405!"),
+            };
+            Database.Users.Add(User);
+            Database.SaveChanges();
+            Service = new Infrastructure.Security.UserPasswordService(
+                Database,
+                Hasher,
+                TimeProvider.System);
+        }
+
+        public Data.DatabaseContext Database { get; }
+        public Infrastructure.Security.PasswordHashService Hasher { get; }
+        public Domain.User User { get; }
+        public Infrastructure.Security.UserPasswordService Service { get; }
+
+        public ValueTask DisposeAsync() => Database.DisposeAsync();
+    }
+}
