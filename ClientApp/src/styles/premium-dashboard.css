@@ -157,7 +157,7 @@
 .faranou-sidebar--premium .faranou-nav-disabled > span:last-child {
   color: rgb(185 220 245 / .78);
   border-color: rgb(255 255 255 / .14);
-  background: rgb(255 255 255 / .07);
+  background: rgb(255 255 255 / .06);
 }
 
 .faranou-sidebar--premium .faranou-sidebar-footer {
@@ -170,7 +170,6 @@
   backdrop-filter: blur(8px);
 }
 
-/* Beat index.css .faranou-welcome--milad light cyan theme */
 .faranou-welcome.faranou-welcome--milad {
   min-height: 268px !important;
   border-radius: 22px;
@@ -323,4 +322,59 @@
 @media (max-width: 767px) {
   .faranou-welcome.faranou-welcome--milad { min-height: 220px !important; border-radius: 16px; }
   .faranou-sidebar--premium { width: 260px; flex-basis: 260px; }
+}
+
+/* Colored nav icons */
+.faranou-nav-icon {
+  display: inline-flex;
+  width: 1.85rem;
+  height: 1.85rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .25), 0 2px 6px rgb(0 20 40 / .2);
+}
+.faranou-nav-icon--sky { background: linear-gradient(145deg, #38bdf8, #0284c7); }
+.faranou-nav-icon--emerald { background: linear-gradient(145deg, #34d399, #059669); }
+.faranou-nav-icon--amber { background: linear-gradient(145deg, #fbbf24, #d97706); }
+.faranou-nav-icon--rose { background: linear-gradient(145deg, #fb7185, #e11d48); }
+.faranou-nav-icon--violet { background: linear-gradient(145deg, #a78bfa, #7c3aed); }
+.faranou-nav-icon--cyan { background: linear-gradient(145deg, #22d3ee, #0891b2); }
+.faranou-nav-icon--indigo { background: linear-gradient(145deg, #818cf8, #4f46e5); }
+.faranou-nav-icon--teal { background: linear-gradient(145deg, #2dd4bf, #0f766e); }
+.faranou-nav-icon--orange { background: linear-gradient(145deg, #fb923c, #ea580c); }
+.faranou-nav-icon--slate { background: linear-gradient(145deg, #94a3b8, #475569); }
+.faranou-nav-icon--blue { background: linear-gradient(145deg, #60a5fa, #2563eb); }
+.faranou-nav-icon--green { background: linear-gradient(145deg, #4ade80, #16a34a); }
+
+.faranou-nav-divider {
+  list-style: none;
+  margin: .85rem .35rem;
+  padding: 0;
+}
+.faranou-nav-divider > span {
+  display: block;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(140 200 240 / .35), transparent);
+}
+
+.faranou-nav-group {
+  color: rgb(220 240 255 / .95);
+  border: 1px solid transparent;
+  background: transparent;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+.faranou-nav-group:hover {
+  border-color: rgb(140 200 230 / .14);
+  background: rgb(255 255 255 / .05);
+}
+
+.faranou-nav-sub {
+  margin-top: .25rem;
+}
+
+.faranou-sidebar--premium .faranou-nav-active .faranou-nav-icon {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .35), 0 2px 8px rgb(0 30 60 / .25);
 }
