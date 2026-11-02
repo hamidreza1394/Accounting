@@ -113,17 +113,17 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
           aria-label="ناوبری فرانو"
         >
           <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4" aria-label="منوی اصلی">
-            <p className="mb-3 px-3 text-[10px] font-bold tracking-wide text-blue-100/55">منوی اصلی</p>
+            <p className="mb-3 px-3 text-[10px] font-bold tracking-wide text-slate-600">منوی اصلی</p>
             <ul className="space-y-1.5">
               {navigation.map(({ label, icon: Icon, active, divider }) => (
-                <li key={label} className={divider ? 'mt-4 border-t border-white/10 pt-4' : undefined}>
+                <li key={label} className={divider ? 'mt-4 border-t border-slate-200 pt-4' : undefined}>
                   {active ? (
                     <a href="/app/" aria-current="page" onClick={() => setMobileMenuOpen(false)} className="faranou-nav-active flex min-h-12 items-center gap-3 rounded-xl px-3.5 text-sm font-bold">
                       <Icon size={20} strokeWidth={2.2} /><span>{label}</span>
                     </a>
                   ) : (
                     <div aria-disabled="true" title="این بخش پس از تکمیل مسیر و مجوز مربوط فعال می‌شود." className="faranou-nav-disabled flex min-h-12 cursor-not-allowed items-center gap-3 rounded-xl px-3.5 text-sm">
-                      <Icon size={20} /><span>{label}</span><span className="ms-auto rounded-md border border-white/15 px-1.5 py-0.5 text-[9px]">به‌زودی</span>
+                      <Icon size={20} /><span>{label}</span><span className="ms-auto rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[9px] font-semibold text-slate-600">به‌زودی</span>
                     </div>
                   )}
                 </li>
@@ -131,8 +131,8 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
             </ul>
           </nav>
           <div className="faranou-sidebar-footer">
-            <div className="flex items-center gap-2 text-xs font-semibold text-emerald-100"><ShieldCheck size={17} />محیط کاری امن</div>
-            <p className="mt-1 text-[10px] leading-5 text-blue-100/65">اطلاعات این محیط بر اساس دسترسی معتبر شما نمایش داده می‌شود.</p>
+            <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800"><ShieldCheck size={17} />محیط کاری امن</div>
+            <p className="mt-1 text-[10px] leading-5 text-slate-600">اطلاعات این محیط بر اساس دسترسی معتبر شما نمایش داده می‌شود.</p>
           </div>
         </aside>
 
