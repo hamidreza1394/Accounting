@@ -358,8 +358,8 @@ public static class ApiEndpoints
 		HttpContext httpContext,
 		ClaimsPrincipal user,
 		[FromServices] Data.DatabaseContext databaseContext,
-		int take,
-		CancellationToken cancellationToken)
+		int take = 50,
+		CancellationToken cancellationToken = default)
 	{
 		var userId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(user);
 		if (userId is null)
