@@ -48,7 +48,7 @@ public sealed class UserAdministrationMutationTests
             new DefaultHttpContext(), Principal(admin.Id), request, new AllowAntiforgery(),
             fixture.Database, new Infrastructure.Security.PasswordHashService(), default);
 
-        Assert.IsType<BadRequest<object>>(result);
+        Assert.Equal(StatusCodes.Status400BadRequest, (result as IStatusCodeHttpResult)?.StatusCode);
         Assert.False(await fixture.Database.Users.AnyAsync(x => x.Username == "new.user"));
     }
 
@@ -65,7 +65,7 @@ public sealed class UserAdministrationMutationTests
             admin.Id, new DefaultHttpContext(), Principal(admin.Id), request,
             new AllowAntiforgery(), fixture.Database, default);
 
-        Assert.IsType<Conflict<object>>(result);
+        Assert.Equal(StatusCodes.Status409Conflict, (result as IStatusCodeHttpResult)?.StatusCode);
         Assert.True((await fixture.Database.Users.SingleAsync(x => x.Id == admin.Id)).IsActive);
     }
 
