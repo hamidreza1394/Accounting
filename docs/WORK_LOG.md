@@ -2023,3 +2023,14 @@
 - سند طراحی و معیارهای پذیرش در docs/USER_ACCESS_MANAGEMENT.md و گزارش در docs/handoffs/ISSUE-444-user-access-management.md ثبت شد.
 - هیچ Migration، Entity، API اجرایی یا تغییر schema در این مرحله انجام نشده است. لایسنس/Entitlement مشتری طبق اسناد فعلی NotImplemented است و در این Issue فقط مرز اتصال آن رعایت می‌شود.
 - Build/Test اجرا نشده؛ مرحله S0 ممیزی endpointها، DI، mappingها، migrationها، permission catalog و routing کلاینت باید پیش از هر تغییر رفتاری تکمیل شود.
+
+
+### تکمیل ممیزی اولیه و بازآرایی منوی مدیریت سیستم — Issue #444
+- مدل legacy Users.RoleId → Role و نقش‌های صفحات Razor با Constants.Role.Admin از مدل شرکتی CompanyRole → CompanyRolePermissions جدا هستند؛ یکپارچه‌سازی بدون تصمیم و tracing ممنوع.
+- User فعلی فیلدهای هویتی/تماس و وضعیت را در خود دارد؛ ایجاد UserProfile مستقل هنوز اثبات نشده و باید از ایجاد جدول تکراری پرهیز شود.
+- CompanyRole به TenantId (Company) محدود است؛ UserCompanyMembership کلید خارجی مرکب RoleId/TenantId دارد. CompanyAccessService کاربر فعال، عضویت، شرکت و نقش فعال را کنترل می‌کند و مجوز را از کاتالوگ PermissionDefinitions می‌خواند.
+- PermissionDefinitions دارای Code یکتا است؛ CompanyRolePermissions رابطه نقش-مجوز را ثبت می‌کند. Trade نیز کاتالوگ strongly typed و مجوزهای فرم/عملیات مستقل دارد؛ inventory باید با آن تطبیق یابد.
+- LoginLog فقط UserId و IP را دارد؛ SecurityAuditEvent فیلدهای رویداد، زمان، correlation، IP و DetailsJson دارد. این دو برای history نشست کامل کافی نیستند.
+- App.tsx در حال حاضر flow تک‌صفحه‌ای است؛ AppShell فقط /app/ را فعال می‌کند و routeهای مدیریتی هنوز وجود ندارند. بنابراین منو به شش گروه هدف بازآرایی شد، اما همه موارد غیرفعال باقی ماندند تا route/API واقعی و authorization اضافه شود.
+- «لیست کاربران فعال» به فیلتر داخل مدیریت کاربران منتقل شد؛ ورود/خروج در گزارش امنیت ادغام شد؛ گروه‌های دسترسی از کاتالوگ جزئی مجوزها جدا شدند.
+- AppShell.test.tsx با ساختار جدید هماهنگ شد. تست هنوز اجرا نشده است؛ Build/Typecheck/Vitest و مرورگر باید در محیط دارای checkout اجرا شوند.
