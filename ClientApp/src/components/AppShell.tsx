@@ -365,7 +365,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, onPasswo
               {logoutError}
             </p>
           ) : null}
-          {activeAdminSection === 'users' ? <UserManagementPage onUnauthenticated={onUnauthenticated} /> : activeAdminSection === 'access-groups' ? <AccessGroupManagementPage companyId={context.company.id} companyName={context.company.name} onUnauthenticated={onUnauthenticated} /> : activeAdminSection === 'permission-catalog' ? <PermissionCatalogPage onUnauthenticated={onUnauthenticated} /> : children}
+          {activeAdminSection === 'users' ? <UserManagementPage companyId={context.company.id} companyName={context.company.name} onUnauthenticated={onUnauthenticated} /> : activeAdminSection === 'access-groups' ? <AccessGroupManagementPage companyId={context.company.id} companyName={context.company.name} onUnauthenticated={onUnauthenticated} /> : activeAdminSection === 'permission-catalog' ? <PermissionCatalogPage onUnauthenticated={onUnauthenticated} /> : children}
         </main>
       </div>
       <MyAccountPanel
