@@ -605,6 +605,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 var db = verifyScope.ServiceProvider.GetRequiredService<VendorDbContext>();
                 var persisted = await db.Customers.AsNoTracking().SingleAsync(item => item.Id == customerId, cancellationToken);
                 Assert.Equal("After Update", persisted.DisplayName);
+                Assert.Equal(provisioningCreatedAtUtc, persisted.UpdatedAtUtc);
                 Assert.NotEqual(initialRowVersion, persisted.RowVersion);
                 Assert.Equal(1, await db.AuditEvents.CountAsync(item =>
                     item.ActionCode == "vendor.customer.updated" && item.SubjectId == customerId.ToString("D"), cancellationToken));
@@ -1033,6 +1034,8 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
             // Force two authenticated HTTP creates past the preflight duplicate check and
             // into SQL Server INSERT concurrently. The unique index must arbitrate the race.
             var raceGate = factory.Services.GetRequiredService<CustomerInsertRaceGate>();
+            var racedCustomerCreatedAtUtc = provisioningCreatedAtUtc.AddMinutes(1);
+            timeProvider.SetUtcNow(racedCustomerCreatedAtUtc);
             var racedCustomerNumber = "RACE-" + Guid.NewGuid().ToString("N")[..20];
             var racedCustomerBody = new
             {
@@ -1339,9 +1342,90 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 var db = raceVerificationScope.ServiceProvider.GetRequiredService<VendorDbContext>();
                 Assert.Equal(1, await db.Customers.CountAsync(item =>
                     item.CustomerNumber == racedCustomerNumber, cancellationToken));
+                var racedCustomer = await db.Customers.AsNoTracking()
+                    .SingleAsync(item => item.Id == createdCustomerId, cancellationToken);
+                Assert.Equal(racedCustomerCreatedAtUtc, racedCustomer.CreatedAtUtc);
+                Assert.Equal(racedCustomerCreatedAtUtc, racedCustomer.UpdatedAtUtc);
                 Assert.Equal(1, await db.AuditEvents.CountAsync(item =>
                     item.ActionCode == "vendor.customer.created" &&
                     item.SubjectId == createdCustomerId.ToString("D"), cancellationToken));
+            }
+
+            // Verify deterministic timestamps for the remaining Vendor business create endpoints.
+            // Keep the deterministic test clock within the authenticated cookie lifetime.
+            var businessMutationClock = approvalReviewedAtUtc.AddMinutes(1);
+            var createdInstallationCode = "CLOCK-INST-" + Guid.NewGuid().ToString("N")[..12];
+            timeProvider.SetUtcNow(businessMutationClock);
+            Guid createdInstallationId;
+            using (var response = await PostWithTokenAsync(client, "/api/vendor/installations/",
+                new
+                {
+                    customerId,
+                    installationCode = createdInstallationCode,
+                    name = "Clock-controlled installation",
+                    environment = "Staging"
+                }, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                createdInstallationId = json.RootElement.GetProperty("id").GetGuid();
+                Assert.Equal(businessMutationClock, json.RootElement.GetProperty("createdAtUtc").GetDateTimeOffset());
+            }
+
+            var contractCreatedAtUtc = businessMutationClock.AddMinutes(1);
+            var createdContractNumber = "CLOCK-CON-" + Guid.NewGuid().ToString("N")[..12];
+            timeProvider.SetUtcNow(contractCreatedAtUtc);
+            Guid createdContractId;
+            using (var response = await PostWithTokenAsync(client, "/api/vendor/contracts/",
+                new
+                {
+                    customerId,
+                    contractNumber = createdContractNumber,
+                    startsAtUtc = contractCreatedAtUtc.AddDays(-1),
+                    endsAtUtc = (DateTimeOffset?)null,
+                    currencyCode = "EUR"
+                }, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                createdContractId = json.RootElement.GetProperty("id").GetGuid();
+                Assert.Equal(contractCreatedAtUtc, json.RootElement.GetProperty("createdAtUtc").GetDateTimeOffset());
+            }
+
+            var licenseCreatedAtUtc = businessMutationClock.AddMinutes(2);
+            timeProvider.SetUtcNow(licenseCreatedAtUtc);
+            Guid createdLicenseId;
+            using (var response = await PostWithTokenAsync(client, "/api/vendor/licenses/",
+                new
+                {
+                    customerId,
+                    contractId = createdContractId,
+                    installationId = createdInstallationId,
+                    licenseNumber = "CLOCK-LIC-" + Guid.NewGuid().ToString("N")[..12],
+                    productCode = "FARANOU-PRO",
+                    validFromUtc = licenseCreatedAtUtc.AddDays(-1),
+                    validUntilUtc = (DateTimeOffset?)null,
+                    licenseKind = LicensePayload.KindPerpetual,
+                    maxCompanies = 10,
+                    subsystems = new[] { "finance", "sales" },
+                    graceDays = 30
+                }, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                createdLicenseId = json.RootElement.GetProperty("id").GetGuid();
+                Assert.Equal(licenseCreatedAtUtc, json.RootElement.GetProperty("createdAtUtc").GetDateTimeOffset());
+            }
+
+            await using (var clockVerificationScope = factory.Services.CreateAsyncScope())
+            {
+                var db = clockVerificationScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                Assert.Equal(businessMutationClock, (await db.Installations.AsNoTracking()
+                    .SingleAsync(item => item.Id == createdInstallationId, cancellationToken)).CreatedAtUtc);
+                Assert.Equal(contractCreatedAtUtc, (await db.Contracts.AsNoTracking()
+                    .SingleAsync(item => item.Id == createdContractId, cancellationToken)).CreatedAtUtc);
+                Assert.Equal(licenseCreatedAtUtc, (await db.Licenses.AsNoTracking()
+                    .SingleAsync(item => item.Id == createdLicenseId, cancellationToken)).CreatedAtUtc);
             }
         }
         finally
