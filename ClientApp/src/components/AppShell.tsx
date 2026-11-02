@@ -81,14 +81,7 @@ const navigation: NavEntry[] = [
     label: 'مدیریت سیستم',
     icon: Settings2,
     tone: 'slate',
-    children: [
-      {
-        kind: 'item',
-        label: 'مدیریت کاربری',
-        icon: Users,
-        tone: 'blue',
-      },
-    ],
+    children: [],
   },
   { kind: 'item', label: 'اطلاعات پایه', icon: ClipboardList, tone: 'teal' },
   { kind: 'item', label: 'راهنما و پشتیبانی', icon: Headphones, tone: 'orange' },
