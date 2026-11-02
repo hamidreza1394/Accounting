@@ -12,6 +12,7 @@ public sealed class UserSelfServiceEndpointTests
     {
         await using var fixture = new Fixture();
         var result = await Server.Api.ApiEndpoints.GetMyProfileAsync(
+            new DefaultHttpContext(),
             TenantFixture.CompanyUser(fixture.Alice.Id),
             fixture.Database,
             default);
@@ -30,6 +31,7 @@ public sealed class UserSelfServiceEndpointTests
     {
         await using var fixture = new Fixture();
         var result = await Server.Api.ApiEndpoints.GetMyProfileAsync(
+            new DefaultHttpContext(),
             TenantFixture.InfrastructureAccount(),
             fixture.Database,
             default);
@@ -72,6 +74,7 @@ public sealed class UserSelfServiceEndpointTests
         await fixture.Database.SaveChangesAsync();
 
         var result = await Server.Api.ApiEndpoints.GetMyLoginHistoryAsync(
+            new DefaultHttpContext(),
             TenantFixture.CompanyUser(fixture.Alice.Id),
             fixture.Database,
             take: 50,
