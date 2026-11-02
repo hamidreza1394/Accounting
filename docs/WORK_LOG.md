@@ -2044,3 +2044,10 @@
 - LoginLog فقط در ورود موفق ثبت می‌شود و فقط UserId/IP دارد؛ ورودهای ناموفق در SecurityAuditEvents ثبت می‌شوند. API خروج فعلی رویداد logout ثبت نمی‌کند.
 - Customer-side license import/signature/revocation در بخشی از کد وجود دارد؛ اما Trade entitlement با DenyAllTradeModuleEntitlement ثبت شده و مجوز مؤثر زیرسیستم هنوز فعال نیست.
 - PR #445 Draft باز است. Client CI (typecheck, unit tests, build, offline check, runtime dependency audit) موفق؛ Semgrep موفق؛ .NET Build/Test در آخرین مشاهده موفق شده و job در مرحله گزارش آسیب‌پذیری/جمع‌بندی بود. نتیجه نهایی باید مجدداً poll شود.
+
+
+### D-064 پیشنهادی — Issue #444
+- تفکیک مدیر سراسری نصب از مدیر شرکتی به‌صورت Proposed در docs/DECISIONS.md ثبت شد.
+- پیشنهاد: Role.Admin برای مدیریت سراسری کاربران همان نصب؛ CompanyRole/CompanyRolePermissions برای دسترسی عملیاتی در هر شرکت. در APIهای جدید نقش مدیر سراسری باید از DB در هر درخواست بررسی شود تا claim قدیمی پس از لغو نقش معتبر نماند.
+- CompanyRole به‌عنوان گروه دسترسی شرکتی استفاده می‌شود؛ تا اثبات نیاز نسخه‌بندی/مالکیت مستقل، AccessGroup جدا ساخته نمی‌شود.
+- سمت/واحد سازمانی از مجوز تفکیک و در S2 طراحی می‌شود. هیچ Migration در این مرحله انجام نشد.
