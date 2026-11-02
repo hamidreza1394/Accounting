@@ -84,7 +84,7 @@
 - LoginLogs
 - SecurityAuditEvents
 
-ابتدا کاربرد و call-site نقش legacy و مدل نقش شرکتی بررسی شود. از جدول موازی برای Role/Permission/AccessGroup پرهیز شود. اگر AccessGroup صرفاً الگوی بسته‌بندی نقش‌های موجود است، بدون نیاز به موجودیت مستقل مدل شود؛ اگر نسخه‌بندی/مالکیت/تخصیص آن نیاز داده‌ای جدید می‌خواهد، ADR و طرح داده جدا لازم است.
+این دو مدل در بررسی اولیه مستقل به نظر می‌رسند: Users.RoleId به Domain.Role سراسری اشاره می‌کند و صفحات قدیمی Users/Roles با Constants.Role.Admin محافظت می‌شوند؛ UserCompanyMemberships به CompanyRole شرکتی با کلید مرکب RoleId/TenantId اشاره می‌کند و مجوزها از CompanyRolePermissions/PermissionDefinitions می‌آیند. این دو را بدون tracing و تصمیم مهاجرت به هم متصل نکنید. از جدول موازی برای Role/Permission/AccessGroup پرهیز شود. اگر AccessGroup صرفاً الگوی بسته‌بندی نقش‌های موجود است، بدون نیاز به موجودیت مستقل مدل شود؛ اگر نسخه‌بندی/مالکیت/تخصیص آن نیاز داده‌ای جدید می‌خواهد، ADR و طرح داده جدا لازم است.
 
 ### قواعد قطعی
 - Company در مدل فعلی همان مرز Tenant است؛ Tenant entity جدید نسازید.
@@ -97,7 +97,7 @@
 - گروه شرکتی به‌تنهایی مجوز داده‌ای ایجاد نمی‌کند؛ تصمیمات D-033..D-035 رعایت شوند.
 
 ## 8. سوابق و امنیت حساب
-LoginLog فعلی فقط UserId و IP را نگه می‌دارد؛ به‌تنهایی تاریخچه کامل نشست، خروج، دستگاه، MFA و علت شکست نیست. AuthenticationService و SecurityAuditEvents باید بررسی شوند تا رویدادهای فعلی مشخص شوند.
+مدل User فعلی شامل نام، نام خانوادگی، ایمیل، موبایل، نام کاربری و فیلدهای وضعیت/تأیید است؛ بنابراین UserProfile جداگانه یا EmployeeId/Position جدید فقط پس از بررسی کامل مدل و نیاز اتصال Payroll پیشنهاد می‌شود. LoginLog فعلی فقط UserId و IP را نگه می‌دارد؛ به‌تنهایی تاریخچه کامل نشست، خروج، دستگاه، MFA و علت شکست نیست. SecurityAuditEvent شامل UserId/TenantId، نوع رویداد، نوع/شناسه موجودیت، زمان UTC، CorrelationId، IP و DetailsJson است و باید از نظر retention، ساختار payload و queryability بررسی شود. AuthenticationService و SecurityAuditEvents باید بررسی شوند تا رویدادهای فعلی مشخص شوند.
 
 رویدادهای موردنیاز: ورود موفق/ناموفق، خروج صریح، انقضای نشست، ابطال توسط مدیر و پایان نامشخص نشست. نباید خروج قطعی یا مدت نشست را از داده ناقص حدس زد. Audit Trail مستقل از Login History است و تغییر نقش، مجوز، عضویت و وضعیت حساب را ثبت می‌کند. رمز، hash، token یا secret در Audit/Log ممنوع است. IP و metadata دستگاه نیازمند دسترسی محدود و retention مشخص‌اند.
 
@@ -106,7 +106,7 @@ API هم‌مبدأ با Cookie HttpOnly و Anti-forgery موجود حفظ شو�
 
 فرانت‌اند React + TypeScript strict + Tailwind/shadcn، RTL و دارایی محلی است. حالت‌های loading/empty/error/forbidden/success لازم‌اند. پنهان‌سازی دکمه صرفاً UX است و کنترل واقعی در API انجام می‌شود. API client از الگوی anti-forgery موجود پیروی کند.
 
-نکته: App.tsx در ممیزی اولیه جریان تک‌صفحه‌ای دارد و routing مستقل آن باید بررسی شود؛ href به صفحات ناموجود اضافه نشود.
+نکته: App.tsx در ممیزی اولیه جریان تک‌صفحه‌ای دارد و routing مستقل آن باید بررسی شود؛ href به صفحات ناموجود اضافه نشود. AppShell فعلی فقط /app/ را route فعال می‌کند و زیرمنوی تنظیمات سیستم placeholder است.
 
 ## 10. مراحل اجرایی
 | مرحله | خروجی | شرط |
