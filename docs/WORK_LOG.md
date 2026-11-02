@@ -1972,5 +1972,7 @@
 - **اصلاح در شاخه:** تمام پنج مسیر از `TimeProvider.GetUtcNow().ToUniversalTime()` استفاده می‌کنند؛ برای ساخت Customer یک timestamp واحد به هر دو فیلد Created/Updated داده می‌شود.
 - **Regression:** تست SQL Server موجود اکنون زمان ایجاد Customer در رقابت دو POST، ویرایش Customer، ایجاد Installation، Contract و License را با ساعت کنترل‌شده assert می‌کند.
 - **دامنه:** فقط Vendor Host، تست Vendor و مستندات تحویل؛ هیچ `Server/**`، migration یا Customer DB تغییر نکرده است.
-- **اعتبارسنجی:** تست محلی اجرا نشده؛ CI روی PR برای اثبات build، SQL Server integration، E2E و static analysis لازم است. وضعیت تا تکمیل CI، Implemented / Not Verified است.
+- **اعتبارسنجی اولیه:** Vendor CI روی SHA `3e2818b50ee12ec942f0e44c9ec9e12ca66ab8b5` با 204 تست موفق و 1 شکست پایان یافت. شکست در POST نصب، `Unauthorized` بود؛ تست ساعت مصنوعی را دو ساعت جلو برده و cookie سی‌دقیقه‌ای احراز هویت منقضی شده بود. این خطای production code نبود، بلکه ترتیب زمانی fixture تست بود.
+- **اصلاح regression:** ساعت عملیات تجاری تست به یک دقیقه پس از `approvalReviewedAtUtc` تغییر کرد تا در پنجرهٔ اعتبار cookie باقی بماند؛ CI روی SHA جدید باید دوباره اجرا شود.
+- **اعتبارسنجی نهایی:** تست محلی اجرا نشده؛ تا سبزشدن Vendor CI، .NET CI، Semgrep و CodeQL روی SHA جدید، وضعیت Implemented / Not Verified و merge ممنوع است.
 - **باقی‌مانده:** یک timestamp مستقیم در command-mode `VendorBootstrapCommand` باقی است و در این slice تغییر نمی‌کند؛ #235 customer consumer، #236 signer واقعی و #107 sink مستقل Production موانع جداگانه‌اند.

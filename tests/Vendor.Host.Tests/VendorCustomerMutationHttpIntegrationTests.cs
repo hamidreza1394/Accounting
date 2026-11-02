@@ -1352,7 +1352,8 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
             }
 
             // Verify deterministic timestamps for the remaining Vendor business create endpoints.
-            var businessMutationClock = provisioningCreatedAtUtc.AddHours(2);
+            // Keep the deterministic test clock within the authenticated cookie lifetime.
+            var businessMutationClock = approvalReviewedAtUtc.AddMinutes(1);
             var createdInstallationCode = "CLOCK-INST-" + Guid.NewGuid().ToString("N")[..12];
             timeProvider.SetUtcNow(businessMutationClock);
             Guid createdInstallationId;

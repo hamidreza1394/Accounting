@@ -32,8 +32,9 @@
 | فرمان/آزمون | نتیجه واقعی | توضیح/کد خروج |
 |---|---|---|
 | تست محلی .NET | اجرا نشد | این نشست checkout محلی/SDK ندارد؛ نتیجهٔ محلی ادعا نمی‌شود. |
-| `VendorCustomerMutationHttpIntegrationTests` | در انتظار CI | تست SQL Server موجود گسترش یافته؛ CI باید آن را با SQL Server اجرا کند. |
-| Vendor CI / .NET CI / Semgrep / CodeQL | در انتظار | Merge تا سبزشدن تمام بررسی‌های الزامی ممنوع است. |
+| اجرای نخست Vendor CI روی SHA `3e2818b` | ناموفق — 204 موفق، 1 ناموفق | تست Integration در POST نصب، `Unauthorized` گرفت؛ ساعت fake دو ساعت جلو رفته و cookie احراز هویت ۳۰ دقیقه‌ای را منقضی کرده بود. |
+| اصلاح Regression | انجام شد | ساعت تست اکنون یک دقیقه پس از زمان تأیید قبلی جلو می‌رود و در محدودهٔ عمر cookie می‌ماند. |
+| Vendor CI / .NET CI / Semgrep / CodeQL روی SHA جدید | در انتظار | Merge تا سبزشدن تمام بررسی‌های الزامی ممنوع است. |
 | `git diff --check` | اجرا نشد | تغییر از Git object API ثبت می‌شود؛ بررسی CI و diff نهایی PR لازم است. |
 
 ## امنیت، داده و سازگاری
@@ -48,5 +49,6 @@
 
 ## شناسه‌های Git
 - Branch: fix/vendor-business-mutation-time-provider
-- Commit: پس از ساخت
-- Pull Request: پس از ساخت
+- Commit اول: `3e2818b50ee12ec942f0e44c9ec9e12ca66ab8b5`
+- Commit اصلاح regression: پس از ساخت
+- Pull Request: #424
