@@ -432,7 +432,7 @@ public static class CompanyMembershipRequestEndpoints
                 on item.UserId equals requester.Id into requesterRows
             from requester in requesterRows.DefaultIfEmpty()
             join decider in database.Users.AsNoTracking()
-                on item.DecidedByUserId equals decider.Id into deciderRows
+                on item.DecidedByUserId equals (Guid?)decider.Id into deciderRows
             from decider in deciderRows.DefaultIfEmpty()
             orderby item.RequestedAtUtc descending, item.Id descending
             select new
