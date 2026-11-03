@@ -29,10 +29,12 @@
 - آیتم: `{ id, requesterDisplayName, username, status, requestedAtUtc, decidedAtUtc, decidedByDisplayName, approvedRoleName, decisionReason }`؛ مجوز مانند ۱.۳. درخواست‌کننده سوابق خودش را از `GET /me/membership-requests` می‌بیند (موجود).
 
 ## ۲. مجوزهای کاربر جاری و منو (مرحلهٔ ۹)
-`GET /api/v1/me/permissions?companyId=` (شرکت پیش‌فرض: شرکت انتخاب‌شده در زمینهٔ کاری)
-- پاسخ ۲۰۰: `{ "isInstallationAdministrator": false, "company": { "id": "guid", "permissionCodes": ["users.list", "users.membership.approve"] } }`
-- فقط مجوزهای **همان شرکت** و **همان زیرسیستم** که کاربر واقعاً دارد (مجوز یک زیرسیستم هرگز مجوز زیرسیستم دیگر را القا نکند)؛ شرکت بدون عضویت فعال ← 404؛ `no-store`؛ مجوز نقش غیرفعال/عضویت غیرفعال نیاید.
-- UI فقط برای نمایش/مخفی‌کردن منو و کنترل‌ها استفاده می‌کند و مرجع امنیتی نیست؛ بعد از ۴۰۳/۴۰۴ هر endpoint پیام مناسب نشان می‌دهد؛ انقضا ← بارگذاری مجدد مجوز.
+`GET /api/v1/me/permissions` — بدون پارامتر `companyId`.
+- پاسخ ۲۰۰: `{ "isInstallationAdministrator": false, "company": { "id": "guid", "permissionCodes": ["users.list", "users.membership.approve"] } }`؛ اگر زمینهٔ شرکت فعالی برای همین sign-in وجود نداشته باشد، `company: null` برمی‌گردد.
+- شرکت فقط از زمینهٔ کاری محافظت‌شدهٔ همین نشست، با `WorkContextService.GetCurrentAsync` تعیین می‌شود؛ شناسهٔ شرکت ارسالی در query/route/body یا claim خوانده نمی‌شود و هیچ شرکت دیگری خودکار انتخاب نمی‌شود.
+- مجوزها از نقش فعال عضویت فعال همان شرکت، از طریق `CompanyAccessService` خوانده می‌شوند؛ مجوزهای شرکت دیگر حتی اگر کاربر عضو آن باشد افشا نمی‌شود. `isInstallationAdministrator` از نقش فعال DB در هر درخواست محاسبه می‌شود، نه Claim قدیمی.
+- پاسخ `Cache-Control: no-store` و `Pragma: no-cache`؛ بدون cache. کاربر بدون زمینهٔ فعال پاسخ ۲۰۰ با `company: null` می‌گیرد؛ ناشناس/حساب غیرکاربر یا Claim شناسه نامعتبر ۴۰۱.
+- UI فقط برای نمایش/مخفی‌کردن منو و کنترل‌ها استفاده می‌کند و مرجع امنیتی نیست؛ هر endpoint باید مجوز خودش را سمت سرور بررسی کند.
 
 ## ۳. گزارش امنیتی (مراحل ۵ و ۱۱)
 موجود: `GET /admin/security/audit-events` (فیلتر exact: `eventType,userId,companyId,fromUtc,toUtc`).
