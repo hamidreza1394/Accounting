@@ -14,6 +14,7 @@ export type Permission =
   | 'admin.roles.view'
   | 'admin.roles.manage'
   | 'admin.permissions.view'
+  | 'admin.security.view'
   | 'account.view';
 
 /**

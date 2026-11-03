@@ -106,4 +106,11 @@ describe('membership request parsers', () => {
     );
     expect(page.items[0]).toMatchObject({ status: 'Approved', approvedRoleName: 'حسابدار', decidedAtUtc: '2026-11-02T09:00:00Z' });
   });
+
+  it('reads offset-less server timestamps as UTC', () => {
+    const mine = parseMyMembershipRequests(pageBody([myRequest({ requestedAtUtc: '2026-11-01T08:00:00', decidedAtUtc: '2026-11-02T09:00:00.5' })]));
+    expect(mine.items[0]).toMatchObject({ requestedAtUtc: '2026-11-01T08:00:00Z', decidedAtUtc: '2026-11-02T09:00:00.5Z' });
+    const pending = parsePendingMembershipRequests(pageBody([pendingItem(1, { requestedAtUtc: '2026-11-01T08:00:00' })]));
+    expect(pending.items[0]?.requestedAtUtc).toBe('2026-11-01T08:00:00Z');
+  });
 });

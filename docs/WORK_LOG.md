@@ -2185,6 +2185,11 @@
 - handoff: `docs/handoffs/ISSUE-485-security-audit-report-api.md`.
 
 
+## 2026-11-03 — Issue #444: UI گزارش امنیت و سوابق مدیریتی (S7)
+- صفحهٔ `/admin/security/audit` روی API ادغام‌شدهٔ #487 ساخته شد: فهرست صفحه‌بندی‌شدهٔ رویدادها، فیلتر نوع رویداد/بازهٔ تاریخ/کاربر/شرکت، برچسب فارسی برای کدهای شناخته‌شده، هشدار «نبودِ رویداد = نبودِ اتفاق نیست». IP و محتوای رویداد نمایش داده نمی‌شود. سمت سرور تغییر نکرد.
+- انتخابگر تاریخ شمسی ساخته نشد (وابستگی جدید نیازمند تأیید مالک)؛ `input type=date` بومی استفاده شد. ورود/خروج سراسری، نشست‌ها، export و retention به API وابسته‌اند.
+- تست: typecheck، ۴۵۵ تست vitest، build و check:offline موفق؛ axe و E2E واقعی اجرا نشد.
+- handoff: `docs/handoffs/ISSUE-444-security-audit-ui.md`.
 ## 2026-11-03 — Issue #483: E2E مثبت مدیریت نقش با مدیر نصب و SQL Server
 
 - یک حساب مدیر نصب اختصاصی برای E2E ایجاد شد؛ حساب‌های عادی Alice/Bob تغییر نقش نمی‌گیرند و حساب Infrastructure Master نیز برای احراز مدیر API استفاده نمی‌شود.
@@ -2247,3 +2252,9 @@
 - هیچ Schema، Migration، UI یا قرارداد پاسخ موفق تغییر نکرد.
 - تست محلی و dotnet build اجرا نشدند؛ CI باید روی SHA نهایی بررسی شود. نتیجه تست SQL Server هنوز Verified نیست.
 - handoff: docs/handoffs/ISSUE-498-membership-permission-delegation-ceiling.md.
+
+
+## 2026-11-03 — Issue #444: انتخابگر تاریخ شمسی (D-068)
+- ADR D-068: `react-day-picker@9.14.0` با مسیر `/persian` (نسخهٔ 10 این مسیر را ندارد) پین شد؛ مجوزها MIT، `npm audit` بدون آسیب‌پذیری، حجم chunk تنبل ≈ 72 kB gzip، اجرای آفلاین تأیید شد.
+- کامپوننت `ui/JalaliDateField` (مقدار ISO میلادی، RTL، ارقام فارسی، `min`/`max`، صفحه‌کلید، `FormField`) با ۱۲ تست؛ یک باگ اعتبارسنجی ماه حین تست یافت و رفع شد.
+- اتصال به گزارش امنیتی پس از ادغام #499 در PR بعدی. handoff: `docs/handoffs/ISSUE-444-jalali-date-picker.md`.

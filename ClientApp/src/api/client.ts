@@ -8,6 +8,7 @@ import {
   parseCompanyRoles,
   parseMyMembershipRequests,
   parsePendingMembershipRequests,
+  parseSecurityAuditEvents,
   parseCreatedCompanyRole,
   parsePermissionCatalog,
   parseCompanyRoleMembers,
@@ -39,6 +40,7 @@ import {
   type MembershipRequestPage,
   type MyMembershipRequest,
   type PendingMembershipRequest,
+  type SecurityAuditPage,
 } from './types';
 
 // The API lives on the same origin and is authenticated by the HttpOnly cookie of the
@@ -369,6 +371,31 @@ export async function rejectMembershipRequest(companyId: string, requestId: stri
     `/admin/companies/${encodeURIComponent(companyId)}/membership-requests/${encodeURIComponent(requestId)}/reject`,
     { reason },
   );
+}
+
+/** Filters of the security audit report; every filter is an exact match and optional. */
+export type SecurityAuditQuery = {
+  eventType?: string;
+  userId?: string;
+  companyId?: string;
+  /** ISO instants (UTC). The server answers 400 when `fromUtc` is after `toUtc`. */
+  fromUtc?: string;
+  toUtc?: string;
+  page: number;
+  pageSize: number;
+};
+
+/** The installation-wide security audit events, newest first. Installation administrators only. */
+export async function getSecurityAuditEvents(query: SecurityAuditQuery, signal?: AbortSignal): Promise<SecurityAuditPage> {
+  const params = new URLSearchParams();
+  if (query.eventType) params.set('eventType', query.eventType);
+  if (query.userId) params.set('userId', query.userId);
+  if (query.companyId) params.set('companyId', query.companyId);
+  if (query.fromUtc) params.set('fromUtc', query.fromUtc);
+  if (query.toUtc) params.set('toUtc', query.toUtc);
+  params.set('page', String(query.page));
+  params.set('pageSize', String(query.pageSize));
+  return parseSecurityAuditEvents(await getJson(`/admin/security/audit-events?${params.toString()}`, signal));
 }
 
 /** Changes the current account password; the server signs out all sessions after success. */
