@@ -26,6 +26,7 @@ import {
 import type { SelectedContext, Session } from '../api/types';
 import { FaranouLogo } from './ui/FaranouLogo';
 import { MyAccountPanel } from './MyAccountPanel';
+import { UserManagementPage } from './UserManagementPage';
 
 type AppShellProps = {
   session: Session;
@@ -153,6 +154,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, onPasswo
   const [accountOpen, setAccountOpen] = useState(false);
   const accountTriggerRef = useRef<HTMLButtonElement>(null);
   const [settingsOpen, setSettingsOpen] = useState(true);
+  const [activeAdminSection, setActiveAdminSection] = useState<'dashboard' | 'users'>('dashboard');
   const readOnly = context.fiscalPeriod.accessMode === 'readOnly';
 
   async function handleLogout() {
@@ -270,6 +272,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, onPasswo
                 }
 
                 if (entry.kind === 'group' && entry.label === 'مدیریت سیستم') {
+                  if (!session.isAdministrator) return null;
                   return (
                     <li key={entry.label} className="space-y-1">
                       <button
@@ -288,7 +291,12 @@ export function AppShell({ session, context, onChangeContext, onLogout, onPasswo
                       </button>
                       {settingsOpen ? (
                         <ul className="faranou-nav-sub space-y-2 ms-4 ps-2">
-                          <li><DisabledItem label="مدیریت کاربران" icon={Users} tone="sky" nested /></li>
+                          <li>
+                            <button type="button" onClick={() => { setActiveAdminSection('users'); setMobileMenuOpen(false); }} aria-current={activeAdminSection === 'users' ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-right text-[12px] transition ' + (activeAdminSection === 'users' ? 'bg-sky-500/20 text-white ring-1 ring-sky-300/30' : 'text-sky-100/80 hover:bg-white/10 hover:text-white')}>
+                              <NavIcon icon={Users} tone="sky" size="sm" />
+                              <span className="min-w-0 flex-1">مدیریت کاربران</span>
+                            </button>
+                          </li>
                           <li><DisabledItem label="ساختار سازمانی و سمت‌ها" icon={Building2} tone="blue" nested /></li>
                           <li><DisabledItem label="گروه‌های دسترسی" icon={ShieldCheck} tone="violet" nested /></li>
                           <li><DisabledItem label="کاتالوگ و جزئیات مجوزها" icon={KeyRound} tone="amber" nested /></li>
@@ -345,7 +353,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, onPasswo
               {logoutError}
             </p>
           ) : null}
-          {children}
+          {activeAdminSection === 'users' ? <UserManagementPage onUnauthenticated={onUnauthenticated} /> : children}
         </main>
       </div>
       <MyAccountPanel
