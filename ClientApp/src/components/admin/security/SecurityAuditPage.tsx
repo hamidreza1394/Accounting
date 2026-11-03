@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useId, useMemo, useState, type FormEvent } from 'react';
 import { ApiError, getSecurityAuditEvents, type SecurityAuditQuery } from '../../../api/client';
 import type { SecurityAuditEvent, SecurityAuditPage as AuditPage } from '../../../api/types';
 import { formatDateTime } from '../../../lib/format';
@@ -137,10 +137,10 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
     setApplied(empty);
   };
 
-  const filterBy = (patch: Partial<Applied>) => {
+  const filterBy = useCallback((patch: Partial<Applied>) => {
     setPage(1);
     setApplied((current) => ({ ...current, ...patch }));
-  };
+  }, []);
 
   const columns = useMemo<readonly DataTableColumn<SecurityAuditEvent>[]>(
     () => [
@@ -212,7 +212,7 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
         cell: (event) => (event.correlationId ? <code dir="ltr" className="break-all text-xs text-sub">{event.correlationId}</code> : '—'),
       },
     ],
-    [],
+    [filterBy],
   );
 
   const hasFilters = applied.eventType !== '' || applied.fromUtc !== null || applied.toUtc !== null || applied.user !== null || applied.company !== null;
