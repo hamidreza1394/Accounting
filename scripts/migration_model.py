@@ -222,7 +222,11 @@ def parse_generated_model(source: str) -> dict[str, Any]:
                 }
             )
 
-        table = optional_string(re.search(r'b\.ToTable\("([^"]*)"\)', body))
+        # EF Core tools write ToTable("X", (string)null) (explicit null schema); the
+        # repository generator writes ToTable("X"). Both name the same table.
+        table = optional_string(
+            re.search(r'b\.ToTable\("([^"]*)"(?:,\s*\(string\)null)?\)', body)
+        )
         described = entities.setdefault(
             name,
             {
@@ -274,6 +278,21 @@ def parse_generated_model(source: str) -> dict[str, Any]:
                     "required": ".IsRequired()" in calls,
                 }
             )
+
+    # EF Core 10 tools no longer write a separate b.HasAlternateKey(...) for a key that a
+    # relationship references through HasPrincipalKey(...); the key is only implied by the
+    # relationship. The repository generator writes both. A principal key that is not the
+    # primary key is therefore an alternate key of the principal, so both forms describe
+    # the same model (verified against 'dotnet ef migrations has-pending-model-changes').
+    for relationship in relationships:
+        principal_columns = relationship["principal_columns"]
+        principal = entities.get(relationship["principal"])
+        if principal_columns is None or principal is None:
+            continue
+        if principal_columns == principal["primary_key"]:
+            continue
+        if principal_columns not in principal["alternate_keys"]:
+            principal["alternate_keys"].append(principal_columns)
 
     for entity in entities.values():
         if entity["table"] is None:
