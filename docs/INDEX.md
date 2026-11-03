@@ -59,6 +59,7 @@
 | [`handoffs/ISSUE-444-membership-requests-ui.md`](handoffs/ISSUE-444-membership-requests-ui.md) | تحویل UI گردش درخواست عضویت بین‌شرکتی (درخواست‌های من و صف تأیید) و قرارداد API مورد نیاز از Backend (Issue #444) |
 | [`handoffs/ISSUE-444-role-members-api.md`](handoffs/ISSUE-444-role-members-api.md) | تحویل Backend فهرست اعضای گروه دسترسی و انتقال اعضا (Issue #444، مورد ۳)؛ UI و RowVersion باقی‌مانده |
 | [`handoffs/ISSUE-485-security-audit-report-api.md`](handoffs/ISSUE-485-security-audit-report-api.md) | API گزارش صفحه‌بندی‌شده Audit امنیتی برای مدیر نصب؛ بدون IP و payload جزئیات |
+| [`handoffs/ISSUE-494-company-user-directory-api.md`](handoffs/ISSUE-494-company-user-directory-api.md) | API فهرست کاربران در scope شرکت با مجوز users.list؛ بدون اطلاعات تماس/امنیتی |
 | [`handoffs/ISSUE-467-login-history-logout-test.md`](handoffs/ISSUE-467-login-history-logout-test.md) | Regression test برای نمایش خروج موفق در سوابق ورود/خروج کاربر |
 | [`WORK_LOG.md`](WORK_LOG.md), [`handoffs/`](handoffs/) | سوابق تحویل؛ [تحویل تجمیعی مدیریت کاربران و دسترسی‌ها](handoffs/ISSUE-444-admin-ui-completion.md)؛ [تحویل نقش‌ها و کاتالوگ مجوز](handoffs/ISSUE-475-roles-permission-catalog.md) |
 

@@ -2178,3 +2178,23 @@
 - رویدادهای ناقص یا نبود Logout به‌عنوان مدت نشست/انقضا تفسیر نمی‌شوند. هیچ schema، migration، UI یا retention deletion در این برش نیست.
 - تست‌های unit و SQL Server integration اضافه شدند؛ اجرای محلی در این محیط ممکن نبود (GitHub DNS و .NET SDK در دسترس نیست). CI روی PR معیار تأیید است.
 - handoff: `docs/handoffs/ISSUE-485-security-audit-report-api.md`.
+
+
+## 2026-11-03 — Issue #494: فهرست کاربران با scope شرکت و users.list
+
+- permission code پایدار users.list با migration افزایشی و idempotent به PermissionDefinitions افزوده شد؛ هیچ Role یا کاربری به‌صورت خودکار این مجوز را دریافت نمی‌کند.
+- GET /api/v1/companies/{companyId}/users با CompanyAccessService و بررسی membership فعال/role فعال/Company فعال و permission users.list در همان شرکت اضافه شد.
+- فقط UserCompanyMembershipهای همان Tenant خوانده می‌شوند؛ درخواست‌های Pending در جدول جداگانه هستند و در directory دیده نمی‌شوند. membership و user غیرفعال با status نمایش داده می‌شوند ولی دسترسی ایجاد نمی‌کنند.
+- پاسخ حداقلی شامل username/name، وضعیت user/membership/role و role display است؛ email، phone، password/hash، login history، IP، DetailsJson و permission list حذف شده‌اند. Search و pagination سمت سرور و no-store است.
+- تست‌های unit و SQL Server integration اضافه شدند؛ اجرای محلی در این محیط ممکن نیست (GitHub DNS و .NET SDK در دسترس نیست). CI مرجع تأیید است.
+- بدون UI/ClientApp؛ Claude می‌تواند endpoint را مصرف کند. handoff: docs/handoffs/ISSUE-494-company-user-directory-api.md.
+
+
+## 2026-11-03 — Issue #494: فهرست کاربران با scope شرکت و users.list
+
+- permission code پایدار users.list با migration افزایشی و idempotent به PermissionDefinitions افزوده شد؛ هیچ Role یا کاربری به‌صورت خودکار این مجوز را دریافت نمی‌کند.
+- GET /api/v1/companies/{companyId}/users با CompanyAccessService و بررسی membership فعال/role فعال/Company فعال و permission users.list در همان شرکت اضافه شد.
+- فقط UserCompanyMembershipهای همان Tenant خوانده می‌شوند؛ درخواست‌های Pending در جدول جداگانه هستند و در directory دیده نمی‌شوند. membership و user غیرفعال با status نمایش داده می‌شوند ولی دسترسی ایجاد نمی‌کنند.
+- پاسخ حداقلی شامل username/name، وضعیت user/membership/role و role display است؛ email، phone، password/hash، login history، IP، DetailsJson و permission list حذف شده‌اند. Search و pagination سمت سرور و no-store است.
+- تست‌های unit و SQL Server integration اضافه شدند؛ اجرای محلی در این محیط ممکن نیست (GitHub DNS و .NET SDK در دسترس نیست). CI مرجع تأیید است.
+- بدون UI/ClientApp؛ Claude می‌تواند endpoint را مصرف کند. handoff: docs/handoffs/ISSUE-494-company-user-directory-api.md.

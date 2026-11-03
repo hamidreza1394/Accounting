@@ -50,20 +50,21 @@ MIGRATIONS_DIRECTORY = os.path.join("Infrastructure", "Persistence", "Migrations
 # 'InitialCreate'. Its designer file is the starting point of the difference that the
 # current migration has to apply. ('AlignSchemaWithModel' and 'WidenUserPasswordHash'
 # are published history as well.)
-DELTA_MIGRATION_ID = "20261031140000"
-DELTA_MIGRATION_NAME = "SeedTradePermissionCatalog"
+DELTA_MIGRATION_ID = "20261103111108"
+DELTA_MIGRATION_NAME = "AddCompanyMembershipRequests"
 
 # The most recent migration. Its operations are computed from the difference between
 # the model of the migration before it (DELTA_MIGRATION_*) and the model of the code
 # base, so the files can not drift apart from the snapshot. DELTA_MIGRATION_* is
 # published history and is never rewritten, exactly like 'InitialCreate'.
-CURRENT_MIGRATION_ID = "20261103111108"
-CURRENT_MIGRATION_NAME = "AddCompanyMembershipRequests"
-CURRENT_MIGRATION_CLASS = "AddCompanyMembershipRequests"
+CURRENT_MIGRATION_ID = "20261103141500"
+CURRENT_MIGRATION_NAME = "SeedCompanyUserListPermission"
+CURRENT_MIGRATION_CLASS = "SeedCompanyUserListPermission"
 
-# The current migration is created with dotnet ef migrations add because it introduces
-# a new entity/table. Its reviewed SQL constraints and permission seed are pinned in
-# HAND_WRITTEN_SQL; the designer and snapshot are checked byte-for-byte by '--check'.
+# This migration only seeds a permission catalog row and does not change the EF model.
+# Keep the last EF-generated designer/snapshot as the target model; the migration class is
+# handwritten and its SQL is pinned in HAND_WRITTEN_SQL. verify_migration_model.py and
+# dotnet ef migrations has-pending-model-changes validate the unchanged model artifacts.
 CURRENT_MIGRATION_WRITTEN_BY_EF_TOOLS = True
 
 # Statements that have to run before the structural operations of the current
@@ -205,6 +206,14 @@ HAND_WRITTEN_SQL: dict[str, tuple[list[str], list[str]]] = {
         [
             "IF EXISTS (SELECT 1 FROM [CompanyMembershipRequests]) THROW 51000, 'Rollback blocked: export or retain membership request history before dropping CompanyMembershipRequests.', 1;",
             "DELETE FROM [PermissionDefinitions] WHERE [Id] = 'f47a2026-1103-4d00-8000-000000000001' AND NOT EXISTS (SELECT 1 FROM [CompanyRolePermissions] WHERE [CompanyRolePermissions].[PermissionId] = [PermissionDefinitions].[Id]);",
+        ],
+    ),
+    "20261103141500": (
+        [
+            "IF NOT EXISTS (SELECT 1 FROM [PermissionDefinitions] WHERE [Code] = 'users.list') INSERT INTO [PermissionDefinitions] ([Id], [Code], [Name], [Description], [Ordering], [InsertDateTime]) VALUES ('f47a2026-1103-4d00-8000-000000000002', 'users.list', N'مشاهده کاربران شرکت', N'اجازه مشاهده فهرست کاربران دارای عضویت در همین شرکت؛ بدون دسترسی به سایر شرکت‌ها یا اطلاعات امنیتی.', 21001, SYSDATETIME());",
+        ],
+        [
+            "DELETE FROM [PermissionDefinitions] WHERE [Id] = 'f47a2026-1103-4d00-8000-000000000002' AND [Code] = 'users.list' AND NOT EXISTS (SELECT 1 FROM [CompanyRolePermissions] WHERE [CompanyRolePermissions].[PermissionId] = [PermissionDefinitions].[Id]);",
         ],
     ),
 }
@@ -935,12 +944,10 @@ def main(argv: list[str]) -> int:
                 problems.append(f"{name} is missing.")
                 continue
 
-            # EF Core owns these two artifacts when the current migration was created
-            # with 'dotnet ef migrations add'. This Python generator intentionally
-            # derives a reduced model from source parsing and cannot reproduce EF's
-            # complete CSharpSnapshotGenerator output byte-for-byte. The CI workflow
-            # separately runs 'dotnet ef migrations has-pending-model-changes' to
-            # verify the committed snapshot against the actual runtime model.
+            # This data-only migration leaves the last EF-generated designer and snapshot
+            # unchanged. The Python generator intentionally does not rewrite those
+            # artifacts; verify_migration_model.py and dotnet ef
+            # migrations has-pending-model-changes verify them against the runtime model.
             if CURRENT_MIGRATION_WRITTEN_BY_EF_TOOLS and name in {
                 f"{CURRENT_MIGRATION_ID}_{CURRENT_MIGRATION_NAME}.Designer.cs",
                 f"{SNAPSHOT_CLASS}.cs",
