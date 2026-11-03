@@ -43,7 +43,7 @@ describe('AppShell', () => {
     expect(screen.getByRole('button', { name: 'مدیریت کاربران' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'گروه‌های دسترسی' })).toBeInTheDocument();
     
-    for (const label of ['ساختار سازمانی و سمت‌ها', 'کاتالوگ و جزئیات مجوزها', گزارش امنیت و سوابق', 'سیاست‌های امنیتی']) {
+    for (const label of ['ساختار سازمانی و سمت‌ها', 'کاتالوگ و جزئیات مجوزها', 'گزارش امنیت و سوابق', 'سیاست‌های امنیتی']) {
       expect(screen.getByText(label).closest('[aria-disabled="true"]')).toBeTruthy();
     }
     expect(screen.queryByText('لیست کاربران فعال')).toBeNull();
