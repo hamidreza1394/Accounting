@@ -165,7 +165,7 @@ public sealed class CompanyMembershipRequestReadSqlServerTests
 
             var access = new Infrastructure.Tenancy.CompanyAccessService(database);
             var destinations = await Server.Api.CompanyMembershipRequestEndpoints.GetDestinationsAsync(
-                new DefaultHttpContext(), Principal(requester.Id), database, destination.Name,
+                new DefaultHttpContext(), Principal(requester.Id), database, access, destination.Name,
                 page: 1, pageSize: 25, cancellationToken);
             var destinationResponse = Assert.IsType<Ok<Server.Api.MembershipDestinationListResponse>>(destinations).Value!;
             var discovered = Assert.Single(destinationResponse.Items);
