@@ -64,6 +64,7 @@ public sealed class CompanyUserDirectoryEndpointTests
         Assert.Equal(companyA.Id, ok.Value!.CompanyId);
         Assert.Equal("شرکت الف", ok.Value.CompanyName);
         Assert.Equal(3, ok.Value.TotalCount);
+        Assert.All(ok.Value.Items, item => Assert.Equal(DateTimeKind.Utc, item.MembershipCreatedAtUtc.Kind));
         Assert.Equal("no-store", responseContext.Response.Headers.CacheControl.ToString());
         Assert.Equal(
             new[] { manager.Id, alice.Id, inactive.Id }.Order(),
