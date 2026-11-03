@@ -62,6 +62,8 @@ public static class CompanyUserDirectoryEndpoints
         page = Math.Clamp(page, 1, MaxPage);
         pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
 
+        // Keep the query projection anonymous until after filtering/paging. EF Core cannot
+        // translate predicates over a custom record constructor into SQL.
         var query =
             from membership in database.UserCompanyMemberships.AsNoTracking()
             join user in database.Users.AsNoTracking()
@@ -70,18 +72,20 @@ public static class CompanyUserDirectoryEndpoints
                 on new { membership.RoleId, membership.TenantId }
                 equals new { RoleId = role.Id, role.TenantId }
             where membership.TenantId == companyId
-            select new CompanyUserDirectoryRow(
-                user.Id,
+            select new
+            {
+                UserId = user.Id,
                 user.Username,
                 user.FirstName,
                 user.LastName,
-                user.IsActive,
-                membership.IsActive,
-                role.Id,
-                role.Code,
-                role.Name,
-                role.IsActive,
-                membership.CreatedAtUtc);
+                UserIsActive = user.IsActive,
+                MembershipIsActive = membership.IsActive,
+                RoleId = role.Id,
+                RoleCode = role.Code,
+                RoleName = role.Name,
+                RoleIsActive = role.IsActive,
+                MembershipCreatedAtUtc = membership.CreatedAtUtc,
+            };
 
         if (membershipActive.HasValue)
             query = query.Where(item => item.MembershipIsActive == membershipActive.Value);
@@ -126,19 +130,6 @@ public static class CompanyUserDirectoryEndpoints
         context.Response.Headers.CacheControl = "no-store";
         context.Response.Headers.Pragma = "no-cache";
     }
-
-    private sealed record CompanyUserDirectoryRow(
-        Guid UserId,
-        string? Username,
-        string? FirstName,
-        string? LastName,
-        bool UserIsActive,
-        bool MembershipIsActive,
-        Guid RoleId,
-        string RoleCode,
-        string RoleName,
-        bool RoleIsActive,
-        DateTime MembershipCreatedAtUtc);
 }
 
 public sealed record CompanyUserDirectoryResponse(
