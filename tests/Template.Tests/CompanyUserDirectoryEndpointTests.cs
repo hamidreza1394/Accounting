@@ -132,7 +132,7 @@ public sealed class CompanyUserDirectoryEndpointTests
         var access = new Infrastructure.Tenancy.CompanyAccessService(fixture.Database);
         var denied = await Server.Api.CompanyUserDirectoryEndpoints.GetUsersAsync(
             companyA.Id, new DefaultHttpContext(), Principal(manager.Id), fixture.Database, access);
-        Assert.Equal(StatusCodes.Status403Forbidden, (denied as IStatusCodeHttpResult)?.StatusCode);
+        Assert.IsType<ForbidHttpResult>(denied);
 
         var foreign = await Server.Api.CompanyUserDirectoryEndpoints.GetUsersAsync(
             companyB.Id, new DefaultHttpContext(), Principal(manager.Id), fixture.Database, access);
