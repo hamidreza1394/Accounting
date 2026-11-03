@@ -2254,3 +2254,11 @@
 - ADR D-068: `react-day-picker@9.14.0` با مسیر `/persian` (نسخهٔ 10 این مسیر را ندارد) پین شد؛ مجوزها MIT، `npm audit` بدون آسیب‌پذیری، حجم chunk تنبل ≈ 72 kB gzip، اجرای آفلاین تأیید شد.
 - کامپوننت `ui/JalaliDateField` (مقدار ISO میلادی، RTL، ارقام فارسی، `min`/`max`، صفحه‌کلید، `FormField`) با ۱۲ تست؛ یک باگ اعتبارسنجی ماه حین تست یافت و رفع شد.
 - اتصال به گزارش امنیتی پس از ادغام #499 در PR بعدی. handoff: `docs/handoffs/ISSUE-444-jalali-date-picker.md`.
+
+## 2026-11-03 — Issue #500: EF UTC Kind برای ویژگی‌های *Utc
+- در EF فقط DateTime و DateTime?هایی که نام property آن‌ها به Utc ختم می‌شود با ValueConverter به Kind=Utc علامت‌گذاری می‌شوند؛ Ticks و مقدار ذخیره‌شده تغییر نمی‌کند.
+- InsertDateTime، UpdateDateTime و LastLoginDateTime عمداً خارج از این قاعده‌اند؛ هیچ مبدل سراسری یا Migration داده‌ای اجرا نشد.
+- تست SQL Server برای JSON دارای Z، ویژگی nullable و عدم تغییر رفتار InsertDateTime قدیمی اضافه شد.
+- تست UtcWireFormatSqlServerTests در PR #501 متعلق به شاخه Claude است و برای جلوگیری از تداخل ویرایش نشد؛ پس از ادغام این Backend باید انتظار آن تست به Utc/Z تغییر کند.
+- CI، SQL Server واقعی و بررسی has-pending-model-changes هنوز باید روی SHA نهایی تأیید شوند.
+- handoff: docs/handoffs/ISSUE-500-utc-kind-value-converter.md.
