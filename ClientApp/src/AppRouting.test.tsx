@@ -98,7 +98,7 @@ describe('App routing', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('دسترسی ندارید');
     expect(screen.queryByRole('link', { name: 'مدیریت کاربران' })).toBeNull();
     expect(fetchMock.mock.calls.some((call) => String(call[0]).startsWith('/api/v1/admin/users'))).toBe(false);
-    expect(document.title).toBe('دسترسی ندارید | فرانو');
+    await waitFor(() => expect(document.title).toBe('دسترسی ندارید | فرانو'));
   });
 
   it('shows the not-found page for an unknown route inside the shell', async () => {
