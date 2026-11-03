@@ -150,7 +150,7 @@ public sealed class CompanyMembershipRequestSqlServerTests
                 var restrictedRole = new Domain.CompanyRole
                 {
                     TenantId = destinationId,
-                    Company = await before.Companies.SingleAsync(item => item.Id == destinationId, TestContext.Current.CancellationToken),
+                    Company = destination,
                     Code = "RESTRICTED",
                     Name = "نقش خارج از سقف واگذاری",
                     IsActive = true,
