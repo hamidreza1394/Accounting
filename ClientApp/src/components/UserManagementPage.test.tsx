@@ -43,6 +43,11 @@ describe('user administration navigation', () => {
     expect(await screen.findByText('حسابدار · ACCOUNTANT')).toBeInTheDocument();
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain('/api/v1/admin/users?');
     expect(String(fetchMock.mock.calls[1]?.[0])).toBe('/api/v1/admin/users/user-1');
+    fireEvent.click(screen.getByRole('button', { name: 'کاربر جدید' }));
+    expect(screen.getByRole('dialog', { name: 'ایجاد کاربر جدید' })).toBeInTheDocument();
+    expect(screen.getByLabelText('رمز عبور اولیه')).toBeRequired();
+    expect(screen.getByLabelText('تکرار رمز عبور')).toBeRequired();
+    expect(screen.getByLabelText('شماره همراه')).toHaveAttribute('maxLength', '11');
   });
 
   it('does not show installation administration navigation to a regular user', () => {
@@ -50,5 +55,22 @@ describe('user administration navigation', () => {
     render(<AppShell session={regular} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>داشبورد</main></AppShell>);
     expect(screen.queryByRole('button', { name: 'مدیریت سیستم' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'مدیریت کاربران' })).toBeNull();
+  });
+});
+
+
+describe('user creation editor', () => {
+  it('opens a create form with required initial password and confirmation', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      items: [], totalCount: 0, page: 1, pageSize: 20,
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } })));
+
+    render(<AppShell session={adminSession} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>داشبورد</main></AppShell>);
+    fireEvent.click(screen.getByRole('button', { name: 'مدیریت کاربران' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'کاربر جدید' }));
+
+    expect(screen.getByRole('dialog', { name: 'ایجاد کاربر جدید' })).toBeInTheDocument();
+    expect(screen.getByLabelText('رمز عبور اولیه')).toBeRequired();
+    expect(screen.getByLabelText('تکرار رمز عبور')).toBeRequired();
   });
 });
