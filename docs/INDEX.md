@@ -62,12 +62,14 @@
 | [`handoffs/ISSUE-485-security-audit-report-api.md`](handoffs/ISSUE-485-security-audit-report-api.md) | API گزارش صفحه‌بندی‌شده Audit امنیتی برای مدیر نصب؛ بدون IP و payload جزئیات |
 | [`handoffs/ISSUE-498-membership-permission-delegation-ceiling.md`](handoffs/ISSUE-498-membership-permission-delegation-ceiling.md) | enforce سقف واگذاری مجوز هنگام تأیید عضویت بین‌شرکتی؛ بدون Schema/Migration |
 | [`handoffs/ISSUE-496-role-membership-rowversion.md`](handoffs/ISSUE-496-role-membership-rowversion.md) | RowVersion SQL Server برای CompanyRole و UserCompanyMembership؛ مدیریت 409 و تست رقابت نویسنده‌ها (Issue #496) |
+| [`handoffs/ISSUE-504-session-lifecycle-design.md`](handoffs/ISSUE-504-session-lifecycle-design.md) | ممیزی نشست فعلی، پیشنهاد UserSession/SessionId، ابطال مستقل و تصمیم‌های retention (D-069, Issue #504) |
 | [`handoffs/ISSUE-492-customer-boundary-authz-tests.md`](handoffs/ISSUE-492-customer-boundary-authz-tests.md) | تست امنیتی endpointهای Customer Boundary operator؛ فقط Infrastructure، Anti-forgery و جلوگیری از reassignment |
 | [`handoffs/ISSUE-494-company-user-directory-api.md`](handoffs/ISSUE-494-company-user-directory-api.md) | API فهرست کاربران در scope شرکت با مجوز users.list؛ بدون اطلاعات تماس/امنیتی |
 | [`TIME_CONTRACT.md`](TIME_CONTRACT.md) | ممیزی و قرارداد زمان: `*Utc` در برابر ساعت محلی قدیمی سرور، قرارداد Frontend و پیشنهاد Backend (D-067) |
 | [`handoffs/ISSUE-444-utc-time-contract.md`](handoffs/ISSUE-444-utc-time-contract.md) | تحویل یکپارچه‌سازی قرارداد زمان در ClientApp (Issue #444) |
 | [`handoffs/ISSUE-444-jalali-date-picker.md`](handoffs/ISSUE-444-jalali-date-picker.md) | تحویل انتخابگر تاریخ شمسی (`JalaliDateField`) و ADR وابستگی D-068 (Issue #444) |
 | [`handoffs/ISSUE-444-security-audit-ui.md`](handoffs/ISSUE-444-security-audit-ui.md) | تحویل UI گزارش امنیت و سوابق مدیریتی روی API #487 (Issue #444، S7) |
+| [`handoffs/ISSUE-444-ui-e2e-and-a11y.md`](handoffs/ISSUE-444-ui-e2e-and-a11y.md) | تحویل E2E و axe رابط مدیریت دسترسی (Issue #444، مرحلهٔ ۱۱؛ اجرا فقط در CI) |
 | [`handoffs/ISSUE-444-company-user-directory-ui.md`](handoffs/ISSUE-444-company-user-directory-ui.md) | تحویل UI دفترچهٔ کاربران شرکت روی API #497 (Issue #444) |
 | [`TIME_CONTRACT.md`](TIME_CONTRACT.md) | ممیزی و قرارداد زمان: `*Utc` در برابر ساعت محلی قدیمی سرور، قرارداد Frontend و پیشنهاد Backend (D-067) |
 | [`handoffs/ISSUE-444-utc-time-contract.md`](handoffs/ISSUE-444-utc-time-contract.md) | تحویل یکپارچه‌سازی قرارداد زمان در ClientApp (Issue #444) |
