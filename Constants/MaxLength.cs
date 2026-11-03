@@ -32,8 +32,6 @@ public static class MaxLength : object
 
 	public const int EmailAddress = 254;
 
-	public const int CellPhoneNumber = 32;
-
 	public const int CellPhoneNumberVerificationKey = 10;
 
 }
