@@ -6,15 +6,15 @@ namespace Faranou.Licensing.Contracts;
 /// </summary>
 public static class LicenseSubsystemCodes
 {
-    public const string Finance = "finance";
-    public const string Sales = "sales";
-    public const string Inventory = "inventory";
-    public const string Treasury = "treasury";
-    public const string TradeImport = "TRADE_IMPORT";
+	public const string Finance = "finance";
+	public const string Sales = "sales";
+	public const string Inventory = "inventory";
+	public const string Treasury = "treasury";
+	public const string TradeImport = "TRADE_IMPORT";
 
-    public static bool IsAllowed(string? code)
-        => code is Finance or Sales or Inventory or Treasury;
+	public static bool IsAllowed(string? code)
+		=> code is Finance or Sales or Inventory or Treasury;
 
-    public static bool IsAllowedCompanyModule(string? code)
-        => IsAllowed(code) || string.Equals(code, TradeImport, StringComparison.Ordinal);
+	public static bool IsAllowedCompanyModule(string? code)
+		=> IsAllowed(code) || string.Equals(code, TradeImport, StringComparison.Ordinal);
 }
