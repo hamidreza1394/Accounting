@@ -60,10 +60,10 @@ CURRENT_MIGRATION_ID = "20261103100000"
 CURRENT_MIGRATION_NAME = "AddCompanyMembershipRequests"
 CURRENT_MIGRATION_CLASS = "AddCompanyMembershipRequests"
 
-# The current migration's reviewed constraints and permission seed are pinned in
-# HAND_WRITTEN_SQL. The migration operations, designer and snapshot are generated from
-# the model delta and compared byte-for-byte by '--check'.
-CURRENT_MIGRATION_WRITTEN_BY_EF_TOOLS = False
+# The current migration is created with dotnet ef migrations add because it introduces
+# a new entity/table. Its reviewed SQL constraints and permission seed are pinned in
+# HAND_WRITTEN_SQL; the designer and snapshot are checked byte-for-byte by '--check'.
+CURRENT_MIGRATION_WRITTEN_BY_EF_TOOLS = True
 
 # Statements that have to run before the structural operations of the current
 # migration. A human decision, therefore written down instead of computed.
@@ -197,7 +197,6 @@ HAND_WRITTEN_SQL: dict[str, tuple[list[str], list[str]]] = {
     ),
     "20261103100000": (
         [
-            "ALTER TABLE [CompanyMembershipRequests] ADD CONSTRAINT [CK_CompanyMembershipRequests_DifferentCompanies] CHECK ([SourceTenantId] <> [DestinationTenantId]);",
             "ALTER TABLE [CompanyMembershipRequests] ADD CONSTRAINT [CK_CompanyMembershipRequests_Status] CHECK ([Status] IN ('Pending', 'Approved', 'Rejected'));",
             "ALTER TABLE [CompanyMembershipRequests] ADD CONSTRAINT [CK_CompanyMembershipRequests_DecisionState] CHECK (([Status] = 'Pending' AND [DecidedByUserId] IS NULL AND [DecidedAtUtc] IS NULL AND [ApprovedRoleId] IS NULL) OR ([Status] = 'Approved' AND [DecidedByUserId] IS NOT NULL AND [DecidedAtUtc] IS NOT NULL AND [ApprovedRoleId] IS NOT NULL) OR ([Status] = 'Rejected' AND [DecidedByUserId] IS NOT NULL AND [DecidedAtUtc] IS NOT NULL AND [ApprovedRoleId] IS NULL));",
             "IF NOT EXISTS (SELECT 1 FROM [PermissionDefinitions] WHERE [Code] = 'users.membership.approve') INSERT INTO [PermissionDefinitions] ([Id], [Code], [Name], [Description], [Ordering], [InsertDateTime]) VALUES ('f47a2026-1103-4d00-8000-000000000001', 'users.membership.approve', N'تأیید درخواست عضویت در شرکت', N'اجازه مشاهده و تعیین تکلیف درخواست عضویت در شرکت مقصد.', 21000, SYSDATETIME());",
