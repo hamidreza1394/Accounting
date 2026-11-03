@@ -2248,3 +2248,13 @@
 - هیچ Schema، Migration، UI یا قرارداد پاسخ موفق تغییر نکرد.
 - تست محلی و dotnet build اجرا نشدند؛ CI باید روی SHA نهایی بررسی شود. نتیجه تست SQL Server هنوز Verified نیست.
 - handoff: docs/handoffs/ISSUE-498-membership-permission-delegation-ceiling.md.
+
+## 2026-11-03 — Issue #496: optimistic concurrency برای نقش‌ها و عضویت‌ها
+- RowVersion native SQL Server به CompanyRole و UserCompanyMembership افزوده شد.
+- UpdateRoleAsync، AssignMembershipAsync و TransferMembersAsync برای rowversion stale پاسخ 409 می‌دهند؛ role dependencies نیز با no-op UPDATE در شرط concurrency شرکت می‌کنند.
+- انتقال گروهی همچنان یک SaveChanges اتمیک است؛ Audit همان SaveChanges در صورت تعارض commit نمی‌شود.
+- Migration افزایشی 20261103160000_AddCompanyRoleMembershipRowVersions دو ستون rowversion اضافه می‌کند و Down فقط آن‌ها را حذف می‌کند.
+- تست مدل، تست SQL Server برای تعارض هم‌زمان سه endpoint، عدم partial mutation/Audit و Down/Up روی جدول‌های دارای داده اضافه شد.
+- guardهای Python برای تشخیص RowVersion در مدل و اعتبارسنجی AddColumn<byte[]>(rowVersion:true) گسترش یافتند.
+- اجرای محلی .NET/SQL Server/Python انجام نشده؛ CI باید نتیجه نهایی را تأیید کند.
+- handoff: docs/handoffs/ISSUE-496-role-membership-rowversion.md.
