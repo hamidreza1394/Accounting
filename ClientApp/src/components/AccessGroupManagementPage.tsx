@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Check, ChevronLeft, ChevronRight, KeyRound, Plus, ShieldCheck, Users, X } from 'lucide-react';
+import { Check, KeyRound, Plus, ShieldCheck, Users, X } from 'lucide-react';
 import { ApiError, createCompanyRole, getCompanyRoleTemplates, getCompanyRoles, getPermissionCatalog, updateCompanyRole } from '../api/client';
 import type { CompanyRoleSummary, CompanyRoleTemplate, PermissionCatalogItem } from '../api/types';
 
@@ -46,10 +46,6 @@ export function AccessGroupManagementPage({ companyId, companyName, onUnauthenti
   }, [companyId, onUnauthenticated]);
 
   const selectedRole = roles.find(role => role.id === selectedId) ?? null;
-  const selectedPermissions = useMemo(
-    () => new Set(selectedRole?.permissionCodes ?? []),
-    [selectedRole],
-  );
   const permissionNames = useMemo(
     () => new Map(catalog.map(permission => [permission.code, permission.name])),
     [catalog],
