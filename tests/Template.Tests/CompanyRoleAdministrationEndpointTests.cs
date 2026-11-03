@@ -91,13 +91,7 @@ public sealed class CompanyRoleAdministrationEndpointTests
         var admin = fixture.AddAdministrator();
         var user = fixture.AddUser("employee");
         fixture.AddCompany();
-        var role = new Domain.CompanyRole
-        {
-            TenantId = fixture.CompanyId,
-            Code = "ACCOUNTANT",
-            Name = "حسابدار",
-            IsActive = true,
-        };
+        var role = new Domain.CompanyRole { TenantId = fixture.CompanyId, Code = "ACCOUNTANT", Name = "حسابدار", IsActive = true };
         fixture.Database.CompanyRoles.Add(role);
         await fixture.Database.SaveChangesAsync();
 
@@ -116,22 +110,12 @@ public sealed class CompanyRoleAdministrationEndpointTests
         var admin = fixture.AddAdministrator();
         var user = fixture.AddUser("employee");
         fixture.AddCompany();
-        var role = new Domain.CompanyRole
-        {
-            TenantId = fixture.CompanyId,
-            Code = "ACCOUNTANT",
-            Name = "حسابدار",
-            IsActive = true,
-        };
+        var role = new Domain.CompanyRole { TenantId = fixture.CompanyId, Code = "ACCOUNTANT", Name = "حسابدار", IsActive = true };
         fixture.Database.CompanyRoles.Add(role);
         fixture.Database.UserCompanyMemberships.Add(new Domain.UserCompanyMembership
         {
-            UserId = user.Id,
-            TenantId = fixture.CompanyId,
-            Role = role,
-            RoleId = role.Id,
-            IsActive = false,
-            CreatedAtUtc = DateTime.UtcNow,
+            UserId = user.Id, TenantId = fixture.CompanyId, Role = role, RoleId = role.Id,
+            IsActive = false, CreatedAtUtc = DateTime.UtcNow,
         });
         await fixture.Database.SaveChangesAsync();
 

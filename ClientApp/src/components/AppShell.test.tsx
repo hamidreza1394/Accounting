@@ -41,7 +41,9 @@ describe('AppShell', () => {
     render(<AppShell session={{ ...session, isAdministrator: true }} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
     expect(screen.getByRole('button', { name: /مدیریت سیستم/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'مدیریت کاربران' })).toBeInTheDocument();
-    for (const label of ['ساختار سازمانی و سمت‌ها', 'گروه‌های دسترسی', 'کاتالوگ و جزئیات مجوزها', 'گزارش امنیت و سوابق', 'سیاست‌های امنیتی']) {
+    expect(screen.getByRole('button', { name: 'گروه‌های دسترسی' })).toBeInTheDocument();
+    
+    for (const label of ['ساختار سازمانی و سمت‌ها', 'کاتالوگ و جزئیات مجوزها', گزارش امنیت و سوابق', 'سیاست‌های امنیتی']) {
       expect(screen.getByText(label).closest('[aria-disabled="true"]')).toBeTruthy();
     }
     expect(screen.queryByText('لیست کاربران فعال')).toBeNull();
