@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Building2, ChevronLeft, ChevronRight, Search, ShieldCheck, UserRound, Users } from 'lucide-react';
-import { ApiError, getAdminUser, getAdminUsers } from '../api/client';
-import type { AdminUserDetails, AdminUserListItem, AdminUserListResponse } from '../api/types';
+import { Building2, ChevronLeft, ChevronRight, Search, ShieldCheck, UserRound, Users, X } from 'lucide-react';
+import { ApiError, createAdminUser, getAdminUser, getAdminUsers, updateAdminUser } from '../api/client';
+import type { AdminUserDetails, AdminUserListItem, AdminUserListResponse, CreateAdminUserRequest, UpdateAdminUserRequest } from '../api/types';
 
 type Props = { onUnauthenticated: (error: unknown) => boolean };
 
@@ -25,7 +25,7 @@ function Status({ active }: { active: boolean }) {
   </span>;
 }
 
-function UserDetails({ user }: { user: AdminUserDetails }) {
+function UserDetails({ user, onEdit }: { user: AdminUserDetails; onEdit: (user: AdminUserDetails) => void }) {
   return (
     <section className="min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-100 bg-gradient-to-l from-slate-50 to-white p-5 sm:p-6">
@@ -39,7 +39,10 @@ function UserDetails({ user }: { user: AdminUserDetails }) {
               <p className="mt-1 text-sm text-slate-500" dir="ltr">@{user.username ?? '—'}</p>
             </div>
           </div>
-          <Status active={user.isActive} />
+          <div className="flex items-center gap-2">
+            <Status active={user.isActive} />
+            <button type="button" onClick={() => onEdit(user)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-sky-300">ویرایش اطلاعات</button>
+          </div>
         </div>
       </div>
 
@@ -99,6 +102,11 @@ export function UserManagementPage({ onUnauthenticated }: Props) {
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<AdminUserDetails | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -118,7 +126,7 @@ export function UserManagementPage({ onUnauthenticated }: Props) {
       })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [search, status, page, onUnauthenticated]);
+  }, [search, status, page, refreshKey, onUnauthenticated]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -154,8 +162,11 @@ export function UserManagementPage({ onUnauthenticated }: Props) {
           <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900">مدیریت کاربران</h1>
           <p className="mt-2 text-sm text-slate-500">فهرست حساب‌های این نصب و جزئیات عضویت هر کاربر</p>
         </div>
-        <div className="flex items-center gap-2 rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-800">
-          <ShieldCheck size={16} /> دسترسی مدیر سراسری نصب
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-800">
+            <ShieldCheck size={16} /> دسترسی مدیر سراسری نصب
+          </div>
+          <button type="button" onClick={() => { setEditingUser(null); setSaveError(null); setEditorOpen(true); }} className="rounded-xl bg-[#12365d] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#194a79]">کاربر جدید</button>
         </div>
       </header>
 
@@ -206,7 +217,7 @@ export function UserManagementPage({ onUnauthenticated }: Props) {
         <div className="min-w-0">
           {detailsLoading ? <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">در حال دریافت جزئیات کاربر…</div> : null}
           {detailsError ? <p role="alert" className="rounded-xl bg-rose-50 p-4 text-sm text-rose-700">{detailsError}</p> : null}
-          {!detailsLoading && !detailsError && details ? <UserDetails user={details} /> : null}
+          {!detailsLoading && !detailsError && details ? <UserDetails user={details} onEdit={(user) => { setEditingUser(user); setSaveError(null); setEditorOpen(true); }} /> : null}
           {!detailsLoading && !detailsError && !details ? (
             <div className="flex min-h-72 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white text-center">
               <UserRound size={30} className="text-slate-300" />
@@ -216,8 +227,108 @@ export function UserManagementPage({ onUnauthenticated }: Props) {
           ) : null}
         </div>
       </div>
+      {editorOpen ? (
+        <UserEditor
+          key={editingUser?.id ?? 'new-user'}
+          initialUser={editingUser}
+          saving={saving}
+          error={saveError}
+          onClose={() => setEditorOpen(false)}
+          onSave={async (values) => {
+            setSaving(true);
+            setSaveError(null);
+            try {
+              if (editingUser) {
+                const request: UpdateAdminUserRequest = {
+                  username: values.username,
+                  firstName: values.firstName,
+                  lastName: values.lastName,
+                  emailAddress: values.emailAddress,
+                  cellPhoneNumber: values.cellPhoneNumber,
+                  isActive: values.isActive,
+                };
+                await updateAdminUser(editingUser.id, request);
+                setDetails(await getAdminUser(editingUser.id));
+                setSelectedId(editingUser.id);
+              } else {
+                const request: CreateAdminUserRequest = values;
+                const newId = await createAdminUser(request);
+                setSearch('');
+                setSearchInput('');
+                setStatus('all');
+                setPage(1);
+                setSelectedId(newId);
+                setDetails(await getAdminUser(newId));
+              }
+              setRefreshKey((value) => value + 1);
+              setEditorOpen(false);
+            } catch (cause: unknown) {
+              if (!onUnauthenticated(cause)) setSaveError(cause instanceof ApiError ? cause.message : 'ذخیره اطلاعات کاربر انجام نشد.');
+            } finally {
+              setSaving(false);
+            }
+          }}
+        />
+      ) : null}
     </div>
   );
+}
+
+type EditorValues = CreateAdminUserRequest;
+function UserEditor({ initialUser, saving, error, onClose, onSave }: {
+  initialUser: AdminUserDetails | null;
+  saving: boolean;
+  error: string | null;
+  onClose: () => void;
+  onSave: (values: EditorValues) => Promise<void>;
+}) {
+  const [username, setUsername] = useState(initialUser?.username ?? '');
+  const [firstName, setFirstName] = useState(initialUser?.firstName ?? '');
+  const [lastName, setLastName] = useState(initialUser?.lastName ?? '');
+  const [emailAddress, setEmailAddress] = useState(initialUser?.emailAddress ?? '');
+  const [cellPhoneNumber, setCellPhoneNumber] = useState(initialUser?.cellPhoneNumber ?? '');
+  const [isActive, setIsActive] = useState(initialUser?.isActive ?? true);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await onSave({ username, firstName, lastName, emailAddress, cellPhoneNumber, isActive, password, confirmPassword });
+  }
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/55 p-3 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
+      <section role="dialog" aria-modal="true" aria-labelledby="user-editor-title" className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+        <header className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-l from-slate-50 to-white px-5 py-4">
+          <div><p className="text-xs font-semibold text-sky-700">مدیریت سیستم</p><h2 id="user-editor-title" className="mt-1 text-lg font-bold text-slate-900">{initialUser ? 'ویرایش کاربر' : 'ایجاد کاربر جدید'}</h2></div>
+          <button type="button" aria-label="بستن فرم" disabled={saving} onClick={onClose} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X size={18} /></button>
+        </header>
+        <form onSubmit={submit} className="space-y-5 p-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="نام" value={firstName} onChange={setFirstName} required />
+            <Field label="نام خانوادگی" value={lastName} onChange={setLastName} required />
+            <Field label="نام کاربری" value={username} onChange={setUsername} required dir="ltr" />
+            <Field label="ایمیل" value={emailAddress} onChange={setEmailAddress} required type="email" dir="ltr" />
+            <Field label="شماره همراه" value={cellPhoneNumber} onChange={setCellPhoneNumber} dir="ltr" type="tel" />
+            {!initialUser ? <><Field label="رمز عبور اولیه" value={password} onChange={setPassword} required type="password" dir="ltr" /><Field label="تکرار رمز عبور" value={confirmPassword} onChange={setConfirmPassword} required type="password" dir="ltr" /></> : null}
+          </div>
+          <label className="flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700"><input type="checkbox" checked={isActive} onChange={(event) => setIsActive(event.target.checked)} /> حساب کاربری فعال باشد</label>
+          {!initialUser ? <p className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-xs leading-6 text-amber-800">رمز اولیه فقط هنگام ایجاد ارسال می‌شود و به‌صورت هش امن ذخیره خواهد شد. برای تغییر یا بازنشانی رمز از فرایند امنیتی مستقل استفاده می‌شود.</p> : null}
+          {error ? <p role="alert" className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
+          <footer className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+            <button type="button" disabled={saving} onClick={onClose} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">انصراف</button>
+            <button type="submit" disabled={saving} className="rounded-xl bg-[#12365d] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#194a79] disabled:opacity-60">{saving ? 'در حال ذخیره…' : initialUser ? 'ذخیره تغییرات' : 'ایجاد حساب کاربری'}</button>
+          </footer>
+        </form>
+      </section>
+    </div>
+  );
+}
+
+function Field({ label, value, onChange, required = false, type = 'text', dir = 'rtl' }: {
+  label: string; value: string; onChange: (value: string) => void; required?: boolean; type?: string; dir?: 'rtl' | 'ltr';
+}) {
+  return <label className="block min-w-0"><span className="mb-1.5 block text-xs font-semibold text-slate-600">{label}</span><input type={type} dir={dir} value={value} onChange={(event) => onChange(event.target.value)} required={required} maxLength={type === 'email' ? 254 : type === 'tel' ? 11 : type === 'password' ? 128 : 100} className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100" /></label>;
 }
 
 function UserRow({ user, selected, onSelect }: { user: AdminUserListItem; selected: boolean; onSelect: () => void }) {
