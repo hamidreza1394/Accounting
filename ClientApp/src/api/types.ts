@@ -679,3 +679,56 @@ export function parsePendingMembershipRequests(value: unknown): MembershipReques
     isRequesterActive: readBoolean(item, 'isRequesterActive', what),
   }));
 }
+
+// --- Installation-wide security audit report (backend: SecurityAuditAdministrationEndpoints) ---
+
+/** One audit event. The server deliberately omits the IP address and the event payload. */
+export type SecurityAuditEvent = {
+  id: string;
+  userId: string | null;
+  actorUsername: string | null;
+  actorDisplayName: string | null;
+  companyId: string | null;
+  companyName: string | null;
+  eventType: string;
+  entityType: string | null;
+  entityId: string | null;
+  occurredAtUtc: string;
+  correlationId: string | null;
+};
+
+export type SecurityAuditPage = { items: SecurityAuditEvent[]; totalCount: number; page: number; pageSize: number };
+
+export function parseSecurityAuditEvents(value: unknown): SecurityAuditPage {
+  const what = 'securityAudit';
+  if (!isObject(value)) throw new ContractError(what);
+  const rows = value['items'];
+  if (!Array.isArray(rows)) throw new ContractError(`${what}.items`);
+  const page = readCount(value, 'page', what);
+  const pageSize = readCount(value, 'pageSize', what);
+  if (page < 1 || pageSize < 1) throw new ContractError(`${what}.page`);
+  return {
+    items: rows.map((row): SecurityAuditEvent => {
+      if (!isObject(row)) throw new ContractError(`${what}.item`);
+      const at = `${what}.item`;
+      const occurred = readIsoDateTime(row, 'occurredAtUtc', at);
+      if (occurred === null) throw new ContractError(`${at}.occurredAtUtc`);
+      return {
+        id: readString(row, 'id', at),
+        userId: readNullableString(row, 'userId', at),
+        actorUsername: readNullableString(row, 'actorUsername', at),
+        actorDisplayName: readNullableString(row, 'actorDisplayName', at),
+        companyId: readNullableString(row, 'companyId', at),
+        companyName: readNullableString(row, 'companyName', at),
+        eventType: readString(row, 'eventType', at),
+        entityType: readNullableString(row, 'entityType', at),
+        entityId: readNullableString(row, 'entityId', at),
+        occurredAtUtc: occurred,
+        correlationId: readNullableString(row, 'correlationId', at),
+      };
+    }),
+    totalCount: readCount(value, 'totalCount', what),
+    page,
+    pageSize,
+  };
+}
