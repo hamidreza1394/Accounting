@@ -57,7 +57,6 @@
 | [`handoffs/ISSUE-214-vendor-revocation-issuance.md`](handoffs/ISSUE-214-vendor-revocation-issuance.md) | تحویل پیاده‌سازی Vendor برای snapshot امضاشده و گردش maker-checker ابطال آفلاین؛ CI شاخه باید پیش از Verified بررسی شود |
 | [`handoffs/ISSUE-444-membership-requests-ui.md`](handoffs/ISSUE-444-membership-requests-ui.md) | تحویل UI گردش درخواست عضویت بین‌شرکتی (درخواست‌های من و صف تأیید) و قرارداد API مورد نیاز از Backend (Issue #444) |
 | [`handoffs/ISSUE-444-role-members-api.md`](handoffs/ISSUE-444-role-members-api.md) | تحویل Backend فهرست اعضای گروه دسترسی و انتقال اعضا (Issue #444، مورد ۳)؛ UI و RowVersion باقی‌مانده |
-| [`handoffs/ISSUE-492-customer-boundary-authz-tests.md`](handoffs/ISSUE-492-customer-boundary-authz-tests.md) | تست امنیتی endpointهای Customer Boundary operator؛ فقط Infrastructure، Anti-forgery و جلوگیری از reassignment |
 | [`handoffs/ISSUE-485-security-audit-report-api.md`](handoffs/ISSUE-485-security-audit-report-api.md) | API گزارش صفحه‌بندی‌شده Audit امنیتی برای مدیر نصب؛ بدون IP و payload جزئیات |
 | [`handoffs/ISSUE-467-login-history-logout-test.md`](handoffs/ISSUE-467-login-history-logout-test.md) | Regression test برای نمایش خروج موفق در سوابق ورود/خروج کاربر |
 | [`WORK_LOG.md`](WORK_LOG.md), [`handoffs/`](handoffs/) | سوابق تحویل؛ [تحویل تجمیعی مدیریت کاربران و دسترسی‌ها](handoffs/ISSUE-444-admin-ui-completion.md)؛ [تحویل نقش‌ها و کاتالوگ مجوز](handoffs/ISSUE-475-roles-permission-catalog.md) |
@@ -65,3 +64,4 @@
 
 - **D-061..D-063:** ماژول مستقل Trade، استفاده از FiscalPeriod مشترک و سیاست‌های اجرایی مالکیت Voyage، پرونده چنددوره‌ای، گزارش عملیاتی چندشرکتی موج اول و entitlement از S1 در `DECISIONS.md` و `TRADE_MODULE.md` ثبت شده‌اند.
 - **Issue #399:** هم‌ترازی S0 و ممیزی foundation بازرگانی.
+| [`handoffs/ISSUE-492-customer-boundary-authz-tests.md`](handoffs/ISSUE-492-customer-boundary-authz-tests.md) | تست امنیتی endpointهای Customer Boundary operator؛ فقط Infrastructure، Anti-forgery و جلوگیری از reassignment |
