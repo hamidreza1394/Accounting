@@ -13,6 +13,8 @@ import {
   type LoginHistoryItem,
   type AdminUserListResponse,
   type AdminUserDetails,
+  type CreateAdminUserRequest,
+  type UpdateAdminUserRequest,
   type ChangeMyPasswordRequest,
   type CompanyOverview,
   type CompanySummary,
@@ -111,7 +113,7 @@ async function post(path: string): Promise<void> {
 }
 
 /** A state-changing request: carries the anti-forgery request token and, optionally, a JSON body. */
-async function sendJson(method: 'POST' | 'DELETE', path: string, body?: unknown): Promise<Response> {
+async function sendJson(method: 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown): Promise<Response> {
   const token = parseAntiforgeryToken(await getJson('/antiforgery/token'));
   const response = await fetch(`${apiBase}${path}`, {
     method,
@@ -164,6 +166,20 @@ export async function getAdminUsers(query: AdminUserQuery, signal?: AbortSignal)
 export async function getAdminUser(userId: string, signal?: AbortSignal): Promise<AdminUserDetails> {
   return parseAdminUserDetails(await getJson(`/admin/users/${encodeURIComponent(userId)}`, signal));
 }
+ 
+export async function createAdminUser(request: CreateAdminUserRequest): Promise<string> {
+  const response = await sendJson('POST', '/admin/users', request);
+  const value: unknown = await response.json();
+  if (typeof value !== 'object' || value === null || !('id' in value) || typeof value.id !== 'string') {
+    throw new ApiError(500, 'پاسخ ایجاد کاربر معتبر نیست.');
+  }
+  return value.id;
+}
+
+export async function updateAdminUser(userId: string, request: UpdateAdminUserRequest): Promise<void> {
+  await sendJson('PUT', `/admin/users/${encodeURIComponent(userId)}`, request);
+}
+
 
 export async function changeMyPassword(request: ChangeMyPasswordRequest): Promise<void> {
   await sendJson('POST', '/me/password', request);
