@@ -25,6 +25,7 @@ has-pending-model-changes``.
 from __future__ import annotations
 
 import argparse
+import difflib
 import re
 import os
 import sys
@@ -934,8 +935,18 @@ def main(argv: list[str]) -> int:
                 problems.append(f"{name} is missing.")
                 continue
             with open(path, encoding="utf-8") as file:
-                if file.read() != content:
-                    problems.append(f"{name} is out of date.")
+                committed = file.read()
+            if committed != content:
+                problems.append(f"{name} is out of date.")
+                diff = difflib.unified_diff(
+                    committed.splitlines(),
+                    content.splitlines(),
+                    fromfile=f"committed/{name}",
+                    tofile=f"generated/{name}",
+                    lineterm="",
+                )
+                for line in diff:
+                    print(line, file=sys.stderr)
         problems.extend(check_reviewed_sql(directory))
         if problems:
             for problem in problems:
