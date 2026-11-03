@@ -264,6 +264,9 @@ public static class CompanyMembershipRequestEndpoints
 
         await using var transaction = await database.Database.BeginTransactionAsync(
             IsolationLevel.Serializable, cancellationToken);
+        if (!await companyAccess.HasPermissionAsync(
+                approverId.Value, companyId, ApprovalPermissionCode, cancellationToken))
+            return TypedResults.NotFound();
 
         var membershipRequest = await database.CompanyMembershipRequests
             .FirstOrDefaultAsync(item =>
@@ -378,6 +381,10 @@ public static class CompanyMembershipRequestEndpoints
 
         await using var transaction = await database.Database.BeginTransactionAsync(
             IsolationLevel.Serializable, cancellationToken);
+        if (!await companyAccess.HasPermissionAsync(
+                approverId.Value, companyId, ApprovalPermissionCode, cancellationToken))
+            return TypedResults.NotFound();
+
         var membershipRequest = await database.CompanyMembershipRequests.FirstOrDefaultAsync(item =>
             item.Id == requestId &&
             item.DestinationTenantId == companyId &&
