@@ -107,20 +107,27 @@ public sealed class CompanyMembershipRequestSqlServerTests
 
                 before.Companies.Add(destination);
                 before.Users.AddRange(requester, approverA, approverB);
-                before.CompanyRoles.AddRange(approverRoleA, approverRoleB, memberRole);
-                before.UserCompanyMemberships.AddRange(
-                    new Domain.UserCompanyMembership
-                    {
-                        UserId = approverA.Id, TenantId = destination.Id, Role = approverRoleA, IsActive = true,
-                        CreatedAtUtc = DateTime.UtcNow,
-                    },
-                    new Domain.UserCompanyMembership
-                    {
-                        UserId = approverB.Id, TenantId = destination.Id, Role = approverRoleB, IsActive = true,
-                        CreatedAtUtc = DateTime.UtcNow,
-                    });
-
                 await before.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+                // These rows must exist before the membership-request migration is applied.
+                // RowVersion is introduced by a later migration, so the old-schema fixture
+                // inserts them with SQL instead of using the current EF model.
+                await before.Database.ExecuteSqlInterpolatedAsync(
+                    $"INSERT INTO CompanyRoles (Id, Ordering, InsertDateTime, TenantId, Code, Name, IsSystemRole, IsActive) VALUES ({approverRoleA.Id}, 0, SYSUTCDATETIME(), {destination.Id}, {"APPROVER_A"}, {"تأییدکننده الف"}, 0, 1)",
+                    TestContext.Current.CancellationToken);
+                await before.Database.ExecuteSqlInterpolatedAsync(
+                    $"INSERT INTO CompanyRoles (Id, Ordering, InsertDateTime, TenantId, Code, Name, IsSystemRole, IsActive) VALUES ({approverRoleB.Id}, 0, SYSUTCDATETIME(), {destination.Id}, {"APPROVER_B"}, {"تأییدکننده ب"}, 0, 1)",
+                    TestContext.Current.CancellationToken);
+                await before.Database.ExecuteSqlInterpolatedAsync(
+                    $"INSERT INTO CompanyRoles (Id, Ordering, InsertDateTime, TenantId, Code, Name, IsSystemRole, IsActive) VALUES ({memberRole.Id}, 0, SYSUTCDATETIME(), {destination.Id}, {"MEMBER"}, {"عضو"}, 0, 1)",
+                    TestContext.Current.CancellationToken);
+                await before.Database.ExecuteSqlInterpolatedAsync(
+                    $"INSERT INTO UserCompanyMemberships (Id, Ordering, InsertDateTime, UserId, TenantId, RoleId, IsActive, CreatedAtUtc) VALUES ({Guid.NewGuid()}, 0, SYSUTCDATETIME(), {approverA.Id}, {destination.Id}, {approverRoleA.Id}, 1, SYSUTCDATETIME())",
+                    TestContext.Current.CancellationToken);
+                await before.Database.ExecuteSqlInterpolatedAsync(
+                    $"INSERT INTO UserCompanyMemberships (Id, Ordering, InsertDateTime, UserId, TenantId, RoleId, IsActive, CreatedAtUtc) VALUES ({Guid.NewGuid()}, 0, SYSUTCDATETIME(), {approverB.Id}, {destination.Id}, {approverRoleB.Id}, 1, SYSUTCDATETIME())",
+                    TestContext.Current.CancellationToken);
+
                 destinationId = destination.Id;
                 requesterId = requester.Id;
                 approverAId = approverA.Id;
@@ -129,6 +136,9 @@ public sealed class CompanyMembershipRequestSqlServerTests
 
                 // Upgrade an existing database after destination approver memberships already exist.
                 await before.Database.MigrateAsync(TestContext.Current.CancellationToken);
+                approverRoleA = await before.CompanyRoles.SingleAsync(item => item.Id == approverRoleA.Id, TestContext.Current.CancellationToken);
+                approverRoleB = await before.CompanyRoles.SingleAsync(item => item.Id == approverRoleB.Id, TestContext.Current.CancellationToken);
+                memberRole = await before.CompanyRoles.SingleAsync(item => item.Id == memberRole.Id, TestContext.Current.CancellationToken);
                 Assert.True(await before.UserCompanyMemberships.AnyAsync(
                     item => item.UserId == approverAId && item.TenantId == destinationId && item.IsActive,
                     TestContext.Current.CancellationToken));
