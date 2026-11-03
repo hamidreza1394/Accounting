@@ -340,6 +340,36 @@ public class User :
 
 	#region Methods
 
+	#region ChangeEmailAddress Method
+	/// <summary>
+	/// Changes the email address and invalidates its previous verification state.
+	/// </summary>
+	public void ChangeEmailAddress(string emailAddress)
+	{
+		if (string.Equals(EmailAddress, emailAddress, System.StringComparison.OrdinalIgnoreCase))
+			return;
+
+		EmailAddress = emailAddress;
+		EmailAddressVerificationKey = System.Guid.NewGuid();
+		IsEmailAddressVerified = false;
+	}
+	#endregion /ChangeEmailAddress Method
+
+	#region ChangeCellPhoneNumber Method
+	/// <summary>
+	/// Changes the mobile number and invalidates its previous verification state.
+	/// </summary>
+	public void ChangeCellPhoneNumber(string? cellPhoneNumber)
+	{
+		if (string.Equals(CellPhoneNumber, cellPhoneNumber, System.StringComparison.Ordinal))
+			return;
+
+		CellPhoneNumber = cellPhoneNumber;
+		CellPhoneNumberVerificationKey = null;
+		IsCellPhoneNumberVerified = false;
+	}
+	#endregion /ChangeCellPhoneNumber Method
+
 	#region SetUpdateDateTime Method
 	public void SetUpdateDateTime()
 	{
