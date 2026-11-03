@@ -1170,6 +1170,14 @@ Pending هیچ دسترسی ندارد؛ مقصد تنها approver است؛ gra
 - **قواعد ثابت مستقل از گزینه:** deny-by-default؛ عضویت Pending فاقد دسترسی؛ Company/Tenant مشترک؛ بدون FiscalYear یا Tenant موازی؛ دوره‌های زیرسیستم‌ها از Core مصرف می‌شوند؛ هر grant دارای actor/time/reason/audit و concurrency protection است.
 - **گام بعد از تأیید:** طرح کامل کلیدها و composite FKها، یکتایی، lifecycle/revocation، backfill (پیش‌فرض عدم اعطای grant به کاربران موجود)، SQL Server integration tests و rollback plan در PR مستقل ارائه شود. هیچ migration روی دیتابیس مشتری در این مرحله اجرا نمی‌شود.
 
+## D-067 — قرارداد زمان: UTC واقعی در API و تفکیک ساعت محلی قدیمی (2026-11-03)
+
+- **وضعیت:** Frontend `Implemented` (قرارداد کلاینت)؛ Backend `Proposed` — نیازمند تأیید مالک؛ هیچ Migration داده یا مبدل سراسری از این پیشنهاد مجاز نمی‌شود.
+- **Issue:** #444 (ممیزی زمان). جزئیات و جدول ممیزی: `docs/TIME_CONTRACT.md`.
+- **شواهد:** فیلدهای `*Utc` با `DateTime.UtcNow` نوشته می‌شوند ولی EF آن‌ها را با `Kind=Unspecified` می‌خواند و JSON بدون `Z` می‌شود؛ فیلدهای قدیمی (`InsertDateTime`، `UpdateDateTime`، `LastLoginDateTime`) با `DateTime.Now` (ساعت محلی سرور) نوشته می‌شوند و UTC نیستند.
+- **تصمیم Frontend (اجرا‌شده):** `*Utc` = UTC با افزودن `Z` در صورت نبود offset؛ فیلدهای قدیمی بدون تغییر و بدون `Z`؛ فیلتر روز در منطقهٔ مرورگر؛ تاریخ تقویمی UTC نیست.
+- **پیشنهاد Backend:** (۱) مبدل مقدار EF برای ویژگی‌های `*Utc` تا `Kind=Utc` شود (بدون Migration)؛ (۲) تبدیل فیلدهای قدیمی به UTC فقط با تصمیم جدا، تعیین منطقهٔ تاریخی سرور و Migration داده؛ (۳) قراردادهای جدید `DateTimeOffset`/`*Utc` با `Z`.
+- **ریسک:** یک مبدل سراسری «بدون Z = UTC» فیلدهای قدیمی را به‌اندازهٔ offset سرور جابه‌جا می‌کند؛ بدون ممیزی فیلد به فیلد ممنوع است.
 ## D-068 — انتخابگر تاریخ شمسی: react-day-picker 9.14.0 (مسیر `/persian`) (2026-11-03)
 
 - **وضعیت:** Accepted — مجوز صریح مالک در دستور کار 2026-11-03 برای افزودن وابستگی مناسب، مشروط به بررسی امنیت/نگهداری، ADR، حجم و بسته‌شدن محلی؛ شرایط زیر بررسی و ثبت شد.
