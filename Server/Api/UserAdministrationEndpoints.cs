@@ -320,9 +320,8 @@ public static class UserAdministrationEndpoints
             if (targetIsActiveAdmin)
             {
                 var activeAdminCount = await database.Users.CountAsync(candidate =>
-                    candidate.IsActive && candidate.RoleId != null &&
-                    database.Roles.Any(role => role.Id == candidate.RoleId &&
-                        role.IsActive && role.Name == Constants.Role.Admin),
+                    candidate.IsActive && candidate.Role != null &&
+                    candidate.Role.IsActive && candidate.Role.Name == Constants.Role.Admin),
                     cancellationToken);
                 if (activeAdminCount <= 1)
                     return TypedResults.Conflict(new { error = "غیرفعال‌کردن آخرین مدیر سیستم مجاز نیست." });
@@ -364,6 +363,10 @@ public static class UserAdministrationEndpoints
         catch (DbUpdateException)
         {
             return TypedResults.Conflict(new { error = "تغییرات با تعارض داده یا درخواست هم‌زمان مواجه شد؛ وضعیت را دوباره بررسی کنید." });
+        }
+        catch (System.Data.Common.DbException)
+        {
+            return TypedResults.Conflict(new { error = "تغییر هم‌زمان دیگری انجام شده است؛ وضعیت مدیران فعال را دوباره بررسی کنید." });
         }
 
         SetNoStore(httpContext);
