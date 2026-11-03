@@ -321,7 +321,7 @@ public static class UserAdministrationEndpoints
             {
                 var activeAdminCount = await database.Users.CountAsync(candidate =>
                     candidate.IsActive && candidate.Role != null &&
-                    candidate.Role.IsActive && candidate.Role.Name == Constants.Role.Admin),
+                    candidate.Role.IsActive && candidate.Role.Name == Constants.Role.Admin,
                     cancellationToken);
                 if (activeAdminCount <= 1)
                     return TypedResults.Conflict(new { error = "غیرفعال‌کردن آخرین مدیر سیستم مجاز نیست." });
