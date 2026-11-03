@@ -33,7 +33,7 @@
 - پاسخ ۲۰۰: `{ "isInstallationAdministrator": false, "company": { "id": "guid", "permissionCodes": ["users.list", "users.membership.approve"] } }`؛ اگر زمینهٔ شرکت فعالی برای همین sign-in وجود نداشته باشد، `company: null` برمی‌گردد.
 - شرکت فقط از زمینهٔ کاری محافظت‌شدهٔ همین نشست، با `WorkContextService.GetCurrentAsync` تعیین می‌شود؛ شناسهٔ شرکت ارسالی در query/route/body یا claim خوانده نمی‌شود و هیچ شرکت دیگری خودکار انتخاب نمی‌شود.
 - مجوزها از نقش فعال عضویت فعال همان شرکت، از طریق `CompanyAccessService` خوانده می‌شوند؛ مجوزهای شرکت دیگر حتی اگر کاربر عضو آن باشد افشا نمی‌شود. `isInstallationAdministrator` از نقش فعال DB در هر درخواست محاسبه می‌شود، نه Claim قدیمی.
-- پاسخ `Cache-Control: no-store` و `Pragma: no-cache`؛ بدون cache. کاربر بدون زمینهٔ فعال پاسخ ۲۰۰ با `company: null` می‌گیرد؛ ناشناس/حساب غیرکاربر یا Claim شناسه نامعتبر ۴۰۱.
+- پاسخ `Cache-Control: no-store` و `Pragma: no-cache`؛ بدون cache. کاربر بدون زمینهٔ فعال پاسخ ۲۰۰ با `company: null` می‌گیرد؛ ناشناس یا Claim شناسه نامعتبر ۴۰۱؛ حساب احرازشدهٔ غیرکاربر به‌علت RequireClaim با ۴۰۳ رد می‌شود.
 - UI فقط برای نمایش/مخفی‌کردن منو و کنترل‌ها استفاده می‌کند و مرجع امنیتی نیست؛ هر endpoint باید مجوز خودش را سمت سرور بررسی کند.
 
 ## ۳. گزارش امنیتی (مراحل ۵ و ۱۱)
