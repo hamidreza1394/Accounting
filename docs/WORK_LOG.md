@@ -2254,3 +2254,10 @@
 - ADR D-068: `react-day-picker@9.14.0` با مسیر `/persian` (نسخهٔ 10 این مسیر را ندارد) پین شد؛ مجوزها MIT، `npm audit` بدون آسیب‌پذیری، حجم chunk تنبل ≈ 72 kB gzip، اجرای آفلاین تأیید شد.
 - کامپوننت `ui/JalaliDateField` (مقدار ISO میلادی، RTL، ارقام فارسی، `min`/`max`، صفحه‌کلید، `FormField`) با ۱۲ تست؛ یک باگ اعتبارسنجی ماه حین تست یافت و رفع شد.
 - اتصال به گزارش امنیتی پس از ادغام #499 در PR بعدی. handoff: `docs/handoffs/ISSUE-444-jalali-date-picker.md`.
+
+## 2026-11-03 — Issue #504 / D-069: طراحی چرخه عمر نشست
+- ممیزی نشان داد Cookie فعلی ۳۰ دقیقه‌ای و sliding است؛ SessionValidator در هر درخواست account active و CredentialStamp را بررسی می‌کند؛ خروج صریح نیز از طریق UserSessionAuditService ثبت می‌شود.
+- SessionId و UserSession per-session وجود ندارد، پس فهرست/ابطال مستقل نشست هنوز ممکن نیست. نبود event به‌عنوان logout/expiry/duration تفسیر نمی‌شود.
+- D-069 یک طرح پیشنهادی برای UserSession، SessionId، idle window، self-service revoke و retention ثبت می‌کند؛ هیچ Schema، Migration، claim یا تغییر Cookie انجام نشده است.
+- تصمیم‌های retention، absolute lifetime، revoke-others و scope مدیر نصب نیازمند تأیید مالک هستند.
+- handoff: docs/handoffs/ISSUE-504-session-lifecycle-design.md.
