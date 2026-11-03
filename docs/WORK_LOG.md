@@ -2170,6 +2170,11 @@
 - handoff: `docs/handoffs/ISSUE-444-role-members-api.md`.
 
 
+## 2026-11-03 — Issue #444: UI اعضای گروه دسترسی و انتقال اعضا
+- بخش «اعضای این گروه» به صفحهٔ جزئیات گروه اضافه شد: فهرست صفحه‌بندی‌شدهٔ اعضای فعال و انتقال گروهی با تأییدیه روی API ادغام‌شدهٔ #482؛ گروه سیستمی و سقف ۵۰۰ نفر در UI توضیح داده می‌شوند و سرور مرجع می‌ماند.
+- جستجوی اعضا ساخته نشد چون API ندارد. هیچ تغییری در Backend نبود.
+- تست: typecheck، ۴۲۲ تست vitest، build و check:offline موفق؛ axe و E2E واقعی اجرا نشد.
+- handoff: `docs/handoffs/ISSUE-444-role-members-ui.md`.
 ## 2026-11-03 — Issue #485: گزارش Audit امنیتی مدیر نصب
 
 - API فقط‌خواندنی `GET /api/v1/admin/security/audit-events` روی جدول موجود SecurityAuditEvents اضافه شد؛ احراز مجدد مدیر نصب از دیتابیس انجام می‌شود.
@@ -2178,6 +2183,23 @@
 - رویدادهای ناقص یا نبود Logout به‌عنوان مدت نشست/انقضا تفسیر نمی‌شوند. هیچ schema، migration، UI یا retention deletion در این برش نیست.
 - تست‌های unit و SQL Server integration اضافه شدند؛ اجرای محلی در این محیط ممکن نبود (GitHub DNS و .NET SDK در دسترس نیست). CI روی PR معیار تأیید است.
 - handoff: `docs/handoffs/ISSUE-485-security-audit-report-api.md`.
+
+
+## 2026-11-03 — Issue #483: E2E مثبت مدیریت نقش با مدیر نصب و SQL Server
+
+- یک حساب مدیر نصب اختصاصی برای E2E ایجاد شد؛ حساب‌های عادی Alice/Bob تغییر نقش نمی‌گیرند و حساب Infrastructure Master نیز برای احراز مدیر API استفاده نمی‌شود.
+- نقش سراسری `Admin` در دیتابیس آزمون ایجاد و فقط به کاربر E2E اختصاص داده می‌شود؛ رمز تصادفی در فایل `.e2e-state.json` نادیده‌گرفته‌شده باقی می‌ماند.
+- سناریوی Playwright روی سرور Production منتشرشده و SQL Server واقعی، خواندن کاتالوگ و نقش‌ها، رد POST بدون Anti-forgery، ایجاد نقش با مجوز catalog موجود، بازخوانی، تغییر مجوزها، رد role ID شرکت دیگر با 404 و غیرفعال‌سازی نقش را پوشش می‌دهد.
+- هیچ کد Production، API، UI، Schema یا Migration تغییر نکرده است. تست محلی در این محیط اجرا نشد (GitHub clone به‌علت DNS و .NET SDK در دسترس نبود)؛ اجرای E2E در CI مرجع Verified شدن است.
+- handoff: `docs/handoffs/ISSUE-483-role-admin-positive-e2e.md`.
+
+
+## 2026-11-03 — PR #484: رفع ناپایداری تست عنوان صفحهٔ دسترسی ممنوع
+
+- بررسی CI نشان داد سناریوی E2E مثبت نقش‌ها، seed دیتابیس، publish سرور و job واقعی E2E همگی موفق‌اند؛ شکست از job `publish` در مجموعهٔ تست Client بود.
+- علت قطعی: تست `AppRouting` بلافاصله پس از مشاهدهٔ DOM صفحهٔ Forbidden، عنوان سند را synchronous assert می‌کرد؛ اما `RouteView` عنوان را در `useEffect` به‌روزرسانی می‌کند. در نتیجه race زمان‌بندی باعث باقی ماندن عنوان صفحهٔ قبلی شد.
+- assertion به `waitFor` تغییر کرد تا قرارداد واقعی UI (عنوان پس از effect) را بدون تغییر رفتار Production بسنجد.
+- CI اولیه: `.NET CI` ناموفق فقط به‌علت همین assertion؛ `e2e`, `build-and-test`, `client` و `publish-windows` موفق، `Semgrep` موفق. اجرای مجدد CI برای تأیید fix لازم است.
 
 ## 2026-11-03 — Issue #492: تست مرز امنیتی Customer Boundary Operator API
 
@@ -2192,3 +2214,22 @@
 - CI اولیه خطای کامپایل نشان داد unionهای `Results<...>` مستقیماً به `IStatusCodeHttpResult` cast نمی‌شوند. تست‌ها اصلاح شدند تا `IResult.ExecuteAsync` را روی `DefaultHttpContext` اجرا و status واقعی HTTP را بررسی کنند.
 - تست diagnostics نیز پاسخ JSON واقعی endpoint را deserialize می‌کند و allowlist خروجی را از نظر عدم افشای شناسه/نام شرکت و شناسه ملی می‌سنجد.
 - CI اولیه در `build-and-test` فقط به علت cast نامعتبر شکست خورد؛ اصلاح در شاخه PR ثبت شده و اجرای مجدد CI برای تأیید باقی است.
+
+## 2026-11-03 — Issue #494: فهرست کاربران با scope شرکت و users.list
+
+- permission code پایدار users.list با migration افزایشی و idempotent به PermissionDefinitions افزوده شد؛ هیچ Role یا کاربری به‌صورت خودکار این مجوز را دریافت نمی‌کند.
+- GET /api/v1/companies/{companyId}/users با CompanyAccessService و بررسی membership فعال/role فعال/Company فعال و permission users.list در همان شرکت اضافه شد.
+- فقط UserCompanyMembershipهای همان Tenant خوانده می‌شوند؛ درخواست‌های Pending در جدول جداگانه هستند و در directory دیده نمی‌شوند. membership و user غیرفعال با status نمایش داده می‌شوند ولی دسترسی ایجاد نمی‌کنند.
+- پاسخ حداقلی شامل username/name، وضعیت user/membership/role و role display است؛ email، phone، password/hash، login history، IP، DetailsJson و permission list حذف شده‌اند. Search و pagination سمت سرور و no-store است.
+- تست‌های unit و SQL Server integration اضافه شدند؛ اجرای محلی در این محیط ممکن نیست (GitHub DNS و .NET SDK در دسترس نیست). CI مرجع تأیید است.
+- بدون UI/ClientApp؛ Claude می‌تواند endpoint را مصرف کند. handoff: docs/handoffs/ISSUE-494-company-user-directory-api.md.
+
+
+## 2026-11-03 — Issue #494: فهرست کاربران با scope شرکت و users.list
+
+- permission code پایدار users.list با migration افزایشی و idempotent به PermissionDefinitions افزوده شد؛ هیچ Role یا کاربری به‌صورت خودکار این مجوز را دریافت نمی‌کند.
+- GET /api/v1/companies/{companyId}/users با CompanyAccessService و بررسی membership فعال/role فعال/Company فعال و permission users.list در همان شرکت اضافه شد.
+- فقط UserCompanyMembershipهای همان Tenant خوانده می‌شوند؛ درخواست‌های Pending در جدول جداگانه هستند و در directory دیده نمی‌شوند. membership و user غیرفعال با status نمایش داده می‌شوند ولی دسترسی ایجاد نمی‌کنند.
+- پاسخ حداقلی شامل username/name، وضعیت user/membership/role و role display است؛ email، phone، password/hash، login history، IP، DetailsJson و permission list حذف شده‌اند. Search و pagination سمت سرور و no-store است.
+- تست‌های unit و SQL Server integration اضافه شدند؛ اجرای محلی در این محیط ممکن نیست (GitHub DNS و .NET SDK در دسترس نیست). CI مرجع تأیید است.
+- بدون UI/ClientApp؛ Claude می‌تواند endpoint را مصرف کند. handoff: docs/handoffs/ISSUE-494-company-user-directory-api.md.
