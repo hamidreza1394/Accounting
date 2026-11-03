@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using System.Globalization;
 using System.Text;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 
 namespace Server.Api;
@@ -256,6 +257,30 @@ public static class SecurityAuditAdministrationEndpoints
                 .Append(CsvCell(item.CorrelationId))
                 .Append("\r\n");
         }
+
+        if (!Guid.TryParse(principal.FindFirstValue(ClaimTypes.NameIdentifier), out var actorId))
+            return TypedResults.Forbid();
+
+        database.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
+        {
+            UserId = actorId,
+            EventType = "SecurityAuditExported",
+            EntityType = "SecurityAuditEvent",
+            OccurredAtUtc = DateTime.UtcNow,
+            CorrelationId = httpContext.TraceIdentifier.Length <= 100
+                ? httpContext.TraceIdentifier
+                : httpContext.TraceIdentifier[..100],
+            DetailsJson = JsonSerializer.Serialize(new
+            {
+                eventType,
+                userId,
+                companyId,
+                fromUtc = fromUtc.Value,
+                toUtc = toUtc.Value,
+                rowCount = rows.Count,
+            }),
+        });
+        await database.SaveChangesAsync(cancellationToken);
 
         var preamble = Encoding.UTF8.GetPreamble();
         var content = Encoding.UTF8.GetBytes(csv.ToString());
