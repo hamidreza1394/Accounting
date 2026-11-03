@@ -562,7 +562,7 @@ export function parseCompanyRoleMembers(value: unknown): CompanyRoleMemberPage {
   return {
     items: rows.map((row): CompanyRoleMember => {
       if (!isObject(row)) throw new ContractError(`${what}.item`);
-      const since = readIsoDateTime(row, 'memberSinceUtc', `${what}.item`);
+      const since = readUtcDateTime(row, 'memberSinceUtc', `${what}.item`);
       if (since === null) throw new ContractError(`${what}.item.memberSinceUtc`);
       return {
         userId: readString(row, 'userId', `${what}.item`),
@@ -673,7 +673,7 @@ function readMembershipRequestStatus(source: JsonObject, what: string): Membersh
 }
 
 function readRequiredDateTime(source: JsonObject, key: string, what: string): string {
-  const value = readIsoDateTime(source, key, what);
+  const value = readUtcDateTime(source, key, what);
   if (value === null) throw new ContractError(`${what}.${key}`);
   return value;
 }
@@ -707,7 +707,7 @@ export function parseMyMembershipRequests(value: unknown): MembershipRequestPage
     destinationCompanyName: readString(item, 'destinationCompanyName', what),
     status: readMembershipRequestStatus(item, what),
     requestedAtUtc: readRequiredDateTime(item, 'requestedAtUtc', what),
-    decidedAtUtc: readIsoDateTime(item, 'decidedAtUtc', what, true),
+    decidedAtUtc: readUtcDateTime(item, 'decidedAtUtc', what, true),
     decisionReason: readNullableString(item, 'decisionReason', what),
     approvedRoleCode: readNullableString(item, 'approvedRoleCode', what),
     approvedRoleName: readNullableString(item, 'approvedRoleName', what),
@@ -744,6 +744,20 @@ export type SecurityAuditEvent = {
 
 export type SecurityAuditPage = { items: SecurityAuditEvent[]; totalCount: number; page: number; pageSize: number };
 
+/**
+ * A `*Utc` instant from the server. EF returns SQL Server `datetime2` with `Kind=Unspecified`, so
+ * System.Text.Json writes it WITHOUT `Z`/offset, and `new Date()` would read it as browser-local
+ * time (hours off). These fields are UTC by contract, so an offset-less value gets `Z` appended.
+ */
+export function asUtcInstant(value: string): string {
+  return /(?:Z|[+-]\d{2}:\d{2})$/.test(value) ? value : `${value}Z`;
+}
+
+function readUtcDateTime(source: JsonObject, key: string, what: string, nullable = false): string | null {
+  const value = readIsoDateTime(source, key, what, nullable);
+  return value === null ? null : asUtcInstant(value);
+}
+
 export function parseSecurityAuditEvents(value: unknown): SecurityAuditPage {
   const what = 'securityAudit';
   if (!isObject(value)) throw new ContractError(what);
@@ -756,7 +770,7 @@ export function parseSecurityAuditEvents(value: unknown): SecurityAuditPage {
     items: rows.map((row): SecurityAuditEvent => {
       if (!isObject(row)) throw new ContractError(`${what}.item`);
       const at = `${what}.item`;
-      const occurred = readIsoDateTime(row, 'occurredAtUtc', at);
+      const occurred = readUtcDateTime(row, 'occurredAtUtc', at);
       if (occurred === null) throw new ContractError(`${at}.occurredAtUtc`);
       return {
         id: readString(row, 'id', at),

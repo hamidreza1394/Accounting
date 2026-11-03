@@ -17,20 +17,32 @@ type Applied = {
   eventType: string;
   from: string;
   to: string;
+  /** Already converted (and validated) UTC instants of `from`/`to`; the effect never converts. */
+  fromUtc: string | null;
+  toUtc: string | null;
   user: { id: string; label: string } | null;
   company: { id: string; label: string } | null;
 };
 
-const empty: Applied = { eventType: '', from: '', to: '', user: null, company: null };
+const empty: Applied = { eventType: '', from: '', to: '', fromUtc: null, toUtc: null, user: null, company: null };
 
-/** Start of the chosen local calendar day, as a UTC instant. */
-export function dayStartUtc(date: string): string {
-  return new Date(`${date}T00:00:00`).toISOString();
+/** Smallest/largest year the date inputs accept; keeps typed years inside what the server and `Date` handle. */
+const minDate = '2000-01-01';
+const maxDate = '2100-12-31';
+
+function toInstant(date: string, time: string): string | null {
+  const parsed = new Date(`${date}T${time}`);
+  return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : null;
 }
 
-/** End of the chosen local calendar day, as a UTC instant. */
-export function dayEndUtc(date: string): string {
-  return new Date(`${date}T23:59:59.999`).toISOString();
+/** Start of the chosen local calendar day as a UTC instant, or `null` for an invalid date. */
+export function dayStartUtc(date: string): string | null {
+  return toInstant(date, '00:00:00');
+}
+
+/** End of the chosen local calendar day as a UTC instant, or `null` for an invalid date. */
+export function dayEndUtc(date: string): string | null {
+  return toInstant(date, '23:59:59.999');
 }
 
 function toQuery(applied: Applied, page: number, pageSize: number): SecurityAuditQuery {
@@ -38,8 +50,8 @@ function toQuery(applied: Applied, page: number, pageSize: number): SecurityAudi
     ...(applied.eventType ? { eventType: applied.eventType } : {}),
     ...(applied.user ? { userId: applied.user.id } : {}),
     ...(applied.company ? { companyId: applied.company.id } : {}),
-    ...(applied.from ? { fromUtc: dayStartUtc(applied.from) } : {}),
-    ...(applied.to ? { toUtc: dayEndUtc(applied.to) } : {}),
+    ...(applied.fromUtc ? { fromUtc: applied.fromUtc } : {}),
+    ...(applied.toUtc ? { toUtc: applied.toUtc } : {}),
     page,
     pageSize,
   };
@@ -102,13 +114,20 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (draft.from && draft.to && draft.from > draft.to) {
+    const fromUtc = draft.from ? dayStartUtc(draft.from) : null;
+    const toUtc = draft.to ? dayEndUtc(draft.to) : null;
+    if ((draft.from && !fromUtc) || (draft.to && !toUtc)) {
+      setDraftError('تاریخ واردشده معتبر نیست.');
+      return;
+    }
+    // Compare real instants, not strings (years of different length order wrongly as text).
+    if (fromUtc && toUtc && Date.parse(fromUtc) > Date.parse(toUtc)) {
       setDraftError('تاریخ شروع نباید بعد از تاریخ پایان باشد.');
       return;
     }
     setDraftError(null);
     setPage(1);
-    setApplied((current) => ({ ...current, eventType: draft.eventType.trim(), from: draft.from, to: draft.to }));
+    setApplied((current) => ({ ...current, eventType: draft.eventType.trim(), from: draft.from, to: draft.to, fromUtc, toUtc }));
   };
 
   const reset = () => {
@@ -147,11 +166,11 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
             <button
               type="button"
               className="text-start text-teal-deep underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-gold"
-              aria-label={`فقط رویدادهای ${actorLabel(event)}`}
               onClick={() => filterBy({ user: { id: event.userId as string, label: actorLabel(event) } })}
             >
               {actorLabel(event)}
               {event.actorUsername && event.actorDisplayName ? <code dir="ltr" className="ms-2 text-xs text-sub">{event.actorUsername}</code> : null}
+              <span className="sr-only">، فقط رویدادهای این کاربر</span>
             </button>
           ) : (
             <span className="text-sub">سیستم / ناشناس</span>
@@ -165,10 +184,10 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
             <button
               type="button"
               className="text-start text-teal-deep underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-gold"
-              aria-label={`فقط رویدادهای شرکت ${event.companyName ?? 'ناشناخته'}`}
               onClick={() => filterBy({ company: { id: event.companyId as string, label: event.companyName ?? 'شرکت ناشناخته' } })}
             >
               {event.companyName ?? 'شرکت ناشناخته'}
+              <span className="sr-only">، فقط رویدادهای این شرکت</span>
             </button>
           ) : (
             '—'
@@ -196,7 +215,7 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
     [],
   );
 
-  const hasFilters = applied.eventType !== '' || applied.from !== '' || applied.to !== '' || applied.user !== null || applied.company !== null;
+  const hasFilters = applied.eventType !== '' || applied.fromUtc !== null || applied.toUtc !== null || applied.user !== null || applied.company !== null;
 
   return (
     <div className="space-y-5">
@@ -227,10 +246,10 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
           ))}
         </datalist>
         <FormField label="از تاریخ" hint="به وقت محلی مرورگر">
-          <Input type="date" value={draft.from} onChange={(event) => setDraft((current) => ({ ...current, from: event.target.value }))} />
+          <Input type="date" min={minDate} max={maxDate} value={draft.from} onChange={(event) => setDraft((current) => ({ ...current, from: event.target.value }))} />
         </FormField>
         <FormField label="تا تاریخ" error={draftError}>
-          <Input type="date" value={draft.to} onChange={(event) => setDraft((current) => ({ ...current, to: event.target.value }))} />
+          <Input type="date" min={minDate} max={maxDate} value={draft.to} onChange={(event) => setDraft((current) => ({ ...current, to: event.target.value }))} />
         </FormField>
         <div className="flex flex-wrap gap-2">
           <Button type="submit" size="lg">اعمال فیلتر</Button>

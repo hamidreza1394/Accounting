@@ -136,8 +136,8 @@ export const appRoutes: readonly Route[] = [
   // `/new` must stay before `/:roleId`, otherwise "new" would be read as a role id.
   { path: '/admin/roles/new', element: RoleCreateRoute, title: 'ایجاد گروه دسترسی', permission: 'admin.roles.manage' },
   { path: '/admin/roles/:roleId', element: RoleDetailRoute, title: 'جزئیات گروه دسترسی', permission: 'admin.roles.view' },
-  // No UI permission hint: the approver permission is per company and not in the session; the server decides (404).
   { path: '/admin/security/audit', element: SecurityAuditRoute, title: 'گزارش امنیت و سوابق', permission: 'admin.security.view' },
+  // No UI permission hint: the approver permission is per company and not in the session; the server decides (404).
   { path: '/admin/membership-requests', element: PendingMembershipRequestsRoute, title: 'درخواست‌های عضویت' },
   { path: '/account/membership-requests', element: MyMembershipRequestsRoute, title: 'درخواست‌های عضویت من', permission: 'account.view' },
 ];

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getSecurityAuditEvents } from './client';
-import { ContractError, parseSecurityAuditEvents } from './types';
+import { ContractError, asUtcInstant, parseSecurityAuditEvents } from './types';
 import { auditItem, auditPage } from '../test/securityAudit';
 
 const jsonResponse = (status: number, body: unknown) =>
@@ -69,5 +69,18 @@ describe('security audit parser', () => {
     const page = parseSecurityAuditEvents(auditPage([auditItem(1, { ipAddress: '10.0.0.1', detailsJson: '{"secret":1}' })]));
     expect(Object.keys(page.items[0] as object)).not.toContain('ipAddress');
     expect(Object.keys(page.items[0] as object)).not.toContain('detailsJson');
+  });
+
+  it('reads an offset-less server timestamp as UTC, never as browser-local time', () => {
+    // EF returns SQL Server datetime2 as Kind=Unspecified, which System.Text.Json writes without Z.
+    const page = parseSecurityAuditEvents(auditPage([auditItem(1, { occurredAtUtc: '2026-11-03T10:00:00' }), auditItem(2, { occurredAtUtc: '2026-11-03T10:00:00.1234567' })]));
+    expect(page.items[0]?.occurredAtUtc).toBe('2026-11-03T10:00:00Z');
+    expect(Date.parse(page.items[0]?.occurredAtUtc ?? '')).toBe(Date.UTC(2026, 10, 3, 10, 0, 0));
+    expect(page.items[1]?.occurredAtUtc).toBe('2026-11-03T10:00:00.1234567Z');
+  });
+
+  it('leaves values that already carry Z or an offset untouched', () => {
+    expect(asUtcInstant('2026-11-03T10:00:00Z')).toBe('2026-11-03T10:00:00Z');
+    expect(asUtcInstant('2026-11-03T13:30:00+03:30')).toBe('2026-11-03T13:30:00+03:30');
   });
 });
