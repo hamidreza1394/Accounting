@@ -1,8 +1,8 @@
 # رابط مدیریت سیستم (ClientApp) — معماری، استانداردها و شکاف‌ها
 
-- **Issue مرجع:** #464 (پاک‌سازی و مستندسازی A5) روی کار #461، #462، #462b و #463.
-- **وضعیت سند:** توصیف کد موجود در `ClientApp/src` در شاخهٔ `agent/464-admin-ui-cleanup`. هر چیز نساخته با واژگان D-030 (`NotImplemented`، `Proposed`، `NeedsApproval`، `Blocked`) علامت خورده است.
-- **حد ادعا:** تست‌های jsdom/Vitest در handoffها سبز گزارش شده‌اند، ولی بررسی در مرورگر واقعی، axe و E2E با سرور زنده **اجرا نشده**؛ بنابراین هیچ بخش UI این سند `Verified` نیست (حداکثر `Implemented`).
+- **Issue مرجع:** #444؛ برش‌های UI انجام‌شده در Issues #461–#464 و #475.
+- **وضعیت سند:** snapshot کد ادغام‌شده در `main` پس از PR #478 (merge commit `4c84b3938b4438f93db907be0375d0c120202387`). PRهای #470، #471، #473، #474 و #478 ادغام شده‌اند؛ #469 به‌صورت مستقل ادغام نشد و زیرساخت آن در زنجیره PRهای بعدی وارد main شد.
+- **حد ادعا:** تست‌های Vitest/TypeScript/Build و QA مرورگر با API mock طبق handoffها و CI PRها گزارش شده‌اند. این شواهد، E2E مدیریت نقش با Backend/SQL Server واقعی یا دسترس‌پذیری axe را اثبات نمی‌کنند. وضعیت پیاده‌سازی UI `Implemented` است؛ اعتبارسنجی یکپارچهٔ واقعی `NeedsVerification` باقی می‌ماند.
 - منبع قواعد عمومی: `AGENTS.md` بخش ۲، `docs/UI_COMPONENTS.md` (D-048، D-049) و `docs/UI_LIBRARIES.md`. این سند آن‌ها را تکرار نمی‌کند و فقط الگوهای مدیریت سیستم را ثبت می‌کند.
 
 ## ۱) هدف و دامنه
@@ -19,7 +19,7 @@
 | جزئیات کاربر (تب‌های اطلاعات عمومی، تماس، شرکت‌ها و عضویت‌ها) | `/admin/users/:id` | `Implemented` |
 | ویرایش کاربر | `/admin/users/:id/edit` | `Implemented` |
 | حساب من (drawer با تب‌های مشخصات، امنیت/رمز، سوابق ورود) | بدون مسیر؛ پنل داخل `AppShell` | `Implemented` |
-| نقش‌ها (`/admin/roles`، ایجاد، ویرایش) و کاتالوگ مجوز (`/admin/permissions`) | صفحات lazy با `PermissionTree`؛ روی قرارداد PR #459 (هنوز Merge نشده) | `Implemented` (UI)؛ اتصال به سرور واقعی `NotImplemented` تا Merge بک‌اند |
+| نقش‌ها (`/admin/roles`، ایجاد، ویرایش) و کاتالوگ مجوز (`/admin/permissions`) | صفحات lazy با `PermissionTree`؛ قراردادهای API در PR #459 ادغام شده‌اند | `Implemented`؛ تست UI و CI موفق گزارش شده، اما E2E این صفحات با Backend/SQL Server واقعی هنوز اثبات نشده است |
 | سوابق امنیتی، سیاست‌ها، ساختار سازمانی | فقط آیتم غیرفعال منو | `NotImplemented` |
 
 ## ۲) معماری صفحات مدیریت سیستم
@@ -39,7 +39,7 @@
 | `/admin/users/:id/edit` | `admin.users.update` | `session.isAdministrator` |
 | `/` و حساب من (`account.view`) | بدون / همیشه true | همه کاربران وارد‌شده |
 
-- **سرور مرجع نهایی است (D-064، D-065):** `lib/permissions.ts` فقط برای پنهان یا غیرفعال‌کردن کنترل است. `can()` برای هر `admin.*` فقط `session.isAdministrator` را می‌خواند؛ این تفکیک مدیر سراسری نصب از مجوز شرکتی را بیان نمی‌کند. کاربر غیرمدیر در deep link «دسترسی ندارید» می‌بیند و درخواستی به `/admin/users` نمی‌رود (تست jsdom). با آمدن `GET /me/permissions` (بخش ۱۰) `can()` با همان امضا به فهرست سرور تغییر می‌کند: `NotImplemented`.
+- **سرور مرجع نهایی است (D-064، D-065):** `lib/permissions.ts` فقط برای پنهان یا غیرفعال‌کردن کنترل است. `can()` برای هر `admin.*` فقط `session.isAdministrator` را می‌خواند؛ این تفکیک مدیر سراسری نصب از مجوز شرکتی را بیان نمی‌کند. کاربر غیرمدیر در deep link «دسترسی ندارید» می‌بیند و درخواستی به `/admin/users` نمی‌رود (تست jsdom). مسیر `GET /me/permissions` هنوز پیاده‌سازی نشده است؛ بنابراین `can()` همچنان فقط راهنمای UX مبتنی بر `session.isAdministrator` است و مجوزدهی قطعی فقط در API انجام می‌شود.
 
 ## ۳) کامپوننت‌های مشترک
 
@@ -69,7 +69,7 @@
 
 - همه چیز هم‌مبدأ و زیر `/api/v1` با Cookie (`credentials: 'same-origin'`). توکن نشست هرگز در JavaScript دیده یا در `localStorage` ذخیره نمی‌شود (D-012).
 - **Anti-forgery:** `sendJson(method, path, body?)` با `method` در `POST|PUT|PATCH|DELETE` پیش از هر درخواست تغییردهنده `GET /antiforgery/token` می‌زند و هدر را برمی‌گرداند. توکن عمداً کش نمی‌شود (وابسته به هویت؛ کش بیات پس از ورود/خروج ناامن است). `Content-Type: application/json` فقط وقتی بدنه هست.
-- **توابع:** `getAdminUsers`، `getAdminUser`، `createAdminUser` (POST، پاسخ `{id}`)، `updateAdminUser` (PUT، 204)، `getMyProfile`، `getMyLoginHistory`، `changeMyPassword`، `getSession`، `getCompanies`، `getCompanyOverview`، `getWorkContext`، `selectWorkContext`، `setDefaultCompany`، `logout`. هر پاسخ با `parse*` در `api/types.ts` اعتبارسنجی می‌شود.
+- **توابع:** `getAdminUsers`، `getAdminUser`، `createAdminUser` (POST، پاسخ `{id}`)، `updateAdminUser` (PUT، 204)، `getMyProfile`، `getMyLoginHistory`، `changeMyPassword`، `getSession`، `getCompanies`، `getCompanyOverview`، `getWorkContext`، `selectWorkContext`، `setDefaultCompany`، `logout`، `getCompanyRoles`، `createCompanyRole`، `updateCompanyRole`، `getPermissionCatalog` و `getPermissionTemplates`. هر پاسخ با `parse*` در `api/types.ts` اعتبارسنجی می‌شود.
 - **`apiPostJson`/`apiGetRaw`:** فقط برای دو صفحهٔ Provisioning (بدون نشست)؛ برای وضعیت ناموفق پرتاب نمی‌کنند. صفحات مدیریت از آن‌ها استفاده نکنند.
 - **خطاها:**
 
@@ -113,7 +113,7 @@
 
 ## ۷) ساختار Navigation
 
-- منوی «مدیریت سیستم» (فقط وقتی `session.isAdministrator`) زیرمنوی دارد: «مدیریت کاربران» لینک واقعی `/admin/users` با `aria-current` (برای همهٔ `/admin/users/*` فعال)؛ پنج آیتم دیگر (ساختار سازمانی و سمت‌ها، گروه‌های دسترسی، کاتالوگ و جزئیات مجوزها، گزارش امنیت و سوابق، سیاست‌های امنیتی) `DisabledItem` با `aria-disabled` هستند.
+- منوی «مدیریت سیستم» (فقط وقتی `session.isAdministrator`) شامل لینک‌های واقعی «مدیریت کاربران» (`/admin/users`)، «گروه‌های دسترسی» (`/admin/roles`) و «کاتالوگ و جزئیات مجوزها» (`/admin/permissions`) است. ساختار سازمانی و سمت‌ها، گزارش امنیت و سوابق و سیاست‌های امنیتی همچنان `DisabledItem` هستند.
 - **قاعده: لینک یا تب به صفحه/قابلیتی که API آن وجود ندارد ممنوع است.** آیتم تا وقتی مسیر واقعی و API و مجوز سرور نیست غیرفعال می‌ماند. تب‌های نقش‌ها، سال مالی، سوابق ورود و Audit در جزئیات کاربر عمداً ساخته نشده‌اند. فیلدهای بدون پشتوانهٔ API (کد ملی، اجبار تغییر رمز، یادداشت، حذف کاربر، تغییر رمز کاربر دیگر) در فرم‌ها نیامده‌اند.
 - پس از ورود یک قابلیت جدید: مسیر در `AppRoutes.tsx`، آیتم منو در `AppShell.tsx`، `Permission` در `lib/permissions.ts`، تست مسیر در `AppRouting.test.tsx`.
 
@@ -129,8 +129,9 @@ npm run check:offline    # اسکن ایستا؛ آدرس ساخته‌شده د
 ```
 
 - **الگوی mock:** `src/test/api.ts` تابع `stubApi({ 'METHOD /api/v1/path': {status, body} | handler })` را دارد؛ مسیر ناشناخته 404 می‌دهد تا فراخوانی ناخواسته تست را بشکند. `antiforgeryRoute` و دادهٔ نمونه نیز آنجاست. دادهٔ کاربران مدیریتی در `src/test/adminUsers.ts`. تست‌ها کنار کامپوننت (`*.test.tsx`) و با jsdom.
-- آخرین اعداد گزارش‌شده در handoffها (نه اجرای مجدد در این PR): #462b: ۲۹ فایل، ۲۸۸ تست؛ typecheck، build و check:offline موفق. این سند خود تست اجرا نکرده است.
-- **هنوز تست نشده:** مرورگر واقعی در ۳۶۰/۷۶۸/۱۲۸۰ و RTL بصری؛ axe/صفحه‌خوان؛ E2E صفحات کاربران با سرور و SQL Server زنده (شکل پاسخ‌ها از کد سرور خوانده و با mock آزمون شده)؛ رفتار واقعی سرور برای شناسهٔ نامعتبر (400 و 404 هر دو «کاربر پیدا نشد»)؛ stretched link ردیف جدول؛ ظاهر drawer حساب من؛ بازبینی دوبارهٔ `code-reviewer` پس از اصلاحات #461 و #463.
+- نتایج هر برش در handoffهای همان Issue ثبت شده است. برای B1 (#475/#478): typecheck، ۴۰۸ تست، build، check:offline و ۳۶/۳۶ سناریوی Playwright در ۳ اندازه viewport موفق گزارش شده‌اند؛ API مرورگر در آن QA mock بوده است.
+- CI نهایی PR #478 در توضیح PR موفق گزارش شده است (build/test، Client، E2E عمومی، secret scan و publish jobs). E2E عمومی CI را نباید با آزمون اختصاصی گردش نقش/مجوز روی SQL Server واقعی یکی دانست.
+- **هنوز نیازمند تأیید:** سناریوی end-to-end نقش‌ها/مجوزها روی سرور واقعی و SQL Server؛ اجرای axe/صفحه‌خوان؛ دسترسی مدیر شرکتی و سقف تفویض؛ فهرست اعضای نقش و انتقال اعضا؛ آزمون هم‌زمانی دو ویرایشگر.
 
 ## ۹) گزارش تصمیمات طراحی
 
@@ -147,16 +148,16 @@ npm run check:offline    # اسکن ایستا؛ آدرس ساخته‌شده د
 
 ## ۱۰) APIهای مورد نیاز از Backend
 
-هیچ‌کدام در این PR ساخته نشده‌اند. وضعیت «باز» بودن PR/Issue از شرح کار Lead گرفته شده و در این بررسی از GitHub راستی‌آزمایی نشد.
+این جدول وضعیت فعلی را بر اساس کد main و PRهای ادغام‌شده ثبت می‌کند؛ موارد `NotImplemented` به معنی قابلیت موجود نبودن است، نه صرفاً نبود UI.
 
 | نیاز | وضعیت | وابستگی / اثر بر UI |
 |---|---|---|
 | `GET /me/permissions` | `NotImplemented` | جایگزین `can()` مبتنی بر `isAdministrator`؛ پیش‌نیاز تفکیک واقعی مدیر نصب و مجوز شرکتی (D-064) |
 | آمار داشبورد مدیریت (تعداد کاربران فعال/غیرفعال، رویداد اخیر) | `NotImplemented` | بدون آن داشبورد مدیریت ساخته نمی‌شود |
-| نقش‌ها و کاتالوگ مجوز | UI ساخته شد؛ PR #459 باز | کمبودها: فهرست همه شرکت‌ها برای مدیر نصب، فهرست اعضای نقش، GET تک‌نقش، جستجوی معکوس مجوز←نقش، سقف تفویض (Delegation Ceiling) سمت سرور |
-| عضویت‌ها و جریان تأیید (PendingApproval، approve/reject، self-approval ممنوع) | `Proposed`؛ Issue #460 | D-065؛ UI تأیید عضویت و انتخاب `UserSelector`/`CompanySelector` وابسته |
+| نقش‌ها و کاتالوگ مجوز | API در #459 و UI در #478 ادغام شده‌اند | فهرست همه شرکت‌ها، اعضای نقش/انتقال اعضا، GET تک‌نقش، جستجوی معکوس و پشتیبانی مدیر شرکتی/Delegation هنوز موجود نیست؛ سقف تفویض باید پیش از فعال‌سازی مدیران غیرسراسری طراحی و enforce شود |
+| عضویت‌ها و جریان تأیید (PendingApproval، approve/reject، self-approval ممنوع) | Backend در PR #479 در حال تکمیل است؛ UI مدیریتی این گردش هنوز ساخته نشده | D-065؛ پس از تکمیل API و CI، UI درخواست/تصمیم عضویت باید در Issue مستقل ساخته شود |
 | grantهای سال/دوره مالی (`AllPeriodsInYear`) | `NotImplemented` | D-065؛ `FiscalYearSelector`/`FiscalPeriodSelector` وابسته |
-| دایرکتوری read-only هم‌گروه | endpoint در PR #466 باز؛ UI ساخته نشد (`Blocked`) | API فهرست گروه‌های قابل مشاهده وجود ندارد و UI نمی‌تواند `groupId` را پیدا کند؛ منوط به تصمیم مرز مشتری/گروه (`AGENTS.md` 5.3) |
+| دایرکتوری read-only هم‌گروه | API در PR #477 ادغام شده؛ UI ساخته نشده (`Blocked`) | API فهرست گروه‌های قابل مشاهده وجود ندارد و UI نمی‌تواند `groupId` را پیدا کند؛ تا افزودن API فهرست گروه‌ها UI ساخته نشود |
 | رویدادهای امنیتی/Audit مدیریتی | `NotImplemented` | `AuditTimeline` آماده بازاستفاده؛ سوابق ورود فعلی فقط برای حساب خود (`/me/login-history`) |
 | یکسان‌سازی قالب خطا و صفحه‌بندی | `Proposed` | بخش ۴؛ حذف کد تطبیق در کلاینت |
 | فیلتر شرکت/نقش، شمارهٔ پرسنلی، خروجی فهرست کاربران | `NotImplemented` | UI ساخته نشد |
@@ -175,4 +176,4 @@ npm run check:offline    # اسکن ایستا؛ آدرس ساخته‌شده د
 8. `AppRouteDataContext` memo نشده؛ اگر `onUnauthenticated` در `AppShell` پایدار نباشد، درخواست‌های پروفایل/سوابق با هر رندر تکرار می‌شوند.
 9. پس از ویرایش خود مدیر، نام نمایش‌داده‌شده در پوسته تا بارگذاری دوبارهٔ نشست به‌روز نمی‌شود.
 10. یادداشت‌های Low مربوط به `security-reviewer` در #463 ثبت متنی نشده بود؛ Lead باید در handoff آن مورد را تکمیل کند.
-11. بررسی مرورگر واقعی، axe و E2E (بخش ۸).
+11. E2E اختصاصی مدیریت کاربران/نقش‌ها با API واقعی و SQL Server، axe و صفحه‌خوان (بخش ۸).
