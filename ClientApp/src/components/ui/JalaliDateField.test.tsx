@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { FormField } from './FormField';
-import { JalaliDateField, dateToIso, isoToDate } from './JalaliDateField';
+import { JalaliDateField, clampToRange, dateToIso, isoToDate } from './JalaliDateField';
 
 // 2026-11-03 is 12 Aban 1405.
 function Controlled({ initial = '', min, max, onChange }: { initial?: string; min?: string; max?: string; onChange?: (value: string) => void }) {
@@ -128,6 +128,8 @@ describe('JalaliDateField', () => {
     expect(trigger).toBe(screen.getByRole('button', { name: /از تاریخ/ }));
     expect(trigger).toHaveAttribute('aria-invalid', 'true');
     expect(trigger).toHaveAccessibleDescription(/تاریخ نامعتبر است/);
+    // The chosen day (or the placeholder) is part of the description, since the label hides the content.
+    expect(trigger).toHaveAccessibleDescription(/انتخاب تاریخ/);
   });
 
   it('does not open or offer clearing when disabled', async () => {
@@ -136,6 +138,40 @@ describe('JalaliDateField', () => {
     await user.click(screen.getByRole('button', { name: '۱۴۰۵/۰۸/۱۲' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(screen.queryByRole('button', { name: 'پاک‌کردن تاریخ' })).toBeNull();
+  });
+});
+
+describe('screen reader value', () => {
+  it('reads the chosen day after the label of a FormField', () => {
+    render(
+      <FormField label="تا تاریخ">
+        <JalaliDateField value="2026-11-03" onChange={vi.fn()} />
+      </FormField>,
+    );
+    const trigger = screen.getByRole('button', { name: /تا تاریخ/ });
+    expect(trigger).toHaveAccessibleDescription('۱۴۰۵/۰۸/۱۲');
+  });
+});
+
+describe('opening month of an empty field', () => {
+  it('opens on today, not on the minimum, when today is allowed', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-03T09:00:00'));
+    const user = userEvent.setup();
+    render(<Controlled min="2000-01-01" max="2100-12-31" />);
+    await user.click(screen.getByRole('button', { name: 'انتخاب تاریخ' }));
+    expect(await screen.findByRole('dialog')).toHaveTextContent('آبان ۱۴۰۵');
+    vi.useRealTimers();
+  });
+
+  it('opens on the nearest allowed month when today is outside the range', () => {
+    const min = new Date(2026, 11, 1, 12);
+    const max = new Date(2026, 11, 31, 12);
+    expect(clampToRange(new Date(2026, 10, 3, 12), min, max)).toBe(min);
+    expect(clampToRange(new Date(2027, 2, 3, 12), min, max)).toBe(max);
+    const inside = new Date(2026, 11, 10, 12);
+    expect(clampToRange(inside, min, max)).toBe(inside);
+    expect(clampToRange(inside)).toBe(inside);
   });
 });
 

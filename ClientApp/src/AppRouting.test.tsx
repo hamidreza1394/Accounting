@@ -249,7 +249,8 @@ describe('App routing', () => {
     const first = render(<App navigate={vi.fn()} />);
     await screen.findByRole('heading', { name: dashboardHeading });
     await user.click(within(screen.getByRole('navigation', { name: 'منوی اصلی' })).getByRole('link', { name: 'گزارش امنیت و سوابق' }));
-    expect(await screen.findByRole('heading', { level: 1, name: 'گزارش امنیت و سوابق' })).toBeInTheDocument();
+    // The first load of this lazy page also transforms the calendar library, which is slow under jsdom.
+    expect(await screen.findByRole('heading', { level: 1, name: 'گزارش امنیت و سوابق' }, { timeout: 15000 })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/app/admin/security/audit');
     expect(await screen.findByText('ایجاد گروه دسترسی')).toBeInTheDocument();
     first.unmount();
@@ -259,5 +260,5 @@ describe('App routing', () => {
     render(<App navigate={vi.fn()} />);
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(fetchMock.mock.calls.some((call) => String(call[0]).includes('/admin/security/audit-events'))).toBe(false);
-  });
+  }, 30000);
 });
