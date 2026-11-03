@@ -60,6 +60,21 @@ public sealed class UserAdministrationEndpointTests
         await using var fixture = new Fixture();
         var admin = fixture.AddUser("admin", "مدیر", "سیستم", Constants.Role.Admin);
         var target = fixture.AddUser("alice", "آلیس", "مثالی", "Accountant");
+        var company = new Domain.Company { Name = "شرکت آزمون", IsActive = true };
+        var companyRole = new Domain.CompanyRole
+        {
+            TenantId = company.Id, Company = company, Code = "ACCOUNTANT", Name = "حسابدار", IsActive = true,
+        };
+        fixture.Database.AddRange(company, companyRole);
+        fixture.Database.UserCompanyMemberships.Add(new Domain.UserCompanyMembership
+        {
+            UserId = target.Id,
+            TenantId = company.Id,
+            RoleId = companyRole.Id,
+            Role = companyRole,
+            IsActive = true,
+            CreatedAtUtc = new DateTime(2026, 11, 3, 8, 30, 0, DateTimeKind.Unspecified),
+        });
         await fixture.Database.SaveChangesAsync();
 
         var missing = await Server.Api.UserAdministrationEndpoints.GetUserAsync(
@@ -70,6 +85,9 @@ public sealed class UserAdministrationEndpointTests
             target.Id, new DefaultHttpContext(), Principal(admin.Id), fixture.Database, default);
         var ok = Assert.IsType<Ok<Server.Api.UserDetailsResponse>>(result);
         Assert.Equal("alice", ok.Value!.Username);
+        var membership = Assert.Single(ok.Value.Memberships);
+        Assert.Equal(DateTimeKind.Utc, membership.CreatedAtUtc.Kind);
+        Assert.EndsWith("Z", JsonSerializer.Serialize(membership.CreatedAtUtc));
         Assert.DoesNotContain("Password", typeof(Server.Api.UserDetailsResponse).GetProperties().Select(x => x.Name));
     }
 
