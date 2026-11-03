@@ -306,8 +306,6 @@ public static class UserAdministrationEndpoints
         if (actorId == userId && !request.IsActive)
             return TypedResults.Conflict(new { error = "مدیر سیستم نمی‌تواند حساب جاری خود را غیرفعال کند." });
 
-        // Serialize account deactivations on relational providers. The serializable range
-        // lock makes the last-active-admin check and the update one atomic decision.
         await using var adminGuardTransaction = user.IsActive && !request.IsActive && database.Database.IsRelational()
             ? await database.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken)
             : null;
@@ -315,14 +313,12 @@ public static class UserAdministrationEndpoints
         if (user.IsActive && !request.IsActive && user.RoleId is Guid targetRoleId)
         {
             var targetIsActiveAdmin = await database.Roles.AsNoTracking().AnyAsync(role =>
-                role.Id == targetRoleId && role.IsActive && role.Name == Constants.Role.Admin,
-                cancellationToken);
+                role.Id == targetRoleId && role.IsActive && role.Name == Constants.Role.Admin, cancellationToken);
             if (targetIsActiveAdmin)
             {
                 var activeAdminCount = await database.Users.CountAsync(candidate =>
                     candidate.IsActive && candidate.Role != null &&
-                    candidate.Role.IsActive && candidate.Role.Name == Constants.Role.Admin,
-                    cancellationToken);
+                    candidate.Role.IsActive && candidate.Role.Name == Constants.Role.Admin, cancellationToken);
                 if (activeAdminCount <= 1)
                     return TypedResults.Conflict(new { error = "غیرفعال‌کردن آخرین مدیر سیستم مجاز نیست." });
             }
