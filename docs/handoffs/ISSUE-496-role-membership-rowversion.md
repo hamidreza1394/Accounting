@@ -3,7 +3,7 @@
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/496
 - **Agent/مسئول:** ChatGPT — Backend/Database/Security
 - **تاریخ:** 2026-11-03
-- **وضعیت:** پیاده‌سازی، Migration و تست‌ها اضافه شدند؛ اجرای تست/CI روی SHA نهایی هنوز تأیید نشده است.
+- **وضعیت:** پیاده‌سازی و Migration روی شاخهٔ همگام‌شده با main منتقل شدند؛ سه شکست CI تشخیص داده و اصلاح شده‌اند؛ اجرای مجدد CI هنوز در انتظار است.
 
 ## هدف و معیارهای پذیرش
 - [x] CompanyRole دارای RowVersion واقعی SQL Server باشد.
@@ -62,6 +62,17 @@
 - endpointهای خارج از Issue #496 که CompanyRole/UserCompanyMembership را تغییر می‌دهند باید در ممیزی‌های بعدی از همین concurrency contract پیروی کنند.
 
 ## شناسه‌های Git
-- Branch: agent/496-role-membership-rowversion
+- Branch: agent/496-role-membership-rowversion (نسخهٔ همگام‌شده: agent/496-role-membership-rowversion-mainline)
 - Commit نهایی فعلی: 5a843981db12a1b614bac8b2c095aeda2147ed66
 - Pull Request: https://github.com/hamidreza1394/Accounting/pull/496
+
+
+## 2026-11-03 — تشخیص و اصلاح شکست‌های CI
+
+- CI اولیه روی SHA قبلی، Build موفق داشت و سه تست SQL Server شکست خورد:
+  - CompanyRoleMembersSqlServerTests: مقدار Username برابر rowversion-assignment از محدودیت ۲۰ نویسه عبور می‌کرد؛ به rv-assign و rv-transfer کوتاه شد.
+  - CorporateGroupSqlServerTests: تست عمداً روی Schema پیش از RowVersion داده می‌کاشت اما از مدل EF جاری استفاده می‌کرد؛ درج CompanyRole و UserCompanyMembership به SQL پارامتری منتقل شد.
+  - CompanyMembershipRequestSqlServerTests: همان مشکل در Seed قبل از Migration؛ درج نقش‌ها و عضویت‌های موجود به SQL پارامتری منتقل شد و پس از اعمال Migration، نقش‌ها دوباره از مدل جاری بارگذاری می‌شوند.
+- برای جلوگیری از حل تعارض مخرب، تغییرات PR روی شاخهٔ تازه‌ای که از main شروع شده بود منتقل شدند؛ تغییرات main و PR #498 در docs حفظ شدند.
+- بررسی کد TransferMembersAsync نشان داد تغییر نقش عضویت‌ها، no-op update نقش مبدأ/مقصد و رویدادهای Audit در یک SaveChanges قرار دارند؛ تست رقابت SQL Server برای اطمینان از rollback کامل همچنان باید در CI تأیید شود.
+- Build و تست‌های پس از این اصلاحات در این محیط اجرا نشده‌اند؛ نتیجهٔ CI روی SHA نهایی معیار Verified شدن است.
