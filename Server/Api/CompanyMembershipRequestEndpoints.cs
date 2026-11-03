@@ -48,7 +48,6 @@ public static class CompanyMembershipRequestEndpoints
         [FromBody] CreateCompanyMembershipRequestRequest request,
         [FromServices] IAntiforgery antiforgery,
         Data.DatabaseContext database,
-        [FromServices] Infrastructure.Tenancy.CompanyAccessService companyAccess,
         [FromServices] TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
@@ -56,17 +55,14 @@ public static class CompanyMembershipRequestEndpoints
         if (userId is null)
             return TypedResults.Unauthorized();
         SetNoStore(httpContext);
-        if (request is null || request.SourceCompanyId == Guid.Empty ||
-            request.DestinationCompanyId == Guid.Empty ||
-            request.SourceCompanyId == request.DestinationCompanyId)
-            return TypedResults.BadRequest(new { error = "شرکت مبدأ و مقصد معتبر و متفاوت لازم است." });
+        if (request is null || request.DestinationCompanyId == Guid.Empty)
+            return TypedResults.BadRequest(new { error = "شرکت مقصد معتبر لازم است." });
         if (!await antiforgery.IsRequestValidAsync(httpContext))
             return TypedResults.Problem(title: "درخواست نامعتبر است.", statusCode: StatusCodes.Status400BadRequest);
 
-        // The source company is accepted only through the canonical active-membership check.
-        var sourceAccess = await companyAccess.FindAccessibleCompanyAsync(
-            userId.Value, request.SourceCompanyId, cancellationToken);
-        if (sourceAccess is null)
+        var requesterIsActive = await database.Users.AsNoTracking()
+            .AnyAsync(user => user.Id == userId.Value && user.IsActive, cancellationToken);
+        if (!requesterIsActive)
             return TypedResults.NotFound();
 
         var destinationIsActive = await database.Companies.AsNoTracking()
@@ -96,7 +92,6 @@ public static class CompanyMembershipRequestEndpoints
         var membershipRequest = new Domain.CompanyMembershipRequest
         {
             UserId = userId.Value,
-            SourceTenantId = request.SourceCompanyId,
             DestinationTenantId = request.DestinationCompanyId,
             Status = Domain.CompanyMembershipRequestStatuses.Pending,
             RequestedAtUtc = now,
@@ -111,7 +106,6 @@ public static class CompanyMembershipRequestEndpoints
             httpContext,
             new
             {
-                membershipRequest.SourceTenantId,
                 membershipRequest.DestinationTenantId,
                 membershipRequest.Status,
             }));
@@ -157,8 +151,6 @@ public static class CompanyMembershipRequestEndpoints
             .Take(safePageSize)
             .Select(item => new CompanyMembershipRequestItemResponse(
                 item.Id,
-                item.SourceTenantId,
-                item.SourceCompany.Name,
                 item.DestinationTenantId,
                 item.DestinationCompany.Name,
                 item.Status,
@@ -209,8 +201,6 @@ public static class CompanyMembershipRequestEndpoints
             {
                 item.Id,
                 item.UserId,
-                item.SourceTenantId,
-                SourceCompanyName = item.SourceCompany.Name,
                 item.RequestedAtUtc,
                 Username = user == null ? null : user.Username,
                 FirstName = user == null ? null : user.FirstName,
@@ -233,8 +223,6 @@ public static class CompanyMembershipRequestEndpoints
                 item.UserId,
                 displayName,
                 item.Username,
-                item.SourceTenantId,
-                item.SourceCompanyName,
                 item.RequestedAtUtc,
                 item.IsRequesterActive);
         }).ToArray();
@@ -290,24 +278,14 @@ public static class CompanyMembershipRequestEndpoints
         var now = timeProvider.GetUtcNow().UtcDateTime;
         var requesterIsActive = await database.Users.AsNoTracking()
             .AnyAsync(user => user.Id == membershipRequest.UserId && user.IsActive, cancellationToken);
-        var sourceIsActive = await database.Companies.AsNoTracking()
-            .AnyAsync(company => company.Id == membershipRequest.SourceTenantId && company.IsActive, cancellationToken);
-        var sourceMembershipIsActive = await database.UserCompanyMemberships.AsNoTracking()
-            .AnyAsync(membership =>
-                membership.UserId == membershipRequest.UserId &&
-                membership.TenantId == membershipRequest.SourceTenantId &&
-                membership.IsActive &&
-                membership.Company.IsActive &&
-                membership.Role.IsActive,
-                cancellationToken);
         var destinationRole = await database.CompanyRoles.FirstOrDefaultAsync(role =>
             role.Id == request.RoleId &&
             role.TenantId == companyId &&
             role.IsActive,
             cancellationToken);
 
-        if (!requesterIsActive || !sourceIsActive || !sourceMembershipIsActive || destinationRole is null)
-            return TypedResults.Conflict(new { error = "کاربر، شرکت مبدأ یا گروه دسترسی مقصد دیگر شرایط تأیید را ندارد." });
+        if (!requesterIsActive || destinationRole is null)
+            return TypedResults.Conflict(new { error = "کاربر یا گروه دسترسی مقصد دیگر شرایط تأیید را ندارد." });
 
         var existingMembership = await database.UserCompanyMemberships
             .Include(membership => membership.Role)
@@ -344,7 +322,7 @@ public static class CompanyMembershipRequestEndpoints
         database.SecurityAuditEvents.Add(CreateAudit(
             approverId.Value, companyId, "CompanyMembershipApproved",
             membershipRequest.Id, now, httpContext,
-            new { membershipRequest.UserId, membershipRequest.SourceTenantId, membershipRequest.DestinationTenantId, RoleId = destinationRole.Id }));
+            new { membershipRequest.UserId, membershipRequest.DestinationTenantId, RoleId = destinationRole.Id }));
 
         try
         {
@@ -412,7 +390,7 @@ public static class CompanyMembershipRequestEndpoints
         database.SecurityAuditEvents.Add(CreateAudit(
             approverId.Value, companyId, "CompanyMembershipRejected",
             membershipRequest.Id, now, httpContext,
-            new { membershipRequest.UserId, membershipRequest.SourceTenantId, membershipRequest.DestinationTenantId, ReasonProvided = reason is not null }));
+            new { membershipRequest.UserId, membershipRequest.DestinationTenantId, ReasonProvided = reason is not null }));
 
         try
         {
@@ -465,14 +443,12 @@ public static class CompanyMembershipRequestEndpoints
     }
 }
 
-public sealed record CreateCompanyMembershipRequestRequest(Guid SourceCompanyId, Guid DestinationCompanyId);
+public sealed record CreateCompanyMembershipRequestRequest(Guid DestinationCompanyId);
 public sealed record ApproveCompanyMembershipRequest(Guid RoleId);
 public sealed record RejectCompanyMembershipRequest(string? Reason);
 public sealed record CompanyMembershipRequestCreatedResponse(Guid Id, string Status, DateTime RequestedAtUtc);
 public sealed record CompanyMembershipRequestItemResponse(
     Guid Id,
-    Guid SourceCompanyId,
-    string SourceCompanyName,
     Guid DestinationCompanyId,
     string DestinationCompanyName,
     string Status,
@@ -491,8 +467,6 @@ public sealed record CompanyMembershipPendingItemResponse(
     Guid UserId,
     string RequesterDisplayName,
     string? Username,
-    Guid SourceCompanyId,
-    string SourceCompanyName,
     DateTime RequestedAtUtc,
     bool IsRequesterActive);
 public sealed record CompanyMembershipPendingListResponse(
