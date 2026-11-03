@@ -167,6 +167,13 @@ public sealed class CompanyMembershipRequestEndpointTests
         await using var fixture = await Fixture.CreateAsync();
         var request = fixture.NewRequest();
         fixture.Database.CompanyMembershipRequests.Add(request);
+        var approvalPermission = await fixture.Database.PermissionDefinitions.SingleAsync(
+            item => item.Code == Server.Api.CompanyMembershipRequestEndpoints.ApprovalPermissionCode);
+        fixture.Database.CompanyRolePermissions.Add(new Domain.CompanyRolePermission
+        {
+            Role = fixture.MemberRole,
+            Permission = approvalPermission,
+        });
         await fixture.Database.SaveChangesAsync();
 
         var result = await Server.Api.CompanyMembershipRequestEndpoints.ApproveAsync(
@@ -185,6 +192,58 @@ public sealed class CompanyMembershipRequestEndpointTests
         Assert.Equal(fixture.Approver.Id, saved.DecidedByUserId);
         Assert.Contains(await fixture.Database.SecurityAuditEvents.ToListAsync(),
             audit => audit.EventType == "CompanyMembershipApproved" && audit.UserId == fixture.Approver.Id);
+    }
+
+    [Fact]
+    public async Task ApproveMembership_RejectsPermissionsOutsideDelegationCeilingAndSystemRoles()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var request = fixture.NewRequest();
+        var extraPermission = new Domain.PermissionDefinition
+        {
+            Code = "finance.entries.post",
+            Name = "ثبت سند مالی",
+        };
+        fixture.Database.CompanyMembershipRequests.Add(request);
+        fixture.Database.PermissionDefinitions.Add(extraPermission);
+        fixture.Database.CompanyRolePermissions.Add(new Domain.CompanyRolePermission
+        {
+            Role = fixture.MemberRole,
+            Permission = extraPermission,
+        });
+        await fixture.Database.SaveChangesAsync();
+
+        var excessiveRole = await Server.Api.CompanyMembershipRequestEndpoints.ApproveAsync(
+            fixture.Destination.Id, request.Id, new DefaultHttpContext(), fixture.Principal(fixture.Approver.Id),
+            new Server.Api.ApproveCompanyMembershipRequest(fixture.MemberRole.Id), new AllowAntiforgery(),
+            fixture.Database, fixture.Access, TimeProvider.System, default);
+        Assert.Equal(StatusCodes.Status403Forbidden, (excessiveRole as IStatusCodeHttpResult)?.StatusCode);
+        Assert.Equal(Domain.CompanyMembershipRequestStatuses.Pending,
+            (await fixture.Database.CompanyMembershipRequests.SingleAsync()).Status);
+        Assert.False(await fixture.Database.UserCompanyMemberships.AnyAsync(
+            membership => membership.UserId == fixture.Requester.Id && membership.TenantId == fixture.Destination.Id));
+
+        var systemRole = new Domain.CompanyRole
+        {
+            TenantId = fixture.Destination.Id,
+            Company = fixture.Destination,
+            Code = "SYSTEM_ADMIN",
+            Name = "مدیر سیستمی",
+            IsActive = true,
+            IsSystemRole = true,
+        };
+        fixture.Database.CompanyRoles.Add(systemRole);
+        await fixture.Database.SaveChangesAsync();
+
+        var systemRoleResult = await Server.Api.CompanyMembershipRequestEndpoints.ApproveAsync(
+            fixture.Destination.Id, request.Id, new DefaultHttpContext(), fixture.Principal(fixture.Approver.Id),
+            new Server.Api.ApproveCompanyMembershipRequest(systemRole.Id), new AllowAntiforgery(),
+            fixture.Database, fixture.Access, TimeProvider.System, default);
+        Assert.Equal(StatusCodes.Status409Conflict, (systemRoleResult as IStatusCodeHttpResult)?.StatusCode);
+        Assert.Equal(Domain.CompanyMembershipRequestStatuses.Pending,
+            (await fixture.Database.CompanyMembershipRequests.SingleAsync()).Status);
+        Assert.False(await fixture.Database.UserCompanyMemberships.AnyAsync(
+            membership => membership.UserId == fixture.Requester.Id && membership.TenantId == fixture.Destination.Id));
     }
 
     [Fact]
