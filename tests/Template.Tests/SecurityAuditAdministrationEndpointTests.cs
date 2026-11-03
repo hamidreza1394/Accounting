@@ -162,7 +162,9 @@ public sealed class SecurityAuditAdministrationEndpointTests
         var file = Assert.IsType<FileContentHttpResult>(result);
         Assert.Equal("text/csv; charset=utf-8", file.ContentType);
         Assert.EndsWith(".csv", file.FileDownloadName);
-        Assert.Equal(new byte[] { 0xEF, 0xBB, 0xBF }, file.FileContents[..3]);
+        Assert.Equal(0xEF, file.FileContents[0]);
+        Assert.Equal(0xBB, file.FileContents[1]);
+        Assert.Equal(0xBF, file.FileContents[2]);
 
         var csv = Encoding.UTF8.GetString(file.FileContents);
         Assert.Contains("OccurredAtUtc", csv);
