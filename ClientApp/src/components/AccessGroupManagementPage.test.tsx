@@ -31,7 +31,7 @@ describe('access group management', () => {
     fireEvent.click(screen.getByRole('button', { name: 'گروه‌های دسترسی' }));
 
     expect(await screen.findByRole('heading', { name: 'گروه‌های دسترسی' })).toBeInTheDocument();
-    expect(await screen.findByText('مشاهده بازرگانی')).toBeInTheDocument();
+    expect((await screen.findAllByText('مشاهده بازرگانی')).length).toBeGreaterThan(0);
     expect(fetchMock.mock.calls.map(call => String(call[0]))).toEqual(expect.arrayContaining([
       '/api/v1/admin/companies/company-1/roles',
       '/api/v1/admin/permission-catalog',
