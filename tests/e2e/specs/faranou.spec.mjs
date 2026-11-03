@@ -630,3 +630,48 @@ test('a company user is denied role administration by both the React route and t
   expect(anonymousStatus).toBe(401);
   await expectCleanPage(page);
 });
+
+
+test('an installation administrator can create, edit and reload a company role through the published UI', async ({ page }) => {
+  await signIn(page, state.users.admin);
+  await expect(page).toHaveURL(/\/app\/$/);
+  await expect(page.getByRole('heading', { name: 'به سامانه یکپارچه فرانو خوش آمدید' })).toBeVisible();
+
+  const nav = page.getByRole('navigation', { name: 'منوی اصلی' });
+  await expect(nav.getByRole('link', { name: 'گروه‌های دسترسی' })).toBeVisible();
+  await nav.getByRole('link', { name: 'گروه‌های دسترسی' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'گروه‌های دسترسی' })).toBeVisible();
+  await expect(page.getByText('حسابدار', { exact: true })).toBeVisible();
+
+  const code = `E2E_${a.id.replaceAll('-', '').slice(0, 8).toUpperCase()}`;
+  await page.getByRole('link', { name: 'ایجاد گروه دسترسی' }).click();
+  const createForm = page.getByRole('form', { name: 'فرم ایجاد گروه دسترسی' });
+  await createForm.getByLabel('کد گروه').fill(code);
+  await createForm.getByLabel('عنوان گروه').fill('گروه آزمون E2E');
+
+  const createRequestPromise = page.waitForRequest((request) =>
+    request.method() === 'POST' &&
+    request.url().includes('/api/v1/admin/companies/') &&
+    request.url().endsWith('/roles'),
+  );
+  await createForm.getByRole('button', { name: 'ایجاد گروه دسترسی' }).click();
+  const createRequest = await createRequestPromise;
+  expect(await createRequest.headerValue('x-xsrf-token')).toBeTruthy();
+  await expect(page.getByRole('heading', { level: 1, name: 'گروه آزمون E2E' })).toBeVisible();
+
+  await page.getByLabel('عنوان گروه').fill('گروه آزمون E2E ویرایش‌شده');
+  const updateRequestPromise = page.waitForRequest((request) =>
+    request.method() === 'PUT' &&
+    request.url().includes('/api/v1/admin/companies/') &&
+    request.url().includes('/roles/'),
+  );
+  await page.getByRole('button', { name: 'بررسی و ذخیرهٔ تغییرات' }).click();
+  await page.getByRole('button', { name: 'تأیید و ذخیره' }).click();
+  const updateRequest = await updateRequestPromise;
+  expect(await updateRequest.headerValue('x-xsrf-token')).toBeTruthy();
+
+  await expect(page.getByRole('heading', { level: 1, name: 'گروه آزمون E2E ویرایش‌شده' })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('heading', { level: 1, name: 'گروه آزمون E2E ویرایش‌شده' })).toBeVisible();
+  await expectCleanPage(page);
+});
