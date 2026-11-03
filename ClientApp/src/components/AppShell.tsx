@@ -178,6 +178,8 @@ function AppShellFrame({ session, context, onChangeContext, onLogout, onPassword
   const { pathname } = useLocation();
   const dashboardActive = pathname === '/';
   const usersActive = pathname === '/admin/users' || pathname.startsWith('/admin/users/');
+  const rolesActive = pathname === '/admin/roles' || pathname.startsWith('/admin/roles/');
+  const permissionsActive = pathname === '/admin/permissions';
   const readOnly = context.fiscalPeriod.accessMode === 'readOnly';
 
   async function handleLogout() {
@@ -332,8 +334,18 @@ function AppShellFrame({ session, context, onChangeContext, onLogout, onPassword
                             </Link>
                           </li>
                           <li><DisabledItem label="ساختار سازمانی و سمت‌ها" icon={Building2} tone="blue" nested /></li>
-                          <li><DisabledItem label="گروه‌های دسترسی" icon={ShieldCheck} tone="violet" nested /></li>
-                          <li><DisabledItem label="کاتالوگ و جزئیات مجوزها" icon={KeyRound} tone="amber" nested /></li>
+                          <li>
+                            <Link to="/admin/roles" onClick={() => setMobileMenuOpen(false)} aria-current={rolesActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (rolesActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
+                              <NavIcon icon={ShieldCheck} tone="violet" size="sm" />
+                              <span className="min-w-0 flex-1">گروه‌های دسترسی</span>
+                            </Link>
+                          </li>
+                          <li>
+                            <Link to="/admin/permissions" onClick={() => setMobileMenuOpen(false)} aria-current={permissionsActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (permissionsActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
+                              <NavIcon icon={KeyRound} tone="amber" size="sm" />
+                              <span className="min-w-0 flex-1">کاتالوگ و جزئیات مجوزها</span>
+                            </Link>
+                          </li>
                           <li><DisabledItem label="گزارش امنیت و سوابق" icon={Activity} tone="emerald" nested /></li>
                           <li><DisabledItem label="سیاست‌های امنیتی" icon={Settings2} tone="slate" nested /></li>
                         </ul>

@@ -10,6 +10,10 @@ export type Permission =
   | 'admin.users.view'
   | 'admin.users.create'
   | 'admin.users.update'
+  // Same rule as admin.users.*: a UI hint from `isAdministrator`; the server decides every request.
+  | 'admin.roles.view'
+  | 'admin.roles.manage'
+  | 'admin.permissions.view'
   | 'account.view';
 
 /**

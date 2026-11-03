@@ -143,3 +143,10 @@
 - `ui/PasswordInput` (یکپارچه، `togglePlacement`)، `ui/ErrorBoundary`، `lib/fiscalStatus.ts`، `FormSection headingLevel`، لینک «پرش به محتوای اصلی» در AppShell، `Root.tsx` برای صفحات lazy فراهم‌سازی.
 - دکمه‌های `lg` در موبایل حداقل ۴۴px؛ سایدبار بستهٔ موبایل `visibility: hidden` است (غیرقابل فوکوس).
 - بررسی مرورگر واقعی (Chromium، ۳۶۰/۷۶۸/۱۲۸۰، API شبیه‌سازی‌شده) انجام شد؛ جزئیات و باگ‌های یافته‌شده در `docs/handoffs/ISSUE-464-admin-ui-cleanup.md`.
+
+### نقش‌ها، کاتالوگ مجوز و PermissionTree (Issue #475)
+
+- `ui/PermissionTree`: فهرست گروه‌بندی‌شدهٔ چک‌باکس بومی (نه WAI-ARIA tree) بر اساس زیرسیستم و منبع؛ والد سه‌حالته با `indeterminate`، جست‌وجوی debounce‌شده، انتخاب/پاک‌کردن گروهی فقط روی نتایج جست‌وجو، حالت فقط‌خواندنی با `aria-readonly`، بخش «مجوزهای ناشناخته». نوع عملیات (view/create/…) از آخرین بخش کد و فقط در UI مشتق می‌شود.
+- مسیرها: `/admin/permissions`، `/admin/roles?company=`، `/admin/roles/new` (پیش از `/:roleId`) و `/admin/roles/:roleId`. بدنه ایجاد `{code,name,permissionCodes}` و بدنه ویرایش کامل است؛ الگو سمت کلاینت اعمال می‌شود.
+- ویرایش نقش پیش از ذخیره دیالوگ پیش‌نمایش قبل/بعد (مجوزهای افزوده و حذف‌شده) نشان می‌دهد (D-064). `CompanySelect` فقط شرکت‌های عضو کاربر را از `GET /companies` می‌خواند.
+- یادداشت اطلاعاتی: سقف تفویض هنوز سمت سرور پیاده نشده است.

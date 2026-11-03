@@ -2130,3 +2130,8 @@
 - تست‌های regression برای v1 compatibility، signed v2، tampering، unknown field، canonicalization، module/feature allowlist، duplicate، capacity و sequence اضافه شدند.
 - هیچ تغییری در Vendor/**، Server/**، دیتابیس مشتری یا migration انجام نشد. Vendor issuance #393 و Customer state/replay #391 خارج از این PR هستند.
 - تست محلی در این نشست اجرا نشده است؛ CI روی PR لازم است. وضعیت تا آن زمان Verified نیست.
+
+
+## 2026-11-03 — Issue #475 (PR-B1): نقش‌ها، کاتالوگ مجوز و PermissionTree
+- صفحات کاتالوگ مجوز، فهرست نقش‌ها، ایجاد و ویرایش نقش با `PermissionTree` و پیش‌نمایش قبل/بعد؛ روی قرارداد PR #459 (هنوز Merge نشده؛ بدون اتصال به سرور واقعی). دایرکتوری هم‌گروه (PR #466) به‌دلیل نبود API فهرست گروه‌ها ساخته نشد.
+- بازبینی مستقل: code-reviewer ۰ مسدودکننده/۱ major (فرم کهنه پس از ذخیره) اصلاح شد؛ security-reviewer بدون Critical/High (Medium: نبود Delegation Ceiling سمت سرور، مستند شد). ۴۰۸ تست سبز؛ QA مرورگر واقعی ۳۶ از ۳۶ سناریو روی API شبیه‌سازی‌شده.

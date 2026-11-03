@@ -5,6 +5,10 @@ import {
   parseAdminUserList,
   parseAdminUserDetails,
   parseCreatedAdminUser,
+  parseCompanyRoles,
+  parseCreatedCompanyRole,
+  parsePermissionCatalog,
+  parsePermissionTemplates,
   parseCompanies,
   parseCompanyOverview,
   parseSelectedContextResponse,
@@ -18,6 +22,11 @@ import {
   type UpdateAdminUserRequest,
   type ChangeMyPasswordRequest,
   type CompanyOverview,
+  type CompanyRole,
+  type CreateCompanyRoleRequest,
+  type PermissionCatalogItem,
+  type PermissionTemplate,
+  type UpdateCompanyRoleRequest,
   type CompanySummary,
   type SelectedContext,
   type Session,
@@ -258,6 +267,31 @@ export async function createAdminUser(request: CreateAdminUserRequest): Promise<
 /** Replaces the editable fields of a user (204). There is no concurrency token: the last write wins. */
 export async function updateAdminUser(userId: string, request: UpdateAdminUserRequest): Promise<void> {
   await sendJson('PUT', `/admin/users/${encodeURIComponent(userId)}`, request);
+}
+
+/** The access groups (roles) of one company, with their permission codes. Installation administrators only. */
+export async function getCompanyRoles(companyId: string, signal?: AbortSignal): Promise<CompanyRole[]> {
+  return parseCompanyRoles(await getJson(`/admin/companies/${encodeURIComponent(companyId)}/roles`, signal));
+}
+
+/** Creates a role (201 `{ id }`). A duplicate code answers 409 and an invalid code or permission 400. */
+export async function createCompanyRole(companyId: string, request: CreateCompanyRoleRequest): Promise<{ id: string }> {
+  const response = await sendJson('POST', `/admin/companies/${encodeURIComponent(companyId)}/roles`, request);
+  return parseCreatedCompanyRole(await response.json());
+}
+
+/** Replaces name, status and permissions of a non-system role (204). System roles answer 409. */
+export async function updateCompanyRole(companyId: string, roleId: string, request: UpdateCompanyRoleRequest): Promise<void> {
+  await sendJson('PUT', `/admin/companies/${encodeURIComponent(companyId)}/roles/${encodeURIComponent(roleId)}`, request);
+}
+
+/** Every registered permission (unpaged, a few hundred at most). */
+export async function getPermissionCatalog(signal?: AbortSignal): Promise<PermissionCatalogItem[]> {
+  return parsePermissionCatalog(await getJson('/admin/permission-catalog', signal));
+}
+
+export async function getPermissionTemplates(signal?: AbortSignal): Promise<PermissionTemplate[]> {
+  return parsePermissionTemplates(await getJson('/admin/permission-templates', signal));
 }
 
 /** Changes the current account password; the server signs out all sessions after success. */
