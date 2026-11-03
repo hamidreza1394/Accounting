@@ -23,7 +23,8 @@ public sealed class UserAdministrationEndpointTests
             descending: true, cancellationToken: default);
         Assert.Equal(StatusCodes.Status403Forbidden, (denied as IStatusCodeHttpResult)?.StatusCode);
         var payload = Assert.IsAssignableFrom<IValueHttpResult>(denied);
-        Assert.Contains("فقط مدیر نصب سامانه مجاز به این عملیات است.", JsonSerializer.Serialize(payload.Value));
+        using var errorDocument = JsonDocument.Parse(JsonSerializer.Serialize(payload.Value));
+        Assert.Equal("فقط مدیر نصب سامانه مجاز به این عملیات است.", errorDocument.RootElement.GetProperty("error").GetString());
 
         var allowed = await Server.Api.UserAdministrationEndpoints.GetUsersAsync(
             new DefaultHttpContext(), Principal(admin.Id), fixture.Database,
