@@ -44,6 +44,7 @@ public sealed class DatabaseModelTests
 			{
 				"ApplicationHandlers",
 				"Companies",
+				"CompanyMembershipRequests",
 				"CompanyRolePermissions",
 				"CompanyRoles",
 				"ConsolidationProfiles",
@@ -403,6 +404,7 @@ public sealed class DatabaseModelTests
 		Assert.Contains("20261029161402_AddCustomerProvisioningClaims", migrations);
 		Assert.Contains("20261031120000_AddCustomerOfflineRevocationState", migrations);
 		Assert.Contains("20261031130000_AddCustomerLicensePersistence", migrations);
+		Assert.Contains("20261103111108_AddCompanyMembershipRequests", migrations);
 	}
 
 	[Fact]

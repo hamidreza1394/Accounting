@@ -12,6 +12,7 @@ public sealed class Company : Seedwork.Entity,
     public Guid? CustomerBoundaryId { get; set; }
     public bool IsActive { get; set; } = true;
     public ICollection<UserCompanyMembership> Memberships { get; set; } = new List<UserCompanyMembership>();
+    public ICollection<CompanyMembershipRequest> MembershipRequestsAsDestination { get; set; } = new List<CompanyMembershipRequest>();
     public ICollection<FiscalPeriod> FiscalPeriods { get; set; } = new List<FiscalPeriod>();
     public ICollection<CompanyRole> Roles { get; set; } = new List<CompanyRole>();
 

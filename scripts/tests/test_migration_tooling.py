@@ -325,5 +325,78 @@ class ParseMigrationColumnTests(unittest.TestCase):
         self.assertFalse(columns[0]["nullable"])
 
 
+EF_TOOLS_SNAPSHOT = """
+modelBuilder.Entity("Domain.Parent", b =>
+    {
+        b.Property<Guid>("Id")
+            .HasColumnType("uniqueidentifier");
+
+        b.Property<Guid>("TenantId")
+            .HasColumnType("uniqueidentifier");
+
+        b.HasKey("Id");
+
+        b.ToTable("Parents", (string)null);
+    });
+
+modelBuilder.Entity("Domain.Child", b =>
+    {
+        b.Property<Guid>("Id")
+            .HasColumnType("uniqueidentifier");
+
+        b.Property<Guid>("ParentId")
+            .HasColumnType("uniqueidentifier");
+
+        b.Property<Guid>("TenantId")
+            .HasColumnType("uniqueidentifier");
+
+        b.HasKey("Id");
+
+        b.ToTable("Children");
+    });
+
+modelBuilder.Entity("Domain.Child", b =>
+    {
+        b.HasOne("Domain.Parent", "Parent")
+            .WithMany("Children")
+            .HasForeignKey("ParentId", "TenantId")
+            .HasPrincipalKey("Id", "TenantId")
+            .OnDelete(DeleteBehavior.Restrict)
+            .IsRequired();
+
+        b.Navigation("Parent");
+    });
+"""
+
+
+class EfToolsSnapshotFormTests(unittest.TestCase):
+    """The EF Core tools write ToTable("X", (string)null) and imply alternate keys."""
+
+    def test_table_with_explicit_null_schema_is_read(self):
+        model = migration_model.parse_generated_model(EF_TOOLS_SNAPSHOT)
+        self.assertEqual("Parents", model["entities"]["Domain.Parent"]["table"])
+        self.assertEqual("Children", model["entities"]["Domain.Child"]["table"])
+
+    def test_principal_key_of_a_relationship_is_an_alternate_key(self):
+        model = migration_model.parse_generated_model(EF_TOOLS_SNAPSHOT)
+        self.assertEqual(
+            [["Id", "TenantId"]], model["entities"]["Domain.Parent"]["alternate_keys"]
+        )
+        self.assertEqual([], model["entities"]["Domain.Child"]["alternate_keys"])
+
+    def test_primary_key_as_principal_key_is_not_an_alternate_key(self):
+        source = EF_TOOLS_SNAPSHOT.replace(
+            '.HasForeignKey("ParentId", "TenantId")\n            .HasPrincipalKey("Id", "TenantId")',
+            '.HasForeignKey("ParentId")\n            .HasPrincipalKey("Id")',
+        )
+        model = migration_model.parse_generated_model(source)
+        self.assertEqual([], model["entities"]["Domain.Parent"]["alternate_keys"])
+
+    def test_entity_without_a_table_is_still_rejected(self):
+        source = EF_TOOLS_SNAPSHOT.replace('b.ToTable("Children");', "")
+        with self.assertRaises(migration_model.MigrationModelError):
+            migration_model.parse_generated_model(source)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
