@@ -1192,3 +1192,28 @@ Pending هیچ دسترسی ندارد؛ مقصد تنها approver است؛ gra
   - قرارداد داده: مقدار همیشه تاریخ تقویمی میلادی ISO (`yyyy-MM-dd`) است؛ تبدیل به UTC فقط با `dayStartUtc`/`dayEndUtc` (D-067، `docs/TIME_CONTRACT.md`)؛ هیچ تاریخ جلالی ذخیره یا ارسال نمی‌شود.
 - **ریسک‌ها و نگهداری:** (۱) نسخه **دقیقاً پین** است؛ ارتقا به 10.x مسیر `/persian` را از دست می‌دهد و باید با ADR جدید ارزیابی شود. (۲) `date-fns-jalali@4.1.0-0` نسخهٔ pre-release است که خود بستهٔ بالادستی پین کرده است؛ هر ارتقای react-day-picker باید این وابستگی را دوباره بررسی کند. (۳) حجم 72 kB gzip فقط در صفحه‌های دارای تاریخ.
 - **قاعده:** همهٔ فیلدهای ورود تاریخ در ClientApp از `ui/JalaliDateField` استفاده کنند؛ `input type=date` بومی برای تاریخ کاربر ممنوع است.
+
+## D-069 — نشست‌های سروری، ابطال مستقل و چرخه عمر نشست کاربر (2026-11-03)
+
+- **وضعیت:** Proposed — نیازمند تأیید مالک محصول؛ هیچ Schema، Migration یا تغییر runtime از این پیشنهاد مجاز نمی‌شود.
+- **Issue:** #504 (زیرمجموعه #444، S7).
+- **شواهد وضعیت فعلی:**
+  - Cookie احراز هویت ASP.NET Core دارای ExpireTimeSpan برابر ۳۰ دقیقه و SlidingExpiration فعال است.
+  - SessionValidator در هر درخواست وضعیت فعال حساب و CredentialStamp را از DB دوباره بررسی می‌کند؛ تغییر رمز/هش همه Cookieهای قبلی را نامعتبر می‌کند.
+  - خروج صریح API از طریق UserSessionAuditService رویداد LogoutSucceeded را ثبت و سپس Cookie و WorkContext را پاک می‌کند (PR #476).
+  - موجودیت/شناسه مستقل برای هر نشست وجود ندارد؛ بنابراین فهرست‌کردن یا ابطال فقط یک نشست ممکن نیست.
+  - نبودن Logout event به معنی logout، expiry یا مدت نشست نیست؛ این استنتاج ممنوع می‌ماند.
+- **پیشنهاد ترجیحی برای نسخه اول:**
+  1. برای هر ورود موفق کاربر، یک UserSession بساز و SessionId تصادفی را در Claim کوکی محافظت‌شده قرار بده. نشست به حساب نصب تعلق دارد، نه Company/Tenant انتخاب‌شده.
+  2. در هر درخواست، SessionId، UserId، RevokedAtUtc و idle window اعتبارسنجی شوند؛ شناسه گمشده/نامعتبر/ابطال‌شده یا متعلق به کاربر دیگر به deny منتهی شود. استقرار این الزام، ورود مجدد کاربران دارای Cookie قدیمی را لازم می‌کند.
+  3. رفتار فعلی ۳۰ دقیقه‌ای Sliding را حفظ کن؛ در نسخه اول absolute maximum lifetime جدید اضافه نشود. نشست فقط وقتی active است که ابطال نشده و LastSeenAtUtc در ۳۰ دقیقه اخیر باشد.
+  4. LastSeenAtUtc حداکثر هر ۵ دقیقه به‌روزرسانی شود تا برای هر درخواست write ایجاد نشود.
+  5. APIهای self-service: GET /api/v1/me/sessions، POST /api/v1/me/sessions/{sessionId}/revoke و POST /api/v1/me/sessions/revoke-others. ابطال نشست جاری بلافاصله Cookie را sign-out کند.
+  6. تغییر رمز همه نشست‌های کاربر را revoke کند؛ CredentialStamp فعلی به‌عنوان defense-in-depth حفظ شود.
+  7. در جدول UserSession، IP خام و User-Agent ذخیره نشود. IP رویدادهای ورود/خروج فقط در Audit محدودشده باقی بماند.
+  8. حساب Infrastructure/Master خارج از جدول نشست کاربران بماند؛ مدیریت نشست سایر کاربران توسط مدیر نصب تصمیم جداگانه است.
+- **مدل پیشنهادی:** UserSession با فیلدهای Id (random Guid session identifier, PK)، UserId (FK to Users)، CreatedAtUtc، LastSeenAtUtc، RevokedAtUtc nullable، RevokedByUserId nullable، RevocationReasonCode nullable و RowVersion. Index برای UserId و نشست‌های فعال/اخیر؛ بدون TenantId.
+- **تصمیم‌های نیازمند مالک:** تأیید idle window و نبود absolute lifetime؛ امکان revoke نشست جاری و revoke-others؛ retention ردیف‌های revoked/idle و Audit؛ ذخیره‌نکردن IP/User-Agent؛ و اینکه مدیر نصب بتواند نشست کاربران دیگر را revoke کند یا خیر.
+- **Retention:** تا تعیین دوره نگهداری، هیچ job حذف خودکار یا پاک‌سازی Audit مجاز نیست. تاریخ آخرین فعالیت را به‌عنوان زمان خروج قطعی ثبت نکن.
+- **معیار پذیرش پس از تأیید:** ایجاد یک نشست به ازای login موفق؛ رد SessionId مفقود/ابطال‌شده/متعلق به دیگری؛ ابطال مستقل بدون اثر بر نشست‌های دیگر؛ revoke-others؛ ابطال همه نشست‌ها پس از تغییر رمز؛ رفتار مشخص برای حساب Infrastructure؛ Audit امن؛ تست SQL Server و concurrency.
+- **پیامد:** این ADR فقط semantics را پیشنهاد می‌کند. Migration، endpoint، claim یا تغییر Cookie تا تصویب صریح انجام نمی‌شود.
