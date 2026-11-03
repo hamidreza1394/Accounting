@@ -2262,7 +2262,17 @@
 
 ## 2026-11-03 — Issue #444: قراردادهای API مورد نیاز UI (هماهنگی Backend)
 - برای قابلیت‌هایی که API ندارند (کشف شرکت برای درخواست عضویت، گروه‌های قابل‌تخصیص، `/me/permissions`، مرتب‌سازی/Export/Retention گزارش، نشست‌ها، S2) قرارداد دقیق endpoint، مدل و کدهای خطا در `docs/FRONTEND_API_CONTRACT_NEEDS.md` ثبت شد (`Proposed`، مسئول ChatGPT). UI مربوط عمداً ساخته نشد تا قابلیت ظاهری یا داده ساختگی تولید نشود؛ هر مورد پس از Merge شدن API در PR مستقل مصرف می‌شود.
+## 2026-11-03 — Issue #444: UI دفترچهٔ کاربران شرکت
+- صفحهٔ `/company/users` روی API ادغام‌شدهٔ #497: فهرست فقط‌خواندنی کاربران شرکت جاری با جستجو، فیلتر وضعیت عضویت، جزئیات و صفحه‌بندی؛ 403/404 با پنل «دسترسی ندارید». هیچ داده شرکت دیگر درخواست یا نمایش داده نمی‌شود.
+- واحد/سمت، مجوز دقیق گروه برای غیرمدیر و منوی مبتنی بر مجوز به Backend وابسته‌اند (قرارداد در handoff). handoff: `docs/handoffs/ISSUE-444-company-user-directory-ui.md`.
 ## 2026-11-03 — Issue #444: تکمیل UI گزارش امنیتی (مراحل ۴ و ۵)
 - فیلترهای تاریخ به `JalaliDateField` منتقل شد؛ فیلتر کاربر با `UserPicker` (combobox دسترس‌پذیر روی `GET /admin/users?search=`) و فیلتر شرکت از شرکت‌های عضویت کاربر + کلیک روی جدول. بدون داده ساختگی.
 - حین تست دو باگ واقعی رفع شد: ماه پیش‌فرض تقویم و گم‌شدن مقدار تاریخ از نام دسترس‌پذیر دکمه.
 - مسدود به API: مرتب‌سازی، فهرست همهٔ شرکت‌های نصب، فهرست انواع رویداد؛ قرارداد در handoff. handoff: `docs/handoffs/ISSUE-444-security-audit-complete.md`.
+
+## 2026-11-03 — Issue #504 / D-069: طراحی چرخه عمر نشست
+- ممیزی نشان داد Cookie فعلی ۳۰ دقیقه‌ای و sliding است؛ SessionValidator در هر درخواست account active و CredentialStamp را بررسی می‌کند؛ خروج صریح نیز از طریق UserSessionAuditService ثبت می‌شود.
+- SessionId و UserSession per-session وجود ندارد، پس فهرست/ابطال مستقل نشست هنوز ممکن نیست. نبود event به‌عنوان logout/expiry/duration تفسیر نمی‌شود.
+- D-069 یک طرح پیشنهادی برای UserSession، SessionId، idle window، self-service revoke و retention ثبت می‌کند؛ هیچ Schema، Migration، claim یا تغییر Cookie انجام نشده است.
+- تصمیم‌های retention، absolute lifetime، revoke-others و scope مدیر نصب نیازمند تأیید مالک هستند.
+- handoff: docs/handoffs/ISSUE-504-session-lifecycle-design.md.
