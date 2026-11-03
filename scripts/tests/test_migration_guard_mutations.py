@@ -164,7 +164,9 @@ class ReviewedSqlMutationTests(MutationBase):
                     "generate", "can not be compared")
 
     def test_newer_migration_than_the_constants(self):
-        extra = self.path("20261101000000_Unregistered.cs")
+        # Must sort after CURRENT_MIGRATION_ID in generate_migrations.py (2026-11-03 ...),
+        # otherwise the file is not "newer than the constants".
+        extra = self.path("20261201000000_Unregistered.cs")
         with open(self.path(f"{BOUNDARY}.cs"), encoding="utf-8") as file:
             text = file.read().replace("AddCompanyCustomerBoundary", "Unregistered")
         try:
