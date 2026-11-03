@@ -2302,3 +2302,5 @@
 - تست UtcWireFormatSqlServerTests در همین PR #503 به‌روزرسانی شد تا DateTimeKind.Utc و خروجی JSON دارای Z را اثبات کند؛ هیچ فایل ClientApp تغییر نکرد.
 - CI، SQL Server واقعی و بررسی has-pending-model-changes هنوز باید روی SHA نهایی تأیید شوند.
 - handoff: docs/handoffs/ISSUE-500-utc-kind-value-converter.md.
+## 2026-11-03 — Issue #444: قراردادهای API مورد نیاز UI (هماهنگی Backend)
+- برای قابلیت‌هایی که API ندارند (کشف شرکت برای درخواست عضویت، گروه‌های قابل‌تخصیص، `/me/permissions`، مرتب‌سازی/Export/Retention گزارش، نشست‌ها، S2) قرارداد دقیق endpoint، مدل و کدهای خطا در `docs/FRONTEND_API_CONTRACT_NEEDS.md` ثبت شد (`Proposed`، مسئول ChatGPT). UI مربوط عمداً ساخته نشد تا قابلیت ظاهری یا داده ساختگی تولید نشود؛ هر مورد پس از Merge شدن API در PR مستقل مصرف می‌شود.
