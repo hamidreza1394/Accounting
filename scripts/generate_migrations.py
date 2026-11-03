@@ -50,21 +50,20 @@ MIGRATIONS_DIRECTORY = os.path.join("Infrastructure", "Persistence", "Migrations
 # 'InitialCreate'. Its designer file is the starting point of the difference that the
 # current migration has to apply. ('AlignSchemaWithModel' and 'WidenUserPasswordHash'
 # are published history as well.)
-DELTA_MIGRATION_ID = "20261103111108"
-DELTA_MIGRATION_NAME = "AddCompanyMembershipRequests"
+DELTA_MIGRATION_ID = "20261103141500"
+DELTA_MIGRATION_NAME = "SeedCompanyUserListPermission"
 
 # The most recent migration. Its operations are computed from the difference between
 # the model of the migration before it (DELTA_MIGRATION_*) and the model of the code
 # base, so the files can not drift apart from the snapshot. DELTA_MIGRATION_* is
 # published history and is never rewritten, exactly like 'InitialCreate'.
-CURRENT_MIGRATION_ID = "20261103141500"
-CURRENT_MIGRATION_NAME = "SeedCompanyUserListPermission"
-CURRENT_MIGRATION_CLASS = "SeedCompanyUserListPermission"
+CURRENT_MIGRATION_ID = "20261103160000"
+CURRENT_MIGRATION_NAME = "AddCompanyRoleMembershipRowVersions"
+CURRENT_MIGRATION_CLASS = "AddCompanyRoleMembershipRowVersions"
 
-# This migration only seeds a permission catalog row and does not change the EF model.
-# Keep the last EF-generated designer/snapshot as the target model; the migration class is
-# handwritten and its SQL is pinned in HAND_WRITTEN_SQL. verify_migration_model.py and
-# dotnet ef migrations has-pending-model-changes validate the unchanged model artifacts.
+# The target model artifacts use EF Core's generated snapshot format because SQL Server
+# rowversion metadata is provider-specific. Keep them stable; verify_migration_model.py
+# checks the full migration chain and the runtime model, including the rowversion facet.
 CURRENT_MIGRATION_WRITTEN_BY_EF_TOOLS = True
 
 # Statements that have to run before the structural operations of the current
