@@ -3,30 +3,50 @@
 نقطه شروع همه Agentها و توسعه‌دهندگان. پیش از هر کار [`../AGENTS.md`](../AGENTS.md) را بخوانید.
 
 ## ترتیب منابع حقیقت (D-030)
-۱) کد در Commit مبنا ← ۲) نتیجه CI/تست ← ۳) تصمیم صریح کارفرما ← ۴) PR ادغام‌شده/تاریخچه ← ۵) مستندات ← ۶) پیشنهاد Agentها. اختلاف کد با تصمیم تأییدشده باید به‌عنوان باگ ثبت شود.
+۱) کد در Commit مبنا ← ۲) نتیجه CI/تست ← ۳) تصمیم صریح کارفرما ← ۴) PR ادغام‌شده/تاریخچه ← ۵) مستندات ← ۶) پیشنهاد Agentها. اختلاف کد با تصمیم تأییدشده «انحراف پیاده‌سازی» ثبت می‌شود.
 
-## نقشه مطالعه
-| سند | نقش |
+## واژگان وضعیت
+`Accepted` تصمیم پذیرفته‌شده؛ `Implemented` در کد هست؛ `Verified` با اجرای تست/CI شاهد دارد؛ `Proposed` پیشنهاد؛ `NeedsApproval` نیازمند تأیید کارفرما؛ `Deprecated` منسوخ؛ `Blocked` مسدود؛ `NotImplemented` در کد نیست. `Deferred` موکول‌شده؛ `Rejected` ردشده با دلیل (افزوده 2026-10-24).
+
+## فهرست
+
+| [AGENT_SKILL_LIBRARY.md](AGENT_SKILL_LIBRARY.md) | کتابخانه مهارت‌های مشترک Agentها و قواعد استفاده از VoltAgent |
+| سند | کاربرد |
 |---|---|
-| [`../AGENTS.md`](../AGENTS.md) | قواعد الزامی Agentها، ممنوعیت‌ها، قالب تحویل |
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | معماری لایه، مرز ماژول‌ها، چندشرکتی |
-| [`ACCESS_CONTROL_ARCHITECTURE.md`](ACCESS_CONTROL_ARCHITECTURE.md) | مدل دسترسی، نقش، عضویت، D-064/D-065 |
-| [`ADMIN_UI.md`](ADMIN_UI.md) | UI مدیریت سیستم، صفحات و قراردادها |
-| [`DECISIONS.md`](DECISIONS.md) | ADRها و تصمیم‌های معماری |
-| [`PROJECT_STATUS.md`](PROJECT_STATUS.md) | وضعیت فعلی و کارهای باز |
-| [`CODING_STANDARDS.md`](CODING_STANDARDS.md) | استانداردهای کد |
-| [`DATABASE.md`](DATABASE.md) / [`DATABASE_SETUP.md`](DATABASE_SETUP.md) | مدل داده و راه‌اندازی |
-| [`DEVELOPMENT.md`](DEVELOPMENT.md) | محیط توسعه محلی |
-| [`DEPLOYMENT.md`](DEPLOYMENT.md) | استقرار |
-| [`PRODUCT_REQUIREMENTS.md`](PRODUCT_REQUIREMENTS.md) | الزامات محصول |
-| [`AGENT_COORDINATION.md`](AGENT_COORDINATION.md) / [`AGENT_REFERENCE.md`](AGENT_REFERENCE.md) | هماهنگی و مرجع Agent |
-| [`AGENT_START_PROMPT.md`](AGENT_START_PROMPT.md) | پرامپت شروع |
-| [`AGENT_SKILL_LIBRARY.md`](AGENT_SKILL_LIBRARY.md) | کتابخانه مهارت |
-| [`REPOSITORY_AUDIT.md`](REPOSITORY_AUDIT.md) | ممیزی مخزن |
-| [`CORPORATE_GROUPS.md`](CORPORATE_GROUPS.md) / [`CORPORATE_GROUPS_DATA_MODEL.md`](CORPORATE_GROUPS_DATA_MODEL.md) | گروه‌های شرکتی |
-| [`ORGANIZATIONAL_STRUCTURE_DATA_MODEL.md`](ORGANIZATIONAL_STRUCTURE_DATA_MODEL.md) | ساختار سازمانی |
-| [`LICENSING*.md`](LICENSING.md) | مجوزدهی |
-| [`CLOUD_CONCURRENCY_READINESS.md`](CLOUD_CONCURRENCY_READINESS.md) | آمادگی همزمانی ابری |
+| [TRADE_MODULE.md](TRADE_MODULE.md) | معماری، امنیت چندشرکتی، استفاده مشترک از دوره‌های مالی، فرم‌ها، گزارش‌ها و مسیر استخراج ماژول بازرگانی (D-061/D-062) |
+| [USER_ACCESS_MANAGEMENT.md](USER_ACCESS_MANAGEMENT.md) | طراحی و نقشه اجرایی مدیریت کاربران، سمت‌ها، گروه‌های دسترسی، مجوزهای جزئی و سوابق امنیتی (Issue #444) |
+| [ORGANIZATIONAL_STRUCTURE_DATA_MODEL.md](ORGANIZATIONAL_STRUCTURE_DATA_MODEL.md) | ممیزی و پیشنهاد مدل شرکت‌محور Employee، OrganizationalUnit و Position برای S2؛ بدون Migration تا تأیید مالک |
+| [`PROJECT_STATUS.md`](PROJECT_STATUS.md) | وضعیت تأییدشده فعلی |
+| [`ROADMAP.md`](ROADMAP.md) | برنامه راه |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | معماری و جهت وابستگی |
+| [`WORK_CONTEXT_SELECTOR_UI.md`](WORK_CONTEXT_SELECTOR_UI.md) | طراحی بصری و رفتار صفحه انتخاب شرکت و دوره مالی (لوگو، فونت، مرور محصولات، اندازه‌گیری) |
+| [`DECISIONS.md`](DECISIONS.md) | ADRها D-001..D-063 در DECISIONS.md؛ D-064: تفکیک مدیر سراسری نصب از مجوزهای عملیاتی شرکتی (Accepted؛ Issue #444)؛ D-065: معماری مصوب دسترسی چندشرکتی، دامنه و grant سال/دوره (Accepted؛ Issue #444)؛ D-059: entitlement مستقل Company/Module/Feature/Seat، add-on با amendment، bootstrap مدیر Offline و sync دوحالته؛ D-055 و D-056 جداگانه در اسناد اختصاصی Issue #236 (D-055: معماری PKCS#11؛ D-056: SoftHSM برای Development/Staging و Software assurance با پذیرش ریسک صریح در Production؛ مرحلهٔ ۲ با HSM واقعی؛ D-057: TPM 2.0 NV Extend hash-chain برای anti-rollback وضعیت ابطال آفلاین مشتری (Issue #364)؛ D-058: فعال‌سازی پایدار، هویت نصب ویندوز و کنترل server-side ابری (Issue #384)؛ مرز مشتری و برچسب‌های رابطه: D-037..D-040؛ مرز سامانه مرکزی، فعال‌سازی، هویت فروشنده و گذار: D-041..D-044؛ قرارداد لایسنس: D-045؛ امنیت و عملیات فروشنده: D-046؛ معماری اجرایی Vendor: D-047 (Accepted; implementation staged and not Production-ready)؛ shadcn/ui: D-048؛ کتابخانه‌های جدول/نمودار/تاریخ، آفلاین‌بودن دارایی‌ها و قواعد طراحی/سرعت: D-049؛ استفادهٔ مشروط از بخش‌های رایگان KendoReact: D-050 |
+| [`CORPORATE_GROUPS.md`](CORPORATE_GROUPS.md) | گروه شرکتی، گزارش تجمیعی/تلفیقی، مجوزها و نقشه راه (D-033..D-035) |
+| [`CORPORATE_GROUPS_DATA_MODEL.md`](CORPORATE_GROUPS_DATA_MODEL.md) | جداول، کلیدها و راهبرد Migration گروه شرکتی |
+| [`PRODUCT_REQUIREMENTS.md`](PRODUCT_REQUIREMENTS.md) | نیازمندی‌های محصول |
+| [`REQUIREMENTS_TRACEABILITY.md`](REQUIREMENTS_TRACEABILITY.md) | ردیابی نیازمندی ← کد/تست |
+| [`LICENSING.md`](LICENSING.md) | معماری و وضعیت لایسنس و فعال‌سازی |
+| [`LICENSING_IMPLEMENTATION_PLAN.md`](LICENSING_IMPLEMENTATION_PLAN.md) | مرجع اجرایی D-059/D-060 و ترتیب Issues #389–#396 |
+| [`LICENSING_DATA_MODEL.md`](LICENSING_DATA_MODEL.md) | ERD واقعی و پیشنهادی |
+| [`LICENSING_WORKFLOWS.md`](LICENSING_WORKFLOWS.md) | گردش‌کارها |
+| [`LICENSING_THREAT_MODEL.md`](LICENSING_THREAT_MODEL.md) | تهدیدها |
+| [`LICENSING_OPEN_DECISIONS.md`](LICENSING_OPEN_DECISIONS.md) | تصمیم‌های باز لایسنس و سامانه مرکزی با گزینه‌ها، ریسک و پیشنهاد؛ پرسش‌های اولویت‌بندی‌شده برای مالک محصول (فاز صفر 2026-10-24) |
+| [`DATABASE.md`](DATABASE.md), [`database-migrations.md`](database-migrations.md) | دیتابیس و Migration |
+| [`DATABASE_SETUP.md`](DATABASE_SETUP.md) | راه‌اندازی اولیه دیتابیس، محل و رمزنگاری تنظیمات اتصال، مهاجرت TarazAva ← Farano، فرمان `--settings` (D-036) |
+| [`SECURITY.md`](SECURITY.md) | امنیت |
+| [`VENDOR_BOOTSTRAP.md`](VENDOR_BOOTSTRAP.md) | راهنمای عملیاتی command-mode برای راه‌اندازی اولین مدیر Vendor، TOTP و بازیابی pending |
+| [`runbooks/vendor-audit-checkpoint-recovery.md`](runbooks/vendor-audit-checkpoint-recovery.md) | رویهٔ provider-neutral برای checkpoint مستقل Audit، backup/restore و recovery؛ تا انتخاب مقصد واقعی، Production-ready نیست |
+| [`runbooks/ISSUE-236-HSM-TPM-KEY-OPERATIONS.md`](runbooks/ISSUE-236-HSM-TPM-KEY-OPERATIONS.md) | Key Ceremony، کنترل دو نفره، rotation/revocation، Backup/Recovery، TPM مشتری و alerting؛ اجرای Production تا تأمین HSM واقعی Blocked است |
+| [`TESTING.md`](TESTING.md) | تست |
+| [`DEPLOYMENT.md`](DEPLOYMENT.md), [`DEVELOPMENT.md`](DEVELOPMENT.md) | استقرار و توسعه |
+| [`CODING_STANDARDS.md`](CODING_STANDARDS.md) | استانداردها |
+| [`UI_COMPONENTS.md`](UI_COMPONENTS.md) | هستهٔ قواعد UI: shadcn/ui، RTL فارسی، دسترس‌پذیری، runtime آفلاین، قانون محلی‌سازی دارایی‌ها و قواعد طراحی/سرعت/ویژوال (D-048، D-049) |
+| [`ADMIN_UI.md`](ADMIN_UI.md) | وضعیت کد ادغام‌شدهٔ رابط مدیریت سیستم در ClientApp، مسیرها، API client، تست‌ها و شکاف‌های واقعی Backend (Issues #461–#475) |
+| [`UI_LIBRARIES.md`](UI_LIBRARIES.md) | مرجع کتابخانه‌ها: جدول/نمودار/تاریخ، استفادهٔ مشروط از KendoReact Free (D-050)، گزارش پیوت و راهنمای مهارت `ui-ux-pro-max`؛ هنگام انتخاب یا افزودن کتابخانه بخوان |
+| [`REPOSITORY_AUDIT.md`](REPOSITORY_AUDIT.md) | ممیزی و ناهماهنگی‌ها |
+| [`CLOUD_CONCURRENCY_READINESS.md`](CLOUD_CONCURRENCY_READINESS.md) | ممیزی آمادگی بار ابری؛ ظرفیت ۱۰۰ کاربر فعلاً تأیید نشده |
+| [`AGENT_COORDINATION.md`](AGENT_COORDINATION.md), [`AGENT_START_PROMPT.md`](AGENT_START_PROMPT.md), [`prompts/`](prompts/), [`../CLAUDE.md`](../CLAUDE.md) | هماهنگی Agentها (شامل بخش «تقسیم کار بین Subagentهای Claude Code» و «Skill، Plugin و کنترل‌های قطعی»؛ تنظیمات Claude Code در [`../.claude/settings.json`](../.claude/settings.json)) |
+| [`AGENT_REFERENCE.md`](AGENT_REFERENCE.md) | مرجع تکمیلی Claude Code منتقل‌شده از `CLAUDE.md` (بدون تغییر محتوا، 2026-10-27): جدول تیم Subagent، نحوهٔ فراخوانی، نگاشت گردش‌کار، جدول انتخاب Skill، کنترل‌های قطعی؛ فقط در صورت نیاز بخوان |
 | [`prompts/CLOUD_CONCURRENCY_IMPLEMENTATION_PROMPT.md`](prompts/CLOUD_CONCURRENCY_IMPLEMENTATION_PROMPT.md) | پرامپ اجرایی Issue #49 برای آزمون بار و اصلاح مبتنی بر شواهد |
 | [`../.claude/skills/faranou-senior-developer/SKILL.md`](../.claude/skills/faranou-senior-developer/SKILL.md) | Skill اصلی توسعه فرانو؛ فناوری، امنیت، تست و کنترل تغییرات |
 | [`../.claude/skills/faranou-architecture-review/SKILL.md`](../.claude/skills/faranou-architecture-review/SKILL.md), [`../.claude/skills/faranou-security-multitenancy/SKILL.md`](../.claude/skills/faranou-security-multitenancy/SKILL.md), [`../.claude/skills/faranou-testing-quality/SKILL.md`](../.claude/skills/faranou-testing-quality/SKILL.md) | Skillهای بازبینی معماری، امنیت چندشرکتی و کیفیت/تست |
@@ -34,20 +54,15 @@
 | [`../.claude/skills/dotnet-patterns/SKILL.md`](../.claude/skills/dotnet-patterns/SKILL.md), [`../.claude/skills/csharp-testing/SKILL.md`](../.claude/skills/csharp-testing/SKILL.md), [`../.claude/skills/api-design/SKILL.md`](../.claude/skills/api-design/SKILL.md) | Skillهای انتخابی ECC برای .NET، تست C# و API |
 | [`../.claude/skills/react-patterns/SKILL.md`](../.claude/skills/react-patterns/SKILL.md), [`../.claude/skills/react-testing/SKILL.md`](../.claude/skills/react-testing/SKILL.md), [`../.claude/skills/e2e-testing/SKILL.md`](../.claude/skills/e2e-testing/SKILL.md) | Skillهای React، تست کلاینت و Playwright |
 | [`../.claude/skills/change-impact/SKILL.md`](../.claude/skills/change-impact/SKILL.md), [`../.claude/skills/faranou-efcore-migrations/SKILL.md`](../.claude/skills/faranou-efcore-migrations/SKILL.md), [`../.claude/skills/faranou-architecture-decisions/SKILL.md`](../.claude/skills/faranou-architecture-decisions/SKILL.md) | تحلیل اثر تغییرات، Migrationهای EF Core و تصمیمات معماری |
-| [`THIRD_PARTY_SKILLS.md`](THIRD_PARTY_SKILLS.md), [`../THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md), [`../third_party/MICROSOFT-TSS-LICENSE.txt`](../third_party/MICROSOFT-TSS-LICENSE.txt), [`../third_party/ECC-LICENSE.txt`](../third_party/ECC-LICENSE.txt), [`../third_party/UI-UX-PRO-MAX-LICENSE.txt`](../third_party/UI-UX-PRO-MAX-LICENSE.txt), [`../.claude/skills/ui-ux-pro-max/SKILL.md`](../.claude/skills/ui-ux-pro-max/SKILL.md) | منشأ، مجوز و قواعد نگهداری Skillها و کاتالوگ UI |
-
-## Handoffs اخیر (Issue #444 و مرتبط)
-| handoff | توضیح |
-|---|---|
-| [`handoffs/ISSUE-444-admin-ui-completion.md`](handoffs/ISSUE-444-admin-ui-completion.md) | تحویل تجمیعی مدیریت کاربران و دسترسی‌ها |
-| [`handoffs/ISSUE-475-roles-permission-catalog.md`](handoffs/ISSUE-475-roles-permission-catalog.md) | تحویل نقش‌ها و کاتالوگ مجوز |
+| [`THIRD_PARTY_SKILLS.md`](THIRD_PARTY_SKILLS.md), [`../THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md), [`../third_party/MICROSOFT-TSS-LICENSE.txt`](../third_party/MICROSOFT-TSS-LICENSE.txt), [`../third_party/ECC-LICENSE.txt`](../third_party/ECC-LICENSE.txt), [`../third_party/UI-UX-PRO-MAX-LICENSE.txt`](../third_party/UI-UX-PRO-MAX-LICENSE.txt), [`../.claude/skills/ui-ux-pro-max/SKILL.md`](../.claude/skills/ui-ux-pro-max/SKILL.md) | منشأ، مجوز و قواعد نگهداری Skillها و کتابخانه‌های شخص ثالث |
+| [`handoffs/ISSUE-214-vendor-revocation-issuance.md`](handoffs/ISSUE-214-vendor-revocation-issuance.md) | تحویل پیاده‌سازی Vendor برای snapshot امضاشده و گردش maker-checker ابطال آفلاین؛ CI شاخه باید پیش از Verified بررسی شود |
 | [`handoffs/ISSUE-444-membership-requests-ui.md`](handoffs/ISSUE-444-membership-requests-ui.md) | تحویل UI گردش درخواست عضویت بین‌شرکتی (درخواست‌های من و صف تأیید) و قرارداد API مورد نیاز از Backend (Issue #444) |
 | [`handoffs/ISSUE-444-role-members-api.md`](handoffs/ISSUE-444-role-members-api.md) | تحویل Backend فهرست اعضای گروه دسترسی و انتقال اعضا (Issue #444، مورد ۳)؛ UI و RowVersion باقی‌مانده |
 | [`handoffs/ISSUE-444-role-members-ui.md`](handoffs/ISSUE-444-role-members-ui.md) | تحویل UI فهرست اعضای گروه دسترسی و انتقال گروهی اعضا روی API ادغام‌شدهٔ #482 (Issue #444) |
 | [`handoffs/ISSUE-485-security-audit-report-api.md`](handoffs/ISSUE-485-security-audit-report-api.md) | API گزارش صفحه‌بندی‌شده Audit امنیتی برای مدیر نصب؛ بدون IP و payload جزئیات |
-| [`handoffs/ISSUE-444-security-audit-ui.md`](handoffs/ISSUE-444-security-audit-ui.md) | تحویل UI گزارش امنیت و سوابق مدیریتی روی API #487 (Issue #444، S7) |
 | [`handoffs/ISSUE-492-customer-boundary-authz-tests.md`](handoffs/ISSUE-492-customer-boundary-authz-tests.md) | تست امنیتی endpointهای Customer Boundary operator؛ فقط Infrastructure، Anti-forgery و جلوگیری از reassignment |
 | [`handoffs/ISSUE-494-company-user-directory-api.md`](handoffs/ISSUE-494-company-user-directory-api.md) | API فهرست کاربران در scope شرکت با مجوز users.list؛ بدون اطلاعات تماس/امنیتی |
+| [`handoffs/ISSUE-444-security-audit-ui.md`](handoffs/ISSUE-444-security-audit-ui.md) | تحویل UI گزارش امنیت و سوابق مدیریتی روی API #487 (Issue #444، S7) |
 | [`handoffs/ISSUE-467-login-history-logout-test.md`](handoffs/ISSUE-467-login-history-logout-test.md) | Regression test برای نمایش خروج موفق در سوابق ورود/خروج کاربر |
 | [`WORK_LOG.md`](WORK_LOG.md), [`handoffs/`](handoffs/) | سوابق تحویل؛ [تحویل تجمیعی مدیریت کاربران و دسترسی‌ها](handoffs/ISSUE-444-admin-ui-completion.md)؛ [تحویل نقش‌ها و کاتالوگ مجوز](handoffs/ISSUE-475-roles-permission-catalog.md) |
 
