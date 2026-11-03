@@ -74,4 +74,5 @@
 
 ## شناسه‌های Git
 - Branch: `feat/510-membership-workflow-api`
-- Commit نهایی و PR: پس از ایجاد PR ثبت می‌شوند.
+- Commit نهایی سرشاخه: `70c27b7550556a9df66acfdcff5deffd048005d9`.
+- Pull Request: https://github.com/hamidreza1394/Accounting/pull/518 (باز؛ Merge نشده).
