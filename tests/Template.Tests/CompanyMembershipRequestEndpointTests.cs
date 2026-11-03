@@ -453,7 +453,30 @@ public sealed class CompanyMembershipRequestEndpointTests
             IsActive = true,
             CustomerBoundaryId = fixture.Destination.CustomerBoundaryId,
         };
-        fixture.Database.Companies.AddRange(foreignCompany, pendingCompany);
+        var existingMemberCompany = new Domain.Company
+        {
+            Name = "شرکت با عضویت فعال",
+            IsActive = true,
+            CustomerBoundaryId = fixture.Destination.CustomerBoundaryId,
+        };
+        var existingMemberRole = new Domain.CompanyRole
+        {
+            TenantId = existingMemberCompany.Id,
+            Company = existingMemberCompany,
+            Code = "EXISTING",
+            Name = "عضو",
+            IsActive = true,
+        };
+        fixture.Database.Companies.AddRange(foreignCompany, pendingCompany, existingMemberCompany);
+        fixture.Database.CompanyRoles.Add(existingMemberRole);
+        fixture.Database.UserCompanyMemberships.Add(new Domain.UserCompanyMembership
+        {
+            UserId = fixture.Requester.Id,
+            TenantId = existingMemberCompany.Id,
+            Role = existingMemberRole,
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow,
+        });
         var pending = fixture.NewRequest();
         pending.DestinationTenantId = pendingCompany.Id;
         pending.DestinationCompany = pendingCompany;
@@ -473,6 +496,16 @@ public sealed class CompanyMembershipRequestEndpointTests
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
             fixture.Database, pendingCompany.Name);
         Assert.Empty(Assert.IsType<Ok<Server.Api.MembershipDestinationListResponse>>(pendingSearch).Value!.Items);
+
+        var existingMembershipSearch = await Server.Api.CompanyMembershipRequestEndpoints.GetDestinationsAsync(
+            new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
+            fixture.Database, existingMemberCompany.Name);
+        Assert.Empty(Assert.IsType<Ok<Server.Api.MembershipDestinationListResponse>>(existingMembershipSearch).Value!.Items);
+
+        var prefixSearch = await Server.Api.CompanyMembershipRequestEndpoints.GetDestinationsAsync(
+            new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
+            fixture.Database, "شرکت");
+        Assert.Empty(Assert.IsType<Ok<Server.Api.MembershipDestinationListResponse>>(prefixSearch).Value!.Items);
 
         var invalidSearch = await Server.Api.CompanyMembershipRequestEndpoints.GetDestinationsAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
