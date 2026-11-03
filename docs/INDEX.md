@@ -62,6 +62,7 @@
 | [`handoffs/ISSUE-444-role-members-ui.md`](handoffs/ISSUE-444-role-members-ui.md) | تحویل UI فهرست اعضای گروه دسترسی و انتقال گروهی اعضا روی API ادغام‌شدهٔ #482 (Issue #444) |
 | [`handoffs/ISSUE-485-security-audit-report-api.md`](handoffs/ISSUE-485-security-audit-report-api.md) | API گزارش صفحه‌بندی‌شده Audit امنیتی برای مدیر نصب؛ بدون IP و payload جزئیات |
 | [`handoffs/ISSUE-507-security-audit-csv-export.md`](handoffs/ISSUE-507-security-audit-csv-export.md) | خروجی CSV محدود گزارش امنیتی با ثبت Audit، محدودیت حجم و جلوگیری از Formula Injection (Issue #507) |
+| [`handoffs/ISSUE-510-membership-workflow-api.md`](handoffs/ISSUE-510-membership-workflow-api.md) | کشف مقصد محدود به CustomerBoundary، نقش‌های قابل واگذاری، فهرست تأییدکنندگان و تاریخچه درخواست (Issue #510) |
 | [`handoffs/ISSUE-498-membership-permission-delegation-ceiling.md`](handoffs/ISSUE-498-membership-permission-delegation-ceiling.md) | enforce سقف واگذاری مجوز هنگام تأیید عضویت بین‌شرکتی؛ بدون Schema/Migration |
 | [`handoffs/ISSUE-500-utc-kind-value-converter.md`](handoffs/ISSUE-500-utc-kind-value-converter.md) | EF ValueConverter برای فیلدهای DateTime دارای پسوند Utc؛ حفظ مقدار و عدم تغییر فیلدهای ساعت محلی قدیمی (Issue #500) |
 | [`handoffs/ISSUE-496-role-membership-rowversion.md`](handoffs/ISSUE-496-role-membership-rowversion.md) | RowVersion SQL Server برای CompanyRole و UserCompanyMembership؛ مدیریت 409 و تست رقابت نویسنده‌ها (Issue #496) |
