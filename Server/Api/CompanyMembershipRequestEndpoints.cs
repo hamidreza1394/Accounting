@@ -78,7 +78,8 @@ public static class CompanyMembershipRequestEndpoints
             .AnyAsync(membership =>
                 membership.UserId == userId.Value &&
                 membership.TenantId == request.DestinationCompanyId &&
-                membership.IsActive, cancellationToken);
+                membership.IsActive &&
+                membership.Role.IsActive, cancellationToken);
         if (alreadyActive)
             return TypedResults.Conflict(new { error = "کاربر در شرکت مقصد عضویت فعال دارد." });
 
@@ -308,11 +309,13 @@ public static class CompanyMembershipRequestEndpoints
         if (!requesterIsActive || !sourceIsActive || !sourceMembershipIsActive || destinationRole is null)
             return TypedResults.Conflict(new { error = "کاربر، شرکت مبدأ یا گروه دسترسی مقصد دیگر شرایط تأیید را ندارد." });
 
-        var existingMembership = await database.UserCompanyMemberships.FirstOrDefaultAsync(membership =>
-            membership.UserId == membershipRequest.UserId &&
-            membership.TenantId == companyId,
-            cancellationToken);
-        if (existingMembership is { IsActive: true })
+        var existingMembership = await database.UserCompanyMemberships
+            .Include(membership => membership.Role)
+            .FirstOrDefaultAsync(membership =>
+                membership.UserId == membershipRequest.UserId &&
+                membership.TenantId == companyId,
+                cancellationToken);
+        if (existingMembership is { IsActive: true } && existingMembership.Role.IsActive)
             return TypedResults.Conflict(new { error = "کاربر در شرکت مقصد از قبل عضویت فعال دارد." });
 
         if (existingMembership is null)
