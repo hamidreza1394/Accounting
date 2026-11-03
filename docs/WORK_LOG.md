@@ -2083,3 +2083,15 @@
 
 
 - Regression test `UserAdministrationEndpointTests.ListUsers_RequiresAnActiveInstallationAdministratorFromTheDatabase` به پاسخ JSON دارای فیلد error با HTTP 403 به‌روزرسانی شد تا با helper صریح 403 در head فعلی هم‌خوان باشد.
+
+## 2026-11-03 — Issue #465: API دفترچه محدود کاربران گروه شرکتی (D-065)
+
+- API فقط‌خواندنی `GET /api/v1/corporate-groups/{groupId}/directory` اضافه شد.
+- مجوز `corporate-groups.view` فقط در OwnerCompany از مسیر canonical `CompanyAccessService` بررسی می‌شود؛ گروه ناشناخته و گروه غیرمجاز هر دو 404 می‌دهند.
+- مرز CustomerBoundary گروه به‌صورت fail-closed بررسی می‌شود؛ اگر حتی یک عضو گروه null/different boundary باشد، هیچ داده‌ای برگردانده نمی‌شود.
+- فقط عضویت‌های شرکتی فعال از نظر تاریخ و شرکت‌های فعال وارد محدوده می‌شوند؛ خروجی allowlist شامل شناسه حداقلی، نام نمایشی، username، شرکت و وضعیت مؤثر عضویت است.
+- جستجو فقط روی نام/username و pagination در SQL انجام می‌شود؛ pageSize حداکثر 100 است.
+- هیچ email/phone/password/hash/role/permission/login/session/IP یا audit جزئیات شرکت دیگر در DTO وجود ندارد.
+- تست‌های InMemory برای دسترسی، عدم افشا، مرز مشتری، جستجو و pagination اضافه شدند. Build/Tests محلی اجرا نشده‌اند؛ CI باید پیش از Merge بررسی شود.
+- هیچ Migration یا فایل Frontend تغییر نکرد.
+- handoff: `docs/handoffs/ISSUE-465-corporate-group-directory-api.md`.

@@ -58,6 +58,7 @@ public static class ApiEndpoints
 			.RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
 		api.MapUserAdministrationEndpoints();
 		api.MapCompanyRoleAdministrationEndpoints();
+		api.MapCorporateGroupDirectoryEndpoints();
 		api.MapGet("/companies", GetCompaniesAsync);
 		api.MapGet("/companies/{companyId:guid}/overview", GetCompanyOverviewAsync);
 		api.MapWorkContextEndpoints();
