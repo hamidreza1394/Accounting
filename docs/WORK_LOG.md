@@ -2311,3 +2311,11 @@
 - handoff: docs/handoffs/ISSUE-500-utc-kind-value-converter.md.
 ## 2026-11-03 — Issue #444: قراردادهای API مورد نیاز UI (هماهنگی Backend)
 - برای قابلیت‌هایی که API ندارند (کشف شرکت برای درخواست عضویت، گروه‌های قابل‌تخصیص، `/me/permissions`، مرتب‌سازی/Export/Retention گزارش، نشست‌ها، S2) قرارداد دقیق endpoint، مدل و کدهای خطا در `docs/FRONTEND_API_CONTRACT_NEEDS.md` ثبت شد (`Proposed`، مسئول ChatGPT). UI مربوط عمداً ساخته نشد تا قابلیت ظاهری یا داده ساختگی تولید نشود؛ هر مورد پس از Merge شدن API در PR مستقل مصرف می‌شود.
+
+
+## 2026-11-03 — Issue #511: API مجوزهای کاربر جاری
+- قرارداد `GET /api/v1/me/permissions` نهایی شد: شرکت از زمینه کاری محافظت‌شده همین نشست می‌آید و هیچ شناسه شرکت کلاینتی پذیرفته نمی‌شود.
+- endpoint جدید فقط permission codeهای نقش فعال عضویت فعال همان شرکت را برمی‌گرداند؛ وضعیت مدیر نصب از نقش فعال DB محاسبه می‌شود؛ بدون زمینه معتبر `company: null` و no-store.
+- تست‌های endpoint برای چند شرکت، query جعلی، عضویت/نقش غیرفعال، کاربر بدون شرکت و مدیر نصب؛ تست SQL Server برای query و جداسازی شرکت اضافه شد.
+- هیچ Migration، ClientApp یا E2E تغییر نکرد. Build/Test/SQL Server و diff-check هنوز اجرا نشده‌اند؛ Verified نیست.
+- handoff: docs/handoffs/ISSUE-511-me-permissions.md.
