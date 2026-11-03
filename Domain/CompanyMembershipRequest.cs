@@ -14,8 +14,6 @@ public static class CompanyMembershipRequestStatuses
 public sealed class CompanyMembershipRequest : Seedwork.Entity
 {
     public Guid UserId { get; set; }
-    public Guid SourceTenantId { get; set; }
-    public Company SourceCompany { get; set; } = null!;
     public Guid DestinationTenantId { get; set; }
     public Company DestinationCompany { get; set; } = null!;
     public string Status { get; set; } = CompanyMembershipRequestStatuses.Pending;
