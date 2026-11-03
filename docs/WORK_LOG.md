@@ -2093,3 +2093,16 @@
 - هیچ API، schema، Migration یا Frontend تغییر نکرد.
 - اجرای dotnet test و build در محیط ChatGPT انجام نشد؛ نتیجهٔ CI همین PR باید بررسی شود.
 - handoff: `docs/handoffs/ISSUE-467-login-history-logout-test.md`.
+
+
+## 2026-11-03 — Issue #465: API دفترچه محدود کاربران گروه شرکتی (D-065)
+
+- API فقط‌خواندنی `GET /api/v1/corporate-groups/{groupId}/directory` اضافه شد.
+- مجوز `corporate-groups.view` فقط در شرکت Owner و از مسیر canonical `CompanyAccessService.HasPermissionAsync` بررسی می‌شود؛ گروه ناشناخته و گروه غیرمجاز هر دو 404 می‌دهند.
+- مرز CustomerBoundary گروه به‌صورت fail-closed بررسی می‌شود؛ اگر حتی یک عضو گروه null/different boundary باشد، هیچ داده‌ای برگردانده نمی‌شود.
+- فقط شرکت‌های فعال با عضویت گروهی معتبر در تاریخ UTC جاری وارد محدوده می‌شوند؛ وضعیت مؤثر عضویت کاربر نیز جداگانه در DTO حداقلی بازگردانده می‌شود.
+- خروجی allowlist شامل UserId، DisplayName، Username، CompanyId، CompanyName و IsMembershipActive است؛ اطلاعات تماس، رمز/hash، نقش، مجوز، تاریخچه ورود، نشست، IP و جزئیات Audit برگردانده نمی‌شوند.
+- جستجو فقط روی نام/username و pagination در SQL انجام می‌شود؛ pageSize حداکثر 100 است.
+- تست‌های InMemory برای scope، allowlist، عدم مجوز، گروه ناشناخته، CustomerBoundary متناقض، جستجو و pagination اضافه شدند.
+- بدون Migration و بدون فایل Frontend. Build/Test محلی در محیط ChatGPT اجرا نشده؛ CI باید بررسی شود.
+- handoff: `docs/handoffs/ISSUE-465-corporate-group-directory-api.md`.
