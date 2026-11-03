@@ -2170,6 +2170,11 @@
 - handoff: `docs/handoffs/ISSUE-444-role-members-api.md`.
 
 
+## 2026-11-03 — Issue #444: UI اعضای گروه دسترسی و انتقال اعضا
+- بخش «اعضای این گروه» به صفحهٔ جزئیات گروه اضافه شد: فهرست صفحه‌بندی‌شدهٔ اعضای فعال و انتقال گروهی با تأییدیه روی API ادغام‌شدهٔ #482؛ گروه سیستمی و سقف ۵۰۰ نفر در UI توضیح داده می‌شوند و سرور مرجع می‌ماند.
+- جستجوی اعضا ساخته نشد چون API ندارد. هیچ تغییری در Backend نبود.
+- تست: typecheck، ۴۲۲ تست vitest، build و check:offline موفق؛ axe و E2E واقعی اجرا نشد.
+- handoff: `docs/handoffs/ISSUE-444-role-members-ui.md`.
 ## 2026-11-03 — Issue #485: گزارش Audit امنیتی مدیر نصب
 
 - API فقط‌خواندنی `GET /api/v1/admin/security/audit-events` روی جدول موجود SecurityAuditEvents اضافه شد؛ احراز مجدد مدیر نصب از دیتابیس انجام می‌شود.

@@ -35,6 +35,7 @@ function api(roles: unknown[] = [roleItem(), systemRole], onPut: (call: ApiCall)
     if (call.path === '/api/v1/companies') return json(companiesBody);
     if (call.path === '/api/v1/admin/permission-catalog') return json(catalogItems);
     if (call.path === '/api/v1/admin/companies/a/roles') return json(roles);
+    if (call.path === '/api/v1/admin/companies/a/roles/role-1/members') return json({ items: [], totalCount: 0, page: 1, pageSize: 20 });
     return new Response(null, { status: 404 });
   });
 }
@@ -138,6 +139,7 @@ describe('RoleDetailPage', () => {
       if (call.path === '/api/v1/companies') return json(companiesBody);
       if (call.path === '/api/v1/admin/permission-catalog') return json(catalogItems);
       if (call.path === '/api/v1/admin/companies/a/roles') return json([stored]);
+      if (call.path === '/api/v1/admin/companies/a/roles/role-1/members') return json({ items: [], totalCount: 0, page: 1, pageSize: 20 });
       return new Response(null, { status: 404 });
     });
     setup();
@@ -297,5 +299,48 @@ describe('RoleDetailPage', () => {
     api();
     setup();
     expect(await screen.findByText('گروه دسترسی با موفقیت ایجاد شد.')).toBeInTheDocument();
+  });
+
+  it('keeps the editor in step with a transfer: the member count updates and unsaved edits survive', async () => {
+    const user = userEvent.setup();
+    let moved = false;
+    const members = [
+      { userId: 'user-1', username: 'm1', firstName: 'الف', lastName: 'ب', isUserActive: true, memberSinceUtc: '2026-10-01T09:00:00Z' },
+      { userId: 'user-2', username: 'm2', firstName: 'ج', lastName: 'د', isUserActive: true, memberSinceUtc: '2026-10-01T09:00:00Z' },
+    ];
+    stubApi((call) => {
+      if (call.method === 'POST' && call.path.endsWith('/members/transfer')) {
+        moved = true;
+        return json({ movedCount: 2 });
+      }
+      if (call.path === '/api/v1/companies') return json(companiesBody);
+      if (call.path === '/api/v1/admin/permission-catalog') return json(catalogItems);
+      if (call.path === '/api/v1/admin/companies/a/roles') {
+        return json([roleItem({ activeMemberCount: 2 }), roleItem({ id: 'role-2', code: 'ACCOUNTANT', name: 'حسابدار' })]);
+      }
+      if (call.path === '/api/v1/admin/companies/a/roles/role-1/members') {
+        return json({ items: moved ? [] : members, totalCount: moved ? 0 : 2, page: 1, pageSize: 20 });
+      }
+      return new Response(null, { status: 404 });
+    });
+    setup();
+    await screen.findByRole('form', { name: 'فرم ویرایش گروه دسترسی' });
+    const memberField = screen.getByText('اعضای فعال').parentElement as HTMLElement;
+    expect(memberField).toHaveTextContent('۲ نفر');
+
+    await user.type(title(), ' ویرایش‌نشده‌ذخیره');
+    const edited = (title() as HTMLInputElement).value;
+    expect(edited).toContain('ویرایش‌نشده‌ذخیره');
+
+    const select = await screen.findByRole('combobox', { name: /گروه مقصد/ });
+    await within(select).findByRole('option', { name: 'حسابدار' });
+    await user.selectOptions(select, 'role-2');
+    await user.click(screen.getByRole('button', { name: 'انتقال اعضا…' }));
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'انتقال اعضا' }));
+
+    expect(await screen.findByText('این گروه عضو فعالی ندارد')).toBeInTheDocument();
+    // The editor's own counter no longer contradicts the table, and the unsaved title was not wiped.
+    await waitFor(() => expect(memberField).toHaveTextContent('۰ نفر'));
+    expect((title() as HTMLInputElement).value).toBe(edited);
   });
 });
