@@ -61,6 +61,7 @@
 | [`handoffs/ISSUE-444-role-members-ui.md`](handoffs/ISSUE-444-role-members-ui.md) | تحویل UI فهرست اعضای گروه دسترسی و انتقال گروهی اعضا روی API ادغام‌شدهٔ #482 (Issue #444) |
 | [`handoffs/ISSUE-485-security-audit-report-api.md`](handoffs/ISSUE-485-security-audit-report-api.md) | API گزارش صفحه‌بندی‌شده Audit امنیتی برای مدیر نصب؛ بدون IP و payload جزئیات |
 | [`handoffs/ISSUE-498-membership-permission-delegation-ceiling.md`](handoffs/ISSUE-498-membership-permission-delegation-ceiling.md) | enforce سقف واگذاری مجوز هنگام تأیید عضویت بین‌شرکتی؛ بدون Schema/Migration |
+| [`handoffs/ISSUE-496-role-membership-rowversion.md`](handoffs/ISSUE-496-role-membership-rowversion.md) | RowVersion SQL Server برای CompanyRole و UserCompanyMembership؛ مدیریت 409 و تست رقابت نویسنده‌ها (Issue #496) |
 | [`handoffs/ISSUE-492-customer-boundary-authz-tests.md`](handoffs/ISSUE-492-customer-boundary-authz-tests.md) | تست امنیتی endpointهای Customer Boundary operator؛ فقط Infrastructure، Anti-forgery و جلوگیری از reassignment |
 | [`handoffs/ISSUE-494-company-user-directory-api.md`](handoffs/ISSUE-494-company-user-directory-api.md) | API فهرست کاربران در scope شرکت با مجوز users.list؛ بدون اطلاعات تماس/امنیتی |
 | [`handoffs/ISSUE-444-security-audit-ui.md`](handoffs/ISSUE-444-security-audit-ui.md) | تحویل UI گزارش امنیت و سوابق مدیریتی روی API #487 (Issue #444، S7) |
