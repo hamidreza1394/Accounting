@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Xunit;
 
 namespace Template.Tests.Integration;
@@ -14,6 +15,8 @@ namespace Template.Tests.Integration;
 /// </summary>
 public sealed class CompanyRoleMembersSqlServerTests
 {
+    private const string PreviousRowVersionMigration = "20261103141500_SeedCompanyUserListPermission";
+
     private static bool SqlServerAvailable()
     {
         if (IntegrationDatabase.UsesSqlServer)
@@ -23,16 +26,20 @@ public sealed class CompanyRoleMembersSqlServerTests
         return false;
     }
 
-    private static Data.DatabaseContext CreateContext(string databaseName)
+    private static Data.DatabaseContext CreateContext(
+        string databaseName,
+        SaveChangesInterceptor? interceptor = null)
     {
         var builder = new SqlConnectionStringBuilder(IntegrationDatabase.SqlServerConnectionString!)
         {
             InitialCatalog = databaseName,
         };
-        return new Data.DatabaseContext(new DbContextOptionsBuilder<Data.DatabaseContext>()
+        var options = new DbContextOptionsBuilder<Data.DatabaseContext>()
             .UseSqlServer(builder.ConnectionString, sql =>
-                sql.MigrationsAssembly(typeof(Data.DatabaseContext).Assembly.FullName))
-            .Options);
+                sql.MigrationsAssembly(typeof(Data.DatabaseContext).Assembly.FullName));
+        if (interceptor is not null)
+            options.AddInterceptors(interceptor);
+        return new Data.DatabaseContext(options.Options);
     }
 
     private static ClaimsPrincipal Principal(Guid id) => new(new ClaimsIdentity(
@@ -168,6 +175,219 @@ public sealed class CompanyRoleMembersSqlServerTests
         {
             await using var cleanup = CreateContext(name);
             await cleanup.Database.EnsureDeletedAsync(cancellationToken);
+        }
+    }
+
+    [Fact]
+    public async Task RoleAndMembershipWritersReturnConflictWhenAnotherWriterWinsTheRowVersion()
+    {
+        Assert.SkipUnless(SqlServerAvailable(), "SQL Server is not configured (FARANOU_TEST_SQLSERVER).");
+
+        var name = "FaranouTests_RV_" + Guid.NewGuid().ToString("N")[..12];
+        var cancellationToken = TestContext.Current.CancellationToken;
+        try
+        {
+            Guid companyId;
+            Guid adminId;
+            Guid roleToEditId;
+            Guid assignmentUserId;
+            Guid assignmentTargetRoleId;
+            Guid assignmentWinnerRoleId;
+            Guid assignmentMembershipId;
+            Guid transferUserId;
+            Guid transferSourceRoleId;
+            Guid transferTargetRoleId;
+            Guid transferWinnerRoleId;
+            Guid transferMembershipId;
+
+            await using (var seed = CreateContext(name))
+            {
+                await seed.Database.MigrateAsync(cancellationToken);
+                var company = new Domain.Company { Name = "شرکت هم‌زمانی", IsActive = true };
+                var adminRole = new Domain.Role(Constants.Role.Admin) { IsActive = true };
+                var admin = new Domain.User("rowversion-admin@example.test")
+                {
+                    Username = "rowversion-admin",
+                    IsActive = true,
+                    Role = adminRole,
+                };
+                var roleToEdit = new Domain.CompanyRole
+                {
+                    Company = company, TenantId = company.Id, Code = "EDIT", Name = "قبل از ویرایش", IsActive = true,
+                };
+                var assignmentCurrentRole = new Domain.CompanyRole
+                {
+                    Company = company, TenantId = company.Id, Code = "ASSIGN_CURRENT", Name = "نقش فعلی", IsActive = true,
+                };
+                var assignmentTargetRole = new Domain.CompanyRole
+                {
+                    Company = company, TenantId = company.Id, Code = "ASSIGN_TARGET", Name = "مقصد", IsActive = true,
+                };
+                var assignmentWinnerRole = new Domain.CompanyRole
+                {
+                    Company = company, TenantId = company.Id, Code = "ASSIGN_WINNER", Name = "برنده هم‌زمان", IsActive = true,
+                };
+                var transferSourceRole = new Domain.CompanyRole
+                {
+                    Company = company, TenantId = company.Id, Code = "TRANSFER_SOURCE", Name = "مبدأ انتقال", IsActive = true,
+                };
+                var transferTargetRole = new Domain.CompanyRole
+                {
+                    Company = company, TenantId = company.Id, Code = "TRANSFER_TARGET", Name = "مقصد انتقال", IsActive = true,
+                };
+                var transferWinnerRole = new Domain.CompanyRole
+                {
+                    Company = company, TenantId = company.Id, Code = "TRANSFER_WINNER", Name = "برنده انتقال", IsActive = true,
+                };
+                var assignmentUser = new Domain.User("rv-assign@example.test")
+                {
+                    Username = "rv-assign", IsActive = true,
+                };
+                var transferUser = new Domain.User("rv-transfer@example.test")
+                {
+                    Username = "rv-transfer", IsActive = true,
+                };
+                seed.AddRange(
+                    company, adminRole, admin, roleToEdit,
+                    assignmentCurrentRole, assignmentTargetRole, assignmentWinnerRole,
+                    transferSourceRole, transferTargetRole, transferWinnerRole,
+                    assignmentUser, transferUser);
+                seed.UserCompanyMemberships.AddRange(
+                    new Domain.UserCompanyMembership
+                    {
+                        UserId = assignmentUser.Id, TenantId = company.Id, Role = assignmentCurrentRole,
+                        IsActive = true, CreatedAtUtc = DateTime.UtcNow,
+                    },
+                    new Domain.UserCompanyMembership
+                    {
+                        UserId = transferUser.Id, TenantId = company.Id, Role = transferSourceRole,
+                        IsActive = true, CreatedAtUtc = DateTime.UtcNow,
+                    });
+                await seed.SaveChangesAsync(cancellationToken);
+
+                companyId = company.Id;
+                adminId = admin.Id;
+                roleToEditId = roleToEdit.Id;
+                assignmentUserId = assignmentUser.Id;
+                assignmentTargetRoleId = assignmentTargetRole.Id;
+                assignmentWinnerRoleId = assignmentWinnerRole.Id;
+                assignmentMembershipId = await seed.UserCompanyMemberships
+                    .Where(item => item.UserId == assignmentUserId && item.TenantId == companyId)
+                    .Select(item => item.Id).SingleAsync(cancellationToken);
+                transferUserId = transferUser.Id;
+                transferSourceRoleId = transferSourceRole.Id;
+                transferTargetRoleId = transferTargetRole.Id;
+                transferWinnerRoleId = transferWinnerRole.Id;
+                transferMembershipId = await seed.UserCompanyMemberships
+                    .Where(item => item.UserId == transferUserId && item.TenantId == companyId)
+                    .Select(item => item.Id).SingleAsync(cancellationToken);
+
+                // Exercise the additive migration against populated tables, not just an empty schema.
+                await seed.Database.MigrateAsync(PreviousRowVersionMigration, cancellationToken);
+                await seed.Database.MigrateAsync(cancellationToken);
+                var roleVersions = await seed.CompanyRoles.AsNoTracking()
+                    .Select(item => item.RowVersion).ToArrayAsync(cancellationToken);
+                var membershipVersions = await seed.UserCompanyMemberships.AsNoTracking()
+                    .Select(item => item.RowVersion).ToArrayAsync(cancellationToken);
+                Assert.All(roleVersions, version => Assert.Equal(8, version.Length));
+                Assert.All(membershipVersions, version => Assert.Equal(8, version.Length));
+                Assert.Equal(roleVersions.Length,
+                    roleVersions.Select(version => Convert.ToHexString(version)).Distinct(StringComparer.Ordinal).Count());
+                Assert.Equal(membershipVersions.Length,
+                    membershipVersions.Select(version => Convert.ToHexString(version)).Distinct(StringComparer.Ordinal).Count());
+            }
+
+            var roleInterceptor = new ConcurrentUpdateInterceptor(async token =>
+            {
+                await using var competing = CreateContext(name);
+                var role = await competing.CompanyRoles.SingleAsync(item => item.Id == roleToEditId, token);
+                role.Name = "برنده هم‌زمان";
+                await competing.SaveChangesAsync(token);
+            });
+            await using (var requestContext = CreateContext(name, roleInterceptor))
+            {
+                var result = await Server.Api.CompanyRoleAdministrationEndpoints.UpdateRoleAsync(
+                    companyId, roleToEditId, new DefaultHttpContext(), Principal(adminId),
+                    new Server.Api.UpdateCompanyRoleRequest("بازنده", true, Array.Empty<string>()),
+                    new AllowAntiforgery(), requestContext, TimeProvider.System, cancellationToken);
+                Assert.Equal(StatusCodes.Status409Conflict, (result as IStatusCodeHttpResult)?.StatusCode);
+            }
+
+            await using (var verifyRole = CreateContext(name))
+            {
+                Assert.Equal("برنده هم‌زمان",
+                    (await verifyRole.CompanyRoles.SingleAsync(item => item.Id == roleToEditId, cancellationToken)).Name);
+                Assert.DoesNotContain(await verifyRole.SecurityAuditEvents.ToListAsync(cancellationToken),
+                    item => item.EventType == "CompanyRoleUpdated" && item.EntityId == roleToEditId.ToString());
+            }
+
+            var assignmentInterceptor = new ConcurrentUpdateInterceptor(async token =>
+            {
+                await using var competing = CreateContext(name);
+                var membership = await competing.UserCompanyMemberships.SingleAsync(item => item.Id == assignmentMembershipId, token);
+                membership.RoleId = assignmentWinnerRoleId;
+                await competing.SaveChangesAsync(token);
+            });
+            await using (var requestContext = CreateContext(name, assignmentInterceptor))
+            {
+                var result = await Server.Api.CompanyRoleAdministrationEndpoints.AssignMembershipAsync(
+                    companyId, assignmentTargetRoleId, assignmentUserId, new DefaultHttpContext(),
+                    Principal(adminId), new AllowAntiforgery(), requestContext, TimeProvider.System, cancellationToken);
+                Assert.Equal(StatusCodes.Status409Conflict, (result as IStatusCodeHttpResult)?.StatusCode);
+            }
+
+            await using (var verifyAssignment = CreateContext(name))
+            {
+                Assert.Equal(assignmentWinnerRoleId,
+                    (await verifyAssignment.UserCompanyMemberships.SingleAsync(item => item.Id == assignmentMembershipId, cancellationToken)).RoleId);
+                Assert.DoesNotContain(await verifyAssignment.SecurityAuditEvents.ToListAsync(cancellationToken),
+                    item => item.EventType == "UserCompanyRoleAssigned" && item.EntityId == $"{assignmentUserId}:{companyId}");
+            }
+
+            var transferInterceptor = new ConcurrentUpdateInterceptor(async token =>
+            {
+                await using var competing = CreateContext(name);
+                var membership = await competing.UserCompanyMemberships.SingleAsync(item => item.Id == transferMembershipId, token);
+                membership.RoleId = transferWinnerRoleId;
+                await competing.SaveChangesAsync(token);
+            });
+            await using (var requestContext = CreateContext(name, transferInterceptor))
+            {
+                var result = await Server.Api.CompanyRoleAdministrationEndpoints.TransferMembersAsync(
+                    companyId, transferSourceRoleId, new DefaultHttpContext(), Principal(adminId),
+                    new Server.Api.TransferCompanyRoleMembersRequest(transferTargetRoleId),
+                    new AllowAntiforgery(), requestContext, TimeProvider.System, cancellationToken);
+                Assert.Equal(StatusCodes.Status409Conflict, (result as IStatusCodeHttpResult)?.StatusCode);
+            }
+
+            await using (var verifyTransfer = CreateContext(name))
+            {
+                Assert.Equal(transferWinnerRoleId,
+                    (await verifyTransfer.UserCompanyMemberships.SingleAsync(item => item.Id == transferMembershipId, cancellationToken)).RoleId);
+                Assert.DoesNotContain(await verifyTransfer.SecurityAuditEvents.ToListAsync(cancellationToken),
+                    item => item.EventType == "UserCompanyRoleAssigned" && item.EntityId == $"{transferUserId}:{companyId}");
+            }
+        }
+        finally
+        {
+            await using var cleanup = CreateContext(name);
+            await cleanup.Database.EnsureDeletedAsync(cancellationToken);
+        }
+    }
+
+    private sealed class ConcurrentUpdateInterceptor(
+        Func<CancellationToken, Task> concurrentUpdate) : SaveChangesInterceptor
+    {
+        private int _triggered;
+
+        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData,
+            InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (Interlocked.Exchange(ref _triggered, 1) == 0)
+                await concurrentUpdate(cancellationToken);
+            return result;
         }
     }
 
