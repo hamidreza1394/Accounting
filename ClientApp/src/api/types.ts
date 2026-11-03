@@ -436,23 +436,18 @@ export function parseAdminUserDetails(value: unknown): AdminUserDetails {
       createdAtUtc: readIsoDateTime(item, 'createdAtUtc', 'adminUser.membership')!,
     };
   });
-  const base = parseAdminUserList({
-    items: [{
-      id: value['id'],
-      username: value['username'],
-      firstName: value['firstName'],
-      lastName: value['lastName'],
-      emailAddress: value['emailAddress'],
-      cellPhoneNumber: value['cellPhoneNumber'],
-      isActive: value['isActive'],
-      lastLoginDateTime: value['lastLoginDateTime'],
-      insertDateTime: value['insertDateTime'],
-      activeCompanyCount: memberships.filter(x => x.isActive).length,
-    }],
-    totalCount: 1,
-    page: 1,
-    pageSize: 1,
-  }).items[0];
+  const base: AdminUserListItem = {
+    id: readString(value, 'id', 'adminUser'),
+    username: readNullableString(value, 'username', 'adminUser'),
+    firstName: readNullableString(value, 'firstName', 'adminUser'),
+    lastName: readNullableString(value, 'lastName', 'adminUser'),
+    emailAddress: readString(value, 'emailAddress', 'adminUser'),
+    cellPhoneNumber: readNullableString(value, 'cellPhoneNumber', 'adminUser'),
+    isActive: readBoolean(value, 'isActive', 'adminUser'),
+    lastLoginDateTime: readIsoDateTime(value, 'lastLoginDateTime', 'adminUser', true),
+    insertDateTime: readIsoDateTime(value, 'insertDateTime', 'adminUser')!,
+    activeCompanyCount: memberships.filter(x => x.isActive).length,
+  };
   return {
     ...base,
     isEmailAddressVerified: readBoolean(value, 'isEmailAddressVerified', 'adminUser'),
