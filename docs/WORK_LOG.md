@@ -2095,3 +2095,12 @@
 - تست‌های InMemory برای دسترسی، عدم افشا، مرز مشتری، جستجو و pagination اضافه شدند. Build/Tests محلی اجرا نشده‌اند؛ CI باید پیش از Merge بررسی شود.
 - هیچ Migration یا فایل Frontend تغییر نکرد.
 - handoff: `docs/handoffs/ISSUE-465-corporate-group-directory-api.md`.
+
+## 2026-11-03 — Issue #467: پوشش تست خروج موفق در سوابق ورود/خروج
+
+- ممیزی `GetMyLoginHistoryAsync` نشان داد `LogoutSucceeded` از قبل در allowlist رویدادهای تاریخچه وجود دارد؛ API به تغییر نیاز نداشت.
+- شکاف واقعی فقط تست بود: تست self-service فقط LoginSucceeded/LoginFailed را درج می‌کرد و LogoutSucceeded را صریحاً assert نمی‌کرد.
+- رویداد LogoutSucceeded با timestamp جدیدتر به تست افزوده شد؛ انتظار سه رویداد، allowlist و ترتیب نزولی بررسی می‌شوند. RoleChanged و رویداد کاربر دیگر همچنان خارج از پاسخ می‌مانند.
+- هیچ API، schema، Migration یا Frontend تغییر نکرد.
+- dotnet test محلی اجرا نشده؛ CI باید نتیجه را تأیید کند.
+- handoff: `docs/handoffs/ISSUE-467-login-history-logout-test.md`.
