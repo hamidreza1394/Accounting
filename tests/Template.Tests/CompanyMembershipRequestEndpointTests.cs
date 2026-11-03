@@ -16,7 +16,7 @@ public sealed class CompanyMembershipRequestEndpointTests
         var result = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
             new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Destination.Id),
-            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+            new AllowAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
 
         Assert.Equal(StatusCodes.Status201Created, (result as IStatusCodeHttpResult)?.StatusCode);
         var request = await fixture.Database.CompanyMembershipRequests.SingleAsync();
@@ -41,7 +41,7 @@ public sealed class CompanyMembershipRequestEndpointTests
         var duplicate = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
             new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Destination.Id),
-            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+            new AllowAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
         Assert.Equal(StatusCodes.Status409Conflict, (duplicate as IStatusCodeHttpResult)?.StatusCode);
 
         fixture.Database.CompanyMembershipRequests.RemoveRange(fixture.Database.CompanyMembershipRequests);
@@ -57,7 +57,7 @@ public sealed class CompanyMembershipRequestEndpointTests
         var alreadyMember = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
             new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Destination.Id),
-            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+            new AllowAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
         Assert.Equal(StatusCodes.Status409Conflict, (alreadyMember as IStatusCodeHttpResult)?.StatusCode);
     }
 
@@ -72,7 +72,7 @@ public sealed class CompanyMembershipRequestEndpointTests
         var inactiveRequester = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
             new DefaultHttpContext(), fixture.Principal(inactiveUser.Id),
             new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Destination.Id),
-            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+            new AllowAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
         Assert.Equal(StatusCodes.Status404NotFound, (inactiveRequester as IStatusCodeHttpResult)?.StatusCode);
 
         fixture.Destination.IsActive = false;
@@ -80,7 +80,7 @@ public sealed class CompanyMembershipRequestEndpointTests
         var inactiveDestination = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
             new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Destination.Id),
-            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+            new AllowAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
         Assert.Equal(StatusCodes.Status404NotFound, (inactiveDestination as IStatusCodeHttpResult)?.StatusCode);
     }
 
@@ -91,7 +91,7 @@ public sealed class CompanyMembershipRequestEndpointTests
         var result = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
             new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Destination.Id),
-            new RejectAntiforgery(), fixture.Database, TimeProvider.System, default);
+            new RejectAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
 
         Assert.Equal(StatusCodes.Status400BadRequest, (result as IStatusCodeHttpResult)?.StatusCode);
         Assert.Empty(await fixture.Database.CompanyMembershipRequests.ToListAsync());
@@ -374,7 +374,7 @@ public sealed class CompanyMembershipRequestEndpointTests
         var created = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
             new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Destination.Id),
-            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+            new AllowAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
         Assert.Equal(StatusCodes.Status201Created, (created as IStatusCodeHttpResult)?.StatusCode);
         var request = await fixture.Database.CompanyMembershipRequests.SingleAsync();
 
@@ -415,7 +415,7 @@ public sealed class CompanyMembershipRequestEndpointTests
         var newRequest = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
             new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Destination.Id),
-            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+            new AllowAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
         Assert.Equal(StatusCodes.Status201Created, (newRequest as IStatusCodeHttpResult)?.StatusCode);
     }
 
@@ -485,7 +485,7 @@ public sealed class CompanyMembershipRequestEndpointTests
 
         var result = await Server.Api.CompanyMembershipRequestEndpoints.GetDestinationsAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
-            fixture.Database, fixture.Destination.Name, page: 1, pageSize: 25);
+            fixture.Database, fixture.Access, fixture.Destination.Name, page: 1, pageSize: 25);
 
         var response = Assert.IsType<Ok<Server.Api.MembershipDestinationListResponse>>(result).Value!;
         var item = Assert.Single(response.Items);
@@ -494,22 +494,22 @@ public sealed class CompanyMembershipRequestEndpointTests
 
         var pendingSearch = await Server.Api.CompanyMembershipRequestEndpoints.GetDestinationsAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
-            fixture.Database, pendingCompany.Name);
+            fixture.Database, fixture.Access, pendingCompany.Name);
         Assert.Empty(Assert.IsType<Ok<Server.Api.MembershipDestinationListResponse>>(pendingSearch).Value!.Items);
 
         var existingMembershipSearch = await Server.Api.CompanyMembershipRequestEndpoints.GetDestinationsAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
-            fixture.Database, existingMemberCompany.Name);
+            fixture.Database, fixture.Access, existingMemberCompany.Name);
         Assert.Empty(Assert.IsType<Ok<Server.Api.MembershipDestinationListResponse>>(existingMembershipSearch).Value!.Items);
 
         var prefixSearch = await Server.Api.CompanyMembershipRequestEndpoints.GetDestinationsAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
-            fixture.Database, "شرکت");
+            fixture.Database, fixture.Access, "شرکت");
         Assert.Empty(Assert.IsType<Ok<Server.Api.MembershipDestinationListResponse>>(prefixSearch).Value!.Items);
 
         var invalidSearch = await Server.Api.CompanyMembershipRequestEndpoints.GetDestinationsAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
-            fixture.Database, "شـ");
+            fixture.Database, fixture.Access, "شـ");
         Assert.Equal(StatusCodes.Status400BadRequest, (invalidSearch as IStatusCodeHttpResult)?.StatusCode);
     }
 
@@ -529,7 +529,7 @@ public sealed class CompanyMembershipRequestEndpointTests
         var result = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
             new Server.Api.CreateCompanyMembershipRequestRequest(foreignCompany.Id),
-            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+            new AllowAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
 
         Assert.Equal(StatusCodes.Status404NotFound, (result as IStatusCodeHttpResult)?.StatusCode);
         Assert.Empty(await fixture.Database.CompanyMembershipRequests.ToListAsync());
