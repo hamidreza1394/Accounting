@@ -2163,3 +2163,12 @@
 - ریسک ثبت‌شده: نبود concurrency token روی CompanyRole/UserCompanyMembership (رفع نیازمند Migration و تأیید).
 - تست محلی: ۲۶ تست مرتبط موفق؛ دو تست SQL Server محلی اجرا نشد (Docker نبود) و باید در CI سبز شوند. هیچ Migration، Schema یا UI تغییر نکرد.
 - handoff: `docs/handoffs/ISSUE-444-role-members-api.md`.
+
+
+## 2026-11-03 — Issue #483: E2E مثبت مدیریت نقش با مدیر نصب و SQL Server
+
+- یک حساب مدیر نصب اختصاصی برای E2E ایجاد شد؛ حساب‌های عادی Alice/Bob تغییر نقش نمی‌گیرند و حساب Infrastructure Master نیز برای احراز مدیر API استفاده نمی‌شود.
+- نقش سراسری `Admin` در دیتابیس آزمون ایجاد و فقط به کاربر E2E اختصاص داده می‌شود؛ رمز تصادفی در فایل `.e2e-state.json` نادیده‌گرفته‌شده باقی می‌ماند.
+- سناریوی Playwright روی سرور Production منتشرشده و SQL Server واقعی، خواندن کاتالوگ و نقش‌ها، رد POST بدون Anti-forgery، ایجاد نقش با مجوز catalog موجود، بازخوانی، تغییر مجوزها، رد role ID شرکت دیگر با 404 و غیرفعال‌سازی نقش را پوشش می‌دهد.
+- هیچ کد Production، API، UI، Schema یا Migration تغییر نکرده است. تست محلی در این محیط اجرا نشد (GitHub clone به‌علت DNS و .NET SDK در دسترس نبود)؛ اجرای E2E در CI مرجع Verified شدن است.
+- handoff: `docs/handoffs/ISSUE-483-role-admin-positive-e2e.md`.
