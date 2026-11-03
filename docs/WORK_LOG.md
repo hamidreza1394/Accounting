@@ -2264,3 +2264,11 @@
 - فیلترهای تاریخ به `JalaliDateField` منتقل شد؛ فیلتر کاربر با `UserPicker` (combobox دسترس‌پذیر روی `GET /admin/users?search=`) و فیلتر شرکت از شرکت‌های عضویت کاربر + کلیک روی جدول. بدون داده ساختگی.
 - حین تست دو باگ واقعی رفع شد: ماه پیش‌فرض تقویم و گم‌شدن مقدار تاریخ از نام دسترس‌پذیر دکمه.
 - مسدود به API: مرتب‌سازی، فهرست همهٔ شرکت‌های نصب، فهرست انواع رویداد؛ قرارداد در handoff. handoff: `docs/handoffs/ISSUE-444-security-audit-complete.md`.
+
+## 2026-11-03 — Issue #500: EF UTC Kind برای ویژگی‌های *Utc
+- در EF فقط DateTime و DateTime?هایی که نام property آن‌ها به Utc ختم می‌شود با ValueConverter به Kind=Utc علامت‌گذاری می‌شوند؛ Ticks و مقدار ذخیره‌شده تغییر نمی‌کند.
+- InsertDateTime، UpdateDateTime و LastLoginDateTime عمداً خارج از این قاعده‌اند؛ هیچ مبدل سراسری یا Migration داده‌ای اجرا نشد.
+- تست SQL Server برای JSON دارای Z، ویژگی nullable و عدم تغییر رفتار InsertDateTime قدیمی اضافه شد.
+- تست UtcWireFormatSqlServerTests در PR #501 متعلق به شاخه Claude است و برای جلوگیری از تداخل ویرایش نشد؛ پس از ادغام این Backend باید انتظار آن تست به Utc/Z تغییر کند.
+- CI، SQL Server واقعی و بررسی has-pending-model-changes هنوز باید روی SHA نهایی تأیید شوند.
+- handoff: docs/handoffs/ISSUE-500-utc-kind-value-converter.md.
