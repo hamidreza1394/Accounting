@@ -2083,3 +2083,13 @@
 
 
 - Regression test `UserAdministrationEndpointTests.ListUsers_RequiresAnActiveInstallationAdministratorFromTheDatabase` به پاسخ JSON دارای فیلد error با HTTP 403 به‌روزرسانی شد تا با helper صریح 403 در head فعلی هم‌خوان باشد.
+
+
+## 2026-11-03 — Issue #467: پوشش تست خروج موفق در سوابق ورود/خروج
+
+- ممیزی `GetMyLoginHistoryAsync` نشان داد `LogoutSucceeded` از قبل در allowlist رویدادهای تاریخچه وجود دارد؛ API به تغییر نیاز نداشت.
+- شکاف واقعی فقط تست بود: تست self-service فقط LoginSucceeded/LoginFailed را درج می‌کرد و LogoutSucceeded را صریحاً assert نمی‌کرد.
+- رویداد LogoutSucceeded با timestamp جدیدتر به تست افزوده شد؛ انتظار سه رویداد، allowlist و ترتیب نزولی بررسی می‌شوند. RoleChanged و رویداد کاربر دیگر همچنان خارج از پاسخ می‌مانند.
+- هیچ API، schema، Migration یا Frontend تغییر نکرد.
+- اجرای dotnet test و build در محیط ChatGPT انجام نشد؛ نتیجهٔ CI همین PR باید بررسی شود.
+- handoff: `docs/handoffs/ISSUE-467-login-history-logout-test.md`.
