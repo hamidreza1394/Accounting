@@ -198,10 +198,11 @@ HAND_WRITTEN_SQL: dict[str, tuple[list[str], list[str]]] = {
     "20261103100000": (
         [
             "ALTER TABLE [CompanyMembershipRequests] ADD CONSTRAINT [CK_CompanyMembershipRequests_Status] CHECK ([Status] IN ('Pending', 'Approved', 'Rejected'));",
-            "ALTER TABLE [CompanyMembershipRequests] ADD CONSTRAINT [CK_CompanyMembershipRequests_DecisionState] CHECK (([Status] = 'Pending' AND [DecidedByUserId] IS NULL AND [DecidedAtUtc] IS NULL AND [ApprovedRoleId] IS NULL) OR ([Status] = 'Approved' AND [DecidedByUserId] IS NOT NULL AND [DecidedAtUtc] IS NOT NULL AND [ApprovedRoleId] IS NOT NULL) OR ([Status] = 'Rejected' AND [DecidedByUserId] IS NOT NULL AND [DecidedAtUtc] IS NOT NULL AND [ApprovedRoleId] IS NULL));",
+            "ALTER TABLE [CompanyMembershipRequests] ADD CONSTRAINT [CK_CompanyMembershipRequests_DecisionState] CHECK (([Status] = 'Pending' AND [DecidedByUserId] IS NULL AND [DecidedAtUtc] IS NULL AND [ApprovedRoleId] IS NULL) OR ([Status] = 'Approved' AND [DecidedByUserId] IS NOT NULL AND [DecidedByUserId] <> [UserId] AND [DecidedAtUtc] IS NOT NULL AND [ApprovedRoleId] IS NOT NULL) OR ([Status] = 'Rejected' AND [DecidedByUserId] IS NOT NULL AND [DecidedAtUtc] IS NOT NULL AND [ApprovedRoleId] IS NULL));",
             "IF NOT EXISTS (SELECT 1 FROM [PermissionDefinitions] WHERE [Code] = 'users.membership.approve') INSERT INTO [PermissionDefinitions] ([Id], [Code], [Name], [Description], [Ordering], [InsertDateTime]) VALUES ('f47a2026-1103-4d00-8000-000000000001', 'users.membership.approve', N'تأیید درخواست عضویت در شرکت', N'اجازه مشاهده و تعیین تکلیف درخواست عضویت در شرکت مقصد.', 21000, SYSDATETIME());",
         ],
         [
+            "IF EXISTS (SELECT 1 FROM [CompanyMembershipRequests]) THROW 51000, 'Rollback blocked: export or retain membership request history before dropping CompanyMembershipRequests.', 1;",
             "DELETE FROM [PermissionDefinitions] WHERE [Id] = 'f47a2026-1103-4d00-8000-000000000001' AND NOT EXISTS (SELECT 1 FROM [CompanyRolePermissions] WHERE [CompanyRolePermissions].[PermissionId] = [PermissionDefinitions].[Id]);",
         ],
     ),
