@@ -33,6 +33,10 @@ function stubAll(isAdministrator: boolean) {
       'GET /api/v1/admin/companies/a/roles/new': () => json({}, 404),
       'GET /api/v1/admin/permission-catalog': () => json(catalogItems),
       'GET /api/v1/admin/permission-templates': () => json(templates),
+      'GET /api/v1/admin/companies/a/membership-requests/pending': () =>
+        json({ items: [{ id: 'req-1', userId: 'u1', requesterDisplayName: 'متقاضی نمونه', username: 'applicant', requestedAtUtc: '2026-11-01T08:00:00Z', isRequesterActive: true }], page: 1, pageSize: 20, totalCount: 1 }),
+      'GET /api/v1/me/membership-requests': () =>
+        json({ items: [{ id: 'r1', destinationCompanyId: 'b', destinationCompanyName: 'شرکت مقصد نمونه', status: 'Pending', requestedAtUtc: '2026-11-01T08:00:00Z', decidedAtUtc: null, decisionReason: null, approvedRoleCode: null, approvedRoleName: null }], page: 1, pageSize: 20, totalCount: 1 }),
     };
     return Promise.resolve(routes[key]?.() ?? new Response(null, { status: 404 }));
   });
@@ -208,5 +212,32 @@ describe('App routing', () => {
       expect(fetchMock.mock.calls.some((call) => String(call[0]) === '/api/v1/companies')).toBe(false);
       view.unmount();
     }
+  });
+
+  it('reaches the membership request pages from the menu for an administrator', async () => {
+    const user = userEvent.setup();
+    stubAll(true);
+    render(<App navigate={vi.fn()} />);
+    await screen.findByRole('heading', { name: dashboardHeading });
+    const nav = screen.getByRole('navigation', { name: 'منوی اصلی' });
+
+    await user.click(within(nav).getByRole('link', { name: 'درخواست‌های عضویت' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'درخواست‌های عضویت در انتظار تأیید' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/app/admin/membership-requests');
+    expect(await screen.findByText('متقاضی نمونه')).toBeInTheDocument();
+    expect(within(nav).getByRole('link', { name: 'درخواست‌های عضویت' })).toHaveAttribute('aria-current', 'page');
+
+    await user.click(within(nav).getByRole('link', { name: 'درخواست‌های عضویت من' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'درخواست‌های عضویت من' })).toBeInTheDocument();
+    expect(await screen.findByRole('cell', { name: 'شرکت مقصد نمونه' })).toBeInTheDocument();
+  });
+
+  it('lets a non-administrator open their own membership requests by deep link, with no admin menu', async () => {
+    window.history.replaceState(null, '', '/app/account/membership-requests');
+    stubAll(false);
+    render(<App navigate={vi.fn()} />);
+    expect(await screen.findByRole('heading', { level: 1, name: 'درخواست‌های عضویت من' })).toBeInTheDocument();
+    const nav = screen.getByRole('navigation', { name: 'منوی اصلی' });
+    expect(within(nav).queryByRole('link', { name: 'درخواست‌های عضویت' })).toBeNull();
   });
 });
