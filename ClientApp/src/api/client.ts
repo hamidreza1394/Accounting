@@ -4,6 +4,9 @@ import {
   parseLoginHistory,
   parseAdminUserList,
   parseAdminUserDetails,
+  parseCompanyRoles,
+  parsePermissionCatalog,
+  parseCompanyRoleTemplates,
   parseCompanies,
   parseCompanyOverview,
   parseSelectedContextResponse,
@@ -15,6 +18,11 @@ import {
   type AdminUserDetails,
   type CreateAdminUserRequest,
   type UpdateAdminUserRequest,
+  type CompanyRoleSummary,
+  type PermissionCatalogItem,
+  type CompanyRoleTemplate,
+  type CreateCompanyRoleRequest,
+  type UpdateCompanyRoleRequest,
   type ChangeMyPasswordRequest,
   type CompanyOverview,
   type CompanySummary,
@@ -179,6 +187,32 @@ export async function createAdminUser(request: CreateAdminUserRequest): Promise<
 export async function updateAdminUser(userId: string, request: UpdateAdminUserRequest): Promise<void> {
   await sendJson('PUT', `/admin/users/${encodeURIComponent(userId)}`, request);
 }
+ 
+export async function getCompanyRoles(companyId: string, signal?: AbortSignal): Promise<CompanyRoleSummary[]> {
+  return parseCompanyRoles(await getJson(`/admin/companies/${encodeURIComponent(companyId)}/roles`, signal));
+}
+
+export async function getPermissionCatalog(signal?: AbortSignal): Promise<PermissionCatalogItem[]> {
+  return parsePermissionCatalog(await getJson('/admin/permission-catalog', signal));
+}
+
+export async function getCompanyRoleTemplates(signal?: AbortSignal): Promise<CompanyRoleTemplate[]> {
+  return parseCompanyRoleTemplates(await getJson('/admin/permission-templates', signal));
+}
+
+export async function createCompanyRole(companyId: string, request: CreateCompanyRoleRequest): Promise<string> {
+  const response = await sendJson('POST', `/admin/companies/${encodeURIComponent(companyId)}/roles`, request);
+  const value: unknown = await response.json();
+  if (typeof value !== 'object' || value === null || !('id' in value) || typeof value.id !== 'string') {
+    throw new ApiError(500, 'پاسخ ایجاد گروه دسترسی معتبر نیست.');
+  }
+  return value.id;
+}
+
+export async function updateCompanyRole(companyId: string, roleId: string, request: UpdateCompanyRoleRequest): Promise<void> {
+  await sendJson('PUT', `/admin/companies/${encodeURIComponent(companyId)}/roles/${encodeURIComponent(roleId)}`, request);
+}
+
 
 
 export async function changeMyPassword(request: ChangeMyPasswordRequest): Promise<void> {
