@@ -2205,3 +2205,36 @@
 - علت قطعی: تست `AppRouting` بلافاصله پس از مشاهدهٔ DOM صفحهٔ Forbidden، عنوان سند را synchronous assert می‌کرد؛ اما `RouteView` عنوان را در `useEffect` به‌روزرسانی می‌کند. در نتیجه race زمان‌بندی باعث باقی ماندن عنوان صفحهٔ قبلی شد.
 - assertion به `waitFor` تغییر کرد تا قرارداد واقعی UI (عنوان پس از effect) را بدون تغییر رفتار Production بسنجد.
 - CI اولیه: `.NET CI` ناموفق فقط به‌علت همین assertion؛ `e2e`, `build-and-test`, `client` و `publish-windows` موفق، `Semgrep` موفق. اجرای مجدد CI برای تأیید fix لازم است.
+
+## 2026-11-03 — Issue #492: تست مرز امنیتی Customer Boundary Operator API
+
+- برای دو endpoint عملیاتی `CustomerBoundaryEndpoints` تست‌های regression اضافه شد: فقط AccountKind=Infrastructure مجاز است؛ کاربر شرکتی باید 404 بگیرد.
+- سناریوهای diagnostics allowlist، رد پیش از antiforgery برای کاربر شرکتی، رد و Audit درخواست فاقد antiforgery، تخصیص موفق و Audit، و جلوگیری از انتقال شرکت به boundary دیگر (409) پوشش داده شدند.
+- هیچ کد Production، قرارداد API، Schema، Migration یا UI تغییر نکرد.
+- تست محلی در این محیط اجرا نشد؛ CI روی PR معیار Verified شدن است.
+- handoff: `docs/handoffs/ISSUE-492-customer-boundary-authz-tests.md`.
+
+## 2026-11-03 — PR #495: اصلاح تست typed Results و CI
+
+- CI اولیه خطای کامپایل نشان داد unionهای `Results<...>` مستقیماً به `IStatusCodeHttpResult` cast نمی‌شوند. تست‌ها اصلاح شدند تا `IResult.ExecuteAsync` را روی `DefaultHttpContext` اجرا و status واقعی HTTP را بررسی کنند.
+- تست diagnostics نیز پاسخ JSON واقعی endpoint را deserialize می‌کند و allowlist خروجی را از نظر عدم افشای شناسه/نام شرکت و شناسه ملی می‌سنجد.
+- CI اولیه در `build-and-test` فقط به علت cast نامعتبر شکست خورد؛ اصلاح در شاخه PR ثبت شده و اجرای مجدد CI برای تأیید باقی است.
+
+## 2026-11-03 — Issue #494: فهرست کاربران با scope شرکت و users.list
+
+- permission code پایدار users.list با migration افزایشی و idempotent به PermissionDefinitions افزوده شد؛ هیچ Role یا کاربری به‌صورت خودکار این مجوز را دریافت نمی‌کند.
+- GET /api/v1/companies/{companyId}/users با CompanyAccessService و بررسی membership فعال/role فعال/Company فعال و permission users.list در همان شرکت اضافه شد.
+- فقط UserCompanyMembershipهای همان Tenant خوانده می‌شوند؛ درخواست‌های Pending در جدول جداگانه هستند و در directory دیده نمی‌شوند. membership و user غیرفعال با status نمایش داده می‌شوند ولی دسترسی ایجاد نمی‌کنند.
+- پاسخ حداقلی شامل username/name، وضعیت user/membership/role و role display است؛ email، phone، password/hash، login history، IP، DetailsJson و permission list حذف شده‌اند. Search و pagination سمت سرور و no-store است.
+- تست‌های unit و SQL Server integration اضافه شدند؛ اجرای محلی در این محیط ممکن نیست (GitHub DNS و .NET SDK در دسترس نیست). CI مرجع تأیید است.
+- بدون UI/ClientApp؛ Claude می‌تواند endpoint را مصرف کند. handoff: docs/handoffs/ISSUE-494-company-user-directory-api.md.
+
+
+## 2026-11-03 — Issue #494: فهرست کاربران با scope شرکت و users.list
+
+- permission code پایدار users.list با migration افزایشی و idempotent به PermissionDefinitions افزوده شد؛ هیچ Role یا کاربری به‌صورت خودکار این مجوز را دریافت نمی‌کند.
+- GET /api/v1/companies/{companyId}/users با CompanyAccessService و بررسی membership فعال/role فعال/Company فعال و permission users.list در همان شرکت اضافه شد.
+- فقط UserCompanyMembershipهای همان Tenant خوانده می‌شوند؛ درخواست‌های Pending در جدول جداگانه هستند و در directory دیده نمی‌شوند. membership و user غیرفعال با status نمایش داده می‌شوند ولی دسترسی ایجاد نمی‌کنند.
+- پاسخ حداقلی شامل username/name، وضعیت user/membership/role و role display است؛ email، phone، password/hash، login history، IP، DetailsJson و permission list حذف شده‌اند. Search و pagination سمت سرور و no-store است.
+- تست‌های unit و SQL Server integration اضافه شدند؛ اجرای محلی در این محیط ممکن نیست (GitHub DNS و .NET SDK در دسترس نیست). CI مرجع تأیید است.
+- بدون UI/ClientApp؛ Claude می‌تواند endpoint را مصرف کند. handoff: docs/handoffs/ISSUE-494-company-user-directory-api.md.

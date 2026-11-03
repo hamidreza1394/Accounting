@@ -362,3 +362,13 @@ runs Down and Up again. **Not applied to any customer or production database.**
 A data-only migration still belongs to the versioned EF migration chain. For the initial Trade permission catalog, `20261031140000_SeedTradePermissionCatalog` adds rows to the existing `PermissionDefinitions` table without changing the EF model or creating a new table. Its `Up` and `Down` SQL are pinned in `scripts/generate_migrations.py` under `HAND_WRITTEN_SQL`; `generate_migrations.py --check` rejects unreviewed SQL or a mismatch in statement order. `verify_migration_model.py` verifies that the migration has no unreviewed schema operations and that its designer matches the current model.
 
 The migration is additive and idempotent by permission Code. It never overwrites an existing catalog row or grants permissions to roles. `Down` deletes only the fixed IDs inserted by this migration and only when no `CompanyRolePermissions` row references them. This is a rollback safeguard, not permission to apply or roll back the migration on a customer database without an independently reviewed deployment plan.
+
+
+### Data-only permission catalog migrations
+
+A migration that only adds a PermissionDefinitions row does not change the EF model. Keep the last EF-generated designer and DatabaseContextModelSnapshot unchanged, advance DELTA_MIGRATION_* and CURRENT_MIGRATION_*, and pin the exact idempotent Up/Down SQL in HAND_WRITTEN_SQL. The migration class is handwritten; generate_migrations.py checks its SQL, while verify_migration_model.py and dotnet ef migrations has-pending-model-changes verify the unchanged target model. Down must delete only the exact seeded ID/code and only when no CompanyRolePermissions row references it.
+
+
+### Data-only permission catalog migrations
+
+A migration that only adds a PermissionDefinitions row does not change the EF model. Keep the last EF-generated designer and DatabaseContextModelSnapshot unchanged, advance DELTA_MIGRATION_* and CURRENT_MIGRATION_*, and pin the exact idempotent Up/Down SQL in HAND_WRITTEN_SQL. The migration class is handwritten; generate_migrations.py checks its SQL, while verify_migration_model.py and dotnet ef migrations has-pending-model-changes verify the unchanged target model. Down must delete only the exact seeded ID/code and only when no CompanyRolePermissions row references it.
