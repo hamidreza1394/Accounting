@@ -24,9 +24,11 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { SelectedContext, Session } from '../api/types';
+import { Alert } from './ui/Alert';
 import { FaranouLogo } from './ui/FaranouLogo';
 import { MyAccountPanel } from './MyAccountPanel';
-import { UserManagementPage } from './UserManagementPage';
+import type { Permission } from '../lib/permissions';
+import { Link, RouterProvider, useLocation, type Route } from '../lib/router';
 
 type AppShellProps = {
   session: Session;
@@ -35,6 +37,10 @@ type AppShellProps = {
   onLogout: () => Promise<void>;
   onPasswordChanged?: () => void;
   onUnauthenticated?: (error: unknown) => boolean;
+  /** Routes of the app; `children` is normally a `<RouteView />` that renders them. */
+  routes?: readonly Route[];
+  /** UI permission hint for guarded routes; the server decides. */
+  canAccess?: (permission: Permission) => boolean;
   children: ReactNode;
 };
 
@@ -57,7 +63,8 @@ type NavLeaf = {
   label: string;
   icon: LucideIcon;
   tone: Tone;
-  active?: boolean;
+  /** App-relative route; items without one stay disabled placeholders. */
+  to?: string;
 };
 
 type NavGroup = {
@@ -72,7 +79,7 @@ type NavEntry = NavLeaf | NavGroup | { kind: 'divider' };
 
 /** Presentation-only navigation. Unfinished routes stay disabled until real paths and server permissions exist. */
 const navigation: NavEntry[] = [
-  { kind: 'item', label: 'داشبورد', icon: LayoutDashboard, tone: 'sky', active: true },
+  { kind: 'item', label: 'داشبورد', icon: LayoutDashboard, tone: 'sky', to: '/' },
   { kind: 'item', label: 'حسابداری', icon: BookOpen, tone: 'emerald' },
   { kind: 'item', label: 'خزانه‌داری', icon: Wallet, tone: 'amber' },
   { kind: 'item', label: 'فروش', icon: ShoppingCart, tone: 'rose' },
@@ -131,11 +138,11 @@ function DisabledItem({ label, icon, tone, nested }: { label: string; icon: Luci
            touch users (no hover) and conveys nothing on its own to sighted users who
            aren't using a screen reader. Keep a compact-but-visible text badge instead,
            smaller than the top-level one to fit the narrower nested row. */
-        <span className="ms-auto shrink-0 rounded-md border border-white/15 bg-white/5 px-1 py-0.5 text-[8px] font-semibold text-sky-100/70">
+        <span className="ms-auto shrink-0 rounded-md border border-white/15 bg-white/5 px-1 py-0.5 text-[8px] font-semibold text-on-navy/70">
           به‌زودی
         </span>
       ) : (
-        <span className="ms-auto shrink-0 rounded-md border border-white/15 bg-white/5 px-1.5 py-0.5 text-[9px] font-semibold text-sky-100/70">
+        <span className="ms-auto shrink-0 rounded-md border border-white/15 bg-white/5 px-1.5 py-0.5 text-[9px] font-semibold text-on-navy/70">
           به‌زودی
         </span>
       )}
@@ -147,14 +154,30 @@ function DisabledItem({ label, icon, tone, nested }: { label: string; icon: Luci
 const ignoreUnauthenticated = (_error: unknown) => false;
 const noop = () => undefined;
 
-export function AppShell({ session, context, onChangeContext, onLogout, onPasswordChanged = noop, onUnauthenticated = ignoreUnauthenticated, children }: AppShellProps) {
+const noRoutes: readonly Route[] = [];
+
+/** The shell owns the router, so the sidebar links and the page area (`children`) share one location. */
+export function AppShell({ routes = noRoutes, canAccess, ...props }: AppShellProps) {
+  return (
+    <RouterProvider routes={routes} {...(canAccess ? { canAccess } : {})}>
+      <AppShellFrame {...props} />
+    </RouterProvider>
+  );
+}
+
+type AppShellFrameProps = Omit<AppShellProps, 'routes' | 'canAccess'>;
+
+function AppShellFrame({ session, context, onChangeContext, onLogout, onPasswordChanged = noop, onUnauthenticated = ignoreUnauthenticated, children }: AppShellFrameProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const accountTriggerRef = useRef<HTMLButtonElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
   const [settingsOpen, setSettingsOpen] = useState(true);
-  const [activeAdminSection, setActiveAdminSection] = useState<'dashboard' | 'users'>('dashboard');
+  const { pathname } = useLocation();
+  const dashboardActive = pathname === '/';
+  const usersActive = pathname === '/admin/users' || pathname.startsWith('/admin/users/');
   const readOnly = context.fiscalPeriod.accessMode === 'readOnly';
 
   async function handleLogout() {
@@ -170,6 +193,17 @@ export function AppShell({ session, context, onChangeContext, onLogout, onPasswo
 
   return (
     <div dir="rtl" className="faranou-workspace min-h-screen text-ink">
+      <a
+        href="#main-content"
+        onClick={(event) => {
+          // The router is pathname based: move focus ourselves instead of changing the URL hash.
+          event.preventDefault();
+          mainRef.current?.focus();
+        }}
+        className="sr-only focus:not-sr-only focus:fixed focus:start-4 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-navy focus:shadow-lg"
+      >
+        پرش به محتوای اصلی
+      </a>
       <header className="faranou-topbar faranou-topbar--login-palette on-dark sticky top-0 z-40 text-white">
         <div className="faranou-header-inner">
           <div className="faranou-header-brand">
@@ -192,19 +226,19 @@ export function AppShell({ session, context, onChangeContext, onLogout, onPasswo
           <div className="faranou-header-context" aria-label="زمینه کاری جاری">
             <button type="button" onClick={onChangeContext} className="faranou-context-choice" aria-label="تغییر شرکت">
               <ChevronDown className="faranou-context-chevron" size={17} />
-              <span className="min-w-0 flex-1 text-right">
-                <span className="block text-[10px] text-blue-100/70 sm:text-[11px]">شرکت جاری</span>
+              <span className="min-w-0 flex-1 text-start">
+                <span className="block text-[10px] text-on-navy/70 sm:text-[11px]">شرکت جاری</span>
                 <strong className="block truncate text-xs sm:text-sm">{context.company.name}</strong>
               </span>
-              <Building2 className="shrink-0 text-sky-200" size={22} />
+              <Building2 className="shrink-0 text-on-navy-accent" size={22} />
             </button>
             <button type="button" onClick={onChangeContext} className="faranou-context-choice" aria-label="تغییر دوره مالی">
               <ChevronDown className="faranou-context-chevron" size={17} />
-              <span className="min-w-0 flex-1 text-right">
-                <span className="block text-[10px] text-blue-100/70 sm:text-[11px]">دوره مالی</span>
+              <span className="min-w-0 flex-1 text-start">
+                <span className="block text-[10px] text-on-navy/70 sm:text-[11px]">دوره مالی</span>
                 <strong className="block truncate text-xs sm:text-sm">{context.fiscalPeriod.title}</strong>
               </span>
-              <CalendarDays className="shrink-0 text-sky-200" size={22} />
+              <CalendarDays className="shrink-0 text-on-navy-accent" size={22} />
             </button>
             {readOnly ? <span className="faranou-readonly-chip">فقط مشاهده و گزارش‌گیری</span> : null}
           </div>
@@ -214,7 +248,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, onPasswo
               ref={accountTriggerRef}
               type="button"
               onClick={() => setAccountOpen(true)}
-              className="rounded-full focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-2 focus:ring-offset-[#102b4c]"
+              className="rounded-full focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2 focus:ring-offset-night"
               aria-label="حساب کاربری من"
               aria-haspopup="dialog"
               aria-expanded={accountOpen}
@@ -225,7 +259,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, onPasswo
             </button>
             <span className="hidden min-w-0 flex-col leading-tight sm:flex">
               <strong className="max-w-36 truncate text-sm font-bold">{session.fullName}</strong>
-              <span className="mt-1 max-w-36 truncate text-[11px] text-blue-100/75">{context.company.roleName}</span>
+              <span className="mt-1 max-w-36 truncate text-[11px] text-on-navy/75">{context.company.roleName}</span>
             </span>
             <span className="faranou-header-icon faranou-header-icon--notify" title="اعلان‌ها" aria-label="اعلان‌ها">
               <Bell size={20} />
@@ -260,7 +294,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, onPasswo
           aria-label="ناوبری فرانو"
         >
           <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4" aria-label="منوی اصلی">
-            <p className="mb-3 px-3 text-[10px] font-bold tracking-wide text-sky-200/70">منوی اصلی</p>
+            <p className="mb-3 px-3 text-[10px] font-bold tracking-wide text-on-navy-accent/70">منوی اصلی</p>
             <ul className="space-y-1">
               {navigation.map((entry, index) => {
                 if (entry.kind === 'divider') {
@@ -285,17 +319,17 @@ export function AppShell({ session, context, onChangeContext, onLogout, onPasswo
                         <span className="min-w-0 flex-1 whitespace-normal text-start leading-snug">{entry.label}</span>
                         <ChevronDown
                           size={16}
-                          className={'shrink-0 text-sky-100/70 transition-transform ' + (settingsOpen ? 'rotate-180' : '')}
+                          className={'shrink-0 text-on-navy/70 transition-transform ' + (settingsOpen ? 'rotate-180' : '')}
                           aria-hidden="true"
                         />
                       </button>
                       {settingsOpen ? (
                         <ul className="faranou-nav-sub space-y-2 ms-4 ps-2">
                           <li>
-                            <button type="button" onClick={() => { setActiveAdminSection('users'); setMobileMenuOpen(false); }} aria-current={activeAdminSection === 'users' ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-right text-[12px] transition ' + (activeAdminSection === 'users' ? 'bg-sky-500/20 text-white ring-1 ring-sky-300/30' : 'text-sky-100/80 hover:bg-white/10 hover:text-white')}>
+                            <Link to="/admin/users" onClick={() => setMobileMenuOpen(false)} aria-current={usersActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (usersActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
                               <NavIcon icon={Users} tone="sky" size="sm" />
                               <span className="min-w-0 flex-1">مدیریت کاربران</span>
-                            </button>
+                            </Link>
                           </li>
                           <li><DisabledItem label="ساختار سازمانی و سمت‌ها" icon={Building2} tone="blue" nested /></li>
                           <li><DisabledItem label="گروه‌های دسترسی" icon={ShieldCheck} tone="violet" nested /></li>
@@ -312,18 +346,22 @@ export function AppShell({ session, context, onChangeContext, onLogout, onPasswo
                   return null;
                 }
 
-                if (entry.active) {
+                if (entry.to) {
+                  const active = dashboardActive;
                   return (
                     <li key={entry.label}>
-                      <a
-                        href="/app/"
-                        aria-current="page"
+                      <Link
+                        to={entry.to}
+                        aria-current={active ? 'page' : undefined}
                         onClick={() => setMobileMenuOpen(false)}
-                        className="faranou-nav-active flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-[13px] font-semibold"
+                        className={
+                          'flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-[13px] font-semibold ' +
+                          (active ? 'faranou-nav-active' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')
+                        }
                       >
                         <NavIcon icon={entry.icon} tone={entry.tone} />
                         <span className="min-w-0 flex-1 whitespace-normal leading-snug">{entry.label}</span>
-                      </a>
+                      </Link>
                     </li>
                   );
                 }
@@ -337,23 +375,23 @@ export function AppShell({ session, context, onChangeContext, onLogout, onPasswo
             </ul>
           </nav>
           <div className="faranou-sidebar-footer">
-            <div className="flex items-center gap-2 text-xs font-semibold text-emerald-200">
+            <div className="flex items-center gap-2 text-xs font-semibold text-on-navy-ok">
               <ShieldCheck size={17} />
               محیط کاری امن
             </div>
-            <p className="mt-1 text-[10px] leading-5 text-sky-100/65">
+            <p className="mt-1 text-[10px] leading-5 text-on-navy/65">
               اطلاعات این محیط بر اساس دسترسی معتبر شما نمایش داده می‌شود.
             </p>
           </div>
         </aside>
 
-        <main className="faranou-main-content min-w-0 flex-1">
+        <main id="main-content" ref={mainRef} tabIndex={-1} className="faranou-main-content min-w-0 flex-1 outline-none">
           {logoutError ? (
-            <p role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-              {logoutError}
-            </p>
+            <div className="mb-4">
+              <Alert tone="error">{logoutError}</Alert>
+            </div>
           ) : null}
-          {activeAdminSection === 'users' ? <UserManagementPage onUnauthenticated={onUnauthenticated} /> : children}
+          {children}
         </main>
       </div>
       <MyAccountPanel

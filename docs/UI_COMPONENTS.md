@@ -101,6 +101,13 @@
    - `check:offline` یک اسکن ایستا روی خروجی build است؛ آدرسی که در زمان اجرا ساخته شود را نمی‌بیند (جزئیات در `docs/TESTING.md`). قبولی آن شاهد است، نه تضمین.
    - `Server/wwwroot/app` خروجی build است و در Git نگهداری نمی‌شود. قطع اینترنت اجرای نسخهٔ build/publish‌شده را مختل نمی‌کند، ولی ساخت تازه با `npm ci` به رجیستری npm یا یک کش/آینهٔ محلی نیاز دارد. ساخت کاملاً آفلاین (آینهٔ npm یا ذخیرهٔ tarballها) هنوز تصمیم نشده است: `NeedsApproval` / `NotImplemented`.
 
+## کامپوننت‌های مشترک مدیریتی و روتر درون‌پروژه‌ای (Issue #461)
+
+- کامپوننت‌های `ClientApp/src/components/ui/` که سورس‌محور، RTL و بدون وابستگی جدید هستند: `FormField` (همراه `Input`، `Select`، `Textarea`)، `FormSection`، `ConfirmDialog` (محدودسازی focus، Escape، بازگشت focus، جلوگیری از ارسال دوباره)، `Tabs` (WAI-ARIA، جهت فلش‌ها در RTL)، `StatusBadge` (آیکون و متن؛ بر پایهٔ `Badge`)، `DataTable` (نمایشی و سرور-محور: مرتب‌سازی، اسکلت بارگذاری، حالت خالی/خطا، صفحه‌بندی) و `Breadcrumb`. حالت‌های بارگذاری، خالی و خطا از `Feedback.tsx` استفاده می‌کنند.
+- تاریخ‌ها فقط با `src/lib/format.ts` (`formatDate`/`formatDateTime`، روی `lib/date.ts`) نمایش داده می‌شوند.
+- روتر: `src/lib/router.tsx` یک روتر کوچک مبتنی بر History API زیر `/app/` است (`RouterProvider`، `Link`، `useNavigate`، `useLocation`، `useParams`، مسیرهای lazy). دلیل: جلوگیری از افزودن وابستگی بدون ADR و تأیید مالک (D-011). اگر نیازها رشد کرد (layout تو در تو، loader، حالت جست‌وجو در URL) این تصمیم بازبینی شود.
+- `src/lib/permissions.ts` فقط تلمیح UI است و مرجع تصمیم سرور است (D-064)؛ با وجود `GET /me/permissions` به فهرست سرور تغییر می‌کند.
+
 ## منابع رسمی
 
 - [نصب برای Vite و پروژهٔ موجود](https://ui.shadcn.com/docs/installation/vite)
@@ -108,3 +115,31 @@
 - [راهنمای Tailwind v4](https://ui.shadcn.com/docs/tailwind-v4)
 
 نسخهٔ CLI در `package.json` پین شده تا تولید کامپوننت‌ها در توسعه تکرارپذیر باشد. برای به‌روزرسانی، نسخه را آگاهانه تغییر دهید و CI را اجرا کنید.
+
+### مسیریابی و صفحات مدیریت کاربران (Issue #462)
+
+- `RouterProvider` در `AppShell` قرار دارد و مسیرهای `/app/admin/users` و `/app/admin/users/:id` از `AppRoutes.tsx` به‌صورت lazy بارگذاری می‌شوند؛ دسترسی مسیر با `can(session, 'admin.users.view')` فقط راهنمای UI است و سرور مرجع نهایی است (D-064).
+- `useSearchParams` در `lib/router.tsx`: وضعیت فهرست (`q`, `status`, `sort`, `dir`, `page`, `pageSize`) در URL نگه داشته می‌شود؛ مقادیر پیش‌فرض حذف و مقادیر نامعتبر به پیش‌فرض برمی‌گردند. جست‌وجو (debounce) با replace و سایر تغییرها با push ثبت می‌شوند.
+- پس از تغییر مسیر، Focus به `h1` صفحه منتقل می‌شود؛ `useDocumentTitle` عنوان تب را برای صفحات دارای داده پویا تنظیم می‌کند.
+- `scripts/offline-check.mjs` اکنون chunkهای lazy را درست resolve می‌کند (آزمون رگرسیون دارد).
+
+### حساب کاربری من و AuditTimeline (Issue #463)
+
+- `ui/AuditTimeline`: فهرست رویدادهای زمانی با وضعیت «آیکون + متن» (هرگز فقط رنگ)، `<time dateTime>` با تاریخ جلالی و IP با `dir=ltr`؛ props: `label`، `events` (id, label, tone, icon, occurredAt, detail)، `detailLabel`، `detailFallback`.
+- `account/PasswordInput`: ورودی رمز با دکمه نمایش/پنهان (`aria-pressed`) و `dir=ltr`؛ الگوی نگاشت `fieldErrors` سرور به فیلدها (حذف پیشوند کلید و تطبیق بدون حساسیت به حروف) در `SecurityTab`.
+- در حین ارسال تغییر رمز، تب‌های دیگر قفل می‌شوند تا ارسال دوباره ممکن نباشد.
+
+### فرم‌های ایجاد و ویرایش کاربر (Issue #462، بخش ۲)
+
+- `admin/users/UserFormFields.tsx` (`UserForm`) فرم مشترک ایجاد و ویرایش است؛ اعتبارسنجی در `userFormValidation.ts` و با محدودیت‌های سرور (`Constants/*`) هم‌خوان است. بدنه درخواست‌ها فیلد‌به‌فیلد ساخته می‌شود (بدون spread) تا فیلد اضافه ارسال نشود.
+- مسیرها: `/admin/users/new` باید پیش از `/admin/users/:id` باشد. رمز فقط در state فرم نگه داشته می‌شود؛ `userFlash.ts` فقط `{userId, kind}` را برای پیام موفقیت یک‌بار مصرف و با TTL ۳۰ ثانیه نگه می‌دارد.
+- نگهبان تغییرات ذخیره‌نشده فقط Cancel و `beforeunload` را پوشش می‌دهد؛ مسدودکننده ناوبری router کار بعدی است.
+- `PasswordInput` (در ایجاد کاربر) و `account/PasswordInput` (حساب کاربری) تکراری‌اند و باید در A5 به یک کامپوننت `ui/PasswordInput` ادغام شوند.
+
+### پاک‌سازی ClientApp و استانداردهای تکمیلی (Issue #464)
+
+- رنگ‌ها: در کامپوننت‌ها hex سخت‌کد و کلاس‌های خام Tailwind نمانده است؛ توکن‌های جدید در `@theme` فایل `styles/index.css` تعریف شده‌اند (جدول تغییر تن‌ها در handoff).
+- RTL: متغیر `--inline-sign` (از `html[dir=rtl]`) برای transformها و سایه‌های جهت‌دار؛ ویژگی‌های فیزیکی TSX به `start-/end-/text-start` تبدیل شد.
+- `ui/PasswordInput` (یکپارچه، `togglePlacement`)، `ui/ErrorBoundary`، `lib/fiscalStatus.ts`، `FormSection headingLevel`، لینک «پرش به محتوای اصلی» در AppShell، `Root.tsx` برای صفحات lazy فراهم‌سازی.
+- دکمه‌های `lg` در موبایل حداقل ۴۴px؛ سایدبار بستهٔ موبایل `visibility: hidden` است (غیرقابل فوکوس).
+- بررسی مرورگر واقعی (Chromium، ۳۶۰/۷۶۸/۱۲۸۰، API شبیه‌سازی‌شده) انجام شد؛ جزئیات و باگ‌های یافته‌شده در `docs/handoffs/ISSUE-464-admin-ui-cleanup.md`.

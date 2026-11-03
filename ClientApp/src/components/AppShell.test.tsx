@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { SelectedContext, Session } from '../api/types';
 import { AppShell } from './AppShell';
@@ -40,7 +41,7 @@ describe('AppShell', () => {
   it('shows the focused system-administration menu and removes redundant user-list shortcuts', () => {
     render(<AppShell session={{ ...session, isAdministrator: true }} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
     expect(screen.getByRole('button', { name: /مدیریت سیستم/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'مدیریت کاربران' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'مدیریت کاربران' })).toHaveAttribute('href', '/app/admin/users');
     for (const label of ['ساختار سازمانی و سمت‌ها', 'گروه‌های دسترسی', 'کاتالوگ و جزئیات مجوزها', 'گزارش امنیت و سوابق', 'سیاست‌های امنیتی']) {
       expect(screen.getByText(label).closest('[aria-disabled="true"]')).toBeTruthy();
     }
@@ -80,5 +81,28 @@ describe('AppShell', () => {
     render(<AppShell session={session} context={readOnlyContext} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
 
     expect(screen.getByLabelText('زمینه کاری جاری')).toHaveTextContent('فقط مشاهده و گزارش‌گیری');
+  });
+
+  it('offers a skip link as the first focusable element that moves focus to the main content', async () => {
+    const user = userEvent.setup();
+    render(<AppShell session={session} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><p>محتوای صفحه</p></AppShell>);
+    const skip = screen.getByRole('link', { name: 'پرش به محتوای اصلی' });
+    expect(skip).toHaveAttribute('href', '#main-content');
+    // Hidden until focused (sr-only), visible on focus.
+    expect(skip).toHaveClass('sr-only', 'focus:not-sr-only');
+    await user.tab();
+    expect(skip).toHaveFocus();
+    await user.keyboard('{Enter}');
+    const main = document.getElementById('main-content');
+    expect(main?.tagName).toBe('MAIN');
+    expect(main).toHaveFocus();
+    expect(window.location.hash).toBe('');
+  });
+
+  it('shows a logout failure in the shared error Alert', async () => {
+    const user = userEvent.setup();
+    render(<AppShell session={session} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockRejectedValue(new Error('خروج ناموفق بود'))}><p>محتوای صفحه</p></AppShell>);
+    await user.click(screen.getByRole('button', { name: 'خروج' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('خروج ناموفق بود');
   });
 });
