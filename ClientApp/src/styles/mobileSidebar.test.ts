@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 // Vitest runs from the ClientApp folder. The project has no @types/node; the test only needs to read the stylesheet source.
 // @ts-expect-error -- node:fs types are not installed
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 
-const css: string = (readFileSync as (path: string, encoding: string) => string)(resolve(process.cwd(), 'src/styles/index.css'), 'utf8');
+const workingDirectory = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd();
+const css: string = (readFileSync as (path: string, encoding: string) => string)(`${workingDirectory}/src/styles/index.css`, 'utf8');
 
 // jsdom does not apply the stylesheet, so the closed-drawer rule is asserted on the source; the
 // real-browser Tab order was checked separately (see the ISSUE-464 handoff).
