@@ -2300,3 +2300,10 @@
 - projection فقط شناسه/عامل/شرکت/نوع/موجودیت/زمان/CorrelationId را صادر می‌کند؛ IP و DetailsJson حذف‌اند و پاسخ no-store/no-cache دارد. ثبت audit پیش از تحویل فایل انجام می‌شود؛ شکست ذخیره‌سازی مانع تحویل فایل است.
 - Unit و SQL Server integration پوشش داده شدند؛ اجرا در این محیط انجام نشد و نتیجه CI روی head نهایی معیار Verified شدن است.
 - handoff: docs/handoffs/ISSUE-507-security-audit-csv-export.md.
+## 2026-11-03 — Issue #500: EF UTC Kind برای ویژگی‌های *Utc
+- در EF فقط DateTime و DateTime?هایی که نام property آن‌ها به Utc ختم می‌شود با ValueConverter به Kind=Utc علامت‌گذاری می‌شوند؛ Ticks و مقدار ذخیره‌شده تغییر نمی‌کند.
+- InsertDateTime، UpdateDateTime و LastLoginDateTime عمداً خارج از این قاعده‌اند؛ هیچ مبدل سراسری یا Migration داده‌ای اجرا نشد.
+- تست SQL Server برای JSON دارای Z، ویژگی nullable و عدم تغییر رفتار InsertDateTime قدیمی اضافه شد.
+- تست UtcWireFormatSqlServerTests در همین PR #503 به‌روزرسانی شد تا DateTimeKind.Utc و خروجی JSON دارای Z را اثبات کند؛ هیچ فایل ClientApp تغییر نکرد.
+- CI، SQL Server واقعی و بررسی has-pending-model-changes هنوز باید روی SHA نهایی تأیید شوند.
+- handoff: docs/handoffs/ISSUE-500-utc-kind-value-converter.md.

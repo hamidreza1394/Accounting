@@ -6,12 +6,9 @@ using Xunit;
 namespace Template.Tests.Integration;
 
 /// <summary>
-/// CHARACTERIZATION of the current wire format of UTC timestamps (docs/TIME_CONTRACT.md, D-067).
-/// It documents how data stored on SQL Server reaches the API: EF materializes a stored
-/// <c>datetime2</c> with <c>Kind=Unspecified</c>, so System.Text.Json writes it WITHOUT a <c>Z</c>.
-/// The ClientApp therefore treats every <c>*Utc</c> field as UTC (lib/time.ts). When the Backend
-/// starts materializing <c>*Utc</c> columns as <c>Kind=Utc</c> (proposed in D-067), this test must be
-/// updated to expect the <c>Z</c>; until then it protects the assumption the client relies on.
+/// Verifies the UTC wire contract after the EF UTC-kind converter (D-067).
+/// SQL Server datetime2 does not persist DateTimeKind, so EF must restore Utc for *Utc properties
+/// before System.Text.Json serializes them with a Z suffix.
 /// </summary>
 public sealed class UtcWireFormatSqlServerTests
 {
@@ -37,7 +34,7 @@ public sealed class UtcWireFormatSqlServerTests
     }
 
     [Fact]
-    public async Task AUtcInstantStoredOnSqlServerComesBackWithoutAUtcMarker()
+    public async Task AUtcInstantStoredOnSqlServerComesBackAsUtcAndSerializesWithMarker()
     {
         Assert.SkipUnless(SqlServerAvailable(), "SQL Server is not configured (FARANOU_TEST_SQLSERVER).");
 
@@ -59,13 +56,11 @@ public sealed class UtcWireFormatSqlServerTests
             await using var read = CreateContext(name);
             var loaded = await read.SecurityAuditEvents.AsNoTracking().SingleAsync(item => item.Id == id, cancellationToken);
 
-            // The instant itself survives the round trip ...
+            // SQL Server preserves the instant; the EF converter restores its UTC kind.
             Assert.Equal(stored.Ticks, loaded.OccurredAtUtc.Ticks);
-            // ... but its Kind does not, which is why the JSON carries no Z.
-            Assert.Equal(DateTimeKind.Unspecified, loaded.OccurredAtUtc.Kind);
+            Assert.Equal(DateTimeKind.Utc, loaded.OccurredAtUtc.Kind);
             var json = JsonSerializer.Serialize(new { occurredAtUtc = loaded.OccurredAtUtc }, JsonSerializerOptions.Web);
-            Assert.Contains("2026-11-03T10:15:30.25", json);
-            Assert.DoesNotContain("Z\"", json);
+            Assert.Contains("2026-11-03T10:15:30.25Z", json);
         }
         finally
         {
