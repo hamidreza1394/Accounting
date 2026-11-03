@@ -37,8 +37,8 @@
 | فرمان/آزمون | نتیجه واقعی | توضیح |
 |---|---|---|
 | اجرای محلی Playwright | اجرا نشده | این محیط GitHub clone را به‌علت DNS مسدود کرد؛ .NET SDK نیز نصب نیست. |
-| CI .NET CI job e2e | در انتظار | باید روی PR head اجرا شود؛ فقط پس از موفقیت گزارش Verified می‌شود. |
-| Build / Unit / Integration | اجرا نشده محلی | هیچ production code یا migration تغییر نکرده است؛ CI همچنان تمام suite را اجرا می‌کند. |
+| CI .NET CI job e2e | موفق | job `e2e` روی SHA اولیه موفق شد؛ seed، schema، سرور Production و browser tests سبز بودند. |
+| Build / Unit / Integration | موفق در CI | job `build-and-test` سبز شد؛ job `publish` به علت race در assertion عنوان تست `AppRouting` شکست خورد و با `waitFor` اصلاح شد؛ تأیید CI جدید در انتظار است. |
 
 ## امنیت، داده و سازگاری
 - رمز مدیر E2E تصادفی است و در فایل state محلی git-ignored نگهداری می‌شود؛ هیچ credential به مخزن افزوده نشده است.
@@ -48,7 +48,7 @@
 - هیچ تغییر Production، Schema، Migration یا مجوز عملیاتی واقعی ایجاد نشده است.
 
 ## ریسک‌ها و کارهای باقی‌مانده
-- اجرای CI روی PR باید ثابت کند SQL insert مربوط به Role/RoleId با schema جاری سازگار است و سناریو در Production E2E پاس می‌شود.
+- CI اولیه ثابت کرد SQL seed و سناریو روی SQL Server واقعی موفق است؛ فقط rerun نهایی بعد از اصلاح flaky assertion باقی است.
 - این PR جای تست concurrency/RowVersion یا Delegation Ceiling را نمی‌گیرد.
 
 ## شناسه‌های Git
