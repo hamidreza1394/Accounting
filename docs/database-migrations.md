@@ -372,3 +372,14 @@ A migration that only adds a PermissionDefinitions row does not change the EF mo
 ### Data-only permission catalog migrations
 
 A migration that only adds a PermissionDefinitions row does not change the EF model. Keep the last EF-generated designer and DatabaseContextModelSnapshot unchanged, advance DELTA_MIGRATION_* and CURRENT_MIGRATION_*, and pin the exact idempotent Up/Down SQL in HAND_WRITTEN_SQL. The migration class is handwritten; generate_migrations.py checks its SQL, while verify_migration_model.py and dotnet ef migrations has-pending-model-changes verify the unchanged target model. Down must delete only the exact seeded ID/code and only when no CompanyRolePermissions row references it.
+
+
+## 7. SQL Server RowVersion برای گروه دسترسی و عضویت (Issue #496)
+
+Migration 20261103160000_AddCompanyRoleMembershipRowVersions به‌صورت افزایشی ستون RowVersion از نوع SQL Server rowversion را به CompanyRoles و UserCompanyMemberships اضافه می‌کند. SQL Server برای ردیف‌های موجود نیز token تولید می‌کند؛ Migration هیچ داده‌ای را بازنویسی یا حذف نمی‌کند. Down فقط ستون‌های RowVersion را حذف می‌کند.
+
+مدل EF این دو property را با IsRowVersion پیکربندی می‌کند تا UPDATE/DELETE با مقدار اصلی token شرطی باشد و DbUpdateConcurrencyException تولید شود. endpointهای ویرایش نقش، انتساب تکی عضو و انتقال گروهی اعضا این exception را به 409 تبدیل می‌کنند. انتقال گروهی و Audit آن در یک SaveChanges باقی می‌مانند تا تعارض، تمام batch و رویدادهای Audit همان درخواست را rollback کند.
+
+Guardهای scripts/migration_model.py و scripts/verify_migration_model.py باید facet مربوط به RowVersion و پارامتر rowVersion:true در AddColumn را مقایسه کنند؛ هر دو تست tooling در scripts/tests/test_migration_tooling.py پوشش داده شده‌اند. تست SQL Server در CompanyRoleMembersSqlServerTests ابتدا داده موجود می‌سازد، Migration را Down/Up می‌کند، tokenهای 8 بایتی و یکتا را بررسی می‌کند و سپس رقابت writerها را در سه endpoint آزمایش می‌کند.
+
+این Migration هنوز فقط در PR است و تا سبز شدن CI و تأیید SQL Server integration test، وضعیت آن Verified یا آماده استقرار محسوب نمی‌شود.
