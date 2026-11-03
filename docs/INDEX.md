@@ -68,3 +68,4 @@
 
 
 - **Issue #488 / D-066 Proposed:** ممیزی مدل سال/دوره مالی و تفکیک grant سال و دوره؛ handoff: [`handoffs/ISSUE-488-fiscal-grant-model-audit.md`](handoffs/ISSUE-488-fiscal-grant-model-audit.md). هیچ Migration تا تأیید معنای FiscalPeriod و AccountingPeriod مجاز نیست.
+| [`handoffs/ISSUE-485-security-audit-report-api.md`](handoffs/ISSUE-485-security-audit-report-api.md) | API گزارش صفحه‌بندی‌شده Audit امنیتی برای مدیر نصب؛ بدون IP و payload جزئیات |

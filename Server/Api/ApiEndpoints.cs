@@ -60,6 +60,7 @@ public static class ApiEndpoints
 		api.MapSecurityAuditAdministrationEndpoints();
 		api.MapCompanyRoleAdministrationEndpoints();
 		api.MapCompanyMembershipRequestEndpoints();
+		api.MapSecurityAuditAdministrationEndpoints();
 		api.MapGet("/companies", GetCompaniesAsync);
 		api.MapGet("/companies/{companyId:guid}/overview", GetCompanyOverviewAsync);
 		api.MapWorkContextEndpoints();

@@ -2178,3 +2178,13 @@
 - رویدادهای ناقص یا نبود Logout به‌عنوان مدت نشست/انقضا تفسیر نمی‌شوند. هیچ schema، migration، UI یا retention deletion در این برش نیست.
 - تست‌های unit و SQL Server integration اضافه شدند؛ اجرای محلی در این محیط ممکن نبود (GitHub DNS و .NET SDK در دسترس نیست). CI روی PR معیار تأیید است.
 - handoff: `docs/handoffs/ISSUE-485-security-audit-report-api.md`.
+
+
+## 2026-11-03 — Issue #485: گزارش Audit امنیتی مدیر نصب
+
+- API فقط‌خواندنی `GET /api/v1/admin/security/audit-events` روی جدول موجود SecurityAuditEvents اضافه شد؛ احراز مجدد مدیر نصب از دیتابیس انجام می‌شود.
+- فیلترهای دقیق EventType، UserId، CompanyId، FromUtc و ToUtc، مرتب‌سازی قطعی جدیدترین‌اول، صفحه‌بندی محدود و Cache-Control: no-store دارد.
+- قرارداد پاسخ فقط شناسه/نوع/زمان/موجودیت، actor و نام شرکت و CorrelationId را برمی‌گرداند؛ IpAddress و DetailsJson عمداً حذف شده‌اند تا payload حساس یا metadata شبکه افشا نشود.
+- رویدادهای ناقص یا نبود Logout به‌عنوان مدت نشست/انقضا تفسیر نمی‌شوند. هیچ schema، migration، UI یا retention deletion در این برش نیست.
+- تست‌های unit و SQL Server integration اضافه شدند؛ اجرای محلی در این محیط ممکن نبود (GitHub DNS و .NET SDK در دسترس نیست). CI روی PR معیار تأیید است.
+- handoff: `docs/handoffs/ISSUE-485-security-audit-report-api.md`.
