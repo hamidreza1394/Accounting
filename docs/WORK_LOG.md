@@ -2257,4 +2257,6 @@
 - تست مدل، تست SQL Server برای تعارض هم‌زمان سه endpoint، عدم partial mutation/Audit و Down/Up روی جدول‌های دارای داده اضافه شد.
 - guardهای Python برای تشخیص RowVersion در مدل و اعتبارسنجی AddColumn<byte[]>(rowVersion:true) گسترش یافتند.
 - اجرای محلی .NET/SQL Server/Python انجام نشده؛ CI باید نتیجه نهایی را تأیید کند.
+- CI اولیه روی SHA قبلی Build موفق و سه شکست SQL Server داشت: Username آزمایشی بیش از ۲۰ نویسه، و دو تست Migration که در Schema قدیمی با مدل EF دارای RowVersion ردیف درج می‌کردند. Usernameها کوتاه و Seed پیش از Migration در دو تست با SQL پارامتری انجام شد؛ نقش‌ها پس از Migration مجدداً از EF خوانده می‌شوند.
+- تغییرات #496 روی شاخهٔ mainline منتقل شدند تا تغییرات ادغام‌شدهٔ main/#498 و مستندات جدید حفظ شوند؛ CI مجدد پس از انتقال نهایی هنوز اجرا/تأیید نشده است.
 - handoff: docs/handoffs/ISSUE-496-role-membership-rowversion.md.
