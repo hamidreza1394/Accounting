@@ -26,7 +26,8 @@ import {
 import type { SelectedContext, Session } from '../api/types';
 import { FaranouLogo } from './ui/FaranouLogo';
 import { MyAccountPanel } from './MyAccountPanel';
-import { UserManagementPage } from './UserManagementPage';
+import type { Permission } from '../lib/permissions';
+import { Link, RouterProvider, useLocation, type Route } from '../lib/router';
 
 type AppShellProps = {
   session: Session;
@@ -35,6 +36,10 @@ type AppShellProps = {
   onLogout: () => Promise<void>;
   onPasswordChanged?: () => void;
   onUnauthenticated?: (error: unknown) => boolean;
+  /** Routes of the app; `children` is normally a `<RouteView />` that renders them. */
+  routes?: readonly Route[];
+  /** UI permission hint for guarded routes; the server decides. */
+  canAccess?: (permission: Permission) => boolean;
   children: ReactNode;
 };
 
@@ -57,7 +62,8 @@ type NavLeaf = {
   label: string;
   icon: LucideIcon;
   tone: Tone;
-  active?: boolean;
+  /** App-relative route; items without one stay disabled placeholders. */
+  to?: string;
 };
 
 type NavGroup = {
@@ -72,7 +78,7 @@ type NavEntry = NavLeaf | NavGroup | { kind: 'divider' };
 
 /** Presentation-only navigation. Unfinished routes stay disabled until real paths and server permissions exist. */
 const navigation: NavEntry[] = [
-  { kind: 'item', label: 'داشبورد', icon: LayoutDashboard, tone: 'sky', active: true },
+  { kind: 'item', label: 'داشبورد', icon: LayoutDashboard, tone: 'sky', to: '/' },
   { kind: 'item', label: 'حسابداری', icon: BookOpen, tone: 'emerald' },
   { kind: 'item', label: 'خزانه‌داری', icon: Wallet, tone: 'amber' },
   { kind: 'item', label: 'فروش', icon: ShoppingCart, tone: 'rose' },
@@ -147,14 +153,29 @@ function DisabledItem({ label, icon, tone, nested }: { label: string; icon: Luci
 const ignoreUnauthenticated = (_error: unknown) => false;
 const noop = () => undefined;
 
-export function AppShell({ session, context, onChangeContext, onLogout, onPasswordChanged = noop, onUnauthenticated = ignoreUnauthenticated, children }: AppShellProps) {
+const noRoutes: readonly Route[] = [];
+
+/** The shell owns the router, so the sidebar links and the page area (`children`) share one location. */
+export function AppShell({ routes = noRoutes, canAccess, ...props }: AppShellProps) {
+  return (
+    <RouterProvider routes={routes} {...(canAccess ? { canAccess } : {})}>
+      <AppShellFrame {...props} />
+    </RouterProvider>
+  );
+}
+
+type AppShellFrameProps = Omit<AppShellProps, 'routes' | 'canAccess'>;
+
+function AppShellFrame({ session, context, onChangeContext, onLogout, onPasswordChanged = noop, onUnauthenticated = ignoreUnauthenticated, children }: AppShellFrameProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const accountTriggerRef = useRef<HTMLButtonElement>(null);
   const [settingsOpen, setSettingsOpen] = useState(true);
-  const [activeAdminSection, setActiveAdminSection] = useState<'dashboard' | 'users'>('dashboard');
+  const { pathname } = useLocation();
+  const dashboardActive = pathname === '/';
+  const usersActive = pathname === '/admin/users' || pathname.startsWith('/admin/users/');
   const readOnly = context.fiscalPeriod.accessMode === 'readOnly';
 
   async function handleLogout() {
@@ -292,10 +313,10 @@ export function AppShell({ session, context, onChangeContext, onLogout, onPasswo
                       {settingsOpen ? (
                         <ul className="faranou-nav-sub space-y-2 ms-4 ps-2">
                           <li>
-                            <button type="button" onClick={() => { setActiveAdminSection('users'); setMobileMenuOpen(false); }} aria-current={activeAdminSection === 'users' ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-right text-[12px] transition ' + (activeAdminSection === 'users' ? 'bg-sky-500/20 text-white ring-1 ring-sky-300/30' : 'text-sky-100/80 hover:bg-white/10 hover:text-white')}>
+                            <Link to="/admin/users" onClick={() => setMobileMenuOpen(false)} aria-current={usersActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (usersActive ? 'bg-sky-500/20 text-white ring-1 ring-sky-300/30' : 'text-sky-100/80 hover:bg-white/10 hover:text-white')}>
                               <NavIcon icon={Users} tone="sky" size="sm" />
                               <span className="min-w-0 flex-1">مدیریت کاربران</span>
-                            </button>
+                            </Link>
                           </li>
                           <li><DisabledItem label="ساختار سازمانی و سمت‌ها" icon={Building2} tone="blue" nested /></li>
                           <li><DisabledItem label="گروه‌های دسترسی" icon={ShieldCheck} tone="violet" nested /></li>
@@ -312,18 +333,22 @@ export function AppShell({ session, context, onChangeContext, onLogout, onPasswo
                   return null;
                 }
 
-                if (entry.active) {
+                if (entry.to) {
+                  const active = dashboardActive;
                   return (
                     <li key={entry.label}>
-                      <a
-                        href="/app/"
-                        aria-current="page"
+                      <Link
+                        to={entry.to}
+                        aria-current={active ? 'page' : undefined}
                         onClick={() => setMobileMenuOpen(false)}
-                        className="faranou-nav-active flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-[13px] font-semibold"
+                        className={
+                          'flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-[13px] font-semibold ' +
+                          (active ? 'faranou-nav-active' : 'text-sky-100/80 hover:bg-white/10 hover:text-white')
+                        }
                       >
                         <NavIcon icon={entry.icon} tone={entry.tone} />
                         <span className="min-w-0 flex-1 whitespace-normal leading-snug">{entry.label}</span>
-                      </a>
+                      </Link>
                     </li>
                   );
                 }
@@ -353,7 +378,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, onPasswo
               {logoutError}
             </p>
           ) : null}
-          {activeAdminSection === 'users' ? <UserManagementPage onUnauthenticated={onUnauthenticated} /> : children}
+          {children}
         </main>
       </div>
       <MyAccountPanel

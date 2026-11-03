@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type AnchorHTMLAttributes,
   type ComponentType,
@@ -208,16 +209,58 @@ export function RouteView() {
     document.title = `${title} | ${titleSuffix}`;
   }, [title]);
 
-  if (!match) return <NotFound />;
-  if (!allowed) return <Forbidden />;
-  const Element = match.route.element;
-  return (
-    <ParamsContext.Provider value={match.params}>
-      <Suspense fallback={<LoadingState label={loadingLabel} />}>
-        <Element />
-      </Suspense>
-    </ParamsContext.Provider>
-  );
+  // After a route change (not on the first load) focus moves to the page heading, so keyboard and
+  // screen-reader users are not left on the link they activated. Lazy pages render later, so the
+  // heading is awaited briefly. Query-only changes (filters, paging) keep the focus where it is.
+  const containerRef = useRef<HTMLDivElement>(null);
+  const lastPathname = useRef(location.pathname);
+  useEffect(() => {
+    if (lastPathname.current === location.pathname) return;
+    lastPathname.current = location.pathname;
+    const container = containerRef.current;
+    if (!container) return;
+    const focusHeading = (): boolean => {
+      const heading = container.querySelector('h1');
+      if (!heading) return false;
+      heading.tabIndex = -1;
+      heading.focus();
+      return true;
+    };
+    if (focusHeading()) return;
+    const observer = new MutationObserver(() => {
+      if (focusHeading()) observer.disconnect();
+    });
+    observer.observe(container, { childList: true, subtree: true });
+    const timer = window.setTimeout(() => observer.disconnect(), 5000);
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(timer);
+    };
+  }, [location.pathname]);
+
+  let content: ReactNode;
+  if (!match) {
+    content = <NotFound />;
+  } else if (!allowed) {
+    content = <Forbidden />;
+  } else {
+    const Element = match.route.element;
+    content = (
+      <ParamsContext.Provider value={match.params}>
+        <Suspense fallback={<LoadingState label={loadingLabel} />}>
+          <Element />
+        </Suspense>
+      </ParamsContext.Provider>
+    );
+  }
+  return <div ref={containerRef}>{content}</div>;
+}
+
+/** Refines the tab title once a page knows its subject (e.g. a user's name); `null` leaves it as is. */
+export function useDocumentTitle(title: string | null): void {
+  useEffect(() => {
+    if (title) document.title = `${title} | ${titleSuffix}`;
+  }, [title]);
 }
 
 export function useNavigate(): (to: string, options?: NavigateOptions) => void {
@@ -232,6 +275,25 @@ export function useLocation(): AppLocation {
 /** Params of the matched route (e.g. `:id`). */
 export function useParams(): Params {
   return useContext(ParamsContext);
+}
+
+/**
+ * The query string of the current location as `URLSearchParams`, plus a setter that navigates to
+ * the same path with a new query (so the state lives in the URL: back/forward and refresh work).
+ * Empty values are dropped; pass `{ replace: true }` for changes that should not add a history entry.
+ */
+export function useSearchParams(): [URLSearchParams, (next: URLSearchParams, options?: NavigateOptions) => void] {
+  const { location, navigate } = useRouterContext();
+  const params = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const pathname = location.pathname;
+  const setParams = useCallback(
+    (next: URLSearchParams, options?: NavigateOptions) => {
+      const query = next.toString();
+      navigate(query ? `${pathname}?${query}` : pathname, options);
+    },
+    [navigate, pathname],
+  );
+  return [params, setParams];
 }
 
 type LinkProps = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> & {

@@ -115,3 +115,10 @@
 - [راهنمای Tailwind v4](https://ui.shadcn.com/docs/tailwind-v4)
 
 نسخهٔ CLI در `package.json` پین شده تا تولید کامپوننت‌ها در توسعه تکرارپذیر باشد. برای به‌روزرسانی، نسخه را آگاهانه تغییر دهید و CI را اجرا کنید.
+
+### مسیریابی و صفحات مدیریت کاربران (Issue #462)
+
+- `RouterProvider` در `AppShell` قرار دارد و مسیرهای `/app/admin/users` و `/app/admin/users/:id` از `AppRoutes.tsx` به‌صورت lazy بارگذاری می‌شوند؛ دسترسی مسیر با `can(session, 'admin.users.view')` فقط راهنمای UI است و سرور مرجع نهایی است (D-064).
+- `useSearchParams` در `lib/router.tsx`: وضعیت فهرست (`q`, `status`, `sort`, `dir`, `page`, `pageSize`) در URL نگه داشته می‌شود؛ مقادیر پیش‌فرض حذف و مقادیر نامعتبر به پیش‌فرض برمی‌گردند. جست‌وجو (debounce) با replace و سایر تغییرها با push ثبت می‌شوند.
+- پس از تغییر مسیر، Focus به `h1` صفحه منتقل می‌شود؛ `useDocumentTitle` عنوان تب را برای صفحات دارای داده پویا تنظیم می‌کند.
+- `scripts/offline-check.mjs` اکنون chunkهای lazy را درست resolve می‌کند (آزمون رگرسیون دارد).

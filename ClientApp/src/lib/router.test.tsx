@@ -1,8 +1,8 @@
-import { lazy } from 'react';
+import { lazy, useState } from 'react';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, onTestFinished } from 'vitest';
-import { Link, RouteView, RouterProvider, matchPath, useLocation, useNavigate, useParams, type Route } from './router';
+import { Link, RouteView, RouterProvider, matchPath, useLocation, useNavigate, useDocumentTitle, useParams, useSearchParams, type Route } from './router';
 
 function Home() {
   return <h1>خانه</h1>;
@@ -28,6 +28,7 @@ function Nav() {
       <Link to="/missing">ناشناس</Link>
       <Link to="/admin">مدیریت</Link>
       <button type="button" onClick={() => navigate('/users/9', { replace: true })}>برو ۹</button>
+      <button type="button" onClick={() => navigate('/lazy')}>برو تنبل</button>
       <output>{location.pathname}</output>
     </nav>
   );
@@ -173,5 +174,97 @@ describe('router', () => {
     setup('/app/', () => false);
     await user.click(screen.getByRole('link', { name: 'مدیریت' }));
     expect(screen.getByRole('alert')).toHaveTextContent('دسترسی ندارید');
+  });
+
+  it('keeps the query string in the URL through useSearchParams (push, replace, back)', async () => {
+    function Query() {
+      const [params, setParams] = useSearchParams();
+      return (
+        <div>
+          <output aria-label="q">{params.get('q') ?? 'none'}</output>
+          <button type="button" onClick={() => setParams(new URLSearchParams({ q: 'علی' }))}>
+            جستجو
+          </button>
+          <button type="button" onClick={() => setParams(new URLSearchParams({ q: 'علی', page: '2' }), { replace: true })}>
+            صفحه ۲
+          </button>
+          <button type="button" onClick={() => setParams(new URLSearchParams())}>
+            پاک
+          </button>
+        </div>
+      );
+    }
+    const user = userEvent.setup();
+    window.history.pushState(null, '', '/app/users/1?q=ab');
+    render(
+      <RouterProvider routes={routes}>
+        <Query />
+      </RouterProvider>,
+    );
+    expect(screen.getByLabelText('q')).toHaveTextContent('ab');
+    await user.click(screen.getByRole('button', { name: 'جستجو' }));
+    expect(window.location.search).toBe('?q=%D8%B9%D9%84%DB%8C');
+    expect(window.location.pathname).toBe('/app/users/1');
+    const length = window.history.length;
+    await user.click(screen.getByRole('button', { name: 'صفحه ۲' }));
+    expect(window.history.length).toBe(length);
+    expect(window.location.search).toContain('page=2');
+    await user.click(screen.getByRole('button', { name: 'پاک' }));
+    expect(window.location.search).toBe('');
+    expect(screen.getByLabelText('q')).toHaveTextContent('none');
+    act(() => {
+      window.history.back();
+    });
+    await screen.findByText('علی');
+  });
+
+  it('moves focus to the page heading after a navigation, but not on the first load', async () => {
+    const user = userEvent.setup();
+    setup('/app/users/42');
+    expect(document.body).toHaveFocus();
+    await user.click(screen.getByRole('link', { name: 'خانه' }));
+    expect(screen.getByRole('heading', { name: 'خانه' })).toHaveFocus();
+  });
+
+  it('waits for a lazy page heading before focusing it', async () => {
+    const user = userEvent.setup();
+    setup();
+    await user.click(screen.getByRole('button', { name: 'برو تنبل' }));
+    expect(await screen.findByRole('heading', { name: 'تنبل' })).toHaveFocus();
+  });
+
+  it('does not move focus for a query-only change', async () => {
+    const user = userEvent.setup();
+    setup('/app/users/42');
+    const button = screen.getByRole('button', { name: 'برو ۹' });
+    await user.click(screen.getByRole('link', { name: 'خانه' }));
+    await user.click(screen.getByRole('link', { name: 'خانه' }));
+    button.focus();
+    act(() => {
+      window.history.replaceState(null, '', '/app/?x=1');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    expect(button).toHaveFocus();
+  });
+
+  it('sets a refined title with useDocumentTitle', async () => {
+    const user = userEvent.setup();
+    // Like a page that learns its subject after loading: the refinement comes in a later commit.
+    function Titled() {
+      const [name, setName] = useState<string | null>(null);
+      useDocumentTitle(name);
+      return (
+        <h1>
+          <button type="button" onClick={() => setName('علی رضایی')}>
+            بارگذاری
+          </button>
+        </h1>
+      );
+    }
+    window.history.pushState(null, '', '/app/');
+    render(<RouterProvider routes={[{ path: '/', element: Titled, title: 'عمومی' }]} />);
+    expect(document.title).toBe('عمومی | فرانو');
+    await user.click(screen.getByRole('button', { name: 'بارگذاری' }));
+    expect(document.title).toBe('علی رضایی | فرانو');
   });
 });
