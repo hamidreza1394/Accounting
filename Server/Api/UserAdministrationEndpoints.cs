@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Data;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Mvc;
@@ -302,14 +303,30 @@ public static class UserAdministrationEndpoints
             return TypedResults.Conflict(new { error = "نام کاربری، ایمیل یا شماره همراه قبلاً ثبت شده است." });
 
         var actorId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal)!.Value;
-        if (user.IsActive && !request.IsActive && user.RoleId is not null &&
-            await database.Users.CountAsync(candidate =>
-                candidate.IsActive && candidate.Role != null && candidate.Role.IsActive &&
-                candidate.Role.Name == Constants.Role.Admin, cancellationToken) <= 1)
-            return TypedResults.Conflict(new { error = "غیرفعال‌کردن آخرین مدیر سیستم مجاز نیست." });
-
         if (actorId == userId && !request.IsActive)
             return TypedResults.Conflict(new { error = "مدیر سیستم نمی‌تواند حساب جاری خود را غیرفعال کند." });
+
+        // Serialize account deactivations on relational providers. The serializable range
+        // lock makes the last-active-admin check and the update one atomic decision.
+        await using var adminGuardTransaction = user.IsActive && !request.IsActive && database.Database.IsRelational()
+            ? await database.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken)
+            : null;
+
+        if (user.IsActive && !request.IsActive && user.RoleId is Guid targetRoleId)
+        {
+            var targetIsActiveAdmin = await database.Roles.AsNoTracking().AnyAsync(role =>
+                role.Id == targetRoleId && role.IsActive && role.Name == Constants.Role.Admin,
+                cancellationToken);
+            if (targetIsActiveAdmin)
+            {
+                var activeAdminCount = await database.Users.CountAsync(candidate =>
+                    candidate.IsActive && candidate.Role != null &&
+                    candidate.Role.IsActive && candidate.Role.Name == Constants.Role.Admin),
+                    cancellationToken);
+                if (activeAdminCount <= 1)
+                    return TypedResults.Conflict(new { error = "غیرفعال‌کردن آخرین مدیر سیستم مجاز نیست." });
+            }
+        }
 
         var previousActive = user.IsActive;
         user.EmailAddress = email;
@@ -326,7 +343,7 @@ public static class UserAdministrationEndpoints
             EventType = "UserUpdated",
             EntityType = "User",
             EntityId = user.Id.ToString(),
-            OccurredAtUtc = DateTime.UtcNow,
+            OccurredAtUtc = timeProvider.GetUtcNow().UtcDateTime,
             CorrelationId = System.Diagnostics.Activity.Current?.Id,
             IpAddress = httpContext.Connection.RemoteIpAddress?.ToString(),
             DetailsJson = System.Text.Json.JsonSerializer.Serialize(new
@@ -340,10 +357,16 @@ public static class UserAdministrationEndpoints
         try
         {
             await database.SaveChangesAsync(cancellationToken);
+            if (adminGuardTransaction is not null)
+                await adminGuardTransaction.CommitAsync(cancellationToken);
         }
         catch (DbUpdateException)
         {
-            return TypedResults.Conflict(new { error = "نام کاربری، ایمیل یا شماره همراه قبلاً ثبت شده است." });
+            return TypedResults.Conflict(new { error = "تغییرات با تعارض داده یا درخواست هم‌زمان مواجه شد؛ وضعیت را دوباره بررسی کنید." });
+        }
+        catch (System.Data.Common.DbException)
+        {
+            return TypedResults.Conflict(new { error = "تغییر هم‌زمان دیگری انجام شده است؛ وضعیت مدیران فعال را دوباره بررسی کنید." });
         }
 
         SetNoStore(httpContext);
