@@ -264,7 +264,7 @@ public static class CompanyMembershipRequestEndpoints
             return TypedResults.NotFound();
 
         await using var transaction = await database.Database.BeginTransactionAsync(
-            IsolationLevel.Serializable, cancellationToken);
+            IsolationLevel.ReadCommitted, cancellationToken);
         if (!await companyAccess.HasPermissionAsync(
                 approverId.Value, companyId, ApprovalPermissionCode, cancellationToken))
             return TypedResults.NotFound();
@@ -381,7 +381,7 @@ public static class CompanyMembershipRequestEndpoints
             return TypedResults.NotFound();
 
         await using var transaction = await database.Database.BeginTransactionAsync(
-            IsolationLevel.Serializable, cancellationToken);
+            IsolationLevel.ReadCommitted, cancellationToken);
         if (!await companyAccess.HasPermissionAsync(
                 approverId.Value, companyId, ApprovalPermissionCode, cancellationToken))
             return TypedResults.NotFound();
