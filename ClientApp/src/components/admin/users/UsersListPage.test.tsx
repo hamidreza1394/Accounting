@@ -6,8 +6,9 @@ import { json, listBody, listCalls, stubFetch, userItem } from '../../../test/ad
 import { UsersListPage } from './UsersListPage';
 
 const onUnauthenticated = vi.fn((): boolean => false);
+let canCreate = false;
 function ListRoute() {
-  return <UsersListPage onUnauthenticated={onUnauthenticated} />;
+  return <UsersListPage onUnauthenticated={onUnauthenticated} canCreate={canCreate} />;
 }
 function DetailRoute() {
   return <h1>صفحهٔ جزئیات</h1>;
@@ -32,6 +33,33 @@ describe('UsersListPage', () => {
   beforeEach(() => {
     onUnauthenticated.mockReset();
     onUnauthenticated.mockReturnValue(false);
+    canCreate = false;
+  });
+
+  it('shows no create button without the create permission', async () => {
+    stubFetch(() => json(listBody(three)));
+    setup();
+    await screen.findByText('نام1 خانوادگی1');
+    expect(screen.queryByRole('link', { name: 'ایجاد کاربر' })).toBeNull();
+  });
+
+  it('shows a primary create link to /admin/users/new with the create permission', async () => {
+    const user = userEvent.setup();
+    canCreate = true;
+    stubFetch(() => json(listBody(three)));
+    const createRoutes = [{ path: '/admin/users/new', element: () => <h1>فرم ایجاد</h1>, title: 'ایجاد' }, ...routes];
+    window.history.pushState(null, '', '/app/admin/users');
+    render(
+      <RouterProvider routes={createRoutes}>
+        <RouteView />
+      </RouterProvider>,
+    );
+    const link = await screen.findByRole('link', { name: 'ایجاد کاربر' });
+    expect(link).toHaveAttribute('href', '/app/admin/users/new');
+    link.focus();
+    await user.keyboard('{Enter}');
+    expect(await screen.findByRole('heading', { name: 'فرم ایجاد' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/app/admin/users/new');
   });
 
   it('requests the server-side default query and renders every column', async () => {

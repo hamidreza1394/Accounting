@@ -128,3 +128,10 @@
 - `ui/AuditTimeline`: فهرست رویدادهای زمانی با وضعیت «آیکون + متن» (هرگز فقط رنگ)، `<time dateTime>` با تاریخ جلالی و IP با `dir=ltr`؛ props: `label`، `events` (id, label, tone, icon, occurredAt, detail)، `detailLabel`، `detailFallback`.
 - `account/PasswordInput`: ورودی رمز با دکمه نمایش/پنهان (`aria-pressed`) و `dir=ltr`؛ الگوی نگاشت `fieldErrors` سرور به فیلدها (حذف پیشوند کلید و تطبیق بدون حساسیت به حروف) در `SecurityTab`.
 - در حین ارسال تغییر رمز، تب‌های دیگر قفل می‌شوند تا ارسال دوباره ممکن نباشد.
+
+### فرم‌های ایجاد و ویرایش کاربر (Issue #462، بخش ۲)
+
+- `admin/users/UserFormFields.tsx` (`UserForm`) فرم مشترک ایجاد و ویرایش است؛ اعتبارسنجی در `userFormValidation.ts` و با محدودیت‌های سرور (`Constants/*`) هم‌خوان است. بدنه درخواست‌ها فیلد‌به‌فیلد ساخته می‌شود (بدون spread) تا فیلد اضافه ارسال نشود.
+- مسیرها: `/admin/users/new` باید پیش از `/admin/users/:id` باشد. رمز فقط در state فرم نگه داشته می‌شود؛ `userFlash.ts` فقط `{userId, kind}` را برای پیام موفقیت یک‌بار مصرف و با TTL ۳۰ ثانیه نگه می‌دارد.
+- نگهبان تغییرات ذخیره‌نشده فقط Cancel و `beforeunload` را پوشش می‌دهد؛ مسدودکننده ناوبری router کار بعدی است.
+- `PasswordInput` (در ایجاد کاربر) و `account/PasswordInput` (حساب کاربری) تکراری‌اند و باید در A5 به یک کامپوننت `ui/PasswordInput` ادغام شوند.

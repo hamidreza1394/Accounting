@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { ApiError, getAdminUser } from '../../../api/client';
 import type { AdminUserDetails, AdminUserMembership } from '../../../api/types';
 import { formatDate, formatDateTime } from '../../../lib/format';
+import { buttonVariants } from '../../ui/button';
 import { Link, useDocumentTitle, useParams } from '../../../lib/router';
 import { EmptyState, ErrorState, LoadingState } from '../../Feedback';
 import { Breadcrumb } from '../../ui/Breadcrumb';
@@ -9,8 +10,13 @@ import { DataTable, type DataTableColumn } from '../../ui/DataTable';
 import { StatusBadge } from '../../ui/StatusBadge';
 import { Tabs } from '../../ui/Tabs';
 import { fullName } from './userDisplay';
+import { clearUserFlash, peekUserFlash, userFlashText } from './userFlash';
 
-type Props = { onUnauthenticated: (error: unknown) => boolean };
+type Props = {
+  onUnauthenticated: (error: unknown) => boolean;
+  /** UI hint only (the server decides): shows the edit button. */
+  canUpdate?: boolean;
+};
 
 type State =
   | { kind: 'loading' }
@@ -115,8 +121,11 @@ function DetailTabs({ user }: { user: AdminUserDetails }) {
   );
 }
 
-export function UserDetailPage({ onUnauthenticated }: Props) {
+export function UserDetailPage({ onUnauthenticated, canUpdate = false }: Props) {
   const { id = '' } = useParams();
+  // A one-shot message from the create/edit page (kept in memory only; gone after a refresh).
+  const [flash] = useState(() => peekUserFlash(id));
+  useEffect(() => clearUserFlash, []);
   const [state, setState] = useState<State>({ kind: 'loading' });
   const [attempt, setAttempt] = useState(0);
 
@@ -178,7 +187,14 @@ export function UserDetailPage({ onUnauthenticated }: Props) {
               @{user.username ?? '—'}
             </p>
           </div>
-          <StatusBadge status={user.isActive ? 'active' : 'inactive'} />
+          <div className="flex items-center gap-3">
+            <StatusBadge status={user.isActive ? 'active' : 'inactive'} />
+            {canUpdate ? (
+              <Link to={`/admin/users/${encodeURIComponent(user.id)}/edit`} className={buttonVariants({ variant: 'outline', size: 'lg' })}>
+                ویرایش
+              </Link>
+            ) : null}
+          </div>
         </header>
         <DetailTabs user={user} />
       </>
@@ -188,6 +204,12 @@ export function UserDetailPage({ onUnauthenticated }: Props) {
   return (
     <div className="space-y-5">
       <Breadcrumb items={crumbs} />
+      {/* The live region exists from the first render; its text is added later, so it is announced. */}
+      <div aria-live="polite">
+        {flash && state.kind === 'ready' ? (
+          <p className="rounded-xl border border-line bg-cool p-4 text-sm font-medium text-navy">{userFlashText[flash]}</p>
+        ) : null}
+      </div>
       {body}
     </div>
   );

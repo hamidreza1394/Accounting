@@ -1,5 +1,6 @@
 import { createContext, lazy, useContext } from 'react';
 import type { SelectedContext, Session } from '../api/types';
+import { can } from '../lib/permissions';
 import type { Route } from '../lib/router';
 import { Dashboard } from './Dashboard';
 
@@ -25,6 +26,13 @@ const LazyUserDetailPage = lazy(() =>
   import('./admin/users/UserDetailPage').then((module) => ({ default: module.UserDetailPage })),
 );
 
+const LazyUserCreatePage = lazy(() =>
+  import('./admin/users/UserCreatePage').then((module) => ({ default: module.UserCreatePage })),
+);
+const LazyUserEditPage = lazy(() =>
+  import('./admin/users/UserEditPage').then((module) => ({ default: module.UserEditPage })),
+);
+
 function DashboardRoute() {
   const { session, context, onUnauthenticated } = useAppRouteData();
   return (
@@ -38,11 +46,21 @@ function DashboardRoute() {
 }
 
 function UsersListRoute() {
-  return <LazyUsersListPage onUnauthenticated={useAppRouteData().onUnauthenticated} />;
+  const { session, onUnauthenticated } = useAppRouteData();
+  return <LazyUsersListPage onUnauthenticated={onUnauthenticated} canCreate={can(session, 'admin.users.create')} />;
+}
+
+function UserCreateRoute() {
+  return <LazyUserCreatePage onUnauthenticated={useAppRouteData().onUnauthenticated} />;
 }
 
 function UserDetailRoute() {
-  return <LazyUserDetailPage onUnauthenticated={useAppRouteData().onUnauthenticated} />;
+  const { session, onUnauthenticated } = useAppRouteData();
+  return <LazyUserDetailPage onUnauthenticated={onUnauthenticated} canUpdate={can(session, 'admin.users.update')} />;
+}
+
+function UserEditRoute() {
+  return <LazyUserEditPage onUnauthenticated={useAppRouteData().onUnauthenticated} />;
 }
 
 /**
@@ -52,5 +70,8 @@ function UserDetailRoute() {
 export const appRoutes: readonly Route[] = [
   { path: '/', element: DashboardRoute, title: 'داشبورد' },
   { path: '/admin/users', element: UsersListRoute, title: 'مدیریت کاربران', permission: 'admin.users.view' },
+  // `/new` must stay before `/:id`, otherwise "new" would be read as a user id.
+  { path: '/admin/users/new', element: UserCreateRoute, title: 'ایجاد کاربر', permission: 'admin.users.create' },
   { path: '/admin/users/:id', element: UserDetailRoute, title: 'جزئیات کاربر', permission: 'admin.users.view' },
+  { path: '/admin/users/:id/edit', element: UserEditRoute, title: 'ویرایش کاربر', permission: 'admin.users.update' },
 ];

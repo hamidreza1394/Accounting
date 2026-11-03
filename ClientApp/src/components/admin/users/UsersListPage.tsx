@@ -3,15 +3,19 @@ import { Search, X } from 'lucide-react';
 import { ApiError, getAdminUsers, type AdminUserQuery } from '../../../api/client';
 import type { AdminUserListItem, AdminUserListResponse } from '../../../api/types';
 import { formatDate, formatDateTime } from '../../../lib/format';
-import { useSearchParams } from '../../../lib/router';
+import { Link, useSearchParams } from '../../../lib/router';
 import { Breadcrumb } from '../../ui/Breadcrumb';
 import { DataTable, type DataTableColumn, type SortState } from '../../ui/DataTable';
 import { Input, Select, FormField } from '../../ui/FormField';
 import { StatusBadge } from '../../ui/StatusBadge';
-import { Button } from '../../ui/button';
+import { Button, buttonVariants } from '../../ui/button';
 import { fullName } from './userDisplay';
 
-type Props = { onUnauthenticated: (error: unknown) => boolean };
+type Props = {
+  onUnauthenticated: (error: unknown) => boolean;
+  /** UI hint only (the server decides): shows the create button. */
+  canCreate?: boolean;
+};
 
 const pageSizes = [10, 20, 50] as const;
 const sortKeys = ['name', 'username', 'lastLogin', 'created'] as const;
@@ -85,7 +89,7 @@ const columns: readonly DataTableColumn<AdminUserListItem>[] = [
   { key: 'created', header: 'تاریخ ایجاد', sortable: true, cell: (user) => formatDate(user.insertDateTime) },
 ];
 
-export function UsersListPage({ onUnauthenticated }: Props) {
+export function UsersListPage({ onUnauthenticated, canCreate = false }: Props) {
   const [params, setParams] = useSearchParams();
   const query = useMemo(() => parseQuery(params), [params]);
   const [searchInput, setSearchInput] = useState(query.search);
@@ -182,8 +186,17 @@ export function UsersListPage({ onUnauthenticated }: Props) {
     <div className="space-y-5">
       <header className="space-y-2">
         <Breadcrumb items={[{ label: 'مدیریت سیستم' }, { label: 'کاربران' }]} />
-        <h1 className="text-2xl font-extrabold tracking-tight text-title">مدیریت کاربران</h1>
-        <p className="text-sm text-sub">فهرست حساب‌های این نصب؛ برای مشاهدهٔ جزئیات و عضویت‌ها یک کاربر را انتخاب کنید.</p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 space-y-2">
+            <h1 className="text-2xl font-extrabold tracking-tight text-title">مدیریت کاربران</h1>
+            <p className="text-sm text-sub">فهرست حساب‌های این نصب؛ برای مشاهدهٔ جزئیات و عضویت‌ها یک کاربر را انتخاب کنید.</p>
+          </div>
+          {canCreate ? (
+            <Link to="/admin/users/new" className={buttonVariants({ size: 'lg' })}>
+              ایجاد کاربر
+            </Link>
+          ) : null}
+        </div>
       </header>
 
       <form role="search" aria-label="جستجو و فیلتر کاربران" onSubmit={(event) => event.preventDefault()} className="flex flex-wrap items-end gap-3">

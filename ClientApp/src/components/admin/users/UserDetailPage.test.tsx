@@ -4,10 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { RouteView, RouterProvider, type Route } from '../../../lib/router';
 import { json, stubFetch, userDetails } from '../../../test/adminUsers';
 import { UserDetailPage } from './UserDetailPage';
+import { clearUserFlash, setUserFlash } from './userFlash';
 
 const onUnauthenticated = vi.fn((): boolean => false);
+let canUpdate = false;
 function DetailRoute() {
-  return <UserDetailPage onUnauthenticated={onUnauthenticated} />;
+  return <UserDetailPage onUnauthenticated={onUnauthenticated} canUpdate={canUpdate} />;
 }
 const routes: Route[] = [
   { path: '/admin/users', element: () => <h1>فهرست</h1>, title: 'فهرست' },
@@ -27,6 +29,44 @@ describe('UserDetailPage', () => {
   beforeEach(() => {
     onUnauthenticated.mockReset();
     onUnauthenticated.mockReturnValue(false);
+    canUpdate = false;
+    clearUserFlash();
+  });
+
+  it('shows no edit button without the update permission', async () => {
+    stubFetch(() => json(userDetails(2)));
+    setup();
+    await screen.findByRole('heading', { level: 1, name: 'نام2 خانوادگی2' });
+    expect(screen.queryByRole('link', { name: 'ویرایش' })).toBeNull();
+  });
+
+  it('shows an edit link in the header with the update permission', async () => {
+    canUpdate = true;
+    stubFetch(() => json(userDetails(2)));
+    setup();
+    expect(await screen.findByRole('link', { name: 'ویرایش' })).toHaveAttribute('href', '/app/admin/users/user-2/edit');
+  });
+
+  it('shows a one-shot success message handed over by a form page', async () => {
+    setUserFlash('user-2', 'created');
+    stubFetch(() => json(userDetails(2)));
+    const view = setup();
+    const message = await screen.findByText('کاربر با موفقیت ایجاد شد.');
+    // The message is placed inside a polite live region that exists independently of the text.
+    expect(message.parentElement).toHaveAttribute('aria-live', 'polite');
+    view.unmount();
+    stubFetch(() => json(userDetails(2)));
+    setup();
+    await screen.findByRole('heading', { level: 1, name: 'نام2 خانوادگی2' });
+    expect(screen.queryByText('کاربر با موفقیت ایجاد شد.')).toBeNull();
+  });
+
+  it('ignores a message that was meant for another user', async () => {
+    setUserFlash('someone-else', 'updated');
+    stubFetch(() => json(userDetails(2)));
+    setup();
+    await screen.findByRole('heading', { level: 1, name: 'نام2 خانوادگی2' });
+    expect(screen.queryByText('تغییرات کاربر ذخیره شد.')).toBeNull();
   });
 
   it('shows breadcrumb, header and the general tab first', async () => {

@@ -4,6 +4,7 @@ import {
   parseLoginHistory,
   parseAdminUserList,
   parseAdminUserDetails,
+  parseCreatedAdminUser,
   parseCompanies,
   parseCompanyOverview,
   parseSelectedContextResponse,
@@ -13,6 +14,8 @@ import {
   type LoginHistoryItem,
   type AdminUserListResponse,
   type AdminUserDetails,
+  type CreateAdminUserRequest,
+  type UpdateAdminUserRequest,
   type ChangeMyPasswordRequest,
   type CompanyOverview,
   type CompanySummary,
@@ -244,6 +247,17 @@ export async function getAdminUsers(query: AdminUserQuery, signal?: AbortSignal)
 
 export async function getAdminUser(userId: string, signal?: AbortSignal): Promise<AdminUserDetails> {
   return parseAdminUserDetails(await getJson(`/admin/users/${encodeURIComponent(userId)}`, signal));
+}
+
+/** Creates a user (201 `{ id }`). A duplicate answers 409 and invalid data 400, both as {@link ApiError}. */
+export async function createAdminUser(request: CreateAdminUserRequest): Promise<{ id: string }> {
+  const response = await sendJson('POST', '/admin/users', request);
+  return parseCreatedAdminUser(await response.json());
+}
+
+/** Replaces the editable fields of a user (204). There is no concurrency token: the last write wins. */
+export async function updateAdminUser(userId: string, request: UpdateAdminUserRequest): Promise<void> {
+  await sendJson('PUT', `/admin/users/${encodeURIComponent(userId)}`, request);
 }
 
 /** Changes the current account password; the server signs out all sessions after success. */
