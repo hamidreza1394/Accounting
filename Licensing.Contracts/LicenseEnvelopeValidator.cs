@@ -3,8 +3,7 @@ namespace Faranou.Licensing.Contracts;
 /// <summary>
 /// Single safe entry point for untrusted envelopes:
 /// size/structure → algorithm allowlist → kid trust → signature on exact PayloadJson bytes
-/// → parse that same JSON → structural payload rules → time evaluation.
-/// The evaluated payload is always the one parsed from the signed string.
+/// → parse that same JSON → structural/canonical payload rules → time evaluation.
 /// </summary>
 public sealed class LicenseEnvelopeValidator
 {
@@ -32,7 +31,7 @@ public sealed class LicenseEnvelopeValidator
 			return LicenseValidationResult.Fail("envelope_structure_invalid");
 
 		if (!LicenseAlgorithms.IsAllowed(envelope.Algorithm)
-		    || !string.Equals(envelope.Algorithm, _verifier.Algorithm, StringComparison.Ordinal))
+			|| !string.Equals(envelope.Algorithm, _verifier.Algorithm, StringComparison.Ordinal))
 			return LicenseValidationResult.Fail("algorithm_not_allowed");
 
 		if (!_keys.TryResolve(envelope.Kid, out var trusted) || trusted is null)
@@ -53,6 +52,14 @@ public sealed class LicenseEnvelopeValidator
 		var payloadErrors = StructuralValidation.ValidatePayload(payload);
 		if (payloadErrors.Count > 0)
 			return LicenseValidationResult.Fail("payload_structure_invalid");
+
+		// v2 is canonical by contract. v1 retains historical parsing behavior for compatibility.
+		if (payload.FormatVersion >= LicensePayload.CurrentFormatVersion &&
+			!string.Equals(
+				CanonicalJson.SerializePayload(payload),
+				envelope.PayloadJson,
+				StringComparison.Ordinal))
+			return LicenseValidationResult.Fail("payload_not_canonical");
 
 		var status = _evaluator.Evaluate(payload, localInstallationId);
 		if (status == LicenseStatus.Invalid)

@@ -204,3 +204,11 @@
 | Customer Deployment & Sync | #235، #384، #392، #394، #396 | نصب، identity، bootstrap، startup gate، API، فایل، sync و ACK |
 
 Issue #396 فقط مسئول startup gate و Activation Wizard است؛ contract schema در #390، سیاست enforcement در #391، Company/admin provisioning در #392، فروش add-on در #393 و transport/reconciliation در #394 باقی می‌ماند.
+
+## وضعیت اجرای Issue #390 (2026-11-03)
+
+- شاخه `feat/issue-390-company-scoped-license-contract-v2` قرارداد payload v2، validator، canonical serializer و pure successor rules را اضافه می‌کند.
+- دامنه PR فقط Licensing.Contracts، تست قرارداد و مستندات است؛ Vendor issuance در #393 و Customer persistence/enforcement در #391 باقی می‌مانند.
+- Envelope بیرونی و الگوریتم D-045 تغییر نمی‌کنند؛ v1 bytes و allowlist legacy حفظ می‌شوند.
+- تا تکمیل CI و ادغام، این مرحله Implemented-in-PR و نه Verified است.
+

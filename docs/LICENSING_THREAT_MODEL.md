@@ -195,3 +195,16 @@
 - **T51 — downgrade یا stale response در فایل آفلاین:** Customer بالاترین sequence پذیرفته‌شده را durable نگه دارد؛ پاسخ قدیمی/نامرتبط reject شود. ACK و usage نیز idempotent و دارای freshness باشند.
 
 - **T52 — حدس/سرقت activation code:** کد یک‌بارمصرف با entropy کافی، hash-at-rest، rate limit، expiry قابل تنظیم، CustomerAccount/Installation binding، ثبت تلاش و invalidation پس از مصرف داشته باشد؛ کد خام در log/telemetry/file قرار نگیرد. Redeem باید اتمیک باشد تا دو درخواست هم‌زمان دوبار مصرف نشوند.
+
+## کنترل‌های افزوده برای Payload v2 (Issue #390)
+
+| تهدید | کنترل قرارداد | مرز باقی‌مانده |
+|---|---|---|
+| ارتقای ناخواسته ماژول با دستکاری کلاینت | module فقط از payload امضاشده و در CompanyReference مشخص خوانده می‌شود؛ v2 global subsystem را رد می‌کند | enforcement هر API و Company context در #391 |
+| فعال‌شدن ضمنی Trade در نصب قدیمی | v1 allowlist تغییر نکرده؛ `TRADE_IMPORT` فقط در v2 و scope شرکت معتبر است | issuance v2 در #393 |
+| استفاده از feature ناشناخته یا type confusion | catalog allowlist، type ثابت هر code و union دقیقاً تک‌مقداری | افزودن catalog key جدید نیازمند review و golden test |
+| جعل یا تغییر CompanyReference | مرجع opaque در payload امضاشده است و canonical/strict validation دارد | نگاشت reference به Company محلی و authorization در #391 |
+| replay/downgrade amendment | LicenseId/InstallationId/ProductCode ثابت و Sequence strictly increasing در helper قرارداد | ذخیره و مقایسه اتمیک sequence پذیرفته‌شده در Customer #391 |
+| parser differential / extension smuggling | v2 unknown fields رد و canonical byte representation الزام می‌شود | v1 برای سازگاری تاریخی رفتار قبلی را حفظ می‌کند |
+| نشت اطلاعات مشتری | فقط opaque CompanyReference و entitlement تجاری؛ نام/شناسه مالیاتی/داده حسابداری ممنوع | مراقبت در تولید Reference و telemetry |
+

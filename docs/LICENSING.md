@@ -138,3 +138,14 @@
 - کد فعال‌سازی Vendor یک‌بارمصرف، با مدت اعتبار قابل تنظیم و bind‌شده به CustomerAccount/Installation است؛ فقط مجوز شروع صدور است، نه جایگزین LicenseEnvelope. در Cloud از API احراز هویت‌شده و در Offline توسط اپراتور Vendor روی Vendor Host redeem می‌شود؛ هرگز داخل فایل انتقال/log/telemetry قرار نمی‌گیرد.
 - Offline: درخواست نسخه‌دار .request.json با public SPKI و proof-of-possession؛ پاسخ امضاشده .license.json. فایل .txt فقط Base64/armored wrapper همان بایت‌های دقیق است؛ QR صرفاً برای challenge کوچک اختیاری است. هیچ private key/password صادر نمی‌شود.
 - جزئیات و معیار پذیرش در [LICENSING_IMPLEMENTATION_PLAN.md](LICENSING_IMPLEMENTATION_PLAN.md)، [D-060](DECISIONS.md) و Issue #396 است. این قابلیت‌ها Accepted / NotImplemented هستند.
+
+## Payload v2 و entitlementهای شرکت‌محور — Issue #390
+
+- Envelope بیرونی همچنان v1 است؛ payload v1 موجود بدون تغییر canonical bytes معتبر می‌ماند.
+- payload v2 شامل maxCompanies در سطح Installation و `companyEntitlements[]` برای Module/Feature/UserSeat هر Company است.
+- `TRADE_IMPORT` فقط در payload v2 و به‌صورت entitlement شرکت‌محور شناخته می‌شود؛ payloadهای v1 بدون این کد باقی می‌مانند و به‌طور ضمنی Trade را فعال نمی‌کنند.
+- catalog اولیه و typed feature values در بخش ۱۰ `LICENSING_DATA_MODEL.md` تعریف شده است.
+- `supportUntilUtc` و `updatesUntilUtc` از `expiresAtUtc` مستقل‌اند.
+- قرارداد amendment فقط invariants را اعتبارسنجی می‌کند؛ persistence/replay transaction در #391 و Vendor issuance در #393 هستند.
+- وضعیت: پیاده‌سازی در PR #390؛ تا تکمیل CI و ادغام، Verified محسوب نمی‌شود.
+
