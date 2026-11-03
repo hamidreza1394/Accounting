@@ -185,8 +185,8 @@ public sealed class SecurityAuditAdministrationEndpointTests
         Assert.Contains("' \t=1+1", csv);
         Assert.Contains("'@CMD", csv);
         Assert.Contains("\"'-CMD\"", csv);
-        Assert.Contains("\"'\\tleading-tab\"", csv);
-        Assert.Contains("\"'\\rleading-cr\"", csv);
+        Assert.Contains("\"'\tleading-tab\"", csv);
+        Assert.Contains("\"'\rleading-cr\"", csv);
         Assert.DoesNotContain("198.51.100.99", csv);
         Assert.DoesNotContain("export-private-payload", csv);
         Assert.Equal("no-store", context.Response.Headers.CacheControl.ToString());
