@@ -403,7 +403,8 @@ public static class CompanyMembershipRequestEndpoints
             return TypedResults.NotFound();
 
         var now = timeProvider.GetUtcNow().UtcDateTime;
-        var reason = string.IsNullOrWhiteSpace(request?.Reason) ? null : request.Reason.Trim();
+        var suppliedReason = request?.Reason;
+        var reason = string.IsNullOrWhiteSpace(suppliedReason) ? null : suppliedReason.Trim();
         membershipRequest.Status = Domain.CompanyMembershipRequestStatuses.Rejected;
         membershipRequest.DecidedByUserId = approverId.Value;
         membershipRequest.DecidedAtUtc = now;
