@@ -2178,3 +2178,19 @@
 - رویدادهای ناقص یا نبود Logout به‌عنوان مدت نشست/انقضا تفسیر نمی‌شوند. هیچ schema، migration، UI یا retention deletion در این برش نیست.
 - تست‌های unit و SQL Server integration اضافه شدند؛ اجرای محلی در این محیط ممکن نبود (GitHub DNS و .NET SDK در دسترس نیست). CI روی PR معیار تأیید است.
 - handoff: `docs/handoffs/ISSUE-485-security-audit-report-api.md`.
+
+
+## 2026-11-03 — Issue #492: تست مرز امنیتی Customer Boundary Operator API
+
+- برای دو endpoint عملیاتی `CustomerBoundaryEndpoints` تست‌های regression اضافه شد: فقط AccountKind=Infrastructure مجاز است؛ کاربر شرکتی باید 404 بگیرد.
+- سناریوهای diagnostics allowlist، رد پیش از antiforgery برای کاربر شرکتی، رد و Audit درخواست فاقد antiforgery، تخصیص موفق و Audit، و جلوگیری از انتقال شرکت به boundary دیگر (409) پوشش داده شدند.
+- هیچ کد Production، قرارداد API، Schema، Migration یا UI تغییر نکرد.
+- تست محلی در این محیط اجرا نشد؛ CI روی PR معیار Verified شدن است.
+- handoff: `docs/handoffs/ISSUE-492-customer-boundary-authz-tests.md`.
+
+
+## 2026-11-03 — PR #495: اصلاح تست typed Results و CI
+
+- CI اولیه خطای کامپایل نشان داد unionهای `Results<...>` مستقیماً به `IStatusCodeHttpResult` cast نمی‌شوند. تست‌ها اصلاح شدند تا `IResult.ExecuteAsync` را روی `DefaultHttpContext` اجرا و status واقعی HTTP را بررسی کنند.
+- تست diagnostics نیز پاسخ JSON واقعی endpoint را deserialize می‌کند و allowlist خروجی را از نظر عدم افشای شناسه/نام شرکت و شناسه ملی می‌سنجد.
+- CI اولیه در `build-and-test` فقط به علت cast نامعتبر شکست خورد؛ اصلاح در شاخه PR ثبت شده و اجرای مجدد CI برای تأیید باقی است.
