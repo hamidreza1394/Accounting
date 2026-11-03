@@ -39,6 +39,14 @@
 - actor، زمان UTC، reason، correlation و transition باید audit شوند.
 - تعلیق یا لغو باید در درخواست بعدی مؤثر شود؛ cache/session authorization باید invalidate شود.
 
+### 4.1 ممیزی S2 — ساختار سازمانی و ارتباط با هویت (2026-11-03)
+
+- Domain شامل User و UserCompanyMembership است، اما Entity مستقل Employee/Personnel، OrganizationalUnit یا Position در مخزن وجود ندارد؛ ماژول Payroll نیز در ساختار فعلی پیدا نشد.
+- User هویت نصب است و می‌تواند در چند Company عضویت مستقل داشته باشد. UserCompanyMembership دسترسی عملیاتی و CompanyRole را نگه می‌دارد؛ employment/HR record نیست.
+- D-064 می‌گوید سمت و واحد داده منابع انسانی‌اند و به‌خودی‌خود مجوز نمی‌دهند. بنابراین افزودن مستقیم Position/Unit به User سراسری اشتباه است و اتصال آن‌ها به CompanyRole نیز ممنوع است.
+- طرح پیشنهادی در docs/ORGANIZATIONAL_STRUCTURE_DATA_MODEL.md دو گزینه دارد: فیلدهای ساده روی membership (فقط کاربران دارای login) یا CompanyEmployee مستقل با لینک اختیاری به membership (پشتیبانی از کارکنان بدون حساب). گزینه دوم برای ERP/Payroll آینده مناسب‌تر است، اما نیازمند تأیید مالک محصول است.
+- هیچ Employee، OrganizationalUnit، Position، API یا Migration در این مرحله ساخته نشده است.
+
 ## 5. تخصیص سال و دوره مالی
 
 | نوع تخصیص | معنا |
