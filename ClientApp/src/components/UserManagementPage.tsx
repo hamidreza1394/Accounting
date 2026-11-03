@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Building2, ChevronLeft, ChevronRight, Search, ShieldCheck, UserRound, Users } from 'lucide-react';
-import { ApiError, getAdminUser, getAdminUsers } from '../api/client';
-import type { AdminUserDetails, AdminUserListItem, AdminUserListResponse } from '../api/types';
+import { Building2, ChevronLeft, ChevronRight, Search, ShieldCheck, UserRound, Users, X } from 'lucide-react';
+import { ApiError, createAdminUser, getAdminUser, getAdminUsers, updateAdminUser } from '../api/client';
+import type { AdminUserDetails, AdminUserListItem, AdminUserListResponse, CreateAdminUserRequest, UpdateAdminUserRequest } from '../api/types';
 
 type Props = { onUnauthenticated: (error: unknown) => boolean };
 
@@ -25,7 +25,7 @@ function Status({ active }: { active: boolean }) {
   </span>;
 }
 
-function UserDetails({ user }: { user: AdminUserDetails }) {
+function UserDetails({ user, onEdit }: { user: AdminUserDetails; onEdit: (user: AdminUserDetails) => void }) {
   return (
     <section className="min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-100 bg-gradient-to-l from-slate-50 to-white p-5 sm:p-6">
@@ -39,7 +39,10 @@ function UserDetails({ user }: { user: AdminUserDetails }) {
               <p className="mt-1 text-sm text-slate-500" dir="ltr">@{user.username ?? '—'}</p>
             </div>
           </div>
-          <Status active={user.isActive} />
+          <div className="flex items-center gap-2">
+            <Status active={user.isActive} />
+            <button type="button" onClick={() => onEdit(user)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-sky-300">ویرایش اطلاعات</button>
+          </div>
         </div>
       </div>
 
@@ -99,6 +102,11 @@ export function UserManagementPage({ onUnauthenticated }: Props) {
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<AdminUserDetails | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -118,7 +126,7 @@ export function UserManagementPage({ onUnauthenticated }: Props) {
       })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [search, status, page, onUnauthenticated]);
+  }, [search, status, page, refreshKey, onUnauthenticated]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -154,8 +162,11 @@ export function UserManagementPage({ onUnauthenticated }: Props) {
           <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900">مدیریت کاربران</h1>
           <p className="mt-2 text-sm text-slate-500">فهرست حساب‌های این نصب و جزئیات عضویت هر کاربر</p>
         </div>
-        <div className="flex items-center gap-2 rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-800">
-          <ShieldCheck size={16} /> دسترسی مدیر سراسری نصب
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-800">
+            <ShieldCheck size={16} /> دسترسی مدیر سراسری نصب
+          </div>
+          <button type="button" onClick={() => { setEditingUser(null); setSaveError(null); setEditorOpen(true); }} className="rounded-xl bg-[#12365d] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#194a79]">کاربر جدید</button>
         </div>
       </header>
 
@@ -206,7 +217,7 @@ export function UserManagementPage({ onUnauthenticated }: Props) {
         <div className="min-w-0">
           {detailsLoading ? <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">در حال دریافت جزئیات کاربر…</div> : null}
           {detailsError ? <p role="alert" className="rounded-xl bg-rose-50 p-4 text-sm text-rose-700">{detailsError}</p> : null}
-          {!detailsLoading && !detailsError && details ? <UserDetails user={details} /> : null}
+          {!detailsLoading && !detailsError && details ? <UserDetails user={details} onEdit={(user) => { setEditingUser(user); setSaveError(null); setEditorOpen(true); }} /> : null}
           {!detailsLoading && !detailsError && !details ? (
             <div className="flex min-h-72 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white text-center">
               <UserRound size={30} className="text-slate-300" />
