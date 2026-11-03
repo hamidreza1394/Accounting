@@ -328,7 +328,7 @@ function UserEditor({ initialUser, saving, error, onClose, onSave }: {
 function Field({ label, value, onChange, required = false, type = 'text', dir = 'rtl' }: {
   label: string; value: string; onChange: (value: string) => void; required?: boolean; type?: string; dir?: 'rtl' | 'ltr';
 }) {
-  return <label className="block min-w-0"><span className="mb-1.5 block text-xs font-semibold text-slate-600">{label}</span><input type={type} dir={dir} value={value} onChange={(event) => onChange(event.target.value)} required={required} maxLength={type === 'email' ? 254 : type === 'tel' ? 32 : type === 'password' ? 128 : 100} className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100" /></label>;
+  return <label className="block min-w-0"><span className="mb-1.5 block text-xs font-semibold text-slate-600">{label}</span><input type={type} dir={dir} value={value} onChange={(event) => onChange(event.target.value)} required={required} maxLength={type === 'email' ? 254 : type === 'tel' ? 11 : type === 'password' ? 128 : 100} className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100" /></label>;
 }
 
 function UserRow({ user, selected, onSelect }: { user: AdminUserListItem; selected: boolean; onSelect: () => void }) {
