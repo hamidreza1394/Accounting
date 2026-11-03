@@ -448,6 +448,7 @@ public sealed class CompanyMembershipRequestEndpointTests
         public Data.DatabaseContext Database { get; }
         public Infrastructure.Tenancy.CompanyAccessService Access { get; }
         public Domain.Company Destination { get; private set; } = null!;
+        public Domain.Company Source { get; private set; } = null!;
         public Domain.User Requester { get; private set; } = null!;
         public Domain.User Approver { get; private set; } = null!;
         public Domain.User OtherUser { get; private set; } = null!;
@@ -460,9 +461,17 @@ public sealed class CompanyMembershipRequestEndpointTests
         {
             var database = new Data.DatabaseContext(new DbContextOptionsBuilder<Data.DatabaseContext>()
                 .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+            var customerBoundaryId = Guid.NewGuid();
             var fixture = new Fixture(database)
             {
-                Destination = new Domain.Company { Name = "شرکت مقصد", IsActive = true },
+                Destination = new Domain.Company
+                {
+                    Name = "شرکت مقصد", IsActive = true, CustomerBoundaryId = customerBoundaryId,
+                },
+                Source = new Domain.Company
+                {
+                    Name = "شرکت مبدأ", IsActive = true, CustomerBoundaryId = customerBoundaryId,
+                },
                 Requester = new Domain.User("requester@example.test") { Username = "requester", IsActive = true },
                 Approver = new Domain.User("approver@example.test") { Username = "approver", IsActive = true },
                 OtherUser = new Domain.User("other@example.test") { Username = "other", IsActive = true },
@@ -474,6 +483,10 @@ public sealed class CompanyMembershipRequestEndpointTests
             fixture.MemberRole = new Domain.CompanyRole
             {
                 TenantId = fixture.Destination.Id, Company = fixture.Destination, Code = "MEMBER", Name = "عضو", IsActive = true,
+            };
+            var sourceRole = new Domain.CompanyRole
+            {
+                TenantId = fixture.Source.Id, Company = fixture.Source, Code = "SOURCE_MEMBER", Name = "عضو مبدأ", IsActive = true,
             };
             var permission = new Domain.PermissionDefinition
             {
@@ -490,10 +503,19 @@ public sealed class CompanyMembershipRequestEndpointTests
                 Code = "users.update",
                 Name = "ویرایش کاربران",
             };
-            database.Companies.Add(fixture.Destination);
+            database.Companies.AddRange(fixture.Destination, fixture.Source);
             database.Users.AddRange(fixture.Requester, fixture.Approver, fixture.OtherUser);
-            database.CompanyRoles.AddRange(fixture.ApproverRole, fixture.MemberRole);
+            database.CompanyRoles.AddRange(fixture.ApproverRole, fixture.MemberRole, sourceRole);
             database.PermissionDefinitions.AddRange(permission, fixture.DelegatedPermission, fixture.ExtraPermission);
+            database.UserCompanyMemberships.Add(new Domain.UserCompanyMembership
+            {
+                UserId = fixture.Requester.Id,
+                TenantId = fixture.Source.Id,
+                RoleId = sourceRole.Id,
+                Role = sourceRole,
+                IsActive = true,
+                CreatedAtUtc = DateTime.UtcNow,
+            });
             database.CompanyRolePermissions.AddRange(
                 new Domain.CompanyRolePermission
                 {
