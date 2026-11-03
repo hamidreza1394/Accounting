@@ -588,3 +588,94 @@ export function parseCreatedCompanyRole(value: unknown): { id: string } {
   if (!isObject(value)) throw new ContractError('createdRole');
   return { id: readString(value, 'id', 'createdRole') };
 }
+
+// --- Cross-company membership requests (backend: CompanyMembershipRequestEndpoints, D-065) ---
+
+export type MembershipRequestStatus = 'Pending' | 'Approved' | 'Rejected';
+
+const membershipRequestStatuses: readonly MembershipRequestStatus[] = ['Pending', 'Approved', 'Rejected'];
+
+/** One request the signed-in user made to join another company. */
+export type MyMembershipRequest = {
+  id: string;
+  destinationCompanyId: string;
+  destinationCompanyName: string;
+  status: MembershipRequestStatus;
+  requestedAtUtc: string;
+  decidedAtUtc: string | null;
+  decisionReason: string | null;
+  approvedRoleCode: string | null;
+  approvedRoleName: string | null;
+};
+
+/** One request waiting for the destination company's approver (minimal requester identity only). */
+export type PendingMembershipRequest = {
+  id: string;
+  userId: string;
+  requesterDisplayName: string;
+  username: string | null;
+  requestedAtUtc: string;
+  isRequesterActive: boolean;
+};
+
+export type MembershipRequestPage<T> = { items: T[]; page: number; pageSize: number; totalCount: number };
+
+function readMembershipRequestStatus(source: JsonObject, what: string): MembershipRequestStatus {
+  const value = readString(source, 'status', what);
+  const status = membershipRequestStatuses.find((candidate) => candidate === value);
+  if (!status) throw new ContractError(`${what}.status`);
+  return status;
+}
+
+function readRequiredDateTime(source: JsonObject, key: string, what: string): string {
+  const value = readIsoDateTime(source, key, what);
+  if (value === null) throw new ContractError(`${what}.${key}`);
+  return value;
+}
+
+function parseMembershipRequestPage<T>(
+  value: unknown,
+  what: string,
+  parseItem: (item: JsonObject, itemWhat: string) => T,
+): MembershipRequestPage<T> {
+  if (!isObject(value)) throw new ContractError(what);
+  const rows = value['items'];
+  if (!Array.isArray(rows)) throw new ContractError(`${what}.items`);
+  const page = readCount(value, 'page', what);
+  const pageSize = readCount(value, 'pageSize', what);
+  if (page < 1 || pageSize < 1) throw new ContractError(`${what}.page`);
+  return {
+    items: rows.map((row) => {
+      if (!isObject(row)) throw new ContractError(`${what}.item`);
+      return parseItem(row, `${what}.item`);
+    }),
+    page,
+    pageSize,
+    totalCount: readCount(value, 'totalCount', what),
+  };
+}
+
+export function parseMyMembershipRequests(value: unknown): MembershipRequestPage<MyMembershipRequest> {
+  return parseMembershipRequestPage(value, 'myMembershipRequests', (item, what): MyMembershipRequest => ({
+    id: readString(item, 'id', what),
+    destinationCompanyId: readString(item, 'destinationCompanyId', what),
+    destinationCompanyName: readString(item, 'destinationCompanyName', what),
+    status: readMembershipRequestStatus(item, what),
+    requestedAtUtc: readRequiredDateTime(item, 'requestedAtUtc', what),
+    decidedAtUtc: readIsoDateTime(item, 'decidedAtUtc', what, true),
+    decisionReason: readNullableString(item, 'decisionReason', what),
+    approvedRoleCode: readNullableString(item, 'approvedRoleCode', what),
+    approvedRoleName: readNullableString(item, 'approvedRoleName', what),
+  }));
+}
+
+export function parsePendingMembershipRequests(value: unknown): MembershipRequestPage<PendingMembershipRequest> {
+  return parseMembershipRequestPage(value, 'pendingMembershipRequests', (item, what): PendingMembershipRequest => ({
+    id: readString(item, 'id', what),
+    userId: readString(item, 'userId', what),
+    requesterDisplayName: readString(item, 'requesterDisplayName', what),
+    username: readNullableString(item, 'username', what),
+    requestedAtUtc: readRequiredDateTime(item, 'requestedAtUtc', what),
+    isRequesterActive: readBoolean(item, 'isRequesterActive', what),
+  }));
+}

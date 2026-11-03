@@ -6,6 +6,8 @@ import {
   parseAdminUserDetails,
   parseCreatedAdminUser,
   parseCompanyRoles,
+  parseMyMembershipRequests,
+  parsePendingMembershipRequests,
   parseCreatedCompanyRole,
   parsePermissionCatalog,
   parsePermissionTemplates,
@@ -31,6 +33,9 @@ import {
   type SelectedContext,
   type Session,
   type WorkContext,
+  type MembershipRequestPage,
+  type MyMembershipRequest,
+  type PendingMembershipRequest,
 } from './types';
 
 // The API lives on the same origin and is authenticated by the HttpOnly cookie of the
@@ -295,6 +300,48 @@ export async function getPermissionTemplates(signal?: AbortSignal): Promise<Perm
 }
 
 /** Changes the current account password; the server signs out all sessions after success. */
+/** The signed-in user's own membership requests, newest first (`GET /me/membership-requests`). */
+export async function getMyMembershipRequests(
+  page: number,
+  pageSize: number,
+  signal?: AbortSignal,
+): Promise<MembershipRequestPage<MyMembershipRequest>> {
+  return parseMyMembershipRequests(await getJson(`/me/membership-requests?page=${page}&pageSize=${pageSize}`, signal));
+}
+
+/**
+ * Requests waiting for this company's approver, oldest first. The server answers 404 (not 403) to
+ * a user without the approval permission in that company, so a company's queue is not revealed.
+ */
+export async function getPendingMembershipRequests(
+  companyId: string,
+  page: number,
+  pageSize: number,
+  signal?: AbortSignal,
+): Promise<MembershipRequestPage<PendingMembershipRequest>> {
+  return parsePendingMembershipRequests(
+    await getJson(`/admin/companies/${encodeURIComponent(companyId)}/membership-requests/pending?page=${page}&pageSize=${pageSize}`, signal),
+  );
+}
+
+/** Approves a pending request into one active role of the same company (204). Self-approval answers 403. */
+export async function approveMembershipRequest(companyId: string, requestId: string, roleId: string): Promise<void> {
+  await sendJson(
+    'POST',
+    `/admin/companies/${encodeURIComponent(companyId)}/membership-requests/${encodeURIComponent(requestId)}/approve`,
+    { roleId },
+  );
+}
+
+/** Rejects a pending request; the reason is optional and at most 500 characters (204). */
+export async function rejectMembershipRequest(companyId: string, requestId: string, reason: string | null): Promise<void> {
+  await sendJson(
+    'POST',
+    `/admin/companies/${encodeURIComponent(companyId)}/membership-requests/${encodeURIComponent(requestId)}/reject`,
+    { reason },
+  );
+}
+
 export async function changeMyPassword(request: ChangeMyPasswordRequest): Promise<void> {
   await sendJson('POST', '/me/password', request);
 }
