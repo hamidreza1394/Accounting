@@ -81,7 +81,7 @@ public sealed class UserAdministrationMutationTests
 
         var result = await Server.Api.UserAdministrationEndpoints.UpdateUserAsync(
             target.Id, new DefaultHttpContext(), Principal(admin.Id), request,
-            new AllowAntiforgery(), fixture.Database, default);
+            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
 
         Assert.IsType<NoContent>(result);
         var updated = await fixture.Database.Users.SingleAsync(x => x.Id == target.Id);
