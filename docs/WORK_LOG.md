@@ -2154,3 +2154,12 @@
 - شواهد محلی: `generate_migrations.py --check` و `verify_migration_model.py` (۱۱ migration، Up و Down) موفق؛ `test_migration_tooling.py` ۲۸ تست و `test_migration_guard_mutations.py` ۳۱ تست موفق؛ `dotnet ef migrations has-pending-model-changes` (ابزار 10.0.13) خروجی «No changes have been made to the model since the last migration».
 - ریسک ثبت‌شده: در همین PR بررسی بایت‌به‌بایت designer/snapshot برای migration فعلی با `CURRENT_MIGRATION_WRITTEN_BY_EF_TOOLS` عمداً کنار گذاشته شده و تنها به EF (`has-pending-model-changes`) واگذار شده است؛ این کاهش پوشش گارد باید توسط Maintainer بازبینی شود.
 
+
+
+## 2026-11-03 — Issue #444: API اعضای گروه دسترسی و انتقال اعضا
+- مورد ۳ از کارهای باقی‌مانده #444 در Backend پیاده‌سازی شد: `GET .../roles/{roleId}/members` (صفحه‌بندی، حداقل فیلد، فقط عضویت فعال) و `POST .../roles/{roleId}/members/transfer` (انتقال اتمی همهٔ اعضای فعال به گروه فعال دیگرِ همان شرکت، سقف ۵۰۰).
+- فقط مدیر نصب مجاز است؛ عضویت جدید ساخته یا فعال نمی‌شود (D-065)؛ انتقال از/به گروه سیستمی fail-closed است.
+- بازبینی امنیت نشان داد ثبت همهٔ `userIds` در یک رویداد Audit از سقف ۴۰۰۰ نویسهٔ `DetailsJson` فراتر می‌رود؛ Audit به یک رویداد برای هر کاربر تغییر کرد. سرریز صفحه‌بندی با سقف `page` بسته شد.
+- ریسک ثبت‌شده: نبود concurrency token روی CompanyRole/UserCompanyMembership (رفع نیازمند Migration و تأیید).
+- تست محلی: ۲۶ تست مرتبط موفق؛ دو تست SQL Server محلی اجرا نشد (Docker نبود) و باید در CI سبز شوند. هیچ Migration، Schema یا UI تغییر نکرد.
+- handoff: `docs/handoffs/ISSUE-444-role-members-api.md`.
