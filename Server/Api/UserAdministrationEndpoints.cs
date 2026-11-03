@@ -132,18 +132,28 @@ public static class UserAdministrationEndpoints
         if (user is null)
             return TypedResults.NotFound();
 
-        var memberships = await database.UserCompanyMemberships
+        var membershipRows = await database.UserCompanyMemberships
             .AsNoTracking()
             .Where(membership => membership.UserId == userId)
             .OrderBy(membership => membership.Company.Name)
-            .Select(membership => new UserCompanyMembershipResponse(
+            .Select(membership => new
+            {
                 membership.TenantId,
-                membership.Company.Name,
-                membership.Role.Code,
-                membership.Role.Name,
+                CompanyName = membership.Company.Name,
+                RoleCode = membership.Role.Code,
+                RoleName = membership.Role.Name,
                 membership.IsActive,
-                membership.CreatedAtUtc))
+                membership.CreatedAtUtc,
+            })
             .ToListAsync(cancellationToken);
+
+        var memberships = membershipRows.Select(membership => new UserCompanyMembershipResponse(
+            membership.TenantId,
+            membership.CompanyName,
+            membership.RoleCode,
+            membership.RoleName,
+            membership.IsActive,
+            DateTime.SpecifyKind(membership.CreatedAtUtc, DateTimeKind.Utc))).ToArray();
 
         SetNoStore(httpContext);
         return TypedResults.Ok(new UserDetailsResponse(
