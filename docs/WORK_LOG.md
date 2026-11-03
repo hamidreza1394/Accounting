@@ -2069,31 +2069,6 @@
 - D-065 چهار تصمیم جدید تخصیص سال/دوره، directory هم‌گروه، دو نوع دامنه و approval اجباری عضویت بین‌شرکتی را تکمیل می‌کند.
 - هیچ Migration یا تغییر runtime صرفاً با تغییر وضعیت ADR اجرا نشده است.
 
-## 2026-11-03 — پایهٔ رابط مدیریت: روتر، مجوز UI و کامپوننت‌های مشترک (Issue #461 / PR-A1)
-
-- در `ClientApp` روتر درون‌پروژه‌ای مبتنی بر History API (`src/lib/router.tsx`)، تلمیح مجوز UI (`src/lib/permissions.ts`)، قالب‌بندی تاریخ یکپارچه (`src/lib/format.ts`) و کامپوننت‌های مشترک `FormField/Input/Select/Textarea`، `FormSection`، `ConfirmDialog`، `Tabs`، `StatusBadge`، `DataTable`، `Breadcrumb` اضافه شد.
-- کلاینت API: پشتیبانی PUT/PATCH در `sendJson`، `normalizeApiError` (ProblemDetails و `{ error }`) با `fieldErrors`، و `apiPostJson`/`apiGetRaw` برای دو صفحهٔ Provisioning بدون تغییر رفتار.
-- وابستگی جدید اضافه نشد؛ کش توکن Anti-forgery عمداً اضافه نشد. هیچ فایل Backend تغییر نکرد؛ AppShell و ناوبری فعلی دست‌نخورده است.
-- نتایج واقعی در `docs/handoffs/ISSUE-461-admin-ui-foundation.md` ثبت شده است.
-- بازبینی مستقل (code-reviewer): ۰ مورد مسدودکننده و ۳ مورد major که اصلاح شد (Focus trap و خطای onConfirm در ConfirmDialog، Link خارجی در router)؛ ۱۸۰ تست سبز. بازبینی پس از اصلاح تکرار نشد.
-
-## 2026-11-03 — Issue #462 (PR-A2): فهرست و جزئیات کاربران + اتصال router
-- فهرست کاربران (DataTable سمت‌سرور: جست‌وجو، فیلتر، مرتب‌سازی، صفحه‌بندی، وضعیت در URL) و صفحه جزئیات سه‌تبی؛ `UserManagementPage` قدیمی حذف و آزمون‌هایش منتقل شد.
-- `RouterProvider` به AppShell وصل شد؛ منوی «مدیریت کاربران» لینک واقعی شد؛ باگ `offline-check.mjs` برای chunkهای lazy اصلاح شد.
-- بازبینی مستقل: code-reviewer ۰ مسدودکننده/۰ major (۴ مورد minor اصلاح شد)؛ security-reviewer بدون یافته Medium به بالا. ۲۲۲ تست سبز. بررسی مرورگر واقعی اجرا نشد.
-
-## 2026-11-03 — Issue #463 (PR-A4): بهبود حساب کاربری من
-- کشوی حساب کاربری با `Tabs` مشترک؛ تب امنیت با اعتبارسنجی فیلدی، نگاشت `fieldErrors` و جلوگیری از ارسال دوباره؛ تب سوابق با `AuditTimeline` (take=50 و «نمایش بیشتر» تا ۱۰۰)؛ پروفایل فقط‌خواندنی (بدون ورود روند ویرایش، طبق USER_SELF_SERVICE.md).
-- بازبینی مستقل: code-reviewer ۰ مسدودکننده و ۲ major (اصلاح شد)؛ security-reviewer بدون یافته Medium به بالا. ۲۵۰ تست سبز (روی پایه A2). بررسی مرورگر واقعی اجرا نشد.
-
-## 2026-11-03 — Issue #462 (بخش ۲، PR-A3): فرم‌های ایجاد و ویرایش کاربر
-- فرم مشترک ایجاد/ویرایش با اعتبارسنجی فیلدی هم‌خوان با سرور، نگهبان تغییرات ذخیره‌نشده (Cancel و beforeunload)، تأیید غیرفعال‌سازی، نگاشت خطاهای سرور (۴۰۹/۴۰۰)، پیام موفقیت یک‌بار مصرف؛ فقط فیلدهای پشتیبانی‌شده API.
-- بازبینی مستقل: code-reviewer ۰ مسدودکننده/۳ major (۲ اصلاح، ۱ به‌عنوان کار بعدی)، security-reviewer بدون Critical/High/Medium (Low اصلاح شد). ۳۱۶ تست سبز (روی پایه A4). بررسی مرورگر واقعی اجرا نشد.
-
-## 2026-11-03 — Issue #464 (PR-A5): پاک‌سازی ClientApp، RTL، عملکرد و مستندات
-- حذف hex و کلاس‌های خام Tailwind از کامپوننت‌ها (توکن‌های جدید)، منطقی‌سازی RTL، ادغام `PasswordInput`، `fiscalStatus`، `ErrorBoundary`، lazy بودن صفحات Provisioning (JS ورودی: ۳۹۵٫۰۴kB ← ۳۲۵٫۶۵kB)، لینک پرش، `headingLevel`؛ مستند `docs/ADMIN_UI.md`.
-- بررسی مرورگر واقعی با Playwright: ۴ باگ یافت و اصلاح شد (ارتفاع دکمه‌ها در موبایل، برش تب‌ها و هم‌پوشانی فوتر کشو، فوکوس‌پذیری سایدبار بسته، آیکون جست‌وجو). بازبینی مستقل: ۰ مسدودکننده/۲ major اصلاح‌شد. ۳۳۸ تست سبز. مقایسه پیکسلی با main: تغییر فقط جزئی در آیکون‌ها/نشان‌ها.
-
 
 ## 2026-11-03 — Issue #458: انتقال API مدیریت نقش و کاتالوگ مجوز به main
 
@@ -2108,6 +2083,47 @@
 
 
 - Regression test `UserAdministrationEndpointTests.ListUsers_RequiresAnActiveInstallationAdministratorFromTheDatabase` به پاسخ JSON دارای فیلد error با HTTP 403 به‌روزرسانی شد تا با helper صریح 403 در head فعلی هم‌خوان باشد.
+
+
+## 2026-11-03 — Issue #467: پوشش تست خروج موفق در سوابق ورود/خروج
+
+- ممیزی `GetMyLoginHistoryAsync` نشان داد `LogoutSucceeded` از قبل در allowlist رویدادهای تاریخچه وجود دارد؛ API به تغییر نیاز نداشت.
+- شکاف واقعی فقط تست بود: تست self-service فقط LoginSucceeded/LoginFailed را درج می‌کرد و LogoutSucceeded را صریحاً assert نمی‌کرد.
+- رویداد LogoutSucceeded با timestamp جدیدتر به تست افزوده شد؛ انتظار سه رویداد، allowlist و ترتیب نزولی بررسی می‌شوند. RoleChanged و رویداد کاربر دیگر همچنان خارج از پاسخ می‌مانند.
+- هیچ API، schema، Migration یا Frontend تغییر نکرد.
+- اجرای dotnet test و build در محیط ChatGPT انجام نشد؛ نتیجهٔ CI همین PR باید بررسی شود.
+- handoff: `docs/handoffs/ISSUE-467-login-history-logout-test.md`.
+
+
+## 2026-11-03 — پایهٔ رابط مدیریت: روتر، مجوز UI و کامپوننت‌های مشترک (Issue #461 / PR-A1)
+
+- در `ClientApp` روتر درون‌پروژه‌ای مبتنی بر History API (`src/lib/router.tsx`)، تلمیح مجوز UI (`src/lib/permissions.ts`)، قالب‌بندی تاریخ یکپارچه (`src/lib/format.ts`) و کامپوننت‌های مشترک `FormField/Input/Select/Textarea`، `FormSection`، `ConfirmDialog`، `Tabs`، `StatusBadge`، `DataTable`، `Breadcrumb` اضافه شد.
+- کلاینت API: پشتیبانی PUT/PATCH در `sendJson`، `normalizeApiError` (ProblemDetails و `{ error }`) با `fieldErrors`، و `apiPostJson`/`apiGetRaw` برای دو صفحهٔ Provisioning بدون تغییر رفتار.
+- وابستگی جدید اضافه نشد؛ کش توکن Anti-forgery عمداً اضافه نشد. هیچ فایل Backend تغییر نکرد؛ AppShell و ناوبری فعلی دست‌نخورده است.
+- نتایج واقعی در `docs/handoffs/ISSUE-461-admin-ui-foundation.md` ثبت شده است.
+- بازبینی مستقل (code-reviewer): ۰ مورد مسدودکننده و ۳ مورد major که اصلاح شد (Focus trap و خطای onConfirm در ConfirmDialog، Link خارجی در router)؛ ۱۸۰ تست سبز. بازبینی پس از اصلاح تکرار نشد.
+
+
+## 2026-11-03 — Issue #462 (PR-A2): فهرست و جزئیات کاربران + اتصال router
+- فهرست کاربران (DataTable سمت‌سرور: جست‌وجو، فیلتر، مرتب‌سازی، صفحه‌بندی، وضعیت در URL) و صفحه جزئیات سه‌تبی؛ `UserManagementPage` قدیمی حذف و آزمون‌هایش منتقل شد.
+- `RouterProvider` به AppShell وصل شد؛ منوی «مدیریت کاربران» لینک واقعی شد؛ باگ `offline-check.mjs` برای chunkهای lazy اصلاح شد.
+- بازبینی مستقل: code-reviewer ۰ مسدودکننده/۰ major (۴ مورد minor اصلاح شد)؛ security-reviewer بدون یافته Medium به بالا. ۲۲۲ تست سبز. بررسی مرورگر واقعی اجرا نشد.
+
+
+## 2026-11-03 — Issue #463 (PR-A4): بهبود حساب کاربری من
+- کشوی حساب کاربری با `Tabs` مشترک؛ تب امنیت با اعتبارسنجی فیلدی، نگاشت `fieldErrors` و جلوگیری از ارسال دوباره؛ تب سوابق با `AuditTimeline` (take=50 و «نمایش بیشتر» تا ۱۰۰)؛ پروفایل فقط‌خواندنی (بدون ورود روند ویرایش، طبق USER_SELF_SERVICE.md).
+- بازبینی مستقل: code-reviewer ۰ مسدودکننده و ۲ major (اصلاح شد)؛ security-reviewer بدون یافته Medium به بالا. ۲۵۰ تست سبز (روی پایه A2). بررسی مرورگر واقعی اجرا نشد.
+
+
+## 2026-11-03 — Issue #462 (بخش ۲، PR-A3): فرم‌های ایجاد و ویرایش کاربر
+- فرم مشترک ایجاد/ویرایش با اعتبارسنجی فیلدی هم‌خوان با سرور، نگهبان تغییرات ذخیره‌نشده (Cancel و beforeunload)، تأیید غیرفعال‌سازی، نگاشت خطاهای سرور (۴۰۹/۴۰۰)، پیام موفقیت یک‌بار مصرف؛ فقط فیلدهای پشتیبانی‌شده API.
+- بازبینی مستقل: code-reviewer ۰ مسدودکننده/۳ major (۲ اصلاح، ۱ به‌عنوان کار بعدی)، security-reviewer بدون Critical/High/Medium (Low اصلاح شد). ۳۱۶ تست سبز (روی پایه A4). بررسی مرورگر واقعی اجرا نشد.
+
+
+## 2026-11-03 — Issue #464 (PR-A5): پاک‌سازی ClientApp، RTL، عملکرد و مستندات
+- حذف hex و کلاس‌های خام Tailwind از کامپوننت‌ها (توکن‌های جدید)، منطقی‌سازی RTL، ادغام `PasswordInput`، `fiscalStatus`، `ErrorBoundary`، lazy بودن صفحات Provisioning (JS ورودی: ۳۹۵٫۰۴kB ← ۳۲۵٫۶۵kB)، لینک پرش، `headingLevel`؛ مستند `docs/ADMIN_UI.md`.
+- بررسی مرورگر واقعی با Playwright: ۴ باگ یافت و اصلاح شد (ارتفاع دکمه‌ها در موبایل، برش تب‌ها و هم‌پوشانی فوتر کشو، فوکوس‌پذیری سایدبار بسته، آیکون جست‌وجو). بازبینی مستقل: ۰ مسدودکننده/۲ major اصلاح‌شد. ۳۳۸ تست سبز. مقایسه پیکسلی با main: تغییر فقط جزئی در آیکون‌ها/نشان‌ها.
+
 
 ## 2026-11-03 — Issue #475 (PR-B1): نقش‌ها، کاتالوگ مجوز و PermissionTree
 - صفحات کاتالوگ مجوز، فهرست نقش‌ها، ایجاد و ویرایش نقش با `PermissionTree` و پیش‌نمایش قبل/بعد؛ روی قرارداد PR #459 (هنوز Merge نشده؛ بدون اتصال به سرور واقعی). دایرکتوری هم‌گروه (PR #466) به‌دلیل نبود API فهرست گروه‌ها ساخته نشد.
