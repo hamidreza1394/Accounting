@@ -97,22 +97,121 @@ describe('RoleMembersSection', () => {
     expect(screen.queryByRole('button', { name: 'انتقال اعضا…' })).toBeNull();
   });
 
-  it('keeps the dialog open and shows the server message when the transfer is refused', async () => {
-    const user = userEvent.setup();
-    const message = 'گروه مقصد غیرفعال است.';
-    const { calls } = api({ transfer: () => json({ error: message }, 409) });
-    setup();
+  async function openTransferDialog(user: ReturnType<typeof userEvent.setup>) {
     const select = await screen.findByRole('combobox', { name: /گروه مقصد/ });
     await within(select).findByRole('option', { name: 'حسابدار' });
     await user.selectOptions(select, 'role-2');
     await user.click(screen.getByRole('button', { name: 'انتقال اعضا…' }));
-    const dialog = await screen.findByRole('dialog');
+    return screen.findByRole('dialog');
+  }
+
+  it('shows the server message in a focused alert when the transfer is refused, and reloads everything', async () => {
+    const user = userEvent.setup();
+    const message = 'گروه مقصد غیرفعال است.';
+    const { calls } = api({ transfer: () => json({ error: message }, 409) });
+    setup();
+    const dialog = await openTransferDialog(user);
     await user.click(within(dialog).getByRole('button', { name: 'انتقال اعضا' }));
-    expect(await within(dialog).findByText(message)).toBeInTheDocument();
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(message);
+    await waitFor(() => expect(alert).toHaveFocus());
+    expect(screen.queryByRole('dialog')).toBeNull();
     expect(screen.queryByText(/منتقل شد/)).toBeNull();
-    // The members are reloaded so the page shows the current state.
+    // The members and the possible targets are refreshed; the stale target choice is dropped.
     await waitFor(() => expect(calls.filter((call) => call.path === membersPath).length).toBeGreaterThan(1));
+    await waitFor(() => expect(calls.filter((call) => call.path === rolesPath).length).toBeGreaterThan(1));
+    expect(await screen.findByRole('combobox', { name: /گروه مقصد/ })).toHaveValue('');
+  });
+
+  it('never claims nothing moved when the outcome is unknown (5xx), and reloads the members', async () => {
+    const user = userEvent.setup();
+    const { calls } = api({ transfer: () => new Response(null, { status: 500 }) });
+    setup();
+    const dialog = await openTransferDialog(user);
+    await user.click(within(dialog).getByRole('button', { name: 'انتقال اعضا' }));
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('نتیجهٔ انتقال نامشخص است');
+    expect(alert).not.toHaveTextContent('هیچ عضوی منتقل نشده');
+    await waitFor(() => expect(calls.filter((call) => call.path === membersPath).length).toBeGreaterThan(1));
+  });
+
+  it('moves focus to the confirmation after a successful transfer and clears it on the next dialog', async () => {
+    const user = userEvent.setup();
+    let memberCalls = 0;
+    api({ members: () => json(memberPage(memberCalls++ === 0 ? [memberItem(1)] : [memberItem(3)])) });
+    setup();
+    const dialog = await openTransferDialog(user);
+    await user.click(within(dialog).getByRole('button', { name: 'انتقال اعضا' }));
+    const notice = await screen.findByText('۲ عضو به گروه «حسابدار» منتقل شد.');
+    await waitFor(() => expect(notice.closest('[role="status"]')).toHaveFocus());
+    await user.selectOptions(await screen.findByRole('combobox', { name: /گروه مقصد/ }), 'role-2');
+    await user.click(screen.getByRole('button', { name: 'انتقال اعضا…' }));
+    expect(screen.queryByText('۲ عضو به گروه «حسابدار» منتقل شد.')).toBeNull();
+  });
+
+  it('hands a 401 of the member list or of the transfer to the unauthenticated flow without an error or a notice', async () => {
+    const user = userEvent.setup();
+    onUnauthenticated.mockReturnValue(true);
+    api({ transfer: () => new Response(null, { status: 401 }) });
+    setup();
+    const dialog = await openTransferDialog(user);
+    await user.click(within(dialog).getByRole('button', { name: 'انتقال اعضا' }));
+    await waitFor(() => expect(onUnauthenticated).toHaveBeenCalled());
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText(/منتقل شد/)).toBeNull();
+  });
+
+  it('hands a 401 while loading the members to the unauthenticated flow', async () => {
+    onUnauthenticated.mockReturnValue(true);
+    api({ members: () => new Response(null, { status: 401 }) });
+    setup();
+    await waitFor(() => expect(onUnauthenticated).toHaveBeenCalled());
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('shows an alert and no transfer controls when the target roles cannot be loaded', async () => {
+    api({ roles: () => new Response(null, { status: 500 }) });
+    setup();
+    expect(await screen.findByText('نام1 خانوادگی1')).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: /گروه مقصد/ })).toBeNull();
+  });
+
+  it('pages with the exact query and returns to page 1 when the page size changes', async () => {
+    const user = userEvent.setup();
+    const { mock } = api({ members: () => json(memberPage([memberItem(1)], { totalCount: 45 })) });
+    setup();
+    await screen.findByText('نام1 خانوادگی1');
+    const memberUrls = () => mock.mock.calls.map((call) => String(call[0])).filter((url) => url.startsWith(membersPath));
+    expect(memberUrls().at(-1)).toBe(`${membersPath}?page=1&pageSize=20`);
+    await user.click(screen.getByRole('button', { name: 'بعدی' }));
+    await waitFor(() => expect(memberUrls().at(-1)).toBe(`${membersPath}?page=2&pageSize=20`));
+    await user.selectOptions(screen.getByLabelText(/تعداد/), '50');
+    await waitFor(() => expect(memberUrls().at(-1)).toBe(`${membersPath}?page=1&pageSize=50`));
+  });
+
+  it('moves to the last existing page when the current one became empty, and never hangs loading', async () => {
+    const user = userEvent.setup();
+    let call = 0;
+    const bodies = [
+      memberPage([memberItem(1)], { totalCount: 25 }),
+      memberPage([], { page: 2, totalCount: 1 }),
+      memberPage([memberItem(1)], { totalCount: 1 }),
+    ];
+    api({ members: () => json(bodies[Math.min(call++, bodies.length - 1)]) });
+    setup();
+    await screen.findByText('نام1 خانوادگی1');
+    await user.click(screen.getByRole('button', { name: 'بعدی' }));
+    await waitFor(() => expect(call).toBe(3));
+    expect(await screen.findByText('نام1 خانوادگی1')).toBeInTheDocument();
+  });
+
+  it('reports the live member count to its parent after loading', async () => {
+    api();
+    const onMemberCount = vi.fn();
+    render(<RoleMembersSection role={source} companyId="a" canManage onUnauthenticated={onUnauthenticated} onMemberCount={onMemberCount} />);
+    await waitFor(() => expect(onMemberCount).toHaveBeenCalledWith(2));
   });
 
   it('never offers a transfer for a system role and says why', async () => {

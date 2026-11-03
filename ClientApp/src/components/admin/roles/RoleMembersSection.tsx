@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ApiError, getCompanyRoleMembers, getCompanyRoles, transferCompanyRoleMembers } from '../../../api/client';
 import type { CompanyRole, CompanyRoleMember, CompanyRoleMemberPage } from '../../../api/types';
 import { formatDate } from '../../../lib/format';
@@ -15,6 +15,8 @@ type Props = {
   /** UI hint only (the server decides): shows the transfer controls. */
   canManage: boolean;
   onUnauthenticated: (error: unknown) => boolean;
+  /** Reports the current number of active members after every successful load. */
+  onMemberCount?: (count: number) => void;
 };
 
 /** Mirrors `CompanyRoleAdministrationEndpoints.MaxTransferBatchSize`; the server enforces it. */
@@ -39,7 +41,7 @@ function messageOf(cause: unknown, fallback: string): string {
  * same company. A move only changes the group of memberships that are already active; it never
  * creates or reactivates a membership (D-065) and is refused by the server for system groups.
  */
-export function RoleMembersSection({ role, companyId, canManage, onUnauthenticated }: Props) {
+export function RoleMembersSection({ role, companyId, canManage, onUnauthenticated, onMemberCount }: Props) {
   const targetFieldId = useId();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(20);
@@ -52,8 +54,22 @@ export function RoleMembersSection({ role, companyId, canManage, onUnauthenticat
   const [targets, setTargets] = useState<Targets>({ kind: 'idle' });
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [dialogError, setDialogError] = useState<string | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [targetsAttempt, setTargetsAttempt] = useState(0);
+  const noticeRef = useRef<HTMLDivElement>(null);
+  const failureRef = useRef<HTMLDivElement>(null);
+  const onMemberCountRef = useRef(onMemberCount);
+  onMemberCountRef.current = onMemberCount;
+
+  // After a transfer the opener button disappears: move focus to the confirmation so keyboard and
+  // screen reader users keep their place.
+  useEffect(() => {
+    if (notice) noticeRef.current?.focus();
+  }, [notice]);
+  useEffect(() => {
+    if (failure) failureRef.current?.focus();
+  }, [failure]);
 
   const canTransfer = canManage && !role.isSystemRole;
   const total = data?.totalCount ?? 0;
@@ -66,13 +82,18 @@ export function RoleMembersSection({ role, companyId, canManage, onUnauthenticat
     getCompanyRoleMembers(companyId, role.id, page, pageSize, controller.signal)
       .then((result) => {
         if (controller.signal.aborted) return;
-        // A stale page (members were moved away) goes back to the last page that still exists.
-        if (result.items.length === 0 && result.totalCount > 0 && page > 1) {
-          setPage(Math.max(1, Math.ceil(result.totalCount / pageSize)));
-          return;
+        // A stale page (members were moved away) goes to the last page that still exists. Only when
+        // that is a different page; otherwise show the data so a racing total cannot hang loading.
+        if (result.items.length === 0 && page > 1) {
+          const lastPage = Math.max(1, Math.ceil(result.totalCount / pageSize));
+          if (lastPage < page) {
+            setPage(lastPage);
+            return;
+          }
         }
         setData(result);
         setLoading(false);
+        onMemberCountRef.current?.(result.totalCount);
       })
       .catch((cause: unknown) => {
         if (controller.signal.aborted || onUnauthenticated(cause)) return;
@@ -96,7 +117,7 @@ export function RoleMembersSection({ role, companyId, canManage, onUnauthenticat
         setTargets({ kind: 'error', message: messageOf(cause, 'دریافت گروه‌های مقصد انجام نشد.') });
       });
     return () => controller.abort();
-  }, [canTransfer, companyId, onUnauthenticated]);
+  }, [canTransfer, companyId, targetsAttempt, onUnauthenticated]);
 
   const targetChoices = useMemo(
     () => (targets.kind === 'ready' ? targets.roles.filter((candidate) => candidate.id !== role.id && candidate.isActive && !candidate.isSystemRole) : []),
@@ -117,7 +138,7 @@ export function RoleMembersSection({ role, companyId, canManage, onUnauthenticat
   const confirm = async () => {
     if (!target) return;
     setBusy(true);
-    setDialogError(null);
+    setFailure(null);
     try {
       const moved = await transferCompanyRoleMembers(companyId, role.id, target.id);
       setNotice(`${number.format(moved)} عضو به گروه «${target.name}» منتقل شد.`);
@@ -127,9 +148,22 @@ export function RoleMembersSection({ role, companyId, canManage, onUnauthenticat
       setAttempt((value) => value + 1);
     } catch (cause) {
       if (onUnauthenticated(cause)) return;
-      setDialogError(messageOf(cause, 'انتقال اعضا انجام نشد. هیچ عضوی منتقل نشده است.'));
-      // The members or the target may have changed under us; show the current state.
-      if (cause instanceof ApiError && (cause.status === 404 || cause.status === 409)) setAttempt((value) => value + 1);
+      // A refusal from the server (4xx) is definitive and its message is shown. Anything else (network,
+      // 5xx, unreadable answer) may have been applied, so never claim nothing moved; show the real state.
+      const refused = cause instanceof ApiError && cause.status >= 400 && cause.status < 500;
+      // The dialog closes either way: the target may be stale, so the choice is made again.
+      setConfirming(false);
+      setFailure(
+        refused
+          ? cause.message
+          : 'نتیجهٔ انتقال نامشخص است. فهرست اعضا دوباره بارگذاری شد؛ آن را بررسی کنید و در صورت نیاز دوباره تلاش کنید.',
+      );
+      setAttempt((value) => value + 1);
+      // The target may be gone or inactive now: refresh the choices and drop a target that no longer qualifies.
+      if (cause instanceof ApiError && (cause.status === 404 || cause.status === 409)) {
+        setTargetId('');
+        setTargetsAttempt((value) => value + 1);
+      }
     } finally {
       setBusy(false);
     }
@@ -144,7 +178,8 @@ export function RoleMembersSection({ role, companyId, canManage, onUnauthenticat
         <p className="text-sm text-sub">کاربرانی که در این شرکت عضویت فعال دارند و گروه دسترسی‌شان این گروه است.</p>
       </div>
 
-      {notice ? <Alert tone="info">{notice}</Alert> : null}
+      {notice ? <Alert ref={noticeRef} tone="info">{notice}</Alert> : null}
+      {failure ? <Alert ref={failureRef} tone="error">{failure}</Alert> : null}
 
       <DataTable
         caption={`اعضای گروه ${role.name}`}
@@ -161,8 +196,12 @@ export function RoleMembersSection({ role, companyId, canManage, onUnauthenticat
           pageSize,
           total,
           pageSizeOptions: pageSizes,
-          onPageChange: setPage,
+          onPageChange: (next) => {
+            setNotice(null);
+            setPage(next);
+          },
           onPageSizeChange: (size) => {
+            setNotice(null);
             setPageSize(size);
             setPage(1);
           },
@@ -205,7 +244,8 @@ export function RoleMembersSection({ role, companyId, canManage, onUnauthenticat
                 size="lg"
                 disabled={!target}
                 onClick={() => {
-                  setDialogError(null);
+                  setFailure(null);
+                  setNotice(null);
                   setConfirming(true);
                 }}
               >
@@ -230,7 +270,6 @@ export function RoleMembersSection({ role, companyId, canManage, onUnauthenticat
             <p>
               {number.format(total)} عضو فعال گروه «{role.name}» به گروه «{target?.name}» منتقل می‌شوند. این کار دسترسی آن‌ها را به مجوزهای گروه مقصد تغییر می‌دهد و در سوابق امنیتی ثبت می‌شود.
             </p>
-            {dialogError ? <p role="alert" className="font-medium text-danger">{dialogError}</p> : null}
           </div>
         }
       />
