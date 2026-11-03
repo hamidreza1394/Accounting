@@ -648,13 +648,13 @@ public sealed class CompanyMembershipRequestEndpointTests
         Assert.Equal(approved.Id, item.Id);
         Assert.Equal(DateTimeKind.Utc, item.RequestedAtUtc.Kind);
         Assert.Equal(DateTimeKind.Utc, item.DecidedAtUtc!.Value.Kind);
-        Assert.Equal("تأییدکننده", item.DecidedByDisplayName);
+        Assert.Equal("approver", item.DecidedByDisplayName);
 
         var ownHistory = await Server.Api.CompanyMembershipRequestEndpoints.GetMyRequestsAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
             fixture.Database, status: "Rejected");
         var ownResponse = Assert.IsType<Ok<Server.Api.CompanyMembershipRequestListResponse>>(ownHistory).Value!;
-        Assert.Equal(2, ownResponse.TotalCount);
+        Assert.Equal(1, ownResponse.TotalCount);
         Assert.All(ownResponse.Items, request => Assert.Equal(
             Domain.CompanyMembershipRequestStatuses.Rejected, request.Status));
 
