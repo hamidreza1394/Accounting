@@ -2263,6 +2263,8 @@
 - آزمون‌های Playwright `access-ui.spec.mjs` + اسکن axe (WCAG A/AA) و ۴۰۳ واقعی API برای غیرمدیر نوشته شد؛ seed گسترش یافت؛ وابستگی آزمونی `@axe-core/playwright@4.14.0` (MPL-2.0) افزوده شد.
 - **اجرا نشد** (فقط CI با SQL Server)؛ تا نتیجهٔ job `e2e` وضعیت Verified نیست. handoff: `docs/handoffs/ISSUE-444-ui-e2e-and-a11y.md`.
 
+## 2026-11-03 — Issue #444: قراردادهای API مورد نیاز UI (هماهنگی Backend)
+- برای قابلیت‌هایی که API ندارند (کشف شرکت برای درخواست عضویت، گروه‌های قابل‌تخصیص، `/me/permissions`، مرتب‌سازی/Export/Retention گزارش، نشست‌ها، S2) قرارداد دقیق endpoint، مدل و کدهای خطا در `docs/FRONTEND_API_CONTRACT_NEEDS.md` ثبت شد (`Proposed`، مسئول ChatGPT). UI مربوط عمداً ساخته نشد تا قابلیت ظاهری یا داده ساختگی تولید نشود؛ هر مورد پس از Merge شدن API در PR مستقل مصرف می‌شود.
 ## 2026-11-03 — Issue #444: UI دفترچهٔ کاربران شرکت
 - صفحهٔ `/company/users` روی API ادغام‌شدهٔ #497: فهرست فقط‌خواندنی کاربران شرکت جاری با جستجو، فیلتر وضعیت عضویت، جزئیات و صفحه‌بندی؛ 403/404 با پنل «دسترسی ندارید». هیچ داده شرکت دیگر درخواست یا نمایش داده نمی‌شود.
 - واحد/سمت، مجوز دقیق گروه برای غیرمدیر و منوی مبتنی بر مجوز به Backend وابسته‌اند (قرارداد در handoff). handoff: `docs/handoffs/ISSUE-444-company-user-directory-ui.md`.
@@ -2307,3 +2309,5 @@
 - تست UtcWireFormatSqlServerTests در همین PR #503 به‌روزرسانی شد تا DateTimeKind.Utc و خروجی JSON دارای Z را اثبات کند؛ هیچ فایل ClientApp تغییر نکرد.
 - CI، SQL Server واقعی و بررسی has-pending-model-changes هنوز باید روی SHA نهایی تأیید شوند.
 - handoff: docs/handoffs/ISSUE-500-utc-kind-value-converter.md.
+## 2026-11-03 — Issue #444: قراردادهای API مورد نیاز UI (هماهنگی Backend)
+- برای قابلیت‌هایی که API ندارند (کشف شرکت برای درخواست عضویت، گروه‌های قابل‌تخصیص، `/me/permissions`، مرتب‌سازی/Export/Retention گزارش، نشست‌ها، S2) قرارداد دقیق endpoint، مدل و کدهای خطا در `docs/FRONTEND_API_CONTRACT_NEEDS.md` ثبت شد (`Proposed`، مسئول ChatGPT). UI مربوط عمداً ساخته نشد تا قابلیت ظاهری یا داده ساختگی تولید نشود؛ هر مورد پس از Merge شدن API در PR مستقل مصرف می‌شود.
