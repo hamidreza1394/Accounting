@@ -305,3 +305,10 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 ## هویت، دامنه و دسترسی بین‌شرکتی — D-065
 
 الزامات تفصیلی در ACCESS_CONTROL_ARCHITECTURE.md است. Host، CompanyId، GroupId، TenantId و FiscalPeriodId ارسالی کلاینت به‌تنهایی مجوز نیستند. Host mapping فقط context verified را resolve می‌کند. عضویت جدید بین‌شرکتی تا approval مقصد Pending و فاقد هرگونه دسترسی عملیاتی است. Directory هم‌گروه read-only و allowlisted است و role، permission، login history، session، IP، password/hash یا جزئیات امنیتی شرکت دیگر را افشا نمی‌کند. همه queryها، mutationها، exportها، jobها و cacheها باید context کامل را کنترل کنند. TLS، trusted proxy، host-only cookie، anti-forgery، audit، concurrency و تست منفی cross-company/group/period الزامی‌اند.
+
+
+## نگهداری سوابق امنیتی — Proposed (D-070)
+- وضعیت: Proposed؛ تا تصمیم مالک/حقوقی هیچ پاک‌سازی خودکار، endpoint حذف، جدول سیاست یا job اجرایی ایجاد نمی‌شود.
+- مجوز پیشنهادی در سطح نصب: `security.audit.retention.manage`؛ هنوز در catalog فعال نشده است.
+- هر تغییر سیاست، legal hold و purge آتی باید Audit شود؛ Audit نباید IP خام یا payload رویداد را در DetailsJson جدید تکثیر کند.
+- گزینه‌های دوره نگهداری و اثر قانونی/عملیاتی در D-070 ثبت شده‌اند؛ UI فقط پس از تصویب، وضعیت read-only نشان می‌دهد و اجازه حذف ندارد.
