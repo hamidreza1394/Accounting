@@ -47,3 +47,30 @@ export function stubFetch(handler: (url: URL) => Response | Promise<Response>) {
 
 export const listCalls = (mock: ReturnType<typeof stubFetch>): URL[] =>
   mock.mock.calls.map((call) => new URL(String(call[0]), 'http://localhost')).filter((url) => url.pathname === '/api/v1/admin/users');
+
+export type ApiCall = { method: string; path: string; body: unknown; headers: Record<string, string> };
+
+/**
+ * Stubs fetch with a handler that sees the method, path and parsed JSON body. The anti-forgery
+ * token endpoint is answered automatically; `calls` holds every other request for assertions.
+ */
+export function stubApi(handler: (call: ApiCall) => Response | Promise<Response>) {
+  const calls: ApiCall[] = [];
+  const mock = vi.fn((input: string, init?: RequestInit) => {
+    const url = new URL(input, 'http://localhost');
+    const method = init?.method ?? 'GET';
+    if (method === 'GET' && url.pathname === '/api/v1/antiforgery/token') {
+      return Promise.resolve(json({ headerName: 'X-XSRF-TOKEN', requestToken: 'tok' }));
+    }
+    const call: ApiCall = {
+      method,
+      path: url.pathname,
+      body: typeof init?.body === 'string' ? JSON.parse(init.body) : undefined,
+      headers: (init?.headers ?? {}) as Record<string, string>,
+    };
+    calls.push(call);
+    return Promise.resolve(handler(call));
+  });
+  vi.stubGlobal('fetch', mock);
+  return { mock, calls };
+}

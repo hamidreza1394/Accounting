@@ -457,3 +457,23 @@ export function parseAdminUserDetails(value: unknown): AdminUserDetails {
     memberships,
   };
 }
+
+/** Body of `POST /admin/users`; the server normalizes text and validates every value again. */
+export type CreateAdminUserRequest = {
+  username: string;
+  firstName: string | null;
+  lastName: string | null;
+  emailAddress: string;
+  cellPhoneNumber: string | null;
+  password: string;
+  confirmPassword: string;
+  isActive: boolean;
+};
+
+/** Body of `PUT /admin/users/{id}`: always the full set of editable fields (no partial update). */
+export type UpdateAdminUserRequest = Omit<CreateAdminUserRequest, 'password' | 'confirmPassword'>;
+
+export function parseCreatedAdminUser(value: unknown): { id: string } {
+  if (!isObject(value)) throw new ContractError('createdUser');
+  return { id: readString(value, 'id', 'createdUser') };
+}

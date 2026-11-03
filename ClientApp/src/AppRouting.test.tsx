@@ -26,6 +26,7 @@ function stubAll(isAdministrator: boolean) {
       'GET /api/v1/companies/a/overview': () => json(overview),
       'GET /api/v1/admin/users': () => json(listBody([userItem(1), userItem(2)])),
       'GET /api/v1/admin/users/user-2': () => json(userDetails(2)),
+      'GET /api/v1/admin/users/new': () => json({}, 404),
     };
     return Promise.resolve(routes[key]?.() ?? new Response(null, { status: 404 }));
   });
@@ -104,5 +105,51 @@ describe('App routing', () => {
     await screen.findByRole('heading', { name: dashboardHeading });
     expect(screen.queryByRole('link', { name: /گروه‌های دسترسی/ })).toBeNull();
     expect(screen.getByText('گروه‌های دسترسی').closest('[aria-disabled="true"]')).toBeTruthy();
+  });
+
+  it('opens /admin/users/new as the create form, not as a user with id "new"', async () => {
+    window.history.replaceState(null, '', '/app/admin/users/new');
+    const fetchMock = stubAll(true);
+    render(<App navigate={vi.fn()} />);
+    expect(await screen.findByRole('heading', { level: 1, name: 'ایجاد کاربر' })).toBeInTheDocument();
+    expect(screen.getByRole('form', { name: 'فرم ایجاد کاربر' })).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some((call) => String(call[0]).startsWith('/api/v1/admin/users/new'))).toBe(false);
+    await waitFor(() => expect(document.title).toBe('ایجاد کاربر | فرانو'));
+  });
+
+  it('opens the edit form for a deep link and loads that user', async () => {
+    window.history.replaceState(null, '', '/app/admin/users/user-2/edit');
+    stubAll(true);
+    render(<App navigate={vi.fn()} />);
+    expect(await screen.findByRole('heading', { level: 1, name: 'ویرایش کاربر' })).toBeInTheDocument();
+    expect(await screen.findByLabelText(/^نام کاربری/)).toHaveValue('user2');
+  });
+
+  it('reaches create and edit through the list and detail buttons for an administrator', async () => {
+    const user = userEvent.setup();
+    window.history.replaceState(null, '', '/app/admin/users');
+    stubAll(true);
+    render(<App navigate={vi.fn()} />);
+    await user.click(await screen.findByRole('link', { name: 'ایجاد کاربر' }));
+    expect(await screen.findByRole('form', { name: 'فرم ایجاد کاربر' })).toBeInTheDocument();
+    act(() => {
+      window.history.back();
+    });
+    await user.click(await screen.findByRole('link', { name: 'نام2 خانوادگی2' }));
+    await user.click(await screen.findByRole('link', { name: 'ویرایش' }));
+    expect(await screen.findByRole('form', { name: 'فرم ویرایش کاربر' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/app/admin/users/user-2/edit');
+  });
+
+  it('shows a forbidden page and sends no request for create and edit deep links of a non-administrator', async () => {
+    for (const path of ['/app/admin/users/new', '/app/admin/users/user-2/edit']) {
+      window.history.replaceState(null, '', path);
+      const fetchMock = stubAll(false);
+      const view = render(<App navigate={vi.fn()} />);
+      expect(await screen.findByRole('alert')).toHaveTextContent('دسترسی ندارید');
+      expect(screen.queryByRole('form')).toBeNull();
+      expect(fetchMock.mock.calls.some((call) => String(call[0]).startsWith('/api/v1/admin/users'))).toBe(false);
+      view.unmount();
+    }
   });
 });
