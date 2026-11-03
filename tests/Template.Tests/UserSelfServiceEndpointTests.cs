@@ -60,6 +60,13 @@ public sealed class UserSelfServiceEndpointTests
             },
             new Domain.SecurityAuditEvent
             {
+                UserId = fixture.Alice.Id,
+                EventType = "LogoutSucceeded",
+                OccurredAtUtc = new DateTime(2026, 11, 1, 11, 0, 0, DateTimeKind.Utc),
+                IpAddress = "192.0.2.10",
+            },
+            new Domain.SecurityAuditEvent
+            {
                 UserId = fixture.Bob.Id,
                 EventType = "LoginSucceeded",
                 OccurredAtUtc = new DateTime(2026, 11, 1, 9, 0, 0, DateTimeKind.Utc),
@@ -81,8 +88,9 @@ public sealed class UserSelfServiceEndpointTests
             cancellationToken: default);
 
         var ok = Assert.IsType<Ok<IReadOnlyList<Server.Api.LoginHistoryItemResponse>>>(result.Result);
-        Assert.Equal(2, ok.Value!.Count);
-        Assert.All(ok.Value, item => Assert.Contains(item.EventType, new[] { "LoginSucceeded", "LoginFailed" }));
+        Assert.Equal(3, ok.Value!.Count);
+        Assert.All(ok.Value, item => Assert.Contains(item.EventType, new[] { "LoginSucceeded", "LoginFailed", "LogoutSucceeded" }));
+        Assert.Equal("LogoutSucceeded", ok.Value[0].EventType);
         Assert.DoesNotContain(ok.Value, item => item.IpAddress == "192.0.2.20");
     }
 
