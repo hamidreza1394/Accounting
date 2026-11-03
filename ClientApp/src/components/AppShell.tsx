@@ -27,6 +27,7 @@ import type { SelectedContext, Session } from '../api/types';
 import { FaranouLogo } from './ui/FaranouLogo';
 import { MyAccountPanel } from './MyAccountPanel';
 import { UserManagementPage } from './UserManagementPage';
+import { AccessGroupManagementPage } from './AccessGroupManagementPage';
 
 type AppShellProps = {
   session: Session;
@@ -154,7 +155,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, onPasswo
   const [accountOpen, setAccountOpen] = useState(false);
   const accountTriggerRef = useRef<HTMLButtonElement>(null);
   const [settingsOpen, setSettingsOpen] = useState(true);
-  const [activeAdminSection, setActiveAdminSection] = useState<'dashboard' | 'users'>('dashboard');
+  const [activeAdminSection, setActiveAdminSection] = useState<'dashboard' | 'users' | 'access-groups'>('dashboard');
   const readOnly = context.fiscalPeriod.accessMode === 'readOnly';
 
   async function handleLogout() {
@@ -298,7 +299,12 @@ export function AppShell({ session, context, onChangeContext, onLogout, onPasswo
                             </button>
                           </li>
                           <li><DisabledItem label="ساختار سازمانی و سمت‌ها" icon={Building2} tone="blue" nested /></li>
-                          <li><DisabledItem label="گروه‌های دسترسی" icon={ShieldCheck} tone="violet" nested /></li>
+                          <li>
+                            <button type="button" onClick={() => { setActiveAdminSection('access-groups'); setMobileMenuOpen(false); }} aria-current={activeAdminSection === 'access-groups' ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-right text-[12px] transition ' + (activeAdminSection === 'access-groups' ? 'bg-sky-500/20 text-white ring-1 ring-sky-300/30' : 'text-sky-100/80 hover:bg-white/10 hover:text-white')}>
+                              <NavIcon icon={ShieldCheck} tone="violet" size="sm" />
+                              <span className="min-w-0 flex-1">گروه‌های دسترسی</span>
+                            </button>
+                          </li>
                           <li><DisabledItem label="کاتالوگ و جزئیات مجوزها" icon={KeyRound} tone="amber" nested /></li>
                           <li><DisabledItem label="گزارش امنیت و سوابق" icon={Activity} tone="emerald" nested /></li>
                           <li><DisabledItem label="سیاست‌های امنیتی" icon={Settings2} tone="slate" nested /></li>
@@ -353,7 +359,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, onPasswo
               {logoutError}
             </p>
           ) : null}
-          {activeAdminSection === 'users' ? <UserManagementPage onUnauthenticated={onUnauthenticated} /> : children}
+          {activeAdminSection === 'users' ? <UserManagementPage onUnauthenticated={onUnauthenticated} /> : activeAdminSection === 'access-groups' ? <AccessGroupManagementPage companyId={context.company.id} companyName={context.company.name} onUnauthenticated={onUnauthenticated} /> : children}
         </main>
       </div>
       <MyAccountPanel
