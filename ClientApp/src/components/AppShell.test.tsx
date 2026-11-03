@@ -38,7 +38,7 @@ describe('AppShell', () => {
   });
 
   it('shows the focused system-administration menu and removes redundant user-list shortcuts', () => {
-    render(<AppShell session={session} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
+    render(<AppShell session={{ ...session, isAdministrator: true }} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
     expect(screen.getByRole('button', { name: /مدیریت سیستم/ })).toBeInTheDocument();
     for (const label of ['مدیریت کاربران', 'ساختار سازمانی و سمت‌ها', 'گروه‌های دسترسی', 'کاتالوگ و جزئیات مجوزها', 'گزارش امنیت و سوابق', 'سیاست‌های امنیتی']) {
       expect(screen.getByText(label).closest('[aria-disabled="true"]')).toBeTruthy();
@@ -49,7 +49,7 @@ describe('AppShell', () => {
 
   it('keeps the new administration labels readable without truncation', () => {
     // JSDOM cannot measure visual wrapping, but it can guard the full label and wrapping classes.
-    render(<AppShell session={session} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
+    render(<AppShell session={{ ...session, isAdministrator: true }} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
     const longLabel = screen.getByText('ساختار سازمانی و سمت‌ها');
     expect(longLabel).toHaveTextContent('ساختار سازمانی و سمت‌ها');
     expect(longLabel.className).not.toContain('truncate');
@@ -60,7 +60,7 @@ describe('AppShell', () => {
     // Issue #442 review (Finding 3): a bare dot that only surfaced its meaning via a
     // `title` tooltip or a visually-hidden span was invisible to touch users. Nested rows
     // now carry the same always-visible text badge as top-level rows, just smaller.
-    render(<AppShell session={session} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
+    render(<AppShell session={{ ...session, isAdministrator: true }} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
     const nestedItem = screen.getByText('مدیریت کاربران').closest('[aria-disabled="true"]') as HTMLElement;
     expect(nestedItem).toBeTruthy();
     expect(nestedItem).toHaveTextContent('به‌زودی');
