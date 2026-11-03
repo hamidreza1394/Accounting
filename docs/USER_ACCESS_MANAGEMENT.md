@@ -177,3 +177,4 @@ API هم‌مبدأ با Cookie HttpOnly و Anti-forgery موجود حفظ شو�
 - محدودیت‌های مهم ثبت‌شده: endpointهای نقش/کاتالوگ فعلاً فقط Installation Administrator را می‌پذیرند؛ Company Manager/Delegation Ceiling، فهرست اعضا و انتقال اعضای نقش، گزارش امنیت مدیریتی و ساختار سازمانی هنوز آماده نیستند.
 - هیچ entitlement تجاری جدیدی از روی permission UI صادر نمی‌شود؛ لایسنس و مجوز عملیاتی مستقل باقی می‌مانند.
 - مرجع جزئیات و برنامه تکمیل: `docs/handoffs/ISSUE-444-admin-ui-completion.md` و `docs/ADMIN_UI.md`.
+- API اعضای گروه (2026-11-03، `Implemented` در Backend، `Verified` پس از CI و SQL Server): `GET .../roles/{roleId}/members` و `POST .../roles/{roleId}/members/transfer` فقط برای Installation Administrator؛ انتقال اتمی، سقف ۵۰۰ عضو، Audit برای هر کاربر، و انتقال از/به گروه سیستمی بسته است (`NeedsApproval` برای باز کردن). UI این API و concurrency token (RowVersion) هنوز `NotImplemented` هستند. جزئیات: `docs/handoffs/ISSUE-444-role-members-api.md`.

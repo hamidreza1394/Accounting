@@ -2161,3 +2161,10 @@
 - فرم ثبت درخواست جدید ساخته نشد: API کشف شرکت‌های قابل‌درخواست وجود ندارد. تأییدکنندهٔ غیر مدیر نصب هم گروه‌ها را نمی‌بیند (`GET .../roles` فقط مدیر نصب). قرارداد پیشنهادی برای Backend در handoff ثبت شد.
 - تست: typecheck، ۴۳۱ تست vitest، build و check:offline موفق. axe و E2E با SQL Server واقعی اجرا نشد.
 - handoff: `docs/handoffs/ISSUE-444-membership-requests-ui.md`.
+## 2026-11-03 — Issue #444: API اعضای گروه دسترسی و انتقال اعضا
+- مورد ۳ از کارهای باقی‌مانده #444 در Backend پیاده‌سازی شد: `GET .../roles/{roleId}/members` (صفحه‌بندی، حداقل فیلد، فقط عضویت فعال) و `POST .../roles/{roleId}/members/transfer` (انتقال اتمی همهٔ اعضای فعال به گروه فعال دیگرِ همان شرکت، سقف ۵۰۰).
+- فقط مدیر نصب مجاز است؛ عضویت جدید ساخته یا فعال نمی‌شود (D-065)؛ انتقال از/به گروه سیستمی fail-closed است.
+- بازبینی امنیت نشان داد ثبت همهٔ `userIds` در یک رویداد Audit از سقف ۴۰۰۰ نویسهٔ `DetailsJson` فراتر می‌رود؛ Audit به یک رویداد برای هر کاربر تغییر کرد. سرریز صفحه‌بندی با سقف `page` بسته شد.
+- ریسک ثبت‌شده: نبود concurrency token روی CompanyRole/UserCompanyMembership (رفع نیازمند Migration و تأیید).
+- تست محلی: ۲۶ تست مرتبط موفق؛ دو تست SQL Server محلی اجرا نشد (Docker نبود) و باید در CI سبز شوند. هیچ Migration، Schema یا UI تغییر نکرد.
+- handoff: `docs/handoffs/ISSUE-444-role-members-api.md`.
