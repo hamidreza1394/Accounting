@@ -35,6 +35,7 @@ function api(roles: unknown[] = [roleItem(), systemRole], onPut: (call: ApiCall)
     if (call.path === '/api/v1/companies') return json(companiesBody);
     if (call.path === '/api/v1/admin/permission-catalog') return json(catalogItems);
     if (call.path === '/api/v1/admin/companies/a/roles') return json(roles);
+    if (call.path === '/api/v1/admin/companies/a/roles/role-1/members') return json({ items: [], totalCount: 0, page: 1, pageSize: 20 });
     return new Response(null, { status: 404 });
   });
 }
@@ -138,6 +139,7 @@ describe('RoleDetailPage', () => {
       if (call.path === '/api/v1/companies') return json(companiesBody);
       if (call.path === '/api/v1/admin/permission-catalog') return json(catalogItems);
       if (call.path === '/api/v1/admin/companies/a/roles') return json([stored]);
+      if (call.path === '/api/v1/admin/companies/a/roles/role-1/members') return json({ items: [], totalCount: 0, page: 1, pageSize: 20 });
       return new Response(null, { status: 404 });
     });
     setup();

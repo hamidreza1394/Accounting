@@ -13,6 +13,7 @@ import { PermissionTree } from '../../ui/PermissionTree';
 import { StatusBadge } from '../../ui/StatusBadge';
 import { Button } from '../../ui/button';
 import { normalizeText } from '../users/userFormValidation';
+import { RoleMembersSection } from './RoleMembersSection';
 import { clearRoleFlash, peekRoleFlash, roleFlashText, setRoleFlash } from './roleFlash';
 import { delegationNote, roleNameMax, sameCodes, validateRoleFields } from './roleValidation';
 import { resolveCompanyId, rolesPath, useCompanyChoices } from './useCompanyChoices';
@@ -393,6 +394,13 @@ export function RoleDetailPage({ onUnauthenticated, defaultCompanyId, canManage 
             setSaveCount((value) => value + 1);
             setAttempt((value) => value + 1);
           }}
+        />
+        <RoleMembersSection
+          key={state.role.id}
+          role={state.role}
+          companyId={companyId}
+          canManage={canManage}
+          onUnauthenticated={onUnauthenticated}
         />
       </>
     );
