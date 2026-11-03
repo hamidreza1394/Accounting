@@ -222,6 +222,48 @@ public sealed class CompanyMembershipRequestEndpointTests
     }
 
     [Fact]
+    public async Task ApproveMembership_ReactivatesAnExistingMembershipWithAnInactiveRole()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var inactiveRole = new Domain.CompanyRole
+        {
+            TenantId = fixture.Destination.Id,
+            Company = fixture.Destination,
+            Code = "INACTIVE",
+            Name = "نقش غیرفعال",
+            IsActive = false,
+        };
+        fixture.Database.CompanyRoles.Add(inactiveRole);
+        fixture.Database.UserCompanyMemberships.Add(new Domain.UserCompanyMembership
+        {
+            UserId = fixture.Requester.Id,
+            TenantId = fixture.Destination.Id,
+            Role = inactiveRole,
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow,
+        });
+        await fixture.Database.SaveChangesAsync();
+
+        var created = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
+            new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
+            new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Source.Id, fixture.Destination.Id),
+            new AllowAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
+        Assert.Equal(StatusCodes.Status201Created, (created as IStatusCodeHttpResult)?.StatusCode);
+        var request = await fixture.Database.CompanyMembershipRequests.SingleAsync();
+
+        var approved = await Server.Api.CompanyMembershipRequestEndpoints.ApproveAsync(
+            fixture.Destination.Id, request.Id, new DefaultHttpContext(), fixture.Principal(fixture.Approver.Id),
+            new Server.Api.ApproveCompanyMembershipRequest(fixture.MemberRole.Id), new AllowAntiforgery(),
+            fixture.Database, fixture.Access, TimeProvider.System, default);
+        Assert.Equal(StatusCodes.Status204NoContent, (approved as IStatusCodeHttpResult)?.StatusCode);
+
+        var membership = await fixture.Database.UserCompanyMemberships.SingleAsync(
+            item => item.UserId == fixture.Requester.Id && item.TenantId == fixture.Destination.Id);
+        Assert.True(membership.IsActive);
+        Assert.Equal(fixture.MemberRole.Id, membership.RoleId);
+    }
+
+    [Fact]
     public async Task RejectMembership_ClosesRequestWithoutCreatingMembership()
     {
         await using var fixture = await Fixture.CreateAsync();
