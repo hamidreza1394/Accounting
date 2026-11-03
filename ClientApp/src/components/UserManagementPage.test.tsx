@@ -47,6 +47,7 @@ describe('user administration navigation', () => {
     expect(screen.getByRole('dialog', { name: 'ایجاد کاربر جدید' })).toBeInTheDocument();
     expect(screen.getByLabelText('رمز عبور اولیه')).toBeRequired();
     expect(screen.getByLabelText('تکرار رمز عبور')).toBeRequired();
+    expect(screen.getByLabelText('شماره همراه')).toHaveAttribute('maxLength', '11');
   });
 
   it('does not show installation administration navigation to a regular user', () => {
