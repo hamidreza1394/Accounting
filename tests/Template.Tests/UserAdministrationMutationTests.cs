@@ -92,6 +92,49 @@ public sealed class UserAdministrationMutationTests
             audit => audit.EventType == "UserUpdated" && audit.EntityId == target.Id.ToString());
     }
 
+
+    [Fact]
+    public async Task UpdateUser_DoesNotTreatAnOrdinaryRoleAsAnInstallationAdministrator()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddUser("admin", Constants.Role.Admin);
+        var accountantRole = new Domain.Role("Accountant") { IsActive = true };
+        fixture.Database.Roles.Add(accountantRole);
+        var target = fixture.AddUser("alice", "Accountant");
+        target.Role = accountantRole;
+        await fixture.Database.SaveChangesAsync();
+        var request = new Server.Api.UpdateUserRequest(
+            "alice", "آلیس", "مثالی", "alice@example.test", null, false);
+
+        var result = await Server.Api.UserAdministrationEndpoints.UpdateUserAsync(
+            target.Id, new DefaultHttpContext(), Principal(admin.Id), request,
+            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+
+        Assert.IsType<NoContent>(result);
+        Assert.False((await fixture.Database.Users.SingleAsync(x => x.Id == target.Id)).IsActive);
+    }
+
+    [Fact]
+    public async Task UpdateUser_UsesInjectedTimeProviderForAuditTimestamp()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddUser("admin", Constants.Role.Admin);
+        var target = fixture.AddUser("alice", "Accountant");
+        await fixture.Database.SaveChangesAsync();
+        var expected = new DateTimeOffset(2026, 11, 3, 6, 0, 0, TimeSpan.Zero);
+        var timeProvider = new FixedTimeProvider(expected);
+        var request = new Server.Api.UpdateUserRequest(
+            "alice", "آلیس", "مثالی", "alice@example.test", null, true);
+
+        var result = await Server.Api.UserAdministrationEndpoints.UpdateUserAsync(
+            target.Id, new DefaultHttpContext(), Principal(admin.Id), request,
+            new AllowAntiforgery(), fixture.Database, timeProvider, default);
+
+        Assert.IsType<NoContent>(result);
+        var audit = await fixture.Database.SecurityAuditEvents.SingleAsync(x => x.EventType == "UserUpdated");
+        Assert.Equal(expected.UtcDateTime, audit.OccurredAtUtc);
+    }
+
     private static ClaimsPrincipal Principal(Guid userId) => new(
         new ClaimsIdentity(
         [
@@ -132,6 +175,11 @@ public sealed class UserAdministrationMutationTests
         }
 
         public ValueTask DisposeAsync() => Database.DisposeAsync();
+    }
+
+    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
     }
 
     private sealed class AllowAntiforgery : IAntiforgery
