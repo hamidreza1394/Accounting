@@ -281,27 +281,15 @@ public static class CompanyRoleAdministrationEndpoints
         var membership = await database.UserCompanyMemberships.FirstOrDefaultAsync(
             current => current.UserId == userId && current.TenantId == companyId,
             cancellationToken);
-        var previousRoleId = membership?.RoleId;
-        if (membership is null)
-        {
-            membership = new Domain.UserCompanyMembership
+        if (membership is null || !membership.IsActive)
+            return TypedResults.Conflict(new
             {
-                UserId = userId,
-                TenantId = companyId,
-                Company = company,
-                RoleId = roleId,
-                Role = role,
-                IsActive = true,
-                CreatedAtUtc = timeProvider.GetUtcNow().UtcDateTime,
-            };
-            database.UserCompanyMemberships.Add(membership);
-        }
-        else
-        {
-            membership.RoleId = roleId;
-            membership.Role = role;
-            membership.IsActive = true;
-        }
+                error = "عضویت جدید یا غیرفعال باید ابتدا از مسیر درخواست و تأیید شرکت مقصد تعیین تکلیف شود."
+            });
+
+        var previousRoleId = membership.RoleId;
+        membership.RoleId = roleId;
+        membership.Role = role;
 
         var actorId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal)!.Value;
         database.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
