@@ -381,7 +381,7 @@ public static class CompanyRoleAdministrationEndpoints
         var query = database.UserCompanyMemberships.AsNoTracking()
             .Where(membership => membership.TenantId == companyId && membership.RoleId == roleId && membership.IsActive);
         var totalCount = await query.CountAsync(cancellationToken);
-        var items = await query
+        var rows = await query
             .Join(database.Users.AsNoTracking(), membership => membership.UserId, user => user.Id,
                 (membership, user) => new { membership, user })
             .OrderBy(row => row.user.LastName)
@@ -389,14 +389,24 @@ public static class CompanyRoleAdministrationEndpoints
             .ThenBy(row => row.user.Id)
             .Skip((normalizedPage - 1) * normalizedPageSize)
             .Take(normalizedPageSize)
-            .Select(row => new CompanyRoleMemberResponse(
-                row.user.Id,
+            .Select(row => new
+            {
+                UserId = row.user.Id,
                 row.user.Username,
                 row.user.FirstName,
                 row.user.LastName,
-                row.user.IsActive,
-                row.membership.CreatedAtUtc))
+                UserIsActive = row.user.IsActive,
+                row.membership.CreatedAtUtc,
+            })
             .ToListAsync(cancellationToken);
+
+        var items = rows.Select(row => new CompanyRoleMemberResponse(
+            row.UserId,
+            row.Username,
+            row.FirstName,
+            row.LastName,
+            row.UserIsActive,
+            DateTime.SpecifyKind(row.CreatedAtUtc, DateTimeKind.Utc))).ToArray();
 
         SetNoStore(httpContext);
         return TypedResults.Ok(new CompanyRoleMemberListResponse(items, totalCount, normalizedPage, normalizedPageSize));
