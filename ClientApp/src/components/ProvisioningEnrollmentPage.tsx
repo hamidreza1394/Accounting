@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { apiGetRaw, apiPostJson } from '@/api/client';
 
 type AntiforgeryResponse = { headerName?: string; requestToken?: string };
 type ApiError = { detail?: string; title?: string };
@@ -18,12 +19,9 @@ export function ProvisioningEnrollmentPage() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/v1/provisioning/enrollment/antiforgery', {
-      credentials: 'same-origin',
-      cache: 'no-store',
-    }).then(async response => {
-      if (!response.ok) throw new Error('دریافت توکن امنیتی ناموفق بود؛ صفحه را تازه‌سازی کنید.');
-      const body = await response.json() as AntiforgeryResponse;
+    apiGetRaw('/provisioning/enrollment/antiforgery').then(result => {
+      if (!result.ok) throw new Error('دریافت توکن امنیتی ناموفق بود؛ صفحه را تازه‌سازی کنید.');
+      const body = (result.body ?? {}) as AntiforgeryResponse;
       if (!cancelled) {
         setRequestToken(body.requestToken ?? '');
         setHeaderName(body.headerName ?? 'X-XSRF-TOKEN');
@@ -44,19 +42,14 @@ export function ProvisioningEnrollmentPage() {
     setBusy(true);
     setError('');
     try {
-      const response = await fetch('/api/v1/provisioning/enrollment/complete', {
-        method: 'POST',
-        credentials: 'same-origin',
-        cache: 'no-store',
-        headers: { 'Content-Type': 'application/json', [headerName]: requestToken },
-        body: JSON.stringify({ username: username.trim(), enrollmentToken: token.trim(), newPassword: password }),
-      });
+      const response = await apiPostJson(
+        '/provisioning/enrollment/complete',
+        { username: username.trim(), enrollmentToken: token.trim(), newPassword: password },
+        { headerName, requestToken },
+      );
       if (!response.ok) {
-        let detail = '';
-        try {
-          const body = await response.json() as ApiError;
-          detail = body.detail ?? body.title ?? '';
-        } catch { /* Keep the response generic. */ }
+        const body = (response.body ?? {}) as ApiError;
+        const detail = body.detail ?? body.title ?? '';
         if (response.status === 410) throw new Error('توکن راه‌اندازی منقضی شده است؛ با اپراتور نصب برای صدور مجدد تماس بگیرید.');
         if (response.status === 429) throw new Error('تعداد تلاش‌ها بیش از حد مجاز است؛ بعداً دوباره تلاش کنید.');
         throw new Error(detail || 'فعال‌سازی حساب انجام نشد؛ نام کاربری و توکن را بررسی کنید.');

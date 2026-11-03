@@ -1,6 +1,7 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { AlertCircle, CheckCircle2, Download, FileUp, KeyRound, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { apiGetRaw, apiPostJson } from '@/api/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 type AntiforgeryResponse = { headerName?: string; requestToken?: string };
@@ -76,10 +77,10 @@ export function CustomerProvisioningImportPage() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/v1/antiforgery/token', { credentials: 'same-origin', cache: 'no-store' })
-      .then(async response => {
-        if (!response.ok) throw new Error('دریافت توکن امنیتی ناموفق بود؛ دوباره تلاش کنید.');
-        const body = await response.json() as AntiforgeryResponse;
+    apiGetRaw('/antiforgery/token')
+      .then(result => {
+        if (!result.ok) throw new Error('دریافت توکن امنیتی ناموفق بود؛ دوباره تلاش کنید.');
+        const body = (result.body ?? {}) as AntiforgeryResponse;
         if (!cancelled) {
           setRequestToken(body.requestToken ?? '');
           setHeaderName(body.headerName ?? 'X-XSRF-TOKEN');
@@ -119,14 +120,8 @@ export function CustomerProvisioningImportPage() {
     try {
       const id = getRequestId(packageText);
       const parsed = JSON.parse(packageText) as ProvisioningPackage;
-      const response = await fetch('/api/v1/provisioning/apply', {
-        method: 'POST',
-        credentials: 'same-origin',
-        cache: 'no-store',
-        headers: { 'Content-Type': 'application/json', [headerName]: requestToken },
-        body: JSON.stringify(parsed),
-      });
-      const body = await response.json().catch(() => ({})) as ApplyResponse & ApiProblem;
+      const response = await apiPostJson('/provisioning/apply', parsed, { headerName, requestToken });
+      const body = (response.body ?? {}) as ApplyResponse & ApiProblem;
       if (!response.ok) {
         if (body.acknowledgement) setAcknowledgement(JSON.stringify(body.acknowledgement, null, 2));
         throw new Error(body.detail ?? body.error ?? body.title ?? 'اعمال بسته ناموفق بود.');
@@ -151,14 +146,12 @@ export function CustomerProvisioningImportPage() {
     setError('');
     setEnrollmentToken('');
     try {
-      const response = await fetch(`/api/v1/provisioning/${encodeURIComponent(requestId)}/enrollment/reissue`, {
-        method: 'POST',
-        credentials: 'same-origin',
-        cache: 'no-store',
-        headers: { 'Content-Type': 'application/json', [headerName]: requestToken },
-        body: JSON.stringify({ reasonCode }),
-      });
-      const body = await response.json().catch(() => ({})) as { enrollmentToken?: string; error?: string; detail?: string };
+      const response = await apiPostJson(
+        `/provisioning/${encodeURIComponent(requestId)}/enrollment/reissue`,
+        { reasonCode },
+        { headerName, requestToken },
+      );
+      const body = (response.body ?? {}) as { enrollmentToken?: string; error?: string; detail?: string };
       if (!response.ok || !body.enrollmentToken) throw new Error(body.detail ?? body.error ?? 'صدور مجدد توکن ناموفق بود.');
       setEnrollmentToken(body.enrollmentToken);
       setReplayed(false);

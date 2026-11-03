@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { changeMyPassword, getMyLoginHistory, getMyProfile, UnauthenticatedError } from '../api/client';
 import type { LoginHistoryItem, MyProfile } from '../api/types';
+import { formatDateTime } from '../lib/format';
 
 type AccountTab = 'profile' | 'security' | 'history';
 
@@ -30,13 +31,6 @@ const tabs: { id: AccountTab; label: string; icon: typeof UserRound }[] = [
   { id: 'security', label: 'امنیت حساب', icon: ShieldCheck },
   { id: 'history', label: 'سوابق ورود', icon: History },
 ];
-
-function formatDate(value: string | null): string {
-  if (!value) return 'ثبت نشده';
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return 'ثبت نشده';
-  return new Intl.DateTimeFormat('fa-IR', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
-}
 
 function eventLabel(event: LoginHistoryItem['eventType']): { label: string; tone: string; icon: typeof LogIn } {
   switch (event) {
@@ -268,8 +262,8 @@ export function MyAccountPanel({ open, onClose, onPasswordChanged, onUnauthentic
                   <InfoCard icon={KeyRound} label="نام کاربری" value={profile.username} />
                   <InfoCard icon={Mail} label="ایمیل" value={profile.emailAddress} verified={profile.isEmailAddressVerified} />
                   <InfoCard icon={Phone} label="شماره همراه" value={profile.cellPhoneNumber} verified={profile.isCellPhoneNumberVerified} />
-                  <InfoCard icon={CalendarClock} label="آخرین ورود ثبت‌شده" value={formatDate(profile.lastLoginDateTime)} />
-                  <InfoCard icon={CalendarClock} label="تاریخ ایجاد حساب" value={formatDate(profile.insertDateTime)} />
+                  <InfoCard icon={CalendarClock} label="آخرین ورود ثبت‌شده" value={formatDateTime(profile.lastLoginDateTime)} />
+                  <InfoCard icon={CalendarClock} label="تاریخ ایجاد حساب" value={formatDateTime(profile.insertDateTime)} />
                 </div>
               ) : null}
             </div>
@@ -348,7 +342,7 @@ export function MyAccountPanel({ open, onClose, onPasswordChanged, onUnauthentic
                         </span>
                         <div className="min-w-0">
                           <strong className="block text-sm text-slate-800">{event.label}</strong>
-                          <span className="mt-1 block text-xs text-slate-500">{formatDate(item.occurredAtUtc)}</span>
+                          <span className="mt-1 block text-xs text-slate-500">{formatDateTime(item.occurredAtUtc)}</span>
                         </div>
                       </div>
                       <span className="rounded-lg bg-slate-100 px-3 py-2 text-[11px] font-medium text-slate-600" dir="ltr">

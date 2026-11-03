@@ -2068,3 +2068,11 @@
 - با تأیید مالک محصول مبنی بر پذیرش تمام اصول گزارش معماری قبلی، D-064 نیز از Proposed به Accepted تغییر وضعیت یافت: تفکیک مدیر سراسری نصب از مدیر شرکت، استفاده از CompanyRole به‌عنوان گروه دسترسی و حفظ مدل legacy تا مهاجرت امن.
 - D-065 چهار تصمیم جدید تخصیص سال/دوره، directory هم‌گروه، دو نوع دامنه و approval اجباری عضویت بین‌شرکتی را تکمیل می‌کند.
 - هیچ Migration یا تغییر runtime صرفاً با تغییر وضعیت ADR اجرا نشده است.
+
+## 2026-11-03 — پایهٔ رابط مدیریت: روتر، مجوز UI و کامپوننت‌های مشترک (Issue #461 / PR-A1)
+
+- در `ClientApp` روتر درون‌پروژه‌ای مبتنی بر History API (`src/lib/router.tsx`)، تلمیح مجوز UI (`src/lib/permissions.ts`)، قالب‌بندی تاریخ یکپارچه (`src/lib/format.ts`) و کامپوننت‌های مشترک `FormField/Input/Select/Textarea`، `FormSection`، `ConfirmDialog`، `Tabs`، `StatusBadge`، `DataTable`، `Breadcrumb` اضافه شد.
+- کلاینت API: پشتیبانی PUT/PATCH در `sendJson`، `normalizeApiError` (ProblemDetails و `{ error }`) با `fieldErrors`، و `apiPostJson`/`apiGetRaw` برای دو صفحهٔ Provisioning بدون تغییر رفتار.
+- وابستگی جدید اضافه نشد؛ کش توکن Anti-forgery عمداً اضافه نشد. هیچ فایل Backend تغییر نکرد؛ AppShell و ناوبری فعلی دست‌نخورده است.
+- نتایج واقعی در `docs/handoffs/ISSUE-461-admin-ui-foundation.md` ثبت شده است.
+- بازبینی مستقل (code-reviewer): ۰ مورد مسدودکننده و ۳ مورد major که اصلاح شد (Focus trap و خطای onConfirm در ConfirmDialog، Link خارجی در router)؛ ۱۸۰ تست سبز. بازبینی پس از اصلاح تکرار نشد.

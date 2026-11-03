@@ -2,17 +2,11 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Building2, ChevronLeft, ChevronRight, Search, ShieldCheck, UserRound, Users } from 'lucide-react';
 import { ApiError, getAdminUser, getAdminUsers } from '../api/client';
 import type { AdminUserDetails, AdminUserListItem, AdminUserListResponse } from '../api/types';
+import { formatDateTime } from '../lib/format';
 
 type Props = { onUnauthenticated: (error: unknown) => boolean };
 
 const pageSize = 20;
-
-function formatDate(value: string | null): string {
-  if (!value) return 'ثبت نشده';
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return 'ثبت نشده';
-  return new Intl.DateTimeFormat('fa-IR', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
-}
 
 function fullName(user: Pick<AdminUserListItem, 'firstName' | 'lastName'>): string {
   return [user.firstName, user.lastName].filter(Boolean).join(' ') || 'بدون نام ثبت‌شده';
@@ -47,9 +41,9 @@ function UserDetails({ user }: { user: AdminUserDetails }) {
         <Info label="ایمیل" value={user.emailAddress} />
         <Info label="شماره همراه" value={user.cellPhoneNumber ?? 'ثبت نشده'} />
         <Info label="نقش قدیمی حساب" value={user.legacyRoleName ?? 'تعریف نشده'} />
-        <Info label="آخرین ورود موفق" value={formatDate(user.lastLoginDateTime)} />
-        <Info label="تاریخ ایجاد حساب" value={formatDate(user.insertDateTime)} />
-        <Info label="آخرین ویرایش" value={formatDate(user.updateDateTime)} />
+        <Info label="آخرین ورود موفق" value={formatDateTime(user.lastLoginDateTime)} />
+        <Info label="تاریخ ایجاد حساب" value={formatDateTime(user.insertDateTime)} />
+        <Info label="آخرین ویرایش" value={formatDateTime(user.updateDateTime)} />
         <Info label="تأیید ایمیل" value={user.isEmailAddressVerified ? 'تأیید شده' : 'تأیید نشده'} />
         <Info label="تأیید موبایل" value={user.isCellPhoneNumberVerified ? 'تأیید شده' : 'تأیید نشده'} />
       </div>
@@ -227,7 +221,7 @@ function UserRow({ user, selected, onSelect }: { user: AdminUserListItem; select
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-bold text-slate-800">{fullName(user)}</span>
         <span className="mt-1 block truncate text-xs text-slate-500" dir="ltr">@{user.username ?? '—'}</span>
-        <span className="mt-1 block text-[11px] text-slate-400">{user.activeCompanyCount} شرکت فعال · آخرین ورود: {formatDate(user.lastLoginDateTime)}</span>
+        <span className="mt-1 block text-[11px] text-slate-400">{user.activeCompanyCount} شرکت فعال · آخرین ورود: {formatDateTime(user.lastLoginDateTime)}</span>
       </span>
       <Status active={user.isActive} />
     </button>

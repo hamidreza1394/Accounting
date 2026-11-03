@@ -101,6 +101,13 @@
    - `check:offline` یک اسکن ایستا روی خروجی build است؛ آدرسی که در زمان اجرا ساخته شود را نمی‌بیند (جزئیات در `docs/TESTING.md`). قبولی آن شاهد است، نه تضمین.
    - `Server/wwwroot/app` خروجی build است و در Git نگهداری نمی‌شود. قطع اینترنت اجرای نسخهٔ build/publish‌شده را مختل نمی‌کند، ولی ساخت تازه با `npm ci` به رجیستری npm یا یک کش/آینهٔ محلی نیاز دارد. ساخت کاملاً آفلاین (آینهٔ npm یا ذخیرهٔ tarballها) هنوز تصمیم نشده است: `NeedsApproval` / `NotImplemented`.
 
+## کامپوننت‌های مشترک مدیریتی و روتر درون‌پروژه‌ای (Issue #461)
+
+- کامپوننت‌های `ClientApp/src/components/ui/` که سورس‌محور، RTL و بدون وابستگی جدید هستند: `FormField` (همراه `Input`، `Select`، `Textarea`)، `FormSection`، `ConfirmDialog` (محدودسازی focus، Escape، بازگشت focus، جلوگیری از ارسال دوباره)، `Tabs` (WAI-ARIA، جهت فلش‌ها در RTL)، `StatusBadge` (آیکون و متن؛ بر پایهٔ `Badge`)، `DataTable` (نمایشی و سرور-محور: مرتب‌سازی، اسکلت بارگذاری، حالت خالی/خطا، صفحه‌بندی) و `Breadcrumb`. حالت‌های بارگذاری، خالی و خطا از `Feedback.tsx` استفاده می‌کنند.
+- تاریخ‌ها فقط با `src/lib/format.ts` (`formatDate`/`formatDateTime`، روی `lib/date.ts`) نمایش داده می‌شوند.
+- روتر: `src/lib/router.tsx` یک روتر کوچک مبتنی بر History API زیر `/app/` است (`RouterProvider`، `Link`، `useNavigate`، `useLocation`، `useParams`، مسیرهای lazy). دلیل: جلوگیری از افزودن وابستگی بدون ADR و تأیید مالک (D-011). اگر نیازها رشد کرد (layout تو در تو، loader، حالت جست‌وجو در URL) این تصمیم بازبینی شود.
+- `src/lib/permissions.ts` فقط تلمیح UI است و مرجع تصمیم سرور است (D-064)؛ با وجود `GET /me/permissions` به فهرست سرور تغییر می‌کند.
+
 ## منابع رسمی
 
 - [نصب برای Vite و پروژهٔ موجود](https://ui.shadcn.com/docs/installation/vite)
