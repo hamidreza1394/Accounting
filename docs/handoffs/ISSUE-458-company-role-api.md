@@ -64,4 +64,4 @@
 - Commit: پس از ایجاد commit در Git ثبت می‌شود.
 - Pull Request: پس از ایجاد PR ثبت می‌شود.
 
-- تست endpointهای مدیریت کاربران اکنون ProblemDetails JSON و status/title پاسخ 403 را بررسی می‌کند.
+- تست endpointهای مدیریت کاربران اکنون JSON error payload و status 403 را بررسی می‌کند.

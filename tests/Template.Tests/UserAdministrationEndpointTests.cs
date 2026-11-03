@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
@@ -20,9 +21,9 @@ public sealed class UserAdministrationEndpointTests
             new DefaultHttpContext(), Principal(ordinary.Id), fixture.Database,
             search: null, status: "all", page: 1, pageSize: 25, sort: "created",
             descending: true, cancellationToken: default);
-        var problem = Assert.IsType<ProblemHttpResult>(denied);
-        Assert.Equal(StatusCodes.Status403Forbidden, problem.ProblemDetails.Status);
-        Assert.Equal("برای انجام این عملیات به نقش مدیر نصب نیاز دارید.", problem.ProblemDetails.Title);
+        Assert.Equal(StatusCodes.Status403Forbidden, (denied as IStatusCodeHttpResult)?.StatusCode);
+        var payload = Assert.IsAssignableFrom<IValueHttpResult>(denied);
+        Assert.Contains("فقط مدیر نصب سامانه مجاز به این عملیات است.", JsonSerializer.Serialize(payload.Value));
 
         var allowed = await Server.Api.UserAdministrationEndpoints.GetUsersAsync(
             new DefaultHttpContext(), Principal(admin.Id), fixture.Database,

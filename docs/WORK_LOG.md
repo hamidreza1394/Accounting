@@ -2082,4 +2082,4 @@
 - handoff: `docs/handoffs/ISSUE-458-company-role-api.md`.
 
 
-- Regression test `UserAdministrationEndpointTests.ListUsers_RequiresAnActiveInstallationAdministratorFromTheDatabase` به پاسخ ProblemDetails با HTTP 403 به‌روزرسانی شد تا با helper صریح 403 در head فعلی هم‌خوان باشد.
+- Regression test `UserAdministrationEndpointTests.ListUsers_RequiresAnActiveInstallationAdministratorFromTheDatabase` به پاسخ JSON دارای فیلد error با HTTP 403 به‌روزرسانی شد تا با helper صریح 403 در head فعلی هم‌خوان باشد.
