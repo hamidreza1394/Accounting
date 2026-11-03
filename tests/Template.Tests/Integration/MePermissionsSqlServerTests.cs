@@ -57,8 +57,8 @@ public sealed class MePermissionsSqlServerTests
             {
                 Company = companyB, TenantId = companyB.Id, Code = "TRADE", Name = "بازرگانی", IsActive = true,
             };
-            var permissionA = new Domain.PermissionDefinition { Code = "users.list", Name = "مشاهده کاربران" };
-            var permissionB = new Domain.PermissionDefinition { Code = "trade.import", Name = "ورود بازرگانی" };
+            var permissionA = new Domain.PermissionDefinition { Code = "test.me.permissions.company-a", Name = "مشاهده کاربران" };
+            var permissionB = new Domain.PermissionDefinition { Code = "test.me.permissions.company-b", Name = "ورود بازرگانی" };
             database.AddRange(user, companyA, companyB, roleA, roleB, permissionA, permissionB);
             database.CompanyRolePermissions.AddRange(
                 new Domain.CompanyRolePermission { Role = roleA, RoleId = roleA.Id, Permission = permissionA, PermissionId = permissionA.Id },
@@ -79,7 +79,7 @@ public sealed class MePermissionsSqlServerTests
             var access = new Infrastructure.Tenancy.CompanyAccessService(database);
             var companyAPermissions = await access.GetGrantedPermissionCodesAsync(
                 user.Id, companyA.Id, cancellationToken);
-            Assert.Equal(new[] { "users.list" }, companyAPermissions);
+            Assert.Equal(new[] { "test.me.permissions.company-a" }, companyAPermissions);
 
             var inactiveMembershipPermissions = await access.GetGrantedPermissionCodesAsync(
                 user.Id, companyB.Id, cancellationToken);
@@ -89,7 +89,7 @@ public sealed class MePermissionsSqlServerTests
             await database.SaveChangesAsync(cancellationToken);
             var companyBPermissions = await access.GetGrantedPermissionCodesAsync(
                 user.Id, companyB.Id, cancellationToken);
-            Assert.Equal(new[] { "trade.import" }, companyBPermissions);
+            Assert.Equal(new[] { "test.me.permissions.company-b" }, companyBPermissions);
 
             roleA.IsActive = false;
             await database.SaveChangesAsync(cancellationToken);
