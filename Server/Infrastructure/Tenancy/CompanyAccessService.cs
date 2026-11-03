@@ -135,6 +135,31 @@ public sealed class CompanyAccessService
 	}
 
 	/// <summary>
+	/// Returns the effective permission IDs from the user's active company role in one company.
+	/// This is the current RBAC source of truth; extend it if direct or group grants are introduced.
+	/// </summary>
+	public async Task<IReadOnlySet<Guid>> GetEffectivePermissionIdsAsync(
+		Guid userId,
+		Guid companyId,
+		CancellationToken cancellationToken = default)
+	{
+		if (userId == Guid.Empty || companyId == Guid.Empty)
+		{
+			return new HashSet<Guid>();
+		}
+
+		var permissionIds = await QueryActiveMemberships(userId)
+			.Where(membership => membership.TenantId == companyId)
+			.SelectMany(membership => DatabaseContext.CompanyRolePermissions
+				.Where(rolePermission => rolePermission.RoleId == membership.RoleId)
+				.Select(rolePermission => rolePermission.PermissionId))
+			.Distinct()
+			.ToListAsync(cancellationToken);
+
+		return permissionIds.ToHashSet();
+	}
+
+	/// <summary>
 	/// The subset of <paramref name="companyIds" /> in which the user holds the permission
 	/// <paramref name="permissionCode" /> through an active membership. One query, so a
 	/// group report can check every company of its scope at once.
