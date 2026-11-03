@@ -2259,6 +2259,9 @@
 - کامپوننت `ui/JalaliDateField` (مقدار ISO میلادی، RTL، ارقام فارسی، `min`/`max`، صفحه‌کلید، `FormField`) با ۱۲ تست؛ یک باگ اعتبارسنجی ماه حین تست یافت و رفع شد.
 - اتصال به گزارش امنیتی پس از ادغام #499 در PR بعدی. handoff: `docs/handoffs/ISSUE-444-jalali-date-picker.md`.
 
+## 2026-11-03 — Issue #444: E2E و دسترس‌پذیری (مرحلهٔ ۱۱)
+- آزمون‌های Playwright `access-ui.spec.mjs` + اسکن axe (WCAG A/AA) و ۴۰۳ واقعی API برای غیرمدیر نوشته شد؛ seed گسترش یافت؛ وابستگی آزمونی `@axe-core/playwright@4.14.0` (MPL-2.0) افزوده شد.
+- **اجرا نشد** (فقط CI با SQL Server)؛ تا نتیجهٔ job `e2e` وضعیت Verified نیست. handoff: `docs/handoffs/ISSUE-444-ui-e2e-and-a11y.md`.
 
 ## 2026-11-03 — Issue #444: UI دفترچهٔ کاربران شرکت
 - صفحهٔ `/company/users` روی API ادغام‌شدهٔ #497: فهرست فقط‌خواندنی کاربران شرکت جاری با جستجو، فیلتر وضعیت عضویت، جزئیات و صفحه‌بندی؛ 403/404 با پنل «دسترسی ندارید». هیچ داده شرکت دیگر درخواست یا نمایش داده نمی‌شود.
@@ -2267,6 +2270,7 @@
 - فیلترهای تاریخ به `JalaliDateField` منتقل شد؛ فیلتر کاربر با `UserPicker` (combobox دسترس‌پذیر روی `GET /admin/users?search=`) و فیلتر شرکت از شرکت‌های عضویت کاربر + کلیک روی جدول. بدون داده ساختگی.
 - حین تست دو باگ واقعی رفع شد: ماه پیش‌فرض تقویم و گم‌شدن مقدار تاریخ از نام دسترس‌پذیر دکمه.
 - مسدود به API: مرتب‌سازی، فهرست همهٔ شرکت‌های نصب، فهرست انواع رویداد؛ قرارداد در handoff. handoff: `docs/handoffs/ISSUE-444-security-audit-complete.md`.
+- نتیجهٔ واقعی job `e2e` (CI): ۳۲ موفق، ۴ شکست axe؛ یافتهٔ واقعی در هدر مشترک: `label-content-name-mismatch` (دکمه‌های تغییر شرکت/دوره مالی) و `aria-prohibited-attr` (aria-label روی span اعلان). در UI اصلاح شد (نام دسترس‌پذیر شامل متن دیده‌شده؛ `role="img"`)؛ تست‌ها با regex هماهنگ شدند، ضعیف نشدند.
 
 ## 2026-11-03 — Issue #504 / D-069: طراحی چرخه عمر نشست
 - ممیزی نشان داد Cookie فعلی ۳۰ دقیقه‌ای و sliding است؛ SessionValidator در هر درخواست account active و CredentialStamp را بررسی می‌کند؛ خروج صریح نیز از طریق UserSessionAuditService ثبت می‌شود.
