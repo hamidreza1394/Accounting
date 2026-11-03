@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Data.SqlClient;
@@ -109,6 +110,25 @@ public sealed class SecurityAuditAdministrationSqlServerTests
             var json = JsonSerializer.Serialize(ok.Value);
             Assert.DoesNotContain("203.0.113.10", json);
             Assert.DoesNotContain("sql-private-payload", json);
+
+            var exportContext = new DefaultHttpContext();
+            var export = await Server.Api.SecurityAuditAdministrationEndpoints.ExportAuditEventsAsync(
+                exportContext,
+                Principal(admin.Id),
+                database,
+                eventType: "LoginSucceeded",
+                userId: admin.Id,
+                companyId: company.Id,
+                fromUtc: new DateTimeOffset(occurredAt.AddMinutes(-1), TimeSpan.Zero),
+                toUtc: new DateTimeOffset(occurredAt.AddMinutes(1), TimeSpan.Zero),
+                cancellationToken: cancellationToken);
+            var exportFile = Assert.IsType<FileContentHttpResult>(export);
+            var csv = Encoding.UTF8.GetString(exportFile.FileContents);
+            Assert.Contains("LoginSucceeded", csv);
+            Assert.Contains("203.0.113.10", json);
+            Assert.DoesNotContain("203.0.113.10", csv);
+            Assert.DoesNotContain("sql-private-payload", csv);
+            Assert.Equal("no-store", exportContext.Response.Headers.CacheControl.ToString());
         }
         finally
         {
