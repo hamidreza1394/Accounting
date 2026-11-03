@@ -20,13 +20,13 @@ internal sealed class CompanyMembershipRequestConfiguration :
             .HasFilter("[Status] = 'Pending'");
         builder.HasIndex(x => new { x.DestinationTenantId, x.Status, x.RequestedAtUtc });
 
-        builder.HasOne(x => x.SourceCompany).WithMany()
+        builder.HasOne(x => x.SourceCompany).WithMany(x => x.MembershipRequestsAsSource)
             .HasForeignKey(x => x.SourceTenantId)
             .OnDelete(Microsoft.EntityFrameworkCore.DeleteBehavior.Restrict);
-        builder.HasOne(x => x.DestinationCompany).WithMany()
+        builder.HasOne(x => x.DestinationCompany).WithMany(x => x.MembershipRequestsAsDestination)
             .HasForeignKey(x => x.DestinationTenantId)
             .OnDelete(Microsoft.EntityFrameworkCore.DeleteBehavior.Restrict);
-        builder.HasOne(x => x.ApprovedRole).WithMany()
+        builder.HasOne(x => x.ApprovedRole).WithMany(x => x.MembershipRequests)
             .HasForeignKey(x => new { x.ApprovedRoleId, x.DestinationTenantId })
             .HasPrincipalKey(x => new { x.Id, x.TenantId })
             .OnDelete(Microsoft.EntityFrameworkCore.DeleteBehavior.Restrict);
