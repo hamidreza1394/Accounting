@@ -2254,3 +2254,7 @@
 - ADR D-068: `react-day-picker@9.14.0` با مسیر `/persian` (نسخهٔ 10 این مسیر را ندارد) پین شد؛ مجوزها MIT، `npm audit` بدون آسیب‌پذیری، حجم chunk تنبل ≈ 72 kB gzip، اجرای آفلاین تأیید شد.
 - کامپوننت `ui/JalaliDateField` (مقدار ISO میلادی، RTL، ارقام فارسی، `min`/`max`، صفحه‌کلید، `FormField`) با ۱۲ تست؛ یک باگ اعتبارسنجی ماه حین تست یافت و رفع شد.
 - اتصال به گزارش امنیتی پس از ادغام #499 در PR بعدی. handoff: `docs/handoffs/ISSUE-444-jalali-date-picker.md`.
+
+
+## 2026-11-03 — Issue #444: قراردادهای API مورد نیاز UI (هماهنگی Backend)
+- برای قابلیت‌هایی که API ندارند (کشف شرکت برای درخواست عضویت، گروه‌های قابل‌تخصیص، `/me/permissions`، مرتب‌سازی/Export/Retention گزارش، نشست‌ها، S2) قرارداد دقیق endpoint، مدل و کدهای خطا در `docs/FRONTEND_API_CONTRACT_NEEDS.md` ثبت شد (`Proposed`، مسئول ChatGPT). UI مربوط عمداً ساخته نشد تا قابلیت ظاهری یا داده ساختگی تولید نشود؛ هر مورد پس از Merge شدن API در PR مستقل مصرف می‌شود.

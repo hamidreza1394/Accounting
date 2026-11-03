@@ -65,6 +65,7 @@
 | [`handoffs/ISSUE-494-company-user-directory-api.md`](handoffs/ISSUE-494-company-user-directory-api.md) | API فهرست کاربران در scope شرکت با مجوز users.list؛ بدون اطلاعات تماس/امنیتی |
 | [`handoffs/ISSUE-444-jalali-date-picker.md`](handoffs/ISSUE-444-jalali-date-picker.md) | تحویل انتخابگر تاریخ شمسی (`JalaliDateField`) و ADR وابستگی D-068 (Issue #444) |
 | [`handoffs/ISSUE-444-security-audit-ui.md`](handoffs/ISSUE-444-security-audit-ui.md) | تحویل UI گزارش امنیت و سوابق مدیریتی روی API #487 (Issue #444، S7) |
+| [`FRONTEND_API_CONTRACT_NEEDS.md`](FRONTEND_API_CONTRACT_NEEDS.md) | قراردادهای API پیشنهادی مورد نیاز UI مدیریت دسترسی (عضویت، `/me/permissions`، گزارش امنیتی، نشست‌ها، S2) برای Backend (Issue #444) |
 | [`handoffs/ISSUE-467-login-history-logout-test.md`](handoffs/ISSUE-467-login-history-logout-test.md) | Regression test برای نمایش خروج موفق در سوابق ورود/خروج کاربر |
 | [`WORK_LOG.md`](WORK_LOG.md), [`handoffs/`](handoffs/) | سوابق تحویل؛ [تحویل تجمیعی مدیریت کاربران و دسترسی‌ها](handoffs/ISSUE-444-admin-ui-completion.md)؛ [تحویل نقش‌ها و کاتالوگ مجوز](handoffs/ISSUE-475-roles-permission-catalog.md) |
 
