@@ -1,0 +1,146 @@
+import { useId, useState } from 'react';
+import { Popover } from '@base-ui/react/popover';
+import { DayPicker } from 'react-day-picker/persian';
+import 'react-day-picker/style.css';
+import { CalendarDays, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { formatPersianDate } from '@/lib/date';
+
+/**
+ * A Persian (Jalali) calendar date field. The VALUE is always a Gregorian ISO calendar date
+ * (`yyyy-MM-dd`, or `''` for none): the Jalali calendar is only how it is shown and chosen
+ * (D-049, D-068). It carries no time and no time zone; turning a day into UTC instants is
+ * `dayStartUtc`/`dayEndUtc` in lib/time.ts (docs/TIME_CONTRACT.md).
+ */
+export type JalaliDateFieldProps = {
+  /** Gregorian ISO calendar date, or `''`. */
+  value: string;
+  onChange: (value: string) => void;
+  /** Earliest / latest selectable day (ISO). Days outside are shown disabled. */
+  min?: string;
+  max?: string;
+  placeholder?: string;
+  disabled?: boolean;
+  /** Accessible name of the "clear" button; defaults to a generic Persian label. */
+  clearLabel?: string;
+  /** Wired by `FormField`: label association, hint/error description, validity, required. */
+  id?: string;
+  'aria-describedby'?: string;
+  'aria-invalid'?: boolean;
+  'aria-required'?: boolean;
+  required?: boolean;
+  className?: string;
+};
+
+const isoPattern = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/** Local noon of an ISO calendar date: DST transitions cannot move it to another day. */
+export function isoToDate(iso: string): Date | undefined {
+  const match = isoPattern.exec(iso);
+  if (!match) return undefined;
+  const [, year, month, day] = match;
+  const date = new Date(Number(year), Number(month) - 1, Number(day), 12);
+  const valid =
+    Number.isFinite(date.getTime()) &&
+    date.getFullYear() === Number(year) &&
+    date.getMonth() === Number(month) - 1 &&
+    date.getDate() === Number(day);
+  return valid ? date : undefined;
+}
+
+/** The local calendar date of a chosen day as ISO `yyyy-MM-dd`. */
+export function dateToIso(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${String(date.getFullYear()).padStart(4, '0')}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+const triggerClass =
+  'inline-flex h-10 min-w-0 flex-1 items-center justify-between gap-2 rounded-lg border border-line bg-white px-3 text-sm text-ink outline-none transition-colors focus-visible:border-teal-deep focus-visible:ring-2 focus-visible:ring-gold aria-[invalid=true]:border-danger disabled:cursor-not-allowed disabled:bg-cool disabled:text-sub';
+
+export function JalaliDateField({
+  value,
+  onChange,
+  min,
+  max,
+  placeholder = 'انتخاب تاریخ',
+  disabled = false,
+  clearLabel = 'پاک‌کردن تاریخ',
+  className,
+  ...aria
+}: JalaliDateFieldProps) {
+  const [open, setOpen] = useState(false);
+  const titleId = useId();
+  const selected = isoToDate(value);
+  const minDate = min ? isoToDate(min) : undefined;
+  const maxDate = max ? isoToDate(max) : undefined;
+  const startMonth = minDate ?? new Date(2000, 0, 1);
+  const endMonth = maxDate ?? new Date(2100, 11, 1);
+
+  let text = placeholder;
+  if (selected) {
+    try {
+      text = formatPersianDate(value);
+    } catch {
+      text = placeholder;
+    }
+  }
+
+  return (
+    <div className={cn('flex items-center gap-1', className)}>
+      <Popover.Root open={open} onOpenChange={setOpen}>
+        <Popover.Trigger
+          type="button"
+          disabled={disabled}
+          id={aria.id}
+          aria-describedby={aria['aria-describedby']}
+          aria-invalid={aria['aria-invalid']}
+          aria-required={aria['aria-required'] ?? aria.required}
+          className={triggerClass}
+        >
+          <span className={cn('truncate', !selected && 'text-muted')} dir={selected ? 'ltr' : undefined}>
+            {text}
+          </span>
+          <CalendarDays size={16} aria-hidden="true" className="shrink-0 text-sub" />
+        </Popover.Trigger>
+        <Popover.Portal>
+          <Popover.Positioner sideOffset={6} className="z-50">
+            <Popover.Popup
+              aria-labelledby={titleId}
+              dir="rtl"
+              className="rounded-xl border border-line bg-white p-2 text-ink shadow-xl outline-none"
+              style={{ '--rdp-accent-color': 'var(--color-teal-deep)', '--rdp-accent-background-color': 'var(--color-pick-soft)' } as React.CSSProperties}
+            >
+              <Popover.Title id={titleId} className="sr-only">
+                انتخاب تاریخ شمسی
+              </Popover.Title>
+              <DayPicker
+                mode="single"
+                {...(selected ? { selected } : {})}
+                {...(selected ?? minDate ? { defaultMonth: (selected ?? minDate) as Date } : {})}
+                startMonth={startMonth}
+                endMonth={endMonth}
+                disabled={[...(minDate ? [{ before: minDate }] : []), ...(maxDate ? [{ after: maxDate }] : [])]}
+                onSelect={(date) => {
+                  // Clicking the selected day again clears it in DayPicker; keep a chosen value instead.
+                  if (!date) return;
+                  onChange(dateToIso(date));
+                  setOpen(false);
+                }}
+              />
+            </Popover.Popup>
+          </Popover.Positioner>
+        </Popover.Portal>
+      </Popover.Root>
+      {value && !disabled ? (
+        <button
+          type="button"
+          aria-label={clearLabel}
+          onClick={() => onChange('')}
+          className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg text-sub outline-none hover:bg-cool focus-visible:ring-2 focus-visible:ring-gold"
+        >
+          <X size={16} aria-hidden="true" />
+        </button>
+      ) : null}
+    </div>
+  );
+}

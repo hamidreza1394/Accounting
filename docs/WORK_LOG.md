@@ -2252,3 +2252,9 @@
 - هیچ Schema، Migration، UI یا قرارداد پاسخ موفق تغییر نکرد.
 - تست محلی و dotnet build اجرا نشدند؛ CI باید روی SHA نهایی بررسی شود. نتیجه تست SQL Server هنوز Verified نیست.
 - handoff: docs/handoffs/ISSUE-498-membership-permission-delegation-ceiling.md.
+
+
+## 2026-11-03 — Issue #444: انتخابگر تاریخ شمسی (D-068)
+- ADR D-068: `react-day-picker@9.14.0` با مسیر `/persian` (نسخهٔ 10 این مسیر را ندارد) پین شد؛ مجوزها MIT، `npm audit` بدون آسیب‌پذیری، حجم chunk تنبل ≈ 72 kB gzip، اجرای آفلاین تأیید شد.
+- کامپوننت `ui/JalaliDateField` (مقدار ISO میلادی، RTL، ارقام فارسی، `min`/`max`، صفحه‌کلید، `FormField`) با ۱۲ تست؛ یک باگ اعتبارسنجی ماه حین تست یافت و رفع شد.
+- اتصال به گزارش امنیتی پس از ادغام #499 در PR بعدی. handoff: `docs/handoffs/ISSUE-444-jalali-date-picker.md`.
