@@ -25,5 +25,8 @@ describe('permission catalog', () => {
     fireEvent.change(screen.getByLabelText('جستجوی مجوز'), { target: { value: 'party.create' } });
     expect(screen.getByText('ایجاد طرف حساب')).toBeInTheDocument();
     expect(screen.queryByText('مشاهده طرف حساب')).toBeNull();
+
+    fireEvent.change(screen.getByLabelText('جستجوی مجوز'), { target: { value: 'not-registered' } });
+    expect(screen.getByText('مجوزی با این فیلتر پیدا نشد.')).toBeInTheDocument();
   });
 });
