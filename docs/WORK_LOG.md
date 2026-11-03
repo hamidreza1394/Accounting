@@ -2154,3 +2154,10 @@
 - شواهد محلی: `generate_migrations.py --check` و `verify_migration_model.py` (۱۱ migration، Up و Down) موفق؛ `test_migration_tooling.py` ۲۸ تست و `test_migration_guard_mutations.py` ۳۱ تست موفق؛ `dotnet ef migrations has-pending-model-changes` (ابزار 10.0.13) خروجی «No changes have been made to the model since the last migration».
 - ریسک ثبت‌شده: در همین PR بررسی بایت‌به‌بایت designer/snapshot برای migration فعلی با `CURRENT_MIGRATION_WRITTEN_BY_EF_TOOLS` عمداً کنار گذاشته شده و تنها به EF (`has-pending-model-changes`) واگذار شده است؛ این کاهش پوشش گارد باید توسط Maintainer بازبینی شود.
 
+
+
+## 2026-11-03 — Issue #444: UI گردش درخواست عضویت بین‌شرکتی
+- دو صفحهٔ React روی API ادغام‌شدهٔ #479 ساخته شد: «درخواست‌های عضویت من» و «صف تأیید مقصد» (تأیید با انتخاب گروه فعال همان شرکت، رد با دلیل اختیاری)، Client/Parser سخت‌گیر، مسیرها و لینک منو. سمت سرور تغییر نکرد؛ داده ساختگی استفاده نشد.
+- فرم ثبت درخواست جدید ساخته نشد: API کشف شرکت‌های قابل‌درخواست وجود ندارد. تأییدکنندهٔ غیر مدیر نصب هم گروه‌ها را نمی‌بیند (`GET .../roles` فقط مدیر نصب). قرارداد پیشنهادی برای Backend در handoff ثبت شد.
+- تست: typecheck، ۴۳۱ تست vitest، build و check:offline موفق. axe و E2E با SQL Server واقعی اجرا نشد.
+- handoff: `docs/handoffs/ISSUE-444-membership-requests-ui.md`.
