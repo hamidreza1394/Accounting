@@ -181,6 +181,7 @@ function AppShellFrame({ session, context, onChangeContext, onLogout, onPassword
   const usersActive = pathname === '/admin/users' || pathname.startsWith('/admin/users/');
   const rolesActive = pathname === '/admin/roles' || pathname.startsWith('/admin/roles/');
   const permissionsActive = pathname === '/admin/permissions';
+  const companyUsersActive = pathname === '/company/users';
   const securityAuditActive = pathname === '/admin/security/audit';
   const membershipRequestsActive = pathname === '/admin/membership-requests';
   const myMembershipRequestsActive = pathname === '/account/membership-requests';
@@ -335,6 +336,12 @@ function AppShellFrame({ session, context, onChangeContext, onLogout, onPassword
                             <Link to="/admin/users" onClick={() => setMobileMenuOpen(false)} aria-current={usersActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (usersActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
                               <NavIcon icon={Users} tone="sky" size="sm" />
                               <span className="min-w-0 flex-1">مدیریت کاربران</span>
+                            </Link>
+                          </li>
+                          <li>
+                            <Link to="/company/users" onClick={() => setMobileMenuOpen(false)} aria-current={companyUsersActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (companyUsersActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
+                              <NavIcon icon={Users} tone="blue" size="sm" />
+                              <span className="min-w-0 flex-1">کاربران شرکت جاری</span>
                             </Link>
                           </li>
                           <li><DisabledItem label="ساختار سازمانی و سمت‌ها" icon={Building2} tone="blue" nested /></li>
