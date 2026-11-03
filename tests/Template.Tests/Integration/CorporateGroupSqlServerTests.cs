@@ -85,8 +85,12 @@ public sealed class CorporateGroupSqlServerTests
 				await before.Database.ExecuteSqlInterpolatedAsync(
 					$"INSERT INTO Companies (Id, Ordering, InsertDateTime, Name, NationalId, IsActive) VALUES ({company.Id}, 0, SYSUTCDATETIME(), {company.Name}, {company.NationalId}, 1)",
 					TestContext.Current.CancellationToken);
-				var role = new CompanyRole { TenantId = company.Id, Code = "accountant", Name = "حسابدار", IsActive = true };
-				before.CompanyRoles.Add(role);
+				// CompanyRole and UserCompanyMembership gain RowVersion in a later migration.
+				// Seed them with SQL here because this fixture intentionally starts from the old schema.
+				var roleId = Guid.NewGuid();
+				await before.Database.ExecuteSqlInterpolatedAsync(
+					$"INSERT INTO CompanyRoles (Id, Ordering, InsertDateTime, TenantId, Code, Name, IsSystemRole, IsActive) VALUES ({roleId}, 0, SYSUTCDATETIME(), {company.Id}, {"accountant"}, {"حسابدار"}, 0, 1)",
+					TestContext.Current.CancellationToken);
 				before.FiscalPeriods.Add(new FiscalPeriod
 				{
 					TenantId = company.Id,
@@ -94,7 +98,9 @@ public sealed class CorporateGroupSqlServerTests
 					StartDate = new DateOnly(2026, 3, 21),
 					EndDate = new DateOnly(2027, 3, 20),
 				});
-				before.UserCompanyMemberships.Add(new UserCompanyMembership { UserId = Guid.NewGuid(), TenantId = company.Id, RoleId = role.Id });
+				await before.Database.ExecuteSqlInterpolatedAsync(
+					$"INSERT INTO UserCompanyMemberships (Id, Ordering, InsertDateTime, UserId, TenantId, RoleId, IsActive, CreatedAtUtc) VALUES ({Guid.NewGuid()}, 0, SYSUTCDATETIME(), {Guid.NewGuid()}, {company.Id}, {roleId}, 1, SYSUTCDATETIME())",
+					TestContext.Current.CancellationToken);
 
 				// An administrator already created a row with one of the new codes.
 				before.PermissionDefinitions.Add(new PermissionDefinition { Code = CorporateGroupPermissions.View, Name = "نام مدیر" });

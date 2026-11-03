@@ -13,5 +13,6 @@ public sealed class UserCompanyMembership : Seedwork.Entity,
     public Guid RoleId { get; set; }
     public CompanyRole Role { get; set; } = null!;
     public bool IsActive { get; set; } = true;
+    public byte[] RowVersion { get; set; } = [];
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }

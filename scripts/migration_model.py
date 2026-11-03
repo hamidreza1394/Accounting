@@ -187,6 +187,14 @@ def parse_generated_model(source: str) -> dict[str, Any]:
                     "max_length": optional_int(re.search(r"HasMaxLength\((\d+)\)", calls)),
                     "unicode": _parse_unicode(calls),
                     "value_generated": bool(re.search(r"\.ValueGeneratedOnAdd\(\)", calls)),
+                    "is_row_version": (
+                        ".IsRowVersion()" in calls
+                        or (
+                            ".IsConcurrencyToken()" in calls
+                            and ".ValueGeneratedOnAddOrUpdate()" in calls
+                            and 'HasColumnType("rowversion")' in calls
+                        )
+                    ),
                     "column_type": optional_string(
                         re.search(r'HasColumnType\("([^"]*)"\)', calls)
                     ),
@@ -317,6 +325,7 @@ def normalize_derived_model(model: dict[str, Any]) -> dict[str, Any]:
                     "max_length": column["max_length"],
                     "unicode": column["unicode"],
                     "value_generated": value_generated_on_add(entity, column),
+                    "is_row_version": bool(column.get("is_row_version")),
                     "column_type": column["snapshot_column_type"] or column["store_type"],
                 }
             )
@@ -726,6 +735,7 @@ def clr_type_name(clr_type: str) -> str:
         "System.Int64": "long",
         "System.Int16": "short",
         "System.Byte": "byte",
+        "System.Byte[]": "byte[]",
         "System.Single": "float",
         "System.Double": "double",
         "System.Decimal": "decimal",

@@ -37,4 +37,31 @@ internal static class DateTimeConventions : object
 		{
 		}
 	}
+
+	/// <summary>
+	/// Preserves the stored instant while marking UTC-suffixed DateTime values as UTC.
+	/// SQL Server datetime2 has no offset or DateTimeKind metadata.
+	/// </summary>
+	internal sealed class UtcDateTimeConverter :
+		Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<System.DateTime, System.DateTime>
+	{
+		public UtcDateTimeConverter() : base(
+			current => System.DateTime.SpecifyKind(current, System.DateTimeKind.Utc),
+			current => System.DateTime.SpecifyKind(current, System.DateTimeKind.Utc))
+		{
+		}
+	}
+
+	/// <summary>
+	/// Nullable counterpart of <see cref="UtcDateTimeConverter"/>.
+	/// </summary>
+	internal sealed class NullableUtcDateTimeConverter :
+		Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<System.DateTime?, System.DateTime?>
+	{
+		public NullableUtcDateTimeConverter() : base(
+			current => current == null ? null : System.DateTime.SpecifyKind(current.Value, System.DateTimeKind.Utc),
+			current => current == null ? null : System.DateTime.SpecifyKind(current.Value, System.DateTimeKind.Utc))
+		{
+		}
+	}
 }

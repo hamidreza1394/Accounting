@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Xunit;
@@ -28,16 +29,20 @@ public sealed class CompanyMembershipRequestSqlServerTests
         return false;
     }
 
-    private static Data.DatabaseContext CreateContext(string databaseName)
+    private static Data.DatabaseContext CreateContext(
+        string databaseName,
+        SaveChangesInterceptor? interceptor = null)
     {
         var builder = new SqlConnectionStringBuilder(IntegrationDatabase.SqlServerConnectionString!)
         {
             InitialCatalog = databaseName,
         };
-        return new Data.DatabaseContext(new DbContextOptionsBuilder<Data.DatabaseContext>()
+        var options = new DbContextOptionsBuilder<Data.DatabaseContext>()
             .UseSqlServer(builder.ConnectionString, sql =>
-                sql.MigrationsAssembly(typeof(Data.DatabaseContext).Assembly.FullName))
-            .Options);
+                sql.MigrationsAssembly(typeof(Data.DatabaseContext).Assembly.FullName));
+        if (interceptor is not null)
+            options.AddInterceptors(interceptor);
+        return new Data.DatabaseContext(options.Options);
     }
 
     private static async Task WithDatabaseAsync(Func<string, Task> test)
@@ -107,20 +112,27 @@ public sealed class CompanyMembershipRequestSqlServerTests
 
                 before.Companies.Add(destination);
                 before.Users.AddRange(requester, approverA, approverB);
-                before.CompanyRoles.AddRange(approverRoleA, approverRoleB, memberRole);
-                before.UserCompanyMemberships.AddRange(
-                    new Domain.UserCompanyMembership
-                    {
-                        UserId = approverA.Id, TenantId = destination.Id, Role = approverRoleA, IsActive = true,
-                        CreatedAtUtc = DateTime.UtcNow,
-                    },
-                    new Domain.UserCompanyMembership
-                    {
-                        UserId = approverB.Id, TenantId = destination.Id, Role = approverRoleB, IsActive = true,
-                        CreatedAtUtc = DateTime.UtcNow,
-                    });
-
                 await before.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+                // These rows must exist before the membership-request migration is applied.
+                // RowVersion is introduced by a later migration, so the old-schema fixture
+                // inserts them with SQL instead of using the current EF model.
+                await before.Database.ExecuteSqlInterpolatedAsync(
+                    $"INSERT INTO CompanyRoles (Id, Ordering, InsertDateTime, TenantId, Code, Name, IsSystemRole, IsActive) VALUES ({approverRoleA.Id}, 0, SYSUTCDATETIME(), {destination.Id}, {"APPROVER_A"}, {"تأییدکننده الف"}, 0, 1)",
+                    TestContext.Current.CancellationToken);
+                await before.Database.ExecuteSqlInterpolatedAsync(
+                    $"INSERT INTO CompanyRoles (Id, Ordering, InsertDateTime, TenantId, Code, Name, IsSystemRole, IsActive) VALUES ({approverRoleB.Id}, 0, SYSUTCDATETIME(), {destination.Id}, {"APPROVER_B"}, {"تأییدکننده ب"}, 0, 1)",
+                    TestContext.Current.CancellationToken);
+                await before.Database.ExecuteSqlInterpolatedAsync(
+                    $"INSERT INTO CompanyRoles (Id, Ordering, InsertDateTime, TenantId, Code, Name, IsSystemRole, IsActive) VALUES ({memberRole.Id}, 0, SYSUTCDATETIME(), {destination.Id}, {"MEMBER"}, {"عضو"}, 0, 1)",
+                    TestContext.Current.CancellationToken);
+                await before.Database.ExecuteSqlInterpolatedAsync(
+                    $"INSERT INTO UserCompanyMemberships (Id, Ordering, InsertDateTime, UserId, TenantId, RoleId, IsActive, CreatedAtUtc) VALUES ({Guid.NewGuid()}, 0, SYSUTCDATETIME(), {approverA.Id}, {destination.Id}, {approverRoleA.Id}, 1, SYSUTCDATETIME())",
+                    TestContext.Current.CancellationToken);
+                await before.Database.ExecuteSqlInterpolatedAsync(
+                    $"INSERT INTO UserCompanyMemberships (Id, Ordering, InsertDateTime, UserId, TenantId, RoleId, IsActive, CreatedAtUtc) VALUES ({Guid.NewGuid()}, 0, SYSUTCDATETIME(), {approverB.Id}, {destination.Id}, {approverRoleB.Id}, 1, SYSUTCDATETIME())",
+                    TestContext.Current.CancellationToken);
+
                 destinationId = destination.Id;
                 requesterId = requester.Id;
                 approverAId = approverA.Id;
@@ -129,6 +141,9 @@ public sealed class CompanyMembershipRequestSqlServerTests
 
                 // Upgrade an existing database after destination approver memberships already exist.
                 await before.Database.MigrateAsync(TestContext.Current.CancellationToken);
+                approverRoleA = await before.CompanyRoles.SingleAsync(item => item.Id == approverRoleA.Id, TestContext.Current.CancellationToken);
+                approverRoleB = await before.CompanyRoles.SingleAsync(item => item.Id == approverRoleB.Id, TestContext.Current.CancellationToken);
+                memberRole = await before.CompanyRoles.SingleAsync(item => item.Id == memberRole.Id, TestContext.Current.CancellationToken);
                 Assert.True(await before.UserCompanyMemberships.AnyAsync(
                     item => item.UserId == approverAId && item.TenantId == destinationId && item.IsActive,
                     TestContext.Current.CancellationToken));
@@ -283,6 +298,140 @@ public sealed class CompanyMembershipRequestSqlServerTests
         });
     }
 
+    [Fact]
+    public async Task ApprovalReturnsConflictWhenDelegationPermissionsChangeAfterTheyWereRead()
+    {
+        Assert.SkipUnless(SqlServerAvailable(), "SQL Server is not configured (FARANOU_TEST_SQLSERVER).");
+
+        await WithDatabaseAsync(async name =>
+        {
+            Guid companyId;
+            Guid approverId;
+            Guid requesterId;
+            Guid approverRoleId;
+            Guid memberRoleId;
+            Guid delegatedPermissionId;
+            Guid requestId;
+
+            await using (var seed = CreateContext(name))
+            {
+                await seed.Database.MigrateAsync(TestContext.Current.CancellationToken);
+
+                var company = new Domain.Company { Name = "شرکت آزمون هم‌زمانی واگذاری", IsActive = true };
+                var approver = new Domain.User("delegation-approver@example.test")
+                {
+                    Username = "delegation-approver",
+                    IsActive = true,
+                };
+                var requester = new Domain.User("delegation-requester@example.test")
+                {
+                    Username = "delegation-requester",
+                    IsActive = true,
+                };
+                var approverRole = new Domain.CompanyRole
+                {
+                    TenantId = company.Id,
+                    Company = company,
+                    Code = "DELEGATION_APPROVER",
+                    Name = "تأییدکننده",
+                    IsActive = true,
+                };
+                var memberRole = new Domain.CompanyRole
+                {
+                    TenantId = company.Id,
+                    Company = company,
+                    Code = "DELEGATION_MEMBER",
+                    Name = "عضو مقصد",
+                    IsActive = true,
+                };
+                // The approval permission is seeded by the shared permission-catalog migration.
+                var approvalPermission = await seed.PermissionDefinitions.SingleAsync(
+                    item => item.Code == Server.Api.CompanyMembershipRequestEndpoints.ApprovalPermissionCode,
+                    TestContext.Current.CancellationToken);
+                var delegatedPermission = new Domain.PermissionDefinition
+                {
+                    Code = "test.delegation.ceiling.read",
+                    Name = "مجوز آزمایشی واگذاری",
+                };
+                var membershipRequest = new Domain.CompanyMembershipRequest
+                {
+                    UserId = requester.Id,
+                    DestinationCompany = company,
+                    DestinationTenantId = company.Id,
+                    Status = Domain.CompanyMembershipRequestStatuses.Pending,
+                    RequestedAtUtc = DateTime.UtcNow,
+                };
+
+                seed.AddRange(company, approver, requester, approverRole, memberRole, delegatedPermission, membershipRequest);
+                seed.CompanyRolePermissions.AddRange(
+                    new Domain.CompanyRolePermission { Role = approverRole, Permission = approvalPermission },
+                    new Domain.CompanyRolePermission { Role = approverRole, Permission = delegatedPermission },
+                    new Domain.CompanyRolePermission { Role = memberRole, Permission = delegatedPermission });
+                seed.UserCompanyMemberships.Add(new Domain.UserCompanyMembership
+                {
+                    UserId = approver.Id,
+                    TenantId = company.Id,
+                    Role = approverRole,
+                    IsActive = true,
+                    CreatedAtUtc = DateTime.UtcNow,
+                });
+                await seed.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+                companyId = company.Id;
+                approverId = approver.Id;
+                requesterId = requester.Id;
+                approverRoleId = approverRole.Id;
+                memberRoleId = memberRole.Id;
+                delegatedPermissionId = delegatedPermission.Id;
+                requestId = membershipRequest.Id;
+            }
+
+            var interceptor = new ConcurrentUpdateInterceptor(async cancellationToken =>
+            {
+                await using var competing = CreateContext(name);
+                var role = await competing.CompanyRoles
+                    .Include(item => item.RolePermissions)
+                    .SingleAsync(item => item.Id == approverRoleId, cancellationToken);
+                var revokedGrant = role.RolePermissions.Single(item => item.PermissionId == delegatedPermissionId);
+                competing.CompanyRolePermissions.Remove(revokedGrant);
+                role.Name = "تأییدکننده پس از لغو مجوز";
+                await competing.SaveChangesAsync(cancellationToken);
+            });
+
+            await using (var requestContext = CreateContext(name, interceptor))
+            {
+                var result = await Server.Api.CompanyMembershipRequestEndpoints.ApproveAsync(
+                    companyId,
+                    requestId,
+                    new DefaultHttpContext(),
+                    Principal(approverId),
+                    new Server.Api.ApproveCompanyMembershipRequest(memberRoleId),
+                    new AllowAntiforgery(),
+                    requestContext,
+                    new Infrastructure.Tenancy.CompanyAccessService(requestContext),
+                    TimeProvider.System,
+                    TestContext.Current.CancellationToken);
+
+                Assert.Equal(StatusCodes.Status409Conflict, (result as IStatusCodeHttpResult)?.StatusCode);
+            }
+
+            await using var check = CreateContext(name);
+            var savedRequest = await check.CompanyMembershipRequests.SingleAsync(
+                item => item.Id == requestId, TestContext.Current.CancellationToken);
+            Assert.Equal(Domain.CompanyMembershipRequestStatuses.Pending, savedRequest.Status);
+            Assert.False(await check.UserCompanyMemberships.AnyAsync(
+                item => item.UserId == requesterId && item.TenantId == companyId,
+                TestContext.Current.CancellationToken));
+            Assert.DoesNotContain(await check.SecurityAuditEvents.ToListAsync(TestContext.Current.CancellationToken),
+                item => item.EventType == "CompanyMembershipApproved" && item.EntityId == requestId.ToString());
+            Assert.DoesNotContain(await check.CompanyRoles
+                    .Where(item => item.Id == approverRoleId)
+                    .SelectMany(item => item.RolePermissions)
+                    .ToListAsync(TestContext.Current.CancellationToken),
+                item => item.PermissionId == delegatedPermissionId);
+        });
+    }
+
     private static ClaimsPrincipal Principal(Guid userId) => new(
         new ClaimsIdentity(
         [
@@ -290,6 +439,22 @@ public sealed class CompanyMembershipRequestSqlServerTests
             new Claim(Infrastructure.Tenancy.CompanyAccessService.AccountKindClaimType,
                 Infrastructure.Tenancy.CompanyAccessService.UserAccountKind),
         ], "sql-server-test"));
+
+    private sealed class ConcurrentUpdateInterceptor(
+        Func<CancellationToken, Task> concurrentUpdate) : SaveChangesInterceptor
+    {
+        private int _triggered;
+
+        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData,
+            InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (Interlocked.Exchange(ref _triggered, 1) == 0)
+                await concurrentUpdate(cancellationToken);
+            return result;
+        }
+    }
 
     private sealed class AllowAntiforgery : IAntiforgery
     {
