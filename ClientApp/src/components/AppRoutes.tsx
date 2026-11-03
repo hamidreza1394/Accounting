@@ -51,6 +51,10 @@ const LazySecurityAuditPage = lazy(() =>
   import('./admin/security/SecurityAuditPage').then((module) => ({ default: module.SecurityAuditPage })),
 );
 
+const LazyCompanyUsersPage = lazy(() =>
+  import('./company/CompanyUsersPage').then((module) => ({ default: module.CompanyUsersPage })),
+);
+
 function DashboardRoute() {
   const { session, context, onUnauthenticated } = useAppRouteData();
   return (
@@ -120,6 +124,19 @@ function SecurityAuditRoute() {
   return <LazySecurityAuditPage onUnauthenticated={useAppRouteData().onUnauthenticated} />;
 }
 
+function CompanyUsersRoute() {
+  const { session, context, onUnauthenticated } = useAppRouteData();
+  return (
+    <LazyCompanyUsersPage
+      key={context.company.id}
+      onUnauthenticated={onUnauthenticated}
+      companyId={context.company.id}
+      companyName={context.company.name}
+      isAdministrator={session.isAdministrator}
+    />
+  );
+}
+
 /**
  * Routes under `/app`. Admin pages are lazy chunks so the dashboard bundle stays small. The
  * `permission` is a UI hint only; the server decides (D-064). List specific paths first.
@@ -136,6 +153,8 @@ export const appRoutes: readonly Route[] = [
   // `/new` must stay before `/:roleId`, otherwise "new" would be read as a role id.
   { path: '/admin/roles/new', element: RoleCreateRoute, title: 'ایجاد گروه دسترسی', permission: 'admin.roles.manage' },
   { path: '/admin/roles/:roleId', element: RoleDetailRoute, title: 'جزئیات گروه دسترسی', permission: 'admin.roles.view' },
+  // No UI permission hint: the company permission users.list is not in the session; the server decides (403/404).
+  { path: '/company/users', element: CompanyUsersRoute, title: 'کاربران شرکت' },
   { path: '/admin/security/audit', element: SecurityAuditRoute, title: 'گزارش امنیت و سوابق', permission: 'admin.security.view' },
   // No UI permission hint: the approver permission is per company and not in the session; the server decides (404).
   { path: '/admin/membership-requests', element: PendingMembershipRequestsRoute, title: 'درخواست‌های عضویت' },

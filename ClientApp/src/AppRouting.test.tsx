@@ -37,6 +37,8 @@ function stubAll(isAdministrator: boolean) {
         json({ items: [{ id: 'req-1', userId: 'u1', requesterDisplayName: 'متقاضی نمونه', username: 'applicant', requestedAtUtc: '2026-11-01T08:00:00Z', isRequesterActive: true }], page: 1, pageSize: 20, totalCount: 1 }),
       'GET /api/v1/admin/security/audit-events': () =>
         json({ items: [{ id: 'e1', userId: 'u1', actorUsername: 'admin', actorDisplayName: 'مدیر نمونه', companyId: 'a', companyName: 'شرکت الف', eventType: 'CompanyRoleCreated', entityType: 'CompanyRole', entityId: 'r1', occurredAtUtc: '2026-11-03T10:00:00Z', correlationId: null }], totalCount: 1, page: 1, pageSize: 25 }),
+      'GET /api/v1/companies/a/users': () =>
+        json({ companyId: 'a', companyName: 'شرکت الف', items: [{ userId: 'u1', username: 'dir1', firstName: 'عضو', lastName: 'دفترچه', userIsActive: true, membershipIsActive: true, roleId: 'r1', roleCode: 'ACC', roleName: 'حسابدار', roleIsActive: true, membershipCreatedAtUtc: '2026-10-01T09:00:00Z' }], totalCount: 1, page: 1, pageSize: 25 }),
       'GET /api/v1/me/membership-requests': () =>
         json({ items: [{ id: 'r1', destinationCompanyId: 'b', destinationCompanyName: 'شرکت مقصد نمونه', status: 'Pending', requestedAtUtc: '2026-11-01T08:00:00Z', decidedAtUtc: null, decisionReason: null, approvedRoleCode: null, approvedRoleName: null }], page: 1, pageSize: 20, totalCount: 1 }),
     };
@@ -259,5 +261,26 @@ describe('App routing', () => {
     render(<App navigate={vi.fn()} />);
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(fetchMock.mock.calls.some((call) => String(call[0]).includes('/admin/security/audit-events'))).toBe(false);
+  });
+
+  it('opens the company user directory for the active company by deep link, even for a non-administrator', async () => {
+    window.history.replaceState(null, '', '/app/company/users');
+    const fetchMock = stubAll(false);
+    render(<App navigate={vi.fn()} />);
+    expect(await screen.findByRole('heading', { level: 1, name: 'کاربران شرکت' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /عضو دفترچه/ })).toBeInTheDocument();
+    const urls = fetchMock.mock.calls.map((call) => String(call[0]));
+    expect(urls.some((url) => url.startsWith('/api/v1/companies/a/users'))).toBe(true);
+    expect(urls.some((url) => url.includes('/admin/users'))).toBe(false);
+  });
+
+  it('reaches the company user directory from the administration menu', async () => {
+    const user = userEvent.setup();
+    stubAll(true);
+    render(<App navigate={vi.fn()} />);
+    await screen.findByRole('heading', { name: dashboardHeading });
+    await user.click(within(screen.getByRole('navigation', { name: 'منوی اصلی' })).getByRole('link', { name: 'کاربران شرکت جاری' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'کاربران شرکت' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/app/company/users');
   });
 });

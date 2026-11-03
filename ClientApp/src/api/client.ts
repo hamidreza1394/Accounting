@@ -8,6 +8,7 @@ import {
   parseCompanyRoles,
   parseMyMembershipRequests,
   parsePendingMembershipRequests,
+  parseCompanyDirectory,
   parseSecurityAuditEvents,
   parseCreatedCompanyRole,
   parsePermissionCatalog,
@@ -40,6 +41,7 @@ import {
   type MembershipRequestPage,
   type MyMembershipRequest,
   type PendingMembershipRequest,
+  type CompanyDirectoryPage,
   type SecurityAuditPage,
 } from './types';
 
@@ -396,6 +398,28 @@ export async function getSecurityAuditEvents(query: SecurityAuditQuery, signal?:
   params.set('page', String(query.page));
   params.set('pageSize', String(query.pageSize));
   return parseSecurityAuditEvents(await getJson(`/admin/security/audit-events?${params.toString()}`, signal));
+}
+
+/** Filters of the company user directory; the server validates and clamps every value. */
+export type CompanyDirectoryQuery = {
+  search?: string;
+  /** `undefined` = every membership, `true` = active only, `false` = inactive only. */
+  membershipActive?: boolean;
+  page: number;
+  pageSize: number;
+};
+
+/**
+ * The users who have a membership in one company (`GET /companies/{id}/users`). The server answers 404 for a
+ * company the user cannot access and 403 without the explicit `users.list` permission of that company.
+ */
+export async function getCompanyUsers(companyId: string, query: CompanyDirectoryQuery, signal?: AbortSignal): Promise<CompanyDirectoryPage> {
+  const params = new URLSearchParams();
+  if (query.search?.trim()) params.set('search', query.search.trim());
+  if (query.membershipActive !== undefined) params.set('membershipActive', String(query.membershipActive));
+  params.set('page', String(query.page));
+  params.set('pageSize', String(query.pageSize));
+  return parseCompanyDirectory(await getJson(`/companies/${encodeURIComponent(companyId)}/users?${params.toString()}`, signal));
 }
 
 /** Changes the current account password; the server signs out all sessions after success. */

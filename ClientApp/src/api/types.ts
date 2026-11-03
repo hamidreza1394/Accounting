@@ -791,3 +791,65 @@ export function parseSecurityAuditEvents(value: unknown): SecurityAuditPage {
     pageSize,
   };
 }
+
+// --- Company user directory (backend: CompanyUserDirectoryEndpoints, permission users.list) ---
+
+/** One member of the requested company. Minimal fields only: no e-mail, phone, credential or session data. */
+export type CompanyDirectoryUser = {
+  userId: string;
+  username: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  userIsActive: boolean;
+  membershipIsActive: boolean;
+  roleId: string;
+  roleCode: string;
+  roleName: string;
+  roleIsActive: boolean;
+  membershipCreatedAtUtc: string;
+};
+
+export type CompanyDirectoryPage = {
+  companyId: string;
+  companyName: string;
+  items: CompanyDirectoryUser[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+};
+
+export function parseCompanyDirectory(value: unknown): CompanyDirectoryPage {
+  const what = 'companyDirectory';
+  if (!isObject(value)) throw new ContractError(what);
+  const rows = value['items'];
+  if (!Array.isArray(rows)) throw new ContractError(`${what}.items`);
+  const page = readCount(value, 'page', what);
+  const pageSize = readCount(value, 'pageSize', what);
+  if (page < 1 || pageSize < 1) throw new ContractError(`${what}.page`);
+  return {
+    companyId: readString(value, 'companyId', what),
+    companyName: readString(value, 'companyName', what),
+    items: rows.map((row): CompanyDirectoryUser => {
+      if (!isObject(row)) throw new ContractError(`${what}.item`);
+      const at = `${what}.item`;
+      const since = readUtcDateTime(row, 'membershipCreatedAtUtc', at);
+      if (since === null) throw new ContractError(`${at}.membershipCreatedAtUtc`);
+      return {
+        userId: readString(row, 'userId', at),
+        username: readNullableString(row, 'username', at),
+        firstName: readNullableString(row, 'firstName', at),
+        lastName: readNullableString(row, 'lastName', at),
+        userIsActive: readBoolean(row, 'userIsActive', at),
+        membershipIsActive: readBoolean(row, 'membershipIsActive', at),
+        roleId: readString(row, 'roleId', at),
+        roleCode: readString(row, 'roleCode', at),
+        roleName: readString(row, 'roleName', at),
+        roleIsActive: readBoolean(row, 'roleIsActive', at),
+        membershipCreatedAtUtc: since,
+      };
+    }),
+    totalCount: readCount(value, 'totalCount', what),
+    page,
+    pageSize,
+  };
+}
