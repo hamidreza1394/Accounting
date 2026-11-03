@@ -2163,3 +2163,12 @@
 - ریسک ثبت‌شده: نبود concurrency token روی CompanyRole/UserCompanyMembership (رفع نیازمند Migration و تأیید).
 - تست محلی: ۲۶ تست مرتبط موفق؛ دو تست SQL Server محلی اجرا نشد (Docker نبود) و باید در CI سبز شوند. هیچ Migration، Schema یا UI تغییر نکرد.
 - handoff: `docs/handoffs/ISSUE-444-role-members-api.md`.
+
+
+## 2026-11-03 — Issue #492: تست مرز امنیتی Customer Boundary Operator API
+
+- برای دو endpoint عملیاتی `CustomerBoundaryEndpoints` تست‌های regression اضافه شد: فقط AccountKind=Infrastructure مجاز است؛ کاربر شرکتی باید 404 بگیرد.
+- سناریوهای diagnostics allowlist، رد پیش از antiforgery برای کاربر شرکتی، رد و Audit درخواست فاقد antiforgery، تخصیص موفق و Audit، و جلوگیری از انتقال شرکت به boundary دیگر (409) پوشش داده شدند.
+- هیچ کد Production، قرارداد API، Schema، Migration یا UI تغییر نکرد.
+- تست محلی در این محیط اجرا نشد؛ CI روی PR معیار Verified شدن است.
+- handoff: `docs/handoffs/ISSUE-492-customer-boundary-authz-tests.md`.
