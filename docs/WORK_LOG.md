@@ -2292,3 +2292,11 @@
 - پس از افزودن RowVersion، ممیزی مسیر تأیید عضویت #498 یک race امنیتی را آشکار کرد: permission ceiling می‌توانست بین خواندن و SaveChanges تغییر کند. ApproveAsync اکنون RowVersion تمام عضویت‌ها/نقش‌های مبنای تصمیم و نقش مقصد را در همان تراکنش guard می‌کند؛ تست SQL Server revocation هم‌زمان اضافه شد.
 - تست انتقال گروهی به دو عضو گسترش یافت تا rollback کامل batch (بدون partial membership یا Audit) در تعارض یک عضو اثبات شود.
 - handoff: docs/handoffs/ISSUE-496-role-membership-rowversion.md.
+
+## 2026-11-03 — Issue #500: EF UTC Kind برای ویژگی‌های *Utc
+- در EF فقط DateTime و DateTime?هایی که نام property آن‌ها به Utc ختم می‌شود با ValueConverter به Kind=Utc علامت‌گذاری می‌شوند؛ Ticks و مقدار ذخیره‌شده تغییر نمی‌کند.
+- InsertDateTime، UpdateDateTime و LastLoginDateTime عمداً خارج از این قاعده‌اند؛ هیچ مبدل سراسری یا Migration داده‌ای اجرا نشد.
+- تست SQL Server برای JSON دارای Z، ویژگی nullable و عدم تغییر رفتار InsertDateTime قدیمی اضافه شد.
+- تست UtcWireFormatSqlServerTests در همین PR #503 به‌روزرسانی شد تا DateTimeKind.Utc و خروجی JSON دارای Z را اثبات کند؛ هیچ فایل ClientApp تغییر نکرد.
+- CI، SQL Server واقعی و بررسی has-pending-model-changes هنوز باید روی SHA نهایی تأیید شوند.
+- handoff: docs/handoffs/ISSUE-500-utc-kind-value-converter.md.
