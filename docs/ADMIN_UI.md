@@ -19,7 +19,8 @@
 | جزئیات کاربر (تب‌های اطلاعات عمومی، تماس، شرکت‌ها و عضویت‌ها) | `/admin/users/:id` | `Implemented` |
 | ویرایش کاربر | `/admin/users/:id/edit` | `Implemented` |
 | حساب من (drawer با تب‌های مشخصات، امنیت/رمز، سوابق ورود) | بدون مسیر؛ پنل داخل `AppShell` | `Implemented` |
-| نقش‌ها، گروه‌های دسترسی، کاتالوگ مجوز، سوابق امنیتی، سیاست‌ها، ساختار سازمانی | فقط آیتم غیرفعال منو | `NotImplemented` |
+| نقش‌ها (`/admin/roles`، ایجاد، ویرایش) و کاتالوگ مجوز (`/admin/permissions`) | صفحات lazy با `PermissionTree`؛ روی قرارداد PR #459 (هنوز Merge نشده) | `Implemented` (UI)؛ اتصال به سرور واقعی `NotImplemented` تا Merge بک‌اند |
+| سوابق امنیتی، سیاست‌ها، ساختار سازمانی | فقط آیتم غیرفعال منو | `NotImplemented` |
 
 ## ۲) معماری صفحات مدیریت سیستم
 
@@ -60,7 +61,7 @@
 | `PasswordInput` (حساب من) | ورودی رمز، `dir=ltr`، نمایش/پنهان با `aria-pressed` | `account/PasswordInput.tsx` |
 | `userFlash` | پیام موفقیت یک‌بارمصرف `{userId, kind}` در حافظهٔ ماژول، TTL ۳۰ ثانیه | `admin/users/userFlash.ts` |
 
-**موجود نیستند (`NotImplemented`)** و تا نیاز واقعی و API مربوط ساخته نمی‌شوند: `PermissionTree`، `UserSelector`، `CompanySelector`، `FiscalYearSelector`، `FiscalPeriodSelector`. برای انتخاب شرکت/دوره الگوی موجود `WorkContextSelector` است و نباید موازی‌اش ساخته شود مگر با بازبینی.
+**موجود نیستند (`NotImplemented`)** و تا نیاز واقعی و API مربوط ساخته نمی‌شوند: `UserSelector`، `FiscalYearSelector`، `FiscalPeriodSelector` (`PermissionTree` در `ui/PermissionTree.tsx` و انتخاب‌گر شرکت نقش‌ها در `admin/roles/CompanySelect.tsx` اکنون `Implemented`). برای انتخاب شرکت/دوره الگوی موجود `WorkContextSelector` است و نباید موازی‌اش ساخته شود مگر با بازبینی.
 
 **تکرار شناخته‌شده:** `PasswordInput` در `account/` و یک `PasswordInput` محلی در `UserFormFields.tsx` تکراری‌اند و قرار است به یک `ui/PasswordInput` ادغام شوند (بخش ۱۱).
 
@@ -152,10 +153,10 @@ npm run check:offline    # اسکن ایستا؛ آدرس ساخته‌شده د
 |---|---|---|
 | `GET /me/permissions` | `NotImplemented` | جایگزین `can()` مبتنی بر `isAdministrator`؛ پیش‌نیاز تفکیک واقعی مدیر نصب و مجوز شرکتی (D-064) |
 | آمار داشبورد مدیریت (تعداد کاربران فعال/غیرفعال، رویداد اخیر) | `NotImplemented` | بدون آن داشبورد مدیریت ساخته نمی‌شود |
-| نقش‌ها و کاتالوگ مجوز | `Proposed`؛ PR #459 باز | آیتم‌های «گروه‌های دسترسی» و «کاتالوگ» منو تا آن زمان غیرفعال؛ `PermissionTree` وابسته |
+| نقش‌ها و کاتالوگ مجوز | UI ساخته شد؛ PR #459 باز | کمبودها: فهرست همه شرکت‌ها برای مدیر نصب، فهرست اعضای نقش، GET تک‌نقش، جستجوی معکوس مجوز←نقش، سقف تفویض (Delegation Ceiling) سمت سرور |
 | عضویت‌ها و جریان تأیید (PendingApproval، approve/reject، self-approval ممنوع) | `Proposed`؛ Issue #460 | D-065؛ UI تأیید عضویت و انتخاب `UserSelector`/`CompanySelector` وابسته |
 | grantهای سال/دوره مالی (`AllPeriodsInYear`) | `NotImplemented` | D-065؛ `FiscalYearSelector`/`FiscalPeriodSelector` وابسته |
-| دایرکتوری read-only هم‌گروه | `NotImplemented` | D-065 بند ۲؛ منوط به تصمیم مرز مشتری/گروه (`AGENTS.md` 5.3) |
+| دایرکتوری read-only هم‌گروه | endpoint در PR #466 باز؛ UI ساخته نشد (`Blocked`) | API فهرست گروه‌های قابل مشاهده وجود ندارد و UI نمی‌تواند `groupId` را پیدا کند؛ منوط به تصمیم مرز مشتری/گروه (`AGENTS.md` 5.3) |
 | رویدادهای امنیتی/Audit مدیریتی | `NotImplemented` | `AuditTimeline` آماده بازاستفاده؛ سوابق ورود فعلی فقط برای حساب خود (`/me/login-history`) |
 | یکسان‌سازی قالب خطا و صفحه‌بندی | `Proposed` | بخش ۴؛ حذف کد تطبیق در کلاینت |
 | فیلتر شرکت/نقش، شمارهٔ پرسنلی، خروجی فهرست کاربران | `NotImplemented` | UI ساخته نشد |

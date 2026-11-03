@@ -10,6 +10,14 @@ describe('permissions (UI hint)', () => {
     expect(can({ isAdministrator: false }, 'admin.users.create')).toBe(false);
   });
 
+  it('treats the role and catalog permissions like the other admin.* hints', () => {
+    for (const permission of ['admin.roles.view', 'admin.roles.manage', 'admin.permissions.view'] as const) {
+      expect(can({ isAdministrator: true }, permission)).toBe(true);
+      expect(can({ isAdministrator: false }, permission)).toBe(false);
+      expect(can(null, permission)).toBe(false);
+    }
+  });
+
   it('always grants account.view to a signed-in user, never without a session', () => {
     expect(can({ isAdministrator: false }, 'account.view')).toBe(true);
     expect(can(null, 'account.view')).toBe(false);
