@@ -224,7 +224,7 @@ describe('App', () => {
 
     render(<App navigate={vi.fn()} />);
     await screen.findByRole('heading', { name: /به سامانه یکپارچه فرانو خوش آمدید/ });
-    await userEvent.click(await screen.findByRole('button', { name: 'تغییر شرکت' }));
+    await userEvent.click(await screen.findByRole('button', { name: /تغییر شرکت/ }));
     // The current choice (company A, year 1405) is shown; moving to 1406 clears A and pre-selects B.
     expect(await screen.findByRole('radio', { name: /شرکت الف/ })).toBeChecked();
     await userEvent.click(screen.getByRole('radio', { name: /سال مالی ۱۴۰۶/ }));
@@ -301,7 +301,7 @@ describe('App', () => {
 
     render(<App navigate={vi.fn()} />);
 
-    await userEvent.click(await screen.findByRole('button', { name: 'تغییر شرکت' }));
+    await userEvent.click(await screen.findByRole('button', { name: /تغییر شرکت/ }));
 
     // The selector opens with the current choice pre-selected, and the choices were reloaded.
     expect(await screen.findByRole('heading', { name: 'فرانو - دوره مالی' })).toBeInTheDocument();

@@ -2259,16 +2259,30 @@
 - کامپوننت `ui/JalaliDateField` (مقدار ISO میلادی، RTL، ارقام فارسی، `min`/`max`، صفحه‌کلید، `FormField`) با ۱۲ تست؛ یک باگ اعتبارسنجی ماه حین تست یافت و رفع شد.
 - اتصال به گزارش امنیتی پس از ادغام #499 در PR بعدی. handoff: `docs/handoffs/ISSUE-444-jalali-date-picker.md`.
 
+## 2026-11-03 — Issue #444: E2E و دسترس‌پذیری (مرحلهٔ ۱۱)
+- آزمون‌های Playwright `access-ui.spec.mjs` + اسکن axe (WCAG A/AA) و ۴۰۳ واقعی API برای غیرمدیر نوشته شد؛ seed گسترش یافت؛ وابستگی آزمونی `@axe-core/playwright@4.14.0` (MPL-2.0) افزوده شد.
+- **اجرا نشد** (فقط CI با SQL Server)؛ تا نتیجهٔ job `e2e` وضعیت Verified نیست. handoff: `docs/handoffs/ISSUE-444-ui-e2e-and-a11y.md`.
 
+## 2026-11-03 — Issue #444: UI دفترچهٔ کاربران شرکت
+- صفحهٔ `/company/users` روی API ادغام‌شدهٔ #497: فهرست فقط‌خواندنی کاربران شرکت جاری با جستجو، فیلتر وضعیت عضویت، جزئیات و صفحه‌بندی؛ 403/404 با پنل «دسترسی ندارید». هیچ داده شرکت دیگر درخواست یا نمایش داده نمی‌شود.
+- واحد/سمت، مجوز دقیق گروه برای غیرمدیر و منوی مبتنی بر مجوز به Backend وابسته‌اند (قرارداد در handoff). handoff: `docs/handoffs/ISSUE-444-company-user-directory-ui.md`.
 ## 2026-11-03 — Issue #444: تکمیل UI گزارش امنیتی (مراحل ۴ و ۵)
 - فیلترهای تاریخ به `JalaliDateField` منتقل شد؛ فیلتر کاربر با `UserPicker` (combobox دسترس‌پذیر روی `GET /admin/users?search=`) و فیلتر شرکت از شرکت‌های عضویت کاربر + کلیک روی جدول. بدون داده ساختگی.
 - حین تست دو باگ واقعی رفع شد: ماه پیش‌فرض تقویم و گم‌شدن مقدار تاریخ از نام دسترس‌پذیر دکمه.
 - مسدود به API: مرتب‌سازی، فهرست همهٔ شرکت‌های نصب، فهرست انواع رویداد؛ قرارداد در handoff. handoff: `docs/handoffs/ISSUE-444-security-audit-complete.md`.
+- نتیجهٔ واقعی job `e2e` (CI): ۳۲ موفق، ۴ شکست axe؛ یافتهٔ واقعی در هدر مشترک: `label-content-name-mismatch` (دکمه‌های تغییر شرکت/دوره مالی) و `aria-prohibited-attr` (aria-label روی span اعلان). در UI اصلاح شد (نام دسترس‌پذیر شامل متن دیده‌شده؛ `role="img"`)؛ تست‌ها با regex هماهنگ شدند، ضعیف نشدند.
+
+## 2026-11-03 — Issue #504 / D-069: طراحی چرخه عمر نشست
+- ممیزی نشان داد Cookie فعلی ۳۰ دقیقه‌ای و sliding است؛ SessionValidator در هر درخواست account active و CredentialStamp را بررسی می‌کند؛ خروج صریح نیز از طریق UserSessionAuditService ثبت می‌شود.
+- SessionId و UserSession per-session وجود ندارد، پس فهرست/ابطال مستقل نشست هنوز ممکن نیست. نبود event به‌عنوان logout/expiry/duration تفسیر نمی‌شود.
+- D-069 یک طرح پیشنهادی برای UserSession، SessionId، idle window، self-service revoke و retention ثبت می‌کند؛ هیچ Schema، Migration، claim یا تغییر Cookie انجام نشده است.
+- تصمیم‌های retention، absolute lifetime، revoke-others و scope مدیر نصب نیازمند تأیید مالک هستند.
+- handoff: docs/handoffs/ISSUE-504-session-lifecycle-design.md.
 
 ## 2026-11-03 — Issue #500: EF UTC Kind برای ویژگی‌های *Utc
 - در EF فقط DateTime و DateTime?هایی که نام property آن‌ها به Utc ختم می‌شود با ValueConverter به Kind=Utc علامت‌گذاری می‌شوند؛ Ticks و مقدار ذخیره‌شده تغییر نمی‌کند.
 - InsertDateTime، UpdateDateTime و LastLoginDateTime عمداً خارج از این قاعده‌اند؛ هیچ مبدل سراسری یا Migration داده‌ای اجرا نشد.
 - تست SQL Server برای JSON دارای Z، ویژگی nullable و عدم تغییر رفتار InsertDateTime قدیمی اضافه شد.
-- تست UtcWireFormatSqlServerTests در PR #501 متعلق به شاخه Claude است و برای جلوگیری از تداخل ویرایش نشد؛ پس از ادغام این Backend باید انتظار آن تست به Utc/Z تغییر کند.
+- تست UtcWireFormatSqlServerTests در همین PR #503 به‌روزرسانی شد تا DateTimeKind.Utc و خروجی JSON دارای Z را اثبات کند؛ هیچ فایل ClientApp تغییر نکرد.
 - CI، SQL Server واقعی و بررسی has-pending-model-changes هنوز باید روی SHA نهایی تأیید شوند.
 - handoff: docs/handoffs/ISSUE-500-utc-kind-value-converter.md.

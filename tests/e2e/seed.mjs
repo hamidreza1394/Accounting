@@ -36,6 +36,8 @@ const state = {
     erin: { username: `erin${suffix}`, password: password(), id: randomUUID(), active: true },
     // Several companies (a long name, two companies with the same name) and three fiscal years.
     frank: { username: `frank${suffix}`, password: password(), id: randomUUID(), active: true },
+    // One company with one open period: enters directly; requests membership in company b (UI E2E).
+    heidi: { username: `heidi${suffix}`, password: password(), id: randomUUID(), active: true },
     // A dedicated database-backed installation administrator for positive authorization E2E.
     admin: { username: `admin${suffix}`, password: password(), id: randomUUID(), active: true, roleId: randomUUID() },
   },
@@ -46,6 +48,7 @@ const state = {
     d: { id: randomUUID(), name: `شرکت صنایع غذایی پارس‌آریا و همکاران (سهامی خاص) ${suffix}`, roleId: randomUUID(), nationalId: '10100123456' },
     e: { id: randomUUID(), name: `شرکت همنام ${suffix}`, roleId: randomUUID(), nationalId: '10200234567' },
     f: { id: randomUUID(), name: `شرکت همنام ${suffix}`, roleId: randomUUID(), nationalId: '10300345678' },
+    g: { id: randomUUID(), name: `شرکت گ ${suffix}`, roleId: randomUUID() },
   },
   secretPeriodTitle: `دوره محرمانه ب ${suffix}`,
 };
@@ -110,11 +113,16 @@ async function period(company, title, start, end, status = 1) {
       title: [sql.NVarChar(100), title], start: [sql.Date, start], end: [sql.Date, end], status: [sql.Int, status] });
 }
 
-const { alice, bob, carol, dave, frank } = state.users;
-const { a, b, c, d, e, f } = state.companies;
+const { alice, bob, carol, dave, frank, heidi, admin } = state.users;
+const { a, b, c, d, e, f, g } = state.companies;
 await member(alice, a);
 await member(alice, c);
 await member(bob, b);
+// The installation administrator is also a member of b, so it enters the app directly (single company,
+// single open period) and can act as a destination-company approver in the UI E2E.
+await member(admin, b);
+await member(heidi, g);
+await period(g, 'سال مالی ۱۴۰۵', '2026-03-21', '2027-03-20', 1);
 await member(carol, a);
 await member(dave, c); // company without any fiscal period
 // erin has no company at all

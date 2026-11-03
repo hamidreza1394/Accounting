@@ -181,6 +181,7 @@ function AppShellFrame({ session, context, onChangeContext, onLogout, onPassword
   const usersActive = pathname === '/admin/users' || pathname.startsWith('/admin/users/');
   const rolesActive = pathname === '/admin/roles' || pathname.startsWith('/admin/roles/');
   const permissionsActive = pathname === '/admin/permissions';
+  const companyUsersActive = pathname === '/company/users';
   const securityAuditActive = pathname === '/admin/security/audit';
   const membershipRequestsActive = pathname === '/admin/membership-requests';
   const myMembershipRequestsActive = pathname === '/account/membership-requests';
@@ -230,7 +231,7 @@ function AppShellFrame({ session, context, onChangeContext, onLogout, onPassword
           </div>
 
           <div className="faranou-header-context" aria-label="زمینه کاری جاری">
-            <button type="button" onClick={onChangeContext} className="faranou-context-choice" aria-label="تغییر شرکت">
+            <button type="button" onClick={onChangeContext} className="faranou-context-choice" aria-label={`شرکت جاری ${context.company.name}، تغییر شرکت`}>
               <ChevronDown className="faranou-context-chevron" size={17} />
               <span className="min-w-0 flex-1 text-start">
                 <span className="block text-[10px] text-on-navy/70 sm:text-[11px]">شرکت جاری</span>
@@ -238,7 +239,7 @@ function AppShellFrame({ session, context, onChangeContext, onLogout, onPassword
               </span>
               <Building2 className="shrink-0 text-on-navy-accent" size={22} />
             </button>
-            <button type="button" onClick={onChangeContext} className="faranou-context-choice" aria-label="تغییر دوره مالی">
+            <button type="button" onClick={onChangeContext} className="faranou-context-choice" aria-label={`دوره مالی ${context.fiscalPeriod.title}، تغییر دوره مالی`}>
               <ChevronDown className="faranou-context-chevron" size={17} />
               <span className="min-w-0 flex-1 text-start">
                 <span className="block text-[10px] text-on-navy/70 sm:text-[11px]">دوره مالی</span>
@@ -267,7 +268,7 @@ function AppShellFrame({ session, context, onChangeContext, onLogout, onPassword
               <strong className="max-w-36 truncate text-sm font-bold">{session.fullName}</strong>
               <span className="mt-1 max-w-36 truncate text-[11px] text-on-navy/75">{context.company.roleName}</span>
             </span>
-            <span className="faranou-header-icon faranou-header-icon--notify" title="اعلان‌ها" aria-label="اعلان‌ها">
+            <span className="faranou-header-icon faranou-header-icon--notify" title="اعلان‌ها" role="img" aria-label="اعلان‌ها">
               <Bell size={20} />
               <span className="faranou-notify-dot" aria-hidden="true" />
             </span>
@@ -335,6 +336,12 @@ function AppShellFrame({ session, context, onChangeContext, onLogout, onPassword
                             <Link to="/admin/users" onClick={() => setMobileMenuOpen(false)} aria-current={usersActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (usersActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
                               <NavIcon icon={Users} tone="sky" size="sm" />
                               <span className="min-w-0 flex-1">مدیریت کاربران</span>
+                            </Link>
+                          </li>
+                          <li>
+                            <Link to="/company/users" onClick={() => setMobileMenuOpen(false)} aria-current={companyUsersActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (companyUsersActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
+                              <NavIcon icon={Users} tone="blue" size="sm" />
+                              <span className="min-w-0 flex-1">کاربران شرکت جاری</span>
                             </Link>
                           </li>
                           <li><DisabledItem label="ساختار سازمانی و سمت‌ها" icon={Building2} tone="blue" nested /></li>
