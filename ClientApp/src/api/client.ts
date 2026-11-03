@@ -2,6 +2,8 @@ import {
   parseAntiforgeryToken,
   parseMyProfile,
   parseLoginHistory,
+  parseAdminUserList,
+  parseAdminUserDetails,
   parseCompanies,
   parseCompanyOverview,
   parseSelectedContextResponse,
@@ -9,6 +11,8 @@ import {
   parseWorkContext,
   type MyProfile,
   type LoginHistoryItem,
+  type AdminUserListResponse,
+  type AdminUserDetails,
   type ChangeMyPasswordRequest,
   type CompanyOverview,
   type CompanySummary,
@@ -136,6 +140,31 @@ export async function getMyLoginHistory(signal?: AbortSignal, take = 50): Promis
 }
 
 /** Changes the current account password; the server signs out all sessions after success. */
+export type AdminUserQuery = {
+  search?: string;
+  status: 'all' | 'active' | 'inactive';
+  page: number;
+  pageSize: number;
+  sort: 'created' | 'lastLogin' | 'name' | 'username';
+  descending: boolean;
+};
+
+export async function getAdminUsers(query: AdminUserQuery, signal?: AbortSignal): Promise<AdminUserListResponse> {
+  const params = new URLSearchParams({
+    status: query.status,
+    page: String(query.page),
+    pageSize: String(query.pageSize),
+    sort: query.sort,
+    descending: String(query.descending),
+  });
+  if (query.search?.trim()) params.set('search', query.search.trim());
+  return parseAdminUserList(await getJson(`/admin/users?${params.toString()}`, signal));
+}
+
+export async function getAdminUser(userId: string, signal?: AbortSignal): Promise<AdminUserDetails> {
+  return parseAdminUserDetails(await getJson(`/admin/users/${encodeURIComponent(userId)}`, signal));
+}
+
 export async function changeMyPassword(request: ChangeMyPasswordRequest): Promise<void> {
   await sendJson('POST', '/me/password', request);
 }
