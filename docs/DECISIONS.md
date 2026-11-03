@@ -1084,7 +1084,7 @@ D-013، D-025، D-034، D-059، D-061، D-062، Issue #397، Issue #399، PR #39
 
 ## D-064 — تفکیک مدیریت سراسری نصب از مجوزهای عملیاتی شرکتی (2026-11-02)
 
-- **وضعیت تصمیم:** Proposed — برای بازبینی در PR #445؛ هنوز مبنای Migration یا تغییر Schema نیست.
+- **وضعیت تصمیم:** Accepted — مالک محصول در 2026-11-03 اصل تفکیک مدیر نصب از مدیر شرکت و استفاده مجدد از مدل موجود را تأیید کرد. این تصمیم به‌تنهایی مجوز Migration یا تغییر Schema نیست.
 - **Issue مرجع:** #444.
 - **زمینه:** فرانو دو scope مستقل دارد: حساب مدیریتی سراسری نصب و نقش‌های عملیاتی هر شرکت. مدل فعلی Users.RoleId به Role سراسری متصل است؛ UserCompanyMemberships به CompanyRole شرکتی متصل است. مجوزهای CompanyRole از PermissionDefinitions/CompanyRolePermissions توسط CompanyAccessService واقعاً enforce می‌شوند. مسیر قدیمی Role → Permission → ApplicationHandler در call-siteهای تولیدی برای authorization runtime استفاده نمی‌شود و APIهای React را پوشش نمی‌دهد.
 
