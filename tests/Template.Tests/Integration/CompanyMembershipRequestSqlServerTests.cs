@@ -261,10 +261,11 @@ public sealed class CompanyMembershipRequestSqlServerTests
                     await check.GetService<IMigrator>().MigrateAsync(
                         PreviousMigration, TestContext.Current.CancellationToken));
 
-                // This isolated test database has no customer data to retain; remove its test row
-                // only after verifying that the rollback guard rejected the destructive downgrade.
+                // This isolated test database has no customer data to retain; remove every test
+                // membership-request row (approved + still-pending restricted) only after the
+                // rollback guard has rejected the destructive downgrade.
                 await check.Database.ExecuteSqlInterpolatedAsync(
-                    $"DELETE FROM [CompanyMembershipRequests] WHERE [Id] = {requestId}",
+                    $"DELETE FROM [CompanyMembershipRequests] WHERE [Id] IN ({requestId}, {restrictedRequestId})",
                     TestContext.Current.CancellationToken);
                 await check.GetService<IMigrator>().MigrateAsync(
                     PreviousMigration, TestContext.Current.CancellationToken);
