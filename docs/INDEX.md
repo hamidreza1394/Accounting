@@ -67,6 +67,7 @@
 | [`handoffs/ISSUE-444-security-audit-ui.md`](handoffs/ISSUE-444-security-audit-ui.md) | تحویل UI گزارش امنیت و سوابق مدیریتی روی API #487 (Issue #444، S7) |
 | [`TIME_CONTRACT.md`](TIME_CONTRACT.md) | ممیزی و قرارداد زمان: `*Utc` در برابر ساعت محلی قدیمی سرور، قرارداد Frontend و پیشنهاد Backend (D-067) |
 | [`handoffs/ISSUE-444-utc-time-contract.md`](handoffs/ISSUE-444-utc-time-contract.md) | تحویل یکپارچه‌سازی قرارداد زمان در ClientApp (Issue #444) |
+| [`handoffs/ISSUE-444-security-audit-complete.md`](handoffs/ISSUE-444-security-audit-complete.md) | تکمیل UI گزارش امنیتی: فیلتر تاریخ شمسی، انتخاب کاربر/شرکت و قراردادهای API باقی‌مانده (Issue #444) |
 | [`handoffs/ISSUE-467-login-history-logout-test.md`](handoffs/ISSUE-467-login-history-logout-test.md) | Regression test برای نمایش خروج موفق در سوابق ورود/خروج کاربر |
 | [`WORK_LOG.md`](WORK_LOG.md), [`handoffs/`](handoffs/) | سوابق تحویل؛ [تحویل تجمیعی مدیریت کاربران و دسترسی‌ها](handoffs/ISSUE-444-admin-ui-completion.md)؛ [تحویل نقش‌ها و کاتالوگ مجوز](handoffs/ISSUE-475-roles-permission-catalog.md) |
 
