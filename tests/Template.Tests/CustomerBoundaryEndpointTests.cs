@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Template.Tests;
@@ -16,12 +17,12 @@ public sealed class CustomerBoundaryEndpointTests
         var companyUser = Principal("User", "company-user");
         var infrastructure = Principal("Infrastructure", "master");
 
-        var deniedContext = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
+        var deniedContext = CreateHttpContext();
         var denied = await Server.Api.CustomerBoundaryEndpoints.DiagnoseAsync(companyUser, fixture.Database, default);
         await denied.ExecuteAsync(deniedContext);
         Assert.Equal(StatusCodes.Status404NotFound, deniedContext.Response.StatusCode);
 
-        var allowedContext = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
+        var allowedContext = CreateHttpContext();
         var allowed = await Server.Api.CustomerBoundaryEndpoints.DiagnoseAsync(infrastructure, fixture.Database, default);
         await allowed.ExecuteAsync(allowedContext);
         Assert.Equal(StatusCodes.Status200OK, allowedContext.Response.StatusCode);
@@ -44,7 +45,7 @@ public sealed class CustomerBoundaryEndpointTests
         await using var fixture = new Fixture();
         var antiforgery = new StubAntiforgery(isValid: false);
 
-        var httpContext = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
+        var httpContext = CreateHttpContext();
         var result = await Server.Api.CustomerBoundaryEndpoints.AssignAsync(
             httpContext,
             Principal("User", "company-user"),
@@ -64,7 +65,7 @@ public sealed class CustomerBoundaryEndpointTests
     public async Task Assignment_RejectsMissingAntiforgeryAndAuditsTheRejection()
     {
         await using var fixture = new Fixture();
-        var httpContext = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
+        var httpContext = CreateHttpContext();
         var result = await Server.Api.CustomerBoundaryEndpoints.AssignAsync(
             httpContext,
             Principal("Infrastructure", "master"),
@@ -89,7 +90,7 @@ public sealed class CustomerBoundaryEndpointTests
         var principal = Principal("Infrastructure", "master");
         var firstBoundary = Guid.NewGuid();
 
-        var assignedContext = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
+        var assignedContext = CreateHttpContext();
         var assigned = await Server.Api.CustomerBoundaryEndpoints.AssignAsync(
             assignedContext,
             principal,
@@ -106,7 +107,7 @@ public sealed class CustomerBoundaryEndpointTests
         Assert.Contains(firstBoundary.ToString(), successAudit.EntityId);
 
         var secondBoundary = Guid.NewGuid();
-        var reassignmentContext = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
+        var reassignmentContext = CreateHttpContext();
         var reassignment = await Server.Api.CustomerBoundaryEndpoints.AssignAsync(
             reassignmentContext,
             principal,
@@ -123,6 +124,20 @@ public sealed class CustomerBoundaryEndpointTests
         Assert.Contains(audits, item =>
             item.EventType == "CustomerBoundaryProvisionRejected" &&
             item.DetailsJson.Contains("Conflict", StringComparison.Ordinal));
+    }
+
+    private static DefaultHttpContext CreateHttpContext()
+    {
+        var services = new ServiceCollection()
+            .AddLogging()
+            .AddOptions()
+            .AddProblemDetails()
+            .BuildServiceProvider();
+        return new DefaultHttpContext
+        {
+            RequestServices = services,
+            Response = { Body = new MemoryStream() },
+        };
     }
 
     private static ClaimsPrincipal Principal(string accountKind, string name) => new(
