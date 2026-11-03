@@ -2254,3 +2254,7 @@
 - ADR D-068: `react-day-picker@9.14.0` با مسیر `/persian` (نسخهٔ 10 این مسیر را ندارد) پین شد؛ مجوزها MIT، `npm audit` بدون آسیب‌پذیری، حجم chunk تنبل ≈ 72 kB gzip، اجرای آفلاین تأیید شد.
 - کامپوننت `ui/JalaliDateField` (مقدار ISO میلادی، RTL، ارقام فارسی، `min`/`max`، صفحه‌کلید، `FormField`) با ۱۲ تست؛ یک باگ اعتبارسنجی ماه حین تست یافت و رفع شد.
 - اتصال به گزارش امنیتی پس از ادغام #499 در PR بعدی. handoff: `docs/handoffs/ISSUE-444-jalali-date-picker.md`.
+
+## 2026-11-03 — Issue #444: E2E و دسترس‌پذیری (مرحلهٔ ۱۱)
+- آزمون‌های Playwright `access-ui.spec.mjs` + اسکن axe (WCAG A/AA) و ۴۰۳ واقعی API برای غیرمدیر نوشته شد؛ seed گسترش یافت؛ وابستگی آزمونی `@axe-core/playwright@4.14.0` (MPL-2.0) افزوده شد.
+- **اجرا نشد** (فقط CI با SQL Server)؛ تا نتیجهٔ job `e2e` وضعیت Verified نیست. handoff: `docs/handoffs/ISSUE-444-ui-e2e-and-a11y.md`.
