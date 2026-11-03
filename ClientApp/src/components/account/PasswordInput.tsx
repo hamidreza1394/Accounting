@@ -18,7 +18,7 @@ export function PasswordInput({ fieldName, className, ...props }: PasswordInputP
   return (
     <div dir="ltr" className="relative">
       {/* The wrapper is LTR like the input, so the toggle (start-0) and the input padding (ps-11) are both on the left. */}
-      <Input {...props} type={visible ? 'text' : 'password'} dir="ltr" className={`ps-11 ${className ?? ''}`} />
+      <Input {...props} type={visible ? 'text' : 'password'} dir="ltr" spellCheck={false} autoCapitalize="none" autoCorrect="off" className={`ps-11 ${className ?? ''}`} />
       <button
         type="button"
         aria-label={`نمایش ${fieldName}`}
