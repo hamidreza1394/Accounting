@@ -178,6 +178,12 @@ public sealed class SecurityAuditAdministrationEndpointTests
         Assert.DoesNotContain("export-private-payload", csv);
         Assert.Equal("no-store", context.Response.Headers.CacheControl.ToString());
         Assert.Equal("no-cache", context.Response.Headers.Pragma.ToString());
+
+        var exportAudit = await fixture.Database.SecurityAuditEvents.SingleAsync(
+            item => item.EventType == "SecurityAuditExported");
+        Assert.Equal(admin.Id, exportAudit.UserId);
+        using var details = JsonDocument.Parse(exportAudit.DetailsJson!);
+        Assert.Equal(1, details.RootElement.GetProperty("rowCount").GetInt32());
     }
 
     [Fact]
