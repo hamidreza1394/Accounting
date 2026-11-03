@@ -651,6 +651,11 @@ public sealed class CompanyMembershipRequestEndpointTests
         Assert.Contains(response.Items, item => item.UserId == fixture.Approver.Id);
         Assert.Contains(response.Items, item => item.UserId == secondApprover.Id);
         Assert.DoesNotContain(response.Items, item => item.UserId == fixture.OtherUser.Id);
+
+        var denied = await Server.Api.CompanyMembershipRequestEndpoints.GetApproversAsync(
+            fixture.Destination.Id, new DefaultHttpContext(), fixture.Principal(fixture.OtherUser.Id),
+            fixture.Database, fixture.Access);
+        Assert.Equal(StatusCodes.Status404NotFound, (denied as IStatusCodeHttpResult)?.StatusCode);
     }
 
     [Fact]
@@ -695,6 +700,11 @@ public sealed class CompanyMembershipRequestEndpointTests
             fixture.Destination.Id, new DefaultHttpContext(), fixture.Principal(fixture.Approver.Id),
             fixture.Database, fixture.Access, status: "Unknown");
         Assert.Equal(StatusCodes.Status400BadRequest, (invalid as IStatusCodeHttpResult)?.StatusCode);
+
+        var crossCompany = await Server.Api.CompanyMembershipRequestEndpoints.GetRequestHistoryAsync(
+            Guid.NewGuid(), new DefaultHttpContext(), fixture.Principal(fixture.OtherUser.Id),
+            fixture.Database, fixture.Access);
+        Assert.Equal(StatusCodes.Status404NotFound, (crossCompany as IStatusCodeHttpResult)?.StatusCode);
     }
 
     private sealed class Fixture : IAsyncDisposable
