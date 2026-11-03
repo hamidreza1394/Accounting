@@ -15,21 +15,21 @@ export function SelectionBackdrop() {
       >
         <defs>
           <linearGradient id="sb-ridge-back" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#ffffff" stopOpacity="0.95" />
-            <stop offset="1" stopColor="#cfdff2" stopOpacity="0.35" />
+            <stop offset="0" stopColor="white" stopOpacity="0.95" />
+            <stop offset="1" className="[stop-color:var(--color-ridge)]" stopOpacity="0.35" />
           </linearGradient>
           <linearGradient id="sb-ridge-front" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#f4f8fe" stopOpacity="0.95" />
-            <stop offset="1" stopColor="#dbe7f5" stopOpacity="0.2" />
+            <stop offset="0" className="[stop-color:var(--color-wash-top)]" stopOpacity="0.95" />
+            <stop offset="1" className="[stop-color:var(--color-ridge-soft)]" stopOpacity="0.2" />
           </linearGradient>
           <linearGradient id="sb-glow" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor="#f1c36f" stopOpacity="0" />
-            <stop offset="0.5" stopColor="#f1c36f" stopOpacity="0.75" />
-            <stop offset="1" stopColor="#f1c36f" stopOpacity="0" />
+            <stop offset="0" className="[stop-color:var(--color-glow)]" stopOpacity="0" />
+            <stop offset="0.5" className="[stop-color:var(--color-glow)]" stopOpacity="0.75" />
+            <stop offset="1" className="[stop-color:var(--color-glow)]" stopOpacity="0" />
           </linearGradient>
           <linearGradient id="sb-fade" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0.55" stopColor="#eef3fa" stopOpacity="0" />
-            <stop offset="1" stopColor="#eef3fa" stopOpacity="1" />
+            <stop offset="0.55" className="[stop-color:var(--color-wash)]" stopOpacity="0" />
+            <stop offset="1" className="[stop-color:var(--color-wash)]" stopOpacity="1" />
           </linearGradient>
         </defs>
 
@@ -45,13 +45,13 @@ export function SelectionBackdrop() {
         <path d="M0 300 L220 238 L420 275 L690 185 L860 235 L1080 160 L1290 245 L1500 205 L1710 262" fill="none" stroke="url(#sb-glow)" strokeWidth="1" opacity="0.7" />
         <path d="M300 330 Q860 120 1500 250" fill="none" stroke="url(#sb-glow)" strokeWidth="0.8" opacity="0.6" />
 
-        <g fill="#8fb4de" opacity="0.18" className="max-lg:hidden">
+        <g opacity="0.18" className="fill-ridge-bars max-lg:hidden">
           <rect x="1590" y="190" width="14" height="40" rx="2" />
           <rect x="1612" y="168" width="14" height="62" rx="2" />
           <rect x="1634" y="140" width="14" height="90" rx="2" />
           <rect x="1656" y="112" width="14" height="118" rx="2" />
         </g>
-        <path d="M1580 232 L1612 214 L1640 192 L1672 150" fill="none" stroke="#f1c36f" strokeWidth="1.5" opacity="0.55" className="max-lg:hidden" />
+        <path d="M1580 232 L1612 214 L1640 192 L1672 150" fill="none" strokeWidth="1.5" opacity="0.55" className="stroke-glow max-lg:hidden" />
         <rect width="1710" height="380" fill="url(#sb-fade)" />
       </svg>
     </div>

@@ -81,7 +81,7 @@
     radial-gradient(ellipse at 100% 0%, rgb(40 92 158 / .24), transparent 42%),
     radial-gradient(ellipse at 0% 100%, rgb(20 90 130 / .18), transparent 40%),
     linear-gradient(180deg, #0d1f36 0%, #0b1a2e 48%, #0a1628 100%);
-  box-shadow: -10px 0 36px rgb(4 22 44 / .2), inset 1px 0 0 rgb(255 255 255 / .04);
+  box-shadow: calc(var(--inline-sign) * 10px) 0 36px rgb(4 22 44 / .2), inset calc(var(--inline-sign) * -1px) 0 0 rgb(255 255 255 / .04);
   overflow: hidden;
 }
 
@@ -145,7 +145,7 @@
   }
   .faranou-sidebar--premium .faranou-nav-active:hover {
     filter: brightness(1.05);
-    transform: translateX(-2px);
+    transform: translateX(calc(var(--inline-sign) * 2px));
   }
 }
 
