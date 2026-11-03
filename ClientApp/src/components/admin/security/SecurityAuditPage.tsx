@@ -1,17 +1,29 @@
-import { useCallback, useEffect, useId, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useId, useMemo, useState, type FormEvent } from 'react';
 import { ApiError, getSecurityAuditEvents, type SecurityAuditQuery } from '../../../api/client';
 import type { SecurityAuditEvent, SecurityAuditPage as AuditPage } from '../../../api/types';
 import { formatDateTime } from '../../../lib/format';
 import { eventTypeLabel, knownEventTypes } from '../../../lib/securityEvents';
+import { dayEndUtc, dayStartUtc } from '../../../lib/time';
 import { Alert } from '../../ui/Alert';
 import { Breadcrumb } from '../../ui/Breadcrumb';
 import { Button } from '../../ui/button';
 import { DataTable, type DataTableColumn } from '../../ui/DataTable';
-import { FormField, Input } from '../../ui/FormField';
+import { FormField, Input, Select } from '../../ui/FormField';
+import { JalaliDateField } from '../../ui/JalaliDateField';
+import { useCompanyChoices } from '../roles/useCompanyChoices';
+import { UserPicker, type PickedUser } from '../UserPicker';
 
 type Props = { onUnauthenticated: (error: unknown) => boolean };
 
 const pageSizes = [10, 25, 50, 100] as const;
+
+/** Day limits of the date fields: keeps typed/picked years inside what the server and `Date` handle. */
+const minDate = '2000-01-01';
+const maxDate = '2100-12-31';
+
+type Picked = { id: string; label: string };
+
+type Draft = { eventType: string; from: string; to: string; user: PickedUser | null; companyId: string };
 
 type Applied = {
   eventType: string;
@@ -20,30 +32,12 @@ type Applied = {
   /** Already converted (and validated) UTC instants of `from`/`to`; the effect never converts. */
   fromUtc: string | null;
   toUtc: string | null;
-  user: { id: string; label: string } | null;
-  company: { id: string; label: string } | null;
+  user: Picked | null;
+  company: Picked | null;
 };
 
+const emptyDraft: Draft = { eventType: '', from: '', to: '', user: null, companyId: '' };
 const empty: Applied = { eventType: '', from: '', to: '', fromUtc: null, toUtc: null, user: null, company: null };
-
-/** Smallest/largest year the date inputs accept; keeps typed years inside what the server and `Date` handle. */
-const minDate = '2000-01-01';
-const maxDate = '2100-12-31';
-
-function toInstant(date: string, time: string): string | null {
-  const parsed = new Date(`${date}T${time}`);
-  return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : null;
-}
-
-/** Start of the chosen local calendar day as a UTC instant, or `null` for an invalid date. */
-export function dayStartUtc(date: string): string | null {
-  return toInstant(date, '00:00:00');
-}
-
-/** End of the chosen local calendar day as a UTC instant, or `null` for an invalid date. */
-export function dayEndUtc(date: string): string | null {
-  return toInstant(date, '23:59:59.999');
-}
 
 function toQuery(applied: Applied, page: number, pageSize: number): SecurityAuditQuery {
   return {
@@ -68,7 +62,7 @@ function actorLabel(event: SecurityAuditEvent): string {
  */
 export function SecurityAuditPage({ onUnauthenticated }: Props) {
   const typeListId = useId();
-  const [draft, setDraft] = useState({ eventType: '', from: '', to: '' });
+  const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [draftError, setDraftError] = useState<string | null>(null);
   const [applied, setApplied] = useState<Applied>(empty);
   const [page, setPage] = useState(1);
@@ -77,6 +71,7 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<{ message: string; status: number | null } | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const { state: companyChoices, retry: retryCompanies } = useCompanyChoices(onUnauthenticated);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -112,6 +107,8 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
     return () => controller.abort();
   }, [applied, page, pageSize, attempt, onUnauthenticated]);
 
+  const companies = companyChoices.kind === 'ready' ? companyChoices.companies : [];
+
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const fromUtc = draft.from ? dayStartUtc(draft.from) : null;
@@ -127,20 +124,44 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
     }
     setDraftError(null);
     setPage(1);
-    setApplied((current) => ({ ...current, eventType: draft.eventType.trim(), from: draft.from, to: draft.to, fromUtc, toUtc }));
+    const company = draft.companyId ? companies.find((candidate) => candidate.id === draft.companyId) : undefined;
+    setApplied((current) => ({
+      eventType: draft.eventType.trim(),
+      from: draft.from,
+      to: draft.to,
+      fromUtc,
+      toUtc,
+      user: draft.user,
+      // A company chosen from a table cell (not in the user's own list) is kept unless the select changes it.
+      company: draft.companyId ? (company ? { id: company.id, label: company.name } : current.company) : null,
+    }));
   };
 
   const reset = () => {
-    setDraft({ eventType: '', from: '', to: '' });
+    setDraft(emptyDraft);
     setDraftError(null);
     setPage(1);
     setApplied(empty);
   };
 
-  const filterBy = useCallback((patch: Partial<Applied>) => {
+  const filterByUser = (user: Picked) => {
+    setDraft((current) => ({ ...current, user }));
     setPage(1);
-    setApplied((current) => ({ ...current, ...patch }));
-  }, []);
+    setApplied((current) => ({ ...current, user }));
+  };
+
+  const filterByCompany = (company: Picked) => {
+    setDraft((current) => ({ ...current, companyId: companies.some((candidate) => candidate.id === company.id) ? company.id : '' }));
+    setPage(1);
+    setApplied((current) => ({ ...current, company }));
+  };
+
+  const clearChip = (which: 'user' | 'company') => {
+    setPage(1);
+    if (which === 'user') setDraft((current) => ({ ...current, user: null }));
+    else setDraft((current) => ({ ...current, companyId: '' }));
+    setApplied((current) => ({ ...current, [which]: null }));
+  };
 
   const columns = useMemo<readonly DataTableColumn<SecurityAuditEvent>[]>(
     () => [
@@ -165,8 +186,8 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
           event.userId ? (
             <button
               type="button"
-              className="text-start text-teal-deep underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-gold"
-              onClick={() => filterBy({ user: { id: event.userId as string, label: actorLabel(event) } })}
+              className="min-h-8 text-start text-teal-deep underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-gold"
+              onClick={() => filterByUser({ id: event.userId as string, label: actorLabel(event) })}
             >
               {actorLabel(event)}
               {event.actorUsername && event.actorDisplayName ? <code dir="ltr" className="ms-2 text-xs text-sub">{event.actorUsername}</code> : null}
@@ -183,8 +204,8 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
           event.companyId ? (
             <button
               type="button"
-              className="text-start text-teal-deep underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-gold"
-              onClick={() => filterBy({ company: { id: event.companyId as string, label: event.companyName ?? 'شرکت ناشناخته' } })}
+              className="min-h-8 text-start text-teal-deep underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-gold"
+              onClick={() => filterByCompany({ id: event.companyId as string, label: event.companyName ?? 'شرکت ناشناخته' })}
             >
               {event.companyName ?? 'شرکت ناشناخته'}
               <span className="sr-only">، فقط رویدادهای این شرکت</span>
@@ -212,10 +233,12 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
         cell: (event) => (event.correlationId ? <code dir="ltr" className="break-all text-xs text-sub">{event.correlationId}</code> : '—'),
       },
     ],
-    [filterBy],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the cell handlers only call stable state setters
+    [companies],
   );
 
   const hasFilters = applied.eventType !== '' || applied.fromUtc !== null || applied.toUtc !== null || applied.user !== null || applied.company !== null;
+  const draftDirty = draft.eventType !== '' || draft.from !== '' || draft.to !== '' || draft.user !== null || draft.companyId !== '';
 
   return (
     <div className="space-y-5">
@@ -229,7 +252,7 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
 
       <Alert tone="info">نبودِ یک رویداد به معنی نبودِ آن اتفاق یا پایان نشست نیست؛ این گزارش مدت نشست یا خروج ضمنی را نشان نمی‌دهد.</Alert>
 
-      <form aria-label="فیلتر گزارش امنیتی" onSubmit={submit} noValidate className="grid gap-3 rounded-xl border border-line bg-white p-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
+      <form aria-label="فیلتر گزارش امنیتی" onSubmit={submit} noValidate className="grid gap-3 rounded-xl border border-line bg-white p-4 sm:grid-cols-2 lg:grid-cols-3">
         <FormField label="نوع رویداد" hint="کد دقیق رویداد؛ از پیشنهادها انتخاب کنید.">
           <Input
             list={typeListId}
@@ -245,17 +268,55 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
             <option key={code} value={code} label={eventTypeLabel(code) ?? code} />
           ))}
         </datalist>
-        <FormField label="از تاریخ" hint="به وقت محلی مرورگر">
-          <Input type="date" min={minDate} max={maxDate} value={draft.from} onChange={(event) => setDraft((current) => ({ ...current, from: event.target.value }))} />
+        <FormField label="از تاریخ" hint="تاریخ شمسی؛ شروع روز به وقت محلی شما">
+          <JalaliDateField
+            value={draft.from}
+            min={minDate}
+            max={draft.to || maxDate}
+            onChange={(value) => setDraft((current) => ({ ...current, from: value }))}
+          />
         </FormField>
-        <FormField label="تا تاریخ" error={draftError}>
-          <Input type="date" min={minDate} max={maxDate} value={draft.to} onChange={(event) => setDraft((current) => ({ ...current, to: event.target.value }))} />
+        <FormField label="تا تاریخ" hint="پایان روز به وقت محلی شما" error={draftError}>
+          <JalaliDateField
+            value={draft.to}
+            min={draft.from || minDate}
+            max={maxDate}
+            onChange={(value) => setDraft((current) => ({ ...current, to: value }))}
+          />
         </FormField>
-        <div className="flex flex-wrap gap-2">
+        <FormField label="کاربر" hint="جستجو در فهرست کاربران نصب">
+          <UserPicker value={draft.user} onChange={(user) => setDraft((current) => ({ ...current, user }))} onUnauthenticated={onUnauthenticated} />
+        </FormField>
+        <FormField
+          label="شرکت"
+          hint={
+            companyChoices.kind === 'error'
+              ? undefined
+              : 'فقط شرکت‌هایی که خودتان عضو آن‌ها هستید؛ برای سایر شرکت‌ها روی نام شرکت در جدول بزنید.'
+          }
+          error={companyChoices.kind === 'error' ? companyChoices.message : undefined}
+        >
+          <Select
+            value={draft.companyId}
+            disabled={companyChoices.kind === 'loading'}
+            onChange={(event) => setDraft((current) => ({ ...current, companyId: event.target.value }))}
+          >
+            <option value="">{companyChoices.kind === 'loading' ? 'در حال دریافت…' : 'همهٔ شرکت‌ها'}</option>
+            {companies.map((company) => (
+              <option key={company.id} value={company.id}>
+                {company.name}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+        <div className="flex flex-wrap items-end gap-2 sm:col-span-2 lg:col-span-3">
           <Button type="submit" size="lg">اعمال فیلتر</Button>
-          <Button type="button" size="lg" variant="outline" onClick={reset} disabled={!hasFilters && draft.eventType === '' && draft.from === '' && draft.to === ''}>
+          <Button type="button" size="lg" variant="outline" onClick={reset} disabled={!hasFilters && !draftDirty}>
             پاک‌کردن فیلترها
           </Button>
+          {companyChoices.kind === 'error' ? (
+            <Button type="button" size="lg" variant="outline" onClick={retryCompanies}>تلاش دوباره برای فهرست شرکت‌ها</Button>
+          ) : null}
         </div>
       </form>
 
@@ -263,14 +324,14 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
         <ul aria-label="فیلترهای فعال" className="flex flex-wrap gap-2">
           {applied.user ? (
             <li>
-              <Button type="button" size="sm" variant="outline" aria-label={`حذف فیلتر کاربر ${applied.user.label}`} onClick={() => filterBy({ user: null })}>
+              <Button type="button" size="sm" variant="outline" aria-label={`حذف فیلتر کاربر ${applied.user.label}`} onClick={() => clearChip('user')}>
                 کاربر: {applied.user.label} ✕
               </Button>
             </li>
           ) : null}
           {applied.company ? (
             <li>
-              <Button type="button" size="sm" variant="outline" aria-label={`حذف فیلتر شرکت ${applied.company.label}`} onClick={() => filterBy({ company: null })}>
+              <Button type="button" size="sm" variant="outline" aria-label={`حذف فیلتر شرکت ${applied.company.label}`} onClick={() => clearChip('company')}>
                 شرکت: {applied.company.label} ✕
               </Button>
             </li>
