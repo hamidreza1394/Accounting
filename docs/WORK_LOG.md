@@ -2264,3 +2264,10 @@
 - فیلترهای تاریخ به `JalaliDateField` منتقل شد؛ فیلتر کاربر با `UserPicker` (combobox دسترس‌پذیر روی `GET /admin/users?search=`) و فیلتر شرکت از شرکت‌های عضویت کاربر + کلیک روی جدول. بدون داده ساختگی.
 - حین تست دو باگ واقعی رفع شد: ماه پیش‌فرض تقویم و گم‌شدن مقدار تاریخ از نام دسترس‌پذیر دکمه.
 - مسدود به API: مرتب‌سازی، فهرست همهٔ شرکت‌های نصب، فهرست انواع رویداد؛ قرارداد در handoff. handoff: `docs/handoffs/ISSUE-444-security-audit-complete.md`.
+
+## 2026-11-03 — Issue #504 / D-069: طراحی چرخه عمر نشست
+- ممیزی نشان داد Cookie فعلی ۳۰ دقیقه‌ای و sliding است؛ SessionValidator در هر درخواست account active و CredentialStamp را بررسی می‌کند؛ خروج صریح نیز از طریق UserSessionAuditService ثبت می‌شود.
+- SessionId و UserSession per-session وجود ندارد، پس فهرست/ابطال مستقل نشست هنوز ممکن نیست. نبود event به‌عنوان logout/expiry/duration تفسیر نمی‌شود.
+- D-069 یک طرح پیشنهادی برای UserSession، SessionId، idle window، self-service revoke و retention ثبت می‌کند؛ هیچ Schema، Migration، claim یا تغییر Cookie انجام نشده است.
+- تصمیم‌های retention، absolute lifetime، revoke-others و scope مدیر نصب نیازمند تأیید مالک هستند.
+- handoff: docs/handoffs/ISSUE-504-session-lifecycle-design.md.
