@@ -55,6 +55,7 @@ public static class CompanyMembershipRequestEndpoints
         var userId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal);
         if (userId is null)
             return TypedResults.Unauthorized();
+        SetNoStore(httpContext);
         if (request is null || request.SourceCompanyId == Guid.Empty ||
             request.DestinationCompanyId == Guid.Empty ||
             request.SourceCompanyId == request.DestinationCompanyId)
@@ -142,6 +143,7 @@ public static class CompanyMembershipRequestEndpoints
         if (userId is null)
             return TypedResults.Unauthorized();
 
+        SetNoStore(httpContext);
         var safePage = Math.Clamp(page, 1, 100_000);
         var safePageSize = Math.Clamp(pageSize, 1, 100);
         var query = database.CompanyMembershipRequests.AsNoTracking()
@@ -185,6 +187,7 @@ public static class CompanyMembershipRequestEndpoints
         if (userId is null)
             return TypedResults.Unauthorized();
 
+        SetNoStore(httpContext);
         if (!await companyAccess.HasPermissionAsync(
                 userId.Value, companyId, ApprovalPermissionCode, cancellationToken))
             return TypedResults.NotFound();
@@ -255,6 +258,7 @@ public static class CompanyMembershipRequestEndpoints
         var approverId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal);
         if (approverId is null)
             return TypedResults.Unauthorized();
+        SetNoStore(httpContext);
         if (request is null || request.RoleId == Guid.Empty)
             return TypedResults.BadRequest(new { error = "گروه دسترسی مقصد معتبر نیست." });
         if (!await antiforgery.IsRequestValidAsync(httpContext))
@@ -372,7 +376,8 @@ public static class CompanyMembershipRequestEndpoints
         var approverId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal);
         if (approverId is null)
             return TypedResults.Unauthorized();
-        if (request?.Reason?.Length > 500)
+        SetNoStore(httpContext);
+        if (request?.Reason is { Length: > 500 })
             return TypedResults.BadRequest(new { error = "توضیح رد درخواست بیش از حد مجاز است." });
         if (!await antiforgery.IsRequestValidAsync(httpContext))
             return TypedResults.Problem(title: "درخواست نامعتبر است.", statusCode: StatusCodes.Status400BadRequest);
