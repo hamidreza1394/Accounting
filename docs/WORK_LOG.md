@@ -2083,3 +2083,11 @@
 
 
 - Regression test `UserAdministrationEndpointTests.ListUsers_RequiresAnActiveInstallationAdministratorFromTheDatabase` به پاسخ JSON دارای فیلد error با HTTP 403 به‌روزرسانی شد تا با helper صریح 403 در head فعلی هم‌خوان باشد.
+
+
+## 2026-11-03 — PR #479 (Issue #460): اصلاح گارد Migration برای خروجی ابزار EF
+- شکست CI فقط در گام «Test the migration guards» بود (۸۶۹ تست .NET سبز بودند): پارسر `scripts/migration_model.py` شکل خروجی `dotnet ef` را نمی‌فهمید — `ToTable("X", (string)null)` و نبود `HasAlternateKey` مجزا (EF کلیدِ جایگزین را فقط از `HasPrincipalKey` در رابطه‌ها نشان می‌دهد).
+- پارسر هر دو شکل را می‌پذیرد و کلید جایگزین را از `HasPrincipalKey` استخراج می‌کند؛ مقایسهٔ مدل/snapshot/designer هیچ‌جا ضعیف نشد. چهار تست واحد جدید (`EfToolsSnapshotFormTests`) شامل تست منفی «entity بدون جدول همچنان رد می‌شود».
+- فیکسچر تست جهش `test_newer_migration_than_the_constants` به تاریخی بعد از migration جدید (`20261201000000`) منتقل شد؛ نیت تست تغییر نکرد.
+- شواهد محلی: `generate_migrations.py --check` و `verify_migration_model.py` (۱۱ migration، Up و Down) موفق؛ `test_migration_tooling.py` ۲۸ تست و `test_migration_guard_mutations.py` ۳۱ تست موفق؛ `dotnet ef migrations has-pending-model-changes` (ابزار 10.0.13) خروجی «No changes have been made to the model since the last migration».
+- ریسک ثبت‌شده: در همین PR بررسی بایت‌به‌بایت designer/snapshot برای migration فعلی با `CURRENT_MIGRATION_WRITTEN_BY_EF_TOOLS` عمداً کنار گذاشته شده و تنها به EF (`has-pending-model-changes`) واگذار شده است؛ این کاهش پوشش گارد باید توسط Maintainer بازبینی شود.
