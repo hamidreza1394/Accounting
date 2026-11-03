@@ -934,6 +934,19 @@ def main(argv: list[str]) -> int:
             if not os.path.exists(path):
                 problems.append(f"{name} is missing.")
                 continue
+
+            # EF Core owns these two artifacts when the current migration was created
+            # with 'dotnet ef migrations add'. This Python generator intentionally
+            # derives a reduced model from source parsing and cannot reproduce EF's
+            # complete CSharpSnapshotGenerator output byte-for-byte. The CI workflow
+            # separately runs 'dotnet ef migrations has-pending-model-changes' to
+            # verify the committed snapshot against the actual runtime model.
+            if CURRENT_MIGRATION_WRITTEN_BY_EF_TOOLS and name in {
+                f"{CURRENT_MIGRATION_ID}_{CURRENT_MIGRATION_NAME}.Designer.cs",
+                f"{SNAPSHOT_CLASS}.cs",
+            }:
+                continue
+
             with open(path, encoding="utf-8") as file:
                 committed = file.read()
             if committed != content:
