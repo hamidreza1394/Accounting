@@ -281,17 +281,23 @@ public sealed class CompanyRoleAdministrationEndpointTests
 
         var ok = Assert.IsType<Ok<Server.Api.TransferCompanyRoleMembersResponse>>(result);
         Assert.Equal(2, ok.Value!.MovedCount);
-        var memberships = await fixture.Database.UserCompanyMemberships.ToListAsync();
+        await using var reader = fixture.NewContext();
+        var memberships = await reader.UserCompanyMemberships.ToListAsync();
         Assert.Equal(target.Id, memberships.Single(m => m.UserId == first.Id).RoleId);
         Assert.Equal(target.Id, memberships.Single(m => m.UserId == second.Id).RoleId);
         var untouched = memberships.Single(m => m.UserId == inactiveUser.Id);
         Assert.Equal(source.Id, untouched.RoleId);
         Assert.False(untouched.IsActive);
-        var audit = Assert.Single(await fixture.Database.SecurityAuditEvents
-            .Where(e => e.EventType == "CompanyRoleMembersTransferred").ToListAsync());
-        Assert.Equal(fixture.CompanyId, audit.TenantId);
-        Assert.Equal(admin.Id, audit.UserId);
-        Assert.Contains(first.Id.ToString(), audit.DetailsJson);
+        var audits = await reader.SecurityAuditEvents
+            .Where(e => e.EventType == "UserCompanyRoleAssigned").ToListAsync();
+        Assert.Equal(2, audits.Count);
+        Assert.All(audits, audit =>
+        {
+            Assert.Equal(fixture.CompanyId, audit.TenantId);
+            Assert.Equal(admin.Id, audit.UserId);
+            Assert.Contains("\"bulkTransfer\":true", audit.DetailsJson);
+        });
+        Assert.Contains(audits, audit => audit.EntityId == $"{first.Id}:{fixture.CompanyId}");
     }
 
     [Fact]
@@ -393,13 +399,107 @@ public sealed class CompanyRoleAdministrationEndpointTests
         Assert.All(await fixture.Database.UserCompanyMemberships.ToListAsync(), m => Assert.Equal(source.Id, m.RoleId));
     }
 
+    [Fact]
+    public async Task TransferMembers_RejectsMissingBodyUnknownCompanyAndForeignSourceRole()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddAdministrator();
+        fixture.AddCompany();
+        var target = fixture.AddRole("NEW");
+        var foreignSource = fixture.AddRoleInOtherCompany("FOREIGN");
+        fixture.AddMember(foreignSource, "foreign-member");
+        await fixture.Database.SaveChangesAsync();
+
+        var noBody = await Server.Api.CompanyRoleAdministrationEndpoints.TransferMembersAsync(
+            fixture.CompanyId, target.Id, new DefaultHttpContext(), fixture.Principal(admin.Id), null,
+            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+        Assert.Equal(StatusCodes.Status400BadRequest, (noBody as IStatusCodeHttpResult)?.StatusCode);
+
+        var unknownCompany = await Server.Api.CompanyRoleAdministrationEndpoints.TransferMembersAsync(
+            Guid.NewGuid(), target.Id, new DefaultHttpContext(), fixture.Principal(admin.Id),
+            new Server.Api.TransferCompanyRoleMembersRequest(target.Id),
+            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+        Assert.Equal(StatusCodes.Status404NotFound, (unknownCompany as IStatusCodeHttpResult)?.StatusCode);
+
+        var foreign = await fixture.Transfer(admin.Id, foreignSource.Id, target.Id);
+        Assert.Equal(StatusCodes.Status404NotFound, (foreign as IStatusCodeHttpResult)?.StatusCode);
+        await using var reader = fixture.NewContext();
+        Assert.Equal(foreignSource.Id, (await reader.UserCompanyMemberships.SingleAsync()).RoleId);
+    }
+
+    [Fact]
+    public async Task TransferMembers_RejectsAnInvalidAntiforgeryTokenWithoutMovingAnyone()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddAdministrator();
+        fixture.AddCompany();
+        var source = fixture.AddRole("OLD");
+        var target = fixture.AddRole("NEW");
+        fixture.AddMember(source, "member");
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await Server.Api.CompanyRoleAdministrationEndpoints.TransferMembersAsync(
+            fixture.CompanyId, source.Id, new DefaultHttpContext(), fixture.Principal(admin.Id),
+            new Server.Api.TransferCompanyRoleMembersRequest(target.Id),
+            new DenyAntiforgery(), fixture.Database, TimeProvider.System, default);
+
+        Assert.Equal(StatusCodes.Status400BadRequest, (result as IStatusCodeHttpResult)?.StatusCode);
+        await using var reader = fixture.NewContext();
+        Assert.Equal(source.Id, (await reader.UserCompanyMemberships.SingleAsync()).RoleId);
+    }
+
+    [Fact]
+    public async Task TransferMembers_WithNoActiveMembersReturnsZeroAndWritesNoAudit()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddAdministrator();
+        fixture.AddCompany();
+        var source = fixture.AddRole("OLD");
+        var target = fixture.AddRole("NEW");
+        fixture.AddMember(source, "left", membershipActive: false);
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await fixture.Transfer(admin.Id, source.Id, target.Id);
+
+        Assert.Equal(0, Assert.IsType<Ok<Server.Api.TransferCompanyRoleMembersResponse>>(result).Value!.MovedCount);
+        Assert.False(await fixture.Database.SecurityAuditEvents.AnyAsync());
+    }
+
+    [Fact]
+    public async Task TransferMembers_RefusesToMoveFromOrIntoASystemRole()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddAdministrator();
+        fixture.AddCompany();
+        var system = fixture.AddRole("company-admin");
+        system.IsSystemRole = true;
+        var normal = fixture.AddRole("NORMAL");
+        fixture.AddMember(system, "boss");
+        fixture.AddMember(normal, "clerk");
+        await fixture.Database.SaveChangesAsync();
+
+        Assert.Equal(StatusCodes.Status409Conflict,
+            ((await fixture.Transfer(admin.Id, system.Id, normal.Id)) as IStatusCodeHttpResult)?.StatusCode);
+        Assert.Equal(StatusCodes.Status409Conflict,
+            ((await fixture.Transfer(admin.Id, normal.Id, system.Id)) as IStatusCodeHttpResult)?.StatusCode);
+        await using var reader = fixture.NewContext();
+        Assert.Equal(1, await reader.UserCompanyMemberships.CountAsync(m => m.RoleId == system.Id));
+        Assert.Equal(1, await reader.UserCompanyMemberships.CountAsync(m => m.RoleId == normal.Id));
+        Assert.False(await reader.SecurityAuditEvents.AnyAsync());
+    }
+
     private sealed class Fixture : IAsyncDisposable
     {
         public Fixture()
         {
-            Database = new Data.DatabaseContext(new DbContextOptionsBuilder<Data.DatabaseContext>()
-                .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+            Database = NewContext();
         }
+
+        private readonly string _databaseName = Guid.NewGuid().ToString();
+
+        /// <summary>A fresh context on the same store, so assertions read what was really saved.</summary>
+        public Data.DatabaseContext NewContext() => new(new DbContextOptionsBuilder<Data.DatabaseContext>()
+            .UseInMemoryDatabase(_databaseName).Options);
 
         public Data.DatabaseContext Database { get; }
         public Guid CompanyId { get; private set; }
@@ -496,6 +596,15 @@ public sealed class CompanyRoleAdministrationEndpointTests
         public AntiforgeryTokenSet GetAndStoreTokens(HttpContext httpContext) => throw new NotSupportedException();
         public AntiforgeryTokenSet GetTokens(HttpContext httpContext) => throw new NotSupportedException();
         public Task<bool> IsRequestValidAsync(HttpContext httpContext) => Task.FromResult(true);
+        public Task ValidateRequestAsync(HttpContext httpContext) => Task.CompletedTask;
+        public void SetCookieTokenAndHeader(HttpContext httpContext) { }
+    }
+
+    private sealed class DenyAntiforgery : IAntiforgery
+    {
+        public AntiforgeryTokenSet GetAndStoreTokens(HttpContext httpContext) => throw new NotSupportedException();
+        public AntiforgeryTokenSet GetTokens(HttpContext httpContext) => throw new NotSupportedException();
+        public Task<bool> IsRequestValidAsync(HttpContext httpContext) => Task.FromResult(false);
         public Task ValidateRequestAsync(HttpContext httpContext) => Task.CompletedTask;
         public void SetCookieTokenAndHeader(HttpContext httpContext) { }
     }

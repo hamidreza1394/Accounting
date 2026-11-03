@@ -17,7 +17,10 @@ public static class CompanyRoleAdministrationEndpoints
     /// <summary>Upper bound of members moved by one transfer request (one atomic save).</summary>
     public const int MaxTransferBatchSize = 500;
 
-    private static readonly Regex RoleCodePattern =new("^[A-Z0-9][A-Z0-9._-]{1,79}$", RegexOptions.CultureInvariant);
+    /// <summary>Largest accepted page number; keeps (page - 1) * pageSize inside int range.</summary>
+    private const int MaxMemberPage = 100_000;
+
+    private static readonly Regex RoleCodePattern = new("^[A-Z0-9][A-Z0-9._-]{1,79}$", RegexOptions.CultureInvariant);
 
     public static RouteGroupBuilder MapCompanyRoleAdministrationEndpoints(this RouteGroupBuilder api)
     {
@@ -349,7 +352,7 @@ public static class CompanyRoleAdministrationEndpoints
                 .AnyAsync(role => role.Id == roleId && role.TenantId == companyId, cancellationToken))
             return TypedResults.NotFound();
 
-        var normalizedPage = Math.Max(page ?? 1, 1);
+        var normalizedPage = Math.Clamp(page ?? 1, 1, MaxMemberPage);
         var normalizedPageSize = Math.Clamp(pageSize ?? 25, 1, 100);
 
         var query = database.UserCompanyMemberships.AsNoTracking()
@@ -379,7 +382,7 @@ public static class CompanyRoleAdministrationEndpoints
     /// <summary>
     /// Moves every active member of the source role to another active role of the SAME company
     /// in one atomic save, so a role with members can then be deactivated. It never creates or
-    /// reactivates a membership (D-065) and writes one audit event for the whole transfer.
+    /// reactivates a membership (D-065) and writes one audit event per moved user. System roles are refused.
     /// </summary>
     public static async Task<IResult> TransferMembersAsync(
         Guid companyId,
@@ -401,7 +404,7 @@ public static class CompanyRoleAdministrationEndpoints
         if (request is null || request.TargetRoleId == Guid.Empty || request.TargetRoleId == roleId)
             return TypedResults.BadRequest(new { error = "گروه مقصد نامعتبر است یا با گروه مبدأ یکی است." });
 
-        var roles = await database.CompanyRoles.AsNoTracking()
+        var roles = await database.CompanyRoles
             .Where(role => role.TenantId == companyId && (role.Id == roleId || role.Id == request.TargetRoleId))
             .ToListAsync(cancellationToken);
         var source = roles.FirstOrDefault(role => role.Id == roleId);
@@ -409,6 +412,10 @@ public static class CompanyRoleAdministrationEndpoints
         if (source is null || target is null) return TypedResults.NotFound();
         if (!target.IsActive)
             return TypedResults.Conflict(new { error = "گروه مقصد غیرفعال است." });
+        // System roles (e.g. company-admin) are immutable (see UpdateRoleAsync). A bulk move out of
+        // or into one would silently strip or grant company-wide administration, so it fails closed.
+        if (source.IsSystemRole || target.IsSystemRole)
+            return TypedResults.Conflict(new { error = "انتقال گروهی از یا به گروه سیستمی مجاز نیست." });
 
         var memberships = await database.UserCompanyMemberships
             .Where(membership => membership.TenantId == companyId && membership.RoleId == roleId && membership.IsActive)
@@ -426,33 +433,40 @@ public static class CompanyRoleAdministrationEndpoints
             return TypedResults.Ok(new TransferCompanyRoleMembersResponse(0));
         }
 
-        var targetRole = await database.CompanyRoles.FirstAsync(
-            role => role.Id == target.Id && role.TenantId == companyId, cancellationToken);
         foreach (var membership in memberships)
         {
-            membership.RoleId = targetRole.Id;
-            membership.Role = targetRole;
+            membership.RoleId = target.Id;
+            membership.Role = target;
         }
 
+        // One small event per moved user (same event type as the single assignment), so the
+        // audit stays inside the 4000-character DetailsJson column for any batch size up to the limit.
         var actorId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal)!.Value;
-        database.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
+        var occurredAtUtc = timeProvider.GetUtcNow().UtcDateTime;
+        var correlationId = System.Diagnostics.Activity.Current?.Id;
+        var ipAddress = httpContext.Connection.RemoteIpAddress?.ToString();
+        foreach (var membership in memberships)
         {
-            UserId = actorId,
-            TenantId = companyId,
-            EventType = "CompanyRoleMembersTransferred",
-            EntityType = "CompanyRole",
-            EntityId = roleId.ToString(),
-            OccurredAtUtc = timeProvider.GetUtcNow().UtcDateTime,
-            CorrelationId = System.Diagnostics.Activity.Current?.Id,
-            IpAddress = httpContext.Connection.RemoteIpAddress?.ToString(),
-            DetailsJson = JsonSerializer.Serialize(new
+            database.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
             {
-                sourceRoleId = roleId,
-                targetRoleId = targetRole.Id,
-                count = memberships.Count,
-                userIds = memberships.Select(membership => membership.UserId).ToArray(),
-            }),
-        });
+                UserId = actorId,
+                TenantId = companyId,
+                EventType = "UserCompanyRoleAssigned",
+                EntityType = "UserCompanyMembership",
+                EntityId = $"{membership.UserId}:{companyId}",
+                OccurredAtUtc = occurredAtUtc,
+                CorrelationId = correlationId,
+                IpAddress = ipAddress,
+                DetailsJson = JsonSerializer.Serialize(new
+                {
+                    userId = membership.UserId,
+                    previousRoleId = roleId,
+                    roleId = target.Id,
+                    bulkTransfer = true,
+                    sourceRoleWasActive = source.IsActive,
+                }),
+            });
+        }
 
         await database.SaveChangesAsync(cancellationToken);
         SetNoStore(httpContext);
