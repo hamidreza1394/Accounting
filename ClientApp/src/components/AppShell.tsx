@@ -28,6 +28,7 @@ import { FaranouLogo } from './ui/FaranouLogo';
 import { MyAccountPanel } from './MyAccountPanel';
 import { UserManagementPage } from './UserManagementPage';
 import { AccessGroupManagementPage } from './AccessGroupManagementPage';
+import { PermissionCatalogPage } from './PermissionCatalogPage';
 
 type AppShellProps = {
   session: Session;
@@ -155,7 +156,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, onPasswo
   const [accountOpen, setAccountOpen] = useState(false);
   const accountTriggerRef = useRef<HTMLButtonElement>(null);
   const [settingsOpen, setSettingsOpen] = useState(true);
-  const [activeAdminSection, setActiveAdminSection] = useState<'dashboard' | 'users' | 'access-groups'>('dashboard');
+  const [activeAdminSection, setActiveAdminSection] = useState<'dashboard' | 'users' | 'access-groups' | 'permission-catalog'>('dashboard');
   const readOnly = context.fiscalPeriod.accessMode === 'readOnly';
 
   async function handleLogout() {
@@ -305,7 +306,12 @@ export function AppShell({ session, context, onChangeContext, onLogout, onPasswo
                               <span className="min-w-0 flex-1">گروه‌های دسترسی</span>
                             </button>
                           </li>
-                          <li><DisabledItem label="کاتالوگ و جزئیات مجوزها" icon={KeyRound} tone="amber" nested /></li>
+                          <li>
+                            <button type="button" onClick={() => { setActiveAdminSection('permission-catalog'); setMobileMenuOpen(false); }} aria-current={activeAdminSection === 'permission-catalog' ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-right text-[12px] transition ' + (activeAdminSection === 'permission-catalog' ? 'bg-sky-500/20 text-white ring-1 ring-sky-300/30' : 'text-sky-100/80 hover:bg-white/10 hover:text-white')}>
+                              <NavIcon icon={KeyRound} tone="amber" size="sm" />
+                              <span className="min-w-0 flex-1">کاتالوگ و جزئیات مجوزها</span>
+                            </button>
+                          </li>
                           <li><DisabledItem label="گزارش امنیت و سوابق" icon={Activity} tone="emerald" nested /></li>
                           <li><DisabledItem label="سیاست‌های امنیتی" icon={Settings2} tone="slate" nested /></li>
                         </ul>
@@ -359,7 +365,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, onPasswo
               {logoutError}
             </p>
           ) : null}
-          {activeAdminSection === 'users' ? <UserManagementPage onUnauthenticated={onUnauthenticated} /> : activeAdminSection === 'access-groups' ? <AccessGroupManagementPage companyId={context.company.id} companyName={context.company.name} onUnauthenticated={onUnauthenticated} /> : children}
+          {activeAdminSection === 'users' ? <UserManagementPage onUnauthenticated={onUnauthenticated} /> : activeAdminSection === 'access-groups' ? <AccessGroupManagementPage companyId={context.company.id} companyName={context.company.name} onUnauthenticated={onUnauthenticated} /> : activeAdminSection === 'permission-catalog' ? <PermissionCatalogPage onUnauthenticated={onUnauthenticated} /> : children}
         </main>
       </div>
       <MyAccountPanel
