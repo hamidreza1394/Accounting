@@ -47,6 +47,10 @@ const LazyPendingMembershipRequestsPage = lazy(() =>
   import('./membership/PendingMembershipRequestsPage').then((module) => ({ default: module.PendingMembershipRequestsPage })),
 );
 
+const LazySecurityAuditPage = lazy(() =>
+  import('./admin/security/SecurityAuditPage').then((module) => ({ default: module.SecurityAuditPage })),
+);
+
 function DashboardRoute() {
   const { session, context, onUnauthenticated } = useAppRouteData();
   return (
@@ -112,6 +116,10 @@ function PendingMembershipRequestsRoute() {
   );
 }
 
+function SecurityAuditRoute() {
+  return <LazySecurityAuditPage onUnauthenticated={useAppRouteData().onUnauthenticated} />;
+}
+
 /**
  * Routes under `/app`. Admin pages are lazy chunks so the dashboard bundle stays small. The
  * `permission` is a UI hint only; the server decides (D-064). List specific paths first.
@@ -129,6 +137,7 @@ export const appRoutes: readonly Route[] = [
   { path: '/admin/roles/new', element: RoleCreateRoute, title: 'ایجاد گروه دسترسی', permission: 'admin.roles.manage' },
   { path: '/admin/roles/:roleId', element: RoleDetailRoute, title: 'جزئیات گروه دسترسی', permission: 'admin.roles.view' },
   // No UI permission hint: the approver permission is per company and not in the session; the server decides (404).
+  { path: '/admin/security/audit', element: SecurityAuditRoute, title: 'گزارش امنیت و سوابق', permission: 'admin.security.view' },
   { path: '/admin/membership-requests', element: PendingMembershipRequestsRoute, title: 'درخواست‌های عضویت' },
   { path: '/account/membership-requests', element: MyMembershipRequestsRoute, title: 'درخواست‌های عضویت من', permission: 'account.view' },
 ];
