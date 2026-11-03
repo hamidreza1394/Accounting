@@ -147,6 +147,15 @@ public sealed class SecurityAuditAdministrationEndpointTests
             IpAddress = "198.51.100.99",
             DetailsJson = "{\"secret\":\"export-private-payload\"}",
         });
+        fixture.Database.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
+        {
+            UserId = actor.Id,
+            TenantId = company.Id,
+            EventType = "LoginSucceeded",
+            EntityType = "\tleading-tab",
+            EntityId = "\rleading-cr",
+            OccurredAtUtc = occurredAt.AddSeconds(-1),
+        });
         await fixture.Database.SaveChangesAsync();
 
         var context = new DefaultHttpContext();
@@ -176,6 +185,8 @@ public sealed class SecurityAuditAdministrationEndpointTests
         Assert.Contains("' \t=1+1", csv);
         Assert.Contains("'@CMD", csv);
         Assert.Contains("\"'-CMD\"", csv);
+        Assert.Contains("\"'\\tleading-tab\"", csv);
+        Assert.Contains("\"'\\rleading-cr\"", csv);
         Assert.DoesNotContain("198.51.100.99", csv);
         Assert.DoesNotContain("export-private-payload", csv);
         Assert.Equal("no-store", context.Response.Headers.CacheControl.ToString());
@@ -185,7 +196,7 @@ public sealed class SecurityAuditAdministrationEndpointTests
             item => item.EventType == "SecurityAuditExported");
         Assert.Equal(admin.Id, exportAudit.UserId);
         using var details = JsonDocument.Parse(exportAudit.DetailsJson!);
-        Assert.Equal(1, details.RootElement.GetProperty("rowCount").GetInt32());
+        Assert.Equal(2, details.RootElement.GetProperty("rowCount").GetInt32());
     }
 
     [Fact]
