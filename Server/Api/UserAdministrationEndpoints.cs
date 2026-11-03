@@ -1,43 +1,44 @@
 using System.Security.Claims;
-using System.Data;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Antiforgery;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
 namespace Server.Api;
 
 /// <summary>
-/// Read-only administration endpoints for installation administrators.
-/// All authorization decisions are revalidated against the current database state.
+/// Installation-administrator user directory endpoints. Company-manager authorization
+/// and membership-approval workflows are intentionally out of scope for this slice.
 /// </summary>
 public static class UserAdministrationEndpoints
 {
     public static RouteGroupBuilder MapUserAdministrationEndpoints(this RouteGroupBuilder api)
     {
         var users = api.MapGroup("/admin/users")
-            .RequireAuthorization(policy => policy.RequireClaim(
-                Infrastructure.Tenancy.CompanyAccessService.AccountKindClaimType,
-                Infrastructure.Tenancy.CompanyAccessService.UserAccountKind));
+            .RequireAuthorization()
+            .WithTags("UserAdministration");
 
-        users.MapGet("", GetUsersAsync);
+        users.MapGet("", ListUsersAsync);
         users.MapGet("/{userId:guid}", GetUserAsync);
-        users.MapPost("", CreateUserAsync).RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
-        users.MapPut("/{userId:guid}", UpdateUserAsync).RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
-        return users;
+        users.MapPost("/{userId:guid}/memberships", AssignMembershipAsync)
+            .RequireAntiforgery()
+            .RequireRateLimiting(Infrastructure.RateLimiting.ApiRateLimiting.SensitivePolicyName);
+        users.MapDelete("/{userId:guid}/memberships/{companyId:guid}", RevokeMembershipAsync)
+            .RequireAntiforgery()
+            .RequireRateLimiting(Infrastructure.RateLimiting.ApiRateLimiting.SensitivePolicyName);
+
+        return api;
     }
 
-    public static async Task<IResult> GetUsersAsync(
-        HttpContext httpContext,
+    public static async Task<IResult> ListUsersAsync(
         ClaimsPrincipal principal,
         Data.DatabaseContext database,
-        string? search,
-        string? status,
-        int page,
-        int pageSize,
-        string? sort,
-        bool descending,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? search = null,
+        string? status = null,
+        string? sort = null,
+        bool descending = true,
+        int page = 1,
+        int pageSize = 20)
     {
         var authorization = await AuthorizeInstallationAdministratorAsync(principal, database, cancellationToken);
         if (authorization is not null)
@@ -90,13 +91,11 @@ public static class UserAdministrationEndpoints
                     membership.UserId == user.Id && membership.IsActive)))
             .ToListAsync(cancellationToken);
 
-        SetNoStore(httpContext);
         return TypedResults.Ok(new UserListResponse(items, totalCount, page, pageSize));
     }
 
     public static async Task<IResult> GetUserAsync(
         Guid userId,
-        HttpContext httpContext,
         ClaimsPrincipal principal,
         Data.DatabaseContext database,
         CancellationToken cancellationToken)
@@ -110,266 +109,147 @@ public static class UserAdministrationEndpoints
 
         var user = await database.Users
             .AsNoTracking()
-            .Where(current => current.Id == userId)
-            .Select(current => new
-            {
-                current.Id,
-                current.Username,
-                current.FirstName,
-                current.LastName,
-                current.EmailAddress,
-                current.CellPhoneNumber,
-                current.IsEmailAddressVerified,
-                current.IsCellPhoneNumberVerified,
-                current.IsActive,
-                current.LastLoginDateTime,
-                current.InsertDateTime,
-                current.UpdateDateTime,
-                RoleName = current.Role == null ? null : current.Role.Name,
-            })
-            .FirstOrDefaultAsync(cancellationToken);
+            .Where(item => item.Id == userId)
+            .Select(item => new UserDetailResponse(
+                item.Id,
+                item.Username,
+                item.FirstName,
+                item.LastName,
+                item.EmailAddress,
+                item.CellPhoneNumber,
+                item.IsActive,
+                item.LastLoginDateTime,
+                item.InsertDateTime,
+                item.UpdateDateTime,
+                database.UserCompanyMemberships
+                    .Where(membership => membership.UserId == item.Id)
+                    .OrderBy(membership => membership.Company.Name)
+                    .Select(membership => new UserMembershipResponse(
+                        membership.TenantId,
+                        membership.Company.Name,
+                        membership.RoleId,
+                        membership.Role.Code,
+                        membership.Role.Name,
+                        membership.IsActive,
+                        membership.CreatedAtUtc))
+                    .ToList()))
+            .SingleOrDefaultAsync(cancellationToken);
 
-        if (user is null)
-            return TypedResults.NotFound();
-
-        var memberships = await database.UserCompanyMemberships
-            .AsNoTracking()
-            .Where(membership => membership.UserId == userId)
-            .OrderBy(membership => membership.Company.Name)
-            .Select(membership => new UserCompanyMembershipResponse(
-                membership.TenantId,
-                membership.Company.Name,
-                membership.Role.Code,
-                membership.Role.Name,
-                membership.IsActive,
-                membership.CreatedAtUtc))
-            .ToListAsync(cancellationToken);
-
-        SetNoStore(httpContext);
-        return TypedResults.Ok(new UserDetailsResponse(
-            user.Id,
-            user.Username,
-            user.FirstName,
-            user.LastName,
-            user.EmailAddress,
-            user.CellPhoneNumber,
-            user.IsEmailAddressVerified,
-            user.IsCellPhoneNumberVerified,
-            user.IsActive,
-            user.LastLoginDateTime,
-            user.InsertDateTime,
-            user.UpdateDateTime,
-            user.RoleName,
-            memberships));
+        return user is null ? TypedResults.NotFound() : TypedResults.Ok(user);
     }
 
-    public static async Task<IResult> CreateUserAsync(
-        HttpContext httpContext,
-        ClaimsPrincipal principal,
-        [FromBody] CreateUserRequest request,
-        [FromServices] IAntiforgery antiforgery,
-        Data.DatabaseContext database,
-        Infrastructure.Security.PasswordHashService passwordHashService,
-        [FromServices] TimeProvider timeProvider,
-        CancellationToken cancellationToken)
-    {
-        var authorization = await AuthorizeInstallationAdministratorAsync(principal, database, cancellationToken);
-        if (authorization is not null)
-            return authorization;
-        if (!await antiforgery.IsRequestValidAsync(httpContext))
-            return TypedResults.Problem(title: "درخواست نامعتبر است.", statusCode: StatusCodes.Status400BadRequest);
-
-        var email = Dtat.Utility.FixText(request.EmailAddress);
-        var username = Dtat.Utility.FixText(request.Username);
-        var firstName = Dtat.Utility.FixText(request.FirstName);
-        var lastName = Dtat.Utility.FixText(request.LastName);
-        var cellPhone = Dtat.Utility.FixText(request.CellPhoneNumber);
-        var password = request.Password;
-
-        if (string.IsNullOrWhiteSpace(email) ||
-            email.Length > Constants.MaxLength.EmailAddress ||
-            !new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(email) ||
-            string.IsNullOrWhiteSpace(username) ||
-            username.Length < Constants.MinLength.Username ||
-            username.Length > Constants.MaxLength.Username ||
-            (firstName?.Length > Constants.MaxLength.FirstName) ||
-            (lastName?.Length > Constants.MaxLength.LastName) ||
-            (cellPhone is not null && (cellPhone.Length != Constants.FixedLength.CellPhoneNumber || !new System.ComponentModel.DataAnnotations.RegularExpressionAttribute(Constants.RegularExpression.CellPhoneNumber).IsValid(cellPhone))) ||
-            string.IsNullOrWhiteSpace(password) ||
-            password.Length < Constants.MinLength.UserPassword ||
-            password.Length > Constants.MaxLength.UserPassword ||
-            !new ViewModels.Validation.NotCommonPasswordAttribute().IsValid(password) ||
-            !string.Equals(password, request.ConfirmPassword, StringComparison.Ordinal))
-            return TypedResults.BadRequest(new { error = "اطلاعات کاربر یا سیاست رمز عبور معتبر نیست." });
-
-        var duplicate = await database.Users.AsNoTracking().AnyAsync(user =>
-            user.EmailAddress.ToLower() == email.ToLower() ||
-            user.Username != null && user.Username.ToLower() == username.ToLower() ||
-            cellPhone != null && user.CellPhoneNumber == cellPhone,
-            cancellationToken);
-        if (duplicate)
-            return TypedResults.Conflict(new { error = "نام کاربری، ایمیل یا شماره همراه قبلاً ثبت شده است." });
-
-        var actorId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal)!.Value;
-        var user = new Domain.User(email)
-        {
-            Username = username,
-            FirstName = firstName,
-            LastName = lastName,
-            CellPhoneNumber = cellPhone,
-            Password = passwordHashService.Hash(password!),
-            IsActive = request.IsActive,
-            IsSystemic = false,
-            IsUndeletable = false,
-        };
-
-        database.Users.Add(user);
-        database.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
-        {
-            UserId = actorId,
-            EventType = "UserCreated",
-            EntityType = "User",
-            EntityId = user.Id.ToString(),
-            OccurredAtUtc = timeProvider.GetUtcNow().UtcDateTime,
-            CorrelationId = System.Diagnostics.Activity.Current?.Id,
-            IpAddress = httpContext.Connection.RemoteIpAddress?.ToString(),
-            DetailsJson = System.Text.Json.JsonSerializer.Serialize(new
-            {
-                username = user.Username,
-                isActive = user.IsActive,
-            }),
-        });
-
-        try
-        {
-            await database.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateException)
-        {
-            return TypedResults.Conflict(new { error = "نام کاربری، ایمیل یا شماره همراه قبلاً ثبت شده است." });
-        }
-
-        SetNoStore(httpContext);
-        return TypedResults.Created($"/api/v1/admin/users/{user.Id}", new UserCreatedResponse(user.Id));
-    }
-
-    public static async Task<IResult> UpdateUserAsync(
+    public static async Task<IResult> AssignMembershipAsync(
         Guid userId,
+        AssignMembershipRequest request,
         HttpContext httpContext,
         ClaimsPrincipal principal,
-        [FromBody] UpdateUserRequest request,
-        [FromServices] IAntiforgery antiforgery,
+        IAntiforgery antiforgery,
         Data.DatabaseContext database,
-        [FromServices] TimeProvider timeProvider,
+        TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
         var authorization = await AuthorizeInstallationAdministratorAsync(principal, database, cancellationToken);
         if (authorization is not null)
             return authorization;
-        if (!await antiforgery.IsRequestValidAsync(httpContext))
-            return TypedResults.Problem(title: "درخواست نامعتبر است.", statusCode: StatusCodes.Status400BadRequest);
-
-        if (userId == Guid.Empty)
-            return TypedResults.NotFound();
-
-        var user = await database.Users.FirstOrDefaultAsync(candidate => candidate.Id == userId, cancellationToken);
-        if (user is null)
-            return TypedResults.NotFound();
-
-        var email = Dtat.Utility.FixText(request.EmailAddress);
-        var username = Dtat.Utility.FixText(request.Username);
-        var firstName = Dtat.Utility.FixText(request.FirstName);
-        var lastName = Dtat.Utility.FixText(request.LastName);
-        var cellPhone = Dtat.Utility.FixText(request.CellPhoneNumber);
-
-        if (string.IsNullOrWhiteSpace(email) ||
-            email.Length > Constants.MaxLength.EmailAddress ||
-            !new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(email) ||
-            string.IsNullOrWhiteSpace(username) ||
-            username.Length < Constants.MinLength.Username ||
-            username.Length > Constants.MaxLength.Username ||
-            (firstName?.Length > Constants.MaxLength.FirstName) ||
-            (lastName?.Length > Constants.MaxLength.LastName) ||
-            (cellPhone is not null && (cellPhone.Length != Constants.FixedLength.CellPhoneNumber || !new System.ComponentModel.DataAnnotations.RegularExpressionAttribute(Constants.RegularExpression.CellPhoneNumber).IsValid(cellPhone))))
-            return TypedResults.BadRequest(new { error = "اطلاعات کاربر معتبر نیست." });
-
-        var duplicate = await database.Users.AsNoTracking().AnyAsync(candidate =>
-            candidate.Id != userId &&
-            (candidate.EmailAddress.ToLower() == email.ToLower() ||
-             candidate.Username != null && candidate.Username.ToLower() == username.ToLower() ||
-             cellPhone != null && candidate.CellPhoneNumber == cellPhone),
-            cancellationToken);
-        if (duplicate)
-            return TypedResults.Conflict(new { error = "نام کاربری، ایمیل یا شماره همراه قبلاً ثبت شده است." });
-
-        var actorId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal)!.Value;
-        if (actorId == userId && !request.IsActive)
-            return TypedResults.Conflict(new { error = "مدیر سیستم نمی‌تواند حساب جاری خود را غیرفعال کند." });
-
-        // Serialize account deactivations on relational providers. The serializable range
-        // lock makes the last-active-admin check and the update one atomic decision.
-        await using var adminGuardTransaction = user.IsActive && !request.IsActive && database.Database.IsRelational()
-            ? await database.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken)
-            : null;
-
-        if (user.IsActive && !request.IsActive && user.RoleId is Guid targetRoleId)
-        {
-            var targetIsActiveAdmin = await database.Roles.AsNoTracking().AnyAsync(role =>
-                role.Id == targetRoleId && role.IsActive && role.Name == Constants.Role.Admin,
-                cancellationToken);
-            if (targetIsActiveAdmin)
-            {
-                var activeAdminCount = await database.Users.CountAsync(candidate =>
-                    candidate.IsActive && candidate.Role != null &&
-                    candidate.Role.IsActive && candidate.Role.Name == Constants.Role.Admin,
-                    cancellationToken);
-                if (activeAdminCount <= 1)
-                    return TypedResults.Conflict(new { error = "غیرفعال‌کردن آخرین مدیر سیستم مجاز نیست." });
-            }
-        }
-
-        var previousActive = user.IsActive;
-        user.ChangeEmailAddress(email);
-        user.Username = username;
-        user.FirstName = firstName;
-        user.LastName = lastName;
-        user.ChangeCellPhoneNumber(cellPhone);
-        user.IsActive = request.IsActive;
-        user.SetUpdateDateTime();
-
-        database.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
-        {
-            UserId = actorId,
-            EventType = "UserUpdated",
-            EntityType = "User",
-            EntityId = user.Id.ToString(),
-            OccurredAtUtc = timeProvider.GetUtcNow().UtcDateTime,
-            CorrelationId = System.Diagnostics.Activity.Current?.Id,
-            IpAddress = httpContext.Connection.RemoteIpAddress?.ToString(),
-            DetailsJson = System.Text.Json.JsonSerializer.Serialize(new
-            {
-                changedFields = new[] { "EmailAddress", "Username", "FirstName", "LastName", "CellPhoneNumber", "IsActive" },
-                previousIsActive = previousActive,
-                currentIsActive = user.IsActive,
-            }),
-        });
 
         try
         {
-            await database.SaveChangesAsync(cancellationToken);
-            if (adminGuardTransaction is not null)
-                await adminGuardTransaction.CommitAsync(cancellationToken);
+            await antiforgery.ValidateRequestAsync(httpContext);
         }
-        catch (DbUpdateException)
+        catch (AntiforgeryValidationException)
         {
-            return TypedResults.Conflict(new { error = "تغییرات با تعارض داده یا درخواست هم‌زمان مواجه شد؛ وضعیت را دوباره بررسی کنید." });
-        }
-        catch (System.Data.Common.DbException)
-        {
-            return TypedResults.Conflict(new { error = "تغییر هم‌زمان دیگری انجام شده است؛ وضعیت مدیران فعال را دوباره بررسی کنید." });
+            return TypedResults.BadRequest(new { error = "توکن ضدجعل نامعتبر است." });
         }
 
-        SetNoStore(httpContext);
+        if (userId == Guid.Empty || request.CompanyId == Guid.Empty || request.RoleId == Guid.Empty)
+            return TypedResults.BadRequest(new { error = "شناسه‌های ارسالی معتبر نیست." });
+
+        var user = await database.Users.SingleOrDefaultAsync(item => item.Id == userId, cancellationToken);
+        if (user is null)
+            return TypedResults.NotFound();
+
+        var company = await database.Companies.SingleOrDefaultAsync(item => item.Id == request.CompanyId, cancellationToken);
+        if (company is null || !company.IsActive)
+            return TypedResults.BadRequest(new { error = "شرکت معتبر و فعال نیست." });
+
+        var role = await database.CompanyRoles.SingleOrDefaultAsync(
+            item => item.Id == request.RoleId && item.TenantId == request.CompanyId, cancellationToken);
+        if (role is null || !role.IsActive)
+            return TypedResults.BadRequest(new { error = "نقش شرکتی معتبر و فعال نیست." });
+
+        var membership = await database.UserCompanyMemberships.SingleOrDefaultAsync(
+            item => item.UserId == userId && item.TenantId == request.CompanyId, cancellationToken);
+
+        // Fail-closed: do not create or reactivate membership here. Membership approval is a separate slice.
+        if (membership is null || !membership.IsActive)
+            return TypedResults.Conflict(new { error = "عضویت فعال برای این کاربر در شرکت یافت نشد." });
+
+        var actorId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal)!.Value;
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        membership.RoleId = role.Id;
+        membership.Role = role;
+
+        database.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
+        {
+            EventType = "CompanyMembershipRoleAssigned",
+            ActorUserId = actorId,
+            SubjectUserId = userId,
+            TenantId = request.CompanyId,
+            Detail = role.Code,
+            OccurredAtUtc = now,
+        });
+
+        await database.SaveChangesAsync(cancellationToken);
+        return TypedResults.NoContent();
+    }
+
+    public static async Task<IResult> RevokeMembershipAsync(
+        Guid userId,
+        Guid companyId,
+        HttpContext httpContext,
+        ClaimsPrincipal principal,
+        IAntiforgery antiforgery,
+        Data.DatabaseContext database,
+        TimeProvider timeProvider,
+        CancellationToken cancellationToken)
+    {
+        var authorization = await AuthorizeInstallationAdministratorAsync(principal, database, cancellationToken);
+        if (authorization is not null)
+            return authorization;
+
+        try
+        {
+            await antiforgery.ValidateRequestAsync(httpContext);
+        }
+        catch (AntiforgeryValidationException)
+        {
+            return TypedResults.BadRequest(new { error = "توکن ضدجعل نامعتبر است." });
+        }
+
+        if (userId == Guid.Empty || companyId == Guid.Empty)
+            return TypedResults.NotFound();
+
+        var membership = await database.UserCompanyMemberships.SingleOrDefaultAsync(
+            item => item.UserId == userId && item.TenantId == companyId, cancellationToken);
+        if (membership is null)
+            return TypedResults.NotFound();
+
+        if (!membership.IsActive)
+            return TypedResults.NoContent();
+
+        var actorId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal)!.Value;
+        membership.IsActive = false;
+        database.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
+        {
+            EventType = "CompanyMembershipRevoked",
+            ActorUserId = actorId,
+            SubjectUserId = userId,
+            TenantId = companyId,
+            Detail = null,
+            OccurredAtUtc = timeProvider.GetUtcNow().UtcDateTime,
+        });
+
+        await database.SaveChangesAsync(cancellationToken);
         return TypedResults.NoContent();
     }
 
@@ -392,7 +272,13 @@ public static class UserAdministrationEndpoints
                 user.Role.Name == Constants.Role.Admin,
                 cancellationToken);
 
-        return isAdministrator ? null : TypedResults.Forbid();
+        // Prefer an explicit 403 payload so callers and unit tests can read StatusCode
+        // without depending on authentication-handler Forbid semantics.
+        return isAdministrator
+            ? null
+            : TypedResults.Json(
+                new { error = "فقط مدیر نصب سامانه مجاز به این عملیات است." },
+                statusCode: StatusCodes.Status403Forbidden);
     }
 
     private static IQueryable<Domain.User> ApplySort(
@@ -448,48 +334,28 @@ public sealed record UserListItemResponse(
     bool IsActive,
     DateTime? LastLoginDateTime,
     DateTime InsertDateTime,
-    int ActiveCompanyCount);
+    int ActiveMembershipCount);
 
-public sealed record UserDetailsResponse(
+public sealed record UserDetailResponse(
     Guid Id,
     string? Username,
     string? FirstName,
     string? LastName,
     string EmailAddress,
     string? CellPhoneNumber,
-    bool IsEmailAddressVerified,
-    bool IsCellPhoneNumberVerified,
     bool IsActive,
     DateTime? LastLoginDateTime,
     DateTime InsertDateTime,
     DateTime UpdateDateTime,
-    string? LegacyRoleName,
-    IReadOnlyList<UserCompanyMembershipResponse> Memberships);
+    IReadOnlyList<UserMembershipResponse> Memberships);
 
-public sealed record UserCompanyMembershipResponse(
+public sealed record UserMembershipResponse(
     Guid CompanyId,
     string CompanyName,
+    Guid RoleId,
     string RoleCode,
     string RoleName,
     bool IsActive,
     DateTime CreatedAtUtc);
 
-public sealed record CreateUserRequest(
-    string? Username,
-    string? FirstName,
-    string? LastName,
-    string? EmailAddress,
-    string? CellPhoneNumber,
-    string? Password,
-    string? ConfirmPassword,
-    bool IsActive);
-
-public sealed record UpdateUserRequest(
-    string? Username,
-    string? FirstName,
-    string? LastName,
-    string? EmailAddress,
-    string? CellPhoneNumber,
-    bool IsActive);
-
-public sealed record UserCreatedResponse(Guid Id);
+public sealed record AssignMembershipRequest(Guid CompanyId, Guid RoleId);
