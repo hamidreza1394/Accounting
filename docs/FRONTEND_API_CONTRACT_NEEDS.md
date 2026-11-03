@@ -20,12 +20,14 @@
 
 ### ۱.۳ گروه‌های قابل‌تخصیص برای تأییدکننده
 `GET /api/v1/admin/companies/{companyId}/membership-requests/assignable-roles`
-- پاسخ ۲۰۰: `[{ "id": "guid", "code": "string", "name": "string", "isSystemRole": false }]`
+- پاسخ ۲۰۰: `{ "items": [{ "id": "guid", "code": "string", "name": "string", "isSystemRole": false }], "totalCount": 0, "page": 1, "pageSize": 100 }`.
+- پارامترهای `page` و `pageSize`؛ سقف pageSize برابر ۱۰۰.
 - مجوز: `users.membership.approve` در همان شرکت (بدون مجوز ← 404). فقط گروه‌های فعال و غیرسیستمی همان شرکت که تمام permissionهایشان زیرمجموعهٔ مجوزهای فعال تأییدکننده در همان شرکت است؛ permission codeها برگردانده نشوند. این فهرست جایگزین کنترل مجدد سقف تفویض در POST approve نیست.
 
 ### ۱.۴ فهرست تأییدکنندگان مقصد
 `GET /api/v1/admin/companies/{companyId}/membership-requests/approvers`
-- مجوز: `users.membership.approve` همان شرکت (بدون مجوز ← 404). فقط کاربران فعال با عضویت و نقش فعال همان شرکت که permission `users.membership.approve` را دارند؛ پاسخ allowlist شامل `{ userId, displayName, username }`، بدون ایمیل/تلفن/نقش/permissionهای دیگر.
+- پارامترهای `page` و `pageSize`؛ سقف pageSize برابر ۱۰۰. پاسخ ۲۰۰: `{ items: [{ userId, displayName, username }], totalCount, page, pageSize }`.
+- مجوز: `users.membership.approve` همان شرکت (بدون مجوز ← 404). فقط کاربران فعال با عضویت و نقش فعال همان شرکت که permission `users.membership.approve` را دارند؛ پاسخ allowlist است و ایمیل/تلفن/نقش/permissionهای دیگر برنمی‌گردد.
 
 ### ۱.۵ سوابق درخواست و تصمیم
 `GET /api/v1/admin/companies/{companyId}/membership-requests?status=Pending|Approved|Rejected&page=&pageSize=`
