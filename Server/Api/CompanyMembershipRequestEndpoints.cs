@@ -35,10 +35,14 @@ public static class CompanyMembershipRequestEndpoints
                 Infrastructure.Tenancy.CompanyAccessService.AccountKindClaimType,
                 Infrastructure.Tenancy.CompanyAccessService.UserAccountKind));
 
-        destinationApprovers.MapGet("/pending", GetPendingRequestsAsync);
-        destinationApprovers.MapGet("/assignable-roles", GetAssignableRolesAsync);
-        destinationApprovers.MapGet("/approvers", GetApproversAsync);
-        destinationApprovers.MapGet("", GetRequestHistoryAsync);
+        destinationApprovers.MapGet("/pending", GetPendingRequestsAsync)
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+        destinationApprovers.MapGet("/assignable-roles", GetAssignableRolesAsync)
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+        destinationApprovers.MapGet("/approvers", GetApproversAsync)
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+        destinationApprovers.MapGet("", GetRequestHistoryAsync)
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
         destinationApprovers.MapPost("/{requestId:guid}/approve", ApproveAsync)
             .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
         destinationApprovers.MapPost("/{requestId:guid}/reject", RejectAsync)
