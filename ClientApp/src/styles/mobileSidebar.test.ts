@@ -6,18 +6,18 @@ import { readFileSync } from 'node:fs';
 const workingDirectory = (globalThis as unknown as { process: { cwd: () => string } }).process.cwd();
 const css: string = (readFileSync as (path: string, encoding: string) => string)(`${workingDirectory}/src/styles/index.css`, 'utf8');
 
-// jsdom does not apply the stylesheet, so the closed-drawer rule is asserted on the source; the
-// real-browser Tab order was checked separately (see the ISSUE-464 handoff).
-describe('mobile sidebar stylesheet', () => {
-  const mobileBlock = css.slice(css.indexOf('.faranou-sidebar {\n    position: fixed;'));
+// Windows checkouts may use CRLF. Match CSS whitespace rather than requiring LF-only source text.
+const closedDrawerRule = css.match(/\.faranou-sidebar\s*\{\s*position:\s*fixed;[\s\S]*?\}/)?.[0] ?? '';
+const openDrawerRule = css.match(/\.faranou-sidebar\.is-open\s*\{[^}]*\}/)?.[0] ?? '';
 
+describe('mobile sidebar stylesheet', () => {
   it('hides the closed drawer from focus and assistive technology after the slide-out', () => {
-    const closed = mobileBlock.slice(0, mobileBlock.indexOf('}'));
-    expect(closed).toContain('visibility: hidden');
-    expect(closed).toMatch(/transition: transform 180ms ease, visibility 0s linear 180ms/);
+    expect(closedDrawerRule).toContain('visibility: hidden');
+    expect(closedDrawerRule).toMatch(/transition:\s*transform 180ms ease, visibility 0s linear 180ms/);
   });
 
   it('shows the open drawer immediately', () => {
-    expect(mobileBlock).toMatch(/\.faranou-sidebar\.is-open \{[^}]*visibility: visible[^}]*transition-delay: 0s/);
+    expect(openDrawerRule).toContain('visibility: visible');
+    expect(openDrawerRule).toContain('transition-delay: 0s');
   });
 });
