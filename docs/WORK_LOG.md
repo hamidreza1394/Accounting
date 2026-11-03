@@ -2240,6 +2240,10 @@
 - بدون UI/ClientApp؛ Claude می‌تواند endpoint را مصرف کند. handoff: docs/handoffs/ISSUE-494-company-user-directory-api.md.
 
 
+## 2026-11-03 — Issue #444: ممیزی و قرارداد زمان (UTC)
+- ممیزی نشان داد فیلدهای `*Utc` با `DateTime.UtcNow` نوشته می‌شوند ولی بدون `Z` سریال می‌شوند، و فیلدهای قدیمی (`InsertDateTime`، `UpdateDateTime`، `LastLoginDateTime`) با `DateTime.Now` (ساعت محلی سرور) نوشته می‌شوند؛ پس مبدل سراسری «بدون Z = UTC» غلط است.
+- ClientApp: ماژول `lib/time.ts` و تفکیک صریح دو نوع فیلد در پارسرها؛ مرز روز در منطقهٔ کاربر؛ تست UTC/ایران/آلمان/DST/نیمه‌شب. یک تست مشخصه‌ساز SQL Server اضافه شد (بدون تغییر رفتار). پیشنهاد Backend در D-067 (`Proposed`).
+- `docs/TIME_CONTRACT.md`، handoff: `docs/handoffs/ISSUE-444-utc-time-contract.md`.
 ## 2026-11-03 — Issue #498: enforce سقف واگذاری مجوز در تأیید عضویت بین‌شرکتی
 - در API تأیید عضویت، PermissionIdهای نقش مقصد با مجوزهای مؤثر نقش‌های فعال تأییدکننده در همان شرکت مقایسه می‌شوند؛ واگذاری مجوزی که تأییدکننده ندارد رد می‌شود.
 - تخصیص System Role از این گردش‌کار رد می‌شود؛ نقش بدون مجوز همچنان قابل واگذاری است. پاسخ رد عمومی 403 است و درخواست Pending/عضویت/سوابق Audit موفق تغییر نمی‌کند.
