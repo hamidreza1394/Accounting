@@ -230,7 +230,7 @@ function AppShellFrame({ session, context, onChangeContext, onLogout, onPassword
           </div>
 
           <div className="faranou-header-context" aria-label="زمینه کاری جاری">
-            <button type="button" onClick={onChangeContext} className="faranou-context-choice" aria-label="تغییر شرکت">
+            <button type="button" onClick={onChangeContext} className="faranou-context-choice" aria-label={`شرکت جاری ${context.company.name}، تغییر شرکت`}>
               <ChevronDown className="faranou-context-chevron" size={17} />
               <span className="min-w-0 flex-1 text-start">
                 <span className="block text-[10px] text-on-navy/70 sm:text-[11px]">شرکت جاری</span>
@@ -238,7 +238,7 @@ function AppShellFrame({ session, context, onChangeContext, onLogout, onPassword
               </span>
               <Building2 className="shrink-0 text-on-navy-accent" size={22} />
             </button>
-            <button type="button" onClick={onChangeContext} className="faranou-context-choice" aria-label="تغییر دوره مالی">
+            <button type="button" onClick={onChangeContext} className="faranou-context-choice" aria-label={`دوره مالی ${context.fiscalPeriod.title}، تغییر دوره مالی`}>
               <ChevronDown className="faranou-context-chevron" size={17} />
               <span className="min-w-0 flex-1 text-start">
                 <span className="block text-[10px] text-on-navy/70 sm:text-[11px]">دوره مالی</span>
@@ -267,7 +267,7 @@ function AppShellFrame({ session, context, onChangeContext, onLogout, onPassword
               <strong className="max-w-36 truncate text-sm font-bold">{session.fullName}</strong>
               <span className="mt-1 max-w-36 truncate text-[11px] text-on-navy/75">{context.company.roleName}</span>
             </span>
-            <span className="faranou-header-icon faranou-header-icon--notify" title="اعلان‌ها" aria-label="اعلان‌ها">
+            <span className="faranou-header-icon faranou-header-icon--notify" title="اعلان‌ها" role="img" aria-label="اعلان‌ها">
               <Bell size={20} />
               <span className="faranou-notify-dot" aria-hidden="true" />
             </span>
