@@ -470,3 +470,96 @@ export type CreateAdminUserRequest = {
 };
 
 export type UpdateAdminUserRequest = Omit<CreateAdminUserRequest, 'password' | 'confirmPassword'>;
+
+export type CompanyRoleSummary = {
+  id: string;
+  companyId: string;
+  code: string;
+  name: string;
+  isSystemRole: boolean;
+  isActive: boolean;
+  permissionCount: number;
+  activeMemberCount: number;
+  permissionCodes: string[];
+};
+
+export type PermissionCatalogItem = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  subsystemCode: string;
+};
+
+export type CompanyRoleTemplate = {
+  code: string;
+  name: string;
+  permissionCodes: string[];
+};
+
+export type CreateCompanyRoleRequest = {
+  code: string;
+  name: string;
+  templateCode: string | null;
+  permissionCodes: string[];
+};
+
+export type UpdateCompanyRoleRequest = {
+  name: string;
+  isActive: boolean;
+  permissionCodes: string[];
+};
+
+function readStringArray(value: unknown, what: string): string[] {
+  if (!Array.isArray(value) || value.some(item => typeof item !== 'string')) throw new ContractError(what);
+  return value as string[];
+}
+
+export function parseCompanyRoles(value: unknown): CompanyRoleSummary[] {
+  if (!Array.isArray(value)) throw new ContractError('companyRoles');
+  return value.map((item): CompanyRoleSummary => {
+    if (!isObject(item)) throw new ContractError('companyRoles.item');
+    const count = (key: string): number => {
+      const v = item[key];
+      if (typeof v !== 'number' || !Number.isInteger(v) || v < 0) throw new ContractError('companyRoles.item.' + key);
+      return v;
+    };
+    return {
+      id: readString(item, 'id', 'companyRoles.item'),
+      companyId: readString(item, 'companyId', 'companyRoles.item'),
+      code: readString(item, 'code', 'companyRoles.item'),
+      name: readString(item, 'name', 'companyRoles.item'),
+      isSystemRole: readBoolean(item, 'isSystemRole', 'companyRoles.item'),
+      isActive: readBoolean(item, 'isActive', 'companyRoles.item'),
+      permissionCount: count('permissionCount'),
+      activeMemberCount: count('activeMemberCount'),
+      permissionCodes: readStringArray(item['permissionCodes'], 'companyRoles.item.permissionCodes'),
+    };
+  });
+}
+
+export function parsePermissionCatalog(value: unknown): PermissionCatalogItem[] {
+  if (!Array.isArray(value)) throw new ContractError('permissionCatalog');
+  return value.map((item): PermissionCatalogItem => {
+    if (!isObject(item)) throw new ContractError('permissionCatalog.item');
+    return {
+      id: readString(item, 'id', 'permissionCatalog.item'),
+      code: readString(item, 'code', 'permissionCatalog.item'),
+      name: readString(item, 'name', 'permissionCatalog.item'),
+      description: readNullableString(item, 'description', 'permissionCatalog.item'),
+      subsystemCode: readString(item, 'subsystemCode', 'permissionCatalog.item'),
+    };
+  });
+}
+
+export function parseCompanyRoleTemplates(value: unknown): CompanyRoleTemplate[] {
+  if (!Array.isArray(value)) throw new ContractError('companyRoleTemplates');
+  return value.map((item): CompanyRoleTemplate => {
+    if (!isObject(item)) throw new ContractError('companyRoleTemplates.item');
+    return {
+      code: readString(item, 'code', 'companyRoleTemplates.item'),
+      name: readString(item, 'name', 'companyRoleTemplates.item'),
+      permissionCodes: readStringArray(item['permissionCodes'], 'companyRoleTemplates.item.permissionCodes'),
+    };
+  });
+}
