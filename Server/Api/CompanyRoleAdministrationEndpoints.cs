@@ -14,7 +14,10 @@ namespace Server.Api;
 /// </summary>
 public static class CompanyRoleAdministrationEndpoints
 {
-    private static readonly Regex RoleCodePattern = new("^[A-Z0-9][A-Z0-9._-]{1,79}$", RegexOptions.CultureInvariant);
+    /// <summary>Upper bound of members moved by one transfer request (one atomic save).</summary>
+    public const int MaxTransferBatchSize = 500;
+
+    private static readonly Regex RoleCodePattern =new("^[A-Z0-9][A-Z0-9._-]{1,79}$", RegexOptions.CultureInvariant);
 
     public static RouteGroupBuilder MapCompanyRoleAdministrationEndpoints(this RouteGroupBuilder api)
     {
@@ -26,6 +29,9 @@ public static class CompanyRoleAdministrationEndpoints
         roles.MapGet("", GetRolesAsync);
         roles.MapPost("", CreateRoleAsync).RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
         roles.MapPut("/{roleId:guid}", UpdateRoleAsync).RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+        roles.MapGet("/{roleId:guid}/members", GetRoleMembersAsync);
+        roles.MapPost("/{roleId:guid}/members/transfer", TransferMembersAsync)
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
         roles.MapPost("/{roleId:guid}/members/{userId:guid}", AssignMembershipAsync)
             .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
 
@@ -321,6 +327,138 @@ public static class CompanyRoleAdministrationEndpoints
         return TypedResults.NoContent();
     }
 
+    /// <summary>
+    /// Lists the active members of one role of one company. Only minimal identity fields are
+    /// returned (no e-mail, phone, password hash, other-company data); the role must belong to
+    /// the company in the route, so a foreign role id yields 404.
+    /// </summary>
+    public static async Task<IResult> GetRoleMembersAsync(
+        Guid companyId,
+        Guid roleId,
+        int? page,
+        int? pageSize,
+        HttpContext httpContext,
+        ClaimsPrincipal principal,
+        Data.DatabaseContext database,
+        CancellationToken cancellationToken)
+    {
+        var authorization = await UserAdministrationEndpoints.AuthorizeInstallationAdministratorAsync(principal, database, cancellationToken);
+        if (authorization is not null) return authorization;
+        if (!await IsActiveCompanyAsync(database, companyId, cancellationToken)) return TypedResults.NotFound();
+        if (!await database.CompanyRoles.AsNoTracking()
+                .AnyAsync(role => role.Id == roleId && role.TenantId == companyId, cancellationToken))
+            return TypedResults.NotFound();
+
+        var normalizedPage = Math.Max(page ?? 1, 1);
+        var normalizedPageSize = Math.Clamp(pageSize ?? 25, 1, 100);
+
+        var query = database.UserCompanyMemberships.AsNoTracking()
+            .Where(membership => membership.TenantId == companyId && membership.RoleId == roleId && membership.IsActive);
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query
+            .Join(database.Users.AsNoTracking(), membership => membership.UserId, user => user.Id,
+                (membership, user) => new { membership, user })
+            .OrderBy(row => row.user.LastName)
+            .ThenBy(row => row.user.FirstName)
+            .ThenBy(row => row.user.Id)
+            .Skip((normalizedPage - 1) * normalizedPageSize)
+            .Take(normalizedPageSize)
+            .Select(row => new CompanyRoleMemberResponse(
+                row.user.Id,
+                row.user.Username,
+                row.user.FirstName,
+                row.user.LastName,
+                row.user.IsActive,
+                row.membership.CreatedAtUtc))
+            .ToListAsync(cancellationToken);
+
+        SetNoStore(httpContext);
+        return TypedResults.Ok(new CompanyRoleMemberListResponse(items, totalCount, normalizedPage, normalizedPageSize));
+    }
+
+    /// <summary>
+    /// Moves every active member of the source role to another active role of the SAME company
+    /// in one atomic save, so a role with members can then be deactivated. It never creates or
+    /// reactivates a membership (D-065) and writes one audit event for the whole transfer.
+    /// </summary>
+    public static async Task<IResult> TransferMembersAsync(
+        Guid companyId,
+        Guid roleId,
+        HttpContext httpContext,
+        ClaimsPrincipal principal,
+        [FromBody] TransferCompanyRoleMembersRequest? request,
+        [FromServices] IAntiforgery antiforgery,
+        Data.DatabaseContext database,
+        [FromServices] TimeProvider timeProvider,
+        CancellationToken cancellationToken)
+    {
+        var authorization = await UserAdministrationEndpoints.AuthorizeInstallationAdministratorAsync(principal, database, cancellationToken);
+        if (authorization is not null) return authorization;
+        if (!await antiforgery.IsRequestValidAsync(httpContext))
+            return TypedResults.Problem(title: "درخواست نامعتبر است.", statusCode: StatusCodes.Status400BadRequest);
+        if (!await IsActiveCompanyAsync(database, companyId, cancellationToken)) return TypedResults.NotFound();
+
+        if (request is null || request.TargetRoleId == Guid.Empty || request.TargetRoleId == roleId)
+            return TypedResults.BadRequest(new { error = "گروه مقصد نامعتبر است یا با گروه مبدأ یکی است." });
+
+        var roles = await database.CompanyRoles.AsNoTracking()
+            .Where(role => role.TenantId == companyId && (role.Id == roleId || role.Id == request.TargetRoleId))
+            .ToListAsync(cancellationToken);
+        var source = roles.FirstOrDefault(role => role.Id == roleId);
+        var target = roles.FirstOrDefault(role => role.Id == request.TargetRoleId);
+        if (source is null || target is null) return TypedResults.NotFound();
+        if (!target.IsActive)
+            return TypedResults.Conflict(new { error = "گروه مقصد غیرفعال است." });
+
+        var memberships = await database.UserCompanyMemberships
+            .Where(membership => membership.TenantId == companyId && membership.RoleId == roleId && membership.IsActive)
+            .OrderBy(membership => membership.UserId)
+            .Take(MaxTransferBatchSize + 1)
+            .ToListAsync(cancellationToken);
+        if (memberships.Count > MaxTransferBatchSize)
+            return TypedResults.Conflict(new
+            {
+                error = $"تعداد اعضا از سقف {MaxTransferBatchSize} نفر در هر انتقال بیشتر است و هیچ عضوی منتقل نشد."
+            });
+        if (memberships.Count == 0)
+        {
+            SetNoStore(httpContext);
+            return TypedResults.Ok(new TransferCompanyRoleMembersResponse(0));
+        }
+
+        var targetRole = await database.CompanyRoles.FirstAsync(
+            role => role.Id == target.Id && role.TenantId == companyId, cancellationToken);
+        foreach (var membership in memberships)
+        {
+            membership.RoleId = targetRole.Id;
+            membership.Role = targetRole;
+        }
+
+        var actorId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal)!.Value;
+        database.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
+        {
+            UserId = actorId,
+            TenantId = companyId,
+            EventType = "CompanyRoleMembersTransferred",
+            EntityType = "CompanyRole",
+            EntityId = roleId.ToString(),
+            OccurredAtUtc = timeProvider.GetUtcNow().UtcDateTime,
+            CorrelationId = System.Diagnostics.Activity.Current?.Id,
+            IpAddress = httpContext.Connection.RemoteIpAddress?.ToString(),
+            DetailsJson = JsonSerializer.Serialize(new
+            {
+                sourceRoleId = roleId,
+                targetRoleId = targetRole.Id,
+                count = memberships.Count,
+                userIds = memberships.Select(membership => membership.UserId).ToArray(),
+            }),
+        });
+
+        await database.SaveChangesAsync(cancellationToken);
+        SetNoStore(httpContext);
+        return TypedResults.Ok(new TransferCompanyRoleMembersResponse(memberships.Count));
+    }
+
     private static async Task<bool> IsActiveCompanyAsync(
         Data.DatabaseContext database,
         Guid companyId,
@@ -396,3 +534,9 @@ public sealed record CompanyRoleTemplateResponse(string Code, string Name, IRead
 public sealed record CreateCompanyRoleRequest(string? Code, string? Name, string? TemplateCode, IReadOnlyCollection<string>? PermissionCodes);
 public sealed record UpdateCompanyRoleRequest(string? Name, bool IsActive, IReadOnlyCollection<string> PermissionCodes);
 public sealed record CompanyRoleCreatedResponse(Guid Id);
+public sealed record CompanyRoleMemberResponse(
+    Guid UserId, string? Username, string? FirstName, string? LastName, bool IsUserActive, DateTime MemberSinceUtc);
+public sealed record CompanyRoleMemberListResponse(
+    IReadOnlyList<CompanyRoleMemberResponse> Items, int TotalCount, int Page, int PageSize);
+public sealed record TransferCompanyRoleMembersRequest(Guid TargetRoleId);
+public sealed record TransferCompanyRoleMembersResponse(int MovedCount);
