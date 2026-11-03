@@ -2146,3 +2146,13 @@
 - PR #478 گزارش CI نهایی موفق و QA مرورگر ۳۶/۳۶ با API mock دارد. این نتایج را به‌عنوان E2E زنده نقش‌ها تعبیر نکردیم.
 - هیچ کد runtime، API، Schema یا Migration در این برش مستنداتی تغییر نمی‌کند. Issue مادر #444 باز می‌ماند تا شکاف‌های باقیمانده با Issue/PRهای مستقل تکمیل شوند.
 - handoff تجمیعی: `docs/handoffs/ISSUE-444-admin-ui-completion.md`.
+
+
+## 2026-11-03 — Issue #444: E2E زندهٔ منع دسترسی مدیریت نقش برای کاربر عادی
+
+- یک سناریوی Playwright به suite منتشرشدهٔ واقعی اضافه شد: کاربر فعال و عضو شرکت (Alice) وارد می‌شود، شرکت/دوره را انتخاب می‌کند و تلاش می‌کند مسیر `/app/admin/roles` را باز کند؛ UI باید دسترسی را رد کند و هیچ درخواست `/api/v1/admin/*` نفرستد.
+- تست سپس UI را دور می‌زند و با Cookie واقعی مرورگر، هر دو endpoint `GET /api/v1/admin/permission-catalog` و `GET /api/v1/admin/companies/{companyId}/roles` را فراخوانی می‌کند؛ انتظار HTTP 403 با پیام محدودیت مدیر نصب است.
+- پس از پاک‌کردن Cookie، درخواست ناشناس به کاتالوگ باید HTTP 401 بگیرد.
+- تست در `tests/e2e/specs/faranou.spec.mjs` به اجرا در CI موجود وابسته است: سرور Publish‌شدهٔ Production + SQL Server 2022 واقعی؛ seed از دیتابیس disposable با پیشوند `FaranouE2E` استفاده می‌کند.
+- هیچ API، مجوز، Schema، Migration یا dependency جدیدی تغییر نکرد؛ این تست فقط قرارداد امنیتی فعلی را تثبیت می‌کند.
+- وضعیت اجرای این PR تا اتمام CI: Pending؛ نتیجه موفق ادعا نمی‌شود.
