@@ -133,7 +133,7 @@ public sealed class SecurityAuditAdministrationSqlServerTests
                 database,
                 cancellationToken);
             var exportFile = Assert.IsType<FileContentHttpResult>(export);
-            var csv = Encoding.UTF8.GetString(exportFile.FileContents);
+            var csv = Encoding.UTF8.GetString(exportFile.FileContents.Span);
             Assert.Contains("LoginSucceeded", csv);
             Assert.DoesNotContain("203.0.113.10", csv);
             Assert.DoesNotContain("sql-private-payload", csv);
