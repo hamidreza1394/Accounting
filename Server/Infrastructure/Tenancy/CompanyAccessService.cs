@@ -176,25 +176,39 @@ public sealed class CompanyAccessService
 	/// The permission codes starting with <paramref name="codePrefix" /> that the user holds in the
 	/// company through an active membership. The prefix is a server constant, never client input.
 	/// </summary>
+	public Task<IReadOnlyList<string>> GetGrantedPermissionCodesAsync(
+		Guid userId,
+		Guid companyId,
+		CancellationToken cancellationToken = default)
+	{
+		return GetGrantedPermissionCodesAsync(userId, companyId, string.Empty, cancellationToken);
+	}
+
 	public async Task<IReadOnlyList<string>> GetGrantedPermissionCodesAsync(
 		Guid userId,
 		Guid companyId,
 		string codePrefix,
 		CancellationToken cancellationToken = default)
 	{
-		ArgumentException.ThrowIfNullOrWhiteSpace(codePrefix);
+		ArgumentNullException.ThrowIfNull(codePrefix);
 
 		if (userId == Guid.Empty || companyId == Guid.Empty)
 		{
 			return [];
 		}
 
-		return await QueryActiveMemberships(userId)
+		var query = QueryActiveMemberships(userId)
 			.Where(membership => membership.TenantId == companyId)
 			.SelectMany(membership => DatabaseContext.CompanyRolePermissions
 				.Where(rolePermission => rolePermission.RoleId == membership.RoleId)
-				.Select(rolePermission => rolePermission.Permission.Code))
-			.Where(code => code.StartsWith(codePrefix))
+				.Select(rolePermission => rolePermission.Permission.Code));
+
+		if (codePrefix.Length > 0)
+		{
+			query = query.Where(code => code.StartsWith(codePrefix));
+		}
+
+		return await query
 			.Distinct()
 			.OrderBy(code => code)
 			.ToListAsync(cancellationToken);
