@@ -196,6 +196,16 @@ public sealed class CompanyMembershipRequestSqlServerTests
                     item => item.EventType == "CompanyMembershipApproved" && item.EntityId == requestId.ToString(),
                     TestContext.Current.CancellationToken));
 
+                // The migration deliberately refuses to discard membership-request history.
+                await Assert.ThrowsAsync<SqlException>(async () =>
+                    await check.GetService<IMigrator>().MigrateAsync(
+                        PreviousMigration, TestContext.Current.CancellationToken));
+
+                // This isolated test database has no customer data to retain; remove its test row
+                // only after verifying that the rollback guard rejected the destructive downgrade.
+                await check.Database.ExecuteSqlInterpolatedAsync(
+                    $"DELETE FROM [CompanyMembershipRequests] WHERE [Id] = {requestId}",
+                    TestContext.Current.CancellationToken);
                 await check.GetService<IMigrator>().MigrateAsync(
                     PreviousMigration, TestContext.Current.CancellationToken);
                 var tableCount = await check.Database.SqlQueryRaw<int>(
