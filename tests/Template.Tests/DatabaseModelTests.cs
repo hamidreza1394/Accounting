@@ -393,6 +393,26 @@ public sealed class DatabaseModelTests
 	}
 
 	[Fact]
+	public void CompanyRolesAndMemberships_UseRowVersionConcurrency()
+	{
+		foreach (var clrType in new[]
+		{
+			typeof(Domain.CompanyRole),
+			typeof(Domain.UserCompanyMembership),
+		})
+		{
+			var entity = Model.FindEntityType(clrType);
+			Assert.NotNull(entity);
+
+			var rowVersion = entity!.FindProperty("RowVersion");
+			Assert.NotNull(rowVersion);
+			Assert.Equal("rowversion", rowVersion!.GetColumnType(), ignoreCase: true);
+			Assert.True(rowVersion.IsConcurrencyToken);
+			Assert.Equal(ValueGenerated.OnAddOrUpdate, rowVersion.ValueGenerated);
+		}
+	}
+
+	[Fact]
 	public void TheMigrationsOfThePersistenceAssemblyAreDiscovered()
 	{
 		using var context = CreateContext();
@@ -405,6 +425,7 @@ public sealed class DatabaseModelTests
 		Assert.Contains("20261031120000_AddCustomerOfflineRevocationState", migrations);
 		Assert.Contains("20261031130000_AddCustomerLicensePersistence", migrations);
 		Assert.Contains("20261103111108_AddCompanyMembershipRequests", migrations);
+		Assert.Contains("20261103160000_AddCompanyRoleMembershipRowVersions", migrations);
 	}
 
 	[Fact]

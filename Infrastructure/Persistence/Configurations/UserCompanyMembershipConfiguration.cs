@@ -9,6 +9,7 @@ internal sealed class UserCompanyMembershipConfiguration : Microsoft.EntityFrame
         builder.ToTable("UserCompanyMemberships");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.CreatedAtUtc).IsRequired();
+        builder.Property(x => x.RowVersion).IsRowVersion();
         builder.HasIndex(x => new { x.UserId, x.TenantId }).IsUnique();
         builder.HasIndex(x => new { x.TenantId, x.IsActive });
         builder.HasOne(x => x.Company).WithMany(x => x.Memberships)
