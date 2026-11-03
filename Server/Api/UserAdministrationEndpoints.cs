@@ -329,11 +329,11 @@ public static class UserAdministrationEndpoints
         }
 
         var previousActive = user.IsActive;
-        user.EmailAddress = email;
+        user.ChangeEmailAddress(email);
         user.Username = username;
         user.FirstName = firstName;
         user.LastName = lastName;
-        user.CellPhoneNumber = cellPhone;
+        user.ChangeCellPhoneNumber(cellPhone);
         user.IsActive = request.IsActive;
         user.SetUpdateDateTime();
 
