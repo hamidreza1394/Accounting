@@ -2293,6 +2293,13 @@
 - تست انتقال گروهی به دو عضو گسترش یافت تا rollback کامل batch (بدون partial membership یا Audit) در تعارض یک عضو اثبات شود.
 - handoff: docs/handoffs/ISSUE-496-role-membership-rowversion.md.
 
+## 2026-11-03 — Issue #507: خروجی محدود CSV گزارش امنیتی
+- مسیر خروجی با POST و فیلترهای JSON در بدنه پیاده‌سازی شد؛ چون خروجی موفق رویداد SecurityAuditExported ثبت می‌کند، GET امن/بدون‌اثر نیست. Anti-forgery و rate limiting برای endpoint فعال‌اند.
+- بازه fromUtc/toUtc اجباری و حداکثر ۳۱ روز؛ پرس‌وجو با ترتیب قطعی OccurredAtUtc DESC و Id DESC و Take(10,001) انجام می‌شود؛ بیش از ۱۰٬۰۰۰ ردیف پاسخ 413 می‌گیرد.
+- CSV با UTF-8 BOM، quoting و escaping مطابق RFC 4180 و CRLF تولید می‌شود؛ تمام سلول‌های متنی پس از بررسی whitespace برای شروع فرمولی با apostrophe خنثی می‌شوند.
+- projection فقط شناسه/عامل/شرکت/نوع/موجودیت/زمان/CorrelationId را صادر می‌کند؛ IP و DetailsJson حذف‌اند و پاسخ no-store/no-cache دارد. ثبت audit پیش از تحویل فایل انجام می‌شود؛ شکست ذخیره‌سازی مانع تحویل فایل است.
+- Unit و SQL Server integration پوشش داده شدند؛ اجرا در این محیط انجام نشد و نتیجه CI روی head نهایی معیار Verified شدن است.
+- handoff: docs/handoffs/ISSUE-507-security-audit-csv-export.md.
 ## 2026-11-03 — Issue #500: EF UTC Kind برای ویژگی‌های *Utc
 - در EF فقط DateTime و DateTime?هایی که نام property آن‌ها به Utc ختم می‌شود با ValueConverter به Kind=Utc علامت‌گذاری می‌شوند؛ Ticks و مقدار ذخیره‌شده تغییر نمی‌کند.
 - InsertDateTime، UpdateDateTime و LastLoginDateTime عمداً خارج از این قاعده‌اند؛ هیچ مبدل سراسری یا Migration داده‌ای اجرا نشد.
