@@ -67,6 +67,7 @@ def parse_columns(body: str) -> list[dict[str, Any]]:
                 "type": re.search(r'type: "([^"]+)"', arguments).group(1),
                 "max_length": mm.optional_int(re.search(r"maxLength: (\d+)", arguments)),
                 "unicode": "unicode: false" not in arguments,
+                "is_row_version": "rowVersion: true" in arguments,
             }
         )
     return columns
@@ -133,7 +134,7 @@ DOWN_OPERATIONS = {
 TABLE_UP_OPERATIONS = {"CreateTable"}
 TABLE_DOWN_OPERATIONS = {"DropTable", "DropUniqueConstraint"}
 
-ADD_COLUMN_ARGUMENTS = {"name", "table", "type", "nullable", "maxLength", "unicode", "defaultValue"}
+ADD_COLUMN_ARGUMENTS = {"name", "table", "type", "nullable", "maxLength", "unicode", "defaultValue", "rowVersion"}
 ADD_FOREIGN_KEY_ARGUMENTS = {
     "name",
     "table",
@@ -179,7 +180,7 @@ CLR_DEFAULT_LITERALS = {
 
 def expected_default_literal(column: dict[str, Any]) -> str | None:
     """The 'defaultValue' of an AddColumn: none for a nullable column, the CLR default else."""
-    if column["nullable"]:
+    if column["nullable"] or column.get("is_row_version"):
         return None
     literal_value = CLR_DEFAULT_LITERALS.get(column["clr_type"])
     if literal_value is None:
@@ -262,6 +263,7 @@ def parse_operations(
                     int(arguments["maxLength"]) if "maxLength" in arguments else None,
                     False if arguments.get("unicode") == "false" else None,
                     arguments.get("defaultValue"),
+                    arguments.get("rowVersion") == "true",
                 )
             )
         elif kind == "DropColumn":
@@ -391,6 +393,7 @@ def signatures_of(operations: list[dict[str, Any]]) -> list[tuple[Any, ...]]:
                     column["max_length"],
                     False if column.get("unicode") is False else None,
                     expected_default_literal(column),
+                    bool(column.get("is_row_version")),
                 )
             )
         elif operation["kind"] == "drop_column":
@@ -482,6 +485,7 @@ def verify_model_against_generated(
                 "unicode",
                 "value_generated",
                 "column_type",
+                "is_row_version",
             ):
                 if column[facet] != actual[facet]:
                     problems.append(
@@ -564,6 +568,11 @@ def verify_initial_migration(migration_source: str, designer: dict[str, Any]) ->
             if column["clr_type"] != actual["clr_type"]:
                 problems.append(
                     f"The provider type of '{table}.{name}' differs between the migration "
+                    "and the designer file."
+                )
+            if bool(column.get("is_row_version")) != bool(actual.get("is_row_version")):
+                problems.append(
+                    f"The rowversion facet of '{table}.{name}' differs between the migration "
                     "and the designer file."
                 )
 
