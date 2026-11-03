@@ -74,7 +74,7 @@ for (const user of Object.values(state.users)) {
     `INSERT INTO Users (Id, Ordering, InsertDateTime, UpdateDateTime, RoleId, IsActive, IsSystemic, IsProgrammer, IsUndeletable,
        IsProfilePublic, IsVisibleInContactUsPage, IsEmailAddressVerified, IsCellPhoneNumberVerified,
        Username, Password, FirstName, LastName, EmailAddress, EmailAddressVerificationKey)
-     VALUES (@id, 10000, @now, @now, @active, 0, 0, 0, 0, 0, 1, 0, @username, @password, @first, N'آزمون', @email, @key)`,
+     VALUES (@id, 10000, @now, @now, @roleId, @active, 0, 0, 0, 0, 0, 1, 0, @username, @password, @first, N'آزمون', @email, @key)`,
     {
       id: [sql.UniqueIdentifier, user.id], now: [sql.DateTime2, now], roleId: [sql.UniqueIdentifier, user.roleId ?? null], active: [sql.Bit, user.active],
       username: [sql.VarChar(20), user.username], password: [sql.VarChar(255), hashPasswordV3(user.password)],
