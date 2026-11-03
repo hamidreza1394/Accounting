@@ -194,7 +194,8 @@ public sealed class CompanyMembershipRequestSqlServerTests
                 var savedRequest = await check.CompanyMembershipRequests.SingleAsync(
                     item => item.Id == requestId, TestContext.Current.CancellationToken);
                 Assert.Equal(Domain.CompanyMembershipRequestStatuses.Approved, savedRequest.Status);
-                Assert.Contains(savedRequest.DecidedByUserId, new[] { approverAId, approverBId });
+                Assert.NotNull(savedRequest.DecidedByUserId);
+                Assert.Contains(savedRequest.DecidedByUserId.Value, new[] { approverAId, approverBId });
                 Assert.Equal(memberRoleId, savedRequest.ApprovedRoleId);
 
                 var membership = await check.UserCompanyMemberships.SingleAsync(
