@@ -249,6 +249,9 @@ public static class CompanyRoleAdministrationEndpoints
             role.RolePermissions.Add(new Domain.CompanyRolePermission { Role = role, PermissionId = permissionId });
         role.Name = name;
         role.IsActive = request.IsActive;
+        // Force a role-row update even when only its permission links changed (or the
+        // submitted scalar values are unchanged), so the rowversion guards the whole role.
+        database.Entry(role).Property(current => current.Name).IsModified = true;
 
         var actorId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal)!.Value;
         database.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
@@ -264,7 +267,16 @@ public static class CompanyRoleAdministrationEndpoints
             DetailsJson = JsonSerializer.Serialize(new { role.Name, role.IsActive, permissionCodes }),
         });
 
-        await database.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await database.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            SetNoStore(httpContext);
+            return TypedResults.Conflict(new { error = "این گروه دسترسی هم‌زمان توسط کاربر دیگری تغییر کرده است؛ اطلاعات را تازه‌سازی کنید." });
+        }
+
         SetNoStore(httpContext);
         return TypedResults.NoContent();
     }
@@ -297,10 +309,8 @@ public static class CompanyRoleAdministrationEndpoints
             current => current.UserId == userId && current.TenantId == companyId,
             cancellationToken);
 
-        // A role assignment must never create or reactivate a cross-company membership.
-        // New memberships require the destination-company approval workflow (D-065),
-        // which is implemented separately from role grants. Until that workflow exists,
-        // fail closed instead of making a pending request operationally active.
+        // A role assignment may only reassign an existing, active membership. New or
+        // inactive memberships must go through the destination-company approval workflow (D-065).
         if (membership is null || !membership.IsActive)
             return TypedResults.Conflict(new
             {
@@ -310,6 +320,10 @@ public static class CompanyRoleAdministrationEndpoints
         var previousRoleId = membership.RoleId;
         membership.RoleId = roleId;
         membership.Role = role;
+        // Guard both sides of the transition: a concurrent membership edit or role
+        // deactivation must win or lose atomically rather than silently being overwritten.
+        database.Entry(membership).Property(current => current.RoleId).IsModified = true;
+        database.Entry(role).Property(current => current.IsActive).IsModified = true;
 
         var actorId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal)!.Value;
         database.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
@@ -325,7 +339,16 @@ public static class CompanyRoleAdministrationEndpoints
             DetailsJson = JsonSerializer.Serialize(new { userId, previousRoleId, roleId }),
         });
 
-        await database.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await database.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            SetNoStore(httpContext);
+            return TypedResults.Conflict(new { error = "عضویت یا گروه دسترسی هم‌زمان توسط کاربر دیگری تغییر کرده است؛ اطلاعات را تازه‌سازی کنید." });
+        }
+
         SetNoStore(httpContext);
         return TypedResults.NoContent();
     }
@@ -433,6 +456,11 @@ public static class CompanyRoleAdministrationEndpoints
             return TypedResults.Ok(new TransferCompanyRoleMembersResponse(0));
         }
 
+        // The role tokens protect the preconditions (source/target are still the roles
+        // inspected above); membership tokens protect every row in the atomic batch.
+        database.Entry(source).Property(current => current.IsActive).IsModified = true;
+        database.Entry(target).Property(current => current.IsActive).IsModified = true;
+
         foreach (var membership in memberships)
         {
             membership.RoleId = target.Id;
@@ -468,7 +496,16 @@ public static class CompanyRoleAdministrationEndpoints
             });
         }
 
-        await database.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await database.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            SetNoStore(httpContext);
+            return TypedResults.Conflict(new { error = "اعضای گروه هم‌زمان توسط کاربر دیگری تغییر کرده‌اند؛ اطلاعات را تازه‌سازی کنید." });
+        }
+
         SetNoStore(httpContext);
         return TypedResults.Ok(new TransferCompanyRoleMembersResponse(memberships.Count));
     }
