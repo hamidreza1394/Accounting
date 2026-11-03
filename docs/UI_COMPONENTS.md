@@ -125,6 +125,7 @@
 
 ### حساب کاربری من و AuditTimeline (Issue #463)
 
+- `ui/JalaliDateField`: انتخابگر تاریخ شمسی (RTL، ارقام فارسی، `min`/`max`، پاک‌کردن، کار با `FormField`)؛ مقدار همیشه تاریخ میلادی ISO است و هرگز `input type=date` بومی برای تاریخ کاربر استفاده نشود (D-068).
 - `ui/AuditTimeline`: فهرست رویدادهای زمانی با وضعیت «آیکون + متن» (هرگز فقط رنگ)، `<time dateTime>` با تاریخ جلالی و IP با `dir=ltr`؛ props: `label`، `events` (id, label, tone, icon, occurredAt, detail)، `detailLabel`، `detailFallback`.
 - `account/PasswordInput`: ورودی رمز با دکمه نمایش/پنهان (`aria-pressed`) و `dir=ltr`؛ الگوی نگاشت `fieldErrors` سرور به فیلدها (حذف پیشوند کلید و تطبیق بدون حساسیت به حروف) در `SecurityTab`.
 - در حین ارسال تغییر رمز، تب‌های دیگر قفل می‌شوند تا ارسال دوباره ممکن نباشد.

@@ -1169,3 +1169,18 @@ Pending هیچ دسترسی ندارد؛ مقصد تنها approver است؛ gra
 - **گزینه B:** اگر FiscalPeriod در واقع دوره عملیاتی است، از آن به‌عنوان period grant target استفاده شود و کلید سال فقط از تاریخ‌های واقعی آن مشتق شود؛ این گزینه باید دقیقاً مشخص کند چه چیزی در آینده «دوره جدید همان سال» محسوب می‌شود.
 - **قواعد ثابت مستقل از گزینه:** deny-by-default؛ عضویت Pending فاقد دسترسی؛ Company/Tenant مشترک؛ بدون FiscalYear یا Tenant موازی؛ دوره‌های زیرسیستم‌ها از Core مصرف می‌شوند؛ هر grant دارای actor/time/reason/audit و concurrency protection است.
 - **گام بعد از تأیید:** طرح کامل کلیدها و composite FKها، یکتایی، lifecycle/revocation، backfill (پیش‌فرض عدم اعطای grant به کاربران موجود)، SQL Server integration tests و rollback plan در PR مستقل ارائه شود. هیچ migration روی دیتابیس مشتری در این مرحله اجرا نمی‌شود.
+
+## D-068 — انتخابگر تاریخ شمسی: react-day-picker 9.14.0 (مسیر `/persian`) (2026-11-03)
+
+- **وضعیت:** Accepted — مجوز صریح مالک در دستور کار 2026-11-03 برای افزودن وابستگی مناسب، مشروط به بررسی امنیت/نگهداری، ADR، حجم و بسته‌شدن محلی؛ شرایط زیر بررسی و ثبت شد.
+- **Issue:** #444 (فیلترهای تاریخ شمسی گزارش امنیتی)؛ ادامهٔ تصمیم D-049 (`Calendar` شادسی‌ان با `react-day-picker/persian`).
+- **گزینه‌ها:** (الف) `react-day-picker@9.14.0` + `/persian` (انتخاب‌شده)؛ (ب) `react-day-picker@10.0.2`: **مسیر `/persian` ندارد** (فقط locale `fa-IR` با تقویم میلادی) و رد شد؛ (ج) کتابخانهٔ مستقل تقویم جلالی: جدید، نگهداری و RTL/React 19 ناروشن، رد شد؛ (د) `input type=date` بومی: میلادی، رد شد.
+- **ارزیابی انتخاب (الف):**
+  - تقویم جلالی واقعی (`date-fns-jalali`)، پیش‌فرض RTL، locale فارسی، ارقام فارسی (`arabext`)، برچسب فارسی روزها/ماه‌ها و ناوبری صفحه‌کلید؛ تست‌های واقعی در `JalaliDateField.test.tsx`.
+  - سازگار با React 19 (`peer react >=16.8`) و TypeScript (`exactOptionalPropertyTypes` رعایت شد).
+  - مجوزها همه MIT: react-day-picker 9.14.0، date-fns 4.4.0، date-fns-jalali 4.1.0-0، @date-fns/tz 1.5.0، @tabby_ai/hijri-converter 1.0.5. `npm audit --omit=dev`: 0 آسیب‌پذیری.
+  - اجرای آفلاین: همه با npm نصب و در bundle Vite محلی می‌شوند؛ CSS از `react-day-picker/style.css` محلی؛ `check:offline` موفق؛ بدون CDN.
+  - حجم (اندازه‌گیری واقعی با import پویا): chunk تنبل حدود 240 kB (72 kB gzip) JS و 8 kB (1.6 kB gzip) CSS؛ bundle اصلی بدون تغییر (330.67 kB). فقط صفحه‌هایی که انتخابگر را import کنند آن را بارگیری می‌کنند.
+  - قرارداد داده: مقدار همیشه تاریخ تقویمی میلادی ISO (`yyyy-MM-dd`) است؛ تبدیل به UTC فقط با `dayStartUtc`/`dayEndUtc` (D-067، `docs/TIME_CONTRACT.md`)؛ هیچ تاریخ جلالی ذخیره یا ارسال نمی‌شود.
+- **ریسک‌ها و نگهداری:** (۱) نسخه **دقیقاً پین** است؛ ارتقا به 10.x مسیر `/persian` را از دست می‌دهد و باید با ADR جدید ارزیابی شود. (۲) `date-fns-jalali@4.1.0-0` نسخهٔ pre-release است که خود بستهٔ بالادستی پین کرده است؛ هر ارتقای react-day-picker باید این وابستگی را دوباره بررسی کند. (۳) حجم 72 kB gzip فقط در صفحه‌های دارای تاریخ.
+- **قاعده:** همهٔ فیلدهای ورود تاریخ در ClientApp از `ui/JalaliDateField` استفاده کنند؛ `input type=date` بومی برای تاریخ کاربر ممنوع است.
