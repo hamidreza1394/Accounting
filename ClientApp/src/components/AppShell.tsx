@@ -18,6 +18,7 @@ import {
   Settings2,
   ShieldCheck,
   ShoppingCart,
+  UserCheck,
   Users,
   Wallet,
   X,
@@ -180,6 +181,8 @@ function AppShellFrame({ session, context, onChangeContext, onLogout, onPassword
   const usersActive = pathname === '/admin/users' || pathname.startsWith('/admin/users/');
   const rolesActive = pathname === '/admin/roles' || pathname.startsWith('/admin/roles/');
   const permissionsActive = pathname === '/admin/permissions';
+  const membershipRequestsActive = pathname === '/admin/membership-requests';
+  const myMembershipRequestsActive = pathname === '/account/membership-requests';
   const readOnly = context.fiscalPeriod.accessMode === 'readOnly';
 
   async function handleLogout() {
@@ -344,6 +347,18 @@ function AppShellFrame({ session, context, onChangeContext, onLogout, onPassword
                             <Link to="/admin/permissions" onClick={() => setMobileMenuOpen(false)} aria-current={permissionsActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (permissionsActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
                               <NavIcon icon={KeyRound} tone="amber" size="sm" />
                               <span className="min-w-0 flex-1">کاتالوگ و جزئیات مجوزها</span>
+                            </Link>
+                          </li>
+                          <li>
+                            <Link to="/admin/membership-requests" onClick={() => setMobileMenuOpen(false)} aria-current={membershipRequestsActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (membershipRequestsActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
+                              <NavIcon icon={UserCheck} tone="emerald" size="sm" />
+                              <span className="min-w-0 flex-1">درخواست‌های عضویت</span>
+                            </Link>
+                          </li>
+                          <li>
+                            <Link to="/account/membership-requests" onClick={() => setMobileMenuOpen(false)} aria-current={myMembershipRequestsActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (myMembershipRequestsActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
+                              <NavIcon icon={ClipboardList} tone="slate" size="sm" />
+                              <span className="min-w-0 flex-1">درخواست‌های عضویت من</span>
                             </Link>
                           </li>
                           <li><DisabledItem label="گزارش امنیت و سوابق" icon={Activity} tone="emerald" nested /></li>

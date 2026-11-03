@@ -2156,6 +2156,11 @@
 
 
 
+## 2026-11-03 — Issue #444: UI گردش درخواست عضویت بین‌شرکتی
+- دو صفحهٔ React روی API ادغام‌شدهٔ #479 ساخته شد: «درخواست‌های عضویت من» و «صف تأیید مقصد» (تأیید با انتخاب گروه فعال همان شرکت، رد با دلیل اختیاری)، Client/Parser سخت‌گیر، مسیرها و لینک منو. سمت سرور تغییر نکرد؛ داده ساختگی استفاده نشد.
+- فرم ثبت درخواست جدید ساخته نشد: API کشف شرکت‌های قابل‌درخواست وجود ندارد. تأییدکنندهٔ غیر مدیر نصب هم گروه‌ها را نمی‌بیند (`GET .../roles` فقط مدیر نصب). قرارداد پیشنهادی برای Backend در handoff ثبت شد.
+- تست: typecheck، ۴۳۱ تست vitest، build و check:offline موفق. axe و E2E با SQL Server واقعی اجرا نشد.
+- handoff: `docs/handoffs/ISSUE-444-membership-requests-ui.md`.
 ## 2026-11-03 — Issue #444: API اعضای گروه دسترسی و انتقال اعضا
 - مورد ۳ از کارهای باقی‌مانده #444 در Backend پیاده‌سازی شد: `GET .../roles/{roleId}/members` (صفحه‌بندی، حداقل فیلد، فقط عضویت فعال) و `POST .../roles/{roleId}/members/transfer` (انتقال اتمی همهٔ اعضای فعال به گروه فعال دیگرِ همان شرکت، سقف ۵۰۰).
 - فقط مدیر نصب مجاز است؛ عضویت جدید ساخته یا فعال نمی‌شود (D-065)؛ انتقال از/به گروه سیستمی fail-closed است.
@@ -2170,3 +2175,11 @@
 - جستجوی اعضا ساخته نشد چون API ندارد. هیچ تغییری در Backend نبود.
 - تست: typecheck، ۴۲۲ تست vitest، build و check:offline موفق؛ axe و E2E واقعی اجرا نشد.
 - handoff: `docs/handoffs/ISSUE-444-role-members-ui.md`.
+## 2026-11-03 — Issue #485: گزارش Audit امنیتی مدیر نصب
+
+- API فقط‌خواندنی `GET /api/v1/admin/security/audit-events` روی جدول موجود SecurityAuditEvents اضافه شد؛ احراز مجدد مدیر نصب از دیتابیس انجام می‌شود.
+- فیلترهای دقیق EventType، UserId، CompanyId، FromUtc و ToUtc، مرتب‌سازی قطعی جدیدترین‌اول، صفحه‌بندی محدود و Cache-Control: no-store دارد.
+- قرارداد پاسخ فقط شناسه/نوع/زمان/موجودیت، actor و نام شرکت و CorrelationId را برمی‌گرداند؛ IpAddress و DetailsJson عمداً حذف شده‌اند تا payload حساس یا metadata شبکه افشا نشود.
+- رویدادهای ناقص یا نبود Logout به‌عنوان مدت نشست/انقضا تفسیر نمی‌شوند. هیچ schema، migration، UI یا retention deletion در این برش نیست.
+- تست‌های unit و SQL Server integration اضافه شدند؛ اجرای محلی در این محیط ممکن نبود (GitHub DNS و .NET SDK در دسترس نیست). CI روی PR معیار تأیید است.
+- handoff: `docs/handoffs/ISSUE-485-security-audit-report-api.md`.

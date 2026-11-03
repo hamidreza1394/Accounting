@@ -39,6 +39,14 @@
 - actor، زمان UTC، reason، correlation و transition باید audit شوند.
 - تعلیق یا لغو باید در درخواست بعدی مؤثر شود؛ cache/session authorization باید invalidate شود.
 
+### 4.1 ممیزی S2 — ساختار سازمانی و ارتباط با هویت (2026-11-03)
+
+- Domain شامل User و UserCompanyMembership است، اما Entity مستقل Employee/Personnel، OrganizationalUnit یا Position در مخزن وجود ندارد؛ ماژول Payroll نیز در ساختار فعلی پیدا نشد.
+- User هویت نصب است و می‌تواند در چند Company عضویت مستقل داشته باشد. UserCompanyMembership دسترسی عملیاتی و CompanyRole را نگه می‌دارد؛ employment/HR record نیست.
+- D-064 می‌گوید سمت و واحد داده منابع انسانی‌اند و به‌خودی‌خود مجوز نمی‌دهند. بنابراین افزودن مستقیم Position/Unit به User سراسری اشتباه است و اتصال آن‌ها به CompanyRole نیز ممنوع است.
+- طرح پیشنهادی در docs/ORGANIZATIONAL_STRUCTURE_DATA_MODEL.md دو گزینه دارد: فیلدهای ساده روی membership (فقط کاربران دارای login) یا CompanyEmployee مستقل با لینک اختیاری به membership (پشتیبانی از کارکنان بدون حساب). گزینه دوم برای ERP/Payroll آینده مناسب‌تر است، اما نیازمند تأیید مالک محصول است.
+- هیچ Employee، OrganizationalUnit، Position، API یا Migration در این مرحله ساخته نشده است.
+
 ## 5. تخصیص سال و دوره مالی
 
 | نوع تخصیص | معنا |
@@ -52,6 +60,14 @@
 دسترسی سال به‌صورت ضمنی دوره جدیدی را که بعداً به سال اضافه می‌شود مجاز نمی‌کند؛ مگر grant صریحاً نوع AllPeriodsInYear داشته باشد و این policy توسط مدیر مجاز انتخاب شده باشد. اگر مدل فعلی سال را به‌صورت entity جداگانه ندارد، YearId جدید نسازید؛ ابتدا مدل FiscalPeriod و قواعد تقویم موجود بررسی شود.
 
 نام FiscalAccessGrant صرفاً نام مفهومی است، نه schema نهایی. ممکن است سال از دوره‌های موجود مشتق شود. چند grant نباید با تکثیر عضویت کاربر در شرکت پیاده‌سازی شوند.
+
+### 5.1 ممیزی مدل سال/دوره مالی برای D-065 (2026-11-03)
+
+- مدل فعلی فقط FiscalPeriod را به‌عنوان رکورد شرکت‌محور با StartDate/EndDate/Title/Status دارد؛ FiscalYear و AccountingPeriod مستقل در Domain وجود ندارد.
+- UI سال نمایشی را از تطبیق دقیق StartDate/EndDate دوره‌های شرکت‌های مختلف مشتق می‌کند (ClientApp/src/lib/fiscalYears.ts) و تست‌ها نمونه سال مالی کامل را نشان می‌دهند.
+- بنابراین Year grant و Period grant دو هدف داده‌ای مستقل در Schema فعلی ندارند. ساخت دو نوع grant بدون تعیین معنای «دوره داخل سال» می‌تواند به اعطای دسترسی ضمنی یا بی‌اثر منجر شود.
+- D-066 در docs/DECISIONS.md گزینه ترجیحی را پیشنهاد می‌کند: FiscalPeriod به‌عنوان سال؛ AccountingPeriod فرزند فقط پس از تأیید محصول؛ Year grant با ExplicitPeriodsOnly/AllPeriodsInYear؛ Period grant روی AccountingPeriod.
+- **هیچ Entity، Migration یا runtime behavior در این مرحله اضافه نشده است.** Issue #488 برای تأیید معنای سال/دوره باز است.
 
 ## 6. دفترچه محدود شرکت‌های هم‌گروه
 

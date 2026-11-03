@@ -40,6 +40,13 @@ const LazyRolesListPage = lazy(() => import('./admin/roles/RolesListPage').then(
 const LazyRoleCreatePage = lazy(() => import('./admin/roles/RoleCreatePage').then((module) => ({ default: module.RoleCreatePage })));
 const LazyRoleDetailPage = lazy(() => import('./admin/roles/RoleDetailPage').then((module) => ({ default: module.RoleDetailPage })));
 
+const LazyMyMembershipRequestsPage = lazy(() =>
+  import('./membership/MyMembershipRequestsPage').then((module) => ({ default: module.MyMembershipRequestsPage })),
+);
+const LazyPendingMembershipRequestsPage = lazy(() =>
+  import('./membership/PendingMembershipRequestsPage').then((module) => ({ default: module.PendingMembershipRequestsPage })),
+);
+
 function DashboardRoute() {
   const { session, context, onUnauthenticated } = useAppRouteData();
   return (
@@ -89,6 +96,22 @@ function RoleDetailRoute() {
   return <LazyRoleDetailPage onUnauthenticated={onUnauthenticated} defaultCompanyId={context.company.id} canManage={can(session, 'admin.roles.manage')} />;
 }
 
+function MyMembershipRequestsRoute() {
+  return <LazyMyMembershipRequestsPage onUnauthenticated={useAppRouteData().onUnauthenticated} />;
+}
+
+function PendingMembershipRequestsRoute() {
+  const { context, onUnauthenticated } = useAppRouteData();
+  return (
+    <LazyPendingMembershipRequestsPage
+      key={context.company.id}
+      onUnauthenticated={onUnauthenticated}
+      companyId={context.company.id}
+      companyName={context.company.name}
+    />
+  );
+}
+
 /**
  * Routes under `/app`. Admin pages are lazy chunks so the dashboard bundle stays small. The
  * `permission` is a UI hint only; the server decides (D-064). List specific paths first.
@@ -105,4 +128,7 @@ export const appRoutes: readonly Route[] = [
   // `/new` must stay before `/:roleId`, otherwise "new" would be read as a role id.
   { path: '/admin/roles/new', element: RoleCreateRoute, title: 'ایجاد گروه دسترسی', permission: 'admin.roles.manage' },
   { path: '/admin/roles/:roleId', element: RoleDetailRoute, title: 'جزئیات گروه دسترسی', permission: 'admin.roles.view' },
+  // No UI permission hint: the approver permission is per company and not in the session; the server decides (404).
+  { path: '/admin/membership-requests', element: PendingMembershipRequestsRoute, title: 'درخواست‌های عضویت' },
+  { path: '/account/membership-requests', element: MyMembershipRequestsRoute, title: 'درخواست‌های عضویت من', permission: 'account.view' },
 ];
