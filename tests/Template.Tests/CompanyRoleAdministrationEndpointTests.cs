@@ -55,6 +55,35 @@ public sealed class CompanyRoleAdministrationEndpointTests
         Assert.False(await fixture.Database.CompanyRoles.AnyAsync());
     }
 
+
+    [Fact]
+    public async Task UpdateRole_RejectsRoleIdOwnedByAnotherCompany()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddAdministrator();
+        fixture.AddCompany();
+        var otherCompany = new Domain.Company { Name = "شرکت دیگر", IsActive = true };
+        fixture.Database.Companies.Add(otherCompany);
+        var foreignRole = new Domain.CompanyRole
+        {
+            TenantId = otherCompany.Id,
+            Company = otherCompany,
+            Code = "FOREIGN",
+            Name = "نقش شرکت دیگر",
+            IsActive = true,
+        };
+        fixture.Database.CompanyRoles.Add(foreignRole);
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await Server.Api.CompanyRoleAdministrationEndpoints.UpdateRoleAsync(
+            fixture.CompanyId, foreignRole.Id, new DefaultHttpContext(), fixture.Principal(admin.Id),
+            new Server.Api.UpdateCompanyRoleRequest("تغییر غیرمجاز", true, Array.Empty<string>()),
+            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+
+        Assert.Equal(StatusCodes.Status404NotFound, (result as IStatusCodeHttpResult)?.StatusCode);
+        Assert.Equal("نقش شرکت دیگر", (await fixture.Database.CompanyRoles.SingleAsync(x => x.Id == foreignRole.Id)).Name);
+    }
+
     [Fact]
     public async Task AssignMembership_RejectsRoleFromAnotherCompany()
     {
