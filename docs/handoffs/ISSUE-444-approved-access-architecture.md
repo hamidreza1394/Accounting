@@ -28,7 +28,7 @@ D-065 و ACCESS_CONTROL_ARCHITECTURE.md افزوده شدند. INDEX، ARCHITECT
 | CI | پس از PR باید بررسی شود |
 
 ## ریسک و ادامه
-مدل واقعی FiscalPeriod باید پیش از طراحی grant بررسی شود. Host resolution و approval flow باید با API و session فعلی تطبیق یابند. PRهای #445..#456 نیازمند reconcile هستند.
+مدل واقعی FiscalPeriod باید پیش از طراحی grant بررسی شود. Host resolution و approval flow باید با API و session فعلی تطبیق یابند. PRهای #445..#456 نیازمند reconcile هستند. D-064 نیز پس از تأیید مالک محصول Accepted شد و D-065 چهار تصمیم تکمیلی را ثبت می‌کند.
 
 ## Git
 - Branch: docs/issue-444-approved-access-architecture
