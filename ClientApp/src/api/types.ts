@@ -457,3 +457,16 @@ export function parseAdminUserDetails(value: unknown): AdminUserDetails {
     memberships,
   };
 }
+
+export type CreateAdminUserRequest = {
+  username: string;
+  firstName: string;
+  lastName: string;
+  emailAddress: string;
+  cellPhoneNumber: string;
+  password: string;
+  confirmPassword: string;
+  isActive: boolean;
+};
+
+export type UpdateAdminUserRequest = Omit<CreateAdminUserRequest, 'password' | 'confirmPassword'>;

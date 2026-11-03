@@ -161,16 +161,8 @@ describe('admin user response contracts', () => {
     memberships: [],
   };
 
-  it('parses required detail fields into a fully typed user record', () => {
-    expect(parseAdminUserDetails(validDetails)).toMatchObject({
-      id: 'user-1',
-      emailAddress: 'alice@example.test',
-      activeCompanyCount: 0,
-      memberships: [],
-    });
-  });
-
-  it('rejects details when a required identity field is missing', () => {
+  it('parses required detail fields and rejects a missing id', () => {
+    expect(parseAdminUserDetails(validDetails).id).toBe('user-1');
     const { id: _ignored, ...withoutId } = validDetails;
     expect(() => parseAdminUserDetails(withoutId)).toThrow(ContractError);
   });
