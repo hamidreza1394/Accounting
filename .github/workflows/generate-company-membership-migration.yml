@@ -8,7 +8,7 @@ on:
       - .github/workflows/generate-company-membership-migration.yml
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   generate:
@@ -51,6 +51,15 @@ jobs:
             --project Infrastructure/Persistence/Infrastructure.Persistence.csproj \
             --startup-project Server/Server.csproj \
             --configuration Release
+
+      - name: Commit generated EF migration and model snapshot
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Infrastructure/Persistence/Migrations/*AddCompanyMembershipRequests* Infrastructure/Persistence/Migrations/DatabaseContextModelSnapshot.cs
+          git commit -m "feat(access): add generated membership request migration"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
 
       - name: Upload generated migration and snapshot
         if: always()
