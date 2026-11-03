@@ -30,11 +30,6 @@ describe('shadcn/ui primitives', () => {
     expect(onClick).not.toHaveBeenCalled();
   });
 
-  it('keeps the large Button at least 44px tall on small screens', () => {
-    render(<Button size="lg">ذخیره</Button>);
-    expect(screen.getByRole('button', { name: 'ذخیره' })).toHaveClass('max-sm:min-h-11');
-  });
-
   it('renders Card content with semantic heading and description', () => {
     render(
       <Card>

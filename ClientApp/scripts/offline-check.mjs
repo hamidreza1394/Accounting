@@ -131,11 +131,9 @@ export function checkBuild({ appRoot, wwwroot }) {
       for (const match of js.matchAll(/new\s+URL\(\s*(["'`])([^"'`$]+)\1\s*,\s*import\.meta\.url\s*\)/g)) {
         inspect(match[2], file);
       }
-      // Vite's preload list holds paths relative to the base of the client. `appUrl` ends with a
-      // slash, so a pseudo file inside it makes "assets/x.js" resolve to /app/assets/x.js (a bare
-      // directory URL would resolve against its parent and miss the chunk).
+      // Vite's preload list holds paths relative to the base of the client.
       for (const match of js.matchAll(/(["'`])((?:\.\/)?assets\/[\w.-]+\.(?:js|css))\1/g)) {
-        inspect(match[2], file, `${appUrl}index.html`);
+        inspect(match[2], file, appUrl);
       }
       // Literal resource paths and literal external resource URLs, recognised by extension.
       const literal = new RegExp(String.raw`(["'\`])((?:https?:)?\/[^"'\`\s]*?\.(?:${resourceExtensions})(?:[?#][^"'\`\s]*)?)\1`, 'gi');

@@ -39,7 +39,7 @@ export function SelectionLayout({ session, onLogout, footer, width = 'wide', chi
     <div className={`selection-backdrop relative isolate flex min-h-screen flex-col text-ink ${width === 'wide' ? 'lg:h-dvh lg:min-h-[44rem]' : ''}`}>
       <SelectionBackdrop />
 
-      <header className="on-dark bg-gradient-to-b from-navy-header to-navy-header-deep text-white shadow-[0_2px_12px_rgb(15_42_69/0.25)]">
+      <header className="on-dark bg-gradient-to-b from-[#15304a] to-[#0f2a45] text-white shadow-[0_2px_12px_rgb(15_42_69/0.25)]">
         <div className="flex min-h-[4.75rem] items-center justify-between gap-3 px-4 py-2 sm:px-8 xl:px-14">
           <span className="inline-flex items-center gap-3">
             <FaranouLogo size={46} label={false} tone="dark" />

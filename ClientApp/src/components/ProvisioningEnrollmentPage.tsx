@@ -1,8 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/button';
-import { apiGetRaw, apiPostJson } from '@/api/client';
 
 type AntiforgeryResponse = { headerName?: string; requestToken?: string };
 type ApiError = { detail?: string; title?: string };
@@ -20,9 +18,12 @@ export function ProvisioningEnrollmentPage() {
 
   useEffect(() => {
     let cancelled = false;
-    apiGetRaw('/provisioning/enrollment/antiforgery').then(result => {
-      if (!result.ok) throw new Error('دریافت توکن امنیتی ناموفق بود؛ صفحه را تازه‌سازی کنید.');
-      const body = (result.body ?? {}) as AntiforgeryResponse;
+    fetch('/api/v1/provisioning/enrollment/antiforgery', {
+      credentials: 'same-origin',
+      cache: 'no-store',
+    }).then(async response => {
+      if (!response.ok) throw new Error('دریافت توکن امنیتی ناموفق بود؛ صفحه را تازه‌سازی کنید.');
+      const body = await response.json() as AntiforgeryResponse;
       if (!cancelled) {
         setRequestToken(body.requestToken ?? '');
         setHeaderName(body.headerName ?? 'X-XSRF-TOKEN');
@@ -43,14 +44,19 @@ export function ProvisioningEnrollmentPage() {
     setBusy(true);
     setError('');
     try {
-      const response = await apiPostJson(
-        '/provisioning/enrollment/complete',
-        { username: username.trim(), enrollmentToken: token.trim(), newPassword: password },
-        { headerName, requestToken },
-      );
+      const response = await fetch('/api/v1/provisioning/enrollment/complete', {
+        method: 'POST',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { 'Content-Type': 'application/json', [headerName]: requestToken },
+        body: JSON.stringify({ username: username.trim(), enrollmentToken: token.trim(), newPassword: password }),
+      });
       if (!response.ok) {
-        const body = (response.body ?? {}) as ApiError;
-        const detail = body.detail ?? body.title ?? '';
+        let detail = '';
+        try {
+          const body = await response.json() as ApiError;
+          detail = body.detail ?? body.title ?? '';
+        } catch { /* Keep the response generic. */ }
         if (response.status === 410) throw new Error('توکن راه‌اندازی منقضی شده است؛ با اپراتور نصب برای صدور مجدد تماس بگیرید.');
         if (response.status === 429) throw new Error('تعداد تلاش‌ها بیش از حد مجاز است؛ بعداً دوباره تلاش کنید.');
         throw new Error(detail || 'فعال‌سازی حساب انجام نشد؛ نام کاربری و توکن را بررسی کنید.');
@@ -90,7 +96,7 @@ export function ProvisioningEnrollmentPage() {
                 <div className="space-y-2">
                   <label htmlFor="enrollment-token" className="text-sm font-medium">توکن یک‌بارمصرف</label>
                   <input id="enrollment-token" required maxLength={64} autoComplete="off" spellCheck={false} dir="ltr" value={token}
-                    onChange={event => setToken(event.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-start text-sm" />
+                    onChange={event => setToken(event.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-left text-sm" />
                 </div>
                 <div className="space-y-2">
                   <label htmlFor="enrollment-password" className="text-sm font-medium">گذرواژه جدید (حداقل ۱۲ نویسه)</label>
@@ -102,7 +108,7 @@ export function ProvisioningEnrollmentPage() {
                   <input id="enrollment-confirmation" type="password" required minLength={12} maxLength={128} autoComplete="new-password" value={confirmation}
                     onChange={event => setConfirmation(event.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" />
                 </div>
-                {error && <Alert tone="error">{error}</Alert>}
+                {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
                 <Button type="submit" className="w-full" disabled={busy || !requestToken}>
                   {busy ? 'در حال فعال‌سازی…' : 'مصرف توکن و فعال‌سازی حساب'}
                 </Button>

@@ -4,7 +4,7 @@ type Variant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'onDark';
 
 const variants: Record<Variant, string> = {
   primary: 'bg-navy text-white hover:bg-navy-deep border border-navy shadow-sm',
-  secondary: 'bg-white text-ink border border-faint hover:bg-cool',
+  secondary: 'bg-white text-ink border border-slate-400 hover:bg-cool',
   danger: 'bg-danger text-white border border-danger hover:opacity-90',
   ghost: 'bg-transparent text-ink border border-transparent hover:bg-cool',
   onDark: 'bg-white/10 text-white border border-white/35 hover:bg-white/20',
@@ -48,7 +48,7 @@ export function Button({
         onClick?.(event);
       }}
       className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] px-5 py-2.5 text-sm font-semibold transition-colors duration-150 motion-reduce:transition-none ${
-        inert && !loading ? 'cursor-not-allowed border border-line-strong bg-line text-sub' : variants[variant]
+        inert && !loading ? 'cursor-not-allowed border border-slate-300 bg-slate-200 text-slate-600' : variants[variant]
       } ${loading ? 'cursor-progress' : inert ? '' : 'cursor-pointer'}`}
     >
       {loading ? (

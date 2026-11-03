@@ -95,7 +95,7 @@ describe('App', () => {
     render(<App navigate={vi.fn()} />);
 
     expect(await screen.findByRole('heading', { name: /به سامانه یکپارچه فرانو خوش آمدید/ })).toBeInTheDocument();
-    await waitFor(() => expect(document.title).toBe('داشبورد | فرانو'));
+    await waitFor(() => expect(document.title).toBe('فرانو — داشبورد'));
   });
 
   it('falls back to the selection screen when the server refuses the automatic entry', async () => {

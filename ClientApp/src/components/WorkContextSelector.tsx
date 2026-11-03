@@ -1,8 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ApiError, selectWorkContext, setDefaultCompany as saveDefaultCompany } from '../api/client';
-import type { CompanyRelationshipType, SelectedContext, Session, WorkContext } from '../api/types';
+import type { CompanyRelationshipType, FiscalPeriodStatus, SelectedContext, Session, WorkContext } from '../api/types';
 import { formatPersianDate } from '../lib/date';
-import { blockedPeriodLabel, yearBadgeClass, yearStatusLabel } from '../lib/fiscalStatus';
 import {
   companiesWithoutEnterablePeriod,
   formatCount,
@@ -23,6 +22,7 @@ import { Button } from './ui/FaranouButton';
 import { ChoiceCard } from './ui/ChoiceCard';
 import { BuildingIcon, CalendarIcon, EyeIcon, InfoIcon, LockIcon, SearchIcon, UsersIcon } from './ui/icons';
 
+const statusLabels = { Open: 'باز', Closed: 'بسته', Archived: 'بایگانی‌شده' } as const;
 
 const relationshipLabels: Record<CompanyRelationshipType, string> = {
   parent: 'شرکت مادر',
@@ -38,6 +38,12 @@ const relationshipLabels: Record<CompanyRelationshipType, string> = {
 };
 
 /** The badge of a fiscal year in the period list. */
+const yearBadges: Record<FiscalPeriodStatus, { label: string; className: string }> = {
+  Open: { label: 'فعال', className: 'bg-[#dcf4e8] text-success' },
+  Closed: { label: 'بسته شده', className: 'bg-[#e1e7f0] text-sub' },
+  Archived: { label: 'بایگانی', className: 'bg-[#e1e7f0] text-sub' },
+};
+
 type SelectorProps = {
   session: Session;
   context: WorkContext;
@@ -57,8 +63,8 @@ function IconTile({ children, raised = false }: { children: ReactNode; raised?: 
   return (
     <span
       aria-hidden="true"
-      className={`inline-flex size-[2.875rem] shrink-0 items-center justify-center rounded-[0.875rem] text-azure ${
-        raised ? 'bg-white shadow-[0_2px_8px_rgb(60_110_180/0.15)]' : 'bg-wash-deep'
+      className={`inline-flex size-[2.875rem] shrink-0 items-center justify-center rounded-[0.875rem] text-[#1d4f86] ${
+        raised ? 'bg-white shadow-[0_2px_8px_rgb(60_110_180/0.15)]' : 'bg-[#e9f0f9]'
       }`}
     >
       {children}
@@ -70,7 +76,7 @@ function Chip({ children, tone }: { children: ReactNode; tone: 'plain' | 'period
   return (
     <span
       className={`inline-flex h-7 shrink-0 items-center whitespace-nowrap rounded-full px-3.5 text-[0.8125rem] ${
-        tone === 'period' ? 'border border-frost-deep bg-white text-steel' : 'bg-chip-cool text-steel-text'
+        tone === 'period' ? 'border border-[#cfe0f3] bg-white text-[#3f567a]' : 'bg-[#e9eef6] text-[#475a70]'
       }`}
     >
       {children}
@@ -109,10 +115,10 @@ function SearchBox({
         placeholder={placeholder}
         autoComplete="off"
         className={`h-11 w-full rounded-[0.875rem] border-[1.5px] bg-white pe-4 ps-10 text-[0.84375rem] text-ink placeholder:text-muted disabled:cursor-not-allowed disabled:bg-white/60 ${
-          tone === 'period' ? 'border-frost-deep' : 'border-frost'
+          tone === 'period' ? 'border-[#c6d9ef]' : 'border-[#dde6f1]'
         }`}
       />
-      <SearchIcon width={18} height={18} strokeWidth={2} className="pointer-events-none absolute start-3.5 top-1/2 -translate-y-1/2 text-faint" />
+      <SearchIcon width={18} height={18} strokeWidth={2} className="pointer-events-none absolute start-3.5 top-1/2 -translate-y-1/2 text-[#7b8ba0]" />
     </div>
   );
 }
@@ -129,7 +135,7 @@ function YearCard({
   onChange: (key: string) => void;
 }) {
   const hintId = `${name}-${year.key}-hint`;
-  const badge = { label: yearStatusLabel[year.status], className: yearBadgeClass[year.status] };
+  const badge = yearBadges[year.status];
 
   return (
     <ChoiceCard
@@ -211,8 +217,8 @@ function CompanyRow({
       <span className="@container flex items-center gap-4">
         <span
           aria-hidden="true"
-          className={`inline-flex size-[3.125rem] shrink-0 items-center justify-center rounded-full border border-frost shadow-[0_1px_4px_rgb(30_70_120/0.12)] ${
-            enterable ? 'bg-white text-azure' : 'bg-cool text-sub'
+          className={`inline-flex size-[3.125rem] shrink-0 items-center justify-center rounded-full border border-[#e1e9f3] shadow-[0_1px_4px_rgb(30_70_120/0.12)] ${
+            enterable ? 'bg-white text-[#1d4f86]' : 'bg-slate-100 text-sub'
           }`}
         >
           <BuildingIcon width={24} height={24} />
@@ -235,7 +241,7 @@ function CompanyRow({
               <span className="flex flex-wrap items-center gap-2">
                 {!enterable ? (
                   <Badge tone="neutral" icon={<LockIcon width={13} height={13} />}>
-                    {blockedPeriodLabel[period.status]}
+                    {statusLabels[period.status]}
                   </Badge>
                 ) : (
                   <Badge tone="info" icon={<EyeIcon width={13} height={13} />}>
@@ -262,7 +268,7 @@ function CompanyRow({
               <span aria-hidden="true" className="@max-2xl:hidden" />
             )}
             {company.roleName ? (
-              <span className="inline-flex h-[1.875rem] max-w-full items-center justify-self-start truncate rounded-full bg-azure-chip px-4 text-[0.8125rem] font-semibold text-azure-text">
+              <span className="inline-flex h-[1.875rem] max-w-full items-center justify-self-start truncate rounded-full bg-[#dff3fe] px-4 text-[0.8125rem] font-semibold text-[#1f6ea6]">
                 <span className="sr-only">نقش: </span>
                 {company.roleName}
               </span>
@@ -427,7 +433,7 @@ export function WorkContextSelector({
         <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
           <div>
             <div className="flex items-center gap-3">
-              <span aria-hidden="true" className="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-period text-azure">
+              <span aria-hidden="true" className="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#e6eef9] text-[#1d4f86]">
                 <CalendarIcon width={26} height={26} strokeWidth={1.7} />
               </span>
               <h1 className="text-[1.625rem] font-extrabold leading-snug text-title sm:text-[2rem]">فرانو - دوره مالی</h1>
@@ -437,7 +443,7 @@ export function WorkContextSelector({
             </p>
           </div>
           <p className="inline-flex items-center gap-3 rounded-2xl border border-white bg-white/90 px-5 py-3 text-[0.8125rem] font-medium text-title shadow-[0_4px_18px_rgb(31_70_120/0.1)]">
-            <UsersIcon width={24} height={24} className="text-azure-bright" />
+            <UsersIcon width={24} height={24} className="text-[#2f7bd0]" />
             <span>شما به {formatCount(companies.length)} شرکت دسترسی دارید</span>
           </p>
         </div>
@@ -461,9 +467,9 @@ export function WorkContextSelector({
         <div className="grid gap-5 lg:min-h-0 lg:flex-1 lg:grid-cols-[26.25rem_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]">
           <section
             aria-labelledby={yearsHeadingId}
-            className="relative flex min-h-0 min-w-0 flex-col rounded-[1.25rem] border-[1.5px] border-period-line bg-gradient-to-b from-period to-period-end p-4 shadow-[0_10px_30px_rgb(45_100_170/0.14)] sm:p-[1.125rem]"
+            className="relative flex min-h-0 min-w-0 flex-col rounded-[1.25rem] border-[1.5px] border-period-line bg-gradient-to-b from-period to-[#eef4fc] p-4 shadow-[0_10px_30px_rgb(45_100_170/0.14)] sm:p-[1.125rem]"
           >
-            <span aria-hidden="true" className="absolute inset-x-6 -top-[1.5px] h-1 rounded-b-md bg-gradient-to-r from-pick-light via-pick to-pick-light" />
+            <span aria-hidden="true" className="absolute inset-x-6 -top-[1.5px] h-1 rounded-b-md bg-gradient-to-r from-[#8fc3ee] via-pick to-[#8fc3ee]" />
             <div className="flex min-h-12 items-center gap-3">
               <IconTile raised>
                 <CalendarIcon width={26} height={26} strokeWidth={1.7} />
@@ -515,7 +521,7 @@ export function WorkContextSelector({
             )}
 
             <p className="mt-3 flex items-start gap-2 rounded-xl bg-white/70 px-3 py-1.5 text-xs leading-6 text-sub">
-              <InfoIcon width={16} height={16} className="mt-1 shrink-0 text-azure-text" />
+              <InfoIcon width={16} height={16} className="mt-1 shrink-0 text-[#1d6aa5]" />
               <span>دوره بسته فقط برای مشاهده و گزارش‌گیری است.</span>
             </p>
           </section>
@@ -523,7 +529,7 @@ export function WorkContextSelector({
           <section
             ref={companiesPanelRef}
             aria-labelledby={companiesHeadingId}
-            className="flex min-h-0 min-w-0 scroll-mt-4 flex-col rounded-[1.25rem] border border-frost bg-white/90 p-4 shadow-[0_8px_28px_rgb(31_70_120/0.08)] sm:p-[1.125rem]"
+            className="flex min-h-0 min-w-0 scroll-mt-4 flex-col rounded-[1.25rem] border border-[#dbe6f3] bg-white/90 p-4 shadow-[0_8px_28px_rgb(31_70_120/0.08)] sm:p-[1.125rem]"
           >
             <div className="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-3">
               <IconTile>
@@ -551,12 +557,12 @@ export function WorkContextSelector({
             </div>
 
             {!year ? (
-              <p className="mt-4 rounded-xl border border-dashed border-faint bg-white/70 px-4 py-8 text-center text-sm leading-7 text-sub">
-                <CalendarIcon width={28} height={28} className="mx-auto mb-2 text-muted" />
+              <p className="mt-4 rounded-xl border border-dashed border-slate-400 bg-white/70 px-4 py-8 text-center text-sm leading-7 text-sub">
+                <CalendarIcon width={28} height={28} className="mx-auto mb-2 text-slate-500" />
                 ابتدا یک دوره مالی انتخاب کنید.
               </p>
             ) : visibleEntries.length === 0 ? (
-              <p role="status" className="mt-4 rounded-xl border border-dashed border-faint bg-white/70 p-6 text-center text-sm text-sub">
+              <p role="status" className="mt-4 rounded-xl border border-dashed border-slate-400 bg-white/70 p-6 text-center text-sm text-sub">
                 شرکتی با این مشخصات پیدا نشد.
               </p>
             ) : (
@@ -579,7 +585,7 @@ export function WorkContextSelector({
             )}
 
             {entry ? (
-              <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-frost pt-3">
+              <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-[#e5edf6] pt-3">
                 {defaultCompanyId === entry.company.id ? (
                   <Badge tone="info">این شرکت، پیش‌فرض حساب شماست</Badge>
                 ) : (
