@@ -104,7 +104,10 @@ public sealed class CompanyUserDirectorySqlServerTests
                 search: "sql-member", page: 1, pageSize: 1, cancellationToken: cancellationToken);
             var firstOk = Assert.IsType<Ok<Server.Api.CompanyUserDirectoryResponse>>(first);
             Assert.Equal(2, firstOk.Value!.TotalCount);
-            Assert.Equal("sql-member-a", Assert.Single(firstOk.Value.Items).Username);
+            var firstItem = Assert.Single(firstOk.Value.Items);
+            Assert.Equal("sql-member-a", firstItem.Username);
+            Assert.Equal(DateTimeKind.Utc, firstItem.MembershipCreatedAtUtc.Kind);
+            Assert.EndsWith("Z", JsonSerializer.Serialize(firstItem.MembershipCreatedAtUtc));
 
             var second = await Server.Api.CompanyUserDirectoryEndpoints.GetUsersAsync(
                 company.Id, new DefaultHttpContext(), Principal(manager.Id), database, access,
