@@ -193,3 +193,19 @@ cd ClientApp && npm ci && npm run typecheck && npm test && npm run build && npm 
 - `CustomerProvisioningAcknowledgementTrustStoreTests` covers configured public-key resolution, explicit revocation while retaining the public key for audit, overlap rotation where the new version remains trusted while the previous version is revoked, and fail-closed handling of malformed revocation flags.
 - Revocation is deployment configuration under `Provisioning:RevokedAcknowledgementKeys:<keyId>=true`; a revoked KeyId cannot verify a newly produced ACK, so the customer apply transaction remains fail-closed (503) and persists no acknowledgement.
 - The tests are pure configuration/cryptography tests and require no SQL Server or external provider.
+
+
+## ماتریس آزمون دسترسی چندشرکتی — D-065
+
+| حوزه | آزمون مثبت | آزمون منفی |
+|---|---|---|
+| عضویت | Pending به Approved توسط مقصد | Pending/Rejected/Suspended/Revoked/Expired هیچ داده عملیاتی ندهد |
+| تأیید | destination approver تصمیم را audit کند | self-approval و approval توسط مدیر گروه بدون مجوز مقصد رد شود |
+| سال/دوره | grant سالی و دوره‌ای در Company درست | دوره شرکت دیگر، دوره خارج grant و دوره جدید بدون policy رد شود |
+| directory | کاربران شرکت‌های همان گروه با DTO محدود | شرکت بیرون گروه و فیلدهای حساس/role/login/session افشا نشوند |
+| domain | Company و Group host به context درست resolve شوند | host spoof، unverified، inactive، duplicate و ambiguous fail-closed |
+| authorization | permission و entitlement در context معتبر | تغییر route/body/query/claim/cache موجب ارتقای دسترسی نشود |
+| concurrency | approval/revoke اتمیک | race condition grant یا approval موجب دسترسی ناخواسته نشود |
+| extraction | contract tests بدون Entity داخلی | reference مستقیم به DbContext/Entity ماژول دیگر رد شود |
+
+تست Integration باید روی SQL Server provider واقعی اجرا شود؛ تست Host/cookie/anti-forgery، migration تازه و ارتقایافته، stale-session و cross-tenant نیز لازم است. تست نوشته‌شده بدون اجرای CI/SQL Server Verified نیست.
