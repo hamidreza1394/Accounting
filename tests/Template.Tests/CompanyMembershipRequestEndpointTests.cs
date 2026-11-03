@@ -26,6 +26,8 @@ public sealed class CompanyMembershipRequestEndpointTests
         Assert.Equal(Domain.CompanyMembershipRequestStatuses.Pending, request.Status);
         Assert.False(await fixture.Database.UserCompanyMemberships.AnyAsync(
             membership => membership.UserId == fixture.Requester.Id && membership.TenantId == fixture.Destination.Id));
+        Assert.Null(await fixture.Access.FindAccessibleCompanyAsync(
+            fixture.Requester.Id, fixture.Destination.Id));
         Assert.Contains(await fixture.Database.SecurityAuditEvents.ToListAsync(),
             audit => audit.EventType == "CompanyMembershipRequested" && audit.UserId == fixture.Requester.Id);
     }
@@ -93,6 +95,37 @@ public sealed class CompanyMembershipRequestEndpointTests
 
         Assert.Equal(StatusCodes.Status400BadRequest, (result as IStatusCodeHttpResult)?.StatusCode);
         Assert.Empty(await fixture.Database.CompanyMembershipRequests.ToListAsync());
+    }
+
+    [Fact]
+    public async Task GetPendingRequests_RequiresDestinationPermissionAndReturnsOnlyMinimalRequesterFields()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var own = fixture.NewRequest();
+        var other = fixture.NewRequest(fixture.OtherUser.Id);
+        fixture.Database.CompanyMembershipRequests.AddRange(own, other);
+        await fixture.Database.SaveChangesAsync();
+
+        var allowed = await Server.Api.CompanyMembershipRequestEndpoints.GetPendingRequestsAsync(
+            fixture.Destination.Id, new DefaultHttpContext(), fixture.Principal(fixture.Approver.Id),
+            fixture.Database, fixture.Access, page: 1, pageSize: 25, cancellationToken: default);
+        var ok = Assert.IsType<Ok<Server.Api.CompanyMembershipPendingListResponse>>(allowed);
+        Assert.Equal(2, ok.Value!.TotalCount);
+        Assert.Equal(2, ok.Value.Items.Count);
+        Assert.All(ok.Value.Items, item => Assert.True(item.IsRequesterActive));
+        var fields = typeof(Server.Api.CompanyMembershipPendingItemResponse)
+            .GetProperties().Select(property => property.Name).ToArray();
+        Assert.DoesNotContain(fields, name =>
+            name.Contains("Email", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Phone", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Password", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Role", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Permission", StringComparison.OrdinalIgnoreCase));
+
+        var denied = await Server.Api.CompanyMembershipRequestEndpoints.GetPendingRequestsAsync(
+            fixture.Destination.Id, new DefaultHttpContext(), fixture.Principal(fixture.OtherUser.Id),
+            fixture.Database, fixture.Access, cancellationToken: default);
+        Assert.Equal(StatusCodes.Status404NotFound, (denied as IStatusCodeHttpResult)?.StatusCode);
     }
 
     [Fact]
@@ -209,6 +242,12 @@ public sealed class CompanyMembershipRequestEndpointTests
             membership => membership.UserId == fixture.Requester.Id && membership.TenantId == fixture.Destination.Id));
         Assert.Contains(await fixture.Database.SecurityAuditEvents.ToListAsync(),
             audit => audit.EventType == "CompanyMembershipRejected");
+
+        var newRequest = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
+            new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
+            new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Source.Id, fixture.Destination.Id),
+            new AllowAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
+        Assert.Equal(StatusCodes.Status201Created, (newRequest as IStatusCodeHttpResult)?.StatusCode);
     }
 
     [Fact]
