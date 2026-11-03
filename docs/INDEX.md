@@ -63,9 +63,14 @@
 | [`handoffs/ISSUE-498-membership-permission-delegation-ceiling.md`](handoffs/ISSUE-498-membership-permission-delegation-ceiling.md) | enforce سقف واگذاری مجوز هنگام تأیید عضویت بین‌شرکتی؛ بدون Schema/Migration |
 | [`handoffs/ISSUE-492-customer-boundary-authz-tests.md`](handoffs/ISSUE-492-customer-boundary-authz-tests.md) | تست امنیتی endpointهای Customer Boundary operator؛ فقط Infrastructure، Anti-forgery و جلوگیری از reassignment |
 | [`handoffs/ISSUE-494-company-user-directory-api.md`](handoffs/ISSUE-494-company-user-directory-api.md) | API فهرست کاربران در scope شرکت با مجوز users.list؛ بدون اطلاعات تماس/امنیتی |
+| [`TIME_CONTRACT.md`](TIME_CONTRACT.md) | ممیزی و قرارداد زمان: `*Utc` در برابر ساعت محلی قدیمی سرور، قرارداد Frontend و پیشنهاد Backend (D-067) |
+| [`handoffs/ISSUE-444-utc-time-contract.md`](handoffs/ISSUE-444-utc-time-contract.md) | تحویل یکپارچه‌سازی قرارداد زمان در ClientApp (Issue #444) |
 | [`handoffs/ISSUE-444-jalali-date-picker.md`](handoffs/ISSUE-444-jalali-date-picker.md) | تحویل انتخابگر تاریخ شمسی (`JalaliDateField`) و ADR وابستگی D-068 (Issue #444) |
 | [`handoffs/ISSUE-444-security-audit-ui.md`](handoffs/ISSUE-444-security-audit-ui.md) | تحویل UI گزارش امنیت و سوابق مدیریتی روی API #487 (Issue #444، S7) |
 | [`handoffs/ISSUE-444-ui-e2e-and-a11y.md`](handoffs/ISSUE-444-ui-e2e-and-a11y.md) | تحویل E2E و axe رابط مدیریت دسترسی (Issue #444، مرحلهٔ ۱۱؛ اجرا فقط در CI) |
+| [`TIME_CONTRACT.md`](TIME_CONTRACT.md) | ممیزی و قرارداد زمان: `*Utc` در برابر ساعت محلی قدیمی سرور، قرارداد Frontend و پیشنهاد Backend (D-067) |
+| [`handoffs/ISSUE-444-utc-time-contract.md`](handoffs/ISSUE-444-utc-time-contract.md) | تحویل یکپارچه‌سازی قرارداد زمان در ClientApp (Issue #444) |
+| [`handoffs/ISSUE-444-security-audit-complete.md`](handoffs/ISSUE-444-security-audit-complete.md) | تکمیل UI گزارش امنیتی: فیلتر تاریخ شمسی، انتخاب کاربر/شرکت و قراردادهای API باقی‌مانده (Issue #444) |
 | [`handoffs/ISSUE-467-login-history-logout-test.md`](handoffs/ISSUE-467-login-history-logout-test.md) | Regression test برای نمایش خروج موفق در سوابق ورود/خروج کاربر |
 | [`WORK_LOG.md`](WORK_LOG.md), [`handoffs/`](handoffs/) | سوابق تحویل؛ [تحویل تجمیعی مدیریت کاربران و دسترسی‌ها](handoffs/ISSUE-444-admin-ui-completion.md)؛ [تحویل نقش‌ها و کاتالوگ مجوز](handoffs/ISSUE-475-roles-permission-catalog.md) |
 

@@ -54,6 +54,13 @@ export function dateToIso(date: Date): string {
   return `${String(date.getFullYear()).padStart(4, '0')}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
+/** `date` limited to [min, max]: an empty field opens on today when allowed, else on the nearest allowed day. */
+export function clampToRange(date: Date, min?: Date, max?: Date): Date {
+  if (min && date < min) return min;
+  if (max && date > max) return max;
+  return date;
+}
+
 const triggerClass =
   'inline-flex h-10 min-w-0 flex-1 items-center justify-between gap-2 rounded-lg border border-line bg-white px-3 text-sm text-ink outline-none transition-colors focus-visible:border-teal-deep focus-visible:ring-2 focus-visible:ring-gold aria-[invalid=true]:border-danger disabled:cursor-not-allowed disabled:bg-cool disabled:text-sub';
 
@@ -70,6 +77,7 @@ export function JalaliDateField({
 }: JalaliDateFieldProps) {
   const [open, setOpen] = useState(false);
   const titleId = useId();
+  const valueId = useId();
   const selected = isoToDate(value);
   const minDate = min ? isoToDate(min) : undefined;
   const maxDate = max ? isoToDate(max) : undefined;
@@ -92,12 +100,14 @@ export function JalaliDateField({
           type="button"
           disabled={disabled}
           id={aria.id}
-          aria-describedby={aria['aria-describedby']}
+          // The name usually comes from the field label, which hides the content; the chosen day is
+          // therefore part of the description so a screen reader reads it after the label.
+          aria-describedby={[valueId, aria['aria-describedby']].filter(Boolean).join(' ')}
           aria-invalid={aria['aria-invalid']}
           aria-required={aria['aria-required'] ?? aria.required}
           className={triggerClass}
         >
-          <span className={cn('truncate', !selected && 'text-muted')} dir={selected ? 'ltr' : undefined}>
+          <span id={valueId} className={cn('truncate', !selected && 'text-muted')} dir={selected ? 'ltr' : undefined}>
             {text}
           </span>
           <CalendarDays size={16} aria-hidden="true" className="shrink-0 text-sub" />
@@ -116,7 +126,7 @@ export function JalaliDateField({
               <DayPicker
                 mode="single"
                 {...(selected ? { selected } : {})}
-                {...(selected ?? minDate ? { defaultMonth: (selected ?? minDate) as Date } : {})}
+                defaultMonth={selected ?? clampToRange(new Date(), minDate, maxDate)}
                 startMonth={startMonth}
                 endMonth={endMonth}
                 disabled={[...(minDate ? [{ before: minDate }] : []), ...(maxDate ? [{ after: maxDate }] : [])]}

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getSecurityAuditEvents } from './client';
-import { ContractError, asUtcInstant, parseSecurityAuditEvents } from './types';
+import { asUtcInstant } from '../lib/time';
+import { ContractError, parseSecurityAuditEvents } from './types';
 import { auditItem, auditPage } from '../test/securityAudit';
 
 const jsonResponse = (status: number, body: unknown) =>
