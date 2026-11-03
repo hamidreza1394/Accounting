@@ -62,7 +62,7 @@
 - endpointهای خارج از Issue #496 که CompanyRole/UserCompanyMembership را تغییر می‌دهند باید در ممیزی‌های بعدی از همین concurrency contract پیروی کنند.
 
 ## شناسه‌های Git
-- Branch: agent/496-role-membership-rowversion (نسخهٔ همگام‌شده: agent/496-role-membership-rowversion-mainline)
+- Branch: agent/496-role-membership-rowversion (نسخهٔ همگام‌شده: agent/496-role-membership-rowversion-mainline2)
 - Commit نهایی فعلی: 5a843981db12a1b614bac8b2c095aeda2147ed66
 - Pull Request: https://github.com/hamidreza1394/Accounting/pull/496
 
