@@ -2233,3 +2233,13 @@
 - پاسخ حداقلی شامل username/name، وضعیت user/membership/role و role display است؛ email، phone، password/hash، login history، IP، DetailsJson و permission list حذف شده‌اند. Search و pagination سمت سرور و no-store است.
 - تست‌های unit و SQL Server integration اضافه شدند؛ اجرای محلی در این محیط ممکن نیست (GitHub DNS و .NET SDK در دسترس نیست). CI مرجع تأیید است.
 - بدون UI/ClientApp؛ Claude می‌تواند endpoint را مصرف کند. handoff: docs/handoffs/ISSUE-494-company-user-directory-api.md.
+
+
+## 2026-11-03 — Issue #498: enforce سقف واگذاری مجوز در تأیید عضویت بین‌شرکتی
+- در API تأیید عضویت، PermissionIdهای نقش مقصد با مجوزهای مؤثر نقش‌های فعال تأییدکننده در همان شرکت مقایسه می‌شوند؛ واگذاری مجوزی که تأییدکننده ندارد رد می‌شود.
+- تخصیص System Role از این گردش‌کار رد می‌شود؛ نقش بدون مجوز همچنان قابل واگذاری است. پاسخ رد عمومی 403 است و درخواست Pending/عضویت/سوابق Audit موفق تغییر نمی‌کند.
+- چهار تست واحد برای subset مجاز، مجوز اضافه، System Role و جلوگیری از نشت مجوز شرکت دیگر اضافه شد.
+- تست SQL Server موجود گسترش یافت تا ترجمه query، رد واگذاری خارج از سقف و عدم تغییر درخواست/عضویت/Audit را روی SQL Server واقعی بررسی کند.
+- هیچ Schema، Migration، UI یا قرارداد پاسخ موفق تغییر نکرد.
+- تست محلی و dotnet build اجرا نشدند؛ CI باید روی SHA نهایی بررسی شود. نتیجه تست SQL Server هنوز Verified نیست.
+- handoff: docs/handoffs/ISSUE-498-membership-permission-delegation-ceiling.md.
