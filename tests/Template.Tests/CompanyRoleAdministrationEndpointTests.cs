@@ -83,6 +83,50 @@ public sealed class CompanyRoleAdministrationEndpointTests
         Assert.False(await fixture.Database.UserCompanyMemberships.AnyAsync());
     }
 
+
+    [Fact]
+    public async Task AssignMembership_DoesNotCreateANewMembershipBeforeDestinationApproval()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddAdministrator();
+        var user = fixture.AddUser("employee");
+        fixture.AddCompany();
+        var role = new Domain.CompanyRole { TenantId = fixture.CompanyId, Code = "ACCOUNTANT", Name = "حسابدار", IsActive = true };
+        fixture.Database.CompanyRoles.Add(role);
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await Server.Api.CompanyRoleAdministrationEndpoints.AssignMembershipAsync(
+            fixture.CompanyId, role.Id, user.Id, new DefaultHttpContext(),
+            fixture.Principal(admin.Id), new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+
+        Assert.Equal(StatusCodes.Status409Conflict, (result as IStatusCodeHttpResult)?.StatusCode);
+        Assert.False(await fixture.Database.UserCompanyMemberships.AnyAsync());
+    }
+
+    [Fact]
+    public async Task AssignMembership_DoesNotReactivateAnInactiveMembership()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddAdministrator();
+        var user = fixture.AddUser("employee");
+        fixture.AddCompany();
+        var role = new Domain.CompanyRole { TenantId = fixture.CompanyId, Code = "ACCOUNTANT", Name = "حسابدار", IsActive = true };
+        fixture.Database.CompanyRoles.Add(role);
+        fixture.Database.UserCompanyMemberships.Add(new Domain.UserCompanyMembership
+        {
+            UserId = user.Id, TenantId = fixture.CompanyId, Role = role, RoleId = role.Id,
+            IsActive = false, CreatedAtUtc = DateTime.UtcNow,
+        });
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await Server.Api.CompanyRoleAdministrationEndpoints.AssignMembershipAsync(
+            fixture.CompanyId, role.Id, user.Id, new DefaultHttpContext(),
+            fixture.Principal(admin.Id), new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+
+        Assert.Equal(StatusCodes.Status409Conflict, (result as IStatusCodeHttpResult)?.StatusCode);
+        Assert.False((await fixture.Database.UserCompanyMemberships.SingleAsync()).IsActive);
+    }
+
     private sealed class Fixture : IAsyncDisposable
     {
         public Fixture()
