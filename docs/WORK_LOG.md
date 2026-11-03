@@ -2178,3 +2178,10 @@
 - رویدادهای ناقص یا نبود Logout به‌عنوان مدت نشست/انقضا تفسیر نمی‌شوند. هیچ schema، migration، UI یا retention deletion در این برش نیست.
 - تست‌های unit و SQL Server integration اضافه شدند؛ اجرای محلی در این محیط ممکن نبود (GitHub DNS و .NET SDK در دسترس نیست). CI روی PR معیار تأیید است.
 - handoff: `docs/handoffs/ISSUE-485-security-audit-report-api.md`.
+
+
+## 2026-11-03 — Issue #444: UI گزارش امنیت و سوابق مدیریتی (S7)
+- صفحهٔ `/admin/security/audit` روی API ادغام‌شدهٔ #487 ساخته شد: فهرست صفحه‌بندی‌شدهٔ رویدادها، فیلتر نوع رویداد/بازهٔ تاریخ/کاربر/شرکت، برچسب فارسی برای کدهای شناخته‌شده، هشدار «نبودِ رویداد = نبودِ اتفاق نیست». IP و محتوای رویداد نمایش داده نمی‌شود. سمت سرور تغییر نکرد.
+- انتخابگر تاریخ شمسی ساخته نشد (وابستگی جدید نیازمند تأیید مالک)؛ `input type=date` بومی استفاده شد. ورود/خروج سراسری، نشست‌ها، export و retention به API وابسته‌اند.
+- تست: typecheck، ۴۵۵ تست vitest، build و check:offline موفق؛ axe و E2E واقعی اجرا نشد.
+- handoff: `docs/handoffs/ISSUE-444-security-audit-ui.md`.
