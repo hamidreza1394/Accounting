@@ -173,8 +173,7 @@ public sealed class CompanyAccessService
 	}
 
 	/// <summary>
-	/// The permission codes starting with <paramref name="codePrefix" /> that the user holds in the
-	/// company through an active membership. The prefix is a server constant, never client input.
+	/// All permission codes granted through the user's active role in the company.
 	/// </summary>
 	public Task<IReadOnlyList<string>> GetGrantedPermissionCodesAsync(
 		Guid userId,
@@ -184,6 +183,10 @@ public sealed class CompanyAccessService
 		return GetGrantedPermissionCodesAsync(userId, companyId, string.Empty, cancellationToken);
 	}
 
+	/// <summary>
+	/// The permission codes starting with <paramref name="codePrefix" /> that the user holds in the
+	/// company through an active membership. The prefix is a server constant, never client input.
+	/// </summary>
 	public async Task<IReadOnlyList<string>> GetGrantedPermissionCodesAsync(
 		Guid userId,
 		Guid companyId,
