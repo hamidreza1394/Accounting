@@ -2170,6 +2170,11 @@
 - handoff: `docs/handoffs/ISSUE-444-role-members-api.md`.
 
 
+## 2026-11-03 — Issue #444: UI اعضای گروه دسترسی و انتقال اعضا
+- بخش «اعضای این گروه» به صفحهٔ جزئیات گروه اضافه شد: فهرست صفحه‌بندی‌شدهٔ اعضای فعال و انتقال گروهی با تأییدیه روی API ادغام‌شدهٔ #482؛ گروه سیستمی و سقف ۵۰۰ نفر در UI توضیح داده می‌شوند و سرور مرجع می‌ماند.
+- جستجوی اعضا ساخته نشد چون API ندارد. هیچ تغییری در Backend نبود.
+- تست: typecheck، ۴۲۲ تست vitest، build و check:offline موفق؛ axe و E2E واقعی اجرا نشد.
+- handoff: `docs/handoffs/ISSUE-444-role-members-ui.md`.
 ## 2026-11-03 — Issue #485: گزارش Audit امنیتی مدیر نصب
 
 - API فقط‌خواندنی `GET /api/v1/admin/security/audit-events` روی جدول موجود SecurityAuditEvents اضافه شد؛ احراز مجدد مدیر نصب از دیتابیس انجام می‌شود.
@@ -2185,3 +2190,18 @@
 - انتخابگر تاریخ شمسی ساخته نشد (وابستگی جدید نیازمند تأیید مالک)؛ `input type=date` بومی استفاده شد. ورود/خروج سراسری، نشست‌ها، export و retention به API وابسته‌اند.
 - تست: typecheck، ۴۵۵ تست vitest، build و check:offline موفق؛ axe و E2E واقعی اجرا نشد.
 - handoff: `docs/handoffs/ISSUE-444-security-audit-ui.md`.
+## 2026-11-03 — Issue #483: E2E مثبت مدیریت نقش با مدیر نصب و SQL Server
+
+- یک حساب مدیر نصب اختصاصی برای E2E ایجاد شد؛ حساب‌های عادی Alice/Bob تغییر نقش نمی‌گیرند و حساب Infrastructure Master نیز برای احراز مدیر API استفاده نمی‌شود.
+- نقش سراسری `Admin` در دیتابیس آزمون ایجاد و فقط به کاربر E2E اختصاص داده می‌شود؛ رمز تصادفی در فایل `.e2e-state.json` نادیده‌گرفته‌شده باقی می‌ماند.
+- سناریوی Playwright روی سرور Production منتشرشده و SQL Server واقعی، خواندن کاتالوگ و نقش‌ها، رد POST بدون Anti-forgery، ایجاد نقش با مجوز catalog موجود، بازخوانی، تغییر مجوزها، رد role ID شرکت دیگر با 404 و غیرفعال‌سازی نقش را پوشش می‌دهد.
+- هیچ کد Production، API، UI، Schema یا Migration تغییر نکرده است. تست محلی در این محیط اجرا نشد (GitHub clone به‌علت DNS و .NET SDK در دسترس نبود)؛ اجرای E2E در CI مرجع Verified شدن است.
+- handoff: `docs/handoffs/ISSUE-483-role-admin-positive-e2e.md`.
+
+
+## 2026-11-03 — PR #484: رفع ناپایداری تست عنوان صفحهٔ دسترسی ممنوع
+
+- بررسی CI نشان داد سناریوی E2E مثبت نقش‌ها، seed دیتابیس، publish سرور و job واقعی E2E همگی موفق‌اند؛ شکست از job `publish` در مجموعهٔ تست Client بود.
+- علت قطعی: تست `AppRouting` بلافاصله پس از مشاهدهٔ DOM صفحهٔ Forbidden، عنوان سند را synchronous assert می‌کرد؛ اما `RouteView` عنوان را در `useEffect` به‌روزرسانی می‌کند. در نتیجه race زمان‌بندی باعث باقی ماندن عنوان صفحهٔ قبلی شد.
+- assertion به `waitFor` تغییر کرد تا قرارداد واقعی UI (عنوان پس از effect) را بدون تغییر رفتار Production بسنجد.
+- CI اولیه: `.NET CI` ناموفق فقط به‌علت همین assertion؛ `e2e`, `build-and-test`, `client` و `publish-windows` موفق، `Semgrep` موفق. اجرای مجدد CI برای تأیید fix لازم است.

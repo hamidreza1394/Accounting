@@ -11,6 +11,8 @@ import {
   parseSecurityAuditEvents,
   parseCreatedCompanyRole,
   parsePermissionCatalog,
+  parseCompanyRoleMembers,
+  parseTransferredMemberCount,
   parsePermissionTemplates,
   parseCompanies,
   parseCompanyOverview,
@@ -30,6 +32,7 @@ import {
   type PermissionCatalogItem,
   type PermissionTemplate,
   type UpdateCompanyRoleRequest,
+  type CompanyRoleMemberPage,
   type CompanySummary,
   type SelectedContext,
   type Session,
@@ -290,6 +293,33 @@ export async function createCompanyRole(companyId: string, request: CreateCompan
 /** Replaces name, status and permissions of a non-system role (204). System roles answer 409. */
 export async function updateCompanyRole(companyId: string, roleId: string, request: UpdateCompanyRoleRequest): Promise<void> {
   await sendJson('PUT', `/admin/companies/${encodeURIComponent(companyId)}/roles/${encodeURIComponent(roleId)}`, request);
+}
+
+/** The active members of one role, paged (`GET .../roles/{roleId}/members`). Installation administrators only. */
+export async function getCompanyRoleMembers(
+  companyId: string,
+  roleId: string,
+  page: number,
+  pageSize: number,
+  signal?: AbortSignal,
+): Promise<CompanyRoleMemberPage> {
+  return parseCompanyRoleMembers(
+    await getJson(`/admin/companies/${encodeURIComponent(companyId)}/roles/${encodeURIComponent(roleId)}/members?page=${page}&pageSize=${pageSize}`, signal),
+  );
+}
+
+/**
+ * Moves every active member of a role to another active role of the same company in one atomic
+ * step and returns how many were moved. It never creates or reactivates a membership. System roles
+ * and more than 500 members answer 409; a role of another company answers 404.
+ */
+export async function transferCompanyRoleMembers(companyId: string, roleId: string, targetRoleId: string): Promise<number> {
+  const response = await sendJson(
+    'POST',
+    `/admin/companies/${encodeURIComponent(companyId)}/roles/${encodeURIComponent(roleId)}/members/transfer`,
+    { targetRoleId },
+  );
+  return parseTransferredMemberCount(await response.json());
 }
 
 /** Every registered permission (unpaged, a few hundred at most). */

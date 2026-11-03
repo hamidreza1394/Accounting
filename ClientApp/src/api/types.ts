@@ -539,6 +539,51 @@ function readCount(source: JsonObject, key: string, what: string): number {
   return value;
 }
 
+/** One active member of a company role (minimal identity only; no e-mail, phone or hash). */
+export type CompanyRoleMember = {
+  userId: string;
+  username: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  isUserActive: boolean;
+  memberSinceUtc: string;
+};
+
+export type CompanyRoleMemberPage = { items: CompanyRoleMember[]; totalCount: number; page: number; pageSize: number };
+
+export function parseCompanyRoleMembers(value: unknown): CompanyRoleMemberPage {
+  const what = 'roleMembers';
+  if (!isObject(value)) throw new ContractError(what);
+  const rows = value['items'];
+  if (!Array.isArray(rows)) throw new ContractError(`${what}.items`);
+  const page = readCount(value, 'page', what);
+  const pageSize = readCount(value, 'pageSize', what);
+  if (page < 1 || pageSize < 1) throw new ContractError(`${what}.page`);
+  return {
+    items: rows.map((row): CompanyRoleMember => {
+      if (!isObject(row)) throw new ContractError(`${what}.item`);
+      const since = readIsoDateTime(row, 'memberSinceUtc', `${what}.item`);
+      if (since === null) throw new ContractError(`${what}.item.memberSinceUtc`);
+      return {
+        userId: readString(row, 'userId', `${what}.item`),
+        username: readNullableString(row, 'username', `${what}.item`),
+        firstName: readNullableString(row, 'firstName', `${what}.item`),
+        lastName: readNullableString(row, 'lastName', `${what}.item`),
+        isUserActive: readBoolean(row, 'isUserActive', `${what}.item`),
+        memberSinceUtc: since,
+      };
+    }),
+    totalCount: readCount(value, 'totalCount', what),
+    page,
+    pageSize,
+  };
+}
+
+export function parseTransferredMemberCount(value: unknown): number {
+  if (!isObject(value)) throw new ContractError('transferResult');
+  return readCount(value, 'movedCount', 'transferResult');
+}
+
 export function parsePermissionCatalog(value: unknown): PermissionCatalogItem[] {
   if (!Array.isArray(value)) throw new ContractError('permissionCatalog');
   return value.map((item): PermissionCatalogItem => {
