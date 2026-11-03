@@ -18,11 +18,11 @@ import {
   Settings2,
   ShieldCheck,
   ShoppingCart,
+  UserCheck,
   Users,
   Wallet,
   X,
   type LucideIcon,
-  UserCheck,
 } from 'lucide-react';
 import type { SelectedContext, Session } from '../api/types';
 import { Alert } from './ui/Alert';

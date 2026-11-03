@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ApiError,
   approveMembershipRequest,
@@ -34,6 +34,11 @@ type RolesState =
   | { kind: 'forbidden' }
   | { kind: 'error'; message: string };
 
+/** Display name plus username, so two requesters with the same name have distinct button names. */
+function requesterLabel(request: PendingMembershipRequest): string {
+  return request.username ? `${request.requesterDisplayName} (${request.username})` : request.requesterDisplayName;
+}
+
 function message(cause: unknown, fallback: string): string {
   return cause instanceof ApiError ? cause.message : fallback;
 }
@@ -51,6 +56,7 @@ export function PendingMembershipRequestsPage({ onUnauthenticated, companyId, co
   const [failure, setFailure] = useState<{ message: string; status: number | null } | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [flash, setFlash] = useState<string | null>(null);
+  const flashRef = useRef<HTMLDivElement>(null);
 
   const [decision, setDecision] = useState<Decision | null>(null);
   const [busy, setBusy] = useState(false);
@@ -61,6 +67,12 @@ export function PendingMembershipRequestsPage({ onUnauthenticated, companyId, co
 
   const reload = useCallback(() => setAttempt((value) => value + 1), []);
 
+  // After a decision the row (and the button that opened the dialog) is gone: move focus to the
+  // confirmation so keyboard and screen reader users are not left on <body>.
+  useEffect(() => {
+    if (flash) flashRef.current?.focus();
+  }, [flash]);
+
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
@@ -68,10 +80,15 @@ export function PendingMembershipRequestsPage({ onUnauthenticated, companyId, co
     getPendingMembershipRequests(companyId, page, pageSize, controller.signal)
       .then((result) => {
         if (controller.signal.aborted) return;
-        // A stale page (the last item of the last page was just decided) moves back one page.
-        if (result.items.length === 0 && result.totalCount > 0 && page > 1) {
-          setPage(Math.max(1, Math.ceil(result.totalCount / pageSize)));
-          return;
+        // A stale page (the last items of the last page were just decided) moves to the last page
+        // that still exists. Only when that really is a different page; otherwise show the data,
+        // so a racing total can never leave the table loading forever.
+        if (result.items.length === 0 && page > 1) {
+          const lastPage = Math.max(1, Math.ceil(result.totalCount / pageSize));
+          if (lastPage < page) {
+            setPage(lastPage);
+            return;
+          }
         }
         setData(result);
         setLoading(false);
@@ -113,6 +130,7 @@ export function PendingMembershipRequestsPage({ onUnauthenticated, companyId, co
     setDialogError(null);
     setRoleId('');
     setReason('');
+    setRolesState({ kind: 'idle' });
     setDecision({ kind, request });
   };
   const close = () => {
@@ -122,6 +140,14 @@ export function PendingMembershipRequestsPage({ onUnauthenticated, companyId, co
   const confirm = async () => {
     if (!decision) return;
     setDialogError(null);
+    if (decision.kind === 'approve' && rolesState.kind !== 'ready') {
+      setDialogError(
+        rolesState.kind === 'loading'
+          ? 'گروه‌های دسترسی هنوز دریافت نشده‌اند؛ چند لحظه صبر کنید.'
+          : 'بدون فهرست گروه‌های دسترسی، تأیید ممکن نیست.',
+      );
+      return;
+    }
     if (decision.kind === 'approve' && !roleId) {
       setDialogError('یک گروه دسترسی برای کاربر انتخاب کنید.');
       return;
@@ -176,7 +202,7 @@ export function PendingMembershipRequestsPage({ onUnauthenticated, companyId, co
               size="sm"
               disabled={!request.isRequesterActive}
               onClick={() => open('approve', request)}
-              aria-label={`تأیید درخواست ${request.requesterDisplayName}`}
+              aria-label={`تأیید درخواست ${requesterLabel(request)}`}
             >
               تأیید
             </Button>
@@ -185,7 +211,7 @@ export function PendingMembershipRequestsPage({ onUnauthenticated, companyId, co
               size="sm"
               variant="outline"
               onClick={() => open('reject', request)}
-              aria-label={`رد درخواست ${request.requesterDisplayName}`}
+              aria-label={`رد درخواست ${requesterLabel(request)}`}
             >
               رد
             </Button>
@@ -209,7 +235,7 @@ export function PendingMembershipRequestsPage({ onUnauthenticated, companyId, co
         </p>
       </header>
 
-      {flash ? <Alert tone="info">{flash}</Alert> : null}
+      {flash ? <Alert ref={flashRef} tone="info">{flash}</Alert> : null}
 
       {forbidden ? (
         <div role="alert" className="rounded-xl border border-line bg-white p-6 text-center">
@@ -261,7 +287,7 @@ export function PendingMembershipRequestsPage({ onUnauthenticated, companyId, co
                 <>
                   {rolesState.kind === 'forbidden' ? (
                     <p role="alert" className="text-danger">
-                      فهرست گروه‌های دسترسی این شرکت در حال حاضر فقط برای مدیر نصب قابل مشاهده است؛ برای تأییدکنندگان شرکتی به API فهرست گروه‌های قابل‌تخصیص نیاز است.
+                      حساب شما به فهرست گروه‌های دسترسی این شرکت دسترسی ندارد، پس تأیید از این صفحه ممکن نیست. با مدیر نصب هماهنگ کنید.
                     </p>
                   ) : rolesState.kind === 'error' ? (
                     <p role="alert" className="text-danger">{rolesState.message}</p>

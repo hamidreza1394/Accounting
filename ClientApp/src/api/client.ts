@@ -299,7 +299,6 @@ export async function getPermissionTemplates(signal?: AbortSignal): Promise<Perm
   return parsePermissionTemplates(await getJson('/admin/permission-templates', signal));
 }
 
-/** Changes the current account password; the server signs out all sessions after success. */
 /** The signed-in user's own membership requests, newest first (`GET /me/membership-requests`). */
 export async function getMyMembershipRequests(
   page: number,
@@ -342,6 +341,7 @@ export async function rejectMembershipRequest(companyId: string, requestId: stri
   );
 }
 
+/** Changes the current account password; the server signs out all sessions after success. */
 export async function changeMyPassword(request: ChangeMyPasswordRequest): Promise<void> {
   await sendJson('POST', '/me/password', request);
 }

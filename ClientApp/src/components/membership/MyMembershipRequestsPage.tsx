@@ -34,6 +34,13 @@ export function MyMembershipRequestsPage({ onUnauthenticated }: Props) {
     getMyMembershipRequests(page, pageSize, controller.signal)
       .then((result) => {
         if (controller.signal.aborted) return;
+        if (result.items.length === 0 && page > 1) {
+          const lastPage = Math.max(1, Math.ceil(result.totalCount / pageSize));
+          if (lastPage < page) {
+            setPage(lastPage);
+            return;
+          }
+        }
         setData(result);
         setLoading(false);
       })
