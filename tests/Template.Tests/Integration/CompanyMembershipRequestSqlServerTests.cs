@@ -17,7 +17,7 @@ namespace Template.Tests.Integration;
 public sealed class CompanyMembershipRequestSqlServerTests
 {
     private const string PreviousMigration = "20261031140000_SeedTradePermissionCatalog";
-    private const string MembershipMigration = "20261103100000_AddCompanyMembershipRequests";
+    private const string MembershipMigration = "20261103111108_AddCompanyMembershipRequests";
 
     private static bool SqlServerAvailable()
     {
