@@ -6,8 +6,8 @@ namespace Faranou.Licensing.Contracts;
 
 /// <summary>
 /// Project-specific deterministic UTF-8 JSON for signing (NOT RFC 8785).
-/// Contract v1: fixed DTO property order, camelCase, nulls omitted, subsystems sorted Ordinal,
-/// DateTimeOffset as round-trip "O" UTC. Options are private and not mutable from outside.
+/// Payload v1 retains its historical property order/bytes. Payload v2 additionally sorts company
+/// references, modules, and feature codes using Ordinal comparison.
 /// </summary>
 public static class CanonicalJson
 {
@@ -28,9 +28,15 @@ public static class CanonicalJson
 		MaxDepth = 8
 	};
 
+	private static readonly JsonSerializerOptions StrictV2ParseOptions = new(ParseOptions)
+	{
+		UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow
+	};
+
 	public static string SerializePayload(LicensePayload payload)
 	{
 		ArgumentNullException.ThrowIfNull(payload);
+
 		var subsystems = payload.Limits.Subsystems ?? Array.Empty<string>();
 		var dto = new PayloadDto
 		{
@@ -47,9 +53,36 @@ public static class CanonicalJson
 			Limits = new LimitsDto
 			{
 				MaxCompanies = payload.Limits.MaxCompanies,
-				Subsystems = subsystems.OrderBy(s => s, StringComparer.Ordinal).ToArray()
+				Subsystems = subsystems.OrderBy(code => code, StringComparer.Ordinal).ToArray()
 			}
 		};
+
+		if (payload.FormatVersion >= LicensePayload.CurrentFormatVersion)
+		{
+			dto.SupportUntilUtc = payload.SupportUntilUtc?.ToUniversalTime().ToString("O");
+			dto.UpdatesUntilUtc = payload.UpdatesUntilUtc?.ToUniversalTime().ToString("O");
+			dto.CompanyEntitlements = payload.CompanyEntitlements?
+				.Select(company => company is null ? null : new CompanyEntitlementDto
+				{
+					CompanyReference = company.CompanyReference,
+					Modules = company.Modules?.OrderBy(code => code, StringComparer.Ordinal).ToArray(),
+					MaxUsers = company.MaxUsers,
+					Features = company.Features?
+						.Select(feature => feature is null ? null : new FeatureEntitlementDto
+						{
+							Code = feature.Code,
+							Type = feature.Type,
+							Enabled = feature.Enabled,
+							MaxCount = feature.MaxCount,
+							EnumValue = feature.EnumValue
+						})
+						.OrderBy(feature => feature?.Code, StringComparer.Ordinal)
+						.ToArray()
+				})
+				.OrderBy(company => company?.CompanyReference, StringComparer.Ordinal)
+				.ToArray();
+		}
+
 		return JsonSerializer.Serialize(dto, Options);
 	}
 
@@ -71,9 +104,42 @@ public static class CanonicalJson
 		}
 
 		PayloadDto? dto;
+		int formatVersion;
 		try
 		{
-			dto = JsonSerializer.Deserialize<PayloadDto>(payloadJson, ParseOptions);
+			using var document = JsonDocument.Parse(payloadJson, new JsonDocumentOptions { MaxDepth = 8 });
+			if (document.RootElement.ValueKind != JsonValueKind.Object ||
+				!document.RootElement.TryGetProperty("formatVersion", out var versionElement) ||
+				!versionElement.TryGetInt32(out formatVersion))
+			{
+				errorCode = "payload_format_version_invalid";
+				return false;
+			}
+
+			if (formatVersion >= LicensePayload.CurrentFormatVersion)
+			{
+				dto = JsonSerializer.Deserialize<PayloadDto>(payloadJson, StrictV2ParseOptions);
+			}
+			else
+			{
+				// Deserialize through the original v1 DTO so every unknown v2-only field is ignored,
+				// even if its JSON value has a type that would not match the v2 property.
+				var legacyDto = JsonSerializer.Deserialize<PayloadV1Dto>(payloadJson, ParseOptions);
+				dto = legacyDto is null ? null : new PayloadDto
+				{
+					FormatVersion = legacyDto.FormatVersion,
+					LicenseId = legacyDto.LicenseId,
+					InstallationId = legacyDto.InstallationId,
+					ProductCode = legacyDto.ProductCode,
+					LicenseKind = legacyDto.LicenseKind,
+					IssuedAtUtc = legacyDto.IssuedAtUtc,
+					NotBeforeUtc = legacyDto.NotBeforeUtc,
+					ExpiresAtUtc = legacyDto.ExpiresAtUtc,
+					GraceDays = legacyDto.GraceDays,
+					Sequence = legacyDto.Sequence,
+					Limits = legacyDto.Limits
+				};
+			}
 		}
 		catch (JsonException)
 		{
@@ -96,26 +162,69 @@ public static class CanonicalJson
 		DateTimeOffset? nbf = null;
 		if (dto.NotBeforeUtc is not null)
 		{
-			if (!TryParseO(dto.NotBeforeUtc, out var nbfV))
+			if (!TryParseO(dto.NotBeforeUtc, out var nbfValue))
 			{
 				errorCode = "not_before_invalid";
 				return false;
 			}
-			nbf = nbfV;
+			nbf = nbfValue;
 		}
 
 		DateTimeOffset? exp = null;
 		if (dto.ExpiresAtUtc is not null)
 		{
-			if (!TryParseO(dto.ExpiresAtUtc, out var expV))
+			if (!TryParseO(dto.ExpiresAtUtc, out var expValue))
 			{
 				errorCode = "expires_at_invalid";
 				return false;
 			}
-			exp = expV;
+			exp = expValue;
+		}
+
+		DateTimeOffset? supportUntil = null;
+		if (dto.FormatVersion >= LicensePayload.CurrentFormatVersion && dto.SupportUntilUtc is not null)
+		{
+			if (!TryParseO(dto.SupportUntilUtc, out var supportValue))
+			{
+				errorCode = "support_until_invalid";
+				return false;
+			}
+			supportUntil = supportValue;
+		}
+
+		DateTimeOffset? updatesUntil = null;
+		if (dto.FormatVersion >= LicensePayload.CurrentFormatVersion && dto.UpdatesUntilUtc is not null)
+		{
+			if (!TryParseO(dto.UpdatesUntilUtc, out var updatesValue))
+			{
+				errorCode = "updates_until_invalid";
+				return false;
+			}
+			updatesUntil = updatesValue;
 		}
 
 		var subsystems = (IReadOnlyList<string>)(dto.Limits?.Subsystems ?? Array.Empty<string>());
+		var companies = dto.FormatVersion >= LicensePayload.CurrentFormatVersion
+			? dto.CompanyEntitlements?
+				.Select(company => company is null
+					? null
+					: new CompanyLicenseEntitlement(
+						company.CompanyReference,
+						company.Modules,
+						company.MaxUsers,
+						company.Features?
+							.Select(feature => feature is null
+								? null
+								: new LicenseFeatureEntitlement(
+									feature.Code,
+									feature.Type,
+									feature.Enabled,
+									feature.MaxCount,
+									feature.EnumValue))
+							.ToArray()))
+				.ToArray()
+			: null;
+
 		payload = new LicensePayload(
 			dto.FormatVersion,
 			dto.LicenseId ?? "",
@@ -127,7 +236,12 @@ public static class CanonicalJson
 			exp,
 			dto.GraceDays,
 			dto.Sequence,
-			new LicenseLimits(dto.Limits?.MaxCompanies, subsystems));
+			new LicenseLimits(dto.Limits?.MaxCompanies, subsystems))
+		{
+			SupportUntilUtc = supportUntil,
+			UpdatesUntilUtc = updatesUntil,
+			CompanyEntitlements = companies
+		};
 		return true;
 	}
 
@@ -144,7 +258,7 @@ public static class CanonicalJson
 			out result);
 	}
 
-	private sealed class PayloadDto
+	private sealed class PayloadV1Dto
 	{
 		public int FormatVersion { get; set; }
 		public string? LicenseId { get; set; }
@@ -159,9 +273,44 @@ public static class CanonicalJson
 		public LimitsDto? Limits { get; set; }
 	}
 
+	private sealed class PayloadDto
+	{
+		public int FormatVersion { get; set; }
+		public string? LicenseId { get; set; }
+		public string? InstallationId { get; set; }
+		public string? ProductCode { get; set; }
+		public string? LicenseKind { get; set; }
+		public string? IssuedAtUtc { get; set; }
+		public string? NotBeforeUtc { get; set; }
+		public string? ExpiresAtUtc { get; set; }
+		public string? SupportUntilUtc { get; set; }
+		public string? UpdatesUntilUtc { get; set; }
+		public int GraceDays { get; set; }
+		public int Sequence { get; set; }
+		public LimitsDto? Limits { get; set; }
+		public CompanyEntitlementDto?[]? CompanyEntitlements { get; set; }
+	}
+
 	private sealed class LimitsDto
 	{
 		public int? MaxCompanies { get; set; }
 		public string[]? Subsystems { get; set; }
+	}
+
+	private sealed class CompanyEntitlementDto
+	{
+		public string? CompanyReference { get; set; }
+		public string[]? Modules { get; set; }
+		public int MaxUsers { get; set; }
+		public FeatureEntitlementDto?[]? Features { get; set; }
+	}
+
+	private sealed class FeatureEntitlementDto
+	{
+		public string? Code { get; set; }
+		public string? Type { get; set; }
+		public bool? Enabled { get; set; }
+		public int? MaxCount { get; set; }
+		public string? EnumValue { get; set; }
 	}
 }
