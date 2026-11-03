@@ -222,6 +222,98 @@ public sealed class CompanyMembershipRequestSqlServerTests
         });
     }
 
+    [Fact]
+    public async Task ApprovalRejectsDelegationBeyondApproverPermissionSetOnSqlServer()
+    {
+        Assert.SkipUnless(SqlServerAvailable(), "SQL Server is not configured (FARANOU_TEST_SQLSERVER).");
+
+        await WithDatabaseAsync(async name =>
+        {
+            await using var database = CreateContext(name);
+            await database.Database.MigrateAsync(TestContext.Current.CancellationToken);
+
+            var company = new Domain.Company { Name = "شرکت مقصد", IsActive = true };
+            var requester = new Domain.User("ceiling-requester@example.test")
+            {
+                Username = "ceiling-requester",
+                IsActive = true,
+            };
+            var approver = new Domain.User("ceiling-approver@example.test")
+            {
+                Username = "ceiling-approver",
+                IsActive = true,
+            };
+            var approverRole = new Domain.CompanyRole
+            {
+                TenantId = company.Id, Company = company, Code = "APPROVER", Name = "تأییدکننده", IsActive = true,
+            };
+            var targetRole = new Domain.CompanyRole
+            {
+                TenantId = company.Id, Company = company, Code = "TARGET", Name = "نقش با مجوز بیشتر", IsActive = true,
+            };
+            var systemRole = new Domain.CompanyRole
+            {
+                TenantId = company.Id, Company = company, Code = "SYSTEM", Name = "نقش سیستمی",
+                IsActive = true, IsSystemRole = true,
+            };
+            var approvalPermission = await database.PermissionDefinitions.SingleAsync(
+                item => item.Code == Server.Api.CompanyMembershipRequestEndpoints.ApprovalPermissionCode,
+                TestContext.Current.CancellationToken);
+            var extraPermission = new Domain.PermissionDefinition
+            {
+                Code = "finance.entries.post",
+                Name = "ثبت سند مالی",
+            };
+            var request = new Domain.CompanyMembershipRequest
+            {
+                UserId = requester.Id,
+                DestinationTenantId = company.Id,
+                Status = Domain.CompanyMembershipRequestStatuses.Pending,
+                RequestedAtUtc = DateTime.UtcNow,
+            };
+
+            database.AddRange(company, requester, approver, approverRole, targetRole, systemRole, extraPermission, request);
+            database.CompanyRolePermissions.AddRange(
+                new Domain.CompanyRolePermission
+                {
+                    Role = approverRole, Permission = approvalPermission,
+                },
+                new Domain.CompanyRolePermission
+                {
+                    Role = targetRole, Permission = extraPermission,
+                });
+            database.UserCompanyMemberships.Add(new Domain.UserCompanyMembership
+            {
+                UserId = approver.Id,
+                TenantId = company.Id,
+                Role = approverRole,
+                IsActive = true,
+                CreatedAtUtc = DateTime.UtcNow,
+            });
+            await database.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var access = new Infrastructure.Tenancy.CompanyAccessService(database);
+            var overCeiling = await Server.Api.CompanyMembershipRequestEndpoints.ApproveAsync(
+                company.Id, request.Id, new DefaultHttpContext(), Principal(approver.Id),
+                new Server.Api.ApproveCompanyMembershipRequest(targetRole.Id), new AllowAntiforgery(),
+                database, access, TimeProvider.System, TestContext.Current.CancellationToken);
+            Assert.Equal(StatusCodes.Status403Forbidden, (overCeiling as IStatusCodeHttpResult)?.StatusCode);
+
+            var systemRoleResult = await Server.Api.CompanyMembershipRequestEndpoints.ApproveAsync(
+                company.Id, request.Id, new DefaultHttpContext(), Principal(approver.Id),
+                new Server.Api.ApproveCompanyMembershipRequest(systemRole.Id), new AllowAntiforgery(),
+                database, access, TimeProvider.System, TestContext.Current.CancellationToken);
+            Assert.Equal(StatusCodes.Status409Conflict, (systemRoleResult as IStatusCodeHttpResult)?.StatusCode);
+
+            var saved = await database.CompanyMembershipRequests.SingleAsync(
+                item => item.Id == request.Id, TestContext.Current.CancellationToken);
+            Assert.Equal(Domain.CompanyMembershipRequestStatuses.Pending, saved.Status);
+            Assert.False(await database.UserCompanyMemberships.AnyAsync(
+                item => item.UserId == requester.Id && item.TenantId == company.Id,
+                TestContext.Current.CancellationToken));
+        });
+    }
+
     private static ClaimsPrincipal Principal(Guid userId) => new(
         new ClaimsIdentity(
         [
