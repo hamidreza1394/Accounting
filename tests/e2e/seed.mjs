@@ -36,6 +36,8 @@ const state = {
     erin: { username: `erin${suffix}`, password: password(), id: randomUUID(), active: true },
     // Several companies (a long name, two companies with the same name) and three fiscal years.
     frank: { username: `frank${suffix}`, password: password(), id: randomUUID(), active: true },
+    // A real installation administrator for positive management-API and UI E2E coverage.
+    admin: { username: `admin${suffix}`, password: password(), id: randomUUID(), roleId: randomUUID(), active: true },
   },
   companies: {
     a: { id: randomUUID(), name: `شرکت الف ${suffix}`, roleId: randomUUID() },
@@ -60,14 +62,21 @@ async function run(statement, parameters) {
   await request.query(statement);
 }
 
+// Seed the global installation-administrator role only in this disposable E2E database.
+await run(
+  `INSERT INTO Roles (Id, Ordering, InsertDateTime, IsActive, UpdateDateTime, Name, Description)
+   VALUES (@id, 10000, @now, 1, @now, N'Admin', NULL)`,
+  { id: [sql.UniqueIdentifier, state.users.admin.roleId], now: [sql.DateTime2, now] },
+);
+
 for (const user of Object.values(state.users)) {
   await run(
-    `INSERT INTO Users (Id, Ordering, InsertDateTime, UpdateDateTime, IsActive, IsSystemic, IsProgrammer, IsUndeletable,
+    `INSERT INTO Users (Id, Ordering, InsertDateTime, UpdateDateTime, RoleId, IsActive, IsSystemic, IsProgrammer, IsUndeletable,
        IsProfilePublic, IsVisibleInContactUsPage, IsEmailAddressVerified, IsCellPhoneNumberVerified,
        Username, Password, FirstName, LastName, EmailAddress, EmailAddressVerificationKey)
      VALUES (@id, 10000, @now, @now, @active, 0, 0, 0, 0, 0, 1, 0, @username, @password, @first, N'آزمون', @email, @key)`,
     {
-      id: [sql.UniqueIdentifier, user.id], now: [sql.DateTime2, now], active: [sql.Bit, user.active],
+      id: [sql.UniqueIdentifier, user.id], now: [sql.DateTime2, now], roleId: [sql.UniqueIdentifier, user.roleId ?? null], active: [sql.Bit, user.active],
       username: [sql.VarChar(20), user.username], password: [sql.VarChar(255), hashPasswordV3(user.password)],
       first: [sql.NVarChar(50), user.username.replace(/[0-9a-f]+$/, '')], email: [sql.VarChar(254), `${user.username}@e2e.test`],
       key: [sql.UniqueIdentifier, randomUUID()],
@@ -101,9 +110,10 @@ async function period(company, title, start, end, status = 1) {
       title: [sql.NVarChar(100), title], start: [sql.Date, start], end: [sql.Date, end], status: [sql.Int, status] });
 }
 
-const { alice, bob, carol, dave, frank } = state.users;
+const { alice, bob, carol, dave, frank, admin } = state.users;
 const { a, b, c, d, e, f } = state.companies;
 await member(alice, a);
+await member(admin, a);
 await member(alice, c);
 await member(bob, b);
 await member(carol, a);
