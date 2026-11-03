@@ -28,7 +28,6 @@ public sealed class MePermissionsEndpointTests
         fixture.AddMembership(user, companyA, roleA);
         fixture.AddMembership(user, companyB, roleB);
         var periodA = fixture.AddFiscalPeriod(companyA);
-        var periodB = fixture.AddFiscalPeriod(companyB);
         await fixture.Database.SaveChangesAsync();
 
         var sessionId = Guid.NewGuid();
@@ -217,7 +216,9 @@ public sealed class MePermissionsEndpointTests
             Database.CompanyRolePermissions.Add(new Domain.CompanyRolePermission
             {
                 Role = role,
+                RoleId = role.Id,
                 Permission = permission,
+                PermissionId = permission.Id,
             });
         }
 
@@ -227,7 +228,6 @@ public sealed class MePermissionsEndpointTests
             var membership = new Domain.UserCompanyMembership
             {
                 UserId = user.Id,
-                User = user,
                 TenantId = company.Id,
                 Company = company,
                 RoleId = role.Id,
