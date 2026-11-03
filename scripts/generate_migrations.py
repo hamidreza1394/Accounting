@@ -213,7 +213,7 @@ CURRENT_MIGRATION_EPILOGUE, CURRENT_MIGRATION_DOWN_PRELUDE = HAND_WRITTEN_SQL.ge
 
 # The version of the Entity Framework Core packages of the solution. It is written into the
 # "ProductVersion" annotation of the model snapshot, exactly like the EF Core tools do.
-PRODUCT_VERSION = "10.0.13"
+PRODUCT_VERSION = "10.0.14"
 
 INDENT = "    "
 
