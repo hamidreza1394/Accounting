@@ -2240,6 +2240,10 @@
 - بدون UI/ClientApp؛ Claude می‌تواند endpoint را مصرف کند. handoff: docs/handoffs/ISSUE-494-company-user-directory-api.md.
 
 
+## 2026-11-03 — Issue #444: ممیزی و قرارداد زمان (UTC)
+- ممیزی نشان داد فیلدهای `*Utc` با `DateTime.UtcNow` نوشته می‌شوند ولی بدون `Z` سریال می‌شوند، و فیلدهای قدیمی (`InsertDateTime`، `UpdateDateTime`، `LastLoginDateTime`) با `DateTime.Now` (ساعت محلی سرور) نوشته می‌شوند؛ پس مبدل سراسری «بدون Z = UTC» غلط است.
+- ClientApp: ماژول `lib/time.ts` و تفکیک صریح دو نوع فیلد در پارسرها؛ مرز روز در منطقهٔ کاربر؛ تست UTC/ایران/آلمان/DST/نیمه‌شب. یک تست مشخصه‌ساز SQL Server اضافه شد (بدون تغییر رفتار). پیشنهاد Backend در D-067 (`Proposed`).
+- `docs/TIME_CONTRACT.md`، handoff: `docs/handoffs/ISSUE-444-utc-time-contract.md`.
 ## 2026-11-03 — Issue #498: enforce سقف واگذاری مجوز در تأیید عضویت بین‌شرکتی
 - در API تأیید عضویت، PermissionIdهای نقش مقصد با مجوزهای مؤثر نقش‌های فعال تأییدکننده در همان شرکت مقایسه می‌شوند؛ واگذاری مجوزی که تأییدکننده ندارد رد می‌شود.
 - تخصیص System Role از این گردش‌کار رد می‌شود؛ نقش بدون مجوز همچنان قابل واگذاری است. پاسخ رد عمومی 403 است و درخواست Pending/عضویت/سوابق Audit موفق تغییر نمی‌کند.
@@ -2254,3 +2258,9 @@
 - ADR D-068: `react-day-picker@9.14.0` با مسیر `/persian` (نسخهٔ 10 این مسیر را ندارد) پین شد؛ مجوزها MIT، `npm audit` بدون آسیب‌پذیری، حجم chunk تنبل ≈ 72 kB gzip، اجرای آفلاین تأیید شد.
 - کامپوننت `ui/JalaliDateField` (مقدار ISO میلادی، RTL، ارقام فارسی، `min`/`max`، صفحه‌کلید، `FormField`) با ۱۲ تست؛ یک باگ اعتبارسنجی ماه حین تست یافت و رفع شد.
 - اتصال به گزارش امنیتی پس از ادغام #499 در PR بعدی. handoff: `docs/handoffs/ISSUE-444-jalali-date-picker.md`.
+
+
+## 2026-11-03 — Issue #444: تکمیل UI گزارش امنیتی (مراحل ۴ و ۵)
+- فیلترهای تاریخ به `JalaliDateField` منتقل شد؛ فیلتر کاربر با `UserPicker` (combobox دسترس‌پذیر روی `GET /admin/users?search=`) و فیلتر شرکت از شرکت‌های عضویت کاربر + کلیک روی جدول. بدون داده ساختگی.
+- حین تست دو باگ واقعی رفع شد: ماه پیش‌فرض تقویم و گم‌شدن مقدار تاریخ از نام دسترس‌پذیر دکمه.
+- مسدود به API: مرتب‌سازی، فهرست همهٔ شرکت‌های نصب، فهرست انواع رویداد؛ قرارداد در handoff. handoff: `docs/handoffs/ISSUE-444-security-audit-complete.md`.
