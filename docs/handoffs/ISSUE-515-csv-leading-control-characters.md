@@ -41,5 +41,5 @@
 
 ## شناسه‌های Git
 - Branch: `fix/515-csv-leading-control-characters`
-- Commit: در زمان ساخت PR ثبت می‌شود.
-- Pull Request: پس از ساخت ثبت می‌شود.
+- Commit نهایی فعلی: `71eb50a1eefd0c585eeef74147fbc47ae4254362` (سرشاخه PR؛ commitهای قبلی همان شاخه در تاریخچه حفظ شده‌اند).
+- Pull Request: https://github.com/hamidreza1394/Accounting/pull/516 (باز؛ Merge نشده).
