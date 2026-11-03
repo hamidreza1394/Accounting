@@ -2311,3 +2311,12 @@
 - handoff: docs/handoffs/ISSUE-500-utc-kind-value-converter.md.
 ## 2026-11-03 — Issue #444: قراردادهای API مورد نیاز UI (هماهنگی Backend)
 - برای قابلیت‌هایی که API ندارند (کشف شرکت برای درخواست عضویت، گروه‌های قابل‌تخصیص، `/me/permissions`، مرتب‌سازی/Export/Retention گزارش، نشست‌ها، S2) قرارداد دقیق endpoint، مدل و کدهای خطا در `docs/FRONTEND_API_CONTRACT_NEEDS.md` ثبت شد (`Proposed`، مسئول ChatGPT). UI مربوط عمداً ساخته نشد تا قابلیت ظاهری یا داده ساختگی تولید نشود؛ هر مورد پس از Merge شدن API در PR مستقل مصرف می‌شود.
+
+
+## 2026-11-03 — Issue #510: تکمیل گردش API درخواست عضویت
+- قرارداد کشف مقصد، سقف واگذاری، فهرست تأییدکنندگان و تاریخچه تصمیم به‌روز شد.
+- مقصد فقط با نام exact در CustomerBoundary مشترک با یکی از عضویت‌های فعال کاربر قابل کشف است؛ CustomerBoundary null/متفاوت fail-closed و POST هم همان قاعده را مستقل enforce می‌کند.
+- API نقش‌های قابل واگذاری، approvers و تاریخچه status-filtered با pagination افزوده شد؛ queryهای مدیریتی و کشف مقصد rate-limited/no-store شدند.
+- زمان‌های *Utc پس از EF read صریحاً Kind=UTC می‌گیرند؛ RowVersion و transaction approval موجود حفظ شد.
+- Unit و SQL Server regression tests اضافه شدند؛ هیچ‌کدام هنوز اجرا نشده‌اند. بدون Migration/ClientApp/E2E.
+- handoff: docs/handoffs/ISSUE-510-membership-workflow-api.md.
