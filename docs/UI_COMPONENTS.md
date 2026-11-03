@@ -122,3 +122,9 @@
 - `useSearchParams` در `lib/router.tsx`: وضعیت فهرست (`q`, `status`, `sort`, `dir`, `page`, `pageSize`) در URL نگه داشته می‌شود؛ مقادیر پیش‌فرض حذف و مقادیر نامعتبر به پیش‌فرض برمی‌گردند. جست‌وجو (debounce) با replace و سایر تغییرها با push ثبت می‌شوند.
 - پس از تغییر مسیر، Focus به `h1` صفحه منتقل می‌شود؛ `useDocumentTitle` عنوان تب را برای صفحات دارای داده پویا تنظیم می‌کند.
 - `scripts/offline-check.mjs` اکنون chunkهای lazy را درست resolve می‌کند (آزمون رگرسیون دارد).
+
+### حساب کاربری من و AuditTimeline (Issue #463)
+
+- `ui/AuditTimeline`: فهرست رویدادهای زمانی با وضعیت «آیکون + متن» (هرگز فقط رنگ)، `<time dateTime>` با تاریخ جلالی و IP با `dir=ltr`؛ props: `label`، `events` (id, label, tone, icon, occurredAt, detail)، `detailLabel`، `detailFallback`.
+- `account/PasswordInput`: ورودی رمز با دکمه نمایش/پنهان (`aria-pressed`) و `dir=ltr`؛ الگوی نگاشت `fieldErrors` سرور به فیلدها (حذف پیشوند کلید و تطبیق بدون حساسیت به حروف) در `SecurityTab`.
+- در حین ارسال تغییر رمز، تب‌های دیگر قفل می‌شوند تا ارسال دوباره ممکن نباشد.
