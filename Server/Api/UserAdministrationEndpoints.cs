@@ -373,7 +373,7 @@ public static class UserAdministrationEndpoints
         return TypedResults.NoContent();
     }
 
-    private static async Task<IResult?> AuthorizeInstallationAdministratorAsync(
+    internal static async Task<IResult?> AuthorizeInstallationAdministratorAsync(
         ClaimsPrincipal principal,
         Data.DatabaseContext database,
         CancellationToken cancellationToken)
