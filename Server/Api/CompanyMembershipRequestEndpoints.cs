@@ -196,26 +196,27 @@ public static class CompanyMembershipRequestEndpoints
                 item.DestinationTenantId == companyId &&
                 item.Status == Domain.CompanyMembershipRequestStatuses.Pending);
         var totalCount = await query.CountAsync(cancellationToken);
-        var rows = await query
-            .OrderBy(item => item.RequestedAtUtc)
-            .ThenBy(item => item.Id)
-            .Skip((safePage - 1) * safePageSize)
-            .Take(safePageSize)
-            .Select(item => new
+        var rows = await (
+            from item in query
+            join user in database.Users.AsNoTracking()
+                on item.UserId equals user.Id into userRows
+            from user in userRows.DefaultIfEmpty()
+            select new
             {
                 item.Id,
                 item.UserId,
                 item.SourceTenantId,
                 SourceCompanyName = item.SourceCompany.Name,
                 item.RequestedAtUtc,
-                Username = database.Users.Where(user => user.Id == item.UserId)
-                    .Select(user => user.Username).FirstOrDefault(),
-                FirstName = database.Users.Where(user => user.Id == item.UserId)
-                    .Select(user => user.FirstName).FirstOrDefault(),
-                LastName = database.Users.Where(user => user.Id == item.UserId)
-                    .Select(user => user.LastName).FirstOrDefault(),
-                IsRequesterActive = database.Users.Any(user => user.Id == item.UserId && user.IsActive),
+                Username = user == null ? null : user.Username,
+                FirstName = user == null ? null : user.FirstName,
+                LastName = user == null ? null : user.LastName,
+                IsRequesterActive = user != null && user.IsActive,
             })
+            .OrderBy(item => item.RequestedAtUtc)
+            .ThenBy(item => item.Id)
+            .Skip((safePage - 1) * safePageSize)
+            .Take(safePageSize)
             .ToListAsync(cancellationToken);
 
         var items = rows.Select(item =>
