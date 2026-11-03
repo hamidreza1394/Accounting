@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
@@ -120,6 +121,109 @@ public sealed class SecurityAuditAdministrationEndpointTests
         var emptyCompany = await Server.Api.SecurityAuditAdministrationEndpoints.GetAuditEventsAsync(
             new DefaultHttpContext(), principal, fixture.Database, companyId: Guid.Empty);
         Assert.Equal(StatusCodes.Status400BadRequest, (emptyCompany as IStatusCodeHttpResult)?.StatusCode);
+    }
+
+    [Fact]
+    public async Task AuditExport_ProducesSafeUtf8CsvAndOmitsSensitiveFields()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddUser("admin", Constants.Role.Admin);
+        var actor = fixture.AddUser("alice", "Accountant");
+        actor.Username = "=SUM(1,1)";
+        actor.FirstName = "=HYPERLINK(\"https://example.invalid\")";
+        var company = new Domain.Company { Name = "=1+1", IsActive = true };
+        fixture.Database.Companies.Add(company);
+        var occurredAt = new DateTime(2026, 11, 3, 12, 30, 0, DateTimeKind.Utc);
+        fixture.Database.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
+        {
+            UserId = actor.Id,
+            TenantId = company.Id,
+            EventType = "LoginSucceeded",
+            EntityType = "User",
+            EntityId = "record,\"quoted\"",
+            OccurredAtUtc = occurredAt,
+            CorrelationId = "=CMD",
+            IpAddress = "198.51.100.99",
+            DetailsJson = "{\"secret\":\"export-private-payload\"}",
+        });
+        await fixture.Database.SaveChangesAsync();
+
+        var context = new DefaultHttpContext();
+        var result = await Server.Api.SecurityAuditAdministrationEndpoints.ExportAuditEventsAsync(
+            context,
+            Principal(admin.Id),
+            fixture.Database,
+            eventType: "LoginSucceeded",
+            userId: actor.Id,
+            companyId: company.Id,
+            fromUtc: new DateTimeOffset(occurredAt.AddMinutes(-1), TimeSpan.Zero),
+            toUtc: new DateTimeOffset(occurredAt.AddMinutes(1), TimeSpan.Zero));
+
+        var file = Assert.IsType<FileContentHttpResult>(result);
+        Assert.Equal("text/csv; charset=utf-8", file.ContentType);
+        Assert.EndsWith(".csv", file.FileDownloadName);
+        Assert.Equal(new byte[] { 0xEF, 0xBB, 0xBF }, file.FileContents[..3]);
+
+        var csv = Encoding.UTF8.GetString(file.FileContents);
+        Assert.Contains("OccurredAtUtc", csv);
+        Assert.Contains("2026-11-03T12:30:00.0000000Z", csv);
+        Assert.Contains("\"record,\"\"quoted\"\"", csv);
+        Assert.Contains("'=SUM(1,1)", csv);
+        Assert.Contains("'=HYPERLINK", csv);
+        Assert.Contains("'=1+1", csv);
+        Assert.Contains("'=CMD", csv);
+        Assert.DoesNotContain("198.51.100.99", csv);
+        Assert.DoesNotContain("export-private-payload", csv);
+        Assert.Equal("no-store", context.Response.Headers.CacheControl.ToString());
+        Assert.Equal("no-cache", context.Response.Headers.Pragma.ToString());
+    }
+
+    [Fact]
+    public async Task AuditExport_RequiresInstallationAdministratorAndBoundedDateRange()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddUser("admin", Constants.Role.Admin);
+        var ordinary = fixture.AddUser("accountant", "Accountant");
+        await fixture.Database.SaveChangesAsync();
+
+        var from = new DateTimeOffset(2026, 11, 1, 0, 0, 0, TimeSpan.Zero);
+        var to = from.AddDays(1);
+        var denied = await Server.Api.SecurityAuditAdministrationEndpoints.ExportAuditEventsAsync(
+            new DefaultHttpContext(), Principal(ordinary.Id), fixture.Database, fromUtc: from, toUtc: to);
+        Assert.Equal(StatusCodes.Status403Forbidden, (denied as IStatusCodeHttpResult)?.StatusCode);
+
+        var missingRange = await Server.Api.SecurityAuditAdministrationEndpoints.ExportAuditEventsAsync(
+            new DefaultHttpContext(), Principal(admin.Id), fixture.Database);
+        Assert.Equal(StatusCodes.Status400BadRequest, (missingRange as IStatusCodeHttpResult)?.StatusCode);
+
+        var wideRange = await Server.Api.SecurityAuditAdministrationEndpoints.ExportAuditEventsAsync(
+            new DefaultHttpContext(), Principal(admin.Id), fixture.Database,
+            fromUtc: from, toUtc: from.AddDays(31).AddTicks(1));
+        Assert.Equal(StatusCodes.Status400BadRequest, (wideRange as IStatusCodeHttpResult)?.StatusCode);
+    }
+
+    [Fact]
+    public async Task AuditExport_ReturnsPayloadTooLargeWhenMoreThanTenThousandRowsMatch()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddUser("admin", Constants.Role.Admin);
+        var from = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc);
+        fixture.Database.SecurityAuditEvents.AddRange(Enumerable.Range(0, 10_001).Select(index =>
+            new Domain.SecurityAuditEvent
+            {
+                EventType = "LoginSucceeded",
+                OccurredAtUtc = from.AddSeconds(index),
+            }));
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await Server.Api.SecurityAuditAdministrationEndpoints.ExportAuditEventsAsync(
+            new DefaultHttpContext(),
+            Principal(admin.Id),
+            fixture.Database,
+            fromUtc: new DateTimeOffset(from, TimeSpan.Zero),
+            toUtc: new DateTimeOffset(from.AddDays(1), TimeSpan.Zero));
+
+        Assert.Equal(StatusCodes.Status413PayloadTooLarge, (result as IStatusCodeHttpResult)?.StatusCode);
     }
 
     private static Domain.SecurityAuditEvent NewEvent(Guid? userId, Guid? companyId, string eventType, DateTime occurredAtUtc) => new()
