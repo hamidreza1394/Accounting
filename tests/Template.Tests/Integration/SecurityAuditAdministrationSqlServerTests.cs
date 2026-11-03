@@ -128,6 +128,9 @@ public sealed class SecurityAuditAdministrationSqlServerTests
             Assert.DoesNotContain("203.0.113.10", csv);
             Assert.DoesNotContain("sql-private-payload", csv);
             Assert.Equal("no-store", exportContext.Response.Headers.CacheControl.ToString());
+            Assert.True(await database.SecurityAuditEvents.AnyAsync(
+                item => item.EventType == "SecurityAuditExported" && item.UserId == admin.Id,
+                cancellationToken));
         }
         finally
         {
