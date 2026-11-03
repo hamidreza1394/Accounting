@@ -95,6 +95,7 @@ public sealed class CompanyRoleMembersSqlServerTests
                 var list = Assert.IsType<Ok<Server.Api.CompanyRoleMemberListResponse>>(page).Value!;
                 Assert.Equal(5, list.TotalCount);
                 Assert.Equal(pageNumber < 3 ? 2 : 1, list.Items.Count);
+                Assert.All(list.Items, item => Assert.Equal(DateTimeKind.Utc, item.CreatedAtUtc.Kind));
                 seen.AddRange(list.Items.Select(item => item.UserId));
             }
             // Pages are disjoint and together cover every member exactly once.
