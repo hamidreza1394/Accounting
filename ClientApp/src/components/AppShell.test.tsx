@@ -40,7 +40,8 @@ describe('AppShell', () => {
   it('shows the focused system-administration menu and removes redundant user-list shortcuts', () => {
     render(<AppShell session={{ ...session, isAdministrator: true }} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
     expect(screen.getByRole('button', { name: /مدیریت سیستم/ })).toBeInTheDocument();
-    for (const label of ['مدیریت کاربران', 'ساختار سازمانی و سمت‌ها', 'گروه‌های دسترسی', 'کاتالوگ و جزئیات مجوزها', 'گزارش امنیت و سوابق', 'سیاست‌های امنیتی']) {
+    expect(screen.getByRole('button', { name: 'مدیریت کاربران' })).toBeInTheDocument();
+    for (const label of ['ساختار سازمانی و سمت‌ها', 'گروه‌های دسترسی', 'کاتالوگ و جزئیات مجوزها', 'گزارش امنیت و سوابق', 'سیاست‌های امنیتی']) {
       expect(screen.getByText(label).closest('[aria-disabled="true"]')).toBeTruthy();
     }
     expect(screen.queryByText('لیست کاربران فعال')).toBeNull();
@@ -61,7 +62,7 @@ describe('AppShell', () => {
     // `title` tooltip or a visually-hidden span was invisible to touch users. Nested rows
     // now carry the same always-visible text badge as top-level rows, just smaller.
     render(<AppShell session={{ ...session, isAdministrator: true }} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
-    const nestedItem = screen.getByText('مدیریت کاربران').closest('[aria-disabled="true"]') as HTMLElement;
+    const nestedItem = screen.getByText('ساختار سازمانی و سمت‌ها').closest('[aria-disabled="true"]') as HTMLElement;
     expect(nestedItem).toBeTruthy();
     expect(nestedItem).toHaveTextContent('به‌زودی');
     expect(nestedItem.querySelector('.faranou-nav-soon-dot')).toBeFalsy();
