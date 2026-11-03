@@ -316,6 +316,7 @@ public sealed class CompanyMembershipRequestEndpointTests
             DestinationCompany = Destination,
             Status = Domain.CompanyMembershipRequestStatuses.Pending,
             RequestedAtUtc = DateTime.UtcNow,
+            RowVersion = new byte[8],
         };
 
         public ClaimsPrincipal Principal(Guid userId) => new(
