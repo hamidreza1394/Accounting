@@ -258,7 +258,7 @@ public static class CompanyMembershipRequestEndpoints
 
         await using var transaction = database.Database.IsRelational()
             ? await database.Database.BeginTransactionAsync(
-                IsolationLevel.ReadCommitted, cancellationToken)
+                IsolationLevel.Serializable, cancellationToken)
             : null;
         if (!await companyAccess.HasPermissionAsync(
                 approverId.Value, companyId, ApprovalPermissionCode, cancellationToken))
@@ -288,6 +288,20 @@ public static class CompanyMembershipRequestEndpoints
 
         if (!requesterIsActive || destinationRole is null)
             return TypedResults.Conflict(new { error = "کاربر یا گروه دسترسی مقصد دیگر شرایط تأیید را ندارد." });
+        if (destinationRole.IsSystemRole)
+            return TypedResults.Conflict(new { error = "انتساب گروه سیستمی از مسیر تأیید عضویت مجاز نیست." });
+
+        var approverPermissionIds = await companyAccess.GetEffectivePermissionIdsAsync(
+            approverId.Value, companyId, cancellationToken);
+        var destinationPermissionIds = await database.CompanyRolePermissions.AsNoTracking()
+            .Where(rolePermission => rolePermission.RoleId == destinationRole.Id &&
+                rolePermission.Role.TenantId == companyId)
+            .Select(rolePermission => rolePermission.PermissionId)
+            .ToListAsync(cancellationToken);
+        if (destinationPermissionIds.Any(permissionId => !approverPermissionIds.Contains(permissionId)))
+            return TypedResults.Json(
+                new { error = "نقش مقصد از سقف مجوزهای قابل تفویض شما فراتر است." },
+                statusCode: StatusCodes.Status403Forbidden);
 
         var existingMembership = await database.UserCompanyMemberships
             .Include(membership => membership.Role)
