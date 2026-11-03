@@ -2069,6 +2069,31 @@
 - D-065 چهار تصمیم جدید تخصیص سال/دوره، directory هم‌گروه، دو نوع دامنه و approval اجباری عضویت بین‌شرکتی را تکمیل می‌کند.
 - هیچ Migration یا تغییر runtime صرفاً با تغییر وضعیت ADR اجرا نشده است.
 
+## 2026-11-03 — پایهٔ رابط مدیریت: روتر، مجوز UI و کامپوننت‌های مشترک (Issue #461 / PR-A1)
+
+- در `ClientApp` روتر درون‌پروژه‌ای مبتنی بر History API (`src/lib/router.tsx`)، تلمیح مجوز UI (`src/lib/permissions.ts`)، قالب‌بندی تاریخ یکپارچه (`src/lib/format.ts`) و کامپوننت‌های مشترک `FormField/Input/Select/Textarea`، `FormSection`، `ConfirmDialog`، `Tabs`، `StatusBadge`، `DataTable`، `Breadcrumb` اضافه شد.
+- کلاینت API: پشتیبانی PUT/PATCH در `sendJson`، `normalizeApiError` (ProblemDetails و `{ error }`) با `fieldErrors`، و `apiPostJson`/`apiGetRaw` برای دو صفحهٔ Provisioning بدون تغییر رفتار.
+- وابستگی جدید اضافه نشد؛ کش توکن Anti-forgery عمداً اضافه نشد. هیچ فایل Backend تغییر نکرد؛ AppShell و ناوبری فعلی دست‌نخورده است.
+- نتایج واقعی در `docs/handoffs/ISSUE-461-admin-ui-foundation.md` ثبت شده است.
+- بازبینی مستقل (code-reviewer): ۰ مورد مسدودکننده و ۳ مورد major که اصلاح شد (Focus trap و خطای onConfirm در ConfirmDialog، Link خارجی در router)؛ ۱۸۰ تست سبز. بازبینی پس از اصلاح تکرار نشد.
+
+## 2026-11-03 — Issue #462 (PR-A2): فهرست و جزئیات کاربران + اتصال router
+- فهرست کاربران (DataTable سمت‌سرور: جست‌وجو، فیلتر، مرتب‌سازی، صفحه‌بندی، وضعیت در URL) و صفحه جزئیات سه‌تبی؛ `UserManagementPage` قدیمی حذف و آزمون‌هایش منتقل شد.
+- `RouterProvider` به AppShell وصل شد؛ منوی «مدیریت کاربران» لینک واقعی شد؛ باگ `offline-check.mjs` برای chunkهای lazy اصلاح شد.
+- بازبینی مستقل: code-reviewer ۰ مسدودکننده/۰ major (۴ مورد minor اصلاح شد)؛ security-reviewer بدون یافته Medium به بالا. ۲۲۲ تست سبز. بررسی مرورگر واقعی اجرا نشد.
+
+## 2026-11-03 — Issue #463 (PR-A4): بهبود حساب کاربری من
+- کشوی حساب کاربری با `Tabs` مشترک؛ تب امنیت با اعتبارسنجی فیلدی، نگاشت `fieldErrors` و جلوگیری از ارسال دوباره؛ تب سوابق با `AuditTimeline` (take=50 و «نمایش بیشتر» تا ۱۰۰)؛ پروفایل فقط‌خواندنی (بدون ورود روند ویرایش، طبق USER_SELF_SERVICE.md).
+- بازبینی مستقل: code-reviewer ۰ مسدودکننده و ۲ major (اصلاح شد)؛ security-reviewer بدون یافته Medium به بالا. ۲۵۰ تست سبز (روی پایه A2). بررسی مرورگر واقعی اجرا نشد.
+
+## 2026-11-03 — Issue #462 (بخش ۲، PR-A3): فرم‌های ایجاد و ویرایش کاربر
+- فرم مشترک ایجاد/ویرایش با اعتبارسنجی فیلدی هم‌خوان با سرور، نگهبان تغییرات ذخیره‌نشده (Cancel و beforeunload)، تأیید غیرفعال‌سازی، نگاشت خطاهای سرور (۴۰۹/۴۰۰)، پیام موفقیت یک‌بار مصرف؛ فقط فیلدهای پشتیبانی‌شده API.
+- بازبینی مستقل: code-reviewer ۰ مسدودکننده/۳ major (۲ اصلاح، ۱ به‌عنوان کار بعدی)، security-reviewer بدون Critical/High/Medium (Low اصلاح شد). ۳۱۶ تست سبز (روی پایه A4). بررسی مرورگر واقعی اجرا نشد.
+
+## 2026-11-03 — Issue #464 (PR-A5): پاک‌سازی ClientApp، RTL، عملکرد و مستندات
+- حذف hex و کلاس‌های خام Tailwind از کامپوننت‌ها (توکن‌های جدید)، منطقی‌سازی RTL، ادغام `PasswordInput`، `fiscalStatus`، `ErrorBoundary`، lazy بودن صفحات Provisioning (JS ورودی: ۳۹۵٫۰۴kB ← ۳۲۵٫۶۵kB)، لینک پرش، `headingLevel`؛ مستند `docs/ADMIN_UI.md`.
+- بررسی مرورگر واقعی با Playwright: ۴ باگ یافت و اصلاح شد (ارتفاع دکمه‌ها در موبایل، برش تب‌ها و هم‌پوشانی فوتر کشو، فوکوس‌پذیری سایدبار بسته، آیکون جست‌وجو). بازبینی مستقل: ۰ مسدودکننده/۲ major اصلاح‌شد. ۳۳۸ تست سبز. مقایسه پیکسلی با main: تغییر فقط جزئی در آیکون‌ها/نشان‌ها.
+
 
 ## 2026-11-03 — Issue #458: انتقال API مدیریت نقش و کاتالوگ مجوز به main
 
@@ -2085,9 +2110,47 @@
 - Regression test `UserAdministrationEndpointTests.ListUsers_RequiresAnActiveInstallationAdministratorFromTheDatabase` به پاسخ JSON دارای فیلد error با HTTP 403 به‌روزرسانی شد تا با helper صریح 403 در head فعلی هم‌خوان باشد.
 
 
+## 2026-11-03 — Issue #467: پوشش تست خروج موفق در سوابق ورود/خروج
+
+- ممیزی `GetMyLoginHistoryAsync` نشان داد `LogoutSucceeded` از قبل در allowlist رویدادهای تاریخچه وجود دارد؛ API به تغییر نیاز نداشت.
+- شکاف واقعی فقط تست بود: تست self-service فقط LoginSucceeded/LoginFailed را درج می‌کرد و LogoutSucceeded را صریحاً assert نمی‌کرد.
+- رویداد LogoutSucceeded با timestamp جدیدتر به تست افزوده شد؛ انتظار سه رویداد، allowlist و ترتیب نزولی بررسی می‌شوند. RoleChanged و رویداد کاربر دیگر همچنان خارج از پاسخ می‌مانند.
+- هیچ API، schema، Migration یا Frontend تغییر نکرد.
+- اجرای dotnet test و build در محیط ChatGPT انجام نشد؛ نتیجهٔ CI همین PR باید بررسی شود.
+- handoff: `docs/handoffs/ISSUE-467-login-history-logout-test.md`.
+
+
+## 2026-11-03 — Issue #390: قرارداد entitlement شرکت‌محور payload v2
+
+- مبنای شاخه: `main`@ `5262c9a3f8600a036edad9f32eea594b118b7824`; PRهای باز زمان شروع #469/#468/#466/#459 همگی خارج از محدوده Vendor بودند.
+- Issue #390 با D-059 و نظر مالک درباره کد `TRADE_IMPORT` بررسی شد. هیچ تصمیم جدیدی درباره entitlement تجاری یا migration گرفته نشد.
+- در `Licensing.Contracts` payload v2 اضافه شد: entitlement مستقل هر Company، module allowlist شامل `TRADE_IMPORT` فقط در v2، سقف Seat مثبت، feature catalog typed، و تاریخ‌های support/update مستقل از expiry.
+- v1 canonical golden bytes، allowlist نصب‌محور و رفتار ignore کردن تمام فیلدهای ناشناخته با DTO مستقل legacy حفظ شدند؛ v2 unknown fields و JSON غیرcanonical را رد می‌کند.
+- `LicenseRevisionRules` فقط invariants amendment را برای payloadهای از قبل signature-verified کنترل می‌کند: LicenseId/InstallationId/ProductCode ثابت، format downgrade و Sequence replay/lower رد.
+- تست‌های regression برای v1 compatibility، signed v2، tampering، unknown field، canonicalization، module/feature allowlist، duplicate، capacity و sequence اضافه شدند.
+- هیچ تغییری در Vendor/**، Server/**، دیتابیس مشتری یا migration انجام نشد. Vendor issuance #393 و Customer state/replay #391 خارج از این PR هستند.
+- تست محلی در این نشست اجرا نشده است؛ CI روی PR لازم است. وضعیت تا آن زمان Verified نیست.
+
+
+## 2026-11-03 — Issue #475 (PR-B1): نقش‌ها، کاتالوگ مجوز و PermissionTree
+- صفحات کاتالوگ مجوز، فهرست نقش‌ها، ایجاد و ویرایش نقش با `PermissionTree` و پیش‌نمایش قبل/بعد؛ روی قرارداد PR #459 (هنوز Merge نشده؛ بدون اتصال به سرور واقعی). دایرکتوری هم‌گروه (PR #466) به‌دلیل نبود API فهرست گروه‌ها ساخته نشد.
+- بازبینی مستقل: code-reviewer ۰ مسدودکننده/۱ major (فرم کهنه پس از ذخیره) اصلاح شد؛ security-reviewer بدون Critical/High (Medium: نبود Delegation Ceiling سمت سرور، مستند شد). ۴۰۸ تست سبز؛ QA مرورگر واقعی ۳۶ از ۳۶ سناریو روی API شبیه‌سازی‌شده.
+
+
+## 2026-11-03 — بازبینی تحویل Claude برای Issue #444 (پس از PR #478)
+
+- بررسی GitHub و `main`@`4c84b3938b4438f93db907be0375d0c120202387` نشان داد برش‌های UI A1–A5 و B1 از طریق PRهای #470، #471، #473، #474 و #478 در main حضور دارند؛ PR #469 مستقل ادغام نشده اما زیرساخت A1 در زنجیره PRهای بعدی منتقل شده است.
+- API نقش و کاتالوگ از PR #459 و API دایرکتوری گروهی از PR #477 در main هستند. PR #478 وضعیت API #459 را به‌عنوان وابستگی ادغام‌شده تثبیت می‌کند.
+- مستند `ADMIN_UI.md`، `USER_ACCESS_MANAGEMENT.md` و handoff #475 از وضعیت پیش از Merge به وضعیت واقعی main به‌روزرسانی شدند؛ تاریخچه قبلی WORK_LOG حفظ شد.
+- محدودیت‌های باز به‌صراحت ثبت شدند: E2E اختصاصی role/catalog با Backend و SQL Server واقعی و axe اجرا نشده؛ Delegation Ceiling و Company Manager پشتیبانی نمی‌شوند؛ اعضای نقش/انتقال اعضا API ندارند؛ S2 ساختار سازمانی و S7 گزارش امنیت مدیریتی کامل نیستند.
+- PR #478 گزارش CI نهایی موفق و QA مرورگر ۳۶/۳۶ با API mock دارد. این نتایج را به‌عنوان E2E زنده نقش‌ها تعبیر نکردیم.
+- هیچ کد runtime، API، Schema یا Migration در این برش مستنداتی تغییر نمی‌کند. Issue مادر #444 باز می‌ماند تا شکاف‌های باقیمانده با Issue/PRهای مستقل تکمیل شوند.
+- handoff تجمیعی: `docs/handoffs/ISSUE-444-admin-ui-completion.md`.
+
 ## 2026-11-03 — PR #479 (Issue #460): اصلاح گارد Migration برای خروجی ابزار EF
 - شکست CI فقط در گام «Test the migration guards» بود (۸۶۹ تست .NET سبز بودند): پارسر `scripts/migration_model.py` شکل خروجی `dotnet ef` را نمی‌فهمید — `ToTable("X", (string)null)` و نبود `HasAlternateKey` مجزا (EF کلیدِ جایگزین را فقط از `HasPrincipalKey` در رابطه‌ها نشان می‌دهد).
 - پارسر هر دو شکل را می‌پذیرد و کلید جایگزین را از `HasPrincipalKey` استخراج می‌کند؛ مقایسهٔ مدل/snapshot/designer هیچ‌جا ضعیف نشد. چهار تست واحد جدید (`EfToolsSnapshotFormTests`) شامل تست منفی «entity بدون جدول همچنان رد می‌شود».
 - فیکسچر تست جهش `test_newer_migration_than_the_constants` به تاریخی بعد از migration جدید (`20261201000000`) منتقل شد؛ نیت تست تغییر نکرد.
 - شواهد محلی: `generate_migrations.py --check` و `verify_migration_model.py` (۱۱ migration، Up و Down) موفق؛ `test_migration_tooling.py` ۲۸ تست و `test_migration_guard_mutations.py` ۳۱ تست موفق؛ `dotnet ef migrations has-pending-model-changes` (ابزار 10.0.13) خروجی «No changes have been made to the model since the last migration».
 - ریسک ثبت‌شده: در همین PR بررسی بایت‌به‌بایت designer/snapshot برای migration فعلی با `CURRENT_MIGRATION_WRITTEN_BY_EF_TOOLS` عمداً کنار گذاشته شده و تنها به EF (`has-pending-model-changes`) واگذار شده است؛ این کاهش پوشش گارد باید توسط Maintainer بازبینی شود.
+
