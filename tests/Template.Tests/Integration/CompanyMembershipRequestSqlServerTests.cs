@@ -67,6 +67,9 @@ public sealed class CompanyMembershipRequestSqlServerTests
             Guid approverBId;
             Guid memberRoleId;
             Guid requestId;
+            Guid restrictedRequesterId;
+            Guid restrictedRoleId;
+            Guid restrictedRequestId;
 
             await using (var before = CreateContext(name))
             {
@@ -139,6 +142,45 @@ public sealed class CompanyMembershipRequestSqlServerTests
                     new Domain.CompanyRolePermission { RoleId = approverRoleA.Id, Role = approverRoleA, PermissionId = permission.Id, Permission = permission },
                     new Domain.CompanyRolePermission { RoleId = approverRoleB.Id, Role = approverRoleB, PermissionId = permission.Id, Permission = permission });
 
+                var restrictedRequester = new Domain.User("restricted-requester@example.test")
+                {
+                    Username = "restricted-requester",
+                    IsActive = true,
+                };
+                var restrictedRole = new Domain.CompanyRole
+                {
+                    TenantId = destinationId,
+                    Company = await before.Companies.SingleAsync(item => item.Id == destinationId, TestContext.Current.CancellationToken),
+                    Code = "RESTRICTED",
+                    Name = "نقش خارج از سقف واگذاری",
+                    IsActive = true,
+                };
+                var extraPermission = new Domain.PermissionDefinition
+                {
+                    Code = "test.membership.delegation.extra",
+                    Name = "مجوز آزمایشی خارج از سقف",
+                };
+                before.Users.Add(restrictedRequester);
+                before.CompanyRoles.Add(restrictedRole);
+                before.PermissionDefinitions.Add(extraPermission);
+                before.CompanyRolePermissions.Add(new Domain.CompanyRolePermission
+                {
+                    Role = restrictedRole,
+                    Permission = extraPermission,
+                });
+                var restrictedRequest = new Domain.CompanyMembershipRequest
+                {
+                    UserId = restrictedRequester.Id,
+                    DestinationTenantId = destinationId,
+                    Status = Domain.CompanyMembershipRequestStatuses.Pending,
+                    RequestedAtUtc = DateTime.UtcNow,
+                };
+                before.CompanyMembershipRequests.Add(restrictedRequest);
+                await before.SaveChangesAsync(TestContext.Current.CancellationToken);
+                restrictedRequesterId = restrictedRequester.Id;
+                restrictedRoleId = restrictedRole.Id;
+                restrictedRequestId = restrictedRequest.Id;
+
                 var membershipRequest = new Domain.CompanyMembershipRequest
                 {
                     UserId = requesterId,
@@ -151,15 +193,15 @@ public sealed class CompanyMembershipRequestSqlServerTests
                 requestId = membershipRequest.Id;
             }
 
-            async Task<IResult> ApproveAsync(Guid approverId)
+            async Task<IResult> ApproveAsync(Guid approverId, Guid targetRequestId, Guid targetRoleId)
             {
                 await using var database = CreateContext(name);
                 return await Server.Api.CompanyMembershipRequestEndpoints.ApproveAsync(
                     destinationId,
-                    requestId,
+                    targetRequestId,
                     new DefaultHttpContext(),
                     Principal(approverId),
-                    new Server.Api.ApproveCompanyMembershipRequest(memberRoleId),
+                    new Server.Api.ApproveCompanyMembershipRequest(targetRoleId),
                     new AllowAntiforgery(),
                     database,
                     new Infrastructure.Tenancy.CompanyAccessService(database),
@@ -167,7 +209,25 @@ public sealed class CompanyMembershipRequestSqlServerTests
                     TestContext.Current.CancellationToken);
             }
 
-            var outcomes = await Task.WhenAll(ApproveAsync(approverAId), ApproveAsync(approverBId));
+            var restrictedOutcome = await ApproveAsync(approverAId, restrictedRequestId, restrictedRoleId);
+            Assert.Equal(StatusCodes.Status403Forbidden,
+                (restrictedOutcome as IStatusCodeHttpResult)?.StatusCode);
+
+            await using (var deniedCheck = CreateContext(name))
+            {
+                var deniedRequest = await deniedCheck.CompanyMembershipRequests.SingleAsync(
+                    item => item.Id == restrictedRequestId, TestContext.Current.CancellationToken);
+                Assert.Equal(Domain.CompanyMembershipRequestStatuses.Pending, deniedRequest.Status);
+                Assert.False(await deniedCheck.UserCompanyMemberships.AnyAsync(
+                    item => item.UserId == restrictedRequesterId && item.TenantId == destinationId,
+                    TestContext.Current.CancellationToken));
+                Assert.DoesNotContain(await deniedCheck.SecurityAuditEvents.ToListAsync(TestContext.Current.CancellationToken),
+                    item => item.EventType == "CompanyMembershipApproved" && item.EntityId == restrictedRequestId.ToString());
+            }
+
+            var outcomes = await Task.WhenAll(
+                ApproveAsync(approverAId, requestId, memberRoleId),
+                ApproveAsync(approverBId, requestId, memberRoleId));
             Assert.Single(outcomes.Where(result =>
                 (result as IStatusCodeHttpResult)?.StatusCode == StatusCodes.Status204NoContent));
             Assert.All(outcomes.Where(result =>
