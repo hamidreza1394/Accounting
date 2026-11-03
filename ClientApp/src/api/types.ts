@@ -1,3 +1,4 @@
+import { asUtcInstant } from '../lib/time';
 // Contracts of the Faranou JSON API v1 (Server/Api/ApiEndpoints.cs).
 // Every response is checked at runtime before it is used, so a contract change on the
 // server surfaces as a clear error instead of `undefined` deep inside a component.
@@ -323,6 +324,20 @@ function readIsoDateTime(source: JsonObject, key: string, what: string, nullable
   return value;
 }
 
+/** A `*Utc` instant: UTC by contract; an offset-less value (EF `Kind=Unspecified`) gets `Z` (see lib/time.ts). */
+function readUtcDateTime(source: JsonObject, key: string, what: string, nullable = false): string | null {
+  const value = readIsoDateTime(source, key, what, nullable);
+  return value === null ? null : asUtcInstant(value);
+}
+
+/**
+ * A legacy server-local wall-clock time (`DateTime.Now` on the server: InsertDateTime, UpdateDateTime,
+ * LastLoginDateTime). It is NOT UTC and is returned unchanged, so it displays as the server wrote it.
+ */
+function readServerLocalDateTime(source: JsonObject, key: string, what: string, nullable = false): string | null {
+  return readIsoDateTime(source, key, what, nullable);
+}
+
 export function parseMyProfile(value: unknown): MyProfile {
   if (!isObject(value)) throw new ContractError('myProfile');
   return {
@@ -333,8 +348,8 @@ export function parseMyProfile(value: unknown): MyProfile {
     cellPhoneNumber: readNullableString(value, 'cellPhoneNumber', 'myProfile'),
     isEmailAddressVerified: readBoolean(value, 'isEmailAddressVerified', 'myProfile'),
     isCellPhoneNumberVerified: readBoolean(value, 'isCellPhoneNumberVerified', 'myProfile'),
-    lastLoginDateTime: readIsoDateTime(value, 'lastLoginDateTime', 'myProfile', true),
-    insertDateTime: readIsoDateTime(value, 'insertDateTime', 'myProfile')!,
+    lastLoginDateTime: readServerLocalDateTime(value, 'lastLoginDateTime', 'myProfile', true),
+    insertDateTime: readServerLocalDateTime(value, 'insertDateTime', 'myProfile')!,
   };
 }
 
@@ -348,7 +363,7 @@ export function parseLoginHistory(value: unknown): LoginHistoryItem[] {
     }
     return {
       eventType: eventType as LoginHistoryEventType,
-      occurredAtUtc: readIsoDateTime(item, 'occurredAtUtc', 'loginHistory.item')!,
+      occurredAtUtc: readUtcDateTime(item, 'occurredAtUtc', 'loginHistory.item')!,
       ipAddress: readNullableString(item, 'ipAddress', 'loginHistory.item'),
     };
   });
@@ -412,8 +427,8 @@ export function parseAdminUserList(value: unknown): AdminUserListResponse {
       emailAddress: readString(item, 'emailAddress', 'adminUsers.item'),
       cellPhoneNumber: readNullableString(item, 'cellPhoneNumber', 'adminUsers.item'),
       isActive: readBoolean(item, 'isActive', 'adminUsers.item'),
-      lastLoginDateTime: readIsoDateTime(item, 'lastLoginDateTime', 'adminUsers.item', true),
-      insertDateTime: readIsoDateTime(item, 'insertDateTime', 'adminUsers.item')!,
+      lastLoginDateTime: readServerLocalDateTime(item, 'lastLoginDateTime', 'adminUsers.item', true),
+      insertDateTime: readServerLocalDateTime(item, 'insertDateTime', 'adminUsers.item')!,
       activeCompanyCount,
     };
   });
@@ -433,7 +448,7 @@ export function parseAdminUserDetails(value: unknown): AdminUserDetails {
       roleCode: readString(item, 'roleCode', 'adminUser.membership'),
       roleName: readString(item, 'roleName', 'adminUser.membership'),
       isActive: readBoolean(item, 'isActive', 'adminUser.membership'),
-      createdAtUtc: readIsoDateTime(item, 'createdAtUtc', 'adminUser.membership')!,
+      createdAtUtc: readUtcDateTime(item, 'createdAtUtc', 'adminUser.membership')!,
     };
   });
   const base: AdminUserListItem = {
@@ -444,15 +459,15 @@ export function parseAdminUserDetails(value: unknown): AdminUserDetails {
     emailAddress: readString(value, 'emailAddress', 'adminUser'),
     cellPhoneNumber: readNullableString(value, 'cellPhoneNumber', 'adminUser'),
     isActive: readBoolean(value, 'isActive', 'adminUser'),
-    lastLoginDateTime: readIsoDateTime(value, 'lastLoginDateTime', 'adminUser', true),
-    insertDateTime: readIsoDateTime(value, 'insertDateTime', 'adminUser')!,
+    lastLoginDateTime: readServerLocalDateTime(value, 'lastLoginDateTime', 'adminUser', true),
+    insertDateTime: readServerLocalDateTime(value, 'insertDateTime', 'adminUser')!,
     activeCompanyCount: memberships.filter(x => x.isActive).length,
   };
   return {
     ...base,
     isEmailAddressVerified: readBoolean(value, 'isEmailAddressVerified', 'adminUser'),
     isCellPhoneNumberVerified: readBoolean(value, 'isCellPhoneNumberVerified', 'adminUser'),
-    updateDateTime: readIsoDateTime(value, 'updateDateTime', 'adminUser')!,
+    updateDateTime: readServerLocalDateTime(value, 'updateDateTime', 'adminUser')!,
     legacyRoleName: readNullableString(value, 'legacyRoleName', 'adminUser'),
     memberships,
   };
@@ -744,20 +759,6 @@ export type SecurityAuditEvent = {
 
 export type SecurityAuditPage = { items: SecurityAuditEvent[]; totalCount: number; page: number; pageSize: number };
 
-/**
- * A `*Utc` instant from the server. EF returns SQL Server `datetime2` with `Kind=Unspecified`, so
- * System.Text.Json writes it WITHOUT `Z`/offset, and `new Date()` would read it as browser-local
- * time (hours off). These fields are UTC by contract, so an offset-less value gets `Z` appended.
- */
-export function asUtcInstant(value: string): string {
-  return /(?:Z|[+-]\d{2}:\d{2})$/.test(value) ? value : `${value}Z`;
-}
-
-function readUtcDateTime(source: JsonObject, key: string, what: string, nullable = false): string | null {
-  const value = readIsoDateTime(source, key, what, nullable);
-  return value === null ? null : asUtcInstant(value);
-}
-
 export function parseSecurityAuditEvents(value: unknown): SecurityAuditPage {
   const what = 'securityAudit';
   if (!isObject(value)) throw new ContractError(what);
@@ -784,6 +785,68 @@ export function parseSecurityAuditEvents(value: unknown): SecurityAuditPage {
         entityId: readNullableString(row, 'entityId', at),
         occurredAtUtc: occurred,
         correlationId: readNullableString(row, 'correlationId', at),
+      };
+    }),
+    totalCount: readCount(value, 'totalCount', what),
+    page,
+    pageSize,
+  };
+}
+
+// --- Company user directory (backend: CompanyUserDirectoryEndpoints, permission users.list) ---
+
+/** One member of the requested company. Minimal fields only: no e-mail, phone, credential or session data. */
+export type CompanyDirectoryUser = {
+  userId: string;
+  username: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  userIsActive: boolean;
+  membershipIsActive: boolean;
+  roleId: string;
+  roleCode: string;
+  roleName: string;
+  roleIsActive: boolean;
+  membershipCreatedAtUtc: string;
+};
+
+export type CompanyDirectoryPage = {
+  companyId: string;
+  companyName: string;
+  items: CompanyDirectoryUser[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+};
+
+export function parseCompanyDirectory(value: unknown): CompanyDirectoryPage {
+  const what = 'companyDirectory';
+  if (!isObject(value)) throw new ContractError(what);
+  const rows = value['items'];
+  if (!Array.isArray(rows)) throw new ContractError(`${what}.items`);
+  const page = readCount(value, 'page', what);
+  const pageSize = readCount(value, 'pageSize', what);
+  if (page < 1 || pageSize < 1) throw new ContractError(`${what}.page`);
+  return {
+    companyId: readString(value, 'companyId', what),
+    companyName: readString(value, 'companyName', what),
+    items: rows.map((row): CompanyDirectoryUser => {
+      if (!isObject(row)) throw new ContractError(`${what}.item`);
+      const at = `${what}.item`;
+      const since = readUtcDateTime(row, 'membershipCreatedAtUtc', at);
+      if (since === null) throw new ContractError(`${at}.membershipCreatedAtUtc`);
+      return {
+        userId: readString(row, 'userId', at),
+        username: readNullableString(row, 'username', at),
+        firstName: readNullableString(row, 'firstName', at),
+        lastName: readNullableString(row, 'lastName', at),
+        userIsActive: readBoolean(row, 'userIsActive', at),
+        membershipIsActive: readBoolean(row, 'membershipIsActive', at),
+        roleId: readString(row, 'roleId', at),
+        roleCode: readString(row, 'roleCode', at),
+        roleName: readString(row, 'roleName', at),
+        roleIsActive: readBoolean(row, 'roleIsActive', at),
+        membershipCreatedAtUtc: since,
       };
     }),
     totalCount: readCount(value, 'totalCount', what),

@@ -2240,6 +2240,10 @@
 - بدون UI/ClientApp؛ Claude می‌تواند endpoint را مصرف کند. handoff: docs/handoffs/ISSUE-494-company-user-directory-api.md.
 
 
+## 2026-11-03 — Issue #444: ممیزی و قرارداد زمان (UTC)
+- ممیزی نشان داد فیلدهای `*Utc` با `DateTime.UtcNow` نوشته می‌شوند ولی بدون `Z` سریال می‌شوند، و فیلدهای قدیمی (`InsertDateTime`، `UpdateDateTime`، `LastLoginDateTime`) با `DateTime.Now` (ساعت محلی سرور) نوشته می‌شوند؛ پس مبدل سراسری «بدون Z = UTC» غلط است.
+- ClientApp: ماژول `lib/time.ts` و تفکیک صریح دو نوع فیلد در پارسرها؛ مرز روز در منطقهٔ کاربر؛ تست UTC/ایران/آلمان/DST/نیمه‌شب. یک تست مشخصه‌ساز SQL Server اضافه شد (بدون تغییر رفتار). پیشنهاد Backend در D-067 (`Proposed`).
+- `docs/TIME_CONTRACT.md`، handoff: `docs/handoffs/ISSUE-444-utc-time-contract.md`.
 ## 2026-11-03 — Issue #498: enforce سقف واگذاری مجوز در تأیید عضویت بین‌شرکتی
 - در API تأیید عضویت، PermissionIdهای نقش مقصد با مجوزهای مؤثر نقش‌های فعال تأییدکننده در همان شرکت مقایسه می‌شوند؛ واگذاری مجوزی که تأییدکننده ندارد رد می‌شود.
 - تخصیص System Role از این گردش‌کار رد می‌شود؛ نقش بدون مجوز همچنان قابل واگذاری است. پاسخ رد عمومی 403 است و درخواست Pending/عضویت/سوابق Audit موفق تغییر نمی‌کند.
@@ -2254,3 +2258,31 @@
 - ADR D-068: `react-day-picker@9.14.0` با مسیر `/persian` (نسخهٔ 10 این مسیر را ندارد) پین شد؛ مجوزها MIT، `npm audit` بدون آسیب‌پذیری، حجم chunk تنبل ≈ 72 kB gzip، اجرای آفلاین تأیید شد.
 - کامپوننت `ui/JalaliDateField` (مقدار ISO میلادی، RTL، ارقام فارسی، `min`/`max`، صفحه‌کلید، `FormField`) با ۱۲ تست؛ یک باگ اعتبارسنجی ماه حین تست یافت و رفع شد.
 - اتصال به گزارش امنیتی پس از ادغام #499 در PR بعدی. handoff: `docs/handoffs/ISSUE-444-jalali-date-picker.md`.
+
+## 2026-11-03 — Issue #444: E2E و دسترس‌پذیری (مرحلهٔ ۱۱)
+- آزمون‌های Playwright `access-ui.spec.mjs` + اسکن axe (WCAG A/AA) و ۴۰۳ واقعی API برای غیرمدیر نوشته شد؛ seed گسترش یافت؛ وابستگی آزمونی `@axe-core/playwright@4.14.0` (MPL-2.0) افزوده شد.
+- **اجرا نشد** (فقط CI با SQL Server)؛ تا نتیجهٔ job `e2e` وضعیت Verified نیست. handoff: `docs/handoffs/ISSUE-444-ui-e2e-and-a11y.md`.
+
+## 2026-11-03 — Issue #444: UI دفترچهٔ کاربران شرکت
+- صفحهٔ `/company/users` روی API ادغام‌شدهٔ #497: فهرست فقط‌خواندنی کاربران شرکت جاری با جستجو، فیلتر وضعیت عضویت، جزئیات و صفحه‌بندی؛ 403/404 با پنل «دسترسی ندارید». هیچ داده شرکت دیگر درخواست یا نمایش داده نمی‌شود.
+- واحد/سمت، مجوز دقیق گروه برای غیرمدیر و منوی مبتنی بر مجوز به Backend وابسته‌اند (قرارداد در handoff). handoff: `docs/handoffs/ISSUE-444-company-user-directory-ui.md`.
+## 2026-11-03 — Issue #444: تکمیل UI گزارش امنیتی (مراحل ۴ و ۵)
+- فیلترهای تاریخ به `JalaliDateField` منتقل شد؛ فیلتر کاربر با `UserPicker` (combobox دسترس‌پذیر روی `GET /admin/users?search=`) و فیلتر شرکت از شرکت‌های عضویت کاربر + کلیک روی جدول. بدون داده ساختگی.
+- حین تست دو باگ واقعی رفع شد: ماه پیش‌فرض تقویم و گم‌شدن مقدار تاریخ از نام دسترس‌پذیر دکمه.
+- مسدود به API: مرتب‌سازی، فهرست همهٔ شرکت‌های نصب، فهرست انواع رویداد؛ قرارداد در handoff. handoff: `docs/handoffs/ISSUE-444-security-audit-complete.md`.
+- نتیجهٔ واقعی job `e2e` (CI): ۳۲ موفق، ۴ شکست axe؛ یافتهٔ واقعی در هدر مشترک: `label-content-name-mismatch` (دکمه‌های تغییر شرکت/دوره مالی) و `aria-prohibited-attr` (aria-label روی span اعلان). در UI اصلاح شد (نام دسترس‌پذیر شامل متن دیده‌شده؛ `role="img"`)؛ تست‌ها با regex هماهنگ شدند، ضعیف نشدند.
+
+## 2026-11-03 — Issue #504 / D-069: طراحی چرخه عمر نشست
+- ممیزی نشان داد Cookie فعلی ۳۰ دقیقه‌ای و sliding است؛ SessionValidator در هر درخواست account active و CredentialStamp را بررسی می‌کند؛ خروج صریح نیز از طریق UserSessionAuditService ثبت می‌شود.
+- SessionId و UserSession per-session وجود ندارد، پس فهرست/ابطال مستقل نشست هنوز ممکن نیست. نبود event به‌عنوان logout/expiry/duration تفسیر نمی‌شود.
+- D-069 یک طرح پیشنهادی برای UserSession، SessionId، idle window، self-service revoke و retention ثبت می‌کند؛ هیچ Schema، Migration، claim یا تغییر Cookie انجام نشده است.
+- تصمیم‌های retention، absolute lifetime، revoke-others و scope مدیر نصب نیازمند تأیید مالک هستند.
+- handoff: docs/handoffs/ISSUE-504-session-lifecycle-design.md.
+
+## 2026-11-03 — Issue #507: خروجی محدود CSV گزارش امنیتی
+- مسیر خروجی با POST و فیلترهای JSON در بدنه پیاده‌سازی شد؛ چون خروجی موفق رویداد SecurityAuditExported ثبت می‌کند، GET امن/بدون‌اثر نیست. Anti-forgery و rate limiting برای endpoint فعال‌اند.
+- بازه fromUtc/toUtc اجباری و حداکثر ۳۱ روز؛ پرس‌وجو با ترتیب قطعی OccurredAtUtc DESC و Id DESC و Take(10,001) انجام می‌شود؛ بیش از ۱۰٬۰۰۰ ردیف پاسخ 413 می‌گیرد.
+- CSV با UTF-8 BOM، quoting و escaping مطابق RFC 4180 و CRLF تولید می‌شود؛ تمام سلول‌های متنی پس از بررسی whitespace برای شروع فرمولی با apostrophe خنثی می‌شوند.
+- projection فقط شناسه/عامل/شرکت/نوع/موجودیت/زمان/CorrelationId را صادر می‌کند؛ IP و DetailsJson حذف‌اند و پاسخ no-store/no-cache دارد. ثبت audit پیش از تحویل فایل انجام می‌شود؛ شکست ذخیره‌سازی مانع تحویل فایل است.
+- Unit و SQL Server integration پوشش داده شدند؛ اجرا در این محیط انجام نشد و نتیجه CI روی head نهایی معیار Verified شدن است.
+- handoff: docs/handoffs/ISSUE-507-security-audit-csv-export.md.

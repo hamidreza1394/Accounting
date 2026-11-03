@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Data.SqlClient;
@@ -33,6 +34,15 @@ public sealed class SecurityAuditAdministrationSqlServerTests
             .UseSqlServer(builder.ConnectionString, sql =>
                 sql.MigrationsAssembly(typeof(Data.DatabaseContext).Assembly.FullName))
             .Options);
+    }
+
+    private sealed class StubAntiforgery : IAntiforgery
+    {
+        public AntiforgeryTokenSet GetAndStoreTokens(HttpContext httpContext) => throw new NotSupportedException();
+        public AntiforgeryTokenSet GetTokens(HttpContext httpContext) => throw new NotSupportedException();
+        public Task<bool> IsRequestValidAsync(HttpContext httpContext) => Task.FromResult(true);
+        public Task ValidateRequestAsync(HttpContext httpContext) => Task.CompletedTask;
+        public void SetCookieTokenAndHeader(HttpContext httpContext) { }
     }
 
     private static ClaimsPrincipal Principal(Guid id) => new(new ClaimsIdentity(
@@ -115,13 +125,13 @@ public sealed class SecurityAuditAdministrationSqlServerTests
             var export = await Server.Api.SecurityAuditAdministrationEndpoints.ExportAuditEventsAsync(
                 exportContext,
                 Principal(admin.Id),
+                new Server.Api.SecurityAuditExportRequest(
+                    "LoginSucceeded", admin.Id, company.Id,
+                    new DateTimeOffset(occurredAt.AddMinutes(-1), TimeSpan.Zero),
+                    new DateTimeOffset(occurredAt.AddMinutes(1), TimeSpan.Zero)),
+                new StubAntiforgery(),
                 database,
-                eventType: "LoginSucceeded",
-                userId: admin.Id,
-                companyId: company.Id,
-                fromUtc: new DateTimeOffset(occurredAt.AddMinutes(-1), TimeSpan.Zero),
-                toUtc: new DateTimeOffset(occurredAt.AddMinutes(1), TimeSpan.Zero),
-                cancellationToken: cancellationToken);
+                cancellationToken);
             var exportFile = Assert.IsType<FileContentHttpResult>(export);
             var csv = Encoding.UTF8.GetString(exportFile.FileContents);
             Assert.Contains("LoginSucceeded", csv);

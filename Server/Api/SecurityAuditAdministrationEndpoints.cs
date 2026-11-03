@@ -1,5 +1,7 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -26,10 +28,11 @@ public static class SecurityAuditAdministrationEndpoints
                 Infrastructure.Tenancy.CompanyAccessService.AccountKindClaimType,
                 Infrastructure.Tenancy.CompanyAccessService.UserAccountKind));
 
-        api.MapGet("/admin/security/audit-events/export", ExportAuditEventsAsync)
+        api.MapPost("/admin/security/audit-events/export", ExportAuditEventsAsync)
             .RequireAuthorization(policy => policy.RequireClaim(
                 Infrastructure.Tenancy.CompanyAccessService.AccountKindClaimType,
-                Infrastructure.Tenancy.CompanyAccessService.UserAccountKind));
+                Infrastructure.Tenancy.CompanyAccessService.UserAccountKind))
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
     }
 
     public static async Task<IResult> GetAuditEventsAsync(
@@ -150,12 +153,9 @@ public static class SecurityAuditAdministrationEndpoints
     public static async Task<IResult> ExportAuditEventsAsync(
         HttpContext httpContext,
         ClaimsPrincipal principal,
+        [FromBody] SecurityAuditExportRequest request,
+        [FromServices] IAntiforgery antiforgery,
         Data.DatabaseContext database,
-        string? eventType = null,
-        Guid? userId = null,
-        Guid? companyId = null,
-        DateTimeOffset? fromUtc = null,
-        DateTimeOffset? toUtc = null,
         CancellationToken cancellationToken = default)
     {
         SetNoStore(httpContext);
@@ -164,8 +164,14 @@ public static class SecurityAuditAdministrationEndpoints
             principal, database, cancellationToken);
         if (authorization is not null)
             return authorization;
+        if (!await antiforgery.IsRequestValidAsync(httpContext))
+            return TypedResults.Problem(title: "درخواست نامعتبر است.", statusCode: StatusCodes.Status400BadRequest);
 
-        eventType = string.IsNullOrWhiteSpace(eventType) ? null : eventType.Trim();
+        var eventType = string.IsNullOrWhiteSpace(request.EventType) ? null : request.EventType.Trim();
+        var userId = request.UserId;
+        var companyId = request.CompanyId;
+        var fromUtc = request.FromUtc;
+        var toUtc = request.ToUtc;
         if (eventType?.Length > MaxEventTypeLength ||
             userId == Guid.Empty ||
             companyId == Guid.Empty ||
@@ -323,6 +329,13 @@ public static class SecurityAuditAdministrationEndpoints
     private sealed record ActorRow(Guid Id, string? Username, string? FirstName, string? LastName);
     private sealed record CompanyRow(Guid Id, string Name);
 }
+
+public sealed record SecurityAuditExportRequest(
+    string? EventType,
+    Guid? UserId,
+    Guid? CompanyId,
+    DateTimeOffset? FromUtc,
+    DateTimeOffset? ToUtc);
 
 public sealed record SecurityAuditEventListResponse(
     IReadOnlyList<SecurityAuditEventItemResponse> Items,

@@ -5,7 +5,7 @@
 - Status: API و تست‌ها اضافه شده‌اند؛ CI نهایی در انتظار است.
 
 ## قرارداد خروجی
-- GET /api/v1/admin/security/audit-events/export
+- POST /api/v1/admin/security/audit-events/export with JSON filters. POST is required because successful exports append a SecurityAuditExported audit event; a side-effecting GET would violate HTTP safe-method semantics. Requests require anti-forgery validation and sensitive rate limiting.
 - همان مجوز Installation Administrator و فیلترهای گزارش موجود.
 - fromUtc و toUtc اجباری؛ بازه معکوس یا بزرگ‌تر از ۳۱ روز رد می‌شود.
 - حداکثر ۱۰٬۰۰۰ ردیف؛ بیش از آن 413 و درخواست بازه/فیلتر محدودتر.

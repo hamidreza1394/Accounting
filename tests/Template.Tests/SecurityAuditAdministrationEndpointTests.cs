@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
@@ -131,7 +132,7 @@ public sealed class SecurityAuditAdministrationEndpointTests
         var actor = fixture.AddUser("alice", "Accountant");
         actor.Username = "=SUM(1,1)";
         actor.FirstName = "=HYPERLINK(\"https://example.invalid\")";
-        var company = new Domain.Company { Name = "=1+1", IsActive = true };
+        var company = new Domain.Company { Name = " \t=1+1", IsActive = true };
         fixture.Database.Companies.Add(company);
         var occurredAt = new DateTime(2026, 11, 3, 12, 30, 0, DateTimeKind.Utc);
         fixture.Database.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
@@ -139,10 +140,10 @@ public sealed class SecurityAuditAdministrationEndpointTests
             UserId = actor.Id,
             TenantId = company.Id,
             EventType = "LoginSucceeded",
-            EntityType = "User",
-            EntityId = "record,\"quoted\"",
+            EntityType = "-CMD",
+            EntityId = "+CMD,\"quoted\"",
             OccurredAtUtc = occurredAt,
-            CorrelationId = "=CMD",
+            CorrelationId = "@CMD",
             IpAddress = "198.51.100.99",
             DetailsJson = "{\"secret\":\"export-private-payload\"}",
         });
@@ -152,12 +153,12 @@ public sealed class SecurityAuditAdministrationEndpointTests
         var result = await Server.Api.SecurityAuditAdministrationEndpoints.ExportAuditEventsAsync(
             context,
             Principal(admin.Id),
-            fixture.Database,
-            eventType: "LoginSucceeded",
-            userId: actor.Id,
-            companyId: company.Id,
-            fromUtc: new DateTimeOffset(occurredAt.AddMinutes(-1), TimeSpan.Zero),
-            toUtc: new DateTimeOffset(occurredAt.AddMinutes(1), TimeSpan.Zero));
+            new Server.Api.SecurityAuditExportRequest(
+                "LoginSucceeded", actor.Id, company.Id,
+                new DateTimeOffset(occurredAt.AddMinutes(-1), TimeSpan.Zero),
+                new DateTimeOffset(occurredAt.AddMinutes(1), TimeSpan.Zero)),
+            new StubAntiforgery(isValid: true),
+            fixture.Database);
 
         var file = Assert.IsType<FileContentHttpResult>(result);
         Assert.Equal("text/csv; charset=utf-8", file.ContentType);
@@ -169,11 +170,12 @@ public sealed class SecurityAuditAdministrationEndpointTests
         var csv = Encoding.UTF8.GetString(file.FileContents);
         Assert.Contains("OccurredAtUtc", csv);
         Assert.Contains("2026-11-03T12:30:00.0000000Z", csv);
-        Assert.Contains("\"record,\"\"quoted\"\"", csv);
+        Assert.Contains("\"'+CMD,\"\"quoted\"\"", csv);
         Assert.Contains("'=SUM(1,1)", csv);
         Assert.Contains("'=HYPERLINK", csv);
-        Assert.Contains("'=1+1", csv);
-        Assert.Contains("'=CMD", csv);
+        Assert.Contains("' \t=1+1", csv);
+        Assert.Contains("'@CMD", csv);
+        Assert.Contains("\"'-CMD\"", csv);
         Assert.DoesNotContain("198.51.100.99", csv);
         Assert.DoesNotContain("export-private-payload", csv);
         Assert.Equal("no-store", context.Response.Headers.CacheControl.ToString());
@@ -196,17 +198,30 @@ public sealed class SecurityAuditAdministrationEndpointTests
 
         var from = new DateTimeOffset(2026, 11, 1, 0, 0, 0, TimeSpan.Zero);
         var to = from.AddDays(1);
+        var request = new Server.Api.SecurityAuditExportRequest(null, null, null, from, to);
         var denied = await Server.Api.SecurityAuditAdministrationEndpoints.ExportAuditEventsAsync(
-            new DefaultHttpContext(), Principal(ordinary.Id), fixture.Database, fromUtc: from, toUtc: to);
+            new DefaultHttpContext(), Principal(ordinary.Id), request,
+            new StubAntiforgery(isValid: true), fixture.Database);
         Assert.Equal(StatusCodes.Status403Forbidden, (denied as IStatusCodeHttpResult)?.StatusCode);
 
+        var rejectedContext = new DefaultHttpContext();
+        var rejectedAntiforgery = new StubAntiforgery(isValid: false);
+        var antiforgeryRejected = await Server.Api.SecurityAuditAdministrationEndpoints.ExportAuditEventsAsync(
+            rejectedContext, Principal(admin.Id), request, rejectedAntiforgery, fixture.Database);
+        Assert.Equal(StatusCodes.Status400BadRequest, (antiforgeryRejected as IStatusCodeHttpResult)?.StatusCode);
+        Assert.Equal(1, rejectedAntiforgery.ValidationCalls);
+        Assert.False(await fixture.Database.SecurityAuditEvents.AnyAsync(item => item.EventType == "SecurityAuditExported"));
+
         var missingRange = await Server.Api.SecurityAuditAdministrationEndpoints.ExportAuditEventsAsync(
-            new DefaultHttpContext(), Principal(admin.Id), fixture.Database);
+            new DefaultHttpContext(), Principal(admin.Id),
+            new Server.Api.SecurityAuditExportRequest(null, null, null, null, null),
+            new StubAntiforgery(isValid: true), fixture.Database);
         Assert.Equal(StatusCodes.Status400BadRequest, (missingRange as IStatusCodeHttpResult)?.StatusCode);
 
         var wideRange = await Server.Api.SecurityAuditAdministrationEndpoints.ExportAuditEventsAsync(
-            new DefaultHttpContext(), Principal(admin.Id), fixture.Database,
-            fromUtc: from, toUtc: from.AddDays(31).AddTicks(1));
+            new DefaultHttpContext(), Principal(admin.Id),
+            new Server.Api.SecurityAuditExportRequest(null, null, null, from, from.AddDays(31).AddTicks(1)),
+            new StubAntiforgery(isValid: true), fixture.Database);
         Assert.Equal(StatusCodes.Status400BadRequest, (wideRange as IStatusCodeHttpResult)?.StatusCode);
     }
 
@@ -227,11 +242,26 @@ public sealed class SecurityAuditAdministrationEndpointTests
         var result = await Server.Api.SecurityAuditAdministrationEndpoints.ExportAuditEventsAsync(
             new DefaultHttpContext(),
             Principal(admin.Id),
-            fixture.Database,
-            fromUtc: new DateTimeOffset(from, TimeSpan.Zero),
-            toUtc: new DateTimeOffset(from.AddDays(1), TimeSpan.Zero));
+            new Server.Api.SecurityAuditExportRequest(null, null, null,
+                new DateTimeOffset(from, TimeSpan.Zero), new DateTimeOffset(from.AddDays(1), TimeSpan.Zero)),
+            new StubAntiforgery(isValid: true),
+            fixture.Database);
 
         Assert.Equal(StatusCodes.Status413PayloadTooLarge, (result as IStatusCodeHttpResult)?.StatusCode);
+    }
+
+    private sealed class StubAntiforgery(bool isValid) : IAntiforgery
+    {
+        public int ValidationCalls { get; private set; }
+        public AntiforgeryTokenSet GetAndStoreTokens(HttpContext httpContext) => throw new NotSupportedException();
+        public AntiforgeryTokenSet GetTokens(HttpContext httpContext) => throw new NotSupportedException();
+        public Task<bool> IsRequestValidAsync(HttpContext httpContext)
+        {
+            ValidationCalls++;
+            return Task.FromResult(isValid);
+        }
+        public Task ValidateRequestAsync(HttpContext httpContext) => Task.CompletedTask;
+        public void SetCookieTokenAndHeader(HttpContext httpContext) { }
     }
 
     private static Domain.SecurityAuditEvent NewEvent(Guid? userId, Guid? companyId, string eventType, DateTime occurredAtUtc) => new()
