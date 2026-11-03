@@ -256,8 +256,10 @@ public static class CompanyMembershipRequestEndpoints
                 approverId.Value, companyId, ApprovalPermissionCode, cancellationToken))
             return TypedResults.NotFound();
 
-        await using var transaction = await database.Database.BeginTransactionAsync(
-            IsolationLevel.ReadCommitted, cancellationToken);
+        await using var transaction = database.Database.IsRelational()
+            ? await database.Database.BeginTransactionAsync(
+                IsolationLevel.ReadCommitted, cancellationToken)
+            : null;
         if (!await companyAccess.HasPermissionAsync(
                 approverId.Value, companyId, ApprovalPermissionCode, cancellationToken))
             return TypedResults.NotFound();
@@ -327,7 +329,8 @@ public static class CompanyMembershipRequestEndpoints
         try
         {
             await database.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+            if (transaction is not null)
+                await transaction.CommitAsync(cancellationToken);
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -366,8 +369,10 @@ public static class CompanyMembershipRequestEndpoints
                 approverId.Value, companyId, ApprovalPermissionCode, cancellationToken))
             return TypedResults.NotFound();
 
-        await using var transaction = await database.Database.BeginTransactionAsync(
-            IsolationLevel.ReadCommitted, cancellationToken);
+        await using var transaction = database.Database.IsRelational()
+            ? await database.Database.BeginTransactionAsync(
+                IsolationLevel.ReadCommitted, cancellationToken)
+            : null;
         if (!await companyAccess.HasPermissionAsync(
                 approverId.Value, companyId, ApprovalPermissionCode, cancellationToken))
             return TypedResults.NotFound();
@@ -395,7 +400,8 @@ public static class CompanyMembershipRequestEndpoints
         try
         {
             await database.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+            if (transaction is not null)
+                await transaction.CommitAsync(cancellationToken);
         }
         catch (DbUpdateConcurrencyException)
         {
