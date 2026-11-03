@@ -70,6 +70,20 @@ public class DatabaseContext : Microsoft.EntityFrameworkCore.DbContext
 
 		modelBuilder.ApplyConfigurationsFromAssembly
 			(assembly: typeof(Configurations.RoleConfiguration).Assembly);
+
+		// SQL Server datetime2 does not persist DateTimeKind. Restore UTC only for properties
+		// whose names explicitly end in Utc; legacy InsertDateTime/UpdateDateTime/LastLoginDateTime
+		// remain server-local wall-clock values and must not be relabelled.
+		foreach (var property in modelBuilder.Model.GetEntityTypes().SelectMany(entityType => entityType.GetProperties()))
+		{
+			if (!property.Name.EndsWith("Utc", StringComparison.Ordinal))
+				continue;
+
+			if (property.ClrType == typeof(System.DateTime))
+				property.SetValueConverter(new Conventions.DateTimeConventions.UtcDateTimeConverter());
+			else if (property.ClrType == typeof(System.DateTime?))
+				property.SetValueConverter(new Conventions.DateTimeConventions.NullableUtcDateTimeConverter());
+		}
 	}
 
 	protected override void ConfigureConventions
