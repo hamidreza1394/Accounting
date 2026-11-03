@@ -44,7 +44,9 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: 'مدیریت کاربران' })).toHaveAttribute('href', '/app/admin/users');
     expect(screen.getByRole('link', { name: 'گروه‌های دسترسی' })).toHaveAttribute('href', '/app/admin/roles');
     expect(screen.getByRole('link', { name: 'کاتالوگ و جزئیات مجوزها' })).toHaveAttribute('href', '/app/admin/permissions');
-    for (const label of ['ساختار سازمانی و سمت‌ها', 'گزارش امنیت و سوابق', 'سیاست‌های امنیتی']) {
+    // The security report is a real page now; the other two remain placeholders.
+    expect(screen.getByRole('link', { name: 'گزارش امنیت و سوابق' })).toHaveAttribute('href', '/app/admin/security/audit');
+    for (const label of ['ساختار سازمانی و سمت‌ها', 'سیاست‌های امنیتی']) {
       expect(screen.getByText(label).closest('[aria-disabled="true"]')).toBeTruthy();
     }
     expect(screen.queryByText('لیست کاربران فعال')).toBeNull();
