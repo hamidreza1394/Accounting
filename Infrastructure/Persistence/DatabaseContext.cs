@@ -46,6 +46,7 @@ public class DatabaseContext : Microsoft.EntityFrameworkCore.DbContext
 
     public Microsoft.EntityFrameworkCore.DbSet<Domain.Company> Companies { get; set; }
     public Microsoft.EntityFrameworkCore.DbSet<Domain.UserCompanyMembership> UserCompanyMemberships { get; set; }
+    public Microsoft.EntityFrameworkCore.DbSet<Domain.CompanyMembershipRequest> CompanyMembershipRequests { get; set; }
     public Microsoft.EntityFrameworkCore.DbSet<Domain.FiscalPeriod> FiscalPeriods { get; set; }
     public Microsoft.EntityFrameworkCore.DbSet<Domain.CompanyRole> CompanyRoles { get; set; }
     public Microsoft.EntityFrameworkCore.DbSet<Domain.PermissionDefinition> PermissionDefinitions { get; set; }
