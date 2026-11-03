@@ -112,6 +112,25 @@ public sealed class UserAdministrationMutationTests
     }
 
 
+
+    [Fact]
+    public async Task UpdateUser_RejectsPhoneNumbersOutsideTheExistingElevenDigitContract()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddUser("admin", Constants.Role.Admin);
+        var target = fixture.AddUser("alice", "Accountant");
+        await fixture.Database.SaveChangesAsync();
+        var request = new Server.Api.UpdateUserRequest(
+            "alice", "آلیس", "مثالی", "alice@example.test", "091234567890", true);
+
+        var result = await Server.Api.UserAdministrationEndpoints.UpdateUserAsync(
+            target.Id, new DefaultHttpContext(), Principal(admin.Id), request,
+            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+
+        Assert.Equal(StatusCodes.Status400BadRequest, (result as IStatusCodeHttpResult)?.StatusCode);
+        Assert.Null((await fixture.Database.Users.SingleAsync(x => x.Id == target.Id)).CellPhoneNumber);
+    }
+
     [Fact]
     public async Task UpdateUser_DoesNotTreatAnOrdinaryRoleAsAnInstallationAdministrator()
     {
