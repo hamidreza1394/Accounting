@@ -2068,3 +2068,15 @@
 - با تأیید مالک محصول مبنی بر پذیرش تمام اصول گزارش معماری قبلی، D-064 نیز از Proposed به Accepted تغییر وضعیت یافت: تفکیک مدیر سراسری نصب از مدیر شرکت، استفاده از CompanyRole به‌عنوان گروه دسترسی و حفظ مدل legacy تا مهاجرت امن.
 - D-065 چهار تصمیم جدید تخصیص سال/دوره، directory هم‌گروه، دو نوع دامنه و approval اجباری عضویت بین‌شرکتی را تکمیل می‌کند.
 - هیچ Migration یا تغییر runtime صرفاً با تغییر وضعیت ADR اجرا نشده است.
+
+## 2026-11-03 — Issue #390: قرارداد entitlement شرکت‌محور payload v2
+
+- مبنای شاخه: `main`@ `5262c9a3f8600a036edad9f32eea594b118b7824`; PRهای باز زمان شروع #469/#468/#466/#459 همگی خارج از محدوده Vendor بودند.
+- Issue #390 با D-059 و نظر مالک درباره کد `TRADE_IMPORT` بررسی شد. هیچ تصمیم جدیدی درباره entitlement تجاری یا migration گرفته نشد.
+- در `Licensing.Contracts` payload v2 اضافه شد: entitlement مستقل هر Company، module allowlist شامل `TRADE_IMPORT` فقط در v2، سقف Seat مثبت، feature catalog typed، و تاریخ‌های support/update مستقل از expiry.
+- v1 canonical golden bytes و allowlist نصب‌محور حفظ شدند؛ v2 unknown fields و JSON غیرcanonical را رد می‌کند.
+- `LicenseRevisionRules` فقط invariants amendment را برای payloadهای از قبل signature-verified کنترل می‌کند: LicenseId/InstallationId/ProductCode ثابت، format downgrade و Sequence replay/lower رد.
+- تست‌های regression برای v1 compatibility، signed v2، tampering، unknown field، canonicalization، module/feature allowlist، duplicate، capacity و sequence اضافه شدند.
+- هیچ تغییری در Vendor/**، Server/**، دیتابیس مشتری یا migration انجام نشد. Vendor issuance #393 و Customer state/replay #391 خارج از این PR هستند.
+- تست محلی در این نشست اجرا نشده است؛ CI روی PR لازم است. وضعیت تا آن زمان Verified نیست.
+

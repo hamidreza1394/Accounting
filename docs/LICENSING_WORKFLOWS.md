@@ -211,3 +211,15 @@ Vendor پس از بررسی Customer/Installation و خرید/تأیید، یک 
 - Customer برای ACK/usage/status یک بسته امضاشده جدا صادر می‌کند؛ Vendor sequence و request ID را idempotently ثبت می‌کند و freshness را با زمان آخرین sync نشان می‌دهد.
 
 این گردش‌کار هنوز Accepted / NotImplemented است تا PR کد و CI مرتبط ادغام شوند.
+
+## ۱۴) قرارداد نسخه‌دار entitlement و amendment (Issue #390)
+
+1. نصب دارای یک LicenseId پایه است. Envelope بیرونی v1 می‌ماند؛ payload می‌تواند v1 یا v2 باشد.
+2. اعتبارسنج ابتدا envelope bounds، algorithm، trusted kid و امضای دقیق PayloadJson را بررسی می‌کند؛ سپس JSON را parse می‌کند. payload v2 علاوه بر آن باید strict schema و canonical byte representation داشته باشد.
+3. payload v1 همچنان فقط allowlist نصب‌محور finance/sales/inventory/treasury را می‌پذیرد؛ v1 هیچ entitlement ضمنی برای Trade ندارد.
+4. payload v2 سقف `maxCompanies` را در Installation نگه می‌دارد و module/feature/maxUsers را برای هر opaque CompanyReference جداگانه بیان می‌کند. `TRADE_IMPORT` فقط به‌صورت Company-scoped پذیرفته می‌شود.
+5. هر feature باید در catalog شناخته‌شده باشد، نوع ثابت catalog را رعایت کند، دقیقاً یک مقدار typed داشته باشد و ماژول مالک آن برای همان Company اعطا شده باشد.
+6. amendment پس از اعتبارسنجی مستقل امضا، باید LicenseId، InstallationId و ProductCode قبلی را حفظ و Sequence بزرگ‌تری داشته باشد. Sequence می‌تواند از عدد قبلی بیشتر باشد و الزاماً +1 نیست؛ تکرار/کاهش رد می‌شود.
+7. این contract rule به‌تنهایی state یا replay ledger ایجاد نمی‌کند. #391 باید sequence پذیرفته‌شده را اتمیک در Customer ذخیره و هم‌زمانی/replay را کنترل کند؛ #393 صدور amendment را در Vendor و از مسیر خرید/Approval/Signer اضافه می‌کند.
+8. support و update end-dateها مستقل از expiry هستند. Perpetual license با پایان support/update منقضی نمی‌شود.
+
