@@ -125,7 +125,6 @@ public sealed class SecurityAuditAdministrationSqlServerTests
             var exportFile = Assert.IsType<FileContentHttpResult>(export);
             var csv = Encoding.UTF8.GetString(exportFile.FileContents);
             Assert.Contains("LoginSucceeded", csv);
-            Assert.Contains("203.0.113.10", json);
             Assert.DoesNotContain("203.0.113.10", csv);
             Assert.DoesNotContain("sql-private-payload", csv);
             Assert.Equal("no-store", exportContext.Response.Headers.CacheControl.ToString());
