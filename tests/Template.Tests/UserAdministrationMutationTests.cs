@@ -34,6 +34,25 @@ public sealed class UserAdministrationMutationTests
             audit => audit.EventType == "UserCreated" && audit.EntityId == created.Id.ToString());
     }
 
+
+    [Fact]
+    public async Task CreateUser_RejectsPhoneNumbersOutsideTheExistingElevenDigitContract()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddUser("admin", Constants.Role.Admin);
+        await fixture.Database.SaveChangesAsync();
+        var request = new Server.Api.CreateUserRequest(
+            "new.user", "کاربر", "جدید", "new.user@example.test", "091234567890",
+            "A-Long-Unique-Phrase-1406!", "A-Long-Unique-Phrase-1406!", true);
+
+        var result = await Server.Api.UserAdministrationEndpoints.CreateUserAsync(
+            new DefaultHttpContext(), Principal(admin.Id), request, new AllowAntiforgery(),
+            fixture.Database, new Infrastructure.Security.PasswordHashService(), TimeProvider.System, default);
+
+        Assert.Equal(StatusCodes.Status400BadRequest, (result as IStatusCodeHttpResult)?.StatusCode);
+        Assert.False(await fixture.Database.Users.AnyAsync(x => x.Username == "new.user"));
+    }
+
     [Fact]
     public async Task CreateUser_RejectsPasswordConfirmationMismatchAndDoesNotPersist()
     {
@@ -77,7 +96,7 @@ public sealed class UserAdministrationMutationTests
         var target = fixture.AddUser("alice", "Accountant");
         await fixture.Database.SaveChangesAsync();
         var request = new Server.Api.UpdateUserRequest(
-            "alice2", "آلیس", "مثالی", "alice2@example.test", "+491234567890", true);
+            "alice2", "آلیس", "مثالی", "alice2@example.test", "09123456789", true);
 
         var result = await Server.Api.UserAdministrationEndpoints.UpdateUserAsync(
             target.Id, new DefaultHttpContext(), Principal(admin.Id), request,
