@@ -57,6 +57,7 @@ public static class ApiEndpoints
 		api.MapGet("/antiforgery/token", GetAntiforgeryToken)
 			.RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
 		api.MapUserAdministrationEndpoints();
+		api.MapSecurityAuditAdministrationEndpoints();
 		api.MapCompanyRoleAdministrationEndpoints();
 		api.MapCompanyMembershipRequestEndpoints();
 		api.MapGet("/companies", GetCompaniesAsync);
