@@ -57,6 +57,7 @@ public static class CompanyMembershipRequestEndpoints
         [FromBody] CreateCompanyMembershipRequestRequest request,
         [FromServices] IAntiforgery antiforgery,
         Data.DatabaseContext database,
+        [FromServices] Infrastructure.Tenancy.CompanyAccessService companyAccess,
         [FromServices] TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
@@ -77,13 +78,14 @@ public static class CompanyMembershipRequestEndpoints
         // CustomerBoundary is a fail-closed isolation boundary, not a permission. A requester
         // must already have an active membership in at least one provisioned boundary; a
         // caller cannot bypass the discovery endpoint by posting an arbitrary company ID.
-        var requesterBoundaries = database.UserCompanyMemberships.AsNoTracking()
-            .Where(membership =>
-                membership.UserId == userId.Value &&
-                membership.IsActive &&
-                membership.Company.IsActive &&
-                membership.Role.IsActive)
-            .Select(membership => membership.Company.CustomerBoundaryId)
+        var accessibleCompanies = await companyAccess.GetAccessibleCompaniesAsync(
+            userId.Value, cancellationToken);
+        var accessibleCompanyIds = accessibleCompanies
+            .Select(company => company.CompanyId)
+            .ToArray();
+        var requesterBoundaries = database.Companies.AsNoTracking()
+            .Where(company => accessibleCompanyIds.Contains(company.Id))
+            .Select(company => company.CustomerBoundaryId)
             .Where(boundaryId => boundaryId.HasValue);
 
         var destinationIsAllowed = await database.Companies.AsNoTracking()
@@ -219,6 +221,7 @@ public static class CompanyMembershipRequestEndpoints
         HttpContext httpContext,
         ClaimsPrincipal principal,
         Data.DatabaseContext database,
+        [FromServices] Infrastructure.Tenancy.CompanyAccessService companyAccess,
         string? search,
         int page = 1,
         int pageSize = 25,
@@ -238,13 +241,14 @@ public static class CompanyMembershipRequestEndpoints
         if (!requesterIsActive)
             return TypedResults.NotFound();
 
-        var requesterBoundaries = database.UserCompanyMemberships.AsNoTracking()
-            .Where(membership =>
-                membership.UserId == userId.Value &&
-                membership.IsActive &&
-                membership.Company.IsActive &&
-                membership.Role.IsActive)
-            .Select(membership => membership.Company.CustomerBoundaryId)
+        var accessibleCompanies = await companyAccess.GetAccessibleCompaniesAsync(
+            userId.Value, cancellationToken);
+        var accessibleCompanyIds = accessibleCompanies
+            .Select(company => company.CompanyId)
+            .ToArray();
+        var requesterBoundaries = database.Companies.AsNoTracking()
+            .Where(company => accessibleCompanyIds.Contains(company.Id))
+            .Select(company => company.CustomerBoundaryId)
             .Where(boundaryId => boundaryId.HasValue);
 
         var query = database.Companies.AsNoTracking()
