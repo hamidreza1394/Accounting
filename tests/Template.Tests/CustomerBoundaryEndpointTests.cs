@@ -17,19 +17,26 @@ public sealed class CustomerBoundaryEndpointTests
         var companyUser = Principal("User", "company-user");
         var infrastructure = Principal("Infrastructure", "master");
 
+        var deniedContext = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
         var denied = await Server.Api.CustomerBoundaryEndpoints.DiagnoseAsync(companyUser, fixture.Database, default);
-        Assert.Equal(StatusCodes.Status404NotFound, (denied as IStatusCodeHttpResult)?.StatusCode);
+        await denied.ExecuteAsync(deniedContext);
+        Assert.Equal(StatusCodes.Status404NotFound, deniedContext.Response.StatusCode);
 
+        var allowedContext = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
         var allowed = await Server.Api.CustomerBoundaryEndpoints.DiagnoseAsync(infrastructure, fixture.Database, default);
-        var ok = Assert.IsType<Ok<Server.Api.CustomerBoundaryDiagnostics>>(allowed);
-        Assert.Equal(1, ok.Value!.Companies);
-        Assert.Equal(1, ok.Value.UnprovisionedCompanies);
-        Assert.Empty(ok.Value.UnresolvedCompanyIds);
+        await allowed.ExecuteAsync(allowedContext);
+        Assert.Equal(StatusCodes.Status200OK, allowedContext.Response.StatusCode);
+        allowedContext.Response.Body.Position = 0;
+        using var json = await JsonDocument.ParseAsync(allowedContext.Response.Body);
+        var root = json.RootElement;
+        Assert.Equal(1, root.GetProperty("companies").GetInt32());
+        Assert.Equal(1, root.GetProperty("unprovisionedCompanies").GetInt32());
+        Assert.Empty(root.GetProperty("unresolvedCompanyIds").EnumerateArray());
 
-        var json = JsonSerializer.Serialize(ok.Value);
-        Assert.DoesNotContain(fixture.Company.Id.ToString(), json);
-        Assert.DoesNotContain(fixture.Company.Name, json);
-        Assert.DoesNotContain("NationalId", json);
+        var serialized = root.GetRawText();
+        Assert.DoesNotContain(fixture.Company.Id.ToString(), serialized);
+        Assert.DoesNotContain(fixture.Company.Name, serialized);
+        Assert.DoesNotContain("NationalId", serialized);
     }
 
     [Fact]
@@ -38,15 +45,17 @@ public sealed class CustomerBoundaryEndpointTests
         await using var fixture = new Fixture();
         var antiforgery = new StubAntiforgery(isValid: false);
 
+        var httpContext = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
         var result = await Server.Api.CustomerBoundaryEndpoints.AssignAsync(
-            new DefaultHttpContext(),
+            httpContext,
             Principal("User", "company-user"),
             new Server.Api.CustomerBoundaryProvisionRequest(Guid.NewGuid(), [fixture.Company.Id]),
             antiforgery,
             fixture.Database,
             default);
 
-        Assert.Equal(StatusCodes.Status404NotFound, (result as IStatusCodeHttpResult)?.StatusCode);
+        await result.ExecuteAsync(httpContext);
+        Assert.Equal(StatusCodes.Status404NotFound, httpContext.Response.StatusCode);
         Assert.Equal(0, antiforgery.ValidationCalls);
         Assert.Null((await fixture.Database.Companies.SingleAsync()).CustomerBoundaryId);
         Assert.Empty(await fixture.Database.SecurityAuditEvents.ToListAsync());
@@ -56,15 +65,17 @@ public sealed class CustomerBoundaryEndpointTests
     public async Task Assignment_RejectsMissingAntiforgeryAndAuditsTheRejection()
     {
         await using var fixture = new Fixture();
+        var httpContext = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
         var result = await Server.Api.CustomerBoundaryEndpoints.AssignAsync(
-            new DefaultHttpContext(),
+            httpContext,
             Principal("Infrastructure", "master"),
             new Server.Api.CustomerBoundaryProvisionRequest(Guid.NewGuid(), [fixture.Company.Id]),
             new StubAntiforgery(isValid: false),
             fixture.Database,
             default);
 
-        Assert.Equal(StatusCodes.Status400BadRequest, (result as IStatusCodeHttpResult)?.StatusCode);
+        await result.ExecuteAsync(httpContext);
+        Assert.Equal(StatusCodes.Status400BadRequest, httpContext.Response.StatusCode);
         Assert.Null((await fixture.Database.Companies.SingleAsync()).CustomerBoundaryId);
         var audit = Assert.Single(await fixture.Database.SecurityAuditEvents.ToListAsync());
         Assert.Equal("CustomerBoundaryProvisionRejected", audit.EventType);
@@ -79,30 +90,34 @@ public sealed class CustomerBoundaryEndpointTests
         var principal = Principal("Infrastructure", "master");
         var firstBoundary = Guid.NewGuid();
 
+        var assignedContext = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
         var assigned = await Server.Api.CustomerBoundaryEndpoints.AssignAsync(
-            new DefaultHttpContext(),
+            assignedContext,
             principal,
             new Server.Api.CustomerBoundaryProvisionRequest(firstBoundary, [fixture.Company.Id]),
             new StubAntiforgery(isValid: true),
             fixture.Database,
             default);
 
-        Assert.Equal(StatusCodes.Status204NoContent, (assigned as IStatusCodeHttpResult)?.StatusCode);
+        await assigned.ExecuteAsync(assignedContext);
+        Assert.Equal(StatusCodes.Status204NoContent, assignedContext.Response.StatusCode);
         Assert.Equal(firstBoundary, (await fixture.Database.Companies.SingleAsync()).CustomerBoundaryId);
         var successAudit = Assert.Single(await fixture.Database.SecurityAuditEvents.ToListAsync());
         Assert.Equal("CustomerBoundaryProvisioned", successAudit.EventType);
         Assert.Contains(firstBoundary.ToString(), successAudit.EntityId);
 
         var secondBoundary = Guid.NewGuid();
+        var reassignmentContext = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
         var reassignment = await Server.Api.CustomerBoundaryEndpoints.AssignAsync(
-            new DefaultHttpContext(),
+            reassignmentContext,
             principal,
             new Server.Api.CustomerBoundaryProvisionRequest(secondBoundary, [fixture.Company.Id]),
             new StubAntiforgery(isValid: true),
             fixture.Database,
             default);
 
-        Assert.Equal(StatusCodes.Status409Conflict, (reassignment as IStatusCodeHttpResult)?.StatusCode);
+        await reassignment.ExecuteAsync(reassignmentContext);
+        Assert.Equal(StatusCodes.Status409Conflict, reassignmentContext.Response.StatusCode);
         Assert.Equal(firstBoundary, (await fixture.Database.Companies.SingleAsync()).CustomerBoundaryId);
         var audits = await fixture.Database.SecurityAuditEvents.OrderBy(item => item.EventType).ToListAsync();
         Assert.Equal(2, audits.Count);
