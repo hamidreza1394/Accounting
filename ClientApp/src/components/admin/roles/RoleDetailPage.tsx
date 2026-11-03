@@ -13,6 +13,7 @@ import { PermissionTree } from '../../ui/PermissionTree';
 import { StatusBadge } from '../../ui/StatusBadge';
 import { Button } from '../../ui/button';
 import { normalizeText } from '../users/userFormValidation';
+import { RoleMembersSection } from './RoleMembersSection';
 import { clearRoleFlash, peekRoleFlash, roleFlashText, setRoleFlash } from './roleFlash';
 import { delegationNote, roleNameMax, sameCodes, validateRoleFields } from './roleValidation';
 import { resolveCompanyId, rolesPath, useCompanyChoices } from './useCompanyChoices';
@@ -55,6 +56,7 @@ function PermissionList({ title, codes, names, tone }: { title: string; codes: r
 
 function RoleEditor({
   role,
+  memberCount,
   catalog,
   companyId,
   canManage,
@@ -62,6 +64,8 @@ function RoleEditor({
   onSaved,
 }: {
   role: CompanyRole;
+  /** The live number of active members (kept current by the members section; the editor is not remounted). */
+  memberCount: number;
   catalog: PermissionCatalogItem[];
   companyId: string;
   canManage: boolean;
@@ -205,7 +209,7 @@ function RoleEditor({
         </div>
         <div className="flex flex-col gap-1.5">
           <span className="text-sm font-semibold text-ink">اعضای فعال</span>
-          <span className="text-sm text-ink">{number.format(role.activeMemberCount)} نفر</span>
+          <span className="text-sm text-ink">{number.format(memberCount)} نفر</span>
         </div>
         <FormField label="عنوان گروه" required={editable} error={nameError} hint={editable ? `حداکثر ${number.format(roleNameMax)} نویسه.` : undefined}>
           <Input value={name} readOnly={!editable} autoComplete="off" onChange={(event) => setName(event.target.value)} onBlur={() => setNameTouched(true)} />
@@ -298,6 +302,8 @@ export function RoleDetailPage({ onUnauthenticated, defaultCompanyId, canManage 
   const [attempt, setAttempt] = useState(0);
   const [saveCount, setSaveCount] = useState(0);
   const [flash] = useState(() => peekRoleFlash(roleId));
+  // Updated by the members section after a load/transfer, so the editor never contradicts the table below it.
+  const [liveMemberCount, setLiveMemberCount] = useState<{ roleId: string; count: number } | null>(null);
   useEffect(() => clearRoleFlash, []);
 
   useEffect(() => {
@@ -375,6 +381,7 @@ export function RoleDetailPage({ onUnauthenticated, defaultCompanyId, canManage 
         <RoleEditor
           key={`${state.role.id}:${state.version}`}
           role={state.role}
+          memberCount={liveMemberCount?.roleId === state.role.id ? liveMemberCount.count : state.role.activeMemberCount}
           catalog={catalogState.catalog}
           companyId={companyId}
           canManage={canManage}
@@ -393,6 +400,14 @@ export function RoleDetailPage({ onUnauthenticated, defaultCompanyId, canManage 
             setSaveCount((value) => value + 1);
             setAttempt((value) => value + 1);
           }}
+        />
+        <RoleMembersSection
+          key={state.role.id}
+          role={state.role}
+          companyId={companyId}
+          canManage={canManage}
+          onUnauthenticated={onUnauthenticated}
+          onMemberCount={(count) => setLiveMemberCount({ roleId: state.role.id, count })}
         />
       </>
     );
