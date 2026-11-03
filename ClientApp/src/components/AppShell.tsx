@@ -181,6 +181,7 @@ function AppShellFrame({ session, context, onChangeContext, onLogout, onPassword
   const usersActive = pathname === '/admin/users' || pathname.startsWith('/admin/users/');
   const rolesActive = pathname === '/admin/roles' || pathname.startsWith('/admin/roles/');
   const permissionsActive = pathname === '/admin/permissions';
+  const securityAuditActive = pathname === '/admin/security/audit';
   const membershipRequestsActive = pathname === '/admin/membership-requests';
   const myMembershipRequestsActive = pathname === '/account/membership-requests';
   const readOnly = context.fiscalPeriod.accessMode === 'readOnly';
@@ -361,7 +362,12 @@ function AppShellFrame({ session, context, onChangeContext, onLogout, onPassword
                               <span className="min-w-0 flex-1">درخواست‌های عضویت من</span>
                             </Link>
                           </li>
-                          <li><DisabledItem label="گزارش امنیت و سوابق" icon={Activity} tone="emerald" nested /></li>
+                          <li>
+                            <Link to="/admin/security/audit" onClick={() => setMobileMenuOpen(false)} aria-current={securityAuditActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (securityAuditActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
+                              <NavIcon icon={Activity} tone="emerald" size="sm" />
+                              <span className="min-w-0 flex-1">گزارش امنیت و سوابق</span>
+                            </Link>
+                          </li>
                           <li><DisabledItem label="سیاست‌های امنیتی" icon={Settings2} tone="slate" nested /></li>
                         </ul>
                       ) : null}

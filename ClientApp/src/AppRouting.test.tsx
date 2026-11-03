@@ -35,6 +35,8 @@ function stubAll(isAdministrator: boolean) {
       'GET /api/v1/admin/permission-templates': () => json(templates),
       'GET /api/v1/admin/companies/a/membership-requests/pending': () =>
         json({ items: [{ id: 'req-1', userId: 'u1', requesterDisplayName: 'متقاضی نمونه', username: 'applicant', requestedAtUtc: '2026-11-01T08:00:00Z', isRequesterActive: true }], page: 1, pageSize: 20, totalCount: 1 }),
+      'GET /api/v1/admin/security/audit-events': () =>
+        json({ items: [{ id: 'e1', userId: 'u1', actorUsername: 'admin', actorDisplayName: 'مدیر نمونه', companyId: 'a', companyName: 'شرکت الف', eventType: 'CompanyRoleCreated', entityType: 'CompanyRole', entityId: 'r1', occurredAtUtc: '2026-11-03T10:00:00Z', correlationId: null }], totalCount: 1, page: 1, pageSize: 25 }),
       'GET /api/v1/me/membership-requests': () =>
         json({ items: [{ id: 'r1', destinationCompanyId: 'b', destinationCompanyName: 'شرکت مقصد نمونه', status: 'Pending', requestedAtUtc: '2026-11-01T08:00:00Z', decidedAtUtc: null, decisionReason: null, approvedRoleCode: null, approvedRoleName: null }], page: 1, pageSize: 20, totalCount: 1 }),
     };
@@ -239,5 +241,23 @@ describe('App routing', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'درخواست‌های عضویت من' })).toBeInTheDocument();
     const nav = screen.getByRole('navigation', { name: 'منوی اصلی' });
     expect(within(nav).queryByRole('link', { name: 'درخواست‌های عضویت' })).toBeNull();
+  });
+
+  it('reaches the security report from the menu for an administrator, and not for others', async () => {
+    const user = userEvent.setup();
+    stubAll(true);
+    const first = render(<App navigate={vi.fn()} />);
+    await screen.findByRole('heading', { name: dashboardHeading });
+    await user.click(within(screen.getByRole('navigation', { name: 'منوی اصلی' })).getByRole('link', { name: 'گزارش امنیت و سوابق' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'گزارش امنیت و سوابق' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/app/admin/security/audit');
+    expect(await screen.findByText('ایجاد گروه دسترسی')).toBeInTheDocument();
+    first.unmount();
+
+    window.history.replaceState(null, '', '/app/admin/security/audit');
+    const fetchMock = stubAll(false);
+    render(<App navigate={vi.fn()} />);
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some((call) => String(call[0]).includes('/admin/security/audit-events'))).toBe(false);
   });
 });

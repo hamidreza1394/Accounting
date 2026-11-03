@@ -562,7 +562,7 @@ export function parseCompanyRoleMembers(value: unknown): CompanyRoleMemberPage {
   return {
     items: rows.map((row): CompanyRoleMember => {
       if (!isObject(row)) throw new ContractError(`${what}.item`);
-      const since = readIsoDateTime(row, 'memberSinceUtc', `${what}.item`);
+      const since = readUtcDateTime(row, 'memberSinceUtc', `${what}.item`);
       if (since === null) throw new ContractError(`${what}.item.memberSinceUtc`);
       return {
         userId: readString(row, 'userId', `${what}.item`),
@@ -673,7 +673,7 @@ function readMembershipRequestStatus(source: JsonObject, what: string): Membersh
 }
 
 function readRequiredDateTime(source: JsonObject, key: string, what: string): string {
-  const value = readIsoDateTime(source, key, what);
+  const value = readUtcDateTime(source, key, what);
   if (value === null) throw new ContractError(`${what}.${key}`);
   return value;
 }
@@ -707,7 +707,7 @@ export function parseMyMembershipRequests(value: unknown): MembershipRequestPage
     destinationCompanyName: readString(item, 'destinationCompanyName', what),
     status: readMembershipRequestStatus(item, what),
     requestedAtUtc: readRequiredDateTime(item, 'requestedAtUtc', what),
-    decidedAtUtc: readIsoDateTime(item, 'decidedAtUtc', what, true),
+    decidedAtUtc: readUtcDateTime(item, 'decidedAtUtc', what, true),
     decisionReason: readNullableString(item, 'decisionReason', what),
     approvedRoleCode: readNullableString(item, 'approvedRoleCode', what),
     approvedRoleName: readNullableString(item, 'approvedRoleName', what),
@@ -723,4 +723,71 @@ export function parsePendingMembershipRequests(value: unknown): MembershipReques
     requestedAtUtc: readRequiredDateTime(item, 'requestedAtUtc', what),
     isRequesterActive: readBoolean(item, 'isRequesterActive', what),
   }));
+}
+
+// --- Installation-wide security audit report (backend: SecurityAuditAdministrationEndpoints) ---
+
+/** One audit event. The server deliberately omits the IP address and the event payload. */
+export type SecurityAuditEvent = {
+  id: string;
+  userId: string | null;
+  actorUsername: string | null;
+  actorDisplayName: string | null;
+  companyId: string | null;
+  companyName: string | null;
+  eventType: string;
+  entityType: string | null;
+  entityId: string | null;
+  occurredAtUtc: string;
+  correlationId: string | null;
+};
+
+export type SecurityAuditPage = { items: SecurityAuditEvent[]; totalCount: number; page: number; pageSize: number };
+
+/**
+ * A `*Utc` instant from the server. EF returns SQL Server `datetime2` with `Kind=Unspecified`, so
+ * System.Text.Json writes it WITHOUT `Z`/offset, and `new Date()` would read it as browser-local
+ * time (hours off). These fields are UTC by contract, so an offset-less value gets `Z` appended.
+ */
+export function asUtcInstant(value: string): string {
+  return /(?:Z|[+-]\d{2}:\d{2})$/.test(value) ? value : `${value}Z`;
+}
+
+function readUtcDateTime(source: JsonObject, key: string, what: string, nullable = false): string | null {
+  const value = readIsoDateTime(source, key, what, nullable);
+  return value === null ? null : asUtcInstant(value);
+}
+
+export function parseSecurityAuditEvents(value: unknown): SecurityAuditPage {
+  const what = 'securityAudit';
+  if (!isObject(value)) throw new ContractError(what);
+  const rows = value['items'];
+  if (!Array.isArray(rows)) throw new ContractError(`${what}.items`);
+  const page = readCount(value, 'page', what);
+  const pageSize = readCount(value, 'pageSize', what);
+  if (page < 1 || pageSize < 1) throw new ContractError(`${what}.page`);
+  return {
+    items: rows.map((row): SecurityAuditEvent => {
+      if (!isObject(row)) throw new ContractError(`${what}.item`);
+      const at = `${what}.item`;
+      const occurred = readUtcDateTime(row, 'occurredAtUtc', at);
+      if (occurred === null) throw new ContractError(`${at}.occurredAtUtc`);
+      return {
+        id: readString(row, 'id', at),
+        userId: readNullableString(row, 'userId', at),
+        actorUsername: readNullableString(row, 'actorUsername', at),
+        actorDisplayName: readNullableString(row, 'actorDisplayName', at),
+        companyId: readNullableString(row, 'companyId', at),
+        companyName: readNullableString(row, 'companyName', at),
+        eventType: readString(row, 'eventType', at),
+        entityType: readNullableString(row, 'entityType', at),
+        entityId: readNullableString(row, 'entityId', at),
+        occurredAtUtc: occurred,
+        correlationId: readNullableString(row, 'correlationId', at),
+      };
+    }),
+    totalCount: readCount(value, 'totalCount', what),
+    page,
+    pageSize,
+  };
 }
