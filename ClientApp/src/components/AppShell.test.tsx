@@ -14,8 +14,8 @@ describe('AppShell', () => {
   it('places the Faranou brand, company and fiscal period selectors, and user identity in the header', () => {
     render(<AppShell session={session} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
     expect(screen.getByRole('img', { name: 'نشان فرانو' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'تغییر شرکت' })).toHaveTextContent('شرکت نمونه');
-    expect(screen.getByRole('button', { name: 'تغییر دوره مالی' })).toHaveTextContent('سال مالی ۱۴۰۵');
+    expect(screen.getByRole('button', { name: /تغییر شرکت/ })).toHaveTextContent('شرکت نمونه');
+    expect(screen.getByRole('button', { name: /تغییر دوره مالی/ })).toHaveTextContent('سال مالی ۱۴۰۵');
     expect(screen.getByText('حمید رضایی')).toBeInTheDocument();
     expect(screen.getByText('مدیر مالی')).toBeInTheDocument();
   });
