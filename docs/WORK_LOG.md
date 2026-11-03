@@ -2264,3 +2264,17 @@
 - فیلترهای تاریخ به `JalaliDateField` منتقل شد؛ فیلتر کاربر با `UserPicker` (combobox دسترس‌پذیر روی `GET /admin/users?search=`) و فیلتر شرکت از شرکت‌های عضویت کاربر + کلیک روی جدول. بدون داده ساختگی.
 - حین تست دو باگ واقعی رفع شد: ماه پیش‌فرض تقویم و گم‌شدن مقدار تاریخ از نام دسترس‌پذیر دکمه.
 - مسدود به API: مرتب‌سازی، فهرست همهٔ شرکت‌های نصب، فهرست انواع رویداد؛ قرارداد در handoff. handoff: `docs/handoffs/ISSUE-444-security-audit-complete.md`.
+
+## 2026-11-03 — Issue #496: optimistic concurrency برای نقش‌ها و عضویت‌ها
+- RowVersion native SQL Server به CompanyRole و UserCompanyMembership افزوده شد.
+- UpdateRoleAsync، AssignMembershipAsync و TransferMembersAsync برای rowversion stale پاسخ 409 می‌دهند؛ role dependencies نیز با no-op UPDATE در شرط concurrency شرکت می‌کنند.
+- انتقال گروهی همچنان یک SaveChanges اتمیک است؛ Audit همان SaveChanges در صورت تعارض commit نمی‌شود.
+- Migration افزایشی 20261103160000_AddCompanyRoleMembershipRowVersions دو ستون rowversion اضافه می‌کند و Down فقط آن‌ها را حذف می‌کند.
+- تست مدل، تست SQL Server برای تعارض هم‌زمان سه endpoint، عدم partial mutation/Audit و Down/Up روی جدول‌های دارای داده اضافه شد.
+- guardهای Python برای تشخیص RowVersion در مدل و اعتبارسنجی AddColumn<byte[]>(rowVersion:true) گسترش یافتند.
+- اجرای محلی .NET/SQL Server/Python انجام نشده؛ CI باید نتیجه نهایی را تأیید کند.
+- CI اولیه روی SHA قبلی Build موفق و سه شکست SQL Server داشت: Username آزمایشی بیش از ۲۰ نویسه، و دو تست Migration که در Schema قدیمی با مدل EF دارای RowVersion ردیف درج می‌کردند. Usernameها کوتاه و Seed پیش از Migration در دو تست با SQL پارامتری انجام شد؛ نقش‌ها پس از Migration مجدداً از EF خوانده می‌شوند.
+- تغییرات #496 روی شاخهٔ mainline منتقل شدند تا تغییرات ادغام‌شدهٔ main/#498 و مستندات جدید حفظ شوند؛ CI مجدد پس از انتقال نهایی هنوز اجرا/تأیید نشده است.
+- پس از افزودن RowVersion، ممیزی مسیر تأیید عضویت #498 یک race امنیتی را آشکار کرد: permission ceiling می‌توانست بین خواندن و SaveChanges تغییر کند. ApproveAsync اکنون RowVersion تمام عضویت‌ها/نقش‌های مبنای تصمیم و نقش مقصد را در همان تراکنش guard می‌کند؛ تست SQL Server revocation هم‌زمان اضافه شد.
+- تست انتقال گروهی به دو عضو گسترش یافت تا rollback کامل batch (بدون partial membership یا Audit) در تعارض یک عضو اثبات شود.
+- handoff: docs/handoffs/ISSUE-496-role-membership-rowversion.md.
