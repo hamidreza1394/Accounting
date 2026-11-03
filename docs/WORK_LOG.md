@@ -2156,3 +2156,8 @@
 - تست در `tests/e2e/specs/faranou.spec.mjs` به اجرا در CI موجود وابسته است: سرور Publish‌شدهٔ Production + SQL Server 2022 واقعی؛ seed از دیتابیس disposable با پیشوند `FaranouE2E` استفاده می‌کند.
 - هیچ API، مجوز، Schema، Migration یا dependency جدیدی تغییر نکرد؛ این تست فقط قرارداد امنیتی فعلی را تثبیت می‌کند.
 - وضعیت اجرای این PR تا اتمام CI: Pending؛ نتیجه موفق ادعا نمی‌شود.
+
+
+## 2026-11-03 — بستن Issueهای تکمیل‌شدهٔ Claude
+- پس از بررسی وضعیت PRهای ادغام‌شده، Issueهای #461، #462، #463، #464 و #475 با state=closed / reason=completed بسته شدند.
+- Issue مادر #444 باز ماند؛ شکاف‌های Backend، Delegation Ceiling، ساختار سازمانی، Audit مدیریتی و آزمون‌های مثبت E2E همچنان در آن پیگیری می‌شوند.
