@@ -15,13 +15,12 @@ public sealed class CompanyMembershipRequestEndpointTests
         await using var fixture = await Fixture.CreateAsync();
         var result = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
-            new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Source.Id, fixture.Destination.Id),
-            new AllowAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
+            new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Destination.Id),
+            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
 
         Assert.Equal(StatusCodes.Status201Created, (result as IStatusCodeHttpResult)?.StatusCode);
         var request = await fixture.Database.CompanyMembershipRequests.SingleAsync();
         Assert.Equal(fixture.Requester.Id, request.UserId);
-        Assert.Equal(fixture.Source.Id, request.SourceTenantId);
         Assert.Equal(fixture.Destination.Id, request.DestinationTenantId);
         Assert.Equal(Domain.CompanyMembershipRequestStatuses.Pending, request.Status);
         Assert.False(await fixture.Database.UserCompanyMemberships.AnyAsync(
@@ -41,8 +40,8 @@ public sealed class CompanyMembershipRequestEndpointTests
 
         var duplicate = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
-            new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Source.Id, fixture.Destination.Id),
-            new AllowAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
+            new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Destination.Id),
+            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
         Assert.Equal(StatusCodes.Status409Conflict, (duplicate as IStatusCodeHttpResult)?.StatusCode);
 
         fixture.Database.CompanyMembershipRequests.RemoveRange(fixture.Database.CompanyMembershipRequests);
@@ -57,31 +56,32 @@ public sealed class CompanyMembershipRequestEndpointTests
 
         var alreadyMember = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
-            new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Source.Id, fixture.Destination.Id),
-            new AllowAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
+            new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Destination.Id),
+            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
         Assert.Equal(StatusCodes.Status409Conflict, (alreadyMember as IStatusCodeHttpResult)?.StatusCode);
     }
 
     [Fact]
-    public async Task RequestMembership_RequiresActiveSourceMembershipAndValidCompanies()
+    public async Task RequestMembership_RequiresActiveAccountAndActiveDestination()
     {
         await using var fixture = await Fixture.CreateAsync();
-        var outsider = fixture.AddUser("outsider");
+        var inactiveUser = fixture.AddUser("inactive");
+        inactiveUser.IsActive = false;
         await fixture.Database.SaveChangesAsync();
 
-        var noSourceMembership = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
-            new DefaultHttpContext(), fixture.Principal(outsider.Id),
-            new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Source.Id, fixture.Destination.Id),
-            new AllowAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
-        Assert.Equal(StatusCodes.Status404NotFound, (noSourceMembership as IStatusCodeHttpResult)?.StatusCode);
-
-        fixture.Requester.IsActive = false;
-        await fixture.Database.SaveChangesAsync();
         var inactiveRequester = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
-            new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
-            new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Source.Id, fixture.Destination.Id),
-            new AllowAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
+            new DefaultHttpContext(), fixture.Principal(inactiveUser.Id),
+            new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Destination.Id),
+            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
         Assert.Equal(StatusCodes.Status404NotFound, (inactiveRequester as IStatusCodeHttpResult)?.StatusCode);
+
+        fixture.Destination.IsActive = false;
+        await fixture.Database.SaveChangesAsync();
+        var inactiveDestination = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
+            new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
+            new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Destination.Id),
+            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+        Assert.Equal(StatusCodes.Status404NotFound, (inactiveDestination as IStatusCodeHttpResult)?.StatusCode);
     }
 
     [Fact]
@@ -90,8 +90,8 @@ public sealed class CompanyMembershipRequestEndpointTests
         await using var fixture = await Fixture.CreateAsync();
         var result = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
-            new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Source.Id, fixture.Destination.Id),
-            new RejectAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
+            new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Destination.Id),
+            new RejectAntiforgery(), fixture.Database, TimeProvider.System, default);
 
         Assert.Equal(StatusCodes.Status400BadRequest, (result as IStatusCodeHttpResult)?.StatusCode);
         Assert.Empty(await fixture.Database.CompanyMembershipRequests.ToListAsync());
@@ -193,14 +193,16 @@ public sealed class CompanyMembershipRequestEndpointTests
         await using var fixture = await Fixture.CreateAsync();
         var request = fixture.NewRequest();
         fixture.Database.CompanyMembershipRequests.Add(request);
+        var foreignCompany = new Domain.Company { Name = "شرکت دیگر", IsActive = true };
         var foreignRole = new Domain.CompanyRole
         {
-            TenantId = fixture.Source.Id,
-            Company = fixture.Source,
+            TenantId = foreignCompany.Id,
+            Company = foreignCompany,
             Code = "FOREIGN",
-            Name = "نقش شرکت مبدأ",
+            Name = "نقش شرکت دیگر",
             IsActive = true,
         };
+        fixture.Database.Companies.Add(foreignCompany);
         fixture.Database.CompanyRoles.Add(foreignRole);
         await fixture.Database.SaveChangesAsync();
 
@@ -246,8 +248,8 @@ public sealed class CompanyMembershipRequestEndpointTests
 
         var created = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
-            new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Source.Id, fixture.Destination.Id),
-            new AllowAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
+            new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Destination.Id),
+            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
         Assert.Equal(StatusCodes.Status201Created, (created as IStatusCodeHttpResult)?.StatusCode);
         var request = await fixture.Database.CompanyMembershipRequests.SingleAsync();
 
@@ -287,8 +289,8 @@ public sealed class CompanyMembershipRequestEndpointTests
 
         var newRequest = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
-            new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Source.Id, fixture.Destination.Id),
-            new AllowAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
+            new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Destination.Id),
+            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
         Assert.Equal(StatusCodes.Status201Created, (newRequest as IStatusCodeHttpResult)?.StatusCode);
     }
 
@@ -320,12 +322,10 @@ public sealed class CompanyMembershipRequestEndpointTests
 
         public Data.DatabaseContext Database { get; }
         public Infrastructure.Tenancy.CompanyAccessService Access { get; }
-        public Domain.Company Source { get; private set; } = null!;
         public Domain.Company Destination { get; private set; } = null!;
         public Domain.User Requester { get; private set; } = null!;
         public Domain.User Approver { get; private set; } = null!;
         public Domain.User OtherUser { get; private set; } = null!;
-        public Domain.CompanyRole SourceRole { get; private set; } = null!;
         public Domain.CompanyRole ApproverRole { get; private set; } = null!;
         public Domain.CompanyRole MemberRole { get; private set; } = null!;
 
@@ -335,15 +335,10 @@ public sealed class CompanyMembershipRequestEndpointTests
                 .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
             var fixture = new Fixture(database)
             {
-                Source = new Domain.Company { Name = "شرکت مبدأ", IsActive = true },
                 Destination = new Domain.Company { Name = "شرکت مقصد", IsActive = true },
                 Requester = new Domain.User("requester@example.test") { Username = "requester", IsActive = true },
                 Approver = new Domain.User("approver@example.test") { Username = "approver", IsActive = true },
                 OtherUser = new Domain.User("other@example.test") { Username = "other", IsActive = true },
-            };
-            fixture.SourceRole = new Domain.CompanyRole
-            {
-                TenantId = fixture.Source.Id, Company = fixture.Source, Code = "SOURCE", Name = "مبدأ", IsActive = true,
             };
             fixture.ApproverRole = new Domain.CompanyRole
             {
@@ -358,19 +353,14 @@ public sealed class CompanyMembershipRequestEndpointTests
                 Code = Server.Api.CompanyMembershipRequestEndpoints.ApprovalPermissionCode,
                 Name = "تأیید عضویت",
             };
-            database.Companies.AddRange(fixture.Source, fixture.Destination);
+            database.Companies.Add(fixture.Destination);
             database.Users.AddRange(fixture.Requester, fixture.Approver, fixture.OtherUser);
-            database.CompanyRoles.AddRange(fixture.SourceRole, fixture.ApproverRole, fixture.MemberRole);
+            database.CompanyRoles.AddRange(fixture.ApproverRole, fixture.MemberRole);
             database.PermissionDefinitions.Add(permission);
             database.CompanyRolePermissions.Add(new Domain.CompanyRolePermission
             {
                 Role = fixture.ApproverRole,
                 Permission = permission,
-            });
-            database.UserCompanyMemberships.Add(new Domain.UserCompanyMembership
-            {
-                UserId = fixture.Requester.Id, TenantId = fixture.Source.Id, Role = fixture.SourceRole,
-                IsActive = true, CreatedAtUtc = DateTime.UtcNow,
             });
             database.UserCompanyMemberships.Add(new Domain.UserCompanyMembership
             {
@@ -391,8 +381,6 @@ public sealed class CompanyMembershipRequestEndpointTests
         public Domain.CompanyMembershipRequest NewRequest(Guid? userId = null) => new()
         {
             UserId = userId ?? Requester.Id,
-            SourceTenantId = Source.Id,
-            SourceCompany = Source,
             DestinationTenantId = Destination.Id,
             DestinationCompany = Destination,
             Status = Domain.CompanyMembershipRequestStatuses.Pending,
