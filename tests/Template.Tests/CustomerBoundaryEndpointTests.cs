@@ -24,10 +24,10 @@ public sealed class CustomerBoundaryEndpointTests
         var ok = Assert.IsType<Ok<Server.Api.CustomerBoundaryDiagnostics>>(allowed);
         Assert.Equal(1, ok.Value!.Companies);
         Assert.Equal(1, ok.Value.UnprovisionedCompanies);
-        Assert.Contains(fixture.Company.Id, ok.Value.UnresolvedCompanyIds);
+        Assert.Empty(ok.Value.UnresolvedCompanyIds);
 
         var json = JsonSerializer.Serialize(ok.Value);
-        Assert.Contains(fixture.Company.Id.ToString(), json);
+        Assert.DoesNotContain(fixture.Company.Id.ToString(), json);
         Assert.DoesNotContain(fixture.Company.Name, json);
         Assert.DoesNotContain("NationalId", json);
     }
