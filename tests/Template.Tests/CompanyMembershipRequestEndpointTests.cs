@@ -109,6 +109,16 @@ public sealed class CompanyMembershipRequestEndpointTests
             fixture.Database, fixture.Access, TimeProvider.System, default);
         Assert.Equal(StatusCodes.Status404NotFound, (unauthorized as IStatusCodeHttpResult)?.StatusCode);
 
+        fixture.Database.UserCompanyMemberships.Add(new Domain.UserCompanyMembership
+        {
+            UserId = fixture.Requester.Id,
+            TenantId = fixture.Destination.Id,
+            Role = fixture.ApproverRole,
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow,
+        });
+        await fixture.Database.SaveChangesAsync();
+
         var selfApproval = await Server.Api.CompanyMembershipRequestEndpoints.ApproveAsync(
             fixture.Destination.Id, request.Id, new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
             new Server.Api.ApproveCompanyMembershipRequest(fixture.MemberRole.Id), new AllowAntiforgery(),
