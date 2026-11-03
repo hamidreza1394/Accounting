@@ -113,6 +113,33 @@ public sealed class UserAdministrationMutationTests
 
 
 
+
+    [Fact]
+    public async Task UpdateUser_ResetsContactVerificationWhenEmailOrPhoneChanges()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddUser("admin", Constants.Role.Admin);
+        var target = fixture.AddUser("alice", "Accountant");
+        target.IsEmailAddressVerified = true;
+        target.IsCellPhoneNumberVerified = true;
+        target.CellPhoneNumber = "09123456789";
+        await fixture.Database.SaveChangesAsync();
+        var previousEmailVerificationKey = target.EmailAddressVerificationKey;
+        var request = new Server.Api.UpdateUserRequest(
+            "alice", "آلیس", "مثالی", "alice2@example.test", "09123456780", true);
+
+        var result = await Server.Api.UserAdministrationEndpoints.UpdateUserAsync(
+            target.Id, new DefaultHttpContext(), Principal(admin.Id), request,
+            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+
+        Assert.IsType<NoContent>(result);
+        var updated = await fixture.Database.Users.SingleAsync(x => x.Id == target.Id);
+        Assert.False(updated.IsEmailAddressVerified);
+        Assert.False(updated.IsCellPhoneNumberVerified);
+        Assert.NotEqual(previousEmailVerificationKey, updated.EmailAddressVerificationKey);
+        Assert.Null(updated.CellPhoneNumberVerificationKey);
+    }
+
     [Fact]
     public async Task UpdateUser_RejectsPhoneNumbersOutsideTheExistingElevenDigitContract()
     {
