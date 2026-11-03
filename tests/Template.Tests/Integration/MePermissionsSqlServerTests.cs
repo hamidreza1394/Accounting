@@ -61,16 +61,16 @@ public sealed class MePermissionsSqlServerTests
             var permissionB = new Domain.PermissionDefinition { Code = "trade.import", Name = "ورود بازرگانی" };
             database.AddRange(user, companyA, companyB, roleA, roleB, permissionA, permissionB);
             database.CompanyRolePermissions.AddRange(
-                new Domain.CompanyRolePermission { Role = roleA, Permission = permissionA },
-                new Domain.CompanyRolePermission { Role = roleB, Permission = permissionB });
+                new Domain.CompanyRolePermission { Role = roleA, RoleId = roleA.Id, Permission = permissionA, PermissionId = permissionA.Id },
+                new Domain.CompanyRolePermission { Role = roleB, RoleId = roleB.Id, Permission = permissionB, PermissionId = permissionB.Id });
             var membershipA = new Domain.UserCompanyMembership
             {
-                User = user, UserId = user.Id, Company = companyA, TenantId = companyA.Id,
+                UserId = user.Id, Company = companyA, TenantId = companyA.Id,
                 Role = roleA, RoleId = roleA.Id, IsActive = true,
             };
             var membershipB = new Domain.UserCompanyMembership
             {
-                User = user, UserId = user.Id, Company = companyB, TenantId = companyB.Id,
+                UserId = user.Id, Company = companyB, TenantId = companyB.Id,
                 Role = roleB, RoleId = roleB.Id, IsActive = false,
             };
             database.UserCompanyMemberships.AddRange(membershipA, membershipB);
