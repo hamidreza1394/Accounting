@@ -1,10 +1,21 @@
 import {
   parseAntiforgeryToken,
+  parseMyProfile,
+  parseLoginHistory,
+  parseAdminUserList,
+  parseAdminUserDetails,
   parseCompanies,
   parseCompanyOverview,
   parseSelectedContextResponse,
   parseSession,
   parseWorkContext,
+  type MyProfile,
+  type LoginHistoryItem,
+  type AdminUserListResponse,
+  type AdminUserDetails,
+  type CreateAdminUserRequest,
+  type UpdateAdminUserRequest,
+  type ChangeMyPasswordRequest,
   type CompanyOverview,
   type CompanySummary,
   type SelectedContext,
@@ -102,7 +113,7 @@ async function post(path: string): Promise<void> {
 }
 
 /** A state-changing request: carries the anti-forgery request token and, optionally, a JSON body. */
-async function sendJson(method: 'POST' | 'DELETE', path: string, body?: unknown): Promise<Response> {
+async function sendJson(method: 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown): Promise<Response> {
   const token = parseAntiforgeryToken(await getJson('/antiforgery/token'));
   const response = await fetch(`${apiBase}${path}`, {
     method,
@@ -116,6 +127,62 @@ async function sendJson(method: 'POST' | 'DELETE', path: string, body?: unknown)
   });
   await ensureSuccess(response);
   return response;
+}
+
+
+/** Retrieves only the authenticated user's safe profile fields. */
+export async function getMyProfile(signal?: AbortSignal): Promise<MyProfile> {
+  return parseMyProfile(await getJson('/me/profile', signal));
+}
+
+/** Retrieves authentication events belonging only to the current user. */
+export async function getMyLoginHistory(signal?: AbortSignal, take = 50): Promise<LoginHistoryItem[]> {
+  const pageSize = Math.max(1, Math.min(100, Math.trunc(take)));
+  return parseLoginHistory(await getJson(`/me/login-history?take=${pageSize}`, signal));
+}
+
+/** Changes the current account password; the server signs out all sessions after success. */
+export type AdminUserQuery = {
+  search?: string;
+  status: 'all' | 'active' | 'inactive';
+  page: number;
+  pageSize: number;
+  sort: 'created' | 'lastLogin' | 'name' | 'username';
+  descending: boolean;
+};
+
+export async function getAdminUsers(query: AdminUserQuery, signal?: AbortSignal): Promise<AdminUserListResponse> {
+  const params = new URLSearchParams({
+    status: query.status,
+    page: String(query.page),
+    pageSize: String(query.pageSize),
+    sort: query.sort,
+    descending: String(query.descending),
+  });
+  if (query.search?.trim()) params.set('search', query.search.trim());
+  return parseAdminUserList(await getJson(`/admin/users?${params.toString()}`, signal));
+}
+
+export async function getAdminUser(userId: string, signal?: AbortSignal): Promise<AdminUserDetails> {
+  return parseAdminUserDetails(await getJson(`/admin/users/${encodeURIComponent(userId)}`, signal));
+}
+ 
+export async function createAdminUser(request: CreateAdminUserRequest): Promise<string> {
+  const response = await sendJson('POST', '/admin/users', request);
+  const value: unknown = await response.json();
+  if (typeof value !== 'object' || value === null || !('id' in value) || typeof value.id !== 'string') {
+    throw new ApiError(500, 'پاسخ ایجاد کاربر معتبر نیست.');
+  }
+  return value.id;
+}
+
+export async function updateAdminUser(userId: string, request: UpdateAdminUserRequest): Promise<void> {
+  await sendJson('PUT', `/admin/users/${encodeURIComponent(userId)}`, request);
+}
+
+
+export async function changeMyPassword(request: ChangeMyPasswordRequest): Promise<void> {
+  await sendJson('POST', '/me/password', request);
 }
 
 export async function getSession(signal?: AbortSignal): Promise<Session> {

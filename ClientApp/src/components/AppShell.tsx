@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import {
   Activity,
   Bell,
@@ -25,12 +25,16 @@ import {
 } from 'lucide-react';
 import type { SelectedContext, Session } from '../api/types';
 import { FaranouLogo } from './ui/FaranouLogo';
+import { MyAccountPanel } from './MyAccountPanel';
+import { UserManagementPage } from './UserManagementPage';
 
 type AppShellProps = {
   session: Session;
   context: SelectedContext;
   onChangeContext: () => void;
   onLogout: () => Promise<void>;
+  onPasswordChanged?: () => void;
+  onUnauthenticated?: (error: unknown) => boolean;
   children: ReactNode;
 };
 
@@ -140,11 +144,17 @@ function DisabledItem({ label, icon, tone, nested }: { label: string; icon: Luci
 }
 
 /** Main authenticated frame. The server-validated WorkContext remains authoritative. */
-export function AppShell({ session, context, onChangeContext, onLogout, children }: AppShellProps) {
+const ignoreUnauthenticated = (_error: unknown) => false;
+const noop = () => undefined;
+
+export function AppShell({ session, context, onChangeContext, onLogout, onPasswordChanged = noop, onUnauthenticated = ignoreUnauthenticated, children }: AppShellProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountTriggerRef = useRef<HTMLButtonElement>(null);
   const [settingsOpen, setSettingsOpen] = useState(true);
+  const [activeAdminSection, setActiveAdminSection] = useState<'dashboard' | 'users'>('dashboard');
   const readOnly = context.fiscalPeriod.accessMode === 'readOnly';
 
   async function handleLogout() {
@@ -200,9 +210,19 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
           </div>
 
           <div className="faranou-header-user">
-            <span className="faranou-user-avatar" aria-label={'تصویر نمایه ' + session.fullName}>
-              {session.fullName.trim().slice(0, 1) || 'ف'}
-            </span>
+            <button
+              ref={accountTriggerRef}
+              type="button"
+              onClick={() => setAccountOpen(true)}
+              className="rounded-full focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-2 focus:ring-offset-[#102b4c]"
+              aria-label="حساب کاربری من"
+              aria-haspopup="dialog"
+              aria-expanded={accountOpen}
+            >
+              <span className="faranou-user-avatar" aria-hidden="true">
+                {session.fullName.trim().slice(0, 1) || 'ف'}
+              </span>
+            </button>
             <span className="hidden min-w-0 flex-col leading-tight sm:flex">
               <strong className="max-w-36 truncate text-sm font-bold">{session.fullName}</strong>
               <span className="mt-1 max-w-36 truncate text-[11px] text-blue-100/75">{context.company.roleName}</span>
@@ -252,6 +272,7 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
                 }
 
                 if (entry.kind === 'group' && entry.label === 'مدیریت سیستم') {
+                  if (!session.isAdministrator) return null;
                   return (
                     <li key={entry.label} className="space-y-1">
                       <button
@@ -270,7 +291,12 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
                       </button>
                       {settingsOpen ? (
                         <ul className="faranou-nav-sub space-y-2 ms-4 ps-2">
-                          <li><DisabledItem label="مدیریت کاربران" icon={Users} tone="sky" nested /></li>
+                          <li>
+                            <button type="button" onClick={() => { setActiveAdminSection('users'); setMobileMenuOpen(false); }} aria-current={activeAdminSection === 'users' ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-right text-[12px] transition ' + (activeAdminSection === 'users' ? 'bg-sky-500/20 text-white ring-1 ring-sky-300/30' : 'text-sky-100/80 hover:bg-white/10 hover:text-white')}>
+                              <NavIcon icon={Users} tone="sky" size="sm" />
+                              <span className="min-w-0 flex-1">مدیریت کاربران</span>
+                            </button>
+                          </li>
                           <li><DisabledItem label="ساختار سازمانی و سمت‌ها" icon={Building2} tone="blue" nested /></li>
                           <li><DisabledItem label="گروه‌های دسترسی" icon={ShieldCheck} tone="violet" nested /></li>
                           <li><DisabledItem label="کاتالوگ و جزئیات مجوزها" icon={KeyRound} tone="amber" nested /></li>
@@ -327,9 +353,18 @@ export function AppShell({ session, context, onChangeContext, onLogout, children
               {logoutError}
             </p>
           ) : null}
-          {children}
+          {activeAdminSection === 'users' ? <UserManagementPage onUnauthenticated={onUnauthenticated} /> : children}
         </main>
       </div>
+      <MyAccountPanel
+        open={accountOpen}
+        onClose={() => {
+          setAccountOpen(false);
+          accountTriggerRef.current?.focus();
+        }}
+        onPasswordChanged={onPasswordChanged}
+        onUnauthenticated={onUnauthenticated}
+      />
     </div>
   );
 }
