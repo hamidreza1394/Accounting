@@ -1147,3 +1147,25 @@ PRها به reconcile PRهای #445..#456، membership/approval، fiscal grants�
 
 ### معیار پذیرش
 Pending هیچ دسترسی ندارد؛ مقصد تنها approver است؛ grant سالی و دوره‌ای هر دو کار می‌کنند و دوره جدید خودکار باز نمی‌شود؛ Company/Group domain درست resolve می‌شوند اما authorization مستقل است؛ directory فقط فیلدهای allowlisted هم‌گروه را می‌دهد؛ تست‌های cross-company/group/period، host spoofing، stale session، concurrency و SQL Server اجرا و ثبت می‌شوند.
+
+
+## D-066 — تفکیک سال مالی و دوره عملیاتی برای تخصیص دسترسی (2026-11-03)
+
+- **وضعیت:** Proposed — نیازمند تأیید معنای دامنه توسط مالک محصول؛ هیچ Schema یا Migration از این پیشنهاد مجاز نمی‌شود.
+- **Issue:** #488 (زیرمجموعه #444، اجرای D-065).
+- **شواهد مدل فعلی:**
+  - Domain فقط Entity به نام FiscalPeriod دارد و فیلدهای TenantId، StartDate، EndDate، Title و Status را نگه می‌دارد؛ Entity جداگانه FiscalYear یا دوره عملیاتی ماهانه/فصلی در مدل جاری یافت نشد.
+  - قاعده یکتایی فعلی (TenantId, StartDate, EndDate) است.
+  - ClientApp/src/lib/fiscalYears.ts رکوردهای FiscalPeriod شرکت‌های مختلف را با تاریخ شروع/پایان یکسان در یک سال نمایشی گروه‌بندی می‌کند؛ تست‌های آن نمونه‌هایی مانند «سال مالی ۱۴۰۵» با بازه یک‌ساله دارند.
+  - در نتیجه، در مدل فعلی دو هدف مستقل «سال» و «دوره داخل سال» برای grant وجود ندارد.
+- **ابهام لازم برای حل:** آیا FiscalPeriod فعلی نماینده سال مالی است و محصول به دوره‌های عملیاتی ماهانه/فصلی زیرمجموعه آن نیاز دارد، یا FiscalPeriod از نظر کسب‌وکار خودِ دوره عملیاتی است و گروه‌بندی سال فقط یک نمای UI است؟
+- **پیشنهاد ترجیحی A (بر اساس شواهد فعلی UI):**
+  1. FiscalPeriod موجود حفظ و به‌عنوان رکورد سال مالی شرکت در نظر گرفته شود؛ جدول FiscalYear موازی ساخته نشود.
+  2. فقط در صورت تأیید نیاز کسب‌وکار، Entity فرزند AccountingPeriod برای ماه/فصل/دوره عملیاتی به آن افزوده شود.
+  3. Year grant به FiscalPeriod موجود متصل و دارای policy صریح ExplicitPeriodsOnly یا AllPeriodsInYear باشد.
+  4. Period grant به یک AccountingPeriod مشخص متصل شود.
+  5. هر دو grant به UserCompanyMembership تأییدشده و همان Tenant متصل شوند؛ grant عضویت یا نقش ایجاد نمی‌کند.
+  6. AllPeriodsInYear دوره‌های فعلی و آینده همان سال را پوشش می‌دهد؛ ExplicitPeriodsOnly هیچ دوره جدیدی را ضمنی مجاز نمی‌کند.
+- **گزینه B:** اگر FiscalPeriod در واقع دوره عملیاتی است، از آن به‌عنوان period grant target استفاده شود و کلید سال فقط از تاریخ‌های واقعی آن مشتق شود؛ این گزینه باید دقیقاً مشخص کند چه چیزی در آینده «دوره جدید همان سال» محسوب می‌شود.
+- **قواعد ثابت مستقل از گزینه:** deny-by-default؛ عضویت Pending فاقد دسترسی؛ Company/Tenant مشترک؛ بدون FiscalYear یا Tenant موازی؛ دوره‌های زیرسیستم‌ها از Core مصرف می‌شوند؛ هر grant دارای actor/time/reason/audit و concurrency protection است.
+- **گام بعد از تأیید:** طرح کامل کلیدها و composite FKها، یکتایی، lifecycle/revocation، backfill (پیش‌فرض عدم اعطای grant به کاربران موجود)، SQL Server integration tests و rollback plan در PR مستقل ارائه شود. هیچ migration روی دیتابیس مشتری در این مرحله اجرا نمی‌شود.

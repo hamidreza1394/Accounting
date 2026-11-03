@@ -53,6 +53,14 @@
 
 نام FiscalAccessGrant صرفاً نام مفهومی است، نه schema نهایی. ممکن است سال از دوره‌های موجود مشتق شود. چند grant نباید با تکثیر عضویت کاربر در شرکت پیاده‌سازی شوند.
 
+### 5.1 ممیزی مدل سال/دوره مالی برای D-065 (2026-11-03)
+
+- مدل فعلی فقط FiscalPeriod را به‌عنوان رکورد شرکت‌محور با StartDate/EndDate/Title/Status دارد؛ FiscalYear و AccountingPeriod مستقل در Domain وجود ندارد.
+- UI سال نمایشی را از تطبیق دقیق StartDate/EndDate دوره‌های شرکت‌های مختلف مشتق می‌کند (ClientApp/src/lib/fiscalYears.ts) و تست‌ها نمونه سال مالی کامل را نشان می‌دهند.
+- بنابراین Year grant و Period grant دو هدف داده‌ای مستقل در Schema فعلی ندارند. ساخت دو نوع grant بدون تعیین معنای «دوره داخل سال» می‌تواند به اعطای دسترسی ضمنی یا بی‌اثر منجر شود.
+- D-066 در docs/DECISIONS.md گزینه ترجیحی را پیشنهاد می‌کند: FiscalPeriod به‌عنوان سال؛ AccountingPeriod فرزند فقط پس از تأیید محصول؛ Year grant با ExplicitPeriodsOnly/AllPeriodsInYear؛ Period grant روی AccountingPeriod.
+- **هیچ Entity، Migration یا runtime behavior در این مرحله اضافه نشده است.** Issue #488 برای تأیید معنای سال/دوره باز است.
+
 ## 6. دفترچه محدود شرکت‌های هم‌گروه
 
 Directory فقط کاربران شرکت‌هایی را نشان می‌دهد که عضویت معتبر در همان CorporateGroup دارند. داده پیش‌فرض محدود به نام نمایشی، شناسه/نام کاربری حداقلی، شرکت محل عضویت و وضعیت کلی عضویت است. جستجو و صفحه‌بندی server-side است.
