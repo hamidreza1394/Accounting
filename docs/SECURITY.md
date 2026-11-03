@@ -300,3 +300,8 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - Rotation procedure: add the new public key before issuing with its key ID; keep the old public key trusted for historical signed envelopes while they remain valid; set Revoked only under the approved revocation procedure. Revoking a key prevents new Vendor provisioning operations that depend on envelopes signed by that key.
 - A customer that has already received a package while fully offline cannot discover later Vendor-side suspension, key revocation or a newer sequence. This is a protocol limitation, not a claim of offline revocation.
 - This branch adds no database migration and no Customer DB schema change. MaxCompanies enforcement, module additions to existing companies and multi-license aggregation remain NotImplemented.
+
+
+## هویت، دامنه و دسترسی بین‌شرکتی — D-065
+
+الزامات تفصیلی در ACCESS_CONTROL_ARCHITECTURE.md است. Host، CompanyId، GroupId، TenantId و FiscalPeriodId ارسالی کلاینت به‌تنهایی مجوز نیستند. Host mapping فقط context verified را resolve می‌کند. عضویت جدید بین‌شرکتی تا approval مقصد Pending و فاقد هرگونه دسترسی عملیاتی است. Directory هم‌گروه read-only و allowlisted است و role، permission، login history، session، IP، password/hash یا جزئیات امنیتی شرکت دیگر را افشا نمی‌کند. همه queryها، mutationها، exportها، jobها و cacheها باید context کامل را کنترل کنند. TLS، trusted proxy، host-only cookie، anti-forgery، audit، concurrency و تست منفی cross-company/group/period الزامی‌اند.

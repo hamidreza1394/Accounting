@@ -155,3 +155,16 @@ API هم‌مبدأ با Cookie HttpOnly و Anti-forgery موجود حفظ شو�
 - customer license import/signature/revocation در بخشی از کد پیاده‌سازی شده، اما Trade entitlement در DI با DenyAllTradeModuleEntitlement بسته است؛ اتصال entitlement مؤثر خارج از فازهای اولیه این Issue است.
 - هیچ Migration تا پایان S0 و تصویب طرح داده ساخته نمی‌شود.
 - صفحات Razor قدیمی تا جایگزینی کامل و تست‌شده حذف نمی‌شوند.
+
+---
+
+## 13. تصمیمات مصوب D-065 — 2026-11-03
+
+چهار تصمیم محصولی Accepted هستند:
+
+1. تخصیص مالی در هر دو سطح سال مالی و دوره مالی. دسترسی سال به‌صورت ضمنی دوره جدید را باز نمی‌کند مگر policy صریح AllPeriodsInYear انتخاب شود. مدل سال باید با FiscalPeriod واقعی تطبیق داده شود؛ schema مفهومی به معنی جدول مصوب نیست.
+2. directory کاربران فقط برای شرکت‌های عضو همان CorporateGroup و read-only است. داده پیش‌فرض نام نمایشی، شناسه حداقلی، شرکت محل عضویت و وضعیت کلی عضویت است. اطلاعات تماس خصوصی فقط با permission مستقل؛ رمز/hash، role، permission، login history، session، IP و audit جزئیات شرکت دیگر ممنوع است.
+3. هر دو دامنه اختصاصی Company و دامنه CorporateGroup پشتیبانی می‌شوند. Host verified فقط context را resolve می‌کند؛ بعد از login در Group domain فقط شرکت‌های دارای membership Approved و فعال نمایش داده می‌شوند.
+4. تمام عضویت‌های جدید بین‌شرکتی PendingApproval هستند. فقط مدیر مجاز شرکت مقصد می‌تواند approve/reject کند؛ self-approval ممنوع و تا approval هیچ داده، دوره یا endpoint عملیاتی مقصد در دسترس نیست. approval به‌تنهایی role یا grant مالی ایجاد نمی‌کند.
+
+قواعد مشترک: Company همان tenant boundary فعلی است؛ FiscalPeriod Core مشترک است؛ CompanyRole/CompanyRolePermission و PermissionDefinition بازاستفاده می‌شوند؛ لایسنس از مجوز عملیاتی جداست؛ گروه/مالکیت/دامنه مجوز ضمنی نمی‌دهد؛ legacy Role/Permission/ApplicationHandler تا تعیین مصرف‌کنندگان حذف نمی‌شود. جزئیات و threat model در ACCESS_CONTROL_ARCHITECTURE.md و D-065 هستند.
