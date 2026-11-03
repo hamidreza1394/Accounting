@@ -116,10 +116,30 @@ public static class CanonicalJson
 				return false;
 			}
 
-			var parseOptions = formatVersion >= LicensePayload.CurrentFormatVersion
-				? StrictV2ParseOptions
-				: ParseOptions;
-			dto = JsonSerializer.Deserialize<PayloadDto>(payloadJson, parseOptions);
+			if (formatVersion >= LicensePayload.CurrentFormatVersion)
+			{
+				dto = JsonSerializer.Deserialize<PayloadDto>(payloadJson, StrictV2ParseOptions);
+			}
+			else
+			{
+				// Deserialize through the original v1 DTO so every unknown v2-only field is ignored,
+				// even if its JSON value has a type that would not match the v2 property.
+				var legacyDto = JsonSerializer.Deserialize<PayloadV1Dto>(payloadJson, ParseOptions);
+				dto = legacyDto is null ? null : new PayloadDto
+				{
+					FormatVersion = legacyDto.FormatVersion,
+					LicenseId = legacyDto.LicenseId,
+					InstallationId = legacyDto.InstallationId,
+					ProductCode = legacyDto.ProductCode,
+					LicenseKind = legacyDto.LicenseKind,
+					IssuedAtUtc = legacyDto.IssuedAtUtc,
+					NotBeforeUtc = legacyDto.NotBeforeUtc,
+					ExpiresAtUtc = legacyDto.ExpiresAtUtc,
+					GraceDays = legacyDto.GraceDays,
+					Sequence = legacyDto.Sequence,
+					Limits = legacyDto.Limits
+				};
+			}
 		}
 		catch (JsonException)
 		{
@@ -236,6 +256,21 @@ public static class CanonicalJson
 			System.Globalization.CultureInfo.InvariantCulture,
 			System.Globalization.DateTimeStyles.RoundtripKind,
 			out result);
+	}
+
+	private sealed class PayloadV1Dto
+	{
+		public int FormatVersion { get; set; }
+		public string? LicenseId { get; set; }
+		public string? InstallationId { get; set; }
+		public string? ProductCode { get; set; }
+		public string? LicenseKind { get; set; }
+		public string? IssuedAtUtc { get; set; }
+		public string? NotBeforeUtc { get; set; }
+		public string? ExpiresAtUtc { get; set; }
+		public int GraceDays { get; set; }
+		public int Sequence { get; set; }
+		public LimitsDto? Limits { get; set; }
 	}
 
 	private sealed class PayloadDto

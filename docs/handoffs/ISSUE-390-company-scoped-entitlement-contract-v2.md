@@ -56,7 +56,7 @@
 - private key، secret، credential یا داده مشتری اضافه نشده است.
 - no Customer DB migration; no `Server/**`; no Vendor-only dependency.
 - v2 strict parser و canonical check پس از signature verification اجرا می‌شوند.
-- v1 parser behavior برای compatibility حفظ می‌شود.
+- v1 parser از DTO مستقل legacy استفاده می‌کند و تمام فیلدهای ناشناخته/فقط-v2 را حتی با JSON type متفاوت نادیده می‌گیرد؛ canonical output نیز حفظ می‌شود.
 
 ## ریسک‌ها و کارهای باقی‌مانده
 - این PR قرارداد را تعریف می‌کند؛ runtime persistence/replay و entitlement enforcement در #391 پیاده‌سازی می‌شوند.

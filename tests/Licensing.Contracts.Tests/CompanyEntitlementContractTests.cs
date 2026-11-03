@@ -106,7 +106,7 @@ public sealed class CompanyEntitlementContractTests
 		var legacy = CanonicalJson.SerializePayload(SampleV1());
 		var withV2OnlyFields = legacy.Replace(
 			"\"graceDays\":30",
-			"\"supportUntilUtc\":\"not-a-date\",\"updatesUntilUtc\":\"also-invalid\",\"companyEntitlements\":[],\"graceDays\":30",
+			"\"supportUntilUtc\":{\"bad\":true},\"updatesUntilUtc\":123,\"companyEntitlements\":{\"bad\":true},\"graceDays\":30",
 			StringComparison.Ordinal);
 
 		Assert.True(CanonicalJson.TryParsePayload(withV2OnlyFields, out var parsed, out var error), error);
