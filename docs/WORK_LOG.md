@@ -2076,3 +2076,8 @@
 - وابستگی جدید اضافه نشد؛ کش توکن Anti-forgery عمداً اضافه نشد. هیچ فایل Backend تغییر نکرد؛ AppShell و ناوبری فعلی دست‌نخورده است.
 - نتایج واقعی در `docs/handoffs/ISSUE-461-admin-ui-foundation.md` ثبت شده است.
 - بازبینی مستقل (code-reviewer): ۰ مورد مسدودکننده و ۳ مورد major که اصلاح شد (Focus trap و خطای onConfirm در ConfirmDialog، Link خارجی در router)؛ ۱۸۰ تست سبز. بازبینی پس از اصلاح تکرار نشد.
+
+## 2026-11-03 — Issue #462 (PR-A2): فهرست و جزئیات کاربران + اتصال router
+- فهرست کاربران (DataTable سمت‌سرور: جست‌وجو، فیلتر، مرتب‌سازی، صفحه‌بندی، وضعیت در URL) و صفحه جزئیات سه‌تبی؛ `UserManagementPage` قدیمی حذف و آزمون‌هایش منتقل شد.
+- `RouterProvider` به AppShell وصل شد؛ منوی «مدیریت کاربران» لینک واقعی شد؛ باگ `offline-check.mjs` برای chunkهای lazy اصلاح شد.
+- بازبینی مستقل: code-reviewer ۰ مسدودکننده/۰ major (۴ مورد minor اصلاح شد)؛ security-reviewer بدون یافته Medium به بالا. ۲۲۲ تست سبز. بررسی مرورگر واقعی اجرا نشد.

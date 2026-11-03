@@ -40,7 +40,7 @@ describe('AppShell', () => {
   it('shows the focused system-administration menu and removes redundant user-list shortcuts', () => {
     render(<AppShell session={{ ...session, isAdministrator: true }} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
     expect(screen.getByRole('button', { name: /مدیریت سیستم/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'مدیریت کاربران' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'مدیریت کاربران' })).toHaveAttribute('href', '/app/admin/users');
     for (const label of ['ساختار سازمانی و سمت‌ها', 'گروه‌های دسترسی', 'کاتالوگ و جزئیات مجوزها', 'گزارش امنیت و سوابق', 'سیاست‌های امنیتی']) {
       expect(screen.getByText(label).closest('[aria-disabled="true"]')).toBeTruthy();
     }

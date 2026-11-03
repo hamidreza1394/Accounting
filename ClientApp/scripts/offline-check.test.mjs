@@ -28,6 +28,29 @@ afterEach(() => {
 });
 
 describe('checkBuild', () => {
+  it('resolves the preload list of lazy chunks against the client base and reports a missing chunk', () => {
+    const preload = 'const d=["assets/Page-abc.js","assets/Page-abc.css"];';
+    const ok = site({
+      'app/index.html': html(),
+      'app/assets/index.js': preload,
+      'app/assets/index.css': '',
+      'app/assets/Page-abc.js': '',
+      'app/assets/Page-abc.css': '',
+      'images/icon.png': 'png',
+    });
+    expect(ok.problems).toEqual([]);
+    expect(ok.resources).toContain('/app/assets/Page-abc.js');
+
+    const missing = site({
+      'app/index.html': html(),
+      'app/assets/index.js': preload,
+      'app/assets/index.css': '',
+      'app/assets/Page-abc.css': '',
+      'images/icon.png': 'png',
+    });
+    expect(missing.problems.join('\n')).toContain('missing local resource /app/assets/Page-abc.js');
+  });
+
   it('accepts absolute and relative local paths that exist, resolving CSS urls against the CSS file', () => {
     const result = site({
       'app/index.html': html('<img src="assets/logo.svg" srcset="assets/logo.svg 1x, /images/icon.png 2x">'),

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   UnauthenticatedError,
   buildLoginUrl,
@@ -11,10 +11,12 @@ import {
 import type { SelectedContext, Session, WorkContext } from './api/types';
 import { AppShell } from './components/AppShell';
 import { BlockedAccess } from './components/BlockedAccess';
-import { Dashboard } from './components/Dashboard';
+import { AppRouteDataContext, appRoutes, type AppRouteData } from './components/AppRoutes';
 import { ErrorState, LoadingScreen } from './components/Feedback';
 import { SelectionLayout } from './components/SelectionLayout';
 import { WorkContextSelector } from './components/WorkContextSelector';
+import { can, type Permission } from './lib/permissions';
+import { RouteView } from './lib/router';
 
 type AppState =
   | { kind: 'loading' }
@@ -141,9 +143,26 @@ export function App({ navigate = defaultNavigate }: { navigate?: Navigate }) {
   const showsSelection =
     state.kind === 'ready' && (state.context.current === null || state.selecting);
   // The tab title names the screen, so several open tabs and the history stay distinguishable.
+  // Inside the shell the router names the page (`<title> | فرانو`).
   useEffect(() => {
-    document.title = showsSelection ? 'فرانو — انتخاب دوره مالی' : 'فرانو — داشبورد';
+    if (showsSelection) document.title = 'فرانو — انتخاب دوره مالی';
   }, [showsSelection]);
+
+  const sessionForPermissions = state.kind === 'ready' ? state.session : null;
+  const canAccess = useCallback(
+    (permission: Permission) => can(sessionForPermissions, permission),
+    [sessionForPermissions],
+  );
+
+  const readySession = state.kind === 'ready' ? state.session : null;
+  const readyContext = state.kind === 'ready' ? state.context.current : null;
+  const routeData = useMemo<AppRouteData | null>(
+    () =>
+      readySession && readyContext
+        ? { session: readySession, context: readyContext, onUnauthenticated: handleUnauthenticated }
+        : null,
+    [readySession, readyContext, handleUnauthenticated],
+  );
 
   if (state.kind === 'loading') {
     return (
@@ -214,23 +233,23 @@ export function App({ navigate = defaultNavigate }: { navigate?: Navigate }) {
   }
 
   return (
-    <AppShell
-      session={session}
-      context={context.current}
-      onChangeContext={() => {
-        // Fresh choices from the server: memberships and periods may have changed.
-        wantsSelection.current = true;
-        reload();
-      }}
-      onLogout={handleLogout}
-      onPasswordChanged={handlePasswordChanged}
-      onUnauthenticated={handleUnauthenticated}
-    >
-      <Dashboard
-        key={`${context.current.company.id}:${context.current.fiscalPeriod.id}`}
+    <AppRouteDataContext.Provider value={routeData}>
+      <AppShell
+        routes={appRoutes}
+        canAccess={canAccess}
         session={session}
         context={context.current}
-        onUnauthenticated={handleUnauthenticated} />
-    </AppShell>
+        onChangeContext={() => {
+          // Fresh choices from the server: memberships and periods may have changed.
+          wantsSelection.current = true;
+          reload();
+        }}
+        onLogout={handleLogout}
+        onPasswordChanged={handlePasswordChanged}
+        onUnauthenticated={handleUnauthenticated}
+      >
+        <RouteView />
+      </AppShell>
+    </AppRouteDataContext.Provider>
   );
 }
