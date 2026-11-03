@@ -2068,3 +2068,18 @@
 - با تأیید مالک محصول مبنی بر پذیرش تمام اصول گزارش معماری قبلی، D-064 نیز از Proposed به Accepted تغییر وضعیت یافت: تفکیک مدیر سراسری نصب از مدیر شرکت، استفاده از CompanyRole به‌عنوان گروه دسترسی و حفظ مدل legacy تا مهاجرت امن.
 - D-065 چهار تصمیم جدید تخصیص سال/دوره، directory هم‌گروه، دو نوع دامنه و approval اجباری عضویت بین‌شرکتی را تکمیل می‌کند.
 - هیچ Migration یا تغییر runtime صرفاً با تغییر وضعیت ADR اجرا نشده است.
+
+
+## 2026-11-03 — Issue #458: انتقال API مدیریت نقش و کاتالوگ مجوز به main
+
+- ممیزی مشخص کرد PRهای #454 تا #456 به‌صورت stacked روی شاخه‌های والد ادغام شده بودند و فایل Backend `Server/Api/CompanyRoleAdministrationEndpoints.cs` و تست متناظر در tree فعلی main حضور نداشتند؛ ادغام وضعیت PR با حضور در main اشتباه گرفته نشد.
+- برش Backend مستقل از Claude تعریف شد؛ هیچ فایل `ClientApp/**`، CSS یا UI تغییر نکرد.
+- APIهای CompanyRole و Permission Catalog از پیاده‌سازی قبلی استخراج شدند و routeها در `ApiEndpoints` ثبت شدند. مدل‌های موجود CompanyRole/CompanyRolePermission/PermissionDefinition بازاستفاده شدند؛ Migration یا Entity جدید ایجاد نشد.
+- helper احراز Installation Administrator برای reuse داخلی endpointها از private به internal تغییر کرد. کنترل نقش فعال همچنان از DB در هر درخواست انجام می‌شود.
+- endpoint تخصیص نقش فقط عضویت فعال موجود را تغییر می‌دهد؛ ایجاد/فعال‌سازی عضویت جدید رد می‌شود تا lifecycle تأیید مقصد D-065 دور زده نشود.
+- تست‌های endpoint منتقل و تست منفی non-admin اضافه شد.
+- تست محلی .NET و SQL Server اجرا نشده است: محیط فاقد dotnet SDK است و clone محلی GitHub به علت خطای DNS ممکن نشد. نتایج CI پس از ایجاد PR باید جداگانه بررسی شود.
+- handoff: `docs/handoffs/ISSUE-458-company-role-api.md`.
+
+
+- Regression test `UserAdministrationEndpointTests.ListUsers_RequiresAnActiveInstallationAdministratorFromTheDatabase` به پاسخ JSON دارای فیلد error با HTTP 403 به‌روزرسانی شد تا با helper صریح 403 در head فعلی هم‌خوان باشد.
