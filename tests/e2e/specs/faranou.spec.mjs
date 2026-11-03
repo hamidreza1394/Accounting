@@ -588,3 +588,45 @@ test('the first-run setup page works under the enforced CSP', async ({ page }) =
   }
   await expectCleanPage(page);
 });
+
+
+test('a company user is denied role administration by both the React route and the live API', async ({ page }) => {
+  await signIn(page, alice);
+  await chooseAlicesCompany(page);
+
+  // The UI guard is only a usability layer: it must hide the route without calling admin APIs.
+  const adminRequests = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname.startsWith('/api/v1/admin/')) {
+      adminRequests.push(request.url());
+    }
+  });
+  await page.goto('/app/admin/roles');
+  await expect(page.getByRole('alert')).toContainText('دسترسی ندارید');
+  expect(adminRequests).toEqual([]);
+
+  // Independently bypass the UI and call the real published API with the authenticated user cookie.
+  const denied = await page.evaluate(async (companyId) => {
+    const paths = [
+      '/api/v1/admin/permission-catalog',
+      `/api/v1/admin/companies/${companyId}/roles`,
+    ];
+    return Promise.all(paths.map(async (path) => {
+      const response = await fetch(path, { credentials: 'same-origin' });
+      return { status: response.status, body: await response.json() };
+    }));
+  }, a.id);
+
+  expect(denied).toEqual([
+    { status: 403, body: { error: 'فقط مدیر نصب سامانه مجاز به این عملیات است.' } },
+    { status: 403, body: { error: 'فقط مدیر نصب سامانه مجاز به این عملیات است.' } },
+  ]);
+
+  // The same endpoints remain protected when the session is removed.
+  await page.context().clearCookies();
+  const anonymousStatus = await page.evaluate(async () =>
+    (await fetch('/api/v1/admin/permission-catalog', { credentials: 'same-origin' })).status,
+  );
+  expect(anonymousStatus).toBe(401);
+  await expectCleanPage(page);
+});
