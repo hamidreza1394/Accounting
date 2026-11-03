@@ -60,6 +60,7 @@
 | [`handoffs/ISSUE-444-role-members-api.md`](handoffs/ISSUE-444-role-members-api.md) | تحویل Backend فهرست اعضای گروه دسترسی و انتقال اعضا (Issue #444، مورد ۳)؛ UI و RowVersion باقی‌مانده |
 | [`handoffs/ISSUE-444-role-members-ui.md`](handoffs/ISSUE-444-role-members-ui.md) | تحویل UI فهرست اعضای گروه دسترسی و انتقال گروهی اعضا روی API ادغام‌شدهٔ #482 (Issue #444) |
 | [`handoffs/ISSUE-485-security-audit-report-api.md`](handoffs/ISSUE-485-security-audit-report-api.md) | API گزارش صفحه‌بندی‌شده Audit امنیتی برای مدیر نصب؛ بدون IP و payload جزئیات |
+| [`handoffs/ISSUE-498-membership-permission-delegation-ceiling.md`](handoffs/ISSUE-498-membership-permission-delegation-ceiling.md) | enforce سقف واگذاری مجوز هنگام تأیید عضویت بین‌شرکتی؛ بدون Schema/Migration |
 | [`handoffs/ISSUE-492-customer-boundary-authz-tests.md`](handoffs/ISSUE-492-customer-boundary-authz-tests.md) | تست امنیتی endpointهای Customer Boundary operator؛ فقط Infrastructure، Anti-forgery و جلوگیری از reassignment |
 | [`handoffs/ISSUE-494-company-user-directory-api.md`](handoffs/ISSUE-494-company-user-directory-api.md) | API فهرست کاربران در scope شرکت با مجوز users.list؛ بدون اطلاعات تماس/امنیتی |
 | [`TIME_CONTRACT.md`](TIME_CONTRACT.md) | ممیزی و قرارداد زمان: `*Utc` در برابر ساعت محلی قدیمی سرور، قرارداد Frontend و پیشنهاد Backend (D-067) |

@@ -188,6 +188,131 @@ public sealed class CompanyMembershipRequestEndpointTests
     }
 
     [Fact]
+    public async Task ApproveMembership_AllowsRoleWhosePermissionsAreWithinApproversDelegationCeiling()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        fixture.Database.CompanyRolePermissions.Add(new Domain.CompanyRolePermission
+        {
+            Role = fixture.MemberRole,
+            Permission = fixture.DelegatedPermission,
+        });
+        var request = fixture.NewRequest();
+        fixture.Database.CompanyMembershipRequests.Add(request);
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await Server.Api.CompanyMembershipRequestEndpoints.ApproveAsync(
+            fixture.Destination.Id, request.Id, new DefaultHttpContext(), fixture.Principal(fixture.Approver.Id),
+            new Server.Api.ApproveCompanyMembershipRequest(fixture.MemberRole.Id), new AllowAntiforgery(),
+            fixture.Database, fixture.Access, TimeProvider.System, default);
+
+        Assert.Equal(StatusCodes.Status204NoContent, (result as IStatusCodeHttpResult)?.StatusCode);
+        Assert.Equal(Domain.CompanyMembershipRequestStatuses.Approved,
+            (await fixture.Database.CompanyMembershipRequests.SingleAsync()).Status);
+    }
+
+    [Fact]
+    public async Task ApproveMembership_RejectsRoleWithPermissionOutsideApproversDelegationCeilingWithoutMutation()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        fixture.Database.CompanyRolePermissions.Add(new Domain.CompanyRolePermission
+        {
+            Role = fixture.MemberRole,
+            Permission = fixture.ExtraPermission,
+        });
+        var request = fixture.NewRequest();
+        fixture.Database.CompanyMembershipRequests.Add(request);
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await Server.Api.CompanyMembershipRequestEndpoints.ApproveAsync(
+            fixture.Destination.Id, request.Id, new DefaultHttpContext(), fixture.Principal(fixture.Approver.Id),
+            new Server.Api.ApproveCompanyMembershipRequest(fixture.MemberRole.Id), new AllowAntiforgery(),
+            fixture.Database, fixture.Access, TimeProvider.System, default);
+
+        Assert.Equal(StatusCodes.Status403Forbidden, (result as IStatusCodeHttpResult)?.StatusCode);
+        Assert.Equal(Domain.CompanyMembershipRequestStatuses.Pending,
+            (await fixture.Database.CompanyMembershipRequests.SingleAsync()).Status);
+        Assert.False(await fixture.Database.UserCompanyMemberships.AnyAsync(
+            membership => membership.UserId == fixture.Requester.Id && membership.TenantId == fixture.Destination.Id));
+        Assert.DoesNotContain(await fixture.Database.SecurityAuditEvents.ToListAsync(),
+            audit => audit.EventType == "CompanyMembershipApproved");
+    }
+
+    [Fact]
+    public async Task ApproveMembership_RejectsSystemRoleEvenWhenItsPermissionsAreDelegable()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        fixture.MemberRole.IsSystemRole = true;
+        fixture.Database.CompanyRolePermissions.Add(new Domain.CompanyRolePermission
+        {
+            Role = fixture.MemberRole,
+            Permission = fixture.DelegatedPermission,
+        });
+        var request = fixture.NewRequest();
+        fixture.Database.CompanyMembershipRequests.Add(request);
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await Server.Api.CompanyMembershipRequestEndpoints.ApproveAsync(
+            fixture.Destination.Id, request.Id, new DefaultHttpContext(), fixture.Principal(fixture.Approver.Id),
+            new Server.Api.ApproveCompanyMembershipRequest(fixture.MemberRole.Id), new AllowAntiforgery(),
+            fixture.Database, fixture.Access, TimeProvider.System, default);
+
+        Assert.Equal(StatusCodes.Status403Forbidden, (result as IStatusCodeHttpResult)?.StatusCode);
+        Assert.Equal(Domain.CompanyMembershipRequestStatuses.Pending,
+            (await fixture.Database.CompanyMembershipRequests.SingleAsync()).Status);
+        Assert.False(await fixture.Database.UserCompanyMemberships.AnyAsync(
+            membership => membership.UserId == fixture.Requester.Id && membership.TenantId == fixture.Destination.Id));
+    }
+
+    [Fact]
+    public async Task ApproveMembership_DoesNotUsePermissionsGrantedInAnotherCompany()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var foreignCompany = new Domain.Company { Name = "شرکت دیگر", IsActive = true };
+        var foreignRole = new Domain.CompanyRole
+        {
+            TenantId = foreignCompany.Id,
+            Company = foreignCompany,
+            Code = "FOREIGN_APPROVER",
+            Name = "تأییدکننده شرکت دیگر",
+            IsActive = true,
+        };
+        fixture.Database.Companies.Add(foreignCompany);
+        fixture.Database.CompanyRoles.Add(foreignRole);
+        fixture.Database.CompanyRolePermissions.Add(new Domain.CompanyRolePermission
+        {
+            Role = foreignRole,
+            Permission = fixture.ExtraPermission,
+        });
+        fixture.Database.UserCompanyMemberships.Add(new Domain.UserCompanyMembership
+        {
+            UserId = fixture.Approver.Id,
+            TenantId = foreignCompany.Id,
+            Role = foreignRole,
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow,
+        });
+        fixture.Database.CompanyRolePermissions.Add(new Domain.CompanyRolePermission
+        {
+            Role = fixture.MemberRole,
+            Permission = fixture.ExtraPermission,
+        });
+        var request = fixture.NewRequest();
+        fixture.Database.CompanyMembershipRequests.Add(request);
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await Server.Api.CompanyMembershipRequestEndpoints.ApproveAsync(
+            fixture.Destination.Id, request.Id, new DefaultHttpContext(), fixture.Principal(fixture.Approver.Id),
+            new Server.Api.ApproveCompanyMembershipRequest(fixture.MemberRole.Id), new AllowAntiforgery(),
+            fixture.Database, fixture.Access, TimeProvider.System, default);
+
+        Assert.Equal(StatusCodes.Status403Forbidden, (result as IStatusCodeHttpResult)?.StatusCode);
+        Assert.Equal(Domain.CompanyMembershipRequestStatuses.Pending,
+            (await fixture.Database.CompanyMembershipRequests.SingleAsync()).Status);
+        Assert.False(await fixture.Database.UserCompanyMemberships.AnyAsync(
+            membership => membership.UserId == fixture.Requester.Id && membership.TenantId == fixture.Destination.Id));
+    }
+
+    [Fact]
     public async Task ApproveMembership_RejectsInactiveOrForeignCompanyRole()
     {
         await using var fixture = await Fixture.CreateAsync();
@@ -328,6 +453,8 @@ public sealed class CompanyMembershipRequestEndpointTests
         public Domain.User OtherUser { get; private set; } = null!;
         public Domain.CompanyRole ApproverRole { get; private set; } = null!;
         public Domain.CompanyRole MemberRole { get; private set; } = null!;
+        public Domain.PermissionDefinition DelegatedPermission { get; private set; } = null!;
+        public Domain.PermissionDefinition ExtraPermission { get; private set; } = null!;
 
         public static async Task<Fixture> CreateAsync()
         {
@@ -353,15 +480,31 @@ public sealed class CompanyMembershipRequestEndpointTests
                 Code = Server.Api.CompanyMembershipRequestEndpoints.ApprovalPermissionCode,
                 Name = "تأیید عضویت",
             };
+            fixture.DelegatedPermission = new Domain.PermissionDefinition
+            {
+                Code = "users.list",
+                Name = "فهرست کاربران",
+            };
+            fixture.ExtraPermission = new Domain.PermissionDefinition
+            {
+                Code = "users.update",
+                Name = "ویرایش کاربران",
+            };
             database.Companies.Add(fixture.Destination);
             database.Users.AddRange(fixture.Requester, fixture.Approver, fixture.OtherUser);
             database.CompanyRoles.AddRange(fixture.ApproverRole, fixture.MemberRole);
-            database.PermissionDefinitions.Add(permission);
-            database.CompanyRolePermissions.Add(new Domain.CompanyRolePermission
-            {
-                Role = fixture.ApproverRole,
-                Permission = permission,
-            });
+            database.PermissionDefinitions.AddRange(permission, fixture.DelegatedPermission, fixture.ExtraPermission);
+            database.CompanyRolePermissions.AddRange(
+                new Domain.CompanyRolePermission
+                {
+                    Role = fixture.ApproverRole,
+                    Permission = permission,
+                },
+                new Domain.CompanyRolePermission
+                {
+                    Role = fixture.ApproverRole,
+                    Permission = fixture.DelegatedPermission,
+                });
             database.UserCompanyMemberships.Add(new Domain.UserCompanyMembership
             {
                 UserId = fixture.Approver.Id, TenantId = fixture.Destination.Id, Role = fixture.ApproverRole,
