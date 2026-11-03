@@ -211,6 +211,7 @@ public sealed class CompanyRoleAdministrationEndpointTests
         var member = Assert.Single(ok.Value!.Items);
         Assert.Equal(inCompany.Id, member.UserId);
         Assert.Equal(1, ok.Value.TotalCount);
+        Assert.Equal(DateTimeKind.Utc, member.CreatedAtUtc.Kind);
         // The projection type itself carries no e-mail, phone or password hash.
         var fields = typeof(Server.Api.CompanyRoleMemberResponse).GetProperties().Select(p => p.Name);
         Assert.DoesNotContain(fields, name => name.Contains("Email") || name.Contains("Phone") || name.Contains("Password"));
