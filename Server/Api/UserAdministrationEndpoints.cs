@@ -194,7 +194,7 @@ public static class UserAdministrationEndpoints
             username.Length > Constants.MaxLength.Username ||
             (firstName?.Length > Constants.MaxLength.FirstName) ||
             (lastName?.Length > Constants.MaxLength.LastName) ||
-            (cellPhone is not null && (cellPhone.Length != Constants.FixedLength.CellPhoneNumber || !new System.ComponentModel.DataAnnotations.RegularExpressionAttribute(Constants.RegularExpression.CellPhoneNumber).IsValid(cellPhone))) ||
+            (cellPhone?.Length > 32) ||
             string.IsNullOrWhiteSpace(password) ||
             password.Length < Constants.MinLength.UserPassword ||
             password.Length > Constants.MaxLength.UserPassword ||
@@ -290,7 +290,7 @@ public static class UserAdministrationEndpoints
             username.Length > Constants.MaxLength.Username ||
             (firstName?.Length > Constants.MaxLength.FirstName) ||
             (lastName?.Length > Constants.MaxLength.LastName) ||
-            (cellPhone is not null && (cellPhone.Length != Constants.FixedLength.CellPhoneNumber || !new System.ComponentModel.DataAnnotations.RegularExpressionAttribute(Constants.RegularExpression.CellPhoneNumber).IsValid(cellPhone))))
+            (cellPhone?.Length > Constants.MaxLength.CellPhoneNumber))
             return TypedResults.BadRequest(new { error = "اطلاعات کاربر معتبر نیست." });
 
         var duplicate = await database.Users.AsNoTracking().AnyAsync(candidate =>
