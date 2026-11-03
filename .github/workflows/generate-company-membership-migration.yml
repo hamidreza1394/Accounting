@@ -1,0 +1,59 @@
+name: Generate company membership request migration
+
+on:
+  push:
+    branches:
+      - agent/460-membership-approval
+    paths:
+      - .github/workflows/generate-company-membership-migration.yml
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install EF Core tools
+        shell: bash
+        run: |
+          dotnet tool install --global dotnet-ef --version 10.0.13
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Generate migration from the actual EF model
+        shell: bash
+        run: |
+          dotnet ef migrations add AddCompanyMembershipRequests \
+            --context Data.DatabaseContext \
+            --project Infrastructure/Persistence/Infrastructure.Persistence.csproj \
+            --startup-project Server/Server.csproj \
+            --configuration Release \
+            --output-dir Migrations --verbose
+
+      - name: Verify there are no pending model changes
+        shell: bash
+        run: |
+          dotnet ef migrations has-pending-model-changes \
+            --context Data.DatabaseContext \
+            --project Infrastructure/Persistence/Infrastructure.Persistence.csproj \
+            --startup-project Server/Server.csproj \
+            --configuration Release
+
+      - name: Upload generated migration and snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: company-membership-ef-migration
+          if-no-files-found: warn
+          path: |
+            Infrastructure/Persistence/Migrations/*_AddCompanyMembershipRequests.cs
+            Infrastructure/Persistence/Migrations/DatabaseContextModelSnapshot.cs
