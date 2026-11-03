@@ -30,8 +30,12 @@ Handlerها حساب‌های غیر-Infrastructure را با 404 رد می‌ک
 | مورد | وضعیت |
 |---|---|
 | اجرای محلی | در این محیط اجرا نشده؛ GitHub clone/DNS در دسترس نیست |
-| CI | در انتظار اجرای PR |
+| CI | اجرای اولیه شکست کامپایل تست را نشان داد؛ اصلاح انجام و اجرای مجدد در انتظار است |
 | Merge | انجام نشده؛ نیازمند تأیید Maintainer |
+
+## جزئیات اصلاح CI
+- unionهای strongly-typed از `Results<...>` به `IStatusCodeHttpResult` cast نمی‌شوند؛ تست اکنون نتیجه را با `IResult.ExecuteAsync` روی `DefaultHttpContext` اجرا می‌کند و status واقعی HTTP را بررسی می‌کند.
+- پاسخ diagnostics به JSON واقعی serialize می‌شود و propertyهای allowlisted بررسی می‌شوند.
 
 ## فایل‌ها
 - `tests/Template.Tests/CustomerBoundaryEndpointTests.cs`
