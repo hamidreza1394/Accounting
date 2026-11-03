@@ -94,6 +94,20 @@ describe('UsersListPage', () => {
     expect(screen.getByRole('table')).toHaveAttribute('aria-busy', 'true');
   });
 
+  it('keeps the search icon and the clear button inside the full-width field', async () => {
+    const user = userEvent.setup();
+    stubFetch(() => json(listBody(three)));
+    setup();
+    await screen.findByText('نام1 خانوادگی1');
+    const input = screen.getByRole('searchbox', { name: 'جستجوی کاربران' });
+    const field = input.parentElement as HTMLElement;
+    expect(field.querySelector('svg')).not.toBeNull();
+    expect(input).toHaveClass('ps-9');
+    expect(screen.queryByRole('button', { name: 'پاک‌کردن جستجو' })).toBeNull();
+    await user.type(input, 'ع');
+    expect(within(field).getByRole('button', { name: 'پاک‌کردن جستجو' })).toBeInTheDocument();
+  });
+
   it('debounces the search, sends one request, keeps it in the URL and clears it', async () => {
     const user = userEvent.setup();
     const fetchMock = stubFetch(() => json(listBody(three)));

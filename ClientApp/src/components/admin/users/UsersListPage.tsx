@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { ApiError, getAdminUsers, type AdminUserQuery } from '../../../api/client';
 import type { AdminUserListItem, AdminUserListResponse } from '../../../api/types';
@@ -92,6 +92,7 @@ const columns: readonly DataTableColumn<AdminUserListItem>[] = [
 export function UsersListPage({ onUnauthenticated, canCreate = false }: Props) {
   const [params, setParams] = useSearchParams();
   const query = useMemo(() => parseQuery(params), [params]);
+  const searchId = useId();
   const [searchInput, setSearchInput] = useState(query.search);
   const [data, setData] = useState<AdminUserListResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -200,28 +201,36 @@ export function UsersListPage({ onUnauthenticated, canCreate = false }: Props) {
       </header>
 
       <form role="search" aria-label="جستجو و فیلتر کاربران" onSubmit={(event) => event.preventDefault()} className="flex flex-wrap items-end gap-3">
-        <div className="flex min-w-60 flex-1 items-end gap-2">
-          <FormField label="جستجوی کاربران" className="flex-1" hint="نام، نام کاربری، ایمیل یا موبایل">
+        <div className="flex min-w-60 flex-1 flex-col gap-1.5">
+          <label htmlFor={searchId} className="text-sm font-semibold text-ink">جستجوی کاربران</label>
+          {/* The icon and the clear button sit inside the field; the input spans the whole row. */}
+          <div className="relative">
+            <Search aria-hidden="true" size={16} className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-muted" />
             <Input
+              id={searchId}
               type="search"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
               placeholder="جستجو…"
               autoComplete="off"
+              aria-describedby={`${searchId}-hint`}
+              className="h-11 ps-9 pe-11 sm:h-10 [&::-webkit-search-cancel-button]:appearance-none"
             />
-          </FormField>
-          {searchInput ? (
-            <Button type="button" variant="outline" size="lg" aria-label="پاک‌کردن جستجو" onClick={() => {
-                setSearchInput('');
-                update({ search: '' }, { replace: true });
-              }}>
-              <X aria-hidden="true" />
-            </Button>
-          ) : (
-            <span aria-hidden="true" className="inline-flex h-9 items-center px-2.5 text-muted">
-              <Search size={16} />
-            </span>
-          )}
+            {searchInput ? (
+              <button
+                type="button"
+                aria-label="پاک‌کردن جستجو"
+                onClick={() => {
+                  setSearchInput('');
+                  update({ search: '' }, { replace: true });
+                }}
+                className="absolute inset-y-0 end-0 flex w-11 items-center justify-center rounded-e-lg text-sub outline-none hover:text-ink focus-visible:ring-2 focus-visible:ring-gold"
+              >
+                <X aria-hidden="true" size={16} />
+              </button>
+            ) : null}
+          </div>
+          <p id={`${searchId}-hint`} className="text-xs leading-5 text-sub">نام، نام کاربری، ایمیل یا موبایل</p>
         </div>
         <FormField label="وضعیت" className="w-40">
           <Select value={query.status} onChange={(event) => update({ status: statuses.find((value) => value === event.target.value) ?? defaults.status })}>

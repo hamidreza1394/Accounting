@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { getCompanyOverview } from '../api/client';
-import type { CompanyOverview, FiscalPeriodStatus } from '../api/types';
+import type { CompanyOverview } from '../api/types';
 import { formatPersianDate } from '../lib/date';
+import { periodPillClass, periodStatusLabel } from '../lib/fiscalStatus';
 import { EmptyState, ErrorState, LoadingState } from './Feedback';
 import { Card } from './ui/card';
 
@@ -9,18 +10,6 @@ type OverviewState =
   | { kind: 'loading' }
   | { kind: 'error'; message: string }
   | { kind: 'ready'; overview: CompanyOverview };
-
-const statusLabels: Record<FiscalPeriodStatus, string> = {
-  Open: 'باز',
-  Closed: 'بسته',
-  Archived: 'بایگانی',
-};
-
-const statusStyles: Record<FiscalPeriodStatus, string> = {
-  Open: 'bg-success-soft text-success',
-  Closed: 'bg-warning-soft text-warning',
-  Archived: 'bg-cool text-muted',
-};
 
 type CompanyOverviewPanelProps = {
   companyId: string;
@@ -111,8 +100,8 @@ export function CompanyOverviewPanel({ companyId, currentPeriodId, onUnauthentic
                     {period.title}
                     {period.id === currentPeriodId ? <span className="ms-2 text-xs font-semibold text-teal">(دوره جاری)</span> : null}
                   </span>
-                  <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusStyles[period.status]}`}>
-                    {statusLabels[period.status]}
+                  <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${periodPillClass[period.status]}`}>
+                    {periodStatusLabel[period.status]}
                   </span>
                 </div>
                 <p className="mt-2 text-muted tabular-nums">
@@ -142,8 +131,8 @@ export function CompanyOverviewPanel({ companyId, currentPeriodId, onUnauthentic
                     <td className="py-3 pe-4 tabular-nums">{formatPersianDate(period.startDate)}</td>
                     <td className="py-3 pe-4 tabular-nums">{formatPersianDate(period.endDate)}</td>
                     <td className="py-3">
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusStyles[period.status]}`}>
-                        {statusLabels[period.status]}
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${periodPillClass[period.status]}`}>
+                        {periodStatusLabel[period.status]}
                       </span>
                     </td>
                   </tr>

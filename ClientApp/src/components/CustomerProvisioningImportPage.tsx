@@ -1,5 +1,6 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
-import { AlertCircle, CheckCircle2, Download, FileUp, KeyRound, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, Download, FileUp, KeyRound, ShieldCheck } from 'lucide-react';
+import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/button';
 import { apiGetRaw, apiPostJson } from '@/api/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -191,7 +192,7 @@ export function CustomerProvisioningImportPage() {
           </CardContent>
         </Card>
 
-        {error && <div role="alert" className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"><AlertCircle className="mt-0.5 size-4 shrink-0" /><span>{error}</span></div>}
+        {error && <Alert tone="error">{error}</Alert>}
 
         {acknowledgement && (
           <Card>

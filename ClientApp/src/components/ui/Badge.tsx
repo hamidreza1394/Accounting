@@ -7,7 +7,7 @@ type Tone = BadgeTone;
 const tones: Record<Tone, string> = {
   success: 'border-success/30 bg-success-soft text-success',
   warning: 'border-gold-deep/40 bg-warning-soft text-warning',
-  neutral: 'border-slate-300 bg-cool text-sub',
+  neutral: 'border-line-strong bg-cool text-sub',
   info: 'border-teal-deep/25 bg-teal-soft text-teal-deep',
   danger: 'border-danger/30 bg-danger-soft text-danger',
 };

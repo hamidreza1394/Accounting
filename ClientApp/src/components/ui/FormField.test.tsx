@@ -63,4 +63,21 @@ describe('FormSection', () => {
     );
     expect(screen.getByRole('region', { name: 'مشخصات' })).toHaveTextContent('اطلاعات پایه');
   });
+
+  it('renders an h3 by default and honours headingLevel', () => {
+    const { rerender } = render(
+      <FormSection title="مشخصات">
+        <p>محتوا</p>
+      </FormSection>,
+    );
+    expect(screen.getByRole('heading', { level: 3, name: 'مشخصات' })).toBeInTheDocument();
+    rerender(
+      <FormSection title="مشخصات" headingLevel={2}>
+        <p>محتوا</p>
+      </FormSection>,
+    );
+    expect(screen.getByRole('heading', { level: 2, name: 'مشخصات' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 3 })).toBeNull();
+    expect(screen.getByRole('region', { name: 'مشخصات' })).toBeInTheDocument();
+  });
 });

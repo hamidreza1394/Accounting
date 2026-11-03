@@ -87,6 +87,19 @@ describe('UserCreatePage', () => {
     }
   });
 
+  it('keeps the outline continuous: h1 then h2 sections, no h3', () => {
+    stubApi(() => json({}));
+    setup();
+    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual([
+      'اطلاعات هویتی',
+      'اطلاعات ورود',
+      'اطلاعات تماس',
+      'وضعیت',
+    ]);
+    expect(screen.queryByRole('heading', { level: 3 })).toBeNull();
+  });
+
   it('drops a stale success message when the create form opens', () => {
     setUserFlash('user-9', 'created');
     stubApi(() => json({}));
@@ -111,7 +124,8 @@ describe('UserCreatePage', () => {
     toggle.focus();
     await user.keyboard('{Enter}');
     expect(field.password()).toHaveAttribute('type', 'text');
-    expect(screen.getByRole('button', { name: 'پنهان‌کردن رمز عبور' })).toHaveAttribute('aria-pressed', 'true');
+    // The shared PasswordInput keeps one fixed label; the state is only in aria-pressed.
+    expect(screen.getByRole('button', { name: 'نمایش رمز عبور' })).toHaveAttribute('aria-pressed', 'true');
     expect(field.confirm()).toHaveAttribute('type', 'password');
   });
 

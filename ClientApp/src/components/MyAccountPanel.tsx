@@ -20,8 +20,8 @@ const focusableSelector = 'button:not([disabled]), input:not([disabled]), select
 
 function TabLabel({ icon: Icon, children }: { icon: typeof UserRound; children: string }) {
   return (
-    <span className="inline-flex items-center gap-2">
-      <Icon size={16} aria-hidden="true" />
+    <span className="inline-flex items-center justify-center gap-1.5 sm:gap-2">
+      <Icon size={16} className="shrink-0" aria-hidden="true" />
       {children}
     </span>
   );
@@ -169,10 +169,10 @@ export function MyAccountPanel({ open, onClose, onPasswordChanged, onUnauthentic
           </div>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto bg-white p-4 sm:p-6">
+        <div className="min-h-0 flex-1 overflow-y-auto bg-white p-4 pb-8 sm:p-6 sm:pb-8">
           <Tabs label="بخش‌های حساب کاربری" items={items} value={activeTab} onValueChange={(id) => setActiveTab(id as AccountTab)} />
         </div>
-        <footer className="flex items-center justify-between border-t border-line bg-white px-5 py-3 text-xs text-muted sm:px-7">
+        <footer className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-line bg-white px-5 py-3 text-xs text-muted sm:px-7">
           <span>فرانو · مدیریت امن حساب</span>
           <span>اطلاعات محرمانه فقط برای صاحب حساب</span>
         </footer>

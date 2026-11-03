@@ -40,6 +40,7 @@
 | [`DEPLOYMENT.md`](DEPLOYMENT.md), [`DEVELOPMENT.md`](DEVELOPMENT.md) | استقرار و توسعه |
 | [`CODING_STANDARDS.md`](CODING_STANDARDS.md) | استانداردها |
 | [`UI_COMPONENTS.md`](UI_COMPONENTS.md) | هستهٔ قواعد UI: shadcn/ui، RTL فارسی، دسترس‌پذیری، runtime آفلاین، قانون محلی‌سازی دارایی‌ها و قواعد طراحی/سرعت/ویژوال (D-048، D-049) |
+| [`ADMIN_UI.md`](ADMIN_UI.md) | رابط مدیریت سیستم در ClientApp: مسیرها و روتر، کامپوننت‌های مشترک، قرارداد API client، استاندارد فرم/RTL، نقشهٔ Navigation، راهنمای تست، تصمیمات طراحی، نیازهای Backend و بدهی فنی (Issue #464) |
 | [`UI_LIBRARIES.md`](UI_LIBRARIES.md) | مرجع کتابخانه‌ها: جدول/نمودار/تاریخ، استفادهٔ مشروط از KendoReact Free (D-050)، گزارش پیوت و راهنمای مهارت `ui-ux-pro-max`؛ هنگام انتخاب یا افزودن کتابخانه بخوان |
 | [`REPOSITORY_AUDIT.md`](REPOSITORY_AUDIT.md) | ممیزی و ناهماهنگی‌ها |
 | [`CLOUD_CONCURRENCY_READINESS.md`](CLOUD_CONCURRENCY_READINESS.md) | ممیزی آمادگی بار ابری؛ ظرفیت ۱۰۰ کاربر فعلاً تأیید نشده |

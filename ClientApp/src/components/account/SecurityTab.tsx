@@ -3,7 +3,7 @@ import { KeyRound } from 'lucide-react';
 import { ApiError, changeMyPassword, UnauthenticatedError } from '../../api/client';
 import { Alert } from '../ui/Alert';
 import { FormField } from '../ui/FormField';
-import { PasswordInput } from './PasswordInput';
+import { PasswordInput } from '../ui/PasswordInput';
 
 export type PasswordField = 'currentPassword' | 'newPassword' | 'confirmNewPassword';
 export type PasswordFieldErrors = Partial<Record<PasswordField, string>>;
@@ -173,14 +173,14 @@ export function SecurityTab({ submitting, onSubmittingChange, onPasswordChanged,
             type="button"
             onClick={clearAll}
             disabled={submitting}
-            className="rounded-lg border border-line px-4 py-2.5 text-xs font-bold text-sub outline-none hover:bg-cool focus-visible:ring-2 focus-visible:ring-gold disabled:opacity-60"
+            className="min-h-11 rounded-lg border border-line px-4 py-2.5 text-xs font-bold text-sub outline-none hover:bg-cool focus-visible:ring-2 focus-visible:ring-gold disabled:opacity-60"
           >
             پاک‌کردن
           </button>
           <button
             type="submit"
             disabled={submitting}
-            className="inline-flex items-center gap-2 rounded-lg bg-teal-deep px-5 py-2.5 text-xs font-bold text-white outline-none transition hover:bg-navy focus-visible:ring-2 focus-visible:ring-gold disabled:cursor-wait disabled:opacity-60"
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-teal-deep px-5 py-2.5 text-xs font-bold text-white outline-none transition hover:bg-navy focus-visible:ring-2 focus-visible:ring-gold disabled:cursor-wait disabled:opacity-60"
           >
             <KeyRound size={15} aria-hidden="true" />
             {submitting ? 'در حال ثبت…' : 'تغییر رمز و خروج'}

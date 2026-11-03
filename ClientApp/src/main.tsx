@@ -1,8 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { App } from './App';
-import { ProvisioningEnrollmentPage } from './components/ProvisioningEnrollmentPage';
-import { CustomerProvisioningImportPage } from './components/CustomerProvisioningImportPage';
+import { Root } from './Root';
 import './styles/index.css';
 import './styles/premium-dashboard.css';
 
@@ -14,6 +12,6 @@ if (!container) {
 
 createRoot(container).render(
   <StrictMode>
-    {window.location.pathname === '/enroll' ? <ProvisioningEnrollmentPage /> : window.location.pathname === '/provisioning/import' ? <CustomerProvisioningImportPage /> : <App />}
+    <Root pathname={window.location.pathname} />
   </StrictMode>,
 );

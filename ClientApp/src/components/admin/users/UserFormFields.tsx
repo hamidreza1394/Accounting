@@ -1,10 +1,10 @@
-import { useEffect, useId, useRef, useState, type ComponentProps, type FormEvent } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { ApiError } from '../../../api/client';
 import { Alert } from '../../ui/Alert';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { FormField, Input } from '../../ui/FormField';
 import { FormSection } from '../../ui/FormSection';
+import { PasswordInput } from '../../ui/PasswordInput';
 import { Button } from '../../ui/button';
 import {
   faDigits,
@@ -30,36 +30,6 @@ type UserFormProps = {
 };
 
 const fallbackMessage = 'ذخیرهٔ اطلاعات انجام نشد. لطفاً دوباره تلاش کنید.';
-
-/** A password box with a show/hide toggle; the value is only kept in component state. */
-function PasswordInput({ className, ...props }: ComponentProps<'input'>) {
-  const [visible, setVisible] = useState(false);
-  const label = props['aria-label'] ?? 'رمز عبور';
-  return (
-    // The wrapper is ltr so the toggle (`end-0`), the padding (`pe-11`) and the text (`text-start`)
-    // all refer to the same side, whatever the page direction is.
-    <div className="relative" dir="ltr">
-      <Input
-        {...props}
-        type={visible ? 'text' : 'password'}
-        dir="ltr"
-        spellCheck={false}
-        autoCapitalize="none"
-        autoCorrect="off"
-        className={`pe-11 text-start ${className ?? ''}`}
-      />
-      <button
-        type="button"
-        aria-pressed={visible}
-        aria-label={visible ? `پنهان‌کردن ${label}` : `نمایش ${label}`}
-        onClick={() => setVisible((value) => !value)}
-        className="absolute inset-y-0 end-0 flex w-10 items-center justify-center rounded-e-lg text-sub outline-none hover:text-ink focus-visible:ring-2 focus-visible:ring-gold"
-      >
-        {visible ? <EyeOff aria-hidden="true" size={16} /> : <Eye aria-hidden="true" size={16} />}
-      </button>
-    </div>
-  );
-}
 
 /**
  * The create/edit form of a user, shared by both pages. It owns the typed values, validation
@@ -196,7 +166,7 @@ export function UserForm({ mode, initialValues, onSubmit, onCancel, onUnauthenti
         </Alert>
       ) : null}
 
-      <FormSection title="اطلاعات هویتی">
+      <FormSection headingLevel={2} title="اطلاعات هویتی">
         <FormField label="نام" error={errorFor('firstName')}>
           <Input {...field('firstName')} autoComplete="off" />
         </FormField>
@@ -205,23 +175,23 @@ export function UserForm({ mode, initialValues, onSubmit, onCancel, onUnauthenti
         </FormField>
       </FormSection>
 
-      <FormSection title="اطلاعات ورود">
+      <FormSection headingLevel={2} title="اطلاعات ورود">
         <FormField label="نام کاربری" required error={errorFor('username')} hint={`${faDigits(limits.usernameMin)} تا ${faDigits(limits.usernameMax)} نویسه؛ برای ورود به سامانه استفاده می‌شود.`}>
           <Input {...field('username')} dir="ltr" autoComplete="off" autoCapitalize="none" spellCheck={false} className="text-start" />
         </FormField>
         {mode === 'create' ? (
           <>
             <FormField label="رمز عبور" required error={errorFor('password')} hint={`دست‌کم ${faDigits(limits.passwordMin)} نویسه؛ رمزهای رایج و قابل‌حدس پذیرفته نمی‌شوند.`}>
-              <PasswordInput {...field('password')} autoComplete="new-password" />
+              <PasswordInput {...field('password')} fieldName="رمز عبور" togglePlacement="end" autoComplete="new-password" />
             </FormField>
             <FormField label="تکرار رمز عبور" required error={errorFor('confirmPassword')}>
-              <PasswordInput {...field('confirmPassword')} aria-label="تکرار رمز عبور" autoComplete="new-password" />
+              <PasswordInput {...field('confirmPassword')} fieldName="تکرار رمز عبور" togglePlacement="end" aria-label="تکرار رمز عبور" autoComplete="new-password" />
             </FormField>
           </>
         ) : null}
       </FormSection>
 
-      <FormSection title="اطلاعات تماس">
+      <FormSection headingLevel={2} title="اطلاعات تماس">
         <FormField label="ایمیل" required error={errorFor('emailAddress')}>
           <Input {...field('emailAddress')} type="email" dir="ltr" autoComplete="off" spellCheck={false} className="text-start" />
         </FormField>
@@ -230,7 +200,7 @@ export function UserForm({ mode, initialValues, onSubmit, onCancel, onUnauthenti
         </FormField>
       </FormSection>
 
-      <FormSection title="وضعیت">
+      <FormSection headingLevel={2} title="وضعیت">
         <div className="sm:col-span-2">
           <label className="flex cursor-pointer items-start gap-3">
             <input

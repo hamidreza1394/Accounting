@@ -135,3 +135,11 @@
 - مسیرها: `/admin/users/new` باید پیش از `/admin/users/:id` باشد. رمز فقط در state فرم نگه داشته می‌شود؛ `userFlash.ts` فقط `{userId, kind}` را برای پیام موفقیت یک‌بار مصرف و با TTL ۳۰ ثانیه نگه می‌دارد.
 - نگهبان تغییرات ذخیره‌نشده فقط Cancel و `beforeunload` را پوشش می‌دهد؛ مسدودکننده ناوبری router کار بعدی است.
 - `PasswordInput` (در ایجاد کاربر) و `account/PasswordInput` (حساب کاربری) تکراری‌اند و باید در A5 به یک کامپوننت `ui/PasswordInput` ادغام شوند.
+
+### پاک‌سازی ClientApp و استانداردهای تکمیلی (Issue #464)
+
+- رنگ‌ها: در کامپوننت‌ها hex سخت‌کد و کلاس‌های خام Tailwind نمانده است؛ توکن‌های جدید در `@theme` فایل `styles/index.css` تعریف شده‌اند (جدول تغییر تن‌ها در handoff).
+- RTL: متغیر `--inline-sign` (از `html[dir=rtl]`) برای transformها و سایه‌های جهت‌دار؛ ویژگی‌های فیزیکی TSX به `start-/end-/text-start` تبدیل شد.
+- `ui/PasswordInput` (یکپارچه، `togglePlacement`)، `ui/ErrorBoundary`، `lib/fiscalStatus.ts`، `FormSection headingLevel`، لینک «پرش به محتوای اصلی» در AppShell، `Root.tsx` برای صفحات lazy فراهم‌سازی.
+- دکمه‌های `lg` در موبایل حداقل ۴۴px؛ سایدبار بستهٔ موبایل `visibility: hidden` است (غیرقابل فوکوس).
+- بررسی مرورگر واقعی (Chromium، ۳۶۰/۷۶۸/۱۲۸۰، API شبیه‌سازی‌شده) انجام شد؛ جزئیات و باگ‌های یافته‌شده در `docs/handoffs/ISSUE-464-admin-ui-cleanup.md`.
