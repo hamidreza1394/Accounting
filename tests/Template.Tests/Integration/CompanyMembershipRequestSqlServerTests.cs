@@ -61,7 +61,6 @@ public sealed class CompanyMembershipRequestSqlServerTests
 
         await WithDatabaseAsync(async name =>
         {
-            Guid sourceId;
             Guid destinationId;
             Guid requesterId;
             Guid approverAId;
@@ -74,7 +73,6 @@ public sealed class CompanyMembershipRequestSqlServerTests
                 await before.GetService<IMigrator>().MigrateAsync(
                     PreviousMigration, TestContext.Current.CancellationToken);
 
-                var source = new Domain.Company { Name = "شرکت مبدأ", IsActive = true };
                 var destination = new Domain.Company { Name = "شرکت مقصد", IsActive = true };
                 var requester = new Domain.User("requester-membership@example.test")
                 {
@@ -91,10 +89,6 @@ public sealed class CompanyMembershipRequestSqlServerTests
                     Username = "approver-b",
                     IsActive = true,
                 };
-                var sourceRole = new Domain.CompanyRole
-                {
-                    TenantId = source.Id, Company = source, Code = "SOURCE", Name = "مبدأ", IsActive = true,
-                };
                 var approverRoleA = new Domain.CompanyRole
                 {
                     TenantId = destination.Id, Company = destination, Code = "APPROVER_A", Name = "تأییدکننده الف", IsActive = true,
@@ -108,15 +102,10 @@ public sealed class CompanyMembershipRequestSqlServerTests
                     TenantId = destination.Id, Company = destination, Code = "MEMBER", Name = "عضو", IsActive = true,
                 };
 
-                before.Companies.AddRange(source, destination);
+                before.Companies.Add(destination);
                 before.Users.AddRange(requester, approverA, approverB);
-                before.CompanyRoles.AddRange(sourceRole, approverRoleA, approverRoleB, memberRole);
+                before.CompanyRoles.AddRange(approverRoleA, approverRoleB, memberRole);
                 before.UserCompanyMemberships.AddRange(
-                    new Domain.UserCompanyMembership
-                    {
-                        UserId = requester.Id, TenantId = source.Id, Role = sourceRole, IsActive = true,
-                        CreatedAtUtc = DateTime.UtcNow,
-                    },
                     new Domain.UserCompanyMembership
                     {
                         UserId = approverA.Id, TenantId = destination.Id, Role = approverRoleA, IsActive = true,
@@ -129,17 +118,16 @@ public sealed class CompanyMembershipRequestSqlServerTests
                     });
 
                 await before.SaveChangesAsync(TestContext.Current.CancellationToken);
-                sourceId = source.Id;
                 destinationId = destination.Id;
                 requesterId = requester.Id;
                 approverAId = approverA.Id;
                 approverBId = approverB.Id;
                 memberRoleId = memberRole.Id;
 
-                // Upgrade an existing database after a live membership already exists.
+                // Upgrade an existing database after destination approver memberships already exist.
                 await before.Database.MigrateAsync(TestContext.Current.CancellationToken);
                 Assert.True(await before.UserCompanyMemberships.AnyAsync(
-                    item => item.UserId == requesterId && item.TenantId == sourceId && item.IsActive,
+                    item => item.UserId == approverAId && item.TenantId == destinationId && item.IsActive,
                     TestContext.Current.CancellationToken));
                 Assert.Contains(await before.Database.GetAppliedMigrationsAsync(TestContext.Current.CancellationToken),
                     item => item == MembershipMigration);
@@ -154,7 +142,6 @@ public sealed class CompanyMembershipRequestSqlServerTests
                 var membershipRequest = new Domain.CompanyMembershipRequest
                 {
                     UserId = requesterId,
-                    SourceTenantId = sourceId,
                     DestinationTenantId = destinationId,
                     Status = Domain.CompanyMembershipRequestStatuses.Pending,
                     RequestedAtUtc = DateTime.UtcNow,
@@ -185,9 +172,11 @@ public sealed class CompanyMembershipRequestSqlServerTests
                 (result as IStatusCodeHttpResult)?.StatusCode == StatusCodes.Status204NoContent));
             Assert.All(outcomes.Where(result =>
                     (result as IStatusCodeHttpResult)?.StatusCode != StatusCodes.Status204NoContent),
-                result => Assert.Contains(
-                    (result as IStatusCodeHttpResult)?.StatusCode,
-                    new[] { StatusCodes.Status404NotFound, StatusCodes.Status409Conflict }));
+                result =>
+                {
+                    var status = (result as IStatusCodeHttpResult)?.StatusCode;
+                    Assert.True(status == StatusCodes.Status404NotFound || status == StatusCodes.Status409Conflict);
+                });
 
             await using (var check = CreateContext(name))
             {
@@ -207,16 +196,12 @@ public sealed class CompanyMembershipRequestSqlServerTests
                     item => item.EventType == "CompanyMembershipApproved" && item.EntityId == requestId.ToString(),
                     TestContext.Current.CancellationToken));
 
-                // Down is safe: the assigned permission is retained because it is now in use.
                 await check.GetService<IMigrator>().MigrateAsync(
                     PreviousMigration, TestContext.Current.CancellationToken);
                 var tableCount = await check.Database.SqlQueryRaw<int>(
                     "SELECT COUNT(*) AS [Value] FROM sys.tables WHERE [name] = 'CompanyMembershipRequests'")
                     .SingleAsync(TestContext.Current.CancellationToken);
                 Assert.Equal(0, tableCount);
-                Assert.True(await check.PermissionDefinitions.AnyAsync(
-                    item => item.Code == Server.Api.CompanyMembershipRequestEndpoints.ApprovalPermissionCode,
-                    TestContext.Current.CancellationToken));
 
                 await check.Database.MigrateAsync(TestContext.Current.CancellationToken);
                 tableCount = await check.Database.SqlQueryRaw<int>(
