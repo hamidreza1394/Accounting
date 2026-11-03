@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
@@ -20,7 +21,10 @@ public sealed class UserAdministrationEndpointTests
             new DefaultHttpContext(), Principal(ordinary.Id), fixture.Database,
             search: null, status: "all", page: 1, pageSize: 25, sort: "created",
             descending: true, cancellationToken: default);
-        Assert.IsType<ForbidHttpResult>(denied);
+        Assert.Equal(StatusCodes.Status403Forbidden, (denied as IStatusCodeHttpResult)?.StatusCode);
+        var payload = Assert.IsAssignableFrom<IValueHttpResult>(denied);
+        using var errorDocument = JsonDocument.Parse(JsonSerializer.Serialize(payload.Value));
+        Assert.Equal("فقط مدیر نصب سامانه مجاز به این عملیات است.", errorDocument.RootElement.GetProperty("error").GetString());
 
         var allowed = await Server.Api.UserAdministrationEndpoints.GetUsersAsync(
             new DefaultHttpContext(), Principal(admin.Id), fixture.Database,
