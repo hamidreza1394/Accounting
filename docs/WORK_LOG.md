@@ -2311,3 +2311,11 @@
 - handoff: docs/handoffs/ISSUE-500-utc-kind-value-converter.md.
 ## 2026-11-03 — Issue #444: قراردادهای API مورد نیاز UI (هماهنگی Backend)
 - برای قابلیت‌هایی که API ندارند (کشف شرکت برای درخواست عضویت، گروه‌های قابل‌تخصیص، `/me/permissions`، مرتب‌سازی/Export/Retention گزارش، نشست‌ها، S2) قرارداد دقیق endpoint، مدل و کدهای خطا در `docs/FRONTEND_API_CONTRACT_NEEDS.md` ثبت شد (`Proposed`، مسئول ChatGPT). UI مربوط عمداً ساخته نشد تا قابلیت ظاهری یا داده ساختگی تولید نشود؛ هر مورد پس از Merge شدن API در PR مستقل مصرف می‌شود.
+
+
+## 2026-11-03 — Issue #512: تکمیل گزارش امنیتی Backend
+- `GET /admin/security/audit-events` فهرست سفید sort (occurredAt/eventType) و direction دریافت کرد؛ query فقط expressionهای EF ثابت را انتخاب می‌کند و ورودی ستون به SQL تبدیل نمی‌شود.
+- `GET /admin/security/audit-event-types` کد و label سمت سرور ارائه می‌کند؛ `GET /admin/companies` فهرست صفحه‌بندی‌شده نصب برای فیلتر شرکت اضافه شد.
+- فیلتر شرکت و DateTimeOffset UTC موجود حفظ شد؛ `OccurredAtUtc` خروجی پس از EF read صریحاً Kind=UTC می‌گیرد. Export نیز Z دارد.
+- Retention در D-070 با وضعیت Proposed ثبت شد؛ هیچ endpoint/job/permission اجرایی یا purge پیاده‌سازی نشد تا مالک تصمیم بگیرد.
+- Unit/SQL Server/Build/Full Test هنوز اجرا نشده‌اند؛ Verified نیست. بدون Migration و ClientApp.
