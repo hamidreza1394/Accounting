@@ -188,3 +188,8 @@ flowchart LR
 - ImportCase می‌تواند چند دوره را پوشش دهد؛ هر سند/عملیات تراکنشی FiscalPeriodId دوره جاری WorkContext را ذخیره می‌کند. اسناد دوره قبل immutable از نظر انتساب دوره باقی می‌مانند و به دوره جدید منتقل نمی‌شوند.
 - گزارش چندشرکتی عملیاتی از موج اول با all-or-nothing authorization در همه جفت‌های Company/FiscalPeriod و audit scope ارائه می‌شود؛ این قابلیت گزارش تلفیقی مالی نیست.
 - entitlement تجاری TRADE_IMPORT از S1 و پیش از استفاده از قابلیت‌های Trade enforce می‌شود؛ Production در نبود یا خطای اعتبارسنجی fail-closed است.
+
+
+## مدیریت دسترسی چندشرکتی — D-065
+
+مرجع تفصیلی: ACCESS_CONTROL_ARCHITECTURE.md. تصمیم‌های D-065 Accepted هستند: تخصیص مالی در سطح سال و دوره؛ directory محدود فقط کاربران شرکت‌های هم‌گروه؛ پشتیبانی هر دو دامنه Company و CorporateGroup؛ approval اجباری تمام عضویت‌های جدید بین‌شرکتی. Host و عضویت گروهی مجوز نیستند. عضویت Approved، grant مالی، entitlement و permission در هر درخواست مستقل بررسی می‌شوند. ماژول‌ها فقط از قراردادهای application استفاده می‌کنند و نباید به Entity/DbContext داخلی یکدیگر وابسته شوند.

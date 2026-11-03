@@ -1109,3 +1109,42 @@ D-013، D-025، D-034، D-059، D-061، D-062، Issue #397، Issue #399، PR #39
 - تست نشان دهد مدیر سیستم فقط کاربران همان نصب را می‌بیند و API از Role فعال DB استفاده می‌کند.
 - تغییر نقش یا غیرفعال‌سازی مدیر در DB در درخواست بعدی اثر کند، بدون اتکا به claim قدیمی.
 - هیچ تخصیص عضویت یا CompanyRole به‌تنهایی اختیارات سراسری ایجاد نکند.
+
+
+## D-065 — معماری مصوب مدیریت دسترسی چندشرکتی، دامنه و تخصیص مالی (2026-11-03)
+
+- **وضعیت:** Accepted؛ چهار تصمیم محصولی در 2026-11-03 صریحاً تأیید شدند.
+- **Issue:** #444.
+- **دامنه:** تکمیل طراحی مدیریت هویت و دسترسی. D-061..D-063 درباره Trade و FiscalPeriod مشترک معتبر می‌مانند.
+
+### تصمیم‌ها
+1. تخصیص مالی در هر دو سطح سال مالی و دوره مالی مشخص انجام می‌شود. دسترسی سال به‌صورت ضمنی دوره جدید را مجاز نمی‌کند مگر grant صریح AllPeriodsInYear انتخاب شده باشد. مدل سال باید از FiscalPeriod واقعی استخراج شود؛ Year entity یا جدول موازی بدون شواهد مدل فعلی ساخته نشود.
+2. مدیر شرکت فقط directory محدود و read-only کاربران شرکت‌های عضو همان CorporateGroup را می‌بیند. داده حساس، نقش‌ها، مجوزها، سوابق ورود و نشست شرکت دیگر افشا نمی‌شوند. این directory هیچ دسترسی یا اختیار مدیریتی ایجاد نمی‌کند.
+3. هر دو دامنه Company و CorporateGroup پشتیبانی می‌شوند. Host verified فقط context را resolve می‌کند و جایگزین authentication، membership، fiscal grant، entitlement یا permission نیست.
+4. تمام عضویت‌های جدید بین‌شرکتی PendingApproval هستند و فقط مدیر مجاز Company مقصد می‌تواند آن‌ها را تأیید کند. self-approval ممنوع و تا approval هیچ دسترسی داده/مالی/زیرسیستم ایجاد نمی‌شود.
+
+### مدل مؤثر دسترسی
+هویت فعال + Company context معتبر + عضویت Approved + grant معتبر سال/دوره برای عملیات مالی + entitlement فعال در صورت نیاز + permission صریح + DataScope معتبر. هر شرط ناموجود/مبهم/منقضی به deny منتهی می‌شود. RBAC با CompanyRole/CompanyRolePermission و policyهای context-aware اعمال می‌شود.
+
+### چرخه عضویت و مدل
+User در هر Installation/Identity Realm یکتا است؛ UserCompanyMembership برای هر Company مستقل است. lifecycle شامل PendingApproval, Approved, Rejected, Suspended, Revoked و Expired است. approval عضویت، grant نقش یا دوره را خودکار ایجاد نمی‌کند. transitionها actor، UTC time، reason و correlation دارند.
+
+### دامنه و جداسازی
+Company domain به Company و Group domain به CorporateGroup verified resolve می‌شود. mapping مبهم رد می‌شود؛ Host و group membership مجوز نیستند. قراردادهای versioned برای Identity، Membership، Fiscal Access، Domain Resolution و Authorization Decision تعریف می‌شوند. ماژول‌ها به Entity/DbContext داخلی یکدیگر وابسته نمی‌شوند. استخراج سرویس مستقل نیازمند service identity، contract tests، data ownership، migration/reconciliation و عملیات مستقل است؛ این ADR الزام به microservice فوری نیست.
+
+### امنیت و پیامدها
+تمام query/API/export/jobها membership و scope را کنترل می‌کنند؛ revoke در درخواست بعدی اثر می‌کند؛ cache/session invalidation، anti-forgery، audit و concurrency control الزامی‌اند. Host spoofing، forwarded header غیرمعتبر، domain unverified و cookie domain-wide ناخواسته باید رد شوند.
+
+### گزینه‌های ردشده
+- فقط سال یا فقط دوره: رد؛ هر دو لازم‌اند.
+- directory تمام نصب: رد؛ فقط هم‌گروه.
+- فقط Company domain یا فقط Group domain: رد؛ هر دو.
+- تأیید اختیاری/استثنایی: رد؛ تمام عضویت‌های جدید بین‌شرکتی نیازمند تأیید مقصدند.
+- اعطای دسترسی از عضویت گروه/مالکیت/دامنه: رد.
+- AccessGroup یا Permission engine موازی و Tenant entity جدید: رد.
+
+### اجرای مرحله‌ای
+PRها به reconcile PRهای #445..#456، membership/approval، fiscal grants، domain mapping، group directory، UI، security hardening و extraction readiness تقسیم می‌شوند. هر migration additive، با backfill، SQL Server verification و rollback plan است. این ADR مجوز اجرای migration روی دیتابیس مشتری نیست.
+
+### معیار پذیرش
+Pending هیچ دسترسی ندارد؛ مقصد تنها approver است؛ grant سالی و دوره‌ای هر دو کار می‌کنند و دوره جدید خودکار باز نمی‌شود؛ Company/Group domain درست resolve می‌شوند اما authorization مستقل است؛ directory فقط فیلدهای allowlisted هم‌گروه را می‌دهد؛ تست‌های cross-company/group/period، host spoofing، stale session، concurrency و SQL Server اجرا و ثبت می‌شوند.
