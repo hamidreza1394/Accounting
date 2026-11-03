@@ -289,6 +289,36 @@ public static class CompanyMembershipRequestEndpoints
         if (!requesterIsActive || destinationRole is null)
             return TypedResults.Conflict(new { error = "کاربر یا گروه دسترسی مقصد دیگر شرایط تأیید را ندارد." });
 
+        // A company approver may delegate only permissions they currently hold in this
+        // destination company. System roles are installation/domain templates and cannot
+        // be assigned through the inter-company approval workflow.
+        var approverPermissionIds = await (
+            from membership in database.UserCompanyMemberships.AsNoTracking()
+            join role in database.CompanyRoles.AsNoTracking()
+                on membership.RoleId equals role.Id
+            join rolePermission in database.CompanyRolePermissions.AsNoTracking()
+                on role.Id equals rolePermission.RoleId
+            where membership.UserId == approverId.Value &&
+                  membership.TenantId == companyId &&
+                  membership.IsActive &&
+                  role.TenantId == companyId &&
+                  role.IsActive
+            select rolePermission.PermissionId)
+            .ToHashSetAsync(cancellationToken);
+
+        var destinationPermissionIds = await database.CompanyRolePermissions.AsNoTracking()
+            .Where(rolePermission => rolePermission.RoleId == destinationRole.Id)
+            .Select(rolePermission => rolePermission.PermissionId)
+            .ToArrayAsync(cancellationToken);
+
+        if (destinationRole.IsSystemRole ||
+            destinationPermissionIds.Any(permissionId => !approverPermissionIds.Contains(permissionId)))
+        {
+            return TypedResults.Json(
+                new { error = "شما مجاز به واگذاری این گروه دسترسی نیستید." },
+                statusCode: StatusCodes.Status403Forbidden);
+        }
+
         var existingMembership = await database.UserCompanyMemberships
             .Include(membership => membership.Role)
             .FirstOrDefaultAsync(membership =>
