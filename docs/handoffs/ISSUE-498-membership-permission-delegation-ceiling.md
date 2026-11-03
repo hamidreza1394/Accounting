@@ -53,5 +53,6 @@
 
 ## شناسه‌های Git
 - Branch: agent/498-membership-permission-delegation-ceiling
-- Commit: در PR ثبت می‌شود.
-- Pull Request: در حال ایجاد.
+- Commit پیاده‌سازی: 80cff8fa58e44c24b6bcc15be0ea6d6c1ca02186
+- Commit همگام‌سازی با main: ad6d3bfc25c555c6484f31e52e889e4879db0f14
+- Pull Request: https://github.com/hamidreza1394/Accounting/pull/498
