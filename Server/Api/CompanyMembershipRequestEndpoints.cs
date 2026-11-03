@@ -280,11 +280,13 @@ public static class CompanyMembershipRequestEndpoints
         var now = timeProvider.GetUtcNow().UtcDateTime;
         var requesterIsActive = await database.Users.AsNoTracking()
             .AnyAsync(user => user.Id == membershipRequest.UserId && user.IsActive, cancellationToken);
-        var destinationRole = await database.CompanyRoles.FirstOrDefaultAsync(role =>
-            role.Id == request.RoleId &&
-            role.TenantId == companyId &&
-            role.IsActive,
-            cancellationToken);
+        var destinationRole = await database.CompanyRoles
+            .Include(role => role.RolePermissions)
+            .FirstOrDefaultAsync(role =>
+                role.Id == request.RoleId &&
+                role.TenantId == companyId &&
+                role.IsActive,
+                cancellationToken);
 
         if (!requesterIsActive || destinationRole is null)
             return TypedResults.Conflict(new { error = "کاربر یا گروه دسترسی مقصد دیگر شرایط تأیید را ندارد." });
@@ -292,24 +294,27 @@ public static class CompanyMembershipRequestEndpoints
         // A company approver may delegate only permissions they currently hold in this
         // destination company. System roles are installation/domain templates and cannot
         // be assigned through the inter-company approval workflow.
-        var approverPermissionIds = await (
-            from membership in database.UserCompanyMemberships.AsNoTracking()
-            join role in database.CompanyRoles.AsNoTracking()
-                on membership.RoleId equals role.Id
-            join rolePermission in database.CompanyRolePermissions.AsNoTracking()
-                on role.Id equals rolePermission.RoleId
-            where membership.UserId == approverId.Value &&
-                  membership.TenantId == companyId &&
-                  membership.IsActive &&
-                  role.TenantId == companyId &&
-                  role.IsActive
-            select rolePermission.PermissionId)
-            .ToHashSetAsync(cancellationToken);
+        // Track the exact membership and role rows that establish the approver's delegation
+        // ceiling. RowVersion guards below make a concurrent revocation/change fail closed
+        // instead of approving from a stale permission snapshot.
+        var approverMemberships = await database.UserCompanyMemberships
+            .Include(membership => membership.Role)
+                .ThenInclude(role => role.RolePermissions)
+            .Where(membership =>
+                membership.UserId == approverId.Value &&
+                membership.TenantId == companyId &&
+                membership.IsActive &&
+                membership.Role.TenantId == companyId &&
+                membership.Role.IsActive)
+            .ToListAsync(cancellationToken);
 
-        var destinationPermissionIds = await database.CompanyRolePermissions.AsNoTracking()
-            .Where(rolePermission => rolePermission.RoleId == destinationRole.Id)
+        var approverPermissionIds = approverMemberships
+            .SelectMany(membership => membership.Role.RolePermissions)
             .Select(rolePermission => rolePermission.PermissionId)
-            .ToArrayAsync(cancellationToken);
+            .ToHashSet();
+        var destinationPermissionIds = destinationRole.RolePermissions
+            .Select(rolePermission => rolePermission.PermissionId)
+            .ToArray();
 
         if (destinationRole.IsSystemRole ||
             destinationPermissionIds.Any(permissionId => !approverPermissionIds.Contains(permissionId)))
@@ -318,6 +323,17 @@ public static class CompanyMembershipRequestEndpoints
                 new { error = "شما مجاز به واگذاری این گروه دسترسی نیستید." },
                 statusCode: StatusCodes.Status403Forbidden);
         }
+
+        // Force no-op updates on every row used to calculate the delegation ceiling. The
+        // membership RowVersion protects active membership/role assignment; the role RowVersion
+        // protects its active flag and permission links (UpdateRoleAsync updates the role row
+        // in the same transaction as those links). The destination role is guarded as well.
+        foreach (var membership in approverMemberships)
+        {
+            database.Entry(membership).Property(current => current.RoleId).IsModified = true;
+            database.Entry(membership.Role).Property(current => current.IsActive).IsModified = true;
+        }
+        database.Entry(destinationRole).Property(current => current.IsActive).IsModified = true;
 
         var existingMembership = await database.UserCompanyMemberships
             .Include(membership => membership.Role)
@@ -364,7 +380,7 @@ public static class CompanyMembershipRequestEndpoints
         }
         catch (DbUpdateConcurrencyException)
         {
-            return TypedResults.Conflict(new { error = "درخواست قبلاً توسط کاربر دیگری تعیین تکلیف شده است." });
+            return TypedResults.Conflict(new { error = "درخواست، مجوزها یا عضویت تأییدکننده هم‌زمان تغییر کرده‌اند؛ اطلاعات را تازه‌سازی کنید." });
         }
         catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
         {

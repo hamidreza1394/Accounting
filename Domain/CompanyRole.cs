@@ -12,6 +12,7 @@ public sealed class CompanyRole : Seedwork.Entity,
     public string Name { get; set; } = string.Empty;
     public bool IsSystemRole { get; set; }
     public bool IsActive { get; set; } = true;
+    public byte[] RowVersion { get; set; } = [];
     public ICollection<UserCompanyMembership> Memberships { get; set; } = new List<UserCompanyMembership>();
     public ICollection<CompanyMembershipRequest> MembershipRequests { get; set; } = new List<CompanyMembershipRequest>();
     public ICollection<CompanyRolePermission> RolePermissions { get; set; } = new List<CompanyRolePermission>();
