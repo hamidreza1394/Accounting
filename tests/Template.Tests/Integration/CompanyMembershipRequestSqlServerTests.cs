@@ -30,7 +30,7 @@ public sealed class CompanyMembershipRequestSqlServerTests
 
     private static Data.DatabaseContext CreateContext(string databaseName)
     {
-        var builder = new SqlConnectionStringBuilder(IntegrationDatabase.SqlServerConnectionString)
+        var builder = new SqlConnectionStringBuilder(IntegrationDatabase.SqlServerConnectionString!)
         {
             InitialCatalog = databaseName,
         };
