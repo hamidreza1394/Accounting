@@ -82,3 +82,17 @@
 
 
 | کاتالوگ اولیه مجوزهای Trade | D-062/D-063 / #402 | TradePermissionCatalog، SeedTradePermissionCatalog، TradePermissionCatalogTests و TradePermissionCatalogSqlServerTests | ۴۶ کد strongly-typed و Migration داده‌ای در شاخه PR #403؛ تست‌ها نوشته شده، اجرا/CI هنوز تأیید نشده |
+
+## ردیابی قرارداد D-059 / Issue #390 — Payload v2
+
+| نیازمندی | شاهد کد | شاهد تست | وضعیت |
+|---|---|---|---|
+| سازگاری payload v1 و canonical golden bytes | `LicensePayload`, `CanonicalJson` | `CompanyEntitlementContractTests.PayloadV1_CanonicalGoldenVectorRemainsUnchanged` و تست‌های قبلی Envelope | Implemented در PR؛ CI pending |
+| entitlement شرکت‌محور Module/Feature/Seat | `CompanyLicenseEntitlement`, `LicenseFeatureCatalog`, `StructuralValidation` | round-trip، allowlist، type mismatch، duplicate و maxCompanies tests | Implemented در PR؛ CI pending |
+| Trade با کد دقیق TRADE_IMPORT و بدون فعال‌سازی ضمنی v1 | `LicenseSubsystemCodes` | v1 rejection و v2 signed-envelope tests | Implemented در PR؛ CI pending |
+| support/update مستقل از expiry | `LicensePayload.SupportUntilUtc/UpdatesUntilUtc`, `CanonicalJson` | v2 round-trip | Implemented در PR؛ CI pending |
+| schema strict و canonical v2 | `CanonicalJson`, `LicenseEnvelopeValidator` | unknown property، noncanonical JSON و signature tampering | Implemented در PR؛ CI pending |
+| amendment همان LicenseId/Installation و Sequence افزایشی | `LicenseRevisionRules` | higher sequence، replay، downgrade، identity change | Implemented در PR؛ CI pending |
+
+این وضعیت فقط وجود تغییر در شاخه PR را نشان می‌دهد؛ Verified فقط پس از CI سبز روی SHA نهایی و ادغام ثبت می‌شود.
+

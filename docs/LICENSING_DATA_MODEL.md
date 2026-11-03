@@ -310,3 +310,23 @@ erDiagram
 User/Identity در Customer Host محلی است. برای هر Company می‌توان مدیر اولیه جدا و membership مستقل ایجاد کرد؛ یک User می‌تواند در چند Company عضویت داشته باشد. Password فقط به شکل ASP.NET Core Identity hash در store موجود Customer ذخیره می‌شود. هیچ Password، password hash، refresh token یا credential در Vendor Commercial tables یا request/license/ACK files قرار نمی‌گیرد.
 
 **وضعیت:** همه موارد بالا به‌جز موجودیت‌های صریحاً ذکرشده در کد فعلی، صرفاً مدل پیشنهادی و NotImplemented هستند؛ قبل از هر DDL باید schema فعلی، روابط، unique constraints، tenant isolation و migration rollout جداگانه بررسی و تأیید شوند.
+
+## ۱۰) قرارداد Payload v2 — Issue #390
+
+- Envelope بیرونی همچنان formatVersion=1 و پروفایل ECDSA P-256/SHA-256 با امضای دقیق 64-byte IEEE P1363 است؛ نسخهٔ payload مستقل است.
+- Payload v1 بدون تغییر canonical bytes و با allowlist نصب‌محور قدیمی باقی می‌ماند. کد v1 هرگز `TRADE_IMPORT` را نمی‌پذیرد.
+- Payload v2 در `limits.maxCompanies` فقط سقف Installation را نگه می‌دارد؛ `limits.subsystems` باید خالی باشد و هر Company یک `companyEntitlements[]` مستقل دارد.
+- هر Company شامل `companyReference` مات، `modules[]`، `maxUsers` مثبت و `features[]` است. شناسه شرکت نباید نام حقوقی، شناسه مالیاتی یا داده حسابداری باشد.
+- در v2 کد ماژول `TRADE_IMPORT` در scope همان Company مجاز است؛ finance/sales/inventory/treasury نیز فقط در scope شرکت‌اند.
+- Featureهای اولیه و نوع ثابت هر کد:
+  - `finance.analytic_account_levels` → `max_count`
+  - `finance.cost_centers` → `max_count`
+  - `finance.budgeting` → `enabled`
+  - `inventory.warehouses` → `max_count`
+  - `sales.pos` → `enabled`
+- نوع `enum` در wire contract تعریف شده و مقدار آن یک code محدودشده است؛ هیچ کلید enum در catalog اولیه فعال نشده، چون فهرست مقادیر محصولی آن هنوز تعریف نشده است. افزودن key/type/allowed values باید تغییر افزایشی catalog و تست golden باشد.
+- `supportUntilUtc` و `updatesUntilUtc` مستقل از `expiresAtUtc` هستند؛ پایان پشتیبانی/به‌روزرسانی لایسنس perpetual را منقضی نمی‌کند.
+- `companyEntitlements: []` یعنی هیچ Company مجوز ندارد؛ حذف property در v2 نامعتبر است. حذف/عدم وجود module یا feature یعنی عدم اعطای همان حق. `maxUsers` الزامی و مثبت است؛ null/unlimited semantics ندارد. `maxCompanies=null` یعنی سقف Installation در این payload مشخص نشده است.
+- v2 strict unknown-property rejection و canonical serialization دارد. ترتیب company reference، module code و feature code با Ordinal sort می‌شود. v1 parser و canonical output برای سازگاری تاریخی حفظ می‌شوند.
+- `LicenseRevisionRules` فقط پس از اعتبارسنجی امضای هر دو Envelope استفاده می‌شود؛ LicenseId، InstallationId و ProductCode ثابت و Sequence باید strictly increasing باشد. این helper state را persist نمی‌کند و جایگزین anti-replay تراکنشی Customer در #391 نیست.
+- این PR فقط `Licensing.Contracts` و تست/مستندات را تغییر می‌دهد؛ هیچ Vendor dependency، Customer `Server/**` یا migration دیتابیس مشتری اضافه نمی‌کند.

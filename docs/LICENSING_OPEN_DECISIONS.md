@@ -199,3 +199,12 @@ D-059 در Issue #389 با تأیید مالک محصول پذیرفته شد؛ 
 
 
 D-060 سه حوزه معماری و state machine شروع برنامه را ثبت کرده است؛ این تصمیم پرسش‌های باز OD-05، OD-06، OD-08 recovery، OD-10، OD-13 و OD-17 را نمی‌بندد. Issue اجرایی: #396.
+
+## OD-15 — پیاده‌سازی catalog اولیه در Payload v2 (2026-11-03)
+
+- D-059 و OD-15 سه نوع typed value را می‌پذیرند.
+- قرارداد v2 discriminantهای `enabled`، `max_count` و `enum` را تعریف می‌کند. catalog اولیهٔ کدها و نوع هرکدام در `LICENSING_DATA_MODEL.md` بخش ۱۰ آمده است.
+- هیچ enum-valued feature key در catalog اولیه فعال نشده است؛ مقادیر enum محصولی باید پیش از افزودن key به‌صورت allowlist مشخص شوند. این محدودیت fail-closed است و به معنی پذیرش enum دلخواه از payload نیست.
+- Trade module code در entitlement شرکت‌محور دقیقاً `TRADE_IMPORT` است. این کد به allowlist payload v1 اضافه نشده؛ LicensePayload قدیمی Trade را فعال نمی‌کند.
+- این یادداشت فقط قرارداد و catalog است؛ mapping مجوزهای عملیاتی Trade و enforcement آن در #391/#401 باقی می‌ماند.
+

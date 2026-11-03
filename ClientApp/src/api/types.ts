@@ -457,3 +457,134 @@ export function parseAdminUserDetails(value: unknown): AdminUserDetails {
     memberships,
   };
 }
+
+/** Body of `POST /admin/users`; the server normalizes text and validates every value again. */
+export type CreateAdminUserRequest = {
+  username: string;
+  firstName: string | null;
+  lastName: string | null;
+  emailAddress: string;
+  cellPhoneNumber: string | null;
+  password: string;
+  confirmPassword: string;
+  isActive: boolean;
+};
+
+/** Body of `PUT /admin/users/{id}`: always the full set of editable fields (no partial update). */
+export type UpdateAdminUserRequest = Omit<CreateAdminUserRequest, 'password' | 'confirmPassword'>;
+
+export function parseCreatedAdminUser(value: unknown): { id: string } {
+  if (!isObject(value)) throw new ContractError('createdUser');
+  return { id: readString(value, 'id', 'createdUser') };
+}
+
+// --- Company roles and the permission catalog (PR #459, `/admin/companies/{id}/roles`) ---
+
+/** A permission as registered on the server. `subsystemCode` is the first segment of `code`. */
+export type PermissionCatalogItem = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  subsystemCode: string;
+};
+
+/** A server-defined starting selection of permissions for a new role. */
+export type PermissionTemplate = {
+  code: string;
+  name: string;
+  permissionCodes: string[];
+};
+
+export type CompanyRole = {
+  id: string;
+  companyId: string;
+  code: string;
+  name: string;
+  isSystemRole: boolean;
+  isActive: boolean;
+  permissionCount: number;
+  activeMemberCount: number;
+  permissionCodes: string[];
+};
+
+/**
+ * Body of `POST /admin/companies/{id}/roles`. The server prefers `permissionCodes` over
+ * `templateCode`, so the client applies a template to the selection and sends the codes only.
+ */
+export type CreateCompanyRoleRequest = {
+  code: string;
+  name: string;
+  permissionCodes: string[];
+};
+
+/** Body of `PUT /admin/companies/{id}/roles/{roleId}`: always the full editable state. */
+export type UpdateCompanyRoleRequest = {
+  name: string;
+  isActive: boolean;
+  permissionCodes: string[];
+};
+
+function readStringArray(source: JsonObject, key: string, what: string): string[] {
+  const value = source[key];
+  if (!Array.isArray(value) || !value.every((entry): entry is string => typeof entry === 'string')) {
+    throw new ContractError(`${what}.${key}`);
+  }
+  return value;
+}
+
+function readCount(source: JsonObject, key: string, what: string): number {
+  const value = source[key];
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) throw new ContractError(`${what}.${key}`);
+  return value;
+}
+
+export function parsePermissionCatalog(value: unknown): PermissionCatalogItem[] {
+  if (!Array.isArray(value)) throw new ContractError('permissionCatalog');
+  return value.map((item): PermissionCatalogItem => {
+    if (!isObject(item)) throw new ContractError('permissionCatalog.item');
+    return {
+      id: readString(item, 'id', 'permissionCatalog.item'),
+      code: readString(item, 'code', 'permissionCatalog.item'),
+      name: readString(item, 'name', 'permissionCatalog.item'),
+      description: readNullableString(item, 'description', 'permissionCatalog.item'),
+      subsystemCode: readString(item, 'subsystemCode', 'permissionCatalog.item'),
+    };
+  });
+}
+
+export function parsePermissionTemplates(value: unknown): PermissionTemplate[] {
+  if (!Array.isArray(value)) throw new ContractError('permissionTemplates');
+  return value.map((item): PermissionTemplate => {
+    if (!isObject(item)) throw new ContractError('permissionTemplates.item');
+    return {
+      code: readString(item, 'code', 'permissionTemplates.item'),
+      name: readString(item, 'name', 'permissionTemplates.item'),
+      permissionCodes: readStringArray(item, 'permissionCodes', 'permissionTemplates.item'),
+    };
+  });
+}
+
+export function parseCompanyRoles(value: unknown): CompanyRole[] {
+  if (!Array.isArray(value)) throw new ContractError('companyRoles');
+  return value.map((item): CompanyRole => {
+    if (!isObject(item)) throw new ContractError('companyRoles.item');
+    const what = 'companyRoles.item';
+    return {
+      id: readString(item, 'id', what),
+      companyId: readString(item, 'companyId', what),
+      code: readString(item, 'code', what),
+      name: readString(item, 'name', what),
+      isSystemRole: readBoolean(item, 'isSystemRole', what),
+      isActive: readBoolean(item, 'isActive', what),
+      permissionCount: readCount(item, 'permissionCount', what),
+      activeMemberCount: readCount(item, 'activeMemberCount', what),
+      permissionCodes: readStringArray(item, 'permissionCodes', what),
+    };
+  });
+}
+
+export function parseCreatedCompanyRole(value: unknown): { id: string } {
+  if (!isObject(value)) throw new ContractError('createdRole');
+  return { id: readString(value, 'id', 'createdRole') };
+}

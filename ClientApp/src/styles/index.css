@@ -97,9 +97,56 @@
   --color-tick: #1593a6;
   --color-cta: #fab14c;
   --color-cta-soft: #ffe4b7;
+  --color-cta-mid: #fdc978;
+
+  /* Selection-screen palette (work-context selector, footer bar, backdrop). Every colour that
+     used to be an inline hex in those components is a named token here; the values are the
+     previous ones, merged to the nearest neighbour when two differed by only a few units. */
+  --color-navy-header: #15304a;
+  --color-navy-header-deep: #0f2a45;
+  --color-bar-from: #0f2842;
+  --color-bar-via: #12314f;
+  --color-bar-to: #1c4f7a;
+  --color-wash: #eef3fa;
+  --color-wash-top: #f7faff;
+  --color-wash-deep: #e9f0f9;
+  --color-period-end: #eef4fc;
+  --color-pick-light: #8fc3ee;
+  --color-frost: #dde6f1;
+  --color-frost-deep: #c6d9ef;
+  --color-line-strong: #b3bfce;
+  --color-faint: #7b8ba0;
+  --color-mint: #dcf4e8;
+  --color-chip: #e1e7f0;
+  --color-chip-cool: #e9eef6;
+  --color-steel: #3f567a;
+  --color-steel-text: #475a70;
+  --color-azure: #1d4f86;
+  --color-azure-bright: #2f7bd0;
+  --color-azure-text: #1f6ea6;
+  --color-azure-chip: #dff3fe;
+  --color-ridge: #cfdff2;
+  --color-ridge-soft: #dbe7f5;
+  --color-ridge-bars: #8fb4de;
+  --color-glow: #f1c36f;
+  /* Text and icons on the dark navy surfaces (header, hero): pale sky tints. */
+  --color-on-navy: #e0f2fe;
+  --color-on-navy-accent: #bae6fd;
+  --color-on-navy-ok: #a7f3d0;
+  --color-dot-open: #34d399;
+
+  /* Direction-safe motion: +1 in LTR, -1 in RTL (see :root[dir] rules below). Multiply a
+     physical translateX distance by it instead of hard-coding the RTL sign. */
+  /* Depends on html[dir='rtl'] being the single source of truth for direction (AppShell's own
+     dir="rtl" wrapper must stay consistent with it). */
+  --inline-sign: 1;
 }
 
 @layer base {
+  html[dir='rtl'] {
+    --inline-sign: -1;
+  }
+
   html {
     font-family: var(--font-sans);
     -webkit-text-size-adjust: 100%;
@@ -129,12 +176,12 @@
      soft glow at the top. The ridges, glow lines and chart bars are an inline SVG
      (SelectionBackdrop); no image file, no animation. */
   .selection-backdrop {
-    background-color: #eef3fa;
+    background-color: var(--color-wash);
     background-image:
       radial-gradient(60rem 18rem at 50% 0%, rgb(255 255 255 / 0.9), transparent 70%),
       repeating-linear-gradient(0deg, rgb(28 61 90 / 0.03) 0 1px, transparent 1px 40px),
       repeating-linear-gradient(90deg, rgb(28 61 90 / 0.03) 0 1px, transparent 1px 40px),
-      linear-gradient(180deg, #f7faff 0%, #e9f0f9 55%, #eef3fa 100%);
+      linear-gradient(180deg, var(--color-wash-top) 0%, var(--color-wash-deep) 55%, var(--color-wash) 100%);
   }
 }
 
@@ -281,7 +328,7 @@
 
 @media (max-width: 1023px) {
   .faranou-sidebar {
-    box-shadow: -18px 0 50px rgb(5 20 40 / .24);
+    box-shadow: calc(var(--inline-sign) * 18px) 0 50px rgb(5 20 40 / .24);
   }
 }
 
@@ -445,7 +492,7 @@
 
 @media (max-width: 1023px) {
   .faranou-sidebar {
-    box-shadow: -18px 0 50px rgb(5 36 65 / .28);
+    box-shadow: calc(var(--inline-sign) * 18px) 0 50px rgb(5 36 65 / .28);
   }
 }
 
@@ -672,15 +719,17 @@
   .faranou-sidebar {
     position: fixed;
     inset-block: 76px 0;
-    right: 0;
+    inset-inline-start: 0;
     top: 76px;
     width: min(300px, 86vw);
     height: auto;
-    transform: translateX(105%);
-    transition: transform 180ms ease;
-    box-shadow: -18px 0 50px rgb(5 20 40 / .28);
+    transform: translateX(calc(var(--inline-sign) * -105%));
+    /* Closed: hidden from focus and assistive technology once the slide-out finishes. */
+    visibility: hidden;
+    transition: transform 180ms ease, visibility 0s linear 180ms;
+    box-shadow: calc(var(--inline-sign) * 18px) 0 50px rgb(5 20 40 / .28);
   }
-  .faranou-sidebar.is-open { transform: translateX(0); }
+  .faranou-sidebar.is-open { transform: translateX(0); visibility: visible; transition-delay: 0s; }
   .faranou-mobile-scrim {
     display: block;
     position: fixed;
@@ -866,15 +915,15 @@
     pointer-events: none;
     background: linear-gradient(112deg, transparent 38%, rgb(255 255 255 / .07) 48%, transparent 58%);
     content: "";
-    transform: translateX(-35%);
+    transform: translateX(calc(var(--inline-sign) * 35%));
     animation: faranou-welcome-glint 14s ease-in-out infinite;
   }
   .faranou-nav-active { transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease; }
-  .faranou-nav-active:hover { filter: brightness(1.08); transform: translateX(-2px); }
+  .faranou-nav-active:hover { filter: brightness(1.08); transform: translateX(calc(var(--inline-sign) * 2px)); }
   @keyframes faranou-welcome-glint {
-    0%, 62% { transform: translateX(-35%); opacity: 0; }
+    0%, 62% { transform: translateX(calc(var(--inline-sign) * 35%)); opacity: 0; }
     72% { opacity: .8; }
-    100% { transform: translateX(35%); opacity: 0; }
+    100% { transform: translateX(calc(var(--inline-sign) * -35%)); opacity: 0; }
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -972,7 +1021,7 @@
     radial-gradient(ellipse at 88% 36%, rgb(53 144 245 / .10), transparent 34%),
     linear-gradient(180deg, var(--faranou-workspace-ice-white) 0%, var(--faranou-workspace-ice) 48%, #e9f4ff 100%);
   color: var(--faranou-workspace-ink);
-  box-shadow: 7px 0 26px rgb(29 87 139 / .08), inset -1px 0 0 rgb(255 255 255 / .9);
+  box-shadow: calc(var(--inline-sign) * -7px) 0 26px rgb(29 87 139 / .08), inset calc(var(--inline-sign) * 1px) 0 0 rgb(255 255 255 / .9);
 }
 .faranou-sidebar--light::before {
   position: absolute;
@@ -1076,7 +1125,7 @@
 }
 @media (prefers-reduced-motion: no-preference) {
   .faranou-sidebar--light .faranou-nav-active { transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease; }
-  .faranou-sidebar--light .faranou-nav-active:hover { filter: brightness(1.06); transform: translateX(-2px); }
+  .faranou-sidebar--light .faranou-nav-active:hover { filter: brightness(1.06); transform: translateX(calc(var(--inline-sign) * 2px)); }
 }
 @media (prefers-reduced-motion: reduce) {
   .faranou-sidebar--light .faranou-nav-active { transition: none; }
