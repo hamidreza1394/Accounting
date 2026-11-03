@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError, UnauthenticatedError, buildLoginUrl, getCompanies, getCompanyOverview, getWorkContext, logout, setDefaultCompany } from './client';
-import { ContractError } from './types';
+import { ContractError, parseAdminUserDetails } from './types';
 
 function jsonResponse(status: number, body: unknown, contentType = 'application/json'): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': contentType } });
@@ -139,5 +139,31 @@ describe('api client', () => {
       '/Account/Login?ReturnUrl=%2Fapp%2F%3Fcompany%3Dc1',
     );
     expect(buildLoginUrl({ pathname: '//evil.example', search: '' })).toBe('/Account/Login?ReturnUrl=%2Fapp%2F');
+  });
+});
+
+
+describe('admin user response contracts', () => {
+  const validDetails = {
+    id: 'user-1',
+    username: 'alice',
+    firstName: 'آلیس',
+    lastName: 'مثالی',
+    emailAddress: 'alice@example.test',
+    cellPhoneNumber: null,
+    isActive: true,
+    lastLoginDateTime: null,
+    insertDateTime: '2026-11-02T08:00:00Z',
+    isEmailAddressVerified: false,
+    isCellPhoneNumberVerified: false,
+    updateDateTime: '2026-11-02T08:00:00Z',
+    legacyRoleName: null,
+    memberships: [],
+  };
+
+  it('parses required detail fields and rejects a missing id', () => {
+    expect(parseAdminUserDetails(validDetails).id).toBe('user-1');
+    const { id: _ignored, ...withoutId } = validDetails;
+    expect(() => parseAdminUserDetails(withoutId)).toThrow(ContractError);
   });
 });
