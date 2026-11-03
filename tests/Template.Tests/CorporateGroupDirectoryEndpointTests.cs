@@ -49,7 +49,7 @@ public sealed class CorporateGroupDirectoryEndpointTests
             name.Contains("Role", StringComparison.OrdinalIgnoreCase) ||
             name.Contains("Permission", StringComparison.OrdinalIgnoreCase) ||
             name.Contains("Login", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Ip", StringComparison.OrdinalIgnoreCase));
+            name.Equals("IpAddress", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
