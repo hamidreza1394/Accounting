@@ -54,7 +54,43 @@ class ParseRelationshipTests(unittest.TestCase):
         self.assertIsNone(relationship["has_type"])
 
 
+class GeneratedRowVersionSnapshotTests(unittest.TestCase):
+    def test_ef_and_repository_snapshot_rowversion_forms_are_recognized(self):
+        for row_version_calls in (
+            '.IsConcurrencyToken().IsRequired().ValueGeneratedOnAddOrUpdate().HasColumnType("rowversion")',
+            '.IsRequired().IsRowVersion().HasColumnType("rowversion")',
+        ):
+            with self.subTest(row_version_calls=row_version_calls):
+                source = (
+                    'modelBuilder.Entity("Domain.Item", b =>\n'
+                    '{\n'
+                    '    b.Property<Guid>("Id").HasColumnType("uniqueidentifier");\n'
+                    f'    b.Property<byte[]>("RowVersion"){row_version_calls};\n'
+                    '    b.HasKey("Id");\n'
+                    '    b.ToTable("Items");\n'
+                    '});'
+                )
+                parsed = migration_model.parse_generated_model(source)
+                row_version = next(
+                    column for column in parsed["entities"]["Domain.Item"]["columns"]
+                    if column["name"] == "RowVersion"
+                )
+                self.assertTrue(row_version["is_row_version"])
+                self.assertEqual("rowversion", row_version["column_type"])
+
+
 class DerivedModelTests(unittest.TestCase):
+    def test_rowversion_configuration_is_preserved_in_the_normalized_model(self):
+        model = ef_model.derive_model(REPO)
+        normalized = migration_model.normalize_derived_model(model)
+        for entity_name in ("Domain.CompanyRole", "Domain.UserCompanyMembership"):
+            row_version = next(
+                column for column in normalized["entities"][entity_name]["columns"]
+                if column["name"] == "RowVersion"
+            )
+            self.assertTrue(row_version["is_row_version"])
+            self.assertEqual("rowversion", row_version["column_type"])
+
     def test_default_company_foreign_key_is_in_the_model(self):
         model = ef_model.derive_model(REPO)
         user = next(e for e in model["entities"] if e["clr_name"] == "Domain.User")
@@ -112,6 +148,7 @@ def _column(name, clr="System.Int32", nullable=False, column_type="int", max_len
         "unicode": unicode,
         "value_generated": False,
         "column_type": column_type,
+        "is_row_version": False,
     }
 
 
@@ -198,6 +235,19 @@ class AddColumnOperationTests(unittest.TestCase):
         up = self.add("string", "nvarchar(50)", False, ', maxLength: 50, defaultValue: ""')
         self.assertEqual([], self.step(column, up))
 
+    def test_sql_server_rowversion_add_column_is_accepted(self):
+        column = _column("Qty", "System.Byte[]", False, "rowversion")
+        column["is_row_version"] = True
+        self.assertEqual([], self.step(
+            column,
+            self.add("byte[]", "rowversion", False, ", rowVersion: true"),
+        ))
+
+    def test_rowversion_column_without_rowversion_flag_is_rejected(self):
+        column = _column("Qty", "System.Byte[]", False, "rowversion")
+        column["is_row_version"] = True
+        self.assertRejected(column, self.add("byte[]", "rowversion", False))
+
     # ---- negative -----------------------------------------------------------------------
     def assertRejected(self, column, up, down=DROP_QTY):
         try:
@@ -228,7 +278,7 @@ class AddColumnOperationTests(unittest.TestCase):
 
     def test_unknown_arguments_are_rejected(self):
         column = _column("Qty", nullable=True)
-        for extra in (', comment: "x"', ", precision: 5", ", computedColumnSql: \"1\"", ", rowVersion: true"):
+        for extra in (', comment: "x"', ", precision: 5", ", computedColumnSql: \"1\""):
             with self.subTest(extra=extra):
                 self.assertRejected(column, self.add("int", "int", True, extra))
 
@@ -323,6 +373,7 @@ class ParseMigrationColumnTests(unittest.TestCase):
         self.assertEqual("System.Byte[]", columns[0]["clr_type"])
         self.assertEqual("rowversion", columns[0]["type"])
         self.assertFalse(columns[0]["nullable"])
+        self.assertTrue(columns[0]["is_row_version"])
 
 
 EF_TOOLS_SNAPSHOT = """
