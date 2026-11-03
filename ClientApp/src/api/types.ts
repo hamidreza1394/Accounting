@@ -1,3 +1,4 @@
+import { asUtcInstant } from '../lib/time';
 // Contracts of the Faranou JSON API v1 (Server/Api/ApiEndpoints.cs).
 // Every response is checked at runtime before it is used, so a contract change on the
 // server surfaces as a clear error instead of `undefined` deep inside a component.
@@ -323,6 +324,20 @@ function readIsoDateTime(source: JsonObject, key: string, what: string, nullable
   return value;
 }
 
+/** A `*Utc` instant: UTC by contract; an offset-less value (EF `Kind=Unspecified`) gets `Z` (see lib/time.ts). */
+function readUtcDateTime(source: JsonObject, key: string, what: string, nullable = false): string | null {
+  const value = readIsoDateTime(source, key, what, nullable);
+  return value === null ? null : asUtcInstant(value);
+}
+
+/**
+ * A legacy server-local wall-clock time (`DateTime.Now` on the server: InsertDateTime, UpdateDateTime,
+ * LastLoginDateTime). It is NOT UTC and is returned unchanged, so it displays as the server wrote it.
+ */
+function readServerLocalDateTime(source: JsonObject, key: string, what: string, nullable = false): string | null {
+  return readIsoDateTime(source, key, what, nullable);
+}
+
 export function parseMyProfile(value: unknown): MyProfile {
   if (!isObject(value)) throw new ContractError('myProfile');
   return {
@@ -333,8 +348,8 @@ export function parseMyProfile(value: unknown): MyProfile {
     cellPhoneNumber: readNullableString(value, 'cellPhoneNumber', 'myProfile'),
     isEmailAddressVerified: readBoolean(value, 'isEmailAddressVerified', 'myProfile'),
     isCellPhoneNumberVerified: readBoolean(value, 'isCellPhoneNumberVerified', 'myProfile'),
-    lastLoginDateTime: readIsoDateTime(value, 'lastLoginDateTime', 'myProfile', true),
-    insertDateTime: readIsoDateTime(value, 'insertDateTime', 'myProfile')!,
+    lastLoginDateTime: readServerLocalDateTime(value, 'lastLoginDateTime', 'myProfile', true),
+    insertDateTime: readServerLocalDateTime(value, 'insertDateTime', 'myProfile')!,
   };
 }
 
@@ -348,7 +363,7 @@ export function parseLoginHistory(value: unknown): LoginHistoryItem[] {
     }
     return {
       eventType: eventType as LoginHistoryEventType,
-      occurredAtUtc: readIsoDateTime(item, 'occurredAtUtc', 'loginHistory.item')!,
+      occurredAtUtc: readUtcDateTime(item, 'occurredAtUtc', 'loginHistory.item')!,
       ipAddress: readNullableString(item, 'ipAddress', 'loginHistory.item'),
     };
   });
@@ -412,8 +427,8 @@ export function parseAdminUserList(value: unknown): AdminUserListResponse {
       emailAddress: readString(item, 'emailAddress', 'adminUsers.item'),
       cellPhoneNumber: readNullableString(item, 'cellPhoneNumber', 'adminUsers.item'),
       isActive: readBoolean(item, 'isActive', 'adminUsers.item'),
-      lastLoginDateTime: readIsoDateTime(item, 'lastLoginDateTime', 'adminUsers.item', true),
-      insertDateTime: readIsoDateTime(item, 'insertDateTime', 'adminUsers.item')!,
+      lastLoginDateTime: readServerLocalDateTime(item, 'lastLoginDateTime', 'adminUsers.item', true),
+      insertDateTime: readServerLocalDateTime(item, 'insertDateTime', 'adminUsers.item')!,
       activeCompanyCount,
     };
   });
@@ -433,7 +448,7 @@ export function parseAdminUserDetails(value: unknown): AdminUserDetails {
       roleCode: readString(item, 'roleCode', 'adminUser.membership'),
       roleName: readString(item, 'roleName', 'adminUser.membership'),
       isActive: readBoolean(item, 'isActive', 'adminUser.membership'),
-      createdAtUtc: readIsoDateTime(item, 'createdAtUtc', 'adminUser.membership')!,
+      createdAtUtc: readUtcDateTime(item, 'createdAtUtc', 'adminUser.membership')!,
     };
   });
   const base: AdminUserListItem = {
@@ -444,15 +459,15 @@ export function parseAdminUserDetails(value: unknown): AdminUserDetails {
     emailAddress: readString(value, 'emailAddress', 'adminUser'),
     cellPhoneNumber: readNullableString(value, 'cellPhoneNumber', 'adminUser'),
     isActive: readBoolean(value, 'isActive', 'adminUser'),
-    lastLoginDateTime: readIsoDateTime(value, 'lastLoginDateTime', 'adminUser', true),
-    insertDateTime: readIsoDateTime(value, 'insertDateTime', 'adminUser')!,
+    lastLoginDateTime: readServerLocalDateTime(value, 'lastLoginDateTime', 'adminUser', true),
+    insertDateTime: readServerLocalDateTime(value, 'insertDateTime', 'adminUser')!,
     activeCompanyCount: memberships.filter(x => x.isActive).length,
   };
   return {
     ...base,
     isEmailAddressVerified: readBoolean(value, 'isEmailAddressVerified', 'adminUser'),
     isCellPhoneNumberVerified: readBoolean(value, 'isCellPhoneNumberVerified', 'adminUser'),
-    updateDateTime: readIsoDateTime(value, 'updateDateTime', 'adminUser')!,
+    updateDateTime: readServerLocalDateTime(value, 'updateDateTime', 'adminUser')!,
     legacyRoleName: readNullableString(value, 'legacyRoleName', 'adminUser'),
     memberships,
   };
@@ -562,7 +577,7 @@ export function parseCompanyRoleMembers(value: unknown): CompanyRoleMemberPage {
   return {
     items: rows.map((row): CompanyRoleMember => {
       if (!isObject(row)) throw new ContractError(`${what}.item`);
-      const since = readIsoDateTime(row, 'memberSinceUtc', `${what}.item`);
+      const since = readUtcDateTime(row, 'memberSinceUtc', `${what}.item`);
       if (since === null) throw new ContractError(`${what}.item.memberSinceUtc`);
       return {
         userId: readString(row, 'userId', `${what}.item`),
@@ -673,7 +688,7 @@ function readMembershipRequestStatus(source: JsonObject, what: string): Membersh
 }
 
 function readRequiredDateTime(source: JsonObject, key: string, what: string): string {
-  const value = readIsoDateTime(source, key, what);
+  const value = readUtcDateTime(source, key, what);
   if (value === null) throw new ContractError(`${what}.${key}`);
   return value;
 }
@@ -707,7 +722,7 @@ export function parseMyMembershipRequests(value: unknown): MembershipRequestPage
     destinationCompanyName: readString(item, 'destinationCompanyName', what),
     status: readMembershipRequestStatus(item, what),
     requestedAtUtc: readRequiredDateTime(item, 'requestedAtUtc', what),
-    decidedAtUtc: readIsoDateTime(item, 'decidedAtUtc', what, true),
+    decidedAtUtc: readUtcDateTime(item, 'decidedAtUtc', what, true),
     decisionReason: readNullableString(item, 'decisionReason', what),
     approvedRoleCode: readNullableString(item, 'approvedRoleCode', what),
     approvedRoleName: readNullableString(item, 'approvedRoleName', what),
