@@ -101,6 +101,23 @@ public sealed class CompanyEntitlementContractTests
 	}
 
 	[Fact]
+	public void PayloadV1_IgnoresFieldsIntroducedByV2ToPreserveLegacyParsing()
+	{
+		var legacy = CanonicalJson.SerializePayload(SampleV1());
+		var withV2OnlyFields = legacy.Replace(
+			"\"graceDays\":30",
+			"\"supportUntilUtc\":\"not-a-date\",\"updatesUntilUtc\":\"also-invalid\",\"companyEntitlements\":[],\"graceDays\":30",
+			StringComparison.Ordinal);
+
+		Assert.True(CanonicalJson.TryParsePayload(withV2OnlyFields, out var parsed, out var error), error);
+		Assert.NotNull(parsed);
+		Assert.Null(parsed!.SupportUntilUtc);
+		Assert.Null(parsed.UpdatesUntilUtc);
+		Assert.Null(parsed.CompanyEntitlements);
+		Assert.Empty(StructuralValidation.ValidatePayload(parsed));
+	}
+
+	[Fact]
 	public void PayloadV1_CannotGrantTradeImportThroughLegacyGlobalSubsystems()
 	{
 		var payload = SampleV1() with

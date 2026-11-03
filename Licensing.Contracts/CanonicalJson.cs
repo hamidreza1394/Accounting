@@ -162,7 +162,7 @@ public static class CanonicalJson
 		}
 
 		DateTimeOffset? supportUntil = null;
-		if (dto.SupportUntilUtc is not null)
+		if (dto.FormatVersion >= LicensePayload.CurrentFormatVersion && dto.SupportUntilUtc is not null)
 		{
 			if (!TryParseO(dto.SupportUntilUtc, out var supportValue))
 			{
@@ -173,7 +173,7 @@ public static class CanonicalJson
 		}
 
 		DateTimeOffset? updatesUntil = null;
-		if (dto.UpdatesUntilUtc is not null)
+		if (dto.FormatVersion >= LicensePayload.CurrentFormatVersion && dto.UpdatesUntilUtc is not null)
 		{
 			if (!TryParseO(dto.UpdatesUntilUtc, out var updatesValue))
 			{
@@ -184,24 +184,26 @@ public static class CanonicalJson
 		}
 
 		var subsystems = (IReadOnlyList<string>)(dto.Limits?.Subsystems ?? Array.Empty<string>());
-		var companies = dto.CompanyEntitlements?
-			.Select(company => company is null
-				? null
-				: new CompanyLicenseEntitlement(
-					company.CompanyReference,
-					company.Modules,
-					company.MaxUsers,
-					company.Features?
-						.Select(feature => feature is null
-							? null
-							: new LicenseFeatureEntitlement(
-								feature.Code,
-								feature.Type,
-								feature.Enabled,
-								feature.MaxCount,
-								feature.EnumValue))
-						.ToArray()))
-			.ToArray();
+		var companies = dto.FormatVersion >= LicensePayload.CurrentFormatVersion
+			? dto.CompanyEntitlements?
+				.Select(company => company is null
+					? null
+					: new CompanyLicenseEntitlement(
+						company.CompanyReference,
+						company.Modules,
+						company.MaxUsers,
+						company.Features?
+							.Select(feature => feature is null
+								? null
+								: new LicenseFeatureEntitlement(
+									feature.Code,
+									feature.Type,
+									feature.Enabled,
+									feature.MaxCount,
+									feature.EnumValue))
+							.ToArray()))
+				.ToArray()
+			: null;
 
 		payload = new LicensePayload(
 			dto.FormatVersion,
