@@ -20,7 +20,9 @@ public sealed class UserAdministrationEndpointTests
             new DefaultHttpContext(), Principal(ordinary.Id), fixture.Database,
             search: null, status: "all", page: 1, pageSize: 25, sort: "created",
             descending: true, cancellationToken: default);
-        Assert.IsType<ForbidHttpResult>(denied);
+        var problem = Assert.IsType<ProblemHttpResult>(denied);
+        Assert.Equal(StatusCodes.Status403Forbidden, problem.ProblemDetails.Status);
+        Assert.Equal("برای انجام این عملیات به نقش مدیر نصب نیاز دارید.", problem.ProblemDetails.Title);
 
         var allowed = await Server.Api.UserAdministrationEndpoints.GetUsersAsync(
             new DefaultHttpContext(), Principal(admin.Id), fixture.Database,

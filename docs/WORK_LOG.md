@@ -2080,3 +2080,6 @@
 - تست‌های endpoint منتقل و تست منفی non-admin اضافه شد.
 - تست محلی .NET و SQL Server اجرا نشده است: محیط فاقد dotnet SDK است و clone محلی GitHub به علت خطای DNS ممکن نشد. نتایج CI پس از ایجاد PR باید جداگانه بررسی شود.
 - handoff: `docs/handoffs/ISSUE-458-company-role-api.md`.
+
+
+- Regression test `UserAdministrationEndpointTests.ListUsers_RequiresAnActiveInstallationAdministratorFromTheDatabase` به پاسخ ProblemDetails با HTTP 403 به‌روزرسانی شد تا با helper صریح 403 در head فعلی هم‌خوان باشد.
