@@ -306,8 +306,6 @@ public static class UserAdministrationEndpoints
         if (actorId == userId && !request.IsActive)
             return TypedResults.Conflict(new { error = "مدیر سیستم نمی‌تواند حساب جاری خود را غیرفعال کند." });
 
-        // Serialize account deactivations on relational providers. The serializable range
-        // lock makes the last-active-admin check and the update one atomic decision.
         await using var adminGuardTransaction = user.IsActive && !request.IsActive && database.Database.IsRelational()
             ? await database.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken)
             : null;
@@ -373,7 +371,7 @@ public static class UserAdministrationEndpoints
         return TypedResults.NoContent();
     }
 
-    private static async Task<IResult?> AuthorizeInstallationAdministratorAsync(
+    internal static async Task<IResult?> AuthorizeInstallationAdministratorAsync(
         ClaimsPrincipal principal,
         Data.DatabaseContext database,
         CancellationToken cancellationToken)
@@ -392,7 +390,13 @@ public static class UserAdministrationEndpoints
                 user.Role.Name == Constants.Role.Admin,
                 cancellationToken);
 
-        return isAdministrator ? null : TypedResults.Forbid();
+        // Prefer an explicit 403 payload so callers and unit tests can read StatusCode
+        // without depending on authentication-handler Forbid semantics.
+        return isAdministrator
+            ? null
+            : TypedResults.Json(
+                new { error = "فقط مدیر نصب سامانه مجاز به این عملیات است." },
+                statusCode: StatusCodes.Status403Forbidden);
     }
 
     private static IQueryable<Domain.User> ApplySort(
