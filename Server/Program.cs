@@ -349,39 +349,53 @@ var applyMigrationsOnStartup = !connectionLoadedFromLocalSettings
     && app.Environment.IsDevelopment()
     && string.Equals(builder.Configuration["Database:ApplyMigrations"], "true", StringComparison.OrdinalIgnoreCase);
 
-if (!setupRequired && (migrateOnly || applyMigrationsOnStartup))
+if (!setupRequired && migrateOnly)
 {
-    using (var scope = app.Services.CreateScope())
-    {
-        var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("StartupMigration");
-        try
-        {
-            var migrator = scope.ServiceProvider.GetRequiredService<Data.IDatabaseSchemaMigrator>();
-            migrator.Migrate();
-            logger.LogInformation("Database schema migration completed.");
-        }
-        catch (Exception exception)
-        {
-            logger.LogError(exception, "Database schema migration failed.");
-            if (migrateOnly)
-            {
-                Environment.ExitCode = 1;
-                return;
-            }
+    using var scope = app.Services.CreateScope();
+    var migrator = scope.ServiceProvider.GetRequiredService<Data.IDatabaseSchemaMigrator>();
+    await migrator.MigrateAsync();
+    return;
+}
 
-            throw;
+if (!setupRequired && applyMigrationsOnStartup)
+{
+    using var scope = app.Services.CreateScope();
+    var migrator = scope.ServiceProvider.GetRequiredService<Data.IDatabaseSchemaMigrator>();
+    await migrator.MigrateAsync();
+}
+else if (!setupRequired && (!app.Environment.IsDevelopment() || connectionLoadedFromLocalSettings))
+{
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        var migrator = scope.ServiceProvider.GetRequiredService<Data.IDatabaseSchemaMigrator>();
+        var pendingMigrations = await migrator.GetPendingMigrationsAsync();
+
+        if (pendingMigrations.Count > 0)
+        {
+            app.Logger.LogWarning(
+                "The database schema is out of date. {PendingMigrationCount} migration(s) are pending: {PendingMigrations}. Apply them with 'dotnet run --project Server -- --migrate'.",
+                pendingMigrations.Count,
+                string.Join(", ", pendingMigrations));
         }
     }
-
-    if (migrateOnly)
+    catch (Exception exception)
     {
-        return;
+        app.Logger.LogWarning(exception, "The pending database migrations could not be checked at start-up.");
     }
 }
 
-// Security headers and forwarded-header handling (configuration-driven).
+foreach (var warning in Infrastructure.Hosting.DeploymentConfigurationChecks.GetWarnings(app.Configuration, app.Environment))
+{
+    app.Logger.LogWarning("Deployment configuration: {Warning}", warning);
+}
+
+// First: the client address and scheme from a trusted proxy are needed by HSTS, HTTPS
+// redirection, rate limiting and the audit trail. Without a configured proxy it does nothing.
 app.UseFaranouForwardedHeaders();
-app.UseFaranouSecurityHeaders();
+
+// Security headers (CSP, X-Content-Type-Options, Referrer-Policy, ...).
+app.UseMiddleware<Infrastructure.Security.SecurityHeadersMiddleware>();
 
 // API requests never receive an HTML error page or a stack trace, in any environment: the
 // exception is logged and a generic application/problem+json response is returned.
