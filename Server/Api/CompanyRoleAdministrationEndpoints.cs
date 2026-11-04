@@ -401,7 +401,7 @@ public static class CompanyRoleAdministrationEndpoints
         SetNoStore(httpContext);
         var utcItems = items.Select(item => item with
         {
-            CreatedAtUtc = DateTime.SpecifyKind(item.CreatedAtUtc, DateTimeKind.Utc),
+            MemberSinceUtc = DateTime.SpecifyKind(item.MemberSinceUtc, DateTimeKind.Utc),
         }).ToArray();
         return TypedResults.Ok(new CompanyRoleMemberListResponse(utcItems, totalCount, normalizedPage, normalizedPageSize));
     }
