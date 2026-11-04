@@ -2353,6 +2353,14 @@
 - تست‌های Client و بررسی آفلاین موفق؛ E2E واقعی و dotnet در محیط محلی به علت نبود SDK و SQL Server اجرا نشد. نتیجه CI و fixture مثبت مرز مشتری باقی است.
 - handoff: `docs/handoffs/ISSUE-444-company-permissions-membership-ui.md`.
 
+## 2026-11-03 — Issue #512: تکمیل گزارش امنیتی Backend
+- `GET /admin/security/audit-events` فهرست سفید sort (occurredAt/eventType) و direction دریافت کرد؛ query فقط expressionهای EF ثابت را انتخاب می‌کند و ورودی ستون به SQL تبدیل نمی‌شود.
+- `GET /admin/security/audit-event-types` کد و label سمت سرور ارائه می‌کند؛ `GET /admin/companies` فهرست صفحه‌بندی‌شده نصب برای فیلتر شرکت اضافه شد.
+- فیلتر شرکت و DateTimeOffset UTC موجود حفظ شد؛ `OccurredAtUtc` خروجی پس از EF read صریحاً Kind=UTC می‌گیرد. Export نیز Z دارد.
+- Retention در D-070 با وضعیت Proposed ثبت شد؛ هیچ endpoint/job/permission اجرایی یا purge پیاده‌سازی نشد تا مالک تصمیم بگیرد.
+- Unit/SQL Server/Build/Full Test هنوز اجرا نشده‌اند؛ Verified نیست. بدون Migration و ClientApp.
+
+
 ## 2026-11-04 — Issue #214: customer runtime revocation evaluation
 - Added `ICustomerLicenseRuntimeEvaluator` as the shared customer-runtime evaluation entry point; it reloads the current installed envelope and validates it through the revocation-aware `ICustomerLicenseEnvelopeValidator` on every evaluation.
 - Registered the evaluator in Server DI through `AddCustomerLicenseRuntimeEvaluator()`; existing startup middleware and forwarded-header configuration are preserved.
