@@ -14,7 +14,7 @@ const overview = {
   fiscalPeriods: [{ id: 'p1', title: 'سال مالی ۱۴۰۵', startDate: '2026-03-21', endDate: '2027-03-20', status: 'Open' }],
 };
 
-function stubAll(isAdministrator: boolean) {
+function stubAll(isAdministrator: boolean, codes = isAdministrator ? ['users.list', 'users.membership.approve'] : []) {
   const fetchMock = vi.fn((input: string, init?: RequestInit) => {
     const method = init?.method ?? 'GET';
     const url = new URL(input, 'http://localhost');
@@ -22,6 +22,7 @@ function stubAll(isAdministrator: boolean) {
     const routes: Record<string, () => Response> = {
       'GET /api/v1/antiforgery/token': () => json({ headerName: 'X-XSRF-TOKEN', requestToken: 't' }),
       'GET /api/v1/session': () => json({ ...session, isAdministrator }),
+      'GET /api/v1/me/permissions': () => json({ isInstallationAdministrator: isAdministrator, company: { id: 'a', permissionCodes: codes } }),
       'GET /api/v1/context': () => json(contextBody({ entry: 'directEntry', directSelection: { companyId: 'a', fiscalPeriodId: 'p1' }, companies: [companyA] })),
       'POST /api/v1/context': () => json(selected(companyA, p1)),
       'GET /api/v1/companies/a/overview': () => json(overview),
@@ -53,6 +54,15 @@ const dashboardHeading = /به سامانه یکپارچه فرانو خوش آ�
 describe('App routing', () => {
   beforeEach(() => {
     window.history.replaceState(null, '', '/app/');
+  });
+
+  it('shows company actions to a non-admin only when granted by the current company', async () => {
+    stubAll(false, ['users.list', 'users.membership.approve']);
+    render(<App navigate={vi.fn()} />);
+    const nav = await screen.findByRole('navigation', { name: 'منوی اصلی' });
+    expect(await within(nav).findByRole('link', { name: 'کاربران شرکت جاری' })).toBeInTheDocument();
+    expect(within(nav).getByRole('link', { name: 'درخواست‌های عضویت' })).toBeInTheDocument();
+    expect(within(nav).queryByRole('link', { name: 'مدیریت کاربران' })).toBeNull();
   });
 
   it('navigates from the sidebar to the user list and to a detail page, then back with the history', async () => {
@@ -225,7 +235,7 @@ describe('App routing', () => {
     await screen.findByRole('heading', { name: dashboardHeading });
     const nav = screen.getByRole('navigation', { name: 'منوی اصلی' });
 
-    await user.click(within(nav).getByRole('link', { name: 'درخواست‌های عضویت' }));
+    await user.click(await within(nav).findByRole('link', { name: 'درخواست‌های عضویت' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'درخواست‌های عضویت در انتظار تأیید' })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/app/admin/membership-requests');
     expect(await screen.findByText('متقاضی نمونه')).toBeInTheDocument();
@@ -280,7 +290,7 @@ describe('App routing', () => {
     stubAll(true);
     render(<App navigate={vi.fn()} />);
     await screen.findByRole('heading', { name: dashboardHeading });
-    await user.click(within(screen.getByRole('navigation', { name: 'منوی اصلی' })).getByRole('link', { name: 'کاربران شرکت جاری' }));
+    await user.click(await within(screen.getByRole('navigation', { name: 'منوی اصلی' })).findByRole('link', { name: 'کاربران شرکت جاری' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'کاربران شرکت' })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/app/company/users');
   });

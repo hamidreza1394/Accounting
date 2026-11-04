@@ -16,6 +16,7 @@ import { ErrorState, LoadingScreen } from './components/Feedback';
 import { SelectionLayout } from './components/SelectionLayout';
 import { WorkContextSelector } from './components/WorkContextSelector';
 import { can, type Permission } from './lib/permissions';
+import { useCompanyPermissions } from './lib/useCompanyPermissions';
 import { RouteView } from './lib/router';
 
 type AppState =
@@ -154,6 +155,9 @@ export function App({ navigate = defaultNavigate }: { navigate?: Navigate }) {
     [sessionForPermissions],
   );
 
+  const activeCompanyId = state.kind === 'ready' && !state.selecting ? state.context.current?.company.id : undefined;
+  const companyPermissions = useCompanyPermissions(activeCompanyId, handleUnauthenticated);
+
   const readySession = state.kind === 'ready' ? state.session : null;
   const readyContext = state.kind === 'ready' ? state.context.current : null;
   const routeData = useMemo<AppRouteData | null>(
@@ -236,6 +240,9 @@ export function App({ navigate = defaultNavigate }: { navigate?: Navigate }) {
     <AppRouteDataContext.Provider value={routeData}>
       <AppShell
         routes={appRoutes}
+        companyPermissions={companyPermissions.codes}
+        permissionsStatus={companyPermissions.status}
+        onRetryPermissions={companyPermissions.retry}
         canAccess={canAccess}
         session={session}
         context={context.current}

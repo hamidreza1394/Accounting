@@ -114,3 +114,13 @@ describe('membership request parsers', () => {
     expect(pending.items[0]?.requestedAtUtc).toBe('2026-11-01T08:00:00Z');
   });
 });
+
+describe('current-company discovery contracts', () => {
+  it('rejects malformed permission and assignable-role responses', async () => {
+    const { parseCurrentPermissions, parseAssignableRoles, parseMembershipDestinations } = await import('./types');
+    expect(parseCurrentPermissions({ isInstallationAdministrator: false, company: { id: 'a', permissionCodes: ['users.list'] } }).company?.id).toBe('a');
+    expect(() => parseCurrentPermissions({ isInstallationAdministrator: false, company: { id: 'a', permissionCodes: [1] } })).toThrow(ContractError);
+    expect(() => parseAssignableRoles(pageBody([{ id: 'r', code: 'R', name: 'role', isSystemRole: 'false' }]))).toThrow(ContractError);
+    expect(() => parseMembershipDestinations(pageBody([{ companyId: 12, name: 'company' }]))).toThrow(ContractError);
+  });
+});

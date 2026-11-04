@@ -854,3 +854,38 @@ export function parseCompanyDirectory(value: unknown): CompanyDirectoryPage {
     pageSize,
   };
 }
+
+export type CurrentPermissions = {
+  isInstallationAdministrator: boolean;
+  company: { id: string; permissionCodes: string[] } | null;
+};
+
+export function parseCurrentPermissions(value: unknown): CurrentPermissions {
+  const what = 'currentPermissions';
+  if (!isObject(value)) throw new ContractError(what);
+  const company = value['company'];
+  if (company !== null && !isObject(company)) throw new ContractError(`${what}.company`);
+  let parsedCompany: CurrentPermissions['company'] = null;
+  if (isObject(company)) {
+    const codes = company['permissionCodes'];
+    if (!Array.isArray(codes) || !codes.every((code) => typeof code === 'string')) throw new ContractError(`${what}.permissionCodes`);
+    parsedCompany = { id: readString(company, 'id', what), permissionCodes: codes };
+  }
+  return { isInstallationAdministrator: readBoolean(value, 'isInstallationAdministrator', what), company: parsedCompany };
+}
+
+export type MembershipDestination = { companyId: string; name: string };
+export type AssignableRole = { id: string; code: string; name: string; isSystemRole: boolean };
+
+export function parseMembershipDestinations(value: unknown): MembershipRequestPage<MembershipDestination> {
+  return parseMembershipRequestPage(value, 'destinations', (item, what) => ({
+    companyId: readString(item, 'companyId', what), name: readString(item, 'name', what),
+  }));
+}
+
+export function parseAssignableRoles(value: unknown): MembershipRequestPage<AssignableRole> {
+  return parseMembershipRequestPage(value, 'assignableRoles', (item, what) => ({
+    id: readString(item, 'id', what), code: readString(item, 'code', what), name: readString(item, 'name', what),
+    isSystemRole: readBoolean(item, 'isSystemRole', what),
+  }));
+}

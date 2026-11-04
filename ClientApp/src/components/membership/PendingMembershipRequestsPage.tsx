@@ -2,11 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ApiError,
   approveMembershipRequest,
-  getCompanyRoles,
+  getAssignableRoles,
   getPendingMembershipRequests,
   rejectMembershipRequest,
 } from '../../api/client';
-import type { CompanyRole, MembershipRequestPage, PendingMembershipRequest } from '../../api/types';
+import type { AssignableRole, MembershipRequestPage, PendingMembershipRequest } from '../../api/types';
 import { formatDateTime } from '../../lib/format';
 import { Alert } from '../ui/Alert';
 import { Breadcrumb } from '../ui/Breadcrumb';
@@ -30,7 +30,7 @@ type Decision = { kind: 'approve' | 'reject'; request: PendingMembershipRequest 
 type RolesState =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'ready'; roles: CompanyRole[] }
+  | { kind: 'ready'; roles: AssignableRole[] }
   | { kind: 'forbidden' }
   | { kind: 'error'; message: string };
 
@@ -64,6 +64,8 @@ export function PendingMembershipRequestsPage({ onUnauthenticated, companyId, co
   const [roleId, setRoleId] = useState('');
   const [reason, setReason] = useState('');
   const [rolesState, setRolesState] = useState<RolesState>({ kind: 'idle' });
+  const [rolesPage, setRolesPage] = useState(1);
+  const [rolesTotal, setRolesTotal] = useState(0);
 
   const reload = useCallback(() => setAttempt((value) => value + 1), []);
 
@@ -113,17 +115,17 @@ export function PendingMembershipRequestsPage({ onUnauthenticated, companyId, co
     if (decision?.kind !== 'approve') return undefined;
     const controller = new AbortController();
     setRolesState({ kind: 'loading' });
-    getCompanyRoles(companyId, controller.signal)
-      .then((roles) => {
-        if (!controller.signal.aborted) setRolesState({ kind: 'ready', roles: roles.filter((role) => role.isActive) });
+    getAssignableRoles(companyId, rolesPage, controller.signal)
+      .then((result) => {
+        if (!controller.signal.aborted) { setRolesState({ kind: 'ready', roles: result.items.filter((role) => !role.isSystemRole) }); setRolesTotal(result.totalCount); }
       })
       .catch((cause: unknown) => {
         if (controller.signal.aborted || onUnauthenticated(cause)) return;
-        if (cause instanceof ApiError && cause.status === 403) setRolesState({ kind: 'forbidden' });
+        if (cause instanceof ApiError && (cause.status === 403 || cause.status === 404)) setRolesState({ kind: 'forbidden' });
         else setRolesState({ kind: 'error', message: message(cause, 'دریافت گروه‌های دسترسی انجام نشد.') });
       });
     return () => controller.abort();
-  }, [decision?.kind, decision?.request.id, companyId, onUnauthenticated]);
+  }, [decision?.kind, decision?.request.id, companyId, rolesPage, onUnauthenticated]);
 
   const open = (kind: Decision['kind'], request: PendingMembershipRequest) => {
     setFlash(null);
@@ -131,6 +133,8 @@ export function PendingMembershipRequestsPage({ onUnauthenticated, companyId, co
     setRoleId('');
     setReason('');
     setRolesState({ kind: 'idle' });
+    setRolesPage(1);
+    setRolesTotal(0);
     setDecision({ kind, request });
   };
   const close = () => {
@@ -312,6 +316,12 @@ export function PendingMembershipRequestsPage({ onUnauthenticated, companyId, co
                       </Select>
                     </FormField>
                   )}
+                  {rolesState.kind === 'ready' && rolesTotal > 100 ? (
+                    <div className="flex gap-2">
+                      <Button type="button" variant="outline" disabled={rolesPage === 1} onClick={() => { setRoleId(''); setRolesPage(rolesPage - 1); }}>گروه‌های قبلی</Button>
+                      <Button type="button" variant="outline" disabled={rolesPage * 100 >= rolesTotal} onClick={() => { setRoleId(''); setRolesPage(rolesPage + 1); }}>گروه‌های بعدی</Button>
+                    </div>
+                  ) : null}
                 </>
               ) : (
                 <FormField label="توضیح رد درخواست (اختیاری)" hint={`حداکثر ${reasonLimit} نویسه؛ برای درخواست‌کننده نمایش داده می‌شود.`}>

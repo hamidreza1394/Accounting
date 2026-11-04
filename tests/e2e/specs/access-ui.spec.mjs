@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 
 const state = JSON.parse(readFileSync(new URL('../.e2e-state.json', import.meta.url), 'utf8'));
-const { alice, bob, admin } = state.users;
+const { alice, bob, heidi, admin } = state.users;
 const { b } = state.companies;
 
 test.use({ timezoneId: 'Asia/Tehran' });
@@ -181,4 +181,23 @@ test('role transfer updates the real member list and company directory permissio
       expect(restored.status).toBe(204);
     }
   }
+});
+
+
+test('membership discovery fails closed without a shared customer boundary', async ({ page }) => {
+  await signIn(page, heidi);
+  await page.goto('/app/account/membership-requests');
+  await expect(page.getByRole('heading', { level: 1, name: 'درخواست‌های عضویت من' })).toBeVisible();
+  const search = page.getByLabel('نام دقیق شرکت مقصد');
+  await search.fill('ab');
+  await page.getByRole('button', { name: 'جستجوی شرکت' }).click();
+  await expect(page.getByRole('alert')).toContainText('۳');
+  await search.fill(b.name);
+  const result = page.waitForResponse((response) => response.url().includes('/membership-requests/destinations?') && response.request().method() === 'GET');
+  await page.getByRole('button', { name: 'جستجوی شرکت' }).click();
+  expect((await result).status()).toBe(200);
+  await expect(page.getByText('شرکت قابل درخواستی پیدا نشد.')).toBeVisible();
+  await expect(page.getByRole('button', { name: /درخواست عضویت در/ })).toHaveCount(0);
+  expect(await apiStatus(page, '/api/v1/me/membership-requests/destinations?search=ab')).toBe(400);
+  expect(await apiStatus(page, `/api/v1/admin/companies/${b.id}/membership-requests/pending`)).toBe(404);
 });
