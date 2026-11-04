@@ -424,8 +424,9 @@ public static class SecurityAuditAdministrationEndpoints
         if (value is null)
             return "\"\"";
 
-        var firstNonWhitespace = value.TrimStart().FirstOrDefault();
-        if (firstNonWhitespace is '=' or '+' or '-' or '@')
+        var startsWithControlCharacter = value[0] is '\t' or '\r' or '\n';
+        var startsWithFormula = value.TrimStart().FirstOrDefault() is '=' or '+' or '-' or '@';
+        if (startsWithControlCharacter || startsWithFormula)
             value = "'" + value;
 
         return "\"" + value.Replace("\"", "\"\"") + "\"";
