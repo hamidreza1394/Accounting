@@ -16,7 +16,7 @@
 | [TRADE_MODULE.md](TRADE_MODULE.md) | معماری، امنیت چندشرکتی، استفاده مشترک از دوره‌های مالی، فرم‌ها، گزارش‌ها و مسیر استخراج ماژول بازرگانی (D-061/D-062) |
 | [USER_ACCESS_MANAGEMENT.md](USER_ACCESS_MANAGEMENT.md) | طراحی و نقشه اجرایی مدیریت کاربران، سمت‌ها، گروه‌های دسترسی، مجوزهای جزئی و سوابق امنیتی (Issue #444) |
 | [`FRONTEND_API_CONTRACT_NEEDS.md`](FRONTEND_API_CONTRACT_NEEDS.md) | قراردادهای API پیشنهادی مورد نیاز UI مدیریت دسترسی (عضویت، `/me/permissions`، گزارش امنیتی، نشست‌ها، S2) برای Backend (Issue #444) |
-| [ORGANIZATIONAL_STRUCTURE_DATA_MODEL.md](ORGANIZATIONAL_STRUCTURE_DATA_MODEL.md) | طرح پیاده‌سازی S2: Entityها، Constraintها، کاتالوگ مجوز `hr.*` و قرارداد API گزینه B (HR-ready) با ADR پیشنهادی D-072؛ اجرای Schema/API تا تأیید صریح مالک در Issue #491 مسدود است |
+| [ORGANIZATIONAL_STRUCTURE_DATA_MODEL.md](ORGANIZATIONAL_STRUCTURE_DATA_MODEL.md) | مرجع S2: طراحی پیاده‌سازی‌شده گزینه B (HR-ready) با D-072 (Accepted) — Entityها، Migration `20261104200301`، کاتالوگ `hr.*` و قرارداد API `/org/*`؛ Backend پیاده و UI در ادامه فاز ۴ |
 | [`PROJECT_STATUS.md`](PROJECT_STATUS.md) | وضعیت تأییدشده فعلی |
 | [`ROADMAP.md`](ROADMAP.md) | برنامه راه |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | معماری و جهت وابستگی |
