@@ -64,6 +64,7 @@
 | [`handoffs/ISSUE-507-security-audit-csv-export.md`](handoffs/ISSUE-507-security-audit-csv-export.md) | خروجی CSV محدود گزارش امنیتی با ثبت Audit، محدودیت حجم و جلوگیری از Formula Injection (Issue #507) |
 | [`handoffs/ISSUE-515-csv-leading-control-characters.md`](handoffs/ISSUE-515-csv-leading-control-characters.md) | تکمیل خنثی‌سازی Tab/CR/LF در سلول‌های خروجی CSV (Issue #515) |
 | [`handoffs/ISSUE-511-me-permissions.md`](handoffs/ISSUE-511-me-permissions.md) | API مجوزهای کاربر جاری بر اساس شرکت فعال زمینه کاری همان نشست (Issue #511) |
+| [`handoffs/ISSUE-512-security-audit-report-api.md`](handoffs/ISSUE-512-security-audit-report-api.md) | مرتب‌سازی امن، فهرست نوع رویداد، فهرست شرکت‌ها و قرارداد UTC؛ D-070 نگهداری Proposed (Issue #512) |
 | [`handoffs/ISSUE-510-membership-workflow-api.md`](handoffs/ISSUE-510-membership-workflow-api.md) | کشف مقصد محدود به CustomerBoundary، نقش‌های قابل واگذاری، فهرست تأییدکنندگان و تاریخچه درخواست (Issue #510) |
 | [`handoffs/ISSUE-498-membership-permission-delegation-ceiling.md`](handoffs/ISSUE-498-membership-permission-delegation-ceiling.md) | enforce سقف واگذاری مجوز هنگام تأیید عضویت بین‌شرکتی؛ بدون Schema/Migration |
 | [`handoffs/ISSUE-500-utc-kind-value-converter.md`](handoffs/ISSUE-500-utc-kind-value-converter.md) | EF ValueConverter برای فیلدهای DateTime دارای پسوند Utc؛ حفظ مقدار و عدم تغییر فیلدهای ساعت محلی قدیمی (Issue #500) |
