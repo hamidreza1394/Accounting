@@ -2336,3 +2336,9 @@
 - زمان‌های *Utc پس از EF read صریحاً Kind=UTC می‌گیرند؛ RowVersion و transaction approval موجود حفظ شد.
 - Unit و SQL Server regression tests اضافه شدند؛ هیچ‌کدام هنوز اجرا نشده‌اند. بدون Migration/ClientApp/E2E.
 - handoff: docs/handoffs/ISSUE-510-membership-workflow-api.md.
+
+
+## 2026-11-04 — Issue #520: UTC در projectionهای عضویت
+- برچسب UTC پس از materialization برای سه پاسخ عضویت؛ فیلدهای قدیمی و schema بدون تغییر.
+- تست واحد و SQL Server اضافه شد؛ اجرای .NET و SQL Server به‌علت نبود SDK و سرویس در محیط مسدود است. بررسی asset و `git diff --check` موفق بود.
+- جزئیات: `docs/handoffs/ISSUE-520-membership-utc-wire.md`.

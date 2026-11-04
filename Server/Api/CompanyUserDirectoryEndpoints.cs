@@ -119,7 +119,7 @@ public static class CompanyUserDirectoryEndpoints
             item.RoleCode,
             item.RoleName,
             item.RoleIsActive,
-            item.MembershipCreatedAtUtc)).ToArray();
+            DateTime.SpecifyKind(item.MembershipCreatedAtUtc, DateTimeKind.Utc))).ToArray();
 
         return TypedResults.Ok(new CompanyUserDirectoryResponse(
             companyId, companyAccess.CompanyName, items, totalCount, page, pageSize));

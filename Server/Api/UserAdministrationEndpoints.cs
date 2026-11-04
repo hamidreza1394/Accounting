@@ -145,6 +145,11 @@ public static class UserAdministrationEndpoints
                 membership.CreatedAtUtc))
             .ToListAsync(cancellationToken);
 
+        var utcMemberships = memberships.Select(membership => membership with
+        {
+            CreatedAtUtc = DateTime.SpecifyKind(membership.CreatedAtUtc, DateTimeKind.Utc),
+        }).ToArray();
+
         SetNoStore(httpContext);
         return TypedResults.Ok(new UserDetailsResponse(
             user.Id,
@@ -160,7 +165,7 @@ public static class UserAdministrationEndpoints
             user.InsertDateTime,
             user.UpdateDateTime,
             user.RoleName,
-            memberships));
+            utcMemberships));
     }
 
     public static async Task<IResult> CreateUserAsync(
