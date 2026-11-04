@@ -2455,3 +2455,11 @@
 - **باقی‌مانده:** startup reload/revalidation، اتصال runtime به call-siteها، Cloud authoritative resolution و تست عملی TPM/دو میزبان.
 - **Dependency برای #391/#401:** CompanyReference در payload provisioning v4 و ProvisioningRequestClaim persist نمی‌شود؛ #392 باید mapping durable به CompanyId محلی را در قرارداد نسخه‌دار و CompanySetupRecord پیاده کند. تا آن زمان resolver شرکت باید fail-closed بماند.
 - **Migration:** وجود migration در repository به معنی اجرای آن روی دیتابیس مشتری نیست؛ rollout واقعی همچنان جداگانه بررسی و تأیید می‌خواهد.
+
+## 2026-11-04 — Issue #444 (مأموریت ۲): هاردنینگ دسترسی‌ها و راستی‌آزمایی مرحله اول
+- **راستی‌آزمایی روی main@d06a4b1a:** PRهای #538، #536، #481 و قراردادهای #510/#511 همگی ادغام‌شده و با کد فعلی منطبق‌اند؛ کار تکراری انجام نشد. ماتریس وضعیت ۱۳ کنترل امنیتی (Verified/Implemented-but-not-tested/Blocked) در handoff ثبت شد؛ هیچ مورد Missing یافت نشد.
+- **افزوده ۱ — تست رفتاری Rate Limit حساس** (`SensitiveReadRateLimitBehaviorTests`): پیش از این فقط metadata Routeها تست می‌شد؛ اکنون 429 با Retry-After/no-store/بدنه عمومی بدون افشا، اشتراک پارتیشن کاربر بین چهار endpoint (عدم دورزدن با Query/Route/endpoint-hopping)، بی‌اثری برای کاربر دیگر و endpoint غیرحساس، و throttling جداگانه ناشناس روی پارتیشن آدرس از طریق Pipeline واقعی اثبات می‌شود.
+- **افزوده ۲ — تست مجوزدهی HTTP مدیریتی** (`AdministrativeEndpointAuthorizationHttpTests`): 401 ناشناس، 403 عضو عادی (بدنه بدون افشا) و 200 مدیر نصب برای `/admin/users`، `/admin/permission-catalog`، `/admin/companies/{id}/roles`، `/admin/companies/{id}/roles/{id}/members` و `/companies/{id}/users` از Pipeline واقعی.
+- **اعتبارسنجی:** build کل Solution با SDK 10.0.403 صفر خطا؛ `dotnet test` کل Solution بدون SQL Server: 969 تست، 911 موفق، 56 Skip، فقط 2 ناموفقِ محیطیِ از قبل موجود (`SafeExceptionRealApplicationTests` بدون SQL Server). E2E و تست‌های SQL Server محلی Blocked و از CI این PR می‌آیند.
+- **مرزبندی:** بدون تغییر کد اجرایی، Migration، API یا UI؛ هیچ نقص امنیتی واقعی در محدوده یافت نشد.
+- **handoff:** `docs/handoffs/ISSUE-444-access-hardening-mission2.md`.
