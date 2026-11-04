@@ -2433,3 +2433,11 @@
 - **CI:** نگهبان قرارداد (`npm run test:contract`) پیش از مرحلهٔ مرورگر در job `e2e` اجرا می‌شود.
 - **اعتبارسنجی محلی:** `node --check` هر سه فایل سالم؛ `node --test tests/*.test.mjs` → **۸/۸ سبز**؛ `npx playwright test --list` → spec با ۵ تست در فهرست. در این sandbox نه .NET SDK، نه SQL Server و نه Chromium موجود نیست (بارگیری هر دو از شبکه رد شد)، بنابراین **اجرای واقعی مرورگر/SQL فقط از CI** می‌آید و تا سبز شدن job `e2e` این کار Verified نیست.
 - **مرزبندی:** هیچ تغییر Backend/API/Migration/UI؛ هیچ یافتهٔ واقعی که نیازمند اصلاح باشد تا این لحظه تأیید نشده است. در صورت مشاهده، Issue جداگانه ثبت می‌شود.
+
+
+## 2026-11-04 — Issue #391: پل payload معتبر برای سیاست Entitlement
+- **تغییر:** `CustomerLicenseRuntimeResult.ValidatedPayload` فقط پس از موفقیت validator revocation-aware پر می‌شود؛ تمام نتایج ردشده payload برابر null دارند. هیچ Envelope، signature یا متن خام لایسنس به مصرف‌کننده تحویل نمی‌شود.
+- **Regression:** تست موفقیت هویت همان payload اعتبارسنجی‌شده را assert می‌کند؛ تست revoked و Grace assert می‌کنند payload افشا نمی‌شود.
+- **محدوده:** بدون API، migration، persistence، cache یا call-site عملیاتی جدید.
+- **Blocker کشف‌شده:** Contract V2 از opaque `CompanyReference` استفاده می‌کند، اما provisioning schema v4 و `ProvisioningRequestClaim` نگاشت durable به Company.Id را ذخیره نمی‌کنند و `CompanySetupRecord` در کد وجود ندارد. این mapping باید در #384/#392 طراحی و پیاده‌سازی شود؛ استفاده از Company.Id یا CustomerBoundaryId به‌عنوان جایگزین ممنوع است.
+- **اعتبارسنجی:** اجرای محلی .NET انجام نشد؛ CI روی PR #539 مرجع است.

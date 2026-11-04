@@ -14,13 +14,18 @@ public sealed record CustomerLicenseRuntimeResult(
     LicenseStatus? Status,
     string? ErrorCode,
     string? LicenseId,
-    int? Sequence)
+    int? Sequence,
+    LicensePayload? ValidatedPayload = null)
 {
-    public static CustomerLicenseRuntimeResult Usable(LicenseStatus status, string licenseId, int sequence) =>
-        new(true, status, null, licenseId, sequence);
+    /// <summary>
+    /// The payload only after the installed envelope has passed signature, installation-binding,
+    /// trust and revocation validation. Rejected results never carry a payload.
+    /// </summary>
+    public static CustomerLicenseRuntimeResult Usable(LicenseStatus status, LicensePayload payload) =>
+        new(true, status, null, payload.LicenseId, payload.Sequence, payload);
 
     public static CustomerLicenseRuntimeResult Rejected(string errorCode, string? licenseId = null, int? sequence = null) =>
-        new(false, LicenseStatus.Invalid, errorCode, licenseId, sequence);
+        new(false, LicenseStatus.Invalid, errorCode, licenseId, sequence, null);
 }
 
 /// <summary>
@@ -128,9 +133,6 @@ public sealed class CustomerLicenseRuntimeEvaluator : ICustomerLicenseRuntimeEva
                 "license_status_policy_unapproved", current.LicenseId, current.Sequence);
         }
 
-        return CustomerLicenseRuntimeResult.Usable(
-            validation.Status,
-            validation.Payload.LicenseId,
-            validation.Payload.Sequence);
+        return CustomerLicenseRuntimeResult.Usable(validation.Status, validation.Payload);
     }
 }
