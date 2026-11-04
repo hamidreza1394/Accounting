@@ -45,5 +45,6 @@
 
 ## شناسه‌های Git
 - Branch: `security/issue-522-sensitive-read-rate-limit`
-- Commit: پس از ثبت
-- Pull Request: پس از ایجاد
+- Implementation commits: `cc87bce85a09f60de99b644f8c57c033c0b1a3cd`, `c04511336cf1e5f0455033677fde36951c481e67`, `407b48936ba371f0911714f4deda78b4fd7b700a`.
+- Main synchronization merge commit: `c0ecef0e726df70af32a555592cfd4027c76acba`.
+- Pull Request: [#538](https://github.com/hamidreza1394/Accounting/pull/538).
