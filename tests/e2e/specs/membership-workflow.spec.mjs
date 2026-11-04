@@ -129,10 +129,16 @@ test.describe('membership workflow: request, approve, reject', () => {
     await destinationRow.getByRole('button', { name: `درخواست عضویت در ${destination.name}` }).click();
     const created = await createResponse;
     expect(created.status()).toBe(201);
-    const createdBody = await created.json();
-    expect(createdBody.status).toBe('Pending');
-    const requestId = createdBody.id;
     await expect(page.getByText('درخواست عضویت ثبت شد و در انتظار تأیید است.')).toBeVisible();
+
+    // The UI intentionally consumes only the success status. Read the durable request id from SQL
+    // rather than making the browser test depend on re-reading a response body already consumed
+    // by the application's fetch implementation.
+    const [createdRow] = await readRequests(fixture, { userId: requester.id, companyId: destination.id });
+    expect(createdRow).toMatchObject({
+      Status: 'Pending', ApprovedRoleId: null, DecidedByUserId: null,
+    });
+    const requestId = createdRow.Id;
     const myRequestsTable = page.getByRole('table', { name: 'فهرست درخواست‌های عضویت من' });
     await expect(myRequestsTable.getByText(destination.name)).toBeVisible();
     await expect(myRequestsTable.getByText('در انتظار تأیید')).toBeVisible();
@@ -402,9 +408,14 @@ test.describe('membership workflow: request, approve, reject', () => {
       // in the destination company (D-065); the temporary grant is removed again straight away.
       await fixture.addMembership(requester, destination, destination.approverRole.id);
       try {
+        const membershipBefore = await readMembership(fixture, { userId: requester.id, companyId: destination.id });
+        expect(membershipBefore).toMatchObject({
+          IsActive: true, RoleId: destination.approverRole.id,
+        });
         expect((await post(page, approvePath(destination.id, requestId), roleBody(destination.memberRole.id))).status).toBe(403);
         expect(await pendingStatus()).toBe('Pending');
-        await noMembership();
+        expect(await readMembership(fixture, { userId: requester.id, companyId: destination.id }))
+          .toEqual(membershipBefore);
       } finally {
         await fixture.removeMembership(requester, destination);
       }
@@ -460,7 +471,7 @@ test.describe('membership workflow: request, approve, reject', () => {
     }
   });
 
-  test('an active member cannot request the same company again while the approver queue stays empty', async ({ page }) => {
+  test('an active member cannot request the same company again while the approver queue stays empty', async ({ page, browser }) => {
     const { destination, approver } = fixture;
     const member = await fixture.addUser('member');
     await fixture.addMembership(member, destination, destination.memberRole.id);
