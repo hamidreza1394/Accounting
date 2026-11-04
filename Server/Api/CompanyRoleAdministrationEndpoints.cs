@@ -399,7 +399,11 @@ public static class CompanyRoleAdministrationEndpoints
             .ToListAsync(cancellationToken);
 
         SetNoStore(httpContext);
-        return TypedResults.Ok(new CompanyRoleMemberListResponse(items, totalCount, normalizedPage, normalizedPageSize));
+        var utcItems = items.Select(item => item with
+        {
+            CreatedAtUtc = DateTime.SpecifyKind(item.CreatedAtUtc, DateTimeKind.Utc),
+        }).ToArray();
+        return TypedResults.Ok(new CompanyRoleMemberListResponse(utcItems, totalCount, normalizedPage, normalizedPageSize));
     }
 
     /// <summary>
