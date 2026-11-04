@@ -2348,6 +2348,10 @@
 - typecheck، ۵۳۸ تست Client، build، check:offline، syntax و فهرست تست Playwright و بررسی asset موفق. اجرای واقعی E2E و Build دات‌نت به علت نبود SDK و SQL Server محلی اجرا نشد؛ CI مرجع تأیید است.
 - جزئیات و وابستگی seed مرز مشتری برای گردش عضویت: `docs/handoffs/ISSUE-444-role-transfer-directory-e2e.md`.
 
+## 2026-11-04 — Issue #444: مجوز شرکت جاری و گردش عضویت در UI
+- منوی شرکتی از `/me/permissions` و تأیید عضویت از نقش‌های قابل تخصیص سرور استفاده می‌کند؛ جستجوی دقیق مقصد و ثبت درخواست با API واقعی افزوده شد. برچسب‌های UI کنترل امنیتی نیستند.
+- تست‌های Client و بررسی آفلاین موفق؛ E2E واقعی و dotnet در محیط محلی به علت نبود SDK و SQL Server اجرا نشد. نتیجه CI و fixture مثبت مرز مشتری باقی است.
+- handoff: `docs/handoffs/ISSUE-444-company-permissions-membership-ui.md`.
 
 ## 2026-11-04 — Issue #214: customer runtime revocation evaluation
 - Added `ICustomerLicenseRuntimeEvaluator` as the shared customer-runtime evaluation entry point; it reloads the current installed envelope and validates it through the revocation-aware `ICustomerLicenseEnvelopeValidator` on every evaluation.
