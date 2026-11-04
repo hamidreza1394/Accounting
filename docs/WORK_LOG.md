@@ -2473,3 +2473,13 @@
 - **اعتبارسنجی:** build کل Solution صفر خطا؛ `dotnet test`: 830 موفق، 56 Skip (SQL/Windows-gated)، 2 ناموفقِ محیطیِ از قبل موجود (`SafeExceptionRealApplicationTests`؛ تکرار و تأیید در baseline). تست‌های SQL Server/E2E محلی Blocked و از CI این PR می‌آیند.
 - **مرزبندی:** بدون تغییر ClientApp، بدون Migration ساختاری، بدون سیستم RBAC موازی؛ موارد خارج از محدوده (#491، #488، #504، #384، #391، #392، #401) دست‌نخورده.
 - **handoff:** `docs/handoffs/ISSUE-444-company-manager-delegation-ceiling.md` (شامل ماتریس Permission/Scope/Actor/Target).
+
+## 2026-11-05 — Issue #491 (فاز ۳ مأموریت): طراحی سطح پیاده‌سازی ساختار سازمانی و پرسنل
+- **مبنا:** main@f7860c01 (ادغام PR #541 — فاز ۲ کامل و CI سبز). شاخه `feature/company-organizational-structure`؛ Gap Analysis فاز ۲ پوشش کامل ۴.۱–۴.۸ مأموریت را در #541 تأیید کرد.
+- **گیت معماری:** تأیید صریح مالک برای گزینه B در Issue #491 (بدون کامنت)، ADRها و مستندات موجود نبود؛ طبق قاعده «تأیید از سکوت استنباط نمی‌شود»، Migration اسکیمای نهایی مسدود ماند و فقط طراحی + قرارداد API + مستندات مستقل انجام شد.
+- **افزوده ۱ — طرح پیاده‌سازی S2:** `ORGANIZATIONAL_STRUCTURE_DATA_MODEL.md` ارتقا یافت: چهار Entity شرکت‌محور (`CompanyOrganizationalUnit`، `CompanyPosition`، `CompanyEmployee`، `CompanyEmployeeAssignment` مستقل با Effective Dating و ممنوعیت بازنویسی تاریخچه)، Unique فیلترشده انتساب فعال، FKهای ترکیبی tenant-safe، قواعد چرخه والد/مدیر، کاتالوگ ۱۲ کد مجوز `hr.*` با سقف تفویض D-071 و قرارداد کامل API `/org/*` با خطای 401/403/404/409 استاندارد.
+- **افزوده ۲ — ADR D-072 (Proposed)** در `docs/DECISIONS.md`؛ هم‌ترازسازی `INDEX.md`، `ACCESS_CONTROL_ARCHITECTURE.md`، `USER_ACCESS_MANAGEMENT.md`، `FRONTEND_API_CONTRACT_NEEDS.md` و handoff Issue #491.
+- **اعتبارسنجی:** `dotnet build` کل Solution صفر خطا (تغییرات فقط docs)؛ `generate_migrations.py --check`: «The generated migrations are up to date.» تست اجرایی جدیدی وجود ندارد چون هیچ کدی تغییر نکرده است.
+- **مسدود/منتظر مالک:** چهار پرسش بند ۱۱ سند طراحی (گزینه A/B، کارمند بدون حساب، کاردینالیتی لینک، Position مستقل از Unit). پس از تأیید: کاتالوگ `hr.*` → Migration ساختاری → سرویس/API → تست‌ها → UI.
+- **مرزبندی:** بدون تغییر کد اجرایی، Migration، داده یا ClientApp؛ موارد خارج از محدوده (#488، #504 و غیره) دست‌نخورده.
+- **handoff:** `docs/handoffs/ISSUE-491-organizational-structure-model.md` (بخش به‌روزرسانی 2026-11-05).
