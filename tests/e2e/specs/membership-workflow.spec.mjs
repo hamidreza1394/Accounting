@@ -272,7 +272,7 @@ test.describe('membership workflow: request, approve, reject', () => {
       expect(mine.status).toBe(200);
       expect(mine.body.items[0]).toMatchObject({ id: requestId, status: 'Approved', approvedRoleName: 'عضو مقصد' });
       await page.goto('/app/account/membership-requests');
-      await expect(myRequestsTable.getByText('تأییدشده')).toBeVisible();
+      await expect(myRequestsTable.getByText('تأییدشده', { exact: true })).toBeVisible();
       await expect(myRequestsTable.getByText('عضو مقصد')).toBeVisible();
       await watch.assertClean('requester: approved request');
       expect(await accessibleCompanyIds(page)).toEqual(expect.arrayContaining([source.id, destination.id]));
