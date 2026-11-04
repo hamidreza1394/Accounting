@@ -20,9 +20,9 @@ ConnectionStrings__ConnectionString="$FARANOU_E2E_SQL" dotnet "$FARANOU_E2E_PUBL
 npm run seed && npx playwright test
 ```
 
-The role-administration spec creates a separate installation administrator and global `Admin` role
+The role-administration spec creates a separate installation administrator referencing the existing global `Admin` role
 for its own run, using credentials generated in the ignored state file. It verifies authorization
-against the live database, and removes its account, role, login/audit records and created company
+against the live database, and removes its account, login/audit records and created company
 role in a `finally` block, including on assertion failure. Shared Alice/Bob/admin accounts are not
 changed. It uses the existing seeded companies, runs sequentially with the suite, and disables
 trace/screenshots for this spec to avoid retaining its credentials or antiforgery token. As with

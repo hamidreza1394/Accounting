@@ -42,7 +42,7 @@ const state = {
     admin: { username: `admin${suffix}`, password: password(), id: randomUUID(), active: true, roleId: randomUUID() },
   },
   // Used only by the isolated role-administration test; created and removed by that test.
-  roleAdmin: { username: `ra${randomBytes(6).toString('hex')}`, password: password(), id: randomUUID(), roleId: randomUUID() },
+  roleAdmin: { username: `ra${randomBytes(6).toString('hex')}`, password: password(), id: randomUUID() },
   companies: {
     a: { id: randomUUID(), name: `شرکت الف ${suffix}`, roleId: randomUUID() },
     b: { id: randomUUID(), name: `شرکت ب ${suffix}`, roleId: randomUUID() },

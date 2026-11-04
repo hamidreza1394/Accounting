@@ -46,7 +46,7 @@ async function callApi(page, method, path, body, token) {
 }
 
 
-// The account and its global role are created inside the test, not by the shared seed. The
+// The account is created inside the test and references the existing active Admin role. The
 // disposable fixture uses dedicated identifiers and never changes the shared admin/Alice/Bob.
 // Do not retain login credentials or antiforgery tokens in failure artifacts.
 test.use({ trace: 'off', screenshot: 'off' });
@@ -61,7 +61,7 @@ test('an installation administrator can create, read and update company roles ag
   const pool = await new sql.ConnectionPool(connectionString).connect();
   const query = (text) => pool.request()
     .input('user', sql.UniqueIdentifier, account.id)
-    .input('globalRole', sql.UniqueIdentifier, account.roleId)
+    .input('globalRole', sql.UniqueIdentifier, state.users.admin.roleId)
     .input('company', sql.UniqueIdentifier, a.id)
     .input('code', sql.VarChar(50), roleCode)
     .query(text);
@@ -74,10 +74,8 @@ test('an installation administrator can create, read and update company roles ag
     header.writeUInt32BE(100_000, 5);
     header.writeUInt32BE(salt.length, 9);
     const hash = Buffer.concat([header, salt, pbkdf2Sync(account.password, salt, 100_000, 32, 'sha512')]).toString('base64');
-    await query(`INSERT INTO Roles (Id, Ordering, InsertDateTime, IsActive, UpdateDateTime, Name, Description)
-      VALUES (@globalRole, 10000, SYSDATETIME(), 1, SYSDATETIME(), N'Admin', NULL)`);
     await pool.request().input('id', sql.UniqueIdentifier, account.id)
-      .input('role', sql.UniqueIdentifier, account.roleId)
+      .input('role', sql.UniqueIdentifier, state.users.admin.roleId)
       .input('username', sql.VarChar(20), account.username)
       .input('password', sql.VarChar(255), hash)
       .input('email', sql.VarChar(254), `${account.username}@e2e.test`)
@@ -95,9 +93,9 @@ test('an installation administrator can create, read and update company roles ag
     expect(catalog.body.some((permission) => permission.code === 'corporate-groups.view')).toBe(true);
 
     // The existing authenticated cookie must not override the current database role record.
-    await query("UPDATE Roles SET Name = N'E2E-NotAdmin' WHERE Id = @globalRole");
+    await query('UPDATE Users SET RoleId = NULL WHERE Id = @user');
     expect((await callApi(page, 'GET', '/api/v1/admin/permission-catalog')).status).toBe(403);
-    await query("UPDATE Roles SET Name = N'Admin' WHERE Id = @globalRole");
+    await query('UPDATE Users SET RoleId = @globalRole WHERE Id = @user');
     expect((await callApi(page, 'GET', '/api/v1/admin/permission-catalog')).status).toBe(200);
 
     const initialRoles = await callApi(page, 'GET', rolesPath);
@@ -151,7 +149,6 @@ test('an installation administrator can create, read and update company roles ag
         DELETE FROM SecurityAuditEvents WHERE UserId = @user;
         DELETE FROM LoginLogs WHERE UserId = @user;
         DELETE FROM Users WHERE Id = @user;
-        DELETE FROM Roles WHERE Id = @globalRole;
         COMMIT TRANSACTION;`);
     } finally {
       await pool.close();
