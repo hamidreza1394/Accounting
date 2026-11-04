@@ -178,7 +178,7 @@ public static class CustomerBoundaryEndpoints
             // The audit of a refusal must never turn the intended 400/409 into a 500.
             httpContext.RequestServices.GetRequiredService<ILoggerFactory>()
                 .CreateLogger("Server.Api.CustomerBoundaryEndpoints")
-                .LogError(exception, "The rejection of a customer boundary provisioning could not be audited.");
+                .LogError("The rejection of a customer boundary provisioning could not be audited. ExceptionType={ExceptionType}.", exception.GetType().FullName);
         }
     }
 

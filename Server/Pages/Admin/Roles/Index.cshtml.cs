@@ -83,7 +83,7 @@ public class IndexModel : Infrastructure.BasePageModelWithDatabaseContext
 			//Logger.LogTrace();
 
 			Logger.LogError
-				(message: Constants.Logger.ErrorMessage, args: ex.Message);
+				(message: "Operation failed. ExceptionType={ExceptionType}.", args: ex.GetType().FullName);
 
 			AddPageError
 				(message: Resources.Messages.Errors.UnexpectedError);

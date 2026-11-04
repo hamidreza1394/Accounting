@@ -2376,10 +2376,23 @@
 - **مرزبندی:** اصلاح در شاخه و PR مستقل #526 باقی ماند؛ هیچ تغییری به PRهای Vendor-only، #235، Migration یا schema مشتری اضافه نشد.
 - **اعتبارسنجی:** تست محلی اجرا نشده؛ اجرای .NET CI جدید روی SHA نهایی لازم است.
 
-## 2026-11-04 — Issue #483: تکمیل ایزوله‌سازی E2E مدیریت نقش
-- سناریوی مثبت موجود #484 به spec مستقل با مدیر نصب اختصاصی، اثبات DB-backed authorization، بررسی ماندگاری و 404 بین‌شرکتی و پاک‌سازی finally انتقال یافت؛ حساب‌های مشترک تغییر نمی‌کنند.
-- regression منفی 403/401 نقش‌ها که در snapshot فعلی main موجود نبود، بازگردانده شد؛ سناریوهای #524 و #525 دست‌نخورده‌اند.
-- npm ci، syntax، فهرست تست و بررسی asset محلی موفق؛ اجرای واقعی SQL Server/Production در محیط فاقد dotnet و Docker انجام نشد و نیازمند نتیجه CI روی SHA نهایی است. جزئیات و محدودیت cleanup در `docs/handoffs/ISSUE-483-role-admin-positive-e2e.md`.
+### 2026-11-04 — #521 exception logging hardening (incomplete)
 
-- CI نخست #483 روی `fd1db77`: تعداد ۳۸ تست مرورگر موفق و تست مثبت به علت unique بودن نام Admin شکست خورد؛ اصلاح fixture برای ارجاع به نقش موجود بدون تغییر آن انجام شد. اجرای مجدد CI لازم است.
-- اجرای مجدد CI روی `3fecd490736220f6d1881daccfb508975ec7748e`: job E2E روی Production منتشرشده و SQL Server با ۳۹ تست موفق؛ همه jobهای .NET CI موفق ([run 41821747024](https://github.com/hamidreza1394/Accounting/actions/runs/41821747024)). نتیجه SHAهای بعدی جداگانه بررسی شود.
+- Replaced identified application-owned raw exception/message logging with exception type metadata; request handlers also retain safe event, trace, method, and route template metadata. File-manager error responses no longer expose exception messages.
+- Added capture-logger regression tests using synthetic nested exception and secret data. These tests exercise the API handler and legacy middleware directly, not the full ASP.NET pipeline.
+- Remaining blocker: built-in exception/developer middleware may independently log exception details. Implement and verify an end-to-end safe pipeline and expand regression coverage across remaining paths before closing the issue.
+- Validation: `git diff --check` and static asset check passed. .NET SDK and Docker were unavailable; attempted test runs failed with `dotnet: command not found`, and SDK resolution failed due to TLS. No build, .NET tests, or pre-fix failing test run was possible.
+- Follow-up: retained the original route template when ASP.NET's exception handler clears the active endpoint, and added direct endpoint-filter and original-endpoint regression cases. Attempted test execution still blocked by the missing `dotnet` executable; full-pipeline framework logging remains unresolved.
+- PR #529 initial CI compiled the code but failed one capture test because framework ProblemDetails writes two additional harmless log entries. Updated the test to inspect every entry for secrets/exception objects and identify the application failure event by its fixed message. Initial CI reported 919 passed, 1 failed, 8 skipped; the updated run must be checked separately.
+- Added an application request exception boundary with generic responses and connection aborts for already-started responses, plus TestServer and started-response regression cases. ASP.NET Core automatically installs an outer developer exception page in Development; host/startup and third-party logging remain outside the boundary. This change requires real-application pipeline validation and provider review before the issue can be closed. The new tests were not run locally because the SDK is unavailable.
+- CI for commit `2cf2799` passed build-and-test, E2E, publication, secret scan, CodeQL and Semgrep. Added real-application Development/Production tests that inject a synthetic nested secret-bearing exception inside the middleware pipeline and inspect all captured log entries and responses. The added tests have not been run locally; they need their own CI result. Host/startup/third-party logging outside that pipeline remains a separate limitation.
+- Addressed the CodeQL PR review concern that `HttpContext.TraceIdentifier` can be untrusted: the request logger uses W3C activity trace IDs, or a bounded SHA-256-derived correlation identifier instead of copying arbitrary trace identifier text. Added a synthetic secret/newline regression test. Local .NET execution remains unavailable.
+
+
+## 2026-11-04 — اصلاح CI و CodeQL در PR #529 (Issue #521)
+- **علت شکست .NET CI:** خطای قطعی CS0117 در SafeExceptionLogging.cs؛ نام بدون qualification یعنی Convert.ToHexString در این پروژه به نوع Convert دیگری resolve می‌شد و عضو موردنظر را نداشت.
+- **اصلاح:** طراحی logger ساده شد تا هیچ دادهٔ مشتق از درخواست در log قرار نگیرد: نه HttpContext.TraceIdentifier، نه Activity.TraceId، نه path/route metadata. شناسهٔ خطا اکنون با Guid.NewGuid() در سرور ساخته می‌شود؛ فقط شناسهٔ تولیدشده، HTTP method محدودشده به allowlist و نوع Exception ثبت می‌شوند. در نتیجه وابستگی به hash و Convert.ToHexString نیز حذف شد.
+- **تست رگرسیون:** تست‌های capture logger اکنون مقادیر ساختگی حساس را در TraceIdentifier، Path و Exception قرار می‌دهند و نبود آن‌ها در log را بررسی می‌کنند؛ شناسهٔ FailureId نیز باید قالب GUID تولیدشده در سرور داشته باشد.
+- **مستندات:** سیاست logging در docs/SECURITY.md با حذف route template و trace identifier به‌روزرسانی شد.
+- **اعتبارسنجی:** CI قبلی روی SHA aa0474b7c46b67c5f349f3091091dbb563471e42 به علت CS0117 در Build شکست خورد؛ Test به همین دلیل اجرا نشد. اصلاحات روی SHA جدید ثبت شده‌اند، اما برای SHA نهایی هنوز CI تازه مشاهده نشده است. هشدار CodeQL نیز باید با اسکن جدید تأیید شود.
+- **وضعیت PR:** #529 باز و Merge نشده است. Branch هنگام بررسی ۱۳ commit از main عقب بود و GitHub وضعیت mergeability را false گزارش می‌کرد؛ این موضوع جدا از اصلاح حاضر باید پیش از Merge بررسی و حل شود.

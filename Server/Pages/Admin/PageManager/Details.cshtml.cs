@@ -25,7 +25,7 @@ public class DetailsModel : Infrastructure.BasePageModelWithDatabaseContext
 		}
 		catch (System.Exception ex)
 		{
-			Logger.LogError(message: ex.Message);
+			Logger.LogError("Page manager operation failed. ExceptionType={ExceptionType}.", ex.GetType().FullName);
 
 			AddPageError(message: Resources.Messages.Errors.UnexpectedError);
 		}

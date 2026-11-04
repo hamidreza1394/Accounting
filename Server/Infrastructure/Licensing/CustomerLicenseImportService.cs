@@ -233,7 +233,7 @@ public sealed class CustomerLicenseImportService
                 transaction = null;
             }
             _database.ChangeTracker.Clear();
-            _logger.LogWarning(exception, "Customer license import conflicted with persisted state.");
+            _logger.LogWarning("Customer license import conflicted with persisted state. ExceptionType={ExceptionType}.", exception.GetType().FullName);
             return await RejectAsync("license_import_conflict",
                 localInstallationId, payload.LicenseId, actorUserId, cancellationToken);
         }
@@ -278,7 +278,7 @@ public sealed class CustomerLicenseImportService
         }
         catch (Exception exception) when (exception is DbUpdateException or InvalidOperationException)
         {
-            _logger.LogError(exception, "Could not persist customer license rejection audit event.");
+            _logger.LogError("Could not persist customer license rejection audit event. ExceptionType={ExceptionType}.", exception.GetType().FullName);
             return new CustomerLicenseImportResult(false, false, "license_audit_unavailable", LicenseStatus.Invalid);
         }
     }
