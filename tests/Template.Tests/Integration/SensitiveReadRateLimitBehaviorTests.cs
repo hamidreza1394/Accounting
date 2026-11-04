@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace Template.Tests.Integration;
@@ -46,7 +47,7 @@ public sealed class SensitiveReadRateLimitBehaviorTests : IClassFixture<Sensitiv
                 return await factory.WithDatabaseAsync(async database =>
                 {
                         var hasher = new Infrastructure.Security.PasswordHashService();
-                        var role = new Domain.Role(name: Constants.Role.Admin) { IsActive = true };
+                        var role = await AdminRoleSeed.GetOrCreateAsync(database);
                         var user = new Domain.User(emailAddress: $"{TestData.Unique(prefix)}@example.test")
                         {
                                 Username = TestData.Unique(prefix),
@@ -173,7 +174,7 @@ public sealed class AdministrativeEndpointAuthorizationHttpTests : IClassFixture
                 return await factory.WithDatabaseAsync(async database =>
                 {
                         var hasher = new Infrastructure.Security.PasswordHashService();
-                        var adminRole = new Domain.Role(name: Constants.Role.Admin) { IsActive = true };
+                        var adminRole = await AdminRoleSeed.GetOrCreateAsync(database);
                         var admin = new Domain.User(emailAddress: $"{TestData.Unique("aez")}@example.test")
                         {
                                 Username = TestData.Unique("aez"),
@@ -247,5 +248,18 @@ public sealed class AdministrativeEndpointAuthorizationHttpTests : IClassFixture
                 Assert.Equal(HttpStatusCode.OK, (await adminClient.GetAsync("/api/v1/admin/users?page=1&pageSize=10&descending=false")).StatusCode);
                 Assert.Equal(HttpStatusCode.OK, (await adminClient.GetAsync("/api/v1/admin/permission-catalog")).StatusCode);
                 Assert.Equal(HttpStatusCode.OK, (await adminClient.GetAsync($"/api/v1/admin/companies/{company.Id}/roles")).StatusCode);
+        }
+}
+
+/// <summary>
+/// Tests of one class share a single database (IClassFixture) and `IX_Roles_Name` is unique, so
+/// the installation-administrator role is reused when it already exists instead of created per call.
+/// </summary>
+internal static class AdminRoleSeed
+{
+        public static async Task<Domain.Role> GetOrCreateAsync(Data.DatabaseContext database)
+        {
+                var existing = await database.Roles.FirstOrDefaultAsync(role => role.Name == Constants.Role.Admin);
+                return existing ?? new Domain.Role(name: Constants.Role.Admin) { IsActive = true };
         }
 }
