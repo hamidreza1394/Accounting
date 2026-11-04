@@ -244,6 +244,7 @@ if (!setupRequired)
     builder.Services.AddScoped<Infrastructure.Licensing.ILocalInstallationKeyMetadataProvider,
         Infrastructure.Licensing.WindowsCngLocalInstallationKeyMetadataProvider>();
     builder.Services.AddScoped<Infrastructure.Licensing.CustomerLicenseImportService>();
+    builder.Services.AddCustomerLicenseRuntimeEvaluator();
     builder.Services.AddScoped<Infrastructure.Licensing.CustomerInstallationIdentityEnrollmentService>();
     builder.Services.Configure<Infrastructure.Provisioning.CustomerProvisioningSettings>(
         builder.Configuration.GetSection(Infrastructure.Provisioning.CustomerProvisioningSettings.SectionName));
