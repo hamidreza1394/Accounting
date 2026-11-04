@@ -2348,6 +2348,33 @@
 - typecheck، ۵۳۸ تست Client، build، check:offline، syntax و فهرست تست Playwright و بررسی asset موفق. اجرای واقعی E2E و Build دات‌نت به علت نبود SDK و SQL Server محلی اجرا نشد؛ CI مرجع تأیید است.
 - جزئیات و وابستگی seed مرز مشتری برای گردش عضویت: `docs/handoffs/ISSUE-444-role-transfer-directory-e2e.md`.
 
+## 2026-11-04 — Issue #444: مجوز شرکت جاری و گردش عضویت در UI
+- منوی شرکتی از `/me/permissions` و تأیید عضویت از نقش‌های قابل تخصیص سرور استفاده می‌کند؛ جستجوی دقیق مقصد و ثبت درخواست با API واقعی افزوده شد. برچسب‌های UI کنترل امنیتی نیستند.
+- تست‌های Client و بررسی آفلاین موفق؛ E2E واقعی و dotnet در محیط محلی به علت نبود SDK و SQL Server اجرا نشد. نتیجه CI و fixture مثبت مرز مشتری باقی است.
+- handoff: `docs/handoffs/ISSUE-444-company-permissions-membership-ui.md`.
+
+## 2026-11-03 — Issue #512: تکمیل گزارش امنیتی Backend
+- `GET /admin/security/audit-events` فهرست سفید sort (occurredAt/eventType) و direction دریافت کرد؛ query فقط expressionهای EF ثابت را انتخاب می‌کند و ورودی ستون به SQL تبدیل نمی‌شود.
+- `GET /admin/security/audit-event-types` کد و label سمت سرور ارائه می‌کند؛ `GET /admin/companies` فهرست صفحه‌بندی‌شده نصب برای فیلتر شرکت اضافه شد.
+- فیلتر شرکت و DateTimeOffset UTC موجود حفظ شد؛ `OccurredAtUtc` خروجی پس از EF read صریحاً Kind=UTC می‌گیرد. Export نیز Z دارد.
+- Retention در D-070 با وضعیت Proposed ثبت شد؛ هیچ endpoint/job/permission اجرایی یا purge پیاده‌سازی نشد تا مالک تصمیم بگیرد.
+- Unit/SQL Server/Build/Full Test هنوز اجرا نشده‌اند؛ Verified نیست. بدون Migration و ClientApp.
+
+
+## 2026-11-04 — Issue #214: customer runtime revocation evaluation
+- Added `ICustomerLicenseRuntimeEvaluator` as the shared customer-runtime evaluation entry point; it reloads the current installed envelope and validates it through the revocation-aware `ICustomerLicenseEnvelopeValidator` on every evaluation.
+- Registered the evaluator in Server DI through `AddCustomerLicenseRuntimeEvaluator()`; existing startup middleware and forwarded-header configuration are preserved.
+- Added unit regression coverage for valid/revoked licenses, unavailable or invalid revocation snapshots/trust, state-store failure, missing license, deterministic retries, Grace rejection, and invalid installation IDs.
+- Reused the clean evaluator implementation; the two similarly named enforcement branches were inspected separately. The divergent branch with an empty work log and removed middleware was not used.
+- .NET build/tests have not been run in this environment. CI must verify the PR head; no local test success is claimed.
+
+
+## 2026-11-04 — Issue #214: اصلاح شکست DI registration در PR #526
+- **علت ریشه‌ای CI:** `Server/Program.cs` متد `AddCustomerLicenseRuntimeEvaluator()` را به‌صورت extension فراخوانی می‌کرد، اما namespace تعریف آن (`Infrastructure.Licensing`) وارد نشده بود؛ کامپایلر `CS1061` گزارش کرد.
+- **اصلاح:** فراخوانی به نام کامل static تبدیل شد تا ambiguity مربوط به namespace حذف شود.
+- **تست Regression:** آزمون جدید تأیید می‌کند extension، `ICustomerLicenseRuntimeEvaluator` را با lifetime از نوع Scoped ثبت می‌کند.
+- **مرزبندی:** اصلاح در شاخه و PR مستقل #526 باقی ماند؛ هیچ تغییری به PRهای Vendor-only، #235، Migration یا schema مشتری اضافه نشد.
+- **اعتبارسنجی:** تست محلی اجرا نشده؛ اجرای .NET CI جدید روی SHA نهایی لازم است.
 
 ## 2026-11-04 — Issue #393: سازندهٔ امن Payload برای افزایش سقف شرکت
 - **محدوده:** نخستین برش Vendor-only از Add-on issuance؛ فقط ساخت candidate payload برای افزایش installation-scoped `maxCompanies` روی همان LicenseId/InstallationId.
