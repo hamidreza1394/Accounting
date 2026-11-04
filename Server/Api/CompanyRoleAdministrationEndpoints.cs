@@ -32,7 +32,8 @@ public static class CompanyRoleAdministrationEndpoints
         roles.MapGet("", GetRolesAsync);
         roles.MapPost("", CreateRoleAsync).RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
         roles.MapPut("/{roleId:guid}", UpdateRoleAsync).RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
-        roles.MapGet("/{roleId:guid}/members", GetRoleMembersAsync);
+        roles.MapGet("/{roleId:guid}/members", GetRoleMembersAsync)
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
         roles.MapPost("/{roleId:guid}/members/transfer", TransferMembersAsync)
             .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
         roles.MapPost("/{roleId:guid}/members/{userId:guid}", AssignMembershipAsync)

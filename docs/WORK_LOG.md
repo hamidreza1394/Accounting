@@ -2425,3 +2425,12 @@
 - **Regression:** دو تست ورودی‌های mutable را پس از ساخت amendment تغییر می‌دهند و ثابت می‌کنند خروجی تغییر نمی‌کند.
 - **محدوده:** فقط Vendor pure builder، تست‌ها و مستندات؛ بدون DB، Migration، signer یا `Server/**`.
 - **اعتبارسنجی:** تست محلی اجرا نشده؛ CI روی SHA جدید لازم است.
+
+
+## 2026-11-04 — Issue #522: محدودسازی نرخ خواندن اطلاعات هویتی
+- **یافته:** چهار endpoint خواندن اطلاعات هویتی از نرخ عمومی 300 درخواست در دقیقه استفاده می‌کردند، در حالی که endpointهای تغییردهنده و نشست از سیاست مستقل `api-sensitive` (پیش‌فرض 30 درخواست در 60 ثانیه) استفاده می‌کنند.
+- **اصلاح:** سیاست `api-sensitive` علاوه بر `api` روی `GET /admin/users`، `GET /admin/users/{userId}`، `GET /companies/{companyId}/users` و `GET /admin/companies/{companyId}/roles/{roleId}/members` اعمال شد.
+- **Regression:** تست معماری با `EndpointDataSource` وجود هر چهار Route، فعل GET و حضور هم‌زمان هر دو policy را از metadata واقعی endpoint بررسی می‌کند.
+- **مرز تغییر:** authorization، DTO، فیلترها، pagination، no-store، schema و Migration تغییر نکردند.
+- **اعتبارسنجی:** اجرای محلی .NET در این محیط انجام نشد؛ Build و تست‌های کامل، به‌ویژه تست metadata جدید، باید روی CI شاخه نهایی بررسی شوند.
+- **handoff:** `docs/handoffs/ISSUE-522-sensitive-identity-read-rate-limit.md`.
