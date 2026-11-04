@@ -2355,3 +2355,11 @@
 - Added unit regression coverage for valid/revoked licenses, unavailable or invalid revocation snapshots/trust, state-store failure, missing license, deterministic retries, Grace rejection, and invalid installation IDs.
 - Reused the clean evaluator implementation; the two similarly named enforcement branches were inspected separately. The divergent branch with an empty work log and removed middleware was not used.
 - .NET build/tests have not been run in this environment. CI must verify the PR head; no local test success is claimed.
+
+
+## 2026-11-04 — Issue #214: اصلاح شکست DI registration در PR #526
+- **علت ریشه‌ای CI:** `Server/Program.cs` متد `AddCustomerLicenseRuntimeEvaluator()` را به‌صورت extension فراخوانی می‌کرد، اما namespace تعریف آن (`Infrastructure.Licensing`) وارد نشده بود؛ کامپایلر `CS1061` گزارش کرد.
+- **اصلاح:** فراخوانی به نام کامل static تبدیل شد تا ambiguity مربوط به namespace حذف شود.
+- **تست Regression:** آزمون جدید تأیید می‌کند extension، `ICustomerLicenseRuntimeEvaluator` را با lifetime از نوع Scoped ثبت می‌کند.
+- **مرزبندی:** اصلاح در شاخه و PR مستقل #526 باقی ماند؛ هیچ تغییری به PRهای Vendor-only، #235، Migration یا schema مشتری اضافه نشد.
+- **اعتبارسنجی:** تست محلی اجرا نشده؛ اجرای .NET CI جدید روی SHA نهایی لازم است.

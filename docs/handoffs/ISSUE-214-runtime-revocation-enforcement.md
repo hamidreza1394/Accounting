@@ -3,7 +3,7 @@
 - Issue: [#214](https://github.com/hamidreza1394/Accounting/issues/214)
 - Branch: `fix/214-runtime-evaluator`
 - PR: [#526](https://github.com/hamidreza1394/Accounting/pull/526)
-- وضعیت: نقطهٔ مشترک runtime evaluation افزوده شد؛ ثبت DI در Program.cs و تست‌های regression باید همراه PR کامل شوند.
+- وضعیت: اصلاح ثبت DI و تست رگرسیون آن در این commit اضافه شد؛ CI روی SHA جدید باید تأیید کند.
 
 ## شکاف قبلی
 - قراردادها، `RevocationAwareLicenseEnvelopeValidator`، `OfflineRevocationConsumer`، state store با TPM و import path از قبل در main بودند.
@@ -29,3 +29,10 @@
 
 ## محدودیت محیط
 - SDK .NET 10 در محیط agent موجود نبود؛ Build/Test محلی اجرا نشده است.
+
+## علت شکست CI و اصلاح
+- اجرای `.NET CI` روی SHA قبلی با `CS1061` در `Server/Program.cs` شکست خورد: متد extension در namespace `Infrastructure.Licensing` تعریف شده بود، اما این فایل namespace را import نمی‌کرد.
+- فراخوانی به invocation صریح static تبدیل شد تا وابسته به using/extension lookup نباشد.
+- تست رگرسیون جدید ثبت scoped evaluator را در ServiceCollection بررسی می‌کند.
+- این تغییر فقط در PR مستقل #526 است؛ به PR Vendor-only یا Issue #235 منتقل نشده است.
+- تست محلی در این نشست اجرا نشده؛ نتیجهٔ CI جدید مرجع است.

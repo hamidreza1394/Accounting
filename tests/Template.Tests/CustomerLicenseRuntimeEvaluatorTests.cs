@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Faranou.Licensing.Contracts;
 using Infrastructure.Licensing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -18,6 +19,20 @@ namespace Template.Tests;
 public sealed class CustomerLicenseRuntimeEvaluatorTests
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    [Fact]
+    public void AddCustomerLicenseRuntimeEvaluator_RegistersScopedEvaluator()
+    {
+        var services = new ServiceCollection();
+
+        services.AddCustomerLicenseRuntimeEvaluator();
+
+        var descriptor = Assert.Single(
+            services,
+            item => item.ServiceType == typeof(ICustomerLicenseRuntimeEvaluator));
+        Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
+        Assert.Equal(typeof(CustomerLicenseRuntimeEvaluator), descriptor.ImplementationType);
+    }
 
     [Fact]
     public async Task EvaluateCurrentAsync_ValidLicenseNotRevoked_IsUsable()
