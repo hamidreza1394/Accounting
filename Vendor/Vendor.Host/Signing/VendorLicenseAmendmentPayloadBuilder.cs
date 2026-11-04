@@ -76,6 +76,22 @@ public static class VendorLicenseAmendmentPayloadBuilder
             return Fail("amendment_issued_at_invalid", out errorCode);
         }
 
+        var effectiveIssuedAt = issuedAtUtc.ToUniversalTime();
+        if (currentPayload.NotBeforeUtc is { } notBefore &&
+            notBefore.ToUniversalTime() > effectiveIssuedAt)
+        {
+            return Fail("license_not_yet_valid", out errorCode);
+        }
+
+        // Do not extend a term license after its entitlement has expired, even during any
+        // historical grace period. Support/update expiry is intentionally independent.
+        if (currentPayload.LicenseKind == LicensePayload.KindTerm &&
+            (currentPayload.ExpiresAtUtc is not { } expiresAt ||
+             expiresAt.ToUniversalTime() <= effectiveIssuedAt))
+        {
+            return Fail("license_outside_validity", out errorCode);
+        }
+
         var candidate = currentPayload with
         {
             IssuedAtUtc = issuedAtUtc.ToUniversalTime(),

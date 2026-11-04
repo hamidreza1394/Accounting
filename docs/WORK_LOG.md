@@ -2358,3 +2358,5 @@
 - **اعتبارسنجی:** Build/Test محلی اجرا نشده؛ CI روی PR لازم است. هیچ Migration، Customer-side consumer، `Server/**`، کلید یا secret تغییر نکرد.
 - **باقی‌مانده:** purchase/order evidence، API درخواست Amendment، Maker-Checker، امضای fail-closed و export در گام‌های بعدی #393؛ Company-scoped add-ons تا وجود current v2 و CompanyReference قابل اعتماد.
 
+
+- **تکمیل اعتبار زمانی در همان PR #527:** builder اکنون term license را پیش از NotBefore یا پس از Expires رد می‌کند و هیچ grace ضمنی برای صدور add-on به کار نمی‌برد؛ support/update expiry به‌تنهایی perpetual entitlement را منقضی نمی‌کند. تست‌های منفی/مثبت این مرز اضافه شدند. این commit جدید نیازمند اجرای مجدد CI است.

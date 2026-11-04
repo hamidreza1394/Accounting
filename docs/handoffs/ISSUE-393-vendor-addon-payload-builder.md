@@ -9,7 +9,7 @@
 - [x] ساخت candidate amendment برای افزایش installation-scoped `maxCompanies` روی همان LicenseId و InstallationId.
 - [x] حفظ Payload v1 به‌صورت v1 و Payload v2 به‌صورت v2؛ بدون تبدیل ضمنی نسخه یا حذف entitlementهای موجود.
 - [x] الزام sequence دقیقاً بزرگ‌تر، سقف جدید بزرگ‌تر، منابع Active/Issued و تطابق metadata با آخرین payload.
-- [x] تست‌های واحد برای v1/v2، حفظ حقوق، metadata stale، cross-customer، وضعیت نامعتبر، replay/sequence و عقب‌گرد زمان.
+- [x] تست‌های واحد برای v1/v2، حفظ حقوق، metadata stale، cross-customer، وضعیت نامعتبر، replay/sequence و عقب‌گرد زمان، انقضا/شروع term و استقلال support/update.
 - [ ] اجرای CI روی SHA نهایی و بازبینی diff.
 - [ ] تکمیل persistence، commercial order/purchase evidence، maker-checker approval و signing/export در PRهای بعدی #393.
 
@@ -60,3 +60,5 @@
 - .NET CI روی همان SHA: Build موفق؛ مجموع 923 تست، 915 موفق، 8 skip و 0 شکست. E2E و publish در زمان ثبت این یادداشت هنوز در حال اجرا بودند.
 - Semgrep، CodeQL و Secret Scan موفق شدند.
 - دو هشدار CA1861 در fixtureهای تست با آرایه‌های readonly مشترک اصلاح شده‌اند؛ این commit جدید نیازمند اجرای مجدد CI است.
+
+- **اصلاح اعتبار زمانی:** amendment فقط در بازهٔ اعتبار حق استفاده ساخته می‌شود؛ grace ضمنی برای term expiry اعمال نمی‌شود. انقضای support/update مانع amendment یک perpetual license نیست.

@@ -177,6 +177,60 @@ public sealed class VendorLicenseAmendmentPayloadBuilderTests
     }
 
     [Fact]
+    public void RejectsTermLicenseBeforeStartOrAfterExpiryWithoutUsingGrace()
+    {
+        var fixture = CreateV1Fixture();
+        var startsAt = IssuedAt.AddHours(2);
+        fixture.License.ValidFromUtc = startsAt;
+        fixture.Payload = fixture.Payload with { NotBeforeUtc = startsAt };
+
+        var success = VendorLicenseAmendmentPayloadBuilder.TryBuildMaxCompaniesIncrease(
+            fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
+            10, IssuedAt.AddHours(1), out var amendment, out var error);
+
+        Assert.False(success);
+        Assert.Null(amendment);
+        Assert.Equal("license_not_yet_valid", error);
+
+        fixture = CreateV1Fixture();
+        var expiresAt = IssuedAt.AddMinutes(30);
+        fixture.License.ValidUntilUtc = expiresAt;
+        fixture.Payload = fixture.Payload with { ExpiresAtUtc = expiresAt };
+        success = VendorLicenseAmendmentPayloadBuilder.TryBuildMaxCompaniesIncrease(
+            fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
+            10, IssuedAt.AddHours(1), out amendment, out error);
+
+        Assert.False(success);
+        Assert.Null(amendment);
+        Assert.Equal("license_outside_validity", error);
+    }
+
+    [Fact]
+    public void ExpiredSupportAndUpdateDatesDoNotBlockPerpetualLicenseAmendment()
+    {
+        var fixture = CreateV2Fixture();
+        fixture.License.LicenseKind = LicensePayload.KindPerpetual;
+        fixture.License.ValidUntilUtc = null;
+        fixture.Payload = fixture.Payload with
+        {
+            LicenseKind = LicensePayload.KindPerpetual,
+            ExpiresAtUtc = null,
+            SupportUntilUtc = IssuedAt.AddDays(-30),
+            UpdatesUntilUtc = IssuedAt.AddDays(-10)
+        };
+
+        var success = VendorLicenseAmendmentPayloadBuilder.TryBuildMaxCompaniesIncrease(
+            fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
+            10, IssuedAt.AddDays(1), out var amendment, out var error);
+
+        Assert.True(success);
+        Assert.Null(error);
+        Assert.NotNull(amendment);
+        Assert.Equal(fixture.Payload.SupportUntilUtc, amendment!.SupportUntilUtc);
+        Assert.Equal(fixture.Payload.UpdatesUntilUtc, amendment.UpdatesUntilUtc);
+    }
+
+    [Fact]
     public void RejectsInvalidPayloadSequenceExhaustionAndClockRollback()
     {
         var fixture = CreateV1Fixture();
