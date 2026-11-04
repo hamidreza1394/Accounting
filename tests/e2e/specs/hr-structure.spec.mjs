@@ -176,7 +176,7 @@ test('the organizational structure works end to end on SQL Server and fails clos
     const detail = await callApi(page, 'GET', `${employeesPath}/${employee.body.id}`);
     expect(detail.status).toBe(200);
     expect(detail.body.activeAssignment.id).toBe(started.body.id);
-    expect(detail.body.activeAssignment.unitId).toBe(unit.body.id);
+    expect(detail.body.activeAssignment.organizationalUnitId).toBe(unit.body.id);
     expect(detail.body.rowVersion).toBeTruthy();
 
     // The history endpoint serves the append-only rows without rewriting anything.
