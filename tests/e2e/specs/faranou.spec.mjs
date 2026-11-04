@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import sql from 'mssql';
 
 const state = JSON.parse(readFileSync(new URL('../.e2e-state.json', import.meta.url), 'utf8'));
-const { alice, bob, carol, dave, erin, frank, admin } = state.users;
+const { alice, bob, carol, dave, erin, frank } = state.users;
 const { a, b, c, d, e, f } = state.companies;
 
 // Every page records CSP violations (enforced and report-only) and script errors.
@@ -69,94 +69,24 @@ async function signIn(page, user, { rememberMe = false } = {}) {
   ]);
 }
 
-async function callApi(page, method, path, body, token) {
-  return page.evaluate(async ({ method, path, body, token }) => {
-    const headers = {};
-    if (body !== undefined) headers['Content-Type'] = 'application/json';
-    if (token?.headerName && token?.requestToken) headers[token.headerName] = token.requestToken;
-    const response = await fetch(path, {
-      method,
-      credentials: 'same-origin',
-      headers,
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    });
-    const text = await response.text();
-    let payload = null;
-    if (text) {
-      try { payload = JSON.parse(text); } catch { payload = text; }
-    }
-    return { status: response.status, body: payload };
-  }, { method, path, body, token });
-}
 
-
-test('an installation administrator can create, read and update company roles against SQL Server', async ({ page }) => {
-  await signIn(page, admin);
+// Regression from #481: an ordinary, authenticated user cannot administer roles.
+test('a normal company user is refused role administration APIs', async ({ page }) => {
+  await signIn(page, alice);
   await page.goto('/app/');
-
-  const rolesPath = `/api/v1/admin/companies/${a.id}/roles`;
-  const catalog = await callApi(page, 'GET', '/api/v1/admin/permission-catalog');
-  expect(catalog.status).toBe(200);
-  expect(catalog.body.some((permission) => permission.code === 'corporate-groups.view')).toBe(true);
-
-  const initialRoles = await callApi(page, 'GET', rolesPath);
-  expect(initialRoles.status).toBe(200);
-  expect(initialRoles.body.some((role) => role.id === a.roleId)).toBe(true);
-
-  const roleCode = `E2E-ROLE-${admin.username.slice(-6).toUpperCase()}`;
-  const createBody = {
-    code: roleCode,
-    name: 'نقش آزمون مدیر نصب',
-    templateCode: null,
-    permissionCodes: ['corporate-groups.view'],
-  };
-  const withoutAntiforgery = await callApi(page, 'POST', rolesPath, createBody);
-  expect(withoutAntiforgery.status).toBe(400);
-
-  const antiforgery = await callApi(page, 'GET', '/api/v1/antiforgery/token');
-  expect(antiforgery.status).toBe(200);
-  const created = await callApi(page, 'POST', rolesPath, createBody, antiforgery.body);
-  expect(created.status).toBe(201);
-  expect(created.body.id).toBeTruthy();
-
-  const afterCreate = await callApi(page, 'GET', rolesPath);
-  const createdRole = afterCreate.body.find((role) => role.id === created.body.id);
-  expect(createdRole).toMatchObject({
-    code: roleCode,
-    name: 'نقش آزمون مدیر نصب',
-    isActive: true,
-    permissionCodes: ['corporate-groups.view'],
-  });
-
-  const updated = await callApi(page, 'PUT', `${rolesPath}/${created.body.id}`, {
-    name: 'نقش آزمون به‌روزشده',
-    isActive: true,
-    permissionCodes: [],
-  }, antiforgery.body);
-  expect(updated.status).toBe(204);
-
-  const afterUpdate = await callApi(page, 'GET', rolesPath);
-  expect(afterUpdate.body.find((role) => role.id === created.body.id)).toMatchObject({
-    name: 'نقش آزمون به‌روزشده',
-    isActive: true,
-    permissionCodes: [],
-  });
-
-  // The administrator is global to this installation, but route role IDs remain company-scoped.
-  const foreignRoleUpdate = await callApi(page, 'PUT', `${rolesPath}/${b.roleId}`, {
-    name: 'نباید تغییر کند',
-    isActive: true,
-    permissionCodes: [],
-  }, antiforgery.body);
-  expect(foreignRoleUpdate.status).toBe(404);
-
-  const deactivated = await callApi(page, 'PUT', `${rolesPath}/${created.body.id}`, {
-    name: 'نقش آزمون به‌روزشده',
-    isActive: false,
-    permissionCodes: [],
-  }, antiforgery.body);
-  expect(deactivated.status).toBe(204);
-  await expectCleanPage(page);
+  const denied = await page.evaluate(async (companyId) => {
+    const paths = ['/api/v1/admin/permission-catalog', `/api/v1/admin/companies/${companyId}/roles`];
+    return Promise.all(paths.map(async (path) => {
+      const response = await fetch(path, { credentials: 'same-origin' });
+      return { status: response.status, body: await response.json() };
+    }));
+  }, a.id);
+  expect(denied).toEqual([
+    { status: 403, body: { error: 'فقط مدیر نصب سامانه مجاز به این عملیات است.' } },
+    { status: 403, body: { error: 'فقط مدیر نصب سامانه مجاز به این عملیات است.' } },
+  ]);
+  await page.context().clearCookies();
+  expect(await page.evaluate(async () => (await fetch('/api/v1/admin/permission-catalog')).status)).toBe(401);
 });
 
 async function setUserActive(user, active) {
