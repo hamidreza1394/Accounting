@@ -24,7 +24,8 @@ public sealed class CompanyRoleAdministrationEndpointTests
 
         var result = await Server.Api.CompanyRoleAdministrationEndpoints.CreateRoleAsync(
             fixture.CompanyId, new DefaultHttpContext(), fixture.Principal(admin.Id), request,
-            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+            new AllowAntiforgery(), fixture.Database, fixture.CompanyAccess, fixture.CeilingService,
+            TimeProvider.System, default);
 
         Assert.Equal(StatusCodes.Status201Created, (result as IStatusCodeHttpResult)?.StatusCode);
         var role = await fixture.Database.CompanyRoles.Include(x => x.RolePermissions)
@@ -49,7 +50,8 @@ public sealed class CompanyRoleAdministrationEndpointTests
 
         var result = await Server.Api.CompanyRoleAdministrationEndpoints.CreateRoleAsync(
             fixture.CompanyId, new DefaultHttpContext(), fixture.Principal(admin.Id), request,
-            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+            new AllowAntiforgery(), fixture.Database, fixture.CompanyAccess, fixture.CeilingService,
+            TimeProvider.System, default);
 
         Assert.Equal(StatusCodes.Status400BadRequest, (result as IStatusCodeHttpResult)?.StatusCode);
         Assert.False(await fixture.Database.CompanyRoles.AnyAsync());
@@ -78,7 +80,8 @@ public sealed class CompanyRoleAdministrationEndpointTests
         var result = await Server.Api.CompanyRoleAdministrationEndpoints.UpdateRoleAsync(
             fixture.CompanyId, foreignRole.Id, new DefaultHttpContext(), fixture.Principal(admin.Id),
             new Server.Api.UpdateCompanyRoleRequest("تغییر غیرمجاز", true, Array.Empty<string>()),
-            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+            new AllowAntiforgery(), fixture.Database, fixture.CompanyAccess, fixture.CeilingService,
+            TimeProvider.System, default);
 
         Assert.Equal(StatusCodes.Status404NotFound, (result as IStatusCodeHttpResult)?.StatusCode);
         Assert.Equal("نقش شرکت دیگر", (await fixture.Database.CompanyRoles.SingleAsync(x => x.Id == foreignRole.Id)).Name);
@@ -106,7 +109,8 @@ public sealed class CompanyRoleAdministrationEndpointTests
 
         var result = await Server.Api.CompanyRoleAdministrationEndpoints.AssignMembershipAsync(
             fixture.CompanyId, foreignRole.Id, user.Id, new DefaultHttpContext(),
-            fixture.Principal(admin.Id), new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+            fixture.Principal(admin.Id), new AllowAntiforgery(), fixture.Database,
+            fixture.CompanyAccess, fixture.CeilingService, TimeProvider.System, default);
 
         Assert.Equal(StatusCodes.Status404NotFound, (result as IStatusCodeHttpResult)?.StatusCode);
         Assert.False(await fixture.Database.UserCompanyMemberships.AnyAsync());
@@ -132,7 +136,8 @@ public sealed class CompanyRoleAdministrationEndpointTests
 
         var result = await Server.Api.CompanyRoleAdministrationEndpoints.AssignMembershipAsync(
             fixture.CompanyId, role.Id, user.Id, new DefaultHttpContext(),
-            fixture.Principal(admin.Id), new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+            fixture.Principal(admin.Id), new AllowAntiforgery(), fixture.Database,
+            fixture.CompanyAccess, fixture.CeilingService, TimeProvider.System, default);
 
         Assert.Equal(StatusCodes.Status409Conflict, (result as IStatusCodeHttpResult)?.StatusCode);
         Assert.False(await fixture.Database.UserCompanyMemberships.AnyAsync());
@@ -166,28 +171,32 @@ public sealed class CompanyRoleAdministrationEndpointTests
 
         var result = await Server.Api.CompanyRoleAdministrationEndpoints.AssignMembershipAsync(
             fixture.CompanyId, role.Id, user.Id, new DefaultHttpContext(),
-            fixture.Principal(admin.Id), new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+            fixture.Principal(admin.Id), new AllowAntiforgery(), fixture.Database,
+            fixture.CompanyAccess, fixture.CeilingService, TimeProvider.System, default);
 
         Assert.Equal(StatusCodes.Status409Conflict, (result as IStatusCodeHttpResult)?.StatusCode);
         Assert.False((await fixture.Database.UserCompanyMemberships.SingleAsync()).IsActive);
     }
 
     [Fact]
-    public async Task GetRoles_RejectsAnAuthenticatedNonInstallationAdministrator()
+    public async Task GetRoles_FailsClosedForAUserWithoutAnyCompanyRelationship()
     {
         await using var fixture = new Fixture();
-        var user = fixture.AddUser("company-manager");
+        var user = fixture.AddUser("outsider");
         fixture.AddCompany();
         await fixture.Database.SaveChangesAsync();
 
+        // A user with no membership and no installation role gets the same 404 as an
+        // unknown company: the endpoint existence and company identity are not disclosed.
         var result = await Server.Api.CompanyRoleAdministrationEndpoints.GetRolesAsync(
             fixture.CompanyId,
             new DefaultHttpContext(),
             fixture.Principal(user.Id),
             fixture.Database,
+            fixture.CompanyAccess,
             default);
 
-        Assert.Equal(StatusCodes.Status403Forbidden, (result as IStatusCodeHttpResult)?.StatusCode);
+        Assert.Equal(StatusCodes.Status404NotFound, (result as IStatusCodeHttpResult)?.StatusCode);
     }
 
     [Fact]
@@ -205,7 +214,7 @@ public sealed class CompanyRoleAdministrationEndpointTests
 
         var result = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
             fixture.CompanyId, accountant.Id, null, null, new DefaultHttpContext(),
-            fixture.Principal(admin.Id), fixture.Database, default);
+            fixture.Principal(admin.Id), fixture.Database, fixture.CompanyAccess, default);
 
         var ok = Assert.IsType<Ok<Server.Api.CompanyRoleMemberListResponse>>(result);
         var member = Assert.Single(ok.Value!.Items);
@@ -228,7 +237,7 @@ public sealed class CompanyRoleAdministrationEndpointTests
 
         var result = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
             fixture.CompanyId, role.Id, 2, 2, new DefaultHttpContext(),
-            fixture.Principal(admin.Id), fixture.Database, default);
+            fixture.Principal(admin.Id), fixture.Database, fixture.CompanyAccess, default);
         var page = Assert.IsType<Ok<Server.Api.CompanyRoleMemberListResponse>>(result).Value!;
         Assert.Equal(3, page.TotalCount);
         Assert.Single(page.Items);
@@ -236,7 +245,7 @@ public sealed class CompanyRoleAdministrationEndpointTests
 
         var huge = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
             fixture.CompanyId, role.Id, 0, 100000, new DefaultHttpContext(),
-            fixture.Principal(admin.Id), fixture.Database, default);
+            fixture.Principal(admin.Id), fixture.Database, fixture.CompanyAccess, default);
         var clamped = Assert.IsType<Ok<Server.Api.CompanyRoleMemberListResponse>>(huge).Value!;
         Assert.Equal(1, clamped.Page);
         Assert.Equal(100, clamped.PageSize);
@@ -255,13 +264,14 @@ public sealed class CompanyRoleAdministrationEndpointTests
 
         var foreign = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
             fixture.CompanyId, foreignRole.Id, null, null, new DefaultHttpContext(),
-            fixture.Principal(admin.Id), fixture.Database, default);
+            fixture.Principal(admin.Id), fixture.Database, fixture.CompanyAccess, default);
         Assert.Equal(StatusCodes.Status404NotFound, (foreign as IStatusCodeHttpResult)?.StatusCode);
 
-        var forbidden = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
+        // The manager has no membership in the routed company: same 404 as an unknown company.
+        var outsider = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
             fixture.CompanyId, foreignRole.Id, null, null, new DefaultHttpContext(),
-            fixture.Principal(manager.Id), fixture.Database, default);
-        Assert.Equal(StatusCodes.Status403Forbidden, (forbidden as IStatusCodeHttpResult)?.StatusCode);
+            fixture.Principal(manager.Id), fixture.Database, fixture.CompanyAccess, default);
+        Assert.Equal(StatusCodes.Status404NotFound, (outsider as IStatusCodeHttpResult)?.StatusCode);
     }
 
     [Fact]
@@ -314,7 +324,8 @@ public sealed class CompanyRoleAdministrationEndpointTests
         var blocked = await Server.Api.CompanyRoleAdministrationEndpoints.UpdateRoleAsync(
             fixture.CompanyId, source.Id, new DefaultHttpContext(), fixture.Principal(admin.Id),
             new Server.Api.UpdateCompanyRoleRequest(source.Name, false, Array.Empty<string>()),
-            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+            new AllowAntiforgery(), fixture.Database, fixture.CompanyAccess, fixture.CeilingService,
+            TimeProvider.System, default);
         Assert.Equal(StatusCodes.Status409Conflict, (blocked as IStatusCodeHttpResult)?.StatusCode);
 
         await fixture.Transfer(admin.Id, source.Id, target.Id);
@@ -322,7 +333,8 @@ public sealed class CompanyRoleAdministrationEndpointTests
         var allowed = await Server.Api.CompanyRoleAdministrationEndpoints.UpdateRoleAsync(
             fixture.CompanyId, source.Id, new DefaultHttpContext(), fixture.Principal(admin.Id),
             new Server.Api.UpdateCompanyRoleRequest(source.Name, false, Array.Empty<string>()),
-            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+            new AllowAntiforgery(), fixture.Database, fixture.CompanyAccess, fixture.CeilingService,
+            TimeProvider.System, default);
         Assert.Equal(StatusCodes.Status204NoContent, (allowed as IStatusCodeHttpResult)?.StatusCode);
     }
 
@@ -365,7 +377,7 @@ public sealed class CompanyRoleAdministrationEndpointTests
     }
 
     [Fact]
-    public async Task TransferMembers_RejectsNonAdministratorsAndDoesNotMoveAnyone()
+    public async Task TransferMembers_FailsClosedForAUserWithoutAnyCompanyRelationship()
     {
         await using var fixture = new Fixture();
         var manager = fixture.AddUser("company-manager");
@@ -377,7 +389,7 @@ public sealed class CompanyRoleAdministrationEndpointTests
 
         var result = await fixture.Transfer(manager.Id, source.Id, target.Id);
 
-        Assert.Equal(StatusCodes.Status403Forbidden, (result as IStatusCodeHttpResult)?.StatusCode);
+        Assert.Equal(StatusCodes.Status404NotFound, (result as IStatusCodeHttpResult)?.StatusCode);
         Assert.Equal(source.Id, (await fixture.Database.UserCompanyMemberships.SingleAsync()).RoleId);
     }
 
@@ -412,13 +424,15 @@ public sealed class CompanyRoleAdministrationEndpointTests
 
         var noBody = await Server.Api.CompanyRoleAdministrationEndpoints.TransferMembersAsync(
             fixture.CompanyId, target.Id, new DefaultHttpContext(), fixture.Principal(admin.Id), null,
-            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+            new AllowAntiforgery(), fixture.Database, fixture.CompanyAccess, fixture.CeilingService,
+            TimeProvider.System, default);
         Assert.Equal(StatusCodes.Status400BadRequest, (noBody as IStatusCodeHttpResult)?.StatusCode);
 
         var unknownCompany = await Server.Api.CompanyRoleAdministrationEndpoints.TransferMembersAsync(
             Guid.NewGuid(), target.Id, new DefaultHttpContext(), fixture.Principal(admin.Id),
             new Server.Api.TransferCompanyRoleMembersRequest(target.Id),
-            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+            new AllowAntiforgery(), fixture.Database, fixture.CompanyAccess, fixture.CeilingService,
+            TimeProvider.System, default);
         Assert.Equal(StatusCodes.Status404NotFound, (unknownCompany as IStatusCodeHttpResult)?.StatusCode);
 
         var foreign = await fixture.Transfer(admin.Id, foreignSource.Id, target.Id);
@@ -441,7 +455,8 @@ public sealed class CompanyRoleAdministrationEndpointTests
         var result = await Server.Api.CompanyRoleAdministrationEndpoints.TransferMembersAsync(
             fixture.CompanyId, source.Id, new DefaultHttpContext(), fixture.Principal(admin.Id),
             new Server.Api.TransferCompanyRoleMembersRequest(target.Id),
-            new DenyAntiforgery(), fixture.Database, TimeProvider.System, default);
+            new DenyAntiforgery(), fixture.Database, fixture.CompanyAccess, fixture.CeilingService,
+            TimeProvider.System, default);
 
         Assert.Equal(StatusCodes.Status400BadRequest, (result as IStatusCodeHttpResult)?.StatusCode);
         await using var reader = fixture.NewContext();
@@ -503,6 +518,10 @@ public sealed class CompanyRoleAdministrationEndpointTests
 
         public Data.DatabaseContext Database { get; }
         public Guid CompanyId { get; private set; }
+
+        public Infrastructure.Tenancy.CompanyAccessService CompanyAccess => new(Database);
+
+        public Infrastructure.Tenancy.DelegationCeilingService CeilingService => new(Database);
 
         public Domain.User AddAdministrator()
         {
@@ -579,7 +598,8 @@ public sealed class CompanyRoleAdministrationEndpointTests
             Server.Api.CompanyRoleAdministrationEndpoints.TransferMembersAsync(
                 CompanyId, sourceRoleId, new DefaultHttpContext(), Principal(actorId),
                 new Server.Api.TransferCompanyRoleMembersRequest(targetRoleId),
-                new AllowAntiforgery(), Database, TimeProvider.System, default);
+                new AllowAntiforgery(), Database, CompanyAccess, CeilingService,
+                TimeProvider.System, default);
 
         public ClaimsPrincipal Principal(Guid id) => new(
             new ClaimsIdentity(

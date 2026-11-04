@@ -57,9 +57,9 @@ DELTA_MIGRATION_NAME = "SeedCompanyUserListPermission"
 # the model of the migration before it (DELTA_MIGRATION_*) and the model of the code
 # base, so the files can not drift apart from the snapshot. DELTA_MIGRATION_* is
 # published history and is never rewritten, exactly like 'InitialCreate'.
-CURRENT_MIGRATION_ID = "20261103160000"
-CURRENT_MIGRATION_NAME = "AddCompanyRoleMembershipRowVersions"
-CURRENT_MIGRATION_CLASS = "AddCompanyRoleMembershipRowVersions"
+CURRENT_MIGRATION_ID = "20261104174711"
+CURRENT_MIGRATION_NAME = "SeedCompanyRoleAdministrationPermissions"
+CURRENT_MIGRATION_CLASS = "SeedCompanyRoleAdministrationPermissions"
 
 # The target model artifacts use EF Core's generated snapshot format because SQL Server
 # rowversion metadata is provider-specific. Keep them stable; verify_migration_model.py
@@ -120,6 +120,47 @@ ADD_CORPORATE_GROUPS_DOWN_PRELUDE: list[str] = [
     + ", ".join(f"'{identifier}'" for identifier, _, _ in CORPORATE_GROUP_PERMISSIONS)
     + ") AND NOT EXISTS (SELECT 1 FROM [CompanyRolePermissions] WHERE [CompanyRolePermissions].[PermissionId] = [PermissionDefinitions].[Id]);",
 ]
+
+# The company-scoped role-administration and group-directory permission catalog rows
+# (D-071): fixed identifiers, inserted only when the code does not exist yet, so the
+# statement is idempotent and never overwrites a row that an administrator already has.
+COMPANY_ROLE_ADMINISTRATION_PERMISSIONS: list[tuple[str, str, str]] = [
+    ("f47a2026-1104-4d00-8000-000000000001", "roles.view", "مشاهده گروه‌های دسترسی شرکت"),
+    ("f47a2026-1104-4d00-8000-000000000002", "roles.create", "ایجاد گروه دسترسی در شرکت"),
+    ("f47a2026-1104-4d00-8000-000000000003", "roles.update", "ویرایش گروه دسترسی شرکت"),
+    ("f47a2026-1104-4d00-8000-000000000004", "roles.assign", "تخصیص نقش به اعضای شرکت"),
+    ("f47a2026-1104-4d00-8000-000000000005", "corporate-groups.directory.view", "مشاهده دفترچه کاربران هم‌گروه"),
+]
+
+COMPANY_ROLE_ADMINISTRATION_DESCRIPTIONS: dict[str, str] = {
+    "roles.view": "اجازه مشاهده گروه‌های دسترسی، مجوزها و اعضای همان شرکت؛ بدون دسترسی به شرکت‌های دیگر.",
+    "roles.create": "اجازه ایجاد گروه دسترسی جدید در همان شرکت؛ فقط با مجوزهایی که خود کاربر حق واگذاری آن‌ها را دارد (سقف تفویض).",
+    "roles.update": "اجازه ویرایش عنوان، وضعیت و مجوزهای گروه‌های دسترسی همان شرکت؛ فقط با مجوزهایی که خود کاربر حق واگذاری آن‌ها را دارد (سقف تفویض).",
+    "roles.assign": "اجازه تخصیص و انتقال نقش اعضای فعال همان شرکت؛ فقط با گروه‌هایی که مجوزهای آن‌ها در سقف تفویض کاربر است.",
+    "corporate-groups.directory.view": "اجازه مشاهده فهرست فقط-خواندنی و محدود کاربران شرکت‌های عضو همان گروه شرکتی؛ بدون اطلاعات تماس، نقش، مجوز یا داده امنیتی.",
+}
+
+
+def _seed_permission_statements() -> list[str]:
+    return [
+        (
+            f"IF NOT EXISTS (SELECT 1 FROM [PermissionDefinitions] WHERE [Code] = '{code}') "
+            f"INSERT INTO [PermissionDefinitions] ([Id], [Code], [Name], [Description], [Ordering], [InsertDateTime]) "
+            f"VALUES ('{identifier}', '{code}', N'{name}', N'{COMPANY_ROLE_ADMINISTRATION_DESCRIPTIONS[code]}', {21001 + index}, SYSDATETIME());"
+        )
+        for index, (identifier, code, name) in enumerate(COMPANY_ROLE_ADMINISTRATION_PERMISSIONS, start=1)
+    ]
+
+
+def _unseed_permission_statements() -> list[str]:
+    return [
+        (
+            f"DELETE FROM [PermissionDefinitions] WHERE [Id] = '{identifier}' AND [Code] = '{code}' "
+            f"AND NOT EXISTS (SELECT 1 FROM [CompanyRolePermissions] WHERE [CompanyRolePermissions].[PermissionId] = [PermissionDefinitions].[Id]);"
+        )
+        for identifier, code, _ in COMPANY_ROLE_ADMINISTRATION_PERMISSIONS
+    ]
+
 
 # The hand-written SQL belongs to one migration. It is keyed by the migration id, so it can
 # never be emitted into the next migration when the CURRENT_MIGRATION_* constants move on.
@@ -215,6 +256,7 @@ HAND_WRITTEN_SQL: dict[str, tuple[list[str], list[str]]] = {
             "DELETE FROM [PermissionDefinitions] WHERE [Id] = 'f47a2026-1103-4d00-8000-000000000002' AND [Code] = 'users.list' AND NOT EXISTS (SELECT 1 FROM [CompanyRolePermissions] WHERE [CompanyRolePermissions].[PermissionId] = [PermissionDefinitions].[Id]);",
         ],
     ),
+    "20261104174711": (_seed_permission_statements(), _unseed_permission_statements()),
 }
 CURRENT_MIGRATION_EPILOGUE, CURRENT_MIGRATION_DOWN_PRELUDE = HAND_WRITTEN_SQL.get(
     CURRENT_MIGRATION_ID, ([], [])

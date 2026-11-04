@@ -93,8 +93,10 @@ test('an installation administrator can create, read and update company roles ag
     expect(catalog.body.some((permission) => permission.code === 'corporate-groups.view')).toBe(true);
 
     // The existing authenticated cookie must not override the current database role record.
+    // D-071: without the administrator role and without any company membership the catalog
+    // hides itself with a body-less 404 instead of disclosing an explicit refusal reason.
     await query('UPDATE Users SET RoleId = NULL WHERE Id = @user');
-    expect((await callApi(page, 'GET', '/api/v1/admin/permission-catalog')).status).toBe(403);
+    expect((await callApi(page, 'GET', '/api/v1/admin/permission-catalog')).status).toBe(404);
     await query('UPDATE Users SET RoleId = @globalRole WHERE Id = @user');
     expect((await callApi(page, 'GET', '/api/v1/admin/permission-catalog')).status).toBe(200);
 

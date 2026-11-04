@@ -91,7 +91,8 @@ public sealed class CompanyRoleMembersSqlServerTests
             foreach (var pageNumber in new[] { 1, 2, 3 })
             {
                 var page = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
-                    company.Id, source.Id, pageNumber, 2, new DefaultHttpContext(), Principal(admin.Id), database, cancellationToken);
+                    company.Id, source.Id, pageNumber, 2, new DefaultHttpContext(), Principal(admin.Id),
+                    database, new Infrastructure.Tenancy.CompanyAccessService(database), cancellationToken);
                 var list = Assert.IsType<Ok<Server.Api.CompanyRoleMemberListResponse>>(page).Value!;
                 Assert.Equal(5, list.TotalCount);
                 Assert.Equal(pageNumber < 3 ? 2 : 1, list.Items.Count);
@@ -104,13 +105,15 @@ public sealed class CompanyRoleMembersSqlServerTests
             var crossCompany = await Server.Api.CompanyRoleAdministrationEndpoints.TransferMembersAsync(
                 company.Id, source.Id, new DefaultHttpContext(), Principal(admin.Id),
                 new Server.Api.TransferCompanyRoleMembersRequest(foreign.Id),
-                new AllowAntiforgery(), database, TimeProvider.System, cancellationToken);
+                new AllowAntiforgery(), database, new Infrastructure.Tenancy.CompanyAccessService(database),
+                new Infrastructure.Tenancy.DelegationCeilingService(database), TimeProvider.System, cancellationToken);
             Assert.Equal(StatusCodes.Status404NotFound, (crossCompany as IStatusCodeHttpResult)?.StatusCode);
 
             var moved = await Server.Api.CompanyRoleAdministrationEndpoints.TransferMembersAsync(
                 company.Id, source.Id, new DefaultHttpContext(), Principal(admin.Id),
                 new Server.Api.TransferCompanyRoleMembersRequest(target.Id),
-                new AllowAntiforgery(), database, TimeProvider.System, cancellationToken);
+                new AllowAntiforgery(), database, new Infrastructure.Tenancy.CompanyAccessService(database),
+                new Infrastructure.Tenancy.DelegationCeilingService(database), TimeProvider.System, cancellationToken);
             Assert.Equal(5, Assert.IsType<Ok<Server.Api.TransferCompanyRoleMembersResponse>>(moved).Value!.MovedCount);
 
             await using var verify = CreateContext(name);
@@ -163,7 +166,8 @@ public sealed class CompanyRoleMembersSqlServerTests
             var moved = await Server.Api.CompanyRoleAdministrationEndpoints.TransferMembersAsync(
                 company.Id, source.Id, new DefaultHttpContext(), Principal(admin.Id),
                 new Server.Api.TransferCompanyRoleMembersRequest(target.Id),
-                new AllowAntiforgery(), database, TimeProvider.System, cancellationToken);
+                new AllowAntiforgery(), database, new Infrastructure.Tenancy.CompanyAccessService(database),
+                new Infrastructure.Tenancy.DelegationCeilingService(database), TimeProvider.System, cancellationToken);
             Assert.Equal(count, Assert.IsType<Ok<Server.Api.TransferCompanyRoleMembersResponse>>(moved).Value!.MovedCount);
 
             await using var verify = CreateContext(name);
@@ -324,7 +328,8 @@ public sealed class CompanyRoleMembersSqlServerTests
                 var result = await Server.Api.CompanyRoleAdministrationEndpoints.UpdateRoleAsync(
                     companyId, roleToEditId, new DefaultHttpContext(), Principal(adminId),
                     new Server.Api.UpdateCompanyRoleRequest("بازنده", true, Array.Empty<string>()),
-                    new AllowAntiforgery(), requestContext, TimeProvider.System, cancellationToken);
+                    new AllowAntiforgery(), requestContext, new Infrastructure.Tenancy.CompanyAccessService(requestContext),
+                    new Infrastructure.Tenancy.DelegationCeilingService(requestContext), TimeProvider.System, cancellationToken);
                 Assert.Equal(StatusCodes.Status409Conflict, (result as IStatusCodeHttpResult)?.StatusCode);
             }
 
@@ -347,7 +352,10 @@ public sealed class CompanyRoleMembersSqlServerTests
             {
                 var result = await Server.Api.CompanyRoleAdministrationEndpoints.AssignMembershipAsync(
                     companyId, assignmentTargetRoleId, assignmentUserId, new DefaultHttpContext(),
-                    Principal(adminId), new AllowAntiforgery(), requestContext, TimeProvider.System, cancellationToken);
+                    Principal(adminId), new AllowAntiforgery(), requestContext,
+                    new Infrastructure.Tenancy.CompanyAccessService(requestContext),
+                    new Infrastructure.Tenancy.DelegationCeilingService(requestContext),
+                    TimeProvider.System, cancellationToken);
                 Assert.Equal(StatusCodes.Status409Conflict, (result as IStatusCodeHttpResult)?.StatusCode);
             }
 
@@ -371,7 +379,8 @@ public sealed class CompanyRoleMembersSqlServerTests
                 var result = await Server.Api.CompanyRoleAdministrationEndpoints.TransferMembersAsync(
                     companyId, transferSourceRoleId, new DefaultHttpContext(), Principal(adminId),
                     new Server.Api.TransferCompanyRoleMembersRequest(transferTargetRoleId),
-                    new AllowAntiforgery(), requestContext, TimeProvider.System, cancellationToken);
+                    new AllowAntiforgery(), requestContext, new Infrastructure.Tenancy.CompanyAccessService(requestContext),
+                    new Infrastructure.Tenancy.DelegationCeilingService(requestContext), TimeProvider.System, cancellationToken);
                 Assert.Equal(StatusCodes.Status409Conflict, (result as IStatusCodeHttpResult)?.StatusCode);
             }
 

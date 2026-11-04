@@ -387,24 +387,38 @@ public static class UserAdministrationEndpoints
         if (userId is null)
             return TypedResults.Unauthorized();
 
-        var isAdministrator = await database.Users
+        return await IsInstallationAdministratorAsync(userId.Value, database, cancellationToken)
+            ? null
+            : ForbiddenForNonAdministrator();
+    }
+
+    /// <summary>
+    /// Re-reads the installation-administrator predicate from the database for one known
+    /// user id, so dual-mode endpoints (D-071) can branch between the installation scope
+    /// and the company scope without producing a result object first.
+    /// </summary>
+    internal static async Task<bool> IsInstallationAdministratorAsync(
+        Guid userId,
+        Data.DatabaseContext database,
+        CancellationToken cancellationToken)
+    {
+        return await database.Users
             .AsNoTracking()
             .AnyAsync(user =>
-                user.Id == userId.Value &&
+                user.Id == userId &&
                 user.IsActive &&
                 user.Role != null &&
                 user.Role.IsActive &&
                 user.Role.Name == Constants.Role.Admin,
                 cancellationToken);
+    }
 
+    internal static IResult ForbiddenForNonAdministrator() =>
         // Prefer an explicit 403 payload so callers and unit tests can read StatusCode
         // without depending on authentication-handler Forbid semantics.
-        return isAdministrator
-            ? null
-            : TypedResults.Json(
-                new { error = "فقط مدیر نصب سامانه مجاز به این عملیات است." },
-                statusCode: StatusCodes.Status403Forbidden);
-    }
+        TypedResults.Json(
+            new { error = "فقط مدیر نصب سامانه مجاز به این عملیات است." },
+            statusCode: StatusCodes.Status403Forbidden);
 
     private static IQueryable<Domain.User> ApplySort(
         IQueryable<Domain.User> query,

@@ -292,35 +292,38 @@ public static class CompanyMembershipRequestEndpoints
         int pageSize = 100,
         CancellationToken cancellationToken = default)
     {
-        var userId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal);
-        if (userId is null)
-            return TypedResults.Unauthorized();
+        var (failure, _, isInstallationAdministrator) = await AuthorizeDestinationApproverAsync(
+            database, companyAccess, principal, companyId, cancellationToken);
+        if (failure is not null) return failure;
 
         SetNoStore(httpContext);
-        if (!await companyAccess.HasPermissionAsync(
-                userId.Value, companyId, ApprovalPermissionCode, cancellationToken))
-            return TypedResults.NotFound();
-
-        var approverPermissionIds = await database.UserCompanyMemberships.AsNoTracking()
-            .Where(membership =>
-                membership.UserId == userId.Value &&
-                membership.TenantId == companyId &&
-                membership.IsActive &&
-                membership.Company.IsActive &&
-                membership.Role.TenantId == companyId &&
-                membership.Role.IsActive)
-            .SelectMany(membership => membership.Role.RolePermissions.Select(rolePermission => rolePermission.PermissionId))
-            .Distinct()
-            .ToListAsync(cancellationToken);
 
         var query = database.CompanyRoles.AsNoTracking()
-            .Where(role => role.TenantId == companyId && role.IsActive && !role.IsSystemRole)
-            // A role that can approve membership requests must never be delegated to a requester;
-            // otherwise an approver could grant the approval capability to another account.
-            .Where(role => !role.RolePermissions.Any(rolePermission =>
-                rolePermission.Permission.Code == ApprovalPermissionCode))
-            .Where(role => !role.RolePermissions.Any(rolePermission =>
-                !approverPermissionIds.Contains(rolePermission.PermissionId)));
+            .Where(role => role.TenantId == companyId && role.IsActive && !role.IsSystemRole);
+
+        if (!isInstallationAdministrator)
+        {
+            var approverPermissionIds = await database.UserCompanyMemberships.AsNoTracking()
+                .Where(membership =>
+                    membership.UserId == GetCallerUserId(principal) &&
+                    membership.TenantId == companyId &&
+                    membership.IsActive &&
+                    membership.Company.IsActive &&
+                    membership.Role.TenantId == companyId &&
+                    membership.Role.IsActive)
+                .SelectMany(membership => membership.Role.RolePermissions.Select(rolePermission => rolePermission.PermissionId))
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            // A company approver can only offer roles inside their own delegation ceiling,
+            // and a role that can approve membership requests must never be delegated to a
+            // requester; otherwise an approver could grant the approval capability onward.
+            query = query
+                .Where(role => !role.RolePermissions.Any(rolePermission =>
+                    rolePermission.Permission.Code == ApprovalPermissionCode))
+                .Where(role => !role.RolePermissions.Any(rolePermission =>
+                    !approverPermissionIds.Contains(rolePermission.PermissionId)));
+        }
 
         var safePage = Math.Clamp(page, 1, 100_000);
         var safePageSize = Math.Clamp(pageSize, 1, 100);
@@ -347,14 +350,11 @@ public static class CompanyMembershipRequestEndpoints
         int pageSize = 25,
         CancellationToken cancellationToken = default)
     {
-        var userId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal);
-        if (userId is null)
-            return TypedResults.Unauthorized();
+        var (failure, _, isInstallationAdministrator) = await AuthorizeDestinationApproverAsync(
+            database, companyAccess, principal, companyId, cancellationToken);
+        if (failure is not null) return failure;
 
         SetNoStore(httpContext);
-        if (!await companyAccess.HasPermissionAsync(
-                userId.Value, companyId, ApprovalPermissionCode, cancellationToken))
-            return TypedResults.NotFound();
 
         var query =
             from membership in database.UserCompanyMemberships.AsNoTracking()
@@ -365,9 +365,9 @@ public static class CompanyMembershipRequestEndpoints
                 membership.Company.IsActive &&
                 membership.Role.TenantId == companyId &&
                 membership.Role.IsActive &&
-                membership.Role.RolePermissions.Any(rolePermission =>
-                    rolePermission.Permission.Code == ApprovalPermissionCode) &&
-                user.IsActive
+                user.IsActive &&
+                (isInstallationAdministrator || membership.Role.RolePermissions.Any(rolePermission =>
+                    rolePermission.Permission.Code == ApprovalPermissionCode))
             select new
             {
                 UserId = user.Id,
@@ -411,14 +411,11 @@ public static class CompanyMembershipRequestEndpoints
         int pageSize = 25,
         CancellationToken cancellationToken = default)
     {
-        var userId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal);
-        if (userId is null)
-            return TypedResults.Unauthorized();
+        var (failure, _, _) = await AuthorizeDestinationApproverAsync(
+            database, companyAccess, principal, companyId, cancellationToken);
+        if (failure is not null) return failure;
 
         SetNoStore(httpContext);
-        if (!await companyAccess.HasPermissionAsync(
-                userId.Value, companyId, ApprovalPermissionCode, cancellationToken))
-            return TypedResults.NotFound();
         if (!TryNormalizeStatus(status, out var normalizedStatus))
             return TypedResults.BadRequest(new { error = "وضعیت درخواست معتبر نیست." });
 
@@ -492,14 +489,11 @@ public static class CompanyMembershipRequestEndpoints
         int pageSize = 25,
         CancellationToken cancellationToken = default)
     {
-        var userId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal);
-        if (userId is null)
-            return TypedResults.Unauthorized();
+        var (failure, _, _) = await AuthorizeDestinationApproverAsync(
+            database, companyAccess, principal, companyId, cancellationToken);
+        if (failure is not null) return failure;
 
         SetNoStore(httpContext);
-        if (!await companyAccess.HasPermissionAsync(
-                userId.Value, companyId, ApprovalPermissionCode, cancellationToken))
-            return TypedResults.NotFound();
 
         var safePage = Math.Clamp(page, 1, 100_000);
         var safePageSize = Math.Clamp(pageSize, 1, 100);
@@ -560,25 +554,24 @@ public static class CompanyMembershipRequestEndpoints
         [FromServices] TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
-        var approverId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal);
-        if (approverId is null)
-            return TypedResults.Unauthorized();
+        var (failure, approverId, isInstallationAdministrator) = await AuthorizeDestinationApproverAsync(
+            database, companyAccess, principal, companyId, cancellationToken);
+        if (failure is not null) return failure;
         SetNoStore(httpContext);
         if (request is null || request.RoleId == Guid.Empty)
             return TypedResults.BadRequest(new { error = "گروه دسترسی مقصد معتبر نیست." });
         if (!await antiforgery.IsRequestValidAsync(httpContext))
             return TypedResults.Problem(title: "درخواست نامعتبر است.", statusCode: StatusCodes.Status400BadRequest);
-        if (!await companyAccess.HasPermissionAsync(
-                approverId.Value, companyId, ApprovalPermissionCode, cancellationToken))
-            return TypedResults.NotFound();
 
         await using var transaction = database.Database.IsRelational()
             ? await database.Database.BeginTransactionAsync(
                 IsolationLevel.ReadCommitted, cancellationToken)
             : null;
-        if (!await companyAccess.HasPermissionAsync(
-                approverId.Value, companyId, ApprovalPermissionCode, cancellationToken))
-            return TypedResults.NotFound();
+        // Re-check inside the transaction, so the authorization and the ceiling below are
+        // evaluated with the same fresh rows the decision is written with (D-071).
+        (failure, approverId, isInstallationAdministrator) = await AuthorizeDestinationApproverAsync(
+            database, companyAccess, principal, companyId, cancellationToken);
+        if (failure is not null) return failure;
 
         var membershipRequest = await database.CompanyMembershipRequests
             .FirstOrDefaultAsync(item =>
@@ -588,7 +581,7 @@ public static class CompanyMembershipRequestEndpoints
                 cancellationToken);
         if (membershipRequest is null)
             return TypedResults.NotFound();
-        if (membershipRequest.UserId == approverId.Value)
+        if (membershipRequest.UserId == approverId)
             return TypedResults.Json(
                 new { error = "درخواست‌کننده نمی‌تواند درخواست عضویت خودش را تأیید کند." },
                 statusCode: StatusCodes.Status403Forbidden);
@@ -609,46 +602,41 @@ public static class CompanyMembershipRequestEndpoints
 
         // A company approver may delegate only permissions they currently hold in this
         // destination company. System roles are installation/domain templates and cannot
-        // be assigned through the inter-company approval workflow.
+        // be assigned through the inter-company approval workflow — for every actor kind.
+        // The installation administrator has no ceiling (D-064): approving the first company
+        // manager of an empty company is exactly the secure bootstrap path (D-071).
         // Track the exact membership and role rows that establish the approver's delegation
         // ceiling. RowVersion guards below make a concurrent revocation/change fail closed
         // instead of approving from a stale permission snapshot.
-        var approverMemberships = await database.UserCompanyMemberships
-            .Include(membership => membership.Role)
-                .ThenInclude(role => role.RolePermissions)
-            .Where(membership =>
-                membership.UserId == approverId.Value &&
-                membership.TenantId == companyId &&
-                membership.IsActive &&
-                membership.Role.TenantId == companyId &&
-                membership.Role.IsActive)
-            .ToListAsync(cancellationToken);
-
-        var approverPermissionIds = approverMemberships
-            .SelectMany(membership => membership.Role.RolePermissions)
-            .Select(rolePermission => rolePermission.PermissionId)
-            .ToHashSet();
-        var destinationPermissionIds = destinationRole.RolePermissions
-            .Select(rolePermission => rolePermission.PermissionId)
-            .ToArray();
-
-        if (destinationRole.IsSystemRole ||
-            destinationPermissionIds.Any(permissionId => !approverPermissionIds.Contains(permissionId)))
+        if (destinationRole.IsSystemRole)
         {
             return TypedResults.Json(
                 new { error = "شما مجاز به واگذاری این گروه دسترسی نیستید." },
                 statusCode: StatusCodes.Status403Forbidden);
         }
 
-        // Force no-op updates on every row used to calculate the delegation ceiling. The
-        // membership RowVersion protects active membership/role assignment; the role RowVersion
-        // protects its active flag and permission links (UpdateRoleAsync updates the role row
-        // in the same transaction as those links). The destination role is guarded as well.
-        foreach (var membership in approverMemberships)
+        Infrastructure.Tenancy.TrackedDelegationCeiling? approverCeiling = null;
+        if (!isInstallationAdministrator)
         {
-            database.Entry(membership).Property(current => current.RoleId).IsModified = true;
-            database.Entry(membership.Role).Property(current => current.IsActive).IsModified = true;
+            approverCeiling = await Infrastructure.Tenancy.TrackedDelegationCeiling.LoadAsync(
+                database, approverId, companyId, cancellationToken);
+            if (approverCeiling is null)
+                return TypedResults.NotFound();
+
+            if (destinationRole.RolePermissions.Any(rolePermission =>
+                    !approverCeiling.PermissionIds.Contains(rolePermission.PermissionId)))
+            {
+                return TypedResults.Json(
+                    new { error = "شما مجاز به واگذاری این گروه دسترسی نیستید." },
+                    statusCode: StatusCodes.Status403Forbidden);
+            }
+
+            approverCeiling.ApplyRowVersionGuards(database);
         }
+
+        // Force no-op updates on the destination role row as well: its RowVersion protects
+        // its active flag and permission links (UpdateRoleAsync updates the role row in the
+        // same transaction as those links) for both actor kinds.
         database.Entry(destinationRole).Property(current => current.IsActive).IsModified = true;
 
         var existingMembership = await database.UserCompanyMemberships
@@ -681,10 +669,10 @@ public static class CompanyMembershipRequestEndpoints
 
         membershipRequest.Status = Domain.CompanyMembershipRequestStatuses.Approved;
         membershipRequest.ApprovedRoleId = destinationRole.Id;
-        membershipRequest.DecidedByUserId = approverId.Value;
+        membershipRequest.DecidedByUserId = approverId;
         membershipRequest.DecidedAtUtc = now;
         database.SecurityAuditEvents.Add(CreateAudit(
-            approverId.Value, companyId, "CompanyMembershipApproved",
+            approverId, companyId, "CompanyMembershipApproved",
             membershipRequest.Id, now, httpContext,
             new { membershipRequest.UserId, membershipRequest.DestinationTenantId, RoleId = destinationRole.Id }));
 
@@ -719,25 +707,22 @@ public static class CompanyMembershipRequestEndpoints
         [FromServices] TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
-        var approverId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal);
-        if (approverId is null)
-            return TypedResults.Unauthorized();
+        var (failure, approverId, _) = await AuthorizeDestinationApproverAsync(
+            database, companyAccess, principal, companyId, cancellationToken);
+        if (failure is not null) return failure;
         SetNoStore(httpContext);
         if (request?.Reason is { Length: > 500 })
             return TypedResults.BadRequest(new { error = "توضیح رد درخواست بیش از حد مجاز است." });
         if (!await antiforgery.IsRequestValidAsync(httpContext))
             return TypedResults.Problem(title: "درخواست نامعتبر است.", statusCode: StatusCodes.Status400BadRequest);
-        if (!await companyAccess.HasPermissionAsync(
-                approverId.Value, companyId, ApprovalPermissionCode, cancellationToken))
-            return TypedResults.NotFound();
 
         await using var transaction = database.Database.IsRelational()
             ? await database.Database.BeginTransactionAsync(
                 IsolationLevel.ReadCommitted, cancellationToken)
             : null;
-        if (!await companyAccess.HasPermissionAsync(
-                approverId.Value, companyId, ApprovalPermissionCode, cancellationToken))
-            return TypedResults.NotFound();
+        (failure, approverId, _) = await AuthorizeDestinationApproverAsync(
+            database, companyAccess, principal, companyId, cancellationToken);
+        if (failure is not null) return failure;
 
         var membershipRequest = await database.CompanyMembershipRequests.FirstOrDefaultAsync(item =>
             item.Id == requestId &&
@@ -751,11 +736,11 @@ public static class CompanyMembershipRequestEndpoints
         var suppliedReason = request?.Reason;
         var reason = string.IsNullOrWhiteSpace(suppliedReason) ? null : suppliedReason.Trim();
         membershipRequest.Status = Domain.CompanyMembershipRequestStatuses.Rejected;
-        membershipRequest.DecidedByUserId = approverId.Value;
+        membershipRequest.DecidedByUserId = approverId;
         membershipRequest.DecidedAtUtc = now;
         membershipRequest.DecisionReason = reason;
         database.SecurityAuditEvents.Add(CreateAudit(
-            approverId.Value, companyId, "CompanyMembershipRejected",
+            approverId, companyId, "CompanyMembershipRejected",
             membershipRequest.Id, now, httpContext,
             new { membershipRequest.UserId, membershipRequest.DestinationTenantId, ReasonProvided = reason is not null }));
 
@@ -773,6 +758,40 @@ public static class CompanyMembershipRequestEndpoints
         SetNoStore(httpContext);
         return TypedResults.NoContent();
     }
+
+    /// <summary>
+    /// Destination-company authorization for the approval workflow (D-071). The installation
+    /// administrator may act in every destination company — the secure bootstrap path that
+    /// creates the first approver of an otherwise empty company. A company actor needs the
+    /// <see cref="ApprovalPermissionCode" /> in the routed company. Both predicates are
+    /// re-read from the database on every call; a caller without either relationship gets
+    /// the same 404 as an unknown company (no disclosure).
+    /// </summary>
+    private static async Task<(IResult? Failure, Guid ApproverId, bool IsInstallationAdministrator)>
+        AuthorizeDestinationApproverAsync(
+            Data.DatabaseContext database,
+            Infrastructure.Tenancy.CompanyAccessService companyAccess,
+            ClaimsPrincipal principal,
+            Guid companyId,
+            CancellationToken cancellationToken)
+    {
+        var approverId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal);
+        if (approverId is null)
+            return (TypedResults.Unauthorized(), default, false);
+
+        if (await UserAdministrationEndpoints.IsInstallationAdministratorAsync(
+                approverId.Value, database, cancellationToken))
+            return (null, approverId.Value, true);
+
+        if (!await companyAccess.HasPermissionAsync(
+                approverId.Value, companyId, ApprovalPermissionCode, cancellationToken))
+            return (TypedResults.NotFound(), default, false);
+
+        return (null, approverId.Value, false);
+    }
+
+    private static Guid? GetCallerUserId(ClaimsPrincipal principal) =>
+        Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal);
 
     private static bool TryNormalizeStatus(string? status, out string? normalized)
     {
