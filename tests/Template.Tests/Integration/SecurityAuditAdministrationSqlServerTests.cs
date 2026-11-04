@@ -116,6 +116,26 @@ public sealed class SecurityAuditAdministrationSqlServerTests
             Assert.Equal("مدیر آزمون", item.ActorDisplayName);
             Assert.Equal("شرکت ممیزی", item.CompanyName);
             Assert.Equal("LoginSucceeded", item.EventType);
+            Assert.Equal(DateTimeKind.Utc, item.OccurredAtUtc.Kind);
+
+            var sorted = await Server.Api.SecurityAuditAdministrationEndpoints.GetAuditEventsAsync(
+                new DefaultHttpContext(), Principal(admin.Id), database,
+                sort: "eventType", descending: false,
+                page: 1, pageSize: 10, cancellationToken: cancellationToken);
+            var sortedItems = Assert.IsType<Ok<Server.Api.SecurityAuditEventListResponse>>(sorted).Value!.Items;
+            Assert.Equal(new[] { "LoginSucceeded", "LogoutSucceeded" }, sortedItems.Select(row => row.EventType));
+            Assert.All(sortedItems, row => Assert.Equal(DateTimeKind.Utc, row.OccurredAtUtc.Kind));
+
+            var eventTypes = await Server.Api.SecurityAuditAdministrationEndpoints.GetAuditEventTypesAsync(
+                new DefaultHttpContext(), Principal(admin.Id), database, cancellationToken);
+            var typeItems = Assert.IsType<Ok<Server.Api.SecurityAuditEventTypeResponse[]>>(eventTypes).Value!;
+            Assert.Contains(typeItems, type => type.Code == "LoginSucceeded" && type.Label == "ورود موفق");
+
+            var companies = await Server.Api.SecurityAuditAdministrationEndpoints.GetAdminCompaniesAsync(
+                new DefaultHttpContext(), Principal(admin.Id), database, search: "شرکت",
+                page: 1, pageSize: 10, cancellationToken: cancellationToken);
+            var companyItems = Assert.IsType<Ok<Server.Api.SecurityAuditCompanyListResponse>>(companies).Value!;
+            Assert.Contains(companyItems.Items, companyItem => companyItem.Id == company.Id);
 
             var json = JsonSerializer.Serialize(ok.Value);
             Assert.DoesNotContain("203.0.113.10", json);
