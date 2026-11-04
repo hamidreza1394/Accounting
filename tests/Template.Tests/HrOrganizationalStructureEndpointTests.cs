@@ -101,6 +101,43 @@ public sealed class HrOrganizationalStructureEndpointTests
     }
 
     [Fact]
+    public async Task Employee_Detail_ServesTheLinkedUserAndHandlesTheMissingLink()
+    {
+        await using var fixture = new Fixture();
+        var manager = await fixture.AddMemberWithPermission(
+            fixture.Company,
+            HrOrganizationalStructureEndpoints.CreateEmployeesPermission,
+            HrOrganizationalStructureEndpoints.ViewEmployeesPermission,
+            HrOrganizationalStructureEndpoints.ManageEmployeeUserLinkPermission);
+        var unlinkedId = await fixture.AddCreatedEmployee(manager.Id, "EMP-1", "علی", "محمدی");
+        var memberUser = await fixture.AddMember(fixture.AddRole("CLERK"), "member-user");
+        await fixture.LinkEmployeeUser(manager.Id, unlinkedId, memberUser.Id);
+
+        // Without the link (the SQL Server LEFT JOIN path must not throw on a null
+        // membership), and with it.
+        var unlinked = await fixture.CreateEmployee(manager.Id, "EMP-2", "رضا", "احمدی");
+        Assert.IsType<Created<HrEmployeeCreatedResponse>>(unlinked);
+        var unlinkedEntityId = await fixture.Database.CompanyEmployees
+            .Where(current => current.EmployeeNumber == "EMP-2")
+            .Select(current => current.Id)
+            .SingleAsync();
+
+        var linkedDetail = await HrOrganizationalStructureEndpoints.GetEmployeeAsync(
+            fixture.Company.Id, unlinkedId, new DefaultHttpContext(), fixture.Principal(manager.Id),
+            fixture.Database, fixture.CompanyAccess, default);
+        var linkedOk = Assert.IsType<Ok<HrEmployeeDetail>>(linkedDetail);
+        Assert.Equal(memberUser.Id, linkedOk.Value!.LinkedUserId);
+        Assert.NotNull(linkedOk.Value.UserCompanyMembershipId);
+
+        var bareDetail = await HrOrganizationalStructureEndpoints.GetEmployeeAsync(
+            fixture.Company.Id, unlinkedEntityId, new DefaultHttpContext(), fixture.Principal(manager.Id),
+            fixture.Database, fixture.CompanyAccess, default);
+        var bareOk = Assert.IsType<Ok<HrEmployeeDetail>>(bareDetail);
+        Assert.Null(bareOk.Value!.LinkedUserId);
+        Assert.Null(bareOk.Value.UserCompanyMembershipId);
+    }
+
+    [Fact]
     public async Task Employee_UserLink_RequiresAnActiveMembershipOfTheSameCompany()
     {
         await using var fixture = new Fixture();

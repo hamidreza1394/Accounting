@@ -253,7 +253,9 @@ public static class HrOrganizationalStructureEndpoints
                 current.HiredOnUtc,
                 current.TerminatedOnUtc,
                 current.UserCompanyMembershipId,
-                LinkedUserId = current.Membership!.UserId,
+                // The membership is optional: the conditional keeps the LEFT JOIN nullable
+                // instead of forcing a Guid materialization that throws on SQL Server.
+                LinkedUserId = current.Membership != null ? (Guid?)current.Membership.UserId : null,
                 current.CreatedAtUtc,
                 current.RowVersion,
             })
