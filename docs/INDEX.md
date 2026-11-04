@@ -28,6 +28,7 @@
 | [`REQUIREMENTS_TRACEABILITY.md`](REQUIREMENTS_TRACEABILITY.md) | ردیابی نیازمندی ← کد/تست |
 | [`LICENSING.md`](LICENSING.md) | معماری و وضعیت لایسنس و فعال‌سازی |
 | [`LICENSING_IMPLEMENTATION_PLAN.md`](LICENSING_IMPLEMENTATION_PLAN.md) | مرجع اجرایی D-059/D-060 و ترتیب Issues #389–#396 |
+| [`handoffs/ISSUE-393-vendor-addon-payload-builder.md`](handoffs/ISSUE-393-vendor-addon-payload-builder.md) | تحویل Vendor-only برای ساخت candidate amendment افزایش سقف شرکت؛ بدون persistence، approval یا Customer-side changes (Issue #393) |
 | [`LICENSING_DATA_MODEL.md`](LICENSING_DATA_MODEL.md) | ERD واقعی و پیشنهادی |
 | [`LICENSING_WORKFLOWS.md`](LICENSING_WORKFLOWS.md) | گردش‌کارها |
 | [`LICENSING_THREAT_MODEL.md`](LICENSING_THREAT_MODEL.md) | تهدیدها |
@@ -65,6 +66,7 @@
 | [`handoffs/ISSUE-515-csv-leading-control-characters.md`](handoffs/ISSUE-515-csv-leading-control-characters.md) | تکمیل خنثی‌سازی Tab/CR/LF در سلول‌های خروجی CSV (Issue #515) |
 | [`handoffs/ISSUE-511-me-permissions.md`](handoffs/ISSUE-511-me-permissions.md) | API مجوزهای کاربر جاری بر اساس شرکت فعال زمینه کاری همان نشست (Issue #511) |
 | [`handoffs/ISSUE-512-security-audit-report-api.md`](handoffs/ISSUE-512-security-audit-report-api.md) | مرتب‌سازی امن، فهرست نوع رویداد، فهرست شرکت‌ها و قرارداد UTC؛ D-070 نگهداری Proposed (Issue #512) |
+| [`handoffs/ISSUE-530-membership-search-loading-reset.md`](handoffs/ISSUE-530-membership-search-loading-reset.md) | رفع گیر کردن وضعیت بارگذاری جستجوی مقصد عضویت پس از پاک کردن query (Issue #530) |
 | [`handoffs/ISSUE-510-membership-workflow-api.md`](handoffs/ISSUE-510-membership-workflow-api.md) | کشف مقصد محدود به CustomerBoundary، نقش‌های قابل واگذاری، فهرست تأییدکنندگان و تاریخچه درخواست (Issue #510) |
 | [`handoffs/ISSUE-535-membership-workflow-positive-e2e.md`](handoffs/ISSUE-535-membership-workflow-positive-e2e.md) | تست E2E مسیر موفق گردش درخواست عضویت (تأیید، رد، حالت‌های امنیتی) روی مرورگر و SQL Server واقعی؛ فقط تست، بدون تغییر محصول (Issue #535) |
 | [`handoffs/ISSUE-498-membership-permission-delegation-ceiling.md`](handoffs/ISSUE-498-membership-permission-delegation-ceiling.md) | enforce سقف واگذاری مجوز هنگام تأیید عضویت بین‌شرکتی؛ بدون Schema/Migration |

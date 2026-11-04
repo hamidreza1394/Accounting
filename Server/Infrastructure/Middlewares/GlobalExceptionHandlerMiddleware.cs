@@ -20,11 +20,7 @@ public sealed class GlobalExceptionHandlerMiddleware(RequestDelegate next, ILogg
         }
         catch (Exception exception)
         {
-            _logger.LogError(
-                exception,
-                "Unhandled exception while processing {Method} {Path}",
-                httpContext.Request.Method,
-                httpContext.Request.Path);
+            Infrastructure.Security.SafeExceptionLogging.LogRequestFailure(_logger, httpContext, exception);
 
             // Let the configured ASP.NET Core exception handler generate the response.
             throw;

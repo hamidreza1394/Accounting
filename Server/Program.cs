@@ -387,32 +387,21 @@ foreach (var warning in Infrastructure.Hosting.DeploymentConfigurationChecks.Get
     app.Logger.LogWarning("Deployment configuration: {Warning}", warning);
 }
 
-// First: the client address and scheme from a trusted proxy are needed by HSTS, HTTPS
+// Handle request failures before other middleware so raw exception objects are never handed
+// to the built-in developer/exception pages or the server's unhandled-exception logger.
+app.UseMiddleware<Infrastructure.Middlewares.SafeRequestExceptionMiddleware>();
+
+// The client address and scheme from a trusted proxy are needed by HSTS, HTTPS
 // redirection, rate limiting and the audit trail. Without a configured proxy it does nothing.
 app.UseForwardedHeaders();
 
-// Then, so every response (pages, API, static files, errors) carries the security headers.
+// Every normal response carries security headers; the callback also applies them to errors.
 app.UseMiddleware<Infrastructure.Security.SecurityHeadersMiddleware>();
 
-if (app.Environment.IsDevelopment())
+if (!app.Environment.IsDevelopment())
 {
-    app.UseDeveloperExceptionPage();
-}
-else
-{
-    app.UseGlobalException();
-    app.UseExceptionHandler("/Errors/Error");
     app.UseHsts();
 }
-
-// API requests never receive an HTML error page or a stack trace, in any environment: the
-// exception is logged and a generic application/problem+json response is returned.
-app.UseWhen(
-    context => ApiEndpoints.IsApiRequest(context.Request.Path),
-    api => api.UseExceptionHandler(new ExceptionHandlerOptions
-    {
-        ExceptionHandler = ApiEndpoints.WriteUnexpectedErrorAsync,
-    }));
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();

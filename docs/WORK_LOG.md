@@ -2376,6 +2376,56 @@
 - **مرزبندی:** اصلاح در شاخه و PR مستقل #526 باقی ماند؛ هیچ تغییری به PRهای Vendor-only، #235، Migration یا schema مشتری اضافه نشد.
 - **اعتبارسنجی:** تست محلی اجرا نشده؛ اجرای .NET CI جدید روی SHA نهایی لازم است.
 
+### 2026-11-04 — #521 exception logging hardening (incomplete)
+
+- Replaced identified application-owned raw exception/message logging with exception type metadata; request handlers also retain safe event, trace, method, and route template metadata. File-manager error responses no longer expose exception messages.
+- Added capture-logger regression tests using synthetic nested exception and secret data. These tests exercise the API handler and legacy middleware directly, not the full ASP.NET pipeline.
+- Remaining blocker: built-in exception/developer middleware may independently log exception details. Implement and verify an end-to-end safe pipeline and expand regression coverage across remaining paths before closing the issue.
+- Validation: `git diff --check` and static asset check passed. .NET SDK and Docker were unavailable; attempted test runs failed with `dotnet: command not found`, and SDK resolution failed due to TLS. No build, .NET tests, or pre-fix failing test run was possible.
+- Follow-up: retained the original route template when ASP.NET's exception handler clears the active endpoint, and added direct endpoint-filter and original-endpoint regression cases. Attempted test execution still blocked by the missing `dotnet` executable; full-pipeline framework logging remains unresolved.
+- PR #529 initial CI compiled the code but failed one capture test because framework ProblemDetails writes two additional harmless log entries. Updated the test to inspect every entry for secrets/exception objects and identify the application failure event by its fixed message. Initial CI reported 919 passed, 1 failed, 8 skipped; the updated run must be checked separately.
+- Added an application request exception boundary with generic responses and connection aborts for already-started responses, plus TestServer and started-response regression cases. ASP.NET Core automatically installs an outer developer exception page in Development; host/startup and third-party logging remain outside the boundary. This change requires real-application pipeline validation and provider review before the issue can be closed. The new tests were not run locally because the SDK is unavailable.
+- CI for commit `2cf2799` passed build-and-test, E2E, publication, secret scan, CodeQL and Semgrep. Added real-application Development/Production tests that inject a synthetic nested secret-bearing exception inside the middleware pipeline and inspect all captured log entries and responses. The added tests have not been run locally; they need their own CI result. Host/startup/third-party logging outside that pipeline remains a separate limitation.
+- Addressed the CodeQL PR review concern that `HttpContext.TraceIdentifier` can be untrusted: the request logger uses W3C activity trace IDs, or a bounded SHA-256-derived correlation identifier instead of copying arbitrary trace identifier text. Added a synthetic secret/newline regression test. Local .NET execution remains unavailable.
+
+
+## 2026-11-04 — Issue #530: بازیابی وضعیت جستجوی مقصد عضویت پس از لغو
+- ریشه باگ: وقتی query جستجو خالی می‌شد، effect درخواست قبلی را با AbortController لغو می‌کرد اما مسیر early-return مقدار loading را reset نمی‌کرد؛ در نتیجه دکمه جستجو می‌توانست برای همیشه disabled بماند.
+- هنگام پاک‌شدن ورودی یا نامعتبر بودن query، loading بلافاصله false می‌شود؛ effect همچنان درخواست قبلی را با AbortController لغو می‌کند و نتیجه/خطای درخواست لغوشده وارد UI نمی‌شود.
+- تست رگرسیون: جستجوی اول عمداً معلق می‌ماند، query پاک می‌شود، فعال‌شدن مجدد دکمه بررسی می‌شود و جستجوی دوم باید نتیجه را نمایش دهد.
+- بدون تغییر API، Backend، مجوزها، Migration یا dependency.
+- اجرای محلی typecheck/Vitest/build/check:offline در این محیط انجام نشده؛ نتیجه CI روی PR باید بررسی شود.
+- handoff: `docs/handoffs/ISSUE-530-membership-search-loading-reset.md`.
+
+## 2026-11-04 — اصلاح CI و CodeQL در PR #529 (Issue #521)
+- **علت شکست .NET CI:** خطای قطعی CS0117 در SafeExceptionLogging.cs؛ نام بدون qualification یعنی Convert.ToHexString در این پروژه به نوع Convert دیگری resolve می‌شد و عضو موردنظر را نداشت.
+- **اصلاح:** طراحی logger ساده شد تا هیچ دادهٔ مشتق از درخواست در log قرار نگیرد: نه HttpContext.TraceIdentifier، نه Activity.TraceId، نه path/route metadata. شناسهٔ خطا اکنون با Guid.NewGuid() در سرور ساخته می‌شود؛ فقط شناسهٔ تولیدشده، HTTP method محدودشده به allowlist و نوع Exception ثبت می‌شوند. در نتیجه وابستگی به hash و Convert.ToHexString نیز حذف شد.
+- **تست رگرسیون:** تست‌های capture logger اکنون مقادیر ساختگی حساس را در TraceIdentifier، Path و Exception قرار می‌دهند و نبود آن‌ها در log را بررسی می‌کنند؛ شناسهٔ FailureId نیز باید قالب GUID تولیدشده در سرور داشته باشد.
+- **مستندات:** سیاست logging در docs/SECURITY.md با حذف route template و trace identifier به‌روزرسانی شد.
+- **اعتبارسنجی:** CI قبلی روی SHA aa0474b7c46b67c5f349f3091091dbb563471e42 به علت CS0117 در Build شکست خورد؛ Test به همین دلیل اجرا نشد. اصلاحات روی SHA جدید ثبت شده‌اند، اما برای SHA نهایی هنوز CI تازه مشاهده نشده است. هشدار CodeQL نیز باید با اسکن جدید تأیید شود.
+- **وضعیت PR:** #529 باز و Merge نشده است. Branch هنگام بررسی ۱۳ commit از main عقب بود و GitHub وضعیت mergeability را false گزارش می‌کرد؛ این موضوع جدا از اصلاح حاضر باید پیش از Merge بررسی و حل شود.
+
+
+## 2026-11-04 — Issue #393: سازندهٔ امن Payload برای افزایش سقف شرکت
+- **محدوده:** نخستین برش Vendor-only از Add-on issuance؛ فقط ساخت candidate payload برای افزایش installation-scoped `maxCompanies` روی همان LicenseId/InstallationId.
+- **پیاده‌سازی:** `VendorLicenseAmendmentPayloadBuilder` وضعیت Active مشتری/نصب و Issued بودن لایسنس، تطابق شناسه‌ها و metadata با payload جاری، هم‌ترازی LastIssuedSequence، وجود سقف قبلی و افزایش strict را کنترل می‌کند. Sequence دقیقاً یک واحد افزایش می‌یابد و issuedAt عقب‌تر از revision فعلی پذیرفته نمی‌شود.
+- **سازگاری:** Payload v1 به v1 و v2 به v2 باقی می‌ماند؛ subsystemهای v1، company entitlements و support/update dates در v2 بدون تغییر حفظ می‌شوند. هیچ تبدیل v1→v2 انجام نمی‌شود.
+- **تست‌های رگرسیون:** v1/v2 preservation، سقف برابر/کمتر، سقف نامشخص، sequence stale/overflow، metadata stale، cross-customer، customer/installation غیرفعال، license غیر Issued، payload نامعتبر و clock rollback.
+- **مرز امنیتی:** این builder فقط روی payloadای اجرا می‌شود که caller پیش‌تر امضای envelope، trusted key، hash، binding و آخرین sequence آن را تأیید کرده باشد؛ builder خود امضا را verify یا persist نمی‌کند.
+- **اعتبارسنجی:** Build/Test محلی اجرا نشده؛ CI روی PR لازم است. هیچ Migration، Customer-side consumer، `Server/**`، کلید یا secret تغییر نکرد.
+- **باقی‌مانده:** purchase/order evidence، API درخواست Amendment، Maker-Checker، امضای fail-closed و export در گام‌های بعدی #393؛ Company-scoped add-ons تا وجود current v2 و CompanyReference قابل اعتماد.
+
+
+- **تکمیل اعتبار زمانی در همان PR #527:** builder اکنون term license را پیش از NotBefore یا پس از Expires رد می‌کند و هیچ grace ضمنی برای صدور add-on به کار نمی‌برد؛ support/update expiry به‌تنهایی perpetual entitlement را منقضی نمی‌کند. تست‌های منفی/مثبت این مرز اضافه شدند. این commit جدید نیازمند اجرای مجدد CI است.
+
+
+## 2026-11-04 — Issue #393: جداسازی snapshot amendment از collectionهای mutable
+- **یافته بازبینی:** `IReadOnlyList` در قرارداد تضمین immutability نیست؛ caller می‌تواند `List<T>` یا آرایه mutable بدهد. نسخه قبلی builder همان referenceهای v1 subsystem و v2 company/module/feature را در amendment نگه می‌داشت؛ mutation بعدی caller می‌توانست payload آماده canonicalization/signing را عوض کند.
+- **اصلاح:** builder اکنون subsystemها و تمام لایه‌های collection مربوط به company entitlement را به snapshot مستقل read-only کپی می‌کند. مقادیر feature نیز به recordهای تازه تبدیل می‌شوند.
+- **Regression:** دو تست ورودی‌های mutable را پس از ساخت amendment تغییر می‌دهند و ثابت می‌کنند خروجی تغییر نمی‌کند.
+- **محدوده:** فقط Vendor pure builder، تست‌ها و مستندات؛ بدون DB، Migration، signer یا `Server/**`.
+- **اعتبارسنجی:** تست محلی اجرا نشده؛ CI روی SHA جدید لازم است.
+
 ## 2026-11-04 — Issue #535: E2E مسیر موفقیت‌آمیز گردش درخواست عضویت شرکت
 - **شکاف:** تنها مسیر پوشش‌داده‌شده «رد شدن» بود (#524/#525) و بخشی از آن هم API-سطح، نه مرورگری. مسیر موفق (درخواست → صف تأیید → انتخاب گروه دسترسی مجاز → تأیید → عضویت فعال + دسترسی واقعی) و حالت‌های امنیتی آن هیچ تست E2E نداشتند.
 - **افزوده شد:** `tests/e2e/lib/membershipFixture.mjs` (گراف ایزوله: CustomerBoundary اختصاصی، دو شرکت داخل مرز، شرکت مرز خارجی، شرکت بدون مرز، شرکت هم‌نام با مرز دیگر؛ نقش‌ها با شناسه‌های واقعی مجوز؛ کاربران با هش Identity V3؛ پاک‌سازی در ۹ جدول)، `tests/e2e/lib/session.mjs` (ورود، `enterWorkspace`، `callApi`/`post`/antiforgery، پایش خطای صفحه و CSP)، `tests/e2e/specs/membership-workflow.spec.mjs` (۵ تست Chromium/fa-IR روی سرور منتشرشده و SQL Server واقعی، بدون mock) و `tests/e2e/tests/membership-workflow-contract.test.mjs` (نگهبان ایستا با `node --test`).

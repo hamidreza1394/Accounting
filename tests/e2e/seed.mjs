@@ -3,7 +3,7 @@
 // for the tests and for the server start (Master credential). Passwords are random per run.
 //   FARANOU_E2E_SQL  connection string of the E2E database (its name must start with FaranouE2E)
 import { randomBytes, randomUUID, pbkdf2Sync } from 'node:crypto';
-import { writeFileSync } from 'node:fs';
+import { chmodSync, writeFileSync } from 'node:fs';
 import sql from 'mssql';
 
 const connectionString = process.env.FARANOU_E2E_SQL;
@@ -41,6 +41,8 @@ const state = {
     // A dedicated database-backed installation administrator for positive authorization E2E.
     admin: { username: `admin${suffix}`, password: password(), id: randomUUID(), active: true, roleId: randomUUID() },
   },
+  // Used only by the isolated role-administration test; created and removed by that test.
+  roleAdmin: { username: `ra${randomBytes(6).toString('hex')}`, password: password(), id: randomUUID() },
   companies: {
     a: { id: randomUUID(), name: `شرکت الف ${suffix}`, roleId: randomUUID() },
     b: { id: randomUUID(), name: `شرکت ب ${suffix}`, roleId: randomUUID() },
@@ -143,5 +145,6 @@ await period(f, 'سال مالی ۱۴۰۵', '2026-03-21', '2027-03-20', 1);
 await period(f, 'سال مالی ۱۴۰۴', '2025-03-21', '2026-03-20', 2);
 
 await pool.close();
-writeFileSync(new URL('./.e2e-state.json', import.meta.url), JSON.stringify(state, null, 2));
+writeFileSync(new URL('./.e2e-state.json', import.meta.url), JSON.stringify(state, null, 2), { mode: 0o600 });
+chmodSync(new URL('./.e2e-state.json', import.meta.url), 0o600);
 console.log('E2E data seeded (credentials in tests/e2e/.e2e-state.json, never committed).');

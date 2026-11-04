@@ -89,8 +89,7 @@ namespace Server.Pages
 				// The failure is recorded and shown; it is never turned into an empty list
 				// that would look like "you have no company".
 				Logger.LogError
-					(exception: exception,
-					message: "The companies of the signed-in user could not be loaded.");
+					(message: "The companies of the signed-in user could not be loaded. ExceptionType={ExceptionType}.", args: exception.GetType().FullName);
 
 				CompaniesLoadFailed = true;
 				Companies = new System.Collections.Generic.List<CompanyViewModel>();

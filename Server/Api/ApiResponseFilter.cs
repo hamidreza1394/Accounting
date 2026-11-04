@@ -7,7 +7,7 @@ namespace Server.Api;
 /// <list type="bullet">
 /// <item>Responses contain company data, so they are never stored by a browser or a proxy
 /// (<c>Cache-Control: no-store</c>).</item>
-/// <item>An unexpected exception is logged with its details on the server and answered with
+/// <item>An unexpected exception is logged with safe diagnostic metadata and answered with
 /// a generic problem response: the client never receives a stack trace, a SQL message or a
 /// connection string, and the error is never turned silently into an empty result.</item>
 /// </list>
@@ -40,11 +40,7 @@ public sealed class ApiResponseFilter : IEndpointFilter
 		}
 		catch (Exception exception)
 		{
-			Logger.LogError(
-				exception,
-				"API request {Method} {Path} failed with an unexpected error.",
-				httpContext.Request.Method,
-				httpContext.Request.Path.Value);
+			Infrastructure.Security.SafeExceptionLogging.LogRequestFailure(Logger, httpContext, exception);
 
 			return TypedResults.Problem(
 				title: "خطای غیرمنتظره‌ای در سرور رخ داد. لطفاً دوباره تلاش کنید.",

@@ -546,11 +546,10 @@ public sealed class DatabaseConnectionSetupService
         Exception exception,
         string trackingId)
     {
-        // Never the connection string, user name or password. SqlException messages do not contain them.
+        // Provider messages and inner exceptions may contain credentials; log only safe metadata.
         if (code == DatabaseSetupErrorCode.Unknown)
         {
             _logger.LogError(
-                exception,
                 "Database setup failed. TrackingId={TrackingId}; Code={Code}; Stage={Stage}; SqlNumber={SqlNumber}; SqlState={SqlState}; SqlClass={SqlClass}; ExceptionType={ExceptionType}.",
                 trackingId, code, stage, sql?.Number, sql?.State, sql?.Class, exception.GetType().FullName);
         }

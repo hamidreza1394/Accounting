@@ -54,10 +54,10 @@ public class IndexModel : Infrastructure.BasePageModel
 
 			SetDirectoriesAndFiles();
 		}
-		catch (System.Exception ex)
+		catch (System.Exception)
 		{
 			AddToastError
-				(message: ex.Message);
+				(message: Resources.Messages.Errors.UnexpectedError);
 		}
 	}
 	#endregion /OnGet
@@ -126,19 +126,19 @@ public class IndexModel : Infrastructure.BasePageModel
 						}
 					}
 				}
-				catch (System.Exception ex)
+				catch (System.Exception)
 				{
 					AddToastError
-						(message: ex.Message);
+						(message: Resources.Messages.Errors.UnexpectedError);
 				}
 			}
 
 			SetDirectoriesAndFiles();
 		}
-		catch (System.Exception ex)
+		catch (System.Exception)
 		{
 			AddToastError
-				(message: ex.Message);
+				(message: Resources.Messages.Errors.UnexpectedError);
 		}
 	}
 	#endregion /OnPostDeleteItems
@@ -198,10 +198,10 @@ public class IndexModel : Infrastructure.BasePageModel
 
 			SetDirectoriesAndFiles();
 		}
-		catch (System.Exception ex)
+		catch (System.Exception)
 		{
 			AddToastError
-				(message: ex.Message);
+				(message: Resources.Messages.Errors.UnexpectedError);
 		}
 	}
 	#endregion /OnPostCreateDirectory
@@ -241,10 +241,10 @@ public class IndexModel : Infrastructure.BasePageModel
 
 			SetDirectoriesAndFiles();
 		}
-		catch (System.Exception ex)
+		catch (System.Exception)
 		{
 			AddToastError
-				(message: ex.Message);
+				(message: Resources.Messages.Errors.UnexpectedError);
 		}
 	}
 	#endregion /OnPostUploadFilesAsync
