@@ -78,14 +78,14 @@ public sealed class CompanyMembershipRequestReadSqlServerTests
             };
             var requester = new Domain.User("membership-read-requester@example.test")
             {
-                Username = "membership-read-requester",
+                Username = "mr-requester",
                 FirstName = "درخواست‌کننده",
                 LastName = "آزمون",
                 IsActive = true,
             };
             var approver = new Domain.User("membership-read-approver@example.test")
             {
-                Username = "membership-read-approver",
+                Username = "mr-approver",
                 FirstName = "مدیر",
                 LastName = "مقصد",
                 IsActive = true,
@@ -178,6 +178,7 @@ public sealed class CompanyMembershipRequestReadSqlServerTests
             var roleResponse = Assert.IsType<Ok<Server.Api.AssignableCompanyRoleListResponse>>(assignable).Value!;
             Assert.Contains(roleResponse.Items, item => item.Id == assignableRole.Id);
             Assert.DoesNotContain(roleResponse.Items, item => item.Id == restrictedRole.Id);
+            Assert.DoesNotContain(roleResponse.Items, item => item.Id == approverRole.Id);
 
             var approvers = await Server.Api.CompanyMembershipRequestEndpoints.GetApproversAsync(
                 destination.Id, new DefaultHttpContext(), Principal(approver.Id), database, access,
