@@ -1,7 +1,7 @@
 # تحویل وظیفه — ISSUE-214-runtime-revocation-enforcement
 
 - Issue: [#214](https://github.com/hamidreza1394/Accounting/issues/214)
-- Branch: `fix/214-runtime-revocation-enforcement`
+- Branch: `fix/214-runtime-revocation-enforcement-clean`
 - وضعیت: نقطهٔ مشترک runtime evaluation افزوده شد؛ CI پس از باز شدن PR مرجع است.
 
 ## شکاف قبلی
