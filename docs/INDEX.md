@@ -91,3 +91,5 @@
 
 - **Issue #488 / D-066 Proposed:** ممیزی مدل سال/دوره مالی و تفکیک grant سال و دوره؛ handoff: [`handoffs/ISSUE-488-fiscal-grant-model-audit.md`](handoffs/ISSUE-488-fiscal-grant-model-audit.md). هیچ Migration تا تأیید معنای FiscalPeriod و AccountingPeriod مجاز نیست.
 | [`handoffs/ISSUE-483-role-admin-positive-e2e.md`](handoffs/ISSUE-483-role-admin-positive-e2e.md) | E2E مثبت مدیر نصب برای API نقش‌ها روی سرور منتشرشده و SQL Server واقعی |
+
+| [`handoffs/ISSUE-393-vendor-addon-payload-builder.md`](handoffs/ISSUE-393-vendor-addon-payload-builder.md) | تحویل Vendor-only برای ساخت candidate amendment افزایش سقف شرکت؛ بدون persistence، approval یا Customer-side changes (Issue #393) |
