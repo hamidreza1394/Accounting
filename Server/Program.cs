@@ -244,6 +244,7 @@ if (!setupRequired)
     builder.Services.AddScoped<Infrastructure.Licensing.ILocalInstallationKeyMetadataProvider,
         Infrastructure.Licensing.WindowsCngLocalInstallationKeyMetadataProvider>();
     builder.Services.AddScoped<Infrastructure.Licensing.CustomerLicenseImportService>();
+    Infrastructure.Licensing.CustomerLicenseRuntimeServiceCollectionExtensions.AddCustomerLicenseRuntimeEvaluator(builder.Services);
     builder.Services.AddScoped<Infrastructure.Licensing.CustomerInstallationIdentityEnrollmentService>();
     builder.Services.Configure<Infrastructure.Provisioning.CustomerProvisioningSettings>(
         builder.Configuration.GetSection(Infrastructure.Provisioning.CustomerProvisioningSettings.SectionName));
@@ -377,7 +378,7 @@ else if (!setupRequired && (!app.Environment.IsDevelopment() || connectionLoaded
     }
     catch (Exception exception)
     {
-        app.Logger.LogWarning("The pending database migrations could not be checked at start-up. ExceptionType={ExceptionType}.", exception.GetType().FullName);
+        app.Logger.LogWarning(exception, "The pending database migrations could not be checked at start-up.");
     }
 }
 
