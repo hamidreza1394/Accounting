@@ -44,7 +44,11 @@ public sealed class DatabaseModelTests
 			{
 				"ApplicationHandlers",
 				"Companies",
+				"CompanyEmployeeAssignments",
+				"CompanyEmployees",
 				"CompanyMembershipRequests",
+				"CompanyOrganizationalUnits",
+				"CompanyPositions",
 				"CompanyRolePermissions",
 				"CompanyRoles",
 				"ConsolidationProfiles",
