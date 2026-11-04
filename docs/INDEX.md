@@ -12,6 +12,7 @@
 
 | [AGENT_SKILL_LIBRARY.md](AGENT_SKILL_LIBRARY.md) | کتابخانه مهارت‌های مشترک Agentها و قواعد استفاده از VoltAgent |
 | سند | کاربرد |
+| [`handoffs/ISSUE-393-vendor-addon-payload-builder.md`](handoffs/ISSUE-393-vendor-addon-payload-builder.md) | تحویل Vendor-only برای ساخت candidate amendment افزایش سقف شرکت؛ بدون persistence، approval یا Customer-side changes (Issue #393) |
 |---|---|
 | [TRADE_MODULE.md](TRADE_MODULE.md) | معماری، امنیت چندشرکتی، استفاده مشترک از دوره‌های مالی، فرم‌ها، گزارش‌ها و مسیر استخراج ماژول بازرگانی (D-061/D-062) |
 | [USER_ACCESS_MANAGEMENT.md](USER_ACCESS_MANAGEMENT.md) | طراحی و نقشه اجرایی مدیریت کاربران، سمت‌ها، گروه‌های دسترسی، مجوزهای جزئی و سوابق امنیتی (Issue #444) |
@@ -64,6 +65,7 @@
 | [`handoffs/ISSUE-507-security-audit-csv-export.md`](handoffs/ISSUE-507-security-audit-csv-export.md) | خروجی CSV محدود گزارش امنیتی با ثبت Audit، محدودیت حجم و جلوگیری از Formula Injection (Issue #507) |
 | [`handoffs/ISSUE-515-csv-leading-control-characters.md`](handoffs/ISSUE-515-csv-leading-control-characters.md) | تکمیل خنثی‌سازی Tab/CR/LF در سلول‌های خروجی CSV (Issue #515) |
 | [`handoffs/ISSUE-511-me-permissions.md`](handoffs/ISSUE-511-me-permissions.md) | API مجوزهای کاربر جاری بر اساس شرکت فعال زمینه کاری همان نشست (Issue #511) |
+| [`handoffs/ISSUE-512-security-audit-report-api.md`](handoffs/ISSUE-512-security-audit-report-api.md) | مرتب‌سازی امن، فهرست نوع رویداد، فهرست شرکت‌ها و قرارداد UTC؛ D-070 نگهداری Proposed (Issue #512) |
 | [`handoffs/ISSUE-510-membership-workflow-api.md`](handoffs/ISSUE-510-membership-workflow-api.md) | کشف مقصد محدود به CustomerBoundary، نقش‌های قابل واگذاری، فهرست تأییدکنندگان و تاریخچه درخواست (Issue #510) |
 | [`handoffs/ISSUE-498-membership-permission-delegation-ceiling.md`](handoffs/ISSUE-498-membership-permission-delegation-ceiling.md) | enforce سقف واگذاری مجوز هنگام تأیید عضویت بین‌شرکتی؛ بدون Schema/Migration |
 | [`handoffs/ISSUE-500-utc-kind-value-converter.md`](handoffs/ISSUE-500-utc-kind-value-converter.md) | EF ValueConverter برای فیلدهای DateTime دارای پسوند Utc؛ حفظ مقدار و عدم تغییر فیلدهای ساعت محلی قدیمی (Issue #500) |
@@ -91,5 +93,3 @@
 
 - **Issue #488 / D-066 Proposed:** ممیزی مدل سال/دوره مالی و تفکیک grant سال و دوره؛ handoff: [`handoffs/ISSUE-488-fiscal-grant-model-audit.md`](handoffs/ISSUE-488-fiscal-grant-model-audit.md). هیچ Migration تا تأیید معنای FiscalPeriod و AccountingPeriod مجاز نیست.
 | [`handoffs/ISSUE-483-role-admin-positive-e2e.md`](handoffs/ISSUE-483-role-admin-positive-e2e.md) | E2E مثبت مدیر نصب برای API نقش‌ها روی سرور منتشرشده و SQL Server واقعی |
-
-| [`handoffs/ISSUE-393-vendor-addon-payload-builder.md`](handoffs/ISSUE-393-vendor-addon-payload-builder.md) | تحویل Vendor-only برای ساخت candidate amendment افزایش سقف شرکت؛ بدون persistence، approval یا Customer-side changes (Issue #393) |
