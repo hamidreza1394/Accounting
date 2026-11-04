@@ -6,7 +6,7 @@
 - **وضعیت:** پیاده‌سازی‌شده؛ منتظر اعتبارسنجی CI
 
 ## هدف و معیارهای پذیرش
-- [x] اعمال `ApiSensitivePolicy` علاوه بر `ApiPolicy` روی چهار endpoint خواندن اطلاعات هویتی.
+- [x] اعمال `ApiSensitivePolicy` به‌عنوان policy مؤثر endpoint روی چهار مسیر خواندن اطلاعات هویتی (جایگزین policy گروهی `ApiPolicy`).
 - [x] حفظ authorization، no-store، فیلترها، pagination و DTOهای موجود.
 - [x] افزودن تست metadata واقعی route برای هر چهار endpoint و هر دو policy.
 - [ ] Build و تست کامل روی CI سبز روی SHA نهایی.
@@ -23,7 +23,7 @@
 - `docs/SECURITY.md`, `docs/WORK_LOG.md`, `docs/INDEX.md` — ثبت کنترل امنیتی و handoff.
 
 ## تصمیم‌های فنی
-- policy حساس روی همان endpoint اضافه شد؛ policy عمومی گروه `/api/v1` حفظ می‌شود. هر دو limiter مستقل‌اند و هر دو محدودیت را اعمال می‌کنند.
+- policy حساس در سطح endpoint اعمال می‌شود و طبق رفتار ASP.NET Core policy گروهی `api` را جایگزین می‌کند. در حال حاضر global limiter جداگانه‌ای پیکربندی نشده است؛ بنابراین حد مؤثر برای این چهار مسیر ۳۰ درخواست در ۶۰ ثانیه است.
 - هیچ منطق authorization یا قرارداد پاسخ تغییر نکرد.
 
 ## بررسی و آزمون

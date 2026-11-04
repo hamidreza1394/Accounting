@@ -36,9 +36,10 @@ public sealed class ApiSensitiveReadRateLimitTests : IClassFixture<FaranouApplic
                     candidate.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods.Contains("GET", StringComparer.OrdinalIgnoreCase) == true)
                     .Select(candidate => candidate.RoutePattern.RawText)));
             var endpoint = matches[0];
-            var policies = endpoint.Metadata.GetOrderedMetadata<EnableRateLimitingAttribute>();
-            Assert.Contains(policies, policy => policy.PolicyName == Infrastructure.Security.RateLimitingPolicies.ApiPolicy);
-            Assert.Contains(policies, policy => policy.PolicyName == Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+            // Endpoint-specific rate limiting replaces the group policy in ASP.NET Core.
+            // The effective policy must therefore be api-sensitive, not the inherited api policy.
+            var effectivePolicy = endpoint.Metadata.GetMetadata<EnableRateLimitingAttribute>();
+            Assert.Equal(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy, effectivePolicy?.PolicyName);
         }
     }
 }
