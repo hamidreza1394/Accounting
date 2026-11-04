@@ -2313,6 +2313,14 @@
 - برای قابلیت‌هایی که API ندارند (کشف شرکت برای درخواست عضویت، گروه‌های قابل‌تخصیص، `/me/permissions`، مرتب‌سازی/Export/Retention گزارش، نشست‌ها، S2) قرارداد دقیق endpoint، مدل و کدهای خطا در `docs/FRONTEND_API_CONTRACT_NEEDS.md` ثبت شد (`Proposed`، مسئول ChatGPT). UI مربوط عمداً ساخته نشد تا قابلیت ظاهری یا داده ساختگی تولید نشود؛ هر مورد پس از Merge شدن API در PR مستقل مصرف می‌شود.
 
 
+## 2026-11-03 — Issue #515: تکمیل خنثی‌سازی کنترل‌کاراکترهای ابتدای سلول CSV
+- بازبینی پس از Merge #507 نشان داد Tab یا CR مستقل در ابتدای سلول در guard قبلی پوشش داده نشده بود.
+- CsvCell اکنون Tab/CR/LF ابتدایی را نیز با apostrophe خنثی می‌کند؛ رفتار قبلی برای پیشوندهای فرمولی پس از whitespace حفظ شده است.
+- تست regression برای سلول‌های آغازشونده با Tab و CR اضافه شد؛ Audit rowCount نیز برای دو ردیف خروجی بررسی می‌شود.
+- تست، Build، SQL Server، diff-check و CI هنوز اجرا/تأیید نشده‌اند؛ وضعیت Verified نیست.
+- handoff: docs/handoffs/ISSUE-515-csv-leading-control-characters.md.
+
+
 ## 2026-11-03 — Issue #512: تکمیل گزارش امنیتی Backend
 - `GET /admin/security/audit-events` فهرست سفید sort (occurredAt/eventType) و direction دریافت کرد؛ query فقط expressionهای EF ثابت را انتخاب می‌کند و ورودی ستون به SQL تبدیل نمی‌شود.
 - `GET /admin/security/audit-event-types` کد و label سمت سرور ارائه می‌کند؛ `GET /admin/companies` فهرست صفحه‌بندی‌شده نصب برای فیلتر شرکت اضافه شد.
