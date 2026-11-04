@@ -2463,3 +2463,13 @@
 - **اعتبارسنجی:** build کل Solution با SDK 10.0.403 صفر خطا؛ `dotnet test` کل Solution بدون SQL Server: 969 تست، 911 موفق، 56 Skip، فقط 2 ناموفقِ محیطیِ از قبل موجود (`SafeExceptionRealApplicationTests` بدون SQL Server). E2E و تست‌های SQL Server محلی Blocked و از CI این PR می‌آیند.
 - **مرزبندی:** بدون تغییر کد اجرایی، Migration، API یا UI؛ هیچ نقص امنیتی واقعی در محدوده یافت نشد.
 - **handoff:** `docs/handoffs/ISSUE-444-access-hardening-mission2.md`.
+
+## 2026-11-04 — Issue #444 (مأموریت ۳): مدیر شرکت، سقف تفویض و bootstrap امن
+- **مبنا:** main@b0d2f097 (ادغام PR #540). شاخه `feature/company-manager-delegation-ceiling`؛ ADR D-071 در `docs/DECISIONS.md` ثبت شد.
+- **افزوده ۱ — مجوزهای شرکتی مدیریت نقش:** seed idempotent پنج کد (`roles.view/create/update/assign`، `corporate-groups.directory.view`) با Migration فقط-داده‌ای؛ `generate_migrations.py --check` و `verify_migration_model.py` سبز.
+- **افزوده ۲ — مجوزدهی دوحالته + سقف تفویض:** endpointهای نقش‌ها مدیر شرکتِ دارای عضویت فعال و کد مجوز را می‌پذیرند؛ Create/Update/Assign/Transfer فقط با مجموعه مجوزی ⊆ سقف تصاحب actor، ارزیابی درون تراکنش ReadCommitted با گارد RowVersion (الگوی `ApproveAsync`)؛ خودتغییر نقش بسته؛ کاتالوگ/الگوها فیلترشده.
+- **افزوده ۳ — Bootstrap امن:** مدیر نصب صف‌های درخواست عضویت هر شرکت را می‌بیند و تعیین تکلیف می‌کند (رفع deadlock شرکت خالی)؛ self-approval و نقش سیستمی برای همه ممنوع.
+- **افزوده ۴ — دفترچه هم‌گروه:** `GET /api/v1/corporate-groups/{id}/directory` فقط-خواندنی، allowlist، fail-closed روی مرز مشتری شامل شرکت مالک.
+- **اعتبارسنجی:** build کل Solution صفر خطا؛ `dotnet test`: 830 موفق، 56 Skip (SQL/Windows-gated)، 2 ناموفقِ محیطیِ از قبل موجود (`SafeExceptionRealApplicationTests`؛ تکرار و تأیید در baseline). تست‌های SQL Server/E2E محلی Blocked و از CI این PR می‌آیند.
+- **مرزبندی:** بدون تغییر ClientApp، بدون Migration ساختاری، بدون سیستم RBAC موازی؛ موارد خارج از محدوده (#491، #488، #504، #384، #391، #392، #401) دست‌نخورده.
+- **handoff:** `docs/handoffs/ISSUE-444-company-manager-delegation-ceiling.md` (شامل ماتریس Permission/Scope/Actor/Target).
