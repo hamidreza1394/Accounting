@@ -2434,6 +2434,13 @@
 - **اعتبارسنجی محلی:** `node --check` هر سه فایل سالم؛ `node --test tests/*.test.mjs` → **۸/۸ سبز**؛ `npx playwright test --list` → spec با ۵ تست در فهرست. در این sandbox نه .NET SDK، نه SQL Server و نه Chromium موجود نیست (بارگیری هر دو از شبکه رد شد)، بنابراین **اجرای واقعی مرورگر/SQL فقط از CI** می‌آید و تا سبز شدن job `e2e` این کار Verified نیست.
 - **مرزبندی:** هیچ تغییر Backend/API/Migration/UI؛ هیچ یافتهٔ واقعی که نیازمند اصلاح باشد تا این لحظه تأیید نشده است. در صورت مشاهده، Issue جداگانه ثبت می‌شود.
 
+## 2026-11-04 — Issue #522: محدودسازی نرخ خواندن اطلاعات هویتی
+- **یافته:** چهار endpoint خواندن اطلاعات هویتی از نرخ عمومی 300 درخواست در دقیقه استفاده می‌کردند، در حالی که endpointهای تغییردهنده و نشست از سیاست مستقل `api-sensitive` (پیش‌فرض 30 درخواست در 60 ثانیه) استفاده می‌کنند.
+- **اصلاح:** سیاست endpoint-level `api-sensitive` روی `GET /admin/users`، `GET /admin/users/{userId}`، `GET /companies/{companyId}/users` و `GET /admin/companies/{companyId}/roles/{roleId}/members` قرار گرفت و policy گروهی `api` را برای این مسیرها جایگزین می‌کند. در پیکربندی فعلی global limiter تعریف نشده است؛ حد مؤثر این مسیرها ۳۰ درخواست در ۶۰ ثانیه است.
+- **Regression:** تست معماری با `EndpointDataSource` وجود هر چهار Route، فعل GET و policy مؤثر `api-sensitive` را از metadata واقعی endpoint بررسی می‌کند.
+- **مرز تغییر:** authorization، DTO، فیلترها، pagination، no-store، schema و Migration تغییر نکردند.
+- **اعتبارسنجی:** اجرای محلی .NET در این محیط انجام نشد؛ Build و تست‌های کامل، به‌ویژه تست metadata جدید، باید روی CI شاخه نهایی بررسی شوند.
+- **handoff:** `docs/handoffs/ISSUE-522-sensitive-identity-read-rate-limit.md`.
 
 ## 2026-11-04 — Issue #391: پل payload معتبر برای سیاست Entitlement
 - **تغییر:** `CustomerLicenseRuntimeResult.ValidatedPayload` فقط پس از موفقیت validator revocation-aware پر می‌شود؛ تمام نتایج ردشده payload برابر null دارند. هیچ Envelope، signature یا متن خام لایسنس به مصرف‌کننده تحویل نمی‌شود.

@@ -113,8 +113,10 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 | سیاست | محدوده | پیش‌فرض (`RateLimiting` در appsettings) |
 |---|---|---|
 | `api` | همه `/api/v1`، به ازای کاربر (یا آدرس برای ناشناس) | 300 درخواست در 60 ثانیه |
-| `api-sensitive` | `antiforgery/token` و `session/logout` | 30 در 60 ثانیه |
+| `api-sensitive` | `antiforgery/token`، `session/logout` و چهار endpoint خواندن اطلاعات هویتی مدیر/شرکت/اعضای نقش (Issue #522) | 30 در 60 ثانیه |
 | `login` | فقط POST فرم ورود، به ازای آدرس کلاینت (GET محدود نمی‌شود) | 20 در 60 ثانیه |
+
+چهار endpoint خواندن اطلاعات هویتی (`GET /admin/users`، `GET /admin/users/{userId}`، `GET /companies/{companyId}/users` و `GET /admin/companies/{companyId}/roles/{roleId}/members`) سیاست endpoint-level `api-sensitive` را به‌جای سیاست گروهی `api` اعمال می‌کنند؛ طبق رفتار ASP.NET Core، policy اختصاصی endpoint جایگزین policy گروهی می‌شود. در پیکربندی فعلی `GlobalLimiter` تعریف نشده است؛ بنابراین این مسیرها با حد حساس ۳۰ درخواست در ۶۰ ثانیه محدود می‌شوند، نه با جمع دو حد. مجوزدهی، DTO، فیلتر، صفحه‌بندی و `no-store` تغییر نمی‌کند. تست metadata، policy مؤثر هر مسیر را بررسی می‌کند (Issue #522).
 
 پاسخ رد: 429 با `Retry-After` (برای API به‌صورت `application/problem+json`). این محدودیت مکمل قفل موقت ۵ تلاش ناموفق در ۱۵ دقیقه به ازای نام کاربری است. **محدودیت:** پشت Reverse Proxy تا پیکربندی ForwardedHeaders، همه کاربران پشت Proxy یک پارتیشن آدرس مشترک دارند.
 

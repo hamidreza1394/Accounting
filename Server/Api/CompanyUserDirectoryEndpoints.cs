@@ -22,7 +22,8 @@ public static class CompanyUserDirectoryEndpoints
                 Infrastructure.Tenancy.CompanyAccessService.AccountKindClaimType,
                 Infrastructure.Tenancy.CompanyAccessService.UserAccountKind));
 
-        users.MapGet("", GetUsersAsync);
+        users.MapGet("", GetUsersAsync)
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
         return users;
     }
 

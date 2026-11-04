@@ -66,6 +66,7 @@
 | [`handoffs/ISSUE-485-security-audit-report-api.md`](handoffs/ISSUE-485-security-audit-report-api.md) | API گزارش صفحه‌بندی‌شده Audit امنیتی برای مدیر نصب؛ بدون IP و payload جزئیات |
 | [`handoffs/ISSUE-507-security-audit-csv-export.md`](handoffs/ISSUE-507-security-audit-csv-export.md) | خروجی CSV محدود گزارش امنیتی با ثبت Audit، محدودیت حجم و جلوگیری از Formula Injection (Issue #507) |
 | [`handoffs/ISSUE-515-csv-leading-control-characters.md`](handoffs/ISSUE-515-csv-leading-control-characters.md) | تکمیل خنثی‌سازی Tab/CR/LF در سلول‌های خروجی CSV (Issue #515) |
+| [`handoffs/ISSUE-522-sensitive-identity-read-rate-limit.md`](handoffs/ISSUE-522-sensitive-identity-read-rate-limit.md) | اعمال سیاست نرخ حساس روی چهار endpoint خواندن اطلاعات هویتی (Issue #522) |
 | [`handoffs/ISSUE-511-me-permissions.md`](handoffs/ISSUE-511-me-permissions.md) | API مجوزهای کاربر جاری بر اساس شرکت فعال زمینه کاری همان نشست (Issue #511) |
 | [`handoffs/ISSUE-512-security-audit-report-api.md`](handoffs/ISSUE-512-security-audit-report-api.md) | مرتب‌سازی امن، فهرست نوع رویداد، فهرست شرکت‌ها و قرارداد UTC؛ D-070 نگهداری Proposed (Issue #512) |
 | [`handoffs/ISSUE-530-membership-search-loading-reset.md`](handoffs/ISSUE-530-membership-search-loading-reset.md) | رفع گیر کردن وضعیت بارگذاری جستجوی مقصد عضویت پس از پاک کردن query (Issue #530) |
