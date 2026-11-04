@@ -20,8 +20,10 @@ public static class UserAdministrationEndpoints
                 Infrastructure.Tenancy.CompanyAccessService.AccountKindClaimType,
                 Infrastructure.Tenancy.CompanyAccessService.UserAccountKind));
 
-        users.MapGet("", GetUsersAsync);
-        users.MapGet("/{userId:guid}", GetUserAsync);
+        users.MapGet("", GetUsersAsync)
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+        users.MapGet("/{userId:guid}", GetUserAsync)
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
         users.MapPost("", CreateUserAsync).RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
         users.MapPut("/{userId:guid}", UpdateUserAsync).RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
         return users;
