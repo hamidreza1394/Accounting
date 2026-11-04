@@ -42,7 +42,7 @@ public sealed class SafeExceptionLoggingTests
         Assert.Null(entry.Exception);
         Assert.DoesNotContain(Secret, entry.Message);
         Assert.Contains("InvalidOperationException", entry.Message);
-        Assert.Contains("trace-safe-521", entry.Message);
+        Assert.Contains("TraceId=", entry.Message);
         Assert.Contains("POST", entry.Message);
     }
 
@@ -102,6 +102,36 @@ public sealed class SafeExceptionLoggingTests
         _ => Task.CompletedTask, RoutePatternFactory.Parse("/api/items/{id}"), 0).Build();
 
     [Fact]
+    public void RequestLogger_DoesNotEmitUntrustedTraceIdentifier()
+    {
+        var capture = new CaptureProvider();
+        using var factory = LoggerFactory.Create(builder => builder.AddProvider(capture));
+        var context = new DefaultHttpContext { TraceIdentifier = "trace-" + Secret + "\r\nforged" };
+        context.Request.Method = "GET";
+
+        var currentActivity = System.Diagnostics.Activity.Current;
+        try
+        {
+            System.Diagnostics.Activity.Current = null;
+            Infrastructure.Security.SafeExceptionLogging.LogRequestFailure(
+                factory.CreateLogger("test"), context, new InvalidOperationException(Secret));
+        }
+        finally
+        {
+            System.Diagnostics.Activity.Current = currentActivity;
+        }
+
+        var entry = Assert.Single(capture.Entries);
+        var expectedTrace = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(context.TraceIdentifier)))[..32];
+        Assert.Contains(expectedTrace, entry.Message);
+        Assert.Null(entry.Exception);
+        Assert.DoesNotContain(Secret, entry.Message);
+        Assert.DoesNotContain("\r", entry.Message);
+        Assert.DoesNotContain("\n", entry.Message);
+    }
+
+    [Fact]
     public async Task LegacyMiddleware_RethrowsButLogsOnlySafeMetadata()
     {
         var capture = new CaptureProvider();
@@ -123,7 +153,7 @@ public sealed class SafeExceptionLoggingTests
         Assert.Null(entry.Exception);
         Assert.DoesNotContain(Secret, entry.Message);
         Assert.Contains("InvalidOperationException", entry.Message);
-        Assert.Contains("trace-middleware-521", entry.Message);
+        Assert.Contains("TraceId=", entry.Message);
     }
 
     private sealed class ErrorFeature(Exception error, Endpoint? endpoint = null) : IExceptionHandlerFeature

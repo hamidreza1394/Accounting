@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Routing;
@@ -20,7 +22,24 @@ public static class SafeExceptionLogging
         var route = (endpoint as RouteEndpoint)?.RoutePattern.RawText ?? "unmatched";
         logger.LogError(new EventId(521, "UnexpectedRequestFailure"),
             "Unexpected request failure. TraceId={TraceId}; Method={Method}; Route={Route}; ExceptionType={ExceptionType}.",
-            Activity.Current?.TraceId.ToString() ?? context.TraceIdentifier, method, route,
+            GetSafeTraceId(context), method, route,
             exception?.GetType().FullName ?? "unknown");
+    }
+
+    private static string GetSafeTraceId(HttpContext context)
+    {
+        if (Activity.Current is { IdFormat: ActivityIdFormat.W3C } activity)
+        {
+            return activity.TraceId.ToString();
+        }
+
+        // TraceIdentifier can be assigned by middleware and is not guaranteed to be trusted.
+        // Hash it rather than writing attacker-controlled text (or log delimiters) verbatim.
+        var traceIdentifier = context.TraceIdentifier;
+        if (string.IsNullOrEmpty(traceIdentifier) || traceIdentifier.Length > 128)
+        {
+            return "unavailable";
+        }
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(traceIdentifier)))[..32];
     }
 }
