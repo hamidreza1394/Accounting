@@ -125,6 +125,83 @@ public sealed class SecurityAuditAdministrationEndpointTests
     }
 
     [Fact]
+    public async Task AuditReportUsesOnlyAllowlistedSortKeysAndReturnsUtcWireValues()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddUser("admin", Constants.Role.Admin);
+        var company = new Domain.Company { Name = "شرکت مرتب‌سازی", IsActive = true };
+        fixture.Database.Companies.Add(company);
+        var first = new DateTime(2026, 11, 3, 8, 0, 0, DateTimeKind.Unspecified);
+        var second = first.AddHours(1);
+        fixture.Database.SecurityAuditEvents.AddRange(
+            NewEvent(admin.Id, company.Id, "LoginSucceeded", first),
+            NewEvent(admin.Id, company.Id, "LoginFailed", second));
+        await fixture.Database.SaveChangesAsync();
+
+        var sorted = await Server.Api.SecurityAuditAdministrationEndpoints.GetAuditEventsAsync(
+            new DefaultHttpContext(), Principal(admin.Id), fixture.Database,
+            sort: "eventType", descending: false);
+        var response = Assert.IsType<Ok<Server.Api.SecurityAuditEventListResponse>>(sorted).Value!;
+        Assert.Equal(new[] { "LoginFailed", "LoginSucceeded" }, response.Items.Select(item => item.EventType));
+        Assert.All(response.Items, item => Assert.Equal(DateTimeKind.Utc, item.OccurredAtUtc.Kind));
+
+        var injection = await Server.Api.SecurityAuditAdministrationEndpoints.GetAuditEventsAsync(
+            new DefaultHttpContext(), Principal(admin.Id), fixture.Database,
+            sort: "OccurredAtUtc DESC; DROP TABLE SecurityAuditEvents");
+        Assert.Equal(StatusCodes.Status400BadRequest, (injection as IStatusCodeHttpResult)?.StatusCode);
+    }
+
+    [Fact]
+    public async Task AuditEventTypesExposeServerLabelsAndUnknownCodesSafely()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddUser("admin", Constants.Role.Admin);
+        fixture.Database.SecurityAuditEvents.AddRange(
+            NewEvent(admin.Id, null, "LoginSucceeded", DateTime.UtcNow),
+            NewEvent(admin.Id, null, "UnknownEventType", DateTime.UtcNow));
+        await fixture.Database.SaveChangesAsync();
+
+        var context = new DefaultHttpContext();
+        var result = await Server.Api.SecurityAuditAdministrationEndpoints.GetAuditEventTypesAsync(
+            context, Principal(admin.Id), fixture.Database);
+        var items = Assert.IsType<Ok<Server.Api.SecurityAuditEventTypeResponse[]>>(result).Value!;
+        Assert.Contains(items, item => item.Code == "LoginSucceeded" && item.Label == "ورود موفق");
+        Assert.Contains(items, item => item.Code == "UnknownEventType" && item.Label == "UnknownEventType");
+        Assert.Equal("no-store", context.Response.Headers.CacheControl.ToString());
+
+        var ordinary = fixture.AddUser("ordinary", "Accountant");
+        await fixture.Database.SaveChangesAsync();
+        var denied = await Server.Api.SecurityAuditAdministrationEndpoints.GetAuditEventTypesAsync(
+            new DefaultHttpContext(), Principal(ordinary.Id), fixture.Database);
+        Assert.Equal(StatusCodes.Status403Forbidden, (denied as IStatusCodeHttpResult)?.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminCompanyListIsInstallationAdminOnlyAndPaginated()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddUser("admin", Constants.Role.Admin);
+        var ordinary = fixture.AddUser("ordinary", "Accountant");
+        fixture.Database.Companies.AddRange(
+            new Domain.Company { Name = "شرکت آلفا", IsActive = true },
+            new Domain.Company { Name = "شرکت بتا", IsActive = false },
+            new Domain.Company { Name = "موسسه خارج از جستجو", IsActive = true });
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await Server.Api.SecurityAuditAdministrationEndpoints.GetAdminCompaniesAsync(
+            new DefaultHttpContext(), Principal(admin.Id), fixture.Database,
+            search: "شرکت", page: 1, pageSize: 1);
+        var response = Assert.IsType<Ok<Server.Api.SecurityAuditCompanyListResponse>>(result).Value!;
+        Assert.Equal(2, response.TotalCount);
+        Assert.Single(response.Items);
+        Assert.Contains(response.Items, item => item.Name == "شرکت آلفا" || item.Name == "شرکت بتا");
+
+        var denied = await Server.Api.SecurityAuditAdministrationEndpoints.GetAdminCompaniesAsync(
+            new DefaultHttpContext(), Principal(ordinary.Id), fixture.Database);
+        Assert.Equal(StatusCodes.Status403Forbidden, (denied as IStatusCodeHttpResult)?.StatusCode);
+    }
+
+    [Fact]
     public async Task AuditExport_ProducesSafeUtf8CsvAndOmitsSensitiveFields()
     {
         await using var fixture = new Fixture();
