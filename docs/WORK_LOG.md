@@ -2327,3 +2327,9 @@
 - تست‌های endpoint برای چند شرکت، query جعلی، عضویت/نقش غیرفعال، کاربر بدون شرکت و مدیر نصب؛ تست SQL Server برای query و جداسازی شرکت اضافه شد.
 - هیچ Migration، ClientApp یا E2E تغییر نکرد. Build/Test/SQL Server و diff-check هنوز اجرا نشده‌اند؛ Verified نیست.
 - handoff: docs/handoffs/ISSUE-511-me-permissions.md.
+
+
+## 2026-11-04 — Issue #520: UTC در projectionهای عضویت
+- برچسب UTC پس از materialization برای سه پاسخ عضویت؛ فیلدهای قدیمی و schema بدون تغییر.
+- تست واحد و SQL Server اضافه شد؛ اجرای .NET و SQL Server به‌علت نبود SDK و سرویس در محیط مسدود است. بررسی asset و `git diff --check` موفق بود.
+- جزئیات: `docs/handoffs/ISSUE-520-membership-utc-wire.md`.
