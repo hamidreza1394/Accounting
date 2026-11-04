@@ -73,7 +73,10 @@ public sealed class VendorLicenseAmendmentPayloadBuilderTests
         Assert.Equal(2, amendment!.FormatVersion);
         Assert.Equal(20, amendment.Limits.MaxCompanies);
         Assert.Empty(amendment.Limits.Subsystems);
-        Assert.Same(fixture.Payload.CompanyEntitlements, amendment.CompanyEntitlements);
+        Assert.NotSame(fixture.Payload.CompanyEntitlements, amendment.CompanyEntitlements);
+        Assert.Equal(fixture.Payload.CompanyEntitlements, amendment.CompanyEntitlements);
+        Assert.NotSame(fixture.Payload.CompanyEntitlements![0]!.Modules, amendment.CompanyEntitlements![0]!.Modules);
+        Assert.NotSame(fixture.Payload.CompanyEntitlements![0]!.Features, amendment.CompanyEntitlements![0]!.Features);
         Assert.Equal(fixture.Payload.SupportUntilUtc, amendment.SupportUntilUtc);
         Assert.Equal(fixture.Payload.UpdatesUntilUtc, amendment.UpdatesUntilUtc);
         Assert.Equal(CanonicalJson.SerializePayload(amendment), CanonicalJson.SerializePayload(
@@ -83,6 +86,61 @@ public sealed class VendorLicenseAmendmentPayloadBuilderTests
                 Sequence = fixture.Payload.Sequence + 1,
                 Limits = fixture.Payload.Limits with { MaxCompanies = 20 }
             }));
+    }
+
+    [Fact]
+    public void BuiltV1AmendmentIsDetachedFromMutableSubsystemSource()
+    {
+        var fixture = CreateV1Fixture();
+        var mutableSubsystems = new List<string> { "finance", "sales" };
+        fixture.Payload = fixture.Payload with
+        {
+            Limits = new LicenseLimits(5, mutableSubsystems)
+        };
+
+        var success = VendorLicenseAmendmentPayloadBuilder.TryBuildMaxCompaniesIncrease(
+            fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
+            newMaxCompanies: 8, IssuedAt.AddHours(1), out var amendment, out var error);
+
+        Assert.True(success, error);
+        Assert.NotNull(amendment);
+        mutableSubsystems.Add("treasury");
+
+        Assert.Equal(new[] { "finance", "sales" }, amendment!.Limits.Subsystems);
+        Assert.NotSame(mutableSubsystems, amendment.Limits.Subsystems);
+    }
+
+    [Fact]
+    public void BuiltV2AmendmentIsDetachedFromMutableCompanyEntitlementSources()
+    {
+        var fixture = CreateV2Fixture();
+        var modules = new List<string> { "finance", "inventory" };
+        var features = new List<LicenseFeatureEntitlement?>
+        {
+            new("finance.cost_centers", LicenseFeatureValueTypes.MaxCount, MaxCount: 12)
+        };
+        var companies = new List<CompanyLicenseEntitlement?>
+        {
+            new("company-0001", modules, 25, features)
+        };
+        fixture.Payload = fixture.Payload with { CompanyEntitlements = companies };
+
+        var success = VendorLicenseAmendmentPayloadBuilder.TryBuildMaxCompaniesIncrease(
+            fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
+            newMaxCompanies: 20, IssuedAt.AddDays(1), out var amendment, out var error);
+
+        Assert.True(success, error);
+        Assert.NotNull(amendment);
+        modules.Add("TRADE_IMPORT");
+        features.Add(new LicenseFeatureEntitlement("sales.pos", LicenseFeatureValueTypes.Enabled, Enabled: true));
+        companies.Add(new CompanyLicenseEntitlement("company-0002", new[] { "finance" }, 5, Array.Empty<LicenseFeatureEntitlement?>()));
+
+        Assert.Single(amendment!.CompanyEntitlements!);
+        Assert.Equal(new[] { "finance", "inventory" }, amendment.CompanyEntitlements![0]!.Modules);
+        Assert.Single(amendment.CompanyEntitlements[0]!.Features!);
+        Assert.NotSame(companies, amendment.CompanyEntitlements);
+        Assert.NotSame(modules, amendment.CompanyEntitlements[0]!.Modules);
+        Assert.NotSame(features, amendment.CompanyEntitlements[0]!.Features);
     }
 
     [Theory]

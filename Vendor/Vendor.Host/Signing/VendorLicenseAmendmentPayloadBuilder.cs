@@ -92,11 +92,17 @@ public static class VendorLicenseAmendmentPayloadBuilder
             return Fail("license_outside_validity", out errorCode);
         }
 
+        // The payload model exposes IReadOnlyList, but callers can still supply mutable
+        // List/array instances. Snapshot every nested collection before returning a payload
+        // that will later be canonicalized and signed.
         var candidate = currentPayload with
         {
-            IssuedAtUtc = issuedAtUtc.ToUniversalTime(),
+            IssuedAtUtc = effectiveIssuedAt,
             Sequence = currentPayload.Sequence + 1,
-            Limits = currentPayload.Limits with { MaxCompanies = newMaxCompanies }
+            Limits = new LicenseLimits(
+                newMaxCompanies,
+                Array.AsReadOnly(currentPayload.Limits.Subsystems.ToArray())),
+            CompanyEntitlements = CloneCompanyEntitlements(currentPayload.CompanyEntitlements)
         };
 
         if (StructuralValidation.ValidatePayload(candidate).Count > 0 ||
@@ -107,6 +113,38 @@ public static class VendorLicenseAmendmentPayloadBuilder
 
         amendmentPayload = candidate;
         return true;
+    }
+
+    private static IReadOnlyList<CompanyLicenseEntitlement?>? CloneCompanyEntitlements(
+        IReadOnlyList<CompanyLicenseEntitlement?>? companies)
+    {
+        if (companies is null)
+            return null;
+
+        var snapshot = companies
+            .Select(company => company is null
+                ? null
+                : new CompanyLicenseEntitlement(
+                    company.CompanyReference,
+                    company.Modules is null
+                        ? null
+                        : Array.AsReadOnly(company.Modules.ToArray()),
+                    company.MaxUsers,
+                    company.Features is null
+                        ? null
+                        : Array.AsReadOnly(company.Features
+                            .Select(feature => feature is null
+                                ? null
+                                : new LicenseFeatureEntitlement(
+                                    feature.Code,
+                                    feature.Type,
+                                    feature.Enabled,
+                                    feature.MaxCount,
+                                    feature.EnumValue))
+                            .ToArray())))
+            .ToArray();
+
+        return Array.AsReadOnly(snapshot);
     }
 
     private static bool Fail(string code, out string? errorCode)

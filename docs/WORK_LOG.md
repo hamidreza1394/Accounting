@@ -2360,3 +2360,11 @@
 
 
 - **تکمیل اعتبار زمانی در همان PR #527:** builder اکنون term license را پیش از NotBefore یا پس از Expires رد می‌کند و هیچ grace ضمنی برای صدور add-on به کار نمی‌برد؛ support/update expiry به‌تنهایی perpetual entitlement را منقضی نمی‌کند. تست‌های منفی/مثبت این مرز اضافه شدند. این commit جدید نیازمند اجرای مجدد CI است.
+
+
+## 2026-11-04 — Issue #393: جداسازی snapshot amendment از collectionهای mutable
+- **یافته بازبینی:** `IReadOnlyList` در قرارداد تضمین immutability نیست؛ caller می‌تواند `List<T>` یا آرایه mutable بدهد. نسخه قبلی builder همان referenceهای v1 subsystem و v2 company/module/feature را در amendment نگه می‌داشت؛ mutation بعدی caller می‌توانست payload آماده canonicalization/signing را عوض کند.
+- **اصلاح:** builder اکنون subsystemها و تمام لایه‌های collection مربوط به company entitlement را به snapshot مستقل read-only کپی می‌کند. مقادیر feature نیز به recordهای تازه تبدیل می‌شوند.
+- **Regression:** دو تست ورودی‌های mutable را پس از ساخت amendment تغییر می‌دهند و ثابت می‌کنند خروجی تغییر نمی‌کند.
+- **محدوده:** فقط Vendor pure builder، تست‌ها و مستندات؛ بدون DB، Migration، signer یا `Server/**`.
+- **اعتبارسنجی:** تست محلی اجرا نشده؛ CI روی SHA جدید لازم است.

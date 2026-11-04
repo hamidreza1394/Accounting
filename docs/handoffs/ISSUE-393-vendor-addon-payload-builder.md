@@ -62,3 +62,10 @@
 - دو هشدار CA1861 در fixtureهای تست با آرایه‌های readonly مشترک اصلاح شده‌اند؛ این commit جدید نیازمند اجرای مجدد CI است.
 
 - **اصلاح اعتبار زمانی:** amendment فقط در بازهٔ اعتبار حق استفاده ساخته می‌شود؛ grace ضمنی برای term expiry اعمال نمی‌شود. انقضای support/update مانع amendment یک perpetual license نیست.
+
+
+## بازبینی امنیتی تکمیلی — snapshot مستقل از ورودی‌های mutable
+- مدل قرارداد از `IReadOnlyList` استفاده می‌کند، اما این interface مانع پاس‌دادن `List<T>` یا آرایه mutable توسط caller نیست.
+- Builder اکنون هنگام ساخت amendment، لیست subsystemهای v1 و تمام لایه‌های collection در company entitlementهای v2 (companies/modules/features) را به snapshotهای مستقل read-only کپی می‌کند.
+- تست‌های regression پس از ساخت amendment، مجموعه‌های ورودی را mutate می‌کنند و ثابت می‌کنند payload آماده امضا تغییر نمی‌کند.
+- این اصلاح در همان محدودهٔ pure payload builder است؛ هیچ persistence، signer، migration یا customer-side code اضافه نشده است.
