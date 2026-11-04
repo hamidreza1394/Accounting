@@ -103,6 +103,8 @@ public sealed class CustomerLicenseRuntimeEvaluator : ICustomerLicenseRuntimeEva
         LicenseValidationResult validation;
         try
         {
+            // Always re-validate through the revocation-aware composition registered in DI.
+            // No in-memory cache of prior results; each call re-reads and re-verifies.
             validation = await _validator.ValidateAsync(envelope, localInstallationId, cancellationToken);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
