@@ -74,7 +74,6 @@ public sealed class CustomerLicenseRuntimeEvaluator : ICustomerLicenseRuntimeEva
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            // Database unreadable must never be treated as a usable license.
             _logger.LogWarning(exception, "Customer license runtime evaluation could not read installed licenses.");
             return CustomerLicenseRuntimeResult.Rejected("license_state_unavailable");
         }
@@ -104,14 +103,10 @@ public sealed class CustomerLicenseRuntimeEvaluator : ICustomerLicenseRuntimeEva
         LicenseValidationResult validation;
         try
         {
-            // The only registered ICustomerLicenseEnvelopeValidator is RevocationAware.
-            // It first verifies the license signature and installation binding, then
-            // consults OfflineRevocationConsumer (state store + TPM anchor + trust).
             validation = await _validator.ValidateAsync(envelope, localInstallationId, cancellationToken);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            // Any unexpected failure in trust/TPM/state must fail closed.
             _logger.LogWarning(exception, "Customer license runtime validation failed closed.");
             return CustomerLicenseRuntimeResult.Rejected(
                 "offline_revocation_unavailable", current.LicenseId, current.Sequence);
@@ -119,16 +114,12 @@ public sealed class CustomerLicenseRuntimeEvaluator : ICustomerLicenseRuntimeEva
 
         if (!validation.Success || validation.Payload is null)
         {
-            // Preserve stable codes from the revocation-aware pipeline:
-            // license_revoked | offline_revocation_unavailable | signature failures, etc.
             var code = string.IsNullOrWhiteSpace(validation.ErrorCode)
                 ? "license_validation_failed"
                 : validation.ErrorCode;
             return CustomerLicenseRuntimeResult.Rejected(code, current.LicenseId, current.Sequence);
         }
 
-        // Runtime usability follows the same policy as import: Valid / ExpiringSoon /
-        // Restricted are the only accepted signed states. Grace remains rejected.
         if (validation.Status is not (LicenseStatus.Valid or LicenseStatus.ExpiringSoon or LicenseStatus.Restricted))
         {
             return CustomerLicenseRuntimeResult.Rejected(
