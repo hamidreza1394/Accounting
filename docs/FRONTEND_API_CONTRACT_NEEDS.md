@@ -11,22 +11,28 @@
 ### ۱.۱ کشف شرکت‌های قابل‌درخواست
 `GET /api/v1/me/membership-requests/destinations?search=&page=&pageSize=`
 - پاسخ ۲۰۰: `{ "items": [{ "companyId": "guid", "name": "string" }], "totalCount": 0, "page": 1, "pageSize": 25 }`
-- فقط شرکت‌های **فعال** که طبق D-065 قابل درخواست‌اند (هم‌گروه شرکتی/دامنهٔ مجاز) و کاربر در آن‌ها عضویت فعال یا درخواست Pending ندارد. شرکت‌های بیرون از دامنه هرگز در پاسخ یا شمارش نیایند. `search` حداکثر ۱۲۰ نویسه.
-- خطا: 401 ناشناس/حساب غیرکاربر؛ 400 `search` طولانی. فهرست خالی خطا نیست.
-- UI: فرم «ثبت درخواست» با جستجو و انتخاب شرکت، سپس `POST /me/membership-requests { destinationCompanyId }`.
+- جستجو **اجباری و exact** است: پس از Trim طول ۳ تا ۱۲۰ نویسه؛ فهرست کامل/جستجوی prefix یا wildcard ارائه نمی‌شود. این endpoint فقط شرکت‌های فعال با `CustomerBoundaryId` غیرتهی و برابر با مرز حداقل یکی از عضویت‌های فعال کاربر را بررسی می‌کند. شرکت‌هایی که کاربر در آن‌ها عضویت فعال با نقش فعال یا درخواست Pending دارد، حذف می‌شوند. شرکت‌های بیرون از مرز هرگز در پاسخ یا شمارش نیایند؛ مرز null به معنی fail-closed است (D-037/D-038/D-065).
+- Rate limit حساس، `no-store`، صفحه‌بندی با سقف ۱۰۰؛ خطا: 401 ناشناس/حساب غیرکاربر؛ 400 جستجوی خالی/کوتاه/بیش از ۱۲۰ نویسه. فهرست خالی خطا نیست.
+- `POST /me/membership-requests` همان مرز را مستقلاً سمت سرور دوباره بررسی می‌کند؛ پنهان‌کردن مقصد در UI کنترل امنیتی محسوب نمی‌شود.
 
 ### ۱.۲ ثبت درخواست (موجود) — کدهای خطای مورد انتظار UI
-`POST /me/membership-requests` → 201 `{ id, status, requestedAtUtc }`؛ 400 شرکت نامعتبر؛ 404 شرکت مقصد ناموجود/خارج از دامنه (پاسخ یکسان، بدون افشا)؛ 409 عضو فعال یا درخواست Pending دارد.
+`POST /me/membership-requests` → 201 `{ id, status, requestedAtUtc }`؛ 400 بدنه/Anti-forgery نامعتبر؛ 404 شرکت مقصد ناموجود/غیرفعال/خارج از CustomerBoundary (پاسخ یکسان، بدون افشا)؛ 409 عضو فعال یا درخواست Pending دارد. درخواست تا تأیید صریح مقصد هیچ دسترسی عملیاتی ایجاد نمی‌کند.
 
 ### ۱.۳ گروه‌های قابل‌تخصیص برای تأییدکننده
 `GET /api/v1/admin/companies/{companyId}/membership-requests/assignable-roles`
-- پاسخ ۲۰۰: `[{ "id": "guid", "code": "string", "name": "string", "isSystemRole": false }]`
-- مجوز: همان `users.membership.approve` شرکت (بدون مجوز ← 404 مانند `/pending`). فقط گروه‌های **فعال همان شرکت** و **در سقف تفویض** تأییدکننده (PR #498)؛ مجوزهای داخل گروه برگردانده نشود.
-- اکنون تأییدکنندهٔ غیرمدیر نصب نمی‌تواند `GET …/roles` را بخواند و UI پیام «با مدیر نصب هماهنگ کنید» نشان می‌دهد.
+- پاسخ ۲۰۰: `{ "items": [{ "id": "guid", "code": "string", "name": "string", "isSystemRole": false }], "totalCount": 0, "page": 1, "pageSize": 100 }`.
+- پارامترهای `page` و `pageSize`؛ سقف pageSize برابر ۱۰۰.
+- مجوز: `users.membership.approve` در همان شرکت (بدون مجوز ← 404). فقط گروه‌های فعال و غیرسیستمی همان شرکت که تمام permissionهایشان زیرمجموعهٔ مجوزهای فعال تأییدکننده در همان شرکت است؛ permission codeها برگردانده نشوند. این فهرست جایگزین کنترل مجدد سقف تفویض در POST approve نیست.
 
-### ۱.۴ سوابق تصمیم برای تأییدکننده
+### ۱.۴ فهرست تأییدکنندگان مقصد
+`GET /api/v1/admin/companies/{companyId}/membership-requests/approvers`
+- پارامترهای `page` و `pageSize`؛ سقف pageSize برابر ۱۰۰. پاسخ ۲۰۰: `{ items: [{ userId, displayName, username }], totalCount, page, pageSize }`.
+- مجوز: `users.membership.approve` همان شرکت (بدون مجوز ← 404). فقط کاربران فعال با عضویت و نقش فعال همان شرکت که permission `users.membership.approve` را دارند؛ پاسخ allowlist است و ایمیل/تلفن/نقش/permissionهای دیگر برنمی‌گردد.
+
+### ۱.۵ سوابق درخواست و تصمیم
 `GET /api/v1/admin/companies/{companyId}/membership-requests?status=Pending|Approved|Rejected&page=&pageSize=`
-- آیتم: `{ id, requesterDisplayName, username, status, requestedAtUtc, decidedAtUtc, decidedByDisplayName, approvedRoleName, decisionReason }`؛ مجوز مانند ۱.۳. درخواست‌کننده سوابق خودش را از `GET /me/membership-requests` می‌بیند (موجود).
+- آیتم: `{ id, requesterDisplayName, username, status, requestedAtUtc, decidedAtUtc, decidedByDisplayName, approvedRoleName, decisionReason }`؛ مجوز مانند ۱.۳؛ status اختیاری و فقط همین سه مقدار؛ زمان‌های `*Utc` با پسوند Z. این endpoint تاریخچهٔ درخواست‌ها/تصمیم‌ها را می‌دهد؛ مدل مستقل تاریخچهٔ همهٔ تغییرات عضویت هنوز وجود ندارد و نباید جعل شود.
+- درخواست‌کننده سوابق خودش را از `GET /me/membership-requests?status=&page=&pageSize=` می‌بیند؛ فقط درخواست‌های متعلق به خودش.
 
 ## ۲. مجوزهای کاربر جاری و منو (مرحلهٔ ۹)
 `GET /api/v1/me/permissions` — بدون پارامتر `companyId`.

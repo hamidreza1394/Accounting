@@ -16,7 +16,7 @@ public sealed class CompanyMembershipRequestEndpointTests
         var result = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
             new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Destination.Id),
-            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+            new AllowAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
 
         Assert.Equal(StatusCodes.Status201Created, (result as IStatusCodeHttpResult)?.StatusCode);
         var request = await fixture.Database.CompanyMembershipRequests.SingleAsync();
@@ -41,7 +41,7 @@ public sealed class CompanyMembershipRequestEndpointTests
         var duplicate = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
             new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Destination.Id),
-            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+            new AllowAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
         Assert.Equal(StatusCodes.Status409Conflict, (duplicate as IStatusCodeHttpResult)?.StatusCode);
 
         fixture.Database.CompanyMembershipRequests.RemoveRange(fixture.Database.CompanyMembershipRequests);
@@ -57,7 +57,7 @@ public sealed class CompanyMembershipRequestEndpointTests
         var alreadyMember = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
             new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Destination.Id),
-            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+            new AllowAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
         Assert.Equal(StatusCodes.Status409Conflict, (alreadyMember as IStatusCodeHttpResult)?.StatusCode);
     }
 
@@ -72,7 +72,7 @@ public sealed class CompanyMembershipRequestEndpointTests
         var inactiveRequester = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
             new DefaultHttpContext(), fixture.Principal(inactiveUser.Id),
             new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Destination.Id),
-            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+            new AllowAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
         Assert.Equal(StatusCodes.Status404NotFound, (inactiveRequester as IStatusCodeHttpResult)?.StatusCode);
 
         fixture.Destination.IsActive = false;
@@ -80,7 +80,7 @@ public sealed class CompanyMembershipRequestEndpointTests
         var inactiveDestination = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
             new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Destination.Id),
-            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+            new AllowAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
         Assert.Equal(StatusCodes.Status404NotFound, (inactiveDestination as IStatusCodeHttpResult)?.StatusCode);
     }
 
@@ -91,7 +91,7 @@ public sealed class CompanyMembershipRequestEndpointTests
         var result = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
             new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Destination.Id),
-            new RejectAntiforgery(), fixture.Database, TimeProvider.System, default);
+            new RejectAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
 
         Assert.Equal(StatusCodes.Status400BadRequest, (result as IStatusCodeHttpResult)?.StatusCode);
         Assert.Empty(await fixture.Database.CompanyMembershipRequests.ToListAsync());
@@ -374,7 +374,7 @@ public sealed class CompanyMembershipRequestEndpointTests
         var created = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
             new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Destination.Id),
-            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+            new AllowAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
         Assert.Equal(StatusCodes.Status201Created, (created as IStatusCodeHttpResult)?.StatusCode);
         var request = await fixture.Database.CompanyMembershipRequests.SingleAsync();
 
@@ -415,7 +415,7 @@ public sealed class CompanyMembershipRequestEndpointTests
         var newRequest = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
             new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
             new Server.Api.CreateCompanyMembershipRequestRequest(fixture.Destination.Id),
-            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+            new AllowAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
         Assert.Equal(StatusCodes.Status201Created, (newRequest as IStatusCodeHttpResult)?.StatusCode);
     }
 
@@ -437,6 +437,276 @@ public sealed class CompanyMembershipRequestEndpointTests
         Assert.Equal(own.Id, ok.Value.Items[0].Id);
     }
 
+    [Fact]
+    public async Task GetDestinationsRequiresExactSearchAndNeverEnumeratesOutsideCustomerBoundary()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var foreignCompany = new Domain.Company
+        {
+            Name = fixture.Destination.Name,
+            IsActive = true,
+            CustomerBoundaryId = Guid.NewGuid(),
+        };
+        var pendingCompany = new Domain.Company
+        {
+            Name = "شرکت در انتظار",
+            IsActive = true,
+            CustomerBoundaryId = fixture.Destination.CustomerBoundaryId,
+        };
+        var existingMemberCompany = new Domain.Company
+        {
+            Name = "شرکت با عضویت فعال",
+            IsActive = true,
+            CustomerBoundaryId = fixture.Destination.CustomerBoundaryId,
+        };
+        var existingMemberRole = new Domain.CompanyRole
+        {
+            TenantId = existingMemberCompany.Id,
+            Company = existingMemberCompany,
+            Code = "EXISTING",
+            Name = "عضو",
+            IsActive = true,
+        };
+        fixture.Database.Companies.AddRange(foreignCompany, pendingCompany, existingMemberCompany);
+        fixture.Database.CompanyRoles.Add(existingMemberRole);
+        fixture.Database.UserCompanyMemberships.Add(new Domain.UserCompanyMembership
+        {
+            UserId = fixture.Requester.Id,
+            TenantId = existingMemberCompany.Id,
+            Role = existingMemberRole,
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow,
+        });
+        var pending = fixture.NewRequest();
+        pending.DestinationTenantId = pendingCompany.Id;
+        pending.DestinationCompany = pendingCompany;
+        fixture.Database.CompanyMembershipRequests.Add(pending);
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await Server.Api.CompanyMembershipRequestEndpoints.GetDestinationsAsync(
+            new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
+            fixture.Database, fixture.Access, fixture.Destination.Name, page: 1, pageSize: 25);
+
+        var response = Assert.IsType<Ok<Server.Api.MembershipDestinationListResponse>>(result).Value!;
+        var item = Assert.Single(response.Items);
+        Assert.Equal(fixture.Destination.Id, item.CompanyId);
+        Assert.Equal(1, response.TotalCount);
+
+        var pendingSearch = await Server.Api.CompanyMembershipRequestEndpoints.GetDestinationsAsync(
+            new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
+            fixture.Database, fixture.Access, pendingCompany.Name);
+        Assert.Empty(Assert.IsType<Ok<Server.Api.MembershipDestinationListResponse>>(pendingSearch).Value!.Items);
+
+        var existingMembershipSearch = await Server.Api.CompanyMembershipRequestEndpoints.GetDestinationsAsync(
+            new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
+            fixture.Database, fixture.Access, existingMemberCompany.Name);
+        Assert.Empty(Assert.IsType<Ok<Server.Api.MembershipDestinationListResponse>>(existingMembershipSearch).Value!.Items);
+
+        var prefixSearch = await Server.Api.CompanyMembershipRequestEndpoints.GetDestinationsAsync(
+            new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
+            fixture.Database, fixture.Access, "شرکت");
+        Assert.Empty(Assert.IsType<Ok<Server.Api.MembershipDestinationListResponse>>(prefixSearch).Value!.Items);
+
+        var invalidSearch = await Server.Api.CompanyMembershipRequestEndpoints.GetDestinationsAsync(
+            new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
+            fixture.Database, fixture.Access, "شـ");
+        Assert.Equal(StatusCodes.Status400BadRequest, (invalidSearch as IStatusCodeHttpResult)?.StatusCode);
+    }
+
+    [Fact]
+    public async Task RequestMembershipRejectsDirectPostOutsideTheRequestersCustomerBoundary()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var foreignCompany = new Domain.Company
+        {
+            Name = "شرکت خارج از مرز",
+            IsActive = true,
+            CustomerBoundaryId = Guid.NewGuid(),
+        };
+        fixture.Database.Companies.Add(foreignCompany);
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await Server.Api.CompanyMembershipRequestEndpoints.RequestMembershipAsync(
+            new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
+            new Server.Api.CreateCompanyMembershipRequestRequest(foreignCompany.Id),
+            new AllowAntiforgery(), fixture.Database, fixture.Access, TimeProvider.System, default);
+
+        Assert.Equal(StatusCodes.Status404NotFound, (result as IStatusCodeHttpResult)?.StatusCode);
+        Assert.Empty(await fixture.Database.CompanyMembershipRequests.ToListAsync());
+    }
+
+    [Fact]
+    public async Task GetAssignableRolesReturnsOnlyActiveNonSystemRolesWithinDelegationCeiling()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        fixture.Database.CompanyRolePermissions.Add(new Domain.CompanyRolePermission
+        {
+            Role = fixture.MemberRole,
+            Permission = fixture.DelegatedPermission,
+        });
+        var restrictedRole = new Domain.CompanyRole
+        {
+            TenantId = fixture.Destination.Id,
+            Company = fixture.Destination,
+            Code = "RESTRICTED",
+            Name = "بالاتر از سقف",
+            IsActive = true,
+        };
+        var systemRole = new Domain.CompanyRole
+        {
+            TenantId = fixture.Destination.Id,
+            Company = fixture.Destination,
+            Code = "SYSTEM",
+            Name = "سیستمی",
+            IsActive = true,
+            IsSystemRole = true,
+        };
+        fixture.Database.CompanyRoles.AddRange(restrictedRole, systemRole);
+        fixture.Database.CompanyRolePermissions.AddRange(
+            new Domain.CompanyRolePermission { Role = restrictedRole, Permission = fixture.ExtraPermission },
+            new Domain.CompanyRolePermission { Role = systemRole, Permission = fixture.DelegatedPermission });
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await Server.Api.CompanyMembershipRequestEndpoints.GetAssignableRolesAsync(
+            fixture.Destination.Id, new DefaultHttpContext(), fixture.Principal(fixture.Approver.Id),
+            fixture.Database, fixture.Access);
+
+        var response = Assert.IsType<Ok<Server.Api.AssignableCompanyRoleListResponse>>(result).Value!;
+        var item = Assert.Single(response.Items);
+        Assert.Equal(fixture.MemberRole.Id, item.Id);
+        Assert.False(item.IsSystemRole);
+
+        var denied = await Server.Api.CompanyMembershipRequestEndpoints.GetAssignableRolesAsync(
+            fixture.Destination.Id, new DefaultHttpContext(), fixture.Principal(fixture.OtherUser.Id),
+            fixture.Database, fixture.Access);
+        Assert.Equal(StatusCodes.Status404NotFound, (denied as IStatusCodeHttpResult)?.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetApproversReturnsOnlyActiveApproversInTheRequestedCompany()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var secondApprover = fixture.AddUser("second-approver");
+        var secondRole = new Domain.CompanyRole
+        {
+            TenantId = fixture.Destination.Id,
+            Company = fixture.Destination,
+            Code = "SECOND_APPROVER",
+            Name = "تأییدکننده دوم",
+            IsActive = true,
+        };
+        fixture.Database.CompanyRoles.Add(secondRole);
+        var approvalPermission = await fixture.Database.PermissionDefinitions.SingleAsync(
+            item => item.Code == Server.Api.CompanyMembershipRequestEndpoints.ApprovalPermissionCode);
+        fixture.Database.CompanyRolePermissions.Add(new Domain.CompanyRolePermission
+        {
+            Role = secondRole,
+            Permission = approvalPermission,
+        });
+        fixture.Database.UserCompanyMemberships.Add(new Domain.UserCompanyMembership
+        {
+            UserId = secondApprover.Id,
+            TenantId = fixture.Destination.Id,
+            Role = secondRole,
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow,
+        });
+        var foreignCompany = new Domain.Company
+        {
+            Name = "شرکت دیگر",
+            IsActive = true,
+            CustomerBoundaryId = fixture.Destination.CustomerBoundaryId,
+        };
+        var foreignRole = new Domain.CompanyRole
+        {
+            TenantId = foreignCompany.Id,
+            Company = foreignCompany,
+            Code = "FOREIGN_APPROVER",
+            Name = "تأییدکننده بیرونی",
+            IsActive = true,
+        };
+        fixture.Database.Companies.Add(foreignCompany);
+        fixture.Database.CompanyRoles.Add(foreignRole);
+        fixture.Database.CompanyRolePermissions.Add(new Domain.CompanyRolePermission
+        {
+            Role = foreignRole,
+            Permission = approvalPermission,
+        });
+        fixture.Database.UserCompanyMemberships.Add(new Domain.UserCompanyMembership
+        {
+            UserId = fixture.OtherUser.Id,
+            TenantId = foreignCompany.Id,
+            Role = foreignRole,
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow,
+        });
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await Server.Api.CompanyMembershipRequestEndpoints.GetApproversAsync(
+            fixture.Destination.Id, new DefaultHttpContext(), fixture.Principal(fixture.Approver.Id),
+            fixture.Database, fixture.Access);
+
+        var response = Assert.IsType<Ok<Server.Api.MembershipApproverListResponse>>(result).Value!;
+        Assert.Equal(2, response.TotalCount);
+        Assert.Contains(response.Items, item => item.UserId == fixture.Approver.Id);
+        Assert.Contains(response.Items, item => item.UserId == secondApprover.Id);
+        Assert.DoesNotContain(response.Items, item => item.UserId == fixture.OtherUser.Id);
+
+        var denied = await Server.Api.CompanyMembershipRequestEndpoints.GetApproversAsync(
+            fixture.Destination.Id, new DefaultHttpContext(), fixture.Principal(fixture.OtherUser.Id),
+            fixture.Database, fixture.Access);
+        Assert.Equal(StatusCodes.Status404NotFound, (denied as IStatusCodeHttpResult)?.StatusCode);
+    }
+
+    [Fact]
+    public async Task RequestHistoryFiltersStatusAndSerializesUtcTimesExplicitly()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var approvedAt = new DateTime(2026, 11, 3, 10, 0, 0, DateTimeKind.Unspecified);
+        var approved = fixture.NewRequest();
+        approved.Status = Domain.CompanyMembershipRequestStatuses.Approved;
+        approved.DecidedAtUtc = approvedAt;
+        approved.DecidedByUserId = fixture.Approver.Id;
+        approved.ApprovedRoleId = fixture.MemberRole.Id;
+        approved.ApprovedRole = fixture.MemberRole;
+        var rejected = fixture.NewRequest();
+        rejected.Status = Domain.CompanyMembershipRequestStatuses.Rejected;
+        rejected.DecidedAtUtc = approvedAt.AddMinutes(1);
+        rejected.DecidedByUserId = fixture.Approver.Id;
+        rejected.DecisionReason = "رد آزمون";
+        fixture.Database.CompanyMembershipRequests.AddRange(approved, rejected);
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await Server.Api.CompanyMembershipRequestEndpoints.GetRequestHistoryAsync(
+            fixture.Destination.Id, new DefaultHttpContext(), fixture.Principal(fixture.Approver.Id),
+            fixture.Database, fixture.Access, status: "Approved");
+
+        var response = Assert.IsType<Ok<Server.Api.CompanyMembershipRequestHistoryListResponse>>(result).Value!;
+        var item = Assert.Single(response.Items);
+        Assert.Equal(approved.Id, item.Id);
+        Assert.Equal(DateTimeKind.Utc, item.RequestedAtUtc.Kind);
+        Assert.Equal(DateTimeKind.Utc, item.DecidedAtUtc!.Value.Kind);
+        Assert.Equal("approver", item.DecidedByDisplayName);
+
+        var ownHistory = await Server.Api.CompanyMembershipRequestEndpoints.GetMyRequestsAsync(
+            new DefaultHttpContext(), fixture.Principal(fixture.Requester.Id),
+            fixture.Database, status: "Rejected");
+        var ownResponse = Assert.IsType<Ok<Server.Api.CompanyMembershipRequestListResponse>>(ownHistory).Value!;
+        Assert.Equal(1, ownResponse.TotalCount);
+        Assert.All(ownResponse.Items, request => Assert.Equal(
+            Domain.CompanyMembershipRequestStatuses.Rejected, request.Status));
+
+        var invalid = await Server.Api.CompanyMembershipRequestEndpoints.GetRequestHistoryAsync(
+            fixture.Destination.Id, new DefaultHttpContext(), fixture.Principal(fixture.Approver.Id),
+            fixture.Database, fixture.Access, status: "Unknown");
+        Assert.Equal(StatusCodes.Status400BadRequest, (invalid as IStatusCodeHttpResult)?.StatusCode);
+
+        var crossCompany = await Server.Api.CompanyMembershipRequestEndpoints.GetRequestHistoryAsync(
+            Guid.NewGuid(), new DefaultHttpContext(), fixture.Principal(fixture.OtherUser.Id),
+            fixture.Database, fixture.Access);
+        Assert.Equal(StatusCodes.Status404NotFound, (crossCompany as IStatusCodeHttpResult)?.StatusCode);
+    }
+
     private sealed class Fixture : IAsyncDisposable
     {
         private Fixture(Data.DatabaseContext database)
@@ -448,6 +718,7 @@ public sealed class CompanyMembershipRequestEndpointTests
         public Data.DatabaseContext Database { get; }
         public Infrastructure.Tenancy.CompanyAccessService Access { get; }
         public Domain.Company Destination { get; private set; } = null!;
+        public Domain.Company Source { get; private set; } = null!;
         public Domain.User Requester { get; private set; } = null!;
         public Domain.User Approver { get; private set; } = null!;
         public Domain.User OtherUser { get; private set; } = null!;
@@ -460,9 +731,17 @@ public sealed class CompanyMembershipRequestEndpointTests
         {
             var database = new Data.DatabaseContext(new DbContextOptionsBuilder<Data.DatabaseContext>()
                 .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+            var customerBoundaryId = Guid.NewGuid();
             var fixture = new Fixture(database)
             {
-                Destination = new Domain.Company { Name = "شرکت مقصد", IsActive = true },
+                Destination = new Domain.Company
+                {
+                    Name = "شرکت مقصد", IsActive = true, CustomerBoundaryId = customerBoundaryId,
+                },
+                Source = new Domain.Company
+                {
+                    Name = "شرکت مبدأ", IsActive = true, CustomerBoundaryId = customerBoundaryId,
+                },
                 Requester = new Domain.User("requester@example.test") { Username = "requester", IsActive = true },
                 Approver = new Domain.User("approver@example.test") { Username = "approver", IsActive = true },
                 OtherUser = new Domain.User("other@example.test") { Username = "other", IsActive = true },
@@ -474,6 +753,10 @@ public sealed class CompanyMembershipRequestEndpointTests
             fixture.MemberRole = new Domain.CompanyRole
             {
                 TenantId = fixture.Destination.Id, Company = fixture.Destination, Code = "MEMBER", Name = "عضو", IsActive = true,
+            };
+            var sourceRole = new Domain.CompanyRole
+            {
+                TenantId = fixture.Source.Id, Company = fixture.Source, Code = "SOURCE_MEMBER", Name = "عضو مبدأ", IsActive = true,
             };
             var permission = new Domain.PermissionDefinition
             {
@@ -490,10 +773,19 @@ public sealed class CompanyMembershipRequestEndpointTests
                 Code = "users.update",
                 Name = "ویرایش کاربران",
             };
-            database.Companies.Add(fixture.Destination);
+            database.Companies.AddRange(fixture.Destination, fixture.Source);
             database.Users.AddRange(fixture.Requester, fixture.Approver, fixture.OtherUser);
-            database.CompanyRoles.AddRange(fixture.ApproverRole, fixture.MemberRole);
+            database.CompanyRoles.AddRange(fixture.ApproverRole, fixture.MemberRole, sourceRole);
             database.PermissionDefinitions.AddRange(permission, fixture.DelegatedPermission, fixture.ExtraPermission);
+            database.UserCompanyMemberships.Add(new Domain.UserCompanyMembership
+            {
+                UserId = fixture.Requester.Id,
+                TenantId = fixture.Source.Id,
+                RoleId = sourceRole.Id,
+                Role = sourceRole,
+                IsActive = true,
+                CreatedAtUtc = DateTime.UtcNow,
+            });
             database.CompanyRolePermissions.AddRange(
                 new Domain.CompanyRolePermission
                 {
