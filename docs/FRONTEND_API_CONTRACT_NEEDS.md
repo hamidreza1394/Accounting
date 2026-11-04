@@ -36,13 +36,14 @@
 - پاسخ `Cache-Control: no-store` و `Pragma: no-cache`؛ بدون cache. کاربر بدون زمینهٔ فعال پاسخ ۲۰۰ با `company: null` می‌گیرد؛ ناشناس یا Claim شناسه نامعتبر ۴۰۱؛ حساب احرازشدهٔ غیرکاربر به‌علت RequireClaim با ۴۰۳ رد می‌شود.
 - UI فقط برای نمایش/مخفی‌کردن منو و کنترل‌ها استفاده می‌کند و مرجع امنیتی نیست؛ هر endpoint باید مجوز خودش را سمت سرور بررسی کند.
 
-## ۳. گزارش امنیتی (مراحل ۵ و ۱۱)
-موجود: `GET /admin/security/audit-events` (فیلتر exact: `eventType,userId,companyId,fromUtc,toUtc`).
-- **مرتب‌سازی:** افزودن `sort=occurredAt|eventType` و `descending=true|false` (پیش‌فرض فعلی بدون تغییر).
-- **فهرست شرکت‌های نصب** (مدیر نصب): `GET /admin/companies?search=&page=&pageSize=` → `{ items:[{ id, name, isActive }], … }`.
-- **انواع رویداد:** `GET /admin/security/audit-event-types` → `[{ "code": "string" }]`.
-- **Export (CSV — Issue #507):** `POST /admin/security/audit-events/export` با بدنه JSON شامل `eventType?`, `userId?`, `companyId?`, `fromUtc`, `toUtc` → `text/csv; charset=utf-8` با BOM. POST اجباری است چون خروجی موفق رویداد `SecurityAuditExported` ثبت می‌کند و GET نباید side effect داشته باشد. فقط مدیر نصب؛ anti-forgery و rate limit؛ هر دو تاریخ اجباری، بازهٔ معکوس یا بیش از ۳۱ روز با ۴۰۰ رد می‌شود؛ ترتیب `OccurredAtUtc DESC, Id DESC`؛ سقف سخت ۱۰٬۰۰۰ ردیف و در صورت بیشتر بودن ۴۱۳. فقط projection ایمن (بدون IP/DetailsJson)، UTF-8 BOM، quoting/escaping مطابق RFC 4180 و CRLF؛ تمام سلول‌های متنی با پیشوند فرمولی پس از whitespace با apostrophe خنثی می‌شوند. `SecurityAuditExported` با actor، فیلترهای غیرحساس و تعداد ردیف ثبت می‌شود؛ اگر ثبت Audit شکست بخورد، فایل تحویل داده نمی‌شود. Export کلاینتی از یک صفحه ساخته نمی‌شود، زیرا فیلتر/سقف/Audit/مجوز را تضمین نمی‌کند.
-- **Retention:** سیاست نگهداری و هر منطق پاک‌سازی فقط در Backend (job + Audit)؛ UI فقط وضعیت/سیاست را می‌خواند: `GET /admin/security/retention-policy` → `{ "retainDays": null, "lastPurgedAtUtc": null, "isEnforced": false }`؛ تا تصمیم مالک، پاک‌سازی خودکار ممنوع (D-069). UI هیچ حذف رکوردی ندارد.
+## ۳. گزارش امنیتی (Issue #512؛ Backend)
+موجود: `GET /admin/security/audit-events` با فیلترهای exact `eventType,userId,companyId,fromUtc,toUtc`. فیلتر `companyId` و بازهٔ `DateTimeOffset` موجودند؛ مقدارهای ورودی به UTC تبدیل می‌شوند.
+- **مرتب‌سازی:** `sort=occurredAt|eventType` و `descending=true|false`؛ فقط همین دو مقدار allowlist هستند، مقدار نامعتبر ۴۰۰؛ ترتیب ثانویهٔ پایدار `Id DESC`. هیچ نام ستون یا عبارت SQL از کلاینت وارد query نمی‌شود.
+- **فهرست شرکت‌های نصب** (مدیر نصب): `GET /admin/companies?search=&page=&pageSize=` → `{ items:[{ id, name, isActive }], totalCount, page, pageSize }`؛ pageSize حداکثر ۱۰۰.
+- **انواع رویداد:** `GET /admin/security/audit-event-types` → `[{ "code": "string", "label": "برچسب فارسی یا کد ناشناخته" }]`. API فهرست کدهای شناخته‌شده و کدهای موجود در سوابق را می‌دهد؛ UI نباید برچسب را از کد بسازد.
+- **UTC:** تمام `OccurredAtUtc`های خروجی API با Kind=UTC و پسوند `Z` serialize می‌شوند؛ فیلترها `DateTimeOffset` هستند و مقایسه پس از تبدیل به UTC انجام می‌شود.
+- **Export (CSV — Issue #507):** `POST /admin/security/audit-events/export` با بدنه JSON شامل `eventType?`, `userId?`, `companyId?`, `fromUtc`, `toUtc` → `text/csv; charset=utf-8` با BOM. POST اجباری است چون خروجی موفق رویداد `SecurityAuditExported` ثبت می‌کند و GET نباید side effect داشته باشد. فقط مدیر نصب؛ anti-forgery و rate limit؛ هر دو تاریخ اجباری، بازهٔ معکوس یا بیش از ۳۱ روز با ۴۰۰ رد می‌شود؛ ترتیب `OccurredAtUtc DESC, Id DESC`؛ سقف سخت ۱۰٬۰۰۰ ردیف و در صورت بیشتر بودن ۴۱۳. فقط projection ایمن (بدون IP/`DetailsJson`)، UTF-8 BOM، quoting/escaping مطابق RFC 4180 و CRLF؛ سلول‌های فرمولی و کنترل‌کاراکترهای ابتدای سلول با apostrophe خنثی می‌شوند. `SecurityAuditExported` با actor، فیلترهای غیرحساس و تعداد ردیف ثبت می‌شود؛ اگر ثبت Audit شکست بخورد، فایل تحویل داده نمی‌شود.
+- **Retention — Proposed / NeedsApproval:** تا تصویب مالک، هیچ API، permission اجرایی، job یا پاک‌سازی Audit پیاده‌سازی نمی‌شود. پیشنهاد تصمیم D-070 در `docs/DECISIONS.md`؛ retention و legal hold باید بر اساس الزام قراردادی/قانونی تعیین شود. UI حق حذف رکورد ندارد.
 
 ## ۴. سوابق ورود/خروج و نشست‌ها (مرحلهٔ ۱۰)
 - **سوابق ورود کاربر جاری (موجود):** `GET /me/login-history?take=`. برای فیلتر تاریخ و صفحه‌بندی: `?fromUtc=&toUtc=&page=&pageSize=` با همان آیتم و پاسخ `{ items, totalCount, page, pageSize }`.
