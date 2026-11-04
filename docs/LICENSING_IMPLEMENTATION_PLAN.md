@@ -212,3 +212,10 @@ Issue #396 فقط مسئول startup gate و Activation Wizard است؛ contract
 - Envelope بیرونی و الگوریتم D-045 تغییر نمی‌کنند؛ v1 bytes و allowlist legacy حفظ می‌شوند.
 - تا تکمیل CI و ادغام، این مرحله Implemented-in-PR و نه Verified است.
 
+
+
+## وضعیت اجرایی Issue #393 — 2026-11-04
+- **Implemented / CI pending:** نخستین برش Vendor-only، یعنی ساخت candidate amendment برای افزایش installation-scoped `maxCompanies` روی همان LicenseId/InstallationId، در `VendorLicenseAmendmentPayloadBuilder` اضافه شده است. این builder Payload v1/v2 را در همان نسخه نگه می‌دارد و تمام entitlementهای دیگر را حفظ می‌کند.
+- **NotImplemented:** commercial order/payment evidence، persistence درخواست Amendment، endpoint، maker-checker approval، signing/export و statusهای purchased/delivered/acknowledged.
+- **Dependency:** add-onهای Company-scoped برای module/feature/user-seat نیازمند current Payload v2 و CompanyReference قابل اعتماد است. تبدیل خودکار Payload v1 به v2 ممنوع است؛ تا زمانی که مرجع شرکت‌های نصب از مسیر provisioning/signed ACK معتبر در دسترس نباشد، UI نباید Company دلخواه را به‌عنوان مرجع معتبر بپذیرد.
+- **محدوده:** این برش هیچ تغییر در Customer `Server/**`، دیتابیس مشتری یا Migration مشتری ندارد و signer واقعی KMS/HSM را انتخاب یا شبیه‌سازی نمی‌کند.

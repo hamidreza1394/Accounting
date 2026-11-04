@@ -2347,3 +2347,14 @@
 - سناریوی Playwright با نقش‌های ساخته‌شده از API واقعی، انتقال از UI، بررسی عضو مبدأ/مقصد، و مجوز مثبت/منفی دفترچه افزوده شد؛ نقش اولیه در پایان بازگردانده می‌شود.
 - typecheck، ۵۳۸ تست Client، build، check:offline، syntax و فهرست تست Playwright و بررسی asset موفق. اجرای واقعی E2E و Build دات‌نت به علت نبود SDK و SQL Server محلی اجرا نشد؛ CI مرجع تأیید است.
 - جزئیات و وابستگی seed مرز مشتری برای گردش عضویت: `docs/handoffs/ISSUE-444-role-transfer-directory-e2e.md`.
+
+
+## 2026-11-04 — Issue #393: سازندهٔ امن Payload برای افزایش سقف شرکت
+- **محدوده:** نخستین برش Vendor-only از Add-on issuance؛ فقط ساخت candidate payload برای افزایش installation-scoped `maxCompanies` روی همان LicenseId/InstallationId.
+- **پیاده‌سازی:** `VendorLicenseAmendmentPayloadBuilder` وضعیت Active مشتری/نصب و Issued بودن لایسنس، تطابق شناسه‌ها و metadata با payload جاری، هم‌ترازی LastIssuedSequence، وجود سقف قبلی و افزایش strict را کنترل می‌کند. Sequence دقیقاً یک واحد افزایش می‌یابد و issuedAt عقب‌تر از revision فعلی پذیرفته نمی‌شود.
+- **سازگاری:** Payload v1 به v1 و v2 به v2 باقی می‌ماند؛ subsystemهای v1، company entitlements و support/update dates در v2 بدون تغییر حفظ می‌شوند. هیچ تبدیل v1→v2 انجام نمی‌شود.
+- **تست‌های رگرسیون:** v1/v2 preservation، سقف برابر/کمتر، سقف نامشخص، sequence stale/overflow، metadata stale، cross-customer، customer/installation غیرفعال، license غیر Issued، payload نامعتبر و clock rollback.
+- **مرز امنیتی:** این builder فقط روی payloadای اجرا می‌شود که caller پیش‌تر امضای envelope، trusted key، hash، binding و آخرین sequence آن را تأیید کرده باشد؛ builder خود امضا را verify یا persist نمی‌کند.
+- **اعتبارسنجی:** Build/Test محلی اجرا نشده؛ CI روی PR لازم است. هیچ Migration، Customer-side consumer، `Server/**`، کلید یا secret تغییر نکرد.
+- **باقی‌مانده:** purchase/order evidence، API درخواست Amendment، Maker-Checker، امضای fail-closed و export در گام‌های بعدی #393؛ Company-scoped add-ons تا وجود current v2 و CompanyReference قابل اعتماد.
+
