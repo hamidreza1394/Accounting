@@ -53,3 +53,4 @@
 - `npm ci`، `node --check`، فهرست Playwright و static asset check محلی موفق؛ اجرای واقعی Production/SQL Server محلی به دلیل نبود dotnet و Docker انجام نشده است. نتیجه CI روی SHA این PR باید جداگانه بررسی شود.
 
 - اجرای واقعی نخست CI روی `fd1db77`: تعداد ۳۸ تست موفق و یک تست شکست خورد؛ SQL Server به علت unique index نام نقش، ساخت Admin دوم را رد کرد. اصلاح: استفاده از رکورد Admin موجود بدون تغییر آن و تغییر RoleId فقط در حساب اختصاصی. نتیجه اجرای مجدد باید روی SHA نهایی بررسی شود.
+- CI واقعی روی commit `3fecd490736220f6d1881daccfb508975ec7748e`، اجرای [41821747024](https://github.com/hamidreza1394/Accounting/actions/runs/41821747024): Playwright روی Production منتشرشده و SQL Server موفق، ۳۹ تست موفق در ۱٫۳ دقیقه؛ تمام jobهای .NET CI موفق. نتیجه SHAهای بعدی باید جداگانه بررسی شود.
