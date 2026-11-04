@@ -223,7 +223,6 @@ public sealed class AdministrativeEndpointAuthorizationHttpTests : IClassFixture
                 var deniedPaths = new[]
                 {
                         "/api/v1/admin/users?page=1&pageSize=10&descending=false",
-                        "/api/v1/admin/permission-catalog",
                         $"/api/v1/admin/companies/{company.Id}/roles",
                         $"/api/v1/admin/companies/{company.Id}/roles/{company.RoleId}/members",
                         $"/api/v1/companies/{company.Id}/users",
@@ -236,6 +235,14 @@ public sealed class AdministrativeEndpointAuthorizationHttpTests : IClassFixture
                         var deniedBody = await denied.Content.ReadAsStringAsync();
                         Assert.DoesNotContain("@example.test", deniedBody);
                 }
+
+                // D-071: the permission catalog shows a company-scoped actor only the codes
+                // inside their own delegation ceiling. The seeded member role carries no
+                // permission at all, so the catalog answers 404 (no disclosure) instead of
+                // hinting at installation-level codes through an empty list.
+                var memberCatalog = await memberClient.GetAsync("/api/v1/admin/permission-catalog");
+                Assert.Equal(HttpStatusCode.NotFound, memberCatalog.StatusCode);
+                Assert.DoesNotContain("@example.test", await memberCatalog.Content.ReadAsStringAsync());
 
                 // The member's own directory is not disclosed either: the response cannot contain
                 // the administrator account that the member has no permission to list.
