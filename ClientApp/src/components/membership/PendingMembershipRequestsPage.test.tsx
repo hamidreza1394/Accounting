@@ -3,12 +3,12 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { json, stubApi, type ApiCall } from '../../test/adminUsers';
 import { pageBody, pendingItem } from '../../test/membership';
-import { roleItem, systemRole } from '../../test/roles';
+import { roleItem } from '../../test/roles';
 import { PendingMembershipRequestsPage } from './PendingMembershipRequestsPage';
 
 const onUnauthenticated = vi.fn((): boolean => false);
 const queuePath = '/api/v1/admin/companies/c1/membership-requests/pending';
-const rolesPath = '/api/v1/admin/companies/c1/roles';
+const rolesPath = '/api/v1/admin/companies/c1/membership-requests/assignable-roles';
 
 function setup() {
   return render(<PendingMembershipRequestsPage onUnauthenticated={onUnauthenticated} companyId="c1" companyName="شرکت نمونه" />);
@@ -23,7 +23,7 @@ type Handlers = {
 function api({ queue, roles, decide }: Handlers = {}) {
   return stubApi((call) => {
     if (call.path === queuePath) return queue ? queue(call) : json(pageBody([pendingItem(1), pendingItem(2)]));
-    if (call.path === rolesPath) return roles ? roles() : json([roleItem(), systemRole, roleItem({ id: 'role-off', name: 'غیرفعال', isActive: false })]);
+    if (call.path === rolesPath) return roles ? roles() : json(pageBody([roleItem(), { ...roleItem({ id: 'system', name: 'سیستمی' }), isSystemRole: true }]));
     if (call.method === 'POST') return decide ? decide(call) : new Response(null, { status: 204 });
     return new Response(null, { status: 404 });
   });
@@ -56,11 +56,10 @@ describe('PendingMembershipRequestsPage', () => {
 
     const dialog = await screen.findByRole('dialog', { name: 'تأیید درخواست عضویت' });
     const select = await within(dialog).findByRole('combobox', { name: /گروه دسترسی/ });
-    // Inactive roles are not offered; system roles are labelled.
+    // Only server-assignable roles are offered, and a malformed system role is excluded.
     await waitFor(() => expect(within(select).getAllByRole('option').map((option) => option.textContent)).toEqual([
       'انتخاب کنید',
       'کارشناس فروش',
-      'مدیر شرکت (سیستمی)',
     ]));
     await user.selectOptions(select, 'role-1');
     await user.click(within(dialog).getByRole('button', { name: 'تأیید و ایجاد عضویت' }));

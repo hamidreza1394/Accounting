@@ -18,9 +18,8 @@ export type Permission =
   | 'account.view';
 
 /**
- * Today the hint is derived only from `session.isAdministrator` for `admin.*` permissions and is
- * always true for `account.view`. When `GET /me/permissions` exists, this function will switch to
- * the server-provided list and keep the same signature.
+ * Installation-wide admin routes use the server session administrator flag; company-scoped
+ * menu hints are loaded separately from `/me/permissions` for the current work context.
  */
 export function can(session: Pick<Session, 'isAdministrator'> | null | undefined, permission: Permission): boolean {
   if (!session) return false;

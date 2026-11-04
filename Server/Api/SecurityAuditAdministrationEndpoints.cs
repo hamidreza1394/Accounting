@@ -20,13 +20,56 @@ public static class SecurityAuditAdministrationEndpoints
     private const int MaxEventTypeLength = 120;
     private const int MaxExportRows = 10_000;
     private static readonly TimeSpan MaxExportRange = TimeSpan.FromDays(31);
+    private static readonly IReadOnlyDictionary<string, string> EventTypeLabels =
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["LoginSucceeded"] = "ورود موفق",
+            ["LoginFailed"] = "ورود ناموفق",
+            ["LoginDeniedInactive"] = "رد ورود حساب غیرفعال",
+            ["LoginDeniedEnrollmentPending"] = "رد ورود تا تکمیل ثبت‌نام",
+            ["LogoutSucceeded"] = "خروج موفق",
+            ["PasswordChanged"] = "تغییر رمز عبور",
+            ["UserCreated"] = "ایجاد کاربر",
+            ["UserUpdated"] = "ویرایش کاربر",
+            ["CompanyRoleCreated"] = "ایجاد نقش شرکت",
+            ["CompanyRoleUpdated"] = "ویرایش نقش شرکت",
+            ["UserCompanyRoleAssigned"] = "تخصیص نقش به کاربر",
+            ["WorkContextSelectionDenied"] = "رد انتخاب زمینه کاری",
+            ["CorporateGroupAccessDenied"] = "رد دسترسی گروه شرکتی",
+            ["CustomerBoundaryProvisioned"] = "ثبت مرز مشتری",
+            ["CustomerBoundaryProvisionRejected"] = "رد ثبت مرز مشتری",
+            ["ProvisioningApplied"] = "اعمال بسته تأمین",
+            ["ProvisioningRejected"] = "رد بسته تأمین",
+            ["ProvisioningEnrollmentTokenReissued"] = "صدور مجدد کد ثبت‌نام",
+            ["ProvisioningEnrollmentFailed"] = "شکست ثبت‌نام",
+            ["ProvisioningEnrollmentCompleted"] = "تکمیل ثبت‌نام",
+            ["CompanyMembershipRequested"] = "درخواست عضویت شرکت",
+            ["CompanyMembershipApproved"] = "تأیید عضویت شرکت",
+            ["CompanyMembershipRejected"] = "رد درخواست عضویت شرکت",
+            ["SecurityAuditExported"] = "خروجی گزارش امنیتی",
+            ["LicenseImported"] = "ورود مجوز",
+            ["InstallationIdentityEnrolled"] = "ثبت هویت نصب",
+        };
 
     public static void MapSecurityAuditAdministrationEndpoints(this IEndpointRouteBuilder api)
     {
         api.MapGet("/admin/security/audit-events", GetAuditEventsAsync)
             .RequireAuthorization(policy => policy.RequireClaim(
                 Infrastructure.Tenancy.CompanyAccessService.AccountKindClaimType,
-                Infrastructure.Tenancy.CompanyAccessService.UserAccountKind));
+                Infrastructure.Tenancy.CompanyAccessService.UserAccountKind))
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+
+        api.MapGet("/admin/security/audit-event-types", GetAuditEventTypesAsync)
+            .RequireAuthorization(policy => policy.RequireClaim(
+                Infrastructure.Tenancy.CompanyAccessService.AccountKindClaimType,
+                Infrastructure.Tenancy.CompanyAccessService.UserAccountKind))
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+
+        api.MapGet("/admin/companies", GetAdminCompaniesAsync)
+            .RequireAuthorization(policy => policy.RequireClaim(
+                Infrastructure.Tenancy.CompanyAccessService.AccountKindClaimType,
+                Infrastructure.Tenancy.CompanyAccessService.UserAccountKind))
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
 
         api.MapPost("/admin/security/audit-events/export", ExportAuditEventsAsync)
             .RequireAuthorization(policy => policy.RequireClaim(
@@ -44,6 +87,8 @@ public static class SecurityAuditAdministrationEndpoints
         Guid? companyId = null,
         DateTimeOffset? fromUtc = null,
         DateTimeOffset? toUtc = null,
+        string? sort = "occurredAt",
+        bool descending = true,
         int page = 1,
         int pageSize = 25,
         CancellationToken cancellationToken = default)
@@ -56,9 +101,11 @@ public static class SecurityAuditAdministrationEndpoints
             return authorization;
 
         eventType = string.IsNullOrWhiteSpace(eventType) ? null : eventType.Trim();
+        sort = string.IsNullOrWhiteSpace(sort) ? "occurredAt" : sort.Trim();
         if (eventType?.Length > MaxEventTypeLength ||
             userId == Guid.Empty ||
             companyId == Guid.Empty ||
+            sort is not ("occurredAt" or "eventType") ||
             (fromUtc.HasValue && toUtc.HasValue && fromUtc.Value > toUtc.Value))
         {
             return TypedResults.BadRequest(new { error = "فیلترهای گزارش امنیتی معتبر نیستند." });
@@ -86,8 +133,17 @@ public static class SecurityAuditAdministrationEndpoints
         }
 
         var totalCount = await query.CountAsync(cancellationToken);
-        var rows = await query
-            .OrderByDescending(item => item.OccurredAtUtc)
+        IOrderedQueryable<Domain.SecurityAuditEvent> orderedQuery = sort switch
+        {
+            "occurredAt" => descending
+                ? query.OrderByDescending(item => item.OccurredAtUtc)
+                : query.OrderBy(item => item.OccurredAtUtc),
+            "eventType" => descending
+                ? query.OrderByDescending(item => item.EventType)
+                : query.OrderBy(item => item.EventType),
+            _ => throw new InvalidOperationException("The audit sort key was not allowlisted."),
+        };
+        var rows = await orderedQuery
             .ThenByDescending(item => item.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -138,13 +194,78 @@ public static class SecurityAuditAdministrationEndpoints
                 item.EventType,
                 item.EntityType,
                 item.EntityId,
-                item.OccurredAtUtc,
+                DateTime.SpecifyKind(item.OccurredAtUtc, DateTimeKind.Utc),
                 item.CorrelationId);
         }).ToArray();
 
         return TypedResults.Ok(new SecurityAuditEventListResponse(items, totalCount, page, pageSize));
     }
 
+
+    public static async Task<IResult> GetAuditEventTypesAsync(
+        HttpContext httpContext,
+        ClaimsPrincipal principal,
+        Data.DatabaseContext database,
+        CancellationToken cancellationToken = default)
+    {
+        SetNoStore(httpContext);
+        var authorization = await UserAdministrationEndpoints.AuthorizeInstallationAdministratorAsync(
+            principal, database, cancellationToken);
+        if (authorization is not null)
+            return authorization;
+
+        var observedCodes = await database.SecurityAuditEvents.AsNoTracking()
+            .Select(item => item.EventType)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        var codes = EventTypeLabels.Keys
+            .Union(observedCodes, StringComparer.Ordinal)
+            .OrderBy(code => code, StringComparer.Ordinal)
+            .Select(code => new SecurityAuditEventTypeResponse(
+                code,
+                EventTypeLabels.TryGetValue(code, out var label) ? label : code))
+            .ToArray();
+
+        return TypedResults.Ok(codes);
+    }
+
+    public static async Task<IResult> GetAdminCompaniesAsync(
+        HttpContext httpContext,
+        ClaimsPrincipal principal,
+        Data.DatabaseContext database,
+        string? search = null,
+        int page = 1,
+        int pageSize = 25,
+        CancellationToken cancellationToken = default)
+    {
+        SetNoStore(httpContext);
+        var authorization = await UserAdministrationEndpoints.AuthorizeInstallationAdministratorAsync(
+            principal, database, cancellationToken);
+        if (authorization is not null)
+            return authorization;
+
+        search = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
+        if (search?.Length > MaxEventTypeLength)
+            return TypedResults.BadRequest(new { error = "عبارت جستجوی شرکت معتبر نیست." });
+
+        page = Math.Clamp(page, 1, MaxPage);
+        pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
+        var query = database.Companies.AsNoTracking();
+        if (search is not null)
+            query = query.Where(company => company.Name.Contains(search));
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query
+            .OrderBy(company => company.Name)
+            .ThenBy(company => company.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(company => new SecurityAuditCompanyItemResponse(
+                company.Id, company.Name, company.IsActive))
+            .ToListAsync(cancellationToken);
+
+        return TypedResults.Ok(new SecurityAuditCompanyListResponse(items, totalCount, page, pageSize));
+    }
 
     /// <summary>
     /// Exports a bounded, safe projection of audit events. Network addresses and event payloads
@@ -330,6 +451,14 @@ public static class SecurityAuditAdministrationEndpoints
     private sealed record ActorRow(Guid Id, string? Username, string? FirstName, string? LastName);
     private sealed record CompanyRow(Guid Id, string Name);
 }
+
+public sealed record SecurityAuditEventTypeResponse(string Code, string Label);
+public sealed record SecurityAuditCompanyItemResponse(Guid Id, string Name, bool IsActive);
+public sealed record SecurityAuditCompanyListResponse(
+    IReadOnlyList<SecurityAuditCompanyItemResponse> Items,
+    int TotalCount,
+    int Page,
+    int PageSize);
 
 public sealed record SecurityAuditExportRequest(
     string? EventType,

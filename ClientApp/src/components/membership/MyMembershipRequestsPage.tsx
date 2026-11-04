@@ -5,6 +5,7 @@ import { formatDateTime } from '../../lib/format';
 import { Alert } from '../ui/Alert';
 import { Breadcrumb } from '../ui/Breadcrumb';
 import { DataTable, type DataTableColumn } from '../ui/DataTable';
+import { CreateMembershipRequest } from './CreateMembershipRequest';
 import { MembershipRequestStatusBadge } from './membershipStatus';
 
 type Props = { onUnauthenticated: (error: unknown) => boolean };
@@ -75,6 +76,8 @@ export function MyMembershipRequestsPage({ onUnauthenticated }: Props) {
       </header>
 
       <Alert tone="info">تا زمانی که مدیر مجاز شرکت مقصد درخواست را تأیید نکند، هیچ دسترسی‌ای به داده‌های آن شرکت ایجاد نمی‌شود.</Alert>
+
+      <CreateMembershipRequest onUnauthenticated={onUnauthenticated} onCreated={() => { setPage(1); setAttempt((value) => value + 1); }} />
 
       <DataTable
         caption="فهرست درخواست‌های عضویت من"

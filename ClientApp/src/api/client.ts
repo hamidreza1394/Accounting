@@ -1,5 +1,8 @@
 import {
   parseAntiforgeryToken,
+  parseCurrentPermissions,
+  parseMembershipDestinations,
+  parseAssignableRoles,
   parseMyProfile,
   parseLoginHistory,
   parseAdminUserList,
@@ -467,4 +470,22 @@ export function buildLoginUrl(location: Pick<Location, 'pathname' | 'search'>): 
   const returnUrl = `${location.pathname}${location.search}`;
   const safeReturnUrl = returnUrl.startsWith('/') && !returnUrl.startsWith('//') ? returnUrl : '/app/';
   return `${loginPath}?ReturnUrl=${encodeURIComponent(safeReturnUrl)}`;
+}
+
+/** Company is resolved exclusively from the server's protected work context. */
+export async function getCurrentPermissions(signal?: AbortSignal) {
+  return parseCurrentPermissions(await getJson('/me/permissions', signal));
+}
+
+export async function getMembershipDestinations(search: string, page: number, signal?: AbortSignal) {
+  const params = new URLSearchParams({ search, page: String(page), pageSize: '25' });
+  return parseMembershipDestinations(await getJson(`/me/membership-requests/destinations?${params}`, signal));
+}
+
+export async function createMembershipRequest(destinationCompanyId: string): Promise<void> {
+  await sendJson('POST', '/me/membership-requests', { destinationCompanyId });
+}
+
+export async function getAssignableRoles(companyId: string, page: number, signal?: AbortSignal) {
+  return parseAssignableRoles(await getJson(`/admin/companies/${encodeURIComponent(companyId)}/membership-requests/assignable-roles?page=${page}&pageSize=100`, signal));
 }

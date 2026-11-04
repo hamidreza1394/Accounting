@@ -33,6 +33,9 @@ import { Link, RouterProvider, useLocation, type Route } from '../lib/router';
 
 type AppShellProps = {
   session: Session;
+  companyPermissions?: readonly string[];
+  permissionsStatus?: 'loading' | 'ready' | 'error';
+  onRetryPermissions?: () => void;
   context: SelectedContext;
   onChangeContext: () => void;
   onLogout: () => Promise<void>;
@@ -168,7 +171,7 @@ export function AppShell({ routes = noRoutes, canAccess, ...props }: AppShellPro
 
 type AppShellFrameProps = Omit<AppShellProps, 'routes' | 'canAccess'>;
 
-function AppShellFrame({ session, context, onChangeContext, onLogout, onPasswordChanged = noop, onUnauthenticated = ignoreUnauthenticated, children }: AppShellFrameProps) {
+function AppShellFrame({ session, context, companyPermissions = [], permissionsStatus = 'ready', onRetryPermissions = noop, onChangeContext, onLogout, onPasswordChanged = noop, onUnauthenticated = ignoreUnauthenticated, children }: AppShellFrameProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -313,7 +316,6 @@ function AppShellFrame({ session, context, onChangeContext, onLogout, onPassword
                 }
 
                 if (entry.kind === 'group' && entry.label === 'مدیریت سیستم') {
-                  if (!session.isAdministrator) return null;
                   return (
                     <li key={entry.label} className="space-y-1">
                       <button
@@ -332,50 +334,64 @@ function AppShellFrame({ session, context, onChangeContext, onLogout, onPassword
                       </button>
                       {settingsOpen ? (
                         <ul className="faranou-nav-sub space-y-2 ms-4 ps-2">
+                          {permissionsStatus === 'loading' ? <li><span role="status">در حال دریافت مجوزهای شرکت…</span></li> : null}
+                          {permissionsStatus === 'error' ? <li><span role="alert">دریافت مجوزهای شرکت انجام نشد.</span> <button type="button" onClick={onRetryPermissions}>تلاش دوباره</button></li> : null}
+                          {session.isAdministrator ? (
                           <li>
                             <Link to="/admin/users" onClick={() => setMobileMenuOpen(false)} aria-current={usersActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (usersActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
                               <NavIcon icon={Users} tone="sky" size="sm" />
                               <span className="min-w-0 flex-1">مدیریت کاربران</span>
                             </Link>
                           </li>
+                          ) : null}
+                          {companyPermissions.includes('users.list') ? (
                           <li>
                             <Link to="/company/users" onClick={() => setMobileMenuOpen(false)} aria-current={companyUsersActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (companyUsersActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
                               <NavIcon icon={Users} tone="blue" size="sm" />
                               <span className="min-w-0 flex-1">کاربران شرکت جاری</span>
                             </Link>
                           </li>
-                          <li><DisabledItem label="ساختار سازمانی و سمت‌ها" icon={Building2} tone="blue" nested /></li>
+                          ) : null}
+                          {session.isAdministrator ? <li><DisabledItem label="ساختار سازمانی و سمت‌ها" icon={Building2} tone="blue" nested /></li> : null}
+                          {session.isAdministrator ? (
                           <li>
                             <Link to="/admin/roles" onClick={() => setMobileMenuOpen(false)} aria-current={rolesActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (rolesActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
                               <NavIcon icon={ShieldCheck} tone="violet" size="sm" />
                               <span className="min-w-0 flex-1">گروه‌های دسترسی</span>
                             </Link>
                           </li>
+                          ) : null}
+                          {session.isAdministrator ? (
                           <li>
                             <Link to="/admin/permissions" onClick={() => setMobileMenuOpen(false)} aria-current={permissionsActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (permissionsActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
                               <NavIcon icon={KeyRound} tone="amber" size="sm" />
                               <span className="min-w-0 flex-1">کاتالوگ و جزئیات مجوزها</span>
                             </Link>
                           </li>
+                          ) : null}
+                          {companyPermissions.includes('users.membership.approve') ? (
                           <li>
                             <Link to="/admin/membership-requests" onClick={() => setMobileMenuOpen(false)} aria-current={membershipRequestsActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (membershipRequestsActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
                               <NavIcon icon={UserCheck} tone="emerald" size="sm" />
                               <span className="min-w-0 flex-1">درخواست‌های عضویت</span>
                             </Link>
                           </li>
+                          ) : null}
                           <li>
                             <Link to="/account/membership-requests" onClick={() => setMobileMenuOpen(false)} aria-current={myMembershipRequestsActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (myMembershipRequestsActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
                               <NavIcon icon={ClipboardList} tone="slate" size="sm" />
                               <span className="min-w-0 flex-1">درخواست‌های عضویت من</span>
                             </Link>
                           </li>
+                          {session.isAdministrator ? (
                           <li>
                             <Link to="/admin/security/audit" onClick={() => setMobileMenuOpen(false)} aria-current={securityAuditActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (securityAuditActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
                               <NavIcon icon={Activity} tone="emerald" size="sm" />
                               <span className="min-w-0 flex-1">گزارش امنیت و سوابق</span>
                             </Link>
                           </li>
-                          <li><DisabledItem label="سیاست‌های امنیتی" icon={Settings2} tone="slate" nested /></li>
+                          ) : null}
+                          {session.isAdministrator ? <li><DisabledItem label="سیاست‌های امنیتی" icon={Settings2} tone="slate" nested /></li> : null}
                         </ul>
                       ) : null}
                     </li>
