@@ -79,6 +79,8 @@ test('the organizational structure works end to end on SQL Server and fails clos
   const now = new Date();
   try {
     // ASP.NET Core Identity V3 PBKDF2 hash, matching the shared fixture's password format.
+    // Company-scoped accounts only: RoleId stays NULL, otherwise every seeded account
+    // would be an installation administrator and the scope assertions would be meaningless.
     const insertUser = async (account) => {
       const salt = randomBytes(16);
       const header = Buffer.alloc(13);
@@ -88,7 +90,6 @@ test('the organizational structure works end to end on SQL Server and fails clos
       header.writeUInt32BE(salt.length, 9);
       const hash = Buffer.concat([header, salt, pbkdf2Sync(account.password, salt, 100_000, 32, 'sha512')]).toString('base64');
       await pool.request().input('id', sql.UniqueIdentifier, account.id)
-        .input('role', sql.UniqueIdentifier, state.users.admin.roleId)
         .input('username', sql.VarChar(20), account.username)
         .input('password', sql.VarChar(255), hash)
         .input('email', sql.VarChar(254), `${account.username}@e2e.test`)
@@ -96,7 +97,7 @@ test('the organizational structure works end to end on SQL Server and fails clos
         .query(`INSERT INTO Users (Id, RoleId, Ordering, InsertDateTime, UpdateDateTime, IsActive, IsSystemic, IsProgrammer, IsUndeletable,
           IsProfilePublic, IsVisibleInContactUsPage, IsEmailAddressVerified, IsCellPhoneNumberVerified,
           Username, Password, FirstName, LastName, EmailAddress, EmailAddressVerificationKey)
-          VALUES (@id, @role, 10000, SYSDATETIME(), SYSDATETIME(), 1, 0, 0, 0, 0, 0, 1, 0,
+          VALUES (@id, NULL, 10000, SYSDATETIME(), SYSDATETIME(), 1, 0, 0, 0, 0, 0, 1, 0,
           @username, @password, N'E2E', N'HR', @email, @key)`);
     };
     await insertUser(hrManager);
