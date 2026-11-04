@@ -14,18 +14,24 @@ public sealed record CustomerLicenseRuntimeResult(
     LicenseStatus? Status,
     string? ErrorCode,
     string? LicenseId,
-    int? Sequence,
-    LicensePayload? ValidatedPayload = null)
+    int? Sequence)
 {
     /// <summary>
     /// The payload only after the installed envelope has passed signature, installation-binding,
     /// trust and revocation validation. Rejected results never carry a payload.
+    /// The private init accessor prevents callers from manufacturing a validated result.
     /// </summary>
+    public LicensePayload? ValidatedPayload { get; private init; }
+
     public static CustomerLicenseRuntimeResult Usable(LicenseStatus status, LicensePayload payload) =>
-        new(true, status, null, payload.LicenseId, payload.Sequence, payload);
+        new(true, status, null, payload.LicenseId, payload.Sequence) { ValidatedPayload = payload };
 
     public static CustomerLicenseRuntimeResult Rejected(string errorCode, string? licenseId = null, int? sequence = null) =>
-        new(false, LicenseStatus.Invalid, errorCode, licenseId, sequence, null);
+        new(false, LicenseStatus.Invalid, errorCode, licenseId, sequence);
+
+    // Do not include the validated entitlement payload in logs or diagnostic string output.
+    public override string ToString() =>
+        $"CustomerLicenseRuntimeResult {{ IsUsable = {IsUsable}, Status = {Status}, ErrorCode = {ErrorCode}, LicenseId = {LicenseId}, Sequence = {Sequence} }}";
 }
 
 /// <summary>
