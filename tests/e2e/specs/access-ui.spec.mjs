@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 
 const state = JSON.parse(readFileSync(new URL('../.e2e-state.json', import.meta.url), 'utf8'));
-const { alice, bob, admin } = state.users;
+const { alice, bob, heidi, admin } = state.users;
 const { b } = state.companies;
 
 test.use({ timezoneId: 'Asia/Tehran' });
@@ -105,4 +105,99 @@ test.describe('role members', () => {
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await expectAccessible(page);
   });
+});
+
+// Creates two temporary roles through the actual administrator API, so the test does not rely on
+// database shortcuts or give the seeded accountant role any extra permissions. Bob is restored even
+// if a UI assertion fails; the suite shares its disposable database with the other specs.
+test('role transfer updates the real member list and company directory permission', async ({ page, browser }) => {
+  test.setTimeout(60_000);
+  await signIn(page, admin);
+  await page.goto('/app/');
+  const rolesPath = `/api/v1/admin/companies/${b.id}/roles`;
+  const api = async (method, path, body, token) => page.evaluate(async ({ method, path, body, token }) => {
+    const headers = {};
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    if (token) headers[token.headerName] = token.requestToken;
+    const response = await fetch(path, {
+      method, headers, credentials: 'same-origin',
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+    const text = await response.text();
+    return { status: response.status, body: text ? JSON.parse(text) : null };
+  }, { method, path, body, token });
+
+  const tokenResponse = await api('GET', '/api/v1/antiforgery/token');
+  expect(tokenResponse.status).toBe(200);
+  const token = tokenResponse.body;
+  const suffix = admin.username.slice(-6).toUpperCase();
+  const create = async (code, name, permissionCodes) => {
+    const result = await api('POST', rolesPath, { code, name, templateCode: null, permissionCodes }, token);
+    expect(result.status).toBe(201);
+    return result.body.id;
+  };
+  const source = await create(`E2E-SRC-${suffix}`, 'گروه مبدأ آزمون', ['users.list']);
+  const target = await create(`E2E-DST-${suffix}`, 'گروه مقصد آزمون', []);
+  let assigned = false;
+  let bobContext;
+  try {
+    const assign = await api('POST', `${rolesPath}/${source}/members/${bob.id}`, undefined, token);
+    expect(assign.status).toBe(204);
+    assigned = true;
+
+    bobContext = await browser.newContext({ baseURL: new URL(page.url()).origin, locale: 'fa-IR', timezoneId: 'Asia/Tehran' });
+    const bobPage = await bobContext.newPage();
+    await signIn(bobPage, bob);
+    await bobPage.goto('/app/company/users');
+    await expect(bobPage.getByRole('heading', { level: 1, name: 'کاربران شرکت' })).toBeVisible();
+    const directory = bobPage.getByRole('table', { name: 'فهرست کاربران شرکت' });
+    await expect(directory.getByText(bob.username)).toBeVisible();
+    await expect(directory.getByText(admin.username)).toBeVisible();
+    await expect(directory.getByText(alice.username)).toHaveCount(0);
+    await expect(bobPage.getByText(`${bob.username}@e2e.test`)).toHaveCount(0);
+
+    await page.goto(`/app/admin/roles/${source}?company=${b.id}`);
+    const sourceTable = page.getByRole('table', { name: 'اعضای گروه گروه مبدأ آزمون' });
+    await expect(sourceTable.getByText(bob.username)).toBeVisible();
+    await expect(sourceTable.getByText(admin.username)).toHaveCount(0);
+    await page.getByLabel('گروه مقصد').selectOption(target);
+    await page.getByRole('button', { name: 'انتقال اعضا…' }).click();
+    const dialog = page.getByRole('dialog', { name: 'انتقال همهٔ اعضای گروه' });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: 'انتقال اعضا', exact: true }).click();
+    await expect(page.getByText(/عضو به گروه «گروه مقصد آزمون» منتقل شد/)).toBeVisible();
+    await expect(page.getByText('این گروه عضو فعالی ندارد')).toBeVisible();
+
+    await page.goto(`/app/admin/roles/${target}?company=${b.id}`);
+    await expect(page.getByRole('table', { name: 'اعضای گروه گروه مقصد آزمون' }).getByText(bob.username)).toBeVisible();
+    // Permissions are checked again on the server; the target role has no users.list.
+    expect(await apiStatus(bobPage, `/api/v1/companies/${b.id}/users?page=1&pageSize=10`)).toBe(403);
+    await bobPage.reload();
+    await expect(bobPage.getByText('دسترسی ندارید', { exact: true })).toBeVisible();
+  } finally {
+    if (bobContext) await bobContext.close();
+    if (assigned) {
+      const restored = await api('POST', `${rolesPath}/${b.roleId}/members/${bob.id}`, undefined, token);
+      expect(restored.status).toBe(204);
+    }
+  }
+});
+
+
+test('membership discovery fails closed without a shared customer boundary', async ({ page }) => {
+  await signIn(page, heidi);
+  await page.goto('/app/account/membership-requests');
+  await expect(page.getByRole('heading', { level: 1, name: 'درخواست‌های عضویت من' })).toBeVisible();
+  const search = page.getByLabel('نام دقیق شرکت مقصد');
+  await search.fill('ab');
+  await page.getByRole('button', { name: 'جستجوی شرکت' }).click();
+  await expect(page.getByRole('alert')).toContainText('۳');
+  await search.fill(b.name);
+  const result = page.waitForResponse((response) => response.url().includes('/membership-requests/destinations?') && response.request().method() === 'GET');
+  await page.getByRole('button', { name: 'جستجوی شرکت' }).click();
+  expect((await result).status()).toBe(200);
+  await expect(page.getByText('شرکت قابل درخواستی پیدا نشد.')).toBeVisible();
+  await expect(page.getByRole('button', { name: /درخواست عضویت در/ })).toHaveCount(0);
+  expect(await apiStatus(page, '/api/v1/me/membership-requests/destinations?search=ab')).toBe(400);
+  expect(await apiStatus(page, `/api/v1/admin/companies/${b.id}/membership-requests/pending`)).toBe(404);
 });
