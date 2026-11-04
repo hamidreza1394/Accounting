@@ -2360,6 +2360,22 @@
 - Retention در D-070 با وضعیت Proposed ثبت شد؛ هیچ endpoint/job/permission اجرایی یا purge پیاده‌سازی نشد تا مالک تصمیم بگیرد.
 - Unit/SQL Server/Build/Full Test هنوز اجرا نشده‌اند؛ Verified نیست. بدون Migration و ClientApp.
 
+
+## 2026-11-04 — Issue #214: customer runtime revocation evaluation
+- Added `ICustomerLicenseRuntimeEvaluator` as the shared customer-runtime evaluation entry point; it reloads the current installed envelope and validates it through the revocation-aware `ICustomerLicenseEnvelopeValidator` on every evaluation.
+- Registered the evaluator in Server DI through `AddCustomerLicenseRuntimeEvaluator()`; existing startup middleware and forwarded-header configuration are preserved.
+- Added unit regression coverage for valid/revoked licenses, unavailable or invalid revocation snapshots/trust, state-store failure, missing license, deterministic retries, Grace rejection, and invalid installation IDs.
+- Reused the clean evaluator implementation; the two similarly named enforcement branches were inspected separately. The divergent branch with an empty work log and removed middleware was not used.
+- .NET build/tests have not been run in this environment. CI must verify the PR head; no local test success is claimed.
+
+
+## 2026-11-04 — Issue #214: اصلاح شکست DI registration در PR #526
+- **علت ریشه‌ای CI:** `Server/Program.cs` متد `AddCustomerLicenseRuntimeEvaluator()` را به‌صورت extension فراخوانی می‌کرد، اما namespace تعریف آن (`Infrastructure.Licensing`) وارد نشده بود؛ کامپایلر `CS1061` گزارش کرد.
+- **اصلاح:** فراخوانی به نام کامل static تبدیل شد تا ambiguity مربوط به namespace حذف شود.
+- **تست Regression:** آزمون جدید تأیید می‌کند extension، `ICustomerLicenseRuntimeEvaluator` را با lifetime از نوع Scoped ثبت می‌کند.
+- **مرزبندی:** اصلاح در شاخه و PR مستقل #526 باقی ماند؛ هیچ تغییری به PRهای Vendor-only، #235، Migration یا schema مشتری اضافه نشد.
+- **اعتبارسنجی:** تست محلی اجرا نشده؛ اجرای .NET CI جدید روی SHA نهایی لازم است.
+
 ### 2026-11-04 — #521 exception logging hardening (incomplete)
 
 - Replaced identified application-owned raw exception/message logging with exception type metadata; request handlers also retain safe event, trace, method, and route template metadata. File-manager error responses no longer expose exception messages.
