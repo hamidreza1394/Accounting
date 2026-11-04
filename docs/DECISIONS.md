@@ -1267,3 +1267,35 @@ Pending هیچ دسترسی ندارد؛ مقصد تنها approver است؛ gra
 - تست نشان دهد مدیر نصب می‌تواند اولین عضو یک شرکت خالی را از مسیر تأیید عضویت بسازد (204 + عضویت فعال + Audit) اما درخواست خودش و نقش سیستمی را نه.
 - تست نشان دهد دفترچه هم‌گروه بدون مجوز صریح 403، برای غیرعضو 404 و با مرز مشتری ناهمگون/غایب 404 می‌دهد و خروجی فقط فیلدهای allowlist دارد.
 - `dotnet build`/`dotnet test` (InMemory) سبز؛ تست‌های `*SqlServerTests` روی SQL Server واقعی در CI اجرا می‌شوند.
+
+## D-072 — مدل پرسنلی و ساختار سازمانی HR-ready شرکتمحور (گزینه B) (2026-11-05)
+
+- **وضعیت تصمیم:** `Proposed` — **تصمیم هنوز گرفته نشده و اجرای Schema/API بدون تأیید صریح مالک ممنوع است.** مرجع تصمیم: Issue #491 (معیار پذیرش صریح: «Owner confirms option A or B»). این ADR تنها پیشنهاد فنی نهایی‌شده را ثبت می‌کند.
+- **Issue مرجع:** #491 (زیرمجموعه #444، S2).
+- **مستند طراحی:** `docs/ORGANIZATIONAL_STRUCTURE_DATA_MODEL.md` (سطح Entity، Constraint، کاتالوگ مجوز و قرارداد API).
+- **زمینه:** Domain فعلی Employee/OrganizationalUnit/Position مستقل ندارد. اتصال سمت/واحد به User یا CompanyRole با D-064 ناسازگار است و اتصال به UserCompanyMembership فقط کارکنان دارای حساب را مدل می‌کند.
+
+### پیشنهاد فنی (گزینه B — HR-ready)
+1. چهار Entity شرکتمحور: `CompanyOrganizationalUnit` (درخت با ParentUnitId)، `CompanyPosition` (مستقل از Unit)، `CompanyEmployee` (رکورد پرسنلی مستقل از User، بدون الزام حساب ورود) و `CompanyEmployeeAssignment` (تاریخچه انتساب با Effective Dating — واحد/سمت/مدیر روی خود Employee ذخیره نمی‌شود).
+2. همه موجودیت‌ها با TenantId (= CompanyId)، Unique (TenantId, Code) / (TenantId, EmployeeNumber)، FKهای ترکیبی tenant-safe با الگوی `HasPrincipalKey (Id, TenantId)`، `RowVersion` و Audit.
+3. لینک اختیاری one-to-one هم‌شرکت بین `CompanyEmployee` و `UserCompanyMembership` با Unique فیلترشده؛ لینک هیچ مجوزی نمی‌سازد، membership ایجاد/تأیید نمی‌کند و خاتمه همکاری membership/نشست را ابطال نمی‌کند.
+4. حداکثر یک انتساب فعال برای هر Employee (Unique فیلترشده)؛ تغییر سمت/واحد/مدیر = پایان انتساب جاری + انتساب جدید در یک تراکنش؛ تاریخچه بازنویسی نمی‌شود؛ چرخه والد و چرخه مدیریتی با پیمایش زنجیره (سقف ۳۲) درون تراکنش ممنوع.
+5. کاتالوگ مجوز `hr.*` (۱۲ کد server-owned با Migration فقط-داده‌ای idempotent، الگوی D-071)؛ scope همه کدها شرکت مسیر با اثبات سمت سرور؛ **مدیر شرکت خودکار هیچ مجوز HR دریافت نمی‌کند**؛ تخصیص فقط از `CompanyRolePermissions` و تحت سقف تفویض مبتنی بر تصاحب.
+6. مسیر استاندارد حذف، Deactivate/Terminate است؛ حذف فیزیکی رکورد دارای سابقه با 409 مسدود می‌شود تا تاریخچه و Audit حفظ شود.
+7. هیچ RBAC، Tenant یا موتور مجوز موازی‌ای ساخته نمی‌شود؛ منبع حقیقت همان `CompanyRole`/`CompanyRolePermissions`/`PermissionDefinitions` و `CompanyAccessService` است.
+
+### گزینه‌های ردشده در این پیشنهاد
+- فیلد ثابت Unit/Position/Manager روی `CompanyEmployee`: رد؛ تاریخچه و Effective Dating را از بین می‌برد.
+- انتساب/حذف فیزیکی به‌عنوان مسیر عادی: رد؛ فقط Deactivate با حفظ سابقه.
+- استنتاج مجوز از ساختار سازمانی یا `ManagerEmployeeId`: رد (D-064 بند ۶).
+- Tenant entity جدید یا RBAC موازی: رد (هم‌راستا با D-065).
+
+### پیامدها در صورت پذیرش
+- کارکنان بدون حساب قابل ثبت می‌شوند و Payroll/HR آینده بدون بازنویسی مدل سوار می‌شود.
+- فرم‌ها و UI فقط پس از ثابت‌شدن API ساخته می‌شوند؛ منو بر اساس `/me/permissions`.
+- Migration additive و زنجیره‌ای بعد از `20261104174711_SeedCompanyRoleAdministrationPermissions`؛ بدون backfill خودکار؛ بدون اجرا روی دیتابیس مشتری بدون برنامه استقرار مستقل.
+
+### معیار پذیرش پیاده‌سازی (پس از تأیید مالک)
+- تست‌های Unit/Integration/SQL Server/E2E مطابق برنامه بند ۹ سند طراحی اجرا و ثبت شود؛ تست‌های دیتابیس روی SQL Server واقعی نه InMemory.
+- تست منفی نشان دهد مدیر سازمانی (دارنده ManagerEmployeeId) بدون کد مجوز HR هیچ عملیات مدیریتی دسترسی ندارد.
+- تست منفی cross-company برای همه موجودیت‌ها و انتساب‌ها؛ تست چرخه والد/مدیر و هم‌پوشانی انتساب فعال با 409.

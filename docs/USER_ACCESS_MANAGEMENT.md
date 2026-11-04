@@ -54,6 +54,8 @@
 
 ممیزی 2026-11-03 نشان داد User هویت ورود نصب است و UserCompanyMembership عضویت عملیاتی شرکت؛ هیچ Employee، OrganizationalUnit یا Position در Domain وجود ندارد. برای جلوگیری از تبدیل عضویت دسترسی به رکورد منابع انسانی، پیشنهاد داده‌ای در docs/ORGANIZATIONAL_STRUCTURE_DATA_MODEL.md ثبت شده است. گزینه ترجیحی، CompanyEmployee مستقل با لینک اختیاری به UserCompanyMembership است تا کارکنان بدون حساب نیز قابل ثبت باشند. تا تأیید این مرز، هیچ migration یا فرم متصل به داده ساختگی ایجاد نشود.
 
+به‌روزرسانی 2026-11-05: طراحی سطح پیاده‌سازی گزینه B (HR-ready) — چهار Entity شرکت‌محور با انتساب مستقل و Effective Dating، کاتالوگ مجوز `hr.*` و قرارداد کامل `/api/v1/companies/{companyId}/org/*` — در همان سند نهایی و پیشنهاد در ADR D-072 (Proposed) ثبت شد. اجرای Migration/Entity/API تا ثبت تأیید صریح مالک روی گزینه A/B در Issue #491 مسدود است.
+
 ## 5. گروه‌های دسترسی
 گروه دسترسی یک الگوی قابل استفاده مجدد است؛ نمونه‌ها: حسابدار، حسابدار ارشد، خزانه‌دار، مسئول انبار، کارشناس فروش و کارشناس بازرگانی خارجی.
 
@@ -131,7 +133,7 @@ API هم‌مبدأ با Cookie HttpOnly و Anti-forgery موجود حفظ شو�
 |---|---|---|
 | S0 | ممیزی مدل/endpoint/UI، threat model و تصمیم داده | تکمیل‌شده؛ PR #445 و تصمیم D-064 |
 | S1 | self-service، فهرست/جزئیات کاربران، ایجاد/ویرایش؛ lifecycle عضویت جداگانه | بخش self-service و مدیریت کاربر ادغام شده (#447، #449، #450، #451، #470، #471، #473)؛ گردش عضویت بین‌شرکتی در #479 مستقل است |
-| S2 | سمت‌ها و واحدهای سازمانی | `NotImplemented`؛ نیازمند تصمیم مالکیت داده و ارتباط با Employee/Payroll؛ نباید CompanyRole را با سمت شغلی یکی کرد |
+| S2 | سمت‌ها و واحدهای سازمانی | `NotImplemented`؛ طراحی سطح پیاده‌سازی گزینه B (HR-ready) و قرارداد API در `ORGANIZATIONAL_STRUCTURE_DATA_MODEL.md` کامل و به‌صورت D-072 (Proposed) ثبت شده است؛ اجرا تا تأیید صریح مالک در Issue #491 مسدود است؛ نباید CompanyRole را با سمت شغلی یکی کرد |
 | S3 | گروه‌ها و الگوها | CompanyRole به‌عنوان گروه دسترسی شرکتی و الگوهای اولیه در #459/#478 پیاده‌سازی شده؛ گروه سازمانی جداگانه یا AccessGroup موازی ایجاد نشده است |
 | S4 | کاتالوگ و ویرایشگر مجوز | کاتالوگ API و UI در #459/#478 پیاده‌سازی شده؛ inventory کامل همه زیرسیستم‌ها و عملیات هنوز نیازمند توسعه تدریجی است |
 | S5 | enforcement در API و UI | enforcement فعلی CompanyAccessService/Trade حفظ شده و API مدیریت نقش برای Installation Administrator محدود است؛ پوشش کامل همه endpointها، مدیر شرکتی و سقف تفویض هنوز نیازمند کار و تست است |
@@ -182,7 +184,7 @@ API هم‌مبدأ با Cookie HttpOnly و Anti-forgery موجود حفظ شو�
 
 - PRهای #470، #471، #473، #474 و #478 ادغام شده‌اند. PR #469 مستقل ادغام نشده، اما زیرساخت A1 در زنجیرهٔ PRهای بعدی منتقل شده است. Issueهای #461 تا #464 و #475 باید پس از تطبیق وضعیت GitHub به‌عنوان برش‌های تحویل‌شده بسته شوند؛ Issue مادر #444 باز می‌ماند.
 - UI نقش‌ها و PermissionTree در #478 با mock API در QA مرورگر بررسی شده است؛ این نتیجه جای E2E با API واقعی و SQL Server را نمی‌گیرد.
-- محدودیت‌های مهم ثبت‌شده (به‌روزرسانی 2026-11-04): endpointهای نقش/کاتالوگ اکنون دوحالته‌اند — مدیر نصب و مدیر شرکت با سقف تفویض (D-071؛ Backend `Implemented`/`Verified` با تست، UI در انتظار) — گزارش امنیت مدیریتی تحویل شده و ساختار سازمانی (S2) همچنان `NotImplemented` است.
+- محدودیت‌های مهم ثبت‌شده (به‌روزرسانی 2026-11-05): endpointهای نقش/کاتالوگ اکنون دوحالته‌اند — مدیر نصب و مدیر شرکت با سقف تفویض (D-071؛ Backend `Implemented`/`Verified` با تست، UI در انتظار) — گزارش امنیت مدیریتی تحویل شده و ساختار سازمانی (S2) همچنان `NotImplemented` است؛ طراحی پیاده‌سازی آن کامل و در D-072 (Proposed) ثبت شده و تنها منتظر تأیید مالک است.
 - هیچ entitlement تجاری جدیدی از روی permission UI صادر نمی‌شود؛ لایسنس و مجوز عملیاتی مستقل باقی می‌مانند.
 - مرجع جزئیات و برنامه تکمیل: `docs/handoffs/ISSUE-444-admin-ui-completion.md` و `docs/ADMIN_UI.md`.
 - API اعضای گروه (2026-11-03، `Implemented` در Backend، `Verified` پس از CI و SQL Server): `GET .../roles/{roleId}/members` و `POST .../roles/{roleId}/members/transfer` فقط برای Installation Administrator؛ انتقال اتمی، سقف ۵۰۰ عضو، Audit برای هر کاربر، و انتقال از/به گروه سیستمی بسته است (`NeedsApproval` برای باز کردن). UI این API و concurrency token (RowVersion) هنوز `NotImplemented` هستند. جزئیات: `docs/handoffs/ISSUE-444-role-members-api.md`.

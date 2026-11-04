@@ -57,7 +57,7 @@
 - ابطال نشست دیگران توسط مدیر نصب: تصمیم جدا و `NeedsApproval`.
 
 ## ۵. ساختار سازمانی S2 (مرحلهٔ ۸)
-مدل `Proposed` است (`docs/ORGANIZATIONAL_STRUCTURE_DATA_MODEL.md`، PR #493): UI فقط پس از تصویب مدل و آماده‌شدن API. حداقل قرارداد خواندنی مورد نیاز UI: `GET /companies/{companyId}/org/units` (درخت)، `GET /companies/{companyId}/org/positions`، و در دفترچهٔ کاربران `unitName`/`positionName` اختیاری؛ ویرایش با مجوز مجزا. سمت/واحد با `CompanyRole` یکی نیست. همهٔ پرس‌وجوها فقط برای `companyId` مسیر و عضو فعال همان شرکت.
+مدل `Proposed` است (`docs/ORGANIZATIONAL_STRUCTURE_DATA_MODEL.md`) و طراحی سطح پیاده‌سازی آن (Entityها، Constraintها، کاتالوگ مجوز `hr.*` و قرارداد کامل API) به‌همراه ADR پیشنهادی D-072 در همان سند نهایی شده است (2026-11-05). پیاده‌سازی Backend و UI تا تأیید صریح مالک روی گزینه A/B در Issue #491 مسدود است. قرارداد کامل در بخش ۶ سند طراحی آمده است؛ چکیده خواندنی‌های مورد نیاز UI: `GET /api/v1/companies/{companyId}/org/units?view=tree`، `GET .../org/positions`، `GET .../org/employees` و `GET .../org/assignments?employeeId=` با مجوزهای `hr.organizational-units.list`، `hr.positions.list`، `hr.employees.list` و `hr.employees.view`؛ ویرایش‌ها با مجوزهای مجزای `*.create`/`*.update` و `hr.assignments.manage` سمت سرور enforce می‌شوند. سمت/واحد با `CompanyRole` یکی نیست. همهٔ پرس‌وجوها فقط برای `companyId` مسیر و عضو فعال همان شرکت؛ پاسخ‌ها Allowlist و بدون فیلد حساس کاربر.
 
 ## ۶. مجوزهای گروه برای غیرمدیر نصب
 `GET /api/v1/companies/{companyId}/roles/{roleId}` با مجوز صریح (مثلاً `users.roles.view`) فقط برای گروه‌های همان شرکت؛ پاسخ مانند `CompanyRoleResponse`. تا آن زمان مجوزهای گروه فقط برای مدیر نصب دیده می‌شود.
