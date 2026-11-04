@@ -73,10 +73,19 @@ public sealed class VendorLicenseAmendmentPayloadBuilderTests
         Assert.Equal(2, amendment!.FormatVersion);
         Assert.Equal(20, amendment.Limits.MaxCompanies);
         Assert.Empty(amendment.Limits.Subsystems);
+        var originalCompany = fixture.Payload.CompanyEntitlements![0]!;
+        var amendedCompany = amendment.CompanyEntitlements![0]!;
         Assert.NotSame(fixture.Payload.CompanyEntitlements, amendment.CompanyEntitlements);
-        Assert.Equal(fixture.Payload.CompanyEntitlements, amendment.CompanyEntitlements);
-        Assert.NotSame(fixture.Payload.CompanyEntitlements![0]!.Modules, amendment.CompanyEntitlements![0]!.Modules);
-        Assert.NotSame(fixture.Payload.CompanyEntitlements![0]!.Features, amendment.CompanyEntitlements![0]!.Features);
+        Assert.Equal(originalCompany.CompanyReference, amendedCompany.CompanyReference);
+        Assert.Equal(originalCompany.MaxUsers, amendedCompany.MaxUsers);
+        Assert.Equal(originalCompany.Modules, amendedCompany.Modules);
+        Assert.Equal(originalCompany.Features!.Count, amendedCompany.Features!.Count);
+        Assert.Equal(originalCompany.Features[0]!.Code, amendedCompany.Features[0]!.Code);
+        Assert.Equal(originalCompany.Features[0]!.Type, amendedCompany.Features[0]!.Type);
+        Assert.Equal(originalCompany.Features[0]!.MaxCount, amendedCompany.Features[0]!.MaxCount);
+        Assert.NotSame(originalCompany.Modules, amendedCompany.Modules);
+        Assert.NotSame(originalCompany.Features, amendedCompany.Features);
+        Assert.NotSame(originalCompany.Features[0], amendedCompany.Features[0]);
         Assert.Equal(fixture.Payload.SupportUntilUtc, amendment.SupportUntilUtc);
         Assert.Equal(fixture.Payload.UpdatesUntilUtc, amendment.UpdatesUntilUtc);
         Assert.Equal(CanonicalJson.SerializePayload(amendment), CanonicalJson.SerializePayload(
