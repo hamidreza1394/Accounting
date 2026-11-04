@@ -2,22 +2,30 @@
 
 - Issue: [#214](https://github.com/hamidreza1394/Accounting/issues/214)
 - Branch: `fix/214-runtime-evaluator`
-- وضعیت: نقطهٔ مشترک runtime evaluation افزوده شد؛ CI پس از باز شدن PR مرجع است.
+- PR: [#526](https://github.com/hamidreza1394/Accounting/pull/526)
+- وضعیت: نقطهٔ مشترک runtime evaluation افزوده شد؛ ثبت DI در Program.cs و تست‌های regression باید همراه PR کامل شوند.
 
 ## شکاف قبلی
 - قراردادها، `RevocationAwareLicenseEnvelopeValidator`، `OfflineRevocationConsumer`، state store با TPM و import path از قبل در main بودند.
-- DI فقط `ICustomerLicenseEnvelopeValidator` را در معرض قرار می‌داد و import از آن استفاده می‌کرد.
-- **هیچ سرویس مشترکی برای ارزیابی لایسنس نصب‌شدهٔ جاری وجود نداشت.**
+- پس از import، هیچ سرویس مشترکی envelope ذخیره‌شده را دوباره از مسیر revocation-aware عبور نمی‌داد.
 
-## تغییرات این PR
+## تغییرات
 - `ICustomerLicenseRuntimeEvaluator` / `CustomerLicenseRuntimeEvaluator`
-- ثبت DI کنار import service
-- تست‌های regression fail-closed
+- `CustomerLicenseRuntimeServiceCollectionExtensions.AddCustomerLicenseRuntimeEvaluator()`
+- ثبت یک‌خطی در `Server/Program.cs` (اگر هنوز اعمال نشده)
+- تست‌های regression (۱۱ سناریو fail-closed)
 
-## وابستگی‌های خارج از محدوده
+## کنترل‌های امنیتی
+1. هر ارزیابی از `ICustomerLicenseEnvelopeValidator` (revocation-aware) عبور می‌کند؛ DB به‌تنهایی معتبر نیست.
+2. Unavailable هرگز NotRevoked نیست (داخل consumer و evaluator).
+3. Grace در runtime usable نیست.
+4. Log فقط warning عمومی.
+5. `LicenseEnvelopeValidator` خام در DI expose نیست.
+
+## خارج از محدوده
 - Startup Gate: #396
-- Module entitlement: #390, #391, #401
+- Module/Seat/Feature: #390, #391, #401
+- بدون Migration / Vendor / تغییر قرارداد Snapshot
 
-## محدودیت‌ها
-- SDK و TPM در محیط agent موجود نبود؛ Build/Test محلی اجرا نشده
-- هیچ Migration / Vendor / تغییر قرارداد Snapshot
+## محدودیت محیط
+- SDK .NET 10 در محیط agent موجود نبود؛ Build/Test محلی اجرا نشده است.
