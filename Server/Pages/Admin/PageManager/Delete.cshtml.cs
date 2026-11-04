@@ -28,7 +28,7 @@ public class DeleteModel : Infrastructure.BasePageModelWithDatabaseContext
 			}
 			catch (System.Exception ex)
 			{
-				Logger.LogError(message: ex.Message);
+				Logger.LogError("Page manager operation failed. ExceptionType={ExceptionType}.", ex.GetType().FullName);
 
 				AddToastError(message: Resources.Messages.Errors.UnexpectedError);
 			}
@@ -50,7 +50,7 @@ public class DeleteModel : Infrastructure.BasePageModelWithDatabaseContext
 		}
 		catch (System.Exception ex)
 		{
-			Logger.LogError(message: ex.Message);
+			Logger.LogError("Page manager operation failed. ExceptionType={ExceptionType}.", ex.GetType().FullName);
 
 			AddToastError(message: Resources.Messages.Errors.UnexpectedError);
 		}

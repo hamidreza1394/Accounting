@@ -2359,3 +2359,10 @@
 - فیلتر شرکت و DateTimeOffset UTC موجود حفظ شد؛ `OccurredAtUtc` خروجی پس از EF read صریحاً Kind=UTC می‌گیرد. Export نیز Z دارد.
 - Retention در D-070 با وضعیت Proposed ثبت شد؛ هیچ endpoint/job/permission اجرایی یا purge پیاده‌سازی نشد تا مالک تصمیم بگیرد.
 - Unit/SQL Server/Build/Full Test هنوز اجرا نشده‌اند؛ Verified نیست. بدون Migration و ClientApp.
+
+### 2026-11-04 — #521 exception logging hardening (incomplete)
+
+- Replaced identified application-owned raw exception/message logging with exception type metadata; request handlers also retain safe event, trace, method, and route template metadata. File-manager error responses no longer expose exception messages.
+- Added capture-logger regression tests using synthetic nested exception and secret data. These tests exercise the API handler and legacy middleware directly, not the full ASP.NET pipeline.
+- Remaining blocker: built-in exception/developer middleware may independently log exception details. Implement and verify an end-to-end safe pipeline and expand regression coverage across remaining paths before closing the issue.
+- Validation: `git diff --check` and static asset check passed. .NET SDK and Docker were unavailable; attempted test runs failed with `dotnet: command not found`, and SDK resolution failed due to TLS. No build, .NET tests, or pre-fix failing test run was possible.

@@ -92,7 +92,7 @@ public class UpdateModel : Infrastructure.BasePageModelWithDatabaseContext
 		catch (System.Exception ex)
 		{
 			Logger.LogError
-				(message: Constants.Logger.ErrorMessage, args: ex.Message);
+				(message: "Operation failed. ExceptionType={ExceptionType}.", args: ex.GetType().FullName);
 
 			AddToastError
 				(message: Resources.Messages.Errors.UnexpectedError);
@@ -208,7 +208,7 @@ public class UpdateModel : Infrastructure.BasePageModelWithDatabaseContext
 		catch (System.Exception ex)
 		{
 			Logger.LogError
-				(message: Constants.Logger.ErrorMessage, args: ex.Message);
+				(message: "Operation failed. ExceptionType={ExceptionType}.", args: ex.GetType().FullName);
 
 			AddToastError
 				(message: Resources.Messages.Errors.UnexpectedError);

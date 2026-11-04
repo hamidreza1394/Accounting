@@ -312,3 +312,9 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - مجوز پیشنهادی در سطح نصب: `security.audit.retention.manage`؛ هنوز در catalog فعال نشده است.
 - هر تغییر سیاست، legal hold و purge آتی باید Audit شود؛ Audit نباید IP خام یا payload رویداد را در DetailsJson جدید تکثیر کند.
 - گزینه‌های دوره نگهداری و اثر قانونی/عملیاتی در D-070 ثبت شده‌اند؛ UI فقط پس از تصویب، وضعیت read-only نشان می‌دهد و اجازه حذف ندارد.
+
+### Exception logging hardening (issue #521, work in progress)
+
+Application-owned exception log calls should record only an exception type and fixed event metadata, never an exception object, its message, inner exceptions, request path or query string. Request-failure logs use the matched route template where available, a normalized HTTP method, and a trace identifier. Database connection failures must not include provider messages or connection strings. Generic client-facing errors must not contain exception messages.
+
+**This is not yet an end-to-end guarantee.** ASP.NET Core's built-in exception-handler and developer exception-page middleware can emit exception details independently of application-owned log calls. The production and development request pipelines need a verified safe handling strategy and full-pipeline capture-logger tests before #521 can be closed or this change treated as production-ready. Framework and third-party providers also require review; do not assume filtering application log calls sanitizes them.

@@ -32,7 +32,7 @@ public class CreateModel : Infrastructure.BasePageModelWithDatabaseContext
 		}
 		catch (System.Exception ex)
 		{
-			Logger.LogError(message: ex.Message);
+			Logger.LogError("Page manager operation failed. ExceptionType={ExceptionType}.", ex.GetType().FullName);
 		}
 		finally
 		{
@@ -57,7 +57,7 @@ public class CreateModel : Infrastructure.BasePageModelWithDatabaseContext
 		}
 		catch (System.Exception ex)
 		{
-			Logger.LogError(message: ex.Message);
+			Logger.LogError("Page manager operation failed. ExceptionType={ExceptionType}.", ex.GetType().FullName);
 
 			//System.Console.WriteLine(value: ex.Message);
 

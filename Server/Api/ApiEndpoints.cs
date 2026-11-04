@@ -241,11 +241,9 @@ public static class ApiEndpoints
 			return;
 		}
 
-		httpContext.RequestServices
-			.GetRequiredService<ILoggerFactory>()
-			.CreateLogger(typeof(ApiEndpoints).FullName!)
-			.LogError(exception, "API request {Method} {Path} failed with an unexpected error.",
-				httpContext.Request.Method, httpContext.Request.Path.Value);
+		var logger = httpContext.RequestServices.GetRequiredService<ILoggerFactory>()
+			.CreateLogger(typeof(ApiEndpoints).FullName!);
+		Infrastructure.Security.SafeExceptionLogging.LogRequestFailure(logger, httpContext, exception);
 
 		httpContext.Response.Headers.CacheControl = "no-store";
 
@@ -317,7 +315,7 @@ public static class ApiEndpoints
 			{
 				httpContext.RequestServices.GetService<ILoggerFactory>()?
 					.CreateLogger(typeof(ApiEndpoints).FullName!)?
-					.LogError(exception, "Could not persist the explicit logout audit event.");
+					.LogError("Could not persist the explicit logout audit event. ExceptionType={ExceptionType}.", exception.GetType().FullName);
 			}
 		}
 

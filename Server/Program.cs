@@ -377,7 +377,7 @@ else if (!setupRequired && (!app.Environment.IsDevelopment() || connectionLoaded
     }
     catch (Exception exception)
     {
-        app.Logger.LogWarning(exception, "The pending database migrations could not be checked at start-up.");
+        app.Logger.LogWarning("The pending database migrations could not be checked at start-up. ExceptionType={ExceptionType}.", exception.GetType().FullName);
     }
 }
 

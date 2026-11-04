@@ -25,7 +25,7 @@ public class UpdateModel : Infrastructure.BasePageModelWithDatabaseContext
 		}
 		catch (System.Exception ex)
 		{
-			Logger.LogError(message: ex.Message);
+			Logger.LogError("Page manager operation failed. ExceptionType={ExceptionType}.", ex.GetType().FullName);
 
 			AddPageError(message: Resources.Messages.Errors.UnexpectedError);
 		}
@@ -51,7 +51,7 @@ public class UpdateModel : Infrastructure.BasePageModelWithDatabaseContext
 		}
 		catch (System.Exception ex)
 		{
-			Logger.LogError(message: ex.Message);
+			Logger.LogError("Page manager operation failed. ExceptionType={ExceptionType}.", ex.GetType().FullName);
 
 			//System.Console.WriteLine(value: ex.Message);
 

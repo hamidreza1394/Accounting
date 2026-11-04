@@ -243,7 +243,7 @@ namespace Server.Pages.Security
 				// in the log; the user only sees a generic message. The exception is
 				// logged without any credential, cookie or token.
 				Logger.LogError
-					(exception: ex, message: "Sign-in failed with an unexpected error.");
+					(message: "Sign-in failed with an unexpected error. ExceptionType={ExceptionType}.", args: ex.GetType().FullName);
 
 				AddPageError(message:
 					Resources.Messages.Errors.UnexpectedError);
