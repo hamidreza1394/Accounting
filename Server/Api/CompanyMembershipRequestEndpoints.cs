@@ -315,6 +315,10 @@ public static class CompanyMembershipRequestEndpoints
 
         var query = database.CompanyRoles.AsNoTracking()
             .Where(role => role.TenantId == companyId && role.IsActive && !role.IsSystemRole)
+            // A role that can approve membership requests must never be delegated to a requester;
+            // otherwise an approver could grant the approval capability to another account.
+            .Where(role => !role.RolePermissions.Any(rolePermission =>
+                rolePermission.Permission.Code == ApprovalPermissionCode))
             .Where(role => !role.RolePermissions.Any(rolePermission =>
                 !approverPermissionIds.Contains(rolePermission.PermissionId)));
 
