@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Faranou.Licensing.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -21,6 +22,7 @@ public sealed record CustomerLicenseRuntimeResult(
     /// trust and revocation validation. Rejected results never carry a payload.
     /// The private init accessor prevents callers from manufacturing a validated result.
     /// </summary>
+    [JsonIgnore]
     public LicensePayload? ValidatedPayload { get; private init; }
 
     public static CustomerLicenseRuntimeResult Usable(LicenseStatus status, LicensePayload payload) =>

@@ -51,6 +51,9 @@ public sealed class CustomerLicenseRuntimeEvaluatorTests
         Assert.Equal(payload.LicenseId, result.LicenseId);
         Assert.Equal(payload.Sequence, result.Sequence);
         Assert.Same(payload, result.ValidatedPayload);
+        var serialized = JsonSerializer.Serialize(result, JsonOptions);
+        Assert.False(serialized.Contains("validatedPayload", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(payload.ToString(), result.ToString());
         Assert.Null(result.ErrorCode);
     }
 
