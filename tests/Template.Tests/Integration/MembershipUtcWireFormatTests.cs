@@ -105,7 +105,7 @@ public sealed class MembershipUtcWireFormatTests
 
         var timestamps = new[] { Assert.Single(details.Memberships).CreatedAtUtc,
             Assert.Single(directory.Items).MembershipCreatedAtUtc,
-            Assert.Single(members.Items, item => item.UserId == target.Id).CreatedAtUtc };
+            Assert.Single(members.Items, item => item.UserId == target.Id).MemberSinceUtc };
         foreach (var timestamp in timestamps)
         {
             Assert.Equal(DateTimeKind.Utc, timestamp.Kind);
@@ -129,7 +129,7 @@ public sealed class MembershipUtcWireFormatTests
         foreach (var name in new[] { "insertDateTime", "updateDateTime", "lastLoginDateTime" })
         {
             var value = detailsJson.RootElement.GetProperty(name).GetString()!;
-            Assert.DoesNotEndWith("Z", value);
+            Assert.False(value.EndsWith("Z", StringComparison.Ordinal));
             Assert.DoesNotContain("+", value);
         }
         Assert.Equal("2026-01-02T03:04:05", detailsJson.RootElement.GetProperty("lastLoginDateTime").GetString());
