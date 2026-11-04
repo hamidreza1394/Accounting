@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.Routing.Patterns;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Server.Api;
@@ -31,13 +33,73 @@ public sealed class SafeExceptionLoggingTests
         Assert.Equal(StatusCodes.Status500InternalServerError, context.Response.StatusCode);
         Assert.DoesNotContain(Secret, body);
         Assert.NotEmpty(capture.Entries);
-        var entry = Assert.Single(capture.Entries);
+        Assert.All(capture.Entries, logged =>
+        {
+            Assert.Null(logged.Exception);
+            Assert.DoesNotContain(Secret, logged.Message);
+        });
+        var entry = Assert.Single(capture.Entries, logged => logged.Message.Contains("Unexpected request failure"));
         Assert.Null(entry.Exception);
         Assert.DoesNotContain(Secret, entry.Message);
         Assert.Contains("InvalidOperationException", entry.Message);
         Assert.Contains("trace-safe-521", entry.Message);
         Assert.Contains("POST", entry.Message);
     }
+
+    [Fact]
+    public async Task ApiFilter_LogsRouteTemplateWithoutRawRouteOrException()
+    {
+        var capture = new CaptureProvider();
+        using var factory = LoggerFactory.Create(builder => builder.AddProvider(capture));
+        var context = new DefaultHttpContext { TraceIdentifier = "trace-filter-521" };
+        context.Request.Method = "GET";
+        context.Request.Path = "/api/items/" + Secret;
+        context.SetEndpoint(CreateEndpoint());
+        var filter = new ApiResponseFilter(factory.CreateLogger<ApiResponseFilter>());
+
+        var result = await filter.InvokeAsync(EndpointFilterInvocationContext.Create(context),
+            _ => throw new InvalidOperationException(Secret, new Exception(Secret)));
+
+        Assert.NotNull(result);
+        Assert.All(capture.Entries, logged =>
+        {
+            Assert.Null(logged.Exception);
+            Assert.DoesNotContain(Secret, logged.Message);
+        });
+        var entry = Assert.Single(capture.Entries, logged => logged.Message.Contains("Unexpected request failure"));
+        Assert.Null(entry.Exception);
+        Assert.DoesNotContain(Secret, entry.Message);
+        Assert.Contains("/api/items/{id}", entry.Message);
+        Assert.Equal("no-store", context.Response.Headers.CacheControl.ToString());
+    }
+
+    [Fact]
+    public async Task Handler_UsesOriginalEndpointAfterFrameworkClearsCurrentEndpoint()
+    {
+        var capture = new CaptureProvider();
+        using var factory = LoggerFactory.Create(builder => builder.AddProvider(capture));
+        using var services = new ServiceCollection().AddSingleton<ILoggerFactory>(factory).BuildServiceProvider();
+        var context = new DefaultHttpContext { RequestServices = services };
+        context.Request.Method = "GET";
+        context.Request.Path = "/api/items/" + Secret;
+        context.Response.Body = new MemoryStream();
+        context.Features.Set<IExceptionHandlerFeature>(new ErrorFeature(new InvalidOperationException(Secret), CreateEndpoint()));
+
+        await ApiEndpoints.WriteUnexpectedErrorAsync(context);
+
+        Assert.All(capture.Entries, logged =>
+        {
+            Assert.Null(logged.Exception);
+            Assert.DoesNotContain(Secret, logged.Message);
+        });
+        var entry = Assert.Single(capture.Entries, logged => logged.Message.Contains("Unexpected request failure"));
+        Assert.Contains("/api/items/{id}", entry.Message);
+        Assert.DoesNotContain(Secret, entry.Message);
+        Assert.Null(entry.Exception);
+    }
+
+    private static Endpoint CreateEndpoint() => new RouteEndpointBuilder(
+        _ => Task.CompletedTask, RoutePatternFactory.Parse("/api/items/{id}"), 0).Build();
 
     [Fact]
     public async Task LegacyMiddleware_RethrowsButLogsOnlySafeMetadata()
@@ -52,16 +114,22 @@ public sealed class SafeExceptionLoggingTests
             factory.CreateLogger<Infrastructure.Middlewares.GlobalExceptionHandlerMiddleware>());
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => middleware.InvokeAsync(context));
-        var entry = Assert.Single(capture.Entries);
+        Assert.All(capture.Entries, logged =>
+        {
+            Assert.Null(logged.Exception);
+            Assert.DoesNotContain(Secret, logged.Message);
+        });
+        var entry = Assert.Single(capture.Entries, logged => logged.Message.Contains("Unexpected request failure"));
         Assert.Null(entry.Exception);
         Assert.DoesNotContain(Secret, entry.Message);
         Assert.Contains("InvalidOperationException", entry.Message);
         Assert.Contains("trace-middleware-521", entry.Message);
     }
 
-    private sealed class ErrorFeature(Exception error) : IExceptionHandlerFeature
+    private sealed class ErrorFeature(Exception error, Endpoint? endpoint = null) : IExceptionHandlerFeature
     {
         public Exception Error { get; } = error;
+        public Endpoint? Endpoint { get; } = endpoint;
     }
 
     private sealed record Entry(string Message, Exception? Exception);

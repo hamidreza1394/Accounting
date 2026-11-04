@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
 
@@ -15,7 +16,8 @@ public static class SafeExceptionLogging
             "GET" or "POST" or "PUT" or "PATCH" or "DELETE" or "HEAD" or "OPTIONS" => context.Request.Method,
             _ => "OTHER",
         };
-        var route = (context.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText ?? "unmatched";
+        var endpoint = context.GetEndpoint() ?? context.Features.Get<IExceptionHandlerFeature>()?.Endpoint;
+        var route = (endpoint as RouteEndpoint)?.RoutePattern.RawText ?? "unmatched";
         logger.LogError(new EventId(521, "UnexpectedRequestFailure"),
             "Unexpected request failure. TraceId={TraceId}; Method={Method}; Route={Route}; ExceptionType={ExceptionType}.",
             Activity.Current?.TraceId.ToString() ?? context.TraceIdentifier, method, route,
