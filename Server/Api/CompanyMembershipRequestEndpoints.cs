@@ -24,6 +24,8 @@ public static class CompanyMembershipRequestEndpoints
                 Infrastructure.Tenancy.CompanyAccessService.AccountKindClaimType,
                 Infrastructure.Tenancy.CompanyAccessService.UserAccountKind));
 
+        companyUsers.MapGet("/destinations", GetDestinationsAsync)
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
         companyUsers.MapGet("", GetMyRequestsAsync);
         companyUsers.MapPost("", RequestMembershipAsync)
             .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
@@ -33,7 +35,14 @@ public static class CompanyMembershipRequestEndpoints
                 Infrastructure.Tenancy.CompanyAccessService.AccountKindClaimType,
                 Infrastructure.Tenancy.CompanyAccessService.UserAccountKind));
 
-        destinationApprovers.MapGet("/pending", GetPendingRequestsAsync);
+        destinationApprovers.MapGet("/pending", GetPendingRequestsAsync)
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+        destinationApprovers.MapGet("/assignable-roles", GetAssignableRolesAsync)
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+        destinationApprovers.MapGet("/approvers", GetApproversAsync)
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+        destinationApprovers.MapGet("", GetRequestHistoryAsync)
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
         destinationApprovers.MapPost("/{requestId:guid}/approve", ApproveAsync)
             .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
         destinationApprovers.MapPost("/{requestId:guid}/reject", RejectAsync)
@@ -48,6 +57,7 @@ public static class CompanyMembershipRequestEndpoints
         [FromBody] CreateCompanyMembershipRequestRequest request,
         [FromServices] IAntiforgery antiforgery,
         Data.DatabaseContext database,
+        [FromServices] Infrastructure.Tenancy.CompanyAccessService companyAccess,
         [FromServices] TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
@@ -65,9 +75,27 @@ public static class CompanyMembershipRequestEndpoints
         if (!requesterIsActive)
             return TypedResults.NotFound();
 
-        var destinationIsActive = await database.Companies.AsNoTracking()
-            .AnyAsync(company => company.Id == request.DestinationCompanyId && company.IsActive, cancellationToken);
-        if (!destinationIsActive)
+        // CustomerBoundary is a fail-closed isolation boundary, not a permission. A requester
+        // must already have an active membership in at least one provisioned boundary; a
+        // caller cannot bypass the discovery endpoint by posting an arbitrary company ID.
+        var accessibleCompanies = await companyAccess.GetAccessibleCompaniesAsync(
+            userId.Value, cancellationToken);
+        var accessibleCompanyIds = accessibleCompanies
+            .Select(company => company.CompanyId)
+            .ToArray();
+        var requesterBoundaries = database.Companies.AsNoTracking()
+            .Where(company => accessibleCompanyIds.Contains(company.Id))
+            .Select(company => company.CustomerBoundaryId)
+            .Where(boundaryId => boundaryId.HasValue);
+
+        var destinationIsAllowed = await database.Companies.AsNoTracking()
+            .AnyAsync(company =>
+                company.Id == request.DestinationCompanyId &&
+                company.IsActive &&
+                company.CustomerBoundaryId.HasValue &&
+                requesterBoundaries.Contains(company.CustomerBoundaryId),
+                cancellationToken);
+        if (!destinationIsAllowed)
             return TypedResults.NotFound();
 
         var alreadyActive = await database.UserCompanyMemberships.AsNoTracking()
@@ -130,6 +158,7 @@ public static class CompanyMembershipRequestEndpoints
         HttpContext httpContext,
         ClaimsPrincipal principal,
         Data.DatabaseContext database,
+        string? status = null,
         int page = 1,
         int pageSize = 25,
         CancellationToken cancellationToken = default)
@@ -139,31 +168,318 @@ public static class CompanyMembershipRequestEndpoints
             return TypedResults.Unauthorized();
 
         SetNoStore(httpContext);
+        if (!TryNormalizeStatus(status, out var normalizedStatus))
+            return TypedResults.BadRequest(new { error = "وضعیت درخواست معتبر نیست." });
+
         var safePage = Math.Clamp(page, 1, 100_000);
         var safePageSize = Math.Clamp(pageSize, 1, 100);
         var query = database.CompanyMembershipRequests.AsNoTracking()
             .Where(item => item.UserId == userId.Value);
+        if (normalizedStatus is not null)
+            query = query.Where(item => item.Status == normalizedStatus);
+
         var totalCount = await query.CountAsync(cancellationToken);
         var rows = await query
             .OrderByDescending(item => item.RequestedAtUtc)
             .ThenByDescending(item => item.Id)
             .Skip((safePage - 1) * safePageSize)
             .Take(safePageSize)
-            .Select(item => new CompanyMembershipRequestItemResponse(
+            .Select(item => new
+            {
                 item.Id,
                 item.DestinationTenantId,
-                item.DestinationCompany.Name,
+                DestinationCompanyName = item.DestinationCompany.Name,
                 item.Status,
                 item.RequestedAtUtc,
                 item.DecidedAtUtc,
                 item.DecisionReason,
-                item.ApprovedRole == null ? null : item.ApprovedRole.Code,
-                item.ApprovedRole == null ? null : item.ApprovedRole.Name))
+                ApprovedRoleCode = item.ApprovedRole == null ? null : item.ApprovedRole.Code,
+                ApprovedRoleName = item.ApprovedRole == null ? null : item.ApprovedRole.Name,
+            })
             .ToListAsync(cancellationToken);
 
-        SetNoStore(httpContext);
+        var items = rows.Select(item => new CompanyMembershipRequestItemResponse(
+            item.Id,
+            item.DestinationTenantId,
+            item.DestinationCompanyName,
+            item.Status,
+            AsUtc(item.RequestedAtUtc),
+            AsUtc(item.DecidedAtUtc),
+            item.DecisionReason,
+            item.ApprovedRoleCode,
+            item.ApprovedRoleName)).ToArray();
+
         return TypedResults.Ok(new CompanyMembershipRequestListResponse(
-            rows, safePage, safePageSize, totalCount));
+            items, safePage, safePageSize, totalCount));
+    }
+
+    /// <summary>
+    /// Exact-name discovery inside the requester's already-provisioned customer boundary.
+    /// Requiring a non-empty exact term prevents bulk enumeration of company names.
+    /// </summary>
+    public static async Task<IResult> GetDestinationsAsync(
+        HttpContext httpContext,
+        ClaimsPrincipal principal,
+        Data.DatabaseContext database,
+        [FromServices] Infrastructure.Tenancy.CompanyAccessService companyAccess,
+        string? search,
+        int page = 1,
+        int pageSize = 25,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal);
+        if (userId is null)
+            return TypedResults.Unauthorized();
+
+        SetNoStore(httpContext);
+        var exactName = search?.Trim();
+        if (string.IsNullOrWhiteSpace(exactName) || exactName.Length is < 3 or > 120)
+            return TypedResults.BadRequest(new { error = "برای جستجوی شرکت، نام دقیق با حداقل ۳ و حداکثر ۱۲۰ نویسه لازم است." });
+
+        var requesterIsActive = await database.Users.AsNoTracking()
+            .AnyAsync(user => user.Id == userId.Value && user.IsActive, cancellationToken);
+        if (!requesterIsActive)
+            return TypedResults.NotFound();
+
+        var accessibleCompanies = await companyAccess.GetAccessibleCompaniesAsync(
+            userId.Value, cancellationToken);
+        var accessibleCompanyIds = accessibleCompanies
+            .Select(company => company.CompanyId)
+            .ToArray();
+        var requesterBoundaries = database.Companies.AsNoTracking()
+            .Where(company => accessibleCompanyIds.Contains(company.Id))
+            .Select(company => company.CustomerBoundaryId)
+            .Where(boundaryId => boundaryId.HasValue);
+
+        var query = database.Companies.AsNoTracking()
+            .Where(company =>
+                company.IsActive &&
+                company.CustomerBoundaryId.HasValue &&
+                requesterBoundaries.Contains(company.CustomerBoundaryId))
+            .Where(company => company.Name == exactName)
+            .Where(company => !database.UserCompanyMemberships.Any(membership =>
+                membership.UserId == userId.Value &&
+                membership.TenantId == company.Id &&
+                membership.IsActive &&
+                membership.Role.IsActive))
+            .Where(company => !database.CompanyMembershipRequests.Any(request =>
+                request.UserId == userId.Value &&
+                request.DestinationTenantId == company.Id &&
+                request.Status == Domain.CompanyMembershipRequestStatuses.Pending));
+
+        var safePage = Math.Clamp(page, 1, 100_000);
+        var safePageSize = Math.Clamp(pageSize, 1, 100);
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query
+            .OrderBy(company => company.Name)
+            .ThenBy(company => company.Id)
+            .Skip((safePage - 1) * safePageSize)
+            .Take(safePageSize)
+            .Select(company => new MembershipDestinationResponse(company.Id, company.Name))
+            .ToListAsync(cancellationToken);
+
+        return TypedResults.Ok(new MembershipDestinationListResponse(
+            items, safePage, safePageSize, totalCount));
+    }
+
+    public static async Task<IResult> GetAssignableRolesAsync(
+        Guid companyId,
+        HttpContext httpContext,
+        ClaimsPrincipal principal,
+        Data.DatabaseContext database,
+        [FromServices] Infrastructure.Tenancy.CompanyAccessService companyAccess,
+        int page = 1,
+        int pageSize = 100,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal);
+        if (userId is null)
+            return TypedResults.Unauthorized();
+
+        SetNoStore(httpContext);
+        if (!await companyAccess.HasPermissionAsync(
+                userId.Value, companyId, ApprovalPermissionCode, cancellationToken))
+            return TypedResults.NotFound();
+
+        var approverPermissionIds = await database.UserCompanyMemberships.AsNoTracking()
+            .Where(membership =>
+                membership.UserId == userId.Value &&
+                membership.TenantId == companyId &&
+                membership.IsActive &&
+                membership.Company.IsActive &&
+                membership.Role.TenantId == companyId &&
+                membership.Role.IsActive)
+            .SelectMany(membership => membership.Role.RolePermissions.Select(rolePermission => rolePermission.PermissionId))
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        var query = database.CompanyRoles.AsNoTracking()
+            .Where(role => role.TenantId == companyId && role.IsActive && !role.IsSystemRole)
+            // A role that can approve membership requests must never be delegated to a requester;
+            // otherwise an approver could grant the approval capability to another account.
+            .Where(role => !role.RolePermissions.Any(rolePermission =>
+                rolePermission.Permission.Code == ApprovalPermissionCode))
+            .Where(role => !role.RolePermissions.Any(rolePermission =>
+                !approverPermissionIds.Contains(rolePermission.PermissionId)));
+
+        var safePage = Math.Clamp(page, 1, 100_000);
+        var safePageSize = Math.Clamp(pageSize, 1, 100);
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query
+            .OrderBy(role => role.Name)
+            .ThenBy(role => role.Id)
+            .Skip((safePage - 1) * safePageSize)
+            .Take(safePageSize)
+            .Select(role => new AssignableCompanyRoleResponse(role.Id, role.Code, role.Name, role.IsSystemRole))
+            .ToListAsync(cancellationToken);
+
+        return TypedResults.Ok(new AssignableCompanyRoleListResponse(
+            items, safePage, safePageSize, totalCount));
+    }
+
+    public static async Task<IResult> GetApproversAsync(
+        Guid companyId,
+        HttpContext httpContext,
+        ClaimsPrincipal principal,
+        Data.DatabaseContext database,
+        [FromServices] Infrastructure.Tenancy.CompanyAccessService companyAccess,
+        int page = 1,
+        int pageSize = 25,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal);
+        if (userId is null)
+            return TypedResults.Unauthorized();
+
+        SetNoStore(httpContext);
+        if (!await companyAccess.HasPermissionAsync(
+                userId.Value, companyId, ApprovalPermissionCode, cancellationToken))
+            return TypedResults.NotFound();
+
+        var query =
+            from membership in database.UserCompanyMemberships.AsNoTracking()
+            join user in database.Users.AsNoTracking()
+                on membership.UserId equals user.Id
+            where membership.TenantId == companyId &&
+                membership.IsActive &&
+                membership.Company.IsActive &&
+                membership.Role.TenantId == companyId &&
+                membership.Role.IsActive &&
+                membership.Role.RolePermissions.Any(rolePermission =>
+                    rolePermission.Permission.Code == ApprovalPermissionCode) &&
+                user.IsActive
+            select new
+            {
+                UserId = user.Id,
+                user.Username,
+                user.FirstName,
+                user.LastName,
+            };
+
+        var distinctQuery = query.Distinct();
+        var safePage = Math.Clamp(page, 1, 100_000);
+        var safePageSize = Math.Clamp(pageSize, 1, 100);
+        var totalCount = await distinctQuery.CountAsync(cancellationToken);
+        var rows = await distinctQuery
+            .OrderBy(item => item.LastName)
+            .ThenBy(item => item.FirstName)
+            .ThenBy(item => item.UserId)
+            .Skip((safePage - 1) * safePageSize)
+            .Take(safePageSize)
+            .ToListAsync(cancellationToken);
+
+        var items = rows.Select(item =>
+        {
+            var displayName = $"{item.FirstName} {item.LastName}".Trim();
+            if (string.IsNullOrWhiteSpace(displayName))
+                displayName = item.Username ?? "کاربر";
+            return new MembershipApproverResponse(item.UserId, displayName, item.Username);
+        }).ToArray();
+
+        return TypedResults.Ok(new MembershipApproverListResponse(
+            items, safePage, safePageSize, totalCount));
+    }
+
+    public static async Task<IResult> GetRequestHistoryAsync(
+        Guid companyId,
+        HttpContext httpContext,
+        ClaimsPrincipal principal,
+        Data.DatabaseContext database,
+        [FromServices] Infrastructure.Tenancy.CompanyAccessService companyAccess,
+        string? status = null,
+        int page = 1,
+        int pageSize = 25,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal);
+        if (userId is null)
+            return TypedResults.Unauthorized();
+
+        SetNoStore(httpContext);
+        if (!await companyAccess.HasPermissionAsync(
+                userId.Value, companyId, ApprovalPermissionCode, cancellationToken))
+            return TypedResults.NotFound();
+        if (!TryNormalizeStatus(status, out var normalizedStatus))
+            return TypedResults.BadRequest(new { error = "وضعیت درخواست معتبر نیست." });
+
+        var query = database.CompanyMembershipRequests.AsNoTracking()
+            .Where(item => item.DestinationTenantId == companyId);
+        if (normalizedStatus is not null)
+            query = query.Where(item => item.Status == normalizedStatus);
+
+        var safePage = Math.Clamp(page, 1, 100_000);
+        var safePageSize = Math.Clamp(pageSize, 1, 100);
+        var totalCount = await query.CountAsync(cancellationToken);
+        var rows = await (
+            from item in query
+            join requester in database.Users.AsNoTracking()
+                on item.UserId equals requester.Id into requesterRows
+            from requester in requesterRows.DefaultIfEmpty()
+            join decider in database.Users.AsNoTracking()
+                on item.DecidedByUserId equals (Guid?)decider.Id into deciderRows
+            from decider in deciderRows.DefaultIfEmpty()
+            orderby item.RequestedAtUtc descending, item.Id descending
+            select new
+            {
+                item.Id,
+                item.Status,
+                item.RequestedAtUtc,
+                item.DecidedAtUtc,
+                item.DecisionReason,
+                RequesterUsername = requester == null ? null : requester.Username,
+                RequesterFirstName = requester == null ? null : requester.FirstName,
+                RequesterLastName = requester == null ? null : requester.LastName,
+                DeciderFirstName = decider == null ? null : decider.FirstName,
+                DeciderLastName = decider == null ? null : decider.LastName,
+                DeciderUsername = decider == null ? null : decider.Username,
+                ApprovedRoleName = item.ApprovedRole == null ? null : item.ApprovedRole.Name,
+            })
+            .Skip((safePage - 1) * safePageSize)
+            .Take(safePageSize)
+            .ToListAsync(cancellationToken);
+
+        var items = rows.Select(item =>
+        {
+            var requesterDisplayName = $"{item.RequesterFirstName} {item.RequesterLastName}".Trim();
+            if (string.IsNullOrWhiteSpace(requesterDisplayName))
+                requesterDisplayName = item.RequesterUsername ?? "کاربر ناموجود";
+            var deciderDisplayName = $"{item.DeciderFirstName} {item.DeciderLastName}".Trim();
+            if (string.IsNullOrWhiteSpace(deciderDisplayName))
+                deciderDisplayName = item.DeciderUsername;
+            return new CompanyMembershipRequestHistoryItemResponse(
+                item.Id,
+                requesterDisplayName,
+                item.RequesterUsername,
+                item.Status,
+                AsUtc(item.RequestedAtUtc),
+                AsUtc(item.DecidedAtUtc),
+                string.IsNullOrWhiteSpace(deciderDisplayName) ? null : deciderDisplayName,
+                item.ApprovedRoleName,
+                item.DecisionReason);
+        }).ToArray();
+
+        return TypedResults.Ok(new CompanyMembershipRequestHistoryListResponse(
+            items, safePage, safePageSize, totalCount));
     }
 
     public static async Task<IResult> GetPendingRequestsAsync(
@@ -223,7 +539,7 @@ public static class CompanyMembershipRequestEndpoints
                 item.UserId,
                 displayName,
                 item.Username,
-                item.RequestedAtUtc,
+                AsUtc(item.RequestedAtUtc),
                 item.IsRequesterActive);
         }).ToArray();
 
@@ -458,6 +774,28 @@ public static class CompanyMembershipRequestEndpoints
         return TypedResults.NoContent();
     }
 
+    private static bool TryNormalizeStatus(string? status, out string? normalized)
+    {
+        normalized = null;
+        if (string.IsNullOrWhiteSpace(status))
+            return true;
+
+        normalized = status.Trim() switch
+        {
+            Domain.CompanyMembershipRequestStatuses.Pending => Domain.CompanyMembershipRequestStatuses.Pending,
+            Domain.CompanyMembershipRequestStatuses.Approved => Domain.CompanyMembershipRequestStatuses.Approved,
+            Domain.CompanyMembershipRequestStatuses.Rejected => Domain.CompanyMembershipRequestStatuses.Rejected,
+            _ => null,
+        };
+        return normalized is not null;
+    }
+
+    private static DateTime AsUtc(DateTime value) =>
+        DateTime.SpecifyKind(value, DateTimeKind.Utc);
+
+    private static DateTime? AsUtc(DateTime? value) =>
+        value.HasValue ? AsUtc(value.Value) : null;
+
     private static Domain.SecurityAuditEvent CreateAudit(
         Guid actorId,
         Guid tenantId,
@@ -495,6 +833,39 @@ public static class CompanyMembershipRequestEndpoints
     }
 }
 
+public sealed record MembershipDestinationResponse(Guid CompanyId, string Name);
+public sealed record MembershipDestinationListResponse(
+    IReadOnlyList<MembershipDestinationResponse> Items,
+    int Page,
+    int PageSize,
+    int TotalCount);
+public sealed record AssignableCompanyRoleResponse(Guid Id, string Code, string Name, bool IsSystemRole);
+public sealed record AssignableCompanyRoleListResponse(
+    IReadOnlyList<AssignableCompanyRoleResponse> Items,
+    int Page,
+    int PageSize,
+    int TotalCount);
+public sealed record MembershipApproverResponse(Guid UserId, string DisplayName, string? Username);
+public sealed record MembershipApproverListResponse(
+    IReadOnlyList<MembershipApproverResponse> Items,
+    int Page,
+    int PageSize,
+    int TotalCount);
+public sealed record CompanyMembershipRequestHistoryItemResponse(
+    Guid Id,
+    string RequesterDisplayName,
+    string? Username,
+    string Status,
+    DateTime RequestedAtUtc,
+    DateTime? DecidedAtUtc,
+    string? DecidedByDisplayName,
+    string? ApprovedRoleName,
+    string? DecisionReason);
+public sealed record CompanyMembershipRequestHistoryListResponse(
+    IReadOnlyList<CompanyMembershipRequestHistoryItemResponse> Items,
+    int Page,
+    int PageSize,
+    int TotalCount);
 public sealed record CreateCompanyMembershipRequestRequest(Guid DestinationCompanyId);
 public sealed record ApproveCompanyMembershipRequest(Guid RoleId);
 public sealed record RejectCompanyMembershipRequest(string? Reason);

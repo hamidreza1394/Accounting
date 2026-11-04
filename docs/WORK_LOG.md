@@ -2327,3 +2327,12 @@
 - تست‌های endpoint برای چند شرکت، query جعلی، عضویت/نقش غیرفعال، کاربر بدون شرکت و مدیر نصب؛ تست SQL Server برای query و جداسازی شرکت اضافه شد.
 - هیچ Migration، ClientApp یا E2E تغییر نکرد. Build/Test/SQL Server و diff-check هنوز اجرا نشده‌اند؛ Verified نیست.
 - handoff: docs/handoffs/ISSUE-511-me-permissions.md.
+
+
+## 2026-11-03 — Issue #510: تکمیل گردش API درخواست عضویت
+- قرارداد کشف مقصد، سقف واگذاری، فهرست تأییدکنندگان و تاریخچه تصمیم به‌روز شد.
+- مقصد فقط با نام exact در CustomerBoundary مشترک با یکی از عضویت‌های فعال کاربر قابل کشف است؛ CustomerBoundary null/متفاوت fail-closed و POST هم همان قاعده را مستقل enforce می‌کند.
+- API نقش‌های قابل واگذاری، approvers و تاریخچه status-filtered با pagination افزوده شد؛ queryهای مدیریتی و کشف مقصد rate-limited/no-store شدند.
+- زمان‌های *Utc پس از EF read صریحاً Kind=UTC می‌گیرند؛ RowVersion و transaction approval موجود حفظ شد.
+- Unit و SQL Server regression tests اضافه شدند؛ هیچ‌کدام هنوز اجرا نشده‌اند. بدون Migration/ClientApp/E2E.
+- handoff: docs/handoffs/ISSUE-510-membership-workflow-api.md.
