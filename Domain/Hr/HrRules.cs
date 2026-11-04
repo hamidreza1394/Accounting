@@ -17,6 +17,8 @@ public enum HrRuleViolation
     ManagerCycle = 11,
     ManagerCycleTooDeep = 12,
     SelfManagement = 13,
+    AssignmentStartInFuture = 14,
+    AssignmentStartBeforeHire = 15,
 }
 
 /// <summary>A unit, as the pure rules see it: either a stored one or a candidate.</summary>
@@ -67,6 +69,28 @@ public static class HrRules
         endOnUtc is not null && endOnUtc < startOnUtc
             ? HrRuleViolation.AssignmentPeriodInvalid
             : HrRuleViolation.None;
+
+    /// <summary>
+    /// Controls the effective start of a new assignment (phase 4 workflow): the model keeps
+    /// at most one active assignment per employee, so a future-dated start cannot be staged
+    /// as active and a start before the recorded hire date is inconsistent with the
+    /// employment history. Both fail closed.
+    /// </summary>
+    public static HrRuleViolation ValidateAssignmentStart(
+        DateTime startOnUtc, DateTime nowUtc, DateTime? hiredOnUtc)
+    {
+        if (startOnUtc > nowUtc)
+        {
+            return HrRuleViolation.AssignmentStartInFuture;
+        }
+
+        if (hiredOnUtc is not null && startOnUtc < hiredOnUtc.Value)
+        {
+            return HrRuleViolation.AssignmentStartBeforeHire;
+        }
+
+        return HrRuleViolation.None;
+    }
 
     /// <summary>
     /// Whether starting a new active assignment for the employee is free of overlap: an
