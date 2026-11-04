@@ -270,6 +270,13 @@ test('the phase-4 operational workflows work end to end and control effective da
       .input('code', sql.VarChar(50), hrRoleCode)
       .query(`INSERT INTO CompanyRoles (Id, TenantId, Ordering, InsertDateTime, Code, Name, IsSystemRole, IsActive)
         VALUES (@id, @tenant, 10000, SYSDATETIME(), @code, N'گردش‌کار E2E', 0, 1)`);
+    // The user anchor of the employee needs its own membership, and every membership
+    // references a (RoleId, TenantId) pair of CompanyRoles.
+    await pool.request().input('id', sql.UniqueIdentifier, linkedUser.roleId)
+      .input('tenant', sql.UniqueIdentifier, a.id)
+      .input('code', sql.VarChar(50), `PL-${randomBytes(6).toString('hex').toUpperCase()}`)
+      .query(`INSERT INTO CompanyRoles (Id, TenantId, Ordering, InsertDateTime, Code, Name, IsSystemRole, IsActive)
+        VALUES (@id, @tenant, 10000, SYSDATETIME(), @code, N'کارمند ساده گردش‌کار', 0, 1)`);
     for (const code of HrPermissionCodes) {
       await pool.request().input('role', sql.UniqueIdentifier, hrManager.roleId)
         .input('code', sql.VarChar(50), code)
