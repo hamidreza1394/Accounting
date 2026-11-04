@@ -10,6 +10,25 @@ public sealed class VendorLicenseAmendmentPayloadBuilderTests
     private static readonly DateTimeOffset IssuedAt =
         new(2026, 11, 1, 10, 0, 0, TimeSpan.Zero);
 
+    private static readonly IReadOnlyList<string> LegacySubsystems =
+        Array.AsReadOnly(new[] { "finance", "sales" });
+
+    private static readonly IReadOnlyList<string> CompanyModules =
+        Array.AsReadOnly(new[] { "finance", "inventory" });
+
+    private static readonly IReadOnlyList<LicenseFeatureEntitlement?> CompanyFeatures =
+        Array.AsReadOnly<LicenseFeatureEntitlement?>(new[]
+        {
+            new LicenseFeatureEntitlement(
+                "finance.cost_centers", LicenseFeatureValueTypes.MaxCount, MaxCount: 12)
+        });
+
+    private static readonly IReadOnlyList<CompanyLicenseEntitlement?> CompanyEntitlements =
+        Array.AsReadOnly<CompanyLicenseEntitlement?>(new[]
+        {
+            new CompanyLicenseEntitlement("company-0001", CompanyModules, 25, CompanyFeatures)
+        });
+
     [Fact]
     public void BuildsV1CompanyCapacityIncreaseWithoutChangingExistingRights()
     {
@@ -217,22 +236,13 @@ public sealed class VendorLicenseAmendmentPayloadBuilderTests
             ExpiresAtUtc: license.ValidUntilUtc,
             GraceDays: license.GraceDays,
             Sequence: license.LastIssuedSequence,
-            Limits: new LicenseLimits(license.MaxCompanies, new[] { "finance", "sales" }));
+            Limits: new LicenseLimits(license.MaxCompanies, LegacySubsystems));
         return new Fixture(customer, installation, license, payload);
     }
 
     private static Fixture CreateV2Fixture()
     {
         var fixture = CreateV1Fixture();
-        var company = new CompanyLicenseEntitlement(
-            "company-0001",
-            new[] { "finance", "inventory" },
-            25,
-            new[]
-            {
-                new LicenseFeatureEntitlement(
-                    "finance.cost_centers", LicenseFeatureValueTypes.MaxCount, MaxCount: 12)
-            });
         fixture.Payload = new LicensePayload(
             FormatVersion: 2,
             LicenseId: fixture.Payload.LicenseId,
@@ -246,7 +256,7 @@ public sealed class VendorLicenseAmendmentPayloadBuilderTests
             Sequence: fixture.Payload.Sequence,
             Limits: new LicenseLimits(5, Array.Empty<string>()))
         {
-            CompanyEntitlements = new[] { company },
+            CompanyEntitlements = CompanyEntitlements,
             SupportUntilUtc = IssuedAt.AddDays(45),
             UpdatesUntilUtc = IssuedAt.AddDays(90)
         };

@@ -34,9 +34,9 @@
 ## بررسی و آزمون
 | فرمان/آزمون | نتیجه واقعی | توضیح/کد خروج |
 |---|---|---|
-| `dotnet build` | اجرا نشده | در این نشست checkout و SDK محلی در دسترس نیست؛ CI مرجع است. |
-| `dotnet test tests/Vendor.Host.Tests` | در انتظار | تست‌های واحد جدید در Vendor CI اجرا می‌شوند. |
-| SQL Server Integration | خارج از دامنهٔ این تغییر | هیچ persistence یا Migration اضافه نشده است. |
+| `dotnet build` | در CI موفق | Build در `.NET CI` روی SHA قبلی PR موفق شد؛ commit اصلاح analyzer مجدداً باید بررسی شود. |
+| `dotnet test tests/Vendor.Host.Tests` | موفق روی SHA قبلی | Vendor.Host.Tests: 214 passed، 0 failed، 0 skipped؛ commit اصلاح analyzer مجدداً CI می‌خواهد. |
+| SQL Server Integration | موفق در Vendor CI روی SHA قبلی | مجموعهٔ Vendor.Host.Tests با SQL Server CI اجرا شد؛ 214 passed، 0 failed. |
 | `git diff --check` | اجرا نشده | تغییر از طریق GitHub Git API ساخته می‌شود؛ CI و review diff لازم است. |
 
 ## امنیت، داده و سازگاری
@@ -51,5 +51,12 @@
 
 ## شناسه‌های Git
 - Branch: feat/393-vendor-company-capacity-amendment-payload
-- Commit: پس از ساخت
+- Commit: SHA نهایی همیشه از Head همان PR خوانده می‌شود؛ CI فعلی روی هر push مجدداً اجرا می‌شود.
 - Pull Request: پس از ساخت
+
+
+## به‌روزرسانی CI — 2026-11-04
+- روی SHA قبلی `50b431e7a791b20353db4a83569bf97aafa110c8`، Vendor CI شامل 214 تست Vendor.Host با 0 شکست و 0 skip موفق شد؛ Linux و Windows checkpoint regression نیز موفق شدند.
+- .NET CI روی همان SHA: Build موفق؛ مجموع 923 تست، 915 موفق، 8 skip و 0 شکست. E2E و publish در زمان ثبت این یادداشت هنوز در حال اجرا بودند.
+- Semgrep، CodeQL و Secret Scan موفق شدند.
+- دو هشدار CA1861 در fixtureهای تست با آرایه‌های readonly مشترک اصلاح شده‌اند؛ این commit جدید نیازمند اجرای مجدد CI است.
