@@ -2359,3 +2359,11 @@
 - فیلتر شرکت و DateTimeOffset UTC موجود حفظ شد؛ `OccurredAtUtc` خروجی پس از EF read صریحاً Kind=UTC می‌گیرد. Export نیز Z دارد.
 - Retention در D-070 با وضعیت Proposed ثبت شد؛ هیچ endpoint/job/permission اجرایی یا purge پیاده‌سازی نشد تا مالک تصمیم بگیرد.
 - Unit/SQL Server/Build/Full Test هنوز اجرا نشده‌اند؛ Verified نیست. بدون Migration و ClientApp.
+
+## 2026-11-04 — Issue #530: بازیابی وضعیت جستجوی مقصد عضویت پس از لغو
+- ریشه باگ: وقتی query جستجو خالی می‌شد، effect درخواست قبلی را با AbortController لغو می‌کرد اما مسیر early-return مقدار loading را reset نمی‌کرد؛ در نتیجه دکمه جستجو می‌توانست برای همیشه disabled بماند.
+- effect اکنون در حالت query خالی loading را false می‌کند؛ درخواست لغوشده همچنان نتیجه/خطا را وارد UI نمی‌کند.
+- تست رگرسیون: جستجوی اول عمداً معلق می‌ماند، query پاک می‌شود، فعال‌شدن مجدد دکمه بررسی می‌شود و جستجوی دوم باید نتیجه را نمایش دهد.
+- بدون تغییر API، Backend، مجوزها، Migration یا dependency.
+- اجرای محلی typecheck/Vitest/build/check:offline در این محیط انجام نشده؛ نتیجه CI روی PR باید بررسی شود.
+- handoff: `docs/handoffs/ISSUE-530-membership-search-loading-reset.md`.
