@@ -78,12 +78,17 @@ test('a normal company user is refused role administration APIs', async ({ page 
     const paths = ['/api/v1/admin/permission-catalog', `/api/v1/admin/companies/${companyId}/roles`];
     return Promise.all(paths.map(async (path) => {
       const response = await fetch(path, { credentials: 'same-origin' });
-      return { status: response.status, body: await response.json() };
+      const text = await response.text();
+      const body = text ? JSON.parse(text) : null;
+      return { status: response.status, body };
     }));
   }, a.id);
+  // D-071: the permission catalog hides itself from an actor with an empty delegation
+  // ceiling (404, no body); the role administration endpoints answer with an explicit
+  // 403 payload instead of the installation-administrator message.
   expect(denied).toEqual([
-    { status: 403, body: { error: 'فقط مدیر نصب سامانه مجاز به این عملیات است.' } },
-    { status: 403, body: { error: 'فقط مدیر نصب سامانه مجاز به این عملیات است.' } },
+    { status: 404, body: null },
+    { status: 403, body: { error: 'شما مجاز به این عملیات در این شرکت نیستید.' } },
   ]);
   await page.context().clearCookies();
   expect(await page.evaluate(async () => (await fetch('/api/v1/admin/permission-catalog')).status)).toBe(401);
