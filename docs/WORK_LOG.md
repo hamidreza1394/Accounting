@@ -2441,3 +2441,10 @@
 - **محدوده:** بدون API، migration، persistence، cache یا call-site عملیاتی جدید.
 - **Blocker کشف‌شده:** Contract V2 از opaque `CompanyReference` استفاده می‌کند، اما provisioning schema v4 و `ProvisioningRequestClaim` نگاشت durable به Company.Id را ذخیره نمی‌کنند و `CompanySetupRecord` در کد وجود ندارد. این mapping باید در #384/#392 طراحی و پیاده‌سازی شود؛ استفاده از Company.Id یا CustomerBoundaryId به‌عنوان جایگزین ممنوع است.
 - **اعتبارسنجی:** اجرای محلی .NET انجام نشد؛ CI روی PR #539 مرجع است.
+
+
+## 2026-11-04 — Issue #384: تصحیح وضعیت تحویل نصب/Import مشتری
+- **وضعیت واقعی:** PRهای #386، #387 و #388 همگی merged هستند و CI آن‌ها موفق بوده است؛ handoff قدیمی که #388 را open/pending معرفی می‌کرد اصلاح شد.
+- **باقی‌مانده:** startup reload/revalidation، اتصال runtime به call-siteها، Cloud authoritative resolution و تست عملی TPM/دو میزبان.
+- **Dependency برای #391/#401:** CompanyReference در payload provisioning v4 و ProvisioningRequestClaim persist نمی‌شود؛ #392 باید mapping durable به CompanyId محلی را در قرارداد نسخه‌دار و CompanySetupRecord پیاده کند. تا آن زمان resolver شرکت باید fail-closed بماند.
+- **Migration:** وجود migration در repository به معنی اجرای آن روی دیتابیس مشتری نیست؛ rollout واقعی همچنان جداگانه بررسی و تأیید می‌خواهد.
