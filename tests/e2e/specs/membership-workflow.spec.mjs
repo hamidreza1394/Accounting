@@ -132,8 +132,7 @@ test.describe('membership workflow: request, approve, reject', () => {
     await expect(page.getByText('درخواست عضویت ثبت شد و در انتظار تأیید است.')).toBeVisible();
 
     // The UI intentionally consumes only the success status. Read the durable request id from SQL
-    // rather than making the browser test depend on re-reading a response body already consumed
-    // by the application's fetch implementation.
+    // so this browser assertion does not depend on the response body's completion semantics.
     const [createdRow] = await readRequests(fixture, { userId: requester.id, companyId: destination.id });
     expect(createdRow).toMatchObject({
       Status: 'Pending', ApprovedRoleId: null, DecidedByUserId: null,
