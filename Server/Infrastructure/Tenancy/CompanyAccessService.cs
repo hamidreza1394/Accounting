@@ -180,21 +180,29 @@ public sealed class CompanyAccessService
 		Guid companyId,
 		CancellationToken cancellationToken = default)
 	{
-		return GetGrantedPermissionCodesAsync(userId, companyId, string.Empty, cancellationToken);
+		return GetGrantedPermissionCodesCoreAsync(userId, companyId, null, cancellationToken);
 	}
 
 	/// <summary>
 	/// The permission codes starting with <paramref name="codePrefix" /> that the user holds in the
 	/// company through an active membership. The prefix is a server constant, never client input.
 	/// </summary>
-	public async Task<IReadOnlyList<string>> GetGrantedPermissionCodesAsync(
+	public Task<IReadOnlyList<string>> GetGrantedPermissionCodesAsync(
 		Guid userId,
 		Guid companyId,
 		string codePrefix,
 		CancellationToken cancellationToken = default)
 	{
-		ArgumentNullException.ThrowIfNull(codePrefix);
+		ArgumentException.ThrowIfNullOrWhiteSpace(codePrefix);
+		return GetGrantedPermissionCodesCoreAsync(userId, companyId, codePrefix, cancellationToken);
+	}
 
+	private async Task<IReadOnlyList<string>> GetGrantedPermissionCodesCoreAsync(
+		Guid userId,
+		Guid companyId,
+		string? codePrefix,
+		CancellationToken cancellationToken)
+	{
 		if (userId == Guid.Empty || companyId == Guid.Empty)
 		{
 			return [];
@@ -206,7 +214,7 @@ public sealed class CompanyAccessService
 				.Where(rolePermission => rolePermission.RoleId == membership.RoleId)
 				.Select(rolePermission => rolePermission.Permission.Code));
 
-		if (codePrefix.Length > 0)
+		if (codePrefix is not null)
 		{
 			query = query.Where(code => code.StartsWith(codePrefix));
 		}
