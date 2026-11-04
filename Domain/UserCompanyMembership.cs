@@ -15,4 +15,11 @@ public sealed class UserCompanyMembership : Seedwork.Entity,
     public bool IsActive { get; set; } = true;
     public byte[] RowVersion { get; set; } = [];
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// The HR employee records anchored to this membership (S2, D-072). At most one employee
+    /// per membership of the same company (filtered unique index); the link is bookkeeping
+    /// only and never grants or changes a permission (D-064).
+    /// </summary>
+    public ICollection<CompanyEmployee> Employees { get; set; } = new List<CompanyEmployee>();
 }

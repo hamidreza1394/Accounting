@@ -21,28 +21,28 @@ namespace Data;
 public class DatabaseContext : Microsoft.EntityFrameworkCore.DbContext
 {
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-	public DatabaseContext
+        public DatabaseContext
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-		(Microsoft.EntityFrameworkCore.DbContextOptions<DatabaseContext> options) : base(options: options)
-	{
-		// No schema mutation here on purpose. See the remarks on the class.
-	}
+                (Microsoft.EntityFrameworkCore.DbContextOptions<DatabaseContext> options) : base(options: options)
+        {
+                // No schema mutation here on purpose. See the remarks on the class.
+        }
 
-	public Microsoft.EntityFrameworkCore.DbSet<Domain.Role> Roles { get; set; }
+        public Microsoft.EntityFrameworkCore.DbSet<Domain.Role> Roles { get; set; }
 
-	public Microsoft.EntityFrameworkCore.DbSet<Domain.User> Users { get; set; }
+        public Microsoft.EntityFrameworkCore.DbSet<Domain.User> Users { get; set; }
 
-	public Microsoft.EntityFrameworkCore.DbSet<Domain.Page> Pages { get; set; }
+        public Microsoft.EntityFrameworkCore.DbSet<Domain.Page> Pages { get; set; }
 
-	public Microsoft.EntityFrameworkCore.DbSet<Domain.LoginLog> LoginLogs { get; set; }
+        public Microsoft.EntityFrameworkCore.DbSet<Domain.LoginLog> LoginLogs { get; set; }
 
-	public Microsoft.EntityFrameworkCore.DbSet<Domain.MenuItem> MenuItems { get; set; }
+        public Microsoft.EntityFrameworkCore.DbSet<Domain.MenuItem> MenuItems { get; set; }
 
-	public Microsoft.EntityFrameworkCore.DbSet<Domain.Permission> Permissions { get; set; }
+        public Microsoft.EntityFrameworkCore.DbSet<Domain.Permission> Permissions { get; set; }
 
-	public Microsoft.EntityFrameworkCore.DbSet<Domain.PageCategory> PageCategories { get; set; }
+        public Microsoft.EntityFrameworkCore.DbSet<Domain.PageCategory> PageCategories { get; set; }
 
-	public Microsoft.EntityFrameworkCore.DbSet<Domain.ApplicationHandler> ApplicationHandlers { get; set; }
+        public Microsoft.EntityFrameworkCore.DbSet<Domain.ApplicationHandler> ApplicationHandlers { get; set; }
 
     public Microsoft.EntityFrameworkCore.DbSet<Domain.Company> Companies { get; set; }
     public Microsoft.EntityFrameworkCore.DbSet<Domain.UserCompanyMembership> UserCompanyMemberships { get; set; }
@@ -62,43 +62,47 @@ public class DatabaseContext : Microsoft.EntityFrameworkCore.DbContext
     public Microsoft.EntityFrameworkCore.DbSet<Domain.ConsolidationProfile> ConsolidationProfiles { get; set; }
     public Microsoft.EntityFrameworkCore.DbSet<Domain.ConsolidationRun> ConsolidationRuns { get; set; }
     public Microsoft.EntityFrameworkCore.DbSet<Domain.ConsolidationRunCompany> ConsolidationRunCompanies { get; set; }
+    public Microsoft.EntityFrameworkCore.DbSet<Domain.CompanyOrganizationalUnit> CompanyOrganizationalUnits { get; set; }
+    public Microsoft.EntityFrameworkCore.DbSet<Domain.CompanyPosition> CompanyPositions { get; set; }
+    public Microsoft.EntityFrameworkCore.DbSet<Domain.CompanyEmployee> CompanyEmployees { get; set; }
+    public Microsoft.EntityFrameworkCore.DbSet<Domain.CompanyEmployeeAssignment> CompanyEmployeeAssignments { get; set; }
 
-	protected override void OnModelCreating
-		(Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder)
-	{
-		base.OnModelCreating(modelBuilder: modelBuilder);
+        protected override void OnModelCreating
+                (Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder)
+        {
+                base.OnModelCreating(modelBuilder: modelBuilder);
 
-		modelBuilder.ApplyConfigurationsFromAssembly
-			(assembly: typeof(Configurations.RoleConfiguration).Assembly);
+                modelBuilder.ApplyConfigurationsFromAssembly
+                        (assembly: typeof(Configurations.RoleConfiguration).Assembly);
 
-		// SQL Server datetime2 does not persist DateTimeKind. Restore UTC only for properties
-		// whose names explicitly end in Utc; legacy InsertDateTime/UpdateDateTime/LastLoginDateTime
-		// remain server-local wall-clock values and must not be relabelled.
-		foreach (var property in modelBuilder.Model.GetEntityTypes().SelectMany(entityType => entityType.GetProperties()))
-		{
-			if (!property.Name.EndsWith("Utc", StringComparison.Ordinal))
-				continue;
+                // SQL Server datetime2 does not persist DateTimeKind. Restore UTC only for properties
+                // whose names explicitly end in Utc; legacy InsertDateTime/UpdateDateTime/LastLoginDateTime
+                // remain server-local wall-clock values and must not be relabelled.
+                foreach (var property in modelBuilder.Model.GetEntityTypes().SelectMany(entityType => entityType.GetProperties()))
+                {
+                        if (!property.Name.EndsWith("Utc", StringComparison.Ordinal))
+                                continue;
 
-			if (property.ClrType == typeof(System.DateTime))
-				property.SetValueConverter(new Conventions.DateTimeConventions.UtcDateTimeConverter());
-			else if (property.ClrType == typeof(System.DateTime?))
-				property.SetValueConverter(new Conventions.DateTimeConventions.NullableUtcDateTimeConverter());
-		}
-	}
+                        if (property.ClrType == typeof(System.DateTime))
+                                property.SetValueConverter(new Conventions.DateTimeConventions.UtcDateTimeConverter());
+                        else if (property.ClrType == typeof(System.DateTime?))
+                                property.SetValueConverter(new Conventions.DateTimeConventions.NullableUtcDateTimeConverter());
+                }
+        }
 
-	protected override void ConfigureConventions
-		(Microsoft.EntityFrameworkCore.ModelConfigurationBuilder builder)
-	{
-		base.ConfigureConventions(builder);
+        protected override void ConfigureConventions
+                (Microsoft.EntityFrameworkCore.ModelConfigurationBuilder builder)
+        {
+                base.ConfigureConventions(builder);
 
-		builder.Properties<System.DateOnly>()
-			.HaveConversion<Conventions.DateTimeConventions.DateOnlyConverter>()
-			.HaveColumnType(typeName: nameof(System.DateTime.Date))
-			;
+                builder.Properties<System.DateOnly>()
+                        .HaveConversion<Conventions.DateTimeConventions.DateOnlyConverter>()
+                        .HaveColumnType(typeName: nameof(System.DateTime.Date))
+                        ;
 
-		builder.Properties<System.DateOnly?>()
-			.HaveConversion<Conventions.DateTimeConventions.NullableDateOnlyConverter>()
-			.HaveColumnType(typeName: nameof(System.DateTime.Date))
-			;
-	}
+                builder.Properties<System.DateOnly?>()
+                        .HaveConversion<Conventions.DateTimeConventions.NullableDateOnlyConverter>()
+                        .HaveColumnType(typeName: nameof(System.DateTime.Date))
+                        ;
+        }
 }

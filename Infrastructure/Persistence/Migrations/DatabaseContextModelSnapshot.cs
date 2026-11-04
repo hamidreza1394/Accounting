@@ -109,6 +109,143 @@ namespace Data.Migrations
                     b.ToTable("Companies", (string)null);
                 });
 
+            modelBuilder.Entity("Domain.CompanyEmployee", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("EmployeeNumber")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)");
+
+                    b.Property<int>("EmploymentStatus")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("HiredOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("InsertDateTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("Ordering")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("TerminatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UserCompanyMembershipId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "EmployeeNumber")
+                        .IsUnique();
+
+                    b.HasIndex("UserCompanyMembershipId", "TenantId")
+                        .IsUnique()
+                        .HasFilter("[UserCompanyMembershipId] IS NOT NULL");
+
+                    b.ToTable("CompanyEmployees", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.CompanyEmployeeAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("EndOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("EndedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("InsertDateTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ManagerEmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Ordering")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("OrganizationalUnitId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("PositionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime>("StartOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId", "TenantId");
+
+                    b.HasIndex("ManagerEmployeeId", "TenantId");
+
+                    b.HasIndex("OrganizationalUnitId", "TenantId");
+
+                    b.HasIndex("PositionId", "TenantId");
+
+                    b.HasIndex("TenantId", "EmployeeId")
+                        .IsUnique()
+                        .HasFilter("[Status] = 1 AND [EndOnUtc] IS NULL");
+
+                    b.HasIndex("TenantId", "OrganizationalUnitId");
+
+                    b.HasIndex("TenantId", "PositionId");
+
+                    b.ToTable("CompanyEmployeeAssignments", (string)null);
+                });
+
             modelBuilder.Entity("Domain.CompanyMembershipRequest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -165,6 +302,126 @@ namespace Data.Migrations
                     b.HasIndex("DestinationTenantId", "Status", "RequestedAtUtc");
 
                     b.ToTable("CompanyMembershipRequests", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.CompanyOrganizationalUnit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime>("InsertDateTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("Ordering")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("ParentUnitId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ValidFromUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ValidToUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentUnitId", "TenantId");
+
+                    b.HasIndex("TenantId", "Code")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "ParentUnitId");
+
+                    b.ToTable("CompanyOrganizationalUnits", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.CompanyPosition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime>("InsertDateTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("Ordering")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Rank")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Code")
+                        .IsUnique();
+
+                    b.ToTable("CompanyPositions", (string)null);
                 });
 
             modelBuilder.Entity("Domain.CompanyRole", b =>
@@ -1521,6 +1778,69 @@ namespace Data.Migrations
                     b.ToTable("UserCompanyMemberships", (string)null);
                 });
 
+            modelBuilder.Entity("Domain.CompanyEmployee", b =>
+                {
+                    b.HasOne("Domain.Company", "Company")
+                        .WithMany("Employees")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.UserCompanyMembership", "Membership")
+                        .WithMany("Employees")
+                        .HasForeignKey("UserCompanyMembershipId", "TenantId")
+                        .HasPrincipalKey("Id", "TenantId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Company");
+
+                    b.Navigation("Membership");
+                });
+
+            modelBuilder.Entity("Domain.CompanyEmployeeAssignment", b =>
+                {
+                    b.HasOne("Domain.Company", "Company")
+                        .WithMany("EmployeeAssignments")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.CompanyEmployee", "Employee")
+                        .WithMany("Assignments")
+                        .HasForeignKey("EmployeeId", "TenantId")
+                        .HasPrincipalKey("Id", "TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.CompanyEmployee", "ManagerEmployee")
+                        .WithMany("ManagedAssignments")
+                        .HasForeignKey("ManagerEmployeeId", "TenantId")
+                        .HasPrincipalKey("Id", "TenantId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Domain.CompanyOrganizationalUnit", "OrganizationalUnit")
+                        .WithMany("Assignments")
+                        .HasForeignKey("OrganizationalUnitId", "TenantId")
+                        .HasPrincipalKey("Id", "TenantId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Domain.CompanyPosition", "Position")
+                        .WithMany("Assignments")
+                        .HasForeignKey("PositionId", "TenantId")
+                        .HasPrincipalKey("Id", "TenantId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Company");
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("ManagerEmployee");
+
+                    b.Navigation("OrganizationalUnit");
+
+                    b.Navigation("Position");
+                });
+
             modelBuilder.Entity("Domain.CompanyMembershipRequest", b =>
                 {
                     b.HasOne("Domain.Company", "DestinationCompany")
@@ -1538,6 +1858,36 @@ namespace Data.Migrations
                     b.Navigation("ApprovedRole");
 
                     b.Navigation("DestinationCompany");
+                });
+
+            modelBuilder.Entity("Domain.CompanyOrganizationalUnit", b =>
+                {
+                    b.HasOne("Domain.Company", "Company")
+                        .WithMany("OrganizationalUnits")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.CompanyOrganizationalUnit", "ParentUnit")
+                        .WithMany("ChildUnits")
+                        .HasForeignKey("ParentUnitId", "TenantId")
+                        .HasPrincipalKey("Id", "TenantId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Company");
+
+                    b.Navigation("ParentUnit");
+                });
+
+            modelBuilder.Entity("Domain.CompanyPosition", b =>
+                {
+                    b.HasOne("Domain.Company", "Company")
+                        .WithMany("Positions")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Company");
                 });
 
             modelBuilder.Entity("Domain.CompanyRole", b =>
@@ -1825,6 +2175,10 @@ namespace Data.Migrations
 
                     b.Navigation("ConsolidationRuns");
 
+                    b.Navigation("EmployeeAssignments");
+
+                    b.Navigation("Employees");
+
                     b.Navigation("FiscalPeriods");
 
                     b.Navigation("GroupMemberships");
@@ -1833,11 +2187,34 @@ namespace Data.Migrations
 
                     b.Navigation("Memberships");
 
+                    b.Navigation("OrganizationalUnits");
+
                     b.Navigation("OwnedCompanies");
 
                     b.Navigation("Owners");
 
+                    b.Navigation("Positions");
+
                     b.Navigation("Roles");
+                });
+
+            modelBuilder.Entity("Domain.CompanyEmployee", b =>
+                {
+                    b.Navigation("Assignments");
+
+                    b.Navigation("ManagedAssignments");
+                });
+
+            modelBuilder.Entity("Domain.CompanyOrganizationalUnit", b =>
+                {
+                    b.Navigation("Assignments");
+
+                    b.Navigation("ChildUnits");
+                });
+
+            modelBuilder.Entity("Domain.CompanyPosition", b =>
+                {
+                    b.Navigation("Assignments");
                 });
 
             modelBuilder.Entity("Domain.CompanyRole", b =>
@@ -1905,6 +2282,11 @@ namespace Data.Migrations
                     b.Navigation("CreatedPages");
 
                     b.Navigation("LoginLogs");
+                });
+
+            modelBuilder.Entity("Domain.UserCompanyMembership", b =>
+                {
+                    b.Navigation("Employees");
                 });
 #pragma warning restore 612, 618
         }
