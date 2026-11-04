@@ -195,7 +195,7 @@ public sealed class CompanyMembershipRequestReadSqlServerTests
             Assert.Equal(approved.Id, historyItem.Id);
             Assert.Equal(DateTimeKind.Utc, historyItem.RequestedAtUtc.Kind);
             Assert.Equal(DateTimeKind.Utc, historyItem.DecidedAtUtc!.Value.Kind);
-            Assert.EndsWith("Z", JsonSerializer.Serialize(historyItem.DecidedAtUtc));
+            Assert.EndsWith("Z\"", JsonSerializer.Serialize(historyItem.DecidedAtUtc));
         }
         finally
         {
