@@ -2442,6 +2442,20 @@
 - **اعتبارسنجی:** اجرای محلی .NET در این محیط انجام نشد؛ Build و تست‌های کامل، به‌ویژه تست metadata جدید، باید روی CI شاخه نهایی بررسی شوند.
 - **handoff:** `docs/handoffs/ISSUE-522-sensitive-identity-read-rate-limit.md`.
 
+## 2026-11-04 — Issue #391: پل payload معتبر برای سیاست Entitlement
+- **تغییر:** `CustomerLicenseRuntimeResult.ValidatedPayload` فقط پس از موفقیت validator revocation-aware پر می‌شود؛ تمام نتایج ردشده payload برابر null دارند. هیچ Envelope، signature یا متن خام لایسنس به مصرف‌کننده تحویل نمی‌شود.
+- **Regression:** تست موفقیت هویت همان payload اعتبارسنجی‌شده را assert می‌کند؛ تست revoked و Grace assert می‌کنند payload افشا نمی‌شود.
+- **محدوده:** بدون API، migration، persistence، cache یا call-site عملیاتی جدید.
+- **Blocker کشف‌شده:** Contract V2 از opaque `CompanyReference` استفاده می‌کند، اما provisioning schema v4 و `ProvisioningRequestClaim` نگاشت durable به Company.Id را ذخیره نمی‌کنند و `CompanySetupRecord` در کد وجود ندارد. این mapping باید در #384/#392 طراحی و پیاده‌سازی شود؛ استفاده از Company.Id یا CustomerBoundaryId به‌عنوان جایگزین ممنوع است.
+- **اعتبارسنجی:** اجرای محلی .NET انجام نشد؛ CI روی PR #539 مرجع است.
+
+
+## 2026-11-04 — Issue #384: تصحیح وضعیت تحویل نصب/Import مشتری
+- **وضعیت واقعی:** PRهای #386، #387 و #388 همگی merged هستند و CI آن‌ها موفق بوده است؛ handoff قدیمی که #388 را open/pending معرفی می‌کرد اصلاح شد.
+- **باقی‌مانده:** startup reload/revalidation، اتصال runtime به call-siteها، Cloud authoritative resolution و تست عملی TPM/دو میزبان.
+- **Dependency برای #391/#401:** CompanyReference در payload provisioning v4 و ProvisioningRequestClaim persist نمی‌شود؛ #392 باید mapping durable به CompanyId محلی را در قرارداد نسخه‌دار و CompanySetupRecord پیاده کند. تا آن زمان resolver شرکت باید fail-closed بماند.
+- **Migration:** وجود migration در repository به معنی اجرای آن روی دیتابیس مشتری نیست؛ rollout واقعی همچنان جداگانه بررسی و تأیید می‌خواهد.
+
 ## 2026-11-04 — Issue #444 (مأموریت ۲): هاردنینگ دسترسی‌ها و راستی‌آزمایی مرحله اول
 - **راستی‌آزمایی روی main@d06a4b1a:** PRهای #538، #536، #481 و قراردادهای #510/#511 همگی ادغام‌شده و با کد فعلی منطبق‌اند؛ کار تکراری انجام نشد. ماتریس وضعیت ۱۳ کنترل امنیتی (Verified/Implemented-but-not-tested/Blocked) در handoff ثبت شد؛ هیچ مورد Missing یافت نشد.
 - **افزوده ۱ — تست رفتاری Rate Limit حساس** (`SensitiveReadRateLimitBehaviorTests`): پیش از این فقط metadata Routeها تست می‌شد؛ اکنون 429 با Retry-After/no-store/بدنه عمومی بدون افشا، اشتراک پارتیشن کاربر بین چهار endpoint (عدم دورزدن با Query/Route/endpoint-hopping)، بی‌اثری برای کاربر دیگر و endpoint غیرحساس، و throttling جداگانه ناشناس روی پارتیشن آدرس از طریق Pipeline واقعی اثبات می‌شود.
