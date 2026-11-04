@@ -1,3 +1,4 @@
+using Xunit;
 using Faranou.Licensing.Contracts;
 
 namespace Faranou.Licensing.Contracts.Tests;
