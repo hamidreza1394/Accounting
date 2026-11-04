@@ -19,3 +19,12 @@ export FARANOU_E2E_SQL="Server=localhost,1433;Database=FaranouE2E;User Id=...;Pa
 ConnectionStrings__ConnectionString="$FARANOU_E2E_SQL" dotnet "$FARANOU_E2E_PUBLISH/Server.dll" --migrate
 npm run seed && npx playwright test
 ```
+
+The role-administration spec creates a separate installation administrator and global `Admin` role
+for its own run, using credentials generated in the ignored state file. It verifies authorization
+against the live database, and removes its account, role, login/audit records and created company
+role in a `finally` block, including on assertion failure. Shared Alice/Bob/admin accounts are not
+changed. It uses the existing seeded companies, runs sequentially with the suite, and disables
+trace/screenshots for this spec to avoid retaining its credentials or antiforgery token. As with
+all E2E data, use a disposable database; hard process termination or loss of SQL connectivity can
+prevent `finally` cleanup, so discard the database after the run.

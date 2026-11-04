@@ -2375,3 +2375,8 @@
 - **تست Regression:** آزمون جدید تأیید می‌کند extension، `ICustomerLicenseRuntimeEvaluator` را با lifetime از نوع Scoped ثبت می‌کند.
 - **مرزبندی:** اصلاح در شاخه و PR مستقل #526 باقی ماند؛ هیچ تغییری به PRهای Vendor-only، #235، Migration یا schema مشتری اضافه نشد.
 - **اعتبارسنجی:** تست محلی اجرا نشده؛ اجرای .NET CI جدید روی SHA نهایی لازم است.
+
+## 2026-11-04 — Issue #483: تکمیل ایزوله‌سازی E2E مدیریت نقش
+- سناریوی مثبت موجود #484 به spec مستقل با مدیر نصب اختصاصی، اثبات DB-backed authorization، بررسی ماندگاری و 404 بین‌شرکتی و پاک‌سازی finally انتقال یافت؛ حساب‌های مشترک تغییر نمی‌کنند.
+- regression منفی 403/401 نقش‌ها که در snapshot فعلی main موجود نبود، بازگردانده شد؛ سناریوهای #524 و #525 دست‌نخورده‌اند.
+- npm ci، syntax، فهرست تست و بررسی asset محلی موفق؛ اجرای واقعی SQL Server/Production در محیط فاقد dotnet و Docker انجام نشد و نیازمند نتیجه CI روی SHA نهایی است. جزئیات و محدودیت cleanup در `docs/handoffs/ISSUE-483-role-admin-positive-e2e.md`.
