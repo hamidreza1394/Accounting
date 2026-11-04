@@ -173,28 +173,53 @@ public sealed class CompanyAccessService
 	}
 
 	/// <summary>
+	/// All permission codes granted through the user's active role in the company.
+	/// </summary>
+	public Task<IReadOnlyList<string>> GetGrantedPermissionCodesAsync(
+		Guid userId,
+		Guid companyId,
+		CancellationToken cancellationToken = default)
+	{
+		return GetGrantedPermissionCodesCoreAsync(userId, companyId, null, cancellationToken);
+	}
+
+	/// <summary>
 	/// The permission codes starting with <paramref name="codePrefix" /> that the user holds in the
 	/// company through an active membership. The prefix is a server constant, never client input.
 	/// </summary>
-	public async Task<IReadOnlyList<string>> GetGrantedPermissionCodesAsync(
+	public Task<IReadOnlyList<string>> GetGrantedPermissionCodesAsync(
 		Guid userId,
 		Guid companyId,
 		string codePrefix,
 		CancellationToken cancellationToken = default)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(codePrefix);
+		return GetGrantedPermissionCodesCoreAsync(userId, companyId, codePrefix, cancellationToken);
+	}
 
+	private async Task<IReadOnlyList<string>> GetGrantedPermissionCodesCoreAsync(
+		Guid userId,
+		Guid companyId,
+		string? codePrefix,
+		CancellationToken cancellationToken)
+	{
 		if (userId == Guid.Empty || companyId == Guid.Empty)
 		{
 			return [];
 		}
 
-		return await QueryActiveMemberships(userId)
+		var query = QueryActiveMemberships(userId)
 			.Where(membership => membership.TenantId == companyId)
 			.SelectMany(membership => DatabaseContext.CompanyRolePermissions
 				.Where(rolePermission => rolePermission.RoleId == membership.RoleId)
-				.Select(rolePermission => rolePermission.Permission.Code))
-			.Where(code => code.StartsWith(codePrefix))
+				.Select(rolePermission => rolePermission.Permission.Code));
+
+		if (codePrefix is not null)
+		{
+			query = query.Where(code => code.StartsWith(codePrefix));
+		}
+
+		return await query
 			.Distinct()
 			.OrderBy(code => code)
 			.ToListAsync(cancellationToken);

@@ -61,6 +61,7 @@ public static class ApiEndpoints
 		api.MapCompanyRoleAdministrationEndpoints();
 		api.MapCompanyUserDirectoryEndpoints();
 		api.MapCompanyMembershipRequestEndpoints();
+		api.MapMePermissionsEndpoints();
 		api.MapGet("/companies", GetCompaniesAsync);
 		api.MapGet("/companies/{companyId:guid}/overview", GetCompanyOverviewAsync);
 		api.MapWorkContextEndpoints();
