@@ -193,6 +193,8 @@ if (!setupRequired)
     // The single server-side decision point for company (tenant) access. It reads the
     // memberships from the database on each request; it never trusts a client tenant id.
     builder.Services.AddScoped<Infrastructure.Tenancy.CompanyAccessService>();
+    // The delegation ceiling (D-071) is recomputed from fresh rows on every operation.
+    builder.Services.AddScoped<Infrastructure.Tenancy.DelegationCeilingService>();
     builder.Services.AddScoped<Infrastructure.Security.UserPasswordService>();
     builder.Services.AddScoped<Infrastructure.Security.UserSessionAuditService>();
 

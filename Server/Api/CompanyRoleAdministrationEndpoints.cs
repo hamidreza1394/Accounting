@@ -1,3 +1,4 @@
+using System.Data;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -12,8 +13,30 @@ namespace Server.Api;
 /// Manages company-scoped access groups by reusing CompanyRole and CompanyRolePermissions.
 /// Permission codes remain server-owned catalog entries; clients may assign only known codes.
 /// </summary>
+/// <remarks>
+/// <para>
+/// Every endpoint has two authorized actor kinds (D-071): the installation administrator
+/// (re-read from the database on every request, no delegation ceiling) and the company
+/// manager — an active member of the routed company whose role carries the matching
+/// <c>roles.*</c> permission code. Company managers act strictly inside their company and
+/// inside their delegation ceiling: they may only create, edit or assign roles whose
+/// permission set is a subset of the permissions they themselves hold in that company.
+/// </para>
+/// </remarks>
 public static class CompanyRoleAdministrationEndpoints
 {
+    /// <summary>Permission to view the roles, permissions and members of the routed company.</summary>
+    public const string ViewRolesPermission = "roles.view";
+
+    /// <summary>Permission to create company roles inside the delegation ceiling.</summary>
+    public const string CreateRolesPermission = "roles.create";
+
+    /// <summary>Permission to edit company roles inside the delegation ceiling.</summary>
+    public const string UpdateRolesPermission = "roles.update";
+
+    /// <summary>Permission to assign or transfer the roles of active members.</summary>
+    public const string AssignRolesPermission = "roles.assign";
+
     /// <summary>Upper bound of members moved by one transfer request (one atomic save).</summary>
     public const int MaxTransferBatchSize = 500;
 
@@ -56,10 +79,12 @@ public static class CompanyRoleAdministrationEndpoints
         HttpContext httpContext,
         ClaimsPrincipal principal,
         Data.DatabaseContext database,
+        [FromServices] Infrastructure.Tenancy.CompanyAccessService companyAccess,
         CancellationToken cancellationToken)
     {
-        var authorization = await UserAdministrationEndpoints.AuthorizeInstallationAdministratorAsync(principal, database, cancellationToken);
-        if (authorization is not null) return authorization;
+        var (failure, _) = await AuthorizeCompanyScopeAsync(
+            database, companyAccess, principal, companyId, ViewRolesPermission, cancellationToken);
+        if (failure is not null) return failure;
         if (!await IsActiveCompanyAsync(database, companyId, cancellationToken)) return TypedResults.NotFound();
 
         var roles = await database.CompanyRoles.AsNoTracking()
@@ -98,15 +123,33 @@ public static class CompanyRoleAdministrationEndpoints
         HttpContext httpContext,
         ClaimsPrincipal principal,
         Data.DatabaseContext database,
+        [FromServices] Infrastructure.Tenancy.DelegationCeilingService delegationCeiling,
         CancellationToken cancellationToken)
     {
-        var authorization = await UserAdministrationEndpoints.AuthorizeInstallationAdministratorAsync(principal, database, cancellationToken);
-        if (authorization is not null) return authorization;
+        var userId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal);
+        if (userId is null)
+            return TypedResults.Unauthorized();
 
         var registeredPermissions = await database.PermissionDefinitions.AsNoTracking()
             .OrderBy(permission => permission.Code)
             .Select(permission => new { permission.Id, permission.Code, permission.Name, permission.Description })
             .ToListAsync(cancellationToken);
+
+        if (!await UserAdministrationEndpoints.IsInstallationAdministratorAsync(userId.Value, database, cancellationToken))
+        {
+            // A company-scoped actor sees only the codes inside its own delegation ceiling
+            // (the union across every active membership), so installation-level codes stay
+            // invisible and the catalog can never leak a delegatable capability the actor
+            // does not already hold (D-071).
+            var ceilingCodes = await delegationCeiling.GetUnionPermissionCodesAsync(userId.Value, cancellationToken);
+            if (ceilingCodes.Count == 0)
+                return TypedResults.NotFound();
+            var ceiling = ceilingCodes.ToHashSet(StringComparer.Ordinal);
+            registeredPermissions = registeredPermissions
+                .Where(permission => ceiling.Contains(permission.Code))
+                .ToList();
+        }
+
         var permissions = registeredPermissions.Select(permission => new PermissionCatalogItemResponse(
             permission.Id,
             permission.Code,
@@ -122,15 +165,32 @@ public static class CompanyRoleAdministrationEndpoints
         HttpContext httpContext,
         ClaimsPrincipal principal,
         Data.DatabaseContext database,
+        [FromServices] Infrastructure.Tenancy.DelegationCeilingService delegationCeiling,
         CancellationToken cancellationToken)
     {
-        var authorization = await UserAdministrationEndpoints.AuthorizeInstallationAdministratorAsync(principal, database, cancellationToken);
-        if (authorization is not null) return authorization;
+        var userId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal);
+        if (userId is null)
+            return TypedResults.Unauthorized();
 
         var codes = await database.PermissionDefinitions.AsNoTracking()
             .Select(permission => permission.Code)
             .ToListAsync(cancellationToken);
-        var templates = BuildTemplates(codes);
+
+        if (!await UserAdministrationEndpoints.IsInstallationAdministratorAsync(userId.Value, database, cancellationToken))
+        {
+            // Templates are cut down to the actor's own ceiling, and a template whose whole
+            // permission set is outside the ceiling disappears instead of hinting at codes
+            // the actor cannot delegate.
+            var ceilingCodes = await delegationCeiling.GetUnionPermissionCodesAsync(userId.Value, cancellationToken);
+            if (ceilingCodes.Count == 0)
+                return TypedResults.NotFound();
+            var ceiling = ceilingCodes.ToHashSet(StringComparer.Ordinal);
+            codes = codes.Where(code => ceiling.Contains(code)).ToList();
+        }
+
+        var templates = BuildTemplates(codes)
+            .Where(template => template.PermissionCodes.Count > 0)
+            .ToArray();
         SetNoStore(httpContext);
         return TypedResults.Ok(templates);
     }
@@ -142,11 +202,14 @@ public static class CompanyRoleAdministrationEndpoints
         [FromBody] CreateCompanyRoleRequest request,
         [FromServices] IAntiforgery antiforgery,
         Data.DatabaseContext database,
+        [FromServices] Infrastructure.Tenancy.CompanyAccessService companyAccess,
+        [FromServices] Infrastructure.Tenancy.DelegationCeilingService delegationCeiling,
         [FromServices] TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
-        var authorization = await UserAdministrationEndpoints.AuthorizeInstallationAdministratorAsync(principal, database, cancellationToken);
-        if (authorization is not null) return authorization;
+        var (failure, scope) = await AuthorizeCompanyScopeAsync(
+            database, companyAccess, principal, companyId, CreateRolesPermission, cancellationToken);
+        if (failure is not null) return failure;
         if (!await antiforgery.IsRequestValidAsync(httpContext))
             return TypedResults.Problem(title: "درخواست نامعتبر است.", statusCode: StatusCodes.Status400BadRequest);
         if (!await IsActiveCompanyAsync(database, companyId, cancellationToken)) return TypedResults.NotFound();
@@ -170,6 +233,21 @@ public static class CompanyRoleAdministrationEndpoints
             .Select(permission => permission.Id)
             .ToListAsync(cancellationToken);
 
+        await using var transaction = database.Database.IsRelational()
+            ? await database.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken)
+            : null;
+
+        // The delegation ceiling is evaluated inside the transaction from fresh, tracked rows:
+        // a concurrent change of the actor's memberships or the catalog can never be missed (D-071).
+        Infrastructure.Tenancy.TrackedDelegationCeiling? ceiling = null;
+        if (!scope!.IsInstallationAdministrator)
+        {
+            ceiling = await delegationCeiling.LoadTrackedCeilingAsync(scope.UserId, companyId, cancellationToken);
+            if (ceiling is null) return TypedResults.NotFound();
+            if (ceiling.Violates(permissionIds, out _))
+                return ForbiddenBeyondCeiling();
+        }
+
         var role = new Domain.CompanyRole
         {
             TenantId = companyId,
@@ -182,7 +260,7 @@ public static class CompanyRoleAdministrationEndpoints
         foreach (var permissionId in permissionIds)
             database.CompanyRolePermissions.Add(new Domain.CompanyRolePermission { Role = role, PermissionId = permissionId });
 
-        var actorId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal)!.Value;
+        var actorId = scope!.UserId;
         database.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
         {
             UserId = actorId,
@@ -196,8 +274,22 @@ public static class CompanyRoleAdministrationEndpoints
             DetailsJson = JsonSerializer.Serialize(new { role.Code, permissionCodes }),
         });
 
-        try { await database.SaveChangesAsync(cancellationToken); }
-        catch (DbUpdateException) { return TypedResults.Conflict(new { error = "کد گروه دسترسی در این شرکت تکراری است." }); }
+        try
+        {
+            ceiling?.ApplyRowVersionGuards(database);
+            await database.SaveChangesAsync(cancellationToken);
+            if (transaction is not null)
+                await transaction.CommitAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            SetNoStore(httpContext);
+            return TypedResults.Conflict(new { error = "سقف واگذاری شما هم‌زمان توسط کاربر دیگری تغییر کرده است؛ اطلاعات را تازه‌سازی کنید." });
+        }
+        catch (DbUpdateException)
+        {
+            return TypedResults.Conflict(new { error = "کد گروه دسترسی در این شرکت تکراری است." });
+        }
 
         SetNoStore(httpContext);
         return TypedResults.Created($"/api/v1/admin/companies/{companyId}/roles/{role.Id}", new CompanyRoleCreatedResponse(role.Id));
@@ -211,11 +303,14 @@ public static class CompanyRoleAdministrationEndpoints
         [FromBody] UpdateCompanyRoleRequest request,
         [FromServices] IAntiforgery antiforgery,
         Data.DatabaseContext database,
+        [FromServices] Infrastructure.Tenancy.CompanyAccessService companyAccess,
+        [FromServices] Infrastructure.Tenancy.DelegationCeilingService delegationCeiling,
         [FromServices] TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
-        var authorization = await UserAdministrationEndpoints.AuthorizeInstallationAdministratorAsync(principal, database, cancellationToken);
-        if (authorization is not null) return authorization;
+        var (failure, scope) = await AuthorizeCompanyScopeAsync(
+            database, companyAccess, principal, companyId, UpdateRolesPermission, cancellationToken);
+        if (failure is not null) return failure;
         if (!await antiforgery.IsRequestValidAsync(httpContext))
             return TypedResults.Problem(title: "درخواست نامعتبر است.", statusCode: StatusCodes.Status400BadRequest);
         if (!await IsActiveCompanyAsync(database, companyId, cancellationToken)) return TypedResults.NotFound();
@@ -244,6 +339,22 @@ public static class CompanyRoleAdministrationEndpoints
             .Select(permission => permission.Id)
             .ToListAsync(cancellationToken);
 
+        await using var transaction = database.Database.IsRelational()
+            ? await database.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken)
+            : null;
+
+        // Replacing the permission set (or re-activating a dormant role) is a delegation:
+        // for a company manager every resulting permission must stay inside the ceiling that
+        // is re-read here, inside the transaction, from tracked rows (D-071).
+        if (!scope!.IsInstallationAdministrator)
+        {
+            var ceiling = await delegationCeiling.LoadTrackedCeilingAsync(scope.UserId, companyId, cancellationToken);
+            if (ceiling is null) return TypedResults.NotFound();
+            if (ceiling.Violates(permissionIds, out _))
+                return ForbiddenBeyondCeiling();
+            ceiling.ApplyRowVersionGuards(database);
+        }
+
         database.CompanyRolePermissions.RemoveRange(role.RolePermissions);
         role.RolePermissions.Clear();
         foreach (var permissionId in permissionIds)
@@ -254,7 +365,7 @@ public static class CompanyRoleAdministrationEndpoints
         // submitted scalar values are unchanged), so the rowversion guards the whole role.
         database.Entry(role).Property(current => current.Name).IsModified = true;
 
-        var actorId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal)!.Value;
+        var actorId = scope!.UserId;
         database.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
         {
             UserId = actorId,
@@ -271,6 +382,8 @@ public static class CompanyRoleAdministrationEndpoints
         try
         {
             await database.SaveChangesAsync(cancellationToken);
+            if (transaction is not null)
+                await transaction.CommitAsync(cancellationToken);
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -290,17 +403,22 @@ public static class CompanyRoleAdministrationEndpoints
         ClaimsPrincipal principal,
         [FromServices] IAntiforgery antiforgery,
         Data.DatabaseContext database,
+        [FromServices] Infrastructure.Tenancy.CompanyAccessService companyAccess,
+        [FromServices] Infrastructure.Tenancy.DelegationCeilingService delegationCeiling,
         [FromServices] TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
-        var authorization = await UserAdministrationEndpoints.AuthorizeInstallationAdministratorAsync(principal, database, cancellationToken);
-        if (authorization is not null) return authorization;
+        var (failure, scope) = await AuthorizeCompanyScopeAsync(
+            database, companyAccess, principal, companyId, AssignRolesPermission, cancellationToken);
+        if (failure is not null) return failure;
         if (!await antiforgery.IsRequestValidAsync(httpContext))
             return TypedResults.Problem(title: "درخواست نامعتبر است.", statusCode: StatusCodes.Status400BadRequest);
 
-        var role = await database.CompanyRoles.FirstOrDefaultAsync(
-            current => current.Id == roleId && current.TenantId == companyId && current.IsActive,
-            cancellationToken);
+        var role = await database.CompanyRoles
+            .Include(current => current.RolePermissions)
+            .FirstOrDefaultAsync(
+                current => current.Id == roleId && current.TenantId == companyId && current.IsActive,
+                cancellationToken);
         var company = await database.Companies.FirstOrDefaultAsync(
             current => current.Id == companyId && current.IsActive, cancellationToken);
         var user = await database.Users.FirstOrDefaultAsync(current => current.Id == userId && current.IsActive, cancellationToken);
@@ -318,6 +436,24 @@ public static class CompanyRoleAdministrationEndpoints
                 error = "عضویت جدید یا غیرفعال باید ابتدا از مسیر درخواست و تأیید شرکت مقصد تعیین تکلیف شود."
             });
 
+        await using var transaction = database.Database.IsRelational()
+            ? await database.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken)
+            : null;
+
+        // A company manager may never change their own membership from this path and may
+        // only assign a role whose permission set is inside their freshly re-read ceiling;
+        // both guards fail closed before anything is written (D-071).
+        if (!scope!.IsInstallationAdministrator)
+        {
+            if (userId == scope.UserId)
+                return ForbiddenSelfAssignment();
+            var ceiling = await delegationCeiling.LoadTrackedCeilingAsync(scope.UserId, companyId, cancellationToken);
+            if (ceiling is null) return TypedResults.NotFound();
+            if (ceiling.Violates(role.RolePermissions.Select(rolePermission => rolePermission.PermissionId), out _))
+                return ForbiddenBeyondCeiling();
+            ceiling.ApplyRowVersionGuards(database);
+        }
+
         var previousRoleId = membership.RoleId;
         membership.RoleId = roleId;
         membership.Role = role;
@@ -326,7 +462,7 @@ public static class CompanyRoleAdministrationEndpoints
         database.Entry(membership).Property(current => current.RoleId).IsModified = true;
         database.Entry(role).Property(current => current.IsActive).IsModified = true;
 
-        var actorId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal)!.Value;
+        var actorId = scope!.UserId;
         database.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
         {
             UserId = actorId,
@@ -343,6 +479,8 @@ public static class CompanyRoleAdministrationEndpoints
         try
         {
             await database.SaveChangesAsync(cancellationToken);
+            if (transaction is not null)
+                await transaction.CommitAsync(cancellationToken);
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -367,10 +505,12 @@ public static class CompanyRoleAdministrationEndpoints
         HttpContext httpContext,
         ClaimsPrincipal principal,
         Data.DatabaseContext database,
+        [FromServices] Infrastructure.Tenancy.CompanyAccessService companyAccess,
         CancellationToken cancellationToken)
     {
-        var authorization = await UserAdministrationEndpoints.AuthorizeInstallationAdministratorAsync(principal, database, cancellationToken);
-        if (authorization is not null) return authorization;
+        var (failure, _) = await AuthorizeCompanyScopeAsync(
+            database, companyAccess, principal, companyId, ViewRolesPermission, cancellationToken);
+        if (failure is not null) return failure;
         if (!await IsActiveCompanyAsync(database, companyId, cancellationToken)) return TypedResults.NotFound();
         if (!await database.CompanyRoles.AsNoTracking()
                 .AnyAsync(role => role.Id == roleId && role.TenantId == companyId, cancellationToken))
@@ -420,11 +560,14 @@ public static class CompanyRoleAdministrationEndpoints
         [FromBody] TransferCompanyRoleMembersRequest? request,
         [FromServices] IAntiforgery antiforgery,
         Data.DatabaseContext database,
+        [FromServices] Infrastructure.Tenancy.CompanyAccessService companyAccess,
+        [FromServices] Infrastructure.Tenancy.DelegationCeilingService delegationCeiling,
         [FromServices] TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
-        var authorization = await UserAdministrationEndpoints.AuthorizeInstallationAdministratorAsync(principal, database, cancellationToken);
-        if (authorization is not null) return authorization;
+        var (failure, scope) = await AuthorizeCompanyScopeAsync(
+            database, companyAccess, principal, companyId, AssignRolesPermission, cancellationToken);
+        if (failure is not null) return failure;
         if (!await antiforgery.IsRequestValidAsync(httpContext))
             return TypedResults.Problem(title: "درخواست نامعتبر است.", statusCode: StatusCodes.Status400BadRequest);
         if (!await IsActiveCompanyAsync(database, companyId, cancellationToken)) return TypedResults.NotFound();
@@ -433,6 +576,7 @@ public static class CompanyRoleAdministrationEndpoints
             return TypedResults.BadRequest(new { error = "گروه مقصد نامعتبر است یا با گروه مبدأ یکی است." });
 
         var roles = await database.CompanyRoles
+            .Include(role => role.RolePermissions)
             .Where(role => role.TenantId == companyId && (role.Id == roleId || role.Id == request.TargetRoleId))
             .ToListAsync(cancellationToken);
         var source = roles.FirstOrDefault(role => role.Id == roleId);
@@ -461,6 +605,23 @@ public static class CompanyRoleAdministrationEndpoints
             return TypedResults.Ok(new TransferCompanyRoleMembersResponse(0));
         }
 
+        await using var transaction = database.Database.IsRelational()
+            ? await database.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken)
+            : null;
+
+        // A company manager neither moves their own membership in bulk nor moves anybody
+        // into a role whose permission set exceeds their freshly re-read ceiling (D-071).
+        if (!scope!.IsInstallationAdministrator)
+        {
+            if (memberships.Any(membership => membership.UserId == scope.UserId))
+                return ForbiddenSelfAssignment();
+            var ceiling = await delegationCeiling.LoadTrackedCeilingAsync(scope.UserId, companyId, cancellationToken);
+            if (ceiling is null) return TypedResults.NotFound();
+            if (ceiling.Violates(target.RolePermissions.Select(rolePermission => rolePermission.PermissionId), out _))
+                return ForbiddenBeyondCeiling();
+            ceiling.ApplyRowVersionGuards(database);
+        }
+
         // The role tokens protect the preconditions (source/target are still the roles
         // inspected above); membership tokens protect every row in the atomic batch.
         database.Entry(source).Property(current => current.IsActive).IsModified = true;
@@ -474,7 +635,7 @@ public static class CompanyRoleAdministrationEndpoints
 
         // One small event per moved user (same event type as the single assignment), so the
         // audit stays inside the 4000-character DetailsJson column for any batch size up to the limit.
-        var actorId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal)!.Value;
+        var actorId = scope!.UserId;
         var occurredAtUtc = timeProvider.GetUtcNow().UtcDateTime;
         var correlationId = System.Diagnostics.Activity.Current?.Id;
         var ipAddress = httpContext.Connection.RemoteIpAddress?.ToString();
@@ -504,6 +665,8 @@ public static class CompanyRoleAdministrationEndpoints
         try
         {
             await database.SaveChangesAsync(cancellationToken);
+            if (transaction is not null)
+                await transaction.CommitAsync(cancellationToken);
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -514,6 +677,52 @@ public static class CompanyRoleAdministrationEndpoints
         SetNoStore(httpContext);
         return TypedResults.Ok(new TransferCompanyRoleMembersResponse(memberships.Count));
     }
+
+    /// <summary>
+    /// Dual-mode authorization for one routed company (D-071). The installation administrator
+    /// passes without a company membership; a company manager must prove an active membership
+    /// plus the routed permission code. Anonymous callers get 401, callers without any
+    /// relationship to the company get the same 404 as an unknown company (no disclosure),
+    /// and members without the permission get an explicit 403.
+    /// </summary>
+    private static async Task<(IResult? Failure, CompanyScopeAccess? Scope)> AuthorizeCompanyScopeAsync(
+        Data.DatabaseContext database,
+        Infrastructure.Tenancy.CompanyAccessService companyAccess,
+        ClaimsPrincipal principal,
+        Guid companyId,
+        string permissionCode,
+        CancellationToken cancellationToken)
+    {
+        var userId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal);
+        if (userId is null)
+            return (TypedResults.Unauthorized(), null);
+
+        if (await UserAdministrationEndpoints.IsInstallationAdministratorAsync(userId.Value, database, cancellationToken))
+            return (null, new CompanyScopeAccess(userId.Value, true));
+
+        var access = await companyAccess.FindAccessibleCompanyAsync(userId.Value, companyId, cancellationToken);
+        if (access is null)
+            return (TypedResults.NotFound(), null);
+
+        if (!await companyAccess.HasPermissionAsync(userId.Value, companyId, permissionCode, cancellationToken))
+            return (TypedResults.Json(
+                new { error = "شما مجاز به این عملیات در این شرکت نیستید." },
+                statusCode: StatusCodes.Status403Forbidden), null);
+
+        return (null, new CompanyScopeAccess(userId.Value, false));
+    }
+
+    private static IResult ForbiddenBeyondCeiling() =>
+        TypedResults.Json(
+            new { error = "شما مجاز به واگذاری این گروه یا مجوزها نیستید؛ سقف تفویض شما کمتر از این است." },
+            statusCode: StatusCodes.Status403Forbidden);
+
+    private static IResult ForbiddenSelfAssignment() =>
+        TypedResults.Json(
+            new { error = "تغییر نقش خودتان از این مسیر مجاز نیست." },
+            statusCode: StatusCodes.Status403Forbidden);
+
+    private sealed record CompanyScopeAccess(Guid UserId, bool IsInstallationAdministrator);
 
     private static async Task<bool> IsActiveCompanyAsync(
         Data.DatabaseContext database,
