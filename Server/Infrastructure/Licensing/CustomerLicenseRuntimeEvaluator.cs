@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Faranou.Licensing.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -16,11 +17,23 @@ public sealed record CustomerLicenseRuntimeResult(
     string? LicenseId,
     int? Sequence)
 {
-    public static CustomerLicenseRuntimeResult Usable(LicenseStatus status, string licenseId, int sequence) =>
-        new(true, status, null, licenseId, sequence);
+    /// <summary>
+    /// The payload only after the installed envelope has passed signature, installation-binding,
+    /// trust and revocation validation. Rejected results never carry a payload.
+    /// The private init accessor prevents callers from manufacturing a validated result.
+    /// </summary>
+    [JsonIgnore]
+    public LicensePayload? ValidatedPayload { get; private init; }
+
+    public static CustomerLicenseRuntimeResult Usable(LicenseStatus status, LicensePayload payload) =>
+        new(true, status, null, payload.LicenseId, payload.Sequence) { ValidatedPayload = payload };
 
     public static CustomerLicenseRuntimeResult Rejected(string errorCode, string? licenseId = null, int? sequence = null) =>
         new(false, LicenseStatus.Invalid, errorCode, licenseId, sequence);
+
+    // Do not include the validated entitlement payload in logs or diagnostic string output.
+    public override string ToString() =>
+        $"CustomerLicenseRuntimeResult {{ IsUsable = {IsUsable}, Status = {Status}, ErrorCode = {ErrorCode}, LicenseId = {LicenseId}, Sequence = {Sequence} }}";
 }
 
 /// <summary>
@@ -128,9 +141,6 @@ public sealed class CustomerLicenseRuntimeEvaluator : ICustomerLicenseRuntimeEva
                 "license_status_policy_unapproved", current.LicenseId, current.Sequence);
         }
 
-        return CustomerLicenseRuntimeResult.Usable(
-            validation.Status,
-            validation.Payload.LicenseId,
-            validation.Payload.Sequence);
+        return CustomerLicenseRuntimeResult.Usable(validation.Status, validation.Payload);
     }
 }

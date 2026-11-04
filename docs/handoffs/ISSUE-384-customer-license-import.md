@@ -3,7 +3,7 @@
 - **Issue:** [#384](https://github.com/hamidreza1394/Accounting/issues/384)
 - **Agent/مسئول:** ChatGPT
 - **تاریخ:** 2026-10-31
-- **وضعیت:** پیاده‌سازی اولیه در شاخه؛ اصلاح خطاهای CI روی head جدید انجام شده؛ CI نهایی در انتظار
+- **وضعیت:** PRهای #386، #387 و #388 ادغام و CI آن‌ها سبز است؛ startup/runtime/cloud enforcement هنوز باقی است.
 
 ## هدف و معیارهای پذیرش
 - [x] استفاده از schema مشتری ادغام‌شده در PR #387؛ بدون تغییر Vendor schema.
@@ -12,14 +12,16 @@
 - [x] اثبات possession کلید و بررسی OS-installation marker پیش از import.
 - [x] import/replace تراکنشی با validator revocation-aware، idempotency و کنترل sequence.
 - [x] audit رویدادهای enrollment/import/rejection.
-- [ ] اجرای CI کامل و اصلاح همه خطاهای آن.
+- [x] اجرای CI برای PRهای #386، #387 و #388؛ همه اجراهای ثبت‌شده موفق‌اند.
 - [ ] startup reload/revalidation و اتصال enforcement به call-siteهای عملیات تجاری.
 - [ ] Cloud authoritative entitlement resolution و tenant isolation.
 - [ ] تست عملی دو میزبان و TPM واقعی در انتهای پروژه.
 
 ## خلاصه تغییرات
-- PR #387 ادغام شده است: commit `65c2cb4762a8f05e3f1deb2592579ac8fba0b6d6`.
-- شاخه کاری `feat/issue-384-customer-license-import` شامل enrollment هویت نصب و import/replace لایسنس است.
+- PR #386 ادغام شده است: commit `010571779e5bbbef9419f7748aa13d3700bd48ec` (Windows CNG key ceremony).
+- PR #387 ادغام شده است: commit `65c2cb4762a8f05e3f1deb2592579ac8fba0b6d6` (InstallationIdentities و InstalledLicenses persistence).
+- PR #388 ادغام شده است: commit `75b0af84d5543a2bfb935d893d8bfc37ee330eef` (enrollment و import/replace).
+- این سه slice روی `main` هستند؛ PR #388 دیگر باز یا منتظر CI نیست.
 - APIهای جدید زیر `/api/v1/licensing/installation-identity/enroll` و `/api/v1/licensing/import` هستند؛ هر دو فقط برای AccountKind=Infrastructure، با Anti-forgery، rate limit و no-store.
 - InstallationId از `Provisioning:InstallationId` سمت سرور خوانده می‌شود؛ از بدنه درخواست گرفته نمی‌شود.
 - طبق D-059، envelope امضاشده با status برابر Restricted پذیرفته و ذخیره می‌شود تا runtime به حالت read/export/recovery برود؛ Grace رد می‌شود چون grace ضمنی پذیرفته نشده است.
@@ -47,10 +49,10 @@
 ## بررسی و آزمون
 | فرمان/آزمون | نتیجه واقعی | توضیح/کد خروج |
 |---|---|---|
-| `.NET build` | اجرا نشده | در این محیط اجرای محلی .NET انجام نشده است. |
-| `dotnet test` | اجرا نشده | تست‌ها نوشته شده‌اند؛ باید CI آن‌ها را اجرا کند. |
-| SQL Server migration/integration | اجرا نشده | هیچ migration روی دیتابیس واقعی اجرا نشده است. |
-| Windows CNG proof test | اجرا نشده | تست Windows-gated اضافه شده؛ CI باید آن را اجرا کند. |
+| `.NET build` | CI موفق | PRهای #386–#388 build سبز داشته‌اند؛ اجرای محلی در این نشست انجام نشده است. |
+| `dotnet test` | CI موفق | تست‌های هر سه PR روی CI اجرا شده‌اند؛ اجرای محلی در این نشست انجام نشده است. |
+| SQL Server migration/integration | CI موفق برای guardها | migration واقعی روی دیتابیس مشتری اجرا نشده؛ هیچ ادعای rollout نداریم. |
+| Windows CNG proof test | CI موفق | تست‌های Windows-gated در PR #386 اجرا شده‌اند؛ TPM فیزیکی هنوز تست نشده است. |
 | physical TPM / two-host E2E | موکول‌شده | طبق درخواست مالک در انتهای پروژه اجرا می‌شود. |
 
 ## امنیت، داده و سازگاری
@@ -61,14 +63,14 @@
 - این PR به تنهایی runtime enforcement نیست؛ سرویس هنوز باید به startup validation و مجوزدهی عملیات حسابداری متصل شود.
 
 ## ریسک‌ها و کارهای باقی‌مانده
-- CI کامل هنوز اجرا/تأیید نشده؛ compile/test errors ممکن است باقی باشند.
 - Startup reload/revalidation و middleware/policy/call-site enforcement تکمیل نشده است.
 - Cloud server-side authoritative entitlement resolution و tenant isolation تکمیل نشده است.
+- Contract V2 از `CompanyReference` opaque استفاده می‌کند، اما provisioning schema v4 و `ProvisioningRequestClaim` هنوز این reference را به `CompanyId` محلی map/persist نمی‌کنند؛ #392 باید CompanySetupRecord و versioned provisioning binding را تکمیل کند.
 - OD-03/04/05 و OD-06 همچنان خارج از این slice و نیازمند تصمیم/پیاده‌سازی جداگانه‌اند.
 - نصب Linux در این مرحله پشتیبانی عملیاتی ندارد؛ provider Windows CNG fail-closed است.
 - تست TPM واقعی، restore/recovery drill و دو میزبان مستقل در انتهای پروژه انجام می‌شود.
 
 ## شناسه‌های Git
-- **Branch:** `feat/issue-384-customer-license-import`
-- **Commit:** `2d184ef20f7baf062a2e241a6abd845ef328cb9c` (آخرین head مشاهده‌شده هنگام به‌روزرسانی این handoff؛ در صورت commit بعدی، PR head ملاک است).
-- **Pull Request:** [#388](https://github.com/hamidreza1394/Accounting/pull/388) — باز؛ CI در حال اجرا.
+- **Merged PRs:** [#386](https://github.com/hamidreza1394/Accounting/pull/386), [#387](https://github.com/hamidreza1394/Accounting/pull/387), [#388](https://github.com/hamidreza1394/Accounting/pull/388).
+- **Latest merge:** #388 → `75b0af84d5543a2bfb935d893d8bfc37ee330eef`.
+- **Current status:** merged slices complete; remaining runtime/startup/cloud tasks stay under #384/#391/#396.

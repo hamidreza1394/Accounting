@@ -50,6 +50,10 @@ public sealed class CustomerLicenseRuntimeEvaluatorTests
         Assert.Equal(LicenseStatus.Valid, result.Status);
         Assert.Equal(payload.LicenseId, result.LicenseId);
         Assert.Equal(payload.Sequence, result.Sequence);
+        Assert.Same(payload, result.ValidatedPayload);
+        var serialized = JsonSerializer.Serialize(result, JsonOptions);
+        Assert.False(serialized.Contains("validatedPayload", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(payload.ToString(), result.ToString());
         Assert.Null(result.ErrorCode);
     }
 
@@ -68,6 +72,7 @@ public sealed class CustomerLicenseRuntimeEvaluatorTests
         Assert.False(result.IsUsable);
         Assert.Equal("license_revoked", result.ErrorCode);
         Assert.Equal(payload.LicenseId, result.LicenseId);
+        Assert.Null(result.ValidatedPayload);
     }
 
     [Fact]
@@ -199,6 +204,7 @@ public sealed class CustomerLicenseRuntimeEvaluatorTests
 
         Assert.False(result.IsUsable);
         Assert.Equal("license_status_policy_unapproved", result.ErrorCode);
+        Assert.Null(result.ValidatedPayload);
     }
 
     [Fact]

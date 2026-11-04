@@ -8,9 +8,9 @@
 - `664fc921` — unit tests for company / module / feature / seat / legacy
 
 **Depends on:**
-- Contract V2 (#390 / PR #472) — Implemented on main
-- Runtime Evaluator base (#526) — Merged
-- Customer license import/persistence (#384) — still required for real envelopes in production paths
+- Contract V2 (#390 / PR #472) — merged and CI-verified
+- Runtime evaluator/revocation path (#526) — merged and CI-verified
+- Customer license import/persistence (#384) — initial identity/import slices (#386–#388) merged; startup/runtime/cloud integration remains incomplete
 
 ## Goal
 Enforce commercial entitlements at trusted server-side operation boundaries. UI-only checks are insufficient.
@@ -43,7 +43,7 @@ Coverage for:
 ## Still missing (next commits / follow-up)
 1. Runtime service that:
    - Calls `ICustomerLicenseRuntimeEvaluator` for installation usability
-   - Obtains the validated `LicensePayload` (may require a small, careful extension of the evaluator result)
+   - Obtains the validated `LicensePayload` through `CustomerLicenseRuntimeResult.ValidatedPayload` (implemented in PR #539; populated only on successful revocation-aware validation)
    - Resolves the current Company reference from **server** WorkContext / CompanyAccessService (never client-supplied)
    - Counts active human memberships for seat checks
    - Surfaces stable API error codes without leaking license material
@@ -64,6 +64,13 @@ Coverage for:
 - Next commit on the same branch: thin `IEntitlementPolicy` service + evaluator composition + membership seat counter.
 - Only after that, begin endpoint wiring and Trade gate replacement under #403.
 
+## Company-reference mapping blocker (verified 2026-11-04)
+- Entitlement Contract V2 identifies each licensed Company by an opaque `CompanyReference`.
+- The current customer `CustomerProvisioningPayload` (schema v4) does not carry that reference; `ProvisioningRequestClaim` persists the local `CompanyId` but not the signed entitlement reference; no `CompanySetupRecord` persistence entity exists in the current code.
+- Do not substitute `Company.Id.ToString()` or `CustomerBoundaryId` for the opaque license reference. Neither mapping is established by the accepted contract.
+- A trusted, durable CompanyReference ↔ local CompanyId mapping must be added to the provisioning/company-setup flow (#384/#392) before a production entitlement resolver can safely evaluate a WorkContext company.
+
 ## Status
-- Pure decision engine + unit tests: **Implemented** (awaiting CI)
+- Pure decision engine + unit tests (#534): **Merged; CI passed**
+- Validated-payload bridge (#539): **Implemented; CI pending**
 - Full runtime enforcement + production call sites: **NotImplemented**
