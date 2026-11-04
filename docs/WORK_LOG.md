@@ -2342,3 +2342,8 @@
 - برچسب UTC پس از materialization برای سه پاسخ عضویت؛ فیلدهای قدیمی و schema بدون تغییر.
 - تست واحد و SQL Server اضافه شد؛ اجرای .NET و SQL Server به‌علت نبود SDK و سرویس در محیط مسدود است. بررسی asset و `git diff --check` موفق بود.
 - جزئیات: `docs/handoffs/ISSUE-520-membership-utc-wire.md`.
+
+## 2026-11-04 — Issue #444: E2E انتقال نقش و مجوز دفترچه
+- سناریوی Playwright با نقش‌های ساخته‌شده از API واقعی، انتقال از UI، بررسی عضو مبدأ/مقصد، و مجوز مثبت/منفی دفترچه افزوده شد؛ نقش اولیه در پایان بازگردانده می‌شود.
+- typecheck، ۵۳۸ تست Client، build، check:offline، syntax و فهرست تست Playwright و بررسی asset موفق. اجرای واقعی E2E و Build دات‌نت به علت نبود SDK و SQL Server محلی اجرا نشد؛ CI مرجع تأیید است.
+- جزئیات و وابستگی seed مرز مشتری برای گردش عضویت: `docs/handoffs/ISSUE-444-role-transfer-directory-e2e.md`.
