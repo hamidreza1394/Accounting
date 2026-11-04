@@ -13,7 +13,7 @@
 - [x] بدون تغییر API، Backend، مجوزها، دیتابیس یا dependency.
 
 ## خلاصه تغییرات
-- در effect جستجوی مقصد عضویت، وقتی query خالی است، `loading` به `false` بازنشانی می‌شود.
+- هنگام تغییر ورودی و خالی‌شدن query، `loading` بلافاصله به `false` بازنشانی می‌شود؛ مسیر ورودی نامعتبر نیز همین reset را انجام می‌دهد. effect همچنان درخواست قبلی را با AbortController لغو می‌کند.
 - AbortController همچنان درخواست قبلی را لغو می‌کند و handlerهای قبلی نتیجه یا خطای درخواست لغوشده را به UI اعمال نمی‌کنند.
 - تست رگرسیون درخواست اول را معلق نگه می‌دارد، query را پاک می‌کند، فعال‌شدن دکمه را بررسی می‌کند و سپس موفقیت جستجوی دوم را assert می‌کند.
 
@@ -50,6 +50,6 @@
 
 ## شناسه‌های Git
 - Branch: `fix/530-membership-search-loading-reset`
-- Test-first commit: `f53bbd960aebb9d33474456ccd56e196eaf35624`
-- Implementation commit: `daa362b4bc9145c00b26d54854f626c978b732b1`
+- Regression test commit: `15634dad38f617733b8c408f5f89db1a04e9107b`
+- Implementation commit: `bf655e864ad95350068a4384de93f5e6589e649b`
 - PR: پس از ایجاد ثبت می‌شود.
