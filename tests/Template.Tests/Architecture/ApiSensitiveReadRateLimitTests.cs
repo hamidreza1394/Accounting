@@ -26,9 +26,16 @@ public sealed class ApiSensitiveReadRateLimitTests : IClassFixture<FaranouApplic
 
         foreach (var route in routes)
         {
-            var endpoint = Assert.Single(endpoints.Where(candidate =>
-                string.Equals(candidate.RoutePattern.RawText, route, StringComparison.OrdinalIgnoreCase) &&
-                candidate.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods.Contains("GET", StringComparer.OrdinalIgnoreCase) == true));
+            var matches = endpoints.Where(candidate =>
+                string.Equals(candidate.RoutePattern.RawText?.TrimEnd('/'), route.TrimEnd('/'), StringComparison.OrdinalIgnoreCase) &&
+                candidate.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods.Contains("GET", StringComparer.OrdinalIgnoreCase) == true)
+                .ToArray();
+            Assert.True(matches.Length == 1,
+                $"Expected one GET route '{route}', found {matches.Length}. Mapped GET routes: " +
+                string.Join(", ", endpoints.Where(candidate =>
+                    candidate.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods.Contains("GET", StringComparer.OrdinalIgnoreCase) == true)
+                    .Select(candidate => candidate.RoutePattern.RawText)));
+            var endpoint = matches[0];
             var policies = endpoint.Metadata.GetOrderedMetadata<EnableRateLimitingAttribute>();
             Assert.Contains(policies, policy => policy.PolicyName == Infrastructure.Security.RateLimitingPolicies.ApiPolicy);
             Assert.Contains(policies, policy => policy.PolicyName == Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
