@@ -19,7 +19,10 @@ export function CreateMembershipRequest({ onUnauthenticated, onCreated }: Props)
   const [notice, setNotice] = useState('');
 
   useEffect(() => {
-    if (!query) return undefined;
+    if (!query) {
+      setLoading(false);
+      return undefined;
+    }
     const controller = new AbortController();
     setLoading(true);
     setResults(null);
