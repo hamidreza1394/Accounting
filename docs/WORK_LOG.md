@@ -2389,6 +2389,14 @@
 - Addressed the CodeQL PR review concern that `HttpContext.TraceIdentifier` can be untrusted: the request logger uses W3C activity trace IDs, or a bounded SHA-256-derived correlation identifier instead of copying arbitrary trace identifier text. Added a synthetic secret/newline regression test. Local .NET execution remains unavailable.
 
 
+## 2026-11-04 — Issue #530: بازیابی وضعیت جستجوی مقصد عضویت پس از لغو
+- ریشه باگ: وقتی query جستجو خالی می‌شد، effect درخواست قبلی را با AbortController لغو می‌کرد اما مسیر early-return مقدار loading را reset نمی‌کرد؛ در نتیجه دکمه جستجو می‌توانست برای همیشه disabled بماند.
+- هنگام پاک‌شدن ورودی یا نامعتبر بودن query، loading بلافاصله false می‌شود؛ effect همچنان درخواست قبلی را با AbortController لغو می‌کند و نتیجه/خطای درخواست لغوشده وارد UI نمی‌شود.
+- تست رگرسیون: جستجوی اول عمداً معلق می‌ماند، query پاک می‌شود، فعال‌شدن مجدد دکمه بررسی می‌شود و جستجوی دوم باید نتیجه را نمایش دهد.
+- بدون تغییر API، Backend، مجوزها، Migration یا dependency.
+- اجرای محلی typecheck/Vitest/build/check:offline در این محیط انجام نشده؛ نتیجه CI روی PR باید بررسی شود.
+- handoff: `docs/handoffs/ISSUE-530-membership-search-loading-reset.md`.
+
 ## 2026-11-04 — اصلاح CI و CodeQL در PR #529 (Issue #521)
 - **علت شکست .NET CI:** خطای قطعی CS0117 در SafeExceptionLogging.cs؛ نام بدون qualification یعنی Convert.ToHexString در این پروژه به نوع Convert دیگری resolve می‌شد و عضو موردنظر را نداشت.
 - **اصلاح:** طراحی logger ساده شد تا هیچ دادهٔ مشتق از درخواست در log قرار نگیرد: نه HttpContext.TraceIdentifier، نه Activity.TraceId، نه path/route metadata. شناسهٔ خطا اکنون با Guid.NewGuid() در سرور ساخته می‌شود؛ فقط شناسهٔ تولیدشده، HTTP method محدودشده به allowlist و نوع Exception ثبت می‌شوند. در نتیجه وابستگی به hash و Convert.ToHexString نیز حذف شد.

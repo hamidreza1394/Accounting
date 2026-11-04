@@ -42,4 +42,34 @@ describe('CreateMembershipRequest', () => {
     await user.click(await screen.findByRole('button', { name: 'درخواست عضویت در شرکت ب' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('شرکت پیدا نشد');
   });
+
+  it('resets loading when a pending destination search is cancelled by clearing the query', async () => {
+    const user = userEvent.setup();
+    let destinationSearchCount = 0;
+    const { calls } = stubApi((call) => {
+      if (call.path.endsWith('/destinations')) {
+        destinationSearchCount += 1;
+        if (destinationSearchCount === 1) return new Promise<Response>(() => undefined);
+        return json({ items: [{ companyId: 'b', name: 'شرکت ب' }], page: 1, pageSize: 25, totalCount: 1 });
+      }
+      return new Response(null, { status: 404 });
+    });
+
+    render(<CreateMembershipRequest onUnauthenticated={onUnauthenticated} onCreated={vi.fn()} />);
+    const searchInput = screen.getByLabelText('نام دقیق شرکت مقصد');
+    const searchButton = screen.getByRole('button', { name: 'جستجوی شرکت' });
+
+    await user.type(searchInput, 'شرکت الف');
+    await user.click(searchButton);
+    expect(await screen.findByRole('status')).toHaveTextContent('در حال جستجو');
+
+    await user.clear(searchInput);
+    await waitFor(() => expect(searchButton).toBeEnabled());
+
+    await user.type(searchInput, 'شرکت ب');
+    await user.click(searchButton);
+    expect(await screen.findByRole('button', { name: 'درخواست عضویت در شرکت ب' })).toBeInTheDocument();
+    expect(calls.filter((call) => call.path.endsWith('/destinations'))).toHaveLength(2);
+  });
+
 });
