@@ -291,6 +291,12 @@ jobs:
         run: |
           npm ci --no-fund --no-audit
           npx playwright install --with-deps chromium
+      # Static guard of the membership-workflow spec (no browser, no database): it fails when a route
+      # it drives disappears, when a scenario stops asserting the database *and* API state, or when
+      # something starts mocking the API. Runs before the (slow) browser step on purpose.
+      - name: Contract guard of the E2E specs
+        working-directory: tests/e2e
+        run: npm run test:contract
       - name: Seed accounts and companies
         working-directory: tests/e2e
         run: npm run seed

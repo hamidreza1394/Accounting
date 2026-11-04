@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "seed": "node seed.mjs",
-    "test": "playwright test"
+    "test": "playwright test",
+    "test:contract": "node --test tests/*.test.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
