@@ -2313,6 +2313,14 @@
 - برای قابلیت‌هایی که API ندارند (کشف شرکت برای درخواست عضویت، گروه‌های قابل‌تخصیص، `/me/permissions`، مرتب‌سازی/Export/Retention گزارش، نشست‌ها، S2) قرارداد دقیق endpoint، مدل و کدهای خطا در `docs/FRONTEND_API_CONTRACT_NEEDS.md` ثبت شد (`Proposed`، مسئول ChatGPT). UI مربوط عمداً ساخته نشد تا قابلیت ظاهری یا داده ساختگی تولید نشود؛ هر مورد پس از Merge شدن API در PR مستقل مصرف می‌شود.
 
 
+## 2026-11-03 — Issue #515: تکمیل خنثی‌سازی کنترل‌کاراکترهای ابتدای سلول CSV
+- بازبینی پس از Merge #507 نشان داد Tab یا CR مستقل در ابتدای سلول در guard قبلی پوشش داده نشده بود.
+- CsvCell اکنون Tab/CR/LF ابتدایی را نیز با apostrophe خنثی می‌کند؛ رفتار قبلی برای پیشوندهای فرمولی پس از whitespace حفظ شده است.
+- تست regression برای سلول‌های آغازشونده با Tab و CR اضافه شد؛ Audit rowCount نیز برای دو ردیف خروجی بررسی می‌شود.
+- تست، Build، SQL Server، diff-check و CI هنوز اجرا/تأیید نشده‌اند؛ وضعیت Verified نیست.
+- handoff: docs/handoffs/ISSUE-515-csv-leading-control-characters.md.
+
+
 ## 2026-11-03 — Issue #510: تکمیل گردش API درخواست عضویت
 - قرارداد کشف مقصد، سقف واگذاری، فهرست تأییدکنندگان و تاریخچه تصمیم به‌روز شد.
 - مقصد فقط با نام exact در CustomerBoundary مشترک با یکی از عضویت‌های فعال کاربر قابل کشف است؛ CustomerBoundary null/متفاوت fail-closed و POST هم همان قاعده را مستقل enforce می‌کند.
