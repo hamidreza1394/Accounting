@@ -19,10 +19,7 @@ export function CreateMembershipRequest({ onUnauthenticated, onCreated }: Props)
   const [notice, setNotice] = useState('');
 
   useEffect(() => {
-    if (!query) {
-      setLoading(false);
-      return undefined;
-    }
+    if (!query) return undefined;
     const controller = new AbortController();
     setLoading(true);
     setResults(null);
@@ -54,10 +51,10 @@ export function CreateMembershipRequest({ onUnauthenticated, onCreated }: Props)
       <form className="space-y-3" onSubmit={(event) => {
         event.preventDefault(); setError(''); setNotice(''); setResults(null);
         const value = search.trim();
-        if (value.length < 3 || value.length > 120) { setQuery(''); setError('نام دقیق شرکت باید بین ۳ و ۱۲۰ نویسه باشد.'); return; }
+        if (value.length < 3 || value.length > 120) { setQuery(''); setLoading(false); setError('نام دقیق شرکت باید بین ۳ و ۱۲۰ نویسه باشد.'); return; }
         setPage(1); setQuery(value); setAttempt((current) => current + 1);
       }}>
-        <FormField label="نام دقیق شرکت مقصد"><Input value={search} maxLength={120} onChange={(event) => { setSearch(event.target.value); setQuery(''); setResults(null); setError(''); }} /></FormField>
+        <FormField label="نام دقیق شرکت مقصد"><Input value={search} maxLength={120} onChange={(event) => { setSearch(event.target.value); setQuery(''); setLoading(false); setResults(null); setError(''); }} /></FormField>
         <Button type="submit" disabled={loading || busy}>جستجوی شرکت</Button>
       </form>
       {loading ? <p role="status">در حال جستجو…</p> : null}
