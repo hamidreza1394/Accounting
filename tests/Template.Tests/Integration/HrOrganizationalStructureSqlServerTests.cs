@@ -62,7 +62,9 @@ public sealed class HrOrganizationalStructureSqlServerTests
                 Assert.False(string.IsNullOrWhiteSpace(permission.Name));
                 Assert.False(string.IsNullOrWhiteSpace(permission.Description));
             });
-            Assert.Equal(expectedCodes, seeded.Select(permission => permission.Code).Order().ToArray());
+            // The catalog query has no stable order of its own; both sides are compared in
+            // ordinal order, so the expected list is sorted the same way here.
+            Assert.Equal(expectedCodes.Order().ToArray(), seeded.Select(permission => permission.Code).Order().ToArray());
         }
         finally
         {
