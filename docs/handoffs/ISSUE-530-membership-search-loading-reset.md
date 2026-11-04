@@ -26,7 +26,7 @@
 
 ## تصمیم‌های فنی
 - از همان state موجود استفاده شد؛ abstraction یا dependency جدید اضافه نشد.
-- reset در شاخه query خالی effect قرار گرفت تا همه مسیرهایی که query را خالی می‌کنند رفتار یکسان داشته باشند.
+- reset در handler تغییر ورودی و مسیر query نامعتبر انجام می‌شود تا UI بدون انتظار برای تکمیل درخواست قبلی به حالت قابل جستجو برگردد.
 - تغییری در قرارداد API یا کنترل امنیتی ایجاد نشد.
 
 ## بررسی و آزمون
@@ -52,4 +52,4 @@
 - Branch: `fix/530-membership-search-loading-reset`
 - Regression test commit: `15634dad38f617733b8c408f5f89db1a04e9107b`
 - Implementation commit: `bf655e864ad95350068a4384de93f5e6589e649b`
-- PR: پس از ایجاد ثبت می‌شود.
+- PR: [#531](https://github.com/hamidreza1394/Accounting/pull/531)
