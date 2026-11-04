@@ -15,12 +15,12 @@ public sealed class SafeExceptionLoggingTests
     private const string Secret = "FAKE_PASSWORD_TOKEN_CONNECTION_SECRET";
 
     [Fact]
-    public async Task ApiExceptionHandler_DoesNotLogExceptionOrRequestPath_AndPreservesDiagnostics()
+    public async Task ApiExceptionHandler_DoesNotLogExceptionOrRequestData_AndPreservesDiagnostics()
     {
         var capture = new CaptureProvider();
         using var factory = LoggerFactory.Create(builder => builder.AddProvider(capture));
         using var services = new ServiceCollection().AddSingleton<ILoggerFactory>(factory).BuildServiceProvider();
-        var context = new DefaultHttpContext { RequestServices = services, TraceIdentifier = "trace-safe-521" };
+        var context = new DefaultHttpContext { RequestServices = services, TraceIdentifier = "trace-safe-521-" + Secret };
         context.Request.Method = "POST";
         context.Request.Path = "/api/v1/" + Secret;
         context.Response.Body = new MemoryStream();
@@ -37,21 +37,23 @@ public sealed class SafeExceptionLoggingTests
         {
             Assert.Null(logged.Exception);
             Assert.DoesNotContain(Secret, logged.Message);
+            Assert.DoesNotContain(context.TraceIdentifier, logged.Message);
+            Assert.DoesNotContain(context.Request.Path.Value!, logged.Message);
         });
         var entry = Assert.Single(capture.Entries, logged => logged.Message.Contains("Unexpected request failure"));
         Assert.Null(entry.Exception);
         Assert.DoesNotContain(Secret, entry.Message);
         Assert.Contains("InvalidOperationException", entry.Message);
-        Assert.Contains("TraceId=", entry.Message);
+        Assert.Matches(@"FailureId=[0-9a-f]{32};", entry.Message);
         Assert.Contains("POST", entry.Message);
     }
 
     [Fact]
-    public async Task ApiFilter_LogsRouteTemplateWithoutRawRouteOrException()
+    public async Task ApiFilter_DoesNotLogRouteOrRawRequestPath()
     {
         var capture = new CaptureProvider();
         using var factory = LoggerFactory.Create(builder => builder.AddProvider(capture));
-        var context = new DefaultHttpContext { TraceIdentifier = "trace-filter-521" };
+        var context = new DefaultHttpContext { TraceIdentifier = "trace-filter-521-" + Secret };
         context.Request.Method = "GET";
         context.Request.Path = "/api/items/" + Secret;
         context.SetEndpoint(CreateEndpoint());
@@ -65,21 +67,23 @@ public sealed class SafeExceptionLoggingTests
         {
             Assert.Null(logged.Exception);
             Assert.DoesNotContain(Secret, logged.Message);
+            Assert.DoesNotContain("/api/items", logged.Message);
+            Assert.DoesNotContain(context.TraceIdentifier, logged.Message);
         });
         var entry = Assert.Single(capture.Entries, logged => logged.Message.Contains("Unexpected request failure"));
         Assert.Null(entry.Exception);
-        Assert.DoesNotContain(Secret, entry.Message);
-        Assert.Contains("/api/items/{id}", entry.Message);
+        Assert.Matches(@"FailureId=[0-9a-f]{32};", entry.Message);
+        Assert.Contains("GET", entry.Message);
         Assert.Equal("no-store", context.Response.Headers.CacheControl.ToString());
     }
 
     [Fact]
-    public async Task Handler_UsesOriginalEndpointAfterFrameworkClearsCurrentEndpoint()
+    public async Task Handler_DoesNotLogOriginalEndpointOrRequestPath()
     {
         var capture = new CaptureProvider();
         using var factory = LoggerFactory.Create(builder => builder.AddProvider(capture));
         using var services = new ServiceCollection().AddSingleton<ILoggerFactory>(factory).BuildServiceProvider();
-        var context = new DefaultHttpContext { RequestServices = services };
+        var context = new DefaultHttpContext { RequestServices = services, TraceIdentifier = "trace-handler-" + Secret };
         context.Request.Method = "GET";
         context.Request.Path = "/api/items/" + Secret;
         context.Response.Body = new MemoryStream();
@@ -91,10 +95,11 @@ public sealed class SafeExceptionLoggingTests
         {
             Assert.Null(logged.Exception);
             Assert.DoesNotContain(Secret, logged.Message);
+            Assert.DoesNotContain("/api/items", logged.Message);
+            Assert.DoesNotContain(context.TraceIdentifier, logged.Message);
         });
         var entry = Assert.Single(capture.Entries, logged => logged.Message.Contains("Unexpected request failure"));
-        Assert.Contains("/api/items/{id}", entry.Message);
-        Assert.DoesNotContain(Secret, entry.Message);
+        Assert.Matches(@"FailureId=[0-9a-f]{32};", entry.Message);
         Assert.Null(entry.Exception);
     }
 
@@ -102,31 +107,21 @@ public sealed class SafeExceptionLoggingTests
         _ => Task.CompletedTask, RoutePatternFactory.Parse("/api/items/{id}"), 0).Build();
 
     [Fact]
-    public void RequestLogger_DoesNotEmitUntrustedTraceIdentifier()
+    public void RequestLogger_UsesServerGeneratedFailureIdInsteadOfUntrustedRequestData()
     {
         var capture = new CaptureProvider();
         using var factory = LoggerFactory.Create(builder => builder.AddProvider(capture));
         var context = new DefaultHttpContext { TraceIdentifier = "trace-" + Secret + "\r\nforged" };
         context.Request.Method = "GET";
 
-        var currentActivity = System.Diagnostics.Activity.Current;
-        try
-        {
-            System.Diagnostics.Activity.Current = null;
-            Infrastructure.Security.SafeExceptionLogging.LogRequestFailure(
-                factory.CreateLogger("test"), context, new InvalidOperationException(Secret));
-        }
-        finally
-        {
-            System.Diagnostics.Activity.Current = currentActivity;
-        }
+        Infrastructure.Security.SafeExceptionLogging.LogRequestFailure(
+            factory.CreateLogger("test"), context, new InvalidOperationException(Secret));
 
         var entry = Assert.Single(capture.Entries);
-        var expectedTrace = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
-            System.Text.Encoding.UTF8.GetBytes(context.TraceIdentifier)))[..32];
-        Assert.Contains(expectedTrace, entry.Message);
+        Assert.Matches(@"FailureId=[0-9a-f]{32};", entry.Message);
         Assert.Null(entry.Exception);
         Assert.DoesNotContain(Secret, entry.Message);
+        Assert.DoesNotContain(context.TraceIdentifier, entry.Message);
         Assert.DoesNotContain("\r", entry.Message);
         Assert.DoesNotContain("\n", entry.Message);
     }
@@ -136,7 +131,7 @@ public sealed class SafeExceptionLoggingTests
     {
         var capture = new CaptureProvider();
         using var factory = LoggerFactory.Create(builder => builder.AddProvider(capture));
-        var context = new DefaultHttpContext { TraceIdentifier = "trace-middleware-521" };
+        var context = new DefaultHttpContext { TraceIdentifier = "trace-middleware-521-" + Secret };
         context.Request.Method = "GET";
         context.Request.Path = "/private/" + Secret;
         var middleware = new Infrastructure.Middlewares.GlobalExceptionHandlerMiddleware(
@@ -148,12 +143,14 @@ public sealed class SafeExceptionLoggingTests
         {
             Assert.Null(logged.Exception);
             Assert.DoesNotContain(Secret, logged.Message);
+            Assert.DoesNotContain(context.TraceIdentifier, logged.Message);
+            Assert.DoesNotContain("/private/", logged.Message);
         });
         var entry = Assert.Single(capture.Entries, logged => logged.Message.Contains("Unexpected request failure"));
         Assert.Null(entry.Exception);
         Assert.DoesNotContain(Secret, entry.Message);
         Assert.Contains("InvalidOperationException", entry.Message);
-        Assert.Contains("TraceId=", entry.Message);
+        Assert.Matches(@"FailureId=[0-9a-f]{32};", entry.Message);
     }
 
     private sealed class ErrorFeature(Exception error, Endpoint? endpoint = null) : IExceptionHandlerFeature
