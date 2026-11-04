@@ -2347,3 +2347,11 @@
 - سناریوی Playwright با نقش‌های ساخته‌شده از API واقعی، انتقال از UI، بررسی عضو مبدأ/مقصد، و مجوز مثبت/منفی دفترچه افزوده شد؛ نقش اولیه در پایان بازگردانده می‌شود.
 - typecheck، ۵۳۸ تست Client، build، check:offline، syntax و فهرست تست Playwright و بررسی asset موفق. اجرای واقعی E2E و Build دات‌نت به علت نبود SDK و SQL Server محلی اجرا نشد؛ CI مرجع تأیید است.
 - جزئیات و وابستگی seed مرز مشتری برای گردش عضویت: `docs/handoffs/ISSUE-444-role-transfer-directory-e2e.md`.
+
+
+## 2026-11-04 — Issue #214: customer runtime revocation evaluation
+- Added `ICustomerLicenseRuntimeEvaluator` as the shared customer-runtime evaluation entry point; it reloads the current installed envelope and validates it through the revocation-aware `ICustomerLicenseEnvelopeValidator` on every evaluation.
+- Registered the evaluator in Server DI through `AddCustomerLicenseRuntimeEvaluator()`; existing startup middleware and forwarded-header configuration are preserved.
+- Added unit regression coverage for valid/revoked licenses, unavailable or invalid revocation snapshots/trust, state-store failure, missing license, deterministic retries, Grace rejection, and invalid installation IDs.
+- Reused the clean evaluator implementation; the two similarly named enforcement branches were inspected separately. The divergent branch with an empty work log and removed middleware was not used.
+- .NET build/tests have not been run in this environment. CI must verify the PR head; no local test success is claimed.
