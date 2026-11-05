@@ -35,4 +35,14 @@
 
 ## شناسه‌ها
 - Branch: `feat/issue-113-vendor-bootstrap`
-- PR: پس از بررسی Build و CI ایجاد/به‌روزرسانی می‌شود.
+- PR: #548 — `fix/vendor-bootstrap-time-provider`؛ SHA فعلی `46d4f3fafcf605ef94d8f91a7421379ef5e6c157`؛ CI نهایی در انتظار.
+
+## تکمیل کنترل زمان — 2026-11-05 (PR #548)
+
+- تنها timestamp مستقیم باقی‌مانده در command-mode، یعنی مقدار `VendorAdminUser.CreatedAtUtc`، از `DateTimeOffset.UtcNow` به `TimeProvider.GetUtcNow().ToUniversalTime()` تغییر کرد.
+- `RunAsync` یک `TimeProvider` اختیاری می‌پذیرد و در مسیر عادی آن را از DI می‌گیرد؛ `AddVendorPersistence` از قبل `TimeProvider.System` را ثبت می‌کند.
+- تست Integration SQL Server اکنون یک ساعت کنترل‌شده تزریق می‌کند و مقدار پایدارشدهٔ `CreatedAtUtc` را دقیقاً assert می‌کند؛ مسیر رقابت دو bootstrap و TOTP همچنان بدون تغییر است.
+- هیچ Migration، تغییر Customer، secret یا credential اضافه نشده است.
+- اجرای محلی در این محیط انجام نشده؛ نتیجهٔ Build/Integration فقط پس از CI روی SHA نهایی PR قابل اعلام است.
+
+- **حفظ رفتار رد زودهنگام:** resolve کردن `TimeProvider` بعد از اعتبارسنجی secret و ورودی انجام می‌شود؛ تست واحد جدید ثابت می‌کند نبود secret همچنان بدون نیاز به سرویس ساعت، با کد امن ۲ متوقف می‌شود.

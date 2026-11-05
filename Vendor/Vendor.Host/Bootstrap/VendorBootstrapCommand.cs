@@ -58,7 +58,8 @@ public static class VendorBootstrapCommand
         IServiceProvider services,
         IConfiguration configuration,
         IVendorBootstrapPrompt prompt,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
@@ -95,6 +96,9 @@ public static class VendorBootstrapCommand
             return 4;
         }
 
+        // Resolve the clock only after early secret/input validation so rejected bootstrap
+        // attempts still follow the same safe audit and response path without extra services.
+        timeProvider ??= services.GetRequiredService<TimeProvider>();
         var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("VendorBootstrapCommand");
         await using var scope = services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
@@ -131,7 +135,7 @@ public static class VendorBootstrapCommand
                         IsEnabled = false,
                         TwoFactorEnabled = false,
                         MustChangePassword = false,
-                        CreatedAtUtc = DateTimeOffset.UtcNow
+                        CreatedAtUtc = timeProvider.GetUtcNow().ToUniversalTime()
                     };
 
                     var createResult = await users.CreateAsync(user, password);
