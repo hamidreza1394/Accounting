@@ -44,3 +44,19 @@
 
 - **Branch:** feat/issue-228-vendor-provisioning-state
 - **PR:** در حال ایجاد
+
+
+## بازبینی 2026-11-05 — fail-closed برای LicensePayload v2
+
+- **یافتهٔ تأییدشده:** LicensePayload نسخهٔ ۲ طبق StructuralValidation باید limits.subsystems خالی داشته باشد و ماژول‌ها را فقط در companyEntitlements و زیر یک CompanyReference مات حمل کند. اما provisioning schema v4 فقط Subsystems، LicenseId و Sequence را حمل می‌کند و مرجع شرکت را ندارد.
+- **ریسک پیش از اصلاح:** resolver از payload.Limits.Subsystems می‌خواند؛ برای v2 فهرست خالی برمی‌گشت و در حالت انتخاب پیش‌فرض، intent غیرقابل‌اعمال با Subsystems خالی در وضعیت AwaitingSigner ذخیره می‌شد. validator بسته آن را هنگام صدور رد می‌کرد.
+- **اصلاح Vendor-only:** resolver اکنون LicensePayload v2 را با provisioning_company_reference_mapping_required رد می‌کند و LicensePayload v1 بدون هیچ زیرسیستم را با provisioning_license_has_no_subsystems رد می‌کند. در نتیجه endpoint پیش از ایجاد رکورد ProvisioningRequest متوقف می‌شود؛ entitlementهای Company-scoped هرگز global یا خالی‌سازی‌شده تفسیر نمی‌شوند.
+- **Regression:** دو تست SQL Server برای v2 شرکت‌محور و v1 بدون زیرسیستم افزوده شد. تست‌ها در این محیط اجرا نشده‌اند؛ نتیجهٔ نهایی فقط پس از Vendor CI روی SHA نهایی ثبت می‌شود.
+- **وابستگی ادامه:** #392 باید نگاشت پایدار و مورداعتماد CompanyReference به CompanyId و قرارداد نسخه‌دار provisioning را هماهنگ کند؛ تغییر consumer/ACK مشتری در #235 جدا می‌ماند. تا تکمیل آن، v2 provisioning عمداً unavailable است.
+- **مرزبندی:** بدون تغییر Server/**، migration دیتابیس مشتری، schema مشترک، کلید خصوصی، credential یا secret. هیچ ادعای Provisioning/ACK جدیدی ایجاد نشده است.
+
+## تصحیح وضعیت مسیر Customer و هماهنگی #235
+
+- consumer پایه، claim/replay، apply تراکنشی و Enrollment در PRهای #302 و #305–#308/#329 در main وجود دارند؛ intake و اعتبارسنجی ACK در PRهای #293/#294 نیز پیاده‌سازی شده‌اند. این handoff قدیمی نباید به‌عنوان نبود کامل این کد خوانده شود.
+- این PR هیچ تغییر Customer-side ندارد. Issue #235 همچنان برای trust distribution، durable audit/readiness، error/retry semantics و تأیید عملیاتی مستقل باز می‌ماند.
+- قرارداد provisioning v4 هنوز CompanyReference ندارد؛ تا هماهنگی #392 و نسخه‌دار شدن transport، LicensePayload v2 در Vendor fail-closed رد می‌شود.
