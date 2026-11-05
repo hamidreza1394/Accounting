@@ -144,6 +144,29 @@ public sealed class CompanyRoleAdministrationEndpointTests
     }
 
     [Fact]
+    public async Task AssignMembership_RefusesASystemRole_ForTheInstallationAdministratorToo()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddAdministrator();
+        fixture.AddCompany();
+        var system = fixture.AddRole("company-admin");
+        system.IsSystemRole = true;
+        var normal = fixture.AddRole("NORMAL");
+        var clerk = fixture.AddMember(normal, "clerk");
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await Server.Api.CompanyRoleAdministrationEndpoints.AssignMembershipAsync(
+            fixture.CompanyId, system.Id, clerk.Id, new DefaultHttpContext(),
+            fixture.Principal(admin.Id), new AllowAntiforgery(), fixture.Database,
+            fixture.CompanyAccess, fixture.CeilingService, TimeProvider.System, default);
+
+        Assert.Equal(StatusCodes.Status409Conflict, (result as IStatusCodeHttpResult)?.StatusCode);
+        await using var reader = fixture.NewContext();
+        Assert.Equal(normal.Id, (await reader.UserCompanyMemberships.SingleAsync()).RoleId);
+        Assert.False(await reader.SecurityAuditEvents.AnyAsync());
+    }
+
+    [Fact]
     public async Task AssignMembership_DoesNotReactivateAnInactiveMembership()
     {
         await using var fixture = new Fixture();

@@ -211,6 +211,32 @@ public sealed class CompanyRoleDelegationCeilingEndpointTests
     }
 
     [Fact]
+    public async Task AssignMembership_CompanyManagerHoldingTheWholeCatalog_StillCannotAssignASystemRole()
+    {
+        await using var fixture = new Fixture();
+        fixture.AddCompany();
+        fixture.AddPermission(AssignPermission);
+        fixture.AddPermission("users.list");
+        fixture.AddPermission("trade.form.party.view");
+        // The manager's ceiling deliberately covers every permission the system role holds:
+        // the system-role refusal must not depend on the ceiling subset check (D-071).
+        var systemRole = fixture.AddRoleWithPermissions("company-admin", "users.list", "trade.form.party.view");
+        systemRole.IsSystemRole = true;
+        var manager = fixture.AddCompanyManager(AssignPermission, "users.list", "trade.form.party.view");
+        var member = fixture.AddMember(fixture.AddRole("OLD"), "employee");
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await fixture.AssignMembership(manager.Id, systemRole.Id, member.Id);
+
+        Assert.Equal(StatusCodes.Status409Conflict, (result as IStatusCodeHttpResult)?.StatusCode);
+        await using var reader = fixture.NewContext();
+        Assert.Equal("OLD", (await reader.UserCompanyMemberships
+            .Include(membership => membership.Role)
+            .SingleAsync(membership => membership.UserId == member.Id)).Role.Code);
+        Assert.False(await reader.SecurityAuditEvents.AnyAsync());
+    }
+
+    [Fact]
     public async Task AssignMembership_CompanyManagerCannotChangeTheirOwnMembership()
     {
         await using var fixture = new Fixture();

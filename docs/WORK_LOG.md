@@ -2550,3 +2550,10 @@
 - **هاردنینگ تکمیلی:** resolve کردن `TimeProvider` به بعد از بررسی secret/ورودی منتقل شد تا مسیر رد زودهنگام به سرویس جدید وابسته نشود؛ تست واحد `MissingBootstrapSecretDoesNotRequireTimeProvider` این رفتار را پوشش می‌دهد.
 - **مرزبندی:** فقط Vendor bootstrap، تست Vendor و handoffها؛ بدون Migration، Customer `Server/**`، دیتابیس مشتری، signing provider یا secret.
 - **PR:** #548، شاخه `fix/vendor-bootstrap-time-provider`، SHA فعلی `merged main + vendor branch`.
+
+## 2026-11-05 — بستن مسیر fail-open تخصیص نقش سیستمی (ISSUE-444-system-role-assign-guard)
+- **مبنا:** `main@584f87da` (merge #548). ممیزی امنیتی Wave-1 نشان داد `AssignMembershipAsync` تنها مسیر باقی‌مانده بدون گارد نقش سیستمی بود؛ `UpdateRoleAsync`، `TransferMembersAsync` و تأیید عضویت قبلاً رد می‌کردند.
+- **اثر نقص:** مدیر نصب می‌توانست `company-admin` را مستقیماً تخصیص دهد و مدیر شرکتی با سقف کامل کاتالوگ می‌توانست مدیر دوم بسازد (عبور از بررسی زیرمجموعه سقف).
+- **اصلاح:** رد 409 پیش از بررسی سقف و پیش از هر نوشتن؛ بدون Migration، بدون تغییر DTO/Route.
+- **تست:** دو تست جدید قرمز→سبز (مدیر نصب + مدیر شرکتی با سقف کامل). مجموعه کامل: ۱۰۸۵ کل، ۱۰۲۱ موفق، ۶۲ Skip؛ فقط ۲ ناموفق محیطی پایه (نیازمند SQL Server؛ Docker محلی ناموجود). Build Release ۰ خطا.
+- **PR:** شاخه `fix/access-system-role-assign`؛ Merge فقط با اجازهٔ مالک.
