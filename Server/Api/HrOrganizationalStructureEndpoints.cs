@@ -75,6 +75,8 @@ public static class HrOrganizationalStructureEndpoints
             .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
         employees.MapPost("/{employeeId:guid}/assignment-change", ChangeAssignmentAsync)
             .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+        employees.MapGet("/{employeeId:guid}/history", GetEmployeeHistoryAsync)
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
 
         var units = api.MapGroup("/companies/{companyId:guid}/org/units")
             .RequireAuthorization(policy => policy.RequireClaim(
@@ -90,6 +92,10 @@ public static class HrOrganizationalStructureEndpoints
             .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
         units.MapPost("/{unitId:guid}/deactivate", DeactivateUnitAsync)
             .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+        units.MapGet("/{unitId:guid}/subtree", GetUnitSubtreeAsync)
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+        units.MapGet("/{unitId:guid}/employees", ListUnitEmployeesAsync)
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
 
         var positions = api.MapGroup("/companies/{companyId:guid}/org/positions")
             .RequireAuthorization(policy => policy.RequireClaim(
@@ -104,6 +110,8 @@ public static class HrOrganizationalStructureEndpoints
         positions.MapPut("/{positionId:guid}", UpdatePositionAsync)
             .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
         positions.MapPost("/{positionId:guid}/deactivate", DeactivatePositionAsync)
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+        positions.MapGet("/{positionId:guid}/employees", ListPositionEmployeesAsync)
             .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
 
         var assignments = api.MapGroup("/companies/{companyId:guid}/org/assignments")
@@ -1676,6 +1684,15 @@ public static class HrOrganizationalStructureEndpoints
         if (employee.EmploymentStatus == Domain.CompanyEmployeeEmploymentStatus.Terminated)
             return (null, TypedResults.Conflict(new { error = "کارمند خاتمه‌همکاری قابل انتساب نیست." }));
 
+        // Effective-dating controls (phase 4): the model stages at most one active
+        // assignment, so future-dated starts are refused and a start before the recorded
+        // hire date would contradict the employment history.
+        var startViolation = HrRules.ValidateAssignmentStart(request.StartOnUtc, nowUtc, employee.HiredOnUtc);
+        if (startViolation == HrRuleViolation.AssignmentStartInFuture)
+            return (null, BadRequest("انتساب آینده‌نگر پشتیبانی نمی‌شود؛ انتساب را در زمان اجرا ثبت کنید."));
+        if (startViolation == HrRuleViolation.AssignmentStartBeforeHire)
+            return (null, BadRequest("شروع انتساب نمی‌تواند قبل از تاریخ شروع همکاری باشد."));
+
         var violation = HrRules.ValidateAssignmentWindow(request.StartOnUtc, null);
         if (violation != HrRuleViolation.None)
             return (null, BadRequest("تاریخ شروع انتساب معتبر نیست."));
@@ -1788,6 +1805,277 @@ public static class HrOrganizationalStructureEndpoints
         });
 
         return (assignment, null);
+    }
+
+    // ------------------------------------------------- operational workflows (phase 4)
+
+    /// <summary>
+    /// The subtree of one unit (phase 4 workflow): every descendant of the routed unit with
+    /// its active assignment count. The walk is bounded and cycle-safe, so even a manually
+    /// corrupted parent chain can never hang or loop the response.
+    /// </summary>
+    public static async Task<IResult> GetUnitSubtreeAsync(
+        Guid companyId,
+        Guid unitId,
+        HttpContext httpContext,
+        ClaimsPrincipal principal,
+        Data.DatabaseContext database,
+        [FromServices] Infrastructure.Tenancy.CompanyAccessService companyAccess,
+        CancellationToken cancellationToken = default)
+    {
+        var (failure, _) = await AuthorizeHrScopeAsync(
+            database, companyAccess, principal, companyId, ListUnitsPermission, cancellationToken);
+        if (failure is not null) return failure;
+        if (!await IsActiveCompanyAsync(database, companyId, cancellationToken)) return NotFoundForCompany();
+
+        var units = await database.CompanyOrganizationalUnits.AsNoTracking()
+            .Where(current => current.TenantId == companyId)
+            .Select(current => new HrUnitItem(
+                current.Id, current.Code, current.Name, current.Description,
+                current.ParentUnitId, current.IsActive, current.ValidFromUtc, current.ValidToUtc))
+            .ToListAsync(cancellationToken);
+        if (units.All(current => current.Id != unitId)) return NotFoundForCompany();
+
+        var childrenByParent = units
+            .Where(current => current.ParentUnitId is not null)
+            .GroupBy(current => current.ParentUnitId!.Value)
+            .ToDictionary(group => group.Key, group => group.ToList());
+
+        var subtreeIds = new List<Guid>();
+        var queue = new System.Collections.Generic.Queue<(Guid Id, int Depth)>();
+        queue.Enqueue((unitId, 0));
+        var visited = new HashSet<Guid> { unitId };
+        while (queue.Count > 0)
+        {
+            var (currentId, depth) = queue.Dequeue();
+            subtreeIds.Add(currentId);
+            if (depth >= HrRules.MaxChainDepth)
+                continue;
+            if (!childrenByParent.TryGetValue(currentId, out var children))
+                continue;
+            foreach (var child in children)
+            {
+                if (visited.Add(child.Id))
+                    queue.Enqueue((child.Id, depth + 1));
+            }
+        }
+
+        var counts = await database.CompanyEmployeeAssignments.AsNoTracking()
+            .Where(assignment => assignment.TenantId == companyId &&
+                                 assignment.Status == Domain.CompanyEmployeeAssignmentStatus.Active &&
+                                 assignment.EndOnUtc == null &&
+                                 assignment.OrganizationalUnitId != null &&
+                                 subtreeIds.Contains(assignment.OrganizationalUnitId.Value))
+            .GroupBy(assignment => assignment.OrganizationalUnitId!.Value)
+            .Select(group => new { UnitId = group.Key, Count = group.Count() })
+            .ToListAsync(cancellationToken);
+        var countByUnit = counts.ToDictionary(row => row.UnitId, row => row.Count);
+
+        HrUnitSubtreeNode BuildNode(HrUnitItem unit, int depth) => new(
+            unit.Id,
+            unit.Code,
+            unit.Name,
+            unit.IsActive,
+            unit.ParentUnitId,
+            countByUnit.TryGetValue(unit.Id, out var count) ? count : 0,
+            depth >= HrRules.MaxChainDepth
+                ? []
+                : childrenByParent.TryGetValue(unit.Id, out var children)
+                    ? children.Select(child => BuildNode(child, depth + 1)).ToArray()
+                    : []);
+
+        var root = units.Single(current => current.Id == unitId);
+        SetNoStore(httpContext);
+        return TypedResults.Ok(BuildNode(root, 0) with
+        {
+            ValidFromUtc = ToUtc(root.ValidFromUtc),
+            ValidToUtc = ToUtc(root.ValidToUtc),
+        });
+    }
+
+    /// <summary>
+    /// The employees actively assigned to one unit (phase 4 workflow), with their position
+    /// and the effective start of the assignment.
+    /// </summary>
+    public static async Task<IResult> ListUnitEmployeesAsync(
+        Guid companyId,
+        Guid unitId,
+        HttpContext httpContext,
+        ClaimsPrincipal principal,
+        Data.DatabaseContext database,
+        [FromServices] Infrastructure.Tenancy.CompanyAccessService companyAccess,
+        int? page = null,
+        int? pageSize = null,
+        CancellationToken cancellationToken = default)
+    {
+        var (failure, _) = await AuthorizeHrScopeAsync(
+            database, companyAccess, principal, companyId, ListUnitsPermission, cancellationToken);
+        if (failure is not null) return failure;
+        if (!await IsActiveCompanyAsync(database, companyId, cancellationToken)) return NotFoundForCompany();
+        if (!await database.CompanyOrganizationalUnits.AsNoTracking()
+                .AnyAsync(current => current.Id == unitId && current.TenantId == companyId, cancellationToken))
+            return NotFoundForCompany();
+
+        var normalizedPage = Math.Clamp(page ?? 1, 1, MaxPage);
+        var normalizedPageSize = Math.Clamp(pageSize ?? 25, 1, MaxPageSize);
+
+        var query = database.CompanyEmployeeAssignments.AsNoTracking()
+            .Where(assignment => assignment.TenantId == companyId &&
+                                 assignment.OrganizationalUnitId == unitId &&
+                                 assignment.Status == Domain.CompanyEmployeeAssignmentStatus.Active &&
+                                 assignment.EndOnUtc == null);
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query
+            .OrderBy(assignment => assignment.Employee.LastName)
+            .ThenBy(assignment => assignment.Employee.FirstName)
+            .ThenBy(assignment => assignment.EmployeeId)
+            .Skip((normalizedPage - 1) * normalizedPageSize)
+            .Take(normalizedPageSize)
+            .Select(assignment => new HrUnitEmployeeItem(
+                assignment.EmployeeId,
+                assignment.Employee.EmployeeNumber,
+                assignment.Employee.FirstName,
+                assignment.Employee.LastName,
+                assignment.PositionId,
+                assignment.Position != null ? assignment.Position.Name : null,
+                assignment.StartOnUtc))
+            .ToListAsync(cancellationToken);
+
+        SetNoStore(httpContext);
+        var utcItems = items.Select(item => item with { StartOnUtc = ToUtc(item.StartOnUtc) }).ToArray();
+        return TypedResults.Ok(new HrUnitEmployeeListResponse(utcItems, totalCount, normalizedPage, normalizedPageSize));
+    }
+
+    /// <summary>
+    /// The employees actively holding one position across the company (phase 4 workflow);
+    /// a position can be reused by several units, so the unit comes with each row.
+    /// </summary>
+    public static async Task<IResult> ListPositionEmployeesAsync(
+        Guid companyId,
+        Guid positionId,
+        HttpContext httpContext,
+        ClaimsPrincipal principal,
+        Data.DatabaseContext database,
+        [FromServices] Infrastructure.Tenancy.CompanyAccessService companyAccess,
+        int? page = null,
+        int? pageSize = null,
+        CancellationToken cancellationToken = default)
+    {
+        var (failure, _) = await AuthorizeHrScopeAsync(
+            database, companyAccess, principal, companyId, ListPositionsPermission, cancellationToken);
+        if (failure is not null) return failure;
+        if (!await IsActiveCompanyAsync(database, companyId, cancellationToken)) return NotFoundForCompany();
+        if (!await database.CompanyPositions.AsNoTracking()
+                .AnyAsync(current => current.Id == positionId && current.TenantId == companyId, cancellationToken))
+            return NotFoundForCompany();
+
+        var normalizedPage = Math.Clamp(page ?? 1, 1, MaxPage);
+        var normalizedPageSize = Math.Clamp(pageSize ?? 25, 1, MaxPageSize);
+
+        var query = database.CompanyEmployeeAssignments.AsNoTracking()
+            .Where(assignment => assignment.TenantId == companyId &&
+                                 assignment.PositionId == positionId &&
+                                 assignment.Status == Domain.CompanyEmployeeAssignmentStatus.Active &&
+                                 assignment.EndOnUtc == null);
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query
+            .OrderBy(assignment => assignment.Employee.LastName)
+            .ThenBy(assignment => assignment.Employee.FirstName)
+            .ThenBy(assignment => assignment.EmployeeId)
+            .Skip((normalizedPage - 1) * normalizedPageSize)
+            .Take(normalizedPageSize)
+            .Select(assignment => new HrPositionEmployeeItem(
+                assignment.EmployeeId,
+                assignment.Employee.EmployeeNumber,
+                assignment.Employee.FirstName,
+                assignment.Employee.LastName,
+                assignment.OrganizationalUnitId,
+                assignment.OrganizationalUnit != null ? assignment.OrganizationalUnit.Name : null,
+                assignment.StartOnUtc))
+            .ToListAsync(cancellationToken);
+
+        SetNoStore(httpContext);
+        var utcItems = items.Select(item => item with { StartOnUtc = ToUtc(item.StartOnUtc) }).ToArray();
+        return TypedResults.Ok(new HrPositionEmployeeListResponse(utcItems, totalCount, normalizedPage, normalizedPageSize));
+    }
+
+    /// <summary>
+    /// The change history of one employee (phase 4 workflow): the allow-listed audit trail
+    /// of the employee rows and of every assignment row of that employee. Only employees of
+    /// the routed company are visible; a foreign id is the same 404 as an unknown one.
+    /// </summary>
+    public static async Task<IResult> GetEmployeeHistoryAsync(
+        Guid companyId,
+        Guid employeeId,
+        HttpContext httpContext,
+        ClaimsPrincipal principal,
+        Data.DatabaseContext database,
+        [FromServices] Infrastructure.Tenancy.CompanyAccessService companyAccess,
+        int? page = null,
+        int? pageSize = null,
+        CancellationToken cancellationToken = default)
+    {
+        var (failure, _) = await AuthorizeHrScopeAsync(
+            database, companyAccess, principal, companyId, ViewEmployeesPermission, cancellationToken);
+        if (failure is not null) return failure;
+        if (!await IsActiveCompanyAsync(database, companyId, cancellationToken)) return NotFoundForCompany();
+        if (!await database.CompanyEmployees.AsNoTracking()
+                .AnyAsync(current => current.Id == employeeId && current.TenantId == companyId, cancellationToken))
+            return NotFoundForCompany();
+
+        var normalizedPage = Math.Clamp(page ?? 1, 1, MaxPage);
+        var normalizedPageSize = Math.Clamp(pageSize ?? 25, 1, MaxPageSize);
+
+        var assignmentIdStrings = await database.CompanyEmployeeAssignments.AsNoTracking()
+            .Where(assignment => assignment.TenantId == companyId && assignment.EmployeeId == employeeId)
+            .Select(assignment => assignment.Id.ToString())
+            .ToListAsync(cancellationToken);
+
+        var employeeEvents = database.SecurityAuditEvents.AsNoTracking()
+            .Where(securityEvent => securityEvent.TenantId == companyId &&
+                                    securityEvent.EntityType == "CompanyEmployee" &&
+                                    securityEvent.EntityId == employeeId.ToString())
+            .Select(securityEvent => new
+            {
+                securityEvent.EventType,
+                securityEvent.EntityType,
+                securityEvent.EntityId,
+                securityEvent.OccurredAtUtc,
+                securityEvent.UserId,
+                securityEvent.CorrelationId,
+            });
+        var assignmentEvents = database.SecurityAuditEvents.AsNoTracking()
+            .Where(securityEvent => securityEvent.TenantId == companyId &&
+                                    securityEvent.EntityType == "CompanyEmployeeAssignment" &&
+                                    assignmentIdStrings.Contains(securityEvent.EntityId))
+            .Select(securityEvent => new
+            {
+                securityEvent.EventType,
+                securityEvent.EntityType,
+                securityEvent.EntityId,
+                securityEvent.OccurredAtUtc,
+                securityEvent.UserId,
+                securityEvent.CorrelationId,
+            });
+
+        var totalCount = await employeeEvents.CountAsync(cancellationToken)
+                         + await assignmentEvents.CountAsync(cancellationToken);
+        var merged = await employeeEvents
+            .Concat(assignmentEvents)
+            .OrderByDescending(securityEvent => securityEvent.OccurredAtUtc)
+            .Skip((normalizedPage - 1) * normalizedPageSize)
+            .Take(normalizedPageSize)
+            .ToListAsync(cancellationToken);
+
+        SetNoStore(httpContext);
+        var items = merged.Select(securityEvent => new HrEmployeeHistoryItem(
+            securityEvent.EventType,
+            securityEvent.EntityType,
+            securityEvent.EntityId,
+            ToUtc(securityEvent.OccurredAtUtc),
+            securityEvent.UserId,
+            securityEvent.CorrelationId)).ToArray();
+        return TypedResults.Ok(new HrEmployeeHistoryResponse(items, totalCount, normalizedPage, normalizedPageSize));
     }
 
     // ------------------------------------------------------------------ helpers
@@ -2021,3 +2309,23 @@ public sealed record HrAssignmentItem(
     Domain.CompanyEmployeeAssignmentStatus Status);
 public sealed record HrAssignmentListResponse(
     IReadOnlyList<HrAssignmentItem> Items, int TotalCount, int Page, int PageSize);
+
+public sealed record HrUnitSubtreeNode(
+    Guid Id, string Code, string Name, bool IsActive, Guid? ParentUnitId,
+    int ActiveAssignmentCount, IReadOnlyList<HrUnitSubtreeNode> Children,
+    DateTime? ValidFromUtc = null, DateTime? ValidToUtc = null);
+public sealed record HrUnitEmployeeItem(
+    Guid EmployeeId, string EmployeeNumber, string FirstName, string LastName,
+    Guid? PositionId, string? PositionName, DateTime StartOnUtc);
+public sealed record HrUnitEmployeeListResponse(
+    IReadOnlyList<HrUnitEmployeeItem> Items, int TotalCount, int Page, int PageSize);
+public sealed record HrPositionEmployeeItem(
+    Guid EmployeeId, string EmployeeNumber, string FirstName, string LastName,
+    Guid? OrganizationalUnitId, string? OrganizationalUnitName, DateTime StartOnUtc);
+public sealed record HrPositionEmployeeListResponse(
+    IReadOnlyList<HrPositionEmployeeItem> Items, int TotalCount, int Page, int PageSize);
+public sealed record HrEmployeeHistoryItem(
+    string EventType, string EntityType, string EntityId,
+    DateTime OccurredAtUtc, Guid? ActorUserId, string? CorrelationId);
+public sealed record HrEmployeeHistoryResponse(
+    IReadOnlyList<HrEmployeeHistoryItem> Items, int TotalCount, int Page, int PageSize);

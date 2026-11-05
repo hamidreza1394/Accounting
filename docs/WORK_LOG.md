@@ -2494,3 +2494,11 @@
 - **Blocked محلی:** تست‌های SQL Server و E2E روی Published Server بدون زیرساخت اجرا نشدند و به CI این PR موکول‌اند (جعل نتیجه ممنوع).
 - **ادامه در فاز ۴:** UI در ClientApp، گردش‌کارهای عملیاتی تکمیلی، شروع انتساب گذشته/آینده و مدیریت Unitهای غیرفعال.
 - **handoff:** `docs/handoffs/ISSUE-491-organizational-structure-implementation.md`.
+
+## 2026-11-05 — Issue #491: گردش‌کارهای عملیاتی ساختار سازمانی (فاز ۴، Stacked)
+- **مبنا:** شاخه `feature/hr-organizational-structure-workflows` از tip پیاده‌سازی فاز ۳ (`c4711d0b`)؛ PR جدید وابسته به PR فاز ۳ (Base = شاخه فاز ۳) و پس از Merge آن به main منتقل می‌شود.
+- **افزوده ۱ — Endpointهای عملیاتی:** `GET .../org/units/{id}/subtree` (زیردرخت با شمار انتساب فعال هر گره؛ BFS با عمق bounded و visited-set)، `GET .../org/units/{id}/employees` (اعضای فعال واحد)، `GET .../org/positions/{id}/employees` (دارندگان فعال سمت در همه واحدها)، `GET .../org/employees/{id}/history` (تاریخچه تغییرات کارمند از `SecurityAuditEvents` با خروجی Allowlist — بدون منبع حقیقت دوم).
+- **افزوده ۲ — کنترل Effective Dating:** `HrRules.ValidateAssignmentStart` — شروع آینده‌نگر 400 (مدل حداکثر یک انتساب فعال دارد) و شروع قبل از `HiredOnUtc` 400؛ اعمال در StartAssignmentCoreAsync.
+- **افزوده ۳ — تست‌ها:** `HrWorkflowsEndpointTests` (۷ تست) + سناریوی دوم E2E (درخت چندسطحی، اتصال به عضویت، رد شروع آینده، انتقال اتمی، تاریخچه، شمارنده‌های subtree). `dotnet test`: 943 کل — 879 موفق، 62 Skip، فقط 2 ناموفقِ محیطیِ از قبل موجود در main.
+- **مرزبندی:** بدون Migration و بدون تغییر Schema؛ بدون تغییر RBAC؛ UI در ClientApp کاری جداگانه است و نیازهای آن در `FRONTEND_API_CONTRACT_NEEDS.md` بند ۵ کامل شد.
+- **handoff:** `docs/handoffs/ISSUE-491-organizational-structure-workflows.md`.
