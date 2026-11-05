@@ -208,6 +208,26 @@ public sealed class HrOrganizationalStructureEndpointTests
     }
 
     [Fact]
+    public async Task Employee_Deactivate_BeforeTheFutureHireDate_IsRefused()
+    {
+        await using var fixture = new Fixture();
+        var manager = await fixture.AddMemberWithPermission(fixture.Company, HrOrganizationalStructureEndpoints.CreateEmployeesPermission, HrOrganizationalStructureEndpoints.UpdateEmployeesPermission);
+        var employeeId = await fixture.AddCreatedEmployee(manager.Id, "EMP-1", "علی", "محمدی", hiredOnUtc: DateTime.UtcNow.AddDays(30));
+        await fixture.Database.SaveChangesAsync();
+
+        // Terminating now would store a termination before the recorded hire date, which
+        // the employment period rule forbids; the request must fail closed.
+        var result = await fixture.DeactivateEmployee(manager.Id, employeeId);
+
+        Assert.Equal(StatusCodes.Status400BadRequest, (result as IStatusCodeHttpResult)?.StatusCode);
+        var stored = await fixture.Database.CompanyEmployees.SingleAsync(current => current.Id == employeeId);
+        Assert.Equal(Domain.CompanyEmployeeEmploymentStatus.Active, stored.EmploymentStatus);
+        Assert.Null(stored.TerminatedOnUtc);
+        Assert.False(await fixture.Database.SecurityAuditEvents
+            .AnyAsync(securityEvent => securityEvent.EventType == "HrEmployeeTerminated"));
+    }
+
+    [Fact]
     public async Task Unit_MoveUnderOwnDescendant_IsRefusedAndPersistsNothing()
     {
         await using var fixture = new Fixture();
@@ -254,6 +274,70 @@ public sealed class HrOrganizationalStructureEndpointTests
     }
 
     [Fact]
+    public async Task Unit_Update_CannotDeactivateWithAnActiveChild()
+    {
+        await using var fixture = new Fixture();
+        var manager = await fixture.AddMemberWithPermission(fixture.Company, HrOrganizationalStructureEndpoints.CreateUnitsPermission, HrOrganizationalStructureEndpoints.UpdateUnitsPermission);
+        var rootId = await fixture.AddCreatedUnit(manager.Id, "ROOT", "دفتر مرکزی");
+        await fixture.AddCreatedUnit(manager.Id, "SALES", "فروش", rootId);
+        await fixture.Database.SaveChangesAsync();
+
+        // The edit endpoint must enforce the same deactivation guard as the dedicated
+        // deactivate endpoint: an active child unit blocks the active -> inactive turn.
+        var blocked = await fixture.UpdateUnit(manager.Id, rootId, "دفتر مرکزی", parentId: null, isActive: false, rowVersion: string.Empty);
+
+        Assert.Equal(StatusCodes.Status409Conflict, (blocked as IStatusCodeHttpResult)?.StatusCode);
+        Assert.True((await fixture.Database.CompanyOrganizationalUnits.SingleAsync(current => current.Id == rootId)).IsActive);
+    }
+
+    [Fact]
+    public async Task Unit_Update_CannotDeactivateWithAnActiveAssignment()
+    {
+        await using var fixture = new Fixture();
+        var manager = await fixture.AddMemberWithPermission(fixture.Company, HrOrganizationalStructureEndpoints.CreateUnitsPermission, HrOrganizationalStructureEndpoints.UpdateUnitsPermission, HrOrganizationalStructureEndpoints.CreateEmployeesPermission, HrOrganizationalStructureEndpoints.ManageAssignmentsPermission);
+        var unitId = await fixture.AddCreatedUnit(manager.Id, "UNIT-1", "دفتر مرکزی");
+        var employeeId = await fixture.AddCreatedEmployee(manager.Id, "EMP-1", "علی", "محمدی");
+        await fixture.Database.SaveChangesAsync();
+        await fixture.StartAssignment(manager.Id, employeeId, unitId: unitId);
+
+        var blocked = await fixture.UpdateUnit(manager.Id, unitId, "دفتر مرکزی", parentId: null, isActive: false, rowVersion: string.Empty);
+
+        Assert.Equal(StatusCodes.Status409Conflict, (blocked as IStatusCodeHttpResult)?.StatusCode);
+        Assert.True((await fixture.Database.CompanyOrganizationalUnits.SingleAsync(current => current.Id == unitId)).IsActive);
+
+        // Ending the assignment unblocks the same edit path.
+        var assignmentId = await fixture.Database.CompanyEmployeeAssignments
+            .Where(current => current.EmployeeId == employeeId)
+            .Select(current => current.Id)
+            .SingleAsync();
+        await fixture.EndAssignment(manager.Id, assignmentId);
+        var unblocked = await fixture.UpdateUnit(manager.Id, unitId, "دفتر مرکزی", parentId: null, isActive: false, rowVersion: string.Empty);
+        Assert.Equal(StatusCodes.Status204NoContent, (unblocked as IStatusCodeHttpResult)?.StatusCode);
+    }
+
+    [Fact]
+    public async Task Unit_Update_RecordsTheParentChangeInTheAuditTrail()
+    {
+        await using var fixture = new Fixture();
+        var manager = await fixture.AddMemberWithPermission(fixture.Company, HrOrganizationalStructureEndpoints.CreateUnitsPermission, HrOrganizationalStructureEndpoints.UpdateUnitsPermission);
+        var rootId = await fixture.AddCreatedUnit(manager.Id, "ROOT", "دفتر مرکزی");
+        var siblingId = await fixture.AddCreatedUnit(manager.Id, "OPS", "عملیات");
+        await fixture.Database.SaveChangesAsync();
+
+        await fixture.UpdateUnit(manager.Id, rootId, "دفتر مرکزی", parentId: siblingId, isActive: true, rowVersion: string.Empty);
+        await fixture.UpdateUnit(manager.Id, siblingId, "عملیات", parentId: null, isActive: true, rowVersion: string.Empty);
+
+        var events = await fixture.Database.SecurityAuditEvents
+            .Where(securityEvent => securityEvent.EventType == "HrUnitUpdated")
+            .OrderBy(securityEvent => securityEvent.OccurredAtUtc)
+            .Select(securityEvent => securityEvent.DetailsJson)
+            .ToListAsync();
+        Assert.Equal(2, events.Count);
+        Assert.Contains("\"parentChanged\":true", events[0]);
+        Assert.Contains("\"parentChanged\":false", events[1]);
+    }
+
+    [Fact]
     public async Task Unit_TreeView_BuildsTheHierarchyOfActiveUnits()
     {
         await using var fixture = new Fixture();
@@ -270,6 +354,88 @@ public sealed class HrOrganizationalStructureEndpointTests
     }
 
     [Fact]
+    public async Task Unit_FlatList_PaginatesOnlyTheActiveUnits()
+    {
+        await using var fixture = new Fixture();
+        var manager = await fixture.AddMemberWithPermission(fixture.Company, HrOrganizationalStructureEndpoints.ListUnitsPermission, HrOrganizationalStructureEndpoints.CreateUnitsPermission, HrOrganizationalStructureEndpoints.UpdateUnitsPermission);
+        var rootId = await fixture.AddCreatedUnit(manager.Id, "ROOT", "دفتر مرکزی");
+        var childId = await fixture.AddCreatedUnit(manager.Id, "SALES", "فروش", rootId);
+        await fixture.Database.SaveChangesAsync();
+        Assert.Equal(StatusCodes.Status204NoContent, (await fixture.DeactivateUnit(manager.Id, childId) as IStatusCodeHttpResult)?.StatusCode);
+
+        var result = await fixture.ListUnits(manager.Id, view: "flat", page: 1, pageSize: 1);
+
+        var ok = Assert.IsType<Ok<HrUnitListResponse>>(result);
+        Assert.Equal(1, ok.Value!.TotalCount);
+        var item = Assert.Single(ok.Value.Items);
+        Assert.Equal(rootId, item.Id);
+        Assert.True(item.IsActive);
+    }
+
+    [Fact]
+    public async Task Unit_Detail_ServesTheCountsAndTheConcurrencyToken()
+    {
+        await using var fixture = new Fixture();
+        var manager = await fixture.AddMemberWithPermission(fixture.Company, HrOrganizationalStructureEndpoints.ListUnitsPermission, HrOrganizationalStructureEndpoints.CreateUnitsPermission, HrOrganizationalStructureEndpoints.CreateEmployeesPermission, HrOrganizationalStructureEndpoints.ManageAssignmentsPermission);
+        var rootId = await fixture.AddCreatedUnit(manager.Id, "ROOT", "دفتر مرکزی");
+        await fixture.AddCreatedUnit(manager.Id, "SALES", "فروش", rootId);
+        var employeeId = await fixture.AddCreatedEmployee(manager.Id, "EMP-1", "علی", "محمدی");
+        await fixture.Database.SaveChangesAsync();
+        await fixture.StartAssignment(manager.Id, employeeId, unitId: rootId);
+
+        var result = await fixture.GetUnit(manager.Id, rootId);
+
+        var ok = Assert.IsType<Ok<HrUnitDetail>>(result);
+        Assert.Equal(rootId, ok.Value!.Id);
+        Assert.Equal(1, ok.Value.ActiveChildCount);
+        Assert.Equal(1, ok.Value.ActiveAssignmentCount);
+        // The InMemory provider leaves the rowversion empty; the E2E run on SQL Server
+        // asserts a real token value (HrUnitDetail always carries the field).
+        Assert.NotNull(ok.Value.RowVersion);
+    }
+
+    [Fact]
+    public async Task Position_Detail_ServesTheActiveAssignmentCount()
+    {
+        await using var fixture = new Fixture();
+        var manager = await fixture.AddMemberWithPermission(fixture.Company, HrOrganizationalStructureEndpoints.ListPositionsPermission, HrOrganizationalStructureEndpoints.CreatePositionsPermission, HrOrganizationalStructureEndpoints.CreateEmployeesPermission, HrOrganizationalStructureEndpoints.ManageAssignmentsPermission);
+        var positionId = await fixture.AddCreatedPosition(manager.Id, "POS-1", "حسابدار");
+        var employeeId = await fixture.AddCreatedEmployee(manager.Id, "EMP-1", "علی", "محمدی");
+        await fixture.Database.SaveChangesAsync();
+        await fixture.StartAssignment(manager.Id, employeeId, positionId: positionId);
+
+        var result = await fixture.GetPosition(manager.Id, positionId);
+
+        var ok = Assert.IsType<Ok<HrPositionDetail>>(result);
+        Assert.Equal(positionId, ok.Value!.Id);
+        Assert.Equal(1, ok.Value.ActiveAssignmentCount);
+        // The InMemory provider leaves the rowversion empty; the E2E run on SQL Server
+        // asserts a real token value.
+        Assert.NotNull(ok.Value.RowVersion);
+    }
+
+    [Fact]
+    public async Task Employee_Unlink_RemovesTheLinkAndRefusesTheSecondTime()
+    {
+        await using var fixture = new Fixture();
+        var manager = await fixture.AddMemberWithPermission(fixture.Company, HrOrganizationalStructureEndpoints.CreateEmployeesPermission, HrOrganizationalStructureEndpoints.ViewEmployeesPermission, HrOrganizationalStructureEndpoints.ManageEmployeeUserLinkPermission);
+        var employeeId = await fixture.AddCreatedEmployee(manager.Id, "EMP-1", "علی", "محمدی");
+        var memberUser = await fixture.AddMember(fixture.AddRole("CLERK"), "member-user");
+        await fixture.Database.SaveChangesAsync();
+
+        Assert.Equal(StatusCodes.Status204NoContent, (await fixture.LinkEmployeeUser(manager.Id, employeeId, memberUser.Id) as IStatusCodeHttpResult)?.StatusCode);
+        Assert.Equal(StatusCodes.Status204NoContent, (await fixture.UnlinkEmployeeUser(manager.Id, employeeId) as IStatusCodeHttpResult)?.StatusCode);
+
+        // The second unlink has nothing left to remove and the detail shows no link.
+        Assert.Equal(StatusCodes.Status409Conflict, (await fixture.UnlinkEmployeeUser(manager.Id, employeeId) as IStatusCodeHttpResult)?.StatusCode);
+        var detail = Assert.IsType<Ok<HrEmployeeDetail>>(await HrOrganizationalStructureEndpoints.GetEmployeeAsync(
+            fixture.Company.Id, employeeId, new DefaultHttpContext(), fixture.Principal(manager.Id),
+            fixture.Database, fixture.CompanyAccess, default));
+        Assert.Null(detail.Value!.UserCompanyMembershipId);
+        Assert.Null(detail.Value.LinkedUserId);
+    }
+
+    [Fact]
     public async Task Position_Deactivate_IsBlockedByAnActiveAssignment()
     {
         await using var fixture = new Fixture();
@@ -281,6 +447,33 @@ public sealed class HrOrganizationalStructureEndpointTests
         await fixture.StartAssignment(assignmentManager.Id, employeeId, positionId: positionId);
 
         Assert.Equal(StatusCodes.Status409Conflict, (await fixture.DeactivatePosition(manager.Id, positionId) as IStatusCodeHttpResult)?.StatusCode);
+    }
+
+    [Fact]
+    public async Task Position_Update_CannotDeactivateWithAnActiveAssignment()
+    {
+        await using var fixture = new Fixture();
+        var manager = await fixture.AddMemberWithPermission(fixture.Company, HrOrganizationalStructureEndpoints.CreatePositionsPermission, HrOrganizationalStructureEndpoints.UpdatePositionsPermission, HrOrganizationalStructureEndpoints.CreateEmployeesPermission, HrOrganizationalStructureEndpoints.ManageAssignmentsPermission);
+        var positionId = await fixture.AddCreatedPosition(manager.Id, "POS-1", "حسابدار");
+        var employeeId = await fixture.AddCreatedEmployee(manager.Id, "EMP-1", "علی", "محمدی");
+        await fixture.Database.SaveChangesAsync();
+        await fixture.StartAssignment(manager.Id, employeeId, positionId: positionId);
+
+        // The edit endpoint must enforce the same deactivation guard as the dedicated
+        // deactivate endpoint: an active assignment blocks the active -> inactive turn.
+        var blocked = await fixture.UpdatePosition(manager.Id, positionId, "حسابدار", isActive: false, rowVersion: string.Empty);
+
+        Assert.Equal(StatusCodes.Status409Conflict, (blocked as IStatusCodeHttpResult)?.StatusCode);
+        Assert.True((await fixture.Database.CompanyPositions.SingleAsync(current => current.Id == positionId)).IsActive);
+
+        // Ending the assignment unblocks the same edit path.
+        var assignmentId = await fixture.Database.CompanyEmployeeAssignments
+            .Where(current => current.EmployeeId == employeeId)
+            .Select(current => current.Id)
+            .SingleAsync();
+        await fixture.EndAssignment(manager.Id, assignmentId);
+        var unblocked = await fixture.UpdatePosition(manager.Id, positionId, "حسابدار", isActive: false, rowVersion: string.Empty);
+        Assert.Equal(StatusCodes.Status204NoContent, (unblocked as IStatusCodeHttpResult)?.StatusCode);
     }
 
     [Fact]
@@ -511,17 +704,17 @@ public sealed class HrOrganizationalStructureEndpointTests
             return user;
         }
 
-        public async Task<IResult> CreateEmployee(Guid actorId, string number, string firstName, string lastName, Guid? companyId = null)
+        public async Task<IResult> CreateEmployee(Guid actorId, string number, string firstName, string lastName, Guid? companyId = null, DateTime? hiredOnUtc = null)
         {
             return await HrOrganizationalStructureEndpoints.CreateEmployeeAsync(
                 companyId ?? Company.Id, new DefaultHttpContext(), Principal(actorId),
-                new HrCreateEmployeeRequest(number, firstName, lastName, null),
+                new HrCreateEmployeeRequest(number, firstName, lastName, hiredOnUtc),
                 new AllowAntiforgery(), Database, CompanyAccess, TimeProvider.System, default);
         }
 
-        public async Task<Guid> AddCreatedEmployee(Guid actorId, string number, string firstName, string lastName)
+        public async Task<Guid> AddCreatedEmployee(Guid actorId, string number, string firstName, string lastName, DateTime? hiredOnUtc = null)
         {
-            var result = await CreateEmployee(actorId, number, firstName, lastName);
+            var result = await CreateEmployee(actorId, number, firstName, lastName, hiredOnUtc: hiredOnUtc);
             if (result is not Created<HrEmployeeCreatedResponse> created)
                 throw new Xunit.Sdk.XunitException($"employee create failed: {Describe(result)}");
             return created.Value!.Id;
@@ -594,10 +787,23 @@ public sealed class HrOrganizationalStructureEndpointTests
                 new HrLinkEmployeeUserRequest(userId),
                 new AllowAntiforgery(), Database, CompanyAccess, TimeProvider.System, default);
 
-        public Task<IResult> ListUnits(Guid actorId, string? view = null) =>
+        public Task<IResult> ListUnits(Guid actorId, string? view = null, int? page = null, int? pageSize = null) =>
             HrOrganizationalStructureEndpoints.ListUnitsAsync(
                 Company.Id, new DefaultHttpContext(), Principal(actorId), Database, CompanyAccess,
-                view, null, null, null, default);
+                view, null, page, pageSize, default);
+
+        public Task<IResult> GetUnit(Guid actorId, Guid unitId) =>
+            HrOrganizationalStructureEndpoints.GetUnitAsync(
+                Company.Id, unitId, new DefaultHttpContext(), Principal(actorId), Database, CompanyAccess, default);
+
+        public Task<IResult> GetPosition(Guid actorId, Guid positionId) =>
+            HrOrganizationalStructureEndpoints.GetPositionAsync(
+                Company.Id, positionId, new DefaultHttpContext(), Principal(actorId), Database, CompanyAccess, default);
+
+        public Task<IResult> UnlinkEmployeeUser(Guid actorId, Guid employeeId) =>
+            HrOrganizationalStructureEndpoints.UnlinkEmployeeUserAsync(
+                Company.Id, employeeId, new DefaultHttpContext(), Principal(actorId),
+                new AllowAntiforgery(), Database, CompanyAccess, TimeProvider.System, default);
 
         public Task<IResult> UpdateUnit(Guid actorId, Guid unitId, string name, Guid? parentId, bool isActive, string? rowVersion) =>
             HrOrganizationalStructureEndpoints.UpdateUnitAsync(
@@ -613,6 +819,12 @@ public sealed class HrOrganizationalStructureEndpointTests
         public Task<IResult> DeactivatePosition(Guid actorId, Guid positionId) =>
             HrOrganizationalStructureEndpoints.DeactivatePositionAsync(
                 Company.Id, positionId, new DefaultHttpContext(), Principal(actorId),
+                new AllowAntiforgery(), Database, CompanyAccess, TimeProvider.System, default);
+
+        public Task<IResult> UpdatePosition(Guid actorId, Guid positionId, string name, bool isActive, string? rowVersion) =>
+            HrOrganizationalStructureEndpoints.UpdatePositionAsync(
+                Company.Id, positionId, new DefaultHttpContext(), Principal(actorId),
+                new HrUpdatePositionRequest(name, null, null, isActive, rowVersion),
                 new AllowAntiforgery(), Database, CompanyAccess, TimeProvider.System, default);
 
         public Task<IResult> StartAssignment(

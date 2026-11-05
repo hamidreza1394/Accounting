@@ -2527,3 +2527,16 @@
 - گردش‌کار Licensing با تفکیک دقیق LicensePayload v1/v2 و provisioning schema v4/v5 هم‌تراز شد؛ پشتیبانی Customer از schema v1-v4 و وضعیت واقعی builder محدود #393 نیز اصلاح شد.
 - handoff تاریخی #228 تصحیح شد: مسیر پایه consumer/ACK در PRهای #302/#305–#308/#329 و #293/#294 در main وجود دارد؛ #235 برای hardening و تأیید عملیاتی باقی می‌ماند، نه بازنویسی مجدد مسیر پایه.
 - این مستندات روی شاخه fix/228-company-scoped-license-provisioning-guard هستند؛ تا Merge، PROJECT_STATUS.md و SHA مبنای main تغییر داده نمی‌شوند.
+
+## 2026-11-05 — ممیزی و تثبیت Backend HR و قرارداد API (ISSUE-491-hr-api-contract-hardening)
+- **مبنا:** آخرین `main` (`5715df82` = merge #545). ممیزی کامل مدل چهارگانه HR، `HrRules`، ۲۵ Endpoint، کاتالوگ ۱۲ کد `hr.*`، Tenant Isolation، Anti-forgery/Rate Limit/no-store و رفتار صفحات.
+- **نقص‌های واقعی اصلاح‌شده (با TDD قرمز→سبز):**
+  1. `PUT /org/units/{id}` گارد غیرفعال‌سازی (فرزند/انتساب فعال → ۴۰۹) را دور می‌زد؛ قاعدهٔ خالص `HrRules.ValidateUnitDeactivation` (enum موجود `CompanyUnitDeactivationBlock`) روی هر دو مسیر اعمال شد.
+  2. `PUT /org/positions/{id}` گارد انتساب فعال را دور می‌زد؛ قاعدهٔ خالص `HrRules.ValidatePositionDeactivation` (`HrRuleViolation.PositionDeactivationBlocked`) اضافه شد.
+  3. خاتمه‌همکاری کارمند با `HiredOnUtc` آینده‌نگر ناوردای `InvalidPeriod` را ذخیره می‌کرد؛ اکنون `HrRules.ValidateEmployment` پیش از خاتمه فراخوانی و نقض با ۴۰۰ رد می‌شود.
+  4. Audit `HrUnitUpdated` همیشه `parentChanged: false` ثبت می‌کرد؛ مقدار قبلی والد پیش از mutation ثبت و گزارش صحیح شد.
+- **تست‌ها:** ۱۵ تست جدید (۳۳ قواعد + ۳۱ Endpoint + ۷ Workflow = ۷۱ تست HR، همه سبز)؛ پوشش مستقیم قبلیِ کم‌تست `GetUnit`، `GetPosition`، `Unlink` و فهرست تخت واحدها تکمیل شد؛ هیچ تستی حذف/Skip/تضعیف نشد.
+- **راستی‌آزمایی محلی (SDK 10.0.403):** Build Release بدون خطا؛ مجموعه کامل پس از تغییر ۱۰۷۹ کل — ۱۰۱۵ موفق، ۶۲ Skip (SQL-gated محلی)، فقط همان ۲ ناموفق محیطیِ از قبل موجود (`SafeExceptionRealApplicationTests`). Baseline پیش از تغییر: ۱۰۶۸ کل — ۱۰۰۴ موفق. `generate_migrations.py --check` و `verify_migration_model.py` سبز (۱۵ Migration)؛ `has-pending-model-changes` خالی؛ Migration جدید لازم نبود.
+- **CI آخرین main (شواهد واقعی):** run 41979174876 — ۱۰۶۸ کل، ۰ ناموفق، ۸ Skip با `FARANOU_REQUIRE_SQLSERVER=1` (SQL Server 2022 سرویس Container) + E2E ۴۶ passed + Semgrep/secret-scan سبز.
+- **قرارداد Frontend:** سند مستقل `docs/HR_FRONTEND_API_CONTRACT.md` (ماتریس ۲۵ Endpoint با وضعیت `Verified`، DTOهای واقعی، نمونه‌های JSON منطبق با کد، خطاها، صفحه‌بندی، RowVersion، UTC، Tenant Scope، Audit، قواعد Assignment و محدودیت‌های شناخته‌شده)؛ بند ۵ `FRONTEND_API_CONTRACT_NEEDS.md` به آن ارجاع شد.
+- **نتیجه:** Backend HR برای شروع فاز ۳ (UI) بدون حدس DTO آماده است؛ PR مستقل به `main` ایجاد شد و Merge فقط با اجازهٔ مالک.

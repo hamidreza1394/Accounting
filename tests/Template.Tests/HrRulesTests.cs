@@ -292,4 +292,48 @@ public sealed class HrRulesTests
 
         Assert.False(HrRules.HasActiveAssignmentOverlap(facts));
     }
+
+    // ------------------------------------------------- deactivation guards (D-072)
+
+    [Fact]
+    public void UnitDeactivation_ActiveChildBlocksTheTransition()
+    {
+        Assert.Equal(CompanyUnitDeactivationBlock.HasActiveChildUnit,
+            HrRules.ValidateUnitDeactivation(hasActiveChildUnit: true, hasActiveAssignment: false));
+    }
+
+    [Fact]
+    public void UnitDeactivation_ActiveAssignmentBlocksTheTransition()
+    {
+        Assert.Equal(CompanyUnitDeactivationBlock.HasActiveAssignment,
+            HrRules.ValidateUnitDeactivation(hasActiveChildUnit: false, hasActiveAssignment: true));
+    }
+
+    [Fact]
+    public void UnitDeactivation_ClearUnit_IsNotBlocked()
+    {
+        Assert.Equal(CompanyUnitDeactivationBlock.None,
+            HrRules.ValidateUnitDeactivation(hasActiveChildUnit: false, hasActiveAssignment: false));
+    }
+
+    [Fact]
+    public void UnitDeactivation_ActiveChildTakesPrecedenceOverTheAssignment()
+    {
+        Assert.Equal(CompanyUnitDeactivationBlock.HasActiveChildUnit,
+            HrRules.ValidateUnitDeactivation(hasActiveChildUnit: true, hasActiveAssignment: true));
+    }
+
+    [Fact]
+    public void PositionDeactivation_ActiveAssignmentBlocksTheTransition()
+    {
+        Assert.Equal(HrRuleViolation.PositionDeactivationBlocked,
+            HrRules.ValidatePositionDeactivation(hasActiveAssignment: true));
+    }
+
+    [Fact]
+    public void PositionDeactivation_WithoutActiveAssignment_IsValid()
+    {
+        Assert.Equal(HrRuleViolation.None,
+            HrRules.ValidatePositionDeactivation(hasActiveAssignment: false));
+    }
 }
