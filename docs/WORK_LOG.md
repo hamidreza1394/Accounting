@@ -2494,3 +2494,19 @@
 - **Blocked محلی:** تست‌های SQL Server و E2E روی Published Server بدون زیرساخت اجرا نشدند و به CI این PR موکول‌اند (جعل نتیجه ممنوع).
 - **ادامه در فاز ۴:** UI در ClientApp، گردش‌کارهای عملیاتی تکمیلی، شروع انتساب گذشته/آینده و مدیریت Unitهای غیرفعال.
 - **handoff:** `docs/handoffs/ISSUE-491-organizational-structure-implementation.md`.
+
+## 2026-11-05 — Issue #491: گردش‌کارهای عملیاتی ساختار سازمانی (فاز ۴، Stacked)
+- **مبنا:** شاخه `feature/hr-organizational-structure-workflows` از tip پیاده‌سازی فاز ۳ (`c4711d0b`)؛ PR جدید وابسته به PR فاز ۳ (Base = شاخه فاز ۳) و پس از Merge آن به main منتقل می‌شود.
+- **افزوده ۱ — Endpointهای عملیاتی:** `GET .../org/units/{id}/subtree` (زیردرخت با شمار انتساب فعال هر گره؛ BFS با عمق bounded و visited-set)، `GET .../org/units/{id}/employees` (اعضای فعال واحد)، `GET .../org/positions/{id}/employees` (دارندگان فعال سمت در همه واحدها)، `GET .../org/employees/{id}/history` (تاریخچه تغییرات کارمند از `SecurityAuditEvents` با خروجی Allowlist — بدون منبع حقیقت دوم).
+- **افزوده ۲ — کنترل Effective Dating:** `HrRules.ValidateAssignmentStart` — شروع آینده‌نگر 400 (مدل حداکثر یک انتساب فعال دارد) و شروع قبل از `HiredOnUtc` 400؛ اعمال در StartAssignmentCoreAsync.
+- **افزوده ۳ — تست‌ها:** `HrWorkflowsEndpointTests` (۷ تست) + سناریوی دوم E2E (درخت چندسطحی، اتصال به عضویت، رد شروع آینده، انتقال اتمی، تاریخچه، شمارنده‌های subtree). `dotnet test`: 943 کل — 879 موفق، 62 Skip، فقط 2 ناموفقِ محیطیِ از قبل موجود در main.
+- **مرزبندی:** بدون Migration و بدون تغییر Schema؛ بدون تغییر RBAC؛ UI در ClientApp کاری جداگانه است و نیازهای آن در `FRONTEND_API_CONTRACT_NEEDS.md` بند ۵ کامل شد.
+- **handoff:** `docs/handoffs/ISSUE-491-organizational-structure-workflows.md`.
+
+## 2026-11-05 — Issue #491: انتقال مستقل فاز ۴ به main و تکمیل آن (PR #545)
+- **پس‌زمینه:** PR #544 (فاز ۴) به‌جای main در شاخه پیاده‌سازی فاز ۳ ادغام شده بود؛ بنابراین گردش‌کارهای عملیاتی هرگز به main نرسیده بودند. وضعیت زنده GitHub راستی‌آزمایی شد (merged=true روی `feature/hr-organizational-structure-implementation@d457cdf4`) و چهار commit واقعی فاز ۴ (`f22b7c76`، `3cbd98d0`، `3473fbde`، `fe5aa831`) به‌صورت cherry-pick انتخابی — نه merge کل شاخه — روی `main@fb26e7e5` منتقل شد. شاخه جدید: `feat/hr-organizational-structure-workflows-main`؛ درخت پس از انتقال با شاخه مبدأ یکسان و بدون هیچ Conflict بود.
+- **تکمیل ۱ — ترتیب قطعی پاسخ‌های خواندنی:** subtree واحدها با همان ترتیب پایدار `Code`/`Id` فهرست واحدها (هم‌تراز ListUnitsAsync) و تاریخچه کارمند با تساوی‌شکن `EntityId` پس از `OccurredAtUtc` برای پایداری مرز صفحات در timestamps مساوی تراکنش‌ها.
+- **تکمیل ۲ — تست Unit مستقیم قواعد:** ۷ تست مرزهای `HrRules.ValidateAssignmentStart` در `HrRulesTests` (یک تیک آینده، لحظه اکنون، یک تیک قبل از استخدام، لحظه استخدام، بدون تاریخ استخدام، مرز نیمه‌شب UTC).
+- **راستی‌آزمایی Baseline:** اجرای کامل تست‌ها روی `main` خالص (`fb26e7e5`) پیش از انتقال: ۱۰۵۵ کل — ۹۹۱ موفق، ۶۲ Skip، ۲ ناموفقِ محیطی (`SafeExceptionRealApplicationTests`؛ بدون SQL Server، فکتوری به InMemory سوییچ می‌شود و `GetPendingMigrationsAsync` روی Provider غیررابطه‌ای شکست می‌خورد؛ روی CI با `FARANOU_TEST_SQLSERVER` سبز — check-runs ادغام #543 همه ۱۲ سبز). پس از انتقال: ۱۰۶۲ کل — ۹۹۸ موفق (تغییر فقط +۷ تست سبز فاز ۴)؛ هیچ تستی حذف یا تضعیف نشد.
+- **Migration:** هیچ Schema Change جدیدی در فاز ۴ لازم نبود و Migration جدید ساخته نشد؛ فقط endpoint خواندنی + قاعده اعتبارسنجی نوشتن.
+- **PR:** #545 (`feat/hr-organizational-structure-workflows-main` → `main`)؛ merge نهایی منوط به اجازه مالک.

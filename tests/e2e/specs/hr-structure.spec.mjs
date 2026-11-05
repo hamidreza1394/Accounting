@@ -219,3 +219,170 @@ test('the organizational structure works end to end on SQL Server and fails clos
     await pool.close();
   }
 });
+
+test('the phase-4 operational workflows work end to end and control effective dating', async ({ page }) => {
+  test.setTimeout(90_000);
+  const hrManager = {
+    id: randomUUID(),
+    username: `hrw${randomBytes(5).toString('hex')}`,
+    password: `Hr-${randomBytes(9).toString('base64url')}`,
+    roleId: randomUUID(),
+    membershipId: randomUUID(),
+  };
+  const linkedUser = {
+    id: randomUUID(),
+    username: `hrl${randomBytes(5).toString('hex')}`,
+    password: `Hr-${randomBytes(9).toString('base64url')}`,
+    roleId: randomUUID(),
+    membershipId: randomUUID(),
+  };
+  const hrRoleCode = `HR-${randomBytes(6).toString('hex').toUpperCase()}`;
+
+  const connectionString = process.env.FARANOU_E2E_SQL;
+  if (!connectionString || !/Database=FaranouE2E/i.test(connectionString)) throw new Error('Disposable E2E database required');
+  const pool = await new sql.ConnectionPool(connectionString).connect();
+  try {
+    const insertUser = async (account) => {
+      const salt = randomBytes(16);
+      const header = Buffer.alloc(13);
+      header.writeUInt8(1, 0);
+      header.writeUInt32BE(2, 1);
+      header.writeUInt32BE(100_000, 5);
+      header.writeUInt32BE(salt.length, 9);
+      const hash = Buffer.concat([header, salt, pbkdf2Sync(account.password, salt, 100_000, 32, 'sha512')]).toString('base64');
+      await pool.request().input('id', sql.UniqueIdentifier, account.id)
+        .input('username', sql.VarChar(20), account.username)
+        .input('password', sql.VarChar(255), hash)
+        .input('email', sql.VarChar(254), `${account.username}@e2e.test`)
+        .input('key', sql.UniqueIdentifier, randomUUID())
+        .query(`INSERT INTO Users (Id, RoleId, Ordering, InsertDateTime, UpdateDateTime, IsActive, IsSystemic, IsProgrammer, IsUndeletable,
+          IsProfilePublic, IsVisibleInContactUsPage, IsEmailAddressVerified, IsCellPhoneNumberVerified,
+          Username, Password, FirstName, LastName, EmailAddress, EmailAddressVerificationKey)
+          VALUES (@id, NULL, 10000, SYSDATETIME(), SYSDATETIME(), 1, 0, 0, 0, 0, 0, 1, 0,
+          @username, @password, N'E2E', N'HRW', @email, @key)`);
+    };
+    await insertUser(hrManager);
+    await insertUser(linkedUser);
+
+    await pool.request().input('id', sql.UniqueIdentifier, hrManager.roleId)
+      .input('tenant', sql.UniqueIdentifier, a.id)
+      .input('code', sql.VarChar(50), hrRoleCode)
+      .query(`INSERT INTO CompanyRoles (Id, TenantId, Ordering, InsertDateTime, Code, Name, IsSystemRole, IsActive)
+        VALUES (@id, @tenant, 10000, SYSDATETIME(), @code, N'گردش‌کار E2E', 0, 1)`);
+    // The user anchor of the employee needs its own membership, and every membership
+    // references a (RoleId, TenantId) pair of CompanyRoles.
+    await pool.request().input('id', sql.UniqueIdentifier, linkedUser.roleId)
+      .input('tenant', sql.UniqueIdentifier, a.id)
+      .input('code', sql.VarChar(50), `PL-${randomBytes(6).toString('hex').toUpperCase()}`)
+      .query(`INSERT INTO CompanyRoles (Id, TenantId, Ordering, InsertDateTime, Code, Name, IsSystemRole, IsActive)
+        VALUES (@id, @tenant, 10000, SYSDATETIME(), @code, N'کارمند ساده گردش‌کار', 0, 1)`);
+    for (const code of HrPermissionCodes) {
+      await pool.request().input('role', sql.UniqueIdentifier, hrManager.roleId)
+        .input('code', sql.VarChar(50), code)
+        .query(`INSERT INTO CompanyRolePermissions (RoleId, PermissionId)
+          SELECT @role, Id FROM PermissionDefinitions WHERE Code = @code`);
+    }
+    for (const account of [hrManager, linkedUser]) {
+      await pool.request().input('id', sql.UniqueIdentifier, account.membershipId)
+        .input('user', sql.UniqueIdentifier, account.id)
+        .input('tenant', sql.UniqueIdentifier, a.id)
+        .input('role', sql.UniqueIdentifier, account.roleId)
+        .query(`INSERT INTO UserCompanyMemberships (Id, Ordering, InsertDateTime, UserId, TenantId, RoleId, IsActive, CreatedAtUtc)
+          VALUES (@id, 10000, SYSDATETIME(), @user, @tenant, @role, 1, SYSDATETIME())`);
+    }
+
+    await signIn(page, hrManager);
+    await page.goto('/app/');
+    const antiforgery = await callApi(page, 'GET', '/api/v1/antiforgery/token');
+    expect(antiforgery.status).toBe(200);
+
+    const employeesPath = `/api/v1/companies/${a.id}/org/employees`;
+    const unitsPath = `/api/v1/companies/${a.id}/org/units`;
+    const positionsPath = `/api/v1/companies/${a.id}/org/positions`;
+    const assignmentsPath = `/api/v1/companies/${a.id}/org/assignments`;
+    const suffix = randomBytes(4).toString('hex').toUpperCase();
+
+    // A multi-level tree: root -> sales -> overseas.
+    const root = await callApi(page, 'POST', unitsPath, {
+      code: `R-${suffix}`, name: 'دفتر مرکزی گردش‌کار', description: null, parentUnitId: null, validFromUtc: null, validToUtc: null,
+    }, antiforgery.body);
+    expect(root.status).toBe(201);
+    const sales = await callApi(page, 'POST', unitsPath, {
+      code: `S-${suffix}`, name: 'فروش گردش‌کار', description: null, parentUnitId: root.body.id, validFromUtc: null, validToUtc: null,
+    }, antiforgery.body);
+    expect(sales.status).toBe(201);
+    const overseas = await callApi(page, 'POST', unitsPath, {
+      code: `O-${suffix}`, name: 'بازرگانی گردش‌کار', description: null, parentUnitId: sales.body.id, validFromUtc: null, validToUtc: null,
+    }, antiforgery.body);
+    expect(overseas.status).toBe(201);
+
+    // The subtree endpoint reports the whole branch with per-node assignment counts.
+    const tree = await callApi(page, 'GET', `${unitsPath}/${root.body.id}/subtree`);
+    expect(tree.status).toBe(200);
+    expect(tree.body.id).toBe(root.body.id);
+    const salesNode = tree.body.children.find((node) => node.id === sales.body.id);
+    expect(salesNode).toBeTruthy();
+
+    const position = await callApi(page, 'POST', positionsPath, {
+      code: `P-${suffix}`, name: 'کارشناس فروش گردش‌کار', description: null, rank: null,
+    }, antiforgery.body);
+    expect(position.status).toBe(201);
+
+    // An employee without any login account, then anchored to an approved membership.
+    const employee = await callApi(page, 'POST', employeesPath, {
+      employeeNumber: `W-${suffix}`, firstName: 'مریم', lastName: 'احمدی', hiredOnUtc: new Date(Date.now() - 30 * 86_400_000).toISOString(),
+    }, antiforgery.body);
+    expect(employee.status).toBe(201);
+    const linked = await callApi(page, 'PUT', `${employeesPath}/${employee.body.id}/user`, {
+      userId: linkedUser.id,
+    }, antiforgery.body);
+    expect(linked.status).toBe(204);
+    const detail = await callApi(page, 'GET', `${employeesPath}/${employee.body.id}`);
+    expect(detail.body.linkedUserId).toBe(linkedUser.id);
+
+    // A future-dated start is refused; starting after the hire date works.
+    const future = await callApi(page, 'POST', assignmentsPath, {
+      employeeId: employee.body.id, organizationalUnitId: sales.body.id, positionId: position.body.id,
+      managerEmployeeId: null, startOnUtc: new Date(Date.now() + 14 * 86_400_000).toISOString(), endActive: false,
+    }, antiforgery.body);
+    expect(future.status).toBe(400);
+    const started = await callApi(page, 'POST', assignmentsPath, {
+      employeeId: employee.body.id, organizationalUnitId: sales.body.id, positionId: position.body.id,
+      managerEmployeeId: null, startOnUtc: new Date(Date.now() - 5 * 86_400_000).toISOString(), endActive: false,
+    }, antiforgery.body);
+    expect(started.status).toBe(201);
+
+    // The live unit members and the position holders see the same assignment.
+    const unitMembers = await callApi(page, 'GET', `${unitsPath}/${sales.body.id}/employees`);
+    expect(unitMembers.status).toBe(200);
+    expect(unitMembers.body.items.some((item) => item.employeeId === employee.body.id)).toBe(true);
+    const holders = await callApi(page, 'GET', `${positionsPath}/${position.body.id}/employees`);
+    expect(holders.status).toBe(200);
+    expect(holders.body.totalCount).toBe(1);
+
+    // The transfer ends the current assignment and starts the new one atomically.
+    const transferred = await callApi(page, 'POST', `${employeesPath}/${employee.body.id}/assignment-change`, {
+      organizationalUnitId: overseas.body.id, positionId: null, managerEmployeeId: null,
+    }, antiforgery.body);
+    expect(transferred.status).toBe(200);
+    const history = await callApi(page, 'GET', `${assignmentsPath}?employeeId=${employee.body.id}`);
+    expect(history.status).toBe(200);
+    expect(history.body.totalCount).toBe(2);
+    const subtreeAfter = await callApi(page, 'GET', `${unitsPath}/${root.body.id}/subtree`);
+    const overseasNode = subtreeAfter.body.children
+      .find((node) => node.id === sales.body.id).children
+      .find((node) => node.id === overseas.body.id);
+    expect(overseasNode.activeAssignmentCount).toBe(1);
+
+    // The change history of the employee is served from the audit trail.
+    const employeeHistory = await callApi(page, 'GET', `${employeesPath}/${employee.body.id}/history`);
+    expect(employeeHistory.status).toBe(200);
+    const historyTypes = employeeHistory.body.items.map((item) => item.eventType);
+    expect(historyTypes).toContain('HrEmployeeCreated');
+    expect(historyTypes).toContain('HrEmployeeUserLinked');
+    expect(historyTypes).toContain('HrAssignmentStarted');
+    expect(employeeHistory.body.totalCount).toBeGreaterThanOrEqual(4);
+  } finally {
+    await pool.close();
+  }
+});
