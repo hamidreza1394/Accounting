@@ -19,6 +19,7 @@ public enum HrRuleViolation
     SelfManagement = 13,
     AssignmentStartInFuture = 14,
     AssignmentStartBeforeHire = 15,
+    PositionDeactivationBlocked = 16,
 }
 
 /// <summary>A unit, as the pure rules see it: either a stored one or a candidate.</summary>
@@ -101,6 +102,38 @@ public static class HrRules
     public static bool HasActiveAssignmentOverlap(
         IEnumerable<HrAssignmentFact> otherAssignments) =>
         otherAssignments.Any(assignment => assignment.IsActive);
+
+    /// <summary>
+    /// The deactivation guard of a unit (D-072): a unit with an active child unit or an
+    /// active employee assignment stays active until those are resolved. The rule is the
+    /// pure form of the check, so the dedicated deactivate endpoint and the edit endpoint
+    /// enforce exactly the same transition control and cannot drift apart.
+    /// </summary>
+    public static CompanyUnitDeactivationBlock ValidateUnitDeactivation(
+        bool hasActiveChildUnit, bool hasActiveAssignment)
+    {
+        if (hasActiveChildUnit)
+        {
+            return CompanyUnitDeactivationBlock.HasActiveChildUnit;
+        }
+
+        if (hasActiveAssignment)
+        {
+            return CompanyUnitDeactivationBlock.HasActiveAssignment;
+        }
+
+        return CompanyUnitDeactivationBlock.None;
+    }
+
+    /// <summary>
+    /// The deactivation guard of a position (D-072): a position with an active employee
+    /// assignment stays active until that assignment ends; ended assignments keep
+    /// referencing the position as history, which never blocks the deactivation.
+    /// </summary>
+    public static HrRuleViolation ValidatePositionDeactivation(bool hasActiveAssignment) =>
+        hasActiveAssignment
+            ? HrRuleViolation.PositionDeactivationBlocked
+            : HrRuleViolation.None;
 
     /// <summary>
     /// Validates the parent chain of a unit candidate. The facts are the units of the

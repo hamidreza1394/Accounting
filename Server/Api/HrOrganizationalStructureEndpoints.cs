@@ -511,6 +511,14 @@ public static class HrOrganizationalStructureEndpoints
             return TypedResults.Conflict(new { error = "همکاری این کارمند قبلاً خاتمه یافته است." });
 
         var nowUtc = timeProvider.GetUtcNow().UtcDateTime;
+        // The termination instant is the stored hire date's counterpart, so the pure
+        // employment rule must pass before the state turn: a termination before the
+        // recorded (possibly future-dated) hire date would corrupt the employment period.
+        var employmentViolation = HrRules.ValidateEmployment(
+            Domain.CompanyEmployeeEmploymentStatus.Terminated, employee.HiredOnUtc, nowUtc);
+        if (employmentViolation != HrRuleViolation.None)
+            return BadRequest("دوره همکاری معتبر نیست؛ تاریخ خاتمه نمی‌تواند قبل از تاریخ شروع همکاری باشد.");
+
         employee.EmploymentStatus = Domain.CompanyEmployeeEmploymentStatus.Terminated;
         employee.TerminatedOnUtc = nowUtc;
 
@@ -970,6 +978,28 @@ public static class HrOrganizationalStructureEndpoints
                 return TypedResults.Conflict(new { error = "انتقال واحد باعث چرخه در ساختار سازمانی می‌شود." });
         }
 
+        var previousParentUnitId = unit.ParentUnitId;
+
+        if (unit.IsActive && !request.IsActive)
+        {
+            // The edit endpoint turns the unit inactive with the same deactivation guard
+            // as the dedicated deactivate endpoint (D-072): an active child unit or an
+            // active employee assignment blocks the transition with 409.
+            var updateHasActiveChild = await database.CompanyOrganizationalUnits.AsNoTracking()
+                .AnyAsync(current => current.TenantId == companyId && current.ParentUnitId == unitId && current.IsActive,
+                    cancellationToken);
+            var updateHasActiveAssignment = await database.CompanyEmployeeAssignments.AsNoTracking()
+                .AnyAsync(assignment => assignment.TenantId == companyId &&
+                                        assignment.OrganizationalUnitId == unitId &&
+                                        assignment.Status == Domain.CompanyEmployeeAssignmentStatus.Active &&
+                                        assignment.EndOnUtc == null, cancellationToken);
+            var block = HrRules.ValidateUnitDeactivation(updateHasActiveChild, updateHasActiveAssignment);
+            if (block == CompanyUnitDeactivationBlock.HasActiveChildUnit)
+                return TypedResults.Conflict(new { error = "ابتدا واحدهای زیرمجموعه فعال را منتقل یا غیرفعال کنید." });
+            if (block == CompanyUnitDeactivationBlock.HasActiveAssignment)
+                return TypedResults.Conflict(new { error = "ابتدا انتساب‌های فعال این واحد را پایان دهید." });
+        }
+
         unit.Name = name;
         unit.Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
         unit.ParentUnitId = request.ParentUnitId;
@@ -992,7 +1022,7 @@ public static class HrOrganizationalStructureEndpoints
                 unit.Name,
                 unit.ParentUnitId,
                 unit.IsActive,
-                parentChanged = unit.ParentUnitId != request.ParentUnitId,
+                parentChanged = previousParentUnitId != request.ParentUnitId,
             }),
         });
 
@@ -1045,15 +1075,15 @@ public static class HrOrganizationalStructureEndpoints
         var hasActiveChild = await database.CompanyOrganizationalUnits.AsNoTracking()
             .AnyAsync(current => current.TenantId == companyId && current.ParentUnitId == unitId && current.IsActive,
                 cancellationToken);
-        if (hasActiveChild)
-            return TypedResults.Conflict(new { error = "ابتدا واحدهای زیرمجموعه فعال را منتقل یا غیرفعال کنید." });
-
         var hasActiveAssignment = await database.CompanyEmployeeAssignments.AsNoTracking()
             .AnyAsync(assignment => assignment.TenantId == companyId &&
                                     assignment.OrganizationalUnitId == unitId &&
                                     assignment.Status == Domain.CompanyEmployeeAssignmentStatus.Active &&
                                     assignment.EndOnUtc == null, cancellationToken);
-        if (hasActiveAssignment)
+        var deactivationBlock = HrRules.ValidateUnitDeactivation(hasActiveChild, hasActiveAssignment);
+        if (deactivationBlock == CompanyUnitDeactivationBlock.HasActiveChildUnit)
+            return TypedResults.Conflict(new { error = "ابتدا واحدهای زیرمجموعه فعال را منتقل یا غیرفعال کنید." });
+        if (deactivationBlock == CompanyUnitDeactivationBlock.HasActiveAssignment)
             return TypedResults.Conflict(new { error = "ابتدا انتساب‌های فعال این واحد را پایان دهید." });
 
         unit.IsActive = false;
@@ -1289,6 +1319,22 @@ public static class HrOrganizationalStructureEndpoints
         position.Name = name;
         position.Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
         position.Rank = request.Rank;
+
+        if (position.IsActive && !request.IsActive)
+        {
+            // The edit endpoint turns the position inactive with the same deactivation
+            // guard as the dedicated deactivate endpoint (D-072): an active assignment
+            // blocks the transition with 409.
+            var updateHasActiveAssignment = await database.CompanyEmployeeAssignments.AsNoTracking()
+                .AnyAsync(assignment => assignment.TenantId == companyId &&
+                                        assignment.PositionId == positionId &&
+                                        assignment.Status == Domain.CompanyEmployeeAssignmentStatus.Active &&
+                                        assignment.EndOnUtc == null, cancellationToken);
+            var updateViolation = HrRules.ValidatePositionDeactivation(updateHasActiveAssignment);
+            if (updateViolation != HrRuleViolation.None)
+                return TypedResults.Conflict(new { error = "ابتدا انتساب‌های فعال این سمت را پایان دهید." });
+        }
+
         position.IsActive = request.IsActive;
 
         database.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
@@ -1353,7 +1399,8 @@ public static class HrOrganizationalStructureEndpoints
                                     assignment.PositionId == positionId &&
                                     assignment.Status == Domain.CompanyEmployeeAssignmentStatus.Active &&
                                     assignment.EndOnUtc == null, cancellationToken);
-        if (hasActiveAssignment)
+        var deactivationViolation = HrRules.ValidatePositionDeactivation(hasActiveAssignment);
+        if (deactivationViolation != HrRuleViolation.None)
             return TypedResults.Conflict(new { error = "ابتدا انتساب‌های فعال این سمت را پایان دهید." });
 
         position.IsActive = false;
