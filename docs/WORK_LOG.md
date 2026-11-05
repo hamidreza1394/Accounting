@@ -2483,3 +2483,14 @@
 - **مسدود/منتظر مالک:** چهار پرسش بند ۱۱ سند طراحی (گزینه A/B، کارمند بدون حساب، کاردینالیتی لینک، Position مستقل از Unit). پس از تأیید: کاتالوگ `hr.*` → Migration ساختاری → سرویس/API → تست‌ها → UI.
 - **مرزبندی:** بدون تغییر کد اجرایی، Migration، داده یا ClientApp؛ موارد خارج از محدوده (#488، #504 و غیره) دست‌نخورده.
 - **handoff:** `docs/handoffs/ISSUE-491-organizational-structure-model.md` (بخش به‌روزرسانی 2026-11-05).
+
+## 2026-11-05 — Issue #491: پیاده‌سازی کامل ساختار سازمانی و پرسنل (گزینه B — D-072 Accepted)
+- **مبنا و گیت:** main@fc8ee881 (ادغام PR #542). مالک در مأموریت 2026-11-05 اجرای «طراحی تأییدشده» را صریحاً دستور داد؛ D-072 به `Accepted` ارتقا یافت و پیاده‌سازی Backend آغاز شد. شاخه `feature/hr-organizational-structure-implementation`.
+- **افزوده ۱ — مدل داده:** چهار Entity شرکت‌محور (`CompanyOrganizationalUnit`، `CompanyPosition`، `CompanyEmployee`، `CompanyEmployeeAssignment`) با FKهای ترکیبی tenant-safe، unique `(TenantId, Code)` / `(TenantId, EmployeeNumber)`، دو Unique فیلترشده (یک انتساب فعال، یک Employee به‌ازای هر عضویت) و RowVersion؛ قواعد خالص fail-closed در `Domain/Hr/HrRules.cs` (چرخه والد/مدیر با پیمایش bounded، ماشین وضعیت اشتغال، هم‌پوشانی انتساب).
+- **افزوده ۲ — Migration زنجیره‌ای:** `20261104200301_AddHrOrganizationalStructure` با dotnet-ef واقعی (EF Core 10.0.14) + ۶ CHECK constraint بازبینی‌شده + seed idempotent ۱۲ کد `hr.*` (Ordering 22001..22012)؛ ثبت در `HAND_WRITTEN_SQL`؛ `generate_migrations.py --check` و `verify_migration_model.py` (۱۵ migration، Up/Down) سبز.
+- **افزوده ۳ — API:** `HrOrganizationalStructureEndpoints` روی `/api/v1/companies/{companyId}/org/*` — Employee (شامل خاتمه هم‌راستا با پایان انتساب، لینک/جداسازی اختیاری عضویت هم‌شرکت، انتقال اتمی)، Units (flat/tree، گارد فرزند/انتساب فعال)، Positions (گارد انتساب فعال)، Assignments (تاریخچه با فیلتر اجباری، Start/endActive، End)؛ مجوزدهی دوحالته D-071، Anti-forgery، تراکنش ReadCommitted، گارد RowVersion، Audit با ۱۳ رویداد، خروجی Allowlist.
+- **افزوده ۴ — تست‌ها:** ۱۷ تست قواعد خالص + ۲۵ تست endpoint + ۵ تست SQL Server-gated + spec جدید E2E (`hr-structure.spec.mjs`). `dotnet test`: 937 کل — 873 موفق، 62 Skip، فقط 2 ناموفقِ محیطیِ از قبل موجود در main (`SafeExceptionRealApplicationTests`).
+- **مرزبندی امنیتی:** Employee/Unit/Position/Assignment و ManagerEmployeeId هیچ مجوزی نمی‌سازند؛ مدیر شرکت خودکار هیچ کد `hr.*` نمی‌گیرد؛ تخصیص فقط از CompanyRolePermissions تحت سقف تفویض؛ RBAC همچنان CompanyRole/CompanyRolePermissions/PermissionDefinitions.
+- **Blocked محلی:** تست‌های SQL Server و E2E روی Published Server بدون زیرساخت اجرا نشدند و به CI این PR موکول‌اند (جعل نتیجه ممنوع).
+- **ادامه در فاز ۴:** UI در ClientApp، گردش‌کارهای عملیاتی تکمیلی، شروع انتساب گذشته/آینده و مدیریت Unitهای غیرفعال.
+- **handoff:** `docs/handoffs/ISSUE-491-organizational-structure-implementation.md`.

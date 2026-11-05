@@ -23,4 +23,11 @@ public sealed class Company : Seedwork.Entity,
     public ICollection<OwnershipRelationship> OwnedCompanies { get; set; } = new List<OwnershipRelationship>();
     public ICollection<OwnershipRelationship> Owners { get; set; } = new List<OwnershipRelationship>();
     public ICollection<ConsolidationRunCompany> ConsolidationRuns { get; set; } = new List<ConsolidationRunCompany>();
+
+    // Navigations of the company-scoped organizational structure (S2, D-072). They add no
+    // column to Companies; HR data never grants a permission or an access (D-064).
+    public ICollection<CompanyOrganizationalUnit> OrganizationalUnits { get; set; } = new List<CompanyOrganizationalUnit>();
+    public ICollection<CompanyPosition> Positions { get; set; } = new List<CompanyPosition>();
+    public ICollection<CompanyEmployee> Employees { get; set; } = new List<CompanyEmployee>();
+    public ICollection<CompanyEmployeeAssignment> EmployeeAssignments { get; set; } = new List<CompanyEmployeeAssignment>();
 }

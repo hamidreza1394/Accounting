@@ -45,8 +45,8 @@
 - User هویت نصب است و می‌تواند در چند Company عضویت مستقل داشته باشد. UserCompanyMembership دسترسی عملیاتی و CompanyRole را نگه می‌دارد؛ employment/HR record نیست.
 - D-064 می‌گوید سمت و واحد داده منابع انسانی‌اند و به‌خودی‌خود مجوز نمی‌دهند. بنابراین افزودن مستقیم Position/Unit به User سراسری اشتباه است و اتصال آن‌ها به CompanyRole نیز ممنوع است.
 - طرح پیشنهادی در docs/ORGANIZATIONAL_STRUCTURE_DATA_MODEL.md دو گزینه دارد: فیلدهای ساده روی membership (فقط کاربران دارای login) یا CompanyEmployee مستقل با لینک اختیاری به membership (پشتیبانی از کارکنان بدون حساب). گزینه دوم برای ERP/Payroll آینده مناسب‌تر است، اما نیازمند تأیید مالک محصول است.
-- به‌روزرسانی 2026-11-05: طراحی سطح پیاده‌سازی گزینه B (Entityها، Constraintها، کاتالوگ مجوز `hr.*` و قرارداد کامل API) در همان سند نهایی شد و پیشنهاد به‌صورت ADR `D-072 (Proposed)` در DECISIONS.md ثبت شد. مرجع تصمیم Issue #491 است و تا تأیید صریح مالک هیچ Migration/Entity/API ساخته نمی‌شود.
-- هیچ Employee، OrganizationalUnit، Position، API یا Migration در این مرحله ساخته نشده است.
+- به‌روزرسانی 2026-11-05 (پیاده‌سازی): مالک اجرای طراحی را صریحاً دستور داد؛ D-072 به `Accepted` ارتقا یافت و گزینه B به‌صورت کامل در Backend پیاده شد — چهار Entity شرکتمحور، Migration زنجیره‌ای `20261104200301_AddHrOrganizationalStructure` (ساختار + CHECK + seed ۱۲ کد `hr.*`)، Endpointهای `/org/*` با مجوزدهی دوحالته D-071، Audit، تست‌های Unit/Endpoint/SQL-gated/E2E. UI در ClientApp در فاز ۴ ادامه می‌یابد.
+- مرز امنیتی پابرجاست: Employee/Unit/Position/Assignment و ManagerEmployeeId هیچ مجوزی ایجاد نمی‌کنند؛ RBAC همچنان CompanyRole/CompanyRolePermissions/PermissionDefinitions و CompanyAccessService است.
 
 ## 5. تخصیص سال و دوره مالی
 

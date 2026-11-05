@@ -50,16 +50,16 @@ MIGRATIONS_DIRECTORY = os.path.join("Infrastructure", "Persistence", "Migrations
 # 'InitialCreate'. Its designer file is the starting point of the difference that the
 # current migration has to apply. ('AlignSchemaWithModel' and 'WidenUserPasswordHash'
 # are published history as well.)
-DELTA_MIGRATION_ID = "20261103141500"
-DELTA_MIGRATION_NAME = "SeedCompanyUserListPermission"
+DELTA_MIGRATION_ID = "20261104174711"
+DELTA_MIGRATION_NAME = "SeedCompanyRoleAdministrationPermissions"
 
 # The most recent migration. Its operations are computed from the difference between
 # the model of the migration before it (DELTA_MIGRATION_*) and the model of the code
 # base, so the files can not drift apart from the snapshot. DELTA_MIGRATION_* is
 # published history and is never rewritten, exactly like 'InitialCreate'.
-CURRENT_MIGRATION_ID = "20261104174711"
-CURRENT_MIGRATION_NAME = "SeedCompanyRoleAdministrationPermissions"
-CURRENT_MIGRATION_CLASS = "SeedCompanyRoleAdministrationPermissions"
+CURRENT_MIGRATION_ID = "20261104200301"
+CURRENT_MIGRATION_NAME = "AddHrOrganizationalStructure"
+CURRENT_MIGRATION_CLASS = "AddHrOrganizationalStructure"
 
 # The target model artifacts use EF Core's generated snapshot format because SQL Server
 # rowversion metadata is provider-specific. Keep them stable; verify_migration_model.py
@@ -162,6 +162,75 @@ def _unseed_permission_statements() -> list[str]:
     ]
 
 
+# The company-scoped HR permission catalog rows (S2, D-072): fixed identifiers, inserted
+# only when the code does not exist yet, so the statement is idempotent and never
+# overwrites a row that an administrator already has. No role receives these codes
+# automatically; granting runs through CompanyRolePermissions and the delegation ceiling.
+HR_ORGANIZATIONAL_STRUCTURE_PERMISSIONS: list[tuple[str, str, str]] = [
+    ("f47a2026-1105-4d00-8000-000000000001", "hr.employees.list", "فهرست کارکنان شرکت"),
+    ("f47a2026-1105-4d00-8000-000000000002", "hr.employees.view", "مشاهده جزئیات کارمند"),
+    ("f47a2026-1105-4d00-8000-000000000003", "hr.employees.create", "ثبت کارمند جدید"),
+    ("f47a2026-1105-4d00-8000-000000000004", "hr.employees.update", "ویرایش و خاتمه همکاری کارمند"),
+    ("f47a2026-1105-4d00-8000-000000000005", "hr.employees.user-link.manage", "اتصال کارمند به حساب کاربری"),
+    ("f47a2026-1105-4d00-8000-000000000006", "hr.organizational-units.list", "مشاهده واحدهای سازمانی"),
+    ("f47a2026-1105-4d00-8000-000000000007", "hr.organizational-units.create", "ایجاد واحد سازمانی"),
+    ("f47a2026-1105-4d00-8000-000000000008", "hr.organizational-units.update", "ویرایش و غیرفعال‌سازی واحد سازمانی"),
+    ("f47a2026-1105-4d00-8000-000000000009", "hr.positions.list", "مشاهده سمت‌های سازمانی"),
+    ("f47a2026-1105-4d00-8000-000000000010", "hr.positions.create", "ایجاد سمت سازمانی"),
+    ("f47a2026-1105-4d00-8000-000000000011", "hr.positions.update", "ویرایش و غیرفعال‌سازی سمت سازمانی"),
+    ("f47a2026-1105-4d00-8000-000000000012", "hr.assignments.manage", "مدیریت انتساب سازمانی"),
+]
+
+HR_ORGANIZATIONAL_STRUCTURE_DESCRIPTIONS: dict[str, str] = {
+    "hr.employees.list": "اجازه مشاهده فهرست کارکنان همان شرکت؛ بدون داده تماس، نقش، مجوز یا داده امنیتی کاربران.",
+    "hr.employees.view": "اجازه مشاهده جزئیات یک کارمند و انتساب سازمانی او در همان شرکت.",
+    "hr.employees.create": "اجازه ثبت رکورد پرسنلی جدید در همان شرکت؛ کارمند می‌تواند بدون حساب ورود ثبت شود و هیچ مجوزی ایجاد نمی‌کند.",
+    "hr.employees.update": "اجازه ویرایش اطلاعات پایه و وضعیت اشتغال کارمندان همان شرکت؛ خاتمه همکاری عضویت یا نشست کاربر را ابطال نمی‌کند.",
+    "hr.employees.user-link.manage": "اجازه اتصال یا جداسازی کارمند به عضویت فعال همان شرکت؛ این اتصال هیچ مجوز یا عضویت جدیدی ایجاد نمی‌کند.",
+    "hr.organizational-units.list": "اجازه مشاهده فهرست و درخت واحدهای سازمانی همان شرکت.",
+    "hr.organizational-units.create": "اجازه ایجاد واحد سازمانی در همان شرکت؛ واحد والد باید متعلق به همان شرکت باشد.",
+    "hr.organizational-units.update": "اجازه ویرایش یا غیرفعال‌سازی واحدهای همان شرکت؛ واحد دارای فرزند یا انتساب فعال غیرفعال نمی‌شود.",
+    "hr.positions.list": "اجازه مشاهده فهرست سمت‌های سازمانی همان شرکت.",
+    "hr.positions.create": "اجازه ایجاد سمت سازمانی در همان شرکت؛ سمت هیچ مجوزی ایجاد نمی‌کند.",
+    "hr.positions.update": "اجازه ویرایش یا غیرفعال‌سازی سمت‌های همان شرکت؛ سمت دارای انتساب فعال غیرفعال نمی‌شود.",
+    "hr.assignments.manage": "اجازه شروع، پایان و تغییر انتساب کارمندان به واحد، سمت و مدیر در همان شرکت؛ انتساب هیچ مجوز عملیاتی ایجاد نمی‌کند.",
+}
+
+
+def _seed_hr_permission_statements() -> list[str]:
+    return [
+        (
+            f"IF NOT EXISTS (SELECT 1 FROM [PermissionDefinitions] WHERE [Code] = '{code}') "
+            f"INSERT INTO [PermissionDefinitions] ([Id], [Code], [Name], [Description], [Ordering], [InsertDateTime]) "
+            f"VALUES ('{identifier}', '{code}', N'{name}', N'{HR_ORGANIZATIONAL_STRUCTURE_DESCRIPTIONS[code]}', {22001 + index}, SYSDATETIME());"
+        )
+        for index, (identifier, code, name) in enumerate(HR_ORGANIZATIONAL_STRUCTURE_PERMISSIONS, start=0)
+    ]
+
+
+def _unseed_hr_permission_statements() -> list[str]:
+    identifiers = ", ".join(f"'{identifier}'" for identifier, _, _ in HR_ORGANIZATIONAL_STRUCTURE_PERMISSIONS)
+    return [
+        (
+            f"DELETE FROM [PermissionDefinitions] WHERE [Id] IN ({identifiers}) "
+            f"AND NOT EXISTS (SELECT 1 FROM [CompanyRolePermissions] WHERE [CompanyRolePermissions].[PermissionId] = [PermissionDefinitions].[Id]);"
+        )
+    ]
+
+
+# The reviewed CHECK constraints of the HR tables (D-072): the employment/assignment state
+# machines and the effective windows that the model guards know only at the application
+# layer. A human decision, therefore written down instead of computed.
+HR_ORGANIZATIONAL_STRUCTURE_CONSTRAINTS: list[str] = [
+    "ALTER TABLE [CompanyOrganizationalUnits] ADD CONSTRAINT [CK_CompanyOrganizationalUnits_Period] CHECK ([ValidToUtc] IS NULL OR [ValidFromUtc] IS NULL OR [ValidToUtc] >= [ValidFromUtc]);",
+    "ALTER TABLE [CompanyEmployees] ADD CONSTRAINT [CK_CompanyEmployees_EmploymentStatus] CHECK ([EmploymentStatus] BETWEEN 1 AND 3);",
+    "ALTER TABLE [CompanyEmployees] ADD CONSTRAINT [CK_CompanyEmployees_Termination] CHECK (([EmploymentStatus] = 3 AND [TerminatedOnUtc] IS NOT NULL) OR ([EmploymentStatus] <> 3 AND [TerminatedOnUtc] IS NULL));",
+    "ALTER TABLE [CompanyEmployeeAssignments] ADD CONSTRAINT [CK_CompanyEmployeeAssignments_Status] CHECK ([Status] BETWEEN 1 AND 2);",
+    "ALTER TABLE [CompanyEmployeeAssignments] ADD CONSTRAINT [CK_CompanyEmployeeAssignments_Period] CHECK ([EndOnUtc] IS NULL OR [EndOnUtc] >= [StartOnUtc]);",
+    "ALTER TABLE [CompanyEmployeeAssignments] ADD CONSTRAINT [CK_CompanyEmployeeAssignments_SelfManager] CHECK ([ManagerEmployeeId] IS NULL OR [ManagerEmployeeId] <> [EmployeeId]);",
+]
+
+
 # The hand-written SQL belongs to one migration. It is keyed by the migration id, so it can
 # never be emitted into the next migration when the CURRENT_MIGRATION_* constants move on.
 #
@@ -257,6 +326,10 @@ HAND_WRITTEN_SQL: dict[str, tuple[list[str], list[str]]] = {
         ],
     ),
     "20261104174711": (_seed_permission_statements(), _unseed_permission_statements()),
+    "20261104200301": (
+        HR_ORGANIZATIONAL_STRUCTURE_CONSTRAINTS + _seed_hr_permission_statements(),
+        _unseed_hr_permission_statements(),
+    ),
 }
 CURRENT_MIGRATION_EPILOGUE, CURRENT_MIGRATION_DOWN_PRELUDE = HAND_WRITTEN_SQL.get(
     CURRENT_MIGRATION_ID, ([], [])

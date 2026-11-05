@@ -10,6 +10,9 @@ internal sealed class UserCompanyMembershipConfiguration : Microsoft.EntityFrame
         builder.HasKey(x => x.Id);
         builder.Property(x => x.CreatedAtUtc).IsRequired();
         builder.Property(x => x.RowVersion).IsRowVersion();
+        // Tenant-safe alternate key so other company-scoped tables (e.g. CompanyEmployees,
+        // D-072) can reference one membership with a composite (Id, TenantId) foreign key.
+        builder.HasAlternateKey(x => new { x.Id, x.TenantId });
         builder.HasIndex(x => new { x.UserId, x.TenantId }).IsUnique();
         builder.HasIndex(x => new { x.TenantId, x.IsActive });
         builder.HasOne(x => x.Company).WithMany(x => x.Memberships)
