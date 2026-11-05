@@ -35,7 +35,7 @@
 
 ## شناسه‌ها
 - Branch: `feat/issue-113-vendor-bootstrap`
-- PR: پس از بررسی Build و CI ایجاد/به‌روزرسانی می‌شود.
+- PR: #548 — `fix/vendor-bootstrap-time-provider`؛ SHA فعلی `46d4f3fafcf605ef94d8f91a7421379ef5e6c157`؛ CI نهایی در انتظار.
 
 ## تکمیل کنترل زمان — 2026-11-05 (PR #548)
 

@@ -2537,4 +2537,4 @@
 - **اعتبارسنجی:** هیچ اجرای محلی در این نشست انجام نشد. Build، Vendor CI، SQL Server integration و .NET CI روی SHA نهایی PR #548 در انتظارند؛ تا تکمیل آن‌ها هیچ تستی موفق اعلام نمی‌شود.
 - **هاردنینگ تکمیلی:** resolve کردن `TimeProvider` به بعد از بررسی secret/ورودی منتقل شد تا مسیر رد زودهنگام به سرویس جدید وابسته نشود؛ تست واحد `MissingBootstrapSecretDoesNotRequireTimeProvider` این رفتار را پوشش می‌دهد.
 - **مرزبندی:** فقط Vendor bootstrap، تست Vendor و handoffها؛ بدون Migration، Customer `Server/**`، دیتابیس مشتری، signing provider یا secret.
-- **PR:** #548، شاخه `fix/vendor-bootstrap-time-provider`.
+- **PR:** #548، شاخه `fix/vendor-bootstrap-time-provider`، SHA فعلی `46d4f3fafcf605ef94d8f91a7421379ef5e6c157`.
