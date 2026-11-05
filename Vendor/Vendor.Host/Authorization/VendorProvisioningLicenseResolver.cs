@@ -147,9 +147,18 @@ public sealed class VendorProvisioningLicenseResolver(
             payload.Limits.MaxCompanies != license.MaxCompanies)
             return VendorProvisioningLicenseBindingResult.Conflict("provisioning_license_binding_mismatch");
 
+        // Payload v2 stores modules per opaque CompanyReference and intentionally has no
+        // installation-wide subsystem list. Provisioning schema v4 has no trusted company-reference
+        // binding, so never flatten company entitlements or persist an empty v4 request.
+        if (payload.FormatVersion == LicensePayload.CurrentFormatVersion)
+            return VendorProvisioningLicenseBindingResult.Conflict(
+                "provisioning_company_reference_mapping_required");
+
         var entitlements = payload.Limits.Subsystems
             .OrderBy(code => code, StringComparer.Ordinal)
             .ToArray();
+        if (entitlements.Length == 0)
+            return VendorProvisioningLicenseBindingResult.Conflict("provisioning_license_has_no_subsystems");
         string[] selected;
         if (requestedSubsystems is null)
         {

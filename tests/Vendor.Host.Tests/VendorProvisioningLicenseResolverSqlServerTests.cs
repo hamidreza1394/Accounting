@@ -51,6 +51,61 @@ public sealed class VendorProvisioningLicenseResolverSqlServerTests
     }
 
     [Fact]
+    public async Task CompanyScopedLicenseFailsClosedUntilProvisioningCompanyReferenceIsBound()
+    {
+        var fixture = await OpenAsync();
+        if (fixture is null) return;
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        try
+        {
+            var seed = await SeedAsync(fixture.Db, key, 1, ["finance"]);
+            await AddCompanyScopedEnvelopeAsync(
+                fixture.Db, seed.License, seed.Installation, key, 2, "company-ref-0001", ["finance"]);
+            seed.License.LastIssuedSequence = 2;
+            seed.License.SubsystemsJson = "[]";
+            await fixture.Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var result = await CreateResolver(fixture.Db, key).ResolveLatestAsync(
+                seed.License.Id, seed.Customer, seed.Installation, null, TestContext.Current.CancellationToken);
+
+            Assert.False(result.Succeeded);
+            Assert.Equal(StatusCodes.Status409Conflict, result.StatusCode);
+            Assert.Equal("provisioning_company_reference_mapping_required", result.ErrorCode);
+            Assert.Null(result.Subsystems);
+        }
+        finally
+        {
+            await CleanupAsync(fixture);
+        }
+    }
+
+    [Fact]
+    public async Task LegacyLicenseWithoutSubsystemsIsRejectedInsteadOfReturningAnEmptyBinding()
+    {
+        var fixture = await OpenAsync();
+        if (fixture is null) return;
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        try
+        {
+            var seed = await SeedAsync(fixture.Db, key, 1, []);
+            seed.License.SubsystemsJson = "[]";
+            await fixture.Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var result = await CreateResolver(fixture.Db, key).ResolveLatestAsync(
+                seed.License.Id, seed.Customer, seed.Installation, null, TestContext.Current.CancellationToken);
+
+            Assert.False(result.Succeeded);
+            Assert.Equal(StatusCodes.Status409Conflict, result.StatusCode);
+            Assert.Equal("provisioning_license_has_no_subsystems", result.ErrorCode);
+            Assert.Null(result.Subsystems);
+        }
+        finally
+        {
+            await CleanupAsync(fixture);
+        }
+    }
+
+    [Fact]
     public async Task LatestResolutionRejectsStaleSequenceButHistoricalResolutionCanVerifyAnExistingBinding()
     {
         var fixture = await OpenAsync();
@@ -408,6 +463,62 @@ public sealed class VendorProvisioningLicenseResolverSqlServerTests
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         await AddEnvelopeAsync(db, license, installation, key, sequence, subsystems);
         return new SeededLicense(customer, installation, license);
+    }
+
+    private static async Task AddCompanyScopedEnvelopeAsync(
+        VendorDbContext db,
+        VendorLicense license,
+        VendorInstallation installation,
+        ECDsa key,
+        int sequence,
+        string companyReference,
+        string[] modules)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var payload = new LicensePayload(
+            LicensePayload.CurrentFormatVersion,
+            license.Id.ToString("D"),
+            installation.Id.ToString("D"),
+            license.ProductCode,
+            license.LicenseKind,
+            now,
+            license.ValidFromUtc,
+            license.ValidUntilUtc,
+            license.GraceDays,
+            sequence,
+            new LicenseLimits(license.MaxCompanies, Array.Empty<string>()))
+        {
+            CompanyEntitlements =
+            [
+                new CompanyLicenseEntitlement(
+                    companyReference,
+                    Array.AsReadOnly(modules),
+                    5,
+                    Array.Empty<LicenseFeatureEntitlement?>())
+            ]
+        };
+        Assert.Empty(StructuralValidation.ValidatePayload(payload));
+
+        var payloadJson = CanonicalJson.SerializePayload(payload);
+        var signature = key.SignData(
+            Encoding.UTF8.GetBytes(payloadJson),
+            HashAlgorithmName.SHA256,
+            DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
+        var envelope = new LicenseEnvelope(
+            1, "license-test-key", LicenseAlgorithms.EcdsaP256Sha256,
+            payloadJson, Convert.ToBase64String(signature));
+        db.SignedLicenseEnvelopes.Add(new VendorSignedLicenseEnvelope
+        {
+            Id = Guid.NewGuid(),
+            LicenseId = license.Id,
+            Sequence = sequence,
+            KeyId = envelope.Kid,
+            Algorithm = envelope.Algorithm,
+            EnvelopeJson = System.Text.Json.JsonSerializer.Serialize(envelope),
+            PayloadSha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payloadJson))).ToLowerInvariant(),
+            CreatedAtUtc = now
+        });
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     private static async Task AddEnvelopeAsync(

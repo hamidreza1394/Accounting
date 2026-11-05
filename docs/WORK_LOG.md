@@ -2510,3 +2510,20 @@
 - **راستی‌آزمایی Baseline:** اجرای کامل تست‌ها روی `main` خالص (`fb26e7e5`) پیش از انتقال: ۱۰۵۵ کل — ۹۹۱ موفق، ۶۲ Skip، ۲ ناموفقِ محیطی (`SafeExceptionRealApplicationTests`؛ بدون SQL Server، فکتوری به InMemory سوییچ می‌شود و `GetPendingMigrationsAsync` روی Provider غیررابطه‌ای شکست می‌خورد؛ روی CI با `FARANOU_TEST_SQLSERVER` سبز — check-runs ادغام #543 همه ۱۲ سبز). پس از انتقال: ۱۰۶۲ کل — ۹۹۸ موفق (تغییر فقط +۷ تست سبز فاز ۴)؛ هیچ تستی حذف یا تضعیف نشد.
 - **Migration:** هیچ Schema Change جدیدی در فاز ۴ لازم نبود و Migration جدید ساخته نشد؛ فقط endpoint خواندنی + قاعده اعتبارسنجی نوشتن.
 - **PR:** #545 (`feat/hr-organizational-structure-workflows-main` → `main`)؛ merge نهایی منوط به اجازه مالک.
+
+
+## 2026-11-05 — Issue #228: جلوگیری از ایجاد درخواست Provisioning غیرقابل‌امضا برای LicensePayload v2
+
+- **مبنای بازبینی:** main@5715df82bfe1a42859cbc2d5c85da67f2bb67563؛ آخرین main پس از ادغام PR #545. تمام PRهای باز در ابتدای اجرا بررسی شدند (صفر PR باز) و سه Workflow آخر main روی همین SHA موفق بودند.
+- **یافته:** قرارداد LicensePayload v2، limits.subsystems را الزاماً خالی می‌کند و Moduleها را در سطح Company/CompanyReference قرار می‌دهد؛ resolver قدیمی فقط فهرست نصب‌محور را می‌خواند. با نبود CompanyReference در provisioning schema v4، انتخاب پیش‌فرض می‌توانست intent خالی و غیرقابل‌امضا بسازد.
+- **اصلاح:** v2 اکنون با provisioning_company_reference_mapping_required fail-closed رد می‌شود؛ v1 بدون ماژول نیز با provisioning_license_has_no_subsystems رد می‌شود. هیچ entitlement شرکت به سطح Installation ارتقا داده یا حدس زده نمی‌شود.
+- **Regression:** دو تست SQL Server جدید برای v2 شرکت‌محور و v1 بدون زیرسیستم اضافه شد.
+- **مستندات:** گردش‌کار لایسنس و handoff #228 به‌روزرسانی شد. اجرای محلی .NET/SQL Server در این محیط انجام نشد؛ Vendor CI و .NET CI روی SHA نهایی PR مرجع نتیجه هستند.
+- **محدوده:** فقط Vendor resolver، تست Vendor و مستندات؛ بدون Customer Server/**، migration مشتری، تغییر قرارداد مشترک یا secret.
+
+## تکمیل مستندات Issue #228 — 2026-11-05
+
+- فهرست مستندات اکنون handoff جاری #228 را معرفی می‌کند.
+- گردش‌کار Licensing با تفکیک دقیق LicensePayload v1/v2 و provisioning schema v4/v5 هم‌تراز شد؛ پشتیبانی Customer از schema v1-v4 و وضعیت واقعی builder محدود #393 نیز اصلاح شد.
+- handoff تاریخی #228 تصحیح شد: مسیر پایه consumer/ACK در PRهای #302/#305–#308/#329 و #293/#294 در main وجود دارد؛ #235 برای hardening و تأیید عملیاتی باقی می‌ماند، نه بازنویسی مجدد مسیر پایه.
+- این مستندات روی شاخه fix/228-company-scoped-license-provisioning-guard هستند؛ تا Merge، PROJECT_STATUS.md و SHA مبنای main تغییر داده نمی‌شوند.
