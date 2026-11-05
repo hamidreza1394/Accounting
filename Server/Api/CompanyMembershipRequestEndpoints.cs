@@ -591,6 +591,7 @@ public static class CompanyMembershipRequestEndpoints
             .AnyAsync(user => user.Id == membershipRequest.UserId && user.IsActive, cancellationToken);
         var destinationRole = await database.CompanyRoles
             .Include(role => role.RolePermissions)
+                .ThenInclude(rolePermission => rolePermission.Permission)
             .FirstOrDefaultAsync(role =>
                 role.Id == request.RoleId &&
                 role.TenantId == companyId &&
@@ -622,6 +623,19 @@ public static class CompanyMembershipRequestEndpoints
                 database, approverId, companyId, cancellationToken);
             if (approverCeiling is null)
                 return TypedResults.NotFound();
+
+            // A role that can approve membership requests must never be delegated to a
+            // requester, matching GET /assignable-roles: an approver's own ceiling always
+            // contains the approval permission, so the subset check below would let an
+            // approver mint further approvers and the capability would spread beyond the
+            // bootstrap intent of D-065/D-071.
+            if (destinationRole.RolePermissions.Any(rolePermission =>
+                    rolePermission.Permission.Code == ApprovalPermissionCode))
+            {
+                return TypedResults.Json(
+                    new { error = "شما مجاز به واگذاری این گروه دسترسی نیستید." },
+                    statusCode: StatusCodes.Status403Forbidden);
+            }
 
             if (destinationRole.RolePermissions.Any(rolePermission =>
                     !approverCeiling.PermissionIds.Contains(rolePermission.PermissionId)))
