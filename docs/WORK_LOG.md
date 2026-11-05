@@ -2527,3 +2527,13 @@
 - گردش‌کار Licensing با تفکیک دقیق LicensePayload v1/v2 و provisioning schema v4/v5 هم‌تراز شد؛ پشتیبانی Customer از schema v1-v4 و وضعیت واقعی builder محدود #393 نیز اصلاح شد.
 - handoff تاریخی #228 تصحیح شد: مسیر پایه consumer/ACK در PRهای #302/#305–#308/#329 و #293/#294 در main وجود دارد؛ #235 برای hardening و تأیید عملیاتی باقی می‌ماند، نه بازنویسی مجدد مسیر پایه.
 - این مستندات روی شاخه fix/228-company-scoped-license-provisioning-guard هستند؛ تا Merge، PROJECT_STATUS.md و SHA مبنای main تغییر داده نمی‌شوند.
+
+
+## 2026-11-05 — Issue #113: حذف آخرین ساعت مستقیم در Vendor bootstrap
+
+- **مبنا:** `main@c3404da89d97e54977ec993a20479084922ca891`. جست‌وجوی تازه در فایل‌های Vendor تنها یک استفادهٔ مستقیم از `DateTimeOffset.UtcNow` پیدا کرد: ایجاد `VendorAdminUser` در `VendorBootstrapCommand`. endpointهای Customer/Installation/Contract/License قبلاً از `TimeProvider` استفاده می‌کنند.
+- **اصلاح:** `VendorBootstrapCommand.RunAsync` اکنون `TimeProvider` اختیاری می‌پذیرد؛ در اجرای عادی آن را از DI می‌گیرد و `CreatedAtUtc` را با `GetUtcNow().ToUniversalTime()` ثبت می‌کند. ثبت موجود `TimeProvider.System` در `AddVendorPersistence` حفظ شد.
+- **Regression:** تست Integration SQL Server در `VendorBootstrapIntegrationTests` یک `FixedTimeProvider` تزریق می‌کند و timestamp ذخیره‌شده را دقیقاً بررسی می‌کند؛ رقابت دو bootstrap، TOTP، نقش SuperAdmin و زنجیره ممیزی بدون تضعیف باقی می‌مانند.
+- **اعتبارسنجی:** هیچ اجرای محلی در این نشست انجام نشد. Build، Vendor CI، SQL Server integration و .NET CI روی SHA نهایی PR #548 در انتظارند؛ تا تکمیل آن‌ها هیچ تستی موفق اعلام نمی‌شود.
+- **مرزبندی:** فقط Vendor bootstrap، تست Vendor و handoffها؛ بدون Migration، Customer `Server/**`، دیتابیس مشتری، signing provider یا secret.
+- **PR:** #548، شاخه `fix/vendor-bootstrap-time-provider`.

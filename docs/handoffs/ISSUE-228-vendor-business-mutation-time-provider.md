@@ -43,7 +43,7 @@
 - مقدار زمان از DI گرفته می‌شود؛ ورودی کاربر نمی‌تواند ساعت سرور را تعیین کند.
 
 ## ریسک‌ها و کارهای باقی‌مانده
-- مسیر command-mode بوت‌استرپ مدیر Vendor در `VendorBootstrapCommand` هنوز یک timestamp مستقیم `DateTimeOffset.UtcNow` دارد؛ خارج از endpointهای تجاری این Issue است و در این PR تغییر داده نمی‌شود.
+- timestamp باقی‌مانده در command-mode بوت‌استرپ مدیر Vendor نیز در PR #548 با `TimeProvider.GetUtcNow()` جایگزین شده است؛ regression آزمون SQL Server زمان ثابت را بررسی می‌کند. تا تکمیل CI، این اصلاح Implemented / NotVerified است.
 - signer Production در #236، consumer مستقل مشتری در #235 و sink مستقل checkpoint در #107 همچنان به تصمیم/زیرساخت جداگانه وابسته‌اند.
 - تست فیزیکی دو میزبان/انتقال فایل در محیط عملیاتی انجام نشده است.
 
@@ -52,3 +52,10 @@
 - Commit اول: `3e2818b50ee12ec942f0e44c9ec9e12ca66ab8b5`
 - Commit اصلاح regression: پس از ساخت
 - Pull Request: #424
+
+
+## پیگیری command-mode bootstrap — 2026-11-05
+
+- ممیزی مجدد جست‌وجوی `DateTimeOffset.UtcNow` در پوشه Vendor نشان داد تنها مورد باقی‌مانده در `VendorBootstrapCommand.cs` بود؛ endpointهای تجاری قبلاً با `TimeProvider` همگام شده‌اند.
+- اصلاح در PR #548 به‌صورت مستقل انجام شده است تا محدودهٔ قبلی و مسئولیت Issue #113 حفظ شود.
+- CI روی SHA نهایی PR #548 هنوز باید تکمیل شود؛ ادعای تست موفق یا Merge در این مرحله وجود ندارد.

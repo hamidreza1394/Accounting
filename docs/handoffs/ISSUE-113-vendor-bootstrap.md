@@ -36,3 +36,11 @@
 ## شناسه‌ها
 - Branch: `feat/issue-113-vendor-bootstrap`
 - PR: پس از بررسی Build و CI ایجاد/به‌روزرسانی می‌شود.
+
+## تکمیل کنترل زمان — 2026-11-05 (PR #548)
+
+- تنها timestamp مستقیم باقی‌مانده در command-mode، یعنی مقدار `VendorAdminUser.CreatedAtUtc`، از `DateTimeOffset.UtcNow` به `TimeProvider.GetUtcNow().ToUniversalTime()` تغییر کرد.
+- `RunAsync` یک `TimeProvider` اختیاری می‌پذیرد و در مسیر عادی آن را از DI می‌گیرد؛ `AddVendorPersistence` از قبل `TimeProvider.System` را ثبت می‌کند.
+- تست Integration SQL Server اکنون یک ساعت کنترل‌شده تزریق می‌کند و مقدار پایدارشدهٔ `CreatedAtUtc` را دقیقاً assert می‌کند؛ مسیر رقابت دو bootstrap و TOTP همچنان بدون تغییر است.
+- هیچ Migration، تغییر Customer، secret یا credential اضافه نشده است.
+- اجرای محلی در این محیط انجام نشده؛ نتیجهٔ Build/Integration فقط پس از CI روی SHA نهایی PR قابل اعلام است.

@@ -51,6 +51,8 @@ public sealed class VendorBootstrapIntegrationTests
         services.AddDataProtection().SetApplicationName("Faranou.Vendor.ControlPlane");
         services.AddVendorPersistence(configuration);
         new IdentityBuilder(typeof(VendorAdminUser), services).AddDefaultTokenProviders();
+        var bootstrapTime = new DateTimeOffset(2026, 11, 5, 9, 0, 0, TimeSpan.Zero);
+        var timeProvider = new FixedTimeProvider(bootstrapTime);
 
         await using var provider = services.BuildServiceProvider(
             new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
@@ -79,8 +81,8 @@ public sealed class VendorBootstrapIntegrationTests
             var promptB = new FakePrompt(bootstrapSecret, "bootstrap-b", "bootstrap-b@example.invalid");
 
             var results = await Task.WhenAll(
-                VendorBootstrapCommand.RunAsync(provider, configuration, promptA, TestContext.Current.CancellationToken),
-                VendorBootstrapCommand.RunAsync(provider, configuration, promptB, TestContext.Current.CancellationToken));
+                VendorBootstrapCommand.RunAsync(provider, configuration, promptA, TestContext.Current.CancellationToken, timeProvider),
+                VendorBootstrapCommand.RunAsync(provider, configuration, promptB, TestContext.Current.CancellationToken, timeProvider));
 
             Assert.Single(results, result => result == 0);
             var rejectedAttempt = Assert.Single(results, result => result != 0);
@@ -92,6 +94,7 @@ public sealed class VendorBootstrapIntegrationTests
                 var users = await db.Users.AsNoTracking().ToListAsync(TestContext.Current.CancellationToken);
                 var user = Assert.Single(users);
                 Assert.True(user.IsEnabled);
+                Assert.Equal(bootstrapTime, user.CreatedAtUtc);
                 Assert.True(user.TwoFactorEnabled);
                 Assert.False(user.EmailConfirmed);
                 Assert.True(user.MustChangePassword);
@@ -129,6 +132,11 @@ public sealed class VendorBootstrapIntegrationTests
         Assert.False(VendorBootstrapCommand.MatchesSecret(expected, "another-random-test-secret-value"));
         Assert.False(VendorBootstrapCommand.MatchesSecret(expected, null));
         Assert.False(VendorBootstrapCommand.MatchesSecret(null, expected));
+    }
+
+    private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => utcNow;
     }
 
     private sealed class FakePrompt(string bootstrapSecret, string userName, string email) : IVendorBootstrapPrompt

@@ -58,11 +58,13 @@ public static class VendorBootstrapCommand
         IServiceProvider services,
         IConfiguration configuration,
         IVendorBootstrapPrompt prompt,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
         ArgumentNullException.ThrowIfNull(prompt);
+        timeProvider ??= services.GetRequiredService<TimeProvider>();
 
         var expectedSecret = configuration["Bootstrap:Secret"];
         if (string.IsNullOrWhiteSpace(expectedSecret) || Encoding.UTF8.GetByteCount(expectedSecret) < 32)
@@ -131,7 +133,7 @@ public static class VendorBootstrapCommand
                         IsEnabled = false,
                         TwoFactorEnabled = false,
                         MustChangePassword = false,
-                        CreatedAtUtc = DateTimeOffset.UtcNow
+                        CreatedAtUtc = timeProvider.GetUtcNow().ToUniversalTime()
                     };
 
                     var createResult = await users.CreateAsync(user, password);
