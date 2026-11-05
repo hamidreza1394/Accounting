@@ -146,12 +146,12 @@ flowchart TD
 
 1. کاربر Vendor نصب مقصد را انتخاب می‌کند؛ API فقط لایسنس‌هایی را نمایش می‌دهد که envelope امضاشدهٔ آن‌ها با کلید عمومی مورد اعتماد تأیید شده و برای همان مشتری/نصب فعال و در بازهٔ اعتبار هستند.
 2. درخواست کلاینت شامل licenseId و در صورت نیاز subset زیرسیستم‌ها است. نبود subset یعنی تمام entitlementهای آخرین payload امضاشده. sequence یا فهرست کامل entitlement از کلاینت دریافت نمی‌شود.
-3. Vendor در تراکنش Serializable، همان لایسنس را از دیتابیس Vendor resolve می‌کند، آخرین VendorSignedLicenseEnvelope را می‌خواند، digest و signature و binding را کنترل می‌کند و sequence و entitlement مؤثر را در payload schema v4 قرار می‌دهد.
+3. Vendor در تراکنش Serializable، همان لایسنس را از دیتابیس Vendor resolve می‌کند، آخرین VendorSignedLicenseEnvelope را می‌خواند و digest، signature و binding را کنترل می‌کند. برای LicensePayload v1، sequence و زیرمجموعهٔ installation-scoped در provisioning schema v4 قرار می‌گیرد. برای LicensePayload v2، چون ماژول‌ها فقط در CompanyEntitlements و بر اساس CompanyReference مات هستند و schema v4 این binding را حمل نمی‌کند، Vendor پیش از ثبت درخواست با خطای provisioning_company_reference_mapping_required fail-closed می‌شود؛ هیچ ماژول شرکت به entitlement نصب‌محور تبدیل نمی‌شود.
 4. پیش از امضای بستهٔ Provisioning، Vendor دوباره بررسی می‌کند که لایسنس همان مشتری/نصب و فعال باشد، تاریخ اعتبار نگذشته باشد و sequence payload هنوز آخرین revision امضاشده باشد. در صورت تعلیق، انقضا، تغییر نصب یا صدور revision جدید، امضا رد می‌شود.
 5. پیش از هر Export مجدد نیز همین اعتبارسنجی انجام می‌شود. پس از Export موفق، مشتری آفلاین نمی‌تواند تعلیق بعدی یا revision جدید Vendor را کشف کند؛ این محدودیت در قرارداد پذیرفته شده است.
 6. idempotency شامل licenseId و sequence امضاشده، به‌علاوهٔ تنظیمات و زیرسیستم مؤثر است. retry یک requestId قدیمی به revision تاریخی خودش متصل می‌ماند و به revision جدیدتر منتقل نمی‌شود.
-7. درخواست‌های تاریخی v3 نه backfill می‌شوند و نه به لایسنس حدس‌زده وصل می‌شوند. verifier مشتری همچنان v1-v3 را برای سازگاری بسته‌های قبلی می‌پذیرد؛ Vendor درخواست v3 را دوباره امضا یا Export نمی‌کند.
-8. MaxCompanies، افزودن زیرسیستم به شرکت موجود و تجمیع چند لایسنس NotImplemented هستند؛ هیچ کنترل ناقص یا تخمینی جایگزین آن‌ها نمی‌شود.
+7. درخواست‌های تاریخی schema v3 نه backfill می‌شوند و نه به لایسنس حدس‌زده وصل می‌شوند. verifier مشتری schemaهای v1-v4 را می‌پذیرد و canonical bytes نسخه‌های v1-v3 حفظ شده‌اند؛ Vendor درخواست v3 را دوباره امضا یا Export نمی‌کند و LicenseId/Sequence مفقود را حدس نمی‌زند.
+8. برای MaxCompanies فقط candidate payload builder در Vendor (#393) موجود است؛ سفارش/پرداخت، persistence، Approval، signing/export و اعمال Customer هنوز NotImplemented هستند. افزودن Module/Feature/Seat به Company موجود و حمل CompanyReference در provisioning schema v5 نیز تا تکمیل نگاشت مورداعتماد در #392 و هماهنگی consumer مستقل #235 NotImplemented می‌ماند. LicensePayload v2 در مسیر v4 صریحاً رد می‌شود؛ هیچ کنترل ناقص یا تخمینی جایگزین آن‌ها نمی‌شود.
 
 
 ## ۱۴) Add-on amendment، bootstrap و entitlement sync (D-059)

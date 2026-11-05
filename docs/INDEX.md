@@ -29,6 +29,7 @@
 | [`LICENSING.md`](LICENSING.md) | معماری و وضعیت لایسنس و فعال‌سازی |
 | [`LICENSING_IMPLEMENTATION_PLAN.md`](LICENSING_IMPLEMENTATION_PLAN.md) | مرجع اجرایی D-059/D-060 و ترتیب Issues #389–#396 |
 | [`handoffs/ISSUE-384-customer-license-import.md`](handoffs/ISSUE-384-customer-license-import.md) | وضعیت واقعی نصب هویت، persistence و import لایسنس مشتری پس از ادغام PRهای #386–#388 و کارهای runtime باقیمانده |
+| [`handoffs/ISSUE-228-vendor-provisioning-state.md`](handoffs/ISSUE-228-vendor-provisioning-state.md) | وضعیت Vendor provisioning، binding لایسنس و شکاف CompanyReference در payload v2 |
 | [`handoffs/ISSUE-393-vendor-addon-payload-builder.md`](handoffs/ISSUE-393-vendor-addon-payload-builder.md) | تحویل Vendor-only برای ساخت candidate amendment افزایش سقف شرکت؛ بدون persistence، approval یا Customer-side changes (Issue #393) |
 | [`handoffs/ISSUE-391-runtime-entitlement-enforcement.md`](handoffs/ISSUE-391-runtime-entitlement-enforcement.md) | وضعیت لایه تصمیم Entitlement، پل payload معتبر و blocker نگاشت CompanyReference در Issue #391 |
 | [`LICENSING_DATA_MODEL.md`](LICENSING_DATA_MODEL.md) | ERD واقعی و پیشنهادی |
