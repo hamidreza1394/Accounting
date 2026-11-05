@@ -54,3 +54,22 @@
 ## شناسه‌های Git
 - Branch: `feature/hr-organizational-structure-workflows`
 - Pull Request: `feat(hr): organizational-structure operational workflows` به `feature/hr-organizational-structure-implementation` — **وابسته به PR پیاده‌سازی (Stacked)؛ پس از Merge آن، Base به main منتقل می‌شود.**
+
+---
+
+# به‌روزرسانی تحویل — انتقال مستقل به main و تکمیل (2026-11-05)
+
+PR اصلی این تحویل (Stacked) در شاخه فاز ۳ ادغام شده بود و هرگز به main نرسیده بود. وضعیت زنده GitHub راستی‌آزمایی و محتوا با cherry-pick انتخابی چهار commit فاز ۴ (`f22b7c76`، `3cbd98d0`، `3473fbde`، `fe5aa831`) روی `main@fb26e7e5` منتقل شد؛ درخت پس از انتقال با شاخه مبدأ یکسان بود و هیچ Conflict رخ نداد.
+
+## تکمیل‌های این PR نسبت به نسخه Stacked
+1. **ترتیب قطعی پاسخ‌های خواندنی:** فرزندان subtree با ترتیب پایدار `Code` سپس `Id` (هم‌تراز فهرست واحدها)؛ تاریخچه کارمند با تساوی‌شکن `EntityId` پس از `OccurredAtUtc` تا مرز صفحات در timestamps مساوی پایدار بماند.
+2. **تست Unit مستقیم قواعد:** ۷ تست مرزهای `HrRules.ValidateAssignmentStart` در `HrRulesTests` (لحظه‌های دقیق: یک تیک آینده، اکنون، یک تیک قبل از استخدام، خود لحظه استخدام، بدون تاریخ استخدام، مرز نیمه‌شب UTC).
+3. مستندات قرارداد (`ORGANIZATIONAL_STRUCTURE_DATA_MODEL.md`) رفتار ترتیب subtree/history را ثبت می‌کند.
+
+## راستی‌آزمایی Baseline دو تست ناموفق
+اجرای کامل تست‌ها روی `main` خالص پیش از انتقال: ۱۰۵۵ کل — ۹۹۱ موفق، ۶۲ Skip، ۲ ناموفق. همان دو شکست پس از انتقال نیز فقط همان دو مورد بود (۱۰۶۲ کل — ۹۹۸ موفق). علت، محیطی است و مستند شد: بدون `FARANOU_TEST_SQLSERVER` فکتوری یکپارچگی Provider را به InMemory تغییر می‌دهد و `DatabaseSchemaMigrator.GetPendingMigrationsAsync` (رابطه‌ای-فقط) هنگام راه‌اندازی میزبان واقعی خطا می‌دهد؛ روی CI ادغام #543 هر ۱۲ check شامل `build-and-test` با SQL Server سبز بود. هیچ تستی Skip/حذف نشد.
+
+## شناسه‌های Git (انتقال)
+- Branch: `feat/hr-organizational-structure-workflows-main` (از `main@fb26e7e5`)
+- Pull Request مستقل به `main`: **#545** — `feat(hr): complete organizational structure operational workflows`
+- Merge نهایی منوط به اجازه صریح مالک است.
