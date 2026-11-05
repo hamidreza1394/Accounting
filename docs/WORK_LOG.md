@@ -2510,3 +2510,16 @@
 - **راستی‌آزمایی Baseline:** اجرای کامل تست‌ها روی `main` خالص (`fb26e7e5`) پیش از انتقال: ۱۰۵۵ کل — ۹۹۱ موفق، ۶۲ Skip، ۲ ناموفقِ محیطی (`SafeExceptionRealApplicationTests`؛ بدون SQL Server، فکتوری به InMemory سوییچ می‌شود و `GetPendingMigrationsAsync` روی Provider غیررابطه‌ای شکست می‌خورد؛ روی CI با `FARANOU_TEST_SQLSERVER` سبز — check-runs ادغام #543 همه ۱۲ سبز). پس از انتقال: ۱۰۶۲ کل — ۹۹۸ موفق (تغییر فقط +۷ تست سبز فاز ۴)؛ هیچ تستی حذف یا تضعیف نشد.
 - **Migration:** هیچ Schema Change جدیدی در فاز ۴ لازم نبود و Migration جدید ساخته نشد؛ فقط endpoint خواندنی + قاعده اعتبارسنجی نوشتن.
 - **PR:** #545 (`feat/hr-organizational-structure-workflows-main` → `main`)؛ merge نهایی منوط به اجازه مالک.
+
+## 2026-11-05 — ممیزی و تثبیت Backend HR و قرارداد API (ISSUE-491-hr-api-contract-hardening)
+- **مبنا:** آخرین `main` (`5715df82` = merge #545). ممیزی کامل مدل چهارگانه HR، `HrRules`، ۲۵ Endpoint، کاتالوگ ۱۲ کد `hr.*`، Tenant Isolation، Anti-forgery/Rate Limit/no-store و رفتار صفحات.
+- **نقص‌های واقعی اصلاح‌شده (با TDD قرمز→سبز):**
+  1. `PUT /org/units/{id}` گارد غیرفعال‌سازی (فرزند/انتساب فعال → ۴۰۹) را دور می‌زد؛ قاعدهٔ خالص `HrRules.ValidateUnitDeactivation` (enum موجود `CompanyUnitDeactivationBlock`) روی هر دو مسیر اعمال شد.
+  2. `PUT /org/positions/{id}` گارد انتساب فعال را دور می‌زد؛ قاعدهٔ خالص `HrRules.ValidatePositionDeactivation` (`HrRuleViolation.PositionDeactivationBlocked`) اضافه شد.
+  3. خاتمه‌همکاری کارمند با `HiredOnUtc` آینده‌نگر ناوردای `InvalidPeriod` را ذخیره می‌کرد؛ اکنون `HrRules.ValidateEmployment` پیش از خاتمه فراخوانی و نقض با ۴۰۰ رد می‌شود.
+  4. Audit `HrUnitUpdated` همیشه `parentChanged: false` ثبت می‌کرد؛ مقدار قبلی والد پیش از mutation ثبت و گزارش صحیح شد.
+- **تست‌ها:** ۱۵ تست جدید (۳۳ قواعد + ۳۱ Endpoint + ۷ Workflow = ۷۱ تست HR، همه سبز)؛ پوشش مستقیم قبلیِ کم‌تست `GetUnit`، `GetPosition`، `Unlink` و فهرست تخت واحدها تکمیل شد؛ هیچ تستی حذف/Skip/تضعیف نشد.
+- **راستی‌آزمایی محلی (SDK 10.0.403):** Build Release بدون خطا؛ مجموعه کامل پس از تغییر ۱۰۷۹ کل — ۱۰۱۵ موفق، ۶۲ Skip (SQL-gated محلی)، فقط همان ۲ ناموفق محیطیِ از قبل موجود (`SafeExceptionRealApplicationTests`). Baseline پیش از تغییر: ۱۰۶۸ کل — ۱۰۰۴ موفق. `generate_migrations.py --check` و `verify_migration_model.py` سبز (۱۵ Migration)؛ `has-pending-model-changes` خالی؛ Migration جدید لازم نبود.
+- **CI آخرین main (شواهد واقعی):** run 41979174876 — ۱۰۶۸ کل، ۰ ناموفق، ۸ Skip با `FARANOU_REQUIRE_SQLSERVER=1` (SQL Server 2022 سرویس Container) + E2E ۴۶ passed + Semgrep/secret-scan سبز.
+- **قرارداد Frontend:** سند مستقل `docs/HR_FRONTEND_API_CONTRACT.md` (ماتریس ۲۵ Endpoint با وضعیت `Verified`، DTOهای واقعی، نمونه‌های JSON منطبق با کد، خطاها، صفحه‌بندی، RowVersion، UTC، Tenant Scope، Audit، قواعد Assignment و محدودیت‌های شناخته‌شده)؛ بند ۵ `FRONTEND_API_CONTRACT_NEEDS.md` به آن ارجاع شد.
+- **نتیجه:** Backend HR برای شروع فاز ۳ (UI) بدون حدس DTO آماده است؛ PR مستقل به `main` ایجاد شد و Merge فقط با اجازهٔ مالک.
