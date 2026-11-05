@@ -1828,8 +1828,12 @@ public static class HrOrganizationalStructureEndpoints
         if (failure is not null) return failure;
         if (!await IsActiveCompanyAsync(database, companyId, cancellationToken)) return NotFoundForCompany();
 
+        // The same stable Code/Id order as the units list (D-072), so the rendered tree is
+        // deterministic regardless of the storage engine's row order.
         var units = await database.CompanyOrganizationalUnits.AsNoTracking()
             .Where(current => current.TenantId == companyId)
+            .OrderBy(current => current.Code)
+            .ThenBy(current => current.Id)
             .Select(current => new HrUnitItem(
                 current.Id, current.Code, current.Name, current.Description,
                 current.ParentUnitId, current.IsActive, current.ValidFromUtc, current.ValidToUtc))
@@ -2060,9 +2064,12 @@ public static class HrOrganizationalStructureEndpoints
 
         var totalCount = await employeeEvents.CountAsync(cancellationToken)
                          + await assignmentEvents.CountAsync(cancellationToken);
+        // OccurredAtUtc alone is not a stable page boundary when several rows share one
+        // transaction timestamp; the entity id is the deterministic tie-breaker.
         var merged = await employeeEvents
             .Concat(assignmentEvents)
             .OrderByDescending(securityEvent => securityEvent.OccurredAtUtc)
+            .ThenByDescending(securityEvent => securityEvent.EntityId)
             .Skip((normalizedPage - 1) * normalizedPageSize)
             .Take(normalizedPageSize)
             .ToListAsync(cancellationToken);

@@ -199,10 +199,10 @@ Index و قواعد:
 ### گردش‌کارهای عملیاتی (فاز ۴)
 | متد و مسیر | مجوز | توضیح |
 |---|---|---|
-| `GET .../org/units/{id}/subtree` | `hr.organizational-units.list` | زیردرخت واحد با شمار انتساب فعال هر گره؛ پیمایش bounded و cycle-safe |
+| `GET .../org/units/{id}/subtree` | `hr.organizational-units.list` | زیردرخت واحد با شمار انتساب فعال هر گره؛ پیمایش bounded و cycle-safe؛ ترتیب فرزندان قطعی و پایدار (Code سپس Id، هم‌تراز فهرست واحدها) |
 | `GET .../org/units/{id}/employees?page=&pageSize=` | `hr.organizational-units.list` | کارکنان دارای انتساب فعال در واحد با سمت و شروع مؤثر |
 | `GET .../org/positions/{id}/employees?page=&pageSize=` | `hr.positions.list` | دارندگان فعال سمت در همه واحدها (استفاده مجدد سمت) |
-| `GET .../org/employees/{id}/history?page=&pageSize=` | `hr.employees.view` | تاریخچه تغییرات کارمند از Audit Trail (رویدادهای Employee و Assignmentهای او) با خروجی Allowlist |
+| `GET .../org/employees/{id}/history?page=&pageSize=` | `hr.employees.view` | تاریخچه تغییرات کارمند از Audit Trail (رویدادهای Employee و Assignmentهای او) با خروجی Allowlist؛ ترتیب نزولی زمان وقوع با تساوی‌شکن قطعی (EntityId) برای پایداری صفحه‌بندی |
 
 قواعد قرارداد:
 - DTOها Allowlist و از Entity جدا هستند؛ `TenantId`/`CompanyId` هرگز از بدنه پذیرفته نمی‌شود و از مسیر + `CompanyAccessService` تعیین می‌شود (ضد Mass Assignment و IDOR).
