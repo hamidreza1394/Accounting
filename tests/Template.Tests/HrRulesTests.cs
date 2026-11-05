@@ -66,6 +66,59 @@ public sealed class HrRulesTests
             new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc), null));
     }
 
+    // ------------------------------------------------- assignment start (phase 4)
+
+    [Fact]
+    public void AssignmentStart_InTheFuture_Fails()
+    {
+        var now = new DateTime(2026, 3, 1, 12, 0, 0, DateTimeKind.Utc);
+        Assert.Equal(HrRuleViolation.AssignmentStartInFuture, HrRules.ValidateAssignmentStart(
+            now.AddTicks(1), now, null));
+    }
+
+    [Fact]
+    public void AssignmentStart_ExactlyNow_IsValid()
+    {
+        var now = new DateTime(2026, 3, 1, 12, 0, 0, DateTimeKind.Utc);
+        Assert.Equal(HrRuleViolation.None, HrRules.ValidateAssignmentStart(now, now, null));
+    }
+
+    [Fact]
+    public void AssignmentStart_BeforeTheHireDate_Fails()
+    {
+        var hired = new DateTime(2026, 1, 10, 8, 30, 0, DateTimeKind.Utc);
+        Assert.Equal(HrRuleViolation.AssignmentStartBeforeHire, HrRules.ValidateAssignmentStart(
+            hired.AddTicks(-1), hired.AddDays(1), hired));
+    }
+
+    [Fact]
+    public void AssignmentStart_ExactlyOnTheHireDate_IsValid()
+    {
+        var hired = new DateTime(2026, 1, 10, 8, 30, 0, DateTimeKind.Utc);
+        Assert.Equal(HrRuleViolation.None, HrRules.ValidateAssignmentStart(
+            hired, hired.AddDays(1), hired));
+    }
+
+    [Fact]
+    public void AssignmentStart_WithoutHireDate_PastStart_IsValid()
+    {
+        var now = new DateTime(2026, 3, 1, 12, 0, 0, DateTimeKind.Utc);
+        Assert.Equal(HrRuleViolation.None, HrRules.ValidateAssignmentStart(
+            new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), now, null));
+    }
+
+    [Fact]
+    public void AssignmentStart_MidnightBoundaries_AreComparedInUtc()
+    {
+        // The midnight of the day after "now" is still future-dated; the midnight of the
+        // hire day itself is a valid start (the rule compares instants, not calendar days).
+        var now = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc);
+        var hired = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc);
+        Assert.Equal(HrRuleViolation.AssignmentStartInFuture, HrRules.ValidateAssignmentStart(
+            new DateTime(2026, 3, 2, 0, 0, 0, DateTimeKind.Utc), now, hired));
+        Assert.Equal(HrRuleViolation.None, HrRules.ValidateAssignmentStart(hired, now, hired));
+    }
+
     // ------------------------------------------------------------------ unit cycles
 
     [Fact]
