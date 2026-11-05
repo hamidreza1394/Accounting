@@ -64,7 +64,6 @@ public static class VendorBootstrapCommand
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
         ArgumentNullException.ThrowIfNull(prompt);
-        timeProvider ??= services.GetRequiredService<TimeProvider>();
 
         var expectedSecret = configuration["Bootstrap:Secret"];
         if (string.IsNullOrWhiteSpace(expectedSecret) || Encoding.UTF8.GetByteCount(expectedSecret) < 32)
@@ -97,6 +96,9 @@ public static class VendorBootstrapCommand
             return 4;
         }
 
+        // Resolve the clock only after early secret/input validation so rejected bootstrap
+        // attempts still follow the same safe audit and response path without extra services.
+        timeProvider ??= services.GetRequiredService<TimeProvider>();
         var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("VendorBootstrapCommand");
         await using var scope = services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();

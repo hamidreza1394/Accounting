@@ -124,6 +124,22 @@ public sealed class VendorBootstrapIntegrationTests
     }
 
     [Fact]
+    public async Task MissingBootstrapSecretDoesNotRequireTimeProvider()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        await using var provider = services.BuildServiceProvider();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>())
+            .Build();
+        var prompt = new FakePrompt(string.Empty, "unused", "unused@example.invalid");
+
+        var result = await VendorBootstrapCommand.RunAsync(provider, configuration, prompt);
+
+        Assert.Equal(2, result);
+    }
+
+    [Fact]
     public void BootstrapSecretComparisonRejectsMissingAndDifferentValues()
     {
         const string expected = "random-test-secret-with-at-least-32-bytes";
