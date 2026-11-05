@@ -2550,3 +2550,10 @@
 - **هاردنینگ تکمیلی:** resolve کردن `TimeProvider` به بعد از بررسی secret/ورودی منتقل شد تا مسیر رد زودهنگام به سرویس جدید وابسته نشود؛ تست واحد `MissingBootstrapSecretDoesNotRequireTimeProvider` این رفتار را پوشش می‌دهد.
 - **مرزبندی:** فقط Vendor bootstrap، تست Vendor و handoffها؛ بدون Migration، Customer `Server/**`، دیتابیس مشتری، signing provider یا secret.
 - **PR:** #548، شاخه `fix/vendor-bootstrap-time-provider`، SHA فعلی `merged main + vendor branch`.
+
+## 2026-11-05 — بستن حفرهٔ minting تأییدکننده در تأیید عضویت (ISSUE-444-membership-approve-approver-mint)
+- **مبنا:** `main@584f87da`. ناهم‌تقارنی GET/POST: فیلتر «نقش حامل مجوز تأیید هرگز واگذار نمی‌شود» فقط در `GET /assignable-roles` بود؛ `POST /approve` فقط سقف زیرمجموعه را بررسی می‌کرد و چون سقف تأییدکننده همیشه شامل مجوز تأیید است، عبور می‌کرد.
+- **اصلاح:** رد 403 برای غیرمدیرِ نصب پیش از بررسی سقف؛ bootstrap مدیر نصب و همه مسیرهای مجاز بدون تغییر؛ بدون Migration.
+- **تصمیم ممیزی:** افزودن `ApiSensitivePolicy` به `GET /me/membership-requests` با تست تثبیت‌شدهٔ #522/#538 تناقض داشت و اعمال نشد؛ سیاست نرخ چهار endpoint هویتی بدون تغییر می‌ماند.
+- **تست:** یک تست قرمز→سبز جدید؛ مجموعه کامل ۱۰۸۴ کل، ۱۰۲۰ موفق، ۶۲ Skip، فقط ۲ ناموفق محیطی پایه (نیاز SQL Server). Build ۰ خطا.
+- **PR:** شاخه `fix/membership-approve-approver-mint`؛ Merge فقط با اجازهٔ مالک.

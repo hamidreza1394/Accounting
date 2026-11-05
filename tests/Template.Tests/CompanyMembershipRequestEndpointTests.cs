@@ -238,6 +238,38 @@ public sealed class CompanyMembershipRequestEndpointTests
     }
 
     [Fact]
+    public async Task ApproveMembership_RefusesADestinationRoleThatCarriesTheApprovalPermission()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        // The approver's ceiling covers the approval permission itself, so the subset check
+        // alone would allow this: the refusal must mirror GET /assignable-roles and never
+        // delegate a role that can approve membership requests onward (D-065, D-071).
+        var approvalPermission = await fixture.Database.PermissionDefinitions.SingleAsync(
+            item => item.Code == Server.Api.CompanyMembershipRequestEndpoints.ApprovalPermissionCode);
+        fixture.Database.CompanyRolePermissions.Add(new Domain.CompanyRolePermission
+        {
+            Role = fixture.MemberRole,
+            Permission = approvalPermission,
+        });
+        var request = fixture.NewRequest();
+        fixture.Database.CompanyMembershipRequests.Add(request);
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await Server.Api.CompanyMembershipRequestEndpoints.ApproveAsync(
+            fixture.Destination.Id, request.Id, new DefaultHttpContext(), fixture.Principal(fixture.Approver.Id),
+            new Server.Api.ApproveCompanyMembershipRequest(fixture.MemberRole.Id), new AllowAntiforgery(),
+            fixture.Database, fixture.Access, TimeProvider.System, default);
+
+        Assert.Equal(StatusCodes.Status403Forbidden, (result as IStatusCodeHttpResult)?.StatusCode);
+        Assert.Equal(Domain.CompanyMembershipRequestStatuses.Pending,
+            (await fixture.Database.CompanyMembershipRequests.SingleAsync()).Status);
+        Assert.False(await fixture.Database.UserCompanyMemberships.AnyAsync(
+            membership => membership.UserId == fixture.Requester.Id && membership.TenantId == fixture.Destination.Id));
+        Assert.DoesNotContain(await fixture.Database.SecurityAuditEvents.ToListAsync(),
+            audit => audit.EventType == "CompanyMembershipApproved");
+    }
+
+    [Fact]
     public async Task ApproveMembership_RejectsSystemRoleEvenWhenItsPermissionsAreDelegable()
     {
         await using var fixture = await Fixture.CreateAsync();
