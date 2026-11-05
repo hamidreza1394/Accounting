@@ -424,6 +424,14 @@ public static class CompanyRoleAdministrationEndpoints
         var user = await database.Users.FirstOrDefaultAsync(current => current.Id == userId && current.IsActive, cancellationToken);
         if (role is null || company is null || user is null) return TypedResults.NotFound();
 
+        // System roles (e.g. company-admin) are immutable and must never be granted through
+        // this path: assigning one would hand out company-wide administration outside the
+        // approval workflow that refuses system roles for every actor kind (D-065, D-071).
+        // The refusal comes before the ceiling check, so it cannot be talked around by a
+        // manager who happens to hold every catalog permission.
+        if (role.IsSystemRole)
+            return TypedResults.Conflict(new { error = "تخصیص گروه سیستمی مجاز نیست." });
+
         var membership = await database.UserCompanyMemberships.FirstOrDefaultAsync(
             current => current.UserId == userId && current.TenantId == companyId,
             cancellationToken);
