@@ -62,5 +62,5 @@
 
 ## شناسه‌های Git
 - Branch: `docs/adr-073-074-account-security-entitlement`
-- Commit: در پایان ثبت فایل‌ها تعیین می‌شود.
-- Pull Request: در پایان ایجاد می‌شود.
+- Commit: `cb8f2ee8dfeda9e8208749f7ab1d8ba610aa1e34`.
+- Pull Request: [#557](https://github.com/hamidreza1394/Accounting/pull/557) — Open, not merged.
