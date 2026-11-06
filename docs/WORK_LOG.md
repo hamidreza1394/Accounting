@@ -2610,3 +2610,13 @@
 - Scope B: `RoleMemberAssign` (افزودن عضو فعال موجود به نقش با `POST .../roles/{roleId}/members/{userId}`)، حالت فقط‌خواندنی برای نقشی که مجوزهایش خارج از سقف مدیر شرکت است، دکمهٔ «دریافت آخرین اطلاعات» برای 409، متن سقف تفویض مطابق D-071.
 - Scope C: بخش «نشست‌های فعال» در تب امنیت حساب (`ActiveSessions`) با endpointهای D-069؛ شناسهٔ نشست نمایش داده یا ذخیره نمی‌شود؛ پایان‌دادن به نشست فعلی به صفحهٔ ورود می‌رود.
 - فقط ClientApp و مستندات تغییر کردند؛ Backend، Schema و Migration دست نخورد. تست‌های .NET و E2E در این محیط اجرا نشدند.
+
+
+## 2026-11-06 — Issue #393: candidate افزایش entitlement شرکت موجود
+- **مبنای کار:** `main` @ `553405d4f773683b5a43eb08f12dfa4f3669697a`؛ شاخه مستقل `feat/393-company-entitlement-additions-20261106`.
+- **تغییر:** افزودن pure builder برای Payload v2 که فقط CompanyReference از قبل موجود را هدف می‌گیرد و Module، UserSeat و Feature را به‌صورت افزایشی تغییر می‌دهد. نسخه، LicenseId و InstallationId ثابت می‌مانند؛ candidate sequence را افزایش می‌دهد اما هیچ state پایدار را تغییر نمی‌دهد.
+- **کنترل‌های منفی:** رد v1، شرکت ناشناخته، ماژول/Feature ناشناخته یا تکراری، ماژول موجود، Feature بدون entitlement ماژول مالک، کاهش/مقدار برابر، سقف خارج از محدوده و درخواست no-op. enum تا تعریف مقادیر مجاز در کاتالوگ بسته است.
+- **Snapshot:** collectionهای ورودی و entitlementهای تمام شرکت‌ها به خروجی read-only مستقل کپی می‌شوند تا candidate بعد از اعتبارسنجی از طریق referenceهای mutable تغییر نکند.
+- **تست‌ها:** Regressionهای Unit برای مسیر موفق چندنوعی، حفظ شرکت دوم، canonical round-trip و سناریوهای منفی اضافه شدند. تست محلی در این نشست اجرا نشده؛ نتیجه CI هنوز باید بررسی شود.
+- **مستندات:** handoff #393، Licensing Implementation Plan و Requirements Traceability به‌روزرسانی شدند.
+- **محدوده/ریسک:** هیچ سفارش/پرداخت، persistence، endpoint، approval، signer یا export اضافه نشده است؛ هیچ تغییر در `Server/**`، دیتابیس مشتری، Migration مشتری یا secret وجود ندارد. PR پس از تکمیل مستندات ساخته و CI روی SHA نهایی بررسی می‌شود.
