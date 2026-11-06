@@ -72,6 +72,100 @@ public sealed class UserAdministrationMutationTests
     }
 
     [Fact]
+    public async Task CreateUser_RejectsUsernamesOutsideThePolicyCharset()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddUser("admin", Constants.Role.Admin);
+        await fixture.Database.SaveChangesAsync();
+        // The Razor views enforce Constants.RegularExpression.Username; the API must not be
+        // a bypass (the column is varchar(20), the policy is 3–20 of [a-zA-Z0-9._@+-]).
+        var request = new Server.Api.CreateUserRequest(
+            "ali;drop", "کاربر", "جدید", "new.user@example.test", null,
+            "A-Long-Unique-Phrase-1406!", "A-Long-Unique-Phrase-1406!", true);
+
+        var result = await Server.Api.UserAdministrationEndpoints.CreateUserAsync(
+            new DefaultHttpContext(), Principal(admin.Id), request, new AllowAntiforgery(),
+            fixture.Database, new Infrastructure.Security.PasswordHashService(), TimeProvider.System, default);
+
+        Assert.Equal(StatusCodes.Status400BadRequest, (result as IStatusCodeHttpResult)?.StatusCode);
+        Assert.False(await fixture.Database.Users.AnyAsync(x => x.Username == "ali;drop"));
+    }
+
+    [Fact]
+    public async Task CreateUser_Is403ForAUserWithoutTheInstallationRole()
+    {
+        await using var fixture = new Fixture();
+        var member = fixture.AddUser("member", "Accountant");
+        await fixture.Database.SaveChangesAsync();
+        var request = new Server.Api.CreateUserRequest(
+            "new.user", "کاربر", "جدید", "new.user@example.test", null,
+            "A-Long-Unique-Phrase-1406!", "A-Long-Unique-Phrase-1406!", true);
+
+        var result = await Server.Api.UserAdministrationEndpoints.CreateUserAsync(
+            new DefaultHttpContext(), Principal(member.Id), request, new AllowAntiforgery(),
+            fixture.Database, new Infrastructure.Security.PasswordHashService(), TimeProvider.System, default);
+
+        Assert.Equal(StatusCodes.Status403Forbidden, (result as IStatusCodeHttpResult)?.StatusCode);
+        Assert.False(await fixture.Database.Users.AnyAsync(x => x.Username == "new.user"));
+        Assert.False(await fixture.Database.SecurityAuditEvents.AnyAsync());
+    }
+
+    [Fact]
+    public async Task CreateUser_ConflictsOnADuplicateUsernameCaseInsensitively()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddUser("admin", Constants.Role.Admin);
+        await fixture.Database.SaveChangesAsync();
+        var request = new Server.Api.CreateUserRequest(
+            "ADMIN", "کاربر", "جدید", "new.user@example.test", null,
+            "A-Long-Unique-Phrase-1406!", "A-Long-Unique-Phrase-1406!", true);
+
+        var result = await Server.Api.UserAdministrationEndpoints.CreateUserAsync(
+            new DefaultHttpContext(), Principal(admin.Id), request, new AllowAntiforgery(),
+            fixture.Database, new Infrastructure.Security.PasswordHashService(), TimeProvider.System, default);
+
+        Assert.Equal(StatusCodes.Status409Conflict, (result as IStatusCodeHttpResult)?.StatusCode);
+        Assert.Equal(1, await fixture.Database.Users.CountAsync());
+    }
+
+    [Fact]
+    public async Task UpdateUser_RejectsUsernamesOutsideThePolicyCharset()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddUser("admin", Constants.Role.Admin);
+        var target = fixture.AddUser("alice", "Accountant");
+        await fixture.Database.SaveChangesAsync();
+        var request = new Server.Api.UpdateUserRequest(
+            "ali;drop", "آلیس", "مثالی", "alice@example.test", null, true);
+
+        var result = await Server.Api.UserAdministrationEndpoints.UpdateUserAsync(
+            target.Id, new DefaultHttpContext(), Principal(admin.Id), request,
+            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+
+        Assert.Equal(StatusCodes.Status400BadRequest, (result as IStatusCodeHttpResult)?.StatusCode);
+        Assert.Equal("alice", (await fixture.Database.Users.SingleAsync(x => x.Id == target.Id)).Username);
+    }
+
+    [Fact]
+    public async Task UpdateUser_Is403ForAUserWithoutTheInstallationRole()
+    {
+        await using var fixture = new Fixture();
+        var member = fixture.AddUser("member", "Accountant");
+        var target = fixture.AddUser("alice", "Accountant");
+        await fixture.Database.SaveChangesAsync();
+        var request = new Server.Api.UpdateUserRequest(
+            "alice", "آلیس", "مثالی", "alice@example.test", null, true);
+
+        var result = await Server.Api.UserAdministrationEndpoints.UpdateUserAsync(
+            target.Id, new DefaultHttpContext(), Principal(member.Id), request,
+            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+
+        Assert.Equal(StatusCodes.Status403Forbidden, (result as IStatusCodeHttpResult)?.StatusCode);
+        Assert.Equal("alice", (await fixture.Database.Users.SingleAsync(x => x.Id == target.Id)).Username);
+        Assert.False(await fixture.Database.SecurityAuditEvents.AnyAsync());
+    }
+
+    [Fact]
     public async Task UpdateUser_CannotDisableCurrentOrLastInstallationAdministrator()
     {
         await using var fixture = new Fixture();
