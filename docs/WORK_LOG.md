@@ -2610,3 +2610,15 @@
 - Scope B: `RoleMemberAssign` (افزودن عضو فعال موجود به نقش با `POST .../roles/{roleId}/members/{userId}`)، حالت فقط‌خواندنی برای نقشی که مجوزهایش خارج از سقف مدیر شرکت است، دکمهٔ «دریافت آخرین اطلاعات» برای 409، متن سقف تفویض مطابق D-071.
 - Scope C: بخش «نشست‌های فعال» در تب امنیت حساب (`ActiveSessions`) با endpointهای D-069؛ شناسهٔ نشست نمایش داده یا ذخیره نمی‌شود؛ پایان‌دادن به نشست فعلی به صفحهٔ ورود می‌رود.
 - فقط ClientApp و مستندات تغییر کردند؛ Backend، Schema و Migration دست نخورد. تست‌های .NET و E2E در این محیط اجرا نشدند.
+
+
+## 2026-11-06 — تصویب و ثبت D-070، D-073 و D-074 (Issue #556)
+- مالک محصول هر شش موضوع را تأیید کرد: retention، ابطال مدیریتی نشست، Forgot Password، Admin Reset، MFA و اتصال Permission/Entitlement.
+- D-070 موجود با همان شناسه از Proposed به Accepted ارتقا یافت؛ baseline رویداد عادی/حساس/بحرانی ۱۲/۲۴/۳۶ ماه و سیاست Cloud high-volume شامل Hot/Archive، Legal Hold، integrity، purge کنترل‌شده و جلوگیری از resurrection پس از Restore ثبت شد.
+- D-073 امنیت حساب را ثبت کرد: ابطال نشست توسط مدیر نصب با re-auth و reason؛ بازیابی Cloud/Offline؛ Reset فقط user-controlled؛ MFA برای مدیران/حساب‌های حساس با Passkey/TOTP؛ سیاست رمز جدید.
+- D-074 ترکیب مستقل و fail-closed Permission و Entitlement را ثبت کرد؛ وضعیت واقعی main حفظ شد: Trade gate وجود دارد اما DI فعلی DenyAll است و runtime signed entitlement هنوز تکمیل نیست.
+- شماره‌گذاری ADR با واقعیت D-072 هم‌تراز شد؛ شماره بعدی D-075 است. AGENTS.md و INDEX.md اصلاح شدند.
+- مستندات API و Frontend فقط وضعیت تصمیم را به‌روز کردند؛ endpoint یا DTO فرضی معرفی نشد.
+- **بدون تغییر کد، Schema، Migration، API، Job یا Purge.** Build/Test اجرا نشده‌اند؛ CI بعد از PR باید بررسی شود.
+- Handoff: `docs/handoffs/ISSUE-556-security-decisions.md`.
+- Branch: `docs/adr-073-074-account-security-entitlement`; PR مستقل و بدون Merge.
