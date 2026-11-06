@@ -69,3 +69,13 @@
 - Builder اکنون هنگام ساخت amendment، لیست subsystemهای v1 و تمام لایه‌های collection در company entitlementهای v2 (companies/modules/features) را به snapshotهای مستقل read-only کپی می‌کند.
 - تست‌های regression پس از ساخت amendment، مجموعه‌های ورودی را mutate می‌کنند و ثابت می‌کنند payload آماده امضا تغییر نمی‌کند.
 - این اصلاح در همان محدودهٔ pure payload builder است؛ هیچ persistence، signer، migration یا customer-side code اضافه نشده است.
+
+## برش دوم — افزایش entitlementهای شرکت موجود (2026-11-06)
+
+- متد `TryBuildCompanyEntitlementIncrease` در Builder اضافه شد؛ فقط Payload v2 معتبر و یک `CompanyReference` که از قبل در همان payload امضاشده وجود دارد پذیرفته می‌شود. v1 به v2 تبدیل نمی‌شود و CompanyReference جدید ساخته نمی‌شود.
+- افزودن ماژول‌های allowlist‌شده (از جمله `TRADE_IMPORT`)، افزایش `MaxUsers` و افزودن/ارتقای Featureهای موجود در `LicenseFeatureCatalog` پشتیبانی می‌شود.
+- Feature باید نوع کاتالوگ و ماژول مالکِ دارای entitlement داشته باشد؛ `enabled` فقط از false به true و `max_count` فقط به مقدار بزرگ‌تر قابل تغییر است. enum تا زمان وجود مقادیر محصولی تأییدشده پذیرفته نمی‌شود.
+- کاهش، تکرار، کد ناشناخته، ماژول از قبل خریداری‌شده، شرکت ناشناخته، درخواست خالی و سقف خارج از محدوده رد می‌شوند. همهٔ entitlementهای شرکت‌های دیگر و فیلدهای سطح Installation حفظ می‌شوند.
+- collectionهای ورودی و خروجی snapshot مستقل read-only هستند؛ candidate همچنان pure است و هیچ سفارش/پرداخت، persistence، approval، امضا، export یا sequence پایدار ایجاد نمی‌کند.
+- تست‌های Regression برای مسیر موفق چندنوعی، حفظ شرکت دیگر، round-trip canonical، ورودی mutable، رد v1، شرکت/ماژول/Feature نامعتبر، عدم افزایش و no-op اضافه شدند.
+- تست محلی اجرا نشده است؛ وضعیت فقط پس از CI روی SHA نهایی قابل `Verified` است.

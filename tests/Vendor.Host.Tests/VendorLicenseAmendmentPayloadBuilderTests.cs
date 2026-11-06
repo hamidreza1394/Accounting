@@ -332,6 +332,214 @@ public sealed class VendorLicenseAmendmentPayloadBuilderTests
         Assert.Equal("amendment_issued_at_invalid", error);
     }
 
+
+    [Fact]
+    public void BuildsV2CompanyEntitlementIncreaseForAnExistingCompanyAndSnapshotsInputs()
+    {
+        var fixture = CreateV2Fixture();
+        var secondCompany = new CompanyLicenseEntitlement(
+            "company-0002",
+            Array.AsReadOnly(new[] { "sales" }),
+            10,
+            Array.Empty<LicenseFeatureEntitlement?>());
+        fixture.Payload = fixture.Payload with
+        {
+            CompanyEntitlements = new[]
+            {
+                fixture.Payload.CompanyEntitlements![0],
+                secondCompany
+            }
+        };
+
+        var mutableModules = new List<string> { "sales", LicenseSubsystemCodes.TradeImport };
+        var mutableFeatures = new List<LicenseFeatureEntitlement?>
+        {
+            new("finance.cost_centers", LicenseFeatureValueTypes.MaxCount, MaxCount: 20),
+            new("finance.budgeting", LicenseFeatureValueTypes.Enabled, Enabled: true),
+            new("sales.pos", LicenseFeatureValueTypes.Enabled, Enabled: true)
+        };
+
+        var success = VendorLicenseAmendmentPayloadBuilder.TryBuildCompanyEntitlementIncrease(
+            fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
+            "company-0001", mutableModules, newMaxUsers: 40, featureIncreases: mutableFeatures,
+            issuedAtUtc: IssuedAt.AddDays(1), out var amendment, out var error);
+
+        Assert.True(success, error);
+        Assert.NotNull(amendment);
+        Assert.Equal(2, amendment!.FormatVersion);
+        Assert.Equal(fixture.Payload.LicenseId, amendment.LicenseId);
+        Assert.Equal(fixture.Payload.InstallationId, amendment.InstallationId);
+        Assert.Equal(fixture.Payload.Sequence + 1, amendment.Sequence);
+        Assert.Equal(fixture.Payload.Limits.MaxCompanies, amendment.Limits.MaxCompanies);
+        Assert.Empty(amendment.Limits.Subsystems);
+        Assert.Equal(fixture.Payload.SupportUntilUtc, amendment.SupportUntilUtc);
+        Assert.Equal(fixture.Payload.UpdatesUntilUtc, amendment.UpdatesUntilUtc);
+
+        var originalTarget = fixture.Payload.CompanyEntitlements![0]!;
+        var amendedTarget = amendment.CompanyEntitlements![0]!;
+        Assert.Equal("company-0001", amendedTarget.CompanyReference);
+        Assert.Equal(40, amendedTarget.MaxUsers);
+        Assert.Equal(
+            new[] { LicenseSubsystemCodes.TradeImport, "finance", "inventory", "sales" },
+            amendedTarget.Modules);
+        Assert.Equal(3, amendedTarget.Features!.Count);
+        Assert.Equal(20, amendedTarget.Features.Single(feature => feature!.Code == "finance.cost_centers")!.MaxCount);
+        Assert.True(amendedTarget.Features.Single(feature => feature!.Code == "finance.budgeting")!.Enabled);
+        Assert.True(amendedTarget.Features.Single(feature => feature!.Code == "sales.pos")!.Enabled);
+        Assert.NotSame(originalTarget.Modules, amendedTarget.Modules);
+        Assert.NotSame(originalTarget.Features, amendedTarget.Features);
+        Assert.NotSame(originalTarget.Features![0], amendedTarget.Features[0]);
+
+        var amendedOther = amendment.CompanyEntitlements[1]!;
+        Assert.Equal(secondCompany.CompanyReference, amendedOther.CompanyReference);
+        Assert.Equal(secondCompany.MaxUsers, amendedOther.MaxUsers);
+        Assert.Equal(new[] { "sales" }, amendedOther.Modules);
+        Assert.NotSame(secondCompany.Modules, amendedOther.Modules);
+
+        mutableModules.Add("treasury");
+        mutableFeatures.Add(new LicenseFeatureEntitlement(
+            "finance.budgeting", LicenseFeatureValueTypes.Enabled, Enabled: false));
+
+        Assert.DoesNotContain("treasury", amendedTarget.Modules!);
+        Assert.Equal(3, amendedTarget.Features.Count);
+        Assert.Empty(StructuralValidation.ValidatePayload(amendment));
+        Assert.True(
+            CanonicalJson.TryParsePayload(CanonicalJson.SerializePayload(amendment), out var parsed, out var parseError),
+            parseError);
+        Assert.Equal(40, parsed!.CompanyEntitlements![0]!.MaxUsers);
+    }
+
+    [Fact]
+    public void CompanyEntitlementIncreaseRejectsLegacyV1WithoutImplicitUpgrade()
+    {
+        var fixture = CreateV1Fixture();
+
+        var success = VendorLicenseAmendmentPayloadBuilder.TryBuildCompanyEntitlementIncrease(
+            fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
+            "company-0001", Array.Empty<string>(), newMaxUsers: 40,
+            Array.Empty<LicenseFeatureEntitlement?>(), IssuedAt.AddHours(1),
+            out var amendment, out var error);
+
+        Assert.False(success);
+        Assert.Null(amendment);
+        Assert.Equal("company_entitlements_require_payload_v2", error);
+    }
+
+    [Fact]
+    public void CompanyEntitlementIncreaseRejectsUnknownCompanyReference()
+    {
+        var fixture = CreateV2Fixture();
+
+        var success = VendorLicenseAmendmentPayloadBuilder.TryBuildCompanyEntitlementIncrease(
+            fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
+            "company-9999", new[] { "sales" }, null,
+            Array.Empty<LicenseFeatureEntitlement?>(), IssuedAt.AddHours(1),
+            out var amendment, out var error);
+
+        Assert.False(success);
+        Assert.Null(amendment);
+        Assert.Equal("company_not_entitled", error);
+    }
+
+    [Fact]
+    public void CompanyEntitlementIncreaseRejectsUnknownDuplicateAndAlreadyEntitledModules()
+    {
+        var fixture = CreateV2Fixture();
+
+        var success = VendorLicenseAmendmentPayloadBuilder.TryBuildCompanyEntitlementIncrease(
+            fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
+            "company-0001", new[] { "unknown-module" }, null,
+            Array.Empty<LicenseFeatureEntitlement?>(), IssuedAt.AddHours(1),
+            out var amendment, out var error);
+        Assert.False(success);
+        Assert.Null(amendment);
+        Assert.Equal("company_module_invalid", error);
+
+        success = VendorLicenseAmendmentPayloadBuilder.TryBuildCompanyEntitlementIncrease(
+            fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
+            "company-0001", new[] { "sales", "sales" }, null,
+            Array.Empty<LicenseFeatureEntitlement?>(), IssuedAt.AddHours(1),
+            out amendment, out error);
+        Assert.False(success);
+        Assert.Null(amendment);
+        Assert.Equal("company_module_duplicate", error);
+
+        success = VendorLicenseAmendmentPayloadBuilder.TryBuildCompanyEntitlementIncrease(
+            fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
+            "company-0001", new[] { "finance" }, null,
+            Array.Empty<LicenseFeatureEntitlement?>(), IssuedAt.AddHours(1),
+            out amendment, out error);
+        Assert.False(success);
+        Assert.Null(amendment);
+        Assert.Equal("company_module_already_entitled", error);
+    }
+
+    [Fact]
+    public void CompanyEntitlementIncreaseRequiresFeatureCatalogTypeAndEntitledOwningModule()
+    {
+        var fixture = CreateV2Fixture();
+
+        var success = VendorLicenseAmendmentPayloadBuilder.TryBuildCompanyEntitlementIncrease(
+            fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
+            "company-0001", Array.Empty<string>(), null,
+            new[] { new LicenseFeatureEntitlement("finance.unknown", LicenseFeatureValueTypes.Enabled, Enabled: true) },
+            IssuedAt.AddHours(1), out var amendment, out var error);
+        Assert.False(success);
+        Assert.Null(amendment);
+        Assert.Equal("company_feature_unknown", error);
+
+        success = VendorLicenseAmendmentPayloadBuilder.TryBuildCompanyEntitlementIncrease(
+            fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
+            "company-0001", Array.Empty<string>(), null,
+            new[] { new LicenseFeatureEntitlement("finance.budgeting", LicenseFeatureValueTypes.MaxCount, MaxCount: 5) },
+            IssuedAt.AddHours(1), out amendment, out error);
+        Assert.False(success);
+        Assert.Null(amendment);
+        Assert.Equal("company_feature_type_mismatch", error);
+
+        success = VendorLicenseAmendmentPayloadBuilder.TryBuildCompanyEntitlementIncrease(
+            fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
+            "company-0001", Array.Empty<string>(), null,
+            new[] { new LicenseFeatureEntitlement("sales.pos", LicenseFeatureValueTypes.Enabled, Enabled: true) },
+            IssuedAt.AddHours(1), out amendment, out error);
+        Assert.False(success);
+        Assert.Null(amendment);
+        Assert.Equal("company_feature_module_not_entitled", error);
+    }
+
+    [Fact]
+    public void CompanyEntitlementIncreaseRejectsSeatAndFeatureDowngradesOrNoOpRequests()
+    {
+        var fixture = CreateV2Fixture();
+
+        var success = VendorLicenseAmendmentPayloadBuilder.TryBuildCompanyEntitlementIncrease(
+            fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
+            "company-0001", Array.Empty<string>(), newMaxUsers: 25,
+            Array.Empty<LicenseFeatureEntitlement?>(), IssuedAt.AddHours(1),
+            out var amendment, out var error);
+        Assert.False(success);
+        Assert.Null(amendment);
+        Assert.Equal("company_user_limit_not_increased", error);
+
+        success = VendorLicenseAmendmentPayloadBuilder.TryBuildCompanyEntitlementIncrease(
+            fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
+            "company-0001", Array.Empty<string>(), null,
+            new[] { new LicenseFeatureEntitlement("finance.cost_centers", LicenseFeatureValueTypes.MaxCount, MaxCount: 10) },
+            IssuedAt.AddHours(1), out amendment, out error);
+        Assert.False(success);
+        Assert.Null(amendment);
+        Assert.Equal("company_feature_not_increased", error);
+
+        success = VendorLicenseAmendmentPayloadBuilder.TryBuildCompanyEntitlementIncrease(
+            fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
+            "company-0001", Array.Empty<string>(), null,
+            Array.Empty<LicenseFeatureEntitlement?>(), IssuedAt.AddHours(1),
+            out amendment, out error);
+        Assert.False(success);
+        Assert.Null(amendment);
+        Assert.Equal("amendment_has_no_entitlement_increase", error);
+    }
+
     private static Fixture CreateV1Fixture()
     {
         var customer = new VendorCustomer { Id = Guid.NewGuid(), Status = "Active" };

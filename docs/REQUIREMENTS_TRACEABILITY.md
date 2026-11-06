@@ -96,3 +96,16 @@
 
 این وضعیت فقط وجود تغییر در شاخه PR را نشان می‌دهد؛ Verified فقط پس از CI سبز روی SHA نهایی و ادغام ثبت می‌شود.
 
+
+
+## ردیابی Issue #393 — candidate افزایشی entitlement شرکت موجود
+
+| نیازمندی | شاهد کد | شاهد Regression | وضعیت |
+|---|---|---|---|
+| افزودن Module برای Company موجود در v2 | `TryBuildCompanyEntitlementIncrease` + `LicenseSubsystemCodes.IsAllowedCompanyModule` | مسیر موفق با `TRADE_IMPORT` و رد unknown/duplicate/already-entitled | Implemented در PR؛ CI pending |
+| افزایش UserSeat برای Company | همان Builder و `LicenseInputLimits.MaxUsersPerCompany` | افزایش موفق، مقدار برابر/کاهش و سقف خارج از محدوده | Implemented در PR؛ CI pending |
+| افزودن/ارتقای Feature نوع‌دار | `LicenseFeatureCatalog` و `LicenseFeatureValueTypes` | owner-module، type mismatch، unknown، max_count increase و enabled false→true | Implemented در PR؛ CI pending |
+| حفظ حقوق سایر شرکت‌ها و فیلدهای Installation | snapshot immutable در Builder | تست چندشرکتی و canonical round-trip | Implemented در PR؛ CI pending |
+| منع تبدیل v1 و ساخت CompanyReference جدید | شرط نسخه و lookup exact reference | تست رد v1 و reference ناشناخته | Implemented در PR؛ CI pending |
+
+این candidate فقط payload می‌سازد؛ سفارش/پرداخت، persistence، approval، signing/export و ACK هنوز NotImplemented هستند.

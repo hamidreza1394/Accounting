@@ -219,3 +219,12 @@ Issue #396 فقط مسئول startup gate و Activation Wizard است؛ contract
 - **NotImplemented:** commercial order/payment evidence، persistence درخواست Amendment، endpoint، maker-checker approval، signing/export و statusهای purchased/delivered/acknowledged.
 - **Dependency:** add-onهای Company-scoped برای module/feature/user-seat نیازمند current Payload v2 و CompanyReference قابل اعتماد است. تبدیل خودکار Payload v1 به v2 ممنوع است؛ تا زمانی که مرجع شرکت‌های نصب از مسیر provisioning/signed ACK معتبر در دسترس نباشد، UI نباید Company دلخواه را به‌عنوان مرجع معتبر بپذیرد.
 - **محدوده:** این برش هیچ تغییر در Customer `Server/**`، دیتابیس مشتری یا Migration مشتری ندارد و signer واقعی KMS/HSM را انتخاب یا شبیه‌سازی نمی‌کند.
+
+
+## وضعیت اجرایی Issue #393 — برش دوم Company-scoped add-on (2026-11-06)
+
+- **Implemented در شاخه PR؛ CI pending:** `VendorLicenseAmendmentPayloadBuilder.TryBuildCompanyEntitlementIncrease` candidate افزایشی برای CompanyReference موجود در Payload v2 می‌سازد: افزودن ماژول allowlist‌شده، افزایش سقف UserSeat و افزودن/ارتقای Feature نوع‌دار.
+- **قواعد fail-closed:** فقط reference موجود در payload پذیرفته می‌شود؛ v1 به v2 تبدیل نمی‌شود؛ Company جدید ساخته نمی‌شود؛ ماژول/Feature ناشناخته، تکراری، از قبل موجود، Feature بدون ماژول مالک، کاهش یا مقدار برابر، سقف خارج از محدوده و درخواست بدون تغییر رد می‌شود. enum تا تصویب کاتالوگ مقادیر قابل صدور نیست.
+- payload candidate همان LicenseId/InstallationId و نسخه v2 را نگه می‌دارد، Sequence را فقط در candidate یک واحد افزایش می‌دهد و maxCompanies، تاریخ‌های support/update و entitlement شرکت‌های دیگر را حفظ می‌کند. اعتبارسنجی امضا و ثبت sequence پایدار همچنان مسئولیت caller/service و مرحله بعدی است.
+- **NotImplemented:** Commercial Order/Payment Evidence، persistence درخواست Amendment، endpoint، Maker-Checker، signer/export و وضعیت‌های Purchased/Delivered/Acknowledged. این PR آن‌ها را تکمیل‌شده معرفی نمی‌کند.
+- **مرز:** فقط Vendor Host، تست Vendor و مستندات؛ بدون `Server/**`، دیتابیس/Migration مشتری یا secret. تست محلی اجرا نشده و CI نهایی باید روی SHA نهایی بررسی شود.
