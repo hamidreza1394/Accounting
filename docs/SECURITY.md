@@ -309,17 +309,16 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 الزامات تفصیلی در ACCESS_CONTROL_ARCHITECTURE.md است. Host، CompanyId، GroupId، TenantId و FiscalPeriodId ارسالی کلاینت به‌تنهایی مجوز نیستند. Host mapping فقط context verified را resolve می‌کند. عضویت جدید بین‌شرکتی تا approval مقصد Pending و فاقد هرگونه دسترسی عملیاتی است. Directory هم‌گروه read-only و allowlisted است و role، permission، login history، session، IP، password/hash یا جزئیات امنیتی شرکت دیگر را افشا نمی‌کند. همه queryها، mutationها، exportها، jobها و cacheها باید context کامل را کنترل کنند. TLS، trusted proxy، host-only cookie، anti-forgery، audit، concurrency و تست منفی cross-company/group/period الزامی‌اند.
 
 
-## نگهداری سوابق امنیتی — Proposed (D-070)
-- وضعیت: Proposed؛ تا تصمیم مالک/حقوقی هیچ پاک‌سازی خودکار، endpoint حذف، جدول سیاست یا job اجرایی ایجاد نمی‌شود.
-- مجوز پیشنهادی در سطح نصب: `security.audit.retention.manage`؛ هنوز در catalog فعال نشده است.
-- هر تغییر سیاست، legal hold و purge آتی باید Audit شود؛ Audit نباید IP خام یا payload رویداد را در DetailsJson جدید تکثیر کند.
-- گزینه‌های دوره نگهداری و اثر قانونی/عملیاتی در D-070 ثبت شده‌اند؛ UI فقط پس از تصویب، وضعیت read-only نشان می‌دهد و اجازه حذف ندارد.
+## نگهداری و آرشیو سوابق امنیتی — Accepted (D-070)
 
-### Exception logging hardening (issue #521, work in progress)
-
-Application-owned exception log calls should record only an exception type and fixed event metadata, never an exception object, its message, inner exceptions, request path, route metadata, trace identifier or query string. Request-failure logs use a server-generated failure identifier and a normalized HTTP method; request-derived correlation values are not logged because trace identifiers can originate from caller-controlled headers. Database connection failures must not include provider messages or connection strings. Generic client-facing errors must not contain exception messages.
-
-**This is not yet an end-to-end guarantee.** The application request pipeline now catches failures before the application exception handler or server unhandled-exception logger can receive them; if the response has started, it aborts the connection instead of rethrowing. API responses remain generic ProblemDetails; non-API failures return a generic plain-text error. ASP.NET Core automatically wraps Development applications in a developer exception page, and hosting/startup middleware, framework and third-party providers can still log independently of the application pipeline. Full real-application pipeline tests in Development and Production, including started responses and failures outside the application middleware, and provider review remain required before closing #521. Never treat unverified logs as safe for secrets.
+- مدت پیش‌فرض از زمان وقوع UTC: رویداد عادی ۱۲ ماه؛ حساس ۲۴ ماه؛ بحرانی ۳۶ ماه. اگر چند طبقه صدق کند، طولانی‌ترین مدت اعمال می‌شود. این baseline محصول است و جایگزین بررسی قانون/قرارداد حوزه قضایی نیست.
+- هیچ کاربر یا مدیر اجازه حذف/ویرایش مستقیم Audit را ندارد. Purge فقط پس از پایان مدت، نبود Legal Hold و تأیید Archive قابل راستی‌آزمایی مجاز است.
+- Cloud حجیم: داده تازه در Hot Store؛ داده قدیمی‌تر در Archive رمزنگاری‌شده، کم‌هزینه و مقیاس‌پذیر. انتقال batch/idempotent/checkpointed است و تا تطبیق شمارش/checksum/manifest، نسخه Hot حذف نمی‌شود. Archive به‌صورت tenant-isolated، access-audited و در صورت پشتیبانی WORM/Object Lock می‌شود.
+- افزایش حجم به‌تنهایی مجوز کوتاه‌کردن retention یا حذف زودهنگام نیست. پایش نرخ ورود، حجم tenant، رشد DB، query latency، backlog و هزینه؛ در صورت عبور از آستانه‌های عملیاتی، Archive/ظرفیت افزایش می‌یابد. جداسازی دیتابیس Audit فقط بر اساس اندازه‌گیری و ADR اجرایی است، نه الزام اولیه.
+- Restore باید deletion ledger/tombstone را اعمال کند تا داده purge‌شده دوباره زنده نشود. Backup جایگزین Archive یا retention نیست.
+- Legal Hold، تغییر سیاست، دسترسی Archive و Purge همگی Audit می‌شوند. مجوز پیشنهادی سطح نصب `security.audit.retention.manage` هنوز در کاتالوگ نیست.
+- **وضعیت کد:** NotImplemented؛ هیچ schema/table/job/endpoint/purge با D-070 ایجاد نشده است. جزئیات Provider، Hot Window، SLO و دوره‌های قانونی حوزه قضایی در Issue اجرایی باز می‌مانند.
+- مرجع: [D-070](DECISIONS.md#d-070--نگهداری-آرشیو-و-پاکسازی-سوابق-امنیتی-2026-11-03-تکمیل-و-تصویب-2026-11-06).
 
 
 ## مدیر شرکت، سقف تفویض و bootstrap امن — D-071 (2026-11-04)
@@ -331,3 +330,24 @@ Application-owned exception log calls should record only an exception type and f
 - **Bootstrap امن:** مدیر نصب (بررسی مجدد DB در هر درخواست، درون تراکنش) صف درخواست‌های هر شرکت را می‌بیند و تعیین تکلیف می‌کند؛ این تنها مسیر رسمی ساخت اولین عضو شرکت است و Audit `CompanyMembershipApproved/Rejected` دارد. self-approval برای همه ممنوع است.
 - **دفترچه هم‌گروه:** فقط-خواندنی، اجازه صریح `corporate-groups.directory.view`، scope اثبات‌شده سمت سرور، fail-closed روی مرز مشتری (اعضا + شرکت مالک)، خروجی allowlistشده بدون username/تماس/نقش/مجوز/داده امنیتی و پاسخ 404 برای هر رابطه اثبات‌نشده.
 - **عدم افشا:** کاتالوگ مجوز برای مدیر شرکت فقط کدهای سقف او را نشان می‌دهد؛ عضو بدون هیچ مجوزی 404 می‌گیرد. جزئیات و ماتریس: `docs/handoffs/ISSUE-444-company-manager-delegation-ceiling.md`.
+
+
+## امنیت حساب کاربری و MFA — Accepted (D-073، 2026-11-06)
+
+- مدیر نصب فعال می‌تواند با re-authentication و علت اجباری، یک نشست یا تمام نشست‌های فعال یک کاربر همان Installation را باطل کند. مدیر شرکت چنین اختیاری ندارد. ابطال اضطراری تمام نشست‌های Installation و break-glass خارج از تصمیم است.
+- Cloud password recovery از کانال تأییدشده (نسخه اول: ایمیل) با پاسخ غیرقابل enumeration، token تصادفی ۲۵۶بیتی، hash-only، یک‌بارمصرف و انقضای پیش‌فرض ۱۵ دقیقه انجام می‌شود. Dedicated/Offline از رویه محلی کنترل‌شده مدیر نصب استفاده می‌کند.
+- Reset مدیریتی فقط آغاز فرایند user-controlled است؛ مدیر هرگز رمز را انتخاب یا مشاهده نمی‌کند. مدیر شرکت فقط با مجوز مستقل `users.credentials.reset` برای عضو فعال همان شرکت می‌تواند درخواست را آغاز کند؛ اثر تغییر رمز روی حساب سراسری همان Installation آشکار و ممیزی می‌شود.
+- MFA برای مدیر نصب، مدیران شرکت و حساب‌های دارای دسترسی حساس اجباری است؛ کاربران عادی اختیاری‌اند و مدیر نصب می‌تواند الزام سازمانی را فعال کند. Passkey/WebAuthn ترجیحی، TOTP جایگزین Cloud/Offline؛ SMS و Email OTP عامل دوم نیستند. Recovery Code یک‌بارمصرف و hash-only است.
+- رمزهای جدید/تغییریافته حداقل ۱۵ و حداکثر ۱۲۸ نویسه، blocklist رمزهای رایج/افشاشده، بدون composition rules و بدون چرخش دوره‌ای اجباری هستند. حساب قدیمی ناگهان قفل نمی‌شود.
+- تکمیل recovery/reset یا تغییر/بازیابی MFA تمام نشست‌های قبلی را باطل می‌کند؛ reset رمز MFA را حذف نمی‌کند.
+- **وضعیت کد:** D-069 self-service sessions پیاده‌سازی شده؛ admin revoke، recovery، reset و MFA در Customer هنوز NotImplemented هستند. هیچ endpoint از این خلاصه به‌صورت ضمنی ایجاد نمی‌شود.
+- مرجع: [D-073](DECISIONS.md#d-073--امنیت-حساب-کاربری-بازیابی-اعتبارنامه-mfa-و-ابطال-مدیریتی-نشست-2026-11-06).
+
+## ترکیب Permission و Entitlement — Accepted (D-074، 2026-11-06)
+
+- مجوز عملیاتی از CompanyRole/CompanyRolePermissions/CompanyAccessService و حق تجاری از LicenseEnvelope/Entitlement engine می‌آید؛ هر دو مستقل و لازم‌اند.
+- ترتیب Customer Host: نشست → Company membership/context → FiscalPeriod/grant (در صورت کاربرد) → Installation/Company Entitlement → permission تخصصی → DataScope/use case.
+- خرید لایسنس Permission نمی‌سازد و تخصیص Permission حق تجاری نمی‌سازد. همه خطاها، انقضا، mismatch و وضعیت نامعلوم fail-closed هستند.
+- Cloud از مرجع سمت سرور و cache نسخه‌دار/دارای expiry استفاده می‌کند؛ Offline از Envelope امضاشده، sequence و anti-rollback استفاده می‌کند. تماس Vendor برای هر درخواست حسابداری ممنوع است.
+- **وضعیت کد:** قرارداد v2 و اجزای Trade gate موجودند؛ runtime واقعی Trade هنوز با DenyAll بسته است و اتصال سراسری همه ماژول‌ها کامل نیست.
+- مرجع: [D-074](DECISIONS.md#d-074--ترکیب-مجوز-عملیاتی-و-entitlement-تجاری-در-تصمیم-دسترسی-2026-11-06).
