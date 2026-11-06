@@ -264,7 +264,8 @@ describe('App routing', () => {
     // The first load of this lazy page also transforms the calendar library, which is slow under jsdom.
     expect(await screen.findByRole('heading', { level: 1, name: 'گزارش امنیت و سوابق' }, { timeout: 15000 })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/app/admin/security/audit');
-    expect(await screen.findByText('ایجاد گروه دسترسی')).toBeInTheDocument();
+    // The row label comes from the synced event-type registry wording of the server (CompanyRoleCreated).
+    expect(await screen.findByText('ایجاد نقش شرکت')).toBeInTheDocument();
     first.unmount();
 
     window.history.replaceState(null, '', '/app/admin/security/audit');
