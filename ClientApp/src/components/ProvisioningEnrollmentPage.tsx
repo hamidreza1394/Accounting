@@ -93,13 +93,13 @@ export function ProvisioningEnrollmentPage() {
                     onChange={event => setToken(event.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-start text-sm" />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="enrollment-password" className="text-sm font-medium">گذرواژه جدید (حداقل ۱۲ نویسه)</label>
-                  <input id="enrollment-password" type="password" required minLength={12} maxLength={128} autoComplete="new-password" value={password}
+                  <label htmlFor="enrollment-password" className="text-sm font-medium">گذرواژه جدید (حداقل ۱۵ نویسه)</label>
+                  <input id="enrollment-password" type="password" required minLength={15} maxLength={128} autoComplete="new-password" value={password}
                     onChange={event => setPassword(event.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" />
                 </div>
                 <div className="space-y-2">
                   <label htmlFor="enrollment-confirmation" className="text-sm font-medium">تکرار گذرواژه</label>
-                  <input id="enrollment-confirmation" type="password" required minLength={12} maxLength={128} autoComplete="new-password" value={confirmation}
+                  <input id="enrollment-confirmation" type="password" required minLength={15} maxLength={128} autoComplete="new-password" value={confirmation}
                     onChange={event => setConfirmation(event.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" />
                 </div>
                 {error && <Alert tone="error">{error}</Alert>}

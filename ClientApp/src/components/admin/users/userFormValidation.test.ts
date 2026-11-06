@@ -5,8 +5,8 @@ const valid: UserFormValues = {
   ...emptyUserForm,
   username: 'ali.r',
   emailAddress: 'ali@example.test',
-  password: 'Str0ng-pass!',
-  confirmPassword: 'Str0ng-pass!',
+  password: 'Str0ng-pass-phrase!',
+  confirmPassword: 'Str0ng-pass-phrase!',
 };
 
 describe('validateUserForm', () => {
@@ -46,8 +46,8 @@ describe('validateUserForm', () => {
     }
   });
 
-  it('enforces password length 8..128, a non-blank value and the confirmation match', () => {
-    expect(validateUserForm({ ...valid, password: 'short1', confirmPassword: 'short1' }, 'create').password).toMatch(/دست‌کم ۸/);
+  it('enforces password length 15..128, a non-blank value and the confirmation match', () => {
+    expect(validateUserForm({ ...valid, password: 'short1', confirmPassword: 'short1' }, 'create').password).toMatch(/دست‌کم ۱۵/);
     expect(validateUserForm({ ...valid, password: '        ', confirmPassword: '        ' }, 'create').password).toBe('رمز عبور را وارد کنید.');
     const long = 'p'.repeat(129);
     expect(validateUserForm({ ...valid, password: long, confirmPassword: long }, 'create').password).toMatch(/بیش از ۱۲۸/);

@@ -2641,3 +2641,10 @@
 - ۱۰ مسیر `hrRoutes` در `AppRoutes.tsx` ثبت شد و سه آیتم «واحدهای سازمانی»، «سمت‌های سازمانی» و «کارکنان» زیر «مدیریت سیستم» در `AppShell.tsx` افزوده شد (placeholder قدیمی «ساختار سازمانی و سمت‌ها» جایگزین شد).
 - `lib/permissions.ts`: سه hint `hr.units.view`/`hr.positions.view`/`hr.employees.view` برای کدهای verified‌شدهٔ `hr.organizational-units.list`، `hr.positions.list`، `hr.employees.list`؛ fail-closed در loading/error/شرکت نامطابق.
 - آزمون: `HrIntegration.test.tsx` (۲۲ تست) + تست‌های `permissions`؛ کل ClientApp ۷۵۵ تست موفق؛ build و check:offline موفق. Backend، Schema و `features/hr/**` تغییر نکرد؛ dotnet/E2E اجرا نشد.
+
+## 2026-11-06 — هم‌ترازی سیاست رمز عبور با D-073 §5 (شاخه feat/password-policy-d073)
+- `Constants.MinLength.UserPassword` از ۸ به **۱۵**؛ فقط برای رمز جدید/تغییریافته (Login و حساب‌های قدیمی دست‌نخورده). حداکثر ۱۲۸، blocklist، بدون قاعده ترکیبی و پذیرش عبارت عبور/فاصله طبق D-073 §5 حفظ شد.
+- ثبت‌نام اولین مدیر (`CustomerProvisioningApplyService.CompleteEnrollmentAsync`) که قبلاً طول ۱۲..۱۲۸ hardcode و بدون blocklist بود، به همان ثابت‌ها + `NotCommonPasswordAttribute` هم‌تراز شد.
+- Client هم‌تراز شد: SecurityTab (تغییر رمز شخصی) ۸→۱۵، فرم ایجاد کاربر ۸→۱۵، صفحه ثبت‌نام اولین مدیر ۱۲→۱۵ + تست‌های مربوطه (هیچ تستی حذف/تضعیف نشد).
+- تست مرزی جدید: رمز ۱۴ نویسه رد، رمز ۱۵ نویسه با فاصله پذیرفته؛ `PasswordPolicyTests` بازساختگان منطبق با حداقل ۱۵.
+- نتایج واقعی: dotnet کل ۱۰۴۰ موفق / ۲ پیش‌موجود (`SafeExceptionRealApplicationTests`) / ۶۲ Skip؛ vitest ۷۸۳/۷۸۳؛ typecheck و build سبز. `docs/USER_SELF_SERVICE.md` به‌روزرسانی شد؛ handoff: `ISSUE-444-password-policy-d073.md`. Merge فقط با اجازه مالک.

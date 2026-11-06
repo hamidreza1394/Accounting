@@ -29,7 +29,7 @@ describe('Customer provisioning enrollment', () => {
     render(<ProvisioningEnrollmentPage />);
     fireEvent.change(await screen.findByLabelText('نام کاربری مدیر'), { target: { value: 'initial-admin' } });
     fireEvent.change(screen.getByLabelText('توکن یک‌بارمصرف'), { target: { value: 'a'.repeat(43) } });
-    fireEvent.change(screen.getByLabelText('گذرواژه جدید (حداقل ۱۲ نویسه)'), { target: { value: 'Strong-Passphrase-2026' } });
+    fireEvent.change(screen.getByLabelText('گذرواژه جدید (حداقل ۱۵ نویسه)'), { target: { value: 'Strong-Passphrase-2026' } });
     fireEvent.change(screen.getByLabelText('تکرار گذرواژه'), { target: { value: 'Strong-Passphrase-2026' } });
     await waitFor(() => expect(screen.getByRole('button', { name: 'مصرف توکن و فعال‌سازی حساب' })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: 'مصرف توکن و فعال‌سازی حساب' }));
@@ -58,7 +58,7 @@ describe('Customer provisioning enrollment', () => {
     render(<ProvisioningEnrollmentPage />);
     fireEvent.change(await screen.findByLabelText('نام کاربری مدیر'), { target: { value: 'initial-admin' } });
     fireEvent.change(screen.getByLabelText('توکن یک‌بارمصرف'), { target: { value: 'a'.repeat(43) } });
-    fireEvent.change(screen.getByLabelText('گذرواژه جدید (حداقل ۱۲ نویسه)'), { target: { value: 'Strong-Passphrase-2026' } });
+    fireEvent.change(screen.getByLabelText('گذرواژه جدید (حداقل ۱۵ نویسه)'), { target: { value: 'Strong-Passphrase-2026' } });
     fireEvent.change(screen.getByLabelText('تکرار گذرواژه'), { target: { value: 'Different-Passphrase-2026' } });
     fireEvent.click(screen.getByRole('button', { name: 'مصرف توکن و فعال‌سازی حساب' }));
 

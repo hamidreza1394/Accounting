@@ -8,7 +8,7 @@ export const limits = {
   nameMax: 50,
   emailMax: 254,
   mobileLength: 11,
-  passwordMin: 8,
+  passwordMin: 15,
   passwordMax: 128,
 } as const;
 

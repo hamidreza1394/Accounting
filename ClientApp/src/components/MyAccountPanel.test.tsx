@@ -196,7 +196,7 @@ describe('MyAccountPanel security tab', () => {
     expect(field.current()).toHaveFocus();
     expect(field.current()).toHaveAttribute('aria-invalid', 'true');
 
-    await user.type(field.current(), 'OldPass#1');
+    await user.type(field.current(), 'OldPass#1-Long-2026!');
     await user.type(field.next(), 'short');
     await user.type(field.confirm(), 'short');
     await user.click(submitButton());
@@ -204,12 +204,12 @@ describe('MyAccountPanel security tab', () => {
     expect(field.next()).toHaveFocus();
 
     await user.clear(field.next());
-    await user.type(field.next(), 'OldPass#1');
+    await user.type(field.next(), 'OldPass#1-Long-2026!');
     await user.click(submitButton());
     expect(screen.getByText('رمز جدید نباید با رمز فعلی یکسان باشد.')).toBeInTheDocument();
 
     await user.clear(field.next());
-    await user.type(field.next(), 'NewPass#12345');
+    await user.type(field.next(), 'NewPass#1234567');
     await user.clear(field.confirm());
     await user.type(field.confirm(), 'Different#12345');
     await user.click(submitButton());
@@ -244,8 +244,8 @@ describe('MyAccountPanel security tab', () => {
     });
     const user = await openSecurity();
     await user.type(field.current(), 'WrongOld#1');
-    await user.type(field.next(), 'NewPass#12345');
-    await user.type(field.confirm(), 'NewPass#12345');
+    await user.type(field.next(), 'NewPass#1234567');
+    await user.type(field.confirm(), 'NewPass#1234567');
     await user.click(submitButton());
 
     expect(await screen.findByText('رمز فعلی نادرست است.')).toBeInTheDocument();
@@ -253,7 +253,7 @@ describe('MyAccountPanel security tab', () => {
     expect(screen.queryByRole('alert')).toBeNull();
     expect(field.current()).toHaveFocus();
     expect(field.current()).toHaveValue('');
-    expect(field.next()).toHaveValue('NewPass#12345');
+    expect(field.next()).toHaveValue('NewPass#1234567');
     expect(submitButton()).toBeEnabled();
   });
 
@@ -265,8 +265,8 @@ describe('MyAccountPanel security tab', () => {
     });
     const user = await openSecurity();
     await user.type(field.current(), 'OldPass#1');
-    await user.type(field.next(), 'NewPass#12345');
-    await user.type(field.confirm(), 'NewPass#12345');
+    await user.type(field.next(), 'NewPass#1234567');
+    await user.type(field.confirm(), 'NewPass#1234567');
     await user.click(submitButton());
     expect(await screen.findByText('تکرار رمز یکسان نیست.')).toBeInTheDocument();
     expect(field.confirm()).toHaveAccessibleDescription(/یکسان نیست/);
@@ -281,15 +281,15 @@ describe('MyAccountPanel security tab', () => {
     });
     const user = await openSecurity();
     await user.type(field.current(), 'OldPass#1');
-    await user.type(field.next(), 'NewPass#12345');
-    await user.type(field.confirm(), 'NewPass#12345');
+    await user.type(field.next(), 'NewPass#1234567');
+    await user.type(field.confirm(), 'NewPass#1234567');
     await user.click(submitButton());
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('تعداد تلاش‌ها زیاد است.');
     expect(alert).toHaveFocus();
     // Any non-401 API rejection may be a rejected current password, so it is never kept on screen.
     expect(field.current()).toHaveValue('');
-    expect(field.next()).toHaveValue('NewPass#12345');
+    expect(field.next()).toHaveValue('NewPass#1234567');
   });
 
   it('pairs the toggle placement with the input padding in one LTR wrapper', async () => {
@@ -316,8 +316,8 @@ describe('MyAccountPanel security tab', () => {
     });
     const user = await openSecurity();
     await user.type(field.current(), 'OldPass#1');
-    await user.type(field.next(), 'NewPass#12345');
-    await user.type(field.confirm(), 'NewPass#12345');
+    await user.type(field.next(), 'NewPass#1234567');
+    await user.type(field.confirm(), 'NewPass#1234567');
     await user.click(submitButton());
     expect(await screen.findByText('رمز ضعیف است.')).toBeInTheDocument();
     expect(field.next()).toHaveAccessibleDescription(/رمز ضعیف است/);
@@ -330,8 +330,8 @@ describe('MyAccountPanel security tab', () => {
     stubApi({ ...profileRoute, ...antiforgeryRoute, 'POST /api/v1/me/password': { status: 400, body: { error: 'درخواست نامعتبر است.' } } });
     const user = await openSecurity();
     await user.type(field.current(), 'OldPass#1');
-    await user.type(field.next(), 'NewPass#12345');
-    await user.type(field.confirm(), 'NewPass#12345');
+    await user.type(field.next(), 'NewPass#1234567');
+    await user.type(field.confirm(), 'NewPass#1234567');
     await user.click(submitButton());
     expect(await screen.findByRole('alert')).toHaveTextContent('درخواست نامعتبر است.');
     expect(field.current()).toHaveValue('');
@@ -350,8 +350,8 @@ describe('MyAccountPanel security tab', () => {
     const user = await openPanel();
     await user.click(screen.getByRole('tab', { name: 'امنیت حساب' }));
     await user.type(field.current(), 'OldPass#1');
-    await user.type(field.next(), 'NewPass#12345');
-    await user.type(field.confirm(), 'NewPass#12345');
+    await user.type(field.next(), 'NewPass#1234567');
+    await user.type(field.confirm(), 'NewPass#1234567');
     await user.click(submitButton());
     await screen.findByRole('button', { name: 'در حال ثبت…' });
 
@@ -389,8 +389,8 @@ describe('MyAccountPanel security tab', () => {
     const user = await openPanel(onPasswordChanged);
     await user.click(screen.getByRole('tab', { name: 'امنیت حساب' }));
     await user.type(field.current(), 'OldPass#1');
-    await user.type(field.next(), 'NewPass#12345');
-    await user.type(field.confirm(), 'NewPass#12345');
+    await user.type(field.next(), 'NewPass#1234567');
+    await user.type(field.confirm(), 'NewPass#1234567');
 
     const form = submitButton().closest('form')!;
     fireEvent.submit(form);
@@ -409,13 +409,13 @@ describe('MyAccountPanel security tab', () => {
     const user = await openPanel(onPasswordChanged);
     await user.click(screen.getByRole('tab', { name: 'امنیت حساب' }));
     await user.type(field.current(), 'OldPass#1');
-    await user.type(field.next(), 'NewPass#12345');
-    await user.type(field.confirm(), 'NewPass#12345');
+    await user.type(field.next(), 'NewPass#1234567');
+    await user.type(field.confirm(), 'NewPass#1234567');
     await user.click(submitButton());
 
     await waitFor(() => expect(onPasswordChanged).toHaveBeenCalledTimes(1));
     const [, init] = postCalls(fetchMock)[0]!;
-    expect(JSON.parse(String(init?.body))).toEqual({ currentPassword: 'OldPass#1', newPassword: 'NewPass#12345', confirmNewPassword: 'NewPass#12345' });
+    expect(JSON.parse(String(init?.body))).toEqual({ currentPassword: 'OldPass#1', newPassword: 'NewPass#1234567', confirmNewPassword: 'NewPass#1234567' });
     expect(field.current()).toHaveValue('');
     expect(field.next()).toHaveValue('');
     expect(field.confirm()).toHaveValue('');

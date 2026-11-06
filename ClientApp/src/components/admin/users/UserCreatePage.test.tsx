@@ -38,8 +38,8 @@ async function fillValid(user: UserEvent) {
   await user.type(field.firstName(), 'علی');
   await user.type(field.lastName(), 'رضایی');
   await user.type(field.username(), 'ali.r');
-  await user.type(field.password(), 'Str0ng-pass!');
-  await user.type(field.confirm(), 'Str0ng-pass!');
+  await user.type(field.password(), 'Str0ng-pass-phrase!');
+  await user.type(field.confirm(), 'Str0ng-pass-phrase!');
   await user.type(field.email(), 'ali@example.test');
   await user.type(field.mobile(), '09123456789');
 }
@@ -111,7 +111,7 @@ describe('UserCreatePage', () => {
     stubApi(() => json({}));
     setup();
     expect(screen.getByText(/۳ تا ۲۰ نویسه/)).toBeInTheDocument();
-    expect(screen.getByText(/دست‌کم ۸ نویسه/)).toBeInTheDocument();
+    expect(screen.getByText(/دست‌کم ۱۵ نویسه/)).toBeInTheDocument();
     expect(screen.getByText(/۱۱ رقم لاتین، مانند/)).toBeInTheDocument();
   });
 
@@ -159,7 +159,7 @@ describe('UserCreatePage', () => {
   it.each([
     ['email', 'plain', 'قالب ایمیل معتبر نیست.'],
     ['mobile', '0912', 'شماره موبایل باید ۱۱ رقم لاتین باشد'],
-    ['password', 'short1', 'رمز عبور باید دست‌کم ۸ نویسه باشد.'],
+    ['password', 'short1', 'رمز عبور باید دست‌کم ۱۵ نویسه باشد.'],
   ] as const)('shows the %s rule on blur', async (name, value, message) => {
     const user = userEvent.setup();
     stubApi(() => json({}));
@@ -173,7 +173,7 @@ describe('UserCreatePage', () => {
     const user = userEvent.setup();
     stubApi(() => json({}));
     setup();
-    await user.type(field.password(), 'Str0ng-pass!');
+    await user.type(field.password(), 'Str0ng-pass-phrase!');
     await user.type(field.confirm(), 'other-pass-1');
     await user.tab();
     expect(screen.getByText('تکرار رمز عبور با رمز عبور یکسان نیست.')).toBeInTheDocument();
@@ -206,8 +206,8 @@ describe('UserCreatePage', () => {
       lastName: 'رضایی',
       emailAddress: 'ali@example.test',
       cellPhoneNumber: '09123456789',
-      password: 'Str0ng-pass!',
-      confirmPassword: 'Str0ng-pass!',
+      password: 'Str0ng-pass-phrase!',
+      confirmPassword: 'Str0ng-pass-phrase!',
       isActive: true,
     });
     expect(Object.keys(post?.body as object).sort()).toEqual(
@@ -229,8 +229,8 @@ describe('UserCreatePage', () => {
     setup();
     await user.type(field.username(), 'minimal');
     await user.type(field.email(), 'min@example.test');
-    await user.type(field.password(), 'Str0ng-pass!');
-    await user.type(field.confirm(), 'Str0ng-pass!');
+    await user.type(field.password(), 'Str0ng-pass-phrase!');
+    await user.type(field.confirm(), 'Str0ng-pass-phrase!');
     await user.click(screen.getByRole('checkbox', { name: 'حساب فعال باشد' }));
     expect(screen.getByText(/حساب غیرفعال است/)).toBeInTheDocument();
     await user.click(submit());
@@ -247,7 +247,7 @@ describe('UserCreatePage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('نام کاربری، ایمیل یا شماره همراه قبلاً ثبت شده است.');
     expect(screen.getByRole('alert')).toHaveFocus();
     expect(field.username()).toHaveValue('ali.r');
-    expect(field.password()).toHaveValue('Str0ng-pass!');
+    expect(field.password()).toHaveValue('Str0ng-pass-phrase!');
     expect(field.email()).toHaveValue('ali@example.test');
     expect(window.location.pathname).toBe('/app/admin/users/new');
     expect(submit()).toBeEnabled();
