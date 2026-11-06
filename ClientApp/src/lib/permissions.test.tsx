@@ -101,3 +101,41 @@ describe('permissions (UI hint only, fail-closed)', () => {
     expect(result.current.can('admin.roles.view')).toBe(true);
   });
 });
+
+describe('HR hints (company-scoped list codes)', () => {
+  const ready = (codes: string[], overrides: Partial<AccessSnapshot> = {}): AccessSnapshot => ({
+    status: 'ready',
+    isInstallationAdministrator: false,
+    companyId: 'a',
+    companyCodes: codes,
+    ...overrides,
+  });
+
+  it.each([
+    ['hr.units.view', 'hr.organizational-units.list'],
+    ['hr.positions.view', 'hr.positions.list'],
+    ['hr.employees.view', 'hr.employees.list'],
+  ] as const)('%s is granted only by %s', (permission, code) => {
+    expect(can(ready([code]), permission)).toBe(true);
+    expect(can(ready([]), permission)).toBe(false);
+    expect(can(ready(['hr.employees.view', 'hr.positions.create'].filter((c) => c !== code)), permission)).toBe(false);
+  });
+
+  it('does not let one HR family unlock another', () => {
+    const access = ready(['hr.employees.list']);
+    expect(can(access, 'hr.units.view')).toBe(false);
+    expect(can(access, 'hr.positions.view')).toBe(false);
+  });
+
+  it('grants every HR hint to a ready installation administrator, like the server', () => {
+    const access = ready([], { isInstallationAdministrator: true });
+    expect(can(access, 'hr.units.view') && can(access, 'hr.positions.view') && can(access, 'hr.employees.view')).toBe(true);
+  });
+
+  it('grants nothing while loading, after an error, or for another company', () => {
+    expect(can({ ...deniedAccess }, 'hr.employees.view')).toBe(false);
+    expect(can({ ...deniedAccess, status: 'error' }, 'hr.employees.view')).toBe(false);
+    expect(can(ready(['hr.employees.list']), 'hr.employees.view', 'b')).toBe(false);
+    expect(can(ready(['hr.employees.list']), 'hr.employees.view', 'A')).toBe(true);
+  });
+});

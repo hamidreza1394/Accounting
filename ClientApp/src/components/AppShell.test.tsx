@@ -53,11 +53,12 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: 'مدیریت کاربران' })).toHaveAttribute('href', '/app/admin/users');
     expect(screen.getByRole('link', { name: 'گروه‌های دسترسی' })).toHaveAttribute('href', '/app/admin/roles');
     expect(screen.getByRole('link', { name: 'کاتالوگ و جزئیات مجوزها' })).toHaveAttribute('href', '/app/admin/permissions');
-    // The security report is a real page now; the other two remain placeholders.
+    // The security report and the HR organizational pages are real now (HR entries: HrIntegration.test.tsx); only
+    // the security policies remain a placeholder.
     expect(screen.getByRole('link', { name: 'گزارش امنیت و سوابق' })).toHaveAttribute('href', '/app/admin/security/audit');
-    for (const label of ['ساختار سازمانی و سمت‌ها', 'سیاست‌های امنیتی']) {
-      expect(screen.getByText(label).closest('[aria-disabled="true"]')).toBeTruthy();
-    }
+    expect(screen.getByText('سیاست‌های امنیتی').closest('[aria-disabled="true"]')).toBeTruthy();
+    // The old "organizational structure" placeholder is replaced by the real HR entries, never shown beside them.
+    expect(screen.queryByText('ساختار سازمانی و سمت‌ها')).toBeNull();
     expect(screen.queryByText('لیست کاربران فعال')).toBeNull();
     expect(screen.queryByText('مشاهده ورود و خروج کاربران')).toBeNull();
   });
@@ -65,8 +66,8 @@ describe('AppShell', () => {
   it('keeps the new administration labels readable without truncation', () => {
     // JSDOM cannot measure visual wrapping, but it can guard the full label and wrapping classes.
     shell(installationAdmin, { isAdministrator: true });
-    const longLabel = screen.getByText('ساختار سازمانی و سمت‌ها');
-    expect(longLabel).toHaveTextContent('ساختار سازمانی و سمت‌ها');
+    const longLabel = screen.getByText('سیاست‌های امنیتی');
+    expect(longLabel).toHaveTextContent('سیاست‌های امنیتی');
     expect(longLabel.className).not.toContain('truncate');
     expect(longLabel.className).toContain('whitespace-normal');
   });
@@ -76,7 +77,7 @@ describe('AppShell', () => {
     // `title` tooltip or a visually-hidden span was invisible to touch users. Nested rows
     // now carry the same always-visible text badge as top-level rows, just smaller.
     shell(installationAdmin, { isAdministrator: true });
-    const nestedItem = screen.getByText('ساختار سازمانی و سمت‌ها').closest('[aria-disabled="true"]') as HTMLElement;
+    const nestedItem = screen.getByText('سیاست‌های امنیتی').closest('[aria-disabled="true"]') as HTMLElement;
     expect(nestedItem).toBeTruthy();
     expect(nestedItem).toHaveTextContent('به‌زودی');
     expect(nestedItem.querySelector('.faranou-nav-soon-dot')).toBeFalsy();

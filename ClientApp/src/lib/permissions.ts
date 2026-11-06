@@ -20,6 +20,11 @@ export type Permission =
   | 'admin.roles.update'
   | 'admin.roles.assign'
   | 'admin.permissions.view'
+  // HR organizational structure (D-072): installation administrator (the server lets them through), or a
+  // company member holding the matching `hr.*.list` company code. Hints for the menu and the route guard only.
+  | 'hr.units.view'
+  | 'hr.positions.view'
+  | 'hr.employees.view'
   // Any signed-in user.
   | 'account.view';
 
@@ -52,6 +57,13 @@ const roleCodes = {
   create: 'roles.create',
   update: 'roles.update',
   assign: 'roles.assign',
+} as const;
+
+/** Company permission codes (server-owned, `HrOrganizationalStructureEndpoints`) that unlock each HR hint. */
+const hrCodes = {
+  units: 'hr.organizational-units.list',
+  positions: 'hr.positions.list',
+  employees: 'hr.employees.list',
 } as const;
 
 const sameCompany = (left: string | null, right: string): boolean => left !== null && left.toLowerCase() === right.toLowerCase();
@@ -87,6 +99,12 @@ export function can(access: AccessSnapshot | null | undefined, permission: Permi
           return has(roleCodes.assign);
         case 'admin.permissions.view':
           return Object.values(roleCodes).some(has);
+        case 'hr.units.view':
+          return has(hrCodes.units);
+        case 'hr.positions.view':
+          return has(hrCodes.positions);
+        case 'hr.employees.view':
+          return has(hrCodes.employees);
         default:
           return false;
       }

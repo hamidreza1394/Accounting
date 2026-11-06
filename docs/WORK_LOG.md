@@ -2628,3 +2628,9 @@
 - **تست:** +۹۲ تست جدید HR (پارسرها، کلاینت، اعتبارسنجی، درخت، ۸ صفحه/جریان) — کل سوییت ۶۳۸/۶۳۸ موفق (۶۸ فایل)؛ `npm run typecheck`، `npm run build` و `npm run check:offline` (۳۶ منبع محلی، بدون CDN) همه سبز؛ بدون حذف/تضعیف تست موجود. مرورگر واقعی و E2E پس از ادغام مسیرها (اجراشده ثبت نشد).
 - **محدودیت مستندشده:** جستجوی کاربر برای اتصال حساب نیازمند `users.list` است (نقطهٔ پایانی جستجوی HR در بک‌اند وجود ندارد) و نام مدیر در DTO انتساب موجود نیست؛ UI به‌جای حدس، محدودیت را نشان می‌دهد.
 - **PR:** شاخه `feature/hr-organizational-ui`؛ عنوان `feat(hr): implement organizational management frontend`؛ Merge فقط با اجازهٔ مالک.
+
+
+## 2026-11-06 — ادغام Frontend منابع انسانی در پوستهٔ مدیریت سیستم (شاخه feature/hr-frontend-integration)
+- ۱۰ مسیر `hrRoutes` در `AppRoutes.tsx` ثبت شد و سه آیتم «واحدهای سازمانی»، «سمت‌های سازمانی» و «کارکنان» زیر «مدیریت سیستم» در `AppShell.tsx` افزوده شد (placeholder قدیمی «ساختار سازمانی و سمت‌ها» جایگزین شد).
+- `lib/permissions.ts`: سه hint `hr.units.view`/`hr.positions.view`/`hr.employees.view` برای کدهای verified‌شدهٔ `hr.organizational-units.list`، `hr.positions.list`، `hr.employees.list`؛ fail-closed در loading/error/شرکت نامطابق.
+- آزمون: `HrIntegration.test.tsx` (۲۲ تست) + تست‌های `permissions`؛ کل ClientApp ۷۵۵ تست موفق؛ build و check:offline موفق. Backend، Schema و `features/hr/**` تغییر نکرد؛ dotnet/E2E اجرا نشد.
