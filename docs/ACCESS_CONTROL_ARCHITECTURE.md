@@ -139,3 +139,12 @@ Directory فقط کاربران شرکت‌هایی را نشان می‌دهد 
 | H | extraction readiness | contract tests و نبود coupling داخلی |
 
 این ADR به معنی جداسازی فوری دیتابیس یا الزام به microservice نیست. ساخت License engine، Migration مشتری و موتور تلفیق مالی خارج از دامنه آن است.
+
+
+## ۴. تصمیم‌های تکمیلی امنیت حساب و Entitlement (D-073/D-074)
+
+- D-073: مدیر نصب می‌تواند نشست یک کاربر دیگر را فقط در همان Installation، با احراز هویت مجدد، علت اجباری و Audit باطل کند؛ مدیر شرکت اختیار revoke نشست دیگران ندارد. Forgot Password و Admin Reset فقط فرایند user-controlled هستند؛ مدیر رمز را تعیین/مشاهده نمی‌کند. مدیر شرکت برای آغاز Reset به مجوز مستقل `users.credentials.reset` و عضویت فعال همان Company نیاز دارد.
+- MFA برای مدیر نصب، مدیران شرکت و حساب‌های حساس اجباری است؛ Passkey/WebAuthn ترجیحی، TOTP جایگزین آفلاین، Recovery Code یک‌بارمصرف؛ SMS/Email OTP عامل دوم نیستند.
+- D-074: Permission و Entitlement دو موتور مستقل‌اند و هر دو برای قابلیت‌های لایسنس‌دار لازم‌اند. ترتیب canonical: Authentication/Session → Company membership/context → FiscalPeriod/grant → Entitlement → operational Permission → DataScope/use case.
+- هیچ لایسنس یا Feature خریداری‌شده‌ای Permission نمی‌سازد و هیچ Role/Permission لایسنس ایجاد نمی‌کند. Cloud از authority سمت سرور و cache نسخه‌دار/دارای expiry؛ Offline از Envelope امضاشده و sequence/anti-rollback استفاده می‌کند.
+- وضعیت پیاده‌سازی جداست: D-073 عمدتاً NotImplemented؛ در D-074 قرارداد v2 و Trade gate موجودند اما runtime Trade هنوز با DenyAll fail-closed است و تعمیم همه ماژول‌ها باقی است.
