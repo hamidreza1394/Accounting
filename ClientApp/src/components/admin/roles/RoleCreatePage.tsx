@@ -17,11 +17,18 @@ import { CompanySelect } from './CompanySelect';
 import { newRolePath, resolveCompanyId, rolePath, rolesPath, useCompanyChoices } from './useCompanyChoices';
 import { usePermissionCatalog } from './usePermissionCatalog';
 
-type Props = { onUnauthenticated: (error: unknown) => boolean; defaultCompanyId: string };
+type Props = {
+  onUnauthenticated: (error: unknown) => boolean;
+  defaultCompanyId: string;
+  /** Only changes the delegation text; the server applies the ceiling either way. */
+  isInstallationAdministrator?: boolean;
+  /** Called when the server answers 403, so the permission hints are reloaded (never trusted over the server). */
+  onForbidden?: (() => void) | undefined;
+};
 
 const fallbackMessage = 'ذخیرهٔ گروه دسترسی انجام نشد. لطفاً دوباره تلاش کنید.';
 
-export function RoleCreatePage({ onUnauthenticated, defaultCompanyId }: Props) {
+export function RoleCreatePage({ onUnauthenticated, defaultCompanyId, isInstallationAdministrator = false, onForbidden }: Props) {
   const [params] = useSearchParams();
   const companyId = resolveCompanyId(params, defaultCompanyId);
   const navigate = useNavigate();
@@ -147,6 +154,7 @@ export function RoleCreatePage({ onUnauthenticated, defaultCompanyId }: Props) {
       navigate(rolePath(companyId, created.id));
     } catch (cause) {
       if (onUnauthenticated(cause)) return;
+      if (cause instanceof ApiError && cause.status === 403) onForbidden?.();
       showServerFailure(cause);
       setFocusTick((tick) => tick + 1);
     } finally {
@@ -198,7 +206,7 @@ export function RoleCreatePage({ onUnauthenticated, defaultCompanyId }: Props) {
           </Alert>
         ) : null}
 
-        <Alert tone="info">{delegationNote}</Alert>
+        <Alert tone="info">{delegationNote(isInstallationAdministrator)}</Alert>
 
         <FormSection headingLevel={2} title="مشخصات گروه">
           <FormField label="کد گروه" required error={errorFor('code')} hint="حروف لاتین، ارقام و . _ - ؛ پس از ثبت قابل تغییر نیست.">

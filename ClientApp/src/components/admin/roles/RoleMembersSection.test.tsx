@@ -17,8 +17,8 @@ const targetRole = roleItem({ id: 'role-2', code: 'ACCOUNTANT', name: 'حساب�
 const inactiveRole = roleItem({ id: 'role-3', name: 'غیرفعال', isActive: false });
 const systemTarget = { ...systemRole };
 
-function setup(role: CompanyRole = source, canManage = true) {
-  return render(<RoleMembersSection role={role} companyId="a" canManage={canManage} onUnauthenticated={onUnauthenticated} />);
+function setup(role: CompanyRole = source, canAssign = true, onForbidden?: () => void) {
+  return render(<RoleMembersSection role={role} companyId="a" canAssign={canAssign} onForbidden={onForbidden} onUnauthenticated={onUnauthenticated} />);
 }
 
 type Handlers = {
@@ -210,7 +210,7 @@ describe('RoleMembersSection', () => {
   it('reports the live member count to its parent after loading', async () => {
     api();
     const onMemberCount = vi.fn();
-    render(<RoleMembersSection role={source} companyId="a" canManage onUnauthenticated={onUnauthenticated} onMemberCount={onMemberCount} />);
+    render(<RoleMembersSection role={source} companyId="a" canAssign onUnauthenticated={onUnauthenticated} onMemberCount={onMemberCount} />);
     await waitFor(() => expect(onMemberCount).toHaveBeenCalledWith(2));
   });
 
@@ -246,5 +246,33 @@ describe('RoleMembersSection', () => {
     fail = false;
     await user.click(retry);
     expect(await screen.findByText('نام1 خانوادگی1')).toBeInTheDocument();
+  });
+  describe('adding a member (roles.assign)', () => {
+    it('offers the add-member search to an assigner of an active, non-system group', async () => {
+      api();
+      setup();
+      expect(await screen.findByRole('heading', { level: 3, name: 'افزودن عضو به این گروه' })).toBeInTheDocument();
+    });
+
+    it.each([
+      ['without the assign permission', source, false],
+      ['for a system group', systemRole as unknown as CompanyRole, true],
+      ['for an inactive group', roleItem({ isActive: false }) as unknown as CompanyRole, true],
+    ])('hides the add-member search %s', async (_name, role, canAssign) => {
+      api();
+      setup(role, canAssign);
+      await screen.findByRole('heading', { level: 2 });
+      expect(screen.queryByRole('heading', { level: 3, name: 'افزودن عضو به این گروه' })).not.toBeInTheDocument();
+    });
+
+    it('asks the caller to re-read permissions when the server refuses a transfer with 403', async () => {
+      const onForbidden = vi.fn();
+      api({ transfer: () => json({ error: 'نه' }, 403) });
+      setup(source, true, onForbidden);
+      await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'گروه مقصد' }), 'role-2');
+      await userEvent.click(screen.getByRole('button', { name: 'انتقال اعضا…' }));
+      await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'انتقال اعضا' }));
+      await waitFor(() => expect(onForbidden).toHaveBeenCalledTimes(1));
+    });
   });
 });

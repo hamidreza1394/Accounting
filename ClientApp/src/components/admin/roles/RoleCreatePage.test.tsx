@@ -234,11 +234,12 @@ describe('RoleCreatePage', () => {
     expect(posts(calls)).toHaveLength(0);
   });
 
-  it('shows the note that the delegation ceiling is not enforced by the server', async () => {
+  it('shows the D-071 delegation-ceiling note to a company administrator', async () => {
     api();
     setup();
     await ready();
-    expect(screen.getByText('سقف تفویض هنوز در سمت سرور پیاده نشده است؛ هر مدیر نصب می‌تواند هر مجوز ثبت‌شده را به نقش‌ها اختصاص دهد.')).toBeInTheDocument();
+    expect(screen.getByText(/سقف تفویض \(D-071\)/)).toBeInTheDocument();
+    expect(screen.queryByText(/به‌عنوان مدیر نصب سقف تفویض ندارید/)).not.toBeInTheDocument();
   });
 
   it('leaves a pristine form without asking', async () => {

@@ -8,9 +8,11 @@ import { RolesListPage } from './RolesListPage';
 
 const onUnauthenticated = vi.fn((): boolean => false);
 
+const onForbidden = vi.fn();
+
 function setup(search = '', canManage = true) {
   const routes: Route[] = [
-    { path: '/admin/roles', element: () => <RolesListPage onUnauthenticated={onUnauthenticated} defaultCompanyId="a" canManage={canManage} />, title: 'گروه‌ها' },
+    { path: '/admin/roles', element: () => <RolesListPage onUnauthenticated={onUnauthenticated} defaultCompanyId="a" can={(permission) => canManage && permission === 'admin.roles.create'} onForbidden={onForbidden} />, title: 'گروه‌ها' },
   ];
   window.history.pushState(null, '', `/app/admin/roles${search}`);
   return render(
@@ -34,6 +36,7 @@ describe('RolesListPage', () => {
   beforeEach(() => {
     onUnauthenticated.mockReset();
     onUnauthenticated.mockReturnValue(false);
+    onForbidden.mockReset();
   });
 
   it('lists the roles of the default company with badges, counts and a link per row', async () => {
@@ -112,5 +115,21 @@ describe('RolesListPage', () => {
     setup();
     expect(await screen.findByRole('link', { name: 'کارشناس فروش' })).toBeInTheDocument();
     expect(await screen.findByText(/خطای غیرمنتظره/)).toBeInTheDocument();
+  });
+  it('asks the app to re-read the real permissions when the server answers 403', async () => {
+    api(() => new Response(null, { status: 403 }));
+    setup();
+    await waitFor(() => expect(onForbidden).toHaveBeenCalledTimes(1));
+  });
+
+  it('offers the create button only with roles.create', async () => {
+    api();
+    const first = setup('', false);
+    await screen.findByText('SALES');
+    expect(screen.queryByText('ایجاد گروه دسترسی')).toBeNull();
+    first.unmount();
+    api();
+    setup('', true);
+    expect(await screen.findByText('ایجاد گروه دسترسی')).toBeInTheDocument();
   });
 });
