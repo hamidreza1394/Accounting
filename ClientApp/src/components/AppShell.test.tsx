@@ -2,9 +2,18 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { SelectedContext, Session } from '../api/types';
+import type { AccessSnapshot } from '../lib/permissions';
 import { AppShell } from './AppShell';
 
 const session: Session = { username: 'hamid', fullName: 'حمید رضایی', accountKind: 'User', isAdministrator: false };
+const installationAdmin: AccessSnapshot = { status: 'ready', isInstallationAdministrator: true, companyId: 'company-1', companyCodes: [] };
+const companyAdmin = (codes: string[]): AccessSnapshot => ({ status: 'ready', isInstallationAdministrator: false, companyId: 'company-1', companyCodes: codes });
+const shell = (access: AccessSnapshot | undefined, sessionOverride: Partial<Session> = {}) =>
+  render(
+    <AppShell session={{ ...session, ...sessionOverride }} context={context} {...(access ? { access } : {})} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}>
+      <main>محتوای صفحه</main>
+    </AppShell>,
+  );
 const context: SelectedContext = {
   company: { id: 'company-1', name: 'شرکت نمونه', nationalId: null, roleName: 'مدیر مالی' },
   fiscalPeriod: { id: 'period-1', title: 'سال مالی ۱۴۰۵', startDate: '2026-03-21', endDate: '2027-03-20', status: 'Open', isSelectable: true, accessMode: 'readWrite' },
@@ -39,7 +48,7 @@ describe('AppShell', () => {
   });
 
   it('shows the focused system-administration menu and removes redundant user-list shortcuts', () => {
-    render(<AppShell session={{ ...session, isAdministrator: true }} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
+    shell(installationAdmin, { isAdministrator: true });
     expect(screen.getByRole('button', { name: /مدیریت سیستم/ })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'مدیریت کاربران' })).toHaveAttribute('href', '/app/admin/users');
     expect(screen.getByRole('link', { name: 'گروه‌های دسترسی' })).toHaveAttribute('href', '/app/admin/roles');
@@ -55,7 +64,7 @@ describe('AppShell', () => {
 
   it('keeps the new administration labels readable without truncation', () => {
     // JSDOM cannot measure visual wrapping, but it can guard the full label and wrapping classes.
-    render(<AppShell session={{ ...session, isAdministrator: true }} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
+    shell(installationAdmin, { isAdministrator: true });
     const longLabel = screen.getByText('ساختار سازمانی و سمت‌ها');
     expect(longLabel).toHaveTextContent('ساختار سازمانی و سمت‌ها');
     expect(longLabel.className).not.toContain('truncate');
@@ -66,7 +75,7 @@ describe('AppShell', () => {
     // Issue #442 review (Finding 3): a bare dot that only surfaced its meaning via a
     // `title` tooltip or a visually-hidden span was invisible to touch users. Nested rows
     // now carry the same always-visible text badge as top-level rows, just smaller.
-    render(<AppShell session={{ ...session, isAdministrator: true }} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
+    shell(installationAdmin, { isAdministrator: true });
     const nestedItem = screen.getByText('ساختار سازمانی و سمت‌ها').closest('[aria-disabled="true"]') as HTMLElement;
     expect(nestedItem).toBeTruthy();
     expect(nestedItem).toHaveTextContent('به‌زودی');
@@ -108,5 +117,37 @@ describe('AppShell', () => {
     render(<AppShell session={session} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockRejectedValue(new Error('خروج ناموفق بود'))}><p>محتوای صفحه</p></AppShell>);
     await user.click(screen.getByRole('button', { name: 'خروج' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('خروج ناموفق بود');
+  });
+  describe('administration menu from the real company permissions', () => {
+    const adminLinks = ['مدیریت کاربران', 'گروه‌های دسترسی', 'کاتالوگ و جزئیات مجوزها', 'گزارش امنیت و سوابق'];
+
+    it('shows nothing to an ordinary member, even when the session says isAdministrator', () => {
+      shell(companyAdmin([]), { isAdministrator: true });
+      for (const label of adminLinks) expect(screen.queryByRole('link', { name: label })).toBeNull();
+      // Everything every signed-in user may use stays.
+      expect(screen.getByRole('link', { name: 'درخواست‌های عضویت من' })).toBeInTheDocument();
+    });
+
+    it('shows only the role pages to a company administrator, never the installation-only pages', () => {
+      shell(companyAdmin(['roles.view', 'roles.update']));
+      expect(screen.getByRole('link', { name: 'گروه‌های دسترسی' })).toHaveAttribute('href', '/app/admin/roles');
+      expect(screen.getByRole('link', { name: 'کاتالوگ و جزئیات مجوزها' })).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'مدیریت کاربران' })).toBeNull();
+      expect(screen.queryByRole('link', { name: 'گزارش امنیت و سوابق' })).toBeNull();
+    });
+
+    it('shows every administration page to an installation administrator', () => {
+      shell(installationAdmin);
+      for (const label of adminLinks) expect(screen.getByRole('link', { name: label })).toBeInTheDocument();
+    });
+
+    it.each([
+      ['loading', { status: 'loading', isInstallationAdministrator: false, companyId: null, companyCodes: [] }],
+      ['failed', { status: 'error', isInstallationAdministrator: false, companyId: null, companyCodes: [] }],
+      ['missing', undefined],
+    ] as const)('grants nothing while the permissions are %s', (_name, access) => {
+      shell(access as AccessSnapshot | undefined, { isAdministrator: true });
+      for (const label of adminLinks) expect(screen.queryByRole('link', { name: label })).toBeNull();
+    });
   });
 });
