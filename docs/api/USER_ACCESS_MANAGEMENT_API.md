@@ -42,7 +42,7 @@
 - **Migration کاربر (پیشنهاد):** endpoint بازیابی رمز فراموش‌شده و reset رمز توسط مدیر **وجود ندارد** — تصمیم محصولی لازم است (ممیزی 2026-11-05).
 
 ### ۲.۱ `GET /api/v1/admin/users`
-- Query: `page`, `pageSize`, `search` (روی نام کاربری/نام/ایمیل/موبایل)، `descending`.
+- Query: `page`, `pageSize`, `search` (روی نام کاربری/نام/ایمیل/موبایل)، `status=all|active|inactive` (پیش‌فرض `all`)، `sort=created|lastLogin|name|username` (پیش‌فرض `created`) و `descending` (پیش‌فرض `false`). `page` حداقل ۱، `pageSize` بین ۱ تا ۱۰۰ (clamp)؛ `search` پس از Trim حداکثر ۱۲۰ نویسه، ورودی طولانی‌تر یا status/sort ناشناخته → 400.
 - پاسخ ۲۰۰: `{ items: [{ id, username, firstName, lastName, emailAddress, cellPhoneNumber, isActive, lastLoginDateTime, insertDateTime, activeCompanyCount }], totalCount, page, pageSize }`؛ فیلتر/جستجو/شمارش سمت سرور.
 
 ### ۲.۲ `GET /api/v1/admin/users/{userId}`
@@ -65,19 +65,19 @@
 - **نقش سیستمی** (`IsSystemRole`، مانند `company-admin`): ویرایش/تخصیص/انتقال به و از آن برای همهٔ actorها 409 (از 2026-11-05 شامل مسیر تک‌عضوی assign هم می‌شود).
 
 ### ۳.۱ `GET /api/v1/admin/companies/{companyId}/roles`
-فهرست نقش‌های فعال همان شرکت با کدهای مجوز؛ ۲۰۰ آرایه `[ { id, code, name, isActive, isSystemRole, permissionCodes: [string] } ]`.
+فهرست همهٔ نقش‌های همان شرکت (نه فقط نقش‌های فعال) با کدهای مجوز؛ ۲۰۰ آرایه‌ای از `{ id, companyId, code, name, isSystemRole, isActive, permissionCount, activeMemberCount, permissionCodes: [string] }`. مرتب‌سازی بر اساس نام نقش است.
 
 ### ۳.۲ `GET /api/v1/admin/permission-catalog` و `GET /api/v1/admin/permission-templates`
 - کاتالوگ برای مدیر نصب کامل است؛ برای مدیر شرکت فقط کدهای سقف خودش؛ عضو بدون هیچ مجوز **404** می‌گیرد (قرارداد D-071). قالب‌ها (templates) با الگوی مشابه.
 
 ### ۳.۳ `POST /api/v1/admin/companies/{companyId}/roles` (حساس + anti-forgery)
-- بدنه: `{ code?, name, isActive?, permissionCodes: [string] }` → 201؛ کد ناموجود در کاتالوگ → 400؛ فراتر از سقف → 403؛ Audit `CompanyRoleCreated`.
+- بدنه مطابق DTO واقعی: `{ code, name, templateCode?, permissionCodes? }`؛ `code` و `name` در عمل الزامی‌اند (کد با الگوی `^[A-Z0-9][A-Z0-9._-]{1,79}$`، نام حداکثر ۱۲۰ نویسه). `templateCode` و/یا `permissionCodes` برای تعیین مجوزها استفاده می‌شوند؛ `isActive` در درخواست ایجاد وجود ندارد. پاسخ 201: `{ id }` و هدر `Location` به منبع نقش جدید؛ کد تکراری → 409؛ کد/الگو/مجوز نامعتبر → 400؛ فراتر از سقف تفویض → 403؛ Audit `CompanyRoleCreated`.
 
 ### ۳.۴ `PUT /api/v1/admin/companies/{companyId}/roles/{roleId}` (حساس + anti-forgery)
 - بدنه: `{ name, isActive, permissionCodes }` — تعویض کامل مجموعه مجوزها؛ نقش سیستمی → 409؛ غیرفعال‌سازی نقش دارای عضو فعال → 409 (ابتدا اعضا منتقل شوند)؛ Audit `CompanyRoleUpdated`؛ تغییر هم‌زمان → 409 (RowVersion نقش و عضویت‌ها).
 
 ### ۳.۵ `GET /api/v1/admin/companies/{companyId}/roles/{roleId}/members`
-- Query: `page`, `pageSize` (≤۱۰۰). فقط فیلدهای حداقلی: `{ items: [{ userId, username?, displayName }], totalCount, page, pageSize }`؛ نقش بیگانه → 404. (حساس rate limit.)
+- Query: `page` (پیش‌فرض ۱) و `pageSize` (پیش‌فرض ۲۵، clamp بین ۱ تا ۱۰۰). پاسخ: `{ items: [{ userId, username, firstName, lastName, isUserActive, memberSinceUtc }], totalCount, page, pageSize }`؛ فقط اعضای فعال آن نقش برگردانده می‌شوند؛ ترتیب نام خانوادگی، نام و سپس شناسه است؛ نقش بیگانه → 404. (حساس rate limit.)
 
 ### ۳.۶ `POST /api/v1/admin/companies/{companyId}/roles/{roleId}/members/{userId}` (حساس + anti-forgery)
 - تخصیص نقش به عضو فعال موجود؛ عضویت جدید/غیرفعال → 409 «از مسیر تأیید مقصد»؛ نقش سیستمی → 409 «تخصیص گروه سیستمی مجاز نیست.» (اصلاح 2026-11-05)؛ خود-تخصیص شرکتی → 403؛ فراتر از سقف → 403؛ Audit `UserCompanyRoleAssigned`.
@@ -91,7 +91,7 @@
 ## ۴. دفترچه کاربران شرکت
 
 ### ۴.۱ `GET /api/v1/companies/{companyId}/users` (permission: `users.list`)
-- فهرست کاربران همان شرکت؛ فقط فیلدهای allowlist (`{ userId, username, displayName, isActive }`)؛ بدون تماس/نقش/مجوز. غیرعضو 404؛ عضو بی‌مجوز 403؛ (حساس rate limit).
+- Query: `search` اختیاری (روی username/firstName/lastName، حداکثر ۱۲۰ نویسه)، `membershipActive` اختیاری (فیلتر وضعیت عضویت)، `page` (پیش‌فرض ۱) و `pageSize` (پیش‌فرض ۲۵، clamp بین ۱ تا ۱۰۰). پاسخ: `{ companyId, companyName, items: [{ userId, username, firstName, lastName, userIsActive, membershipIsActive, roleId, roleCode, roleName, roleIsActive, membershipCreatedAtUtc }], totalCount, page, pageSize }`. شامل فیلدهای نقش و وضعیت جداگانهٔ حساب/عضویت است؛ اطلاعات تماس، رمز، نشست و دادهٔ Audit افشا نمی‌شود. غیرعضو 404؛ عضو بی‌مجوز `users.list` → 403؛ (حساس rate limit، no-store).
 
 ## ۵. گردش درخواست عضویت بین‌شرکتی (D-065)
 
@@ -101,7 +101,7 @@
 درخواست‌های خود کاربر با `status` اختیاری (`Pending|Approved|Rejected`) و صفحه‌بندی. (این خواندن عمداً در سیاست حساس چهار endpoint هویتی نیست — Issue #522؛ تغییر آن نیازمند تصمیم مالک است.)
 
 ### ۵.۲ `POST /api/v1/me/membership-requests`
-- بدنه: `{ destinationCompanyId, reason? }`؛ مرز CustomerBoundary دوباره سمت سرور بررسی می‌شود؛ 201 `{ id, status: "Pending", requestedAtUtc }`؛ شرکت ناموجود/غیرفعال/خارج از مرز → 404 یکسان؛ عضو فعال یا درخواست Pending تکراری → 409 (ایندکس فیلترشده + رقابت → 409). Audit `CompanyMembershipRequested`.
+- بدنه مطابق DTO واقعی: `{ destinationCompanyId }`؛ فیلد `reason` پشتیبانی نمی‌شود. مرز CustomerBoundary دوباره سمت سرور بررسی می‌شود؛ 201 `{ id, status: "Pending", requestedAtUtc }`؛ شرکت ناموجود/غیرفعال/خارج از مرز → 404 یکسان؛ عضو فعال یا درخواست Pending تکراری → 409 (ایندکس فیلترشده + رقابت → 409). Audit `CompanyMembershipRequested`.
 
 ### ۵.۳ `GET /api/v1/me/membership-requests/destinations?search=`
 جستجوی **exact و اجباری** (۳..۱۲۰ نویسه پس از Trim)؛ فقط شرکت‌های فعال داخل مرز مشتری مشترک؛ حذف عضوهای فعال و درخواست‌دهنده‌های Pending؛ fail-closed روی مرز null.
