@@ -143,12 +143,13 @@ test('an installation administrator can create, read and update company roles ag
     expect(foreignAfter.body.find((role) => role.id === b.roleId)).toEqual(foreignRole);
   } finally {
     // Match the random code AND company, even if POST succeeded but its response was lost.
-    // Deleting the dedicated account also removes its disposable login/audit records.
+    // Deleting the dedicated account also removes its disposable session/login/audit records.
     try {
       await query(`SET XACT_ABORT ON; BEGIN TRANSACTION;
         DELETE FROM CompanyRolePermissions WHERE RoleId IN (SELECT Id FROM CompanyRoles WHERE TenantId = @company AND Code = @code);
         DELETE FROM CompanyRoles WHERE TenantId = @company AND Code = @code;
         DELETE FROM SecurityAuditEvents WHERE UserId = @user;
+        DELETE FROM UserSessions WHERE UserId = @user;
         DELETE FROM LoginLogs WHERE UserId = @user;
         DELETE FROM Users WHERE Id = @user;
         COMMIT TRANSACTION;`);

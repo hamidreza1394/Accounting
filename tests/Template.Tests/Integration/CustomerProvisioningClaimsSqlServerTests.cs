@@ -537,6 +537,18 @@ public sealed class CustomerProvisioningClaimsSqlServerTests
     private static async Task<bool> SessionIsValidAsync(
         Data.DatabaseContext database, Guid userId, string storedCredential)
     {
+        // D-069: every validated session needs its server-side session row; the helper
+        // seeds one so the test keeps exercising the credential/account semantics.
+        var sessionId = Guid.NewGuid();
+        database.UserSessions.Add(new Domain.UserSession
+        {
+            Id = sessionId,
+            UserId = userId,
+            CreatedAtUtc = DateTime.UtcNow,
+            LastSeenAtUtc = DateTime.UtcNow,
+        });
+        await database.SaveChangesAsync(TestContext.Current.CancellationToken);
+
         using var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection()
             .AddSingleton(database)
             .BuildServiceProvider();
@@ -546,6 +558,9 @@ public sealed class CustomerProvisioningClaimsSqlServerTests
                 new System.Security.Claims.Claim(
                     Infrastructure.Tenancy.CompanyAccessService.AccountKindClaimType,
                     Infrastructure.Tenancy.CompanyAccessService.UserAccountKind),
+                new System.Security.Claims.Claim(
+                    Infrastructure.Tenancy.WorkContextCookie.SessionIdClaimType,
+                    sessionId.ToString()),
                 new System.Security.Claims.Claim(
                     SessionValidator.CredentialStampClaimType,
                     SessionValidator.ComputeCredentialStamp(storedCredential)),

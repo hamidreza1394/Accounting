@@ -83,6 +83,42 @@ public sealed class UserPasswordService
         user.Password = _passwordHashService.Hash(newPassword);
         user.SetUpdateDateTime();
 
+        // D-069: a changed password revokes every server-side session of this user, so a
+        // stolen cookie of another device dies even before its next request is validated.
+        // The current credential stamp stays in place as defense in depth. Revoking here
+        // (before the password SaveChanges) is fail-safe: even if the password write then
+        // failed, ending the sessions is the more secure state, never the weaker one.
+        var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
+        int revokedSessions;
+
+        if (_databaseContext.Database.IsRelational())
+        {
+            // Set-based update on the production provider; the ownership predicate keeps
+            // the write scoped to this user's rows. No RowVersion conflict can surface.
+            revokedSessions = await _databaseContext.UserSessions
+                .Where(session => session.UserId == user.Id && session.RevokedAtUtc == null)
+                .ExecuteUpdateAsync(update => update
+                    .SetProperty(session => session.RevokedAtUtc, nowUtc)
+                    .SetProperty(session => session.RevocationReasonCode, "password_changed"),
+                cancellationToken);
+        }
+        else
+        {
+            // The InMemory provider of the unit tests does not support ExecuteUpdate; the
+            // tracked write has the same outcome there.
+            var activeSessions = await _databaseContext.UserSessions
+                .Where(session => session.UserId == user.Id && session.RevokedAtUtc == null)
+                .ToListAsync(cancellationToken);
+
+            foreach (var session in activeSessions)
+            {
+                session.RevokedAtUtc = nowUtc;
+                session.RevocationReasonCode = "password_changed";
+            }
+
+            revokedSessions = activeSessions.Count;
+        }
+
         _databaseContext.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
         {
             UserId = user.Id,
@@ -92,7 +128,8 @@ public sealed class UserPasswordService
             OccurredAtUtc = _timeProvider.GetUtcNow().UtcDateTime,
             CorrelationId = System.Diagnostics.Activity.Current?.Id,
             IpAddress = ipAddress,
-            DetailsJson = "{\"source\":\"SelfService\"}",
+            DetailsJson = System.Text.Json.JsonSerializer.Serialize(
+                new { source = "SelfService", revokedSessions }),
         });
 
         await _databaseContext.SaveChangesAsync(cancellationToken);

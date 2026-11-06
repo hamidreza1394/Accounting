@@ -52,6 +52,15 @@ public static class ApiEndpoints
                 api.MapPost("/me/password", ChangeMyPasswordAsync)
                         .RequireAuthorization(policy => policy.RequireClaim("AccountKind", "User"))
                         .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+                api.MapGet("/me/sessions", GetMySessionsAsync)
+                        .RequireAuthorization(policy => policy.RequireClaim("AccountKind", "User"))
+                        .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+                api.MapPost("/me/sessions/revoke-others", RevokeMyOtherSessionsAsync)
+                        .RequireAuthorization(policy => policy.RequireClaim("AccountKind", "User"))
+                        .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+                api.MapPost("/me/sessions/{sessionId:guid}/revoke", RevokeMySessionAsync)
+                        .RequireAuthorization(policy => policy.RequireClaim("AccountKind", "User"))
+                        .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
                 api.MapPost("/session/logout", LogoutAsync)
                         .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
                 api.MapGet("/antiforgery/token", GetAntiforgeryToken)
@@ -321,6 +330,32 @@ public static class ApiEndpoints
                         }
                 }
 
+                // D-069: the explicit logout also ends the server-side session row, so the
+                // device disappears from the session list instead of lingering until the
+                // idle window closes. A failure must not block the logout itself.
+                var currentSessionId = GetCurrentSessionId(httpContext.User);
+                var sessionService = httpContext.RequestServices.GetService<Infrastructure.Security.UserSessionService>();
+
+                if (currentSessionId is not null && sessionService is not null)
+                {
+                        try
+                        {
+                                var userId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(httpContext.User);
+
+                                if (userId is not null)
+                                {
+                                        await sessionService.RevokeAsync(
+                                                userId.Value, currentSessionId.Value, userId.Value, cancellationToken);
+                                }
+                        }
+                        catch (Exception exception)
+                        {
+                                httpContext.RequestServices.GetService<ILoggerFactory>()?
+                                        .CreateLogger(typeof(ApiEndpoints).FullName!)?
+                                        .LogError("Could not revoke the session row on logout. ExceptionType={ExceptionType}.", exception.GetType().FullName);
+                        }
+                }
+
                 await httpContext.SignOutAsync(Infrastructure.Security.Utility.AuthenticationScheme);
                 httpContext.RequestServices.GetService<Infrastructure.Tenancy.WorkContextCookie>()?.Delete(httpContext);
                 httpContext.Response.Headers.CacheControl = "no-store";
@@ -456,6 +491,156 @@ public static class ApiEndpoints
                 };
 
                 return TypedResults.Problem(title: title, statusCode: statusCode);
+        }
+
+        /// <summary>GET /api/v1/me/sessions — the active server-side sessions of the authenticated user (D-069).</summary>
+        public static async Task<Results<Ok<IReadOnlyList<MySessionResponse>>, UnauthorizedHttpResult>> GetMySessionsAsync(
+                HttpContext httpContext,
+                ClaimsPrincipal user,
+                [FromServices] Infrastructure.Security.UserSessionService sessionService,
+                CancellationToken cancellationToken)
+        {
+                var userId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(user);
+                if (userId is null)
+                {
+                        return TypedResults.Unauthorized();
+                }
+
+                var currentSessionId = GetCurrentSessionId(user);
+
+                httpContext.Response.Headers.CacheControl = "no-store";
+                httpContext.Response.Headers.Pragma = "no-cache";
+
+                var sessions = await sessionService.ListActiveSessionsAsync(userId.Value, currentSessionId, cancellationToken);
+
+                return TypedResults.Ok<IReadOnlyList<MySessionResponse>>(
+                        sessions.Select(session => new MySessionResponse(
+                                session.SessionId,
+                                session.SessionId == currentSessionId,
+                                session.CreatedAtUtc,
+                                session.LastSeenAtUtc))
+                                .ToList());
+        }
+
+        /// <summary>POST /api/v1/me/sessions/{sessionId}/revoke — ends one session of the authenticated user (anti-forgery protected).</summary>
+        public static async Task<IResult> RevokeMySessionAsync(
+                Guid sessionId,
+                HttpContext httpContext,
+                ClaimsPrincipal user,
+                [FromServices] IAntiforgery antiforgery,
+                [FromServices] Infrastructure.Security.UserSessionService sessionService,
+                [FromServices] Data.DatabaseContext databaseContext,
+                [FromServices] TimeProvider timeProvider,
+                CancellationToken cancellationToken)
+        {
+                var userId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(user);
+                if (userId is null || sessionId == Guid.Empty)
+                {
+                        return TypedResults.Unauthorized();
+                }
+
+                if (!await antiforgery.IsRequestValidAsync(httpContext))
+                {
+                        return TypedResults.Problem(
+                                title: "درخواست نامعتبر است. صفحه را دوباره بارگذاری کنید.",
+                                statusCode: StatusCodes.Status400BadRequest);
+                }
+
+                httpContext.Response.Headers.CacheControl = "no-store";
+
+                // The ownership check is part of the UPDATE predicate: a foreign or unknown
+                // identifier is never distinguishable, and a concurrent revocation makes this
+                // call an idempotent no-op instead of an error.
+                var revoked = await sessionService.RevokeAsync(userId.Value, sessionId, userId.Value, cancellationToken);
+
+                if (!revoked && !await sessionService.ExistsAsync(userId.Value, sessionId, cancellationToken))
+                {
+                        // Same answer for "does not exist" and "belongs to someone else" (no probing).
+                        return TypedResults.NotFound();
+                }
+
+                if (revoked)
+                {
+                        databaseContext.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
+                        {
+                                UserId = userId.Value,
+                                EventType = "UserSessionRevoked",
+                                EntityType = "UserSession",
+                                EntityId = sessionId.ToString(),
+                                OccurredAtUtc = timeProvider.GetUtcNow().UtcDateTime,
+                                CorrelationId = System.Diagnostics.Activity.Current?.Id,
+                                IpAddress = httpContext.Connection.RemoteIpAddress?.ToString(),
+                                DetailsJson = System.Text.Json.JsonSerializer.Serialize(
+                                        new { reason = Infrastructure.Security.UserSessionService.SelfRevokedReasonCode }),
+                        });
+                        await databaseContext.SaveChangesAsync(cancellationToken);
+                }
+
+                if (sessionId == GetCurrentSessionId(user))
+                {
+                        await httpContext.SignOutAsync(Infrastructure.Security.Utility.AuthenticationScheme);
+                        httpContext.RequestServices.GetService<Infrastructure.Tenancy.WorkContextCookie>()?.Delete(httpContext);
+                }
+
+                return TypedResults.NoContent();
+        }
+
+        /// <summary>POST /api/v1/me/sessions/revoke-others — ends every other session of the authenticated user (anti-forgery protected).</summary>
+        public static async Task<IResult> RevokeMyOtherSessionsAsync(
+                HttpContext httpContext,
+                ClaimsPrincipal user,
+                [FromServices] IAntiforgery antiforgery,
+                [FromServices] Infrastructure.Security.UserSessionService sessionService,
+                [FromServices] Data.DatabaseContext databaseContext,
+                [FromServices] TimeProvider timeProvider,
+                CancellationToken cancellationToken)
+        {
+                var userId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(user);
+                var currentSessionId = GetCurrentSessionId(user);
+
+                if (userId is null || currentSessionId is null)
+                {
+                        return TypedResults.Unauthorized();
+                }
+
+                if (!await antiforgery.IsRequestValidAsync(httpContext))
+                {
+                        return TypedResults.Problem(
+                                title: "درخواست نامعتبر است. صفحه را دوباره بارگذاری کنید.",
+                                statusCode: StatusCodes.Status400BadRequest);
+                }
+
+                httpContext.Response.Headers.CacheControl = "no-store";
+
+                var revokedCount = await sessionService.RevokeOthersAsync(userId.Value, currentSessionId.Value, userId.Value, cancellationToken);
+
+                if (revokedCount > 0)
+                {
+                        databaseContext.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
+                        {
+                                UserId = userId.Value,
+                                EventType = "UserSessionsRevokedOthers",
+                                EntityType = "UserSession",
+                                OccurredAtUtc = timeProvider.GetUtcNow().UtcDateTime,
+                                CorrelationId = System.Diagnostics.Activity.Current?.Id,
+                                IpAddress = httpContext.Connection.RemoteIpAddress?.ToString(),
+                                DetailsJson = System.Text.Json.JsonSerializer.Serialize(
+                                        new { revokedCount }),
+                        });
+                        await databaseContext.SaveChangesAsync(cancellationToken);
+                }
+
+                return TypedResults.Ok(new RevokeOthersResponse(revokedCount));
+        }
+
+        /// <summary>The identifier of the server-side session this cookie was issued for, or <c>null</c>.</summary>
+        private static Guid? GetCurrentSessionId(ClaimsPrincipal user)
+        {
+                var value = user.FindFirst(Infrastructure.Tenancy.WorkContextCookie.SessionIdClaimType)?.Value;
+
+                return System.Guid.TryParse(value, out var sessionId) && sessionId != Guid.Empty
+                        ? sessionId
+                        : null;
         }
 
         /// <summary>GET /api/v1/companies — the companies the user may work in.</summary>
@@ -678,6 +863,15 @@ public sealed record LoginHistoryItemResponse(
         string EventType,
         DateTime OccurredAtUtc,
         string? IpAddress);
+
+/// <summary>Allowlisted view of one active session (D-069: no IP, no user agent).</summary>
+public sealed record MySessionResponse(
+        Guid SessionId,
+        bool IsCurrent,
+        DateTime CreatedAtUtc,
+        DateTime LastSeenAtUtc);
+
+public sealed record RevokeOthersResponse(int RevokedCount);
 
 public sealed record ChangeMyPasswordRequest(
         string? CurrentPassword,

@@ -442,12 +442,17 @@ namespace Server.Pages.Security
 			claims.Add(item: new System.Security.Claims.Claim
 				(type: "AccountKind", value: "User"));
 
-			// A random identifier of THIS sign-in. The company and fiscal period a user chooses
-			// are bound to it (Infrastructure.Tenancy.WorkContextCookie), so a choice made in an
-			// earlier sign-in is never restored: every new sign-in asks again.
+			// The identifier of THIS sign-in's server-side session row (D-069), created by
+			// Infrastructure.Security.AuthenticationService during the verified sign-in. The
+			// company and fiscal period a user chooses are bound to it
+			// (Infrastructure.Tenancy.WorkContextCookie), so a choice made in an earlier
+			// sign-in is never restored; and Infrastructure.Security.SessionValidator
+			// re-validates the row on every request, so revoking the session ends this
+			// device's access on its next request.
 			claims.Add(item: new System.Security.Claims.Claim
 				(type: Infrastructure.Tenancy.WorkContextCookie.SessionIdClaimType,
-				value: System.Guid.NewGuid().ToString()));
+				value: loginResult.SessionId?.ToString()
+					?? System.Guid.NewGuid().ToString()));
 
 			// The stable identifier of the verified account. Every server-side access
 			// decision (for example the company access of the API) resolves the

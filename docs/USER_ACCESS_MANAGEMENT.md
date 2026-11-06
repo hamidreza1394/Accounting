@@ -119,7 +119,7 @@
 رویدادهای موردنیاز: ورود موفق/ناموفق، خروج صریح، انقضای نشست، ابطال توسط مدیر و پایان نامشخص نشست. نباید خروج قطعی یا مدت نشست را از داده ناقص حدس زد. Audit Trail مستقل از Login History است و تغییر نقش، مجوز، عضویت و وضعیت حساب را ثبت می‌کند. رمز، hash، token یا secret در Audit/Log ممنوع است. IP و metadata دستگاه نیازمند دسترسی محدود و retention مشخص‌اند.
 
 ### وضعیت self-service حساب شخصی (پس از PR #447 و #449)
-APIهای GET /me/profile، GET /me/login-history و POST /me/password برقرارند؛ خروج صریح POST /session/logout نیز رویداد LogoutSucceeded را ثبت می‌کند. UserId فقط از principal استخراج می‌شود و رمز/hash در DTO خروجی نیست. UI سوابق و گزارش امنیت در PRهای #476 و #499 تکمیل شده‌اند. فهرست/ابطال مستقل نشست‌ها هنوز API و جدول ندارد و در D-069 / Issue #504 فقط طراحی پیشنهادی است؛ تا تأیید مالک هیچ Migration یا تغییر Cookie انجام نمی‌شود.
+APIهای GET /me/profile، GET /me/login-history و POST /me/password برقرارند؛ خروج صریح POST /session/logout نیز رویداد LogoutSucceeded را ثبت می‌کند. UserId فقط از principal استخراج می‌شود و رمز/hash در DTO خروجی نیست. UI سوابق و گزارش امنیت در PRهای #476 و #499 تکمیل شده‌اند. به‌روزرسانی 2026-11-05: چرخهٔ عمر نشست سروری طبق D-069 `Implemented` شد (Migration `20261105094700_AddUserSessions`)؛ APIهای `GET /me/sessions`، `POST /me/sessions/{id}/revoke` و `POST /me/sessions/revoke-others` فعال‌اند، تغییر رمز همهٔ نشست‌ها را ابطال می‌کند و خروج صریح نشست جاری را می‌بندد؛ ابطال نشست کاربر دیگر توسط مدیر نصب همچنان `NeedsApproval` است.
 
 ## 9. قرارداد API و فرانت‌اند
 API هم‌مبدأ با Cookie HttpOnly و Anti-forgery موجود حفظ شود؛ توکن نشست در localStorage ذخیره نشود. DTO از Entity جدا، جستجو/صفحه‌بندی سمت سرور، CancellationToken، پاسخ‌های 401/403/404 و authorization server-side رعایت شوند.

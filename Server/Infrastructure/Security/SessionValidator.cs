@@ -32,6 +32,18 @@ public static class SessionValidator
 {
 	public const string CredentialStampClaimType = "CredentialStamp";
 
+	/// <summary>
+	/// A server-side session (D-069) is valid only while its last use is inside this
+	/// idle window; it matches the sliding expiration of the authentication cookie.
+	/// </summary>
+	public static readonly System.TimeSpan IdleWindow = System.TimeSpan.FromMinutes(30);
+
+	/// <summary>
+	/// The <c>LastSeenAtUtc</c> of a session is refreshed at most once per this
+	/// interval, so normal traffic does not write on every request.
+	/// </summary>
+	public static readonly System.TimeSpan LastSeenWriteInterval = System.TimeSpan.FromMinutes(5);
+
 	public static string ComputeCredentialStamp(string? storedCredential)
 	{
 		var bytes = System.Text.Encoding.UTF8.GetBytes(storedCredential ?? string.Empty);
@@ -103,6 +115,16 @@ public static class SessionValidator
 			return false;
 		}
 
+		// D-069: the SessionId claim of the cookie is the identifier of one server-side
+		// session row. A cookie without the claim was issued by an older release (or was
+		// tampered with) and has to sign in again.
+		var sessionIdValue = principal.FindFirst(Tenancy.WorkContextCookie.SessionIdClaimType)?.Value;
+
+		if (!System.Guid.TryParse(sessionIdValue, out var sessionId) || sessionId == System.Guid.Empty)
+		{
+			return false;
+		}
+
 		// One round trip: besides the account itself, the same query reports whether the
 		// account is the initial administrator of a provisioning request whose one-time
 		// enrollment is not completed (see ProvisioningRequestClaim.MustChangePassword).
@@ -118,10 +140,57 @@ public static class SessionValidator
 			})
 			.FirstOrDefaultAsync(cancellationToken);
 
-		return account is not null
-			&& account.IsActive
-			&& !account.EnrollmentPending
-			&& FixedTimeEquals(stamp, ComputeCredentialStamp(account.Password));
+		if (account is null
+			|| !account.IsActive
+			|| account.EnrollmentPending
+			|| !FixedTimeEquals(stamp, ComputeCredentialStamp(account.Password)))
+		{
+			return false;
+		}
+
+		// The session row must exist, belong to this very user, not be revoked and not be
+		// idle-expired; anything else fails closed (D-069). The row is loaded tracked on
+		// purpose: the non-relational fallback below refreshes it through SaveChanges,
+		// while the relational path uses an untracked set-based update and never mutates
+		// the tracked instance, so no extra write can happen.
+		var session = await databaseContext.UserSessions
+			.FirstOrDefaultAsync(current => current.Id == sessionId, cancellationToken);
+
+		if (session is null || session.UserId != userId.Value || session.RevokedAtUtc is not null)
+		{
+			return false;
+		}
+
+		var nowUtc = System.DateTime.UtcNow;
+
+		if (session.LastSeenAtUtc < nowUtc.Subtract(IdleWindow))
+		{
+			return false;
+		}
+
+		// Throttled last-seen write: at most one UPDATE per interval per session. The
+		// relational update is set-based and untracked, so a concurrent revocation can
+		// never surface as a concurrency exception inside cookie validation.
+		if (session.LastSeenAtUtc < nowUtc.Subtract(LastSeenWriteInterval))
+		{
+			if (databaseContext.Database.IsRelational())
+			{
+				await databaseContext.UserSessions
+					.Where(current => current.Id == sessionId && current.RevokedAtUtc == null)
+					.ExecuteUpdateAsync(
+						update => update.SetProperty(current => current.LastSeenAtUtc, nowUtc),
+						cancellationToken);
+			}
+			else
+			{
+				// The InMemory provider of the unit tests does not support ExecuteUpdate;
+				// the tracked write has the same outcome there.
+				session.LastSeenAtUtc = nowUtc;
+				await databaseContext.SaveChangesAsync(cancellationToken);
+			}
+		}
+
+		return true;
 	}
 
 	private static bool FixedTimeEquals(string left, string right)

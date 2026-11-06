@@ -25,6 +25,35 @@ namespace Server.Pages.Account
 		public async System.Threading.Tasks.Task
 			<Microsoft.AspNetCore.Mvc.IActionResult> OnPostAsync()
 		{
+			// D-069: the explicit logout also ends the server-side session row, so this
+			// device disappears from the session list. A failure must not block the logout.
+			var userId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(User);
+			var sessionIdValue = User.FindFirst(Infrastructure.Tenancy.WorkContextCookie.SessionIdClaimType)?.Value;
+
+			if (userId is not null &&
+				System.Guid.TryParse(sessionIdValue, out var sessionId) &&
+				sessionId != System.Guid.Empty)
+			{
+				var sessionService = HttpContext.RequestServices
+					.GetService<Infrastructure.Security.UserSessionService>();
+
+				if (sessionService is not null)
+				{
+					try
+					{
+						await sessionService.RevokeAsync(
+							userId: userId.Value,
+							sessionId: sessionId,
+							revokedByUserId: userId.Value);
+					}
+					catch (System.Exception)
+					{
+						// The cookie is cleared regardless; the idle window or the next
+						// validation closes the row's effect anyway. Nothing sensitive is logged.
+					}
+				}
+			}
+
 			// SignOutAsync -> using Microsoft.AspNetCore.Authentication;
 			await HttpContext.SignOutAsync
 				(scheme: Infrastructure.Security.Utility.AuthenticationScheme);

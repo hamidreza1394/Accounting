@@ -66,6 +66,7 @@ public class DatabaseContext : Microsoft.EntityFrameworkCore.DbContext
     public Microsoft.EntityFrameworkCore.DbSet<Domain.CompanyPosition> CompanyPositions { get; set; }
     public Microsoft.EntityFrameworkCore.DbSet<Domain.CompanyEmployee> CompanyEmployees { get; set; }
     public Microsoft.EntityFrameworkCore.DbSet<Domain.CompanyEmployeeAssignment> CompanyEmployeeAssignments { get; set; }
+    public Microsoft.EntityFrameworkCore.DbSet<Domain.UserSession> UserSessions { get; set; }
 
         protected override void OnModelCreating
                 (Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder)

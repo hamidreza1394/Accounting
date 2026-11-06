@@ -403,5 +403,12 @@ public class User :
 	public virtual System.Collections.Generic.IList<LoginLog> LoginLogs { get; private set; }
 	#endregion /LoginLogs
 
+	#region Sessions
+	/// <summary>
+	/// نشست‌های سروری کاربر (D-069)
+	/// </summary>
+	public virtual System.Collections.Generic.IList<UserSession> Sessions { get; private set; }
+	#endregion /Sessions
+
 	#endregion /Collections
 }

@@ -53,7 +53,7 @@
 
 ## ۴. سوابق ورود/خروج و نشست‌ها (مرحلهٔ ۱۰)
 - **سوابق ورود کاربر جاری (موجود):** `GET /me/login-history?take=`. برای فیلتر تاریخ و صفحه‌بندی: `?fromUtc=&toUtc=&page=&pageSize=` با همان آیتم و پاسخ `{ items, totalCount, page, pageSize }`.
-- **نشست‌ها:** منتظر تأیید D-069 (`Proposed`، PR #505). پس از تأیید و پیاده‌سازی: `GET /me/sessions` → `[{ id, createdAtUtc, lastSeenAtUtc, isCurrent, status: "Active"|"Revoked"|"Idle" }]` (بدون IP/User-Agent)، `POST /me/sessions/{id}/revoke`، `POST /me/sessions/revoke-others`؛ ابطال نشست جاری Cookie را پاک کند؛ نشست کاربر دیگر ← 404. UI هیچ مدت نشست یا خروج را از نبود رویداد استنتاج نمی‌کند.
+- **نشست‌ها (پیاده‌سازی‌شده — 2026-11-05، D-069 `Implemented`):** `GET /api/v1/me/sessions` → آرایه‌ای از نشست‌های **فعال** کاربر جاری با فیلدهای allowlist `{ "sessionId": "guid", "isCurrent": true, "createdAtUtc": "...Z", "lastSeenAtUtc": "...Z" }`؛ مرتب‌سازی `lastSeenAtUtc DESC, sessionId DESC`؛ نشست‌های ابطال‌شده یا خارج از پنجرهٔ بی‌کاری ۳۰ دقیقه فهرست نمی‌شوند و `status` وجود ندارد (فقط active برگردانده می‌شود). بدون IP/User-Agent. `POST /api/v1/me/sessions/{sessionId}/revoke` → `204` (idempotent؛ شناسهٔ ناموجود یا متعلق به کاربر دیگر همان `404`؛ ابطال نشست جاری Cookie را sign-out می‌کند)؛ `POST /api/v1/me/sessions/revoke-others` → `200 { "revokedCount": n }` (نشست جاری حفظ می‌شود). همه سه endpoint با anti-forgery و rate limit حساس و `no-store`؛ رویدادهای Audit `UserSessionRevoked` و `UserSessionsRevokedOthers` در گزارش امنیتی با برچسب فارسی می‌آیند. تغییر رمز همهٔ نشست‌های فعال را ابطال می‌کند و خروج صریح نشست جاری را می‌بندد. UI هیچ مدت نشست یا خروج را از نبود رویداد استنتاج نمی‌کند.
 - ابطال نشست دیگران توسط مدیر نصب: تصمیم جدا و `NeedsApproval`.
 
 ## ۵. ساختار سازمانی S2 (مرحلهٔ ۸)

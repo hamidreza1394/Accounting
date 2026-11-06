@@ -276,6 +276,7 @@ export async function createMembershipFixture(label) {
       actor ? `DELETE FROM SecurityAuditEvents WHERE ${actor}` : null,
       roles.clause ? `DELETE FROM CompanyRolePermissions WHERE RoleId IN (${roles.clause})` : null,
       membership ? `DELETE FROM UserCompanyMemberships WHERE ${membership}` : null,
+      users.clause ? `DELETE FROM UserSessions WHERE UserId IN (${users.clause})` : null,
       users.clause ? `DELETE FROM LoginLogs WHERE UserId IN (${users.clause})` : null,
       users.clause ? `DELETE FROM Users WHERE Id IN (${users.clause})` : null,
       roles.clause ? `DELETE FROM CompanyRoles WHERE Id IN (${roles.clause})` : null,
