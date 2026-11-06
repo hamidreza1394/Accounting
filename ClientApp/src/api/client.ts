@@ -13,6 +13,8 @@ import {
   parsePendingMembershipRequests,
   parseCompanyDirectory,
   parseSecurityAuditEvents,
+  parseSecurityAuditEventTypes,
+  parseAdminCompanies,
   parseCreatedCompanyRole,
   parsePermissionCatalog,
   parseCompanyRoleMembers,
@@ -49,6 +51,8 @@ import {
   type PendingMembershipRequest,
   type CompanyDirectoryPage,
   type SecurityAuditPage,
+  type SecurityAuditEventType,
+  type AdminCompanyPage,
 } from './types';
 
 // The API lives on the same origin and is authenticated by the HttpOnly cookie of the
@@ -401,11 +405,15 @@ export type SecurityAuditQuery = {
   /** ISO instants (UTC). The server answers 400 when `fromUtc` is after `toUtc`. */
   fromUtc?: string;
   toUtc?: string;
+  /** Server allowlist: only `occurredAt` and `eventType` exist; anything else answers 400. */
+  sort?: 'occurredAt' | 'eventType';
+  /** The server defaults to `occurredAt` descending when these are omitted. */
+  descending?: boolean;
   page: number;
   pageSize: number;
 };
 
-/** The installation-wide security audit events, newest first. Installation administrators only. */
+/** The installation-wide security audit events. Sorting happens on the server, never on the page. */
 export async function getSecurityAuditEvents(query: SecurityAuditQuery, signal?: AbortSignal): Promise<SecurityAuditPage> {
   const params = new URLSearchParams();
   if (query.eventType) params.set('eventType', query.eventType);
@@ -413,9 +421,84 @@ export async function getSecurityAuditEvents(query: SecurityAuditQuery, signal?:
   if (query.companyId) params.set('companyId', query.companyId);
   if (query.fromUtc) params.set('fromUtc', query.fromUtc);
   if (query.toUtc) params.set('toUtc', query.toUtc);
+  if (query.sort) params.set('sort', query.sort);
+  if (query.descending !== undefined) params.set('descending', String(query.descending));
   params.set('page', String(query.page));
   params.set('pageSize', String(query.pageSize));
   return parseSecurityAuditEvents(await getJson(`/admin/security/audit-events?${params.toString()}`, signal));
+}
+
+/**
+ * The audit event-type registry of the server, unioned with every code observed in the database
+ * (`GET /admin/security/audit-event-types`). Unknown codes arrive with the code as their label and
+ * are never dropped, so a newly written event shows up without a client change.
+ */
+export async function getSecurityAuditEventTypes(signal?: AbortSignal): Promise<SecurityAuditEventType[]> {
+  return parseSecurityAuditEventTypes(await getJson('/admin/security/audit-event-types', signal));
+}
+
+/** Query of the installation-wide company list of the security report; the server clamps every value. */
+export type AdminCompanyQuery = { search?: string; page: number; pageSize: number };
+
+/**
+ * EVERY company of the installation, paged and searched on the server
+ * (`GET /admin/companies`). Installation administrators only; unlike `GET /companies` this is not
+ * limited to the caller's own memberships, so historical events of inactive companies stay filterable.
+ */
+export async function getAdminCompanies(query: AdminCompanyQuery, signal?: AbortSignal): Promise<AdminCompanyPage> {
+  const params = new URLSearchParams({ page: String(query.page), pageSize: String(query.pageSize) });
+  if (query.search?.trim()) params.set('search', query.search.trim());
+  return parseAdminCompanies(await getJson(`/admin/companies?${params.toString()}`, signal));
+}
+
+/** The body of the audit CSV export; the server re-validates the range (31 days) and row cap (10,000). */
+export type SecurityAuditExportRequest = {
+  eventType?: string;
+  userId?: string;
+  companyId?: string;
+  fromUtc: string;
+  toUtc: string;
+};
+
+/** The `filename*`/`filename` of a Content-Disposition header, or `null` when absent or unsafe. */
+export function fileNameFromDisposition(header: string | null): string | null {
+  const safe = (name: string): string | null =>
+    name !== '' && name !== '.' && name !== '..' && !name.includes('/') && !name.includes('\\') && !/[\u0000-\u001f]/.test(name) ? name : null;
+  if (!header) return null;
+  const star = /filename\*=UTF-8''([^;]+)/i.exec(header);
+  if (star) {
+    try {
+      const raw = star[1];
+      return raw ? safe(decodeURIComponent(raw).trim()) : null;
+    } catch {
+      return null;
+    }
+  }
+  const plain = /filename\s*=\s*"?([^";]+)"?/i.exec(header);
+  const name = plain?.[1]?.trim();
+  return name ? safe(name) : null;
+}
+
+/**
+ * Downloads the audit CSV export (`POST /admin/security/audit-events/export`) as a file. The filters
+ * travel in the POST body, never in a URL or log; errors surface as {@link ApiError} with the
+ * server's Persian messages (400 bad range, 403 not an administrator, 413 over the row cap).
+ */
+export async function exportSecurityAuditEventsCsv(request: SecurityAuditExportRequest): Promise<void> {
+  const response = await sendJson('POST', '/admin/security/audit-events/export', request);
+  const blob = await response.blob();
+  const name = fileNameFromDisposition(response.headers.get('Content-Disposition')) ?? 'security-audit-events.csv';
+  const url = URL.createObjectURL(blob);
+  try {
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = name;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 /** Filters of the company user directory; the server validates and clamps every value. */

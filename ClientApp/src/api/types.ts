@@ -827,6 +827,55 @@ export function parseSecurityAuditEvents(value: unknown): SecurityAuditPage {
   };
 }
 
+/** One audit event type offered by the server: the exact code and its Persian label. */
+export type SecurityAuditEventType = { code: string; label: string };
+
+/**
+ * The server's event-type registry unioned with every code observed in the database, so unknown
+ * codes are returned (with the code as its own label) instead of being dropped. This parser keeps
+ * that promise: every entry is validated and none is ever filtered out.
+ */
+export function parseSecurityAuditEventTypes(value: unknown): SecurityAuditEventType[] {
+  const what = 'securityAuditEventTypes';
+  if (!Array.isArray(value)) throw new ContractError(what);
+  return value.map((row): SecurityAuditEventType => {
+    if (!isObject(row)) throw new ContractError(`${what}.item`);
+    const code = readString(row, 'code', what);
+    const label = readString(row, 'label', what);
+    if (code.trim() === '' || label.trim() === '') throw new ContractError(`${what}.item`);
+    return { code, label };
+  });
+}
+
+/** One company of the installation as seen by `GET /admin/companies` (installation administrators only). */
+export type AdminCompanyItem = { id: string; name: string; isActive: boolean };
+
+export type AdminCompanyPage = { items: AdminCompanyItem[]; totalCount: number; page: number; pageSize: number };
+
+export function parseAdminCompanies(value: unknown): AdminCompanyPage {
+  const what = 'adminCompanies';
+  if (!isObject(value)) throw new ContractError(what);
+  const rows = value['items'];
+  if (!Array.isArray(rows)) throw new ContractError(`${what}.items`);
+  const page = readCount(value, 'page', what);
+  const pageSize = readCount(value, 'pageSize', what);
+  if (page < 1 || pageSize < 1) throw new ContractError(`${what}.page`);
+  return {
+    items: rows.map((row): AdminCompanyItem => {
+      if (!isObject(row)) throw new ContractError(`${what}.item`);
+      const at = `${what}.item`;
+      return {
+        id: readString(row, 'id', at),
+        name: readString(row, 'name', at),
+        isActive: readBoolean(row, 'isActive', at),
+      };
+    }),
+    totalCount: readCount(value, 'totalCount', what),
+    page,
+    pageSize,
+  };
+}
+
 // --- Company user directory (backend: CompanyUserDirectoryEndpoints, permission users.list) ---
 
 /** One member of the requested company. Minimal fields only: no e-mail, phone, credential or session data. */
