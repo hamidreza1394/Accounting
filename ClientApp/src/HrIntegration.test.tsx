@@ -6,6 +6,9 @@ import { json, listBody, userItem } from './test/adminUsers';
 import { company, contextBody, period, selected, session } from './test/api';
 import { companiesBody, roleItem, systemRole } from './test/roles';
 
+// Each test renders the whole App and a lazy HR chunk: allow slow CI runners (the Windows publish job timed out at 5 s).
+vi.setConfig({ testTimeout: 30_000 });
+
 // Integration of the finished HR frontend (PR #555) into the shared shell: routes, sidebar, company permissions.
 const p1 = period('p1', 'سال مالی ۱۴۰۵');
 const companyA = company('a', 'شرکت الف', [p1], '10101010101');
