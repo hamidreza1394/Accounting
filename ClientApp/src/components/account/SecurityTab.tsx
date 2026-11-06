@@ -9,8 +9,9 @@ export type PasswordField = 'currentPassword' | 'newPassword' | 'confirmNewPassw
 export type PasswordFieldErrors = Partial<Record<PasswordField, string>>;
 
 const fieldOrder: readonly PasswordField[] = ['currentPassword', 'newPassword', 'confirmNewPassword'];
-// The same bounds the server documents (docs/USER_SELF_SERVICE.md); no further policy is invented here.
-const minLength = 8;
+// The same bounds the server enforces (D-073 §5: minimum 15 for new or changed passwords);
+// no further policy is invented here.
+const minLength = 15;
 const maxLength = 128;
 const genericError = 'تغییر رمز با خطا مواجه شد.';
 

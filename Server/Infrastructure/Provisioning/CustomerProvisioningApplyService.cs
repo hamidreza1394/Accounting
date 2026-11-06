@@ -368,8 +368,13 @@ public sealed class CustomerProvisioningApplyService
         if (string.IsNullOrWhiteSpace(username) || username.Length > 64 ||
             string.IsNullOrWhiteSpace(enrollmentToken) || enrollmentToken.Length != 43 ||
             enrollmentToken.Any(character => !(char.IsAsciiLetterOrDigit(character) || character is '-' or '_')) ||
-            string.IsNullOrWhiteSpace(newPassword) || newPassword.Length is < 12 or > 128 ||
-            newPassword.Any(char.IsControl))
+            // D-073 §5: the first administrator credential follows the same password policy
+            // as every other new password (minimum 15, maximum 128, no common password).
+            string.IsNullOrWhiteSpace(newPassword) ||
+            newPassword.Length < Constants.MinLength.UserPassword ||
+            newPassword.Length > Constants.MaxLength.UserPassword ||
+            newPassword.Any(char.IsControl) ||
+            !new ViewModels.Validation.NotCommonPasswordAttribute().IsValid(newPassword))
             return new CustomerProvisioningEnrollmentResult(false, "enrollment_invalid");
 
         await using var transaction = await _database.Database.BeginTransactionAsync(

@@ -216,11 +216,9 @@ public sealed class PasswordPolicyTests
 	}
 
 	[Theory]
-	[InlineData("12345678")]
-	[InlineData("password")]
-	[InlineData("PASSWORD1")]
-	[InlineData("qwerty123")]
-	[InlineData("admin123")]
+	// D-073 §5: minimum length is 15, so the blocklist-only assertion needs a common
+	// password of 15+ characters; shorter common passwords are covered by the length test.
+	[InlineData("passwordpassword")]
 	public void Rejects_CommonPasswords(string password)
 	{
 		var results = ValidateProperty
@@ -229,20 +227,25 @@ public sealed class PasswordPolicyTests
 			value: password);
 
 		// The common-password check is the only rule that can fail here
-		// (the value is 8+ characters and shorter than the maximum).
+		// (the value is 15+ characters and shorter than the maximum).
 		var error = Assert.Single(results);
 		Assert.NotNull(error.ErrorMessage);
 	}
 
-	[Fact]
-	public void Rejects_TooShortPasswords()
+	[Theory]
+	[InlineData("Ab1!xyz")] // below the minimum and not in the blocklist: the length rule only.
+	[InlineData("12345678")]
+	[InlineData("PASSWORD1")]
+	[InlineData("qwerty123")]
+	[InlineData("admin123")] // also blocklist entries: rejected by at least the length rule.
+	public void Rejects_TooShortPasswords(string password)
 	{
 		var results = ValidateProperty
 			(instance: new ViewModels.Pages.Admin.Users.CreateViewModel(),
 			propertyName: nameof(ViewModels.Pages.Admin.Users.CreateViewModel.Password),
-			value: "Ab1!xyz");
+			value: password);
 
-		Assert.Single(results);
+		Assert.NotEmpty(results);
 	}
 
 	[Fact]

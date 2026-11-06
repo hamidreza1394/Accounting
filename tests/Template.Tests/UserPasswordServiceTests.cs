@@ -105,6 +105,7 @@ public sealed class UserPasswordServiceTests
     [Theory]
     [InlineData("short")]
     [InlineData("password123")]
+    [InlineData("xactly-14-char")] // D-073 §5: one character below the minimum 15.
     public async Task ChangePasswordAsync_RejectsShortOrCommonPasswords(string newPassword)
     {
         await using var fixture = new Fixture();
@@ -118,6 +119,22 @@ public sealed class UserPasswordServiceTests
 
         Assert.Equal(Infrastructure.Security.ChangePasswordOutcome.PasswordPolicyRejected, result.Outcome);
         Assert.Empty(await fixture.Database.SecurityAuditEvents.ToListAsync());
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_AcceptsAFifteenCharacterPassphrase_WithSpaces()
+    {
+        await using var fixture = new Fixture();
+
+        // D-073 §5: minimum 15, spaces and passphrases are allowed, no composition rules.
+        var result = await fixture.Service.ChangePasswordAsync(
+            fixture.User.Id,
+            "Old-Password-1405!",
+            "correct horse battery staple 42!",
+            "correct horse battery staple 42!",
+            "192.0.2.10");
+
+        Assert.Equal(Infrastructure.Security.ChangePasswordOutcome.Changed, result.Outcome);
     }
 
     [Fact]
