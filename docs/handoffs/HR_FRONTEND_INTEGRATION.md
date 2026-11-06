@@ -79,6 +79,7 @@
 
 ## شناسه‌های Git
 
-- Branch: `feature/hr-organizational-ui` (از `main` = `8726fc2a4b00980dc8e0bfd3ded0f3ab7e20c364`)
-- Commit: در توضیح PR ثبت می‌شود
-- Pull Request: `feat(hr): implement organizational management frontend` — به `main`؛ **merge توسط مالک**
+- Branch: `feature/hr-organizational-ui` (از `main` = `8726fc2a4b00980dc8e0bfd3ded0f3ab7e20c364`)؛ پس از پیشروی main (PR #554)، هم‌ترازی با `main` جدید = `553405d` با commit merge `04dcfe5` انجام شد و هر دو رکورد WORK_LOG حفظ شد.
+- Commit اصلی: `c59a9dc1dd548c2f6479dd8223a1cb6323fe47c7`
+- Pull Request: [#555 — feat(hr): implement organizational management frontend](https://github.com/hamidreza1394/Accounting/pull/555) — به `main`؛ **merge توسط مالک**
+- CI روی commit اصلی: همهٔ Checkها completed بدون failure (شامل `client` و `build-and-test` با SQL Server واقعی)؛ پس از هم‌ترازی با main، CI دوباره اجرا و در گزارش نهایی ثبت می‌شود.
