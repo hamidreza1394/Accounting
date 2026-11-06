@@ -67,7 +67,8 @@ describe('HrEmployeeDetailPage', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'علی محمدی' })).toBeInTheDocument();
     expect(screen.getByText('انتساب جاری')).toBeInTheDocument();
     const history = await screen.findByRole('table', { name: 'تاریخچه انتساب‌های کارمند' });
-    expect(history).toHaveTextContent('دفتر مرکزی');
+    // The table shell renders before the history rows arrive; wait for the rows instead of racing them (slow CI runners).
+    await waitFor(() => expect(history).toHaveTextContent('دفتر مرکزی'));
     expect(history).toHaveTextContent('پایان‌یافته');
   });
 

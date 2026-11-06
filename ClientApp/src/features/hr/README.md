@@ -1,7 +1,7 @@
 # ماژول Frontend منابع انسانی (HR) — `ClientApp/src/features/hr/`
 
 - **مأموریت:** پیاده‌سازی Frontend مدیریت سازمانی HR (S2 — D-072) برای فرانو.
-- **وضعیت:** پیاده‌سازی کامل و تست‌شده در شاخه `feature/hr-organizational-ui`؛ ثبت مسیرها در پوستهٔ مشترک به PR ادغام بعدی موکول است (مرزبندی توسعهٔ موازی).
+- **وضعیت:** پیاده‌سازی کامل و تست‌شده در شاخه `feature/hr-organizational-ui`؛ مسیرها و منو در پوستهٔ مشترک ثبت شده‌اند (شاخهٔ `feature/hr-frontend-integration`؛ جزئیات در `docs/handoffs/HR_FRONTEND_INTEGRATION.md`).
 - **منبع حقیقت قرارداد:** `docs/HR_FRONTEND_API_CONTRACT.md` (تأییدشده در PR #547) و کد `Server/Api/HrOrganizationalStructureEndpoints.cs`. هیچ Endpoint، فیلد یا رفتاری حدس زده نشده است.
 
 ## ۱. نمای معماری

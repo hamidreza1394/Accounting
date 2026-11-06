@@ -4,6 +4,7 @@ import {
   Bell,
   BookOpen,
   Boxes,
+  BadgeCheck,
   Building2,
   CalendarDays,
   ChevronDown,
@@ -192,6 +193,9 @@ function AppShellFrame({ session, context, access, canAccess, onRetryPermissions
   const permissionsActive = pathname === '/admin/permissions';
   const companyUsersActive = pathname === '/company/users';
   const securityAuditActive = pathname === '/admin/security/audit';
+  const hrUnitsActive = pathname === '/hr/org/units' || pathname.startsWith('/hr/org/units/');
+  const hrPositionsActive = pathname === '/hr/org/positions' || pathname.startsWith('/hr/org/positions/');
+  const hrEmployeesActive = pathname === '/hr/org/employees' || pathname.startsWith('/hr/org/employees/');
   const membershipRequestsActive = pathname === '/admin/membership-requests';
   const myMembershipRequestsActive = pathname === '/account/membership-requests';
   const readOnly = context.fiscalPeriod.accessMode === 'readOnly';
@@ -360,7 +364,30 @@ function AppShellFrame({ session, context, access, canAccess, onRetryPermissions
                             </Link>
                           </li>
                           ) : null}
-                          {canAccess('admin.users.view') ? <li><DisabledItem label="ساختار سازمانی و سمت‌ها" icon={Building2} tone="blue" nested /></li> : null}
+                          {canAccess('hr.units.view') ? (
+                          <li>
+                            <Link to="/hr/org/units" onClick={() => setMobileMenuOpen(false)} aria-current={hrUnitsActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (hrUnitsActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
+                              <NavIcon icon={Building2} tone="blue" size="sm" />
+                              <span className="min-w-0 flex-1">واحدهای سازمانی</span>
+                            </Link>
+                          </li>
+                          ) : null}
+                          {canAccess('hr.positions.view') ? (
+                          <li>
+                            <Link to="/hr/org/positions" onClick={() => setMobileMenuOpen(false)} aria-current={hrPositionsActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (hrPositionsActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
+                              <NavIcon icon={BadgeCheck} tone="violet" size="sm" />
+                              <span className="min-w-0 flex-1">سمت‌های سازمانی</span>
+                            </Link>
+                          </li>
+                          ) : null}
+                          {canAccess('hr.employees.view') ? (
+                          <li>
+                            <Link to="/hr/org/employees" onClick={() => setMobileMenuOpen(false)} aria-current={hrEmployeesActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (hrEmployeesActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
+                              <NavIcon icon={Users} tone="emerald" size="sm" />
+                              <span className="min-w-0 flex-1">کارکنان</span>
+                            </Link>
+                          </li>
+                          ) : null}
                           {canAccess('admin.roles.view') ? (
                           <li>
                             <Link to="/admin/roles" onClick={() => setMobileMenuOpen(false)} aria-current={rolesActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (rolesActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>

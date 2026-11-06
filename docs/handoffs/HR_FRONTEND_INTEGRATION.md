@@ -3,7 +3,7 @@
 - **Issue:** UNNUMBERED (مأموریت Frontend منابع انسانی فرانو)
 - **Agent/مسئول:** عامل Frontend HR (مستقل از عامل موازیِ مدیریت دسترسی)
 - **تاریخ:** 2026-11-06
-- **وضعیت:** انجام‌شده — آمادهٔ بازبینی و ادغام در یک PR جداگانهٔ Integration
+- **وضعیت:** انجام‌شده — ادغام در پوسته انجام شد (بخش «نتیجهٔ ادغام در پوسته» در انتهای سند؛ شاخهٔ `feature/hr-frontend-integration`)
 
 ## هدف و معیارهای پذیرش
 
@@ -83,3 +83,45 @@
 - Commit اصلی: `c59a9dc1dd548c2f6479dd8223a1cb6323fe47c7`
 - Pull Request: [#555 — feat(hr): implement organizational management frontend](https://github.com/hamidreza1394/Accounting/pull/555) — به `main`؛ **merge توسط مالک**
 - CI روی commit اصلی: همهٔ Checkها completed بدون failure (شامل `client` و `build-and-test` با SQL Server واقعی)؛ پس از هم‌ترازی با main، CI دوباره اجرا و در گزارش نهایی ثبت می‌شود.
+
+
+## نتیجهٔ ادغام در پوسته (2026-11-06، شاخهٔ `feature/hr-frontend-integration`)
+
+### مسیرهای ثبت‌شده
+`AppRoutes.tsx` اکنون `hrRoutes` را بعد از مسیرهای مشترک به `appRoutes` می‌افزاید (۱۰ مسیر، ترتیب `/new` قبل از `/:id` حفظ شد). `features/hr/**` دست نخورد. هر مسیر یک `permission` hint از خانوادهٔ خودش می‌گیرد (`/hr/org/units*` ← `hr.units.view`، `/hr/org/positions*` ← `hr.positions.view`، `/hr/org/employees*` ← `hr.employees.view`) تا روتر در حالت loading/error صفحه را نشان ندهد و درخواست HR نفرستد (fail-closed).
+
+| مسیر (زیر `/app`) | hint |
+|---|---|
+| `/hr/org/units`، `/units/new`، `/units/:unitId` | `hr.units.view` |
+| `/hr/org/positions`، `/positions/new`، `/positions/:positionId` | `hr.positions.view` |
+| `/hr/org/employees`، `/employees/new`، `/employees/:employeeId`، `/employees/:employeeId/edit` | `hr.employees.view` |
+
+### ورودی‌های منوی «مدیریت سیستم»
+«واحدهای سازمانی»، «سمت‌های سازمانی» و «کارکنان» با `aria-current` برای مسیرهای تودرتو. آیتم غیرفعال قبلی «ساختار سازمانی و سمت‌ها» (placeholder) حذف شد چون این سه آیتم واقعی جایگزین آن هستند؛ تست‌های `AppShell.test.tsx` که روی آن placeholder بودند به placeholder باقی‌مانده (`سیاست‌های امنیتی`) منتقل شدند (همان ادعاها، بدون حذف تست).
+
+### کدهای مجوز تأییدشده
+در `Server/Api/HrOrganizationalStructureEndpoints.cs` وجود دارند: `hr.organizational-units.list`، `hr.positions.list`، `hr.employees.list` (و `...create/update`، `hr.employees.view/create/update/user-link.manage`، `hr.assignments.manage`). برای `Permission` در `lib/permissions.ts` فقط سه hint اضافه شد که به همین سه کد list نگاشت می‌شوند؛ مدیر نصب مثل سرور (`AuthorizeHrScopeAsync`) همه را می‌گیرد. کد جدیدی ساخته نشد.
+
+### رفتار زمینهٔ شرکت
+هیچ انتخابگر شرکت یا حافظهٔ جدیدی افزوده نشد. hintها از `access` همان `useCompanyPermissions` می‌آیند: با تغییر شرکت snapshot قبلی فوراً حذف و دوباره دریافت می‌شود، پاسخ دیررس شرکت قبلی نادیده گرفته می‌شود، خطا/پاسخ ناهمخوان هیچ دسترسی نمی‌دهد. `session.isAdministrator` استفاده نشده است.
+
+### نتایج آزمون (واقعی)
+| فرمان | نتیجه |
+|---|---|
+| `npx tsc --noEmit` | موفق |
+| `npx vitest run src/HrIntegration.test.tsx` | ۲۲ از ۲۲ موفق (قبل از پیاده‌سازی ۱۸ ناموفق/۴ موفق) |
+| `npx vitest run` (کل) | ۷۳ فایل، ۷۵۵ تست؛ همه موفق |
+| `npm run build` | موفق |
+| `npm run check:offline` | موفق (۵۷ منبع محلی) |
+| `python3 scripts/check_static_assets.py` | موفق |
+| `dotnet build/test`، Playwright E2E، مرورگر واقعی | اجرا نشد (SDK و SQL Server و مرورگر در محیط نیست؛ Backend تغییر نکرده) |
+
+### محدودیت‌ها
+- hint هر خانواده در سطح فهرست است (`*.list`)؛ دسترسی دقیق صفحات جزئیات/ایجاد/ویرایش (مثلاً `hr.employees.view`/`create`) را سرور تعیین می‌کند و صفحات 403 را صادقانه نشان می‌دهند.
+- تغییر شرکت در سطح کل برنامه با تست جدا نشده؛ رفتار آن با تست‌های `useCompanyPermissions.test.tsx` (پاک‌شدن فوری، نادیده‌گرفتن پاسخ دیررس) پوشش داده شده است.
+- بازبینی بصری RTL در سه عرض و E2E پس از ادغام لازم است.
+
+### شناسه‌های Git ادغام
+- Branch: `feature/hr-frontend-integration`
+- Commit: `54227f529d44873bee35a3dc3acb4dca3c3fe8ea`
+- Pull Request: [#559](https://github.com/hamidreza1394/Accounting/pull/559) — Merge نشده؛ با مسئول مخزن

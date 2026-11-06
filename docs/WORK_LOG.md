@@ -2636,3 +2636,8 @@
 - WORM/Object Lock، دیتابیس Audit مستقل، deletion ledger و سرویس جست‌وجوی جدا برای مرحله اول الزام نیستند. در Dedicated مقصد می‌تواند مسیر محلی/شبکه‌ای امن و در Cloud فضای فایل/Object Storage ارزان موجود باشد.
 - مدت نگهداری ۱۲/۲۴/۳۶ ماه و Legal Hold بدون تغییر باقی ماند؛ آرشیو باعث کوتاه‌شدن مدت نگهداری نمی‌شود. Restore از Backup قدیمی با اجرای مجدد Job نگهداری همراه خواهد بود.
 - این تغییر فقط ساده‌سازی ADR و مستندات است؛ هیچ کد، Schema، Migration، Job یا Purge اجرایی ایجاد نشد.
+
+## 2026-11-06 — ادغام Frontend منابع انسانی در پوستهٔ مدیریت سیستم (شاخه feature/hr-frontend-integration)
+- ۱۰ مسیر `hrRoutes` در `AppRoutes.tsx` ثبت شد و سه آیتم «واحدهای سازمانی»، «سمت‌های سازمانی» و «کارکنان» زیر «مدیریت سیستم» در `AppShell.tsx` افزوده شد (placeholder قدیمی «ساختار سازمانی و سمت‌ها» جایگزین شد).
+- `lib/permissions.ts`: سه hint `hr.units.view`/`hr.positions.view`/`hr.employees.view` برای کدهای verified‌شدهٔ `hr.organizational-units.list`، `hr.positions.list`، `hr.employees.list`؛ fail-closed در loading/error/شرکت نامطابق.
+- آزمون: `HrIntegration.test.tsx` (۲۲ تست) + تست‌های `permissions`؛ کل ClientApp ۷۵۵ تست موفق؛ build و check:offline موفق. Backend، Schema و `features/hr/**` تغییر نکرد؛ dotnet/E2E اجرا نشد.

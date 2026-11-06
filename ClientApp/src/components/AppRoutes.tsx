@@ -1,6 +1,7 @@
 import { createContext, lazy, useCallback, useContext } from 'react';
 import type { SelectedContext, Session } from '../api/types';
-import { can, isInstallationAdministrator, type AccessSnapshot, type CanHint } from '../lib/permissions';
+import { hrRoutes } from '../features/hr/hrRoutes';
+import { can, isInstallationAdministrator, type AccessSnapshot, type CanHint, type Permission } from '../lib/permissions';
 import type { Route } from '../lib/router';
 import { Dashboard } from './Dashboard';
 
@@ -170,7 +171,7 @@ function CompanyUsersRoute() {
  * Routes under `/app`. Admin pages are lazy chunks so the dashboard bundle stays small. The
  * `permission` is a UI hint only; the server decides (D-064). List specific paths first.
  */
-export const appRoutes: readonly Route[] = [
+const baseRoutes: readonly Route[] = [
   { path: '/', element: DashboardRoute, title: 'داشبورد' },
   { path: '/admin/users', element: UsersListRoute, title: 'مدیریت کاربران', permission: 'admin.users.view' },
   // `/new` must stay before `/:id`, otherwise "new" would be read as a user id.
@@ -188,4 +189,21 @@ export const appRoutes: readonly Route[] = [
   // No UI permission hint: the approver permission is per company and not in the session; the server decides (404).
   { path: '/admin/membership-requests', element: PendingMembershipRequestsRoute, title: 'درخواست‌های عضویت' },
   { path: '/account/membership-requests', element: MyMembershipRequestsRoute, title: 'درخواست‌های عضویت من', permission: 'account.view' },
+];
+
+/**
+ * The finished HR routes (`features/hr/hrRoutes.tsx`, read-only) get the list permission of their family as UI hint, so the
+ * router never shows an HR page while the company permissions are loading, failed or lack the code (fail-closed). The
+ * server still authorizes every request (D-064), so the shared hint is deliberately the family's list code.
+ */
+function hrPermission(path: string): Permission {
+  if (path.startsWith('/hr/org/units')) return 'hr.units.view';
+  if (path.startsWith('/hr/org/positions')) return 'hr.positions.view';
+  return 'hr.employees.view';
+}
+
+/** Specific paths first inside each group; HR paths do not overlap the shared ones. */
+export const appRoutes: readonly Route[] = [
+  ...baseRoutes,
+  ...hrRoutes.map((route): Route => ({ ...route, permission: hrPermission(route.path) })),
 ];
