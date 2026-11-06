@@ -361,8 +361,8 @@ public sealed class VendorLicenseAmendmentPayloadBuilderTests
 
         var success = VendorLicenseAmendmentPayloadBuilder.TryBuildCompanyEntitlementIncrease(
             fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
-            "company-0001", mutableModules, newMaxUsers: 40, mutableFeatures,
-            IssuedAt.AddDays(1), out var amendment, out var error);
+            "company-0001", mutableModules, newMaxUsers: 40, featureIncreases: mutableFeatures,
+            issuedAtUtc: IssuedAt.AddDays(1), out var amendment, out var error);
 
         Assert.True(success, error);
         Assert.NotNull(amendment);
@@ -393,7 +393,7 @@ public sealed class VendorLicenseAmendmentPayloadBuilderTests
         var amendedOther = amendment.CompanyEntitlements[1]!;
         Assert.Equal(secondCompany.CompanyReference, amendedOther.CompanyReference);
         Assert.Equal(secondCompany.MaxUsers, amendedOther.MaxUsers);
-        Assert.Equal(secondCompany.Modules, amendedOther.Modules);
+        Assert.Equal(new[] { "sales" }, amendedOther.Modules);
         Assert.NotSame(secondCompany.Modules, amendedOther.Modules);
 
         mutableModules.Add("treasury");
