@@ -15,7 +15,7 @@
 - [x] اسناد امنیت، API contract، licensing، access architecture، index و AGENTS هم‌تراز شوند.
 
 ## خلاصه تغییرات
-- D-070: Accepted؛ baseline retention ۱۲/۲۴/۳۶ ماه؛ Legal Hold؛ Archive چندلایه Cloud؛ انتقال idempotent و کنترل integrity؛ حذف پس از تأیید Archive؛ deletion ledger برای جلوگیری از زنده‌شدن داده در Restore.
+- D-070: Accepted؛ baseline retention ۱۲/۲۴/۳۶ ماه و Legal Hold؛ آرشیو ساده فایل‌محور و رمزنگاری‌شده با Job زمان‌بندی‌شده؛ تطبیق تعداد/checksum پیش از حذف batchی از DB؛ بدون دیتابیس دوم، WORM یا deletion ledger اجباری در مرحله اول.
 - D-073: Accepted؛ admin session revoke، Cloud/Offline recovery، user-controlled Admin Reset، MFA و سیاست رمز. پیاده‌سازی Customer هنوز عمدتاً NotImplemented است.
 - D-074: Accepted؛ Permission و Entitlement مستقل و هر دو لازم؛ ترتیب canonical کنترل و Cloud/Offline authority. قرارداد v2 و Trade gate در main هستند اما runtime Trade هنوز DenyAll است.
 - شماره ADR بعدی به D-075 اصلاح شد.
@@ -33,7 +33,7 @@
 ## تصمیم‌های فنی
 - هیچ ADR قبلی حذف یا بازشماری نشد؛ D-070 موجود تکمیل شد و D-073/D-074 به‌ترتیب بعد از D-072 اضافه شدند.
 - دوره‌های ۱۲/۲۴/۳۶ ماه baseline محصول هستند، نه ادعای قانون یکسان جهانی؛ استثنای کوتاه‌تر نیازمند مبنای قانونی/قراردادی و تأیید مستند است.
-- حجم بالا باعث کوتاه‌کردن retention نمی‌شود؛ انتقال به Archive با صحت‌سنجی، tenant isolation، Legal Hold و restore reconciliation انجام می‌شود.
+- حجم بالا باعث کوتاه‌کردن retention نمی‌شود؛ Job آرشیو ماهانه یا زودتر هنگام نزدیک‌شدن به آستانه ظرفیت، فایل فشرده/رمزنگاری‌شده تولید می‌کند؛ پس از تطبیق تعداد و checksum، رکوردها batchی از DB حذف می‌شوند. شکست انتقال رکورد DB را حفظ می‌کند.
 - Entitlement در CompanyAccessService ادغام نمی‌شود؛ RBAC و Licensing مرجع مستقل دارند و Gate آن‌ها را ترکیب می‌کند.
 - هیچ API، Schema، Migration، Job، Purge یا رفتار runtime در این Issue ساخته نشده است.
 
@@ -62,5 +62,5 @@
 
 ## شناسه‌های Git
 - Branch: `docs/adr-073-074-account-security-entitlement`
-- Commit: `cb8f2ee8dfeda9e8208749f7ab1d8ba610aa1e34`.
+- آخرین Commit: در ادامه PR #557 به‌روزرسانی می‌شود.
 - Pull Request: [#557](https://github.com/hamidreza1394/Accounting/pull/557) — Open, not merged.
