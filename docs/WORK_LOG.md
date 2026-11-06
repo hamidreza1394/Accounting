@@ -2642,6 +2642,12 @@
 - `lib/permissions.ts`: سه hint `hr.units.view`/`hr.positions.view`/`hr.employees.view` برای کدهای verified‌شدهٔ `hr.organizational-units.list`، `hr.positions.list`، `hr.employees.list`؛ fail-closed در loading/error/شرکت نامطابق.
 - آزمون: `HrIntegration.test.tsx` (۲۲ تست) + تست‌های `permissions`؛ کل ClientApp ۷۵۵ تست موفق؛ build و check:offline موفق. Backend، Schema و `features/hr/**` تغییر نکرد؛ dotnet/E2E اجرا نشد.
 
+## 2026-11-06 — ممیزی جامع تکمیل مدیریت کاربران، سازمان و دسترسی‌ها (Issue #444)
+- مبنا: آخرین `origin/main` @ `129b93b5`؛ وضعیت GitHub API (Issue #444، PRهای #559/#560/#561، صفر PR Open) و کد واقعی بررسی شد.
+- Build/تست واقعی روی main تمیز: SDK 10.0.403 نصب شد؛ `dotnet build` ۰ خطا؛ `dotnet test` ۱۰۳۸ موفق، ۲ ناموفق پیش‌موجود (`SafeExceptionRealApplicationTests` نیازمند SQL Server)، ۶۲ Skip gated — مطابق handoffهای قبلی.
+- طبقه‌بندی قابلیت‌ها با شواهد: مراحل ۱/۲/۳/۹ Completed؛ مرحله ۴ (ابطال مدیریتی نشست — D-073 §1) و ۵/۶/۷ Not Implemented؛ مرحله ۸ (حداقل طول رمز ۸ به‌جای ۱۵ مصوب D-073) و ۱۰ (Entitlement — DenyAll طبق D-074) Partially Implemented.
+- handoff: `docs/handoffs/ISSUE-444-comprehensive-access-completion-audit.md`؛ اجرای مراحل ۴ و ۸ در PRهای مستقل بعدی همین مأموریت ادامه می‌یابد؛ هیچ کد محصولی در این PR تغییر نکرد.
+
 ## 2026-11-06 — ابطال مدیریتی نشست کاربر توسط مدیر نصب (D-073 §1 — شاخه feat/admin-session-revocation-d073)
 - سه Endpoint جدید: `GET /api/v1/admin/users/{userId}/sessions`، `POST .../{sessionId}/revoke`، `POST .../revoke-all` — فقط مدیر نصب فعال با بازخوانی نقش از DB در هر درخواست؛ Step-up با تأیید رمز جاری مدیر (`PasswordHashService.Verify`)؛ دلیل از کاتالوگ چهار کد مجاز؛ Anti-forgery، Rate limit حساس، no-store؛ Projection بدون IP/UA/Cookie/Token.
 - Audit: `AdminUserSessionRevoked` / `AdminUserSessionsRevoked` با actor، targetUserId، reasonCode و revokedCount؛ بدون رمز/توکن؛ برچسب فارسی در رجیستری گزارش امنیتی و Fallback کلاینت همگام شد.
