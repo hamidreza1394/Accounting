@@ -32,4 +32,12 @@ export function sameCodes(a: readonly string[], b: readonly string[]): boolean {
   return b.every((code) => set.has(code));
 }
 
-export const delegationNote = 'سقف تفویض هنوز در سمت سرور پیاده نشده است؛ هر مدیر نصب می‌تواند هر مجوز ثبت‌شده را به نقش‌ها اختصاص دهد.';
+const delegationNoteInstallation =
+  'به‌عنوان مدیر نصب سقف تفویض ندارید و می‌توانید هر مجوز ثبت‌شده را به گروه‌ها بدهید. گروه سیستمی هیچ‌گاه از این مسیر تغییر نمی‌کند.';
+const delegationNoteCompany =
+  'سقف تفویض (D-071): فقط مجوزهایی را می‌توانید به یک گروه بدهید که خودتان در همین شرکت دارید. مجوزهای خارج از سقف شما در کاتالوگ دیده نمی‌شوند و سرور هر درخواست فراتر از آن را رد می‌کند.';
+
+/** What the delegation rule means for the signed-in actor. The server enforces it either way. */
+export function delegationNote(isInstallationAdministrator: boolean): string {
+  return isInstallationAdministrator ? delegationNoteInstallation : delegationNoteCompany;
+}

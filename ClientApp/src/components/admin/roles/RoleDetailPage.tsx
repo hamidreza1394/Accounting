@@ -12,6 +12,7 @@ import { FormSection } from '../../ui/FormSection';
 import { PermissionTree } from '../../ui/PermissionTree';
 import { StatusBadge } from '../../ui/StatusBadge';
 import { Button } from '../../ui/button';
+import type { CanHint } from '../../../lib/permissions';
 import { normalizeText } from '../users/userFormValidation';
 import { RoleMembersSection } from './RoleMembersSection';
 import { clearRoleFlash, peekRoleFlash, roleFlashText, setRoleFlash } from './roleFlash';
@@ -22,9 +23,15 @@ import { usePermissionCatalog } from './usePermissionCatalog';
 type Props = {
   onUnauthenticated: (error: unknown) => boolean;
   defaultCompanyId: string;
-  /** UI hint only (the server decides): false shows the role read-only. */
-  canManage?: boolean;
+  /** UI hints only (the server decides) from the real `/me/permissions` of the active company. */
+  can?: CanHint;
+  /** Installation administrators are not bound by a delegation ceiling. */
+  isInstallationAdministrator?: boolean;
+  /** A 403 from the server: the caller re-reads the real permissions. */
+  onForbidden?: (() => void) | undefined;
 };
+
+const denyAll: CanHint = () => false;
 
 type RoleState =
   | { kind: 'loading' }
@@ -59,8 +66,11 @@ function RoleEditor({
   memberCount,
   catalog,
   companyId,
-  canManage,
+  canUpdate,
+  isInstallationAdministrator,
   onUnauthenticated,
+  onForbidden,
+  onConflict,
   onSaved,
 }: {
   role: CompanyRole;
@@ -68,8 +78,12 @@ function RoleEditor({
   memberCount: number;
   catalog: PermissionCatalogItem[];
   companyId: string;
-  canManage: boolean;
+  canUpdate: boolean;
+  isInstallationAdministrator: boolean;
   onUnauthenticated: (error: unknown) => boolean;
+  onForbidden?: (() => void) | undefined;
+  /** 409: the role changed meanwhile; the caller reloads it so the form shows the real state. */
+  onConflict: () => void;
   onSaved: (saved: { name: string; isActive: boolean; permissionCodes: string[] }) => void;
 }) {
   const navigate = useNavigate();
@@ -81,7 +95,12 @@ function RoleEditor({
   const submittingRef = useRef(false);
   const doneRef = useRef(false);
 
-  const editable = canManage && !role.isSystemRole;
+  // A company administrator can only edit a role whose permissions are all within their own ceiling (D-071):
+  // the catalog they receive holds exactly those codes, so any other code on the role is beyond reach.
+  const catalogCodes = useMemo(() => new Set(catalog.map((item) => item.code)), [catalog]);
+  const exceedsCeiling = !isInstallationAdministrator && role.permissionCodes.some((code) => !catalogCodes.has(code));
+  const editable = canUpdate && !role.isSystemRole && !exceedsCeiling;
+  const [conflict, setConflict] = useState(false);
   const [name, setName] = useState(role.name);
   const [isActive, setIsActive] = useState(role.isActive);
   const [selection, setSelection] = useState<string[]>(role.permissionCodes);
@@ -132,7 +151,9 @@ function RoleEditor({
       onSaved({ name: normalizedName, isActive, permissionCodes: selection });
     } catch (cause) {
       if (onUnauthenticated(cause)) return;
-      // 409 carries the Persian reason (system role, or active members that must move first).
+      if (cause instanceof ApiError && cause.status === 403) onForbidden?.();
+      // 409 carries the Persian reason (system role, active members that must move first, or a concurrent change).
+      setConflict(cause instanceof ApiError && cause.status === 409);
       setAlertMessage(cause instanceof ApiError ? cause.message : fallbackMessage);
       setFocusTick((tick) => tick + 1);
     } finally {
@@ -189,16 +210,28 @@ function RoleEditor({
   return (
     <form ref={formRef} noValidate onSubmit={handleSubmit} aria-label="فرم ویرایش گروه دسترسی" className="space-y-5">
       {alertMessage ? (
-        <Alert ref={alertRef} tone="error">
+        <Alert
+          ref={alertRef}
+          tone="error"
+          action={
+            conflict ? (
+              <Button type="button" variant="outline" size="sm" onClick={onConflict}>
+                دریافت آخرین اطلاعات
+              </Button>
+            ) : undefined
+          }
+        >
           {alertMessage}
         </Alert>
       ) : null}
       {role.isSystemRole ? (
         <Alert tone="info">این گروه سیستمی است و قابل ویرایش نیست؛ مشخصات و مجوزهای آن فقط نمایش داده می‌شوند.</Alert>
-      ) : !canManage ? (
+      ) : !canUpdate ? (
         <Alert tone="info">شما مجوز ویرایش گروه‌های دسترسی را ندارید؛ اطلاعات فقط نمایش داده می‌شود.</Alert>
+      ) : exceedsCeiling ? (
+        <Alert tone="info">این گروه مجوزهایی دارد که خارج از سقف مجوزهای شما است؛ برای جلوگیری از حذف ناخواستهٔ آن‌ها فقط نمایش داده می‌شود.</Alert>
       ) : null}
-      <Alert tone="info">{delegationNote}</Alert>
+      <Alert tone="info">{delegationNote(isInstallationAdministrator)}</Alert>
 
       <FormSection headingLevel={2} title="مشخصات گروه">
         <div className="flex flex-col gap-1.5">
@@ -290,7 +323,7 @@ function RoleEditor({
   );
 }
 
-export function RoleDetailPage({ onUnauthenticated, defaultCompanyId, canManage = false }: Props) {
+export function RoleDetailPage({ onUnauthenticated, defaultCompanyId, can = denyAll, isInstallationAdministrator = false, onForbidden }: Props) {
   const { roleId = '' } = useParams();
   const [params] = useSearchParams();
   const companyId = resolveCompanyId(params, defaultCompanyId);
@@ -384,8 +417,11 @@ export function RoleDetailPage({ onUnauthenticated, defaultCompanyId, canManage 
           memberCount={liveMemberCount?.roleId === state.role.id ? liveMemberCount.count : state.role.activeMemberCount}
           catalog={catalogState.catalog}
           companyId={companyId}
-          canManage={canManage}
+          canUpdate={can('admin.roles.update', companyId)}
+          isInstallationAdministrator={isInstallationAdministrator}
           onUnauthenticated={onUnauthenticated}
+          onForbidden={onForbidden}
+          onConflict={() => setAttempt((value) => value + 1)}
           onSaved={(saved) => {
             // Show the saved values at once, then confirm them with a silent reload.
             setState((current) =>
@@ -405,8 +441,9 @@ export function RoleDetailPage({ onUnauthenticated, defaultCompanyId, canManage 
           key={state.role.id}
           role={state.role}
           companyId={companyId}
-          canManage={canManage}
+          canAssign={can('admin.roles.assign', companyId)}
           onUnauthenticated={onUnauthenticated}
+          onForbidden={onForbidden}
           onMemberCount={(count) => setLiveMemberCount({ roleId: state.role.id, count })}
         />
       </>

@@ -15,7 +15,6 @@ import { AppRouteDataContext, appRoutes, type AppRouteData } from './components/
 import { ErrorState, LoadingScreen } from './components/Feedback';
 import { SelectionLayout } from './components/SelectionLayout';
 import { WorkContextSelector } from './components/WorkContextSelector';
-import { can, type Permission } from './lib/permissions';
 import { useCompanyPermissions } from './lib/useCompanyPermissions';
 import { RouteView } from './lib/router';
 
@@ -149,12 +148,6 @@ export function App({ navigate = defaultNavigate }: { navigate?: Navigate }) {
     if (showsSelection) document.title = 'فرانو — انتخاب دوره مالی';
   }, [showsSelection]);
 
-  const sessionForPermissions = state.kind === 'ready' ? state.session : null;
-  const canAccess = useCallback(
-    (permission: Permission) => can(sessionForPermissions, permission),
-    [sessionForPermissions],
-  );
-
   const activeCompanyId = state.kind === 'ready' && !state.selecting ? state.context.current?.company.id : undefined;
   const companyPermissions = useCompanyPermissions(activeCompanyId, handleUnauthenticated);
 
@@ -163,9 +156,15 @@ export function App({ navigate = defaultNavigate }: { navigate?: Navigate }) {
   const routeData = useMemo<AppRouteData | null>(
     () =>
       readySession && readyContext
-        ? { session: readySession, context: readyContext, onUnauthenticated: handleUnauthenticated }
+        ? {
+            session: readySession,
+            context: readyContext,
+            access: companyPermissions.access,
+            refreshAccess: companyPermissions.refresh,
+            onUnauthenticated: handleUnauthenticated,
+          }
         : null,
-    [readySession, readyContext, handleUnauthenticated],
+    [readySession, readyContext, companyPermissions.access, companyPermissions.refresh, handleUnauthenticated],
   );
 
   if (state.kind === 'loading') {
@@ -240,10 +239,8 @@ export function App({ navigate = defaultNavigate }: { navigate?: Navigate }) {
     <AppRouteDataContext.Provider value={routeData}>
       <AppShell
         routes={appRoutes}
-        companyPermissions={companyPermissions.codes}
-        permissionsStatus={companyPermissions.status}
+        access={companyPermissions.access}
         onRetryPermissions={companyPermissions.retry}
-        canAccess={canAccess}
         session={session}
         context={context.current}
         onChangeContext={() => {

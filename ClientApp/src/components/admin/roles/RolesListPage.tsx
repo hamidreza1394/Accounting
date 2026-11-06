@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, getCompanyRoles } from '../../../api/client';
 import type { CompanyRole } from '../../../api/types';
+import type { CanHint } from '../../../lib/permissions';
 import { Link, useSearchParams } from '../../../lib/router';
 import { Badge } from '../../ui/Badge';
 import { Breadcrumb } from '../../ui/Breadcrumb';
@@ -14,11 +15,14 @@ type Props = {
   onUnauthenticated: (error: unknown) => boolean;
   /** The active work-context company; used when the URL names none. */
   defaultCompanyId: string;
-  /** UI hint only (the server decides): shows the create button. */
-  canManage?: boolean;
+  /** UI hint only (the server decides): shows the create button. Without it nothing is offered. */
+  can?: CanHint;
+  /** Called when the server answers 403, so the permission hints are reloaded (never trusted over the server). */
+  onForbidden?: (() => void) | undefined;
 };
 
 const number = new Intl.NumberFormat('fa-IR');
+const denyAll: CanHint = () => false;
 
 type Failure = { message: string; status: number | null };
 
@@ -31,7 +35,7 @@ function toFailure(cause: unknown): Failure {
   return { message: 'دریافت گروه‌های دسترسی انجام نشد. لطفاً دوباره تلاش کنید.', status: null };
 }
 
-export function RolesListPage({ onUnauthenticated, defaultCompanyId, canManage = false }: Props) {
+export function RolesListPage({ onUnauthenticated, defaultCompanyId, can = denyAll, onForbidden }: Props) {
   const [params, setParams] = useSearchParams();
   const companyId = resolveCompanyId(params, defaultCompanyId);
   const { state: choices, retry: retryCompanies } = useCompanyChoices(onUnauthenticated);
@@ -39,6 +43,8 @@ export function RolesListPage({ onUnauthenticated, defaultCompanyId, canManage =
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<Failure | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const onForbiddenRef = useRef(onForbidden);
+  onForbiddenRef.current = onForbidden;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -53,6 +59,7 @@ export function RolesListPage({ onUnauthenticated, defaultCompanyId, canManage =
       })
       .catch((cause: unknown) => {
         if (controller.signal.aborted || onUnauthenticated(cause)) return;
+        if (cause instanceof ApiError && cause.status === 403) onForbiddenRef.current?.();
         setFailure(toFailure(cause));
         setLoading(false);
       });
@@ -88,7 +95,7 @@ export function RolesListPage({ onUnauthenticated, defaultCompanyId, canManage =
               گروه‌های دسترسی{companyName ? ` شرکت «${companyName}»` : ' شرکت انتخاب‌شده'}؛ برای مشاهده یا ویرایش مجوزهای یک گروه، آن را انتخاب کنید.
             </p>
           </div>
-          {canManage && companyId ? (
+          {companyId && can('admin.roles.create', companyId) ? (
             <Link to={newRolePath(companyId)} className={buttonVariants({ size: 'lg' })}>
               ایجاد گروه دسترسی
             </Link>

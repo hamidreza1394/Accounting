@@ -9,10 +9,12 @@ import { clearRoleFlash, setRoleFlash } from './roleFlash';
 
 const onUnauthenticated = vi.fn((): boolean => false);
 
-function setup(roleId = 'role-1', canManage = true, search = '?company=a') {
+const onForbidden = vi.fn();
+
+function setup(roleId = 'role-1', canManage = true, search = '?company=a', installationAdmin = true) {
   const routes: Route[] = [
     { path: '/admin/roles', element: () => <h1>فهرست گروه‌ها</h1>, title: 'فهرست' },
-    { path: '/admin/roles/:roleId', element: () => <RoleDetailPage onUnauthenticated={onUnauthenticated} defaultCompanyId="a" canManage={canManage} />, title: 'جزئیات' },
+    { path: '/admin/roles/:roleId', element: () => <RoleDetailPage onUnauthenticated={onUnauthenticated} defaultCompanyId="a" can={(permission) => canManage && (permission === 'admin.roles.update' || permission === 'admin.roles.assign')} isInstallationAdministrator={installationAdmin} onForbidden={onForbidden} />, title: 'جزئیات' },
   ];
   window.history.pushState(null, '', `/app/admin/roles/${roleId}${search}`);
   return render(
@@ -44,6 +46,7 @@ describe('RoleDetailPage', () => {
   beforeEach(() => {
     onUnauthenticated.mockReset();
     onUnauthenticated.mockReturnValue(false);
+    onForbidden.mockReset();
     clearRoleFlash();
   });
 
@@ -184,7 +187,7 @@ describe('RoleDetailPage', () => {
     api([roleItem({ permissionCodes: ['trade.orders.view', 'legacy.gone.view'] })]);
     setup();
     await screen.findByRole('form', { name: 'فرم ویرایش گروه دسترسی' });
-    expect(screen.getByText(/سقف تفویض هنوز در سمت سرور پیاده نشده است/)).toBeInTheDocument();
+    expect(screen.getByText(/به‌عنوان مدیر نصب سقف تفویض ندارید/)).toBeInTheDocument();
     await user.click(screen.getByRole('checkbox', { name: 'مجوز ناشناخته' }));
     await user.click(save());
     const dialog = await screen.findByRole('dialog');
@@ -342,5 +345,68 @@ describe('RoleDetailPage', () => {
     // The editor's own counter no longer contradicts the table, and the unsaved title was not wiped.
     await waitFor(() => expect(memberField).toHaveTextContent('۰ نفر'));
     expect((title() as HTMLInputElement).value).toBe(edited);
+  });
+  describe('company administrator (D-071)', () => {
+    it('edits a role fully inside the ceiling and shows the company ceiling note', async () => {
+      api();
+      setup('role-1', true, '?company=a', false);
+      expect(await screen.findByRole('form', { name: 'فرم ویرایش گروه دسترسی' })).toBeInTheDocument();
+      expect(title()).not.toHaveAttribute('readonly');
+      expect(screen.getByText(/سقف تفویض \(D-071\)/)).toBeInTheDocument();
+    });
+
+    it('shows a role with permissions beyond the ceiling read-only, so nothing is silently dropped', async () => {
+      api([roleItem({ permissionCodes: ['trade.orders.view', 'legacy.gone.view'] })]);
+      setup('role-1', true, '?company=a', false);
+      expect(await screen.findByText(/خارج از سقف مجوزهای شما است/)).toBeInTheDocument();
+      expect(title()).toHaveAttribute('readonly');
+      expect(screen.queryByRole('button', { name: 'بررسی و ذخیرهٔ تغییرات' })).toBeNull();
+    });
+
+    it('leaves the same role editable for an installation administrator', async () => {
+      api([roleItem({ permissionCodes: ['trade.orders.view', 'legacy.gone.view'] })]);
+      setup('role-1', true, '?company=a', true);
+      await screen.findByRole('form', { name: 'فرم ویرایش گروه دسترسی' });
+      expect(title()).not.toHaveAttribute('readonly');
+    });
+
+    it('is read-only without roles.update', async () => {
+      api();
+      setup('role-1', false, '?company=a', false);
+      expect(await screen.findByText(/شما مجوز ویرایش گروه‌های دسترسی را ندارید/)).toBeInTheDocument();
+      expect(title()).toHaveAttribute('readonly');
+    });
+  });
+
+  describe('server refusals on save', () => {
+    async function submitRename() {
+      const user = userEvent.setup();
+      await screen.findByRole('form', { name: 'فرم ویرایش گروه دسترسی' });
+      await user.clear(title());
+      await user.type(title(), 'نام جدید');
+      await user.click(save());
+      await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'تأیید و ذخیره' }));
+      return user;
+    }
+
+    it('on 403 shows the message and asks the app to re-read the real permissions', async () => {
+      api([roleItem(), systemRole], () => json({ error: 'فراتر از سقف مجوزهای شما است.' }, 403));
+      setup();
+      await submitRename();
+      expect(await screen.findByRole('alert')).toHaveTextContent('فراتر از سقف مجوزهای شما است.');
+      expect(onForbidden).toHaveBeenCalledTimes(1);
+    });
+
+    it('on 409 shows the message and reloads the latest role on request', async () => {
+      const { calls } = api([roleItem(), systemRole], () => json({ error: 'گروه هم‌زمان تغییر کرد.' }, 409));
+      setup();
+      const user = await submitRename();
+      expect(await screen.findByRole('alert')).toHaveTextContent('گروه هم‌زمان تغییر کرد.');
+      const loads = () => calls.filter((call) => call.method === 'GET' && call.path === '/api/v1/admin/companies/a/roles').length;
+      const before = loads();
+      await user.click(screen.getByRole('button', { name: 'دریافت آخرین اطلاعات' }));
+      await waitFor(() => expect(loads()).toBe(before + 1));
+      await waitFor(() => expect(title()).toHaveValue('کارشناس فروش'));
+    });
   });
 });

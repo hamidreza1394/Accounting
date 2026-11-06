@@ -73,7 +73,7 @@ describe('App routing', () => {
     const nav = screen.getByRole('navigation', { name: 'منوی اصلی' });
     expect(within(nav).getByRole('link', { name: /داشبورد/ })).toHaveAttribute('aria-current', 'page');
 
-    await user.click(within(nav).getByRole('link', { name: 'مدیریت کاربران' }));
+    await user.click(await within(nav).findByRole('link', { name: 'مدیریت کاربران' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'مدیریت کاربران' })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/app/admin/users');
     expect(within(nav).getByRole('link', { name: 'مدیریت کاربران' })).toHaveAttribute('aria-current', 'page');
@@ -128,7 +128,7 @@ describe('App routing', () => {
     render(<App navigate={vi.fn()} />);
     await screen.findByRole('heading', { name: dashboardHeading });
     expect(screen.queryByRole('link', { name: /سیاست‌های امنیتی/ })).toBeNull();
-    expect(screen.getByText('سیاست‌های امنیتی').closest('[aria-disabled="true"]')).toBeTruthy();
+    expect((await screen.findByText('سیاست‌های امنیتی')).closest('[aria-disabled="true"]')).toBeTruthy();
   });
 
   it('opens /admin/users/new as the create form, not as a user with id "new"', async () => {
@@ -183,7 +183,7 @@ describe('App routing', () => {
     render(<App navigate={vi.fn()} />);
     await screen.findByRole('heading', { name: dashboardHeading });
     const nav = screen.getByRole('navigation', { name: 'منوی اصلی' });
-    await user.click(within(nav).getByRole('link', { name: 'گروه‌های دسترسی' }));
+    await user.click(await within(nav).findByRole('link', { name: 'گروه‌های دسترسی' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'گروه‌های دسترسی' })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/app/admin/roles');
     expect(await screen.findByRole('link', { name: 'کارشناس فروش' })).toHaveAttribute('href', '/app/admin/roles/role-1?company=a');
@@ -260,7 +260,7 @@ describe('App routing', () => {
     stubAll(true);
     const first = render(<App navigate={vi.fn()} />);
     await screen.findByRole('heading', { name: dashboardHeading });
-    await user.click(within(screen.getByRole('navigation', { name: 'منوی اصلی' })).getByRole('link', { name: 'گزارش امنیت و سوابق' }));
+    await user.click(await within(screen.getByRole('navigation', { name: 'منوی اصلی' })).findByRole('link', { name: 'گزارش امنیت و سوابق' }));
     // The first load of this lazy page also transforms the calendar library, which is slow under jsdom.
     expect(await screen.findByRole('heading', { level: 1, name: 'گزارش امنیت و سوابق' }, { timeout: 15000 })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/app/admin/security/audit');
@@ -293,5 +293,64 @@ describe('App routing', () => {
     await user.click(await within(screen.getByRole('navigation', { name: 'منوی اصلی' })).findByRole('link', { name: 'کاربران شرکت جاری' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'کاربران شرکت' })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/app/company/users');
+  });
+  describe('company administrator versus installation administrator (D-071)', () => {
+    it('lets a company administrator with roles.view reach the roles page but not the installation-only pages', async () => {
+      window.history.replaceState(null, '', '/app/admin/roles');
+      stubAll(false, ['roles.view']);
+      render(<App navigate={vi.fn()} />);
+      expect(await screen.findByRole('heading', { level: 1, name: 'گروه‌های دسترسی' })).toBeInTheDocument();
+      expect(screen.queryByText('ایجاد گروه دسترسی')).toBeNull(); // no roles.create
+    });
+
+    it('shows the create button to a company administrator holding roles.create', async () => {
+      window.history.replaceState(null, '', '/app/admin/roles');
+      stubAll(false, ['roles.view', 'roles.create']);
+      render(<App navigate={vi.fn()} />);
+      expect(await screen.findByText('ایجاد گروه دسترسی')).toBeInTheDocument();
+    });
+
+    it('forbids a company administrator on the installation-only user administration deep link', async () => {
+      window.history.replaceState(null, '', '/app/admin/users');
+      const fetchMock = stubAll(false, ['roles.view', 'roles.update', 'roles.assign', 'roles.create']);
+      render(<App navigate={vi.fn()} />);
+      expect(await screen.findByRole('alert')).toHaveTextContent('دسترسی ندارید');
+      expect(fetchMock.mock.calls.some((call) => String(call[0]).startsWith('/api/v1/admin/users'))).toBe(false);
+    });
+
+    it('forbids an ordinary member on the roles deep link and never requests the roles', async () => {
+      window.history.replaceState(null, '', '/app/admin/roles');
+      const fetchMock = stubAll(false, []);
+      render(<App navigate={vi.fn()} />);
+      expect(await screen.findByRole('alert')).toHaveTextContent('دسترسی ندارید');
+      expect(fetchMock.mock.calls.some((call) => String(call[0]).includes('/admin/companies/a/roles'))).toBe(false);
+    });
+
+    it('does not grant the roles page when the permission request fails, even for an administrator session', async () => {
+      window.history.replaceState(null, '', '/app/admin/roles');
+      const fetchMock = stubAll(true);
+      const base = fetchMock.getMockImplementation()!;
+      fetchMock.mockImplementation((input: string, init?: RequestInit) =>
+        new URL(input, 'http://localhost').pathname === '/api/v1/me/permissions' ? Promise.resolve(new Response(null, { status: 500 })) : base(input, init),
+      );
+      render(<App navigate={vi.fn()} />);
+      const alerts = await screen.findAllByRole('alert');
+      expect(alerts.some((alert) => alert.textContent?.includes('دریافت مجوزها انجام نشد'))).toBe(true);
+      expect(fetchMock.mock.calls.some((call) => String(call[0]).includes('/admin/companies/a/roles'))).toBe(false);
+    });
+    it('does not loop between a 403 on another company\'s roles and the permission re-check', async () => {
+      window.history.replaceState(null, '', '/app/admin/roles?company=b');
+      const fetchMock = stubAll(false, ['roles.view']);
+      const base = fetchMock.getMockImplementation()!;
+      fetchMock.mockImplementation((input: string, init?: RequestInit) =>
+        new URL(input, 'http://localhost').pathname === '/api/v1/admin/companies/b/roles' ? Promise.resolve(json({ error: 'نه' }, 403)) : base(input, init),
+      );
+      render(<App navigate={vi.fn()} />);
+      await screen.findByRole('heading', { level: 1, name: 'گروه‌های دسترسی' });
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      const count = (path: string) => fetchMock.mock.calls.filter((call) => new URL(String(call[0]), 'http://localhost').pathname === path).length;
+      expect(count('/api/v1/me/permissions')).toBeLessThanOrEqual(2);
+      expect(count('/api/v1/admin/companies/b/roles')).toBeLessThanOrEqual(2);
+    });
   });
 });
