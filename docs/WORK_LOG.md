@@ -2620,3 +2620,11 @@
 - **تست‌ها:** Regressionهای Unit برای مسیر موفق چندنوعی، حفظ شرکت دوم، canonical round-trip و سناریوهای منفی اضافه شدند. تست محلی در این نشست اجرا نشده؛ نتیجه CI هنوز باید بررسی شود.
 - **مستندات:** handoff #393، Licensing Implementation Plan و Requirements Traceability به‌روزرسانی شدند.
 - **محدوده/ریسک:** هیچ سفارش/پرداخت، persistence، endpoint، approval، signer یا export اضافه نشده است؛ هیچ تغییر در `Server/**`، دیتابیس مشتری، Migration مشتری یا secret وجود ندارد. PR پس از تکمیل مستندات ساخته و CI روی SHA نهایی بررسی می‌شود.
+
+## 2026-11-06 — پیاده‌سازی Frontend مدیریت سازمانی منابع انسانی (feature/hr-organizational-ui)
+- **مبنا:** قرارداد تأییدشدهٔ `docs/HR_FRONTEND_API_CONTRACT.md` (PR #547) و کد `Server/Api/HrOrganizationalStructureEndpoints.cs`؛ توسعهٔ موازی و ایزوله نسبت به عامل مدیریت دسترسی (بدون تغییر `AppRoutes.tsx`، `AppShell.tsx`، `lib/permissions.ts`، `api/client.ts` یا هر فایل Backend).
+- **تغییرات:** ماژول کامل `ClientApp/src/features/hr/` — لایه API با پارسرهای سخت‌گیر DTOهای واقعی، کلاینت فراخوانی ۲۵ Endpoint واقعی (anti-forgery از سرویس مشترک)، اعتبارسنجی آینه‌ای قواعد سرور، ۷ کامپوننت (درخت سازمانی بومی با aria-expanded، انتخابگر جستجودار سرور-محور، بخش انتساب اتمی، اتصال اختیاری حساب، تاریخچهٔ Allowlist)، ۱۰ صفحهٔ RTL فارسی با تاریخ شمسی (D-068) و توکن‌های طراحی فرانو، `hrRoutes.tsx` آمادهٔ ادغام + README معماری و `docs/handoffs/HR_FRONTEND_INTEGRATION.md` با دستور دقیق ثبت مسیر/منو.
+- **رفتارهای قراردادی رعایت‌شده:** rowVersion فقط در PUTها و از Detail؛ بازخوانی پس از 409؛ معنای null در PUT واحد/کارمند از کد سرور؛ enumهای عددی؛ انتقال اتمی با null=حفظ؛ رد شروع آینده‌نگر/قبل از تاریخ همکاری؛ 401/403/404/409/400 با پیام فارسی سرور؛ Tenant Scope فقط از companyId مسیر.
+- **تست:** +۹۲ تست جدید HR (پارسرها، کلاینت، اعتبارسنجی، درخت، ۸ صفحه/جریان) — کل سوییت ۶۳۸/۶۳۸ موفق (۶۸ فایل)؛ `npm run typecheck`، `npm run build` و `npm run check:offline` (۳۶ منبع محلی، بدون CDN) همه سبز؛ بدون حذف/تضعیف تست موجود. مرورگر واقعی و E2E پس از ادغام مسیرها (اجراشده ثبت نشد).
+- **محدودیت مستندشده:** جستجوی کاربر برای اتصال حساب نیازمند `users.list` است (نقطهٔ پایانی جستجوی HR در بک‌اند وجود ندارد) و نام مدیر در DTO انتساب موجود نیست؛ UI به‌جای حدس، محدودیت را نشان می‌دهد.
+- **PR:** شاخه `feature/hr-organizational-ui`؛ عنوان `feat(hr): implement organizational management frontend`؛ Merge فقط با اجازهٔ مالک.
