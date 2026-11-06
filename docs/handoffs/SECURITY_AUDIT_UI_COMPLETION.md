@@ -100,5 +100,11 @@
 
 ## شناسه‌های Git
 - Branch: `feature/security-audit-ui-completion` (از `origin/main` @ `265e449f`)
-- Commit: پس از Push ثبت می‌شود.
-- Pull Request: پس از ایجاد ثبت می‌شود؛ Merge فقط با اجازهٔ مالک.
+- Pull Request: **#561** — `feat(security): complete administrative audit reporting UI`
+- Commitها:
+  - `c7cca441` feat(security): add API client contracts for audit sort, event types, admin companies and CSV export
+  - `7c2e9320` feat(security): add server-searched installation-wide company picker for the audit report
+  - `474c56b8` feat(security): wire audit report UI to server-side sorting, event types, company filter and CSV export
+  - `ed4fab78` docs(security): add handoff for administrative audit reporting UI completion
+  - `1a584078` fix(security): load audit registries lazily to protect the shared sensitive rate-limit budget
+- وضعیت CI (روی `1a584078`): **هر ۱۵ چک سبز** — client، build-and-test، e2e، publish، publish-windows، publish-scripts، Semgrep ×۲، CodeQL، secret-scan و Analyze ×۵. Merge فقط با اجازهٔ مالک.
