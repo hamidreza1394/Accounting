@@ -27,7 +27,12 @@ function historyItems(count: number) {
   }));
 }
 
-const profileRoute: Record<string, RouteHandler> = { 'GET /api/v1/me/profile': { status: 200, body: profileBody } };
+const currentOnly = [{ sessionId: 'only', isCurrent: true, createdAtUtc: '2026-11-03T08:00:00Z', lastSeenAtUtc: '2026-11-03T09:00:00Z' }];
+const profileRoute: Record<string, RouteHandler> = {
+  'GET /api/v1/me/profile': { status: 200, body: profileBody },
+  // The security tab also lists the sessions; tests that do not care about them see only this device.
+  'GET /api/v1/me/sessions': { status: 200, body: currentOnly },
+};
 const stableUnauthenticated = vi.fn(() => false);
 
 function Host({ onPasswordChanged }: { onPasswordChanged: () => void }) {
@@ -424,6 +429,30 @@ describe('MyAccountPanel security tab', () => {
     await user.type(field.current(), 'abc');
     await user.click(screen.getByRole('button', { name: 'پاک‌کردن' }));
     expect(field.current()).toHaveValue('');
+  });
+});
+
+describe('MyAccountPanel active sessions', () => {
+  const sessionRows = [
+    { sessionId: 's-1', isCurrent: true, createdAtUtc: '2026-11-03T08:00:00Z', lastSeenAtUtc: '2026-11-03T09:00:00Z' },
+    { sessionId: 's-2', isCurrent: false, createdAtUtc: '2026-11-02T08:00:00Z', lastSeenAtUtc: '2026-11-02T09:00:00Z' },
+  ];
+
+  it('lists the sessions in the security tab and leaves for login after ending this device', async () => {
+    const fetchMock = stubApi({
+      ...profileRoute,
+      ...antiforgeryRoute,
+      'GET /api/v1/me/sessions': { status: 200, body: sessionRows },
+      'POST /api/v1/me/sessions/s-1/revoke': { status: 204 },
+    });
+    const onSignedOut = vi.fn();
+    const user = await openPanel(onSignedOut);
+    await user.click(screen.getByRole('tab', { name: 'امنیت حساب' }));
+    expect(await screen.findByRole('list', { name: 'نشست‌های فعال' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'خروج از این دستگاه' }));
+    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'خروج از این دستگاه' }));
+    await waitFor(() => expect(onSignedOut).toHaveBeenCalledTimes(1));
+    expect(fetchMock.mock.calls.some(([url, init]) => url === '/api/v1/me/sessions/s-1/revoke' && init?.method === 'POST')).toBe(true);
   });
 });
 

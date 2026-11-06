@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 're
 import { History, ShieldCheck, UserRound, X } from 'lucide-react';
 import { getMyProfile, UnauthenticatedError } from '../api/client';
 import type { MyProfile } from '../api/types';
+import { ActiveSessions } from './account/ActiveSessions';
 import { HistoryTab } from './account/HistoryTab';
 import { ProfileTab } from './account/ProfileTab';
 import { SecurityTab } from './account/SecurityTab';
@@ -112,7 +113,13 @@ export function MyAccountPanel({ open, onClose, onPasswordChanged, onUnauthentic
     {
       id: 'security',
       label: <TabLabel icon={ShieldCheck}>امنیت حساب</TabLabel>,
-      content: <SecurityTab submitting={passwordSubmitting} onSubmittingChange={setPasswordSubmitting} onPasswordChanged={onPasswordChanged} onUnauthenticated={onUnauthenticated} />,
+      content: (
+        <>
+          <SecurityTab submitting={passwordSubmitting} onSubmittingChange={setPasswordSubmitting} onPasswordChanged={onPasswordChanged} onUnauthenticated={onUnauthenticated} />
+          {/* Ending this browser's own session leaves the same way a password change does: back to the login page. */}
+          <ActiveSessions onUnauthenticated={onUnauthenticated} onSignedOut={onPasswordChanged} />
+        </>
+      ),
     },
     {
       id: 'history',
