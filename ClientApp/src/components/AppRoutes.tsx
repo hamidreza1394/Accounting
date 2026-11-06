@@ -1,6 +1,6 @@
-import { createContext, lazy, useContext } from 'react';
+import { createContext, lazy, useCallback, useContext } from 'react';
 import type { SelectedContext, Session } from '../api/types';
-import { can } from '../lib/permissions';
+import { can, isInstallationAdministrator, type AccessSnapshot, type CanHint } from '../lib/permissions';
 import type { Route } from '../lib/router';
 import { Dashboard } from './Dashboard';
 
@@ -8,8 +8,13 @@ import { Dashboard } from './Dashboard';
 export type AppRouteData = {
   session: Session;
   context: SelectedContext;
+  /** What `/me/permissions` said for the active company; a UI hint only, fail-closed (D-071). */
+  access: AccessSnapshot;
+  /** Reloads the hints, e.g. after the server answered 403 to something the hints allowed. */
+  refreshAccess: () => void;
   onUnauthenticated: (error: unknown) => boolean;
 };
+
 
 export const AppRouteDataContext = createContext<AppRouteData | null>(null);
 
@@ -55,6 +60,11 @@ const LazyCompanyUsersPage = lazy(() =>
   import('./company/CompanyUsersPage').then((module) => ({ default: module.CompanyUsersPage })),
 );
 
+function useCanHint(): CanHint {
+  const { access } = useAppRouteData();
+  return useCallback((permission, companyId) => can(access, permission, companyId), [access]);
+}
+
 function DashboardRoute() {
   const { session, context, onUnauthenticated } = useAppRouteData();
   return (
@@ -68,8 +78,8 @@ function DashboardRoute() {
 }
 
 function UsersListRoute() {
-  const { session, onUnauthenticated } = useAppRouteData();
-  return <LazyUsersListPage onUnauthenticated={onUnauthenticated} canCreate={can(session, 'admin.users.create')} />;
+  const { access, onUnauthenticated } = useAppRouteData();
+  return <LazyUsersListPage onUnauthenticated={onUnauthenticated} canCreate={can(access, 'admin.users.create')} />;
 }
 
 function UserCreateRoute() {
@@ -77,8 +87,8 @@ function UserCreateRoute() {
 }
 
 function UserDetailRoute() {
-  const { session, onUnauthenticated } = useAppRouteData();
-  return <LazyUserDetailPage onUnauthenticated={onUnauthenticated} canUpdate={can(session, 'admin.users.update')} />;
+  const { access, onUnauthenticated } = useAppRouteData();
+  return <LazyUserDetailPage onUnauthenticated={onUnauthenticated} canUpdate={can(access, 'admin.users.update')} />;
 }
 
 function UserEditRoute() {
@@ -90,18 +100,37 @@ function PermissionCatalogRoute() {
 }
 
 function RolesListRoute() {
-  const { session, context, onUnauthenticated } = useAppRouteData();
-  return <LazyRolesListPage onUnauthenticated={onUnauthenticated} defaultCompanyId={context.company.id} canManage={can(session, 'admin.roles.manage')} />;
+  const { context, onUnauthenticated, refreshAccess } = useAppRouteData();
+  const hint = useCanHint();
+  return <LazyRolesListPage key={context.company.id} onUnauthenticated={onUnauthenticated} defaultCompanyId={context.company.id} can={hint} onForbidden={refreshAccess} />;
 }
 
 function RoleCreateRoute() {
-  const { context, onUnauthenticated } = useAppRouteData();
-  return <LazyRoleCreatePage onUnauthenticated={onUnauthenticated} defaultCompanyId={context.company.id} />;
+  const { access, context, onUnauthenticated, refreshAccess } = useAppRouteData();
+  return (
+    <LazyRoleCreatePage
+      key={context.company.id}
+      onUnauthenticated={onUnauthenticated}
+      defaultCompanyId={context.company.id}
+      isInstallationAdministrator={isInstallationAdministrator(access)}
+      onForbidden={refreshAccess}
+    />
+  );
 }
 
 function RoleDetailRoute() {
-  const { session, context, onUnauthenticated } = useAppRouteData();
-  return <LazyRoleDetailPage onUnauthenticated={onUnauthenticated} defaultCompanyId={context.company.id} canManage={can(session, 'admin.roles.manage')} />;
+  const { access, context, onUnauthenticated, refreshAccess } = useAppRouteData();
+  const hint = useCanHint();
+  return (
+    <LazyRoleDetailPage
+      key={context.company.id}
+      onUnauthenticated={onUnauthenticated}
+      defaultCompanyId={context.company.id}
+      can={hint}
+      isInstallationAdministrator={isInstallationAdministrator(access)}
+      onForbidden={refreshAccess}
+    />
+  );
 }
 
 function MyMembershipRequestsRoute() {
@@ -125,14 +154,14 @@ function SecurityAuditRoute() {
 }
 
 function CompanyUsersRoute() {
-  const { session, context, onUnauthenticated } = useAppRouteData();
+  const { access, context, onUnauthenticated } = useAppRouteData();
   return (
     <LazyCompanyUsersPage
       key={context.company.id}
       onUnauthenticated={onUnauthenticated}
       companyId={context.company.id}
       companyName={context.company.name}
-      isAdministrator={session.isAdministrator}
+      canViewRoles={can(access, 'admin.roles.view', context.company.id)}
     />
   );
 }
@@ -151,7 +180,7 @@ export const appRoutes: readonly Route[] = [
   { path: '/admin/permissions', element: PermissionCatalogRoute, title: 'کاتالوگ مجوزها', permission: 'admin.permissions.view' },
   { path: '/admin/roles', element: RolesListRoute, title: 'گروه‌های دسترسی', permission: 'admin.roles.view' },
   // `/new` must stay before `/:roleId`, otherwise "new" would be read as a role id.
-  { path: '/admin/roles/new', element: RoleCreateRoute, title: 'ایجاد گروه دسترسی', permission: 'admin.roles.manage' },
+  { path: '/admin/roles/new', element: RoleCreateRoute, title: 'ایجاد گروه دسترسی', permission: 'admin.roles.create' },
   { path: '/admin/roles/:roleId', element: RoleDetailRoute, title: 'جزئیات گروه دسترسی', permission: 'admin.roles.view' },
   // No UI permission hint: the company permission users.list is not in the session; the server decides (403/404).
   { path: '/company/users', element: CompanyUsersRoute, title: 'کاربران شرکت' },

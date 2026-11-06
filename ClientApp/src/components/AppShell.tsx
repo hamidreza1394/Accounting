@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
 import {
   Activity,
   Bell,
@@ -28,13 +28,16 @@ import type { SelectedContext, Session } from '../api/types';
 import { Alert } from './ui/Alert';
 import { FaranouLogo } from './ui/FaranouLogo';
 import { MyAccountPanel } from './MyAccountPanel';
-import type { Permission } from '../lib/permissions';
+import { can, deniedAccess, type AccessSnapshot, type Permission } from '../lib/permissions';
 import { Link, RouterProvider, useLocation, type Route } from '../lib/router';
 
 type AppShellProps = {
   session: Session;
-  companyPermissions?: readonly string[];
-  permissionsStatus?: 'loading' | 'ready' | 'error';
+  /**
+   * What `/me/permissions` said for the active company. Presentation hint only; omitted or
+   * unknown means nothing is granted (fail-closed). Not derived from `session.isAdministrator`.
+   */
+  access?: AccessSnapshot;
   onRetryPermissions?: () => void;
   context: SelectedContext;
   onChangeContext: () => void;
@@ -43,8 +46,6 @@ type AppShellProps = {
   onUnauthenticated?: (error: unknown) => boolean;
   /** Routes of the app; `children` is normally a `<RouteView />` that renders them. */
   routes?: readonly Route[];
-  /** UI permission hint for guarded routes; the server decides. */
-  canAccess?: (permission: Permission) => boolean;
   children: ReactNode;
 };
 
@@ -159,19 +160,24 @@ const ignoreUnauthenticated = (_error: unknown) => false;
 const noop = () => undefined;
 
 const noRoutes: readonly Route[] = [];
+const noCodes: readonly string[] = [];
 
 /** The shell owns the router, so the sidebar links and the page area (`children`) share one location. */
-export function AppShell({ routes = noRoutes, canAccess, ...props }: AppShellProps) {
+export function AppShell({ routes = noRoutes, access = deniedAccess, onRetryPermissions = noop, ...props }: AppShellProps) {
+  const canAccess = useCallback((permission: Permission) => can(access, permission), [access]);
   return (
-    <RouterProvider routes={routes} {...(canAccess ? { canAccess } : {})}>
-      <AppShellFrame {...props} />
+    <RouterProvider routes={routes} canAccess={canAccess} accessStatus={access.status} onRetryAccess={onRetryPermissions}>
+      <AppShellFrame {...props} access={access} canAccess={canAccess} onRetryPermissions={onRetryPermissions} />
     </RouterProvider>
   );
 }
 
-type AppShellFrameProps = Omit<AppShellProps, 'routes' | 'canAccess'>;
+type AppShellFrameProps = Omit<AppShellProps, 'routes' | 'access'> & {
+  access: AccessSnapshot;
+  canAccess: (permission: Permission) => boolean;
+};
 
-function AppShellFrame({ session, context, companyPermissions = [], permissionsStatus = 'ready', onRetryPermissions = noop, onChangeContext, onLogout, onPasswordChanged = noop, onUnauthenticated = ignoreUnauthenticated, children }: AppShellFrameProps) {
+function AppShellFrame({ session, context, access, canAccess, onRetryPermissions = noop, onChangeContext, onLogout, onPasswordChanged = noop, onUnauthenticated = ignoreUnauthenticated, children }: AppShellFrameProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -189,6 +195,8 @@ function AppShellFrame({ session, context, companyPermissions = [], permissionsS
   const membershipRequestsActive = pathname === '/admin/membership-requests';
   const myMembershipRequestsActive = pathname === '/account/membership-requests';
   const readOnly = context.fiscalPeriod.accessMode === 'readOnly';
+  // Company permission codes count only while the answer is known and fresh (fail-closed).
+  const companyCodes = access.status === 'ready' ? access.companyCodes : noCodes;
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -334,9 +342,9 @@ function AppShellFrame({ session, context, companyPermissions = [], permissionsS
                       </button>
                       {settingsOpen ? (
                         <ul className="faranou-nav-sub space-y-2 ms-4 ps-2">
-                          {permissionsStatus === 'loading' ? <li><span role="status">در حال دریافت مجوزهای شرکت…</span></li> : null}
-                          {permissionsStatus === 'error' ? <li><span role="alert">دریافت مجوزهای شرکت انجام نشد.</span> <button type="button" onClick={onRetryPermissions}>تلاش دوباره</button></li> : null}
-                          {session.isAdministrator ? (
+                          {access.status === 'loading' ? <li><span role="status">در حال دریافت مجوزهای شرکت…</span></li> : null}
+                          {access.status === 'error' ? <li><span role="alert">دریافت مجوزهای شرکت انجام نشد.</span> <button type="button" onClick={onRetryPermissions}>تلاش دوباره</button></li> : null}
+                          {canAccess('admin.users.view') ? (
                           <li>
                             <Link to="/admin/users" onClick={() => setMobileMenuOpen(false)} aria-current={usersActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (usersActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
                               <NavIcon icon={Users} tone="sky" size="sm" />
@@ -344,7 +352,7 @@ function AppShellFrame({ session, context, companyPermissions = [], permissionsS
                             </Link>
                           </li>
                           ) : null}
-                          {companyPermissions.includes('users.list') ? (
+                          {companyCodes.includes('users.list') ? (
                           <li>
                             <Link to="/company/users" onClick={() => setMobileMenuOpen(false)} aria-current={companyUsersActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (companyUsersActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
                               <NavIcon icon={Users} tone="blue" size="sm" />
@@ -352,8 +360,8 @@ function AppShellFrame({ session, context, companyPermissions = [], permissionsS
                             </Link>
                           </li>
                           ) : null}
-                          {session.isAdministrator ? <li><DisabledItem label="ساختار سازمانی و سمت‌ها" icon={Building2} tone="blue" nested /></li> : null}
-                          {session.isAdministrator ? (
+                          {canAccess('admin.users.view') ? <li><DisabledItem label="ساختار سازمانی و سمت‌ها" icon={Building2} tone="blue" nested /></li> : null}
+                          {canAccess('admin.roles.view') ? (
                           <li>
                             <Link to="/admin/roles" onClick={() => setMobileMenuOpen(false)} aria-current={rolesActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (rolesActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
                               <NavIcon icon={ShieldCheck} tone="violet" size="sm" />
@@ -361,7 +369,7 @@ function AppShellFrame({ session, context, companyPermissions = [], permissionsS
                             </Link>
                           </li>
                           ) : null}
-                          {session.isAdministrator ? (
+                          {canAccess('admin.permissions.view') ? (
                           <li>
                             <Link to="/admin/permissions" onClick={() => setMobileMenuOpen(false)} aria-current={permissionsActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (permissionsActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
                               <NavIcon icon={KeyRound} tone="amber" size="sm" />
@@ -369,7 +377,7 @@ function AppShellFrame({ session, context, companyPermissions = [], permissionsS
                             </Link>
                           </li>
                           ) : null}
-                          {companyPermissions.includes('users.membership.approve') ? (
+                          {companyCodes.includes('users.membership.approve') ? (
                           <li>
                             <Link to="/admin/membership-requests" onClick={() => setMobileMenuOpen(false)} aria-current={membershipRequestsActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (membershipRequestsActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
                               <NavIcon icon={UserCheck} tone="emerald" size="sm" />
@@ -383,7 +391,7 @@ function AppShellFrame({ session, context, companyPermissions = [], permissionsS
                               <span className="min-w-0 flex-1">درخواست‌های عضویت من</span>
                             </Link>
                           </li>
-                          {session.isAdministrator ? (
+                          {canAccess('admin.security.view') ? (
                           <li>
                             <Link to="/admin/security/audit" onClick={() => setMobileMenuOpen(false)} aria-current={securityAuditActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (securityAuditActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
                               <NavIcon icon={Activity} tone="emerald" size="sm" />
@@ -391,7 +399,7 @@ function AppShellFrame({ session, context, companyPermissions = [], permissionsS
                             </Link>
                           </li>
                           ) : null}
-                          {session.isAdministrator ? <li><DisabledItem label="سیاست‌های امنیتی" icon={Settings2} tone="slate" nested /></li> : null}
+                          {canAccess('admin.security.view') ? <li><DisabledItem label="سیاست‌های امنیتی" icon={Settings2} tone="slate" nested /></li> : null}
                         </ul>
                       ) : null}
                     </li>

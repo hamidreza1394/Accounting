@@ -599,6 +599,40 @@ export function parseTransferredMemberCount(value: unknown): number {
   return readCount(value, 'movedCount', 'transferResult');
 }
 
+/**
+ * One active server-side session of the signed-in user (D-069). The server sends exactly these
+ * four fields; there is no token, IP address or device text, and none is ever kept here.
+ */
+export type MySession = {
+  sessionId: string;
+  /** True for the session this browser is using. */
+  isCurrent: boolean;
+  createdAtUtc: string;
+  lastSeenAtUtc: string;
+};
+
+export function parseMySessions(value: unknown): MySession[] {
+  const what = 'mySessions';
+  if (!Array.isArray(value)) throw new ContractError(what);
+  return value.map((row): MySession => {
+    if (!isObject(row)) throw new ContractError(`${what}.item`);
+    const created = readUtcDateTime(row, 'createdAtUtc', `${what}.item`);
+    const lastSeen = readUtcDateTime(row, 'lastSeenAtUtc', `${what}.item`);
+    if (created === null || lastSeen === null) throw new ContractError(`${what}.item`);
+    return {
+      sessionId: readString(row, 'sessionId', `${what}.item`),
+      isCurrent: readBoolean(row, 'isCurrent', `${what}.item`),
+      createdAtUtc: created,
+      lastSeenAtUtc: lastSeen,
+    };
+  });
+}
+
+export function parseRevokedSessionCount(value: unknown): number {
+  if (!isObject(value)) throw new ContractError('revokedSessions');
+  return readCount(value, 'revokedCount', 'revokedSessions');
+}
+
 export function parsePermissionCatalog(value: unknown): PermissionCatalogItem[] {
   if (!Array.isArray(value)) throw new ContractError('permissionCatalog');
   return value.map((item): PermissionCatalogItem => {

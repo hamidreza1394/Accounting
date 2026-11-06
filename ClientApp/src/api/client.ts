@@ -17,6 +17,8 @@ import {
   parsePermissionCatalog,
   parseCompanyRoleMembers,
   parseTransferredMemberCount,
+  parseMySessions,
+  parseRevokedSessionCount,
   parsePermissionTemplates,
   parseCompanies,
   parseCompanyOverview,
@@ -37,6 +39,7 @@ import {
   type PermissionTemplate,
   type UpdateCompanyRoleRequest,
   type CompanyRoleMemberPage,
+  type MySession,
   type CompanySummary,
   type SelectedContext,
   type Session,
@@ -327,6 +330,18 @@ export async function transferCompanyRoleMembers(companyId: string, roleId: stri
   return parseTransferredMemberCount(await response.json());
 }
 
+/**
+ * Gives one existing, active member of the company the role (`POST .../roles/{roleId}/members/{userId}`, 204).
+ * The server refuses a system role (409), a new or inactive membership (409), the caller's own membership
+ * and anything beyond the caller's delegation ceiling (403), and answers 404 for anything it will not reveal.
+ */
+export async function assignCompanyRoleMember(companyId: string, roleId: string, userId: string): Promise<void> {
+  await sendJson(
+    'POST',
+    `/admin/companies/${encodeURIComponent(companyId)}/roles/${encodeURIComponent(roleId)}/members/${encodeURIComponent(userId)}`,
+  );
+}
+
 /** Every registered permission (unpaged, a few hundred at most). */
 export async function getPermissionCatalog(signal?: AbortSignal): Promise<PermissionCatalogItem[]> {
   return parsePermissionCatalog(await getJson('/admin/permission-catalog', signal));
@@ -428,6 +443,25 @@ export async function getCompanyUsers(companyId: string, query: CompanyDirectory
 /** Changes the current account password; the server signs out all sessions after success. */
 export async function changeMyPassword(request: ChangeMyPasswordRequest): Promise<void> {
   await sendJson('POST', '/me/password', request);
+}
+
+/** The active sessions of the signed-in user (`GET /me/sessions`, D-069): id, current flag and two UTC times only. */
+export async function getMySessions(signal?: AbortSignal): Promise<MySession[]> {
+  return parseMySessions(await getJson('/me/sessions', signal));
+}
+
+/**
+ * Ends one of the user's own sessions (204; repeating it is a no-op). An unknown id and another user's id both
+ * answer 404. Revoking the CURRENT session also signs this browser out on the server.
+ */
+export async function revokeMySession(sessionId: string): Promise<void> {
+  await sendJson('POST', `/me/sessions/${encodeURIComponent(sessionId)}/revoke`);
+}
+
+/** Ends every other session of the user and returns how many were ended; the current session stays. */
+export async function revokeMyOtherSessions(): Promise<number> {
+  const response = await sendJson('POST', '/me/sessions/revoke-others');
+  return parseRevokedSessionCount(await response.json());
 }
 
 export async function getSession(signal?: AbortSignal): Promise<Session> {

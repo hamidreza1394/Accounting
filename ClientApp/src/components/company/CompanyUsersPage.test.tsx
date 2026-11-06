@@ -24,7 +24,7 @@ function api(handler: (url: URL) => Response = () => json(directoryPage([directo
 
 function setup(isAdministrator = false) {
   const routes: Route[] = [
-    { path: '/company/users', element: () => <CompanyUsersPage onUnauthenticated={onUnauthenticated} companyId="a" companyName="شرکت الف" isAdministrator={isAdministrator} />, title: 'کاربران' },
+    { path: '/company/users', element: () => <CompanyUsersPage onUnauthenticated={onUnauthenticated} companyId="a" companyName="شرکت الف" canViewRoles={isAdministrator} />, title: 'کاربران' },
   ];
   window.history.pushState(null, '', '/app/company/users');
   return render(

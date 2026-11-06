@@ -8,13 +8,16 @@ import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { DataTable, type DataTableColumn } from '../../ui/DataTable';
 import { FormField, Select } from '../../ui/FormField';
 import { StatusBadge } from '../../ui/StatusBadge';
+import { RoleMemberAssign } from './RoleMemberAssign';
 
 type Props = {
   role: CompanyRole;
   companyId: string;
-  /** UI hint only (the server decides): shows the transfer controls. */
-  canManage: boolean;
+  /** UI hint only (the server decides): `roles.assign` in this company, or installation administrator. */
+  canAssign: boolean;
   onUnauthenticated: (error: unknown) => boolean;
+  /** A 403 from the server: the caller re-reads the real permissions. */
+  onForbidden?: (() => void) | undefined;
   /** Reports the current number of active members after every successful load. */
   onMemberCount?: (count: number) => void;
 };
@@ -41,7 +44,7 @@ function messageOf(cause: unknown, fallback: string): string {
  * same company. A move only changes the group of memberships that are already active; it never
  * creates or reactivates a membership (D-065) and is refused by the server for system groups.
  */
-export function RoleMembersSection({ role, companyId, canManage, onUnauthenticated, onMemberCount }: Props) {
+export function RoleMembersSection({ role, companyId, canAssign, onUnauthenticated, onForbidden, onMemberCount }: Props) {
   const targetFieldId = useId();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(20);
@@ -71,7 +74,8 @@ export function RoleMembersSection({ role, companyId, canManage, onUnauthenticat
     if (failure) failureRef.current?.focus();
   }, [failure]);
 
-  const canTransfer = canManage && !role.isSystemRole;
+  const canTransfer = canAssign && !role.isSystemRole;
+  const canAddMember = canTransfer && role.isActive;
   const total = data?.totalCount ?? 0;
   const tooMany = total > maxTransferBatchSize;
 
@@ -148,6 +152,7 @@ export function RoleMembersSection({ role, companyId, canManage, onUnauthenticat
       setAttempt((value) => value + 1);
     } catch (cause) {
       if (onUnauthenticated(cause)) return;
+      if (cause instanceof ApiError && cause.status === 403) onForbidden?.();
       // A refusal from the server (4xx) is definitive and its message is shown. Anything else (network,
       // 5xx, unreadable answer) may have been applied, so never claim nothing moved; show the real state.
       const refused = cause instanceof ApiError && cause.status >= 400 && cause.status < 500;
@@ -254,6 +259,16 @@ export function RoleMembersSection({ role, companyId, canManage, onUnauthenticat
             </div>
           )}
         </div>
+      ) : null}
+
+      {canAddMember ? (
+        <RoleMemberAssign
+          role={role}
+          companyId={companyId}
+          onUnauthenticated={onUnauthenticated}
+          onForbidden={onForbidden}
+          onAssigned={() => setAttempt((value) => value + 1)}
+        />
       ) : null}
 
       <ConfirmDialog

@@ -15,8 +15,8 @@ type Props = {
   /** The active work-context company: the directory always belongs to it. */
   companyId: string;
   companyName?: string;
-  /** UI hint only (the server decides): shows the link to the group page, which is administrator-only. */
-  isAdministrator?: boolean;
+  /** UI hint only (the server decides): shows the link to the role of the selected user. */
+  canViewRoles?: boolean;
 };
 
 const pageSizes = [10, 25, 50, 100] as const;
@@ -38,7 +38,7 @@ function membershipValue(filter: MembershipFilter): boolean | undefined {
  * user cannot access, and the page shows exactly that. Nothing of another company is requested or shown.
  * It never grants or changes anything: membership and group changes live in the administration pages.
  */
-export function CompanyUsersPage({ onUnauthenticated, companyId, companyName, isAdministrator = false }: Props) {
+export function CompanyUsersPage({ onUnauthenticated, companyId, companyName, canViewRoles = false }: Props) {
   const searchId = useId();
   const [searchText, setSearchText] = useState('');
   const [search, setSearch] = useState('');
@@ -211,7 +211,7 @@ export function CompanyUsersPage({ onUnauthenticated, companyId, companyName, is
               ) : null}
               <p className="text-xs text-sub">
                 مجوزهای دقیق گروه و واحد/سمت سازمانی در این فهرست نیست.
-                {isAdministrator ? (
+                {canViewRoles ? (
                   <>
                     {' '}
                     <Link to={`/admin/roles/${encodeURIComponent(selected.roleId)}?company=${encodeURIComponent(companyId)}`} className="font-medium text-teal-deep underline-offset-4 hover:underline">

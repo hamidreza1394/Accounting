@@ -12,8 +12,8 @@ import {
   type MouseEvent,
   type ReactNode,
 } from 'react';
-import { LoadingState } from '../components/Feedback';
-import type { Permission } from './permissions';
+import { ErrorState, LoadingState } from '../components/Feedback';
+import type { AccessStatus, Permission } from './permissions';
 
 // A minimal History-API router for the pages under the base path `/app` (the server falls back
 // `/app/{*path}` to index.html). It is in-house on purpose: no new dependency without an ADR;
@@ -95,6 +95,8 @@ type RouterContextValue = {
   hrefFor: (to: string) => string;
   routes: readonly Route[];
   canAccess: (permission: Permission) => boolean;
+  accessStatus: AccessStatus;
+  onRetryAccess: () => void;
   notFound: ComponentType;
   forbidden: ComponentType;
   loadingLabel: string;
@@ -132,6 +134,13 @@ type RouterProviderProps = {
   base?: string;
   /** UI permission hint; by default everything is allowed. The server still decides. */
   canAccess?: (permission: Permission) => boolean;
+  /**
+   * Whether the permission answer behind `canAccess` is known. While it is `loading` or `error`
+   * a guarded route shows a loading or retry state instead of a misleading "forbidden"; it never
+   * renders the page (fail-closed). Defaults to `ready`.
+   */
+  accessStatus?: AccessStatus;
+  onRetryAccess?: () => void;
   notFound?: ComponentType;
   forbidden?: ComponentType;
   loadingLabel?: string;
@@ -140,11 +149,14 @@ type RouterProviderProps = {
 };
 
 const allowAll = () => true;
+const noRetry = () => undefined;
 
 export function RouterProvider({
   routes,
   base = defaultBase,
   canAccess = allowAll,
+  accessStatus = 'ready',
+  onRetryAccess = noRetry,
   notFound = DefaultNotFound,
   forbidden = DefaultForbidden,
   loadingLabel = 'در حال بارگذاری…',
@@ -179,8 +191,8 @@ export function RouterProvider({
   );
 
   const value = useMemo<RouterContextValue>(
-    () => ({ location, navigate, hrefFor, routes, canAccess, notFound, forbidden, loadingLabel }),
-    [location, navigate, hrefFor, routes, canAccess, notFound, forbidden, loadingLabel],
+    () => ({ location, navigate, hrefFor, routes, canAccess, accessStatus, onRetryAccess, notFound, forbidden, loadingLabel }),
+    [location, navigate, hrefFor, routes, canAccess, accessStatus, onRetryAccess, notFound, forbidden, loadingLabel],
   );
 
   return <RouterContext.Provider value={value}>{children ?? <RouteView />}</RouterContext.Provider>;
@@ -200,10 +212,13 @@ const ParamsContext = createContext<Params>({});
 
 /** Renders the route matching the current location (NotFound when none; Forbidden without permission). */
 export function RouteView() {
-  const { location, routes, canAccess, notFound: NotFound, forbidden: Forbidden, loadingLabel } = useRouterContext();
+  const { location, routes, canAccess, accessStatus, onRetryAccess, notFound: NotFound, forbidden: Forbidden, loadingLabel } = useRouterContext();
   const match = useMemo(() => findMatch(routes, location.pathname), [routes, location.pathname]);
   const allowed = match ? !match.route.permission || canAccess(match.route.permission) : true;
-  const title = match ? (allowed ? match.route.title : 'دسترسی ندارید') : 'صفحه پیدا نشد';
+  // A denial that only reflects "the answer is not known yet" is not a real denial: say so.
+  const pending = !allowed && accessStatus === 'loading';
+  const failed = !allowed && accessStatus === 'error';
+  const title = match ? (pending ? loadingLabel : failed ? 'خطا در دریافت مجوزها' : allowed ? match.route.title : 'دسترسی ندارید') : 'صفحه پیدا نشد';
 
   useEffect(() => {
     document.title = `${title} | ${titleSuffix}`;
@@ -241,6 +256,10 @@ export function RouteView() {
   let content: ReactNode;
   if (!match) {
     content = <NotFound />;
+  } else if (pending) {
+    content = <LoadingState label="در حال دریافت مجوزهای شما…" />;
+  } else if (failed) {
+    content = <ErrorState message="دریافت مجوزها انجام نشد؛ تا آن زمان دسترسی به این صفحه داده نمی‌شود." onRetry={onRetryAccess} />;
   } else if (!allowed) {
     content = <Forbidden />;
   } else {
