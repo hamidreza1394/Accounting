@@ -1,16 +1,22 @@
 import { useEffect, useId, useMemo, useState, type FormEvent } from 'react';
-import { ApiError, getSecurityAuditEvents, type SecurityAuditQuery } from '../../../api/client';
-import type { SecurityAuditEvent, SecurityAuditPage as AuditPage } from '../../../api/types';
+import {
+  ApiError,
+  exportSecurityAuditEventsCsv,
+  getSecurityAuditEventTypes,
+  getSecurityAuditEvents,
+  type SecurityAuditQuery,
+} from '../../../api/client';
+import type { SecurityAuditEvent, SecurityAuditEventType, SecurityAuditPage as AuditPage } from '../../../api/types';
 import { formatDateTime } from '../../../lib/format';
-import { eventTypeLabel, knownEventTypes } from '../../../lib/securityEvents';
+import { eventTypeLabel, exportRangeProblem, knownEventTypes } from '../../../lib/securityEvents';
 import { dayEndUtc, dayStartUtc } from '../../../lib/time';
 import { Alert } from '../../ui/Alert';
 import { Breadcrumb } from '../../ui/Breadcrumb';
 import { Button } from '../../ui/button';
 import { DataTable, type DataTableColumn } from '../../ui/DataTable';
-import { FormField, Input, Select } from '../../ui/FormField';
+import { FormField, Input } from '../../ui/FormField';
 import { JalaliDateField } from '../../ui/JalaliDateField';
-import { useCompanyChoices } from '../roles/useCompanyChoices';
+import { CompanyPicker, type PickedCompany } from './CompanyPicker';
 import { UserPicker, type PickedUser } from '../UserPicker';
 
 type Props = { onUnauthenticated: (error: unknown) => boolean };
@@ -23,7 +29,7 @@ const maxDate = '2100-12-31';
 
 type Picked = { id: string; label: string };
 
-type Draft = { eventType: string; from: string; to: string; user: PickedUser | null; companyId: string };
+type Draft = { eventType: string; from: string; to: string; user: PickedUser | null; company: PickedCompany | null };
 
 type Applied = {
   eventType: string;
@@ -36,16 +42,20 @@ type Applied = {
   company: Picked | null;
 };
 
-const emptyDraft: Draft = { eventType: '', from: '', to: '', user: null, companyId: '' };
+type SortKey = 'occurredAt' | 'eventType';
+
+const emptyDraft: Draft = { eventType: '', from: '', to: '', user: null, company: null };
 const empty: Applied = { eventType: '', from: '', to: '', fromUtc: null, toUtc: null, user: null, company: null };
 
-function toQuery(applied: Applied, page: number, pageSize: number): SecurityAuditQuery {
+function toQuery(applied: Applied, sort: SortKey, descending: boolean, page: number, pageSize: number): SecurityAuditQuery {
   return {
     ...(applied.eventType ? { eventType: applied.eventType } : {}),
     ...(applied.user ? { userId: applied.user.id } : {}),
     ...(applied.company ? { companyId: applied.company.id } : {}),
     ...(applied.fromUtc ? { fromUtc: applied.fromUtc } : {}),
     ...(applied.toUtc ? { toUtc: applied.toUtc } : {}),
+    sort,
+    descending,
     page,
     pageSize,
   };
@@ -58,26 +68,58 @@ function actorLabel(event: SecurityAuditEvent): string {
 /**
  * The installation-wide security audit report (read-only). It shows who did what and when; the
  * server omits IP addresses and event payloads, and so does this page. An absent event proves
- * nothing about a session, so no duration or logout is ever inferred here.
+ * nothing about a session, so no duration or logout is ever inferred here. Sorting, filtering and
+ * paging all happen on the server; the event-type suggestions and the company choices come from
+ * the real administration endpoints.
  */
 export function SecurityAuditPage({ onUnauthenticated }: Props) {
   const typeListId = useId();
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [draftError, setDraftError] = useState<string | null>(null);
   const [applied, setApplied] = useState<Applied>(empty);
+  const [sort, setSort] = useState<SortKey>('occurredAt');
+  const [descending, setDescending] = useState(true);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(25);
   const [data, setData] = useState<AuditPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<{ message: string; status: number | null } | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const { state: companyChoices, retry: retryCompanies } = useCompanyChoices(onUnauthenticated);
+
+  // The event-type registry of the server (codes + Persian labels). It is loaded lazily on the
+  // first interaction with the event-type field, not on page load: every endpoint here shares the
+  // installation's sensitive rate-limit budget, and a report that is only read should not spend it.
+  // When it cannot be loaded the report stays usable: the static fallback list feeds the
+  // suggestions and unknown codes are always shown by their code. This is resilience, not a
+  // security decision.
+  const [eventTypesWanted, setEventTypesWanted] = useState(false);
+  const [eventTypes, setEventTypes] = useState<{ kind: 'idle' | 'loading' | 'ready' | 'error'; items: SecurityAuditEventType[] }>({ kind: 'idle', items: [] });
+  const [eventTypeAttempt, setEventTypeAttempt] = useState(0);
+
+  const [exportBusy, setExportBusy] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!eventTypesWanted) return undefined;
+    const controller = new AbortController();
+    setEventTypes({ kind: 'loading', items: [] });
+    getSecurityAuditEventTypes(controller.signal)
+      .then((items) => {
+        if (controller.signal.aborted) return;
+        setEventTypes({ kind: 'ready', items });
+      })
+      .catch((cause: unknown) => {
+        if (controller.signal.aborted || onUnauthenticated(cause)) return;
+        setEventTypes({ kind: 'error', items: [] });
+      });
+    return () => controller.abort();
+  }, [eventTypesWanted, eventTypeAttempt, onUnauthenticated]);
 
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     setFailure(null);
-    getSecurityAuditEvents(toQuery(applied, page, pageSize), controller.signal)
+    getSecurityAuditEvents(toQuery(applied, sort, descending, page, pageSize), controller.signal)
       .then((result) => {
         if (controller.signal.aborted) return;
         if (result.items.length === 0 && page > 1) {
@@ -105,10 +147,21 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
         setLoading(false);
       });
     return () => controller.abort();
-  }, [applied, page, pageSize, attempt, onUnauthenticated]);
+  }, [applied, sort, descending, page, pageSize, attempt, onUnauthenticated]);
 
-  const companies = companyChoices.kind === 'ready' ? companyChoices.companies : [];
+  const serverLabels = useMemo(
+    () => new Map<string, string>(eventTypes.kind === 'ready' ? eventTypes.items.map((item) => [item.code, item.label]) : []),
+    [eventTypes],
+  );
 
+  /** Server label first; when the server only knows the code, the static fallback may know better. */
+  const resolveLabel = (code: string): string | null => {
+    const fromServer = serverLabels.get(code);
+    if (fromServer !== undefined && fromServer !== code) return fromServer;
+    return eventTypeLabel(code);
+  };
+
+  const eventTypeChoices = eventTypes.kind === 'ready' ? eventTypes.items.map((item) => item.code) : knownEventTypes;
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const fromUtc = draft.from ? dayStartUtc(draft.from) : null;
@@ -124,16 +177,14 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
     }
     setDraftError(null);
     setPage(1);
-    const company = draft.companyId ? companies.find((candidate) => candidate.id === draft.companyId) : undefined;
-    setApplied((current) => ({
+    setApplied(() => ({
       eventType: draft.eventType.trim(),
       from: draft.from,
       to: draft.to,
       fromUtc,
       toUtc,
       user: draft.user,
-      // A company chosen from a table cell (not in the user's own list) is kept unless the select changes it.
-      company: draft.companyId ? (company ? { id: company.id, label: company.name } : current.company) : null,
+      company: draft.company,
     }));
   };
 
@@ -144,6 +195,12 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
     setApplied(empty);
   };
 
+  const changeSort = (key: string, direction: 'asc' | 'desc') => {
+    setSort(key === 'event' ? 'eventType' : 'occurredAt');
+    setDescending(direction === 'desc');
+    setPage(1);
+  };
+
   const filterByUser = (user: Picked) => {
     setDraft((current) => ({ ...current, user }));
     setPage(1);
@@ -151,7 +208,7 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
   };
 
   const filterByCompany = (company: Picked) => {
-    setDraft((current) => ({ ...current, companyId: companies.some((candidate) => candidate.id === company.id) ? company.id : '' }));
+    setDraft((current) => ({ ...current, company }));
     setPage(1);
     setApplied((current) => ({ ...current, company }));
   };
@@ -159,18 +216,50 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
   const clearChip = (which: 'user' | 'company') => {
     setPage(1);
     if (which === 'user') setDraft((current) => ({ ...current, user: null }));
-    else setDraft((current) => ({ ...current, companyId: '' }));
+    else setDraft((current) => ({ ...current, company: null }));
     setApplied((current) => ({ ...current, [which]: null }));
+  };
+
+  const exportCsv = () => {
+    if (exportBusy) return;
+    setExportError(null);
+    const rangeProblem = exportRangeProblem(applied.fromUtc, applied.toUtc);
+    if (rangeProblem || applied.fromUtc === null || applied.toUtc === null) {
+      if (rangeProblem) setExportError(rangeProblem);
+      return;
+    }
+    setExportBusy(true);
+    exportSecurityAuditEventsCsv({
+      ...(applied.eventType ? { eventType: applied.eventType } : {}),
+      ...(applied.user ? { userId: applied.user.id } : {}),
+      ...(applied.company ? { companyId: applied.company.id } : {}),
+      fromUtc: applied.fromUtc,
+      toUtc: applied.toUtc,
+    })
+      .catch((cause: unknown) => {
+        if (onUnauthenticated(cause)) return;
+        const status = cause instanceof ApiError ? cause.status : null;
+        setExportError(
+          status === 403
+            ? 'خروجی گزارش امنیتی فقط برای مدیر نصب در دسترس است.'
+            : status === 413
+              ? 'تعداد رکوردهای خروجی بیش از حد مجاز (۱۰٬۰۰۰ ردیف) است؛ بازه یا فیلترها را محدود کنید.'
+              : cause instanceof ApiError
+                ? cause.message
+                : 'ساخت خروجی CSV انجام نشد. لطفاً دوباره تلاش کنید.',
+        );
+      })
+      .finally(() => setExportBusy(false));
   };
 
   const columns = useMemo<readonly DataTableColumn<SecurityAuditEvent>[]>(
     () => [
-      { key: 'time', header: 'زمان', cell: (event) => formatDateTime(event.occurredAtUtc) },
+      { key: 'time', header: 'زمان', cell: (event) => formatDateTime(event.occurredAtUtc), sortable: true },
       {
         key: 'event',
         header: 'رویداد',
         cell: (event) => {
-          const label = eventTypeLabel(event.eventType);
+          const label = resolveLabel(event.eventType);
           return (
             <span className="flex flex-col">
               {label ? <span>{label}</span> : null}
@@ -178,6 +267,7 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
             </span>
           );
         },
+        sortable: true,
       },
       {
         key: 'actor',
@@ -234,11 +324,11 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the cell handlers only call stable state setters
-    [companies],
+    [serverLabels],
   );
 
   const hasFilters = applied.eventType !== '' || applied.fromUtc !== null || applied.toUtc !== null || applied.user !== null || applied.company !== null;
-  const draftDirty = draft.eventType !== '' || draft.from !== '' || draft.to !== '' || draft.user !== null || draft.companyId !== '';
+  const draftDirty = draft.eventType !== '' || draft.from !== '' || draft.to !== '' || draft.user !== null || draft.company !== null;
 
   return (
     <div className="space-y-5">
@@ -246,7 +336,7 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
         <Breadcrumb items={[{ label: 'مدیریت سیستم' }, { label: 'گزارش امنیت و سوابق' }]} />
         <h1 className="text-2xl font-extrabold tracking-tight text-title">گزارش امنیت و سوابق</h1>
         <p className="text-sm text-sub">
-          رویدادهای ثبت‌شدهٔ امنیتی و تغییر دسترسی در کل سامانه، از جدیدترین. نشانی IP و محتوای جزئی رویدادها عمداً نمایش داده نمی‌شود.
+          رویدادهای ثبت‌شدهٔ امنیتی و تغییر دسترسی در کل سامانه. نشانی IP و محتوای جزئی رویدادها عمداً نمایش داده نمی‌شود.
         </p>
       </header>
 
@@ -260,12 +350,13 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
             value={draft.eventType}
             maxLength={120}
             autoComplete="off"
+            onFocus={() => setEventTypesWanted(true)}
             onChange={(event) => setDraft((current) => ({ ...current, eventType: event.target.value }))}
           />
         </FormField>
         <datalist id={typeListId}>
-          {knownEventTypes.map((code) => (
-            <option key={code} value={code} label={eventTypeLabel(code) ?? code} />
+          {eventTypeChoices.map((code) => (
+            <option key={code} value={code} label={resolveLabel(code) ?? code} />
           ))}
         </datalist>
         <FormField label="از تاریخ" hint="تاریخ شمسی؛ شروع روز به وقت محلی شما">
@@ -287,36 +378,39 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
         <FormField label="کاربر" hint="جستجو در فهرست کاربران نصب">
           <UserPicker value={draft.user} onChange={(user) => setDraft((current) => ({ ...current, user }))} onUnauthenticated={onUnauthenticated} />
         </FormField>
-        <FormField
-          label="شرکت"
-          hint={
-            companyChoices.kind === 'error'
-              ? undefined
-              : 'فقط شرکت‌هایی که خودتان عضو آن‌ها هستید؛ برای سایر شرکت‌ها روی نام شرکت در جدول بزنید.'
-          }
-          error={companyChoices.kind === 'error' ? companyChoices.message : undefined}
-        >
-          <Select
-            value={draft.companyId}
-            disabled={companyChoices.kind === 'loading'}
-            onChange={(event) => setDraft((current) => ({ ...current, companyId: event.target.value }))}
-          >
-            <option value="">{companyChoices.kind === 'loading' ? 'در حال دریافت…' : 'همهٔ شرکت‌ها'}</option>
-            {companies.map((company) => (
-              <option key={company.id} value={company.id}>
-                {company.name}
-              </option>
-            ))}
-          </Select>
+        <FormField label="شرکت" hint="همهٔ شرکت‌های نصب؛ جستجو در سمت سرور انجام می‌شود.">
+          <CompanyPicker value={draft.company} onChange={(company) => setDraft((current) => ({ ...current, company }))} onUnauthenticated={onUnauthenticated} />
         </FormField>
         <div className="flex flex-wrap items-end gap-2 sm:col-span-2 lg:col-span-3">
           <Button type="submit" size="lg">اعمال فیلتر</Button>
           <Button type="button" size="lg" variant="outline" onClick={reset} disabled={!hasFilters && !draftDirty}>
             پاک‌کردن فیلترها
           </Button>
-          {companyChoices.kind === 'error' ? (
-            <Button type="button" size="lg" variant="outline" onClick={retryCompanies}>تلاش دوباره برای فهرست شرکت‌ها</Button>
+          <Button
+            type="button"
+            size="lg"
+            variant="outline"
+            onClick={exportCsv}
+            disabled={exportBusy}
+            aria-busy={exportBusy || undefined}
+          >
+            {exportBusy ? 'در حال آماده‌سازی خروجی…' : 'خروجی CSV'}
+          </Button>
+          {eventTypes.kind === 'loading' ? (
+            <p className="text-xs text-sub" role="status">در حال دریافت انواع رویداد…</p>
           ) : null}
+          {eventTypes.kind === 'error' ? (
+            <>
+              <p role="alert" className="text-xs text-danger">دریافت انواع رویداد انجام نشد؛ می‌توانید کد رویداد را دستی وارد کنید.</p>
+              <Button type="button" size="sm" variant="outline" onClick={() => setEventTypeAttempt((value) => value + 1)}>
+                تلاش دوباره برای انواع رویداد
+              </Button>
+            </>
+          ) : null}
+          {exportError ? <p role="alert" className="w-full text-sm text-danger">{exportError}</p> : null}
+          <p className="w-full text-xs text-sub">
+            خروجی CSV با همان فیلترهای اعمال‌شدهٔ گزارش ساخته می‌شود؛ بازهٔ زمانی الزامی و حداکثر ۳۱ روز است و تا ۱۰٬۰۰۰ ردیف شامل می‌شود.
+          </p>
         </div>
       </form>
 
@@ -355,6 +449,8 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
           onRetry={() => setAttempt((value) => value + 1)}
           emptyTitle="رویدادی پیدا نشد"
           emptyDescription={hasFilters ? 'با فیلترهای فعلی رویدادی ثبت نشده است.' : 'هنوز رویداد امنیتی‌ای ثبت نشده است.'}
+          sort={{ key: sort === 'eventType' ? 'event' : 'time', direction: descending ? 'desc' : 'asc' }}
+          onSortChange={({ key, direction }) => changeSort(key, direction)}
           pagination={{
             page,
             pageSize,
