@@ -2642,9 +2642,24 @@
 - `lib/permissions.ts`: سه hint `hr.units.view`/`hr.positions.view`/`hr.employees.view` برای کدهای verified‌شدهٔ `hr.organizational-units.list`، `hr.positions.list`، `hr.employees.list`؛ fail-closed در loading/error/شرکت نامطابق.
 - آزمون: `HrIntegration.test.tsx` (۲۲ تست) + تست‌های `permissions`؛ کل ClientApp ۷۵۵ تست موفق؛ build و check:offline موفق. Backend، Schema و `features/hr/**` تغییر نکرد؛ dotnet/E2E اجرا نشد.
 
+
+## 2026-11-06 — ممیزی جامع تکمیل مدیریت کاربران، سازمان و دسترسی‌ها (Issue #444)
+- مبنا: آخرین `origin/main` @ `129b93b5`؛ وضعیت GitHub API (Issue #444، PRهای #559/#560/#561، صفر PR Open) و کد واقعی بررسی شد.
+- Build/تست واقعی روی main تمیز: SDK 10.0.403 نصب شد؛ `dotnet build` ۰ خطا؛ `dotnet test` ۱۰۳۸ موفق، ۲ ناموفق پیش‌موجود (`SafeExceptionRealApplicationTests` نیازمند SQL Server)، ۶۲ Skip gated — مطابق handoffهای قبلی.
+- طبقه‌بندی قابلیت‌ها با شواهد: مراحل ۱/۲/۳/۹ Completed؛ مرحله ۴ (ابطال مدیریتی نشست — D-073 §1) و ۵/۶/۷ Not Implemented؛ مرحله ۸ (حداقل طول رمز ۸ به‌جای ۱۵ مصوب D-073) و ۱۰ (Entitlement — DenyAll طبق D-074) Partially Implemented.
+- handoff: `docs/handoffs/ISSUE-444-comprehensive-access-completion-audit.md`؛ اجرای مراحل ۴ و ۸ در PRهای مستقل بعدی همین مأموریت ادامه می‌یابد؛ هیچ کد محصولی در این PR تغییر نکرد.
+
+## 2026-11-06 — ابطال مدیریتی نشست کاربر توسط مدیر نصب (D-073 §1 — شاخه feat/admin-session-revocation-d073)
+- سه Endpoint جدید: `GET /api/v1/admin/users/{userId}/sessions`، `POST .../{sessionId}/revoke`، `POST .../revoke-all` — فقط مدیر نصب فعال با بازخوانی نقش از DB در هر درخواست؛ فقط برای «کاربر دیگر» (درخواست Self-target در هر سه Endpoint با 400 رد می‌شود؛ مدیریت نشست‌های خود مدیر منحصراً self-service D-069 — بازبینی مالک PR #563)؛ Step-up با تأیید رمز جاری مدیر (`PasswordHashService.Verify`)؛ دلیل از کاتالوگ چهار کد مجاز؛ Anti-forgery، Rate limit حساس، no-store؛ Projection بدون IP/UA/Cookie/Token.
+- Audit اتمی: `AdminUserSessionRevoked` / `AdminUserSessionsRevoked` با actor، targetUserId، reasonCode و revokedCount؛ تغییر نشست و درج Audit در یک تراکنش SQL واحد commit/rollback می‌شوند و شکست Audit ابطال را کامل برمی‌گرداند (fail-closed)؛ بدون رمز/توکن؛ برچسب فارسی در رجیستری گزارش امنیتی و Fallback کلاینت همگام شد.
+- `UserSessionService`: پارامتر اختیاری `reasonCode` در RevokeAsync/RevokeOthersAsync (رفتار self-service بدون تغییر) + `RevokeAllAsync` — همان نوشتن مجموعه‌ای با مالکیت در Prediccate؛ بدون Migration.
+- تست: ۱۲ تست Endpoint جدید (401/403/404، step-up، کاتالوگ، anti-forgery، idempotency، بازخوانی نقش، سه تست رگرسیون رد Self-target، Allowlist) + ۲ تست SQL Server-gated (ExecuteUpdate، idempotency، 404 بیگانه، Rollback واقعی ابطال هنگام شکست Audit). کل: dotnet ۱۰۵۰ موفق/۲ پیش‌موجود؛ vitest ۷۸۳/۷۸۳؛ typecheck سبز.
+- مستندات: قرارداد بخش ۸.۵ `docs/api/USER_ACCESS_MANAGEMENT_API.md`، وضعیت کد D-073 در `docs/SECURITY.md`، handoff `ISSUE-444-admin-session-revocation-d073.md`. Merge فقط با اجازه مالک.
+
 ## 2026-11-06 — هم‌ترازی سیاست رمز عبور با D-073 §5 (شاخه feat/password-policy-d073)
 - `Constants.MinLength.UserPassword` از ۸ به **۱۵**؛ فقط برای رمز جدید/تغییریافته (Login و حساب‌های قدیمی دست‌نخورده). حداکثر ۱۲۸، blocklist، بدون قاعده ترکیبی و پذیرش عبارت عبور/فاصله طبق D-073 §5 حفظ شد.
 - ثبت‌نام اولین مدیر (`CustomerProvisioningApplyService.CompleteEnrollmentAsync`) که قبلاً طول ۱۲..۱۲۸ hardcode و بدون blocklist بود، به همان ثابت‌ها + `NotCommonPasswordAttribute` هم‌تراز شد.
 - Client هم‌تراز شد: SecurityTab (تغییر رمز شخصی) ۸→۱۵، فرم ایجاد کاربر ۸→۱۵، صفحه ثبت‌نام اولین مدیر ۱۲→۱۵ + تست‌های مربوطه (هیچ تستی حذف/تضعیف نشد).
 - تست مرزی جدید: رمز ۱۴ نویسه رد، رمز ۱۵ نویسه با فاصله پذیرفته؛ `PasswordPolicyTests` بازساختگان منطبق با حداقل ۱۵.
 - نتایج واقعی: dotnet کل ۱۰۴۰ موفق / ۲ پیش‌موجود (`SafeExceptionRealApplicationTests`) / ۶۲ Skip؛ vitest ۷۸۳/۷۸۳؛ typecheck و build سبز. `docs/USER_SELF_SERVICE.md` به‌روزرسانی شد؛ handoff: `ISSUE-444-password-policy-d073.md`. Merge فقط با اجازه مالک.
+

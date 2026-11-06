@@ -11,6 +11,8 @@ namespace Infrastructure.Security;
 /// <remarks>
 /// No IP address and no user agent are stored or returned (D-069): the listing shows
 /// only the session identity, whether it is the current one and its UTC timestamps.
+/// The installation-administrator revocation of another user's sessions (D-073 §1)
+/// reuses the same set-based writes with an explicit, catalog-validated reason code.
 /// </remarks>
 public sealed class UserSessionService
 {
@@ -63,9 +65,11 @@ public sealed class UserSessionService
         Guid userId,
         Guid sessionId,
         Guid? revokedByUserId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? reasonCode = null)
     {
         var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
+        reasonCode ??= SelfRevokedReasonCode;
 
         if (_databaseContext.Database.IsRelational())
         {
@@ -78,7 +82,7 @@ public sealed class UserSessionService
                 .ExecuteUpdateAsync(update => update
                     .SetProperty(session => session.RevokedAtUtc, nowUtc)
                     .SetProperty(session => session.RevokedByUserId, revokedByUserId)
-                    .SetProperty(session => session.RevocationReasonCode, SelfRevokedReasonCode),
+                    .SetProperty(session => session.RevocationReasonCode, reasonCode),
                 cancellationToken);
 
             return updated == 1;
@@ -99,7 +103,7 @@ public sealed class UserSessionService
 
         sessionRow.RevokedAtUtc = nowUtc;
         sessionRow.RevokedByUserId = revokedByUserId;
-        sessionRow.RevocationReasonCode = SelfRevokedReasonCode;
+        sessionRow.RevocationReasonCode = reasonCode;
 
         try
         {
@@ -133,9 +137,11 @@ public sealed class UserSessionService
         Guid userId,
         Guid keepSessionId,
         Guid? revokedByUserId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? reasonCode = null)
     {
         var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
+        reasonCode ??= RevokedOthersReasonCode;
 
         if (_databaseContext.Database.IsRelational())
         {
@@ -146,7 +152,7 @@ public sealed class UserSessionService
                 .ExecuteUpdateAsync(update => update
                     .SetProperty(session => session.RevokedAtUtc, nowUtc)
                     .SetProperty(session => session.RevokedByUserId, revokedByUserId)
-                    .SetProperty(session => session.RevocationReasonCode, RevokedOthersReasonCode),
+                    .SetProperty(session => session.RevocationReasonCode, reasonCode),
                 cancellationToken);
         }
 
@@ -160,7 +166,7 @@ public sealed class UserSessionService
         {
             session.RevokedAtUtc = nowUtc;
             session.RevokedByUserId = revokedByUserId;
-            session.RevocationReasonCode = RevokedOthersReasonCode;
+            session.RevocationReasonCode = reasonCode;
         }
 
         try
@@ -174,6 +180,55 @@ public sealed class UserSessionService
         }
 
         return otherSessions.Count;
+    }
+
+    /// <summary>
+    /// Revokes every active session of the user with no exception (D-073 §1:
+    /// the installation administrator ends all sessions of a target user).
+    /// Returns the number of sessions this call actually ended; a second call is
+    /// an idempotent no-op that returns zero.
+    /// </summary>
+    public async Task<int> RevokeAllAsync(
+        Guid userId,
+        Guid? revokedByUserId,
+        CancellationToken cancellationToken = default,
+        string? reasonCode = null)
+    {
+        var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
+
+        if (_databaseContext.Database.IsRelational())
+        {
+            return await _databaseContext.UserSessions
+                .Where(session => session.UserId == userId && session.RevokedAtUtc == null)
+                .ExecuteUpdateAsync(update => update
+                    .SetProperty(session => session.RevokedAtUtc, nowUtc)
+                    .SetProperty(session => session.RevokedByUserId, revokedByUserId)
+                    .SetProperty(session => session.RevocationReasonCode, reasonCode ?? RevokedOthersReasonCode),
+                cancellationToken);
+        }
+
+        var activeSessions = await _databaseContext.UserSessions
+            .Where(session => session.UserId == userId && session.RevokedAtUtc == null)
+            .ToListAsync(cancellationToken);
+
+        foreach (var session in activeSessions)
+        {
+            session.RevokedAtUtc = nowUtc;
+            session.RevokedByUserId = revokedByUserId;
+            session.RevocationReasonCode = reasonCode ?? RevokedOthersReasonCode;
+        }
+
+        try
+        {
+            await _databaseContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // A concurrent writer revoked some of these sessions first; the goal state holds.
+            return 0;
+        }
+
+        return activeSessions.Count;
     }
 }
 

@@ -5,3 +5,8 @@
 # Gitleaks false positive: public, non-secret test KeyId passed to TestSigner in an integration fixture.
 # Gitleaks scans the entire PR commit range, so changing the current literal alone cannot clear this historical match.
 0508c553e4cab42f967bc6bcd86e48cefac2ec9a:tests/Vendor.Host.Tests/VendorOfflineRevocationIssuanceTests.cs:generic-api-key:161
+# Gitleaks false positive: fixed, non-secret test passphrase for the D-073 §1 admin-session
+# revocation endpoint tests. The value is a throwaway literal used only against a disposable
+# test database (InMemory locally, per-run CI database); no real credential exists.
+9444dc6056ab6ca2de468ad358c189491398611a:tests/Template.Tests/AdminUserSessionEndpointTests.cs:generic-api-key:23
+9444dc6056ab6ca2de468ad358c189491398611a:tests/Template.Tests/Integration/AdminUserSessionSqlServerTests.cs:generic-api-key:55
