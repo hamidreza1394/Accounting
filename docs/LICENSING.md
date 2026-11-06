@@ -149,3 +149,12 @@
 - قرارداد amendment فقط invariants را اعتبارسنجی می‌کند؛ persistence/replay transaction در #391 و Vendor issuance در #393 هستند.
 - وضعیت: پیاده‌سازی در PR #390؛ تا تکمیل CI و ادغام، Verified محسوب نمی‌شود.
 
+
+
+## ۱۲) ترکیب Entitlement با Permission عملیاتی — D-074 (Accepted، 2026-11-06)
+
+- D-025 و D-059 پابرجا هستند: Entitlement تجاری و Permission عملیاتی دو مرجع مستقل‌اند و هر دو برای عملیات ماژول مجوزدار لازم‌اند.
+- ترتیب کنترل در Customer Host طبق D-063/D-074: نشست → عضویت و WorkContext/FiscalPeriod → entitlement Installation/Company/Module/Feature/Capacity → permission تخصصی → DataScope/use case.
+- در Cloud، مرجع تصمیم سمت سرور است و cache باید نسخه‌دار، دارای expiry و invalidation باشد؛ هر عملیات حسابداری نباید به Vendor round-trip بزند. در Offline، Envelope امضاشده، sequence و anti-rollback مرجع محلی‌اند.
+- **وضعیت واقعی main:** قرارداد v2 و policy engine وجود دارند؛ Trade دارای `ITradeModuleEntitlement` و `TradeAccessGate` است اما DI به `DenyAllTradeModuleEntitlement` متصل است. بنابراین Trade در نبود اتصال runtime بسته می‌ماند؛ این رفتار fail-closed است و نباید با stub مجازکننده جایگزین شود.
+- اتصال runtime و گسترش الگو به تمام ماژول‌های لایسنس‌دار در Issueهای اجرایی باقی است؛ D-074 به‌تنهایی مجوز Migration یا ادعای Production enforcement نیست.
