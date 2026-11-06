@@ -15,6 +15,8 @@
 |---|---|
 | [TRADE_MODULE.md](TRADE_MODULE.md) | معماری، امنیت چندشرکتی، استفاده مشترک از دوره‌های مالی، فرم‌ها، گزارش‌ها و مسیر استخراج ماژول بازرگانی (D-061/D-062) |
 | [USER_ACCESS_MANAGEMENT.md](USER_ACCESS_MANAGEMENT.md) | طراحی و نقشه اجرایی مدیریت کاربران، سمت‌ها، گروه‌های دسترسی، مجوزهای جزئی و سوابق امنیتی (Issue #444) |
+| [api/USER_ACCESS_MANAGEMENT_API.md](api/USER_ACCESS_MANAGEMENT_API.md) | قرارداد واقعی API مدیریت کاربران/دسترسی/نشست‌ها برای مصرف Frontend — استخراج‌شده از کد (Issue #444؛ به‌روزرسانی 2026-11-05) |
+| [handoffs/USER-ACCESS-FRONTEND-HANDOFF.md](handoffs/USER-ACCESS-FRONTEND-HANDOFF.md) | نقشهٔ مصرف Frontend برای کاربران/دسترسی/نشست‌ها: نگاشت صفحه‌ها به API، خطاها، قابلیت‌های ناموجود و وضعیت PRهای Wave-1 (2026-11-05) |
 | [`FRONTEND_API_CONTRACT_NEEDS.md`](FRONTEND_API_CONTRACT_NEEDS.md) | قراردادهای API پیشنهادی مورد نیاز UI مدیریت دسترسی (عضویت، `/me/permissions`، گزارش امنیتی، نشست‌ها، S2) برای Backend (Issue #444) |
 | [ORGANIZATIONAL_STRUCTURE_DATA_MODEL.md](ORGANIZATIONAL_STRUCTURE_DATA_MODEL.md) | مرجع S2: طراحی پیاده‌سازی‌شده گزینه B (HR-ready) با D-072 (Accepted) — Entityها، Migration `20261104200301`، کاتالوگ `hr.*` و قرارداد API `/org/*`؛ Backend پیاده و UI در ادامه فاز ۴ |
 | [`PROJECT_STATUS.md`](PROJECT_STATUS.md) | وضعیت تأییدشده فعلی |
