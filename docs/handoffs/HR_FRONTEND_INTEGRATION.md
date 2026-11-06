@@ -120,3 +120,8 @@
 - hint هر خانواده در سطح فهرست است (`*.list`)؛ دسترسی دقیق صفحات جزئیات/ایجاد/ویرایش (مثلاً `hr.employees.view`/`create`) را سرور تعیین می‌کند و صفحات 403 را صادقانه نشان می‌دهند.
 - تغییر شرکت در سطح کل برنامه با تست جدا نشده؛ رفتار آن با تست‌های `useCompanyPermissions.test.tsx` (پاک‌شدن فوری، نادیده‌گرفتن پاسخ دیررس) پوشش داده شده است.
 - بازبینی بصری RTL در سه عرض و E2E پس از ادغام لازم است.
+
+### شناسه‌های Git ادغام
+- Branch: `feature/hr-frontend-integration`
+- Commit: `54227f529d44873bee35a3dc3acb4dca3c3fe8ea`
+- Pull Request: [#559](https://github.com/hamidreza1394/Accounting/pull/559) — Merge نشده؛ با مسئول مخزن
