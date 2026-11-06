@@ -221,6 +221,10 @@ public sealed class AdminUserSessionSqlServerTests
                     new StubAntiforgery(), database, sessionService, passwordHashService,
                     TimeProvider.System, cancellationToken));
 
+            // The failed request leaves its poisoned audit row tracked (a real request
+            // would end with its scoped context; this test reuses one context).
+            database.ChangeTracker.Clear();
+
             // Fail-closed: the rolled-back transaction left the session active and no
             // partial audit row behind — evidence and revocation commit together or not at all.
             var row = await database.UserSessions.AsNoTracking()
