@@ -1,7 +1,7 @@
 # قرارداد API مدیریت کاربران و دسترسی‌ها (منبع حقیقت مصرف Frontend)
 
 - **وضعیت:** `Implemented` — این سند از روی کد واقعی `main` (Nov 2026) استخراج شده است، نه از طراحی پیشین. هر تغییری در کد باید همین سند را هم به‌روزرسانی کند.
-- **Issue مادر:** #444. اسناد مرتبط: `docs/USER_ACCESS_MANAGEMENT.md`، `docs/ACCESS_CONTROL_ARCHITECTURE.md`، `docs/FRONTEND_API_CONTRACT_NEEDS.md`، `docs/HR_FRONTEND_API_CONTRACT.md` (HR)، `docs/DECISIONS.md` (D-064، D-065، D-067، D-069، D-070، D-071، D-072).
+- **Issue مادر:** #444. اسناد مرتبط: `docs/USER_ACCESS_MANAGEMENT.md`، `docs/ACCESS_CONTROL_ARCHITECTURE.md`، `docs/FRONTEND_API_CONTRACT_NEEDS.md`، `docs/HR_FRONTEND_API_CONTRACT.md` (HR)، `docs/DECISIONS.md` (D-064، D-065، D-067، D-069، D-070، D-071، D-072، D-073، D-074).
 - **مرز این سند:** کاربران، نقش‌ها و مجوزها، عضویت بین‌شرکتی، دفترچه هم‌گروه، مجوزهای من، گزارش امنیتی و نشست‌ها. قرارداد HR در سند مستقل خودش است و قرارداد زمینهٔ کاری (شرکت/دوره) در `WorkContextEndpoints` جداگانه می‌ماند.
 
 ## ۰. قواعد مشترک همهٔ endpointها
@@ -39,7 +39,7 @@
 ## ۲. مدیریت کاربران (فقط مدیر نصب)
 
 - **مجوزدهی:** هیچ کد permission ندارد؛ هر درخواست نقش فعال `Admin` را از دیتابیس بازخوانی می‌کند (`IsActive` کاربر و نقش). غیرمدیر 403 می‌گیرد (تست‌شده برای create/update؛ 403 با بدنهٔ `{ error }`).
-- **Migration کاربر (پیشنهاد):** endpoint بازیابی رمز فراموش‌شده و reset رمز توسط مدیر **وجود ندارد** — تصمیم محصولی لازم است (ممیزی 2026-11-05).
+- **بازیابی/Reset رمز (D-073 Accepted):** endpoint بازیابی رمز فراموش‌شده و Reset آغازشده توسط مدیر هنوز در کد وجود ندارد؛ این سند قرارداد موجود را توصیف می‌کند و تا Issue اجرایی، هیچ API یا UI جدیدی فرض نمی‌شود.
 
 ### ۲.۱ `GET /api/v1/admin/users`
 - Query: `page`, `pageSize`, `search` (روی نام کاربری/نام/ایمیل/موبایل)، `status=all|active|inactive` (پیش‌فرض `all`)، `sort=created|lastLogin|name|username` (پیش‌فرض `created`) و `descending` (پیش‌فرض `false`). `page` حداقل ۱، `pageSize` بین ۱ تا ۱۰۰ (clamp)؛ `search` پس از Trim حداکثر ۱۲۰ نویسه، ورودی طولانی‌تر یا status/sort ناشناخته → 400.
@@ -142,7 +142,7 @@
 - رویداد `SecurityAuditExported` پیش از تحویل فایل ثبت می‌شود؛ شکست Audit = بدون فایل.
 
 ### ۷.۴ Retention (D-070)
-`Proposed`/`NeedsApproval` — هیچ endpoint، job یا پاک‌سازی‌ای وجود ندارد و UI حق حذف رکورد ندارد.
+`Accepted` (D-070، 2026-11-06) / پیاده‌سازی `NotImplemented` — هیچ endpoint، job یا پاک‌سازی‌ای وجود ندارد و UI حق حذف رکورد ندارد. سیاست ۱۲/۲۴/۳۶ ماه، Archive چندلایه و Legal Hold در ADR ثبت شده‌اند.
 
 ## ۸. چرخهٔ عمر نشست‌ها (D-069 — پیاده‌سازی‌شده 2026-11-05)
 
@@ -156,7 +156,7 @@
 - ابطال یک نشست متعلق به خود کاربر؛ `204` در موفقیت و در تلاش تکراری (idempotent، بدون Audit دوم)؛ `404` یکسان برای ناموجود و نشست کاربر دیگر؛ ابطال نشست جاری Cookie را sign-out می‌کند. Audit `UserSessionRevoked` (EntityId=شناسه نشست، دلیل `self_revoked`).
 
 ### ۸.۳ `POST /api/v1/me/sessions/revoke-others` (حساس + anti-forgery)
-- همهٔ نشست‌های فعال دیگر کاربر (به‌جز نشست جاری) ابطال می‌شوند → `200 { "revokedCount": n }`؛ یک رویداد `UserSessionsRevokedOthers` با شمارش. ابطال نشست کاربر دیگر توسط مدیر نصب `NeedsApproval` است و وجود ندارد.
+- همهٔ نشست‌های فعال دیگر کاربر (به‌جز نشست جاری) ابطال می‌شوند → `200 { "revokedCount": n }`؛ یک رویداد `UserSessionsRevokedOthers` با شمارش. ابطال نشست کاربر دیگر توسط مدیر نصب طبق D-073 `Accepted` است، اما endpoint آن هنوز وجود ندارد.
 
 ### ۸.۴ ابطال‌های خودکار
 - تغییر رمز (`POST /me/password`): همهٔ نشست‌های فعال با دلیل `password_changed` ابطال می‌شوند؛ CredentialStamp هم دقیقه‌بعدی می‌ماند؛ مرورگر جاری بلافاصله sign-out می‌شود؛ Audit `PasswordChanged` با `revokedSessions` در DetailsJson (بدون رمز).
@@ -172,3 +172,10 @@
 5. **429:** `Retry-After` را رعایت و فرم را قفل کن؛ پیام عمومی فارسی است.
 6. **نشست‌ها:** فهرست، ابطال هر دستگاه، «ابطال بقیه»؛ بعد از تغییر رمز یا خروج، کاربر به صفحه ورود می‌رود.
 7. **زمان:** همهٔ `*Utc` را با `Z` نمایش/مقایسه کن؛ فیلدهای legacy (`lastLoginDateTime`، `insertDateTime`) را با UTC قاطی نکن (D-067).
+
+
+## ۹. تصمیم‌های پذیرفته‌شده اما هنوز پیاده‌سازی‌نشده (D-073)
+
+- ابطال نشست سایر کاربران توسط مدیر نصب، Forgot Password، Admin Reset و MFA در D-073 پذیرفته شده‌اند؛ API فعلی همچنان فقط قراردادهای پیاده‌سازی‌شده را توصیف می‌کند.
+- تا زمان Issue/PR اجرایی، هیچ مسیر یا DTO فرضی به مصرف‌کننده Frontend معرفی نمی‌شود.
+- Reset رمز توسط مدیر شرکت نیازمند مجوز مستقل `users.credentials.reset` است و فقط برای عضو فعال همان Company درخواست user-controlled reset را آغاز می‌کند؛ تغییر credential در سطح حساب Installation اثر می‌گذارد.
