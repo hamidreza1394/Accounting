@@ -31,6 +31,7 @@ function api({ audit = defaultAudit, export: exportHandler, eventTypes, companie
   const auditUrls: URL[] = [];
   const userUrls: URL[] = [];
   const companyUrls: URL[] = [];
+  const eventTypesUrls: URL[] = [];
   const exportCalls: ApiCall[] = [];
   const stub = stubApi((call: ApiCall) => {
     // `call.path` has no query string; the filters are read from the request URL of this very call.
@@ -43,7 +44,10 @@ function api({ audit = defaultAudit, export: exportHandler, eventTypes, companie
       exportCalls.push(call);
       return exportHandler ? exportHandler() : csvBytes('security-audit-events-20261103-010203.csv');
     }
-    if (call.path === eventTypesPath) return eventTypes ? eventTypes() : json(auditEventTypesBody);
+    if (call.path === eventTypesPath) {
+      eventTypesUrls.push(url);
+      return eventTypes ? eventTypes() : json(auditEventTypesBody);
+    }
     if (call.path === companiesPath) {
       companyUrls.push(url);
       return companies ? companies(url) : json(adminCompanyPage([adminCompanyItem('a', 'شرکت الف'), adminCompanyItem('b', 'شرکت ب'), adminCompanyItem('c', 'شرکت قدیمی', false)]));
@@ -54,7 +58,7 @@ function api({ audit = defaultAudit, export: exportHandler, eventTypes, companie
     }
     return new Response(null, { status: 404 });
   });
-  return { ...stub, auditUrls, userUrls, companyUrls, exportCalls };
+  return { ...stub, auditUrls, userUrls, companyUrls, eventTypesUrls, exportCalls };
 }
 
 const setup = () => render(<SecurityAuditPage onUnauthenticated={onUnauthenticated} />);
@@ -223,10 +227,29 @@ describe('SecurityAuditPage sorting', () => {
 });
 
 describe('SecurityAuditPage event types', () => {
+  it('spends no sensitive-endpoint budget on page load; both registries load only on interaction', async () => {
+    const user = userEvent.setup();
+    const { companyUrls, eventTypesUrls } = api();
+    setup();
+    await screen.findByText('ویرایش نقش شرکت');
+    // The audit page shares the sensitive rate-limit budget with the rest of the installation;
+    // an untouched page must not spend it (regression: the e2e run hit a 429 on page load).
+    expect(eventTypesUrls).toHaveLength(0);
+    expect(companyUrls).toHaveLength(0);
+
+    await user.click(screen.getByLabelText('نوع رویداد'));
+    await waitFor(() => expect(eventTypesUrls).toHaveLength(1));
+    await user.click(screen.getByRole('combobox', { name: 'شرکت' }));
+    await waitFor(() => expect(companyUrls).toHaveLength(1));
+    expect(eventTypesUrls).toHaveLength(1);
+  });
+
   it('fills the suggestions from the server list, unknown codes included, static-only codes not', async () => {
+    const user = userEvent.setup();
     api();
     const { container } = setup();
     await screen.findByText('ویرایش نقش شرکت');
+    await user.click(screen.getByLabelText('نوع رویداد'));
     await waitFor(() => expect(datalistOption(container, 'BrandNewEvent')).not.toBeNull());
     // A code that only the static fallback knows disappears once the server list has arrived.
     expect(datalistOption(container, 'WorkContextSelected')).toBeNull();
@@ -239,6 +262,7 @@ describe('SecurityAuditPage event types', () => {
     const { container } = setup();
     // The report itself still loads and shows rows; only the suggestions fall back.
     expect(await screen.findByText('ویرایش نقش شرکت')).toBeInTheDocument();
+    await user.click(screen.getByLabelText('نوع رویداد'));
     expect(await screen.findByText('دریافت انواع رویداد انجام نشد؛ می‌توانید کد رویداد را دستی وارد کنید.')).toBeInTheDocument();
     expect(datalistOption(container, 'WorkContextSelected')).not.toBeNull();
     expect(datalistOption(container, 'BrandNewEvent')).toBeNull();

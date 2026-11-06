@@ -31,7 +31,9 @@ type Results =
  * A search-as-you-type chooser over EVERY company of the installation (`GET /admin/companies`,
  * server-side search and paging; installation administrators only). Unlike the memberships of
  * `GET /companies`, historical events of inactive companies stay filterable here; an inactive
- * company is marked as such. It follows the ARIA combobox pattern like `UserPicker`.
+ * company is marked as such. It follows the ARIA combobox pattern like `UserPicker`. The first
+ * query fires when the control is opened, not on mount: the endpoint is rate-limited like the
+ * report itself, so an untouched filter must not spend its budget.
  */
 export function CompanyPicker({ value, onChange, onUnauthenticated, className, ...aria }: Props) {
   const generatedId = useId();
@@ -44,8 +46,8 @@ export function CompanyPicker({ value, onChange, onUnauthenticated, className, .
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (value) {
-      setResults({ kind: 'idle' });
+    // Only an opened, empty-handed picker talks to the server (lazy: no request on page load).
+    if (!open || value) {
       return undefined;
     }
     const term = query.trim();
@@ -75,7 +77,7 @@ export function CompanyPicker({ value, onChange, onUnauthenticated, className, .
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [query, value, onUnauthenticated]);
+  }, [open, query, value, onUnauthenticated]);
 
   // Close when focus leaves the whole control.
   useEffect(() => {

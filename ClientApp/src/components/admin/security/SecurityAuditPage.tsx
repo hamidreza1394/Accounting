@@ -86,16 +86,21 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
   const [failure, setFailure] = useState<{ message: string; status: number | null } | null>(null);
   const [attempt, setAttempt] = useState(0);
 
-  // The event-type registry of the server (codes + Persian labels). When it cannot be loaded the
-  // report stays usable: the static fallback list feeds the suggestions and unknown codes are
-  // always shown by their code. This is resilience, not a security decision.
-  const [eventTypes, setEventTypes] = useState<{ kind: 'loading' | 'ready' | 'error'; items: SecurityAuditEventType[] }>({ kind: 'loading', items: [] });
+  // The event-type registry of the server (codes + Persian labels). It is loaded lazily on the
+  // first interaction with the event-type field, not on page load: every endpoint here shares the
+  // installation's sensitive rate-limit budget, and a report that is only read should not spend it.
+  // When it cannot be loaded the report stays usable: the static fallback list feeds the
+  // suggestions and unknown codes are always shown by their code. This is resilience, not a
+  // security decision.
+  const [eventTypesWanted, setEventTypesWanted] = useState(false);
+  const [eventTypes, setEventTypes] = useState<{ kind: 'idle' | 'loading' | 'ready' | 'error'; items: SecurityAuditEventType[] }>({ kind: 'idle', items: [] });
   const [eventTypeAttempt, setEventTypeAttempt] = useState(0);
 
   const [exportBusy, setExportBusy] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!eventTypesWanted) return undefined;
     const controller = new AbortController();
     setEventTypes({ kind: 'loading', items: [] });
     getSecurityAuditEventTypes(controller.signal)
@@ -108,7 +113,7 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
         setEventTypes({ kind: 'error', items: [] });
       });
     return () => controller.abort();
-  }, [eventTypeAttempt, onUnauthenticated]);
+  }, [eventTypesWanted, eventTypeAttempt, onUnauthenticated]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -157,7 +162,6 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
   };
 
   const eventTypeChoices = eventTypes.kind === 'ready' ? eventTypes.items.map((item) => item.code) : knownEventTypes;
-
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const fromUtc = draft.from ? dayStartUtc(draft.from) : null;
@@ -339,16 +343,14 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
       <Alert tone="info">نبودِ یک رویداد به معنی نبودِ آن اتفاق یا پایان نشست نیست؛ این گزارش مدت نشست یا خروج ضمنی را نشان نمی‌دهد.</Alert>
 
       <form aria-label="فیلتر گزارش امنیتی" onSubmit={submit} noValidate className="grid gap-3 rounded-xl border border-line bg-white p-4 sm:grid-cols-2 lg:grid-cols-3">
-        <FormField
-          label="نوع رویداد"
-          hint={eventTypes.kind === 'ready' ? 'کد دقیق رویداد؛ از پیشنهادها انتخاب کنید.' : undefined}
-        >
+        <FormField label="نوع رویداد" hint="کد دقیق رویداد؛ از پیشنهادها انتخاب کنید.">
           <Input
             list={typeListId}
             dir="ltr"
             value={draft.eventType}
             maxLength={120}
             autoComplete="off"
+            onFocus={() => setEventTypesWanted(true)}
             onChange={(event) => setDraft((current) => ({ ...current, eventType: event.target.value }))}
           />
         </FormField>
