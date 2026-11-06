@@ -2620,3 +2620,22 @@
 - **تست‌ها:** Regressionهای Unit برای مسیر موفق چندنوعی، حفظ شرکت دوم، canonical round-trip و سناریوهای منفی اضافه شدند. تست محلی در این نشست اجرا نشده؛ نتیجه CI هنوز باید بررسی شود.
 - **مستندات:** handoff #393، Licensing Implementation Plan و Requirements Traceability به‌روزرسانی شدند.
 - **محدوده/ریسک:** هیچ سفارش/پرداخت، persistence، endpoint، approval، signer یا export اضافه نشده است؛ هیچ تغییر در `Server/**`، دیتابیس مشتری، Migration مشتری یا secret وجود ندارد. PR پس از تکمیل مستندات ساخته و CI روی SHA نهایی بررسی می‌شود.
+
+## 2026-11-06 — تصویب و ثبت D-070، D-073 و D-074 (Issue #556)
+- مالک محصول هر شش موضوع را تأیید کرد: retention، ابطال مدیریتی نشست، Forgot Password، Admin Reset، MFA و اتصال Permission/Entitlement.
+- D-070 موجود با همان شناسه از Proposed به Accepted ارتقا یافت؛ baseline رویداد عادی/حساس/بحرانی ۱۲/۲۴/۳۶ ماه و سیاست Cloud high-volume شامل Hot/Archive، Legal Hold، integrity، purge کنترل‌شده و جلوگیری از resurrection پس از Restore ثبت شد.
+- D-073 امنیت حساب را ثبت کرد: ابطال نشست توسط مدیر نصب با re-auth و reason؛ بازیابی Cloud/Offline؛ Reset فقط user-controlled؛ MFA برای مدیران/حساب‌های حساس با Passkey/TOTP؛ سیاست رمز جدید.
+- D-074 ترکیب مستقل و fail-closed Permission و Entitlement را ثبت کرد؛ وضعیت واقعی main حفظ شد: Trade gate وجود دارد اما DI فعلی DenyAll است و runtime signed entitlement هنوز تکمیل نیست.
+- شماره‌گذاری ADR با واقعیت D-072 هم‌تراز شد؛ شماره بعدی D-075 است. AGENTS.md و INDEX.md اصلاح شدند.
+- مستندات API و Frontend فقط وضعیت تصمیم را به‌روز کردند؛ endpoint یا DTO فرضی معرفی نشد.
+- **بدون تغییر کد، Schema، Migration، API، Job یا Purge.** Build/Test اجرا نشده‌اند؛ CI بعد از PR باید بررسی شود.
+- Handoff: `docs/handoffs/ISSUE-556-security-decisions.md`.
+- Branch: `docs/adr-073-074-account-security-entitlement`; PR [#557](https://github.com/hamidreza1394/Accounting/pull/557) باز است و Merge نشده.
+
+## 2026-11-06 — ساده‌سازی D-070 بنا به تأکید مالک محصول
+- تصمیم شد آرشیو سوابق امنیتی ساده و کم‌هزینه باشد و دیتابیس دوم از ابتدا ساخته نشود.
+- سیاست اجرایی پیشنهادی: Job زمان‌بندی‌شده (ترجیحاً ماهانه و در صورت نزدیک‌شدن DB به آستانه هشدار زودتر) سوابق قدیمی را به فایل فشرده و رمزنگاری‌شده منتقل کند؛ manifest شامل بازه، تعداد، نسخه قالب و checksum باشد.
+- فقط پس از تطبیق تعداد و checksum، رکوردها در batchهای کوچک از DB حذف شوند؛ در صورت شکست انتقال/اعتبارسنجی، رکورد DB باقی بماند.
+- WORM/Object Lock، دیتابیس Audit مستقل، deletion ledger و سرویس جست‌وجوی جدا برای مرحله اول الزام نیستند. در Dedicated مقصد می‌تواند مسیر محلی/شبکه‌ای امن و در Cloud فضای فایل/Object Storage ارزان موجود باشد.
+- مدت نگهداری ۱۲/۲۴/۳۶ ماه و Legal Hold بدون تغییر باقی ماند؛ آرشیو باعث کوتاه‌شدن مدت نگهداری نمی‌شود. Restore از Backup قدیمی با اجرای مجدد Job نگهداری همراه خواهد بود.
+- این تغییر فقط ساده‌سازی ADR و مستندات است؛ هیچ کد، Schema، Migration، Job یا Purge اجرایی ایجاد نشد.
