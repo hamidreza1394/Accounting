@@ -199,6 +199,9 @@ public static class UserAdministrationEndpoints
             string.IsNullOrWhiteSpace(username) ||
             username.Length < Constants.MinLength.Username ||
             username.Length > Constants.MaxLength.Username ||
+            // The same username policy the Razor views enforce; the API must not be a
+            // bypass (the column is varchar(20): ASCII letters, digits and . _ @ + - only).
+            !new System.ComponentModel.DataAnnotations.RegularExpressionAttribute(Constants.RegularExpression.Username).IsValid(username) ||
             (firstName?.Length > Constants.MaxLength.FirstName) ||
             (lastName?.Length > Constants.MaxLength.LastName) ||
             (cellPhone is not null && (cellPhone.Length != Constants.FixedLength.CellPhoneNumber || !new System.ComponentModel.DataAnnotations.RegularExpressionAttribute(Constants.RegularExpression.CellPhoneNumber).IsValid(cellPhone))) ||
@@ -295,6 +298,8 @@ public static class UserAdministrationEndpoints
             string.IsNullOrWhiteSpace(username) ||
             username.Length < Constants.MinLength.Username ||
             username.Length > Constants.MaxLength.Username ||
+            // The same username policy the Razor views enforce; the API must not be a bypass.
+            !new System.ComponentModel.DataAnnotations.RegularExpressionAttribute(Constants.RegularExpression.Username).IsValid(username) ||
             (firstName?.Length > Constants.MaxLength.FirstName) ||
             (lastName?.Length > Constants.MaxLength.LastName) ||
             (cellPhone is not null && (cellPhone.Length != Constants.FixedLength.CellPhoneNumber || !new System.ComponentModel.DataAnnotations.RegularExpressionAttribute(Constants.RegularExpression.CellPhoneNumber).IsValid(cellPhone))))
