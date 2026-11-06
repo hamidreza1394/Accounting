@@ -2621,4 +2621,4 @@
 - مستندات API و Frontend فقط وضعیت تصمیم را به‌روز کردند؛ endpoint یا DTO فرضی معرفی نشد.
 - **بدون تغییر کد، Schema، Migration، API، Job یا Purge.** Build/Test اجرا نشده‌اند؛ CI بعد از PR باید بررسی شود.
 - Handoff: `docs/handoffs/ISSUE-556-security-decisions.md`.
-- Branch: `docs/adr-073-074-account-security-entitlement`; PR مستقل و بدون Merge.
+- Branch: `docs/adr-073-074-account-security-entitlement`; PR [#557](https://github.com/hamidreza1394/Accounting/pull/557) باز است و Merge نشده.
