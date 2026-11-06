@@ -164,4 +164,94 @@ public sealed class AdminUserSessionSqlServerTests
             await cleanup.Database.EnsureDeletedAsync(cancellationToken);
         }
     }
+
+    /// <summary>
+    /// D-073 §1 audit atomicity: the session mutation and its audit row commit in one SQL
+    /// transaction. A failing audit insert (here: an audit IpAddress longer than its
+    /// varchar(45) column, injected through the request's RemoteIpAddress) must roll the
+    /// revocation back — the session stays active and no partial state remains.
+    /// </summary>
+    [Fact]
+    public async Task AdminSessionRevocation_AuditFailure_RollsTheRevocationBack()
+    {
+        Assert.SkipUnless(SqlServerAvailable(), "SQL Server is not configured (FARANOU_TEST_SQLSERVER).");
+
+        var name = "FaranouTests_SESSRB_" + Guid.NewGuid().ToString("N")[..12];
+        var cancellationToken = TestContext.Current.CancellationToken;
+        try
+        {
+            await using var database = CreateContext(name);
+            await database.Database.MigrateAsync(cancellationToken);
+
+            var passwordHashService = new Infrastructure.Security.PasswordHashService();
+            var role = new Domain.Role(Constants.Role.Admin) { IsActive = true };
+            var admin = new Domain.User("sess-atomic-admin@example.test")
+            {
+                Username = "sess-atomic-admin",
+                IsActive = true,
+                Role = role,
+                Password = passwordHashService.Hash(CorrectPassword),
+            };
+            var target = new Domain.User("sess-atomic-target@example.test")
+            {
+                Username = "sess-atomic-target",
+                IsActive = true,
+            };
+            database.AddRange(role, admin, target);
+
+            var session = new Domain.UserSession
+            {
+                UserId = target.Id,
+                CreatedAtUtc = DateTime.UtcNow,
+                LastSeenAtUtc = DateTime.UtcNow,
+            };
+            database.Add(session);
+            await database.SaveChangesAsync(cancellationToken);
+
+            var sessionService = new Infrastructure.Security.UserSessionService(database, TimeProvider.System);
+
+            // The request's RemoteIpAddress exceeds the varchar(45) audit column, so the
+            // audit insert fails on SQL Server after the ExecuteUpdate already ran.
+            var poisonedContext = new DefaultHttpContext();
+            poisonedContext.Connection.RemoteIpAddress = new OverlongToStringIPAddress();
+            await Assert.ThrowsAnyAsync<DbUpdateException>(() =>
+                Server.Api.AdminUserSessionEndpoints.RevokeUserSessionAsync(
+                    target.Id, session.Id, poisonedContext, Principal(admin.Id),
+                    new Server.Api.AdminRevokeSessionRequest(CorrectPassword, Reason),
+                    new StubAntiforgery(), database, sessionService, passwordHashService,
+                    TimeProvider.System, cancellationToken));
+
+            // Fail-closed: the rolled-back transaction left the session active and no
+            // partial audit row behind — evidence and revocation commit together or not at all.
+            var row = await database.UserSessions.AsNoTracking()
+                .SingleAsync(current => current.Id == session.Id, cancellationToken);
+            Assert.Null(row.RevokedAtUtc);
+            Assert.Null(row.RevocationReasonCode);
+            Assert.False(await database.SecurityAuditEvents.AnyAsync(cancellationToken));
+
+            // The same request without the poisoning address commits both writes atomically.
+            var ok = await Server.Api.AdminUserSessionEndpoints.RevokeUserSessionAsync(
+                target.Id, session.Id, new DefaultHttpContext(), Principal(admin.Id),
+                new Server.Api.AdminRevokeSessionRequest(CorrectPassword, Reason),
+                new StubAntiforgery(), database, sessionService, passwordHashService,
+                TimeProvider.System, cancellationToken);
+            Assert.Equal(StatusCodes.Status204NoContent, (ok as IStatusCodeHttpResult)?.StatusCode);
+            Assert.NotNull((await database.UserSessions.AsNoTracking()
+                .SingleAsync(current => current.Id == session.Id, cancellationToken)).RevokedAtUtc);
+            Assert.Equal("AdminUserSessionRevoked", (await database.SecurityAuditEvents
+                .SingleAsync(cancellationToken)).EventType);
+        }
+        finally
+        {
+            await using var cleanup = CreateContext(name);
+            await cleanup.Database.EnsureDeletedAsync(cancellationToken);
+        }
+    }
+
+    /// <summary>A stand-in RemoteIpAddress whose textual form exceeds the varchar(45) audit column.</summary>
+    private sealed class OverlongToStringIPAddress : System.Net.IPAddress
+    {
+        public OverlongToStringIPAddress() : base(0) { }
+        public override string ToString() => new('x', 60);
+    }
 }

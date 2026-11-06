@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Antiforgery;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,12 +20,20 @@ namespace Server.Api;
 /// change-password flow uses — plus a reason code chosen from the server-owned catalog.
 /// </para>
 /// <para>
+/// D-073 §1 scope boundary: these endpoints exist for <em>another</em> user only — a
+/// self-targeted request (<c>userId == actorId</c>) is rejected with 400 so the
+/// administrator's own sessions stay under the D-069 self-service endpoints exclusively.
+/// </para>
+/// <para>
 /// The projection is the D-069 allowlist: session identity and UTC timestamps only; no IP
 /// address, no user agent, no cookie, token or secret is ever returned. A revoked session
 /// dies on its next request through <c>Infrastructure.Security.SessionValidator</c>.
 /// Revocations are idempotent and audited with
 /// <c>AdminUserSessionRevoked</c> / <c>AdminUserSessionsRevoked</c>; the raw password and
-/// every other secret stay out of logs and audit payloads.
+/// every other secret stay out of logs and audit payloads. On a relational store the
+/// session mutation and its audit row commit in <em>one</em> transaction: a failed audit
+/// insert rolls the revocation back, so evidence is never missing for a live revocation
+/// (fail-closed).
 /// </para>
 /// </remarks>
 public static class AdminUserSessionEndpoints
@@ -60,7 +67,7 @@ public static class AdminUserSessionEndpoints
         return sessions;
     }
 
-    /// <summary>GET /api/v1/admin/users/{userId}/sessions — the active sessions of the target user (allowlist projection, D-069).</summary>
+    /// <summary>GET /api/v1/admin/users/{userId}/sessions — the active sessions of the target user (allowlist projection, D-069); self-targeting is rejected.</summary>
     public static async Task<IResult> ListUserSessionsAsync(
         Guid userId,
         HttpContext httpContext,
@@ -69,10 +76,14 @@ public static class AdminUserSessionEndpoints
         Infrastructure.Security.UserSessionService sessionService,
         CancellationToken cancellationToken)
     {
+        var actorId = Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal);
         var authorization = await UserAdministrationEndpoints.AuthorizeInstallationAdministratorAsync(
             principal, database, cancellationToken);
         if (authorization is not null)
             return authorization;
+
+        if (actorId is not null && userId == actorId.Value)
+            return RejectSelfTargeting();
 
         if (userId == Guid.Empty)
             return TypedResults.NotFound();
@@ -109,6 +120,12 @@ public static class AdminUserSessionEndpoints
         if (authorization is not null)
             return authorization;
 
+        // D-073 §1: the administrative path targets another user only; own sessions stay
+        // under the D-069 self-service endpoints. Checked before any other validation so a
+        // self-targeted request never consumes step-up or anti-forgery validation.
+        if (actorId is not null && userId == actorId.Value)
+            return RejectSelfTargeting();
+
         if (!await antiforgery.IsRequestValidAsync(httpContext))
             return TypedResults.Problem(
                 title: "درخواست نامعتبر است. صفحه را دوباره بارگذاری کنید.",
@@ -124,6 +141,13 @@ public static class AdminUserSessionEndpoints
             return TypedResults.BadRequest(new { error = "کد دلیل ابطال معتبر نیست." });
 
         httpContext.Response.Headers.CacheControl = "no-store";
+
+        // The revocation and its mandatory audit evidence commit together: if the audit
+        // insert fails, the whole transaction rolls back and the session stays active
+        // (fail-closed, D-073 §1 audit requirement).
+        await using var transaction = database.Database.IsRelational()
+            ? await database.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, cancellationToken)
+            : null;
 
         // The ownership check is part of the UPDATE predicate: a session of another user is
         // never revocable here, and a foreign or unknown identifier is indistinguishable.
@@ -153,14 +177,8 @@ public static class AdminUserSessionEndpoints
             await database.SaveChangesAsync(cancellationToken);
         }
 
-        // The administrator may target their own current session (D-073 leaves own-session
-        // revocation to self-service, but does not forbid the admin path): end the cookie
-        // exactly like the self-service endpoint does.
-        if (revoked && userId == actorId && sessionId == GetCurrentSessionId(principal))
-        {
-            await httpContext.SignOutAsync(Infrastructure.Security.Utility.AuthenticationScheme);
-            httpContext.RequestServices.GetService<Infrastructure.Tenancy.WorkContextCookie>()?.Delete(httpContext);
-        }
+        if (transaction is not null)
+            await transaction.CommitAsync(cancellationToken);
 
         return TypedResults.NoContent();
     }
@@ -184,6 +202,11 @@ public static class AdminUserSessionEndpoints
         if (authorization is not null)
             return authorization;
 
+        // D-073 §1: the administrative path targets another user only; own sessions stay
+        // under the D-069 self-service endpoints (revoke-others keeps the current session).
+        if (actorId is not null && userId == actorId.Value)
+            return RejectSelfTargeting();
+
         if (!await antiforgery.IsRequestValidAsync(httpContext))
             return TypedResults.Problem(
                 title: "درخواست نامعتبر است. صفحه را دوباره بارگذاری کنید.",
@@ -199,6 +222,12 @@ public static class AdminUserSessionEndpoints
             return TypedResults.BadRequest(new { error = "کد دلیل ابطال معتبر نیست." });
 
         httpContext.Response.Headers.CacheControl = "no-store";
+
+        // Same atomicity contract as the single revocation: the set-based write and the
+        // audit row commit together or not at all.
+        await using var transaction = database.Database.IsRelational()
+            ? await database.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, cancellationToken)
+            : null;
 
         var revokedCount = await sessionService.RevokeAllAsync(
             userId, actorId, cancellationToken, reasonCode);
@@ -224,18 +253,8 @@ public static class AdminUserSessionEndpoints
             await database.SaveChangesAsync(cancellationToken);
         }
 
-        // When the administrator ends their own sessions, the current cookie must die too.
-        var currentSessionId = GetCurrentSessionId(principal);
-        if (userId == actorId && currentSessionId is Guid current)
-        {
-            var currentRow = await database.UserSessions.AsNoTracking()
-                .FirstOrDefaultAsync(session => session.Id == current, cancellationToken);
-            if (currentRow?.RevokedAtUtc is not null)
-            {
-                await httpContext.SignOutAsync(Infrastructure.Security.Utility.AuthenticationScheme);
-                httpContext.RequestServices.GetService<Infrastructure.Tenancy.WorkContextCookie>()?.Delete(httpContext);
-            }
-        }
+        if (transaction is not null)
+            await transaction.CommitAsync(cancellationToken);
 
         return TypedResults.Ok(new AdminRevokeAllSessionsResponse(revokedCount));
     }
@@ -275,15 +294,10 @@ public static class AdminUserSessionEndpoints
             new { error = "احراز هویت مجدد ناموفق بود؛ رمز عبور جاری مدیر را درست وارد کنید." },
             statusCode: StatusCodes.Status403Forbidden);
 
-    /// <summary>The identifier of the server-side session this cookie was issued for, or <c>null</c>.</summary>
-    private static Guid? GetCurrentSessionId(ClaimsPrincipal user)
-    {
-        var value = user.FindFirst(Infrastructure.Tenancy.WorkContextCookie.SessionIdClaimType)?.Value;
-
-        return System.Guid.TryParse(value, out var sessionId) && sessionId != Guid.Empty
-            ? sessionId
-            : null;
-    }
+    private static IResult RejectSelfTargeting() =>
+        TypedResults.Json(
+            new { error = "مدیریت نشست‌های شخصی از مسیر مدیریتی مجاز نیست؛ برای نشست‌های خودتان از قابلیت‌های خود-خدمتی (D-069) استفاده کنید." },
+            statusCode: StatusCodes.Status400BadRequest);
 }
 
 public sealed record AdminUserSessionListItem(

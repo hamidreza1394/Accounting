@@ -1,12 +1,10 @@
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Antiforgery;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Template.Tests;
@@ -15,8 +13,9 @@ namespace Template.Tests;
 /// The installation-administrator session revocation endpoints (D-073 §1): only an active
 /// administrator re-read from the database acts, every mutation re-verifies the
 /// administrator's own current password (step-up), the reason comes from the server-owned
-/// catalog, revocations are idempotent and audited without secrets, and the projection
-/// never carries IP, user agent, cookies or tokens.
+/// catalog, revocations are idempotent and audited without secrets, the projection
+/// never carries IP, user agent, cookies or tokens, and self-targeting is rejected so the
+/// administrator's own sessions stay under the D-069 self-service endpoints exclusively.
 /// </summary>
 public sealed class AdminUserSessionEndpointTests
 {
@@ -239,24 +238,58 @@ public sealed class AdminUserSessionEndpointTests
     }
 
     [Fact]
-    public async Task RevokingOwnSessions_EndsTheCurrentCookieToo()
+    public async Task List_RejectsSelfTargeting_OwnSessionsStayUnderTheD069SelfServicePath()
     {
         await using var fixture = new Fixture();
-        var current = fixture.AddSession(fixture.Admin);
-        var otherDevice = fixture.AddSession(fixture.Admin, lastSeenAtUtc: DateTime.UtcNow.AddMinutes(-2));
+        fixture.AddSession(fixture.Admin);
+        fixture.AddSession(fixture.Admin, lastSeenAtUtc: DateTime.UtcNow.AddMinutes(-2));
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await Server.Api.AdminUserSessionEndpoints.ListUserSessionsAsync(
+            fixture.Admin.Id, new DefaultHttpContext(), fixture.AdminPrincipal(),
+            fixture.Database, fixture.SessionService, default);
+
+        Assert.Equal(StatusCodes.Status400BadRequest, (result as IStatusCodeHttpResult)?.StatusCode);
+    }
+
+    [Fact]
+    public async Task RevokeSingle_RejectsSelfTargeting_AndLeavesTheOwnSessionActive_WithoutAudit()
+    {
+        await using var fixture = new Fixture();
+        var own = fixture.AddSession(fixture.Admin, lastSeenAtUtc: DateTime.UtcNow.AddMinutes(-2));
+        await fixture.Database.SaveChangesAsync();
+
+        // Even a valid password and reason cannot make the administrative path touch the
+        // administrator's own session: D-073 §1 keeps own-session revocation on D-069.
+        var result = await Server.Api.AdminUserSessionEndpoints.RevokeUserSessionAsync(
+            fixture.Admin.Id, own.Id, new DefaultHttpContext(), fixture.AdminPrincipal(own.Id),
+            new Server.Api.AdminRevokeSessionRequest(CorrectPassword, Reason),
+            new AllowAntiforgery(), fixture.Database, fixture.SessionService,
+            fixture.PasswordHashService, TimeProvider.System, default);
+
+        Assert.Equal(StatusCodes.Status400BadRequest, (result as IStatusCodeHttpResult)?.StatusCode);
+        Assert.Null((await fixture.Database.UserSessions.SingleAsync(session => session.Id == own.Id)).RevokedAtUtc);
+        Assert.False(await fixture.Database.SecurityAuditEvents.AnyAsync());
+    }
+
+    [Fact]
+    public async Task RevokeAll_RejectsSelfTargeting_AndLeavesEveryOwnSessionActive()
+    {
+        await using var fixture = new Fixture();
+        var first = fixture.AddSession(fixture.Admin);
+        var second = fixture.AddSession(fixture.Admin, lastSeenAtUtc: DateTime.UtcNow.AddMinutes(-2));
         await fixture.Database.SaveChangesAsync();
 
         var result = await Server.Api.AdminUserSessionEndpoints.RevokeAllUserSessionsAsync(
-            fixture.Admin.Id, fixture.HttpContextWithAuthentication(), fixture.AdminPrincipal(current.Id),
+            fixture.Admin.Id, new DefaultHttpContext(), fixture.AdminPrincipal(first.Id),
             new Server.Api.AdminRevokeAllSessionsRequest(CorrectPassword, Reason),
             new AllowAntiforgery(), fixture.Database, fixture.SessionService,
             fixture.PasswordHashService, TimeProvider.System, default);
 
-        var ok = Assert.IsType<Ok<Server.Api.AdminRevokeAllSessionsResponse>>(result);
-        Assert.Equal(2, ok.Value!.RevokedCount);
-        Assert.NotNull((await fixture.Database.UserSessions.SingleAsync(session => session.Id == current.Id)).RevokedAtUtc);
-        Assert.NotNull((await fixture.Database.UserSessions.SingleAsync(session => session.Id == otherDevice.Id)).RevokedAtUtc);
-        Assert.Equal(1, fixture.AuthenticationService.SignOutCalls);
+        Assert.Equal(StatusCodes.Status400BadRequest, (result as IStatusCodeHttpResult)?.StatusCode);
+        Assert.Null((await fixture.Database.UserSessions.SingleAsync(session => session.Id == first.Id)).RevokedAtUtc);
+        Assert.Null((await fixture.Database.UserSessions.SingleAsync(session => session.Id == second.Id)).RevokedAtUtc);
+        Assert.False(await fixture.Database.SecurityAuditEvents.AnyAsync());
     }
 
     [Fact]
@@ -310,21 +343,6 @@ public sealed class AdminUserSessionEndpointTests
         public void SetCookieTokenAndHeader(HttpContext httpContext) { }
     }
 
-    private sealed class RecordingAuthenticationService : IAuthenticationService
-    {
-        public int SignOutCalls { get; private set; }
-        public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) =>
-            Task.FromResult(AuthenticateResult.NoResult());
-        public Task ChallengeAsync(HttpContext context, string? scheme, AuthenticationProperties? properties) => Task.CompletedTask;
-        public Task ForbidAsync(HttpContext context, string? scheme, AuthenticationProperties? properties) => Task.CompletedTask;
-        public Task SignInAsync(HttpContext context, string? scheme, ClaimsPrincipal principal, AuthenticationProperties? properties) => Task.CompletedTask;
-        public Task SignOutAsync(HttpContext context, string? scheme, AuthenticationProperties? properties)
-        {
-            SignOutCalls++;
-            return Task.CompletedTask;
-        }
-    }
-
     private sealed class Fixture : IAsyncDisposable
     {
         public Fixture()
@@ -342,7 +360,6 @@ public sealed class AdminUserSessionEndpointTests
         public Data.DatabaseContext Database { get; }
         public Infrastructure.Security.UserSessionService SessionService { get; }
         public Infrastructure.Security.PasswordHashService PasswordHashService { get; }
-        public RecordingAuthenticationService AuthenticationService { get; } = new();
         public Domain.User Admin { get; }
         public Domain.User Target { get; }
         public Domain.User Plain { get; }
@@ -401,14 +418,6 @@ public sealed class AdminUserSessionEndpointTests
                 claims.Add(new Claim(SessionIdClaimType, id.ToString()));
 
             return new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
-        }
-
-        public DefaultHttpContext HttpContextWithAuthentication()
-        {
-            var services = new ServiceCollection()
-                .AddSingleton<Microsoft.AspNetCore.Authentication.IAuthenticationService>(AuthenticationService)
-                .BuildServiceProvider();
-            return new DefaultHttpContext { RequestServices = services };
         }
 
         public ValueTask DisposeAsync() => Database.DisposeAsync();

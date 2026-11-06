@@ -164,16 +164,16 @@
 - خروج صریح (`POST /session/logout` API و صفحه Razor): رویداد `LogoutSucceeded` + ابطال نشست جاری + پاک‌سازی Cookie و زمینهٔ کاری.
 
 ### ۸.۵ ابطال مدیریتی نشست کاربر دیگر (D-073 §1 — پیاده‌سازی‌شده 2026-11-06)
-فقط مدیر نصب فعال (نقش در هر درخواست از دیتابیس بازخوانی می‌شود؛ هیچ مجوز CompanyRole این اختیار را نمی‌دهد). هر Mutation دو الزام دارد: **احراز هویت مجدد** (رمز جاری خودِ مدیر در بدنه؛ تأیید سمت سرور با همان سازوکار تغییر رمز) و **کد دلیل از کاتالوگ مجاز**: `admin_revoked_suspected_compromise` / `admin_revoked_offboarding` / `admin_revoked_user_request` / `admin_revoked_administrative`.
+فقط مدیر نصب فعال (نقش در هر درخواست از دیتابیس بازخوانی می‌شود؛ هیچ مجوز CompanyRole این اختیار را نمی‌دهد) و فقط برای «کاربر دیگر»: درخواست Self-target (`userId` مدیر فعلی) در هر سه Endpoint با `400` رد می‌شود و مدیریت نشست‌های خود مدیر منحصراً از مسیر self-service بخش ۸.۱–۸.۳ انجام می‌شود. هر Mutation دو الزام دارد: **احراز هویت مجدد** (رمز جاری خودِ مدیر در بدنه؛ تأیید سمت سرور با همان سازوکار تغییر رمز) و **کد دلیل از کاتالوگ مجاز**: `admin_revoked_suspected_compromise` / `admin_revoked_offboarding` / `admin_revoked_user_request` / `admin_revoked_administrative`.
 
 | عملیات | Method/Route | بدنه | پاسخ‌ها |
 |---|---|---|---|
-| فهرست نشست‌های فعال کاربر هدف | `GET /api/v1/admin/users/{userId}/sessions` (حساس) | — | `200 [ { "sessionId": "guid", "createdAtUtc": "...Z", "lastSeenAtUtc": "...Z" } ]` — بدون IP/UA، مرتب‌سازی آخرین استفاده |
-| ابطال یک نشست مشخص | `POST .../sessions/{sessionId}/revoke` (حساس + anti-forgery) | `{ "currentPassword": "...", "reasonCode": "..." }` | `204` (موفق و تکرار idempotent بدون Audit دوم)؛ `403` re-auth ناموفق؛ `400` دلیل نامعتبر/توکن anti-forgery کهنه؛ `404` یکسان برای ناموجود و نشست کاربر دیگر |
+| فهرست نشست‌های فعال کاربر هدف | `GET /api/v1/admin/users/{userId}/sessions` (حساس) | — | `200 [ { "sessionId": "guid", "createdAtUtc": "...Z", "lastSeenAtUtc": "...Z" } ]` — بدون IP/UA، مرتب‌سازی آخرین استفاده؛ `400` Self-target |
+| ابطال یک نشست مشخص | `POST .../sessions/{sessionId}/revoke` (حساس + anti-forgery) | `{ "currentPassword": "...", "reasonCode": "..." }` | `204` (موفق و تکرار idempotent بدون Audit دوم)؛ `403` re-auth ناموفق؛ `400` دلیل نامعتبر/توکن anti-forgery کهنه/Self-target؛ `404` یکسان برای ناموجود و نشست کاربر دیگر |
 | ابطال همهٔ نشست‌های فعال کاربر هدف | `POST .../sessions/revoke-all` (حساس + anti-forgery) | `{ "currentPassword": "...", "reasonCode": "..." }` | `200 { "revokedCount": n }`؛ تکرار بدون تغییر `0` و بدون Audit دوم؛ `403`/`400`/`404` مانند بالا |
 
-- Audit: `AdminUserSessionRevoked` (EntityId=شناسه نشست) و `AdminUserSessionsRevoked` (EntityId=شناسه کاربر هدف، `revokedCount` در DetailsJson) — هر دو با `targetUserId` و `reasonCode` و **بدون رمز یا توکن**؛ actor مدیر است.
-- ابطال در درخواست بعدی کاربر واقعاً به 401 می‌رسد (SessionValidator)؛ هیچ Session Cookie/Token/Secret در پاسخ برنمی‌گردد؛ مدیریت نشست خود مدیر همچنان از مسیر self-service بخش ۸.۱–۸.۳ انجام می‌شود (مسیر مدیریتی برای حساب خودش هم کار می‌کند و در صورت ابطال نشست جاری، Cookie همان درخواست sign-out می‌شود).
+- Audit: `AdminUserSessionRevoked` (EntityId=شناسه نشست) و `AdminUserSessionsRevoked` (EntityId=شناسه کاربر هدف، `revokedCount` در DetailsJson) — هر دو با `targetUserId` و `reasonCode` و **بدون رمز یا توکن**؛ actor مدیر است. تغییر نشست و درج Audit در **یک تراکنش SQL واحد** commit/rollback می‌شوند؛ شکست درج Audit ابطال را کامل برمی‌گرداند (fail-closed — تست SQL Server `AdminSessionRevocation_AuditFailure_RollsTheRevocationBack`).
+- ابطال در درخواست بعدی کاربر واقعاً به 401 می‌رسد (SessionValidator)؛ هیچ Session Cookie/Token/Secret در پاسخ برنمی‌گردد؛ مدیریت نشست خود مدیر منحصراً از مسیر self-service بخش ۸.۱–۸.۳ انجام می‌شود (مسیر مدیریتی درخواست Self-target را با 400 رد می‌کند).
 - ابطال اضطراری همهٔ نشست‌های کل Installation خارج از D-073 §1 است و API ندارد.
 
 ## ۹. سناریوهای کلیدی Frontend
