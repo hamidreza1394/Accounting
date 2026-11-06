@@ -34,6 +34,40 @@ public sealed class UserPasswordServiceTests
     }
 
     [Fact]
+    public async Task ChangePasswordAsync_RevokesEveryActiveSessionOfTheUser()
+    {
+        await using var fixture = new Fixture();
+        var now = DateTime.UtcNow;
+        var active = new Domain.UserSession { UserId = fixture.User.Id, CreatedAtUtc = now, LastSeenAtUtc = now };
+        var alreadyRevoked = new Domain.UserSession
+        {
+            UserId = fixture.User.Id,
+            CreatedAtUtc = now,
+            LastSeenAtUtc = now,
+            RevokedAtUtc = now,
+            RevocationReasonCode = "self_revoked",
+        };
+        fixture.Database.UserSessions.AddRange(active, alreadyRevoked);
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await fixture.Service.ChangePasswordAsync(
+            fixture.User.Id,
+            "Old-Password-1405!",
+            "New-Long-Phrase-1406!",
+            "New-Long-Phrase-1406!",
+            "192.0.2.10");
+
+        Assert.Equal(Infrastructure.Security.ChangePasswordOutcome.Changed, result.Outcome);
+        var revoked = await fixture.Database.UserSessions.SingleAsync(session => session.Id == active.Id);
+        Assert.NotNull(revoked.RevokedAtUtc);
+        Assert.Equal("password_changed", revoked.RevocationReasonCode);
+        var untouched = await fixture.Database.UserSessions.SingleAsync(session => session.Id == alreadyRevoked.Id);
+        Assert.Equal("self_revoked", untouched.RevocationReasonCode);
+        var audit = await fixture.Database.SecurityAuditEvents.SingleAsync();
+        Assert.Contains("revokedSessions", audit.DetailsJson ?? string.Empty, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ChangePasswordAsync_WithWrongCurrentPassword_DoesNotChangeCredentialOrAudit()
     {
         await using var fixture = new Fixture();

@@ -2571,3 +2571,19 @@
 - **تست:** ۵ تست جدید (۲ قرمز→سبز + ۳ تثبیت 403/409). مجموعه کامل: ۱۰۸۸ کل، ۱۰۲۴ موفق، ۶۲ Skip، فقط ۲ ناموفق محیطی پایه.
 - **محدودهٔ تغییرنداده (نیازمند تصمیم مالک):** بازیابی رمز فراموش‌شده، یکسان‌سازی حداقل طول رمز (۸/۱۲)، فیلدهای ساعت محلی قدیمی (D-067 Proposed) و رویداد مجزای UserDeactivated.
 - **PR:** شاخه `fix/identity-username-charset`؛ Merge فقط با اجازهٔ مالک.
+
+
+## 2026-11-05 — پیاده‌سازی چرخهٔ عمر نشست سروری طبق D-069 (ISSUE-504-session-lifecycle-implementation)
+- **مبنا:** `main@584f87da` + دستور صریح مالک در پرامپ Wave-1 («Implement the missing session lifecycle functionality according to D-069»)؛ ADR از `Proposed` به `Implemented` ارتقا یافت (الگوی D-072)؛ باز: retention (D-070) و ابطال نشست دیگران توسط مدیر نصب.
+- **تغییرات:** Entity `UserSession` + Migration افزودنی `20261105094700_AddUserSessions` (زنجیرهٔ ۱۶ تأیید شد)؛ نشست به ازای هر ورود موفق با Claim `SessionId` واقعی؛ اعتبارسنجی fail-closed (مفقود/ابطال‌شده/بیگانه/idle>30min) با آخرین‌مشاهدهٔ ۵ دقیقه‌ای؛ سه API self-service `/me/sessions*` با anti-forgery و rate limit؛ ابطال همهٔ نشست‌ها پس از تغییر رمز؛ ابطال نشست جاری در خروج API و Razor؛ رویدادهای `UserSessionRevoked`/`UserSessionsRevokedOthers` با برچسب فارسی.
+- **تست:** +۱۱ تست (۳ اعتبارسنجی D-069، ۷ Endpoint، ۱ تغییر رمز)؛ تست‌های قبلی SessionValidator و Provisioning Claims با ردیف نشست هماهنگ شدند (بدون تضعیف). مجموعه کامل: ۱۰۹۴ کل، ۱۰۳۰ موفق، ۶۲ Skip، فقط ۲ ناموفق محیطی پایه (نیاز SQL Server؛ Docker محلی ناموجود). Build ۰ خطا؛ `generate_migrations.py --check` و `verify_migration_model.py` سبز.
+- **PR:** شاخه `feat/session-lifecycle-d069`؛ Merge فقط با اجازهٔ مالک.
+
+## 2026-11-05 — اصلاح پاک‌سازی E2E برای جدول UserSessions (دنبالهٔ ISSUE-504)
+- **طبقه‌بندی شکست CI:** Job `e2e` روی PR #552 با `FK_UserSessions_Users_UserId` (Restrict) هنگام `DELETE FROM Users` پاک‌سازی سناریوها شکست خورد؛ ۶ سناریوی membership/role-admin، ۴۰ سناریوی دیگر سبز؛ `build-and-test` (SQL Server واقعی) سبز.
+- **اصلاح:** مطابق الگوی صریح `LoginLogs` (بدون cascade)، دو اسکریپت پاک‌سازی E2E اکنون `DELETE FROM UserSessions WHERE UserId ...` را پیش از حذف کاربر اجرا می‌کنند (`membershipFixture.mjs`، `role-admin.spec.mjs`)؛ هیچ تغییری در تست‌های محصول یا Model.
+
+## 2026-11-05 — بازگردانی تورفتگی اصلی فایل‌های PR نشست (دنبالهٔ ISSUE-504)
+- ابزار ویرایش، تورفتگی tab هفت فایل را به space تبدیل کرده بود (بازقالب‌بندی کل فایل که مخالف قواعد مخزن است): SessionValidator، AuthenticationService، Login/Razor Logout، User، DatabaseModelTests، SessionValidatorTests.
+- همهٔ هفت فایل از بلاف `main` بازساخته و فقط تغییرات معنایی D-069 با تورفتگی tab اصلی اعمال شد؛ دیف PR از ۵۶۸۶+/۲۱۲۱- به ۳۶۰۹+/۴۴- رسید؛ تستِ آخرین‌مشاهده با بارگذاری tracked اصلاح شد.
+- مجموعه کامل: ۱۰۹۴ کل، ۱۰۳۰ موفق، ۶۲ Skip، فقط ۲ ناموفق محیطی پایه؛ Build ۰ خطا.

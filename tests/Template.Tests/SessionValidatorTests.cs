@@ -15,7 +15,7 @@ namespace Template.Tests;
 /// </summary>
 public sealed class SessionValidatorTests
 {
-	private static ClaimsPrincipal Principal(string accountKind, string name, Guid? userId, string? stamp)
+	private static ClaimsPrincipal Principal(string accountKind, string name, Guid? userId, string? stamp, Guid? sessionId = null)
 	{
 		var claims = new List<Claim>
 		{
@@ -31,6 +31,11 @@ public sealed class SessionValidatorTests
 		if (stamp is not null)
 		{
 			claims.Add(new Claim(Infrastructure.Security.SessionValidator.CredentialStampClaimType, stamp));
+		}
+
+		if (sessionId.HasValue)
+		{
+			claims.Add(new Claim(Infrastructure.Tenancy.WorkContextCookie.SessionIdClaimType, sessionId.Value.ToString()));
 		}
 
 		return new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
@@ -63,16 +68,97 @@ public sealed class SessionValidatorTests
 		return user;
 	}
 
+	/// <summary>A server-side session row (D-069) that was last seen right now.</summary>
+	private static Domain.UserSession AddSession(Data.DatabaseContext database, Domain.User user, DateTime? lastSeenAtUtc = null)
+	{
+		var session = new Domain.UserSession
+		{
+			UserId = user.Id,
+			CreatedAtUtc = DateTime.UtcNow,
+			LastSeenAtUtc = lastSeenAtUtc ?? DateTime.UtcNow,
+		};
+
+		database.UserSessions.Add(session);
+		database.SaveChanges();
+		return session;
+	}
+
 	[Fact]
 	public async Task AnUnchangedActiveAccount_KeepsItsSession()
 	{
 		var (services, database) = CreateServices();
 		var user = AddUser(database, "hash-1");
+		var session = AddSession(database, user);
 
 		var principal = Principal("User", "session-user", user.Id,
-			Infrastructure.Security.SessionValidator.ComputeCredentialStamp("hash-1"));
+			Infrastructure.Security.SessionValidator.ComputeCredentialStamp("hash-1"), session.Id);
 
 		Assert.True(await Infrastructure.Security.SessionValidator.IsSessionValidAsync(principal, services, default));
+	}
+
+	[Fact]
+	public async Task ARevokedForeignOrIdleSession_IsDenied()
+	{
+		var (services, database) = CreateServices();
+		var user = AddUser(database, "hash-1");
+		var stamp = Infrastructure.Security.SessionValidator.ComputeCredentialStamp("hash-1");
+		var revoked = AddSession(database, user);
+		revoked.RevokedAtUtc = DateTime.UtcNow;
+		revoked.RevocationReasonCode = "self_revoked";
+		database.SaveChanges();
+
+		var idle = AddSession(database, user, lastSeenAtUtc: DateTime.UtcNow.AddMinutes(-31));
+
+		var otherUser = AddUser(database, "hash-1");
+		var foreign = AddSession(database, otherUser);
+
+		Assert.False(await Infrastructure.Security.SessionValidator.IsSessionValidAsync(
+			Principal("User", "session-user", user.Id, stamp, revoked.Id), services, default));
+		Assert.False(await Infrastructure.Security.SessionValidator.IsSessionValidAsync(
+			Principal("User", "session-user", user.Id, stamp, idle.Id), services, default));
+		Assert.False(await Infrastructure.Security.SessionValidator.IsSessionValidAsync(
+			Principal("User", "session-user", user.Id, stamp, foreign.Id), services, default));
+		Assert.False(await Infrastructure.Security.SessionValidator.IsSessionValidAsync(
+			Principal("User", "session-user", user.Id, stamp, Guid.NewGuid()), services, default));
+	}
+
+	[Fact]
+	public async Task ASessionOfAnEarlierRelease_WithoutASessionClaim_MustSignInAgain()
+	{
+		var (services, database) = CreateServices();
+		var user = AddUser(database, "hash-1");
+		AddSession(database, user);
+
+		// A cookie without a SessionId claim cannot name a server-side session (D-069).
+		Assert.False(await Infrastructure.Security.SessionValidator.IsSessionValidAsync(
+			Principal("User", "session-user", user.Id,
+				Infrastructure.Security.SessionValidator.ComputeCredentialStamp("hash-1")),
+			services, default));
+	}
+
+	[Fact]
+	public async Task AnIdleButUnexpiredSession_RefreshesItsLastSeenAtMostOncePerInterval()
+	{
+		var (services, database) = CreateServices();
+		var user = AddUser(database, "hash-1");
+		var lastSeen = DateTime.UtcNow.AddMinutes(-6);
+		var session = AddSession(database, user, lastSeenAtUtc: lastSeen);
+
+		var principal = Principal("User", "session-user", user.Id,
+			Infrastructure.Security.SessionValidator.ComputeCredentialStamp("hash-1"), session.Id);
+
+		Assert.True(await Infrastructure.Security.SessionValidator.IsSessionValidAsync(principal, services, default));
+
+		// The validator uses its own context: re-read the row to see the store value.
+		database.Entry(session).Reload();
+		Assert.True(session.LastSeenAtUtc > lastSeen,
+			"The throttled last-seen write is expected for a session last seen more than five minutes ago.");
+
+		// Inside the interval no further write happens.
+		var seen = session.LastSeenAtUtc;
+		Assert.True(await Infrastructure.Security.SessionValidator.IsSessionValidAsync(principal, services, default));
+		database.Entry(session).Reload();
+		Assert.Equal(seen, session.LastSeenAtUtc);
 	}
 
 	[Fact]
@@ -80,20 +166,22 @@ public sealed class SessionValidatorTests
 	{
 		var (services, database) = CreateServices();
 		var user = AddUser(database, "hash-1");
+		var session = AddSession(database, user);
 		var stampOfOldHash = Infrastructure.Security.SessionValidator.ComputeCredentialStamp("hash-1");
 
 		user.Password = "hash-2";
 		database.SaveChanges();
 		Assert.False(await Infrastructure.Security.SessionValidator.IsSessionValidAsync(
-			Principal("User", "session-user", user.Id, stampOfOldHash), services, default));
+			Principal("User", "session-user", user.Id, stampOfOldHash, session.Id), services, default));
 
 		var inactive = AddUser(database, "hash-3", isActive: false);
+		var inactiveSession = AddSession(database, inactive);
 		Assert.False(await Infrastructure.Security.SessionValidator.IsSessionValidAsync(
-			Principal("User", "session-user", inactive.Id, Infrastructure.Security.SessionValidator.ComputeCredentialStamp("hash-3")),
+			Principal("User", "session-user", inactive.Id, Infrastructure.Security.SessionValidator.ComputeCredentialStamp("hash-3"), inactiveSession.Id),
 			services, default));
 
 		Assert.False(await Infrastructure.Security.SessionValidator.IsSessionValidAsync(
-			Principal("User", "session-user", Guid.NewGuid(), stampOfOldHash), services, default));
+			Principal("User", "session-user", Guid.NewGuid(), stampOfOldHash, session.Id), services, default));
 	}
 
 	[Fact]
@@ -101,6 +189,7 @@ public sealed class SessionValidatorTests
 	{
 		var (services, database) = CreateServices();
 		var user = AddUser(database, "hash-1");
+		var session = AddSession(database, user);
 		var claim = new Domain.ProvisioningRequestClaim
 		{
 			RequestId = Guid.NewGuid(),
@@ -111,7 +200,7 @@ public sealed class SessionValidatorTests
 		database.SaveChanges();
 
 		var principal = Principal("User", "session-user", user.Id,
-			Infrastructure.Security.SessionValidator.ComputeCredentialStamp("hash-1"));
+			Infrastructure.Security.SessionValidator.ComputeCredentialStamp("hash-1"), session.Id);
 
 		Assert.False(await Infrastructure.Security.SessionValidator.IsSessionValidAsync(principal, services, default));
 
@@ -124,7 +213,7 @@ public sealed class SessionValidatorTests
 		Assert.False(await Infrastructure.Security.SessionValidator.IsSessionValidAsync(principal, services, default));
 		Assert.True(await Infrastructure.Security.SessionValidator.IsSessionValidAsync(
 			Principal("User", "session-user", user.Id,
-				Infrastructure.Security.SessionValidator.ComputeCredentialStamp("hash-2")),
+				Infrastructure.Security.SessionValidator.ComputeCredentialStamp("hash-2"), session.Id),
 			services, default));
 	}
 
@@ -133,6 +222,7 @@ public sealed class SessionValidatorTests
 	{
 		var (services, database) = CreateServices();
 		var user = AddUser(database, "hash-1");
+		var session = AddSession(database, user);
 		database.ProvisioningRequestClaims.Add(new Domain.ProvisioningRequestClaim
 		{
 			RequestId = Guid.NewGuid(),
@@ -143,7 +233,7 @@ public sealed class SessionValidatorTests
 
 		Assert.True(await Infrastructure.Security.SessionValidator.IsSessionValidAsync(
 			Principal("User", "session-user", user.Id,
-				Infrastructure.Security.SessionValidator.ComputeCredentialStamp("hash-1")),
+				Infrastructure.Security.SessionValidator.ComputeCredentialStamp("hash-1"), session.Id),
 			services, default));
 	}
 
@@ -152,9 +242,10 @@ public sealed class SessionValidatorTests
 	{
 		var (services, database) = CreateServices();
 		var user = AddUser(database, "hash-1");
+		var session = AddSession(database, user);
 
 		Assert.False(await Infrastructure.Security.SessionValidator.IsSessionValidAsync(
-			Principal("User", "session-user", user.Id, stamp: null), services, default));
+			Principal("User", "session-user", user.Id, stamp: null, session.Id), services, default));
 	}
 
 	[Fact]

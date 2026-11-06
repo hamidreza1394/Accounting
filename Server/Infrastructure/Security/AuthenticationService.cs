@@ -43,6 +43,14 @@ namespace Infrastructure.Security
 		/// A later change of the stored credential invalidates the session.
 		/// </summary>
 		public string? CredentialStamp { get; init; }
+
+		/// <summary>
+		/// The identifier of the server-side session row (D-069) that was created for
+		/// this successful sign-in of a company user. It is carried in the cookie as
+		/// the <c>SessionId</c> claim and re-validated on every request. The
+		/// infrastructure (master) account has no session row.
+		/// </summary>
+		public System.Guid? SessionId { get; init; }
 	}
 
 	/// <summary>
@@ -299,6 +307,22 @@ namespace Infrastructure.Security
 
 			await DatabaseContext.LoginLogs.AddAsync(entity: loginLog);
 
+			// D-069: every successful sign-in of a company user gets one server-side session
+			// row. Its identifier becomes the SessionId claim of the cookie and is
+			// re-validated on every request, so revoking the row ends exactly this device's
+			// access on its next request. No IP address and no user agent are stored here;
+			// connection metadata stays in the audit events.
+			var nowUtc = System.DateTime.UtcNow;
+
+			var userSession = new Domain.UserSession
+			{
+				UserId = user.Id,
+				CreatedAtUtc = nowUtc,
+				LastSeenAtUtc = nowUtc,
+			};
+
+			await DatabaseContext.UserSessions.AddAsync(entity: userSession);
+
 			var activeCompanyIds =
 				await DatabaseContext.UserCompanyMemberships
 				.Where(current => current.UserId == user.Id)
@@ -322,6 +346,7 @@ namespace Infrastructure.Security
 				ActiveCompanyIds = activeCompanyIds,
 				// Computed after a possible rehash, so the stamp matches the stored value.
 				CredentialStamp = SessionValidator.ComputeCredentialStamp(user.Password),
+				SessionId = userSession.Id,
 			};
 		}
 		#endregion /AuthenticateAsync

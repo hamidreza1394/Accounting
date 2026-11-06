@@ -1778,6 +1778,46 @@ namespace Data.Migrations
                     b.ToTable("UserCompanyMemberships", (string)null);
                 });
 
+            modelBuilder.Entity("Domain.UserSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("LastSeenAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RevocationReasonCode")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime?>("RevokedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("RevokedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LastSeenAtUtc");
+
+                    b.HasIndex("UserId", "LastSeenAtUtc");
+
+                    b.ToTable("UserSessions", (string)null);
+                });
+
             modelBuilder.Entity("Domain.CompanyEmployee", b =>
                 {
                     b.HasOne("Domain.Company", "Company")
@@ -2164,6 +2204,17 @@ namespace Data.Migrations
                     b.Navigation("Role");
                 });
 
+            modelBuilder.Entity("Domain.UserSession", b =>
+                {
+                    b.HasOne("Domain.User", "User")
+                        .WithMany("Sessions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Domain.ApplicationHandler", b =>
                 {
                     b.Navigation("Permissions");
@@ -2282,6 +2333,8 @@ namespace Data.Migrations
                     b.Navigation("CreatedPages");
 
                     b.Navigation("LoginLogs");
+
+                    b.Navigation("Sessions");
                 });
 
             modelBuilder.Entity("Domain.UserCompanyMembership", b =>

@@ -28,6 +28,8 @@ public static class SecurityAuditAdministrationEndpoints
             ["LoginDeniedInactive"] = "رد ورود حساب غیرفعال",
             ["LoginDeniedEnrollmentPending"] = "رد ورود تا تکمیل ثبت‌نام",
             ["LogoutSucceeded"] = "خروج موفق",
+            ["UserSessionRevoked"] = "ابطال نشست کاربر",
+            ["UserSessionsRevokedOthers"] = "ابطال سایر نشست‌های کاربر",
             ["PasswordChanged"] = "تغییر رمز عبور",
             ["UserCreated"] = "ایجاد کاربر",
             ["UserUpdated"] = "ویرایش کاربر",

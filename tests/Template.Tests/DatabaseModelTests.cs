@@ -72,6 +72,7 @@ public sealed class DatabaseModelTests
 				"Roles",
 				"SecurityAuditEvents",
 				"UserCompanyMemberships",
+				"UserSessions",
 				"Users",
 			},
 			tables);

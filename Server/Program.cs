@@ -197,6 +197,8 @@ if (!setupRequired)
     builder.Services.AddScoped<Infrastructure.Tenancy.DelegationCeilingService>();
     builder.Services.AddScoped<Infrastructure.Security.UserPasswordService>();
     builder.Services.AddScoped<Infrastructure.Security.UserSessionAuditService>();
+    // Self-service session lifecycle (D-069): list active sessions, revoke one or all others.
+    builder.Services.AddScoped<Infrastructure.Security.UserSessionService>();
 
     // The company and fiscal period a user chose for the current sign-in (D-031). The cookie
     // helper is stateless; the service validates every stored choice against the database.
