@@ -336,13 +336,13 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 
 ## امنیت حساب کاربری و MFA — Accepted (D-073، 2026-11-06)
 
-- مدیر نصب فعال می‌تواند با re-authentication و علت اجباری، یک نشست یا تمام نشست‌های فعال یک کاربر همان Installation را باطل کند. مدیر شرکت چنین اختیاری ندارد. ابطال اضطراری تمام نشست‌های Installation و break-glass خارج از تصمیم است.
+- مدیر نصب فعال می‌تواند با re-authentication (رمز جاری خودش، تأیید سمت سرور) و علت اجباری از کاتالوگ کدهای مجاز، یک نشست یا تمام نشست‌های فعال یک کاربر همان Installation را باطل کند. مدیر شرکت چنین اختیاری ندارد. ابطال اضطراری تمام نشست‌های Installation و break-glass خارج از تصمیم است.
 - Cloud password recovery از کانال تأییدشده (نسخه اول: ایمیل) با پاسخ غیرقابل enumeration، token تصادفی ۲۵۶بیتی، hash-only، یک‌بارمصرف و انقضای پیش‌فرض ۱۵ دقیقه انجام می‌شود. Dedicated/Offline از رویه محلی کنترل‌شده مدیر نصب استفاده می‌کند.
 - Reset مدیریتی فقط آغاز فرایند user-controlled است؛ مدیر هرگز رمز را انتخاب یا مشاهده نمی‌کند. مدیر شرکت فقط با مجوز مستقل `users.credentials.reset` برای عضو فعال همان شرکت می‌تواند درخواست را آغاز کند؛ اثر تغییر رمز روی حساب سراسری همان Installation آشکار و ممیزی می‌شود.
 - MFA برای مدیر نصب، مدیران شرکت و حساب‌های دارای دسترسی حساس اجباری است؛ کاربران عادی اختیاری‌اند و مدیر نصب می‌تواند الزام سازمانی را فعال کند. Passkey/WebAuthn ترجیحی، TOTP جایگزین Cloud/Offline؛ SMS و Email OTP عامل دوم نیستند. Recovery Code یک‌بارمصرف و hash-only است.
 - رمزهای جدید/تغییریافته حداقل ۱۵ و حداکثر ۱۲۸ نویسه، blocklist رمزهای رایج/افشاشده، بدون composition rules و بدون چرخش دوره‌ای اجباری هستند. حساب قدیمی ناگهان قفل نمی‌شود.
 - تکمیل recovery/reset یا تغییر/بازیابی MFA تمام نشست‌های قبلی را باطل می‌کند؛ reset رمز MFA را حذف نمی‌کند.
-- **وضعیت کد:** D-069 self-service sessions پیاده‌سازی شده؛ admin revoke، recovery، reset و MFA در Customer هنوز NotImplemented هستند. هیچ endpoint از این خلاصه به‌صورت ضمنی ایجاد نمی‌شود.
+- **وضعیت کد:** D-069 self-service sessions و ابطال مدیریتی نشست (D-073 §1؛ `Server/Api/AdminUserSessionEndpoints.cs` — سه endpoint با step-up، کاتالوگ دلیل، Audit `AdminUserSessionRevoked`/`AdminUserSessionsRevoked` و بدون Migration جدید) پیاده‌سازی شده‌اند؛ recovery، reset و MFA در Customer هنوز NotImplemented هستند. هیچ endpoint از این خلاصه به‌صورت ضمنی ایجاد نمی‌شود.
 - مرجع: [D-073](DECISIONS.md#d-073--امنیت-حساب-کاربری-بازیابی-اعتبارنامه-mfa-و-ابطال-مدیریتی-نشست-2026-11-06).
 
 ## ترکیب Permission و Entitlement — Accepted (D-074، 2026-11-06)

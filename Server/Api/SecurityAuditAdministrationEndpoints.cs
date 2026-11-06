@@ -30,6 +30,8 @@ public static class SecurityAuditAdministrationEndpoints
             ["LogoutSucceeded"] = "خروج موفق",
             ["UserSessionRevoked"] = "ابطال نشست کاربر",
             ["UserSessionsRevokedOthers"] = "ابطال سایر نشست‌های کاربر",
+            ["AdminUserSessionRevoked"] = "ابطال نشست کاربر توسط مدیر نصب",
+            ["AdminUserSessionsRevoked"] = "ابطال نشست‌های کاربر توسط مدیر نصب",
             ["PasswordChanged"] = "تغییر رمز عبور",
             ["UserCreated"] = "ایجاد کاربر",
             ["UserUpdated"] = "ویرایش کاربر",

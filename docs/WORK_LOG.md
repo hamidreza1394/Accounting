@@ -2641,3 +2641,10 @@
 - ۱۰ مسیر `hrRoutes` در `AppRoutes.tsx` ثبت شد و سه آیتم «واحدهای سازمانی»، «سمت‌های سازمانی» و «کارکنان» زیر «مدیریت سیستم» در `AppShell.tsx` افزوده شد (placeholder قدیمی «ساختار سازمانی و سمت‌ها» جایگزین شد).
 - `lib/permissions.ts`: سه hint `hr.units.view`/`hr.positions.view`/`hr.employees.view` برای کدهای verified‌شدهٔ `hr.organizational-units.list`، `hr.positions.list`، `hr.employees.list`؛ fail-closed در loading/error/شرکت نامطابق.
 - آزمون: `HrIntegration.test.tsx` (۲۲ تست) + تست‌های `permissions`؛ کل ClientApp ۷۵۵ تست موفق؛ build و check:offline موفق. Backend، Schema و `features/hr/**` تغییر نکرد؛ dotnet/E2E اجرا نشد.
+
+## 2026-11-06 — ابطال مدیریتی نشست کاربر توسط مدیر نصب (D-073 §1 — شاخه feat/admin-session-revocation-d073)
+- سه Endpoint جدید: `GET /api/v1/admin/users/{userId}/sessions`، `POST .../{sessionId}/revoke`، `POST .../revoke-all` — فقط مدیر نصب فعال با بازخوانی نقش از DB در هر درخواست؛ Step-up با تأیید رمز جاری مدیر (`PasswordHashService.Verify`)؛ دلیل از کاتالوگ چهار کد مجاز؛ Anti-forgery، Rate limit حساس، no-store؛ Projection بدون IP/UA/Cookie/Token.
+- Audit: `AdminUserSessionRevoked` / `AdminUserSessionsRevoked` با actor، targetUserId، reasonCode و revokedCount؛ بدون رمز/توکن؛ برچسب فارسی در رجیستری گزارش امنیتی و Fallback کلاینت همگام شد.
+- `UserSessionService`: پارامتر اختیاری `reasonCode` در RevokeAsync/RevokeOthersAsync (رفتار self-service بدون تغییر) + `RevokeAllAsync` — همان نوشتن مجموعه‌ای با مالکیت در Prediccate؛ بدون Migration.
+- تست: ۱۰ تست Endpoint جدید (401/403/404، step-up، کاتالوگ، anti-forgery، idempotency، بازخوانی نقش، sign-out خود مدیر، Allowlist) + ۱ تست SQL Server-gated (ExecuteUpdate، idempotency، 404 بیگانه). کل: dotnet ۱۰۴۸ موفق/۲ پیش‌موجود؛ vitest ۷۸۳/۷۸۳؛ typecheck سبز.
+- مستندات: قرارداد بخش ۸.۵ `docs/api/USER_ACCESS_MANAGEMENT_API.md`، وضعیت کد D-073 در `docs/SECURITY.md`، handoff `ISSUE-444-admin-session-revocation-d073.md`. Merge فقط با اجازه مالک.
