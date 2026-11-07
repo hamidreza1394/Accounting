@@ -1,0 +1,89 @@
+{
+  "out": "pr-integration",
+  "base": "http://localhost:5090",
+  "results": [
+    {
+      "scenario": "Sidebar جمع‌شده + Tooltip در حالت آیکونی",
+      "result": "WARN",
+      "note": "tooltip با سلکتورهای عمومی پیدا نشد (نیازمند بازبینی تصویری)"
+    },
+    {
+      "scenario": "S1 باز کردن صفحه مدیریت کاربران (تب جدید)",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "scenario": "S2 کلیک واحدهای سازمانی در Sidebar → تب جدید بدون بستن تب کاربران",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "scenario": "PR1 دکمه ایجاد واحد سازمانی برای مدیر نصب نمایان است",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "scenario": "S3 بازگشت به تب کاربران و حفظ وضعیت قبلی (جست‌وجو و Query)",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "scenario": "S4 جلوگیری از تب تکراری برای مسیر یکسان",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "scenario": "S5 دو رکورد متفاوت در تب‌های مجزا",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "scenario": "S6 بستن تب غیرفعال (فعال دست‌نخورده)",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "scenario": "S7 بستن تب فعال → انتخاب تب جانشین",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "scenario": "S8 بستن تب دارای تغییرات ذخیره‌نشده (لغو حفظ می‌کند، تأیید می‌بندد)",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "scenario": "S9 جابه‌جایی از فرم Dirty → تب حفظ می‌شود و داده نمی‌رود",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "scenario": "S10 رفتار Back و Forward مرورگر",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "scenario": "S11 خروج از حساب با فرم Dirty → هشدار و لغو",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "scenario": "S12 تغییر شرکت با فرم Dirty → هشدار، سپس ورود به زمینه جدید بدون داده قبلی",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "scenario": "بازگشت به شرکت اولیه برای ادامه بررسی",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "scenario": "PR2 دکمه بازگشت در پرونده کاربر (حالت Ready)",
+      "result": "PASS",
+      "note": ""
+    }
+  ],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 429 (Too Many Requests)"
+  ]
+}
