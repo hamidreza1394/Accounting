@@ -1,5 +1,7 @@
 # قرارداد API مدیریت کاربران و دسترسی‌ها (منبع حقیقت مصرف Frontend)
 
+> به‌روزرسانی 2026-11-08: بخش ۱۰ (کاتالوگ دسترسی Stage 2-D) افزوده شد.
+
 - **وضعیت:** `Implemented` — این سند از روی کد واقعی `main` (Nov 2026) استخراج شده است، نه از طراحی پیشین. هر تغییری در کد باید همین سند را هم به‌روزرسانی کند.
 - **Issue مادر:** #444. اسناد مرتبط: `docs/USER_ACCESS_MANAGEMENT.md`، `docs/ACCESS_CONTROL_ARCHITECTURE.md`، `docs/FRONTEND_API_CONTRACT_NEEDS.md`، `docs/HR_FRONTEND_API_CONTRACT.md` (HR)، `docs/DECISIONS.md` (D-064، D-065، D-067، D-069، D-070، D-071، D-072، D-073، D-074).
 - **مرز این سند:** کاربران، نقش‌ها و مجوزها، عضویت بین‌شرکتی، دفترچه هم‌گروه، مجوزهای من، گزارش امنیتی و نشست‌ها. قرارداد HR در سند مستقل خودش است و قرارداد زمینهٔ کاری (شرکت/دوره) در `WorkContextEndpoints` جداگانه می‌ماند.
@@ -192,3 +194,25 @@
 - Forgot Password، Admin Reset و MFA در D-073 پذیرفته شده‌اند؛ API فعلی همچنان فقط قراردادهای پیاده‌سازی‌شده را توصیف می‌کند.
 - تا زمان Issue/PR اجرایی، هیچ مسیر یا DTO فرضی به مصرف‌کننده Frontend معرفی نمی‌شود.
 - Reset رمز توسط مدیر شرکت نیازمند مجوز مستقل `users.credentials.reset` است و فقط برای عضو فعال همان Company درخواست user-controlled reset را آغاز می‌کند؛ تغییر credential در سطح حساب Installation اثر می‌گذارد.
+
+## ۱۰. کاتالوگ دسترسی (Stage 2-D — D-075؛ پیاده‌سازی‌شده 2026-11-08)
+
+سه endpoint فقط-خواندنی سطح نصب که کاتالوگ کد-محور زیرسیستم‌ها/منوها/فرم‌ها را می‌دهند (منبع: `Server/Infrastructure/Access/AccessCatalogRegistry.cs`؛ هم‌خوان با `docs/SUBSYSTEM_CATALOG.md` و `docs/MENU_FORM_CATALOG.md`). **عملیات و مجوزها از این endpoints سرو نمی‌شوند** — `GET /admin/permission-catalog` (بخش ۳) مرجع همان کاتالوگ است تا API تکراری ساخته نشود.
+
+| متد و مسیر | پاسخ موفق | Auth |
+|---|---|---|
+| `GET /api/v1/admin/access/catalog/subsystems` | آرایهٔ `{code,title,entitlementScope,entitlementLinked,entitlementCode?}` — `entitlementScope` یکی از `none\|installation\|company`؛ کد فقط از ثابت‌های `LicenseSubsystemCodes` | فقط مدیر نصب فعال (بازخوانی نقش از DB در هر درخواست، D-064) |
+| `GET /api/v1/admin/access/catalog/menus` | آرایهٔ `{label,group?,subsystemCode,status,route?}` — `status` یکی از `active\|coming-soon`؛ `route` فقط برای وضعیت `active` | همان |
+| `GET /api/v1/admin/access/catalog/forms` | آرایهٔ `{route,title,subsystemCode,permissionHint?,parent}` — `permissionHint` صرفاً hint نمایشی است (D-064) | همان |
+
+- همهٔ پاسخ‌ها `Cache-Control: no-store` دارند؛ بدون Pagination چون کاتالوگ ثابت و کوچک است (۱۸ زیرسیستم/۲۰ منو/۲۳ فرم).
+
+### ۳.۱ دسترسی‌های مؤثر یک عضو (Stage 2-E — 2026-11-08)
+
+`GET /api/v1/admin/companies/{companyId}/effective-permissions/{userId}` → آرایهٔ `{userId,companyId,roleNames[],permissionCodes[]}`.
+
+- معنا: اجتماع کدهای مجوز نقش‌های **فعال** روی عضویت‌های **فعال** همان کاربر در همان شرکت (`CompanyAccessService.GetGrantedPermissionCodesAsync`) + نام نقش‌ها؛ مرتب‌سازی ordinal.
+- Auth (D-071 دوحالته): مدیر نصب فعال (بازخوانی از DB) یا عضو فعال همان شرکت با `roles.view`؛ عضو بدون مجوز 403؛ کاربر بی‌نسبت به شرکت یا بدون عضویت فعال هدف (شامل حساب ناموجود) **404 بدون افشا**.
+- فقط-خواندنی، `no-store`، بدون Audit (مطابق الگوی خواندنی‌های نقش‌ها)؛ تست: `EffectivePermissionsEndpointTests`.
+- خطاها: ناشناس 401؛ کاربر واردشدهٔ غیرمدیر نصب 403 (پیام فارسی `فقط مدیر نصب سامانه مجاز به این عملیات است.`). مدیر شرکت برای نقش‌های شرکت خود از endpointهای بخش ۳ استفاده می‌کند و این کاتالوگ به او سرو نمی‌شود.
+- تغییر محتوا فقط با به‌روزرسانی Registry + ردیف‌های `SUBSYSTEM_CATALOG.md`/`MENU_FORM_CATALOG.md` انجام می‌شود؛ تست `AccessCatalogEndpointTests` درون‌سازگاری (ارجاع زیرسیستم، یکتایی مسیر، عدم ساخت کد entitlement) را قفل می‌کند.

@@ -2691,3 +2691,29 @@
 - **سند:** `docs/MENU_FORM_CATALOG.md` — درخت منوی واقعی از `navigation` (AppSidebar) و کاتالوگ کامل ۲۳ Route از `appRoutes` با Parent/گیت/زیرسیستم؛ قواعد سه‌حالتی فعال/به‌زودی/پنهان و منع Route جعلی (D-075).
 - **کد:** فقط `export navigation`/نوع‌ها از AppSidebar (بدون تغییر رفتار) + تست سازگاری جدید `menuRouteConsistency.test.tsx` (۶ قید: مسیرهای جعلی، Route تکراری، عنوان فارسی، برچسب انگلیسی، گروه بدون صفحه). هیچ Route/منو/رفتاری تغییر نکرد.
 - **تست:** کل مجموعه ClientApp اجرا شد — نتیجه در handoff ثبت می‌شود؛ مستندات: INDEX + handoff مرحله دوم.
+
+## 2026-11-08 — Issue #444 Stage 2-D: API کاتالوگ زیرسیستم/منو/فرم (Backend)
+- **مبنا:** `main@cb2ddd57`؛ شاخهٔ `feat/issue-444-stage2-access-catalog-api`.
+- **کد:** `Server/Infrastructure/Access/AccessCatalogRegistry.cs` (کاتالوگ کد-محور فقط-خواندنی: ۱۸ زیرسیستم/۲۰ منو/۲۳ فرم؛ کد entitlement فقط از ثابت‌های `LicenseSubsystemCodes`؛ بدون جدول/Migration — D-075) + `Server/Api/AccessCatalogEndpoints.cs` (سه GET فقط-خواندنی `/admin/access/catalog/{subsystems,menus,forms}` فقط مدیر نصب با بازخوانی نقش از DB در هر درخواست؛ no-store؛ بدون Pagination به‌دلیل ثابت‌بودن) + ثبت در `ApiEndpoints.MapFaranouApi`.
+- **عدم تکرار API:** عملیات/مجوزها همچنان از `GET /admin/permission-catalog` سرو می‌شوند؛ مدیر شرکت طبق D-071 §6 همان endpoint را در سقف تفویض می‌بیند.
+- **تست:** ۵ تست جدید `AccessCatalogEndpointTests` (401 ناشناس، 403 غیرمدیر، 200 مدیر؛ درون‌سازگاری کاتالوگ؛ منع ساخت کد entitlement؛ یکتایی مسیرها). اجرای واقعی: `dotnet test` کامل — **۱۰۵۷ موفق / ۲ خطای پیش‌موجود** (`SafeExceptionRealApplicationTests` نیازمند SQL Server، مطابق WORK_LOGهای قبلی) / ۶۴ Skip gated.
+- **مستندات:** بخش ۱۰ `docs/api/USER_ACCESS_MANAGEMENT_API.md`. Merge فقط با اجازهٔ مالک.
+
+## 2026-11-08 — Issue #444 Stage 2-E (بخش Backend): API دسترسی‌های مؤثر عضو شرکت
+- **مبنا:** `main@cb2ddd57`؛ شاخهٔ `feat/issue-444-stage2-effective-permissions-api`.
+- **کد:** `GET /api/v1/admin/companies/{companyId}/effective-permissions/{userId}` در `CompanyRoleAdministrationEndpoints.cs` — اجتماع کدهای مجوز نقش‌های فعال روی عضویت‌های فعال هدف (`CompanyAccessService.GetGrantedPermissionCodesAsync`) + نام نقش‌ها؛ مجوزدهی دوحالته D-071 (`roles.view` یا مدیر نصب با بازخوانی DB)؛ بدون عضویت فعال هدف/حساب ناموجود = 404 بدون افشا (D-064)؛ no-store؛ بدون Audit (خواندنی).
+- **تست واقعی:** ۳ تست جدید `EffectivePermissionsEndpointTests` (قواعد دوحالته 404/403/200؛ اجتماع کدها و حذف نقش/عضویت غیرفعال؛ 404 بدون افشا برای حساب ناموجود/غیرفعال) — سبز؛ کل مجموعه **۱۰۶۰ موفق / ۲ پیش‌موجود (نیازمند SQL Server) / ۶۴ Skip**.
+- **مستندات:** بخش ۳.۱ قرارداد API. UI مشاهده در RoleDetailPage در PR بعدی همین مأموریت می‌آید. Merge فقط با اجازهٔ مالک.
+
+## 2026-11-08 — Issue #444 تکمیلی — PR 1-C: تکمیل تست بصری/Responsive مرحله اول (حد واقعی محیط)
+- **مبنا:** `main@cb2ddd57`؛ شاخهٔ `test/ui-stage1-responsive-checks`.
+- **تست محلی واقعی روی این شاخه:** vitest **842/842** (۸۰ فایل؛ +۱ تست جدید)، typecheck/build/check:offline/check_static_assets همگی سبز؛ `dotnet publish` سرور موفق (175MB، بدون تغییر کد Backend؛ Backend test اجرا نشد چون Backend تغییر نکرد).
+- **تست جدید:** Tooltip Rail سایدبار — رفتار `title` بومی در حالت جمع‌شده، حذف آن در حالت باز و پنهان‌بودن فرزندان گروه در Rail؛ این تست WARN ثبت‌شدهٔ `results-pr-integration.json` («tooltip با سلکتورهای عمومی پیدا نشد») را می‌بندد. هیچ تستی حذف یا تضعیف نشد.
+- **شواهد مرورگر واقعی 2026-11-07** (مأموریت بازبینی پیش از ادغام، در مخزن): هر ۱۱ مورد چک‌لیست مأموریت PR 1-C با نتایج JSON/اسکرین‌شات ۵ اندازهٔ واقعی پوشش داده شده است؛ سند `docs/handoffs/ISSUE-444-stage-1-responsive-checks.md` هر مورد را به شاهد واقعی گره می‌زند.
+- **گزارش صریح:** اجرای تازهٔ E2E مرورگری در 2026-11-08 **انجام نشد** — Sandbox بدون Docker/sudo است و سیاست‌های آن mount/bind و چرخهٔ rootless SQL Server را مسدود می‌کنند (سه تلاش مستند). ادعای اجرای نشده، اجرا نشده گزارش شد؛ هیچ نتیجه‌ای جعل نشد.
+
+## 2026-11-08 — Issue #444 تکمیلی — PR 1-A: اصلاح Handoff مرحله اول با تاریخچهٔ ادغام واقعی
+- **مبنا:** `main@cb2ddd57` (ادغام #571)؛ شاخهٔ `docs/issue-444-stage1-handoff-correction`؛ تغییر فقط-مستندات، بدون هیچ تغییری در کد/تست/Migration.
+- **تغییر:** `docs/handoffs/ISSUE-444-stage-1-workspace-shell.md` با واقعیت GitHub هم‌تراز شد: وضعیت هر ۶ PR «ادغام‌شده در 2026-11-07»، جدول PRها با Head SHA و Merge commit واقعی از GitHub API (#568: `9ae1aaa6ecae`، #571: `33cddd7d0fcd` — SHAهای قبلی سند به commitهای میانی اشاره می‌کردند)، زمان ادغام UTC، جدول «آمار تست واقعی از لاگ CI» (جاب client: 792/790/809/813/824/825) و بخش جدید «وضعیت پس از ادغام» شامل انتهای نهایی main (`cb2ddd57`)، ترتیب ادغام واقعی، محدودیت‌های باقی‌مانده و تصمیمات معماری.
+- **شواهد:** Check-runs همهٔ ۶ SHA نهایی success (client، build-and-test، e2e، secret-scan، Semgrep، CodeQL، Analyze، publish*)؛ لاگ خام CI از GitHub Actions API استخراج شد.
+- **مستندات:** فقط همین Handoff و ورودی WORK_LOG؛ Merge فقط با اجازهٔ مالک.

@@ -79,6 +79,24 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     expect(screen.getByRole('button', { name: 'منابع انسانی (باز)' })).toBeInTheDocument();
   });
 
+  it('keeps native hover tooltips in the rail and drops them when labels are visible', () => {
+    // Closes the WARN recorded in artifacts/ui-preview/stage-1/results-pr-integration.json
+    // («tooltip با سلکتورهای عمومی پیدا نشد»): the rail tooltip is the native `title`
+    // attribute — invisible in screenshots by design — combined with sr-only names.
+    const rail = setup(installationAdmin, true);
+    expect(rail.getByRole('link', { name: 'داشبورد' })).toHaveAttribute('title', 'داشبورد');
+    expect(rail.getByRole('button', { name: 'منابع انسانی (باز)' })).toHaveAttribute('title', 'منابع انسانی');
+    // Group children are hidden in the rail; the tooltip belongs to the group icon itself.
+    expect(rail.queryByRole('link', { name: 'واحدهای سازمانی' })).not.toBeInTheDocument();
+    rail.unmount();
+
+    const expanded = setup();
+    expect(expanded.getByRole('link', { name: 'داشبورد' })).not.toHaveAttribute('title');
+    expect(expanded.getByRole('button', { name: /^منابع انسانی/ })).not.toHaveAttribute('title');
+    expect(expanded.getByRole('link', { name: 'واحدهای سازمانی' })).toBeInTheDocument();
+    expanded.unmount();
+  });
+
   it('auto-opens the owning group for a deep-linked route', () => {
     window.history.pushState(null, '', '/app/hr/org/positions/abc');
     setup();
