@@ -549,7 +549,7 @@ public sealed class VendorLicenseAmendmentPayloadBuilderTests
 
         var success = VendorLicenseAmendmentPayloadBuilder.TryBuildSupportAndUpdatePeriodExtension(
             fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
-            requestedSupportUntil, newUpdatesUntilUtc: null, issuedAt,
+            newSupportUntilUtc: requestedSupportUntil, newUpdatesUntilUtc: null, issuedAtUtc: issuedAt,
             out var amendment, out var error);
 
         Assert.True(success);
@@ -577,7 +577,7 @@ public sealed class VendorLicenseAmendmentPayloadBuilderTests
 
         var success = VendorLicenseAmendmentPayloadBuilder.TryBuildSupportAndUpdatePeriodExtension(
             fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
-            newSupportUntilUtc: null, requestedUpdatesUntil, issuedAt,
+            newSupportUntilUtc: null, newUpdatesUntilUtc: requestedUpdatesUntil, issuedAtUtc: issuedAt,
             out var amendment, out var error);
 
         Assert.True(success);
@@ -595,7 +595,7 @@ public sealed class VendorLicenseAmendmentPayloadBuilderTests
         var legacy = CreateV1Fixture();
         var success = VendorLicenseAmendmentPayloadBuilder.TryBuildSupportAndUpdatePeriodExtension(
             legacy.Payload, legacy.License, legacy.Installation, legacy.Customer,
-            IssuedAt.AddDays(60), newUpdatesUntilUtc: null, IssuedAt.AddDays(1),
+            newSupportUntilUtc: IssuedAt.AddDays(60), newUpdatesUntilUtc: null, issuedAtUtc: IssuedAt.AddDays(1),
             out var amendment, out var error);
         Assert.False(success);
         Assert.Null(amendment);
@@ -605,7 +605,7 @@ public sealed class VendorLicenseAmendmentPayloadBuilderTests
         v2.Payload = v2.Payload with { SupportUntilUtc = null };
         success = VendorLicenseAmendmentPayloadBuilder.TryBuildSupportAndUpdatePeriodExtension(
             v2.Payload, v2.License, v2.Installation, v2.Customer,
-            IssuedAt.AddDays(60), newUpdatesUntilUtc: null, IssuedAt.AddDays(1),
+            newSupportUntilUtc: IssuedAt.AddDays(60), newUpdatesUntilUtc: null, issuedAtUtc: IssuedAt.AddDays(1),
             out amendment, out error);
         Assert.False(success);
         Assert.Null(amendment);
@@ -618,7 +618,7 @@ public sealed class VendorLicenseAmendmentPayloadBuilderTests
         var fixture = CreateV2Fixture();
         var success = VendorLicenseAmendmentPayloadBuilder.TryBuildSupportAndUpdatePeriodExtension(
             fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
-            newSupportUntilUtc: null, newUpdatesUntilUtc: null, IssuedAt.AddDays(1),
+            newSupportUntilUtc: null, newUpdatesUntilUtc: null, issuedAtUtc: IssuedAt.AddDays(1),
             out var amendment, out var error);
         Assert.False(success);
         Assert.Null(amendment);
@@ -626,7 +626,7 @@ public sealed class VendorLicenseAmendmentPayloadBuilderTests
 
         success = VendorLicenseAmendmentPayloadBuilder.TryBuildSupportAndUpdatePeriodExtension(
             fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
-            fixture.Payload.SupportUntilUtc, newUpdatesUntilUtc: null, IssuedAt.AddDays(1),
+            newSupportUntilUtc: fixture.Payload.SupportUntilUtc, newUpdatesUntilUtc: null, issuedAtUtc: IssuedAt.AddDays(1),
             out amendment, out error);
         Assert.False(success);
         Assert.Null(amendment);
@@ -635,7 +635,7 @@ public sealed class VendorLicenseAmendmentPayloadBuilderTests
         fixture.Payload = fixture.Payload with { SupportUntilUtc = IssuedAt.AddDays(-2) };
         success = VendorLicenseAmendmentPayloadBuilder.TryBuildSupportAndUpdatePeriodExtension(
             fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
-            IssuedAt.AddDays(-1), newUpdatesUntilUtc: null, IssuedAt,
+            newSupportUntilUtc: IssuedAt.AddDays(-1), newUpdatesUntilUtc: null, issuedAtUtc: IssuedAt,
             out amendment, out error);
         Assert.False(success);
         Assert.Null(amendment);
@@ -646,7 +646,7 @@ public sealed class VendorLicenseAmendmentPayloadBuilderTests
         fixture.Payload = fixture.Payload with { ExpiresAtUtc = fixture.License.ValidUntilUtc };
         success = VendorLicenseAmendmentPayloadBuilder.TryBuildSupportAndUpdatePeriodExtension(
             fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
-            IssuedAt.AddDays(60), newUpdatesUntilUtc: null, IssuedAt.AddDays(1),
+            newSupportUntilUtc: IssuedAt.AddDays(60), newUpdatesUntilUtc: null, issuedAtUtc: IssuedAt.AddDays(1),
             out amendment, out error);
         Assert.False(success);
         Assert.Null(amendment);
@@ -668,7 +668,7 @@ public sealed class VendorLicenseAmendmentPayloadBuilderTests
 
         var success = VendorLicenseAmendmentPayloadBuilder.TryBuildSupportAndUpdatePeriodExtension(
             fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
-            IssuedAt.AddDays(60), newUpdatesUntilUtc: null, IssuedAt.AddDays(1),
+            newSupportUntilUtc: IssuedAt.AddDays(60), newUpdatesUntilUtc: null, issuedAtUtc: IssuedAt.AddDays(1),
             out var amendment, out var error);
 
         Assert.True(success);
