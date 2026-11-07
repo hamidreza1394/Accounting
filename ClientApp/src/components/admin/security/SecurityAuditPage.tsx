@@ -11,7 +11,7 @@ import { formatDateTime } from '../../../lib/format';
 import { eventTypeLabel, exportRangeProblem, knownEventTypes } from '../../../lib/securityEvents';
 import { dayEndUtc, dayStartUtc } from '../../../lib/time';
 import { Alert } from '../../ui/Alert';
-import { Breadcrumb } from '../../ui/Breadcrumb';
+import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
 import { Button } from '../../ui/button';
 import { DataTable, type DataTableColumn } from '../../ui/DataTable';
 import { FormField, Input } from '../../ui/FormField';
@@ -112,7 +112,7 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
         if (controller.signal.aborted || onUnauthenticated(cause)) return;
         setEventTypes({ kind: 'error', items: [] });
       });
-    return () => controller.abort();
+  return () => controller.abort();
   }, [eventTypesWanted, eventTypeAttempt, onUnauthenticated]);
 
   useEffect(() => {
@@ -330,10 +330,11 @@ export function SecurityAuditPage({ onUnauthenticated }: Props) {
   const hasFilters = applied.eventType !== '' || applied.fromUtc !== null || applied.toUtc !== null || applied.user !== null || applied.company !== null;
   const draftDirty = draft.eventType !== '' || draft.from !== '' || draft.to !== '' || draft.user !== null || draft.company !== null;
 
+  usePageBreadcrumb([{ label: 'مدیریت سیستم' }, { label: 'گزارش امنیت و سوابق' }]);
+
   return (
     <div className="space-y-5">
       <header className="space-y-2">
-        <Breadcrumb items={[{ label: 'مدیریت سیستم' }, { label: 'گزارش امنیت و سوابق' }]} />
         <h1 className="text-2xl font-extrabold tracking-tight text-title">گزارش امنیت و سوابق</h1>
         <p className="text-sm text-sub">
           رویدادهای ثبت‌شدهٔ امنیتی و تغییر دسترسی در کل سامانه. نشانی IP و محتوای جزئی رویدادها عمداً نمایش داده نمی‌شود.

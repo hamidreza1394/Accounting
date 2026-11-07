@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ApiError } from '@/api/client';
 import { Alert } from '@/components/ui/Alert';
-import { Breadcrumb } from '@/components/ui/Breadcrumb';
+import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
 import { Button } from '@/components/ui/button';
 import { FormField, Input } from '@/components/ui/FormField';
 import { FormSection } from '@/components/ui/FormSection';
@@ -43,7 +43,7 @@ export function HrEmployeeCreatePage({ onUnauthenticated, companyId }: Props) {
       event.preventDefault();
     };
     window.addEventListener('beforeunload', beforeUnload);
-    return () => window.removeEventListener('beforeunload', beforeUnload);
+  return () => window.removeEventListener('beforeunload', beforeUnload);
   }, [dirty]);
 
   const submit = async () => {
@@ -69,10 +69,11 @@ export function HrEmployeeCreatePage({ onUnauthenticated, companyId }: Props) {
     }
   };
 
+  usePageBreadcrumb([{ label: 'منابع انسانی' }, { label: 'کارکنان', to: '/hr/org/employees' }, { label: 'کارمند جدید' }]);
+
   return (
     <div className="space-y-5">
       <header className="space-y-2">
-        <Breadcrumb items={[{ label: 'منابع انسانی' }, { label: 'کارکنان', to: '/hr/org/employees' }, { label: 'کارمند جدید' }]} />
         <h1 className="text-2xl font-extrabold tracking-tight text-title">ثبت کارمند</h1>
         <p className="text-sm text-sub">
           شماره پرسنلی در این شرکت یکتاست و پس از ثبت تغییر نمی‌کند. ثبت کارمند نیازی به ساخت حساب کاربری ندارد.

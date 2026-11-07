@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ApiError } from '@/api/client';
 import { Alert } from '@/components/ui/Alert';
-import { Breadcrumb } from '@/components/ui/Breadcrumb';
+import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
+import type { BreadcrumbItem } from '@/components/ui/Breadcrumb';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
@@ -118,10 +119,11 @@ export function HrEmployeeDetailPage({ onUnauthenticated, companyId }: Props) {
     [],
   );
 
+  const crumbs: BreadcrumbItem[] = [{ label: 'منابع انسانی' }, { label: 'کارکنان', to: '/hr/org/employees' }, { label: employee ? `${employee.firstName} ${employee.lastName}` : 'پروندهٔ کارمند' }];
+  usePageBreadcrumb(crumbs);
   if (loading) {
     return (
       <div className="space-y-4">
-        <Breadcrumb items={[{ label: 'منابع انسانی' }, { label: 'کارکنان', to: '/hr/org/employees' }, { label: 'پروندهٔ کارمند' }]} />
         <p role="status" className="rounded-xl border border-line bg-white p-5 text-sub">
           در حال بارگذاری…
         </p>
@@ -132,7 +134,6 @@ export function HrEmployeeDetailPage({ onUnauthenticated, companyId }: Props) {
   if (failure || employee === null) {
     return (
       <div className="space-y-4">
-        <Breadcrumb items={[{ label: 'منابع انسانی' }, { label: 'کارکنان', to: '/hr/org/employees' }, { label: 'پروندهٔ کارمند' }]} />
         <div role="alert" className="rounded-xl border border-line bg-white p-6 text-center">
           <p className="text-lg font-bold text-ink">یافت نشد یا دسترسی ندارید</p>
           <p className="mt-2 text-sm text-sub">{failure?.message}</p>
@@ -150,7 +151,6 @@ export function HrEmployeeDetailPage({ onUnauthenticated, companyId }: Props) {
   return (
     <div className="space-y-5">
       <header className="space-y-2">
-        <Breadcrumb items={[{ label: 'منابع انسانی' }, { label: 'کارکنان', to: '/hr/org/employees' }, { label: fullName }]} />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-extrabold tracking-tight text-title">{fullName}</h1>

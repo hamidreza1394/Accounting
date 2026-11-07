@@ -5,7 +5,7 @@ import { diffCodes } from '../../../lib/permissionTree';
 import { Link, useDocumentTitle, useNavigate, useParams, useSearchParams } from '../../../lib/router';
 import { ErrorState, LoadingState } from '../../Feedback';
 import { Alert } from '../../ui/Alert';
-import { Breadcrumb } from '../../ui/Breadcrumb';
+import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { FormField, Input } from '../../ui/FormField';
 import { FormSection } from '../../ui/FormSection';
@@ -375,6 +375,7 @@ export function RoleDetailPage({ onUnauthenticated, defaultCompanyId, can = deny
     </Link>
   );
 
+  usePageBreadcrumb([{ label: 'مدیریت سیستم' }, { label: 'گروه‌های دسترسی', to: listPath }, { label: role?.name ?? 'جزئیات گروه' }]);
   let body: ReactNode;
   if (state.kind === 'loading' || catalogState.kind === 'loading') {
     body = <LoadingState label="در حال دریافت گروه دسترسی…" />;
@@ -453,7 +454,6 @@ export function RoleDetailPage({ onUnauthenticated, defaultCompanyId, can = deny
   return (
     <div className="space-y-5">
       <header className="space-y-2">
-        <Breadcrumb items={[{ label: 'مدیریت سیستم' }, { label: 'گروه‌های دسترسی', to: listPath }, { label: role?.name ?? 'جزئیات گروه' }]} />
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-extrabold tracking-tight text-title">{role ? role.name : 'جزئیات گروه دسترسی'}</h1>
           {role ? (

@@ -5,7 +5,7 @@ import { formatDate, formatDateTime } from '../../../lib/format';
 import { buttonVariants } from '../../ui/button';
 import { Link, useDocumentTitle, useParams } from '../../../lib/router';
 import { EmptyState, ErrorState, LoadingState } from '../../Feedback';
-import { Breadcrumb } from '../../ui/Breadcrumb';
+import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
 import { DataTable, type DataTableColumn } from '../../ui/DataTable';
 import { StatusBadge } from '../../ui/StatusBadge';
 import { Tabs } from '../../ui/Tabs';
@@ -151,6 +151,7 @@ export function UserDetailPage({ onUnauthenticated, canUpdate = false }: Props) 
   useDocumentTitle(state.kind === 'ready' ? name : null);
   const crumbs = [{ label: 'مدیریت سیستم' }, { label: 'کاربران', to: '/admin/users' }, { label: name }];
 
+  usePageBreadcrumb(crumbs);
   let body: ReactNode;
   if (state.kind === 'loading') {
     body = (
@@ -203,7 +204,6 @@ export function UserDetailPage({ onUnauthenticated, canUpdate = false }: Props) 
 
   return (
     <div className="space-y-5">
-      <Breadcrumb items={crumbs} />
       {/* The live region exists from the first render; its text is added later, so it is announced. */}
       <div aria-live="polite">
         {flash && state.kind === 'ready' ? (

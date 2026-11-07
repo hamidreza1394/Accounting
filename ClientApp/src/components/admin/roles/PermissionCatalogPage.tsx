@@ -5,7 +5,7 @@ import type { PermissionCatalogItem } from '../../../api/types';
 import { filterPermissions, operationLabels, operationOf, subsystemLabel } from '../../../lib/permissionTree';
 import { useSearchParams } from '../../../lib/router';
 import { Badge } from '../../ui/Badge';
-import { Breadcrumb } from '../../ui/Breadcrumb';
+import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
 import { DataTable, type DataTableColumn } from '../../ui/DataTable';
 import { FormField, Input, Select } from '../../ui/FormField';
 import { Button } from '../../ui/button';
@@ -118,7 +118,7 @@ export function PermissionCatalogPage({ onUnauthenticated }: Props) {
     const trimmed = searchInput.trim();
     if (trimmed === q) return;
     const timer = window.setTimeout(() => writeRef.current({ q: trimmed }, true), searchDebounceMs);
-    return () => window.clearTimeout(timer);
+  return () => window.clearTimeout(timer);
   }, [searchInput, q, params]);
 
   // Back/forward restores the search box; typing made by this page is kept.
@@ -156,10 +156,11 @@ export function PermissionCatalogPage({ onUnauthenticated }: Props) {
   );
   const hasFilters = q !== '' || subsystem !== '' || searchInput.trim() !== '';
 
+  usePageBreadcrumb([{ label: 'مدیریت سیستم' }, { label: 'کاتالوگ مجوزها' }]);
+
   return (
     <div className="space-y-5">
       <header className="space-y-2">
-        <Breadcrumb items={[{ label: 'مدیریت سیستم' }, { label: 'کاتالوگ مجوزها' }]} />
         <h1 className="text-2xl font-extrabold tracking-tight text-title">کاتالوگ مجوزها</h1>
         <p className="text-sm text-sub">
           فهرست مجوزهای ثبت‌شده در سامانه. این فهرست فقط‌خواندنی است و مجوزها را سامانه تعریف می‌کند؛ تخصیص مجوز از صفحهٔ «گروه‌های دسترسی» انجام می‌شود. ستون «نوع عملیات» از آخرین بخش کد استنباط می‌شود و فقط برای خوانایی است.

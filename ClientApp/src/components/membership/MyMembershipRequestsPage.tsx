@@ -3,7 +3,7 @@ import { ApiError, getMyMembershipRequests } from '../../api/client';
 import type { MembershipRequestPage, MyMembershipRequest } from '../../api/types';
 import { formatDateTime } from '../../lib/format';
 import { Alert } from '../ui/Alert';
-import { Breadcrumb } from '../ui/Breadcrumb';
+import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
 import { DataTable, type DataTableColumn } from '../ui/DataTable';
 import { CreateMembershipRequest } from './CreateMembershipRequest';
 import { MembershipRequestStatusBadge } from './membershipStatus';
@@ -50,7 +50,7 @@ export function MyMembershipRequestsPage({ onUnauthenticated }: Props) {
         setError(describe(cause));
         setLoading(false);
       });
-    return () => controller.abort();
+  return () => controller.abort();
   }, [page, pageSize, attempt, onUnauthenticated]);
 
   const columns = useMemo<readonly DataTableColumn<MyMembershipRequest>[]>(
@@ -65,10 +65,11 @@ export function MyMembershipRequestsPage({ onUnauthenticated }: Props) {
     [],
   );
 
+  usePageBreadcrumb([{ label: 'حساب کاربری' }, { label: 'درخواست‌های عضویت من' }]);
+
   return (
     <div className="space-y-5">
       <header className="space-y-2">
-        <Breadcrumb items={[{ label: 'حساب کاربری' }, { label: 'درخواست‌های عضویت من' }]} />
         <h1 className="text-2xl font-extrabold tracking-tight text-title">درخواست‌های عضویت من</h1>
         <p className="text-sm text-sub">
           وضعیت درخواست‌هایی که برای عضویت در شرکت‌های دیگر ثبت کرده‌اید.

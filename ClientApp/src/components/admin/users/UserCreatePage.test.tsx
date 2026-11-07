@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { RouteView, RouterProvider, type Route } from '../../../lib/router';
+import { PageBreadcrumbBar, PageBreadcrumbProvider } from '@/components/shell/PageBreadcrumb';
 import { json, stubApi, userDetails } from '../../../test/adminUsers';
 import { UserCreatePage } from './UserCreatePage';
 import { UserDetailPage } from './UserDetailPage';
@@ -18,7 +19,10 @@ function setup() {
   window.history.pushState(null, '', '/app/admin/users/new');
   return render(
     <RouterProvider routes={routes}>
-      <RouteView />
+      <PageBreadcrumbProvider fallback={[{ label: 'ایجاد کاربر' }]}>
+        <RouteView />
+        <PageBreadcrumbBar />
+      </PageBreadcrumbProvider>
     </RouterProvider>,
   );
 }

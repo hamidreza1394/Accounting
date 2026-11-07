@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ApiError } from '@/api/client';
-import { Breadcrumb } from '@/components/ui/Breadcrumb';
+import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { FormField, Input } from '@/components/ui/FormField';
 import { buttonVariants } from '@/components/ui/button';
@@ -43,7 +43,7 @@ export function HrPositionsPage({ onUnauthenticated, companyId }: Props) {
       setPage(1);
       setSearch(searchText);
     }, searchDelayMs);
-    return () => window.clearTimeout(timer);
+  return () => window.clearTimeout(timer);
   }, [searchText, search]);
 
   useEffect(() => {
@@ -97,10 +97,11 @@ export function HrPositionsPage({ onUnauthenticated, companyId }: Props) {
 
   const forbidden = failure?.status === 403 || failure?.status === 404;
 
+  usePageBreadcrumb([{ label: 'منابع انسانی' }, { label: 'سمت‌های سازمانی' }]);
+
   return (
     <div className="space-y-5">
       <header className="space-y-2">
-        <Breadcrumb items={[{ label: 'منابع انسانی' }, { label: 'سمت‌های سازمانی' }]} />
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-2xl font-extrabold tracking-tight text-title">سمت‌های سازمانی</h1>

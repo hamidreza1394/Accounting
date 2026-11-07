@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { createAdminUser } from '../../../api/client';
 import { useNavigate } from '../../../lib/router';
-import { Breadcrumb } from '../../ui/Breadcrumb';
+import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
 import { UserForm } from './UserFormFields';
 import { clearUserFlash, setUserFlash } from './userFlash';
 import { emptyUserForm, toCreateRequest } from './userFormValidation';
@@ -14,10 +14,10 @@ export function UserCreatePage({ onUnauthenticated }: Props) {
   useEffect(() => {
     clearUserFlash();
   }, []);
+  usePageBreadcrumb([{ label: 'مدیریت سیستم' }, { label: 'کاربران', to: '/admin/users' }, { label: 'ایجاد کاربر' }]);
   return (
     <div className="space-y-5">
       <header className="space-y-2">
-        <Breadcrumb items={[{ label: 'مدیریت سیستم' }, { label: 'کاربران', to: '/admin/users' }, { label: 'ایجاد کاربر' }]} />
         <h1 className="text-2xl font-extrabold tracking-tight text-title">ایجاد کاربر</h1>
         <p className="text-sm text-sub">یک حساب کاربری جدید برای این نصب بسازید. عضویت در شرکت‌ها پس از ایجاد حساب تعیین می‌شود.</p>
       </header>

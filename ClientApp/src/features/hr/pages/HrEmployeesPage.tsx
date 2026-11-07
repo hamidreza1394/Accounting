@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ApiError } from '@/api/client';
-import { Breadcrumb } from '@/components/ui/Breadcrumb';
+import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { FormField, Input, Select } from '@/components/ui/FormField';
 import { buttonVariants } from '@/components/ui/button';
@@ -60,7 +60,7 @@ export function HrEmployeesPage({ onUnauthenticated, companyId }: Props) {
       setPage(1);
       setSearch(searchText);
     }, searchDelayMs);
-    return () => window.clearTimeout(timer);
+  return () => window.clearTimeout(timer);
   }, [searchText, search]);
 
   // The unit filter comes from the real tree of THIS company (active units only).
@@ -162,10 +162,11 @@ export function HrEmployeesPage({ onUnauthenticated, companyId }: Props) {
   const forbidden = failure?.status === 403 || failure?.status === 404;
   const filtered = search !== '' || status !== 'all' || unitId !== '';
 
+  usePageBreadcrumb([{ label: 'منابع انسانی' }, { label: 'کارکنان' }]);
+
   return (
     <div className="space-y-5">
       <header className="space-y-2">
-        <Breadcrumb items={[{ label: 'منابع انسانی' }, { label: 'کارکنان' }]} />
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-2xl font-extrabold tracking-tight text-title">کارکنان</h1>

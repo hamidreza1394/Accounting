@@ -4,7 +4,7 @@ import { ApiError, getAdminUsers, type AdminUserQuery } from '../../../api/clien
 import type { AdminUserListItem, AdminUserListResponse } from '../../../api/types';
 import { formatDate, formatDateTime } from '../../../lib/format';
 import { Link, useSearchParams } from '../../../lib/router';
-import { Breadcrumb } from '../../ui/Breadcrumb';
+import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
 import { DataTable, type DataTableColumn, type SortState } from '../../ui/DataTable';
 import { Input, Select, FormField } from '../../ui/FormField';
 import { StatusBadge } from '../../ui/StatusBadge';
@@ -128,7 +128,7 @@ export function UsersListPage({ onUnauthenticated, canCreate = false }: Props) {
     const trimmed = searchInput.trim();
     if (trimmed === queryRef.current.search) return;
     const timer = window.setTimeout(() => update({ search: trimmed }, { replace: true }), searchDebounceMs);
-    return () => window.clearTimeout(timer);
+  return () => window.clearTimeout(timer);
   }, [searchInput, update, params]);
 
   // Back/forward: the box shows the restored search and unsent typing is dropped. Changes made by
@@ -183,10 +183,11 @@ export function UsersListPage({ onUnauthenticated, canCreate = false }: Props) {
   };
   const sort: SortState = { key: query.sort, direction: query.descending ? 'desc' : 'asc' };
 
+  usePageBreadcrumb([{ label: 'مدیریت سیستم' }, { label: 'کاربران' }]);
+
   return (
     <div className="space-y-5">
       <header className="space-y-2">
-        <Breadcrumb items={[{ label: 'مدیریت سیستم' }, { label: 'کاربران' }]} />
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 space-y-2">
             <h1 className="text-2xl font-extrabold tracking-tight text-title">مدیریت کاربران</h1>

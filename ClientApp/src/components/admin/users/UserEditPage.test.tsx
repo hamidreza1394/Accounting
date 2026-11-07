@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { RouteView, RouterProvider, type Route } from '../../../lib/router';
+import { PageBreadcrumbBar, PageBreadcrumbProvider } from '@/components/shell/PageBreadcrumb';
 import { json, stubApi, userDetails, type ApiCall } from '../../../test/adminUsers';
 import { UserDetailPage } from './UserDetailPage';
 import { UserEditPage } from './UserEditPage';
@@ -18,7 +19,10 @@ function setup(id = 'user-2') {
   window.history.pushState(null, '', `/app/admin/users/${id}/edit`);
   return render(
     <RouterProvider routes={routes}>
-      <RouteView />
+      <PageBreadcrumbProvider fallback={[{ label: 'ویرایش' }]}>
+        <RouteView />
+        <PageBreadcrumbBar />
+      </PageBreadcrumbProvider>
     </RouterProvider>,
   );
 }
@@ -55,8 +59,9 @@ describe('UserEditPage', () => {
     expect(mobile()).toHaveValue('09120000002');
     expect(active()).toBeChecked();
     expect(screen.queryByLabelText(/رمز عبور/)).toBeNull();
-    const crumbs = within(screen.getByRole('navigation', { name: 'مسیر صفحه' }));
-    expect(crumbs.getByRole('link', { name: 'نام2 خانوادگی2' })).toHaveAttribute('href', '/app/admin/users/user-2');
+    // The shell bar receives the page declaration in an effect right after the record loads.
+    const crumbs = within(await screen.findByRole('navigation', { name: 'مسیر صفحه' }));
+    expect(await crumbs.findByRole('link', { name: 'نام2 خانوادگی2' })).toHaveAttribute('href', '/app/admin/users/user-2');
     expect(crumbs.getByText('ویرایش')).toHaveAttribute('aria-current', 'page');
     await waitFor(() => expect(document.title).toBe('ویرایش نام2 خانوادگی2 | فرانو'));
   });

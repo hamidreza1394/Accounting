@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ApiError } from '@/api/client';
 import { Alert } from '@/components/ui/Alert';
-import { Breadcrumb } from '@/components/ui/Breadcrumb';
+import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
+import type { BreadcrumbItem } from '@/components/ui/Breadcrumb';
 import { Button } from '@/components/ui/button';
 import { FormField, Input, Select } from '@/components/ui/FormField';
 import { FormSection } from '@/components/ui/FormSection';
@@ -113,10 +114,15 @@ export function HrEmployeeEditPage({ onUnauthenticated, companyId }: Props) {
     }
   };
 
+  const crumbs: BreadcrumbItem[] = [
+    { label: 'منابع انسانی' },
+    { label: 'کارکنان', to: '/hr/org/employees' },
+    employee ? { label: `${employee.firstName} ${employee.lastName}`, to: `/hr/org/employees/${employee.id}` } : { label: 'ویرایش' },
+  ];
+  usePageBreadcrumb(crumbs);
   if (loading) {
     return (
       <div className="space-y-4">
-        <Breadcrumb items={[{ label: 'منابع انسانی' }, { label: 'کارکنان', to: '/hr/org/employees' }, { label: 'ویرایش' }]} />
         <p role="status" className="rounded-xl border border-line bg-white p-5 text-sub">
           در حال بارگذاری…
         </p>
@@ -127,7 +133,6 @@ export function HrEmployeeEditPage({ onUnauthenticated, companyId }: Props) {
   if (failure || employee === null) {
     return (
       <div className="space-y-4">
-        <Breadcrumb items={[{ label: 'منابع انسانی' }, { label: 'کارکنان', to: '/hr/org/employees' }, { label: 'ویرایش' }]} />
         <div role="alert" className="rounded-xl border border-line bg-white p-6 text-center">
           <p className="text-lg font-bold text-ink">یافت نشد یا دسترسی ندارید</p>
           <p className="mt-2 text-sm text-sub">{failure?.message}</p>
@@ -150,14 +155,6 @@ export function HrEmployeeEditPage({ onUnauthenticated, companyId }: Props) {
   return (
     <div className="space-y-5">
       <header className="space-y-2">
-        <Breadcrumb
-          items={[
-            { label: 'منابع انسانی' },
-            { label: 'کارکنان', to: '/hr/org/employees' },
-            { label: `${employee.firstName} ${employee.lastName}`, to: `/hr/org/employees/${employee.id}` },
-            { label: 'ویرایش' },
-          ]}
-        />
         <h1 className="text-2xl font-extrabold tracking-tight text-title">ویرایش کارمند</h1>
         <p className="text-sm text-sub">
           شماره پرسنلی <code dir="ltr">{employee.employeeNumber}</code> پس از ثبت تغییرنکردنی است.
