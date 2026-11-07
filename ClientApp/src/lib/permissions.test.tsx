@@ -113,8 +113,14 @@ describe('HR hints (company-scoped list codes)', () => {
 
   it.each([
     ['hr.units.view', 'hr.organizational-units.list'],
+    ['hr.units.create', 'hr.organizational-units.create'],
+    ['hr.units.update', 'hr.organizational-units.update'],
     ['hr.positions.view', 'hr.positions.list'],
+    ['hr.positions.create', 'hr.positions.create'],
+    ['hr.positions.update', 'hr.positions.update'],
     ['hr.employees.view', 'hr.employees.list'],
+    ['hr.employees.create', 'hr.employees.create'],
+    ['hr.employees.update', 'hr.employees.update'],
   ] as const)('%s is granted only by %s', (permission, code) => {
     expect(can(ready([code]), permission)).toBe(true);
     expect(can(ready([]), permission)).toBe(false);
@@ -125,11 +131,18 @@ describe('HR hints (company-scoped list codes)', () => {
     const access = ready(['hr.employees.list']);
     expect(can(access, 'hr.units.view')).toBe(false);
     expect(can(access, 'hr.positions.view')).toBe(false);
+    expect(can(access, 'hr.units.create')).toBe(false);
+    expect(can(access, 'hr.employees.update')).toBe(false);
   });
 
-  it('grants every HR hint to a ready installation administrator, like the server', () => {
+  it('grants every HR hint — list, create and update — to a ready installation administrator, like the server', () => {
     const access = ready([], { isInstallationAdministrator: true });
-    expect(can(access, 'hr.units.view') && can(access, 'hr.positions.view') && can(access, 'hr.employees.view')).toBe(true);
+    const hints = [
+      'hr.units.view', 'hr.units.create', 'hr.units.update',
+      'hr.positions.view', 'hr.positions.create', 'hr.positions.update',
+      'hr.employees.view', 'hr.employees.create', 'hr.employees.update',
+    ] as const;
+    expect(hints.every((hint) => can(access, hint))).toBe(true);
   });
 
   it('grants nothing while loading, after an error, or for another company', () => {

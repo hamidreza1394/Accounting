@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { stubApi } from '@/test/api';
 import { antiforgeryRoute, companyId, employeeId, positionDetail, positionId, positionItem, positionListResponse } from '../test/hrFixtures';
-import { hrPermissionRoute, renderHrPage } from '../test/hrTestUtils';
+import { hrInstallationAdminPermissionRoute, hrPermissionRoute, renderHrPage } from '../test/hrTestUtils';
 import { HrPositionsPage } from './HrPositionsPage';
 import { HrPositionCreatePage } from './HrPositionCreatePage';
 import { HrPositionDetailPage } from './HrPositionDetailPage';
@@ -54,6 +54,19 @@ describe('HrPositionsPage', () => {
     expect(table).toHaveTextContent('حسابدار');
     expect(table).toHaveTextContent('ACC');
     expect(table).toHaveTextContent('۲');
+  });
+
+  it('shows the create action to the installation administrator without any company code (Issue #444 stage 1)', async () => {
+    stubApi({
+      [`GET ${positionsPath}?page=1&pageSize=25`]: { status: 200, body: positionListResponse([]) },
+      'GET /api/v1/me/permissions': hrInstallationAdminPermissionRoute(),
+    } as never);
+    renderHrPage(
+      <HrPositionsPage onUnauthenticated={onUnauthenticated} companyId={companyId} />,
+      { path: '/hr/org/positions', title: 'سمت‌ها' },
+      '/hr/org/positions',
+    );
+    expect(await screen.findByRole('link', { name: 'سمت جدید' })).toBeInTheDocument();
   });
 
   it('states that a position is not a security role', async () => {

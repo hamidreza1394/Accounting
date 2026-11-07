@@ -9,6 +9,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { Tabs } from '@/components/ui/Tabs';
 import { Link, useDocumentTitle, useParams } from '@/lib/router';
 import { useCompanyPermissions } from '@/lib/useCompanyPermissions';
+import { can } from '@/lib/permissions';
 import { deactivateHrEmployee, getHrEmployee, listHrAssignments } from '../api/hrClient';
 import type { HrAssignmentItem, HrEmployeeDetail } from '../api/hrTypes';
 import { formatHrInstant } from '../lib/hrFormat';
@@ -33,8 +34,10 @@ const assignmentPageSizes = [10, 25, 50] as const;
  */
 export function HrEmployeeDetailPage({ onUnauthenticated, companyId }: Props) {
   const { employeeId } = useParams();
-  const { codes } = useCompanyPermissions(companyId, onUnauthenticated);
-  const canUpdate = codes.includes('hr.employees.update');
+  const { access } = useCompanyPermissions(companyId, onUnauthenticated);
+  // The standard hint (Issue #444 stage 1): a ready installation administrator passes without a
+  // company code — the same dual-mode rule the server enforces for every `hr.*` operation.
+  const canUpdate = can(access, 'hr.employees.update');
 
   const [employee, setEmployee] = useState<HrEmployeeDetail | null>(null);
   const [loading, setLoading] = useState(true);

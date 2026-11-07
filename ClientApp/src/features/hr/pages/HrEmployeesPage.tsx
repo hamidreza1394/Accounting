@@ -5,6 +5,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { FormField, Input, Select } from '@/components/ui/FormField';
 import { buttonVariants } from '@/components/ui/button';
 import { Link } from '@/lib/router';
+import { can } from '@/lib/permissions';
 import { useCompanyPermissions } from '@/lib/useCompanyPermissions';
 import { listHrEmployees, getHrUnitTree } from '../api/hrClient';
 import type { HrEmployeeListItem, HrUnitTreeNode } from '../api/hrTypes';
@@ -39,8 +40,10 @@ function unitFilterOptions(roots: readonly HrUnitTreeNode[], depth = 0, out: { k
  * account appear exactly like everyone else — a login is optional (D-072).
  */
 export function HrEmployeesPage({ onUnauthenticated, companyId }: Props) {
-  const { codes } = useCompanyPermissions(companyId, onUnauthenticated);
-  const canCreate = codes.includes('hr.employees.create');
+  const { access } = useCompanyPermissions(companyId, onUnauthenticated);
+  // The standard hint (Issue #444 stage 1): a ready installation administrator passes without a
+  // company code — the same dual-mode rule the server enforces for every `hr.*` operation.
+  const canCreate = can(access, 'hr.employees.create');
 
   const [searchText, setSearchText] = useState('');
   const [search, setSearch] = useState('');

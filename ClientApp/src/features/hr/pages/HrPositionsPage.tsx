@@ -5,6 +5,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { FormField, Input } from '@/components/ui/FormField';
 import { buttonVariants } from '@/components/ui/button';
 import { Link } from '@/lib/router';
+import { can } from '@/lib/permissions';
 import { useCompanyPermissions } from '@/lib/useCompanyPermissions';
 import { listHrPositions } from '../api/hrClient';
 import type { HrPositionItem } from '../api/hrTypes';
@@ -25,8 +26,10 @@ const persianNumber = new Intl.NumberFormat('fa-IR');
  * explicitly so no one confuses the two concepts.
  */
 export function HrPositionsPage({ onUnauthenticated, companyId }: Props) {
-  const { codes } = useCompanyPermissions(companyId, onUnauthenticated);
-  const canCreate = codes.includes('hr.positions.create');
+  const { access } = useCompanyPermissions(companyId, onUnauthenticated);
+  // The standard hint (Issue #444 stage 1): a ready installation administrator passes without a
+  // company code — the same dual-mode rule the server enforces for every `hr.*` operation.
+  const canCreate = can(access, 'hr.positions.create');
 
   const [searchText, setSearchText] = useState('');
   const [search, setSearch] = useState('');

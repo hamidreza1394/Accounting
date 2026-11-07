@@ -10,6 +10,7 @@ import { FormField, Input, Select, Textarea } from '@/components/ui/FormField';
 import { FormSection } from '@/components/ui/FormSection';
 import { useDocumentTitle, useNavigate, useParams } from '@/lib/router';
 import { useCompanyPermissions } from '@/lib/useCompanyPermissions';
+import { can } from '@/lib/permissions';
 import { formatHrInstant } from '../lib/hrFormat';
 import { deactivateHrPosition, getHrPosition, listHrPositionEmployees, updateHrPosition } from '../api/hrClient';
 import type { HrPositionDetail, HrPositionEmployeeItem } from '../api/hrTypes';
@@ -33,8 +34,10 @@ type EditState = { name: string; description: string; rank: string; isActive: bo
 export function HrPositionDetailPage({ onUnauthenticated, companyId }: Props) {
   const { positionId } = useParams();
   const navigate = useNavigate();
-  const { codes } = useCompanyPermissions(companyId, onUnauthenticated);
-  const canUpdate = codes.includes('hr.positions.update');
+  const { access } = useCompanyPermissions(companyId, onUnauthenticated);
+  // The standard hint (Issue #444 stage 1): a ready installation administrator passes without a
+  // company code — the same dual-mode rule the server enforces for every `hr.*` operation.
+  const canUpdate = can(access, 'hr.positions.update');
 
   const [position, setPosition] = useState<HrPositionDetail | null>(null);
   const [loading, setLoading] = useState(true);

@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { ArrowRight } from 'lucide-react';
 import { ApiError, getAdminUser } from '../../../api/client';
 import type { AdminUserDetails, AdminUserMembership } from '../../../api/types';
 import { formatDate, formatDateTime } from '../../../lib/format';
@@ -10,6 +11,7 @@ import { DataTable, type DataTableColumn } from '../../ui/DataTable';
 import { StatusBadge } from '../../ui/StatusBadge';
 import { Tabs } from '../../ui/Tabs';
 import { fullName } from './userDisplay';
+import { userListBackPath } from './userListReturn';
 import { clearUserFlash, peekUserFlash, userFlashText } from './userFlash';
 
 type Props = {
@@ -25,11 +27,23 @@ type State =
 
 const pageHeading = <h1 className="text-2xl font-extrabold tracking-tight text-title">اطلاعات کاربر</h1>;
 
-const backToList = (
-  <Link to="/admin/users" className="mt-3 inline-block rounded font-medium text-teal-deep underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-gold">
-    بازگشت به فهرست کاربران
-  </Link>
-);
+/**
+ * The back affordance, present in every state (loading, error, ready) directly under the
+ * breadcrumb. It returns to the list as this visit left it — search, filters and paging —
+ * remembered in memory by the list page itself (see `userListReturn.ts`); a fresh load falls
+ * back to the plain list.
+ */
+function BackToList() {
+  return (
+    <Link
+      to={userListBackPath()}
+      className="inline-flex items-center gap-1.5 rounded font-medium text-teal-deep underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-gold"
+    >
+      <ArrowRight size={16} aria-hidden="true" />
+      بازگشت به فهرست کاربران
+    </Link>
+  );
+}
 
 function Info({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -174,7 +188,6 @@ export function UserDetailPage({ onUnauthenticated, canUpdate = false }: Props) 
         ) : (
           <ErrorState message={state.message} onRetry={() => setAttempt((value) => value + 1)} />
         )}
-        {backToList}
       </div>
     );
   } else {
@@ -204,6 +217,7 @@ export function UserDetailPage({ onUnauthenticated, canUpdate = false }: Props) 
 
   return (
     <div className="space-y-5">
+      <BackToList />
       {/* The live region exists from the first render; its text is added later, so it is announced. */}
       <div aria-live="polite">
         {flash && state.kind === 'ready' ? (

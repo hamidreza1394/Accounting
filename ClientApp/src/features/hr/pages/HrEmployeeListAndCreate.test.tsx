@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { stubApi } from '@/test/api';
 import { antiforgeryRoute, companyId, employeeId, employeeListResponse, unitId, unitTreeNode } from '../test/hrFixtures';
-import { hrPermissionRoute, renderHrPage } from '../test/hrTestUtils';
+import { hrInstallationAdminPermissionRoute, hrPermissionRoute, renderHrPage } from '../test/hrTestUtils';
 import { HrEmployeesPage } from './HrEmployeesPage';
 import { HrEmployeeCreatePage } from './HrEmployeeCreatePage';
 
@@ -76,6 +76,20 @@ describe('HrEmployeesPage', () => {
     await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).includes('search='))).toBe(true));
     await user.selectOptions(screen.getByLabelText('وضعیت اشتغال'), '3');
     await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).includes('status=3'))).toBe(true));
+  });
+
+  it('shows the create action to the installation administrator without any company code (Issue #444 stage 1)', async () => {
+    stubApi({
+      [`GET ${employeesPath}?page=1&pageSize=25`]: { status: 200, body: employeeListResponse([]) },
+      [`GET ${treePath}`]: { status: 200, body: { roots: [] } },
+      'GET /api/v1/me/permissions': hrInstallationAdminPermissionRoute(),
+    } as never);
+    renderHrPage(
+      <HrEmployeesPage onUnauthenticated={onUnauthenticated} companyId={companyId} />,
+      { path: '/hr/org/employees', title: 'کارکنان' },
+      '/hr/org/employees',
+    );
+    expect(await screen.findByRole('link', { name: 'کارمند جدید' })).toBeInTheDocument();
   });
 
   it('shows the access-denied panel on 403 without the table', async () => {

@@ -5,6 +5,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { FormField, Input, Select } from '@/components/ui/FormField';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Link } from '@/lib/router';
+import { can } from '@/lib/permissions';
 import { formatHrInstant } from '../lib/hrFormat';
 import { useCompanyPermissions } from '@/lib/useCompanyPermissions';
 import { getHrUnitTree, listHrUnits } from '../api/hrClient';
@@ -28,8 +29,10 @@ type ViewMode = 'tree' | 'flat';
  * `hr.organizational-units.create` (the server stays authoritative).
  */
 export function HrUnitsPage({ onUnauthenticated, companyId }: Props) {
-  const { codes } = useCompanyPermissions(companyId, onUnauthenticated);
-  const canCreate = codes.includes('hr.organizational-units.create');
+  const { access } = useCompanyPermissions(companyId, onUnauthenticated);
+  // The standard hint (Issue #444 stage 1): a ready installation administrator passes without a
+  // company code — the same dual-mode rule the server enforces for every `hr.*` operation.
+  const canCreate = can(access, 'hr.units.create');
 
   const [view, setView] = useState<ViewMode>('tree');
   const [searchText, setSearchText] = useState('');
