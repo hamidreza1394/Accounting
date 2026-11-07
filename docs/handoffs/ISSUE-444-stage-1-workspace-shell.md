@@ -227,3 +227,13 @@ Backend هیچ تغییری در ۶ PR نداشت؛ nevertheless بیلد Releas
 
 - هیچ ADR جدیدی لازم نشد؛ D-011، D-031، D-048/D-049، D-064، D-071، D-072 و D-074 رعایت شدند.
 - وابستگی نهایی PRها: #566 و #567 مستقل از main؛ #568→#569→#570→#571 به‌صورت stacked؛ پس از ادغام همه، هیچ شاخهٔ باقی‌مانده‌ای برای این مرحله وجود ندارد.
+
+## تکمیل مأموریت تکمیلی مرحله اول (2026-11-08)
+
+با ایجاد سه PR زیر، نواقص مرحله اول تکمیل و این Handoff «تکمیل‌شده» اعلام می‌شود:
+
+- PR 1-A — اصلاح همین سند با تاریخچه ادغام واقعی: [#572](https://github.com/hamidreza1394/Accounting/pull/572)
+- PR 1-B — انتشار لینک‌های مستقیم تصاویر پیش‌نمایش: [#573](https://github.com/hamidreza1394/Accounting/pull/573)
+- PR 1-C — تکمیل تست بصری/Responsive و بستن WARN معلق Tooltip: [#574](https://github.com/hamidreza1394/Accounting/pull/574) (سند: `docs/handoffs/ISSUE-444-stage-1-responsive-checks.md`)
+
+هیچ‌کدام Merge نشده‌اند؛ ادغام فقط با اجازهٔ مالک انجام می‌شود.
