@@ -2679,6 +2679,13 @@
 - **تست محلی:** vitest نهایی **824/824** (+۳۴)، typecheck و build سبز، `check:offline` و `check_static_assets` سبز؛ هیچ تغییری در Backend/Migration/کاتالوگ مجوز. بررسی مرورگر واقعی (Chromium، 1440/768/360) با تصاویر قبل/بعد پوسته.
 - **مستندات:** `docs/UI_COMPONENTS.md` (سه بخش پوسته/چندتب/Dirty)، handoff: `docs/handoffs/ISSUE-444-stage-1-workspace-shell.md`. Merge فقط با اجازهٔ صریح مالک؛ وضعیت CI هر PR در handoff و گزارش مأموریت ثبت می‌شود.
 
+## 2026-11-08 — Issue #444 Stage 2-A: کاتالوگ رسمی زیرسیستم‌ها و معماری دسترسی (فقط-مستندات)
+- **مبنا:** `main@cb2ddd57`؛ شاخهٔ `docs/issue-444-stage2-subsystem-catalog`.
+- **کاتالوگ:** `docs/SUBSYSTEM_CATALOG.md` — استخراج کامل از کد واقعی (روترها/منو/Endpointها/PermissionDefinitions/LicenseSubsystemCodes) در سه گروه: هسته/مدیریتی (core, identity-admin, membership, access-admin, hr, security-audit, fiscal)، عملیاتی مجوزدار (TRADE_IMPORT, finance, treasury, sales, inventory) و پشتیبان/بیرونی (corporate-groups, reporting, licensing, vendor, infrastructure-operator, support)؛ هر ردیف با شواهد کد و وضعیت واقعی D-030.
+- **D-075 (Proposed):** مدل مفهومی زیرسیستم/منو/فرم/عملیات؛ پیوند entitlement فقط برای زیرسیستم‌های مجوزدار؛ هم‌خوانی PermissionTree با کاتالوگ؛ بدون جدول/RBAC/Tenant موازی.
+- **شکاف‌های مستند:** Trade runtime (#390)، تلفیق گروه، grant سال/دوره (D-066 Proposed)، retention (D-070)، انقضای عضویت، ۷ زیرسیستم placeholder.
+- **مستندات:** INDEX.md (سطر کاتالوگ + D-075)؛ handoff: `docs/handoffs/ISSUE-444-stage-2.md`. هیچ تغییر کد/Migration/API. Merge فقط با اجازهٔ مالک.
+
 ## 2026-11-08 — Issue #444 Stage 2-D: API کاتالوگ زیرسیستم/منو/فرم (Backend)
 - **مبنا:** `main@cb2ddd57`؛ شاخهٔ `feat/issue-444-stage2-access-catalog-api`.
 - **کد:** `Server/Infrastructure/Access/AccessCatalogRegistry.cs` (کاتالوگ کد-محور فقط-خواندنی: ۱۸ زیرسیستم/۲۰ منو/۲۳ فرم؛ کد entitlement فقط از ثابت‌های `LicenseSubsystemCodes`؛ بدون جدول/Migration — D-075) + `Server/Api/AccessCatalogEndpoints.cs` (سه GET فقط-خواندنی `/admin/access/catalog/{subsystems,menus,forms}` فقط مدیر نصب با بازخوانی نقش از DB در هر درخواست؛ no-store؛ بدون Pagination به‌دلیل ثابت‌بودن) + ثبت در `ApiEndpoints.MapFaranouApi`.
