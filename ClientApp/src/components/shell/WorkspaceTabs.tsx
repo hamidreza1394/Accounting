@@ -180,25 +180,25 @@ export function WorkspaceTabsBar() {
     event.preventDefault();
     const next = tabs[nextIndex]!;
     activate(next);
-    const buttons = tablistRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+    const buttons = tablistRef.current?.querySelectorAll<HTMLButtonElement>('.faranou-tab-button');
     const nextButton = buttons?.[nextIndex];
     window.setTimeout(() => nextButton?.focus(), 0);
   }
 
   return (
     <div className="faranou-tabbar">
-      <div ref={tablistRef} role="tablist" aria-label="تب‌های کاری باز" className="faranou-tabbar-tabs" onKeyDown={onKeyDown}>
+      {/* A navigation of open pages, not a WAI-ARIA tablist: each entry pairs an activation
+         button with its own close button, and a `tablist` would require bare `tab` children
+         while a close button inside a `tab` trips the nested-interactive rule. `aria-current`
+         names the open page, and the arrow keys still move between entries. */}
+      <nav ref={tablistRef} aria-label="تب‌های کاری باز" className="faranou-tabbar-tabs" onKeyDown={onKeyDown}>
         {state.tabs.map((tab) => {
           const isActive = tab.key === active;
           return (
-            <div key={tab.key} role="presentation" className={'faranou-tab' + (isActive ? ' faranou-tab--active' : '')}>
+            <div key={tab.key} className={'faranou-tab' + (isActive ? ' faranou-tab--active' : '')}>
               <button
                 type="button"
-                role="tab"
-                aria-selected={isActive}
-                aria-controls={`tabpanel-${tab.key}`}
-                id={`tab-${tab.key}`}
-                tabIndex={isActive ? 0 : -1}
+                aria-current={isActive ? 'page' : undefined}
                 title={tabLabel(tab)}
                 className="faranou-tab-button"
                 onClick={() => {
@@ -220,7 +220,7 @@ export function WorkspaceTabsBar() {
             </div>
           );
         })}
-      </div>
+      </nav>
       <button type="button" className="faranou-tabbar-new" aria-label="بازکردن تب جدید" title="بازکردن تب جدید" onClick={openHome}>
         <Plus size={16} aria-hidden="true" />
       </button>
@@ -253,7 +253,7 @@ export function WorkspaceTabPanes() {
     if (!activeKey) return;
     const container = panesRef.current;
     if (!container) return;
-    const pane = container.querySelector<HTMLElement>(`#tabpanel-${CSS.escape(activeKey)}`);
+    const pane = container.querySelector<HTMLElement>(`[data-tab-pane="${CSS.escape(activeKey)}"]`);
     if (!pane) return;
     const focusHeading = (): boolean => {
       const heading = pane.querySelector('h1');
@@ -297,9 +297,7 @@ export function WorkspaceTabPanes() {
         return (
           <div
             key={tab.key}
-            role="tabpanel"
-            id={`tabpanel-${tab.key}`}
-            aria-labelledby={`tab-${tab.key}`}
+            data-tab-pane={tab.key}
             hidden={!isActive}
             tabIndex={-1}
           >

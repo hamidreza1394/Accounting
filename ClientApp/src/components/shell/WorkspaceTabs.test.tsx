@@ -54,8 +54,17 @@ function setup(at = '/app/') {
   );
 }
 
-const tablist = () => screen.getByRole('tablist', { name: 'تب‌های کاری باز' });
-const tabNames = () => within(tablist()).getAllByRole('tab').map((tab) => tab.textContent);
+const tabbar = () => screen.getByRole('navigation', { name: 'تب‌های کاری باز' });
+/** The activation button of one tab (close buttons carry the distinct "بستن …" name). */
+function tabButton(name: RegExp | string): HTMLElement {
+  const matches = within(tabbar())
+    .getAllByRole('button')
+    .filter((button) => button.className.includes('faranou-tab-button'))
+    .filter((button) => (typeof name === 'string' ? button.textContent?.trim() === name : name.test(button.textContent ?? '')));
+  if (matches.length !== 1) throw new Error(`expected exactly one tab button for ${String(name)}, found ${matches.length}`);
+  return matches[0]!;
+}
+const tabNames = () => within(tabbar()).getAllByRole('button').filter((button) => !button.className.includes('faranou-tab-close') && !button.className.includes('faranou-tabbar-new')).map((button) => button.textContent);
 
 afterEach(() => {
   window.history.pushState(null, '', '/app/');
@@ -66,23 +75,23 @@ describe('multi-tab workspace (Issue #444 stage 1, PR 4)', () => {
   it('opens every visited page as a tab and re-activates the existing tab instead of duplicating it', async () => {
     const user = userEvent.setup();
     setup();
-    expect(await within(tablist()).findByRole('tab', { selected: true })).toHaveTextContent('داشبورد');
+    expect(await waitFor(() => tabButton('داشبورد'))).toHaveAttribute('aria-current', 'page');
 
     // Two different pages -> two tabs, the second one active.
     window.history.pushState(null, '', '/app/admin/users');
     window.dispatchEvent(new PopStateEvent('popstate'));
-    expect(await within(tablist()).findByRole('tab', { name: /مدیریت کاربران/ })).toHaveAttribute('aria-selected', 'true');
+    expect(await waitFor(() => tabButton(/مدیریت کاربران/))).toHaveAttribute('aria-current', 'page');
     expect(tabNames()).toEqual(['داشبورد', 'مدیریت کاربران']);
 
     window.history.pushState(null, '', '/app/hr/org/units');
     window.dispatchEvent(new PopStateEvent('popstate'));
-    expect(await within(tablist()).findByRole('tab', { name: /واحدهای سازمانی/ })).toHaveAttribute('aria-selected', 'true');
+    expect(await waitFor(() => tabButton(/واحدهای سازمانی/))).toHaveAttribute('aria-current', 'page');
     expect(tabNames()).toEqual(['داشبورد', 'مدیریت کاربران', 'واحدهای سازمانی']);
 
     // The same page again -> no duplicate tab, the existing one is activated.
     window.history.pushState(null, '', '/app/admin/users');
     window.dispatchEvent(new PopStateEvent('popstate'));
-    await waitFor(() => expect(within(tablist()).getByRole('tab', { name: /مدیریت کاربران/ })).toHaveAttribute('aria-selected', 'true'));
+    await waitFor(() => expect(tabButton(/مدیریت کاربران/)).toHaveAttribute('aria-current', 'page'));
     expect(tabNames()).toEqual(['داشبورد', 'مدیریت کاربران', 'واحدهای سازمانی']);
     void user;
   });
@@ -95,14 +104,13 @@ describe('multi-tab workspace (Issue #444 stage 1, PR 4)', () => {
       window.dispatchEvent(new PopStateEvent('popstate'));
       await waitFor(() => expect(window.location.pathname).toBe(`/app/admin/users/${id}`));
     }
-    await waitFor(() => expect(within(tablist()).getAllByRole('tab')).toHaveLength(3));
-    const tabs = within(tablist()).getAllByRole('tab');
-    expect(tabs.map((tab) => tab.textContent)).toEqual(['داشبورد', 'جزئیات کاربر', 'جزئیات کاربر']);
+    await waitFor(() => expect(tabNames()).toHaveLength(3));
+    expect(tabNames()).toEqual(['داشبورد', 'جزئیات کاربر', 'جزئیات کاربر']);
   });
 
   it('keeps the query string with the tab across switches (filters, search and paging survive)', async () => {
     setup('/app/admin/users?q=sara&status=active&page=2');
-    expect(await within(tablist()).findByRole('tab', { selected: true })).toHaveTextContent('مدیریت کاربران');
+    expect(await waitFor(() => tabButton(/مدیریت کاربران/))).toHaveAttribute('aria-current', 'page');
     window.history.pushState(null, '', '/app/hr/org/units');
     window.dispatchEvent(new PopStateEvent('popstate'));
     await waitFor(() => expect(window.location.pathname).toBe('/app/hr/org/units'));
@@ -110,7 +118,7 @@ describe('multi-tab workspace (Issue #444 stage 1, PR 4)', () => {
     window.history.pushState(null, '', '/app/admin/users?q=sara&status=active&page=2');
     window.dispatchEvent(new PopStateEvent('popstate'));
     await waitFor(() => expect(window.location.search).toBe('?q=sara&status=active&page=2'));
-    expect(within(tablist()).getByRole('tab', { name: /مدیریت کاربران/ })).toHaveAttribute('aria-selected', 'true');
+    expect(tabButton(/مدیریت کاربران/)).toHaveAttribute('aria-current', 'page');
   });
 
   it('closes a background tab without changing the active one, and the active tab with a sensible successor', async () => {
@@ -118,26 +126,26 @@ describe('multi-tab workspace (Issue #444 stage 1, PR 4)', () => {
     // dashboard -> users (active) -> units (active), one browser task per navigation
     window.history.pushState(null, '', '/app/admin/users');
     window.dispatchEvent(new PopStateEvent('popstate'));
-    await within(tablist()).findByRole('tab', { name: /مدیریت کاربران/ });
+    await waitFor(() => tabButton(/مدیریت کاربران/));
     window.history.pushState(null, '', '/app/hr/org/units');
     window.dispatchEvent(new PopStateEvent('popstate'));
-    await within(tablist()).findByRole('tab', { name: /واحدهای سازمانی/ });
+    await waitFor(() => tabButton(/واحدهای سازمانی/));
 
     // Closing a background tab (داشبورد) keeps the active tab.
     await userEvent.setup().click(screen.getByRole('button', { name: 'بستن داشبورد' }));
     expect(tabNames()).toEqual(['مدیریت کاربران', 'واحدهای سازمانی']);
-    expect(within(tablist()).getByRole('tab', { name: /واحدهای سازمانی/ })).toHaveAttribute('aria-selected', 'true');
+    expect(tabButton(/واحدهای سازمانی/)).toHaveAttribute('aria-current', 'page');
     expect(window.location.pathname).toBe('/app/hr/org/units');
 
     // Closing the ACTIVE tab activates the previously active one (users) and follows its URL.
     await userEvent.setup().click(screen.getByRole('button', { name: 'بستن واحدهای سازمانی' }));
     expect(tabNames()).toEqual(['مدیریت کاربران']);
-    expect(within(tablist()).getByRole('tab', { name: /مدیریت کاربران/ })).toHaveAttribute('aria-selected', 'true');
+    expect(tabButton(/مدیریت کاربران/)).toHaveAttribute('aria-current', 'page');
     expect(window.location.pathname).toBe('/app/admin/users');
 
     // Closing the last tab hands the workspace back to the dashboard.
     await userEvent.setup().click(screen.getByRole('button', { name: 'بستن مدیریت کاربران' }));
-    expect(await within(tablist()).findByRole('tab', { name: /داشبورد/ })).toHaveAttribute('aria-selected', 'true');
+    expect(await waitFor(() => tabButton(/داشبورد/))).toHaveAttribute('aria-current', 'page');
     expect(window.location.pathname).toBe('/app/');
   });
 
@@ -147,22 +155,22 @@ describe('multi-tab workspace (Issue #444 stage 1, PR 4)', () => {
     window.dispatchEvent(new PopStateEvent('popstate'));
     window.history.pushState(null, '', '/app/hr/org/units');
     window.dispatchEvent(new PopStateEvent('popstate'));
-    await within(tablist()).findByRole('tab', { name: /واحدهای سازمانی/ });
+    await waitFor(() => tabButton(/واحدهای سازمانی/));
 
     window.history.back();
     window.dispatchEvent(new PopStateEvent('popstate'));
-    await waitFor(() => expect(within(tablist()).getByRole('tab', { name: /مدیریت کاربران/ })).toHaveAttribute('aria-selected', 'true'));
+    await waitFor(() => expect(tabButton(/مدیریت کاربران/)).toHaveAttribute('aria-current', 'page'));
 
     window.history.forward();
     window.dispatchEvent(new PopStateEvent('popstate'));
-    await waitFor(() => expect(within(tablist()).getByRole('tab', { name: /واحدهای سازمانی/ })).toHaveAttribute('aria-selected', 'true'));
+    await waitFor(() => expect(tabButton(/واحدهای سازمانی/)).toHaveAttribute('aria-current', 'page'));
   });
 
   it('offers the "new tab" action that opens (or focuses) the dashboard tab', async () => {
     setup('/app/admin/users');
-    await within(tablist()).findByRole('tab', { selected: true });
+    await waitFor(() => tabButton(/مدیریت کاربران/));
     await userEvent.setup().click(screen.getByRole('button', { name: 'بازکردن تب جدید' }));
-    expect(await within(tablist()).findByRole('tab', { name: /داشبورد/ })).toHaveAttribute('aria-selected', 'true');
+    expect(await waitFor(() => tabButton(/داشبورد/))).toHaveAttribute('aria-current', 'page');
     expect(window.location.pathname).toBe('/app/');
   });
 
@@ -180,18 +188,18 @@ describe('multi-tab workspace (Issue #444 stage 1, PR 4)', () => {
         <main>جایگزین</main>
       </AppShell>,
     );
-    expect(await within(tablist()).findByRole('tab', { selected: true, name: /سارا کریمی/ })).toBeInTheDocument();
+    expect(await waitFor(() => tabButton(/سارا کریمی/))).toHaveAttribute('aria-current', 'page');
   });
 
   it('marks every tab panel with the tab id and hides the inactive panes', async () => {
     setup();
     window.history.pushState(null, '', '/app/admin/users');
     window.dispatchEvent(new PopStateEvent('popstate'));
-    const usersTab = await within(tablist()).findByRole('tab', { name: /مدیریت کاربران/ });
-    const panel = document.getElementById(usersTab.getAttribute('aria-controls')!);
-    expect(panel).not.toHaveAttribute('hidden');
-    const dashboardPanel = document.getElementById('tabpanel-/')!;
-    expect(dashboardPanel).toHaveAttribute('hidden');
+    await waitFor(() => tabButton(/مدیریت کاربران/));
+    const activePane = document.querySelector('[data-tab-pane="/admin/users"]');
+    expect(activePane).not.toHaveAttribute('hidden');
+    const dashboardPane = document.querySelector('[data-tab-pane="/"]')!;
+    expect(dashboardPane).toHaveAttribute('hidden');
   });
 });
 
@@ -199,7 +207,7 @@ describe('dirty-form protection in the workspace (Issue #444 stage 1, PR 5)', ()
   it('asks before closing a tab that holds a dirty form; cancel keeps the tab, confirm closes it', async () => {
     const user = userEvent.setup();
     setup('/app/form');
-    await within(tablist()).findByRole('tab', { selected: true, name: /فرم آزمایشی/ });
+    await waitFor(() => tabButton(/فرم آزمایشی/));
 
     // Make the form dirty, then try to close its tab.
     await user.click(screen.getByRole('button', { name: 'خراب‌کردن فرم' }));
@@ -210,35 +218,35 @@ describe('dirty-form protection in the workspace (Issue #444 stage 1, PR 5)', ()
     // Cancel: the tab stays open, nothing is lost.
     await user.click(within(dialog).getByRole('button', { name: 'انصراف' }));
     await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
-    expect(within(tablist()).getByRole('tab', { name: /فرم آزمایشی/ })).toBeInTheDocument();
+    expect(tabButton(/فرم آزمایشی/)).toBeInTheDocument();
 
     // Confirm: the tab finally closes and the workspace lands on the previous tab.
     await user.click(screen.getByRole('button', { name: 'بستن فرم آزمایشی' }));
     await user.click(await screen.findByRole('button', { name: 'بستن تب و از دست دادن تغییرات' }));
     await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
-    expect(within(tablist()).queryByRole('tab', { name: /فرم آزمایشی/ })).not.toBeInTheDocument();
+    expect(within(tabbar()).queryByRole('button', { name: /فرم آزمایشی/ })).not.toBeInTheDocument();
     expect(window.location.pathname).toBe('/app/');
   });
 
   it('closes a clean tab immediately without any dialog', async () => {
     const user = userEvent.setup();
     setup('/app/form');
-    await within(tablist()).findByRole('tab', { selected: true, name: /فرم آزمایشی/ });
+    await waitFor(() => tabButton(/فرم آزمایشی/));
     await user.click(screen.getByRole('button', { name: 'بستن فرم آزمایشی' }));
-    await waitFor(() => expect(within(tablist()).queryByRole('tab', { name: /فرم آزمایشی/ })).not.toBeInTheDocument());
+    await waitFor(() => expect(within(tabbar()).queryByRole('button', { name: /فرم آزمایشی/ })).not.toBeInTheDocument());
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
 
   it('keeps the form state while the tab is hidden (still dirty after coming back)', async () => {
     const user = userEvent.setup();
     setup('/app/form');
-    await within(tablist()).findByRole('tab', { selected: true, name: /فرم آزمایشی/ });
+    await waitFor(() => tabButton(/فرم آزمایشی/));
     await user.click(screen.getByRole('button', { name: 'خراب‌کردن فرم' }));
 
     // Open a second tab, switch away and back: the pane never unmounted, still dirty.
     await user.click(screen.getByRole('button', { name: 'بازکردن تب جدید' }));
-    await waitFor(() => expect(within(tablist()).getByRole('tab', { name: /داشبورد/ })).toHaveAttribute('aria-selected', 'true'));
-    await user.click(within(tablist()).getByRole('tab', { name: /فرم آزمایشی/ }));
+    await waitFor(() => expect(tabButton(/داشبورد/)).toHaveAttribute('aria-current', 'page'));
+    await user.click(tabButton(/فرم آزمایشی/));
     await user.click(screen.getByRole('button', { name: 'بستن فرم آزمایشی' }));
     expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
   });
