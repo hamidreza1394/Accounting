@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { ApiError, getCompanyRoleMembers, getCompanyRoles, transferCompanyRoleMembers } from '../../../api/client';
-import type { CompanyRole, CompanyRoleMember, CompanyRoleMemberPage } from '../../../api/types';
+import { ApiError, getCompanyRoleMembers, getCompanyRoles, getEffectivePermissions, transferCompanyRoleMembers } from '../../../api/client';
+import type { CompanyRole, CompanyRoleMember, CompanyRoleMemberPage, EffectivePermissions } from '../../../api/types';
 import { formatDate } from '../../../lib/format';
 import { Alert } from '../../ui/Alert';
 import { Button } from '../../ui/button';
@@ -30,6 +30,12 @@ const number = new Intl.NumberFormat('fa-IR');
 
 type Targets = { kind: 'idle' } | { kind: 'loading' } | { kind: 'ready'; roles: CompanyRole[] } | { kind: 'error'; message: string };
 
+type EffectiveViewer =
+  | { kind: 'idle' }
+  | { kind: 'loading'; userId: string; label: string }
+  | { kind: 'ready'; userId: string; label: string; data: EffectivePermissions }
+  | { kind: 'error'; userId: string; label: string; message: string };
+
 function displayName(member: CompanyRoleMember): string {
   const full = `${member.firstName ?? ''} ${member.lastName ?? ''}`.trim();
   return full || member.username || 'کاربر بدون نام';
@@ -58,6 +64,28 @@ export function RoleMembersSection({ role, companyId, canAssign, onUnauthenticat
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
+  const [viewer, setViewer] = useState<EffectiveViewer>({ kind: 'idle' });
+
+  const openViewer = async (member: CompanyRoleMember) => {
+    const label = displayName(member);
+    setViewer({ kind: 'loading', userId: member.userId, label });
+    try {
+      const data = await getEffectivePermissions(companyId, member.userId);
+      setViewer({ kind: 'ready', userId: member.userId, label, data });
+    } catch (cause) {
+      if (onUnauthenticated(cause)) return;
+      if (cause instanceof ApiError && cause.status === 403) onForbidden?.();
+      setViewer({
+        kind: 'error',
+        userId: member.userId,
+        label,
+        message:
+          cause instanceof ApiError && cause.status === 404
+            ? 'این کاربر عضو فعال این شرکت نیست و دسترسی مؤثری برای نمایش ندارد.'
+            : messageOf(cause, 'نمایش دسترسی‌های مؤثر انجام نشد. دوباره تلاش کنید.'),
+      });
+    }
+  };
   const [notice, setNotice] = useState<string | null>(null);
   const [targetsAttempt, setTargetsAttempt] = useState(0);
   const noticeRef = useRef<HTMLDivElement>(null);
@@ -135,8 +163,23 @@ export function RoleMembersSection({ role, companyId, canAssign, onUnauthenticat
       { key: 'username', header: 'نام کاربری', cell: (member) => (member.username ? <code dir="ltr" className="text-xs">{member.username}</code> : '—') },
       { key: 'status', header: 'وضعیت حساب', cell: (member) => <StatusBadge status={member.isUserActive ? 'active' : 'inactive'} /> },
       { key: 'since', header: 'عضو از', cell: (member) => formatDate(member.memberSinceUtc) },
+      {
+        key: 'effective',
+        header: 'دسترسی مؤثر',
+        cell: (member) => (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-expanded={viewer.kind !== 'idle' && viewer.userId === member.userId}
+            onClick={() => void openViewer(member)}
+          >
+            مشاهده
+          </Button>
+        ),
+      },
     ],
-    [],
+    [viewer],
   );
 
   const confirm = async () => {
@@ -212,6 +255,39 @@ export function RoleMembersSection({ role, companyId, canAssign, onUnauthenticat
           },
         }}
       />
+
+      {viewer.kind !== 'idle' ? (
+        <div
+          role="region"
+          aria-live="polite"
+          aria-label="دسترسی‌های مؤثر عضو"
+          className="space-y-2 rounded-xl border border-line bg-white p-4"
+        >
+          <p className="text-sm font-bold text-title">دسترسی‌های مؤثر — {viewer.label}</p>
+          {viewer.kind === 'loading' ? <p role="status" className="text-sm text-sub">در حال دریافت…</p> : null}
+          {viewer.kind === 'error' ? (
+            <p role="alert" className="text-sm text-danger">{viewer.message}</p>
+          ) : null}
+          {viewer.kind === 'ready' ? (
+            viewer.data.permissionCodes.length === 0 ? (
+              <p className="text-sm text-sub">این عضو از طریق نقش‌های فعالش در این شرکت هیچ مجوزی ندارد.</p>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-sub">
+                  نقش‌های فعال: <span className="font-semibold text-ink">{viewer.data.roleNames.join('، ')}</span>
+                </p>
+                <ul className="flex flex-wrap gap-2">
+                  {viewer.data.permissionCodes.map((code) => (
+                    <li key={code}>
+                      <code dir="ltr" className="inline-block rounded-lg border border-line bg-white px-2 py-1 text-xs">{code}</code>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          ) : null}
+        </div>
+      ) : null}
 
       {role.isSystemRole ? (
         <Alert tone="info">انتقال گروهی اعضا از یا به گروه سیستمی مجاز نیست.</Alert>

@@ -2691,3 +2691,8 @@
 - **کد:** `GET /api/v1/admin/companies/{companyId}/effective-permissions/{userId}` در `CompanyRoleAdministrationEndpoints.cs` — اجتماع کدهای مجوز نقش‌های فعال روی عضویت‌های فعال هدف (`CompanyAccessService.GetGrantedPermissionCodesAsync`) + نام نقش‌ها؛ مجوزدهی دوحالته D-071 (`roles.view` یا مدیر نصب با بازخوانی DB)؛ بدون عضویت فعال هدف/حساب ناموجود = 404 بدون افشا (D-064)؛ no-store؛ بدون Audit (خواندنی).
 - **تست واقعی:** ۳ تست جدید `EffectivePermissionsEndpointTests` (قواعد دوحالته 404/403/200؛ اجتماع کدها و حذف نقش/عضویت غیرفعال؛ 404 بدون افشا برای حساب ناموجود/غیرفعال) — سبز؛ کل مجموعه **۱۰۶۰ موفق / ۲ پیش‌موجود (نیازمند SQL Server) / ۶۴ Skip**.
 - **مستندات:** بخش ۳.۱ قرارداد API. UI مشاهده در RoleDetailPage در PR بعدی همین مأموریت می‌آید. Merge فقط با اجازهٔ مالک.
+
+## 2026-11-08 — Issue #444 Stage 2-E (بخش UI): مشاهدهٔ دسترسی‌های مؤثر در صفحهٔ گروه دسترسی
+- **مبنا:** شاخهٔ `feat/issue-444-stage2-effective-permissions-api` (#579)؛ شاخهٔ جدید `feat/issue-444-stage2-effective-permissions-ui` (stacked — وابستگی واقعی به API جدید).
+- **کد:** `api/types.ts` (نوع + پارسر قراردادی `parseEffectivePermissions`)، `api/client.ts` (`getEffectivePermissions`)، `RoleMembersSection.tsx` (ستون «دسترسی مؤثر» با دکمهٔ مشاهدهٔ per-row + کارت نتیجه با حالت‌های Loading/Error/Empty و نمایش نقش‌ها + کدهای مجوز به‌صورت `<code dir=ltr>`؛ 403 → onForbidden برای بازخوانی hintها؛ 404 → پیام بدون افشا).
+- **تست واقعی:** +۳ تست در `RoleMembersSection.test.tsx` (نمایش اجتماع نقش/کد؛ Empty؛ مسیر 404 بدون افشا و 403 با onForbidden)؛ کل vitest **844/844**؛ typecheck و build سبز؛ هیچ تستی حذف نشد.
