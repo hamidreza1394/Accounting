@@ -1,8 +1,10 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { useState } from 'react';
 import { AppShell } from '../AppShell';
 import { useDocumentTitle } from '@/lib/router';
+import { resetDirtyFormsForTests, useFormGuard } from '@/lib/formGuard';
 import type { AccessSnapshot } from '@/lib/permissions';
 import type { SelectedContext, Session } from '../../api/types';
 
@@ -17,11 +19,24 @@ function Page({ label }: { label: string }) {
   return <h1>{label}</h1>;
 }
 
+/** A page whose form can be made dirty, wired to the shared guard like the real forms. */
+function DirtyFormPage({ label }: { label: string }) {
+  const [dirty, setDirty] = useState(false);
+  useFormGuard(dirty, 'فرم آزمایشی تغییرات ذخیره‌نشده دارد.');
+  return (
+    <div>
+      <h1>{label}</h1>
+      <button type="button" onClick={() => setDirty(true)}>خراب‌کردن فرم</button>
+    </div>
+  );
+}
+
 const routes = [
   { path: '/', element: () => <Page label="داشبورد" />, title: 'داشبورد' },
   { path: '/admin/users', element: () => <div><h1>فهرست کاربران</h1><a href="#q">نشانه</a></div>, title: 'مدیریت کاربران' },
   { path: '/admin/users/:id', element: () => <Page label="جزئیات کاربر" />, title: 'جزئیات کاربر' },
   { path: '/hr/org/units', element: () => <Page label="واحدهای سازمانی" />, title: 'واحدهای سازمانی' },
+  { path: '/form', element: () => <DirtyFormPage label="فرم آزمایشی" />, title: 'فرم آزمایشی' },
 ] as const;
 
 let view: ReturnType<typeof render> | null = null;
@@ -44,6 +59,7 @@ const tabNames = () => within(tablist()).getAllByRole('tab').map((tab) => tab.te
 
 afterEach(() => {
   window.history.pushState(null, '', '/app/');
+  resetDirtyFormsForTests();
 });
 
 describe('multi-tab workspace (Issue #444 stage 1, PR 4)', () => {
@@ -176,5 +192,54 @@ describe('multi-tab workspace (Issue #444 stage 1, PR 4)', () => {
     expect(panel).not.toHaveAttribute('hidden');
     const dashboardPanel = document.getElementById('tabpanel-/')!;
     expect(dashboardPanel).toHaveAttribute('hidden');
+  });
+});
+
+describe('dirty-form protection in the workspace (Issue #444 stage 1, PR 5)', () => {
+  it('asks before closing a tab that holds a dirty form; cancel keeps the tab, confirm closes it', async () => {
+    const user = userEvent.setup();
+    setup('/app/form');
+    await within(tablist()).findByRole('tab', { selected: true, name: /فرم آزمایشی/ });
+
+    // Make the form dirty, then try to close its tab.
+    await user.click(screen.getByRole('button', { name: 'خراب‌کردن فرم' }));
+    await user.click(screen.getByRole('button', { name: 'بستن فرم آزمایشی' }));
+    const dialog = await screen.findByRole('alertdialog');
+    expect(dialog).toHaveTextContent('فرم آزمایشی تغییرات ذخیره‌نشده دارد.');
+
+    // Cancel: the tab stays open, nothing is lost.
+    await user.click(within(dialog).getByRole('button', { name: 'انصراف' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+    expect(within(tablist()).getByRole('tab', { name: /فرم آزمایشی/ })).toBeInTheDocument();
+
+    // Confirm: the tab finally closes and the workspace lands on the previous tab.
+    await user.click(screen.getByRole('button', { name: 'بستن فرم آزمایشی' }));
+    await user.click(await screen.findByRole('button', { name: 'بستن تب و از دست دادن تغییرات' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+    expect(within(tablist()).queryByRole('tab', { name: /فرم آزمایشی/ })).not.toBeInTheDocument();
+    expect(window.location.pathname).toBe('/app/');
+  });
+
+  it('closes a clean tab immediately without any dialog', async () => {
+    const user = userEvent.setup();
+    setup('/app/form');
+    await within(tablist()).findByRole('tab', { selected: true, name: /فرم آزمایشی/ });
+    await user.click(screen.getByRole('button', { name: 'بستن فرم آزمایشی' }));
+    await waitFor(() => expect(within(tablist()).queryByRole('tab', { name: /فرم آزمایشی/ })).not.toBeInTheDocument());
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('keeps the form state while the tab is hidden (still dirty after coming back)', async () => {
+    const user = userEvent.setup();
+    setup('/app/form');
+    await within(tablist()).findByRole('tab', { selected: true, name: /فرم آزمایشی/ });
+    await user.click(screen.getByRole('button', { name: 'خراب‌کردن فرم' }));
+
+    // Open a second tab, switch away and back: the pane never unmounted, still dirty.
+    await user.click(screen.getByRole('button', { name: 'بازکردن تب جدید' }));
+    await waitFor(() => expect(within(tablist()).getByRole('tab', { name: /داشبورد/ })).toHaveAttribute('aria-selected', 'true'));
+    await user.click(within(tablist()).getByRole('tab', { name: /فرم آزمایشی/ }));
+    await user.click(screen.getByRole('button', { name: 'بستن فرم آزمایشی' }));
+    expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
   });
 });
