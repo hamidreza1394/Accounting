@@ -2691,3 +2691,9 @@
 - **سند:** `docs/MENU_FORM_CATALOG.md` — درخت منوی واقعی از `navigation` (AppSidebar) و کاتالوگ کامل ۲۳ Route از `appRoutes` با Parent/گیت/زیرسیستم؛ قواعد سه‌حالتی فعال/به‌زودی/پنهان و منع Route جعلی (D-075).
 - **کد:** فقط `export navigation`/نوع‌ها از AppSidebar (بدون تغییر رفتار) + تست سازگاری جدید `menuRouteConsistency.test.tsx` (۶ قید: مسیرهای جعلی، Route تکراری، عنوان فارسی، برچسب انگلیسی، گروه بدون صفحه). هیچ Route/منو/رفتاری تغییر نکرد.
 - **تست:** کل مجموعه ClientApp اجرا شد — نتیجه در handoff ثبت می‌شود؛ مستندات: INDEX + handoff مرحله دوم.
+
+## 2026-11-08 — Issue #444 Stage 2-C: کاتالوگ عملیات و مجوزها (فقط-مستندات)
+- **مبنا:** `main@cb2ddd57`؛ شاخهٔ `docs/issue-444-stage2-permission-catalog`.
+- **سند:** `docs/PERMISSION_CATALOG.md` — نگاشت هر ۷۳ کد PermissionDefinitions (استخراج با regex از ۶ Migration) به محل اعمال واقعی، تاکسونومی افعال، تطبیق فعل‌های مأموریت، سطح hint کلاینت (۱۹ hint؛ بدون hint مرده)، قواعد PermissionTree و نگهداری.
+- **تصمیم مطابق مأموریت:** هیچ کد مجوز تازه‌ای اضافه نشد (جلوگیری از مجوز بی‌استفاده)؛ دو کد seeded-only و ۴۶ کد Trade به‌عنوان شکاف واقعی مستند شدند.
+- **مستندات:** INDEX + handoff مرحله دوم. بدون کد/Migration/API؛ Merge فقط با اجازهٔ مالک.
