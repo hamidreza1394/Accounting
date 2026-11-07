@@ -239,6 +239,7 @@ export function App({ navigate = defaultNavigate }: { navigate?: Navigate }) {
     <AppRouteDataContext.Provider value={routeData}>
       <AppShell
         routes={appRoutes}
+        workspaceTabs
         access={companyPermissions.access}
         onRetryPermissions={companyPermissions.retry}
         session={session}

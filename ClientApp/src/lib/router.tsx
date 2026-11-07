@@ -45,7 +45,7 @@ const defaultBase = '/app';
 function isInternalPath(to: string): boolean {
   return to.startsWith('/') && !to.startsWith('//');
 }
-const titleSuffix = 'فرانو';
+export const titleSuffix = 'فرانو';
 
 function normalize(path: string): string {
   const trimmed = path.replace(/\/+$/, '');
@@ -104,7 +104,29 @@ type RouterContextValue = {
 
 const RouterContext = createContext<RouterContextValue | null>(null);
 
-function useRouterContext(): RouterContextValue {
+/**
+ * Per-tab location scope of the multi-tab workspace: every open tab keeps its own pathname
+ * and query while it stays mounted (hidden), so a hidden list page never re-renders with
+ * another tab's filters and never refetches with them (Issue #444 stage 1, PR 4).
+ */
+const TabLocationScopeContext = createContext<AppLocation | null>(null);
+
+export function TabLocationScope({
+  pathname,
+  search,
+  hash,
+  children,
+}: {
+  pathname: string;
+  search: string;
+  hash: string;
+  children: ReactNode;
+}) {
+  const value = useMemo<AppLocation>(() => ({ pathname, search, hash }), [pathname, search, hash]);
+  return <TabLocationScopeContext.Provider value={value}>{children}</TabLocationScopeContext.Provider>;
+}
+
+export function useRouterContext(): RouterContextValue {
   const context = useContext(RouterContext);
   if (!context) throw new Error('RouterProvider is missing above this component.');
   return context;
@@ -210,6 +232,15 @@ function findMatch(routes: readonly Route[], pathname: string): Match {
 
 const ParamsContext = createContext<Params>({});
 
+/**
+ * Per-tab params scope of the multi-tab workspace: each open tab renders its page with the
+ * params of its own pathname, not the global location's (Issue #444 stage 1, PR 4).
+ */
+export function ParamsScope({ params, children }: { params: Params; children: ReactNode }) {
+  const value = useMemo(() => params, [params]);
+  return <ParamsContext.Provider value={value}>{children}</ParamsContext.Provider>;
+}
+
 /** Renders the route matching the current location (NotFound when none; Forbidden without permission). */
 export function RouteView() {
   const { location, routes, canAccess, accessStatus, onRetryAccess, notFound: NotFound, forbidden: Forbidden, loadingLabel } = useRouterContext();
@@ -275,10 +306,23 @@ export function RouteView() {
   return <div ref={containerRef}>{content}</div>;
 }
 
+/**
+ * The multi-tab workspace registers a sink here, so a page's record title also names its tab.
+ * Decoupled on purpose: the router stays tab-agnostic and the workspace never wraps the router.
+ */
+let tabTitleSink: ((title: string | null) => void) | null = null;
+
+export function setTabTitleSink(sink: ((title: string | null) => void) | null): void {
+  tabTitleSink = sink;
+}
+
 /** Refines the tab title once a page knows its subject (e.g. a user's name); `null` leaves it as is. */
 export function useDocumentTitle(title: string | null): void {
   useEffect(() => {
     if (title) document.title = `${title} | ${titleSuffix}`;
+  }, [title]);
+  useEffect(() => {
+    tabTitleSink?.(title);
   }, [title]);
 }
 
@@ -286,8 +330,10 @@ export function useNavigate(): (to: string, options?: NavigateOptions) => void {
   return useRouterContext().navigate;
 }
 
-/** The current app-relative location. */
+/** The current app-relative location — the tab's own one inside a `<TabLocationScope>`. */
 export function useLocation(): AppLocation {
+  const tabLocation = useContext(TabLocationScopeContext);
+  if (tabLocation) return tabLocation;
   return useRouterContext().location;
 }
 
