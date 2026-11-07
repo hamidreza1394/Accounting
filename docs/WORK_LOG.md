@@ -2699,6 +2699,11 @@
 - **تست واقعی:** ۳ تست جدید `EffectivePermissionsEndpointTests` (قواعد دوحالته 404/403/200؛ اجتماع کدها و حذف نقش/عضویت غیرفعال؛ 404 بدون افشا برای حساب ناموجود/غیرفعال) — سبز؛ کل مجموعه **۱۰۶۰ موفق / ۲ پیش‌موجود (نیازمند SQL Server) / ۶۴ Skip**.
 - **مستندات:** بخش ۳.۱ قرارداد API. UI مشاهده در RoleDetailPage در PR بعدی همین مأموریت می‌آید. Merge فقط با اجازهٔ مالک.
 
+## 2026-11-08 — Issue #444 Stage 2-E (بخش UI): مشاهدهٔ دسترسی‌های مؤثر در صفحهٔ گروه دسترسی
+- **مبنا:** شاخهٔ `feat/issue-444-stage2-effective-permissions-api` (#579)؛ شاخهٔ جدید `feat/issue-444-stage2-effective-permissions-ui` (stacked — وابستگی واقعی به API جدید).
+- **کد:** `api/types.ts` (نوع + پارسر قراردادی `parseEffectivePermissions`)، `api/client.ts` (`getEffectivePermissions`)، `RoleMembersSection.tsx` (ستون «دسترسی مؤثر» با دکمهٔ مشاهدهٔ per-row + کارت نتیجه با حالت‌های Loading/Error/Empty و نمایش نقش‌ها + کدهای مجوز به‌صورت `<code dir=ltr>`؛ 403 → onForbidden برای بازخوانی hintها؛ 404 → پیام بدون افشا).
+- **تست واقعی:** +۳ تست در `RoleMembersSection.test.tsx` (نمایش اجتماع نقش/کد؛ Empty؛ مسیر 404 بدون افشا و 403 با onForbidden)؛ کل vitest **844/844**؛ typecheck و build سبز؛ هیچ تستی حذف نشد.
+
 ## 2026-11-08 — Issue #444 تکمیلی — PR 1-C: تکمیل تست بصری/Responsive مرحله اول (حد واقعی محیط)
 - **مبنا:** `main@cb2ddd57`؛ شاخهٔ `test/ui-stage1-responsive-checks`.
 - **تست محلی واقعی روی این شاخه:** vitest **842/842** (۸۰ فایل؛ +۱ تست جدید)، typecheck/build/check:offline/check_static_assets همگی سبز؛ `dotnet publish` سرور موفق (175MB، بدون تغییر کد Backend؛ Backend test اجرا نشد چون Backend تغییر نکرد).

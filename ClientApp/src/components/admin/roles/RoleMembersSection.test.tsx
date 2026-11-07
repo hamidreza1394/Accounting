@@ -9,6 +9,7 @@ import { RoleMembersSection } from './RoleMembersSection';
 
 const onUnauthenticated = vi.fn((): boolean => false);
 const membersPath = '/api/v1/admin/companies/a/roles/role-1/members';
+const effectivePath = '/api/v1/admin/companies/a/effective-permissions/user-1';
 const transferPath = `${membersPath}/transfer`;
 const rolesPath = '/api/v1/admin/companies/a/roles';
 
@@ -25,13 +26,19 @@ type Handlers = {
   members?: (call: ApiCall) => Response;
   roles?: () => Response;
   transfer?: (call: ApiCall) => Response;
+  effective?: (call: ApiCall) => Response;
 };
 
-function api({ members, roles, transfer }: Handlers = {}) {
+function api({ members, roles, transfer, effective }: Handlers = {}) {
   return stubApi((call) => {
     if (call.path === membersPath) return members ? members(call) : json(memberPage([memberItem(1), memberItem(2, { isUserActive: false })]));
     if (call.path === rolesPath) return roles ? roles() : json([roleItem(), targetRole, inactiveRole, systemTarget]);
     if (call.path === transferPath) return transfer ? transfer(call) : json({ movedCount: 2 });
+    if (call.path === effectivePath) {
+      return effective
+        ? effective(call)
+        : json({ userId: 'user-1', companyId: 'a', roleNames: ['حسابدار'], permissionCodes: ['users.list', 'roles.view'] });
+    }
     return new Response(null, { status: 404 });
   });
 }
@@ -274,5 +281,39 @@ describe('RoleMembersSection', () => {
       await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'انتقال اعضا' }));
       await waitFor(() => expect(onForbidden).toHaveBeenCalledTimes(1));
     });
+  });
+});
+
+describe('RoleMembersSection — effective permissions viewer (Stage 2-E)', () => {
+  it('shows the union of role names and codes for a member', async () => {
+    api();
+    setup();
+    const row = (await screen.findByText('نام1 خانوادگی1')).closest('tr') as HTMLElement;
+    await userEvent.click(within(row).getByRole('button', { name: 'مشاهده' }));
+    expect(await screen.findByRole('region', { name: 'دسترسی‌های مؤثر عضو' })).toHaveTextContent('حسابدار');
+    expect(screen.getByText('users.list')).toHaveAttribute('dir', 'ltr');
+    expect(screen.getByText('roles.view')).toBeInTheDocument();
+  });
+
+  it('renders the empty state for a member without any effective permission', async () => {
+    api({ effective: () => json({ userId: 'user-1', companyId: 'a', roleNames: [], permissionCodes: [] }) });
+    setup();
+    const row = (await screen.findByText('نام1 خانوادگی1')).closest('tr') as HTMLElement;
+    await userEvent.click(within(row).getByRole('button', { name: 'مشاهده' }));
+    expect(await screen.findByText('این عضو از طریق نقش‌های فعالش در این شرکت هیچ مجوزی ندارد.')).toBeInTheDocument();
+  });
+
+  it('treats a 404 as an indistinguishable no-active-membership message and a 403 as a forbidden refresh', async () => {
+    const onForbidden = vi.fn();
+    api({ effective: () => new Response(null, { status: 404 }) });
+    setup(source, true, onForbidden);
+    const row = (await screen.findByText('نام1 خانوادگی1')).closest('tr') as HTMLElement;
+    await userEvent.click(within(row).getByRole('button', { name: 'مشاهده' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('عضو فعال این شرکت نیست');
+
+    api({ effective: () => new Response(null, { status: 403 }) });
+    await userEvent.click(within(row).getByRole('button', { name: 'مشاهده' }));
+    expect(onForbidden).toHaveBeenCalledTimes(1);
+    expect(await screen.findByRole('alert')).toHaveTextContent('مجوز دسترسی به این بخش را ندارید');
   });
 });
