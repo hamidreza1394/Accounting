@@ -2678,3 +2678,10 @@
 - **PRها:** #566 (دسترسی مدیر نصب به عملیات پایه HR با hintهای استاندارد `can()`)، #567 (بازگشت یکنواخت پروندهٔ کاربر با حفظ کوئری فهرست)، #568 (پوسته: Sidebar گروهی فارسی + Rail جمع‌شده + Breadcrumb سطح شل با `usePageBreadcrumb`)، #569 (Workspace چندتب روی Router اختصاصی؛ paneهای همیشه-mount با TabLocationScope؛ بدون Storage)، #570 (رجیستری سبک فرم‌های Dirty و گارد بستن تب/خروج/تغییر زمینه با ConfirmDialog) و PR 6 (یکپارچه‌سازی + Handoff).
 - **تست محلی:** vitest نهایی **824/824** (+۳۴)، typecheck و build سبز، `check:offline` و `check_static_assets` سبز؛ هیچ تغییری در Backend/Migration/کاتالوگ مجوز. بررسی مرورگر واقعی (Chromium، 1440/768/360) با تصاویر قبل/بعد پوسته.
 - **مستندات:** `docs/UI_COMPONENTS.md` (سه بخش پوسته/چندتب/Dirty)، handoff: `docs/handoffs/ISSUE-444-stage-1-workspace-shell.md`. Merge فقط با اجازهٔ صریح مالک؛ وضعیت CI هر PR در handoff و گزارش مأموریت ثبت می‌شود.
+
+## 2026-11-08 — Issue #444 Stage 2-D: API کاتالوگ زیرسیستم/منو/فرم (Backend)
+- **مبنا:** `main@cb2ddd57`؛ شاخهٔ `feat/issue-444-stage2-access-catalog-api`.
+- **کد:** `Server/Infrastructure/Access/AccessCatalogRegistry.cs` (کاتالوگ کد-محور فقط-خواندنی: ۱۸ زیرسیستم/۲۰ منو/۲۳ فرم؛ کد entitlement فقط از ثابت‌های `LicenseSubsystemCodes`؛ بدون جدول/Migration — D-075) + `Server/Api/AccessCatalogEndpoints.cs` (سه GET فقط-خواندنی `/admin/access/catalog/{subsystems,menus,forms}` فقط مدیر نصب با بازخوانی نقش از DB در هر درخواست؛ no-store؛ بدون Pagination به‌دلیل ثابت‌بودن) + ثبت در `ApiEndpoints.MapFaranouApi`.
+- **عدم تکرار API:** عملیات/مجوزها همچنان از `GET /admin/permission-catalog` سرو می‌شوند؛ مدیر شرکت طبق D-071 §6 همان endpoint را در سقف تفویض می‌بیند.
+- **تست:** ۵ تست جدید `AccessCatalogEndpointTests` (401 ناشناس، 403 غیرمدیر، 200 مدیر؛ درون‌سازگاری کاتالوگ؛ منع ساخت کد entitlement؛ یکتایی مسیرها). اجرای واقعی: `dotnet test` کامل — **۱۰۵۷ موفق / ۲ خطای پیش‌موجود** (`SafeExceptionRealApplicationTests` نیازمند SQL Server، مطابق WORK_LOGهای قبلی) / ۶۴ Skip gated.
+- **مستندات:** بخش ۱۰ `docs/api/USER_ACCESS_MANAGEMENT_API.md`. Merge فقط با اجازهٔ مالک.
