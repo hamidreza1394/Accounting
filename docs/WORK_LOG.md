@@ -2685,3 +2685,9 @@
 - **D-075 (Proposed):** مدل مفهومی زیرسیستم/منو/فرم/عملیات؛ پیوند entitlement فقط برای زیرسیستم‌های مجوزدار؛ هم‌خوانی PermissionTree با کاتالوگ؛ بدون جدول/RBAC/Tenant موازی.
 - **شکاف‌های مستند:** Trade runtime (#390)، تلفیق گروه، grant سال/دوره (D-066 Proposed)، retention (D-070)، انقضای عضویت، ۷ زیرسیستم placeholder.
 - **مستندات:** INDEX.md (سطر کاتالوگ + D-075)؛ handoff: `docs/handoffs/ISSUE-444-stage-2.md`. هیچ تغییر کد/Migration/API. Merge فقط با اجازهٔ مالک.
+
+## 2026-11-08 — Issue #444 تکمیلی — PR 1-A: اصلاح Handoff مرحله اول با تاریخچهٔ ادغام واقعی
+- **مبنا:** `main@cb2ddd57` (ادغام #571)؛ شاخهٔ `docs/issue-444-stage1-handoff-correction`؛ تغییر فقط-مستندات، بدون هیچ تغییری در کد/تست/Migration.
+- **تغییر:** `docs/handoffs/ISSUE-444-stage-1-workspace-shell.md` با واقعیت GitHub هم‌تراز شد: وضعیت هر ۶ PR «ادغام‌شده در 2026-11-07»، جدول PRها با Head SHA و Merge commit واقعی از GitHub API (#568: `9ae1aaa6ecae`، #571: `33cddd7d0fcd` — SHAهای قبلی سند به commitهای میانی اشاره می‌کردند)، زمان ادغام UTC، جدول «آمار تست واقعی از لاگ CI» (جاب client: 792/790/809/813/824/825) و بخش جدید «وضعیت پس از ادغام» شامل انتهای نهایی main (`cb2ddd57`)، ترتیب ادغام واقعی، محدودیت‌های باقی‌مانده و تصمیمات معماری.
+- **شواهد:** Check-runs همهٔ ۶ SHA نهایی success (client، build-and-test، e2e، secret-scan، Semgrep، CodeQL، Analyze، publish*)؛ لاگ خام CI از GitHub Actions API استخراج شد.
+- **مستندات:** فقط همین Handoff و ورودی WORK_LOG؛ Merge فقط با اجازهٔ مالک.
