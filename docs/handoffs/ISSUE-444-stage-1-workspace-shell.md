@@ -21,9 +21,9 @@
 | 1 | fix(hr): allow installation administrator to access HR creation actions | `fix/hr-installation-admin-access` | `17f55b26` | [#566](https://github.com/hamidreza1394/Accounting/pull/566) | `main` |
 | 2 | fix(users): add consistent back navigation to user details | `fix/user-detail-back-nav` | `8d8b99da` | [#567](https://github.com/hamidreza1394/Accounting/pull/567) | `main` |
 | 3 | feat(ui): build professional Farano ERP application shell | `feat/ui-app-shell` | `f706c791` | [#568](https://github.com/hamidreza1394/Accounting/pull/568) | `main` |
-| 4 | feat(ui): add persistent multi-tab workspace navigation | `feat/ui-workspace-tabs` | `9b472a45` | [#569](https://github.com/hamidreza1394/Accounting/pull/569) | `feat/ui-app-shell` (stacked) |
-| 5 | feat(ui): protect dirty forms during workspace navigation | `feat/ui-dirty-form-protection` | `6203d504` | [#570](https://github.com/hamidreza1394/Accounting/pull/570) | `feat/ui-workspace-tabs` (stacked) |
-| 6 | fix(ui): polish workspace navigation and HR administration flows | `fix/ui-final-polish` | همین سند | ثبت‌شده در همین PR | `feat/ui-dirty-form-protection` (stacked) |
+| 4 | feat(ui): add persistent multi-tab workspace navigation | `feat/ui-workspace-tabs` | `5e460f4d` | [#569](https://github.com/hamidreza1394/Accounting/pull/569) | `feat/ui-app-shell` (stacked) |
+| 5 | feat(ui): protect dirty forms during workspace navigation | `feat/ui-dirty-form-protection` | `88c24114` | [#570](https://github.com/hamidreza1394/Accounting/pull/570) | `feat/ui-workspace-tabs` (stacked) |
+| 6 | fix(ui): polish workspace navigation and HR administration flows | `fix/ui-final-polish` | `9b482e10` | [#571](https://github.com/hamidreza1394/Accounting/pull/571) | `feat/ui-dirty-form-protection` (stacked) |
 
 ## خلاصه تغییرات به تفکیک PR
 
@@ -94,7 +94,12 @@
 | Backend (`dotnet build/test`) | اجرا نشده | هیچ تغییری در Backend، کاتالوگ مجوز یا Migration در این مرحله انجام نشد؛ طبق مأموریت الزامی نبود |
 | مرورگر واقعی (Chromium headless) | انجام شد | تصاویر قبل/بعد پوسته در 1440/768/360 شامل Rail جمع‌شده، کشوی موبایل، نوار تب و بستن تب؛ LCP/CLS اندازه‌گیری نشد (سرور تولیدی در Sandbox در دسترس نبود) |
 
-وضعیت CI هر PR در لحظهٔ ثبت: Pending (طبق سیاست مأموریت منتظر CI نماندیم)؛ وضعیت نهایی در گزارش پایانی مأموریت و کامنت به‌روزرسانی PR 6 ثبت می‌شود.
+### وضعیت CI و اصلاح یافتهٔ E2E
+
+- PRهای #566، #567 و #568: **تمام checkها سبز** (`client`، `build-and-test`، `e2e`، `secret-scan`، `Semgrep`، `CodeQL`/`CodeRabbit`، `Analyze`، `publish`).
+- PR #569 (دور اول CI): همه سبز به‌جز **e2e: failure** — axe یک نقض critical `aria-required-children` روی `.faranou-tabbar-tabs` گزارش کرد (tablist به فرزند مستقیم `tab` نیاز دارد و دکمهٔ بستن داخل `tab` نقض `nested-interactive` می‌شد).
+- **اصلاح انجام‌شده روی همان شاخه** (commit `5e460f4d`): نوار تب از `role=tablist/tab/tabpanel` به الگوی واقعی خودش — یک `nav` از صفحات باز با `aria-current="page"` + دکمهٔ بستن مستقل — بازطراحی شد؛ تست‌ها به ساختار جدید به‌روز شدند؛ اسکن کامل axe روی شل رندرشده **صفر نقض**؛ سپس شاخه‌های #570 و #571 با merge همگام شدند (commits `88c24114` و `9b482e10`؛ ۸۲۴/۸۲۵ تست محلی سبز در هر شاخه).
+- دور دوم CI شاخه‌های به‌روزشده (#569/570/571) در لحظهٔ نوشتن این سند در حال اجراست؛ نتیجهٔ نهایی در گزارش پایانی مأموریت ثبت می‌شود.
 
 ## امنیت، داده و سازگاری
 
@@ -106,7 +111,7 @@
 
 ## ریسک‌ها و کارهای باقی‌مانده
 
-- پوشش E2E مرورگر (Playwright) و axe در CI برای این مرحله اجرا نشد (محدودیت Sandbox)؛ پوشش jsdom + بررسی دستی headless جایگزین شد.
+- پوشش E2E کامل Playwright/axe فقط در CI قابل اجراست (Sandbox فاقد Backend/SQL)؛ با این حال یافتهٔ axe همان دور اول CI (نقض a11y نوار تب) گرفته و اصلاح شد — اثبات ارزش این پوشش. بررسی headless محلی روی خروجی build انجام شد.
 - بازگردانی اسکرول بین تب‌ها best-effort است.
 - تب‌های باز پس از تغییر شرکت/دوره حفظ می‌شوند و صفحات company-scoped با Context جدید refetch می‌کنند؛ در نسخهٔ بعدی می‌تواند تصمیم محصولی برای بستن/برچسب‌زدن تب‌های وابسته به Context قبلی گرفته شود.
 - فرم‌های نقش‌ها و کاتالوگ مجوزها هنوز به رجیستری Dirty متصل نیستند (خارج از محدودهٔ این مرحله).
