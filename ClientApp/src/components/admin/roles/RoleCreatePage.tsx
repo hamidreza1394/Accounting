@@ -4,7 +4,7 @@ import type { PermissionTemplate } from '../../../api/types';
 import { Link, useNavigate, useSearchParams } from '../../../lib/router';
 import { ErrorState, LoadingState } from '../../Feedback';
 import { Alert } from '../../ui/Alert';
-import { Breadcrumb } from '../../ui/Breadcrumb';
+import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { FormField, Input, Select } from '../../ui/FormField';
 import { FormSection } from '../../ui/FormSection';
@@ -70,7 +70,7 @@ export function RoleCreatePage({ onUnauthenticated, defaultCompanyId, isInstalla
         if (controller.signal.aborted || onUnauthenticated(cause)) return;
         setTemplates('failed');
       });
-    return () => controller.abort();
+  return () => controller.abort();
   }, [onUnauthenticated]);
 
   // The select shows a template only while the selection still equals what it produced.
@@ -313,10 +313,11 @@ export function RoleCreatePage({ onUnauthenticated, defaultCompanyId, isInstalla
     );
   }
 
+  usePageBreadcrumb([{ label: 'مدیریت سیستم' }, { label: 'گروه‌های دسترسی', to: listPath }, { label: 'ایجاد' }]);
+
   return (
     <div className="space-y-5">
       <header className="space-y-2">
-        <Breadcrumb items={[{ label: 'مدیریت سیستم' }, { label: 'گروه‌های دسترسی', to: listPath }, { label: 'ایجاد' }]} />
         <h1 className="text-2xl font-extrabold tracking-tight text-title">ایجاد گروه دسترسی</h1>
         <p className="text-sm text-sub">
           گروه جدید برای {companyName ? `شرکت «${companyName}»` : 'شرکت انتخاب‌شده'} ایجاد می‌شود.{' '}

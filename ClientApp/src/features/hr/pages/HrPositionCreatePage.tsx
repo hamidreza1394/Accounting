@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ApiError } from '@/api/client';
 import { Alert } from '@/components/ui/Alert';
-import { Breadcrumb } from '@/components/ui/Breadcrumb';
+import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
 import { Button } from '@/components/ui/button';
 import { FormField, Input, Textarea } from '@/components/ui/FormField';
 import { FormSection } from '@/components/ui/FormSection';
@@ -56,10 +56,10 @@ export function HrPositionCreatePage({ onUnauthenticated, companyId }: Props) {
     }
   };
 
+  usePageBreadcrumb([{ label: 'منابع انسانی' }, { label: 'سمت‌های سازمانی', to: '/hr/org/positions' }, { label: 'سمت جدید' }]);
   return (
     <div className="space-y-5">
       <header className="space-y-2">
-        <Breadcrumb items={[{ label: 'منابع انسانی' }, { label: 'سمت‌های سازمانی', to: '/hr/org/positions' }, { label: 'سمت جدید' }]} />
         <h1 className="text-2xl font-extrabold tracking-tight text-title">ایجاد سمت سازمانی</h1>
         <p className="text-sm text-sub">کد سمت در این شرکت یکتاست. یک سمت را می‌توان در چند واحد سازمانی به کار برد.</p>
       </header>

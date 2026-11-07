@@ -1,36 +1,13 @@
-import { useCallback, useRef, useState, type ReactNode } from 'react';
-import {
-  Activity,
-  Bell,
-  BookOpen,
-  Boxes,
-  BadgeCheck,
-  Building2,
-  CalendarDays,
-  ChevronDown,
-  ClipboardList,
-  FileBarChart,
-  Headphones,
-  KeyRound,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  Package,
-  Settings2,
-  ShieldCheck,
-  ShoppingCart,
-  UserCheck,
-  Users,
-  Wallet,
-  X,
-  type LucideIcon,
-} from 'lucide-react';
+import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Bell, Building2, CalendarDays, ChevronDown, LogOut, Menu, X } from 'lucide-react';
 import type { SelectedContext, Session } from '../api/types';
 import { Alert } from './ui/Alert';
 import { FaranouLogo } from './ui/FaranouLogo';
 import { MyAccountPanel } from './MyAccountPanel';
 import { can, deniedAccess, type AccessSnapshot, type Permission } from '../lib/permissions';
-import { Link, RouterProvider, useLocation, type Route } from '../lib/router';
+import { matchPath, RouterProvider, useLocation, type Route } from '../lib/router';
+import { AppSidebar } from './shell/AppSidebar';
+import { PageBreadcrumbBar, PageBreadcrumbProvider } from './shell/PageBreadcrumb';
 
 type AppShellProps = {
   session: Session;
@@ -50,157 +27,56 @@ type AppShellProps = {
   children: ReactNode;
 };
 
-type Tone =
-  | 'sky'
-  | 'emerald'
-  | 'amber'
-  | 'rose'
-  | 'violet'
-  | 'cyan'
-  | 'indigo'
-  | 'teal'
-  | 'orange'
-  | 'slate'
-  | 'blue'
-  | 'green';
-
-type NavLeaf = {
-  kind: 'item';
-  label: string;
-  icon: LucideIcon;
-  tone: Tone;
-  /** App-relative route; items without one stay disabled placeholders. */
-  to?: string;
-};
-
-type NavGroup = {
-  kind: 'group';
-  label: string;
-  icon: LucideIcon;
-  tone: Tone;
-  children: NavLeaf[];
-};
-
-type NavEntry = NavLeaf | NavGroup | { kind: 'divider' };
-
-/** Presentation-only navigation. Unfinished routes stay disabled until real paths and server permissions exist. */
-const navigation: NavEntry[] = [
-  { kind: 'item', label: 'داشبورد', icon: LayoutDashboard, tone: 'sky', to: '/' },
-  { kind: 'item', label: 'حسابداری', icon: BookOpen, tone: 'emerald' },
-  { kind: 'item', label: 'خزانه‌داری', icon: Wallet, tone: 'amber' },
-  { kind: 'item', label: 'فروش', icon: ShoppingCart, tone: 'rose' },
-  { kind: 'item', label: 'انبار', icon: Boxes, tone: 'violet' },
-  { kind: 'item', label: 'بازرگانی خارجی', icon: Package, tone: 'cyan' },
-  { kind: 'item', label: 'گزارش‌ها', icon: FileBarChart, tone: 'indigo' },
-  { kind: 'divider' },
-  {
-    kind: 'group',
-    label: 'مدیریت سیستم',
-    icon: Settings2,
-    tone: 'slate',
-    children: [],
-  },
-  { kind: 'item', label: 'اطلاعات پایه', icon: ClipboardList, tone: 'teal' },
-  { kind: 'item', label: 'راهنما و پشتیبانی', icon: Headphones, tone: 'orange' },
-];
-
-const toneClass: Record<Tone, string> = {
-  sky: 'faranou-nav-icon--sky',
-  emerald: 'faranou-nav-icon--emerald',
-  amber: 'faranou-nav-icon--amber',
-  rose: 'faranou-nav-icon--rose',
-  violet: 'faranou-nav-icon--violet',
-  cyan: 'faranou-nav-icon--cyan',
-  indigo: 'faranou-nav-icon--indigo',
-  teal: 'faranou-nav-icon--teal',
-  orange: 'faranou-nav-icon--orange',
-  slate: 'faranou-nav-icon--slate',
-  blue: 'faranou-nav-icon--blue',
-  green: 'faranou-nav-icon--green',
-};
-
-function NavIcon({ icon: Icon, tone, size = 'md' }: { icon: LucideIcon; tone: Tone; size?: 'md' | 'sm' }) {
-  return (
-    <span className={'faranou-nav-icon ' + toneClass[tone] + (size === 'sm' ? ' faranou-nav-icon--sm' : '')} aria-hidden="true">
-      <Icon size={size === 'sm' ? 14 : 16} strokeWidth={2.2} />
-    </span>
-  );
-}
-
-function DisabledItem({ label, icon, tone, nested }: { label: string; icon: LucideIcon; tone: Tone; nested?: boolean }) {
-  return (
-    <div
-      aria-disabled="true"
-      title="این بخش پس از تکمیل مسیر و مجوز مربوط فعال می‌شود."
-      className={
-        'faranou-nav-disabled flex cursor-not-allowed items-center gap-2.5 rounded-xl ' +
-        (nested ? 'min-h-10 ps-3 pe-2 text-[12px]' : 'min-h-11 px-3 text-[13px] font-semibold')
-      }
-    >
-      <NavIcon icon={icon} tone={tone} size={nested ? 'sm' : 'md'} />
-      <span className="min-w-0 flex-1 whitespace-normal leading-snug">{label}</span>
-      {nested ? (
-        /* Issue #442 review (Finding 3): a bare dot relying on `title` is invisible to
-           touch users (no hover) and conveys nothing on its own to sighted users who
-           aren't using a screen reader. Keep a compact-but-visible text badge instead,
-           smaller than the top-level one to fit the narrower nested row. */
-        <span className="ms-auto shrink-0 rounded-md border border-white/15 bg-white/5 px-1 py-0.5 text-[8px] font-semibold text-on-navy/70">
-          به‌زودی
-        </span>
-      ) : (
-        <span className="ms-auto shrink-0 rounded-md border border-white/15 bg-white/5 px-1.5 py-0.5 text-[9px] font-semibold text-on-navy/70">
-          به‌زودی
-        </span>
-      )}
-    </div>
-  );
-}
-
 /** Main authenticated frame. The server-validated WorkContext remains authoritative. */
 const ignoreUnauthenticated = (_error: unknown) => false;
 const noop = () => undefined;
 
 const noRoutes: readonly Route[] = [];
-const noCodes: readonly string[] = [];
 
 /** The shell owns the router, so the sidebar links and the page area (`children`) share one location. */
 export function AppShell({ routes = noRoutes, access = deniedAccess, onRetryPermissions = noop, ...props }: AppShellProps) {
   const canAccess = useCallback((permission: Permission) => can(access, permission), [access]);
   return (
     <RouterProvider routes={routes} canAccess={canAccess} accessStatus={access.status} onRetryAccess={onRetryPermissions}>
-      <AppShellFrame {...props} access={access} canAccess={canAccess} onRetryPermissions={onRetryPermissions} />
+      <AppShellFrame {...props} access={access} canAccess={canAccess} onRetryPermissions={onRetryPermissions} routes={routes} />
     </RouterProvider>
   );
 }
 
-type AppShellFrameProps = Omit<AppShellProps, 'routes' | 'access'> & {
+type AppShellFrameProps = Omit<AppShellProps, 'access'> & {
   access: AccessSnapshot;
   canAccess: (permission: Permission) => boolean;
+  routes: readonly Route[];
 };
 
-function AppShellFrame({ session, context, access, canAccess, onRetryPermissions = noop, onChangeContext, onLogout, onPasswordChanged = noop, onUnauthenticated = ignoreUnauthenticated, children }: AppShellFrameProps) {
+function AppShellFrame({
+  session,
+  context,
+  access,
+  canAccess,
+  routes,
+  onRetryPermissions = noop,
+  onChangeContext,
+  onLogout,
+  onPasswordChanged = noop,
+  onUnauthenticated = ignoreUnauthenticated,
+  children,
+}: AppShellFrameProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const accountTriggerRef = useRef<HTMLButtonElement>(null);
   const mainRef = useRef<HTMLElement>(null);
-  const [settingsOpen, setSettingsOpen] = useState(true);
   const { pathname } = useLocation();
-  const dashboardActive = pathname === '/';
-  const usersActive = pathname === '/admin/users' || pathname.startsWith('/admin/users/');
-  const rolesActive = pathname === '/admin/roles' || pathname.startsWith('/admin/roles/');
-  const permissionsActive = pathname === '/admin/permissions';
-  const companyUsersActive = pathname === '/company/users';
-  const securityAuditActive = pathname === '/admin/security/audit';
-  const hrUnitsActive = pathname === '/hr/org/units' || pathname.startsWith('/hr/org/units/');
-  const hrPositionsActive = pathname === '/hr/org/positions' || pathname.startsWith('/hr/org/positions/');
-  const hrEmployeesActive = pathname === '/hr/org/employees' || pathname.startsWith('/hr/org/employees/');
-  const membershipRequestsActive = pathname === '/admin/membership-requests';
-  const myMembershipRequestsActive = pathname === '/account/membership-requests';
   const readOnly = context.fiscalPeriod.accessMode === 'readOnly';
-  // Company permission codes count only while the answer is known and fresh (fail-closed).
-  const companyCodes = access.status === 'ready' ? access.companyCodes : noCodes;
+
+  // The route title is the real breadcrumb fallback: the shell never invents a path.
+  const fallbackCrumbs = useMemo(() => {
+    const match = routes.map((route) => ({ route, params: matchPath(route.path, pathname) })).find((entry) => entry.params !== null);
+    return [{ label: match ? match.route.title : 'فرانو' }];
+  }, [routes, pathname]);
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -310,179 +186,28 @@ function AppShellFrame({ session, context, access, canAccess, onRetryPermissions
             onClick={() => setMobileMenuOpen(false)}
           />
         ) : null}
-        <aside
-          id="main-navigation"
-          className={'faranou-sidebar faranou-sidebar--premium ' + (mobileMenuOpen ? 'is-open' : '')}
-          aria-label="ناوبری فرانو"
-        >
-          <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4" aria-label="منوی اصلی">
-            <p className="mb-3 px-3 text-[10px] font-bold tracking-wide text-on-navy-accent/70">منوی اصلی</p>
-            <ul className="space-y-1">
-              {navigation.map((entry, index) => {
-                if (entry.kind === 'divider') {
-                  return (
-                    <li key={'divider-' + index} className="faranou-nav-divider" aria-hidden="true">
-                      <span />
-                    </li>
-                  );
-                }
-
-                if (entry.kind === 'group' && entry.label === 'مدیریت سیستم') {
-                  return (
-                    <li key={entry.label} className="space-y-1">
-                      <button
-                        type="button"
-                        className="faranou-nav-group flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 text-[13px] font-semibold"
-                        aria-expanded={settingsOpen}
-                        onClick={() => setSettingsOpen((open) => !open)}
-                      >
-                        <NavIcon icon={entry.icon} tone={entry.tone} />
-                        <span className="min-w-0 flex-1 whitespace-normal text-start leading-snug">{entry.label}</span>
-                        <ChevronDown
-                          size={16}
-                          className={'shrink-0 text-on-navy/70 transition-transform ' + (settingsOpen ? 'rotate-180' : '')}
-                          aria-hidden="true"
-                        />
-                      </button>
-                      {settingsOpen ? (
-                        <ul className="faranou-nav-sub space-y-2 ms-4 ps-2">
-                          {access.status === 'loading' ? <li><span role="status">در حال دریافت مجوزهای شرکت…</span></li> : null}
-                          {access.status === 'error' ? <li><span role="alert">دریافت مجوزهای شرکت انجام نشد.</span> <button type="button" onClick={onRetryPermissions}>تلاش دوباره</button></li> : null}
-                          {canAccess('admin.users.view') ? (
-                          <li>
-                            <Link to="/admin/users" onClick={() => setMobileMenuOpen(false)} aria-current={usersActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (usersActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
-                              <NavIcon icon={Users} tone="sky" size="sm" />
-                              <span className="min-w-0 flex-1">مدیریت کاربران</span>
-                            </Link>
-                          </li>
-                          ) : null}
-                          {companyCodes.includes('users.list') ? (
-                          <li>
-                            <Link to="/company/users" onClick={() => setMobileMenuOpen(false)} aria-current={companyUsersActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (companyUsersActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
-                              <NavIcon icon={Users} tone="blue" size="sm" />
-                              <span className="min-w-0 flex-1">کاربران شرکت جاری</span>
-                            </Link>
-                          </li>
-                          ) : null}
-                          {canAccess('hr.units.view') ? (
-                          <li>
-                            <Link to="/hr/org/units" onClick={() => setMobileMenuOpen(false)} aria-current={hrUnitsActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (hrUnitsActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
-                              <NavIcon icon={Building2} tone="blue" size="sm" />
-                              <span className="min-w-0 flex-1">واحدهای سازمانی</span>
-                            </Link>
-                          </li>
-                          ) : null}
-                          {canAccess('hr.positions.view') ? (
-                          <li>
-                            <Link to="/hr/org/positions" onClick={() => setMobileMenuOpen(false)} aria-current={hrPositionsActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (hrPositionsActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
-                              <NavIcon icon={BadgeCheck} tone="violet" size="sm" />
-                              <span className="min-w-0 flex-1">سمت‌های سازمانی</span>
-                            </Link>
-                          </li>
-                          ) : null}
-                          {canAccess('hr.employees.view') ? (
-                          <li>
-                            <Link to="/hr/org/employees" onClick={() => setMobileMenuOpen(false)} aria-current={hrEmployeesActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (hrEmployeesActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
-                              <NavIcon icon={Users} tone="emerald" size="sm" />
-                              <span className="min-w-0 flex-1">کارکنان</span>
-                            </Link>
-                          </li>
-                          ) : null}
-                          {canAccess('admin.roles.view') ? (
-                          <li>
-                            <Link to="/admin/roles" onClick={() => setMobileMenuOpen(false)} aria-current={rolesActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (rolesActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
-                              <NavIcon icon={ShieldCheck} tone="violet" size="sm" />
-                              <span className="min-w-0 flex-1">گروه‌های دسترسی</span>
-                            </Link>
-                          </li>
-                          ) : null}
-                          {canAccess('admin.permissions.view') ? (
-                          <li>
-                            <Link to="/admin/permissions" onClick={() => setMobileMenuOpen(false)} aria-current={permissionsActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (permissionsActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
-                              <NavIcon icon={KeyRound} tone="amber" size="sm" />
-                              <span className="min-w-0 flex-1">کاتالوگ و جزئیات مجوزها</span>
-                            </Link>
-                          </li>
-                          ) : null}
-                          {companyCodes.includes('users.membership.approve') ? (
-                          <li>
-                            <Link to="/admin/membership-requests" onClick={() => setMobileMenuOpen(false)} aria-current={membershipRequestsActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (membershipRequestsActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
-                              <NavIcon icon={UserCheck} tone="emerald" size="sm" />
-                              <span className="min-w-0 flex-1">درخواست‌های عضویت</span>
-                            </Link>
-                          </li>
-                          ) : null}
-                          <li>
-                            <Link to="/account/membership-requests" onClick={() => setMobileMenuOpen(false)} aria-current={myMembershipRequestsActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (myMembershipRequestsActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
-                              <NavIcon icon={ClipboardList} tone="slate" size="sm" />
-                              <span className="min-w-0 flex-1">درخواست‌های عضویت من</span>
-                            </Link>
-                          </li>
-                          {canAccess('admin.security.view') ? (
-                          <li>
-                            <Link to="/admin/security/audit" onClick={() => setMobileMenuOpen(false)} aria-current={securityAuditActive ? 'page' : undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' + (securityAuditActive ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')}>
-                              <NavIcon icon={Activity} tone="emerald" size="sm" />
-                              <span className="min-w-0 flex-1">گزارش امنیت و سوابق</span>
-                            </Link>
-                          </li>
-                          ) : null}
-                          {canAccess('admin.security.view') ? <li><DisabledItem label="سیاست‌های امنیتی" icon={Settings2} tone="slate" nested /></li> : null}
-                        </ul>
-                      ) : null}
-                    </li>
-                  );
-                }
-
-                if (entry.kind !== 'item') {
-                  return null;
-                }
-
-                if (entry.to) {
-                  const active = dashboardActive;
-                  return (
-                    <li key={entry.label}>
-                      <Link
-                        to={entry.to}
-                        aria-current={active ? 'page' : undefined}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className={
-                          'flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-[13px] font-semibold ' +
-                          (active ? 'faranou-nav-active' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')
-                        }
-                      >
-                        <NavIcon icon={entry.icon} tone={entry.tone} />
-                        <span className="min-w-0 flex-1 whitespace-normal leading-snug">{entry.label}</span>
-                      </Link>
-                    </li>
-                  );
-                }
-
-                return (
-                  <li key={entry.label}>
-                    <DisabledItem label={entry.label} icon={entry.icon} tone={entry.tone} />
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
-          <div className="faranou-sidebar-footer">
-            <div className="flex items-center gap-2 text-xs font-semibold text-on-navy-ok">
-              <ShieldCheck size={17} />
-              محیط کاری امن
-            </div>
-            <p className="mt-1 text-[10px] leading-5 text-on-navy/65">
-              اطلاعات این محیط بر اساس دسترسی معتبر شما نمایش داده می‌شود.
-            </p>
-          </div>
-        </aside>
+        <AppSidebar
+          access={access}
+          canAccess={canAccess}
+          onRetryPermissions={onRetryPermissions}
+          onNavigate={() => setMobileMenuOpen(false)}
+          collapsed={sidebarCollapsed}
+          onToggleCollapsed={() => setSidebarCollapsed((collapsed) => !collapsed)}
+          mobileOpen={mobileMenuOpen}
+        />
 
         <main id="main-content" ref={mainRef} tabIndex={-1} className="faranou-main-content min-w-0 flex-1 outline-none">
-          {logoutError ? (
-            <div className="mb-4">
-              <Alert tone="error">{logoutError}</Alert>
-            </div>
-          ) : null}
-          {children}
+          {/* Keyed by path: each navigation starts from the real route title, then the active
+              page declares its record-aware breadcrumb into the same bar. */}
+          <PageBreadcrumbProvider key={pathname} fallback={fallbackCrumbs}>
+            <PageBreadcrumbBar />
+            {logoutError ? (
+              <div className="mb-4">
+                <Alert tone="error">{logoutError}</Alert>
+              </div>
+            ) : null}
+            {children}
+          </PageBreadcrumbProvider>
         </main>
       </div>
       <MyAccountPanel

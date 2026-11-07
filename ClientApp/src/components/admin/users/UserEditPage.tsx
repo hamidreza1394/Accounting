@@ -3,7 +3,7 @@ import { ApiError, getAdminUser, updateAdminUser } from '../../../api/client';
 import type { AdminUserDetails } from '../../../api/types';
 import { Link, useDocumentTitle, useNavigate, useParams } from '../../../lib/router';
 import { ErrorState, LoadingState } from '../../Feedback';
-import { Breadcrumb } from '../../ui/Breadcrumb';
+import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
 import { UserForm } from './UserFormFields';
 import { fullName } from './userDisplay';
 import { userListBackPath } from './userListReturn';
@@ -79,6 +79,7 @@ export function UserEditPage({ onUnauthenticated }: Props) {
   const detailPath = `/admin/users/${encodeURIComponent(id)}`;
   const crumbs = [{ label: 'مدیریت سیستم' }, { label: 'کاربران', to: '/admin/users' }, { label: name, to: detailPath }, { label: 'ویرایش' }];
 
+  usePageBreadcrumb(crumbs);
   let body: ReactNode;
   if (state.kind === 'loading') {
     body = <LoadingState label="در حال دریافت اطلاعات کاربر…" />;
@@ -119,7 +120,6 @@ export function UserEditPage({ onUnauthenticated }: Props) {
   return (
     <div className="space-y-5">
       <header className="space-y-2">
-        <Breadcrumb items={crumbs} />
         {heading}
         {user ? <p className="text-sm text-sub">ویرایش اطلاعات «{name}». رمز عبور از این صفحه تغییر نمی‌کند.</p> : null}
       </header>

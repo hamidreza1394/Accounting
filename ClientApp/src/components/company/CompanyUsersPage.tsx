@@ -4,7 +4,7 @@ import type { CompanyDirectoryPage, CompanyDirectoryUser } from '../../api/types
 import { formatDate } from '../../lib/format';
 import { Link } from '../../lib/router';
 import { Alert } from '../ui/Alert';
-import { Breadcrumb } from '../ui/Breadcrumb';
+import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
 import { DataTable, type DataTableColumn } from '../ui/DataTable';
 import { Input, Select } from '../ui/FormField';
 import { FormField } from '../ui/FormField';
@@ -59,7 +59,7 @@ export function CompanyUsersPage({ onUnauthenticated, companyId, companyName, ca
       setPage(1);
       setSearch(searchText);
     }, searchDelayMs);
-    return () => window.clearTimeout(timer);
+  return () => window.clearTimeout(timer);
   }, [searchText, search]);
 
   useEffect(() => {
@@ -149,10 +149,11 @@ export function CompanyUsersPage({ onUnauthenticated, companyId, companyName, ca
   const title = data?.companyName ?? companyName;
   const filtered = search !== '' || membership !== 'all';
 
+  usePageBreadcrumb([{ label: 'شرکت' }, { label: 'کاربران شرکت' }]);
+
   return (
     <div className="space-y-5">
       <header className="space-y-2">
-        <Breadcrumb items={[{ label: 'شرکت' }, { label: 'کاربران شرکت' }]} />
         <h1 className="text-2xl font-extrabold tracking-tight text-title">کاربران شرکت</h1>
         <p className="text-sm text-sub">
           افرادی که در {title ? `شرکت «${title}»` : 'شرکت انتخاب‌شده'} عضویت دارند. این فهرست فقط‌خواندنی است و اطلاعات تماس یا ورود کاربران را نشان نمی‌دهد.

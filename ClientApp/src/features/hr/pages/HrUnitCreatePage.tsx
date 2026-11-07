@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ApiError } from '@/api/client';
 import { Alert } from '@/components/ui/Alert';
-import { Breadcrumb } from '@/components/ui/Breadcrumb';
+import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
 import { Button } from '@/components/ui/button';
 import { FormField, Input, Textarea } from '@/components/ui/FormField';
 import { FormSection } from '@/components/ui/FormSection';
@@ -59,7 +59,7 @@ export function HrUnitCreatePage({ onUnauthenticated, companyId }: Props) {
       event.preventDefault();
     };
     window.addEventListener('beforeunload', beforeUnload);
-    return () => window.removeEventListener('beforeunload', beforeUnload);
+  return () => window.removeEventListener('beforeunload', beforeUnload);
   }, [dirty]);
 
   const validate = (): boolean => {
@@ -90,10 +90,11 @@ export function HrUnitCreatePage({ onUnauthenticated, companyId }: Props) {
     }
   };
 
+  usePageBreadcrumb([{ label: 'منابع انسانی' }, { label: 'واحدهای سازمانی', to: '/hr/org/units' }, { label: 'واحد جدید' }]);
+
   return (
     <div className="space-y-5">
       <header className="space-y-2">
-        <Breadcrumb items={[{ label: 'منابع انسانی' }, { label: 'واحدهای سازمانی', to: '/hr/org/units' }, { label: 'واحد جدید' }]} />
         <h1 className="text-2xl font-extrabold tracking-tight text-title">ایجاد واحد سازمانی</h1>
         <p className="text-sm text-sub">
           کد واحد در این شرکت یکتاست و پس از ثبت قابل تغییر نیست. واحد والد باید واحدی فعال از همین شرکت باشد.

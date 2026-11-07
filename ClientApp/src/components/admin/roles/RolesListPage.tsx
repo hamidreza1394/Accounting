@@ -4,7 +4,7 @@ import type { CompanyRole } from '../../../api/types';
 import type { CanHint } from '../../../lib/permissions';
 import { Link, useSearchParams } from '../../../lib/router';
 import { Badge } from '../../ui/Badge';
-import { Breadcrumb } from '../../ui/Breadcrumb';
+import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
 import { DataTable, type DataTableColumn } from '../../ui/DataTable';
 import { StatusBadge } from '../../ui/StatusBadge';
 import { buttonVariants } from '../../ui/button';
@@ -63,7 +63,7 @@ export function RolesListPage({ onUnauthenticated, defaultCompanyId, can = denyA
         setFailure(toFailure(cause));
         setLoading(false);
       });
-    return () => controller.abort();
+  return () => controller.abort();
   }, [companyId, attempt, onUnauthenticated]);
 
   const columns = useMemo<readonly DataTableColumn<CompanyRole>[]>(
@@ -84,10 +84,11 @@ export function RolesListPage({ onUnauthenticated, defaultCompanyId, can = denyA
 
   const companyName = choices.kind === 'ready' ? choices.companies.find((company) => company.id === companyId)?.name : undefined;
 
+  usePageBreadcrumb([{ label: 'مدیریت سیستم' }, { label: 'گروه‌های دسترسی' }]);
+
   return (
     <div className="space-y-5">
       <header className="space-y-2">
-        <Breadcrumb items={[{ label: 'مدیریت سیستم' }, { label: 'گروه‌های دسترسی' }]} />
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 space-y-2">
             <h1 className="text-2xl font-extrabold tracking-tight text-title">گروه‌های دسترسی</h1>

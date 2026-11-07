@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { RouteView, RouterProvider, type Route } from '../../../lib/router';
+import { PageBreadcrumbBar, PageBreadcrumbProvider } from '@/components/shell/PageBreadcrumb';
 import { json, stubFetch, userDetails } from '../../../test/adminUsers';
 import { rememberUserListLocation, resetUserListReturnForTests } from './userListReturn';
 import { UserDetailPage } from './UserDetailPage';
@@ -21,7 +22,10 @@ function setup(id = 'user-2') {
   window.history.pushState(null, '', `/app/admin/users/${id}`);
   return render(
     <RouterProvider routes={routes}>
-      <RouteView />
+      <PageBreadcrumbProvider fallback={[{ label: 'جزئیات' }]}>
+        <RouteView />
+        <PageBreadcrumbBar />
+      </PageBreadcrumbProvider>
     </RouterProvider>,
   );
 }
@@ -76,10 +80,11 @@ describe('UserDetailPage', () => {
     setup();
     expect(await screen.findByRole('heading', { level: 1, name: 'نام2 خانوادگی2' })).toBeInTheDocument();
     expect(String(fetchMock.mock.calls[0]?.[0])).toBe('/api/v1/admin/users/user-2');
-    const crumbs = within(screen.getByRole('navigation', { name: 'مسیر صفحه' }));
+    // The shell bar receives the page declaration in an effect right after the record loads.
+    const crumbs = within(await screen.findByRole('navigation', { name: 'مسیر صفحه' }));
     expect(crumbs.getByText('مدیریت سیستم')).toBeInTheDocument();
     expect(crumbs.getByRole('link', { name: 'کاربران' })).toHaveAttribute('href', '/app/admin/users');
-    expect(crumbs.getByText('نام2 خانوادگی2')).toHaveAttribute('aria-current', 'page');
+    expect(await crumbs.findByText('نام2 خانوادگی2')).toHaveAttribute('aria-current', 'page');
     expect(screen.getByText('@user2')).toHaveAttribute('dir', 'ltr');
     const panel = screen.getByRole('tabpanel');
     expect(within(panel).getByText('نقش قدیمی حساب')).toBeInTheDocument();
