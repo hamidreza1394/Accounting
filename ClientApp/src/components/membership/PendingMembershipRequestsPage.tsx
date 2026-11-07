@@ -9,7 +9,7 @@ import {
 import type { AssignableRole, MembershipRequestPage, PendingMembershipRequest } from '../../api/types';
 import { formatDateTime } from '../../lib/format';
 import { Alert } from '../ui/Alert';
-import { Breadcrumb } from '../ui/Breadcrumb';
+import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
 import { Button } from '../ui/button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { DataTable, type DataTableColumn } from '../ui/DataTable';
@@ -107,7 +107,7 @@ export function PendingMembershipRequestsPage({ onUnauthenticated, companyId, co
         });
         setLoading(false);
       });
-    return () => controller.abort();
+  return () => controller.abort();
   }, [companyId, page, pageSize, attempt, onUnauthenticated]);
 
   // Roles are needed only when the approver opens the approve dialog.
@@ -229,10 +229,11 @@ export function PendingMembershipRequestsPage({ onUnauthenticated, companyId, co
   const forbidden = failure?.status === 404;
   const approving = decision?.kind === 'approve';
 
+  usePageBreadcrumb([{ label: 'مدیریت سیستم' }, { label: 'درخواست‌های عضویت' }]);
+
   return (
     <div className="space-y-5">
       <header className="space-y-2">
-        <Breadcrumb items={[{ label: 'مدیریت سیستم' }, { label: 'درخواست‌های عضویت' }]} />
         <h1 className="text-2xl font-extrabold tracking-tight text-title">درخواست‌های عضویت در انتظار تأیید</h1>
         <p className="text-sm text-sub">
           درخواست‌هایی که برای عضویت در {companyName ? `شرکت «${companyName}»` : 'شرکت انتخاب‌شده'} ثبت شده‌اند. عضویت فقط پس از تأیید شما و تعیین گروه دسترسی ایجاد می‌شود.

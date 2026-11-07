@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { SelectedContext, Session } from '../api/types';
 import type { AccessSnapshot } from '../lib/permissions';
+import { Link, RouteView } from '../lib/router';
 import { AppShell } from './AppShell';
 
 const session: Session = { username: 'hamid', fullName: 'حمید رضایی', accountKind: 'User', isAdministrator: false };
@@ -29,11 +30,17 @@ describe('AppShell', () => {
     expect(screen.getByText('مدیر مالی')).toBeInTheDocument();
   });
 
-  it('keeps unfinished navigation items disabled and the current dashboard active', () => {
+  it('keeps unfinished navigation items disabled and the current dashboard active', async () => {
+    const user = userEvent.setup();
     render(<AppShell session={session} context={context} onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}><main>محتوای صفحه</main></AppShell>);
     expect(screen.getByRole('link', { name: /داشبورد/ })).toHaveAttribute('aria-current', 'page');
+    // Future subsystems live inside folded groups: open the accounting group, then check that
+    // its placeholder stays a visible "به‌زودی" leaf — never a broken link.
+    await user.click(screen.getByRole('button', { name: /حسابداری و مالی/ }));
     const accountingLabels = screen.getAllByText('حسابداری');
     expect(accountingLabels.some((label) => label.closest('[aria-disabled="true"]'))).toBe(true);
+    // The support entry stays a top-level placeholder.
+    expect(screen.getByText('راهنما و پشتیبانی').closest('[aria-disabled="true"]')).toBeTruthy();
   });
 
   it('uses the premium dark shell matching the approved mockup', () => {
@@ -82,7 +89,8 @@ describe('AppShell', () => {
     expect(nestedItem).toHaveTextContent('به‌زودی');
     expect(nestedItem.querySelector('.faranou-nav-soon-dot')).toBeFalsy();
 
-    const topLevelItem = screen.getByText('حسابداری').closest('[aria-disabled="true"]') as HTMLElement;
+    // A folded future group keeps a top-level placeholder leaf too (the support entry).
+    const topLevelItem = screen.getByText('راهنما و پشتیبانی').closest('[aria-disabled="true"]') as HTMLElement;
     expect(topLevelItem).toHaveTextContent('به‌زودی');
   });
 
@@ -111,6 +119,31 @@ describe('AppShell', () => {
     expect(main?.tagName).toBe('MAIN');
     expect(main).toHaveFocus();
     expect(window.location.hash).toBe('');
+  });
+
+  it('shows a real breadcrumb bar: the fallback follows the matched route', async () => {
+    const user = userEvent.setup();
+    // The shell derives the fallback from the matched route, never from an invented path.
+    const shellProps = {
+      session,
+      context,
+      access: installationAdmin,
+      routes: [
+        { path: '/', element: () => <Link to="/admin/users">به فهرست</Link>, title: 'داشبورد' },
+        { path: '/admin/users', element: () => <p>فهرست کاربران</p>, title: 'مدیریت کاربران' },
+      ],
+      onChangeContext: vi.fn(),
+      onLogout: vi.fn().mockResolvedValue(undefined),
+    } as const;
+    const routedShell = render(
+      <AppShell {...shellProps}>
+        <RouteView />
+      </AppShell>,
+    );
+    expect(await screen.findByRole('navigation', { name: 'مسیر صفحه' })).toHaveTextContent('داشبورد');
+    await user.click(screen.getByRole('link', { name: 'به فهرست' }));
+    expect(await screen.findByRole('navigation', { name: 'مسیر صفحه' })).toHaveTextContent('مدیریت کاربران');
+    routedShell.unmount();
   });
 
   it('shows a logout failure in the shared error Alert', async () => {
