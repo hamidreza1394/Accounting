@@ -122,7 +122,14 @@
 2. #568 (PR 3) — پوسته.
 3. #569 (PR 4) — پس از #568؛ پس از Merge می‌توان base را به `main` برد.
 4. #570 (PR 5) — پس از #569.
-5. PR 6 (همین شاخه) — پس از #570.
+5. #571 (PR 6) — پس از #570.
+
+### آزمون ادغام متقاطع (انجام‌شده محلی)
+
+- `fix/hr-installation-admin-access` × `feat/ui-app-shell`: **auto-merge بدون تعارض** (هر دو به `main` می‌روند).
+- `fix/user-detail-back-nav` × `feat/ui-app-shell`: یک تعارض معلوم در `ClientApp/src/components/admin/users/UserDetailPage.tsx` (هر دو PR بلوک `return` را ویرایش کرده‌اند؛ GitHub Mergeability فعلی هر دو True است چون هنوز یکی Merge نشده).
+  - **دستور رفع هنگام ادغام:** نسخهٔ نهایی باید «حذف رندر درون‌صفحه‌ای Breadcrumb و افزودن `usePageBreadcrumb(crumbs)` به بالای کامپوننت (از PR 3)» + «حفظ `<BackToList />` زیر Breadcrumb شل (از PR 2)» باشد؛ شاخهٔ #571 (`fix/ui-final-polish`) دقیقاً همین ترکیب را دارد و می‌توان از آن به‌عنوان مرجع رفع تعارض استفاده کرد.
+  - پس از رفع، `npm test` روی فایل‌های `admin/users` اجرا شود (پوشش هر دو PR در آن هست).
 
 ## شناسه‌های Git
 
