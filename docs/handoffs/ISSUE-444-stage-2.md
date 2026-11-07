@@ -11,7 +11,8 @@
 
 | بخش | عنوان | شاخه | PR | وضعیت |
 |---|---|---|---|---|
-| 2-A | docs(access): define subsystem catalog and access architecture | `docs/issue-444-stage2-subsystem-catalog` | ثبت پس از ایجاد | Open |
+| 2-A | docs(access): define subsystem catalog and access architecture | `docs/issue-444-stage2-subsystem-catalog` | [#575](https://github.com/hamidreza1394/Accounting/pull/575) | Open |
+| 2-B | feat(access): define menu and form catalog | `feat/issue-444-stage2-menu-form-catalog` | ثبت پس از ایجاد | Open |
 
 ## 2-A — کاتالوگ رسمی زیرسیستم‌ها (این PR)
 
@@ -27,3 +28,9 @@
 - منو و روتر کاملاً هم‌خوان‌اند؛ هیچ Route بدون منو «خراب» نیست؛ ۹ آیتم «به‌زودی» بدون Route جعلی.
 - `docs/ADMIN_UI.md` یک سطر کهنه دارد («سوابق امنیتی… فقط آیتم غیرفعال») که با وضعیت فعلی هم‌خوان نیست — در PR مناسب مرحله دوم اصلاح می‌شود.
 - مدل منو/فرم فعلی فقط در آرایه‌های UI است؛ مدل‌سازی مجدد در 2-B با حداقل تغییر و بدون جدول جدید بررسی می‌شود.
+
+## 2-B — کاتالوگ منو و فرم
+
+- سند `docs/MENU_FORM_CATALOG.md`: درخت منوی واقعی (۷ گروه + آیتم‌های بالا، ترتیب نمایش، گیت‌ها، ۹ placeholder صادقانه)، کاتالوگ کامل ۲۳ Route با Parent/گیت/یادداشت، قواعد فعال/غیرفعال/پنهان، منع Route جعلی و قواعد تغییر.
+- **گارد ماشینی جدید** `menuRouteConsistency.test.tsx` (۶ تست): هر برگ دارای مسیر دقیقاً در `appRoutes`؛ برگ بدون مسیر = placeholder؛ بدون Route تکراری؛ عنوان فارسی همهٔ Routeها؛ منع برچسب انگلیسی داخلی؛ گروه بدون صفحهٔ واقعی هرگز باز-پیش‌فرض نیست.
+- تغییر کد: فقط `export` آرایهٔ `navigation` و نوع‌های `NavEntry/NavLeafInfo/NavGroupInfo` از `AppSidebar.tsx` (بدون هیچ تغییر رفتاری) + تست جدید.

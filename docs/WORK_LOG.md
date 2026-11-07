@@ -2686,6 +2686,12 @@
 - **شکاف‌های مستند:** Trade runtime (#390)، تلفیق گروه، grant سال/دوره (D-066 Proposed)، retention (D-070)، انقضای عضویت، ۷ زیرسیستم placeholder.
 - **مستندات:** INDEX.md (سطر کاتالوگ + D-075)؛ handoff: `docs/handoffs/ISSUE-444-stage-2.md`. هیچ تغییر کد/Migration/API. Merge فقط با اجازهٔ مالک.
 
+## 2026-11-08 — Issue #444 Stage 2-B: کاتالوگ منو و فرم + گارد ماشینی سازگاری منو↔روتر
+- **مبنا:** `main@cb2ddd57`؛ شاخهٔ `feat/issue-444-stage2-menu-form-catalog`.
+- **سند:** `docs/MENU_FORM_CATALOG.md` — درخت منوی واقعی از `navigation` (AppSidebar) و کاتالوگ کامل ۲۳ Route از `appRoutes` با Parent/گیت/زیرسیستم؛ قواعد سه‌حالتی فعال/به‌زودی/پنهان و منع Route جعلی (D-075).
+- **کد:** فقط `export navigation`/نوع‌ها از AppSidebar (بدون تغییر رفتار) + تست سازگاری جدید `menuRouteConsistency.test.tsx` (۶ قید: مسیرهای جعلی، Route تکراری، عنوان فارسی، برچسب انگلیسی، گروه بدون صفحه). هیچ Route/منو/رفتاری تغییر نکرد.
+- **تست:** کل مجموعه ClientApp اجرا شد — نتیجه در handoff ثبت می‌شود؛ مستندات: INDEX + handoff مرحله دوم.
+
 ## 2026-11-08 — Issue #444 Stage 2-D: API کاتالوگ زیرسیستم/منو/فرم (Backend)
 - **مبنا:** `main@cb2ddd57`؛ شاخهٔ `feat/issue-444-stage2-access-catalog-api`.
 - **کد:** `Server/Infrastructure/Access/AccessCatalogRegistry.cs` (کاتالوگ کد-محور فقط-خواندنی: ۱۸ زیرسیستم/۲۰ منو/۲۳ فرم؛ کد entitlement فقط از ثابت‌های `LicenseSubsystemCodes`؛ بدون جدول/Migration — D-075) + `Server/Api/AccessCatalogEndpoints.cs` (سه GET فقط-خواندنی `/admin/access/catalog/{subsystems,menus,forms}` فقط مدیر نصب با بازخوانی نقش از DB در هر درخواست؛ no-store؛ بدون Pagination به‌دلیل ثابت‌بودن) + ثبت در `ApiEndpoints.MapFaranouApi`.
