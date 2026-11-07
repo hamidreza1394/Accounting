@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { stubApi } from '@/test/api';
 import { companyId, unitId, unitItem, unitListResponse, unitTreeNode } from '../test/hrFixtures';
-import { hrPermissionRoute, renderHrPage } from '../test/hrTestUtils';
+import { hrInstallationAdminPermissionRoute, hrPermissionRoute, renderHrPage } from '../test/hrTestUtils';
 import { HrUnitsPage } from './HrUnitsPage';
 
 const onUnauthenticated = vi.fn((): boolean => false);
@@ -83,6 +83,17 @@ describe('HrUnitsPage', () => {
     api({
       [`GET ${treePath}`]: { status: 200, body: { roots: [unitNode()] } },
       'GET /api/v1/me/permissions': hrPermissionRoute(['hr.organizational-units.create']),
+    });
+    renderHrPage(<HrUnitsPage onUnauthenticated={onUnauthenticated} companyId={companyId} />, { path: '/hr/org/units', title: 'واحدها' }, '/hr/org/units');
+    expect(await screen.findByRole('link', { name: 'واحد جدید' })).toBeInTheDocument();
+  });
+
+  it('shows the create action to the installation administrator without any company code (Issue #444 stage 1)', async () => {
+    // The server passes the installation administrator through every `hr.*` operation without a
+    // membership, and `/me/permissions` answers with the flag and no company codes.
+    api({
+      [`GET ${treePath}`]: { status: 200, body: { roots: [unitNode()] } },
+      'GET /api/v1/me/permissions': hrInstallationAdminPermissionRoute(),
     });
     renderHrPage(<HrUnitsPage onUnauthenticated={onUnauthenticated} companyId={companyId} />, { path: '/hr/org/units', title: 'واحدها' }, '/hr/org/units');
     expect(await screen.findByRole('link', { name: 'واحد جدید' })).toBeInTheDocument();

@@ -17,6 +17,7 @@ import { HrUnitParentPicker } from '../components/HrUnitParentPicker';
 import { HrUnitTree } from '../components/HrUnitTree';
 import { validateDescription, validateRequiredName, validateValidityWindow, buildUpdateUnitBody } from '../lib/hrValidation';
 import { useCompanyPermissions } from '@/lib/useCompanyPermissions';
+import { can } from '@/lib/permissions';
 
 type Props = {
   onUnauthenticated: (error: unknown) => boolean;
@@ -45,8 +46,10 @@ type EditState = {
 export function HrUnitDetailPage({ onUnauthenticated, companyId }: Props) {
   const { unitId } = useParams();
   const navigate = useNavigate();
-  const { codes } = useCompanyPermissions(companyId, onUnauthenticated);
-  const canUpdate = codes.includes('hr.organizational-units.update');
+  const { access } = useCompanyPermissions(companyId, onUnauthenticated);
+  // The standard hint (Issue #444 stage 1): a ready installation administrator passes without a
+  // company code — the same dual-mode rule the server enforces for every `hr.*` operation.
+  const canUpdate = can(access, 'hr.units.update');
 
   const [unit, setUnit] = useState<HrUnitDetail | null>(null);
   const [loading, setLoading] = useState(true);
