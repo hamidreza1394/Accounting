@@ -42,7 +42,7 @@ function routeTitleOf(routes: readonly Route[], pathname: string): string {
   for (const route of routes) {
     if (matchPath(route.path, pathname) !== null) return route.title;
   }
-  return 'صفحهٔ ناشناخته';
+  return 'صفحه پیدا نشد';
 }
 
 /**
@@ -368,7 +368,7 @@ function TabPane({ tab, routes, canAccess, accessStatus, onRetryAccess, NotFound
   return (
     <TabLocationScope pathname={pathname} search={search} hash="">
       <PaneTabKeyContext.Provider value={tab.key}>
-        <PageBreadcrumbProvider key={tab.key} fallback={[{ label: match ? match.route.title : 'صفحهٔ ناشناخته' }]}>
+        <PageBreadcrumbProvider key={tab.key} fallback={[{ label: match ? match.route.title : 'صفحه پیدا نشد' }]}>
           <PageBreadcrumbBar />
           {content}
         </PageBreadcrumbProvider>
