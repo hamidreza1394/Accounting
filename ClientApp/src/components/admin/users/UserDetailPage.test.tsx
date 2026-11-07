@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { RouteView, RouterProvider, type Route } from '../../../lib/router';
 import { json, stubFetch, userDetails } from '../../../test/adminUsers';
+import { rememberUserListLocation, resetUserListReturnForTests } from './userListReturn';
 import { UserDetailPage } from './UserDetailPage';
 import { clearUserFlash, setUserFlash } from './userFlash';
 
@@ -31,6 +32,7 @@ describe('UserDetailPage', () => {
     onUnauthenticated.mockReturnValue(false);
     canUpdate = false;
     clearUserFlash();
+    resetUserListReturnForTests();
   });
 
   it('shows no edit button without the update permission', async () => {
@@ -191,5 +193,33 @@ describe('UserDetailPage', () => {
       expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
       view.unmount();
     }
+  });
+
+  it('shows the back link in the ready state too and returns to the remembered list query (Issue #444 stage 1)', async () => {
+    const user = userEvent.setup();
+    stubFetch(() => json(userDetails(2)));
+    // The list page remembers its query in memory; simulate a visit with filters and paging.
+    rememberUserListLocation('q=%D8%B3%D8%A7%D8%B1%D8%A7&status=active&page=2&pageSize=20');
+    setup();
+    expect(await screen.findByRole('heading', { level: 1, name: 'نام2 خانوادگی2' })).toBeInTheDocument();
+    const back = screen.getByRole('link', { name: 'بازگشت به فهرست کاربران' });
+    expect(back).toHaveAttribute('href', '/app/admin/users?q=%D8%B3%D8%A7%D8%B1%D8%A7&status=active&page=2&pageSize=20');
+    await user.click(back);
+    expect(window.location.pathname).toBe('/app/admin/users');
+    expect(window.location.search).toBe('?q=%D8%B3%D8%A7%D8%B1%D8%A7&status=active&page=2&pageSize=20');
+  });
+
+  it('falls back to the plain list when the visit did not pass by the list (fresh load)', async () => {
+    stubFetch(() => json(userDetails(2)));
+    setup();
+    expect(await screen.findByRole('heading', { level: 1, name: 'نام2 خانوادگی2' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'بازگشت به فهرست کاربران' })).toHaveAttribute('href', '/app/admin/users');
+  });
+
+  it('keeps the back link available while loading', () => {
+    stubFetch(() => new Promise(() => undefined)); // never settles
+    setup();
+    expect(screen.getByRole('link', { name: 'بازگشت به فهرست کاربران' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('در حال دریافت اطلاعات کاربر…');
   });
 });
