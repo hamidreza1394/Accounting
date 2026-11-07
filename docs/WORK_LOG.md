@@ -2678,3 +2678,10 @@
 - **PRها:** #566 (دسترسی مدیر نصب به عملیات پایه HR با hintهای استاندارد `can()`)، #567 (بازگشت یکنواخت پروندهٔ کاربر با حفظ کوئری فهرست)، #568 (پوسته: Sidebar گروهی فارسی + Rail جمع‌شده + Breadcrumb سطح شل با `usePageBreadcrumb`)، #569 (Workspace چندتب روی Router اختصاصی؛ paneهای همیشه-mount با TabLocationScope؛ بدون Storage)، #570 (رجیستری سبک فرم‌های Dirty و گارد بستن تب/خروج/تغییر زمینه با ConfirmDialog) و PR 6 (یکپارچه‌سازی + Handoff).
 - **تست محلی:** vitest نهایی **824/824** (+۳۴)، typecheck و build سبز، `check:offline` و `check_static_assets` سبز؛ هیچ تغییری در Backend/Migration/کاتالوگ مجوز. بررسی مرورگر واقعی (Chromium، 1440/768/360) با تصاویر قبل/بعد پوسته.
 - **مستندات:** `docs/UI_COMPONENTS.md` (سه بخش پوسته/چندتب/Dirty)، handoff: `docs/handoffs/ISSUE-444-stage-1-workspace-shell.md`. Merge فقط با اجازهٔ صریح مالک؛ وضعیت CI هر PR در handoff و گزارش مأموریت ثبت می‌شود.
+
+## 2026-11-08 — Issue #444 تکمیلی — PR 1-C: تکمیل تست بصری/Responsive مرحله اول (حد واقعی محیط)
+- **مبنا:** `main@cb2ddd57`؛ شاخهٔ `test/ui-stage1-responsive-checks`.
+- **تست محلی واقعی روی این شاخه:** vitest **842/842** (۸۰ فایل؛ +۱ تست جدید)، typecheck/build/check:offline/check_static_assets همگی سبز؛ `dotnet publish` سرور موفق (175MB، بدون تغییر کد Backend؛ Backend test اجرا نشد چون Backend تغییر نکرد).
+- **تست جدید:** Tooltip Rail سایدبار — رفتار `title` بومی در حالت جمع‌شده، حذف آن در حالت باز و پنهان‌بودن فرزندان گروه در Rail؛ این تست WARN ثبت‌شدهٔ `results-pr-integration.json` («tooltip با سلکتورهای عمومی پیدا نشد») را می‌بندد. هیچ تستی حذف یا تضعیف نشد.
+- **شواهد مرورگر واقعی 2026-11-07** (مأموریت بازبینی پیش از ادغام، در مخزن): هر ۱۱ مورد چک‌لیست مأموریت PR 1-C با نتایج JSON/اسکرین‌شات ۵ اندازهٔ واقعی پوشش داده شده است؛ سند `docs/handoffs/ISSUE-444-stage-1-responsive-checks.md` هر مورد را به شاهد واقعی گره می‌زند.
+- **گزارش صریح:** اجرای تازهٔ E2E مرورگری در 2026-11-08 **انجام نشد** — Sandbox بدون Docker/sudo است و سیاست‌های آن mount/bind و چرخهٔ rootless SQL Server را مسدود می‌کنند (سه تلاش مستند). ادعای اجرای نشده، اجرا نشده گزارش شد؛ هیچ نتیجه‌ای جعل نشد.
