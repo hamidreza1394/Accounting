@@ -2,8 +2,8 @@
 
 - **Issue:** [#444](https://github.com/hamidreza1394/Accounting/issues/444) — مأموریت جامع مرحله اول (پوستهٔ حرفه‌ای فرانو، منوها و Workspace چندتب)
 - **Agent/مسئول:** Z.ai (GLM) طبق پرامپ مأموریت 2026-11-07
-- **تاریخ:** 2026-11-07
-- **وضعیت:** انجام‌شده — ۶ PR مستقل/stacked ثبت شد؛ هیچ PRای Merge نشده است (ادغام فقط با اجازهٔ صریح مالک).
+- **تاریخ:** 2026-11-07 — اصلاح تاریخچهٔ ادغام: 2026-11-08
+- **وضعیت:** انجام‌شده و **ادغام‌شده** — هر ۶ PR (#566 تا #571) در 2026-11-07 ادغام شدند؛ انتهای نهایی `main` پس از ادغام: `cb2ddd57bdff88e0be75a5e0e75f76dc25f76d13`. (این سند در 2026-11-08 با تاریخچهٔ واقعی ادغام از GitHub API اصلاح شد — PR 1-A مأموریت تکمیلی #444.)
 
 ## هدف و معیارهای پذیرش
 
@@ -16,14 +16,16 @@
 
 ## جدول PRها
 
-| # | عنوان | شاخه | Commit | PR | وابستگی (Base) |
-|---|---|---|---|---|---|
-| 1 | fix(hr): allow installation administrator to access HR creation actions | `fix/hr-installation-admin-access` | `17f55b26` | [#566](https://github.com/hamidreza1394/Accounting/pull/566) | `main` |
-| 2 | fix(users): add consistent back navigation to user details | `fix/user-detail-back-nav` | `8d8b99da` | [#567](https://github.com/hamidreza1394/Accounting/pull/567) | `main` |
-| 3 | feat(ui): build professional Farano ERP application shell | `feat/ui-app-shell` | `f706c791` | [#568](https://github.com/hamidreza1394/Accounting/pull/568) | `main` |
-| 4 | feat(ui): add persistent multi-tab workspace navigation | `feat/ui-workspace-tabs` | `5e460f4d` | [#569](https://github.com/hamidreza1394/Accounting/pull/569) | `feat/ui-app-shell` (stacked) |
-| 5 | feat(ui): protect dirty forms during workspace navigation | `feat/ui-dirty-form-protection` | `88c24114` | [#570](https://github.com/hamidreza1394/Accounting/pull/570) | `feat/ui-workspace-tabs` (stacked) |
-| 6 | fix(ui): polish workspace navigation and HR administration flows | `fix/ui-final-polish` | `9b482e10` | [#571](https://github.com/hamidreza1394/Accounting/pull/571) | `feat/ui-dirty-form-protection` (stacked) |
+| # | عنوان | شاخه | Commit نهایی (Head) | Merge commit | PR | وابستگی (Base) | ادغام (UTC) |
+|---|---|---|---|---|---|---|---|
+| 1 | fix(hr): allow installation administrator to access HR creation actions | `fix/hr-installation-admin-access` | `17f55b26d04b` | `911959da9dd9` | [#566](https://github.com/hamidreza1394/Accounting/pull/566) | `main` | 2026-11-07 15:40 |
+| 2 | fix(users): add consistent back navigation to user details | `fix/user-detail-back-nav` | `8d8b99da47c3` | `3dcce666d01e` | [#567](https://github.com/hamidreza1394/Accounting/pull/567) | `main` | 2026-11-07 15:41 |
+| 3 | feat(ui): build professional Farano ERP application shell | `feat/ui-app-shell` | `9ae1aaa6ecae` | `a0b07ac7fb61` | [#568](https://github.com/hamidreza1394/Accounting/pull/568) | `main` (پس از ادغام #566/#567 همگام شد) | 2026-11-07 15:57 |
+| 4 | feat(ui): add persistent multi-tab workspace navigation | `feat/ui-workspace-tabs` | `5e460f4d3a05` | `dad4c10c3ee4` | [#569](https://github.com/hamidreza1394/Accounting/pull/569) | `feat/ui-app-shell` (stacked) | 2026-11-07 15:58 |
+| 5 | feat(ui): protect dirty forms during workspace navigation | `feat/ui-dirty-form-protection` | `88c24114a551` | `e6f558c3ddd7` | [#570](https://github.com/hamidreza1394/Accounting/pull/570) | `feat/ui-workspace-tabs` (stacked) | 2026-11-07 15:58 |
+| 6 | fix(ui): polish workspace navigation and HR administration flows | `fix/ui-final-polish` | `33cddd7d0fcd` | `cb2ddd57bdff` | [#571](https://github.com/hamidreza1394/Accounting/pull/571) | `feat/ui-dirty-form-protection` (stacked) | 2026-11-07 15:59 |
+
+> **یادداشت SHA:** نسخهٔ اولیهٔ این سند برای #568 و #571 به commitهای میانی (`f706c791` و `9b482e10`) اشاره می‌کرد؛ پس از آن، commitهای همگام‌سازی/مستندات بعدی به همان شاخه‌ها اضافه شد. SHAهای جدول بالا، Head واقعیِ هر PR در لحظهٔ ادغام است که از GitHub API استخراج شده است.
 
 ## خلاصه تغییرات به تفکیک PR
 
@@ -74,7 +76,7 @@
 
 ## تصمیم‌های فنی
 
-- وابستگی واقعی PRها به‌صورت **stacked PR** مدیریت شد (۴→۳، ۵→۴، ۶→۵) تا هر PR مستقلاً قابل بازبینی باشد و شاخه‌ها تداخل نگیرند؛ PRهای ۱ و ۲ مستقل از `main`اند. هیچ PRای Merge نشده است.
+- وابستگی واقعی PRها به‌صورت **stacked PR** مدیریت شد (۴→۳، ۵→۴، ۶→۵) تا هر PR مستقلاً قابل بازبینی باشد و شاخه‌ها تداخل نگیرند؛ PRهای ۱ و ۲ مستقل از `main`اند. در زمان نگارش سند هیچ PRای Merge نشده بود؛ ادغام نهایی هر شش PR در 2026-11-07 دقیقاً طبق همین ترتیب پیشنهادی انجام شد (جدول «بررسی و آزمون» بالای سند).
 - معماری Breadcrumb: به‌جای دو منبع حقیقت، صفحات «اعلام» می‌کنند و شل «رندر» می‌کند؛ Provider به‌ازای تب کلید می‌خورد.
 - کلید یکتایی تب = pathname؛ query همراه تب (نه کلید) تا فیلترها تب جدید نسازند.
 - ذخیرهٔ تب‌ها پس از refresh عمداً پیاده نشد (الزام امنیتی مأموریت: بدون Storage؛ راه سادهٔ قابل پیش‌بینی انتخاب شد).
@@ -99,7 +101,20 @@
 - PRهای #566، #567 و #568: **تمام checkها سبز** (`client`، `build-and-test`، `e2e`، `secret-scan`، `Semgrep`، `CodeQL`/`CodeRabbit`، `Analyze`، `publish`).
 - PR #569 (دور اول CI): همه سبز به‌جز **e2e: failure** — axe یک نقض critical `aria-required-children` روی `.faranou-tabbar-tabs` گزارش کرد (tablist به فرزند مستقیم `tab` نیاز دارد و دکمهٔ بستن داخل `tab` نقض `nested-interactive` می‌شد).
 - **اصلاح انجام‌شده روی همان شاخه** (commit `5e460f4d`): نوار تب از `role=tablist/tab/tabpanel` به الگوی واقعی خودش — یک `nav` از صفحات باز با `aria-current="page"` + دکمهٔ بستن مستقل — بازطراحی شد؛ تست‌ها به ساختار جدید به‌روز شدند؛ اسکن کامل axe روی شل رندرشده **صفر نقض**؛ سپس شاخه‌های #570 و #571 با merge همگام شدند (commits `88c24114` و `9b482e10`؛ ۸۲۴/۸۲۵ تست محلی سبز در هر شاخه).
-- **نتیجهٔ نهایی CI (2026-11-07، دور دوم): هر شش PR سبز کامل** — `client`، `build-and-test`، `e2e` (Playwright + axe روی سرور واقعی)، `secret-scan`، `Semgrep`، `publish`/`publish-scripts`/`publish-windows` همه `success` (CodeRabbit `skipped` طبق تنظیمات مخزن). آخرین SHAهای بررسی‌شده: `17f55b26` (#566)، `8d8b99da` (#567)، `f706c791` (#568)، `5e460f4d` (#569)، `88c24114` (#570)، `b175ee43` (#571).
+- **نتیجهٔ نهایی CI (2026-11-07، دور دوم): هر شش PR سبز کامل** — `client`، `build-and-test`، `e2e` (Playwright + axe روی سرور واقعی)، `secret-scan`، `Semgrep scan`/`Semgrep OSS`، `CodeQL`، `Analyze (actions/python/csharp/javascript-typescript)` و `publish`/`publish-scripts`/`publish-windows` همه `success` روی SHA نهایی هر شاخه (CodeRabbit `skipped` طبق تنظیمات مخزن).
+
+### آمار تست واقعی از لاگ CI (جاب `client`، SHA نهایی هر PR)
+
+| PR | Head SHA ادغام‌شده | نتیجهٔ vitest از لاگ CI | وضعیت checkها |
+|---|---|---|---|
+| #566 | `17f55b26d04b` | ۷۹۲/۷۹۲ (۷۴ فایل تست) | همه سبز |
+| #567 | `8d8b99da47c3` | ۷۹۰/۷۹۰ (۷۵ فایل تست) | همه سبز |
+| #568 | `9ae1aaa6ecae` | ۸۰۹/۸۰۹ (۷۷ فایل تست) | همه سبز |
+| #569 | `5e460f4d3a05` | ۸۱۳/۸۱۳ (۷۸ فایل تست) | همه سبز |
+| #570 | `88c24114a551` | ۸۲۴/۸۲۴ (۷۹ فایل تست) | همه سبز |
+| #571 | `33cddd7d0fcd` | ۸۲۵/۸۲۵ (۷۹ فایل تست) | همه سبز |
+
+> منبع: لاگ خام جاب `client` در workflow «.NET CI» برای Head SHA هر PR (استخراج‌شده در 2026-11-08 از GitHub Actions API). رشد شمار تست از ۷۹۰ تا ۸۲۵ دقیقاً با افزودن تست‌های هر PR هم‌خوان است.
 
 ## امنیت، داده و سازگاری
 
@@ -133,9 +148,9 @@
 
 ## شناسه‌های Git
 
-- Branch: `fix/ui-final-polish`
-- Commit: آخرین commit همین شاخه (جدول بالا به‌روزرسانی می‌شود)
-- Pull Request: ثبت‌شده پس از Push (لینک در توضیحات PR و WORK_LOG)
+- انتهای نهایی `main` پس از ادغام هر ۶ PR: `cb2ddd57bdff88e0be75a5e0e75f76dc25f76d13` (Merge commit PR #571)
+- جدول کامل شاخه/Commit/Merge commit/PR: بخش «جدول PRها» در ابتدای سند
+- آرشیو تصاویر پیش‌نمایش: شاخهٔ `artifacts/stage-1-ui-preview` (لینک‌ها در `artifacts/ui-preview/stage-1/README.md`)
 
 ## بازبینی نهایی با اجرای واقعی برنامه (2026-11-07 — مأموریت بازبینی پیش از Merge)
 
@@ -179,3 +194,46 @@ Backend هیچ تغییری در ۶ PR نداشت؛ nevertheless بیلد Releas
 - `pr-568`: پوسته بدون نوار تب (طبق تفکیک محدوده PRها؛ PASS).
 - `pr-569`: T1..T5 تب‌ها PASS.
 - `pr-570`: D1/D2 (هشدار Dirty + بستن فرم تمیز بدون هشدار با بازگشت به داشبورد) PASS.
+
+## وضعیت پس از ادغام (به‌روزرسانی 2026-11-08 — PR 1-A مأموریت تکمیلی #444)
+
+### تاریخچه ادغام واقعی
+
+ادغام هر ۶ PR در 2026-11-07 با همین ترتیب توسط مالک مخزن انجام شد (خلاصه‌ی UTC از GitHub API):
+
+1. **15:40** — #566 (`fix/hr-installation-admin-access`) → `911959da9dd9`
+2. **15:41** — #567 (`fix/user-detail-back-nav`) → `3dcce666d01e`
+3. **15:57** — #568 (`feat/ui-app-shell`) → `a0b07ac7fb61`
+4. **15:58** — #569 (`feat/ui-workspace-tabs`) → `dad4c10c3ee4`
+5. **15:58** — #570 (`feat/ui-dirty-form-protection`) → `e6f558c3ddd7`
+6. **15:59** — #571 (`fix/ui-final-polish`) → `cb2ddd57bdff`
+
+- انتهای نهایی `main`: `cb2ddd57bdff88e0be75a5e0e75f76dc25f76d13`.
+- یافتهٔ «ترتیب Merge» بازبینی پیش از ادغام (#566 باید قبل/هم‌زمان با Stack ادغام شود) رعایت شد و رگرسیون پیش‌بینی‌شده رخ نداد؛ در نسخهٔ نهایی main، ترکیب فیکس #566 + Stack روی همان نسخهٔ یکپارچهٔ آزموده‌شده (`pr-integration`) است که هر ۱۲ سناریوی آن PASS بود.
+
+### وضعیت CI نهایی
+
+- همه checkهای هر ۶ PR روی SHA نهایی: `success` (جدول «آمار تست واقعی از لاگ CI» بالای سند)؛ CodeRabbit `skipped` طبق تنظیمات مخزن.
+- هیچ job الزامی Fail یا Pending باقی نمانده است.
+
+### محدودیت‌های باقی‌مانده (بازنویسی‌شده از «ریسک‌ها»، همچنان معتبر پس از ادغام)
+
+- بازگردانی اسکرول بین تب‌ها best-effort است.
+- تب‌های باز پس از تغییر شرکت/دوره حفظ می‌شوند و صفحات company-scoped با Context جدید refetch می‌کنند؛ تصمیم محصولی بعدی: بستن/برچسب‌زدن تب‌های وابسته به Context قبلی.
+- فرم‌های نقش‌ها و کاتالوگ مجوزها به رجیستری Dirty (PR 5) متصل نیستند — اتصال هر فرم یک خط `useFormGuard` است و در مأموریت تکمیلی #444 بررسی می‌شود.
+- ذخیرهٔ تب‌ها پس از refresh عمداً پیاده نشده است (الزام امنیتی: بدون web storage).
+
+### تصمیمات معماری ثبت‌شده در این مرحله
+
+- هیچ ADR جدیدی لازم نشد؛ D-011، D-031، D-048/D-049، D-064، D-071، D-072 و D-074 رعایت شدند.
+- وابستگی نهایی PRها: #566 و #567 مستقل از main؛ #568→#569→#570→#571 به‌صورت stacked؛ پس از ادغام همه، هیچ شاخهٔ باقی‌مانده‌ای برای این مرحله وجود ندارد.
+
+## تکمیل مأموریت تکمیلی مرحله اول (2026-11-08)
+
+با ایجاد سه PR زیر، نواقص مرحله اول تکمیل و این Handoff «تکمیل‌شده» اعلام می‌شود:
+
+- PR 1-A — اصلاح همین سند با تاریخچه ادغام واقعی: [#572](https://github.com/hamidreza1394/Accounting/pull/572)
+- PR 1-B — انتشار لینک‌های مستقیم تصاویر پیش‌نمایش: [#573](https://github.com/hamidreza1394/Accounting/pull/573)
+- PR 1-C — تکمیل تست بصری/Responsive و بستن WARN معلق Tooltip: [#574](https://github.com/hamidreza1394/Accounting/pull/574) (سند: `docs/handoffs/ISSUE-444-stage-1-responsive-checks.md`)
+
+هیچ‌کدام Merge نشده‌اند؛ ادغام فقط با اجازهٔ مالک انجام می‌شود.
