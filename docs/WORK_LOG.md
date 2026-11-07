@@ -2692,6 +2692,12 @@
 - **کد:** فقط `export navigation`/نوع‌ها از AppSidebar (بدون تغییر رفتار) + تست سازگاری جدید `menuRouteConsistency.test.tsx` (۶ قید: مسیرهای جعلی، Route تکراری، عنوان فارسی، برچسب انگلیسی، گروه بدون صفحه). هیچ Route/منو/رفتاری تغییر نکرد.
 - **تست:** کل مجموعه ClientApp اجرا شد — نتیجه در handoff ثبت می‌شود؛ مستندات: INDEX + handoff مرحله دوم.
 
+## 2026-11-08 — Issue #444 Stage 2-C: کاتالوگ عملیات و مجوزها (فقط-مستندات)
+- **مبنا:** `main@cb2ddd57`؛ شاخهٔ `docs/issue-444-stage2-permission-catalog`.
+- **سند:** `docs/PERMISSION_CATALOG.md` — نگاشت هر ۷۳ کد PermissionDefinitions (استخراج با regex از ۶ Migration) به محل اعمال واقعی، تاکسونومی افعال، تطبیق فعل‌های مأموریت، سطح hint کلاینت (۱۹ hint؛ بدون hint مرده)، قواعد PermissionTree و نگهداری.
+- **تصمیم مطابق مأموریت:** هیچ کد مجوز تازه‌ای اضافه نشد (جلوگیری از مجوز بی‌استفاده)؛ دو کد seeded-only و ۴۶ کد Trade به‌عنوان شکاف واقعی مستند شدند.
+- **مستندات:** INDEX + handoff مرحله دوم. بدون کد/Migration/API؛ Merge فقط با اجازهٔ مالک.
+
 ## 2026-11-08 — Issue #444 Stage 2-D: API کاتالوگ زیرسیستم/منو/فرم (Backend)
 - **مبنا:** `main@cb2ddd57`؛ شاخهٔ `feat/issue-444-stage2-access-catalog-api`.
 - **کد:** `Server/Infrastructure/Access/AccessCatalogRegistry.cs` (کاتالوگ کد-محور فقط-خواندنی: ۱۸ زیرسیستم/۲۰ منو/۲۳ فرم؛ کد entitlement فقط از ثابت‌های `LicenseSubsystemCodes`؛ بدون جدول/Migration — D-075) + `Server/Api/AccessCatalogEndpoints.cs` (سه GET فقط-خواندنی `/admin/access/catalog/{subsystems,menus,forms}` فقط مدیر نصب با بازخوانی نقش از DB در هر درخواست؛ no-store؛ بدون Pagination به‌دلیل ثابت‌بودن) + ثبت در `ApiEndpoints.MapFaranouApi`.
