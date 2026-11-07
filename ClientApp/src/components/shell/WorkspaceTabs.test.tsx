@@ -251,3 +251,20 @@ describe('dirty-form protection in the workspace (Issue #444 stage 1, PR 5)', ()
     expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
   });
 });
+
+  it('opens a tab from a real sidebar navigation click (menu and tabs share one router)', async () => {
+    // The shell sidebar links (admin group, open for the installation administrator) navigate
+    // through the same router the workspace listens to.
+    window.history.pushState(null, '', '/app/');
+    const shell = render(
+      <AppShell session={session} context={context} access={access} routes={routes} workspaceTabs onChangeContext={vi.fn()} onLogout={vi.fn().mockResolvedValue(undefined)}>
+        <main>جایگزین</main>
+      </AppShell>,
+    );
+    const user = userEvent.setup();
+    const nav = await screen.findByRole('navigation', { name: 'منوی اصلی' });
+    await user.click(within(nav).getByRole('link', { name: 'مدیریت کاربران' }));
+    expect(await waitFor(() => tabButton(/مدیریت کاربران/))).toHaveAttribute('aria-current', 'page');
+    expect(window.location.pathname).toBe('/app/admin/users');
+    shell.unmount();
+  });
