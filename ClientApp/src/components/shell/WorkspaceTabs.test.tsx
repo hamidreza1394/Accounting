@@ -207,7 +207,7 @@ describe('dirty-form protection in the workspace (Issue #444 stage 1, PR 5)', ()
   it('asks before closing a tab that holds a dirty form; cancel keeps the tab, confirm closes it', async () => {
     const user = userEvent.setup();
     setup('/app/form');
-    await within(tablist()).findByRole('tab', { selected: true, name: /فرم آزمایشی/ });
+    await waitFor(() => tabButton(/فرم آزمایشی/));
 
     // Make the form dirty, then try to close its tab.
     await user.click(screen.getByRole('button', { name: 'خراب‌کردن فرم' }));
@@ -218,35 +218,35 @@ describe('dirty-form protection in the workspace (Issue #444 stage 1, PR 5)', ()
     // Cancel: the tab stays open, nothing is lost.
     await user.click(within(dialog).getByRole('button', { name: 'انصراف' }));
     await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
-    expect(within(tablist()).getByRole('tab', { name: /فرم آزمایشی/ })).toBeInTheDocument();
+    expect(tabButton(/فرم آزمایشی/)).toBeInTheDocument();
 
     // Confirm: the tab finally closes and the workspace lands on the previous tab.
     await user.click(screen.getByRole('button', { name: 'بستن فرم آزمایشی' }));
     await user.click(await screen.findByRole('button', { name: 'بستن تب و از دست دادن تغییرات' }));
     await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
-    expect(within(tablist()).queryByRole('tab', { name: /فرم آزمایشی/ })).not.toBeInTheDocument();
+    expect(within(tabbar()).queryByRole('button', { name: /فرم آزمایشی/ })).not.toBeInTheDocument();
     expect(window.location.pathname).toBe('/app/');
   });
 
   it('closes a clean tab immediately without any dialog', async () => {
     const user = userEvent.setup();
     setup('/app/form');
-    await within(tablist()).findByRole('tab', { selected: true, name: /فرم آزمایشی/ });
+    await waitFor(() => tabButton(/فرم آزمایشی/));
     await user.click(screen.getByRole('button', { name: 'بستن فرم آزمایشی' }));
-    await waitFor(() => expect(within(tablist()).queryByRole('tab', { name: /فرم آزمایشی/ })).not.toBeInTheDocument());
+    await waitFor(() => expect(within(tabbar()).queryByRole('button', { name: /فرم آزمایشی/ })).not.toBeInTheDocument());
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
 
   it('keeps the form state while the tab is hidden (still dirty after coming back)', async () => {
     const user = userEvent.setup();
     setup('/app/form');
-    await within(tablist()).findByRole('tab', { selected: true, name: /فرم آزمایشی/ });
+    await waitFor(() => tabButton(/فرم آزمایشی/));
     await user.click(screen.getByRole('button', { name: 'خراب‌کردن فرم' }));
 
     // Open a second tab, switch away and back: the pane never unmounted, still dirty.
     await user.click(screen.getByRole('button', { name: 'بازکردن تب جدید' }));
-    await waitFor(() => expect(within(tablist()).getByRole('tab', { name: /داشبورد/ })).toHaveAttribute('aria-selected', 'true'));
-    await user.click(within(tablist()).getByRole('tab', { name: /فرم آزمایشی/ }));
+    await waitFor(() => expect(tabButton(/داشبورد/)).toHaveAttribute('aria-current', 'page'));
+    await user.click(tabButton(/فرم آزمایشی/));
     await user.click(screen.getByRole('button', { name: 'بستن فرم آزمایشی' }));
     expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
   });
