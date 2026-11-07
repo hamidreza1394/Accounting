@@ -99,7 +99,7 @@
 - PRهای #566، #567 و #568: **تمام checkها سبز** (`client`، `build-and-test`، `e2e`، `secret-scan`، `Semgrep`، `CodeQL`/`CodeRabbit`، `Analyze`، `publish`).
 - PR #569 (دور اول CI): همه سبز به‌جز **e2e: failure** — axe یک نقض critical `aria-required-children` روی `.faranou-tabbar-tabs` گزارش کرد (tablist به فرزند مستقیم `tab` نیاز دارد و دکمهٔ بستن داخل `tab` نقض `nested-interactive` می‌شد).
 - **اصلاح انجام‌شده روی همان شاخه** (commit `5e460f4d`): نوار تب از `role=tablist/tab/tabpanel` به الگوی واقعی خودش — یک `nav` از صفحات باز با `aria-current="page"` + دکمهٔ بستن مستقل — بازطراحی شد؛ تست‌ها به ساختار جدید به‌روز شدند؛ اسکن کامل axe روی شل رندرشده **صفر نقض**؛ سپس شاخه‌های #570 و #571 با merge همگام شدند (commits `88c24114` و `9b482e10`؛ ۸۲۴/۸۲۵ تست محلی سبز در هر شاخه).
-- دور دوم CI شاخه‌های به‌روزشده (#569/570/571) در لحظهٔ نوشتن این سند در حال اجراست؛ نتیجهٔ نهایی در گزارش پایانی مأموریت ثبت می‌شود.
+- **نتیجهٔ نهایی CI (2026-11-07، دور دوم): هر شش PR سبز کامل** — `client`، `build-and-test`، `e2e` (Playwright + axe روی سرور واقعی)، `secret-scan`، `Semgrep`، `publish`/`publish-scripts`/`publish-windows` همه `success` (CodeRabbit `skipped` طبق تنظیمات مخزن). آخرین SHAهای بررسی‌شده: `17f55b26` (#566)، `8d8b99da` (#567)، `f706c791` (#568)، `5e460f4d` (#569)، `88c24114` (#570)، `b175ee43` (#571).
 
 ## امنیت، داده و سازگاری
 
