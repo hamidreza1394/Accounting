@@ -1,0 +1,23 @@
+{
+  "out": "pr-566",
+  "base": "http://localhost:5090",
+  "mode": "hr",
+  "results": [
+    {
+      "scenario": "PR1: دکمه ایجاد واحد سازمانی برای مدیر نصب",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "scenario": "PR1: دکمه ایجاد سمت سازمانی برای مدیر نصب",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "scenario": "PR1: دکمه ثبت کارمند برای مدیر نصب",
+      "result": "PASS",
+      "note": ""
+    }
+  ],
+  "consoleErrors": []
+}

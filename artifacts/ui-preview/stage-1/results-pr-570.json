@@ -1,0 +1,18 @@
+{
+  "out": "pr-570",
+  "base": "http://localhost:5090",
+  "mode": "dirty",
+  "results": [
+    {
+      "scenario": "D1: فرم Dirty + بستن تب → هشدار، لغو، تأیید",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "scenario": "D2: ذخیره موفق وضعیت Dirty را پاک می‌کند (فرم بدون تغییر بدون هشدار بسته می‌شود)",
+      "result": "PASS",
+      "note": ""
+    }
+  ],
+  "consoleErrors": []
+}

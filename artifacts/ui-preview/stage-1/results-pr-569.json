@@ -1,0 +1,33 @@
+{
+  "out": "pr-569",
+  "base": "http://localhost:5090",
+  "mode": "tabs",
+  "results": [
+    {
+      "scenario": "T1: باز کردن مدیریت کاربران → تب جدید",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "scenario": "T2: واحدهای سازمانی → تب دوم",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "scenario": "T3: جلوگیری از تب تکراری",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "scenario": "T4: بستن تب غیرفعال",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "scenario": "T5: بستن تب فعال → جانشین",
+      "result": "PASS",
+      "note": ""
+    }
+  ],
+  "consoleErrors": []
+}

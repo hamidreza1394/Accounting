@@ -1,0 +1,18 @@
+{
+  "out": "pr-568",
+  "base": "http://localhost:5090",
+  "mode": "shell",
+  "results": [
+    {
+      "scenario": "Sidebar جمع‌شده و Tooltip",
+      "result": "INFO",
+      "note": "تصویر برای بازبینی بصری ذخیره شد"
+    },
+    {
+      "scenario": "نبود نوار تب در PR3 (پوسته بدون تب)",
+      "result": "PASS",
+      "note": "tabcount=0"
+    }
+  ],
+  "consoleErrors": []
+}

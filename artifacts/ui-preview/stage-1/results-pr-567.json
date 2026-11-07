@@ -1,0 +1,23 @@
+{
+  "out": "pr-567",
+  "base": "http://localhost:5090",
+  "mode": "userdetail",
+  "results": [
+    {
+      "scenario": "PR2: فهرست کاربران با فیلتر جست‌وجو",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "scenario": "PR2: دکمه بازگشت در پرونده کاربر (Ready)",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "scenario": "PR2: بازگشت، فیلتر و جست‌وجو را حفظ می‌کند",
+      "result": "PASS",
+      "note": ""
+    }
+  ],
+  "consoleErrors": []
+}
