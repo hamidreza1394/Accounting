@@ -21,10 +21,17 @@ export type Permission =
   | 'admin.roles.assign'
   | 'admin.permissions.view'
   // HR organizational structure (D-072): installation administrator (the server lets them through), or a
-  // company member holding the matching `hr.*.list` company code. Hints for the menu and the route guard only.
+  // company member holding the matching `hr.*` company code. Hints for the menu, the route guard and
+  // the create/update actions of the base structure pages only (Issue #444 stage 1).
   | 'hr.units.view'
+  | 'hr.units.create'
+  | 'hr.units.update'
   | 'hr.positions.view'
+  | 'hr.positions.create'
+  | 'hr.positions.update'
   | 'hr.employees.view'
+  | 'hr.employees.create'
+  | 'hr.employees.update'
   // Any signed-in user.
   | 'account.view';
 
@@ -59,11 +66,21 @@ const roleCodes = {
   assign: 'roles.assign',
 } as const;
 
-/** Company permission codes (server-owned, `HrOrganizationalStructureEndpoints`) that unlock each HR hint. */
+/**
+ * Company permission codes (server-owned, `HrOrganizationalStructureEndpoints`) that unlock each HR hint.
+ * The server passes the installation administrator through without any code, and `can` mirrors that:
+ * a ready installation administrator is granted every hint, so no page needs its own copy of the rule.
+ */
 const hrCodes = {
-  units: 'hr.organizational-units.list',
-  positions: 'hr.positions.list',
-  employees: 'hr.employees.list',
+  unitsView: 'hr.organizational-units.list',
+  unitsCreate: 'hr.organizational-units.create',
+  unitsUpdate: 'hr.organizational-units.update',
+  positionsView: 'hr.positions.list',
+  positionsCreate: 'hr.positions.create',
+  positionsUpdate: 'hr.positions.update',
+  employeesView: 'hr.employees.list',
+  employeesCreate: 'hr.employees.create',
+  employeesUpdate: 'hr.employees.update',
 } as const;
 
 const sameCompany = (left: string | null, right: string): boolean => left !== null && left.toLowerCase() === right.toLowerCase();
@@ -100,11 +117,23 @@ export function can(access: AccessSnapshot | null | undefined, permission: Permi
         case 'admin.permissions.view':
           return Object.values(roleCodes).some(has);
         case 'hr.units.view':
-          return has(hrCodes.units);
+          return has(hrCodes.unitsView);
+        case 'hr.units.create':
+          return has(hrCodes.unitsCreate);
+        case 'hr.units.update':
+          return has(hrCodes.unitsUpdate);
         case 'hr.positions.view':
-          return has(hrCodes.positions);
+          return has(hrCodes.positionsView);
+        case 'hr.positions.create':
+          return has(hrCodes.positionsCreate);
+        case 'hr.positions.update':
+          return has(hrCodes.positionsUpdate);
         case 'hr.employees.view':
-          return has(hrCodes.employees);
+          return has(hrCodes.employeesView);
+        case 'hr.employees.create':
+          return has(hrCodes.employeesCreate);
+        case 'hr.employees.update':
+          return has(hrCodes.employeesUpdate);
         default:
           return false;
       }
