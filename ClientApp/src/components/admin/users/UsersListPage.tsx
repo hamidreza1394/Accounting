@@ -10,6 +10,7 @@ import { Input, Select, FormField } from '../../ui/FormField';
 import { StatusBadge } from '../../ui/StatusBadge';
 import { Button, buttonVariants } from '../../ui/button';
 import { fullName } from './userDisplay';
+import { rememberUserListLocation } from './userListReturn';
 
 type Props = {
   onUnauthenticated: (error: unknown) => boolean;
@@ -101,6 +102,12 @@ export function UsersListPage({ onUnauthenticated, canCreate = false }: Props) {
 
   const queryRef = useRef(query);
   queryRef.current = query;
+
+  // Detail pages return here with the exact search, filters and paging of this visit.
+  // Memory only (never web storage) and nothing user-specific: just the list URL.
+  useEffect(() => {
+    rememberUserListLocation(params.toString());
+  }, [params]);
 
   // True while a URL change was made by this page itself (as opposed to back/forward).
   const ownNavigation = useRef(false);
