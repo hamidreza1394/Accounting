@@ -6,6 +6,7 @@ import { ErrorState, LoadingState } from '../../Feedback';
 import { Breadcrumb } from '../../ui/Breadcrumb';
 import { UserForm } from './UserFormFields';
 import { fullName } from './userDisplay';
+import { userListBackPath } from './userListReturn';
 import { clearUserFlash, setUserFlash } from './userFlash';
 import { toUpdateRequest, type UserFormValues } from './userFormValidation';
 
@@ -18,11 +19,17 @@ type State =
 
 const heading = <h1 className="text-2xl font-extrabold tracking-tight text-title">ویرایش کاربر</h1>;
 
-const backToList = (
-  <Link to="/admin/users" className="mt-3 inline-block rounded font-medium text-teal-deep underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-gold">
-    بازگشت به فهرست کاربران
-  </Link>
-);
+/** Same back affordance as the detail page: the remembered list query, not a dead plain list. */
+function BackToList() {
+  return (
+    <Link
+      to={userListBackPath()}
+      className="mt-3 inline-block rounded font-medium text-teal-deep underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-gold"
+    >
+      بازگشت به فهرست کاربران
+    </Link>
+  );
+}
 
 function initialValuesOf(user: AdminUserDetails): UserFormValues {
   return {
@@ -89,7 +96,7 @@ export function UserEditPage({ onUnauthenticated }: Props) {
         ) : (
           <ErrorState message={state.message} onRetry={() => setAttempt((value) => value + 1)} />
         )}
-        {backToList}
+        {BackToList()}
       </div>
     );
   } else if (initialValues) {
