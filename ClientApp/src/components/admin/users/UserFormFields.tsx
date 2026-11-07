@@ -16,6 +16,7 @@ import {
   type FieldName,
   type UserFormValues,
 } from './userFormValidation';
+import { useFormGuard } from '@/lib/formGuard';
 
 type Mode = 'create' | 'edit';
 
@@ -55,6 +56,8 @@ export function UserForm({ mode, initialValues, onSubmit, onCancel, onUnauthenti
 
   const clientErrors = validateUserForm(values, mode);
   const dirty = isUserFormDirty(values, initialValues);
+  // The workspace asks this registry before closing the tab, signing out or changing context.
+  const formGuard = useFormGuard(dirty);
   const visibleFields = fieldNames.filter((name) => mode === 'create' || (name !== 'password' && name !== 'confirmPassword'));
 
   const errorFor = (name: FieldName): string | undefined =>
@@ -121,6 +124,8 @@ export function UserForm({ mode, initialValues, onSubmit, onCancel, onUnauthenti
     try {
       await onSubmit(values);
       doneRef.current = true;
+      // Saved: closing this tab (or leaving the workspace) needs no warning anymore.
+      formGuard.markClean();
     } catch (cause) {
       if (onUnauthenticated(cause)) return;
       showServerFailure(cause);

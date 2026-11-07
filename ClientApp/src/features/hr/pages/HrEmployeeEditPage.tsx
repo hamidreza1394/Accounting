@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError } from '@/api/client';
 import { Alert } from '@/components/ui/Alert';
 import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
@@ -12,6 +12,7 @@ import { getHrEmployee, updateHrEmployee } from '../api/hrClient';
 import type { HrEmployeeDetail } from '../api/hrTypes';
 import { hrEmploymentStatusLabel } from '../lib/hrLabels';
 import { buildUpdateEmployeeBody, validateEmployeeNumber, validateRequiredName } from '../lib/hrValidation';
+import { useFormGuard } from '@/lib/formGuard';
 
 type Props = {
   onUnauthenticated: (error: unknown) => boolean;
@@ -37,6 +38,12 @@ export function HrEmployeeEditPage({ onUnauthenticated, companyId }: Props) {
   const [attempt, setAttempt] = useState(0);
 
   const [form, setForm] = useState<FormState | null>(null);
+  // The snapshot of the last server read: any edit creates a new object, so an identity
+  // comparison is the whole dirty check for this small form (no framework needed).
+  const savedFormRef = useRef<FormState | null>(null);
+  const dirty = form !== null && savedFormRef.current !== null && form !== savedFormRef.current;
+  // The workspace asks this registry before closing the tab, signing out or changing context.
+  const formGuard = useFormGuard(dirty);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<string, string>>>({});
   const [submitting, setSubmitting] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -45,7 +52,7 @@ export function HrEmployeeEditPage({ onUnauthenticated, companyId }: Props) {
     (signal: AbortSignal) =>
       getHrEmployee(companyId, employeeId ?? '', signal).then((detail) => {
         setEmployee(detail);
-        setForm(
+        const loaded: FormState | null =
           detail.employmentStatus === 3
             ? null
             : {
@@ -53,8 +60,9 @@ export function HrEmployeeEditPage({ onUnauthenticated, companyId }: Props) {
                 lastName: detail.lastName,
                 employmentStatus: detail.employmentStatus === 2 ? 2 : 1,
                 hiredOnIsoDay: toIsoDay(detail.hiredOnUtc),
-              },
-        );
+              };
+        savedFormRef.current = loaded;
+        setForm(loaded);
       }),
     [companyId, employeeId],
   );
@@ -105,6 +113,8 @@ export function HrEmployeeEditPage({ onUnauthenticated, companyId }: Props) {
     setSubmitting(true);
     try {
       await updateHrEmployee(companyId, employee.id, buildUpdateEmployeeBody({ ...form, rowVersion: employee.rowVersion }));
+      // Saved: closing this tab (or leaving the workspace) needs no warning anymore.
+      formGuard.markClean();
       await navigate(`/hr/org/employees/${employee.id}`);
     } catch (cause: unknown) {
       if (onUnauthenticated(cause)) return;

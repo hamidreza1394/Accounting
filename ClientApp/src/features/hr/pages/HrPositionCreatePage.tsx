@@ -8,6 +8,7 @@ import { FormSection } from '@/components/ui/FormSection';
 import { useNavigate } from '@/lib/router';
 import { createHrPosition } from '../api/hrClient';
 import { validateCode, validateDescription, validateRank, validateRequiredName, buildCreatePositionBody } from '../lib/hrValidation';
+import { useFormGuard } from '@/lib/formGuard';
 
 type Props = {
   onUnauthenticated: (error: unknown) => boolean;
@@ -28,8 +29,14 @@ export function HrPositionCreatePage({ onUnauthenticated, companyId }: Props) {
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<string, string>>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+  // The workspace asks this registry before closing the tab, signing out or changing context.
+  const formGuard = useFormGuard(dirty);
 
-  const update = (patch: Partial<FormState>) => setForm((current) => ({ ...current, ...patch }));
+  const update = (patch: Partial<FormState>) => {
+    setForm((current) => ({ ...current, ...patch }));
+    setDirty(true);
+  };
 
   const submit = async () => {
     setError(null);
@@ -48,6 +55,8 @@ export function HrPositionCreatePage({ onUnauthenticated, companyId }: Props) {
     setSubmitting(true);
     try {
       const created = await createHrPosition(companyId, buildCreatePositionBody(form));
+      // Saved: closing this tab (or leaving the workspace) needs no warning anymore.
+      formGuard.markClean();
       await navigate(`/hr/org/positions/${created.id}`);
     } catch (cause: unknown) {
       if (onUnauthenticated(cause)) return;

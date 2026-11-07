@@ -9,6 +9,8 @@ import { matchPath, RouterProvider, useLocation, type Route } from '../lib/route
 import { AppSidebar } from './shell/AppSidebar';
 import { PageBreadcrumbBar, PageBreadcrumbProvider } from './shell/PageBreadcrumb';
 import { WorkspaceTabPanes, WorkspaceTabsBar, WorkspaceTabsProvider } from './shell/WorkspaceTabs';
+import { dirtySummary, hasAnyDirtyForm } from '../lib/formGuard';
+import { ConfirmDialog } from './ui/ConfirmDialog';
 
 type AppShellProps = {
   session: Session;
@@ -76,6 +78,9 @@ function AppShellFrame({
   const [accountOpen, setAccountOpen] = useState(false);
   const accountTriggerRef = useRef<HTMLButtonElement>(null);
   const mainRef = useRef<HTMLElement>(null);
+  // Dirty forms anywhere in the workspace block logout and context changes until confirmed.
+  const [pendingLogout, setPendingLogout] = useState(false);
+  const [pendingContextChange, setPendingContextChange] = useState(false);
   const { pathname } = useLocation();
   const readOnly = context.fiscalPeriod.accessMode === 'readOnly';
 
@@ -94,6 +99,24 @@ function AppShellFrame({
       setLogoutError(error instanceof Error ? error.message : 'خروج با خطا مواجه شد.');
       setLoggingOut(false);
     }
+  }
+
+  function requestLogout() {
+    if (hasAnyDirtyForm()) {
+      setPendingLogout(true);
+      return;
+    }
+    void handleLogout();
+  }
+
+  function requestContextChange() {
+    // Company/period data is refetched for the new context; dirty forms of the old one would
+    // silently mix contexts, so they get the same confirmation as closing their tab.
+    if (hasAnyDirtyForm()) {
+      setPendingContextChange(true);
+      return;
+    }
+    onChangeContext();
   }
 
   return (
@@ -129,7 +152,7 @@ function AppShellFrame({
           </div>
 
           <div className="faranou-header-context" aria-label="زمینه کاری جاری">
-            <button type="button" onClick={onChangeContext} className="faranou-context-choice" aria-label={`شرکت جاری ${context.company.name}، تغییر شرکت`}>
+            <button type="button" onClick={requestContextChange} className="faranou-context-choice" aria-label={`شرکت جاری ${context.company.name}، تغییر شرکت`}>
               <ChevronDown className="faranou-context-chevron" size={17} />
               <span className="min-w-0 flex-1 text-start">
                 <span className="block text-[10px] text-on-navy/70 sm:text-[11px]">شرکت جاری</span>
@@ -137,7 +160,7 @@ function AppShellFrame({
               </span>
               <Building2 className="shrink-0 text-on-navy-accent" size={22} />
             </button>
-            <button type="button" onClick={onChangeContext} className="faranou-context-choice" aria-label={`دوره مالی ${context.fiscalPeriod.title}، تغییر دوره مالی`}>
+            <button type="button" onClick={requestContextChange} className="faranou-context-choice" aria-label={`دوره مالی ${context.fiscalPeriod.title}، تغییر دوره مالی`}>
               <ChevronDown className="faranou-context-chevron" size={17} />
               <span className="min-w-0 flex-1 text-start">
                 <span className="block text-[10px] text-on-navy/70 sm:text-[11px]">دوره مالی</span>
@@ -172,7 +195,7 @@ function AppShellFrame({
             </span>
             <button
               type="button"
-              onClick={() => void handleLogout()}
+              onClick={requestLogout}
               disabled={loggingOut}
               className="faranou-logout-button"
               aria-label="خروج"
@@ -231,6 +254,32 @@ function AppShellFrame({
         </main>
       </div>
       </WorkspaceTabsProvider>
+      <ConfirmDialog
+        open={pendingLogout}
+        title="خروج از حساب کاربری با تغییرات ذخیره‌نشده"
+        description={`${dirtySummary() || 'صفحهٔ باز تغییرات ذخیره‌نشده دارد.'} با خروج از دست می‌روند.`}
+        confirmLabel="خروج و از دست دادن تغییرات"
+        cancelLabel="انصراف"
+        tone="danger"
+        onConfirm={() => {
+          setPendingLogout(false);
+          void handleLogout();
+        }}
+        onCancel={() => setPendingLogout(false)}
+      />
+      <ConfirmDialog
+        open={pendingContextChange}
+        title="تغییر زمینهٔ کاری با تغییرات ذخیره‌نشده"
+        description={`${dirtySummary() || 'صفحهٔ باز تغییرات ذخیره‌نشده دارد.'} پیش از تغییر شرکت یا دوره مالی ذخیره کنید؛ ادامه، فرم‌های زمینهٔ قبلی را از دست می‌دهد.`}
+        confirmLabel="ادامه و تغییر زمینه"
+        cancelLabel="انصراف"
+        tone="danger"
+        onConfirm={() => {
+          setPendingContextChange(false);
+          onChangeContext();
+        }}
+        onCancel={() => setPendingContextChange(false)}
+      />
       <MyAccountPanel
         open={accountOpen}
         onClose={() => {
