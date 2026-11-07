@@ -18,6 +18,7 @@ import {
   parseCreatedCompanyRole,
   parsePermissionCatalog,
   parseCompanyRoleMembers,
+  parseEffectivePermissions,
   parseTransferredMemberCount,
   parseMySessions,
   parseRevokedSessionCount,
@@ -53,6 +54,7 @@ import {
   type SecurityAuditPage,
   type SecurityAuditEventType,
   type AdminCompanyPage,
+  type EffectivePermissions,
 } from './types';
 
 // The API lives on the same origin and is authenticated by the HttpOnly cookie of the
@@ -317,6 +319,25 @@ export async function getCompanyRoleMembers(
 ): Promise<CompanyRoleMemberPage> {
   return parseCompanyRoleMembers(
     await getJson(`/admin/companies/${encodeURIComponent(companyId)}/roles/${encodeURIComponent(roleId)}/members?page=${page}&pageSize=${pageSize}`, signal),
+  );
+}
+
+/**
+ * The effective permissions of one active member of the company: the union of the codes granted by
+ * the active roles of their active memberships, plus the role names. Installation administrators
+ * and members holding `roles.view` may read it; users without an active membership in the company
+ * answer 404 without disclosing the account (D-064).
+ */
+export async function getEffectivePermissions(
+  companyId: string,
+  userId: string,
+  signal?: AbortSignal,
+): Promise<EffectivePermissions> {
+  return parseEffectivePermissions(
+    await getJson(
+      `/admin/companies/${encodeURIComponent(companyId)}/effective-permissions/${encodeURIComponent(userId)}`,
+      signal,
+    ),
   );
 }
 

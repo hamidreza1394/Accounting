@@ -69,6 +69,7 @@ public static class ApiEndpoints
                 api.MapAdminUserSessionEndpoints();
                 api.MapSecurityAuditAdministrationEndpoints();
                 api.MapCompanyRoleAdministrationEndpoints();
+                api.MapAccessCatalogEndpoints();
                 api.MapCompanyUserDirectoryEndpoints();
                 api.MapCompanyMembershipRequestEndpoints();
                 api.MapCorporateGroupDirectoryEndpoints();
