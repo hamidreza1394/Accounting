@@ -2685,3 +2685,9 @@
 - **عدم تکرار API:** عملیات/مجوزها همچنان از `GET /admin/permission-catalog` سرو می‌شوند؛ مدیر شرکت طبق D-071 §6 همان endpoint را در سقف تفویض می‌بیند.
 - **تست:** ۵ تست جدید `AccessCatalogEndpointTests` (401 ناشناس، 403 غیرمدیر، 200 مدیر؛ درون‌سازگاری کاتالوگ؛ منع ساخت کد entitlement؛ یکتایی مسیرها). اجرای واقعی: `dotnet test` کامل — **۱۰۵۷ موفق / ۲ خطای پیش‌موجود** (`SafeExceptionRealApplicationTests` نیازمند SQL Server، مطابق WORK_LOGهای قبلی) / ۶۴ Skip gated.
 - **مستندات:** بخش ۱۰ `docs/api/USER_ACCESS_MANAGEMENT_API.md`. Merge فقط با اجازهٔ مالک.
+
+## 2026-11-08 — Issue #444 Stage 2-E (بخش Backend): API دسترسی‌های مؤثر عضو شرکت
+- **مبنا:** `main@cb2ddd57`؛ شاخهٔ `feat/issue-444-stage2-effective-permissions-api`.
+- **کد:** `GET /api/v1/admin/companies/{companyId}/effective-permissions/{userId}` در `CompanyRoleAdministrationEndpoints.cs` — اجتماع کدهای مجوز نقش‌های فعال روی عضویت‌های فعال هدف (`CompanyAccessService.GetGrantedPermissionCodesAsync`) + نام نقش‌ها؛ مجوزدهی دوحالته D-071 (`roles.view` یا مدیر نصب با بازخوانی DB)؛ بدون عضویت فعال هدف/حساب ناموجود = 404 بدون افشا (D-064)؛ no-store؛ بدون Audit (خواندنی).
+- **تست واقعی:** ۳ تست جدید `EffectivePermissionsEndpointTests` (قواعد دوحالته 404/403/200؛ اجتماع کدها و حذف نقش/عضویت غیرفعال؛ 404 بدون افشا برای حساب ناموجود/غیرفعال) — سبز؛ کل مجموعه **۱۰۶۰ موفق / ۲ پیش‌موجود (نیازمند SQL Server) / ۶۴ Skip**.
+- **مستندات:** بخش ۳.۱ قرارداد API. UI مشاهده در RoleDetailPage در PR بعدی همین مأموریت می‌آید. Merge فقط با اجازهٔ مالک.
