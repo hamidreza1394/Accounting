@@ -2679,6 +2679,13 @@
 - **تست محلی:** vitest نهایی **824/824** (+۳۴)، typecheck و build سبز، `check:offline` و `check_static_assets` سبز؛ هیچ تغییری در Backend/Migration/کاتالوگ مجوز. بررسی مرورگر واقعی (Chromium، 1440/768/360) با تصاویر قبل/بعد پوسته.
 - **مستندات:** `docs/UI_COMPONENTS.md` (سه بخش پوسته/چندتب/Dirty)، handoff: `docs/handoffs/ISSUE-444-stage-1-workspace-shell.md`. Merge فقط با اجازهٔ صریح مالک؛ وضعیت CI هر PR در handoff و گزارش مأموریت ثبت می‌شود.
 
+## 2026-11-08 — Issue #444 Stage 2-A: کاتالوگ رسمی زیرسیستم‌ها و معماری دسترسی (فقط-مستندات)
+- **مبنا:** `main@cb2ddd57`؛ شاخهٔ `docs/issue-444-stage2-subsystem-catalog`.
+- **کاتالوگ:** `docs/SUBSYSTEM_CATALOG.md` — استخراج کامل از کد واقعی (روترها/منو/Endpointها/PermissionDefinitions/LicenseSubsystemCodes) در سه گروه: هسته/مدیریتی (core, identity-admin, membership, access-admin, hr, security-audit, fiscal)، عملیاتی مجوزدار (TRADE_IMPORT, finance, treasury, sales, inventory) و پشتیبان/بیرونی (corporate-groups, reporting, licensing, vendor, infrastructure-operator, support)؛ هر ردیف با شواهد کد و وضعیت واقعی D-030.
+- **D-075 (Proposed):** مدل مفهومی زیرسیستم/منو/فرم/عملیات؛ پیوند entitlement فقط برای زیرسیستم‌های مجوزدار؛ هم‌خوانی PermissionTree با کاتالوگ؛ بدون جدول/RBAC/Tenant موازی.
+- **شکاف‌های مستند:** Trade runtime (#390)، تلفیق گروه، grant سال/دوره (D-066 Proposed)، retention (D-070)، انقضای عضویت، ۷ زیرسیستم placeholder.
+- **مستندات:** INDEX.md (سطر کاتالوگ + D-075)؛ handoff: `docs/handoffs/ISSUE-444-stage-2.md`. هیچ تغییر کد/Migration/API. Merge فقط با اجازهٔ مالک.
+
 ## 2026-11-08 — Issue #444 Stage 2-D: API کاتالوگ زیرسیستم/منو/فرم (Backend)
 - **مبنا:** `main@cb2ddd57`؛ شاخهٔ `feat/issue-444-stage2-access-catalog-api`.
 - **کد:** `Server/Infrastructure/Access/AccessCatalogRegistry.cs` (کاتالوگ کد-محور فقط-خواندنی: ۱۸ زیرسیستم/۲۰ منو/۲۳ فرم؛ کد entitlement فقط از ثابت‌های `LicenseSubsystemCodes`؛ بدون جدول/Migration — D-075) + `Server/Api/AccessCatalogEndpoints.cs` (سه GET فقط-خواندنی `/admin/access/catalog/{subsystems,menus,forms}` فقط مدیر نصب با بازخوانی نقش از DB در هر درخواست؛ no-store؛ بدون Pagination به‌دلیل ثابت‌بودن) + ثبت در `ApiEndpoints.MapFaranouApi`.
@@ -2696,3 +2703,16 @@
 - **مبنا:** شاخهٔ `feat/issue-444-stage2-effective-permissions-api` (#579)؛ شاخهٔ جدید `feat/issue-444-stage2-effective-permissions-ui` (stacked — وابستگی واقعی به API جدید).
 - **کد:** `api/types.ts` (نوع + پارسر قراردادی `parseEffectivePermissions`)، `api/client.ts` (`getEffectivePermissions`)، `RoleMembersSection.tsx` (ستون «دسترسی مؤثر» با دکمهٔ مشاهدهٔ per-row + کارت نتیجه با حالت‌های Loading/Error/Empty و نمایش نقش‌ها + کدهای مجوز به‌صورت `<code dir=ltr>`؛ 403 → onForbidden برای بازخوانی hintها؛ 404 → پیام بدون افشا).
 - **تست واقعی:** +۳ تست در `RoleMembersSection.test.tsx` (نمایش اجتماع نقش/کد؛ Empty؛ مسیر 404 بدون افشا و 403 با onForbidden)؛ کل vitest **844/844**؛ typecheck و build سبز؛ هیچ تستی حذف نشد.
+
+## 2026-11-08 — Issue #444 تکمیلی — PR 1-C: تکمیل تست بصری/Responsive مرحله اول (حد واقعی محیط)
+- **مبنا:** `main@cb2ddd57`؛ شاخهٔ `test/ui-stage1-responsive-checks`.
+- **تست محلی واقعی روی این شاخه:** vitest **842/842** (۸۰ فایل؛ +۱ تست جدید)، typecheck/build/check:offline/check_static_assets همگی سبز؛ `dotnet publish` سرور موفق (175MB، بدون تغییر کد Backend؛ Backend test اجرا نشد چون Backend تغییر نکرد).
+- **تست جدید:** Tooltip Rail سایدبار — رفتار `title` بومی در حالت جمع‌شده، حذف آن در حالت باز و پنهان‌بودن فرزندان گروه در Rail؛ این تست WARN ثبت‌شدهٔ `results-pr-integration.json` («tooltip با سلکتورهای عمومی پیدا نشد») را می‌بندد. هیچ تستی حذف یا تضعیف نشد.
+- **شواهد مرورگر واقعی 2026-11-07** (مأموریت بازبینی پیش از ادغام، در مخزن): هر ۱۱ مورد چک‌لیست مأموریت PR 1-C با نتایج JSON/اسکرین‌شات ۵ اندازهٔ واقعی پوشش داده شده است؛ سند `docs/handoffs/ISSUE-444-stage-1-responsive-checks.md` هر مورد را به شاهد واقعی گره می‌زند.
+- **گزارش صریح:** اجرای تازهٔ E2E مرورگری در 2026-11-08 **انجام نشد** — Sandbox بدون Docker/sudo است و سیاست‌های آن mount/bind و چرخهٔ rootless SQL Server را مسدود می‌کنند (سه تلاش مستند). ادعای اجرای نشده، اجرا نشده گزارش شد؛ هیچ نتیجه‌ای جعل نشد.
+
+## 2026-11-08 — Issue #444 تکمیلی — PR 1-A: اصلاح Handoff مرحله اول با تاریخچهٔ ادغام واقعی
+- **مبنا:** `main@cb2ddd57` (ادغام #571)؛ شاخهٔ `docs/issue-444-stage1-handoff-correction`؛ تغییر فقط-مستندات، بدون هیچ تغییری در کد/تست/Migration.
+- **تغییر:** `docs/handoffs/ISSUE-444-stage-1-workspace-shell.md` با واقعیت GitHub هم‌تراز شد: وضعیت هر ۶ PR «ادغام‌شده در 2026-11-07»، جدول PRها با Head SHA و Merge commit واقعی از GitHub API (#568: `9ae1aaa6ecae`، #571: `33cddd7d0fcd` — SHAهای قبلی سند به commitهای میانی اشاره می‌کردند)، زمان ادغام UTC، جدول «آمار تست واقعی از لاگ CI» (جاب client: 792/790/809/813/824/825) و بخش جدید «وضعیت پس از ادغام» شامل انتهای نهایی main (`cb2ddd57`)، ترتیب ادغام واقعی، محدودیت‌های باقی‌مانده و تصمیمات معماری.
+- **شواهد:** Check-runs همهٔ ۶ SHA نهایی success (client، build-and-test، e2e، secret-scan، Semgrep، CodeQL، Analyze، publish*)؛ لاگ خام CI از GitHub Actions API استخراج شد.
+- **مستندات:** فقط همین Handoff و ورودی WORK_LOG؛ Merge فقط با اجازهٔ مالک.
