@@ -264,7 +264,7 @@ describe('dirty-form protection in the workspace (Issue #444 stage 1, PR 5)', ()
     const user = userEvent.setup();
     const nav = await screen.findByRole('navigation', { name: 'منوی اصلی' });
     await user.click(within(nav).getByRole('link', { name: 'مدیریت کاربران' }));
-    expect(await within(tablist()).findByRole('tab', { selected: true, name: /مدیریت کاربران/ })).toBeInTheDocument();
+    expect(await waitFor(() => tabButton(/مدیریت کاربران/))).toHaveAttribute('aria-current', 'page');
     expect(window.location.pathname).toBe('/app/admin/users');
     shell.unmount();
   });
