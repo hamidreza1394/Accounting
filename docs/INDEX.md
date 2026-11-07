@@ -16,6 +16,7 @@
 | [TRADE_MODULE.md](TRADE_MODULE.md) | معماری، امنیت چندشرکتی، استفاده مشترک از دوره‌های مالی، فرم‌ها، گزارش‌ها و مسیر استخراج ماژول بازرگانی (D-061/D-062) |
 | [USER_ACCESS_MANAGEMENT.md](USER_ACCESS_MANAGEMENT.md) | طراحی و نقشه اجرایی مدیریت کاربران، سمت‌ها، گروه‌های دسترسی، مجوزهای جزئی و سوابق امنیتی (Issue #444) |
 | [SUBSYSTEM_CATALOG.md](SUBSYSTEM_CATALOG.md) | کاتالوگ رسمی زیرسیستم‌های واقعی مخزن با شواهد کد، وضعیت، منو، کدهای مجوز و پیوند entitlement؛ مدل زیرسیستم/منو/فرم/عملیات در D-075 (Stage 2-A، Issue #444) |
+| [MENU_FORM_CATALOG.md](MENU_FORM_CATALOG.md) | کاتالوگ درخت منو و همهٔ Routeهای واقعی با Parent/گیت/ترتیب؛ گارد ماشینی سازگاری منو↔روتر (Stage 2-B، Issue #444) |
 | [api/USER_ACCESS_MANAGEMENT_API.md](api/USER_ACCESS_MANAGEMENT_API.md) | قرارداد واقعی API مدیریت کاربران/دسترسی/نشست‌ها برای مصرف Frontend — استخراج‌شده از کد (Issue #444؛ به‌روزرسانی 2026-11-05) |
 | [handoffs/USER-ACCESS-FRONTEND-HANDOFF.md](handoffs/USER-ACCESS-FRONTEND-HANDOFF.md) | نقشهٔ مصرف Frontend برای کاربران/دسترسی/نشست‌ها: نگاشت صفحه‌ها به API، خطاها، قابلیت‌های ناموجود و وضعیت PRهای Wave-1 (2026-11-05) |
 | [`FRONTEND_API_CONTRACT_NEEDS.md`](FRONTEND_API_CONTRACT_NEEDS.md) | قراردادهای API پیشنهادی مورد نیاز UI مدیریت دسترسی (عضویت، `/me/permissions`، گزارش امنیتی، نشست‌ها، S2) برای Backend (Issue #444) |
