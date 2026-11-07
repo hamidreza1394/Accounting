@@ -2663,3 +2663,11 @@
 - تست مرزی جدید: رمز ۱۴ نویسه رد، رمز ۱۵ نویسه با فاصله پذیرفته؛ `PasswordPolicyTests` بازساختگان منطبق با حداقل ۱۵.
 - نتایج واقعی: dotnet کل ۱۰۴۰ موفق / ۲ پیش‌موجود (`SafeExceptionRealApplicationTests`) / ۶۲ Skip؛ vitest ۷۸۳/۷۸۳؛ typecheck و build سبز. `docs/USER_SELF_SERVICE.md` به‌روزرسانی شد؛ handoff: `ISSUE-444-password-policy-d073.md`. Merge فقط با اجازه مالک.
 
+
+
+## 2026-11-07 — Issue #393: candidate تمدید مستقل دوره‌های پشتیبانی و به‌روزرسانی
+- **مبنا:** `main@7fd0f7ee23d168e2c48561fc3db8bd5a80a35db1`؛ شاخه مستقل `feat/393-support-update-period-amendments-20261107`.
+- **تغییر:** افزودن `TryBuildSupportAndUpdatePeriodExtension` برای ساخت candidate Payload v2؛ support و updates جداگانه و فقط از تاریخ قبلاً اعطاشده تمدید می‌شوند. تاریخ انقضای License و entitlementهای Company دست‌نخورده می‌مانند.
+- **Fail-closed:** v1، تاریخ null فعلی، no-op، کاهش/تکرار، تاریخ جدید غیرآینده، sequence/metadata stale، منبع غیرمجاز و term منقضی‌شده رد می‌شوند. perpetual با پایان support/update منقضی نمی‌شود.
+- **تست‌ها:** Regression برای تمدید مستقل Support/Updates، عدم تغییر expiry، عدم اعطای ضمنی از null، رد no-op/تاریخ نامعتبر/term منقضی و تمدید Support منقضی‌شده برای perpetual افزوده شد.
+- **محدوده:** فقط Vendor Host، تست و مستندات؛ بدون سفارش/پرداخت، persistence، approval، signer/export، Migration، `Server/**`، Customer DB یا secret. تست محلی اجرا نشده؛ نتیجه فقط پس از CI روی SHA نهایی قابل Verified است.

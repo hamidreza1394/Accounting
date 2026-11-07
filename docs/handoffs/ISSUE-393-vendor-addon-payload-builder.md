@@ -79,3 +79,14 @@
 - collectionهای ورودی و خروجی snapshot مستقل read-only هستند؛ candidate همچنان pure است و هیچ سفارش/پرداخت، persistence، approval، امضا، export یا sequence پایدار ایجاد نمی‌کند.
 - تست‌های Regression برای مسیر موفق چندنوعی، حفظ شرکت دیگر، round-trip canonical، ورودی mutable، رد v1، شرکت/ماژول/Feature نامعتبر، عدم افزایش و no-op اضافه شدند.
 - تست محلی اجرا نشده است؛ وضعیت فقط پس از CI روی SHA نهایی قابل `Verified` است.
+
+
+## برش سوم — تمدید مستقل دوره‌های پشتیبانی و به‌روزرسانی (2026-11-07)
+
+- متد `VendorLicenseAmendmentPayloadBuilder.TryBuildSupportAndUpdatePeriodExtension` فقط Payload v2 معتبر و منطبق با همان Customer/Installation/License را می‌پذیرد.
+- فقط تاریخ غیر-null موجود را می‌توان تمدید کرد؛ تاریخ جدید باید هم از تاریخ قبلی و هم از زمان صدور amendment جلوتر باشد. تاریخ null به‌صورت ضمنی به entitlement تبدیل نمی‌شود.
+- `supportUntilUtc` و `updatesUntilUtc` مستقل و قابل تمدید جداگانه‌اند؛ `expiresAtUtc`، LicenseId، InstallationId، ProductCode، maxCompanies و entitlementهای Company حفظ می‌شوند.
+- Payload v1، sequence/metadata stale، منابع غیرفعال، no-op، کاهش/تکرار تاریخ، تاریخ آینده‌نبودن و term license منقضی‌شده رد می‌شوند. perpetual license پس از پایان support می‌تواند همان دورهٔ قبلی را تمدید کند.
+- این متد pure candidate builder است؛ هیچ خرید، سفارش، پرداخت، approval، امضا، persistence یا sequence پایدار ایجاد نمی‌کند. caller همچنان باید envelope جاری را با trust store و signature بررسی کند.
+- تست‌های Regression افزوده‌شده: تمدید مستقل Support، تمدید مستقل Updates، رد v1 و تاریخ null، رد no-op/عدم افزایش/تاریخ غیرآینده/term منقضی، و تمدید Support منقضی‌شده برای perpetual.
+- CI روی SHA نهایی PR باید پیش از `Verified` شدن موفق شود؛ تست محلی در این اجرا اجرا نشده است.

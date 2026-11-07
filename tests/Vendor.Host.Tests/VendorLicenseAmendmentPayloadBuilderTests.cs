@@ -540,6 +540,145 @@ public sealed class VendorLicenseAmendmentPayloadBuilderTests
         Assert.Equal("amendment_has_no_entitlement_increase", error);
     }
 
+    [Fact]
+    public void BuildsV2SupportPeriodExtensionWithoutChangingUpdatesOrLicenseExpiry()
+    {
+        var fixture = CreateV2Fixture();
+        var issuedAt = IssuedAt.AddDays(1);
+        var requestedSupportUntil = new DateTimeOffset(2027, 2, 1, 0, 0, 0, TimeSpan.FromHours(3));
+
+        var success = VendorLicenseAmendmentPayloadBuilder.TryBuildSupportAndUpdatePeriodExtension(
+            fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
+            requestedSupportUntil, newUpdatesUntilUtc: null, issuedAt,
+            out var amendment, out var error);
+
+        Assert.True(success);
+        Assert.Null(error);
+        Assert.NotNull(amendment);
+        Assert.Equal(2, amendment!.FormatVersion);
+        Assert.Equal(fixture.Payload.LicenseId, amendment.LicenseId);
+        Assert.Equal(fixture.Payload.InstallationId, amendment.InstallationId);
+        Assert.Equal(fixture.Payload.Sequence + 1, amendment.Sequence);
+        Assert.Equal(requestedSupportUntil.ToUniversalTime(), amendment.SupportUntilUtc);
+        Assert.Equal(fixture.Payload.UpdatesUntilUtc, amendment.UpdatesUntilUtc);
+        Assert.Equal(fixture.Payload.ExpiresAtUtc, amendment.ExpiresAtUtc);
+        Assert.NotSame(fixture.Payload.CompanyEntitlements, amendment.CompanyEntitlements);
+        Assert.True(
+            LicenseRevisionRules.TryValidateSuccessor(fixture.Payload, amendment, out var successorError),
+            successorError);
+    }
+
+    [Fact]
+    public void BuildsV2UpdatePeriodExtensionWithoutChangingSupportOrLicenseExpiry()
+    {
+        var fixture = CreateV2Fixture();
+        var issuedAt = IssuedAt.AddDays(1);
+        var requestedUpdatesUntil = IssuedAt.AddDays(180).ToOffset(TimeSpan.FromHours(-4));
+
+        var success = VendorLicenseAmendmentPayloadBuilder.TryBuildSupportAndUpdatePeriodExtension(
+            fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
+            newSupportUntilUtc: null, requestedUpdatesUntil, issuedAt,
+            out var amendment, out var error);
+
+        Assert.True(success);
+        Assert.Null(error);
+        Assert.NotNull(amendment);
+        Assert.Equal(fixture.Payload.SupportUntilUtc, amendment!.SupportUntilUtc);
+        Assert.Equal(requestedUpdatesUntil.ToUniversalTime(), amendment.UpdatesUntilUtc);
+        Assert.Equal(fixture.Payload.ExpiresAtUtc, amendment.ExpiresAtUtc);
+        Assert.Equal(fixture.Payload.Sequence + 1, amendment.Sequence);
+    }
+
+    [Fact]
+    public void SupportUpdatePeriodExtensionRejectsLegacyPayloadAndDoesNotGrantMissingPeriods()
+    {
+        var legacy = CreateV1Fixture();
+        var success = VendorLicenseAmendmentPayloadBuilder.TryBuildSupportAndUpdatePeriodExtension(
+            legacy.Payload, legacy.License, legacy.Installation, legacy.Customer,
+            IssuedAt.AddDays(60), newUpdatesUntilUtc: null, IssuedAt.AddDays(1),
+            out var amendment, out var error);
+        Assert.False(success);
+        Assert.Null(amendment);
+        Assert.Equal("support_update_periods_require_payload_v2", error);
+
+        var v2 = CreateV2Fixture();
+        v2.Payload = v2.Payload with { SupportUntilUtc = null };
+        success = VendorLicenseAmendmentPayloadBuilder.TryBuildSupportAndUpdatePeriodExtension(
+            v2.Payload, v2.License, v2.Installation, v2.Customer,
+            IssuedAt.AddDays(60), newUpdatesUntilUtc: null, IssuedAt.AddDays(1),
+            out amendment, out error);
+        Assert.False(success);
+        Assert.Null(amendment);
+        Assert.Equal("support_period_not_previously_granted", error);
+    }
+
+    [Fact]
+    public void SupportUpdatePeriodExtensionRejectsNoOpNonIncreasingNonFutureAndExpiredTermRequests()
+    {
+        var fixture = CreateV2Fixture();
+        var success = VendorLicenseAmendmentPayloadBuilder.TryBuildSupportAndUpdatePeriodExtension(
+            fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
+            newSupportUntilUtc: null, newUpdatesUntilUtc: null, IssuedAt.AddDays(1),
+            out var amendment, out var error);
+        Assert.False(success);
+        Assert.Null(amendment);
+        Assert.Equal("amendment_has_no_period_increase", error);
+
+        success = VendorLicenseAmendmentPayloadBuilder.TryBuildSupportAndUpdatePeriodExtension(
+            fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
+            fixture.Payload.SupportUntilUtc, newUpdatesUntilUtc: null, IssuedAt.AddDays(1),
+            out amendment, out error);
+        Assert.False(success);
+        Assert.Null(amendment);
+        Assert.Equal("support_period_not_increased", error);
+
+        fixture.Payload = fixture.Payload with { SupportUntilUtc = IssuedAt.AddDays(-2) };
+        success = VendorLicenseAmendmentPayloadBuilder.TryBuildSupportAndUpdatePeriodExtension(
+            fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
+            IssuedAt.AddDays(-1), newUpdatesUntilUtc: null, IssuedAt,
+            out amendment, out error);
+        Assert.False(success);
+        Assert.Null(amendment);
+        Assert.Equal("support_period_not_future", error);
+
+        fixture = CreateV2Fixture();
+        fixture.License.ValidUntilUtc = IssuedAt.AddHours(1);
+        fixture.Payload = fixture.Payload with { ExpiresAtUtc = fixture.License.ValidUntilUtc };
+        success = VendorLicenseAmendmentPayloadBuilder.TryBuildSupportAndUpdatePeriodExtension(
+            fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
+            IssuedAt.AddDays(60), newUpdatesUntilUtc: null, IssuedAt.AddDays(1),
+            out amendment, out error);
+        Assert.False(success);
+        Assert.Null(amendment);
+        Assert.Equal("license_outside_validity", error);
+    }
+
+    [Fact]
+    public void PerpetualLicenseCanRenewAnExpiredPreviouslyGrantedSupportPeriod()
+    {
+        var fixture = CreateV2Fixture();
+        fixture.License.LicenseKind = LicensePayload.KindPerpetual;
+        fixture.License.ValidUntilUtc = null;
+        fixture.Payload = fixture.Payload with
+        {
+            LicenseKind = LicensePayload.KindPerpetual,
+            ExpiresAtUtc = null,
+            SupportUntilUtc = IssuedAt.AddDays(-10)
+        };
+
+        var success = VendorLicenseAmendmentPayloadBuilder.TryBuildSupportAndUpdatePeriodExtension(
+            fixture.Payload, fixture.License, fixture.Installation, fixture.Customer,
+            IssuedAt.AddDays(60), newUpdatesUntilUtc: null, IssuedAt.AddDays(1),
+            out var amendment, out var error);
+
+        Assert.True(success);
+        Assert.Null(error);
+        Assert.NotNull(amendment);
+        Assert.Null(amendment!.ExpiresAtUtc);
+        Assert.Equal(IssuedAt.AddDays(60), amendment.SupportUntilUtc);
+        Assert.Equal(fixture.Payload.UpdatesUntilUtc, amendment.UpdatesUntilUtc);
+    }
+
     private static Fixture CreateV1Fixture()
     {
         var customer = new VendorCustomer { Id = Guid.NewGuid(), Status = "Active" };

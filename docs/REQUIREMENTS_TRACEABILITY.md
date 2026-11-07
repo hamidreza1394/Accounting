@@ -90,7 +90,7 @@
 | سازگاری payload v1 و canonical golden bytes | `LicensePayload`, `CanonicalJson` | `CompanyEntitlementContractTests.PayloadV1_CanonicalGoldenVectorRemainsUnchanged` و تست‌های قبلی Envelope | Implemented در PR؛ CI pending |
 | entitlement شرکت‌محور Module/Feature/Seat | `CompanyLicenseEntitlement`, `LicenseFeatureCatalog`, `StructuralValidation` | round-trip، allowlist، type mismatch، duplicate و maxCompanies tests | Implemented در PR؛ CI pending |
 | Trade با کد دقیق TRADE_IMPORT و بدون فعال‌سازی ضمنی v1 | `LicenseSubsystemCodes` | v1 rejection و v2 signed-envelope tests | Implemented در PR؛ CI pending |
-| support/update مستقل از expiry | `LicensePayload.SupportUntilUtc/UpdatesUntilUtc`, `CanonicalJson` | v2 round-trip | Implemented در PR؛ CI pending |
+| support/update مستقل از expiry و تمدید افزایشی هر دوره | `LicensePayload.SupportUntilUtc/UpdatesUntilUtc`, `CanonicalJson`, `VendorLicenseAmendmentPayloadBuilder.TryBuildSupportAndUpdatePeriodExtension` | v2 round-trip؛ تمدید مستقل؛ رد v1/null/no-op/کاهش/تاریخ غیرآینده/term منقضی | قرارداد Implemented؛ candidate Vendor در شاخه؛ CI pending |
 | schema strict و canonical v2 | `CanonicalJson`, `LicenseEnvelopeValidator` | unknown property، noncanonical JSON و signature tampering | Implemented در PR؛ CI pending |
 | amendment همان LicenseId/Installation و Sequence افزایشی | `LicenseRevisionRules` | higher sequence، replay، downgrade، identity change | Implemented در PR؛ CI pending |
 
