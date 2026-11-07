@@ -228,3 +228,10 @@ Issue #396 فقط مسئول startup gate و Activation Wizard است؛ contract
 - payload candidate همان LicenseId/InstallationId و نسخه v2 را نگه می‌دارد، Sequence را فقط در candidate یک واحد افزایش می‌دهد و maxCompanies، تاریخ‌های support/update و entitlement شرکت‌های دیگر را حفظ می‌کند. اعتبارسنجی امضا و ثبت sequence پایدار همچنان مسئولیت caller/service و مرحله بعدی است.
 - **NotImplemented:** Commercial Order/Payment Evidence، persistence درخواست Amendment، endpoint، Maker-Checker، signer/export و وضعیت‌های Purchased/Delivered/Acknowledged. این PR آن‌ها را تکمیل‌شده معرفی نمی‌کند.
 - **مرز:** فقط Vendor Host، تست Vendor و مستندات؛ بدون `Server/**`، دیتابیس/Migration مشتری یا secret. تست محلی اجرا نشده و CI نهایی باید روی SHA نهایی بررسی شود.
+
+
+## وضعیت اجرایی Issue #393 — برش سوم: تمدید مستقل پشتیبانی/به‌روزرسانی (2026-11-07)
+- **Implemented in branch; CI pending:** متد `TryBuildSupportAndUpdatePeriodExtension` فقط برای Payload v2 candidate amendment می‌سازد و تاریخ‌های `supportUntilUtc` و `updatesUntilUtc` را مستقل و strictly increasing تمدید می‌کند.
+- تاریخ `expiresAtUtc` و entitlementهای Company/Installation تغییر نمی‌کنند؛ term license پس از expiry قابل amendment نیست و perpetual license با پایان support/update منقضی نمی‌شود.
+- تاریخ null فعلی به‌عنوان مجوز ضمنی تفسیر نمی‌شود؛ این برش فقط دوره‌ای را تمدید می‌کند که قبلاً در payload امضاشده وجود داشته است. اعطای اولیه از null تا روشن‌شدن معنای تجاری آن جدا نگه داشته شده است.
+- **NotImplemented:** سفارش/پرداخت، persistence، endpoint، maker-checker، signer/export و وضعیت‌های Purchased/Delivered/Acknowledged. هیچ Migration یا Customer-side change انجام نشده است.

@@ -373,6 +373,156 @@ public static class VendorLicenseAmendmentPayloadBuilder
         return true;
     }
 
+    /// <summary>
+    /// Builds a v2 amendment that extends support and/or update periods already granted by the
+    /// current signed payload. A missing current period is not interpreted as an implicit grant.
+    /// This method does not authenticate, purchase, approve, sign, persist or advance durable state.
+    /// </summary>
+    public static bool TryBuildSupportAndUpdatePeriodExtension(
+        LicensePayload currentPayload,
+        VendorLicense license,
+        VendorInstallation installation,
+        VendorCustomer customer,
+        DateTimeOffset? newSupportUntilUtc,
+        DateTimeOffset? newUpdatesUntilUtc,
+        DateTimeOffset issuedAtUtc,
+        out LicensePayload? amendmentPayload,
+        out string? errorCode)
+    {
+        ArgumentNullException.ThrowIfNull(currentPayload);
+        ArgumentNullException.ThrowIfNull(license);
+        ArgumentNullException.ThrowIfNull(installation);
+        ArgumentNullException.ThrowIfNull(customer);
+
+        amendmentPayload = null;
+        errorCode = null;
+
+        if (currentPayload.FormatVersion != LicensePayload.CurrentFormatVersion)
+            return Fail("support_update_periods_require_payload_v2", out errorCode);
+
+        if (license.Id == Guid.Empty || installation.Id == Guid.Empty || customer.Id == Guid.Empty ||
+            license.InstallationId != installation.Id ||
+            license.CustomerId != customer.Id ||
+            installation.CustomerId != customer.Id ||
+            !string.Equals(currentPayload.LicenseId, license.Id.ToString("D"), StringComparison.Ordinal) ||
+            !string.Equals(currentPayload.InstallationId, installation.Id.ToString("D"), StringComparison.Ordinal))
+        {
+            return Fail("license_installation_mismatch", out errorCode);
+        }
+
+        if (!string.Equals(customer.Status, "Active", StringComparison.Ordinal) ||
+            !string.Equals(installation.Status, "Active", StringComparison.Ordinal) ||
+            !string.Equals(license.Status, "Issued", StringComparison.Ordinal))
+        {
+            return Fail("license_not_amendable", out errorCode);
+        }
+
+        if (StructuralValidation.ValidatePayload(currentPayload).Count > 0)
+            return Fail("current_license_payload_invalid", out errorCode);
+
+        if (license.LastIssuedSequence != currentPayload.Sequence)
+            return Fail("license_sequence_stale", out errorCode);
+
+        if (!string.Equals(license.ProductCode, currentPayload.ProductCode, StringComparison.Ordinal) ||
+            !string.Equals(license.LicenseKind, currentPayload.LicenseKind, StringComparison.Ordinal) ||
+            license.GraceDays != currentPayload.GraceDays ||
+            license.MaxCompanies != currentPayload.Limits.MaxCompanies ||
+            license.ValidFromUtc.ToUniversalTime() != currentPayload.NotBeforeUtc?.ToUniversalTime() ||
+            license.ValidUntilUtc?.ToUniversalTime() != currentPayload.ExpiresAtUtc?.ToUniversalTime())
+        {
+            return Fail("license_metadata_stale", out errorCode);
+        }
+
+        if (currentPayload.Sequence == int.MaxValue)
+            return Fail("license_sequence_exhausted", out errorCode);
+
+        if (issuedAtUtc == default ||
+            issuedAtUtc.ToUniversalTime() < currentPayload.IssuedAtUtc.ToUniversalTime())
+        {
+            return Fail("amendment_issued_at_invalid", out errorCode);
+        }
+
+        var effectiveIssuedAt = issuedAtUtc.ToUniversalTime();
+        if (currentPayload.NotBeforeUtc is { } notBefore &&
+            notBefore.ToUniversalTime() > effectiveIssuedAt)
+        {
+            return Fail("license_not_yet_valid", out errorCode);
+        }
+
+        // A term license cannot be amended after its actual expiry; no grace period is implied.
+        // Support/update dates remain independent from ExpiresAtUtc for perpetual licenses.
+        if (currentPayload.LicenseKind == LicensePayload.KindTerm &&
+            (currentPayload.ExpiresAtUtc is not { } expiresAt ||
+             expiresAt.ToUniversalTime() <= effectiveIssuedAt))
+        {
+            return Fail("license_outside_validity", out errorCode);
+        }
+
+        if (newSupportUntilUtc is null && newUpdatesUntilUtc is null)
+            return Fail("amendment_has_no_period_increase", out errorCode);
+
+        if (!TryExtendPeriod(
+                currentPayload.SupportUntilUtc, newSupportUntilUtc, effectiveIssuedAt,
+                "support", out var supportUntilUtc, out errorCode))
+            return false;
+
+        if (!TryExtendPeriod(
+                currentPayload.UpdatesUntilUtc, newUpdatesUntilUtc, effectiveIssuedAt,
+                "updates", out var updatesUntilUtc, out errorCode))
+            return false;
+
+        // Snapshot nested collections before returning a payload that will later be canonicalized
+        // and signed. Preserve all Company entitlements and all installation-level validity fields.
+        var candidate = currentPayload with
+        {
+            IssuedAtUtc = effectiveIssuedAt,
+            Sequence = currentPayload.Sequence + 1,
+            Limits = new LicenseLimits(
+                currentPayload.Limits.MaxCompanies,
+                Array.AsReadOnly(currentPayload.Limits.Subsystems.ToArray())),
+            CompanyEntitlements = CloneCompanyEntitlements(currentPayload.CompanyEntitlements),
+            SupportUntilUtc = supportUntilUtc,
+            UpdatesUntilUtc = updatesUntilUtc
+        };
+
+        if (StructuralValidation.ValidatePayload(candidate).Count > 0 ||
+            !LicenseRevisionRules.TryValidateSuccessor(currentPayload, candidate, out _))
+        {
+            return Fail("amendment_payload_invalid", out errorCode);
+        }
+
+        amendmentPayload = candidate;
+        return true;
+    }
+
+    private static bool TryExtendPeriod(
+        DateTimeOffset? currentUntilUtc,
+        DateTimeOffset? requestedUntilUtc,
+        DateTimeOffset issuedAtUtc,
+        string periodName,
+        out DateTimeOffset? extendedUntilUtc,
+        out string? errorCode)
+    {
+        extendedUntilUtc = currentUntilUtc;
+        errorCode = null;
+
+        if (requestedUntilUtc is null)
+            return true;
+
+        if (currentUntilUtc is not { } currentUntil)
+            return Fail(periodName + "_period_not_previously_granted", out errorCode);
+
+        var requestedUntil = requestedUntilUtc.Value.ToUniversalTime();
+        if (requestedUntil <= currentUntil.ToUniversalTime())
+            return Fail(periodName + "_period_not_increased", out errorCode);
+
+        if (requestedUntil <= issuedAtUtc)
+            return Fail(periodName + "_period_not_future", out errorCode);
+
+        extendedUntilUtc = requestedUntil;
+        return true;
+    }
+
     private static IReadOnlyList<CompanyLicenseEntitlement?>? CloneCompanyEntitlements(
         IReadOnlyList<CompanyLicenseEntitlement?>? companies)
     {
