@@ -8,6 +8,7 @@ import { can, deniedAccess, type AccessSnapshot, type Permission } from '../lib/
 import { matchPath, RouterProvider, useLocation, type Route } from '../lib/router';
 import { AppSidebar } from './shell/AppSidebar';
 import { PageBreadcrumbBar, PageBreadcrumbProvider } from './shell/PageBreadcrumb';
+import { WorkspaceTabPanes, WorkspaceTabsBar, WorkspaceTabsProvider } from './shell/WorkspaceTabs';
 
 type AppShellProps = {
   session: Session;
@@ -25,6 +26,11 @@ type AppShellProps = {
   /** Routes of the app; `children` is normally a `<RouteView />` that renders them. */
   routes?: readonly Route[];
   children: ReactNode;
+  /**
+   * Multi-tab workspace mode (Issue #444 stage 1): pages open as tabs under the header and
+   * stay mounted while hidden. `children` is ignored in this mode.
+   */
+  workspaceTabs?: boolean;
 };
 
 /** Main authenticated frame. The server-validated WorkContext remains authoritative. */
@@ -61,6 +67,7 @@ function AppShellFrame({
   onPasswordChanged = noop,
   onUnauthenticated = ignoreUnauthenticated,
   children,
+  workspaceTabs = false,
 }: AppShellFrameProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
@@ -177,7 +184,9 @@ function AppShellFrame({
         </div>
       </header>
 
-      <div className="faranou-workspace-body">
+      <WorkspaceTabsProvider workspaceTabs={workspaceTabs}>
+        {workspaceTabs ? <WorkspaceTabsBar /> : null}
+        <div className="faranou-workspace-body">
         {mobileMenuOpen ? (
           <button
             type="button"
@@ -197,19 +206,31 @@ function AppShellFrame({
         />
 
         <main id="main-content" ref={mainRef} tabIndex={-1} className="faranou-main-content min-w-0 flex-1 outline-none">
-          {/* Keyed by path: each navigation starts from the real route title, then the active
-              page declares its record-aware breadcrumb into the same bar. */}
-          <PageBreadcrumbProvider key={pathname} fallback={fallbackCrumbs}>
-            <PageBreadcrumbBar />
-            {logoutError ? (
-              <div className="mb-4">
-                <Alert tone="error">{logoutError}</Alert>
-              </div>
-            ) : null}
-            {children}
-          </PageBreadcrumbProvider>
+          {workspaceTabs ? (
+            <>
+              {logoutError ? (
+                <div className="mb-4">
+                  <Alert tone="error">{logoutError}</Alert>
+                </div>
+              ) : null}
+              <WorkspaceTabPanes />
+            </>
+          ) : (
+            /* Keyed by path: each navigation starts from the real route title, then the active
+                page declares its record-aware breadcrumb into the same bar. */
+            <PageBreadcrumbProvider key={pathname} fallback={fallbackCrumbs}>
+              <PageBreadcrumbBar />
+              {logoutError ? (
+                <div className="mb-4">
+                  <Alert tone="error">{logoutError}</Alert>
+                </div>
+              ) : null}
+              {children}
+            </PageBreadcrumbProvider>
+          )}
         </main>
       </div>
+      </WorkspaceTabsProvider>
       <MyAccountPanel
         open={accountOpen}
         onClose={() => {

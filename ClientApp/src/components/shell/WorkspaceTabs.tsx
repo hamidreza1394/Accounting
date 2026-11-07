@@ -1,0 +1,325 @@
+import { createContext, Suspense, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useReducer, useRef, type ComponentType, type KeyboardEvent, type ReactNode } from 'react';
+import { Plus, X } from 'lucide-react';
+import { ParamsScope, TabLocationScope, matchPath, setTabTitleSink, titleSuffix, useRouterContext, type Route } from '@/lib/router';
+import type { AccessStatus, Permission } from '@/lib/permissions';
+import { ErrorState, LoadingState } from '@/components/Feedback';
+import { initialTabsState, tabLabel, tabsReducer, type TabsState, type WorkspaceTab } from '@/lib/workspaceTabs';
+import { PageBreadcrumbBar, PageBreadcrumbProvider } from './PageBreadcrumb';
+
+// The workspace consumes the router context AppShell owns, so the sidebar links, the tab bar
+// and the tab panes share one location and one history. No new router, no new dependency.
+
+export type WorkspaceTabsStore = {
+  state: TabsState;
+  /** Opens a fresh tab for `to` (or activates the existing one) through navigation. */
+  openOrActivate: (to: string) => void;
+  /** Switches to an already-open tab, preserving its query string and scroll position. */
+  activate: (tab: WorkspaceTab) => void;
+  /** Closes a tab; closing the active one activates the right neighbour and follows it in the URL. */
+  close: (tab: WorkspaceTab) => void;
+  /** The "+ تب جدید" action: opens (or focuses) the dashboard tab. */
+  openHome: () => void;
+};
+
+const WorkspaceTabsContext = createContext<WorkspaceTabsStore | null>(null);
+
+function useWorkspaceTabs(): WorkspaceTabsStore {
+  const store = useContext(WorkspaceTabsContext);
+  if (!store) throw new Error('WorkspaceTabsProvider is missing above this component.');
+  return store;
+}
+
+function routeTitleOf(routes: readonly Route[], pathname: string): string {
+  for (const route of routes) {
+    if (matchPath(route.path, pathname) !== null) return route.title;
+  }
+  return 'صفحهٔ ناشناخته';
+}
+
+/**
+ * Owns the tab model for the whole shell: the store, the tab-title sink, scroll bookkeeping
+ * and the navigation side effects. The bar and the panes consume the same store.
+ */
+export function WorkspaceTabsProvider({ workspaceTabs = false, children }: { workspaceTabs?: boolean; children: ReactNode }) {
+  const { routes, location, navigate } = useRouterContext();
+  const [state, dispatch] = useReducer(
+    tabsReducer,
+    undefined,
+    () => initialTabsState(location.pathname, location.search, routeTitleOf(routes, location.pathname)),
+  );
+  const stateRef = useRef<TabsState>(state);
+  stateRef.current = state;
+
+  // Navigation is the single source of truth: every location change opens or activates the
+  // matching tab (same pathname = same tab; a different query = same tab, updated path).
+  // Back/forward and refresh are just location changes, so they behave predictably.
+  useEffect(() => {
+    dispatch({ type: 'open', pathname: location.pathname, search: location.search, title: routeTitleOf(routes, location.pathname) });
+  }, [location, routes]);
+
+  // Pages name their tab (record titles) through the decoupled sink of `useDocumentTitle`.
+  // In single-page mode the sink stays unregistered: nothing consumes it.
+  useEffect(() => {
+    if (!workspaceTabs) return undefined;
+    setTabTitleSink((title) => {
+      if (!stateRef.current.activeKey) return;
+      dispatch({ type: 'set-declared-title', key: stateRef.current.activeKey, title });
+    });
+    return () => setTabTitleSink(null);
+  }, [workspaceTabs]);
+
+  const store = useMemo<WorkspaceTabsStore>(
+    () => ({
+      state,
+      openOrActivate: (to: string) => navigate(to),
+      activate: (tab: WorkspaceTab) => {
+        // The scroll position belongs to the tab we are leaving; the panes restore the new one.
+        dispatch({ type: 'capture-scroll', key: stateRef.current.activeKey ?? '', scrollY: window.scrollY });
+        navigate(tab.path);
+      },
+      close: (tab: WorkspaceTab) => {
+        const current = stateRef.current;
+        const closingIndex = current.tabs.findIndex((entry) => entry.key === tab.key);
+        if (closingIndex === -1) return;
+        const remaining = current.tabs.filter((entry) => entry.key !== tab.key);
+        if (current.activeKey !== tab.key) {
+          dispatch({ type: 'close', key: tab.key });
+          return;
+        }
+        // The next tab follows the reducer's rule (previously active, else the neighbour), and the
+        // URL must follow it in the same commit — or the location effect would reopen the closed page.
+        const previous =
+          current.previousActiveKey && remaining.some((entry) => entry.key === current.previousActiveKey)
+            ? current.previousActiveKey
+            : null;
+        const next = previous ?? remaining[closingIndex]?.key ?? remaining[remaining.length - 1]?.key ?? null;
+        dispatch({ type: 'close', key: tab.key });
+        navigate(next ? (remaining.find((entry) => entry.key === next)?.path ?? '/') : '/');
+      },
+      openHome: () => navigate('/'),
+    }),
+    [state, navigate],
+  );
+
+  return <WorkspaceTabsContext.Provider value={store}>{children}</WorkspaceTabsContext.Provider>;
+}
+
+/** The tab strip under the header: one tab per open page, plus the "new tab" action. */
+export function WorkspaceTabsBar() {
+  const { state, activate, close, openHome } = useWorkspaceTabs();
+  const active = state.activeKey;
+  const tablistRef = useRef<HTMLDivElement>(null);
+
+  // Roving arrow-key navigation (RTL: ArrowLeft moves visually left = the next tab in DOM order).
+  function onKeyDown(event: KeyboardEvent) {
+    const tabs = state.tabs;
+    if (tabs.length === 0 || !active) return;
+    const index = tabs.findIndex((tab) => tab.key === active);
+    let nextIndex: number | null = null;
+    if (event.key === 'ArrowLeft') nextIndex = (index + 1) % tabs.length;
+    else if (event.key === 'ArrowRight') nextIndex = (index - 1 + tabs.length) % tabs.length;
+    else if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = tabs.length - 1;
+    if (nextIndex === null) return;
+    event.preventDefault();
+    const next = tabs[nextIndex]!;
+    activate(next);
+    const buttons = tablistRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+    const nextButton = buttons?.[nextIndex];
+    window.setTimeout(() => nextButton?.focus(), 0);
+  }
+
+  return (
+    <div className="faranou-tabbar">
+      <div ref={tablistRef} role="tablist" aria-label="تب‌های کاری باز" className="faranou-tabbar-tabs" onKeyDown={onKeyDown}>
+        {state.tabs.map((tab) => {
+          const isActive = tab.key === active;
+          return (
+            <div key={tab.key} role="presentation" className={'faranou-tab' + (isActive ? ' faranou-tab--active' : '')}>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                aria-controls={`tabpanel-${tab.key}`}
+                id={`tab-${tab.key}`}
+                tabIndex={isActive ? 0 : -1}
+                title={tabLabel(tab)}
+                className="faranou-tab-button"
+                onClick={() => {
+                  if (isActive) return;
+                  activate(tab);
+                }}
+              >
+                <span className="faranou-tab-label">{tabLabel(tab)}</span>
+              </button>
+              <button
+                type="button"
+                className="faranou-tab-close"
+                aria-label={`بستن ${tabLabel(tab)}`}
+                title={`بستن ${tabLabel(tab)}`}
+                onClick={() => close(tab)}
+              >
+                <X size={13} aria-hidden="true" />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+      <button type="button" className="faranou-tabbar-new" aria-label="بازکردن تب جدید" title="بازکردن تب جدید" onClick={openHome}>
+        <Plus size={16} aria-hidden="true" />
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Every open tab stays mounted (hidden) so its filters, search, paging, form state and scroll
+ * survive switching; only the active pane is visible. Each pane scopes the tab's own location
+ * and params, so a hidden list page never sees another tab's query and never refetches with it.
+ */
+export function WorkspaceTabPanes() {
+  const { routes, canAccess, accessStatus, onRetryAccess, notFound: NotFound, forbidden: Forbidden, loadingLabel } = useRouterContext();
+  const { state } = useWorkspaceTabs();
+  const activeKey = state.activeKey;
+
+  const activeTab = state.tabs.find((tab) => tab.key === activeKey) ?? null;
+  const panesRef = useRef<HTMLDivElement>(null);
+  // Only the visible pane may name the document; hidden panes stay silent.
+  const setActivePaneTitle = useCallback((title: string) => {
+    document.title = `${title} | ${titleSuffix}`;
+  }, []);
+
+  // Switching tabs mirrors a route change for assistive tech: the page heading gets focus.
+  const lastActiveKey = useRef<string | null>(null);
+  useEffect(() => {
+    if (lastActiveKey.current === activeKey) return;
+    lastActiveKey.current = activeKey;
+    if (!activeKey) return;
+    const container = panesRef.current;
+    if (!container) return;
+    const pane = container.querySelector<HTMLElement>(`#tabpanel-${CSS.escape(activeKey)}`);
+    if (!pane) return;
+    const focusHeading = (): boolean => {
+      const heading = pane.querySelector('h1');
+      if (!heading) return false;
+      heading.tabIndex = -1;
+      heading.focus();
+      return true;
+    };
+    if (focusHeading()) return;
+    const observer = new MutationObserver(() => {
+      if (focusHeading()) observer.disconnect();
+    });
+    observer.observe(pane, { childList: true, subtree: true });
+    const timer = window.setTimeout(() => observer.disconnect(), 5000);
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(timer);
+    };
+  }, [activeKey, activeTab]);
+
+  // Scroll restore for the freshly activated tab (best effort; hidden panes keep their DOM).
+  const scrollMap = useRef<Record<string, number>>({});
+  const lastScrollKey = useRef<string | null>(activeKey);
+  useLayoutEffect(() => {
+    if (lastScrollKey.current !== activeKey) {
+      if (lastScrollKey.current) scrollMap.current[lastScrollKey.current] = window.scrollY;
+      lastScrollKey.current = activeKey;
+      window.scrollTo(0, (activeKey && scrollMap.current[activeKey]) || 0);
+    }
+  }, [activeKey]);
+
+  if (!activeTab) {
+    // No tabs at all (the last one was closed): the store already navigated home.
+    return null;
+  }
+
+  return (
+    <div ref={panesRef}>
+      {state.tabs.map((tab) => {
+        const isActive = tab.key === activeKey;
+        return (
+          <div
+            key={tab.key}
+            role="tabpanel"
+            id={`tabpanel-${tab.key}`}
+            aria-labelledby={`tab-${tab.key}`}
+            hidden={!isActive}
+            tabIndex={-1}
+          >
+            <TabPane tab={tab} routes={routes} canAccess={canAccess} accessStatus={accessStatus} onRetryAccess={onRetryAccess} NotFound={NotFound} Forbidden={Forbidden} loadingLabel={loadingLabel} onTitle={isActive ? setActivePaneTitle : undefined} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+type TabPaneProps = {
+  tab: WorkspaceTab;
+  routes: readonly Route[];
+  canAccess: (permission: Permission) => boolean;
+  accessStatus: AccessStatus;
+  onRetryAccess: () => void;
+  NotFound: ComponentType;
+  Forbidden: ComponentType;
+  loadingLabel: string;
+  /** Present only for the visible pane: it owns `document.title`. */
+  onTitle?: ((title: string) => void) | undefined;
+};
+
+/** One tab's page: its own location scope, params, breadcrumb provider and permission state. */
+function TabPane({ tab, routes, canAccess, accessStatus, onRetryAccess, NotFound: NotFoundComponent, Forbidden: ForbiddenComponent, loadingLabel, onTitle }: TabPaneProps) {
+  const [pathname, search] = splitPath(tab.path);
+  const match = useMemo(() => {
+    for (const route of routes) {
+      const params = matchPath(route.path, pathname);
+      if (params) return { route, params };
+    }
+    return null;
+  }, [routes, pathname]);
+
+  const allowed = match ? !match.route.permission || canAccess(match.route.permission) : true;
+  const pending = !allowed && accessStatus === 'loading';
+  const failed = !allowed && accessStatus === 'error';
+
+  // Same title rules as the single-page RouteView, scoped to this tab.
+  const paneTitle = !match ? 'صفحه پیدا نشد' : pending ? loadingLabel : failed ? 'خطا در دریافت مجوزها' : allowed ? match.route.title : 'دسترسی ندارید';
+  useEffect(() => {
+    onTitle?.(paneTitle);
+  }, [onTitle, paneTitle]);
+
+  let content: ReactNode;
+  if (!match) {
+    content = <NotFoundComponent />;
+  } else if (pending) {
+    content = <LoadingState label="در حال دریافت مجوزهای شما…" />;
+  } else if (failed) {
+    content = <ErrorState message="دریافت مجوزها انجام نشد؛ تا آن زمان دسترسی به این صفحه داده نمی‌شود." onRetry={onRetryAccess} />;
+  } else if (!allowed) {
+    content = <ForbiddenComponent />;
+  } else {
+    const Element = match.route.element;
+    content = (
+      <ParamsScope params={match.params}>
+        <Suspense fallback={<LoadingState label={loadingLabel} />}>
+          <Element />
+        </Suspense>
+      </ParamsScope>
+    );
+  }
+
+  return (
+    <TabLocationScope pathname={pathname} search={search} hash="">
+      <PageBreadcrumbProvider key={tab.key} fallback={[{ label: match ? match.route.title : 'صفحهٔ ناشناخته' }]}>
+        <PageBreadcrumbBar />
+        {content}
+      </PageBreadcrumbProvider>
+    </TabLocationScope>
+  );
+}
+
+function splitPath(path: string): [string, string] {
+  const queryIndex = path.indexOf('?');
+  return queryIndex === -1 ? [path, ''] : [path.slice(0, queryIndex), path.slice(queryIndex)];
+}

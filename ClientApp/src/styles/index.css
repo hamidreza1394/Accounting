@@ -1242,3 +1242,101 @@
   /* The mobile drawer never enters the rail: the drawer needs its labels. */
   .faranou-sidebar.faranou-sidebar--collapsed { width: min(300px, 86vw); flex-basis: min(300px, 86vw); }
 }
+
+/* Issue #444 stage 1 PR4 — the workspace tab strip under the header (Rahkaran-style). */
+.faranou-tabbar {
+  position: sticky;
+  top: 92px;
+  z-index: 30;
+  display: flex;
+  align-items: stretch;
+  gap: .4rem;
+  padding: .4rem clamp(.85rem, 1.4vw, 1.5rem) .45rem;
+  border-bottom: 1px solid #dde7f0;
+  background: linear-gradient(180deg, #ffffff 0%, #f6fafd 100%);
+  box-shadow: 0 2px 10px rgb(31 65 111 / .06);
+}
+.faranou-tabbar-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: .3rem;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding-block: 2px;
+}
+.faranou-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+  flex: 0 0 auto;
+  max-width: 15rem;
+  border: 1px solid #e0e9f1;
+  border-radius: 10px;
+  background: #ffffff;
+  overflow: hidden;
+}
+.faranou-tab:hover { border-color: #b8d4e8; }
+.faranou-tab--active {
+  border-color: rgb(240 184 74 / .75);
+  background: linear-gradient(160deg, #ffffff 0%, #fdf7ec 100%);
+  box-shadow: 0 2px 8px rgb(31 65 111 / .08);
+}
+.faranou-tab--active::after {
+  content: "";
+  position: absolute;
+  inset-inline: .5rem;
+  bottom: 0;
+  height: 2.5px;
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(90deg, #f0b84a, #ffe8a8);
+}
+.faranou-tab-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.15rem;
+  padding: .2rem .7rem;
+  border: 0;
+  background: transparent;
+  color: #22384b;
+  font-size: .78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.faranou-tab-button:focus-visible { outline: 2px solid #f0b84a; outline-offset: -2px; }
+.faranou-tab-label { max-width: 12.5rem; overflow: hidden; text-overflow: ellipsis; }
+.faranou-tab-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.55rem;
+  flex: 0 0 auto;
+  border: 0;
+  border-inline-start: 1px solid #edf2f7;
+  background: transparent;
+  color: #6b7f90;
+}
+.faranou-tab-close:hover { background: #fdecea; color: #b3372f; }
+.faranou-tab-close:focus-visible { outline: 2px solid #f0b84a; outline-offset: -2px; }
+.faranou-tabbar-new {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.15rem;
+  flex: 0 0 auto;
+  border: 1px solid #e0e9f1;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #22384b;
+}
+.faranou-tabbar-new:hover { border-color: #b8d4e8; background: #f4f9fd; color: #123b61; }
+.faranou-tabbar-new:focus-visible { outline: 2px solid #f0b84a; outline-offset: 2px; }
+/* Sticky offset mirrors the wrapped-header breakpoints used by the sidebar. */
+@media (max-width: 1100px) {
+  .faranou-tabbar { top: 150px; }
+}
+@media (max-width: 767px) {
+  .faranou-tabbar { top: 128px; padding-inline: .6rem; }
+  .faranou-tab { max-width: 11rem; }
+  .faranou-tab-label { max-width: 8.5rem; }
+}
