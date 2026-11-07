@@ -1,10 +1,12 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { SelectedContext, Session } from '../api/types';
 import type { AccessSnapshot } from '../lib/permissions';
 import { Link, RouteView } from '../lib/router';
+import { resetDirtyFormsForTests, useFormGuard } from '../lib/formGuard';
 import { AppShell } from './AppShell';
+import { useState } from 'react';
 
 const session: Session = { username: 'hamid', fullName: 'حمید رضایی', accountKind: 'User', isAdministrator: false };
 const installationAdmin: AccessSnapshot = { status: 'ready', isInstallationAdministrator: true, companyId: 'company-1', companyCodes: [] };
@@ -19,6 +21,18 @@ const context: SelectedContext = {
   company: { id: 'company-1', name: 'شرکت نمونه', nationalId: null, roleName: 'مدیر مالی' },
   fiscalPeriod: { id: 'period-1', title: 'سال مالی ۱۴۰۵', startDate: '2026-03-21', endDate: '2027-03-20', status: 'Open', isSelectable: true, accessMode: 'readWrite' },
 };
+
+/** A page with a dirty form outside the tab shell (guard key: single-page). */
+function DirtyChild() {
+  const [dirty, setDirty] = useState(false);
+  useFormGuard(dirty, 'فرم باز تغییرات ذخیره‌نشده دارد.');
+  return (
+    <main>
+      <button type="button" onClick={() => setDirty(true)}>خراب‌کردن فرم</button>
+      محتوای صفحه
+    </main>
+  );
+}
 
 describe('AppShell', () => {
   it('places the Faranou brand, company and fiscal period selectors, and user identity in the header', () => {
@@ -144,6 +158,50 @@ describe('AppShell', () => {
     await user.click(screen.getByRole('link', { name: 'به فهرست' }));
     expect(await screen.findByRole('navigation', { name: 'مسیر صفحه' })).toHaveTextContent('مدیریت کاربران');
     routedShell.unmount();
+  });
+
+  it('guards logout and context change while any form is dirty, and proceeds on confirm', async () => {
+    const user = userEvent.setup();
+    const onLogout = vi.fn().mockResolvedValue(undefined);
+    const onChangeContext = vi.fn();
+    const view = render(
+      <AppShell session={session} context={context} onChangeContext={onChangeContext} onLogout={onLogout}>
+        <DirtyChild />
+      </AppShell>,
+    );
+    await user.click(screen.getByRole('button', { name: 'خراب‌کردن فرم' }));
+
+    // Logout first asks (danger dialog), and cancel keeps the session.
+    await user.click(screen.getByRole('button', { name: 'خروج' }));
+    const dialog = await screen.findByRole('alertdialog');
+    expect(dialog).toHaveTextContent('فرم باز تغییرات ذخیره‌نشده دارد.');
+    await user.click(within(dialog).getByRole('button', { name: 'انصراف' }));
+    expect(onLogout).not.toHaveBeenCalled();
+
+    // Context change asks as well; confirming proceeds.
+    await user.click(screen.getByRole('button', { name: /تغییر شرکت/ }));
+    const contextDialog = await screen.findByRole('alertdialog');
+    await user.click(within(contextDialog).getByRole('button', { name: 'ادامه و تغییر زمینه' }));
+    expect(onChangeContext).toHaveBeenCalledTimes(1);
+
+    // Logout after confirmation performs the sign-out.
+    await user.click(screen.getByRole('button', { name: 'خروج' }));
+    await user.click(await screen.findByRole('button', { name: 'خروج و از دست دادن تغییرات' }));
+    await waitFor(() => expect(onLogout).toHaveBeenCalledTimes(1));
+    view.unmount();
+    resetDirtyFormsForTests();
+  });
+
+  it('logs out immediately when no form is dirty', async () => {
+    const user = userEvent.setup();
+    const onLogout = vi.fn().mockResolvedValue(undefined);
+    render(
+      <AppShell session={session} context={context} onChangeContext={vi.fn()} onLogout={onLogout}>
+        <main>محتوای صفحه</main>
+      </AppShell>,
+    );
+    await user.click(screen.getByRole('button', { name: 'خروج' }));
+    await waitFor(() => expect(onLogout).toHaveBeenCalledTimes(1));
   });
 
   it('shows a logout failure in the shared error Alert', async () => {

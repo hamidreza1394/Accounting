@@ -1,8 +1,10 @@
-import { createContext, Suspense, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useReducer, useRef, type ComponentType, type KeyboardEvent, type ReactNode } from 'react';
+import { createContext, Suspense, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type ComponentType, type KeyboardEvent, type ReactNode } from 'react';
 import { Plus, X } from 'lucide-react';
 import { ParamsScope, TabLocationScope, matchPath, setTabTitleSink, titleSuffix, useRouterContext, type Route } from '@/lib/router';
 import type { AccessStatus, Permission } from '@/lib/permissions';
+import { dirtySummary, isTabDirty } from '@/lib/formGuard';
 import { ErrorState, LoadingState } from '@/components/Feedback';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { initialTabsState, tabLabel, tabsReducer, type TabsState, type WorkspaceTab } from '@/lib/workspaceTabs';
 import { PageBreadcrumbBar, PageBreadcrumbProvider } from './PageBreadcrumb';
 
@@ -22,6 +24,13 @@ export type WorkspaceTabsStore = {
 };
 
 const WorkspaceTabsContext = createContext<WorkspaceTabsStore | null>(null);
+
+/**
+ * The tab key of the mounted page, consumed by the dirty-form guard (`lib/formGuard.ts`).
+ * Null outside the multi-tab shell: the guard then registers under a fixed single-page key,
+ * so logout and context-change protection still work without tabs.
+ */
+export const PaneTabKeyContext = createContext<string | null>(null);
 
 function useWorkspaceTabs(): WorkspaceTabsStore {
   const store = useContext(WorkspaceTabsContext);
@@ -49,6 +58,8 @@ export function WorkspaceTabsProvider({ workspaceTabs = false, children }: { wor
   );
   const stateRef = useRef<TabsState>(state);
   stateRef.current = state;
+  // A tab holding a dirty form closes only after the shared ConfirmDialog says so (PR 5).
+  const [pendingClose, setPendingClose] = useState<WorkspaceTab | null>(null);
 
   // Navigation is the single source of truth: every location change opens or activates the
   // matching tab (same pathname = same tab; a different query = same tab, updated path).
@@ -81,6 +92,11 @@ export function WorkspaceTabsProvider({ workspaceTabs = false, children }: { wor
         const current = stateRef.current;
         const closingIndex = current.tabs.findIndex((entry) => entry.key === tab.key);
         if (closingIndex === -1) return;
+        // Never lose a dirty form to a misclick: ask first (the guard registry is the source).
+        if (isTabDirty(tab.key)) {
+          setPendingClose(tab);
+          return;
+        }
         const remaining = current.tabs.filter((entry) => entry.key !== tab.key);
         if (current.activeKey !== tab.key) {
           dispatch({ type: 'close', key: tab.key });
@@ -101,7 +117,47 @@ export function WorkspaceTabsProvider({ workspaceTabs = false, children }: { wor
     [state, navigate],
   );
 
-  return <WorkspaceTabsContext.Provider value={store}>{children}</WorkspaceTabsContext.Provider>;
+  const confirmPendingClose = () => {
+    const tab = pendingClose;
+    setPendingClose(null);
+    if (!tab) return;
+    closeTabNow(tab);
+  };
+
+  // The guard flow bypasses the dirty-check on purpose (the user just confirmed the loss).
+  const closeTabNow = (tab: WorkspaceTab) => {
+    const current = stateRef.current;
+    const closingIndex = current.tabs.findIndex((entry) => entry.key === tab.key);
+    if (closingIndex === -1) return;
+    const remaining = current.tabs.filter((entry) => entry.key !== tab.key);
+    if (current.activeKey !== tab.key) {
+      dispatch({ type: 'close', key: tab.key });
+      return;
+    }
+    const previous =
+      current.previousActiveKey && remaining.some((entry) => entry.key === current.previousActiveKey)
+        ? current.previousActiveKey
+        : null;
+    const next = previous ?? remaining[closingIndex]?.key ?? remaining[remaining.length - 1]?.key ?? null;
+    dispatch({ type: 'close', key: tab.key });
+    navigate(next ? (remaining.find((entry) => entry.key === next)?.path ?? '/') : '/');
+  };
+
+  return (
+    <WorkspaceTabsContext.Provider value={store}>
+      {children}
+      <ConfirmDialog
+        open={pendingClose !== null}
+        title="بستن تب با تغییرات ذخیره‌نشده"
+        description={pendingClose ? `${dirtySummary() || 'این صفحه تغییرات ذخیره‌نشده دارد.'} با بستن «${tabLabel(pendingClose)}» از دست می‌روند.` : ''}
+        confirmLabel="بستن تب و از دست دادن تغییرات"
+        cancelLabel="انصراف"
+        tone="danger"
+        onConfirm={confirmPendingClose}
+        onCancel={() => setPendingClose(null)}
+      />
+    </WorkspaceTabsContext.Provider>
+  );
 }
 
 /** The tab strip under the header: one tab per open page, plus the "new tab" action. */
@@ -309,10 +365,12 @@ function TabPane({ tab, routes, canAccess, accessStatus, onRetryAccess, NotFound
 
   return (
     <TabLocationScope pathname={pathname} search={search} hash="">
-      <PageBreadcrumbProvider key={tab.key} fallback={[{ label: match ? match.route.title : 'صفحهٔ ناشناخته' }]}>
-        <PageBreadcrumbBar />
-        {content}
-      </PageBreadcrumbProvider>
+      <PaneTabKeyContext.Provider value={tab.key}>
+        <PageBreadcrumbProvider key={tab.key} fallback={[{ label: match ? match.route.title : 'صفحهٔ ناشناخته' }]}>
+          <PageBreadcrumbBar />
+          {content}
+        </PageBreadcrumbProvider>
+      </PaneTabKeyContext.Provider>
     </TabLocationScope>
   );
 }

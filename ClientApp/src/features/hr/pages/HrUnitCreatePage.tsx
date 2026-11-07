@@ -9,6 +9,7 @@ import { JalaliDateField } from '@/components/ui/JalaliDateField';
 import { useNavigate } from '@/lib/router';
 import { createHrUnit } from '../api/hrClient';
 import { validateCode, validateDescription, validateRequiredName, validateValidityWindow, buildCreateUnitBody } from '../lib/hrValidation';
+import { useFormGuard } from '@/lib/formGuard';
 import { HrUnitParentPicker } from '../components/HrUnitParentPicker';
 
 type Props = {
@@ -46,6 +47,8 @@ export function HrUnitCreatePage({ onUnauthenticated, companyId }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  // The workspace asks this registry before closing the tab, signing out or changing context.
+  const formGuard = useFormGuard(dirty);
 
   const update = (patch: Partial<FormState>) => {
     setForm((current) => ({ ...current, ...patch }));
@@ -82,6 +85,8 @@ export function HrUnitCreatePage({ onUnauthenticated, companyId }: Props) {
     setSubmitting(true);
     try {
       const created = await createHrUnit(companyId, buildCreateUnitBody(form));
+      // Saved: closing this tab (or leaving the workspace) needs no warning anymore.
+      formGuard.markClean();
       await navigate(`/hr/org/units/${created.id}`);
     } catch (cause: unknown) {
       if (onUnauthenticated(cause)) return;
