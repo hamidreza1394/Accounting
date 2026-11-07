@@ -2691,3 +2691,9 @@
 - **تغییر:** `docs/handoffs/ISSUE-444-stage-1-workspace-shell.md` با واقعیت GitHub هم‌تراز شد: وضعیت هر ۶ PR «ادغام‌شده در 2026-11-07»، جدول PRها با Head SHA و Merge commit واقعی از GitHub API (#568: `9ae1aaa6ecae`، #571: `33cddd7d0fcd` — SHAهای قبلی سند به commitهای میانی اشاره می‌کردند)، زمان ادغام UTC، جدول «آمار تست واقعی از لاگ CI» (جاب client: 792/790/809/813/824/825) و بخش جدید «وضعیت پس از ادغام» شامل انتهای نهایی main (`cb2ddd57`)، ترتیب ادغام واقعی، محدودیت‌های باقی‌مانده و تصمیمات معماری.
 - **شواهد:** Check-runs همهٔ ۶ SHA نهایی success (client، build-and-test، e2e، secret-scan، Semgrep، CodeQL، Analyze، publish*)؛ لاگ خام CI از GitHub Actions API استخراج شد.
 - **مستندات:** فقط همین Handoff و ورودی WORK_LOG؛ Merge فقط با اجازهٔ مالک.
+
+## 2026-11-07 — UNNUMBERED — ثبت قراردادهای رسمی UI، Workspace و تغییر زمینه (D-075 Proposed)
+- **مبنا:** `main@7207779e`؛ شاخهٔ `docs/ui-workspace-context-contracts`؛ تغییر فقط-مستندات.
+- **تغییر:** الزامات UI-01..UI-15 و قرارداد چرخهٔ عمر تب (`UI_COMPONENTS.md`)، قرارداد تغییر مرکزی شرکت/دوره با ۱۲ سناریو (`WORK_CONTEXT_SELECTOR_UI.md`)، الزامات امنیتی چندشرکتی (`SECURITY.md`)، ADR D-075 با وضعیت `Proposed`/`NeedsApproval` (`DECISIONS.md`)، اصلاح `INDEX.md` و شمارندهٔ ADR بعدی (D-076) در `AGENTS.md`.
+- **انحراف‌های ثبت‌شده:** تأیید و رها کردن Dirty هنگام تغییر زمینه (در برابر توقف)، نبود `Saving`/`Error` در `formGuard`، گروه‌بندی Sidebar ناهم‌تراز با UI-05/UI-08، نبود i18n متمرکز.
+- **آزمون:** کد و تست اجرا/تغییر نشد (فقط مستندات). Handoff: `docs/handoffs/UNNUMBERED-ui-workspace-context-contracts.md`. Merge فقط با اجازهٔ مالک.
