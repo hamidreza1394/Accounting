@@ -2734,3 +2734,14 @@
 - **تغییر:** الزامات UI-01..UI-15 و قرارداد چرخهٔ عمر تب (`UI_COMPONENTS.md`)، قرارداد تغییر مرکزی شرکت/دوره با ۱۲ سناریو (`WORK_CONTEXT_SELECTOR_UI.md`)، الزامات امنیتی چندشرکتی (`SECURITY.md`)، ADR D-076 با وضعیت `Proposed`/`NeedsApproval` (`DECISIONS.md`)، اصلاح `INDEX.md` و شمارندهٔ ADR بعدی (D-077) در `AGENTS.md`.
 - **انحراف‌های ثبت‌شده:** تأیید و رها کردن Dirty هنگام تغییر زمینه (در برابر توقف)، نبود `Saving`/`Error` در `formGuard`، گروه‌بندی Sidebar ناهم‌تراز با UI-05/UI-08، نبود i18n متمرکز.
 - **آزمون:** کد و تست اجرا/تغییر نشد (فقط مستندات). Handoff: `docs/handoffs/UNNUMBERED-ui-workspace-context-contracts.md`. Merge فقط با اجازهٔ مالک.
+
+
+## 2026-11-08 — Vendor/Licensing: تطبیق وضعیت با Mergeهای واقعی و CI پس از Merge
+- مبنای بازبینی: main@da8ed012074f8439cb836ea4ae190e3ad2fc542e. GitHub Compare تأیید کرد این main شامل merge commit PR #565 است (۵۵ commit جلوتر، صفر عقب‌تر از 66b60cc48f6454997e260cb1244374114e2bfbd4).
+- PRهای مرجع: #281 = ۱۲/۱۲، #282 = ۱۳/۱۳ و #284 = ۱۳/۱۳ Check Run موفق روی merge commitهای واقعی؛ ترتیب authorization در approval همچنان تأییدشده است.
+- Vendor/Licensing پس از Merge: #472 = ۱۵/۱۵؛ #526 = ۱۲/۱۲؛ #527 = ۱۵/۱۵؛ #539 = ۱۲/۱۲؛ #546 = ۱۵/۱۵؛ #548 = ۱۵/۱۵؛ #558 = ۱۵/۱۵؛ #565 = ۱۵/۱۵. Check Runهای هر merge commit از GitHub API خوانده شدند؛ نتیجه شکست‌خورده/درحال‌اجرا در این مجموعه وجود نداشت.
+- main CI: ۱۲/۱۲ Check Run موفق (build/test، E2E، Linux/Windows publish، client، secret scan، publish scripts، CodeQL چهار زبان/نوع و Semgrep).
+- Issue #393: candidateهای افزایش maxCompanies، افزایش Company-scoped Module/Feature/UserSeat و تمدید Support/Updates در main هستند؛ همه فقط candidate می‌سازند و هیچ خرید، پرداخت، persistence، approval، امضا یا export را انجام نمی‌دهند.
+- Issue #228: PR #546 fail-closed را حفظ کرده است؛ provisioning برای LicensePayload v2 تا CompanyReference mapping معتبر در #392 عمداً unavailable است. #235 و هر تغییر Customer consumer/ACK جدا می‌مانند.
+- Actions خارج از Vendor: در ۱۰۰ اجرای اخیر ۸۶ success، ۴ in-progress، ۷ cancelled و ۳ failure دیده شد. سه failure از headهای قدیمی #584/#585/#586 (Workspace/HR) بودند؛ logها missing UI headings و SQL Server 18456/State 38 برای FaranouE2E را نشان دادند. این شاخه‌ها خارج از محدوده Vendor هستند و headهای جدیدشان در حال اجرای مجدد بودند؛ هیچ تغییری در آن‌ها انجام نشد.
+- تست محلی: در این اجرا Build/Test محلی اجرا نشد؛ تمام نتایج موفق فوق فقط به Check Runهای واقعی GitHub نسبت داده می‌شوند. هیچ Migration، تغییر Customer Server/** یا secret ایجاد نشد.
