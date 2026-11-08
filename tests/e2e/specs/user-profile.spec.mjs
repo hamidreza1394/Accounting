@@ -19,11 +19,10 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { createMembershipFixture } from '../lib/membershipFixture.mjs';
+import { createMembershipFixture, hashPasswordV3 } from '../lib/membershipFixture.mjs';
 import { callApi, enterWorkspace, post, signIn } from '../lib/session.mjs';
 
 const state = JSON.parse(readFileSync(new URL('../.e2e-state.json', import.meta.url), 'utf8'));
-const admin = state.users.admin;
 
 // The published-server origin from playwright.config.mjs; a fresh secondary context cannot
 // derive it from `page.url()` because the primary page may still be on about:blank.
@@ -44,6 +43,35 @@ async function expectAccessible(page, scope) {
     violations.map((v) => ({ id: v.id, impact: v.impact, nodes: v.nodes.slice(0, 3).map((n) => n.target.join(' ')) })),
     `axe violations on ${page.url()}`,
   ).toEqual([]);
+}
+
+/** A dedicated installation administrator per test: the api-sensitive budget is per user, so a
+ * heavy profile walkthrough must not share the fixed window with the shared seed account (the
+ * role-administration spec uses the same isolation pattern). Tracked as a fixture user. */
+async function addInstallationAdmin(fixture, label) {
+  const { randomUUID } = await import('node:crypto');
+  const { sql } = await import('mssql');
+  const id = randomUUID();
+  const username = `pa${randomUUID().replaceAll('-', '').slice(0, 10)}`;
+  const password = `E2e-${randomUUID().replaceAll('-', '').slice(0, 16)}`;
+  const now = new Date();
+  await fixture.run(
+    `INSERT INTO Users (Id, RoleId, Ordering, InsertDateTime, UpdateDateTime, IsActive, IsSystemic, IsProgrammer, IsUndeletable,
+       IsProfilePublic, IsVisibleInContactUsPage, IsEmailAddressVerified, IsCellPhoneNumberVerified,
+       Username, Password, FirstName, LastName, EmailAddress, EmailAddressVerificationKey)
+     VALUES (@id, @role, 10000, @now, @now, 1, 0, 0, 0, 0, 0, 1, 0, @username, @password, N'مدیر پرونده', N'آزمون', @email, @key)`,
+    {
+      id: [sql.UniqueIdentifier, id],
+      role: [sql.UniqueIdentifier, state.users.admin.roleId],
+      now: [sql.DateTime2, now],
+      username: [sql.VarChar(20), username],
+      password: [sql.VarChar(255), hashPasswordV3(password)],
+      email: [sql.VarChar(254), `${username}@e2e.test`],
+      key: [sql.UniqueIdentifier, randomUUID()],
+    },
+  );
+  fixture.created.users.push(id);
+  return { id, username, password, displayName: 'مدیر پرونده آزمون' };
 }
 
 const profilePath = (userId) => `/app/admin/users/${userId}`;
@@ -70,6 +98,7 @@ test.describe('user profile workspace: HR link, request states, permissions, ses
 
   test('identity, HR link management, memberships and effective permissions work end to end', async ({ page, browser }) => {
     test.setTimeout(300_000);
+    const admin = await addInstallationAdmin(fixture, 't1');
     const { destination } = fixture;
     const target = await fixture.addUser('target');
     await fixture.addMembership(target, destination, destination.memberRole.id);
@@ -142,8 +171,9 @@ test.describe('user profile workspace: HR link, request states, permissions, ses
     await expectAccessible(page, 'main');
   });
 
-  test('request states reach the profile and the step-up revocation really ends the session', async ({ page, browser }) => {
+  test('request states reach the profile: pending, approved, rejected with the reason', async ({ page, browser }) => {
     test.setTimeout(300_000);
+    const admin = await addInstallationAdmin(fixture, 't2');
     const { source, destination } = fixture;
     const target = await fixture.addUser('target2');
     await fixture.addMembership(target, source, source.memberRole.id);
@@ -182,10 +212,8 @@ test.describe('user profile workspace: HR link, request states, permissions, ses
     await expect(afterApprove.getByText('عضو مقصد')).toBeVisible();
 
     // ------------------------------------------------------------ a second request is rejected with a reason
-    const secondRequest = await callApi(targetPage, 'GET', `${destinationsPath}${encodeURIComponent(destination.name)}`);
-    // The target is now an active member of the destination, so the destination is no longer
-    // discoverable; the rejection flow therefore runs from the source company of a second user.
-    expect(secondRequest.status).toBe(200);
+    // The first target is now an active member of the destination, so the rejection flow runs
+    // from the source company of a second user.
     const secondTarget = await fixture.addUser('target3');
     await fixture.addMembership(secondTarget, source, source.memberRole.id);
     const targetContext2 = await browser.newContext({ baseURL: ORIGIN, locale: 'fa-IR', timezoneId: 'Asia/Tehran' });
@@ -213,6 +241,8 @@ test.describe('user profile workspace: HR link, request states, permissions, ses
     await expect(rejectedTable.getByText('رد شده')).toBeVisible();
     await expect(rejectedTable.getByText('در دورهٔ بسته بود')).toBeVisible();
     await capture(page, '04-membership-rejected.png');
+    await targetContext.close();
+    await targetContext2.close();
 
     // ------------------------------------------------------------ tab 7: the request audit of the target
     await page.getByRole('tab', { name: 'سوابق تغییرات مدیریتی' }).click();
@@ -220,9 +250,26 @@ test.describe('user profile workspace: HR link, request states, permissions, ses
     await expect(auditTable.getByText('درخواست عضویت شرکت')).toBeVisible();
     await capture(page, '07-management-history.png');
 
-    // ------------------------------------------------------------ tab 2: session revocation (D-073 §1 step-up)
-    // secondTarget signed in above, so it has exactly one active session.
-    await page.goto(profilePath(secondTarget.id));
+    // ------------------------------------------------------------ tab 6: the authentication history
+    await page.goto(profilePath(target.id));
+    await page.getByRole('tab', { name: 'سوابق ورود و خروج' }).click();
+    const historyTable = page.getByRole('table', { name: 'سوابق ورود و خروج کاربر' });
+    await expect(historyTable.getByText('ورود موفق')).toBeVisible();
+    await capture(page, '09-login-history.png');
+  });
+
+  test('the D-073 step-up revocation really ends the target session', async ({ page, browser }) => {
+    test.setTimeout(300_000);
+    const admin = await addInstallationAdmin(fixture, 't3');
+    const target = await fixture.addUser('target4');
+
+    // The target signs in once: exactly one active session and one LoginSucceeded event.
+    const targetContext = await browser.newContext({ baseURL: ORIGIN, locale: 'fa-IR', timezoneId: 'Asia/Tehran' });
+    const targetPage = await targetContext.newPage();
+    await enterWorkspace(targetPage, target);
+
+    await signIn(page, admin);
+    await page.goto(profilePath(target.id));
     await page.getByRole('tab', { name: 'حساب کاربری و امنیت' }).click();
     const sessionsTable = page.getByRole('table', { name: 'نشست‌های فعال کاربر' });
     await expect(sessionsTable.getByRole('row')).toHaveCount(2); // header + one session
@@ -230,7 +277,7 @@ test.describe('user profile workspace: HR link, request states, permissions, ses
     await capture(page, '06-active-sessions.png');
 
     // Server-side pre-condition: the target's session is alive before the revocation.
-    const before = await callApi(targetPage2, 'GET', '/api/v1/session');
+    const before = await callApi(targetPage, 'GET', '/api/v1/session');
     expect(before.status, 'the target session works before the revocation').toBe(200);
 
     await sessionsTable.getByRole('button', { name: /ابطال نشست ایجادشده/ }).click();
@@ -247,15 +294,8 @@ test.describe('user profile workspace: HR link, request states, permissions, ses
     await capture(page, '08-session-revoked.png');
 
     // The real proof: the revoked session is dead on the very next call of that browser.
-    const after = await callApi(targetPage2, 'GET', '/api/v1/session');
+    const after = await callApi(targetPage, 'GET', '/api/v1/session');
     expect(after.status, 'the revoked session is really dead').toBe(401);
-    await targetContext2.close();
-
-    // ------------------------------------------------------------ tab 6: the authentication history
-    await page.goto(profilePath(target.id));
-    await page.getByRole('tab', { name: 'سوابق ورود و خروج' }).click();
-    const historyTable = page.getByRole('table', { name: 'سوابق ورود و خروج کاربر' });
-    await expect(historyTable.getByText('ورود موفق')).toBeVisible();
-    await capture(page, '09-login-history.png');
+    await targetContext.close();
   });
 });
