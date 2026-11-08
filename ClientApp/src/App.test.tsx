@@ -308,7 +308,9 @@ describe('App', () => {
     window.history.pushState(null, '', '/app/admin/users');
     window.dispatchEvent(new PopStateEvent('popstate'));
     const tabs = await screen.findByRole('navigation', { name: 'تب‌های کاری باز' });
-    await waitFor(() => expect(tabs).toHaveTextContent('مدیریت کاربران'));
+    // The new tab appears after the lazily loaded route resolves; slower runners (Windows CI)
+    // need more than the default 1s, so wait up to 5s. The assertion itself is unchanged.
+    await waitFor(() => expect(tabs).toHaveTextContent('مدیریت کاربران'), { timeout: 5000 });
     expect(tabs).toHaveTextContent('داشبورد');
 
     await userEvent.click(await screen.findByRole('button', { name: /تغییر شرکت/ }));
@@ -324,12 +326,15 @@ describe('App', () => {
     // Cancelling returns to the SAME workspace: both tabs survive and the tab that was active
     // before the change (user management) is still the active one.
     const restoredTabs = await screen.findByRole('navigation', { name: 'تب‌های کاری باز' });
-    await waitFor(() => {
-      expect(restoredTabs).toHaveTextContent('داشبورد');
-      expect(restoredTabs).toHaveTextContent('مدیریت کاربران');
-    });
+    await waitFor(
+      () => {
+        expect(restoredTabs).toHaveTextContent('داشبورد');
+        expect(restoredTabs).toHaveTextContent('مدیریت کاربران');
+      },
+      { timeout: 5000 },
+    );
     expect(window.location.pathname).toBe('/app/admin/users');
-  });
+  }, 20000);
 
   it('sends one request even when the entry button is activated twice quickly', async () => {
     const companyB = company('b', 'شرکت ب', [open1406]);

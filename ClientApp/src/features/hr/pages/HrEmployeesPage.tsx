@@ -7,6 +7,7 @@ import { buttonVariants } from '@/components/ui/button';
 import { Link } from '@/lib/router';
 import { can } from '@/lib/permissions';
 import { useCompanyPermissions } from '@/lib/useCompanyPermissions';
+import { useStaleGuard } from '@/lib/staleGuard';
 import { listHrEmployees, getHrUnitTree } from '../api/hrClient';
 import type { HrEmployeeListItem, HrUnitTreeNode } from '../api/hrTypes';
 import { HrEmploymentStatusBadge } from '../components/HrBadges';
@@ -66,12 +67,17 @@ export function HrEmployeesPage({ onUnauthenticated, companyId }: Props) {
   return () => window.clearTimeout(timer);
   }, [searchText, search]);
 
-  // The unit filter comes from the real tree of THIS company (active units only).
+  // The unit filter comes from the real tree of THIS company (active units only). The stale
+  // guard is the second line of defence: an already-settled answer of another company can
+  // never enter this state (PR 4 of the stage 1 completion).
+  const treeScope = useStaleGuard(companyId);
   useEffect(() => {
     const controller = new AbortController();
+    const { token, isCurrent } = treeScope;
     getHrUnitTree(companyId, controller.signal)
       .then((tree) => {
-        if (!controller.signal.aborted) setUnitOptions(unitFilterOptions(tree.roots));
+        if (controller.signal.aborted || !isCurrent(token)) return;
+        setUnitOptions(unitFilterOptions(tree.roots));
       })
       .catch((cause: unknown) => {
         if (controller.signal.aborted || onUnauthenticated(cause)) return;
@@ -79,10 +85,12 @@ export function HrEmployeesPage({ onUnauthenticated, companyId }: Props) {
         setUnitOptions([]);
       });
     return () => controller.abort();
-  }, [companyId, onUnauthenticated]);
+  }, [companyId, onUnauthenticated, treeScope]);
 
+  const listScope = useStaleGuard(companyId);
   useEffect(() => {
     const controller = new AbortController();
+    const { token, isCurrent } = listScope;
     setLoading(true);
     setFailure(null);
     listHrEmployees(
@@ -97,7 +105,7 @@ export function HrEmployeesPage({ onUnauthenticated, companyId }: Props) {
       controller.signal,
     )
       .then((result) => {
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted || !isCurrent(token)) return;
         setData({ items: result.items, totalCount: result.totalCount });
         setLoading(false);
       })
@@ -118,7 +126,7 @@ export function HrEmployeesPage({ onUnauthenticated, companyId }: Props) {
         setLoading(false);
       });
     return () => controller.abort();
-  }, [companyId, search, status, unitId, page, pageSize, attempt, onUnauthenticated]);
+  }, [companyId, search, status, unitId, page, pageSize, attempt, onUnauthenticated, listScope]);
 
   const columns = useMemo<readonly DataTableColumn<HrEmployeeListItem>[]>(
     () => [
