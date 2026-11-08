@@ -1,7 +1,7 @@
 # تحویل وظیفه — ISSUE-228-vendor-provisioning-state
 
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/228
-- **وضعیت:** پیاده‌سازی backend/state در شاخه؛ منتظر CI و بازبینی
+- **وضعیت فعلی:** backend/state پایه Vendor در main است؛ PR #546 ادغام و post-merge CI آن تأیید شده است. Provisioning برای LicensePayload v2 تا mapping معتبر CompanyReference در #392 عمداً fail-closed باقی می‌ماند.
 
 ## خلاصه تغییرات
 - افزودن جدول مستقل VendorProvisioningRequests در دیتابیس Vendor؛ هیچ تغییری در Server/** یا دیتابیس حسابداری مشتری انجام نشده است.
@@ -60,3 +60,13 @@
 - consumer پایه، claim/replay، apply تراکنشی و Enrollment در PRهای #302 و #305–#308/#329 در main وجود دارند؛ intake و اعتبارسنجی ACK در PRهای #293/#294 نیز پیاده‌سازی شده‌اند. این handoff قدیمی نباید به‌عنوان نبود کامل این کد خوانده شود.
 - این PR هیچ تغییر Customer-side ندارد. Issue #235 همچنان برای trust distribution، durable audit/readiness، error/retry semantics و تأیید عملیاتی مستقل باز می‌ماند.
 - قرارداد provisioning v4 هنوز CompanyReference ندارد؛ تا هماهنگی #392 و نسخه‌دار شدن transport، LicensePayload v2 در Vendor fail-closed رد می‌شود.
+
+
+## تأیید پس از Merge و وضعیت جاری — 2026-11-08
+
+- PR #546 در 2026-11-05T07:57:20Z با merge commit c3404da89d97e54977ec993a20479084922ca891 ادغام شد؛ هر ۱۵ Check Run پس از Merge موفق است (Vendor build/test/package، SQL Server integration، checkpoint Ubuntu/Windows، .NET build/test/E2E/publish، Secret Scan، Semgrep و CodeQL).
+- main اکنون روی da8ed012074f8439cb836ea4ae190e3ad2fc542e است و این merge commit را در تاریخچه دارد.
+- قابلیت موجود: schema v4 فقط یک LicenseId/Sequence امضاشده را bind می‌کند؛ resolver v2 را با provisioning_company_reference_mapping_required رد می‌کند و v1 بدون subsystem را نیز نمی‌پذیرد. هیچ Company entitlement به سطح Installation تبدیل نمی‌شود.
+- مانع #392: قرارداد و mapping پایدار CompanyReference → CompanyId محلی هنوز نیازمند طراحی/تأیید schema مشتری است؛ هیچ migration مشتری در این handoff یا PR Vendor انجام نشده است.
+- مرز #235: consumer/ACK مشتری، trust distribution و retry/error semantics فقط در PR مستقل customer-side ادامه می‌یابد؛ PR Vendor فقط مرجع و binding را fail-closed نگه می‌دارد.
+- تست محلی: در این بازبینی اجرا نشد؛ نتیجه فوق فقط به ۱۵ Check Run واقعی پس از Merge نسبت داده می‌شود.
