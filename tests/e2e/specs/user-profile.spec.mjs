@@ -25,6 +25,10 @@ import { callApi, enterWorkspace, post, signIn } from '../lib/session.mjs';
 const state = JSON.parse(readFileSync(new URL('../.e2e-state.json', import.meta.url), 'utf8'));
 const admin = state.users.admin;
 
+// The published-server origin from playwright.config.mjs; a fresh secondary context cannot
+// derive it from `page.url()` because the primary page may still be on about:blank.
+const ORIGIN = 'http://localhost:5090';
+
 const screenshotDir = fileURLToPath(new URL('../../../artifacts/ui-preview/stage-3-profile/', import.meta.url));
 async function capture(page, name) {
   mkdirSync(screenshotDir, { recursive: true });
@@ -72,11 +76,7 @@ test.describe('user profile workspace: HR link, request states, permissions, ses
 
     // ------------------------------------------------------------ the target signs in once
     // (a real LoginSucceeded event and one active session for later tabs)
-    const targetContext = await browser.newContext({
-      baseURL: new URL(page.url()).origin,
-      locale: 'fa-IR',
-      timezoneId: 'Asia/Tehran',
-    });
+    const targetContext = await browser.newContext({ baseURL: ORIGIN, locale: 'fa-IR', timezoneId: 'Asia/Tehran' });
     const targetPage = await targetContext.newPage();
     await enterWorkspace(targetPage, target);
     await targetContext.close();
@@ -149,11 +149,7 @@ test.describe('user profile workspace: HR link, request states, permissions, ses
     await fixture.addMembership(target, source, source.memberRole.id);
 
     // ------------------------------------------------------------ the target requests membership
-    const targetContext = await browser.newContext({
-      baseURL: new URL(page.url()).origin,
-      locale: 'fa-IR',
-      timezoneId: 'Asia/Tehran',
-    });
+    const targetContext = await browser.newContext({ baseURL: ORIGIN, locale: 'fa-IR', timezoneId: 'Asia/Tehran' });
     const targetPage = await targetContext.newPage();
     await enterWorkspace(targetPage, target);
     const destinations = await callApi(targetPage, 'GET', `${destinationsPath}${encodeURIComponent(destination.name)}`);
@@ -192,11 +188,7 @@ test.describe('user profile workspace: HR link, request states, permissions, ses
     expect(secondRequest.status).toBe(200);
     const secondTarget = await fixture.addUser('target3');
     await fixture.addMembership(secondTarget, source, source.memberRole.id);
-    const targetContext2 = await browser.newContext({
-      baseURL: new URL(page.url()).origin,
-      locale: 'fa-IR',
-      timezoneId: 'Asia/Tehran',
-    });
+    const targetContext2 = await browser.newContext({ baseURL: ORIGIN, locale: 'fa-IR', timezoneId: 'Asia/Tehran' });
     const targetPage2 = await targetContext2.newPage();
     await enterWorkspace(targetPage2, secondTarget);
     const destinations2 = await callApi(targetPage2, 'GET', `${destinationsPath}${encodeURIComponent(destination.name)}`);
