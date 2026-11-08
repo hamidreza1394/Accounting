@@ -567,7 +567,12 @@ public static class CompanyRoleAdministrationEndpoints
     public static async Task<IResult> PreviewRolePermissionsAsync(
         Guid companyId,
         Guid roleId,
-        IReadOnlyList<string>? permissionCodes,
+        // GET contract: the candidate codes arrive as repeated query parameters
+        // (?permissionCodes=a&permissionCodes=b). A bare IReadOnlyList<string> would be inferred
+        // as a request body, which a GET endpoint must not have ("Body was inferred but the
+        // method does not allow inferred body parameters" at route building); string[] binds
+        // from the repeated query parameters instead.
+        [FromQuery] string[]? permissionCodes,
         HttpContext httpContext,
         ClaimsPrincipal principal,
         Data.DatabaseContext database,

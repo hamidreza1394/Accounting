@@ -150,7 +150,7 @@ public sealed class RolePermissionPreviewEndpointTests
 
     private static Task<IResult> CallAsync(Fixture fixture, Guid actorId, Guid roleId, IReadOnlyList<string> codes) =>
         Server.Api.CompanyRoleAdministrationEndpoints.PreviewRolePermissionsAsync(
-            fixture.CompanyId, roleId, codes, new DefaultHttpContext(), fixture.Principal(actorId),
+            fixture.CompanyId, roleId, codes.ToArray(), new DefaultHttpContext(), fixture.Principal(actorId),
             fixture.Database, fixture.CompanyAccess, fixture.CeilingService, default);
 
     private sealed class Fixture : IAsyncDisposable
