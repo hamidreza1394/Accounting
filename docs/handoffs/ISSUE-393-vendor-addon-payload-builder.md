@@ -3,14 +3,14 @@
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/393
 - **Agent/مسئول:** ChatGPT
 - **تاریخ:** 2026-11-04
-- **وضعیت:** پیاده‌سازی محدود؛ CI و بازبینی نهایی لازم است.
+- **وضعیت فعلی:** سه candidate builder در main ادغام و post-merge CI آن‌ها تأیید شده است؛ گردش تجاری خرید/پرداخت و صدور هنوز NotImplemented است.
 
 ## هدف و معیارهای پذیرش
 - [x] ساخت candidate amendment برای افزایش installation-scoped `maxCompanies` روی همان LicenseId و InstallationId.
 - [x] حفظ Payload v1 به‌صورت v1 و Payload v2 به‌صورت v2؛ بدون تبدیل ضمنی نسخه یا حذف entitlementهای موجود.
 - [x] الزام sequence دقیقاً بزرگ‌تر، سقف جدید بزرگ‌تر، منابع Active/Issued و تطابق metadata با آخرین payload.
 - [x] تست‌های واحد برای v1/v2، حفظ حقوق، metadata stale، cross-customer، وضعیت نامعتبر، replay/sequence و عقب‌گرد زمان، انقضا/شروع term و استقلال support/update.
-- [ ] اجرای CI روی SHA نهایی و بازبینی diff.
+- [x] CI پس از Merge برای PR #527 (۱۵/۱۵)، #558 (۱۵/۱۵) و #565 (۱۵/۱۵) روی merge commitهای واقعی تأیید شد.
 - [ ] تکمیل persistence، commercial order/purchase evidence، maker-checker approval و signing/export در PRهای بعدی #393.
 
 ## خلاصه تغییرات
@@ -90,3 +90,13 @@
 - این متد pure candidate builder است؛ هیچ خرید، سفارش، پرداخت، approval، امضا، persistence یا sequence پایدار ایجاد نمی‌کند. caller همچنان باید envelope جاری را با trust store و signature بررسی کند.
 - تست‌های Regression افزوده‌شده: تمدید مستقل Support، تمدید مستقل Updates، رد v1 و تاریخ null، رد no-op/عدم افزایش/تاریخ غیرآینده/term منقضی، و تمدید Support منقضی‌شده برای perpetual.
 - CI روی SHA نهایی PR باید پیش از `Verified` شدن موفق شود؛ تست محلی در این اجرا اجرا نشده است.
+
+
+## تأیید نهایی پس از Merge — 2026-11-08
+
+- مبنای فعلی: main@da8ed012074f8439cb836ea4ae190e3ad2fc542e؛ merge commitهای #527، #558 و #565 در تاریخچه main هستند.
+- #527: 2a62811acdb71bda77288356743be45356685954 — ۱۵/۱۵ Check Run پس از Merge موفق.
+- #558: 8d9740631e715e17b6d280026a049a89a2596f3b — ۱۵/۱۵ Check Run پس از Merge موفق.
+- #565: 66b60cc48f6454997e260cb1244374114e2bfbd4 — ۱۵/۱۵ Check Run پس از Merge موفق، شامل Vendor package/tests، .NET build/test، E2E، Linux/Windows publish، Secret Scan، Semgrep و CodeQL.
+- وضعیت: candidateهای maxCompanies، Company-scoped Module/Feature/UserSeat و support/update در main Verified هستند. سفارش تجاری، payment evidence، persistence، API، Maker-Checker اختصاصی amendment، صدور پایدار و Purchased/Delivered/Acknowledged همچنان NotImplemented هستند.
+- مرزها: هیچ Customer consumer، Server/**، Customer DB migration یا provider واقعی KMS/HSM در این سه PR اضافه نشده است.
