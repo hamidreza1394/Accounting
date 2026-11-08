@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useStaleGuard } from '@/lib/staleGuard';
 import { getCompanyOverview } from '../api/client';
 import type { CompanyOverview } from '../api/types';
 import { formatPersianDate } from '../lib/date';
@@ -25,13 +26,19 @@ type CompanyOverviewPanelProps = {
 export function CompanyOverviewPanel({ companyId, currentPeriodId, onUnauthenticated }: CompanyOverviewPanelProps) {
   const [state, setState] = useState<OverviewState>({ kind: 'loading' });
   const [attempt, setAttempt] = useState(0);
+  // A late overview of the previous company must never enter the new dashboard (PR 4).
+  const scope = useStaleGuard(companyId);
 
   useEffect(() => {
     const controller = new AbortController();
+    const { token, isCurrent } = scope;
     setState({ kind: 'loading' });
 
     getCompanyOverview(companyId, controller.signal)
-      .then((overview) => setState({ kind: 'ready', overview }))
+      .then((overview) => {
+        if (controller.signal.aborted || !isCurrent(token)) return;
+        setState({ kind: 'ready', overview });
+      })
       .catch((error: unknown) => {
         if (controller.signal.aborted || onUnauthenticated(error)) {
           return;
@@ -43,7 +50,7 @@ export function CompanyOverviewPanel({ companyId, currentPeriodId, onUnauthentic
       });
 
     return () => controller.abort();
-  }, [companyId, attempt, onUnauthenticated]);
+  }, [companyId, attempt, onUnauthenticated, scope]);
 
   if (state.kind === 'loading') {
     return <LoadingState label="در حال دریافت اطلاعات شرکت…" />;

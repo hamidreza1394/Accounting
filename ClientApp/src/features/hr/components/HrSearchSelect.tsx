@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from 'react';
 import { Loader2, Search } from 'lucide-react';
 import { Select } from '@/components/ui/FormField';
 import { cn } from '@/lib/utils';
+import { isAbortError } from '@/lib/staleGuard';
 
 export type HrPickerOption = { key: string; label: string; detail?: string | null };
 
@@ -64,7 +65,7 @@ export function HrSearchSelect({
         if (!controller.signal.aborted) setOptions(result);
       })
       .catch((cause: unknown) => {
-        if (controller.signal.aborted || cause instanceof DOMException) return;
+        if (controller.signal.aborted || isAbortError(cause)) return;
         setFailed(true);
       });
     return () => controller.abort();
