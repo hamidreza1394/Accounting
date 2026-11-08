@@ -81,6 +81,9 @@ export function JalaliDateField({
   const selected = isoToDate(value);
   const minDate = min ? isoToDate(min) : undefined;
   const maxDate = max ? isoToDate(max) : undefined;
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  const todayDisabled = Boolean((minDate && today < minDate) || (maxDate && today > maxDate));
   const startMonth = minDate ?? new Date(2000, 0, 1);
   const endMonth = maxDate ?? new Date(2100, 11, 1);
 
@@ -125,6 +128,8 @@ export function JalaliDateField({
               </Popover.Title>
               <DayPicker
                 mode="single"
+                captionLayout="dropdown"
+                navLayout="around"
                 {...(selected ? { selected } : {})}
                 defaultMonth={selected ?? clampToRange(new Date(), minDate, maxDate)}
                 startMonth={startMonth}
@@ -137,6 +142,19 @@ export function JalaliDateField({
                   setOpen(false);
                 }}
               />
+              <div className="mt-2 flex justify-start border-t border-line pt-2">
+                <button
+                  type="button"
+                  disabled={todayDisabled}
+                  onClick={() => {
+                    onChange(dateToIso(today));
+                    setOpen(false);
+                  }}
+                  className="rounded-md px-3 py-1.5 text-xs font-semibold text-teal-deep outline-none hover:bg-pick-soft focus-visible:ring-2 focus-visible:ring-gold disabled:cursor-not-allowed disabled:text-muted"
+                >
+                  امروز
+                </button>
+              </div>
             </Popover.Popup>
           </Popover.Positioner>
         </Popover.Portal>
