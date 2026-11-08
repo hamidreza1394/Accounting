@@ -158,6 +158,10 @@ describe('RoleCreatePage', () => {
     setup('?company=a&copyFrom=role-src');
     await ready();
 
+    // The prefill is applied only after the copy-source fetch resolves; its completion notice
+    // is the reliable readiness signal (asserting the values before it raced on slow runners).
+    const notice = await screen.findByText(/کپی از گروه «منابع انسانی»/);
+
     // Code and title are prefilled as an editable starting point.
     expect(code()).toHaveValue('HR-COPY');
     expect(title()).toHaveValue('کپی منابع انسانی');
@@ -165,7 +169,6 @@ describe('RoleCreatePage', () => {
     expect(leaf('ایجاد سفارش')).toBeChecked();
     // hr.employees.list is not in this actor's catalog: left out and reported, never smuggled.
     expect(screen.queryByRole('checkbox', { name: 'فهرست کارکنان شرکت' })).toBeNull();
-    const notice = await screen.findByText(/کپی از گروه «منابع انسانی»/);
     expect(notice).toHaveTextContent('۱ مجوز خارج از کاتالوگ/سقف شما در این کپی لحاظ نشد');
 
     // The creation still goes through the normal guarded POST with the carried codes only.
