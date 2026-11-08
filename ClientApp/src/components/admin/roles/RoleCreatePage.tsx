@@ -62,7 +62,9 @@ export function RoleCreatePage({ onUnauthenticated, defaultCompanyId, isInstalla
   // Copying an existing role (stage 2): the create form starts from the source's values but the
   // creation itself goes through the normal guarded POST, so the server keeps every control.
   const copyFromId = params.get('copyFrom') ?? '';
-  const [copySource, setCopySource] = useState<{ role: CompanyRole; skippedCodes: string[] } | 'failed' | null>(null);
+  const [copySource, setCopySource] = useState<
+    { role: CompanyRole; skippedCodes: string[] } | 'system' | 'failed' | null
+  >(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -92,6 +94,12 @@ export function RoleCreatePage({ onUnauthenticated, defaultCompanyId, isInstalla
         const source = roles.find((candidate) => candidate.id === copyFromId);
         if (!source) {
           setCopySource('failed');
+          return;
+        }
+        if (source.isSystemRole) {
+          // A system role is not copyable — the same rule the list page enforces by hiding
+          // the copy action on its row; the direct URL must not become a bypass.
+          setCopySource('system');
           return;
         }
         const catalogCodeSet = new Set(catalogState.catalog.map((item) => item.code));
@@ -244,7 +252,10 @@ export function RoleCreatePage({ onUnauthenticated, defaultCompanyId, isInstalla
         <Alert tone="info">{delegationNote(isInstallationAdministrator)}</Alert>
 
         {copySource === 'failed' ? <Alert tone="warning">بارگذاری اطلاعات گروه مبدأ برای کپی ممکن نشد؛ فرم را دستی کامل کنید.</Alert> : null}
-        {copySource && copySource !== 'failed' ? (
+        {copySource === 'system' ? (
+          <Alert tone="warning">گروه سیستمی قابل کپی نیست؛ گروه دسترسی جدید را دستی ایجاد کنید.</Alert>
+        ) : null}
+        {copySource && copySource !== 'failed' && copySource !== 'system' ? (
           <Alert tone="info">
             کپی از گروه «{copySource.role.name}»: کد و عنوان و {new Intl.NumberFormat('fa-IR').format(copySource.role.permissionCodes.length - copySource.skippedCodes.length)} مجوز آن از قبل انتخاب شده است؛ پیش از ذخیره، کد و عنوان را بررسی و در صورت نیاز تغییر دهید.
             {copySource.skippedCodes.length > 0
