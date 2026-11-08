@@ -147,20 +147,19 @@ export function ProfileIdentityTab({ user, cache, onUnauthenticated }: Shared) {
             ) : (
               <dl className="grid gap-3 sm:grid-cols-2">
                 {rows.map((row) => (
-                  <div key={row.companyId} className="rounded-xl bg-cool px-3.5 py-3">
-                    <dt className="text-xs font-medium text-sub">پرونده پرسنلی — {row.companyName}</dt>
-                    <dd className="mt-1 break-words text-sm font-semibold text-ink">
-                      {row.hidden ? (
-                        <span className="text-sub">نمایش این بخش برای شما مجاز نیست.</span>
-                      ) : row.employeeNumber ? (
-                        <>
-                          <span dir="ltr">{row.employeeNumber}</span>
-                          {row.employeeName ? <span className="text-sub"> — {row.employeeName}</span> : null}
-                        </>
-                      ) : (
-                        <span className="text-sub">پرونده پرسنلی متصل نشده است.</span>
-                      )}
-                    </dd>
+                  <Info key={row.companyId} label={`پرونده پرسنلی — ${row.companyName}`}>
+                    {row.hidden ? (
+                      <span className="text-sub">نمایش این بخش برای شما مجاز نیست.</span>
+                    ) : row.employeeNumber ? (
+                      <>
+                        <span dir="ltr">{row.employeeNumber}</span>
+                        {row.employeeName ? <span className="text-sub"> — {row.employeeName}</span> : null}
+                      </>
+                    ) : (
+                      <span className="text-sub">پرونده پرسنلی متصل نشده است.</span>
+                    )}
+                    {/* The row action lives inside the dd (flow content of the definition): a
+                        button between the dl groups would break the definition-list contract. */}
                     {!row.hidden && row.employeeId ? (
                       <button
                         type="button"
@@ -182,12 +181,12 @@ export function ProfileIdentityTab({ user, cache, onUnauthenticated }: Shared) {
                           setLinkTarget({ companyId: row.companyId, companyName: row.companyName });
                         }}
                         aria-label={`اتصال پرونده پرسنلی در ${row.companyName}`}
-                        className="mt-2 inline-flex min-h-9 items-center rounded-lg border border-teal-deep/40 px-3 text-xs font-bold text-teal-deep outline-none hover:bg-white focus-visible:ring-2 focus-visible:ring-gold"
+                        className="ms-2 mt-2 inline-flex min-h-9 items-center rounded-lg border border-teal-deep/40 px-3 text-xs font-bold text-teal-deep outline-none hover:bg-white focus-visible:ring-2 focus-visible:ring-gold"
                       >
                         اتصال پرونده پرسنلی
                       </button>
                     ) : null}
-                  </div>
+                  </Info>
                 ))}
               </dl>
             )
