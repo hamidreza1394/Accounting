@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ApiError, getCompanyRoles } from '../../../api/client';
 import type { CompanyRole } from '../../../api/types';
 import type { CanHint } from '../../../lib/permissions';
 import { Link, useSearchParams } from '../../../lib/router';
 import { Badge } from '../../ui/Badge';
+import { diffCodes } from '../../../lib/permissionTree';
+import { FormField, Select } from '../../ui/FormField';
 import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
 import { DataTable, type DataTableColumn } from '../../ui/DataTable';
 import { StatusBadge } from '../../ui/StatusBadge';
@@ -43,6 +45,11 @@ export function RolesListPage({ onUnauthenticated, defaultCompanyId, can = denyA
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<Failure | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const canCreate = companyId !== '' && can('admin.roles.create', companyId);
+  // Client-side comparison of two roles of the same company; the data comes from the same
+  // server list already loaded for the table — no extra request, no new API.
+  const [compareA, setCompareA] = useState('');
+  const [compareB, setCompareB] = useState('');
   const onForbiddenRef = useRef(onForbidden);
   onForbiddenRef.current = onForbidden;
 
@@ -78,8 +85,25 @@ export function RolesListPage({ onUnauthenticated, defaultCompanyId, can = denyA
       { key: 'status', header: 'وضعیت', cell: (role) => <StatusBadge status={role.isActive ? 'active' : 'inactive'} /> },
       { key: 'permissions', header: 'تعداد مجوز', align: 'center', cell: (role) => number.format(role.permissionCount) },
       { key: 'members', header: 'اعضای فعال', align: 'center', cell: (role) => number.format(role.activeMemberCount) },
+      {
+        key: 'copy',
+        header: 'کپی',
+        align: 'center',
+        cell: (role) =>
+          role.isSystemRole ? (
+            <span className="text-xs text-sub">—</span>
+          ) : canCreate ? (
+            <Link
+              to={newRolePath(companyId, role.id)}
+              className="inline-flex min-h-11 items-center rounded font-medium text-teal-deep underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-gold md:min-h-0"
+              aria-label={`کپی گروه ${role.name}`}
+            >
+              کپی…
+            </Link>
+          ) : null,
+      },
     ],
-    [],
+    [canCreate, companyId],
   );
 
   const companyName = choices.kind === 'ready' ? choices.companies.find((company) => company.id === companyId)?.name : undefined;
@@ -130,6 +154,104 @@ export function RolesListPage({ onUnauthenticated, defaultCompanyId, can = denyA
           rowHref={(role) => rolePath(companyId, role.id)}
         />
       )}
+
+      {roles !== null && roles.length >= 2 ? <RoleCompare roles={roles} a={compareA} b={compareB} onA={setCompareA} onB={setCompareB} /> : null}
     </div>
+  );
+}
+
+const compareSelectHint = 'فقط گروه‌های همین شرکت مقایسه می‌شوند؛ مقایسه فقط نمایشی است و هیچ تغییری اعمال نمی‌کند.';
+
+function RoleCompare({
+  roles,
+  a,
+  b,
+  onA,
+  onB,
+}: {
+  roles: CompanyRole[];
+  a: string;
+  b: string;
+  onA: (value: string) => void;
+  onB: (value: string) => void;
+}) {
+  const roleA = roles.find((role) => role.id === a) ?? null;
+  const roleB = roles.find((role) => role.id === b) ?? null;
+  const both = roleA !== null && roleB !== null;
+  const diff = useMemo(() => (both ? diffCodes(roleA!.permissionCodes, roleB!.permissionCodes) : null), [roleA, roleB, both]);
+  const comparisonId = useId();
+
+  return (
+    <section aria-labelledby={comparisonId} className="space-y-3 rounded-xl border border-line bg-white p-5">
+      <h2 id={comparisonId} className="text-lg font-extrabold text-title">
+        مقایسهٔ دو گروه
+      </h2>
+      <p className="text-sm text-sub">{compareSelectHint}</p>
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="min-w-56 flex-1">
+          <FormField label="گروه اول">
+            <Select value={a} onChange={(event) => onA(event.target.value)}>
+              <option value="">انتخاب کنید</option>
+              {roles.map((role) => (
+                <option key={role.id} value={role.id}>
+                  {role.name}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+        </div>
+        <div className="min-w-56 flex-1">
+          <FormField label="گروه دوم">
+            <Select value={b} onChange={(event) => onB(event.target.value)}>
+              <option value="">انتخاب کنید</option>
+              {roles.map((role) => (
+                <option key={role.id} value={role.id}>
+                  {role.name}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+        </div>
+      </div>
+      {diff && roleA && roleB ? (
+        <div className="space-y-2 text-sm">
+          <p className="text-sub">
+            مشترک: <span className="font-semibold text-ink">{number.format(roleA.permissionCodes.length - diff.removed.length)}</span> مجوز
+          </p>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-lg border border-line p-3">
+              <h3 className="text-sm font-bold text-success">فقط در «{roleA.name}» ({number.format(diff.removed.length)})</h3>
+              {diff.removed.length === 0 ? (
+                <p className="mt-1 text-xs text-sub">هیچ</p>
+              ) : (
+                <ul className="mt-1 space-y-1">
+                  {diff.removed.map((code) => (
+                    <li key={code} className="text-xs text-ink">
+                      <bdi dir="ltr">{code}</bdi>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="rounded-lg border border-line p-3">
+              <h3 className="text-sm font-bold text-danger">فقط در «{roleB.name}» ({number.format(diff.added.length)})</h3>
+              {diff.added.length === 0 ? (
+                <p className="mt-1 text-xs text-sub">هیچ</p>
+              ) : (
+                <ul className="mt-1 space-y-1">
+                  {diff.added.map((code) => (
+                    <li key={code} className="text-xs text-ink">
+                      <bdi dir="ltr">{code}</bdi>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : both || roleA || roleB ? (
+        <p className="text-sm text-sub">برای مقایسه، هر دو گروه را انتخاب کنید.</p>
+      ) : null}
+    </section>
   );
 }

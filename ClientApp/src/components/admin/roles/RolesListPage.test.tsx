@@ -55,6 +55,35 @@ describe('RolesListPage', () => {
     expect(roleCalls(calls)).toEqual(['/api/v1/admin/companies/a/roles']);
   });
 
+  it('offers a copy action per non-system role and none for system roles', async () => {
+    api();
+    setup();
+    await screen.findByRole('link', { name: 'کارشناس فروش' });
+    const copy = await screen.findByRole('link', { name: 'کپی گروه کارشناس فروش' });
+    expect(copy).toHaveAttribute('href', '/app/admin/roles/new?company=a&copyFrom=role-1');
+    const systemRow = screen.getByRole('link', { name: 'مدیر شرکت' }).closest('tr') as HTMLElement;
+    expect(within(systemRow).queryByRole('link', { name: /کپی گروه/ })).toBeNull();
+  });
+
+  it('compares two roles of the same company with the codes only one of them holds', async () => {
+    const user = userEvent.setup();
+    api();
+    setup();
+    await screen.findByRole('link', { name: 'کارشناس فروش' });
+
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'گروه اول' }), 'role-1');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'گروه دوم' }), 'role-sys');
+
+    const section = screen.getByRole('region', { name: 'مقایسهٔ دو گروه' });
+    // Common = SALES codes that ADMIN also holds (none here) — with these fixtures:
+    // SALES = [trade.orders.view, trade.orders.create], ADMIN = [admin.users.view].
+    expect(within(section).getByText(/مشترک:/)).toHaveTextContent('۰');
+    expect(within(section).getByRole('heading', { name: /فقط در «کارشناس فروش»/ })).toHaveTextContent('۲');
+    expect(within(section).getByRole('heading', { name: /فقط در «مدیر شرکت»/ })).toHaveTextContent('۱');
+    expect(within(section).getByText('trade.orders.view')).toBeInTheDocument();
+    expect(within(section).getByText('admin.users.view')).toBeInTheDocument();
+  });
+
   it('shows the company selector with the user-companies gap note and switches company through the URL', async () => {
     const user = userEvent.setup();
     const { calls } = api((id) => json(id === 'b' ? [] : [roleItem()]));
