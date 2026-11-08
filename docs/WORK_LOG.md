@@ -2801,3 +2801,16 @@
 
 ## 2026-11-08 — Issue #444 مرحله دوم PR-E: کپی گروه دسترسی و مقایسهٔ دو گروه
 - فهرست گروه‌ها: ستون «کپی» برای گروه‌های غیرسیستمی + بخش مقایسهٔ دو گروه (مشترک/فقط-در-هر-گروه از دادهٔ موجود)؛ فرم ایجاد: prefill از `?copyFrom=` با حذف و گزارش کدهای خارج از کاتالوگ/سقف کاربر؛ ذخیره از مسیر محافظت‌شدهٔ موجود؛ بدون API/Migration جدید؛ ۴ تست UI؛ ADMIN_UI §۱ و UAM §۵ به‌روزرسانی شدند. vitest ۹۰۴/۹۰۴؛ check:offline و check_static_assets سبز.
+
+## 2026-11-09 — Issue #444 مرحله سوم PR 3-A: تکمیل API پرونده کاربر
+- **Gap Analysis (کد `main` در `a213059d`):** اطلاعات پایه حساب/عضویت‌ها (`GET /admin/users/{userId}`)، نشست‌های فعال (D-073 `/admin/users/{userId}/sessions`)، مجوزهای مؤثر با منبع (`/admin/companies/{companyId}/effective-permissions/{userId}`) و سوابق تغییرات مدیریتی (`GET /admin/security/audit-events?userId=`) موجود بودند؛ دو شکاف واقعی: سوابق ورود کاربر هدف برای مدیر نصب (فقط `/me/login-history` self-service وجود داشت) و یافتن پرونده پرسنلی متصل به یک کاربر (لیست HR فقط `search/status/unitId` داشت).
+- **`GET /api/v1/admin/users/{userId}/login-history`:** فقط مدیر نصب با بازارزیابی فعال از دیتابیس؛ همان قرارداد self-service (۵ نوع رویداد احراز هویت، `take` clamp ۱..۱۰۰، نزولی، `no-store`)؛ ۴۰۴ ناموجود/Empty؛ رویدادهای غیراحراز هویت هرگز در پاسخ نیستند (سوابق مدیریتی از endpoint audit موجود می‌آید؛ endpoint موازی نساخته نشد).
+- **`GET /api/v1/companies/{companyId}/org/employees?userId=`:** فیلتر اختیاری اتصال کارمند↔عضویت همان کاربر؛ کاربر ناشناخته فهرست خالی (fail-closed بدون افشای وجود) و `Guid.Empty` → 400؛ همان مجوز `hr.employees.list` دوحالته موجود.
+- **تست‌ها:** ۳ تست جدید login-history (مجوز ۴۰۳/مجاز، فقط رویدادهای احراز هویت کاربر هدف + نزولی + UTC، ۴۰۴ ناموجود/Empty) + تست فیلتر `userId` لیست کارکنان (متصل/کاربر دیگر/ناشناخته/Empty)؛ route جدید به نگهبان معماری `ApiSensitiveReadRateLimitTests` اضافه شد. اجرای محلی: build Release بدون خطا؛ ۶/۶ تست UserAdministration + ۳۱/۳۱ تست HR + تست rate-limit سبز.
+- **مستندات:** `docs/api/USER_ACCESS_MANAGEMENT_API.md` §۲.۵، `docs/HR_FRONTEND_API_CONTRACT.md` §۱.۱ و handoff مرحله سوم به‌روزرسانی شدند.
+- **Migration:** هیچ.
+
+## 2026-11-09 — Issue #444 مرحله سوم PR 3-B: Workspace هفت‌تبی پرونده کاربر
+- `UserDetailPage` به پرونده حرفه‌ای هفت‌تبی تبدیل شد (مشخصات+پرسنلی، حساب و امنیت، عضویت‌ها، زیرسیستم/لایسنس با یادداشت صادقانه D-075، مجوزهای مؤثر با منبع و جستجو، سوابق ورود، سوابق تغییرات)؛ lazy load هر تب + cache per-user (بدون درخواست تکراری/تب غیرفعال)؛ حالت‌های Loading/Empty/Error/Retry و بخش صادقانه «مجاز نیست» برای 403/404؛ کلاینت: ۳ تابع + parser جدید و `HrEmployeeQuery.userId`.
+- تست‌ها: بازنویسی تست جزئیات + فایل تست جدید Workspace (۱۴ سناریو شامل lazy/caching/RTL/allowlist D-069)؛ vitest ۹۱۶/۹۱۶؛ typecheck/build/check:offline سبز. اصلاح تست HR بر اساس بازخورد CI (مجوز `hr.employees.list`؛ رفتار fail-closed درست endpoint روی SQL Server تأیید شد).
+- Migration: هیچ. (با PR 3-A در #596؛ بخش‌های باقی‌ماندهٔ مرحله سوم در handoff ثبت شده است.)

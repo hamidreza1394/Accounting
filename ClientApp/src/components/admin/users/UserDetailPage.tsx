@@ -1,18 +1,25 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { ArrowRight } from 'lucide-react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { ArrowRight, ShieldCheck } from 'lucide-react';
 import { ApiError, getAdminUser } from '../../../api/client';
-import type { AdminUserDetails, AdminUserMembership } from '../../../api/types';
-import { formatDate, formatDateTime } from '../../../lib/format';
+import type { AdminUserDetails } from '../../../api/types';
 import { buttonVariants } from '../../ui/button';
 import { Link, useDocumentTitle, useParams } from '../../../lib/router';
-import { EmptyState, ErrorState, LoadingState } from '../../Feedback';
+import { ErrorState, LoadingState } from '../../Feedback';
 import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
-import { DataTable, type DataTableColumn } from '../../ui/DataTable';
 import { StatusBadge } from '../../ui/StatusBadge';
 import { Tabs } from '../../ui/Tabs';
 import { fullName } from './userDisplay';
 import { userListBackPath } from './userListReturn';
 import { clearUserFlash, peekUserFlash, userFlashText } from './userFlash';
+import {
+  ProfileAuditTab,
+  ProfileIdentityTab,
+  ProfileLoginHistoryTab,
+  ProfileMembershipsTab,
+  ProfilePermissionsTab,
+  ProfileSecurityTab,
+  ProfileSubsystemsTab,
+} from './profile/ProfileTabs';
 
 type Props = {
   onUnauthenticated: (error: unknown) => boolean;
@@ -45,91 +52,47 @@ function BackToList() {
   );
 }
 
-function Info({ label, children }: { label: string; children: ReactNode }) {
+/** The two-letter initials placeholder; the real personnel photo belongs to the HR record (D-072). */
+function Avatar({ name }: { name: string }) {
+  const initials = name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('');
   return (
-    <div className="min-w-0 rounded-xl bg-cool px-3.5 py-3">
-      <dt className="text-xs font-medium text-sub">{label}</dt>
-      <dd className="mt-1 break-words text-sm font-semibold text-ink">{children}</dd>
-    </div>
+    <span aria-hidden="true" className="flex size-11 shrink-0 items-center justify-center rounded-full bg-navy text-base font-bold text-white">
+      {initials || '؟'}
+    </span>
   );
 }
 
-const membershipColumns: readonly DataTableColumn<AdminUserMembership>[] = [
-  { key: 'company', header: 'شرکت', cell: (membership) => membership.companyName },
-  {
-    key: 'role',
-    header: 'نقش در شرکت',
-    cell: (membership) => (
-      <span>
-        {membership.roleName} <span dir="ltr" className="text-xs text-sub">({membership.roleCode})</span>
-      </span>
-    ),
-  },
-  { key: 'status', header: 'وضعیت', cell: (membership) => <StatusBadge status={membership.isActive ? 'active' : 'inactive'} /> },
-  { key: 'created', header: 'تاریخ عضویت', cell: (membership) => formatDate(membership.createdAtUtc) },
-];
-
-function Verified({ value }: { value: boolean }) {
-  return value ? <StatusBadge status="active">تأیید شده</StatusBadge> : <StatusBadge status="pending">تأیید نشده</StatusBadge>;
-}
-
-function DetailTabs({ user }: { user: AdminUserDetails }) {
-  const [tab, setTab] = useState('general');
+/**
+ * The seven-tab profile workspace. Each tab owns its data: the panel mounts only while the
+ * tab is active (the `Tabs` component renders just the active panel), so an inactive tab
+ * never sends a request; the page-level cache keeps each tab's payload so switching back
+ * never re-requests and nothing loaded is lost.
+ */
+function ProfileWorkspace({ user, cache, onUnauthenticated }: {
+  user: AdminUserDetails;
+  cache: Map<string, unknown>;
+  onUnauthenticated: (error: unknown) => boolean;
+}) {
+  const [tab, setTab] = useState<string>('identity');
+  const shared = { user, cache, onUnauthenticated };
   return (
     <Tabs
-      label="بخش‌های اطلاعات کاربر"
+      label="بخش‌های پرونده کاربر"
       value={tab}
       onValueChange={setTab}
       items={[
-        {
-          id: 'general',
-          label: 'اطلاعات عمومی',
-          content: (
-            <dl className="grid gap-3 sm:grid-cols-2">
-              <Info label="نام و نام خانوادگی">{fullName(user)}</Info>
-              <Info label="نام کاربری">
-                <span dir="ltr">{user.username ?? '—'}</span>
-              </Info>
-              <Info label="نقش قدیمی حساب">{user.legacyRoleName ?? 'تعریف نشده'}</Info>
-              <Info label="آخرین ورود موفق">{formatDateTime(user.lastLoginDateTime, 'هرگز')}</Info>
-              <Info label="تاریخ ایجاد حساب">{formatDateTime(user.insertDateTime)}</Info>
-              <Info label="آخرین ویرایش">{formatDateTime(user.updateDateTime)}</Info>
-            </dl>
-          ),
-        },
-        {
-          id: 'contact',
-          label: 'اطلاعات تماس',
-          content: (
-            <dl className="grid gap-3 sm:grid-cols-2">
-              <Info label="ایمیل">
-                <span dir="ltr">{user.emailAddress}</span>
-              </Info>
-              <Info label="وضعیت تأیید ایمیل">
-                <Verified value={user.isEmailAddressVerified} />
-              </Info>
-              <Info label="شماره موبایل">{user.cellPhoneNumber ? <span dir="ltr">{user.cellPhoneNumber}</span> : 'ثبت نشده'}</Info>
-              <Info label="وضعیت تأیید موبایل">
-                <Verified value={user.isCellPhoneNumberVerified} />
-              </Info>
-            </dl>
-          ),
-        },
-        {
-          id: 'memberships',
-          label: 'شرکت‌ها و عضویت‌ها',
-          content:
-            user.memberships.length === 0 ? (
-              <EmptyState title="این حساب هنوز عضویت شرکتی ندارد." />
-            ) : (
-              <DataTable
-                caption="عضویت‌های شرکتی کاربر"
-                columns={membershipColumns}
-                rows={user.memberships}
-                getRowKey={(membership) => membership.companyId}
-              />
-            ),
-        },
+        { id: 'identity', label: 'مشخصات فردی و پرسنلی', content: <ProfileIdentityTab {...shared} /> },
+        { id: 'security', label: 'حساب کاربری و امنیت', content: <ProfileSecurityTab {...shared} /> },
+        { id: 'memberships', label: 'شرکت‌ها و عضویت‌ها', content: <ProfileMembershipsTab user={user} /> },
+        { id: 'subsystems', label: 'زیرسیستم‌ها و لایسنس', content: <ProfileSubsystemsTab {...shared} /> },
+        { id: 'permissions', label: 'گروه‌های دسترسی و مجوزهای مؤثر', content: <ProfilePermissionsTab {...shared} /> },
+        { id: 'logins', label: 'سوابق ورود و خروج', content: <ProfileLoginHistoryTab {...shared} /> },
+        { id: 'audit', label: 'سوابق تغییرات مدیریتی', content: <ProfileAuditTab {...shared} /> },
       ]}
     />
   );
@@ -142,6 +105,12 @@ export function UserDetailPage({ onUnauthenticated, canUpdate = false }: Props) 
   useEffect(() => clearUserFlash, []);
   const [state, setState] = useState<State>({ kind: 'loading' });
   const [attempt, setAttempt] = useState(0);
+  // Per-user in-memory cache of the lazy tab payloads: revisiting a tab never re-requests,
+  // an inactive tab never fetches, and switching away never discards loaded data.
+  const tabCache = useRef<Map<string, unknown>>(new Map());
+  useEffect(() => {
+    tabCache.current.clear(); // navigating to another user must not inherit their cache
+  }, [id]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -192,17 +161,31 @@ export function UserDetailPage({ onUnauthenticated, canUpdate = false }: Props) 
     );
   } else {
     const { user } = state;
+    const shared = { user, cache: tabCache.current, onUnauthenticated };
+    const hasActiveMembership = user.memberships.some((membership) => membership.isActive);
     body = (
       <>
         <header className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="truncate text-2xl font-extrabold tracking-tight text-title">{fullName(user)}</h1>
-            <p dir="ltr" className="mt-1 text-start text-sm text-sub">
-              @{user.username ?? '—'}
-            </p>
+          <div className="flex min-w-0 items-center gap-3">
+            <Avatar name={fullName(user)} />
+            <div className="min-w-0">
+              <h1 className="truncate text-2xl font-extrabold tracking-tight text-title">{fullName(user)}</h1>
+              <p dir="ltr" className="mt-1 text-start text-sm text-sub">
+                @{user.username ?? '—'}
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {user.legacyRoleName === 'Admin' ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-navy px-2.5 py-1 text-xs font-bold text-white" title="این حساب نقش مدیر سیستم نصب را دارد.">
+                <ShieldCheck size={14} aria-hidden="true" />
+                مدیر سیستم
+              </span>
+            ) : null}
             <StatusBadge status={user.isActive ? 'active' : 'inactive'} />
+            <StatusBadge status={hasActiveMembership ? 'active' : 'pending'}>
+              {hasActiveMembership ? 'عضو فعال' : 'بدون عضویت فعال'}
+            </StatusBadge>
             {canUpdate ? (
               <Link to={`/admin/users/${encodeURIComponent(user.id)}/edit`} className={buttonVariants({ variant: 'outline', size: 'lg' })}>
                 ویرایش
@@ -210,7 +193,7 @@ export function UserDetailPage({ onUnauthenticated, canUpdate = false }: Props) 
             ) : null}
           </div>
         </header>
-        <DetailTabs user={user} />
+        <ProfileWorkspace {...shared} />
       </>
     );
   }

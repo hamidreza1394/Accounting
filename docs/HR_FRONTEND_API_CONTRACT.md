@@ -35,7 +35,7 @@
 
 | عملیات | Method + Route | Permission | Request DTO | Response DTO | Pagination | RowVersion | Audit | وضعیت |
 |---|---|---|---|---|---|---|---|---|
-| فهرست کارکنان | `GET /org/employees` | `hr.employees.list` | Query: `search?` (≤۱۲۰)، `status?` (1/2/3)، `unitId?`، `page?`، `pageSize?` | `HrEmployeeListResponse` | ✔ | — | — | Verified |
+| فهرست کارکنان | `GET /org/employees` | `hr.employees.list` | Query: `search?` (≤۱۲۰)، `status?` (1/2/3)، `unitId?`، `userId?` (Stage 3 — فقط کارمندان متصل به عضویت همان کاربر؛ کاربر ناشناخته = فهرست خالی، `Guid.Empty` = 400)، `page?`، `pageSize?` | `HrEmployeeListResponse` | ✔ | — | — | Verified |
 | جزئیات کارمند | `GET /org/employees/{employeeId}` | `hr.employees.view` | — | `HrEmployeeDetail` | — | خروجی | — | Verified |
 | ثبت کارمند | `POST /org/employees` | `hr.employees.create` | `HrCreateEmployeeRequest` | `201 HrEmployeeCreatedResponse` + `Location` | — | — | `HrEmployeeCreated` | Verified |
 | ویرایش کارمند | `PUT /org/employees/{employeeId}` | `hr.employees.update` | `HrUpdateEmployeeRequest` | `204` | — | **الزامی** | `HrEmployeeUpdated` | Verified |

@@ -24,6 +24,8 @@ import {
   parseTransferredMemberCount,
   parseMySessions,
   parseRevokedSessionCount,
+  parseAdminUserSessions,
+  parseAccessSubsystems,
   parsePermissionTemplates,
   parseCompanies,
   parseCompanyOverview,
@@ -45,6 +47,8 @@ import {
   type UpdateCompanyRoleRequest,
   type CompanyRoleMemberPage,
   type MySession,
+  type AdminUserSession,
+  type AccessSubsystem,
   type CompanySummary,
   type SelectedContext,
   type Session,
@@ -651,4 +655,27 @@ export async function createMembershipRequest(destinationCompanyId: string): Pro
 
 export async function getAssignableRoles(companyId: string, page: number, signal?: AbortSignal) {
   return parseAssignableRoles(await getJson(`/admin/companies/${encodeURIComponent(companyId)}/membership-requests/assignable-roles?page=${page}&pageSize=100`, signal));
+}
+
+/**
+ * The authentication events of the targeted user, for installation administrators only
+ * (stage 3 profile). Same allow-listed shape as the self-service login history.
+ */
+export async function getAdminUserLoginHistory(userId: string, signal?: AbortSignal, take = 50): Promise<LoginHistoryItem[]> {
+  return parseLoginHistory(
+    await getJson(`/admin/users/${encodeURIComponent(userId)}/login-history?take=${Math.min(Math.max(take, 1), 100)}`, signal),
+  );
+}
+
+/**
+ * The active sessions of the targeted user (installation administrator). Revocation is a
+ * separate step-up flow (D-073) and is intentionally not part of this read.
+ */
+export async function getAdminUserSessions(userId: string, signal?: AbortSignal): Promise<AdminUserSession[]> {
+  return parseAdminUserSessions(await getJson(`/admin/users/${encodeURIComponent(userId)}/sessions`, signal));
+}
+
+/** The read-only D-075 access catalog subsystems (installation administrator). */
+export async function getAccessCatalogSubsystems(signal?: AbortSignal): Promise<AccessSubsystem[]> {
+  return parseAccessSubsystems(await getJson('/admin/access/catalog/subsystems', signal));
 }

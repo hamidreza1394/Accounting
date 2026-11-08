@@ -71,6 +71,8 @@ export type HrEmployeeQuery = {
   search?: string;
   status?: HrEmploymentStatus;
   unitId?: string;
+  /** Stage 3 profile: only the employee linked to a membership of this user (fail-closed). */
+  userId?: string;
   page: number;
   pageSize: number;
 };
@@ -80,6 +82,7 @@ export async function listHrEmployees(companyId: string, queryValues: HrEmployee
     search: queryValues.search,
     status: queryValues.status,
     unitId: queryValues.unitId,
+    userId: queryValues.userId,
     page: queryValues.page,
     pageSize: queryValues.pageSize,
   })}`;
