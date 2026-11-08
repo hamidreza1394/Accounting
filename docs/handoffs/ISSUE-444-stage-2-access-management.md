@@ -66,3 +66,15 @@
   - تست: `EffectivePermissions_AttributesEveryCodeToItsGrantingActiveRoles` (مجوز مشترک بین دو نقش، نقش غیرفعال هرگز منبع نیست، برابری اجتماع کدها) + به‌روزرسانی تست‌های UI.
 - **تست‌های اجراشده (محلی):** build بدون خطا؛ ۳/۳ تست EffectivePermissions سبز؛ typecheck پاک؛ vitest ۹۰۲/۹۰۲؛ build موفق.
 - **Migration:** هیچ.
+
+## 4. PR-D — پیش‌نمایش اثر تغییر مجوزهای نقش (سمت سرور)
+
+- **شاخه:** `agent/444-stage2-role-preview` (stacked روی PR-C)
+- **وضعیت پیش از این PR:** دیالوگ «پیش‌نمایش تغییرات گروه» در `RoleDetailPage` سمت کلاینت وجود داشت، اما تعداد اعضای متأثر، مجوزهای حساس و سقف تفویض را نشان نمی‌داد و محاسبهٔ دامنه سمت سرور نداشت.
+- **تغییرات:**
+  - `GET .../roles/{roleId}/permissions/preview` در `CompanyRoleAdministrationEndpoints` — همان مجوز ویرایش (`roles.update`، دوحالته D-071)؛ خروجی: افزوده/حذف‌شونده، `activeMemberCount`، `sensitiveChangedPermissionCodes` (قاعده server-owned: پسوند delete/approve/close) و `ceilingViolatedPermissionCodes` (گزارشی، نه بازدارنده؛ ذخیره سقف را درون تراکنش دوباره enforce می‌کند).
+  - فقط-خواندنی: هیچ ذخیره‌ای، هیچ Audit، `no-store`، rate limit؛ نقش سیستمی 409؛ کد ناشناخته 400؛ نقش بیگانه/غیرعضو 404.
+  - `RoleDetailPage`: هنگام باز شدن دیالوگ، پیش‌نمایش سرور گرفته می‌شود؛ نمایش اعضای متأثر، برجسته‌سازی مجوز حساس و هشدار سقف؛ خطای preview جریان ذخیره را نمی‌بندد (preview مشورتی است).
+  - تست‌های جدید: `RolePermissionPreviewEndpointTests` (۴ تست) + تست UI دیالوگ.
+- **تست محلی:** build بدون خطا؛ ۴/۴ تست preview سبز؛ typecheck پاک؛ vitest ۹۰۳/۹۰۳؛ build موفق.
+- **Migration:** هیچ.

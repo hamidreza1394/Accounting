@@ -2785,5 +2785,8 @@
 - **تست محلی:** `dotnet build` بدون خطا؛ ۵۲ تست نقش/سقف/دسترسی مؤثر سبز؛ typecheck پاک؛ vitest ۹۰۲/۹۰۲؛ build موفق. تست‌های SQL Server به CI واگذار شد (Docker محلی موجود نیست)؛ دو شکست integration وابسته به SQL Server در محلی pre-existing و ServerUnreachable بود.
 - **Migration:** هیچ.
 
+## 2026-11-08 — مرحله دوم PR-D: پیش‌نمایش سمت سرور اثر تغییر مجوزهای نقش
+- `GET .../roles/{roleId}/permissions/preview` (مجوز `roles.update` دوحالته؛ خروجی: افزوده/حذف‌شونده، activeMemberCount، حساس = delete/approve/close، تخلف سقف مشورتی)؛ بدون Mutation/Audit؛ UI دیالوگ preview به دادهٔ سرور وصل شد (اعضای متأثر + حساس + هشدار سقف)؛ ۴ تست Backend + تست UI؛ مستندات API §۳.۴.۱ و UAM §۶ و handoff. TDD؛ Migration: هیچ؛ vitest ۹۰۳/۹۰۳.
+
 ## 2026-11-08 — مرحله دوم PR-B: منبع مجوزبه‌مجوز در دسترسی مؤثر کاربر
 - `CompanyAccessService.GetGrantedPermissionsWithSourcesAsync` (همان محمول‌های QueryActiveMemberships؛ رکورد `GrantedPermissionSources`)؛ پاسخ `effective-permissions` علاوه بر `permissionCodes` فیلد `permissions:[{code,sourceRoleNames}]` دارد؛ دیالوگ «دسترسی مؤثر» UI جدول مجوز/منبع گرفت؛ تست Backend جدید + تست‌های UI به‌روز؛ مستندات API §۳.۱ و handoff. TDD؛ Migration: هیچ؛ vitest ۹۰۲/۹۰۲، ۳/۳ تست endpoint سبز.

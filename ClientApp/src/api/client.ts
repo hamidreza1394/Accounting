@@ -1,6 +1,8 @@
 import {
   parseAntiforgeryToken,
   parseCurrentPermissions,
+  parseRolePermissionPreview,
+  type RolePermissionPreview,
   parseMembershipDestinations,
   parseAssignableRoles,
   parseMyProfile,
@@ -307,6 +309,26 @@ export async function createCompanyRole(companyId: string, request: CreateCompan
 /** Replaces name, status and permissions of a non-system role (204). System roles answer 409. */
 export async function updateCompanyRole(companyId: string, roleId: string, request: UpdateCompanyRoleRequest): Promise<void> {
   await sendJson('PUT', `/admin/companies/${encodeURIComponent(companyId)}/roles/${encodeURIComponent(roleId)}`, request);
+}
+
+/**
+ * Server-computed impact preview of a role permission change: added/removed codes, the number of
+ * active members affected, the sensitive changed codes and — for a company manager — the candidate
+ * codes outside their delegation ceiling (D-071). Read-only: nothing is saved and nothing is
+ * audited; the save path re-runs every security control on its own.
+ */
+export async function previewCompanyRolePermissions(
+  companyId: string,
+  roleId: string,
+  permissionCodes: readonly string[],
+  signal?: AbortSignal,
+): Promise<RolePermissionPreview> {
+  const params = new URLSearchParams();
+  for (const code of permissionCodes) params.append('permissionCodes', code);
+  const query = params.size > 0 ? `?${params.toString()}` : '';
+  return parseRolePermissionPreview(
+    await getJson(`/admin/companies/${encodeURIComponent(companyId)}/roles/${encodeURIComponent(roleId)}/permissions/preview${query}`, signal),
+  );
 }
 
 export type CompanyRoleMemberQuery = { page: number; pageSize: number; search?: string };

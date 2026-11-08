@@ -555,6 +555,40 @@ function readCount(source: JsonObject, key: string, what: string): number {
 }
 
 /** One active member of a company role (minimal identity only; no e-mail, phone or hash). */
+export type RolePermissionPreview = {
+  roleId: string;
+  roleName: string;
+  activeMemberCount: number;
+  currentPermissionCodes: string[];
+  addedPermissionCodes: string[];
+  removedPermissionCodes: string[];
+  sensitiveChangedPermissionCodes: string[];
+  ceilingViolatedPermissionCodes: string[];
+};
+
+export function parseRolePermissionPreview(value: unknown): RolePermissionPreview {
+  const what = 'rolePermissionPreview';
+  if (!isObject(value)) throw new ContractError(what);
+  const readCodes = (key: string): string[] => {
+    const rows = value[key];
+    if (!Array.isArray(rows)) throw new ContractError(`${what}.${key}`);
+    return rows.map((row) => {
+      if (typeof row !== 'string' || row.length === 0) throw new ContractError(`${what}.${key}`);
+      return row;
+    });
+  };
+  return {
+    roleId: readString(value, 'roleId', what),
+    roleName: readString(value, 'roleName', what),
+    activeMemberCount: readCount(value, 'activeMemberCount', what),
+    currentPermissionCodes: readCodes('currentPermissionCodes'),
+    addedPermissionCodes: readCodes('addedPermissionCodes'),
+    removedPermissionCodes: readCodes('removedPermissionCodes'),
+    sensitiveChangedPermissionCodes: readCodes('sensitiveChangedPermissionCodes'),
+    ceilingViolatedPermissionCodes: readCodes('ceilingViolatedPermissionCodes'),
+  };
+}
+
 export type CompanyRoleMember = {
   userId: string;
   username: string | null;

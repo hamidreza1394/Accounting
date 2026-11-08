@@ -61,6 +61,8 @@ public static class CompanyRoleAdministrationEndpoints
             .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
         roles.MapPost("/{roleId:guid}/members/{userId:guid}", AssignMembershipAsync)
             .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+        roles.MapGet("/{roleId:guid}/permissions/preview", PreviewRolePermissionsAsync)
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
 
         api.MapGet("/admin/companies/{companyId:guid}/effective-permissions/{userId:guid}", GetEffectivePermissionsAsync)
             .RequireAuthorization(policy => policy.RequireClaim(
@@ -557,6 +559,84 @@ public static class CompanyRoleAdministrationEndpoints
     }
 
     /// <summary>
+    /// GET .../roles/{roleId}/permissions/preview — پیش‌نمایش اثر تغییر مجوزهای یک نقش، سمت سرور
+    /// و فقط-خواندنی: کدهای افزوده/حذف‌شونده، تعداد اعضای فعال تحت تأثیر، مجوزهای حساس تغییرکرده
+    /// (پسوندهای delete/approve/close) و کدهای خارج از سقف تفویض برای مدیر شرکت (D-071).
+    /// هیچ داده‌ای ذخیره یا Audit نوشته نمی‌شود؛ در زمان ذخیره، تمام کنترل‌های امنیتی دوباره اجرا می‌شوند.
+    /// </summary>
+    public static async Task<IResult> PreviewRolePermissionsAsync(
+        Guid companyId,
+        Guid roleId,
+        IReadOnlyList<string>? permissionCodes,
+        HttpContext httpContext,
+        ClaimsPrincipal principal,
+        Data.DatabaseContext database,
+        [FromServices] Infrastructure.Tenancy.CompanyAccessService companyAccess,
+        [FromServices] Infrastructure.Tenancy.DelegationCeilingService delegationCeiling,
+        CancellationToken cancellationToken)
+    {
+        // The preview is the editor's tool: the same permission the save path requires. A viewer
+        // without roles.update must not be able to probe the ceiling or member composition.
+        var (failure, scope) = await AuthorizeCompanyScopeAsync(
+            database, companyAccess, principal, companyId, UpdateRolesPermission, cancellationToken);
+        if (failure is not null) return failure;
+        if (!await IsActiveCompanyAsync(database, companyId, cancellationToken)) return TypedResults.NotFound();
+
+        var role = await database.CompanyRoles.AsNoTracking()
+            .Include(current => current.RolePermissions)
+                .ThenInclude(rolePermission => rolePermission.Permission)
+            .FirstOrDefaultAsync(current => current.Id == roleId && current.TenantId == companyId, cancellationToken);
+        if (role is null) return TypedResults.NotFound();
+        if (role.IsSystemRole)
+            return TypedResults.Conflict(new { error = "گروه سیستمی قابل ویرایش نیست و پیش‌نمایشی برای آن وجود ندارد." });
+
+        var resolved = await ResolvePermissionCodesAsync(database, null, permissionCodes, cancellationToken);
+        if (resolved is null)
+            return TypedResults.BadRequest(new { error = "کد مجوز ناشناخته یا تکراری است." });
+        var candidate = resolved.ToHashSet(StringComparer.Ordinal);
+        var current = role.RolePermissions.Select(rolePermission => rolePermission.Permission.Code).ToHashSet(StringComparer.Ordinal);
+
+        var added = candidate.Except(current, StringComparer.Ordinal).OrderBy(code => code, StringComparer.Ordinal).ToArray();
+        var removed = current.Except(candidate, StringComparer.Ordinal).OrderBy(code => code, StringComparer.Ordinal).ToArray();
+        var changed = added.Concat(removed);
+        var sensitive = changed.Where(IsSensitivePermission).OrderBy(code => code, StringComparer.Ordinal).ToArray();
+
+        // Advisory only: the save path re-enforces the ceiling inside its own transaction, so a
+        // violated candidate code is reported here instead of being rejected or silently trimmed.
+        var ceilingViolations = Array.Empty<string>();
+        if (!scope!.IsInstallationAdministrator)
+        {
+            var ceiling = await delegationCeiling.GetUnionPermissionCodesAsync(scope.UserId, cancellationToken);
+            var ceilingSet = ceiling.ToHashSet(StringComparer.Ordinal);
+            ceilingViolations = candidate.Except(ceilingSet, StringComparer.Ordinal)
+                .OrderBy(code => code, StringComparer.Ordinal).ToArray();
+        }
+
+        var activeMemberCount = await database.UserCompanyMemberships.AsNoTracking()
+            .CountAsync(membership => membership.TenantId == companyId && membership.RoleId == roleId && membership.IsActive, cancellationToken);
+
+        SetNoStore(httpContext);
+        return TypedResults.Ok(new RolePermissionPreviewResponse(
+            role.Id,
+            role.Name,
+            activeMemberCount,
+            [.. current.OrderBy(code => code, StringComparer.Ordinal)],
+            added,
+            removed,
+            sensitive,
+            ceilingViolations));
+    }
+
+    /// <summary>
+    /// Destructive, approval and closing operations are treated as sensitive (the operation
+    /// taxonomy of docs/PERMISSION_CATALOG.md §2); the rule is server-owned, never client input.
+    /// </summary>
+    private static bool IsSensitivePermission(string code) =>
+        code.EndsWith(".delete", StringComparison.Ordinal) ||
+        code.EndsWith(".approve", StringComparison.Ordinal) ||
+        code.EndsWith(".close", StringComparison.Ordinal);
+
+    /// <summary>
     /// Lists the active members of one role of one company. Only minimal identity fields are
     /// returned (no e-mail, phone, password hash, other-company data); the role must belong to
     /// the company in the route, so a foreign role id yields 404.
@@ -930,6 +1010,16 @@ public sealed record EffectivePermissionsResponse(
 
 /// <summary>One granted code of the effective view and the active roles that grant it.</summary>
 public sealed record EffectivePermissionSource(string Code, IReadOnlyList<string> SourceRoleNames);
+
+public sealed record RolePermissionPreviewResponse(
+    Guid RoleId,
+    string RoleName,
+    int ActiveMemberCount,
+    string[] CurrentPermissionCodes,
+    string[] AddedPermissionCodes,
+    string[] RemovedPermissionCodes,
+    string[] SensitiveChangedPermissionCodes,
+    string[] CeilingViolatedPermissionCodes);
 
 public sealed record CompanyRoleMemberResponse(
     Guid UserId, string? Username, string? FirstName, string? LastName, bool IsUserActive, DateTime MemberSinceUtc);
