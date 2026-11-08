@@ -71,12 +71,13 @@ export function ProblemTabsDialog({ open, title, description, closeLabel = 'ان
   };
 
   // Activating through the store keeps the tab's own query string, scroll and mounted form
-  // state; the pane's focus effect then moves focus to the page heading.
+  // state; the pane's focus effect then moves focus to the page heading. The dialog closes
+  // through `open` becoming false — the context-change flow itself STAYS PENDING until the
+  // forms are resolved (the shell owns the phases).
   const goTo = (tabKey: string) => {
     const tab = state.tabs.find((entry) => entry.key === tabKey);
     if (tab) activate(tab);
     onGoToTab?.(tabKey);
-    onClose();
   };
 
   const list =

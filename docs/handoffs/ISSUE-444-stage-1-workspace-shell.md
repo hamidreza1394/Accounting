@@ -237,3 +237,69 @@ Backend هیچ تغییری در ۶ PR نداشت؛ nevertheless بیلد Releas
 - PR 1-C — تکمیل تست بصری/Responsive و بستن WARN معلق Tooltip: [#574](https://github.com/hamidreza1394/Accounting/pull/574) (سند: `docs/handoffs/ISSUE-444-stage-1-responsive-checks.md`)
 
 هیچ‌کدام Merge نشده‌اند؛ ادغام فقط با اجازهٔ مالک انجام می‌شود.
+
+## تکمیل نهایی مرحلهٔ اول — چرخهٔ عمر فرم‌ها، گارد تغییر زمینه و جریان محلی HR (2026-11-08، PRهای #582..#589)
+
+این بخش، تکمیل «قابل‌استفاده شدن واقعی» مرحلهٔ اول را ثبت می‌کند (مأموریت مالک محصول 2026-11-08). وضعیت D-076 همچنان `Proposed` است و تغییر نکرده؛ پیاده‌سازی بر اساس تصمیم صریح مالک (رتبهٔ ۳ در D-030) در همین محدوده انجام شده و همهٔ انحراف‌های قبلی مرتبط رفع شده‌اند.
+
+### جدول PRها (هیچ‌کدام Merge نشده‌اند)
+
+| # | عنوان | شاخه | Base | وضعیت |
+|---|---|---|---|---|
+| 1 | feat(workspace): implement four-state form lifecycle | `feat/workspace-form-lifecycle` | `main` | [#582](https://github.com/hamidreza1394/Accounting/pull/582) — CI سبز کامل |
+| 2 | feat(workspace): show tab state and navigate blocked forms | `feat/workspace-tab-status` | شاخهٔ PR-1 (stacked) | [#583](https://github.com/hamidreza1394/Accounting/pull/583) — CI سبز کامل |
+| 3 | fix(workspace): block context switch until forms are clean | `fix/workspace-context-guard` | شاخهٔ PR-2 (stacked) | [#584](https://github.com/hamidreza1394/Accounting/pull/584) — e2e رفع شد (اصلاح spec)، دور جدید Pending |
+| 4 | fix(workspace): isolate async data by active work context | `fix/workspace-stale-context` | شاخهٔ PR-3 (stacked) | [#585](https://github.com/hamidreza1394/Accounting/pull/585) — همان اصلاح e2e، Pending |
+| 5 | feat(hr): keep create and edit flows within parent workspace tab | `feat/hr-local-form-navigation` | شاخهٔ PR-4 (stacked) | [#586](https://github.com/hamidreza1394/Accounting/pull/586) — e2e + publish-windows رفع شد، Pending |
+| 6 | feat(ui): polish faranou workspace navigation and navigation feedback | `feat/ui-workspace-navigation-polish` | شاخهٔ PR-5 (stacked) | [#587](https://github.com/hamidreza1394/Accounting/pull/587) — Pending |
+| 7 | test(workspace): verify context safety and responsive workspace flows | `test/workspace-stage1-integration` | شاخهٔ PR-6 (stacked) | [#589](https://github.com/hamidreza1394/Accounting/pull/589) |
+
+- Commitهای اصلاحی CI (spec E2E و timeout تست lazy) با cherry-pick به همهٔ شاخه‌های زنجیره push شده‌اند؛ هیچ Force Push انجام نشده است.
+- **تست محلی واقعی هر شاخه:** typecheck و `npm test` و `npm run build` و `npm run check:offline` سبز؛ شمارش vitest به‌ترتیب: ۸۶۸ / ۸۷۴ / ۸۸۵ / ۸۹۰ / ۸۹۷ / ۸۹۸ / **۹۰۰**. هیچ تستی حذف یا تضعیف نشده است.
+- **نتیجهٔ نهایی CI (2026-11-08):** هر هفت PR روی head نهایی **کاملاً سبز** شدند — client، build-and-test، e2e (Playwright + axe روی سرور واقعی و SQL Server)، publish، publish-windows، publish-scripts، CodeQL، Semgrep و secret-scan. اصلاحات میانی: هم‌ترازی spec E2E با تأیید نهایی تغییر زمینه، timeout تست lazy، و ادغام کار یک اجرای هم‌زمان دیگر (fix عنوان مسیر تب در جریان محلی 79d78002) با merge — بدون Force Push و بدون حذف کار دیگران.
+- **اصلاح ممیزی زنجیره (ثبت‌شده):** دو commit محتوای PR-7 به‌اشتباه روی شاخهٔ PR-6 push شده بودند؛ با `git revert` از شاخهٔ PR-6 حذف و با cherry-pick به شاخهٔ PR-7 منتقل شدند (بدون Force Push). بعد از اصلاح: PR-6 فقط محتوای خودش را دارد (vitest ‏۸۹۸/۸۹۸ محلی) و PR-7 محتوای کامل (۹۰۰/۹۰۰)؛ diff هر PR دقیقاً محدودهٔ خودش است.
+- **Backend:** هیچ تغییری در Backend/Schema/API در این زنجیره انجام نشده است؛ طبق مأموریت اجرای dotnet test الزامی نبود و در Sandbox اجرا نشده گزارش می‌شود.
+
+### پاسخ‌های موضوعی مأموریت (وضعیت واقعی)
+
+1. **چهار وضعیت فرم‌ها:** Implemented — `lib/formGuard.ts` با ۲۱ تست؛ هر ۵ فرم واقعی متصل‌اند.
+2. **مسدودسازی تغییر زمینه در Dirty/Saving/Error:** Implemented — ماشین وضعیت شل + تست‌های `AppShellContextGuard.test.tsx` برای هر سه وضعیت.
+3. **نمایش همهٔ تب‌های مشکل‌دار:** Implemented — `ProblemTabsDialog` (نام فارسی جاری تب، بدترین وضعیت، پیام، تعداد فرم‌ها).
+4. **کلیک روی نام تب:** Implemented — فعال‌سازی از طریق store مشترک (URL/کوئری/اسکرول/وضعیت فرم حفظ می‌شود؛ فوکوس به h1).
+5. **تأیید نهایی پس از Clean:** Implemented — خودکار (effectivePhase) پس از تعیین تکلیف همهٔ فرم‌ها.
+6. **بی‌اعتبارسازی cache زمینهٔ قبلی:** Implemented — بستن تب‌های وابسته (Janitor) + unmount state؛ PR-4 گارد نسل برای پاسخ‌های دیررس.
+7. **پاسخ دیررس:** Implemented — `staleGuard` + تست سناریوی دقیق مأموریت؛ پاسخ دیررس هرگز state شرکت جدید را عوض نمی‌کند.
+8. **ایجاد کارمند در همان تب:** Implemented — `?form=new` روی مسیر فهرست؛ تست یکپارچگی + بررسی تصویری مرورگر واقعی.
+9. **انصراف Clean/Dirty:** Implemented — `HrFormExit` (Clean بی‌دیالوگ؛ Dirty/Error دیالوگ؛ Saving غیرفعال).
+10. **حفظ فیلترها و جستجو:** Implemented — فهرست mount می‌ماند (hidden)؛ تست + تصویر.
+11. **Sidebar/Tooltip/رنگ فعال/آیکون/گروه‌بندی:** Implemented — سکشن‌های فارسی UI-08، ۸ زیرسیستم UI-05، Tooltip پروژه‌ای، pill طلایی.
+12. **اعلان نمایشی:** حذف شد (زنگ + نقطهٔ قرمز)؛ قابلیت واقعی اعلان آینده در همین سند ردیابی می‌شود.
+13. **Breadcrumb همهٔ صفحات:** fallback مسیر واقعی + اعلام صفحات موجود بررسی شد؛ فرم‌های in-tab مسیر والد را با `to` حفظ می‌کنند.
+14. **پیام‌های جدید فارسی:** Implemented — `lib/uiTexts.ts` + متن‌های رجیستری/دیالوگ‌ها.
+15. **تصاویر واقعی ۵ اندازه:** انجام شد — مرورگر headless واقعی روی bundle تولیدی با API شبیه‌سازی‌شده؛ ۳۶۰/۷۶۸/۱۰۲۴/۱۲۸۰/۱۴۴۰ + Rail + فرم + دیالوگ گارد؛ بدون خطای صفحه؛ آرشیو در شاخهٔ `artifacts/stage-1-ui-preview`.
+16. **تست چندشرکتی/امنیتی:** سطح کلاینت اجرا و سبز شد (تست‌های گارد/جداسازی)؛ تست‌های امنیتی Backend/E2E روی SQL Server فقط در CI قابل اجراست (در Sandbox اجرا نشد — صادقانه گزارش می‌شود).
+17. **NotImplemented/Blocked باقی‌مانده:** اتصال Entitlement به عملیات، MFA، بازیابی رمز، هفت تب پروندهٔ کاربر، عکس پرسنلی، زیرسیستم‌های مالی و E2E چندشرکتی روی SQL Server واقعی — همه خارج از محدودهٔ این مرحله و در همین سند از قبل ثبت‌اند.
+
+### رفتارهای کلیدی (خلاصه برای بازبینی)
+
+- بستن تب Dirty → تأیید؛ Saving/Error → رد قطعی با دیالوگ رد (بدون کنش مخرب).
+- تغییر زمینه: Dirty/Saving/Error → توقف + فهرست تب‌ها با پرش؛ همه Clean → تأیید نهایی خودکار → صفحهٔ انتخاب روی پوستهٔ inert (تب‌های global حفظ، وابسته‌ها پس از موفقیت بسته)؛ لغو در هر مرحله هیچ چیز را عوض نمی‌کند؛ شکست سرور کاربر را در زمینهٔ قبلی نگه می‌دارد.
+- تغییر URL/Back-Forward گارد را دور نمی‌زند (زمینه در Cookie سرور است).
+
+### دور دوم ادامهٔ مأموریت (2026-11-08، بعدازظهر) — ریشه‌یابی نهایی CI، هم‌ترازی زنجیره و شواهد تصویری جدید
+
+**ریشه‌های واقعی سه شکست CI (بازبینی مستند لاگ‌ها و trace):**
+
+1. **#584/#585 — سناریوی «دورهٔ مالی بسته‌شده»:** تست E2E پس از کلیک «تغییر شرکت» مستقیماً صفحهٔ انتخاب را انتظار داشت؛ اما رفتار جدید PR-3 طبق بند ۶ جریان D-076 دیالوگ «تأیید نهایی تغییر شرکت یا دورهٔ مالی» را نشان می‌دهد (error-context آرتیفکت، اسنپ‌شات دسترس‌پذیری: دیالوگ در DOM حاضر بود). تست با پیمودن دیالوگ تأیید هم‌تراز شد — ادعای تأیید نهایی به تست E2E **اضافه** شد، نه حذف.
+2. **#586 — `HrIntegration.test.tsx` (خطای «Unable to find role=heading ثبت کارمند»):** دو لایه داشت: (الف) transform سرد قطعهٔ lazy فرم در vitest در Linux و Windows هر دو از پنجرهٔ انتظار عبور می‌کرد (timeout از ۴ به ۱۰ ثانیه رسید و قطعه در تست pre-import شد تا سرعت Host در ادعا اثر نکند)؛ (ب) **باگ محصولی واقعی:** فرم‌های ایجاد HR با `useDocumentTitle` بی‌قید، عنوان تب والد را بازنویسی می‌کردند — در تضاد با قرارداد `UI_COMPONENTS.md` (عنوان تب = عنوان مسیر، سپس نام رکورد موجود) و ادعای تست خودِ PR-5. فیکس (commit `79d78002`): فقط مسیر مستقل Deep-Link عنوان می‌گیرد؛ در جریان درون‌تبی عنوان تب روی عنوان مسیر («کارکنان») می‌ماند. تست یکپارچگی PR-7 نیز به همین قرارداد pin شد و دیالوگ گارد اکنون تب را «کارکنان» نام می‌برد.
+3. **#586 — publish-windows:** همان لایهٔ (الف)؛ با prewarm قطعهٔ lazy رفع شد.
+
+**هم‌ترازی زنجیره:** فیکس‌های E2E و فیکس محصولی `79d78002` با merge غیرمخرب به شاخه‌های #587 و #589 منتقل شد (بدون Force Push)؛ تعارضی وجود نداشت. vitest نهایی روی سرِ زنجیره: **۹۰۰/۹۰۰** (typecheck/build/check:offline سبز).
+
+**پوشش تکمیلی سناریوهای C1:** تست «دکمهٔ تغییر دورهٔ مالی» (سناریو ۸ مأموریت: Dirty → توقف با دکمهٔ دوره → تعیین تکلیف → تأیید نهایی) به `AppShellContextGuard.test.tsx` افزوده شد؛ به‌علاوه ۲۰ سناریوی مأموریت نگاشت کامل دارد: تب‌ها (`WorkspaceTabs.test`)، وضعیت‌ها (`WorkspaceTabStatus`، `formGuard`)، دیالوگ مشکل‌دارها و پرش (`ProblemTabsDialog`، تست یکپارچگی)، لغو/تأیید و حفظ وضعیت (`AppShellContextGuard`، تست یکپارچگی)، تب‌های global/وابسته (`AppShellContextGuard`، `tabContext`)، پاسخ دیررس شرکت/دوره (`staleGuard.test`)، جریان محلی HR و مجوزها (`HrIntegration`، `HrEmployeeListAndCreate`، `HrUnitsPage`، `HrPositionsPages`) و Back/Forward/URL مستقیم.
+
+**شواهد تصویری دور دوم:** با Chromium واقعی روی **bundle تولیدی نهایی** (سرِ زنجیره پس از همهٔ فیکس‌ها) در ۵ عرض الزامی + Rail با Tooltip فوکوس‌شده + گروه به‌زودی + فرم درون‌تبی (تب «کارکنان» با نشانگر Dirty) + دیالوگ توقف گارد + دیالوگ تأیید نهایی + کشوی موبایل — **صفر خطای کنسول/صفحه**. آرشیو: `artifacts/ui-preview/stage-1-completion-round2/` روی شاخهٔ `artifacts/stage-1-ui-preview` (commit `dd26b07b`).
+
+**حجم باندل (C3):** index: `۳۴۵.۸۱KB` (مبنا `main@da8ed012` پس از #581) → `۳۵۷.۴۶KB` (سرِ زنجیره؛ +۱۱.۶۵KB یعنی ~۳٫۴٪ برای هفت PR عملکردی)؛ gzip: `۱۰۳.۳۳ → ۱۰۶.۷۶KB`. `check:offline` و `check_static_assets` سبز (بدون CDN).
+
+**وضعیت نهایی CI (2026-11-08):** هر هفت PR (#582..#587، #589) روی head نهایی **کاملاً سبز** — شامل e2e و publish-windows. Merge فقط با اجازهٔ مالک.
