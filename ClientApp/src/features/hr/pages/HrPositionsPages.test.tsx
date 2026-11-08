@@ -66,7 +66,7 @@ describe('HrPositionsPage', () => {
       { path: '/hr/org/positions', title: 'سمت‌ها' },
       '/hr/org/positions',
     );
-    expect(await screen.findByRole('link', { name: 'سمت جدید' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'سمت جدید' })).toBeInTheDocument();
   });
 
   it('states that a position is not a security role', async () => {

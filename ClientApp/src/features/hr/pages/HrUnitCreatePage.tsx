@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ApiError } from '@/api/client';
 import { Alert } from '@/components/ui/Alert';
 import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
@@ -6,15 +6,23 @@ import { Button } from '@/components/ui/button';
 import { FormField, Input, Textarea } from '@/components/ui/FormField';
 import { FormSection } from '@/components/ui/FormSection';
 import { JalaliDateField } from '@/components/ui/JalaliDateField';
-import { useNavigate } from '@/lib/router';
+import { useDocumentTitle, useNavigate } from '@/lib/router';
 import { createHrUnit } from '../api/hrClient';
+import { ExternalLink } from 'lucide-react';
 import { validateCode, validateDescription, validateRequiredName, validateValidityWindow, buildCreateUnitBody } from '../lib/hrValidation';
 import { useFormGuard } from '@/lib/formGuard';
+import { useFormExit } from '../components/HrFormExit';
 import { HrUnitParentPicker } from '../components/HrUnitParentPicker';
 
 type Props = {
   onUnauthenticated: (error: unknown) => boolean;
   companyId: string;
+  /** Local Form Flow (PR 5): rendered inside the list's tab; receives the created unit. */
+  onSaved?: (unit: { id: string; name: string }) => void;
+  /** Where انصراف returns to; defaults to the list route of this family. */
+  onExit?: () => void;
+  /** Shows the optional «باز کردن در تب کاری جدید» action (only in the in-tab flow). */
+  showOpenInNewTab?: boolean;
 };
 
 type FormState = {
@@ -40,7 +48,7 @@ const initialForm: FormState = {
  * follows the server pattern; the parent must be an active unit of the same company; the validity
  * window is optional. Server answers stay authoritative and are shown as-is.
  */
-export function HrUnitCreatePage({ onUnauthenticated, companyId }: Props) {
+export function HrUnitCreatePage({ onUnauthenticated, companyId, onSaved, onExit, showOpenInNewTab = false }: Props) {
   const navigate = useNavigate();
   const [form, setForm] = useState<FormState>(initialForm);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<string, string>>>({});
@@ -48,23 +56,19 @@ export function HrUnitCreatePage({ onUnauthenticated, companyId }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   // The workspace asks this registry before closing the tab, signing out or changing context;
-  // a failed save keeps the `error` status until the user retries or cancels (D-076).
+  // a failed save keeps the `error` status until the user retries or cancels (D-076). The
+  // registry also owns the `beforeunload` warning for every non-clean state.
   const formGuard = useFormGuard({ dirty, saving: submitting, errorMessage: error, title: 'واحد سازمانی جدید' });
+  // Standalone route only (deep link): inside the list's tab the parent tab keeps its route
+  // title — the workspace tab must stay in step with the real route (UI_COMPONENTS.md:
+  // route title, then the declared RECORD name; a create form has no record to name yet).
+  useDocumentTitle(onSaved ? null : 'ایجاد واحد سازمانی');
+  const { requestExit, exitBlocked, exitDialog } = useFormExit(formGuard, () => (onExit ? onExit() : navigate('/hr/org/units')));
 
   const update = (patch: Partial<FormState>) => {
     setForm((current) => ({ ...current, ...patch }));
     setDirty(true);
   };
-
-  // The company switch or sign-out must not silently lose the draft.
-  useEffect(() => {
-    if (!dirty) return undefined;
-    const beforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-    };
-    window.addEventListener('beforeunload', beforeUnload);
-  return () => window.removeEventListener('beforeunload', beforeUnload);
-  }, [dirty]);
 
   const validate = (): boolean => {
     const errors: Partial<Record<string, string>> = {};
@@ -88,6 +92,11 @@ export function HrUnitCreatePage({ onUnauthenticated, companyId }: Props) {
       const created = await createHrUnit(companyId, buildCreateUnitBody(form));
       // Saved: closing this tab (or leaving the workspace) needs no warning anymore.
       formGuard.markClean();
+      if (onSaved) {
+        // Local Form Flow: back to the same list tab, which refreshes itself.
+        onSaved({ id: created.id, name: form.name });
+        return;
+      }
       await navigate(`/hr/org/units/${created.id}`);
     } catch (cause: unknown) {
       if (onUnauthenticated(cause)) return;
@@ -149,21 +158,23 @@ export function HrUnitCreatePage({ onUnauthenticated, companyId }: Props) {
           </FormField>
         </FormSection>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button type="submit" size="lg" disabled={submitting}>
             {submitting ? 'در حال ثبت…' : 'ثبت واحد'}
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            disabled={submitting}
-            onClick={() => navigate('/hr/org/units')}
-          >
+          <Button type="button" variant="outline" size="lg" disabled={exitBlocked} onClick={requestExit}>
             انصراف
           </Button>
+          {showOpenInNewTab ? (
+            <Button type="button" variant="ghost" size="lg" onClick={() => navigate('/hr/org/units/new')}>
+              <ExternalLink size={16} aria-hidden="true" />
+              باز کردن در تب کاری جدید
+            </Button>
+          ) : null}
+          {exitBlocked ? <span className="text-xs text-sub">ذخیره در حال انجام است؛ تا پایان عملیات امکان انصراف نیست.</span> : null}
         </div>
       </form>
+      {exitDialog}
     </div>
   );
 }

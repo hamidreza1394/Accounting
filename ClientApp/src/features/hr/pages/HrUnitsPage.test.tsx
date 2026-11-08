@@ -85,7 +85,7 @@ describe('HrUnitsPage', () => {
       'GET /api/v1/me/permissions': hrPermissionRoute(['hr.organizational-units.create']),
     });
     renderHrPage(<HrUnitsPage onUnauthenticated={onUnauthenticated} companyId={companyId} />, { path: '/hr/org/units', title: 'واحدها' }, '/hr/org/units');
-    expect(await screen.findByRole('link', { name: 'واحد جدید' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'واحد جدید' })).toBeInTheDocument();
   });
 
   it('shows the create action to the installation administrator without any company code (Issue #444 stage 1)', async () => {
@@ -96,7 +96,7 @@ describe('HrUnitsPage', () => {
       'GET /api/v1/me/permissions': hrInstallationAdminPermissionRoute(),
     });
     renderHrPage(<HrUnitsPage onUnauthenticated={onUnauthenticated} companyId={companyId} />, { path: '/hr/org/units', title: 'واحدها' }, '/hr/org/units');
-    expect(await screen.findByRole('link', { name: 'واحد جدید' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'واحد جدید' })).toBeInTheDocument();
   });
 
   it('hides the create action without the permission hint (the server still decides)', async () => {
@@ -106,7 +106,7 @@ describe('HrUnitsPage', () => {
     });
     renderHrPage(<HrUnitsPage onUnauthenticated={onUnauthenticated} companyId={companyId} />, { path: '/hr/org/units', title: 'واحدها' }, '/hr/org/units');
     await screen.findByRole('link', { name: /دفتر مرکزی/ });
-    expect(screen.queryByRole('link', { name: 'واحد جدید' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'واحد جدید' })).not.toBeInTheDocument();
   });
 
   it('renders an empty tree with guidance', async () => {

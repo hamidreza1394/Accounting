@@ -2,6 +2,12 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
+// Preload the lazy create-form chunk (the same pattern the page-level test files use):
+// the first dynamic import in vitest compiles the whole module graph on the fly inside the
+// assertion window, which is host-speed dependent (the Linux e2e job and the Windows publish
+// job both exceeded the wait there). With the module already in the registry the `lazy()`
+// import resolves instantly and the test measures behaviour, not transform speed.
+import './features/hr/pages/HrEmployeeCreatePage';
 import { json, listBody, userItem } from './test/adminUsers';
 import { company, contextBody, period, selected, session } from './test/api';
 import { companiesBody, roleItem, systemRole } from './test/roles';
@@ -97,6 +103,29 @@ describe('HR sidebar entries (company-scoped permissions)', () => {
     const nav = await openShell();
     expect(await within(nav).findByText('دریافت مجوزهای شرکت انجام نشد.')).toBeInTheDocument();
     for (const label of hrLabels) expect(within(nav).queryByRole('link', { name: label })).toBeNull();
+  });
+
+  it('opens the employee create form INSIDE the list tab (Local Form Flow, PR 5)', async () => {
+    const user = userEvent.setup();
+    stubAll({ codes: ['hr.employees.list', 'hr.employees.create'] });
+    await openShell('/app/hr/org/employees');
+    expect(await screen.findByRole('heading', { level: 1, name: 'کارکنان' })).toBeInTheDocument();
+
+    await user.click(await screen.findByRole('button', { name: 'کارمند جدید' }));
+    // The create form is a lazy chunk inside the list tab; cold transform on a slow CI
+    // runner can take several seconds.
+    expect(await screen.findByRole('heading', { level: 1, name: 'ثبت کارمند' }, { timeout: 10000 })).toBeInTheDocument();
+    // Same tab, no duplicate: the workspace still holds exactly one tab and the query
+    // carries the form state.
+    expect(window.location.search).toBe('?form=new');
+    expect(document.querySelectorAll('[data-tab-pane]')).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: 'بستن ثبت کارمند' })).not.toBeInTheDocument();
+
+    // A clean form returns to the list in the same tab without any dialog.
+    await user.click(screen.getByRole('button', { name: 'انصراف' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'کارکنان' })).toBeInTheDocument();
+    expect(window.location.search).toBe('');
+    expect(document.querySelectorAll('[data-tab-pane]')).toHaveLength(1);
   });
 
   it('navigates from each entry to its page and marks the entry active on nested routes', async () => {
