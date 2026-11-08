@@ -2824,3 +2824,6 @@
 
 ## 2026-11-09 — Issue #444 مرحله سوم PR 3-D2: وضعیت درخواست‌های عضویت کاربر در پرونده
 - Backend: `GET /admin/users/{userId}/membership-requests` (فقط مدیر نصب؛ خواندنی؛ projects جدول گردش D-065 با فیلتر status allowlist مشترک `TryNormalizeStatus`→internal؛ صفحه‌بندی clamp؛ ۴۰۴ ناموجود). Migration: هیچ. Frontend: بخش «درخواست‌های عضویت بین‌شرکتی» در تب ۳ پرونده با وضعیت/زمان‌ها/تصمیم‌گیرنده/نقش/دلیل رد، فیلتر و صفحه‌بندی سرور-سمت و لینک به صف تأیید موجود. تست: ۴ تست Backend + ۳ سناریوی UI — vitest 927/927، ۲۵ تست Backend هدفمند سبز. (stacked روی PR 3-C2)
+
+## 2026-11-09 — Issue #444 مرحله سوم PR 3-H1: E2E واقعی پرونده کاربر + axe + اسکرین‌شات
+- `tests/e2e/specs/user-profile.spec.mjs` روی سرور واقعی + SQL Server (CI): ۱۲ سناریوی پرونده (HR link، درخواست عضویت Pending→تأیید/رد با دلیل، مجوز مؤثر با منبع، ابطال نشست step-up با اثبات 401 واقعی، سوابق ورود و Audit) + axe WCAG 2.x A/AA روی تب‌ها + اسکرین‌شات واقعی هر تب به `artifacts/ui-preview/stage-3-profile/` (آپلود artifact CI، retention ۳۰ روز؛ بدون capture در دیالوگ step-up). فیکسچر ایزوله با cleanup. README آزمون e2e به‌روزرسانی شد. اجرا در CI (job e2e) — Docker/SQL Server محلی موجود نیست. (stacked روی PR 3-D2)
