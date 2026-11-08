@@ -321,7 +321,14 @@ describe('App', () => {
     expect(fetchMock.mock.calls.filter((call) => call[0] === '/api/v1/context')).toHaveLength(2);
 
     await userEvent.click(screen.getByRole('button', { name: 'انصراف' }));
-    expect(await screen.findByRole('heading', { name: /به سامانه یکپارچه فرانو خوش آمدید/ })).toBeInTheDocument();
+    // Cancelling returns to the SAME workspace: both tabs survive and the tab that was active
+    // before the change (user management) is still the active one.
+    const restoredTabs = await screen.findByRole('navigation', { name: 'تب‌های کاری باز' });
+    await waitFor(() => {
+      expect(restoredTabs).toHaveTextContent('داشبورد');
+      expect(restoredTabs).toHaveTextContent('مدیریت کاربران');
+    });
+    expect(window.location.pathname).toBe('/app/admin/users');
   });
 
   it('sends one request even when the entry button is activated twice quickly', async () => {
