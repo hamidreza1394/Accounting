@@ -28,6 +28,8 @@ public static class UserAdministrationEndpoints
         users.MapPut("/{userId:guid}", UpdateUserAsync).RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
         users.MapGet("/{userId:guid}/login-history", GetUserLoginHistoryAsync)
             .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+        users.MapGet("/{userId:guid}/membership-requests", GetUserMembershipRequestsAsync)
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
         return users;
     }
 
@@ -220,6 +222,91 @@ public static class UserAdministrationEndpoints
             .ToListAsync(cancellationToken);
 
         return TypedResults.Ok<IReadOnlyList<LoginHistoryItemResponse>>(events);
+    }
+
+    /// <summary>
+    /// GET /api/v1/admin/users/{userId}/membership-requests — the inter-company membership
+    /// requests of the target user across all destination companies, for installation
+    /// administrators only. Read-only projection of the existing workflow table (D-065): no
+    /// new status machine, no mutation; decisions are made in the destination-company queue
+    /// endpoints, this read only makes the user's request state visible in the profile.
+    /// </summary>
+    public static async Task<IResult> GetUserMembershipRequestsAsync(
+        Guid userId,
+        HttpContext httpContext,
+        ClaimsPrincipal principal,
+        Data.DatabaseContext database,
+        string? status = null,
+        int page = 1,
+        int pageSize = 25,
+        CancellationToken cancellationToken = default)
+    {
+        var authorization = await AuthorizeInstallationAdministratorAsync(principal, database, cancellationToken);
+        if (authorization is not null)
+            return authorization;
+
+        if (userId == Guid.Empty)
+            return TypedResults.NotFound();
+
+        var userExists = await database.Users.AsNoTracking()
+            .AnyAsync(candidate => candidate.Id == userId, cancellationToken);
+        if (!userExists)
+            return TypedResults.NotFound();
+
+        SetNoStore(httpContext);
+        if (!Server.Api.CompanyMembershipRequestEndpoints.TryNormalizeStatus(status, out var normalizedStatus))
+            return TypedResults.BadRequest(new { error = "وضعیت درخواست معتبر نیست." });
+
+        var safePage = Math.Clamp(page, 1, 100_000);
+        var safePageSize = Math.Clamp(pageSize, 1, 100);
+        var query = database.CompanyMembershipRequests.AsNoTracking()
+            .Where(item => item.UserId == userId);
+        if (normalizedStatus is not null)
+            query = query.Where(item => item.Status == normalizedStatus);
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        var rows = await (
+            from item in query
+            join decider in database.Users.AsNoTracking()
+                on item.DecidedByUserId equals (Guid?)decider.Id into deciderRows
+            from decider in deciderRows.DefaultIfEmpty()
+            orderby item.RequestedAtUtc descending, item.Id descending
+            select new
+            {
+                item.Id,
+                DestinationCompanyId = item.DestinationTenantId,
+                DestinationCompanyName = item.DestinationCompany.Name,
+                item.Status,
+                item.RequestedAtUtc,
+                item.DecidedAtUtc,
+                item.DecisionReason,
+                DeciderFirstName = decider == null ? null : decider.FirstName,
+                DeciderLastName = decider == null ? null : decider.LastName,
+                DeciderUsername = decider == null ? null : decider.Username,
+                ApprovedRoleName = item.ApprovedRole == null ? null : item.ApprovedRole.Name,
+            })
+            .Skip((safePage - 1) * safePageSize)
+            .Take(safePageSize)
+            .ToListAsync(cancellationToken);
+
+        var items = rows.Select(item =>
+        {
+            var deciderDisplayName = $"{item.DeciderFirstName} {item.DeciderLastName}".Trim();
+            if (string.IsNullOrWhiteSpace(deciderDisplayName))
+                deciderDisplayName = item.DeciderUsername;
+            return new AdminUserMembershipRequestItemResponse(
+                item.Id,
+                item.DestinationCompanyId,
+                item.DestinationCompanyName,
+                item.Status,
+                DateTime.SpecifyKind(item.RequestedAtUtc, DateTimeKind.Utc),
+                item.DecidedAtUtc is null ? null : DateTime.SpecifyKind(item.DecidedAtUtc.Value, DateTimeKind.Utc),
+                deciderDisplayName,
+                item.ApprovedRoleName,
+                item.DecisionReason);
+        }).ToList();
+
+        return TypedResults.Ok(new AdminUserMembershipRequestListResponse(items, safePage, safePageSize, totalCount));
     }
 
     public static async Task<IResult> CreateUserAsync(
@@ -575,3 +662,25 @@ public sealed record UpdateUserRequest(
     bool IsActive);
 
 public sealed record UserCreatedResponse(Guid Id);
+
+/// <summary>
+/// One inter-company membership request of the target user (administrative read of the
+/// existing D-065 workflow table). The projection is allow-listed: no payload, no IP, no
+/// row version — the same fields the destination approvers already see, plus the company.
+/// </summary>
+public sealed record AdminUserMembershipRequestItemResponse(
+    Guid Id,
+    Guid DestinationCompanyId,
+    string DestinationCompanyName,
+    string Status,
+    DateTime RequestedAtUtc,
+    DateTime? DecidedAtUtc,
+    string? DecidedByDisplayName,
+    string? ApprovedRoleName,
+    string? DecisionReason);
+
+public sealed record AdminUserMembershipRequestListResponse(
+    IReadOnlyList<AdminUserMembershipRequestItemResponse> Items,
+    int Page,
+    int PageSize,
+    int TotalCount);

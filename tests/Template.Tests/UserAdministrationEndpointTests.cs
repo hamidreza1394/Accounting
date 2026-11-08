@@ -144,6 +144,131 @@ public sealed class UserAdministrationEndpointTests
         Assert.IsType<NotFound>(empty);
     }
 
+    [Fact]
+    public async Task GetUserMembershipRequests_RequiresAnActiveInstallationAdministratorFromTheDatabase()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddUser("admin", "مدیر", "سیستم", Constants.Role.Admin);
+        var target = fixture.AddUser("alice", "آلیس", "مثالی", "Accountant");
+        await fixture.Database.SaveChangesAsync();
+
+        var denied = await Server.Api.UserAdministrationEndpoints.GetUserMembershipRequestsAsync(
+            target.Id, new DefaultHttpContext(), Principal(target.Id), fixture.Database,
+            cancellationToken: default);
+        Assert.Equal(StatusCodes.Status403Forbidden, (denied as IStatusCodeHttpResult)?.StatusCode);
+
+        var allowed = await Server.Api.UserAdministrationEndpoints.GetUserMembershipRequestsAsync(
+            target.Id, new DefaultHttpContext(), Principal(admin.Id), fixture.Database,
+            cancellationToken: default);
+        Assert.IsType<Ok<Server.Api.AdminUserMembershipRequestListResponse>>(allowed);
+    }
+
+    [Fact]
+    public async Task GetUserMembershipRequests_ReturnsOnlyTheTargetUsersRequests_NewestFirst_WithDecisionDetails()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddUser("admin", "مدیر", "سیستم", Constants.Role.Admin);
+        var target = fixture.AddUser("alice", "آلیس", "مثالی", "Accountant");
+        var stranger = fixture.AddUser("bob", "باب", "نمونه", "Accountant");
+        var pendingCompany = new Domain.Company { Name = "شرکت مقصد", IsActive = true };
+        var rejectedCompany = new Domain.Company { Name = "شرکت ردشده", IsActive = true };
+        fixture.Database.Companies.AddRange(pendingCompany, rejectedCompany);
+        await fixture.Database.SaveChangesAsync();
+
+        var baseTime = new DateTime(2026, 11, 1, 8, 0, 0, DateTimeKind.Utc);
+        fixture.Database.CompanyMembershipRequests.Add(new Domain.CompanyMembershipRequest
+        {
+            UserId = target.Id, DestinationTenantId = rejectedCompany.Id,
+            Status = Domain.CompanyMembershipRequestStatuses.Rejected,
+            RequestedAtUtc = baseTime, DecidedAtUtc = baseTime.AddHours(2),
+            DecidedByUserId = admin.Id, DecisionReason = "درخواست در دورهٔ بسته بررسی شد",
+        });
+        fixture.Database.CompanyMembershipRequests.Add(new Domain.CompanyMembershipRequest
+        {
+            UserId = target.Id, DestinationTenantId = pendingCompany.Id,
+            Status = Domain.CompanyMembershipRequestStatuses.Pending,
+            RequestedAtUtc = baseTime.AddHours(5),
+        });
+        // Another user's request must never leak into this projection.
+        fixture.Database.CompanyMembershipRequests.Add(new Domain.CompanyMembershipRequest
+        {
+            UserId = stranger.Id, DestinationTenantId = pendingCompany.Id,
+            Status = Domain.CompanyMembershipRequestStatuses.Pending,
+            RequestedAtUtc = baseTime.AddHours(6),
+        });
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await Server.Api.UserAdministrationEndpoints.GetUserMembershipRequestsAsync(
+            target.Id, new DefaultHttpContext(), Principal(admin.Id), fixture.Database,
+            cancellationToken: default);
+        var ok = Assert.IsType<Ok<Server.Api.AdminUserMembershipRequestListResponse>>(result);
+        Assert.Equal(2, ok.Value!.TotalCount);
+        Assert.Equal(2, ok.Value.Items.Count);
+        Assert.Equal("Pending", ok.Value.Items[0].Status);
+        Assert.Equal("شرکت مقصد", ok.Value.Items[0].DestinationCompanyName);
+        Assert.Null(ok.Value.Items[0].DecisionReason);
+        Assert.Equal("Rejected", ok.Value.Items[1].Status);
+        Assert.Equal("شرکت ردشده", ok.Value.Items[1].DestinationCompanyName);
+        Assert.Equal("درخواست در دورهٔ بسته بررسی شد", ok.Value.Items[1].DecisionReason);
+        Assert.Equal("مدیر سیستم", ok.Value.Items[1].DecidedByDisplayName);
+        Assert.Equal(DateTimeKind.Utc, ok.Value.Items[0].RequestedAtUtc.Kind);
+        Assert.Equal(DateTimeKind.Utc, ok.Value.Items[1].DecidedAtUtc!.Value.Kind);
+    }
+
+    [Fact]
+    public async Task GetUserMembershipRequests_FiltersByTheStatusAllowlist()
+    {
+        await using var fixture = new Fixture();
+        fixture.AddUser("admin", "مدیر", "سیستم", Constants.Role.Admin);
+        var target = fixture.AddUser("alice", "آلیس", "مثالی", "Accountant");
+        var company = new Domain.Company { Name = "شرکت مقصد", IsActive = true };
+        fixture.Database.Companies.Add(company);
+        await fixture.Database.SaveChangesAsync();
+
+        var baseTime = new DateTime(2026, 11, 1, 8, 0, 0, DateTimeKind.Utc);
+        fixture.Database.CompanyMembershipRequests.Add(new Domain.CompanyMembershipRequest
+        {
+            UserId = target.Id, DestinationTenantId = company.Id,
+            Status = Domain.CompanyMembershipRequestStatuses.Pending, RequestedAtUtc = baseTime,
+        });
+        fixture.Database.CompanyMembershipRequests.Add(new Domain.CompanyMembershipRequest
+        {
+            UserId = target.Id, DestinationTenantId = company.Id,
+            Status = Domain.CompanyMembershipRequestStatuses.Rejected, RequestedAtUtc = baseTime.AddHours(1),
+        });
+        await fixture.Database.SaveChangesAsync();
+
+        var pending = await Server.Api.UserAdministrationEndpoints.GetUserMembershipRequestsAsync(
+            target.Id, new DefaultHttpContext(), Principal(fixture.AdminId), fixture.Database,
+            status: "Pending", cancellationToken: default);
+        var pendingOk = Assert.IsType<Ok<Server.Api.AdminUserMembershipRequestListResponse>>(pending);
+        Assert.Equal(1, pendingOk.Value!.TotalCount);
+        Assert.Equal("Pending", pendingOk.Value.Items[0].Status);
+
+        var invalid = await Server.Api.UserAdministrationEndpoints.GetUserMembershipRequestsAsync(
+            target.Id, new DefaultHttpContext(), Principal(fixture.AdminId), fixture.Database,
+            status: "Expired", cancellationToken: default);
+        Assert.Equal(StatusCodes.Status400BadRequest, (invalid as IStatusCodeHttpResult)?.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetUserMembershipRequests_ReturnsNotFoundForUnknownOrEmptyUser()
+    {
+        await using var fixture = new Fixture();
+        fixture.AddUser("admin", "مدیر", "سیستم", Constants.Role.Admin);
+        await fixture.Database.SaveChangesAsync();
+
+        var unknown = await Server.Api.UserAdministrationEndpoints.GetUserMembershipRequestsAsync(
+            Guid.NewGuid(), new DefaultHttpContext(), Principal(fixture.AdminId), fixture.Database,
+            cancellationToken: default);
+        Assert.IsType<NotFound>(unknown);
+
+        var empty = await Server.Api.UserAdministrationEndpoints.GetUserMembershipRequestsAsync(
+            Guid.Empty, new DefaultHttpContext(), Principal(fixture.AdminId), fixture.Database,
+            cancellationToken: default);
+        Assert.IsType<NotFound>(empty);
+    }
+
     private static ClaimsPrincipal Principal(Guid userId) => new(
         new ClaimsIdentity(
         [
