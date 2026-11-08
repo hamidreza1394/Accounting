@@ -88,7 +88,7 @@ test.describe('user profile workspace: HR link, request states, permissions, ses
 
     // ---------------------------------------------- tab 1: identity + personnel record link
     const panel = page.getByRole('tabpanel');
-    await expect(panel.getByText(target.username)).toBeVisible();
+    await expect(panel.getByText(target.username, { exact: true })).toBeVisible();
     // The member role carries no HR data yet: the record section shows the honest not-linked text.
     await expect(panel.getByText('پرونده پرسنلی متصل نشده است.')).toBeVisible();
 
@@ -204,7 +204,7 @@ test.describe('user profile workspace: HR link, request states, permissions, ses
         return { headerName: tokenResponse.body.headerName, requestToken: tokenResponse.body.requestToken };
       })(),
     });
-    expect(rejected.status, 'POST reject').toBe(200);
+    expect(rejected.status, 'POST reject').toBe(204);
 
     // The second target's profile shows the rejection with the reason; the first shows approval.
     await page.goto(profilePath(secondTarget.id));
