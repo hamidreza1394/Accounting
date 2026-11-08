@@ -26,6 +26,7 @@ import {
   parseRevokedSessionCount,
   parseAdminUserSessions,
   parseAdminRevocationOutcome,
+  parseAdminUserMembershipRequests,
   parseAccessSubsystems,
   parsePermissionTemplates,
   parseCompanies,
@@ -62,6 +63,7 @@ import {
   type SecurityAuditEventType,
   type AdminCompanyPage,
   type EffectivePermissions,
+  type AdminUserMembershipRequestPage,
 } from './types';
 
 // The API lives on the same origin and is authenticated by the HttpOnly cookie of the
@@ -696,6 +698,22 @@ export async function revokeAdminUserSession(userId: string, sessionId: string, 
 export async function revokeAllAdminUserSessions(userId: string, body: AdminRevocationRequest): Promise<number> {
   const response = await sendJson('POST', `/admin/users/${encodeURIComponent(userId)}/sessions/revoke-all`, body);
   return parseAdminRevocationOutcome(await response.json()).revokedCount;
+}
+
+/**
+ * The inter-company membership requests of the target user across destination companies
+ * (installation administrator; a read-only projection of the existing D-065 workflow table).
+ */
+export async function getAdminUserMembershipRequests(
+  userId: string,
+  queryValues: { status?: 'Pending' | 'Approved' | 'Rejected'; page: number; pageSize: number },
+  signal?: AbortSignal,
+): Promise<AdminUserMembershipRequestPage> {
+  const params = new URLSearchParams({ page: String(queryValues.page), pageSize: String(queryValues.pageSize) });
+  if (queryValues.status) params.set('status', queryValues.status);
+  return parseAdminUserMembershipRequests(
+    await getJson(`/admin/users/${encodeURIComponent(userId)}/membership-requests?${params}`, signal),
+  );
 }
 
 /** The read-only D-075 access catalog subsystems (installation administrator). */

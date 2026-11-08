@@ -807,7 +807,9 @@ public static class CompanyMembershipRequestEndpoints
     private static Guid? GetCallerUserId(ClaimsPrincipal principal) =>
         Infrastructure.Tenancy.CompanyAccessService.GetUserId(principal);
 
-    private static bool TryNormalizeStatus(string? status, out string? normalized)
+    // Shared with the user-scoped administrative read of membership requests
+    // (UserAdministrationEndpoints) so the status allowlist has exactly one definition.
+    internal static bool TryNormalizeStatus(string? status, out string? normalized)
     {
         normalized = null;
         if (string.IsNullOrWhiteSpace(status))
