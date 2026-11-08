@@ -209,9 +209,10 @@
 
 ### ۳.۱ دسترسی‌های مؤثر یک عضو (Stage 2-E — 2026-11-08)
 
-`GET /api/v1/admin/companies/{companyId}/effective-permissions/{userId}` → آرایهٔ `{userId,companyId,roleNames[],permissionCodes[]}`.
+`GET /api/v1/admin/companies/{companyId}/effective-permissions/{userId}` → آرایهٔ `{userId,companyId,roleNames[],permissionCodes[],permissions:[{code,sourceRoleNames[]}]}`.
 
-- معنا: اجتماع کدهای مجوز نقش‌های **فعال** روی عضویت‌های **فعال** همان کاربر در همان شرکت (`CompanyAccessService.GetGrantedPermissionCodesAsync`) + نام نقش‌ها؛ مرتب‌سازی ordinal.
+- معنا: اجتماع کدهای مجوز نقش‌های **فعال** روی عضویت‌های **فعال** همان کاربر در همان شرکت + نام نقش‌ها؛ مرتب‌سازی ordinal.
+- **منبع مجوزبه‌مجوز (2026-11-08، مرحله دوم):** `permissions` هر کد را به نقش(های) فعال اعطاکننده‌اش نگاشت می‌کند (`CompanyAccessService.GetGrantedPermissionsWithSourcesAsync`؛ همان محمول‌های `QueryActiveMemberships`، بنابراین اجتماع کدها با `permissionCodes` همیشه برابر است). یک مجوز مشترک بین چند نقش، همهٔ نام‌های منبع را فهرست می‌کند؛ نقش غیرفعال هرگز منبع نیست. `permissionCodes` برای سازگاری حفظ شده است.
 - Auth (D-071 دوحالته): مدیر نصب فعال (بازخوانی از DB) یا عضو فعال همان شرکت با `roles.view`؛ عضو بدون مجوز 403؛ کاربر بی‌نسبت به شرکت یا بدون عضویت فعال هدف (شامل حساب ناموجود) **404 بدون افشا**.
 - فقط-خواندنی، `no-store`، بدون Audit (مطابق الگوی خواندنی‌های نقش‌ها)؛ تست: `EffectivePermissionsEndpointTests`.
 - خطاها: ناشناس 401؛ کاربر واردشدهٔ غیرمدیر نصب 403 (پیام فارسی `فقط مدیر نصب سامانه مجاز به این عملیات است.`). مدیر شرکت برای نقش‌های شرکت خود از endpointهای بخش ۳ استفاده می‌کند و این کاتالوگ به او سرو نمی‌شود.

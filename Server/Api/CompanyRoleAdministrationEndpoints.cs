@@ -156,14 +156,17 @@ public static class CompanyRoleAdministrationEndpoints
             .ToListAsync(cancellationToken);
         if (roleNames.Count == 0) return TypedResults.NotFound();
 
-        var codes = await companyAccess.GetGrantedPermissionCodesAsync(userId, companyId, cancellationToken);
+        // One official query (CompanyAccessService, D-065/D-071 predicates) yields both the flat
+        // code union and the per-permission source roles, so they can never drift apart.
+        var grants = await companyAccess.GetGrantedPermissionsWithSourcesAsync(userId, companyId, cancellationToken);
 
         SetNoStore(httpContext);
         return TypedResults.Ok(new EffectivePermissionsResponse(
             userId,
             companyId,
             roleNames.OrderBy(name => name, StringComparer.Ordinal).ToArray(),
-            codes.OrderBy(code => code, StringComparer.Ordinal).ToArray()));
+            [.. grants.Select(grant => grant.Code).OrderBy(code => code, StringComparer.Ordinal)],
+            [.. grants.Select(grant => new EffectivePermissionSource(grant.Code, grant.SourceRoleNames))]));
     }
 
     public static async Task<IResult> GetPermissionCatalogAsync(
@@ -876,7 +879,11 @@ public sealed record EffectivePermissionsResponse(
     Guid UserId,
     Guid CompanyId,
     string[] RoleNames,
-    string[] PermissionCodes);
+    string[] PermissionCodes,
+    IReadOnlyList<EffectivePermissionSource> Permissions);
+
+/// <summary>One granted code of the effective view and the active roles that grant it.</summary>
+public sealed record EffectivePermissionSource(string Code, IReadOnlyList<string> SourceRoleNames);
 
 public sealed record CompanyRoleMemberResponse(
     Guid UserId, string? Username, string? FirstName, string? LastName, bool IsUserActive, DateTime MemberSinceUtc);

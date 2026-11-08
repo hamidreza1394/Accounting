@@ -37,7 +37,16 @@ function api({ members, roles, transfer, effective }: Handlers = {}) {
     if (call.path === effectivePath) {
       return effective
         ? effective(call)
-        : json({ userId: 'user-1', companyId: 'a', roleNames: ['حسابدار'], permissionCodes: ['users.list', 'roles.view'] });
+        : json({
+            userId: 'user-1',
+            companyId: 'a',
+            roleNames: ['حسابدار'],
+            permissionCodes: ['users.list', 'roles.view'],
+            permissions: [
+              { code: 'users.list', sourceRoleNames: ['حسابدار'] },
+              { code: 'roles.view', sourceRoleNames: ['حسابدار', 'رسیدگی‌کننده'] },
+            ],
+          });
     }
     return new Response(null, { status: 404 });
   });
@@ -320,13 +329,19 @@ describe('RoleMembersSection — effective permissions viewer (Stage 2-E)', () =
     setup();
     const row = (await screen.findByText('نام1 خانوادگی1')).closest('tr') as HTMLElement;
     await userEvent.click(within(row).getByRole('button', { name: 'مشاهده' }));
-    expect(await screen.findByRole('region', { name: 'دسترسی‌های مؤثر عضو' })).toHaveTextContent('حسابدار');
+    const region = await screen.findByRole('region', { name: 'دسترسی‌های مؤثر عضو' });
+    expect(region).toHaveTextContent('حسابدار');
     expect(screen.getByText('users.list')).toHaveAttribute('dir', 'ltr');
     expect(screen.getByText('roles.view')).toBeInTheDocument();
+    // Each code carries its granting role names (stage 2 source attribution).
+    const grantRow = screen.getByText('roles.view').closest('tr') as HTMLElement;
+    expect(within(grantRow).getByText('حسابدار، رسیدگی‌کننده')).toBeInTheDocument();
+    const usersRow = screen.getByText('users.list').closest('tr') as HTMLElement;
+    expect(within(usersRow).getByText('حسابدار')).toBeInTheDocument();
   });
 
   it('renders the empty state for a member without any effective permission', async () => {
-    api({ effective: () => json({ userId: 'user-1', companyId: 'a', roleNames: [], permissionCodes: [] }) });
+    api({ effective: () => json({ userId: 'user-1', companyId: 'a', roleNames: [], permissionCodes: [], permissions: [] }) });
     setup();
     const row = (await screen.findByText('نام1 خانوادگی1')).closest('tr') as HTMLElement;
     await userEvent.click(within(row).getByRole('button', { name: 'مشاهده' }));
