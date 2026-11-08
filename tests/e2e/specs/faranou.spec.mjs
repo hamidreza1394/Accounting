@@ -334,7 +334,10 @@ test('a closed period opens for viewing only, and switching back leaves nothing 
   await expect(page.getByLabel('زمینه کاری جاری')).toContainText('فقط مشاهده و گزارش‌گیری');
 
   // Switching in the same sign-in: no new login, the badge belongs to the closed period only.
+  // The workspace guard (Issue #444 stage 1 completion) shows the final confirmation first;
+  // with no unresolved form it goes straight to the selection screen on confirm.
   await page.getByRole('button', { name: /تغییر شرکت/ }).click();
+  await page.getByRole('button', { name: 'ادامه و انتخاب زمینهٔ جدید' }).click();
   await expect(page.getByRole('heading', { name: 'فرانو - دوره مالی' })).toBeVisible();
   await chooseOption(page, a.name, /سال مالی ۱۴۰۵/);
   await expect(page.getByLabel('زمینه کاری جاری')).not.toContainText('فقط مشاهده و گزارش‌گیری');
