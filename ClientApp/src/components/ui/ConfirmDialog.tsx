@@ -12,6 +12,11 @@ type ConfirmDialogProps = {
   tone?: 'default' | 'danger';
   /** While true, both buttons ignore activation, so the action cannot be submitted twice. */
   busy?: boolean;
+  /**
+   * False renders a refusal: the dialog only informs and offers the cancel/acknowledge
+   * button — used when an action is blocked outright (a `Saving`/`Error` tab cannot close).
+   */
+  confirmVisible?: boolean;
   onConfirm: () => void | Promise<void>;
   onCancel: () => void;
 };
@@ -32,6 +37,7 @@ export function ConfirmDialog({
   cancelLabel = 'انصراف',
   tone = 'default',
   busy = false,
+  confirmVisible = true,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -48,7 +54,7 @@ export function ConfirmDialog({
   useEffect(() => {
     if (!open) return undefined;
     openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    (tone === 'danger' ? cancelRef : confirmRef).current?.focus();
+    (tone === 'danger' || !confirmVisible ? cancelRef : confirmRef).current?.focus();
     return () => {
       const opener = openerRef.current;
       if (opener?.isConnected) opener.focus();
@@ -131,19 +137,21 @@ export function ConfirmDialog({
         ) : null}
         <div className="mt-6 flex flex-wrap justify-end gap-2">
           <Button ref={cancelRef} type="button" variant="outline" size="lg" aria-disabled={busy || undefined} className={blockedClass} onClick={cancel}>
-            {cancelLabel}
+            {confirmVisible ? cancelLabel : 'متوجه شدم'}
           </Button>
-          <Button
-            ref={confirmRef}
-            type="button"
-            variant={tone === 'danger' ? 'destructive' : 'default'}
-            size="lg"
-            aria-disabled={busy || undefined}
-            className={blockedClass}
-            onClick={() => void confirm()}
-          >
-            {busy ? 'در حال انجام…' : confirmLabel}
-          </Button>
+          {confirmVisible ? (
+            <Button
+              ref={confirmRef}
+              type="button"
+              variant={tone === 'danger' ? 'destructive' : 'default'}
+              size="lg"
+              aria-disabled={busy || undefined}
+              className={blockedClass}
+              onClick={() => void confirm()}
+            >
+              {busy ? 'در حال انجام…' : confirmLabel}
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>,

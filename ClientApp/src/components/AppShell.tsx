@@ -9,7 +9,7 @@ import { matchPath, RouterProvider, useLocation, type Route } from '../lib/route
 import { AppSidebar } from './shell/AppSidebar';
 import { PageBreadcrumbBar, PageBreadcrumbProvider } from './shell/PageBreadcrumb';
 import { WorkspaceTabPanes, WorkspaceTabsBar, WorkspaceTabsProvider } from './shell/WorkspaceTabs';
-import { dirtySummary, hasAnyDirtyForm } from '../lib/formGuard';
+import { hasAnyProblemForm, problemSummary } from '../lib/formGuard';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 
 type AppShellProps = {
@@ -102,7 +102,7 @@ function AppShellFrame({
   }
 
   function requestLogout() {
-    if (hasAnyDirtyForm()) {
+    if (hasAnyProblemForm()) {
       setPendingLogout(true);
       return;
     }
@@ -110,9 +110,9 @@ function AppShellFrame({
   }
 
   function requestContextChange() {
-    // Company/period data is refetched for the new context; dirty forms of the old one would
-    // silently mix contexts, so they get the same confirmation as closing their tab.
-    if (hasAnyDirtyForm()) {
+    // Company/period data is refetched for the new context; unresolved forms of the old one
+    // would silently mix contexts. (PR-3 replaces this confirmation with a hard block.)
+    if (hasAnyProblemForm()) {
       setPendingContextChange(true);
       return;
     }
@@ -256,8 +256,8 @@ function AppShellFrame({
       </WorkspaceTabsProvider>
       <ConfirmDialog
         open={pendingLogout}
-        title="خروج از حساب کاربری با تغییرات ذخیره‌نشده"
-        description={`${dirtySummary() || 'صفحهٔ باز تغییرات ذخیره‌نشده دارد.'} با خروج از دست می‌روند.`}
+        title="خروج از حساب کاربری با فرم‌های تعیین‌تکلیف‌نشده"
+        description={`${problemSummary() || 'صفحهٔ باز تعیین‌تکلیف‌نشده است.'} با خروج از دست می‌روند.`}
         confirmLabel="خروج و از دست دادن تغییرات"
         cancelLabel="انصراف"
         tone="danger"
@@ -269,8 +269,8 @@ function AppShellFrame({
       />
       <ConfirmDialog
         open={pendingContextChange}
-        title="تغییر زمینهٔ کاری با تغییرات ذخیره‌نشده"
-        description={`${dirtySummary() || 'صفحهٔ باز تغییرات ذخیره‌نشده دارد.'} پیش از تغییر شرکت یا دوره مالی ذخیره کنید؛ ادامه، فرم‌های زمینهٔ قبلی را از دست می‌دهد.`}
+        title="تغییر زمینهٔ کاری با فرم‌های تعیین‌تکلیف‌نشده"
+        description={`${problemSummary() || 'صفحهٔ باز تعیین‌تکلیف‌نشده است.'} پیش از تغییر شرکت یا دوره مالی ذخیره کنید؛ ادامه، فرم‌های زمینهٔ قبلی را از دست می‌دهد.`}
         confirmLabel="ادامه و تغییر زمینه"
         cancelLabel="انصراف"
         tone="danger"

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { SelectedContext, Session } from '../api/types';
 import type { AccessSnapshot } from '../lib/permissions';
 import { Link, RouteView } from '../lib/router';
-import { resetDirtyFormsForTests, useFormGuard } from '../lib/formGuard';
+import { resetFormsForTests, useFormGuard } from '../lib/formGuard';
 import { AppShell } from './AppShell';
 import { useState } from 'react';
 
@@ -25,7 +25,7 @@ const context: SelectedContext = {
 /** A page with a dirty form outside the tab shell (guard key: single-page). */
 function DirtyChild() {
   const [dirty, setDirty] = useState(false);
-  useFormGuard(dirty, 'فرم باز تغییرات ذخیره‌نشده دارد.');
+  useFormGuard({ dirty, dirtyMessage: 'فرم باز تغییرات ذخیره‌نشده دارد.' });
   return (
     <main>
       <button type="button" onClick={() => setDirty(true)}>خراب‌کردن فرم</button>
@@ -189,7 +189,7 @@ describe('AppShell', () => {
     await user.click(await screen.findByRole('button', { name: 'خروج و از دست دادن تغییرات' }));
     await waitFor(() => expect(onLogout).toHaveBeenCalledTimes(1));
     view.unmount();
-    resetDirtyFormsForTests();
+    resetFormsForTests();
   });
 
   it('logs out immediately when no form is dirty', async () => {

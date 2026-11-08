@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
 import { AppShell } from '../AppShell';
 import { useDocumentTitle } from '@/lib/router';
-import { resetDirtyFormsForTests, useFormGuard } from '@/lib/formGuard';
+import { resetFormsForTests, useFormGuard } from '@/lib/formGuard';
 import type { AccessSnapshot } from '@/lib/permissions';
 import type { SelectedContext, Session } from '../../api/types';
 
@@ -19,14 +19,19 @@ function Page({ label }: { label: string }) {
   return <h1>{label}</h1>;
 }
 
-/** A page whose form can be made dirty, wired to the shared guard like the real forms. */
+/** A page whose form can be driven through the four lifecycle states, wired like the real forms. */
 function DirtyFormPage({ label }: { label: string }) {
   const [dirty, setDirty] = useState(false);
-  useFormGuard(dirty, 'فرم آزمایشی تغییرات ذخیره‌نشده دارد.');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useFormGuard({ dirty, saving, errorMessage: error, dirtyMessage: 'فرم آزمایشی تغییرات ذخیره‌نشده دارد.' });
   return (
     <div>
       <h1>{label}</h1>
       <button type="button" onClick={() => setDirty(true)}>خراب‌کردن فرم</button>
+      <button type="button" onClick={() => { setSaving(true); }}>شروع ذخیره</button>
+      <button type="button" onClick={() => { setSaving(false); setError('ذخیره انجام نشد.'); }}>شکست ذخیره</button>
+      <button type="button" onClick={() => { setSaving(false); setError(null); setDirty(false); }}>پاک‌سازی فرم</button>
     </div>
   );
 }
@@ -68,7 +73,7 @@ const tabNames = () => within(tabbar()).getAllByRole('button').filter((button) =
 
 afterEach(() => {
   window.history.pushState(null, '', '/app/');
-  resetDirtyFormsForTests();
+  resetFormsForTests();
 });
 
 describe('multi-tab workspace (Issue #444 stage 1, PR 4)', () => {
@@ -226,6 +231,47 @@ describe('dirty-form protection in the workspace (Issue #444 stage 1, PR 5)', ()
     await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
     expect(within(tabbar()).queryByRole('button', { name: /فرم آزمایشی/ })).not.toBeInTheDocument();
     expect(window.location.pathname).toBe('/app/');
+  });
+
+  it('refuses to close a Saving tab outright and lets it close once the save resolves', async () => {
+    const user = userEvent.setup();
+    setup('/app/form');
+    await waitFor(() => tabButton(/فرم آزمایشی/));
+
+    await user.click(screen.getByRole('button', { name: 'شروع ذخیره' }));
+    await user.click(screen.getByRole('button', { name: 'بستن فرم آزمایشی' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('بستن این تب در حال حاضر ممکن نیست');
+    // A refusal: there is no destructive action to confirm.
+    expect(within(dialog).queryByRole('button', { name: 'بستن تب و از دست دادن تغییرات' })).not.toBeInTheDocument();
+
+    // The tab stays open while saving.
+    await user.click(within(dialog).getByRole('button', { name: 'متوجه شدم' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+    expect(tabButton(/فرم آزمایشی/)).toBeInTheDocument();
+
+    // The save resolves cleanly: closing now needs no dialog at all.
+    await user.click(screen.getByRole('button', { name: 'پاک‌سازی فرم' }));
+    await user.click(screen.getByRole('button', { name: 'بستن فرم آزمایشی' }));
+    await waitFor(() => expect(within(tabbar()).queryByRole('button', { name: /فرم آزمایشی/ })).not.toBeInTheDocument());
+  });
+
+  it('refuses to close an Error tab until the failure is resolved', async () => {
+    const user = userEvent.setup();
+    setup('/app/form');
+    await waitFor(() => tabButton(/فرم آزمایشی/));
+
+    await user.click(screen.getByRole('button', { name: 'شروع ذخیره' }));
+    await user.click(screen.getByRole('button', { name: 'شکست ذخیره' }));
+    await user.click(screen.getByRole('button', { name: 'بستن فرم آزمایشی' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('بستن این تب تا رفع خطا ممکن نیست');
+    await user.click(within(dialog).getByRole('button', { name: 'متوجه شدم' }));
+    expect(tabButton(/فرم آزمایشی/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'پاک‌سازی فرم' }));
+    await user.click(screen.getByRole('button', { name: 'بستن فرم آزمایشی' }));
+    await waitFor(() => expect(within(tabbar()).queryByRole('button', { name: /فرم آزمایشی/ })).not.toBeInTheDocument());
   });
 
   it('closes a clean tab immediately without any dialog', async () => {

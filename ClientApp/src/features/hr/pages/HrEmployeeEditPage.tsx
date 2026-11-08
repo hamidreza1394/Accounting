@@ -42,11 +42,12 @@ export function HrEmployeeEditPage({ onUnauthenticated, companyId }: Props) {
   // comparison is the whole dirty check for this small form (no framework needed).
   const savedFormRef = useRef<FormState | null>(null);
   const dirty = form !== null && savedFormRef.current !== null && form !== savedFormRef.current;
-  // The workspace asks this registry before closing the tab, signing out or changing context.
-  const formGuard = useFormGuard(dirty);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<string, string>>>({});
   const [submitting, setSubmitting] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // The workspace asks this registry before closing the tab, signing out or changing context;
+  // a failed save keeps the `error` status until the user retries or cancels (D-076).
+  const formGuard = useFormGuard({ dirty, saving: submitting, errorMessage: saveError, title: 'ویرایش کارمند' });
 
   const readEmployee = useCallback(
     (signal: AbortSignal) =>
