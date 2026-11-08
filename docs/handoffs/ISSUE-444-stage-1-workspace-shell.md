@@ -256,7 +256,7 @@ Backend هیچ تغییری در ۶ PR نداشت؛ nevertheless بیلد Releas
 
 - Commitهای اصلاحی CI (spec E2E و timeout تست lazy) با cherry-pick به همهٔ شاخه‌های زنجیره push شده‌اند؛ هیچ Force Push انجام نشده است.
 - **تست محلی واقعی هر شاخه:** typecheck و `npm test` و `npm run build` و `npm run check:offline` سبز؛ شمارش vitest به‌ترتیب: ۸۶۸ / ۸۷۴ / ۸۸۵ / ۸۹۰ / ۸۹۷ / ۸۹۸ / **۹۰۰**. هیچ تستی حذف یا تضعیف نشده است.
-- **نتیجهٔ CI پس از اصلاحات (2026-11-08):** #584 و #585 و #587 روی commit اصلاحی **کاملاً سبز** شدند (شامل e2e و publish-windows)؛ #586 و #589 در دور جدید Pending. اصلاحات: هم‌ترازی spec E2E با تأیید نهایی تغییر زمینه + timeout ۱۰ثانیه‌ای تست lazy (cherry-pick به شاخه‌ها؛ بدون Force Push).
+- **نتیجهٔ نهایی CI (2026-11-08):** هر هفت PR روی head نهایی **کاملاً سبز** شدند — client، build-and-test، e2e (Playwright + axe روی سرور واقعی و SQL Server)، publish، publish-windows، publish-scripts، CodeQL، Semgrep و secret-scan. اصلاحات میانی: هم‌ترازی spec E2E با تأیید نهایی تغییر زمینه، timeout تست lazy، و ادغام کار یک اجرای هم‌زمان دیگر (fix عنوان مسیر تب در جریان محلی 79d78002) با merge — بدون Force Push و بدون حذف کار دیگران.
 - **اصلاح ممیزی زنجیره (ثبت‌شده):** دو commit محتوای PR-7 به‌اشتباه روی شاخهٔ PR-6 push شده بودند؛ با `git revert` از شاخهٔ PR-6 حذف و با cherry-pick به شاخهٔ PR-7 منتقل شدند (بدون Force Push). بعد از اصلاح: PR-6 فقط محتوای خودش را دارد (vitest ‏۸۹۸/۸۹۸ محلی) و PR-7 محتوای کامل (۹۰۰/۹۰۰)؛ diff هر PR دقیقاً محدودهٔ خودش است.
 - **Backend:** هیچ تغییری در Backend/Schema/API در این زنجیره انجام نشده است؛ طبق مأموریت اجرای dotnet test الزامی نبود و در Sandbox اجرا نشده گزارش می‌شود.
 
