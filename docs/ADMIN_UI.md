@@ -16,7 +16,7 @@
 | داشبورد | `/` | `Implemented` |
 | فهرست کاربران | `/admin/users` | `Implemented` |
 | ایجاد کاربر | `/admin/users/new` | `Implemented` |
-| جزئیات کاربر (تب‌های اطلاعات عمومی، تماس، شرکت‌ها و عضویت‌ها) | `/admin/users/:id` | `Implemented` |
+| جزئیات کاربر (Workspace هفت‌تبی: مشخصات فردی و پرسنلی، حساب و امنیت با ابطال نشست D-073، شرکت‌ها و عضویت‌ها، زیرسیستم‌ها و لایسنس، مجوزهای مؤثر با منبع، سوابق ورود/خروج، سوابق تغییرات مدیریتی؛ lazy load + cache per-user — PR #596 و مرحلهٔ سوم) | `/admin/users/:id` | `Implemented` |
 | ویرایش کاربر | `/admin/users/:id/edit` | `Implemented` |
 | حساب من (drawer با تب‌های مشخصات، امنیت/رمز، سوابق ورود) | بدون مسیر؛ پنل داخل `AppShell` | `Implemented` |
 | نقش‌ها (`/admin/roles`، ایجاد، ویرایش، کپی، مقایسهٔ دو گروه) و کاتالوگ مجوز (`/admin/permissions`) | صفحات lazy با `PermissionTree`؛ قراردادهای API در PR #459 ادغام شده‌اند؛ کپی (prefill از گروه مبدأ با حذف کدهای خارج از کاتالوگ کاربر) و مقایسهٔ دو گروه از 2026-11-08 `Implemented` است (مرحله دوم #444) | `Implemented`؛ تست UI و CI موفق گزارش شده، اما E2E این صفحات با Backend/SQL Server واقعی هنوز اثبات نشده است |
@@ -58,12 +58,13 @@
 | `Alert`، `Badge`، `Button`، `Card` | پایه‌های بصری | `ui/Alert.tsx`، `ui/Badge.tsx`، `ui/button.tsx`، `ui/card.tsx` |
 | `LoadingState`، `ErrorState`، `EmptyState` | حالت‌های بارگذاری (`role=status`)، خطا (`role=alert`)، خالی | `Feedback.tsx` |
 | `UserForm` | فرم مشترک ایجاد/ویرایش کاربر (`mode='create'|'edit'`) | `admin/users/UserFormFields.tsx` |
-| `PasswordInput` (حساب من) | ورودی رمز، `dir=ltr`، نمایش/پنهان با `aria-pressed` | `account/PasswordInput.tsx` |
+| `PasswordInput` | ورودی رمز واحد پروژه، `dir=ltr`، نمایش/پنهان با `aria-pressed`؛ در فرم کاربر، حساب من و دیالوگ step-up ابطال نشست استفاده می‌شود | `ui/PasswordInput.tsx` (ادغام نسخه‌های قبلی انجام شد) |
 | `userFlash` | پیام موفقیت یک‌بارمصرف `{userId, kind}` در حافظهٔ ماژول، TTL ۳۰ ثانیه | `admin/users/userFlash.ts` |
+| `AdminRevokeSessionDialog` | دیالوگ step-up ابطال نشست کاربر دیگر (D-073 §1): رمز مدیر + دلیل از کاتالوگ سرور؛ خطا با حفظ مقادیر؛ گارد دوارسالی | `admin/users/profile/AdminRevokeSessionDialog.tsx` |
 
 **موجود نیستند (`NotImplemented`)** و تا نیاز واقعی و API مربوط ساخته نمی‌شوند: `UserSelector`، `FiscalYearSelector`، `FiscalPeriodSelector` (`PermissionTree` در `ui/PermissionTree.tsx` و انتخاب‌گر شرکت نقش‌ها در `admin/roles/CompanySelect.tsx` اکنون `Implemented`). برای انتخاب شرکت/دوره الگوی موجود `WorkContextSelector` است و نباید موازی‌اش ساخته شود مگر با بازبینی.
 
-**تکرار شناخته‌شده:** `PasswordInput` در `account/` و یک `PasswordInput` محلی در `UserFormFields.tsx` تکراری‌اند و قرار است به یک `ui/PasswordInput` ادغام شوند (بخش ۱۱).
+**تکرار شناخته‌شده:** دو `PasswordInput` قبلی (حساب من و فرم کاربر) در `ui/PasswordInput` ادغام شدند (مورد ۱ بخش ۱۱ حل است).
 
 ## ۴) قرارداد API client (`api/client.ts`)
 
@@ -167,7 +168,7 @@ npm run check:offline    # اسکن ایستا؛ آدرس ساخته‌شده د
 
 ## ۱۱) بدهی فنی باقی‌مانده
 
-1. ادغام دو `PasswordInput` در `ui/PasswordInput`.
+1. ~~ادغام دو `PasswordInput` در `ui/PasswordInput`.~~ (انجام شد — `ui/PasswordInput.tsx` مرجع واحد است)
 2. blocker ناوبری در روتر برای فرم dirty (لینک‌های داخلی و Back).
 3. `FormSection` با `h3` است و صفحه `h2` ندارد (پرش heading از h1 به h3).
 4. `ConfirmDialog` و drawer حساب من: پس‌زمینه `inert` نمی‌شود، قفل اسکرول ندارند؛ focus trap دستی است؛ Escape در drawer فقط با focus داخل آن کار می‌کند.

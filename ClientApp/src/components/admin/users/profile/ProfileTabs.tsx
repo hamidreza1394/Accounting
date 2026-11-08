@@ -24,6 +24,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/Feedback';
 import { Info, TabDataBoundary, useProfileTabData } from './profileShared';
+import { AdminRevokeSessionDialog, type PendingRevocation } from './AdminRevokeSessionDialog';
 import { fullName } from '../userDisplay';
 
 type Shared = {
@@ -140,17 +141,50 @@ export function ProfileIdentityTab({ user, cache, onUnauthenticated }: Shared) {
 
 // ------------------------------------------------------------------ tab 2: account & security
 
+const number = new Intl.NumberFormat('fa-IR');
+
 /**
  * Tab 2 — account status and the allow-listed active sessions (D-069: no IP, no user agent).
- * Revoking another user's session is the step-up flow of D-073 and arrives with PR 3-F.
+ * Revoking another user's session is the step-up flow of D-073 §1: the administrator
+ * re-authenticates and picks a server-owned reason; every mutation refetches the list so
+ * it never shows a stale (still-active) row after the server already ended the session.
  */
 export function ProfileSecurityTab({ user, cache, onUnauthenticated }: Shared) {
+  const sessionsKey = `${user.id}:sessions`;
   const state = useProfileTabData<AdminUserSession[]>(
     cache,
-    `${user.id}:sessions`,
+    sessionsKey,
     (signal) => getAdminUserSessions(user.id, signal),
     onUnauthenticated,
   );
+  const [pending, setPending] = useState<PendingRevocation | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  /** After a confirmed revocation the cached list is dropped and reloaded from the server. */
+  const handleSuccess = (message: string) => {
+    setNotice(message);
+    cache.delete(sessionsKey);
+    state.retry();
+  };
+
+  const actionColumn: DataTableColumn<AdminUserSession> = {
+    key: 'action',
+    header: 'عملیات',
+    cell: (session) => (
+      <button
+        type="button"
+        onClick={() => {
+          setNotice(null);
+          setPending({ kind: 'one', session });
+        }}
+        aria-label={`ابطال نشست ایجادشده در ${formatDateTime(session.createdAtUtc)}`}
+        className="inline-flex min-h-9 items-center rounded-lg border border-danger/40 px-3 text-xs font-bold text-danger outline-none hover:bg-cool focus-visible:ring-2 focus-visible:ring-gold"
+      >
+        ابطال
+      </button>
+    ),
+  };
+
   return (
     <div className="space-y-6">
       <section aria-labelledby="profile-account-heading">
@@ -167,21 +201,53 @@ export function ProfileSecurityTab({ user, cache, onUnauthenticated }: Shared) {
       </section>
       <section aria-labelledby="profile-sessions-heading">
         <h2 id="profile-sessions-heading" className="mb-3 text-base font-bold text-ink">نشست‌های فعال</h2>
+        {/* The live region exists from the first render; the message arrives later, so it is announced. */}
+        <div aria-live="polite">
+          {notice ? (
+            <p role="status" className="mb-3 rounded-xl border border-line bg-cool p-4 text-sm font-medium text-navy">
+              {notice}
+            </p>
+          ) : null}
+        </div>
         <TabDataBoundary state={state} label="در حال دریافت نشست‌های فعال…">
-          {(sessions) =>
-            sessions.length === 0 ? (
-              <EmptyState title="نشست فعالی برای این حساب وجود ندارد." />
-            ) : (
-              <DataTable
-                caption="نشست‌های فعال کاربر"
-                columns={sessionColumns}
-                rows={sessions}
-                getRowKey={(session) => session.sessionId}
-              />
-            )
-          }
+          {(sessions) => (
+            <div className="space-y-3">
+              {sessions.length === 0 ? (
+                <EmptyState title="نشست فعالی برای این حساب وجود ندارد." />
+              ) : (
+                <DataTable
+                  caption="نشست‌های فعال کاربر"
+                  columns={[...sessionColumns, actionColumn]}
+                  rows={sessions}
+                  getRowKey={(session) => session.sessionId}
+                />
+              )}
+              {sessions.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNotice(null);
+                    setPending({ kind: 'all', count: sessions.length });
+                  }}
+                  className="min-h-10 rounded-lg border border-danger/40 px-4 text-xs font-bold text-danger outline-none hover:bg-cool focus-visible:ring-2 focus-visible:ring-gold"
+                >
+                  ابطال همهٔ نشست‌های فعال ({number.format(sessions.length)})
+                </button>
+              ) : null}
+              <p className="text-xs leading-6 text-sub">
+                ابطال نشست کاربر دیگر نیازمند تأیید هویت شما و انتخاب دلیل است؛ عملیات در سوابق امنیتی ثبت می‌شود (D-073).
+              </p>
+            </div>
+          )}
         </TabDataBoundary>
       </section>
+      <AdminRevokeSessionDialog
+        userId={user.id}
+        pending={pending}
+        onClose={() => setPending(null)}
+        onSuccess={handleSuccess}
+        onUnauthenticated={onUnauthenticated}
+      />
     </div>
   );
 }

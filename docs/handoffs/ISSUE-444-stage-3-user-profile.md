@@ -38,3 +38,25 @@
 - کلاینت: `getAdminUserLoginHistory`، `getAdminUserSessions`، `getAccessCatalogSubsystems` + parserهای سخت‌گیر؛ `HrEmployeeQuery.userId`.
 - تست‌ها: بازنویسی `UserDetailPage.test.tsx` + `ProfileTabs.test.tsx` جدید؛ vitest ۹۱۶/۹۱۶، typecheck، build و check:offline سبز.
 - محدودیت صادقانه: Screenshot واقعی مرورگر در این محیط ممکن نیست (بدون Docker/SQL Server راه‌اندازی سرور ممکن نیست)؛ افزودن صفحات پرونده به سناریوی axe/Playwright CI در PR 3-H ادامه می‌یابد.
+
+## ۳. Gap Analysis واقعی پس از PR #596 (ممیزی کد `main` در `f0e89591` — 2026-11-09)
+
+| قابلیت | Backend | تست Backend | تست SQL Server | UI | UI→API | مجوز سرور | Audit | نتیجه |
+|---|---|---|---|---|---|---|---|---|
+| 3-C اتصال HR↔User | `PUT/DELETE /org/employees/{id}/user` + فیلتر `?userId=` موجود | ✅ | ✅ (CI) | فقط-خواندنی | نمایش بدون عملیات | ✅ (`hr.employees.user-link.manage`؛ بایپس مدیر نصب در `AuthorizeHrScopeAsync`) | ✅ `HrEmployeeUserLinked/Unlinked` | **شکاف UI: اتصال/قطع اتصال** (PR 3-C2) |
+| 3-D عضویت‌ها | گردش کامل درخواست/تأیید/رد + صف + تاریخچه | ✅ | ✅ (CI) | تب ۳ فقط عضویت‌های فعال/غیرفعال را نشان می‌دهد؛ صف تأیید و «درخواست‌های من» صفحات مستقل موجودند | ⚠️ وضعیت درخواست‌های «همین کاربر» (Pending/Rejected+دلیل/تأییدکننده) در پرونده نیست | ✅ | ✅ | **شکاف: وضعیت درخواست‌های کاربر در پرونده + فیلتر `userId` روی تاریخچه** (PR 3-D2) |
+| 3-E مجوزهای مؤثر | `effective-permissions` با منبع هر مجوز | ✅ | ✅ (CI) | per-company + منبع + جستجو + حالت «مجاز نیست» | ✅ | ✅ (`roles.view` دوحالته) | n/a (خواندنی) | **کامل**؛ گروه‌بندی زیرسیستمی نیازمند نگاشت مجوز→زیرسیستم است که در API وجود ندارد — به‌صورت Proposed در سند ثبت می‌شود، نگاشت موازی ساخته نمی‌شود |
+| 3-F نشست‌ها | list/revoke/revoke-all با re-auth + reasonCode | ✅ | ✅ (CI) | تب ۲ فقط-خواندنی بود | ❌ | ✅ (فقط مدیر نصب؛ self-target 400) | ✅ تراکنشی fail-closed | **شکاف UI: ابطال با step-up** (PR 3-F2) |
+| 3-G زیرسیستم/لایسنس | کاتالوگ واقعی D-075 | ✅ | ✅ (CI) | کاتالوگ + یادداشت صادقانه | ✅ | ✅ | n/a | **کامل** — هیچ وضعیت فرضی نمایش داده نمی‌شود |
+| 3-H1 E2E | — | — | — | spec پرونده کاربر وجود ندارد | — | — | — | **شکاف** (PR 3-H1) |
+| 3-H2 axe/Screenshot | — | — | — | صفحات پرونده در سناریوی axe نیستند؛ Screenshot واقعی نیست | — | — | — | **شکاف** (PR 3-H1) |
+
+## ۴. PR 3-F2 — ابطال نشست‌های کاربر دیگر از پرونده (UI مرحله‌به‌مرحلهٔ D-073 §1)
+
+- Backend از قبل کامل بود (§۸.۵ قرارداد API) و دوباره ساخته نشد؛ این PR فقط UI و تست UI است.
+- `ConfirmDialog` props اختیاری `children` گرفت (سازگار با عقب) تا فرم step-up داخل همان دیالوگ دسترس‌پذیر موجود رندر شود (focus trap/Escape/بازگشت focus بدون تکرار کد).
+- کامپوننت جدید `AdminRevokeSessionDialog`: رمز عبور مدیر (`current-password`، فقط در بدنهٔ درخواست، پاک‌سازی در هر بازشدن) + انتخاب دلیل از کاتالوگ سرور (۴ کد D-073 با برچسب فارسی)؛ خطای اعتبارسنجی و خطای واقعی سرور (403 re-auth، 400 دلیل نامعتبر، 429) داخل دیالوگ با `Alert` (role=alert) نمایش داده می‌شود و مقادیر در خطا حفظ می‌شوند؛ گارد دوارسالی؛ هیچ Token/Secret نمایش داده نمی‌شود.
+- تب ۲ پرونده (`ProfileSecurityTab`): ستون «عملیات» با دکمهٔ ابطال هر نشست + دکمهٔ «ابطال همهٔ نشست‌های فعال (n)» + پیام موفقیت در ناحیهٔ zندهٔ `aria-live`؛ پس از هر ابطال موفق، cache تب حذف و فهرست از سرور بازخوانی می‌شود (هیچ ردیف «به‌ظاهر فعال» پس از mutation نمایش داده نمی‌شود).
+- کلاینت: `revokeAdminUserSession`، `revokeAllAdminUserSessions` و parser `parseAdminRevocationOutcome` (`revokedCount` allowlist).
+- تست‌ها: ۳ سناریوی جدید در `ProfileTabs.test.tsx` — (۱) ابطال تک‌نشست فقط با فرم کامل + assert بدنهٔ POST + بازخوانی فهرست + عدم افشای رمز در متن صفحه، (۲) 403 re-auth: دیالوگ باز می‌ماند، مقادیر حفظ و پیام واقعی سرور نمایش داده می‌شود، (۳) ابطال همه با شمارش سرور. vitest 920/920؛ typecheck؛ build؛ check:offline سبز.
+- مستندات: `ADMIN_UI.md` (ردیف صفحهٔ پرونده، جدول کامپوننت‌ها و وضعیت نشست‌ها)، `WORK_LOG`، همین handoff. Migration: هیچ.

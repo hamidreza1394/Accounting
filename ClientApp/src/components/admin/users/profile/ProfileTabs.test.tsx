@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { RouteView, RouterProvider, type Route } from '../../../../lib/router';
 import { PageBreadcrumbBar, PageBreadcrumbProvider } from '@/components/shell/PageBreadcrumb';
-import { stubApi } from '../../../../test/api';
+import { stubApi, antiforgeryRoute } from '../../../../test/api';
 import { userDetails } from '../../../../test/adminUsers';
 import { UserDetailPage } from '../UserDetailPage';
 
@@ -184,5 +184,116 @@ describe('UserDetailPage profile workspace (stage 3)', () => {
     expect(await screen.findByRole('navigation', { name: 'صفحه‌بندی سوابق تغییرات' })).toBeInTheDocument();
     expect(screen.getByText(/از 3/)).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('button', { name: 'بعدی' })).toBeEnabled());
+  });
+
+  describe('session revocation (D-073 §1 step-up)', () => {
+    const sessionBody = (extra: boolean) => [
+      { sessionId: 's-1', createdAtUtc: '2026-11-05T08:00:00Z', lastSeenAtUtc: '2026-11-06T09:00:00Z' },
+      ...(extra ? [{ sessionId: 's-2', createdAtUtc: '2026-11-05T10:00:00Z', lastSeenAtUtc: '2026-11-06T11:00:00Z' }] : []),
+    ];
+
+    function revokeHarness(postOutcome: () => { status: number; body?: unknown }) {
+      let sessions = 2;
+      return stubApi({
+        ...antiforgeryRoute,
+        'GET /api/v1/admin/users/user-2': { status: 200, body: userDetails(2, { memberships: [] }) },
+        'GET /api/v1/admin/users/user-2/sessions': () => {
+          const extra = sessions === 2;
+          return { status: 200, body: sessionBody(extra) };
+        },
+        'POST /api/v1/admin/users/user-2/sessions/s-1/revoke': () => {
+          sessions = 1;
+          return postOutcome();
+        },
+      });
+    }
+
+    it('revokes one session only after the step-up form is filled, then reloads the real list', async () => {
+      const user = userEvent.setup();
+      const fetchMock = revokeHarness(() => ({ status: 204 }));
+      setup();
+      await user.click(await screen.findByRole('tab', { name: 'حساب کاربری و امنیت' }));
+      const table = within(await screen.findByRole('table', { name: 'نشست‌های فعال کاربر' }));
+      expect(table.getAllByRole('button', { name: /^ابطال نشست ایجادشده/ })).toHaveLength(2);
+
+      const firstRevoke = table.getAllByRole('button', { name: /^ابطال نشست ایجادشده/ })[0] as HTMLElement;
+      await user.click(firstRevoke);
+      const dialog = screen.getByRole('alertdialog', { name: 'ابطال این نشست' });
+
+      // Nothing filled: the request must not even be attempted.
+      await user.click(within(dialog).getByRole('button', { name: 'ابطال نشست' }));
+      expect(within(dialog).getByText('برای تأیید هویت، رمز عبور خودتان لازم است.')).toBeInTheDocument();
+      expect(within(dialog).getByText('انتخاب دلیل ابطال الزامی است.'));
+      expect(fetchMock.mock.calls.filter(([input]) => String(input).includes('/revoke')).length).toBe(0);
+
+      await user.type(within(dialog).getByLabelText(/رمز عبور خودتان/), 'admin-secret-1');
+      await user.selectOptions(within(dialog).getByLabelText(/دلیل ابطال/), 'admin_revoked_suspected_compromise');
+      await user.click(within(dialog).getByRole('button', { name: 'ابطال نشست' }));
+
+      expect(await screen.findByRole('status')).toHaveTextContent('نشست کاربر پایان یافت.');
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+      const revokeCalls = fetchMock.mock.calls.filter(([input]) => String(input).includes('/revoke'));
+      expect(revokeCalls.length).toBe(1);
+      const revokeBody = revokeCalls[0]?.[1]?.body;
+      expect(typeof revokeBody).toBe('string');
+      expect(JSON.parse(String(revokeBody))).toEqual({
+        currentPassword: 'admin-secret-1',
+        reasonCode: 'admin_revoked_suspected_compromise',
+      });
+      // The list was refetched and now shows the remaining session only.
+      await waitFor(() =>
+        expect(within(screen.getByRole('table', { name: 'نشست‌های فعال کاربر' })).getAllByRole('button', { name: /^ابطال نشست ایجادشده/ })).toHaveLength(1),
+      );
+      // The step-up secret never leaks into the document text.
+      expect(document.body.textContent).not.toContain('admin-secret-1');
+    });
+
+    it('keeps the dialog open with the entered values and the real server message when re-authentication fails', async () => {
+      const user = userEvent.setup();
+      revokeHarness(() => ({ status: 403, body: { error: 'رمز عبور مدیر نادرست است.' } }));
+      setup();
+      await user.click(await screen.findByRole('tab', { name: 'حساب کاربری و امنیت' }));
+      const table = await screen.findByRole('table', { name: 'نشست‌های فعال کاربر' });
+      const revokeButtons = within(table).getAllByRole('button', { name: /^ابطال نشست ایجادشده/ });
+      await user.click(revokeButtons[0] as HTMLElement);
+      const dialog = screen.getByRole('alertdialog', { name: 'ابطال این نشست' });
+      await user.type(within(dialog).getByLabelText(/رمز عبور خودتان/), 'wrong-password');
+      await user.selectOptions(within(dialog).getByLabelText(/دلیل ابطال/), 'admin_revoked_administrative');
+      await user.click(within(dialog).getByRole('button', { name: 'ابطال نشست' }));
+
+      expect(await within(dialog).findByRole('alert')).toHaveTextContent('رمز عبور مدیر نادرست است.');
+      // The values survive the failure so the retry is a correction, not a retyping.
+      expect(within(dialog).getByLabelText(/رمز عبور خودتان/)).toHaveValue('wrong-password');
+      expect(within(dialog).getByLabelText(/دلیل ابطال/)).toHaveValue('admin_revoked_administrative');
+      expect(screen.getByRole('alertdialog', { name: 'ابطال این نشست' })).toBeInTheDocument();
+    });
+
+    it('revokes every active session with one step-up and reports the server count', async () => {
+      const user = userEvent.setup();
+      const fetchMock = stubApi({
+        ...antiforgeryRoute,
+        'GET /api/v1/admin/users/user-2': { status: 200, body: userDetails(2, { memberships: [] }) },
+        'GET /api/v1/admin/users/user-2/sessions': { status: 200, body: sessionBody(true) },
+        'POST /api/v1/admin/users/user-2/sessions/revoke-all': { status: 200, body: { revokedCount: 2 } },
+      });
+      setup();
+      await user.click(await screen.findByRole('tab', { name: 'حساب کاربری و امنیت' }));
+      await screen.findByRole('table', { name: 'نشست‌های فعال کاربر' });
+      await user.click(screen.getByRole('button', { name: /ابطال همهٔ نشست‌های فعال/ }));
+      const dialog = screen.getByRole('alertdialog', { name: 'ابطال همهٔ نشست‌های فعال' });
+      await user.type(within(dialog).getByLabelText(/رمز عبور خودتان/), 'admin-secret-2');
+      await user.selectOptions(within(dialog).getByLabelText(/دلیل ابطال/), 'admin_revoked_offboarding');
+      await user.click(within(dialog).getByRole('button', { name: 'ابطال نشست' }));
+
+      expect(await screen.findByRole('status')).toHaveTextContent('۲ نشست فعال این کاربر پایان یافت.');
+      const revokeCalls = fetchMock.mock.calls.filter(([input]) => String(input).includes('/revoke-all'));
+      expect(revokeCalls.length).toBe(1);
+      const revokeBody = revokeCalls[0]?.[1]?.body;
+      expect(typeof revokeBody).toBe('string');
+      expect(JSON.parse(String(revokeBody))).toEqual({
+        currentPassword: 'admin-secret-2',
+        reasonCode: 'admin_revoked_offboarding',
+      });
+    });
   });
 });

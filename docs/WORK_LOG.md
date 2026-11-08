@@ -2814,3 +2814,7 @@
 - `UserDetailPage` به پرونده حرفه‌ای هفت‌تبی تبدیل شد (مشخصات+پرسنلی، حساب و امنیت، عضویت‌ها، زیرسیستم/لایسنس با یادداشت صادقانه D-075، مجوزهای مؤثر با منبع و جستجو، سوابق ورود، سوابق تغییرات)؛ lazy load هر تب + cache per-user (بدون درخواست تکراری/تب غیرفعال)؛ حالت‌های Loading/Empty/Error/Retry و بخش صادقانه «مجاز نیست» برای 403/404؛ کلاینت: ۳ تابع + parser جدید و `HrEmployeeQuery.userId`.
 - تست‌ها: بازنویسی تست جزئیات + فایل تست جدید Workspace (۱۴ سناریو شامل lazy/caching/RTL/allowlist D-069)؛ vitest ۹۱۶/۹۱۶؛ typecheck/build/check:offline سبز. اصلاح تست HR بر اساس بازخورد CI (مجوز `hr.employees.list`؛ رفتار fail-closed درست endpoint روی SQL Server تأیید شد).
 - Migration: هیچ. (با PR 3-A در #596؛ بخش‌های باقی‌ماندهٔ مرحله سوم در handoff ثبت شده است.)
+
+## 2026-11-09 — Issue #444 مرحله سوم PR 3-F2: ابطال نشست‌های کاربر دیگر از پرونده (step-up D-073 §1)
+- Gap Analysis پس از PR #596 در handoff مرحله سوم ثبت شد: Backend ابطال مدیریتی کامل بود؛ تب ۲ پرونده فقط-خواندنی بود. UI ابطال تک‌نشست و «ابطال همه» با فرم مرحله‌به‌مرحله (رمز مدیر + دلیل از کاتالوگ سرور D-073) در `AdminRevokeSessionDialog` ساخته شد؛ `ConfirmDialog` props اختیاری `children` گرفت تا فرم در همان دیالوگ دسترس‌پذیر قرار گیرد؛ پس از موفقیت cache تب حذف و فهرست واقعی بازخوانی می‌شود؛ خطاها داخل دیالوگ با حفظ مقادیر.
+- کلاینت: `revokeAdminUserSession`/`revokeAllAdminUserSessions`/`parseAdminRevocationOutcome`. تست: ۳ سناریوی جدید (اعتبارسنجی خالی، 403 re-auth با حفظ مقادیر، ابطال همه با شمارش) — vitest 920/920؛ typecheck/build/check:offline سبز. Migration: هیچ.
