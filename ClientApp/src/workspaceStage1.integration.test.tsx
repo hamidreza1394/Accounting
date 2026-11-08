@@ -98,16 +98,15 @@ describe('workspace stage 1 completion — the consolidated integration (PR 7)',
     // 3) The context change is BLOCKED: the problem-tabs dialog names the tab.
     await user.click(screen.getByRole('button', { name: /شرکت جاری شرکت الف، تغییر شرکت/ }));
     const blocked = await screen.findByRole('dialog', { name: 'تغییر زمینهٔ کاری ممکن نیست' });
-    // The dialog names exactly ONE problem tab with its dirty status. The tab label is the
-    // CURRENT Persian one — the create form renames the tab (useDocumentTitle) and on a slow
-    // CI runner the dialog may render before that rename lands; both labels are honest.
-    expect(blocked.textContent).toMatch(/ثبت کارمند|کارکنان/);
-    expect(blocked.textContent).toContain('دارای تغییر ذخیره‌نشده');
+    // The tab keeps its ROUTE title while the create form is open inside it (UI_COMPONENTS:
+    // route title first, then the declared RECORD name — a create form has no record), so the
+    // dialog names the tab «کارکنان» — the tab the user actually has to resolve.
+    expect(blocked.textContent).toContain('کارکنان');
+    expect(blocked.textContent).not.toContain('ثبت کارمند');
     expect(fetchMock.mock.calls.some((call) => `${call[1]?.method ?? 'GET'} ${String(call[0])}` === 'POST /api/v1/context')).toBe(false);
 
     // 4) Jumping to the problem tab keeps the flow; the dialog closes, the form stays.
-    const problemTabLabel = blocked.querySelector('.faranou-problemtab-title')?.textContent ?? '';
-    await user.click(within(blocked).getByRole('button', { name: `رفتن به تب ${problemTabLabel}` }));
+    await user.click(within(blocked).getByRole('button', { name: 'رفتن به تب کارکنان' }));
     await waitFor(() => expect(window.location.search).toBe('?form=new'));
     expect(screen.getByLabelText(/^نام\*$/)).toHaveValue('زهرا');
 

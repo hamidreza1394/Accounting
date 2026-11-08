@@ -42,7 +42,10 @@ export function HrPositionCreatePage({ onUnauthenticated, companyId, onSaved, on
   // a failed save keeps the `error` status until the user retries or cancels (D-076). The
   // registry also owns the `beforeunload` warning for every non-clean state.
   const formGuard = useFormGuard({ dirty, saving: submitting, errorMessage: error, title: 'سمت سازمانی جدید' });
-  useDocumentTitle('ایجاد سمت سازمانی');
+  // Standalone route only (deep link): inside the list's tab the parent tab keeps its route
+  // title — the workspace tab must stay in step with the real route (UI_COMPONENTS.md:
+  // route title, then the declared RECORD name; a create form has no record to name yet).
+  useDocumentTitle(onSaved ? null : 'ایجاد سمت سازمانی');
   const { requestExit, exitBlocked, exitDialog } = useFormExit(formGuard, () => (onExit ? onExit() : navigate('/hr/org/positions')));
 
   const update = (patch: Partial<FormState>) => {
