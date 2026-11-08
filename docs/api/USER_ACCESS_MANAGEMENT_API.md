@@ -78,6 +78,12 @@
 ### ۳.۴ `PUT /api/v1/admin/companies/{companyId}/roles/{roleId}` (حساس + anti-forgery)
 - بدنه: `{ name, isActive, permissionCodes }` — تعویض کامل مجموعه مجوزها؛ نقش سیستمی → 409؛ غیرفعال‌سازی نقش دارای عضو فعال → 409 (ابتدا اعضا منتقل شوند)؛ Audit `CompanyRoleUpdated`؛ تغییر هم‌زمان → 409 (RowVersion نقش و عضویت‌ها).
 
+### ۳.۴.۱ `GET /api/v1/admin/companies/{companyId}/roles/{roleId}/permissions/preview` (Stage 2 — 2026-11-08)
+- Query: `permissionCodes` تکرارشونده (کل مجموعهٔ کاندید). پاسخ: `{ roleId, roleName, activeMemberCount, currentPermissionCodes[], addedPermissionCodes[], removedPermissionCodes[], sensitiveChangedPermissionCodes[], ceilingViolatedPermissionCodes[] }`.
+- **فقط-خواندنی و بدون Mutation/Audit:** هیچ داده‌ای ذخیره نمی‌شود؛ در زمان ذخیره، تمام کنترل‌های امنیتی (سقف D-071 درون تراکنش، RowVersion، anti-forgery) دوباره اجرا می‌شوند. پیش‌نمایش راه دور زدن سقف نیست.
+- محاسبه سمت سرور: افزوده/حذف‌شونده = تفاضل مجموعه کاندید با مجوزهای فعلی نقش؛ `activeMemberCount` = اعضای فعال نقش؛ **مجوز حساس** = پسوند `delete`/`approve`/`close` (قاعده server-owned طبق تاکسونومی `PERMISSION_CATALOG.md` §2)؛ `ceilingViolatedPermissionCodes` فقط برای مدیر شرکت گزارش می‌شود (مشاوره‌ای؛ رد قطعی در ذخیره) و برای مدیر نصب خالی است.
+- Auth: همان مجوز ویرایش (`roles.update`) دوحالتهٔ D-071 — بدون `roles.update` پیش‌نمایش هم 403 است (کشف سقف/ترکیب اعضا بسته می‌شود). نقش سیستمی → 409؛ کد ناشناخته/تکراری → 400؛ نقش بیگانه/غیرعضو → 404. `no-store`، rate limit.
+
 ### ۳.۵ `GET /api/v1/admin/companies/{companyId}/roles/{roleId}/members`
 - Query: `page` (پیش‌فرض ۱)، `pageSize` (پیش‌فرض ۲۵، clamp بین ۱ تا ۱۰۰) و `search` اختیاری (جستجوی سمت سرور روی `username`/`firstName`/`lastName`؛ قرارداد همان دایرکتوری کاربران: trim، خالی نادیده، بیش از ۱۲۰ نویسه → 400). پاسخ: `{ items: [{ userId, username, firstName, lastName, isUserActive, memberSinceUtc }], totalCount, page, pageSize }`؛ فقط اعضای فعال آن نقش برگردانده می‌شوند؛ فیلتر جستجو پیش از شمارش و صفحه‌بندی اعمال می‌شود؛ ترتیب نام خانوادگی، نام و سپس شناسه است؛ نقش بیگانه → 404. (حساس rate limit.)
 

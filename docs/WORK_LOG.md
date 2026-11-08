@@ -2785,8 +2785,19 @@
 - **تست محلی:** `dotnet build` بدون خطا؛ ۵۲ تست نقش/سقف/دسترسی مؤثر سبز؛ typecheck پاک؛ vitest ۹۰۲/۹۰۲؛ build موفق. تست‌های SQL Server به CI واگذار شد (Docker محلی موجود نیست)؛ دو شکست integration وابسته به SQL Server در محلی pre-existing و ServerUnreachable بود.
 - **Migration:** هیچ.
 
+## 2026-11-08 — مرحله دوم PR-C: Audit تلاش ناموفق واگذاری خارج از سقف
+- رویداد `CompanyRoleDelegationDenied` در هر چهار مسیر رد سقف (ایجاد/ویرایش/تخصیص/انتقال) با Actor/Company/عملیات/جزئیات؛ ذخیره اتمی درون تراکنش و fail-closed؛ تست‌های beyond-ceiling به قرارداد جدید به‌روز شدند. Migration: هیچ. (ثبت مستندات این PR در commit مجزا روی شاخهٔ PR-D انجام شد.)
+
+## 2026-11-08 — مرحله دوم PR-D: پیش‌نمایش سمت سرور اثر تغییر مجوزهای نقش
+- `GET .../roles/{roleId}/permissions/preview` (مجوز `roles.update` دوحالته؛ خروجی: افزوده/حذف‌شونده، activeMemberCount، حساس = delete/approve/close، تخلف سقف مشورتی)؛ بدون Mutation/Audit؛ UI دیالوگ preview به دادهٔ سرور وصل شد (اعضای متأثر + حساس + هشدار سقف)؛ ۴ تست Backend + تست UI؛ مستندات API §۳.۴.۱ و UAM §۶ و handoff. TDD؛ Migration: هیچ؛ vitest ۹۰۳/۹۰۳.
+
 ## 2026-11-08 — مرحله دوم PR-B: منبع مجوزبه‌مجوز در دسترسی مؤثر کاربر
 - `CompanyAccessService.GetGrantedPermissionsWithSourcesAsync` (همان محمول‌های QueryActiveMemberships؛ رکورد `GrantedPermissionSources`)؛ پاسخ `effective-permissions` علاوه بر `permissionCodes` فیلد `permissions:[{code,sourceRoleNames}]` دارد؛ دیالوگ «دسترسی مؤثر» UI جدول مجوز/منبع گرفت؛ تست Backend جدید + تست‌های UI به‌روز؛ مستندات API §۳.۱ و handoff. TDD؛ Migration: هیچ؛ vitest ۹۰۲/۹۰۲، ۳/۳ تست endpoint سبز.
+
+## 2026-11-08 — رفع خطای راه‌اندازی Endpoint پیش‌نمایش (PR-D)
+- ریشهٔ ۱۲۸ شکست: پارامتر `IReadOnlyList<string>? permissionCodes` در `GET .../roles/{roleId}/permissions/preview` بدون attribute به‌صورت Body استنباط می‌شد و Minimal API در زمان ساخت Route Table خطای «Body was inferred but the method does not allow inferred body parameters» می‌داد؛ کل اپ (و هر تستی که راه‌اندازی می‌کند) می‌شکست. قرارداد سندشده و کلاینت Query تکرارشونده است، پس پارامتر به `[FromQuery] string[]?` تغییر کرد (تغییر امضای مستقیم تست‌های واحد: `.ToArray()` در helper).
+- تست رگرسیون جدید سطح HTTP: `RolePermissionPreviewHttpTests` با `FaranouApplicationFactory` — بایند واقعی پارامترهای تکرارشوندهٔ Query از طریق Route Table، پاسخ ۲۰۰ با Diff سمت سرور، `no-store`، رد کد تکراری با ۴۰۰ و عدم هیچ Write/Audit نقش.
+- تست محلی: build کامل Release بدون خطا؛ ۴ تست Preview واحد + ۲ تست HTTP جدید + ۴ تست EffectivePermissions + ۳۷ تست WorkContext سبز. Migration: هیچ.
 
 ## 2026-11-08 — Issue #444 مرحله دوم PR-E: کپی گروه دسترسی و مقایسهٔ دو گروه
 - فهرست گروه‌ها: ستون «کپی» برای گروه‌های غیرسیستمی + بخش مقایسهٔ دو گروه (مشترک/فقط-در-هر-گروه از دادهٔ موجود)؛ فرم ایجاد: prefill از `?copyFrom=` با حذف و گزارش کدهای خارج از کاتالوگ/سقف کاربر؛ ذخیره از مسیر محافظت‌شدهٔ موجود؛ بدون API/Migration جدید؛ ۴ تست UI؛ ADMIN_UI §۱ و UAM §۵ به‌روزرسانی شدند. vitest ۹۰۴/۹۰۴؛ check:offline و check_static_assets سبز.

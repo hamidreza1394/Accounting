@@ -30,14 +30,29 @@ const title = () => screen.getByLabelText(/^عنوان گروه/);
 const active = () => screen.getByRole('checkbox', { name: 'گروه فعال باشد' });
 const save = () => screen.getByRole('button', { name: 'بررسی و ذخیرهٔ تغییرات' });
 
-/** Serves the roles list from `roles`; a PUT is answered by `onPut`. */
-function api(roles: unknown[] = [roleItem(), systemRole], onPut: (call: ApiCall) => Response | Promise<Response> = () => new Response(null, { status: 204 })) {
+/** Serves the roles list from `roles`; a PUT is answered by `onPut`; the preview by `onPreview`. */
+function api(
+  roles: unknown[] = [roleItem(), systemRole],
+  onPut: (call: ApiCall) => Response | Promise<Response> = () => new Response(null, { status: 204 }),
+  onPreview: (call: ApiCall) => Response | Promise<Response> = () =>
+    json({
+      roleId: 'role-1',
+      roleName: 'کارشناس فروش',
+      activeMemberCount: 3,
+      currentPermissionCodes: ['trade.orders.create', 'trade.orders.view'],
+      addedPermissionCodes: [],
+      removedPermissionCodes: [],
+      sensitiveChangedPermissionCodes: [],
+      ceilingViolatedPermissionCodes: [],
+    }),
+) {
   return stubApi((call) => {
     if (call.method === 'PUT') return onPut(call);
     if (call.path === '/api/v1/companies') return json(companiesBody);
     if (call.path === '/api/v1/admin/permission-catalog') return json(catalogItems);
     if (call.path === '/api/v1/admin/companies/a/roles') return json(roles);
     if (call.path === '/api/v1/admin/companies/a/roles/role-1/members') return json({ items: [], totalCount: 0, page: 1, pageSize: 20 });
+    if (call.path === '/api/v1/admin/companies/a/roles/role-1/permissions/preview') return onPreview(call);
     return new Response(null, { status: 404 });
   });
 }
@@ -128,6 +143,47 @@ describe('RoleDetailPage', () => {
     expect(Object.keys(puts(calls)[0]?.body as object).sort()).toEqual(['isActive', 'name', 'permissionCodes']);
     expect(puts(calls)[0]?.headers['X-XSRF-TOKEN']).toBe('tok');
     expect(await screen.findByText('تغییرات گروه دسترسی ذخیره شد.')).toBeInTheDocument();
+  });
+
+  it('shows the server-computed impact (member count, sensitive and ceiling codes) in the preview dialog', async () => {
+    const user = userEvent.setup();
+    const apiResult = api(
+      [roleItem(), systemRole],
+      () => new Response(null, { status: 204 }),
+      () =>
+        json({
+          roleId: 'role-1',
+          roleName: 'کارشناس فروش',
+          activeMemberCount: 5,
+          currentPermissionCodes: ['trade.orders.create', 'trade.orders.view'],
+          addedPermissionCodes: ['trade.orders.delete'],
+          removedPermissionCodes: [],
+          sensitiveChangedPermissionCodes: ['trade.orders.delete'],
+          ceilingViolatedPermissionCodes: ['trade.orders.delete'],
+        }),
+    );
+    setup();
+    await screen.findByRole('form', { name: 'فرم ویرایش گروه دسترسی' });
+    await user.click(leaf('حذف سفارش'));
+    await user.click(save());
+
+    const dialog = await screen.findByRole('dialog', { name: 'پیش‌نمایش تغییرات گروه' });
+    const impact = await within(dialog).findByText(/اعضای فعال تحت تأثیر/);
+    expect(impact).toHaveTextContent('۵ نفر');
+    expect(dialog).toHaveTextContent('مجوزهای حساس تغییرکرده');
+    expect(dialog).toHaveTextContent('خارج از سقف تفویض شما است');
+    // The preview is a GET with the whole candidate selection (the server computes the diff),
+    // and it never saves by itself.
+    const previewUrl = apiResult.mock.mock.calls.map((call) => String(call[0])).find((url) => url.includes('/permissions/preview'));
+    expect(new URL(previewUrl!, 'http://localhost').searchParams.getAll('permissionCodes').sort()).toEqual(
+      ['trade.orders.create', 'trade.orders.delete', 'trade.orders.view'].sort(),
+    );
+    expect(puts(apiResult.calls)).toHaveLength(0);
+
+    // Cancelling stays possible after seeing the impact.
+    await user.click(within(dialog).getByRole('button', { name: 'بازگشت به ویرایش' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(puts(apiResult.calls)).toHaveLength(0);
   });
 
   it('re-initializes from the saved values after a save: no stale form, no guards, no second save', async () => {

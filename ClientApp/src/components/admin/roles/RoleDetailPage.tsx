@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { ApiError, getCompanyRoles, updateCompanyRole } from '../../../api/client';
-import type { CompanyRole, PermissionCatalogItem } from '../../../api/types';
+import { ApiError, getCompanyRoles, previewCompanyRolePermissions, updateCompanyRole } from '../../../api/client';
+import type { CompanyRole, PermissionCatalogItem, RolePermissionPreview } from '../../../api/types';
 import { diffCodes } from '../../../lib/permissionTree';
 import { Link, useDocumentTitle, useNavigate, useParams, useSearchParams } from '../../../lib/router';
 import { ErrorState, LoadingState } from '../../Feedback';
@@ -111,6 +111,9 @@ function RoleEditor({
   const [focusTick, setFocusTick] = useState(0);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
+  const [serverPreview, setServerPreview] = useState<
+    { kind: 'idle' } | { kind: 'loading' } | { kind: 'ready'; data: RolePermissionPreview } | { kind: 'error'; message: string }
+  >({ kind: 'idle' });
 
   const names = useMemo(() => new Map(catalog.map((item) => [item.code, item.name])), [catalog]);
   const normalizedName = normalizeText(name);
@@ -174,6 +177,33 @@ function RoleEditor({
     setPreviewOpen(true);
   };
 
+  // The server-side impact preview (stage 2): member count, sensitive codes and ceiling
+  // violations are computed by the domain, not guessed in the client. Purely advisory: the
+  // save path re-runs every control, so a failed preview never blocks the honest save flow.
+  useEffect(() => {
+    if (!previewOpen) {
+      setServerPreview({ kind: 'idle' });
+      return undefined;
+    }
+    const controller = new AbortController();
+    setServerPreview({ kind: 'loading' });
+    previewCompanyRolePermissions(companyId, role.id, selection, controller.signal)
+      .then((data) => {
+        if (!controller.signal.aborted) setServerPreview({ kind: 'ready', data });
+      })
+      .catch((cause: unknown) => {
+        if (controller.signal.aborted || onUnauthenticated(cause)) return;
+        if (cause instanceof ApiError && cause.status === 403) onForbidden?.();
+        setServerPreview({
+          kind: 'error',
+          message: cause instanceof ApiError ? cause.message : 'محاسبهٔ اثر تغییرات انجام نشد؛ ادامه با بررسی محلی مجاز است.',
+        });
+      });
+    return () => controller.abort();
+    // The preview snapshot is bound to the moment the dialog opened: it describes exactly the
+    // change the user was shown, while the save re-reads everything fresh on the server.
+  }, [previewOpen]);
+
   const requestCancel = () => {
     if (submittingRef.current) return;
     if (dirty) setDiscardOpen(true);
@@ -203,6 +233,28 @@ function RoleEditor({
         <p className="mt-3">
           تعداد مجوزها: {number.format(role.permissionCodes.length)} ← {number.format(selection.length)}
         </p>
+        {serverPreview.kind === 'loading' ? <p role="status" className="mt-3 text-sm text-sub">در حال محاسبهٔ اثر تغییرات روی اعضا…</p> : null}
+        {serverPreview.kind === 'error' ? (
+          <p role="alert" className="mt-3 text-sm text-danger">{serverPreview.message}</p>
+        ) : null}
+        {serverPreview.kind === 'ready' ? (
+          <div className="mt-3 space-y-2">
+            <p className="text-sm text-sub">
+              اعضای فعال تحت تأثیر: <span className="font-semibold text-ink">{number.format(serverPreview.data.activeMemberCount)} نفر</span>
+              {statusChanged && !isActive ? ' (پس از غیرفعال‌شدن گروه، این اعضا دیگر این مجوزها را ندارند)' : ''}
+            </p>
+            {serverPreview.data.sensitiveChangedPermissionCodes.length > 0 ? (
+              <p className="text-sm font-semibold text-danger">
+                مجوزهای حساس تغییرکرده: {serverPreview.data.sensitiveChangedPermissionCodes.map((code) => names.get(code) ?? code).join('، ')}
+              </p>
+            ) : null}
+            {serverPreview.data.ceilingViolatedPermissionCodes.length > 0 ? (
+              <p className="text-sm font-semibold text-danger">
+                این کدها خارج از سقف تفویض شما است و ذخیره از سمت سرور رد می‌شود: {serverPreview.data.ceilingViolatedPermissionCodes.join('، ')}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     );
   }

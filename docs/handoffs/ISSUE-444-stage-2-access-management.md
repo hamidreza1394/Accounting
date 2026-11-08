@@ -62,8 +62,27 @@
   - `RoleMembersSection.tsx`: دیالوگ «دسترسی مؤثر» اکنون جدول مجوز/منبع دارد (ستون «منبع» با نام نقش‌ها)؛ caption sr-only.
   - تست: `EffectivePermissions_AttributesEveryCodeToItsGrantingActiveRoles` (مجوز مشترک بین دو نقش، نقش غیرفعال هرگز منبع نیست، برابری اجتماع کدها) + به‌روزرسانی تست‌های UI.
 - **تست‌های اجراشده (محلی):** build بدون خطا؛ ۳/۳ تست EffectivePermissions سبز؛ typecheck پاک؛ vitest ۹۰۲/۹۰۲؛ build موفق.
+- **Migration:** هیچ.
 
-- **این فایل append-only است؛** هر PR بخش خود را به انتهای آن اضافه می‌کند. (این نسخه از شاخهٔ مستقل PR-E ساخته شده و با Merge ترتیبی PRهای دیگر کامل می‌شود؛ بخش‌های ۰ تا ۴ در PR #590/#591/#592/#593 هستند.)
+## 3.5 PR-C — Audit تلاش ناموفق واگذاری خارج از سقف (D-071)
+
+- **شاخه:** `agent/444-stage2-access-audit` (stacked روی PR-B)
+- **تغییرات:** هر چهار مسیر `ForbiddenBeyondCeiling` (ایجاد/ویرایش/تخصیص/انتقال گروهی) رویداد `CompanyRoleDelegationDenied` با Actor/Company/عملیات/جزئیات تلاش می‌نویسند؛ ذخیره درون همان تراکنش باز و Commit آن اتمی و fail-closed است (رویداد Audit تنها تغییر در انتظار در این مسیر است). گارد خود-تخصیص عمداً Audit سقف نمی‌گیرد.
+- تست: چهار تست beyond-ceiling به‌روزرسانی شدند (دقیقاً یک رویداد رد، هیچ رویداد موفق)؛ اجرای واقعی روی build تازه: ۴۱ سبز، ۵ skip (SQL Server).
+- Migration: هیچ. یادداشت: بخش مستنداتی این PR در commit خودش ثبت نشده بود و با یک commit مستنداتی مجزا در شاخهٔ PR-D تکمیل شد.
+
+## 4. PR-D — پیش‌نمایش اثر تغییر مجوزهای نقش (سمت سرور)
+
+- **شاخه:** `agent/444-stage2-role-preview` (stacked روی PR-C)
+- **وضعیت پیش از این PR:** دیالوگ «پیش‌نمایش تغییرات گروه» در `RoleDetailPage` سمت کلاینت وجود داشت، اما تعداد اعضای متأثر، مجوزهای حساس و سقف تفویض را نشان نمی‌داد و محاسبهٔ دامنه سمت سرور نداشت.
+- **تغییرات:**
+  - `GET .../roles/{roleId}/permissions/preview` در `CompanyRoleAdministrationEndpoints` — همان مجوز ویرایش (`roles.update`، دوحالته D-071)؛ خروجی: افزوده/حذف‌شونده، `activeMemberCount`، `sensitiveChangedPermissionCodes` (قاعده server-owned: پسوند delete/approve/close) و `ceilingViolatedPermissionCodes` (گزارشی، نه بازدارنده؛ ذخیره سقف را درون تراکنش دوباره enforce می‌کند).
+  - فقط-خواندنی: هیچ ذخیره‌ای، هیچ Audit، `no-store`، rate limit؛ نقش سیستمی 409؛ کد ناشناخته 400؛ نقش بیگانه/غیرعضو 404.
+  - `RoleDetailPage`: هنگام باز شدن دیالوگ، پیش‌نمایش سرور گرفته می‌شود؛ نمایش اعضای متأثر، برجسته‌سازی مجوز حساس و هشدار سقف؛ خطای preview جریان ذخیره را نمی‌بندد (preview مشورتی است).
+  - تست‌های جدید: `RolePermissionPreviewEndpointTests` (۴ تست) + تست UI دیالوگ.
+- **تست محلی:** build بدون خطا؛ ۴/۴ تست preview سبز؛ typecheck پاک؛ vitest ۹۰۳/۹۰۳؛ build موفق.
+- **Migration:** هیچ.
+- **رفع خطای راه‌اندازی Endpoint (۲۰۲۶-۱۱-۰۸):** پارامتر کاندید بدون attribute به‌صورت Body استنباط می‌شد و ساخت Route Table با «Body was inferred but the method does not allow inferred body parameters» می‌شکست (ریشهٔ ۱۲۸ شکست CI)؛ قرارداد سندشده و کلاینت Query تکرارشونده است، پس پارامتر به `[FromQuery] string[]?` تغییر کرد و تست رگرسیون سطح HTTP (`RolePermissionPreviewHttpTests` با `FaranouApplicationFactory`) بایند واقعی Query، ۲۰۰ + `no-store`، ۴۰۰ کد تکراری و عدم هر Write/Audit را پوشش داد.
 
 ## 5. PR-E — کپی گروه دسترسی و مقایسهٔ دو گروه (UI، مستقل)
 
