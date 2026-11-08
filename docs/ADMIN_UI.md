@@ -61,6 +61,7 @@
 | `PasswordInput` | ورودی رمز واحد پروژه، `dir=ltr`، نمایش/پنهان با `aria-pressed`؛ در فرم کاربر، حساب من و دیالوگ step-up ابطال نشست استفاده می‌شود | `ui/PasswordInput.tsx` (ادغام نسخه‌های قبلی انجام شد) |
 | `userFlash` | پیام موفقیت یک‌بارمصرف `{userId, kind}` در حافظهٔ ماژول، TTL ۳۰ ثانیه | `admin/users/userFlash.ts` |
 | `AdminRevokeSessionDialog` | دیالوگ step-up ابطال نشست کاربر دیگر (D-073 §1): رمز مدیر + دلیل از کاتالوگ سرور؛ خطا با حفظ مقادیر؛ گارد دوارسالی | `admin/users/profile/AdminRevokeSessionDialog.tsx` |
+| `HrLinkActions` | اتصال/قطع اتصال پرونده پرسنلی از پرونده کاربر (D-072): جست‌وجوی سرور-سمت کارمندان بدون حساب، اتصال با تأیید و قطع با تأیید؛ بازخوانی پس از موفقیت | `admin/users/profile/HrLinkActions.tsx` |
 
 **موجود نیستند (`NotImplemented`)** و تا نیاز واقعی و API مربوط ساخته نمی‌شوند: `UserSelector`، `FiscalYearSelector`، `FiscalPeriodSelector` (`PermissionTree` در `ui/PermissionTree.tsx` و انتخاب‌گر شرکت نقش‌ها در `admin/roles/CompanySelect.tsx` اکنون `Implemented`). برای انتخاب شرکت/دوره الگوی موجود `WorkContextSelector` است و نباید موازی‌اش ساخته شود مگر با بازبینی.
 
