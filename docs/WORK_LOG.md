@@ -2787,3 +2787,6 @@
 
 ## 2026-11-08 — مرحله دوم PR-B: منبع مجوزبه‌مجوز در دسترسی مؤثر کاربر
 - `CompanyAccessService.GetGrantedPermissionsWithSourcesAsync` (همان محمول‌های QueryActiveMemberships؛ رکورد `GrantedPermissionSources`)؛ پاسخ `effective-permissions` علاوه بر `permissionCodes` فیلد `permissions:[{code,sourceRoleNames}]` دارد؛ دیالوگ «دسترسی مؤثر» UI جدول مجوز/منبع گرفت؛ تست Backend جدید + تست‌های UI به‌روز؛ مستندات API §۳.۱ و handoff. TDD؛ Migration: هیچ؛ vitest ۹۰۲/۹۰۲، ۳/۳ تست endpoint سبز.
+
+## 2026-11-08 — Issue #444 مرحله دوم PR-E: کپی گروه دسترسی و مقایسهٔ دو گروه
+- فهرست گروه‌ها: ستون «کپی» برای گروه‌های غیرسیستمی + بخش مقایسهٔ دو گروه (مشترک/فقط-در-هر-گروه از دادهٔ موجود)؛ فرم ایجاد: prefill از `?copyFrom=` با حذف و گزارش کدهای خارج از کاتالوگ/سقف کاربر؛ ذخیره از مسیر محافظت‌شدهٔ موجود؛ بدون API/Migration جدید؛ ۴ تست UI؛ ADMIN_UI §۱ و UAM §۵ به‌روزرسانی شدند. vitest ۹۰۴/۹۰۴؛ check:offline و check_static_assets سبز.
