@@ -298,6 +298,60 @@ public sealed class CompanyRoleAdministrationEndpointTests
     }
 
     [Fact]
+    public async Task GetRoleMembers_SearchFiltersServerSideByUserFields()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddAdministrator();
+        fixture.AddCompany();
+        var role = fixture.AddRole("ACCOUNTANT");
+        var sarah = fixture.AddMember(role, "sarah");
+        sarah.FirstName = "سارا";
+        sarah.LastName = "احمدی";
+        var david = fixture.AddMember(role, "david");
+        david.FirstName = "داود";
+        david.LastName = "کاظمی";
+        fixture.AddMember(role, "inactive-sarah", membershipActive: false);
+        await fixture.Database.SaveChangesAsync();
+
+        // By username (Latin identifiers stay exact-case in tests; SQL Server CI is case-insensitive
+        // through its collation while the in-memory store is ordinal).
+        var byUsername = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
+            fixture.CompanyId, role.Id, null, null, "sarah", new DefaultHttpContext(),
+            fixture.Principal(admin.Id), fixture.Database, fixture.CompanyAccess, default);
+        var usernamePage = Assert.IsType<Ok<Server.Api.CompanyRoleMemberListResponse>>(byUsername).Value!;
+        var usernameMember = Assert.Single(usernamePage.Items);
+        Assert.Equal(sarah.Id, usernameMember.UserId);
+        Assert.Equal(1, usernamePage.TotalCount);
+
+        // By Persian first name.
+        var byName = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
+            fixture.CompanyId, role.Id, null, null, "سارا", new DefaultHttpContext(),
+            fixture.Principal(admin.Id), fixture.Database, fixture.CompanyAccess, default);
+        var namePage = Assert.IsType<Ok<Server.Api.CompanyRoleMemberListResponse>>(byName).Value!;
+        Assert.Equal(sarah.Id, Assert.Single(namePage.Items).UserId);
+
+        // A term that only matches the inactive membership must not leak it.
+        var byInactive = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
+            fixture.CompanyId, role.Id, null, null, "inactive-sarah", new DefaultHttpContext(),
+            fixture.Principal(admin.Id), fixture.Database, fixture.CompanyAccess, default);
+        var inactivePage = Assert.IsType<Ok<Server.Api.CompanyRoleMemberListResponse>>(byInactive).Value!;
+        Assert.Empty(inactivePage.Items);
+        Assert.Equal(0, inactivePage.TotalCount);
+
+        // Whitespace-only and too-long searches behave like the admin user directory contract.
+        var blank = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
+            fixture.CompanyId, role.Id, null, null, "   ", new DefaultHttpContext(),
+            fixture.Principal(admin.Id), fixture.Database, fixture.CompanyAccess, default);
+        var blankPage = Assert.IsType<Ok<Server.Api.CompanyRoleMemberListResponse>>(blank).Value!;
+        Assert.Equal(2, blankPage.TotalCount);
+
+        var tooLong = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
+            fixture.CompanyId, role.Id, null, null, new string('ا', 121), new DefaultHttpContext(),
+            fixture.Principal(admin.Id), fixture.Database, fixture.CompanyAccess, default);
+        Assert.Equal(StatusCodes.Status400BadRequest, (tooLong as IStatusCodeHttpResult)?.StatusCode);
+    }
+
+    [Fact]
     public async Task TransferMembers_MovesActiveMembersAndWritesOneAuditEvent()
     {
         await using var fixture = new Fixture();

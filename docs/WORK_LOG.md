@@ -2777,3 +2777,10 @@
 - **Merge:** هیچ PRی merge نشد؛ تصمیم با مالک.
 
 - **PR #589 — حل تعارض با main (۲۰۲۶-۱۱-۰۸):** `ClientApp/src/App.tsx` در سه بلوک تعارض داشت. طرف #589 (تابع `changeContext` که فقط `getWorkContext` را بدون رفتن به حالت `loading` می‌گیرد، و Overlay انتخاب‌گر بالای Shell) نگه داشته شد. اصلاح #584 در effect (حفظ state قبلی هنگام `reload` وقتی زمینهٔ فعال وجود دارد) هم حفظ شد، چون `onRefresh={reload}` در Overlay انتخاب‌گر هنوز `reload()` را صدا می‌زند و بدون آن Shell در آن مسیر Unmount می‌شد. هیچ قابلیتی حذف نشد؛ بخش‌های `WORK_LOG` هر دو طرف نگه داشته شدند.
+
+## 2026-11-08 — Issue #444 مرحله دوم: تکمیل PR #589، ممیزی stage-2 و PR-A (جستجوی سمت سرور اعضای نقش)
+- **PR #589:** Base از `feat/ui-workspace-navigation-polish` (که در #587 مرج شده بود) به `main` تغییر کرد؛ ancestry بررسی شد (head شامل نوک main بود) و Diff فقط تغییرات مرحله اول باقی ماند. هر ۱۰ چک CI روی SHA `655820c57fb9` سبز و PR با merge commit `65a04c2628a9` ادغام شد؛ CI روی main جدید کاملاً سبز.
+- **ممیزی stage-2:** وضعیت ۱۶ مورد مأموریت با شاهد فایل/تست در `docs/handoffs/ISSUE-444-stage-2-access-management.md` ثبت شد. شکاف‌های واقعی: جستجوی اعضا، منبع مجوزبه‌مجوز، Audit تلاش ناموفق سقف، پیش‌نمایش تغییر مجوز، کپی/مقایسه نقش.
+- **PR-A (شاخه `agent/444-stage2-role-members-search`):** پارامتر `search` سمت سرور در `GET .../roles/{roleId}/members` (قرارداد دایرکتوری کاربران: trim، >۱۲۰ نویسه → 400؛ فیلتر username/firstName/lastName پیش از Count/Skip/Take)؛ کلاینت به query object با ارسال شرطی تغییر کرد؛ UI فرم `role="search"` با debounce ۳۰۰ms و ریست صفحه؛ تست Backend جدید + تست UI/کلاینت؛ مستندات API/ADMIN_UI/USER_ACCESS_MANAGEMENT/handoff. TDD: ابتدا تست شکست‌خورده، سپس پیاده‌سازی.
+- **تست محلی:** `dotnet build` بدون خطا؛ ۵۲ تست نقش/سقف/دسترسی مؤثر سبز؛ typecheck پاک؛ vitest ۹۰۲/۹۰۲؛ build موفق. تست‌های SQL Server به CI واگذار شد (Docker محلی موجود نیست)؛ دو شکست integration وابسته به SQL Server در محلی pre-existing و ServerUnreachable بود.
+- **Migration:** هیچ.

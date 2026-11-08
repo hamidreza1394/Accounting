@@ -13,10 +13,21 @@ describe('role members API client', () => {
   it('reads one page with encoded ids', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, memberPage([memberItem(1)], { page: 2, pageSize: 10, totalCount: 11 })));
     vi.stubGlobal('fetch', fetchMock);
-    const page = await getCompanyRoleMembers('a/b', 'r 1', 2, 10);
+    const page = await getCompanyRoleMembers('a/b', 'r 1', { page: 2, pageSize: 10 });
     expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/v1/admin/companies/a%2Fb/roles/r%201/members?page=2&pageSize=10');
     expect(page).toMatchObject({ page: 2, pageSize: 10, totalCount: 11 });
     expect(page.items[0]).toMatchObject({ userId: 'user-1', username: 'member1', isUserActive: true });
+  });
+
+
+  it('sends the server-side search term only when it is non-empty', async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => jsonResponse(200, memberPage([memberItem(1)], { page: 1, pageSize: 20, totalCount: 1 })));
+    vi.stubGlobal('fetch', fetchMock);
+    await getCompanyRoleMembers('c1', 'r1', { page: 1, pageSize: 20, search: '\u0633\u0627\u0631\u0627' });
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/v1/admin/companies/c1/roles/r1/members?page=1&pageSize=20&search=' + encodeURIComponent('\u0633\u0627\u0631\u0627'));
+    await getCompanyRoleMembers('c1', 'r1', { page: 1, pageSize: 20, search: '   ' });
+    const second = String(fetchMock.mock.calls[1]?.[0]);
+    expect(new URL(second, 'http://localhost').searchParams.has('search')).toBe(false);
   });
 
   it('transfers with an anti-forgery token and exactly { targetRoleId }, returning the moved count', async () => {

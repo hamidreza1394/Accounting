@@ -79,7 +79,7 @@
 - بدنه: `{ name, isActive, permissionCodes }` — تعویض کامل مجموعه مجوزها؛ نقش سیستمی → 409؛ غیرفعال‌سازی نقش دارای عضو فعال → 409 (ابتدا اعضا منتقل شوند)؛ Audit `CompanyRoleUpdated`؛ تغییر هم‌زمان → 409 (RowVersion نقش و عضویت‌ها).
 
 ### ۳.۵ `GET /api/v1/admin/companies/{companyId}/roles/{roleId}/members`
-- Query: `page` (پیش‌فرض ۱) و `pageSize` (پیش‌فرض ۲۵، clamp بین ۱ تا ۱۰۰). پاسخ: `{ items: [{ userId, username, firstName, lastName, isUserActive, memberSinceUtc }], totalCount, page, pageSize }`؛ فقط اعضای فعال آن نقش برگردانده می‌شوند؛ ترتیب نام خانوادگی، نام و سپس شناسه است؛ نقش بیگانه → 404. (حساس rate limit.)
+- Query: `page` (پیش‌فرض ۱)، `pageSize` (پیش‌فرض ۲۵، clamp بین ۱ تا ۱۰۰) و `search` اختیاری (جستجوی سمت سرور روی `username`/`firstName`/`lastName`؛ قرارداد همان دایرکتوری کاربران: trim، خالی نادیده، بیش از ۱۲۰ نویسه → 400). پاسخ: `{ items: [{ userId, username, firstName, lastName, isUserActive, memberSinceUtc }], totalCount, page, pageSize }`؛ فقط اعضای فعال آن نقش برگردانده می‌شوند؛ فیلتر جستجو پیش از شمارش و صفحه‌بندی اعمال می‌شود؛ ترتیب نام خانوادگی، نام و سپس شناسه است؛ نقش بیگانه → 404. (حساس rate limit.)
 
 ### ۳.۶ `POST /api/v1/admin/companies/{companyId}/roles/{roleId}/members/{userId}` (حساس + anti-forgery)
 - تخصیص نقش به عضو فعال موجود؛ عضویت جدید/غیرفعال → 409 «از مسیر تأیید مقصد»؛ نقش سیستمی → 409 «تخصیص گروه سیستمی مجاز نیست.» (اصلاح 2026-11-05)؛ خود-تخصیص شرکتی → 403؛ فراتر از سقف → 403؛ Audit `UserCompanyRoleAssigned`.

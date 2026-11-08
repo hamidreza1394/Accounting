@@ -91,7 +91,7 @@ public sealed class CompanyRoleMembersSqlServerTests
             foreach (var pageNumber in new[] { 1, 2, 3 })
             {
                 var page = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
-                    company.Id, source.Id, pageNumber, 2, new DefaultHttpContext(), Principal(admin.Id),
+                    company.Id, source.Id, pageNumber, 2, null, new DefaultHttpContext(), Principal(admin.Id),
                     database, new Infrastructure.Tenancy.CompanyAccessService(database), cancellationToken);
                 var list = Assert.IsType<Ok<Server.Api.CompanyRoleMemberListResponse>>(page).Value!;
                 Assert.Equal(5, list.TotalCount);
