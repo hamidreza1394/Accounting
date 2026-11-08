@@ -143,6 +143,7 @@ public sealed class HrOrganizationalStructureEndpointTests
         await using var fixture = new Fixture();
         var manager = await fixture.AddMemberWithPermission(
             fixture.Company,
+            HrOrganizationalStructureEndpoints.ListEmployeesPermission,
             HrOrganizationalStructureEndpoints.CreateEmployeesPermission,
             HrOrganizationalStructureEndpoints.ViewEmployeesPermission,
             HrOrganizationalStructureEndpoints.ManageEmployeeUserLinkPermission);
