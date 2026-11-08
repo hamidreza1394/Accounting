@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react';
-import { ApiError, createCompanyRole, getPermissionTemplates } from '../../../api/client';
-import type { PermissionTemplate } from '../../../api/types';
+import { ApiError, createCompanyRole, getCompanyRoles, getPermissionTemplates } from '../../../api/client';
+import type { CompanyRole, PermissionTemplate } from '../../../api/types';
 import { Link, useNavigate, useSearchParams } from '../../../lib/router';
 import { ErrorState, LoadingState } from '../../Feedback';
 import { Alert } from '../../ui/Alert';
@@ -59,6 +59,10 @@ export function RoleCreatePage({ onUnauthenticated, defaultCompanyId, isInstalla
   const [submitting, setSubmitting] = useState(false);
   const [focusTick, setFocusTick] = useState(0);
   const [discardOpen, setDiscardOpen] = useState(false);
+  // Copying an existing role (stage 2): the create form starts from the source's values but the
+  // creation itself goes through the normal guarded POST, so the server keeps every control.
+  const copyFromId = params.get('copyFrom') ?? '';
+  const [copySource, setCopySource] = useState<{ role: CompanyRole; skippedCodes: string[] } | 'failed' | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -75,6 +79,37 @@ export function RoleCreatePage({ onUnauthenticated, defaultCompanyId, isInstalla
 
   // The select shows a template only while the selection still equals what it produced.
   const shownTemplate = templateCode !== '' && sameCodes(selection, baseline) ? templateCode : '';
+
+  // A copy request (?copyFrom=<roleId>) prefills the form once, from the roles list the actor can
+  // already read. Codes outside the actor's catalog (beyond their delegation ceiling, D-071) are
+  // left out and reported, so the copy can never smuggle a capability the actor cannot see.
+  useEffect(() => {
+    if (copyFromId === '' || catalogState.kind !== 'ready') return;
+    const controller = new AbortController();
+    getCompanyRoles(companyId, controller.signal)
+      .then((roles) => {
+        if (controller.signal.aborted) return;
+        const source = roles.find((candidate) => candidate.id === copyFromId);
+        if (!source) {
+          setCopySource('failed');
+          return;
+        }
+        const catalogCodeSet = new Set(catalogState.catalog.map((item) => item.code));
+        const carried = source.permissionCodes.filter((permission) => catalogCodeSet.has(permission));
+        const skipped = source.permissionCodes.filter((permission) => !catalogCodeSet.has(permission));
+        setCode(`${source.code}-COPY`);
+        setName(`کپی ${source.name}`);
+        setSelection(carried);
+        setBaseline(carried);
+        setCopySource({ role: source, skippedCodes: skipped });
+      })
+      .catch((cause: unknown) => {
+        if (controller.signal.aborted || onUnauthenticated(cause)) return;
+        setCopySource('failed');
+      });
+    return () => controller.abort();
+    // The prefill runs once per (company, source, catalog) — user edits afterwards are never overwritten.
+  }, [copyFromId, companyId, catalogState.kind]);
   const catalog = catalogState.kind === 'ready' ? catalogState.catalog : null;
   const knownCodes = useMemo(() => new Set(catalog?.map((item) => item.code)), [catalog]);
 
@@ -207,6 +242,16 @@ export function RoleCreatePage({ onUnauthenticated, defaultCompanyId, isInstalla
         ) : null}
 
         <Alert tone="info">{delegationNote(isInstallationAdministrator)}</Alert>
+
+        {copySource === 'failed' ? <Alert tone="warning">بارگذاری اطلاعات گروه مبدأ برای کپی ممکن نشد؛ فرم را دستی کامل کنید.</Alert> : null}
+        {copySource && copySource !== 'failed' ? (
+          <Alert tone="info">
+            کپی از گروه «{copySource.role.name}»: کد و عنوان و {new Intl.NumberFormat('fa-IR').format(copySource.role.permissionCodes.length - copySource.skippedCodes.length)} مجوز آن از قبل انتخاب شده است؛ پیش از ذخیره، کد و عنوان را بررسی و در صورت نیاز تغییر دهید.
+            {copySource.skippedCodes.length > 0
+              ? ` ${new Intl.NumberFormat('fa-IR').format(copySource.skippedCodes.length)} مجوز خارج از کاتالوگ/سقف شما در این کپی لحاظ نشد.`
+              : ''}
+          </Alert>
+        ) : null}
 
         <FormSection headingLevel={2} title="مشخصات گروه">
           <FormField label="کد گروه" required error={errorFor('code')} hint="حروف لاتین، ارقام و . _ - ؛ پس از ثبت قابل تغییر نیست.">

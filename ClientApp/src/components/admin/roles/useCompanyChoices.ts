@@ -38,6 +38,9 @@ export function resolveCompanyId(params: URLSearchParams, defaultCompanyId: stri
 }
 
 export const rolesPath = (companyId: string): string => `/admin/roles?company=${encodeURIComponent(companyId)}`;
-export const newRolePath = (companyId: string): string => `/admin/roles/new?company=${encodeURIComponent(companyId)}`;
+export const newRolePath = (companyId: string, copyFromRoleId?: string): string => {
+  const base = `/admin/roles/new?company=${encodeURIComponent(companyId)}`;
+  return copyFromRoleId ? `${base}&copyFrom=${encodeURIComponent(copyFromRoleId)}` : base;
+};
 export const rolePath = (companyId: string, roleId: string): string =>
   `/admin/roles/${encodeURIComponent(roleId)}?company=${encodeURIComponent(companyId)}`;

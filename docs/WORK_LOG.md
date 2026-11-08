@@ -2798,3 +2798,6 @@
 - ریشهٔ ۱۲۸ شکست: پارامتر `IReadOnlyList<string>? permissionCodes` در `GET .../roles/{roleId}/permissions/preview` بدون attribute به‌صورت Body استنباط می‌شد و Minimal API در زمان ساخت Route Table خطای «Body was inferred but the method does not allow inferred body parameters» می‌داد؛ کل اپ (و هر تستی که راه‌اندازی می‌کند) می‌شکست. قرارداد سندشده و کلاینت Query تکرارشونده است، پس پارامتر به `[FromQuery] string[]?` تغییر کرد (تغییر امضای مستقیم تست‌های واحد: `.ToArray()` در helper).
 - تست رگرسیون جدید سطح HTTP: `RolePermissionPreviewHttpTests` با `FaranouApplicationFactory` — بایند واقعی پارامترهای تکرارشوندهٔ Query از طریق Route Table، پاسخ ۲۰۰ با Diff سمت سرور، `no-store`، رد کد تکراری با ۴۰۰ و عدم هیچ Write/Audit نقش.
 - تست محلی: build کامل Release بدون خطا؛ ۴ تست Preview واحد + ۲ تست HTTP جدید + ۴ تست EffectivePermissions + ۳۷ تست WorkContext سبز. Migration: هیچ.
+
+## 2026-11-08 — Issue #444 مرحله دوم PR-E: کپی گروه دسترسی و مقایسهٔ دو گروه
+- فهرست گروه‌ها: ستون «کپی» برای گروه‌های غیرسیستمی + بخش مقایسهٔ دو گروه (مشترک/فقط-در-هر-گروه از دادهٔ موجود)؛ فرم ایجاد: prefill از `?copyFrom=` با حذف و گزارش کدهای خارج از کاتالوگ/سقف کاربر؛ ذخیره از مسیر محافظت‌شدهٔ موجود؛ بدون API/Migration جدید؛ ۴ تست UI؛ ADMIN_UI §۱ و UAM §۵ به‌روزرسانی شدند. vitest ۹۰۴/۹۰۴؛ check:offline و check_static_assets سبز.

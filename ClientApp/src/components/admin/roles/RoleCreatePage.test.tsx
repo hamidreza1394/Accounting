@@ -30,12 +30,17 @@ const template = () => screen.getByLabelText(/^الگوی مجوز/);
 const submit = () => screen.getByRole('button', { name: 'ایجاد گروه دسترسی' });
 const leaf = (name: string) => screen.getByRole('checkbox', { name });
 
-function api(onPost: (call: ApiCall) => Response | Promise<Response> = () => json({ id: 'new-id' }, 201), catalog: Response = json(catalogItems)) {
+function api(
+  onPost: (call: ApiCall) => Response | Promise<Response> = () => json({ id: 'new-id' }, 201),
+  catalog: Response = json(catalogItems),
+  roles: Response | null = null,
+) {
   return stubApi((call) => {
     if (call.method === 'POST') return onPost(call);
     if (call.path === '/api/v1/companies') return json(companiesBody);
     if (call.path === '/api/v1/admin/permission-catalog') return catalog.clone();
     if (call.path === '/api/v1/admin/permission-templates') return json(templates);
+    if (call.path === '/api/v1/admin/companies/a/roles') return roles ?? new Response(null, { status: 404 });
     return new Response(null, { status: 404 });
   });
 }
@@ -134,6 +139,49 @@ describe('RoleCreatePage', () => {
     expect(leaf('حذف سفارش')).toBeChecked();
     expect(leaf('گزارش شرکتی')).not.toBeChecked();
     expect(template()).toHaveValue('trade.manager');
+  });
+
+  it('prefills the form from a copy source and skips codes outside the actor catalog', async () => {
+    const user = userEvent.setup();
+    const source = {
+      id: 'role-src',
+      companyId: 'a',
+      code: 'HR',
+      name: 'منابع انسانی',
+      isSystemRole: false,
+      isActive: true,
+      permissionCount: 3,
+      activeMemberCount: 2,
+      permissionCodes: ['trade.orders.view', 'trade.orders.create', 'hr.employees.list'],
+    };
+    const { calls } = api(undefined, json(catalogItems), json([source]));
+    setup('?company=a&copyFrom=role-src');
+    await ready();
+
+    // Code and title are prefilled as an editable starting point.
+    expect(code()).toHaveValue('HR-COPY');
+    expect(title()).toHaveValue('کپی منابع انسانی');
+    expect(leaf('مشاهدهٔ سفارش‌ها')).toBeChecked();
+    expect(leaf('ایجاد سفارش')).toBeChecked();
+    // hr.employees.list is not in this actor's catalog: left out and reported, never smuggled.
+    expect(screen.queryByRole('checkbox', { name: 'فهرست کارکنان شرکت' })).toBeNull();
+    const notice = await screen.findByText(/کپی از گروه «منابع انسانی»/);
+    expect(notice).toHaveTextContent('۱ مجوز خارج از کاتالوگ/سقف شما در این کپی لحاظ نشد');
+
+    // The creation still goes through the normal guarded POST with the carried codes only.
+    await user.click(submit());
+    await waitFor(() => expect(posts(calls)).toHaveLength(1));
+    expect(posts(calls)[0]?.body).toMatchObject({ code: 'HR-COPY', name: 'کپی منابع انسانی' });
+    expect((posts(calls)[0]?.body as { permissionCodes: string[] }).permissionCodes.sort()).toEqual(['trade.orders.create', 'trade.orders.view'].sort());
+  });
+
+  it('reports a missing copy source honestly instead of prefilling anything', async () => {
+    api(undefined, json(catalogItems), json([]));
+    setup('?company=a&copyFrom=missing-role');
+    await ready();
+    expect(await screen.findByText(/بارگذاری اطلاعات گروه مبدأ برای کپی ممکن نشد/)).toBeInTheDocument();
+    expect(code()).toHaveValue('');
+    expect(title()).toHaveValue('');
   });
 
   it('sends the template selection as permissionCodes (the server prefers explicit codes)', async () => {
