@@ -48,8 +48,11 @@ export function HrEmployeeCreatePage({ onUnauthenticated, companyId, onSaved, on
   // a failed save keeps the `error` status until the user retries or cancels (D-076). The
   // registry also owns the `beforeunload` warning for every non-clean state.
   const formGuard = useFormGuard({ dirty, saving: submitting, errorMessage: error, title: 'کارمند جدید' });
-  // The tab names the form while the create flow is open (the list keeps its filters hidden).
-  useDocumentTitle('ثبت کارمند');
+  // The standalone route (deep link) names the browser tab. Inside the list's tab the parent
+  // tab keeps its route title: the workspace tab must stay in step with the real route
+  // (`UI_COMPONENTS.md`: route title, then the declared RECORD name — a create form has no
+  // record to name yet), and the test `HrIntegration.test.tsx` pins exactly that contract.
+  useDocumentTitle(onSaved ? null : 'ثبت کارمند');
   const { requestExit, exitBlocked, exitDialog } = useFormExit(formGuard, () => (onExit ? onExit() : navigate('/hr/org/employees')));
 
   const update = (patch: Partial<FormState>) => {
