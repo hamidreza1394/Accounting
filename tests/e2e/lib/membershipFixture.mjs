@@ -274,6 +274,10 @@ export async function createMembershipFixture(label) {
         ].filter(Boolean).join(' OR ')}`
         : null,
       actor ? `DELETE FROM SecurityAuditEvents WHERE ${actor}` : null,
+      // The user-profile spec creates real HR records through the API; they must go before
+      // their company (FK_CompanyEmployees_Companies_TenantId) and their assignments.
+      companies.clause ? `DELETE FROM CompanyEmployeeAssignments WHERE TenantId IN (${companies.clause})` : null,
+      companies.clause ? `DELETE FROM CompanyEmployees WHERE TenantId IN (${companies.clause})` : null,
       roles.clause ? `DELETE FROM CompanyRolePermissions WHERE RoleId IN (${roles.clause})` : null,
       membership ? `DELETE FROM UserCompanyMemberships WHERE ${membership}` : null,
       users.clause ? `DELETE FROM UserSessions WHERE UserId IN (${users.clause})` : null,

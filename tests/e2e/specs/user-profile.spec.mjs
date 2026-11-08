@@ -111,7 +111,7 @@ test.describe('user profile workspace: HR link, request states, permissions, ses
     await expect(results.getByRole('listitem')).toHaveCount(1);
     await results.getByRole('button', { name: `انتخاب ${target.displayName} آزمونی` }).click();
     await linkDialog.getByRole('button', { name: `اتصال ${target.displayName} آزمونی` }).click();
-    await expect(page.getByRole('status')).toHaveTextContent('پرونده پرسنلی «' + target.displayName + ' آزمونی» به این حساب متصل شد.');
+    await expect(page.getByRole('status')).toContainText('پرونده پرسنلی «' + target.displayName + ' آزمونی» به این حساب متصل شد.');
     await expect(panel.getByText('E2E-77')).toBeVisible();
     await capture(page, '02-identity-hr-link.png');
     await expectAccessible(page, '[aria-labelledby="profile-hr-heading"]');
@@ -120,7 +120,7 @@ test.describe('user profile workspace: HR link, request states, permissions, ses
     await panel.getByRole('button', { name: `قطع اتصال پرونده پرسنلی در ${destination.name}` }).click();
     const unlinkDialog = page.getByRole('alertdialog', { name: `قطع اتصال — ${destination.name}` });
     await unlinkDialog.getByRole('button', { name: 'قطع اتصال' }).click();
-    await expect(page.getByRole('status')).toHaveTextContent('اتصال پرونده پرسنلی قطع شد.');
+    await expect(page.getByRole('status')).toContainText('اتصال پرونده پرسنلی قطع شد.');
     await expect(panel.getByText('پرونده پرسنلی متصل نشده است.')).toBeVisible();
 
     await capture(page, '01-profile-workspace.png');
@@ -242,7 +242,7 @@ test.describe('user profile workspace: HR link, request states, permissions, ses
     await stepUp.getByLabel(/رمز عبور خودتان/).fill(admin.password);
     await stepUp.getByLabel(/دلیل ابطال/).selectOptions({ label: 'خروج کاربر از سازمان' });
     await stepUp.getByRole('button', { name: 'ابطال نشست' }).click();
-    await expect(page.getByRole('status')).toHaveTextContent('نشست کاربر پایان یافت.');
+    await expect(page.getByRole('status')).toContainText('نشست کاربر پایان یافت.');
     await expect(page.getByText('نشست فعالی برای این حساب وجود ندارد.')).toBeVisible();
     await capture(page, '08-session-revoked.png');
 

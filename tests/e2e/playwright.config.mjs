@@ -49,8 +49,11 @@ export default defineConfig({
         ConnectionStrings__ConnectionString: connectionString,
         ApplicationSettings__MasterUsername: state.master.username,
         ApplicationSettings__MasterPassword: state.master.hash,
-        // The suite signs in many times from one address.
+        // The suite signs in many times from one address and exercises many sensitive
+        // endpoints with one account within one fixed window; the deployed limits are
+        // unchanged — this is the disposable E2E server only.
         RateLimiting__Login__PermitLimit: '1000',
+        RateLimiting__ApiSensitive__PermitLimit: '1000',
       },
     },
     {
