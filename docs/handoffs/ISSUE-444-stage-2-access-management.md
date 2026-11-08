@@ -54,3 +54,15 @@
   - تست‌های UI و کلاینت به‌روزرسانی/افزوده شدند؛ `docs/api/USER_ACCESS_MANAGEMENT_API.md` §۳.۵، `docs/ADMIN_UI.md` §۱۰، `docs/USER_ACCESS_MANAGEMENT.md` §۱۴ به‌روزرسانی شد.
 - **تست‌های اجراشده (محلی):** `dotnet build Template.sln` بدون خطا؛ ۵۲ تست نقش/سقف/دسترسی مؤثر سبز؛ `npm run typecheck` پاک؛ ۹۰۲ تست Client سبز؛ `npm run build` موفق. تست‌های SQL Server در این محیط اجرا نشدند (Docker در دسترس نیست) و در CI ارزیابی می‌شوند؛ دو تست integration وابسته به SQL Server روی main پایه به همین دلیل در محلی قرمز بودند (ServerUnreachable) و در CI سبز.
 - **Migration:** هیچ. فقط قرارداد query.
+
+## 3. PR-B — منبع مجوزبه‌مجوز در دسترسی مؤثر کاربر
+
+- **شاخه:** `agent/444-stage2-effective-source` (stacked روی PR-A؛ هم‌فایل: `CompanyRoleAdministrationEndpoints.cs`، `RoleMembersSection.tsx`، `client.ts`)
+- **تغییرات:**
+  - `Server/Infrastructure/Tenancy/CompanyAccessService.cs`: متد جدید `GetGrantedPermissionsWithSourcesAsync(userId, companyId)` — هر کد مجوز + نام نقش(های) فعال اعطاکننده؛ از همان `QueryActiveMemberships` استفاده می‌کند تا اجتماع کدها با `GetGrantedPermissionCodesAsync` برابر بماند. رکورد `GrantedPermissionSources(Code, SourceRoleNames)`.
+  - `GetEffectivePermissionsAsync`: پاسخ علاوه بر `permissionCodes` (حفظ سازگاری) فیلد `permissions: [{code, sourceRoleNames}]` را برمی‌گرداند؛ منبع نقش غیرفعال هرگز فهرست نمی‌شود.
+  - `ClientApp/src/api/types.ts`: type + parser سخت‌گیرانهٔ `EffectivePermissionSource`.
+  - `RoleMembersSection.tsx`: دیالوگ «دسترسی مؤثر» اکنون جدول مجوز/منبع دارد (ستون «منبع» با نام نقش‌ها)؛ caption sr-only.
+  - تست: `EffectivePermissions_AttributesEveryCodeToItsGrantingActiveRoles` (مجوز مشترک بین دو نقش، نقش غیرفعال هرگز منبع نیست، برابری اجتماع کدها) + به‌روزرسانی تست‌های UI.
+- **تست‌های اجراشده (محلی):** build بدون خطا؛ ۳/۳ تست EffectivePermissions سبز؛ typecheck پاک؛ vitest ۹۰۲/۹۰۲؛ build موفق.
+- **Migration:** هیچ.

@@ -323,13 +323,27 @@ export function RoleMembersSection({ role, companyId, canAssign, onUnauthenticat
                 <p className="text-sm text-sub">
                   نقش‌های فعال: <span className="font-semibold text-ink">{viewer.data.roleNames.join('، ')}</span>
                 </p>
-                <ul className="flex flex-wrap gap-2">
-                  {viewer.data.permissionCodes.map((code) => (
-                    <li key={code}>
-                      <code dir="ltr" className="inline-block rounded-lg border border-line bg-white px-2 py-1 text-xs">{code}</code>
-                    </li>
-                  ))}
-                </ul>
+                <div className="overflow-hidden rounded-lg border border-line">
+                  <table className="w-full border-collapse text-sm">
+                    <caption className="sr-only">مجوزهای مؤثر {viewer.label} با نقش منبع هر مجوز</caption>
+                    <thead>
+                      <tr className="border-b border-line bg-cool text-start">
+                        <th scope="col" className="px-3 py-2 font-semibold text-ink">مجوز</th>
+                        <th scope="col" className="px-3 py-2 font-semibold text-ink">منبع</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {viewer.data.permissions.map((grant) => (
+                        <tr key={grant.code} className="border-b border-line last:border-b-0">
+                          <td className="px-3 py-2">
+                            <code dir="ltr" className="text-xs">{grant.code}</code>
+                          </td>
+                          <td className="px-3 py-2 text-sub">{grant.sourceRoleNames.join('، ')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )
           ) : null}

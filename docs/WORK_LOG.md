@@ -2784,3 +2784,6 @@
 - **PR-A (شاخه `agent/444-stage2-role-members-search`):** پارامتر `search` سمت سرور در `GET .../roles/{roleId}/members` (قرارداد دایرکتوری کاربران: trim، >۱۲۰ نویسه → 400؛ فیلتر username/firstName/lastName پیش از Count/Skip/Take)؛ کلاینت به query object با ارسال شرطی تغییر کرد؛ UI فرم `role="search"` با debounce ۳۰۰ms و ریست صفحه؛ تست Backend جدید + تست UI/کلاینت؛ مستندات API/ADMIN_UI/USER_ACCESS_MANAGEMENT/handoff. TDD: ابتدا تست شکست‌خورده، سپس پیاده‌سازی.
 - **تست محلی:** `dotnet build` بدون خطا؛ ۵۲ تست نقش/سقف/دسترسی مؤثر سبز؛ typecheck پاک؛ vitest ۹۰۲/۹۰۲؛ build موفق. تست‌های SQL Server به CI واگذار شد (Docker محلی موجود نیست)؛ دو شکست integration وابسته به SQL Server در محلی pre-existing و ServerUnreachable بود.
 - **Migration:** هیچ.
+
+## 2026-11-08 — مرحله دوم PR-B: منبع مجوزبه‌مجوز در دسترسی مؤثر کاربر
+- `CompanyAccessService.GetGrantedPermissionsWithSourcesAsync` (همان محمول‌های QueryActiveMemberships؛ رکورد `GrantedPermissionSources`)؛ پاسخ `effective-permissions` علاوه بر `permissionCodes` فیلد `permissions:[{code,sourceRoleNames}]` دارد؛ دیالوگ «دسترسی مؤثر» UI جدول مجوز/منبع گرفت؛ تست Backend جدید + تست‌های UI به‌روز؛ مستندات API §۳.۱ و handoff. TDD؛ Migration: هیچ؛ vitest ۹۰۲/۹۰۲، ۳/۳ تست endpoint سبز.
