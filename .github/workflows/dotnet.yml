@@ -315,6 +315,13 @@ jobs:
         working-directory: tests/e2e
         run: |
           if [ -d playwright-report ]; then echo "::notice title=E2E::report saved as artifact e2e-report"; fi
+      - name: Keep the stage-3 profile screenshots (real browser captures)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: stage-3-profile-screenshots
+          path: artifacts/ui-preview/stage-3-profile
+          retention-days: 30
       - name: Keep the E2E report
         if: failure()
         uses: actions/upload-artifact@v7
