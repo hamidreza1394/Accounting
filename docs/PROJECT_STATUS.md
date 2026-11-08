@@ -1,39 +1,42 @@
-# وضعیت فعلی ماژول Vendor — 2026-11-01
+# وضعیت فعلی ماژول Vendor — 2026-11-08
 
-**مبنای بازبینی کد:** شاخه `main`، SHA `e26ecc4f387b46da2b703cabbda8e4105bc1d2f7` (پس از ادغام PR #410).
+**مبنای بازبینی:** شاخه `main`، SHA `da8ed012074f8439cb836ea4ae190e3ad2fc542e`. این SHA شامل merge commit مربوط به PR #565 است؛ GitHub Compare نشان می‌دهد main از merge commit #565 به بعد ۵۵ commit جلوتر و صفر commit عقب‌تر است.
 
 ## وضعیت GitHub و CI تأییدشده
 
-- PRهای #281، #282 و #284 ادغام شده‌اند؛ شواهد CI پس از merge که در بازبینی‌های قبلی ثبت شده‌اند:
-  - #281 → `2ee1edc52904833bc28eead5a679185377363c24`: .NET CI `40843230825`، Semgrep `40843230797` و Push on main `40843230369` موفق.
-  - #282 → `f4a0462b0972e7686a686eca0febfaee680baecf`: Vendor CI `40843073693`، .NET CI `40843073694`، Semgrep `40843073640` و Push on main `40843073179` موفق.
-  - #284 → `81ed5f64ed86ebbae47a433cea63e3655cb1d24b`: Vendor CI `40845416309`، .NET CI `40845416352`، Semgrep `40845416374` و Push on main `40845416241` موفق.
-- **PR #410 — یکسان‌سازی TimeProvider در Provisioning/Approval:** در 2026-11-01T07:32:31Z ادغام شد؛ merge commit و SHA فعلی main برابر `e26ecc4f387b46da2b703cabbda8e4105bc1d2f7` است. head نهایی PR: `875f3090098020e964fed257e83108122fb2e6b4`.
-  - PR .NET CI `41284398083`: تمام ۷ job شامل client، secret-scan، publish-scripts، build/test، E2E، Linux publish و Windows publish موفق.
-  - PR Vendor CI `41284398065`: build/test/package و آزمون قفل checkpoint بین‌پردازه‌ای روی Ubuntu و Windows موفق.
-  - Semgrep `41284398117` و CodeQL `41284394919` موفق.
-  - لاگ job مربوط به Vendor CI نشان می‌دهد تست‌های Vendor با SQL Server اجرا شدند؛ summary واقعی `Passed` و `failed: 0` بود.
-- **CI پس از merge روی main فعلی** (snapshot در 2026-11-01 حدود 07:35 UTC):
-  - Vendor CI `41285195060`: موفق؛ build/test/package و regression قفل فایل روی Ubuntu و Windows موفق.
-  - Semgrep `41285195043`: موفق.
-  - Push on main / CodeQL `41285194925`: موفق؛ تحلیل‌های C#, JavaScript/TypeScript, Python و Actions تکمیل شدند.
-  - .NET CI `41285195040`: موفق؛ هر ۷ job شامل client، secret-scan، publish-scripts، build-and-test، E2E، Linux publish و Windows publish تکمیل و موفق شدند.
-- **PRهای باز:** تنها PR باز در snapshot این بازبینی #409 با عنوان داشبورد RTL است؛ تغییرات آن UI و خارج از محدوده Vendor است و در این کار تغییر داده نمی‌شود. هیچ PR باز Vendor در snapshot وجود ندارد.
+- **CI شاخه main روی SHA بالا:** ۱۲ Check Run، همگی موفق: .NET build/test، E2E، Linux/Windows publish، client، secret scan، publish scripts، چهار تحلیل CodeQL و Semgrep.
+- **PRهای مرجع #281، #282 و #284:** ادغام‌شده؛ post-merge checks به‌ترتیب ۱۲/۱۲، ۱۳/۱۳ و ۱۳/۱۳ موفق. به‌ویژه #282 و اصلاح ترتیب authorization در #284 روی merge commitهای واقعی تأیید شدند.
+- **PRهای مرتبط با Vendor/Licensing که post-merge تأیید شده‌اند:**
+
+| PR | موضوع | Merge commit | Check Run پس از Merge |
+|---|---|---|---:|
+| #472 | License Payload v2 و Company-scoped entitlement | `61d33a1ccdccbb0c3f3a63b36fdc2197ed3f2cc9` | ۱۵/۱۵ موفق |
+| #526 | اعمال offline revocation در runtime مشتری | `9966eb6dc79d40589b993f05acf99ff8dfd4786e` | ۱۲/۱۲ موفق |
+| #527 | candidate افزایش maxCompanies | `2a62811acdb71bda77288356743be45356685954` | ۱۵/۱۵ موفق |
+| #539 | entitlement policy سمت مشتری | `8924831dcca60d63846b980a5cc36ea06551560b` | ۱۲/۱۲ موفق |
+| #546 | fail-closed برای Provisioning بدون CompanyReference | `c3404da89d97e54977ec993a20479084922ca891` | ۱۵/۱۵ موفق |
+| #548 | TimeProvider در Bootstrap مدیر Vendor | `584f87dabb1ee98162c13055e28c9fa8560dcb87` | ۱۵/۱۵ موفق |
+| #558 | candidate افزایش Module/Feature/UserSeat شرکت موجود | `8d9740631e715e17b6d280026a049a89a2596f3b` | ۱۵/۱۵ موفق |
+| #565 | تمدید مستقل Support/Updates | `66b60cc48f6454997e260cb1244374114e2bfbd4` | ۱۵/۱۵ موفق |
+
+- **PRهای باز فعلی:** #582، #583، #584، #585، #586 و #587؛ همگی Workspace/UI/HR هستند و هیچ PR باز Vendor وجود ندارد.
+- **وضعیت ۱۰۰ اجرای اخیر Actions در زمان بازبینی:** ۸۶ موفق، ۴ در حال اجرا، ۷ لغوشده و ۳ ناموفق. سه شکست متعلق به headهای قدیمی PRهای HR/Workspace است، نه Vendor: در #586 تست Client نتوانست heading «ثبت کارمند» را پیدا کند؛ در E2Eهای #584/#585/#586 heading «فرانو - دوره مالی» پیدا نشد و لاگ SQL Server خطای 18456/State 38 برای دیتابیس FaranouE2E را نشان می‌دهد. headهای جدید این PRها مجدداً در حال اجرا بودند؛ این تغییرات خارج از محدوده Vendor هستند و در این مأموریت دست‌کاری نشدند.
 
 ## وضعیت قابلیت‌ها و شکاف‌های Vendor
 
-- **#228 — onboarding/provisioning سمت Vendor:** فرم و API ثبت intent، کنترل Customer/Installation، انتخاب فقط زیرمجموعهٔ entitlement مجاز، nonce/sequence، Maker-Checker، امضای بسته، Export و دریافت ACK در کد وجود دارند. تصمیم D-054 در 2026-10-30 پذیرفته شده و پیاده‌سازی PR #319/#329 در main است: هر درخواست جدید به یک `VendorLicense.Id` و آخرین `VendorSignedLicenseEnvelope.Sequence` همان لایسنس bind می‌شود؛ تجمیع چند لایسنس ممنوع است. binding هنگام ایجاد، امضا و Export دوباره بررسی می‌شود. یادداشت قدیمی Issue #228 که این تصمیم را منتظر انتخاب مالک می‌دانست، با D-054 و کد فعلی superseded است.
-- **#228 — مرز تأیید مشتری:** Vendor فقط intent و بسته را مدیریت می‌کند؛ Export به‌تنهایی به معنی ایجاد Company/Administrator نیست و فقط ACK معتبر می‌تواند وضعیت را Confirmed کند. مسیر customer consumer، claim/replay، اعمال تراکنشی و Enrollment در PRهای #302/#305–#308 و intake/ACK در #293/#294 پیاده‌سازی شده‌اند؛ E2E دو TestServer و دو SQL Server در #329 وجود دارد. این E2E معادل دو میزبان فیزیکی/دو process مستقل نیست.
-- **#214 — issuance/revocation:** Maker-Checker، منع self-approval، تراکنش اتمیک، sequence، audit chain و snapshot ابطال در Vendor پیاده‌سازی و در CI پوشش داده شده‌اند. ابطال عملیاتی نصب‌های آفلاین به اعتبارسنج/مصرف‌کنندهٔ مشتری وابسته است؛ تغییر status در Vendor به‌تنهایی ابطال آفلاین نیست.
-- **#236 — signing:** adapter PKCS#11، KeyIdهای purpose-specific و SoftHSM برای Development/Staging در کد و CI وجود دارند. signer پیش‌فرض در نبود provider/trust/configuration معتبر unavailable است؛ هیچ provider یا credential عملیاتی Production provision نشده و fail-closed حفظ می‌شود. HSM واقعی، ceremony، rotation/recovery و آزمون عملیاتی مرحلهٔ سخت‌افزاری نیازمند زیرساخت و دسترسی انسانی است.
-- **#107 — audit checkpoint:** مدل/قرارداد canonical، verifier، startup guard و journal فایل توسعه با آزمون قفل بین‌پردازه‌ای وجود دارند. sink مستقل Production با failure-domain و credential جدا، retention/immutability، alerting و recovery drill هنوز انتخاب/پیکربندی نشده است؛ فایل محلی Development مقصد مستقل Production نیست.
-- **#235 — customer-side consumer/ACK:** پیگیری جداگانه باقی می‌ماند. تغییرات customer-side، `Server/**` و migration مشتری در PR محدود به Vendor وارد نمی‌شوند.
+- **#228 — provisioning و purchased subsystems:** Vendor برای schema v4، Customer/Installation binding، LicenseId و sequence امضاشده، Maker-Checker، signing/export و ACK پایه را دارد. اما resolver عمداً LicensePayload v2 را با `provisioning_company_reference_mapping_required` رد می‌کند؛ ماژول‌های Company-scoped هرگز به فهرست نصب‌محور flatten نمی‌شوند. رفع این مانع به نگاشت پایدار CompanyReference به CompanyId محلی و قرارداد نسخه‌دار در #392 نیاز دارد. #392 باز است و هر migration مشتری باید جداگانه بازبینی و صریحاً تأیید شود. تغییر consumer/ACK مشتری در #235 و PR مستقل باقی می‌ماند.
+- **#393 — add-on/amendment:** سه pure candidate builder در main وجود دارند و post-merge CI آن‌ها سبز است: افزایش `maxCompanies` (#527)، افزایش Module/Feature/UserSeat برای CompanyReference موجود در v2 (#558)، و تمدید مستقل `supportUntilUtc`/`updatesUntilUtc` (#565). این builderها فقط candidate می‌سازند؛ Commercial Order/Payment Evidence، persistence درخواست، endpoint، maker-checker اختصاصی amendment، صدور پایدار و وضعیت‌های Purchased/Delivered/Acknowledged هنوز پیاده‌سازی نشده‌اند.
+- **#214 — maker-checker/revocation:** منع self-approval، RowVersion، تراکنش، audit chain، sequence و snapshot ابطال در کد وجود دارند. تغییر status در Vendor به‌تنهایی ابطال آفلاین نصب مشتری نیست؛ اعتبارسنجی/مصرف snapshot سمت مشتری باید مستقل تأیید شود.
+- **#236 — signer:** PKCS#11/SoftHSM برای Development/Staging و کنترل fail-closed وجود دارد. Production KMS/HSM و credential معتبر provision نشده‌اند؛ provider واقعی یا کلید عملیاتی حدس زده نمی‌شود.
+- **#107 — independent audit checkpoint:** قرارداد sink مستقل، startup guard، startup verification، health check و file store توسعه وجود دارند. مقصد مستقل Production، credential separation، immutability/retention و recovery drill هنوز فراهم نیست. Production بدون دقیقاً یک provider مستقل ثبت‌شده باید fail-closed بماند.
+- **#235 — customer consumer/ACK:** مسیر پایه consumer/claim/replay/apply/ACK در PRهای قبلی وجود دارد؛ trust distribution، durable audit/readiness، retry/error semantics و آزمون عملیاتی دو میزبان مستقل باقی‌اند. هیچ‌یک نباید در PR محدود به Vendor قرار گیرد.
+- **#390 و #391:** قرارداد Company-scoped و entitlement policy پیاده‌سازی و Issues بسته شده‌اند. #389 تصمیم والد D-059/D-060 را نگه می‌دارد؛ #392، #393، #394 و #396 همچنان کارهای باز مرحله‌ای‌اند.
 
 ## آخرین تغییر Vendor
 
-- PR #410 منبع زمان endpointهای Provisioning و Approval را از `DateTimeOffset.UtcNow` مستقیم به `TimeProvider.GetUtcNow().ToUniversalTime()` منتقل کرد.
-- Regression تست SQL Server ساعت کنترل‌شده را برای ایجاد intent، درخواست Approval و تصمیم بازبین اعمال می‌کند؛ ساعت پیش از MFA بازبین به زمان واقعی بازگردانده می‌شود.
-- PR و تست‌های آن روی head نهایی CI-verified هستند؛ post-merge .NET CI روی main در snapshot بالا هنوز در حال اجرا بود.
+- PR #546، #548، #558 و #565 در main ادغام شده‌اند و Check Runهای پس از Merge آن‌ها به‌ترتیب ۱۵/۱۵، ۱۵/۱۵، ۱۵/۱۵ و ۱۵/۱۵ موفق‌اند.
+- PR #565 در `2026-11-07T08:46:47Z` ادغام شد. candidate تمدید Support/Updates اکنون در main است؛ تست محلی در آن نشست اجرا نشده بود، اما Vendor CI، .NET CI، E2E، Linux/Windows publish، Secret Scan، Semgrep و CodeQL پس از Merge موفق شدند.
+- هیچ ادعای Production readiness برای signer، audit sink یا provisioning v2 مطرح نیست.
 
 
 ---
