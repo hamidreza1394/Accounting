@@ -2,21 +2,23 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Activity,
   BadgeCheck,
+  Banknote,
   BookOpen,
   Boxes,
   Building2,
   ChevronDown,
   ClipboardList,
   FileBarChart,
+  Gem,
   Headphones,
   KeyRound,
   LayoutDashboard,
-  Package,
   PanelRightClose,
   PanelRightOpen,
   Settings2,
   ShieldCheck,
   ShoppingCart,
+  Ship,
   UserCheck,
   Users,
   Wallet,
@@ -24,6 +26,7 @@ import {
 } from 'lucide-react';
 import { Link, useLocation } from '@/lib/router';
 import type { AccessSnapshot, Permission } from '@/lib/permissions';
+import { Tooltip } from '@/components/ui/Tooltip';
 
 type Tone =
   | 'sky'
@@ -45,6 +48,12 @@ type NavLeaf = {
   tone: Tone;
   /** App-relative route; leaves without one are honest "به‌زودی" placeholders, never dead links. */
   to?: string;
+  /**
+   * A non-interactive Persian section heading rendered above this leaf inside the group —
+   * the third visual level of the mission's menu structure (e.g. «ساختار سازمانی و کارکنان»
+   * inside «مدیریت سیستم») without a third interactive accordion level.
+   */
+  section?: string;
 };
 
 type NavGroup = {
@@ -65,60 +74,86 @@ export type NavLeafInfo = NavLeaf;
 export type NavGroupInfo = NavGroup;
 
 /**
- * Presentation-only navigation, grouped the way an Iranian accounting ERP is actually used.
- * Only implemented pages carry a route; everything else shows the visible "به‌زودی" state
- * instead of a broken path. Internal English names (hr, trade, roles…) never surface here.
+ * Presentation-only navigation. Structure per the owner mission (UI-05/UI-08): the financial
+ * subsystems stay first-level per the official catalog (all honest "به‌زودی" placeholders),
+ * the independent «منابع انسانی» group is GONE and its pages live under «مدیریت سیستم» in
+ * Persian sections. Only implemented pages carry a route; everything else shows the visible
+ * "به‌زودی" state instead of a broken path. Internal English names never surface here.
  */
 export const navigation: NavEntry[] = [
   { kind: 'item', leaf: { label: 'داشبورد', icon: LayoutDashboard, tone: 'sky', to: '/' } },
   {
     kind: 'group',
     group: {
-      label: 'حسابداری و مالی',
+      label: 'حسابداری',
       icon: BookOpen,
       tone: 'emerald',
-      children: [
-        { label: 'حسابداری', icon: BookOpen, tone: 'emerald' },
-        { label: 'خزانه‌داری', icon: Wallet, tone: 'amber' },
-      ],
+      children: [{ label: 'اسناد و دفاتر', icon: BookOpen, tone: 'emerald' }],
     },
   },
   {
     kind: 'group',
     group: {
-      label: 'فروش، بازرگانی و انبار',
+      label: 'انبار',
+      icon: Boxes,
+      tone: 'violet',
+      children: [{ label: 'کالا و انبارها', icon: Boxes, tone: 'violet' }],
+    },
+  },
+  {
+    kind: 'group',
+    group: {
+      label: 'فروش',
       icon: ShoppingCart,
       tone: 'rose',
-      children: [
-        { label: 'فروش', icon: ShoppingCart, tone: 'rose' },
-        { label: 'بازرگانی خارجی', icon: Package, tone: 'cyan' },
-        { label: 'انبار', icon: Boxes, tone: 'violet' },
-      ],
+      children: [{ label: 'مشتریان و فروش', icon: ShoppingCart, tone: 'rose' }],
     },
   },
   {
     kind: 'group',
     group: {
-      label: 'گزارش‌ها و اطلاعات پایه',
-      icon: FileBarChart,
+      label: 'خزانه‌داری',
+      icon: Wallet,
+      tone: 'amber',
+      children: [{ label: 'بانک و صندوق', icon: Wallet, tone: 'amber' }],
+    },
+  },
+  {
+    kind: 'group',
+    group: {
+      label: 'حقوق و دستمزد',
+      icon: Banknote,
+      tone: 'teal',
+      children: [{ label: 'لیست حقوق و مزایا', icon: Banknote, tone: 'teal' }],
+    },
+  },
+  {
+    kind: 'group',
+    group: {
+      label: 'دارایی ثابت',
+      icon: Gem,
       tone: 'indigo',
+      children: [{ label: 'اموال و دارایی‌ها', icon: Gem, tone: 'indigo' }],
+    },
+  },
+  {
+    kind: 'group',
+    group: {
+      label: 'بازرگانی خارجی',
+      icon: Ship,
+      tone: 'cyan',
+      children: [{ label: 'واردات و صادرات', icon: Ship, tone: 'cyan' }],
+    },
+  },
+  {
+    kind: 'group',
+    group: {
+      label: 'عمومی',
+      icon: FileBarChart,
+      tone: 'slate',
       children: [
         { label: 'گزارش‌ها', icon: FileBarChart, tone: 'indigo' },
         { label: 'اطلاعات پایه', icon: ClipboardList, tone: 'teal' },
-      ],
-    },
-  },
-  {
-    kind: 'group',
-    group: {
-      label: 'منابع انسانی',
-      icon: Users,
-      tone: 'blue',
-      openByDefault: true,
-      children: [
-        { label: 'واحدهای سازمانی', icon: Building2, tone: 'blue', to: '/hr/org/units' },
-        { label: 'سمت‌های سازمانی', icon: BadgeCheck, tone: 'violet', to: '/hr/org/positions' },
-        { label: 'کارکنان', icon: Users, tone: 'emerald', to: '/hr/org/employees' },
       ],
     },
   },
@@ -131,12 +166,15 @@ export const navigation: NavEntry[] = [
       openByDefault: true,
       children: [
         { label: 'مدیریت کاربران', icon: Users, tone: 'sky', to: '/admin/users' },
-        { label: 'کاربران شرکت جاری', icon: Users, tone: 'blue', to: '/company/users' },
-        { label: 'گروه‌های دسترسی', icon: ShieldCheck, tone: 'violet', to: '/admin/roles' },
+        { label: 'کارکنان', icon: Users, tone: 'emerald', to: '/hr/org/employees', section: 'ساختار سازمانی و کارکنان' },
+        { label: 'واحدهای سازمانی', icon: Building2, tone: 'blue', to: '/hr/org/units' },
+        { label: 'سمت‌های سازمانی', icon: BadgeCheck, tone: 'violet', to: '/hr/org/positions' },
+        { label: 'گروه‌های دسترسی', icon: ShieldCheck, tone: 'violet', to: '/admin/roles', section: 'دسترسی و مجوزها' },
         { label: 'کاتالوگ و جزئیات مجوزها', icon: KeyRound, tone: 'amber', to: '/admin/permissions' },
+        { label: 'کاربران شرکت جاری', icon: Users, tone: 'blue', to: '/company/users', section: 'شرکت‌ها و عضویت‌ها' },
         { label: 'درخواست‌های عضویت', icon: UserCheck, tone: 'emerald', to: '/admin/membership-requests' },
         { label: 'درخواست‌های عضویت من', icon: ClipboardList, tone: 'slate', to: '/account/membership-requests' },
-        { label: 'گزارش امنیت و سوابق', icon: Activity, tone: 'emerald', to: '/admin/security/audit' },
+        { label: 'گزارش امنیت و سوابق', icon: Activity, tone: 'emerald', to: '/admin/security/audit', section: 'سوابق امنیتی و مدیریتی' },
         { label: 'سیاست‌های امنیتی', icon: Settings2, tone: 'slate' },
       ],
     },
@@ -310,22 +348,34 @@ export function AppSidebar({ access, canAccess, onRetryPermissions, onNavigate, 
                 );
               }
               const active = isActivePath(pathname, leaf.to);
+              const link = (
+                <Link
+                  to={leaf.to}
+                  aria-current={active ? 'page' : undefined}
+                  onClick={onNavigate}
+                  className={
+                    'flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-[13px] font-semibold ' +
+                    (collapsed ? 'justify-center px-0 ' : '') +
+                    (active ? 'faranou-nav-active' : 'text-on-navy/80 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-gold')
+                  }
+                >
+                  <NavIcon icon={leaf.icon} tone={leaf.tone} />
+                  {!collapsed ? <span className="min-w-0 flex-1 whitespace-normal leading-snug">{leaf.label}</span> : <span className="sr-only">{leaf.label}</span>}
+                </Link>
+              );
               return (
                 <li key={`leaf-${index}`}>
-                  <Link
-                    to={leaf.to}
-                    aria-current={active ? 'page' : undefined}
-                    onClick={onNavigate}
-                    title={collapsed ? leaf.label : undefined}
-                    className={
-                      'flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-[13px] font-semibold ' +
-                      (collapsed ? 'justify-center px-0 ' : '') +
-                      (active ? 'faranou-nav-active' : 'text-on-navy/80 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-gold')
-                    }
-                  >
-                    <NavIcon icon={leaf.icon} tone={leaf.tone} />
-                    {!collapsed ? <span className="min-w-0 flex-1 whitespace-normal leading-snug">{leaf.label}</span> : <span className="sr-only">{leaf.label}</span>}
-                  </Link>
+                  {collapsed ? (
+                    <Tooltip label={leaf.label}>
+                      {(triggerProps) => (
+                        <span {...triggerProps} className="block w-full rounded-xl">
+                          {link}
+                        </span>
+                      )}
+                    </Tooltip>
+                  ) : (
+                    link
+                  )}
                 </li>
               );
             }
@@ -333,12 +383,11 @@ export function AppSidebar({ access, canAccess, onRetryPermissions, onNavigate, 
             const { group } = entry;
             const leaves = visibleLeaves(group.children);
             // A group whose real pages are all hidden by permissions shows nothing at all.
-            if (group.label === 'منابع انسانی' && leaves.length === 0) return null;
+            if (group.children.some((leaf) => leaf.to !== undefined) && leaves.length === 0) return null;
             const open = openGroups[group.label] === true;
             const groupId = `nav-group-${index}`;
             const groupActive = group.children.some((leaf) => leaf.to !== undefined && isActivePath(pathname, leaf.to));
-            return (
-              <li key={group.label} className="space-y-1">
+            const groupButton = (
                 <button
                   type="button"
                   className={
@@ -357,7 +406,6 @@ export function AppSidebar({ access, canAccess, onRetryPermissions, onNavigate, 
                     }
                     toggleGroup(group.label);
                   }}
-                  title={collapsed ? group.label : undefined}
                 >
                   <NavIcon icon={group.icon} tone={group.tone} />
                   {!collapsed ? (
@@ -377,6 +425,20 @@ export function AppSidebar({ access, canAccess, onRetryPermissions, onNavigate, 
                     </>
                   )}
                 </button>
+            );
+            return (
+              <li key={group.label} className="space-y-1">
+                {collapsed ? (
+                  <Tooltip label={group.label}>
+                    {(triggerProps) => (
+                      <span {...triggerProps} className="block w-full rounded-xl">
+                        {groupButton}
+                      </span>
+                    )}
+                  </Tooltip>
+                ) : (
+                  groupButton
+                )}
                 {open && !collapsed ? (
                   <ul id={groupId} className="faranou-nav-sub space-y-2 ms-4 ps-2">
                     {group.label === 'مدیریت سیستم' && access.status === 'loading' ? (
@@ -391,6 +453,7 @@ export function AppSidebar({ access, canAccess, onRetryPermissions, onNavigate, 
                     {leaves.map((leaf) =>
                       leaf.to ? (
                         <li key={leaf.label}>
+                          {leaf.section ? <p className="faranou-nav-section">{leaf.section}</p> : null}
                           <Link
                             to={leaf.to}
                             onClick={onNavigate}
