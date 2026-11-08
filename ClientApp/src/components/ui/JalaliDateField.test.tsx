@@ -34,6 +34,14 @@ describe('JalaliDateField', () => {
     expect(screen.getByRole('button', { name: '۱۴۰۵/۰۸/۱۲' })).toBeInTheDocument();
   });
 
+  it('provides direct month and year dropdowns in the Jalali calendar', async () => {
+    const user = userEvent.setup();
+    render(<Controlled initial="2026-11-03" />);
+    await user.click(screen.getByRole('button', { name: '۱۴۰۵/۰۸/۱۲' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.querySelectorAll('select')).toHaveLength(2);
+  });
+
   it('opens an RTL Persian calendar on the month of the value, with Persian labels and digits', async () => {
     const user = userEvent.setup();
     render(<Controlled initial="2026-11-03" />);
