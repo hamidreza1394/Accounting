@@ -1,16 +1,20 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { ApiError } from '@/api/client';
+import { Alert } from '@/components/ui/Alert';
+import { LoadingState } from '@/components/Feedback';
 import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { FormField, Input, Select } from '@/components/ui/FormField';
 import { buttonVariants } from '@/components/ui/button';
-import { Link } from '@/lib/router';
+import { Link, useSearchParams } from '@/lib/router';
 import { can } from '@/lib/permissions';
 import { useCompanyPermissions } from '@/lib/useCompanyPermissions';
 import { useStaleGuard } from '@/lib/staleGuard';
 import { listHrEmployees, getHrUnitTree } from '../api/hrClient';
 import type { HrEmployeeListItem, HrUnitTreeNode } from '../api/hrTypes';
 import { HrEmploymentStatusBadge } from '../components/HrBadges';
+const HrEmployeeCreatePage = lazy(() => import('./HrEmployeeCreatePage').then((module) => ({ default: module.HrEmployeeCreatePage })));
+type CreatedEmployee = { id: string; firstName: string; lastName: string };
 import { formatHrInstant } from '../lib/hrFormat';
 import { hrEmploymentStatusLabel } from '../lib/hrLabels';
 
@@ -45,6 +49,24 @@ export function HrEmployeesPage({ onUnauthenticated, companyId }: Props) {
   // The standard hint (Issue #444 stage 1): a ready installation administrator passes without a
   // company code — the same dual-mode rule the server enforces for every `hr.*` operation.
   const canCreate = can(access, 'hr.employees.create');
+
+  // Local Form Flow (PR 5): the create form opens INSIDE this workspace tab through the
+  // `form=new` query; the list stays mounted (hidden), so filters, paging and scroll survive.
+  const [params, setParams] = useSearchParams();
+  const creating = params.get('form') === 'new';
+  const [createdFlash, setCreatedFlash] = useState<{ id: string; name: string } | null>(null);
+
+  const closeCreateForm = () => {
+    const next = new URLSearchParams(params);
+    next.delete('form');
+    setParams(next, { replace: true });
+  };
+
+  const handleCreated = (employee: CreatedEmployee) => {
+    setCreatedFlash({ id: employee.id, name: `${employee.firstName} ${employee.lastName}` });
+    closeCreateForm();
+    setAttempt((value) => value + 1); // fresh list with the new record
+  };
 
   const [searchText, setSearchText] = useState('');
   const [search, setSearch] = useState('');
@@ -173,10 +195,32 @@ export function HrEmployeesPage({ onUnauthenticated, companyId }: Props) {
   const forbidden = failure?.status === 403 || failure?.status === 404;
   const filtered = search !== '' || status !== 'all' || unitId !== '';
 
-  usePageBreadcrumb([{ label: 'منابع انسانی' }, { label: 'کارکنان' }]);
+  usePageBreadcrumb(creating ? [{ label: 'منابع انسانی' }, { label: 'کارکنان', to: '/hr/org/employees' }, { label: 'کارمند جدید' }] : [{ label: 'منابع انسانی' }, { label: 'کارکنان' }]);
 
   return (
     <div className="space-y-5">
+      {createdFlash ? (
+        <Alert tone="info">
+          <span>
+            {`کارمند «${createdFlash.name}» ثبت شد.`}{' '}
+            <Link to={`/hr/org/employees/${createdFlash.id}`} className="font-bold underline">
+              مشاهدهٔ پرونده
+            </Link>
+          </span>
+        </Alert>
+      ) : null}
+      {creating ? (
+        <Suspense fallback={<LoadingState label="در حال بارگذاری فرم…" />}>
+          <HrEmployeeCreatePage
+            onUnauthenticated={onUnauthenticated}
+            companyId={companyId}
+            onSaved={handleCreated}
+            onExit={closeCreateForm}
+            showOpenInNewTab
+          />
+        </Suspense>
+      ) : null}
+      <div hidden={creating} className={creating ? undefined : 'space-y-5'}>
       <header className="space-y-2">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -186,9 +230,18 @@ export function HrEmployeesPage({ onUnauthenticated, companyId }: Props) {
             </p>
           </div>
           {canCreate ? (
-            <Link to="/hr/org/employees/new" className={buttonVariants({ size: 'lg' })}>
+            <button
+              type="button"
+              className={buttonVariants({ size: 'lg' })}
+              onClick={() => {
+                setCreatedFlash(null);
+                const next = new URLSearchParams(params);
+                next.set('form', 'new');
+                setParams(next);
+              }}
+            >
               کارمند جدید
-            </Link>
+            </button>
           ) : null}
         </div>
       </header>
@@ -266,6 +319,7 @@ export function HrEmployeesPage({ onUnauthenticated, companyId }: Props) {
           />
         </>
       )}
+      </div>
     </div>
   );
 }

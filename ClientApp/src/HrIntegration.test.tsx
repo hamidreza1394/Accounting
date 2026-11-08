@@ -99,6 +99,28 @@ describe('HR sidebar entries (company-scoped permissions)', () => {
     for (const label of hrLabels) expect(within(nav).queryByRole('link', { name: label })).toBeNull();
   });
 
+  it('opens the employee create form INSIDE the list tab (Local Form Flow, PR 5)', async () => {
+    const user = userEvent.setup();
+    stubAll({ codes: ['hr.employees.list', 'hr.employees.create'] });
+    await openShell('/app/hr/org/employees');
+    expect(await screen.findByRole('heading', { level: 1, name: 'کارکنان' })).toBeInTheDocument();
+
+    await user.click(await screen.findByRole('button', { name: 'کارمند جدید' }));
+    // The create form is a lazy chunk inside the list tab; give the transform a moment.
+    expect(await screen.findByRole('heading', { level: 1, name: 'ثبت کارمند' }, { timeout: 4000 })).toBeInTheDocument();
+    // Same tab, no duplicate: the workspace still holds exactly one tab and the query
+    // carries the form state.
+    expect(window.location.search).toBe('?form=new');
+    expect(document.querySelectorAll('[data-tab-pane]')).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: 'بستن ثبت کارمند' })).not.toBeInTheDocument();
+
+    // A clean form returns to the list in the same tab without any dialog.
+    await user.click(screen.getByRole('button', { name: 'انصراف' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'کارکنان' })).toBeInTheDocument();
+    expect(window.location.search).toBe('');
+    expect(document.querySelectorAll('[data-tab-pane]')).toHaveLength(1);
+  });
+
   it('navigates from each entry to its page and marks the entry active on nested routes', async () => {
     const user = userEvent.setup();
     stubAll({ codes: ['hr.organizational-units.list', 'hr.positions.list', 'hr.employees.list'] });

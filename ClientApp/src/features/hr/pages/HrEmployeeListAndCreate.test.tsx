@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { stubApi } from '@/test/api';
@@ -89,7 +89,7 @@ describe('HrEmployeesPage', () => {
       { path: '/hr/org/employees', title: 'کارکنان' },
       '/hr/org/employees',
     );
-    expect(await screen.findByRole('link', { name: 'کارمند جدید' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'کارمند جدید' })).toBeInTheDocument();
   });
 
   it('shows the access-denied panel on 403 without the table', async () => {
@@ -193,5 +193,127 @@ describe('HrEmployeeCreatePage', () => {
     await user.type(screen.getByLabelText(/نام خانوادگی/), 'محمدی');
     await user.click(screen.getByRole('button', { name: 'ثبت کارمند' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('شماره پرسنلی در این شرکت تکراری است.');
+  });
+});
+
+describe('Local Form Flow — the create form inside the list tab (Issue #444 stage 1 completion, PR 5)', () => {
+  beforeEach(() => {
+    onUnauthenticated.mockReset();
+    onUnauthenticated.mockReturnValue(false);
+    window.history.pushState(null, '', '/app/hr/org/employees');
+  });
+
+  function stubList(extra: Record<string, unknown> = {}) {
+    return stubApi({
+      'GET /api/v1/me/permissions': hrPermissionRoute(['hr.employees.create']),
+      ...antiforgeryRoute,
+      [`GET ${employeesPath}?page=1&pageSize=25`]: { status: 200, body: employeeListResponse([employee()]) },
+      [`GET ${treePath}`]: { status: 200, body: { roots: [unitTreeNode()] } },
+      [`POST ${employeesPath}`]: { status: 201, body: { id: '0f3a1d2c-0000-4000-8000-0000000000aa' } },
+      ...extra,
+    } as never);
+  }
+
+  it('opens the create form inside the same tab through ?form=new and never unmounts the list', async () => {
+    stubList();
+    renderHrPage(<HrEmployeesPage onUnauthenticated={onUnauthenticated} companyId={companyId} />, { path: '/hr/org/employees', title: 'کارکنان' }, '/hr/org/employees');
+    const user = userEvent.setup();
+    await screen.findByRole('heading', { name: 'کارکنان' });
+
+    await user.click(screen.getByRole('button', { name: 'کارمند جدید' }));
+    expect(window.location.search).toBe('?form=new');
+    expect(await screen.findByRole('heading', { name: 'ثبت کارمند' })).toBeInTheDocument();
+    // The list is hidden, not destroyed: its table stays in the DOM with its data.
+    expect(screen.getByRole('table', { name: 'فهرست کارکنان', hidden: true })).toBeInTheDocument();
+    // No navigation to a separate route happened.
+    expect(window.location.pathname).toBe('/app/hr/org/employees');
+  });
+
+  it('a clean form returns to the list without any dialog', async () => {
+    stubList();
+    renderHrPage(<HrEmployeesPage onUnauthenticated={onUnauthenticated} companyId={companyId} />, { path: '/hr/org/employees', title: 'کارکنان' }, '/hr/org/employees?form=new');
+    const user = userEvent.setup();
+    await screen.findByRole('heading', { name: 'ثبت کارمند' });
+
+    await user.click(screen.getByRole('button', { name: 'انصراف' }));
+    expect(await screen.findByRole('heading', { name: 'کارکنان' })).toBeInTheDocument();
+    expect(window.location.search).toBe('');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('a dirty form asks; «ادامهٔ ویرایش» stays and «لغو تغییرات و بازگشت» returns', async () => {
+    stubList();
+    renderHrPage(<HrEmployeesPage onUnauthenticated={onUnauthenticated} companyId={companyId} />, { path: '/hr/org/employees', title: 'کارکنان' }, '/hr/org/employees?form=new');
+    const user = userEvent.setup();
+    await screen.findByRole('heading', { name: 'ثبت کارمند' });
+
+    await user.type(screen.getByLabelText(/^نام\*$/), 'علی');
+    await user.click(screen.getByRole('button', { name: 'انصراف' }));
+    const dialog = await screen.findByRole('alertdialog');
+    expect(dialog).toHaveTextContent('اطلاعات واردشده هنوز ذخیره نشده‌اند. آیا مایلید بدون ذخیره به صفحهٔ قبلی بازگردید؟');
+
+    await user.click(within(dialog).getByRole('button', { name: 'ادامهٔ ویرایش' }));
+    expect(screen.getByRole('heading', { name: 'ثبت کارمند' })).toBeInTheDocument();
+    expect(screen.getByLabelText(/^نام\*$/)).toHaveValue('علی');
+
+    await user.click(screen.getByRole('button', { name: 'انصراف' }));
+    await user.click(await screen.findByRole('button', { name: 'لغو تغییرات و بازگشت' }));
+    expect(await screen.findByRole('heading', { name: 'کارکنان' })).toBeInTheDocument();
+    expect(window.location.search).toBe('');
+  });
+
+  it('the search text of the list survives the create flow (the list stays mounted)', async () => {
+    stubList();
+    renderHrPage(<HrEmployeesPage onUnauthenticated={onUnauthenticated} companyId={companyId} />, { path: '/hr/org/employees', title: 'کارکنان' }, '/hr/org/employees');
+    const user = userEvent.setup();
+    await screen.findByRole('heading', { name: 'کارکنان' });
+    await user.type(screen.getByLabelText('جستجو'), 'محمدی');
+
+    await user.click(screen.getByRole('button', { name: 'کارمند جدید' }));
+    await screen.findByRole('heading', { name: 'ثبت کارمند' });
+    await user.click(screen.getByRole('button', { name: 'انصراف' }));
+    await screen.findByRole('heading', { name: 'کارکنان' });
+    // The uncommitted search text is still there — the list was never unmounted.
+    expect(screen.getByLabelText('جستجو')).toHaveValue('محمدی');
+  });
+
+  it('a successful create returns to the list, refreshes it and links to the new record', async () => {
+    stubList({
+      [`GET ${employeesPath}?page=1&pageSize=25`]: { status: 200, body: employeeListResponse([employee()]) },
+    });
+    renderHrPage(<HrEmployeesPage onUnauthenticated={onUnauthenticated} companyId={companyId} />, { path: '/hr/org/employees', title: 'کارکنان' }, '/hr/org/employees?form=new');
+    const user = userEvent.setup();
+    await screen.findByRole('heading', { name: 'ثبت کارمند' });
+
+    await user.type(screen.getByLabelText(/شماره پرسنلی/), 'EMP-200');
+    await user.type(screen.getByLabelText(/^نام\*$/), 'زهرا');
+    await user.type(screen.getByLabelText(/نام خانوادگی/), 'کریمی');
+    await user.click(screen.getByRole('button', { name: 'ثبت کارمند' }));
+
+    expect(await screen.findByRole('heading', { name: 'کارکنان' })).toBeInTheDocument();
+    expect(await screen.findByText(/«زهرا کریمی» ثبت شد/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'مشاهدهٔ پرونده' })).toHaveAttribute('href', '/app/hr/org/employees/0f3a1d2c-0000-4000-8000-0000000000aa');
+    expect(window.location.search).toBe('');
+  });
+
+  it('blocks the exit while saving and shows the saving hint', async () => {
+    const fetchMock = stubList();
+    const defaultFetch = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(((input: string, init?: RequestInit) => {
+      if ((init?.method ?? 'GET') === 'POST' && String(input) === employeesPath) {
+        return new Promise(() => undefined); // the save stays in flight
+      }
+      return defaultFetch(input, init);
+    }) as typeof fetch);
+    renderHrPage(<HrEmployeesPage onUnauthenticated={onUnauthenticated} companyId={companyId} />, { path: '/hr/org/employees', title: 'کارکنان' }, '/hr/org/employees?form=new');
+    const user = userEvent.setup();
+    await screen.findByRole('heading', { name: 'ثبت کارمند' });
+
+    await user.type(screen.getByLabelText(/شماره پرسنلی/), 'EMP-201');
+    await user.type(screen.getByLabelText(/^نام\*$/), 'سارا');
+    await user.type(screen.getByLabelText(/نام خانوادگی/), 'احمدی');
+    await user.click(screen.getByRole('button', { name: 'ثبت کارمند' }));
+    expect(await screen.findByText('ذخیره در حال انجام است؛ تا پایان عملیات امکان انصراف نیست.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'انصراف' })).toBeDisabled();
   });
 });

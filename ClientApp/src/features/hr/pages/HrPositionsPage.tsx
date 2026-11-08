@@ -1,15 +1,18 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { ApiError } from '@/api/client';
 import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { FormField, Input } from '@/components/ui/FormField';
 import { buttonVariants } from '@/components/ui/button';
-import { Link } from '@/lib/router';
+import { useSearchParams } from '@/lib/router';
 import { can } from '@/lib/permissions';
 import { useCompanyPermissions } from '@/lib/useCompanyPermissions';
 import { listHrPositions } from '../api/hrClient';
 import type { HrPositionItem } from '../api/hrTypes';
 import { HrActiveBadge } from '../components/HrBadges';
+import { Alert } from '@/components/ui/Alert';
+import { LoadingState } from '@/components/Feedback';
+const HrPositionCreatePage = lazy(() => import('./HrPositionCreatePage').then((module) => ({ default: module.HrPositionCreatePage })));
 
 type Props = {
   onUnauthenticated: (error: unknown) => boolean;
@@ -30,6 +33,24 @@ export function HrPositionsPage({ onUnauthenticated, companyId }: Props) {
   // The standard hint (Issue #444 stage 1): a ready installation administrator passes without a
   // company code — the same dual-mode rule the server enforces for every `hr.*` operation.
   const canCreate = can(access, 'hr.positions.create');
+
+  // Local Form Flow (PR 5): the create form opens INSIDE this workspace tab through the
+  // `form=new` query; the list stays mounted (hidden), so filters, paging and scroll survive.
+  const [params, setParams] = useSearchParams();
+  const creating = params.get('form') === 'new';
+  const [createdFlash, setCreatedFlash] = useState<{ id: string; name: string } | null>(null);
+
+  const closeCreateForm = () => {
+    const next = new URLSearchParams(params);
+    next.delete('form');
+    setParams(next, { replace: true });
+  };
+
+  const handleCreated = (created: { id: string; name: string }) => {
+    setCreatedFlash(created);
+    closeCreateForm();
+    setAttempt((value) => value + 1); // fresh list with the new record
+  };
 
   const [searchText, setSearchText] = useState('');
   const [search, setSearch] = useState('');
@@ -100,10 +121,27 @@ export function HrPositionsPage({ onUnauthenticated, companyId }: Props) {
 
   const forbidden = failure?.status === 403 || failure?.status === 404;
 
-  usePageBreadcrumb([{ label: 'منابع انسانی' }, { label: 'سمت‌های سازمانی' }]);
+  usePageBreadcrumb(creating ? [{ label: 'منابع انسانی' }, { label: 'سمت‌های سازمانی', to: '/hr/org/positions' }, { label: 'سمت جدید' }] : [{ label: 'منابع انسانی' }, { label: 'سمت‌های سازمانی' }]);
 
   return (
     <div className="space-y-5">
+      {createdFlash ? (
+        <Alert tone="info">
+          <span>{`سمت سازمانی «${createdFlash.name}» ثبت شد.`}</span>
+        </Alert>
+      ) : null}
+      {creating ? (
+        <Suspense fallback={<LoadingState label="در حال بارگذاری فرم…" />}>
+          <HrPositionCreatePage
+            onUnauthenticated={onUnauthenticated}
+            companyId={companyId}
+            onSaved={handleCreated}
+            onExit={closeCreateForm}
+            showOpenInNewTab
+          />
+        </Suspense>
+      ) : null}
+      <div hidden={creating} className={creating ? undefined : 'space-y-5'}>
       <header className="space-y-2">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -113,9 +151,18 @@ export function HrPositionsPage({ onUnauthenticated, companyId }: Props) {
             </p>
           </div>
           {canCreate ? (
-            <Link to="/hr/org/positions/new" className={buttonVariants({ size: 'lg' })}>
+            <button
+              type="button"
+              className={buttonVariants({ size: 'lg' })}
+              onClick={() => {
+                setCreatedFlash(null);
+                const next = new URLSearchParams(params);
+                next.set('form', 'new');
+                setParams(next);
+              }}
+            >
               سمت جدید
-            </Link>
+            </button>
           ) : null}
         </div>
       </header>
@@ -159,5 +206,6 @@ export function HrPositionsPage({ onUnauthenticated, companyId }: Props) {
         </>
       )}
     </div>
+      </div>
   );
 }

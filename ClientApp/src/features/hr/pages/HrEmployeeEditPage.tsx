@@ -13,6 +13,7 @@ import type { HrEmployeeDetail } from '../api/hrTypes';
 import { hrEmploymentStatusLabel } from '../lib/hrLabels';
 import { buildUpdateEmployeeBody, validateEmployeeNumber, validateRequiredName } from '../lib/hrValidation';
 import { useFormGuard } from '@/lib/formGuard';
+import { useFormExit } from '../components/HrFormExit';
 
 type Props = {
   onUnauthenticated: (error: unknown) => boolean;
@@ -48,6 +49,12 @@ export function HrEmployeeEditPage({ onUnauthenticated, companyId }: Props) {
   // The workspace asks this registry before closing the tab, signing out or changing context;
   // a failed save keeps the `error` status until the user retries or cancels (D-076).
   const formGuard = useFormGuard({ dirty, saving: submitting, errorMessage: saveError, title: 'ویرایش کارمند' });
+  // The state-aware exit: clean leaves silently; dirty/error ask; saving is blocked (PR 5).
+  const { requestExit, exitBlocked, exitDialog } = useFormExit(
+    formGuard,
+    () => navigate(`/hr/org/employees/${employeeId ?? ''}`),
+    'اطلاعات ویرایش‌شده',
+  );
 
   const readEmployee = useCallback(
     (signal: AbortSignal) =>
@@ -214,11 +221,13 @@ export function HrEmployeeEditPage({ onUnauthenticated, companyId }: Props) {
               <Button type="submit" size="lg" disabled={submitting}>
                 {submitting ? 'در حال ذخیره…' : 'ذخیرهٔ تغییرات'}
               </Button>
-              <Button type="button" variant="outline" size="lg" disabled={submitting} onClick={() => navigate(`/hr/org/employees/${employee.id}`)}>
+              <Button type="button" variant="outline" size="lg" disabled={exitBlocked} onClick={requestExit}>
                 انصراف
               </Button>
+              {exitBlocked ? <span className="text-xs text-sub">ذخیره در حال انجام است؛ تا پایان عملیات امکان انصراف نیست.</span> : null}
             </div>
           </form>
+      {exitDialog}
         </>
       ) : null}
     </div>

@@ -1,16 +1,19 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { ApiError } from '@/api/client';
 import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { FormField, Input, Select } from '@/components/ui/FormField';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { Link } from '@/lib/router';
+import { useSearchParams } from '@/lib/router';
 import { can } from '@/lib/permissions';
 import { formatHrInstant } from '../lib/hrFormat';
 import { useCompanyPermissions } from '@/lib/useCompanyPermissions';
 import { getHrUnitTree, listHrUnits } from '../api/hrClient';
 import type { HrUnitItem, HrUnitTreeNode } from '../api/hrTypes';
 import { HrActiveBadge } from '../components/HrBadges';
+import { Alert } from '@/components/ui/Alert';
+import { LoadingState } from '@/components/Feedback';
+const HrUnitCreatePage = lazy(() => import('./HrUnitCreatePage').then((module) => ({ default: module.HrUnitCreatePage })));
 import { HrUnitTree } from '../components/HrUnitTree';
 
 type Props = {
@@ -35,6 +38,24 @@ export function HrUnitsPage({ onUnauthenticated, companyId }: Props) {
   const canCreate = can(access, 'hr.units.create');
 
   const [view, setView] = useState<ViewMode>('tree');
+  // Local Form Flow (PR 5): the create form opens INSIDE this workspace tab through the
+  // `form=new` query; the list stays mounted (hidden), so filters, paging and scroll survive.
+  const [params, setParams] = useSearchParams();
+  const creating = params.get('form') === 'new';
+  const [createdFlash, setCreatedFlash] = useState<{ id: string; name: string } | null>(null);
+
+  const closeCreateForm = () => {
+    const next = new URLSearchParams(params);
+    next.delete('form');
+    setParams(next, { replace: true });
+  };
+
+  const handleCreated = (created: { id: string; name: string }) => {
+    setCreatedFlash(created);
+    closeCreateForm();
+    setAttempt((value) => value + 1); // fresh list with the new record
+  };
+
   const [searchText, setSearchText] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -116,10 +137,27 @@ export function HrUnitsPage({ onUnauthenticated, companyId }: Props) {
   const forbidden = failure?.status === 403 || failure?.status === 404;
   const filtered = search !== '';
 
-  usePageBreadcrumb([{ label: 'منابع انسانی' }, { label: 'واحدهای سازمانی' }]);
+  usePageBreadcrumb(creating ? [{ label: 'منابع انسانی' }, { label: 'واحدهای سازمانی', to: '/hr/org/units' }, { label: 'واحد جدید' }] : [{ label: 'منابع انسانی' }, { label: 'واحدهای سازمانی' }]);
 
   return (
     <div className="space-y-5">
+      {createdFlash ? (
+        <Alert tone="info">
+          <span>{`واحد سازمانی «${createdFlash.name}» ثبت شد.`}</span>
+        </Alert>
+      ) : null}
+      {creating ? (
+        <Suspense fallback={<LoadingState label="در حال بارگذاری فرم…" />}>
+          <HrUnitCreatePage
+            onUnauthenticated={onUnauthenticated}
+            companyId={companyId}
+            onSaved={handleCreated}
+            onExit={closeCreateForm}
+            showOpenInNewTab
+          />
+        </Suspense>
+      ) : null}
+      <div hidden={creating} className={creating ? undefined : 'space-y-5'}>
       <header className="space-y-2">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -129,9 +167,18 @@ export function HrUnitsPage({ onUnauthenticated, companyId }: Props) {
             </p>
           </div>
           {canCreate ? (
-            <Link to="/hr/org/units/new" className={buttonVariants({ size: 'lg' })}>
+            <button
+              type="button"
+              className={buttonVariants({ size: 'lg' })}
+              onClick={() => {
+                setCreatedFlash(null);
+                const next = new URLSearchParams(params);
+                next.set('form', 'new');
+                setParams(next);
+              }}
+            >
               واحد جدید
-            </Link>
+            </button>
           ) : null}
         </div>
       </header>
@@ -206,5 +253,6 @@ export function HrUnitsPage({ onUnauthenticated, companyId }: Props) {
         </>
       )}
     </div>
+      </div>
   );
 }
