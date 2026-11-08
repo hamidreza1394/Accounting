@@ -1340,3 +1340,106 @@
   .faranou-tab { max-width: 11rem; }
   .faranou-tab-label { max-width: 8.5rem; }
 }
+
+/* ---- Workspace tab lifecycle markers (Issue #444 stage 1 completion; D-076) ----
+   Status is never colour-only: every marker pairs an icon/shape with Persian
+   accessible text (sr-only) and the shared tooltip. */
+.faranou-tab-icon { color: #56708a; flex: 0 0 auto; }
+.faranou-tab-dot {
+  flex: 0 0 auto;
+  width: .45rem;
+  height: .45rem;
+  border-radius: 999px;
+  background: var(--color-gold-deep);
+}
+.faranou-tab-saving {
+  flex: 0 0 auto;
+  color: var(--color-teal-deep);
+  animation: faranou-tab-spin 1s linear infinite;
+}
+.faranou-tab-erroricon {
+  flex: 0 0 auto;
+  color: var(--color-danger);
+}
+@keyframes faranou-tab-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .faranou-tab-saving { animation: none; }
+}
+
+/* The problem-tabs dialog of the workspace (dirty/saving/error tabs by name). */
+.faranou-problemtabs {
+  margin: .75rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+.faranou-problemtab-row {
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  padding: .5rem .6rem;
+  background: #fbfdfe;
+}
+.faranou-problemtab {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: .5rem;
+  min-height: 2.25rem;
+  border: 0;
+  background: transparent;
+  padding: 0 .25rem;
+  text-align: start;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.faranou-problemtab:hover { background: #f1f6fa; }
+.faranou-problemtab:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 2px; }
+.faranou-problemtab-routeicon { color: #56708a; flex: 0 0 auto; }
+.faranou-problemtab-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+  color: var(--color-title);
+  font-size: .875rem;
+}
+.faranou-problemtab-statusicon { flex: 0 0 auto; }
+.faranou-problemtab-statusicon--dirty { color: var(--color-gold-deep); }
+.faranou-problemtab-statusicon--saving { color: var(--color-teal-deep); animation: faranou-tab-spin 1s linear infinite; }
+.faranou-problemtab-statusicon--error { color: var(--color-danger); }
+@media (prefers-reduced-motion: reduce) {
+  .faranou-problemtab-statusicon--saving { animation: none; }
+}
+.faranou-problemtab-status {
+  flex: 0 0 auto;
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--color-warning);
+  border: 1px solid color-mix(in srgb, var(--color-warning) 35%, transparent);
+  border-radius: 6px;
+  padding: .1rem .4rem;
+  background: var(--color-warning-soft);
+}
+.faranou-problemtab-status--error {
+  color: var(--color-danger);
+  border-color: color-mix(in srgb, var(--color-danger) 35%, transparent);
+  background: var(--color-danger-soft);
+}
+.faranou-problemtab-count {
+  flex: 0 0 auto;
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--color-sub);
+}
+.faranou-problemtab-message {
+  margin: .35rem .25rem 0;
+  font-size: .78rem;
+  line-height: 1.7;
+  color: var(--color-sub);
+}
