@@ -2809,3 +2809,8 @@
 - **تست‌ها:** ۳ تست جدید login-history (مجوز ۴۰۳/مجاز، فقط رویدادهای احراز هویت کاربر هدف + نزولی + UTC، ۴۰۴ ناموجود/Empty) + تست فیلتر `userId` لیست کارکنان (متصل/کاربر دیگر/ناشناخته/Empty)؛ route جدید به نگهبان معماری `ApiSensitiveReadRateLimitTests` اضافه شد. اجرای محلی: build Release بدون خطا؛ ۶/۶ تست UserAdministration + ۳۱/۳۱ تست HR + تست rate-limit سبز.
 - **مستندات:** `docs/api/USER_ACCESS_MANAGEMENT_API.md` §۲.۵، `docs/HR_FRONTEND_API_CONTRACT.md` §۱.۱ و handoff مرحله سوم به‌روزرسانی شدند.
 - **Migration:** هیچ.
+
+## 2026-11-09 — Issue #444 مرحله سوم PR 3-B: Workspace هفت‌تبی پرونده کاربر
+- `UserDetailPage` به پرونده حرفه‌ای هفت‌تبی تبدیل شد (مشخصات+پرسنلی، حساب و امنیت، عضویت‌ها، زیرسیستم/لایسنس با یادداشت صادقانه D-075، مجوزهای مؤثر با منبع و جستجو، سوابق ورود، سوابق تغییرات)؛ lazy load هر تب + cache per-user (بدون درخواست تکراری/تب غیرفعال)؛ حالت‌های Loading/Empty/Error/Retry و بخش صادقانه «مجاز نیست» برای 403/404؛ کلاینت: ۳ تابع + parser جدید و `HrEmployeeQuery.userId`.
+- تست‌ها: بازنویسی تست جزئیات + فایل تست جدید Workspace (۱۴ سناریو شامل lazy/caching/RTL/allowlist D-069)؛ vitest ۹۱۶/۹۱۶؛ typecheck/build/check:offline سبز. اصلاح تست HR بر اساس بازخورد CI (مجوز `hr.employees.list`؛ رفتار fail-closed درست endpoint روی SQL Server تأیید شد).
+- Migration: هیچ. (با PR 3-A در #596؛ بخش‌های باقی‌ماندهٔ مرحله سوم در handoff ثبت شده است.)
