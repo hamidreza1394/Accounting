@@ -2679,6 +2679,43 @@
 - **تست محلی:** vitest نهایی **824/824** (+۳۴)، typecheck و build سبز، `check:offline` و `check_static_assets` سبز؛ هیچ تغییری در Backend/Migration/کاتالوگ مجوز. بررسی مرورگر واقعی (Chromium، 1440/768/360) با تصاویر قبل/بعد پوسته.
 - **مستندات:** `docs/UI_COMPONENTS.md` (سه بخش پوسته/چندتب/Dirty)، handoff: `docs/handoffs/ISSUE-444-stage-1-workspace-shell.md`. Merge فقط با اجازهٔ صریح مالک؛ وضعیت CI هر PR در handoff و گزارش مأموریت ثبت می‌شود.
 
+## 2026-11-08 — Issue #444 Stage 2-A: کاتالوگ رسمی زیرسیستم‌ها و معماری دسترسی (فقط-مستندات)
+- **مبنا:** `main@cb2ddd57`؛ شاخهٔ `docs/issue-444-stage2-subsystem-catalog`.
+- **کاتالوگ:** `docs/SUBSYSTEM_CATALOG.md` — استخراج کامل از کد واقعی (روترها/منو/Endpointها/PermissionDefinitions/LicenseSubsystemCodes) در سه گروه: هسته/مدیریتی (core, identity-admin, membership, access-admin, hr, security-audit, fiscal)، عملیاتی مجوزدار (TRADE_IMPORT, finance, treasury, sales, inventory) و پشتیبان/بیرونی (corporate-groups, reporting, licensing, vendor, infrastructure-operator, support)؛ هر ردیف با شواهد کد و وضعیت واقعی D-030.
+- **D-075 (Proposed):** مدل مفهومی زیرسیستم/منو/فرم/عملیات؛ پیوند entitlement فقط برای زیرسیستم‌های مجوزدار؛ هم‌خوانی PermissionTree با کاتالوگ؛ بدون جدول/RBAC/Tenant موازی.
+- **شکاف‌های مستند:** Trade runtime (#390)، تلفیق گروه، grant سال/دوره (D-066 Proposed)، retention (D-070)، انقضای عضویت، ۷ زیرسیستم placeholder.
+- **مستندات:** INDEX.md (سطر کاتالوگ + D-075)؛ handoff: `docs/handoffs/ISSUE-444-stage-2.md`. هیچ تغییر کد/Migration/API. Merge فقط با اجازهٔ مالک.
+
+## 2026-11-08 — Issue #444 Stage 2-B: کاتالوگ منو و فرم + گارد ماشینی سازگاری منو↔روتر
+- **مبنا:** `main@cb2ddd57`؛ شاخهٔ `feat/issue-444-stage2-menu-form-catalog`.
+- **سند:** `docs/MENU_FORM_CATALOG.md` — درخت منوی واقعی از `navigation` (AppSidebar) و کاتالوگ کامل ۲۳ Route از `appRoutes` با Parent/گیت/زیرسیستم؛ قواعد سه‌حالتی فعال/به‌زودی/پنهان و منع Route جعلی (D-075).
+- **کد:** فقط `export navigation`/نوع‌ها از AppSidebar (بدون تغییر رفتار) + تست سازگاری جدید `menuRouteConsistency.test.tsx` (۶ قید: مسیرهای جعلی، Route تکراری، عنوان فارسی، برچسب انگلیسی، گروه بدون صفحه). هیچ Route/منو/رفتاری تغییر نکرد.
+- **تست:** کل مجموعه ClientApp اجرا شد — نتیجه در handoff ثبت می‌شود؛ مستندات: INDEX + handoff مرحله دوم.
+
+## 2026-11-08 — Issue #444 Stage 2-C: کاتالوگ عملیات و مجوزها (فقط-مستندات)
+- **مبنا:** `main@cb2ddd57`؛ شاخهٔ `docs/issue-444-stage2-permission-catalog`.
+- **سند:** `docs/PERMISSION_CATALOG.md` — نگاشت هر ۷۳ کد PermissionDefinitions (استخراج با regex از ۶ Migration) به محل اعمال واقعی، تاکسونومی افعال، تطبیق فعل‌های مأموریت، سطح hint کلاینت (۱۹ hint؛ بدون hint مرده)، قواعد PermissionTree و نگهداری.
+- **تصمیم مطابق مأموریت:** هیچ کد مجوز تازه‌ای اضافه نشد (جلوگیری از مجوز بی‌استفاده)؛ دو کد seeded-only و ۴۶ کد Trade به‌عنوان شکاف واقعی مستند شدند.
+- **مستندات:** INDEX + handoff مرحله دوم. بدون کد/Migration/API؛ Merge فقط با اجازهٔ مالک.
+
+## 2026-11-08 — Issue #444 Stage 2-D: API کاتالوگ زیرسیستم/منو/فرم (Backend)
+- **مبنا:** `main@cb2ddd57`؛ شاخهٔ `feat/issue-444-stage2-access-catalog-api`.
+- **کد:** `Server/Infrastructure/Access/AccessCatalogRegistry.cs` (کاتالوگ کد-محور فقط-خواندنی: ۱۸ زیرسیستم/۲۰ منو/۲۳ فرم؛ کد entitlement فقط از ثابت‌های `LicenseSubsystemCodes`؛ بدون جدول/Migration — D-075) + `Server/Api/AccessCatalogEndpoints.cs` (سه GET فقط-خواندنی `/admin/access/catalog/{subsystems,menus,forms}` فقط مدیر نصب با بازخوانی نقش از DB در هر درخواست؛ no-store؛ بدون Pagination به‌دلیل ثابت‌بودن) + ثبت در `ApiEndpoints.MapFaranouApi`.
+- **عدم تکرار API:** عملیات/مجوزها همچنان از `GET /admin/permission-catalog` سرو می‌شوند؛ مدیر شرکت طبق D-071 §6 همان endpoint را در سقف تفویض می‌بیند.
+- **تست:** ۵ تست جدید `AccessCatalogEndpointTests` (401 ناشناس، 403 غیرمدیر، 200 مدیر؛ درون‌سازگاری کاتالوگ؛ منع ساخت کد entitlement؛ یکتایی مسیرها). اجرای واقعی: `dotnet test` کامل — **۱۰۵۷ موفق / ۲ خطای پیش‌موجود** (`SafeExceptionRealApplicationTests` نیازمند SQL Server، مطابق WORK_LOGهای قبلی) / ۶۴ Skip gated.
+- **مستندات:** بخش ۱۰ `docs/api/USER_ACCESS_MANAGEMENT_API.md`. Merge فقط با اجازهٔ مالک.
+
+## 2026-11-08 — Issue #444 Stage 2-E (بخش Backend): API دسترسی‌های مؤثر عضو شرکت
+- **مبنا:** `main@cb2ddd57`؛ شاخهٔ `feat/issue-444-stage2-effective-permissions-api`.
+- **کد:** `GET /api/v1/admin/companies/{companyId}/effective-permissions/{userId}` در `CompanyRoleAdministrationEndpoints.cs` — اجتماع کدهای مجوز نقش‌های فعال روی عضویت‌های فعال هدف (`CompanyAccessService.GetGrantedPermissionCodesAsync`) + نام نقش‌ها؛ مجوزدهی دوحالته D-071 (`roles.view` یا مدیر نصب با بازخوانی DB)؛ بدون عضویت فعال هدف/حساب ناموجود = 404 بدون افشا (D-064)؛ no-store؛ بدون Audit (خواندنی).
+- **تست واقعی:** ۳ تست جدید `EffectivePermissionsEndpointTests` (قواعد دوحالته 404/403/200؛ اجتماع کدها و حذف نقش/عضویت غیرفعال؛ 404 بدون افشا برای حساب ناموجود/غیرفعال) — سبز؛ کل مجموعه **۱۰۶۰ موفق / ۲ پیش‌موجود (نیازمند SQL Server) / ۶۴ Skip**.
+- **مستندات:** بخش ۳.۱ قرارداد API. UI مشاهده در RoleDetailPage در PR بعدی همین مأموریت می‌آید. Merge فقط با اجازهٔ مالک.
+
+## 2026-11-08 — Issue #444 Stage 2-E (بخش UI): مشاهدهٔ دسترسی‌های مؤثر در صفحهٔ گروه دسترسی
+- **مبنا:** شاخهٔ `feat/issue-444-stage2-effective-permissions-api` (#579)؛ شاخهٔ جدید `feat/issue-444-stage2-effective-permissions-ui` (stacked — وابستگی واقعی به API جدید).
+- **کد:** `api/types.ts` (نوع + پارسر قراردادی `parseEffectivePermissions`)، `api/client.ts` (`getEffectivePermissions`)، `RoleMembersSection.tsx` (ستون «دسترسی مؤثر» با دکمهٔ مشاهدهٔ per-row + کارت نتیجه با حالت‌های Loading/Error/Empty و نمایش نقش‌ها + کدهای مجوز به‌صورت `<code dir=ltr>`؛ 403 → onForbidden برای بازخوانی hintها؛ 404 → پیام بدون افشا).
+- **تست واقعی:** +۳ تست در `RoleMembersSection.test.tsx` (نمایش اجتماع نقش/کد؛ Empty؛ مسیر 404 بدون افشا و 403 با onForbidden)؛ کل vitest **844/844**؛ typecheck و build سبز؛ هیچ تستی حذف نشد.
+
 ## 2026-11-08 — Issue #444 تکمیلی — PR 1-C: تکمیل تست بصری/Responsive مرحله اول (حد واقعی محیط)
 - **مبنا:** `main@cb2ddd57`؛ شاخهٔ `test/ui-stage1-responsive-checks`.
 - **تست محلی واقعی روی این شاخه:** vitest **842/842** (۸۰ فایل؛ +۱ تست جدید)، typecheck/build/check:offline/check_static_assets همگی سبز؛ `dotnet publish` سرور موفق (175MB، بدون تغییر کد Backend؛ Backend test اجرا نشد چون Backend تغییر نکرد).
@@ -2692,8 +2729,8 @@
 - **شواهد:** Check-runs همهٔ ۶ SHA نهایی success (client، build-and-test، e2e، secret-scan، Semgrep، CodeQL، Analyze، publish*)؛ لاگ خام CI از GitHub Actions API استخراج شد.
 - **مستندات:** فقط همین Handoff و ورودی WORK_LOG؛ Merge فقط با اجازهٔ مالک.
 
-## 2026-11-07 — UNNUMBERED — ثبت قراردادهای رسمی UI، Workspace و تغییر زمینه (D-075 Proposed)
+## 2026-11-07 — UNNUMBERED — ثبت قراردادهای رسمی UI، Workspace و تغییر زمینه (D-076 Proposed)
 - **مبنا:** `main@7207779e`؛ شاخهٔ `docs/ui-workspace-context-contracts`؛ تغییر فقط-مستندات.
-- **تغییر:** الزامات UI-01..UI-15 و قرارداد چرخهٔ عمر تب (`UI_COMPONENTS.md`)، قرارداد تغییر مرکزی شرکت/دوره با ۱۲ سناریو (`WORK_CONTEXT_SELECTOR_UI.md`)، الزامات امنیتی چندشرکتی (`SECURITY.md`)، ADR D-075 با وضعیت `Proposed`/`NeedsApproval` (`DECISIONS.md`)، اصلاح `INDEX.md` و شمارندهٔ ADR بعدی (D-076) در `AGENTS.md`.
+- **تغییر:** الزامات UI-01..UI-15 و قرارداد چرخهٔ عمر تب (`UI_COMPONENTS.md`)، قرارداد تغییر مرکزی شرکت/دوره با ۱۲ سناریو (`WORK_CONTEXT_SELECTOR_UI.md`)، الزامات امنیتی چندشرکتی (`SECURITY.md`)، ADR D-076 با وضعیت `Proposed`/`NeedsApproval` (`DECISIONS.md`)، اصلاح `INDEX.md` و شمارندهٔ ADR بعدی (D-077) در `AGENTS.md`.
 - **انحراف‌های ثبت‌شده:** تأیید و رها کردن Dirty هنگام تغییر زمینه (در برابر توقف)، نبود `Saving`/`Error` در `formGuard`، گروه‌بندی Sidebar ناهم‌تراز با UI-05/UI-08، نبود i18n متمرکز.
 - **آزمون:** کد و تست اجرا/تغییر نشد (فقط مستندات). Handoff: `docs/handoffs/UNNUMBERED-ui-workspace-context-contracts.md`. Merge فقط با اجازهٔ مالک.

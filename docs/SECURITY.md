@@ -355,7 +355,7 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - مرجع: [D-074](DECISIONS.md#d-074--ترکیب-مجوز-عملیاتی-و-entitlement-تجاری-در-تصمیم-دسترسی-2026-11-06).
 
 
-## تغییر زمینه و جداسازی چندشرکتی در رابط و API — D-075 (Proposed، 2026-11-07)
+## تغییر زمینه و جداسازی چندشرکتی در رابط و API — D-076 (Proposed، 2026-11-07)
 
 الزامات کارفرما برای قرارداد تغییر شرکت/دورهٔ مالی (جزئیات رفتار: `WORK_CONTEXT_SELECTOR_UI.md`، چرخهٔ تب: `UI_COMPONENTS.md`). همگی بر D-013، D-031، D-032، D-064 و D-065 تکیه دارند و هیچ مدل یا جدول تازه‌ای نمی‌سازند.
 

@@ -59,14 +59,17 @@ type NavGroup = {
   openByDefault?: boolean;
 };
 
-type NavEntry = { kind: 'item'; leaf: NavLeaf } | { kind: 'group'; group: NavGroup };
+/** Exported for the menu↔router consistency test and docs tooling; presentation-only. */
+export type NavEntry = { kind: 'item'; leaf: NavLeaf } | { kind: 'group'; group: NavGroup };
+export type NavLeafInfo = NavLeaf;
+export type NavGroupInfo = NavGroup;
 
 /**
  * Presentation-only navigation, grouped the way an Iranian accounting ERP is actually used.
  * Only implemented pages carry a route; everything else shows the visible "به‌زودی" state
  * instead of a broken path. Internal English names (hr, trade, roles…) never surface here.
  */
-const navigation: NavEntry[] = [
+export const navigation: NavEntry[] = [
   { kind: 'item', leaf: { label: 'داشبورد', icon: LayoutDashboard, tone: 'sky', to: '/' } },
   {
     kind: 'group',

@@ -62,6 +62,10 @@ public static class CompanyRoleAdministrationEndpoints
         roles.MapPost("/{roleId:guid}/members/{userId:guid}", AssignMembershipAsync)
             .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
 
+        api.MapGet("/admin/companies/{companyId:guid}/effective-permissions/{userId:guid}", GetEffectivePermissionsAsync)
+            .RequireAuthorization(policy => policy.RequireClaim(
+                Infrastructure.Tenancy.CompanyAccessService.AccountKindClaimType,
+                Infrastructure.Tenancy.CompanyAccessService.UserAccountKind));
         api.MapGet("/admin/permission-catalog", GetPermissionCatalogAsync)
             .RequireAuthorization(policy => policy.RequireClaim(
                 Infrastructure.Tenancy.CompanyAccessService.AccountKindClaimType,
@@ -117,6 +121,49 @@ public static class CompanyRoleAdministrationEndpoints
 
         SetNoStore(httpContext);
         return TypedResults.Ok(result);
+    }
+
+    /// <summary>
+    /// GET /admin/companies/{companyId}/effective-permissions/{userId} — دسترسی‌های مؤثر یک
+    /// عضو فعال همان شرکت (اجتماع کدهای مجوز نقش‌های فعال عضویت‌های او، D-064/D-071).
+    /// فقط-خواندنی؛ برای کاربر بدون عضویت فعال همان شرکت 404 برمی‌گرداند تا وجود حساب افشا نشود.
+    /// </summary>
+    public static async Task<IResult> GetEffectivePermissionsAsync(
+        Guid companyId,
+        Guid userId,
+        HttpContext httpContext,
+        ClaimsPrincipal principal,
+        Data.DatabaseContext database,
+        [FromServices] Infrastructure.Tenancy.CompanyAccessService companyAccess,
+        CancellationToken cancellationToken)
+    {
+        var (failure, _) = await AuthorizeCompanyScopeAsync(
+            database, companyAccess, principal, companyId, ViewRolesPermission, cancellationToken);
+        if (failure is not null) return failure;
+        if (!await IsActiveCompanyAsync(database, companyId, cancellationToken)) return TypedResults.NotFound();
+
+        var roleNames = await database.UserCompanyMemberships.AsNoTracking()
+            .Where(membership => membership.TenantId == companyId
+                && membership.UserId == userId
+                && membership.IsActive)
+            .Join(database.CompanyRoles.AsNoTracking(),
+                membership => new { membership.RoleId, membership.TenantId },
+                role => new { RoleId = role.Id, role.TenantId },
+                (membership, role) => new { role.Name, role.IsActive })
+            .Where(row => row.IsActive)
+            .Select(row => row.Name)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        if (roleNames.Count == 0) return TypedResults.NotFound();
+
+        var codes = await companyAccess.GetGrantedPermissionCodesAsync(userId, companyId, cancellationToken);
+
+        SetNoStore(httpContext);
+        return TypedResults.Ok(new EffectivePermissionsResponse(
+            userId,
+            companyId,
+            roleNames.OrderBy(name => name, StringComparer.Ordinal).ToArray(),
+            codes.OrderBy(code => code, StringComparer.Ordinal).ToArray()));
     }
 
     public static async Task<IResult> GetPermissionCatalogAsync(
@@ -807,6 +854,12 @@ public sealed record CompanyRoleTemplateResponse(string Code, string Name, IRead
 public sealed record CreateCompanyRoleRequest(string? Code, string? Name, string? TemplateCode, IReadOnlyCollection<string>? PermissionCodes);
 public sealed record UpdateCompanyRoleRequest(string? Name, bool IsActive, IReadOnlyCollection<string> PermissionCodes);
 public sealed record CompanyRoleCreatedResponse(Guid Id);
+public sealed record EffectivePermissionsResponse(
+    Guid UserId,
+    Guid CompanyId,
+    string[] RoleNames,
+    string[] PermissionCodes);
+
 public sealed record CompanyRoleMemberResponse(
     Guid UserId, string? Username, string? FirstName, string? LastName, bool IsUserActive, DateTime MemberSinceUtc);
 public sealed record CompanyRoleMemberListResponse(

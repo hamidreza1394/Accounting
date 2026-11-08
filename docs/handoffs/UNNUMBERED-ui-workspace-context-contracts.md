@@ -10,8 +10,8 @@
 - [x] قرارداد چرخهٔ عمر تب `Clean/Dirty/Saving/Error` (`docs/UI_COMPONENTS.md`)
 - [x] قرارداد تغییر مرکزی شرکت/دوره + ۱۲ سناریوی پذیرش (`docs/WORK_CONTEXT_SELECTOR_UI.md`)
 - [x] قرارداد امنیتی/چندشرکتی (`docs/SECURITY.md`)
-- [x] ADR جدید با شماره بعدی، بدون Accepted اعلام‌کردن (`docs/DECISIONS.md` — D-075)
-- [x] اصلاح `docs/INDEX.md` و شمارندهٔ ADR بعدی در `AGENTS.md` (D-076)
+- [x] ADR جدید با شماره بعدی، بدون Accepted اعلام‌کردن (`docs/DECISIONS.md` — D-076)
+- [x] اصلاح `docs/INDEX.md` و شمارندهٔ ADR بعدی در `AGENTS.md` (D-077)
 - [x] بدون تغییر کد، Migration، وابستگی یا جدول
 
 ## خلاصه تغییرات
@@ -21,12 +21,12 @@
 ## فایل‌های مهم تغییرکرده
 - `docs/UI_COMPONENTS.md` — الزامات UI-01..UI-15 و قرارداد چرخهٔ عمر تب
 - `docs/WORK_CONTEXT_SELECTOR_UI.md` — قرارداد تغییر شرکت/دوره، محافظت‌ها، ۱۲ سناریو
-- `docs/SECURITY.md` — بخش D-075 (Tenant، اعتبارسنجی مجدد، cache، Admin در برابر CompanyRole، AccessGroup موازی ممنوع)
-- `docs/DECISIONS.md` — D-075 (`Proposed`)
+- `docs/SECURITY.md` — بخش D-076 (Tenant، اعتبارسنجی مجدد، cache، Admin در برابر CompanyRole، AccessGroup موازی ممنوع)
+- `docs/DECISIONS.md` — D-076 (`Proposed`)
 - `docs/INDEX.md`، `AGENTS.md` (شمارندهٔ ADR)، `docs/WORK_LOG.md`
 
 ## تصمیم‌های فنی
-- ADR جدید: D-075 (`Proposed`/`NeedsApproval`). مالک متن آن را هنوز تأیید نکرده است.
+- ADR جدید: D-076 (`Proposed`/`NeedsApproval`). مالک متن آن را هنوز تأیید نکرده است.
 - تناقض با D-های موجود: ندارد؛ فقط یک تعارض عملی با رفتار فعلی پیاده‌شده (تأیید و رها کردن Dirty هنگام تغییر زمینه، PR 5 مرحلهٔ ۱ Issue #444) و دو انحراف پیاده‌سازی (گروه‌بندی Sidebar، فقدان `Saving`/`Error`) به‌صراحت ثبت شد.
 - عمداً ثبت نشد: انتخاب کتابخانهٔ i18n، اندازه/رنگ/مهلت‌های عددی، متن دقیق پیام‌ها، API دقیق وضعیت فرم، رفتار نهایی پس از رد زمینهٔ جدید، شناسهٔ زمینه در پاسخ API، رفتار دورهٔ `Archived`.
 
@@ -42,7 +42,7 @@
 - بدون اثر روی کد، Schema، API یا مجوزها. بخش امنیتی فقط الزام طراحی است و ادعای `Implemented/Verified` ندارد.
 
 ## ریسک‌ها و کارهای باقی‌مانده
-- تأیید مالک برای متن D-075؛ سپس Issueهای پیاده‌سازی: توسعهٔ `formGuard` (چهار وضعیت و نشانگر تب)، سازوکار مرکزی تغییر زمینه با نسل زمینه، هم‌ترازی Sidebar، تصمیم i18n.
+- تأیید مالک برای متن D-076؛ سپس Issueهای پیاده‌سازی: توسعهٔ `formGuard` (چهار وضعیت و نشانگر تب)، سازوکار مرکزی تغییر زمینه با نسل زمینه، هم‌ترازی Sidebar، تصمیم i18n.
 - تست سناریوهای ۱ تا ۱۲ پس از پیاده‌سازی.
 
 ## شناسه‌های Git

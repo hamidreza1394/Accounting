@@ -972,3 +972,30 @@ export function parseAssignableRoles(value: unknown): MembershipRequestPage<Assi
     isSystemRole: readBoolean(item, 'isSystemRole', what),
   }));
 }
+
+/** The union of the permission codes granted by a member's active memberships' active roles (server-computed). */
+export type EffectivePermissions = {
+  userId: string;
+  companyId: string;
+  roleNames: string[];
+  permissionCodes: string[];
+};
+
+export function parseEffectivePermissions(value: unknown): EffectivePermissions {
+  const what = 'effectivePermissions';
+  if (!isObject(value)) throw new ContractError(what);
+  const readCodes = (key: string): string[] => {
+    const rows = value[key];
+    if (!Array.isArray(rows)) throw new ContractError(`${what}.${key}`);
+    return rows.map((row) => {
+      if (typeof row !== 'string' || row.length === 0) throw new ContractError(`${what}.${key}`);
+      return row;
+    });
+  };
+  return {
+    userId: readString(value, 'userId', what),
+    companyId: readString(value, 'companyId', what),
+    roleNames: readCodes('roleNames'),
+    permissionCodes: readCodes('permissionCodes'),
+  };
+}

@@ -15,6 +15,9 @@
 |---|---|
 | [TRADE_MODULE.md](TRADE_MODULE.md) | معماری، امنیت چندشرکتی، استفاده مشترک از دوره‌های مالی، فرم‌ها، گزارش‌ها و مسیر استخراج ماژول بازرگانی (D-061/D-062) |
 | [USER_ACCESS_MANAGEMENT.md](USER_ACCESS_MANAGEMENT.md) | طراحی و نقشه اجرایی مدیریت کاربران، سمت‌ها، گروه‌های دسترسی، مجوزهای جزئی و سوابق امنیتی (Issue #444) |
+| [SUBSYSTEM_CATALOG.md](SUBSYSTEM_CATALOG.md) | کاتالوگ رسمی زیرسیستم‌های واقعی مخزن با شواهد کد، وضعیت، منو، کدهای مجوز و پیوند entitlement؛ مدل زیرسیستم/منو/فرم/عملیات در D-075 (Stage 2-A، Issue #444) |
+| [MENU_FORM_CATALOG.md](MENU_FORM_CATALOG.md) | کاتالوگ درخت منو و همهٔ Routeهای واقعی با Parent/گیت/ترتیب؛ گارد ماشینی سازگاری منو↔روتر (Stage 2-B، Issue #444) |
+| [PERMISSION_CATALOG.md](PERMISSION_CATALOG.md) | نگاشت کاربرد هر ۷۳ کد `PermissionDefinitions` به endpoint/فرم، تاکسونومی افعال عملیات، سطح hint کلاینت و قواعد نگهداری کاتالوگ (Stage 2-C، Issue #444) |
 | [api/USER_ACCESS_MANAGEMENT_API.md](api/USER_ACCESS_MANAGEMENT_API.md) | قرارداد واقعی API مدیریت کاربران/دسترسی/نشست‌ها برای مصرف Frontend — استخراج‌شده از کد (Issue #444؛ به‌روزرسانی 2026-11-05) |
 | [handoffs/USER-ACCESS-FRONTEND-HANDOFF.md](handoffs/USER-ACCESS-FRONTEND-HANDOFF.md) | نقشهٔ مصرف Frontend برای کاربران/دسترسی/نشست‌ها: نگاشت صفحه‌ها به API، خطاها، قابلیت‌های ناموجود و وضعیت PRهای Wave-1 (2026-11-05) |
 | [`FRONTEND_API_CONTRACT_NEEDS.md`](FRONTEND_API_CONTRACT_NEEDS.md) | قراردادهای API پیشنهادی مورد نیاز UI مدیریت دسترسی (عضویت، `/me/permissions`، گزارش امنیتی، نشست‌ها، S2) برای Backend (Issue #444) |
@@ -22,8 +25,8 @@
 | [`PROJECT_STATUS.md`](PROJECT_STATUS.md) | وضعیت تأییدشده فعلی |
 | [`ROADMAP.md`](ROADMAP.md) | برنامه راه |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | معماری و جهت وابستگی |
-| [`WORK_CONTEXT_SELECTOR_UI.md`](WORK_CONTEXT_SELECTOR_UI.md) | طراحی بصری و رفتار صفحه انتخاب شرکت و دوره مالی (لوگو، فونت، مرور محصولات، اندازه‌گیری)؛ قرارداد تغییر مرکزی شرکت/دوره حین نشست و ۱۲ سناریوی پذیرش (D-075، Proposed) |
-| [`DECISIONS.md`](DECISIONS.md) | ADRها D-001..D-075 در DECISIONS.md؛ D-075: قرارداد رسمی UI، چرخهٔ عمر تب‌های Workspace (Clean/Dirty/Saving/Error) و تغییر مرکزی شرکت/دورهٔ مالی (Proposed؛ NeedsApproval)؛ D-064: تفکیک مدیر سراسری نصب از مجوزهای عملیاتی شرکتی (Accepted؛ Issue #444)؛ D-065: معماری مصوب دسترسی چندشرکتی، دامنه و grant سال/دوره (Accepted؛ Issue #444)؛ D-059: entitlement مستقل Company/Module/Feature/Seat، add-on با amendment، bootstrap مدیر Offline و sync دوحالته؛ D-055 و D-056 جداگانه در اسناد اختصاصی Issue #236 (D-055: معماری PKCS#11؛ D-056: SoftHSM برای Development/Staging و Software assurance با پذیرش ریسک صریح در Production؛ مرحلهٔ ۲ با HSM واقعی؛ D-057: TPM 2.0 NV Extend hash-chain برای anti-rollback وضعیت ابطال آفلاین مشتری (Issue #364)؛ D-058: فعال‌سازی پایدار، هویت نصب ویندوز و کنترل server-side ابری (Issue #384)؛ مرز مشتری و برچسب‌های رابطه: D-037..D-040؛ مرز سامانه مرکزی، فعال‌سازی، هویت فروشنده و گذار: D-041..D-044؛ قرارداد لایسنس: D-045؛ امنیت و عملیات فروشنده: D-046؛ معماری اجرایی Vendor: D-047 (Accepted; implementation staged and not Production-ready)؛ shadcn/ui: D-048؛ کتابخانه‌های جدول/نمودار/تاریخ، آفلاین‌بودن دارایی‌ها و قواعد طراحی/سرعت: D-049؛ استفادهٔ مشروط از بخش‌های رایگان KendoReact: D-050 |
+| [`WORK_CONTEXT_SELECTOR_UI.md`](WORK_CONTEXT_SELECTOR_UI.md) | طراحی بصری و رفتار صفحه انتخاب شرکت و دوره مالی (لوگو، فونت، مرور محصولات، اندازه‌گیری)؛ قرارداد تغییر مرکزی شرکت/دوره حین نشست و ۱۲ سناریوی پذیرش (D-076، Proposed) |
+| [`DECISIONS.md`](DECISIONS.md) | ADRها D-001..D-076 در DECISIONS.md؛ D-076: قرارداد رسمی UI، چرخهٔ عمر تب‌های Workspace (Clean/Dirty/Saving/Error) و تغییر مرکزی شرکت/دورهٔ مالی (Proposed؛ NeedsApproval)؛ D-075: کاتالوگ زیرسیستم و مدل زیرسیستم/منو/فرم/عملیات (Proposed؛ Stage 2-A)؛ D-064: تفکیک مدیر سراسری نصب از مجوزهای عملیاتی شرکتی (Accepted؛ Issue #444)؛ D-065: معماری مصوب دسترسی چندشرکتی، دامنه و grant سال/دوره (Accepted؛ Issue #444)؛ D-059: entitlement مستقل Company/Module/Feature/Seat، add-on با amendment، bootstrap مدیر Offline و sync دوحالته؛ D-055 و D-056 جداگانه در اسناد اختصاصی Issue #236 (D-055: معماری PKCS#11؛ D-056: SoftHSM برای Development/Staging و Software assurance با پذیرش ریسک صریح در Production؛ مرحلهٔ ۲ با HSM واقعی؛ D-057: TPM 2.0 NV Extend hash-chain برای anti-rollback وضعیت ابطال آفلاین مشتری (Issue #364)؛ D-058: فعال‌سازی پایدار، هویت نصب ویندوز و کنترل server-side ابری (Issue #384)؛ مرز مشتری و برچسب‌های رابطه: D-037..D-040؛ مرز سامانه مرکزی، فعال‌سازی، هویت فروشنده و گذار: D-041..D-044؛ قرارداد لایسنس: D-045؛ امنیت و عملیات فروشنده: D-046؛ معماری اجرایی Vendor: D-047 (Accepted; implementation staged and not Production-ready)؛ shadcn/ui: D-048؛ کتابخانه‌های جدول/نمودار/تاریخ، آفلاین‌بودن دارایی‌ها و قواعد طراحی/سرعت: D-049؛ استفادهٔ مشروط از بخش‌های رایگان KendoReact: D-050 |
 | [`CORPORATE_GROUPS.md`](CORPORATE_GROUPS.md) | گروه شرکتی، گزارش تجمیعی/تلفیقی، مجوزها و نقشه راه (D-033..D-035) |
 | [`CORPORATE_GROUPS_DATA_MODEL.md`](CORPORATE_GROUPS_DATA_MODEL.md) | جداول، کلیدها و راهبرد Migration گروه شرکتی |
 | [`PRODUCT_REQUIREMENTS.md`](PRODUCT_REQUIREMENTS.md) | نیازمندی‌های محصول |
@@ -40,14 +43,14 @@
 | [`LICENSING_OPEN_DECISIONS.md`](LICENSING_OPEN_DECISIONS.md) | تصمیم‌های باز لایسنس و سامانه مرکزی با گزینه‌ها، ریسک و پیشنهاد؛ پرسش‌های اولویت‌بندی‌شده برای مالک محصول (فاز صفر 2026-10-24) |
 | [`DATABASE.md`](DATABASE.md), [`database-migrations.md`](database-migrations.md) | دیتابیس و Migration |
 | [`DATABASE_SETUP.md`](DATABASE_SETUP.md) | راه‌اندازی اولیه دیتابیس، محل و رمزنگاری تنظیمات اتصال، مهاجرت TarazAva ← Farano، فرمان `--settings` (D-036) |
-| [`SECURITY.md`](SECURITY.md) | امنیت؛ شامل الزامات تغییر زمینه و جداسازی چندشرکتی (D-075، Proposed) |
+| [`SECURITY.md`](SECURITY.md) | امنیت؛ شامل الزامات تغییر زمینه و جداسازی چندشرکتی (D-076، Proposed) |
 | [`VENDOR_BOOTSTRAP.md`](VENDOR_BOOTSTRAP.md) | راهنمای عملیاتی command-mode برای راه‌اندازی اولین مدیر Vendor، TOTP و بازیابی pending |
 | [`runbooks/vendor-audit-checkpoint-recovery.md`](runbooks/vendor-audit-checkpoint-recovery.md) | رویهٔ provider-neutral برای checkpoint مستقل Audit، backup/restore و recovery؛ تا انتخاب مقصد واقعی، Production-ready نیست |
 | [`runbooks/ISSUE-236-HSM-TPM-KEY-OPERATIONS.md`](runbooks/ISSUE-236-HSM-TPM-KEY-OPERATIONS.md) | Key Ceremony، کنترل دو نفره، rotation/revocation، Backup/Recovery، TPM مشتری و alerting؛ اجرای Production تا تأمین HSM واقعی Blocked است |
 | [`TESTING.md`](TESTING.md) | تست |
 | [`DEPLOYMENT.md`](DEPLOYMENT.md), [`DEVELOPMENT.md`](DEVELOPMENT.md) | استقرار و توسعه |
 | [`CODING_STANDARDS.md`](CODING_STANDARDS.md) | استانداردها |
-| [`UI_COMPONENTS.md`](UI_COMPONENTS.md) | هستهٔ قواعد UI: shadcn/ui، RTL فارسی، دسترس‌پذیری، runtime آفلاین، قانون محلی‌سازی دارایی‌ها و قواعد طراحی/سرعت/ویژوال (D-048، D-049)؛ الزامات رسمی UI-01..UI-15 و قرارداد چرخهٔ عمر تب‌ها (D-075، Proposed) |
+| [`UI_COMPONENTS.md`](UI_COMPONENTS.md) | هستهٔ قواعد UI: shadcn/ui، RTL فارسی، دسترس‌پذیری، runtime آفلاین، قانون محلی‌سازی دارایی‌ها و قواعد طراحی/سرعت/ویژوال (D-048، D-049)؛ الزامات رسمی UI-01..UI-15 و قرارداد چرخهٔ عمر تب‌ها (D-076، Proposed) |
 | [`ADMIN_UI.md`](ADMIN_UI.md) | وضعیت کد ادغام‌شدهٔ رابط مدیریت سیستم در ClientApp، مسیرها، API client، تست‌ها و شکاف‌های واقعی Backend (Issues #461–#475) |
 | [`UI_LIBRARIES.md`](UI_LIBRARIES.md) | مرجع کتابخانه‌ها: جدول/نمودار/تاریخ، استفادهٔ مشروط از KendoReact Free (D-050)، گزارش پیوت و راهنمای مهارت `ui-ux-pro-max`؛ هنگام انتخاب یا افزودن کتابخانه بخوان |
 | [`REPOSITORY_AUDIT.md`](REPOSITORY_AUDIT.md) | ممیزی و ناهماهنگی‌ها |
@@ -86,7 +89,7 @@
 | [`TIME_CONTRACT.md`](TIME_CONTRACT.md) | ممیزی و قرارداد زمان: `*Utc` در برابر ساعت محلی قدیمی سرور، قرارداد Frontend و پیشنهاد Backend (D-067) |
 | [`handoffs/ISSUE-444-utc-time-contract.md`](handoffs/ISSUE-444-utc-time-contract.md) | تحویل یکپارچه‌سازی قرارداد زمان در ClientApp (Issue #444) |
 | [`handoffs/ISSUE-444-jalali-date-picker.md`](handoffs/ISSUE-444-jalali-date-picker.md) | تحویل انتخابگر تاریخ شمسی (`JalaliDateField`) و ADR وابستگی D-068 (Issue #444) |
-| [`handoffs/UNNUMBERED-ui-workspace-context-contracts.md`](handoffs/UNNUMBERED-ui-workspace-context-contracts.md) | تحویل مستندسازی قراردادهای UI، چرخهٔ عمر تب و تغییر زمینه (D-075، Proposed؛ بدون تغییر کد) |
+| [`handoffs/UNNUMBERED-ui-workspace-context-contracts.md`](handoffs/UNNUMBERED-ui-workspace-context-contracts.md) | تحویل مستندسازی قراردادهای UI، چرخهٔ عمر تب و تغییر زمینه (D-076، Proposed؛ بدون تغییر کد) |
 | [`handoffs/ISSUE-444-security-audit-ui.md`](handoffs/ISSUE-444-security-audit-ui.md) | تحویل UI گزارش امنیت و سوابق مدیریتی روی API #487 (Issue #444، S7) |
 | [`FRONTEND_API_CONTRACT_NEEDS.md`](FRONTEND_API_CONTRACT_NEEDS.md) | قراردادهای API پیشنهادی مورد نیاز UI مدیریت دسترسی (عضویت، `/me/permissions`، گزارش امنیتی، نشست‌ها، S2) برای Backend (Issue #444) |
 | [`handoffs/ISSUE-444-ui-e2e-and-a11y.md`](handoffs/ISSUE-444-ui-e2e-and-a11y.md) | تحویل E2E و axe رابط مدیریت دسترسی (Issue #444، مرحلهٔ ۱۱؛ اجرا فقط در CI) |
@@ -110,3 +113,4 @@
 - **D-073 Accepted (2026-11-06):** MFA، بازیابی/Reset رمز و ابطال مدیریتی نشست؛ پیاده‌سازی Customer هنوز ناقص است.
 - **D-074 Accepted (2026-11-06):** ترکیب fail-closed مجوز عملیاتی و Entitlement در همه ماژول‌های مجوزدار؛ اتصال سراسری runtime هنوز کامل نیست.
 - **Issue #556:** ثبت و هم‌ترازی ADRهای امنیت حساب، Audit retention و Entitlement؛ handoff: [ISSUE-556-security-decisions.md](handoffs/ISSUE-556-security-decisions.md).
+- **Stage 2-A مأموریت تکمیلی #444 (2026-11-08):** کاتالوگ رسمی زیرسیستم‌ها: [SUBSYSTEM_CATALOG.md](SUBSYSTEM_CATALOG.md)؛ ADR پیشنهادی D-075؛ handoff مرحله دوم: [handoffs/ISSUE-444-stage-2.md](handoffs/ISSUE-444-stage-2.md).
