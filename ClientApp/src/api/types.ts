@@ -1075,6 +1075,54 @@ export function parseAdminRevocationOutcome(value: unknown): { revokedCount: num
   return { revokedCount: readCount(value, 'revokedCount', what) };
 }
 
+/** One inter-company membership request of the target user, as the installation administrator sees it in the profile. */
+export type AdminUserMembershipRequest = {
+  id: string;
+  destinationCompanyId: string;
+  destinationCompanyName: string;
+  status: MembershipRequestStatus;
+  requestedAtUtc: string;
+  decidedAtUtc: string | null;
+  decidedByDisplayName: string | null;
+  approvedRoleName: string | null;
+  decisionReason: string | null;
+};
+
+export type AdminUserMembershipRequestPage = {
+  items: AdminUserMembershipRequest[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+};
+
+export function parseAdminUserMembershipRequests(value: unknown): AdminUserMembershipRequestPage {
+  const what = 'adminUserMembershipRequests';
+  if (!isObject(value)) throw new ContractError(what);
+  const rows = value['items'];
+  if (!Array.isArray(rows)) throw new ContractError(`${what}.items`);
+  const items = rows.map((row): AdminUserMembershipRequest => {
+    if (!isObject(row)) throw new ContractError(`${what}.item`);
+    const item = `${what}.item`;
+    return {
+      id: readString(row, 'id', item),
+      destinationCompanyId: readString(row, 'destinationCompanyId', item),
+      destinationCompanyName: readString(row, 'destinationCompanyName', item),
+      status: readMembershipRequestStatus(row, item),
+      requestedAtUtc: readRequiredDateTime(row, 'requestedAtUtc', item),
+      decidedAtUtc: readUtcDateTime(row, 'decidedAtUtc', item, true),
+      decidedByDisplayName: readNullableString(row, 'decidedByDisplayName', item),
+      approvedRoleName: readNullableString(row, 'approvedRoleName', item),
+      decisionReason: readNullableString(row, 'decisionReason', item),
+    };
+  });
+  return {
+    items,
+    page: readCount(value, 'page', what),
+    pageSize: readCount(value, 'pageSize', what),
+    totalCount: readCount(value, 'totalCount', what),
+  };
+}
+
 /** One subsystem of the D-075 access catalog (read-only, installation administrator). */
 export type AccessSubsystem = {
   code: string;

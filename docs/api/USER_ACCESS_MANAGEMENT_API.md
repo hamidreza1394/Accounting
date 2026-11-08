@@ -63,6 +63,12 @@
 - سوابق احراز هویت کاربر هدف؛ فقط مدیر نصب (بازارزیابی فعال از دیتابیس)؛ همان قرارداد `GET /me/login-history`: `take` بین ۱ تا ۱۰۰ (clamp، پیش‌فرض ۵۰)، رویدادهای `LoginSucceeded/LoginFailed/LoginDeniedInactive/LoginDeniedEnrollmentPending/LogoutSucceeded`، نزولی بر `OccurredAtUtc`؛ پاسخ `[{ eventType, occurredAtUtc, ipAddress }]` با هدر `no-store`.
 - ۴۰۴ برای کاربر ناموجود یا `Guid.Empty`؛ رویدادهای غیراحراز هویت (مانند `CompanyRoleUpdated`) هرگز در پاسخ نیستند — سوابق تغییرات مدیریتی از `GET /admin/security/audit-events?userId=` گرفته می‌شود.
 
+### ۲.۶ `GET /api/v1/admin/users/{userId}/membership-requests` (rate limit حساس؛ Stage 3 — 2026-11-09)
+- درخواست‌های عضویت بین‌شرکتی «همین کاربر» در همهٔ شرکت‌های مقصد؛ فقط مدیر نصب (بازخوانی فعال از دیتابیس). خواندنی و بدون Audit — همان جدول گردش موجود D-065 را projects می‌کند و هیچ وضعیت یا گردش موازی‌ای ندارد؛ تصمیم همچنان فقط در صف تأیید شرکت مقصد (بخش ۵.۴) گرفته می‌شود.
+- Query: `status` اختیاری از allowlist `Pending|Approved|Rejected` (نامعتبر → 400؛ همان نرمال‌ساز endpointهای مقصد)، `page` (clamp تا ۱۰۰٬۰۰۰) و `pageSize` (clamp ۱..۱۰۰، پیش‌فرض ۲۵).
+- پاسخ ۲۰۰: `{ items: [{ id, destinationCompanyId, destinationCompanyName, status, requestedAtUtc, decidedAtUtc, decidedByDisplayName, approvedRoleName, decisionReason }], totalCount, page, pageSize }`؛ نزولی بر `RequestedAtUtc` با تساوی‌شکن `Id`؛ همهٔ زمان‌ها UTC با `Z`؛ `no-store`؛ بدون IP/Payload/RowVersion.
+- ۴۰۴ برای کاربر ناموجود یا `Guid.Empty`؛ تست: `UserAdministrationEndpointTests` + نگهبان rate-limit `ApiSensitiveReadRateLimitTests`.
+
 ## ۳. نقش‌های شرکتی، کاتالوگ و سقف تفویض (D-071)
 
 - **مجوزدهی دوحالته:** مدیر نصب (بازخوانی DB، بدون سقف) یا مدیر شرکت (عضویت فعال + کد مجوز، محدود به سقف تفویض مبتنی بر تصاحب). ناشناس 401؛ بدون هیچ رابطه با شرکت 404؛ عضو بی‌مجوز 403.

@@ -88,7 +88,7 @@ function ProfileWorkspace({ user, cache, onUnauthenticated }: {
       items={[
         { id: 'identity', label: 'مشخصات فردی و پرسنلی', content: <ProfileIdentityTab {...shared} /> },
         { id: 'security', label: 'حساب کاربری و امنیت', content: <ProfileSecurityTab {...shared} /> },
-        { id: 'memberships', label: 'شرکت‌ها و عضویت‌ها', content: <ProfileMembershipsTab user={user} /> },
+        { id: 'memberships', label: 'شرکت‌ها و عضویت‌ها', content: <ProfileMembershipsTab {...shared} /> },
         { id: 'subsystems', label: 'زیرسیستم‌ها و لایسنس', content: <ProfileSubsystemsTab {...shared} /> },
         { id: 'permissions', label: 'گروه‌های دسترسی و مجوزهای مؤثر', content: <ProfilePermissionsTab {...shared} /> },
         { id: 'logins', label: 'سوابق ورود و خروج', content: <ProfileLoginHistoryTab {...shared} /> },
