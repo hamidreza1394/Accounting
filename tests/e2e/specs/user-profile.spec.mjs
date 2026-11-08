@@ -100,6 +100,9 @@ test.describe('user profile workspace: HR link, request states, permissions, ses
     test.setTimeout(300_000);
     const admin = await addInstallationAdmin(fixture, 't1');
     const { destination } = fixture;
+    // The workspace shell resolves the work context (D-031) before any admin route renders;
+    // the seed administrator is a member of a company for the same reason.
+    await fixture.addMembership(admin, destination, destination.memberRole.id);
     const target = await fixture.addUser('target');
     await fixture.addMembership(target, destination, destination.memberRole.id);
 
@@ -175,6 +178,7 @@ test.describe('user profile workspace: HR link, request states, permissions, ses
     test.setTimeout(300_000);
     const admin = await addInstallationAdmin(fixture, 't2');
     const { source, destination } = fixture;
+    await fixture.addMembership(admin, destination, destination.memberRole.id);
     const target = await fixture.addUser('target2');
     await fixture.addMembership(target, source, source.memberRole.id);
 
@@ -261,6 +265,7 @@ test.describe('user profile workspace: HR link, request states, permissions, ses
   test('the D-073 step-up revocation really ends the target session', async ({ page, browser }) => {
     test.setTimeout(300_000);
     const admin = await addInstallationAdmin(fixture, 't3');
+    await fixture.addMembership(admin, fixture.destination, fixture.destination.memberRole.id);
     const target = await fixture.addUser('target4');
 
     // The target signs in once: exactly one active session and one LoginSucceeded event.
