@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { RouteView, RouterProvider, type Route } from '../../../lib/router';
 import { PageBreadcrumbBar, PageBreadcrumbProvider } from '@/components/shell/PageBreadcrumb';
 import { json, stubFetch, userDetails } from '../../../test/adminUsers';
+import { stubApi } from '../../../test/api';
 import { rememberUserListLocation, resetUserListReturnForTests } from './userListReturn';
 import { UserDetailPage } from './UserDetailPage';
 import { clearUserFlash, setUserFlash } from './userFlash';
@@ -75,7 +76,7 @@ describe('UserDetailPage', () => {
     expect(screen.queryByText('تغییرات کاربر ذخیره شد.')).toBeNull();
   });
 
-  it('shows breadcrumb, header and the general tab first', async () => {
+  it('shows breadcrumb, header and the identity tab first', async () => {
     const fetchMock = stubFetch(() => json(userDetails(2)));
     setup();
     expect(await screen.findByRole('heading', { level: 1, name: 'نام2 خانوادگی2' })).toBeInTheDocument();
@@ -87,46 +88,78 @@ describe('UserDetailPage', () => {
     expect(await crumbs.findByText('نام2 خانوادگی2')).toHaveAttribute('aria-current', 'page');
     expect(screen.getByText('@user2')).toHaveAttribute('dir', 'ltr');
     const panel = screen.getByRole('tabpanel');
-    expect(within(panel).getByText('نقش قدیمی حساب')).toBeInTheDocument();
-    expect(within(panel).getByText('Accountant')).toBeInTheDocument();
-    expect(within(panel).getByText('user2')).toHaveAttribute('dir', 'ltr');
+    expect(within(panel).getByText('user2@example.test')).toBeInTheDocument();
+    expect(within(panel).getByText('تأیید شده')).toBeInTheDocument();
   });
 
-  it('has exactly the three tabs backed by existing API fields', async () => {
+  it('has exactly the seven profile workspace tabs (stage 3)', async () => {
     stubFetch(() => json(userDetails(2)));
     setup();
     await screen.findByRole('tablist');
-    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['اطلاعات عمومی', 'اطلاعات تماس', 'شرکت‌ها و عضویت‌ها']);
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'مشخصات فردی و پرسنلی',
+      'حساب کاربری و امنیت',
+      'شرکت‌ها و عضویت‌ها',
+      'زیرسیستم‌ها و لایسنس',
+      'گروه‌های دسترسی و مجوزهای مؤثر',
+      'سوابق ورود و خروج',
+      'سوابق تغییرات مدیریتی',
+    ]);
   });
 
-  it('shows contact data with verification badges (icon and text)', async () => {
-    const user = userEvent.setup();
+  it('shows the system-administrator badge only for the legacy Admin role', async () => {
+    stubFetch(() => json(userDetails(2)));
+    const first = setup();
+    await screen.findByRole('tablist');
+    expect(screen.queryByText('مدیر سیستم')).toBeNull();
+    first.unmount();
+    stubFetch(() => json(userDetails(2, { legacyRoleName: 'Admin' })));
+    setup();
+    expect(await screen.findByText('مدیر سیستم')).toBeInTheDocument();
+  });
+
+  it('shows contact data in the identity tab with verification badges', async () => {
     stubFetch(() => json(userDetails(2)));
     setup();
-    await user.click(await screen.findByRole('tab', { name: 'اطلاعات تماس' }));
-    const panel = within(screen.getByRole('tabpanel'));
+    const panel = within(await screen.findByRole('tabpanel'));
     expect(panel.getByText('user2@example.test')).toBeInTheDocument();
     expect(panel.getByText('09120000002')).toBeInTheDocument();
     expect(panel.getByText('تأیید شده')).toBeInTheDocument();
     expect(panel.getByText('تأیید نشده')).toBeInTheDocument();
   });
 
-  it('shows memberships in a table and supports keyboard tab navigation', async () => {
+  it('shows memberships in a table when their tab is opened', async () => {
     const user = userEvent.setup();
     stubFetch(() => json(userDetails(2)));
     setup();
-    const first = await screen.findByRole('tab', { name: 'اطلاعات عمومی' });
-    first.focus();
-    await user.keyboard('{End}');
-    expect(screen.getByRole('tab', { name: 'شرکت‌ها و عضویت‌ها' })).toHaveAttribute('aria-selected', 'true');
+    await user.click(await screen.findByRole('tab', { name: 'شرکت‌ها و عضویت‌ها' }));
     const table = within(screen.getByRole('table', { name: 'عضویت‌های شرکتی کاربر' }));
     expect(table.getByText('شرکت نمونه')).toBeInTheDocument();
     expect(table.getByText(/حسابدار/)).toBeInTheDocument();
     expect(table.getByText('(ACCOUNTANT)')).toBeInTheDocument();
     expect(table.getByText('غیرفعال')).toBeInTheDocument();
-    expect(table.getByText('۱۴۰۵/۰۷/۰۹')).toBeInTheDocument();
-    await user.keyboard('{ArrowRight}');
-    expect(screen.getByRole('tab', { name: 'اطلاعات تماس' })).toHaveAttribute('aria-selected', 'true');
+    expect(table.getByText(/۱۴۰۵\/۰۷\/۰۹/)).toBeInTheDocument();
+  });
+
+  it('moves between the tabs with the keyboard (RTL arrow semantics)', async () => {
+    const user = userEvent.setup();
+    stubApi({
+      'GET /api/v1/admin/users/user-2': { status: 200, body: userDetails(2) },
+      'GET /api/v1/admin/users/user-2/sessions': {
+        status: 200,
+        body: [{ sessionId: 's1', createdAtUtc: '2026-11-01T08:00:00Z', lastSeenAtUtc: '2026-11-01T09:30:00Z' }],
+      },
+    });
+    setup();
+    const first = await screen.findByRole('tab', { name: 'مشخصات فردی و پرسنلی' });
+    first.focus();
+    await user.keyboard('{ArrowLeft}'); // RTL: the next tab
+    expect(screen.getByRole('tab', { name: 'حساب کاربری و امنیت' })).toHaveAttribute('aria-selected', 'true');
+    const panel = within(screen.getByRole('tabpanel'));
+    expect(panel.getByRole('heading', { name: 'وضعیت حساب' })).toBeInTheDocument();
+    expect(await panel.findByRole('table', { name: 'نشست‌های فعال کاربر' })).toBeInTheDocument();
+    // D-069: the administrative session list never shows an IP address or user agent.
+    expect(document.body.textContent).not.toMatch(/IpAddress|userAgent/);
   });
 
   it('shows an empty message for a user without memberships', async () => {

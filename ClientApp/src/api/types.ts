@@ -1051,3 +1051,44 @@ export function parseEffectivePermissions(value: unknown): EffectivePermissions 
     permissions: value.permissions.map(readSourceRow),
   };
 }
+
+/** One active session of a user as listed by the installation administrator (D-069/D-073 allowlist: no IP, no user agent). */
+export type AdminUserSession = { sessionId: string; createdAtUtc: string; lastSeenAtUtc: string };
+
+export function parseAdminUserSessions(value: unknown): AdminUserSession[] {
+  const what = 'adminUserSessions';
+  if (!Array.isArray(value)) throw new ContractError(what);
+  return value.map((row) => {
+    if (!isObject(row)) throw new ContractError(what);
+    return {
+      sessionId: readString(row, 'sessionId', what),
+      createdAtUtc: readString(row, 'createdAtUtc', what),
+      lastSeenAtUtc: readString(row, 'lastSeenAtUtc', what),
+    };
+  });
+}
+
+/** One subsystem of the D-075 access catalog (read-only, installation administrator). */
+export type AccessSubsystem = {
+  code: string;
+  title: string;
+  entitlementScope: string;
+  entitlementLinked: boolean;
+  entitlementCode: string | null;
+};
+
+export function parseAccessSubsystems(value: unknown): AccessSubsystem[] {
+  const what = 'accessSubsystems';
+  if (!Array.isArray(value)) throw new ContractError(what);
+  return value.map((row) => {
+    if (!isObject(row)) throw new ContractError(what);
+    const entitlementCode = row['entitlementCode'];
+    return {
+      code: readString(row, 'code', what),
+      title: readString(row, 'title', what),
+      entitlementScope: readString(row, 'entitlementScope', what),
+      entitlementLinked: row['entitlementLinked'] === true,
+      entitlementCode: typeof entitlementCode === 'string' && entitlementCode.length > 0 ? entitlementCode : null,
+    };
+  });
+}
