@@ -323,7 +323,6 @@ describe('UserDetailPage profile workspace (stage 3)', () => {
     });
   });
 
-<<<<<<< HEAD
   describe('inter-company membership request states (PR 3-D2)', () => {
     const requestItem = (overrides: Record<string, unknown> = {}) => ({
       id: 'req-1',
@@ -415,9 +414,6 @@ describe('UserDetailPage profile workspace (stage 3)', () => {
       expect(await screen.findByText('درخواست عضویتی برای این حساب ثبت نشده است.')).toBeInTheDocument();
     });
   });
-
-=======
->>>>>>> origin/main
   describe('session revocation (D-073 §1 step-up)', () => {
     const sessionBody = (extra: boolean) => [
       { sessionId: 's-1', createdAtUtc: '2026-11-05T08:00:00Z', lastSeenAtUtc: '2026-11-06T09:00:00Z' },
