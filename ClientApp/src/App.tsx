@@ -110,28 +110,6 @@ export function App({ navigate = defaultNavigate }: { navigate?: Navigate }) {
 
   const reload = useCallback(() => setAttempt((value) => value + 1), []);
 
-  // The confirmed context change (Issue #444 stage 1 completion) refetches ONLY the work
-  // context: the workspace stays mounted the whole time, so the open tabs and their global
-  // forms survive the round trip. A failure lands in the shared error state; the previous
-  // context and tabs remain untouched until the server accepts the new selection.
-  const changeContext = useCallback(() => {
-    wantsSelection.current = true;
-    const controller = new AbortController();
-    getWorkContext(controller.signal)
-      .then((fresh) => {
-        if (controller.signal.aborted) return;
-        setState((previous) => (previous.kind === 'ready' ? { ...previous, context: fresh, selecting: true } : previous));
-      })
-      .catch((error: unknown) => {
-        if (controller.signal.aborted || handleUnauthenticated(error)) return;
-        setState((previous) =>
-          previous.kind === 'ready'
-            ? { ...previous, selecting: true, context: previous.context }
-            : { kind: 'error', message: error instanceof Error ? error.message : 'بارگذاری برنامه با خطا مواجه شد.' },
-        );
-      });
-  }, [handleUnauthenticated]);
-
   const handleLogout = useCallback(async () => {
     await logout();
     navigate(loginPath);
@@ -235,64 +213,85 @@ export function App({ navigate = defaultNavigate }: { navigate?: Navigate }) {
     );
   }
 
-  const selectorScreen = (
-    <WorkContextSelector
-      session={session}
-      context={context}
-      current={context.current}
-      onSelected={handleSelected}
-      onCancel={
-        context.current
-          ? () => {
-              wantsSelection.current = false;
-              setState({ ...state, selecting: false });
-            }
-          : undefined
-      }
-      onLogout={handleLogoutFromScreen}
-      onRefresh={reload}
-      onUnauthenticated={handleUnauthenticated}
-    />
-  );
-
-  if (context.current === null) {
-    // The first entry (or a forgotten context): there is no workspace to preserve yet.
-    return (
+  if (context.current === null || selecting) {
+    const selectorScreen = (
       <WorkContextSelector
         session={session}
         context={context}
         current={context.current}
         onSelected={handleSelected}
+        onCancel={
+          context.current
+            ? () => {
+                wantsSelection.current = false;
+                setState({ ...state, selecting: false });
+              }
+            : undefined
+        }
         onLogout={handleLogoutFromScreen}
         onRefresh={reload}
         onUnauthenticated={handleUnauthenticated}
       />
     );
+
+    // A context change from a live workspace keeps the shell mounted (inert) under the
+    // selection screen, so the open tabs, their global forms and their state survive the
+    // round trip; a failed or cancelled selection simply removes the overlay. The first
+    // entry (no current context yet) has no workspace to preserve.
+    if (context.current !== null) {
+      return (
+        <>
+          <div inert={true}>
+            <AppRouteDataContext.Provider value={routeData}>
+              <AppShell
+                routes={appRoutes}
+                workspaceTabs
+                access={companyPermissions.access}
+                onRetryPermissions={companyPermissions.retry}
+                session={session}
+                context={context.current}
+                contextChangePending
+                onChangeContext={() => {
+                  // Fresh choices from the server: memberships and periods may have changed.
+                  wantsSelection.current = true;
+                  reload();
+                }}
+                onLogout={handleLogout}
+                onPasswordChanged={handlePasswordChanged}
+                onUnauthenticated={handleUnauthenticated}
+              >
+                <RouteView />
+              </AppShell>
+            </AppRouteDataContext.Provider>
+          </div>
+          <div className="faranou-context-change-overlay">{selectorScreen}</div>
+        </>
+      );
+    }
+
+    return selectorScreen;
   }
 
-  // The selection screen rides ABOVE the workspace: the shell keeps its exact tree position
-  // (only `inert` and the overlay toggle), so the open tabs and their state never remount.
-  const changingContext = selecting;
   return (
     <AppRouteDataContext.Provider value={routeData}>
-      <div inert={changingContext ? true : undefined}>
-        <AppShell
-          routes={appRoutes}
-          workspaceTabs
-          access={companyPermissions.access}
-          onRetryPermissions={companyPermissions.retry}
-          session={session}
-          context={context.current}
-          contextChangePending={changingContext}
-          onChangeContext={changeContext}
-          onLogout={handleLogout}
-          onPasswordChanged={handlePasswordChanged}
-          onUnauthenticated={handleUnauthenticated}
-        >
-          <RouteView />
-        </AppShell>
-      </div>
-      {changingContext ? <div className="faranou-context-change-overlay">{selectorScreen}</div> : null}
+      <AppShell
+        routes={appRoutes}
+        workspaceTabs
+        access={companyPermissions.access}
+        onRetryPermissions={companyPermissions.retry}
+        session={session}
+        context={context.current}
+        onChangeContext={() => {
+          // Fresh choices from the server: memberships and periods may have changed.
+          wantsSelection.current = true;
+          reload();
+        }}
+        onLogout={handleLogout}
+        onPasswordChanged={handlePasswordChanged}
+        onUnauthenticated={handleUnauthenticated}
+      >
+        <RouteView />
+      </AppShell>
     </AppRouteDataContext.Provider>
   );
 }
