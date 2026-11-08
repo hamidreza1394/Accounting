@@ -306,11 +306,19 @@ describe('App', () => {
     // shell: cancelling must restore BOTH tabs, not just recreate the active route.
     await screen.findByRole('heading', { name: /به سامانه یکپارچه فرانو خوش آمدید/ });
     window.history.pushState(null, '', '/app/admin/users');
-    window.dispatchEvent(new PopStateEvent('popstate'));
     const tabs = await screen.findByRole('navigation', { name: 'تب‌های کاری باز' });
-    // The new tab appears after the lazily loaded route resolves; slower runners (Windows CI)
-    // need more than the default 1s, so wait up to 5s. The assertion itself is unchanged.
-    await waitFor(() => expect(tabs).toHaveTextContent('مدیریت کاربران'), { timeout: 5000 });
+    // The router attaches its `popstate` listener in a passive effect, which can still be
+    // pending when the heading above is already in the DOM (slow CI runners). A single
+    // dispatch could then be lost for good, so re-send it until the tab appears. In a real
+    // browser the event comes from a user action long after mount, so this is test-only.
+    // The assertion itself is unchanged.
+    await waitFor(
+      () => {
+        window.dispatchEvent(new PopStateEvent('popstate'));
+        expect(tabs).toHaveTextContent('مدیریت کاربران');
+      },
+      { timeout: 5000 },
+    );
     expect(tabs).toHaveTextContent('داشبورد');
 
     await userEvent.click(await screen.findByRole('button', { name: /تغییر شرکت/ }));
