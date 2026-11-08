@@ -17,12 +17,14 @@
 //      written to artifacts/ui-preview/stage-3-profile (never of the open step-up dialog).
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { mkdirSync, readFileSync } from 'node:fs';
+import { mkdirSync, randomUUID, readFileSync } from 'node:crypto';
+import { readFileSync as readState } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import sql from 'mssql';
 import { createMembershipFixture, hashPasswordV3 } from '../lib/membershipFixture.mjs';
 import { callApi, enterWorkspace, post, signIn } from '../lib/session.mjs';
 
-const state = JSON.parse(readFileSync(new URL('../.e2e-state.json', import.meta.url), 'utf8'));
+const state = JSON.parse(readState(new URL('../.e2e-state.json', import.meta.url), 'utf8'));
 
 // The published-server origin from playwright.config.mjs; a fresh secondary context cannot
 // derive it from `page.url()` because the primary page may still be on about:blank.
@@ -49,8 +51,6 @@ async function expectAccessible(page, scope) {
  * heavy profile walkthrough must not share the fixed window with the shared seed account (the
  * role-administration spec uses the same isolation pattern). Tracked as a fixture user. */
 async function addInstallationAdmin(fixture, label) {
-  const { randomUUID } = await import('node:crypto');
-  const { sql } = await import('mssql');
   const id = randomUUID();
   const username = `pa${randomUUID().replaceAll('-', '').slice(0, 10)}`;
   const password = `E2e-${randomUUID().replaceAll('-', '').slice(0, 16)}`;
