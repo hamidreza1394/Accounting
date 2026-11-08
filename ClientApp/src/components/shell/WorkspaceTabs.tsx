@@ -7,6 +7,7 @@ import { ErrorState, LoadingState } from '@/components/Feedback';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { initialTabsState, tabLabel, tabsReducer, type TabsState, type WorkspaceTab } from '@/lib/workspaceTabs';
 import { PageBreadcrumbBar, PageBreadcrumbProvider } from './PageBreadcrumb';
+import { WorkspaceTabEntry } from './WorkspaceTabEntry';
 
 // The workspace consumes the router context AppShell owns, so the sidebar links, the tab bar
 // and the tab panes share one location and one history. No new router, no new dependency.
@@ -37,6 +38,9 @@ function useWorkspaceTabs(): WorkspaceTabsStore {
   if (!store) throw new Error('WorkspaceTabsProvider is missing above this component.');
   return store;
 }
+
+/** Read access to the workspace store for shell dialogs rendered inside the provider. */
+export { useWorkspaceTabs };
 
 function routeTitleOf(routes: readonly Route[], pathname: string): string {
   for (const route of routes) {
@@ -187,6 +191,7 @@ function TabCloseDialog({ tab, onDismiss, onConfirmClose }: { tab: WorkspaceTab 
           : `«${label}» ${formStatusLabel.error} دارد. ابتدا خطا را برطرف کنید، تغییرات را ذخیره یا آگاهانه لغو کنید؛ سپس تب را ببندید.`
       }
       confirmVisible={false}
+      cancelLabel="متوجه شدم"
       onConfirm={onDismiss}
       onCancel={onDismiss}
     />
@@ -229,18 +234,7 @@ export function WorkspaceTabsBar() {
           const isActive = tab.key === active;
           return (
             <div key={tab.key} className={'faranou-tab' + (isActive ? ' faranou-tab--active' : '')}>
-              <button
-                type="button"
-                aria-current={isActive ? 'page' : undefined}
-                title={tabLabel(tab)}
-                className="faranou-tab-button"
-                onClick={() => {
-                  if (isActive) return;
-                  activate(tab);
-                }}
-              >
-                <span className="faranou-tab-label">{tabLabel(tab)}</span>
-              </button>
+              <WorkspaceTabEntry tab={tab} isActive={isActive} onActivate={() => (isActive ? undefined : activate(tab))} />
               <button
                 type="button"
                 className="faranou-tab-close"

@@ -11,6 +11,7 @@ import { PageBreadcrumbBar, PageBreadcrumbProvider } from './shell/PageBreadcrum
 import { WorkspaceTabPanes, WorkspaceTabsBar, WorkspaceTabsProvider } from './shell/WorkspaceTabs';
 import { hasAnyProblemForm, problemSummary } from '../lib/formGuard';
 import { ConfirmDialog } from './ui/ConfirmDialog';
+import { ProblemTabsDialog } from './shell/ProblemTabsDialog';
 
 type AppShellProps = {
   session: Session;
@@ -33,6 +34,16 @@ type AppShellProps = {
    * stay mounted while hidden. `children` is ignored in this mode.
    */
   workspaceTabs?: boolean;
+  /**
+   * The problem-tabs dialog (dirty/saving/error tabs by name) rendered inside the workspace
+   * provider; the context-change guard of the shell drives it (Issue #444 stage 1 completion).
+   */
+  problemTabsDialog?: {
+    open: boolean;
+    title: string;
+    description: string;
+    onClose: () => void;
+  };
 };
 
 /** Main authenticated frame. The server-validated WorkContext remains authoritative. */
@@ -70,6 +81,7 @@ function AppShellFrame({
   onUnauthenticated = ignoreUnauthenticated,
   children,
   workspaceTabs = false,
+  problemTabsDialog,
 }: AppShellFrameProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
@@ -209,6 +221,14 @@ function AppShellFrame({
 
       <WorkspaceTabsProvider workspaceTabs={workspaceTabs}>
         {workspaceTabs ? <WorkspaceTabsBar /> : null}
+        {problemTabsDialog && workspaceTabs ? (
+          <ProblemTabsDialog
+            open={problemTabsDialog.open}
+            title={problemTabsDialog.title}
+            description={problemTabsDialog.description}
+            onClose={problemTabsDialog.onClose}
+          />
+        ) : null}
         <div className="faranou-workspace-body">
         {mobileMenuOpen ? (
           <button

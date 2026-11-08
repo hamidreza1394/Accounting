@@ -137,7 +137,7 @@ export function ConfirmDialog({
         ) : null}
         <div className="mt-6 flex flex-wrap justify-end gap-2">
           <Button ref={cancelRef} type="button" variant="outline" size="lg" aria-disabled={busy || undefined} className={blockedClass} onClick={cancel}>
-            {confirmVisible ? cancelLabel : 'متوجه شدم'}
+            {cancelLabel}
           </Button>
           {confirmVisible ? (
             <Button
