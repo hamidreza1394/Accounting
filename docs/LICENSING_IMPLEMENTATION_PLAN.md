@@ -210,7 +210,7 @@ Issue #396 فقط مسئول startup gate و Activation Wizard است؛ contract
 - شاخه `feat/issue-390-company-scoped-license-contract-v2` قرارداد payload v2، validator، canonical serializer و pure successor rules را اضافه می‌کند.
 - دامنه PR فقط Licensing.Contracts، تست قرارداد و مستندات است؛ Vendor issuance در #393 و Customer persistence/enforcement در #391 باقی می‌مانند.
 - Envelope بیرونی و الگوریتم D-045 تغییر نمی‌کنند؛ v1 bytes و allowlist legacy حفظ می‌شوند.
-- تا تکمیل CI و ادغام، این مرحله Implemented-in-PR و نه Verified است.
+- **وضعیت نهایی:** PR #472 در main ادغام و ۱۵/۱۵ Check Run پس از Merge موفق شده است؛ PR #533 نیز Handoff/verification را ثبت کرده است. قرارداد v2 در main Verified است؛ این وضعیت به معنی وجود CompanyReference mapping در provisioning v4 یا consumer مشتری نیست.
 
 
 
@@ -227,7 +227,7 @@ Issue #396 فقط مسئول startup gate و Activation Wizard است؛ contract
 - **قواعد fail-closed:** فقط reference موجود در payload پذیرفته می‌شود؛ v1 به v2 تبدیل نمی‌شود؛ Company جدید ساخته نمی‌شود؛ ماژول/Feature ناشناخته، تکراری، از قبل موجود، Feature بدون ماژول مالک، کاهش یا مقدار برابر، سقف خارج از محدوده و درخواست بدون تغییر رد می‌شود. enum تا تصویب کاتالوگ مقادیر قابل صدور نیست.
 - payload candidate همان LicenseId/InstallationId و نسخه v2 را نگه می‌دارد، Sequence را فقط در candidate یک واحد افزایش می‌دهد و maxCompanies، تاریخ‌های support/update و entitlement شرکت‌های دیگر را حفظ می‌کند. اعتبارسنجی امضا و ثبت sequence پایدار همچنان مسئولیت caller/service و مرحله بعدی است.
 - **NotImplemented:** Commercial Order/Payment Evidence، persistence درخواست Amendment، endpoint، Maker-Checker، signer/export و وضعیت‌های Purchased/Delivered/Acknowledged. این PR آن‌ها را تکمیل‌شده معرفی نمی‌کند.
-- **مرز:** فقط Vendor Host، تست Vendor و مستندات؛ بدون `Server/**`، دیتابیس/Migration مشتری یا secret. تست محلی اجرا نشده و CI نهایی باید روی SHA نهایی بررسی شود.
+- **مرز:** فقط Vendor Host، تست Vendor و مستندات؛ بدون `Server/**`، دیتابیس/Migration مشتری یا secret. تست محلی در زمان PR اجرا نشد؛ post-merge CI روی merge commit #558 اکنون ۱۵/۱۵ Check Run موفق دارد.
 
 
 ## وضعیت اجرایی Issue #393 — برش سوم: تمدید مستقل پشتیبانی/به‌روزرسانی (2026-11-07)
