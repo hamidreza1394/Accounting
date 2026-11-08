@@ -184,6 +184,27 @@ describe('RoleCreatePage', () => {
     expect(title()).toHaveValue('');
   });
 
+  it('never prefills from a system role, even through a direct copyFrom URL', async () => {
+    const systemSource = {
+      id: 'role-sys',
+      companyId: 'a',
+      code: 'company-admin',
+      name: 'مدیر شرکت',
+      isSystemRole: true,
+      isActive: true,
+      permissionCount: 2,
+      activeMemberCount: 1,
+      permissionCodes: ['trade.orders.view', 'trade.orders.create'],
+    };
+    api(undefined, json(catalogItems), json([systemSource]));
+    setup('?company=a&copyFrom=role-sys');
+    await ready();
+    expect(await screen.findByText(/گروه سیستمی قابل کپی نیست/)).toBeInTheDocument();
+    expect(code()).toHaveValue('');
+    expect(title()).toHaveValue('');
+    expect(leaf('مشاهدهٔ سفارش‌ها')).not.toBeChecked();
+  });
+
   it('sends the template selection as permissionCodes (the server prefers explicit codes)', async () => {
     const user = userEvent.setup();
     const { calls } = api();
