@@ -32,8 +32,9 @@ export function HrEmployeeCreatePage({ onUnauthenticated, companyId }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
-  // The workspace asks this registry before closing the tab, signing out or changing context.
-  const formGuard = useFormGuard(dirty);
+  // The workspace asks this registry before closing the tab, signing out or changing context;
+  // a failed save keeps the `error` status until the user retries or cancels (D-076).
+  const formGuard = useFormGuard({ dirty, saving: submitting, errorMessage: error, title: 'کارمند جدید' });
 
   const update = (patch: Partial<FormState>) => {
     setForm((current) => ({ ...current, ...patch }));

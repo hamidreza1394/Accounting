@@ -56,8 +56,14 @@ export function UserForm({ mode, initialValues, onSubmit, onCancel, onUnauthenti
 
   const clientErrors = validateUserForm(values, mode);
   const dirty = isUserFormDirty(values, initialValues);
-  // The workspace asks this registry before closing the tab, signing out or changing context.
-  const formGuard = useFormGuard(dirty);
+  // The workspace asks this registry before closing the tab, signing out or changing context;
+  // a failed save keeps the `error` status until the user retries or cancels (D-076).
+  const formGuard = useFormGuard({
+    dirty,
+    saving: submitting,
+    errorMessage: alertMessage,
+    title: mode === 'create' ? 'ایجاد کاربر' : 'ویرایش کاربر',
+  });
   const visibleFields = fieldNames.filter((name) => mode === 'create' || (name !== 'password' && name !== 'confirmPassword'));
 
   const errorFor = (name: FieldName): string | undefined =>

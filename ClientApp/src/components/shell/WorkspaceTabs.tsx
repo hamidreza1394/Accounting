@@ -2,7 +2,7 @@ import { createContext, Suspense, useCallback, useContext, useEffect, useLayoutE
 import { Plus, X } from 'lucide-react';
 import { ParamsScope, TabLocationScope, matchPath, setTabTitleSink, titleSuffix, useRouterContext, type Route } from '@/lib/router';
 import type { AccessStatus, Permission } from '@/lib/permissions';
-import { dirtySummary, isTabDirty } from '@/lib/formGuard';
+import { formStatusLabel, problemSummary, tabStatus } from '@/lib/formGuard';
 import { ErrorState, LoadingState } from '@/components/Feedback';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { initialTabsState, tabLabel, tabsReducer, type TabsState, type WorkspaceTab } from '@/lib/workspaceTabs';
@@ -92,8 +92,9 @@ export function WorkspaceTabsProvider({ workspaceTabs = false, children }: { wor
         const current = stateRef.current;
         const closingIndex = current.tabs.findIndex((entry) => entry.key === tab.key);
         if (closingIndex === -1) return;
-        // Never lose a dirty form to a misclick: ask first (the guard registry is the source).
-        if (isTabDirty(tab.key)) {
+        // Never lose a form to a misclick: a Dirty tab asks first; a Saving/Error tab is
+        // refused outright (D-076: only a resolved tab may close).
+        if (tabStatus(tab.key) !== 'clean') {
           setPendingClose(tab);
           return;
         }
@@ -146,17 +147,49 @@ export function WorkspaceTabsProvider({ workspaceTabs = false, children }: { wor
   return (
     <WorkspaceTabsContext.Provider value={store}>
       {children}
+      <TabCloseDialog tab={pendingClose} onDismiss={() => setPendingClose(null)} onConfirmClose={confirmPendingClose} />
+    </WorkspaceTabsContext.Provider>
+  );
+}
+
+/**
+ * The close guard of a tab with unresolved forms: `Dirty` asks for confirmation (the user just
+ * confirmed the loss), while `Saving` and `Error` are refused outright — only a resolved tab
+ * may close (D-076).
+ */
+function TabCloseDialog({ tab, onDismiss, onConfirmClose }: { tab: WorkspaceTab | null; onDismiss: () => void; onConfirmClose: () => void }) {
+  const status = tab ? tabStatus(tab.key) : 'clean';
+  const label = tab ? tabLabel(tab) : '';
+  if (!tab || status === 'clean') {
+    return null;
+  }
+  if (status === 'dirty') {
+    return (
       <ConfirmDialog
-        open={pendingClose !== null}
+        open
         title="بستن تب با تغییرات ذخیره‌نشده"
-        description={pendingClose ? `${dirtySummary() || 'این صفحه تغییرات ذخیره‌نشده دارد.'} با بستن «${tabLabel(pendingClose)}» از دست می‌روند.` : ''}
+        description={`${problemSummary() || 'این صفحه تغییرات ذخیره‌نشده دارد.'} با بستن «${label}» از دست می‌روند.`}
         confirmLabel="بستن تب و از دست دادن تغییرات"
         cancelLabel="انصراف"
         tone="danger"
-        onConfirm={confirmPendingClose}
-        onCancel={() => setPendingClose(null)}
+        onConfirm={onConfirmClose}
+        onCancel={onDismiss}
       />
-    </WorkspaceTabsContext.Provider>
+    );
+  }
+  return (
+    <ConfirmDialog
+      open
+      title={status === 'saving' ? 'بستن این تب در حال حاضر ممکن نیست' : 'بستن این تب تا رفع خطا ممکن نیست'}
+      description={
+        status === 'saving'
+          ? `ذخیرهٔ «${label}» در حال انجام است (${formStatusLabel.saving}). تا پایان عملیات منتظر بمانید؛ پس از ذخیرهٔ موفق می‌توانید تب را ببندید.`
+          : `«${label}» ${formStatusLabel.error} دارد. ابتدا خطا را برطرف کنید، تغییرات را ذخیره یا آگاهانه لغو کنید؛ سپس تب را ببندید.`
+      }
+      confirmVisible={false}
+      onConfirm={onDismiss}
+      onCancel={onDismiss}
+    />
   );
 }
 
