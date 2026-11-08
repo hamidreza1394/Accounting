@@ -137,7 +137,8 @@ public sealed class EffectivePermissionsEndpointTests
         Assert.Equal(new[] { "hr.employees.list", "users.list" }, ok.PermissionCodes);
 
         var userGrant = Assert.Single(ok.Permissions, permission => permission.Code == "users.list");
-        Assert.Equal(new[] { "رسیدگی‌کننده", "حسابدار" }, userGrant.SourceRoleNames);
+        // Source role names are ordered with the deterministic ordinal comparer (same as the codes).
+        Assert.Equal(new[] { "حسابدار", "رسیدگی‌کننده" }, userGrant.SourceRoleNames);
         var hrGrant = Assert.Single(ok.Permissions, permission => permission.Code == "hr.employees.list");
         Assert.Equal(new[] { "HR-OPERATOR" }, hrGrant.SourceRoleNames);
         // Every attributed code is part of the flat union and vice versa.
