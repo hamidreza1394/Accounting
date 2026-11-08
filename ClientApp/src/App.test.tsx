@@ -302,6 +302,15 @@ describe('App', () => {
 
     render(<App navigate={vi.fn()} />);
 
+    // Open a second tab before switching context. The selector overlay must not remount the
+    // shell: cancelling must restore BOTH tabs, not just recreate the active route.
+    await screen.findByRole('heading', { name: /به سامانه یکپارچه فرانو خوش آمدید/ });
+    window.history.pushState(null, '', '/app/admin/users');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    const tabs = await screen.findByRole('navigation', { name: 'تب‌های کاری باز' });
+    await waitFor(() => expect(tabs).toHaveTextContent('مدیریت کاربران'));
+    expect(tabs).toHaveTextContent('داشبورد');
+
     await userEvent.click(await screen.findByRole('button', { name: /تغییر شرکت/ }));
     await userEvent.click(await screen.findByRole('button', { name: 'ادامه و انتخاب زمینهٔ جدید' }));
 
