@@ -89,7 +89,7 @@
 - Payload v1، sequence/metadata stale، منابع غیرفعال، no-op، کاهش/تکرار تاریخ، تاریخ آینده‌نبودن و term license منقضی‌شده رد می‌شوند. perpetual license پس از پایان support می‌تواند همان دورهٔ قبلی را تمدید کند.
 - این متد pure candidate builder است؛ هیچ خرید، سفارش، پرداخت، approval، امضا، persistence یا sequence پایدار ایجاد نمی‌کند. caller همچنان باید envelope جاری را با trust store و signature بررسی کند.
 - تست‌های Regression افزوده‌شده: تمدید مستقل Support، تمدید مستقل Updates، رد v1 و تاریخ null، رد no-op/عدم افزایش/تاریخ غیرآینده/term منقضی، و تمدید Support منقضی‌شده برای perpetual.
-- CI روی SHA نهایی PR باید پیش از `Verified` شدن موفق شود؛ تست محلی در این اجرا اجرا نشده است.
+- تست محلی در زمان PR اجرا نشد؛ پس از Merge PR #565، هر ۱۵ Check Run روی merge commit واقعی موفق شد و candidate این برش در main Verified است.
 
 
 ## تأیید نهایی پس از Merge — 2026-11-08
