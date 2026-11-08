@@ -2734,3 +2734,22 @@
 - **تغییر:** الزامات UI-01..UI-15 و قرارداد چرخهٔ عمر تب (`UI_COMPONENTS.md`)، قرارداد تغییر مرکزی شرکت/دوره با ۱۲ سناریو (`WORK_CONTEXT_SELECTOR_UI.md`)، الزامات امنیتی چندشرکتی (`SECURITY.md`)، ADR D-076 با وضعیت `Proposed`/`NeedsApproval` (`DECISIONS.md`)، اصلاح `INDEX.md` و شمارندهٔ ADR بعدی (D-077) در `AGENTS.md`.
 - **انحراف‌های ثبت‌شده:** تأیید و رها کردن Dirty هنگام تغییر زمینه (در برابر توقف)، نبود `Saving`/`Error` در `formGuard`، گروه‌بندی Sidebar ناهم‌تراز با UI-05/UI-08، نبود i18n متمرکز.
 - **آزمون:** کد و تست اجرا/تغییر نشد (فقط مستندات). Handoff: `docs/handoffs/UNNUMBERED-ui-workspace-context-contracts.md`. Merge فقط با اجازهٔ مالک.
+
+
+## 2026-11-08 — Vendor/Licensing: تطبیق وضعیت با Mergeهای واقعی و CI پس از Merge
+- مبنای بازبینی: main@da8ed012074f8439cb836ea4ae190e3ad2fc542e. GitHub Compare تأیید کرد این main شامل merge commit PR #565 است (۵۵ commit جلوتر، صفر عقب‌تر از 66b60cc48f6454997e260cb1244374114e2bfbd4).
+- PRهای مرجع: #281 = ۱۲/۱۲، #282 = ۱۳/۱۳ و #284 = ۱۳/۱۳ Check Run موفق روی merge commitهای واقعی؛ ترتیب authorization در approval همچنان تأییدشده است.
+- Vendor/Licensing پس از Merge: #472 = ۱۵/۱۵؛ #526 = ۱۲/۱۲؛ #527 = ۱۵/۱۵؛ #539 = ۱۲/۱۲؛ #546 = ۱۵/۱۵؛ #548 = ۱۵/۱۵؛ #558 = ۱۵/۱۵؛ #565 = ۱۵/۱۵. Check Runهای هر merge commit از GitHub API خوانده شدند؛ نتیجه شکست‌خورده/درحال‌اجرا در این مجموعه وجود نداشت.
+- main CI: ۱۲/۱۲ Check Run موفق (build/test، E2E، Linux/Windows publish، client، secret scan، publish scripts، CodeQL چهار زبان/نوع و Semgrep).
+- Issue #393: candidateهای افزایش maxCompanies، افزایش Company-scoped Module/Feature/UserSeat و تمدید Support/Updates در main هستند؛ همه فقط candidate می‌سازند و هیچ خرید، پرداخت، persistence، approval، امضا یا export را انجام نمی‌دهند.
+- Issue #228: PR #546 fail-closed را حفظ کرده است؛ provisioning برای LicensePayload v2 تا CompanyReference mapping معتبر در #392 عمداً unavailable است. #235 و هر تغییر Customer consumer/ACK جدا می‌مانند.
+- Actions خارج از Vendor: در ۱۰۰ اجرای اخیر ۸۶ success، ۴ in-progress، ۷ cancelled و ۳ failure دیده شد. سه failure از headهای قدیمی #584/#585/#586 (Workspace/HR) بودند؛ logها missing UI headings و SQL Server 18456/State 38 برای FaranouE2E را نشان دادند. این شاخه‌ها خارج از محدوده Vendor هستند و headهای جدیدشان در حال اجرای مجدد بودند؛ هیچ تغییری در آن‌ها انجام نشد.
+- تست محلی: در این اجرا Build/Test محلی اجرا نشد؛ تمام نتایج موفق فوق فقط به Check Runهای واقعی GitHub نسبت داده می‌شوند. هیچ Migration، تغییر Customer Server/** یا secret ایجاد نشد.
+
+
+## 2026-11-08 — PR #584: حفظ Shell و تب‌ها هنگام بارگذاری مجدد زمینهٔ کاری
+- **علت شکست CI (job `client`، Head 253025e):** `reload()` در `App.tsx` همیشه state را به `loading` می‌برد و `AppShell` را Unmount می‌کرد؛ در نتیجه با «تغییر شرکت» و سپس «انصراف» تب داشبورد از بین می‌رفت. تست `App.test.tsx` («lets the user change company or period in the same sign-in, and cancel») این را در CI و محلی به‌صورت قطعی نشان می‌داد.
+- **اصلاح:** در `ClientApp/src/App.tsx` اگر زمینهٔ فعال وجود داشته باشد، بارگذاری مجدد state قبلی را حفظ می‌کند (بارگذاری اولیه، تلاش مجدد پس از خطا و حالت بدون زمینه همچنان صفحهٔ `loading` را نشان می‌دهند). در `App.test.tsx` ادعای نهایی با سناریوی خود تست ناسازگار بود (مسیر فعال `/app/admin/users` بود ولی عنوان داشبورد را می‌خواست)؛ با ادعای «هر دو تب باقی می‌مانند و مسیر فعال حفظ می‌شود» جایگزین شد. هیچ تستی حذف، Skip یا تضعیف نشد.
+- **آزمون محلی (Node 22):** `App.test.tsx` ۱۸/۱۸ موفق؛ `npm run typecheck`، `npm run build` و `npm run check:offline` موفق. `npm test`: ۸۸۲ موفق و ۳ شکست (`securityAuditClient.test.ts`، `SecurityAuditPage.test.tsx`) با خطای `object.stream is not a function`؛ همین ۳ شکست روی Head بدون تغییر هم رخ داد و در CI (Node 24) موفق بودند، یعنی محدودیت محیط محلی است. تست‌های .NET و E2E محلی اجرا نشدند.
+
+- **PR #585 — پایدارسازی زمان‌بندی تست روی Windows:** در `publish-windows` برای Head bd6cac6 تست `App.test.tsx` (انتظار ظاهر شدن تب «مدیریت کاربران» پس از `popstate`) در مهلت پیش‌فرض ۱ ثانیه شکست خورد؛ Runner ویندوز کندتر بود و مسیر lazy هنوز بارگذاری نشده بود (همین تست روی Linux و روی ویندوز Head قبلی موفق بود). مهلت `waitFor` همان تست به ۵ ثانیه و مهلت کل تست به ۲۰ ثانیه افزایش یافت؛ ادعاها بدون تغییر ماندند و هیچ تستی Skip یا حذف نشد.

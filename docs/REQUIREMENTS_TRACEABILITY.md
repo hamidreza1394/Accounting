@@ -87,12 +87,12 @@
 
 | نیازمندی | شاهد کد | شاهد تست | وضعیت |
 |---|---|---|---|
-| سازگاری payload v1 و canonical golden bytes | `LicensePayload`, `CanonicalJson` | `CompanyEntitlementContractTests.PayloadV1_CanonicalGoldenVectorRemainsUnchanged` و تست‌های قبلی Envelope | Implemented در PR؛ CI pending |
-| entitlement شرکت‌محور Module/Feature/Seat | `CompanyLicenseEntitlement`, `LicenseFeatureCatalog`, `StructuralValidation` | round-trip، allowlist، type mismatch، duplicate و maxCompanies tests | Implemented در PR؛ CI pending |
-| Trade با کد دقیق TRADE_IMPORT و بدون فعال‌سازی ضمنی v1 | `LicenseSubsystemCodes` | v1 rejection و v2 signed-envelope tests | Implemented در PR؛ CI pending |
-| support/update مستقل از expiry و تمدید افزایشی هر دوره | `LicensePayload.SupportUntilUtc/UpdatesUntilUtc`, `CanonicalJson`, `VendorLicenseAmendmentPayloadBuilder.TryBuildSupportAndUpdatePeriodExtension` | v2 round-trip؛ تمدید مستقل؛ رد v1/null/no-op/کاهش/تاریخ غیرآینده/term منقضی | قرارداد Implemented؛ candidate Vendor در شاخه؛ CI pending |
-| schema strict و canonical v2 | `CanonicalJson`, `LicenseEnvelopeValidator` | unknown property، noncanonical JSON و signature tampering | Implemented در PR؛ CI pending |
-| amendment همان LicenseId/Installation و Sequence افزایشی | `LicenseRevisionRules` | higher sequence، replay، downgrade، identity change | Implemented در PR؛ CI pending |
+| سازگاری payload v1 و canonical golden bytes | `LicensePayload`, `CanonicalJson` | `CompanyEntitlementContractTests.PayloadV1_CanonicalGoldenVectorRemainsUnchanged` و تست‌های قبلی Envelope | Verified در main؛ PR #472 پس از Merge: ۱۵/۱۵ |
+| entitlement شرکت‌محور Module/Feature/Seat | `CompanyLicenseEntitlement`, `LicenseFeatureCatalog`, `StructuralValidation` | round-trip، allowlist، type mismatch، duplicate و maxCompanies tests | Verified در main؛ PR #472 پس از Merge: ۱۵/۱۵ |
+| Trade با کد دقیق TRADE_IMPORT و بدون فعال‌سازی ضمنی v1 | `LicenseSubsystemCodes` | v1 rejection و v2 signed-envelope tests | Verified در main؛ PR #472 پس از Merge: ۱۵/۱۵ |
+| support/update مستقل از expiry و تمدید افزایشی هر دوره | `LicensePayload.SupportUntilUtc/UpdatesUntilUtc`, `CanonicalJson`, `VendorLicenseAmendmentPayloadBuilder.TryBuildSupportAndUpdatePeriodExtension` | v2 round-trip؛ تمدید مستقل؛ رد v1/null/no-op/کاهش/تاریخ غیرآینده/term منقضی | Verified در main؛ PR #565 پس از Merge: ۱۵/۱۵ |
+| schema strict و canonical v2 | `CanonicalJson`, `LicenseEnvelopeValidator` | unknown property، noncanonical JSON و signature tampering | Verified در main؛ PR #472 پس از Merge: ۱۵/۱۵ |
+| amendment همان LicenseId/Installation و Sequence افزایشی | `LicenseRevisionRules` | higher sequence، replay، downgrade، identity change | Verified در main؛ PR #472 پس از Merge: ۱۵/۱۵ |
 
 این وضعیت فقط وجود تغییر در شاخه PR را نشان می‌دهد؛ Verified فقط پس از CI سبز روی SHA نهایی و ادغام ثبت می‌شود.
 
@@ -102,10 +102,13 @@
 
 | نیازمندی | شاهد کد | شاهد Regression | وضعیت |
 |---|---|---|---|
-| افزودن Module برای Company موجود در v2 | `TryBuildCompanyEntitlementIncrease` + `LicenseSubsystemCodes.IsAllowedCompanyModule` | مسیر موفق با `TRADE_IMPORT` و رد unknown/duplicate/already-entitled | Implemented در PR؛ CI pending |
-| افزایش UserSeat برای Company | همان Builder و `LicenseInputLimits.MaxUsersPerCompany` | افزایش موفق، مقدار برابر/کاهش و سقف خارج از محدوده | Implemented در PR؛ CI pending |
-| افزودن/ارتقای Feature نوع‌دار | `LicenseFeatureCatalog` و `LicenseFeatureValueTypes` | owner-module، type mismatch، unknown، max_count increase و enabled false→true | Implemented در PR؛ CI pending |
-| حفظ حقوق سایر شرکت‌ها و فیلدهای Installation | snapshot immutable در Builder | تست چندشرکتی و canonical round-trip | Implemented در PR؛ CI pending |
-| منع تبدیل v1 و ساخت CompanyReference جدید | شرط نسخه و lookup exact reference | تست رد v1 و reference ناشناخته | Implemented در PR؛ CI pending |
+| افزودن Module برای Company موجود در v2 | `TryBuildCompanyEntitlementIncrease` + `LicenseSubsystemCodes.IsAllowedCompanyModule` | مسیر موفق با `TRADE_IMPORT` و رد unknown/duplicate/already-entitled | Verified در main؛ PR #558 پس از Merge: ۱۵/۱۵ |
+| افزایش UserSeat برای Company | همان Builder و `LicenseInputLimits.MaxUsersPerCompany` | افزایش موفق، مقدار برابر/کاهش و سقف خارج از محدوده | Verified در main؛ PR #558 پس از Merge: ۱۵/۱۵ |
+| افزودن/ارتقای Feature نوع‌دار | `LicenseFeatureCatalog` و `LicenseFeatureValueTypes` | owner-module، type mismatch، unknown، max_count increase و enabled false→true | Verified در main؛ PR #558 پس از Merge: ۱۵/۱۵ |
+| حفظ حقوق سایر شرکت‌ها و فیلدهای Installation | snapshot immutable در Builder | تست چندشرکتی و canonical round-trip | Verified در main؛ PR #558 پس از Merge: ۱۵/۱۵ |
+| منع تبدیل v1 و ساخت CompanyReference جدید | شرط نسخه و lookup exact reference | تست رد v1 و reference ناشناخته | Verified در main؛ PR #558 پس از Merge: ۱۵/۱۵ |
 
 این candidate فقط payload می‌سازد؛ سفارش/پرداخت، persistence، approval، signing/export و ACK هنوز NotImplemented هستند.
+
+
+**بازبینی پس از Merge — 2026-11-08:** مبنای کد main@da8ed012074f8439cb836ea4ae190e3ad2fc542e. PR #472 (contract v2)، #558 (Company-scoped amendment) و #565 (support/update amendment) ادغام شده‌اند و به‌ترتیب ۱۵/۱۵، ۱۵/۱۵ و ۱۵/۱۵ Check Run پس از Merge موفق دارند. PR #527 برای maxCompanies نیز ۱۵/۱۵ موفق است. این Verified فقط candidate/contract builder را پوشش می‌دهد؛ Commercial Order/Payment Evidence، persistence، endpoint، Maker-Checker amendment و signing/export هنوز NotImplemented هستند.
