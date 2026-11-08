@@ -25,6 +25,7 @@ import {
   parseMySessions,
   parseRevokedSessionCount,
   parseAdminUserSessions,
+  parseAdminRevocationOutcome,
   parseAccessSubsystems,
   parsePermissionTemplates,
   parseCompanies,
@@ -673,6 +674,28 @@ export async function getAdminUserLoginHistory(userId: string, signal?: AbortSig
  */
 export async function getAdminUserSessions(userId: string, signal?: AbortSignal): Promise<AdminUserSession[]> {
   return parseAdminUserSessions(await getJson(`/admin/users/${encodeURIComponent(userId)}/sessions`, signal));
+}
+
+/** The body of the administrative session-revocation step-up (D-073 §1: re-authentication + a server-owned reason code). */
+export type AdminRevocationRequest = { currentPassword: string; reasonCode: string };
+
+/**
+ * Revokes one active session of the target user (installation administrator, D-073 §1).
+ * The step-up body carries the administrator's own password — it lives only in the request
+ * body and is never logged, cached or echoed. 204 on success and on an already-revoked id.
+ */
+export async function revokeAdminUserSession(userId: string, sessionId: string, body: AdminRevocationRequest): Promise<void> {
+  await sendJson(
+    'POST',
+    `/admin/users/${encodeURIComponent(userId)}/sessions/${encodeURIComponent(sessionId)}/revoke`,
+    body,
+  );
+}
+
+/** Revokes every active session of the target user (installation administrator, D-073 §1). */
+export async function revokeAllAdminUserSessions(userId: string, body: AdminRevocationRequest): Promise<number> {
+  const response = await sendJson('POST', `/admin/users/${encodeURIComponent(userId)}/sessions/revoke-all`, body);
+  return parseAdminRevocationOutcome(await response.json()).revokedCount;
 }
 
 /** The read-only D-075 access catalog subsystems (installation administrator). */

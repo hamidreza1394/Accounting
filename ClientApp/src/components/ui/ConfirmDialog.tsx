@@ -6,6 +6,11 @@ type ConfirmDialogProps = {
   open: boolean;
   title: string;
   description?: ReactNode;
+  /**
+   * Extra body content between the description and the actions (a step-up form).
+   * It participates in the focus trap and must label its own fields.
+   */
+  children?: ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
   /** `danger` uses role `alertdialog`, the destructive style, and focuses Cancel first. */
@@ -33,6 +38,7 @@ export function ConfirmDialog({
   open,
   title,
   description,
+  children,
   confirmLabel = 'تأیید',
   cancelLabel = 'انصراف',
   tone = 'default',
@@ -135,6 +141,7 @@ export function ConfirmDialog({
             {description}
           </div>
         ) : null}
+        {children ? <div className="mt-4 space-y-4">{children}</div> : null}
         <div className="mt-6 flex flex-wrap justify-end gap-2">
           <Button ref={cancelRef} type="button" variant="outline" size="lg" aria-disabled={busy || undefined} className={blockedClass} onClick={cancel}>
             {cancelLabel}

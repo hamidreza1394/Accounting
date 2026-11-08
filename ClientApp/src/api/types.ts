@@ -1068,6 +1068,13 @@ export function parseAdminUserSessions(value: unknown): AdminUserSession[] {
   });
 }
 
+/** The outcome of revoking every active session of a target user (D-073 §1). */
+export function parseAdminRevocationOutcome(value: unknown): { revokedCount: number } {
+  const what = 'adminRevocationOutcome';
+  if (!isObject(value)) throw new ContractError(what);
+  return { revokedCount: readCount(value, 'revokedCount', what) };
+}
+
 /** One subsystem of the D-075 access catalog (read-only, installation administrator). */
 export type AccessSubsystem = {
   code: string;
