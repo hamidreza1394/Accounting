@@ -82,6 +82,7 @@
   - تست‌های جدید: `RolePermissionPreviewEndpointTests` (۴ تست) + تست UI دیالوگ.
 - **تست محلی:** build بدون خطا؛ ۴/۴ تست preview سبز؛ typecheck پاک؛ vitest ۹۰۳/۹۰۳؛ build موفق.
 - **Migration:** هیچ.
+- **رفع خطای راه‌اندازی Endpoint (۲۰۲۶-۱۱-۰۸):** پارامتر کاندید بدون attribute به‌صورت Body استنباط می‌شد و ساخت Route Table با «Body was inferred but the method does not allow inferred body parameters» می‌شکست (ریشهٔ ۱۲۸ شکست CI)؛ قرارداد سندشده و کلاینت Query تکرارشونده است، پس پارامتر به `[FromQuery] string[]?` تغییر کرد و تست رگرسیون سطح HTTP (`RolePermissionPreviewHttpTests` با `FaranouApplicationFactory`) بایند واقعی Query، ۲۰۰ + `no-store`، ۴۰۰ کد تکراری و عدم هر Write/Audit را پوشش داد.
 
 ## 5. PR-E — کپی گروه دسترسی و مقایسهٔ دو گروه (UI، مستقل)
 
