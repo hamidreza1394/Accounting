@@ -50,19 +50,26 @@ public sealed class RolePermissionPreviewHttpTests : IClassFixture<FaranouApplic
                         database.Companies.Add(company);
                         database.CompanyRoles.Add(role);
 
-                        // The candidate codes must be registered in the catalog; the role currently holds one of them.
-                        var current = database.PermissionDefinitions.Add(new Domain.PermissionDefinition
-                        {
-                                Code = "users.list",
-                                Name = "users.list",
-                                Description = "test permission",
-                        }).Entity;
-                        database.PermissionDefinitions.Add(new Domain.PermissionDefinition
-                        {
-                                Code = "trade.form.party.delete",
-                                Name = "trade.form.party.delete",
-                                Description = "test permission",
-                        });
+                        // The candidate codes must be registered in the catalog; the role currently holds one of
+                        // them. The fixture database is shared by the class, so the definitions are reused
+                        // when they already exist — a second insert would break the unique code index (SQL
+                        // Server) and make the registered-code count check answer 400 (in-memory).
+                        var current = await database.PermissionDefinitions
+                                .SingleOrDefaultAsync(definition => definition.Code == "users.list", cancellationToken: default)
+                            ?? database.PermissionDefinitions.Add(new Domain.PermissionDefinition
+                            {
+                                    Code = "users.list",
+                                    Name = "users.list",
+                                    Description = "test permission",
+                            }).Entity;
+                        _ = await database.PermissionDefinitions
+                                .SingleOrDefaultAsync(definition => definition.Code == "trade.form.party.delete", cancellationToken: default)
+                            ?? database.PermissionDefinitions.Add(new Domain.PermissionDefinition
+                            {
+                                    Code = "trade.form.party.delete",
+                                    Name = "trade.form.party.delete",
+                                    Description = "test permission",
+                            }).Entity;
                         database.CompanyRolePermissions.Add(new Domain.CompanyRolePermission
                         {
                                 Role = role,
