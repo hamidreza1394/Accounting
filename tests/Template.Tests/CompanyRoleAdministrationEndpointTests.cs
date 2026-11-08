@@ -236,7 +236,7 @@ public sealed class CompanyRoleAdministrationEndpointTests
         await fixture.Database.SaveChangesAsync();
 
         var result = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
-            fixture.CompanyId, accountant.Id, null, null, new DefaultHttpContext(),
+            fixture.CompanyId, accountant.Id, null, null, null, new DefaultHttpContext(),
             fixture.Principal(admin.Id), fixture.Database, fixture.CompanyAccess, default);
 
         var ok = Assert.IsType<Ok<Server.Api.CompanyRoleMemberListResponse>>(result);
@@ -259,7 +259,7 @@ public sealed class CompanyRoleAdministrationEndpointTests
         await fixture.Database.SaveChangesAsync();
 
         var result = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
-            fixture.CompanyId, role.Id, 2, 2, new DefaultHttpContext(),
+            fixture.CompanyId, role.Id, 2, 2, null, new DefaultHttpContext(),
             fixture.Principal(admin.Id), fixture.Database, fixture.CompanyAccess, default);
         var page = Assert.IsType<Ok<Server.Api.CompanyRoleMemberListResponse>>(result).Value!;
         Assert.Equal(3, page.TotalCount);
@@ -267,7 +267,7 @@ public sealed class CompanyRoleAdministrationEndpointTests
         Assert.Equal(2, page.Page);
 
         var huge = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
-            fixture.CompanyId, role.Id, 0, 100000, new DefaultHttpContext(),
+            fixture.CompanyId, role.Id, 0, 100000, null, new DefaultHttpContext(),
             fixture.Principal(admin.Id), fixture.Database, fixture.CompanyAccess, default);
         var clamped = Assert.IsType<Ok<Server.Api.CompanyRoleMemberListResponse>>(huge).Value!;
         Assert.Equal(1, clamped.Page);
@@ -286,15 +286,69 @@ public sealed class CompanyRoleAdministrationEndpointTests
         await fixture.Database.SaveChangesAsync();
 
         var foreign = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
-            fixture.CompanyId, foreignRole.Id, null, null, new DefaultHttpContext(),
+            fixture.CompanyId, foreignRole.Id, null, null, null, new DefaultHttpContext(),
             fixture.Principal(admin.Id), fixture.Database, fixture.CompanyAccess, default);
         Assert.Equal(StatusCodes.Status404NotFound, (foreign as IStatusCodeHttpResult)?.StatusCode);
 
         // The manager has no membership in the routed company: same 404 as an unknown company.
         var outsider = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
-            fixture.CompanyId, foreignRole.Id, null, null, new DefaultHttpContext(),
+            fixture.CompanyId, foreignRole.Id, null, null, null, new DefaultHttpContext(),
             fixture.Principal(manager.Id), fixture.Database, fixture.CompanyAccess, default);
         Assert.Equal(StatusCodes.Status404NotFound, (outsider as IStatusCodeHttpResult)?.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetRoleMembers_SearchFiltersServerSideByUserFields()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddAdministrator();
+        fixture.AddCompany();
+        var role = fixture.AddRole("ACCOUNTANT");
+        var sarah = fixture.AddMember(role, "sarah");
+        sarah.FirstName = "سارا";
+        sarah.LastName = "احمدی";
+        var david = fixture.AddMember(role, "david");
+        david.FirstName = "داود";
+        david.LastName = "کاظمی";
+        fixture.AddMember(role, "inactive-sarah", membershipActive: false);
+        await fixture.Database.SaveChangesAsync();
+
+        // By username (Latin identifiers stay exact-case in tests; SQL Server CI is case-insensitive
+        // through its collation while the in-memory store is ordinal).
+        var byUsername = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
+            fixture.CompanyId, role.Id, null, null, "sarah", new DefaultHttpContext(),
+            fixture.Principal(admin.Id), fixture.Database, fixture.CompanyAccess, default);
+        var usernamePage = Assert.IsType<Ok<Server.Api.CompanyRoleMemberListResponse>>(byUsername).Value!;
+        var usernameMember = Assert.Single(usernamePage.Items);
+        Assert.Equal(sarah.Id, usernameMember.UserId);
+        Assert.Equal(1, usernamePage.TotalCount);
+
+        // By Persian first name.
+        var byName = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
+            fixture.CompanyId, role.Id, null, null, "سارا", new DefaultHttpContext(),
+            fixture.Principal(admin.Id), fixture.Database, fixture.CompanyAccess, default);
+        var namePage = Assert.IsType<Ok<Server.Api.CompanyRoleMemberListResponse>>(byName).Value!;
+        Assert.Equal(sarah.Id, Assert.Single(namePage.Items).UserId);
+
+        // A term that only matches the inactive membership must not leak it.
+        var byInactive = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
+            fixture.CompanyId, role.Id, null, null, "inactive-sarah", new DefaultHttpContext(),
+            fixture.Principal(admin.Id), fixture.Database, fixture.CompanyAccess, default);
+        var inactivePage = Assert.IsType<Ok<Server.Api.CompanyRoleMemberListResponse>>(byInactive).Value!;
+        Assert.Empty(inactivePage.Items);
+        Assert.Equal(0, inactivePage.TotalCount);
+
+        // Whitespace-only and too-long searches behave like the admin user directory contract.
+        var blank = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
+            fixture.CompanyId, role.Id, null, null, "   ", new DefaultHttpContext(),
+            fixture.Principal(admin.Id), fixture.Database, fixture.CompanyAccess, default);
+        var blankPage = Assert.IsType<Ok<Server.Api.CompanyRoleMemberListResponse>>(blank).Value!;
+        Assert.Equal(2, blankPage.TotalCount);
+
+        var tooLong = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
+            fixture.CompanyId, role.Id, null, null, new string('ا', 121), new DefaultHttpContext(),
+            fixture.Principal(admin.Id), fixture.Database, fixture.CompanyAccess, default);
+        Assert.Equal(StatusCodes.Status400BadRequest, (tooLong as IStatusCodeHttpResult)?.StatusCode);
     }
 
     [Fact]

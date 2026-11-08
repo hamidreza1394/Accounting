@@ -309,16 +309,19 @@ export async function updateCompanyRole(companyId: string, roleId: string, reque
   await sendJson('PUT', `/admin/companies/${encodeURIComponent(companyId)}/roles/${encodeURIComponent(roleId)}`, request);
 }
 
-/** The active members of one role, paged (`GET .../roles/{roleId}/members`). Installation administrators only. */
+export type CompanyRoleMemberQuery = { page: number; pageSize: number; search?: string };
+
+/** The active members of one role, paged and server-side searchable (`GET .../roles/{roleId}/members`). */
 export async function getCompanyRoleMembers(
   companyId: string,
   roleId: string,
-  page: number,
-  pageSize: number,
+  query: CompanyRoleMemberQuery,
   signal?: AbortSignal,
 ): Promise<CompanyRoleMemberPage> {
+  const params = new URLSearchParams({ page: String(query.page), pageSize: String(query.pageSize) });
+  if (query.search?.trim()) params.set('search', query.search.trim());
   return parseCompanyRoleMembers(
-    await getJson(`/admin/companies/${encodeURIComponent(companyId)}/roles/${encodeURIComponent(roleId)}/members?page=${page}&pageSize=${pageSize}`, signal),
+    await getJson(`/admin/companies/${encodeURIComponent(companyId)}/roles/${encodeURIComponent(roleId)}/members?${params.toString()}`, signal),
   );
 }
 

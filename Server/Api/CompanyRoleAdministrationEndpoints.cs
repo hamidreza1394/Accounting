@@ -557,6 +557,7 @@ public static class CompanyRoleAdministrationEndpoints
         Guid roleId,
         int? page,
         int? pageSize,
+        string? search,
         HttpContext httpContext,
         ClaimsPrincipal principal,
         Data.DatabaseContext database,
@@ -571,11 +572,28 @@ public static class CompanyRoleAdministrationEndpoints
                 .AnyAsync(role => role.Id == roleId && role.TenantId == companyId, cancellationToken))
             return TypedResults.NotFound();
 
+        // Same contract as the admin user directory: trim, ignore whitespace-only, refuse a
+        // term longer than 120 characters with 400 (never a silent full-list fallback).
+        search = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
+        if (search?.Length > 120)
+            return TypedResults.BadRequest(new { error = "عبارت جستجو بیش از حد طولانی است." });
+
         var normalizedPage = Math.Clamp(page ?? 1, 1, MaxMemberPage);
         var normalizedPageSize = Math.Clamp(pageSize ?? 25, 1, 100);
 
         var query = database.UserCompanyMemberships.AsNoTracking()
             .Where(membership => membership.TenantId == companyId && membership.RoleId == roleId && membership.IsActive);
+        if (search is not null)
+        {
+            // Server-side filter on the fields the member table actually shows (username and
+            // names). The filter runs before Count/Skip/Take so paging stays correct.
+            query = query.Join(database.Users.AsNoTracking(), membership => membership.UserId, user => user.Id,
+                    (membership, user) => new { membership, user })
+                .Where(row => (row.user.Username != null && row.user.Username.Contains(search)) ||
+                    (row.user.FirstName != null && row.user.FirstName.Contains(search)) ||
+                    (row.user.LastName != null && row.user.LastName.Contains(search)))
+                .Select(row => row.membership);
+        }
         var totalCount = await query.CountAsync(cancellationToken);
         var items = await query
             .Join(database.Users.AsNoTracking(), membership => membership.UserId, user => user.Id,

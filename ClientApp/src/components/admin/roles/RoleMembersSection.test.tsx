@@ -62,6 +62,36 @@ describe('RoleMembersSection', () => {
     expect(within(inactive).getByText('غیرفعال')).toBeInTheDocument();
   });
 
+  it('searches members server-side with a debounced term and restarts paging', async () => {
+    const user = userEvent.setup();
+    const { mock } = api({ members: () => json(memberPage([memberItem(1)])) });
+    setup();
+    await screen.findByRole('heading', { level: 2, name: 'اعضای این گروه (۱)' });
+    const memberUrls = () => mock.mock.calls.map((call) => String(call[0])).filter((url) => url.includes('/members?'));
+    const initialCount = memberUrls().length;
+    expect(initialCount).toBeGreaterThan(0);
+
+    await user.type(screen.getByRole('searchbox', { name: /جستجوی اعضا/ }), 'سارا');
+    await waitFor(() => {
+      const searched = memberUrls().filter((url) => url.includes('search='));
+      expect(searched.length).toBeGreaterThan(0);
+      const lastUrl = new URL(searched.at(-1)!, 'http://localhost');
+      expect(lastUrl.searchParams.get('search')).toBe('سارا');
+      // A committed search term always restarts from page 1.
+      expect(lastUrl.searchParams.get('page')).toBe('1');
+    });
+    // The 300 ms debounce means typing never floods the API: one extra request, not per keystroke.
+    expect(memberUrls().length).toBe(initialCount + 1);
+
+    // Clearing the box asks for the unfiltered list again.
+    await user.click(screen.getByRole('button', { name: 'پاک‌کردن جستجو' }));
+    await waitFor(() => {
+      const last = new URL(memberUrls().at(-1)!, 'http://localhost');
+      expect(last.searchParams.has('search')).toBe(false);
+      expect(last.searchParams.get('page')).toBe('1');
+    });
+  });
+
   it('falls back to the username, then to a neutral label, for a member without a name', async () => {
     api({ members: () => json(memberPage([memberItem(1, { firstName: null, lastName: null }), memberItem(2, { firstName: null, lastName: null, username: null })])) });
     setup();
