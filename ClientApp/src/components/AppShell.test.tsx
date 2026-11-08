@@ -157,7 +157,10 @@ describe('AppShell', () => {
     );
     expect(await screen.findByRole('navigation', { name: 'مسیر صفحه' })).toHaveTextContent('داشبورد');
     await user.click(screen.getByRole('link', { name: 'به فهرست' }));
-    expect(await screen.findByRole('navigation', { name: 'مسیر صفحه' })).toHaveTextContent('مدیریت کاربران');
+    // The breadcrumb re-renders after the route commit; on slower CI runners (publish-windows)
+    // the query can land between the click and the commit, so wait instead of asserting once.
+    const breadcrumb = await screen.findByRole('navigation', { name: 'مسیر صفحه' });
+    await waitFor(() => expect(breadcrumb).toHaveTextContent('مدیریت کاربران'), { timeout: 5000 });
     routedShell.unmount();
   });
 

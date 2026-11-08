@@ -302,6 +302,25 @@ describe('App', () => {
 
     render(<App navigate={vi.fn()} />);
 
+    // Open a second tab before switching context. The selector overlay must not remount the
+    // shell: cancelling must restore BOTH tabs, not just recreate the active route.
+    await screen.findByRole('heading', { name: /به سامانه یکپارچه فرانو خوش آمدید/ });
+    window.history.pushState(null, '', '/app/admin/users');
+    const tabs = await screen.findByRole('navigation', { name: 'تب‌های کاری باز' });
+    // The router attaches its `popstate` listener in a passive effect, which can still be
+    // pending when the heading above is already in the DOM (slow CI runners). A single
+    // dispatch could then be lost for good, so re-send it until the tab appears. In a real
+    // browser the event comes from a user action long after mount, so this is test-only.
+    // The assertion itself is unchanged.
+    await waitFor(
+      () => {
+        window.dispatchEvent(new PopStateEvent('popstate'));
+        expect(tabs).toHaveTextContent('مدیریت کاربران');
+      },
+      { timeout: 5000 },
+    );
+    expect(tabs).toHaveTextContent('داشبورد');
+
     await userEvent.click(await screen.findByRole('button', { name: /تغییر شرکت/ }));
     await userEvent.click(await screen.findByRole('button', { name: 'ادامه و انتخاب زمینهٔ جدید' }));
 
@@ -312,8 +331,18 @@ describe('App', () => {
     expect(fetchMock.mock.calls.filter((call) => call[0] === '/api/v1/context')).toHaveLength(2);
 
     await userEvent.click(screen.getByRole('button', { name: 'انصراف' }));
-    expect(await screen.findByRole('heading', { name: /به سامانه یکپارچه فرانو خوش آمدید/ })).toBeInTheDocument();
-  });
+    // Cancelling returns to the SAME workspace: both tabs survive and the tab that was active
+    // before the change (user management) is still the active one.
+    const restoredTabs = await screen.findByRole('navigation', { name: 'تب‌های کاری باز' });
+    await waitFor(
+      () => {
+        expect(restoredTabs).toHaveTextContent('داشبورد');
+        expect(restoredTabs).toHaveTextContent('مدیریت کاربران');
+      },
+      { timeout: 5000 },
+    );
+    expect(window.location.pathname).toBe('/app/admin/users');
+  }, 20000);
 
   it('sends one request even when the entry button is activated twice quickly', async () => {
     const companyB = company('b', 'شرکت ب', [open1406]);

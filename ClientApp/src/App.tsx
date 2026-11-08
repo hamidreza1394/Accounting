@@ -55,7 +55,13 @@ export function App({ navigate = defaultNavigate }: { navigate?: Navigate }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    setState({ kind: 'loading' });
+    // A reload that starts from an already-entered workspace must not swap the shell for the
+    // full-page loading screen: that unmounts AppShell and silently discards its open tabs.
+    // Keep the previous ready state until the fresh choices arrive; every other case (first
+    // load, retry after an error, no active context) still shows the loading screen.
+    setState((previous) =>
+      previous.kind === 'ready' && previous.context.current !== null ? previous : { kind: 'loading' },
+    );
     enteredAutomatically.current = false;
 
     Promise.all([getSession(controller.signal), getWorkContext(controller.signal)])
