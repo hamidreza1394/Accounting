@@ -55,7 +55,13 @@ export function App({ navigate = defaultNavigate }: { navigate?: Navigate }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    setState({ kind: 'loading' });
+    // A reload that starts from an already-entered workspace must not swap the shell for the
+    // full-page loading screen: that unmounts AppShell and silently discards its open tabs.
+    // Keep the previous ready state until the fresh choices arrive; every other case (first
+    // load, retry after an error, no active context) still shows the loading screen.
+    setState((previous) =>
+      previous.kind === 'ready' && previous.context.current !== null ? previous : { kind: 'loading' },
+    );
     enteredAutomatically.current = false;
 
     Promise.all([getSession(controller.signal), getWorkContext(controller.signal)])
@@ -213,8 +219,8 @@ export function App({ navigate = defaultNavigate }: { navigate?: Navigate }) {
     );
   }
 
-  if (context.current === null || selecting) {
-    const selectorScreen = (
+  const selectorScreen =
+    context.current === null || selecting ? (
       <WorkContextSelector
         session={session}
         context={context}
@@ -232,66 +238,43 @@ export function App({ navigate = defaultNavigate }: { navigate?: Navigate }) {
         onRefresh={reload}
         onUnauthenticated={handleUnauthenticated}
       />
-    );
+    ) : null;
 
-    // A context change from a live workspace keeps the shell mounted (inert) under the
-    // selection screen, so the open tabs, their global forms and their state survive the
-    // round trip; a failed or cancelled selection simply removes the overlay. The first
-    // entry (no current context yet) has no workspace to preserve.
-    if (context.current !== null) {
-      return (
-        <>
-          <div inert={true}>
-            <AppRouteDataContext.Provider value={routeData}>
-              <AppShell
-                routes={appRoutes}
-                workspaceTabs
-                access={companyPermissions.access}
-                onRetryPermissions={companyPermissions.retry}
-                session={session}
-                context={context.current}
-                contextChangePending
-                onChangeContext={() => {
-                  // Fresh choices from the server: memberships and periods may have changed.
-                  wantsSelection.current = true;
-                  reload();
-                }}
-                onLogout={handleLogout}
-                onPasswordChanged={handlePasswordChanged}
-                onUnauthenticated={handleUnauthenticated}
-              >
-                <RouteView />
-              </AppShell>
-            </AppRouteDataContext.Provider>
-          </div>
-          <div className="faranou-context-change-overlay">{selectorScreen}</div>
-        </>
-      );
-    }
-
+  // Initial entry has no workspace to preserve. Once a context exists, keep the shell at
+  // one stable React tree position while the selector is shown as an overlay. Changing the
+  // wrapper/provider position would unmount AppShell and silently discard its tab store.
+  if (context.current === null) {
     return selectorScreen;
   }
 
   return (
-    <AppRouteDataContext.Provider value={routeData}>
-      <AppShell
-        routes={appRoutes}
-        workspaceTabs
-        access={companyPermissions.access}
-        onRetryPermissions={companyPermissions.retry}
-        session={session}
-        context={context.current}
-        onChangeContext={() => {
-          // Fresh choices from the server: memberships and periods may have changed.
-          wantsSelection.current = true;
-          reload();
-        }}
-        onLogout={handleLogout}
-        onPasswordChanged={handlePasswordChanged}
-        onUnauthenticated={handleUnauthenticated}
-      >
-        <RouteView />
-      </AppShell>
-    </AppRouteDataContext.Provider>
+    <>
+      <div inert={selecting ? true : undefined}>
+        <AppRouteDataContext.Provider value={routeData}>
+          <AppShell
+            routes={appRoutes}
+            workspaceTabs
+            access={companyPermissions.access}
+            onRetryPermissions={companyPermissions.retry}
+            session={session}
+            context={context.current}
+            contextChangePending={selecting}
+            onChangeContext={() => {
+              // Fresh choices from the server: memberships and periods may have changed.
+              wantsSelection.current = true;
+              reload();
+            }}
+            onLogout={handleLogout}
+            onPasswordChanged={handlePasswordChanged}
+            onUnauthenticated={handleUnauthenticated}
+          >
+            <RouteView />
+          </AppShell>
+        </AppRouteDataContext.Provider>
+      </div>
+      {selecting && selectorScreen ? (
+        <div className="faranou-context-change-overlay">{selectorScreen}</div>
+      ) : null}
+    </>
   );
 }
