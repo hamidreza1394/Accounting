@@ -236,7 +236,7 @@ public sealed class CompanyRoleAdministrationEndpointTests
         await fixture.Database.SaveChangesAsync();
 
         var result = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
-            fixture.CompanyId, accountant.Id, null, null, new DefaultHttpContext(),
+            fixture.CompanyId, accountant.Id, null, null, null, new DefaultHttpContext(),
             fixture.Principal(admin.Id), fixture.Database, fixture.CompanyAccess, default);
 
         var ok = Assert.IsType<Ok<Server.Api.CompanyRoleMemberListResponse>>(result);
@@ -259,7 +259,7 @@ public sealed class CompanyRoleAdministrationEndpointTests
         await fixture.Database.SaveChangesAsync();
 
         var result = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
-            fixture.CompanyId, role.Id, 2, 2, new DefaultHttpContext(),
+            fixture.CompanyId, role.Id, 2, 2, null, new DefaultHttpContext(),
             fixture.Principal(admin.Id), fixture.Database, fixture.CompanyAccess, default);
         var page = Assert.IsType<Ok<Server.Api.CompanyRoleMemberListResponse>>(result).Value!;
         Assert.Equal(3, page.TotalCount);
@@ -267,7 +267,7 @@ public sealed class CompanyRoleAdministrationEndpointTests
         Assert.Equal(2, page.Page);
 
         var huge = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
-            fixture.CompanyId, role.Id, 0, 100000, new DefaultHttpContext(),
+            fixture.CompanyId, role.Id, 0, 100000, null, new DefaultHttpContext(),
             fixture.Principal(admin.Id), fixture.Database, fixture.CompanyAccess, default);
         var clamped = Assert.IsType<Ok<Server.Api.CompanyRoleMemberListResponse>>(huge).Value!;
         Assert.Equal(1, clamped.Page);
@@ -286,13 +286,13 @@ public sealed class CompanyRoleAdministrationEndpointTests
         await fixture.Database.SaveChangesAsync();
 
         var foreign = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
-            fixture.CompanyId, foreignRole.Id, null, null, new DefaultHttpContext(),
+            fixture.CompanyId, foreignRole.Id, null, null, null, new DefaultHttpContext(),
             fixture.Principal(admin.Id), fixture.Database, fixture.CompanyAccess, default);
         Assert.Equal(StatusCodes.Status404NotFound, (foreign as IStatusCodeHttpResult)?.StatusCode);
 
         // The manager has no membership in the routed company: same 404 as an unknown company.
         var outsider = await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
-            fixture.CompanyId, foreignRole.Id, null, null, new DefaultHttpContext(),
+            fixture.CompanyId, foreignRole.Id, null, null, null, new DefaultHttpContext(),
             fixture.Principal(manager.Id), fixture.Database, fixture.CompanyAccess, default);
         Assert.Equal(StatusCodes.Status404NotFound, (outsider as IStatusCodeHttpResult)?.StatusCode);
     }

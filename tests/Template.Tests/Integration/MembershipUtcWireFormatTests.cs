@@ -101,7 +101,7 @@ public sealed class MembershipUtcWireFormatTests
             company.Id, new DefaultHttpContext(), principal, database,
             new Infrastructure.Tenancy.CompanyAccessService(database), search: "utc-member")).Value!;
         var members = Assert.IsType<Ok<Server.Api.CompanyRoleMemberListResponse>>(await Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
-            company.Id, role.Id, null, null, new DefaultHttpContext(), principal, database,
+            company.Id, role.Id, null, null, null, new DefaultHttpContext(), principal, database,
             new Infrastructure.Tenancy.CompanyAccessService(database), default)).Value!;
 
         var timestamps = new[] { Assert.Single(details.Memberships).CreatedAtUtc,

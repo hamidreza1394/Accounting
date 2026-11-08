@@ -547,7 +547,7 @@ public sealed class CompanyRoleDelegationCeilingEndpointTests
 
         public Task<IResult> GetRoleMembers(Guid userId, Guid roleId) =>
             Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
-                CompanyId, roleId, null, null, new DefaultHttpContext(), Principal(userId),
+                CompanyId, roleId, null, null, null, new DefaultHttpContext(), Principal(userId),
                 Database, CompanyAccess, default);
 
         public Task<IResult> CreateRole(ClaimsPrincipal principal, Server.Api.CreateCompanyRoleRequest request) =>
