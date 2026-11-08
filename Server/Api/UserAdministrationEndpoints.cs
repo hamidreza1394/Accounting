@@ -26,6 +26,8 @@ public static class UserAdministrationEndpoints
             .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
         users.MapPost("", CreateUserAsync).RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
         users.MapPut("/{userId:guid}", UpdateUserAsync).RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+        users.MapGet("/{userId:guid}/login-history", GetUserLoginHistoryAsync)
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
         return users;
     }
 
@@ -168,6 +170,56 @@ public static class UserAdministrationEndpoints
             user.UpdateDateTime,
             user.RoleName,
             utcMemberships));
+    }
+
+    /// <summary>
+    /// GET /api/v1/admin/users/{userId}/login-history — the authentication events of the
+    /// targeted user, for installation administrators only. Mirrors the self-service
+    /// /me/login-history contract (same event types, same ordering, no-store).
+    /// </summary>
+    public static async Task<IResult> GetUserLoginHistoryAsync(
+        Guid userId,
+        HttpContext httpContext,
+        ClaimsPrincipal principal,
+        Data.DatabaseContext database,
+        int take = 50,
+        CancellationToken cancellationToken = default)
+    {
+        var authorization = await AuthorizeInstallationAdministratorAsync(principal, database, cancellationToken);
+        if (authorization is not null)
+            return authorization;
+
+        if (userId == Guid.Empty)
+            return TypedResults.NotFound();
+
+        var userExists = await database.Users.AsNoTracking()
+            .AnyAsync(candidate => candidate.Id == userId, cancellationToken);
+        if (!userExists)
+            return TypedResults.NotFound();
+
+        httpContext.Response.Headers.CacheControl = "no-store";
+        httpContext.Response.Headers.Pragma = "no-cache";
+        var pageSize = Math.Clamp(take, 1, 100);
+
+        var events = await database.SecurityAuditEvents
+            .AsNoTracking()
+            .Where(item => item.UserId == userId)
+            .Where(item =>
+                item.EventType == "LoginSucceeded" ||
+                item.EventType == "LoginFailed" ||
+                item.EventType == "LoginDeniedInactive" ||
+                item.EventType == "LoginDeniedEnrollmentPending" ||
+                item.EventType == "LogoutSucceeded")
+            .OrderByDescending(item => item.OccurredAtUtc)
+            .ThenByDescending(item => item.Id)
+            .Take(pageSize)
+            .Select(item => new LoginHistoryItemResponse(
+                item.EventType,
+                item.OccurredAtUtc,
+                item.IpAddress))
+            .ToListAsync(cancellationToken);
+
+        return TypedResults.Ok<IReadOnlyList<LoginHistoryItemResponse>>(events);
     }
 
     public static async Task<IResult> CreateUserAsync(

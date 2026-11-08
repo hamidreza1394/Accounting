@@ -59,6 +59,10 @@
 - بدنه: `{ username, firstName, lastName, emailAddress, cellPhoneNumber?, isActive }` — **رمز در این endpoint نیست**.
 - همان اعتبارسنجی؛ تغییر ایمیل/موبایل وضعیت تأیید را reset می‌کند؛ Audit `UserUpdated` با `previousIsActive/currentIsActive`؛ غیرفعال‌کردن خود یا آخرین مدیر فعال نصب → 409 (تراکنش Serializable).
 
+### ۲.۵ `GET /api/v1/admin/users/{userId}/login-history` (rate limit حساس؛ Stage 3 — 2026-11-09)
+- سوابق احراز هویت کاربر هدف؛ فقط مدیر نصب (بازارزیابی فعال از دیتابیس)؛ همان قرارداد `GET /me/login-history`: `take` بین ۱ تا ۱۰۰ (clamp، پیش‌فرض ۵۰)، رویدادهای `LoginSucceeded/LoginFailed/LoginDeniedInactive/LoginDeniedEnrollmentPending/LogoutSucceeded`، نزولی بر `OccurredAtUtc`؛ پاسخ `[{ eventType, occurredAtUtc, ipAddress }]` با هدر `no-store`.
+- ۴۰۴ برای کاربر ناموجود یا `Guid.Empty`؛ رویدادهای غیراحراز هویت (مانند `CompanyRoleUpdated`) هرگز در پاسخ نیستند — سوابق تغییرات مدیریتی از `GET /admin/security/audit-events?userId=` گرفته می‌شود.
+
 ## ۳. نقش‌های شرکتی، کاتالوگ و سقف تفویض (D-071)
 
 - **مجوزدهی دوحالته:** مدیر نصب (بازخوانی DB، بدون سقف) یا مدیر شرکت (عضویت فعال + کد مجوز، محدود به سقف تفویض مبتنی بر تصاحب). ناشناس 401؛ بدون هیچ رابطه با شرکت 404؛ عضو بی‌مجوز 403.

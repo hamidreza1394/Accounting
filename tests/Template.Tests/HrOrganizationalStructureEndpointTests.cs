@@ -138,6 +138,39 @@ public sealed class HrOrganizationalStructureEndpointTests
     }
 
     [Fact]
+    public async Task Employee_List_FilteredByUser_ReturnsOnlyTheLinkedEmployeeOfThatUser()
+    {
+        await using var fixture = new Fixture();
+        var manager = await fixture.AddMemberWithPermission(
+            fixture.Company,
+            HrOrganizationalStructureEndpoints.CreateEmployeesPermission,
+            HrOrganizationalStructureEndpoints.ViewEmployeesPermission,
+            HrOrganizationalStructureEndpoints.ManageEmployeeUserLinkPermission);
+        var memberUser = await fixture.AddMember(fixture.AddRole("CLERK"), "member-user");
+        var otherUser = await fixture.AddMember(fixture.AddRole("CLERK"), "other-user");
+        var linkedId = await fixture.AddCreatedEmployee(manager.Id, "EMP-1", "علی", "محمدی");
+        await fixture.AddCreatedEmployee(manager.Id, "EMP-2", "رضا", "احمدی");
+        await fixture.LinkEmployeeUser(manager.Id, linkedId, memberUser.Id);
+
+        var result = await fixture.ListEmployeesForUser(manager.Id, memberUser.Id);
+        var ok = Assert.IsType<Ok<HrEmployeeListResponse>>(result);
+        Assert.Equal(1, ok.Value!.TotalCount);
+        var item = Assert.Single(ok.Value.Items);
+        Assert.Equal(linkedId, item.Id);
+
+        // Another member of the same company has no linked employee; an unknown user
+        // stays an empty list (fail-closed, no existence leak); Guid.Empty is rejected.
+        var other = await fixture.ListEmployeesForUser(manager.Id, otherUser.Id);
+        Assert.Equal(0, Assert.IsType<Ok<HrEmployeeListResponse>>(other).Value!.TotalCount);
+
+        var unknown = await fixture.ListEmployeesForUser(manager.Id, Guid.NewGuid());
+        Assert.Equal(0, Assert.IsType<Ok<HrEmployeeListResponse>>(unknown).Value!.TotalCount);
+
+        var empty = await fixture.ListEmployeesForUser(manager.Id, Guid.Empty);
+        Assert.Equal(StatusCodes.Status400BadRequest, (empty as IStatusCodeHttpResult)?.StatusCode);
+    }
+
+    [Fact]
     public async Task Employee_UserLink_RequiresAnActiveMembershipOfTheSameCompany()
     {
         await using var fixture = new Fixture();
@@ -768,7 +801,12 @@ public sealed class HrOrganizationalStructureEndpointTests
         public Task<IResult> ListEmployees(Guid actorId, string? search = null) =>
             HrOrganizationalStructureEndpoints.ListEmployeesAsync(
                 Company.Id, new DefaultHttpContext(), Principal(actorId), Database, CompanyAccess,
-                search, null, null, null, null, default);
+                search: search, cancellationToken: default);
+
+        public Task<IResult> ListEmployeesForUser(Guid actorId, Guid userId) =>
+            HrOrganizationalStructureEndpoints.ListEmployeesAsync(
+                Company.Id, new DefaultHttpContext(), Principal(actorId), Database, CompanyAccess,
+                userId: userId, cancellationToken: default);
 
         public Task<IResult> UpdateEmployee(Guid actorId, Guid employeeId, string? rowVersion) =>
             HrOrganizationalStructureEndpoints.UpdateEmployeeAsync(

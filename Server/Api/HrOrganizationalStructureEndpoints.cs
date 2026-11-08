@@ -140,6 +140,7 @@ public static class HrOrganizationalStructureEndpoints
         string? search = null,
         string? status = null,
         Guid? unitId = null,
+        Guid? userId = null,
         int? page = null,
         int? pageSize = null,
         CancellationToken cancellationToken = default)
@@ -181,6 +182,18 @@ public static class HrOrganizationalStructureEndpoints
                 assignment.Status == Domain.CompanyEmployeeAssignmentStatus.Active &&
                 assignment.EndOnUtc == null &&
                 assignment.OrganizationalUnitId == unitId));
+        // Optional link lookup (stage 3 user profile): only the employee whose bookkeeping
+        // link points at a membership of this exact user. An unknown user stays an empty list
+        // (fail-closed, no existence leak); Guid.Empty is rejected as an invalid identifier.
+        if (userId is not null)
+        {
+            if (userId == Guid.Empty)
+                return BadRequest("شناسه کاربر معتبر نیست.");
+            query = query.Where(employee =>
+                employee.UserCompanyMembershipId != null &&
+                employee.Membership != null &&
+                employee.Membership.UserId == userId);
+        }
 
         var totalCount = await query.CountAsync(cancellationToken);
         var items = await query
