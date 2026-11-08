@@ -106,8 +106,9 @@ describe('HR sidebar entries (company-scoped permissions)', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'کارکنان' })).toBeInTheDocument();
 
     await user.click(await screen.findByRole('button', { name: 'کارمند جدید' }));
-    // The create form is a lazy chunk inside the list tab; give the transform a moment.
-    expect(await screen.findByRole('heading', { level: 1, name: 'ثبت کارمند' }, { timeout: 4000 })).toBeInTheDocument();
+    // The create form is a lazy chunk inside the list tab; cold transform on a slow CI
+    // runner can take several seconds.
+    expect(await screen.findByRole('heading', { level: 1, name: 'ثبت کارمند' }, { timeout: 10000 })).toBeInTheDocument();
     // Same tab, no duplicate: the workspace still holds exactly one tab and the query
     // carries the form state.
     expect(window.location.search).toBe('?form=new');
