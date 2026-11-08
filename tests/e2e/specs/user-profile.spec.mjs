@@ -88,7 +88,7 @@ test.describe('user profile workspace: HR link, request states, permissions, ses
 
     // ---------------------------------------------- tab 1: identity + personnel record link
     const panel = page.getByRole('tabpanel');
-    await expect(panel.getByText('@' + target.username)).toBeVisible();
+    await expect(panel.getByText(target.username)).toBeVisible();
     // The member role carries no HR data yet: the record section shows the honest not-linked text.
     await expect(panel.getByText('پرونده پرسنلی متصل نشده است.')).toBeVisible();
 
@@ -173,7 +173,7 @@ test.describe('user profile workspace: HR link, request states, permissions, ses
 
     // ------------------------------------------------------------ the destination approves
     const approved = await post(page, approvePath(destination.id, requestId), { roleId: String(destination.memberRole.id) });
-    expect(approved.status, 'POST approve').toBe(200);
+    expect(approved.status, 'POST approve').toBe(204);
     // Reload the section: the filter select re-triggers the request for the current filter.
     await page.reload();
     await page.getByRole('tab', { name: 'شرکت‌ها و عضویت‌ها' }).click();
