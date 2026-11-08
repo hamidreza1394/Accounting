@@ -2,6 +2,12 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
+// Preload the lazy create-form chunk (the same pattern the page-level test files use):
+// the first dynamic import in vitest compiles the whole module graph on the fly inside the
+// assertion window, which is host-speed dependent (the Linux e2e job and the Windows publish
+// job both exceeded the wait there). With the module already in the registry the `lazy()`
+// import resolves instantly and the test measures behaviour, not transform speed.
+import './features/hr/pages/HrEmployeeCreatePage';
 import { json, listBody, userItem } from './test/adminUsers';
 import { company, contextBody, period, selected, session } from './test/api';
 import { companiesBody, roleItem, systemRole } from './test/roles';
