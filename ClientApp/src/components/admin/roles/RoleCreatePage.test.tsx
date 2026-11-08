@@ -158,8 +158,8 @@ describe('RoleCreatePage', () => {
     setup('?company=a&copyFrom=role-src');
     await ready();
 
-    // Code and title are prefilled as an editable starting point.
-    expect(code()).toHaveValue('HR-COPY');
+    // Prefill is async (catalog ready + getCompanyRoles). Wait for it before asserting.
+    await waitFor(() => expect(code()).toHaveValue('HR-COPY'));
     expect(title()).toHaveValue('کپی منابع انسانی');
     expect(leaf('مشاهدهٔ سفارش‌ها')).toBeChecked();
     expect(leaf('ایجاد سفارش')).toBeChecked();
