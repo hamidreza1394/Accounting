@@ -31,10 +31,10 @@
 ## آزمون‌ها
 | مورد | وضعیت |
 |---|---|
-| Build/Test .NET | در انتظار CI برای PR |
-| Vendor UI/build/test | در انتظار CI برای PR |
-| EF pending-model-changes / migration guard | در انتظار CI برای PR |
-| SQL Server integration test migration | باید CI تأیید کند |
+| Build/Test .NET | پس از Merge PR #546: ۱۵/۱۵ Check Run موفق |
+| Vendor UI/build/test | پس از Merge PR #546: Vendor build/test/package موفق |
+| EF pending-model-changes / migration guard | پس از Merge PR #546 موفق |
+| SQL Server integration test migration | در Vendor CI پس از Merge PR #546 موفق |
 
 ## ادامه لازم برای Issue #228
 - افزودن UI فارسی RTL برای company setup، نام مدیر اولیه و زیرسیستم‌های خریداری‌شده با پیش‌فرض‌های امن.
@@ -43,7 +43,7 @@
 - طرح مصرف‌کننده سمت مشتری در Issue/PR جداگانه طبق محدوده Issue #228؛ بدون تغییر Server/** در این Issue.
 
 - **Branch:** feat/issue-228-vendor-provisioning-state
-- **PR:** در حال ایجاد
+- **PRهای مرتبط:** بنیاد Provisioning در PRهای #319/#329 و اصلاح fail-closed در PR #546 در main ادغام شده‌اند؛ CompanyReference v2 همچنان به #392 وابسته است.
 
 
 ## بازبینی 2026-11-05 — fail-closed برای LicensePayload v2
