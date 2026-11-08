@@ -214,7 +214,7 @@ export function App({ navigate = defaultNavigate }: { navigate?: Navigate }) {
   }
 
   if (context.current === null || selecting) {
-    return (
+    const selectorScreen = (
       <WorkContextSelector
         session={session}
         context={context}
@@ -233,6 +233,43 @@ export function App({ navigate = defaultNavigate }: { navigate?: Navigate }) {
         onUnauthenticated={handleUnauthenticated}
       />
     );
+
+    // A context change from a live workspace keeps the shell mounted (inert) under the
+    // selection screen, so the open tabs, their global forms and their state survive the
+    // round trip; a failed or cancelled selection simply removes the overlay. The first
+    // entry (no current context yet) has no workspace to preserve.
+    if (context.current !== null) {
+      return (
+        <>
+          <div inert={true}>
+            <AppRouteDataContext.Provider value={routeData}>
+              <AppShell
+                routes={appRoutes}
+                workspaceTabs
+                access={companyPermissions.access}
+                onRetryPermissions={companyPermissions.retry}
+                session={session}
+                context={context.current}
+                contextChangePending
+                onChangeContext={() => {
+                  // Fresh choices from the server: memberships and periods may have changed.
+                  wantsSelection.current = true;
+                  reload();
+                }}
+                onLogout={handleLogout}
+                onPasswordChanged={handlePasswordChanged}
+                onUnauthenticated={handleUnauthenticated}
+              >
+                <RouteView />
+              </AppShell>
+            </AppRouteDataContext.Provider>
+          </div>
+          <div className="faranou-context-change-overlay">{selectorScreen}</div>
+        </>
+      );
+    }
+
+    return selectorScreen;
   }
 
   return (
