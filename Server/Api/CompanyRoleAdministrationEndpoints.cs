@@ -295,7 +295,9 @@ public static class CompanyRoleAdministrationEndpoints
             ceiling = await delegationCeiling.LoadTrackedCeilingAsync(scope.UserId, companyId, cancellationToken);
             if (ceiling is null) return TypedResults.NotFound();
             if (ceiling.Violates(permissionIds, out _))
-                return ForbiddenBeyondCeiling();
+                return await ForbiddenBeyondCeilingAuditedAsync(
+                    database, httpContext, companyId, scope.UserId, "CompanyRoleCreate", null,
+                    new { permissionCodes }, timeProvider, transaction, cancellationToken);
         }
 
         var role = new Domain.CompanyRole
@@ -401,7 +403,9 @@ public static class CompanyRoleAdministrationEndpoints
             var ceiling = await delegationCeiling.LoadTrackedCeilingAsync(scope.UserId, companyId, cancellationToken);
             if (ceiling is null) return TypedResults.NotFound();
             if (ceiling.Violates(permissionIds, out _))
-                return ForbiddenBeyondCeiling();
+                return await ForbiddenBeyondCeilingAuditedAsync(
+                    database, httpContext, companyId, scope.UserId, "CompanyRoleUpdate", role.Id.ToString(),
+                    new { roleId = role.Id, permissionCodes }, timeProvider, transaction, cancellationToken);
             ceiling.ApplyRowVersionGuards(database);
         }
 
@@ -508,7 +512,9 @@ public static class CompanyRoleAdministrationEndpoints
             var ceiling = await delegationCeiling.LoadTrackedCeilingAsync(scope.UserId, companyId, cancellationToken);
             if (ceiling is null) return TypedResults.NotFound();
             if (ceiling.Violates(role.RolePermissions.Select(rolePermission => rolePermission.PermissionId), out _))
-                return ForbiddenBeyondCeiling();
+                return await ForbiddenBeyondCeilingAuditedAsync(
+                    database, httpContext, companyId, scope.UserId, "UserCompanyRoleAssign", $"{userId}:{companyId}",
+                    new { userId, roleId }, timeProvider, transaction, cancellationToken);
             ceiling.ApplyRowVersionGuards(database);
         }
 
@@ -694,7 +700,9 @@ public static class CompanyRoleAdministrationEndpoints
             var ceiling = await delegationCeiling.LoadTrackedCeilingAsync(scope.UserId, companyId, cancellationToken);
             if (ceiling is null) return TypedResults.NotFound();
             if (ceiling.Violates(target.RolePermissions.Select(rolePermission => rolePermission.PermissionId), out _))
-                return ForbiddenBeyondCeiling();
+                return await ForbiddenBeyondCeilingAuditedAsync(
+                    database, httpContext, companyId, scope.UserId, "UserCompanyRoleTransfer", $"{roleId}:{target.Id}",
+                    new { targetRoleId = target.Id, requestedMemberCount = memberships.Count }, timeProvider, transaction, cancellationToken);
             ceiling.ApplyRowVersionGuards(database);
         }
 
@@ -792,6 +800,44 @@ public static class CompanyRoleAdministrationEndpoints
         TypedResults.Json(
             new { error = "شما مجاز به واگذاری این گروه یا مجوزها نیستید؛ سقف تفویض شما کمتر از این است." },
             statusCode: StatusCodes.Status403Forbidden);
+
+    /// <summary>
+    /// Records a refused delegation attempt (D-071, stage 2) and answers the Persian 403. The
+    /// denial happens before anything else is tracked, so this audit row is the only pending
+    /// change: saving it inside the already-open transaction and committing it is atomic and
+    /// fail-closed — if the audit cannot be written, the request fails instead of returning a
+    /// silent refusal. Nothing about the requested change is ever applied on this path.
+    /// </summary>
+    private static async Task<IResult> ForbiddenBeyondCeilingAuditedAsync(
+        Data.DatabaseContext database,
+        HttpContext httpContext,
+        Guid companyId,
+        Guid actorId,
+        string operation,
+        string? entityId,
+        object details,
+        TimeProvider timeProvider,
+        Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? transaction,
+        CancellationToken cancellationToken)
+    {
+        database.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
+        {
+            UserId = actorId,
+            TenantId = companyId,
+            EventType = "CompanyRoleDelegationDenied",
+            EntityType = "CompanyRole",
+            EntityId = entityId,
+            OccurredAtUtc = timeProvider.GetUtcNow().UtcDateTime,
+            CorrelationId = System.Diagnostics.Activity.Current?.Id,
+            IpAddress = httpContext.Connection.RemoteIpAddress?.ToString(),
+            DetailsJson = JsonSerializer.Serialize(details),
+        });
+        await database.SaveChangesAsync(cancellationToken);
+        if (transaction is not null)
+            await transaction.CommitAsync(cancellationToken);
+        SetNoStore(httpContext);
+        return ForbiddenBeyondCeiling();
+    }
 
     private static IResult ForbiddenSelfAssignment() =>
         TypedResults.Json(
