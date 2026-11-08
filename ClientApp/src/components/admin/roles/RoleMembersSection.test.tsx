@@ -37,7 +37,16 @@ function api({ members, roles, transfer, effective }: Handlers = {}) {
     if (call.path === effectivePath) {
       return effective
         ? effective(call)
-        : json({ userId: 'user-1', companyId: 'a', roleNames: ['حسابدار'], permissionCodes: ['users.list', 'roles.view'] });
+        : json({
+            userId: 'user-1',
+            companyId: 'a',
+            roleNames: ['حسابدار'],
+            permissionCodes: ['users.list', 'roles.view'],
+            permissions: [
+              { code: 'users.list', sourceRoleNames: ['حسابدار'] },
+              { code: 'roles.view', sourceRoleNames: ['حسابدار', 'رسیدگی‌کننده'] },
+            ],
+          });
     }
     return new Response(null, { status: 404 });
   });
@@ -60,6 +69,36 @@ describe('RoleMembersSection', () => {
     expect(within(row).getByText('فعال')).toBeInTheDocument();
     const inactive = screen.getByText('نام2 خانوادگی2').closest('tr') as HTMLElement;
     expect(within(inactive).getByText('غیرفعال')).toBeInTheDocument();
+  });
+
+  it('searches members server-side with a debounced term and restarts paging', async () => {
+    const user = userEvent.setup();
+    const { mock } = api({ members: () => json(memberPage([memberItem(1)])) });
+    setup();
+    await screen.findByRole('heading', { level: 2, name: 'اعضای این گروه (۱)' });
+    const memberUrls = () => mock.mock.calls.map((call) => String(call[0])).filter((url) => url.includes('/members?'));
+    const initialCount = memberUrls().length;
+    expect(initialCount).toBeGreaterThan(0);
+
+    await user.type(screen.getByRole('searchbox', { name: /جستجوی اعضا/ }), 'سارا');
+    await waitFor(() => {
+      const searched = memberUrls().filter((url) => url.includes('search='));
+      expect(searched.length).toBeGreaterThan(0);
+      const lastUrl = new URL(searched.at(-1)!, 'http://localhost');
+      expect(lastUrl.searchParams.get('search')).toBe('سارا');
+      // A committed search term always restarts from page 1.
+      expect(lastUrl.searchParams.get('page')).toBe('1');
+    });
+    // The 300 ms debounce means typing never floods the API: one extra request, not per keystroke.
+    expect(memberUrls().length).toBe(initialCount + 1);
+
+    // Clearing the box asks for the unfiltered list again.
+    await user.click(screen.getByRole('button', { name: 'پاک‌کردن جستجو' }));
+    await waitFor(() => {
+      const last = new URL(memberUrls().at(-1)!, 'http://localhost');
+      expect(last.searchParams.has('search')).toBe(false);
+      expect(last.searchParams.get('page')).toBe('1');
+    });
   });
 
   it('falls back to the username, then to a neutral label, for a member without a name', async () => {
@@ -290,13 +329,19 @@ describe('RoleMembersSection — effective permissions viewer (Stage 2-E)', () =
     setup();
     const row = (await screen.findByText('نام1 خانوادگی1')).closest('tr') as HTMLElement;
     await userEvent.click(within(row).getByRole('button', { name: 'مشاهده' }));
-    expect(await screen.findByRole('region', { name: 'دسترسی‌های مؤثر عضو' })).toHaveTextContent('حسابدار');
+    const region = await screen.findByRole('region', { name: 'دسترسی‌های مؤثر عضو' });
+    expect(region).toHaveTextContent('حسابدار');
     expect(screen.getByText('users.list')).toHaveAttribute('dir', 'ltr');
     expect(screen.getByText('roles.view')).toBeInTheDocument();
+    // Each code carries its granting role names (stage 2 source attribution).
+    const grantRow = screen.getByText('roles.view').closest('tr') as HTMLElement;
+    expect(within(grantRow).getByText('حسابدار، رسیدگی‌کننده')).toBeInTheDocument();
+    const usersRow = screen.getByText('users.list').closest('tr') as HTMLElement;
+    expect(within(usersRow).getByText('حسابدار')).toBeInTheDocument();
   });
 
   it('renders the empty state for a member without any effective permission', async () => {
-    api({ effective: () => json({ userId: 'user-1', companyId: 'a', roleNames: [], permissionCodes: [] }) });
+    api({ effective: () => json({ userId: 'user-1', companyId: 'a', roleNames: [], permissionCodes: [], permissions: [] }) });
     setup();
     const row = (await screen.findByText('نام1 خانوادگی1')).closest('tr') as HTMLElement;
     await userEvent.click(within(row).getByRole('button', { name: 'مشاهده' }));

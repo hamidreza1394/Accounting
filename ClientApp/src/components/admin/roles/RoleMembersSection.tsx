@@ -1,12 +1,12 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { ApiError, getCompanyRoleMembers, getCompanyRoles, getEffectivePermissions, transferCompanyRoleMembers } from '../../../api/client';
+import { ApiError, getCompanyRoleMembers, getCompanyRoles, getEffectivePermissions, transferCompanyRoleMembers, type CompanyRoleMemberQuery } from '../../../api/client';
 import type { CompanyRole, CompanyRoleMember, CompanyRoleMemberPage, EffectivePermissions } from '../../../api/types';
 import { formatDate } from '../../../lib/format';
 import { Alert } from '../../ui/Alert';
 import { Button } from '../../ui/button';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { DataTable, type DataTableColumn } from '../../ui/DataTable';
-import { FormField, Select } from '../../ui/FormField';
+import { FormField, Input, Select } from '../../ui/FormField';
 import { StatusBadge } from '../../ui/StatusBadge';
 import { RoleMemberAssign } from './RoleMemberAssign';
 
@@ -26,6 +26,7 @@ type Props = {
 export const maxTransferBatchSize = 500;
 
 const pageSizes = [10, 20, 50] as const;
+const searchDebounceMs = 300;
 const number = new Intl.NumberFormat('fa-IR');
 
 type Targets = { kind: 'idle' } | { kind: 'loading' } | { kind: 'ready'; roles: CompanyRole[] } | { kind: 'error'; message: string };
@@ -54,6 +55,8 @@ export function RoleMembersSection({ role, companyId, canAssign, onUnauthenticat
   const targetFieldId = useId();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(20);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
   const [data, setData] = useState<CompanyRoleMemberPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -107,11 +110,25 @@ export function RoleMembersSection({ role, companyId, canAssign, onUnauthenticat
   const total = data?.totalCount ?? 0;
   const tooMany = total > maxTransferBatchSize;
 
+  // Debounced server-side search (like the admin user directory): typing never floods the API
+  // and the committed term is what reaches the server.
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSearch(searchInput.trim()), searchDebounceMs);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
+
+  // A new search term restarts paging; the previous page of the unfiltered list is meaningless.
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     setError(null);
-    getCompanyRoleMembers(companyId, role.id, page, pageSize, controller.signal)
+    const memberQuery: CompanyRoleMemberQuery = { page, pageSize };
+    if (search) memberQuery.search = search;
+    getCompanyRoleMembers(companyId, role.id, memberQuery, controller.signal)
       .then((result) => {
         if (controller.signal.aborted) return;
         // A stale page (members were moved away) goes to the last page that still exists. Only when
@@ -133,7 +150,7 @@ export function RoleMembersSection({ role, companyId, canAssign, onUnauthenticat
         setLoading(false);
       });
     return () => controller.abort();
-  }, [companyId, role.id, page, pageSize, attempt, onUnauthenticated]);
+  }, [companyId, role.id, page, pageSize, search, attempt, onUnauthenticated]);
 
   // The possible targets are only needed when the administrator can move members.
   useEffect(() => {
@@ -229,6 +246,36 @@ export function RoleMembersSection({ role, companyId, canAssign, onUnauthenticat
       {notice ? <Alert ref={noticeRef} tone="info">{notice}</Alert> : null}
       {failure ? <Alert ref={failureRef} tone="error">{failure}</Alert> : null}
 
+      <form
+        role="search"
+        aria-label="جستجوی اعضای گروه"
+        onSubmit={(event) => event.preventDefault()}
+        className="flex flex-wrap items-end gap-3"
+      >
+        <div className="min-w-56 max-w-96 flex-1">
+          <FormField label="جستجوی اعضا" hint="نام کاربری یا نام و نام خانوادگی؛ جستجو سمت سرور انجام می‌شود.">
+            <Input
+              type="search"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="مثلاً sarah یا سارا"
+            />
+          </FormField>
+        </div>
+        {searchInput.trim() !== '' ? (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setNotice(null);
+              setSearchInput('');
+            }}
+          >
+            پاک‌کردن جستجو
+          </Button>
+        ) : null}
+      </form>
+
       <DataTable
         caption={`اعضای گروه ${role.name}`}
         columns={columns}
@@ -276,13 +323,27 @@ export function RoleMembersSection({ role, companyId, canAssign, onUnauthenticat
                 <p className="text-sm text-sub">
                   نقش‌های فعال: <span className="font-semibold text-ink">{viewer.data.roleNames.join('، ')}</span>
                 </p>
-                <ul className="flex flex-wrap gap-2">
-                  {viewer.data.permissionCodes.map((code) => (
-                    <li key={code}>
-                      <code dir="ltr" className="inline-block rounded-lg border border-line bg-white px-2 py-1 text-xs">{code}</code>
-                    </li>
-                  ))}
-                </ul>
+                <div className="overflow-hidden rounded-lg border border-line">
+                  <table className="w-full border-collapse text-sm">
+                    <caption className="sr-only">مجوزهای مؤثر {viewer.label} با نقش منبع هر مجوز</caption>
+                    <thead>
+                      <tr className="border-b border-line bg-cool text-start">
+                        <th scope="col" className="px-3 py-2 font-semibold text-ink">مجوز</th>
+                        <th scope="col" className="px-3 py-2 font-semibold text-ink">منبع</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {viewer.data.permissions.map((grant) => (
+                        <tr key={grant.code} className="border-b border-line last:border-b-0">
+                          <td className="px-3 py-2">
+                            <code dir="ltr" className="text-xs">{grant.code}</code>
+                          </td>
+                          <td className="px-3 py-2 text-sub">{grant.sourceRoleNames.join('، ')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )
           ) : null}

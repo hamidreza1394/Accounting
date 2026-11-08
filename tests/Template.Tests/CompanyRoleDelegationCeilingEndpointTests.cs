@@ -62,7 +62,16 @@ public sealed class CompanyRoleDelegationCeilingEndpointTests
 
         Assert.Equal(StatusCodes.Status403Forbidden, (result as IStatusCodeHttpResult)?.StatusCode);
         Assert.False(await fixture.Database.CompanyRoles.AnyAsync(role => role.Code == "TRADE_CLERK"));
-        Assert.False(await fixture.Database.SecurityAuditEvents.AnyAsync());
+
+        // The refused delegation attempt is audited (stage 2, PR-C): exactly one denial event
+        // with the actor, the company and the attempted permission codes — no success event.
+        var events = await fixture.Database.SecurityAuditEvents.ToListAsync();
+        var denial = Assert.Single(events);
+        Assert.Equal("CompanyRoleDelegationDenied", denial.EventType);
+        Assert.Equal(manager.Id, denial.UserId);
+        Assert.Equal(fixture.CompanyId, denial.TenantId);
+        Assert.Contains("trade.form.party.view", denial.DetailsJson);
+        Assert.DoesNotContain("CompanyRoleCreated", denial.DetailsJson);
     }
 
     [Fact]
@@ -120,6 +129,10 @@ public sealed class CompanyRoleDelegationCeilingEndpointTests
             .SingleAsync(item => item.Id == role.Id);
         Assert.Equal(["users.list"], unchanged.RolePermissions
             .Select(rolePermission => rolePermission.Permission.Code).ToArray());
+
+        var denial = Assert.Single(await reader.SecurityAuditEvents.ToListAsync());
+        Assert.Equal("CompanyRoleDelegationDenied", denial.EventType);
+        Assert.Equal(manager.Id, denial.UserId);
     }
 
     [Fact]
@@ -207,7 +220,9 @@ public sealed class CompanyRoleDelegationCeilingEndpointTests
         Assert.Equal("OLD", (await reader.UserCompanyMemberships
             .Include(membership => membership.Role)
             .SingleAsync(membership => membership.UserId == member.Id)).Role.Code);
-        Assert.False(await reader.SecurityAuditEvents.AnyAsync());
+        var denial = Assert.Single(await reader.SecurityAuditEvents.ToListAsync());
+        Assert.Equal("CompanyRoleDelegationDenied", denial.EventType);
+        Assert.Equal(manager.Id, denial.UserId);
     }
 
     [Fact]
@@ -303,7 +318,13 @@ public sealed class CompanyRoleDelegationCeilingEndpointTests
         Assert.Equal(StatusCodes.Status403Forbidden, (selfTransfer as IStatusCodeHttpResult)?.StatusCode);
         Assert.Equal(managerRole.Id, (await fixture.Database.UserCompanyMemberships
             .SingleAsync(membership => membership.UserId == manager.Id)).RoleId);
-        Assert.False(await fixture.Database.SecurityAuditEvents.AnyAsync());
+
+        // Exactly one audit exists: the ceiling denial of the first attempt. The self-assignment
+        // refusal is a different guard and does not write a ceiling-denial event.
+        var events = await fixture.Database.SecurityAuditEvents.ToListAsync();
+        var denial = Assert.Single(events);
+        Assert.Equal("CompanyRoleDelegationDenied", denial.EventType);
+        Assert.Equal(manager.Id, denial.UserId);
     }
 
     [Fact]
@@ -547,7 +568,7 @@ public sealed class CompanyRoleDelegationCeilingEndpointTests
 
         public Task<IResult> GetRoleMembers(Guid userId, Guid roleId) =>
             Server.Api.CompanyRoleAdministrationEndpoints.GetRoleMembersAsync(
-                CompanyId, roleId, null, null, new DefaultHttpContext(), Principal(userId),
+                CompanyId, roleId, null, null, null, new DefaultHttpContext(), Principal(userId),
                 Database, CompanyAccess, default);
 
         public Task<IResult> CreateRole(ClaimsPrincipal principal, Server.Api.CreateCompanyRoleRequest request) =>

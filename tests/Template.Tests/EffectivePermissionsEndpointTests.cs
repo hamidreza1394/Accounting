@@ -90,6 +90,64 @@ public sealed class EffectivePermissionsEndpointTests
     }
 
     [Fact]
+    public async Task EffectivePermissions_AttributesEveryCodeToItsGrantingActiveRoles()
+    {
+        await using var fixture = new Fixture();
+        fixture.AddCompany();
+        fixture.AddPermission("users.list");
+        fixture.AddPermission("hr.employees.list");
+
+        // Both roles grant users.list: its source must list both role names.
+        var accountant = fixture.AddRole("حسابدار");
+        var auditor = fixture.AddRole("رسیدگی‌کننده");
+        var hrRole = fixture.AddRole("HR-OPERATOR");
+        var inactiveRole = fixture.AddRole("OLD-ROLE", active: false);
+        foreach (var (role, code) in new[]
+                 {
+                     (accountant, "users.list"),
+                     (auditor, "users.list"),
+                     (hrRole, "hr.employees.list"),
+                     // The inactive role also carries users.list, but must never be a source.
+                     (inactiveRole, "users.list"),
+                 })
+        {
+            fixture.Database.CompanyRolePermissions.Add(new Domain.CompanyRolePermission
+            {
+                Role = role,
+                RoleId = role.Id,
+                PermissionId = fixture.Database.PermissionDefinitions.Local.Single(x => x.Code == code).Id,
+            });
+        }
+
+        var target = fixture.AddUser("target");
+        fixture.AddMembership(target, accountant);
+        fixture.AddMembership(target, auditor);
+        fixture.AddMembership(target, hrRole);
+        fixture.AddMembership(target, inactiveRole);
+        await fixture.Database.SaveChangesAsync();
+
+        var admin = fixture.AddAdministrator();
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await CallAsync(fixture, admin.Id, target.Id);
+        Assert.Equal(StatusCodes.Status200OK, Status(result));
+        var ok = Assert.IsType<Ok<Server.Api.EffectivePermissionsResponse>>(result).Value!;
+
+        // The flat union stays identical to CompanyAccessService by construction.
+        Assert.Equal(new[] { "hr.employees.list", "users.list" }, ok.PermissionCodes);
+
+        var userGrant = Assert.Single(ok.Permissions, permission => permission.Code == "users.list");
+        // Source role names are ordered with the deterministic ordinal comparer (same as the codes).
+        Assert.Equal(new[] { "حسابدار", "رسیدگی‌کننده" }, userGrant.SourceRoleNames);
+        var hrGrant = Assert.Single(ok.Permissions, permission => permission.Code == "hr.employees.list");
+        Assert.Equal(new[] { "HR-OPERATOR" }, hrGrant.SourceRoleNames);
+        // Every attributed code is part of the flat union and vice versa.
+        Assert.Equal(
+            (IEnumerable<string>)ok.PermissionCodes,
+            ok.Permissions.Select(permission => permission.Code).OrderBy(code => code, StringComparer.Ordinal));
+    }
+
+    [Fact]
     public async Task EffectivePermissions_Returns404WithoutDisclosingAccounts()
     {
         await using var fixture = new Fixture();

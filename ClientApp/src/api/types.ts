@@ -974,11 +974,15 @@ export function parseAssignableRoles(value: unknown): MembershipRequestPage<Assi
 }
 
 /** The union of the permission codes granted by a member's active memberships' active roles (server-computed). */
+export type EffectivePermissionSource = { code: string; sourceRoleNames: string[] };
+
 export type EffectivePermissions = {
   userId: string;
   companyId: string;
   roleNames: string[];
   permissionCodes: string[];
+  /** Per-permission source attribution: the active roles that grant each code. */
+  permissions: EffectivePermissionSource[];
 };
 
 export function parseEffectivePermissions(value: unknown): EffectivePermissions {
@@ -992,10 +996,24 @@ export function parseEffectivePermissions(value: unknown): EffectivePermissions 
       return row;
     });
   };
+  const readSourceRow = (row: unknown): EffectivePermissionSource => {
+    if (!isObject(row)) throw new ContractError(`${what}.permissions`);
+    return { code: readString(row, 'code', `${what}.permissions`), sourceRoleNames: readRoleNames(row) };
+  };
+  const readRoleNames = (row: Record<string, unknown>): string[] => {
+    const rows = row.sourceRoleNames;
+    if (!Array.isArray(rows)) throw new ContractError(`${what}.permissions.sourceRoleNames`);
+    return rows.map((name) => {
+      if (typeof name !== 'string' || name.length === 0) throw new ContractError(`${what}.permissions.sourceRoleNames`);
+      return name;
+    });
+  };
+  if (!Array.isArray(value.permissions)) throw new ContractError(`${what}.permissions`);
   return {
     userId: readString(value, 'userId', what),
     companyId: readString(value, 'companyId', what),
     roleNames: readCodes('roleNames'),
     permissionCodes: readCodes('permissionCodes'),
+    permissions: value.permissions.map(readSourceRow),
   };
 }

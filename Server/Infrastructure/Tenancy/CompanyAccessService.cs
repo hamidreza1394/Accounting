@@ -8,12 +8,12 @@ namespace Infrastructure.Tenancy;
 /// that company.
 /// </summary>
 public sealed record CompanyAccess(
-	Guid CompanyId,
-	string CompanyName,
-	string? NationalId,
-	Guid RoleId,
-	string RoleCode,
-	string RoleName);
+        Guid CompanyId,
+        string CompanyName,
+        string? NationalId,
+        Guid RoleId,
+        string RoleCode,
+        string RoleName);
 
 /// <summary>
 /// The single server-side decision point for "may this user work in this company?".
@@ -37,225 +37,259 @@ public sealed record CompanyAccess(
 /// </remarks>
 public sealed class CompanyAccessService
 {
-	/// <summary>The claim that marks a company user (as opposed to the infrastructure account).</summary>
-	public const string AccountKindClaimType = "AccountKind";
+        /// <summary>The claim that marks a company user (as opposed to the infrastructure account).</summary>
+        public const string AccountKindClaimType = "AccountKind";
 
-	/// <summary>The <see cref="AccountKindClaimType" /> value of a company user.</summary>
-	public const string UserAccountKind = "User";
+        /// <summary>The <see cref="AccountKindClaimType" /> value of a company user.</summary>
+        public const string UserAccountKind = "User";
 
-	public CompanyAccessService(Data.DatabaseContext databaseContext)
-	{
-		DatabaseContext = databaseContext;
-	}
+        public CompanyAccessService(Data.DatabaseContext databaseContext)
+        {
+                DatabaseContext = databaseContext;
+        }
 
-	private Data.DatabaseContext DatabaseContext { get; }
+        private Data.DatabaseContext DatabaseContext { get; }
 
-	/// <summary>
-	/// Returns the identifier of the signed-in company user, or <c>null</c> when the
-	/// principal is anonymous, is the infrastructure account, or was issued before the
-	/// identifier claim existed (such a session has to sign in again to use the API).
-	/// </summary>
-	public static Guid? GetUserId(ClaimsPrincipal? principal)
-	{
-		if (principal?.Identity?.IsAuthenticated != true)
-		{
-			return null;
-		}
+        /// <summary>
+        /// Returns the identifier of the signed-in company user, or <c>null</c> when the
+        /// principal is anonymous, is the infrastructure account, or was issued before the
+        /// identifier claim existed (such a session has to sign in again to use the API).
+        /// </summary>
+        public static Guid? GetUserId(ClaimsPrincipal? principal)
+        {
+                if (principal?.Identity?.IsAuthenticated != true)
+                {
+                        return null;
+                }
 
-		if (!string.Equals(
-			principal.FindFirst(AccountKindClaimType)?.Value,
-			UserAccountKind,
-			StringComparison.Ordinal))
-		{
-			return null;
-		}
+                if (!string.Equals(
+                        principal.FindFirst(AccountKindClaimType)?.Value,
+                        UserAccountKind,
+                        StringComparison.Ordinal))
+                {
+                        return null;
+                }
 
-		var value = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var value = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-		return Guid.TryParse(value, out var userId) && userId != Guid.Empty
-			? userId
-			: null;
-	}
+                return Guid.TryParse(value, out var userId) && userId != Guid.Empty
+                        ? userId
+                        : null;
+        }
 
-	/// <summary>
-	/// All companies the user may currently work in, ordered by name.
-	/// </summary>
-	public async Task<IReadOnlyList<CompanyAccess>> GetAccessibleCompaniesAsync(
-		Guid userId,
-		CancellationToken cancellationToken = default)
-	{
-		return await ProjectToAccess(QueryActiveMemberships(userId)
-				.OrderBy(membership => membership.Company.Name)
-				.ThenBy(membership => membership.TenantId))
-			.ToListAsync(cancellationToken);
-	}
+        /// <summary>
+        /// All companies the user may currently work in, ordered by name.
+        /// </summary>
+        public async Task<IReadOnlyList<CompanyAccess>> GetAccessibleCompaniesAsync(
+                Guid userId,
+                CancellationToken cancellationToken = default)
+        {
+                return await ProjectToAccess(QueryActiveMemberships(userId)
+                                .OrderBy(membership => membership.Company.Name)
+                                .ThenBy(membership => membership.TenantId))
+                        .ToListAsync(cancellationToken);
+        }
 
-	/// <summary>
-	/// The access of the user to one company, or <c>null</c> when the user has no active
-	/// membership in it (including when the company does not exist).
-	/// </summary>
-	public async Task<CompanyAccess?> FindAccessibleCompanyAsync(
-		Guid userId,
-		Guid companyId,
-		CancellationToken cancellationToken = default)
-	{
-		if (companyId == Guid.Empty)
-		{
-			return null;
-		}
+        /// <summary>
+        /// The access of the user to one company, or <c>null</c> when the user has no active
+        /// membership in it (including when the company does not exist).
+        /// </summary>
+        public async Task<CompanyAccess?> FindAccessibleCompanyAsync(
+                Guid userId,
+                Guid companyId,
+                CancellationToken cancellationToken = default)
+        {
+                if (companyId == Guid.Empty)
+                {
+                        return null;
+                }
 
-		return await ProjectToAccess(QueryActiveMemberships(userId)
-				.Where(membership => membership.TenantId == companyId))
-			.FirstOrDefaultAsync(cancellationToken);
-	}
+                return await ProjectToAccess(QueryActiveMemberships(userId)
+                                .Where(membership => membership.TenantId == companyId))
+                        .FirstOrDefaultAsync(cancellationToken);
+        }
 
-	/// <summary>
-	/// Whether the user may perform the operation <paramref name="permissionCode" /> in the
-	/// company: an active membership (same rules as <see cref="FindAccessibleCompanyAsync" />)
-	/// whose company role has the permission assigned (D-034).
-	/// </summary>
-	public async Task<bool> HasPermissionAsync(
-		Guid userId,
-		Guid companyId,
-		string permissionCode,
-		CancellationToken cancellationToken = default)
-	{
-		if (companyId == Guid.Empty)
-		{
-			return false;
-		}
+        /// <summary>
+        /// Whether the user may perform the operation <paramref name="permissionCode" /> in the
+        /// company: an active membership (same rules as <see cref="FindAccessibleCompanyAsync" />)
+        /// whose company role has the permission assigned (D-034).
+        /// </summary>
+        public async Task<bool> HasPermissionAsync(
+                Guid userId,
+                Guid companyId,
+                string permissionCode,
+                CancellationToken cancellationToken = default)
+        {
+                if (companyId == Guid.Empty)
+                {
+                        return false;
+                }
 
-		var granted = await GetCompaniesWithPermissionAsync(
-			userId,
-			[companyId],
-			permissionCode,
-			cancellationToken);
+                var granted = await GetCompaniesWithPermissionAsync(
+                        userId,
+                        [companyId],
+                        permissionCode,
+                        cancellationToken);
 
-		return granted.Contains(companyId);
-	}
+                return granted.Contains(companyId);
+        }
 
-	/// <summary>
-	/// The subset of <paramref name="companyIds" /> in which the user holds the permission
-	/// <paramref name="permissionCode" /> through an active membership. One query, so a
-	/// group report can check every company of its scope at once.
-	/// </summary>
-	public async Task<IReadOnlySet<Guid>> GetCompaniesWithPermissionAsync(
-		Guid userId,
-		IReadOnlyCollection<Guid> companyIds,
-		string permissionCode,
-		CancellationToken cancellationToken = default)
-	{
-		ArgumentNullException.ThrowIfNull(companyIds);
-		ArgumentException.ThrowIfNullOrWhiteSpace(permissionCode);
+        /// <summary>
+        /// The subset of <paramref name="companyIds" /> in which the user holds the permission
+        /// <paramref name="permissionCode" /> through an active membership. One query, so a
+        /// group report can check every company of its scope at once.
+        /// </summary>
+        public async Task<IReadOnlySet<Guid>> GetCompaniesWithPermissionAsync(
+                Guid userId,
+                IReadOnlyCollection<Guid> companyIds,
+                string permissionCode,
+                CancellationToken cancellationToken = default)
+        {
+                ArgumentNullException.ThrowIfNull(companyIds);
+                ArgumentException.ThrowIfNullOrWhiteSpace(permissionCode);
 
-		var requested = companyIds.Where(id => id != Guid.Empty).Distinct().ToList();
-		if (userId == Guid.Empty || requested.Count == 0)
-		{
-			return new HashSet<Guid>();
-		}
+                var requested = companyIds.Where(id => id != Guid.Empty).Distinct().ToList();
+                if (userId == Guid.Empty || requested.Count == 0)
+                {
+                        return new HashSet<Guid>();
+                }
 
-		var permissionIds = DatabaseContext.PermissionDefinitions
-			.AsNoTracking()
-			.Where(permission => permission.Code == permissionCode)
-			.Select(permission => permission.Id);
+                var permissionIds = DatabaseContext.PermissionDefinitions
+                        .AsNoTracking()
+                        .Where(permission => permission.Code == permissionCode)
+                        .Select(permission => permission.Id);
 
-		var granted = await QueryActiveMemberships(userId)
-			.Where(membership => requested.Contains(membership.TenantId))
-			.Where(membership => DatabaseContext.CompanyRolePermissions
-				.Any(rolePermission =>
-					rolePermission.RoleId == membership.RoleId &&
-					permissionIds.Contains(rolePermission.PermissionId)))
-			.Select(membership => membership.TenantId)
-			.Distinct()
-			.ToListAsync(cancellationToken);
+                var granted = await QueryActiveMemberships(userId)
+                        .Where(membership => requested.Contains(membership.TenantId))
+                        .Where(membership => DatabaseContext.CompanyRolePermissions
+                                .Any(rolePermission =>
+                                        rolePermission.RoleId == membership.RoleId &&
+                                        permissionIds.Contains(rolePermission.PermissionId)))
+                        .Select(membership => membership.TenantId)
+                        .Distinct()
+                        .ToListAsync(cancellationToken);
 
-		return granted.ToHashSet();
-	}
+                return granted.ToHashSet();
+        }
 
-	/// <summary>
-	/// All permission codes granted through the user's active role in the company.
-	/// </summary>
-	public Task<IReadOnlyList<string>> GetGrantedPermissionCodesAsync(
-		Guid userId,
-		Guid companyId,
-		CancellationToken cancellationToken = default)
-	{
-		return GetGrantedPermissionCodesCoreAsync(userId, companyId, null, cancellationToken);
-	}
+        /// <summary>
+        /// All permission codes granted through the user's active role in the company.
+        /// </summary>
+        public Task<IReadOnlyList<string>> GetGrantedPermissionCodesAsync(
+                Guid userId,
+                Guid companyId,
+                CancellationToken cancellationToken = default)
+        {
+                return GetGrantedPermissionCodesCoreAsync(userId, companyId, null, cancellationToken);
+        }
 
-	/// <summary>
-	/// The permission codes starting with <paramref name="codePrefix" /> that the user holds in the
-	/// company through an active membership. The prefix is a server constant, never client input.
-	/// </summary>
-	public Task<IReadOnlyList<string>> GetGrantedPermissionCodesAsync(
-		Guid userId,
-		Guid companyId,
-		string codePrefix,
-		CancellationToken cancellationToken = default)
-	{
-		ArgumentException.ThrowIfNullOrWhiteSpace(codePrefix);
-		return GetGrantedPermissionCodesCoreAsync(userId, companyId, codePrefix, cancellationToken);
-	}
+        /// <summary>
+        /// The permission codes starting with <paramref name="codePrefix" /> that the user holds in the
+        /// company through an active membership. The prefix is a server constant, never client input.
+        /// </summary>
+        public Task<IReadOnlyList<string>> GetGrantedPermissionCodesAsync(
+                Guid userId,
+                Guid companyId,
+                string codePrefix,
+                CancellationToken cancellationToken = default)
+        {
+                ArgumentException.ThrowIfNullOrWhiteSpace(codePrefix);
+                return GetGrantedPermissionCodesCoreAsync(userId, companyId, codePrefix, cancellationToken);
+        }
 
-	private async Task<IReadOnlyList<string>> GetGrantedPermissionCodesCoreAsync(
-		Guid userId,
-		Guid companyId,
-		string? codePrefix,
-		CancellationToken cancellationToken)
-	{
-		if (userId == Guid.Empty || companyId == Guid.Empty)
-		{
-			return [];
-		}
+        private async Task<IReadOnlyList<string>> GetGrantedPermissionCodesCoreAsync(
+                Guid userId,
+                Guid companyId,
+                string? codePrefix,
+                CancellationToken cancellationToken)
+        {
+                if (userId == Guid.Empty || companyId == Guid.Empty)
+                {
+                        return [];
+                }
 
-		var query = QueryActiveMemberships(userId)
-			.Where(membership => membership.TenantId == companyId)
-			.SelectMany(membership => DatabaseContext.CompanyRolePermissions
-				.Where(rolePermission => rolePermission.RoleId == membership.RoleId)
-				.Select(rolePermission => rolePermission.Permission.Code));
+                var query = QueryActiveMemberships(userId)
+                        .Where(membership => membership.TenantId == companyId)
+                        .SelectMany(membership => DatabaseContext.CompanyRolePermissions
+                                .Where(rolePermission => rolePermission.RoleId == membership.RoleId)
+                                .Select(rolePermission => rolePermission.Permission.Code));
 
-		if (codePrefix is not null)
-		{
-			query = query.Where(code => code.StartsWith(codePrefix));
-		}
+                if (codePrefix is not null)
+                {
+                        query = query.Where(code => code.StartsWith(codePrefix));
+                }
 
-		return await query
-			.Distinct()
-			.OrderBy(code => code)
-			.ToListAsync(cancellationToken);
-	}
+                return await query
+                        .Distinct()
+                        .OrderBy(code => code)
+                        .ToListAsync(cancellationToken);
+        }
 
-	private IQueryable<Domain.UserCompanyMembership> QueryActiveMemberships(Guid userId)
-	{
-		var activeUserIds = DatabaseContext.Users
-			.AsNoTracking()
-			.Where(user => user.Id == userId && user.IsActive)
-			.Select(user => user.Id);
+        /// <summary>
+        /// Every permission the user holds in the company through an active membership, with the
+        /// active role names that grant it (the per-permission source attribution of the effective
+        /// permissions view). The predicates are exactly <see cref="QueryActiveMemberships" />, so
+        /// the code set equals <see cref="GetGrantedPermissionCodesAsync" /> by construction.
+        /// </summary>
+        public async Task<IReadOnlyList<GrantedPermissionSources>> GetGrantedPermissionsWithSourcesAsync(
+                Guid userId,
+                Guid companyId,
+                CancellationToken cancellationToken = default)
+        {
+                if (userId == Guid.Empty || companyId == Guid.Empty)
+                {
+                        return [];
+                }
 
-		return DatabaseContext.UserCompanyMemberships
-			.AsNoTracking()
-			.Where(membership => membership.UserId == userId)
-			.Where(membership => activeUserIds.Contains(membership.UserId))
-			.Where(membership => membership.IsActive)
-			.Where(membership => membership.Company.IsActive)
-			.Where(membership => membership.Role.IsActive)
-			// The composite foreign key (RoleId, TenantId) already guarantees that the role
-			// belongs to the same company; the predicate keeps the rule explicit here too.
-			.Where(membership => membership.Role.TenantId == membership.TenantId);
-	}
+                var grants = await QueryActiveMemberships(userId)
+                        .Where(membership => membership.TenantId == companyId)
+                        .SelectMany(membership => DatabaseContext.CompanyRolePermissions
+                                .Where(rolePermission => rolePermission.RoleId == membership.RoleId)
+                                .Select(rolePermission => new { rolePermission.Permission.Code, RoleName = membership.Role.Name }))
+                        .ToListAsync(cancellationToken);
 
-	// The projection is the last operator of every query: filtering and ordering happen on
-	// the entity, which EF Core always translates to SQL.
-	private static IQueryable<CompanyAccess> ProjectToAccess(
-		IQueryable<Domain.UserCompanyMembership> memberships)
-	{
-		return memberships
-			.Select(membership => new CompanyAccess(
-				membership.TenantId,
-				membership.Company.Name,
-				membership.Company.NationalId,
-				membership.RoleId,
-				membership.Role.Code,
-				membership.Role.Name));
-	}
+                return [.. grants
+                        .GroupBy(grant => grant.Code, StringComparer.Ordinal)
+                        .Select(group => new GrantedPermissionSources(
+                                group.Key,
+                                [.. group.Select(grant => grant.RoleName).Distinct(StringComparer.Ordinal).OrderBy(name => name, StringComparer.Ordinal)]))
+                        .OrderBy(item => item.Code, StringComparer.Ordinal)];
+        }
+
+        private IQueryable<Domain.UserCompanyMembership> QueryActiveMemberships(Guid userId)
+        {
+                var activeUserIds = DatabaseContext.Users
+                        .AsNoTracking()
+                        .Where(user => user.Id == userId && user.IsActive)
+                        .Select(user => user.Id);
+
+                return DatabaseContext.UserCompanyMemberships
+                        .AsNoTracking()
+                        .Where(membership => membership.UserId == userId)
+                        .Where(membership => activeUserIds.Contains(membership.UserId))
+                        .Where(membership => membership.IsActive)
+                        .Where(membership => membership.Company.IsActive)
+                        .Where(membership => membership.Role.IsActive)
+                        // The composite foreign key (RoleId, TenantId) already guarantees that the role
+                        // belongs to the same company; the predicate keeps the rule explicit here too.
+                        .Where(membership => membership.Role.TenantId == membership.TenantId);
+        }
+
+        // The projection is the last operator of every query: filtering and ordering happen on
+        // the entity, which EF Core always translates to SQL.
+        private static IQueryable<CompanyAccess> ProjectToAccess(
+                IQueryable<Domain.UserCompanyMembership> memberships)
+        {
+                return memberships
+                        .Select(membership => new CompanyAccess(
+                                membership.TenantId,
+                                membership.Company.Name,
+                                membership.Company.NationalId,
+                                membership.RoleId,
+                                membership.Role.Code,
+                                membership.Role.Name));
+        }
 }
+
+/// <summary>One granted permission code and the active role names that grant it in one company.</summary>
+public sealed record GrantedPermissionSources(string Code, IReadOnlyList<string> SourceRoleNames);

@@ -156,14 +156,17 @@ public static class CompanyRoleAdministrationEndpoints
             .ToListAsync(cancellationToken);
         if (roleNames.Count == 0) return TypedResults.NotFound();
 
-        var codes = await companyAccess.GetGrantedPermissionCodesAsync(userId, companyId, cancellationToken);
+        // One official query (CompanyAccessService, D-065/D-071 predicates) yields both the flat
+        // code union and the per-permission source roles, so they can never drift apart.
+        var grants = await companyAccess.GetGrantedPermissionsWithSourcesAsync(userId, companyId, cancellationToken);
 
         SetNoStore(httpContext);
         return TypedResults.Ok(new EffectivePermissionsResponse(
             userId,
             companyId,
             roleNames.OrderBy(name => name, StringComparer.Ordinal).ToArray(),
-            codes.OrderBy(code => code, StringComparer.Ordinal).ToArray()));
+            [.. grants.Select(grant => grant.Code).OrderBy(code => code, StringComparer.Ordinal)],
+            [.. grants.Select(grant => new EffectivePermissionSource(grant.Code, grant.SourceRoleNames))]));
     }
 
     public static async Task<IResult> GetPermissionCatalogAsync(
@@ -292,7 +295,9 @@ public static class CompanyRoleAdministrationEndpoints
             ceiling = await delegationCeiling.LoadTrackedCeilingAsync(scope.UserId, companyId, cancellationToken);
             if (ceiling is null) return TypedResults.NotFound();
             if (ceiling.Violates(permissionIds, out _))
-                return ForbiddenBeyondCeiling();
+                return await ForbiddenBeyondCeilingAuditedAsync(
+                    database, httpContext, companyId, scope.UserId, "CompanyRoleCreate", null,
+                    new { permissionCodes }, timeProvider, transaction, cancellationToken);
         }
 
         var role = new Domain.CompanyRole
@@ -398,7 +403,9 @@ public static class CompanyRoleAdministrationEndpoints
             var ceiling = await delegationCeiling.LoadTrackedCeilingAsync(scope.UserId, companyId, cancellationToken);
             if (ceiling is null) return TypedResults.NotFound();
             if (ceiling.Violates(permissionIds, out _))
-                return ForbiddenBeyondCeiling();
+                return await ForbiddenBeyondCeilingAuditedAsync(
+                    database, httpContext, companyId, scope.UserId, "CompanyRoleUpdate", role.Id.ToString(),
+                    new { roleId = role.Id, permissionCodes }, timeProvider, transaction, cancellationToken);
             ceiling.ApplyRowVersionGuards(database);
         }
 
@@ -505,7 +512,9 @@ public static class CompanyRoleAdministrationEndpoints
             var ceiling = await delegationCeiling.LoadTrackedCeilingAsync(scope.UserId, companyId, cancellationToken);
             if (ceiling is null) return TypedResults.NotFound();
             if (ceiling.Violates(role.RolePermissions.Select(rolePermission => rolePermission.PermissionId), out _))
-                return ForbiddenBeyondCeiling();
+                return await ForbiddenBeyondCeilingAuditedAsync(
+                    database, httpContext, companyId, scope.UserId, "UserCompanyRoleAssign", $"{userId}:{companyId}",
+                    new { userId, roleId }, timeProvider, transaction, cancellationToken);
             ceiling.ApplyRowVersionGuards(database);
         }
 
@@ -557,6 +566,7 @@ public static class CompanyRoleAdministrationEndpoints
         Guid roleId,
         int? page,
         int? pageSize,
+        string? search,
         HttpContext httpContext,
         ClaimsPrincipal principal,
         Data.DatabaseContext database,
@@ -571,11 +581,28 @@ public static class CompanyRoleAdministrationEndpoints
                 .AnyAsync(role => role.Id == roleId && role.TenantId == companyId, cancellationToken))
             return TypedResults.NotFound();
 
+        // Same contract as the admin user directory: trim, ignore whitespace-only, refuse a
+        // term longer than 120 characters with 400 (never a silent full-list fallback).
+        search = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
+        if (search?.Length > 120)
+            return TypedResults.BadRequest(new { error = "عبارت جستجو بیش از حد طولانی است." });
+
         var normalizedPage = Math.Clamp(page ?? 1, 1, MaxMemberPage);
         var normalizedPageSize = Math.Clamp(pageSize ?? 25, 1, 100);
 
         var query = database.UserCompanyMemberships.AsNoTracking()
             .Where(membership => membership.TenantId == companyId && membership.RoleId == roleId && membership.IsActive);
+        if (search is not null)
+        {
+            // Server-side filter on the fields the member table actually shows (username and
+            // names). The filter runs before Count/Skip/Take so paging stays correct.
+            query = query.Join(database.Users.AsNoTracking(), membership => membership.UserId, user => user.Id,
+                    (membership, user) => new { membership, user })
+                .Where(row => (row.user.Username != null && row.user.Username.Contains(search)) ||
+                    (row.user.FirstName != null && row.user.FirstName.Contains(search)) ||
+                    (row.user.LastName != null && row.user.LastName.Contains(search)))
+                .Select(row => row.membership);
+        }
         var totalCount = await query.CountAsync(cancellationToken);
         var items = await query
             .Join(database.Users.AsNoTracking(), membership => membership.UserId, user => user.Id,
@@ -673,7 +700,9 @@ public static class CompanyRoleAdministrationEndpoints
             var ceiling = await delegationCeiling.LoadTrackedCeilingAsync(scope.UserId, companyId, cancellationToken);
             if (ceiling is null) return TypedResults.NotFound();
             if (ceiling.Violates(target.RolePermissions.Select(rolePermission => rolePermission.PermissionId), out _))
-                return ForbiddenBeyondCeiling();
+                return await ForbiddenBeyondCeilingAuditedAsync(
+                    database, httpContext, companyId, scope.UserId, "UserCompanyRoleTransfer", $"{roleId}:{target.Id}",
+                    new { targetRoleId = target.Id, requestedMemberCount = memberships.Count }, timeProvider, transaction, cancellationToken);
             ceiling.ApplyRowVersionGuards(database);
         }
 
@@ -772,6 +801,44 @@ public static class CompanyRoleAdministrationEndpoints
             new { error = "شما مجاز به واگذاری این گروه یا مجوزها نیستید؛ سقف تفویض شما کمتر از این است." },
             statusCode: StatusCodes.Status403Forbidden);
 
+    /// <summary>
+    /// Records a refused delegation attempt (D-071, stage 2) and answers the Persian 403. The
+    /// denial happens before anything else is tracked, so this audit row is the only pending
+    /// change: saving it inside the already-open transaction and committing it is atomic and
+    /// fail-closed — if the audit cannot be written, the request fails instead of returning a
+    /// silent refusal. Nothing about the requested change is ever applied on this path.
+    /// </summary>
+    private static async Task<IResult> ForbiddenBeyondCeilingAuditedAsync(
+        Data.DatabaseContext database,
+        HttpContext httpContext,
+        Guid companyId,
+        Guid actorId,
+        string operation,
+        string? entityId,
+        object details,
+        TimeProvider timeProvider,
+        Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? transaction,
+        CancellationToken cancellationToken)
+    {
+        database.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
+        {
+            UserId = actorId,
+            TenantId = companyId,
+            EventType = "CompanyRoleDelegationDenied",
+            EntityType = "CompanyRole",
+            EntityId = entityId,
+            OccurredAtUtc = timeProvider.GetUtcNow().UtcDateTime,
+            CorrelationId = System.Diagnostics.Activity.Current?.Id,
+            IpAddress = httpContext.Connection.RemoteIpAddress?.ToString(),
+            DetailsJson = JsonSerializer.Serialize(details),
+        });
+        await database.SaveChangesAsync(cancellationToken);
+        if (transaction is not null)
+            await transaction.CommitAsync(cancellationToken);
+        SetNoStore(httpContext);
+        return ForbiddenBeyondCeiling();
+    }
+
     private static IResult ForbiddenSelfAssignment() =>
         TypedResults.Json(
             new { error = "تغییر نقش خودتان از این مسیر مجاز نیست." },
@@ -858,7 +925,11 @@ public sealed record EffectivePermissionsResponse(
     Guid UserId,
     Guid CompanyId,
     string[] RoleNames,
-    string[] PermissionCodes);
+    string[] PermissionCodes,
+    IReadOnlyList<EffectivePermissionSource> Permissions);
+
+/// <summary>One granted code of the effective view and the active roles that grant it.</summary>
+public sealed record EffectivePermissionSource(string Code, IReadOnlyList<string> SourceRoleNames);
 
 public sealed record CompanyRoleMemberResponse(
     Guid UserId, string? Username, string? FirstName, string? LastName, bool IsUserActive, DateTime MemberSinceUtc);
