@@ -25,6 +25,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/Feedback';
 import { Info, TabDataBoundary, useProfileTabData } from './profileShared';
 import { AdminRevokeSessionDialog, type PendingRevocation } from './AdminRevokeSessionDialog';
+import { HrLinkActions, type LinkTarget, type UnlinkTarget } from './HrLinkActions';
 import { fullName } from '../userDisplay';
 
 type Shared = {
@@ -46,6 +47,7 @@ function Label({ code }: { code: string }) {
 type HrLinkRow = {
   companyId: string;
   companyName: string;
+  employeeId: string | null;
   employeeNumber: string | null;
   employeeName: string | null;
   /** True when the viewer may not read the HR records of that company (the field stays hidden, not faked). */
@@ -56,13 +58,16 @@ type HrLinkRow = {
  * Tab 1 — personal, contact and linked personnel record. The identity fields come from the
  * already-loaded user details (no request); the linked employee is fetched per active
  * membership only when this tab opens (`hr.employees.list` decides per company; 403/404
- * companies are shown as "not visible for you" instead of an error).
+ * companies are shown as "not visible for you" instead of an error). Connect / disconnect
+ * actions go through the real HR endpoints (`hr.employees.user-link.manage` — the server
+ * decides per company) and refresh the section from the server after every success.
  */
 export function ProfileIdentityTab({ user, cache, onUnauthenticated }: Shared) {
   const active = user.memberships.filter((membership) => membership.isActive);
+  const linksKey = `${user.id}:hr-links`;
   const state = useProfileTabData<HrLinkRow[]>(
     cache,
-    `${user.id}:hr-links`,
+    linksKey,
     async (signal) => {
       if (active.length === 0) return [];
       const rows = await Promise.all(
@@ -73,13 +78,14 @@ export function ProfileIdentityTab({ user, cache, onUnauthenticated }: Shared) {
             return {
               companyId: membership.companyId,
               companyName: membership.companyName,
+              employeeId: employee?.id ?? null,
               employeeNumber: employee?.employeeNumber ?? null,
               employeeName: employee ? `${employee.firstName} ${employee.lastName}`.trim() : null,
               hidden: false,
             };
           } catch (error) {
             if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
-              return { companyId: membership.companyId, companyName: membership.companyName, employeeNumber: null, employeeName: null, hidden: true };
+              return { companyId: membership.companyId, companyName: membership.companyName, employeeId: null, employeeNumber: null, employeeName: null, hidden: true };
             }
             throw error;
           }
@@ -89,6 +95,17 @@ export function ProfileIdentityTab({ user, cache, onUnauthenticated }: Shared) {
     },
     onUnauthenticated,
   );
+  const [linkTarget, setLinkTarget] = useState<LinkTarget | null>(null);
+  const [unlinkTarget, setUnlinkTarget] = useState<UnlinkTarget | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  /** After a confirmed link/unlink the section reloads from the server — never a stale row. */
+  const handleDone = (message: string) => {
+    setNotice(message);
+    cache.delete(linksKey);
+    state.retry();
+  };
+
   return (
     <div className="space-y-6">
       <section aria-labelledby="profile-identity-heading">
@@ -112,6 +129,14 @@ export function ProfileIdentityTab({ user, cache, onUnauthenticated }: Shared) {
       </section>
       <section aria-labelledby="profile-hr-heading">
         <h2 id="profile-hr-heading" className="mb-3 text-base font-bold text-ink">پرونده پرسنلی مرتبط</h2>
+        {/* The live region exists from the first render; the message arrives later, so it is announced. */}
+        <div aria-live="polite">
+          {notice ? (
+            <p role="status" className="mb-3 rounded-xl border border-line bg-cool p-4 text-sm font-medium text-navy">
+              {notice}
+            </p>
+          ) : null}
+        </div>
         <TabDataBoundary state={state} label="در حال دریافت پرونده پرسنلی…">
           {(rows) =>
             rows.length === 0 ? (
@@ -119,22 +144,65 @@ export function ProfileIdentityTab({ user, cache, onUnauthenticated }: Shared) {
             ) : (
               <dl className="grid gap-3 sm:grid-cols-2">
                 {rows.map((row) => (
-                  <Info key={row.companyId} label={`پرونده پرسنلی — ${row.companyName}`}>
-                    {row.hidden
-                      ? 'نمایش این بخش برای شما مجاز نیست.'
-                      : row.employeeNumber
-                        ? <>
-                            <span dir="ltr">{row.employeeNumber}</span>
-                            {row.employeeName ? <span className="text-sub"> — {row.employeeName}</span> : null}
-                          </>
-                        : 'پرونده پرسنلی متصل نشده است.'}
-                  </Info>
+                  <div key={row.companyId} className="rounded-xl bg-cool px-3.5 py-3">
+                    <dt className="text-xs font-medium text-sub">پرونده پرسنلی — {row.companyName}</dt>
+                    <dd className="mt-1 break-words text-sm font-semibold text-ink">
+                      {row.hidden ? (
+                        <span className="text-sub">نمایش این بخش برای شما مجاز نیست.</span>
+                      ) : row.employeeNumber ? (
+                        <>
+                          <span dir="ltr">{row.employeeNumber}</span>
+                          {row.employeeName ? <span className="text-sub"> — {row.employeeName}</span> : null}
+                        </>
+                      ) : (
+                        <span className="text-sub">پرونده پرسنلی متصل نشده است.</span>
+                      )}
+                    </dd>
+                    {!row.hidden && row.employeeId ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNotice(null);
+                          setUnlinkTarget({ companyId: row.companyId, companyName: row.companyName, employeeId: row.employeeId as string, employeeName: row.employeeName ?? '' });
+                        }}
+                        aria-label={`قطع اتصال پرونده پرسنلی در ${row.companyName}`}
+                        className="mt-2 inline-flex min-h-9 items-center rounded-lg border border-danger/40 px-3 text-xs font-bold text-danger outline-none hover:bg-white focus-visible:ring-2 focus-visible:ring-gold"
+                      >
+                        قطع اتصال
+                      </button>
+                    ) : null}
+                    {!row.hidden && !row.employeeId ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNotice(null);
+                          setLinkTarget({ companyId: row.companyId, companyName: row.companyName });
+                        }}
+                        aria-label={`اتصال پرونده پرسنلی در ${row.companyName}`}
+                        className="mt-2 inline-flex min-h-9 items-center rounded-lg border border-teal-deep/40 px-3 text-xs font-bold text-teal-deep outline-none hover:bg-white focus-visible:ring-2 focus-visible:ring-gold"
+                      >
+                        اتصال پرونده پرسنلی
+                      </button>
+                    ) : null}
+                  </div>
                 ))}
               </dl>
             )
           }
         </TabDataBoundary>
       </section>
+      <HrLinkActions
+        linkTarget={linkTarget}
+        unlinkTarget={unlinkTarget}
+        userId={user.id}
+        onClose={() => {
+          setLinkTarget(null);
+          setUnlinkTarget(null);
+        }}
+        onLinked={handleDone}
+        onUnlinked={handleDone}
+        onUnauthenticated={onUnauthenticated}
+      />
     </div>
   );
 }

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { RouteView, RouterProvider, type Route } from '../../../../lib/router';
 import { PageBreadcrumbBar, PageBreadcrumbProvider } from '@/components/shell/PageBreadcrumb';
-import { stubApi, antiforgeryRoute } from '../../../../test/api';
+import { stubApi, antiforgeryRoute, type Route as StubRoute } from '../../../../test/api';
 import { userDetails } from '../../../../test/adminUsers';
 import { UserDetailPage } from '../UserDetailPage';
 
@@ -184,6 +184,134 @@ describe('UserDetailPage profile workspace (stage 3)', () => {
     expect(await screen.findByRole('navigation', { name: 'صفحه‌بندی سوابق تغییرات' })).toBeInTheDocument();
     expect(screen.getByText(/از 3/)).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('button', { name: 'بعدی' })).toBeEnabled());
+  });
+
+  describe('personnel record link management (PR 3-C2)', () => {
+    const hrEmployee = {
+      id: '22222222-2222-2222-2222-222222222222',
+      employeeNumber: 'EMP-2',
+      firstName: 'آزاد',
+      lastName: 'کارمند',
+      employmentStatus: 1,
+      hiredOnUtc: null,
+      terminatedOnUtc: null,
+      hasLinkedUser: false,
+    };
+    const hrPage = (items: unknown[]) => ({ items, totalCount: items.length, page: 1, pageSize: 5 });
+
+    const freeEmployeePath = '/org/employees/22222222-2222-2222-2222-222222222222/user';
+
+    function hrHarness(
+      connected: { status: number; body?: unknown } | (() => { status: number; body?: unknown }),
+      mutations: { put?: StubRoute | (() => StubRoute); del?: StubRoute | (() => StubRoute) } = {},
+    ) {
+      return stubApi({
+        ...antiforgeryRoute,
+        'GET /api/v1/admin/users/user-2': { status: 200, body: userDetails(2) },
+        'GET /api/v1/companies/c1/org/employees?userId=user-2&page=1&pageSize=5': () =>
+          typeof connected === 'function' ? connected() : connected,
+        ...(mutations.put ? { [`PUT /api/v1/companies/c1${freeEmployeePath}`]: mutations.put } : {}),
+        ...(mutations.del ? { [`DELETE /api/v1/companies/c1${freeEmployeePath}`]: mutations.del } : {}),
+        // The picker search: one already-connected employee must never be offered here.
+        'GET /api/v1/companies/c1/org/employees?search=EMP&page=1&pageSize=25': {
+          status: 200,
+          body: {
+            items: [
+              hrEmployee,
+              { ...hrEmployee, id: '33333333-3333-3333-3333-333333333333', employeeNumber: 'EMP-9', hasLinkedUser: true },
+            ],
+            totalCount: 2,
+            page: 1,
+            pageSize: 25,
+          },
+        },
+      });
+    }
+
+    it('connects an employee without a linked account through the search picker, then reloads the section', async () => {
+      const user = userEvent.setup();
+      let linked = false;
+      const fetchMock = hrHarness(
+        () => ({ status: 200, body: hrPage(linked ? [{ ...hrEmployee, hasLinkedUser: true }] : []) }),
+        { put: () => { linked = true; return { status: 204 }; } },
+      );
+      setup();
+      await screen.findByRole('tablist');
+      const panel = within(screen.getByRole('tabpanel'));
+      expect(await panel.findByText('پرونده پرسنلی متصل نشده است.')).toBeInTheDocument();
+      await user.click(panel.getByRole('button', { name: 'اتصال پرونده پرسنلی در شرکت نمونه' }));
+
+      const dialog = screen.getByRole('dialog', { name: 'اتصال پرونده پرسنلی — شرکت نمونه' });
+      // Confirming without a pick must not send anything.
+      await user.click(within(dialog).getByRole('button', { name: 'اتصال' }));
+      expect(fetchMock.mock.calls.filter(([input, init]) => init?.method === 'PUT' && String(input).endsWith('/user')).length).toBe(0);
+
+      await user.type(within(dialog).getByLabelText('جست‌وجوی کارمند'), 'EMP');
+      await user.click(within(dialog).getByRole('button', { name: 'جست‌وجو' }));
+      const results = within(dialog).getByRole('list', { name: 'کارمندان بدون حساب متصل' });
+      // The already-connected employee is filtered out; only the free one is offered.
+      expect(within(results).getAllByRole('listitem')).toHaveLength(1);
+      await user.click(within(results).getByRole('button', { name: 'انتخاب آزاد کارمند' }));
+
+      await user.click(within(dialog).getByRole('button', { name: 'اتصال آزاد کارمند' }));
+      expect(await screen.findByRole('status')).toHaveTextContent('پرونده پرسنلی «آزاد کارمند» به این حساب متصل شد.');
+      const linkCall = fetchMock.mock.calls.find(([input]) => String(input).endsWith(freeEmployeePath));
+      expect(linkCall).toBeTruthy();
+      expect(JSON.parse(String(linkCall?.[1]?.body))).toEqual({ userId: 'user-2' });
+      // The section was refetched and now shows the connected record with its unlink action.
+      expect(await panel.findByText(/EMP-2/)).toBeInTheDocument();
+      expect(panel.getByRole('button', { name: 'قطع اتصال پرونده پرسنلی در شرکت نمونه' })).toBeInTheDocument();
+    });
+
+    it('disconnects the linked personnel record after an explicit confirmation', async () => {
+      const user = userEvent.setup();
+      let linked = true;
+      const fetchMock = hrHarness(
+        () => ({ status: 200, body: hrPage(linked ? [{ ...hrEmployee, hasLinkedUser: true }] : []) }),
+        { del: () => { linked = false; return { status: 204 }; } },
+      );
+      setup();
+      await screen.findByRole('tablist');
+      const panel = within(screen.getByRole('tabpanel'));
+      expect(await panel.findByText(/EMP-2/)).toBeInTheDocument();
+      await user.click(panel.getByRole('button', { name: 'قطع اتصال پرونده پرسنلی در شرکت نمونه' }));
+      const dialog = screen.getByRole('alertdialog', { name: 'قطع اتصال — شرکت نمونه' });
+      await user.click(within(dialog).getByRole('button', { name: 'قطع اتصال' }));
+
+      expect(await screen.findByRole('status')).toHaveTextContent('اتصال پرونده پرسنلی قطع شد.');
+      expect(fetchMock.mock.calls.some(([input, init]) => String(input).endsWith(freeEmployeePath) && init?.method === 'DELETE')).toBe(true);
+      await waitFor(() => expect(panel.getByText('پرونده پرسنلی متصل نشده است.')).toBeInTheDocument());
+    });
+
+    it('keeps the link dialog open with the real server rule when the anchor conflicts', async () => {
+      const user = userEvent.setup();
+      hrHarness({ status: 200, body: hrPage([]) }, {
+        put: { status: 409, body: { error: 'این عضویت قبلاً به کارمند دیگری متصل شده است.' } },
+      });
+      setup();
+      await screen.findByRole('tablist');
+      const panel = within(screen.getByRole('tabpanel'));
+      await panel.findByRole('button', { name: 'اتصال پرونده پرسنلی در شرکت نمونه' });
+      await user.click(panel.getByRole('button', { name: 'اتصال پرونده پرسنلی در شرکت نمونه' }));
+      const dialog = screen.getByRole('dialog', { name: 'اتصال پرونده پرسنلی — شرکت نمونه' });
+      await user.type(within(dialog).getByLabelText('جست‌وجوی کارمند'), 'EMP');
+      await user.click(within(dialog).getByRole('button', { name: 'جست‌وجو' }));
+      await user.click(within(dialog).getByRole('button', { name: 'انتخاب آزاد کارمند' }));
+      await user.click(within(dialog).getByRole('button', { name: 'اتصال آزاد کارمند' }));
+
+      expect(await within(dialog).findByRole('alert')).toHaveTextContent('این عضویت قبلاً به کارمند دیگری متصل شده است.');
+      expect(screen.getByRole('dialog', { name: 'اتصال پرونده پرسنلی — شرکت نمونه' })).toBeInTheDocument();
+    });
+
+    it('offers no link actions for a company whose HR records are not visible to the viewer', async () => {
+      hrHarness({ status: 403, body: { error: 'شما مجاز به این عملیات در این شرکت نیستید.' } });
+      setup();
+      await screen.findByRole('tablist');
+      const panel = within(screen.getByRole('tabpanel'));
+      expect(await panel.findByText('نمایش این بخش برای شما مجاز نیست.')).toBeInTheDocument();
+      expect(panel.queryByRole('button', { name: /اتصال پرونده پرسنلی/ })).toBeNull();
+      expect(panel.queryByRole('button', { name: /قطع اتصال/ })).toBeNull();
+    });
   });
 
   describe('session revocation (D-073 §1 step-up)', () => {

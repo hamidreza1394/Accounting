@@ -2818,3 +2818,6 @@
 ## 2026-11-09 — Issue #444 مرحله سوم PR 3-F2: ابطال نشست‌های کاربر دیگر از پرونده (step-up D-073 §1)
 - Gap Analysis پس از PR #596 در handoff مرحله سوم ثبت شد: Backend ابطال مدیریتی کامل بود؛ تب ۲ پرونده فقط-خواندنی بود. UI ابطال تک‌نشست و «ابطال همه» با فرم مرحله‌به‌مرحله (رمز مدیر + دلیل از کاتالوگ سرور D-073) در `AdminRevokeSessionDialog` ساخته شد؛ `ConfirmDialog` props اختیاری `children` گرفت تا فرم در همان دیالوگ دسترس‌پذیر قرار گیرد؛ پس از موفقیت cache تب حذف و فهرست واقعی بازخوانی می‌شود؛ خطاها داخل دیالوگ با حفظ مقادیر.
 - کلاینت: `revokeAdminUserSession`/`revokeAllAdminUserSessions`/`parseAdminRevocationOutcome`. تست: ۳ سناریوی جدید (اعتبارسنجی خالی، 403 re-auth با حفظ مقادیر، ابطال همه با شمارش) — vitest 920/920؛ typecheck/build/check:offline سبز. Migration: هیچ.
+
+## 2026-11-09 — Issue #444 مرحله سوم PR 3-C2: اتصال/قطع اتصال پرونده پرسنلی از پرونده کاربر
+- Backend موجود و Verified بود؛ UI شکاف واقعی بود. `HrLinkActions` با جست‌وجوی سرور-سمت کارمندان بدون حساب (`hasLinkedUser=false`)، اتصال (`PUT .../user` با `{userId}`) و قطع اتصال با تأیید (`DELETE .../user`)؛ پس از موفقیت بازخوانی از سرور؛ خطاهای 403/404/409 با پیام واقعی سرور و حفظ مقادیر؛ شرکت‌های غیرقابل‌مشاهده هیچ اکشنی ندارند. تست: ۴ سناریو — vitest 924/924؛ typecheck/build/check:offline سبز. Migration: هیچ. (stacked روی PR 3-F2)
