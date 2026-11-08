@@ -823,12 +823,12 @@
 .faranou-nav-active {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgb(119 218 204 / .26);
+  border: 1px solid rgb(240 196 119 / .4);
   background:
-    radial-gradient(ellipse at 8% 50%, rgb(255 255 255 / .16), transparent 46%),
-    linear-gradient(105deg, #176b70 0%, #1d8580 58%, #236e72 100%);
+    radial-gradient(ellipse at 8% 50%, rgb(255 255 255 / .1), transparent 46%),
+    linear-gradient(105deg, #1c3d5a 0%, #24506f 58%, #1c3d5a 100%);
   color: #fff;
-  box-shadow: 0 8px 20px rgb(4 24 32 / .28), inset 0 1px 0 rgb(255 255 255 / .18);
+  box-shadow: 0 8px 20px rgb(4 24 32 / .28), inset 0 1px 0 rgb(255 255 255 / .12);
 }
 .faranou-nav-active::before {
   position: absolute;
@@ -1294,12 +1294,13 @@
 .faranou-tab-button {
   display: inline-flex;
   align-items: center;
+  gap: .4rem;
   min-height: 2.15rem;
   padding: .2rem .7rem;
   border: 0;
   background: transparent;
   color: #22384b;
-  font-size: .78rem;
+  font-size: .8125rem; /* 13px: Persian label readability (was .78rem) */
   font-weight: 600;
   white-space: nowrap;
 }
@@ -1453,3 +1454,34 @@
   overflow-y: auto;
   background: var(--color-wash);
 }
+
+
+/* ---- Navigation polish (Issue #444 stage 1 completion, PR 6) ---- */
+/* The lightweight Persian tooltip of the sidebar rail (hover + focus, Escape closes). */
+.faranou-tooltip {
+  position: fixed;
+  z-index: 70;
+  transform: translate(-100%, -50%);
+  max-width: 16rem;
+  padding: .35rem .6rem;
+  border-radius: 8px;
+  border: 1px solid #2a4a66;
+  background: #0f2a45;
+  color: #fff;
+  font-size: .78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 6px 16px rgb(4 24 32 / .35);
+  pointer-events: none;
+}
+/* The Persian section headings inside a group's submenu (third visual level). */
+.faranou-nav-section {
+  margin: .55rem 0 .1rem;
+  padding-inline-start: .15rem;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: var(--color-gold);
+  opacity: .92;
+}
+.faranou-nav-section:first-child { margin-top: .1rem; }

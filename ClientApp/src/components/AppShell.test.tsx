@@ -51,8 +51,8 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: /داشبورد/ })).toHaveAttribute('aria-current', 'page');
     // Future subsystems live inside folded groups: open the accounting group, then check that
     // its placeholder stays a visible "به‌زودی" leaf — never a broken link.
-    await user.click(screen.getByRole('button', { name: /حسابداری و مالی/ }));
-    const accountingLabels = screen.getAllByText('حسابداری');
+    await user.click(screen.getByRole('button', { name: 'حسابداری' }));
+    const accountingLabels = screen.getAllByText('اسناد و دفاتر');
     expect(accountingLabels.some((label) => label.closest('[aria-disabled="true"]'))).toBe(true);
     // The support entry stays a top-level placeholder.
     expect(screen.getByText('راهنما و پشتیبانی').closest('[aria-disabled="true"]')).toBeTruthy();

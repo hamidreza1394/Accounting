@@ -38,35 +38,48 @@ function setup(access: AccessSnapshot = installationAdmin, collapsed = false) {
 }
 
 describe('AppSidebar (Issue #444 stage 1 shell)', () => {
-  it('groups subsystems under logical Persian labels with collapsible groups', async () => {
+  it('groups the catalog subsystems as folded first-level groups with collapsible leaves', async () => {
     const user = userEvent.setup();
     setup();
-    const accounting = screen.getByRole('button', { name: /حسابداری و مالی/ });
-    expect(accounting).toHaveAttribute('aria-expanded', 'false');
-    // Folded future groups hide their leaves until unfolded.
-    expect(screen.queryByText('خزانه‌داری')).not.toBeInTheDocument();
+    // The eight first-level subsystem groups of UI-05 (all future work, folded).
+    for (const group of ['حسابداری', 'انبار', 'فروش', 'خزانه‌داری', 'حقوق و دستمزد', 'دارایی ثابت', 'بازرگانی خارجی', 'عمومی']) {
+      expect(screen.getByRole('button', { name: group })).toHaveAttribute('aria-expanded', 'false');
+    }
+    const accounting = screen.getByRole('button', { name: 'حسابداری' });
+    expect(screen.queryByText('اسناد و دفاتر')).not.toBeInTheDocument();
     await user.click(accounting);
     expect(accounting).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByText('خزانه‌داری')).toBeInTheDocument();
+    expect(screen.getByText('اسناد و دفاتر')).toBeInTheDocument();
     await user.click(accounting);
-    expect(screen.queryByText('خزانه‌داری')).not.toBeInTheDocument();
+    expect(screen.queryByText('اسناد و دفاتر')).not.toBeInTheDocument();
+  });
+
+  it('keeps the HR pages under system administration with Persian sections (UI-08)', () => {
+    setup();
+    // The independent HR group is gone; its pages live in the Persian sections of مدیریت سیستم.
+    expect(screen.queryByText('منابع انسانی')).not.toBeInTheDocument();
+    expect(screen.getByText('ساختار سازمانی و کارکنان')).toBeInTheDocument();
+    // «شرکت‌ها و عضویت‌ها» appears only with the company membership codes (fail-closed);
+    // for the installation administrator the two visible sections are checked here.
+    expect(screen.getByText('دسترسی و مجوزها')).toBeInTheDocument();
+    expect(screen.getByText('سوابق امنیتی و مدیریتی')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'واحدهای سازمانی' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'گروه‌های دسترسی' })).toBeInTheDocument();
   });
 
   it('opens the real groups by default and keeps every entry Persian (no internal English names)', () => {
     setup();
-    // Real pages: HR and system administration groups start unfolded.
-    expect(screen.getByRole('link', { name: 'واحدهای سازمانی' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'گروه‌های دسترسی' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'مدیریت کاربران' })).toBeInTheDocument();
     // No internal route names surface to the user.
     for (const internal of ['hr', 'reporting', 'trade', 'roles', 'users', 'consolidation', '/admin', '/hr']) {
       expect(screen.queryByText(internal, { exact: true })).not.toBeInTheDocument();
     }
   });
 
-  it('hides the whole HR group when neither the installation flag nor any hr code exists', () => {
+  it('hides every gated page when neither the installation flag nor any code exists', () => {
     setup(companyMember([]));
-    expect(screen.queryByText('منابع انسانی')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'واحدهای سازمانی' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'مدیریت کاربران' })).not.toBeInTheDocument();
   });
 
   it('folds into the icon rail with accessible names and no visible labels', () => {
@@ -76,24 +89,30 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     expect(dashboard).toHaveTextContent('داشبورد'); // sr-only text keeps the accessible name
     expect(screen.queryByText('منوی اصلی')).not.toBeInTheDocument();
     // Group buttons keep their real expanded state; opening one re-expands the rail.
-    expect(screen.getByRole('button', { name: 'منابع انسانی (باز)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'مدیریت سیستم (باز)' })).toBeInTheDocument();
   });
 
-  it('keeps native hover tooltips in the rail and drops them when labels are visible', () => {
-    // Closes the WARN recorded in artifacts/ui-preview/stage-1/results-pr-integration.json
-    // («tooltip با سلکتورهای عمومی پیدا نشد»): the rail tooltip is the native `title`
-    // attribute — invisible in screenshots by design — combined with sr-only names.
+  it('shows the custom Persian tooltip on rail focus and drops it when labels are visible', async () => {
+    // The rail tooltip is the project's own component (hover AND focus, Escape closes) —
+    // no native `title`, no external library.
     const rail = setup(installationAdmin, true);
-    expect(rail.getByRole('link', { name: 'داشبورد' })).toHaveAttribute('title', 'داشبورد');
-    expect(rail.getByRole('button', { name: 'منابع انسانی (باز)' })).toHaveAttribute('title', 'منابع انسانی');
+    const dashboard = rail.getByRole('link', { name: 'داشبورد' });
+    expect(dashboard).not.toHaveAttribute('title');
     // Group children are hidden in the rail; the tooltip belongs to the group icon itself.
     expect(rail.queryByRole('link', { name: 'واحدهای سازمانی' })).not.toBeInTheDocument();
+
+    // Focus opens the tooltip (portal, role=tooltip, described-by wiring).
+    const user = userEvent.setup();
+    await user.click(dashboard);
+    // The click navigated nowhere (no routes): focus stays on the link, tooltip open.
+    expect(await screen.findByRole('tooltip', { name: 'داشبورد' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('tooltip', { name: 'داشبورد' })).not.toBeInTheDocument());
     rail.unmount();
 
     const expanded = setup();
     expect(expanded.getByRole('link', { name: 'داشبورد' })).not.toHaveAttribute('title');
-    expect(expanded.getByRole('button', { name: /^منابع انسانی/ })).not.toHaveAttribute('title');
-    expect(expanded.getByRole('link', { name: 'واحدهای سازمانی' })).toBeInTheDocument();
+    expect(expanded.getByRole('link', { name: 'مدیریت کاربران' })).toBeInTheDocument();
     expanded.unmount();
   });
 

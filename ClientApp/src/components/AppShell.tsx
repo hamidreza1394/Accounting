@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Bell, Building2, CalendarDays, ChevronDown, LogOut, Menu, X } from 'lucide-react';
+import { Building2, CalendarDays, ChevronDown, LogOut, Menu, X } from 'lucide-react';
 import type { SelectedContext, Session } from '../api/types';
 import { Alert } from './ui/Alert';
 import { FaranouLogo } from './ui/FaranouLogo';
@@ -220,10 +220,6 @@ function AppShellFrame({
             <span className="hidden min-w-0 flex-col leading-tight sm:flex">
               <strong className="max-w-36 truncate text-sm font-bold">{session.fullName}</strong>
               <span className="mt-1 max-w-36 truncate text-[11px] text-on-navy/75">{context.company.roleName}</span>
-            </span>
-            <span className="faranou-header-icon faranou-header-icon--notify" title="اعلان‌ها" role="img" aria-label="اعلان‌ها">
-              <Bell size={20} />
-              <span className="faranou-notify-dot" aria-hidden="true" />
             </span>
             <button
               type="button"
