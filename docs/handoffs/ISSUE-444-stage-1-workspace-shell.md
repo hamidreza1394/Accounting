@@ -252,11 +252,10 @@ Backend هیچ تغییری در ۶ PR نداشت؛ nevertheless بیلد Releas
 | 4 | fix(workspace): isolate async data by active work context | `fix/workspace-stale-context` | شاخهٔ PR-3 (stacked) | [#585](https://github.com/hamidreza1394/Accounting/pull/585) — همان اصلاح e2e، Pending |
 | 5 | feat(hr): keep create and edit flows within parent workspace tab | `feat/hr-local-form-navigation` | شاخهٔ PR-4 (stacked) | [#586](https://github.com/hamidreza1394/Accounting/pull/586) — e2e + publish-windows رفع شد، Pending |
 | 6 | feat(ui): polish faranou workspace navigation and navigation feedback | `feat/ui-workspace-navigation-polish` | شاخهٔ PR-5 (stacked) | [#587](https://github.com/hamidreza1394/Accounting/pull/587) — Pending |
-| 7 | test(workspace): verify context safety and responsive workspace flows | `test/workspace-stage1-integration` | شاخهٔ PR-6 (stacked) | [#589](https://github.com/hamidreza1394/Accounting/pull/589) |
+| 7 | test(workspace): verify context safety and responsive workspace flows | `test/workspace-stage1-integration` | شاخهٔ PR-6 (stacked) | ثبت پس از ایجاد |
 
 - Commitهای اصلاحی CI (spec E2E و timeout تست lazy) با cherry-pick به همهٔ شاخه‌های زنجیره push شده‌اند؛ هیچ Force Push انجام نشده است.
 - **تست محلی واقعی هر شاخه:** typecheck و `npm test` و `npm run build` و `npm run check:offline` سبز؛ شمارش vitest به‌ترتیب: ۸۶۸ / ۸۷۴ / ۸۸۵ / ۸۹۰ / ۸۹۷ / ۸۹۸ / **۹۰۰**. هیچ تستی حذف یا تضعیف نشده است.
-- **نتیجهٔ CI پس از اصلاحات (2026-11-08):** #584 و #585 و #587 روی commit اصلاحی **کاملاً سبز** شدند (شامل e2e و publish-windows)؛ #586 و #589 در دور جدید Pending. اصلاحات: هم‌ترازی spec E2E با تأیید نهایی تغییر زمینه + timeout ۱۰ثانیه‌ای تست lazy (cherry-pick به شاخه‌ها؛ بدون Force Push).
 - **Backend:** هیچ تغییری در Backend/Schema/API در این زنجیره انجام نشده است؛ طبق مأموریت اجرای dotnet test الزامی نبود و در Sandbox اجرا نشده گزارش می‌شود.
 
 ### پاسخ‌های موضوعی مأموریت (وضعیت واقعی)
