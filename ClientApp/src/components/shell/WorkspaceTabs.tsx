@@ -6,6 +6,7 @@ import { formStatusLabel, problemSummary, tabStatus } from '@/lib/formGuard';
 import { ErrorState, LoadingState } from '@/components/Feedback';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { initialTabsState, tabLabel, tabsReducer, type TabsState, type WorkspaceTab } from '@/lib/workspaceTabs';
+import { tabContextScope, tabKeyPathname } from '@/lib/tabContext';
 import { PageBreadcrumbBar, PageBreadcrumbProvider } from './PageBreadcrumb';
 import { WorkspaceTabEntry } from './WorkspaceTabEntry';
 
@@ -20,6 +21,11 @@ export type WorkspaceTabsStore = {
   activate: (tab: WorkspaceTab) => void;
   /** Closes a tab; closing the active one activates the right neighbour and follows it in the URL. */
   close: (tab: WorkspaceTab) => void;
+  /**
+   * Closes a tab WITHOUT the unresolved-form dialog — only for the confirmed context change,
+   * where the guard already proved every form clean (fail-safe: it closes problem tabs too).
+   */
+  forceClose: (tab: WorkspaceTab) => void;
   /** The "+ تب جدید" action: opens (or focuses) the dashboard tab. */
   openHome: () => void;
 };
@@ -53,7 +59,7 @@ function routeTitleOf(routes: readonly Route[], pathname: string): string {
  * Owns the tab model for the whole shell: the store, the tab-title sink, scroll bookkeeping
  * and the navigation side effects. The bar and the panes consume the same store.
  */
-export function WorkspaceTabsProvider({ workspaceTabs = false, children }: { workspaceTabs?: boolean; children: ReactNode }) {
+export function WorkspaceTabsProvider({ workspaceTabs = false, contextKey = null, children }: { workspaceTabs?: boolean; contextKey?: string | null; children: ReactNode }) {
   const { routes, location, navigate } = useRouterContext();
   const [state, dispatch] = useReducer(
     tabsReducer,
@@ -83,52 +89,6 @@ export function WorkspaceTabsProvider({ workspaceTabs = false, children }: { wor
     return () => setTabTitleSink(null);
   }, [workspaceTabs]);
 
-  const store = useMemo<WorkspaceTabsStore>(
-    () => ({
-      state,
-      openOrActivate: (to: string) => navigate(to),
-      activate: (tab: WorkspaceTab) => {
-        // The scroll position belongs to the tab we are leaving; the panes restore the new one.
-        dispatch({ type: 'capture-scroll', key: stateRef.current.activeKey ?? '', scrollY: window.scrollY });
-        navigate(tab.path);
-      },
-      close: (tab: WorkspaceTab) => {
-        const current = stateRef.current;
-        const closingIndex = current.tabs.findIndex((entry) => entry.key === tab.key);
-        if (closingIndex === -1) return;
-        // Never lose a form to a misclick: a Dirty tab asks first; a Saving/Error tab is
-        // refused outright (D-076: only a resolved tab may close).
-        if (tabStatus(tab.key) !== 'clean') {
-          setPendingClose(tab);
-          return;
-        }
-        const remaining = current.tabs.filter((entry) => entry.key !== tab.key);
-        if (current.activeKey !== tab.key) {
-          dispatch({ type: 'close', key: tab.key });
-          return;
-        }
-        // The next tab follows the reducer's rule (previously active, else the neighbour), and the
-        // URL must follow it in the same commit — or the location effect would reopen the closed page.
-        const previous =
-          current.previousActiveKey && remaining.some((entry) => entry.key === current.previousActiveKey)
-            ? current.previousActiveKey
-            : null;
-        const next = previous ?? remaining[closingIndex]?.key ?? remaining[remaining.length - 1]?.key ?? null;
-        dispatch({ type: 'close', key: tab.key });
-        navigate(next ? (remaining.find((entry) => entry.key === next)?.path ?? '/') : '/');
-      },
-      openHome: () => navigate('/'),
-    }),
-    [state, navigate],
-  );
-
-  const confirmPendingClose = () => {
-    const tab = pendingClose;
-    setPendingClose(null);
-    if (!tab) return;
-    closeTabNow(tab);
-  };
-
   // The guard flow bypasses the dirty-check on purpose (the user just confirmed the loss).
   const closeTabNow = (tab: WorkspaceTab) => {
     const current = stateRef.current;
@@ -148,12 +108,75 @@ export function WorkspaceTabsProvider({ workspaceTabs = false, children }: { wor
     navigate(next ? (remaining.find((entry) => entry.key === next)?.path ?? '/') : '/');
   };
 
+  const confirmPendingClose = () => {
+    const tab = pendingClose;
+    setPendingClose(null);
+    if (!tab) return;
+    closeTabNow(tab);
+  };
+
+  const store = useMemo<WorkspaceTabsStore>(
+    () => ({
+      state,
+      openOrActivate: (to: string) => navigate(to),
+      activate: (tab: WorkspaceTab) => {
+        // The scroll position belongs to the tab we are leaving; the panes restore the new one.
+        dispatch({ type: 'capture-scroll', key: stateRef.current.activeKey ?? '', scrollY: window.scrollY });
+        navigate(tab.path);
+      },
+      close: (tab: WorkspaceTab) => {
+        const current = stateRef.current;
+        const closingIndex = current.tabs.findIndex((entry) => entry.key === tab.key);
+        if (closingIndex === -1) return;
+        // Never lose a form to a misclick: a Dirty tab asks first; a Saving/Error tab is
+        // refused outright (D-076: only a resolved tab may close).
+        if (tabStatus(tab.key) !== 'clean') {
+          setPendingClose(tab);
+          return;
+        }
+        closeTabNow(tab);
+      },
+      forceClose: closeTabNow,
+      openHome: () => navigate('/'),
+    }),
+    [state, navigate],
+  );
+
+
   return (
     <WorkspaceTabsContext.Provider value={store}>
       {children}
+      <TabContextJanitor contextKey={workspaceTabs ? contextKey : null} />
       <TabCloseDialog tab={pendingClose} onDismiss={() => setPendingClose(null)} onConfirmClose={confirmPendingClose} />
     </WorkspaceTabsContext.Provider>
   );
+}
+
+/**
+ * After a CONFIRMED work-context change, closes every tab that depends on the previous
+ * company/period and keeps only the proven-global ones (fail-safe: unknown = dependent).
+ * Runs on the context key change only — a failed or cancelled change never reaches it, so
+ * a server rejection leaves the tabs untouched. Closing the panes also drops every cached
+ * list, search state and form instance of the old context with its component.
+ */
+function TabContextJanitor({ contextKey }: { contextKey: string | null }) {
+  const { state, forceClose } = useWorkspaceTabs();
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const previous = useRef<string | null>(null);
+  useEffect(() => {
+    if (!contextKey) return;
+    if (previous.current === null) {
+      previous.current = contextKey;
+      return;
+    }
+    if (previous.current === contextKey) return;
+    previous.current = contextKey;
+    for (const tab of stateRef.current.tabs) {
+      if (tabContextScope(tabKeyPathname(tab.key)) !== 'global') forceClose(tab);
+    }
+  }, [contextKey, forceClose]);
+  return null;
 }
 
 /**

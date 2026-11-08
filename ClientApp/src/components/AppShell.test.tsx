@@ -29,6 +29,7 @@ function DirtyChild() {
   return (
     <main>
       <button type="button" onClick={() => setDirty(true)}>خراب‌کردن فرم</button>
+      <button type="button" onClick={() => setDirty(false)}>پاک‌سازی فرم</button>
       محتوای صفحه
     </main>
   );
@@ -178,15 +179,22 @@ describe('AppShell', () => {
     await user.click(within(dialog).getByRole('button', { name: 'انصراف' }));
     expect(onLogout).not.toHaveBeenCalled();
 
-    // Context change asks as well; confirming proceeds.
+    // Context change is now BLOCKED outright while any form is unresolved (D-076 flow).
     await user.click(screen.getByRole('button', { name: /تغییر شرکت/ }));
-    const contextDialog = await screen.findByRole('alertdialog');
-    await user.click(within(contextDialog).getByRole('button', { name: 'ادامه و تغییر زمینه' }));
+    const blockedDialog = await screen.findByRole('dialog', { name: 'تغییر زمینهٔ کاری ممکن نیست' });
+    expect(blockedDialog).toHaveTextContent('فرم باز تغییرات ذخیره‌نشده دارد.');
+    await user.click(within(blockedDialog).getByRole('button', { name: 'متوجه شدم' }));
+    expect(onChangeContext).not.toHaveBeenCalled();
+
+    // After the form is resolved, the flow runs: final confirmation first, then the change.
+    await user.click(screen.getByRole('button', { name: 'پاک‌سازی فرم' }));
+    await user.click(screen.getByRole('button', { name: /تغییر شرکت/ }));
+    const confirmDialog = await screen.findByRole('dialog', { name: 'تأیید نهایی تغییر شرکت یا دورهٔ مالی' });
+    await user.click(within(confirmDialog).getByRole('button', { name: 'ادامه و انتخاب زمینهٔ جدید' }));
     expect(onChangeContext).toHaveBeenCalledTimes(1);
 
-    // Logout after confirmation performs the sign-out.
+    // With every form resolved, the sign-out runs directly (nothing unsaved remains).
     await user.click(screen.getByRole('button', { name: 'خروج' }));
-    await user.click(await screen.findByRole('button', { name: 'خروج و از دست دادن تغییرات' }));
     await waitFor(() => expect(onLogout).toHaveBeenCalledTimes(1));
     view.unmount();
     resetFormsForTests();

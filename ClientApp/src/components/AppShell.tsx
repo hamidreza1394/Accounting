@@ -9,7 +9,7 @@ import { matchPath, RouterProvider, useLocation, type Route } from '../lib/route
 import { AppSidebar } from './shell/AppSidebar';
 import { PageBreadcrumbBar, PageBreadcrumbProvider } from './shell/PageBreadcrumb';
 import { WorkspaceTabPanes, WorkspaceTabsBar, WorkspaceTabsProvider } from './shell/WorkspaceTabs';
-import { hasAnyProblemForm, problemSummary } from '../lib/formGuard';
+import { hasAnyProblemForm, problemSummary, useFormRegistryVersion, workspaceStatus } from '../lib/formGuard';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 import { ProblemTabsDialog } from './shell/ProblemTabsDialog';
 
@@ -35,15 +35,10 @@ type AppShellProps = {
    */
   workspaceTabs?: boolean;
   /**
-   * The problem-tabs dialog (dirty/saving/error tabs by name) rendered inside the workspace
-   * provider; the context-change guard of the shell drives it (Issue #444 stage 1 completion).
+   * True while a confirmed context change is running (the selection screen is up): the
+   * context buttons become busy and ignore clicks, so a second change can never start.
    */
-  problemTabsDialog?: {
-    open: boolean;
-    title: string;
-    description: string;
-    onClose: () => void;
-  };
+  contextChangePending?: boolean;
 };
 
 /** Main authenticated frame. The server-validated WorkContext remains authoritative. */
@@ -81,7 +76,7 @@ function AppShellFrame({
   onUnauthenticated = ignoreUnauthenticated,
   children,
   workspaceTabs = false,
-  problemTabsDialog,
+  contextChangePending = false,
 }: AppShellFrameProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
@@ -92,7 +87,15 @@ function AppShellFrame({
   const mainRef = useRef<HTMLElement>(null);
   // Dirty forms anywhere in the workspace block logout and context changes until confirmed.
   const [pendingLogout, setPendingLogout] = useState(false);
-  const [pendingContextChange, setPendingContextChange] = useState(false);
+  // The context-change flow: blocked (problem tabs listed) -> final confirm -> in App hands.
+  // Cancel at every stage keeps the company, the period, the tabs and every form intact.
+  const [contextChangePhase, setContextChangePhase] = useState<'idle' | 'blocked' | 'confirm'>('idle');
+  const [jumpedToProblemTab, setJumpedToProblemTab] = useState(false);
+  // The registry is a module store; subscribing keeps the phase derivation live.
+  useFormRegistryVersion();
+  const liveWorkspaceStatus = workspaceStatus();
+  // All forms resolved while the flow is open: the final confirmation shows automatically.
+  const effectiveContextPhase = contextChangePhase === 'blocked' && liveWorkspaceStatus === 'clean' ? 'confirm' : contextChangePhase;
   const { pathname } = useLocation();
   const readOnly = context.fiscalPeriod.accessMode === 'readOnly';
 
@@ -122,13 +125,16 @@ function AppShellFrame({
   }
 
   function requestContextChange() {
-    // Company/period data is refetched for the new context; unresolved forms of the old one
-    // would silently mix contexts. (PR-3 replaces this confirmation with a hard block.)
-    if (hasAnyProblemForm()) {
-      setPendingContextChange(true);
+    // Single-flight: while a change runs (selection screen up) or a flow stage is open,
+    // further clicks never start a second change.
+    if (contextChangePending) return;
+    if (contextChangePhase !== 'idle') {
+      // Re-open the problem list if the user came back without resolving everything.
+      if (contextChangePhase === 'blocked') setJumpedToProblemTab(false);
       return;
     }
-    onChangeContext();
+    // Hard block (D-076 flow): unresolved forms stop the change; nothing is discarded here.
+    setContextChangePhase(hasAnyProblemForm() ? 'blocked' : 'confirm');
   }
 
   return (
@@ -164,7 +170,14 @@ function AppShellFrame({
           </div>
 
           <div className="faranou-header-context" aria-label="زمینه کاری جاری">
-            <button type="button" onClick={requestContextChange} className="faranou-context-choice" aria-label={`شرکت جاری ${context.company.name}، تغییر شرکت`}>
+            <button
+              type="button"
+              onClick={requestContextChange}
+              disabled={contextChangePending}
+              aria-busy={contextChangePending || undefined}
+              className="faranou-context-choice"
+              aria-label={`شرکت جاری ${context.company.name}، تغییر شرکت`}
+            >
               <ChevronDown className="faranou-context-chevron" size={17} />
               <span className="min-w-0 flex-1 text-start">
                 <span className="block text-[10px] text-on-navy/70 sm:text-[11px]">شرکت جاری</span>
@@ -172,7 +185,14 @@ function AppShellFrame({
               </span>
               <Building2 className="shrink-0 text-on-navy-accent" size={22} />
             </button>
-            <button type="button" onClick={requestContextChange} className="faranou-context-choice" aria-label={`دوره مالی ${context.fiscalPeriod.title}، تغییر دوره مالی`}>
+            <button
+              type="button"
+              onClick={requestContextChange}
+              disabled={contextChangePending}
+              aria-busy={contextChangePending || undefined}
+              className="faranou-context-choice"
+              aria-label={`دوره مالی ${context.fiscalPeriod.title}، تغییر دوره مالی`}
+            >
               <ChevronDown className="faranou-context-chevron" size={17} />
               <span className="min-w-0 flex-1 text-start">
                 <span className="block text-[10px] text-on-navy/70 sm:text-[11px]">دوره مالی</span>
@@ -219,16 +239,34 @@ function AppShellFrame({
         </div>
       </header>
 
-      <WorkspaceTabsProvider workspaceTabs={workspaceTabs}>
+      <WorkspaceTabsProvider
+        workspaceTabs={workspaceTabs}
+        contextKey={workspaceTabs ? `${context.company.id}:${context.fiscalPeriod.id}` : null}
+      >
         {workspaceTabs ? <WorkspaceTabsBar /> : null}
-        {problemTabsDialog && workspaceTabs ? (
+        {workspaceTabs ? (
           <ProblemTabsDialog
-            open={problemTabsDialog.open}
-            title={problemTabsDialog.title}
-            description={problemTabsDialog.description}
-            onClose={problemTabsDialog.onClose}
+            open={effectiveContextPhase === 'blocked' && liveWorkspaceStatus !== 'clean' && !jumpedToProblemTab}
+            title="تغییر زمینهٔ کاری ممکن نیست"
+            description="پیش از تغییر شرکت یا دورهٔ مالی، همهٔ فرم‌های زیر باید ذخیره شوند یا آگاهانه لغو شوند. با انتخاب نام هر تب به همان تب بروید."
+            onClose={() => {
+              setContextChangePhase('idle');
+              setJumpedToProblemTab(false);
+            }}
+            onGoToTab={() => setJumpedToProblemTab(true)}
           />
-        ) : null}
+        ) : (
+          /* Outside the multi-tab shell there is no tab list; the refusal is plain. */
+          <ConfirmDialog
+            open={effectiveContextPhase === 'blocked'}
+            title="تغییر زمینهٔ کاری ممکن نیست"
+            description={`${problemSummary() || 'صفحهٔ باز تعیین‌تکلیف‌نشده است.'} پیش از تغییر شرکت یا دورهٔ مالی، فرم را ذخیره کنید یا تغییرات را آگاهانه لغو کنید.`}
+            confirmVisible={false}
+            cancelLabel="متوجه شدم"
+            onConfirm={() => setContextChangePhase('idle')}
+            onCancel={() => setContextChangePhase('idle')}
+          />
+        )}
         <div className="faranou-workspace-body">
         {mobileMenuOpen ? (
           <button
@@ -288,17 +326,20 @@ function AppShellFrame({
         onCancel={() => setPendingLogout(false)}
       />
       <ConfirmDialog
-        open={pendingContextChange}
-        title="تغییر زمینهٔ کاری با فرم‌های تعیین‌تکلیف‌نشده"
-        description={`${problemSummary() || 'صفحهٔ باز تعیین‌تکلیف‌نشده است.'} پیش از تغییر شرکت یا دوره مالی ذخیره کنید؛ ادامه، فرم‌های زمینهٔ قبلی را از دست می‌دهد.`}
-        confirmLabel="ادامه و تغییر زمینه"
+        open={effectiveContextPhase === 'confirm'}
+        title="تأیید نهایی تغییر شرکت یا دورهٔ مالی"
+        description="با تأیید، به صفحهٔ انتخاب زمینه می‌روید. پس از انتخاب زمینهٔ جدید، تب‌های وابسته به شرکت و دورهٔ فعلی بسته و داده‌های آن‌ها بی‌اعتبار می‌شوند؛ تب‌های عمومی باز می‌مانند."
+        confirmLabel="ادامه و انتخاب زمینهٔ جدید"
         cancelLabel="انصراف"
-        tone="danger"
         onConfirm={() => {
-          setPendingContextChange(false);
+          setContextChangePhase('idle');
+          setJumpedToProblemTab(false);
           onChangeContext();
         }}
-        onCancel={() => setPendingContextChange(false)}
+        onCancel={() => {
+          setContextChangePhase('idle');
+          setJumpedToProblemTab(false);
+        }}
       />
       <MyAccountPanel
         open={accountOpen}
