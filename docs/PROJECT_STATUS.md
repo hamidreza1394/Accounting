@@ -611,3 +611,10 @@
 - **تست واقعی:** vitest هر شاخه سبز (آخرین شاخه: ۹۰۰/۹۰۰)، typecheck/build/check:offline/check_static_assets سبز؛ CI دو PR اول کاملاً سبز، سه PR میانی پس از اصلاح spec E2E و timeout تست در دور جدید Pending. Backend تغییر نکرده است؛ dotnet test اجرا نشد (الزامی نبود؛ Sandbox فاقد SDK/SQL Server).
 - **بررسی تصویری واقعی:** مرورگر headless روی bundle تولیدی با API شبیه‌سازی‌شده در ۳۶۰/۷۶۸/۱۰۲۴/۱۲۸۰/۱۴۴۰ + Rail + فرم ایجاد + دیالوگ گارد؛ بدون خطای صفحه؛ آرشیو در شاخهٔ `artifacts/stage-1-ui-preview`.
 - جزئیات کامل: `docs/handoffs/ISSUE-444-stage-1-workspace-shell.md` (بخش «تکمیل نهایی مرحلهٔ اول») و `docs/WORK_LOG.md`.
+
+## 2026-11-09 — Issue #444: تکمیل مرحلهٔ سوم پرونده کاربر (PRهای #596، #597، #598، #599، #600، #604 — Merge شده)
+
+- قابلیت‌های مرحلهٔ سوم اکنون در `main` است: Workspace هفت‌تبی پرونده کاربر (lazy + cache per-user)، ابطال مدیریتی نشست با step-up D-073 §1 (رمز + دلیل از کاتالوگ سرور)، اتصال/قطع اتصال پرونده پرسنلی HR از پرونده (D-072)، وضعیت درخواست‌های عضویت بین‌شرکتی کاربر (خواندنی کاربر-محور D-065)، سوابق ورود کاربر هدف، و کاتالوگ واقعی D-075 با یادداشت صادقانه «اتصال لایسنس پیاده‌سازی نشده».
+- **تست واقعی:** e2e نهایی `49 passed` روی سرور Publish + SQL Server 2022 شامل ۳ سناریوی پرونده؛ axe WCAG 2.x A/AA صفر نقض روی تب‌ها؛ vitest 927/927؛ تست‌های Backend هدفمند سبز؛ اسکرین‌شات واقعی ۹ نما در `artifacts/ui-preview/stage-3-profile/` و artifact CI.
+- **محدودیت‌های صادقانه:** Entitlement/لایسنس هنوز پیاده‌سازی نشده (مرز D-074 حفظ شده؛ D-075/D-076 همچنان `Proposed`)؛ گروه‌بندی زیرسیستمی مجوزها نیازمند نگامت server-owned است (`Proposed` در handoff)؛ MFA و انقضای درخواست Pending همچنان `Proposed`.
+- جزئیات: `docs/handoffs/ISSUE-444-stage-3-user-profile.md` (Gap Analysis + شواهد نهایی) و `docs/WORK_LOG.md`.

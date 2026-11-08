@@ -2836,3 +2836,7 @@
 ## 2026-11-09 — Issue #444 مرحله سوم PR 3-D2: وضعیت درخواست‌های عضویت کاربر در پرونده
 - Backend: `GET /admin/users/{userId}/membership-requests` (فقط مدیر نصب؛ خواندنی؛ projects جدول گردش D-065 با فیلتر status allowlist مشترک `TryNormalizeStatus`→internal؛ صفحه‌بندی clamp؛ ۴۰۴ ناموجود). Migration: هیچ. Frontend: بخش «درخواست‌های عضویت بین‌شرکتی» در تب ۳ پرونده با وضعیت/زمان‌ها/تصمیم‌گیرنده/نقش/دلیل رد، فیلتر و صفحه‌بندی سرور-سمت و لینک به صف تأیید موجود. تست: ۴ تست Backend + ۳ سناریوی UI — vitest 927/927، ۲۵ تست Backend هدفمند سبز. (stacked روی PR 3-C2)
 >>>>>>> origin/main
+
+## 2026-11-09 — Issue #444 مرحله سوم PR 3-H1 (ادغام #600) + شواهد نهایی
+- E2E واقعی پرونده کاربر (۳ سناریو روی سرور Publish + SQL Server): باز کردن پرونده/اتصال-قطع HR، درخواست‌های عضویت Pending→تأیید/رد با دلیل، ابطال نشست step-up D-073 با اثبات 401؛ axe WCAG 2.x A/AA صفر نقض (یک نقض definition-list واقعی پیدا و رفع شد)؛ اسکرین‌شات واقعی ۹ نما به artifacts/ui-preview/stage-3-profile (artifact CI).
+- اصلاحات اعتماد CI: ریس prefill کپی نقش، تشخیص خودشناس 429 در hr-structure (ریشه flakeهای متناوب)، مدیر نصب اختصاصی per test به‌جای اشتراک بودجهٔ نرخ. vitest 927/927؛ e2e نهایی 49/49. main پس از ادغام #600: b1348b3f.
