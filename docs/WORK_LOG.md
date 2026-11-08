@@ -2785,6 +2785,9 @@
 - **تست محلی:** `dotnet build` بدون خطا؛ ۵۲ تست نقش/سقف/دسترسی مؤثر سبز؛ typecheck پاک؛ vitest ۹۰۲/۹۰۲؛ build موفق. تست‌های SQL Server به CI واگذار شد (Docker محلی موجود نیست)؛ دو شکست integration وابسته به SQL Server در محلی pre-existing و ServerUnreachable بود.
 - **Migration:** هیچ.
 
+## 2026-11-08 — مرحله دوم PR-C: Audit تلاش ناموفق واگذاری خارج از سقف
+- رویداد `CompanyRoleDelegationDenied` در هر چهار مسیر رد سقف (ایجاد/ویرایش/تخصیص/انتقال) با Actor/Company/عملیات/جزئیات؛ ذخیره اتمی درون تراکنش و fail-closed؛ تست‌های beyond-ceiling به قرارداد جدید به‌روز شدند. Migration: هیچ. (ثبت مستندات این PR در commit مجزا روی شاخهٔ PR-D انجام شد.)
+
 ## 2026-11-08 — مرحله دوم PR-D: پیش‌نمایش سمت سرور اثر تغییر مجوزهای نقش
 - `GET .../roles/{roleId}/permissions/preview` (مجوز `roles.update` دوحالته؛ خروجی: افزوده/حذف‌شونده، activeMemberCount، حساس = delete/approve/close، تخلف سقف مشورتی)؛ بدون Mutation/Audit؛ UI دیالوگ preview به دادهٔ سرور وصل شد (اعضای متأثر + حساس + هشدار سقف)؛ ۴ تست Backend + تست UI؛ مستندات API §۳.۴.۱ و UAM §۶ و handoff. TDD؛ Migration: هیچ؛ vitest ۹۰۳/۹۰۳.
 

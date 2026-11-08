@@ -67,6 +67,13 @@
 - **تست‌های اجراشده (محلی):** build بدون خطا؛ ۳/۳ تست EffectivePermissions سبز؛ typecheck پاک؛ vitest ۹۰۲/۹۰۲؛ build موفق.
 - **Migration:** هیچ.
 
+## 3.5 PR-C — Audit تلاش ناموفق واگذاری خارج از سقف (D-071)
+
+- **شاخه:** `agent/444-stage2-access-audit` (stacked روی PR-B)
+- **تغییرات:** هر چهار مسیر `ForbiddenBeyondCeiling` (ایجاد/ویرایش/تخصیص/انتقال گروهی) رویداد `CompanyRoleDelegationDenied` با Actor/Company/عملیات/جزئیات تلاش می‌نویسند؛ ذخیره درون همان تراکنش باز و Commit آن اتمی و fail-closed است (رویداد Audit تنها تغییر در انتظار در این مسیر است). گارد خود-تخصیص عمداً Audit سقف نمی‌گیرد.
+- تست: چهار تست beyond-ceiling به‌روزرسانی شدند (دقیقاً یک رویداد رد، هیچ رویداد موفق)؛ اجرای واقعی روی build تازه: ۴۱ سبز، ۵ skip (SQL Server).
+- Migration: هیچ. یادداشت: بخش مستنداتی این PR در commit خودش ثبت نشده بود و با یک commit مستنداتی مجزا در شاخهٔ PR-D تکمیل شد.
+
 ## 4. PR-D — پیش‌نمایش اثر تغییر مجوزهای نقش (سمت سرور)
 
 - **شاخه:** `agent/444-stage2-role-preview` (stacked روی PR-C)
