@@ -73,7 +73,7 @@
 - تا وجود دفتر و نگاشت کدینگ، عدد مالی تجمیعی/تلفیقی تولید یا ادعا نکن.
 
 ## 5.2) لایسنس و مدل تجاری
-- لایسنس، مشتری تجاری، نصب و زیرسیستم‌ها هنوز `NotImplemented` هستند؛ طرح در `docs/LICENSING*.md` و D-020..D-029 است. بدون تأیید صریح، Schema/Migration/کد لایسنس ننویس.
+- وضعیت Licensing/Vendor مرحله‌ای و جزئی است، نه `NotImplemented` کلی: D-059/D-060 پذیرفته شده‌اند و بخشی از قرارداد v2، Vendor control-plane، provisioning، maker-checker، revocation و amendment در `main` وجود دارد؛ وضعیت دقیق و محدودیت‌ها در `docs/PROJECT_STATUS.md` و `docs/LICENSING*.md` است. تغییر schema/Migration دیتابیس مشتری، consumer سمت مشتری، provider Production یا workflow تجاری جدید فقط در Issue/PR مستقل با دامنه و تأیید صریح مربوط انجام شود؛ CompanyReference یا entitlement شرکت‌محور را بدون binding معتبر به Company محلی تبدیل نکن.
 - `ActivationKeysHandlerMiddleware` کد مرده است (D-028)؛ دوباره وصلش نکن و آن را لایسنس معرفی نکن.
 - کلید خصوصی صدور، رمز یا داده واقعی هرگز در Git، بسته مشتری، Log یا گزارش نیاید. لایسنس تجاری با مجوز عملیاتی کاربر یکی نیست (D-025). ادعای مصونیت مطلق در نصب آفلاین نکن.
 
