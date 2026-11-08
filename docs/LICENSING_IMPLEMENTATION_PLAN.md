@@ -215,7 +215,7 @@ Issue #396 فقط مسئول startup gate و Activation Wizard است؛ contract
 
 
 ## وضعیت اجرایی Issue #393 — 2026-11-04
-- **Implemented / CI pending:** نخستین برش Vendor-only، یعنی ساخت candidate amendment برای افزایش installation-scoped `maxCompanies` روی همان LicenseId/InstallationId، در `VendorLicenseAmendmentPayloadBuilder` اضافه شده است. این builder Payload v1/v2 را در همان نسخه نگه می‌دارد و تمام entitlementهای دیگر را حفظ می‌کند.
+- **Implemented / Verified in main:** candidate افزایش installation-scoped `maxCompanies` در PR #527 ادغام شد؛ merge commit `2a62811acdb71bda77288356743be45356685954` دارای ۱۵/۱۵ Check Run موفق پس از Merge است. این builder Payload v1/v2 را در همان نسخه نگه می‌دارد و تمام entitlementهای دیگر را حفظ می‌کند.
 - **NotImplemented:** commercial order/payment evidence، persistence درخواست Amendment، endpoint، maker-checker approval، signing/export و statusهای purchased/delivered/acknowledged.
 - **Dependency:** add-onهای Company-scoped برای module/feature/user-seat نیازمند current Payload v2 و CompanyReference قابل اعتماد است. تبدیل خودکار Payload v1 به v2 ممنوع است؛ تا زمانی که مرجع شرکت‌های نصب از مسیر provisioning/signed ACK معتبر در دسترس نباشد، UI نباید Company دلخواه را به‌عنوان مرجع معتبر بپذیرد.
 - **محدوده:** این برش هیچ تغییر در Customer `Server/**`، دیتابیس مشتری یا Migration مشتری ندارد و signer واقعی KMS/HSM را انتخاب یا شبیه‌سازی نمی‌کند.
@@ -223,7 +223,7 @@ Issue #396 فقط مسئول startup gate و Activation Wizard است؛ contract
 
 ## وضعیت اجرایی Issue #393 — برش دوم Company-scoped add-on (2026-11-06)
 
-- **Implemented در شاخه PR؛ CI pending:** `VendorLicenseAmendmentPayloadBuilder.TryBuildCompanyEntitlementIncrease` candidate افزایشی برای CompanyReference موجود در Payload v2 می‌سازد: افزودن ماژول allowlist‌شده، افزایش سقف UserSeat و افزودن/ارتقای Feature نوع‌دار.
+- **Implemented / Verified in main:** `VendorLicenseAmendmentPayloadBuilder.TryBuildCompanyEntitlementIncrease` در PR #558 ادغام شد؛ merge commit `8d9740631e715e17b6d280026a049a89a2596f3b` دارای ۱۵/۱۵ Check Run موفق پس از Merge است.
 - **قواعد fail-closed:** فقط reference موجود در payload پذیرفته می‌شود؛ v1 به v2 تبدیل نمی‌شود؛ Company جدید ساخته نمی‌شود؛ ماژول/Feature ناشناخته، تکراری، از قبل موجود، Feature بدون ماژول مالک، کاهش یا مقدار برابر، سقف خارج از محدوده و درخواست بدون تغییر رد می‌شود. enum تا تصویب کاتالوگ مقادیر قابل صدور نیست.
 - payload candidate همان LicenseId/InstallationId و نسخه v2 را نگه می‌دارد، Sequence را فقط در candidate یک واحد افزایش می‌دهد و maxCompanies، تاریخ‌های support/update و entitlement شرکت‌های دیگر را حفظ می‌کند. اعتبارسنجی امضا و ثبت sequence پایدار همچنان مسئولیت caller/service و مرحله بعدی است.
 - **NotImplemented:** Commercial Order/Payment Evidence، persistence درخواست Amendment، endpoint، Maker-Checker، signer/export و وضعیت‌های Purchased/Delivered/Acknowledged. این PR آن‌ها را تکمیل‌شده معرفی نمی‌کند.
@@ -231,7 +231,7 @@ Issue #396 فقط مسئول startup gate و Activation Wizard است؛ contract
 
 
 ## وضعیت اجرایی Issue #393 — برش سوم: تمدید مستقل پشتیبانی/به‌روزرسانی (2026-11-07)
-- **Implemented in branch; CI pending:** متد `TryBuildSupportAndUpdatePeriodExtension` فقط برای Payload v2 candidate amendment می‌سازد و تاریخ‌های `supportUntilUtc` و `updatesUntilUtc` را مستقل و strictly increasing تمدید می‌کند.
+- **Implemented / Verified in main:** متد `TryBuildSupportAndUpdatePeriodExtension` در PR #565 ادغام شد؛ merge commit `66b60cc48f6454997e260cb1244374114e2bfbd4` دارای ۱۵/۱۵ Check Run موفق پس از Merge است.
 - تاریخ `expiresAtUtc` و entitlementهای Company/Installation تغییر نمی‌کنند؛ term license پس از expiry قابل amendment نیست و perpetual license با پایان support/update منقضی نمی‌شود.
 - تاریخ null فعلی به‌عنوان مجوز ضمنی تفسیر نمی‌شود؛ این برش فقط دوره‌ای را تمدید می‌کند که قبلاً در payload امضاشده وجود داشته است. اعطای اولیه از null تا روشن‌شدن معنای تجاری آن جدا نگه داشته شده است.
 - **NotImplemented:** سفارش/پرداخت، persistence، endpoint، maker-checker، signer/export و وضعیت‌های Purchased/Delivered/Acknowledged. هیچ Migration یا Customer-side change انجام نشده است.
