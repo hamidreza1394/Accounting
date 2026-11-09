@@ -142,11 +142,11 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     expect(screen.getByText('کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
     await user.click(section);
     expect(section).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('link', { name: 'کارکنان' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'کارکنان' })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('button', { name: 'دسترسی و مجوزها' })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('button', { name: 'مدیریت سیستم' })).toHaveAttribute('aria-expanded', 'true');
     await user.click(section);
-    expect(screen.getByRole('link', { name: 'کارکنان' })).toBeInTheDocument();
+    expect(screen.getByText('کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
   });
 
   it('has no collapse control or icon-rail state any more', () => {
