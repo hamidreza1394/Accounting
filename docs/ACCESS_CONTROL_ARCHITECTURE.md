@@ -149,3 +149,12 @@ Directory فقط کاربران شرکت‌هایی را نشان می‌دهد 
 - D-074: Permission و Entitlement دو موتور مستقل‌اند و هر دو برای قابلیت‌های لایسنس‌دار لازم‌اند. ترتیب canonical: Authentication/Session → Company membership/context → FiscalPeriod/grant → Entitlement → operational Permission → DataScope/use case.
 - هیچ لایسنس یا Feature خریداری‌شده‌ای Permission نمی‌سازد و هیچ Role/Permission لایسنس ایجاد نمی‌کند. Cloud از authority سمت سرور و cache نسخه‌دار/دارای expiry؛ Offline از Envelope امضاشده و sequence/anti-rollback استفاده می‌کند.
 - وضعیت پیاده‌سازی جداست: D-073 عمدتاً NotImplemented؛ در D-074 قرارداد v2 و Trade gate موجودند اما runtime Trade هنوز با DenyAll fail-closed است و تعمیم همه ماژول‌ها باقی است.
+
+
+## 13. تفکیک عضویت داخلی و درخواست عضویت بین‌شرکتی (D-078)
+- عضویت User در Company جاری که actor دارای اختیار مدیریتی و مجوزهای لازم همان Company ایجاد می‌کند، در همان مسیر ایجاد کاربر به‌صورت خودکار `Approved` و فعال می‌شود؛ تأیید مجدد لازم نیست.
+- عضویت در Company دیگر (حتی در همان CorporateGroup یا زیرمجموعه هلدینگ) درخواست `PendingApproval` است؛ فقط approver مجاز مقصد تصمیم می‌گیرد. عضویت گروهی/مالکیت اختیار مدیریتی مقصد نمی‌دهد.
+- ممنوعیت self-approval برای درخواست بین‌شرکتی حفظ می‌شود؛ مسیر داخلی یک use case مجاز مستقل است، نه bypass endpoint approve.
+- عضویت Approved شرط لازم است، اما Role/Permission/Entitlement یا grant سال/دوره ایجاد نمی‌کند. تخصیص سال/دوره در همان Company طبق D-065/D-066/D-077 انجام می‌شود و Membership جدید نمی‌خواهد.
+- Company، actor، مجوزها، یکتایی User/Company و وضعیت عضویت سمت سرور کنترل می‌شوند. ایجاد User و Membership داخلی باید از نظر تراکنش/جبران شکست سازگار باشد.
+- وضعیت: تصمیم Accepted؛ runtime تا تست مثبت/منفی و SQL Server/E2E `NotVerified` است.
