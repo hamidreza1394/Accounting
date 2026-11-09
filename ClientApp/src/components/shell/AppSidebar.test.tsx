@@ -80,7 +80,7 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     await openSystem();
     const toggle = screen.getByRole('button', { name: 'ساختار سازمانی' });
     expect(screen.getByRole('link', { name: 'واحدهای سازمانی' })).toBeInTheDocument();
-    expect(screen.getByText('فهرست کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
+    expect(screen.getByText('کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
     expect(toggle.querySelector('svg')).not.toBeNull();
     expect(container).toBeTruthy();
   });
@@ -142,14 +142,14 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     const { user } = await openSystem();
     const section = screen.getByRole('button', { name: 'ساختار سازمانی' });
     expect(section).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByText('فهرست کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
+    expect(screen.getByText('کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
     await user.click(section);
     expect(section).toHaveAttribute('aria-expanded', 'false');
     expect(screen.getByText('کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
     expect(screen.getByText('دسترسی و مجوزها').closest('[aria-disabled="true"]')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'مدیریت سیستم' })).toHaveAttribute('aria-expanded', 'true');
     await user.click(section);
-    expect(screen.getByText('فهرست کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
+    expect(screen.getByText('کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
   });
 
   it('has no collapse control or icon-rail state any more', () => {
