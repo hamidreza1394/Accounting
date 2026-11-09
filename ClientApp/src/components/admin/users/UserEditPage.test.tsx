@@ -138,6 +138,19 @@ describe('UserEditPage', () => {
     expect(peekUserFlash('user-2')).toBeNull();
   });
 
+  it('the e-mail is optional: clearing it sends null instead of an error', async () => {
+    const user = userEvent.setup();
+    const { calls } = api();
+    setup();
+    await screen.findByLabelText(/^نام$/);
+    await openContact(user);
+    await user.clear(email());
+    await user.click(save());
+    await waitFor(() => expect(puts(calls)).toHaveLength(1));
+    expect(screen.queryByText('ایمیل را وارد کنید.')).toBeNull();
+    expect(puts(calls)[0]?.body).toMatchObject({ emailAddress: null });
+  });
+
   it('sends null when an optional field is cleared', async () => {
     const user = userEvent.setup();
     const { calls } = api();
@@ -157,9 +170,6 @@ describe('UserEditPage', () => {
     await screen.findByLabelText(/^نام$/);
     await openContact(user);
     await user.clear(email());
-    await user.click(save());
-    expect(await screen.findByText('ایمیل را وارد کنید.')).toBeInTheDocument();
-    expect(email()).toHaveFocus();
     await user.type(email(), 'bad');
     await user.type(mobile(), '1');
     await user.click(save());

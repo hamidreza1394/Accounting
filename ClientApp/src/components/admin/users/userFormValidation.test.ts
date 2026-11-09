@@ -16,10 +16,10 @@ describe('validateUserForm', () => {
     expect(validateUserForm(valid, 'create')).toEqual({});
   });
 
-  it('requires username, e-mail and, only when creating, the password pair', () => {
+  it('requires username and, only when creating, the names and the password pair (the e-mail is optional)', () => {
     const errors = validateUserForm(emptyUserForm, 'create');
-    expect(Object.keys(errors).sort()).toEqual(['confirmPassword', 'emailAddress', 'firstName', 'lastName', 'password', 'username']);
-    expect(Object.keys(validateUserForm(emptyUserForm, 'edit')).sort()).toEqual(['emailAddress', 'username']);
+    expect(Object.keys(errors).sort()).toEqual(['confirmPassword', 'firstName', 'lastName', 'password', 'username']);
+    expect(Object.keys(validateUserForm(emptyUserForm, 'edit')).sort()).toEqual(['username']);
   });
 
   it('enforces the username length 3..20 after trimming', () => {
@@ -48,12 +48,32 @@ describe('validateUserForm', () => {
     }
   });
 
-  it('enforces password length 15..128, a non-blank value and the confirmation match', () => {
-    expect(validateUserForm({ ...valid, password: 'short1', confirmPassword: 'short1' }, 'create').password).toMatch(/دست‌کم ۱۵/);
+  it('enforces the password length boundary 8 (7 rejected, 8 accepted, empty rejected), the maximum and the confirmation match', () => {
+    const rejected = 'رمز عبور باید حداقل ۸ نویسه داشته باشد.';
+    expect(validateUserForm({ ...valid, password: 'abcdefg', confirmPassword: 'abcdefg' }, 'create').password).toBe(rejected);
+    expect(validateUserForm({ ...valid, password: 'abcdefgh', confirmPassword: 'abcdefgh' }, 'create').password).toBeUndefined();
+    expect(validateUserForm({ ...valid, password: '', confirmPassword: '' }, 'create').password).toBe('رمز عبور را وارد کنید.');
+    expect(validateUserForm({ ...valid, password: 'short1', confirmPassword: 'short1' }, 'create').password).toBe(rejected);
     expect(validateUserForm({ ...valid, password: '        ', confirmPassword: '        ' }, 'create').password).toBe('رمز عبور را وارد کنید.');
     const long = 'p'.repeat(129);
     expect(validateUserForm({ ...valid, password: long, confirmPassword: long }, 'create').password).toMatch(/بیش از ۱۲۸/);
     expect(validateUserForm({ ...valid, confirmPassword: 'different-1' }, 'create').confirmPassword).toMatch(/یکسان نیست/);
+  });
+});
+
+describe('optional e-mail', () => {
+  it('accepts an empty or blank e-mail and still rejects a given one with a bad format', () => {
+    for (const empty of ['', '   ']) {
+      expect(validateUserForm({ ...valid, emailAddress: empty }, 'create').emailAddress, JSON.stringify(empty)).toBeUndefined();
+      expect(validateUserForm({ ...valid, emailAddress: empty }, 'edit').emailAddress).toBeUndefined();
+    }
+    expect(validateUserForm({ ...valid, emailAddress: 'not-an-email' }, 'create').emailAddress).toBe('قالب ایمیل معتبر نیست.');
+  });
+
+  it('sends null (never an empty string) when the e-mail is empty', () => {
+    expect(toCreateRequest({ ...valid, emailAddress: '  ' }).emailAddress).toBeNull();
+    expect(toUpdateRequest({ ...valid, emailAddress: '' }).emailAddress).toBeNull();
+    expect(toUpdateRequest({ ...valid, emailAddress: ' ali@example.test ' }).emailAddress).toBe('ali@example.test');
   });
 });
 

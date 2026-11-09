@@ -48,7 +48,7 @@ export function stubFetch(handler: (url: URL) => Response | Promise<Response>) {
 export const listCalls = (mock: ReturnType<typeof stubFetch>): URL[] =>
   mock.mock.calls.map((call) => new URL(String(call[0]), 'http://localhost')).filter((url) => url.pathname === '/api/v1/admin/users');
 
-export type ApiCall = { method: string; path: string; body: unknown; headers: Record<string, string> };
+export type ApiCall = { method: string; path: string; body: unknown; headers: Record<string, string>; rawBody?: unknown; search?: URLSearchParams };
 
 /**
  * Stubs fetch with a handler that sees the method, path and parsed JSON body. The anti-forgery
@@ -67,6 +67,8 @@ export function stubApi(handler: (call: ApiCall) => Response | Promise<Response>
       path: url.pathname,
       body: typeof init?.body === 'string' ? JSON.parse(init.body) : undefined,
       headers: (init?.headers ?? {}) as Record<string, string>,
+      rawBody: init?.body,
+      search: url.searchParams,
     };
     calls.push(call);
     return Promise.resolve(handler(call));

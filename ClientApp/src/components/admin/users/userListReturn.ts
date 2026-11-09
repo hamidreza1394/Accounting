@@ -17,6 +17,11 @@ export function userListBackPath(): string {
   return lastListLocation ?? '/admin/users';
 }
 
+/** After a create the list starts again from its plain first page (no search, filters or paging). */
+export function resetUserListLocation(): void {
+  lastListLocation = null;
+}
+
 /** Test-only: the memory is module-wide, so tests start from a clean state. */
 export function resetUserListReturnForTests(): void {
   lastListLocation = null;

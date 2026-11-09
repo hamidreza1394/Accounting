@@ -11,6 +11,8 @@ import { StatusBadge } from '../../ui/StatusBadge';
 import { Button, buttonVariants } from '../../ui/button';
 import { fullName } from './userDisplay';
 import { rememberUserListLocation } from './userListReturn';
+import { useUserListVersion } from './userListRefresh';
+import { UserListFlashBanner } from './UserListFlashBanner';
 
 type Props = {
   onUnauthenticated: (error: unknown) => boolean;
@@ -33,7 +35,11 @@ type Query = {
   pageSize: number;
 };
 
-const defaults: Query = { search: '', status: 'all', sort: 'name', descending: false, page: 1, pageSize: 20 };
+// The newest-created user comes first by default, so a freshly created account is on page 1.
+const defaults: Query = { search: '', status: 'all', sort: 'created', descending: true, page: 1, pageSize: 20 };
+
+/** The direction a sort starts with: the creation date newest first, every other column ascending. */
+const defaultDescending = (sort: Query['sort']): boolean => sort === 'created';
 
 /** Reads the list state from the URL; any invalid value falls back to its default. */
 function parseQuery(params: URLSearchParams): Query {
@@ -45,7 +51,7 @@ function parseQuery(params: URLSearchParams): Query {
     search: (params.get('q') ?? '').trim(),
     status: statuses.find((value) => value === status) ?? defaults.status,
     sort: sortKeys.find((value) => value === sort) ?? defaults.sort,
-    descending: params.get('dir') === 'desc',
+    descending: params.get('dir') === 'desc' ? true : params.get('dir') === 'asc' ? false : defaultDescending(sortKeys.find((value) => value === sort) ?? defaults.sort),
     page: Number.isInteger(page) && page >= 1 ? page : defaults.page,
     pageSize: pageSizes.find((value) => value === pageSize) ?? defaults.pageSize,
   };
@@ -57,7 +63,7 @@ function toParams(query: Query): URLSearchParams {
   if (query.search) params.set('q', query.search);
   if (query.status !== defaults.status) params.set('status', query.status);
   if (query.sort !== defaults.sort) params.set('sort', query.sort);
-  if (query.descending) params.set('dir', 'desc');
+  if (query.descending !== defaultDescending(query.sort)) params.set('dir', query.descending ? 'desc' : 'asc');
   if (query.page !== defaults.page) params.set('page', String(query.page));
   if (query.pageSize !== defaults.pageSize) params.set('pageSize', String(query.pageSize));
   return params;
@@ -99,6 +105,8 @@ export function UsersListPage({ onUnauthenticated, canCreate = false }: Props) {
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<Failure | null>(null);
   const [attempt, setAttempt] = useState(0);
+  // A create/cancel elsewhere in the workspace asks this (possibly background) list to load again.
+  const listVersion = useUserListVersion();
 
   const queryRef = useRef(query);
   queryRef.current = query;
@@ -174,7 +182,7 @@ export function UsersListPage({ onUnauthenticated, canCreate = false }: Props) {
         setLoading(false);
       });
     return () => controller.abort();
-  }, [query, attempt, onUnauthenticated]);
+  }, [query, attempt, listVersion, onUnauthenticated]);
 
   // A stale page number (e.g. a shared URL after users were removed) moves to the last page.
   useEffect(() => {
@@ -207,6 +215,8 @@ export function UsersListPage({ onUnauthenticated, canCreate = false }: Props) {
           ) : null}
         </div>
       </header>
+
+      <UserListFlashBanner />
 
       <form role="search" aria-label="جستجو و فیلتر کاربران" onSubmit={(event) => event.preventDefault()} className="flex flex-wrap items-end gap-3">
         <div className="flex min-w-60 flex-1 flex-col gap-1.5">

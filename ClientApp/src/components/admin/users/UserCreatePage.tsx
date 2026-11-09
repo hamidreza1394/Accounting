@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
-import { useNavigate } from '../../../lib/router';
 import { usePageBreadcrumb } from '@/components/shell/PageBreadcrumb';
 import { UserForm } from './UserFormFields';
-import { clearUserFlash, setUserFlash } from './userFlash';
+import { clearUserFlash, setUserListFlash } from './userFlash';
+import { useLeaveToList } from './useLeaveToList';
 import { createUserWithEmployee } from './userCreateFlow';
 import { noUserFormContext, type UserFormContext } from './form/userFormShared';
 import { emptyUserForm } from './userFormValidation';
@@ -14,7 +14,7 @@ type Props = {
 };
 
 export function UserCreatePage({ onUnauthenticated, workContext = noUserFormContext }: Props) {
-  const navigate = useNavigate();
+  const leaveToList = useLeaveToList();
   // A message nobody consumed must not appear after this form is saved later.
   useEffect(() => {
     clearUserFlash();
@@ -31,18 +31,20 @@ export function UserCreatePage({ onUnauthenticated, workContext = noUserFormCont
         initialValues={emptyUserForm}
         onUnauthenticated={onUnauthenticated}
         workContext={workContext}
-        onCancel={() => navigate('/admin/users')}
+        onCancel={leaveToList}
         onSubmit={async (values, meta) => {
           // The account is created first; a failed personnel record never hides it (see the flow).
           const result = await createUserWithEmployee({
             values,
             companyId: workContext.activeCompanyId,
             suggestedEmployeeNumber: meta.suggestedEmployeeNumber,
+            photo: meta.photo,
             onUnauthenticated,
           });
-          setUserFlash(result.userId, result.flash);
+          setUserListFlash(result.flash);
           if (result.sessionExpired) return;
-          navigate(`/admin/users/${encodeURIComponent(result.userId)}`);
+          // The list shows the new account first: plain first page, refetched, form tab closed.
+          leaveToList();
         }}
       />
     </div>

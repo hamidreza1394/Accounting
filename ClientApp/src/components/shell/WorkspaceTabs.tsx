@@ -48,6 +48,11 @@ function useWorkspaceTabs(): WorkspaceTabsStore {
 /** Read access to the workspace store for shell dialogs rendered inside the provider. */
 export { useWorkspaceTabs };
 
+/** The store when the multi-tab shell is present, `null` in single-page mode (pages that may run in both). */
+export function useOptionalWorkspaceTabs(): WorkspaceTabsStore | null {
+  return useContext(WorkspaceTabsContext);
+}
+
 function routeTitleOf(routes: readonly Route[], pathname: string): string {
   for (const route of routes) {
     if (matchPath(route.path, pathname) !== null) return route.title;
