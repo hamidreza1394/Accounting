@@ -2877,3 +2877,7 @@
 - **CI:** تست محلی در این اجرا انجام نشد. CI شاخهٔ قدیمی #608 روی SHA قبلی Vendor CI، .NET CI و Semgrep موفق داشت؛ CodeQL در Initialize به‌علت HTTP 504 هنگام دانلود CodeQL bundle شکست خورد. این شواهد به SHA جدید تعمیم داده نمی‌شود؛ وضعیت نهایی فقط از CI روی آخرین head #613 ثبت خواهد شد.
 - **مرزبندی:** بدون تغییر `Server/**`، Customer consumer، `Licensing.Contracts`، schema یا Migration مشتری؛ هیچ private key، رمز، hash رمز مشتری، connection string یا secret اضافه نشد.
 - **وضعیت:** Implemented / Not Verified تا تکمیل تمام بررسی‌های الزامی PR #613.
+
+## 2026-11-10 — مأموریت D-078 PR اول: مجوز شرکتی users.create
+- Migration فقط-داده idempotent `20261110120000_SeedUsersCreatePermission` کد `users.create` را با GUID پایدار و Ordering 21007 به کاتالوگ اضافه کرد؛ هیچ نقشی خودکار مجوز نمی‌گیرد (تست SQL-gated قفل می‌کند). کاتالوگ مستندات به ۷۴ کد رسید؛ کد فعلاً seeded-only است و enforcement در PR دوم سری D-078 می‌آید.
+- `generate_migrations.py` به‌روزرسانی شد (CURRENT/DELTA + HAND_WRITTEN_SQL)؛ هر دو گارد migration سبز. Build سبز؛ تست ۱۰۹۲ موفق/۶۷ Skip/۲ شکست محیطی قدیمی. تست‌های SQL Server محلی NotRun (Docker موجود نیست). جزئیات: `docs/handoffs/UNNUMBERED-d078-users-create-permission-seed.md`.
