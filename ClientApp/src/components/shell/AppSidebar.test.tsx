@@ -80,7 +80,7 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     await openSystem();
     const toggle = screen.getByRole('button', { name: 'ساختار سازمانی' });
     expect(screen.getByRole('link', { name: 'واحدهای سازمانی' })).toBeInTheDocument();
-    expect(screen.getByText('کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
+    expect(screen.getByText('فهرست کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
     expect(toggle.querySelector('svg')).not.toBeNull();
     expect(container).toBeTruthy();
   });
@@ -100,7 +100,7 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     ] as const) {
       expect(screen.getByRole('link', { name })).toHaveAttribute('href', href);
     }
-    for (const name of ['کارکنان', 'گروه‌های دسترسی', 'کاتالوگ و جزئیات مجوزها', 'مجوزهای دسترسی']) {
+    for (const name of ['فهرست کارکنان', 'گروه‌های دسترسی', 'کاتالوگ و جزئیات مجوزها', 'مجوزهای دسترسی']) {
       expect(screen.queryByRole('link', { name })).not.toBeInTheDocument();
       expect(screen.getByText(name).closest('[aria-disabled="true"]')).toBeTruthy();
     }
@@ -139,14 +139,14 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     const { user } = await openSystem();
     const section = screen.getByRole('button', { name: 'ساختار سازمانی' });
     expect(section).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByText('کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
+    expect(screen.getByText('فهرست کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
     await user.click(section);
     expect(section).toHaveAttribute('aria-expanded', 'false');
     expect(screen.getByRole('button', { name: 'کارکنان' })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('button', { name: 'دسترسی و مجوزها' })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('button', { name: 'مدیریت سیستم' })).toHaveAttribute('aria-expanded', 'true');
     await user.click(section);
-    expect(screen.getByText('کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
+    expect(screen.getByText('فهرست کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
   });
 
   it('has no collapse control or icon-rail state any more', () => {
