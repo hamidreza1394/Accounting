@@ -28,7 +28,7 @@ function setup(path: string, workContext: UserFormContext) {
     { path: '/admin/users/new', element: () => <UserCreatePage onUnauthenticated={onUnauthenticated} workContext={workContext} />, title: 'ایجاد کاربر' },
     { path: '/admin/users/:id', element: () => <UserDetailPage onUnauthenticated={onUnauthenticated} />, title: 'جزئیات' },
     { path: '/admin/users/:id/edit', element: () => <UserEditPage onUnauthenticated={onUnauthenticated} workContext={workContext} />, title: 'ویرایش' },
-    { path: '/admin/roles', element: () => <h1>نقش‌ها</h1>, title: 'نقش‌ها' },
+    { path: '/admin/access', element: () => <h1>مجوزهای دسترسی</h1>, title: 'مجوزهای دسترسی' },
   ];
   window.history.pushState(null, '', `/app${path}`);
   return render(

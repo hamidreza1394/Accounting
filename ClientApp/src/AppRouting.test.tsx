@@ -214,18 +214,32 @@ describe('App routing', () => {
   });
 
   it('shows a forbidden page, no menu entry and no request for any role or catalog route of a non-administrator', async () => {
-    for (const path of ['/app/admin/roles', '/app/admin/roles/new', '/app/admin/roles/role-1?company=a', '/app/admin/permissions']) {
+    for (const path of ['/app/admin/roles', '/app/admin/roles/new', '/app/admin/roles/role-1?company=a', '/app/admin/permissions', '/app/admin/access']) {
       window.history.replaceState(null, '', path);
       const fetchMock = stubAll(false);
       const view = render(<App navigate={vi.fn()} />);
       expect(await screen.findByRole('alert')).toHaveTextContent('دسترسی ندارید');
       expect(screen.queryByRole('link', { name: 'گروه‌های دسترسی' })).toBeNull();
       expect(screen.queryByRole('link', { name: 'کاتالوگ و جزئیات مجوزها' })).toBeNull();
+      expect(screen.queryByRole('link', { name: 'مجوزهای دسترسی' })).toBeNull();
       expect(screen.queryByRole('form')).toBeNull();
       expect(fetchMock.mock.calls.some((call) => String(call[0]).startsWith('/api/v1/admin/'))).toBe(false);
       expect(fetchMock.mock.calls.some((call) => String(call[0]) === '/api/v1/companies')).toBe(false);
       view.unmount();
     }
+  });
+
+  it('opens the standalone access page from the sidebar for an administrator', async () => {
+    const user = userEvent.setup();
+    stubAll(true);
+    render(<App navigate={vi.fn()} />);
+    await screen.findByRole('heading', { name: dashboardHeading });
+    const nav = screen.getByRole('navigation', { name: 'منوی اصلی' });
+    await user.click(await within(nav).findByRole('link', { name: 'مجوزهای دسترسی' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'مجوزهای دسترسی' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/app/admin/access');
+    expect(within(nav).getByRole('link', { name: 'مجوزهای دسترسی' })).toHaveAttribute('aria-current', 'page');
+    expect(await screen.findByRole('option', { name: /کارشناس فروش/ })).toBeInTheDocument();
   });
 
   it('reaches the membership request pages from the menu for an administrator', async () => {
