@@ -191,7 +191,7 @@ describe('opening month of an empty field', () => {
     expect(clampToRange(new Date(2026, 10, 3, 12), min, max)).toBe(min);
     expect(clampToRange(new Date(2027, 2, 3, 12), min, max)).toBe(max);
     const inside = new Date(2026, 11, 10, 12);
-    expect(clampToRange(inside, min, tip)).toBe(inside);
+    expect(clampToRange(inside, min, max)).toBe(inside);
     expect(clampToRange(inside)).toBe(inside);
   });
 });
@@ -212,5 +212,4 @@ describe('ISO conversion', () => {
   it('formats years below 1000 with four digits', () => {
     expect(dateToIso(new Date(999, 0, 5))).toBe('0999-01-05');
   });
-
 });
