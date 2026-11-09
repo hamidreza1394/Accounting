@@ -11,6 +11,9 @@ import { formatPersianDate } from '@/lib/date';
  * (`yyyy-MM-dd`, or `''` for none): the Jalali calendar is only how it is shown and chosen
  * (D-049, D-068). It carries no time and no time zone; turning a day into UTC instants is
  * `dayStartUtc`/`dayEndUtc` in lib/time.ts (docs/TIME_CONTRACT.md).
+ *
+ * Built on `react-day-picker/persian` (v9): month/year dropdowns, RTL labels, and Persian digits
+ * without a second calendar library.
  */
 export type JalaliDateFieldProps = {
   /** Gregorian ISO calendar date, or `''`. */
@@ -83,6 +86,10 @@ export function JalaliDateField({
   const maxDate = max ? isoToDate(max) : undefined;
   const startMonth = minDate ?? new Date(2000, 0, 1);
   const endMonth = maxDate ?? new Date(2100, 11, 1);
+  const today = clampToRange(new Date(), minDate, maxDate);
+  const todayIso = dateToIso(today);
+  const todayDisabled =
+    (minDate !== undefined && today < minDate) || (maxDate !== undefined && today > maxDate);
 
   let text = placeholder;
   if (selected) {
@@ -117,14 +124,23 @@ export function JalaliDateField({
             <Popover.Popup
               aria-labelledby={titleId}
               dir="rtl"
-              className="rounded-xl border border-line bg-white p-2 text-ink shadow-xl outline-none"
-              style={{ '--rdp-accent-color': 'var(--color-teal-deep)', '--rdp-accent-background-color': 'var(--color-pick-soft)' } as React.CSSProperties}
+              className="faranou-jalali-picker rounded-xl border border-line bg-white p-3 text-ink shadow-xl outline-none"
+              style={
+                {
+                  '--rdp-accent-color': 'var(--color-teal-deep)',
+                  '--rdp-accent-background-color': 'var(--color-pick-soft)',
+                  '--rdp-day_button-border-radius': '0.5rem',
+                  '--rdp-selected-border': '2px solid var(--color-teal-deep)',
+                } as React.CSSProperties
+              }
             >
               <Popover.Title id={titleId} className="sr-only">
                 انتخاب تاریخ شمسی
               </Popover.Title>
               <DayPicker
                 mode="single"
+                captionLayout="dropdown"
+                navLayout="around"
                 {...(selected ? { selected } : {})}
                 defaultMonth={selected ?? clampToRange(new Date(), minDate, maxDate)}
                 startMonth={startMonth}
@@ -136,7 +152,55 @@ export function JalaliDateField({
                   onChange(dateToIso(date));
                   setOpen(false);
                 }}
+                classNames={{
+                  root: 'rdp-root faranou-rdp',
+                  months: 'rdp-months',
+                  month: 'rdp-month',
+                  month_caption: 'rdp-month_caption faranou-rdp-caption',
+                  dropdowns: 'rdp-dropdowns faranou-rdp-dropdowns',
+                  dropdown_root: 'rdp-dropdown_root faranou-rdp-dropdown',
+                  caption_label: 'rdp-caption_label',
+                  button_previous: 'rdp-button_previous faranou-rdp-nav',
+                  button_next: 'rdp-button_next faranou-rdp-nav',
+                  weekdays: 'rdp-weekdays',
+                  weekday: 'rdp-weekday faranou-rdp-weekday',
+                  week: 'rdp-week',
+                  day: 'rdp-day',
+                  day_button: 'rdp-day_button faranou-rdp-day',
+                  selected: 'rdp-selected',
+                  today: 'rdp-today faranou-rdp-today',
+                  outside: 'rdp-outside',
+                  disabled: 'rdp-disabled',
+                  hidden: 'rdp-hidden',
+                }}
               />
+              <div className="mt-2 flex items-center justify-between gap-2 border-t border-line pt-2">
+                <button
+                  type="button"
+                  disabled={todayDisabled}
+                  onClick={() => {
+                    onChange(todayIso);
+                    setOpen(false);
+                  }}
+                  className="rounded-md px-3 py-1.5 text-xs font-semibold text-teal-deep outline-none hover:bg-pick-soft focus-visible:ring-2 focus-visible:ring-gold disabled:cursor-not-allowed disabled:text-muted"
+                >
+                  امروز
+                </button>
+                {value ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onChange('');
+                      setOpen(false);
+                    }}
+                    className="rounded-md px-3 py-1.5 text-xs font-semibold text-sub outline-none hover:bg-cool focus-visible:ring-2 focus-visible:ring-gold"
+                  >
+                    پاک کردن
+                  </button>
+                ) : (
+                  <span className="text-[11px] text-muted">ماه و سال را از بالا انتخاب کنید</span>
+                )}
+              </div>
             </Popover.Popup>
           </Popover.Positioner>
         </Popover.Portal>
