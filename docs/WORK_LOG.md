@@ -2877,3 +2877,11 @@
 - **CI:** تست محلی در این اجرا انجام نشد. CI شاخهٔ قدیمی #608 روی SHA قبلی Vendor CI، .NET CI و Semgrep موفق داشت؛ CodeQL در Initialize به‌علت HTTP 504 هنگام دانلود CodeQL bundle شکست خورد. این شواهد به SHA جدید تعمیم داده نمی‌شود؛ وضعیت نهایی فقط از CI روی آخرین head #613 ثبت خواهد شد.
 - **مرزبندی:** بدون تغییر `Server/**`، Customer consumer، `Licensing.Contracts`، schema یا Migration مشتری؛ هیچ private key، رمز، hash رمز مشتری، connection string یا secret اضافه نشد.
 - **وضعیت:** Implemented / Not Verified تا تکمیل تمام بررسی‌های الزامی PR #613.
+
+
+## 2026-11-09 — تصمیم D-078: تأیید عضویت داخلی در برابر عضویت بین‌شرکتی
+- مدیر مجاز شرکت هنگام ایجاد کاربر برای همان Company، عضویت همان شرکت را خودکار Approved/Active می‌کند؛ تأیید دوباره لازم نیست.
+- عضویت در Company دیگر، از جمله درخواست هلدینگ برای شرکت زیرمجموعه، PendingApproval است و فقط مدیر مجاز مقصد تصمیم می‌گیرد؛ عضویت گروهی/مالکیت اختیار مقصد ایجاد نمی‌کند و self-approval بین‌شرکتی ممنوع می‌ماند.
+- عضویت به‌تنهایی Role/Permission/Entitlement یا دسترسی سال/دوره نمی‌دهد؛ دسترسی سال/دوره در همان Company با grantهای D-065/D-066/D-077 مدیریت می‌شود و Membership جدید نمی‌خواهد.
+- D-078 Accepted؛ رفتار runtime هنوز NotVerified است و باید مسیرهای create-user/membership با تست API و SQL Server/E2E تطبیق داده شوند.
+- فقط مستندات؛ بدون کد، API، UI، Schema یا Migration. جزئیات: `docs/handoffs/UNNUMBERED-company-membership-approval-scope.md`.
