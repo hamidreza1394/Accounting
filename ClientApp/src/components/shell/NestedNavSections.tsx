@@ -99,25 +99,36 @@ export function NestedNavSections({
         const sectionId = `nav-section-${key.replace(/[^\w؀-ۿ]+/g, '-')}`;
         const SectionIcon = block.icon;
         const active = block.leaves.some((leaf) => leaf.to !== undefined && isActivePath(pathname, leaf.to));
+        const disabled = block.leaves.every((leaf) => leaf.to === undefined);
         return (
           <li key={key} className="faranou-nav-section-item">
-            <button
-              type="button"
-              className="faranou-nav-section-toggle"
-              aria-expanded={open}
-              aria-controls={sectionId}
-              onClick={() => setOpenSections((previous) => ({ ...previous, [key]: previous[key] === false }))}
-            >
-              {SectionIcon ? <SubNavIcon icon={SectionIcon} /> : null}
-              <span className="min-w-0 flex-1 text-start">{block.section}</span>
-              {active && !open ? <span className="faranou-nav-group-dot" aria-hidden="true" /> : null}
-              <ChevronDown size={14} className={'faranou-nav-chevron' + (open ? ' faranou-nav-chevron--open' : '')} aria-hidden="true" />
-            </button>
-            {open ? (
-              <ul id={sectionId} className="faranou-nav-leaf-list">
-                {block.leaves.map(renderLeaf)}
-              </ul>
-            ) : null}
+            {disabled ? (
+              <div aria-disabled="true" className="faranou-nav-disabled faranou-nav-leaf faranou-nav-leaf--sub">
+                {SectionIcon ? <SubNavIcon icon={SectionIcon} /> : null}
+                <span className="min-w-0 flex-1 text-start">{block.section}</span>
+                <span className="faranou-nav-soon-badge">به‌زودی</span>
+              </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="faranou-nav-section-toggle"
+                  aria-expanded={open}
+                  aria-controls={sectionId}
+                  onClick={() => setOpenSections((previous) => ({ ...previous, [key]: previous[key] === false }))}
+                >
+                  {SectionIcon ? <SubNavIcon icon={SectionIcon} /> : null}
+                  <span className="min-w-0 flex-1 text-start">{block.section}</span>
+                  {active && !open ? <span className="faranou-nav-group-dot" aria-hidden="true" /> : null}
+                  <ChevronDown size={14} className={'faranou-nav-chevron' + (open ? ' faranou-nav-chevron--open' : '')} aria-hidden="true" />
+                </button>
+                {open ? (
+                  <ul id={sectionId} className="faranou-nav-leaf-list">
+                    {block.leaves.map(renderLeaf)}
+                  </ul>
+                ) : null}
+              </>
+            )}
           </li>
         );
       })}

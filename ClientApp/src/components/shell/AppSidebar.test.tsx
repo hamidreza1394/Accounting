@@ -65,12 +65,12 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
   });
 
   it('keeps the section icon when only a later leaf of the section is permitted', async () => {
-    const access = companyMember(['hr.employees.list']);
+    const access = companyMember(['hr.organizational-units.list']);
     const { container } = render(
       <RouterProvider routes={[]}>
         <AppSidebar
           access={access}
-          canAccess={(permission: Permission) => permission === 'hr.employees.view'}
+          canAccess={(permission: Permission) => permission === 'hr.units.view' && access.companyCodes.includes('hr.organizational-units.list')}
           onRetryPermissions={vi.fn()}
           onNavigate={vi.fn()}
           mobileOpen={false}
@@ -79,41 +79,61 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     );
     await openSystem();
     const toggle = screen.getByRole('button', { name: 'ساختار سازمانی' });
-    expect(screen.queryByRole('link', { name: 'واحدهای سازمانی' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'کارکنان' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'واحدهای سازمانی' })).toBeInTheDocument();
+    expect(screen.getByText('کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
     expect(toggle.querySelector('svg')).not.toBeNull();
     expect(container).toBeTruthy();
   });
 
-  it('keeps the organizational pages under system administration in a section named «ساختار سازمانی»', async () => {
+  it('moves access permissions directly below user management and defers the access section', async () => {
     setup();
     await openSystem();
     expect(screen.queryByText('منابع انسانی')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'ساختار سازمانی' })).toBeInTheDocument();
     expect(screen.queryByText('ساختار سازمانی و کارکنان')).not.toBeInTheDocument();
-    expect(screen.getByText('دسترسی و مجوزها')).toBeInTheDocument();
     expect(screen.getByText('سوابق امنیتی و مدیریتی')).toBeInTheDocument();
+
     for (const [name, href] of [
-      ['واحدهای سازمانی', '/app/hr/org/units'],
-      ['سمت‌های سازمانی', '/app/hr/org/positions'],
-      ['کارکنان', '/app/hr/org/employees'],
-      ['گروه‌های دسترسی', '/app/admin/roles'],
-      ['کاتالوگ و جزئیات مجوزها', '/app/admin/permissions'],
       ['مدیریت کاربران', '/app/admin/users'],
       ['مجوزهای دسترسی', '/app/admin/access'],
+      ['واحدهای سازمانی', '/app/hr/org/units'],
+      ['سمت‌های سازمانی', '/app/hr/org/positions'],
     ] as const) {
       expect(screen.getByRole('link', { name })).toHaveAttribute('href', href);
     }
-    const section = screen.getByRole('button', { name: 'ساختار سازمانی' }).closest('li') as HTMLElement;
-    expect(within(section).getAllByRole('link').map((link) => link.textContent)).toEqual(['واحدهای سازمانی', 'سمت‌های سازمانی', 'کارکنان']);
+
+    const users = screen.getByRole('link', { name: 'مدیریت کاربران' });
+    const accessPage = screen.getByRole('link', { name: 'مجوزهای دسترسی' });
+    expect(users.compareDocumentPosition(accessPage) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(accessPage.closest('li')?.querySelector('.faranou-nav-section-toggle')).toBeNull();
+
+    const orgSection = screen.getByRole('button', { name: 'ساختار سازمانی' }).closest('li') as HTMLElement;
+    expect(within(orgSection).getAllByRole('link').map((link) => link.textContent)).toEqual(['واحدهای سازمانی', 'سمت‌های سازمانی']);
+
+    const employeeSection = screen.getByText('کارکنان').closest('[aria-disabled="true"]') as HTMLElement;
+    const deferredAccessSection = screen.getByText('دسترسی و مجوزها').closest('[aria-disabled="true"]') as HTMLElement;
+    expect(employeeSection).toBeTruthy();
+    expect(deferredAccessSection).toBeTruthy();
+    expect(deferredAccessSection.querySelector('a,button')).toBeNull();
+    expect(screen.queryByText('گروه‌های دسترسی')).not.toBeInTheDocument();
+    expect(screen.queryByText('کاتالوگ و جزئیات مجوزها')).not.toBeInTheDocument();
+    expect(employeeSection.compareDocumentPosition(deferredAccessSection) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('links «مجوزهای دسترسی» to its real page, directly under the user management entry', async () => {
+  it('keeps the access and permissions section disabled at the bottom', async () => {
     setup();
     await openSystem();
-    const links = screen.getAllByRole('link').map((link) => link.textContent);
-    expect(links.indexOf('مجوزهای دسترسی')).toBe(links.indexOf('مدیریت کاربران') + 1);
-    expect(screen.getByRole('link', { name: 'مجوزهای دسترسی' })).toHaveAttribute('href', '/app/admin/access');
+    const access = screen.getByText('دسترسی و مجوزها').closest('[aria-disabled="true"]') as HTMLElement;
+    expect(access).toBeTruthy();
+    expect(access.querySelector('a,button')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'دسترسی و مجوزها' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'گروه‌های دسترسی' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'کاتالوگ و جزئیات مجوزها' })).not.toBeInTheDocument();
+    const users = screen.getByRole('link', { name: 'مدیریت کاربران' });
+    const accessPage = screen.getByRole('link', { name: 'مجوزهای دسترسی' });
+    const employees = screen.getByText('کارکنان').closest('[aria-disabled="true"]') as HTMLElement;
+    expect(users.compareDocumentPosition(accessPage) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(employees.compareDocumentPosition(access) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('hides «مجوزهای دسترسی» from a member without role permissions (hint only; the server decides)', () => {
@@ -132,14 +152,14 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     const { user } = await openSystem();
     const section = screen.getByRole('button', { name: 'ساختار سازمانی' });
     expect(section).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('link', { name: 'کارکنان' })).toBeInTheDocument();
+    expect(screen.getByText('کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
     await user.click(section);
     expect(section).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('link', { name: 'کارکنان' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'دسترسی و مجوزها' })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
+    expect(screen.getByText('دسترسی و مجوزها').closest('[aria-disabled="true"]')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'مدیریت سیستم' })).toHaveAttribute('aria-expanded', 'true');
     await user.click(section);
-    expect(screen.getByRole('link', { name: 'کارکنان' })).toBeInTheDocument();
+    expect(screen.getByText('کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
   });
 
   it('has no collapse control or icon-rail state any more', () => {
@@ -256,8 +276,8 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     window.history.pushState(null, '', '/');
     setup();
     const { user, system } = await openSystem();
-    await user.click(screen.getByRole('link', { name: 'گروه‌های دسترسی' }));
-    expect(window.location.pathname).toBe('/app/admin/roles');
+    await user.click(screen.getByRole('link', { name: 'مجوزهای دسترسی' }));
+    expect(window.location.pathname).toBe('/app/admin/access');
     expect(system).toHaveAttribute('aria-expanded', 'true');
     for (const group of screen.getAllByRole('button').filter((button) => button.classList.contains('faranou-nav-group') && button !== system)) {
       expect(group).toHaveAttribute('aria-expanded', 'false');

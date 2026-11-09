@@ -96,7 +96,9 @@ describe('AppShell', () => {
     expect(screen.queryByText('ساختار سازمانی و کارکنان')).toBeNull();
     expect(screen.getByRole('link', { name: 'واحدهای سازمانی' })).toHaveAttribute('href', '/app/hr/org/units');
     expect(screen.getByRole('link', { name: 'سمت‌های سازمانی' })).toHaveAttribute('href', '/app/hr/org/positions');
-    expect(screen.getByRole('link', { name: 'کارکنان' })).toHaveAttribute('href', '/app/hr/org/employees');
+    // «کارکنان» is deferred by the owner: a disabled «به‌زودی» entry, not a link (the route itself still works by URL).
+    expect(screen.queryByRole('link', { name: 'کارکنان' })).toBeNull();
+    expect(screen.getByText('کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
   });
 
   it('shows the focused system-administration menu and removes redundant user-list shortcuts', async () => {
@@ -104,8 +106,11 @@ describe('AppShell', () => {
     await openSystemMenu(userEvent.setup());
     expect(screen.getByRole('button', { name: /مدیریت سیستم/ })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'مدیریت کاربران' })).toHaveAttribute('href', '/app/admin/users');
-    expect(screen.getByRole('link', { name: 'گروه‌های دسترسی' })).toHaveAttribute('href', '/app/admin/roles');
-    expect(screen.getByRole('link', { name: 'کاتالوگ و جزئیات مجوزها' })).toHaveAttribute('href', '/app/admin/permissions');
+    // «گروه‌های دسترسی» and «کاتالوگ و جزئیات مجوزها» are deferred by the owner: not shown as links or entries (the «دسترسی و مجوزها» section is a disabled «به‌زودی» item).
+    for (const label of ['گروه‌های دسترسی', 'کاتالوگ و جزئیات مجوزها']) {
+      expect(screen.queryByRole('link', { name: label })).toBeNull();
+      expect(screen.queryByText(label)).toBeNull();
+    }
     // The security report and the HR organizational pages are real now (HR entries: HrIntegration.test.tsx); only
     // the security policies remain a placeholder.
     expect(screen.getByRole('link', { name: 'گزارش امنیت و سوابق' })).toHaveAttribute('href', '/app/admin/security/audit');
@@ -265,11 +270,11 @@ describe('AppShell', () => {
       expect(screen.getByRole('link', { name: 'درخواست‌های عضویت من' })).toBeInTheDocument();
     });
 
-    it('shows only the role pages to a company administrator, never the installation-only pages', async () => {
+    it('shows no installation-only page to a company administrator (role pages are deferred, disabled entries)', async () => {
       shell(companyAdmin(['roles.view', 'roles.update']));
     await openSystemMenu(userEvent.setup());
-      expect(screen.getByRole('link', { name: 'گروه‌های دسترسی' })).toHaveAttribute('href', '/app/admin/roles');
-      expect(screen.getByRole('link', { name: 'کاتالوگ و جزئیات مجوزها' })).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'گروه‌های دسترسی' })).toBeNull();
+      expect(screen.queryByRole('link', { name: 'کاتالوگ و جزئیات مجوزها' })).toBeNull();
       expect(screen.queryByRole('link', { name: 'مدیریت کاربران' })).toBeNull();
       expect(screen.queryByRole('link', { name: 'گزارش امنیت و سوابق' })).toBeNull();
     });
@@ -277,7 +282,11 @@ describe('AppShell', () => {
     it('shows every administration page to an installation administrator', async () => {
       shell(installationAdmin);
     await openSystemMenu(userEvent.setup());
-      for (const label of adminLinks) expect(screen.getByRole('link', { name: label })).toBeInTheDocument();
+      for (const label of ['مدیریت کاربران', 'گزارش امنیت و سوابق']) expect(screen.getByRole('link', { name: label })).toBeInTheDocument();
+      for (const label of ['گروه‌های دسترسی', 'کاتالوگ و جزئیات مجوزها']) {
+        expect(screen.queryByRole('link', { name: label })).toBeNull();
+        expect(screen.queryByText(label)).toBeNull();
+      }
     });
 
     it.each([
