@@ -20,11 +20,8 @@ export const noUserFormContext: UserFormContext = {
   can: () => false,
 };
 
-/**
- * The page that manages roles and permissions. A single constant on purpose: the dedicated access
- * management page of the next change replaces this one line.
- */
-export const accessManagementPath = '/admin/roles';
+/** The standalone «مجوزهای دسترسی» page (company, user, role, subsystem and form permissions). */
+export const accessManagementPath = '/admin/access';
 
 /** Per-user in-memory cache shared by the lazy tabs of the form (no storage, gone with the page). */
 export type FormTabCache = Map<string, unknown>;

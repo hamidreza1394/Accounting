@@ -13,6 +13,7 @@ import {
   Headphones,
   KeyRound,
   LayoutDashboard,
+  LockKeyhole,
   LogOut,
   Network,
   Settings2,
@@ -151,6 +152,7 @@ export const navigation: NavEntry[] = [
       openByDefault: true,
       children: [
         { label: 'مدیریت کاربران', icon: Users, to: '/admin/users' },
+        { label: 'مجوزهای دسترسی', icon: LockKeyhole, to: '/admin/access' },
         { label: 'گروه‌های دسترسی', icon: ShieldCheck, to: '/admin/roles', section: 'دسترسی و مجوزها', sectionIcon: KeyRound },
         { label: 'کاتالوگ و جزئیات مجوزها', icon: KeyRound, to: '/admin/permissions', section: 'دسترسی و مجوزها', sectionIcon: KeyRound },
         { label: 'واحدهای سازمانی', icon: Building2, to: '/hr/org/units', section: 'ساختار سازمانی', sectionIcon: Network },
@@ -251,6 +253,7 @@ export function AppSidebar({ access, canAccess, onRetryPermissions, onNavigate, 
       switch (leaf.to) {
         case '/admin/users':
           return canAccess('admin.users.view');
+        case '/admin/access':
         case '/admin/roles':
           return canAccess('admin.roles.view');
         case '/admin/permissions':

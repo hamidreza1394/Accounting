@@ -90,6 +90,7 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
       ['گروه‌های دسترسی', '/app/admin/roles'],
       ['کاتالوگ و جزئیات مجوزها', '/app/admin/permissions'],
       ['مدیریت کاربران', '/app/admin/users'],
+      ['مجوزهای دسترسی', '/app/admin/access'],
     ] as const) {
       expect(screen.getByRole('link', { name })).toHaveAttribute('href', href);
     }
@@ -97,9 +98,20 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     expect(within(section).getAllByRole('link').map((link) => link.textContent)).toEqual(['واحدهای سازمانی', 'سمت‌های سازمانی', 'کارکنان']);
   });
 
+  it('links «مجوزهای دسترسی» to its real page, directly under the user management entry', () => {
+    setup();
+    const links = screen.getAllByRole('link').map((link) => link.textContent);
+    expect(links.indexOf('مجوزهای دسترسی')).toBe(links.indexOf('مدیریت کاربران') + 1);
+    expect(screen.getByRole('link', { name: 'مجوزهای دسترسی' })).toHaveAttribute('href', '/app/admin/access');
+  });
+
+  it('hides «مجوزهای دسترسی» from a member without role permissions (hint only; the server decides)', () => {
+    setup(companyMember([]));
+    expect(screen.queryByRole('link', { name: 'مجوزهای دسترسی' })).not.toBeInTheDocument();
+  });
+
   it('never creates a link for a page that has no route (placeholders stay disabled)', () => {
     setup();
-    expect(screen.queryByRole('link', { name: /مجوزهای دسترسی$/ })).not.toBeInTheDocument();
     expect(screen.getByText('سیاست‌های امنیتی').closest('[aria-disabled="true"]')).toBeTruthy();
   });
 

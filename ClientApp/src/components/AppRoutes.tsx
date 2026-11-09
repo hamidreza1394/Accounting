@@ -43,6 +43,9 @@ const LazyUserEditPage = lazy(() =>
 const LazyPermissionCatalogPage = lazy(() =>
   import('./admin/roles/PermissionCatalogPage').then((module) => ({ default: module.PermissionCatalogPage })),
 );
+const LazyAccessPermissionsPage = lazy(() =>
+  import('./admin/access/AccessPermissionsPage').then((module) => ({ default: module.AccessPermissionsPage })),
+);
 const LazyRolesListPage = lazy(() => import('./admin/roles/RolesListPage').then((module) => ({ default: module.RolesListPage })));
 const LazyRoleCreatePage = lazy(() => import('./admin/roles/RoleCreatePage').then((module) => ({ default: module.RoleCreatePage })));
 const LazyRoleDetailPage = lazy(() => import('./admin/roles/RoleDetailPage').then((module) => ({ default: module.RoleDetailPage })));
@@ -109,6 +112,21 @@ function UserEditRoute() {
 
 function PermissionCatalogRoute() {
   return <LazyPermissionCatalogPage onUnauthenticated={useAppRouteData().onUnauthenticated} />;
+}
+
+function AccessPermissionsRoute() {
+  const { access, context, onUnauthenticated, refreshAccess } = useAppRouteData();
+  const hint = useCanHint();
+  return (
+    <LazyAccessPermissionsPage
+      key={context.company.id}
+      onUnauthenticated={onUnauthenticated}
+      defaultCompanyId={context.company.id}
+      can={hint}
+      isInstallationAdministrator={isInstallationAdministrator(access)}
+      onForbidden={refreshAccess}
+    />
+  );
 }
 
 function RolesListRoute() {
@@ -189,6 +207,8 @@ const baseRoutes: readonly Route[] = [
   { path: '/admin/users/new', element: UserCreateRoute, title: 'ایجاد کاربر', permission: 'admin.users.create' },
   { path: '/admin/users/:id', element: UserDetailRoute, title: 'جزئیات کاربر', permission: 'admin.users.view' },
   { path: '/admin/users/:id/edit', element: UserEditRoute, title: 'ویرایش کاربر', permission: 'admin.users.update' },
+  // The standalone access page (subsystem and form permissions of a role); `admin.roles.view` is a hint, the server decides.
+  { path: '/admin/access', element: AccessPermissionsRoute, title: 'مجوزهای دسترسی', permission: 'admin.roles.view' },
   { path: '/admin/permissions', element: PermissionCatalogRoute, title: 'کاتالوگ مجوزها', permission: 'admin.permissions.view' },
   { path: '/admin/roles', element: RolesListRoute, title: 'گروه‌های دسترسی', permission: 'admin.roles.view' },
   // `/new` must stay before `/:roleId`, otherwise "new" would be read as a role id.
