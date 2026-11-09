@@ -161,7 +161,7 @@ export const navigation: NavEntry[] = [
         { label: 'کاتالوگ و جزئیات مجوزها', icon: KeyRound, section: 'دسترسی و مجوزها', sectionIcon: KeyRound },
         { label: 'مجوزهای دسترسی', icon: LockKeyhole, section: 'دسترسی و مجوزها', sectionIcon: KeyRound },
         { label: 'کارکنان', icon: Users, section: 'کارکنان', sectionIcon: Users },
-      ],,
+      ],
     },
   },
   { kind: 'item', leaf: { label: 'راهنما و پشتیبانی', icon: Headphones, tone: 'orange' } },
