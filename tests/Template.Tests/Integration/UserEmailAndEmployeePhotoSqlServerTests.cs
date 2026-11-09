@@ -67,6 +67,38 @@ public sealed class UserEmailAndEmployeePhotoSqlServerTests
     }
 
     [Fact]
+    public async Task EmailMigrationDown_GivesEveryMissingEmailADistinctPlaceholder()
+    {
+        Assert.SkipUnless(SqlServerAvailable(), "SQL Server is not configured (FARANOU_TEST_SQLSERVER).");
+
+        var name = "FaranouTests_EMAILDOWN_" + Guid.NewGuid().ToString("N")[..12];
+        var cancellationToken = TestContext.Current.CancellationToken;
+        try
+        {
+            await using var database = CreateContext(name);
+            await database.Database.MigrateAsync(cancellationToken);
+            database.Users.AddRange(NewUser("down-1", null), NewUser("down-2", null), NewUser("down-3", "real@example.test"));
+            await database.SaveChangesAsync(cancellationToken);
+
+            // Roll back to the migration before the optional-e-mail one (also drops the photo table).
+            var migrator = Microsoft.EntityFrameworkCore.Infrastructure.AccessorExtensions.GetService<Microsoft.EntityFrameworkCore.Migrations.IMigrator>(database);
+            await migrator.MigrateAsync("20261105094700_AddUserSessions", cancellationToken);
+
+            var emails = await database.Database
+                .SqlQueryRaw<string>("SELECT [EmailAddress] AS [Value] FROM [Users]")
+                .ToListAsync(cancellationToken);
+            Assert.Equal(3, emails.Count);
+            Assert.Equal(3, emails.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+            Assert.Contains("real@example.test", emails);
+        }
+        finally
+        {
+            await using var cleanup = CreateContext(name);
+            await cleanup.Database.EnsureDeletedAsync(cancellationToken);
+        }
+    }
+
+    [Fact]
     public async Task EmployeePhoto_IsOnePerEmployee_AndCannotCrossCompanies()
     {
         Assert.SkipUnless(SqlServerAvailable(), "SQL Server is not configured (FARANOU_TEST_SQLSERVER).");

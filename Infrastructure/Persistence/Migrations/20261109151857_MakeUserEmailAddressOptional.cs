@@ -41,6 +41,12 @@ namespace Data.Migrations
                 name: "IX_Users_EmailAddress",
                 table: "Users");
 
+            // Users created without an e-mail would all become '' and break the unique index below.
+            // Give each one a distinct, clearly synthetic placeholder instead (no user data is lost:
+            // the address was NULL before).
+            migrationBuilder.Sql(
+                "UPDATE [Users] SET [EmailAddress] = CONCAT('no-email-', CONVERT(varchar(36), [Id]), '@invalid.local') WHERE [EmailAddress] IS NULL;");
+
             migrationBuilder.AlterColumn<string>(
                 name: "EmailAddress",
                 table: "Users",

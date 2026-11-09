@@ -154,10 +154,11 @@ export function UserForm({
     title: mode === 'create' ? 'ایجاد کاربر' : 'ویرایش کاربر',
   });
   const activeCompanyId = workContext.activeCompanyId;
-  const canCreateEmployee = activeCompanyId !== null && workContext.can('hr.employees.create', activeCompanyId);
+  const canCreateEmployee = activeCompanyId !== null && workContext.can('hr.employees.create', activeCompanyId) &&
+    workContext.can('hr.employees.update', activeCompanyId);
   let photoUnavailable: string | null = null;
   if (activeCompanyId === null) photoUnavailable = 'شرکت کاری فعالی انتخاب نشده است؛ عکس همراه پرونده پرسنلی ذخیره می‌شود و بدون شرکت فعال ذخیره نمی‌شود.';
-  else if (!canCreateEmployee) photoUnavailable = 'برای ذخیرهٔ عکس پرسنلی، مجوز «ایجاد کارمند» در شرکت فعال لازم است.';
+  else if (!canCreateEmployee) photoUnavailable = 'برای ذخیرهٔ عکس پرسنلی، مجوزهای «ایجاد کارمند» و «ویرایش کارمند» در شرکت فعال لازم است.';
   // A chosen photo needs the personnel record this save creates; without a personnel number it
   // would be silently dropped, so the save is blocked until the user fixes one side.
   const photoConflict =

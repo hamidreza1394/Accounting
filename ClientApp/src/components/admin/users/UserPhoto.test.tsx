@@ -80,7 +80,7 @@ describe('personnel photo — create form', () => {
   it('shows the default initials avatar and a pick button before any photo is chosen', async () => {
     const user = userEvent.setup();
     createApi();
-    setup('/admin/users/new', context('hr.employees.create'));
+    setup('/admin/users/new', context('hr.employees.create', 'hr.employees.update'));
     expect(screen.getByRole('button', { name: 'انتخاب عکس' })).toBeEnabled();
     expect(screen.queryByRole('button', { name: 'حذف عکس' })).toBeNull();
     await user.type(field.firstName(), 'علی');
@@ -91,7 +91,7 @@ describe('personnel photo — create form', () => {
   it('previews a valid image, lets the user change or remove it, and keeps it across tab switches', async () => {
     const user = userEvent.setup();
     createApi();
-    setup('/admin/users/new', context('hr.employees.create'));
+    setup('/admin/users/new', context('hr.employees.create', 'hr.employees.update'));
     await user.upload(fileInput(), png());
     const image = await screen.findByAltText('عکس پرسنلی');
     expect(image.getAttribute('src')).toMatch(/^data:image\/png;base64,/);
@@ -109,7 +109,7 @@ describe('personnel photo — create form', () => {
   it('refuses a file of the wrong type or above 2 MB and shows the reason', async () => {
     const user = userEvent.setup({ applyAccept: false });
     createApi();
-    setup('/admin/users/new', context('hr.employees.create'));
+    setup('/admin/users/new', context('hr.employees.create', 'hr.employees.update'));
     await user.upload(fileInput(), new File(['<svg/>'], 'x.svg', { type: 'image/svg+xml' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('فقط عکس با قالب JPEG، PNG یا WebP پذیرفته می‌شود.');
     expect(screen.queryByAltText('عکس پرسنلی')).toBeNull();
@@ -127,13 +127,13 @@ describe('personnel photo — create form', () => {
     createApi();
     setup('/admin/users/new', context('hr.employees.view'));
     expect(screen.getByRole('button', { name: 'انتخاب عکس' })).toBeDisabled();
-    expect(screen.getByText(/مجوز «ایجاد کارمند» در شرکت فعال لازم است/)).toBeInTheDocument();
+    expect(screen.getByText(/مجوزهای «ایجاد کارمند» و «ویرایش کارمند» در شرکت فعال لازم است/)).toBeInTheDocument();
   });
 
   it('blocks the save while a photo is chosen but no personnel number would be created', async () => {
     const user = userEvent.setup();
     const { calls } = createApi();
-    setup('/admin/users/new', context('hr.employees.create'));
+    setup('/admin/users/new', context('hr.employees.create', 'hr.employees.update'));
     await waitFor(() => expect(field.employeeNumber()).toHaveValue('0042'));
     await user.upload(fileInput(), png());
     await user.clear(field.employeeNumber());
@@ -147,7 +147,7 @@ describe('personnel photo — create form', () => {
   it('creates the account, then the personnel record, then uploads the photo to THAT record (once)', async () => {
     const user = userEvent.setup();
     const { calls } = createApi();
-    setup('/admin/users/new', context('hr.employees.create'));
+    setup('/admin/users/new', context('hr.employees.create', 'hr.employees.update'));
     await waitFor(() => expect(field.employeeNumber()).toHaveValue('0042'));
     await user.upload(fileInput(), png('secret-name.png'));
     await fillCreate(user);
@@ -171,7 +171,7 @@ describe('personnel photo — create form', () => {
   it('reports a photo failure as a warning on the list while the account and record stay created', async () => {
     const user = userEvent.setup();
     createApi(() => json({ error: 'فقط عکس با قالب JPEG، PNG یا WebP پذیرفته می‌شود.' }, 400));
-    setup('/admin/users/new', context('hr.employees.create'));
+    setup('/admin/users/new', context('hr.employees.create', 'hr.employees.update'));
     await waitFor(() => expect(field.employeeNumber()).toHaveValue('0042'));
     await user.upload(fileInput(), png());
     await fillCreate(user);
@@ -183,7 +183,7 @@ describe('personnel photo — create form', () => {
   it('does not upload anything when no photo was chosen', async () => {
     const user = userEvent.setup();
     const { calls } = createApi();
-    setup('/admin/users/new', context('hr.employees.create'));
+    setup('/admin/users/new', context('hr.employees.create', 'hr.employees.update'));
     await waitFor(() => expect(field.employeeNumber()).toHaveValue('0042'));
     await fillCreate(user);
     await user.click(screen.getByRole('button', { name: 'ایجاد کاربر' }));
