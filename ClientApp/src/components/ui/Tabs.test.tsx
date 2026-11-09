@@ -27,6 +27,8 @@ describe('Tabs', () => {
     expect(screen.getByRole('tab', { name: 'عمومی' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'امنیت' })).toHaveAttribute('tabindex', '-1');
     expect(screen.getByRole('tabpanel', { name: 'عمومی' })).toHaveTextContent('محتوای عمومی');
+    expect(screen.getByRole('tab', { name: 'عمومی' })).toHaveClass('bg-navy', 'text-white', 'border-gold');
+    expect(screen.getByRole('tab', { name: 'امنیت' })).toHaveClass('bg-cool', 'text-sub');
   });
 
   it('moves to the next tab with ArrowLeft in RTL and to the previous with ArrowRight', async () => {
