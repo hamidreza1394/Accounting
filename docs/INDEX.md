@@ -105,7 +105,7 @@
 - **Issue #399:** هم‌ترازی S0 و ممیزی foundation بازرگانی.
 
 
-- **Issue #488 / D-066 Proposed:** ممیزی مدل سال/دوره مالی و تفکیک grant سال و دوره؛ handoff: [`handoffs/ISSUE-488-fiscal-grant-model-audit.md`](handoffs/ISSUE-488-fiscal-grant-model-audit.md). هیچ Migration تا تأیید معنای FiscalPeriod و AccountingPeriod مجاز نیست.
+- **Issue #488 / D-066 Accepted (2026-11-08):** FiscalPeriod موجود = سال مالی؛ AccountingPeriod فرزند = دوره عملیاتی؛ تخصیص نقش Company/year و policy دوره‌ای طبق D-065/D-077. طراحی داده: [`FISCAL_ACCESS_DATA_MODEL.md`](FISCAL_ACCESS_DATA_MODEL.md)؛ handoff: [`handoffs/ISSUE-488-fiscal-grant-model-audit.md`](handoffs/ISSUE-488-fiscal-grant-model-audit.md). Runtime/Migration هنوز NotImplemented.
 | [`handoffs/ISSUE-483-role-admin-positive-e2e.md`](handoffs/ISSUE-483-role-admin-positive-e2e.md) | E2E مثبت مدیر نصب برای API نقش‌ها روی سرور منتشرشده و SQL Server واقعی |
 
 
