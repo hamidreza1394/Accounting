@@ -62,8 +62,13 @@ public sealed class CompanyUserProvisioningSqlServerTests
         Data.DatabaseContext database, string roleCode = "MANAGER")
     {
         var company = new Domain.Company { Name = "شرکت آزمون " + Guid.NewGuid().ToString("N")[..6], IsActive = true };
-        var permission = new Domain.PermissionDefinition
-        { Code = Server.Api.CompanyUserProvisioningEndpoints.CreateUserPermissionCode, Name = "ایجاد کاربر برای شرکت" };
+        // The migrated database already holds the seeded users.create permission (unique
+        // code): reuse that definition and only insert one when it is genuinely absent.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var permission = await database.PermissionDefinitions.AsNoTracking()
+            .FirstOrDefaultAsync(item =>
+                item.Code == Server.Api.CompanyUserProvisioningEndpoints.CreateUserPermissionCode,
+                cancellationToken);
         var role = new Domain.CompanyRole
         { Company = company, TenantId = company.Id, Code = roleCode, Name = "مدیر شرکت", IsActive = true };
         var manager = new Domain.User($"manager-{Guid.NewGuid():N}"[..20].Replace('-', 'a') + "@example.test")
@@ -72,7 +77,13 @@ public sealed class CompanyUserProvisioningSqlServerTests
             IsActive = true,
             Password = "private-password",
         };
-        database.AddRange(company, permission, role, manager);
+        if (permission is null)
+        {
+            permission = new Domain.PermissionDefinition
+            { Code = Server.Api.CompanyUserProvisioningEndpoints.CreateUserPermissionCode, Name = "ایجاد کاربر برای شرکت" };
+            database.Add(permission);
+        }
+        database.AddRange(company, role, manager);
         database.CompanyRolePermissions.Add(new Domain.CompanyRolePermission
         { Role = role, RoleId = role.Id, Permission = permission, PermissionId = permission.Id });
         database.UserCompanyMemberships.Add(new Domain.UserCompanyMembership
@@ -84,7 +95,7 @@ public sealed class CompanyUserProvisioningSqlServerTests
             Role = role,
             IsActive = true,
         });
-        await database.SaveChangesAsync(TestContext.Current.CancellationToken);
+        await database.SaveChangesAsync(cancellationToken);
         return new Seed(company.Id, manager.Id, role.Id, permission.Id);
     }
 
