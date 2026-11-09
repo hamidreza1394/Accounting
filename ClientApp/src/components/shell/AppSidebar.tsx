@@ -27,6 +27,7 @@ import {
 import { Link, useLocation } from '@/lib/router';
 import type { AccessSnapshot, Permission } from '@/lib/permissions';
 import { Tooltip } from '@/components/ui/Tooltip';
+import { NestedNavSections } from './NestedNavSections';
 
 type Tone =
   | 'sky'
@@ -46,13 +47,7 @@ type NavLeaf = {
   label: string;
   icon: LucideIcon;
   tone: Tone;
-  /** App-relative route; leaves without one are honest "به‌زودی" placeholders, never dead links. */
   to?: string;
-  /**
-   * A non-interactive Persian section heading rendered above this leaf inside the group —
-   * the third visual level of the mission's menu structure (e.g. «ساختار سازمانی و کارکنان»
-   * inside «مدیریت سیستم») without a third interactive accordion level.
-   */
   section?: string;
 };
 
@@ -61,25 +56,13 @@ type NavGroup = {
   icon: LucideIcon;
   tone: Tone;
   children: NavLeaf[];
-  /**
-   * Groups with real, working pages start open; future subsystems stay folded so the daily
-   * menu stays short. The user can fold/unfold every group, and deep links auto-open theirs.
-   */
   openByDefault?: boolean;
 };
 
-/** Exported for the menu↔router consistency test and docs tooling; presentation-only. */
 export type NavEntry = { kind: 'item'; leaf: NavLeaf } | { kind: 'group'; group: NavGroup };
 export type NavLeafInfo = NavLeaf;
 export type NavGroupInfo = NavGroup;
 
-/**
- * Presentation-only navigation. Structure per the owner mission (UI-05/UI-08): the financial
- * subsystems stay first-level per the official catalog (all honest "به‌زودی" placeholders),
- * the independent «منابع انسانی» group is GONE and its pages live under «مدیریت سیستم» in
- * Persian sections. Only implemented pages carry a route; everything else shows the visible
- * "به‌زودی" state instead of a broken path. Internal English names never surface here.
- */
 export const navigation: NavEntry[] = [
   { kind: 'item', leaf: { label: 'داشبورد', icon: LayoutDashboard, tone: 'sky', to: '/' } },
   {
@@ -205,7 +188,6 @@ function NavIcon({ icon: Icon, tone, size = 'md' }: { icon: LucideIcon; tone: To
   );
 }
 
-/** True when the current location belongs to the given app-relative route (details included). */
 export function isActivePath(pathname: string, to: string): boolean {
   if (to === '/') return pathname === '/';
   return pathname === to || pathname.startsWith(`${to}/`);
@@ -237,7 +219,6 @@ function DisabledLeaf({ leaf, collapsed = false, nested = false }: { leaf: NavLe
     >
       <NavIcon icon={leaf.icon} tone={leaf.tone} size={nested ? 'sm' : 'md'} />
       <span className="min-w-0 flex-1 whitespace-normal leading-snug">{leaf.label}</span>
-      {/* Always-visible text badge: never a hover-only dot (Issue #442 review, Finding 3). */}
       <span className={'ms-auto shrink-0 rounded-md border border-white/15 bg-white/5 font-semibold text-on-navy/70 ' + (nested ? 'px-1 py-0.5 text-[8px]' : 'px-1.5 py-0.5 text-[9px]')}>
         به‌زودی
       </span>
@@ -250,21 +231,14 @@ export type AppSidebarProps = {
   canAccess: (permission: Permission) => boolean;
   onRetryPermissions: () => void;
   onNavigate: () => void;
-  /** Folded icon-rail mode (desktop); the mobile drawer ignores it. */
   collapsed: boolean;
   onToggleCollapsed: () => void;
   mobileOpen: boolean;
 };
 
-/**
- * The right-side navigation of the workspace: real right-to-left layout, logical Persian
- * groups, collapsible groups, an icon-only rail for wide tables, and permission-aware
- * entries that hide what the server has not granted (UI hint only — D-064).
- */
 export function AppSidebar({ access, canAccess, onRetryPermissions, onNavigate, collapsed, onToggleCollapsed, mobileOpen }: AppSidebarProps) {
   const { pathname } = useLocation();
 
-  // Groups start in their designed state and open automatically when a deep link lands inside.
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(
       navigation
@@ -285,7 +259,6 @@ export function AppSidebar({ access, canAccess, onRetryPermissions, onNavigate, 
 
   const toggleGroup = (label: string) => setOpenGroups((previous) => ({ ...previous, [label]: !previous[label] }));
 
-  // Company permission codes count only while the answer is known and fresh (fail-closed).
   const companyCodes = access.status === 'ready' ? access.companyCodes : [];
   const visibleLeaves = (leaves: readonly NavLeaf[]) =>
     leaves.filter((leaf) => {
@@ -382,7 +355,6 @@ export function AppSidebar({ access, canAccess, onRetryPermissions, onNavigate, 
 
             const { group } = entry;
             const leaves = visibleLeaves(group.children);
-            // A group whose real pages are all hidden by permissions shows nothing at all.
             if (group.children.some((leaf) => leaf.to !== undefined) && leaves.length === 0) return null;
             const open = openGroups[group.label] === true;
             const groupId = `nav-group-${index}`;
@@ -392,14 +364,13 @@ export function AppSidebar({ access, canAccess, onRetryPermissions, onNavigate, 
                   type="button"
                   className={
                     'faranou-nav-group flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 text-[13px] font-semibold focus-visible:outline-2 focus-visible:outline-gold ' +
+                    (open ? 'faranou-nav-group--open ' : '') +
                     (collapsed ? 'justify-center px-0' : '')
                   }
                   aria-expanded={open}
                   aria-controls={collapsed ? undefined : groupId}
                   onClick={() => {
                     if (collapsed) {
-                      // The rail shows icons only: opening a group expands the sidebar again
-                      // and unfolds that group, instead of toggling something invisible.
                       onToggleCollapsed();
                       setOpenGroups((previous) => ({ ...previous, [group.label]: true }));
                       return;
@@ -450,29 +421,14 @@ export function AppSidebar({ access, canAccess, onRetryPermissions, onNavigate, 
                         <button type="button" onClick={onRetryPermissions}>تلاش دوباره</button>
                       </li>
                     ) : null}
-                    {leaves.map((leaf) =>
-                      leaf.to ? (
-                        <li key={leaf.label}>
-                          {leaf.section ? <p className="faranou-nav-section">{leaf.section}</p> : null}
-                          <Link
-                            to={leaf.to}
-                            onClick={onNavigate}
-                            aria-current={isActivePath(pathname, leaf.to) ? 'page' : undefined}
-                            className={
-                              'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' +
-                              (isActivePath(pathname, leaf.to) ? 'bg-pick/20 text-white ring-1 ring-pick/30' : 'text-on-navy/80 hover:bg-white/10 hover:text-white')
-                            }
-                          >
-                            <NavIcon icon={leaf.icon} tone={leaf.tone} size="sm" />
-                            <span className="min-w-0 flex-1">{leaf.label}</span>
-                          </Link>
-                        </li>
-                      ) : (
-                        <li key={leaf.label}>
-                          <DisabledLeaf leaf={leaf} nested />
-                        </li>
-                      ),
-                    )}
+                    <NestedNavSections
+                      groupLabel={group.label}
+                      leaves={leaves}
+                      pathname={pathname}
+                      onNavigate={onNavigate}
+                      toneClass={toneClass}
+                      DisabledLeaf={({ leaf, nested }) => <DisabledLeaf leaf={leaf as NavLeaf} nested={nested === true} />}
+                    />
                   </ul>
                 ) : null}
               </li>

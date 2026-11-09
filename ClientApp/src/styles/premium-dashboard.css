@@ -68,10 +68,6 @@
 }
 
 .faranou-sidebar.faranou-sidebar--premium {
-  /* Issue #442: widened (252->276px) and deepened so the nested "مدیریت کاربری"
-     sub-menu has room and stays above WCAG AA contrast; this compound-class rule has
-     higher specificity than the plain `.faranou-sidebar` rule in index.css, so it is
-     the one actually rendered and must carry the real values. */
   isolation: isolate;
   color: #eaf5fc;
   width: 276px;
@@ -178,8 +174,7 @@
   min-height: 268px !important;
   border-radius: 22px;
   border: 1px solid rgb(255 255 255 / .18) !important;
-  background:
-    linear-gradient(115deg, #04101f 0%, #0a2742 40%, #0c3d58 100%) !important;
+  background: linear-gradient(115deg, #04101f 0%, #0a2742 40%, #0c3d58 100%) !important;
   box-shadow: 0 20px 48px rgb(8 40 70 / .3), inset 0 1px 0 rgb(255 255 255 / .1) !important;
   overflow: hidden;
   color: #fff !important;
@@ -325,18 +320,14 @@
 
 @media (max-width: 767px) {
   .faranou-welcome.faranou-welcome--milad { min-height: 220px !important; border-radius: 16px; }
-  /* Issue #442: kept in step with the index.css drawer rule (min(300px, 86vw)) — this
-     selector has equal specificity and loads after index.css, so its value is the one
-     that actually renders; must not silently diverge from it again. */
   .faranou-sidebar--premium { width: min(300px, 86vw); flex-basis: min(300px, 86vw); }
 }
 
-/* Colored nav icons */
 .faranou-nav-icon {
   display: inline-flex;
   width: 1.85rem;
   height: 1.85rem;
-  flex: 0 0 auto; /* Issue #442 review: merged from index.css's duplicate rule — no shrink/grow, fixed size. */
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
   border-radius: 9px;
@@ -355,7 +346,6 @@
 .faranou-nav-icon--slate { background: linear-gradient(145deg, #94a3b8, #475569); }
 .faranou-nav-icon--blue { background: linear-gradient(145deg, #60a5fa, #2563eb); }
 .faranou-nav-icon--green { background: linear-gradient(145deg, #4ade80, #16a34a); }
-/* Issue #442: nested sub-menu rows use a visibly smaller icon box than top-level items. */
 .faranou-nav-icon.faranou-nav-icon--sm {
   width: 1.5rem;
   height: 1.5rem;
@@ -373,21 +363,88 @@
   background: linear-gradient(90deg, transparent, rgb(140 200 240 / .35), transparent);
 }
 
+/* ---- Sidebar group visual hierarchy (UI shell polish) ---- */
 .faranou-nav-group {
-  color: rgb(220 240 255 / .95);
-  border: 1px solid transparent;
-  background: transparent;
-  transition: background 140ms ease, border-color 140ms ease;
+  color: #e8f4ff;
+  border: 1px solid rgb(120 180 220 / .18);
+  background: linear-gradient(180deg, rgb(18 48 78 / .92) 0%, rgb(14 40 66 / .88) 100%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .06);
+  font-weight: 700;
 }
 .faranou-nav-group:hover {
-  border-color: rgb(140 200 230 / .14);
-  background: rgb(255 255 255 / .05);
+  border-color: rgb(150 200 235 / .28);
+  background: linear-gradient(180deg, rgb(22 56 90 / .95) 0%, rgb(16 46 74 / .9) 100%);
 }
-
+.faranou-nav-group[aria-expanded="true"],
+.faranou-nav-group--open {
+  border-color: rgb(180 210 240 / .32);
+  background: linear-gradient(180deg, rgb(24 62 98 / .96) 0%, rgb(18 50 82 / .92) 100%);
+}
 .faranou-nav-sub {
-  margin-top: .25rem;
+  margin-top: .35rem;
+  padding: .35rem 0 .15rem;
+  border-inline-start: 2px solid rgb(120 180 220 / .22);
 }
+.faranou-nav-section-toggle {
+  display: flex;
+  width: 100%;
+  min-height: 2rem;
+  align-items: center;
+  gap: .35rem;
+  padding: .2rem .35rem;
+  border: 0;
+  border-radius: .55rem;
+  background: transparent;
+  color: var(--color-gold, #d9a24b);
+  font-size: .7rem;
+  font-weight: 800;
+  letter-spacing: .02em;
+  text-align: start;
+  cursor: pointer;
+}
+.faranou-nav-section-toggle:hover { background: rgb(255 255 255 / .06); }
+.faranou-nav-section-toggle:focus-visible {
+  outline: 2px solid var(--color-gold, #d9a24b);
+  outline-offset: 1px;
+}
+.faranou-nav-section-toggle .faranou-nav-section-chevron {
+  margin-inline-start: auto;
+  transition: transform 140ms ease;
+}
+.faranou-nav-section-toggle[aria-expanded="true"] .faranou-nav-section-chevron {
+  transform: rotate(180deg);
+}
+.faranou-nav-leaf--nested { padding-inline-start: .35rem; }
 
 .faranou-sidebar--premium .faranou-nav-active .faranou-nav-icon {
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .35), 0 2px 8px rgb(0 30 60 / .25);
+}
+
+/* Larger, clearer active workspace tabs */
+.faranou-tab {
+  max-width: 17rem;
+  border-radius: 12px;
+}
+.faranou-tab--active {
+  border-color: rgb(240 184 74 / .9);
+  background: linear-gradient(160deg, #ffffff 0%, #fff6e4 100%);
+  box-shadow: 0 3px 12px rgb(31 65 111 / .12);
+}
+.faranou-tab--active .faranou-tab-button {
+  color: #123b61;
+  font-weight: 800;
+}
+.faranou-tab--active .faranou-tab-icon { color: #1d6a70; }
+.faranou-tab-button {
+  min-height: 2.45rem;
+  gap: .5rem;
+  padding: .3rem .85rem;
+  font-size: .875rem;
+  font-weight: 700;
+}
+.faranou-tab-label { max-width: 13.5rem; }
+.faranou-tab-close { width: 1.75rem; }
+.faranou-tabbar-new {
+  width: 2.45rem;
+  border-radius: 12px;
 }
