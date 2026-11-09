@@ -1,5 +1,6 @@
 import type { CreateAdminUserRequest, UpdateAdminUserRequest } from '../../../api/types';
 import { hrEmployeeNumberPattern } from '@/features/hr/lib/hrLabels';
+import { passwordMaxLength, passwordMinLength, passwordMinMessage } from '@/lib/passwordPolicy';
 
 // The limits mirror Server/Api/UserAdministrationEndpoints.cs and Constants/*. The server stays
 // authoritative and validates again; this only gives the user fast, field-level feedback.
@@ -9,8 +10,8 @@ export const limits = {
   nameMax: 50,
   emailMax: 254,
   mobileLength: 11,
-  passwordMin: 15,
-  passwordMax: 128,
+  passwordMin: passwordMinLength,
+  passwordMax: passwordMaxLength,
 } as const;
 
 const fa = new Intl.NumberFormat('fa-IR', { useGrouping: false });
@@ -108,8 +109,10 @@ export function validateUserForm(values: UserFormValues, mode: 'create' | 'edit'
   else if (normalizeText(values.lastName).length > limits.nameMax) errors.lastName = `نام خانوادگی نباید بیش از ${fa.format(limits.nameMax)} نویسه باشد.`;
 
   const email = normalizeText(values.emailAddress);
-  if (email === '') errors.emailAddress = 'ایمیل را وارد کنید.';
-  else if (email.length > limits.emailMax) errors.emailAddress = `ایمیل نباید بیش از ${fa.format(limits.emailMax)} نویسه باشد.`;
+  // The e-mail is optional: only a given value is checked (the server stores NULL when empty).
+  if (email === '') {
+    // nothing to check
+  } else if (email.length > limits.emailMax) errors.emailAddress = `ایمیل نباید بیش از ${fa.format(limits.emailMax)} نویسه باشد.`;
   else if (!emailPattern.test(email)) errors.emailAddress = 'قالب ایمیل معتبر نیست.';
 
   const mobile = normalizeText(values.cellPhoneNumber);
@@ -119,7 +122,7 @@ export function validateUserForm(values: UserFormValues, mode: 'create' | 'edit'
 
   if (mode === 'create') {
     if (values.password.trim() === '') errors.password = 'رمز عبور را وارد کنید.';
-    else if (values.password.length < limits.passwordMin) errors.password = `رمز عبور باید دست‌کم ${fa.format(limits.passwordMin)} نویسه باشد.`;
+    else if (values.password.length < limits.passwordMin) errors.password = passwordMinMessage;
     else if (values.password.length > limits.passwordMax) errors.password = `رمز عبور نباید بیش از ${fa.format(limits.passwordMax)} نویسه باشد.`;
 
     if (values.confirmPassword === '') errors.confirmPassword = 'تکرار رمز عبور را وارد کنید.';
@@ -141,7 +144,7 @@ export function toUpdateRequest(values: UserFormValues): UpdateAdminUserRequest 
     username: normalizeText(values.username),
     firstName: orNull(values.firstName),
     lastName: orNull(values.lastName),
-    emailAddress: normalizeText(values.emailAddress),
+    emailAddress: orNull(values.emailAddress),
     cellPhoneNumber: orNull(values.cellPhoneNumber),
     isActive: values.isActive,
   };

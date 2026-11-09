@@ -218,6 +218,27 @@ export async function sendJson(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', path
 }
 
 
+/**
+ * A state-changing request whose body is the raw bytes of a file (not JSON): it carries the
+ * anti-forgery request token, and the declared type is only a hint — the server decides the real
+ * type from the file content.
+ */
+export async function sendFile(method: 'PUT', path: string, file: Blob, contentType: string): Promise<void> {
+  const token = parseAntiforgeryToken(await getJson('/antiforgery/token'));
+  const response = await fetch(`${apiBase}${path}`, {
+    method,
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json', [token.headerName]: token.requestToken, 'Content-Type': contentType },
+    body: file,
+  });
+  await ensureSuccess(response);
+}
+
+/** The same-origin URL of a path below the API base (e.g. for an `<img>` of a protected resource). */
+export function apiUrl(path: string): string {
+  return `${apiBase}${path}`;
+}
+
 /** An anti-forgery token as issued by the server. */
 export type AntiforgeryToken = { headerName: string; requestToken: string };
 

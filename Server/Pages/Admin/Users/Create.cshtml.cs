@@ -87,7 +87,7 @@ public class CreateModel : Infrastructure.BasePageModelWithDatabaseContext
 			var foundedAny =
 				await
 				DatabaseContext.Users
-				.Where(current => current.EmailAddress.ToLower() == fixedEmailAddress.ToLower())
+				.Where(current => current.EmailAddress != null && current.EmailAddress.ToLower() == fixedEmailAddress.ToLower())
 				.AnyAsync();
 
 			if (foundedAny)

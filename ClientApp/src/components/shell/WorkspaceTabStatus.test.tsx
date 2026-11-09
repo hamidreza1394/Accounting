@@ -75,6 +75,10 @@ describe('workspace tab state indicators (Issue #444 stage 1 completion)', () =>
     await navigate('/app/hr/org/units');
     const buttons = [...tabbar().querySelectorAll<HTMLButtonElement>('.faranou-tab-button')];
     expect(buttons.length).toBeGreaterThanOrEqual(3);
+    const activeTab = buttons.find((button) => button.getAttribute('aria-current') === 'page');
+    const inactiveTab = buttons.find((button) => button.getAttribute('aria-current') !== 'page');
+    expect(activeTab).toHaveStyle({ backgroundColor: 'var(--color-navy)', color: 'var(--color-primary-foreground)' });
+    expect(inactiveTab).toHaveStyle({ backgroundColor: 'var(--color-period)', color: 'var(--color-sub)' });
     // The icons are meaningful per route, not one icon for everything.
     const iconClasses = buttons.map((button) => button.querySelector('svg')?.classList.contains('faranou-tab-icon'));
     expect(iconClasses.every(Boolean)).toBe(true);

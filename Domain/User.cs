@@ -14,7 +14,7 @@ public class User :
 	#endregion /Static(s)
 
 	#region Constructor
-	public User(string emailAddress) : base()
+	public User(string? emailAddress) : base()
 	{
 		UpdateDateTime = InsertDateTime;
 
@@ -250,10 +250,8 @@ public class User :
 		(ResourceType = typeof(Resources.DataDictionary),
 		Name = nameof(Resources.DataDictionary.EmailAddress))]
 
-	[System.ComponentModel.DataAnnotations.Required
-		(ErrorMessageResourceType = typeof(Resources.Messages.Validations),
-		ErrorMessageResourceName = nameof(Resources.Messages.Validations.Required))]
-
+	// The e-mail address is OPTIONAL (null when not given); when present it is unique,
+	// case-insensitively, through the filtered unique index (see UserConfiguration).
 	[System.ComponentModel.DataAnnotations.MaxLength
 		(length: Constants.MaxLength.EmailAddress,
 		ErrorMessageResourceType = typeof(Resources.Messages.Validations),
@@ -263,7 +261,7 @@ public class User :
 		(pattern: Constants.RegularExpression.EmailAddress,
 		ErrorMessageResourceType = typeof(Resources.Messages.Validations),
 		ErrorMessageResourceName = nameof(Resources.Messages.Validations.EmailAddress))]
-	public string EmailAddress { get; set; }
+	public string? EmailAddress { get; set; }
 	#endregion /EmailAddress Property
 
 	#region EmailAddressVerificationKey Property
@@ -344,7 +342,7 @@ public class User :
 	/// <summary>
 	/// Changes the email address and invalidates its previous verification state.
 	/// </summary>
-	public void ChangeEmailAddress(string emailAddress)
+	public void ChangeEmailAddress(string? emailAddress)
 	{
 		if (string.Equals(EmailAddress, emailAddress, System.StringComparison.OrdinalIgnoreCase))
 			return;

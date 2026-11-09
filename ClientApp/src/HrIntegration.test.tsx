@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
+import { openSystemMenu } from './test/sidebar';
 // Preload the lazy create-form chunk (the same pattern the page-level test files use):
 // the first dynamic import in vitest compiles the whole module graph on the fly inside the
 // assertion window, which is host-speed dependent (the Linux e2e job and the Windows publish
@@ -56,10 +57,13 @@ const positionsLink = { name: 'سمت‌های سازمانی' };
 const employeesLink = { name: 'کارکنان' };
 const hrLabels = [unitsLink.name, positionsLink.name, employeesLink.name];
 
+/** Renders the app and opens «مدیریت سیستم» by a click (the sidebar starts folded; the route never opens it). */
 async function openShell(path = '/app/') {
   window.history.replaceState(null, '', path);
   render(<App navigate={vi.fn()} />);
-  return screen.findByRole('navigation', { name: 'منوی اصلی' });
+  const nav = await screen.findByRole('navigation', { name: 'منوی اصلی' });
+  await openSystemMenu(userEvent.setup(), nav);
+  return nav;
 }
 
 describe('HR sidebar entries (company-scoped permissions)', () => {

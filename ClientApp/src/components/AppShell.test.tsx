@@ -6,6 +6,7 @@ import type { AccessSnapshot } from '../lib/permissions';
 import { Link, RouteView } from '../lib/router';
 import { resetFormsForTests, useFormGuard } from '../lib/formGuard';
 import { AppShell } from './AppShell';
+import { openSystemMenu } from '../test/sidebar';
 import { useState } from 'react';
 
 const session: Session = { username: 'hamid', fullName: 'حمید رضایی', accountKind: 'User', isAdministrator: false };
@@ -88,8 +89,9 @@ describe('AppShell', () => {
     expect(await screen.findByRole('button', { name: 'خروج' })).toBeDisabled();
   });
 
-  it('shows the renamed organizational section and no longer the old "ساختار سازمانی و کارکنان" name', () => {
+  it('shows the renamed organizational section and no longer the old "ساختار سازمانی و کارکنان" name', async () => {
     shell(installationAdmin, { isAdministrator: true });
+    await openSystemMenu(userEvent.setup());
     expect(screen.getByRole('button', { name: 'ساختار سازمانی' })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.queryByText('ساختار سازمانی و کارکنان')).toBeNull();
     expect(screen.getByRole('link', { name: 'واحدهای سازمانی' })).toHaveAttribute('href', '/app/hr/org/units');
@@ -97,8 +99,9 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: 'کارکنان' })).toHaveAttribute('href', '/app/hr/org/employees');
   });
 
-  it('shows the focused system-administration menu and removes redundant user-list shortcuts', () => {
+  it('shows the focused system-administration menu and removes redundant user-list shortcuts', async () => {
     shell(installationAdmin, { isAdministrator: true });
+    await openSystemMenu(userEvent.setup());
     expect(screen.getByRole('button', { name: /مدیریت سیستم/ })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'مدیریت کاربران' })).toHaveAttribute('href', '/app/admin/users');
     expect(screen.getByRole('link', { name: 'گروه‌های دسترسی' })).toHaveAttribute('href', '/app/admin/roles');
@@ -113,20 +116,22 @@ describe('AppShell', () => {
     expect(screen.queryByText('مشاهده ورود و خروج کاربران')).toBeNull();
   });
 
-  it('keeps the new administration labels readable without truncation', () => {
+  it('keeps the new administration labels readable without truncation', async () => {
     // JSDOM cannot measure visual wrapping, but it can guard the full label and wrapping classes.
     shell(installationAdmin, { isAdministrator: true });
+    await openSystemMenu(userEvent.setup());
     const longLabel = screen.getByText('سیاست‌های امنیتی');
     expect(longLabel).toHaveTextContent('سیاست‌های امنیتی');
     expect(longLabel.className).not.toContain('truncate');
     expect(longLabel.className).toContain('whitespace-normal');
   });
 
-  it('keeps the "coming soon" badge visible (not hover/screen-reader-only) on nested disabled items', () => {
+  it('keeps the "coming soon" badge visible (not hover/screen-reader-only) on nested disabled items', async () => {
     // Issue #442 review (Finding 3): a bare dot that only surfaced its meaning via a
     // `title` tooltip or a visually-hidden span was invisible to touch users. Nested rows
     // now carry the same always-visible text badge as top-level rows, just smaller.
     shell(installationAdmin, { isAdministrator: true });
+    await openSystemMenu(userEvent.setup());
     const nestedItem = screen.getByText('سیاست‌های امنیتی').closest('[aria-disabled="true"]') as HTMLElement;
     expect(nestedItem).toBeTruthy();
     expect(nestedItem).toHaveTextContent('به‌زودی');
@@ -252,23 +257,26 @@ describe('AppShell', () => {
   describe('administration menu from the real company permissions', () => {
     const adminLinks = ['مدیریت کاربران', 'گروه‌های دسترسی', 'کاتالوگ و جزئیات مجوزها', 'گزارش امنیت و سوابق'];
 
-    it('shows nothing to an ordinary member, even when the session says isAdministrator', () => {
+    it('shows nothing to an ordinary member, even when the session says isAdministrator', async () => {
       shell(companyAdmin([]), { isAdministrator: true });
+    await openSystemMenu(userEvent.setup());
       for (const label of adminLinks) expect(screen.queryByRole('link', { name: label })).toBeNull();
       // Everything every signed-in user may use stays.
       expect(screen.getByRole('link', { name: 'درخواست‌های عضویت من' })).toBeInTheDocument();
     });
 
-    it('shows only the role pages to a company administrator, never the installation-only pages', () => {
+    it('shows only the role pages to a company administrator, never the installation-only pages', async () => {
       shell(companyAdmin(['roles.view', 'roles.update']));
+    await openSystemMenu(userEvent.setup());
       expect(screen.getByRole('link', { name: 'گروه‌های دسترسی' })).toHaveAttribute('href', '/app/admin/roles');
       expect(screen.getByRole('link', { name: 'کاتالوگ و جزئیات مجوزها' })).toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'مدیریت کاربران' })).toBeNull();
       expect(screen.queryByRole('link', { name: 'گزارش امنیت و سوابق' })).toBeNull();
     });
 
-    it('shows every administration page to an installation administrator', () => {
+    it('shows every administration page to an installation administrator', async () => {
       shell(installationAdmin);
+    await openSystemMenu(userEvent.setup());
       for (const label of adminLinks) expect(screen.getByRole('link', { name: label })).toBeInTheDocument();
     });
 

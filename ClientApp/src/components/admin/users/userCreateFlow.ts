@@ -1,5 +1,5 @@
 import { createAdminUser, ApiError } from '../../../api/client';
-import { createHrEmployee, getNextEmployeeNumber } from '@/features/hr/api/hrClient';
+import { createHrEmployee, getNextEmployeeNumber, putEmployeePhoto } from '@/features/hr/api/hrClient';
 import { normalizeText, toCreateRequest, type UserFormValues } from './userFormValidation';
 import type { UserFlashKind } from './userFlash';
 
@@ -12,6 +12,8 @@ export type CreateUserFlowInput = {
   companyId: string | null;
   /** The value the form pre-filled from `next-number`, to tell a suggestion from a typed number. */
   suggestedEmployeeNumber: string | null;
+  /** The photo for the personnel record, uploaded only after the record was created. */
+  photo?: File | null;
   /** Lets the app handle an expired session; returns true when it took over. */
   onUnauthenticated: (error: unknown) => boolean;
 };
@@ -28,7 +30,7 @@ export type CreateUserFlowResult = { userId: string; flash: UserFlashKind; sessi
  * created account is never hidden behind a form error.
  */
 export async function createUserWithEmployee(input: CreateUserFlowInput): Promise<CreateUserFlowResult> {
-  const { values, companyId, suggestedEmployeeNumber, onUnauthenticated } = input;
+  const { values, companyId, suggestedEmployeeNumber, onUnauthenticated, photo = null } = input;
   const created = await createAdminUser(toCreateRequest(values));
 
   const typed = values.employeeNumber.trim();
@@ -44,7 +46,15 @@ export async function createUserWithEmployee(input: CreateUserFlowInput): Promis
   let renewable = suggestedEmployeeNumber !== null && typed === suggestedEmployeeNumber;
   for (let attempt = 0; ; attempt += 1) {
     try {
-      await createHrEmployee(companyId, { employeeNumber, ...record });
+      const employee = await createHrEmployee(companyId, { employeeNumber, ...record });
+      if (photo !== null) {
+        try {
+          await putEmployeePhoto(companyId, employee.id, photo);
+        } catch (photoCause) {
+          const expired = onUnauthenticated(photoCause);
+          return { userId: created.id, flash: 'createdPhotoFailed', sessionExpired: expired };
+        }
+      }
       return { userId: created.id, flash: 'createdWithEmployee' };
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 409) {

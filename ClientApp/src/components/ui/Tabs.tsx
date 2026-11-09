@@ -67,7 +67,7 @@ export function Tabs({ label, items, value, onValueChange, className }: TabsProp
               onKeyDown={(event) => move(event, item.id)}
               className={cn(
                 '-mb-px whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-semibold max-sm:min-h-11 max-sm:min-w-0 max-sm:flex-1 max-sm:basis-0 max-sm:whitespace-normal max-sm:px-1.5 max-sm:text-xs outline-none focus-visible:ring-2 focus-visible:ring-gold disabled:cursor-not-allowed disabled:opacity-50',
-                selected ? 'border-teal-deep text-teal-deep' : 'border-transparent text-sub hover:text-ink',
+                selected ? 'border-gold bg-navy text-white shadow-sm' : 'border-transparent bg-cool text-sub hover:bg-period hover:text-navy',
               )}
             >
               {item.label}

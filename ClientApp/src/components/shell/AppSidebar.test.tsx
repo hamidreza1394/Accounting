@@ -40,6 +40,14 @@ beforeEach(() => {
   window.history.pushState(null, '', '/app/');
 });
 
+/** Every group starts folded; opening one is always an explicit click. */
+async function openSystem() {
+  const user = userEvent.setup();
+  const system = screen.getByRole('button', { name: 'مدیریت سیستم' });
+  await user.click(system);
+  return { user, system };
+}
+
 describe('AppSidebar (Issue #444 stage 1 shell)', () => {
   it('groups the catalog subsystems as folded first-level groups with collapsible leaves', async () => {
     const user = userEvent.setup();
@@ -56,7 +64,7 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     expect(screen.queryByText('اسناد و دفاتر')).not.toBeInTheDocument();
   });
 
-  it('keeps the section icon when only a later leaf of the section is permitted', () => {
+  it('keeps the section icon when only a later leaf of the section is permitted', async () => {
     const access = companyMember(['hr.employees.list']);
     const { container } = render(
       <RouterProvider routes={[]}>
@@ -69,6 +77,7 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
         />
       </RouterProvider>,
     );
+    await openSystem();
     const toggle = screen.getByRole('button', { name: 'ساختار سازمانی' });
     expect(screen.queryByRole('link', { name: 'واحدهای سازمانی' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'کارکنان' })).toBeInTheDocument();
@@ -76,8 +85,9 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     expect(container).toBeTruthy();
   });
 
-  it('keeps the organizational pages under system administration in a section named «ساختار سازمانی»', () => {
+  it('keeps the organizational pages under system administration in a section named «ساختار سازمانی»', async () => {
     setup();
+    await openSystem();
     expect(screen.queryByText('منابع انسانی')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'ساختار سازمانی' })).toBeInTheDocument();
     expect(screen.queryByText('ساختار سازمانی و کارکنان')).not.toBeInTheDocument();
@@ -98,8 +108,9 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     expect(within(section).getAllByRole('link').map((link) => link.textContent)).toEqual(['واحدهای سازمانی', 'سمت‌های سازمانی', 'کارکنان']);
   });
 
-  it('links «مجوزهای دسترسی» to its real page, directly under the user management entry', () => {
+  it('links «مجوزهای دسترسی» to its real page, directly under the user management entry', async () => {
     setup();
+    await openSystem();
     const links = screen.getAllByRole('link').map((link) => link.textContent);
     expect(links.indexOf('مجوزهای دسترسی')).toBe(links.indexOf('مدیریت کاربران') + 1);
     expect(screen.getByRole('link', { name: 'مجوزهای دسترسی' })).toHaveAttribute('href', '/app/admin/access');
@@ -110,14 +121,15 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     expect(screen.queryByRole('link', { name: 'مجوزهای دسترسی' })).not.toBeInTheDocument();
   });
 
-  it('never creates a link for a page that has no route (placeholders stay disabled)', () => {
+  it('never creates a link for a page that has no route (placeholders stay disabled)', async () => {
     setup();
+    await openSystem();
     expect(screen.getByText('سیاست‌های امنیتی').closest('[aria-disabled="true"]')).toBeTruthy();
   });
 
   it('lets the user fold and expand the organizational section without affecting sibling groups', async () => {
-    const user = userEvent.setup();
     setup();
+    const { user } = await openSystem();
     const section = screen.getByRole('button', { name: 'ساختار سازمانی' });
     expect(section).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('link', { name: 'کارکنان' })).toBeInTheDocument();
@@ -154,8 +166,9 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     expect(aside.innerHTML).not.toMatch(/\b(?:ml|mr|pl|pr|left|right)-/);
   });
 
-  it('uses one icon style: a coloured chip for groups, a uniform plain icon for sub-menu items', () => {
+  it('uses one icon style: a coloured chip for groups, a uniform plain icon for sub-menu items', async () => {
     const { container } = setup();
+    await openSystem();
     const groupChips = container.querySelectorAll('.faranou-nav-group .faranou-nav-icon');
     expect(groupChips.length).toBeGreaterThan(5);
     for (const chip of groupChips) expect(chip.className).not.toContain('--sub');
@@ -168,8 +181,13 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     }
   });
 
-  it('opens the real groups by default and keeps every entry Persian (no internal English names)', () => {
+  it('keeps every group folded by default and every entry Persian once opened (no internal English names)', async () => {
     setup();
+    for (const group of screen.getAllByRole('button').filter((button) => button.classList.contains('faranou-nav-group'))) {
+      expect(group).toHaveAttribute('aria-expanded', 'false');
+    }
+    expect(screen.queryByRole('link', { name: 'مدیریت کاربران' })).not.toBeInTheDocument();
+    await openSystem();
     expect(screen.getByRole('link', { name: 'مدیریت کاربران' })).toBeInTheDocument();
     for (const internal of ['hr', 'reporting', 'trade', 'roles', 'users', 'consolidation', '/admin', '/hr']) {
       expect(screen.queryByText(internal, { exact: true })).not.toBeInTheDocument();
@@ -188,32 +206,67 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     expect(screen.queryByRole('button', { name: 'ساختار سازمانی' })).not.toBeInTheDocument();
   });
 
-  it('marks the active page with aria-current, including deep routes, and only that page', () => {
+  it('marks the active page with aria-current, including deep routes, and only that page', async () => {
     window.history.pushState(null, '', '/app/admin/users/123');
     setup();
+    await openSystem();
     const active = screen.getByRole('link', { name: 'مدیریت کاربران' });
     expect(active).toHaveAttribute('aria-current', 'page');
     expect(active).toHaveClass('faranou-nav-active');
     expect(document.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
   });
 
-  it('auto-opens the owning group and section for a deep-linked route', () => {
+  it('does not open any group for a deep-linked route: the active route only drives the highlight', async () => {
     window.history.pushState(null, '', '/app/hr/org/units');
     setup(installationAdmin);
-    const units = screen.getByRole('link', { name: 'واحدهای سازمانی' });
-    expect(units).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('button', { name: 'مدیریت سیستم' })).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('button', { name: 'ساختار سازمانی' })).toHaveAttribute('aria-expanded', 'true');
+    const system = screen.getByRole('button', { name: 'مدیریت سیستم' });
+    expect(system).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('link', { name: 'واحدهای سازمانی' })).not.toBeInTheDocument();
+    // The folded owner of the active page shows a dot, never opens by itself.
+    expect(system.querySelector('.faranou-nav-group-dot')).not.toBeNull();
+    const user = userEvent.setup();
+    await user.click(system);
+    expect(system).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('link', { name: 'واحدهای سازمانی' })).toHaveAttribute('aria-current', 'page');
   });
 
-  it('lets the user fold the system group by hand while the dashboard stays the active page', async () => {
+  it('keeps the system group folded on the dashboard and on the create-user form', () => {
+    for (const path of ['/app/', '/app/admin/users/new']) {
+      window.history.pushState(null, '', path);
+      const { unmount } = setup();
+      expect(screen.getByRole('button', { name: 'مدیریت سیستم' })).toHaveAttribute('aria-expanded', 'false');
+      expect(screen.queryByRole('link', { name: 'مدیریت کاربران' })).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it('opens the system group on a click and folds it on the next click, independent of the active page', async () => {
     window.history.pushState(null, '', '/');
-    const user = userEvent.setup();
     setup();
-    const system = screen.getByRole('button', { name: 'مدیریت سیستم' });
+    const { user, system } = await openSystem();
+    expect(system).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('link', { name: 'مدیریت کاربران' })).toBeInTheDocument();
     await user.click(system);
     expect(system).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('link', { name: 'مدیریت کاربران' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'داشبورد' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('keeps what the user opened and opens nothing else when navigating to another page', async () => {
+    window.history.pushState(null, '', '/');
+    setup();
+    const { user, system } = await openSystem();
+    await user.click(screen.getByRole('link', { name: 'گروه‌های دسترسی' }));
+    expect(window.location.pathname).toBe('/app/admin/roles');
+    expect(system).toHaveAttribute('aria-expanded', 'true');
+    for (const group of screen.getAllByRole('button').filter((button) => button.classList.contains('faranou-nav-group') && button !== system)) {
+      expect(group).toHaveAttribute('aria-expanded', 'false');
+    }
+    // A folded group stays folded after navigation too (the dot only marks it as the owner).
+    await user.click(system);
+    expect(system).toHaveAttribute('aria-expanded', 'false');
+    await user.click(screen.getByRole('link', { name: 'داشبورد' }));
+    expect(system).toHaveAttribute('aria-expanded', 'false');
   });
 
   it('supports keyboard operation of groups and sections with Enter and Space', async () => {
@@ -226,6 +279,10 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     expect(accounting).toHaveAttribute('aria-expanded', 'true');
     await user.keyboard(' ');
     expect(accounting).toHaveAttribute('aria-expanded', 'false');
+    const system = screen.getByRole('button', { name: 'مدیریت سیستم' });
+    system.focus();
+    await user.keyboard('{Enter}');
+    expect(system).toHaveAttribute('aria-expanded', 'true');
     const section = screen.getByRole('button', { name: 'ساختار سازمانی' });
     section.focus();
     await user.keyboard('{Enter}');
@@ -254,8 +311,9 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     expect(screen.queryByRole('button', { name: 'خروج از حساب' })).not.toBeInTheDocument();
   });
 
-  it('keeps icon sizes fixed: groups 16px, sub-menu items 15px', () => {
+  it('keeps icon sizes fixed: groups 16px, sub-menu items 15px', async () => {
     const { container } = setup();
+    await openSystem();
     expect(container.querySelector('.faranou-nav-group .faranou-nav-icon svg')).toHaveAttribute('width', '16');
     expect(container.querySelector('.faranou-nav-sub .faranou-nav-icon svg')).toHaveAttribute('width', '15');
   });

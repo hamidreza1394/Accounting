@@ -6,11 +6,13 @@ import { PageBreadcrumbBar, PageBreadcrumbProvider } from '@/components/shell/Pa
 import { json, stubApi, userDetails } from '../../../test/adminUsers';
 import { UserCreatePage } from './UserCreatePage';
 import { UserDetailPage } from './UserDetailPage';
-import { clearUserFlash, peekUserFlash, setUserFlash } from './userFlash';
+import { UserListFlashBanner } from './UserListFlashBanner';
+import { clearUserFlash, clearUserListFlash, peekUserFlash, readUserListFlash, setUserFlash } from './userFlash';
+import { resetUserListReturnForTests } from './userListReturn';
 
 const onUnauthenticated = vi.fn((): boolean => false);
 const routes: Route[] = [
-  { path: '/admin/users', element: () => <h1>فهرست</h1>, title: 'فهرست' },
+  { path: '/admin/users', element: () => (<><h1>فهرست</h1><UserListFlashBanner /></>), title: 'فهرست' },
   { path: '/admin/users/new', element: () => <UserCreatePage onUnauthenticated={onUnauthenticated} />, title: 'ایجاد کاربر' },
   { path: '/admin/users/:id', element: () => <UserDetailPage onUnauthenticated={onUnauthenticated} />, title: 'جزئیات' },
 ];
@@ -62,6 +64,8 @@ describe('UserCreatePage', () => {
     onUnauthenticated.mockReset();
     onUnauthenticated.mockReturnValue(false);
     clearUserFlash();
+    clearUserListFlash();
+    resetUserListReturnForTests();
     window.localStorage.clear();
     window.sessionStorage.clear();
   });
@@ -129,7 +133,7 @@ describe('UserCreatePage', () => {
     stubApi(() => json({}));
     setup();
     expect(screen.getByText(/۳ تا ۲۰ نویسه/)).toBeInTheDocument();
-    expect(screen.getByText(/دست‌کم ۱۵ نویسه/)).toBeInTheDocument();
+    expect(screen.getByText(/حداقل ۸ نویسه/)).toBeInTheDocument();
     await openContact(user);
     expect(screen.getByText(/۱۱ رقم لاتین، مانند/)).toBeInTheDocument();
   });
@@ -161,11 +165,12 @@ describe('UserCreatePage', () => {
     expect(field.firstName()).toHaveAttribute('aria-invalid', 'true');
     expect(field.firstName()).toHaveFocus();
     expect(field.username()).toHaveAccessibleDescription(/نام کاربری را وارد کنید/);
-    // The e-mail error sits on the second tab, which is flagged but not opened.
-    expect(tab(/^اطلاعات تماس/)).toHaveAccessibleName(/دارای خطا/);
+    // The e-mail is optional: the contact tab carries no error when it is left empty.
+    expect(tab(/^اطلاعات تماس/)).not.toHaveAccessibleName(/دارای خطا/);
     expect(tab(/^اطلاعات اصلی/)).toHaveAccessibleName(/دارای خطا/);
     await openContact(user);
-    expect(screen.getByText('ایمیل را وارد کنید.')).toBeInTheDocument();
+    expect(screen.queryByText('ایمیل را وارد کنید.')).toBeNull();
+    expect(field.email()).not.toBeRequired();
     expect(calls).toHaveLength(0);
   });
 
@@ -184,7 +189,7 @@ describe('UserCreatePage', () => {
   it.each([
     ['email', 'plain', 'قالب ایمیل معتبر نیست.'],
     ['mobile', '0912', 'شماره موبایل باید ۱۱ رقم لاتین باشد'],
-    ['password', 'short1', 'رمز عبور باید دست‌کم ۱۵ نویسه باشد.'],
+    ['password', 'short1', 'رمز عبور باید حداقل ۸ نویسه داشته باشد.'],
   ] as const)('shows the %s rule on blur', async (name, value, message) => {
     const user = userEvent.setup();
     stubApi(() => json({}));
@@ -216,7 +221,7 @@ describe('UserCreatePage', () => {
     expect(screen.getByText(/نام کاربری نباید بیش از ۲۰ نویسه باشد/)).toBeInTheDocument();
   });
 
-  it('posts exactly the supported fields with the anti-forgery header and opens the new user with a success message', async () => {
+  it('posts exactly the supported fields with the anti-forgery header and returns to the users list with a success message', async () => {
     const user = userEvent.setup();
     const { calls } = stubApi((call) =>
       call.method === 'POST' ? json({ id: 'new-1' }, 201) : json(userDetails(2, { id: 'new-1' })),
@@ -240,8 +245,10 @@ describe('UserCreatePage', () => {
       ['cellPhoneNumber', 'confirmPassword', 'emailAddress', 'firstName', 'isActive', 'lastName', 'password', 'username'],
     );
     expect(post?.headers['X-XSRF-TOKEN']).toBe('tok');
+    await waitFor(() => expect(window.location.pathname).toBe('/app/admin/users'));
+    // The list - not the detail page - shows the message, and it loads again from page 1.
     expect(await screen.findByText('کاربر با موفقیت ایجاد شد.')).toBeInTheDocument();
-    expect(window.location.pathname).toBe('/app/admin/users/new-1');
+    expect(readUserListFlash()?.kind).toBe('created');
     // The password lives nowhere after the save.
     expect(window.location.href).not.toContain('Str0ng');
     expect(window.localStorage.length).toBe(0);
@@ -359,7 +366,7 @@ describe('UserCreatePage', () => {
     expect(await screen.findByRole('button', { name: 'در حال ذخیره…' })).toBeDisabled();
     expect(calls.filter((call) => call.method === 'POST')).toHaveLength(1);
     release(json({ id: 'n3' }, 201));
-    await waitFor(() => expect(window.location.pathname).toBe('/app/admin/users/n3'));
+    await waitFor(() => expect(window.location.pathname).toBe('/app/admin/users'));
     expect(calls.filter((call) => call.method === 'POST')).toHaveLength(1);
   });
 

@@ -4,15 +4,16 @@ import { ApiError, changeMyPassword, UnauthenticatedError } from '../../api/clie
 import { Alert } from '../ui/Alert';
 import { FormField } from '../ui/FormField';
 import { PasswordInput } from '../ui/PasswordInput';
+import { passwordMaxLength, passwordMinLength } from '../../lib/passwordPolicy';
 
 export type PasswordField = 'currentPassword' | 'newPassword' | 'confirmNewPassword';
 export type PasswordFieldErrors = Partial<Record<PasswordField, string>>;
 
 const fieldOrder: readonly PasswordField[] = ['currentPassword', 'newPassword', 'confirmNewPassword'];
-// The same bounds the server enforces (D-073 §5: minimum 15 for new or changed passwords);
-// no further policy is invented here.
-const minLength = 15;
-const maxLength = 128;
+// The same bounds the server enforces (D-078: minimum 8 for new or changed passwords); no further
+// policy is invented here.
+const minLength = passwordMinLength;
+const maxLength = passwordMaxLength;
 const genericError = 'تغییر رمز با خطا مواجه شد.';
 
 /** Client-side checks that run before any request is sent. The server stays the authority. */

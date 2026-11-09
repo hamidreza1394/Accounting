@@ -1,6 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { openSystemMenu } from './test/sidebar';
 import { App } from './App';
 import { resetFormsForTests } from './lib/formGuard';
 import { antiforgeryRoute, company, contextBody, period, selected, session as apiSession, stubApi, type RouteHandler } from './test/api';
@@ -81,6 +82,7 @@ describe('workspace stage 1 completion — the consolidated integration (PR 7)',
 
     // 1) The employees list opens as its own tab through the real sidebar.
     const nav = screen.getByRole('navigation', { name: 'منوی اصلی' });
+    await openSystemMenu(user, nav);
     // The sidebar gates the HR entry behind the company permission hints (fail-closed while
     // they load) — wait for the answer, then navigate.
     await user.click(await within(nav).findByRole('link', { name: 'کارکنان' }, { timeout: 10000 }));
@@ -145,6 +147,7 @@ describe('workspace stage 1 completion — the consolidated integration (PR 7)',
     await screen.findByRole('heading', { level: 1, name: /به سامانه یکپارچه فرانو خوش آمدید/ });
 
     const nav = screen.getByRole('navigation', { name: 'منوی اصلی' });
+    await openSystemMenu(user, nav);
     await user.click(await within(nav).findByRole('link', { name: 'کارکنان' }, { timeout: 10000 }));
     await user.click(await screen.findByRole('button', { name: 'کارمند جدید' }, { timeout: 10000 }));
     await user.type(await screen.findByLabelText(/شماره پرسنلی/), 'EMP-778');

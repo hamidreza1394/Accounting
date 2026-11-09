@@ -68,7 +68,7 @@ describe('UsersListPage', () => {
     expect(await screen.findByText('نام1 خانوادگی1')).toBeInTheDocument();
     const [first] = listCalls(fetchMock);
     expect(Object.fromEntries(first!.searchParams)).toEqual({
-      status: 'all', page: '1', pageSize: '20', sort: 'name', descending: 'false',
+      status: 'all', page: '1', pageSize: '20', sort: 'created', descending: 'true',
     });
     for (const header of ['نام و نام خانوادگی', 'نام کاربری', 'ایمیل', 'موبایل', 'وضعیت', 'شرکت‌های فعال', 'آخرین ورود', 'تاریخ ایجاد']) {
       expect(screen.getByRole('columnheader', { name: new RegExp(header) })).toBeInTheDocument();
@@ -192,7 +192,7 @@ describe('UsersListPage', () => {
     setup('/app/admin/users?status=x&sort=password&page=-4&pageSize=999');
     await screen.findByText('نام1 خانوادگی1');
     expect(Object.fromEntries(listCalls(fetchMock)[0]!.searchParams)).toEqual({
-      status: 'all', page: '1', pageSize: '20', sort: 'name', descending: 'false',
+      status: 'all', page: '1', pageSize: '20', sort: 'created', descending: 'true',
     });
   });
 

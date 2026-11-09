@@ -64,6 +64,11 @@ export function WorkspaceTabEntry({
       aria-current={isActive ? 'page' : undefined}
       title={tooltip}
       className="faranou-tab-button"
+      style={{
+        backgroundColor: isActive ? 'var(--color-navy)' : 'var(--color-period)',
+        color: isActive ? 'var(--color-primary-foreground)' : 'var(--color-sub)',
+        borderRadius: '0.45rem',
+      }}
       onClick={onActivate}
     >
       <Icon size={14} aria-hidden="true" className="faranou-tab-icon" />

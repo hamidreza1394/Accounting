@@ -119,7 +119,7 @@ export function ProfileIdentityTab({ user, cache, onUnauthenticated }: Shared) {
             <span dir="ltr">{user.username ?? '—'}</span>
           </Info>
           <Info label="ایمیل">
-            <span dir="ltr">{user.emailAddress}</span>
+            <span dir="ltr">{user.emailAddress ?? '—'}</span>
           </Info>
           <Info label="وضعیت تأیید ایمیل">
             <Verified value={user.isEmailAddressVerified} />

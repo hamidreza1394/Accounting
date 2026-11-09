@@ -6,7 +6,7 @@
 // anti-forgery token and sends `X-XSRF-TOKEN`. The company id is always the validated work-context
 // company and only ever travels in the route, never as an authorization input (D-013).
 
-import { normalizeApiError, sendJson, UnauthenticatedError } from '@/api/client';
+import { apiUrl, normalizeApiError, sendFile, sendJson, UnauthenticatedError } from '@/api/client';
 import {
   parseCreatedId,
   parseHrAssignmentListResponse,
@@ -101,6 +101,25 @@ export async function getHrEmployee(companyId: string, employeeId: string, signa
  */
 export async function getNextEmployeeNumber(companyId: string, signal?: AbortSignal): Promise<HrNextEmployeeNumber> {
   return parseHrNextEmployeeNumber(await hrGet(hrPath(companyId, 'employees', 'next-number'), signal));
+}
+
+/**
+ * The URL an `<img>` loads the personnel photo from (`GET /org/employees/{id}/photo`): same-origin,
+ * served only after the server checked the company scope and the `hr.employees.view` permission.
+ * `version` changes after an upload so the browser never shows the replaced picture.
+ */
+export function employeePhotoUrl(companyId: string, employeeId: string, version: number): string {
+  return `${apiUrl(hrPath(companyId, 'employees', employeeId, 'photo'))}?v=${version}`;
+}
+
+/** `PUT /org/employees/{id}/photo` → 204. The body is the image file itself (JPEG, PNG or WebP, up to 2 MiB). */
+export async function putEmployeePhoto(companyId: string, employeeId: string, file: File): Promise<void> {
+  await sendFile('PUT', hrPath(companyId, 'employees', employeeId, 'photo'), file, file.type || 'application/octet-stream');
+}
+
+/** `DELETE /org/employees/{id}/photo` → 204 (also when there is no photo). */
+export async function deleteEmployeePhoto(companyId: string, employeeId: string): Promise<void> {
+  await sendJson('DELETE', hrPath(companyId, 'employees', employeeId, 'photo'));
 }
 
 /** `POST /org/employees` → 201 `{ id }`. Duplicate employee number answers 409. */
