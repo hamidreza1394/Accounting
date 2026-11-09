@@ -62,13 +62,14 @@
 
 نام FiscalAccessGrant صرفاً نام مفهومی است، نه schema نهایی. ممکن است سال از دوره‌های موجود مشتق شود. چند grant نباید با تکثیر عضویت کاربر در شرکت پیاده‌سازی شوند.
 
-### 5.1 ممیزی مدل سال/دوره مالی برای D-065 (2026-11-03)
+### 5.1 تصمیم نهایی مدل سال/دوره مالی (D-066 Accepted، 2026-11-08)
 
-- مدل فعلی فقط FiscalPeriod را به‌عنوان رکورد شرکت‌محور با StartDate/EndDate/Title/Status دارد؛ FiscalYear و AccountingPeriod مستقل در Domain وجود ندارد.
-- UI سال نمایشی را از تطبیق دقیق StartDate/EndDate دوره‌های شرکت‌های مختلف مشتق می‌کند (ClientApp/src/lib/fiscalYears.ts) و تست‌ها نمونه سال مالی کامل را نشان می‌دهند.
-- بنابراین Year grant و Period grant دو هدف داده‌ای مستقل در Schema فعلی ندارند. ساخت دو نوع grant بدون تعیین معنای «دوره داخل سال» می‌تواند به اعطای دسترسی ضمنی یا بی‌اثر منجر شود.
-- D-066 در docs/DECISIONS.md گزینه ترجیحی را پیشنهاد می‌کند: FiscalPeriod به‌عنوان سال؛ AccountingPeriod فرزند فقط پس از تأیید محصول؛ Year grant با ExplicitPeriodsOnly/AllPeriodsInYear؛ Period grant روی AccountingPeriod.
-- **هیچ Entity، Migration یا runtime behavior در این مرحله اضافه نشده است.** Issue #488 برای تأیید معنای سال/دوره باز است.
+- مالک محصول گزینه A را تأیید کرد: `FiscalPeriod` موجود نماینده سال مالی شرکت است؛ `FiscalYear` جدید ساخته نمی‌شود.
+- برای الزام دسترسی دوره‌ای D-065، `AccountingPeriod` فرزند FiscalPeriod ایجاد می‌شود. دوره‌ها متعلق به همان Tenant و همان سال‌اند و تقویم موازی در ماژول‌ها ساخته نمی‌شود.
+- تخصیص نقش از عضویت مستقل است. تخصیص Company-scoped برای عملیات اداری غیرمالی و تخصیص Fiscal-year-scoped برای عملیات مالی/دوره‌ای در یک مدل واحد ثبت می‌شوند.
+- تخصیص سالانه دارای policy صریح `ExplicitPeriodsOnly` یا `AllPeriodsInYear` است. اولی فقط دوره‌های انتخاب‌شده را مجاز می‌کند؛ دومی دوره‌های فعلی و آینده همان سال را پوشش می‌دهد.
+- جزئیات Entityها، composite FKها، یکتایی، backfill، copy preview، concurrency و تست‌ها در `docs/FISCAL_ACCESS_DATA_MODEL.md` است.
+- Issue #488 از نظر معنای دامنه حل شده است؛ runtime/schema هنوز NotImplemented تا PRهای اجرایی و شواهد واقعی SQL Server.
 
 ## 6. دفترچه محدود شرکت‌های هم‌گروه
 
