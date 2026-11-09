@@ -78,3 +78,13 @@
 - `20261031140000_SeedTradePermissionCatalog` فقط ۴۶ ردیف اولیه را به جدول مشترک `PermissionDefinitions` اضافه می‌کند؛ هیچ جدول یا ستون جدیدی نمی‌سازد و به `TradeDbContext` مربوط نیست.
 - درج بر اساس Code و با `IF NOT EXISTS` است؛ ردیف از قبل موجود و نام/شرح سفارشی مدیر بازنویسی نمی‌شود. هیچ تخصیص نقش ایجاد نمی‌شود.
 - Down فقط شناسه‌های ثابت seedشده را حذف می‌کند، آن هم در صورت نبود ارجاع از `CompanyRolePermissions`. این Migration روی دیتابیس مشتری اجرا نشده است.
+
+
+## مدل مصوب دسترسی سال مالی و دوره حسابداری (D-066/D-077)
+
+- `FiscalPeriods` موجود به‌عنوان سال مالی حفظ می‌شود؛ جدول `FiscalYears` موازی ممنوع است.
+- `AccountingPeriods` زیرمجموعه `FiscalPeriods` است و با FK ترکیبی `(FiscalPeriodId, TenantId)` به سال همان شرکت متصل می‌شود.
+- `UserCompanyMemberships` مرجع عضویت است؛ تخصیص نقش در `UserCompanyRoleAssignments` مستقل از عضویت نگهداری می‌شود. `UserCompanyRoleAssignmentPeriods` دوره‌های انتخابی policy نوع Explicit را ثبت می‌کند.
+- Composite FKها، filtered unique indexها، RowVersion و قیود دوره/شرکت باید در Migration افزایشی پیاده شوند. شرح کامل: [`FISCAL_ACCESS_DATA_MODEL.md`](FISCAL_ACCESS_DATA_MODEL.md).
+- هیچ grant سالانه برای کاربران فعلی به‌صورت خودکار backfill نمی‌شود. RoleId قدیمی عضویت فقط به Company-scoped assignment منتقل می‌شود تا رفتار اداری حفظ شود؛ دسترسی سال/دوره فقط با تخصیص صریح مدیر ایجاد خواهد شد.
+- Migration فقط پس از تکمیل همه مصرف‌کنندگان، تست SQL Server، بررسی rollback و CI سبز ارائه می‌شود؛ هیچ Migration روی دیتابیس مشتری در این مرحله اجرا نشده است.
