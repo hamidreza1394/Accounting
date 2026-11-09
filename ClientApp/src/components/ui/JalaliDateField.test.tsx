@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -34,6 +34,14 @@ describe('JalaliDateField', () => {
     expect(screen.getByRole('button', { name: '۱۴۰۵/۰۸/۱۲' })).toBeInTheDocument();
   });
 
+  it('provides direct month and year dropdowns in the Jalali calendar', async () => {
+    const user = userEvent.setup();
+    render(<Controlled initial="2026-11-03" />);
+    await user.click(screen.getByRole('button', { name: '۱۴۰۵/۰۸/۱۲' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.querySelectorAll('select')).toHaveLength(2);
+  });
+
   it('opens an RTL Persian calendar on the month of the value, with Persian labels and digits', async () => {
     const user = userEvent.setup();
     render(<Controlled initial="2026-11-03" />);
@@ -55,6 +63,19 @@ describe('JalaliDateField', () => {
     expect(onChange).toHaveBeenCalledExactlyOnceWith('2026-11-06');
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(screen.getByRole('button', { name: '۱۴۰۵/۰۸/۱۵' })).toBeInTheDocument();
+  });
+
+  it('offers a quick today action and returns its Gregorian ISO day', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-03T09:00:00'));
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const onChange = vi.fn();
+    render(<Controlled onChange={onChange} />);
+    await user.click(screen.getByRole('button', { name: 'انتخاب تاریخ' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'امروز' }));
+    expect(onChange).toHaveBeenCalledExactlyOnceWith('2026-11-03');
+    vi.useRealTimers();
   });
 
   it('can be moved to another month and picks a day there', async () => {
