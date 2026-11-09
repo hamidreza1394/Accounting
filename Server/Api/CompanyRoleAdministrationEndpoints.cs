@@ -147,13 +147,10 @@ public static class CompanyRoleAdministrationEndpoints
         var roleNames = await database.UserCompanyMemberships.AsNoTracking()
             .Where(membership => membership.TenantId == companyId
                 && membership.UserId == userId
-                && membership.IsActive)
-            .Join(database.CompanyRoles.AsNoTracking(),
-                membership => new { membership.RoleId, membership.TenantId },
-                role => new { RoleId = role.Id, role.TenantId },
-                (membership, role) => new { role.Name, role.IsActive })
-            .Where(row => row.IsActive)
-            .Select(row => row.Name)
+                && membership.IsActive
+                && membership.Role != null
+                && membership.Role.IsActive)
+            .Select(membership => membership.Role!.Name)
             .Distinct()
             .ToListAsync(cancellationToken);
         if (roleNames.Count == 0) return TypedResults.NotFound();

@@ -50,8 +50,8 @@ MIGRATIONS_DIRECTORY = os.path.join("Infrastructure", "Persistence", "Migrations
 # 'InitialCreate'. Its designer file is the starting point of the difference that the
 # current migration has to apply. ('AlignSchemaWithModel' and 'WidenUserPasswordHash'
 # are published history as well.)
-DELTA_MIGRATION_ID = "20261105094700"
-DELTA_MIGRATION_NAME = "AddUserSessions"
+DELTA_MIGRATION_ID = "20261109164408"
+DELTA_MIGRATION_NAME = "MakeCompanyMembershipRoleOptional"
 
 # The most recent migration. Its operations are computed from the difference between
 # the model of the migration before it (DELTA_MIGRATION_*) and the model of the code

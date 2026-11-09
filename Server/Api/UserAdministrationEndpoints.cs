@@ -145,8 +145,8 @@ public static class UserAdministrationEndpoints
             .Select(membership => new UserCompanyMembershipResponse(
                 membership.TenantId,
                 membership.Company.Name,
-                membership.Role.Code,
-                membership.Role.Name,
+                membership.Role == null ? null : membership.Role.Code,
+                membership.Role == null ? null : membership.Role.Name,
                 membership.IsActive,
                 membership.CreatedAtUtc))
             .ToListAsync(cancellationToken);
@@ -635,11 +635,13 @@ public sealed record UserDetailsResponse(
     string? LegacyRoleName,
     IReadOnlyList<UserCompanyMembershipResponse> Memberships);
 
+// D-078: role fields are null while the member has no company role yet; the membership
+// itself stays a valid, active row.
 public sealed record UserCompanyMembershipResponse(
     Guid CompanyId,
     string CompanyName,
-    string RoleCode,
-    string RoleName,
+    string? RoleCode,
+    string? RoleName,
     bool IsActive,
     DateTime CreatedAtUtc);
 
