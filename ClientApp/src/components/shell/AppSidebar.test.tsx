@@ -67,6 +67,21 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     expect(screen.getByRole('link', { name: 'گروه‌های دسترسی' })).toBeInTheDocument();
   });
 
+  it('lets the user fold and expand the nested organizational section without affecting sibling groups', async () => {
+    const user = userEvent.setup();
+    setup();
+    const section = screen.getByRole('button', { name: 'ساختار سازمانی و کارکنان' });
+    expect(section).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('link', { name: 'کارکنان' })).toBeInTheDocument();
+    await user.click(section);
+    expect(section).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('link', { name: 'کارکنان' })).not.toBeInTheDocument();
+    // Sibling group still independent
+    expect(screen.getByRole('button', { name: 'مدیریت سیستم' })).toHaveAttribute('aria-expanded', 'true');
+    await user.click(section);
+    expect(screen.getByRole('link', { name: 'کارکنان' })).toBeInTheDocument();
+  });
+
   it('opens the real groups by default and keeps every entry Persian (no internal English names)', () => {
     setup();
     expect(screen.getByRole('link', { name: 'مدیریت کاربران' })).toBeInTheDocument();
