@@ -238,3 +238,15 @@ D-065 تخصیص در سطح سال و دوره را الزام کرده است�
 - پیاده‌سازی تخصیص مستقل سالانه و کپی: NotImplemented.
 - طراحی فیزیکی/DDL: Blocked تا تعیین تکلیف D-066 / Issue #488.
 - handoff: `docs/handoffs/ISSUE-444-fiscal-year-user-access.md`.
+
+
+## 17. مدل سال مالی و دوره حسابداری (D-066 Accepted)
+
+- `FiscalPeriod` موجود سال مالی شرکت است؛ `AccountingPeriod` دوره‌های ماهانه/فصلی/عملیاتی زیرمجموعه آن است. جدول FiscalYear یا تقویم موازی ایجاد نشود.
+- عضویت شرکت فقط رابطه User و Company را برقرار می‌کند؛ عضویت به‌تنهایی مجوز عملیاتی یا دسترسی سالانه نمی‌دهد.
+- تخصیص نقش از Membership جداست. CompanyRole در سطح شرکت تعریف می‌شود و برای هر عضویت می‌تواند Company-scoped یا برای یک FiscalPeriod مشخص تخصیص یابد.
+- تخصیص سالانه policy صریح `ExplicitPeriodsOnly` یا `AllPeriodsInYear` دارد. در حالت Explicit فقط AccountingPeriodهای انتخاب‌شده مجازند؛ دوره جدید به‌صورت ضمنی مجاز نمی‌شود. در حالت All تمام دوره‌های فعلی و آینده همان سال پوشش داده می‌شوند.
+- کاربر می‌تواند چند نقش در یک سال داشته باشد. برای تفاوت نقش بین سال‌ها، تخصیص مستقل همان نقش یا نقش اختصاصی در همان Company استفاده می‌شود؛ تغییر CompanyRole مشترک تمام مصرف‌کنندگان آن را متأثر می‌کند.
+- «فراخوانی دسترسی از سال دیگر» فقط همان User و همان Company را هدف می‌گیرد؛ preview، تطبیق کد دوره‌ها، نمایش موارد نامنطبق، ویرایش، تأیید صریح، ذخیره اتمیک، idempotency و Audit الزامی است. مبدأ دست‌نخورده می‌ماند.
+- هیچ رمز، اطلاعات HR/تماس، نشست، LoginHistory یا Audit history کپی نمی‌شود. سقف D-071، عضویت Approved/Active، fail-closed و جدایی Entitlement طبق D-074 حفظ می‌شوند.
+- طرح کامل و Migration strategy: [`FISCAL_ACCESS_DATA_MODEL.md`](FISCAL_ACCESS_DATA_MODEL.md). وضعیت پیاده‌سازی: NotImplemented تا ادغام و تست.
