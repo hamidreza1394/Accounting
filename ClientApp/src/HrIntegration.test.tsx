@@ -100,7 +100,8 @@ describe('HR sidebar entries (company-scoped permissions)', () => {
     expect(within(nav).getByRole('link', positionsLink)).toHaveAttribute('href', '/app/hr/org/positions');
     expect(within(nav).queryByRole('link', employeesLink)).toBeNull();
     expect(within(nav).getByText('کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
-    expect(within(nav).getByRole('link', { name: 'گروه‌های دسترسی' })).toBeInTheDocument();
+    expect(within(nav).queryByRole('link', { name: 'گروه‌های دسترسی' })).toBeNull();
+    expect(within(nav).queryByText('گروه‌های دسترسی')).toBeNull();
   });
 
   it('shows no HR entry while permissions are loading and none after a failure (fail-closed)', async () => {
