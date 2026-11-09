@@ -32,6 +32,7 @@ const username = () => screen.getByLabelText(/^نام کاربری/);
 const email = () => screen.getByLabelText(/^ایمیل/);
 const mobile = () => screen.getByLabelText(/^شماره موبایل/);
 const active = () => screen.getByRole('checkbox', { name: 'حساب فعال باشد' });
+const openContact = (user: ReturnType<typeof userEvent.setup>) => user.click(screen.getByRole('tab', { name: /^اطلاعات تماس/ }));
 const save = () => screen.getByRole('button', { name: 'ذخیرهٔ تغییرات' });
 const puts = (calls: ApiCall[]) => calls.filter((call) => call.method === 'PUT');
 
@@ -48,6 +49,7 @@ describe('UserEditPage', () => {
   });
 
   it('loads the user, prefills the form and has no password fields', async () => {
+    const user = userEvent.setup();
     api();
     setup();
     expect(await screen.findByLabelText(/^نام$/)).toHaveValue('نام2');
@@ -55,10 +57,19 @@ describe('UserEditPage', () => {
     expect(screen.getByLabelText(/^نام خانوادگی$/)).toHaveValue('خانوادگی2');
     expect(username()).toHaveValue('user2');
     expect(username()).toHaveAttribute('dir', 'ltr');
+    expect(active()).toBeChecked();
+    // The password and the personnel-number field never appear when editing.
+    expect(screen.queryByLabelText(/رمز عبور/)).toBeNull();
+    expect(screen.queryByLabelText(/^شماره پرسنلی$/)).toBeNull();
+    await openContact(user);
     expect(email()).toHaveValue('user2@example.test');
     expect(mobile()).toHaveValue('09120000002');
-    expect(active()).toBeChecked();
-    expect(screen.queryByLabelText(/رمز عبور/)).toBeNull();
+    // Switching back keeps what was loaded (and edited) on the first tab.
+    await user.click(screen.getByRole('tab', { name: /^اطلاعات اصلی/ }));
+    expect(username()).toHaveValue('user2');
+    await user.click(screen.getByRole('tab', { name: /^اطلاعات تماس/ }));
+    expect(email()).toHaveValue('user2@example.test');
+    await user.click(screen.getByRole('tab', { name: /^اطلاعات اصلی/ }));
     // The shell bar receives the page declaration in an effect right after the record loads.
     const crumbs = within(await screen.findByRole('navigation', { name: 'مسیر صفحه' }));
     expect(await crumbs.findByRole('link', { name: 'نام2 خانوادگی2' })).toHaveAttribute('href', '/app/admin/users/user-2');
@@ -67,9 +78,11 @@ describe('UserEditPage', () => {
   });
 
   it('prefills empty values for a user without names or mobile', async () => {
+    const user = userEvent.setup();
     api(undefined, userDetails(1, { firstName: null, lastName: null, cellPhoneNumber: null }));
     setup('user-1');
     expect(await screen.findByLabelText(/^نام$/)).toHaveValue('');
+    await openContact(user);
     expect(mobile()).toHaveValue('');
   });
 
@@ -129,7 +142,9 @@ describe('UserEditPage', () => {
     const user = userEvent.setup();
     const { calls } = api();
     setup();
-    await user.clear(await screen.findByLabelText(/^شماره موبایل/));
+    await screen.findByLabelText(/^نام$/);
+    await openContact(user);
+    await user.clear(mobile());
     await user.click(save());
     await waitFor(() => expect(puts(calls)).toHaveLength(1));
     expect(puts(calls)[0]?.body).toMatchObject({ cellPhoneNumber: null });
@@ -139,7 +154,9 @@ describe('UserEditPage', () => {
     const user = userEvent.setup();
     const { calls } = api();
     setup();
-    await user.clear(await screen.findByLabelText(/^ایمیل/));
+    await screen.findByLabelText(/^نام$/);
+    await openContact(user);
+    await user.clear(email());
     await user.click(save());
     expect(await screen.findByText('ایمیل را وارد کنید.')).toBeInTheDocument();
     expect(email()).toHaveFocus();

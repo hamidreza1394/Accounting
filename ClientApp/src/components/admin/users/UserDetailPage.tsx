@@ -10,7 +10,7 @@ import { StatusBadge } from '../../ui/StatusBadge';
 import { Tabs } from '../../ui/Tabs';
 import { fullName } from './userDisplay';
 import { userListBackPath } from './userListReturn';
-import { clearUserFlash, peekUserFlash, userFlashText } from './userFlash';
+import { clearUserFlash, peekUserFlash, userFlashText, userFlashWarnings } from './userFlash';
 import {
   ProfileAuditTab,
   ProfileIdentityTab,
@@ -204,7 +204,13 @@ export function UserDetailPage({ onUnauthenticated, canUpdate = false }: Props) 
       {/* The live region exists from the first render; its text is added later, so it is announced. */}
       <div aria-live="polite">
         {flash && state.kind === 'ready' ? (
-          <p className="rounded-xl border border-line bg-cool p-4 text-sm font-medium text-navy">{userFlashText[flash]}</p>
+          userFlashWarnings.includes(flash) ? (
+            <p role="status" className="rounded-xl border border-gold/50 bg-warning-soft p-4 text-sm font-medium text-warning">
+              {userFlashText[flash]}
+            </p>
+          ) : (
+            <p className="rounded-xl border border-line bg-cool p-4 text-sm font-medium text-navy">{userFlashText[flash]}</p>
+          )
         ) : null}
       </div>
       {body}

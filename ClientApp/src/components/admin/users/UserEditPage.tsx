@@ -9,8 +9,13 @@ import { fullName } from './userDisplay';
 import { userListBackPath } from './userListReturn';
 import { clearUserFlash, setUserFlash } from './userFlash';
 import { toUpdateRequest, type UserFormValues } from './userFormValidation';
+import { noUserFormContext, type UserFormContext } from './form/userFormShared';
 
-type Props = { onUnauthenticated: (error: unknown) => boolean };
+type Props = {
+  onUnauthenticated: (error: unknown) => boolean;
+  /** Work-context company and permission hints (UI only); the default grants nothing. */
+  workContext?: UserFormContext;
+};
 
 type State =
   | { kind: 'loading' }
@@ -41,10 +46,11 @@ function initialValuesOf(user: AdminUserDetails): UserFormValues {
     emailAddress: user.emailAddress,
     cellPhoneNumber: user.cellPhoneNumber ?? '',
     isActive: user.isActive,
+    employeeNumber: '',
   };
 }
 
-export function UserEditPage({ onUnauthenticated }: Props) {
+export function UserEditPage({ onUnauthenticated, workContext = noUserFormContext }: Props) {
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const [state, setState] = useState<State>({ kind: 'loading' });
@@ -71,6 +77,15 @@ export function UserEditPage({ onUnauthenticated }: Props) {
       });
     return () => controller.abort();
   }, [id, attempt, onUnauthenticated]);
+
+  /** Reloads the user after a role assignment; the form keeps what was typed and the page never flashes a loader. */
+  const refreshUser = () => {
+    getAdminUser(id)
+      .then((fresh) => setState((current) => (current.kind === 'ready' ? { kind: 'ready', user: fresh } : current)))
+      .catch((cause: unknown) => {
+        onUnauthenticated(cause);
+      });
+  };
 
   const user = state.kind === 'ready' ? state.user : null;
   const initialValues = useMemo(() => (user ? initialValuesOf(user) : null), [user]);
@@ -106,6 +121,9 @@ export function UserEditPage({ onUnauthenticated }: Props) {
         key={state.user.id}
         mode="edit"
         initialValues={initialValues}
+        user={state.user}
+        workContext={workContext}
+        onMembershipsChanged={refreshUser}
         onUnauthenticated={onUnauthenticated}
         onCancel={() => navigate(detailPath)}
         onSubmit={async (values) => {

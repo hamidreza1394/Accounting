@@ -1,8 +1,9 @@
-import { createContext, lazy, useCallback, useContext } from 'react';
+import { createContext, lazy, useCallback, useContext, useMemo } from 'react';
 import type { SelectedContext, Session } from '../api/types';
 import { hrRoutes } from '../features/hr/hrRoutes';
 import { can, isInstallationAdministrator, type AccessSnapshot, type CanHint, type Permission } from '../lib/permissions';
 import type { Route } from '../lib/router';
+import type { UserFormContext } from './admin/users/form/userFormShared';
 import { Dashboard } from './Dashboard';
 
 /** What the route pages need from the signed-in shell; supplied once by `App`. */
@@ -83,8 +84,18 @@ function UsersListRoute() {
   return <LazyUsersListPage onUnauthenticated={onUnauthenticated} canCreate={can(access, 'admin.users.create')} />;
 }
 
+/** The work-context company and the permission hints the user form needs (UI hints only; the server decides). */
+function useUserFormContext(): UserFormContext {
+  const { context } = useAppRouteData();
+  const canHint = useCanHint();
+  return useMemo(
+    () => ({ activeCompanyId: context.company.id, activeCompanyName: context.company.name, can: canHint }),
+    [context.company.id, context.company.name, canHint],
+  );
+}
+
 function UserCreateRoute() {
-  return <LazyUserCreatePage onUnauthenticated={useAppRouteData().onUnauthenticated} />;
+  return <LazyUserCreatePage onUnauthenticated={useAppRouteData().onUnauthenticated} workContext={useUserFormContext()} />;
 }
 
 function UserDetailRoute() {
@@ -93,7 +104,7 @@ function UserDetailRoute() {
 }
 
 function UserEditRoute() {
-  return <LazyUserEditPage onUnauthenticated={useAppRouteData().onUnauthenticated} />;
+  return <LazyUserEditPage onUnauthenticated={useAppRouteData().onUnauthenticated} workContext={useUserFormContext()} />;
 }
 
 function PermissionCatalogRoute() {

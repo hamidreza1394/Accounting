@@ -228,6 +228,17 @@ export function parseHrEmployeeDetail(value: unknown): HrEmployeeDetail {
   };
 }
 
+/** `GET /org/employees/next-number` — a non-reserving suggestion; uniqueness is decided by the create call (409). */
+export type HrNextEmployeeNumber = { suggestedEmployeeNumber: string };
+
+export function parseHrNextEmployeeNumber(value: unknown): HrNextEmployeeNumber {
+  const what = 'hrNextEmployeeNumber';
+  if (!isObject(value)) throw new HrContractError(what);
+  const suggestedEmployeeNumber = readString(value, 'suggestedEmployeeNumber', what);
+  if (suggestedEmployeeNumber === '') throw new HrContractError(`${what}.suggestedEmployeeNumber`);
+  return { suggestedEmployeeNumber };
+}
+
 export function parseCreatedId(value: unknown): { id: string } {
   const what = 'hrCreatedResponse';
   if (!isObject(value)) throw new HrContractError(what);

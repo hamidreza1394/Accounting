@@ -13,6 +13,7 @@ import {
   parseHrEmployeeDetail,
   parseHrEmployeeHistoryResponse,
   parseHrEmployeeListResponse,
+  parseHrNextEmployeeNumber,
   parseHrPositionDetail,
   parseHrPositionEmployeeListResponse,
   parseHrPositionListResponse,
@@ -26,6 +27,7 @@ import {
   type HrEmployeeHistoryResponse,
   type HrEmployeeListResponse,
   type HrEmploymentStatus,
+  type HrNextEmployeeNumber,
   type HrPositionDetail,
   type HrPositionEmployeeListResponse,
   type HrPositionListResponse,
@@ -91,6 +93,14 @@ export async function listHrEmployees(companyId: string, queryValues: HrEmployee
 
 export async function getHrEmployee(companyId: string, employeeId: string, signal?: AbortSignal): Promise<HrEmployeeDetail> {
   return parseHrEmployeeDetail(await hrGet(hrPath(companyId, 'employees', employeeId), signal));
+}
+
+/**
+ * `GET /org/employees/next-number` → 200 `{ suggestedEmployeeNumber }` (`hr.employees.create`).
+ * A suggestion only: nothing is reserved, so the create call may still answer 409.
+ */
+export async function getNextEmployeeNumber(companyId: string, signal?: AbortSignal): Promise<HrNextEmployeeNumber> {
+  return parseHrNextEmployeeNumber(await hrGet(hrPath(companyId, 'employees', 'next-number'), signal));
 }
 
 /** `POST /org/employees` → 201 `{ id }`. Duplicate employee number answers 409. */

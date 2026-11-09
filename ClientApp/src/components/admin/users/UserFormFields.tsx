@@ -1,48 +1,101 @@
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { History, KeyRound, Phone, User as UserIcon, Briefcase } from 'lucide-react';
 import { ApiError } from '../../../api/client';
+import type { AdminUserDetails } from '../../../api/types';
+import { EmptyState } from '../../Feedback';
 import { Alert } from '../../ui/Alert';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
-import { FormField, Input } from '../../ui/FormField';
-import { FormSection } from '../../ui/FormSection';
-import { PasswordInput } from '../../ui/PasswordInput';
+import { Tabs } from '../../ui/Tabs';
 import { Button } from '../../ui/button';
 import {
-  faDigits,
   fieldNames,
   isUserFormDirty,
-  limits,
+  tabsWithErrors,
+  userFormTabOrder,
   validateUserForm,
   type FieldErrors,
   type FieldName,
+  type UserFormTabId,
   type UserFormValues,
 } from './userFormValidation';
 import { useFormGuard } from '@/lib/formGuard';
+import { ContactPanel, MainInfoPanel } from './form/UserFormMainPanels';
+import { EmploymentPanel } from './form/UserFormHrPanel';
+import { RolesPanel } from './form/UserFormRolesPanel';
+import { HistoryPanel } from './form/UserFormHistoryPanel';
+import { noUserFormContext, type FormTabCache, type UserFormContext } from './form/userFormShared';
+import { useSuggestedEmployeeNumber } from './form/useSuggestedEmployeeNumber';
 
 type Mode = 'create' | 'edit';
+
+/** What the form tells the page besides the values: the pre-filled personnel number, if any. */
+export type UserFormSubmitMeta = { suggestedEmployeeNumber: string | null };
 
 type UserFormProps = {
   mode: Mode;
   initialValues: UserFormValues;
   /** Sends the values; it throws (an `ApiError` or any error) when the save failed. */
-  onSubmit: (values: UserFormValues) => Promise<void>;
+  onSubmit: (values: UserFormValues, meta: UserFormSubmitMeta) => Promise<void>;
   /** Leaves the form without saving (only called after the discard confirmation when dirty). */
   onCancel: () => void;
   onUnauthenticated: (error: unknown) => boolean;
+  /** Work-context company and permission hints; the default grants nothing. */
+  workContext?: UserFormContext;
+  /** Edit mode: the loaded user (HR, roles and history tabs read from it). */
+  user?: AdminUserDetails;
+  /** Edit mode: called after a role assignment so the page reloads the user (memberships) from the server. */
+  onMembershipsChanged?: () => void;
 };
+
+const tabMeta: Record<UserFormTabId, { label: string; Icon: typeof UserIcon }> = {
+  main: { label: 'اطلاعات اصلی', Icon: UserIcon },
+  contact: { label: 'اطلاعات تماس', Icon: Phone },
+  employment: { label: 'اطلاعات استخدامی', Icon: Briefcase },
+  roles: { label: 'سمت‌ها و نقش‌ها', Icon: KeyRound },
+  history: { label: 'سوابق', Icon: History },
+};
+
+function TabLabel({ id, hasError }: { id: UserFormTabId; hasError: boolean }) {
+  const { label, Icon } = tabMeta[id];
+  return (
+    <span className="inline-flex items-center gap-1.5 max-sm:flex-col max-sm:gap-1">
+      <Icon size={16} aria-hidden="true" />
+      <span>{label}</span>
+      {hasError ? (
+        <>
+          <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-danger" />
+          <span className="sr-only">(دارای خطا)</span>
+        </>
+      ) : null}
+    </span>
+  );
+}
 
 const fallbackMessage = 'ذخیرهٔ اطلاعات انجام نشد. لطفاً دوباره تلاش کنید.';
 
 /**
- * The create/edit form of a user, shared by both pages. It owns the typed values, validation
- * (on blur and on submit), the server error mapping, the double-submit guard and the unsaved
- * changes guard. The password exists only in this component's state.
+ * The create/edit form of a user, shared by both pages, with five inner tabs. It owns the typed
+ * values (above the tab panels, so switching tabs never loses input), validation (on blur and on
+ * submit), the server error mapping, the double-submit guard and the unsaved changes guard. The
+ * password exists only in this component's state. Tabs 3-5 read real data lazily (the active panel
+ * mounts alone) into a per-form cache, so a revisit never re-requests.
  */
-export function UserForm({ mode, initialValues, onSubmit, onCancel, onUnauthenticated }: UserFormProps) {
+export function UserForm({
+  mode,
+  initialValues,
+  onSubmit,
+  onCancel,
+  onUnauthenticated,
+  workContext = noUserFormContext,
+  user,
+  onMembershipsChanged,
+}: UserFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const alertRef = useRef<HTMLDivElement>(null);
   const submittingRef = useRef(false);
   const doneRef = useRef(false);
-  const statusHintId = useId();
+  // Lazy tab payloads of this form instance: in memory only, gone with the page.
+  const cache = useRef<FormTabCache>(new Map()).current;
 
   const [values, setValues] = useState<UserFormValues>(initialValues);
   const [touched, setTouched] = useState<Partial<Record<FieldName, boolean>>>({});
@@ -53,9 +106,37 @@ export function UserForm({ mode, initialValues, onSubmit, onCancel, onUnauthenti
   const [focusTick, setFocusTick] = useState(0);
   const [deactivateOpen, setDeactivateOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
+  const [tab, setTab] = useState<UserFormTabId>('main');
+  // The suggestion that was pre-filled into an empty personnel number field; it becomes part of
+  // the baseline, so an untouched suggestion never makes the form "dirty".
+  const [applied, setApplied] = useState<{ companyId: string | null; value: string } | null>(null);
+  const appliedSuggestion = applied?.value ?? null;
+
+  const canSuggest =
+    mode === 'create' && workContext.activeCompanyId !== null && workContext.can('hr.employees.create', workContext.activeCompanyId);
+  const suggestion = useSuggestedEmployeeNumber(workContext.activeCompanyId, canSuggest, onUnauthenticated);
+  useEffect(() => {
+    if (suggestion.status !== 'ready') return;
+    const previous = applied;
+    // A suggestion belongs to the company it was requested for: when the work company changes, an
+    // untouched number from the previous company is replaced; a number the user typed is kept.
+    if (previous !== null && previous.companyId === workContext.activeCompanyId && previous.value === suggestion.value) return;
+    setApplied({ companyId: workContext.activeCompanyId, value: suggestion.value });
+    setValues((current) =>
+      current.employeeNumber === '' || (previous !== null && current.employeeNumber === previous.value)
+        ? { ...current, employeeNumber: suggestion.value }
+        : current,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suggestion, workContext.activeCompanyId]);
+
+  const baseline = useMemo<UserFormValues>(
+    () => (appliedSuggestion === null ? initialValues : { ...initialValues, employeeNumber: appliedSuggestion }),
+    [initialValues, appliedSuggestion],
+  );
 
   const clientErrors = validateUserForm(values, mode);
-  const dirty = isUserFormDirty(values, initialValues);
+  const dirty = isUserFormDirty(values, baseline);
   // The workspace asks this registry before closing the tab, signing out or changing context;
   // a failed save keeps the `error` status until the user retries or cancels (D-076).
   const formGuard = useFormGuard({
@@ -64,10 +145,17 @@ export function UserForm({ mode, initialValues, onSubmit, onCancel, onUnauthenti
     errorMessage: alertMessage,
     title: mode === 'create' ? 'ایجاد کاربر' : 'ویرایش کاربر',
   });
-  const visibleFields = fieldNames.filter((name) => mode === 'create' || (name !== 'password' && name !== 'confirmPassword'));
+  const visibleFields = fieldNames.filter((name) => mode === 'create' || (name !== 'password' && name !== 'confirmPassword' && name !== 'employeeNumber'));
 
   const errorFor = (name: FieldName): string | undefined =>
     serverErrors[name] ?? (touched[name] || submitAttempted ? clientErrors[name] : undefined);
+
+  const shownErrors: FieldErrors = {};
+  for (const name of visibleFields) {
+    const message = errorFor(name);
+    if (message) shownErrors[name] = message;
+  }
+  const errorTabs = tabsWithErrors(shownErrors);
 
   // Moves focus to the first invalid field, or to the message box when no field is at fault.
   useEffect(() => {
@@ -102,10 +190,17 @@ export function UserForm({ mode, initialValues, onSubmit, onCancel, onUnauthenti
 
   const blur = (name: FieldName) => setTouched((current) => (current[name] ? current : { ...current, [name]: true }));
 
-  const showServerFailure = (cause: unknown) => {
+  /** Opens the first tab (in tab order) that holds one of the errors, then focuses its field. */
+  const revealErrors = (errors: FieldErrors) => {
+    const first = tabsWithErrors(errors)[0];
+    if (first) setTab(first);
+    setFocusTick((tick) => tick + 1);
+  };
+
+  const showServerFailure = (cause: unknown): FieldErrors => {
     if (!(cause instanceof ApiError)) {
       setAlertMessage(fallbackMessage);
-      return;
+      return {};
     }
     const mapped: FieldErrors = {};
     const rest: string[] = [];
@@ -119,6 +214,7 @@ export function UserForm({ mode, initialValues, onSubmit, onCancel, onUnauthenti
     // message when the server named no field at all.
     if (rest.length > 0) setAlertMessage(rest.join(' '));
     else setAlertMessage(Object.keys(mapped).length > 0 ? null : cause.message);
+    return mapped;
   };
 
   const send = async () => {
@@ -128,14 +224,13 @@ export function UserForm({ mode, initialValues, onSubmit, onCancel, onUnauthenti
     setAlertMessage(null);
     setServerErrors({});
     try {
-      await onSubmit(values);
+      await onSubmit(values, { suggestedEmployeeNumber: appliedSuggestion });
       doneRef.current = true;
       // Saved: closing this tab (or leaving the workspace) needs no warning anymore.
       formGuard.markClean();
     } catch (cause) {
       if (onUnauthenticated(cause)) return;
-      showServerFailure(cause);
-      setFocusTick((tick) => tick + 1);
+      revealErrors(showServerFailure(cause));
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
@@ -144,10 +239,13 @@ export function UserForm({ mode, initialValues, onSubmit, onCancel, onUnauthenti
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    // A submit from a nested form (the employee search of the link dialog bubbles through its
+    // portal) is not this form's submit.
+    if (event.target !== event.currentTarget) return;
     if (submittingRef.current || (mode === 'edit' && !dirty)) return;
     setSubmitAttempted(true);
     if (Object.keys(clientErrors).length > 0) {
-      setFocusTick((tick) => tick + 1);
+      revealErrors(clientErrors);
       return;
     }
     if (mode === 'edit' && initialValues.isActive && !values.isActive) {
@@ -169,6 +267,44 @@ export function UserForm({ mode, initialValues, onSubmit, onCancel, onUnauthenti
     onBlur: () => blur(name),
   });
 
+  const createNotice = (title: string, text: string) => <EmptyState title={title}>{text}</EmptyState>;
+  const editReady = mode === 'edit' && user !== undefined;
+  const panels: Record<UserFormTabId, ReactNode> = {
+    main: (
+      <MainInfoPanel
+        mode={mode}
+        field={field}
+        errorFor={errorFor}
+        isActive={values.isActive}
+        onActiveChange={(value) => change('isActive', value)}
+        context={workContext}
+        suggestion={suggestion}
+        {...(user ? { user } : {})}
+        cache={cache}
+        onUnauthenticated={onUnauthenticated}
+      />
+    ),
+    contact: <ContactPanel field={field} errorFor={errorFor} />,
+    employment: editReady
+      ? <EmploymentPanel user={user} cache={cache} context={workContext} onUnauthenticated={onUnauthenticated} />
+      : createNotice('اطلاعات استخدامی پس از ایجاد حساب و عضویت در شرکت قابل تنظیم است.', 'واحد، سمت و مدیر مستقیم از ماژول منابع انسانی خوانده می‌شود؛ پس از ایجاد حساب و عضویت فعال در شرکت، این تب را در حالت ویرایش ببینید.'),
+    roles: editReady
+      ? (
+        <RolesPanel
+          user={user}
+          memberships={user.memberships}
+          cache={cache}
+          context={workContext}
+          onUnauthenticated={onUnauthenticated}
+          onMembershipsChanged={onMembershipsChanged ?? (() => undefined)}
+        />
+      )
+      : createNotice('سمت‌ها و نقش‌ها پس از ایجاد حساب و عضویت در شرکت قابل تنظیم است.', 'نقش نرم‌افزاری فقط به عضو فعال یک شرکت داده می‌شود؛ سمت سازمانی به‌تنهایی مجوز ایجاد نمی‌کند.'),
+    history: editReady
+      ? <HistoryPanel user={user} cache={cache} context={workContext} onUnauthenticated={onUnauthenticated} />
+      : createNotice('سوابق پس از ایجاد حساب نمایش داده می‌شود.', 'تاریخ ایجاد، آخرین تغییر و سوابق ورود برای حساب ذخیره‌شده در دسترس است.'),
+  };
+
   return (
     <form ref={formRef} noValidate onSubmit={handleSubmit} aria-label={mode === 'create' ? 'فرم ایجاد کاربر' : 'فرم ویرایش کاربر'} className="space-y-5">
       {alertMessage ? (
@@ -177,59 +313,18 @@ export function UserForm({ mode, initialValues, onSubmit, onCancel, onUnauthenti
         </Alert>
       ) : null}
 
-      <FormSection headingLevel={2} title="اطلاعات هویتی">
-        <FormField label="نام" error={errorFor('firstName')}>
-          <Input {...field('firstName')} autoComplete="off" />
-        </FormField>
-        <FormField label="نام خانوادگی" error={errorFor('lastName')}>
-          <Input {...field('lastName')} autoComplete="off" />
-        </FormField>
-      </FormSection>
+      <Tabs
+        label="بخش‌های فرم کاربر"
+        value={tab}
+        onValueChange={(id) => setTab(id as UserFormTabId)}
+        items={userFormTabOrder.map((id) => ({
+          id,
+          label: <TabLabel id={id} hasError={errorTabs.includes(id)} />,
+          content: panels[id],
+        }))}
+      />
 
-      <FormSection headingLevel={2} title="اطلاعات ورود">
-        <FormField label="نام کاربری" required error={errorFor('username')} hint={`${faDigits(limits.usernameMin)} تا ${faDigits(limits.usernameMax)} نویسه؛ برای ورود به سامانه استفاده می‌شود.`}>
-          <Input {...field('username')} dir="ltr" autoComplete="off" autoCapitalize="none" spellCheck={false} className="text-start" />
-        </FormField>
-        {mode === 'create' ? (
-          <>
-            <FormField label="رمز عبور" required error={errorFor('password')} hint={`دست‌کم ${faDigits(limits.passwordMin)} نویسه؛ رمزهای رایج و قابل‌حدس پذیرفته نمی‌شوند.`}>
-              <PasswordInput {...field('password')} fieldName="رمز عبور" togglePlacement="end" autoComplete="new-password" />
-            </FormField>
-            <FormField label="تکرار رمز عبور" required error={errorFor('confirmPassword')}>
-              <PasswordInput {...field('confirmPassword')} fieldName="تکرار رمز عبور" togglePlacement="end" aria-label="تکرار رمز عبور" autoComplete="new-password" />
-            </FormField>
-          </>
-        ) : null}
-      </FormSection>
-
-      <FormSection headingLevel={2} title="اطلاعات تماس">
-        <FormField label="ایمیل" required error={errorFor('emailAddress')}>
-          <Input {...field('emailAddress')} type="email" dir="ltr" autoComplete="off" spellCheck={false} className="text-start" />
-        </FormField>
-        <FormField label="شماره موبایل" error={errorFor('cellPhoneNumber')} hint={`اختیاری؛ ${faDigits(limits.mobileLength)} رقم لاتین، مانند 09123456789.`}>
-          <Input {...field('cellPhoneNumber')} type="tel" inputMode="tel" dir="ltr" autoComplete="off" className="text-start" />
-        </FormField>
-      </FormSection>
-
-      <FormSection headingLevel={2} title="وضعیت">
-        <div className="sm:col-span-2">
-          <label className="flex cursor-pointer items-start gap-3">
-            <input
-              type="checkbox"
-              checked={values.isActive}
-              onChange={(event) => change('isActive', event.target.checked)}
-              aria-describedby={statusHintId}
-              className="mt-0.5 size-5 shrink-0 cursor-pointer accent-teal-deep outline-none focus-visible:ring-2 focus-visible:ring-gold"
-            />
-            <span className="text-sm font-semibold text-ink">حساب فعال باشد</span>
-          </label>
-          <p id={statusHintId} className="mt-1.5 ps-8 text-xs leading-5 text-sub">
-            {values.isActive ? 'کاربر می‌تواند وارد سامانه شود.' : 'حساب غیرفعال است و کاربر نمی‌تواند وارد سامانه شود.'}
-          </p>
-        </div>
-      </FormSection>
-
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center gap-2 border-t border-line bg-white/95 px-1 py-3 backdrop-blur">
         <Button type="submit" size="lg" disabled={submitting || (mode === 'edit' && !dirty)} aria-busy={submitting || undefined}>
           {submitting ? 'در حال ذخیره…' : mode === 'create' ? 'ایجاد کاربر' : 'ذخیرهٔ تغییرات'}
         </Button>
