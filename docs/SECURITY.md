@@ -369,3 +369,11 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - **مدل دسترسی:** مدل موازی `AccessGroup` ساخته نمی‌شود؛ `CompanyRole` همان گروه دسترسی شرکتی است و از ساختار مجوز موجود (`PermissionDefinitions`، `CompanyRolePermissions`) استفاده می‌شود (D-064 بند ۵، D-065).
 - **ممیزی:** رویدادهای موجود `WorkContextSelected`/`WorkContextChanged`/`WorkContextSelectionDenied` (D-032) کافی‌اند؛ افزودن رویداد جدید فقط با Issue جداگانه.
 - **وضعیت:** این بخش قرارداد/الزام است. اجرای end-to-end آن (به‌ویژه ابطال پاسخ دیررس و cache) `NotImplemented` و تست‌شده نیست؛ به‌عنوان `Verified` گزارش نشود.
+
+## ایجاد کاربر شرکتی و عضویت بدون نقش (D-078 — 2026-11-10)
+
+- `POST /api/v1/companies/{companyId}/users` با مجوز شرکتی `users.create` و مجوزدهی دوحالته D-071 (مدیر نصب بازخوانی‌شده از DB یا عضو فعال همان شرکت). شناسه شرکت فقط از مسیر معتبر scope می‌شود؛ مدیر شرکت A برای شرکت B پاسخ 404 بدون افشا می‌گیرد و هیچ رکوردی (کاربر/عضویت/درخواست) ایجاد نمی‌کند؛ رابطه هلدینگ/گروه جایگزین مجوز مستقل مقصد نیست.
+- پاسخ 201 برای «حساب جدید» و «حساب موجود» یکنواخت است تا endpoint برای User Enumeration قابل سوءاستفاده نباشد؛ حساب غیرفعال/عضویت غیرفعال 409. اعتبارسنجی ورودی از کلاس مشترک با مدیر نصب می‌گذرد (هیچ مسیری سیاست رمز/نام کاربری را دور نمی‌زند).
+- عضویت ساخته‌شده `RoleId = null` دارد و عضو بدون نقش در همه کوئری‌های `CompanyAccessService` حاضر نیست (fail-closed)؛ هیچ نقش/مجوز/Entitlement/دسترسی سال-دوره‌ای ضمنی ساخته نمی‌شود؛ تخصیص نقش فقط از `roles.assign` با سقف D-071.
+- اتمیک بودن: User + Membership در یک SaveChanges؛ ایندکس یکتای `(UserId, TenantId)` داور نهایی duplicate/race است و خطای آن به 409 فارسی کنترل‌شده ترجمه می‌شود (بدون نشت خطای SQL). Audit با `UserCreated`/`UserMembershipCreated` و بدون رمز/hash/توکن.
+- عضویت بین‌شرکتی و self-approval طبق D-065 بدون تغییر باقی می‌مانند؛ تست‌های سخت‌سازی (مالکیت/گروه/self-approval/race) قفل شده‌اند.
