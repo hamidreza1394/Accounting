@@ -65,8 +65,8 @@ export function WorkspaceTabEntry({
       title={tooltip}
       className="faranou-tab-button"
       style={{
-        backgroundColor: isActive ? "var(--color-navy)" : "var(--color-period)",
-        color: isActive ? "var(--color-primary-foreground)" : "var(--color-sub)",
+        backgroundColor: isActive ? 'var(--color-navy)' : 'var(--color-period)',
+        color: isActive ? 'var(--color-primary-foreground)' : 'var(--color-sub)',
         borderRadius: "0.45rem",
       }}
       onClick={onActivate}
