@@ -2848,3 +2848,9 @@
 - CompanyRole/CompanyRolePermissions/PermissionDefinitions/CompanyAccessService، سقف D-071، D-074 و قواعد D-065 حفظ می‌شوند؛ مدل موازی یا grant مستقیم User ساخته نمی‌شود.
 - D-077 Accepted است؛ پیاده‌سازی NotImplemented. طراحی فیزیکی/DDL تا تعیین معنای FiscalPeriod در D-066 / Issue #488 مسدود است. هیچ کد، API، UI یا Migration تغییر نکرد.
 - این PR مستنداتی است؛ تست build/runtime اجرا نشده و CI پس از PR باید بررسی شود.
+
+
+## 2026-11-08 — مأموریت رابط مدیریت سیستم: PR1 سایدبار و ساختار منوها
+- سایدبار با قاب پیوسته و ظریف، کادرهای تمام‌عرض گروه‌ها، آیتم فعال با نوار طلایی و Logout انتهایی بازطراحی شد؛ دکمه و حالت «جمع‌کردن منو» حذف شد.
+- «ساختار سازمانی و کارکنان» به «ساختار سازمانی» (Network/Building2/BriefcaseBusiness) تغییر نام یافت و زیر «مدیریت سیستم» ماند؛ «کارکنان» زیر همین بخش حفظ شد.
+- فقط UI؛ بدون تغییر Backend/Migration. نتایج واقعی: `docs/handoffs/UNNUMBERED-ui-sidebar-system-menus.md`. Playwright/E2E و بررسی بصری ۷۶۸/۱۰۲۴/۱۴۴۰ اجرا نشد؛ ۶ شکست Vitest از قبل در main است.

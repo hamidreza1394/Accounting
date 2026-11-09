@@ -69,6 +69,34 @@ describe('AppShell', () => {
     expect(sidebar?.querySelector('.faranou-sidebar-footer p')).toBeTruthy();
   });
 
+  it('has no sidebar collapse control and offers logout both in the header and as the last sidebar element', async () => {
+    const user = userEvent.setup();
+    const onLogout = vi.fn().mockResolvedValue(undefined);
+    render(<AppShell session={session} context={context} onChangeContext={vi.fn()} onLogout={onLogout}><main>محتوای صفحه</main></AppShell>);
+    expect(screen.queryByText('جمع‌کردن منو')).toBeNull();
+    expect(document.querySelector('.faranou-sidebar-fold')).toBeNull();
+    expect(document.querySelector('.faranou-sidebar--collapsed')).toBeNull();
+    const sidebar = document.querySelector('aside.faranou-sidebar') as HTMLElement;
+    const sidebarLogout = within(sidebar).getByRole('button', { name: 'خروج از حساب' });
+    const focusable = sidebar.querySelectorAll('a, button');
+    expect(focusable[focusable.length - 1]).toBe(sidebarLogout);
+    // Same handler as the header button (which keeps its own, separately tested, behaviour).
+    expect(screen.getByRole('button', { name: 'خروج' })).toBeInTheDocument();
+    await user.click(sidebarLogout);
+    expect(onLogout).toHaveBeenCalledTimes(1);
+    // The shared "logging out" state disables both buttons.
+    expect(await screen.findByRole('button', { name: 'خروج' })).toBeDisabled();
+  });
+
+  it('shows the renamed organizational section and no longer the old "ساختار سازمانی و کارکنان" name', () => {
+    shell(installationAdmin, { isAdministrator: true });
+    expect(screen.getByRole('button', { name: 'ساختار سازمانی' })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.queryByText('ساختار سازمانی و کارکنان')).toBeNull();
+    expect(screen.getByRole('link', { name: 'واحدهای سازمانی' })).toHaveAttribute('href', '/app/hr/org/units');
+    expect(screen.getByRole('link', { name: 'سمت‌های سازمانی' })).toHaveAttribute('href', '/app/hr/org/positions');
+    expect(screen.getByRole('link', { name: 'کارکنان' })).toHaveAttribute('href', '/app/hr/org/employees');
+  });
+
   it('shows the focused system-administration menu and removes redundant user-list shortcuts', () => {
     shell(installationAdmin, { isAdministrator: true });
     expect(screen.getByRole('button', { name: /مدیریت سیستم/ })).toBeInTheDocument();

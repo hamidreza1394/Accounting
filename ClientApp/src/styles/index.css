@@ -611,7 +611,6 @@
   overflow: hidden;
   color: white;
 }
-.faranou-sidebar nav { padding-block: 1.35rem; }
 .faranou-nav-active {
   background: linear-gradient(105deg, #1764bd 0%, #1d70d0 100%);
   color: white;
@@ -625,18 +624,6 @@
    (it's the only one that actually applies, since that file loads after this one and the
    real markup always uses the compound `.faranou-sidebar.faranou-sidebar--premium` class
    tree); `flex: 0 0 auto;` was merged there instead of duplicated here. */
-.faranou-nav-sub {
-  position: relative;
-}
-.faranou-nav-sub::before {
-  position: absolute;
-  inset-inline-start: 0;
-  top: .2rem;
-  bottom: .2rem;
-  width: 1px;
-  background: rgb(255 255 255 / .14);
-  content: "";
-}
 /* Issue #442 review (Finding 3): `.faranou-nav-soon-dot` was dropped from the nested
    DisabledItem markup — a bare dot relying on `title` is invisible to touch users and
    conveys nothing to sighted non-screen-reader users. Nested rows now reuse the same
@@ -1172,8 +1159,7 @@
 }
 
 
-/* Issue #444 stage 1 — workspace shell: breadcrumb bar, collapsible groups and the
-   icon-rail (collapsed) sidebar. Offline-only, tokens from this file. */
+/* Issue #444 stage 1 — workspace shell: breadcrumb bar, collapsible groups. Offline-only, tokens from this file. */
 
 /* The single shell-level breadcrumb above the page content. */
 .faranou-breadcrumbbar {
@@ -1188,30 +1174,6 @@
 }
 .faranou-breadcrumbbar nav { min-width: 0; }
 
-/* Fold/unfold toggle at the top of the sidebar (desktop only). */
-.faranou-sidebar-fold {
-  position: relative;
-  z-index: 1;
-  display: none;
-  align-items: center;
-  gap: .5rem;
-  margin: .8rem .85rem 0;
-  min-height: 2.3rem;
-  padding: .3rem .7rem;
-  border: 1px solid rgb(255 255 255 / .12);
-  border-radius: .8rem;
-  background: rgb(255 255 255 / .05);
-  color: rgb(226 240 252 / .92);
-  font-size: .72rem;
-  font-weight: 700;
-  transition: background-color 150ms ease, border-color 150ms ease;
-}
-.faranou-sidebar-fold:hover { border-color: rgb(150 210 240 / .4); background: rgb(255 255 255 / .1); }
-.faranou-sidebar-fold:focus-visible { outline: 2px solid #f0b84a; outline-offset: 2px; }
-@media (min-width: 1024px) {
-  .faranou-sidebar-fold { display: inline-flex; }
-}
-
 /* Active-group dot: shows where you are when the group is folded. */
 .faranou-nav-group-dot {
   width: 7px;
@@ -1220,27 +1182,6 @@
   border-radius: 50%;
   background: linear-gradient(180deg, #ffe8a8, #f0b84a);
   box-shadow: 0 0 0 2px rgb(240 184 74 / .22);
-}
-.faranou-nav-group-dot--rail {
-  position: absolute;
-  inset-inline-start: 14px;
-  top: 12px;
-}
-
-/* Collapsed icon rail (desktop): labels and badges disappear, icons stay reachable. */
-@media (min-width: 1024px) {
-  .faranou-sidebar.faranou-sidebar--collapsed {
-    width: 84px;
-    flex-basis: 84px;
-  }
-  .faranou-sidebar.faranou-sidebar--collapsed .faranou-sidebar-fold { justify-content: center; padding: .3rem; }
-  .faranou-sidebar.faranou-sidebar--collapsed nav ul,
-  .faranou-sidebar.faranou-sidebar--collapsed nav li { padding-inline: 0; }
-  .faranou-sidebar.faranou-sidebar--collapsed .faranou-nav-sub { display: none; }
-}
-@media (max-width: 1023px) {
-  /* The mobile drawer never enters the rail: the drawer needs its labels. */
-  .faranou-sidebar.faranou-sidebar--collapsed { width: min(300px, 86vw); flex-basis: min(300px, 86vw); }
 }
 
 /* Issue #444 stage 1 PR4 — the workspace tab strip under the header (Rahkaran-style). */
@@ -1457,7 +1398,7 @@
 
 
 /* ---- Navigation polish (Issue #444 stage 1 completion, PR 6) ---- */
-/* The lightweight Persian tooltip of the sidebar rail (hover + focus, Escape closes). */
+/* The lightweight Persian tooltip (hover + focus, Escape closes). */
 .faranou-tooltip {
   position: fixed;
   z-index: 70;
@@ -1474,14 +1415,3 @@
   box-shadow: 0 6px 16px rgb(4 24 32 / .35);
   pointer-events: none;
 }
-/* The Persian section headings inside a group's submenu (third visual level). */
-.faranou-nav-section {
-  margin: .55rem 0 .1rem;
-  padding-inline-start: .15rem;
-  font-size: .68rem;
-  font-weight: 700;
-  letter-spacing: .02em;
-  color: var(--color-gold);
-  opacity: .92;
-}
-.faranou-nav-section:first-child { margin-top: .1rem; }
