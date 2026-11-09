@@ -100,9 +100,12 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     ] as const) {
       expect(screen.getByRole('link', { name })).toHaveAttribute('href', href);
     }
-    for (const name of ['فهرست کارکنان', 'گروه‌های دسترسی', 'کاتالوگ و جزئیات مجوزها', 'مجوزهای دسترسی']) {
+    for (const name of ['کارکنان', 'دسترسی و مجوزها']) {
       expect(screen.queryByRole('link', { name })).not.toBeInTheDocument();
       expect(screen.getByText(name).closest('[aria-disabled="true"]')).toBeTruthy();
+    }
+    for (const name of ['فهرست کارکنان', 'گروه‌های دسترسی', 'کاتالوگ و جزئیات مجوزها', 'مجوزهای دسترسی']) {
+      expect(screen.queryByText(name)).not.toBeInTheDocument();
     }
     const section = screen.getByRole('button', { name: 'ساختار سازمانی' }).closest('li') as HTMLElement;
     expect(within(section).getAllByRole('link').map((link) => link.textContent)).toEqual(['واحدهای سازمانی', 'سمت‌های سازمانی']);
@@ -143,7 +146,7 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     await user.click(section);
     expect(section).toHaveAttribute('aria-expanded', 'false');
     expect(screen.getByText('کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'دسترسی و مجوزها' })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('دسترسی و مجوزها').closest('[aria-disabled="true"]')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'مدیریت سیستم' })).toHaveAttribute('aria-expanded', 'true');
     await user.click(section);
     expect(screen.getByText('فهرست کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
