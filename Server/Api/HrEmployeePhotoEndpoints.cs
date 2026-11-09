@@ -49,7 +49,7 @@ public static class HrEmployeePhotoEndpoints
         return null;
     }
 
-    private static async Task<IResult> GetPhotoAsync(
+    public static async Task<IResult> GetPhotoAsync(
         Guid companyId,
         Guid employeeId,
         HttpContext httpContext,
@@ -76,7 +76,7 @@ public static class HrEmployeePhotoEndpoints
         return TypedResults.File(photo.Content, photo.ContentType);
     }
 
-    private static async Task<IResult> PutPhotoAsync(
+    public static async Task<IResult> PutPhotoAsync(
         Guid companyId,
         Guid employeeId,
         HttpContext httpContext,
@@ -147,7 +147,7 @@ public static class HrEmployeePhotoEndpoints
         return TypedResults.NoContent();
     }
 
-    private static async Task<IResult> DeletePhotoAsync(
+    public static async Task<IResult> DeletePhotoAsync(
         Guid companyId,
         Guid employeeId,
         HttpContext httpContext,
