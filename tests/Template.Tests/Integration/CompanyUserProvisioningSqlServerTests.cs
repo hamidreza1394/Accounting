@@ -65,7 +65,10 @@ public sealed class CompanyUserProvisioningSqlServerTests
         // The migrated database already holds the seeded users.create permission (unique
         // code): reuse that definition and only insert one when it is genuinely absent.
         var cancellationToken = TestContext.Current.CancellationToken;
-        var permission = await database.PermissionDefinitions.AsNoTracking()
+        // Tracked on purpose: an untracked (detached) permission reached from an Added
+        // CompanyRolePermission is graph-discovered as a second INSERT and dies on the
+        // primary key; a tracked entity stays Unchanged.
+        var permission = await database.PermissionDefinitions
             .FirstOrDefaultAsync(item =>
                 item.Code == Server.Api.CompanyUserProvisioningEndpoints.CreateUserPermissionCode,
                 cancellationToken);
