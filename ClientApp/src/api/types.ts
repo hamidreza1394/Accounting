@@ -392,8 +392,9 @@ export type AdminUserListResponse = {
 export type AdminUserMembership = {
   companyId: string;
   companyName: string;
-  roleCode: string;
-  roleName: string;
+  /** Null while the member has no company role yet (D-078). */
+  roleCode: string | null;
+  roleName: string | null;
   isActive: boolean;
   createdAtUtc: string;
 };
@@ -445,8 +446,8 @@ export function parseAdminUserDetails(value: unknown): AdminUserDetails {
     return {
       companyId: readString(item, 'companyId', 'adminUser.membership'),
       companyName: readString(item, 'companyName', 'adminUser.membership'),
-      roleCode: readString(item, 'roleCode', 'adminUser.membership'),
-      roleName: readString(item, 'roleName', 'adminUser.membership'),
+      roleCode: readNullableString(item, 'roleCode', 'adminUser.membership'),
+      roleName: readNullableString(item, 'roleName', 'adminUser.membership'),
       isActive: readBoolean(item, 'isActive', 'adminUser.membership'),
       createdAtUtc: readUtcDateTime(item, 'createdAtUtc', 'adminUser.membership')!,
     };
@@ -920,9 +921,10 @@ export type CompanyDirectoryUser = {
   lastName: string | null;
   userIsActive: boolean;
   membershipIsActive: boolean;
-  roleId: string;
-  roleCode: string;
-  roleName: string;
+  /** Null while the member has no company role yet (D-078): membership and role are separate. */
+  roleId: string | null;
+  roleCode: string | null;
+  roleName: string | null;
   roleIsActive: boolean;
   membershipCreatedAtUtc: string;
 };
@@ -959,9 +961,9 @@ export function parseCompanyDirectory(value: unknown): CompanyDirectoryPage {
         lastName: readNullableString(row, 'lastName', at),
         userIsActive: readBoolean(row, 'userIsActive', at),
         membershipIsActive: readBoolean(row, 'membershipIsActive', at),
-        roleId: readString(row, 'roleId', at),
-        roleCode: readString(row, 'roleCode', at),
-        roleName: readString(row, 'roleName', at),
+        roleId: readNullableString(row, 'roleId', at),
+        roleCode: readNullableString(row, 'roleCode', at),
+        roleName: readNullableString(row, 'roleName', at),
         roleIsActive: readBoolean(row, 'roleIsActive', at),
         membershipCreatedAtUtc: since,
       };

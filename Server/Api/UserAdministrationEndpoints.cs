@@ -325,31 +325,10 @@ public static class UserAdministrationEndpoints
         if (!await antiforgery.IsRequestValidAsync(httpContext))
             return TypedResults.Problem(title: "درخواست نامعتبر است.", statusCode: StatusCodes.Status400BadRequest);
 
-        var email = Dtat.Utility.FixText(request.EmailAddress);
-        var username = Dtat.Utility.FixText(request.Username);
-        var firstName = Dtat.Utility.FixText(request.FirstName);
-        var lastName = Dtat.Utility.FixText(request.LastName);
-        var cellPhone = Dtat.Utility.FixText(request.CellPhoneNumber);
-        var password = request.Password;
-
-        if (string.IsNullOrWhiteSpace(email) ||
-            email.Length > Constants.MaxLength.EmailAddress ||
-            !new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(email) ||
-            string.IsNullOrWhiteSpace(username) ||
-            username.Length < Constants.MinLength.Username ||
-            username.Length > Constants.MaxLength.Username ||
-            // The same username policy the Razor views enforce; the API must not be a
-            // bypass (the column is varchar(20): ASCII letters, digits and . _ @ + - only).
-            !new System.ComponentModel.DataAnnotations.RegularExpressionAttribute(Constants.RegularExpression.Username).IsValid(username) ||
-            (firstName?.Length > Constants.MaxLength.FirstName) ||
-            (lastName?.Length > Constants.MaxLength.LastName) ||
-            (cellPhone is not null && (cellPhone.Length != Constants.FixedLength.CellPhoneNumber || !new System.ComponentModel.DataAnnotations.RegularExpressionAttribute(Constants.RegularExpression.CellPhoneNumber).IsValid(cellPhone))) ||
-            string.IsNullOrWhiteSpace(password) ||
-            password.Length < Constants.MinLength.UserPassword ||
-            password.Length > Constants.MaxLength.UserPassword ||
-            !new ViewModels.Validation.NotCommonPasswordAttribute().IsValid(password) ||
-            !string.Equals(password, request.ConfirmPassword, StringComparison.Ordinal))
-            return TypedResults.BadRequest(new { error = "اطلاعات کاربر یا سیاست رمز عبور معتبر نیست." });
+        if (UserCreationValidation.Validate(request,
+                out var email, out var username, out var firstName, out var lastName,
+                out var cellPhone, out var password) is { } validationError)
+            return TypedResults.BadRequest(new { error = validationError });
 
         var duplicate = await database.Users.AsNoTracking().AnyAsync(user =>
             user.EmailAddress.ToLower() == email.ToLower() ||

@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Data.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20261109164408_MakeCompanyMembershipRoleOptional")]
+    [Migration("20261110130000_MakeCompanyMembershipRoleOptional")]
     partial class MakeCompanyMembershipRoleOptional
     {
         /// <inheritdoc />

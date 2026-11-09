@@ -48,7 +48,7 @@
 - پاسخ ۲۰۰: `{ items: [{ id, username, firstName, lastName, emailAddress, cellPhoneNumber, isActive, lastLoginDateTime, insertDateTime, activeCompanyCount }], totalCount, page, pageSize }`؛ فیلتر/جستجو/شمارش سمت سرور.
 
 ### ۲.۲ `GET /api/v1/admin/users/{userId}`
-- 404 برای ناموجود. پاسخ ۲۰۰: فیلدهای فهرست + `isEmailAddressVerified`, `isCellPhoneNumberVerified`, `updateDateTime`, `legacyRoleName`, `memberships: [{ companyId, companyName, roleCode, roleName, isActive, createdAtUtc }]`.
+- 404 برای ناموجود. پاسخ ۲۰۰: فیلدهای فهرست + `isEmailAddressVerified`, `isCellPhoneNumberVerified`, `updateDateTime`, `legacyRoleName`, `memberships: [{ companyId, companyName, roleCode, roleName, isActive, createdAtUtc }]` — `roleCode`/`roleName` برای عضویت بدون نقش `null` هستند (D-078).
 
 ### ۲.۳ `POST /api/v1/admin/users` (rate limit حساس + anti-forgery)
 - بدنه: `{ username, firstName, lastName, emailAddress, cellPhoneNumber?, password, confirmPassword, isActive }`.
@@ -109,7 +109,17 @@
 ## ۴. دفترچه کاربران شرکت
 
 ### ۴.۱ `GET /api/v1/companies/{companyId}/users` (permission: `users.list`)
-- Query: `search` اختیاری (روی username/firstName/lastName، حداکثر ۱۲۰ نویسه)، `membershipActive` اختیاری (فیلتر وضعیت عضویت)، `page` (پیش‌فرض ۱) و `pageSize` (پیش‌فرض ۲۵، clamp بین ۱ تا ۱۰۰). پاسخ: `{ companyId, companyName, items: [{ userId, username, firstName, lastName, userIsActive, membershipIsActive, roleId, roleCode, roleName, roleIsActive, membershipCreatedAtUtc }], totalCount, page, pageSize }`. شامل فیلدهای نقش و وضعیت جداگانهٔ حساب/عضویت است؛ اطلاعات تماس، رمز، نشست و دادهٔ Audit افشا نمی‌شود. غیرعضو 404؛ عضو بی‌مجوز `users.list` → 403؛ (حساس rate limit، no-store).
+- Query: `search` اختیاری (روی username/firstName/lastName، حداکثر ۱۲۰ نویسه)، `membershipActive` اختیاری (فیلتر وضعیت عضویت)، `page` (پیش‌فرض ۱) و `pageSize` (پیش‌فرض ۲۵، clamp بین ۱ تا ۱۰۰). پاسخ: `{ companyId, companyName, items: [{ userId, username, firstName, lastName, userIsActive, membershipIsActive, roleId, roleCode, roleName, roleIsActive, membershipCreatedAtUtc }], totalCount, page, pageSize }`. فیلدهای نقش برای عضوی که هنوز گروه دسترسی ندارد `null` هستند (D-078 — عضویت و نقش دو مفهوم مستقل‌اند) و `roleIsActive` در آن حالت `false` است؛ شامل اطلاعات تماس، رمز، نشست و دادهٔ Audit نمی‌شود. غیرعضو 404؛ عضو بی‌مجوز `users.list` → 403؛ (حساس rate limit، no-store).
+
+### ۴.۲ `POST /api/v1/companies/{companyId}/users` (permission: `users.create`؛ D-078 — 2026-11-10)
+- **مجوزدهی دوحالته (الگوی D-071):** مدیر نصب فعال (بازخوانی DB در هر درخواست) یا عضو فعال همان شرکت دارای کد `users.create`. غیرعضو/شرکت ناموجود/غیرفعال → 404 یکسان بدون افشا؛ عضو بی‌مجوز → 403. مدیر شرکت A هرگز نمی‌تواند برای شرکت B کاربر ایجاد کند (۴۰۴)؛ ورود به شرکت دیگر فقط از گردش درخواست/تأیید مقصد است.
+- بدنه همان DTO ایجاد کاربر مدیر نصب است: `{ username, firstName, lastName, emailAddress, cellPhoneNumber?, password, confirmPassword, isActive }` با **همان سیاست اعتبارسنجی مشترک** (`UserCreationValidation`؛ anti-forgery + rate limit حساس + `no-store`).
+- **سناریوها:**
+  - نام کاربری جدید → کاربر با Password Hash معتبر و عضویت فعال همان شرکت، اتمیک در یک `SaveChanges` (شکست هر مرحله = هیچ رکورد ناقصی نمی‌ماند) → `201 { userId, userCreated: true }`؛ Audit `UserCreated` + `UserMembershipCreated`.
+  - نام کاربری موجود (case-insensitive) → حساب موجود عیناً استفاده می‌شود؛ رمز و پروفایل او **هیچ‌گاه** تغییر/overwrite نمی‌شود؛ فقط عضویت فعال بدون نقش ساخته می‌شود → `201 { userId, userCreated: false }` (پاسخ ۲۰۱ در هر دو حالت یکنواخت است تا endpoint برای User Enumeration قابل سوءاستفاده نباشد؛ حساب غیرفعال → 409).
+  - عضویت فعال موجود → 409 «از قبل عضویت فعال دارد»؛ عضویت غیرفعال موجود → 409 «از مسیر درخواست و تأیید شرکت» (همان قرارداد تخصیص نقش)؛ ایمیل/موبایل متعلق به حساب دیگر → 409 (همان پیام مدیر نصب).
+- **نقش و دسترسی:** عضویت ساخته‌شده `RoleId = null` دارد — هیچ نقش، مجوز یا دسترسی سال/دوره‌ای ضمنی ایجاد نمی‌شود؛ عضو بدون نقش در `CompanyAccessService` هیچ دسترسی عملیاتی ندارد (fail-closed) و فقط با `roles.assign` (سقف D-071) نقش می‌گیرد. ایندکس یکتای `(UserId, TenantId)` داور نهایی تکرار/race است و `DbUpdateException` → 409 کنترل‌شده.
+- Audit در `SecurityAuditEvents` با actor/company/target و `userCreated`؛ بدون رمز، hash یا داده حساس.
 
 ## ۵. گردش درخواست عضویت بین‌شرکتی (D-065)
 

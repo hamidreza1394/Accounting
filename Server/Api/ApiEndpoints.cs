@@ -71,6 +71,7 @@ public static class ApiEndpoints
                 api.MapCompanyRoleAdministrationEndpoints();
                 api.MapAccessCatalogEndpoints();
                 api.MapCompanyUserDirectoryEndpoints();
+                api.MapCompanyUserProvisioningEndpoints();
                 api.MapCompanyMembershipRequestEndpoints();
                 api.MapCorporateGroupDirectoryEndpoints();
                 api.MapHrOrganizationalStructureEndpoints();

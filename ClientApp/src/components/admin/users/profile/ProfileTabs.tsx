@@ -344,7 +344,7 @@ const membershipColumns: readonly DataTableColumn<AdminUserMembership>[] = [
     header: 'نقش در شرکت',
     cell: (membership) => (
       <span>
-        {membership.roleName} <span dir="ltr" className="text-xs text-sub">({membership.roleCode})</span>
+        {membership.roleName ?? '—'} <span dir="ltr" className="text-xs text-sub">{membership.roleCode ? `(${membership.roleCode})` : ''}</span>
       </span>
     ),
   },

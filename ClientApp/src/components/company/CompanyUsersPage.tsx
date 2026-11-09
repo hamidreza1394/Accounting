@@ -135,8 +135,12 @@ export function CompanyUsersPage({ onUnauthenticated, companyId, companyName, ca
         header: 'گروه دسترسی',
         cell: (user) => (
           <span className="flex flex-col">
-            <span>{user.roleName}</span>
-            {!user.roleIsActive ? <span className="text-xs text-danger">گروه غیرفعال است</span> : null}
+            <span>{user.roleName ?? '—'}</span>
+            {user.roleName === null ? (
+              <span className="text-xs text-sub">بدون گروه دسترسی (D-078)</span>
+            ) : !user.roleIsActive ? (
+              <span className="text-xs text-danger">گروه غیرفعال است</span>
+            ) : null}
           </span>
         ),
       },
@@ -202,8 +206,14 @@ export function CompanyUsersPage({ onUnauthenticated, companyId, companyName, ca
                 <div>
                   <dt className="text-sub">گروه دسترسی</dt>
                   <dd>
-                    {selected.roleName} <code dir="ltr" className="ms-1 text-xs text-sub">{selected.roleCode}</code>
-                    {!selected.roleIsActive ? <span className="ms-2 text-xs text-danger">(غیرفعال)</span> : null}
+                    {selected.roleName === null ? (
+                      <span className="text-sub">بدون گروه دسترسی — تا تخصیص گروه، دسترسی عملیاتی ندارد</span>
+                    ) : (
+                      <>
+                        {selected.roleName} <code dir="ltr" className="ms-1 text-xs text-sub">{selected.roleCode}</code>
+                        {!selected.roleIsActive ? <span className="ms-2 text-xs text-danger">(غیرفعال)</span> : null}
+                      </>
+                    )}
                   </dd>
                 </div>
               </dl>
@@ -212,7 +222,7 @@ export function CompanyUsersPage({ onUnauthenticated, companyId, companyName, ca
               ) : null}
               <p className="text-xs text-sub">
                 مجوزهای دقیق گروه و واحد/سمت سازمانی در این فهرست نیست.
-                {canViewRoles ? (
+                {canViewRoles && selected.roleId ? (
                   <>
                     {' '}
                     <Link to={`/admin/roles/${encodeURIComponent(selected.roleId)}?company=${encodeURIComponent(companyId)}`} className="font-medium text-teal-deep underline-offset-4 hover:underline">
