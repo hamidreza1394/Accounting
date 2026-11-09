@@ -72,12 +72,18 @@ describe('HR sidebar entries (company-scoped permissions)', () => {
   it.each([
     ['hr.organizational-units.list', unitsLink, [positionsLink, employeesLink]],
     ['hr.positions.list', positionsLink, [unitsLink, employeesLink]],
-    ['hr.employees.list', employeesLink, [unitsLink, positionsLink]],
   ] as const)('with only %s shows only its own entry', async (code, shown, hidden) => {
     stubAll({ codes: [code] });
     const nav = await openShell();
     expect(await within(nav).findByRole('link', shown)).toBeInTheDocument();
     for (const link of hidden) expect(within(nav).queryByRole('link', link)).toBeNull();
+  });
+
+  it('keeps «کارکنان» a disabled «به‌زودی» entry (not a link) even with hr.employees.list', async () => {
+    stubAll({ codes: ['hr.employees.list'] });
+    const nav = await openShell();
+    expect(within(nav).queryByRole('link', employeesLink)).toBeNull();
+    expect(within(nav).getByText('کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
   });
 
   it('shows no HR entry to a member without HR permissions, but keeps the existing entries', async () => {
@@ -92,7 +98,8 @@ describe('HR sidebar entries (company-scoped permissions)', () => {
     const nav = await openShell();
     expect(await within(nav).findByRole('link', unitsLink)).toHaveAttribute('href', '/app/hr/org/units');
     expect(within(nav).getByRole('link', positionsLink)).toHaveAttribute('href', '/app/hr/org/positions');
-    expect(within(nav).getByRole('link', employeesLink)).toHaveAttribute('href', '/app/hr/org/employees');
+    expect(within(nav).queryByRole('link', employeesLink)).toBeNull();
+    expect(within(nav).getByText('کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
     expect(within(nav).getByRole('link', { name: 'گروه‌های دسترسی' })).toBeInTheDocument();
   });
 
@@ -143,14 +150,13 @@ describe('HR sidebar entries (company-scoped permissions)', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'سمت‌های سازمانی' })).toBeInTheDocument();
     expect(within(nav).getByRole('link', positionsLink)).toHaveAttribute('aria-current', 'page');
     expect(within(nav).getByRole('link', unitsLink)).not.toHaveAttribute('aria-current');
-    await user.click(within(nav).getByRole('link', employeesLink));
-    expect(await screen.findByRole('heading', { level: 1, name: 'کارکنان' })).toBeInTheDocument();
+    // The employees list is deferred in the menu; its route is covered by 'HR routes' (deep link).
+    expect(within(nav).queryByRole('link', employeesLink)).toBeNull();
   });
 
   it.each([
     ['/app/hr/org/units/new', unitsLink],
     ['/app/hr/org/positions/new', positionsLink],
-    ['/app/hr/org/employees/new', employeesLink],
   ] as const)('keeps the entry active on the nested route %s', async (path, link) => {
     stubAll({ codes: ['hr.organizational-units.list', 'hr.positions.list', 'hr.employees.list'] });
     const nav = await openShell(path);

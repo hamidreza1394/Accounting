@@ -96,7 +96,9 @@ describe('AppShell', () => {
     expect(screen.queryByText('ساختار سازمانی و کارکنان')).toBeNull();
     expect(screen.getByRole('link', { name: 'واحدهای سازمانی' })).toHaveAttribute('href', '/app/hr/org/units');
     expect(screen.getByRole('link', { name: 'سمت‌های سازمانی' })).toHaveAttribute('href', '/app/hr/org/positions');
-    expect(screen.getByRole('link', { name: 'کارکنان' })).toHaveAttribute('href', '/app/hr/org/employees');
+    // «کارکنان» is deferred by the owner: a disabled «به‌زودی» entry, not a link (the route itself still works by URL).
+    expect(screen.queryByRole('link', { name: 'کارکنان' })).toBeNull();
+    expect(screen.getByText('کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
   });
 
   it('shows the focused system-administration menu and removes redundant user-list shortcuts', async () => {
