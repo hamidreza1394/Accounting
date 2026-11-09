@@ -73,5 +73,5 @@
 ## شناسه‌های Git
 
 - Branch: `docs/issue-444-fiscal-year-user-access`
-- Commit: پس از ثبت تغییرات
-- Pull Request: پس از ایجاد PR
+- Commit: `6594478402b7ffbb29644233ffd67e5679309891` (head هنگام ایجاد PR؛ ممکن است با commit نهایی این به‌روزرسانی جلو برود)
+- Pull Request: [#606](https://github.com/hamidreza1394/Accounting/pull/606)
