@@ -81,7 +81,7 @@ export function UserPicker({ value, onChange, onUnauthenticated, className, ...a
   }, [open]);
 
   const choose = (user: AdminUserListItem) => {
-    onChange({ id: user.id, label: fullName(user) === 'بدون نام ثبت‌شده' ? (user.username ?? user.emailAddress) : fullName(user) });
+    onChange({ id: user.id, label: fullName(user) === 'بدون نام ثبت‌شده' ? (user.username ?? user.emailAddress ?? 'کاربر بدون نام') : fullName(user) });
     setQuery('');
     setOpen(false);
     setResults({ kind: 'idle' });

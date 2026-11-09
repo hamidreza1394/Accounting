@@ -43,7 +43,7 @@ function initialValuesOf(user: AdminUserDetails): UserFormValues {
     username: user.username ?? '',
     password: '',
     confirmPassword: '',
-    emailAddress: user.emailAddress,
+    emailAddress: user.emailAddress ?? '',
     cellPhoneNumber: user.cellPhoneNumber ?? '',
     isActive: user.isActive,
     employeeNumber: '',

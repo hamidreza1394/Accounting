@@ -42,7 +42,7 @@ public static class UserAdministrationEndpoints
         int page,
         int pageSize,
         string? sort,
-        bool descending,
+        bool? descending,
         CancellationToken cancellationToken)
     {
         var authorization = await AuthorizeInstallationAdministratorAsync(principal, database, cancellationToken);
@@ -77,7 +77,9 @@ public static class UserAdministrationEndpoints
         }
 
         var totalCount = await query.CountAsync(cancellationToken);
-        query = ApplySort(query, normalizedSort, descending);
+        // Without an explicit direction the newest-created user comes first; the other sorts
+        // keep the ascending default. The unique Id is the stable tiebreak of every order.
+        query = ApplySort(query, normalizedSort, descending ?? normalizedSort == "created");
 
         var items = await query
             .Skip((page - 1) * pageSize)

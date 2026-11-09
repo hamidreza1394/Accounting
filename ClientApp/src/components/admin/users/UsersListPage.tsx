@@ -82,7 +82,7 @@ const columns: readonly DataTableColumn<AdminUserListItem>[] = [
     sortable: true,
     cell: (user) => <span dir="ltr">{user.username ?? '—'}</span>,
   },
-  { key: 'email', header: 'ایمیل', cell: (user) => <span dir="ltr">{user.emailAddress}</span> },
+  { key: 'email', header: 'ایمیل', cell: (user) => (user.emailAddress ? <span dir="ltr">{user.emailAddress}</span> : <span className="text-muted-foreground">—</span>) },
   { key: 'mobile', header: 'موبایل', cell: (user) => (user.cellPhoneNumber ? <span dir="ltr">{user.cellPhoneNumber}</span> : '—') },
   { key: 'status', header: 'وضعیت', cell: (user) => <StatusBadge status={user.isActive ? 'active' : 'inactive'} /> },
   { key: 'companies', header: 'شرکت‌های فعال', align: 'center', cell: (user) => number.format(user.activeCompanyCount) },
