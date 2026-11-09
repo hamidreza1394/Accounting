@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ChevronDown, type LucideIcon } from 'lucide-react';
 import { Link } from '@/lib/router';
 
@@ -10,157 +10,126 @@ function isActivePath(pathname: string, to: string): boolean {
 export type NestedNavLeaf = {
   label: string;
   icon: LucideIcon;
-  tone: string;
   to?: string;
+  /** Consecutive leaves with the same section name form one collapsible section. */
   section?: string;
+  sectionIcon?: LucideIcon;
 };
 
-type ToneClass = Record<string, string>;
-
-function NavIcon({
-  icon: Icon,
-  tone,
-  toneClass,
-}: {
-  icon: LucideIcon;
-  tone: string;
-  toneClass: ToneClass;
-}) {
+/** Sub-menu icon: one uniform, slightly smaller glyph (no per-item colour). */
+export function SubNavIcon({ icon: Icon }: { icon: LucideIcon }) {
   return (
-    <span className={'faranou-nav-icon ' + (toneClass[tone] ?? '') + ' faranou-nav-icon--sm'} aria-hidden="true">
-      <Icon size={14} strokeWidth={2.2} />
+    <span className="faranou-nav-icon faranou-nav-icon--sub" aria-hidden="true">
+      <Icon size={15} strokeWidth={2} />
     </span>
   );
 }
 
+function SubLink({ leaf, pathname, onNavigate }: { leaf: NestedNavLeaf & { to: string }; pathname: string; onNavigate: () => void }) {
+  const active = isActivePath(pathname, leaf.to);
+  return (
+    <Link
+      to={leaf.to}
+      onClick={onNavigate}
+      aria-current={active ? 'page' : undefined}
+      className={'faranou-nav-leaf faranou-nav-leaf--sub ' + (active ? 'faranou-nav-active' : 'faranou-nav-link')}
+    >
+      <SubNavIcon icon={leaf.icon} />
+      <span className="min-w-0 flex-1 whitespace-normal leading-snug">{leaf.label}</span>
+    </Link>
+  );
+}
+
+type Block = { section?: string; icon?: LucideIcon; leaves: NestedNavLeaf[] };
+
+/** Splits the leaves into plain leaves and runs of leaves sharing a section name. */
+function toBlocks(leaves: readonly NestedNavLeaf[]): Block[] {
+  const blocks: Block[] = [];
+  for (const leaf of leaves) {
+    const last = blocks[blocks.length - 1];
+    if (leaf.section && last?.section === leaf.section) {
+      last.leaves.push(leaf);
+      if (!last.icon && leaf.sectionIcon) last.icon = leaf.sectionIcon;
+    } else if (leaf.section) {
+      blocks.push({ section: leaf.section, ...(leaf.sectionIcon ? { icon: leaf.sectionIcon } : {}), leaves: [leaf] });
+    } else {
+      blocks.push({ leaves: [leaf] });
+    }
+  }
+  return blocks;
+}
+
 /**
- * Renders leaves of a sidebar group with collapsible Persian section parents
- * (e.g. «ساختار سازمانی و کارکنان» owning کارکنان / واحدها / سمت‌ها).
+ * Renders the leaves of a sidebar group, with collapsible Persian sections
+ * (e.g. «ساختار سازمانی» owning واحدها / سمت‌ها / کارکنان). Sections start open; the section
+ * of the current page is re-opened on every navigation, and can still be folded by hand.
  */
 export function NestedNavSections({
   groupLabel,
   leaves,
   pathname,
   onNavigate,
-  toneClass,
   DisabledLeaf,
 }: {
   groupLabel: string;
   leaves: readonly NestedNavLeaf[];
   pathname: string;
   onNavigate: () => void;
-  toneClass: ToneClass;
   DisabledLeaf: (props: { leaf: NestedNavLeaf; nested?: boolean }) => ReactNode;
 }) {
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  const leavesRef = useRef(leaves);
+  leavesRef.current = leaves;
 
   useEffect(() => {
-    const sectionsToOpen: Record<string, boolean> = {};
-    let currentSection: string | undefined;
-    for (const leaf of leaves) {
-      if (leaf.section) currentSection = leaf.section;
-      if (currentSection && leaf.to && isActivePath(pathname, leaf.to)) {
-        sectionsToOpen[`${groupLabel}::${currentSection}`] = true;
-      }
+    const toOpen: Record<string, boolean> = {};
+    for (const leaf of leavesRef.current) {
+      if (leaf.section && leaf.to && isActivePath(pathname, leaf.to)) toOpen[`${groupLabel}::${leaf.section}`] = true;
     }
-    if (Object.keys(sectionsToOpen).length === 0) return;
-    setOpenSections((previous) => ({ ...previous, ...sectionsToOpen }));
-  }, [pathname, groupLabel, leaves]);
+    if (Object.keys(toOpen).length === 0) return;
+    setOpenSections((previous) => ({ ...previous, ...toOpen }));
+  }, [pathname, groupLabel]);
 
-  const nodes: ReactNode[] = [];
-  let sectionName: string | undefined;
-  let sectionLeaves: NestedNavLeaf[] = [];
-
-  const flushSection = () => {
-    if (!sectionName) return;
-    const key = `${groupLabel}::${sectionName}`;
-    const sectionOpen =
-      openSections[key] !== false ||
-      sectionLeaves.some((l) => l.to !== undefined && isActivePath(pathname, l.to));
-    const sectionId = `nav-section-${key.replace(/[^\w\u0600-\u06FF]+/g, '-')}`;
-    const name = sectionName;
-    const batch = sectionLeaves;
-    nodes.push(
-      <li key={key} className="space-y-1">
-        <button
-          type="button"
-          className="faranou-nav-section-toggle"
-          aria-expanded={sectionOpen}
-          aria-controls={sectionId}
-          onClick={() =>
-            setOpenSections((previous) => {
-              const currentlyOpen =
-                previous[key] !== false ||
-                batch.some((l) => l.to !== undefined && isActivePath(pathname, l.to));
-              return { ...previous, [key]: !currentlyOpen };
-            })
-          }
-        >
-          <span>{name}</span>
-          <ChevronDown size={14} className="faranou-nav-section-chevron" aria-hidden="true" />
-        </button>
-        {sectionOpen ? (
-          <ul id={sectionId} className="space-y-1 faranou-nav-leaf--nested">
-            {batch.map((leaf) =>
-              leaf.to ? (
-                <li key={leaf.label}>
-                  <Link
-                    to={leaf.to}
-                    onClick={onNavigate}
-                    aria-current={isActivePath(pathname, leaf.to) ? 'page' : undefined}
-                    className={
-                      'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' +
-                      (isActivePath(pathname, leaf.to)
-                        ? 'bg-pick/20 text-white ring-1 ring-pick/30'
-                        : 'text-on-navy/80 hover:bg-white/10 hover:text-white')
-                    }
-                  >
-                    <NavIcon icon={leaf.icon} tone={leaf.tone} toneClass={toneClass} />
-                    <span className="min-w-0 flex-1">{leaf.label}</span>
-                  </Link>
-                </li>
-              ) : (
-                <li key={leaf.label}>{DisabledLeaf({ leaf, nested: true })}</li>
-              ),
-            )}
-          </ul>
-        ) : null}
-      </li>,
+  const renderLeaf = (leaf: NestedNavLeaf) =>
+    leaf.to ? (
+      <li key={leaf.label}>
+        <SubLink leaf={{ ...leaf, to: leaf.to }} pathname={pathname} onNavigate={onNavigate} />
+      </li>
+    ) : (
+      <li key={leaf.label}>{DisabledLeaf({ leaf, nested: true })}</li>
     );
-    sectionName = undefined;
-    sectionLeaves = [];
-  };
 
-  for (const leaf of leaves) {
-    if (leaf.section) {
-      flushSection();
-      sectionName = leaf.section;
-      sectionLeaves = [leaf];
-    } else if (sectionName) {
-      sectionLeaves.push(leaf);
-    } else if (leaf.to) {
-      nodes.push(
-        <li key={leaf.label}>
-          <Link
-            to={leaf.to}
-            onClick={onNavigate}
-            aria-current={isActivePath(pathname, leaf.to) ? 'page' : undefined}
-            className={
-              'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 text-start text-[12px] transition ' +
-              (isActivePath(pathname, leaf.to)
-                ? 'bg-pick/20 text-white ring-1 ring-pick/30'
-                : 'text-on-navy/80 hover:bg-white/10 hover:text-white')
-            }
-          >
-            <NavIcon icon={leaf.icon} tone={leaf.tone} toneClass={toneClass} />
-            <span className="min-w-0 flex-1">{leaf.label}</span>
-          </Link>
-        </li>,
-      );
-    } else {
-      nodes.push(<li key={leaf.label}>{DisabledLeaf({ leaf, nested: true })}</li>);
-    }
-  }
-  flushSection();
-  return <>{nodes}</>;
+  return (
+    <>
+      {toBlocks(leaves).map((block) => {
+        if (!block.section) return block.leaves.map(renderLeaf);
+        const key = `${groupLabel}::${block.section}`;
+        const open = openSections[key] !== false;
+        const sectionId = `nav-section-${key.replace(/[^\w؀-ۿ]+/g, '-')}`;
+        const SectionIcon = block.icon;
+        const active = block.leaves.some((leaf) => leaf.to !== undefined && isActivePath(pathname, leaf.to));
+        return (
+          <li key={key} className="faranou-nav-section-item">
+            <button
+              type="button"
+              className="faranou-nav-section-toggle"
+              aria-expanded={open}
+              aria-controls={sectionId}
+              onClick={() => setOpenSections((previous) => ({ ...previous, [key]: previous[key] === false }))}
+            >
+              {SectionIcon ? <SubNavIcon icon={SectionIcon} /> : null}
+              <span className="min-w-0 flex-1 text-start">{block.section}</span>
+              {active && !open ? <span className="faranou-nav-group-dot" aria-hidden="true" /> : null}
+              <ChevronDown size={14} className={'faranou-nav-chevron' + (open ? ' faranou-nav-chevron--open' : '')} aria-hidden="true" />
+            </button>
+            {open ? (
+              <ul id={sectionId} className="faranou-nav-leaf-list">
+                {block.leaves.map(renderLeaf)}
+              </ul>
+            ) : null}
+          </li>
+        );
+      })}
+    </>
+  );
 }

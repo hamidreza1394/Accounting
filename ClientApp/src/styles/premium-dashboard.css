@@ -70,14 +70,15 @@
 .faranou-sidebar.faranou-sidebar--premium {
   isolation: isolate;
   color: #eaf5fc;
-  width: 276px;
-  flex: 0 0 276px;
-  border-inline-start: 1px solid rgb(140 180 214 / .18);
+  /* Desktop width stays inside 280-320px; one continuous, subtle frame around brand title, menu and footer. */
+  width: 300px;
+  flex: 0 0 300px;
+  border: 1px solid rgb(120 165 205 / .28);
   background:
     radial-gradient(ellipse at 100% 0%, rgb(40 92 158 / .24), transparent 42%),
     radial-gradient(ellipse at 0% 100%, rgb(20 90 130 / .18), transparent 40%),
     linear-gradient(180deg, #0d1f36 0%, #0b1a2e 48%, #0a1628 100%);
-  box-shadow: calc(var(--inline-sign) * 10px) 0 36px rgb(4 22 44 / .2), inset calc(var(--inline-sign) * -1px) 0 0 rgb(255 255 255 / .04);
+  box-shadow: calc(var(--inline-sign) * 10px) 0 36px rgb(4 22 44 / .2);
   overflow: hidden;
 }
 
@@ -118,33 +119,6 @@
   letter-spacing: .05em;
 }
 
-.faranou-sidebar--premium .faranou-nav-active {
-  position: relative;
-  overflow: hidden;
-  color: #fff !important;
-  border: 1px solid rgb(100 195 235 / .4);
-  background: linear-gradient(112deg, #1280d0 0%, #15a0d8 55%, #17b0b8 100%);
-  box-shadow: 0 8px 20px rgb(10 70 120 / .35), inset 0 1px 0 rgb(255 255 255 / .28);
-}
-.faranou-sidebar--premium .faranou-nav-active::before {
-  position: absolute;
-  inset-block: 9px;
-  inset-inline-start: 0;
-  width: 3px;
-  border-radius: 4px;
-  background: linear-gradient(180deg, #ffe8a8, #f0b84a);
-  content: "";
-}
-@media (prefers-reduced-motion: no-preference) {
-  .faranou-sidebar--premium .faranou-nav-active {
-    transition: filter 150ms ease, transform 150ms ease;
-  }
-  .faranou-sidebar--premium .faranou-nav-active:hover {
-    filter: brightness(1.05);
-    transform: translateX(calc(var(--inline-sign) * 2px));
-  }
-}
-
 .faranou-sidebar--premium .faranou-nav-disabled {
   color: rgb(205 230 250 / .85);
   border: 1px solid transparent;
@@ -158,16 +132,6 @@
   color: rgb(185 220 245 / .78);
   border-color: rgb(255 255 255 / .14);
   background: rgb(255 255 255 / .06);
-}
-
-.faranou-sidebar--premium .faranou-sidebar-footer {
-  margin: .45rem .7rem .85rem;
-  padding: .85rem 1rem;
-  border-radius: 14px;
-  border: 1px solid rgb(110 200 175 / .25);
-  background: linear-gradient(155deg, rgb(255 255 255 / .1), rgb(35 110 95 / .14));
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / .08);
-  backdrop-filter: blur(8px);
 }
 
 .faranou-welcome.faranou-welcome--milad {
@@ -323,6 +287,70 @@
   .faranou-sidebar--premium { width: min(300px, 86vw); flex-basis: min(300px, 86vw); }
 }
 
+/* ---- Sidebar menu (single source of truth for the nav: frame, rows, groups, sub-menus) ---- */
+.faranou-sidebar-nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: .85rem .75rem;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(150 190 225 / .4) transparent;
+}
+.faranou-sidebar-title {
+  margin: 0 .25rem .6rem;
+  font-size: .68rem;
+  font-weight: 700;
+}
+.faranou-nav-list,
+.faranou-nav-sub,
+.faranou-nav-leaf-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.faranou-nav-list { gap: .5rem; }
+
+/* Top-level entries and groups: one full-width, equal-height bordered row. */
+.faranou-nav-list > li {
+  border: 1px solid rgb(120 170 210 / .16);
+  border-radius: .8rem;
+  background: rgb(255 255 255 / .04);
+}
+.faranou-nav-list > li.faranou-nav-group-card--open {
+  border-color: rgb(150 195 235 / .3);
+  background: rgb(255 255 255 / .075);
+}
+.faranou-nav-row {
+  display: flex;
+  width: 100%;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: .65rem;
+  padding-inline: .65rem;
+  border: 0;
+  border-radius: .8rem;
+  background: transparent;
+  color: #e8f4ff;
+  font-size: .8125rem;
+  font-weight: 600;
+  text-align: start;
+  cursor: pointer;
+}
+.faranou-nav-row.faranou-nav-disabled { cursor: not-allowed; }
+.faranou-nav-row:hover { background: rgb(255 255 255 / .06); }
+.faranou-nav-chevron {
+  flex: 0 0 auto;
+  color: rgb(200 222 245 / .75);
+}
+.faranou-nav-chevron--open { transform: rotate(180deg); }
+@media (prefers-reduced-motion: no-preference) {
+  .faranou-nav-chevron { transition: transform 140ms ease; }
+}
+
+/* Group icon: coloured chip (the only coloured element of the menu besides the active state). */
 .faranou-nav-icon {
   display: inline-flex;
   width: 1.85rem;
@@ -346,79 +374,136 @@
 .faranou-nav-icon--slate { background: linear-gradient(145deg, #94a3b8, #475569); }
 .faranou-nav-icon--blue { background: linear-gradient(145deg, #60a5fa, #2563eb); }
 .faranou-nav-icon--green { background: linear-gradient(145deg, #4ade80, #16a34a); }
-.faranou-nav-icon.faranou-nav-icon--sm {
+/* Sub-menu icon: same colour for every item, a little smaller, no chip. */
+.faranou-nav-icon.faranou-nav-icon--sub {
   width: 1.5rem;
   height: 1.5rem;
-  border-radius: 7px;
+  background: none;
+  box-shadow: none;
+  color: #a9cbe8;
 }
 
-.faranou-nav-divider {
-  list-style: none;
-  margin: .85rem .35rem;
-  padding: 0;
-}
-.faranou-nav-divider > span {
-  display: block;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgb(140 200 240 / .35), transparent);
-}
-
-/* ---- Sidebar group visual hierarchy (UI shell polish) ---- */
-.faranou-nav-group {
-  color: #e8f4ff;
-  border: 1px solid rgb(120 180 220 / .18);
-  background: linear-gradient(180deg, rgb(18 48 78 / .92) 0%, rgb(14 40 66 / .88) 100%);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / .06);
-  font-weight: 700;
-}
-.faranou-nav-group:hover {
-  border-color: rgb(150 200 235 / .28);
-  background: linear-gradient(180deg, rgb(22 56 90 / .95) 0%, rgb(16 46 74 / .9) 100%);
-}
-.faranou-nav-group[aria-expanded="true"],
-.faranou-nav-group--open {
-  border-color: rgb(180 210 240 / .32);
-  background: linear-gradient(180deg, rgb(24 62 98 / .96) 0%, rgb(18 50 82 / .92) 100%);
-}
+/* Sub-menu: stays inside the group card, indented under a thin guide line. */
 .faranou-nav-sub {
-  margin-top: .35rem;
-  padding: .35rem 0 .15rem;
-  border-inline-start: 2px solid rgb(120 180 220 / .22);
+  gap: .15rem;
+  margin: 0 0 .55rem;
+  margin-inline: 1.15rem .5rem;
+  padding-inline-start: .5rem;
+  border-inline-start: 1px solid rgb(120 170 210 / .24);
 }
+.faranou-nav-sub::before { content: none; }
+.faranou-nav-leaf-list { gap: .15rem; padding-inline-start: .5rem; }
+.faranou-nav-leaf {
+  display: flex;
+  width: 100%;
+  min-height: 2.4rem;
+  align-items: center;
+  gap: .55rem;
+  padding-inline: .6rem;
+  border-radius: .6rem;
+  color: rgb(222 236 249 / .92);
+  font-size: .78rem;
+  text-align: start;
+}
+.faranou-nav-link:hover { background: rgb(255 255 255 / .08); color: #fff; }
 .faranou-nav-section-toggle {
   display: flex;
   width: 100%;
-  min-height: 2rem;
+  min-height: 2.4rem;
   align-items: center;
-  gap: .35rem;
-  padding: .2rem .35rem;
+  gap: .55rem;
+  padding-inline: .6rem;
   border: 0;
-  border-radius: .55rem;
+  border-radius: .6rem;
   background: transparent;
-  color: var(--color-gold, #d9a24b);
-  font-size: .7rem;
-  font-weight: 800;
-  letter-spacing: .02em;
+  color: #d3e6f7;
+  font-size: .78rem;
+  font-weight: 700;
   text-align: start;
   cursor: pointer;
 }
-.faranou-nav-section-toggle:hover { background: rgb(255 255 255 / .06); }
-.faranou-nav-section-toggle:focus-visible {
-  outline: 2px solid var(--color-gold, #d9a24b);
-  outline-offset: 1px;
-}
-.faranou-nav-section-toggle .faranou-nav-section-chevron {
-  margin-inline-start: auto;
-  transition: transform 140ms ease;
-}
-.faranou-nav-section-toggle[aria-expanded="true"] .faranou-nav-section-chevron {
-  transform: rotate(180deg);
-}
-.faranou-nav-leaf--nested { padding-inline-start: .35rem; }
+.faranou-nav-section-toggle:hover { background: rgb(255 255 255 / .07); }
+.faranou-nav-section-item { display: grid; gap: .15rem; }
 
-.faranou-sidebar--premium .faranou-nav-active .faranou-nav-icon {
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / .35), 0 2px 8px rgb(0 30 60 / .25);
+/* Active item (any level): lighter fill, thin gold bar on the start edge, bold text. */
+.faranou-sidebar--premium .faranou-nav-active {
+  position: relative;
+  border: 0;
+  background: rgb(255 255 255 / .14);
+  color: #fff !important;
+  font-weight: 700;
+  box-shadow: none;
+  filter: none;
+  transform: none;
 }
+.faranou-sidebar--premium .faranou-nav-active:hover { filter: none; transform: none; background: rgb(255 255 255 / .18); }
+.faranou-sidebar--premium .faranou-nav-active::before {
+  position: absolute;
+  inset-block: .45rem;
+  inset-inline-start: 0;
+  width: 3px;
+  border-radius: 4px;
+  background: #f0b84a;
+  content: "";
+}
+.faranou-sidebar--premium .faranou-nav-active .faranou-nav-icon--sub { color: #fff; }
+
+.faranou-nav-soon-badge {
+  flex: 0 0 auto;
+  padding: .05rem .35rem;
+  border: 1px solid rgb(255 255 255 / .18);
+  border-radius: .4rem;
+  font-size: .6rem;
+  font-weight: 600;
+}
+
+.faranou-sidebar-nav :is(a, button):focus-visible,
+.faranou-sidebar-footer button:focus-visible {
+  outline: 2px solid #f0b84a;
+  outline-offset: -2px;
+}
+
+/* Footer: inside the same frame, always the last thing in the sidebar (logout is its last element). */
+.faranou-sidebar--premium .faranou-sidebar-footer {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: .75rem .85rem .85rem;
+  border: 0;
+  border-top: 1px solid rgb(120 170 210 / .2);
+  border-radius: 0;
+  background: rgb(0 0 0 / .14);
+  box-shadow: none;
+}
+.faranou-sidebar-secure {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-size: .75rem;
+  font-weight: 600;
+}
+.faranou-sidebar-footer p {
+  margin: .25rem 0 0;
+  font-size: .65rem;
+  line-height: 1.6;
+}
+.faranou-sidebar-logout {
+  display: flex;
+  width: 100%;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  margin-top: .65rem;
+  border: 1px solid rgb(255 255 255 / .2);
+  border-radius: .7rem;
+  background: rgb(255 255 255 / .06);
+  color: #fff;
+  font-size: .8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.faranou-sidebar-logout:hover:not(:disabled) { background: rgb(244 63 94 / .2); border-color: rgb(251 113 133 / .5); }
+.faranou-sidebar-logout:disabled { opacity: .65; cursor: progress; }
 
 /* Larger, clearer active workspace tabs */
 .faranou-tab {
@@ -447,4 +532,12 @@
 .faranou-tabbar-new {
   width: 2.45rem;
   border-radius: 12px;
+}
+
+/* Mobile / tablet drawer: never wider than the viewport minus a scrim margin (outranks the desktop width above). */
+@media (max-width: 1023px) {
+  .faranou-sidebar.faranou-sidebar--premium {
+    width: min(300px, 86vw);
+    flex-basis: min(300px, 86vw);
+  }
 }

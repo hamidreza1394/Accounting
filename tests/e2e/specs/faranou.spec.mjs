@@ -357,7 +357,7 @@ test('every new sign-in asks again; the previous choice is not restored', async 
   await signIn(page, alice);
   await chooseAlicesCompany(page);
 
-  await page.getByRole('button', { name: 'خروج' }).click();
+  await page.getByRole('button', { name: 'خروج', exact: true }).click();
   await expect(page).toHaveURL(/\/Account\/Login/i);
 
   await signIn(page, alice);
@@ -439,7 +439,7 @@ test('final design: header has only real controls, companies are single rows, bo
   await expect(page.getByRole('heading', { name: 'فرانو - دوره مالی' })).toBeVisible();
   // Header: brand, user and sign-out only; no dashboard title, no invented bell/settings.
   await expect(page.getByText('فرانو - داشبورد')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'خروج' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'خروج', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: /اعلان|تنظیمات/ })).toHaveCount(0);
   await expect(page.getByText(/همگروه|زیرمجموعه|شرکت مادر/)).toHaveCount(0);
 
@@ -523,7 +523,7 @@ test('API sign-out needs the anti-forgery token; the dashboard button signs out'
   expect(forged).toBe(400);
   expect(await page.evaluate(async () => (await fetch('/api/v1/session')).status)).toBe(200);
 
-  await page.getByRole('button', { name: 'خروج' }).click();
+  await page.getByRole('button', { name: 'خروج', exact: true }).click();
   await expect(page).toHaveURL(/\/Account\/Login/i);
   expect(await page.evaluate(async () => (await fetch('/api/v1/session')).status)).toBe(401);
   await expectCleanPage(page);

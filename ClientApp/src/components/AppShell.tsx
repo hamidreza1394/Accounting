@@ -81,7 +81,6 @@ function AppShellFrame({
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const accountTriggerRef = useRef<HTMLButtonElement>(null);
   const mainRef = useRef<HTMLElement>(null);
@@ -277,9 +276,9 @@ function AppShellFrame({
           canAccess={canAccess}
           onRetryPermissions={onRetryPermissions}
           onNavigate={() => setMobileMenuOpen(false)}
-          collapsed={sidebarCollapsed}
-          onToggleCollapsed={() => setSidebarCollapsed((collapsed) => !collapsed)}
           mobileOpen={mobileMenuOpen}
+          onLogout={requestLogout}
+          loggingOut={loggingOut}
         />
 
         <main id="main-content" ref={mainRef} tabIndex={-1} className="faranou-main-content min-w-0 flex-1 outline-none">
