@@ -427,7 +427,7 @@ export function AppSidebar({ access, canAccess, onRetryPermissions, onNavigate, 
                       pathname={pathname}
                       onNavigate={onNavigate}
                       toneClass={toneClass}
-                      DisabledLeaf={({ leaf, nested }) => <DisabledLeaf leaf={leaf as NavLeaf} nested={nested} />}
+                      DisabledLeaf={({ leaf, nested }) => <DisabledLeaf leaf={leaf as NavLeaf} nested={nested === true} />}
                     />
                   </ul>
                 ) : null}
