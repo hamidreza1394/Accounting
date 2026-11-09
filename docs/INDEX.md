@@ -14,7 +14,7 @@
 | سند | کاربرد |
 |---|---|
 | [TRADE_MODULE.md](TRADE_MODULE.md) | معماری، امنیت چندشرکتی، استفاده مشترک از دوره‌های مالی، فرم‌ها، گزارش‌ها و مسیر استخراج ماژول بازرگانی (D-061/D-062) |
-| [USER_ACCESS_MANAGEMENT.md](USER_ACCESS_MANAGEMENT.md) | طراحی و نقشه اجرایی مدیریت کاربران، سمت‌ها، گروه‌های دسترسی، مجوزهای جزئی و سوابق امنیتی (Issue #444) |
+| [USER_ACCESS_MANAGEMENT.md](USER_ACCESS_MANAGEMENT.md) | طراحی و نقشه اجرایی مدیریت کاربران، سمت‌ها، گروه‌های دسترسی، مجوزهای جزئی، عضویت داخلی/بین‌شرکتی (D-078) و سوابق امنیتی (Issue #444) |
 | [SUBSYSTEM_CATALOG.md](SUBSYSTEM_CATALOG.md) | کاتالوگ رسمی زیرسیستم‌های واقعی مخزن با شواهد کد، وضعیت، منو، کدهای مجوز و پیوند entitlement؛ مدل زیرسیستم/منو/فرم/عملیات در D-075 (Stage 2-A، Issue #444) |
 | [MENU_FORM_CATALOG.md](MENU_FORM_CATALOG.md) | کاتالوگ درخت منو و همهٔ Routeهای واقعی با Parent/گیت/ترتیب؛ گارد ماشینی سازگاری منو↔روتر (Stage 2-B، Issue #444) |
 | [PERMISSION_CATALOG.md](PERMISSION_CATALOG.md) | نگاشت کاربرد هر ۷۳ کد `PermissionDefinitions` به endpoint/فرم، تاکسونومی افعال عملیات، سطح hint کلاینت و قواعد نگهداری کاتالوگ (Stage 2-C، Issue #444) |
@@ -116,3 +116,6 @@
 - **Stage 2-A مأموریت تکمیلی #444 (2026-11-08):** کاتالوگ رسمی زیرسیستم‌ها: [SUBSYSTEM_CATALOG.md](SUBSYSTEM_CATALOG.md)؛ ADR پیشنهادی D-075؛ handoff مرحله دوم: [handoffs/ISSUE-444-stage-2.md](handoffs/ISSUE-444-stage-2.md).
 
 - **D-077 Accepted (2026-11-08):** هویت User یک‌باره و پایدار است؛ تخصیص CompanyRole برای هر سال/دوره مستقل و فراخوانی دسترسی از سال دیگر به‌صورت کپی قابل بازبینی است. پیاده‌سازی NotImplemented و DDL تا رفع ابهام D-066 / Issue #488 مسدود است؛ handoff: [`handoffs/ISSUE-444-fiscal-year-user-access.md`](handoffs/ISSUE-444-fiscal-year-user-access.md).
+
+- **D-078 Accepted (2026-11-09):** عضویت مدیر مجاز در Company خودش هنگام ایجاد کاربر خودکار Approved/Active می‌شود؛ عضویت بین‌شرکتی (از جمله هلدینگ به زیرمجموعه) نیازمند تأیید مدیر مقصد است؛ دسترسی سال/دوره عضویت جدید نیست. runtime تا ممیزی و تست `NotVerified`.
+- **تحویل D-078:** [UNNUMBERED-company-membership-approval-scope.md](handoffs/UNNUMBERED-company-membership-approval-scope.md).
