@@ -224,6 +224,7 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
         return;
       }
 
+      setBlockedLicenses([]);
       setLicenseLoading(true);
       try {
         const response = await fetch(
