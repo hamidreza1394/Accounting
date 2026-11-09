@@ -183,24 +183,28 @@ describe('App routing', () => {
     }
   });
 
-  it('reaches the roles list and the permission catalog from the menu, with the active company by default', async () => {
+  it('reaches the roles list and the permission catalog by URL, with the active company by default (menu entries are deferred)', async () => {
     const user = userEvent.setup();
     const fetchMock = stubAll(true);
+    window.history.replaceState(null, '', '/app/admin/roles');
     render(<App navigate={vi.fn()} />);
-    await screen.findByRole('heading', { name: dashboardHeading });
-    const nav = screen.getByRole('navigation', { name: 'منوی اصلی' });
+    const nav = await screen.findByRole('navigation', { name: 'منوی اصلی' });
     await openSystemMenu(user, nav);
-    await user.click(await within(nav).findByRole('link', { name: 'گروه‌های دسترسی' }));
+    // The owner deferred both menu entries: not shown as links or entries.
+    for (const label of ['گروه‌های دسترسی', 'کاتالوگ و جزئیات مجوزها']) {
+      expect(within(nav).queryByRole('link', { name: label })).toBeNull();
+      expect(within(nav).queryByText(label)).toBeNull();
+    }
     expect(await screen.findByRole('heading', { level: 1, name: 'گروه‌های دسترسی' })).toBeInTheDocument();
-    expect(window.location.pathname).toBe('/app/admin/roles');
     expect(await screen.findByRole('link', { name: 'کارشناس فروش' })).toHaveAttribute('href', '/app/admin/roles/role-1?company=a');
-    expect(within(nav).getByRole('link', { name: 'گروه‌های دسترسی' })).toHaveAttribute('aria-current', 'page');
     expect(fetchMock.mock.calls.some((call) => String(call[0]) === '/api/v1/admin/companies/a/roles')).toBe(true);
+  });
 
-    await user.click(within(nav).getByRole('link', { name: 'کاتالوگ و جزئیات مجوزها' }));
+  it('opens the permission catalog directly by URL', async () => {
+    stubAll(true);
+    window.history.replaceState(null, '', '/app/admin/permissions');
+    render(<App navigate={vi.fn()} />);
     expect(await screen.findByRole('heading', { level: 1, name: 'کاتالوگ مجوزها' })).toBeInTheDocument();
-    expect(window.location.pathname).toBe('/app/admin/permissions');
-    expect(within(nav).getByRole('link', { name: 'کاتالوگ و جزئیات مجوزها' })).toHaveAttribute('aria-current', 'page');
   });
 
   it('opens /admin/roles/new as the create form, not as a role with id "new"', async () => {

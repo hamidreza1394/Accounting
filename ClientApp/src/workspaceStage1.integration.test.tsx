@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { openSystemMenu } from './test/sidebar';
@@ -73,6 +73,15 @@ afterEach(() => {
   resetFormsForTests();
 });
 
+/** «کارکنان» is a deferred (disabled) menu entry, so the list is reached like a typed URL / history navigation. */
+async function openEmployeesList(nav: HTMLElement) {
+  expect(within(nav).queryByRole('link', { name: 'کارکنان' })).toBeNull();
+  act(() => {
+    window.history.pushState(null, '', '/app/hr/org/employees');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  });
+}
+
 describe('workspace stage 1 completion — the consolidated integration (PR 7)', () => {
   it('multi-tab, in-tab create, the context guard and the overlay selection work end to end', async () => {
     const user = userEvent.setup();
@@ -85,7 +94,7 @@ describe('workspace stage 1 completion — the consolidated integration (PR 7)',
     await openSystemMenu(user, nav);
     // The sidebar gates the HR entry behind the company permission hints (fail-closed while
     // they load) — wait for the answer, then navigate.
-    await user.click(await within(nav).findByRole('link', { name: 'کارکنان' }, { timeout: 10000 }));
+    await openEmployeesList(nav);
     await waitFor(() => expect(paneKeys()).toEqual(['/', '/hr/org/employees']));
     expect(await screen.findByRole('heading', { level: 1, name: 'کارکنان' })).toBeInTheDocument();
 
@@ -148,7 +157,7 @@ describe('workspace stage 1 completion — the consolidated integration (PR 7)',
 
     const nav = screen.getByRole('navigation', { name: 'منوی اصلی' });
     await openSystemMenu(user, nav);
-    await user.click(await within(nav).findByRole('link', { name: 'کارکنان' }, { timeout: 10000 }));
+    await openEmployeesList(nav);
     await user.click(await screen.findByRole('button', { name: 'کارمند جدید' }, { timeout: 10000 }));
     await user.type(await screen.findByLabelText(/شماره پرسنلی/), 'EMP-778');
 
