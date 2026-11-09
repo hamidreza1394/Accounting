@@ -160,6 +160,10 @@ ALTER_COLUMN_ARGUMENTS = {
     "oldNullable",
     "oldMaxLength",
     "oldUnicode",
+    # EF Core writes 'defaultValue' on the Down of a column that becomes NOT NULL again
+    # (the value NULL rows are backfilled with). It is data handling, not schema: it is
+    # accepted here and not compared with the model.
+    "defaultValue",
 }
 
 # The value that EF Core writes as 'defaultValue' for a column that is added as NOT NULL.

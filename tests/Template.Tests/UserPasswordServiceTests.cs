@@ -105,7 +105,7 @@ public sealed class UserPasswordServiceTests
     [Theory]
     [InlineData("short")]
     [InlineData("password123")]
-    [InlineData("xactly-14-char")] // D-073 §5: one character below the minimum 15.
+    [InlineData("Zq9!mK2")] // D-078: seven characters, one below the minimum 8.
     public async Task ChangePasswordAsync_RejectsShortOrCommonPasswords(string newPassword)
     {
         await using var fixture = new Fixture();
@@ -122,11 +122,30 @@ public sealed class UserPasswordServiceTests
     }
 
     [Fact]
-    public async Task ChangePasswordAsync_AcceptsAFifteenCharacterPassphrase_WithSpaces()
+    public async Task ChangePasswordAsync_AcceptsAPasswordOfExactlyTheMinimumLength()
     {
         await using var fixture = new Fixture();
 
-        // D-073 §5: minimum 15, spaces and passphrases are allowed, no composition rules.
+        // D-078: the boundary - exactly 8 characters is accepted.
+        var password = "Zq9!mK2x";
+        Assert.Equal(Constants.MinLength.UserPassword, password.Length);
+
+        var result = await fixture.Service.ChangePasswordAsync(
+            fixture.User.Id,
+            "Old-Password-1405!",
+            password,
+            password,
+            "192.0.2.10");
+
+        Assert.Equal(Infrastructure.Security.ChangePasswordOutcome.Changed, result.Outcome);
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_AcceptsALongPassphrase_WithSpaces()
+    {
+        await using var fixture = new Fixture();
+
+        // D-073 §5/D-078: spaces and passphrases are allowed, no composition rules.
         var result = await fixture.Service.ChangePasswordAsync(
             fixture.User.Id,
             "Old-Password-1405!",

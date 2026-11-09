@@ -2227,7 +2227,7 @@ public static class HrOrganizationalStructureEndpoints
     /// relationship to the company get the same 404 as an unknown company (no disclosure),
     /// and members without the permission get an explicit 403.
     /// </summary>
-    private static async Task<(IResult? Failure, HrScope? Scope)> AuthorizeHrScopeAsync(
+    internal static async Task<(IResult? Failure, HrScope? Scope)> AuthorizeHrScopeAsync(
         Data.DatabaseContext database,
         Infrastructure.Tenancy.CompanyAccessService companyAccess,
         ClaimsPrincipal principal,
@@ -2254,14 +2254,14 @@ public static class HrOrganizationalStructureEndpoints
         return (null, new HrScope(userId.Value, false));
     }
 
-    private static async Task<bool> IsActiveCompanyAsync(
+    internal static async Task<bool> IsActiveCompanyAsync(
         Data.DatabaseContext database,
         Guid companyId,
         CancellationToken cancellationToken) =>
         companyId != Guid.Empty && await database.Companies.AsNoTracking()
             .AnyAsync(company => company.Id == companyId && company.IsActive, cancellationToken);
 
-    private static IResult NotFoundForCompany() => TypedResults.NotFound();
+    internal static IResult NotFoundForCompany() => TypedResults.NotFound();
 
     private static IResult BadRequest(string message) =>
         TypedResults.BadRequest(new { error = message });
@@ -2369,13 +2369,13 @@ public static class HrOrganizationalStructureEndpoints
 
     private static DateTime ToUtc(DateTime value) => DateTime.SpecifyKind(value, DateTimeKind.Utc);
 
-    private static void SetNoStore(HttpContext context)
+    internal static void SetNoStore(HttpContext context)
     {
         context.Response.Headers.CacheControl = "no-store";
         context.Response.Headers.Pragma = "no-cache";
     }
 
-    private sealed record HrScope(Guid UserId, bool IsInstallationAdministrator);
+    internal sealed record HrScope(Guid UserId, bool IsInstallationAdministrator);
 }
 
 public sealed record HrCreateEmployeeRequest(

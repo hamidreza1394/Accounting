@@ -50,16 +50,16 @@ MIGRATIONS_DIRECTORY = os.path.join("Infrastructure", "Persistence", "Migrations
 # 'InitialCreate'. Its designer file is the starting point of the difference that the
 # current migration has to apply. ('AlignSchemaWithModel' and 'WidenUserPasswordHash'
 # are published history as well.)
-DELTA_MIGRATION_ID = "20261104200301"
-DELTA_MIGRATION_NAME = "AddHrOrganizationalStructure"
+DELTA_MIGRATION_ID = "20261109151857"
+DELTA_MIGRATION_NAME = "MakeUserEmailAddressOptional"
 
 # The most recent migration. Its operations are computed from the difference between
 # the model of the migration before it (DELTA_MIGRATION_*) and the model of the code
 # base, so the files can not drift apart from the snapshot. DELTA_MIGRATION_* is
 # published history and is never rewritten, exactly like 'InitialCreate'.
-CURRENT_MIGRATION_ID = "20261105094700"
-CURRENT_MIGRATION_NAME = "AddUserSessions"
-CURRENT_MIGRATION_CLASS = "AddUserSessions"
+CURRENT_MIGRATION_ID = "20261109152401"
+CURRENT_MIGRATION_NAME = "AddCompanyEmployeePhotos"
+CURRENT_MIGRATION_CLASS = "AddCompanyEmployeePhotos"
 
 # The target model artifacts use EF Core's generated snapshot format because SQL Server
 # rowversion metadata is provider-specific. Keep them stable; verify_migration_model.py
