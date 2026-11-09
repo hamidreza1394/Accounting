@@ -67,7 +67,7 @@ export function WorkspaceTabEntry({
       style={{
         backgroundColor: isActive ? 'var(--color-navy)' : 'var(--color-period)',
         color: isActive ? 'var(--color-primary-foreground)' : 'var(--color-sub)',
-        borderRadius: "0.45rem",
+        borderRadius: '0.45rem',
       }}
       onClick={onActivate}
     >
