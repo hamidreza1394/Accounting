@@ -60,4 +60,43 @@ describe('mobile sidebar stylesheet', () => {
   it('keeps the drawer narrower than the viewport on phones (premium width is overridden at <=1023px)', () => {
     expect(premiumCss).toMatch(/@media \(max-width: 1023px\)\s*\{\s*\.faranou-sidebar\.faranou-sidebar--premium\s*\{[^}]*width:\s*min\(300px, 86vw\)/);
   });
+
+  describe('outer frame (one continuous border covering the whole sidebar)', () => {
+    const premiumFrame = premiumCss.match(/\.faranou-sidebar\.faranou-sidebar--premium\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    const baseFrame = css.match(/\.faranou-sidebar\s*\{\s*\/\*[\s\S]*?\*\/\s*position:\s*sticky;[\s\S]*?\n\}/)?.[0] ?? '';
+
+    it('draws one solid border on all four sides (no translucent hairline that vanishes on the light page)', () => {
+      expect(premiumFrame).toMatch(/\n\s*border:\s*1px solid var\(--faranou-sidebar-border, #[0-9a-f]{6}\);/i);
+      expect(premiumFrame).not.toMatch(/border:[^;]*rgb\([^)]*\/\s*\./);
+      expect(premiumFrame).not.toMatch(/border-(?:inline|block|left|right|top|bottom)/);
+      // The frame itself never gets inner spacing that would shrink it; padding lives on the nav and footer.
+      expect(premiumFrame).not.toMatch(/\n\s*(?:padding|margin)[^:]*:/);
+      expect(premiumFrame).toContain('overflow: hidden');
+    });
+
+    it('is exactly as wide as the sidebar and cannot overflow the viewport sideways', () => {
+      expect(premiumFrame).toMatch(/\bwidth:\s*300px/);
+      expect(premiumFrame).toMatch(/flex:\s*0 0 300px/);
+      expect(baseFrame).toContain('box-sizing: border-box');
+      const nav = premiumCss.match(/\.faranou-sidebar-nav\s*\{[^}]*\}/)?.[0] ?? '';
+      expect(nav).toContain('overflow-x: hidden');
+    });
+
+    it('stays fixed under the real header and ends at the bottom of the viewport while the menu scrolls', () => {
+      expect(baseFrame).toMatch(/position:\s*sticky/);
+      expect(baseFrame).toMatch(/top:\s*var\(--faranou-header-height, 92px\)/);
+      expect(baseFrame).toMatch(/height:\s*calc\(100vh - var\(--faranou-header-height, 92px\)\)/);
+      expect(baseFrame).toMatch(/height:\s*calc\(100dvh - var\(--faranou-header-height, 92px\)\)/);
+      expect(baseFrame).toContain('overflow: hidden');
+    });
+
+    it('never hard-codes the header height for the sidebar, drawer or scrim (they follow the measured header)', () => {
+      const sidebarOffsets = css.match(/(?:top|inset-block|inset-block-start|inset):\s*(?:\d+px)[^;]*;/g) ?? [];
+      const hardCoded = sidebarOffsets.filter((declaration) => /^(?:top|inset-block|inset-block-start):\s*(?:76|92|128|150)px/.test(declaration));
+      expect(hardCoded).toEqual([]);
+      for (const heightFallback of ['92px', '76px', '128px', '150px']) {
+        expect(css).toContain(`var(--faranou-header-height, ${heightFallback})`);
+      }
+    });
+  });
 });

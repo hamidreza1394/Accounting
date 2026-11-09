@@ -4,6 +4,7 @@ import { FormSection } from '@/components/ui/FormSection';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { Info, TabDataBoundary, useProfileTabData } from '../profile/profileShared';
 import { faDigits, limits, type FieldName } from '../userFormValidation';
+import { passwordMinHint } from '@/lib/passwordPolicy';
 import { employeeLinkKey, loadLinkedEmployee, type FormTabCache, type UserFormContext } from './userFormShared';
 import type { AdminUserDetails } from '@/api/types';
 import type { SuggestionState } from './useSuggestedEmployeeNumber';
@@ -62,8 +63,11 @@ export function MainInfoPanel({
   user,
   cache,
   onUnauthenticated,
+  photo,
 }: PanelBase & {
   mode: 'create' | 'edit';
+  /** The personnel photo field (create: previewed draft; edit: the linked record's saved photo). */
+  photo: ReactNode;
   isActive: boolean;
   onActiveChange: (value: boolean) => void;
   context: UserFormContext;
@@ -77,8 +81,9 @@ export function MainInfoPanel({
   const editLinkVisible =
     mode === 'edit' && user !== undefined && companyId !== null && context.can('hr.employees.view', companyId) && user.memberships.some((m) => m.isActive && m.companyId.toLowerCase() === companyId.toLowerCase());
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <FormSection headingLevel={2} title="اطلاعات هویتی">
+        {photo}
         <FormField label="نام" required={mode === 'create'} error={errorFor('firstName')}>
           <Input {...field('firstName')} autoComplete="off" />
         </FormField>
@@ -93,7 +98,7 @@ export function MainInfoPanel({
         </FormField>
         {mode === 'create' ? (
           <>
-            <FormField label="رمز عبور" required error={errorFor('password')} hint={`دست‌کم ${faDigits(limits.passwordMin)} نویسه؛ رمزهای رایج و قابل‌حدس پذیرفته نمی‌شوند.`}>
+            <FormField label="رمز عبور" required error={errorFor('password')} hint={`${passwordMinHint}؛ رمزهای رایج و قابل‌حدس پذیرفته نمی‌شوند.`}>
               <PasswordInput {...field('password')} fieldName="رمز عبور" togglePlacement="end" autoComplete="new-password" />
             </FormField>
             <FormField label="تکرار رمز عبور" required error={errorFor('confirmPassword')}>
@@ -134,7 +139,7 @@ export function MainInfoPanel({
 export function ContactPanel({ field, errorFor }: PanelBase) {
   return (
     <FormSection headingLevel={2} title="اطلاعات تماس">
-      <FormField label="ایمیل" required error={errorFor('emailAddress')}>
+      <FormField label="ایمیل" error={errorFor('emailAddress')} hint="اختیاری؛ در صورت ثبت، باید قالب معتبر داشته باشد.">
         <Input {...field('emailAddress')} type="email" dir="ltr" autoComplete="off" spellCheck={false} className="text-start" />
       </FormField>
       <FormField label="شماره موبایل" error={errorFor('cellPhoneNumber')} hint={`اختیاری؛ ${faDigits(limits.mobileLength)} رقم لاتین، مانند 09123456789.`}>

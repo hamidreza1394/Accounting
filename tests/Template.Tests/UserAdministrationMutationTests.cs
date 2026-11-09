@@ -53,6 +53,91 @@ public sealed class UserAdministrationMutationTests
         Assert.False(await fixture.Database.Users.AnyAsync(x => x.Username == "new.user"));
     }
 
+    [Theory]
+    [InlineData("Zq9!mK2", StatusCodes.Status400BadRequest)] // D-078: 7 characters is below the minimum 8.
+    [InlineData("Zq9!mK2x", StatusCodes.Status201Created)] // exactly the minimum 8 is accepted.
+    [InlineData("", StatusCodes.Status400BadRequest)] // an empty password is rejected.
+    public async Task CreateUser_EnforcesThePasswordMinimumLengthBoundary(string password, int expectedStatus)
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddUser("admin", Constants.Role.Admin);
+        await fixture.Database.SaveChangesAsync();
+        var request = new Server.Api.CreateUserRequest(
+            "new.user", "کاربر", "جدید", "new.user@example.test", null, password, password, true);
+
+        var result = await Server.Api.UserAdministrationEndpoints.CreateUserAsync(
+            new DefaultHttpContext(), Principal(admin.Id), request, new AllowAntiforgery(),
+            fixture.Database, new Infrastructure.Security.PasswordHashService(), TimeProvider.System, default);
+
+        Assert.Equal(expectedStatus, (result as IStatusCodeHttpResult)?.StatusCode);
+        Assert.Equal(expectedStatus == StatusCodes.Status201Created,
+            await fixture.Database.Users.AnyAsync(x => x.Username == "new.user"));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task CreateUser_StoresANullEmailWhenItIsNotGiven_AndAllowsSeveralSuchUsers(string? email)
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddUser("admin", Constants.Role.Admin);
+        await fixture.Database.SaveChangesAsync();
+
+        foreach (var username in new[] { "first.user", "second.user" })
+        {
+            var request = new Server.Api.CreateUserRequest(
+                username, "کاربر", "جدید", email, null,
+                "A-Long-Unique-Phrase-1406!", "A-Long-Unique-Phrase-1406!", true);
+            var result = await Server.Api.UserAdministrationEndpoints.CreateUserAsync(
+                new DefaultHttpContext(), Principal(admin.Id), request, new AllowAntiforgery(),
+                fixture.Database, new Infrastructure.Security.PasswordHashService(), TimeProvider.System, default);
+            Assert.Equal(StatusCodes.Status201Created, (result as IStatusCodeHttpResult)?.StatusCode);
+        }
+
+        var created = await fixture.Database.Users.Where(x => x.Username!.EndsWith(".user")).ToListAsync();
+        Assert.Equal(2, created.Count);
+        Assert.All(created, user => Assert.Null(user.EmailAddress));
+    }
+
+    [Theory]
+    [InlineData("not-an-email")]
+    [InlineData("a@")]
+    public async Task CreateUser_RejectsAnEmailThatIsGivenButInvalid(string email)
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddUser("admin", Constants.Role.Admin);
+        await fixture.Database.SaveChangesAsync();
+        var request = new Server.Api.CreateUserRequest(
+            "new.user", "کاربر", "جدید", email, null,
+            "A-Long-Unique-Phrase-1406!", "A-Long-Unique-Phrase-1406!", true);
+
+        var result = await Server.Api.UserAdministrationEndpoints.CreateUserAsync(
+            new DefaultHttpContext(), Principal(admin.Id), request, new AllowAntiforgery(),
+            fixture.Database, new Infrastructure.Security.PasswordHashService(), TimeProvider.System, default);
+
+        Assert.Equal(StatusCodes.Status400BadRequest, (result as IStatusCodeHttpResult)?.StatusCode);
+        Assert.False(await fixture.Database.Users.AnyAsync(x => x.Username == "new.user"));
+    }
+
+    [Fact]
+    public async Task UpdateUser_ClearsTheEmailToNullWhenItIsEmpty()
+    {
+        await using var fixture = new Fixture();
+        var admin = fixture.AddUser("admin", Constants.Role.Admin);
+        var target = fixture.AddUser("alice", "Accountant");
+        await fixture.Database.SaveChangesAsync();
+        var request = new Server.Api.UpdateUserRequest("alice", "آلیس", "مثالی", "", null, true);
+
+        var result = await Server.Api.UserAdministrationEndpoints.UpdateUserAsync(
+            target.Id, new DefaultHttpContext(), Principal(admin.Id), request,
+            new AllowAntiforgery(), fixture.Database, TimeProvider.System, default);
+
+        Assert.IsType<NoContent>(result);
+        var updated = await fixture.Database.Users.SingleAsync(x => x.Id == target.Id);
+        Assert.Null(updated.EmailAddress);
+    }
+
     [Fact]
     public async Task CreateUser_RejectsPasswordConfirmationMismatchAndDoesNotPersist()
     {

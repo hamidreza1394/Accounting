@@ -130,7 +130,7 @@ public class UpdateModel : Infrastructure.BasePageModelWithDatabaseContext
 				await
 				DatabaseContext.Users
 				.Where(current => current.Id != ViewModel.Id)
-				.Where(current => current.EmailAddress.ToLower() == fixedEmailAddress.ToLower())
+				.Where(current => current.EmailAddress != null && current.EmailAddress.ToLower() == fixedEmailAddress.ToLower())
 				.AnyAsync();
 
 			if (foundedAny)

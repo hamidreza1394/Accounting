@@ -27,6 +27,6 @@ describe('userFlash', () => {
 
   it('has a Persian text for every kind and marks only the half-finished creations as warnings', () => {
     for (const text of Object.values(userFlashText)) expect(text).toMatch(/[\u0600-\u06FF]/);
-    expect([...userFlashWarnings].sort()).toEqual(['createdEmployeeDuplicate', 'createdEmployeeFailed']);
+    expect([...userFlashWarnings].sort()).toEqual(['createdEmployeeDuplicate', 'createdEmployeeFailed', 'createdPhotoFailed']);
   });
 });

@@ -595,7 +595,7 @@
   font-weight: 700;
 }
 .faranou-logout-button:hover { background: rgb(244 63 94 / .16); }
-.faranou-workspace-body { display: flex; min-height: calc(100vh - 92px); }
+.faranou-workspace-body { display: flex; min-height: calc(100vh - var(--faranou-header-height, 92px)); }
 .faranou-sidebar {
   /* Issue #442 review: `<aside>` always carries `faranou-sidebar--premium` alongside this
      class (AppShell.tsx), so the compound selector `.faranou-sidebar.faranou-sidebar--premium`
@@ -603,10 +603,16 @@
      source of truth for width/flex/background/border-inline-start — removed here rather than
      kept as a second, easy-to-drift copy of the same numbers. */
   position: sticky;
-  top: 92px;
+  /* The frame sits right under the REAL header (--faranou-header-height is measured in AppShell;
+     the pixel value is only the fallback) and ends exactly at the bottom of the viewport, so its
+     border is never hidden under the header or pushed below the fold. */
+  top: var(--faranou-header-height, 92px);
   z-index: 20;
   display: flex;
-  height: calc(100vh - 92px);
+  box-sizing: border-box;
+  align-self: flex-start;
+  height: calc(100vh - var(--faranou-header-height, 92px));
+  height: calc(100dvh - var(--faranou-header-height, 92px));
   flex-direction: column;
   overflow: hidden;
   color: white;
@@ -705,9 +711,9 @@
   .faranou-context-choice { width: 50%; min-height: 3rem; gap: .4rem; padding: .45rem .55rem; }
   .faranou-sidebar {
     position: fixed;
-    inset-block: 76px 0;
+    inset-block: var(--faranou-header-height, 76px) 0;
     inset-inline-start: 0;
-    top: 76px;
+    top: var(--faranou-header-height, 76px);
     width: min(300px, 86vw);
     height: auto;
     transform: translateX(calc(var(--inline-sign) * -105%));
@@ -720,7 +726,7 @@
   .faranou-mobile-scrim {
     display: block;
     position: fixed;
-    inset: 76px 0 0;
+    inset: var(--faranou-header-height, 76px) 0 0;
     z-index: 19;
     background: rgb(8 22 42 / .5);
   }
@@ -735,14 +741,18 @@
 /* Keep the sticky navigation below the wrapped tablet/mobile header. */
 @media (min-width: 768px) and (max-width: 1100px) {
   .faranou-header-inner { min-height: 150px; }
-  .faranou-workspace-body { min-height: calc(100vh - 150px); }
-  .faranou-sidebar { top: 150px; height: calc(100vh - 150px); }
+  .faranou-workspace-body { min-height: calc(100vh - var(--faranou-header-height, 150px)); }
+  .faranou-sidebar {
+    top: var(--faranou-header-height, 150px);
+    height: calc(100vh - var(--faranou-header-height, 150px));
+    height: calc(100dvh - var(--faranou-header-height, 150px));
+  }
 }
 @media (max-width: 767px) {
   .faranou-header-inner { min-height: 128px; }
-  .faranou-workspace-body { min-height: calc(100vh - 128px); }
-  .faranou-sidebar { top: 128px; inset-block-start: 128px; }
-  .faranou-mobile-scrim { inset-block-start: 128px; }
+  .faranou-workspace-body { min-height: calc(100vh - var(--faranou-header-height, 128px)); }
+  .faranou-sidebar { top: var(--faranou-header-height, 128px); inset-block-start: var(--faranou-header-height, 128px); }
+  .faranou-mobile-scrim { inset-block-start: var(--faranou-header-height, 128px); }
 }
 
 .faranou-desktop-menu-mark {
@@ -1187,7 +1197,7 @@
 /* Issue #444 stage 1 PR4 — the workspace tab strip under the header (Rahkaran-style). */
 .faranou-tabbar {
   position: sticky;
-  top: 92px;
+  top: var(--faranou-header-height, 92px);
   z-index: 30;
   display: flex;
   align-items: stretch;
@@ -1275,10 +1285,10 @@
 .faranou-tabbar-new:focus-visible { outline: 2px solid #f0b84a; outline-offset: 2px; }
 /* Sticky offset mirrors the wrapped-header breakpoints used by the sidebar. */
 @media (max-width: 1100px) {
-  .faranou-tabbar { top: 150px; }
+  .faranou-tabbar { top: var(--faranou-header-height, 150px); }
 }
 @media (max-width: 767px) {
-  .faranou-tabbar { top: 128px; padding-inline: .6rem; }
+  .faranou-tabbar { top: var(--faranou-header-height, 128px); padding-inline: .6rem; }
   .faranou-tab { max-width: 11rem; }
   .faranou-tab-label { max-width: 8.5rem; }
 }

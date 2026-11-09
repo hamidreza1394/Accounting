@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ChevronDown, type LucideIcon } from 'lucide-react';
 import { Link } from '@/lib/router';
 
@@ -61,8 +61,8 @@ function toBlocks(leaves: readonly NestedNavLeaf[]): Block[] {
 
 /**
  * Renders the leaves of a sidebar group, with collapsible Persian sections
- * (e.g. «ساختار سازمانی» owning واحدها / سمت‌ها / کارکنان). Sections start open; the section
- * of the current page is re-opened on every navigation, and can still be folded by hand.
+ * (e.g. «ساختار سازمانی» owning واحدها / سمت‌ها / کارکنان). Sections start open once their
+ * group is open and can be folded by hand; navigation never changes their state.
  */
 export function NestedNavSections({
   groupLabel,
@@ -77,18 +77,9 @@ export function NestedNavSections({
   onNavigate: () => void;
   DisabledLeaf: (props: { leaf: NestedNavLeaf; nested?: boolean }) => ReactNode;
 }) {
+  // `false` means the user folded the section by hand; navigation never changes it, so the
+  // active route (highlight only) stays independent of what is expanded.
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
-  const leavesRef = useRef(leaves);
-  leavesRef.current = leaves;
-
-  useEffect(() => {
-    const toOpen: Record<string, boolean> = {};
-    for (const leaf of leavesRef.current) {
-      if (leaf.section && leaf.to && isActivePath(pathname, leaf.to)) toOpen[`${groupLabel}::${leaf.section}`] = true;
-    }
-    if (Object.keys(toOpen).length === 0) return;
-    setOpenSections((previous) => ({ ...previous, ...toOpen }));
-  }, [pathname, groupLabel]);
 
   const renderLeaf = (leaf: NestedNavLeaf) =>
     leaf.to ? (

@@ -73,7 +73,8 @@
   /* Desktop width stays inside 280-320px; one continuous, subtle frame around brand title, menu and footer. */
   width: 300px;
   flex: 0 0 300px;
-  border: 1px solid rgb(120 165 205 / .28);
+  /* One solid, subtle navy hairline on all four sides (a translucent one vanished against the light page). */
+  border: 1px solid var(--faranou-sidebar-border, #2d5180);
   background:
     radial-gradient(ellipse at 100% 0%, rgb(40 92 158 / .24), transparent 42%),
     radial-gradient(ellipse at 0% 100%, rgb(20 90 130 / .18), transparent 40%),

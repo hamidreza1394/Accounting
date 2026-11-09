@@ -58,7 +58,7 @@ public class IndexModel : Infrastructure.BasePageModelWithDatabaseContext
 					LastName = current.LastName,
 					Username = current.Username,
 					FirstName = current.FirstName,
-					EmailAddress = current.EmailAddress,
+					EmailAddress = current.EmailAddress ?? string.Empty,
 					CellPhoneNumber = current.CellPhoneNumber,
 
 					InsertDateTime = current.InsertDateTime,

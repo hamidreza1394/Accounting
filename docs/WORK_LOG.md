@@ -2885,3 +2885,8 @@
 - عضویت به‌تنهایی Role/Permission/Entitlement یا دسترسی سال/دوره نمی‌دهد؛ دسترسی سال/دوره در همان Company با grantهای D-065/D-066/D-077 مدیریت می‌شود و Membership جدید نمی‌خواهد.
 - D-078 Accepted؛ رفتار runtime هنوز NotVerified است و باید مسیرهای create-user/membership با تست API و SQL Server/E2E تطبیق داده شوند.
 - فقط مستندات؛ بدون کد، API، UI، Schema یا Migration. جزئیات: `docs/handoffs/UNNUMBERED-company-membership-approval-scope.md`.
+
+## 2026-11-09 — اصلاح فرم/فهرست کاربران: Sidebar، عکس پرسنلی، رمز ۸، ایمیل اختیاری، بازگشت به فهرست (شاخهٔ `fix/users-form-navigation-and-validation`)
+- گروه‌های Sidebar پیش‌فرض بسته و قاب پیوسته؛ حداقل رمز ۸ نویسه (کلاینت+سرور، D-079)؛ ایمیل اختیاری با Migration مستقل؛ عکس پرسنلی با ذخیرهٔ واقعی و شرکت‌محور (`CompanyEmployeePhotos`)؛ پس از ایجاد کاربر: ناوبری یکتا به فهرست، تازه‌سازی و جدیدترین کاربر اول؛ انصراف/بازگشت دقیقاً به فهرست.
+- .NET: ۱۱۸۶ تست روی SQL Server واقعی، ۰ شکست؛ Vitest کل: ۳ شکست قدیمی و نامرتبط (خروجی CSV)؛ typecheck/build/check:offline موفق؛ E2E و ESLint اجرا نشد. جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-users-form-navigation-and-validation.md`.
+

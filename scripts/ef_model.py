@@ -1358,6 +1358,13 @@ def build_column(
         snapshot_clr_type = "System.Byte[]"
         store_type = STORE_TYPE_ROWVERSION
         snapshot_column_type = STORE_TYPE_ROWVERSION
+    elif unwrapped == "byte[]":
+        # A plain binary column (not a rowversion): 'varbinary(max)', or 'varbinary(n)' with an
+        # explicit maximum length. The snapshot writes the column type, exactly like EF Core.
+        provider_clr_type = "System.Byte[]"
+        snapshot_clr_type = "System.Byte[]"
+        store_type = f"varbinary({max_length})" if max_length is not None else "varbinary(max)"
+        snapshot_column_type = store_type
     elif simple == "String":
         is_ansi = unicode is False
         if max_length is not None:

@@ -374,7 +374,7 @@ export type AdminUserListItem = {
   username: string | null;
   firstName: string | null;
   lastName: string | null;
-  emailAddress: string;
+  emailAddress: string | null;
   cellPhoneNumber: string | null;
   isActive: boolean;
   lastLoginDateTime: string | null;
@@ -424,7 +424,7 @@ export function parseAdminUserList(value: unknown): AdminUserListResponse {
       username: readNullableString(item, 'username', 'adminUsers.item'),
       firstName: readNullableString(item, 'firstName', 'adminUsers.item'),
       lastName: readNullableString(item, 'lastName', 'adminUsers.item'),
-      emailAddress: readString(item, 'emailAddress', 'adminUsers.item'),
+      emailAddress: readNullableString(item, 'emailAddress', 'adminUsers.item'),
       cellPhoneNumber: readNullableString(item, 'cellPhoneNumber', 'adminUsers.item'),
       isActive: readBoolean(item, 'isActive', 'adminUsers.item'),
       lastLoginDateTime: readServerLocalDateTime(item, 'lastLoginDateTime', 'adminUsers.item', true),
@@ -456,7 +456,7 @@ export function parseAdminUserDetails(value: unknown): AdminUserDetails {
     username: readNullableString(value, 'username', 'adminUser'),
     firstName: readNullableString(value, 'firstName', 'adminUser'),
     lastName: readNullableString(value, 'lastName', 'adminUser'),
-    emailAddress: readString(value, 'emailAddress', 'adminUser'),
+    emailAddress: readNullableString(value, 'emailAddress', 'adminUser'),
     cellPhoneNumber: readNullableString(value, 'cellPhoneNumber', 'adminUser'),
     isActive: readBoolean(value, 'isActive', 'adminUser'),
     lastLoginDateTime: readServerLocalDateTime(value, 'lastLoginDateTime', 'adminUser', true),
@@ -478,7 +478,8 @@ export type CreateAdminUserRequest = {
   username: string;
   firstName: string | null;
   lastName: string | null;
-  emailAddress: string;
+  /** Optional: `null` stores no e-mail address. */
+  emailAddress: string | null;
   cellPhoneNumber: string | null;
   password: string;
   confirmPassword: string;

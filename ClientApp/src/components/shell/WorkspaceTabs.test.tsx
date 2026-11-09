@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
+import { openSystemMenu } from '@/test/sidebar';
 import { AppShell } from '../AppShell';
 import { useDocumentTitle } from '@/lib/router';
 import { resetFormsForTests, useFormGuard } from '@/lib/formGuard';
@@ -299,7 +300,7 @@ describe('dirty-form protection in the workspace (Issue #444 stage 1, PR 5)', ()
 });
 
   it('opens a tab from a real sidebar navigation click (menu and tabs share one router)', async () => {
-    // The shell sidebar links (admin group, open for the installation administrator) navigate
+    // The shell sidebar links (admin group, opened by a click for the installation administrator) navigate
     // through the same router the workspace listens to.
     window.history.pushState(null, '', '/app/');
     const shell = render(
@@ -309,6 +310,7 @@ describe('dirty-form protection in the workspace (Issue #444 stage 1, PR 5)', ()
     );
     const user = userEvent.setup();
     const nav = await screen.findByRole('navigation', { name: 'منوی اصلی' });
+    await openSystemMenu(user, nav);
     await user.click(within(nav).getByRole('link', { name: 'مدیریت کاربران' }));
     expect(await waitFor(() => tabButton(/مدیریت کاربران/))).toHaveAttribute('aria-current', 'page');
     expect(window.location.pathname).toBe('/app/admin/users');

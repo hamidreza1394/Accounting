@@ -12,7 +12,8 @@ import { UserCreatePage } from './UserCreatePage';
 import { UserDetailPage } from './UserDetailPage';
 import { UserEditPage } from './UserEditPage';
 import { accessManagementPath, type UserFormContext } from './form/userFormShared';
-import { clearUserFlash } from './userFlash';
+import { clearUserFlash, clearUserListFlash } from './userFlash';
+import { UserListFlashBanner } from './UserListFlashBanner';
 
 const onUnauthenticated = vi.fn((): boolean => false);
 
@@ -24,7 +25,7 @@ const context = (...allowed: Permission[]): UserFormContext => ({
 
 function setup(path: string, workContext: UserFormContext) {
   const routes: Route[] = [
-    { path: '/admin/users', element: () => <h1>فهرست</h1>, title: 'فهرست' },
+    { path: '/admin/users', element: () => (<><h1>فهرست</h1><UserListFlashBanner /></>), title: 'فهرست' },
     { path: '/admin/users/new', element: () => <UserCreatePage onUnauthenticated={onUnauthenticated} workContext={workContext} />, title: 'ایجاد کاربر' },
     { path: '/admin/users/:id', element: () => <UserDetailPage onUnauthenticated={onUnauthenticated} />, title: 'جزئیات' },
     { path: '/admin/users/:id/edit', element: () => <UserEditPage onUnauthenticated={onUnauthenticated} workContext={workContext} />, title: 'ویرایش' },
@@ -72,6 +73,7 @@ describe('UserForm create — personnel number and the employee step', () => {
     onUnauthenticated.mockReset();
     onUnauthenticated.mockReturnValue(false);
     clearUserFlash();
+    clearUserListFlash();
     window.localStorage.clear();
     window.sessionStorage.clear();
   });
@@ -144,7 +146,7 @@ describe('UserForm create — personnel number and the employee step', () => {
     expect(posts[1]?.body).toEqual({ employeeNumber: '0042', firstName: 'علی', lastName: 'رضایی' });
     expect(calls.some((call) => call.path.endsWith('/user'))).toBe(false);
     expect(posts[1]?.headers['X-XSRF-TOKEN']).toBe('tok');
-    expect(window.location.pathname).toBe('/app/admin/users/new-1');
+    expect(window.location.pathname).toBe('/app/admin/users');
     expect(document.body.textContent).not.toContain('Str0ng');
   });
 
@@ -229,8 +231,9 @@ describe('UserForm create — personnel number and the employee step', () => {
     await fillCreate(user);
     await user.click(createButton());
     const warning = await screen.findByText(/پرونده پرسنلی ساخته نشد، چون شماره پرسنلی در این شرکت تکراری بود/);
-    expect(warning.closest('[role="status"]')).not.toBeNull();
-    expect(window.location.pathname).toBe('/app/admin/users/new-1');
+    // A half-finished creation is a warning (role alert), never plain success.
+    expect(warning.closest('[role="alert"]')).not.toBeNull();
+    expect(window.location.pathname).toBe('/app/admin/users');
     expect(countOf(calls, 'POST', employeesPath)).toBe(1);
     expect(countOf(calls, 'POST', '/api/v1/admin/users')).toBe(1);
   });
@@ -243,8 +246,10 @@ describe('UserForm create — personnel number and the employee step', () => {
     await fillCreate(user);
     await user.click(createButton());
     expect(await screen.findByText(/حساب کاربر ایجاد شد، اما ثبت پرونده پرسنلی انجام نشد/)).toBeInTheDocument();
-    expect(window.location.pathname).toBe('/app/admin/users/new-1');
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(window.location.pathname).toBe('/app/admin/users');
+    // The warning is on the list; no form error box remains.
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(screen.getByTestId('user-list-flash')).toContainElement(screen.getByRole('alert'));
   });
 
   it('hands a 401 of the second step to the unauthenticated flow without hiding the created account', async () => {

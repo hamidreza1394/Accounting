@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { History, KeyRound, Phone, User as UserIcon, Briefcase } from 'lucide-react';
+import { ArrowRight, History, KeyRound, Phone, User as UserIcon, Briefcase } from 'lucide-react';
 import { ApiError } from '../../../api/client';
 import type { AdminUserDetails } from '../../../api/types';
 import { EmptyState } from '../../Feedback';
@@ -25,11 +25,17 @@ import { RolesPanel } from './form/UserFormRolesPanel';
 import { HistoryPanel } from './form/UserFormHistoryPanel';
 import { noUserFormContext, type FormTabCache, type UserFormContext } from './form/userFormShared';
 import { useSuggestedEmployeeNumber } from './form/useSuggestedEmployeeNumber';
+import { CreatePhotoField, EditPhotoField, type PhotoDraft } from './form/UserPhotoField';
+import { Info } from './profile/profileShared';
 
 type Mode = 'create' | 'edit';
 
 /** What the form tells the page besides the values: the pre-filled personnel number, if any. */
-export type UserFormSubmitMeta = { suggestedEmployeeNumber: string | null };
+export type UserFormSubmitMeta = {
+  suggestedEmployeeNumber: string | null;
+  /** Create mode: the photo chosen for the personnel record (uploaded after the record exists). */
+  photo: File | null;
+};
 
 type UserFormProps = {
   mode: Mode;
@@ -107,6 +113,8 @@ export function UserForm({
   const [deactivateOpen, setDeactivateOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [tab, setTab] = useState<UserFormTabId>('main');
+  // The photo picked in create mode lives here (above the tab panels), so switching tabs keeps it.
+  const [photoDraft, setPhotoDraft] = useState<PhotoDraft | null>(null);
   // The suggestion that was pre-filled into an empty personnel number field; it becomes part of
   // the baseline, so an untouched suggestion never makes the form "dirty".
   const [applied, setApplied] = useState<{ companyId: string | null; value: string } | null>(null);
@@ -136,7 +144,7 @@ export function UserForm({
   );
 
   const clientErrors = validateUserForm(values, mode);
-  const dirty = isUserFormDirty(values, baseline);
+  const dirty = isUserFormDirty(values, baseline) || (mode === 'create' && photoDraft !== null);
   // The workspace asks this registry before closing the tab, signing out or changing context;
   // a failed save keeps the `error` status until the user retries or cancels (D-076).
   const formGuard = useFormGuard({
@@ -145,6 +153,18 @@ export function UserForm({
     errorMessage: alertMessage,
     title: mode === 'create' ? 'ایجاد کاربر' : 'ویرایش کاربر',
   });
+  const activeCompanyId = workContext.activeCompanyId;
+  const canCreateEmployee = activeCompanyId !== null && workContext.can('hr.employees.create', activeCompanyId) &&
+    workContext.can('hr.employees.update', activeCompanyId);
+  let photoUnavailable: string | null = null;
+  if (activeCompanyId === null) photoUnavailable = 'شرکت کاری فعالی انتخاب نشده است؛ عکس همراه پرونده پرسنلی ذخیره می‌شود و بدون شرکت فعال ذخیره نمی‌شود.';
+  else if (!canCreateEmployee) photoUnavailable = 'برای ذخیرهٔ عکس پرسنلی، مجوزهای «ایجاد کارمند» و «ویرایش کارمند» در شرکت فعال لازم است.';
+  // A chosen photo needs the personnel record this save creates; without a personnel number it
+  // would be silently dropped, so the save is blocked until the user fixes one side.
+  const photoConflict =
+    mode === 'create' && photoDraft !== null && values.employeeNumber.trim() === ''
+      ? 'عکس بدون شماره پرسنلی ذخیره نمی‌شود؛ شماره پرسنلی را وارد کنید یا عکس را حذف کنید.'
+      : null;
   const visibleFields = fieldNames.filter((name) => mode === 'create' || (name !== 'password' && name !== 'confirmPassword' && name !== 'employeeNumber'));
 
   const errorFor = (name: FieldName): string | undefined =>
@@ -224,7 +244,7 @@ export function UserForm({
     setAlertMessage(null);
     setServerErrors({});
     try {
-      await onSubmit(values, { suggestedEmployeeNumber: appliedSuggestion });
+      await onSubmit(values, { suggestedEmployeeNumber: appliedSuggestion, photo: photoDraft?.file ?? null });
       doneRef.current = true;
       // Saved: closing this tab (or leaving the workspace) needs no warning anymore.
       formGuard.markClean();
@@ -244,6 +264,10 @@ export function UserForm({
     if (event.target !== event.currentTarget) return;
     if (submittingRef.current || (mode === 'edit' && !dirty)) return;
     setSubmitAttempted(true);
+    if (photoConflict !== null) {
+      setTab('main');
+      return;
+    }
     if (Object.keys(clientErrors).length > 0) {
       revealErrors(clientErrors);
       return;
@@ -267,6 +291,40 @@ export function UserForm({
     onBlur: () => blur(name),
   });
 
+  const editPhotoVisible =
+    mode === 'edit' && user !== undefined && activeCompanyId !== null && workContext.can('hr.employees.view', activeCompanyId) &&
+    user.memberships.some((m) => m.isActive && m.companyId.toLowerCase() === activeCompanyId.toLowerCase());
+  let photoField: ReactNode;
+  if (mode === 'create') {
+    photoField = (
+      <CreatePhotoField
+        draft={photoDraft}
+        onDraftChange={setPhotoDraft}
+        firstName={values.firstName}
+        lastName={values.lastName}
+        unavailableReason={photoUnavailable}
+        conflictMessage={photoConflict}
+      />
+    );
+  } else if (editPhotoVisible && user && activeCompanyId) {
+    photoField = (
+      <EditPhotoField
+        userId={user.id}
+        companyId={activeCompanyId}
+        firstName={values.firstName}
+        lastName={values.lastName}
+        context={workContext}
+        cache={cache}
+        onUnauthenticated={onUnauthenticated}
+      />
+    );
+  } else {
+    photoField = (
+      <Info label="عکس پرسنلی">
+        <span className="text-sub">عکس همراه پرونده پرسنلی شرکت ذخیره می‌شود؛ برای تغییر آن، عضویت فعال در شرکت و مجوز مشاهدهٔ کارکنان لازم است.</span>
+      </Info>
+    );
+  }
   const createNotice = (title: string, text: string) => <EmptyState title={title}>{text}</EmptyState>;
   const editReady = mode === 'edit' && user !== undefined;
   const panels: Record<UserFormTabId, ReactNode> = {
@@ -282,6 +340,7 @@ export function UserForm({
         {...(user ? { user } : {})}
         cache={cache}
         onUnauthenticated={onUnauthenticated}
+        photo={photoField}
       />
     ),
     contact: <ContactPanel field={field} errorFor={errorFor} />,
@@ -306,7 +365,16 @@ export function UserForm({
   };
 
   return (
-    <form ref={formRef} noValidate onSubmit={handleSubmit} aria-label={mode === 'create' ? 'فرم ایجاد کاربر' : 'فرم ویرایش کاربر'} className="space-y-5">
+    <form ref={formRef} noValidate onSubmit={handleSubmit} aria-label={mode === 'create' ? 'فرم ایجاد کاربر' : 'فرم ویرایش کاربر'} className="space-y-4">
+      {mode === 'create' ? (
+        <div>
+          {/* Same exit as «انصراف»: it asks before discarding typed values, then returns to the plain list. */}
+          <Button type="button" variant="ghost" size="sm" disabled={submitting} onClick={requestCancel}>
+            <ArrowRight size={16} aria-hidden="true" />
+            بازگشت به فهرست کاربران
+          </Button>
+        </div>
+      ) : null}
       {alertMessage ? (
         <Alert ref={alertRef} tone="error">
           {alertMessage}

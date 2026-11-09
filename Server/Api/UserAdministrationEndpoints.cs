@@ -42,7 +42,7 @@ public static class UserAdministrationEndpoints
         int page,
         int pageSize,
         string? sort,
-        bool descending,
+        bool? descending,
         CancellationToken cancellationToken)
     {
         var authorization = await AuthorizeInstallationAdministratorAsync(principal, database, cancellationToken);
@@ -72,12 +72,14 @@ public static class UserAdministrationEndpoints
                 (user.Username != null && user.Username.Contains(search)) ||
                 (user.FirstName != null && user.FirstName.Contains(search)) ||
                 (user.LastName != null && user.LastName.Contains(search)) ||
-                user.EmailAddress.Contains(search) ||
+                (user.EmailAddress != null && user.EmailAddress.Contains(search)) ||
                 (user.CellPhoneNumber != null && user.CellPhoneNumber.Contains(search)));
         }
 
         var totalCount = await query.CountAsync(cancellationToken);
-        query = ApplySort(query, normalizedSort, descending);
+        // Without an explicit direction the newest-created user comes first; the other sorts
+        // keep the ascending default. The unique Id is the stable tiebreak of every order.
+        query = ApplySort(query, normalizedSort, descending ?? normalizedSort == "created");
 
         var items = await query
             .Skip((page - 1) * pageSize)
@@ -332,9 +334,13 @@ public static class UserAdministrationEndpoints
         var cellPhone = Dtat.Utility.FixText(request.CellPhoneNumber);
         var password = request.Password;
 
-        if (string.IsNullOrWhiteSpace(email) ||
-            email.Length > Constants.MaxLength.EmailAddress ||
-            !new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(email) ||
+        // E-mail is optional: an empty value is stored as NULL; a given value must be valid.
+        if (string.IsNullOrWhiteSpace(email))
+            email = null;
+
+        if ((email is not null &&
+             (email.Length > Constants.MaxLength.EmailAddress ||
+              !new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(email))) ||
             string.IsNullOrWhiteSpace(username) ||
             username.Length < Constants.MinLength.Username ||
             username.Length > Constants.MaxLength.Username ||
@@ -352,7 +358,7 @@ public static class UserAdministrationEndpoints
             return TypedResults.BadRequest(new { error = "اطلاعات کاربر یا سیاست رمز عبور معتبر نیست." });
 
         var duplicate = await database.Users.AsNoTracking().AnyAsync(user =>
-            user.EmailAddress.ToLower() == email.ToLower() ||
+            email != null && user.EmailAddress != null && user.EmailAddress.ToLower() == email.ToLower() ||
             user.Username != null && user.Username.ToLower() == username.ToLower() ||
             cellPhone != null && user.CellPhoneNumber == cellPhone,
             cancellationToken);
@@ -431,9 +437,13 @@ public static class UserAdministrationEndpoints
         var lastName = Dtat.Utility.FixText(request.LastName);
         var cellPhone = Dtat.Utility.FixText(request.CellPhoneNumber);
 
-        if (string.IsNullOrWhiteSpace(email) ||
-            email.Length > Constants.MaxLength.EmailAddress ||
-            !new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(email) ||
+        // E-mail is optional: an empty value is stored as NULL; a given value must be valid.
+        if (string.IsNullOrWhiteSpace(email))
+            email = null;
+
+        if ((email is not null &&
+             (email.Length > Constants.MaxLength.EmailAddress ||
+              !new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(email))) ||
             string.IsNullOrWhiteSpace(username) ||
             username.Length < Constants.MinLength.Username ||
             username.Length > Constants.MaxLength.Username ||
@@ -446,7 +456,7 @@ public static class UserAdministrationEndpoints
 
         var duplicate = await database.Users.AsNoTracking().AnyAsync(candidate =>
             candidate.Id != userId &&
-            (candidate.EmailAddress.ToLower() == email.ToLower() ||
+            (email != null && candidate.EmailAddress != null && candidate.EmailAddress.ToLower() == email.ToLower() ||
              candidate.Username != null && candidate.Username.ToLower() == username.ToLower() ||
              cellPhone != null && candidate.CellPhoneNumber == cellPhone),
             cancellationToken);
@@ -612,7 +622,7 @@ public sealed record UserListItemResponse(
     string? Username,
     string? FirstName,
     string? LastName,
-    string EmailAddress,
+    string? EmailAddress,
     string? CellPhoneNumber,
     bool IsActive,
     DateTime? LastLoginDateTime,
@@ -624,7 +634,7 @@ public sealed record UserDetailsResponse(
     string? Username,
     string? FirstName,
     string? LastName,
-    string EmailAddress,
+    string? EmailAddress,
     string? CellPhoneNumber,
     bool IsEmailAddressVerified,
     bool IsCellPhoneNumberVerified,

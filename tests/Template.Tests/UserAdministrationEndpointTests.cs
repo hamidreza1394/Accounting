@@ -55,6 +55,65 @@ public sealed class UserAdministrationEndpointTests
     }
 
     [Fact]
+    public async Task ListUsers_PutsTheNewestCreatedUserFirstByDefault_WithAStableTiebreak()
+    {
+        await using var fixture = new Fixture();
+        var oldest = fixture.AddUser("oldest", "قدیمی", "اول", Constants.Role.Admin);
+        var middle = fixture.AddUser("middle", "میانی", "دوم", "Accountant");
+        var newest = fixture.AddUser("newest", "جدید", "سوم", "Accountant");
+        fixture.Database.Entry(oldest).Property("InsertDateTime").CurrentValue = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        fixture.Database.Entry(middle).Property("InsertDateTime").CurrentValue = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc);
+        fixture.Database.Entry(newest).Property("InsertDateTime").CurrentValue = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc);
+        await fixture.Database.SaveChangesAsync();
+
+        // No sort and no direction: the newest-created user comes first.
+        var byDefault = await Server.Api.UserAdministrationEndpoints.GetUsersAsync(
+            new DefaultHttpContext(), Principal(fixture.AdminId), fixture.Database,
+            search: null, status: "all", page: 1, pageSize: 25, sort: null,
+            descending: null, cancellationToken: default);
+        var defaultOrder = Assert.IsType<Ok<Server.Api.UserListResponse>>(byDefault).Value!.Items.Select(item => item.Username);
+        Assert.Equal(new[] { "newest", "middle", "oldest" }, defaultOrder);
+
+        // The newest user is on page 1 even with a small page size, and an explicit ascending order still works.
+        var firstPage = await Server.Api.UserAdministrationEndpoints.GetUsersAsync(
+            new DefaultHttpContext(), Principal(fixture.AdminId), fixture.Database,
+            search: null, status: "all", page: 1, pageSize: 1, sort: "created",
+            descending: null, cancellationToken: default);
+        Assert.Equal("newest", Assert.IsType<Ok<Server.Api.UserListResponse>>(firstPage).Value!.Items.Single().Username);
+
+        var ascending = await Server.Api.UserAdministrationEndpoints.GetUsersAsync(
+            new DefaultHttpContext(), Principal(fixture.AdminId), fixture.Database,
+            search: null, status: "all", page: 1, pageSize: 25, sort: "created",
+            descending: false, cancellationToken: default);
+        Assert.Equal("oldest", Assert.IsType<Ok<Server.Api.UserListResponse>>(ascending).Value!.Items.First().Username);
+    }
+
+    [Fact]
+    public async Task ListUsers_ListsAUserWithoutEmail_AndTheSearchSkipsTheMissingEmail()
+    {
+        await using var fixture = new Fixture();
+        fixture.AddUser("admin", "مدیر", "سیستم", Constants.Role.Admin);
+        var noEmail = fixture.AddUser("noemail", "بدون", "ایمیل", "Accountant");
+        noEmail.EmailAddress = null;
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await Server.Api.UserAdministrationEndpoints.GetUsersAsync(
+            new DefaultHttpContext(), Principal(fixture.AdminId), fixture.Database,
+            search: "example", status: "all", page: 1, pageSize: 25, sort: "created",
+            descending: true, cancellationToken: default);
+
+        var items = Assert.IsType<Ok<Server.Api.UserListResponse>>(result).Value!.Items;
+        Assert.DoesNotContain(items, item => item.Username == "noemail");
+
+        var byName = await Server.Api.UserAdministrationEndpoints.GetUsersAsync(
+            new DefaultHttpContext(), Principal(fixture.AdminId), fixture.Database,
+            search: "noemail", status: "all", page: 1, pageSize: 25, sort: "created",
+            descending: true, cancellationToken: default);
+        var found = Assert.Single(Assert.IsType<Ok<Server.Api.UserListResponse>>(byName).Value!.Items);
+        Assert.Null(found.EmailAddress);
+    }
+
+    [Fact]
     public async Task GetUser_ReturnsNotFoundForUnknownIdAndNeverSerializesPassword()
     {
         await using var fixture = new Fixture();
