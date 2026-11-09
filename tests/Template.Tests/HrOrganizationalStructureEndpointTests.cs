@@ -618,6 +618,157 @@ public sealed class HrOrganizationalStructureEndpointTests
         Assert.Equal(StatusCodes.Status409Conflict, (again as IStatusCodeHttpResult)?.StatusCode);
     }
 
+    [Fact]
+    public async Task NextNumber_EmptyCompany_SuggestsOne_AndSetsNoStore()
+    {
+        await using var fixture = new Fixture();
+        var manager = await fixture.AddMemberWithPermission(fixture.Company, HrOrganizationalStructureEndpoints.CreateEmployeesPermission);
+
+        var httpContext = new DefaultHttpContext();
+        var result = await fixture.NextNumber(manager.Id, httpContext);
+
+        Assert.Equal("1", Assert.IsType<Ok<HrNextEmployeeNumberResponse>>(result).Value!.SuggestedEmployeeNumber);
+        Assert.Contains("no-store", httpContext.Response.Headers.CacheControl.ToString());
+    }
+
+    [Theory]
+    [InlineData(new[] { "5", "12", "7" }, "13")]
+    [InlineData(new[] { "EMP-101", "EMP-999" }, "1")]
+    [InlineData(new[] { "EMP-101", "8", "9x" }, "9")]
+    [InlineData(new[] { "0099", "100" }, "101")]
+    [InlineData(new[] { "0099", "7" }, "0100")]
+    [InlineData(new[] { "99999999999999999999999999999" }, "100000000000000000000000000000")]
+    [InlineData(new[] { "9223372036854775807" }, "9223372036854775808")]
+    public async Task NextNumber_UsesTheLargestNumericNumberAndIgnoresTheRest(string[] existing, string expected)
+    {
+        await using var fixture = new Fixture();
+        var manager = await fixture.AddMemberWithPermission(fixture.Company, HrOrganizationalStructureEndpoints.CreateEmployeesPermission);
+        foreach (var number in existing)
+            fixture.AddCreatedEmployeeRecord(fixture.Company.Id, number, "علی", "محمدی");
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await fixture.NextNumber(manager.Id);
+
+        Assert.Equal(expected, Assert.IsType<Ok<HrNextEmployeeNumberResponse>>(result).Value!.SuggestedEmployeeNumber);
+    }
+
+    [Fact]
+    public async Task NextNumber_ThirtyNines_CannotBeIncremented_AndReturns409WithNoStore()
+    {
+        await using var fixture = new Fixture();
+        var manager = await fixture.AddMemberWithPermission(fixture.Company, HrOrganizationalStructureEndpoints.CreateEmployeesPermission);
+        fixture.AddCreatedEmployeeRecord(fixture.Company.Id, new string('9', 30), "علی", "محمدی");
+        await fixture.Database.SaveChangesAsync();
+
+        var httpContext = new DefaultHttpContext();
+        var result = await fixture.NextNumber(manager.Id, httpContext);
+
+        Assert.Equal(StatusCodes.Status409Conflict, (result as IStatusCodeHttpResult)?.StatusCode);
+        Assert.Contains("no-store", httpContext.Response.Headers.CacheControl.ToString());
+    }
+
+    [Fact]
+    public async Task NextNumber_CountsTerminatedEmployees_AndIgnoresOtherCompanies()
+    {
+        await using var fixture = new Fixture();
+        var manager = await fixture.AddMemberWithPermission(fixture.Company, HrOrganizationalStructureEndpoints.CreateEmployeesPermission);
+        var otherCompany = fixture.AddCompany("شرکت دوم");
+        var terminated = fixture.AddCreatedEmployeeRecord(fixture.Company.Id, "20", "علی", "محمدی");
+        terminated.EmploymentStatus = Domain.CompanyEmployeeEmploymentStatus.Terminated;
+        terminated.TerminatedOnUtc = DateTime.UtcNow;
+        fixture.AddCreatedEmployeeRecord(fixture.Company.Id, "3", "رضا", "احمدی");
+        fixture.AddCreatedEmployeeRecord(otherCompany.Id, "500", "سارا", "کریمی");
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await fixture.NextNumber(manager.Id);
+
+        Assert.Equal("21", Assert.IsType<Ok<HrNextEmployeeNumberResponse>>(result).Value!.SuggestedEmployeeNumber);
+    }
+
+    [Fact]
+    public async Task NextNumber_IsASuggestionOnly_AndTheSecondCreateWithTheSameNumberIsRefused()
+    {
+        await using var fixture = new Fixture();
+        var manager = await fixture.AddMemberWithPermission(fixture.Company, HrOrganizationalStructureEndpoints.CreateEmployeesPermission);
+
+        var first = Assert.IsType<Ok<HrNextEmployeeNumberResponse>>(await fixture.NextNumber(manager.Id)).Value!;
+        var second = Assert.IsType<Ok<HrNextEmployeeNumberResponse>>(await fixture.NextNumber(manager.Id)).Value!;
+        Assert.Equal(first.SuggestedEmployeeNumber, second.SuggestedEmployeeNumber);
+        Assert.Equal(0, await fixture.Database.CompanyEmployees.CountAsync());
+
+        Assert.IsType<Created<HrEmployeeCreatedResponse>>(
+            await fixture.CreateEmployee(manager.Id, first.SuggestedEmployeeNumber, "علی", "محمدی"));
+        var loser = await fixture.CreateEmployee(manager.Id, second.SuggestedEmployeeNumber, "رضا", "احمدی");
+        Assert.Equal(StatusCodes.Status409Conflict, (loser as IStatusCodeHttpResult)?.StatusCode);
+
+        var third = Assert.IsType<Ok<HrNextEmployeeNumberResponse>>(await fixture.NextNumber(manager.Id)).Value!;
+        Assert.Equal("2", third.SuggestedEmployeeNumber);
+    }
+
+    [Fact]
+    public async Task NextNumber_RequiresTheCreatePermission_NotJustTheListPermission()
+    {
+        await using var fixture = new Fixture();
+        var lister = await fixture.AddMemberWithPermission(fixture.Company, HrOrganizationalStructureEndpoints.ListEmployeesPermission);
+
+        var result = await fixture.NextNumber(lister.Id);
+
+        Assert.Equal(StatusCodes.Status403Forbidden, (result as IStatusCodeHttpResult)?.StatusCode);
+    }
+
+    [Fact]
+    public async Task NextNumber_OtherCompanyMember_GetsTheUnknownCompany404()
+    {
+        await using var fixture = new Fixture();
+        var otherCompany = fixture.AddCompany("شرکت بیرون");
+        var outsider = await fixture.AddMemberWithPermission(otherCompany, HrOrganizationalStructureEndpoints.CreateEmployeesPermission);
+
+        var result = await fixture.NextNumber(outsider.Id);
+
+        Assert.Equal(StatusCodes.Status404NotFound, (result as IStatusCodeHttpResult)?.StatusCode);
+    }
+
+    [Fact]
+    public async Task NextNumber_InactiveMembership_IsRefused()
+    {
+        await using var fixture = new Fixture();
+        var manager = await fixture.AddMemberWithPermission(fixture.Company, HrOrganizationalStructureEndpoints.CreateEmployeesPermission);
+        var membership = await fixture.Database.UserCompanyMemberships.SingleAsync(current => current.UserId == manager.Id);
+        membership.IsActive = false;
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await fixture.NextNumber(manager.Id);
+
+        Assert.Equal(StatusCodes.Status404NotFound, (result as IStatusCodeHttpResult)?.StatusCode);
+    }
+
+    [Fact]
+    public async Task NextNumber_Anonymous_IsUnauthorized_AndInstallationAdministratorIsAccepted()
+    {
+        await using var fixture = new Fixture();
+        var admin = await fixture.AddInstallationAdministrator();
+
+        var anonymous = await HrOrganizationalStructureEndpoints.GetNextEmployeeNumberAsync(
+            fixture.Company.Id, new DefaultHttpContext(), new ClaimsPrincipal(new ClaimsIdentity()),
+            fixture.Database, fixture.CompanyAccess, default);
+
+        Assert.Equal(StatusCodes.Status401Unauthorized, (anonymous as IStatusCodeHttpResult)?.StatusCode);
+        Assert.IsType<Ok<HrNextEmployeeNumberResponse>>(await fixture.NextNumber(admin.Id));
+    }
+
+    [Fact]
+    public async Task NextNumber_UnknownOrInactiveCompany_IsNotFound()
+    {
+        await using var fixture = new Fixture();
+        var admin = await fixture.AddInstallationAdministrator();
+        fixture.Company.IsActive = false;
+        await fixture.Database.SaveChangesAsync();
+
+        var result = await fixture.NextNumber(admin.Id);
+
+        Assert.Equal(StatusCodes.Status404NotFound, (result as IStatusCodeHttpResult)?.StatusCode);
+    }
+
     private sealed class Fixture : IAsyncDisposable
     {
         public Fixture()
@@ -803,6 +954,10 @@ public sealed class HrOrganizationalStructureEndpointTests
             HrOrganizationalStructureEndpoints.ListEmployeesAsync(
                 Company.Id, new DefaultHttpContext(), Principal(actorId), Database, CompanyAccess,
                 search: search, cancellationToken: default);
+
+        public Task<IResult> NextNumber(Guid actorId, HttpContext? httpContext = null) =>
+            HrOrganizationalStructureEndpoints.GetNextEmployeeNumberAsync(
+                Company.Id, httpContext ?? new DefaultHttpContext(), Principal(actorId), Database, CompanyAccess, default);
 
         public Task<IResult> ListEmployeesForUser(Guid actorId, Guid userId) =>
             HrOrganizationalStructureEndpoints.ListEmployeesAsync(
