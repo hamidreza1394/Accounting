@@ -2878,6 +2878,15 @@
 - **مرزبندی:** بدون تغییر `Server/**`، Customer consumer، `Licensing.Contracts`، schema یا Migration مشتری؛ هیچ private key، رمز، hash رمز مشتری، connection string یا secret اضافه نشد.
 - **وضعیت:** Implemented / Not Verified تا تکمیل تمام بررسی‌های الزامی PR #613.
 
+
+## 2026-11-09 — تصمیم D-078: تأیید عضویت داخلی در برابر عضویت بین‌شرکتی
+- مدیر مجاز شرکت هنگام ایجاد کاربر برای همان Company، عضویت همان شرکت را خودکار Approved/Active می‌کند؛ تأیید دوباره لازم نیست.
+- عضویت در Company دیگر، از جمله درخواست هلدینگ برای شرکت زیرمجموعه، PendingApproval است و فقط مدیر مجاز مقصد تصمیم می‌گیرد؛ عضویت گروهی/مالکیت اختیار مقصد ایجاد نمی‌کند و self-approval بین‌شرکتی ممنوع می‌ماند.
+- عضویت به‌تنهایی Role/Permission/Entitlement یا دسترسی سال/دوره نمی‌دهد؛ دسترسی سال/دوره در همان Company با grantهای D-065/D-066/D-077 مدیریت می‌شود و Membership جدید نمی‌خواهد.
+- D-078 Accepted؛ رفتار runtime هنوز NotVerified است و باید مسیرهای create-user/membership با تست API و SQL Server/E2E تطبیق داده شوند.
+- فقط مستندات؛ بدون کد، API، UI، Schema یا Migration. جزئیات: `docs/handoffs/UNNUMBERED-company-membership-approval-scope.md`.
+
 ## 2026-11-09 — اصلاح فرم/فهرست کاربران: Sidebar، عکس پرسنلی، رمز ۸، ایمیل اختیاری، بازگشت به فهرست (شاخهٔ `fix/users-form-navigation-and-validation`)
-- گروه‌های Sidebar پیش‌فرض بسته و قاب پیوسته؛ حداقل رمز ۸ نویسه (کلاینت+سرور، D-078)؛ ایمیل اختیاری با Migration مستقل؛ عکس پرسنلی با ذخیرهٔ واقعی و شرکت‌محور (`CompanyEmployeePhotos`)؛ پس از ایجاد کاربر: ناوبری یکتا به فهرست، تازه‌سازی و جدیدترین کاربر اول؛ انصراف/بازگشت دقیقاً به فهرست.
+- گروه‌های Sidebar پیش‌فرض بسته و قاب پیوسته؛ حداقل رمز ۸ نویسه (کلاینت+سرور، D-079)؛ ایمیل اختیاری با Migration مستقل؛ عکس پرسنلی با ذخیرهٔ واقعی و شرکت‌محور (`CompanyEmployeePhotos`)؛ پس از ایجاد کاربر: ناوبری یکتا به فهرست، تازه‌سازی و جدیدترین کاربر اول؛ انصراف/بازگشت دقیقاً به فهرست.
 - .NET: ۱۱۸۶ تست روی SQL Server واقعی، ۰ شکست؛ Vitest کل: ۳ شکست قدیمی و نامرتبط (خروجی CSV)؛ typecheck/build/check:offline موفق؛ E2E و ESLint اجرا نشد. جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-users-form-navigation-and-validation.md`.
+

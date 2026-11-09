@@ -39,8 +39,8 @@
 | جزئیات کارمند | `GET /org/employees/{employeeId}` | `hr.employees.view` | — | `HrEmployeeDetail` | — | خروجی | — | Verified |
 | پیشنهاد شماره پرسنلی بعدی | `GET /org/employees/next-number` | `hr.employees.create` | — | `200 HrNextEmployeeNumberResponse` (`no-store`) | — | — | — (فقط‌خواندنی) | Implemented |
 | عکس پرسنلی (دریافت) | `GET /org/employees/{employeeId}/photo` | `hr.employees.view` | — | `200` بایت تصویر (`private, no-store`، `nosniff`) / `404` | — | — | — | Implemented |
-| عکس پرسنلی (جایگزینی) | `PUT /org/employees/{employeeId}/photo` | `hr.employees.update` | بدنهٔ خام فایل (`image/jpeg`/`png`/`webp`، حداکثر ۲ مگابایت) | `204` / `400` نوع نامعتبر یا خالی / `413` حجم زیاد | — | `X-XSRF-TOKEN` | — | Implemented (D-078) |
-| عکس پرسنلی (حذف) | `DELETE /org/employees/{employeeId}/photo` | `hr.employees.update` | — | `204` | — | `X-XSRF-TOKEN` | — | Implemented (D-078) |
+| عکس پرسنلی (جایگزینی) | `PUT /org/employees/{employeeId}/photo` | `hr.employees.update` | بدنهٔ خام فایل (`image/jpeg`/`png`/`webp`، حداکثر ۲ مگابایت) | `204` / `400` نوع نامعتبر یا خالی / `413` حجم زیاد | — | `X-XSRF-TOKEN` | — | Implemented (D-079) |
+| عکس پرسنلی (حذف) | `DELETE /org/employees/{employeeId}/photo` | `hr.employees.update` | — | `204` | — | `X-XSRF-TOKEN` | — | Implemented (D-079) |
 | ثبت کارمند | `POST /org/employees` | `hr.employees.create` | `HrCreateEmployeeRequest` | `201 HrEmployeeCreatedResponse` + `Location` | — | — | `HrEmployeeCreated` | Verified |
 | ویرایش کارمند | `PUT /org/employees/{employeeId}` | `hr.employees.update` | `HrUpdateEmployeeRequest` | `204` | — | **الزامی** | `HrEmployeeUpdated` | Verified |
 | خاتمه همکاری | `POST /org/employees/{employeeId}/deactivate` | `hr.employees.update` | بدون بدنه | `204` | — | — | `HrEmployeeTerminated` | Verified |

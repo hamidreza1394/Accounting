@@ -21,10 +21,10 @@
 - **فهرست:** پیش‌فرض مرتب‌سازی `created` نزولی (با tiebreak پایدار) در `GetUsersAsync`.
 - **Frontend:** `UserPhotoField`، `passwordPolicy`، `employeePhoto`، `useLeaveToList`، `userListRefresh`، `UserListFlashBanner`، تغییر `UserCreatePage`/`UserEditPage`/`UsersListPage`/`WorkspaceTabs` (`useOptionalWorkspaceTabs`)/`client.ts`/`hrClient.ts`.
 - **اسکریپت‌های مدل Migration:** `scripts/ef_model.py`، `generate_migrations.py`، `verify_migration_model.py`.
-- **مستندات:** ADR D-078، `SECURITY.md`، `HR_FRONTEND_API_CONTRACT.md`، `AGENTS.md` (شمارهٔ ADR بعدی D-079).
+- **مستندات:** ADR D-079، `SECURITY.md`، `HR_FRONTEND_API_CONTRACT.md`، `AGENTS.md` (شمارهٔ ADR بعدی D-079).
 
 ## تصمیم‌های فنی
-- D-078 (جدید): رمز ۸ (جایگزین عدد D-073)، ایمیل اختیاری، ذخیرهٔ عکس در جدول جدا. CSP بدون تغییر؛ پیش‌نمایش با data URL.
+- D-079 (جدید): رمز ۸ (جایگزین عدد D-073)، ایمیل اختیاری، ذخیرهٔ عکس در جدول جدا. CSP بدون تغییر؛ پیش‌نمایش با data URL.
 - در حالت ایجاد، عکس فقط همراه ساخت پروندهٔ پرسنلی (نیازمند شماره پرسنلی و `hr.employees.create`) ذخیره می‌شود؛ شکست عکس پس از ایجاد حساب، هشدار روی فهرست است نه شکست ایجاد. در ویرایش، عکس فقط برای کاربر دارای پروندهٔ پرسنلی متصل و `hr.employees.view/update` در دسترس است؛ در غیر این صورت یادداشت صادقانه نمایش داده می‌شود.
 - رمز اصلی `DatabaseSetup` (۱۵) عمداً تغییر نکرد.
 
