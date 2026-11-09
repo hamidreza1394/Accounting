@@ -2867,3 +2867,13 @@
 ## 2026-11-08 — مأموریت رابط مدیریت سیستم: PR4 صفحهٔ مجوزهای دسترسی (Frontend)
 - مسیر `/admin/access` با تب‌های زیرسیستم‌ها و دسترسی فرم‌ها؛ فقط مجوزهای واقعی کاتالوگ؛ هشدار نقش مشترک با تعداد کاربران و تأیید صریح؛ پرچم زیرسیستم از کدهای نقش مشتق می‌شود (بدون Backend).
 - Vitest کل: فقط ۶ شکست baseline؛ typecheck/build/check:offline موفق؛ E2E اجرا نشد. جزئیات: `docs/handoffs/UNNUMBERED-access-permissions-page.md`.
+
+## 2026-11-09 — Issue #228: نمایش صریح blocker لایسنس Company-scoped در Vendor (PR #613)
+- **مبنا:** `main@c14bede38f55dffd286d6d60a955337325e82ab3`؛ شاخه مستقل `fix/228-company-scoped-license-blocker-clean`.
+- **یافته:** endpoint `eligible-licenses` خطای دقیق `provisioning_company_reference_mapping_required` را مانند سایر ردها بی‌صدا حذف می‌کرد؛ UI به‌اشتباه «لایسنس معتبر پیدا نشد» نشان می‌داد.
+- **اصلاح:** endpoint علاوه بر `items`، فقط blocker قابل‌نمایش `company_reference_mapping_required` را در `blockedItems` برمی‌گرداند. نگاشت علت با allowlist صریح انجام می‌شود؛ هیچ خطای داخلی یا دادهٔ CompanyReference/payload/KeyId افشا نمی‌شود.
+- **UI:** شماره و محصول لایسنس امضاشدهٔ Company-scoped نمایش داده می‌شود، اما انتخاب و ثبت Provisioning تا تکمیل binding مورداعتماد غیرفعال می‌ماند. دادهٔ blocker در تغییر نصب، شروع بارگذاری و خطا پاک می‌شود.
+- **Regression:** تست واحد allowlist و Vitest برای نمایش blocker، انتخاب خالی و دکمهٔ غیرفعال اضافه شد؛ تست SQL Server fail-closed موجود بدون تغییر باقی ماند.
+- **CI:** تست محلی در این اجرا انجام نشد. CI شاخهٔ قدیمی #608 روی SHA قبلی Vendor CI، .NET CI و Semgrep موفق داشت؛ CodeQL در Initialize به‌علت HTTP 504 هنگام دانلود CodeQL bundle شکست خورد. این شواهد به SHA جدید تعمیم داده نمی‌شود؛ وضعیت نهایی فقط از CI روی آخرین head #613 ثبت خواهد شد.
+- **مرزبندی:** بدون تغییر `Server/**`، Customer consumer، `Licensing.Contracts`، schema یا Migration مشتری؛ هیچ private key، رمز، hash رمز مشتری، connection string یا secret اضافه نشد.
+- **وضعیت:** Implemented / Not Verified تا تکمیل تمام بررسی‌های الزامی PR #613.

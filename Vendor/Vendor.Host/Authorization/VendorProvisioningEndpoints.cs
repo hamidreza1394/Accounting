@@ -504,12 +504,23 @@ public static class VendorProvisioningEndpoints
                 .ToListAsync(ct);
 
             var eligible = new List<EligibleProvisioningLicenseResponse>();
+            var blocked = new List<BlockedProvisioningLicenseResponse>();
             foreach (var license in licenses)
             {
                 var binding = await licenseResolver.ResolveLatestAsync(
                     license.Id, customer, installation, requestedSubsystems: null, ct);
                 if (!binding.Succeeded)
+                {
+                    var publicReason = VendorProvisioningLicenseAvailabilityRules.GetOperatorVisibleBlockReason(
+                        binding.ErrorCode);
+                    if (publicReason is not null)
+                    {
+                        blocked.Add(new BlockedProvisioningLicenseResponse(
+                            license.LicenseNumber, license.ProductCode, publicReason));
+                    }
+
                     continue;
+                }
 
                 eligible.Add(new EligibleProvisioningLicenseResponse(
                     license.Id, license.LicenseNumber, license.ProductCode,
@@ -517,7 +528,7 @@ public static class VendorProvisioningEndpoints
             }
 
             context.Response.Headers.CacheControl = "no-store";
-            return Results.Ok(new { items = eligible });
+            return Results.Ok(new { items = eligible, blockedItems = blocked });
         }).RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.CustomersRead));
 
         group.MapGet("/eligible-parents", async (
