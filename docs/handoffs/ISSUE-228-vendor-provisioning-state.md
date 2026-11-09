@@ -70,3 +70,12 @@
 - مانع #392: قرارداد و mapping پایدار CompanyReference → CompanyId محلی هنوز نیازمند طراحی/تأیید schema مشتری است؛ هیچ migration مشتری در این handoff یا PR Vendor انجام نشده است.
 - مرز #235: consumer/ACK مشتری، trust distribution و retry/error semantics فقط در PR مستقل customer-side ادامه می‌یابد؛ PR Vendor فقط مرجع و binding را fail-closed نگه می‌دارد.
 - تست محلی: در این بازبینی اجرا نشد؛ نتیجه فوق فقط به ۱۵ Check Run واقعی پس از Merge نسبت داده می‌شود.
+
+## 2026-11-09 — نمایش صریح blocker برای لایسنس Company-scoped در Vendor UI
+
+- **یافته:** endpoint فهرست لایسنس‌های قابل Provisioning، خطای `provisioning_company_reference_mapping_required` را مانند سایر ردها بی‌صدا حذف می‌کرد؛ در نتیجه UI می‌گفت «لایسنس معتبر پیدا نشد»، در حالی‌که یک LicensePayload v2 امضاشده و معتبر وجود داشت اما CompanyReference هنوز به Company محلی متصل نبود.
+- **اصلاح Vendor-only:** پاسخ `eligible-licenses` علاوه بر `items`، فهرست `blockedItems` را فقط برای این blocker شناخته‌شده برمی‌گرداند. هیچ CompanyReference، payload، کلید یا خطای داخلی دیگر به مرورگر افشا نمی‌شود.
+- **UI:** لایسنس شرکت‌محور با شماره/محصول نمایش داده می‌شود و علت عدم انتخاب به‌روشنی بیان می‌شود. تا تکمیل mapping، گزینه قابل انتخاب نیست و دکمه ثبت درخواست غیرفعال می‌ماند؛ entitlementها flatten نمی‌شوند.
+- **Regression:** تست واحد allowlist علت عمومی و تست UI برای جلوگیری از پیام گمراه‌کننده افزوده شد. تست‌های resolver موجود همچنان رد fail-closed نسخه v2 را کنترل می‌کنند.
+- **محدوده:** فقط Vendor API/UI و تست‌های Vendor؛ بدون تغییر `Licensing.Contracts`، `Server/**`، Customer consumer، schema یا Migration مشتری. این تغییر blocker را فقط قابل مشاهده می‌کند و #392/#235 را جایگزین نمی‌کند.
+- **وضعیت:** Implemented on branch / Not Verified تا تکمیل Vendor CI و .NET CI روی SHA نهایی.

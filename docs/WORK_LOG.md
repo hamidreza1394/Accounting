@@ -2840,3 +2840,12 @@
 ## 2026-11-09 — Issue #444 مرحله سوم PR 3-H1 (ادغام #600) + شواهد نهایی
 - E2E واقعی پرونده کاربر (۳ سناریو روی سرور Publish + SQL Server): باز کردن پرونده/اتصال-قطع HR، درخواست‌های عضویت Pending→تأیید/رد با دلیل، ابطال نشست step-up D-073 با اثبات 401؛ axe WCAG 2.x A/AA صفر نقض (یک نقض definition-list واقعی پیدا و رفع شد)؛ اسکرین‌شات واقعی ۹ نما به artifacts/ui-preview/stage-3-profile (artifact CI).
 - اصلاحات اعتماد CI: ریس prefill کپی نقش، تشخیص خودشناس 429 در hr-structure (ریشه flakeهای متناوب)، مدیر نصب اختصاصی per test به‌جای اشتراک بودجهٔ نرخ. vitest 927/927؛ e2e نهایی 49/49. main پس از ادغام #600: b1348b3f.
+
+## 2026-11-09 — Issue #228: نمایش blocker لایسنس Company-scoped در Vendor
+
+- **مبنای تغییر:** main در SHA `af8d585fdee34b7d20d26c7c9976326a0de19dbb`. بازبینی کد نشان داد `GET /api/vendor/provisioning-requests/eligible-licenses` خطای `provisioning_company_reference_mapping_required` را بدون هیچ توضیحی حذف می‌کرد؛ UI به‌اشتباه «لایسنس معتبر پیدا نشد» نشان می‌داد.
+- **اصلاح:** پاسخ API یک `blockedItems` محدود به علت عمومی `company_reference_mapping_required` می‌دهد؛ UI شماره/محصول لایسنس امضاشده را با توضیح blocker نمایش می‌دهد، اما آن را قابل انتخاب یا قابل Provisioning نمی‌کند.
+- **امنیت:** فقط یک کد علت allowlist‌شده افشا می‌شود؛ CompanyReference، payload، key ID و خطاهای دیگر به مرورگر نمی‌رسند. Resolver همچنان LicensePayload v2 را تا mapping مورداعتماد #392 fail-closed رد می‌کند.
+- **تست رگرسیون:** تست واحد allowlist علت و تست UI برای نمایش blocker و غیرفعال‌بودن ثبت درخواست اضافه شد؛ تست SQL Server موجود `CompanyScopedLicenseFailsClosedUntilProvisioningCompanyReferenceIsBound` حفظ شده است.
+- **مرزبندی:** بدون تغییر `Server/**`، Customer consumer، قرارداد shared، schema یا Migration مشتری؛ فقط Vendor API/UI و تست‌های Vendor.
+- **اعتبارسنجی:** هنوز اجرا نشده؛ Vendor CI، .NET CI، EF snapshot/migration guard و بررسی امنیتی روی SHA نهایی PR باید نتیجه واقعی را مشخص کنند. وضعیت: **Implemented on branch / Not Verified**.

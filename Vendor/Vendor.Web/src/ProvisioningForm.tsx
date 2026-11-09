@@ -16,6 +16,11 @@ type EligibleLicense = {
   sequence: number;
   subsystems: string[];
 };
+type BlockedEligibleLicense = {
+  licenseNumber: string;
+  productCode: string;
+  reason: 'company_reference_mapping_required';
+};
 type EligibleParent = {
   requestId: string;
   companyName: string;
@@ -81,6 +86,14 @@ function isAcknowledgementEnvelope(value: unknown): boolean {
     && ['keyId', 'algorithm', 'acknowledgementJson', 'signatureBase64'].every(key => typeof envelope[key] === 'string');
 }
 
+function isBlockedEligibleLicense(value: unknown): value is BlockedEligibleLicense {
+  if (typeof value !== 'object' || value === null) return false;
+  const license = value as Record<string, unknown>;
+  return typeof license.licenseNumber === 'string' && license.licenseNumber.length > 0
+    && typeof license.productCode === 'string' && license.productCode.length > 0
+    && license.reason === 'company_reference_mapping_required';
+}
+
 const acknowledgementResultLabels: Record<string, string> = {
   Applied: 'راه‌اندازی توسط مشتری اعمال شد',
   AlreadyApplied: 'راه‌اندازی قبلاً اعمال شده بود',
@@ -137,6 +150,7 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
   const [installations, setInstallations] = useState<Installation[]>([]);
   const [requests, setRequests] = useState<ProvisioningRequest[]>([]);
   const [eligibleLicenses, setEligibleLicenses] = useState<EligibleLicense[]>([]);
+  const [blockedLicenses, setBlockedLicenses] = useState<BlockedEligibleLicense[]>([]);
   const [licenseLoading, setLicenseLoading] = useState(false);
   const [eligibleParents, setEligibleParents] = useState<EligibleParent[]>([]);
   const [parentsLoading, setParentsLoading] = useState(false);
@@ -203,6 +217,7 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
     async function loadEligibleLicenses() {
       if (!installationId) {
         setEligibleLicenses([]);
+        setBlockedLicenses([]);
         setLicenseId('');
         setSubsystems([]);
         setLicenseLoading(false);
@@ -216,16 +231,21 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
           { credentials: 'same-origin', cache: 'no-store' },
         );
         if (!response.ok) throw new Error(publicError(response.status, ''));
-        const body = await response.json() as PageResponse<EligibleLicense>;
+        const body = await response.json() as PageResponse<EligibleLicense> & { blockedItems?: unknown };
         if (cancelled) return;
         const next = Array.isArray(body.items) ? body.items : [];
+        const blocked = Array.isArray(body.blockedItems)
+          ? body.blockedItems.filter(isBlockedEligibleLicense)
+          : [];
         setEligibleLicenses(next);
+        setBlockedLicenses(blocked);
         setLicenseId(current => next.some(item => item.licenseId === current)
           ? current
           : next[0]?.licenseId ?? '');
       } catch (reason) {
         if (!cancelled) {
           setEligibleLicenses([]);
+          setBlockedLicenses([]);
           setLicenseId('');
           setError(reason instanceof Error ? reason.message : 'دریافت لایسنس‌های معتبر ناموفق بود.');
         }
@@ -538,9 +558,19 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
             </select>
             <p id="provisioning-license-help" className="text-xs leading-5 text-muted-foreground">اولین لایسنس امضاشده و معتبر این نصب به‌صورت پیش‌فرض انتخاب می‌شود؛ شماره، محصول و sequence را پیش از ثبت بررسی کنید.</p>
             {licenseLoading ? <p className="text-xs text-muted-foreground">در حال بررسی امضای لایسنس‌ها…</p>
-              : eligibleLicenses.length === 0
+              : eligibleLicenses.length === 0 && blockedLicenses.length === 0
                 ? <p className="text-xs text-muted-foreground">برای این نصب لایسنس امضاشده، فعال و معتبر پیدا نشد.</p>
-                : <p className="text-xs text-muted-foreground">اعتبار و زیرسیستم‌ها در سرور از آخرین نسخهٔ امضاشده استخراج و دوباره بررسی می‌شوند.</p>}
+                : eligibleLicenses.length > 0
+                  ? <p className="text-xs text-muted-foreground">اعتبار و زیرسیستم‌ها در سرور از آخرین نسخهٔ امضاشده استخراج و دوباره بررسی می‌شوند.</p>
+                  : <p className="text-xs text-muted-foreground">لایسنس امضاشدهٔ شرکت‌محور شناسایی شده، اما هنوز برای راه‌اندازی قابل انتخاب نیست.</p>}
+            {blockedLicenses.length > 0 && <div role="status" className="space-y-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs leading-6">
+              <p>لایسنس‌های زیر امضاشده و معتبرند، اما entitlementهای آن‌ها در سطح شرکت تعریف شده است. تا تکمیل نگاشت مورداعتماد CompanyReference به شرکت محلی، این لایسنس‌ها قابل انتخاب نیستند؛ هیچ ماژولی به‌صورت سراسری اعمال نمی‌شود.</p>
+              <ul className="list-disc space-y-1 pr-5">
+                {blockedLicenses.map(item => <li key={item.licenseNumber + ':' + item.productCode}>
+                  <span className="font-medium">{item.licenseNumber}</span> — {item.productCode}
+                </li>)}
+              </ul>
+            </div>}
           </div>
           <div className="space-y-2">
             <label htmlFor="provisioning-company-name" className="text-sm font-medium">نام شرکت حسابداری</label>
