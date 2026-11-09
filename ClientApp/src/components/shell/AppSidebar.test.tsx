@@ -111,7 +111,7 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
   it('keeps access and employee entries visible but non-interactive at the bottom of system administration', async () => {
     setup();
     await openSystem();
-    for (const name of ['گروه‌های دسترسی', 'کاتالوگ و جزئیات مجوزها', 'مجوزهای دسترسی', 'کارکنان']) {
+    for (const name of ['گروه‌های دسترسی', 'کاتالوگ و جزئیات مجوزها', 'مجوزهای دسترسی', 'فهرست کارکنان']) {
       const disabled = screen.getByText(name).closest('[aria-disabled="true"]');
       expect(disabled).toBeTruthy();
       expect(disabled?.querySelector('a,button')).toBeNull();
