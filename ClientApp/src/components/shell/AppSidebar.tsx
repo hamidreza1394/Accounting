@@ -160,7 +160,7 @@ export const navigation: NavEntry[] = [
         { label: 'گروه‌های دسترسی', icon: ShieldCheck, section: 'دسترسی و مجوزها', sectionIcon: KeyRound },
         { label: 'کاتالوگ و جزئیات مجوزها', icon: KeyRound, section: 'دسترسی و مجوزها', sectionIcon: KeyRound },
         { label: 'مجوزهای دسترسی', icon: LockKeyhole, section: 'دسترسی و مجوزها', sectionIcon: KeyRound },
-        { label: 'کارکنان', icon: Users, section: 'کارکنان', sectionIcon: Users },
+        { label: 'فهرست کارکنان', icon: Users, section: 'کارکنان', sectionIcon: Users },
       ],
     },
   },
