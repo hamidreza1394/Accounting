@@ -2859,3 +2859,7 @@
 ## 2026-11-08 — مأموریت رابط مدیریت سیستم: PR2 پیشنهاد شماره پرسنلی بعدی (Backend)
 - `GET /companies/{companyId}/org/employees/next-number` اضافه شد (فقط‌خواندنی، غیررزروکننده؛ یکتایی با Unique Index و 409). بدون Migration. تغییر شماره پس از ایجاد NeedsApproval است.
 - تست‌های HR + rate limit روی SQL Server واقعی (Docker) ۵۵/۵۵ موفق؛ ۲ شکست قدیمی `SafeExceptionRealApplicationTests` محیطی است. جزئیات: `docs/handoffs/UNNUMBERED-hr-next-employee-number.md`.
+
+## 2026-11-08 — مأموریت رابط مدیریت سیستم: PR3 فرم پنج‌تبی کاربر (Frontend)
+- فرم ایجاد/ویرایش کاربر پنج‌تبی شد؛ شماره پرسنلی پیشنهادی از `next-number`؛ ایجاد دو مرحله‌ای حساب + پروندهٔ HR بدون اتصال. بدون Backend/Migration جدید. عکس و تلفن ثابت NotImplemented.
+- Vitest کل فقط ۶ شکست baseline؛ typecheck/build/check:offline موفق؛ E2E اجرا نشد. جزئیات: `docs/handoffs/UNNUMBERED-users-multi-tab-form.md`.

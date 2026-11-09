@@ -29,6 +29,7 @@ import {
   endHrAssignment,
   getHrEmployee,
   getHrEmployeeHistory,
+  getNextEmployeeNumber,
   getHrPosition,
   getHrUnit,
   getHrUnitSubtree,
@@ -94,6 +95,24 @@ describe('hrClient — employees', () => {
     await expect(
       createHrEmployee(companyId, { employeeNumber: 'EMP-1', firstName: 'علی', lastName: 'محمدی', hiredOnUtc: null }),
     ).rejects.toMatchObject({ status: 409, message: 'شماره پرسنلی در این شرکت تکراری است.' });
+  });
+
+  it('reads the non-reserving next-number suggestion from the documented route', async () => {
+    const fetchMock = stubApi({ [`GET ${employeesPath}/next-number`]: { status: 200, body: { suggestedEmployeeNumber: '0042' } } });
+    await expect(getNextEmployeeNumber(companyId)).resolves.toEqual({ suggestedEmployeeNumber: '0042' });
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(request.method).toBe('GET');
+  });
+
+  it('rejects a malformed next-number body and maps 403 / 409 / 401', async () => {
+    stubApi({ [`GET ${employeesPath}/next-number`]: { status: 200, body: { suggestedEmployeeNumber: '' } } });
+    await expect(getNextEmployeeNumber(companyId)).rejects.toThrow();
+    stubApi({ [`GET ${employeesPath}/next-number`]: { status: 403, body: { error: 'شما مجوز دسترسی به این بخش را ندارید.' } } });
+    await expect(getNextEmployeeNumber(companyId)).rejects.toMatchObject({ status: 403 });
+    stubApi({ [`GET ${employeesPath}/next-number`]: { status: 409, body: { error: 'پر است.' } } });
+    await expect(getNextEmployeeNumber(companyId)).rejects.toMatchObject({ status: 409 });
+    stubApi({ [`GET ${employeesPath}/next-number`]: { status: 401 } });
+    await expect(getNextEmployeeNumber(companyId)).rejects.toBeInstanceOf(UnauthenticatedError);
   });
 
   it('creates an employee with the exact create DTO and the anti-forgery header', async () => {

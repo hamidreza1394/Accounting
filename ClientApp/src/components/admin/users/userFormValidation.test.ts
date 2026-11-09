@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { emptyUserForm, isUserFormDirty, normalizeText, toCreateRequest, toUpdateRequest, validateUserForm, type UserFormValues } from './userFormValidation';
+import { emptyUserForm, fieldTab, isUserFormDirty, tabsWithErrors, normalizeText, toCreateRequest, toUpdateRequest, validateUserForm, type UserFormValues } from './userFormValidation';
 
 const valid: UserFormValues = {
   ...emptyUserForm,
+  firstName: 'علی',
+  lastName: 'رضایی',
   username: 'ali.r',
   emailAddress: 'ali@example.test',
   password: 'Str0ng-pass-phrase!',
@@ -10,13 +12,13 @@ const valid: UserFormValues = {
 };
 
 describe('validateUserForm', () => {
-  it('accepts a minimal valid create form (names and mobile are optional)', () => {
+  it('accepts a minimal valid create form (only the mobile is optional)', () => {
     expect(validateUserForm(valid, 'create')).toEqual({});
   });
 
   it('requires username, e-mail and, only when creating, the password pair', () => {
     const errors = validateUserForm(emptyUserForm, 'create');
-    expect(Object.keys(errors).sort()).toEqual(['confirmPassword', 'emailAddress', 'password', 'username']);
+    expect(Object.keys(errors).sort()).toEqual(['confirmPassword', 'emailAddress', 'firstName', 'lastName', 'password', 'username']);
     expect(Object.keys(validateUserForm(emptyUserForm, 'edit')).sort()).toEqual(['emailAddress', 'username']);
   });
 
@@ -81,5 +83,32 @@ describe('request mapping', () => {
     expect(isUserFormDirty({ ...base, firstName: ' علی  ' }, base)).toBe(false);
     expect(isUserFormDirty({ ...base, firstName: 'علی   رضا' }, { ...base, firstName: 'علی رضا' })).toBe(false);
     expect(isUserFormDirty({ ...emptyUserForm, password: ' ' }, emptyUserForm)).toBe(true);
+  });
+});
+
+describe('personnel number and tabs', () => {
+  it('accepts an empty personnel number and the server pattern, and rejects anything else', () => {
+    for (const ok of ['', '1', 'EMP-101', '0042', 'a.b_c-d', 'x'.repeat(30)]) {
+      expect(validateUserForm({ ...valid, employeeNumber: ok }, 'create').employeeNumber, ok).toBeUndefined();
+    }
+    for (const bad of ['-1', '.a', 'a b', 'ش۱', 'x'.repeat(31)]) {
+      expect(validateUserForm({ ...valid, employeeNumber: bad }, 'create').employeeNumber, bad).toBeDefined();
+    }
+  });
+
+  it('never validates or sends the personnel number when editing or in the user request', () => {
+    expect(validateUserForm({ ...valid, employeeNumber: '-bad' }, 'edit').employeeNumber).toBeUndefined();
+    expect(Object.keys(toCreateRequest({ ...valid, employeeNumber: '42' }))).not.toContain('employeeNumber');
+  });
+
+  it('maps every field to a tab and lists the tabs with errors in tab order', () => {
+    expect(fieldTab.emailAddress).toBe('contact');
+    expect(fieldTab.password).toBe('main');
+    expect(tabsWithErrors({ emailAddress: 'x', username: 'y' })).toEqual(['main', 'contact']);
+    expect(tabsWithErrors({})).toEqual([]);
+  });
+
+  it('counts a changed personnel number as a change', () => {
+    expect(isUserFormDirty({ ...valid, employeeNumber: '7' }, valid)).toBe(true);
   });
 });

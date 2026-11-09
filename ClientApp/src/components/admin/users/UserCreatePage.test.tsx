@@ -28,8 +28,8 @@ function setup() {
 }
 
 const field = {
-  firstName: () => screen.getByLabelText(/^نام$/),
-  lastName: () => screen.getByLabelText(/^نام خانوادگی$/),
+  firstName: () => screen.getByLabelText(/^نام\s*\*?$/),
+  lastName: () => screen.getByLabelText(/^نام خانوادگی\s*\*?$/),
   username: () => screen.getByLabelText(/^نام کاربری/),
   password: () => screen.getByLabelText(/^رمز عبور/),
   confirm: () => screen.getByLabelText(/^تکرار رمز عبور/),
@@ -37,13 +37,22 @@ const field = {
   mobile: () => screen.getByLabelText(/^شماره موبایل/),
 };
 const submit = () => screen.getByRole('button', { name: 'ایجاد کاربر' });
+const tab = (name: RegExp | string) => screen.getByRole('tab', { name });
+const openMain = (user: UserEvent) => user.click(tab(/^اطلاعات اصلی/));
+const openContact = (user: UserEvent) => user.click(tab(/^اطلاعات تماس/));
 
-async function fillValid(user: UserEvent) {
+async function fillMain(user: UserEvent) {
+  await openMain(user);
   await user.type(field.firstName(), 'علی');
   await user.type(field.lastName(), 'رضایی');
   await user.type(field.username(), 'ali.r');
   await user.type(field.password(), 'Str0ng-pass-phrase!');
   await user.type(field.confirm(), 'Str0ng-pass-phrase!');
+}
+
+async function fillValid(user: UserEvent) {
+  await fillMain(user);
+  await openContact(user);
   await user.type(field.email(), 'ali@example.test');
   await user.type(field.mobile(), '09123456789');
 }
@@ -57,24 +66,29 @@ describe('UserCreatePage', () => {
     window.sessionStorage.clear();
   });
 
-  it('renders the four sections, a breadcrumb and an h1 with the right field attributes', () => {
+  it('renders the five tabs, a breadcrumb and an h1 with the right field attributes', async () => {
+    const user = userEvent.setup();
     stubApi(() => json({}));
     setup();
     expect(screen.getByRole('heading', { level: 1, name: 'ایجاد کاربر' })).toBeInTheDocument();
     const crumbs = within(screen.getByRole('navigation', { name: 'مسیر صفحه' }));
     expect(crumbs.getByRole('link', { name: 'کاربران' })).toHaveAttribute('href', '/app/admin/users');
-    for (const title of ['اطلاعات هویتی', 'اطلاعات ورود', 'اطلاعات تماس', 'وضعیت']) {
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['اطلاعات اصلی', 'اطلاعات تماس', 'اطلاعات استخدامی', 'سمت‌ها و نقش‌ها', 'سوابق']);
+    for (const title of ['اطلاعات هویتی', 'اطلاعات ورود', 'شماره پرسنلی و وضعیت']) {
       expect(screen.getByRole('region', { name: title })).toBeInTheDocument();
     }
     expect(field.username()).toHaveAttribute('dir', 'ltr');
-    expect(field.email()).toHaveAttribute('dir', 'ltr');
-    expect(field.mobile()).toHaveAttribute('dir', 'ltr');
     expect(field.password()).toHaveAttribute('autocomplete', 'new-password');
     expect(field.confirm()).toHaveAttribute('autocomplete', 'new-password');
     expect(field.password()).toHaveAttribute('type', 'password');
     expect(screen.getByRole('checkbox', { name: 'حساب فعال باشد' })).toBeChecked();
-    // Only fields the API supports.
-    expect(screen.queryByLabelText(/کد ملی|نقش|شرکت|یادداشت/)).toBeNull();
+    // No company is selected here, so the personnel number is disabled with an honest hint.
+    expect(screen.getByLabelText(/^شماره پرسنلی$/)).toBeDisabled();
+    await openContact(user);
+    expect(field.email()).toHaveAttribute('dir', 'ltr');
+    expect(field.mobile()).toHaveAttribute('dir', 'ltr');
+    // Only fields the API supports: no photo, no landline, no free-text note.
+    expect(screen.queryByLabelText(/کد ملی|عکس|تلفن ثابت|یادداشت/)).toBeNull();
   });
 
   it('keeps the password toggle on one side with the text padding, and turns off spelling aids', () => {
@@ -98,8 +112,7 @@ describe('UserCreatePage', () => {
     expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual([
       'اطلاعات هویتی',
       'اطلاعات ورود',
-      'اطلاعات تماس',
-      'وضعیت',
+      'شماره پرسنلی و وضعیت',
     ]);
     expect(screen.queryByRole('heading', { level: 3 })).toBeNull();
   });
@@ -111,11 +124,13 @@ describe('UserCreatePage', () => {
     expect(peekUserFlash('user-9')).toBeNull();
   });
 
-  it('derives the hints from the validation limits', () => {
+  it('derives the hints from the validation limits', async () => {
+    const user = userEvent.setup();
     stubApi(() => json({}));
     setup();
     expect(screen.getByText(/۳ تا ۲۰ نویسه/)).toBeInTheDocument();
     expect(screen.getByText(/دست‌کم ۱۵ نویسه/)).toBeInTheDocument();
+    await openContact(user);
     expect(screen.getByText(/۱۱ رقم لاتین، مانند/)).toBeInTheDocument();
   });
 
@@ -139,12 +154,18 @@ describe('UserCreatePage', () => {
     setup();
     await user.click(submit());
     expect(await screen.findByText('نام کاربری را وارد کنید.')).toBeInTheDocument();
-    expect(screen.getByText('ایمیل را وارد کنید.')).toBeInTheDocument();
+    expect(screen.getByText('نام را وارد کنید.')).toBeInTheDocument();
+    expect(screen.getByText('نام خانوادگی را وارد کنید.')).toBeInTheDocument();
     expect(screen.getByText('رمز عبور را وارد کنید.')).toBeInTheDocument();
     expect(screen.getByText('تکرار رمز عبور را وارد کنید.')).toBeInTheDocument();
-    expect(field.username()).toHaveAttribute('aria-invalid', 'true');
-    expect(field.username()).toHaveFocus();
+    expect(field.firstName()).toHaveAttribute('aria-invalid', 'true');
+    expect(field.firstName()).toHaveFocus();
     expect(field.username()).toHaveAccessibleDescription(/نام کاربری را وارد کنید/);
+    // The e-mail error sits on the second tab, which is flagged but not opened.
+    expect(tab(/^اطلاعات تماس/)).toHaveAccessibleName(/دارای خطا/);
+    expect(tab(/^اطلاعات اصلی/)).toHaveAccessibleName(/دارای خطا/);
+    await openContact(user);
+    expect(screen.getByText('ایمیل را وارد کنید.')).toBeInTheDocument();
     expect(calls).toHaveLength(0);
   });
 
@@ -168,6 +189,7 @@ describe('UserCreatePage', () => {
     const user = userEvent.setup();
     stubApi(() => json({}));
     setup();
+    if (name !== 'password') await openContact(user);
     await user.type(field[name](), value);
     await user.tab();
     expect(screen.getByText(new RegExp(message))).toBeInTheDocument();
@@ -231,15 +253,20 @@ describe('UserCreatePage', () => {
     const user = userEvent.setup();
     const { calls } = stubApi((call) => (call.method === 'POST' ? json({ id: 'n2' }, 201) : json(userDetails(2))));
     setup();
+    await user.type(field.firstName(), 'مینا');
+    await user.type(field.lastName(), 'کاظمی');
     await user.type(field.username(), 'minimal');
-    await user.type(field.email(), 'min@example.test');
     await user.type(field.password(), 'Str0ng-pass-phrase!');
     await user.type(field.confirm(), 'Str0ng-pass-phrase!');
     await user.click(screen.getByRole('checkbox', { name: 'حساب فعال باشد' }));
     expect(screen.getByText(/حساب غیرفعال است/)).toBeInTheDocument();
+    await openContact(user);
+    await user.type(field.email(), 'min@example.test');
     await user.click(submit());
     await waitFor(() => expect(calls.some((call) => call.method === 'POST')).toBe(true));
-    expect(calls.find((call) => call.method === 'POST')?.body).toMatchObject({ firstName: null, lastName: null, cellPhoneNumber: null, isActive: false });
+    // Only the mobile number stays optional; no company means no personnel record request.
+    expect(calls.find((call) => call.method === 'POST')?.body).toMatchObject({ firstName: 'مینا', lastName: 'کاظمی', cellPhoneNumber: null, isActive: false });
+    expect(calls.filter((call) => call.method === 'POST')).toHaveLength(1);
   });
 
   it('shows the 409 duplicate message in an alert and keeps every typed value', async () => {
@@ -250,8 +277,11 @@ describe('UserCreatePage', () => {
     await user.click(submit());
     expect(await screen.findByRole('alert')).toHaveTextContent('نام کاربری، ایمیل یا شماره همراه قبلاً ثبت شده است.');
     expect(screen.getByRole('alert')).toHaveFocus();
+    // Nothing typed is lost, on any tab.
+    await openMain(user);
     expect(field.username()).toHaveValue('ali.r');
     expect(field.password()).toHaveValue('Str0ng-pass-phrase!');
+    await openContact(user);
     expect(field.email()).toHaveValue('ali@example.test');
     expect(window.location.pathname).toBe('/app/admin/users/new');
     expect(submit()).toBeEnabled();
@@ -280,12 +310,16 @@ describe('UserCreatePage', () => {
     setup();
     await fillValid(user);
     await user.click(submit());
-    expect(await screen.findByText('این ایمیل مجاز نیست.')).toBeInTheDocument();
-    expect(screen.getByText('رمز عبور ضعیف است.')).toBeInTheDocument();
+    expect(await screen.findByText('رمز عبور ضعیف است.')).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('خطای عمومی.');
-    expect(field.email()).toHaveAttribute('aria-invalid', 'true');
-    // Focus goes to the first invalid control in DOM order (the password precedes the e-mail).
+    // The first tab with an error opens and its first invalid control takes the focus; the
+    // e-mail error waits on the second tab, which carries the error mark.
+    expect(tab(/^اطلاعات اصلی/)).toHaveAttribute('aria-selected', 'true');
     expect(field.password()).toHaveFocus();
+    expect(tab(/^اطلاعات تماس/)).toHaveAccessibleName(/دارای خطا/);
+    await openContact(user);
+    expect(screen.getByText('این ایمیل مجاز نیست.')).toBeInTheDocument();
+    expect(field.email()).toHaveAttribute('aria-invalid', 'true');
     await user.type(field.email(), 'x');
     expect(screen.queryByText('این ایمیل مجاز نیست.')).toBeNull();
   });
@@ -299,6 +333,7 @@ describe('UserCreatePage', () => {
     await fillValid(user);
     await user.click(submit());
     expect(await screen.findByRole('alert')).toHaveTextContent('ذخیرهٔ اطلاعات انجام نشد');
+    await openMain(user);
     expect(field.username()).toHaveValue('ali.r');
   });
 

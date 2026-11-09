@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { clearUserFlash, peekUserFlash, setUserFlash, userFlashTtlMs } from './userFlash';
+import { clearUserFlash, peekUserFlash, setUserFlash, userFlashText, userFlashTtlMs, userFlashWarnings } from './userFlash';
 
 describe('userFlash', () => {
   afterEach(() => {
@@ -23,5 +23,10 @@ describe('userFlash', () => {
     expect(peekUserFlash('a')).toBe('updated');
     now.mockReturnValue(1_000_000 + userFlashTtlMs + 1);
     expect(peekUserFlash('a')).toBeNull();
+  });
+
+  it('has a Persian text for every kind and marks only the half-finished creations as warnings', () => {
+    for (const text of Object.values(userFlashText)) expect(text).toMatch(/[\u0600-\u06FF]/);
+    expect([...userFlashWarnings].sort()).toEqual(['createdEmployeeDuplicate', 'createdEmployeeFailed']);
   });
 });
