@@ -2903,3 +2903,8 @@
 - بخش «دسترسی و مجوزها» به آخرین جایگاه زیرمنوهای مدیریت سیستم منتقل و کاملاً disabled شد؛ زیرگزینه‌های «گروه‌های دسترسی» و «کاتالوگ و جزئیات مجوزها» در این وضعیت نمایش داده نمی‌شوند.
 - «کارکنان» همچنان disabled باقی ماند. هیچ Route، API، permission catalog، schema یا authorization سمت سرور تغییر نکرد.
 - تست‌های Sidebar برای ترتیب جدید، فعال بودن لینک مجوزهای دسترسی و غیرفعال بودن کامل بخش انتهایی اصلاح شدند؛ اجرای محلی انجام نشده و نتیجه CI باید بررسی شود.
+
+
+## 2026-11-10 — مأموریت D-078 PR اول: مجوز شرکتی users.create
+- Migration فقط-داده idempotent `20261110120000_SeedUsersCreatePermission` کد `users.create` را با GUID پایدار و Ordering 21007 به کاتالوگ اضافه کرد؛ هیچ نقشی خودکار مجوز نمی‌گیرد (تست SQL-gated قفل می‌کند). کاتالوگ مستندات به ۷۴ کد رسید؛ کد فعلاً seeded-only است و enforcement در PR دوم سری D-078 می‌آید.
+- `generate_migrations.py` به‌روزرسانی شد (CURRENT/DELTA + HAND_WRITTEN_SQL)؛ هر دو گارد migration سبز. Build سبز؛ تست ۱۰۹۲ موفق/۶۷ Skip/۲ شکست محیطی قدیمی. تست‌های SQL Server محلی NotRun (Docker موجود نیست). جزئیات: `docs/handoffs/UNNUMBERED-d078-users-create-permission-seed.md`.

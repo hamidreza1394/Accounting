@@ -1,15 +1,16 @@
 # کاتالوگ عملیات و مجوزهای فرانو (Permission & Operation Catalog)
 
 - **Issue:** [#444](https://github.com/hamidreza1394/Accounting/issues/444) — Stage 2-C مأموریت تکمیلی (2026-11-08)
-- **منبع حقیقت:** کاتالوگ `PermissionDefinitions` در دیتابیس (seed شده در ۶ Migration؛ دقیقاً **۷۳ کد**)، از کد واقعی `cb2ddd57` استخراج شد. این سند جایگزین یا کپی آن نیست؛ نگاشت کاربرد و تحلیل پوشش عملیات است.
+- **منبع حقیقت:** کاتالوگ `PermissionDefinitions` در دیتابیس (seed شده در ۷ Migration؛ دقیقاً **۷۴ کد**)، از کد واقعی `main` استخراج شد (به‌روزرسانی D-078: 2026-11-10). این سند جایگزین یا کپی آن نیست؛ نگاشت کاربرد و تحلیل پوشش عملیات است.
 - **مدل:** [D-075](DECISIONS.md) — عملیات = آخرین بخش کد؛ زیرسیستم = اولین بخش؛ نگاشت به زیرسیستم‌ها در [SUBSYSTEM_CATALOG.md](SUBSYSTEM_CATALOG.md).
 
-## 1. فهرست کامل ۷۳ کد و محل اعمال
+## 1. فهرست کامل ۷۴ کد و محل اعمال
 
-### users.* — عضویت و دفترچه شرکت (۲ کد)
+### users.* — عضویت و دفترچه شرکت (۳ کد)
 
 | کد | نام فارسی (seed) | فعل | محل اعمال واقعی |
 |---|---|---|---|
+| `users.create` | ایجاد کاربر برای شرکت | create | **seeded-only** — تا ادغام endpoint ایجاد کاربر شرکتی D-078 (الگوی دو کد seeded-only گروه شرکتی) |
 | `users.list` | مشاهده کاربران شرکت | list | `GET /companies/{id}/users` (`CompanyUserDirectoryEndpoints`) |
 | `users.membership.approve` | تأیید درخواست عضویت در شرکت | approve | صف و تأیید/رد عضویت (`CompanyMembershipRequestEndpoints`؛ approve و reject هر دو با همین کد) |
 
@@ -115,6 +116,6 @@
 ## 6. شکاف‌ها و گام‌های بعدی واقعی
 
 1. **۴۶ کد Trade بدون enforcement تولیدی** — باید هم‌زمان با endpointهای عملیاتی Trade (خارج از Stage 2) declare شوند؛ gate عمومی آماده است.
-2. **دو کد seeded-only گروه شرکتی** — با ویژگی خروجی گزارش/تعدیلات تلفیق فعال می‌شوند.
+2. **کدهای seeded-only** — دو کد گروه شرکتی (`reporting.group.export`، `consolidation.adjustments.approve`) با ویژگی خروجی گزارش/تعدیلات تلفیق فعال می‌شوند؛ `users.create` (D-078) با ادغام endpoint ایجاد کاربر شرکتی enforce می‌شود.
 3. **فعل‌های رد/ابطال/چاپ** به‌عنوان کد مستقل فعلاً نیاز واقعی ندارند؛ فقط با فرم واقعی آینده اضافه شوند.
 4. عدم وجود hint برای `hr.employees.user-link.manage` و `hr.assignments.manage` تعمداً است (UI این عملیات‌ها با گیت `hr.employees.update` نمایش داده می‌شود؛ تعمیم درخت گیت در فاز بعدی HR).

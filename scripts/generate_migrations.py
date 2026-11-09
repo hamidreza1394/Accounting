@@ -50,16 +50,16 @@ MIGRATIONS_DIRECTORY = os.path.join("Infrastructure", "Persistence", "Migrations
 # 'InitialCreate'. Its designer file is the starting point of the difference that the
 # current migration has to apply. ('AlignSchemaWithModel' and 'WidenUserPasswordHash'
 # are published history as well.)
-DELTA_MIGRATION_ID = "20261109151857"
-DELTA_MIGRATION_NAME = "MakeUserEmailAddressOptional"
+DELTA_MIGRATION_ID = "20261109152401"
+DELTA_MIGRATION_NAME = "AddCompanyEmployeePhotos"
 
 # The most recent migration. Its operations are computed from the difference between
 # the model of the migration before it (DELTA_MIGRATION_*) and the model of the code
 # base, so the files can not drift apart from the snapshot. DELTA_MIGRATION_* is
 # published history and is never rewritten, exactly like 'InitialCreate'.
-CURRENT_MIGRATION_ID = "20261109152401"
-CURRENT_MIGRATION_NAME = "AddCompanyEmployeePhotos"
-CURRENT_MIGRATION_CLASS = "AddCompanyEmployeePhotos"
+CURRENT_MIGRATION_ID = "20261110120000"
+CURRENT_MIGRATION_NAME = "SeedUsersCreatePermission"
+CURRENT_MIGRATION_CLASS = "SeedUsersCreatePermission"
 
 # The target model artifacts use EF Core's generated snapshot format because SQL Server
 # rowversion metadata is provider-specific. Keep them stable; verify_migration_model.py
@@ -335,6 +335,17 @@ HAND_WRITTEN_SQL: dict[str, tuple[list[str], list[str]]] = {
     "20261104200301": (
         HR_ORGANIZATIONAL_STRUCTURE_CONSTRAINTS + _seed_hr_permission_statements(),
         _unseed_hr_permission_statements(),
+    ),
+    # D-078: company-scoped permission for creating a user for (or adding an existing
+    # account to) the route company. Data-only and idempotent; no role receives the
+    # code automatically.
+    "20261110120000": (
+        [
+            "IF NOT EXISTS (SELECT 1 FROM [PermissionDefinitions] WHERE [Code] = 'users.create') INSERT INTO [PermissionDefinitions] ([Id], [Code], [Name], [Description], [Ordering], [InsertDateTime]) VALUES ('f47a2026-1103-4d00-8000-000000000003', 'users.create', N'ایجاد کاربر برای شرکت', N'اجازه ایجاد حساب کاربری جدید یا افزودن حساب موجود به همین شرکت؛ عضویت همان شرکت فعال می‌شود اما هیچ نقش، مجوز یا دسترسی سال/دوره‌ای تخصیص نمی‌یابد (D-078).', 21007, SYSDATETIME());",
+        ],
+        [
+            "DELETE FROM [PermissionDefinitions] WHERE [Id] = 'f47a2026-1103-4d00-8000-000000000003' AND [Code] = 'users.create' AND NOT EXISTS (SELECT 1 FROM [CompanyRolePermissions] WHERE [CompanyRolePermissions].[PermissionId] = [PermissionDefinitions].[Id]);",
+        ],
     ),
 }
 CURRENT_MIGRATION_EPILOGUE, CURRENT_MIGRATION_DOWN_PRELUDE = HAND_WRITTEN_SQL.get(
