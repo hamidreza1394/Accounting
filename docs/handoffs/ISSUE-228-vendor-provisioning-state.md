@@ -70,3 +70,13 @@
 - مانع #392: قرارداد و mapping پایدار CompanyReference → CompanyId محلی هنوز نیازمند طراحی/تأیید schema مشتری است؛ هیچ migration مشتری در این handoff یا PR Vendor انجام نشده است.
 - مرز #235: consumer/ACK مشتری، trust distribution و retry/error semantics فقط در PR مستقل customer-side ادامه می‌یابد؛ PR Vendor فقط مرجع و binding را fail-closed نگه می‌دارد.
 - تست محلی: در این بازبینی اجرا نشد؛ نتیجه فوق فقط به ۱۵ Check Run واقعی پس از Merge نسبت داده می‌شود.
+ 
+## 2026-11-09 — نمایش صریح blocker لایسنس Company-scoped در Vendor (PR #613)
+- **مسئله:** فهرست لایسنس‌های قابل Provisioning، LicensePayload v2 امضاشده و معتبر را که به‌دلیل نبود mapping مورداعتماد CompanyReference قابل استفاده نیست، بی‌صدا حذف می‌کرد؛ UI پیام «لایسنس معتبر پیدا نشد» می‌داد.
+- **اصلاح Vendor-only:** `eligible-licenses` یک `blockedItems` محدود دارد؛ فقط خطای دقیق `provisioning_company_reference_mapping_required` به علت عمومی `company_reference_mapping_required` نگاشت می‌شود. خطاهای دیگر، CompanyReference، payload و KeyId به مرورگر منتقل نمی‌شوند.
+- **رفتار UI:** لایسنس blocked با شماره/محصول و توضیح روشن دیده می‌شود اما انتخاب‌پذیر نیست؛ دکمه ثبت تا وجود لایسنس eligible غیرفعال می‌ماند. دادهٔ blocker هنگام تغییر نصب، loading یا خطا reset می‌شود.
+- **Regression:** Unit test allowlist و Vitest نمایش blocker/عدم انتخاب/عدم ثبت اضافه شد. تست SQL Server موجود برای رد fail-closed v2 حفظ شد.
+- **وابستگی:** #392 همچنان مالک binding معتبر CompanyReference به Company محلی و هر Migration احتمالی Customer است. این PR فقط blocker را آشکار می‌کند و mapping را جعل یا bypass نمی‌کند. Consumer/ACK در #235 جدا می‌ماند.
+- **مرزبندی:** بدون تغییر `Server/**`، Customer DB، Migration مشتری، `Licensing.Contracts` یا private key/secret.
+- **آزمون:** تست محلی اجرا نشده؛ وضعیت CI روی head نهایی PR باید بررسی شود. اجرای قبلی #608 روی SHA قدیمی CodeQL را به‌علت HTTP 504 دانلود bundle fail کرد؛ این failure زیرساختی است و باید روی PR جدید دوباره بررسی شود.
+- **وضعیت:** Implemented / Not Verified.

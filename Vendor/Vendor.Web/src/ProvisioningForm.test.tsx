@@ -446,4 +446,38 @@ describe('Vendor customer provisioning form', () => {
     expect(screen.getByText(expectedTime)).toBeInTheDocument();
   });
 
+  it('shows company-scoped signed licenses as blocked until trusted CompanyReference mapping exists', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/vendor/installations/?customerId=customer-1&page=1&pageSize=100') {
+        return response({ items: [{ id: 'install-1', installationCode: 'INSTALL-01', name: 'نصب اصلی', status: 'Active' }] });
+      }
+      if (url === '/api/vendor/provisioning-requests/eligible-licenses?customerId=customer-1&installationId=install-1') {
+        return response({
+          items: [],
+          blockedItems: [{
+            licenseNumber: 'LIC-COMPANY-001',
+            productCode: 'FARANOU',
+            reason: 'company_reference_mapping_required',
+          }],
+        });
+      }
+      if (url === '/api/vendor/provisioning-requests?customerId=customer-1&page=1&pageSize=10') {
+        return response({ items: [] });
+      }
+      throw new Error('Unexpected request: ' + url);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('crypto', { randomUUID: vi.fn().mockReturnValue('unused-request-id') });
+
+    render(<ProvisioningForm customerId="customer-1" customerName="مشتری نمونه"
+      onCancel={vi.fn()} onSaved={vi.fn()} />);
+
+    await screen.findByText(/نگاشت مورداعتماد CompanyReference به شرکت محلی/);
+    expect(screen.getByText('LIC-COMPANY-001')).toBeInTheDocument();
+    expect(screen.queryByText('برای این نصب لایسنس امضاشده، فعال و معتبر پیدا نشد.')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('لایسنس صادرشده')).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'ذخیره درخواست راه‌اندازی' })).toBeDisabled();
+  });
+
 });
