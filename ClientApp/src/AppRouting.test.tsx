@@ -6,6 +6,7 @@ import { App } from './App';
 import { json, listBody, userDetails, userItem } from './test/adminUsers';
 import { company, contextBody, period, selected, session } from './test/api';
 import { catalogItems, companiesBody, roleItem, systemRole, templates } from './test/roles';
+import { openSystemMenu } from './test/sidebar';
 
 const p1 = period('p1', 'سال مالی ۱۴۰۵');
 const companyA = company('a', 'شرکت الف', [p1], '10101010101');
@@ -60,6 +61,7 @@ describe('App routing', () => {
     stubAll(false, ['users.list', 'users.membership.approve']);
     render(<App navigate={vi.fn()} />);
     const nav = await screen.findByRole('navigation', { name: 'منوی اصلی' });
+    await openSystemMenu(userEvent.setup(), nav);
     expect(await within(nav).findByRole('link', { name: 'کاربران شرکت جاری' })).toBeInTheDocument();
     expect(within(nav).getByRole('link', { name: 'درخواست‌های عضویت' })).toBeInTheDocument();
     expect(within(nav).queryByRole('link', { name: 'مدیریت کاربران' })).toBeNull();
@@ -72,6 +74,9 @@ describe('App routing', () => {
     expect(await screen.findByRole('heading', { name: dashboardHeading })).toBeInTheDocument();
     const nav = screen.getByRole('navigation', { name: 'منوی اصلی' });
     expect(within(nav).getByRole('link', { name: /داشبورد/ })).toHaveAttribute('aria-current', 'page');
+    // The menu starts folded; the user opens «مدیریت سیستم» by hand.
+    expect(within(nav).queryByRole('link', { name: 'مدیریت کاربران' })).toBeNull();
+    await openSystemMenu(user, nav);
 
     await user.click(await within(nav).findByRole('link', { name: 'مدیریت کاربران' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'مدیریت کاربران' })).toBeInTheDocument();
@@ -127,6 +132,7 @@ describe('App routing', () => {
     stubAll(true);
     render(<App navigate={vi.fn()} />);
     await screen.findByRole('heading', { name: dashboardHeading });
+    await openSystemMenu(userEvent.setup());
     expect(screen.queryByRole('link', { name: /سیاست‌های امنیتی/ })).toBeNull();
     expect((await screen.findByText('سیاست‌های امنیتی')).closest('[aria-disabled="true"]')).toBeTruthy();
   });
@@ -183,6 +189,7 @@ describe('App routing', () => {
     render(<App navigate={vi.fn()} />);
     await screen.findByRole('heading', { name: dashboardHeading });
     const nav = screen.getByRole('navigation', { name: 'منوی اصلی' });
+    await openSystemMenu(user, nav);
     await user.click(await within(nav).findByRole('link', { name: 'گروه‌های دسترسی' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'گروه‌های دسترسی' })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/app/admin/roles');
@@ -235,6 +242,7 @@ describe('App routing', () => {
     render(<App navigate={vi.fn()} />);
     await screen.findByRole('heading', { name: dashboardHeading });
     const nav = screen.getByRole('navigation', { name: 'منوی اصلی' });
+    await openSystemMenu(user, nav);
     await user.click(await within(nav).findByRole('link', { name: 'مجوزهای دسترسی' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'مجوزهای دسترسی' })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/app/admin/access');
@@ -248,6 +256,7 @@ describe('App routing', () => {
     render(<App navigate={vi.fn()} />);
     await screen.findByRole('heading', { name: dashboardHeading });
     const nav = screen.getByRole('navigation', { name: 'منوی اصلی' });
+    await openSystemMenu(user, nav);
 
     await user.click(await within(nav).findByRole('link', { name: 'درخواست‌های عضویت' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'درخواست‌های عضویت در انتظار تأیید' })).toBeInTheDocument();
@@ -274,7 +283,9 @@ describe('App routing', () => {
     stubAll(true);
     const first = render(<App navigate={vi.fn()} />);
     await screen.findByRole('heading', { name: dashboardHeading });
-    await user.click(await within(screen.getByRole('navigation', { name: 'منوی اصلی' })).findByRole('link', { name: 'گزارش امنیت و سوابق' }));
+    const securityNav = screen.getByRole('navigation', { name: 'منوی اصلی' });
+    await openSystemMenu(user, securityNav);
+    await user.click(await within(securityNav).findByRole('link', { name: 'گزارش امنیت و سوابق' }));
     // The first load of this lazy page also transforms the calendar library, which is slow under jsdom.
     expect(await screen.findByRole('heading', { level: 1, name: 'گزارش امنیت و سوابق' }, { timeout: 15000 })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/app/admin/security/audit');
@@ -305,7 +316,9 @@ describe('App routing', () => {
     stubAll(true);
     render(<App navigate={vi.fn()} />);
     await screen.findByRole('heading', { name: dashboardHeading });
-    await user.click(await within(screen.getByRole('navigation', { name: 'منوی اصلی' })).findByRole('link', { name: 'کاربران شرکت جاری' }));
+    const directoryNav = screen.getByRole('navigation', { name: 'منوی اصلی' });
+    await openSystemMenu(user, directoryNav);
+    await user.click(await within(directoryNav).findByRole('link', { name: 'کاربران شرکت جاری' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'کاربران شرکت' })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/app/company/users');
   });

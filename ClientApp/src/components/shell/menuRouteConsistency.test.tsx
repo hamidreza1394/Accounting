@@ -57,15 +57,12 @@ describe('menu ↔ router consistency (Issue #444 stage 2-B / D-075)', () => {
     }
   });
 
-  it('keeps groups non-empty and only opens groups that own real pages', () => {
+  it('keeps groups non-empty and never declares a group open by default', () => {
     const groups = groupEntries();
     expect(groups.length).toBeGreaterThan(0);
     for (const group of groups) {
       expect(group.children.length, `group «${group.label}» is empty`).toBeGreaterThan(0);
-      const ownsRealPages = group.children.some((leaf) => leaf.to !== undefined);
-      if (!ownsRealPages) {
-        expect(group.openByDefault, `group «${group.label}» has no real pages and must stay folded`).toBeUndefined();
-      }
+      expect('openByDefault' in group, `group «${group.label}» must not be open by default`).toBe(false);
     }
   });
 });

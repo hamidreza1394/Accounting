@@ -7,6 +7,7 @@ import { MyAccountPanel } from './MyAccountPanel';
 import { can, deniedAccess, type AccessSnapshot, type Permission } from '../lib/permissions';
 import { matchPath, RouterProvider, useLocation, type Route } from '../lib/router';
 import { AppSidebar } from './shell/AppSidebar';
+import { useHeaderHeightVar } from './shell/useHeaderHeightVar';
 import { PageBreadcrumbBar, PageBreadcrumbProvider } from './shell/PageBreadcrumb';
 import { WorkspaceTabPanes, WorkspaceTabsBar, WorkspaceTabsProvider } from './shell/WorkspaceTabs';
 import { hasAnyProblemForm, problemSummary, useFormRegistryVersion, workspaceStatus } from '../lib/formGuard';
@@ -84,6 +85,9 @@ function AppShellFrame({
   const [accountOpen, setAccountOpen] = useState(false);
   const accountTriggerRef = useRef<HTMLButtonElement>(null);
   const mainRef = useRef<HTMLElement>(null);
+  const workspaceRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  useHeaderHeightVar(headerRef, workspaceRef);
   // Dirty forms anywhere in the workspace block logout and context changes until confirmed.
   const [pendingLogout, setPendingLogout] = useState(false);
   // The context-change flow: blocked (problem tabs listed) -> final confirm -> in App hands.
@@ -137,7 +141,7 @@ function AppShellFrame({
   }
 
   return (
-    <div dir="rtl" className="faranou-workspace min-h-screen text-ink">
+    <div ref={workspaceRef} dir="rtl" className="faranou-workspace min-h-screen text-ink">
       <a
         href="#main-content"
         onClick={(event) => {
@@ -149,7 +153,7 @@ function AppShellFrame({
       >
         پرش به محتوای اصلی
       </a>
-      <header className="faranou-topbar faranou-topbar--login-palette on-dark sticky top-0 z-40 text-white">
+      <header ref={headerRef} className="faranou-topbar faranou-topbar--login-palette on-dark sticky top-0 z-40 text-white">
         <div className="faranou-header-inner">
           <div className="faranou-header-brand">
             <button

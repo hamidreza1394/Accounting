@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import {
   Activity,
   Banknote,
@@ -59,7 +59,6 @@ type NavGroup = {
   icon: LucideIcon;
   tone: Tone;
   children: NavLeaf[];
-  openByDefault?: boolean;
 };
 
 export type NavEntry = { kind: 'item'; leaf: NavLeaf } | { kind: 'group'; group: NavGroup };
@@ -149,7 +148,6 @@ export const navigation: NavEntry[] = [
       label: 'مدیریت سیستم',
       icon: Settings2,
       tone: 'slate',
-      openByDefault: true,
       children: [
         { label: 'مدیریت کاربران', icon: Users, to: '/admin/users' },
         { label: 'مجوزهای دسترسی', icon: LockKeyhole, to: '/admin/access' },
@@ -227,23 +225,10 @@ export type AppSidebarProps = {
 export function AppSidebar({ access, canAccess, onRetryPermissions, onNavigate, mobileOpen, onLogout, loggingOut = false }: AppSidebarProps) {
   const { pathname } = useLocation();
 
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(
-      navigation
-        .filter((entry): entry is { kind: 'group'; group: NavGroup } => entry.kind === 'group')
-        .map((entry) => [entry.group.label, entry.group.openByDefault === true]),
-    ),
-  );
-  const lastPathname = useRef<string | null>(null);
-  useEffect(() => {
-    if (lastPathname.current === pathname) return;
-    lastPathname.current = pathname;
-    const owner = navigation.find(
-      (entry): entry is { kind: 'group'; group: NavGroup } =>
-        entry.kind === 'group' && entry.group.children.some((leaf) => leaf.to !== undefined && isActivePath(pathname, leaf.to)),
-    );
-    if (owner) setOpenGroups((previous) => (previous[owner.group.label] ? previous : { ...previous, [owner.group.label]: true }));
-  }, [pathname]);
+  // Two independent concepts: the ACTIVE ROUTE (which page is open; drives only the highlight,
+  // `aria-current` and the dot on a folded group) and the EXPANDED GROUPS (which groups the user
+  // opened by an explicit click). Every group starts folded and navigation never opens one.
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
   const toggleGroup = (label: string) => setOpenGroups((previous) => ({ ...previous, [label]: !previous[label] }));
 
