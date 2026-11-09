@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   getAccessCatalogSubsystems,
   getAdminUserLoginHistory,
+  getAdminUserMembershipRequests,
   getAdminUserSessions,
   getEffectivePermissions,
   getSecurityAuditEvents,
@@ -11,6 +12,7 @@ import type {
   AccessSubsystem,
   AdminUserDetails,
   AdminUserMembership,
+  AdminUserMembershipRequest,
   AdminUserSession,
   EffectivePermissions,
   LoginHistoryItem,
@@ -18,6 +20,7 @@ import type {
   SecurityAuditPage,
 } from '@/api/types';
 import { formatDateTime } from '@/lib/format';
+import { Link } from '@/lib/router';
 import { eventTypeLabel } from '@/lib/securityEvents';
 import { listHrEmployees } from '@/features/hr/api/hrClient';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
@@ -144,20 +147,19 @@ export function ProfileIdentityTab({ user, cache, onUnauthenticated }: Shared) {
             ) : (
               <dl className="grid gap-3 sm:grid-cols-2">
                 {rows.map((row) => (
-                  <div key={row.companyId} className="rounded-xl bg-cool px-3.5 py-3">
-                    <dt className="text-xs font-medium text-sub">پرونده پرسنلی — {row.companyName}</dt>
-                    <dd className="mt-1 break-words text-sm font-semibold text-ink">
-                      {row.hidden ? (
-                        <span className="text-sub">نمایش این بخش برای شما مجاز نیست.</span>
-                      ) : row.employeeNumber ? (
-                        <>
-                          <span dir="ltr">{row.employeeNumber}</span>
-                          {row.employeeName ? <span className="text-sub"> — {row.employeeName}</span> : null}
-                        </>
-                      ) : (
-                        <span className="text-sub">پرونده پرسنلی متصل نشده است.</span>
-                      )}
-                    </dd>
+                  <Info key={row.companyId} label={`پرونده پرسنلی — ${row.companyName}`}>
+                    {row.hidden ? (
+                      <span className="text-sub">نمایش این بخش برای شما مجاز نیست.</span>
+                    ) : row.employeeNumber ? (
+                      <>
+                        <span dir="ltr">{row.employeeNumber}</span>
+                        {row.employeeName ? <span className="text-sub"> — {row.employeeName}</span> : null}
+                      </>
+                    ) : (
+                      <span className="text-sub">پرونده پرسنلی متصل نشده است.</span>
+                    )}
+                    {/* The row action lives inside the dd (flow content of the definition): a
+                        button between the dl groups would break the definition-list contract. */}
                     {!row.hidden && row.employeeId ? (
                       <button
                         type="button"
@@ -179,12 +181,12 @@ export function ProfileIdentityTab({ user, cache, onUnauthenticated }: Shared) {
                           setLinkTarget({ companyId: row.companyId, companyName: row.companyName });
                         }}
                         aria-label={`اتصال پرونده پرسنلی در ${row.companyName}`}
-                        className="mt-2 inline-flex min-h-9 items-center rounded-lg border border-teal-deep/40 px-3 text-xs font-bold text-teal-deep outline-none hover:bg-white focus-visible:ring-2 focus-visible:ring-gold"
+                        className="ms-2 mt-2 inline-flex min-h-9 items-center rounded-lg border border-teal-deep/40 px-3 text-xs font-bold text-teal-deep outline-none hover:bg-white focus-visible:ring-2 focus-visible:ring-gold"
                       >
                         اتصال پرونده پرسنلی
                       </button>
                     ) : null}
-                  </div>
+                  </Info>
                 ))}
               </dl>
             )
@@ -350,19 +352,129 @@ const membershipColumns: readonly DataTableColumn<AdminUserMembership>[] = [
   { key: 'created', header: 'تاریخ عضویت', cell: (membership) => formatDateTime(membership.createdAtUtc) },
 ];
 
-/** Tab 3 — the company memberships of the user (already part of the loaded details; no request). */
-export function ProfileMembershipsTab({ user }: Pick<Shared, 'user'>) {
-  return user.memberships.length === 0 ? (
-    <EmptyState title="این حساب هنوز عضویت شرکتی ندارد." />
-  ) : (
-    <DataTable
-      caption="عضویت‌های شرکتی کاربر"
-      columns={membershipColumns}
-      rows={user.memberships}
-      getRowKey={(membership) => membership.companyId}
-    />
+/** Tab 3 — the memberships plus the user's own inter-company request states (D-065). */
+export function ProfileMembershipsTab({ user, cache, onUnauthenticated }: Shared) {
+  const [requestStatus, setRequestStatus] = useState<'' | 'Pending' | 'Approved' | 'Rejected'>('');
+  const [requestPage, setRequestPage] = useState(1);
+  const requestsState = useProfileTabData(
+    cache,
+    `${user.id}:membership-requests:${requestStatus}:${requestPage}`,
+    (signal) =>
+      getAdminUserMembershipRequests(
+        user.id,
+        { ...(requestStatus === '' ? {} : { status: requestStatus }), page: requestPage, pageSize: 10 },
+        signal,
+      ),
+    onUnauthenticated,
+  );
+
+  return (
+    <div className="space-y-8">
+      <section aria-labelledby="profile-memberships-heading">
+        <h2 id="profile-memberships-heading" className="mb-3 text-base font-bold text-ink">عضویت‌های شرکتی</h2>
+        {user.memberships.length === 0 ? (
+          <EmptyState title="این حساب هنوز عضویت شرکتی ندارد." />
+        ) : (
+          <DataTable
+            caption="عضویت‌های شرکتی کاربر"
+            columns={membershipColumns}
+            rows={user.memberships}
+            getRowKey={(membership) => membership.companyId}
+          />
+        )}
+      </section>
+      <section aria-labelledby="profile-requests-heading">
+        <h2 id="profile-requests-heading" className="mb-3 text-base font-bold text-ink">درخواست‌های عضویت بین‌شرکتی</h2>
+        <p className="mb-3 text-xs leading-6 text-sub">
+          تصمیم بر درخواست‌های در انتظار تنها در شرکت مقصد گرفته می‌شود؛ این بخش فقط وضعیت را نشان می‌دهد (D-065).
+          {' '}
+          <Link to="/admin/membership-requests" className="font-bold text-teal-deep underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-gold">
+            رفتن به صف تأیید مقصد
+          </Link>
+        </p>
+        <div className="mb-3">
+          <label htmlFor="membership-request-status" className="mb-1 block text-sm font-medium text-ink">فیلتر وضعیت</label>
+          <select
+            id="membership-request-status"
+            value={requestStatus}
+            onChange={(event) => {
+              setRequestStatus(event.target.value as '' | 'Pending' | 'Approved' | 'Rejected');
+              setRequestPage(1);
+            }}
+            className="w-full max-w-xs rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-gold"
+          >
+            <option value="">همهٔ وضعیت‌ها</option>
+            <option value="Pending">در انتظار تأیید</option>
+            <option value="Approved">تأیید شده</option>
+            <option value="Rejected">رد شده</option>
+          </select>
+        </div>
+        <TabDataBoundary state={requestsState} label="در حال دریافت درخواست‌های عضویت…">
+          {(requestsPage) =>
+            requestsPage.items.length === 0 ? (
+              <EmptyState title="درخواست عضویتی برای این حساب ثبت نشده است." />
+            ) : (
+              <div className="space-y-3">
+                <DataTable
+                  caption="درخواست‌های عضویت کاربر"
+                  columns={membershipRequestColumns}
+                  rows={requestsPage.items}
+                  getRowKey={(request) => request.id}
+                />
+                {requestsPage.totalCount > requestsPage.pageSize ? (
+                  <nav aria-label="صفحه‌بندی درخواست‌های عضویت" className="flex items-center justify-between text-sm">
+                    <button
+                      type="button"
+                      onClick={() => setRequestPage((value) => Math.max(1, value - 1))}
+                      disabled={requestPage <= 1}
+                      className="rounded-lg border border-line px-3 py-1.5 font-medium text-ink outline-none focus-visible:ring-2 focus-visible:ring-gold disabled:opacity-40"
+                    >
+                      قبلی
+                    </button>
+                    <span className="text-sub">
+                      صفحه {requestPage} از {Math.ceil(requestsPage.totalCount / requestsPage.pageSize)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setRequestPage((value) => value + 1)}
+                      disabled={requestPage >= Math.ceil(requestsPage.totalCount / requestsPage.pageSize)}
+                      className="rounded-lg border border-line px-3 py-1.5 font-medium text-ink outline-none focus-visible:ring-2 focus-visible:ring-gold disabled:opacity-40"
+                    >
+                      بعدی
+                    </button>
+                  </nav>
+                ) : null}
+              </div>
+            )
+          }
+        </TabDataBoundary>
+      </section>
+    </div>
   );
 }
+
+const membershipRequestStatusLabels: Record<AdminUserMembershipRequest['status'], { label: string; badge: 'pending' | 'active' | 'rejected' }> = {
+  Pending: { label: 'در انتظار تأیید', badge: 'pending' },
+  Approved: { label: 'تأیید شده', badge: 'active' },
+  Rejected: { label: 'رد شده', badge: 'rejected' },
+};
+
+const membershipRequestColumns: readonly DataTableColumn<AdminUserMembershipRequest>[] = [
+  { key: 'company', header: 'شرکت', cell: (request) => request.destinationCompanyName },
+  {
+    key: 'status',
+    header: 'وضعیت',
+    cell: (request) => {
+      const status = membershipRequestStatusLabels[request.status];
+      return <StatusBadge status={status.badge}>{status.label}</StatusBadge>;
+    },
+  },
+  { key: 'requested', header: 'زمان درخواست', cell: (request) => formatDateTime(request.requestedAtUtc) },
+  { key: 'decided', header: 'زمان تصمیم', cell: (request) => (request.decidedAtUtc ? formatDateTime(request.decidedAtUtc) : '—') },
+  { key: 'decider', header: 'تصمیم‌گیرنده', cell: (request) => request.decidedByDisplayName ?? '—' },
+  { key: 'role', header: 'نقش تخصیص‌یافته', cell: (request) => request.approvedRoleName ?? '—' },
+  { key: 'reason', header: 'دلیل رد', cell: (request) => request.decisionReason ?? '—' },
+];
 
 // ------------------------------------------------------------------ tab 4: subsystems & licensing
 

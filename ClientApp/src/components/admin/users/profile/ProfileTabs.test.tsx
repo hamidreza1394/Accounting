@@ -63,10 +63,14 @@ describe('UserDetailPage profile workspace (stage 3)', () => {
     const fetchMock = stubApi({
       'GET /api/v1/admin/users/user-2': { status: 200, body: userDetails(2, { memberships: [] }) },
       'GET /api/v1/admin/users/user-2/login-history?take=50': { status: 200, body: loginHistoryBody },
+      'GET /api/v1/admin/users/user-2/membership-requests?page=1&pageSize=10': {
+        status: 200,
+        body: { items: [], totalCount: 0, page: 1, pageSize: 10 },
+      },
     });
     setup();
     await screen.findByRole('tablist');
-    // Only the detail request so far — the six data tabs stayed inactive.
+    // Only the detail request so far — the data tabs stayed inactive.
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     await user.click(screen.getByRole('tab', { name: 'سوابق ورود و خروج' }));
@@ -74,11 +78,16 @@ describe('UserDetailPage profile workspace (stage 3)', () => {
     const afterFirstOpen = fetchMock.mock.calls.length;
     expect(afterFirstOpen).toBe(2);
 
-    // Switch away and back: served from the cache, no new request.
+    // The memberships tab fetches its request section once, then serves it from the cache.
     await user.click(screen.getByRole('tab', { name: 'شرکت‌ها و عضویت‌ها' }));
+    await screen.findByText('درخواست عضویتی برای این حساب ثبت نشده است.');
+    const afterMemberships = fetchMock.mock.calls.length;
+    expect(afterMemberships).toBe(3);
+    expect(fetchMock.mock.calls.filter(([input]) => String(input).includes('/membership-requests')).length).toBe(1);
+
     await user.click(screen.getByRole('tab', { name: 'سوابق ورود و خروج' }));
     expect(screen.getByRole('table', { name: 'سوابق ورود و خروج کاربر' })).toBeInTheDocument();
-    expect(fetchMock.mock.calls.length).toBe(afterFirstOpen);
+    expect(fetchMock.mock.calls.length).toBe(afterMemberships);
     // The login history endpoint was called exactly once in total.
     expect(fetchMock.mock.calls.filter(([input]) => String(input).includes('/login-history')).length).toBe(1);
   });
@@ -314,6 +323,97 @@ describe('UserDetailPage profile workspace (stage 3)', () => {
     });
   });
 
+  describe('inter-company membership request states (PR 3-D2)', () => {
+    const requestItem = (overrides: Record<string, unknown> = {}) => ({
+      id: 'req-1',
+      destinationCompanyId: 'c9',
+      destinationCompanyName: 'شرکت مقصد',
+      status: 'Pending',
+      requestedAtUtc: '2026-11-05T08:00:00Z',
+      decidedAtUtc: null,
+      decidedByDisplayName: null,
+      approvedRoleName: null,
+      decisionReason: null,
+      ...overrides,
+    });
+
+    it('loads the request states lazily with Persian status labels, decision details and the rejection reason', async () => {
+      const user = userEvent.setup();
+      const fetchMock = stubApi({
+        'GET /api/v1/admin/users/user-2': { status: 200, body: userDetails(2) },
+        'GET /api/v1/admin/users/user-2/membership-requests?page=1&pageSize=10': {
+          status: 200,
+          body: {
+            items: [
+              requestItem(),
+              requestItem({
+                id: 'req-2',
+                destinationCompanyName: 'شرکت ردشده',
+                status: 'Rejected',
+                decidedAtUtc: '2026-11-06T09:00:00Z',
+                decidedByDisplayName: 'مدیر مقصد',
+                decisionReason: 'در دورهٔ بسته بود',
+              }),
+            ],
+            totalCount: 2,
+            page: 1,
+            pageSize: 10,
+          },
+        },
+      });
+      setup();
+      await screen.findByRole('tablist');
+      // The request section belongs to the memberships tab and stays idle until it opens.
+      expect(fetchMock.mock.calls.filter(([input]) => String(input).includes('/membership-requests')).length).toBe(0);
+      await user.click(screen.getByRole('tab', { name: 'شرکت‌ها و عضویت‌ها' }));
+
+      const table = within(await screen.findByRole('table', { name: 'درخواست‌های عضویت کاربر' }));
+      expect(table.getByText('در انتظار تأیید')).toBeInTheDocument();
+      expect(table.getByText('رد شده')).toBeInTheDocument();
+      expect(table.getByText('شرکت مقصد')).toBeInTheDocument();
+      expect(table.getByText('در دورهٔ بسته بود')).toBeInTheDocument();
+      expect(table.getByText('مدیر مقصد')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'رفتن به صف تأیید مقصد' })).toHaveAttribute('href', '/app/admin/membership-requests');
+    });
+
+    it('filters the requests by the status allowlist without reloading the whole tab', async () => {
+      const user = userEvent.setup();
+      const fetchMock = stubApi({
+        'GET /api/v1/admin/users/user-2': { status: 200, body: userDetails(2) },
+        'GET /api/v1/admin/users/user-2/membership-requests?page=1&pageSize=10': {
+          status: 200,
+          body: { items: [requestItem()], totalCount: 1, page: 1, pageSize: 10 },
+        },
+        'GET /api/v1/admin/users/user-2/membership-requests?page=1&pageSize=10&status=Pending': {
+          status: 200,
+          body: { items: [requestItem()], totalCount: 1, page: 1, pageSize: 10 },
+        },
+      });
+      setup();
+      await user.click(await screen.findByRole('tab', { name: 'شرکت‌ها و عضویت‌ها' }));
+      await screen.findByRole('table', { name: 'درخواست‌های عضویت کاربر' });
+      const before = fetchMock.mock.calls.length;
+
+      await user.selectOptions(screen.getByLabelText('فیلتر وضعیت'), 'Pending');
+      await screen.findByRole('table', { name: 'درخواست‌های عضویت کاربر' });
+      expect(fetchMock.mock.calls.filter(([input]) => String(input).includes('status=Pending')).length).toBe(1);
+      expect(fetchMock.mock.calls.length).toBe(before + 1);
+    });
+
+    it('shows an honest empty state when the user has never requested a membership', async () => {
+      const user = userEvent.setup();
+      stubApi({
+        'GET /api/v1/admin/users/user-2': { status: 200, body: userDetails(2) },
+        'GET /api/v1/admin/users/user-2/membership-requests?page=1&pageSize=10': {
+          status: 200,
+          body: { items: [], totalCount: 0, page: 1, pageSize: 10 },
+        },
+      });
+      setup();
+      await user.click(await screen.findByRole('tab', { name: 'شرکت‌ها و عضویت‌ها' }));
+      expect(await screen.findByText('درخواست عضویتی برای این حساب ثبت نشده است.')).toBeInTheDocument();
+    });
+  });
   describe('session revocation (D-073 §1 step-up)', () => {
     const sessionBody = (extra: boolean) => [
       { sessionId: 's-1', createdAtUtc: '2026-11-05T08:00:00Z', lastSeenAtUtc: '2026-11-06T09:00:00Z' },

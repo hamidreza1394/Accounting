@@ -28,3 +28,15 @@ changed. It uses the existing seeded companies, runs sequentially with the suite
 trace/screenshots for this spec to avoid retaining its credentials or antiforgery token. As with
 all E2E data, use a disposable database; hard process termination or loss of SQL connectivity can
 prevent `finally` cleanup, so discard the database after the run.
+
+## The user-profile spec (stage 3)
+
+`specs/user-profile.spec.mjs` drives the seven-tab profile workspace of Issue #444 stage 3
+against the published server and SQL Server: the HR link management (connect/disconnect
+through the real HR endpoints), the inter-company membership request states (Pending,
+Approved with the decider, Rejected with the reason), the effective permissions with their
+source role, the D-073 §1 step-up session revocation (proven dead by the target user's next
+401), the authentication history and the management change history. It also runs axe
+(WCAG 2.x A/AA) on the opened tabs and writes real browser screenshots of every tab to
+`artifacts/ui-preview/stage-3-profile/` (uploaded as the `stage-3-profile-screenshots`
+artifact; never captured while the step-up dialog is open, so no credential can leak).

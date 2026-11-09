@@ -21,6 +21,7 @@ public sealed class ApiSensitiveReadRateLimitTests : IClassFixture<FaranouApplic
             "/api/v1/admin/users",
             "/api/v1/admin/users/{userId:guid}",
             "/api/v1/admin/users/{userId:guid}/login-history",
+            "/api/v1/admin/users/{userId:guid}/membership-requests",
             "/api/v1/companies/{companyId:guid}/users",
             "/api/v1/admin/companies/{companyId:guid}/roles/{roleId:guid}/members",
         };

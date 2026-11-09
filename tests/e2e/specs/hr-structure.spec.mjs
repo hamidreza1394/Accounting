@@ -190,6 +190,9 @@ test('the organizational structure works end to end on SQL Server and fails clos
     // touches the linked membership.
     expect((await callApi(page, 'POST', `${employeesPath}/${employee.body.id}/deactivate`, undefined, antiforgery.body)).status).toBe(204);
     const afterDeactivate = await callApi(page, 'GET', `${employeesPath}/${employee.body.id}`);
+    // The status is asserted explicitly: three intermittent CI failures reached the body
+    // assertion with an error-shaped payload and could not be attributed to a code path.
+    expect(afterDeactivate.status, `GET employee detail after deactivate: ${JSON.stringify(afterDeactivate.body)}`).toBe(200);
     expect(afterDeactivate.body.employmentStatus).toBe(3);
     const historyAfterEnd = await callApi(page, 'GET', `${assignmentsPath}?employeeId=${employee.body.id}`);
     expect(historyAfterEnd.body.items[0].status).toBe(2);
