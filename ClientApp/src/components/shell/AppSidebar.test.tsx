@@ -91,39 +91,43 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     expect(screen.queryByText('منابع انسانی')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'ساختار سازمانی' })).toBeInTheDocument();
     expect(screen.queryByText('ساختار سازمانی و کارکنان')).not.toBeInTheDocument();
-    expect(screen.getByText('دسترسی و مجوزها')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'دسترسی و مجوزها' })).toBeInTheDocument();
     expect(screen.getByText('سوابق امنیتی و مدیریتی')).toBeInTheDocument();
     for (const [name, href] of [
+      ['مدیریت کاربران', '/app/admin/users'],
+      ['گروه‌های دسترسی', '/app/admin/roles'],
+      ['کاتالوگ و جزئیات مجوزها', '/app/admin/permissions'],
+      ['مجوزهای دسترسی', '/app/admin/access'],
       ['واحدهای سازمانی', '/app/hr/org/units'],
       ['سمت‌های سازمانی', '/app/hr/org/positions'],
-      ['مدیریت کاربران', '/app/admin/users'],
     ] as const) {
       expect(screen.getByRole('link', { name })).toHaveAttribute('href', href);
     }
-    for (const name of ['کارکنان', 'دسترسی و مجوزها']) {
-      expect(screen.queryByRole('link', { name })).not.toBeInTheDocument();
-      expect(screen.getByText(name).closest('[aria-disabled="true"]')).toBeTruthy();
-    }
-    for (const name of ['فهرست کارکنان', 'گروه‌های دسترسی', 'کاتالوگ و جزئیات مجوزها', 'مجوزهای دسترسی']) {
-      expect(screen.queryByText(name)).not.toBeInTheDocument();
-    }
-    const section = screen.getByRole('button', { name: 'ساختار سازمانی' }).closest('li') as HTMLElement;
-    expect(within(section).getAllByRole('link').map((link) => link.textContent)).toEqual(['واحدهای سازمانی', 'سمت‌های سازمانی']);
+    expect(screen.getByText('کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
+    const accessSection = screen.getByRole('button', { name: 'دسترسی و مجوزها' }).closest('li') as HTMLElement;
+    expect(within(accessSection).getAllByRole('link').map((link) => link.textContent)).toEqual([
+      'گروه‌های دسترسی', 'کاتالوگ و جزئیات مجوزها', 'مجوزهای دسترسی',
+    ]);
+    const orgSection = screen.getByRole('button', { name: 'ساختار سازمانی' }).closest('li') as HTMLElement;
+    expect(within(orgSection).getAllByRole('link').map((link) => link.textContent)).toEqual(['واحدهای سازمانی', 'سمت‌های سازمانی']);
+    expect(screen.getByRole('button', { name: 'دسترسی و مجوزها' }).compareDocumentPosition(screen.getByRole('button', { name: 'ساختار سازمانی' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('keeps access and employee entries visible but non-interactive at the bottom of system administration', async () => {
+  it('enables access and permissions after user management while keeping employees deferred', async () => {
     setup();
     await openSystem();
-    for (const name of ['دسترسی و مجوزها', 'کارکنان']) {
-      const disabled = screen.getByText(name).closest('[aria-disabled="true"]');
-      expect(disabled).toBeTruthy();
-      expect(disabled?.querySelector('a,button')).toBeNull();
-    }
-    const section = screen.getByRole('button', { name: 'ساختار سازمانی' });
-    const access = screen.getByText('دسترسی و مجوزها').closest('[aria-disabled="true"]') as HTMLElement;
-    const employees = screen.getByText('کارکنان').closest('[aria-disabled="true"]') as HTMLElement;
-    expect(section.compareDocumentPosition(access) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(access.compareDocumentPosition(employees) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const access = screen.getByRole('button', { name: 'دسترسی و مجوزها' });
+    expect(access).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('link', { name: 'مجوزهای دسترسی' })).toHaveAttribute('href', '/app/admin/access');
+    expect(screen.getByRole('link', { name: 'گروه‌های دسترسی' })).toHaveAttribute('href', '/app/admin/roles');
+    expect(screen.getByRole('link', { name: 'کاتالوگ و جزئیات مجوزها' })).toHaveAttribute('href', '/app/admin/permissions');
+    const users = screen.getByRole('link', { name: 'مدیریت کاربران' });
+    const org = screen.getByRole('button', { name: 'ساختار سازمانی' });
+    expect(users.compareDocumentPosition(access) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(access.compareDocumentPosition(org) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const employees = screen.getByText('کارکنان').closest('[aria-disabled="true"]');
+    expect(employees).toBeTruthy();
+    expect(employees?.querySelector('a,button')).toBeNull();
   });
 
   it('hides «مجوزهای دسترسی» from a member without role permissions (hint only; the server decides)', () => {
@@ -146,7 +150,7 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     await user.click(section);
     expect(section).toHaveAttribute('aria-expanded', 'false');
     expect(screen.getByText('کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
-    expect(screen.getByText('دسترسی و مجوزها').closest('[aria-disabled="true"]')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'دسترسی و مجوزها' })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('button', { name: 'مدیریت سیستم' })).toHaveAttribute('aria-expanded', 'true');
     await user.click(section);
     expect(screen.getByText('کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
