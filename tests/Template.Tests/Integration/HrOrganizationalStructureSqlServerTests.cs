@@ -255,4 +255,88 @@ public sealed class HrOrganizationalStructureSqlServerTests
             await cleanup.Database.EnsureDeletedAsync(cancellationToken);
         }
     }
+
+    [Fact]
+    public async Task NextEmployeeNumber_OnSqlServer_UsesTheLargestNumericNumber_AndTheUniqueIndexRejectsARacedDuplicate()
+    {
+        Assert.SkipUnless(SqlServerAvailable(), "SQL Server is not configured (FARANOU_TEST_SQLSERVER).");
+
+        var name = "FaranouTests_HrNextNumber_" + Guid.NewGuid().ToString("N")[..12];
+        var cancellationToken = TestContext.Current.CancellationToken;
+        try
+        {
+            await using var database = CreateContext(name);
+            await database.Database.MigrateAsync(cancellationToken);
+
+            var company = new Domain.Company { Name = "شرکت آزمون", IsActive = true };
+            var otherCompany = new Domain.Company { Name = "شرکت دیگر", IsActive = true };
+            var adminRole = new Domain.Role(Constants.Role.Admin) { IsActive = true };
+            var admin = new Domain.User($"admin-{Guid.NewGuid():N}@example.test")
+            {
+                Username = "admin",
+                FirstName = "مدیر",
+                IsActive = true,
+                Password = "x",
+                RoleId = adminRole.Id,
+                Role = adminRole,
+            };
+            database.Companies.AddRange(company, otherCompany);
+            database.Roles.Add(adminRole);
+            database.Users.Add(admin);
+            foreach (var (tenantId, number) in new[]
+                     {
+                         (company.Id, "EMP-9999"), (company.Id, "12"), (company.Id, "0099"),
+                         (company.Id, "99999999999999999999"), (otherCompany.Id, "9999999999999999999999"),
+                     })
+            {
+                database.CompanyEmployees.Add(new Domain.CompanyEmployee
+                {
+                    TenantId = tenantId,
+                    EmployeeNumber = number,
+                    FirstName = "علی",
+                    LastName = "محمدی",
+                    EmploymentStatus = Domain.CompanyEmployeeEmploymentStatus.Active,
+                });
+            }
+            await database.SaveChangesAsync(cancellationToken);
+
+            var principal = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(
+            [
+                new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, admin.Id.ToString()),
+                new System.Security.Claims.Claim("AccountKind", "User"),
+            ], "test"));
+            var result = await Server.Api.HrOrganizationalStructureEndpoints.GetNextEmployeeNumberAsync(
+                company.Id, new Microsoft.AspNetCore.Http.DefaultHttpContext(), principal, database,
+                new Infrastructure.Tenancy.CompanyAccessService(database), cancellationToken);
+
+            var ok = Assert.IsType<Microsoft.AspNetCore.Http.HttpResults.Ok<Server.Api.HrNextEmployeeNumberResponse>>(result);
+            Assert.Equal("100000000000000000000", ok.Value!.SuggestedEmployeeNumber);
+
+            // The suggestion reserves nothing: a raced second insert of the same number is
+            // rejected by the unique index, which is the real uniqueness guarantee.
+            database.CompanyEmployees.Add(new Domain.CompanyEmployee
+            {
+                TenantId = company.Id,
+                EmployeeNumber = ok.Value.SuggestedEmployeeNumber,
+                FirstName = "رضا",
+                LastName = "احمدی",
+                EmploymentStatus = Domain.CompanyEmployeeEmploymentStatus.Active,
+            });
+            await database.SaveChangesAsync(cancellationToken);
+            database.CompanyEmployees.Add(new Domain.CompanyEmployee
+            {
+                TenantId = company.Id,
+                EmployeeNumber = ok.Value.SuggestedEmployeeNumber,
+                FirstName = "سارا",
+                LastName = "کریمی",
+                EmploymentStatus = Domain.CompanyEmployeeEmploymentStatus.Active,
+            });
+            await Assert.ThrowsAsync<DbUpdateException>(() => database.SaveChangesAsync(cancellationToken));
+        }
+        finally
+        {
+            await using var cleanup = CreateContext(name);
+            await cleanup.Database.EnsureDeletedAsync(cancellationToken);
+        }
+    }
 }

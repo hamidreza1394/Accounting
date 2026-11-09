@@ -37,6 +37,7 @@
 |---|---|---|---|---|---|---|---|---|
 | فهرست کارکنان | `GET /org/employees` | `hr.employees.list` | Query: `search?` (≤۱۲۰)، `status?` (1/2/3)، `unitId?`، `userId?` (Stage 3 — فقط کارمندان متصل به عضویت همان کاربر؛ کاربر ناشناخته = فهرست خالی، `Guid.Empty` = 400)، `page?`، `pageSize?` | `HrEmployeeListResponse` | ✔ | — | — | Verified |
 | جزئیات کارمند | `GET /org/employees/{employeeId}` | `hr.employees.view` | — | `HrEmployeeDetail` | — | خروجی | — | Verified |
+| پیشنهاد شماره پرسنلی بعدی | `GET /org/employees/next-number` | `hr.employees.create` | — | `200 HrNextEmployeeNumberResponse` (`no-store`) | — | — | — (فقط‌خواندنی) | Implemented |
 | ثبت کارمند | `POST /org/employees` | `hr.employees.create` | `HrCreateEmployeeRequest` | `201 HrEmployeeCreatedResponse` + `Location` | — | — | `HrEmployeeCreated` | Verified |
 | ویرایش کارمند | `PUT /org/employees/{employeeId}` | `hr.employees.update` | `HrUpdateEmployeeRequest` | `204` | — | **الزامی** | `HrEmployeeUpdated` | Verified |
 | خاتمه همکاری | `POST /org/employees/{employeeId}/deactivate` | `hr.employees.update` | بدون بدنه | `204` | — | — | `HrEmployeeTerminated` | Verified |
@@ -89,6 +90,10 @@
 // POST /org/employees — همهٔ فیلدهای متن پرشده اجباری‌اند
 HrCreateEmployeeRequest(string? EmployeeNumber, string? FirstName, string? LastName, DateTime? HiredOnUtc)
 // JSON: { "employeeNumber": "EMP-101", "firstName": "علی", "lastName": "محمدی", "hiredOnUtc": "2026-01-10T08:30:00Z" }
+
+// GET /org/employees/next-number — پیشنهاد غیررزروکننده
+HrNextEmployeeNumberResponse(string SuggestedEmployeeNumber)
+// JSON: { "suggestedEmployeeNumber": "102" }
 
 // PUT /org/employees/{id}
 HrUpdateEmployeeRequest(string? FirstName, string? LastName,
@@ -360,6 +365,7 @@ Content-Type: application/json
 
 - `PUT /org/units/{id}`: پاک‌کردن `validFromUtc` ممکن نیست (null = حفظ مقدار) ولی `validToUtc` با null پاک می‌شود؛ به‌روزرسانی باید این معنای دوگانه را در فرم لحاظ کند.
 - `PUT /org/employees/{id}`: پاک‌کردن `hiredOnUtc` ممکن نیست؛ `employeeNumber` پس از ایجاد تغییرنکردنی است.
+- `GET /org/employees/next-number`: **فقط پیشنهاد است و هیچ شماره‌ای را رزرو نمی‌کند** (چیزی ذخیره نمی‌شود)؛ دو درخواست هم‌زمان ممکن است یک عدد بگیرند. مرجع یکتایی فقط Unique Index `(TenantId, EmployeeNumber)` و پاسخ `409` در `POST /org/employees` است؛ UI باید در `409` شمارهٔ جدید بگیرد یا اجازهٔ ویرایش دستی دهد. الگوریتم: بزرگ‌ترین شمارهٔ کاملاً عددی همان شرکت (با احتساب کارکنان خاتمه‌یافته) + ۱ با حفظ عرض صفرهای پیشرو (سقف ۳۰ رقم؛ اگر بزرگ‌ترین شماره ۳۰ رقمِ پر باشد `409` با `no-store` برمی‌گردد و شماره را دستی وارد کنید)؛ شمارهٔ غیرعددی (مثل `EMP-101`) نادیده گرفته می‌شود و بدون شمارهٔ عددی مقدار `"1"` است. چون شماره پس از ایجاد تغییر/حذف نمی‌شود، شمارهٔ مصرف‌شده دوباره پیشنهاد نمی‌شود. **تغییر شماره پرسنلی پس از ایجاد: `NotImplemented` / `NeedsApproval`.** مجوز `hr.employees.create` لازم است (نه `list`)؛ Anti-forgery لازم ندارد (GET).
 - فعال‌سازی دوبارهٔ یک واحد/سمت غیرفعال از PUT ممکن است (با `isActive: true`)، مشروط به رعایت گاردهای والد/انتساب؛ ولی راه انداختن «کارمند خاتمه‌همکاری» وجود ندارد (409).
 - فعال‌شدن دوبارهٔ یک واحد زیر والدِ غیرفعال از مسیر PUT مسدود نمی‌شود؛ ترتیب فعال‌سازی (والد قبل از فرزند) مسئولیت گردش‌کار UI است. (رفع آن نیازمند تصمیم دامنهٔ جداگانه است.)
 - جستجوی فهرست‌ها `Contains` است؛ خروجی فهرست تخت واحدها فقط واحدهای فعال است (درخت شامل غیرفعال‌ها هم می‌شود).

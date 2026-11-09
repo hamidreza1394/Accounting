@@ -2854,3 +2854,8 @@
 - سایدبار با قاب پیوسته و ظریف، کادرهای تمام‌عرض گروه‌ها، آیتم فعال با نوار طلایی و Logout انتهایی بازطراحی شد؛ دکمه و حالت «جمع‌کردن منو» حذف شد.
 - «ساختار سازمانی و کارکنان» به «ساختار سازمانی» (Network/Building2/BriefcaseBusiness) تغییر نام یافت و زیر «مدیریت سیستم» ماند؛ «کارکنان» زیر همین بخش حفظ شد.
 - فقط UI؛ بدون تغییر Backend/Migration. نتایج واقعی: `docs/handoffs/UNNUMBERED-ui-sidebar-system-menus.md`. Playwright/E2E و بررسی بصری ۷۶۸/۱۰۲۴/۱۴۴۰ اجرا نشد؛ ۶ شکست Vitest از قبل در main است.
+
+
+## 2026-11-08 — مأموریت رابط مدیریت سیستم: PR2 پیشنهاد شماره پرسنلی بعدی (Backend)
+- `GET /companies/{companyId}/org/employees/next-number` اضافه شد (فقط‌خواندنی، غیررزروکننده؛ یکتایی با Unique Index و 409). بدون Migration. تغییر شماره پس از ایجاد NeedsApproval است.
+- تست‌های HR + rate limit روی SQL Server واقعی (Docker) ۵۵/۵۵ موفق؛ ۲ شکست قدیمی `SafeExceptionRealApplicationTests` محیطی است. جزئیات: `docs/handoffs/UNNUMBERED-hr-next-employee-number.md`.

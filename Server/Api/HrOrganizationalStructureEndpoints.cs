@@ -61,6 +61,8 @@ public static class HrOrganizationalStructureEndpoints
                 Infrastructure.Tenancy.CompanyAccessService.UserAccountKind));
         employees.MapGet("", ListEmployeesAsync)
             .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+        employees.MapGet("/next-number", GetNextEmployeeNumberAsync)
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
         employees.MapGet("/{employeeId:guid}", GetEmployeeAsync)
             .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
         employees.MapPost("", CreateEmployeeAsync)
@@ -402,6 +404,77 @@ public static class HrOrganizationalStructureEndpoints
         return TypedResults.Created(
             $"/api/v1/companies/{companyId}/org/employees/{employee.Id}",
             new HrEmployeeCreatedResponse(employee.Id));
+    }
+
+    /// <summary>
+    /// Suggests the next employee number of the routed company for the create form. This is a
+    /// read-only, non-reserving suggestion: nothing is stored, so two concurrent callers can
+    /// receive the same value. Uniqueness is guaranteed only by the unique index
+    /// <c>(TenantId, EmployeeNumber)</c> and the 409 of <see cref="CreateEmployeeAsync"/>
+    /// (pre-check and <see cref="DbUpdateException"/>). Employee numbers are never changed or
+    /// deleted (termination keeps the row), so a consumed number is never suggested again.
+    /// The candidate is the largest purely numeric number of the company plus one, keeping the
+    /// leading-zero width of that largest number; without any numeric number it is "1".
+    /// </summary>
+    public static async Task<IResult> GetNextEmployeeNumberAsync(
+        Guid companyId,
+        HttpContext httpContext,
+        ClaimsPrincipal principal,
+        Data.DatabaseContext database,
+        [FromServices] Infrastructure.Tenancy.CompanyAccessService companyAccess,
+        CancellationToken cancellationToken = default)
+    {
+        var (failure, _) = await AuthorizeHrScopeAsync(
+            database, companyAccess, principal, companyId, CreateEmployeesPermission, cancellationToken);
+        if (failure is not null) return failure;
+        if (!await IsActiveCompanyAsync(database, companyId, cancellationToken)) return NotFoundForCompany();
+
+        SetNoStore(httpContext);
+        var candidate = await ComputeNextNumericCandidateAsync(database, companyId, cancellationToken);
+        return candidate is null
+            ? TypedResults.Conflict(new { error = "پیشنهاد شماره پرسنلی ممکن نیست؛ شماره را دستی وارد کنید." })
+            : TypedResults.Ok(new HrNextEmployeeNumberResponse(candidate));
+    }
+
+    /// <summary>
+    /// Largest all-digit number of the company plus one, or null when it would exceed 30 digits.
+    /// Only this company's numbers (a <c>varchar(30)</c> column, bounded by the company's staff size and the
+    /// sensitive-read rate limit) are read, and the comparison across lengths uses BigInteger
+    /// (30 digits exceed long). One code path serves production and tests.
+    /// </summary>
+    private static async Task<string?> ComputeNextNumericCandidateAsync(
+        Data.DatabaseContext database, Guid companyId, CancellationToken cancellationToken)
+    {
+        var numbers = await database.CompanyEmployees.AsNoTracking()
+            .Where(employee => employee.TenantId == companyId)
+            .Select(employee => employee.EmployeeNumber)
+            .ToListAsync(cancellationToken);
+
+        string? best = null;
+        System.Numerics.BigInteger bestValue = 0;
+        foreach (var number in numbers.Where(IsDigitsOnly))
+        {
+            var value = System.Numerics.BigInteger.Parse(number, CultureInfo.InvariantCulture);
+            if (best is null || value > bestValue || (value == bestValue && number.Length > best.Length))
+            {
+                best = number;
+                bestValue = value;
+            }
+        }
+
+        return best is null ? "1" : IncrementNumeric(best);
+    }
+
+    private static bool IsDigitsOnly(string value) =>
+        value.Length is > 0 and <= 30 && value.All(char.IsAsciiDigit);
+
+    /// <summary>Adds one keeping the zero-padded width; null when 30 digits would be exceeded.</summary>
+    private static string? IncrementNumeric(string number)
+    {
+        var next = (System.Numerics.BigInteger.Parse(number, CultureInfo.InvariantCulture) + 1)
+            .ToString(CultureInfo.InvariantCulture)
+            .PadLeft(number.Length, '0');
+        return next.Length <= 30 ? next : null;
     }
 
     /// <summary>Edits the base fields of an employee; termination runs through deactivate.</summary>
@@ -2329,6 +2402,9 @@ public sealed record HrChangeAssignmentRequest(
     Guid? OrganizationalUnitId, Guid? PositionId, Guid? ManagerEmployeeId);
 
 public sealed record HrEmployeeCreatedResponse(Guid Id);
+
+/// <summary>Non-reserving suggestion for the next employee number of a company.</summary>
+public sealed record HrNextEmployeeNumberResponse(string SuggestedEmployeeNumber);
 public sealed record HrUnitCreatedResponse(Guid Id);
 public sealed record HrPositionCreatedResponse(Guid Id);
 public sealed record HrAssignmentCreatedResponse(Guid Id);
