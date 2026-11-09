@@ -25,10 +25,11 @@ D-065 هر دو سطح Year grant و Period grant را الزام می‌کند 
 - مدل دقیق و migration strategy در docs/FISCAL_ACCESS_DATA_MODEL.md ثبت شد.
 
 ## تغییرات
-- docs/DECISIONS.md: D-066 Proposed.
-- docs/ACCESS_CONTROL_ARCHITECTURE.md: ثبت ممیزی و عدم وجود دو target مستقل.
-- docs/USER_ACCESS_MANAGEMENT.md: ثبت blocker پیش از grant implementation.
-- docs/INDEX.md: ارجاع handoff.
+- docs/DECISIONS.md: D-066 Accepted پس از تأیید مالک.
+- docs/ACCESS_CONTROL_ARCHITECTURE.md: ثبت تصمیم نهایی سال/دوره.
+- docs/USER_ACCESS_MANAGEMENT.md: قرارداد تخصیص نقش سالانه و دوره‌ای.
+- docs/DATABASE.md و docs/INDEX.md: ثبت مدل داده و پیوندهای مرجع.
+- docs/FISCAL_ACCESS_DATA_MODEL.md: مدل پیشنهادی Entityها، FKها، ایندکس‌ها، backfill، copy و تست.
 - هیچ کد Production، Entity، API، Schema، Migration یا ClientApp تغییر نکرد.
 
 ## معیارهای ادامه
