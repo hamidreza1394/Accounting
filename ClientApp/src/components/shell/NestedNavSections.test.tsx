@@ -52,6 +52,14 @@ describe('NestedNavSections', () => {
     expect(screen.getByRole('link', { name: 'کارمند' })).toBeInTheDocument();
   });
 
+  it('renders an all-disabled section as a non-interactive heading without expanding child entries', () => {
+    setup('/', [{ label: 'مجوزها', icon: Users, section: 'دسترسی و مجوزها', sectionIcon: Network }]);
+    const disabled = screen.getByText('دسترسی و مجوزها').closest('[aria-disabled="true"]');
+    expect(disabled).toBeTruthy();
+    expect(disabled?.querySelector('button,a')).toBeNull();
+    expect(screen.queryByText('مجوزها')).not.toBeInTheDocument();
+  });
+
   it('keeps the section header when its first leaf is filtered out', () => {
     setup('/', leaves.filter((leaf) => leaf.label !== 'واحد'));
     expect(screen.getByRole('button', { name: 'بخش نمونه' })).toBeInTheDocument();
