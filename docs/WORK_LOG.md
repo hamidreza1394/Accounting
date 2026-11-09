@@ -2877,3 +2877,7 @@
 - **CI:** تست محلی در این اجرا انجام نشد. CI شاخهٔ قدیمی #608 روی SHA قبلی Vendor CI، .NET CI و Semgrep موفق داشت؛ CodeQL در Initialize به‌علت HTTP 504 هنگام دانلود CodeQL bundle شکست خورد. این شواهد به SHA جدید تعمیم داده نمی‌شود؛ وضعیت نهایی فقط از CI روی آخرین head #613 ثبت خواهد شد.
 - **مرزبندی:** بدون تغییر `Server/**`، Customer consumer، `Licensing.Contracts`، schema یا Migration مشتری؛ هیچ private key، رمز، hash رمز مشتری، connection string یا secret اضافه نشد.
 - **وضعیت:** Implemented / Not Verified تا تکمیل تمام بررسی‌های الزامی PR #613.
+
+## 2026-11-09 — اصلاح فرم/فهرست کاربران: Sidebar، عکس پرسنلی، رمز ۸، ایمیل اختیاری، بازگشت به فهرست (شاخهٔ `fix/users-form-navigation-and-validation`)
+- گروه‌های Sidebar پیش‌فرض بسته و قاب پیوسته؛ حداقل رمز ۸ نویسه (کلاینت+سرور، D-078)؛ ایمیل اختیاری با Migration مستقل؛ عکس پرسنلی با ذخیرهٔ واقعی و شرکت‌محور (`CompanyEmployeePhotos`)؛ پس از ایجاد کاربر: ناوبری یکتا به فهرست، تازه‌سازی و جدیدترین کاربر اول؛ انصراف/بازگشت دقیقاً به فهرست.
+- .NET: ۱۱۸۶ تست روی SQL Server واقعی، ۰ شکست؛ Vitest کل: ۳ شکست قدیمی و نامرتبط (خروجی CSV)؛ typecheck/build/check:offline موفق؛ E2E و ESLint اجرا نشد. جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-users-form-navigation-and-validation.md`.
