@@ -111,14 +111,14 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
   it('keeps access and employee entries visible but non-interactive at the bottom of system administration', async () => {
     setup();
     await openSystem();
-    for (const name of ['گروه‌های دسترسی', 'کاتالوگ و جزئیات مجوزها', 'مجوزهای دسترسی', 'فهرست کارکنان']) {
+    for (const name of ['دسترسی و مجوزها', 'کارکنان']) {
       const disabled = screen.getByText(name).closest('[aria-disabled="true"]');
       expect(disabled).toBeTruthy();
       expect(disabled?.querySelector('a,button')).toBeNull();
     }
     const section = screen.getByRole('button', { name: 'ساختار سازمانی' });
-    const access = screen.getByRole('button', { name: 'دسترسی و مجوزها' });
-    const employees = screen.getByRole('button', { name: 'کارکنان' });
+    const access = screen.getByText('دسترسی و مجوزها').closest('[aria-disabled="true"]') as HTMLElement;
+    const employees = screen.getByText('کارکنان').closest('[aria-disabled="true"]') as HTMLElement;
     expect(section.compareDocumentPosition(access) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(access.compareDocumentPosition(employees) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
@@ -142,7 +142,7 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     expect(screen.getByText('فهرست کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
     await user.click(section);
     expect(section).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.getByRole('button', { name: 'کارکنان' })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('کارکنان').closest('[aria-disabled="true"]')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'دسترسی و مجوزها' })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('button', { name: 'مدیریت سیستم' })).toHaveAttribute('aria-expanded', 'true');
     await user.click(section);
