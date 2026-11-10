@@ -54,5 +54,5 @@
 
 ## شناسه‌های Git
 - Branch: `fix/632-vendor-ci-secret-redaction`
-- Commit: در حال تکمیل
-- Pull Request: در حال ایجاد
+- Commit: `3f9f085a818cebc70916db1a3b65bc0e07c24679` (head فعلی)
+- Pull Request: [#633](https://github.com/hamidreza1394/Accounting/pull/633) — open; CI در حال اجرا
