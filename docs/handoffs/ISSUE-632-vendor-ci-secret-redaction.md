@@ -42,6 +42,7 @@
 | بازبینی log run `42651850808` | یافته تأیید شد | Docker create command و env stepها مقدار password را بدون mask نشان می‌دادند؛ مقدار در گزارش بازنشر نشده است. |
 | Vendor CI run `42775690727` | موفق | guard، UI، build/test، SQL Server، EF snapshot، publish و دو checkpoint regression موفق؛ package upload مطابق PR بودن Skip شد. |
 | ممیزی log run `42775690727` / job `129693604250` | **معیار پذیرش رد شد** | password mask بود، اما بخشی از متن connection string در shell source چاپ‌شده توسط Actions دیده می‌شد؛ علت ریشه‌ای: inline `run:` پیش از اجرای mask در log ثبت می‌شود. |
+| Vendor CI روی SHA `9456df27...` | ناموفق در guard | false-positive الگوی grep روی متغیر محلی `password=`؛ تست‌ها به مراحل بعد نرسیدند؛ علت اصلاح شد و باید روی head جدید بازاجرا شود. |
 | helper و guard تکمیلی | در commit بعدی PR | ساخت مقدار به helper منتقل و ترتیب mask-before-export به guard افزوده شد؛ CI جدید هنوز در انتظار است. |
 | .NET CI / E2E / Windows Publish | در انتظار | اجرای قبلی روی head `56c3...` هنوز کامل نشده بود؛ باید head جدید جداگانه بررسی شود. |
 | ممیزی log نهایی | در انتظار | باید پس از اجرای جدید بررسی شود. |

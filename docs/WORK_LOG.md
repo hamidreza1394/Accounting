@@ -2935,3 +2935,6 @@
 
 
 - بازبینی تکمیلی guard: کنترل ترتیب mask اکنون به‌طور مشخص اولین استفاده از متغیر SQL `$password` را با `docker run` مقایسه می‌کند (نه صرفاً هر add-mask قبلی)؛ اسکن fragmentهای اتصال در workflow نیز case-insensitive است.
+
+
+- اجرای Vendor CI روی SHA `9456df27ea69c05fd1df681e46a6a329ce84af3d` در guard ایستا متوقف شد؛ علت ریشه‌ای false-positive بود: الگوی case-insensitive واژهٔ `password=` را در انتساب متغیر محلی `password=` نیز connection string تلقی می‌کرد. لاگ job `129700425798` این موضوع را در خط workflow نشان داد؛ مقدار واقعی credential تولید یا چاپ نشد. الگو محدود شد به کلیدهای connection-string مانند `Server=`، `Data Source=` و `;Password=` تا متغیر shell را اشتباه تشخیص ندهد. CI باید روی head بعدی دوباره اجرا شود.
