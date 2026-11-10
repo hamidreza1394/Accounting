@@ -139,14 +139,14 @@ jobs:
           echo "LD_LIBRARY_PATH=$native_compat_dir${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
           so_pin="$(openssl rand -hex 16)"
           user_pin="$(openssl rand -hex 16)"
-          printf '::add-mask::%s\\n' "$so_pin"
-          printf '::add-mask::%s\\n' "$user_pin"
+          printf '::add-mask::%s\n' "$so_pin"
+          printf '::add-mask::%s\n' "$user_pin"
           softhsm2-util --init-token --free --label FaranouVendorCI --so-pin "$so_pin" --pin "$user_pin"
           {
             echo "SOFTHSM2_CONF=$config_file"
             echo "FARANO_TEST_PKCS11_MODULE_PATH=$module_path"
             echo "FARANO_TEST_PKCS11_TOKEN_LABEL=FaranouVendorCI"
-            printf 'FARANO_TEST_PKCS11_PIN=%s\\n' "$user_pin"
+            printf 'FARANO_TEST_PKCS11_PIN=%s\n' "$user_pin"
             echo "FARANO_REQUIRE_PKCS11=1"
           } >> "$GITHUB_ENV"
       - name: Start ephemeral SQL Server without logging credentials
