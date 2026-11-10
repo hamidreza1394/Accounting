@@ -54,5 +54,5 @@
 
 ## شناسه‌های Git
 - Branch: `fix/632-vendor-ci-secret-redaction`
-- Commit: `3f9f085a818cebc70916db1a3b65bc0e07c24679` (head فعلی)
+- Commit: head نهایی PR #633؛ SHA جاری همیشه از metadata خود PR خوانده شود.
 - Pull Request: [#633](https://github.com/hamidreza1394/Accounting/pull/633) — open; CI در حال اجرا
