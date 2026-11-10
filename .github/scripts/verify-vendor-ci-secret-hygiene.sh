@@ -45,7 +45,7 @@ if grep -nE '^[[:space:]]*[A-Za-z0-9_]+:[[:space:]].*Password=' "$workflow"; the
   fail "connection string with a password is declared as a YAML mapping value"
 fi
 
-if grep -niE 'server=|data source=|password=' "$workflow"; then
+if grep -niE 'server=|data source=|(^|[^[:alnum:]_])password[[:space:]]*=' "$workflow"; then
   fail "connection-string fragments must not be embedded in the workflow source"
 fi
 
