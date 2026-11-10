@@ -2916,4 +2916,4 @@
 - Connection stringها از YAML `env:` حذف شدند؛ در shell runtime ساخته و mask می‌شوند. cleanup کانتینر با `if: always()` انجام می‌شود.
 - regression guard در `.github/scripts/verify-vendor-ci-secret-hygiene.sh` اضافه شد تا password literal، connection string در YAML environment، ترتیب mask و cleanup را بررسی کند.
 - هیچ secret قابل استفاده مجدد، private key، Customer hash، Customer DB، `Server/**` یا تغییر `.github/workflows/dotnet.yml` وارد این کار نشد.
-- **وضعیت:** Implemented / Not Verified؛ Vendor CI و ممیزی log روی SHA نهایی PR هنوز اجرا/تأیید نشده‌اند. اجرای محلی انجام نشده است.
+- **وضعیت:** Implemented / Not Verified؛ PR #633 با head فعلی `3f9f085a818cebc70916db1a3b65bc0e07c24679` باز است؛ Vendor CI و ممیزی log هنوز اجرا/تأیید نهایی نشده‌اند. اجرای محلی انجام نشده است.
