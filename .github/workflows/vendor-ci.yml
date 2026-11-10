@@ -152,7 +152,6 @@ jobs:
           container_name="faranou-vendor-ci-sqlserver-${GITHUB_RUN_ID}"
           password="Aa1!$(openssl rand -hex 32)"
           printf '::add-mask::%s\n' "$password"
-          printf 'VENDOR_SQLSERVER_CONTAINER=%s\n' "$container_name" >> "$GITHUB_ENV"
           docker run --detach --name "$container_name" --publish 127.0.0.1:1433:1433 \
             --env ACCEPT_EULA=Y --env "MSSQL_SA_PASSWORD=$password" \
             mcr.microsoft.com/mssql/server:2022-latest >/dev/null
@@ -226,6 +225,5 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -n "${VENDOR_SQLSERVER_CONTAINER:-}" ]]; then
-            docker rm --force "$VENDOR_SQLSERVER_CONTAINER" >/dev/null 2>&1 || true
-          fi
+          container_name="faranou-vendor-ci-sqlserver-${GITHUB_RUN_ID}"
+          docker rm --force "$container_name" >/dev/null 2>&1 || true
