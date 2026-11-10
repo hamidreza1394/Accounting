@@ -3,11 +3,12 @@
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/632
 - **Agent/مسئول:** ChatGPT / GitHub tools
 - **تاریخ:** 2026-11-10
-- **وضعیت:** Implemented / Not Verified؛ ممیزی log اجرای نخست PR #633 یک افشای جزئی از متن connection string در shell source را یافت؛ ساخت مقدار به helper منتقل شده و CI/log نهایی هنوز باید تأیید شود.
+- **وضعیت:** Implemented / Not Verified؛ ممیزی log اجرای نخست PR #633 یک افشای جزئی از متن connection string در shell source را یافت؛ ساخت مقدار به helper منتقل شده، PINهای SoftHSM نیز per-run و masked شده‌اند و CI/log نهایی هنوز باید تأیید شود.
 
 ## هدف و معیارهای پذیرش
 - [x] حذف password قابل پیش‌بینی SQL Server از YAML و Service container.
 - [x] تولید password تصادفی فقط برای همان اجرای Vendor CI و mask کردن آن پیش از استفاده.
+- [x] تولید تصادفی و mask کردن SO PIN و user PIN موقت SoftHSM؛ هیچ PIN ثابت در workflow باقی نماند.
 - [x] حذف connection string از YAML و انتقال ساخت runtime به helper مستقل؛ mask کامل هر مقدار پیش از export به process تست/EF.
 - [x] تضمین cleanup کانتینر SQL Server حتی در شکست stepها.
 - [x] افزودن regression guard برای جلوگیری از بازگشت password/connection string به مقادیر YAML.
@@ -17,7 +18,8 @@
 ## خلاصه تغییرات
 - بررسی Vendor CI run `42651850808` روی SHA `9fb6400569b282d18829073d76588b82f7c3c5d8` نشان داد password آزمایشی SQL Server در Docker create command و بلوک‌های محیط step بدون masking ثبت شده بود. مقدار credential در این handoff عمداً تکرار نمی‌شود.
 - SQL Server دیگر به‌عنوان GitHub Actions service با password در YAML تعریف نشده است؛ کانتینر در step مستقل و با password تصادفی همان run راه‌اندازی می‌شود.
-- password با workflow command از ابتدای step mask و سپس از طریق `GITHUB_ENV` به stepهای بعد منتقل می‌شود.
+- password SQL با workflow command از ابتدای step mask و سپس از طریق `GITHUB_ENV` به stepهای بعد منتقل می‌شود.
+- SO PIN و user PIN مربوط به SoftHSM نیز در همان run تصادفی تولید و پیش از `softhsm2-util` mask می‌شوند؛ فقط user PIN موردنیاز تست به `GITHUB_ENV` منتقل می‌شود.
 - connection stringها در YAML `env:` نیستند؛ در shell زمان اجرا ساخته و پیش از مصرف mask می‌شوند.
 - cleanup با `if: always()` انجام می‌شود.
 - guard ایستا workflow را از نظر password literal، password/connection string در YAML environment، ترتیب mask/start و cleanup بررسی می‌کند.
@@ -26,6 +28,7 @@
 - `.github/workflows/vendor-ci.yml` — حذف SQL Server service password و connection stringهای YAML؛ راه‌اندازی/cleanup کنترل‌شده.
 - `.github/scripts/verify-vendor-ci-secret-hygiene.sh` — regression guard ساختار workflow و ترتیب mask/export.
 - `.github/scripts/run-vendor-ci-database-checks.sh` — ساخت runtime مقادیر اتصال در process بدون echo شدن source در GitHub Actions log.
+- `.github/workflows/vendor-ci.yml` — PINهای SoftHSM را نیز تصادفی و per-run می‌سازد؛ مقدار ثابت قبلی حذف شد.
 - این handoff و `docs/WORK_LOG.md`.
 
 ## تصمیم‌های فنی

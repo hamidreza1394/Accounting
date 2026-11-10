@@ -2925,3 +2925,10 @@
 - guard `.github/scripts/verify-vendor-ci-secret-hygiene.sh` اکنون نبود connection-string fragment در workflow، فراخوانی helper، نبود shell tracing/environment dump و ترتیب mask-before-export برای هر چهار مقدار را بررسی می‌کند.
 - فایل‌های handoff و INDEX به‌روزرسانی شدند. تست محلی اجرا نشده است؛ اجرای CI روی head جدید و ممیزی log نهایی هنوز pending است.
 - **وضعیت:** Implemented / Not Verified؛ PR #633 باز می‌ماند تا Vendor CI، .NET CI و ممیزی log واقعی روی SHA نهایی سبز/پاک شوند.
+
+
+## 2026-11-10 — Issue #632 تکمیل hardening credentialهای تستی Vendor CI
+- در بازبینی workflow مشخص شد دو PIN ثابت SoftHSM (فقط برای token موقت CI) نیز در متن workflow وجود داشتند. برای رعایت قاعدهٔ عدم نگهداری password/PIN ثابت در Git، هر دو اکنون با `openssl rand` در همان run تولید و پیش از `softhsm2-util` mask می‌شوند؛ فقط user PIN موردنیاز تست از `GITHUB_ENV` منتقل می‌شود.
+- guard ایستا هر PIN عددی ثابت در فرمان `softhsm2-util` یا مقدار ثابت `FARANO_TEST_PKCS11_PIN` را رد می‌کند و ترتیب mask-before-use را کنترل می‌کند.
+- این تغییر فقط در Vendor CI است؛ کلید خصوصی واقعی، credential قابل استفاده مجدد، Customer hash، Customer DB و workflow عمومی مشتری وارد دامنه نشده‌اند.
+- **وضعیت:** Implemented / Not Verified؛ CI و ممیزی log باید روی head نهایی اجرا شوند؛ تست محلی اجرا نشده است.
