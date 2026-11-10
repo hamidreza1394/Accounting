@@ -2908,3 +2908,12 @@
 ## 2026-11-10 — مأموریت D-078 PR اول: مجوز شرکتی users.create
 - Migration فقط-داده idempotent `20261110120000_SeedUsersCreatePermission` کد `users.create` را با GUID پایدار و Ordering 21007 به کاتالوگ اضافه کرد؛ هیچ نقشی خودکار مجوز نمی‌گیرد (تست SQL-gated قفل می‌کند). کاتالوگ مستندات به ۷۴ کد رسید؛ کد فعلاً seeded-only است و enforcement در PR دوم سری D-078 می‌آید.
 - `generate_migrations.py` به‌روزرسانی شد (CURRENT/DELTA + HAND_WRITTEN_SQL)؛ هر دو گارد migration سبز. Build سبز؛ تست ۱۰۹۲ موفق/۶۷ Skip/۲ شکست محیطی قدیمی. تست‌های SQL Server محلی NotRun (Docker موجود نیست). جزئیات: `docs/handoffs/UNNUMBERED-d078-users-create-permission-seed.md`.
+
+
+## 2026-11-10 — Issue #632: جلوگیری از ثبت credential آزمایشی در Vendor CI
+- در log واقعی Vendor CI run `42651850808` روی SHA `9fb6400569b282d18829073d76588b82f7c3c5d8`، password آزمایشی SQL Server در Docker create command و env stepها بدون masking دیده شد؛ مقدار credential در Work Log بازنشر نشده است.
+- `.github/workflows/vendor-ci.yml` از Service container دارای password در YAML به کانتینر SQL Server موقت در step کنترل‌شده تغییر کرد؛ password تصادفی همان run پیش از استفاده mask می‌شود و فقط از `GITHUB_ENV` به stepهای بعد می‌رود.
+- Connection stringها از YAML `env:` حذف شدند؛ در shell runtime ساخته و mask می‌شوند. cleanup کانتینر با `if: always()` انجام می‌شود.
+- regression guard در `.github/scripts/verify-vendor-ci-secret-hygiene.sh` اضافه شد تا password literal، connection string در YAML environment، ترتیب mask و cleanup را بررسی کند.
+- هیچ secret قابل استفاده مجدد، private key، Customer hash، Customer DB، `Server/**` یا تغییر `.github/workflows/dotnet.yml` وارد این کار نشد.
+- **وضعیت:** Implemented / Not Verified؛ Vendor CI و ممیزی log روی SHA نهایی PR هنوز اجرا/تأیید نشده‌اند. اجرای محلی انجام نشده است.
