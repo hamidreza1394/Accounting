@@ -2908,3 +2908,33 @@
 ## 2026-11-10 — مأموریت D-078 PR اول: مجوز شرکتی users.create
 - Migration فقط-داده idempotent `20261110120000_SeedUsersCreatePermission` کد `users.create` را با GUID پایدار و Ordering 21007 به کاتالوگ اضافه کرد؛ هیچ نقشی خودکار مجوز نمی‌گیرد (تست SQL-gated قفل می‌کند). کاتالوگ مستندات به ۷۴ کد رسید؛ کد فعلاً seeded-only است و enforcement در PR دوم سری D-078 می‌آید.
 - `generate_migrations.py` به‌روزرسانی شد (CURRENT/DELTA + HAND_WRITTEN_SQL)؛ هر دو گارد migration سبز. Build سبز؛ تست ۱۰۹۲ موفق/۶۷ Skip/۲ شکست محیطی قدیمی. تست‌های SQL Server محلی NotRun (Docker موجود نیست). جزئیات: `docs/handoffs/UNNUMBERED-d078-users-create-permission-seed.md`.
+
+
+## 2026-11-10 — Issue #632: جلوگیری از ثبت credential آزمایشی در Vendor CI
+- در log واقعی Vendor CI run `42651850808` روی SHA `9fb6400569b282d18829073d76588b82f7c3c5d8`، password آزمایشی SQL Server در Docker create command و env stepها بدون masking دیده شد؛ مقدار credential در Work Log بازنشر نشده است.
+- `.github/workflows/vendor-ci.yml` از Service container دارای password در YAML به کانتینر SQL Server موقت در step کنترل‌شده تغییر کرد؛ password تصادفی همان run پیش از استفاده mask می‌شود و فقط از `GITHUB_ENV` به stepهای بعد می‌رود.
+- Connection stringها از YAML `env:` حذف شدند؛ در shell runtime ساخته و mask می‌شوند. cleanup کانتینر با `if: always()` انجام می‌شود.
+- regression guard در `.github/scripts/verify-vendor-ci-secret-hygiene.sh` اضافه شد تا password literal، connection string در YAML environment، ترتیب mask و cleanup را بررسی کند.
+- هیچ secret قابل استفاده مجدد، private key، Customer hash، Customer DB، `Server/**` یا تغییر `.github/workflows/dotnet.yml` وارد این کار نشد.
+- **وضعیت:** Implemented / Not Verified؛ PR #633 باز است؛ SHA جاری از metadata PR خوانده می‌شود. Vendor CI و ممیزی log هنوز اجرا/تأیید نهایی نشده‌اند. اجرای محلی انجام نشده است.
+
+
+## 2026-11-10 — Issue #632: حذف نمایش fragmentهای connection string از logهای Vendor CI
+- ممیزی Vendor CI run `42775690727`، job `129693604250`، نشان داد password در نسخه اول اصلاح mask شده بود، اما GitHub متن inline shell source را پیش از اجرای دستور mask در log ثبت می‌کند؛ در نتیجه بخش‌هایی از connection string در خط‌های assignment قابل مشاهده بود. معیار عدم نمایش connection string در log پاس نشده بود و PR عمداً ادغام نشد.
+- ساخت runtime مقادیر اتصال به `.github/scripts/run-vendor-ci-database-checks.sh` منتقل شد؛ workflow فقط helper و mode را فراخوانی می‌کند. helper مقدارها را از اجزای runtime می‌سازد، کل مقدار را با `add-mask` ثبت می‌کند و سپس export می‌کند؛ هیچ مقدار واقعی در Git قرار نگرفت.
+- guard `.github/scripts/verify-vendor-ci-secret-hygiene.sh` اکنون نبود connection-string fragment در workflow، فراخوانی helper، نبود shell tracing/environment dump و ترتیب mask-before-export برای هر چهار مقدار را بررسی می‌کند.
+- فایل‌های handoff و INDEX به‌روزرسانی شدند. تست محلی اجرا نشده است؛ اجرای CI روی head جدید و ممیزی log نهایی هنوز pending است.
+- **وضعیت:** Implemented / Not Verified؛ PR #633 باز می‌ماند تا Vendor CI، .NET CI و ممیزی log واقعی روی SHA نهایی سبز/پاک شوند.
+
+
+## 2026-11-10 — Issue #632 تکمیل hardening credentialهای تستی Vendor CI
+- در بازبینی workflow مشخص شد دو PIN ثابت SoftHSM (فقط برای token موقت CI) نیز در متن workflow وجود داشتند. برای رعایت قاعدهٔ عدم نگهداری password/PIN ثابت در Git، هر دو اکنون با `openssl rand` در همان run تولید و پیش از `softhsm2-util` mask می‌شوند؛ فقط user PIN موردنیاز تست از `GITHUB_ENV` منتقل می‌شود.
+- guard ایستا هر PIN عددی ثابت در فرمان `softhsm2-util` یا مقدار ثابت `FARANO_TEST_PKCS11_PIN` را رد می‌کند و ترتیب mask-before-use را کنترل می‌کند.
+- این تغییر فقط در Vendor CI است؛ کلید خصوصی واقعی، credential قابل استفاده مجدد، Customer hash، Customer DB و workflow عمومی مشتری وارد دامنه نشده‌اند.
+- **وضعیت:** Implemented / Not Verified؛ CI و ممیزی log باید روی head نهایی اجرا شوند؛ تست محلی اجرا نشده است.
+
+
+- بازبینی تکمیلی guard: کنترل ترتیب mask اکنون به‌طور مشخص اولین استفاده از متغیر SQL `$password` را با `docker run` مقایسه می‌کند (نه صرفاً هر add-mask قبلی)؛ اسکن fragmentهای اتصال در workflow نیز case-insensitive است.
+
+
+- اجرای Vendor CI روی SHA `9456df27ea69c05fd1df681e46a6a329ce84af3d` در guard ایستا متوقف شد؛ علت ریشه‌ای false-positive بود: الگوی case-insensitive واژهٔ `password=` را در انتساب متغیر محلی `password=` نیز connection string تلقی می‌کرد. لاگ job `129700425798` این موضوع را در خط workflow نشان داد؛ مقدار واقعی credential تولید یا چاپ نشد. الگو محدود شد به کلیدهای connection-string مانند `Server=`، `Data Source=` و `;Password=` تا متغیر shell را اشتباه تشخیص ندهد. CI باید روی head بعدی دوباره اجرا شود.

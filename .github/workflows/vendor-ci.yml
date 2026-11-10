@@ -13,6 +13,7 @@ on:
       - 'Directory.Build.props'
       - 'global.json'
       - '.github/workflows/vendor-ci.yml'
+      - '.github/scripts/**'
   pull_request:
     paths:
       - 'Vendor/**'
@@ -23,6 +24,7 @@ on:
       - 'Directory.Build.props'
       - 'global.json'
       - '.github/workflows/vendor-ci.yml'
+      - '.github/scripts/**'
   workflow_dispatch:
 
 permissions:
@@ -57,25 +59,13 @@ jobs:
     env:
       ASPNETCORE_ENVIRONMENT: Development
       FARANO_VENDOR_DataProtection__KeysDirectory: /tmp/faranou-vendor-dp-keys
-      MSSQL_SA_PASSWORD: Ci1Faranou${{ github.run_id }}xvnd
-    services:
-      sqlserver:
-        image: mcr.microsoft.com/mssql/server:2022-latest
-        env:
-          ACCEPT_EULA: Y
-          MSSQL_SA_PASSWORD: Ci1Faranou${{ github.run_id }}xvnd
-        ports:
-          - 1433:1433
-        options: >-
-          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Ci1Faranou${{ github.run_id }}xvnd -Q 'SELECT 1' -b"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 20
     permissions:
       contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+      - name: Verify Vendor CI secret handling
+        run: bash .github/scripts/verify-vendor-ci-secret-hygiene.sh
       - name: Setup Node for standalone Vendor UI
         uses: actions/setup-node@v7
         with:
@@ -147,30 +137,47 @@ jobs:
           test -n "$libdl_path"
           ln -sf "$libdl_path" "$native_compat_dir/libdl.so"
           echo "LD_LIBRARY_PATH=$native_compat_dir${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
-          softhsm2-util --init-token --free --label FaranouVendorCI --so-pin 12345678 --pin 123456
+          so_pin="$(openssl rand -hex 16)"
+          user_pin="$(openssl rand -hex 16)"
+          printf '::add-mask::%s\n' "$so_pin"
+          printf '::add-mask::%s\n' "$user_pin"
+          softhsm2-util --init-token --free --label FaranouVendorCI --so-pin "$so_pin" --pin "$user_pin"
           {
             echo "SOFTHSM2_CONF=$config_file"
             echo "FARANO_TEST_PKCS11_MODULE_PATH=$module_path"
             echo "FARANO_TEST_PKCS11_TOKEN_LABEL=FaranouVendorCI"
-            echo "FARANO_TEST_PKCS11_PIN=123456"
+            printf 'FARANO_TEST_PKCS11_PIN=%s\n' "$user_pin"
             echo "FARANO_REQUIRE_PKCS11=1"
           } >> "$GITHUB_ENV"
-
+      - name: Start ephemeral SQL Server without logging credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          container_name="faranou-vendor-ci-sqlserver-${GITHUB_RUN_ID}"
+          password="Aa1!$(openssl rand -hex 32)"
+          printf '::add-mask::%s\n' "$password"
+          docker run --detach --name "$container_name" --publish 127.0.0.1:1433:1433 \
+            --env ACCEPT_EULA=Y --env "MSSQL_SA_PASSWORD=$password" \
+            mcr.microsoft.com/mssql/server:2022-latest >/dev/null
+          printf 'MSSQL_SA_PASSWORD=%s\n' "$password" >> "$GITHUB_ENV"
+          for attempt in $(seq 1 60); do
+            if docker exec "$container_name" /opt/mssql-tools18/bin/sqlcmd \
+              -C -S localhost -U sa -P "$password" -Q "SELECT 1" -b >/dev/null 2>&1; then
+              echo "Ephemeral SQL Server test container is ready."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Ephemeral SQL Server test container did not become ready." >&2
+          exit 1
       - name: Test Vendor solution
         env:
           FARANO_REQUIRE_PKCS11: '1'
-          FARANO_VENDOR_ConnectionStrings__VendorDb: Server=localhost,1433;Database=FaranouVendorAuthTests;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
-          FARANO_VENDOR_TEST_SQLSERVER: Server=localhost,1433;Database=FaranouVendorTests;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
           FARANO_REQUIRE_VENDOR_SQLSERVER: '1'
-          FARANOU_TEST_SQLSERVER: Server=localhost,1433;Database=FaranouTests;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
           FARANOU_REQUIRE_SQLSERVER: '1'
-        run: dotnet test Vendor.sln --configuration Release
-
+        run: bash .github/scripts/run-vendor-ci-database-checks.sh test
       - name: Verify Vendor EF model snapshot is current
-        env:
-          FARANO_VENDOR_ConnectionStrings__VendorDb: Server=localhost,1433;Database=master;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
-        run: |
-          dotnet ef migrations has-pending-model-changes --project Vendor/Vendor.Persistence/Vendor.Persistence.csproj --startup-project Vendor/Vendor.Host/Vendor.Host.csproj --context VendorDbContext
+        run: bash .github/scripts/run-vendor-ci-database-checks.sh ef-snapshot
       - name: Publish standalone Vendor host
         run: dotnet publish Vendor/Vendor.Host/Vendor.Host.csproj --no-restore --configuration Release --output "$RUNNER_TEMP/vendor-publish"
       - name: Check artifact contains the host and no private-key files
@@ -199,3 +206,10 @@ jobs:
           path: ${{ runner.temp }}/vendor-publish/
           if-no-files-found: error
           retention-days: 7
+      - name: Stop ephemeral SQL Server
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          container_name="faranou-vendor-ci-sqlserver-${GITHUB_RUN_ID}"
+          docker rm --force "$container_name" >/dev/null 2>&1 || true
