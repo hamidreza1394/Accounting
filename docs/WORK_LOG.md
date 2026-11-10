@@ -2917,3 +2917,11 @@
 - regression guard در `.github/scripts/verify-vendor-ci-secret-hygiene.sh` اضافه شد تا password literal، connection string در YAML environment، ترتیب mask و cleanup را بررسی کند.
 - هیچ secret قابل استفاده مجدد، private key، Customer hash، Customer DB، `Server/**` یا تغییر `.github/workflows/dotnet.yml` وارد این کار نشد.
 - **وضعیت:** Implemented / Not Verified؛ PR #633 باز است؛ SHA جاری از metadata PR خوانده می‌شود. Vendor CI و ممیزی log هنوز اجرا/تأیید نهایی نشده‌اند. اجرای محلی انجام نشده است.
+
+
+## 2026-11-10 — Issue #632: حذف نمایش fragmentهای connection string از logهای Vendor CI
+- ممیزی Vendor CI run `42775690727`، job `129693604250`، نشان داد password در نسخه اول اصلاح mask شده بود، اما GitHub متن inline shell source را پیش از اجرای دستور mask در log ثبت می‌کند؛ در نتیجه بخش‌هایی از connection string در خط‌های assignment قابل مشاهده بود. معیار عدم نمایش connection string در log پاس نشده بود و PR عمداً ادغام نشد.
+- ساخت runtime مقادیر اتصال به `.github/scripts/run-vendor-ci-database-checks.sh` منتقل شد؛ workflow فقط helper و mode را فراخوانی می‌کند. helper مقدارها را از اجزای runtime می‌سازد، کل مقدار را با `add-mask` ثبت می‌کند و سپس export می‌کند؛ هیچ مقدار واقعی در Git قرار نگرفت.
+- guard `.github/scripts/verify-vendor-ci-secret-hygiene.sh` اکنون نبود connection-string fragment در workflow، فراخوانی helper، نبود shell tracing/environment dump و ترتیب mask-before-export برای هر چهار مقدار را بررسی می‌کند.
+- فایل‌های handoff و INDEX به‌روزرسانی شدند. تست محلی اجرا نشده است؛ اجرای CI روی head جدید و ممیزی log نهایی هنوز pending است.
+- **وضعیت:** Implemented / Not Verified؛ PR #633 باز می‌ماند تا Vendor CI، .NET CI و ممیزی log واقعی روی SHA نهایی سبز/پاک شوند.

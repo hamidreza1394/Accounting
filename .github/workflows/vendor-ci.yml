@@ -171,27 +171,9 @@ jobs:
           FARANO_REQUIRE_PKCS11: '1'
           FARANO_REQUIRE_VENDOR_SQLSERVER: '1'
           FARANOU_REQUIRE_SQLSERVER: '1'
-        shell: bash
-        run: |
-          set -euo pipefail
-          vendor_auth_db="Server=localhost,1433;Database=FaranouVendorAuthTests;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=True"
-          vendor_tests_db="Server=localhost,1433;Database=FaranouVendorTests;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=True"
-          customer_tests_db="Server=localhost,1433;Database=FaranouTests;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=True"
-          printf '::add-mask::%s\n' "$vendor_auth_db"
-          printf '::add-mask::%s\n' "$vendor_tests_db"
-          printf '::add-mask::%s\n' "$customer_tests_db"
-          export FARANO_VENDOR_ConnectionStrings__VendorDb="$vendor_auth_db"
-          export FARANO_VENDOR_TEST_SQLSERVER="$vendor_tests_db"
-          export FARANOU_TEST_SQLSERVER="$customer_tests_db"
-          dotnet test Vendor.sln --configuration Release
+        run: bash .github/scripts/run-vendor-ci-database-checks.sh test
       - name: Verify Vendor EF model snapshot is current
-        shell: bash
-        run: |
-          set -euo pipefail
-          master_db="Server=localhost,1433;Database=master;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=True"
-          printf '::add-mask::%s\n' "$master_db"
-          export FARANO_VENDOR_ConnectionStrings__VendorDb="$master_db"
-          dotnet ef migrations has-pending-model-changes --project Vendor/Vendor.Persistence/Vendor.Persistence.csproj --startup-project Vendor/Vendor.Host/Vendor.Host.csproj --context VendorDbContext
+        run: bash .github/scripts/run-vendor-ci-database-checks.sh ef-snapshot
       - name: Publish standalone Vendor host
         run: dotnet publish Vendor/Vendor.Host/Vendor.Host.csproj --no-restore --configuration Release --output "$RUNNER_TEMP/vendor-publish"
       - name: Check artifact contains the host and no private-key files

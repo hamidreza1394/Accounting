@@ -3,16 +3,16 @@
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/632
 - **Agent/مسئول:** ChatGPT / GitHub tools
 - **تاریخ:** 2026-11-10
-- **وضعیت:** Implemented / Not Verified؛ CI و ممیزی log پس از اجرای PR لازم است.
+- **وضعیت:** Implemented / Not Verified؛ ممیزی log اجرای نخست PR #633 یک افشای جزئی از متن connection string در shell source را یافت؛ ساخت مقدار به helper منتقل شده و CI/log نهایی هنوز باید تأیید شود.
 
 ## هدف و معیارهای پذیرش
 - [x] حذف password قابل پیش‌بینی SQL Server از YAML و Service container.
 - [x] تولید password تصادفی فقط برای همان اجرای Vendor CI و mask کردن آن پیش از استفاده.
-- [x] حذف connection stringها از YAML `env:` و ساخت/ثبت mask آن‌ها فقط داخل process تست.
+- [x] حذف connection string از YAML و انتقال ساخت runtime به helper مستقل؛ mask کامل هر مقدار پیش از export به process تست/EF.
 - [x] تضمین cleanup کانتینر SQL Server حتی در شکست stepها.
 - [x] افزودن regression guard برای جلوگیری از بازگشت password/connection string به مقادیر YAML.
-- [ ] Vendor CI روی PR سبز شود.
-- [ ] ممیزی log واقعی تأیید کند password و connection string خام در هیچ step ظاهر نمی‌شوند.
+- [ ] Vendor CI روی SHA نهایی PR سبز شود.
+- [ ] ممیزی log واقعی تأیید کند نه password و نه هیچ fragment از connection string در step log ظاهر نمی‌شود.
 
 ## خلاصه تغییرات
 - بررسی Vendor CI run `42651850808` روی SHA `9fb6400569b282d18829073d76588b82f7c3c5d8` نشان داد password آزمایشی SQL Server در Docker create command و بلوک‌های محیط step بدون masking ثبت شده بود. مقدار credential در این handoff عمداً تکرار نمی‌شود.
@@ -24,7 +24,8 @@
 
 ## فایل‌های مهم تغییرکرده
 - `.github/workflows/vendor-ci.yml` — حذف SQL Server service password و connection stringهای YAML؛ راه‌اندازی/cleanup کنترل‌شده.
-- `.github/scripts/verify-vendor-ci-secret-hygiene.sh` — regression guard ساختار workflow.
+- `.github/scripts/verify-vendor-ci-secret-hygiene.sh` — regression guard ساختار workflow و ترتیب mask/export.
+- `.github/scripts/run-vendor-ci-database-checks.sh` — ساخت runtime مقادیر اتصال در process بدون echo شدن source در GitHub Actions log.
 - این handoff و `docs/WORK_LOG.md`.
 
 ## تصمیم‌های فنی
@@ -36,14 +37,16 @@
 | فرمان/آزمون | نتیجه واقعی | توضیح/کد خروج |
 |---|---|---|
 | بازبینی log run `42651850808` | یافته تأیید شد | Docker create command و env stepها مقدار password را بدون mask نشان می‌دادند؛ مقدار در گزارش بازنشر نشده است. |
-| regression guard | در CI اجرا خواهد شد | هنوز روی GitHub Actions اجرا نشده است. |
-| Vendor UI/.NET/EF/SQL Server CI | در انتظار | اجرای محلی در این محیط انجام نشده است. |
-| ممیزی log پس از اصلاح | در انتظار | باید پس از run جدید بررسی شود. |
+| Vendor CI run `42775690727` | موفق | guard، UI، build/test، SQL Server، EF snapshot، publish و دو checkpoint regression موفق؛ package upload مطابق PR بودن Skip شد. |
+| ممیزی log run `42775690727` / job `129693604250` | **معیار پذیرش رد شد** | password mask بود، اما بخشی از متن connection string در shell source چاپ‌شده توسط Actions دیده می‌شد؛ علت ریشه‌ای: inline `run:` پیش از اجرای mask در log ثبت می‌شود. |
+| helper و guard تکمیلی | در commit بعدی PR | ساخت مقدار به helper منتقل و ترتیب mask-before-export به guard افزوده شد؛ CI جدید هنوز در انتظار است. |
+| .NET CI / E2E / Windows Publish | در انتظار | اجرای قبلی روی head `56c3...` هنوز کامل نشده بود؛ باید head جدید جداگانه بررسی شود. |
+| ممیزی log نهایی | در انتظار | باید پس از اجرای جدید بررسی شود. |
 | .NET CI و customer workflow | خارج از محدوده | workflow عمومی مشتری تغییر نکرده است. |
 
 ## امنیت، داده و سازگاری
 - هیچ password، private key، hash رمز مشتری، connection string کامل یا credential قابل استفاده مجدد به Git/artifact افزوده نشده است.
-- password و connection string در runner به‌صورت runtime ساخته و پیش از استفاده mask می‌شوند.
+- password و connection string در runner به‌صورت runtime ساخته می‌شوند؛ helper مقدار کامل را mask می‌کند و سپس export می‌کند. منبع shell helper در log Actions echo نمی‌شود؛ این ادعا تا ممیزی log اجرای head نهایی `NotVerified` است.
 - تغییر فقط زیرساخت تست Vendor است؛ هیچ Customer DB، `Server/**` یا Migration مشتری تغییر نکرده است.
 - یافتهٔ مشابه در `.github/workflows/dotnet.yml` خارج از محدودهٔ این Issue است و در این PR اصلاح نمی‌شود.
 
@@ -55,4 +58,4 @@
 ## شناسه‌های Git
 - Branch: `fix/632-vendor-ci-secret-redaction`
 - Commit: head نهایی PR #633؛ SHA جاری همیشه از metadata خود PR خوانده شود.
-- Pull Request: [#633](https://github.com/hamidreza1394/Accounting/pull/633) — open; CI در حال اجرا
+- Pull Request: [#633](https://github.com/hamidreza1394/Accounting/pull/633) — open; CI و ممیزی log روی commit جدید pending

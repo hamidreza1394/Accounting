@@ -2,11 +2,22 @@
 set -euo pipefail
 
 workflow=".github/workflows/vendor-ci.yml"
+database_script=".github/scripts/run-vendor-ci-database-checks.sh"
 [[ -f "$workflow" ]] || { echo "Vendor CI workflow not found: $workflow" >&2; exit 1; }
+[[ -f "$database_script" ]] || { echo "Vendor CI database helper not found: $database_script" >&2; exit 1; }
 
 fail() {
   echo "Vendor CI secret-hygiene regression failed: $1" >&2
   exit 1
+}
+
+assert_before() {
+  local earlier
+  local later
+  earlier="$(grep -nF "$1" "$database_script" | head -n 1 | cut -d: -f1 || true)"
+  later="$(grep -nF "$2" "$database_script" | head -n 1 | cut -d: -f1 || true)"
+  [[ -n "$earlier" && -n "$later" ]] || fail "missing masking/export contract: $1 -> $2"
+  (( earlier < later )) || fail "a connection string is exported before it is masked"
 }
 
 if grep -nF "Ci1Faranou" "$workflow"; then
@@ -21,6 +32,10 @@ if grep -nE '^[[:space:]]*[A-Za-z0-9_]+:[[:space:]].*Password=' "$workflow"; the
   fail "connection string with a password is declared as a YAML mapping value"
 fi
 
+if grep -nE 'Server=|Data Source=|Password=' "$workflow"; then
+  fail "connection-string fragments must not be embedded in the workflow source"
+fi
+
 mask_line="$(grep -nF '::add-mask::' "$workflow" | head -n 1 | cut -d: -f1 || true)"
 docker_line="$(grep -nF 'docker run' "$workflow" | head -n 1 | cut -d: -f1 || true)"
 [[ -n "$mask_line" && -n "$docker_line" ]] || fail "masking or ephemeral SQL Server startup is missing"
@@ -30,5 +45,23 @@ grep -Fq 'MSSQL_SA_PASSWORD=%s' "$workflow" || fail "ephemeral SQL password is n
 grep -Fq '>> "$GITHUB_ENV"' "$workflow" || fail "runner environment handoff is missing"
 grep -Fq 'docker rm --force' "$workflow" || fail "ephemeral SQL Server cleanup is missing"
 grep -Fq 'if: always()' "$workflow" || fail "SQL Server cleanup is not unconditional"
+grep -Fq 'bash .github/scripts/run-vendor-ci-database-checks.sh test' "$workflow" || fail "Vendor tests must run through the non-echoed helper"
+grep -Fq 'bash .github/scripts/run-vendor-ci-database-checks.sh ef-snapshot' "$workflow" || fail "EF snapshot check must run through the non-echoed helper"
+
+if grep -nE '^[[:space:]]*set[[:space:]]+-[^#]*x([[:space:]]|$)|printenv|(^|[[:space:]])env[[:space:]]*($|\|)' "$database_script"; then
+  fail "database helper must not enable tracing or dump its environment"
+fi
+
+grep -Fq '::add-mask::%s' "$database_script" || fail "complete connection-string masking is missing"
+grep -Fq 'dotnet test Vendor.sln' "$database_script" || fail "Vendor test invocation is missing"
+grep -Fq 'dotnet ef migrations has-pending-model-changes' "$database_script" || fail "EF snapshot verification is missing"
+assert_before 'mask_connection_string "$vendor_auth_db"' 'export FARANO_VENDOR_ConnectionStrings__VendorDb="$vendor_auth_db"'
+assert_before 'mask_connection_string "$vendor_tests_db"' 'export FARANO_VENDOR_TEST_SQLSERVER="$vendor_tests_db"'
+assert_before 'mask_connection_string "$customer_tests_db"' 'export FARANOU_TEST_SQLSERVER="$customer_tests_db"'
+assert_before 'mask_connection_string "$master_db"' 'export FARANO_VENDOR_ConnectionStrings__VendorDb="$master_db"'
+
+if grep -nE '(echo|printf).*(vendor_auth_db|vendor_tests_db|customer_tests_db|master_db|MSSQL_SA_PASSWORD)' "$database_script"; then
+  fail "database credentials or connection strings must not be printed"
+fi
 
 echo "Vendor CI secret-hygiene regression passed."
