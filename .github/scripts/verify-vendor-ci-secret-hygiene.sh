@@ -45,14 +45,14 @@ if grep -nE '^[[:space:]]*[A-Za-z0-9_]+:[[:space:]].*Password=' "$workflow"; the
   fail "connection string with a password is declared as a YAML mapping value"
 fi
 
-if grep -nE 'Server=|Data Source=|Password=' "$workflow"; then
+if grep -niE 'server=|data source=|password=' "$workflow"; then
   fail "connection-string fragments must not be embedded in the workflow source"
 fi
 
-mask_line="$(grep -nF '::add-mask::' "$workflow" | head -n 1 | cut -d: -f1 || true)"
+password_mask_line="$(grep -nF '"$password"' "$workflow" | head -n 1 | cut -d: -f1 || true)"
 docker_line="$(grep -nF 'docker run' "$workflow" | head -n 1 | cut -d: -f1 || true)"
-[[ -n "$mask_line" && -n "$docker_line" ]] || fail "masking or ephemeral SQL Server startup is missing"
-(( mask_line < docker_line )) || fail "the SQL password is not masked before docker run"
+[[ -n "$password_mask_line" && -n "$docker_line" ]] || fail "SQL password masking or ephemeral SQL Server startup is missing"
+(( password_mask_line < docker_line )) || fail "the SQL password is not masked before docker run"
 
 grep -Fq 'MSSQL_SA_PASSWORD=%s' "$workflow" || fail "ephemeral SQL password is not transferred through GITHUB_ENV"
 grep -Fq '>> "$GITHUB_ENV"' "$workflow" || fail "runner environment handoff is missing"

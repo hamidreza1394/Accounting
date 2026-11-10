@@ -2932,3 +2932,6 @@
 - guard ایستا هر PIN عددی ثابت در فرمان `softhsm2-util` یا مقدار ثابت `FARANO_TEST_PKCS11_PIN` را رد می‌کند و ترتیب mask-before-use را کنترل می‌کند.
 - این تغییر فقط در Vendor CI است؛ کلید خصوصی واقعی، credential قابل استفاده مجدد، Customer hash، Customer DB و workflow عمومی مشتری وارد دامنه نشده‌اند.
 - **وضعیت:** Implemented / Not Verified؛ CI و ممیزی log باید روی head نهایی اجرا شوند؛ تست محلی اجرا نشده است.
+
+
+- بازبینی تکمیلی guard: کنترل ترتیب mask اکنون به‌طور مشخص اولین استفاده از متغیر SQL `$password` را با `docker run` مقایسه می‌کند (نه صرفاً هر add-mask قبلی)؛ اسکن fragmentهای اتصال در workflow نیز case-insensitive است.
