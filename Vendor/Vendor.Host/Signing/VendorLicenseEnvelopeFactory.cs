@@ -3,14 +3,17 @@ using Faranou.Licensing.Contracts;
 namespace Faranou.Vendor.Host.Signing;
 
 /// <summary>
-/// Creates a structurally valid signed envelope from a validated payload. This component deliberately
-/// does not persist the envelope or mutate VendorLicense state; callers must do so transactionally
-/// only after durable storage and approval semantics are implemented.
+/// Creates and cryptographically verifies a signed envelope from a validated payload. This component
+/// does not persist the envelope or mutate VendorLicense state; callers own the transaction.
 /// </summary>
-public sealed class VendorLicenseEnvelopeFactory(ILicenseSigningProvider signingProvider)
+public sealed class VendorLicenseEnvelopeFactory(
+    ILicenseSigningProvider signingProvider,
+    LicenseSigningTrustStore trustStore)
 {
     private readonly ILicenseSigningProvider _signingProvider =
         signingProvider ?? throw new ArgumentNullException(nameof(signingProvider));
+    private readonly LicenseSigningTrustStore _trustStore =
+        trustStore ?? throw new ArgumentNullException(nameof(trustStore));
 
     public async ValueTask<LicenseEnvelopeCreationResult> CreateAsync(
         LicensePayload payload,
@@ -69,6 +72,14 @@ public sealed class VendorLicenseEnvelopeFactory(ILicenseSigningProvider signing
 
         if (StructuralValidation.ValidateEnvelopeStructure(envelope).Count > 0)
             return LicenseEnvelopeCreationResult.Failed("signed_envelope_invalid");
+
+        // A well-shaped signer response is not sufficient: the returned key ID must resolve to
+        // an active configured trust key, and the signature must verify over the exact payload.
+        if (!_trustStore.TryGetTrustedPublicKey(envelope.Kid, out var trustedPublicKey) ||
+            !new EcdsaP256Sha256Verifier().TryVerify(envelope, trustedPublicKey.Span, out _))
+        {
+            return LicenseEnvelopeCreationResult.Failed("signing_result_invalid");
+        }
 
         return LicenseEnvelopeCreationResult.Success(envelope);
     }
