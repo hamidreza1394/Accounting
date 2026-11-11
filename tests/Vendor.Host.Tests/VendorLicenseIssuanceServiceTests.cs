@@ -3,12 +3,16 @@ using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Auditing;
 using Faranou.Vendor.Persistence.Domain;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Xunit;
 
 namespace Faranou.Vendor.Host.Tests;
 
 public sealed class VendorLicenseIssuanceServiceTests
 {
+    private static LicenseSigningTrustStore CreateEmptyTrustStore() =>
+        new(new ConfigurationBuilder().Build());
+
     [Fact]
     public async Task RefusesIssuanceOutsideCallerOwnedTransaction()
     {
@@ -18,7 +22,7 @@ public sealed class VendorLicenseIssuanceServiceTests
         await using var db = new VendorDbContext(options);
         var service = new VendorLicenseIssuanceService(
             db,
-            new VendorLicenseEnvelopeFactory(new UnavailableLicenseSigningProvider()),
+            new VendorLicenseEnvelopeFactory(new UnavailableLicenseSigningProvider(), CreateEmptyTrustStore()),
             new VendorAuditWriter(db, TimeProvider.System),
             TimeProvider.System);
 
