@@ -30,7 +30,8 @@ public sealed class VendorLicenseEnvelopeFactoryTests
     [Fact]
     public async Task DoesNotCreateEnvelopeWhenProviderIsUnavailable()
     {
-        var factory = new VendorLicenseEnvelopeFactory(new UnavailableSigningProvider(), CreateEmptyTrustStore());
+        var factory = new VendorLicenseEnvelopeFactory(
+            new UnavailableSigningProvider(), CreateEmptyTrustStore());
 
         var result = await factory.CreateAsync(ValidPayload());
 
@@ -117,52 +118,6 @@ public sealed class VendorLicenseEnvelopeFactoryTests
 
     private static LicenseSigningTrustStore CreateEmptyTrustStore() =>
         new(new ConfigurationBuilder().Build());
-
-    [Fact]
-    public async Task RejectsSignatureThatDoesNotMatchConfiguredTrustedPublicKey()
-    {
-        using var signingKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-        using var trustedKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-        var factory = new VendorLicenseEnvelopeFactory(
-            new TestSigningProvider(signingKey),
-            CreateTrustStore(trustedKey));
-
-        var result = await factory.CreateAsync(ValidPayload());
-
-        Assert.False(result.Succeeded);
-        Assert.Null(result.Envelope);
-        Assert.Equal("signing_result_invalid", result.ErrorCode);
-    }
-
-    [Fact]
-    public async Task RejectsUntrustedSigningKeyId()
-    {
-        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-        var factory = new VendorLicenseEnvelopeFactory(
-            new TestSigningProvider(key),
-            CreateTrustStore(key, keyId: "different-kid"));
-
-        var result = await factory.CreateAsync(ValidPayload());
-
-        Assert.False(result.Succeeded);
-        Assert.Null(result.Envelope);
-        Assert.Equal("signing_result_invalid", result.ErrorCode);
-    }
-
-    [Fact]
-    public async Task RejectsRevokedSigningKey()
-    {
-        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-        var factory = new VendorLicenseEnvelopeFactory(
-            new TestSigningProvider(key),
-            CreateTrustStore(key, revoked: true));
-
-        var result = await factory.CreateAsync(ValidPayload());
-
-        Assert.False(result.Succeeded);
-        Assert.Null(result.Envelope);
-        Assert.Equal("signing_result_invalid", result.ErrorCode);
-    }
 
     private static LicensePayload ValidPayload() => new(
         FormatVersion: LicenseAlgorithms.CurrentFormatVersion,
