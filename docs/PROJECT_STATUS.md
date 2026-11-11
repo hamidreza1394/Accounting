@@ -1,4 +1,32 @@
-# وضعیت فعلی ماژول Vendor — 2026-11-08
+# وضعیت جاری ماژول Vendor — 2026-11-11
+
+**مبنای جاری:** `main@3b103a5875a9668bf0c07d305a91685db3fb1db7`؛ Merge commit واقعی PR #633.
+
+## GitHub و CI
+
+- CI پس از Merge #633 روی main کامل و موفق است: Vendor CI [42783806157](https://github.com/hamidreza1394/Accounting/actions/runs/42783806157) با ۳/۳ Job، .NET CI [42783805952](https://github.com/hamidreza1394/Accounting/actions/runs/42783805952) با ۷/۷ Job، Semgrep [42783805757](https://github.com/hamidreza1394/Accounting/actions/runs/42783805757) و Push on main [42783805332](https://github.com/hamidreza1394/Accounting/actions/runs/42783805332) موفق‌اند. Build/Test: ۱۱۹۱ تست، ۱۱۸۳ موفق، صفر شکست و ۸ Skip؛ شمار هشدارهای Build در این خلاصه گزارش نمی‌شود.
+- PRهای مرجع #281، #282 و #284 ادغام‌شده‌اند و post-merge workflowهای آن‌ها به‌ترتیب ۳، ۴ و ۴ مورد موفق هستند.
+- PRهای باز فعلی: #628، #629، #630 و #631 مربوط به D-078 و خارج از Vendor؛ PR #634 تنها PR مستنداتی Vendor است و هنوز ادغام نشده است.
+- در snapshot آخرین ۱۰۰ اجرای Actions پیش از push مستندات جدید PR #634: ۷۱ موفق، ۹ ناموفق، ۲۰ لغوشده. لاگ هر ۹ شکست بررسی شد: شش شکست D-078 از deadlock در SaveChanges تست‌های SQL Server، دو شکست assertion قدیمی Sidebar، و یک شکست E2E در PR #634. پس از push جدید، سه Workflow تازه برای head جدید PR در صف اجرا قرار گرفته‌اند.
+- PR #634 روی head قبلی `8aefa7371ddb401a5bff9ca04e1effec659bf852` در .NET CI run [42978314946](https://github.com/hamidreza1394/Accounting/actions/runs/42978314946) پس از retry در تست HR `hr-structure.spec.mjs` شکست خورد: ۴۸ تست موفق و یک درخواست GET پس از deactivate پاسخ 429 داد، درحالی‌که 200 انتظار می‌رفت. این شکست HR/Workspace خارج از محدوده Vendor است. شاخه مستندات پس از آن چند بار فقط برای اصلاح handoff/status به‌روزرسانی شده و هر push اجرای CI تازه ایجاد می‌کند؛ وضعیت نهایی را باید از checks زندهٔ PR #634 خواند. تا سبز شدن همهٔ بررسی‌های الزامی روی آخرین SHA، PR merge نمی‌شود.
+
+## وضعیت شکاف‌های Vendor
+
+- **#228 — Provisioning/Purchased Subsystems:** Vendor schema v4 فاقد CompanyReference است؛ resolver برای LicensePayload v2 با `provisioning_company_reference_mapping_required` fail-closed می‌ماند. #392 مالک binding پایدار CompanyReference → Company محلی و تصمیم Customer schema است؛ هر Customer migration جداگانه بازبینی/تأیید می‌شود. Customer consumer/ACK در #235 جدا می‌ماند.
+- **#214 — Maker-Checker/Revocation:** Vendor-side snapshot امضاشده، trust set مستقل، sequence تراکنشی، immutable history، maker-checker، audit transaction و export در PR #375 ادغام و post-merge CI-verified شده‌اند. Customer runtime enforcement و anti-rollback/recovery هنوز در #235/#364 جداگانه باقی است.
+- **#236 — Signer:** D-056 مرحلهٔ ۱ برای Software/Hardware assurance پذیرفته شده؛ PKCS#11/SoftHSM و سه purpose key در کد وجود دارند. Default provider unavailable/fail-closed است. Production Software فقط با `AcceptSoftwareKeyRisk=true` و startup audit صریح مجاز است؛ HSM واقعی/Hardware ceremony و credential عملیاتی provision نشده‌اند.
+- **#107 — Audit checkpoint:** قرارداد، versioned hash، startup guard/verification و Development/Test file store موجودند. تست هشت پردازه مستقل روی Ubuntu و Windows در Vendor CI #633 موفق است؛ sink مستقل Production، credential جدا، retention/immutability، alerting و recovery drill هنوز انتخاب/پیاده‌سازی نشده‌اند.
+- **#393 — Purchased add-ons:** سه pure candidate builder برای maxCompanies، Company-scoped Module/Feature/UserSeat و تمدید مستقل Support/Updates در main هستند. Commercial Order/Payment Evidence، persistence، approval اختصاصی amendment، signing/export و وضعیت Purchased/Delivered/Acknowledged هنوز NotImplemented هستند؛ سیاست Payment Evidence نیازمند تصمیم تجاری است.
+- **#235:** consumer/ACK مشتری و trust distribution فقط در کار مستقل Customer-side انجام می‌شود؛ هیچ تغییر `Server/**` یا Customer migration در PR Vendor مجاز نیست.
+
+## Merge policy و محدودیت‌ها
+
+- PR #634 مستنداتی است و تا تکمیل همهٔ بررسی‌های الزامی، از جمله E2E، merge نمی‌شود.
+- تست محلی در این بازبینی اجرا نشده است؛ همهٔ نتایج Verified به GitHub Actions روی SHA و Runهای مشخص‌شده متکی‌اند.
+- هیچ private key، credential، Customer password hash، connection string یا provider واقعی KMS/HSM در این به‌روزرسانی اضافه نشده است.
+
+---
+# snapshot تاریخی وضعیت Vendor — 2026-11-08
 
 **مبنای بازبینی:** شاخه `main`، SHA `da8ed012074f8439cb836ea4ae190e3ad2fc542e`. این SHA شامل merge commit مربوط به PR #565 است؛ GitHub Compare نشان می‌دهد main از merge commit #565 به بعد ۵۵ commit جلوتر و صفر commit عقب‌تر است.
 
@@ -40,6 +68,17 @@
 
 
 ---
+
+### بازبینی 2026-11-11 — تأیید CI پس از PR #633
+
+- **مبنای جاری:** `main@3b103a5875a9668bf0c07d305a91685db3fb1db7`؛ این SHA، Merge commit واقعی PR #633 است.
+- **PR #633 / Issue #632:** hardening اسرار Vendor CI در 2026-11-10 ادغام شد. پس از Merge، Vendor CI run [42783806157](https://github.com/hamidreza1394/Accounting/actions/runs/42783806157)، .NET CI run [42783805952](https://github.com/hamidreza1394/Accounting/actions/runs/42783805952)، Semgrep run [42783805757](https://github.com/hamidreza1394/Accounting/actions/runs/42783805757) و Push on main run [42783805332](https://github.com/hamidreza1394/Accounting/actions/runs/42783805332) همگی موفق‌اند.
+- **Vendor CI:** هر سه Job شامل build/test/package و regression قفل فایل checkpoint روی Ubuntu و Windows موفق‌اند.
+- **.NET CI:** هر هفت Job شامل Secret Scan، Client، Publish Scripts، Build/Test، E2E و انتشار Linux/Windows موفق‌اند. لاگ Build/Test: Build succeeded، صفر خطا؛ ۱۱۹۱ تست، ۱۱۸۳ موفق، صفر ناموفق و ۸ Skip. ۳۱۷۸ هشدار Build نیز ثبت شده و به‌عنوان صفر هشدار گزارش نمی‌شود.
+- **بازبینی Mergeهای مرجع:** PR #281 (سه Workflow)، #282 (چهار Workflow) و #284 (چهار Workflow) روی Merge SHAهای واقعی خود post-merge موفق‌اند. PR #613 نیز روی Merge SHA خود Vendor CI، .NET CI، Semgrep و Push on main موفق دارد؛ چهار تحلیل CodeQL آن در گزارش CI همان Merge موفق ثبت شده‌اند.
+- **وضعیت #228:** Provisioning schema همچنان v4 است و CompanyReference را حمل نمی‌کند؛ resolver برای LicensePayload v2 عمداً با `provisioning_company_reference_mapping_required` fail-closed می‌شود. رفع آن به تصمیم/طراحی binding در #392 وابسته است؛ هیچ Customer migration یا تغییر `Server/**` در این بازبینی انجام نشده است.
+- **مرزبندی Production:** signer واقعی KMS/HSM در #236 و sink مستقل Production در #107 هنوز به provider/هویت/credential و سیاست عملیاتی مصوب نیاز دارند. هیچ provider یا credential فرضی اضافه نشده است.
+- **محدودیت:** در این بازبینی تست محلی اجرا نشد؛ وضعیت Verified فوق فقط به Runهای واقعی GitHub Actions روی SHAهای ذکرشده متکی است.
 
 ## وضعیت ماژول بازرگانی خارجی — S0/S1 (2026-10-31)
 

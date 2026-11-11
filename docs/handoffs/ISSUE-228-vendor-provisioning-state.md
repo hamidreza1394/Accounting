@@ -80,3 +80,14 @@
 - **مرزبندی:** بدون تغییر `Server/**`، Customer DB، Migration مشتری، `Licensing.Contracts` یا private key/secret.
 - **آزمون:** تست محلی اجرا نشده؛ وضعیت CI روی head نهایی PR باید بررسی شود. اجرای قبلی #608 روی SHA قدیمی CodeQL را به‌علت HTTP 504 دانلود bundle fail کرد؛ این failure زیرساختی است و باید روی PR جدید دوباره بررسی شود.
 - **وضعیت:** Implemented / Not Verified.
+
+## بازبینی 2026-11-11 — وضعیت پس از PR #633
+
+- **مبنای جاری:** `main@3b103a5875a9668bf0c07d305a91685db3fb1db7` (Merge commit PR #633).
+- PR #613 در 2026-11-09 با merge commit `f1db16e70608a572ee71673ce1fc9fc3324d2c6d` و PR #633 در 2026-11-10 با merge commit فوق ادغام شده‌اند.
+- CI پس از Merge #633 روی SHA نهایی کامل و موفق است: Vendor CI run `42783806157` (۳/۳ Job)، .NET CI run `42783805952` (۷/۷ Job)، Semgrep run `42783805757` و Push on main run `42783805332`.
+- لاگ .NET Build/Test: Build succeeded، صفر خطا؛ ۱۱۹۱ تست، ۱۱۸۳ موفق، صفر ناموفق و ۸ Skip؛ ۳۱۷۸ هشدار Build ثبت شده‌اند. تست محلی در این بازبینی اجرا نشد.
+- PRهای #281، #282 و #284 و CI پس از Merge هرکدام مجدداً بررسی شدند؛ به‌ترتیب ۳، ۴ و ۴ Workflow پس از Merge موفق‌اند.
+- **شکاف فعال #228:** schema v4 فاقد CompanyReference است. resolver برای LicensePayload v2 با `provisioning_company_reference_mapping_required` fail-closed باقی می‌ماند و هیچ entitlement شرکت به سطح Installation تبدیل نمی‌شود. #392 مالک تصمیم و binding پایدار CompanyReference → Company محلی است؛ هر Customer migration نیازمند بازبینی و تأیید جداگانه است.
+- **مرز #235:** consumer/ACK، trust distribution و retry/error hardening در PR مستقل Customer-side می‌ماند؛ این بازبینی هیچ `Server/**` یا Customer DB را تغییر نداده است.
+- **گام بعدی:** پس از تعیین تکلیف #392، قرارداد نسخه‌دار provisioning و نمایش Purchased Subsystems در Vendor را در PR محدود و مستقل پیگیری کنید. تا آن زمان v2 عمداً unavailable است.

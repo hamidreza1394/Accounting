@@ -101,3 +101,14 @@ Issue فقط وقتی قابل بستن است که تولید و انتشار s
 - **Current head:** latest commit `2a9e227b28d9e54dfc08a4378642abaf4395b533`; new CI runs were queued/in progress when recorded. Do not claim these fixes green until the latest runs finish.
 - PRs #376 and #377 were closed as superseded duplicates to avoid competing snapshot schemas and sequence strategies; their useful immutable-row hardening was ported into #375.
 - **Still blocked/not implemented:** customer runtime call-site enforcement is not yet present; production HSM/KMS signer and independent public trust distribution are not provisioned; physical multi-host/offline operational proof and deployment backup/restore remain to be executed. Vendor-side snapshot issuance/export is not equivalent to complete customer-side revocation enforcement.
+
+
+## 2026-11-11 — تفکیک نهایی Vendor issuance از Customer enforcement
+
+بخش‌های تاریخی این سند که نبود snapshot factory، persistence، sequence، maker-checker و export را در Vendor گزارش می‌کردند، پیش از ادغام PR #375 نوشته شده‌اند و برای وضعیت جاری superseded هستند.
+
+- Vendor-side issuance در PR [#375](https://github.com/hamidreza1394/Accounting/pull/375) با merge commit `24b0e1794b0750d1f545412a7da38631ae1085d3` ادغام و پس از Merge با Vendor CI [41184338873](https://github.com/hamidreza1394/Accounting/actions/runs/41184338873)، .NET CI [41184338919](https://github.com/hamidreza1394/Accounting/actions/runs/41184338919)، Semgrep [41184338869](https://github.com/hamidreza1394/Accounting/actions/runs/41184338869) و Push on main [41184338854](https://github.com/hamidreza1394/Accounting/actions/runs/41184338854) تأیید شده است.
+- Vendor-side شامل canonical signed snapshot creation، independent revocation trust validation، immutable history، monotonic sequence، transactional maker-checker/license/audit updates و authorized no-store export است.
+- Customer-side consumer، ACK، runtime call-site enforcement، trust distribution و anti-rollback/recovery همچنان جداگانه زیر #235/#364 هستند. هیچ تغییر `Server/**`، Customer migration یا Customer consumer در این بازبینی انجام نشده است.
+- Production signer همچنان default unavailable/fail-closed است؛ وجود PKCS#11 adapter یا CI SoftHSM به معنی provision شدن کلید/Hardware واقعی نیست.
+- Issue #214 تا اتصال و آزمون مسیر Customer runtime و شواهد عملیاتی مستقل باز می‌ماند. برای جزئیات Vendor-side به `ISSUE-214-vendor-revocation-issuance.md` مراجعه شود.
