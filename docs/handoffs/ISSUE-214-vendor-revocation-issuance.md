@@ -3,7 +3,7 @@
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/214
 - **Branch:** `feat/issue-214-revocation-snapshot-factory`
 - **تاریخ:** 2026-10-31
-- **وضعیت:** PR #375 باز؛ پیاده‌سازی Vendor در همان PR گسترش یافته و منتظر CI نهایی و بازبینی
+- **وضعیت جاری:** Vendor-side snapshot issuance و maker-checker در PR #375 ادغام و با CI پس از Merge تأیید شده‌اند؛ customer runtime enforcement و عملیات Production همچنان جداگانه باز هستند.
 
 ## هدف و محدوده
 تکمیل بخش Vendor control-plane از گردش ابطال آفلاین: approval دو نفره باید تنها پس از تولید، اعتبارسنجی و ذخیرهٔ یک snapshot امضاشده بتواند License را به `Revoked` تغییر دهد. این PR هیچ consumer سمت مشتری، `Server/**` یا migration دیتابیس مشتری را تغییر نمی‌دهد.
@@ -25,11 +25,11 @@
 ## تست‌ها
 | آزمون | نتیجه در این شاخه |
 |---|---|
-| SQL Server success: snapshot + license + approval + audit | افزوده شد؛ منتظر Vendor CI |
-| SQL Server signer unavailable: عدم تغییر state | افزوده شد؛ منتظر Vendor CI |
-| SQL Server audit failure: rollback کامل | افزوده شد؛ منتظر Vendor CI |
-| SQL Server concurrent revocations: sequence 1/2 و cumulative list | افزوده شد؛ منتظر Vendor CI |
-| trust store خالی/کلید retired | افزوده شد؛ منتظر Vendor CI |
+| SQL Server success: snapshot + license + approval + audit | در Vendor CI و .NET CI پس از Merge #375 تأیید شد |
+| SQL Server signer unavailable: عدم تغییر state | در Vendor CI و .NET CI پس از Merge #375 تأیید شد |
+| SQL Server audit failure: rollback کامل | در Vendor CI و .NET CI پس از Merge #375 تأیید شد |
+| SQL Server concurrent revocations: sequence 1/2 و cumulative list | در Vendor CI و .NET CI پس از Merge #375 تأیید شد |
+| trust store خالی/کلید retired | در Vendor CI و .NET CI پس از Merge #375 تأیید شد |
 | تست محلی .NET/SQL Server | اجرا نشده؛ checkout/SDK/SQL Server محلی در این نشست در دسترس نیست |
 
 ## ریسک‌ها و مرزهای باز
@@ -51,7 +51,7 @@
 ## Git
 - **PR:** https://github.com/hamidreza1394/Accounting/pull/375
 - **Branch:** `feat/issue-214-revocation-snapshot-factory`
-- **وضعیت merge:** انجام نشده؛ هیچ بررسی ناتمام/ناموفق merge نخواهد شد.
+- **وضعیت merge:** PR #375 با merge commit `24b0e1794b0750d1f545412a7da38631ae1085d3` ادغام شد؛ .NET CI، Vendor CI، Semgrep و Push on main پس از Merge موفق‌اند.
 
 
 ## CI failure follow-up — 2026-10-31
@@ -66,3 +66,13 @@
 - علت، بسته‌شدن زودهنگام متد `Up` قبل از `migrationBuilder.Sql` برای trigger immutable بود. Commit `f8743aa80ff5b2821cc64e6bc254d0396c207f64` فراخوانی SQL را به داخل `Up` منتقل کرد.
 - تست SQL Server اکنون UPDATE و DELETE را جداگانه رد می‌کند و وجود snapshot را بعد از هر دو تلاش assert می‌کند.
 - CI روی head نهایی باید Build، EF pending-model guard و SQL Server integration را تأیید کند؛ تا آن زمان PR ادغام نمی‌شود.
+
+
+## 2026-11-11 — تأیید نهایی Vendor-side پس از Merge #375
+
+- PR [#375](https://github.com/hamidreza1394/Accounting/pull/375) با merge commit `24b0e1794b0750d1f545412a7da38631ae1085d3` در main قرار دارد.
+- CI پس از Merge روی همان commit: [Vendor CI 41184338873](https://github.com/hamidreza1394/Accounting/actions/runs/41184338873)، [.NET CI 41184338919](https://github.com/hamidreza1394/Accounting/actions/runs/41184338919)، [Semgrep 41184338869](https://github.com/hamidreza1394/Accounting/actions/runs/41184338869) و [Push on main 41184338854](https://github.com/hamidreza1394/Accounting/actions/runs/41184338854) همگی موفق‌اند.
+- لاگ .NET build/test: مجموع 705 تست، 701 موفق، صفر شکست و 4 Skip. Vendor CI نیز Job اصلی build/test/package را موفق تکمیل کرد.
+- Vendor control-plane اکنون snapshot canonical امضاشده، trust store مستقل revocation، history immutable، sequence تراکنشی با `sp_getapplock`، تصمیم maker-checker، تغییر License/Approval/Snapshot/Audit در یک transaction، trigger منع UPDATE/DELETE و export مجاز antiforgery + no-store دارد.
+- شکست signer/trust/audit/concurrency همچنان fail-closed است؛ signer پیش‌فرض `UnavailableOfflineRevocationSigningProvider` باقی می‌ماند و این Merge به معنی provision شدن HSM/KMS واقعی نیست.
+- Issue #214 فقط به دلیل این بخش قابل بستن نیست: اتصال تمام call-siteهای Customer runtime، anti-rollback/recovery و آزمون عملیاتی دو میزبان در #235/#364 باقی است. این کارها در PR Vendor انجام نمی‌شوند.
