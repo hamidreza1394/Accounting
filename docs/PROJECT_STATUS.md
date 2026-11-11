@@ -41,6 +41,17 @@
 
 ---
 
+### بازبینی 2026-11-11 — تأیید CI پس از PR #633
+
+- **مبنای جاری:** `main@3b103a5875a9668bf0c07d305a91685db3fb1db7`؛ این SHA، Merge commit واقعی PR #633 است.
+- **PR #633 / Issue #632:** hardening اسرار Vendor CI در 2026-11-10 ادغام شد. پس از Merge، Vendor CI run [42783806157](https://github.com/hamidreza1394/Accounting/actions/runs/42783806157)، .NET CI run [42783805952](https://github.com/hamidreza1394/Accounting/actions/runs/42783805952)، Semgrep run [42783805757](https://github.com/hamidreza1394/Accounting/actions/runs/42783805757) و Push on main run [42783805332](https://github.com/hamidreza1394/Accounting/actions/runs/42783805332) همگی موفق‌اند.
+- **Vendor CI:** هر سه Job شامل build/test/package و regression قفل فایل checkpoint روی Ubuntu و Windows موفق‌اند.
+- **.NET CI:** هر هفت Job شامل Secret Scan، Client، Publish Scripts، Build/Test، E2E و انتشار Linux/Windows موفق‌اند. لاگ Build/Test: Build succeeded، صفر خطا؛ ۱۱۹۱ تست، ۱۱۸۳ موفق، صفر ناموفق و ۸ Skip. ۳۱۷۸ هشدار Build نیز ثبت شده و به‌عنوان صفر هشدار گزارش نمی‌شود.
+- **بازبینی Mergeهای مرجع:** PR #281 (سه Workflow)، #282 (چهار Workflow) و #284 (چهار Workflow) روی Merge SHAهای واقعی خود post-merge موفق‌اند. PR #613 نیز روی Merge SHA خود Vendor CI، .NET CI، Semgrep و Push on main موفق دارد؛ چهار تحلیل CodeQL آن در گزارش CI همان Merge موفق ثبت شده‌اند.
+- **وضعیت #228:** Provisioning schema همچنان v4 است و CompanyReference را حمل نمی‌کند؛ resolver برای LicensePayload v2 عمداً با `provisioning_company_reference_mapping_required` fail-closed می‌شود. رفع آن به تصمیم/طراحی binding در #392 وابسته است؛ هیچ Customer migration یا تغییر `Server/**` در این بازبینی انجام نشده است.
+- **مرزبندی Production:** signer واقعی KMS/HSM در #236 و sink مستقل Production در #107 هنوز به provider/هویت/credential و سیاست عملیاتی مصوب نیاز دارند. هیچ provider یا credential فرضی اضافه نشده است.
+- **محدودیت:** در این بازبینی تست محلی اجرا نشد؛ وضعیت Verified فوق فقط به Runهای واقعی GitHub Actions روی SHAهای ذکرشده متکی است.
+
 ## وضعیت ماژول بازرگانی خارجی — S0/S1 (2026-10-31)
 
 - **Foundation:** PR #398 ادغام‌شده در main، commit `6c09765cefe8742668c34deda1c86b881f970332`. پروژه‌های Trade.Domain/Application/Infrastructure، schema پیش‌فرض trade، قراردادهای authorization/entitlement و adapter اولیه در کد وجود دارند.
