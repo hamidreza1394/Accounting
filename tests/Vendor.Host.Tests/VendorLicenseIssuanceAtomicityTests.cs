@@ -126,7 +126,7 @@ public sealed class VendorLicenseIssuanceAtomicityTests
             var db = fixture.Db;
             var approval = await db.ApprovalRequests.SingleAsync();
             var service = new VendorLicenseIssuanceService(
-                db, new VendorLicenseEnvelopeFactory(new TestSigner(key)),
+                db, new VendorLicenseEnvelopeFactory(new TestSigner(key), CreateTrustStore(("test-kid", key))),
                 new FailingAuditWriter(), TimeProvider.System);
 
             await using (var tx = await db.Database.BeginTransactionAsync())
@@ -172,7 +172,7 @@ public sealed class VendorLicenseIssuanceAtomicityTests
 
             var approval = await db.ApprovalRequests.SingleAsync();
             var service = new VendorLicenseIssuanceService(
-                db, new VendorLicenseEnvelopeFactory(new TestSigner(key)),
+                db, new VendorLicenseEnvelopeFactory(new TestSigner(key), CreateTrustStore(("test-kid", key))),
                 new VendorAuditWriter(db, TimeProvider.System), TimeProvider.System);
 
             await using (var tx = await db.Database.BeginTransactionAsync())
