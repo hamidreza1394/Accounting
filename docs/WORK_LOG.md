@@ -2938,3 +2938,14 @@
 
 
 - اجرای Vendor CI روی SHA `9456df27ea69c05fd1df681e46a6a329ce84af3d` در guard ایستا متوقف شد؛ علت ریشه‌ای false-positive بود: الگوی case-insensitive واژهٔ `password=` را در انتساب متغیر محلی `password=` نیز connection string تلقی می‌کرد. لاگ job `129700425798` این موضوع را در خط workflow نشان داد؛ مقدار واقعی credential تولید یا چاپ نشد. الگو محدود شد به کلیدهای connection-string مانند `Server=`، `Data Source=` و `;Password=` تا متغیر shell را اشتباه تشخیص ندهد. CI باید روی head بعدی دوباره اجرا شود.
+
+## 2026-11-11 — بازبینی Vendor و تکمیل Work Log پس از PR #633
+
+- مبنای بازبینی: `main@3b103a5875a9668bf0c07d305a91685db3fb1db7`؛ SHA از `refs/heads/main` خوانده شد و با Merge commit PR #633 یکسان است.
+- PR #633 (Issue #632) در 2026-11-10 ادغام شده است. CI پس از Merge روی همین SHA: Vendor CI run `42783806157`، .NET CI run `42783805952`، Semgrep run `42783805757` و Push on main run `42783805332` همگی موفق‌اند.
+- Vendor CI: سه Job موفق (build/test/package و regression checkpoint روی Ubuntu و Windows). .NET CI: هفت Job موفق شامل Secret Scan، Client، Publish Scripts، Build/Test، E2E و انتشار Linux/Windows.
+- لاگ واقعی Job ‏`build-and-test` در .NET CI: Build succeeded، صفر خطا و ۳۱۷۸ هشدار؛ خلاصه تست ۱۱۹۱ کل، ۱۱۸۳ موفق، صفر شکست و ۸ Skip. هشدارها حذف یا به‌عنوان صفر گزارش نشده‌اند.
+- Mergeهای مرجع مجدداً بررسی شدند: #281 روی `2ee1edc52904833bc28eead5a679185377363c24` با سه Workflow موفق؛ #282 روی `f4a0462b0972e7686a686eca0febfaee680baecf` با چهار Workflow موفق؛ #284 روی `81ed5f64ed86ebbae47a433cea63e3655cb1d24b` با چهار Workflow موفق. #613 نیز روی `f1db16e70608a572ee71673ce1fc9fc3324d2c6d` با Vendor CI، .NET CI، Semgrep و Push on main موفق است.
+- وضعیت #228 تغییری نکرده: schema v4 مرجع شرکت را حمل نمی‌کند و resolver برای LicensePayload v2 fail-closed می‌ماند تا تصمیم و binding معتبر #392 فراهم شود. #235 مستقل از PRهای Vendor است.
+- در این اجرا فقط مستندات Vendor همگام می‌شوند؛ هیچ کد اجرایی، Migration مشتری، `Server/**`، Customer consumer، کلید خصوصی یا credential تغییر نکرده است.
+- تست محلی اجرا نشد؛ شواهد بالا از GitHub Actions و لاگ Jobهای واقعی استخراج شده‌اند. گام بعدی پس از تصمیم #392، طراحی نسخه‌دار provisioning و مرز مستقل Customer-side است؛ signer Production در #236 و sink مستقل Production در #107 نیز تا تأمین provider/هویت/credential مصوب fail-closed می‌مانند.
