@@ -3,7 +3,7 @@
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/406
 - **Agent/مسئول:** ChatGPT
 - **تاریخ:** 2026-10-31
-- **وضعیت:** Domain و EF model پیاده‌سازی شده؛ منتظر CI و بازبینی نهایی
+- **وضعیت:** **Merged.** PR #408، merge commit `94b45fce6c260909bb0828b8fa67686936e2f99e`، 2026-10-31T19:34:43Z؛ ۱۲/۱۲ چک CI موفق. وضعیت واقعی Merge/CI در 2026-11-11 با `gh api` مستقیماً راستی‌آزمایی و در `docs/handoffs/TRADE_DESIGN_RECONCILIATION.md` ثبت شده؛ متن قبلی این خط («منتظر CI و بازبینی نهایی») پیش از Merge نوشته شده بود.
 
 ## منبع نیازمندی
 پروپوزال `Faranou-Trade-Import-Proposal-v1.2.docx`، بخش‌های ۷-۸، ۸-۱، ۸-۲-۱ (Party)، ۸-۲-۲ (Product) و ۸-۲-۳۷ (ProductIdentifier).

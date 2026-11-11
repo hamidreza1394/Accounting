@@ -3,7 +3,7 @@
 - **Issue:** [#403](https://github.com/hamidreza1394/Accounting/issues/403) (فرزند #401؛ S1)
 - **Agent/مسئول:** Claude (Lead) با Subagentهای `architect`، `backend-developer`، `security-reviewer`، `code-reviewer`
 - **تاریخ:** 2026-10-31
-- **وضعیت:** ناقص — بخش S1-a انجام شد؛ اتصال به envelope امضاشده Blocked است
+- **وضعیت:** بخش S1-a **Merged.** PR #407، merge commit `f107791b19613b773d0401be2eb32eec97fc8d43`، 2026-10-31T18:56:29Z؛ ۱۲/۱۲ چک CI موفق. بخش «اتصال به envelope امضاشده» همچنان Blocked/Partially Implemented است (طبق D-074 — `DenyAllTradeModuleEntitlement` عمداً فعال)؛ این محدودیت واقعی باقی‌مانده و تغییر نکرده، فقط بخش S1-a این فایل منسوخ بود. وضعیت واقعی Merge/CI در 2026-11-11 با `gh api` مستقیماً راستی‌آزمایی و در `docs/handoffs/TRADE_DESIGN_RECONCILIATION.md` ثبت شده.
 
 ## هدف و معیارهای پذیرش
 - [x] دروازه با ترتیب نشست ← عضویت ← WorkContext/دوره ← entitlement ← مجوز ← use case.

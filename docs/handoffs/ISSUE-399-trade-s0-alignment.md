@@ -2,7 +2,7 @@
 
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/399
 - **تاریخ:** 2026-10-31
-- **وضعیت:** مستندات و ADR روی شاخه کاری ثبت شده؛ CI/PR هنوز انجام نشده است.
+- **وضعیت:** **Merged.** PR #400، merge commit `0bdfba3316ae64352575a6edd2bc80cad2baedab`، 2026-10-31T17:43:15Z؛ ۱۲/۱۲ چک CI موفق. وضعیت واقعی Merge/CI در 2026-11-11 با `gh api` مستقیماً راستی‌آزمایی و در `docs/handoffs/TRADE_DESIGN_RECONCILIATION.md` ثبت شده؛ متن قبلی این خط («CI/PR هنوز انجام نشده») پیش از Merge نوشته شده بود.
 
 ## تصمیم‌های تأییدشده مالک محصول
 - ADR-B گزینه A: یک Company مالک هر Voyage/Bill of Lading؛ سایر شرکت‌ها فقط allocation/share line می‌گیرند.

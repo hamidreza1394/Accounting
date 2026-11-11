@@ -3,7 +3,7 @@
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/397
 - **Agent/مسئول:** ChatGPT / GitHub engineering workflow
 - **تاریخ:** 2026-10-31
-- **وضعیت:** Foundation اصلاح‌شده طبق D-062؛ نیازمند CI و ادامه کار
+- **وضعیت:** **Merged.** PR #398، merge commit `6c09765cefe8742668c34deda1c86b881f970332`، 2026-10-31T16:56:07Z؛ ۱۲/۱۲ چک CI موفق (build-and-test، e2e، publish×۳، CodeQL×۴، Semgrep، secret-scan، client). وضعیت واقعی Merge/CI در 2026-11-11 با `gh api` مستقیماً راستی‌آزمایی و در `docs/handoffs/TRADE_DESIGN_RECONCILIATION.md` ثبت شده؛ متن قبلی این خط («نیازمند CI و ادامه کار») پیش از Merge نوشته شده بود.
 
 ## هدف و معیارهای پذیرش
 - [x] ثبت D-061 و ساختار مستقل Trade Domain/Application/Infrastructure.
