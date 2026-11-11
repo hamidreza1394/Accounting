@@ -1,7 +1,7 @@
 # تحویل وظیفه — ISSUE-236-provisioning-maker-checker
 
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/236
-- **وضعیت:** maker-checker و fail-closed signer boundary در main ادغام شده‌اند؛ PR #314 برای ثبت امن خطای provider ادغام شده؛ بررسی رمزنگاری خروجی signer در PR مستقل جدید و منتظر CI است
+- **وضعیت جاری:** provisioning maker-checker، signature trust validation و PKCS#11 adapter با سه purpose مجزا در main هستند؛ D-056 مرحلهٔ ۱ را برای Development/Staging پذیرفته است. Production بدون تنظیم صریح و provider/کلید معتبر همچنان fail-closed است.
 
 ## هدف
 افزودن مسیر تأیید دو نفره برای صدور بستهٔ راه‌اندازی مشتری، بدون قراردادن کلید خصوصی در برنامه یا مخزن.
@@ -91,7 +91,7 @@
 - مالک تصمیم معماری را پذیرفته است: Vendor deployment-neutral روی سرور خودمان یا cloud؛ Azure/AWS بدون دسترسی/مجوز و خارج از محدوده؛ بودجهٔ HSM فعلاً صفر.
 - D-055 در `docs/D-055-ISSUE-236-HSM-PKCS11.md` وضعیت Accepted دارد. Production package/license signing تا تأمین HSM سخت‌افزاری واقعی Blocked و fail-closed باقی می‌ماند.
 - PR جاری adapter opt-in PKCS#11 را پشت interfaceهای موجود برای license و provisioning/package اضافه می‌کند. کلیدها با KeyId نسخه‌دار مجزا انتخاب می‌شوند؛ private key باید در token حساس، non-extractable، always-sensitive و never-extractable باشد. الگوریتم ECDSA P-256 و خروجی ۶۴ بایت IEEE P1363 است.
-- SoftHSM فقط در Vendor CI/test استفاده می‌شود؛ slot نرم‌افزاری خارج از محیط اختصاصی `Testing` رد می‌شود؛ در Development/Staging/Production علاوه بر HardwareSlot، manufacturer/model باید دقیقاً در allowlist استقرار ثبت شده باشند. در حال حاضر HSM واقعی provision نشده و `Signing:Pkcs11:Enabled` نباید در Production فعال شود.
+- **توضیح تاریخی D-055؛ superseded by D-056:** AssuranceLevel صریح `Software` برای Development/Staging (از جمله SoftHSM) مجاز است. Production با Software فقط وقتی `AcceptSoftwareKeyRisk=true` صریح باشد و هر startup رخداد Audit پایدار ثبت کند مجاز است؛ در غیر این صورت fail-closed. سطح `Hardware` به HSM واقعی، Hardware slot و allowlist دقیق manufacturer/model نیاز دارد. در main هیچ HSM واقعی provision نشده و `Signing:Pkcs11:Enabled` به‌صورت پیش‌فرض فعال نیست.
 - PIN فقط از secret/environment injection می‌آید؛ هیچ private key generation/export یا cloud adapter اضافه نشده است. `/health/signing` سلامت signer را بدون افشای جزئیات حساس نشان می‌دهد و audit metadata-only برای هر تلاش امضا ثبت می‌شود.
 - **محدودیت شواهد:** اجرای محلی در محیط GitHub-only ممکن نیست؛ تست واقعی SoftHSM و CI نهایی این PR هنوز باید تکمیل شوند. این adapter، Key Ceremony، key rotation/revocation، provisioning/recovery واقعی HSM، توزیع public trust و ACK TPM سمت مشتری را به‌تنهایی کامل نمی‌کند.
 
@@ -127,3 +127,14 @@
 
 ### PR #369 CI correction — 2026-10-31
 - First Vendor CI exposed C# syntax errors caused by over-escaped JSON test literals. Corrected to normal escaped C# JSON strings in both unit and SoftHSM integration tests. Awaiting fresh CI on the latest head.
+
+
+## 2026-11-11 — بازبینی D-056 و مسیر fail-closed روی main
+
+- مبنای کد: `main@3b103a5875a9668bf0c07d305a91685db3fb1db7`. تصمیم [D-056](../D-056-ISSUE-236-STAGED-SIGNING-ASSURANCE.md) با وضعیت Accepted، مرحلهٔ ۱ را برای Development/Staging و مسیر Production با risk acceptance صریح تعریف می‌کند.
+- `Pkcs11SigningOptions` سطح `Software` یا `Hardware` را صریح می‌خواهد؛ providerهای پیش‌فرض License، Provisioning و Offline Revocation همچنان unavailable/fail-closed هستند و PKCS#11 فقط با opt-in فعال می‌شود.
+- `Pkcs11SigningAssuranceStartupService` سطح assurance را در هر startup ثبت می‌کند؛ Production Software بدون `AcceptSoftwareKeyRisk=true` fail-closed است و با پذیرش صریح، رخداد audit پایدار قبل از شروع serving لازم است. Hardware assurance به token واقعی و manufacturer/model allowlist نیاز دارد.
+- کلیدهای License، Provisioning/Package و Offline Revocation سه purpose و سه KeyId نسخه‌دار مستقل دارند؛ SoftHSM integration test سه کلید مجزا را می‌سازد و امضای revocation را با public key متناظر بررسی می‌کند. SoftHSM اثبات Hardware نیست.
+- PR [#359](https://github.com/hamidreza1394/Accounting/pull/359) تصمیم D-056 را در main ثبت کرد؛ .NET CI پس از Merge [41108989377](https://github.com/hamidreza1394/Accounting/actions/runs/41108989377)، Semgrep [41108989322](https://github.com/hamidreza1394/Accounting/actions/runs/41108989322) و Push on main [41108989140](https://github.com/hamidreza1394/Accounting/actions/runs/41108989140) موفق‌اند. Vendor CI پس از Merge #633 نیز run [42783806157](https://github.com/hamidreza1394/Accounting/actions/runs/42783806157) موفق است.
+- Vendor maker-checker issuance/revocation در #214 با PR #375 تکمیل و CI-verified شده است؛ این مسیر به معنی provision شدن signer واقعی نیست.
+- **محدودیت جاری:** هیچ KMS/HSM واقعی، private key یا credential عملیاتی در این مخزن/محیط provision نشده است. Production hardware signing، Key Ceremony، rotation/recovery واقعی، public trust distribution و آزمون دو میزبان/TPM همچنان NotRun/Blocked هستند. هیچ provider فرضی یا fallback نرم‌افزاری ضمنی اضافه نمی‌شود.
