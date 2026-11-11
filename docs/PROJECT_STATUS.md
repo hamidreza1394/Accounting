@@ -1,4 +1,32 @@
-# وضعیت فعلی ماژول Vendor — 2026-11-08
+# وضعیت جاری ماژول Vendor — 2026-11-11
+
+**مبنای جاری:** `main@3b103a5875a9668bf0c07d305a91685db3fb1db7`؛ Merge commit واقعی PR #633.
+
+## GitHub و CI
+
+- CI پس از Merge #633 روی main کامل و موفق است: Vendor CI [42783806157](https://github.com/hamidreza1394/Accounting/actions/runs/42783806157) با ۳/۳ Job، .NET CI [42783805952](https://github.com/hamidreza1394/Accounting/actions/runs/42783805952) با ۷/۷ Job، Semgrep [42783805757](https://github.com/hamidreza1394/Accounting/actions/runs/42783805757) و Push on main [42783805332](https://github.com/hamidreza1394/Accounting/actions/runs/42783805332) موفق‌اند. Build/Test: ۱۱۹۱ تست، ۱۱۸۳ موفق، صفر شکست و ۸ Skip؛ ۳۱۷۸ هشدار Build نیز ثبت شده‌اند.
+- PRهای مرجع #281، #282 و #284 ادغام‌شده‌اند و post-merge workflowهای آن‌ها به‌ترتیب ۳، ۴ و ۴ مورد موفق هستند.
+- PRهای باز فعلی: #628، #629، #630 و #631 مربوط به D-078 و خارج از Vendor؛ PR #634 تنها PR مستنداتی Vendor است و هنوز ادغام نشده است.
+- در آخرین ۱۰۰ اجرای Actions: ۷۱ موفق، ۹ ناموفق، ۲۰ لغوشده و صفر در حال اجرا. لاگ هر ۹ شکست بررسی شد: شش شکست D-078 از deadlock در SaveChanges تست‌های SQL Server، دو شکست assertion قدیمی Sidebar، و یک شکست E2E در PR #634.
+- PR #634 روی head `8aefa7371ddb401a5bff9ca04e1effec659bf852` در .NET CI run [42978314946](https://github.com/hamidreza1394/Accounting/actions/runs/42978314946) پس از یک retry همچنان E2E را fail کرده است: ۴۸ تست موفق و یک تست `hr-structure.spec.mjs` با پاسخ 429 در GET employee detail after deactivate، درحالی‌که 200 انتظار می‌رفت. سایر Jobهای همان run و Semgrep موفق‌اند. این شکست HR/Workspace خارج از محدوده Vendor است؛ هیچ تغییر خارج از scope انجام نشده و PR تا سبز شدن بررسی الزامی merge نمی‌شود.
+
+## وضعیت شکاف‌های Vendor
+
+- **#228 — Provisioning/Purchased Subsystems:** Vendor schema v4 فاقد CompanyReference است؛ resolver برای LicensePayload v2 با `provisioning_company_reference_mapping_required` fail-closed می‌ماند. #392 مالک binding پایدار CompanyReference → Company محلی و تصمیم Customer schema است؛ هر Customer migration جداگانه بازبینی/تأیید می‌شود. Customer consumer/ACK در #235 جدا می‌ماند.
+- **#214 — Maker-Checker/Revocation:** Vendor-side snapshot امضاشده، trust set مستقل، sequence تراکنشی، immutable history، maker-checker، audit transaction و export در PR #375 ادغام و post-merge CI-verified شده‌اند. Customer runtime enforcement و anti-rollback/recovery هنوز در #235/#364 جداگانه باقی است.
+- **#236 — Signer:** D-056 مرحلهٔ ۱ برای Software/Hardware assurance پذیرفته شده؛ PKCS#11/SoftHSM و سه purpose key در کد وجود دارند. Default provider unavailable/fail-closed است. Production Software فقط با `AcceptSoftwareKeyRisk=true` و startup audit صریح مجاز است؛ HSM واقعی/Hardware ceremony و credential عملیاتی provision نشده‌اند.
+- **#107 — Audit checkpoint:** قرارداد، versioned hash، startup guard/verification و Development/Test file store موجودند. تست هشت پردازه مستقل روی Ubuntu و Windows در Vendor CI #633 موفق است؛ sink مستقل Production، credential جدا، retention/immutability، alerting و recovery drill هنوز انتخاب/پیاده‌سازی نشده‌اند.
+- **#393 — Purchased add-ons:** سه pure candidate builder برای maxCompanies، Company-scoped Module/Feature/UserSeat و تمدید مستقل Support/Updates در main هستند. Commercial Order/Payment Evidence، persistence، approval اختصاصی amendment، signing/export و وضعیت Purchased/Delivered/Acknowledged هنوز NotImplemented هستند؛ سیاست Payment Evidence نیازمند تصمیم تجاری است.
+- **#235:** consumer/ACK مشتری و trust distribution فقط در کار مستقل Customer-side انجام می‌شود؛ هیچ تغییر `Server/**` یا Customer migration در PR Vendor مجاز نیست.
+
+## Merge policy و محدودیت‌ها
+
+- PR #634 مستنداتی است و تا تکمیل همهٔ بررسی‌های الزامی، از جمله E2E، merge نمی‌شود.
+- تست محلی در این بازبینی اجرا نشده است؛ همهٔ نتایج Verified به GitHub Actions روی SHA و Runهای مشخص‌شده متکی‌اند.
+- هیچ private key، credential، Customer password hash، connection string یا provider واقعی KMS/HSM در این به‌روزرسانی اضافه نشده است.
+
+---
+# snapshot تاریخی وضعیت Vendor — 2026-11-08
 
 **مبنای بازبینی:** شاخه `main`، SHA `da8ed012074f8439cb836ea4ae190e3ad2fc542e`. این SHA شامل merge commit مربوط به PR #565 است؛ GitHub Compare نشان می‌دهد main از merge commit #565 به بعد ۵۵ commit جلوتر و صفر commit عقب‌تر است.
 
