@@ -4,7 +4,7 @@
 
 ## GitHub و CI
 
-- CI پس از Merge #633 روی main کامل و موفق است: Vendor CI [42783806157](https://github.com/hamidreza1394/Accounting/actions/runs/42783806157) با ۳/۳ Job، .NET CI [42783805952](https://github.com/hamidreza1394/Accounting/actions/runs/42783805952) با ۷/۷ Job، Semgrep [42783805757](https://github.com/hamidreza1394/Accounting/actions/runs/42783805757) و Push on main [42783805332](https://github.com/hamidreza1394/Accounting/actions/runs/42783805332) موفق‌اند. Build/Test: ۱۱۹۱ تست، ۱۱۸۳ موفق، صفر شکست و ۸ Skip؛ ۳۱۷۸ هشدار Build نیز ثبت شده‌اند.
+- CI پس از Merge #633 روی main کامل و موفق است: Vendor CI [42783806157](https://github.com/hamidreza1394/Accounting/actions/runs/42783806157) با ۳/۳ Job، .NET CI [42783805952](https://github.com/hamidreza1394/Accounting/actions/runs/42783805952) با ۷/۷ Job، Semgrep [42783805757](https://github.com/hamidreza1394/Accounting/actions/runs/42783805757) و Push on main [42783805332](https://github.com/hamidreza1394/Accounting/actions/runs/42783805332) موفق‌اند. Build/Test: ۱۱۹۱ تست، ۱۱۸۳ موفق، صفر شکست و ۸ Skip؛ شمار هشدارهای Build در این خلاصه گزارش نمی‌شود.
 - PRهای مرجع #281، #282 و #284 ادغام‌شده‌اند و post-merge workflowهای آن‌ها به‌ترتیب ۳، ۴ و ۴ مورد موفق هستند.
 - PRهای باز فعلی: #628، #629، #630 و #631 مربوط به D-078 و خارج از Vendor؛ PR #634 تنها PR مستنداتی Vendor است و هنوز ادغام نشده است.
 - در snapshot آخرین ۱۰۰ اجرای Actions پیش از push مستندات جدید PR #634: ۷۱ موفق، ۹ ناموفق، ۲۰ لغوشده. لاگ هر ۹ شکست بررسی شد: شش شکست D-078 از deadlock در SaveChanges تست‌های SQL Server، دو شکست assertion قدیمی Sidebar، و یک شکست E2E در PR #634. پس از push جدید، سه Workflow تازه برای head جدید PR در صف اجرا قرار گرفته‌اند.
