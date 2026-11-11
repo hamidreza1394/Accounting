@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 using Xunit;
 
 namespace Faranou.Vendor.Host.Tests;
@@ -29,7 +30,7 @@ public sealed class VendorLicenseIssuanceAtomicityTests
             var expectedVersion = approval.RowVersion.ToArray();
             var reviewer = Guid.NewGuid();
             var service = new VendorLicenseIssuanceService(
-                db, new VendorLicenseEnvelopeFactory(new TestSigner(key)),
+                db, new VendorLicenseEnvelopeFactory(new TestSigner(key), CreateTrustStore(("test-kid", key))),
                 new VendorAuditWriter(db, TimeProvider.System), TimeProvider.System);
 
             await using (var tx = await db.Database.BeginTransactionAsync())
@@ -59,6 +60,52 @@ public sealed class VendorLicenseIssuanceAtomicityTests
             var audit = await VendorAuditChainVerifier.VerifyAsync(db, TestContext.Current.CancellationToken);
             Assert.True(audit.IsValid, audit.FailureCode);
             Assert.Equal(2, audit.EventCount);
+        }
+        finally
+        {
+            await fixture.Db.Database.EnsureDeletedAsync(TestContext.Current.CancellationToken);
+            fixture.Scope.Dispose();
+            await fixture.Provider.DisposeAsync();
+        }
+    }
+
+    [Fact]
+    public async Task InvalidSignerSignatureLeavesLicenseApprovalAndAuditUnchanged()
+    {
+        var fixture = await OpenAsync();
+        if (fixture is null) return;
+        using var signerKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        using var trustedKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        try
+        {
+            var db = fixture.Db;
+            var approval = await db.ApprovalRequests.SingleAsync();
+            var service = new VendorLicenseIssuanceService(
+                db,
+                new VendorLicenseEnvelopeFactory(
+                    new TestSigner(signerKey),
+                    CreateTrustStore(("test-kid", trustedKey))),
+                new VendorAuditWriter(db, TimeProvider.System),
+                TimeProvider.System);
+
+            await using (var tx = await db.Database.BeginTransactionAsync())
+            {
+                var result = await service.IssueApprovedAsync(
+                    approval, Guid.NewGuid(), approval.RowVersion.ToArray(), null,
+                    Guid.NewGuid().ToString("N"), TestContext.Current.CancellationToken);
+
+                Assert.False(result.Succeeded);
+                Assert.Equal(StatusCodes.Status503ServiceUnavailable, result.StatusCode);
+                Assert.Equal("license_issuance_unavailable", result.ErrorCode);
+                await tx.RollbackAsync(TestContext.Current.CancellationToken);
+            }
+
+            db.ChangeTracker.Clear();
+            Assert.Equal("Draft", (await db.Licenses.SingleAsync()).Status);
+            Assert.Equal(0, (await db.Licenses.SingleAsync()).LastIssuedSequence);
+            Assert.Equal("Pending", (await db.ApprovalRequests.SingleAsync()).Status);
+            Assert.Empty(await db.SignedLicenseEnvelopes.ToListAsync());
+            Assert.Empty(await db.AuditEvents.ToListAsync());
         }
         finally
         {
@@ -173,10 +220,10 @@ public sealed class VendorLicenseIssuanceAtomicityTests
             var expectedA = approvalA.RowVersion.ToArray();
             var expectedB = approvalB.RowVersion.ToArray();
             var serviceA = new VendorLicenseIssuanceService(
-                dbA, new VendorLicenseEnvelopeFactory(new TestSigner(keyA)),
+                dbA, new VendorLicenseEnvelopeFactory(new TestSigner(keyA, "test-kid-a"), CreateTrustStore(("test-kid-a", keyA), ("test-kid-b", keyB))),
                 new VendorAuditWriter(dbA, TimeProvider.System), TimeProvider.System);
             var serviceB = new VendorLicenseIssuanceService(
-                dbB, new VendorLicenseEnvelopeFactory(new TestSigner(keyB)),
+                dbB, new VendorLicenseEnvelopeFactory(new TestSigner(keyB, "test-kid-b"), CreateTrustStore(("test-kid-a", keyA), ("test-kid-b", keyB))),
                 new VendorAuditWriter(dbB, TimeProvider.System), TimeProvider.System);
 
             var taskA = serviceA.IssueApprovedAsync(
@@ -281,18 +328,32 @@ public sealed class VendorLicenseIssuanceAtomicityTests
         }
     }
 
+    private static LicenseSigningTrustStore CreateTrustStore(
+        params (string KeyId, ECDsa Key)[] keys)
+    {
+        var settings = new Dictionary<string, string?>();
+        foreach (var (keyId, key) in keys)
+        {
+            settings[$"Licensing:TrustedSigningKeys:{keyId}:PublicKeySubjectPublicKeyInfoBase64"] =
+                Convert.ToBase64String(key.ExportSubjectPublicKeyInfo());
+        }
+
+        return new LicenseSigningTrustStore(
+            new ConfigurationBuilder().AddInMemoryCollection(settings).Build());
+    }
+
     private sealed record Fixture(
         Microsoft.Extensions.DependencyInjection.ServiceProvider Provider,
         Microsoft.Extensions.DependencyInjection.IServiceScope Scope,
         VendorDbContext Db);
 
-    private sealed class TestSigner(ECDsa key) : ILicenseSigningProvider
+    private sealed class TestSigner(ECDsa key, string keyId = "test-kid") : ILicenseSigningProvider
     {
         public ValueTask<LicenseSigningResult> SignAsync(ReadOnlyMemory<byte> payload, CancellationToken ct = default)
         {
             ct.ThrowIfCancellationRequested();
             return ValueTask.FromResult(LicenseSigningResult.Success(
-                "test-kid", LicenseAlgorithms.EcdsaP256Sha256,
+                keyId, LicenseAlgorithms.EcdsaP256Sha256,
                 key.SignData(payload.Span, HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation)));
         }
     }
