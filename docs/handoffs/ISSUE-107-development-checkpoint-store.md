@@ -32,14 +32,13 @@
 - [x] CI نهایی و regression قفل بین‌پردازه‌ای روی Ubuntu و Windows پس از Merge #633 تأیید شد.
 - [ ] انتخاب و پیاده‌سازی provider مستقل Production، credential separation، retention/immutability، alerting و recovery.
 - در صورت نیاز wiring صریح Development از config (بدون Production registration).
-- انتخاب و پیاده‌سازی provider مستقل Production، credential separation، retention/immutability، alerting و recovery.
 
 
 ## 2026-10-31 — independent-process checkpoint regression
 - Added a helper executable and a regression test launching eight independent .NET processes that concurrently append the same sequence to one development JSONL checkpoint journal. Exactly one append must succeed; the other seven must reject the duplicate; the final journal must contain one valid record.
 - Added a Windows/Linux matrix to the existing Vendor CI workflow (rather than introducing a workflow that cannot run until merged).
 - This verifies cross-process locking for the Development/Test adapter only. It does not create a Production checkpoint sink or satisfy independent failure-domain, external retention/immutability, alerting or recovery requirements.
-- Local .NET execution was unavailable; the matrix must pass before verification.
+- At the time this historical note was written, local .NET execution was unavailable and the matrix was pending; the later 2026-11-11 section records the successful Ubuntu/Windows CI evidence.
 
 
 ## 2026-11-11 — تأیید regression چندپردازه‌ای روی main
