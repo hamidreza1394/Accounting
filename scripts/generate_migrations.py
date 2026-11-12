@@ -244,6 +244,12 @@ HAND_WRITTEN_SQL: dict[str, tuple[list[str], list[str]]] = {
         [],
     ),
     "20261022150943": (ADD_CORPORATE_GROUPS_EPILOGUE, ADD_CORPORATE_GROUPS_DOWN_PRELUDE),
+    # MakeUserEmailAddressOptional: Down must not collapse every missing e-mail to '' (the
+    # unique index it recreates would then fail), so each NULL gets a distinct placeholder first.
+    "20261109151857": (
+        [],
+        ["UPDATE [Users] SET [EmailAddress] = CONCAT('no-email-', CONVERT(varchar(36), [Id]), '@invalid.local') WHERE [EmailAddress] IS NULL;"],
+    ),
     "20261031130000": (
         [
             "ALTER TABLE [InstallationIdentities] ADD CONSTRAINT [CK_InstallationIdentities_AssuranceLevel] CHECK (([AssuranceLevel] = 'HardwareTpm' AND [ProviderName] = 'Microsoft Platform Crypto Provider') OR ([AssuranceLevel] = 'SoftwareProtected' AND [ProviderName] = 'Microsoft Software Key Storage Provider'));",
