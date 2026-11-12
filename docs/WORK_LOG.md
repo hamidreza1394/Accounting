@@ -2821,21 +2821,12 @@
 
 ## 2026-11-09 — Issue #444 مرحله سوم PR 3-C2: اتصال/قطع اتصال پرونده پرسنلی از پرونده کاربر
 - Backend موجود و Verified بود؛ UI شکاف واقعی بود. `HrLinkActions` با جست‌وجوی سرور-سمت کارمندان بدون حساب (`hasLinkedUser=false`)، اتصال (`PUT .../user` با `{userId}`) و قطع اتصال با تأیید (`DELETE .../user`)؛ پس از موفقیت بازخوانی از سرور؛ خطاهای 403/404/409 با پیام واقعی سرور و حفظ مقادیر؛ شرکت‌های غیرقابل‌مشاهده هیچ اکشنی ندارند. تست: ۴ سناریو — vitest 924/924؛ typecheck/build/check:offline سبز. Migration: هیچ. (stacked روی PR 3-F2)
-<<<<<<< HEAD
-<<<<<<< HEAD
 
 ## 2026-11-09 — Issue #444 مرحله سوم PR 3-D2: وضعیت درخواست‌های عضویت کاربر در پرونده
 - Backend: `GET /admin/users/{userId}/membership-requests` (فقط مدیر نصب؛ خواندنی؛ projects جدول گردش D-065 با فیلتر status allowlist مشترک `TryNormalizeStatus`→internal؛ صفحه‌بندی clamp؛ ۴۰۴ ناموجود). Migration: هیچ. Frontend: بخش «درخواست‌های عضویت بین‌شرکتی» در تب ۳ پرونده با وضعیت/زمان‌ها/تصمیم‌گیرنده/نقش/دلیل رد، فیلتر و صفحه‌بندی سرور-سمت و لینک به صف تأیید موجود. تست: ۴ تست Backend + ۳ سناریوی UI — vitest 927/927، ۲۵ تست Backend هدفمند سبز. (stacked روی PR 3-C2)
 
 ## 2026-11-09 — Issue #444 مرحله سوم PR 3-H1: E2E واقعی پرونده کاربر + axe + اسکرین‌شات
 - `tests/e2e/specs/user-profile.spec.mjs` روی سرور واقعی + SQL Server (CI): ۱۲ سناریوی پرونده (HR link، درخواست عضویت Pending→تأیید/رد با دلیل، مجوز مؤثر با منبع، ابطال نشست step-up با اثبات 401 واقعی، سوابق ورود و Audit) + axe WCAG 2.x A/AA روی تب‌ها + اسکرین‌شات واقعی هر تب به `artifacts/ui-preview/stage-3-profile/` (آپلود artifact CI، retention ۳۰ روز؛ بدون capture در دیالوگ step-up). فیکسچر ایزوله با cleanup. README آزمون e2e به‌روزرسانی شد. اجرا در CI (job e2e) — Docker/SQL Server محلی موجود نیست. (stacked روی PR 3-D2)
-=======
->>>>>>> origin/main
-=======
-
-## 2026-11-09 — Issue #444 مرحله سوم PR 3-D2: وضعیت درخواست‌های عضویت کاربر در پرونده
-- Backend: `GET /admin/users/{userId}/membership-requests` (فقط مدیر نصب؛ خواندنی؛ projects جدول گردش D-065 با فیلتر status allowlist مشترک `TryNormalizeStatus`→internal؛ صفحه‌بندی clamp؛ ۴۰۴ ناموجود). Migration: هیچ. Frontend: بخش «درخواست‌های عضویت بین‌شرکتی» در تب ۳ پرونده با وضعیت/زمان‌ها/تصمیم‌گیرنده/نقش/دلیل رد، فیلتر و صفحه‌بندی سرور-سمت و لینک به صف تأیید موجود. تست: ۴ تست Backend + ۳ سناریوی UI — vitest 927/927، ۲۵ تست Backend هدفمند سبز. (stacked روی PR 3-C2)
->>>>>>> origin/main
 
 ## 2026-11-09 — Issue #444 مرحله سوم PR 3-H1 (ادغام #600) + شواهد نهایی
 - E2E واقعی پرونده کاربر (۳ سناریو روی سرور Publish + SQL Server): باز کردن پرونده/اتصال-قطع HR، درخواست‌های عضویت Pending→تأیید/رد با دلیل، ابطال نشست step-up D-073 با اثبات 401؛ axe WCAG 2.x A/AA صفر نقض (یک نقض definition-list واقعی پیدا و رفع شد)؛ اسکرین‌شات واقعی ۹ نما به artifacts/ui-preview/stage-3-profile (artifact CI).
@@ -2960,6 +2951,13 @@
 - در آخرین ۱۰۰ اجرای Actions، ۷۱ success، ۹ failure و ۲۰ cancelled ثبت شده‌اند. هر ۹ failure log بررسی شد: شش مورد deadlock در SaveChanges تست‌های SQL Server مربوط به D-078، دو مورد assertion قدیمی Sidebar، و یک مورد HR E2E با 429 در PR #634. شکست‌های خارج از Vendor اصلاح نشدند.
 - هیچ تست محلی اجرا نشده است؛ هیچ ادعای اجرای محلی، Production readiness، provider واقعی، private key یا credential عملیاتی مطرح نمی‌شود.
 
+## 2026-11-10 — مأموریت D-078 PR دوم: ایجاد کاربر و عضویت داخلی شرکتی
+- Migration ساختاری `20261110130000_MakeCompanyMembershipRoleOptional`: `UserCompanyMemberships.RoleId` nullable شد (الگوی D-078؛ عضویت بدون نقش مجاز و fail-closed). Endpoint جدید `POST /api/v1/companies/{companyId}/users` با مجوز `users.create` دوحالته (D-071): ایجاد حساب جدید یا استفاده مجدد از حساب موجود (بدون تغییر رمز/پروفایل) + عضویت فعال بدون نقش، اتمیک در یک SaveChanges؛ Audit `UserCreated`/`UserMembershipCreated`؛ 409 کنترل‌شده برای تکرار/race با ایندکس یکتا؛ پاسخ 201 یکنواخت (ضد User Enumeration). مدیر شرکت A برای شرکت B همیشه 404.
+- سازگاری: دفترچه شرکت left-join شد (عضو بدون نقش با فیلدهای null نمایش داده می‌شود)؛ ClientApp حداقلی (type ها + نمایش «بدون گروه دسترسی»)؛ vitest ۱۰۲۵/۱۰۲۵. ابزار ممیزی migration برای تغییر required→optional و defaultValue دقیق شد (تست‌های ابزار ۳۲+۳۱ سبز)؛ هر سه گارد migration سبز. dotnet test: ۱۱۰۱ موفق/۷۱ Skip/۲ شکست محیطی قدیمی. تست‌های SQL Server محلی NotRun (Docker نیست). جزئیات: `docs/handoffs/UNNUMBERED-d078-company-user-provisioning.md`.
+
+## 2026-11-10 — مأموریت D-078 PR سوم: سازگاری تخصیص نقش با عضویت بدون نقش
+- فقط تست (بدون تغییر production): ۵ تست جدید نشان می‌دهد مسیر موجود `roles.assign` عضو بدون نقش (D-078) را کامل می‌کند — تخصیص نقش با Audit `previousRoleId:null`، سقف تفویض D-071 و بدون ساخت عضویت/درخواست جدید؛ عضو خارجی 409 (مسیر تأیید)؛ انتقال گروهی اعضا عضو بدون نقش را جابه‌جا نمی‌کند؛ عضویت برای تخصیص بعدی (الگوی سال مالی D-077) کافی است و هیچ دسترسی مالی/سالانه ضمنی ساخته نمی‌شود (FiscalPeriod دست‌نخورده).
+- dotnet test: ۱۱۰۶ موفق/۷۱ Skip/۲ شکست محیطی قدیمی. Migration: هیچ.
 
 ## 2026-11-12 — بازبینی تازه Vendor پس از PRهای #634 و #635
 

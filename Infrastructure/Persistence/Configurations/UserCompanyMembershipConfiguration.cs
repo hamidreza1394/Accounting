@@ -20,6 +20,8 @@ internal sealed class UserCompanyMembershipConfiguration : Microsoft.EntityFrame
         builder.HasOne(x => x.Role).WithMany(x => x.Memberships)
             .HasForeignKey(x => new { x.RoleId, x.TenantId })
             .HasPrincipalKey(x => new { x.Id, x.TenantId })
+            // TenantId is non-nullable, so make the nullable RoleId semantics explicit for this composite FK.
+            .IsRequired(false)
             .OnDelete(Microsoft.EntityFrameworkCore.DeleteBehavior.Restrict);
     }
 }

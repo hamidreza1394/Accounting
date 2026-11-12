@@ -430,6 +430,22 @@ def _index_key(index: dict[str, Any]) -> tuple[str, ...]:
     return tuple(index["columns"])
 
 
+def _relationship_structure_key(relationship: dict[str, Any]) -> tuple[Any, ...]:
+    """The relationship identity without the 'required' facet.
+
+    Making a foreign key optional (or required again) does not move, rebuild or re-target
+    the constraint: EF Core expresses it as an 'AlterColumn' of the foreign key columns,
+    exactly like any other nullability change. Only the structural facets (dependent,
+    principal, columns, delete behavior) turn a relationship into a constraint that is
+    dropped and rebuilt.
+    """
+    return _relationship_key(relationship)[:-1]
+
+
+def _normalize_relationship_structures(relationships: list[dict[str, Any]]) -> list[tuple[Any, ...]]:
+    return sorted(_relationship_structure_key(relationship) for relationship in relationships)
+
+
 def compute_operations(
     source: dict[str, Any], target: dict[str, Any]
 ) -> list[dict[str, Any]]:
@@ -446,11 +462,13 @@ def compute_operations(
             "or dropped; the migration has to be written with 'dotnet ef migrations add'."
         )
 
-    source_relationships = Counter(_normalize_relationships(source["relationships"]))
-    target_relationships = Counter(_normalize_relationships(target["relationships"]))
+    source_relationships = Counter(_normalize_relationship_structures(source["relationships"]))
+    target_relationships = Counter(_normalize_relationship_structures(target["relationships"]))
     if source_relationships - target_relationships:
         # A relationship that was removed or changed (principal, columns, delete behavior)
         # drops or rebuilds a constraint; such a migration is written and reviewed by hand.
+        # A pure required -> optional change of the same relationship is not in this class:
+        # the column comparison below emits its exact 'AlterColumn' operations.
         raise MigrationModelError(
             "A relationship of the source model was removed or changed; the migration has "
             "to be written with 'dotnet ef migrations add'."
@@ -477,7 +495,9 @@ def compute_operations(
         operations.extend(_index_operations(source_entity, target_entity))
 
     for relationship in target["relationships"]:
-        key = _relationship_key(relationship)
+        # 'added_relationships' counts relationship structures (see above), so the lookup
+        # uses the same structural key.
+        key = _relationship_structure_key(relationship)
         if added_relationships[key] > 0:
             added_relationships[key] -= 1
             operations.append(_foreign_key_operation(relationship, target_entities))
