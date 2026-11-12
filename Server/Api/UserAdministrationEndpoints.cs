@@ -42,7 +42,7 @@ public static class UserAdministrationEndpoints
         int page,
         int pageSize,
         string? sort,
-        bool? descending,
+        bool descending,
         CancellationToken cancellationToken)
     {
         var authorization = await AuthorizeInstallationAdministratorAsync(principal, database, cancellationToken);
@@ -72,14 +72,12 @@ public static class UserAdministrationEndpoints
                 (user.Username != null && user.Username.Contains(search)) ||
                 (user.FirstName != null && user.FirstName.Contains(search)) ||
                 (user.LastName != null && user.LastName.Contains(search)) ||
-                (user.EmailAddress != null && user.EmailAddress.Contains(search)) ||
+                user.EmailAddress.Contains(search) ||
                 (user.CellPhoneNumber != null && user.CellPhoneNumber.Contains(search)));
         }
 
         var totalCount = await query.CountAsync(cancellationToken);
-        // Without an explicit direction the newest-created user comes first; the other sorts
-        // keep the ascending default. The unique Id is the stable tiebreak of every order.
-        query = ApplySort(query, normalizedSort, descending ?? normalizedSort == "created");
+        query = ApplySort(query, normalizedSort, descending);
 
         var items = await query
             .Skip((page - 1) * pageSize)
@@ -147,8 +145,8 @@ public static class UserAdministrationEndpoints
             .Select(membership => new UserCompanyMembershipResponse(
                 membership.TenantId,
                 membership.Company.Name,
-                membership.Role.Code,
-                membership.Role.Name,
+                membership.Role == null ? null : membership.Role.Code,
+                membership.Role == null ? null : membership.Role.Name,
                 membership.IsActive,
                 membership.CreatedAtUtc))
             .ToListAsync(cancellationToken);
@@ -327,38 +325,13 @@ public static class UserAdministrationEndpoints
         if (!await antiforgery.IsRequestValidAsync(httpContext))
             return TypedResults.Problem(title: "درخواست نامعتبر است.", statusCode: StatusCodes.Status400BadRequest);
 
-        var email = Dtat.Utility.FixText(request.EmailAddress);
-        var username = Dtat.Utility.FixText(request.Username);
-        var firstName = Dtat.Utility.FixText(request.FirstName);
-        var lastName = Dtat.Utility.FixText(request.LastName);
-        var cellPhone = Dtat.Utility.FixText(request.CellPhoneNumber);
-        var password = request.Password;
-
-        // E-mail is optional: an empty value is stored as NULL; a given value must be valid.
-        if (string.IsNullOrWhiteSpace(email))
-            email = null;
-
-        if ((email is not null &&
-             (email.Length > Constants.MaxLength.EmailAddress ||
-              !new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(email))) ||
-            string.IsNullOrWhiteSpace(username) ||
-            username.Length < Constants.MinLength.Username ||
-            username.Length > Constants.MaxLength.Username ||
-            // The same username policy the Razor views enforce; the API must not be a
-            // bypass (the column is varchar(20): ASCII letters, digits and . _ @ + - only).
-            !new System.ComponentModel.DataAnnotations.RegularExpressionAttribute(Constants.RegularExpression.Username).IsValid(username) ||
-            (firstName?.Length > Constants.MaxLength.FirstName) ||
-            (lastName?.Length > Constants.MaxLength.LastName) ||
-            (cellPhone is not null && (cellPhone.Length != Constants.FixedLength.CellPhoneNumber || !new System.ComponentModel.DataAnnotations.RegularExpressionAttribute(Constants.RegularExpression.CellPhoneNumber).IsValid(cellPhone))) ||
-            string.IsNullOrWhiteSpace(password) ||
-            password.Length < Constants.MinLength.UserPassword ||
-            password.Length > Constants.MaxLength.UserPassword ||
-            !new ViewModels.Validation.NotCommonPasswordAttribute().IsValid(password) ||
-            !string.Equals(password, request.ConfirmPassword, StringComparison.Ordinal))
-            return TypedResults.BadRequest(new { error = "اطلاعات کاربر یا سیاست رمز عبور معتبر نیست." });
+        if (UserCreationValidation.Validate(request,
+                out var email, out var username, out var firstName, out var lastName,
+                out var cellPhone, out var password) is { } validationError)
+            return TypedResults.BadRequest(new { error = validationError });
 
         var duplicate = await database.Users.AsNoTracking().AnyAsync(user =>
-            email != null && user.EmailAddress != null && user.EmailAddress.ToLower() == email.ToLower() ||
+            user.EmailAddress.ToLower() == email.ToLower() ||
             user.Username != null && user.Username.ToLower() == username.ToLower() ||
             cellPhone != null && user.CellPhoneNumber == cellPhone,
             cancellationToken);
@@ -437,13 +410,9 @@ public static class UserAdministrationEndpoints
         var lastName = Dtat.Utility.FixText(request.LastName);
         var cellPhone = Dtat.Utility.FixText(request.CellPhoneNumber);
 
-        // E-mail is optional: an empty value is stored as NULL; a given value must be valid.
-        if (string.IsNullOrWhiteSpace(email))
-            email = null;
-
-        if ((email is not null &&
-             (email.Length > Constants.MaxLength.EmailAddress ||
-              !new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(email))) ||
+        if (string.IsNullOrWhiteSpace(email) ||
+            email.Length > Constants.MaxLength.EmailAddress ||
+            !new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(email) ||
             string.IsNullOrWhiteSpace(username) ||
             username.Length < Constants.MinLength.Username ||
             username.Length > Constants.MaxLength.Username ||
@@ -456,7 +425,7 @@ public static class UserAdministrationEndpoints
 
         var duplicate = await database.Users.AsNoTracking().AnyAsync(candidate =>
             candidate.Id != userId &&
-            (email != null && candidate.EmailAddress != null && candidate.EmailAddress.ToLower() == email.ToLower() ||
+            (candidate.EmailAddress.ToLower() == email.ToLower() ||
              candidate.Username != null && candidate.Username.ToLower() == username.ToLower() ||
              cellPhone != null && candidate.CellPhoneNumber == cellPhone),
             cancellationToken);
@@ -622,7 +591,7 @@ public sealed record UserListItemResponse(
     string? Username,
     string? FirstName,
     string? LastName,
-    string? EmailAddress,
+    string EmailAddress,
     string? CellPhoneNumber,
     bool IsActive,
     DateTime? LastLoginDateTime,
@@ -634,7 +603,7 @@ public sealed record UserDetailsResponse(
     string? Username,
     string? FirstName,
     string? LastName,
-    string? EmailAddress,
+    string EmailAddress,
     string? CellPhoneNumber,
     bool IsEmailAddressVerified,
     bool IsCellPhoneNumberVerified,
@@ -645,11 +614,13 @@ public sealed record UserDetailsResponse(
     string? LegacyRoleName,
     IReadOnlyList<UserCompanyMembershipResponse> Memberships);
 
+// D-078: role fields are null while the member has no company role yet; the membership
+// itself stays a valid, active row.
 public sealed record UserCompanyMembershipResponse(
     Guid CompanyId,
     string CompanyName,
-    string RoleCode,
-    string RoleName,
+    string? RoleCode,
+    string? RoleName,
     bool IsActive,
     DateTime CreatedAtUtc);
 

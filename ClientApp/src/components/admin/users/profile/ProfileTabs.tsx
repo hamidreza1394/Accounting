@@ -119,7 +119,7 @@ export function ProfileIdentityTab({ user, cache, onUnauthenticated }: Shared) {
             <span dir="ltr">{user.username ?? '—'}</span>
           </Info>
           <Info label="ایمیل">
-            <span dir="ltr">{user.emailAddress ?? '—'}</span>
+            <span dir="ltr">{user.emailAddress}</span>
           </Info>
           <Info label="وضعیت تأیید ایمیل">
             <Verified value={user.isEmailAddressVerified} />
@@ -344,7 +344,7 @@ const membershipColumns: readonly DataTableColumn<AdminUserMembership>[] = [
     header: 'نقش در شرکت',
     cell: (membership) => (
       <span>
-        {membership.roleName} <span dir="ltr" className="text-xs text-sub">({membership.roleCode})</span>
+        {membership.roleName ?? '—'} <span dir="ltr" className="text-xs text-sub">{membership.roleCode ? `(${membership.roleCode})` : ''}</span>
       </span>
     ),
   },

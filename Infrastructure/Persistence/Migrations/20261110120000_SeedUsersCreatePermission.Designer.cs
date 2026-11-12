@@ -249,52 +249,6 @@ namespace Data.Migrations
                     b.ToTable("CompanyEmployeeAssignments", (string)null);
                 });
 
-            modelBuilder.Entity("Domain.CompanyEmployeePhoto", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<byte[]>("Content")
-                        .IsRequired()
-                        .HasColumnType("varbinary(max)");
-
-                    b.Property<int>("ContentLength")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ContentType")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(30)");
-
-                    b.Property<Guid>("EmployeeId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("InsertDateTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Ordering")
-                        .HasColumnType("int");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("UpdatedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TenantId");
-
-                    b.HasIndex("EmployeeId", "TenantId")
-                        .IsUnique();
-
-                    b.ToTable("CompanyEmployeePhotos", (string)null);
-                });
-
             modelBuilder.Entity("Domain.CompanyMembershipRequest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1688,6 +1642,7 @@ namespace Data.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("EmailAddress")
+                        .IsRequired()
                         .HasMaxLength(254)
                         .IsUnicode(false)
                         .HasColumnType("varchar(254)");
@@ -1768,8 +1723,7 @@ namespace Data.Migrations
                     b.HasIndex("DefaultCompanyId");
 
                     b.HasIndex("EmailAddress")
-                        .IsUnique()
-                        .HasFilter("[EmailAddress] IS NOT NULL");
+                        .IsUnique();
 
                     b.HasIndex("EmailAddressVerificationKey")
                         .IsUnique();
@@ -1928,16 +1882,6 @@ namespace Data.Migrations
                     b.Navigation("OrganizationalUnit");
 
                     b.Navigation("Position");
-                });
-
-            modelBuilder.Entity("Domain.CompanyEmployeePhoto", b =>
-                {
-                    b.HasOne("Domain.CompanyEmployee", null)
-                        .WithMany()
-                        .HasForeignKey("EmployeeId", "TenantId")
-                        .HasPrincipalKey("Id", "TenantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("Domain.CompanyMembershipRequest", b =>

@@ -280,12 +280,15 @@ public sealed class CompanyAccessService
         private static IQueryable<CompanyAccess> ProjectToAccess(
                 IQueryable<Domain.UserCompanyMembership> memberships)
         {
+                // QueryActiveMemberships only keeps memberships with an active role, so the
+                // navigation is never null here; a roleless membership (D-078) grants no
+                // company access at all and never reaches this projection.
                 return memberships
                         .Select(membership => new CompanyAccess(
                                 membership.TenantId,
                                 membership.Company.Name,
                                 membership.Company.NationalId,
-                                membership.RoleId,
+                                membership.Role!.Id,
                                 membership.Role.Code,
                                 membership.Role.Name));
         }

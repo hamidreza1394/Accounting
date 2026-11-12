@@ -154,7 +154,8 @@ export function AccessPermissionsPage({ onUnauthenticated, defaultCompanyId, can
 
   const chooseUser = (picked: CompanyDirectoryUser) => {
     const list = roles.kind === 'ready' ? roles.roles : [];
-    const targetRoleId = list.some((candidate) => candidate.id === picked.roleId) ? picked.roleId : roleId;
+    // A member without a role yet (null roleId, D-078) keeps the currently selected role.
+    const targetRoleId = picked.roleId !== null && list.some((candidate) => candidate.id === picked.roleId) ? picked.roleId : roleId;
     const apply = () => {
       setUser(picked);
       setMessage(null);

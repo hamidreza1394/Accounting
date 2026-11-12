@@ -160,9 +160,8 @@ ALTER_COLUMN_ARGUMENTS = {
     "oldNullable",
     "oldMaxLength",
     "oldUnicode",
-    # EF Core writes 'defaultValue' on the Down of a column that becomes NOT NULL again
-    # (the value NULL rows are backfilled with). It is data handling, not schema: it is
-    # accepted here and not compared with the model.
+    # EF Core writes the CLR default when a column is altered back to NOT NULL; the
+    # exact value is verified separately by 'verify_alter_column_defaults'.
     "defaultValue",
 }
 
@@ -842,6 +841,58 @@ def verify_step(
             "The operations of Down are not the reverse of Up.\n"
             f"  applied:   {actual_down}\n  expected:  {expected_down}"
         )
+    problems.extend(verify_alter_column_defaults(source, operations))
+    return problems
+
+
+def verify_alter_column_defaults(
+    migration_source: str, operations: list[dict[str, Any]]
+) -> list[str]:
+    """Verifies the 'defaultValue' argument of every 'AlterColumn' (fail-closed).
+
+    EF Core writes the CLR default when a column is altered back to NOT NULL. The value is
+    accepted only when it is exactly the CLR default of the target column of that step —
+    any other default would silently fill existing rows with data the model does not know.
+    """
+    problems: list[str] = []
+    up_source, down_source = split_migration_methods(migration_source)
+    for section, section_source, wanted in (
+        ("Up", up_source, operations),
+        ("Down", down_source, mm.reverse_operations(operations)),
+    ):
+        for match in re.finditer(r"migrationBuilder\.AlterColumn\(", section_source):
+            arguments, _ = mm.balanced_call(section_source, match.end() - 1)
+            parsed = _call_arguments(arguments, "AlterColumn", ALTER_COLUMN_ARGUMENTS)
+            default = parsed.get("defaultValue")
+            if default is None:
+                continue
+            table = _string(parsed.get("table"))
+            column_name = _string(parsed.get("name"))
+            target = next(
+                (
+                    operation["column"]
+                    for operation in wanted
+                    if operation["kind"] == "alter_column"
+                    and operation["table"] == table
+                    and operation["name"] == column_name
+                ),
+                None,
+            )
+            if target is None:
+                problems.append(
+                    f"{section} alters '{table}.{column_name}' with 'defaultValue' but "
+                    "the model difference of this step does not alter that column."
+                )
+            elif target["nullable"]:
+                problems.append(
+                    f"{section} of '{table}.{column_name}' writes 'defaultValue' "
+                    "although the target column is nullable."
+                )
+            elif default != expected_default_literal(target):
+                problems.append(
+                    f"{section} of '{table}.{column_name}' writes an unexpected "
+                    f"'defaultValue': {default}."
+                )
     return problems
 
 
