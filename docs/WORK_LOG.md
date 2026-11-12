@@ -2869,9 +2869,87 @@
 - **مرزبندی:** بدون تغییر `Server/**`، Customer consumer، `Licensing.Contracts`، schema یا Migration مشتری؛ هیچ private key، رمز، hash رمز مشتری، connection string یا secret اضافه نشد.
 - **وضعیت:** Implemented / Not Verified تا تکمیل تمام بررسی‌های الزامی PR #613.
 
+
+## 2026-11-09 — تصمیم D-078: تأیید عضویت داخلی در برابر عضویت بین‌شرکتی
+- مدیر مجاز شرکت هنگام ایجاد کاربر برای همان Company، عضویت همان شرکت را خودکار Approved/Active می‌کند؛ تأیید دوباره لازم نیست.
+- عضویت در Company دیگر، از جمله درخواست هلدینگ برای شرکت زیرمجموعه، PendingApproval است و فقط مدیر مجاز مقصد تصمیم می‌گیرد؛ عضویت گروهی/مالکیت اختیار مقصد ایجاد نمی‌کند و self-approval بین‌شرکتی ممنوع می‌ماند.
+- عضویت به‌تنهایی Role/Permission/Entitlement یا دسترسی سال/دوره نمی‌دهد؛ دسترسی سال/دوره در همان Company با grantهای D-065/D-066/D-077 مدیریت می‌شود و Membership جدید نمی‌خواهد.
+- D-078 Accepted؛ رفتار runtime هنوز NotVerified است و باید مسیرهای create-user/membership با تست API و SQL Server/E2E تطبیق داده شوند.
+- فقط مستندات؛ بدون کد، API، UI، Schema یا Migration. جزئیات: `docs/handoffs/UNNUMBERED-company-membership-approval-scope.md`.
+
+## 2026-11-09 — اصلاح فرم/فهرست کاربران: Sidebar، عکس پرسنلی، رمز ۸، ایمیل اختیاری، بازگشت به فهرست (شاخهٔ `fix/users-form-navigation-and-validation`)
+- گروه‌های Sidebar پیش‌فرض بسته و قاب پیوسته؛ حداقل رمز ۸ نویسه (کلاینت+سرور، D-079)؛ ایمیل اختیاری با Migration مستقل؛ عکس پرسنلی با ذخیرهٔ واقعی و شرکت‌محور (`CompanyEmployeePhotos`)؛ پس از ایجاد کاربر: ناوبری یکتا به فهرست، تازه‌سازی و جدیدترین کاربر اول؛ انصراف/بازگشت دقیقاً به فهرست.
+- .NET: ۱۱۸۶ تست روی SQL Server واقعی، ۰ شکست؛ Vitest کل: ۳ شکست قدیمی و نامرتبط (خروجی CSV)؛ typecheck/build/check:offline موفق؛ E2E و ESLint اجرا نشد. جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-users-form-navigation-and-validation.md`.
+
+## 2026-11-09 — منوی مدیریت سیستم: ترتیب و تعلیق موقت بخش‌ها
+- ساختار سازمانی (واحدها و سمت‌ها) بلافاصله پس از مدیریت کاربران قرار گرفت.
+- بخش‌های دسترسی و مجوزها و کارکنان به انتهای منوی مدیریت سیستم منتقل و فعلاً به‌صورت غیرقابل کلیک با نشانگر «به‌زودی» نمایش داده می‌شوند.
+- هیچ route، API، permission یا داده‌ای حذف/تغییر داده نشد؛ این صرفاً تعلیق نمایش/ناوبری UI است.
+- تست‌های Sidebar برای ترتیب، وضعیت disabled و نبود لینک قابل کلیک به‌روزرسانی شدند.
+- اعتبارسنجی محلی در این محیط اجرا نشده؛ CI PR باید typecheck و Vitest را تأیید کند.
+
+
+## 2026-11-09 — اصلاح تکمیلی منوی مدیریت سیستم: انتقال «مجوزهای دسترسی»
+- لینک «مجوزهای دسترسی» از بخش «دسترسی و مجوزها» خارج و بلافاصله پس از «مدیریت کاربران» به‌عنوان یک آیتم مستقل و فعال قرار گرفت؛ مسیر موجود `/admin/access` حفظ شد.
+- بخش «دسترسی و مجوزها» به آخرین جایگاه زیرمنوهای مدیریت سیستم منتقل و کاملاً disabled شد؛ زیرگزینه‌های «گروه‌های دسترسی» و «کاتالوگ و جزئیات مجوزها» در این وضعیت نمایش داده نمی‌شوند.
+- «کارکنان» همچنان disabled باقی ماند. هیچ Route، API، permission catalog، schema یا authorization سمت سرور تغییر نکرد.
+- تست‌های Sidebar برای ترتیب جدید، فعال بودن لینک مجوزهای دسترسی و غیرفعال بودن کامل بخش انتهایی اصلاح شدند؛ اجرای محلی انجام نشده و نتیجه CI باید بررسی شود.
+
+
 ## 2026-11-10 — مأموریت D-078 PR اول: مجوز شرکتی users.create
 - Migration فقط-داده idempotent `20261110120000_SeedUsersCreatePermission` کد `users.create` را با GUID پایدار و Ordering 21007 به کاتالوگ اضافه کرد؛ هیچ نقشی خودکار مجوز نمی‌گیرد (تست SQL-gated قفل می‌کند). کاتالوگ مستندات به ۷۴ کد رسید؛ کد فعلاً seeded-only است و enforcement در PR دوم سری D-078 می‌آید.
 - `generate_migrations.py` به‌روزرسانی شد (CURRENT/DELTA + HAND_WRITTEN_SQL)؛ هر دو گارد migration سبز. Build سبز؛ تست ۱۰۹۲ موفق/۶۷ Skip/۲ شکست محیطی قدیمی. تست‌های SQL Server محلی NotRun (Docker موجود نیست). جزئیات: `docs/handoffs/UNNUMBERED-d078-users-create-permission-seed.md`.
+
+
+## 2026-11-10 — Issue #632: جلوگیری از ثبت credential آزمایشی در Vendor CI
+- در log واقعی Vendor CI run `42651850808` روی SHA `9fb6400569b282d18829073d76588b82f7c3c5d8`، password آزمایشی SQL Server در Docker create command و env stepها بدون masking دیده شد؛ مقدار credential در Work Log بازنشر نشده است.
+- `.github/workflows/vendor-ci.yml` از Service container دارای password در YAML به کانتینر SQL Server موقت در step کنترل‌شده تغییر کرد؛ password تصادفی همان run پیش از استفاده mask می‌شود و فقط از `GITHUB_ENV` به stepهای بعد می‌رود.
+- Connection stringها از YAML `env:` حذف شدند؛ در shell runtime ساخته و mask می‌شوند. cleanup کانتینر با `if: always()` انجام می‌شود.
+- regression guard در `.github/scripts/verify-vendor-ci-secret-hygiene.sh` اضافه شد تا password literal، connection string در YAML environment، ترتیب mask و cleanup را بررسی کند.
+- هیچ secret قابل استفاده مجدد، private key، Customer hash، Customer DB، `Server/**` یا تغییر `.github/workflows/dotnet.yml` وارد این کار نشد.
+- **وضعیت:** Implemented / Not Verified؛ PR #633 باز است؛ SHA جاری از metadata PR خوانده می‌شود. Vendor CI و ممیزی log هنوز اجرا/تأیید نهایی نشده‌اند. اجرای محلی انجام نشده است.
+
+
+## 2026-11-10 — Issue #632: حذف نمایش fragmentهای connection string از logهای Vendor CI
+- ممیزی Vendor CI run `42775690727`، job `129693604250`، نشان داد password در نسخه اول اصلاح mask شده بود، اما GitHub متن inline shell source را پیش از اجرای دستور mask در log ثبت می‌کند؛ در نتیجه بخش‌هایی از connection string در خط‌های assignment قابل مشاهده بود. معیار عدم نمایش connection string در log پاس نشده بود و PR عمداً ادغام نشد.
+- ساخت runtime مقادیر اتصال به `.github/scripts/run-vendor-ci-database-checks.sh` منتقل شد؛ workflow فقط helper و mode را فراخوانی می‌کند. helper مقدارها را از اجزای runtime می‌سازد، کل مقدار را با `add-mask` ثبت می‌کند و سپس export می‌کند؛ هیچ مقدار واقعی در Git قرار نگرفت.
+- guard `.github/scripts/verify-vendor-ci-secret-hygiene.sh` اکنون نبود connection-string fragment در workflow، فراخوانی helper، نبود shell tracing/environment dump و ترتیب mask-before-export برای هر چهار مقدار را بررسی می‌کند.
+- فایل‌های handoff و INDEX به‌روزرسانی شدند. تست محلی اجرا نشده است؛ اجرای CI روی head جدید و ممیزی log نهایی هنوز pending است.
+- **وضعیت:** Implemented / Not Verified؛ PR #633 باز می‌ماند تا Vendor CI، .NET CI و ممیزی log واقعی روی SHA نهایی سبز/پاک شوند.
+
+
+## 2026-11-10 — Issue #632 تکمیل hardening credentialهای تستی Vendor CI
+- در بازبینی workflow مشخص شد دو PIN ثابت SoftHSM (فقط برای token موقت CI) نیز در متن workflow وجود داشتند. برای رعایت قاعدهٔ عدم نگهداری password/PIN ثابت در Git، هر دو اکنون با `openssl rand` در همان run تولید و پیش از `softhsm2-util` mask می‌شوند؛ فقط user PIN موردنیاز تست از `GITHUB_ENV` منتقل می‌شود.
+- guard ایستا هر PIN عددی ثابت در فرمان `softhsm2-util` یا مقدار ثابت `FARANO_TEST_PKCS11_PIN` را رد می‌کند و ترتیب mask-before-use را کنترل می‌کند.
+- این تغییر فقط در Vendor CI است؛ کلید خصوصی واقعی، credential قابل استفاده مجدد، Customer hash، Customer DB و workflow عمومی مشتری وارد دامنه نشده‌اند.
+- **وضعیت:** Implemented / Not Verified؛ CI و ممیزی log باید روی head نهایی اجرا شوند؛ تست محلی اجرا نشده است.
+
+
+- بازبینی تکمیلی guard: کنترل ترتیب mask اکنون به‌طور مشخص اولین استفاده از متغیر SQL `$password` را با `docker run` مقایسه می‌کند (نه صرفاً هر add-mask قبلی)؛ اسکن fragmentهای اتصال در workflow نیز case-insensitive است.
+
+
+- اجرای Vendor CI روی SHA `9456df27ea69c05fd1df681e46a6a329ce84af3d` در guard ایستا متوقف شد؛ علت ریشه‌ای false-positive بود: الگوی case-insensitive واژهٔ `password=` را در انتساب متغیر محلی `password=` نیز connection string تلقی می‌کرد. لاگ job `129700425798` این موضوع را در خط workflow نشان داد؛ مقدار واقعی credential تولید یا چاپ نشد. الگو محدود شد به کلیدهای connection-string مانند `Server=`، `Data Source=` و `;Password=` تا متغیر shell را اشتباه تشخیص ندهد. CI باید روی head بعدی دوباره اجرا شود.
+
+## 2026-11-11 — بازبینی Vendor و تکمیل Work Log پس از PR #633
+
+- مبنای بازبینی: `main@3b103a5875a9668bf0c07d305a91685db3fb1db7`؛ SHA از `refs/heads/main` خوانده شد و با Merge commit PR #633 یکسان است.
+- PR #633 (Issue #632) در 2026-11-10 ادغام شده است. CI پس از Merge روی همین SHA: Vendor CI run `42783806157`، .NET CI run `42783805952`، Semgrep run `42783805757` و Push on main run `42783805332` همگی موفق‌اند.
+- Vendor CI: سه Job موفق (build/test/package و regression checkpoint روی Ubuntu و Windows). .NET CI: هفت Job موفق شامل Secret Scan، Client، Publish Scripts، Build/Test، E2E و انتشار Linux/Windows.
+- لاگ واقعی Job ‏`build-and-test` در .NET CI: Build succeeded، صفر خطا و ۳۱۷۸ هشدار؛ خلاصه تست ۱۱۹۱ کل، ۱۱۸۳ موفق، صفر شکست و ۸ Skip. هشدارها حذف یا به‌عنوان صفر گزارش نشده‌اند.
+- Mergeهای مرجع مجدداً بررسی شدند: #281 روی `2ee1edc52904833bc28eead5a679185377363c24` با سه Workflow موفق؛ #282 روی `f4a0462b0972e7686a686eca0febfaee680baecf` با چهار Workflow موفق؛ #284 روی `81ed5f64ed86ebbae47a433cea63e3655cb1d24b` با چهار Workflow موفق. #613 نیز روی `f1db16e70608a572ee71673ce1fc9fc3324d2c6d` با Vendor CI، .NET CI، Semgrep و Push on main موفق است.
+- وضعیت #228 تغییری نکرده: schema v4 مرجع شرکت را حمل نمی‌کند و resolver برای LicensePayload v2 fail-closed می‌ماند تا تصمیم و binding معتبر #392 فراهم شود. #235 مستقل از PRهای Vendor است.
+- در این اجرا فقط مستندات Vendor همگام می‌شوند؛ هیچ کد اجرایی، Migration مشتری، `Server/**`، Customer consumer، کلید خصوصی یا credential تغییر نکرده است.
+- تست محلی اجرا نشد؛ شواهد بالا از GitHub Actions و لاگ Jobهای واقعی استخراج شده‌اند. گام بعدی پس از تصمیم #392، طراحی نسخه‌دار provisioning و مرز مستقل Customer-side است؛ signer Production در #236 و sink مستقل Production در #107 نیز تا تأمین provider/هویت/credential مصوب fail-closed می‌مانند.
+
+## 2026-11-11 — بازبینی تکمیلی Vendor: #214، #236 و #107
+
+- مبنای بررسی: `main@3b103a5875a9668bf0c07d305a91685db3fb1db7`؛ PRهای باز، Issues مرتبط و ۱۰۰ اجرای اخیر Actions از GitHub تازه خوانده شدند.
+- **#214:** PR #375 با merge commit `24b0e1794b0750d1f545412a7da38631ae1085d3` ادغام شده است. Vendor CI [41184338873](https://github.com/hamidreza1394/Accounting/actions/runs/41184338873)، .NET CI [41184338919](https://github.com/hamidreza1394/Accounting/actions/runs/41184338919)، Semgrep [41184338869](https://github.com/hamidreza1394/Accounting/actions/runs/41184338869) و Push on main [41184338854](https://github.com/hamidreza1394/Accounting/actions/runs/41184338854) پس از Merge موفق‌اند. .NET test summary: 705 کل، 701 موفق، صفر شکست و 4 Skip. Vendor-side revocation issuance/maker-checker در main Verified است؛ Customer runtime enforcement در #235/#364 جدا باقی می‌ماند.
+- **#236:** D-056 Accepted است. کد جاری assurance صریح Software/Hardware، startup audit برای Production software risk acceptance، PKCS#11 adapter و سه KeyId مستقل برای License/Provisioning/Offline Revocation دارد. PR #359 و CI پس از Merge (.NET CI [41108989377](https://github.com/hamidreza1394/Accounting/actions/runs/41108989377)، Semgrep [41108989322](https://github.com/hamidreza1394/Accounting/actions/runs/41108989322)، Push on main [41108989140](https://github.com/hamidreza1394/Accounting/actions/runs/41108989140)) موفق‌اند. هیچ HSM واقعی یا credential عملیاتی provision نشده؛ default fail-closed حفظ شده است.
+- **#107:** Vendor CI پس از Merge #633 [42783806157](https://github.com/hamidreza1394/Accounting/actions/runs/42783806157) هر سه Job را موفق کرد؛ regression `AppendAcrossIndependentProcessesRejectsDuplicateSequenceWithoutCorruptingJournal` روی Ubuntu job `129719941495` و Windows job `129719941498` موفق شد. این فقط Development/Test file store را تأیید می‌کند؛ Production sink مستقل هنوز انتخاب نشده است.
+- **PR #634:** یک retry واقعی روی .NET CI run [42978314946](https://github.com/hamidreza1394/Accounting/actions/runs/42978314946) انجام شد. E2E همچنان ۴۸/۴۹ است؛ تست HR `hr-structure.spec.mjs` هنگام GET جزئیات کارمند پس از deactivate پاسخ 429 داد، درحالی‌که 200 انتظار می‌رفت. علت در HR rate limiting/test flow است و به تغییرات مستنداتی Vendor مربوط نیست؛ این محدوده عمداً تغییر داده نشد و PR merge نشده است.
+- در آخرین ۱۰۰ اجرای Actions، ۷۱ success، ۹ failure و ۲۰ cancelled ثبت شده‌اند. هر ۹ failure log بررسی شد: شش مورد deadlock در SaveChanges تست‌های SQL Server مربوط به D-078، دو مورد assertion قدیمی Sidebar، و یک مورد HR E2E با 429 در PR #634. شکست‌های خارج از Vendor اصلاح نشدند.
+- هیچ تست محلی اجرا نشده است؛ هیچ ادعای اجرای محلی، Production readiness، provider واقعی، private key یا credential عملیاتی مطرح نمی‌شود.
 
 ## 2026-11-10 — مأموریت D-078 PR دوم: ایجاد کاربر و عضویت داخلی شرکتی
 - Migration ساختاری `20261110130000_MakeCompanyMembershipRoleOptional`: `UserCompanyMemberships.RoleId` nullable شد (الگوی D-078؛ عضویت بدون نقش مجاز و fail-closed). Endpoint جدید `POST /api/v1/companies/{companyId}/users` با مجوز `users.create` دوحالته (D-071): ایجاد حساب جدید یا استفاده مجدد از حساب موجود (بدون تغییر رمز/پروفایل) + عضویت فعال بدون نقش، اتمیک در یک SaveChanges؛ Audit `UserCreated`/`UserMembershipCreated`؛ 409 کنترل‌شده برای تکرار/race با ایندکس یکتا؛ پاسخ 201 یکنواخت (ضد User Enumeration). مدیر شرکت A برای شرکت B همیشه 404.
