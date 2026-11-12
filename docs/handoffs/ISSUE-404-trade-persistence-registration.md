@@ -3,7 +3,7 @@
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/404
 - **Agent/مسئول:** ChatGPT
 - **تاریخ:** 2026-10-31
-- **وضعیت:** پیاده‌سازی اولیه ثبت شده؛ منتظر CI و بازبینی نهایی
+- **وضعیت:** **Merged.** PR #405، merge commit `a6f4b44b7ffd86f2e573cbb9f4f2d4f878b36e17`، 2026-10-31T19:20:31Z؛ ۱۲/۱۲ چک CI موفق. وضعیت واقعی Merge/CI در 2026-11-11 با `gh api` مستقیماً راستی‌آزمایی و در `docs/handoffs/TRADE_DESIGN_RECONCILIATION.md` ثبت شده؛ متن قبلی این خط («منتظر CI و بازبینی نهایی») پیش از Merge نوشته شده بود.
 
 ## هدف و معیارهای پذیرش
 - [x] ثبت TradeDbContext در Host فقط وقتی Connection String موجود است.

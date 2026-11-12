@@ -3,7 +3,7 @@
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/402
 - **Agent/مسئول:** ChatGPT
 - **تاریخ:** 2026-10-31
-- **وضعیت:** پیاده‌سازی روی شاخه انجام شده؛ Build/CI و SQL Server verification هنوز تأیید نشده است.
+- **وضعیت:** **Merged.** PR #402، merge commit `9fd5f47256c75eb915febe95ae5991cb95d5c0c5`، 2026-10-31T18:23:33Z؛ ۱۲/۱۲ چک CI موفق. تست SQL Server اختصاصی (`TradePermissionCatalogSqlServerTests`) در محیط بدون `FARANOU_TEST_SQLSERVER` همچنان Skip می‌شود، نه Fail؛ بند «ریسک‌ها و کارهای باقی‌مانده» در همین فایل دربارهٔ آن همچنان معتبر است. وضعیت واقعی Merge/CI در 2026-11-11 با `gh api` مستقیماً راستی‌آزمایی و در `docs/handoffs/TRADE_DESIGN_RECONCILIATION.md` ثبت شده.
 
 ## هدف و معیارهای پذیرش
 - [x] تعریف کاتالوگ strongly-typed و پایدار مجوزهای فرم/گزارش Trade در مالکیت ماژول.
