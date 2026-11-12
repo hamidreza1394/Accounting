@@ -626,3 +626,11 @@
 - **پیاده‌سازی:** `NotImplemented`. این تغییر صرفاً مستنداتی است؛ API، UI، Entity، جدول و Migration جدید ایجاد نشده‌اند.
 - **وابستگی مسدودکننده DDL:** D-066 / Issue #488 باید معنای FiscalPeriod در برابر سال مالی/دوره عملیاتی را مشخص کند. تا آن زمان طراحی فیزیکی grant سالانه و Migration انجام نمی‌شود.
 - جزئیات: `docs/USER_ACCESS_MANAGEMENT.md` §16، `docs/DECISIONS.md` D-077 و `docs/handoffs/ISSUE-444-fiscal-year-user-access.md`.
+
+## 2026-11-10 — Issue #444 / D-078: ایجاد کاربر و عضویت داخلی شرکتی
+
+- **تصمیم:** D-078 `Accepted` (ثبت PR #623؛ متن کامل در `DECISIONS.md`).
+- **پیاده‌سازی Backend:** `Implemented` در سری PRهای 2026-11-10 — مجوز شرکتی `users.create` (seed فقط-داده)، endpoint `POST /api/v1/companies/{companyId}/users` با مجوزدهی دوحالته D-071، عضویت داخلی فوریِ فعالِ بدون نقش (Migration حداقلی `20261110130000_MakeCompanyMembershipRoleOptional`)، اتمیک، Audit، idempotency/race با ایندکس یکتا.
+- **حفظ‌شده‌ها:** گردش تأیید بین‌شرکتی D-065، self-approval ban، سقف تفویض D-071، مسیر مدیر نصب D-064، تفکیک Entitlement D-074 و ساختار FiscalPeriod.
+- **NotVerified:** UI فرم «ایجاد کاربر شرکتی» برای مدیر شرکت، شواهد E2E/SQL Server عملیاتی (تست‌های SQL-gated در CI اجرا می‌شوند) و اجرای Migration روی دیتابیس مشتری.
+- جزئیات: `docs/USER_ACCESS_MANAGEMENT.md` §18، `docs/api/USER_ACCESS_MANAGEMENT_API.md` §4.2، handoffهای `UNNUMBERED-d078-*` و `docs/WORK_LOG.md`.

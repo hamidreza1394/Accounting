@@ -149,3 +149,9 @@ Directory فقط کاربران شرکت‌هایی را نشان می‌دهد 
 - D-074: Permission و Entitlement دو موتور مستقل‌اند و هر دو برای قابلیت‌های لایسنس‌دار لازم‌اند. ترتیب canonical: Authentication/Session → Company membership/context → FiscalPeriod/grant → Entitlement → operational Permission → DataScope/use case.
 - هیچ لایسنس یا Feature خریداری‌شده‌ای Permission نمی‌سازد و هیچ Role/Permission لایسنس ایجاد نمی‌کند. Cloud از authority سمت سرور و cache نسخه‌دار/دارای expiry؛ Offline از Envelope امضاشده و sequence/anti-rollback استفاده می‌کند.
 - وضعیت پیاده‌سازی جداست: D-073 عمدتاً NotImplemented؛ در D-074 قرارداد v2 و Trade gate موجودند اما runtime Trade هنوز با DenyAll fail-closed است و تعمیم همه ماژول‌ها باقی است.
+
+### 4.2 عضویت بدون نقش و ایجاد کاربر شرکتی (D-078، پیاده‌شده 2026-11-10)
+
+- `UserCompanyMemberships.RoleId` اختیاری است؛ عضویت فعال بدون نقش معتبر است اما **هیچ** دسترسی عملیاتی نمی‌دهد: `CompanyAccessService` فقط عضویت‌های دارای نقش فعال را می‌شناسد (fail-closed) و عضو بدون نقش از زمینه کاری، دفترچه مجوز و همه endpointها خارج می‌ماند؛ در دفترچه شرکت با فیلدهای نقش null نمایش داده می‌شود.
+- ایجاد User برای یک شرکت (`POST /companies/{companyId}/users`، مجوز `users.create`) عضویت همان شرکت را مستقیم و فعال می‌کند؛ برای شرکت دیگر — حتی زیرمجموعه یا هم‌گروه — هیچ مسیر مستقیمی وجود ندارد و گردش درخواست/تأیید مقصد (بند 4) تنها راه است. مالکیت هلدینگ، گروه یا دامنه هیچ مجوز تأییدی در مقصد نمی‌سازد.
+- تخصیص نقش همچنان فقط از `roles.assign` با سقف D-071 انجام می‌شود؛ تخصیص برای سال‌های مختلف (D-077) به عضویت جدید نیاز ندارد و عضویت هیچ grant مالی نمی‌سازد.
