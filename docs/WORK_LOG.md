@@ -2821,21 +2821,12 @@
 
 ## 2026-11-09 — Issue #444 مرحله سوم PR 3-C2: اتصال/قطع اتصال پرونده پرسنلی از پرونده کاربر
 - Backend موجود و Verified بود؛ UI شکاف واقعی بود. `HrLinkActions` با جست‌وجوی سرور-سمت کارمندان بدون حساب (`hasLinkedUser=false`)، اتصال (`PUT .../user` با `{userId}`) و قطع اتصال با تأیید (`DELETE .../user`)؛ پس از موفقیت بازخوانی از سرور؛ خطاهای 403/404/409 با پیام واقعی سرور و حفظ مقادیر؛ شرکت‌های غیرقابل‌مشاهده هیچ اکشنی ندارند. تست: ۴ سناریو — vitest 924/924؛ typecheck/build/check:offline سبز. Migration: هیچ. (stacked روی PR 3-F2)
-<<<<<<< HEAD
-<<<<<<< HEAD
 
 ## 2026-11-09 — Issue #444 مرحله سوم PR 3-D2: وضعیت درخواست‌های عضویت کاربر در پرونده
 - Backend: `GET /admin/users/{userId}/membership-requests` (فقط مدیر نصب؛ خواندنی؛ projects جدول گردش D-065 با فیلتر status allowlist مشترک `TryNormalizeStatus`→internal؛ صفحه‌بندی clamp؛ ۴۰۴ ناموجود). Migration: هیچ. Frontend: بخش «درخواست‌های عضویت بین‌شرکتی» در تب ۳ پرونده با وضعیت/زمان‌ها/تصمیم‌گیرنده/نقش/دلیل رد، فیلتر و صفحه‌بندی سرور-سمت و لینک به صف تأیید موجود. تست: ۴ تست Backend + ۳ سناریوی UI — vitest 927/927، ۲۵ تست Backend هدفمند سبز. (stacked روی PR 3-C2)
 
 ## 2026-11-09 — Issue #444 مرحله سوم PR 3-H1: E2E واقعی پرونده کاربر + axe + اسکرین‌شات
 - `tests/e2e/specs/user-profile.spec.mjs` روی سرور واقعی + SQL Server (CI): ۱۲ سناریوی پرونده (HR link، درخواست عضویت Pending→تأیید/رد با دلیل، مجوز مؤثر با منبع، ابطال نشست step-up با اثبات 401 واقعی، سوابق ورود و Audit) + axe WCAG 2.x A/AA روی تب‌ها + اسکرین‌شات واقعی هر تب به `artifacts/ui-preview/stage-3-profile/` (آپلود artifact CI، retention ۳۰ روز؛ بدون capture در دیالوگ step-up). فیکسچر ایزوله با cleanup. README آزمون e2e به‌روزرسانی شد. اجرا در CI (job e2e) — Docker/SQL Server محلی موجود نیست. (stacked روی PR 3-D2)
-=======
->>>>>>> origin/main
-=======
-
-## 2026-11-09 — Issue #444 مرحله سوم PR 3-D2: وضعیت درخواست‌های عضویت کاربر در پرونده
-- Backend: `GET /admin/users/{userId}/membership-requests` (فقط مدیر نصب؛ خواندنی؛ projects جدول گردش D-065 با فیلتر status allowlist مشترک `TryNormalizeStatus`→internal؛ صفحه‌بندی clamp؛ ۴۰۴ ناموجود). Migration: هیچ. Frontend: بخش «درخواست‌های عضویت بین‌شرکتی» در تب ۳ پرونده با وضعیت/زمان‌ها/تصمیم‌گیرنده/نقش/دلیل رد، فیلتر و صفحه‌بندی سرور-سمت و لینک به صف تأیید موجود. تست: ۴ تست Backend + ۳ سناریوی UI — vitest 927/927، ۲۵ تست Backend هدفمند سبز. (stacked روی PR 3-C2)
->>>>>>> origin/main
 
 ## 2026-11-09 — Issue #444 مرحله سوم PR 3-H1 (ادغام #600) + شواهد نهایی
 - E2E واقعی پرونده کاربر (۳ سناریو روی سرور Publish + SQL Server): باز کردن پرونده/اتصال-قطع HR، درخواست‌های عضویت Pending→تأیید/رد با دلیل، ابطال نشست step-up D-073 با اثبات 401؛ axe WCAG 2.x A/AA صفر نقض (یک نقض definition-list واقعی پیدا و رفع شد)؛ اسکرین‌شات واقعی ۹ نما به artifacts/ui-preview/stage-3-profile (artifact CI).
