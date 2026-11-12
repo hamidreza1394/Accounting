@@ -2958,3 +2958,18 @@
 ## 2026-11-10 — مأموریت D-078 PR سوم: سازگاری تخصیص نقش با عضویت بدون نقش
 - فقط تست (بدون تغییر production): ۵ تست جدید نشان می‌دهد مسیر موجود `roles.assign` عضو بدون نقش (D-078) را کامل می‌کند — تخصیص نقش با Audit `previousRoleId:null`، سقف تفویض D-071 و بدون ساخت عضویت/درخواست جدید؛ عضو خارجی 409 (مسیر تأیید)؛ انتقال گروهی اعضا عضو بدون نقش را جابه‌جا نمی‌کند؛ عضویت برای تخصیص بعدی (الگوی سال مالی D-077) کافی است و هیچ دسترسی مالی/سالانه ضمنی ساخته نمی‌شود (FiscalPeriod دست‌نخورده).
 - dotnet test: ۱۱۰۶ موفق/۷۱ Skip/۲ شکست محیطی قدیمی. Migration: هیچ.
+
+## 2026-11-12 — بازبینی تازه Vendor پس از PRهای #634 و #635
+
+- **مبنای واقعی:** main@5cd83ad2355c2ad188b4129eb803c705d4f07f2e؛ SHA از refs/heads/main خوانده شد. این SHA merge commit PR #635 است.
+- **PR #634:** در 2026-11-11T18:29:03Z با merge commit b29999f7dec10ec13cc708c525684dab554c38fd ادغام شده و ۱۲/۱۲ Check Run پس از Merge موفق است.
+- **PR #635:** در 2026-11-12T06:54:34Z با SHA فعلی main ادغام شده و ۱۲/۱۲ Check Run پس از Merge موفق است. تغییرات آن مستندات Trade است و در دامنه این مأموریت تغییر داده نشد.
+- **main:** Check Runهای SHA فعلی ۱۲/۱۲ موفق‌اند: .NET CI run 43171425686، Semgrep run 43171425565 و Push on main run 43171424724. .NET CI شامل Build/Test، E2E و انتشار Linux/Windows است.
+- **PRهای مرجع:** #281 با merge commit 2ee1edc52904833bc28eead5a679185377363c24 و ۱۲/۱۲؛ #282 با f4a0462b0972e7686a686eca0febfaee680baecf و ۱۳/۱۳؛ #284 با 81ed5f64ed86ebbae47a433cea63e3655cb1d24b و ۱۳/۱۳ Check Run موفق‌اند.
+- **PRهای باز:** #628، #629 و #630؛ هر سه D-078 و خارج از Vendor. در حال حاضر PR باز Vendor وجود ندارد.
+- **Actions:** از ۱۰۰ اجرای اخیر، ۷۳ success، چهار failure و ۲۳ cancelled. هر چهار failure log بررسی شد: سه مورد در PR #628 (یک head قدیمی با دو CS1503 در تست UserAdministration؛ دو head جدیدتر با شکست Test و ServerUnreachable در اتصال SQL Server تستی، همراه SQL error 18456 state 38/8)، و یک E2E قدیمی PR #634 که HR پس از deactivate پاسخ 429 می‌داد. شکست‌های D-078/HR خارج از دامنه Vendor هستند و اصلاح نشدند. آخرین head #628 هنوز ۱ Check Run ناموفق دارد؛ #629 و #630 هرکدام ۹ موفق و یک CodeRabbit Skip دارند.
+- **#228/#392:** schema v4 هنوز CompanyReference ندارد؛ resolver برای LicensePayload v2 با provisioning_company_reference_mapping_required fail-closed است. #392 باز است و Customer schema/migration نیازمند تصمیم و بازبینی مستقل است.
+- **#393:** بررسی VendorBusinessEntities.cs، VendorDbContext.cs و VendorBusinessEndpoints.cs نشان می‌دهد مدل runtime سفارش/اقلام خرید/مدرک پرداخت وجود ندارد؛ مدل‌های فعلی Customer، Installation، Contract و License هستند. سه candidate builder #527/#558/#565 در main Verified هستند، اما Commercial Order و Payment Evidence هنوز NotImplemented‌اند.
+- **#214/#236/#235/#107:** وضعیت Vendor-side revocation و maker-checker در #214 Verified است؛ Production KMS/HSM در #236 به provider/credential واقعی نیاز دارد؛ Customer consumer/ACK در #235 جدا می‌ماند؛ Production audit sink مستقل #107 هنوز مقصد/هویت/retention عملیاتی ندارد.
+- **تغییر این بازبینی:** فقط PROJECT_STATUS.md، WORK_LOG.md و دو handoff مرتبط با #228/#393 برای ثبت وضعیت واقعی به‌روزرسانی شدند. هیچ کد، Migration، Customer DB، Server/** یا secret تغییر نکرد.
+- **تست‌ها:** تست محلی اجرا نشد؛ تغییرات مستنداتی‌اند. CI روی PR جدید باید روی SHA نهایی اجرا شود. هیچ Merge یا موفقیت تست محلی ادعا نمی‌شود.

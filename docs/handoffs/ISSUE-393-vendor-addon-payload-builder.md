@@ -100,3 +100,15 @@
 - #565: 66b60cc48f6454997e260cb1244374114e2bfbd4 — ۱۵/۱۵ Check Run پس از Merge موفق، شامل Vendor package/tests، .NET build/test، E2E، Linux/Windows publish، Secret Scan، Semgrep و CodeQL.
 - وضعیت: candidateهای maxCompanies، Company-scoped Module/Feature/UserSeat و support/update در main Verified هستند. سفارش تجاری، payment evidence، persistence، API، Maker-Checker اختصاصی amendment، صدور پایدار و Purchased/Delivered/Acknowledged همچنان NotImplemented هستند.
 - مرزها: هیچ Customer consumer، Server/**، Customer DB migration یا provider واقعی KMS/HSM در این سه PR اضافه نشده است.
+
+
+## بازبینی 2026-11-12 — تفکیک candidate builder از Commercial Order
+
+- مبنای جاری: main@5cd83ad2355c2ad188b4129eb803c705d4f07f2e.
+- سه برش payload builder در main باقی‌اند و شواهد پس از Merge آن‌ها تأیید شده است: PR #527 (افزایش maxCompanies)، PR #558 (افزایش Company-scoped Module/Feature/UserSeat) و PR #565 (تمدید مستقل Support/Updates)، هرکدام با ۱۵/۱۵ Check Run موفق.
+- بررسی مستقیم VendorBusinessEntities.cs نشان می‌دهد مدل‌های تجاری runtime فعلی VendorCustomer، VendorInstallation، VendorContract و VendorLicense هستند. VendorDbContext برای Approval، SignedLicenseEnvelope، SignedRevocationSnapshot و ProvisioningRequest نیز DbSet دارد، اما در مدل/DbContext بررسی‌شده SalesOrder، SalesOrderLine، PaymentRecord یا PaymentAllocation وجود ندارد. بنابراین Contract metadata یا License metadata را نباید به‌عنوان مدرک خرید/پرداخت تلقی کرد.
+- **NotImplemented:** Commercial Order، OrderLine، Payment Evidence، persistence و API خرید، گردش تأیید تجاری، اتصال سفارش به candidate amendment، صدور پایدار، تحویل و وضعیت‌های Purchased/Delivered/Acknowledged.
+- پیش از پیاده‌سازی باید سیاست تجاری روشن باشد: چه مدرکی پرداخت را اثبات می‌کند، چه نقش/هویتی آن را بررسی و تأیید می‌کند، و تفاوت PendingVerification با Purchased چیست. این یادداشت هیچ سیاست پرداختی را تصویب نمی‌کند.
+- مسیر کم‌هزینهٔ پیشنهادی پس از تأیید سیاست: Vendor-only SalesOrder و lineهای typed، ثبت manual payment reference/evidence metadata، RowVersion و audit، سپس handoff به maker-checker و signer موجود. درگاه پرداخت، Ledger موازی یا دسترسی مستقیم به Customer DB لازم نیست و نباید حدس زده شود.
+- Company-specific add-on همچنان به CompanyReference معتبر در payload v2 وابسته است؛ #392 باید binding مورد اعتماد را تعیین کند. v1 به v2 تبدیل نمی‌شود و CompanyReference جدید ساخته نمی‌شود.
+- مرزها حفظ می‌شوند: بدون Server/**، Customer consumer/ACK، Customer DB migration، private key، credential یا provider فرضی. تست محلی اجرا نشد؛ این بازبینی صرفاً بررسی کد و مستندات بود.
