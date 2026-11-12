@@ -42,7 +42,7 @@ public static class UserAdministrationEndpoints
         int page,
         int pageSize,
         string? sort,
-        bool descending,
+        bool? descending,
         CancellationToken cancellationToken)
     {
         var authorization = await AuthorizeInstallationAdministratorAsync(principal, database, cancellationToken);
@@ -72,12 +72,13 @@ public static class UserAdministrationEndpoints
                 (user.Username != null && user.Username.Contains(search)) ||
                 (user.FirstName != null && user.FirstName.Contains(search)) ||
                 (user.LastName != null && user.LastName.Contains(search)) ||
-                user.EmailAddress.Contains(search) ||
+                (user.EmailAddress != null && user.EmailAddress.Contains(search)) ||
                 (user.CellPhoneNumber != null && user.CellPhoneNumber.Contains(search)));
         }
 
         var totalCount = await query.CountAsync(cancellationToken);
-        query = ApplySort(query, normalizedSort, descending);
+        // Match the established main-branch contract: newest-created first unless direction is explicit.
+        query = ApplySort(query, normalizedSort, descending ?? normalizedSort == "created");
 
         var items = await query
             .Skip((page - 1) * pageSize)
