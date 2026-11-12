@@ -91,3 +91,14 @@
 - **شکاف فعال #228:** schema v4 فاقد CompanyReference است. resolver برای LicensePayload v2 با `provisioning_company_reference_mapping_required` fail-closed باقی می‌ماند و هیچ entitlement شرکت به سطح Installation تبدیل نمی‌شود. #392 مالک تصمیم و binding پایدار CompanyReference → Company محلی است؛ هر Customer migration نیازمند بازبینی و تأیید جداگانه است.
 - **مرز #235:** consumer/ACK، trust distribution و retry/error hardening در PR مستقل Customer-side می‌ماند؛ این بازبینی هیچ `Server/**` یا Customer DB را تغییر نداده است.
 - **گام بعدی:** پس از تعیین تکلیف #392، قرارداد نسخه‌دار provisioning و نمایش Purchased Subsystems در Vendor را در PR محدود و مستقل پیگیری کنید. تا آن زمان v2 عمداً unavailable است.
+
+
+## بازبینی 2026-11-12 — وضعیت پس از PRهای #634 و #635
+
+- مبنای جاری: main@5cd83ad2355c2ad188b4129eb803c705d4f07f2e. PR #634 با merge commit b29999f7dec10ec13cc708c525684dab554c38fd در 2026-11-11 ادغام شده و ۱۲/۱۲ Check Run پس از Merge موفق است؛ PR #635 نیز در 2026-11-12 با SHA فعلی main ادغام شده و ۱۲/۱۲ Check Run موفق دارد.
+- آخرین Vendor CI کد-محور پس از PR #633، run 42783806157 با ۳/۳ Job موفق است. PRهای #634 و #635 فقط مستنداتی بوده‌اند؛ این run به‌عنوان اجرای روی SHA فعلی main معرفی نمی‌شود.
+- وضعیت اجرایی #228 تغییر نکرده است: provisioning schema v4 هنوز CompanyReference ندارد. Resolver برای LicensePayload v2 با provisioning_company_reference_mapping_required fail-closed می‌ماند؛ هیچ CompanyEntitlement به سطح Installation flatten یا به Company محلی حدس زده نمی‌شود.
+- #392 همچنان مالک mapping مات و پایدار CompanyReference → CompanyId محلی و قرارداد versioned مربوط به Customer است. هر Customer schema/migration نیازمند بازبینی و تأیید صریح جداگانه است.
+- #235 برای consumer/ACK، trust distribution و retry/error semantics مستقل باقی می‌ماند. این بازبینی هیچ Server/**، Customer DB، Customer migration یا consumer را تغییر نداده است.
+- **وضعیت:** Vendor intent/provisioning base و نمایش blocker در کد موجودند؛ Provisioning نسخهٔ ۲ برای Company-scoped entitlement تا تکمیل #392 عمداً Blocked / fail-closed است. این وضعیت به معنی end-to-end provisioning تأییدشده نیست.
+- تست محلی اجرا نشد؛ شواهد CI فقط از Check Runهای واقعی merge commitهای بالا است. این بازبینی مستنداتی بود و هیچ secret یا credential اضافه نشد.
