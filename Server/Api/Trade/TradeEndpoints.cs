@@ -25,6 +25,7 @@ public static class TradeEndpoints
 			.WithMetadata(new TradeCapabilitiesEndpointMetadata());
 
 		group.MapTradePartyEndpoints();
+		group.MapTradeProductEndpoints();
 		group.MapTradeReferenceEndpoints();
 
 		return api;

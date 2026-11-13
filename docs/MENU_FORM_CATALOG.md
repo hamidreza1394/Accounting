@@ -17,7 +17,7 @@
 | ۲.۲ | خزانه‌داری | آیتم | به‌زودی | همیشه (غیرفعال) | treasury |
 | ۳ | **فروش، بازرگانی و انبار** | گروه | — | — | — |
 | ۳.۱ | فروش | آیتم | به‌زودی | همیشه (غیرفعال) | sales |
-| ۳.۲ | بازرگانی خارجی (در کد: گروه مستقل «بازرگانی خارجی» با دو فرزند: آیتم واقعی «طرف‌حساب‌ها» و placeholder صادق «واردات و صادرات» که تا وجود Route واقعی «به‌زودی» می‌ماند؛ طبق D-081 آیتم فعال فقط با Route واقعی می‌آید: S2-3 ← `/trade/parties` پیاده شده (`Implemented`، بدون اجرای end-to-end روی مرورگر/SQL Server)، `/trade/products` هنوز نه) | گروه + آیتم | `/trade/parties` (آیتم «طرف‌حساب‌ها»)؛ «واردات و صادرات» به‌زودی | «طرف‌حساب‌ها»: فقط وقتی `GET /trade/capabilities` برابر `available` و دارای `trade.form.party.view` باشد (در بارگذاری/خطا/ماژول غیرفعال پنهان — fail-closed؛ منبع hint فقط همین Endpoint است نه `/me/permissions`)؛ placeholder: همیشه (غیرفعال) | TRADE_IMPORT |
+| ۳.۲ | بازرگانی خارجی (در کد: گروه مستقل «بازرگانی خارجی» با سه فرزند: آیتم‌های واقعی «طرف‌حساب‌ها» و «کالاها» و placeholder صادق «واردات و صادرات» که تا وجود Route واقعی «به‌زودی» می‌ماند؛ طبق D-081 آیتم فعال فقط با Route واقعی می‌آید: S2-3 ← `/trade/parties` پیاده شده (`Implemented`، بدون اجرای end-to-end روی مرورگر/SQL Server)، S2-4 ← `/trade/products` در کلاینت پیاده شده (`Implemented`، بدون اجرای end-to-end روی مرورگر/SQL Server)) | گروه + آیتم | `/trade/parties` (آیتم «طرف‌حساب‌ها»)؛ «واردات و صادرات» به‌زودی | «طرف‌حساب‌ها»: فقط وقتی `GET /trade/capabilities` برابر `available` و دارای `trade.form.party.view` باشد؛ «کالاها»: همین قاعده با `trade.form.product.view` (در بارگذاری/خطا/ماژول غیرفعال پنهان — fail-closed؛ منبع hint فقط همین Endpoint است نه `/me/permissions`)؛ placeholder: همیشه (غیرفعال) | TRADE_IMPORT |
 | ۳.۳ | انبار | آیتم | به‌زودی | همیشه (غیرفعال) | inventory |
 | ۴ | **گزارش‌ها و اطلاعات پایه** | گروه | — | — | — |
 | ۴.۱ | گزارش‌ها | آیتم | به‌زودی | همیشه (غیرفعال) | reporting |
@@ -76,6 +76,10 @@
 | `/trade/parties/new` | طرف‌حساب جدید | TRADE_IMPORT | `trade.form.party.create` + `trade.form.party.view` (دورهٔ بسته هم مجاز) | فرم فهرست طرف‌حساب‌ها | پیش از `:id` ثبت شده؛ بخش‌های هویت/نقش‌ها/کشور؛ `SearchableCombobox` برای کشور؛ پس از ثبت ← جزئیات با پیام موفقیت |
 | `/trade/parties/:id` | جزئیات طرف‌حساب | TRADE_IMPORT | `trade.form.party.view` | فرم فهرست طرف‌حساب‌ها | فقط‌خواندنی؛ `isActive` فقط نشان (بدون حذف/فعال‌سازی/غیرفعال‌سازی، D-083 `Proposed`)؛ شناسهٔ حقوقی فقط اینجا و در ویرایش |
 | `/trade/parties/:id/edit` | ویرایش طرف‌حساب | TRADE_IMPORT | `trade.form.party.update` + `trade.form.party.view` (دورهٔ بسته هم مجاز) | فرم جزئیات طرف‌حساب | `rowVersion`؛ تعارض هم‌زمانی ← بارگذاری اطلاعات تازه |
+| `/trade/products` | کالاها | TRADE_IMPORT | `trade.form.product.view` (از `/trade/capabilities`) | منو (بازرگانی خارجی) | فهرست سمت‌سرور: جست‌وجو (کد/نام)، فیلتر وضعیت، صفحه‌بندی؛ کلیک ردیف ← جزئیات؛ دکمهٔ «کالای جدید» با `trade.form.product.create` و `trade.form.product.view` |
+| `/trade/products/new` | کالای جدید | TRADE_IMPORT | `trade.form.product.create` + `trade.form.product.view` (دورهٔ بسته هم مجاز) | فرم فهرست کالاها | پیش از `:id` ثبت شده؛ بخش‌های مشخصات/طبقه‌بندی/واحد؛ `SearchableCombobox` برای واحد پایه (از `/trade/reference/units`)؛ کد تعرفه متن لاتین؛ پس از ثبت ← جزئیات با پیام موفقیت |
+| `/trade/products/:id` | جزئیات کالا | TRADE_IMPORT | `trade.form.product.view` | فرم فهرست کالاها | فقط‌خواندنی؛ `isActive` فقط نشان (بدون حذف/فعال‌سازی/غیرفعال‌سازی، D-083 `Proposed`) |
+| `/trade/products/:id/edit` | ویرایش کالا | TRADE_IMPORT | `trade.form.product.update` + `trade.form.product.view` (دورهٔ بسته هم مجاز) | فرم جزئیات کالا | `rowVersion`؛ تعارض هم‌زمانی ← حفظ ویرایش‌های من یا نمایش مقادیر تازه |
 
 ## 3. قواعد فعال/غیرفعال، ترتیب و Parent
 

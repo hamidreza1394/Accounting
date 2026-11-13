@@ -1,22 +1,8 @@
-import { useSyncExternalStore } from 'react';
+import { createListVersion } from './listVersion';
 
-// The party list tab stays mounted (hidden) while a form tab is open, so a saved create/update must tell
-// it to read again. A module-level version counter, nothing more: no data is kept here.
+const listVersion = createListVersion();
 
-let version = 0;
-const listeners = new Set<() => void>();
-
-export function invalidatePartyList(): void {
-  version += 1;
-  for (const listener of listeners) listener();
-}
-
-function subscribe(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
+export const invalidatePartyList = listVersion.invalidate;
 
 /** Changes whenever a party was created or updated; put it in the list's load effect dependencies. */
-export function usePartyListVersion(): number {
-  return useSyncExternalStore(subscribe, () => version, () => version);
-}
+export const usePartyListVersion = listVersion.useVersion;

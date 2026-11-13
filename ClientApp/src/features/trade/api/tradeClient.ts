@@ -1,4 +1,4 @@
-// Trade API client (Party slice). Every function maps 1:1 onto a real endpoint under
+// Trade API client (Party and Product slices). Every function maps 1:1 onto a real endpoint under
 // `/api/v1/trade` (`Server/Api/Trade/*`). Reads use the shared same-origin GET helper (`same-origin`,
 // `no-store`, 401 -> UnauthenticatedError, errors
 // through the shared `getJson`, so a 409 exposes its machine code as `ApiError.problemCode`); writes
@@ -11,13 +11,20 @@ import {
   parseCountries,
   parsePartyDetail,
   parsePartyListResponse,
+  parseProductDetail,
+  parseProductListResponse,
   parseTradeCapabilities,
+  parseUnits,
   type CountryRef,
   type PartyDetail,
   type PartyListResponse,
   type PartyRole,
   type PartyWriteBody,
+  type ProductDetail,
+  type ProductListResponse,
+  type ProductWriteBody,
   type TradeCapabilities,
+  type UnitRef,
 } from './tradeTypes';
 
 const tradeGet = (path: string, signal?: AbortSignal): Promise<unknown> => getJson(`/trade${path}`, signal);
@@ -88,4 +95,55 @@ export async function updateParty(partyId: string, body: PartyWriteBody, rowVers
 /** `GET /trade/reference/countries` -> every country with its ISO code and Persian/English names. */
 export async function listCountries(signal?: AbortSignal): Promise<readonly CountryRef[]> {
   return parseCountries(await tradeGet('/reference/countries', signal));
+}
+
+/** Query of `GET /trade/products`; the server clamps `page`/`pageSize` and validates the rest. */
+export type ProductQuery = {
+  search?: string;
+  isActive?: boolean;
+  page: number;
+  pageSize: number;
+};
+
+export async function listProducts(queryValues: ProductQuery, signal?: AbortSignal): Promise<ProductListResponse> {
+  const path = `/products${query({
+    search: queryValues.search,
+    isActive: queryValues.isActive,
+    page: queryValues.page,
+    pageSize: queryValues.pageSize,
+  })}`;
+  return parseProductListResponse(await tradeGet(path, signal));
+}
+
+/** 404 with an empty body for a missing, other-tenant or deleted product (the same answer for all three). */
+export async function getProduct(productId: string, signal?: AbortSignal): Promise<ProductDetail> {
+  return parseProductDetail(await tradeGet(`/products/${encodeURIComponent(productId)}`, signal));
+}
+
+function productWriteBody(body: ProductWriteBody): Record<string, unknown> {
+  // Field by field (never a spread); `isActive` and any tenant field are never sent.
+  return {
+    code: body.code,
+    name: body.name,
+    productGroupCode: body.productGroupCode,
+    hsCode: body.hsCode,
+    baseUnitCode: body.baseUnitCode,
+  };
+}
+
+/** `POST /trade/products` -> 201 with the created detail. */
+export async function createProduct(body: ProductWriteBody): Promise<ProductDetail> {
+  const response = await sendJson('POST', '/trade/products', productWriteBody(body));
+  return parseProductDetail(await response.json());
+}
+
+/** `PUT /trade/products/{id}` -> 200 with the updated detail. `rowVersion` is the base64 token of the last read. */
+export async function updateProduct(productId: string, body: ProductWriteBody, rowVersion: string): Promise<ProductDetail> {
+  const response = await sendJson('PUT', `/trade/products/${encodeURIComponent(productId)}`, { ...productWriteBody(body), rowVersion });
+  return parseProductDetail(await response.json());
+}
+
+/** `GET /trade/reference/units` -> every unit of measure with its code and Persian/English names. */
+export async function listUnits(signal?: AbortSignal): Promise<readonly UnitRef[]> {
+  return parseUnits(await tradeGet('/reference/units', signal));
 }

@@ -20,22 +20,24 @@ export const emptyPartyForm: PartyFormState = { code: '', legalName: '', display
 export type PartyFieldKey = 'code' | 'legalName' | 'displayName' | 'legalIdentifier' | 'countryCode' | 'roles';
 export type PartyFieldErrors = Partial<Record<PartyFieldKey, string>>;
 
-const forbiddenMessage = 'مقدار شامل نویسه‌های کنترلی یا جهت‌دهی متن غیرمجاز است.';
+export const forbiddenCharactersMessage = 'مقدار شامل نویسه‌های کنترلی یا جهت‌دهی متن غیرمجاز است.';
 
 /** Control characters and bidi overrides/isolates/marks are refused (ZWNJ stays allowed), like the server. */
 export function hasForbiddenCharacters(value: string): boolean {
   for (const character of value) {
     const code = character.codePointAt(0) ?? 0;
     if (code <= 0x1f || (code >= 0x7f && code <= 0x9f)) return true;
+    // U+061C ALM, U+2028/U+2029 line/paragraph separators, U+FEFF BOM (JS trim() strips a leading/trailing U+FEFF, .NET does not).
+    if (code === 0x061c || code === 0x2028 || code === 0x2029 || code === 0xfeff) return true;
     if (code === 0x200e || code === 0x200f || (code >= 0x202a && code <= 0x202e) || (code >= 0x2066 && code <= 0x2069)) return true;
   }
   return false;
 }
 
-function text(value: string, label: string, max: number, required: boolean): string | undefined {
+export function validateText(value: string, label: string, max: number, required: boolean): string | undefined {
   const trimmed = value.trim();
   if (trimmed === '') return required ? `${label} الزامی است.` : undefined;
-  if (hasForbiddenCharacters(trimmed)) return forbiddenMessage;
+  if (hasForbiddenCharacters(trimmed)) return forbiddenCharactersMessage;
   if (trimmed.length > max) return `${label} نباید بیش از ${max.toLocaleString('fa-IR')} نویسه باشد.`;
   return undefined;
 }
@@ -43,13 +45,13 @@ function text(value: string, label: string, max: number, required: boolean): str
 /** `knownCountryCodes` is the loaded reference list; when it is not loaded yet the server decides. */
 export function validatePartyForm(form: PartyFormState, knownCountryCodes: ReadonlySet<string> | null): PartyFieldErrors {
   const errors: PartyFieldErrors = {};
-  const code = text(form.code, 'کد', partyLimits.code, true);
+  const code = validateText(form.code, 'کد', partyLimits.code, true);
   if (code) errors.code = code;
-  const legalName = text(form.legalName, 'نام حقوقی', partyLimits.legalName, true);
+  const legalName = validateText(form.legalName, 'نام حقوقی', partyLimits.legalName, true);
   if (legalName) errors.legalName = legalName;
-  const displayName = text(form.displayName, 'نام نمایشی', partyLimits.displayName, false);
+  const displayName = validateText(form.displayName, 'نام نمایشی', partyLimits.displayName, false);
   if (displayName) errors.displayName = displayName;
-  const identifier = text(form.legalIdentifier, 'شناسهٔ حقوقی', partyLimits.legalIdentifier, false);
+  const identifier = validateText(form.legalIdentifier, 'شناسهٔ حقوقی', partyLimits.legalIdentifier, false);
   if (identifier) errors.legalIdentifier = identifier;
   if (form.countryCode !== null && knownCountryCodes !== null && !knownCountryCodes.has(form.countryCode)) {
     errors.countryCode = 'کد کشور نامعتبر است.';

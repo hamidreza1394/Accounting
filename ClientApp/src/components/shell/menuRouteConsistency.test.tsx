@@ -66,7 +66,7 @@ describe('menu ↔ router consistency (Issue #444 stage 2-B / D-075)', () => {
     }
   });
 
-  it('keeps the foreign-trade group honest: the party leaf has its real routes, «واردات و صادرات» stays an unrouted placeholder', () => {
+  it('keeps the foreign-trade group honest: the party and product leaves have their real routes, «واردات و صادرات» stays an unrouted placeholder', () => {
     const trade = groupEntries().find((group) => group.label === 'بازرگانی خارجی');
     expect(trade).toBeDefined();
     const party = trade?.children.find((leaf) => leaf.label === 'طرف‌حساب‌ها');
@@ -76,6 +76,12 @@ describe('menu ↔ router consistency (Issue #444 stage 2-B / D-075)', () => {
     }
     // `/new` precedes `/:id`, otherwise «new» would be read as a party id.
     expect(routePaths.indexOf('/trade/parties/new')).toBeLessThan(routePaths.indexOf('/trade/parties/:id'));
+    const product = trade?.children.find((leaf) => leaf.label === 'کالاها');
+    expect(product?.to).toBe('/trade/products');
+    for (const path of ['/trade/products', '/trade/products/new', '/trade/products/:id', '/trade/products/:id/edit']) {
+      expect(routePaths).toContain(path);
+    }
+    expect(routePaths.indexOf('/trade/products/new')).toBeLessThan(routePaths.indexOf('/trade/products/:id'));
     const placeholder = trade?.children.find((leaf) => leaf.label === 'واردات و صادرات');
     expect(placeholder).toBeDefined();
     expect(placeholder?.to).toBeUndefined();

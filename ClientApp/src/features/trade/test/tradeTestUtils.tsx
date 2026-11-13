@@ -4,7 +4,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { AppRouteDataContext, type AppRouteData } from '@/components/AppRoutes';
 import { RouteView, RouterProvider, type Route } from '@/lib/router';
 import { TradeAccessContext, TradeAccessProvider, createTradeAccess, type TradeAccess } from '../access/TradeAccess';
-import { countriesBody, readWriteCapabilities } from './tradeFixtures';
+import { countriesBody, readWriteCapabilities, unitsBody } from './tradeFixtures';
 
 export type StubRequest = { method: string; url: URL; body: unknown; headers: Record<string, string> };
 export type StubResponse = { status: number; body?: unknown };
@@ -20,6 +20,7 @@ export function stubTradeApi(handlers: Record<string, StubHandler>) {
   const all: Record<string, StubHandler> = {
     'GET /api/v1/antiforgery/token': { status: 200, body: { headerName: 'X-XSRF-TOKEN', requestToken: 'token' } },
     'GET /api/v1/trade/reference/countries': { status: 200, body: countriesBody },
+    'GET /api/v1/trade/reference/units': { status: 200, body: unitsBody },
     ...handlers,
   };
   const fetchMock = vi.fn((input: string, init?: RequestInit) => {
@@ -46,12 +47,13 @@ export function stubTradeApi(handlers: Record<string, StubHandler>) {
   return { fetchMock, calls, writes: () => calls.filter((call) => call.method !== 'GET') };
 }
 
-/** A ready access value with the given permission hints (short names are mapped to the server codes). */
+/** A ready access value with the given permission hints of one form (short names are mapped to the server codes). */
 export function readyAccess(
   permissions: readonly ('view' | 'create' | 'update')[] = ['view', 'create', 'update'],
   accessMode: 'ReadWrite' | 'ReadOnly' = 'ReadWrite',
+  form: 'party' | 'product' = 'party',
 ): TradeAccess {
-  return createTradeAccess({ status: 'ready', accessMode, permissions: permissions.map((action) => `trade.form.party.${action}`) });
+  return createTradeAccess({ status: 'ready', accessMode, permissions: permissions.map((action) => `trade.form.${form}.${action}`) });
 }
 
 export const onUnauthenticated = vi.fn((): boolean => false);

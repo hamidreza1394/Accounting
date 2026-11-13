@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '@/api/client';
 import { TradeContractError } from '../api/tradeTypes';
-import { isModuleBlocked, mapTradeFailure, tradeMessages } from './tradeErrors';
+import { isModuleBlocked, mapProductFailure, mapTradeFailure, productMessages, tradeMessages } from './tradeErrors';
 
 describe('mapTradeFailure', () => {
   it('maps a 400 ValidationProblem to field errors (camelCase keys) and never leaks unknown keys', () => {
@@ -56,5 +56,33 @@ describe('mapTradeFailure', () => {
     expect(isModuleBlocked(mapTradeFailure(new ApiError(409, 'x', undefined, 'trade_context_required')))).toBe(true);
     expect(isModuleBlocked(mapTradeFailure(new ApiError(409, 'x', undefined, 'trade_concurrency_conflict')))).toBe(false);
     expect(isModuleBlocked(null)).toBe(false);
+  });
+});
+
+describe('mapProductFailure', () => {
+  it('maps a 400 to the product fields only (camelCase) and ignores party fields and unknown keys', () => {
+    const failure = mapProductFailure(
+      new ApiError(400, 'x', { hsCode: ['کد تعرفه نامعتبر.'], baseUnitCode: ['واحد پایه نامعتبر است.'], legalName: ['x'], other: ['y'] }),
+    );
+    expect(failure.kind).toBe('validation');
+    expect(failure.fieldErrors).toEqual({ hsCode: 'کد تعرفه نامعتبر.', baseUnitCode: 'واحد پایه نامعتبر است.' });
+  });
+
+  it('maps the product duplicate code (and only it) to the code field with the product message', () => {
+    const duplicate = mapProductFailure(new ApiError(409, 'x', undefined, 'trade_product_code_duplicate'));
+    expect(duplicate.kind).toBe('duplicate-code');
+    expect(duplicate.fieldErrors.code).toBe(productMessages.duplicateCode);
+    expect(mapProductFailure(new ApiError(409, 'x', undefined, 'trade_party_code_duplicate')).kind).toBe('generic');
+    expect(mapTradeFailure(new ApiError(409, 'x', undefined, 'trade_product_code_duplicate')).kind).toBe('generic');
+  });
+
+  it('uses product wording for concurrency and not-found, and the shared mapping for the rest', () => {
+    expect(mapProductFailure(new ApiError(409, 'x', undefined, 'trade_concurrency_conflict')).message).toBe(productMessages.concurrency);
+    expect(mapProductFailure(new ApiError(404, 'x')).message).toBe(productMessages.notFound);
+    expect(mapProductFailure(new ApiError(413, 'x')).kind).toBe('too-large');
+    expect(mapProductFailure(new ApiError(403, 'x', undefined, 'trade_forbidden')).kind).toBe('forbidden');
+    expect(mapProductFailure(new ApiError(400, 'x', undefined, 'trade_invalid_request_body')).kind).toBe('invalid-body');
+    expect(mapProductFailure(new TypeError('Failed to fetch')).kind).toBe('network');
+    expect(mapProductFailure(new TradeContractError('product.id')).message).not.toContain('product.id');
   });
 });

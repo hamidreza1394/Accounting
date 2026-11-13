@@ -3015,3 +3015,10 @@
 - وضعیت PRهای خارج از Vendor: #638 دارای ۱۲ موفق/۲ در حال اجرا/۱ Skip؛ #640 دارای E2E failure در HR deactivate (429 به‌جای 204) و Windows Publish موفق؛ #641 دارای ۱۴ موفق/۱ Skip. این تغییرات خارج از محدوده‌اند و دست‌کاری نشدند.
 - PR #642 ابتدا از main قبلی ساخته شد؛ برای کنترل base/head پس از Merge #639، شاخهٔ مستنداتی روی main جدید بازپایه می‌شود و CI روی head تازه باید دوباره اجرا شود.
 - شمار ۱۰۰ اجرای اخیر به ۸۲ success، ۸ failure، ۷ cancelled و ۳ in progress تغییر کرده است؛ هفت شکست #628/D-078 و شکست هشتم E2E در #640 است. هیچ شکست Vendor CI مشاهده نشد.
+
+## 2026-11-13 — Trade S2-3 (Party) ادغام‌شده و S2-4 (Product) در شاخه
+
+- **S2-3:** PR #643 با squash در `main` ادغام شد (SHA `1fbe1e306aaa342d9bf294ff82bdf08f1488bcdd`)؛ CI روی head آزمایش‌شده `aac6c09c` سبز بود (CodeRabbit Skip). Trade 166/166 روی SQL Server واقعی در سه اجرای مستقل؛ کلاینت ۱۱۷۸ از ۱۱۸۱ (سه شکست SecurityAudit پیشین و اثبات‌شده روی main). تست مرورگر (API ساختگی) باگ Combobox را یافت و اصلاح شد. D-084 `Accepted`.
+- **S2-4 (شاخهٔ `feat/trade-s2-4-product-slice`، PR هنوز ادغام نشده):** API کالا (`/api/v1/trade/products`، `/reference/units`)، UI `/trade/products`، برگ «کالاها» در سایدبار. بدون Migration/Schema، بدون حذف/غیرفعال‌سازی (D-083)، `ProductIdentifier` دست‌نخورده. بازبینی مستقل بک‌اند (کد + امنیت) و فرانت (کد + امنیت): بدون Critical/High؛ Mediumها اصلاح شد. Trade 233/233 روی SQL Server واقعی در سه اجرای مستقل.
+- **D-085** (گسترش D-084 به نوشتن Product) `Proposed`+`NeedsApproval`؛ رفتار فعال است و بازگشتش یک‌خطی است.
+- موارد Low پذیرفته‌شده/موکول: فهرست نویسه‌های ممنوع Party با Product یکسان نیست (پیگیری)؛ کد تکراری در اعتبارسنجی دو سرویس؛ حلقهٔ focus ring دکمه‌های مشترک کم‌کنتراست؛ جدول فهرست در ۳۶۰px بدون راهنمای اسکرول افقی.
