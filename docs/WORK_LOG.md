@@ -3022,3 +3022,7 @@
 - **S2-4 (شاخهٔ `feat/trade-s2-4-product-slice`، PR هنوز ادغام نشده):** API کالا (`/api/v1/trade/products`، `/reference/units`)، UI `/trade/products`، برگ «کالاها» در سایدبار. بدون Migration/Schema، بدون حذف/غیرفعال‌سازی (D-083)، `ProductIdentifier` دست‌نخورده. بازبینی مستقل بک‌اند (کد + امنیت) و فرانت (کد + امنیت): بدون Critical/High؛ Mediumها اصلاح شد. Trade 233/233 روی SQL Server واقعی در سه اجرای مستقل.
 - **D-085** (گسترش D-084 به نوشتن Product) `Proposed`+`NeedsApproval`؛ رفتار فعال است و بازگشتش یک‌خطی است.
 - موارد Low پذیرفته‌شده/موکول: فهرست نویسه‌های ممنوع Party با Product یکسان نیست (پیگیری)؛ کد تکراری در اعتبارسنجی دو سرویس؛ حلقهٔ focus ring دکمه‌های مشترک کم‌کنتراست؛ جدول فهرست در ۳۶۰px بدون راهنمای اسکرول افقی.
+
+## 2026-11-13 — به‌روزرسانی: S2-4 (Product) ادغام شد
+
+- PR #644 با squash در `main` ادغام شد (SHA `6fa65e9e2f0acaa59b39dc46ab69bd1b1a7e6d4c`)؛ CI روی head آزمایش‌شده `e6eed7ae` سبز (CodeRabbit Skip)، Trade 233/233 روی SQL Server واقعی در سه اجرا. ورودی بالا دربارهٔ «PR هنوز ادغام نشده» تاریخی است و دست‌نخورده مانده است. D-085 همچنان `Proposed`+`NeedsApproval`.
