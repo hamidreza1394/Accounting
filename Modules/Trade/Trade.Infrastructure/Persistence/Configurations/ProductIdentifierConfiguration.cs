@@ -9,7 +9,7 @@ internal sealed class ProductIdentifierConfiguration : IEntityTypeConfiguration<
     public void Configure(EntityTypeBuilder<ProductIdentifier> builder)
     {
         TradeEntityConfiguration.Configure(builder);
-        builder.ToTable("ProductIdentifiers", "trade");
+        builder.ToTable("ProductIdentifiers", "trade", table => table.ExcludeFromMigrations());
 
         builder.Property(identifier => identifier.RegistrationSourceCode).HasMaxLength(64);
         builder.Property(identifier => identifier.OriginCountryCode).HasMaxLength(2).IsUnicode(false);

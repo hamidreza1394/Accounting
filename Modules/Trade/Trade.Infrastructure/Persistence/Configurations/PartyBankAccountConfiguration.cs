@@ -9,7 +9,7 @@ internal sealed class PartyBankAccountConfiguration : IEntityTypeConfiguration<P
     public void Configure(EntityTypeBuilder<PartyBankAccount> builder)
     {
         TradeEntityConfiguration.Configure(builder);
-        builder.ToTable("PartyBankAccounts", "trade");
+        builder.ToTable("PartyBankAccounts", "trade", table => table.ExcludeFromMigrations());
 
         builder.Property(account => account.BankName).HasMaxLength(160).IsRequired();
         builder.Property(account => account.AccountNumber).HasMaxLength(80).IsRequired();
