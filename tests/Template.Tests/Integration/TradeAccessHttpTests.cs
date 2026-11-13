@@ -120,6 +120,13 @@ internal sealed class CookieJar : DelegatingHandler
 
 internal static class TradeHttp
 {
+	/// <summary>
+	/// The Trade HTTP gate test classes seed the same permission codes into the shared SQL Server
+	/// database with a check-then-insert; running them in parallel races on IX_PermissionDefinitions_Code.
+	/// They share one collection so xUnit runs them one after another.
+	/// </summary>
+	public const string CollectionName = "TradeHttpGate";
+
 	public static readonly DateOnly Start = new(2026, 3, 21);
 	public static readonly DateOnly End = new(2027, 3, 20);
 
@@ -191,6 +198,7 @@ internal static class TradeHttp
 }
 
 /// <summary>Trade access gate through the real pipeline with the production deny-all entitlement.</summary>
+[Collection(TradeHttp.CollectionName)]
 public sealed class TradeAccessHttpTests : IClassFixture<TradeProbeFactory>
 {
 	private readonly TradeProbeFactory factory;
@@ -372,6 +380,7 @@ public sealed class TradeAccessHttpTests : IClassFixture<TradeProbeFactory>
 }
 
 /// <summary>The same pipeline with a test-only granting entitlement.</summary>
+[Collection(TradeHttp.CollectionName)]
 public sealed class TradeAccessGrantedHttpTests : IClassFixture<GrantingTradeProbeFactory>
 {
 	private readonly GrantingTradeProbeFactory factory;
