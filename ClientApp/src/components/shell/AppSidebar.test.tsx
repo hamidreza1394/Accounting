@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AccessSnapshot, Permission } from '@/lib/permissions';
 import { RouterProvider } from '@/lib/router';
+import { TradeAccessContext, createTradeAccess, type TradeAccess } from '@/features/trade/access/TradeAccess';
 import { AppSidebar } from './AppSidebar';
 
 const installationAdmin: AccessSnapshot = {
@@ -342,5 +343,85 @@ describe('AppSidebar (Issue #444 stage 1 shell)', () => {
     const { container } = render(<div dir="rtl"><RouterProvider routes={[]}><AppSidebar access={installationAdmin} canAccess={() => true} onRetryPermissions={vi.fn()} onNavigate={vi.fn()} mobileOpen /></RouterProvider></div>);
     expect(container.firstElementChild).toHaveAttribute('dir', 'rtl');
     expect(container.querySelector('aside')).toHaveClass('is-open');
+  });
+});
+
+describe('AppSidebar Trade leaf «طرف‌حساب‌ها» (S2-3)', () => {
+  const tradeReady = (permissions: string[], accessMode: 'ReadWrite' | 'ReadOnly' = 'ReadWrite') =>
+    createTradeAccess({ status: 'ready', accessMode, permissions });
+
+  function setupTrade(trade: TradeAccess | null) {
+    const sidebar = (
+      <RouterProvider routes={[]}>
+        <AppSidebar access={installationAdmin} canAccess={() => true} onRetryPermissions={vi.fn()} onNavigate={vi.fn()} mobileOpen={false} />
+      </RouterProvider>
+    );
+    return render(trade ? <TradeAccessContext.Provider value={trade}>{sidebar}</TradeAccessContext.Provider> : sidebar);
+  }
+
+  const openTrade = async () => {
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'بازرگانی خارجی' }));
+    return user;
+  };
+
+  it('is hidden by default (no provider), while loading, on error and when the module is unavailable; the honest placeholder stays', async () => {
+    for (const trade of [
+      null,
+      createTradeAccess({ status: 'loading' }),
+      createTradeAccess({ status: 'error' }),
+      createTradeAccess({ status: 'unavailable', reason: 'module' }),
+    ]) {
+      const { unmount } = setupTrade(trade);
+      await openTrade();
+      expect(screen.queryByRole('link', { name: 'طرف‌حساب‌ها' })).not.toBeInTheDocument();
+      const placeholder = screen.getByText('واردات و صادرات').closest('[aria-disabled="true"]') as HTMLElement;
+      expect(placeholder).toBeTruthy();
+      expect(placeholder).toHaveTextContent('به‌زودی');
+      expect(placeholder.querySelector('a,button')).toBeNull();
+      unmount();
+    }
+  });
+
+  it('is hidden without trade.form.party.view even when the user holds other Trade codes, and even for an installation administrator without the code', async () => {
+    setupTrade(tradeReady(['trade.form.party.create', 'trade.form.party.update']));
+    await openTrade();
+    expect(screen.queryByRole('link', { name: 'طرف‌حساب‌ها' })).not.toBeInTheDocument();
+  });
+
+  it('shows a real link to /trade/parties when capabilities allow the view, in the existing «بازرگانی خارجی» group', async () => {
+    setupTrade(tradeReady(['trade.form.party.view']));
+    expect(screen.queryByRole('link', { name: 'طرف‌حساب‌ها' })).not.toBeInTheDocument(); // folded until clicked
+    await openTrade();
+    const link = screen.getByRole('link', { name: 'طرف‌حساب‌ها' });
+    expect(link).toHaveAttribute('href', '/app/trade/parties');
+    expect(link).not.toHaveAttribute('aria-current');
+    expect(screen.getByText('واردات و صادرات').closest('[aria-disabled="true"]')).toBeTruthy();
+    // It is shown on a read-only period too (viewing is allowed).
+    expect(link.closest('li')?.closest('ul')?.id).toBe(screen.getByRole('button', { name: 'بازرگانی خارجی' }).getAttribute('aria-controls'));
+  });
+
+  it('marks the leaf active (aria-current) on the list, details and edit routes', async () => {
+    for (const path of ['/app/trade/parties', '/app/trade/parties/3b1f5c70-1111-4000-8000-00000000a001', '/app/trade/parties/3b1f5c70-1111-4000-8000-00000000a001/edit']) {
+      window.history.pushState(null, '', path);
+      const { unmount } = setupTrade(tradeReady(['trade.form.party.view'], 'ReadOnly'));
+      // Direct load never opens a group: the folded owner shows a dot, the click opens it.
+      const group = screen.getByRole('button', { name: 'بازرگانی خارجی' });
+      expect(group).toHaveAttribute('aria-expanded', 'false');
+      expect(group.querySelector('.faranou-nav-group-dot')).not.toBeNull();
+      await openTrade();
+      const active = screen.getByRole('link', { name: 'طرف‌حساب‌ها' });
+      expect(active).toHaveAttribute('aria-current', 'page');
+      expect(active).toHaveClass('faranou-nav-active');
+      expect(document.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
+      unmount();
+    }
+  });
+
+  it('does not leak the English internal names or the route into the visible labels', async () => {
+    setupTrade(tradeReady(['trade.form.party.view']));
+    await openTrade();
+    expect(screen.queryByText('trade', { exact: true })).not.toBeInTheDocument();
+    expect(screen.queryByText('/trade/parties', { exact: true })).not.toBeInTheDocument();
   });
 });

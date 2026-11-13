@@ -10,6 +10,7 @@ import {
   ClipboardList,
   FileBarChart,
   Gem,
+  Handshake,
   Headphones,
   KeyRound,
   LayoutDashboard,
@@ -27,6 +28,7 @@ import {
 } from 'lucide-react';
 import { Link, useLocation } from '@/lib/router';
 import type { AccessSnapshot, Permission } from '@/lib/permissions';
+import { useTradeAccess } from '@/features/trade/access/TradeAccess';
 import { NestedNavSections, SubNavIcon } from './NestedNavSections';
 
 type Tone =
@@ -127,7 +129,12 @@ export const navigation: NavEntry[] = [
       label: 'بازرگانی خارجی',
       icon: Ship,
       tone: 'cyan',
-      children: [{ label: 'واردات و صادرات', icon: Ship }],
+      // The real leaf is shown only for a user whose Trade capabilities allow it; «واردات و صادرات» stays an honest
+      // placeholder (no route yet, D-081: an active item appears only together with its real route).
+      children: [
+        { label: 'طرف‌حساب‌ها', icon: Handshake, to: '/trade/parties' },
+        { label: 'واردات و صادرات', icon: Ship },
+      ],
     },
   },
   {
@@ -224,6 +231,8 @@ export type AppSidebarProps = {
 
 export function AppSidebar({ access, canAccess, onRetryPermissions, onNavigate, mobileOpen, onLogout, loggingOut = false }: AppSidebarProps) {
   const { pathname } = useLocation();
+  // Trade hints come from `/trade/capabilities`, not from the shell permission snapshot; fail-closed by default.
+  const tradeAccess = useTradeAccess();
 
   // Two independent concepts: the ACTIVE ROUTE (which page is open; drives only the highlight,
   // `aria-current` and the dot on a folded group) and the EXPANDED GROUPS (which groups the user
@@ -255,6 +264,8 @@ export function AppSidebar({ access, canAccess, onRetryPermissions, onNavigate, 
           return canAccess('hr.positions.view');
         case '/hr/org/employees':
           return canAccess('hr.employees.view');
+        case '/trade/parties':
+          return tradeAccess.status === 'ready' && tradeAccess.can('party.view');
         default:
           return true;
       }

@@ -155,6 +155,55 @@ public sealed class TradeAuthorizationAdapterTests : IDisposable
         Assert.False(await HasAsync(adapter, Guid.NewGuid(), permission, TradeAccessIntent.Read));
     }
 
+    [Fact]
+    public async Task ClosedPeriodWriteIsDeniedByDefaultButAllowedOnlyWhenPeriodIndependentAndPermitted()
+    {
+        var permission = TradePermissionCodes.FormUpdate("party");
+        var company = AddCompany(Domain.FiscalPeriodStatus.Closed, [permission]);
+        var adapter = CreateAdapter(company.CompanyId, company.PeriodId);
+        var context = await adapter.ResolveCurrentContextAsync(userId, TestContext.Current.CancellationToken);
+        Assert.NotNull(context);
+        Assert.False(context.AllowsWrites);
+        var ct = TestContext.Current.CancellationToken;
+
+        Assert.False(await adapter.HasPermissionAsync(context, permission, TradeAccessIntent.Write, ct));
+        Assert.False(await adapter.HasPermissionAsync(context, permission, TradeAccessIntent.Write, ct, periodIndependent: false));
+        Assert.True(await adapter.HasPermissionAsync(context, permission, TradeAccessIntent.Write, ct, periodIndependent: true));
+    }
+
+    [Fact]
+    public async Task PeriodIndependentWriteStillNeedsThePermissionAndAResolvedContext()
+    {
+        var granted = TradePermissionCodes.FormUpdate("party");
+        var notGranted = TradePermissionCodes.FormCreate("party");
+        var company = AddCompany(Domain.FiscalPeriodStatus.Closed, [granted]);
+        var adapter = CreateAdapter(company.CompanyId, company.PeriodId);
+        var context = await adapter.ResolveCurrentContextAsync(userId, TestContext.Current.CancellationToken);
+        Assert.NotNull(context);
+        var ct = TestContext.Current.CancellationToken;
+
+        Assert.False(await adapter.HasPermissionAsync(context, notGranted, TradeAccessIntent.Write, ct, periodIndependent: true));
+        Assert.False(await adapter.HasPermissionAsync(context with { }, granted, TradeAccessIntent.Write, ct, periodIndependent: true));
+        Assert.False(await adapter.HasPermissionAsync(context with { TenantId = Guid.NewGuid() }, granted, TradeAccessIntent.Write, ct, periodIndependent: true));
+        var neverResolved = new TradeAccessContext(userId, company.CompanyId, company.PeriodId, false);
+        Assert.False(await adapter.HasPermissionAsync(neverResolved, granted, TradeAccessIntent.Write, ct, periodIndependent: true));
+    }
+
+    [Fact]
+    public async Task PeriodIndependentFlagDoesNotChangeReadDecisions()
+    {
+        var view = TradePermissionCodes.FormView("party");
+        var company = AddCompany(Domain.FiscalPeriodStatus.Closed, [view]);
+        var adapter = CreateAdapter(company.CompanyId, company.PeriodId);
+        var context = await adapter.ResolveCurrentContextAsync(userId, TestContext.Current.CancellationToken);
+        Assert.NotNull(context);
+        var ct = TestContext.Current.CancellationToken;
+
+        Assert.True(await adapter.HasPermissionAsync(context, view, TradeAccessIntent.Read, ct, periodIndependent: false));
+        Assert.True(await adapter.HasPermissionAsync(context, view, TradeAccessIntent.Read, ct, periodIndependent: true));
+        Assert.False(await adapter.HasPermissionAsync(context, TradePermissionCodes.FormExport("party"), TradeAccessIntent.Read, ct, periodIndependent: true));
+    }
+
     private static async Task<bool> HasAsync(
         TradeAuthorizationAdapter adapter, Guid requestedUserId, string permission, TradeAccessIntent intent)
     {

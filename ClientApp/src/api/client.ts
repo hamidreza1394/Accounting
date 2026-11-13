@@ -87,11 +87,17 @@ export class ApiError extends Error {
   readonly status: number;
   /** Validation messages per field (RFC 7807 `errors`), when the server sent any. */
   readonly fieldErrors?: Record<string, string[]>;
+  /**
+   * The machine code of a 4xx ProblemDetails `detail` (for example `trade_concurrency_conflict`), when it has the
+   * shape of a code. A client maps it to its own message; the raw `detail` text is never shown.
+   */
+  readonly problemCode?: string;
 
-  constructor(status: number, message: string, fieldErrors?: Record<string, string[]>) {
+  constructor(status: number, message: string, fieldErrors?: Record<string, string[]>, problemCode?: string) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    if (problemCode) this.problemCode = problemCode;
     if (fieldErrors && Object.keys(fieldErrors).length > 0) {
       this.fieldErrors = fieldErrors;
     }
@@ -118,6 +124,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function nonEmptyString(value: unknown): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value : null;
 }
+
+/** A machine code (`snake_case`), never free text: only this shape of `detail` is exposed to callers. */
+const problemCodePattern = /^[a-z][a-z0-9_]{2,63}$/;
 
 const defaultValidationTitle = 'One or more validation errors occurred.';
 
@@ -153,7 +162,9 @@ export function normalizeApiError(status: number, body?: unknown): ApiError {
   const title = nonEmptyString(body['title']);
   const useTitle = title !== null && !(Object.keys(fieldErrors).length > 0 && title === defaultValidationTitle);
   const message = (useTitle ? title : null) ?? nonEmptyString(body['error']) ?? messageForStatus(status);
-  return new ApiError(status, message, fieldErrors);
+  const detail = body['detail'];
+  const problemCode = typeof detail === 'string' && problemCodePattern.test(detail) ? detail : undefined;
+  return new ApiError(status, message, fieldErrors, problemCode);
 }
 
 async function readJsonBody(response: Response): Promise<unknown> {
@@ -178,7 +189,8 @@ async function ensureSuccess(response: Response): Promise<void> {
   }
 }
 
-async function getJson(path: string, signal?: AbortSignal): Promise<unknown> {
+/** A same-origin, no-store JSON GET below the API base; 401 -> UnauthenticatedError, other failures -> ApiError. */
+export async function getJson(path: string, signal?: AbortSignal): Promise<unknown> {
   const response = await fetch(`${apiBase}${path}`, {
     method: 'GET',
     credentials: 'same-origin',

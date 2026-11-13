@@ -1,6 +1,7 @@
 import { createContext, lazy, useCallback, useContext, useMemo } from 'react';
 import type { SelectedContext, Session } from '../api/types';
 import { hrRoutes } from '../features/hr/hrRoutes';
+import { tradeRoutes } from '../features/trade/tradeRoutes';
 import { can, isInstallationAdministrator, type AccessSnapshot, type CanHint, type Permission } from '../lib/permissions';
 import type { Route } from '../lib/router';
 import type { UserFormContext } from './admin/users/form/userFormShared';
@@ -233,8 +234,12 @@ function hrPermission(path: string): Permission {
   return 'hr.employees.view';
 }
 
-/** Specific paths first inside each group; HR paths do not overlap the shared ones. */
+/**
+ * Specific paths first inside each group; HR and Trade paths do not overlap the shared ones. The Trade routes carry no
+ * `permission` here: their hints come from `/trade/capabilities` and are enforced by the route guard of the feature.
+ */
 export const appRoutes: readonly Route[] = [
   ...baseRoutes,
   ...hrRoutes.map((route): Route => ({ ...route, permission: hrPermission(route.path) })),
+  ...tradeRoutes,
 ];

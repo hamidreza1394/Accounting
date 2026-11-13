@@ -10,6 +10,8 @@ public sealed class TradeAccessGateTests
     private static readonly string WriteCode = TradePermissionCodes.FormUpdate("import-order");
 
     private readonly List<string> calls = [];
+    private readonly List<(string Code, bool PeriodIndependent)> permissionChecks = [];
+    private HashSet<string>? granted;
 
     private static TradeAccessContext Context(bool allowsWrites = true) =>
         new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), allowsWrites);
@@ -21,7 +23,7 @@ public sealed class TradeAccessGateTests
         Exception? entitlementError = null)
     {
         return new TradeAccessGate(
-            new RecordingAuthorization(calls, context, permission),
+            new RecordingAuthorization(calls, context, permission, permissionChecks, () => granted),
             new RecordingEntitlement(calls, entitled, entitlementError));
     }
 
@@ -164,7 +166,99 @@ public sealed class TradeAccessGateTests
         Assert.Equal(["resolve"], calls);
     }
 
-    private sealed class RecordingAuthorization(List<string> calls, TradeAccessContext? context, bool permission)
+    private static readonly TradeAccessOptions PeriodIndependent = new() { PeriodIndependent = true };
+
+    [Fact]
+    public async Task PeriodIndependentWriteIsAllowedInAClosedPeriodAndTheFlagReachesThePermissionCheck()
+    {
+        var gate = Gate(Context(allowsWrites: false));
+
+        var decision = await gate.AuthorizeAsync(
+            Guid.NewGuid(), WriteCode, TradeAccessIntent.Write, PeriodIndependent, TestContext.Current.CancellationToken);
+
+        Assert.Equal(TradeAccessOutcome.Allowed, decision.Outcome);
+        Assert.Equal(["resolve", "entitlement", "permission"], calls);
+        Assert.Equal([(WriteCode, true)], permissionChecks);
+    }
+
+    [Fact]
+    public async Task DefaultAndPeriodDependentWritesAreStillBlockedInAClosedPeriod()
+    {
+        var gate = Gate(Context(allowsWrites: false));
+
+        var byDefault = await gate.AuthorizeAsync(Guid.NewGuid(), WriteCode, TradeAccessIntent.Write, TestContext.Current.CancellationToken);
+        var explicitDefault = await gate.AuthorizeAsync(
+            Guid.NewGuid(), WriteCode, TradeAccessIntent.Write, TradeAccessOptions.Default, TestContext.Current.CancellationToken);
+
+        Assert.Equal(TradeAccessOutcome.PeriodReadOnly, byDefault.Outcome);
+        Assert.Equal(TradeAccessOutcome.PeriodReadOnly, explicitDefault.Outcome);
+        Assert.Equal(["resolve", "resolve"], calls);
+        Assert.False(TradeAccessOptions.Default.PeriodIndependent);
+        Assert.Empty(TradeAccessOptions.Default.AdditionalReadPermissions);
+    }
+
+    [Fact]
+    public async Task PeriodIndependentWriteStillRequiresContextEntitlementAndPermission()
+    {
+        var noContext = await Gate(null).AuthorizeAsync(
+            Guid.NewGuid(), WriteCode, TradeAccessIntent.Write, PeriodIndependent, TestContext.Current.CancellationToken);
+        Assert.Equal(TradeAccessOutcome.ContextRequired, noContext.Outcome);
+
+        calls.Clear();
+        var notEntitled = await Gate(Context(allowsWrites: false), entitled: false).AuthorizeAsync(
+            Guid.NewGuid(), WriteCode, TradeAccessIntent.Write, PeriodIndependent, TestContext.Current.CancellationToken);
+        Assert.Equal(TradeAccessOutcome.ModuleUnavailable, notEntitled.Outcome);
+        Assert.DoesNotContain("permission", calls);
+
+        var faulty = await Gate(Context(allowsWrites: false), entitlementError: new InvalidOperationException("x")).AuthorizeAsync(
+            Guid.NewGuid(), WriteCode, TradeAccessIntent.Write, PeriodIndependent, TestContext.Current.CancellationToken);
+        Assert.Equal(TradeAccessOutcome.ModuleUnavailable, faulty.Outcome);
+
+        var noPermission = await Gate(Context(allowsWrites: false), permission: false).AuthorizeAsync(
+            Guid.NewGuid(), WriteCode, TradeAccessIntent.Write, PeriodIndependent, TestContext.Current.CancellationToken);
+        Assert.Equal(TradeAccessOutcome.Forbidden, noPermission.Outcome);
+    }
+
+    [Fact]
+    public async Task PeriodIndependentFlagIsIgnoredForReadIntent()
+    {
+        var gate = Gate(Context(allowsWrites: false));
+
+        var decision = await gate.AuthorizeAsync(
+            Guid.NewGuid(), ReadCode, TradeAccessIntent.Read, PeriodIndependent, TestContext.Current.CancellationToken);
+
+        Assert.Equal(TradeAccessOutcome.Allowed, decision.Outcome);
+        Assert.Equal([(ReadCode, false)], permissionChecks);
+    }
+
+    [Fact]
+    public async Task AdditionalReadPermissionIsRequiredAfterThePrimaryOne()
+    {
+        var options = new TradeAccessOptions { AdditionalReadPermissions = [ReadCode] };
+
+        granted = [WriteCode];
+        var withoutView = await Gate(Context()).AuthorizeAsync(
+            Guid.NewGuid(), WriteCode, TradeAccessIntent.Write, options, TestContext.Current.CancellationToken);
+        Assert.Equal(TradeAccessOutcome.Forbidden, withoutView.Outcome);
+        Assert.Null(withoutView.Context);
+
+        granted = [WriteCode, ReadCode];
+        var withView = await Gate(Context()).AuthorizeAsync(
+            Guid.NewGuid(), WriteCode, TradeAccessIntent.Write, options, TestContext.Current.CancellationToken);
+        Assert.Equal(TradeAccessOutcome.Allowed, withView.Outcome);
+
+        granted = [ReadCode];
+        var viewOnly = await Gate(Context()).AuthorizeAsync(
+            Guid.NewGuid(), WriteCode, TradeAccessIntent.Write, options, TestContext.Current.CancellationToken);
+        Assert.Equal(TradeAccessOutcome.Forbidden, viewOnly.Outcome);
+    }
+
+    private sealed class RecordingAuthorization(
+        List<string> calls,
+        TradeAccessContext? context,
+        bool permission,
+        List<(string Code, bool PeriodIndependent)> checks,
+        Func<HashSet<string>?> grantedCodes)
         : ITradeAuthorization
     {
         public Task<TradeAccessContext?> ResolveCurrentContextAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -175,10 +269,14 @@ public sealed class TradeAccessGateTests
 
         public Task<bool> HasPermissionAsync(
             TradeAccessContext context, string permissionCode, TradeAccessIntent accessIntent,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default, bool periodIndependent = false)
         {
             calls.Add("permission");
-            return Task.FromResult(permission && TradePermissionCodes.IsAccessIntentCompatible(permissionCode, accessIntent));
+            checks.Add((permissionCode, periodIndependent));
+            var codes = grantedCodes();
+            return Task.FromResult(
+                permission && (codes is null || codes.Contains(permissionCode)) &&
+                TradePermissionCodes.IsAccessIntentCompatible(permissionCode, accessIntent));
         }
 
         public Task<IReadOnlyList<string>> GetGrantedTradePermissionsAsync(

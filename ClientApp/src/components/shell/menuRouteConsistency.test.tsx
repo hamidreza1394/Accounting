@@ -65,4 +65,20 @@ describe('menu ↔ router consistency (Issue #444 stage 2-B / D-075)', () => {
       expect('openByDefault' in group, `group «${group.label}» must not be open by default`).toBe(false);
     }
   });
+
+  it('keeps the foreign-trade group honest: the party leaf has its real routes, «واردات و صادرات» stays an unrouted placeholder', () => {
+    const trade = groupEntries().find((group) => group.label === 'بازرگانی خارجی');
+    expect(trade).toBeDefined();
+    const party = trade?.children.find((leaf) => leaf.label === 'طرف‌حساب‌ها');
+    expect(party?.to).toBe('/trade/parties');
+    for (const path of ['/trade/parties', '/trade/parties/new', '/trade/parties/:id', '/trade/parties/:id/edit']) {
+      expect(routePaths).toContain(path);
+    }
+    // `/new` precedes `/:id`, otherwise «new» would be read as a party id.
+    expect(routePaths.indexOf('/trade/parties/new')).toBeLessThan(routePaths.indexOf('/trade/parties/:id'));
+    const placeholder = trade?.children.find((leaf) => leaf.label === 'واردات و صادرات');
+    expect(placeholder).toBeDefined();
+    expect(placeholder?.to).toBeUndefined();
+    expect('openByDefault' in (trade as object)).toBe(false);
+  });
 });

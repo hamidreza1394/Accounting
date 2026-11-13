@@ -51,11 +51,12 @@ public sealed class TradeAuthorizationAdapter(
         TradeAccessContext context,
         string permissionCode,
         TradeAccessIntent accessIntent,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool periodIndependent = false)
     {
         if (!IsResolvedInThisRequest(context) ||
             !IsValidRequest(context.UserId, permissionCode, accessIntent) ||
-            (accessIntent == TradeAccessIntent.Write && !context.AllowsWrites))
+            (accessIntent == TradeAccessIntent.Write && !context.AllowsWrites && !periodIndependent))
         {
             return false;
         }
