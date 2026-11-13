@@ -239,6 +239,7 @@
 - [ ] مسیر ورود به Trade و نمایش منو/فرم براساس capabilityهای تأییدشده سرور؛ UI مرجع امنیت نیست.
 
 ### S2 — داده‌های پایه حداقلی (D-081؛ توسعهٔ کد موجود، نه بازسازی)
+**مرحلهٔ صفر تکمیل شد:** PR #637 در `main` با SHA `1825107437894e941ef51f60802117ba8e057ca4` ادغام شد (فقط مستندات). S2-1..S2-4 هر یک در PR کوچک و مستقل ساخته می‌شود؛ S3 تا تأیید D-080 (جز P-1) و D-083 وارد نمی‌شود.
 جزئیات، وابستگی و معیار پذیرش هر Issue در `docs/TRADE_PHASE0_DRAFTS.md` بخش ۳ است. S2 به D-080 و به #392/#228/#384/#401 وابسته نیست.
 - [ ] **S2-1:** Migration افزایشی `trade` فقط برای `Party`، `PartyRoleAssignment` و `Product` (تولیدشده از نگاشت موجود؛ `PartyBankAccount` و `ProductIdentifier` با `ExcludeFromMigrations()` از Migration بیرون می‌مانند و مدل/ناوبری‌ها دست‌نخورده است؛ تست دروازه «فقط سه جدول» در همین Issue). *(DI و design-time factory در `main` Implemented (#404/#405)؛ `Verified` فقط با تست SQL Server.)*
 - [ ] **S2-2:** مرجع محلی فقط‌خواندنی Country، Currency، Unit، Incoterm؛ بدون جدول، API مدیریتی یا منو.
