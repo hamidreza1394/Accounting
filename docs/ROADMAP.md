@@ -241,10 +241,10 @@
 ### S2 — داده‌های پایه حداقلی (D-081؛ توسعهٔ کد موجود، نه بازسازی)
 **مرحلهٔ صفر تکمیل شد:** PR #637 در `main` با SHA `1825107437894e941ef51f60802117ba8e057ca4` ادغام شد (فقط مستندات). S2-1..S2-4 هر یک در PR کوچک و مستقل ساخته می‌شود؛ S3 تا تأیید D-080 (جز P-1) و D-083 وارد نمی‌شود.
 جزئیات، وابستگی و معیار پذیرش هر Issue در `docs/TRADE_PHASE0_DRAFTS.md` بخش ۳ است. S2 به D-080 و به #392/#228/#384/#401 وابسته نیست.
-- [ ] **S2-1:** Migration افزایشی `trade` فقط برای `Party`، `PartyRoleAssignment` و `Product` (تولیدشده از نگاشت موجود؛ `PartyBankAccount` و `ProductIdentifier` با `ExcludeFromMigrations()` از Migration بیرون می‌مانند و مدل/ناوبری‌ها دست‌نخورده است؛ تست دروازه «فقط سه جدول» در همین Issue). *(DI و design-time factory در `main` Implemented (#404/#405)؛ `Verified` فقط با تست SQL Server.)*
-- [ ] **S2-2:** مرجع محلی فقط‌خواندنی Country، Currency، Unit، Incoterm؛ بدون جدول، API مدیریتی یا منو.
-- [ ] **S2-3:** برش عمودی «طرف‌حساب‌ها»: UseCase + API `/api/v1/trade/parties` + `/trade/parties` در `ClientApp/src/features/trade`.
-- [ ] **S2-4:** برش عمودی «کالاها»: UseCase + API `/api/v1/trade/products` + `/trade/products`.
+- [x] **S2-1 (ادغام‌شده، #641، `313d48da`):** Migration افزایشی `trade` فقط برای `Party`، `PartyRoleAssignment` و `Product` (تولیدشده از نگاشت موجود؛ `PartyBankAccount` و `ProductIdentifier` با `ExcludeFromMigrations()` از Migration بیرون می‌مانند و مدل/ناوبری‌ها دست‌نخورده است؛ تست دروازه «فقط سه جدول» در همین Issue). *(DI و design-time factory در `main` Implemented (#404/#405)؛ `Verified` فقط با تست SQL Server.)*
+- [x] **S2-2 (ادغام‌شده، #640، `5508b580`):** مرجع محلی فقط‌خواندنی Country، Currency، Unit، Incoterm؛ بدون جدول، API مدیریتی یا منو.
+- [x] **S2-3 (ادغام‌شده، #643، `1fbe1e30`؛ D-084):** برش عمودی «طرف‌حساب‌ها»: UseCase + API `/api/v1/trade/parties` + `/trade/parties` در `ClientApp/src/features/trade`.
+- [x] **S2-4 (ادغام‌شده، #644، `6fa65e9e`؛ D-085 `Proposed`):** برش عمودی «کالاها»: UseCase + API `/api/v1/trade/products` + `/trade/products`.
 - **D-082/D-083:** کنترل مشترک انتخاب (Combobox/Lookup) و ایجاد سریع طبق D-082 (`Accepted`) در فرم‌های S2/S3 به کار می‌رود؛ عملیات حذف/غیرفعال‌سازی اطلاعات پایه منتظر تأیید D-083 است و در S2 ساخته نمی‌شود.
 - **موکول:** `PartyBankAccount` ← S5؛ `ProductIdentifier` ← نیاز واقعی؛ بندر، نوع مجوز و بانک (نقش `PartyRole.Bank`) ← S4/S5؛ attachment storage ← تصمیم جدا.
 
