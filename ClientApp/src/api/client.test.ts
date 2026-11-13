@@ -196,6 +196,14 @@ describe('error normalization', () => {
     expect(normalizeApiError(400, { title: 'x' }).fieldErrors).toBeUndefined();
   });
 
+  it('exposes only a machine-code `detail` as problemCode, never free text, and never for 5xx', () => {
+    expect(normalizeApiError(409, { title: 'x', detail: 'trade_concurrency_conflict' }).problemCode).toBe('trade_concurrency_conflict');
+    expect(normalizeApiError(409, { detail: 'internal text' }).problemCode).toBeUndefined();
+    expect(normalizeApiError(409, { detail: 'Some.Exception: boom' }).problemCode).toBeUndefined();
+    expect(normalizeApiError(400, { title: 'x' }).problemCode).toBeUndefined();
+    expect(normalizeApiError(500, { detail: 'trade_forbidden' }).problemCode).toBeUndefined();
+  });
+
   it('replaces the English default validation title with the Persian status message', () => {
     const error = normalizeApiError(400, { title: 'One or more validation errors occurred.', errors: { Name: ['الزامی است'] } });
     expect(error.message).toBe('درخواست با خطا مواجه شد.');

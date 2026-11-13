@@ -10,6 +10,7 @@ import {
 } from './api/client';
 import type { SelectedContext, Session, WorkContext } from './api/types';
 import { AppShell } from './components/AppShell';
+import { TradeAccessProvider } from './features/trade/access/TradeAccess';
 import { BlockedAccess } from './components/BlockedAccess';
 import { AppRouteDataContext, appRoutes, type AppRouteData } from './components/AppRoutes';
 import { ErrorState, LoadingScreen } from './components/Feedback';
@@ -281,24 +282,27 @@ export function App({ navigate = defaultNavigate }: { navigate?: Navigate }) {
   const changingContext = selecting;
   return (
     <AppRouteDataContext.Provider value={routeData}>
-      <div inert={changingContext ? true : undefined}>
-        <AppShell
-          routes={appRoutes}
-          workspaceTabs
-          access={companyPermissions.access}
-          onRetryPermissions={companyPermissions.retry}
-          session={session}
-          context={context.current}
-          contextChangePending={changingContext}
-          onChangeContext={changeContext}
-          onLogout={handleLogout}
-          onPasswordChanged={handlePasswordChanged}
-          onUnauthenticated={handleUnauthenticated}
-        >
-          <RouteView />
-        </AppShell>
-      </div>
-      {changingContext ? <div className="faranou-context-change-overlay">{selectorScreen}</div> : null}
+      {/* The Trade capability hints are scoped to the work context (company + fiscal period): a change drops them. */}
+      <TradeAccessProvider scope={`${context.current.company.id}:${context.current.fiscalPeriod.id}`} onUnauthenticated={handleUnauthenticated}>
+        <div inert={changingContext ? true : undefined}>
+          <AppShell
+            routes={appRoutes}
+            workspaceTabs
+            access={companyPermissions.access}
+            onRetryPermissions={companyPermissions.retry}
+            session={session}
+            context={context.current}
+            contextChangePending={changingContext}
+            onChangeContext={changeContext}
+            onLogout={handleLogout}
+            onPasswordChanged={handlePasswordChanged}
+            onUnauthenticated={handleUnauthenticated}
+          >
+            <RouteView />
+          </AppShell>
+        </div>
+        {changingContext ? <div className="faranou-context-change-overlay">{selectorScreen}</div> : null}
+      </TradeAccessProvider>
     </AppRouteDataContext.Provider>
   );
 }

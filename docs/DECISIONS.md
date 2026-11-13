@@ -2022,3 +2022,23 @@ Routeها و منو فقط با Route واقعی؛ Migration فقط سه جدو�
 
 ### مراجع
 D-063، D-081، D-082، `docs/TRADE_DESIGN_V3_2.md` (Delete Behavior)، `docs/DATABASE.md`، `Modules/Trade/Trade.Domain/Common/TradeEntity.cs`.
+
+
+## D-084 — ایجاد و ویرایش Party مستقل از وضعیت دورهٔ مالی و الزام مجوز مشاهده برای نوشتن (2026-11-13)
+
+- **وضعیت تصمیم:** `Accepted` — دستور صریح مالک پروژه (2026-11-13، «ادامه توسعه Farano — تکمیل S2-3…»، بندهای ۲.۱ و ۲.۴).
+- **وضعیت پیاده‌سازی:** `Implemented` در شاخهٔ S2-3 (تا ادغام PR و تأیید CI، `Verified` نیست).
+- **Issue:** `UNNUMBERED`.
+- **دامنه:** فقط عملیات نوشتن Party (`POST/PUT /api/v1/trade/parties`). D-062، D-063 و D-081 را تغییر نمی‌دهد.
+
+### زمینه
+Party دادهٔ پایهٔ سطح Tenant است و `FiscalPeriodId` ندارد (D-063 بند ۳). دروازهٔ دسترسی Trade هر عملیات `Write` را در دورهٔ `Closed` رد می‌کرد؛ این رفتار عمومی برای اسناد دوره‌محور درست است ولی برای دادهٔ پایهٔ مستقل از دوره، انتخاب‌شده‌ای نبود. همچنین پاسخ PUT/POST رکورد را برمی‌گرداند و 409 «کد تکراری» وجود کد را آشکار می‌کند.
+
+### تصمیم
+1. **مستقل از دوره:** عملیات نوشتن Party فقط با پرچم صریح و اختیاری `periodIndependent` در فراداده از بستن در دورهٔ `Closed` معاف است. پیش‌فرض همهٔ عملیات «وابسته به دوره» می‌ماند. هویت، Anti-forgery، Company Context، Tenant (D-013)، مجوز و Entitlement ماژول بدون تغییر اعمال می‌شوند. دورهٔ `Archived` همچنان قابل ورود نیست (D-032).
+2. **الزام مجوز مشاهده:** POST/PUT Party علاوه بر `trade.form.party.create|update`، `trade.form.party.view` را سمت سرور می‌خواهند؛ نبود مجوز، 403 یکسان بدون نشت داده یا وجود شناسه (فراداده `AdditionalReadPermissions`).
+3. **تعهد برای اسناد آینده:** سندی که به Party ارجاع می‌دهد باید داده‌هایی را که برای سند قطعی لازم است (مثل نام قانونی و شناسه) Snapshot کند تا تغییر Party ظاهر اسناد دورهٔ بسته را عوض نکند. این تعهد در طراحی S3 بررسی می‌شود.
+4. `accessMode` در `/trade/capabilities` برای عملیات وابسته به دوره است و برای Party تعیین‌کننده نیست؛ کلاینت Party را از `available` و مجوزها تصمیم می‌گیرد.
+
+### مراجع
+D-013، D-032، D-062، D-063، `docs/TRADE_MODULE.md`، `docs/SECURITY.md`، `docs/handoffs/ISSUE-UNNUMBERED-trade-s2-3-party-backend.md`.

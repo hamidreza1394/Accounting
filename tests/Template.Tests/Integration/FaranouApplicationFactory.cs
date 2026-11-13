@@ -107,6 +107,11 @@ internal static class IntegrationDatabase
 			await database.EnsureDeletedAsync();
 			await database.MigrateAsync();
 
+			// Trade owns its own schema and migration history in the same physical database.
+			await scope.ServiceProvider
+				.GetRequiredService<Faranou.Modules.Trade.Infrastructure.Persistence.TradeDbContext>()
+				.Database.MigrateAsync();
+
 			schemaReady = true;
 		}
 		finally

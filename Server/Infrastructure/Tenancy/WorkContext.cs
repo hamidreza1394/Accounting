@@ -89,7 +89,7 @@ public sealed record SelectionResult(SelectionOutcome Outcome, WorkContext? Cont
 /// An <see cref="Domain.FiscalPeriodStatus.Open" /> period is the normal way in: full access as far
 /// as the user's permissions allow. A <see cref="Domain.FiscalPeriodStatus.Closed" /> period stays
 /// available for viewing and reporting (<see cref="WorkAccessMode.ReadOnly" />); posting, editing,
-/// voiding and the like follow their own rules and must check <see cref="WorkContext.AllowsWrites" />.
+/// voiding and the like follow their own rules and must check <see cref="WorkContext.AllowsWrites" />, except operations explicitly marked period-independent (D-084, Trade Party master data).
 /// An <see cref="Domain.FiscalPeriodStatus.Archived" /> period cannot be entered until the product
 /// decides how archived periods are viewed (<c>NeedsApproval</c>). The calendar date is deliberately
 /// <em>not</em> used. Everything is kept in this single place.

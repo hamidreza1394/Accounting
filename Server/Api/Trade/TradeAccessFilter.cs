@@ -46,6 +46,17 @@ public sealed partial class TradeAccessFilter(
 		}
 
 		var mutating = declaredWrite;
+
+		// Cheapest correct place: before anti-forgery, which may read a form body. A state-changing Trade request
+		// must be application/json (charset allowed). A request with no body at all (nothing for anti-forgery or
+		// the handler to read) may omit Content-Type; a body without Content-Type is rejected.
+		if (mutating && !HasAcceptableContentType(httpContext.Request))
+		{
+			return TypedResults.Problem(
+				title: "نوع محتوای درخواست پشتیبانی نمی‌شود.",
+				detail: "trade_unsupported_media_type",
+				statusCode: StatusCodes.Status415UnsupportedMediaType);
+		}
 		if (mutating && !await antiforgery.IsRequestValidAsync(httpContext))
 		{
 			return TypedResults.Problem(
@@ -73,7 +84,15 @@ public sealed partial class TradeAccessFilter(
 		}
 
 		var decision = await gate.AuthorizeAsync(
-			userId.Value, operation!.PermissionCode, operation.Intent, cancellationToken);
+			userId.Value,
+			operation!.PermissionCode,
+			operation.Intent,
+			new TradeAccessOptions
+			{
+				PeriodIndependent = operation.PeriodIndependent,
+				AdditionalReadPermissions = operation.AdditionalReadPermissions,
+			},
+			cancellationToken);
 		LogFault(decision.Fault);
 
 		if (decision.Outcome != TradeAccessOutcome.Allowed || decision.Context is null)
@@ -83,6 +102,18 @@ public sealed partial class TradeAccessFilter(
 
 		httpContext.Items[AccessContextItemKey] = decision.Context;
 		return await next(context);
+	}
+
+	private static bool HasAcceptableContentType(HttpRequest request)
+	{
+		if (string.IsNullOrEmpty(request.ContentType))
+		{
+			var hasBody = request.ContentLength > 0 || request.Headers.TransferEncoding.Count > 0;
+			return !hasBody;
+		}
+
+		return Microsoft.Net.Http.Headers.MediaTypeHeaderValue.TryParse(request.ContentType, out var mediaType) &&
+			mediaType.MediaType.Equals("application/json", StringComparison.OrdinalIgnoreCase);
 	}
 
 	public const string CapabilitiesItemKey = "Faranou.Trade.Capabilities";

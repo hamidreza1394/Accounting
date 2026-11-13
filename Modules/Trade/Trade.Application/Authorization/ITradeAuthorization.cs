@@ -8,7 +8,7 @@ namespace Faranou.Modules.Trade.Application.Authorization;
 /// <remarks>
 /// Period selection and period lifecycle are shared with Accounting through WorkContext and
 /// FiscalPeriodSelectionPolicy. This port adds Trade operation permissions to that verified
-/// context; it does not create a second period-access system. The adapter enforces WorkContext.AllowsWrites so a closed period cannot be modified even when a Trade write permission is granted.
+/// context; it does not create a second period-access system. The adapter enforces WorkContext.AllowsWrites so a closed period cannot be modified even when a Trade write permission is granted, except operations explicitly marked period-independent (D-084, Party master data), which the gate alone may request.
 /// </remarks>
 public interface ITradeAuthorization
 {
@@ -27,12 +27,15 @@ public interface ITradeAuthorization
     /// Fails closed unless <paramref name="context" /> is the exact instance resolved for this request,
     /// the permission matches the intent, a Write intent is allowed by the period, and the company role holds the permission.
     /// This is a user-permission check only; the commercial entitlement is checked by TradeAccessGate.
+    /// <paramref name="periodIndependent" /> (default false) lets a Write intent skip the closed-period block; only the
+    /// gate passes true, for operations that declare themselves tenant-level master data (D-063 item 3).
     /// </summary>
     Task<bool> HasPermissionAsync(
         TradeAccessContext context,
         string permissionCode,
         TradeAccessIntent accessIntent,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        bool periodIndependent = false);
 
     /// <summary>Granted <c>trade.*</c> codes of the resolved context; empty for a forged or foreign context.</summary>
     Task<IReadOnlyList<string>> GetGrantedTradePermissionsAsync(

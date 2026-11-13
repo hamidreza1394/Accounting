@@ -1,3 +1,5 @@
+using Faranou.Modules.Trade.Application.Parties;
+using Faranou.Modules.Trade.Infrastructure.Parties;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,6 +19,10 @@ public static class TradePersistenceServiceCollectionExtensions
 
         services.AddDbContext<TradeDbContext>(options =>
             TradeDbContextOptionsConfiguration.ConfigureSqlServer(options, connectionString));
+
+        // PartyStore logs; AddLogging is idempotent when the host already registered it.
+        services.AddLogging();
+        services.AddScoped<IPartyStore, PartyStore>();
 
         return services;
     }

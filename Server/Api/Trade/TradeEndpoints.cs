@@ -11,11 +11,21 @@ public static class TradeEndpoints
 	public static RouteGroupBuilder MapTradeEndpoints(this RouteGroupBuilder api)
 	{
 		var group = api.MapGroup("/trade")
+			.AddEndpointFilter(async (context, next) =>
+			{
+				// Registered before the gate so that gate rejections are never cached either.
+				context.HttpContext.Response.Headers.CacheControl = "no-store";
+				context.HttpContext.Response.Headers.Pragma = "no-cache";
+				return await next(context);
+			})
 			.AddEndpointFilter<TradeAccessFilter>()
 			.WithMetadata(new TradeGateMarker());
 
 		group.MapGet("/capabilities", GetCapabilities)
 			.WithMetadata(new TradeCapabilitiesEndpointMetadata());
+
+		group.MapTradePartyEndpoints();
+		group.MapTradeReferenceEndpoints();
 
 		return api;
 	}

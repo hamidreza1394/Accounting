@@ -284,6 +284,7 @@ if (!setupRequired)
     builder.Services.AddScoped<Faranou.Modules.Trade.Application.Licensing.ITradeModuleEntitlement,
         Infrastructure.Trade.DenyAllTradeModuleEntitlement>();
     builder.Services.AddScoped<Faranou.Modules.Trade.Application.Authorization.TradeAccessGate>();
+    builder.Services.AddScoped<Faranou.Modules.Trade.Application.Parties.PartyService>();
 
     // Corporate groups, ownership and the scope of group report runs (D-033, D-034). Every
     // permission is decided by CompanyAccessService; a group membership grants no access.

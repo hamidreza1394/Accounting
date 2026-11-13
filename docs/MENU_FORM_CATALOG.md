@@ -17,7 +17,7 @@
 | ۲.۲ | خزانه‌داری | آیتم | به‌زودی | همیشه (غیرفعال) | treasury |
 | ۳ | **فروش، بازرگانی و انبار** | گروه | — | — | — |
 | ۳.۱ | فروش | آیتم | به‌زودی | همیشه (غیرفعال) | sales |
-| ۳.۲ | بازرگانی خارجی (در کد: گروه مستقل «بازرگانی خارجی» با یک فرزند placeholder «واردات و صادرات»؛ طبق D-081 آیتم فعال فقط با Route واقعی می‌آید: S2 ← `/trade/parties`، `/trade/products`) | آیتم | به‌زودی | همیشه (غیرفعال) | TRADE_IMPORT |
+| ۳.۲ | بازرگانی خارجی (در کد: گروه مستقل «بازرگانی خارجی» با دو فرزند: آیتم واقعی «طرف‌حساب‌ها» و placeholder صادق «واردات و صادرات» که تا وجود Route واقعی «به‌زودی» می‌ماند؛ طبق D-081 آیتم فعال فقط با Route واقعی می‌آید: S2-3 ← `/trade/parties` پیاده شده (`Implemented`، بدون اجرای end-to-end روی مرورگر/SQL Server)، `/trade/products` هنوز نه) | گروه + آیتم | `/trade/parties` (آیتم «طرف‌حساب‌ها»)؛ «واردات و صادرات» به‌زودی | «طرف‌حساب‌ها»: فقط وقتی `GET /trade/capabilities` برابر `available` و دارای `trade.form.party.view` باشد (در بارگذاری/خطا/ماژول غیرفعال پنهان — fail-closed؛ منبع hint فقط همین Endpoint است نه `/me/permissions`)؛ placeholder: همیشه (غیرفعال) | TRADE_IMPORT |
 | ۳.۳ | انبار | آیتم | به‌زودی | همیشه (غیرفعال) | inventory |
 | ۴ | **گزارش‌ها و اطلاعات پایه** | گروه | — | — | — |
 | ۴.۱ | گزارش‌ها | آیتم | به‌زودی | همیشه (غیرفعال) | reporting |
@@ -72,11 +72,15 @@
 | `/hr/org/employees/new` | ثبت کارمند | hr | `hr.employees.view` | فرم کارکنان | — |
 | `/hr/org/employees/:employeeId` | پروندهٔ کارمند | hr | `hr.employees.view` | فرم کارکنان | تب‌ها: انتساب، اتصال به حساب، تاریخچه |
 | `/hr/org/employees/:employeeId/edit` | ویرایش کارمند | hr | `hr.employees.view` | فرم پروندهٔ کارمند | — |
+| `/trade/parties` | طرف‌حساب‌ها | TRADE_IMPORT | `trade.form.party.view` (از `/trade/capabilities`) | منو (بازرگانی خارجی) | فهرست سمت‌سرور: جست‌وجو (کد/نام)، فیلتر نقش و وضعیت، صفحه‌بندی؛ کلیک ردیف ← جزئیات؛ دکمهٔ «طرف‌حساب جدید» با `trade.form.party.create` و `trade.form.party.view` |
+| `/trade/parties/new` | طرف‌حساب جدید | TRADE_IMPORT | `trade.form.party.create` + `trade.form.party.view` (دورهٔ بسته هم مجاز) | فرم فهرست طرف‌حساب‌ها | پیش از `:id` ثبت شده؛ بخش‌های هویت/نقش‌ها/کشور؛ `SearchableCombobox` برای کشور؛ پس از ثبت ← جزئیات با پیام موفقیت |
+| `/trade/parties/:id` | جزئیات طرف‌حساب | TRADE_IMPORT | `trade.form.party.view` | فرم فهرست طرف‌حساب‌ها | فقط‌خواندنی؛ `isActive` فقط نشان (بدون حذف/فعال‌سازی/غیرفعال‌سازی، D-083 `Proposed`)؛ شناسهٔ حقوقی فقط اینجا و در ویرایش |
+| `/trade/parties/:id/edit` | ویرایش طرف‌حساب | TRADE_IMPORT | `trade.form.party.update` + `trade.form.party.view` (دورهٔ بسته هم مجاز) | فرم جزئیات طرف‌حساب | `rowVersion`؛ تعارض هم‌زمانی ← بارگذاری اطلاعات تازه |
 
 ## 3. قواعد فعال/غیرفعال، ترتیب و Parent
 
 1. **سه حالت ممکن برای هر آیتم منو:** (الف) فعال با مسیر واقعی + گیت hint؛ (ب) «به‌زودی» — بدون مسیر، `aria-disabled` و عنوان توضیحی ثابت؛ (ج) پنهان کامل — گروه/آیتمی که هیچ گیتش برآورده نشود (مثل گروه HR برای کاربر فاقد هر کد `hr.*`).
-2. **گیت‌ها فقط hint هستند** (D-064): بارگذاری/خطای `/me/permissions` به fail-closed می‌رسد؛ مدیر نصب همهٔ hintها را می‌بیند؛ enforce همیشه سمت سرور است.
+2. **گیت‌ها فقط hint هستند** (D-064): بارگذاری/خطای `/me/permissions` به fail-closed می‌رسد؛ مدیر نصب همهٔ hintها را می‌بیند؛ enforce همیشه سمت سرور است. hintهای بازرگانی (Trade) از `GET /trade/capabilities` می‌آیند (`TradeAccessProvider` در `App.tsx`، همان قاعدهٔ fail-closed) و نگهبان Routeهای `/trade/*` در `features/trade/components/TradeStates.tsx` است، نه فیلد `permission` جدول Route.
 3. **ترتیب نمایش** همان ترتیب آرایهٔ `navigation` است؛ افزودن گروه/آیتم تازه فقط در انتهای گروه مربوط یا جای مصوب مالک محصول.
 4. **Parent:** فرم‌های فهرست Parent منویی دارند؛ فرم‌های ایجاد/جزئیات/ویرایش Parentِ فرمِ فهرست خودشان هستند؛ هیچ فرمی Parent جعلی ندارد (دکمهٔ بازگشت همیشه به مسیر واقعی برمی‌گردد).
 5. **منع Route جعلی:** هر آیتم منوی دارای `to` باید دقیقاً در `appRoutes` باشد؛ این قید با تست بخش ۴ در CI قفل شده است.

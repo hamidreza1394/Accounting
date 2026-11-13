@@ -10,12 +10,22 @@ public sealed class TradeAccessGate(
     ITradeAuthorization authorization,
     ITradeModuleEntitlement entitlement)
 {
+    public Task<TradeAccessDecision> AuthorizeAsync(
+        Guid userId,
+        string permissionCode,
+        TradeAccessIntent intent,
+        CancellationToken cancellationToken = default) =>
+        AuthorizeAsync(userId, permissionCode, intent, TradeAccessOptions.Default, cancellationToken);
+
     public async Task<TradeAccessDecision> AuthorizeAsync(
         Guid userId,
         string permissionCode,
         TradeAccessIntent intent,
+        TradeAccessOptions options,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(options);
+
         var context = await ResolveAsync(userId, cancellationToken);
         if (context.Denied is { } denied)
         {
@@ -23,7 +33,11 @@ public sealed class TradeAccessGate(
         }
 
         var current = context.Context!;
-        if (intent == TradeAccessIntent.Write && !current.AllowsWrites)
+        // Only an operation that explicitly declares itself period-independent (tenant-level master data,
+        // D-063 item 3, D-084) skips the closed-period write block; for every other operation the default stays
+        // "writes need a writable period".
+        var periodIndependent = options.PeriodIndependent && intent == TradeAccessIntent.Write;
+        if (intent == TradeAccessIntent.Write && !current.AllowsWrites && !periodIndependent)
         {
             return new TradeAccessDecision(TradeAccessOutcome.PeriodReadOnly, null);
         }
@@ -34,9 +48,24 @@ public sealed class TradeAccessGate(
             return new TradeAccessDecision(TradeAccessOutcome.ModuleUnavailable, null, fault);
         }
 
-        return await authorization.HasPermissionAsync(current, permissionCode, intent, cancellationToken)
-            ? new TradeAccessDecision(TradeAccessOutcome.Allowed, current)
-            : new TradeAccessDecision(TradeAccessOutcome.Forbidden, null);
+        if (!await authorization.HasPermissionAsync(
+                current, permissionCode, intent, cancellationToken, periodIndependent))
+        {
+            return new TradeAccessDecision(TradeAccessOutcome.Forbidden, null);
+        }
+
+        // Extra Read permissions (for example update also needs view) are checked in the gate, so a user
+        // lacking them never reaches the handler and learns nothing about the record.
+        foreach (var additional in options.AdditionalReadPermissions)
+        {
+            if (!await authorization.HasPermissionAsync(
+                    current, additional, TradeAccessIntent.Read, cancellationToken))
+            {
+                return new TradeAccessDecision(TradeAccessOutcome.Forbidden, null);
+            }
+        }
+
+        return new TradeAccessDecision(TradeAccessOutcome.Allowed, current);
     }
 
     /// <summary>Stages 1 and 3 only (no permission check); permissions are read only when entitled.</summary>
