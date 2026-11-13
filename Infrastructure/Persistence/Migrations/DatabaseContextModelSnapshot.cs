@@ -1797,7 +1797,7 @@ namespace Data.Migrations
                     b.Property<int>("Ordering")
                         .HasColumnType("int");
 
-                    b.Property<Guid>("RoleId")
+                    b.Property<Guid?>("RoleId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<byte[]>("RowVersion")
@@ -2252,8 +2252,7 @@ namespace Data.Migrations
                         .WithMany("Memberships")
                         .HasForeignKey("RoleId", "TenantId")
                         .HasPrincipalKey("Id", "TenantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Company");
 

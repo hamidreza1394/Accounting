@@ -10,7 +10,7 @@
 
 | کد | نام فارسی (seed) | فعل | محل اعمال واقعی |
 |---|---|---|---|
-| `users.create` | ایجاد کاربر برای شرکت | create | **seeded-only** — تا ادغام endpoint ایجاد کاربر شرکتی D-078 (الگوی دو کد seeded-only گروه شرکتی) |
+| `users.create` | ایجاد کاربر برای شرکت | create | `POST /companies/{id}/users` (`CompanyUserProvisioningEndpoints`؛ D-078) — ایجاد حساب جدید یا افزودن حساب موجود به همان شرکت با عضویت فعال بدون نقش؛ تأیید مقصد لازم نیست |
 | `users.list` | مشاهده کاربران شرکت | list | `GET /companies/{id}/users` (`CompanyUserDirectoryEndpoints`) |
 | `users.membership.approve` | تأیید درخواست عضویت در شرکت | approve | صف و تأیید/رد عضویت (`CompanyMembershipRequestEndpoints`؛ approve و reject هر دو با همین کد) |
 
@@ -116,6 +116,6 @@
 ## 6. شکاف‌ها و گام‌های بعدی واقعی
 
 1. **۴۶ کد Trade بدون enforcement تولیدی** — باید هم‌زمان با endpointهای عملیاتی Trade (خارج از Stage 2) declare شوند؛ gate عمومی آماده است.
-2. **کدهای seeded-only** — دو کد گروه شرکتی (`reporting.group.export`، `consolidation.adjustments.approve`) با ویژگی خروجی گزارش/تعدیلات تلفیق فعال می‌شوند؛ `users.create` (D-078) با ادغام endpoint ایجاد کاربر شرکتی enforce می‌شود.
+2. **کدهای seeded-only گروه شرکتی** — دو کد (`reporting.group.export`، `consolidation.adjustments.approve`) با ویژگی خروجی گزارش/تعدیلات تلفیق فعال می‌شوند.
 3. **فعل‌های رد/ابطال/چاپ** به‌عنوان کد مستقل فعلاً نیاز واقعی ندارند؛ فقط با فرم واقعی آینده اضافه شوند.
 4. عدم وجود hint برای `hr.employees.user-link.manage` و `hr.assignments.manage` تعمداً است (UI این عملیات‌ها با گیت `hr.employees.update` نمایش داده می‌شود؛ تعمیم درخت گیت در فاز بعدی HR).

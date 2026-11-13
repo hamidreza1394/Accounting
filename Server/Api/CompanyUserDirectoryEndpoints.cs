@@ -65,13 +65,17 @@ public static class CompanyUserDirectoryEndpoints
 
         // Keep the query projection anonymous until after filtering/paging. EF Core cannot
         // translate predicates over a custom record constructor into SQL.
+        // The role join is a left join (D-078): a member provisioned without a role must
+        // stay visible in the directory with empty role fields, otherwise a freshly created
+        // user would disappear from the company directory until a role is assigned.
         var query =
             from membership in database.UserCompanyMemberships.AsNoTracking()
             join user in database.Users.AsNoTracking()
                 on membership.UserId equals user.Id
             join role in database.CompanyRoles.AsNoTracking()
                 on new { membership.RoleId, membership.TenantId }
-                equals new { RoleId = role.Id, role.TenantId }
+                equals new { RoleId = (Guid?)role.Id, role.TenantId } into roleJoin
+            from role in roleJoin.DefaultIfEmpty()
             where membership.TenantId == companyId
             select new
             {
@@ -81,10 +85,10 @@ public static class CompanyUserDirectoryEndpoints
                 user.LastName,
                 UserIsActive = user.IsActive,
                 MembershipIsActive = membership.IsActive,
-                RoleId = role.Id,
-                RoleCode = role.Code,
-                RoleName = role.Name,
-                RoleIsActive = role.IsActive,
+                RoleId = role == null ? (Guid?)null : role.Id,
+                RoleCode = role == null ? null : role.Code,
+                RoleName = role == null ? null : role.Name,
+                RoleIsActive = role != null && role.IsActive,
                 MembershipCreatedAtUtc = membership.CreatedAtUtc,
             };
 
@@ -143,6 +147,8 @@ public sealed record CompanyUserDirectoryResponse(
 
 /// <summary>
 /// Minimal company-directory contract; never exposes contact, credential, session or audit payload fields.
+/// Role fields are null for a member provisioned without a role yet (D-078) — the membership
+/// status and the role status are deliberately separate signals.
 /// </summary>
 public sealed record CompanyUserDirectoryItem(
     Guid UserId,
@@ -151,8 +157,8 @@ public sealed record CompanyUserDirectoryItem(
     string? LastName,
     bool UserIsActive,
     bool MembershipIsActive,
-    Guid RoleId,
-    string RoleCode,
-    string RoleName,
+    Guid? RoleId,
+    string? RoleCode,
+    string? RoleName,
     bool RoleIsActive,
     DateTime MembershipCreatedAtUtc);
