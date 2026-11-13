@@ -2988,3 +2988,28 @@
 - **S2-1 — Migration سه جدول Trade (2026-11-13):** `InitialTradeMasterData` فقط Parties/PartyRoleAssignments/Products؛ دو موجودیت دیگر با `ExcludeFromMigrations()` در مدل می‌مانند؛ ۱۸ تست روی SQL Server واقعی موفق. مسیر اعمال Migration در نصب مشتری **باز** و نیازمند تصمیم مالک است. جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-trade-s2-1-parties-products-migration.md`.
 - **بستن مرحلهٔ صفر Trade (2026-11-13):** PR #637 (فقط مستندات) پس از CI کامل بدون شکست ادغام شد؛ SHA `main`: `1825107437894e941ef51f60802117ba8e057ca4`. ROADMAP/PROJECT_STATUS هماهنگ شد؛ هیچ Issue/تصمیم باز دیگری بسته نشد.
 - **اصلاح رقابت در تست‌های HTTP دروازهٔ Trade (2026-11-13؛ فقط تست):** دو کلاس تست هم‌زمان در `PermissionDefinitions` می‌نوشتند و تصادفی شکست می‌خوردند (روی main ۴ از ۴ اجرا یک شکست)؛ با Collection سریال شد (۴ از ۴ سبز، ۷۷ تست). جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-trade-http-tests-serialize.md`.
+
+
+## 2026-11-13 — بازبینی Vendor روی main جدید و ثبت موانع اجرایی
+
+- مبنای بازبینی: `main@1825107437894e941ef51f60802117ba8e057ca4`؛ SHA از GitHub خوانده شد و با merge commit PR #637 یکسان است.
+- .NET CI روی main: run `43385807523`، ۷/۷ Job موفق؛ Build موفق؛ ۱۲۰۹ تست، ۱۲۰۱ موفق، صفر شکست و ۸ Skip. Semgrep run `43385807669` و Push on main / CodeQL run `43385807414` موفق‌اند؛ مجموع Check Runها ۱۲/۱۲ است.
+- PR #636 با merge commit `0c9ecff7b6feca2efbdad8470301fe3c32edcf63` و PR #637 با merge commit SHA فعلی main ادغام شده‌اند؛ هر دو ۱۲/۱۲ Check Run پس از Merge موفق دارند.
+- PRهای مرجع #281، #282 و #284 روی merge SHA واقعی خود به‌ترتیب ۱۲/۱۲، ۱۳/۱۳ و ۱۳/۱۳ Check Run موفق دارند. ترتیب Authorization در #284 و اعتبارسنجی پیش از Signing در #282 همچنان در main هستند.
+- Vendor CI آخرین بار روی کد PR #633 با run `42783806157` و ۳/۳ Job موفق اجرا شده است. GitHub Compare بین merge SHA #633 و main فعلی ۴۹ commit جلوتر/صفر عقب‌تر و بدون تغییر `Vendor/**` یا `Licensing.Contracts/**` را نشان می‌دهد؛ این شاهد، اجرای Vendor CI روی SHA فعلی main نیست.
+- PRهای باز هنگام شروع: #638–#641، همگی Trade و خارج از Vendor. در #640، E2E عملیات HR deactivate پاسخ 429 به‌جای 204 داده است؛ دو اجرای دیگر #639/#641 هنوز Jobهای E2E/Windows در حال اجرا داشتند. این شکست‌ها دست‌کاری نشدند.
+- در ۱۰۰ اجرای اخیر Actions، ۸۰ success، ۷ failure، ۹ cancelled و ۴ in progress ثبت شد. هر هفت شکست متعلق به headهای قدیمی #628/D-078 است: چهار شکست کامپایل در نسخه‌های میانی و سه اجرای SQL Server test با Error 18456/State 38 و database-open failure. هیچ شکست Vendor CI مشاهده نشد.
+- Ruleset فعال `main-protection` برای main، چهار context یعنی `secret-scan`، `client`، `build-and-test` و `publish-scripts` را required کرده و Code Owner review را الزام می‌کند؛ bypass actor ندارد.
+- وضعیت شکاف‌ها بازتأیید شد: #228 به CompanyReference/versioned contract و تأیید Customer schema در #392 وابسته است؛ #393 به تصویب Payment Evidence و نقش تأییدکننده؛ #236 به KMS/HSM واقعی و credential معتبر؛ #107 به Production sink/identity مستقل. #214 در سمت Vendor تکمیل است؛ #235/#364 و آزمون عملیاتی Customer-side مستقل باقی می‌مانند.
+- **یافتهٔ خارج از محدوده:** لاگ `.github/workflows/dotnet.yml` در .NET CI فعلی، فرمان ساخت SQL Server تستی و آرگومان `sqlcmd -P` را بدون mask نشان می‌دهد. مقدار رمز در این گزارش درج نشده است. Vendor CI logs بررسی‌شده فاقد این markerها هستند. این workflow در این PR تغییر نکرده و نیازمند اصلاح مستقل CI است.
+- در این PR فقط `PROJECT_STATUS.md`، `WORK_LOG.md`، `INDEX.md` و handoff جدید به‌روزرسانی می‌شوند؛ هیچ Customer code، `Server/**`، Migration، Issue، Commit, Push یا Merge در main انجام نشده است. تست محلی اجرا نشده است؛ CI PR پس از push باید مبنای اعتبارسنجی مستندات باشد.
+
+
+## 2026-11-13 — اصلاح snapshot پس از Merge PR #639
+
+- پس از ثبت بازبینی اولیه، PR #639 (تست‌های Trade) در 2026-11-13T07:50:14Z ادغام شد و main از `1825107437894e941ef51f60802117ba8e057ca4` به `8e58ad6dd9c8943845df6e328577d6816812c2b3` تغییر کرد. وضعیت جاری این Work Log بر SHA جدید استوار است.
+- .NET CI post-merge run `43388610156`: Build/Test موفق با ۱۲۰۹ تست، ۱۲۰۱ موفق، صفر شکست و ۸ Skip؛ Secret Scan، Client و Publish Scripts نیز موفق‌اند. E2E، Linux Publish و Windows Publish در آخرین snapshot هنوز در حال اجرا هستند. Semgrep `43388610161` و Push on main / CodeQL `43388609329` موفق‌اند. بنابراین post-merge CI هنوز کامل نیست.
+- PR #639 pre-merge .NET CI `43387197085` و Semgrep `43387197025` موفق بودند؛ merge commit #639 همان SHA جدید main است.
+- وضعیت PRهای خارج از Vendor: #638 دارای ۱۲ موفق/۲ در حال اجرا/۱ Skip؛ #640 دارای E2E failure در HR deactivate (429 به‌جای 204) و Windows Publish موفق؛ #641 دارای ۱۴ موفق/۱ Skip. این تغییرات خارج از محدوده‌اند و دست‌کاری نشدند.
+- PR #642 ابتدا از main قبلی ساخته شد؛ برای کنترل base/head پس از Merge #639، شاخهٔ مستنداتی روی main جدید بازپایه می‌شود و CI روی head تازه باید دوباره اجرا شود.
+- شمار ۱۰۰ اجرای اخیر به ۸۲ success، ۸ failure، ۷ cancelled و ۳ in progress تغییر کرده است؛ هفت شکست #628/D-078 و شکست هشتم E2E در #640 است. هیچ شکست Vendor CI مشاهده نشد.
