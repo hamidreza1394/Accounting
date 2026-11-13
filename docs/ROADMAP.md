@@ -199,6 +199,27 @@
 
 مرجع اجرایی به‌روز، بخش «برنامه اجرایی ماژول بازرگانی خارجی — تصمیم‌های S0» در ادامه همین سند است. Foundation در PR #398 ادغام شده؛ دوره عملیاتی مستقل طبق D-062 ممنوع است؛ entitlement از S1 و گزارش عملیاتی چندشرکتی از موج اول طبق D-063 انجام می‌شود. اتصال مالی فقط از قراردادهای نسخه‌دار و بدون FK مستقیم انجام خواهد شد. استخراج Microservice Deferred است.
 
+**وضعیت واقعی بررسی‌شده روی `main` (پایهٔ تحلیل `0c9ecff7`؛ در 2026-11-13 `main` = `fbe4b59f` و تغییرات پس از آن فقط D-078/PR #628 مدیریت کاربران است و به Trade دست نزده) (2026-11-12؛ «Implemented» یعنی در کد هست، نه `Verified`):**
+- **PR #635** (طراحی V3.2) ادغام شده و روی آخرین Commit شاخهٔ آن ۱۴ بررسی CI موفق و یک بررسی (CodeRabbit) رد شده بود؛ PR #636 (وضعیت Vendor) نیز بعد از آن ادغام شده است. طراحی V3.2 مبنای پیاده‌سازی نیست تا D-080 و OD-007 تأیید شوند.
+- **در کد:** `TradeDbContext` با DI و design-time factory (Issues #404/#405 بسته)، دامنهٔ `Party` و `Product` همراه EF mapping (Issue #406 بسته)، کاتالوگ ۴۶ مجوز و Migration داده‌ای seed آن (#402)، `TradeAccessGate` و تنها endpoint `GET /api/v1/trade/capabilities` (#403). **ندارد:** Migration ایجاد جدول‌های schema `trade`، هیچ API یا فرم عملیاتی، هیچ مسیر/ماژول Trade در `ClientApp` (منو فقط placeholder «واردات و صادرات» است).
+- **Trade در Production بسته است:** `DenyAllTradeModuleEntitlement` هنوز ثبت‌شده است (fail-closed)؛ اتصال به entitlement واقعی در Issue #401 (باز) است.
+
+**وابستگی‌های S1 با GitHub تطبیق داده شد (2026-11-12؛ دوباره‌خوانی 2026-11-13: #392، #228، #384، #401 همچنان باز و #390، #391، #402..#406 بسته) — کدام برای توسعهٔ S2/S3 لازم است و کدام فقط برای فعال‌سازی Production:**
+
+| Issue | وضعیت GitHub | چه چیزی را مسدود می‌کند | لازم برای توسعه و تست S2/S3؟ |
+|---|---|---|---|
+| #403 (دروازه، `DenyAll`، capabilities) | بسته؛ PR #407 ادغام‌شده | — | انجام شده؛ **بله** (دروازه و الگوی مجوز) |
+| #402 (کاتالوگ ۴۶ مجوز) | بسته؛ PR #405/#407/#554 | — | انجام شده؛ **بله** (مجوزهای party/product/proforma/import-case seed هستند) |
+| #404/#405/#406 (persistence، master data) | بسته | — | انجام شده؛ **بله** |
+| #390 (قرارداد Entitlement V2) | بسته؛ ادغام‌شده | — | **خیر** برای توسعه |
+| #391 (موتور سیاست Entitlement) | بسته (موتور خالص PR #534)؛ اتصال runtime انجام نشده | فعال‌سازی Production | **خیر** |
+| #401 (اتصال entitlement واقعی Trade) | **باز**، آخرین به‌روزرسانی 2026-11-04 | فعال‌سازی Production | **خیر** برای توسعه |
+| #384 (فعال‌سازی و لایسنس مشتری: startup/runtime/Cloud) | **باز**، آخرین به‌روزرسانی 2026-10-31 | فعال‌سازی Production | **خیر** |
+| #392 (ساخت شرکت مجاز و نگاشت `CompanyReference`) | **باز**، آخرین به‌روزرسانی 2026-11-08 | فعال‌سازی Production (نگاشت مورداعتماد شرکت) | **خیر** |
+| #228 (Provisioning؛ schema v4 فاقد CompanyReference) | **باز**، آخرین به‌روزرسانی 2026-11-10 | فعال‌سازی Production | **خیر** |
+
+**جمع‌بندی:** هیچ‌یک از Issueهای باز بالا توسعه و تست S2/S3 را مسدود نمی‌کند. `DenyAllTradeModuleEntitlement` در `Program.cs` بدون شرط محیط ثبت شده است؛ بنابراین تست‌های Integration/API باید در میزبان تست، `ITradeModuleEntitlement` را با test double جایگزین کنند (الگوی `RecordingEntitlement` در `TradeAccessGateTests` و `WebApplicationFactory<Program>` موجود در تست‌ها). افزودن پرچم/تنظیم bypass در کد Production ممنوع است؛ هر مسیر اجرای دستی Development با entitlement موقت تصمیم جدا و ADR می‌خواهد. فعال‌سازی برای کاربر واقعی تا بسته‌شدن زنجیرهٔ #392/#228 → #384 → اتصال #391 → #401 ممکن نیست.
+
 ## برنامه اجرایی ماژول بازرگانی خارجی — تصمیم‌های S0 (D-063 / Issue #399)
 
 ### S0 — هم‌ترازی معماری و مستندات
@@ -210,20 +231,24 @@
 
 ### S1 — امنیت دسترسی و فعال‌سازی ماژول
 - [ ] اتصال ITradeModuleEntitlement به Licensing runtime و entitlement شرکت‌محور TRADE_IMPORT؛ fail-closed در Production.
-  - S1-a (Issue #403): دروازه، پیش‌فرض DenyAll، route gating و capabilities پیاده‌سازی شده‌اند (Implemented، CI تأییدنشده). اتصال به envelope امضاشده `Blocked` است تا ادغام #390 (قرارداد entitlement شرکتی) و تأمین حالت لایسنس runtime (#384/#391).
+  - S1-a (Issue #403، بسته؛ PR #407 ادغام‌شده 2026-10-31): دروازه، پیش‌فرض DenyAll، route gating و capabilities در `main` هست (Implemented).
+  - **وضعیت وابستگی‌های S1 (به‌روز 2026-11-12؛ جایگزین عبارت قبلی «Blocked تا ادغام #390»):** #390 بسته و قرارداد Entitlement V2 ادغام‌شده است؛ #391 بسته است و موتور خالص تصمیم (`EntitlementPolicyEngine`، PR #534) ادغام شده، اما اتصال آن به `ITradeModuleEntitlement` انجام نشده و رفتار Production همچنان `DenyAll` است؛ #384 **باز** است (هویت نصب و import لایسنس ادغام شده، ولی startup/runtime/Cloud ناتمام)؛ #401 (اتصال entitlement واقعی Trade) **باز** است. **مانع واقعی Production:** نگاشت مورداعتماد `CompanyReference` به `CompanyId` محلی (#392 باز، #228) هنوز نیست و resolver برای LicensePayload v2 با `provisioning_company_reference_mapping_required` عمداً fail-closed می‌شود؛ بنابراین هیچ entitlement شرکت‌محور به Trade نمی‌رسد. تفکیک «لازم برای توسعه» و «لازم برای فعال‌سازی Production» در جدول بالای همین بخش آمده است؛ این زنجیره توسعهٔ S2/S3 را متوقف نمی‌کند.
 - [ ] تعریف PermissionDefinitions با کدهای پایدار فرم/عملیات/گزارش و seed ایدمپوتنت؛ عدم ایجاد role/permission store موازی.
 - [ ] API و route gating سمت سرور؛ ترتیب کنترل نشست، membership، WorkContext/FiscalPeriod، entitlement، permission و سپس use case.
 - [ ] تست منفی کاربر بدون entitlement، کاربر بدون permission، شرکت/دوره بیگانه، دوره Closed و دستکاری شناسه‌ها.
 - [ ] مسیر ورود به Trade و نمایش منو/فرم براساس capabilityهای تأییدشده سرور؛ UI مرجع امنیت نیست.
 
-### S2 — داده‌های پایه و زیرساخت persistence
-- [ ] تکمیل TradeDbContext DI، design-time factory، migrations assembly و history table مستقل؛ بدون دیتابیس فیزیکی جدا.
-- [ ] طراحی و Migration افزایشی schema trade فقط پس از review، تست SQL Server و rollout/rollback؛ هیچ Migration مشتری بدون تأیید مستقل اجرا نشود.
-- [ ] فرم‌ها و APIهای Party، Product و lookupهای مرجع (Country, Port, Currency, Unit, Incoterm, Bank, PermitType) با scope شرکت و مجوز.
-- [ ] پیاده‌سازی attachment storage پشت interface قابل استفاده در on-prem/cloud؛ provider نهایی پس از تصمیم جداگانه.
+### S2 — داده‌های پایه حداقلی (D-081؛ توسعهٔ کد موجود، نه بازسازی)
+جزئیات، وابستگی و معیار پذیرش هر Issue در `docs/TRADE_PHASE0_DRAFTS.md` بخش ۳ است. S2 به D-080 و به #392/#228/#384/#401 وابسته نیست.
+- [ ] **S2-1:** Migration افزایشی `trade` فقط برای `Party`، `PartyRoleAssignment` و `Product` (تولیدشده از نگاشت موجود؛ `PartyBankAccount` و `ProductIdentifier` با `ExcludeFromMigrations()` از Migration بیرون می‌مانند و مدل/ناوبری‌ها دست‌نخورده است؛ تست دروازه «فقط سه جدول» در همین Issue). *(DI و design-time factory در `main` Implemented (#404/#405)؛ `Verified` فقط با تست SQL Server.)*
+- [ ] **S2-2:** مرجع محلی فقط‌خواندنی Country، Currency، Unit، Incoterm؛ بدون جدول، API مدیریتی یا منو.
+- [ ] **S2-3:** برش عمودی «طرف‌حساب‌ها»: UseCase + API `/api/v1/trade/parties` + `/trade/parties` در `ClientApp/src/features/trade`.
+- [ ] **S2-4:** برش عمودی «کالاها»: UseCase + API `/api/v1/trade/products` + `/trade/products`.
+- **D-082/D-083:** کنترل مشترک انتخاب (Combobox/Lookup) و ایجاد سریع طبق D-082 (`Accepted`) در فرم‌های S2/S3 به کار می‌رود؛ عملیات حذف/غیرفعال‌سازی اطلاعات پایه منتظر تأیید D-083 است و در S2 ساخته نمی‌شود.
+- **موکول:** `PartyBankAccount` ← S5؛ `ProductIdentifier` ← نیاز واقعی؛ بندر، نوع مجوز و بانک (نقش `PartyRole.Bank`) ← S4/S5؛ attachment storage ← تصمیم جدا.
 
-### S3 — درخواست خرید و پرونده واردات
-- [ ] Purchase Request → Supplier Inquiry/Quotation → Comparison → Proforma → Contract → ImportCase.
+### S3 — پرونده واردات و پیش‌فاکتور (مشروط به تأیید D-080)
+- [ ] ImportCase → Proforma (+ ProformaRevision) با قواعد D-080 پس از تأیید مالک. درخواست خرید، استعلام، مقایسه و قرارداد در نسخهٔ اول ساخته نمی‌شوند (D-081).
 - [ ] هر سند تراکنشی FiscalPeriodId دوره واقعی ثبت را نگه دارد؛ پرونده مادر می‌تواند چنددوره‌ای باشد.
 - [ ] workflow/status و audit append-only با قواعد transition سمت سرور.
 
@@ -245,7 +270,7 @@
 - [ ] ابزار import داده‌های اولیه و فایل‌ها با validation و گزارش خطا.
 - [ ] آزمون سناریوهای end-to-end، کاربر/شرکت/دوره واقعی و بازیابی؛ پایلوت فقط پس از تکمیل کنترل‌های امنیتی و تأیید جداگانه.
 
-**ترتیب پیاده‌سازی UI:** پس از آماده‌شدن S1/S2، ابتدا Party و Product؛ سپس Purchase Request، مقایسه استعلام/پیشنهاد و Proforma. فرم‌های بعدی به‌صورت vertical slice و نه scaffold یک‌جای همه فرم‌ها ساخته شوند.
+**ترتیب پیاده‌سازی UI:** پس از آماده‌شدن S1/S2، ابتدا Party و Product؛ سپس ImportCase و Proforma (D-081: بدون درخواست خرید/استعلام/مقایسه/قرارداد در نسخهٔ اول). فرم‌های بعدی به‌صورت vertical slice و نه scaffold یک‌جای همه فرم‌ها ساخته شوند.
 
 
 ## فاز 10 — مدیریت هویت و دسترسی فرانو (Issue #444)
