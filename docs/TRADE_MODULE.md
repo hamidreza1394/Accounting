@@ -12,7 +12,7 @@
       Trade.Domain/
       Trade.Application/
       Trade.Infrastructure/
-    ClientApp/src/modules/trade/
+    ClientApp/src/features/trade/   (D-081؛ قبلاً modules/trade)
     tests/Template.Tests/
 
 - Domain هیچ ProjectReference به Core یا Server ندارد.

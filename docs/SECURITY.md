@@ -369,3 +369,8 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - **مدل دسترسی:** مدل موازی `AccessGroup` ساخته نمی‌شود؛ `CompanyRole` همان گروه دسترسی شرکتی است و از ساختار مجوز موجود (`PermissionDefinitions`، `CompanyRolePermissions`) استفاده می‌شود (D-064 بند ۵، D-065).
 - **ممیزی:** رویدادهای موجود `WorkContextSelected`/`WorkContextChanged`/`WorkContextSelectionDenied` (D-032) کافی‌اند؛ افزودن رویداد جدید فقط با Issue جداگانه.
 - **وضعیت:** این بخش قرارداد/الزام است. اجرای end-to-end آن (به‌ویژه ابطال پاسخ دیررس و cache) `NotImplemented` و تست‌شده نیست؛ به‌عنوان `Verified` گزارش نشود.
+
+## انتخاب اطلاعات، ایجاد سریع و چرخهٔ عمر اطلاعات پایه (2026-11-13)
+
+- **D-082 (`Accepted`):** جستجو، اعتبارسنجی و محدودهٔ Tenant/Company برای فهرست‌های انتخاب و «ایجاد سریع» فقط سمت سرور و با مجوز ایجاد همان موجودیت؛ ایجاد سریع قواعد و مجوزهای فرم اصلی را دور نمی‌زند؛ ایجاد آزاد برای داده‌های مرجع سیستمی/امنیتی مجاز نیست؛ `TenantId` از کلاینت پذیرفته نمی‌شود. وضعیت پیاده‌سازی: `NotImplemented`.
+- **D-083 (`Proposed` + `NeedsApproval`):** کنترل حذف/غیرفعال‌سازی فقط سمت سرور، FK با `Restrict`/`NoAction`، ممنوعیت حذف آبشاری، محافظت در برابر Race، ثبت عامل/زمان/علت و عدم بازنویسی Audit. تا تأیید مالک الزام نیست.

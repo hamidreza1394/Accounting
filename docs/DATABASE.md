@@ -88,3 +88,9 @@
 - Composite FKها، filtered unique indexها، RowVersion و قیود دوره/شرکت باید در Migration افزایشی پیاده شوند. شرح کامل: [`FISCAL_ACCESS_DATA_MODEL.md`](FISCAL_ACCESS_DATA_MODEL.md).
 - هیچ grant سالانه برای کاربران فعلی به‌صورت خودکار backfill نمی‌شود. RoleId قدیمی عضویت فقط به Company-scoped assignment منتقل می‌شود تا رفتار اداری حفظ شود؛ دسترسی سال/دوره فقط با تخصیص صریح مدیر ایجاد خواهد شد.
 - Migration فقط پس از تکمیل همه مصرف‌کنندگان، تست SQL Server، بررسی rollback و CI سبز ارائه می‌شود؛ هیچ Migration روی دیتابیس مشتری در این مرحله اجرا نشده است.
+
+## قواعد پیشنهادی ارجاع و حذف اطلاعات پایه (D-083؛ `Proposed` + `NeedsApproval`، 2026-11-13)
+
+- FK به اطلاعات پایه (Party، Product و …) `Restrict`/`NoAction` باشد؛ حذف آبشاری اسناد و سوابق به‌واسطهٔ حذف اطلاعات پایه ممنوع است (هم‌راستا با «همه FKها Restrict» در V3.2 و `CORPORATE_GROUPS_DATA_MODEL.md`).
+- رکورد استفاده‌شده با غیرفعال‌سازی مدیریت می‌شود؛ شکل حذف رکورد استفاده‌نشده (فیزیکی یا `SoftDelete`/`IsDeleted`) به پرسش Q-1 در D-083 وابسته است، چون V3.2 حذف فیزیکی در Trade را پیش‌بینی نکرده است. ایندکس‌های یکتای فعلی Party/Product با `[IsDeleted] = 0` فیلتر می‌شوند و `IsActive` در آن نیست (Q-4).
+- هیچ Migration یا تغییر Schema با این بخش انجام نمی‌شود.
