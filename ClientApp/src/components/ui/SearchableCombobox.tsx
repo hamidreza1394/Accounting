@@ -259,6 +259,10 @@ export function SearchableCombobox({
         close();
         break;
       default:
+        // A chosen label is shown as plain text; typing over it must replace it, not append to it
+        // (focus alone only selects the text the first time the input receives focus).
+        if (query === null && value !== null && event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey)
+          event.currentTarget.select();
         break;
     }
   };
@@ -298,7 +302,11 @@ export function SearchableCombobox({
             setOpen(true);
           }}
           onFocus={(event) => event.currentTarget.select()}
-          onClick={() => (open ? undefined : openList())}
+          onClick={(event) => {
+            if (open) return;
+            if (query === null && value !== null) event.currentTarget.select();
+            openList();
+          }}
           onKeyDown={onKeyDown}
           className="h-10 w-full rounded-lg border border-line bg-white ps-3 pe-16 text-sm text-ink outline-none transition-colors placeholder:text-muted focus-visible:border-teal-deep focus-visible:ring-2 focus-visible:ring-gold aria-[invalid=true]:border-danger disabled:cursor-not-allowed disabled:bg-cool disabled:text-sub"
         />

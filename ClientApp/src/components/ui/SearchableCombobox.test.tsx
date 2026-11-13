@@ -103,6 +103,26 @@ describe('SearchableCombobox', () => {
     expect(screen.getAllByRole('option')[0]).toHaveTextContent('امارات');
   });
 
+  it('replaces the chosen label when typing again, whether by click or by keyboard (browser smoke regression)', async () => {
+    const user = userEvent.setup();
+    render(<Harness initial="IR" />);
+    const input = screen.getByRole('combobox');
+    expect(input).toHaveValue('IR — ایران');
+
+    // Click into the already-focused input, then type: the text must be replaced, not appended to.
+    input.focus();
+    await user.click(input);
+    await user.keyboard('chi');
+    expect(input).toHaveValue('chi');
+    expect(screen.getByRole('option')).toHaveTextContent('چین');
+    await user.keyboard('{Escape}');
+    expect(input).toHaveValue('IR — ایران');
+
+    // Keyboard only (no click): same behaviour.
+    await user.keyboard('ger');
+    expect(input).toHaveValue('ger');
+  });
+
   it('shows an empty message in a status region when nothing matches', async () => {
     const user = userEvent.setup();
     render(<Harness />);

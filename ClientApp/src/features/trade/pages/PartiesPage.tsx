@@ -106,7 +106,7 @@ export function PartiesPage({ onUnauthenticated, searchDelayMs = defaultSearchDe
         key: 'code',
         header: 'کد',
         cell: (party) => (
-          <bdi dir="ltr" className="font-mono text-xs">
+          <bdi dir="ltr" className="whitespace-nowrap font-mono text-xs">
             {party.code}
           </bdi>
         ),
