@@ -61,6 +61,39 @@ describe('createTradeAccess (pure hint logic)', () => {
   });
 });
 
+describe('createTradeAccess (Product hints)', () => {
+  const ready = (permissions: string[], accessMode: 'ReadWrite' | 'ReadOnly' = 'ReadWrite') =>
+    createTradeAccess({ status: 'ready', accessMode, permissions });
+
+  it('a Product write hint needs its write code AND product.view', () => {
+    const both = ready(['trade.form.product.view', 'trade.form.product.update', 'trade.form.product.create']);
+    expect(both.can('product.view')).toBe(true);
+    expect(both.can('product.update')).toBe(true);
+    expect(both.can('product.create')).toBe(true);
+    expect(ready(['trade.form.product.update']).can('product.update')).toBe(false);
+    expect(ready(['trade.form.product.create']).can('product.create')).toBe(false);
+    expect(ready(['trade.form.product.update']).can('product.view')).toBe(false);
+  });
+
+  it('keeps Party and Product hints independent (a code of one form never grants the other)', () => {
+    const partyOnly = ready(['trade.form.party.view', 'trade.form.party.create', 'trade.form.party.update']);
+    expect(partyOnly.can('product.view')).toBe(false);
+    expect(partyOnly.can('product.create')).toBe(false);
+    const productOnly = ready(['trade.form.product.view', 'trade.form.product.create']);
+    expect(productOnly.can('party.view')).toBe(false);
+    expect(productOnly.can('party.create')).toBe(false);
+  });
+
+  it('never looks at the fiscal period mode for Product and grants nothing outside ready', () => {
+    const closed = ready(['trade.form.product.view', 'trade.form.product.update', 'trade.form.product.create'], 'ReadOnly');
+    expect(closed.can('product.create')).toBe(true);
+    expect(closed.can('product.update')).toBe(true);
+    for (const access of [deniedTradeAccess, createTradeAccess({ status: 'error' }), createTradeAccess({ status: 'unavailable', reason: 'module' })]) {
+      expect(access.can('product.view')).toBe(false);
+    }
+  });
+});
+
 describe('TradeAccessProvider', () => {
   it('is fail-closed while loading, then grants what /trade/capabilities says', async () => {
     stubTradeApi(capabilitiesRoute({ available: true, accessMode: 'ReadWrite', permissions: ['trade.form.party.view'] }));

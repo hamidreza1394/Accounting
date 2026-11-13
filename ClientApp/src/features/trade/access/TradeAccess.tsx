@@ -15,24 +15,30 @@ const permissionCodes = {
   'party.view': 'trade.form.party.view',
   'party.create': 'trade.form.party.create',
   'party.update': 'trade.form.party.update',
+  'product.view': 'trade.form.product.view',
+  'product.create': 'trade.form.product.create',
+  'product.update': 'trade.form.product.update',
 } as const;
 
 export type TradePermission = keyof typeof permissionCodes;
 
 /**
- * Permission hints the server requires TOGETHER for an operation: a Party write needs its write code AND
- * `party.view` (otherwise the server answers 403 `trade_forbidden`), so the UI shows a write action only when both
+ * Permission hints the server requires TOGETHER for an operation: a Party/Product write needs its write code AND
+ * its `view` code (otherwise the server answers 403 `trade_forbidden`), so the UI shows a write action only when both
  * are held.
  */
 const requiredHints: Record<TradePermission, readonly TradePermission[]> = {
   'party.view': ['party.view'],
   'party.create': ['party.create', 'party.view'],
   'party.update': ['party.update', 'party.view'],
+  'product.view': ['product.view'],
+  'product.create': ['product.create', 'product.view'],
+  'product.update': ['product.update', 'product.view'],
 };
 
 /**
- * Hints that additionally need a writable fiscal period (`accessMode: ReadWrite`). EMPTY on purpose: Party is
- * tenant-level master data and may be written in a closed period too (owner decision), so Party hints never look
+ * Hints that additionally need a writable fiscal period (`accessMode: ReadWrite`). EMPTY on purpose: Party and Product are
+ * tenant-level master data and may be written in a closed period too (owner decision), so their hints never look
  * at `accessMode`. Keep the mechanism for a future operation that really is period-bound; add its hint here.
  */
 const periodBoundHints: ReadonlySet<TradePermission> = new Set<TradePermission>();

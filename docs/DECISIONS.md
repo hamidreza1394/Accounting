@@ -2042,3 +2042,18 @@ Party دادهٔ پایهٔ سطح Tenant است و `FiscalPeriodId` ندارد 
 
 ### مراجع
 D-013، D-032، D-062، D-063، `docs/TRADE_MODULE.md`، `docs/SECURITY.md`، `docs/handoffs/ISSUE-UNNUMBERED-trade-s2-3-party-backend.md`.
+
+## D-085 — گسترش D-084 به نوشتن Product (مستقل از دورهٔ مالی و الزام مجوز مشاهده) (2026-11-13)
+
+- **وضعیت تصمیم:** `Proposed` + `NeedsApproval` — پیشنهاد مبتنی بر اعمال قاعدهٔ صریح مالک (2026-11-13، بند ۲.۴: «دادهٔ پایهٔ سطح Tenant که دورهٔ مالی ندارد نباید به باز بودن دوره وابسته باشد») بر Product؛ `Product` نیز `FiscalPeriodId` ندارد (کامنت Entity و D-063 بند ۳). رفتار در کد فعال است ولی تصمیم تا تأیید صریح مالک `Accepted` نیست (تولید با Entitlement بسته غیرفعال است)؛ در صورت مخالفت، بازگشت یک‌خطی است (حذف پرچم `periodIndependent` از دو عملیات نوشتن Product).
+- **وضعیت پیاده‌سازی:** `Implemented` در شاخهٔ S2-4 (تا ادغام PR و تأیید CI، `Verified` نیست).
+- **Issue:** `UNNUMBERED`.
+- **دامنه:** فقط `POST/PUT /api/v1/trade/products`. D-084 و D-083 را تغییر نمی‌دهد؛ حذف/غیرفعال‌سازی Product پیاده‌سازی نشده است.
+
+### تصمیم
+1. نوشتن Product با همان پرچم اختیاری `periodIndependent` از بستن در دورهٔ `Closed` معاف است؛ همهٔ کنترل‌های دیگر (هویت، Anti-forgery، Company Context، Tenant، مجوز، Entitlement) و رد دورهٔ `Archived` بدون تغییر می‌مانند.
+2. POST/PUT Product علاوه بر `trade.form.product.create|update` مجوز `trade.form.product.view` را سمت سرور می‌خواهند (`AdditionalReadPermissions`).
+3. تعهد Snapshot اسناد آینده (D-084 بند ۳) برای ارجاع به Product نیز اعمال می‌شود.
+
+### مراجع
+D-013، D-032، D-063، D-081، D-084، `docs/handoffs/ISSUE-UNNUMBERED-trade-s2-4-product-backend.md`.

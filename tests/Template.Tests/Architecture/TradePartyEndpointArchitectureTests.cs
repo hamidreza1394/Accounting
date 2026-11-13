@@ -65,7 +65,7 @@ public sealed class TradePartyEndpointArchitectureTests : IClassFixture<FaranouA
     }
 
     [Fact]
-    public void OnlyPartyWritesArePeriodIndependentAndTheyAlsoRequireView()
+    public void OnlyPartyAndProductWritesArePeriodIndependentAndTheyAlsoRequireTheirOwnView()
     {
         var all = factory.Services.GetRequiredService<EndpointDataSource>().Endpoints.OfType<RouteEndpoint>()
             .Where(endpoint => endpoint.Metadata.GetMetadata<TradeOperationMetadata>() is not null)
@@ -77,12 +77,20 @@ public sealed class TradePartyEndpointArchitectureTests : IClassFixture<FaranouA
             .Order(StringComparer.Ordinal)
             .ToArray();
 
-        Assert.Equal(["POST /api/v1/trade/parties", "PUT /api/v1/trade/parties/{id:guid}"], periodIndependent);
+        Assert.Equal(
+        [
+            "POST /api/v1/trade/parties",
+            "POST /api/v1/trade/products",
+            "PUT /api/v1/trade/parties/{id:guid}",
+            "PUT /api/v1/trade/products/{id:guid}",
+        ],
+            periodIndependent);
         foreach (var endpoint in all.Where(endpoint => endpoint.Metadata.GetMetadata<TradeOperationMetadata>()!.PeriodIndependent))
         {
             var operation = endpoint.Metadata.GetMetadata<TradeOperationMetadata>()!;
             Assert.Equal(TradeAccessIntent.Write, operation.Intent);
-            Assert.Equal(["trade.form.party.view"], operation.AdditionalReadPermissions);
+            var resource = operation.PermissionCode.Split('.')[2];
+            Assert.Equal([$"trade.form.{resource}.view"], operation.AdditionalReadPermissions);
         }
     }
 

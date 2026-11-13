@@ -52,6 +52,39 @@ export type PartyDetail = PartyListItem & {
 
 export type CountryRef = { code: string; nameFa: string; nameEn: string };
 
+/** A unit of measure of the reference list (`GET /trade/reference/units`). */
+export type UnitRef = { code: string; nameFa: string; nameEn: string };
+
+/** Mirrors `ProductListItem` (`Modules/Trade/Trade.Application/Products/ProductDtos.cs`). */
+export type ProductListItem = {
+  id: string;
+  code: string;
+  name: string;
+  productGroupCode: string | null;
+  /** Text on purpose: formatting and leading zeroes matter. */
+  hsCode: string | null;
+  baseUnitCode: string;
+  isActive: boolean;
+};
+
+export type ProductListResponse = { items: readonly ProductListItem[]; page: number; pageSize: number; totalCount: number };
+
+/** The detail adds the row version (base64, for the concurrency token) and the audit instants; no user ids. */
+export type ProductDetail = ProductListItem & {
+  rowVersion: string;
+  createdAtUtc: string;
+  updatedAtUtc: string | null;
+};
+
+/** The create/update body. `isActive` is not editable (D-083); `rowVersion` (base64) is mandatory on update only. */
+export type ProductWriteBody = {
+  code: string;
+  name: string;
+  productGroupCode: string | null;
+  hsCode: string | null;
+  baseUnitCode: string;
+};
+
 /** The create/update body. `rowVersion` (base64) is mandatory on update only. */
 export type PartyWriteBody = {
   code: string;
@@ -187,4 +220,54 @@ export function parseCountries(body: unknown): readonly CountryRef[] {
       nameEn: readString(value, 'nameEn', what),
     };
   });
+}
+
+export function parseUnits(body: unknown): readonly UnitRef[] {
+  if (!Array.isArray(body)) throw new TradeContractError('units');
+  return body.map((item, index) => {
+    const what = `units[${index}]`;
+    const value = asObject(item, what);
+    return {
+      code: readString(value, 'code', what),
+      nameFa: readString(value, 'nameFa', what),
+      nameEn: readString(value, 'nameEn', what),
+    };
+  });
+}
+
+function parseProductListItem(body: unknown, what: string): ProductListItem {
+  const value = asObject(body, what);
+  return {
+    id: readGuid(value, 'id', what),
+    code: readString(value, 'code', what),
+    name: readString(value, 'name', what),
+    productGroupCode: readOptionalString(value, 'productGroupCode', what),
+    hsCode: readOptionalString(value, 'hsCode', what),
+    baseUnitCode: readString(value, 'baseUnitCode', what),
+    isActive: readBoolean(value, 'isActive', what),
+  };
+}
+
+export function parseProductListResponse(body: unknown): ProductListResponse {
+  const what = 'productList';
+  const value = asObject(body, what);
+  const items = value['items'];
+  if (!Array.isArray(items)) throw new TradeContractError(`${what}.items`);
+  return {
+    items: items.map((item, index) => parseProductListItem(item, `${what}.items[${index}]`)),
+    page: readInt(value, 'page', what),
+    pageSize: readInt(value, 'pageSize', what),
+    totalCount: readInt(value, 'totalCount', what),
+  };
+}
+
+export function parseProductDetail(body: unknown): ProductDetail {
+  const what = 'product';
+  const value = asObject(body, what);
+  return {
+    ...parseProductListItem(body, what),
+    rowVersion: readString(value, 'rowVersion', what),
+    createdAtUtc: readInstant(value, 'createdAtUtc', what),
+    updatedAtUtc: readOptionalInstant(value, 'updatedAtUtc', what),
+  };
 }

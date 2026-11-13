@@ -10,9 +10,14 @@ internal static class TradeReferenceEndpoints
 	// Clients that need Persian alphabetical order sort by nameFa with their own locale.
 	private static readonly CountryRef[] CountriesByCode = [.. TradeReferenceData.Countries.OrderBy(country => country.Code, StringComparer.Ordinal)];
 
+	private static readonly UnitRef[] UnitsByCode = [.. TradeReferenceData.Units.OrderBy(unit => unit.Code, StringComparer.Ordinal)];
+
 	public static void MapTradeReferenceEndpoints(this RouteGroupBuilder trade)
 	{
 		trade.MapGet("/reference/countries", () => TypedResults.Ok(CountriesByCode))
 			.RequireTradePermission(TradePermissionCodes.FormView("party"), TradeAccessIntent.Read);
+
+		trade.MapGet("/reference/units", () => TypedResults.Ok(UnitsByCode))
+			.RequireTradePermission(TradePermissionCodes.FormView("product"), TradeAccessIntent.Read);
 	}
 }

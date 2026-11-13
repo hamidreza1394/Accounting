@@ -10,6 +10,10 @@ const LazyPartiesPage = lazy(() => import('./pages/PartiesPage').then((module) =
 const LazyPartyCreatePage = lazy(() => import('./pages/PartyCreatePage').then((module) => ({ default: module.PartyCreatePage })));
 const LazyPartyDetailPage = lazy(() => import('./pages/PartyDetailPage').then((module) => ({ default: module.PartyDetailPage })));
 const LazyPartyEditPage = lazy(() => import('./pages/PartyEditPage').then((module) => ({ default: module.PartyEditPage })));
+const LazyProductsPage = lazy(() => import('./pages/ProductsPage').then((module) => ({ default: module.ProductsPage })));
+const LazyProductCreatePage = lazy(() => import('./pages/ProductCreatePage').then((module) => ({ default: module.ProductCreatePage })));
+const LazyProductDetailPage = lazy(() => import('./pages/ProductDetailPage').then((module) => ({ default: module.ProductDetailPage })));
+const LazyProductEditPage = lazy(() => import('./pages/ProductEditPage').then((module) => ({ default: module.ProductEditPage })));
 
 type PageProps = { onUnauthenticated: (error: unknown) => boolean };
 
@@ -34,6 +38,10 @@ const PartiesRoute = makeRoute('party.view', (props) => <LazyPartiesPage {...pro
 const PartyCreateRoute = makeRoute('party.create', (props) => <LazyPartyCreatePage {...props} />);
 const PartyDetailRoute = makeRoute('party.view', (props) => <LazyPartyDetailPage {...props} />);
 const PartyEditRoute = makeRoute('party.update', (props) => <LazyPartyEditPage {...props} />);
+const ProductsRoute = makeRoute('product.view', (props) => <LazyProductsPage {...props} />);
+const ProductCreateRoute = makeRoute('product.create', (props) => <LazyProductCreatePage {...props} />);
+const ProductDetailRoute = makeRoute('product.view', (props) => <LazyProductDetailPage {...props} />);
+const ProductEditRoute = makeRoute('product.update', (props) => <LazyProductEditPage {...props} />);
 
 /**
  * The Trade routes under `/app/trade/*`. `/new` sits before `/:id` on purpose (the router matches in array
@@ -46,4 +54,8 @@ export const tradeRoutes: readonly Route[] = [
   { path: '/trade/parties/new', element: PartyCreateRoute, title: 'طرف‌حساب جدید' },
   { path: '/trade/parties/:id', element: PartyDetailRoute, title: 'جزئیات طرف‌حساب' },
   { path: '/trade/parties/:id/edit', element: PartyEditRoute, title: 'ویرایش طرف‌حساب' },
+  { path: '/trade/products', element: ProductsRoute, title: 'کالاها' },
+  { path: '/trade/products/new', element: ProductCreateRoute, title: 'کالای جدید' },
+  { path: '/trade/products/:id', element: ProductDetailRoute, title: 'جزئیات کالا' },
+  { path: '/trade/products/:id/edit', element: ProductEditRoute, title: 'ویرایش کالا' },
 ];

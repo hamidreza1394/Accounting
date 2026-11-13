@@ -11,6 +11,7 @@ import {
   FileBarChart,
   Gem,
   Handshake,
+  Package,
   Headphones,
   KeyRound,
   LayoutDashboard,
@@ -129,10 +130,11 @@ export const navigation: NavEntry[] = [
       label: 'بازرگانی خارجی',
       icon: Ship,
       tone: 'cyan',
-      // The real leaf is shown only for a user whose Trade capabilities allow it; «واردات و صادرات» stays an honest
+      // The real leaves are shown only for a user whose Trade capabilities allow it; «واردات و صادرات» stays an honest
       // placeholder (no route yet, D-081: an active item appears only together with its real route).
       children: [
         { label: 'طرف‌حساب‌ها', icon: Handshake, to: '/trade/parties' },
+        { label: 'کالاها', icon: Package, to: '/trade/products' },
         { label: 'واردات و صادرات', icon: Ship },
       ],
     },
@@ -266,6 +268,8 @@ export function AppSidebar({ access, canAccess, onRetryPermissions, onNavigate, 
           return canAccess('hr.employees.view');
         case '/trade/parties':
           return tradeAccess.status === 'ready' && tradeAccess.can('party.view');
+        case '/trade/products':
+          return tradeAccess.status === 'ready' && tradeAccess.can('product.view');
         default:
           return true;
       }

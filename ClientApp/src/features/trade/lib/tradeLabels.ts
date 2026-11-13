@@ -1,4 +1,4 @@
-import type { CountryRef, PartyRole } from '../api/tradeTypes';
+import type { CountryRef, PartyRole, UnitRef } from '../api/tradeTypes';
 import type { ComboboxOption } from '@/components/ui/SearchableCombobox';
 
 // Persian UI texts of the Trade Party slice. The API sends only the enum names; the labels live
@@ -44,3 +44,10 @@ export const tradeTexts = {
   loadingAccess: 'در حال بررسی دسترسی به ماژول بازرگانی…',
   networkError: 'ارتباط با سرور برقرار نشد. اتصال خود را بررسی کنید و دوباره تلاش کنید.',
 } as const;
+
+/** Combobox options of the unit list, sorted by Persian name (the server orders by code). */
+export function unitOptions(units: readonly UnitRef[]): ComboboxOption[] {
+  return [...units]
+    .sort((left, right) => left.nameFa.localeCompare(right.nameFa, 'fa'))
+    .map((unit) => ({ value: unit.code, code: unit.code, label: unit.nameFa, description: unit.nameEn }));
+}

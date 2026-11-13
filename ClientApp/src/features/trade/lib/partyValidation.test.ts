@@ -44,6 +44,10 @@ describe('validatePartyForm (mirror of the server rules)', () => {
     expect(hasForbiddenCharacters('a‮b')).toBe(true);
     expect(hasForbiddenCharacters('a⁦b')).toBe(true);
     expect(hasForbiddenCharacters('می‌خواهم')).toBe(false);
+    for (const forbidden of ['\u061c', '\u2028', '\u2029', '\ufeff']) {
+      expect(hasForbiddenCharacters(`a${forbidden}b`)).toBe(true);
+      expect(validatePartyForm({ ...valid, legalName: `ab${forbidden}cd` }, countries).legalName).toMatch(/غیرمجاز/);
+    }
     expect(validatePartyForm({ ...valid, legalName: 'ab‮cd' }, countries).legalName).toMatch(/غیرمجاز/);
   });
 

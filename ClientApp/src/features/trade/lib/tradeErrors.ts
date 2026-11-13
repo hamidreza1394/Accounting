@@ -1,6 +1,7 @@
 import { ApiError } from '@/api/client';
 import { TradeContractError } from '../api/tradeTypes';
-import type { PartyFieldErrors, PartyFieldKey } from './partyValidation';
+import type { PartyFieldKey } from './partyValidation';
+import type { ProductFieldKey } from './productValidation';
 import { tradeTexts } from './tradeLabels';
 
 /**
@@ -22,15 +23,24 @@ export type TradeFailureKind =
   | 'network'
   | 'generic';
 
-export type TradeFailure = {
+export type TradeFailure<K extends string = PartyFieldKey> = {
   kind: TradeFailureKind;
   message: string;
   /** Messages for the fields of the form (400 validation, and the duplicate code on `code`). */
-  fieldErrors: PartyFieldErrors;
+  fieldErrors: Partial<Record<K, string>>;
   status: number | null;
 };
 
-const fieldKeys: readonly PartyFieldKey[] = ['code', 'legalName', 'displayName', 'legalIdentifier', 'countryCode', 'roles'];
+/** What differs between the Trade forms: the form's fields and the texts/codes that name the record. */
+type FailureSubject<K extends string> = {
+  fieldKeys: readonly K[];
+  duplicateProblemCode: string;
+  duplicateMessage: string;
+  concurrencyMessage: string;
+  notFoundMessage: string;
+};
+
+const partyFieldKeys: readonly PartyFieldKey[] = ['code', 'legalName', 'displayName', 'legalIdentifier', 'countryCode', 'roles'];
 
 export const tradeMessages = {
   duplicateCode: 'این کد پیش‌تر برای طرف‌حساب دیگری ثبت شده است. کد دیگری وارد کنید.',
@@ -47,8 +57,31 @@ export const tradeMessages = {
   generic: 'عملیات انجام نشد. لطفاً دوباره تلاش کنید.',
 } as const;
 
-function pickFieldErrors(error: ApiError): PartyFieldErrors {
-  const result: PartyFieldErrors = {};
+export const productMessages = {
+  duplicateCode: 'این کد پیش‌تر برای کالای دیگری ثبت شده است. کد دیگری وارد کنید.',
+  concurrency:
+    'این کالا در فاصلهٔ باز بودن فرم توسط کاربر دیگری تغییر کرده است. اطلاعات تازه را بارگذاری کنید و تغییرات را دوباره اعمال کنید.',
+  notFound: 'کالا پیدا نشد یا به آن دسترسی ندارید.',
+} as const;
+
+const partySubject: FailureSubject<PartyFieldKey> = {
+  fieldKeys: partyFieldKeys,
+  duplicateProblemCode: 'trade_party_code_duplicate',
+  duplicateMessage: tradeMessages.duplicateCode,
+  concurrencyMessage: tradeMessages.concurrency,
+  notFoundMessage: tradeMessages.notFound,
+};
+
+const productSubject: FailureSubject<ProductFieldKey> = {
+  fieldKeys: ['code', 'name', 'productGroupCode', 'hsCode', 'baseUnitCode'],
+  duplicateProblemCode: 'trade_product_code_duplicate',
+  duplicateMessage: productMessages.duplicateCode,
+  concurrencyMessage: productMessages.concurrency,
+  notFoundMessage: productMessages.notFound,
+};
+
+function pickFieldErrors<K extends string>(error: ApiError, fieldKeys: readonly K[]): Partial<Record<K, string>> {
+  const result: Partial<Record<K, string>> = {};
   for (const key of fieldKeys) {
     const first = error.fieldErrors?.[key]?.[0];
     if (first) result[key] = first;
@@ -57,14 +90,22 @@ function pickFieldErrors(error: ApiError): PartyFieldErrors {
 }
 
 export function mapTradeFailure(cause: unknown): TradeFailure {
+  return mapFailure(cause, partySubject);
+}
+
+export function mapProductFailure(cause: unknown): TradeFailure<ProductFieldKey> {
+  return mapFailure(cause, productSubject);
+}
+
+function mapFailure<K extends string>(cause: unknown, subject: FailureSubject<K>): TradeFailure<K> {
   if (cause instanceof ApiError) {
-    const base = { fieldErrors: {} as PartyFieldErrors, status: cause.status };
+    const base = { fieldErrors: {} as Partial<Record<K, string>>, status: cause.status };
     switch (cause.status) {
       case 413:
         return { kind: 'too-large', message: tradeMessages.tooLarge, ...base };
       case 400: {
         if (cause.problemCode === 'trade_invalid_request_body') return { kind: 'invalid-body', message: tradeMessages.invalidBody, ...base };
-        const fieldErrors = pickFieldErrors(cause);
+        const fieldErrors = pickFieldErrors(cause, subject.fieldKeys);
         // A 400 without a known field is a malformed request or an invalid anti-forgery token: show the server's text.
         return Object.keys(fieldErrors).length > 0
           ? { kind: 'validation', message: tradeMessages.validation, fieldErrors, status: 400 }
@@ -75,13 +116,18 @@ export function mapTradeFailure(cause: unknown): TradeFailure {
           ? { kind: 'module-unavailable', message: tradeMessages.moduleUnavailable, ...base }
           : { kind: 'forbidden', message: tradeMessages.forbidden, ...base };
       case 404:
-        return { kind: 'not-found', message: tradeMessages.notFound, ...base };
+        return { kind: 'not-found', message: subject.notFoundMessage, ...base };
       case 409:
         switch (cause.problemCode) {
-          case 'trade_party_code_duplicate':
-            return { kind: 'duplicate-code', message: tradeMessages.duplicateCode, fieldErrors: { code: tradeMessages.duplicateCode }, status: 409 };
+          case subject.duplicateProblemCode:
+            return {
+              kind: 'duplicate-code',
+              message: subject.duplicateMessage,
+              fieldErrors: { code: subject.duplicateMessage } as Partial<Record<K, string>>,
+              status: 409,
+            };
           case 'trade_concurrency_conflict':
-            return { kind: 'concurrency', message: tradeMessages.concurrency, ...base };
+            return { kind: 'concurrency', message: subject.concurrencyMessage, ...base };
           // Defensive: Party writes are allowed in a closed period now, but another gate may still answer this.
           case 'trade_period_read_only':
             return { kind: 'period-read-only', message: tradeMessages.periodReadOnly, ...base };
@@ -101,6 +147,6 @@ export function mapTradeFailure(cause: unknown): TradeFailure {
 }
 
 /** The kinds that mean "the module is not usable here at all" (a friendly state instead of an error box). */
-export function isModuleBlocked(failure: TradeFailure | null): boolean {
+export function isModuleBlocked(failure: TradeFailure<string> | null): boolean {
   return failure?.kind === 'module-unavailable' || failure?.kind === 'context-required';
 }

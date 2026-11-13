@@ -1,5 +1,7 @@
 using Faranou.Modules.Trade.Application.Parties;
+using Faranou.Modules.Trade.Application.Products;
 using Faranou.Modules.Trade.Infrastructure.Parties;
+using Faranou.Modules.Trade.Infrastructure.Products;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -20,9 +22,10 @@ public static class TradePersistenceServiceCollectionExtensions
         services.AddDbContext<TradeDbContext>(options =>
             TradeDbContextOptionsConfiguration.ConfigureSqlServer(options, connectionString));
 
-        // PartyStore logs; AddLogging is idempotent when the host already registered it.
+        // PartyStore/ProductStore log; AddLogging is idempotent when the host already registered it.
         services.AddLogging();
         services.AddScoped<IPartyStore, PartyStore>();
+        services.AddScoped<IProductStore, ProductStore>();
 
         return services;
     }
