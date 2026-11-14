@@ -57,5 +57,5 @@
 
 ## شناسه‌های Git
 - Branch: `docs/d087-tenant-company-source-of-truth`
-- Commit: پس از ساخت ثبت می‌شود.
-- Pull Request: پس از ساخت ثبت می‌شود.
+- Commitها: تغییرات اولیه و اصلاحات بازبینی در همین شاخه ثبت شده‌اند؛ SHA نهایی از Head فعلی PR قابل مشاهده است.
+- Pull Request: [#650 — هم‌راستاسازی اسناد با D-087](https://github.com/hamidreza1394/Accounting/pull/650) (باز، منتظر CI و بازبینی).
