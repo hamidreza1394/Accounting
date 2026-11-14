@@ -730,3 +730,9 @@
 - S3-0d-b هنوز کامل نیست: همه endpointهای export/report/raw SQL، تست‌های isolation و داده‌های مرجع global نیازمند بررسی تکمیلی‌اند. S3-0e/f/g باز هستند.
 - فقط مستندات تغییر می‌کند؛ هیچ کد، Entity، API، Schema، Migration یا داده‌ای تغییر نکرده و Build/Test اجرا نشده است.
 - جزئیات: `docs/handoffs/ISSUE-397-s3-0-tenant-company-audit.md` بخش ۱۳.
+
+
+### تکمیل دور اول جست‌وجوی مسیرهای داده — S3-0d-b
+- جست‌وجوی Source برای FromSqlRaw/ExecuteSqlRaw/ExecuteUpdateAsync انجام شد: FromSqlRaw فقط در state ضد rollback نصب/لایسنس؛ ExecuteSqlRaw فقط برای sp_getapplock در provisioning/import لایسنس؛ ExecuteUpdateAsync برای lifecycle نشست User در سطح Identity Realm.
+- تست‌های موجود CompanyAccess، TradeAuthorizationAdapter، Trade endpoint gate و DatabaseModel شناسایی شدند؛ این‌ها قواعد فعلی را پوشش می‌دهند، نه اثبات جداسازی Tenant مستقل Shared/Dedicated.
+- بازبینی همه گزارش‌ها/Exportها و سناریوهای SQL Server cross-tenant هدف هنوز لازم است؛ S3-0d-b باز می‌ماند.
