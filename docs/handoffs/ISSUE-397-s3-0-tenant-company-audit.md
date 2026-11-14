@@ -308,3 +308,13 @@ Migrationهای قدیمی‌تر با ProductVersion `10.0.13` و موارد ج
 5. هیچ Entity، API، Query، Migration، Schema، داده، فایل یا تنظیم runtime تغییر نکرده است. Build/Test اجرا نشده؛ این PR مستنداتی است.
 
 **گام بعدی:** ادامهٔ inventory روی تمام endpointهای Core/HR/Trade و مسیرهای export/report/raw SQL، بررسی تست‌های مثبت/منفی isolation، تکمیل داده‌های global و سپس ثبت ماتریس Current→Target نهایی. S3-0e، S3-0f و S3-0g تا تصمیم/خروجی مستقل باز می‌مانند.
+
+
+### 13.5 تکمیل بررسی جست‌وجوی SQL خام، عملیات set-based و تست‌های موجود
+
+- جست‌وجوی Source برای `FromSqlRaw` فقط مسیر `TpmAnchoredOfflineRevocationStateStore` را نشان داد؛ این مسیر state ضد rollback لایسنس/نصب است، نه query داده‌های عملیاتی Company/Trade.
+- دو مسیر `ExecuteSqlRawAsync` در `CustomerLicenseImportService` و `CustomerProvisioningApplyService` برای `sp_getapplock` با پارامترهای SQL و قفل transaction استفاده می‌کنند؛ این‌ها query آزاد روی داده شرکت‌ها نیستند.
+- `ExecuteUpdateAsync` در `UserSessionService` و `SessionValidator` روی UserSessions با predicateهای SessionId/UserId و وضعیت revoke انجام می‌شود؛ این عملیات در سطح هویت/نشست نصب است، نه Company data.
+- تست‌های موجود شامل `CompanyAccessTests` برای عضویت/شرکت/نقش غیرفعال و جداسازی شرکت، `TradeAuthorizationAdapterTests` برای تطبیق زوج Company/Period و الزام مجوز همه شرکت‌های گزارش، `TradeEndpointGateTests` برای اجباری‌بودن gate روی همه Routeهای Trade، و `DatabaseModelTests` برای مدل EF هستند.
+- این تست‌ها شواهد مفیدی از قواعد فعلی‌اند، اما به‌تنهایی اثبات‌کننده جداسازی Tenant مستقل در Shared/Dedicated نیستند؛ چون مدل جاری هنوز Tenant مستقل ندارد. پوشش integration روی SQL Server واقعی برای سناریوهای cross-tenant هدف باید بعد از طراحی مدل اضافه شود.
+- در این جست‌وجو مسیر raw SQL عملیاتی که بدون scope شرکت/tenant روی داده‌های تجاری query بزند مشاهده نشد؛ این نتیجه محدود به الگوهای جست‌وجوشده و Source فعلی است و جای بازبینی دستی تمام گزارش‌ها/Exportها را نمی‌گیرد.
