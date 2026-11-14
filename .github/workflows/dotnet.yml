@@ -140,6 +140,7 @@ jobs:
           python3 scripts/tests/test_migration_tooling.py
           python3 scripts/tests/test_migration_guard_mutations.py
           python3 scripts/tests/test_migration_guard_pinned_mappings.py
+          python3 scripts/tests/test_migration_guard_rename.py
       - name: Verify the migration and the model snapshot
         run: python3 scripts/verify_migration_model.py --repo-root .
       - name: Install dotnet-ef

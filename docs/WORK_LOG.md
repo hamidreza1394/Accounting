@@ -3129,3 +3129,10 @@
 - **آزمون:** 22 تست جدید (RED→GREEN)، تست‌های قبلی Guard و `generate_migrations.py --check`/`verify_migration_model.py` موفق؛ .NET Build/Test، `has-pending-model-changes` و SQL Server اجرا نشد.
 - **محدوده:** فقط ابزار Guard، تست‌ها، یک خط CI و مستندات؛ بدون Migration، Schema یا داده. PR-2b (Rename) انجام نشد.
 - **Handoff:** `docs/handoffs/ISSUE-397-pr-2a-migration-guard-pinned-mappings.md`.
+
+## 2026-11-14 — S3-0 PR-2b: پشتیبانی کنترل‌شدهٔ Rename در Migration Guard
+- **مبنا:** `origin/main@9c744eed76b6dd717504a7a983a15e4522ed5661` (شامل PR-2a)؛ Issue #397؛ طرح S3-0h §6.3.
+- **انجام‌شده:** `RenameColumn`/`RenameIndex` فقط با فهرست بازبینی‌شدهٔ `ALLOWED_RENAMES` (خالی)، فقط‌-Rename بودن Migration، `Down` معکوس دقیق، حفظ نام قیدها با Pin و fail-closed برای سایر عملیات.
+- **آزمون:** تست جدید RED (17 ERROR/1 OK) سپس GREEN: 18/18؛ تست‌های قبلی Guard (22، 32، 32) و `generate_migrations.py --check`/`verify_migration_model.py` موفق. .NET Build/Test، `has-pending-model-changes` و SQL Server اجرا نشد (Not Run). Guard اثبات نمی‌کند SQL Server Rename را بی‌خطر اجرا می‌کند؛ این کار G3 است.
+- **محدوده:** فقط ابزار Guard، تست‌ها، یک خط CI و مستندات؛ بدون Migration، Schema، داده یا Trade Host.
+- **Handoff:** `docs/handoffs/ISSUE-397-pr-2b-controlled-rename-migration-guard.md`.
