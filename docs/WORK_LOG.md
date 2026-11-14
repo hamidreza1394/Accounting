@@ -3149,3 +3149,11 @@
 - **انجام‌شده:** `TenantScope`/`CompanyScope`/`OwnershipScope` (تنها منبع: `CompanyAccess`/`WorkContext` تأییدشده سمت سرور؛ نقطهٔ واحد معادلهٔ Legacy Tenant=Company)، `WorkContext.Ownership`، ۱۰ تست معماری/رفتاری و بخش SECURITY.md. بدون Global Query Filter.
 - **محدوده:** فقط Server/Tenancy، تست و مستندات؛ بدون Entity/Migration/Schema/Backfill/Trade/تغییر رفتار Auth.
 - **Handoff:** `docs/handoffs/ISSUE-397-pr-3-tenant-company-ownership-contracts.md`.
+
+## 2026-11-14 — PR-E1a: اعتبارسنجی نقش مدیر سیستم در هر درخواست (R-16)
+- **مبنا:** `origin/main@8ef2196197682c9ba8fa3bb2bd4f35e07855419b`.
+- **علت:** Claim نقش Cookie در `[Authorize(Roles = Admin)]` و `/api/v1/session` از دیتابیس بازبینی نمی‌شد؛ نقش لغوشده تا انقضای Cookie دسترسی مدیریتی می‌داد.
+- **اصلاح:** `SessionValidator` نقش فعال فعلی را در همان Query موجود می‌خواند و Claim نقش کاربر شرکتی را با آن هم‌تراز می‌کند؛ Session لغو نمی‌شود؛ خطا یعنی عدم اعطا؛ بدون Query/Cache/سرویس جدید.
+- **تست:** `AdminRoleRevalidationHttpTests` (۸ تست؛ RED ۴ شکست → GREEN)؛ نتیجهٔ کامل در PR.
+- **محدوده:** فقط `SessionValidator`، تست و مستندات؛ بدون Schema/Migration/Tenant/Trade.
+- **Handoff:** `docs/handoffs/ISSUE-UNNUMBERED-pr-e1a-admin-role-revalidation.md`.
