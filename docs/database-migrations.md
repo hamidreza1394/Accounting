@@ -184,16 +184,9 @@ conventions of the context (`Infrastructure/Persistence/Conventions/`).
   `SecurityAuditEvent`) live side by side. The `InitialCreate` migration
   contains **all** of them.
 * The money is never stored as `float` or `real`, the amounts use `decimal`.
-* The `TenantId` of a company scoped row is the foreign key to
-  `Companies.Id`. The `CompanyRole` has the alternate key `(Id, TenantId)` and
-  the `UserCompanyMembership` uses the composite foreign key
-  `(RoleId, TenantId)` on it, so that a membership can only reference a role of
-  its own company.
-* The isolation of the tenants is **not** enforced by the database: the
-  `TenantId` columns and the foreign keys exist, but there is no row level
-  security and no filter that restricts a query to the tenant of the current
-  user. This has to be implemented in the application layer and is reported as
-  an open point.
+* **Historical schema, not the D-087 target:** in the current company-scoped model, `TenantId` is used as the foreign key to `Companies.Id`; it therefore carries the Company identifier rather than an independent Tenant identifier. `CompanyRole` has the alternate key `(Id, TenantId)` and `UserCompanyMembership` references it with `(RoleId, TenantId)`, preventing a membership from referencing a role belonging to another current Company.
+* **D-087 target:** `Tenant` and `Company` are separate identities. A tenant-owned row carries `TenantId`; a company-owned row carries both `TenantId` and `CompanyId`. Company/Tenant consistency must be enforced by composite foreign keys or equivalent database constraints, and authorization must resolve both scopes from trusted server-side context. Shared and Dedicated deployments use the same logical schema contract; Dedicated DB does not remove TenantId.
+* **Current database enforcement limits:** there is no SQL Server row-level security and no global query filter. Existing composite foreign keys protect only relationships explicitly modeled; they do not automatically scope arbitrary queries. Application authorization and explicit query predicates remain required. Do not describe D-087 as implemented until schema, backfill, queries and migrations are changed and verified through the approved S3-0 plan.
 * Besides the 24 indexes that the configurations declare with `.HasIndex(...)`,
   the model has 8 more indexes that no configuration writes down. The EF Core
   `ForeignKeyIndexConvention` creates an index for every foreign key whose

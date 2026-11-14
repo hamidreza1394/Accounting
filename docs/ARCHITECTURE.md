@@ -149,16 +149,19 @@ flowchart LR
 - هر انتخاب cache توزیع‌شده، queue، broker، Kubernetes یا rate limiting توزیع‌شده نیازمند شواهد و در صورت تغییر معماری، ADR است؛ افزودن پیش‌دستانه آن‌ها ممنوع نیست اما بدون نیاز واقعی توصیه نمی‌شود.
 - معیارها و شکاف‌های تأییدشده در `docs/CLOUD_CONCURRENCY_READINESS.md` ثبت شده‌اند. بار، latency، SQL contention و ظرفیت connection pool از روی کد به‌تنهایی قابل اثبات نیستند.
 
-## گروه‌های شرکتی و گزارش گروه (D-033..D-035، 2026-10-22)
+## مرزهای Tenant، Company و گروه شرکتی (D-033..D-038، D-087)
+
+مدل منطقی هدف:
 ```
-نصب (مرز استقرار/دیتابیس) ─┬─ Company (واحد جداسازی؛ TenantId = Companies.Id؛ مشتری = CustomerAccount، NotImplemented) ── FiscalPeriod, CompanyRole, UserCompanyMembership
-                  └─ CorporateGroup (OwnerCompanyId) ── CorporateGroupMember (بازه) ── Company
-                     OwnershipRelationship (Company ↔ Company، بازه، درصدها) — مستقل از گروه
-                     ConsolidationProfile / ConsolidationRun ── ConsolidationRunCompany (Company + FiscalPeriod)
+Shared Database:       Database ── Tenant A ── Company A1 / Company A2
+                                  └─ Tenant B ── Company B1
+Dedicated Database:    Database A ── Tenant A ── Company A1 / Company A2
 ```
-- **جای کد:** قواعد خالص در `Domain/CorporateGroups/` (بدون وابستگی به EF/Web)؛ نگاشت EF در `Infrastructure/Persistence/Configurations`؛ سرویس‌های کاربردی و سنجش دسترسی در `Server/Infrastructure/CorporateGroups/` هم‌الگو با `Server/Infrastructure/Tenancy/` (پروژه `Application` هنوز اسکلت است؛ Interface/Repository صرفاً برای لایه‌بندی ساخته نشد، D-006).
-- **تصمیم دسترسی:** همه از `CompanyAccessService` (عضویت فعال + `HasPermissionAsync`)؛ عضویت شرکت در گروه دسترسی نمی‌دهد (D-034).
-- **مرز نصب:** نصب فقط مرز استقرار/دیتابیس است، نه مرز مشتری؛ مشتری/مستأجر همان `CustomerAccount` (D-020، `NotImplemented`) است و فقط در نصب اختصاصی با نصب منطبق است. گروه فقط شرکت‌های همان دیتابیس را می‌پذیرد؛ نصب‌های دیگر فقط از راه بسته داده امضاشده در آینده (D-035). معماری توزیع‌شده پیاده نشد. گروه/مالکیت بین شرکت‌های چند مشتری در نصب ابری مشترک تصمیم باز (`NeedsApproval`) و پیش‌شرط API/UI گروه است (D-033 اصلاح، `CORPORATE_GROUPS.md` ۶.۱).
+- Tenant مرز مالکیت و جداسازی داده مشتری/فضای کاری است؛ Company شرکت حقوقی/عملیاتی داخل آن است. هر Company دقیقاً یک Tenant دارد. Shared و Dedicated از همین مدل منطقی و قواعد authorization استفاده می‌کنند (D-087).
+- وضعیت فعلی کد تاریخی است: Entity مستقل Tenant وجود ندارد و در بخشی از مدل‌ها TenantId معادل Company.Id است. این انحراف تا اجرای طرح گذار S3-0 باقی است.
+- CustomerBoundaryId (D-038) مرزی مستقل از Tenant و Company است. گروه شرکتی و روابط مالکیت، ساختار ارتباطی‌اند و به‌تنهایی مرز Tenant یا مجوز دسترسی ایجاد نمی‌کنند.
+- **جای کد:** قواعد خالص در `Domain/CorporateGroups/`؛ نگاشت EF در `Infrastructure/Persistence/Configurations`؛ سرویس‌های کاربردی و سنجش دسترسی در `Server/Infrastructure/CorporateGroups/` (D-006).
+- **تصمیم دسترسی:** همه از `CompanyAccessService` (عضویت فعال + `HasPermissionAsync`)؛ تعلق Company به Tenant نیز در مدل هدف باید با رابطه معتبر و قیود داده کنترل شود؛ عضویت شرکت در گروه دسترسی نمی‌دهد (D-034).
 - **خارج از این مرحله:** API/UI گروه، دفتر و سند، گزارش عددی، تعدیلات، تطبیق درون‌گروهی (`docs/CORPORATE_GROUPS.md` بخش ۸).
 
 
@@ -171,7 +174,7 @@ flowchart LR
 - فعلاً Event Bus، broker، سرویس توزیع‌شده یا دیتابیس جدا اضافه نمی‌شود. مرزهای داخلی و قراردادهای port، مسیر استخراج آینده را حفظ می‌کنند.
 
 ### مرزهای امنیتی و داده
-- در این مخزن Company.Id = TenantId؛ هر رکورد شرکت‌محور Trade باید TenantId داشته باشد.
+- طبق D-087، Tenant و Company دو سطح مستقل‌اند. در مدل هدف، داده tenant-owned دارای TenantId و داده company-owned دارای هر دو TenantId و CompanyId است. کد/Schema فعلی Trade هنوز تاریخی است و TradeEntity.TenantId عملاً CompanyId را نگه می‌دارد؛ این انحراف تا S3-0 و طرح گذار مصوب باقی است.
 - طبق D-013، Global Query Filter عمداً مرز امنیتی نیست؛ queryهای Trade باید TenantId تأییدشده را صریحاً اعمال کنند.
 - `TradeAuthorizationAdapter` در Host از principal احراز‌شده، `WorkContextService` و `CompanyAccessService` استفاده می‌کند؛ شناسه‌های کلاینت فقط درخواست‌اند، نه منبع مجوز. این adapter هنوز به endpointهای تجاری متصل نشده است.
 - TRADE_IMPORT entitlement تجاری است و از permissionهای فرم/عملیات/گزارش جدا می‌ماند.

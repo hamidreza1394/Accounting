@@ -45,20 +45,21 @@
 
 ## 3. Tenant و جداسازی شرکت
 
-در این مخزن طبق D-013، Company.Id همان TenantId است. Tenant entity جدید نسازید.
+طبق D-087، Tenant مرز مالکیت/جداسازی داده مشتری و Company شرکت حقوقی/عملیاتی داخل آن است. هر Company دقیقاً به یک Tenant تعلق دارد. Shared Database چند Tenant را در یک DB و Dedicated Database یک Tenant را در DB مستقل نگه می‌دارد؛ قرارداد منطقی و authorization در هر دو یکسان است.
 
-1. تمام داده‌های متعلق به شرکت باید TenantId داشته باشند.
-2. TenantId از درخواست کلاینت یا Claim شرکت پذیرفته نمی‌شود؛ سرور آن را از Work Context معتبر و CompanyAccessService تأیید می‌کند.
-3. هر query، update، delete، export، attachment و report باید TenantId را صریحاً در scope داشته باشد.
-4. Global Query Filter به‌تنهایی کنترل امنیتی نیست و در این مخزن عمداً جایگزین predicate صریح نمی‌شود.
-5. تست منفی باید دسترسی به رکورد شرکت دیگر را با شناسه معتبر اما غیرمجاز رد کند؛ بدون افشای وجود داده.
+1. داده tenant-owned دارای TenantId و داده company-owned دارای هر دو TenantId و CompanyId است. دامنه مالکیت هر Entity باید در طراحی S3-0 صریح شود.
+2. TenantId و CompanyId از درخواست کلاینت یا Claim پذیرفته نمی‌شوند؛ سرور Tenant را از رابطه معتبر Company و دسترسی Company را از WorkContext/CompanyAccessService resolve و اعتبارسنجی می‌کند.
+3. هر query، update، delete، export، attachment، report و background job باید scope مالکیت مناسب (Tenant و در داده company-owned، Company) را صریحاً اعمال کند.
+4. کد فعلی Trade هنوز تاریخی است: TradeEntity.TenantId در عمل Company.Id را نگه می‌دارد و CompanyId مستقلی ندارد. این وضعیت پیاده‌سازی D-087 نیست؛ تغییر آن فقط پس از ممیزی S3-0 و طرح گذار مصوب مجاز است.
+5. Global Query Filter به‌تنهایی کنترل امنیتی نیست و در این مخزن عمداً جایگزین predicate صریح نمی‌شود.
+6. تست منفی باید دسترسی cross-company و cross-tenant را با شناسه معتبر اما غیرمجاز رد کند؛ بدون افشای وجود داده.
 
 ## 4. دوره‌های مالی مشترک با هسته فرانو
 
 - تنها مرجع تعریف، انتخاب و چرخه عمر دوره مالی، موجودیت `Domain.FiscalPeriod` در هسته فرانو است؛ Trade هیچ `OperationalPeriod`، جدول یا سرویس موازی ندارد.
 - داده‌های مرجع tenant-scoped مانند Party و Product به‌طور معمول `TenantId` دارند و `FiscalPeriodId` نمی‌گیرند. اسناد و عملیات تراکنشی period-scoped هر دو شناسه `TenantId` و `FiscalPeriodId` را نگه می‌دارند؛ `TenantId` همان `Company.Id` و `FiscalPeriodId` همان `FiscalPeriod.Id` است.
 - **قاعدهٔ تاریخی D-063 (برای ImportCase/Proforma/OrderRegistration با D-086 superseded شده است):** قبلاً دورهٔ افتتاح روی ImportCase ثبت و هر سند/عملیات فرزند به دورهٔ انتخاب‌شده متصل می‌شد. طبق D-086، خود ImportCase، Proforma، OrderRegistration و پیگیری بلندمدت پرونده FiscalPeriodId ندارند و با بسته‌شدن دوره از دسترس خارج نمی‌شوند. اسناد مالی واقعی و عملیات حسابداری آینده همچنان FiscalPeriodId دورهٔ ثبت خود را دارند و باید WorkContext، تعلق و وضعیت دوره و مجوز را در سرور اعتبارسنجی کنند.
-- Trade.Domain و Trade.Application برای حفظ مرز ماژول به Core Domain/DbContext Reference نمی‌دهند. Host باید پیش از اجرای use case بررسی کند که `FiscalPeriod.TenantId == TenantId` و دوره از طریق `WorkContext` معتبر انتخاب شده است. این ارجاع منطقی است و FK بین schemaها ایجاد نمی‌شود.
+- Trade.Domain و Trade.Application برای حفظ مرز ماژول به Core Domain/DbContext Reference نمی‌دهند. Host باید پیش از اجرای use case تعلق دوره به همان Company و Tenant را از context معتبر کنترل کند. تا زمان گذار D-087، مقایسه تاریخی `FiscalPeriod.TenantId == TenantId` فقط توصیف قرارداد فعلی است و نباید به‌عنوان قرارداد نهایی Tenant/Company کپی شود. این ارجاع منطقی است و FK بین schemaها ایجاد نمی‌شود.
 - انتخاب شرکت/دوره، فهرست دوره‌های قابل انتخاب و سیاست وضعیت دوره از `WorkContext` و `FiscalPeriodSelectionPolicy` مشترک پیروی می‌کند؛ هیچ دسترسی جداگانه‌ای برای «دوره بازرگانی» تعریف نمی‌شود.
 - سیاست مشترک دوره حفظ می‌شود: دوره Open قابل ورود با رعایت مجوز عملیات است؛ دوره Closed برای مشاهده/گزارش فقط خواندنی است و عملیات نوشتن با قواعد مشترک بسته می‌شود (**استثنا، D-084 و D-085 (`Proposed`):** عملیات صریحاً «مستقل از دوره» مثل ایجاد/ویرایش Party و Product که اطلاعات پایهٔ سطح Tenant است؛ بقیهٔ کنترل‌ها حفظ می‌شود)؛ Archived مطابق سیاست هسته قابل انتخاب نیست.
 - ورود خودکار به شرکت/دوره قبلی ممنوع است؛ هر نشست جدید باید context معتبر را طبق سیاست هسته تعیین کند.

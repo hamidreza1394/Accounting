@@ -18,7 +18,7 @@ model: sonnet
 - Mapping صریح برای طول رشته، Required/Optional، Precision (`decimal(18,2)`/`decimal(19,4)` برای مقادیر مالی)، Index و رفتار Cascade.
 - `AsNoTracking()` برای Queryهای فقط‌خواندنی؛ از N+1 با `Include`/`ThenInclude` یا Projection پرهیز کن.
 - `DbContext` Scoped بماند؛ بین Threadها/عملیات موازی به اشتراک گذاشته نشود.
-- Tenant Isolation: تغییر مدل مرتبط با `Company`/`UserCompanyMembership` باید اثر آن بر `CompanyAccessService` (D-013) را صریح بررسی کند.
+- Tenant Isolation: D-087 مدل هدف را به Tenant و Company مستقل تفکیک می‌کند؛ Shared/Dedicated از قرارداد منطقی یکسان استفاده می‌کنند. تغییر مدل Company/UserCompanyMembership باید اثر TenantId + CompanyId، کلیدهای مرکب، `CompanyAccessService` (D-013)، queryها و هر دو حالت استقرار را بررسی کند. کد فعلی هنوز legacy Company=Tenant است؛ قبل از طرح گذار S3-0 هیچ Migration/backfill اجرا نکن.
 
 ## گردش‌کار
 1. قبل از افزودن Migration، `dotnet ef migrations has-pending-model-changes` را اجرا و خروجی واقعی را گزارش کن.

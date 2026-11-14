@@ -1,6 +1,8 @@
 # مدل داده گروه‌های شرکتی و تلفیق
 
 > تصمیم: D-033 (مدل و مرز)، D-034 (گزارش و مجوز). مفاهیم و قواعد: [`CORPORATE_GROUPS.md`](CORPORATE_GROUPS.md). راهبرد Migration عمومی: [`database-migrations.md`](database-migrations.md).
+>
+> **ملاحظه D-087:** نمودار و FKهای این سند، Schema تاریخی گروه شرکتی را توصیف می‌کنند؛ `TenantId` در مدل فعلی به Company.Id اشاره می‌کند. این نگاشت مدل هدف نیست. هر تغییر بعدی باید Tenant مستقل، Company طرف رابطه و قواعد D-038 برای CustomerBoundaryId را جداگانه مدل کند؛ هیچ FK یا backfill بر اساس حدس اضافه نشود.
 
 ## ۱) نمودار روابط
 ```mermaid
