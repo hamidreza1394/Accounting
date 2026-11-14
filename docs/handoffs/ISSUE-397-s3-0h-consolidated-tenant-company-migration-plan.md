@@ -162,7 +162,7 @@ Tenants (جدید)                       Companies (موجود)
 - **فرمان اپراتوری، نه Migration:** `--dry-run` پیش‌فرض؛ تراکنش Serializable + قفل `sp_getapplock` (الگوی Provisioning)؛ رویداد `SecurityAuditEvent` با SHA256 manifest و شمارها؛ بدون ثبت Secret.
 - **اعتبارسنجی پیش از نوشتن:** هر Company موجود دقیقاً یک‌بار در manifest؛ Company ناشناخته در manifest → توقف؛ Company بدون ردیف در manifest → توقف؛ Tenant بدون Company → هشدار؛ Company با Tenant متفاوت از قبل → توقف (بازتخصیص ممنوع).
 - **Idempotency:** اجرای مجدد با همان manifest بدون تغییر و با گزارش «no-op».
-- **Backfill ستون‌های فرزند (D2):** `UPDATE child SET TenantId = c.TenantId … WHERE child.TenantId IS NULL AND c.TenantId IS NOT NULL` به‌صورت دسته‌ای و قابل ازسرگیری؛ پس از آن راستی‌آزمایی: شمار `child.TenantId IS NULL = 0` و `child.TenantId <> Companies.TenantId = 0`. **کد نوشتن `TenantId` در مسیرهای insert باید قبل از D2 مستقر شده باشد** تا ردیف NULL جدید وارد نشود.
+- **Backfill ستون‌های فرزند (D2):** `UPDATE child SET TenantId = c.TenantId … WHERE child.TenantId IS NULL AND c.TenantId IS NOT NULL` به‌صورت دسته‌ای و قابل ازسرگیری؛ پس از آن راستی‌آزمایی: شمار `child.TenantId IS NULL = 0` و `child.TenantId <> Companies.TenantId = 0` برای همهٔ جدول‌های فرزند **به‌جز `SecurityAuditEvent`**. برای `SecurityAuditEvent` قاعدهٔ جدا (ستون nullable می‌ماند؛ هر دو ستون مالکیت NULL = رویداد سیستمی، OD-5): ردیف‌هایی که `CompanyId` آن‌ها به Company موجود می‌رسد باید `TenantId` غیرخالی و برابر `Companies.TenantId` داشته باشند؛ ردیف‌های سیستمی/بدون Company مجازاً NULL می‌مانند و فقط شمارش و گزارش می‌شوند. NOT NULL (C3) روی این جدول اعمال نمی‌شود. **کد نوشتن `TenantId` در مسیرهای insert باید قبل از D2 مستقر شده باشد** تا ردیف NULL جدید وارد نشود.
 - **گزارش:** شمار قبل/بعد هر جدول، فهرست تفاوت‌ها، توقف کنترل‌شده برای هر مجهول؛ خروجی بدون Secret.
 
 ### 6.5 Rollback و Recovery [P]
@@ -199,7 +199,7 @@ Tenants (جدید)                       Companies (موجود)
 
 ### 7.1 واقعیت‌ها [V] و قید
 
-- Trade ماژول دارای مجوز (`TRADE_IMPORT`) است و امروز با `DenyAllTradeModuleEntitlement` بسته است؛ جداول Trade فعلاً در هیچ نصب (از جمله `Farano-Local`) وجود ندارند.
+- Trade ماژول دارای مجوز (`TRADE_IMPORT`) است و امروز با `DenyAllTradeModuleEntitlement` بسته است؛ در `Farano-Local` جداول Trade وجود ندارند (شاهد S3-0c-b). وضعیت دیتابیس سایر نصب‌ها **نامعلوم** است (§15) و نباید از این مشاهده تعمیم داده شود.
 - نبود `__TradeMigrationsHistory` **اجازهٔ baseline یا فرض وجود Schema نیست.** اگر جداول `trade.*` بدون History یافت شد، باید خطا و گزارش دهد؛ هیچ baseline خودکار نشود. (اسکریپت baseline موجود فقط برای Core دیتابیس‌های `EnsureCreated` است.)
 - `docs/TRADE_MODULE.md` اجرای Migration مشتری را مشروط به Issue مستقل، تست SQL Server، rollout/rollback و تأیید می‌کند؛ D-087 نیز اجرای Migration روی دیتابیس مشتری را نیازمند مجوز جدا می‌داند.
 - ROADMAP: تغییر migration host تا تأیید S3-0g مسدود است.
@@ -311,14 +311,14 @@ OD-2، OD-8 مسدودکنندهٔ فازهای نزدیک نیستند. هیچ 
 | **PR-4 (A1)** | `Tenants` + `Companies.TenantId` nullable + FK + Index (بدون AK) | **Schema** | G0، G3، G4(مرتبط) |
 | **PR-5** | ثبت Tenant اپراتوری + فرمان Backfill D1 (dry-run/audit) | کد + (احتمالاً Schema کوچک) | PR-4، OD-6، OD-6a، OD-13 |
 | **PR-6** | Provisioning: resolve Tenant؛ ستون Company.TenantId هنگام ایجاد؛ fail-closed | کد | PR-5 |
-| **PR-D1** | اجرای Backfill D1 (عملیات، نه PR کد) | **Backfill** | G5، PR-5 |
+| **PR-D1** | اجرای Backfill D1 (عملیات، نه PR کد) | **Backfill** | G5، PR-5، **PR-6 مستقر** (Provisioning آگاه از Tenant)؛ نسخه‌های قدیمی که Company می‌سازند تا پایان A2 متوقف/تعویض شوند تا Companyی بدون `TenantId` پس از D1 ساخته نشود |
 | **PR-4b (A2)** | NOT NULL دستی + AK روی `Companies` | **Schema** | D1 تأییدشده، G3 |
 | **PR-P1..P4** | گام P (C#، Migration خالی) برای FiscalPeriod، G1، HR، Audit، Trade | کد | G1 (برای Pin/HasColumnName) |
 | **PR-R1..R4** | Rename فیزیکی Rename-only (در صورت تأیید OD-12/OD-18) | **Schema** | G2، G3 |
 | **PR-C2a..d** | ستون `TenantId` فرزند (nullable) + FK مرکب (Trade: فقط ستون) + کد نوشتن Tenant | **Schema** + کد | PR-4b، گام P/R همان گروه |
 | **PR-D2** | Backfill مشتق ستون‌های فرزند + راستی‌آزمایی | **Backfill** | کد نوشتن Tenant مستقر؛ G5 |
 | **PR-C3a..d** | NOT NULL دستی فرزندان با `THROW` | **Enforcement** | D2 تأییدشده، SP-5 |
-| **PR-E2/E3** | Admin/کشف عضویت/`TradeAccessContext` + تست دو-Tenant | امنیت | SP-ها؛ G6 |
+| **PR-E2/E3** | Admin/کشف عضویت/`TradeAccessContext` + تست دو-Tenant | امنیت | SP-ها؛ G6 فقط فعال‌سازی Shared را گیت می‌کند، نه ساخت و تست این PRها (که خودشان پیش‌نیازهای G6 را برآورده می‌کنند) |
 | **Shared** | فعال‌سازی Tenant دوم | — | G6 کامل |
 
 ### 11.3 نمودار وابستگی

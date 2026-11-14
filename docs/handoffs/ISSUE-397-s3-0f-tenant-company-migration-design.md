@@ -20,6 +20,8 @@
 
 > **یادداشت اصلاحی (S3-0g، 2026-11-14):** اعتبارسنجی فنی در `docs/handoffs/ISSUE-397-s3-0g-tenant-company-technical-validation.md` چند فرض این سند را رد یا اصلاح کرد. متن اصلی این سند عمداً بدون تغییر مانده است؛ در صورت تعارض، S3-0g مقدم است. موارد اصلی: (۱) فاز A با «`Companies.TenantId` nullable + کلید جایگزین» در EF قابل ساخت نیست؛ کلید جایگزین و NOT NULL باید پس از Backfill بیایند (X1/S-1). (۲) Rename بدون Pin نام قیدها، Drop/Add تولید می‌کند؛ Pin اجباری است (X2/S-2). (۳) Trade هیچ FK به `Companies` ندارد؛ ادعای §2 دربارهٔ Trade درست نیست (X3/S-4). (۴) PR-2 (Guard) پیش‌نیاز اجباری PRهای تغییر نام است، نه موازی (S-3). (۵) Migration NOT NULL باید دستی باشد (S-6). همهٔ موارد `Proposed` هستند.
 
+> **یادداشت اصلاحی دوم (بازبینی PR #655، 2026-11-14):** بر اساس بازبینی CodeRabbit فقط این موارد در متن اصلاح شد: بررسی D3 برای `SecurityAuditEvent`، پیش‌نیازهای PR-10، انتقال AK به گام PR-4b پس از D1 و پیش‌نیازهای PR-11. هیچ تصمیم یا دامنهٔ جدیدی افزوده نشد و S3-0g/S3-0h همچنان مقدم‌اند.
+
 ## 1. Executive Summary
 
 1. **طرح قابل اجراست و با D-087 سازگار است**، به شرط تأیید تصمیم‌های بخش ۳ و رفع دو عدم‌قطعیت فنی بخش ۱۴ (رفتار EF/ابزار گارد برای `RenameColumn`؛ شکاف Migration host برای Trade). هیچ تستی در این مرحله اجرا نشده است.
@@ -214,7 +216,7 @@ Tenants (جدید)                          Companies (موجود)
 - `SecurityAuditEvent`: ردیف‌هایی که `CompanyId` آن‌ها به Company موجود نمی‌رسد، `TenantId=NULL` می‌مانند و گزارش می‌شوند (ستون nullable می‌ماند).
 
 ### 8.3 D3 — اعتبارسنجی قبل و بعد
-قبل: `COUNT(*)` هر جدول، فهرست Companyها، فهرست FK یتیم. بعد: همان شمارها برابر؛ `Companies WHERE TenantId IS NULL = 0`؛ برای هر جدول `COUNT(*) WHERE TenantId IS NULL = 0` و `COUNT(*)` ردیف‌هایی که `child.TenantId <> Companies.TenantId = 0`. خروجی به‌صورت گزارش ذخیره و ضمیمهٔ handoff PR اجرا می‌شود.
+قبل: `COUNT(*)` هر جدول، فهرست Companyها، فهرست FK یتیم. بعد: همان شمارها برابر؛ `Companies WHERE TenantId IS NULL = 0`؛ برای هر جدول فرزند **به‌جز `SecurityAuditEvent`** `COUNT(*) WHERE TenantId IS NULL = 0` و `COUNT(*)` ردیف‌هایی که `child.TenantId <> Companies.TenantId = 0`. برای `SecurityAuditEvent` (ستون nullable؛ رویدادهای سیستمی و ردیف‌های بدون Company مطابق D2 مجازاً NULL می‌مانند) بررسی جدا: برای ردیف‌هایی که `CompanyId` آن‌ها به Company موجود می‌رسد `TenantId IS NULL = 0` و `TenantId <> Companies.TenantId = 0`؛ تعداد ردیف‌های NULL باقی‌مانده فقط گزارش می‌شود، نه خطا. خروجی به‌صورت گزارش ذخیره و ضمیمهٔ handoff PR اجرا می‌شود.
 
 ### 8.4 D4 — الزام NOT NULL
 Migration C3 با پیش‌شرط دستی بازبینی‌شده: اگر ردیف NULL وجود دارد `THROW` با پیام روشن و Migration شکست می‌خورد (توقف کنترل‌شده، بدون تغییر ناقص چون تراکنش).
@@ -305,14 +307,15 @@ Anti-forgery و Cookie بدون تغییر؛ پیام خطای یکسان (404) 
 | **PR-1** | قرارداد Migration host: `--migrate` و بررسی pending برای Trade (`__TradeMigrationsHistory`) + تست SQL Server | کد (بدون Schema جدید) | هیچ | — |
 | **PR-2** | Spike و توسعهٔ ابزار گارد برای `RenameColumn` و نام ثابت قیدها + Mutation test | اسکریپت/تست | هیچ | — |
 | **PR-3** | interfaceهای `ICompanyOwned/ITenantOwned`، extension فیلتر، تست معماری فهرست legacy | کد | هیچ | — |
-| **PR-4** | Schema A: `Tenants` + `Companies.TenantId` (nullable) + AK + IX + Entity | Schema | تأیید شکل Tenant (ساده) | — |
+| **PR-4** | Schema A: `Tenants` + `Companies.TenantId` (nullable) + IX + Entity | Schema | تأیید شکل Tenant (ساده) | — |
 | **PR-5** | ثبت Tenant توسط اپراتور + فرمان Backfill D1 (dry-run/audit) + (اختیاری) ستون `CustomerReference` | کد + Schema کوچک | OD-6، OD-6a، OD-13 | PR-4 |
+| **PR-4b** | AK `Companies(Id, TenantId)` پس از اجرای Backfill D1 (هم‌راستا با S3-0g/S3-0h: A2) | Schema | D1 تأییدشده | PR-5 |
 | **PR-6** | Provisioning: resolve Tenant، `Company.TenantId`، رد fail-closed | کد | OD-6، OD-6a | PR-5 |
 | **PR-7** | G1: RenameColumn + کد مکانیکی (Role، Membership، MembershipRequest، HR) | Schema (rename) + کد | OD-4، OD-10، OD-12 | PR-2، PR-3، PR-4 |
 | **PR-8** | G2: FiscalPeriod/Claim/ConsolidationRunCompany (rename) | Schema + کد | OD-10، OD-12 | PR-7 |
 | **PR-9** | G3: Trade (rename + `TenantId`) | Schema + کد | OD-10، OD-11، OD-12 | PR-1، PR-2، PR-4 |
-| **PR-10** | G4: SecurityAuditEvent (rename + `TenantId`) + فیلتر گزارش | Schema + کد | OD-5 | PR-4 |
-| **PR-11a..d** | C2: ستون `TenantId` واقعی + FK مرکب برای G1..G3 | Schema | OD-11 | PR-7..10 |
+| **PR-10** | G4: SecurityAuditEvent (rename + `TenantId`) + فیلتر گزارش | Schema + کد | OD-5، OD-10، OD-12 | PR-2، PR-4 |
+| **PR-11a..d** | C2: ستون `TenantId` واقعی + FK مرکب برای G1..G3 | Schema | OD-11 | PR-4b، PR-5، PR-7..10 |
 | **PR-12** | D2: Backfill مشتق + گزارش | کد/فرمان | OD-13 | PR-5، PR-11 |
 | **PR-13** | C3: NOT NULL با پیش‌شرط | Schema | پایان Backfill | PR-12 |
 | **PR-E1** | `CompanyAccess`/`WorkContext` با `TenantId` | کد امنیتی | — | PR-4 |
