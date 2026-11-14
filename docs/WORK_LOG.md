@@ -3086,3 +3086,15 @@
 - Unique indexهای Username/EmailAddress tenant-scoped نیستند؛ UserSessions فاقد TenantId و SecurityAuditEvents فاقد CompanyId مستقل است.
 - timestamp اعلام‌شده در خروجی `2026-11-18` است و نسبت به تاریخ ثبت یادداشت جلوتر است؛ باید ساعت محیط تأیید شود.
 - هیچ SQL تغییردهنده، Migration، DDL/DML، Build یا Test اجرا نشد. جزئیات در handoff S3-0 ثبت شد؛ S3-0d-b/e/f/g باز می‌مانند.
+
+
+## 2026-11-14 — ریشه‌یابی و اصلاح شکست متناوب E2E با 429 در سیاست api-sensitive
+
+- **مبنای ریشه‌یابی:** لاگ کامل Job `e2e` اجرای 43585704506 (نتیجه: 1 failed / 48 passed). درخواست failing، `GET /api/v1/companies/{companyId}/org/employees/{employeeId}` در `hr-structure.spec.mjs:195` بود با پاسخ 429 (بدنه Problem فارسی محدودسازی نرخ).
+- **سیاست مؤثر:** `api-sensitive` در سطح endpoint (همه endpointهای HR آن را صریحاً Require می‌کنند و سیاست endpoint جایگزین سیاست گروه `api` می‌شود)؛ حد Production یعنی ۳۰ درخواست در ۶۰ ثانیه که تصمیم مستند امنیتی (Issue #522/#444) است.
+- **علت:** پارتیشن مشترک `api-sensitive|user:{admin}` در پنجره ثابت ۶۰ ثانیه‌ای توسط کل suite ترتیبی پر می‌شد (تست‌های access-ui با audit/directory/نقش + ۹ فراخوانی خود hr-structure) و درخواست دهمِ hr-structure یعنی GET بعد از deactivate حد را تمام کرد. پنجره چند ثانیه بعد تازه شد و به همین دلیل سایر specها پاس شدند؛ علت «متناوب بودن» شکست همین ناسازگاری زمانی است.
+- **طبقه‌بندی:** مشکل بُعدبندی محیط E2E است، نه پیکربندی Production و نه نقص اپلیکیشن. درخواست‌های تست‌ها همگی لازم و ادعاهای رفتاری واقعی‌اند.
+- **اصلاح (کوچک‌ترین تغییر درست):** در `tests/e2e/playwright.config.mjs` حد `api-sensitive` فقط برای نمونه سرور E2E با متغیر محیطی به ۱۰۰ رسید (الگوی موجود `RateLimiting__Login__PermitLimit: '1000'`) و مقدار با `FARANOU_E2E_API_SENSITIVE_LIMIT` به spec رساند شد؛ تست flood در `membership-workflow.spec.mjs` پارامتری شد تا با حد پیکربندی‌شده هم‌گام بماند و همچنان 429 و پنجره ثابت و جداسازی پارتیشن کاربر را اثبات کند. Production بدون تغییر ماند.
+- **آزمون واقعی:** `dotnet build Template.sln -c Release` موفق؛ `SensitiveReadRateLimitBehaviorTests` 2/2، `ApiSensitiveReadRateLimitTests` 1/1، `HttpSecurityTests` 30/30؛ مجموعه کامل `Template.Tests`: 1141 پاس، 99 Skip (SqlServer) و ۲ شکست محیطی `SafeExceptionRealApplicationTests` (میزبان Real Application به SQL Server رابطه‌ای نیاز دارد؛ پیش‌زمینه‌ای و بی‌ربط به این تغییر — در CI همان commit موفق است). `Vendor.Host.Tests` محلی اجرا نشد (VSTest-runner؛ پوشش با `vendor-ci.yml`). `node --check` روی فایل‌های تغییریافته موفق. Docker/SQL Server در sandbox نبود؛ اثبات نهایی E2E با job `e2e` روی PR #654 داده شد: اجرای 43591355980 با **49 passed / 0 failed** شامل همان تست شکست‌خورده (`hr-structure.spec.mjs:57`) و آزمون flood تغییر یافته (`membership-workflow.spec.mjs:502`).
+- **محدوده:** فقط `tests/e2e/*` و مستندات؛ هیچ تغییر در Server/Domain/Infrastructure/Migration/appsettings. PR #653 (docs S3-0d) دست‌نخورده ماند و اصلاح در شاخه و PR مستقل ثبت شد.
+- **Handoff:** `docs/handoffs/ISSUE-UNNUMBERED-e2e-api-sensitive-429.md`.

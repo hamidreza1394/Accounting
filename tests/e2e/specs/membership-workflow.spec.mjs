@@ -505,22 +505,26 @@ test('the membership endpoints keep their per-user sensitive rate limit', async 
     // This account belongs to no company, so the shell settles on the "no company" blocker; the API
     // endpoints used below do not need a work context.
     expect(await enterWorkspace(page, fixture.rateLimited)).toBe('blocked');
-    // The sensitive window allows 30 requests per minute per user; the 429 must still appear.
-    const statuses = await page.evaluate(async () => {
+    // The sensitive window allows the configured number of requests per minute per user. The E2E
+    // configuration raises Production's 30 (see playwright.config.mjs) so the sequential suite
+    // fits into one window; the 429 must still appear, so the flood exceeds the configured limit.
+    const permitLimit = Number(process.env.FARANOU_E2E_API_SENSITIVE_LIMIT ?? '30');
+    const statuses = await page.evaluate(async (floodCount) => {
       const results = [];
-      for (let index = 0; index < 40; index += 1) {
+      for (let index = 0; index < floodCount; index += 1) {
         const response = await fetch('/api/v1/me/membership-requests/destinations?search=aaaaaa', {
           credentials: 'same-origin',
         });
         results.push(response.status);
       }
       return results;
-    });
+    }, permitLimit + 10);
     // The window is fixed: once the limit is reached every later call in the same window is 429,
-    // and the limit is never reached before the configured 30 permits of the partition.
+    // and the limit is never reached before roughly the configured permits of the partition (the
+    // account above is fresh, so a small tolerance covers any incidental earlier request only).
     const firstLimited = statuses.indexOf(429);
     expect(firstLimited, 'the sensitive limit must eventually reject').toBeGreaterThan(-1);
-    expect(firstLimited).toBeGreaterThanOrEqual(20);
+    expect(firstLimited).toBeGreaterThanOrEqual(permitLimit - 10);
     expect(statuses.slice(firstLimited).every((status) => status === 429)).toBe(true);
     // A non-sensitive membership endpoint keeps working for the same user.
     expect((await callApi(page, 'GET', '/api/v1/me/membership-requests')).status).toBe(200);
