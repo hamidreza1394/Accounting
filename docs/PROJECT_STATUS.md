@@ -10,6 +10,14 @@
 - موارد باز: اجرای اسکریپت read-only روی SQL Server و خواندن دو Migration History واقعی؛ تکمیل inventory تمام مسیرهای داده؛ تعیین منبع معتبر Company→Tenant؛ قرارداد migration host؛ ERD و طرح گذار مرحله‌ای. CustomerBoundaryId یا عضویت گروه منبع Tenant نیست.
 - هیچ Entity، API، Migration، Schema، داده یا تنظیم runtime در این ممیزی تغییر نکرده است.
 
+## وضعیت S3-0e تا S3-0h (طرح گذار Tenant/Company) — 2026-11-14
+
+- چهار handoff در `docs/handoffs/` ثبت شد: `ISSUE-397-s3-0e-tenant-company-ownership-audit.md` (ممیزی مالکیت)، `...-s3-0f-tenant-company-migration-design.md` (طرح Migration)، `...-s3-0g-tenant-company-technical-validation.md` (اعتبارسنجی فنی با آزمایش‌های ایزوله خارج از Repo) و `...-s3-0h-consolidated-tenant-company-migration-plan.md` (طرح تجمیعی، ثبت تصمیم‌ها OD-1..OD-18، گیت‌ها و PR-0).
+- وضعیت: همهٔ این خروجی‌ها **Proposed** هستند؛ پیاده‌سازی **NotImplemented** است. تصمیم‌های باز Accepted نشده‌اند و D-087 بدون تغییر Accepted باقی است.
+- کد و Schema همچنان legacy است (Company=Tenant؛ ستون‌های `TenantId` مقدار `Company.Id` دارند). هیچ جدول/ستون Tenant، Backfill، Migration یا تغییر migration host ساخته نشده و گیت S3-0g در ROADMAP برقرار است.
+- نتایج آزمایش‌های S3-0g فقط در handoff همان مرحله و با برچسب‌های اجرا/اجرا‌نشده ثبت شده‌اند؛ آزمایش‌ها بخشی از Repo نیستند و هیچ تست اجرا‌نشده‌ای به‌عنوان پاس گزارش نشده است.
+- نام‌گذاری: ردیف‌های S3-0e/f/g در ROADMAP سرفصل‌های Roadmap‌اند و با نام خروجی‌های کاری handoffها یکی نیستند؛ توضیح در ROADMAP، ردیف S3-0h.
+
 # وضعیت جاری ماژول Vendor — 2026-11-13 (بازبینی تکمیلی پس از Merge #639)
 
 ## وضعیت جاری بازرگانی خارجی — ممیزی S3-0، 2026-11-14
