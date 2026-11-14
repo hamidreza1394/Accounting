@@ -3113,3 +3113,12 @@
 - **آزمون واقعی:** `dotnet build Template.sln -c Release` موفق؛ `SensitiveReadRateLimitBehaviorTests` 2/2، `ApiSensitiveReadRateLimitTests` 1/1، `HttpSecurityTests` 30/30؛ مجموعه کامل `Template.Tests`: 1141 پاس، 99 Skip (SqlServer) و ۲ شکست محیطی `SafeExceptionRealApplicationTests` (میزبان Real Application به SQL Server رابطه‌ای نیاز دارد؛ پیش‌زمینه‌ای و بی‌ربط به این تغییر — در CI همان commit موفق است). `Vendor.Host.Tests` محلی اجرا نشد (VSTest-runner؛ پوشش با `vendor-ci.yml`). `node --check` روی فایل‌های تغییریافته موفق. Docker/SQL Server در sandbox نبود؛ اثبات نهایی E2E با job `e2e` روی PR #654 داده شد: اجرای 43591355980 با **49 passed / 0 failed** شامل همان تست شکست‌خورده (`hr-structure.spec.mjs:57`) و آزمون flood تغییر یافته (`membership-workflow.spec.mjs:502`).
 - **محدوده:** فقط `tests/e2e/*` و مستندات؛ هیچ تغییر در Server/Domain/Infrastructure/Migration/appsettings. PR #653 (docs S3-0d) دست‌نخورده ماند و اصلاح در شاخه و PR مستقل ثبت شد.
 - **Handoff:** `docs/handoffs/ISSUE-UNNUMBERED-e2e-api-sensitive-429.md`.
+
+
+## 2026-11-14 — PR-0: ثبت handoffهای S3-0e تا S3-0h و هم‌راستاسازی اسناد
+- **مبنا:** `origin/main@96b8fd15a995f6d54b7aab85a23db3408fd88e78` (شامل PR #653 و #654)؛ Issue #397؛ D-087 Accepted و بدون تغییر.
+- **انجام‌شده:** چهار handoff (S3-0e ممیزی مالکیت، S3-0f طرح Migration، S3-0g اعتبارسنجی فنی، S3-0h طرح تجمیعی) بدون تغییر محتوا زیر `docs/handoffs/` اضافه شد؛ ROADMAP با ردیف S3-0h و توضیح نام‌گذاری، و PROJECT_STATUS با وضعیت Proposed/NotImplemented هم‌راستا شد.
+- **وضعیت تصمیم‌ها:** هیچ تصمیم از Proposed به Accepted نرفت؛ ADR جدید (D-088) ایجاد نشد؛ گیت S3-0g برقرار است.
+- **محدوده:** فقط `docs/`؛ بدون تغییر C#/TypeScript/Python/SQL/YAML، Migration، Schema یا داده.
+- **آزمون:** Build، Test و SQL Server اجرا نشد (Not Run)؛ `scripts/check_static_assets.py` اجرا نشد چون تغییر فقط مستندات است و قاعدهٔ مستندات اجرای آن را برای این نوع تغییر الزامی نکرده است. `git diff --check` اجرا شد.
+- **Handoff:** `docs/handoffs/ISSUE-397-s3-0h-consolidated-tenant-company-migration-plan.md` (و سه handoff قبلی).
