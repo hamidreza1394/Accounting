@@ -93,8 +93,15 @@ public class IndexModel : Infrastructure.BasePageModel
 				try
 				{
 					var physicalItemPath =
-						$"{PhysicalRootPath}{CurrentPath}{item}"
-						.Replace("/", "\\");
+						ResolveChildPath(name: item);
+
+					if (physicalItemPath == null)
+					{
+						AddToastError
+							(message: Resources.Messages.Errors.UnexpectedError);
+
+						continue;
+					}
 
 					if (System.IO.Directory.Exists(path: physicalItemPath))
 					{
@@ -168,8 +175,16 @@ public class IndexModel : Infrastructure.BasePageModel
 				.Replace(" ", string.Empty);
 
 			var physicalPath =
-				$"{PhysicalRootPath}{CurrentPath}{directoryName}"
-				.Replace("/", "\\");
+				ResolveChildPath(name: directoryName);
+
+			if (physicalPath == null)
+			{
+				AddToastError
+					(message: Resources.Messages.Errors.UnexpectedError);
+
+				SetDirectoriesAndFiles();
+				return;
+			}
 
 			if (System.IO.Directory.Exists(path: physicalPath))
 			{
@@ -268,8 +283,15 @@ public class IndexModel : Infrastructure.BasePageModel
 			.Replace(" ", "_");
 
 		var physicalPathName =
-			$"{PhysicalRootPath}{CurrentPath}{fileName}"
-			.Replace("/", "\\");
+			ResolveChildPath(name: fileName);
+
+		if (physicalPathName == null)
+		{
+			AddToastError
+				(message: Resources.Messages.Errors.UnexpectedError);
+
+			return false;
+		}
 
 		if (overwriteIfFileExists == false)
 		{
@@ -421,10 +443,10 @@ public class IndexModel : Infrastructure.BasePageModel
 
 		// **************************************************
 		PhysicalCurrentPath =
-			$"{PhysicalRootPath}{CurrentPath}"
-			.Replace("/", "\\");
+			ResolveInsideRoot(relativePath: CurrentPath);
 
-		if (System.IO.Directory.Exists(path: PhysicalCurrentPath) == false)
+		if (PhysicalCurrentPath == null ||
+			System.IO.Directory.Exists(path: PhysicalCurrentPath) == false)
 		{
 			CurrentPath = "/";
 			PhysicalCurrentPath = PhysicalRootPath;
@@ -432,6 +454,65 @@ public class IndexModel : Infrastructure.BasePageModel
 		// **************************************************
 	}
 	#endregion /CheckPathAndSetCurrentPath
+
+	#region ResolveInsideRoot
+	/// <summary>
+	/// Resolves a path relative to the file manager root and returns null when the result
+	/// would leave that root (for example through ".."). Every file-system path of this page
+	/// is built here, so no request value can reach outside the root.
+	/// </summary>
+	private string? ResolveInsideRoot(string relativePath)
+	{
+		var root =
+			System.IO.Path.GetFullPath(path: PhysicalRootPath);
+
+		var relative =
+			relativePath
+			.Replace('\\', '/')
+			.TrimStart('/');
+
+		var fullPath =
+			System.IO.Path.GetFullPath
+			(path: System.IO.Path.Combine(root, relative));
+
+		var comparison =
+			System.OperatingSystem.IsWindows()
+			? System.StringComparison.OrdinalIgnoreCase
+			: System.StringComparison.Ordinal;
+
+		var rootWithSeparator =
+			root.EndsWith(System.IO.Path.DirectorySeparatorChar)
+			? root
+			: root + System.IO.Path.DirectorySeparatorChar;
+
+		if (string.Equals(fullPath, root, comparison) ||
+			fullPath.StartsWith(rootWithSeparator, comparison))
+		{
+			return fullPath;
+		}
+
+		return null;
+	}
+	#endregion /ResolveInsideRoot
+
+	#region ResolveChildPath
+	/// <summary>
+	/// An item, directory or file name posted by the client must be a single name:
+	/// no separators and no "." or "..". Returns null otherwise.
+	/// </summary>
+	private string? ResolveChildPath(string? name)
+	{
+		if (string.IsNullOrWhiteSpace(name) ||
+			name == "." || name == ".." ||
+			name.Contains('/') || name.Contains('\\') ||
+			CurrentPath == null)
+		{
+			return null;
+		}
+
+		return ResolveInsideRoot(relativePath: $"{CurrentPath}{name}");
+	}
+	#endregion /ResolveChildPath
 
 	#region SetDirectoriesAndFiles
 	public void SetDirectoriesAndFiles()

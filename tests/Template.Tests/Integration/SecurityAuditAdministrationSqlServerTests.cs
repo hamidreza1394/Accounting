@@ -168,4 +168,52 @@ public sealed class SecurityAuditAdministrationSqlServerTests
             await cleanup.Database.EnsureDeletedAsync(cancellationToken);
         }
     }
+
+    [Fact]
+    public async Task ExportSucceedsWhenAnActorHasNoNameAndIsRefusedForANonAdministrator()
+    {
+        Assert.SkipUnless(SqlServerAvailable(), "SQL Server is not configured (FARANOU_TEST_SQLSERVER).");
+
+        var name = "FaranouTests_AUD_" + Guid.NewGuid().ToString("N")[..12];
+        var cancellationToken = TestContext.Current.CancellationToken;
+        try
+        {
+            await using var database = CreateContext(name);
+            await database.Database.MigrateAsync(cancellationToken);
+
+            var role = new Domain.Role(Constants.Role.Admin) { IsActive = true };
+            var admin = new Domain.User("audit-admin2@example.test") { Username = "audit-admin2", IsActive = true, Role = role };
+            var outsider = new Domain.User("audit-outsider@example.test") { Username = "audit-outsider", IsActive = true };
+            var occurredAt = new DateTime(2026, 11, 3, 12, 30, 0, DateTimeKind.Utc);
+            database.AddRange(role, admin, outsider,
+                new Domain.SecurityAuditEvent
+                {
+                    UserId = admin.Id,
+                    EventType = "LoginSucceeded",
+                    OccurredAtUtc = occurredAt,
+                });
+            await database.SaveChangesAsync(cancellationToken);
+
+            var request = new Server.Api.SecurityAuditExportRequest(
+                null, null, null,
+                new DateTimeOffset(occurredAt.AddMinutes(-1), TimeSpan.Zero),
+                new DateTimeOffset(occurredAt.AddMinutes(1), TimeSpan.Zero));
+
+            var denied = await Server.Api.SecurityAuditAdministrationEndpoints.ExportAuditEventsAsync(
+                new DefaultHttpContext(), Principal(outsider.Id), request, new StubAntiforgery(), database, cancellationToken);
+            Assert.IsNotType<FileContentHttpResult>(denied);
+            Assert.False(await database.SecurityAuditEvents.AnyAsync(
+                item => item.EventType == "SecurityAuditExported", cancellationToken));
+
+            var export = await Server.Api.SecurityAuditAdministrationEndpoints.ExportAuditEventsAsync(
+                new DefaultHttpContext(), Principal(admin.Id), request, new StubAntiforgery(), database, cancellationToken);
+            var file = Assert.IsType<FileContentHttpResult>(export);
+            Assert.Contains("audit-admin2", Encoding.UTF8.GetString(file.FileContents.Span));
+        }
+        finally
+        {
+            await using var cleanup = CreateContext(name);
+            await cleanup.Database.EnsureDeletedAsync(cancellationToken);
+        }
+    }
 }

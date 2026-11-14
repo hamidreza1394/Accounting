@@ -3157,3 +3157,9 @@
 - **تست:** `AdminRoleRevalidationHttpTests` (۸ تست؛ RED ۴ شکست → GREEN)؛ نتیجهٔ کامل در PR.
 - **محدوده:** فقط `SessionValidator`، تست و مستندات؛ بدون Schema/Migration/Tenant/Trade.
 - **Handoff:** `docs/handoffs/ISSUE-UNNUMBERED-pr-e1a-admin-role-revalidation.md`.
+
+## 2026-11-14 — PR-E1b: ممیزی صفحات مدیریتی و خروجی اطلاعات
+- **مبنا:** `origin/main@a4ffdff`.
+- **یافته:** نقص Path Traversal در `Admin/FileManager` (Medium) اصلاح شد؛ سایر مسیرهای مدیریتی و تنها Export CSV بدون نقص مستقل؛ موارد وابسته به OD-1 در Backlog.
+- **تست:** مجموعهٔ کامل روی SQL Server: ۱۳۹۲ موفق، ۱۰ Skip، ۰ شکست.
+- **Handoff:** `docs/handoffs/ISSUE-UNNUMBERED-pr-e1b-admin-surface-audit.md`.
