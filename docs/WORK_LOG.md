@@ -3041,3 +3041,14 @@
 - **محدوده تغییر:** فقط مستندات؛ هیچ کد، Entity، API، Migration، Schema، داده یا پیکربندی runtime تغییر نکرد.
 - **اعتبارسنجی:** anchorها و ارجاعات/شماره ADR در محتوای تولیدشده بررسی شدند؛ Build/Test اجرا نشد (تغییر مستنداتی است). PR برای بازبینی مالک باز می‌شود؛ Merge انجام نمی‌شود.
 - **گیت S3:** پس از Merge بسته مستنداتی، S3-0 بررسی read-only مدل واقعی و V3.2 را آغاز می‌کند؛ هیچ جدول یا Migration پیش از تطبیق مدل ساخته نمی‌شود.
+
+
+## 2026-11-14 — Issue #236: ثبت انتخاب Hardware Assurance در Audit هنگام Startup
+
+- **مبنای کد:** `main@56d5ac736ad45d52cc7ec3e147e0486f08fccf8e`.
+- **شکاف:** Startup service فقط Software assurance در Production را audit می‌کرد و برای Hardware پیش از نوشتن audit بازمی‌گشت؛ این با الزام D-056 برای مشاهده Assurance در audit هم‌راستا نبود.
+- **اصلاح:** هر دو انتخاب Production audit می‌شوند؛ Hardware با action code `vendor.signing.assurance.hardware-selected`. شکست Audit برای Hardware نیز Startup را fail-closed متوقف می‌کند. این رخداد فقط انتخاب تنظیمات را ثبت می‌کند و اثبات HSM/token readiness نیست.
+- **تست Regression:** دو تست برای Hardware audit و audit-failure startup اضافه شد؛ تست‌های قبلی Software/Staging حفظ شدند.
+- **فایل‌ها:** Startup service، تست‌های `Pkcs11SigningProviderTests`، handoff شماره #236 و همین Work Log.
+- **اعتبارسنجی:** تست محلی اجرا نشد؛ CI روی PR باید اجرا شود. هیچ نتیجه تست یا Merge پیشاپیش ادعا نمی‌شود.
+- **محدوده:** Vendor-only؛ بدون Customer consumer، `Server/**`، Migration مشتری، کلید خصوصی یا credential.

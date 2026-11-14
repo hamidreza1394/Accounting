@@ -138,3 +138,14 @@
 - PR [#359](https://github.com/hamidreza1394/Accounting/pull/359) تصمیم D-056 را در main ثبت کرد؛ .NET CI پس از Merge [41108989377](https://github.com/hamidreza1394/Accounting/actions/runs/41108989377)، Semgrep [41108989322](https://github.com/hamidreza1394/Accounting/actions/runs/41108989322) و Push on main [41108989140](https://github.com/hamidreza1394/Accounting/actions/runs/41108989140) موفق‌اند. Vendor CI پس از Merge #633 نیز run [42783806157](https://github.com/hamidreza1394/Accounting/actions/runs/42783806157) موفق است.
 - Vendor maker-checker issuance/revocation در #214 با PR #375 تکمیل و CI-verified شده است؛ این مسیر به معنی provision شدن signer واقعی نیست.
 - **محدودیت جاری:** هیچ KMS/HSM واقعی، private key یا credential عملیاتی در این مخزن/محیط provision نشده است. Production hardware signing، Key Ceremony، rotation/recovery واقعی، public trust distribution و آزمون دو میزبان/TPM همچنان NotRun/Blocked هستند. هیچ provider فرضی یا fallback نرم‌افزاری ضمنی اضافه نمی‌شود.
+
+
+## 2026-11-14 — ثبت انتخاب Hardware Assurance در Audit هنگام Startup
+
+- **Issue/تصمیم:** #236 و D-056؛ در Production، سطح Assurance باید در startup log، audit و health/readiness قابل مشاهده باشد.
+- **یافته از کد main:** `Pkcs11SigningAssuranceStartupService` فقط برای Production با `AssuranceLevel=Software` رخداد پایدار audit ثبت می‌کرد؛ مسیر `Hardware` پیش از نوشتن audit برمی‌گشت. در نتیجه انتخاب سطح Hardware در log ثبت می‌شد، اما در زنجیره audit ثبت نمی‌شد.
+- **اصلاح محدود Vendor-only:** در Production هر دو سطح انتخاب‌شده پیش از تکمیل Startup در `IVendorAuditWriter` ثبت می‌شوند. Software همچنان از action code موجود `vendor.signing.assurance.software-risk-accepted` استفاده می‌کند؛ Hardware با `vendor.signing.assurance.hardware-selected` ثبت می‌شود. شکست append برای هر دو سطح exception می‌دهد و Startup را متوقف می‌کند.
+- **مرز ادعا:** رخداد Hardware فقط انتخاب پیکربندی را ثبت می‌کند؛ به معنی شناسایی token، تأیید allowlist، آمادگی signer یا وجود HSM فیزیکی نیست. این موارد همچنان توسط PKCS#11 provider/health و آزمون عملیاتی مستقل کنترل می‌شوند.
+- **Regression tests:** دو تست برای ثبت رخداد Hardware و جلوگیری از Startup هنگام شکست Audit اضافه شدند؛ تست‌های قبلی Software و عدم الزام Production sink در Staging حفظ شدند.
+- **اعتبارسنجی:** تست محلی اجرا نشد. CI روی PR جدید باید Build/Test، Vendor CI، Secret Scan، Semgrep و Publish را روی SHA نهایی اجرا کند.
+- **امنیت/دامنه:** هیچ private key، PIN، credential، provider جدید، customer code، `Server/**` یا Migration مشتری اضافه/تغییر نشد. Production signing تا provision و تأیید HSM واقعی همچنان Blocked/fail-closed است.

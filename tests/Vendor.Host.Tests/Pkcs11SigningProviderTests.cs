@@ -107,6 +107,46 @@ public sealed class Pkcs11SigningProviderTests
     }
 
     [Fact]
+    public async Task ProductionHardwareAssuranceAuditsSelectedAssuranceBeforeStartupCompletes()
+    {
+        var options = ValidOptions();
+        options.AssuranceLevel = "Hardware";
+        var audit = new RecordingAuditWriter();
+        var services = new ServiceCollection();
+        services.AddScoped<IVendorAuditWriter>(_ => audit);
+        await using var provider = services.BuildServiceProvider();
+        var service = new Pkcs11SigningAssuranceStartupService(
+            Options.Create(options),
+            new TestHostEnvironment(Environments.Production),
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<Pkcs11SigningAssuranceStartupService>.Instance);
+
+        await service.StartAsync(CancellationToken.None);
+
+        Assert.Equal("vendor.signing.assurance.hardware-selected", audit.LastRequest?.ActionCode);
+        Assert.Equal("signing_assurance", audit.LastRequest?.SubjectType);
+    }
+
+    [Fact]
+    public async Task ProductionHardwareAssuranceAuditFailurePreventsStartup()
+    {
+        var options = ValidOptions();
+        options.AssuranceLevel = "Hardware";
+        var audit = new RecordingAuditWriter { Fail = true };
+        var services = new ServiceCollection();
+        services.AddScoped<IVendorAuditWriter>(_ => audit);
+        await using var provider = services.BuildServiceProvider();
+        var service = new Pkcs11SigningAssuranceStartupService(
+            Options.Create(options),
+            new TestHostEnvironment(Environments.Production),
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<Pkcs11SigningAssuranceStartupService>.Instance);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.StartAsync(CancellationToken.None));
+    }
+
+    [Fact]
     public async Task StagingSoftwareAssurance_DoesNotRequireProductionAuditSink()
     {
         var options = ValidOptions();

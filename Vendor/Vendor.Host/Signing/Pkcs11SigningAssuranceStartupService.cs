@@ -7,8 +7,8 @@ using Microsoft.Extensions.Options;
 namespace Faranou.Vendor.Host.Signing;
 
 /// <summary>
-/// Emits the configured signing assurance at every host startup. Production software assurance
-/// requires explicit risk acceptance and a durable audit event before the host starts serving.
+/// Emits the configured signing assurance at every host startup. Production assurance selection
+/// is durably audited before the host starts serving; Software also requires explicit risk acceptance.
 /// </summary>
 public sealed class Pkcs11SigningAssuranceStartupService(
     IOptions<Pkcs11SigningOptions> options,
@@ -26,25 +26,34 @@ public sealed class Pkcs11SigningAssuranceStartupService(
             configured.AssuranceLevel,
             environment.EnvironmentName);
 
-        if (!environment.IsProduction() ||
-            !string.Equals(configured.AssuranceLevel, "Software", StringComparison.Ordinal))
+        if (!environment.IsProduction())
         {
             return;
         }
+
+        // Audit the selected Production assurance level before the host starts serving.
+        // The Hardware event records configuration selection only; provider readiness remains
+        // independently enforced by the signing health check and the PKCS#11 token validation.
+        var actionCode = string.Equals(configured.AssuranceLevel, "Software", StringComparison.Ordinal)
+            ? "vendor.signing.assurance.software-risk-accepted"
+            : "vendor.signing.assurance.hardware-selected";
 
         await using var scope = scopeFactory.CreateAsyncScope();
         var auditWriter = scope.ServiceProvider.GetRequiredService<IVendorAuditWriter>();
         await auditWriter.AppendAsync(
             new VendorAuditWriteRequest(
                 null,
-                "vendor.signing.assurance.software-risk-accepted",
+                actionCode,
                 "signing_assurance",
                 null,
                 null),
             cancellationToken);
 
-        logger.LogWarning(
-            "Vendor Production is running with explicitly accepted Software signing assurance.");
+        if (string.Equals(configured.AssuranceLevel, "Software", StringComparison.Ordinal))
+        {
+            logger.LogWarning(
+                "Vendor Production is running with explicitly accepted Software signing assurance.");
+        }
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
