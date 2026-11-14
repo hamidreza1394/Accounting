@@ -3122,3 +3122,10 @@
 - **محدوده:** فقط `docs/`؛ بدون تغییر C#/TypeScript/Python/SQL/YAML، Migration، Schema یا داده.
 - **آزمون:** Build، Test و SQL Server اجرا نشد (Not Run)؛ `scripts/check_static_assets.py` اجرا نشد چون تغییر فقط مستندات است و قاعدهٔ مستندات اجرای آن را برای این نوع تغییر الزامی نکرده است. `git diff --check` اجرا شد.
 - **Handoff:** `docs/handoffs/ISSUE-397-s3-0h-consolidated-tenant-company-migration-plan.md` (و سه handoff قبلی).
+
+## 2026-11-14 — S3-0 PR-2a: تقویت Migration Guard برای Pin نام‌ها
+- **مبنا:** `origin/main@fc0bda50af5963ff2e91d76f4785369d777d72d5`؛ Issue #397؛ طرح S3-0h §6.3.
+- **انجام‌شده:** `ef_model.py` Fluent APIهای `HasConstraintName/HasDatabaseName/HasName/HasColumnName` را می‌شناسد و هر فراخوانی ناشناخته `ModelExtractionError` می‌دهد؛ نام‌ها در مدل، Snapshot و Designer ثبت و مقایسه می‌شوند؛ Rename همچنان رد می‌شود.
+- **آزمون:** 19 تست جدید (RED→GREEN)، تست‌های قبلی Guard و `generate_migrations.py --check`/`verify_migration_model.py` موفق؛ .NET Build/Test، `has-pending-model-changes` و SQL Server اجرا نشد.
+- **محدوده:** فقط ابزار Guard، تست‌ها، یک خط CI و مستندات؛ بدون Migration، Schema یا داده. PR-2b (Rename) انجام نشد.
+- **Handoff:** `docs/handoffs/ISSUE-397-pr-2a-migration-guard-pinned-mappings.md`.
