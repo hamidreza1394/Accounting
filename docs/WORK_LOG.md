@@ -3136,3 +3136,10 @@
 - **آزمون:** تست جدید RED (17 ERROR/1 OK) سپس GREEN: 18/18؛ تست‌های قبلی Guard (22، 32، 32) و `generate_migrations.py --check`/`verify_migration_model.py` موفق. .NET Build/Test، `has-pending-model-changes` و SQL Server اجرا نشد (Not Run). Guard اثبات نمی‌کند SQL Server Rename را بی‌خطر اجرا می‌کند؛ این کار G3 است.
 - **محدوده:** فقط ابزار Guard، تست‌ها، یک خط CI و مستندات؛ بدون Migration، Schema، داده یا Trade Host.
 - **Handoff:** `docs/handoffs/ISSUE-397-pr-2b-controlled-rename-migration-guard.md`.
+
+## 2026-11-14 — S3-0 PR-SS-1: اعتبارسنجی SQL Server برای Rename کنترل‌شده
+- **مبنا:** `origin/main@03eafd038ca3278cda989e8db071d9fe86fac477` (شامل #656 و #660)؛ Issue #397.
+- **انجام‌شده:** تست `RenameMigrationSqlServerTests` با Migrationهای نمونهٔ فقط‌تست روی SQL Server واقعی: Up/Down برای `RenameColumn` و `RenameIndex`، حفظ FK/AK/Index، R1 (هویت `object_id` و اسکریپت بدون Drop/Create)، کنترل منفی و پاک‌سازی امن دیتابیس.
+- **نتیجه:** SQL Server 2022 RTM-CU28 (16.0.4325.4)، EF Core SqlServer 10.0.14؛ 5/5 تست جدید و `Template.Tests` کامل 1237 موفق/0 ناموفق/10 Skip. Runner ویندوزی و Vendor/E2E/ClientApp اجرا نشد (Not Run).
+- **محدوده:** فقط تست، یک ردیف در `docs/TESTING.md` و مستندات؛ بدون Migration اپلیکیشن، Schema، داده، CI یا Trade Host.
+- **Handoff:** `docs/handoffs/ISSUE-397-pr-ss-1-sqlserver-validation-controlled-rename.md`.
