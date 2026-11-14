@@ -1,11 +1,14 @@
 ## وضعیت جاری معماری Tenant/Company و S3 — 2026-11-14
 
-- PR #648 با عنوان D-087 در `2026-11-14T07:58:56Z` ادغام شد؛ merge commit: `f3bd810aa247b3f11ff337cb84db8af26df27013`. مبنای پیش از این PR مستنداتی، `main@017f18eca481b06ff4fc69157ead30fc53121edc` (پس از PR #649) بود.
+- PR #648 / D-087 در `2026-11-14T07:58:56Z` ادغام شد؛ PR #650 هم‌راستاسازی اسناد در `2026-11-14T09:19:13Z` ادغام شد. مبنای ممیزی جاری: `main@b4d38c0999ff1db7c2f8cc9bb78da1c55b27a6ad`.
 - D-087 پذیرفته شده است: Tenant مرز مشتری/فضای داده و Company شرکت عملیاتی داخل Tenant است؛ Shared Database و Dedicated Database از یک مدل منطقی و کنترل دسترسی استفاده می‌کنند.
-- کد و Schema هنوز تاریخی‌اند: Entity مستقل Tenant وجود ندارد و در بخشی از مدل‌ها TenantId عملاً Company.Id است. گذار کد/Schema هنوز NotImplemented است.
-- ممیزی ایستای منبع کد بخشی از S3-0 را پوشش داده است: مدل هسته و Trade، مسیر CompanyAccess/WorkContext، ثبت DbContextها و شکاف فرمان Migration Trade بررسی شد. این بررسی، ممیزی کامل همه queryها/موجودیت‌ها یا تأیید SQL Server واقعی نیست.
-- موارد باز برای بستن S3-0: بررسی کامل V3.2، Schema و Migration History روی SQL Server آزمایشی/نسخه موجود، inventory جامع FK/index/query/job/file و تعیین منبع معتبر mapping Company→Tenant بدون حدس، ERD و طرح گذار مرحله‌ای.
-- این به‌روزرسانی مستنداتی هیچ کد اجرایی، Entity، API، Migration، Schema یا داده‌ای را تغییر نمی‌دهد.
+- کد و Schema هنوز تاریخی‌اند: Entity مستقل Tenant وجود ندارد؛ Company فاقد TenantId است و TenantId در چند Entity عملاً Company.Id را نگه می‌دارد. گذار کد/Schema هنوز NotImplemented است.
+- ممیزی ایستای منبع کد: Snapshot هسته ۳۳ نگاشت جدول و ۲۰ Migration اصلی؛ Snapshot Trade پنج نگاشت جدول و یک Migration اصلی (سه جدول ایجادشده) دارد. این اعداد از Source/Snapshot هستند و وضعیت دیتابیس واقعی را اثبات نمی‌کنند.
+- مسیر دسترسی فعلی نیز legacy است: CompanyAccessService و WorkContextService، TenantId را به‌عنوان CompanyId تفسیر می‌کنند؛ عضویت، نقش، FiscalPeriod و HR به همین قرارداد متکی‌اند. در Trade نیز TradeEntity فقط TenantId دارد.
+- شکاف Migration: فرمان `--migrate` فقط DatabaseSchemaMigrator هسته را اجرا می‌کند؛ TradeDbContext در Program ثبت می‌شود، اما Migration آن در مسیر اپراتوری اجرا نمی‌شود. تست Integration هر دو Context را جداگانه روی دیتابیس disposable مهاجرت می‌دهد.
+- بازبینی اولیه V3.2: گروه B و گزارش‌های R01–R10 هنوز TenantId=Company/OwnerCompany را فرض می‌کنند؛ گروه C باید Tenant و هر دو Company طرف رابطه را جداگانه کنترل کند. V3.2 همچنان Proposed است؛ D-086 فقط قواعد مشخص کسب‌وکار را Accepted کرده است.
+- موارد باز: اجرای اسکریپت read-only روی SQL Server و خواندن دو Migration History واقعی؛ تکمیل inventory تمام مسیرهای داده؛ تعیین منبع معتبر Company→Tenant؛ قرارداد migration host؛ ERD و طرح گذار مرحله‌ای. CustomerBoundaryId یا عضویت گروه منبع Tenant نیست.
+- هیچ Entity، API، Migration، Schema، داده یا تنظیم runtime در این ممیزی تغییر نکرده است.
 
 # وضعیت جاری ماژول Vendor — 2026-11-13 (بازبینی تکمیلی پس از Merge #639)
 
