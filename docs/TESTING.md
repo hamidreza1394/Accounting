@@ -33,6 +33,7 @@ dotnet test Template.sln --no-build --configuration Release
 | `DatabaseSettingsLocationTests` | ترتیب مسیر، مسیر نسبی/داخل پوشه برنامه، مسیر واقعی (لینک)، `LocalApplicationData` خالی، ثابت‌های برند | خیر |
 | `DatabaseSetupSqlServerTests` | ساخت دیتابیس+Migration+ذخیره رمزشده، دیتابیس منطبق/بیگانه/جدیدتر، نیمه‌Migration، رمز اشتباه، میزبان اشتباه | **بله** |
 | `DatabaseSetupPageSqlServerTests` | جریان صفحه روی SQL Server واقعی | **بله** |
+| `RenameMigrationSqlServerTests` (+ `RenameValidationMigrations.cs`) | رفتار واقعی `RenameColumn`/`RenameIndex` روی SQL Server: حفظ FK/AK/Index، Down دقیق، R1، پاک‌سازی دیتابیس `FaranouTests_Rename_*`؛ ساختار نمونهٔ مستقل، نه Migration اپلیکیشن | **بله** |
 | `DatabaseSetupTestSupport.cs` | ابزار مشترک (پوشه موقت، ساخت تنظیمات قدیمی) | — |
 
 - **قاعده Skip:** تست‌های SQL Server بدون `FARANOU_TEST_SQLSERVER` Skip می‌شوند؛ با `FARANOU_REQUIRE_SQLSERVER=1` نبود آن شکست است. دیتابیس‌های آزمون `FaranoTests_Setup_*` ساخته و حذف می‌شوند. دو تست مبتنی بر `chmod` (AccessDenied و LegacyUnreadable) روی Windows یا با root Skip می‌شوند؛ تست مجوز Unix روی Windows Skip می‌شود.
