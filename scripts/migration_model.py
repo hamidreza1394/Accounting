@@ -152,6 +152,66 @@ def _parse_unicode(calls: str) -> bool | None:
     return match.group("value") == "true"
 
 
+PROPERTY_CALLS = frozenset(
+    {
+        "IsRequired",
+        "IsRowVersion",
+        "IsConcurrencyToken",
+        "ValueGeneratedOnAdd",
+        "ValueGeneratedOnAddOrUpdate",
+        "HasMaxLength",
+        "IsUnicode",
+        "HasColumnType",
+        "HasColumnName",
+    }
+)
+KEY_CALLS = frozenset({"HasName"})
+INDEX_CALLS = frozenset({"IsUnique", "HasFilter", "HasAnnotation", "HasDatabaseName"})
+RELATIONSHIP_CALLS = frozenset(
+    {
+        "WithMany",
+        "WithOne",
+        "HasForeignKey",
+        "HasPrincipalKey",
+        "OnDelete",
+        "IsRequired",
+        "HasConstraintName",
+    }
+)
+
+
+def called_methods(calls: str) -> list[str]:
+    """The names of the calls of a chain such as '.IsUnique().HasFilter("x")'."""
+    return re.findall(r"\.\s*(\w+)\s*(?:<[^()]*>)?\(", re.sub(r'"(?:[^"\\]|\\.)*"', '""', calls))
+
+
+def named_argument(calls: str, method: str) -> str | None:
+    """The string literal argument of ``method``; whitespace is accepted like in ``called_methods``.
+
+    A call whose argument can not be read as one string literal is an error, so that it is
+    never silently treated as "not pinned".
+    """
+    if method not in called_methods(calls):
+        return None
+    match = re.search(r"\.\s*" + method + r'\s*\(\s*"([^"]*)"\s*\)', calls)
+    if match is None:
+        raise MigrationModelError(
+            f"The call '.{method}(...)' of the generated model has no single string literal "
+            "argument."
+        )
+    return match.group(1)
+
+
+def check_calls(calls: str, allowed: frozenset[str], what: str) -> None:
+    """The generated files are read fail-closed: a call that is not known is an error."""
+    for method in called_methods(calls):
+        if method not in allowed:
+            raise MigrationModelError(
+                f"The {what} of the generated model uses the call '.{method}(...)', which "
+                "the migration guard does not understand and would otherwise ignore."
+            )
+
+
 def parse_generated_model(source: str) -> dict[str, Any]:
     """Reads the entity types, the keys, the indexes and the relationships.
 
@@ -174,6 +234,14 @@ def parse_generated_model(source: str) -> dict[str, Any]:
             body,
         ):
             calls = prop.group("calls")
+            check_calls(calls, PROPERTY_CALLS, f"property '{prop.group('name')}'")
+            column_name = named_argument(calls, "HasColumnName")
+            if column_name is not None and column_name != prop.group("name"):
+                raise MigrationModelError(
+                    f"The property '{prop.group('name')}' is mapped to the column "
+                    f"'{column_name}' with HasColumnName(...); renaming a column is not "
+                    "supported by the migration guard (PR-2b)."
+                )
             is_nullable_type = prop.group("type").endswith("?")
             is_reference_type = prop.group("type").rstrip("?") == "string"
             properties.append(
@@ -201,22 +269,28 @@ def parse_generated_model(source: str) -> dict[str, Any]:
                 }
             )
 
-        keys = [
-            parse_literal_list(match.group(1))
-            for match in re.finditer(r"b\.HasKey\(([^)]*)\);", body)
-        ]
-        alternate_keys = [
-            parse_literal_list(match.group(1))
-            for match in re.finditer(r"b\.HasAlternateKey\(([^)]*)\);", body)
-        ]
+        keys = []
+        key_names: list[str | None] = []
+        for key in re.finditer(r"b\.HasKey\(([^)]*)\)([^;]*);", body):
+            check_calls(key.group(2), KEY_CALLS, "primary key")
+            keys.append(parse_literal_list(key.group(1)))
+            key_names.append(named_argument(key.group(2), "HasName"))
+        alternate_keys = []
+        alternate_key_names: list[str | None] = []
+        for key in re.finditer(r"b\.HasAlternateKey\(([^)]*)\)([^;]*);", body):
+            check_calls(key.group(2), KEY_CALLS, "alternate key")
+            alternate_keys.append(parse_literal_list(key.group(1)))
+            alternate_key_names.append(named_argument(key.group(2), "HasName"))
 
         indexes = []
         for index in re.finditer(
             r"b\.HasIndex\((?P<columns>[^)]*)\)(?P<calls>[^;]*);", body
         ):
             calls = index.group("calls")
+            check_calls(calls, INDEX_CALLS, "index")
             indexes.append(
                 {
+                    "explicit_name": named_argument(calls, "HasDatabaseName"),
                     "columns": parse_literal_list(index.group("columns")),
                     "unique": ".IsUnique()" in calls,
                     "filter": optional_string(
@@ -242,14 +316,18 @@ def parse_generated_model(source: str) -> dict[str, Any]:
                 "table": None,
                 "columns": [],
                 "primary_key": [],
+                "primary_key_name": None,
                 "alternate_keys": [],
+                "alternate_key_names": [],
                 "indexes": [],
             },
         )
         described["columns"].extend(properties)
         if keys:
             described["primary_key"] = keys[0]
+            described["primary_key_name"] = key_names[0]
         described["alternate_keys"].extend(alternate_keys)
+        described["alternate_key_names"].extend(alternate_key_names)
         described["indexes"].extend(indexes)
         if table is not None:
             described["table"] = table
@@ -267,6 +345,7 @@ def parse_generated_model(source: str) -> dict[str, Any]:
             re.DOTALL,
         ):
             calls = match.group("calls")
+            check_calls(calls, RELATIONSHIP_CALLS, "relationship")
             foreign_key = re.search(r"\.HasForeignKey\((?P<columns>[^)]*)\)", calls)
             if foreign_key is None:
                 continue
@@ -284,6 +363,7 @@ def parse_generated_model(source: str) -> dict[str, Any]:
                     ),
                     "on_delete": parse_enum(calls, "DeleteBehavior."),
                     "required": ".IsRequired()" in calls,
+                    "explicit_name": named_argument(calls, "HasConstraintName"),
                 }
             )
 
@@ -301,12 +381,39 @@ def parse_generated_model(source: str) -> dict[str, Any]:
             continue
         if principal_columns not in principal["alternate_keys"]:
             principal["alternate_keys"].append(principal_columns)
+            principal["alternate_key_names"].append(None)
 
     for entity in entities.values():
         if entity["table"] is None:
             raise MigrationModelError(
                 f"The table of the entity '{entity['clr_name']}' is unknown."
             )
+
+    # A name that the file does not write is the name EF Core derives; from here on the
+    # model carries the name of every key, index and foreign key, so that two models can be
+    # compared name by name.
+    for entity in entities.values():
+        table = entity["table"]
+        if entity["primary_key"]:
+            entity["primary_key_name"] = entity["primary_key_name"] or f"PK_{table}"
+        entity["alternate_key_names"] = [
+            name or "AK_{}_{}".format(table, "_".join(key))
+            for key, name in zip(entity["alternate_keys"], entity["alternate_key_names"])
+        ]
+        for index in entity["indexes"]:
+            index["name"] = index.pop("explicit_name", None) or "IX_{}_{}".format(
+                table, "_".join(index["columns"])
+            )
+    for relationship in relationships:
+        dependent = entities.get(relationship["dependent"])
+        principal = entities.get(relationship["principal"])
+        explicit = relationship.pop("explicit_name", None)
+        if dependent is None or principal is None:
+            relationship["name"] = explicit
+            continue
+        relationship["name"] = explicit or "FK_{}_{}_{}".format(
+            dependent["table"], principal["table"], "_".join(relationship["columns"])
+        )
 
     return {"entities": entities, "relationships": relationships}
 
@@ -335,6 +442,7 @@ def normalize_derived_model(model: dict[str, Any]) -> dict[str, Any]:
                 "unique": bool(index["unique"]),
                 "filter": index["filter"],
                 "clustered": index.get("clustered"),
+                "name": index["name"],
             }
             for index in entity["indexes"]
         ]
@@ -343,7 +451,9 @@ def normalize_derived_model(model: dict[str, Any]) -> dict[str, Any]:
             "table": entity["table"],
             "columns": columns,
             "primary_key": list(entity["primary_key"]),
+            "primary_key_name": entity.get("primary_key_name"),
             "alternate_keys": [list(key) for key in entity["alternate_keys"]],
+            "alternate_key_names": list(entity.get("alternate_key_names") or []),
             "indexes": indexes,
         }
 
@@ -365,6 +475,7 @@ def normalize_derived_model(model: dict[str, Any]) -> dict[str, Any]:
                 else None
             ),
             "required": bool(foreign_key["required"]),
+            "name": foreign_key["name"],
         }
         for foreign_key in model["foreign_keys"]
     ]
@@ -474,6 +585,7 @@ def compute_operations(
             "to be written with 'dotnet ef migrations add'."
         )
     added_relationships = target_relationships - source_relationships
+    _refuse_renamed_foreign_keys(source, target)
 
     operations: list[dict[str, Any]] = []
     for clr_name in sorted(target_entities):
@@ -491,6 +603,7 @@ def compute_operations(
                 f"The keys of '{clr_name}' differ; the migration has to be written with "
                 "'dotnet ef migrations add'."
             )
+        _refuse_renamed_constraints(clr_name, source_entity, target_entity)
         operations.extend(_column_operations(source_entity, target_entity))
         operations.extend(_index_operations(source_entity, target_entity))
 
@@ -513,6 +626,58 @@ def compute_operations(
         "add_foreign_key": 3,
     }
     return sorted(operations, key=lambda operation: order[operation["kind"]])
+
+
+def _refuse_renamed_foreign_keys(source: dict[str, Any], target: dict[str, Any]) -> None:
+    before_names = {
+        _relationship_structure_key(item): item.get("name") for item in source["relationships"]
+    }
+    for relationship in target["relationships"]:
+        before = before_names.get(_relationship_structure_key(relationship))
+        after = relationship.get("name")
+        if before is not None and after not in (None, before):
+            raise MigrationModelError(
+                f"The foreign key '{before}' was renamed to '{after}'; a rename is not "
+                "supported by the migration guard (PR-2b), the migration has to be written "
+                "with 'dotnet ef migrations add' and reviewed."
+            )
+
+
+def _refuse_renamed_constraints(
+    clr_name: str, source_entity: dict[str, Any], target_entity: dict[str, Any]
+) -> None:
+    """A key or an index that keeps its columns but changes its name is a rename.
+
+    EF Core would write 'RenameIndex' (or drop and re-create the constraint); the guard
+    accepts neither before PR-2b, so it refuses instead of generating the wrong operation.
+    """
+
+    def renamed(what: str, before: str | None, after: str | None) -> None:
+        if before != after:
+            raise MigrationModelError(
+                f"The {what} of '{clr_name}' was renamed from '{before}' to '{after}'; a "
+                "rename is not supported by the migration guard (PR-2b), the migration has "
+                "to be written with 'dotnet ef migrations add' and reviewed."
+            )
+
+    renamed(
+        "primary key",
+        source_entity.get("primary_key_name"),
+        target_entity.get("primary_key_name"),
+    )
+    source_keys = dict(
+        zip(map(tuple, source_entity["alternate_keys"]), source_entity.get("alternate_key_names") or [])
+    )
+    target_keys = dict(
+        zip(map(tuple, target_entity["alternate_keys"]), target_entity.get("alternate_key_names") or [])
+    )
+    for key in sorted(set(source_keys) & set(target_keys)):
+        renamed(f"alternate key {list(key)}", source_keys[key], target_keys[key])
+    source_indexes = {tuple(index["columns"]): index.get("name") for index in source_entity["indexes"]}
+    for index in target_entity["indexes"]:
+        key = tuple(index["columns"])
+        if key in source_indexes:
+            renamed(f"index {list(key)}", source_indexes[key], index.get("name"))
 
 
 # 'DeleteBehavior' -> 'ReferentialAction' as EF Core's migrations code generator writes it.
@@ -541,7 +706,8 @@ def _foreign_key_operation(
     return {
         "kind": "add_foreign_key",
         "table": dependent["table"],
-        "name": "FK_{}_{}_{}".format(dependent["table"], principal["table"], "_".join(columns)),
+        "name": relationship.get("name")
+        or "FK_{}_{}_{}".format(dependent["table"], principal["table"], "_".join(columns)),
         "columns": columns,
         "principal_table": principal["table"],
         "principal_columns": list(relationship["principal_columns"] or principal["primary_key"]),
@@ -584,6 +750,7 @@ def compute_operations_with_added_tables(
             "supported by the verification of a migration that adds tables."
         )
     added_relationships = sum((target_relationships - source_relationships).values())
+    _refuse_renamed_foreign_keys(source, target)
 
     operations: list[dict[str, Any]] = []
     for clr_name in sorted(source_entities):
@@ -597,14 +764,19 @@ def compute_operations_with_added_tables(
         target_keys = {tuple(key) for key in target_entity["alternate_keys"]}
         if source_keys - target_keys:
             raise MigrationModelError(f"An alternate key of '{clr_name}' was removed.")
+        target_key_names = dict(
+            zip(map(tuple, target_entity["alternate_keys"]), target_entity.get("alternate_key_names") or [])
+        )
         for key in sorted(target_keys - source_keys):
             operations.append(
                 {
                     "kind": "add_unique_constraint",
                     "table": target_entity["table"],
                     "columns": list(key),
+                    "name": target_key_names.get(key),
                 }
             )
+        _refuse_renamed_constraints(clr_name, source_entity, target_entity)
         operations.extend(_column_operations(source_entity, target_entity))
         operations.extend(_index_operations(source_entity, target_entity))
 
@@ -738,7 +910,7 @@ def literal(value: str) -> str:
 
 
 def index_name(table: str, index: dict[str, Any]) -> str:
-    return "IX_{}_{}".format(table, "_".join(index["columns"]))
+    return index.get("name") or "IX_{}_{}".format(table, "_".join(index["columns"]))
 
 
 def array_literal(values: list[str]) -> str:

@@ -367,7 +367,8 @@ def signatures_of(operations: list[dict[str, Any]]) -> list[tuple[Any, ...]]:
                 (
                     "add_unique_constraint",
                     operation["table"],
-                    "AK_{}_{}".format(operation["table"], "_".join(operation["columns"])),
+                    operation.get("name")
+                    or "AK_{}_{}".format(operation["table"], "_".join(operation["columns"])),
                     tuple(operation["columns"]),
                 )
             )
@@ -472,6 +473,25 @@ def verify_model_against_generated(
                 "the model."
             )
 
+        if described.get("primary_key_name") != wanted.get("primary_key_name"):
+            problems.append(
+                f"The primary key name of '{clr_name}' is '{described.get('primary_key_name')}' "
+                f"in the {description} but '{wanted.get('primary_key_name')}' in the model."
+            )
+        wanted_key_names = dict(
+            zip(map(tuple, wanted["alternate_keys"]), wanted.get("alternate_key_names") or [])
+        )
+        described_key_names = dict(
+            zip(map(tuple, described["alternate_keys"]), described.get("alternate_key_names") or [])
+        )
+        for key in sorted(set(wanted_key_names) & set(described_key_names)):
+            if wanted_key_names[key] != described_key_names[key]:
+                problems.append(
+                    f"The alternate key name of {list(key)} of '{clr_name}' is "
+                    f"'{described_key_names[key]}' in the {description} but "
+                    f"'{wanted_key_names[key]}' in the model."
+                )
+
         wanted_columns = {column["name"]: column for column in wanted["columns"]}
         described_columns = {column["name"]: column for column in described["columns"]}
         for name in sorted(set(wanted_columns) - set(described_columns)):
@@ -509,6 +529,11 @@ def verify_model_against_generated(
         for key in sorted(set(wanted_indexes) & set(described_indexes)):
             index = wanted_indexes[key]
             actual = described_indexes[key]
+            if index.get("name") != actual.get("name"):
+                problems.append(
+                    f"The name of the index {key} of '{clr_name}' is '{actual.get('name')}' in "
+                    f"the {description} but '{index.get('name')}' in the model."
+                )
             for facet in ("unique", "filter", "clustered"):
                 if (index[facet] or None) != (actual[facet] or None):
                     problems.append(
@@ -523,6 +548,17 @@ def verify_model_against_generated(
         problems.append(
             f"The relationships of the {description} differ from the model."
         )
+    else:
+        wanted_names = {
+            mm._relationship_key(item): item.get("name") for item in expected["relationships"]
+        }
+        for item in generated["relationships"]:
+            wanted_name = wanted_names.get(mm._relationship_key(item))
+            if item.get("name") != wanted_name:
+                problems.append(
+                    f"The foreign key name of {item['dependent']} {item['columns']} is "
+                    f"'{item.get('name')}' in the {description} but '{wanted_name}' in the model."
+                )
 
     return problems
 
@@ -662,7 +698,8 @@ def verify_migration_with_added_tables(
 
     # The foreign keys of the new tables against the model of the code base.
     wanted_foreign_keys = sorted(
-        "FK_{}_{}_{}".format(
+        foreign_key.get("name")
+        or "FK_{}_{}_{}".format(
             foreign_key["dependent"],
             foreign_key["principal_table"],
             "_".join(foreign_key["columns"]),
@@ -699,7 +736,9 @@ def verify_migration_with_added_tables(
         )
     for operation in operations:
         if operation["kind"] == "add_unique_constraint":
-            name = "AK_{}_{}".format(operation["table"], "_".join(operation["columns"]))
+            name = operation.get("name") or "AK_{}_{}".format(
+                operation["table"], "_".join(operation["columns"])
+            )
             if f'name: "{name}"' not in down_source or "DropUniqueConstraint(" not in down_source:
                 problems.append(f"Down does not drop the unique constraint '{name}'.")
 
