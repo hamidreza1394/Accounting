@@ -452,28 +452,51 @@ def table_order(entities: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [by_table[table] for table in ordered]
 
 
-def index_name(entity: dict[str, Any], index: dict[str, Any]) -> str:
-    """The default name of an index: 'IX_{table}_{columns}'."""
+def default_index_name(entity: dict[str, Any], index: dict[str, Any]) -> str:
+    """The name EF Core derives for an index: 'IX_{table}_{columns}'."""
     return "IX_{}_{}".format(entity["table"], "_".join(index["columns"]))
 
 
-def primary_key_name(entity: dict[str, Any]) -> str:
-    """The default name of a primary key: 'PK_{table}'."""
+def default_primary_key_name(entity: dict[str, Any]) -> str:
+    """The name EF Core derives for a primary key: 'PK_{table}'."""
     return f"PK_{entity['table']}"
 
 
-def alternate_key_name(entity: dict[str, Any], columns: list[str]) -> str:
-    """The default name of an alternate key: 'AK_{table}_{columns}'."""
+def default_alternate_key_name(entity: dict[str, Any], columns: list[str]) -> str:
+    """The name EF Core derives for an alternate key: 'AK_{table}_{columns}'."""
     return "AK_{}_{}".format(entity["table"], "_".join(columns))
 
 
-def foreign_key_name(foreign_key: dict[str, Any]) -> str:
-    """The default name of a foreign key: 'FK_{dependent}_{principal}_{columns}'."""
+def default_foreign_key_name(foreign_key: dict[str, Any]) -> str:
+    """The name EF Core derives for a foreign key: 'FK_{dependent}_{principal}_{columns}'."""
     return "FK_{}_{}_{}".format(
         foreign_key["dependent"],
         foreign_key["principal_table"],
         "_".join(foreign_key["columns"]),
     )
+
+
+# The names below are the names of the model: a name pinned in the configuration
+# (HasName, HasDatabaseName, HasConstraintName) or else the derived default.
+
+
+def index_name(entity: dict[str, Any], index: dict[str, Any]) -> str:
+    return index.get("name") or default_index_name(entity, index)
+
+
+def primary_key_name(entity: dict[str, Any]) -> str:
+    return entity.get("primary_key_name") or default_primary_key_name(entity)
+
+
+def alternate_key_name(entity: dict[str, Any], columns: list[str]) -> str:
+    for key, name in zip(entity["alternate_keys"], entity.get("alternate_key_names") or []):
+        if list(key) == list(columns) and name:
+            return name
+    return default_alternate_key_name(entity, columns)
+
+
+def foreign_key_name(foreign_key: dict[str, Any]) -> str:
+    return foreign_key.get("name") or default_foreign_key_name(foreign_key)
 
 
 # --------------------------------------------------------------------------------------
@@ -621,6 +644,17 @@ def generate_migration(entities: list[dict[str, Any]]) -> str:
 # --------------------------------------------------------------------------------------
 
 
+def pinned_name_call(method: str, name: str, default: str) -> str:
+    """The call that writes a constraint or index name into the model.
+
+    EF Core writes a name only when it differs from the name it derives, so a pin that
+    repeats the derived name leaves the snapshot unchanged.
+    """
+    if name == default:
+        return ""
+    return f".{method}({literal(name)})"
+
+
 def generate_model(entity_types: list[dict[str, Any]], indent: str) -> list[str]:
     """Renders the model of the snapshot and of the designer file.
 
@@ -673,14 +707,22 @@ def generate_model(entity_types: list[dict[str, Any]], indent: str) -> list[str]
             lines.append(
                 f"{indent}{INDENT}b.HasKey("
                 + ", ".join(literal(column) for column in entity["primary_key"])
-                + ");"
+                + ")"
+                + pinned_name_call("HasName", primary_key_name(entity), default_primary_key_name(entity))
+                + ";"
             )
         for alternate_key in entity["alternate_keys"]:
             lines.append("")
             lines.append(
                 f"{indent}{INDENT}b.HasAlternateKey("
                 + ", ".join(literal(column) for column in alternate_key)
-                + ");"
+                + ")"
+                + pinned_name_call(
+                    "HasName",
+                    alternate_key_name(entity, alternate_key),
+                    default_alternate_key_name(entity, alternate_key),
+                )
+                + ";"
             )
         for index in entity["indexes"]:
             lines.append("")
@@ -691,6 +733,11 @@ def generate_model(entity_types: list[dict[str, Any]], indent: str) -> list[str]
             )
             if index["unique"]:
                 lines.append(f"{indent}{INDENT * 2}.IsUnique()")
+            pinned = pinned_name_call(
+                "HasDatabaseName", index_name(entity, index), default_index_name(entity, index)
+            )
+            if pinned:
+                lines.append(f"{indent}{INDENT * 2}{pinned.lstrip()}")
             if index.get("clustered") is False:
                 lines.append(
                     f'{indent}{INDENT * 2}.HasAnnotation("SqlServer:Clustered", false)'
@@ -732,6 +779,13 @@ def generate_model(entity_types: list[dict[str, Any]], indent: str) -> list[str]
                 + ", ".join(literal(column) for column in foreign_key["columns"])
                 + ")"
             )
+            pinned = pinned_name_call(
+                "HasConstraintName",
+                foreign_key_name(foreign_key),
+                default_foreign_key_name(foreign_key),
+            )
+            if pinned:
+                lines.append(f"{indent}{INDENT * 2}{pinned.lstrip()}")
             principal_key = foreign_key["principal_columns"]
             principal_primary_key = next(
                 (

@@ -421,12 +421,146 @@ def lambda_properties(lambda_text: str) -> list[str]:
     return re.findall(r"\.([A-Za-z_]\w*)", lambda_text)
 
 
+# The fluent API calls that the parser understands, per kind of configuration statement. A
+# call of a statement that is not listed is an error: ignoring it would let a mapping
+# change (a default value, a conversion, a rename ...) slip past the guards unnoticed.
+ALLOWED_CHAIN_CALLS: dict[str, frozenset[str]] = {
+    "ToTable": frozenset({"ToTable"}),
+    "HasAlternateKey": frozenset({"HasAlternateKey", "HasName"}),
+    "HasKey": frozenset({"HasKey", "HasName"}),
+    "HasIndex": frozenset(
+        {"HasIndex", "IsUnique", "HasFilter", "IsClustered", "HasDatabaseName"}
+    ),
+    "Property": frozenset(
+        {
+            "Property",
+            "IsRequired",
+            "HasMaxLength",
+            "IsUnicode",
+            "HasColumnType",
+            "IsRowVersion",
+            "ValueGeneratedNever",
+            "HasColumnName",
+        }
+    ),
+    "Relationship": frozenset(
+        {
+            "HasOne",
+            "HasMany",
+            "WithOne",
+            "WithMany",
+            "HasForeignKey",
+            "HasPrincipalKey",
+            "OnDelete",
+            "IsRequired",
+            "HasConstraintName",
+        }
+    ),
+}
+
+
+def chain_calls(statement: str) -> list[tuple[str, str]]:
+    """Returns the ``(method, arguments)`` pairs of the fluent chain of a statement.
+
+    Only the calls of the top level chain are returned ("a.B(x).C<T>(y)" gives ``B`` and
+    ``C``); the calls inside the arguments (lambdas, nested expressions) belong to their
+    argument and are not part of the chain.
+    """
+    calls: list[tuple[str, str]] = []
+    position = 0
+    length = len(statement)
+    while position < length:
+        character = statement[position]
+        if character == '"':
+            position = skip_string_literal(statement, position)
+            continue
+        if character in "([{":
+            position = skip_balanced(statement, position)
+            continue
+        if character == ".":
+            match = re.compile(r"\.\s*(?P<name>[A-Za-z_]\w*)\s*(?:<[^()]*>)?\s*\(").match(
+                statement, position
+            )
+            if match:
+                open_index = match.end() - 1
+                close_index = skip_balanced(statement, open_index)
+                calls.append((match.group("name"), statement[open_index + 1 : close_index - 1]))
+                position = close_index
+                continue
+        position += 1
+    return calls
+
+
+def skip_string_literal(text: str, start: int) -> int:
+    """Returns the index after the string literal that starts at ``start``."""
+    position = start + 1
+    while position < len(text):
+        if text[position] == "\\":
+            position += 2
+            continue
+        if text[position] == '"':
+            return position + 1
+        position += 1
+    raise ModelExtractionError("Unterminated string literal in a configuration statement.")
+
+
+def skip_balanced(text: str, start: int) -> int:
+    """Returns the index after the bracket pair that opens at ``start``."""
+    pairs = {"(": ")", "[": "]", "{": "}"}
+    stack = [pairs[text[start]]]
+    position = start + 1
+    while position < len(text):
+        character = text[position]
+        if character == '"':
+            position = skip_string_literal(text, position)
+            continue
+        if character in pairs:
+            stack.append(pairs[character])
+        elif stack and character == stack[-1]:
+            stack.pop()
+            if not stack:
+                return position + 1
+        position += 1
+    raise ModelExtractionError("Unbalanced brackets in a configuration statement.")
+
+
+def check_chain(
+    calls: list[tuple[str, str]], kind: str, file_name: str, statement: str
+) -> None:
+    """Rejects every call of the chain that the parser does not understand."""
+    allowed = ALLOWED_CHAIN_CALLS[kind]
+    for method, _ in calls:
+        if method not in allowed:
+            raise ModelExtractionError(
+                f"{file_name}: the fluent API call '.{method}(...)' is not supported in a "
+                f"'{kind}' configuration and would be ignored by the guards: {statement}"
+            )
+
+
+def literal_argument(calls: list[tuple[str, str]], method: str, file_name: str) -> str | None:
+    """Returns the string literal argument of ``method`` or ``None`` when it is not called."""
+    values = [arguments for name, arguments in calls if name == method]
+    if not values:
+        return None
+    if len(values) > 1:
+        raise ModelExtractionError(f"{file_name}: '.{method}(...)' is called more than once.")
+    match = re.fullmatch(r'\s*"(?P<value>[^"\\]*)"\s*', values[0])
+    if match is None or not match.group("value"):
+        raise ModelExtractionError(
+            f"{file_name}: '.{method}(...)' needs one non-empty string literal, got: "
+            f"{values[0].strip()!r}."
+        )
+    return match.group("value")
+
+
 class Configuration:
     def __init__(self, entity_clr_name: str) -> None:
         self.entity_clr_name = entity_clr_name
         self.table: str | None = None
         self.key: list[str] | None = None
+        self.key_name: str | None = None
         self.alternate_keys: list[list[str]] = []
+        self.alternate_key_names: list[str | None] = []
         self.indexes: list[dict[str, Any]] = []
         self.properties: dict[str, dict[str, Any]] = {}
         self.foreign_keys: list[dict[str, Any]] = []
@@ -483,23 +617,31 @@ def apply_configuration_statement(
     configuration: Configuration, statement: str, file_name: str
 ) -> None:
     normalized = re.sub(r"\s+", " ", statement).strip()
+    calls = chain_calls(normalized)
+    first_call = calls[0][0] if calls else None
 
     table_match = re.search(r"\.ToTable\(\s*\"(?P<name>[^\"]+)\"", normalized)
     if table_match:
+        check_chain(calls, "ToTable", file_name, normalized)
         configuration.table = table_match.group("name")
         return
 
-    if ".HasAlternateKey(" in normalized:
+    if first_call == "HasAlternateKey":
+        check_chain(calls, "HasAlternateKey", file_name, normalized)
         lambda_text = method_call_argument(normalized, "HasAlternateKey") or ""
         configuration.alternate_keys.append(lambda_properties(lambda_text))
+        configuration.alternate_key_names.append(literal_argument(calls, "HasName", file_name))
         return
 
-    if ".HasKey(" in normalized:
+    if first_call == "HasKey":
+        check_chain(calls, "HasKey", file_name, normalized)
         lambda_text = method_call_argument(normalized, "HasKey") or ""
         configuration.key = lambda_properties(lambda_text)
+        configuration.key_name = literal_argument(calls, "HasName", file_name)
         return
 
-    if ".HasIndex(" in normalized:
+    if first_call == "HasIndex":
+        check_chain(calls, "HasIndex", file_name, normalized)
         lambda_text = method_call_argument(normalized, "HasIndex") or ""
         columns = lambda_properties(lambda_text)
         index: dict[str, Any] = {
@@ -507,6 +649,7 @@ def apply_configuration_statement(
             "unique": False,
             "filter": None,
             "clustered": None,
+            "explicit_name": literal_argument(calls, "HasDatabaseName", file_name),
         }
         unique_match = re.search(
             r"\.IsUnique\(\s*(?:unique\s*:\s*)?(?P<value>true|false)?\s*\)", normalized
@@ -523,12 +666,23 @@ def apply_configuration_statement(
         configuration.indexes.append(index)
         return
 
-    if ".Property(" in normalized:
+    if first_call == "Property":
+        check_chain(calls, "Property", file_name, normalized)
         lambda_text = method_call_argument(normalized, "Property") or ""
         names = lambda_properties(lambda_text)
         if not names:
             raise ModelExtractionError(f"{file_name}: unsupported Property(...) call.")
         property_name = names[0]
+        column_name = literal_argument(calls, "HasColumnName", file_name)
+        if column_name is not None and column_name != property_name:
+            # Mapping a property to a column of another name is a rename of the column. The
+            # guards accept no rename yet (S3-0h PR-2b); a pin that repeats the name is
+            # not a mapping change and needs no entry in the model.
+            raise ModelExtractionError(
+                f"{file_name}: HasColumnName(\"{column_name}\") maps the property "
+                f"'{property_name}' to a different column; renaming a column is not "
+                "supported by the migration guard (PR-2b)."
+            )
         settings = configuration.properties.setdefault(property_name, {})
         max_length_argument = method_call_argument(normalized, "HasMaxLength")
         if max_length_argument is not None:
@@ -564,8 +718,11 @@ def apply_configuration_statement(
             settings["row_version"] = True
         return
 
-    if re.search(r"\.Has(?:One|Many)\s*[<(]", normalized):
-        configuration.foreign_keys.append(parse_relationship(normalized, file_name))
+    if first_call in {"HasOne", "HasMany"}:
+        check_chain(calls, "Relationship", file_name, normalized)
+        relationship = parse_relationship(normalized, file_name)
+        relationship["constraint_name"] = literal_argument(calls, "HasConstraintName", file_name)
+        configuration.foreign_keys.append(relationship)
         return
 
     raise ModelExtractionError(
@@ -874,11 +1031,18 @@ def derive_model(repository_root: str) -> dict[str, Any]:
         indexes: list[dict[str, Any]] = []
         if configuration is not None:
             for index in configuration.indexes:
-                if any(
-                    existing["columns"] == list(index["columns"])
-                    for existing in indexes
-                ):
+                duplicate = next(
+                    (
+                        existing
+                        for existing in indexes
+                        if existing["columns"] == list(index["columns"])
+                    ),
+                    None,
+                )
+                if duplicate is not None:
                     # The same index is declared twice in the configuration.
+                    if index.get("explicit_name"):
+                        duplicate["explicit_name"] = index["explicit_name"]
                     continue
                 indexes.append(
                     {
@@ -886,17 +1050,38 @@ def derive_model(repository_root: str) -> dict[str, Any]:
                         "unique": bool(index["unique"]),
                         "filter": index["filter"],
                         "clustered": index["clustered"],
+                        "explicit_name": index.get("explicit_name"),
                     }
                 )
+
+        table_name = table_by_entity.get(clr_name, simple_name(clr_name))
+        # A name that is pinned with HasName(...) is part of the model, an unpinned name is
+        # the one that EF Core derives. Both are written here, so that a pin that repeats the
+        # derived name is the same model as no pin at all.
+        primary_key_name = None
+        if primary_key:
+            primary_key_name = (
+                configuration.key_name if configuration and configuration.key_name else None
+            ) or f"PK_{table_name}"
+        alternate_key_names = []
+        for position, key in enumerate(alternate_keys):
+            pinned = (
+                configuration.alternate_key_names[position]
+                if configuration and position < len(configuration.alternate_key_names)
+                else None
+            )
+            alternate_key_names.append(pinned or "AK_{}_{}".format(table_name, "_".join(key)))
 
         model_entities.append(
             {
                 "column_index": {column["name"]: column for column in columns},
                 "clr_name": clr_name,
-                "table": table_by_entity.get(clr_name, simple_name(clr_name)),
+                "table": table_name,
                 "columns": columns,
                 "primary_key": primary_key,
+                "primary_key_name": primary_key_name,
                 "alternate_keys": alternate_keys,
+                "alternate_key_names": alternate_key_names,
                 "indexes": indexes,
                 "navigations": entity.navigations,
                 "base_property_names": sorted(base_property_names)
@@ -1001,6 +1186,8 @@ def derive_model(repository_root: str) -> dict[str, Any]:
                 existing["on_delete"] = relationship["on_delete"]
             if relationship["principal_key"]:
                 existing["principal_columns"] = list(relationship["principal_key"])
+            if relationship.get("constraint_name"):
+                existing["name"] = relationship["constraint_name"]
             continue
 
         if relationship["has_kind"] == "one":
@@ -1029,7 +1216,7 @@ def derive_model(repository_root: str) -> dict[str, Any]:
             "unique": relationship["has_kind"] == "one"
             and relationship["with_kind"] == "one",
         }
-        foreign_key["name"] = "FK_{}_{}_{}".format(
+        foreign_key["name"] = relationship.get("constraint_name") or "FK_{}_{}_{}".format(
             foreign_key["dependent"],
             foreign_key["principal_table"],
             "_".join(foreign_key["columns"]),
@@ -1140,7 +1327,7 @@ def derive_model(repository_root: str) -> dict[str, Any]:
     # ---- Index names -----------------------------------------------------------------
     for entity in model_entities:
         for index in entity["indexes"]:
-            index["name"] = "IX_{}_{}".format(
+            index["name"] = index.pop("explicit_name", None) or "IX_{}_{}".format(
                 entity["table"], "_".join(index["columns"])
             )
 
@@ -1162,12 +1349,49 @@ def derive_model(repository_root: str) -> dict[str, Any]:
                         f"[{column}] IS NOT NULL" for column in nullable_columns
                     )
 
+    check_constraint_names(model_entities, foreign_keys)
+
     return {
         "entities": model_entities,
         "foreign_keys": foreign_keys,
         "enums": enums,
         "db_set_order": list(db_sets.values()),
     }
+
+
+def check_constraint_names(
+    model_entities: list[dict[str, Any]], foreign_keys: list[dict[str, Any]]
+) -> None:
+    """Rejects pinned names that collide: SQL Server needs them unique.
+
+    Constraint names (primary, alternate and foreign keys) are unique per schema, index
+    names per table; a key is an index of its table as well.
+    """
+    seen: dict[str, str] = {}
+
+    def claim(name: str, what: str) -> None:
+        if name in seen:
+            raise ModelExtractionError(
+                f"The constraint name '{name}' is used twice ({seen[name]} and {what})."
+            )
+        seen[name] = what
+
+    for entity in model_entities:
+        table_names: set[str] = set()
+        if entity["primary_key_name"]:
+            claim(entity["primary_key_name"], f"the primary key of {entity['table']}")
+            table_names.add(entity["primary_key_name"])
+        for name in entity["alternate_key_names"]:
+            claim(name, f"an alternate key of {entity['table']}")
+            table_names.add(name)
+        for index in entity["indexes"]:
+            if index["name"] in table_names:
+                raise ModelExtractionError(
+                    f"The index name '{index['name']}' of {entity['table']} is used twice."
+                )
+            table_names.add(index["name"])
+    for foreign_key in foreign_keys:
+        claim(foreign_key["name"], f"a foreign key of {foreign_key['dependent']}")
 
 
 def resolve_entity_type(
