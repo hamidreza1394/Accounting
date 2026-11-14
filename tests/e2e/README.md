@@ -11,6 +11,13 @@ They run in CI (job `e2e` of `.github/workflows/dotnet.yml`); the job:
 5. runs `npx playwright test` (starts two server instances: one with the database, one in first-run
    setup mode).
 
+The suite runs sequentially and concentrates its requests on the shared seeded accounts, so the
+E2E instance of the server raises two rate limits through environment variables only
+(`RateLimiting__Login__PermitLimit` and `RateLimiting__ApiSensitive__PermitLimit`, see
+`playwright.config.mjs`). Production keeps the `appsettings.json` defaults, and the
+membership-workflow spec still proves on every run that the sensitive limit really rejects with
+429 at the configured permit count.
+
 Local run (disposable database only — its name must start with `FaranouE2E`):
 ```bash
 cd tests/e2e && npm ci && npx playwright install chromium
