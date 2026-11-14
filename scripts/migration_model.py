@@ -185,6 +185,23 @@ def called_methods(calls: str) -> list[str]:
     return re.findall(r"\.\s*(\w+)\s*(?:<[^()]*>)?\(", re.sub(r'"(?:[^"\\]|\\.)*"', '""', calls))
 
 
+def named_argument(calls: str, method: str) -> str | None:
+    """The string literal argument of ``method``; whitespace is accepted like in ``called_methods``.
+
+    A call whose argument can not be read as one string literal is an error, so that it is
+    never silently treated as "not pinned".
+    """
+    if method not in called_methods(calls):
+        return None
+    match = re.search(r"\.\s*" + method + r'\s*\(\s*"([^"]*)"\s*\)', calls)
+    if match is None:
+        raise MigrationModelError(
+            f"The call '.{method}(...)' of the generated model has no single string literal "
+            "argument."
+        )
+    return match.group(1)
+
+
 def check_calls(calls: str, allowed: frozenset[str], what: str) -> None:
     """The generated files are read fail-closed: a call that is not known is an error."""
     for method in called_methods(calls):
@@ -218,7 +235,7 @@ def parse_generated_model(source: str) -> dict[str, Any]:
         ):
             calls = prop.group("calls")
             check_calls(calls, PROPERTY_CALLS, f"property '{prop.group('name')}'")
-            column_name = optional_string(re.search(r'\.HasColumnName\("([^"]*)"\)', calls))
+            column_name = named_argument(calls, "HasColumnName")
             if column_name is not None and column_name != prop.group("name"):
                 raise MigrationModelError(
                     f"The property '{prop.group('name')}' is mapped to the column "
@@ -257,15 +274,13 @@ def parse_generated_model(source: str) -> dict[str, Any]:
         for key in re.finditer(r"b\.HasKey\(([^)]*)\)([^;]*);", body):
             check_calls(key.group(2), KEY_CALLS, "primary key")
             keys.append(parse_literal_list(key.group(1)))
-            key_names.append(optional_string(re.search(r'\.HasName\("([^"]*)"\)', key.group(2))))
+            key_names.append(named_argument(key.group(2), "HasName"))
         alternate_keys = []
         alternate_key_names: list[str | None] = []
         for key in re.finditer(r"b\.HasAlternateKey\(([^)]*)\)([^;]*);", body):
             check_calls(key.group(2), KEY_CALLS, "alternate key")
             alternate_keys.append(parse_literal_list(key.group(1)))
-            alternate_key_names.append(
-                optional_string(re.search(r'\.HasName\("([^"]*)"\)', key.group(2)))
-            )
+            alternate_key_names.append(named_argument(key.group(2), "HasName"))
 
         indexes = []
         for index in re.finditer(
@@ -275,9 +290,7 @@ def parse_generated_model(source: str) -> dict[str, Any]:
             check_calls(calls, INDEX_CALLS, "index")
             indexes.append(
                 {
-                    "explicit_name": optional_string(
-                        re.search(r'\.HasDatabaseName\("([^"]*)"\)', calls)
-                    ),
+                    "explicit_name": named_argument(calls, "HasDatabaseName"),
                     "columns": parse_literal_list(index.group("columns")),
                     "unique": ".IsUnique()" in calls,
                     "filter": optional_string(
@@ -350,9 +363,7 @@ def parse_generated_model(source: str) -> dict[str, Any]:
                     ),
                     "on_delete": parse_enum(calls, "DeleteBehavior."),
                     "required": ".IsRequired()" in calls,
-                    "explicit_name": optional_string(
-                        re.search(r'\.HasConstraintName\("([^"]*)"\)', calls)
-                    ),
+                    "explicit_name": named_argument(calls, "HasConstraintName"),
                 }
             )
 

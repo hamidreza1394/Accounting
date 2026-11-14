@@ -14,7 +14,7 @@
 `HasColumnName` فقط وقتی پذیرفته می‌شود که نام ستون با نام Property برابر باشد (Pin بدون تغییر مدل). نگاشت Property به ستون دیگر Rename است و برای PR-2b (و گام P از طرح S3-0h) می‌ماند، چون نیازمند جداسازی نام Property از نام ستون در سراسر Generator/Verifier است.
 
 ## تست
-- تست جدید: `scripts/tests/test_migration_guard_pinned_mappings.py` (19 تست؛ Parser و Guardهای واقعی روی کپی موقت مخزن، بدون Mock). پیش از پیاده‌سازی: 15 FAIL + 1 ERROR؛ سه تست «Pin هم‌نام با پیش‌فرض» پیش از تغییر هم پاس بودند چون Pin نادیده گرفته می‌شد و پس از تغییر به‌دلیل درست پاس می‌شوند. پس از پیاده‌سازی: 19/19.
+- تست جدید: `scripts/tests/test_migration_guard_pinned_mappings.py` (22 تست؛ Parser و Guardهای واقعی روی کپی موقت مخزن، بدون Mock). پیش از پیاده‌سازی: 15 FAIL + 1 ERROR؛ سه تست «Pin هم‌نام با پیش‌فرض» پیش از تغییر هم پاس بودند چون Pin نادیده گرفته می‌شد و پس از تغییر به‌دلیل درست پاس می‌شوند. پس از پیاده‌سازی: 19/19؛ پس از بازبینی CodeRabbit سه تست افزوده شد (ToTable با آرگومان اضافه، نام Index با تفاوت فقط در حروف، فاصله در فراخوانی نام‌ها): 22/22.
 - قبلی‌ها: `test_migration_tooling.py` 32/32، `test_migration_guard_mutations.py` 31/31، `generate_migrations.py --check` و `verify_migration_model.py` (20 Migration) موفق.
 - اجرا نشد: `dotnet ef migrations has-pending-model-changes`، Build/Test .NET، SQL Server (تغییر مدل واقعی وجود ندارد).
 - CI: تست جدید به مرحلهٔ «Test the migration guards» در `.github/workflows/dotnet.yml` اضافه شد.

@@ -623,6 +623,14 @@ def apply_configuration_statement(
     table_match = re.search(r"\.ToTable\(\s*\"(?P<name>[^\"]+)\"", normalized)
     if table_match:
         check_chain(calls, "ToTable", file_name, normalized)
+        for method, arguments in calls:
+            if method == "ToTable" and not re.fullmatch(r'\s*"[^"]+"\s*', arguments):
+                # A schema or a callback (t => t.ExcludeFromMigrations()) changes the mapping;
+                # the model records only the table name, so such a call would be half read.
+                raise ModelExtractionError(
+                    f"{file_name}: '.ToTable(...)' accepts only the table name as a string "
+                    f"literal, got: {arguments.strip()!r}."
+                )
         configuration.table = table_match.group("name")
         return
 
@@ -1370,26 +1378,30 @@ def check_constraint_names(
     seen: dict[str, str] = {}
 
     def claim(name: str, what: str) -> None:
-        if name in seen:
+        # SQL Server compares identifiers case-insensitively (default collation).
+        folded = name.casefold()
+        if folded in seen:
             raise ModelExtractionError(
-                f"The constraint name '{name}' is used twice ({seen[name]} and {what})."
+                f"The constraint name '{name}' is used twice ({seen[folded]} and {what}); "
+                "names that differ only in case are the same name in SQL Server."
             )
-        seen[name] = what
+        seen[folded] = what
 
     for entity in model_entities:
         table_names: set[str] = set()
         if entity["primary_key_name"]:
             claim(entity["primary_key_name"], f"the primary key of {entity['table']}")
-            table_names.add(entity["primary_key_name"])
+            table_names.add(entity["primary_key_name"].casefold())
         for name in entity["alternate_key_names"]:
             claim(name, f"an alternate key of {entity['table']}")
-            table_names.add(name)
+            table_names.add(name.casefold())
         for index in entity["indexes"]:
-            if index["name"] in table_names:
+            if index["name"].casefold() in table_names:
                 raise ModelExtractionError(
-                    f"The index name '{index['name']}' of {entity['table']} is used twice."
+                    f"The index name '{index['name']}' of {entity['table']} is used twice "
+                    "(names that differ only in case are the same name in SQL Server)."
                 )
-            table_names.add(index["name"])
+            table_names.add(index["name"].casefold())
     for foreign_key in foreign_keys:
         claim(foreign_key["name"], f"a foreign key of {foreign_key['dependent']}")
 

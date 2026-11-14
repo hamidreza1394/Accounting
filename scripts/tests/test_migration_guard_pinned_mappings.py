@@ -265,6 +265,26 @@ class FailClosedTests(PinnedMappingBase):
             "HasAnnotation",
         )
 
+    def test_a_table_callback_or_schema_is_rejected(self):
+        self.assert_rejected(
+            'builder.ToTable("CompanyRoles");',
+            'builder.ToTable("CompanyRoles", t => t.ExcludeFromMigrations());',
+            "ToTable",
+        )
+        self.mutate_configuration('builder.ToTable("CompanyRoles");', 'builder.ToTable("CompanyRoles", "sales");')
+        with self.assertRaises(ef_model.ModelExtractionError):
+            self.derive()
+
+    def test_index_names_that_differ_only_in_case_are_rejected(self):
+        self.mutate_configuration(
+            INDEX_LINE,
+            INDEX_LINE.replace(".IsUnique();", ".IsUnique().HasDatabaseName(\"IX_Pinned\");")
+            + ' builder.HasIndex(x => x.Name).HasDatabaseName("ix_pinned");',
+        )
+        with self.assertRaises(ef_model.ModelExtractionError) as context:
+            self.derive()
+        self.assertIn("case", str(context.exception))
+
     def test_unknown_table_call(self):
         self.assert_rejected(
             'builder.ToTable("CompanyRoles");',
@@ -326,6 +346,17 @@ class GeneratedFileParserFailClosedTests(unittest.TestCase):
         with self.assertRaises(mm.MigrationModelError) as context:
             mm.parse_generated_model(self.snapshot_with('\n        .HasDefaultValue("x")'))
         self.assertIn("HasDefaultValue", str(context.exception))
+
+    def test_whitespace_in_a_naming_call_does_not_hide_it(self):
+        for calls in ('\n        .HasColumnName( "Other" )', '\n        .HasColumnName ("Other")'):
+            with self.subTest(calls=calls):
+                with self.assertRaises(mm.MigrationModelError) as context:
+                    mm.parse_generated_model(self.snapshot_with(calls))
+                self.assertIn("Other", str(context.exception))
+        parsed = mm.parse_generated_model(
+            self.snapshot_with("").replace('b.HasKey("Id");', 'b.HasKey("Id").HasName( "PK_Spaced" );')
+        )
+        self.assertEqual("PK_Spaced", parsed["entities"]["Domain.Thing"]["primary_key_name"])
 
     def test_a_column_name_that_differs_from_the_property_is_an_error(self):
         with self.assertRaises(mm.MigrationModelError) as context:
