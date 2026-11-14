@@ -57,13 +57,23 @@ public static class SessionValidator
 			return;
 		}
 
-		var isValid = await IsSessionValidAsync(
+		var check = await CheckSessionAsync(
 			context.Principal,
 			context.HttpContext.RequestServices,
 			context.HttpContext.RequestAborted);
 
-		if (isValid)
+		if (check.IsValid)
 		{
+			// R-16: the role claim of the cookie is only a copy made at sign-in. For a company
+			// user it is replaced by the CURRENT role of the database on every request, so a
+			// revoked (or deactivated, or changed) role has no effect through an old cookie. The
+			// session itself stays valid: only the claim changes, the user is not signed out.
+			if (check.IsCompanyUser && !RoleClaimMatches(context.Principal, check.CurrentRoleName))
+			{
+				context.ReplacePrincipal(WithRole(context.Principal, check.CurrentRoleName));
+				context.ShouldRenew = true;
+			}
+
 			return;
 		}
 
@@ -83,11 +93,57 @@ public static class SessionValidator
 		IServiceProvider services,
 		CancellationToken cancellationToken)
 	{
+		return (await CheckSessionAsync(principal, services, cancellationToken)).IsValid;
+	}
+
+	/// <summary>
+	/// The outcome of the session check. <see cref="CurrentRoleName" /> is the name of the active
+	/// installation role the user has in the database right now (only for <see cref="IsCompanyUser" />; <c>null</c> when the
+	/// user has none or the role is switched off). It is only meaningful when <see cref="IsValid" />.
+	/// </summary>
+	private readonly record struct SessionCheck(bool IsValid, bool IsCompanyUser, string? CurrentRoleName)
+	{
+		public static readonly SessionCheck Invalid = new(false, false, null);
+	}
+
+	/// <summary>Whether the role claims of the principal are exactly the current role (none when there is none).</summary>
+	private static bool RoleClaimMatches(ClaimsPrincipal principal, string? currentRoleName)
+	{
+		var roles = principal.FindAll(ClaimTypes.Role).Select(claim => claim.Value).ToList();
+
+		return currentRoleName is null
+			? roles.Count == 0
+			: roles.Count == 1 && string.Equals(roles[0], currentRoleName, StringComparison.Ordinal);
+	}
+
+	/// <summary>A copy of the principal with exactly the given role claim (or none), everything else kept.</summary>
+	private static ClaimsPrincipal WithRole(ClaimsPrincipal principal, string? roleName)
+	{
+		var identity = principal.Identities.First();
+		var claims = identity.Claims.Where(claim => claim.Type != ClaimTypes.Role).ToList();
+
+		if (roleName is not null)
+		{
+			claims.Add(new Claim(ClaimTypes.Role, roleName));
+		}
+
+		return new ClaimsPrincipal(new ClaimsIdentity(
+			claims,
+			identity.AuthenticationType,
+			identity.NameClaimType,
+			identity.RoleClaimType));
+	}
+
+	private static async Task<SessionCheck> CheckSessionAsync(
+		ClaimsPrincipal principal,
+		IServiceProvider services,
+		CancellationToken cancellationToken)
+	{
 		var stamp = principal.FindFirst(CredentialStampClaimType)?.Value;
 
 		if (string.IsNullOrEmpty(stamp))
 		{
-			return false;
+			return SessionCheck.Invalid;
 		}
 
 		var accountKind = principal.FindFirst(Tenancy.CompanyAccessService.AccountKindClaimType)?.Value;
@@ -96,15 +152,19 @@ public static class SessionValidator
 		{
 			var settings = services.GetRequiredService<Settings.ApplicationSettings>();
 
-			return !string.IsNullOrWhiteSpace(settings.MasterUsername)
+			// the infrastructure account keeps its administrator role from the configuration
+			return new SessionCheck(
+				!string.IsNullOrWhiteSpace(settings.MasterUsername)
 				&& !string.IsNullOrWhiteSpace(settings.MasterPassword)
 				&& string.Equals(principal.Identity?.Name, settings.MasterUsername, StringComparison.OrdinalIgnoreCase)
-				&& FixedTimeEquals(stamp, ComputeCredentialStamp(settings.MasterPassword));
+				&& FixedTimeEquals(stamp, ComputeCredentialStamp(settings.MasterPassword)),
+				false,
+				null);
 		}
 
 		if (!string.Equals(accountKind, Tenancy.CompanyAccessService.UserAccountKind, StringComparison.Ordinal))
 		{
-			return false;
+			return SessionCheck.Invalid;
 		}
 
 		var userId = Tenancy.CompanyAccessService.GetUserId(principal);
@@ -112,7 +172,7 @@ public static class SessionValidator
 
 		if (userId is null || databaseContext is null)
 		{
-			return false;
+			return SessionCheck.Invalid;
 		}
 
 		// D-069: the SessionId claim of the cookie is the identifier of one server-side
@@ -122,7 +182,7 @@ public static class SessionValidator
 
 		if (!System.Guid.TryParse(sessionIdValue, out var sessionId) || sessionId == System.Guid.Empty)
 		{
-			return false;
+			return SessionCheck.Invalid;
 		}
 
 		// One round trip: besides the account itself, the same query reports whether the
@@ -135,6 +195,7 @@ public static class SessionValidator
 			{
 				user.IsActive,
 				user.Password,
+				RoleName = user.Role != null && user.Role.IsActive ? user.Role.Name : null,
 				EnrollmentPending = databaseContext.ProvisioningRequestClaims
 					.Any(claim => claim.AdminUserId == user.Id && claim.MustChangePassword),
 			})
@@ -145,7 +206,7 @@ public static class SessionValidator
 			|| account.EnrollmentPending
 			|| !FixedTimeEquals(stamp, ComputeCredentialStamp(account.Password)))
 		{
-			return false;
+			return SessionCheck.Invalid;
 		}
 
 		// The session row must exist, belong to this very user, not be revoked and not be
@@ -158,14 +219,14 @@ public static class SessionValidator
 
 		if (session is null || session.UserId != userId.Value || session.RevokedAtUtc is not null)
 		{
-			return false;
+			return SessionCheck.Invalid;
 		}
 
 		var nowUtc = System.DateTime.UtcNow;
 
 		if (session.LastSeenAtUtc < nowUtc.Subtract(IdleWindow))
 		{
-			return false;
+			return SessionCheck.Invalid;
 		}
 
 		// Throttled last-seen write: at most one UPDATE per interval per session. The
@@ -190,7 +251,7 @@ public static class SessionValidator
 			}
 		}
 
-		return true;
+		return new SessionCheck(true, true, account.RoleName);
 	}
 
 	private static bool FixedTimeEquals(string left, string right)
