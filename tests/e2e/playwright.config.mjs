@@ -18,6 +18,18 @@ const setupPort = 5091;
 const setupData = `${process.env.RUNNER_TEMP ?? '/tmp'}/faranou-e2e-setup`;
 mkdirSync(setupData, { recursive: true });
 
+// The suite runs sequentially against one server and concentrates its traffic on the shared
+// seeded installation administrator: audit views, role/membership administration and the HR
+// endpoints all share the single `api-sensitive` partition (30 requests per 60 seconds per
+// user in Production), so a fixed window fills up mid-suite and an unrelated spec receives
+// an intermittent 429. Only this E2E server instance raises the limit; Production keeps the
+// appsettings defaults and the rate-limit spec of the membership-workflow suite still proves
+// that 429 rejection and the fixed window work (same pattern as RateLimiting__Login__PermitLimit
+// in the webServer env below).
+const apiSensitivePermitLimit = 100;
+// The flood of the rate-limit spec reads the same value, so the spec and the server stay in step.
+process.env.FARANOU_E2E_API_SENSITIVE_LIMIT = String(apiSensitivePermitLimit);
+
 export default defineConfig({
   testDir: './specs',
   fullyParallel: false,
@@ -51,6 +63,9 @@ export default defineConfig({
         ApplicationSettings__MasterPassword: state.master.hash,
         // The suite signs in many times from one address.
         RateLimiting__Login__PermitLimit: '1000',
+        // The shared administrator account exceeds the Production api-sensitive allowance
+        // (see the comment on apiSensitivePermitLimit above).
+        RateLimiting__ApiSensitive__PermitLimit: String(apiSensitivePermitLimit),
       },
     },
     {
