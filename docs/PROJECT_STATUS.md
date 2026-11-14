@@ -12,15 +12,17 @@
 
 # وضعیت جاری ماژول Vendor — 2026-11-13 (بازبینی تکمیلی پس از Merge #639)
 
-## وضعیت جاری بازرگانی خارجی — بازبینی مستنداتی 2026-11-14
+## وضعیت جاری بازرگانی خارجی — ممیزی S3-0، 2026-11-14
 
-- مبنای مخزن: main@b5a6caf6217a054643ba9aed04d7c1b7af831abe.
-- S2-1 تا S2-4 طبق Roadmap/Work Log ادغام شده‌اند؛ Party، Product و داده‌های مرجع موجودند و در S3 دوباره ساخته نمی‌شوند.
-- D-086 قواعد پرونده، پیش‌فاکتور، ثبت سفارش، پروفایل فعالیت، فایل‌ها و گردش کار را Accepted کرده است؛ پیاده‌سازی قابلیت‌های S3 همچنان NotImplemented است.
-- D-087 مدل هدف را تثبیت کرده است: Tenant مرز مشتری/فضای داده و Company شرکت عملیاتی داخل آن است؛ هر دو استقرار Shared Database و Dedicated Database پشتیبانی می‌شوند. مدل کد فعلی هنوز تاریخی و Company=Tenant است؛ گذار Schema/API تا ممیزی S3-0 NotImplemented است.
-- S3 از نظر تصمیم کسب‌وکاری آماده شروع پس از Merge این بسته مستنداتی است؛ P-4/P-5 در D-080 بازند و رفتارهای وابسته به آن‌ها از محدوده S3 کنار گذاشته شده‌اند.
-- این PR فقط مستندات را تغییر می‌دهد؛ هیچ کد، Entity، API، Migration، داده یا تنظیم runtime تغییر نکرده است.
-- محدودیت باقی‌مانده: روش اعمال Migrationهای Trade در نصب مشتری نیازمند تصمیم/کار جداگانه است؛ این PR آن را تغییر نمی‌دهد.
+- مبنای ممیزی: main@b4d38c0999ff1db7c2f8cc9bb78da1c55b27a6ad.
+- S2-1 تا S2-4 ادغام شده‌اند؛ Party، Product و داده‌های مرجع موجودند و در S3 دوباره ساخته نمی‌شوند.
+- D-086 قواعد منتخب کسب‌وکار S3 را Accepted کرده است؛ خود سند TRADE_DESIGN_V3_2.md همچنان Proposed است و همه جزئیات آن Approved تلقی نمی‌شوند.
+- D-087 مدل هدف Tenant/Company را تثبیت کرده است؛ کد فعلی هنوز Company=Tenant است و گذار Schema/API NotImplemented است.
+- ممیزی ایستای Core/Trade انجام شد: Core Snapshot برابر ۳۳ جدول و ۲۰ Migration؛ Trade Snapshot برابر پنج جدول و یک Migration که سه جدول ایجاد می‌کند. این اعداد وضعیت زنده دیتابیس را اثبات نمی‌کنند.
+- یافته‌های اصلی: Company TenantId ندارد؛ CompanyAccess/WorkContext و Trade هنوز TenantId را به‌عنوان CompanyId تفسیر می‌کنند؛ گروه B در V3.2 نیازمند TenantId+CompanyId است؛ گروه C نیازمند tenant boundary و مجوز صریح بین‌شرکتی است.
+- اسکریپت فقط‌خواندنی SQL Server در scripts/audits/s3-0c-sqlserver-readonly-audit.sql قرار دارد. اجرای آن و بررسی __EFMigrationsHistory و __TradeMigrationsHistory واقعی هنوز انجام نشده است.
+- P-4/P-5 از D-080 و D-083 همچنان Proposed/NeedsApproval هستند؛ رفتارهای وابسته نباید ضمنی پیاده‌سازی شوند.
+- هیچ Entity، API، Migration، Schema، داده یا تنظیم runtime تغییر نکرده است. جزئیات و ماتریس اولیه در handoffs/ISSUE-397-s3-0-tenant-company-audit.md ثبت شده‌اند.
 
 
 **مبنای جاری:** `main@8e58ad6dd9c8943845df6e328577d6816812c2b3`؛ merge commit PR #639 در 2026-11-13T07:50:14Z.
