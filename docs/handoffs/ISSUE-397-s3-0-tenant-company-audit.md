@@ -256,3 +256,55 @@ Migrationهای قدیمی‌تر با ProductVersion `10.0.13` و موارد ج
 6. پیش از طراحی Migration باید روشن شود این دیتابیس محلی نمایندهٔ چه سناریوی نصب/داده‌ای است و وضعیت Trade tables در محیط هدف چگونه باید ایجاد شود.
 
 **محدودهٔ بررسی:** فقط خواندن خروجی SELECT-only اپراتور؛ بدون اتصال مستقیم، اجرای SQL از سمت ممیز، تغییر Schema، تغییر داده، ساخت Entity/API یا اجرای Migration.
+
+
+## 13. ممیزی مسیرهای داده و دسترسی — S3-0d-b (دور اول)
+
+**مبنای بررسی:** شاخه `main` پس از Merge PR #652؛ بررسی read-only فایل‌های Source و جست‌وجوی کد. این دور، inventory اولیهٔ مسیرهای Core/Identity/HR/Trade/Provisioning/Corporate Group/Audit را ثبت می‌کند؛ به معنی تأیید کامل همهٔ Queryها، endpointها یا تست‌های isolation نیست.
+
+### 13.1 ماتریس مالکیت Entity و داده
+
+| حوزه / Entity | وضعیت فعلی در Source | طبقه‌بندی هدف D-087 / اقدام لازم |
+|---|---|---|
+| Company | فاقد TenantId؛ دارای CustomerBoundaryId اختیاری | Company-owned زیر Tenant؛ رابطه Company→Tenant باید مستقل و معتبر شود؛ CustomerBoundaryId جدا باقی بماند |
+| FiscalPeriod | TenantId غیرnullable با FK به Company.Id | Company-owned؛ در هدف TenantId + CompanyId؛ دوره همچنان منبع مشترک زیرسیستم‌هاست |
+| CompanyRole / UserCompanyMembership | TenantId عملاً CompanyId؛ Role و Membership با کلیدهای مرکب tenant-scoped | Company-owned؛ Tenant و Company باید جدا شوند؛ membership همچنان منبع دسترسی عملیاتی است |
+| CompanyMembershipRequest | DestinationTenantId در API از DestinationCompanyId پر می‌شود | درخواست بین‌شرکتی؛ فیلد فعلی معنای Company مقصد دارد؛ باید در مدل هدف از Tenant مقصد و Company مقصد تفکیک شود |
+| HR: CompanyEmployee، Assignment، Photo، OrganizationalUnit، Position | پنج Entity از هشت Entity دارای TenantId؛ FKهای مرکب برای نگهداری تعلق فرزند به شرکت | Company-owned؛ TenantId + CompanyId؛ HR نباید مجوز عملیاتی ایجاد کند |
+| SecurityAuditEvent | TenantId nullable؛ CompanyId ندارد | نیازمند طبقه‌بندی هر Event به system/tenant/company؛ شناسه‌های درخواستی تأییدنشده نباید به‌عنوان scope معتبر ثبت شوند |
+| UserSession / User / LoginLog | هویت و نشست در سطح Identity Realm/نصب؛ UserSession فقط UserId دارد | هویت مستقل از Tenant؛ نشست به User تعلق دارد؛ Company/Tenant authorization در هر درخواست باقی بماند |
+| ProvisioningRequestClaim | CompanyId و FiscalPeriodId دارد؛ رابطه دوره/شرکت فعلاً از legacy TenantId عبور می‌کند | رکورد idempotency/provisioning در سطح نصب/درخواست؛ Company و Tenant باید بدون استنتاج از CustomerReference یا ParentCompanyId نگاشت شوند |
+| CorporateGroup / CorporateGroupMember / OwnershipRelationship و Consolidation | دسترسی از CompanyAccessService؛ CustomerBoundaryId برای محدودیت گروه بررسی می‌شود | ساختار گروهی، مالکیت و Tenant سه مفهوم مستقل‌اند؛ گروه/مالکیت به‌تنهایی دسترسی یا تعلق Tenant ایجاد نمی‌کند؛ گروه C نیازمند Tenant مشترک و مجوز صریح طرفین است |
+| Trade: Party، PartyRoleAssignment، PartyBankAccount، Product، ProductIdentifier | TradeEntity فقط TenantId دارد؛ Storeها فقط TenantId را فیلتر می‌کنند؛ Adapter مقدار Company جاری را در TradeAccessContext.TenantId قرار می‌دهد | Party/Product و فرزندان Company-owned؛ TenantId + CompanyId؛ uniqueness کسب‌وکاری در Company؛ migration فعلی فقط بخشی از جداول را ایجاد می‌کند |
+| داده مرجع Trade (Vessel، Currency، Country، Port و ...) | هنوز در این دور به‌صورت Entity-by-Entity در کد جاری راستی‌آزمایی نشده | فقط در صورت global و غیرقابل سفارشی‌سازی بودن Global؛ در غیر این صورت مالکیت Tenant/Company باید تعیین شود |
+
+### 13.2 مسیرهای دسترسی و نوشتن بررسی‌شده
+
+- `CompanyAccessService`: عضویت فعال، شرکت فعال، کاربر فعال و نقش فعال را از دیتابیس می‌خواند؛ اما `membership.TenantId` را به‌عنوان شناسه Company تفسیر می‌کند. این کنترل fail-closed فعلی مفید است، ولی مدل هدف D-087 را پیاده نکرده است.
+- `WorkContextService`: فهرست دوره‌ها و اعتبارسنجی انتخاب دوره با `FiscalPeriod.TenantId == CompanyId` انجام می‌شود؛ کوکی فقط انتخاب را نگه می‌دارد و در خواندن مجدد با دیتابیس اعتبارسنجی می‌شود. پس از گذار، باید هم تعلق Company به Tenant و هم تعلق دوره به همان Company کنترل شود.
+- `TradeAuthorizationAdapter`: context را از WorkContext معتبر و SessionId احراز‌شده resolve می‌کند؛ مجوز را از CompanyAccessService می‌گیرد. در حال حاضر CompanyId جاری در property با نام TenantId حمل می‌شود؛ نباید این نام/مقدار به‌عنوان Tenant واقعی تعبیر شود.
+- `PartyStore` و `ProductStore`: List/Find/Update/Unique checks همگی TenantId predicate دارند و query filter سراسری ندارند؛ چون Adapter مقدار CompanyId را می‌فرستد، scope واقعی فعلی Company است. پس از تغییر مدل باید predicate و کلیدها هر دو TenantId و CompanyId را اعمال کنند.
+- `CompanyUserProvisioningEndpoints`: عضویت داخلی را با `TenantId = companyId` ایجاد می‌کند؛ این فقط قرارداد legacy است. نقش/مجوز به‌صورت ضمنی اعطا نمی‌شود.
+- `CompanyMembershipRequestEndpoints`: شناسه Company مقصد در ستون `DestinationTenantId` نوشته می‌شود؛ CustomerBoundaryId برای کشف/محدودسازی مقصد استفاده شده، اما اثبات تعلق دو Company به Tenant مشترک نیست.
+- `CustomerProvisioningApplyService`: مسیر provisioning مقدار TenantId را از Company.Id می‌سازد؛ این منبع معتبر Tenant در مدل هدف نیست و باید در S3-0e به payload/Company binding معتبر جداگانه متصل شود.
+- `HrOrganizationalStructureEndpoints` و `HrEmployeePhotoEndpoints`: scope شرکت و permission هر درخواست بررسی می‌شود؛ queryهای HR از TenantId برابر CompanyId استفاده می‌کنند. عکس پرسنلی به‌صورت BLOB در SQL Server نگهداری می‌شود؛ این استثنا با تصمیم فایل‌های Trade که خارج SQL نگهداری می‌شوند یکی نیست.
+- `CorporateGroupService`: مجوز owner company و CustomerBoundaryId مشترک را کنترل می‌کند؛ CustomerBoundaryId جایگزین TenantId نیست. برای روابط چندشرکتی هدف، تطبیق Tenant طرفین و مجوز مستقل باید صریح باشد.
+- `SecurityAuditAdministrationEndpoints`: گزارش امنیتی مسیر نصب/مدیر نصب است و فیلتر company در مدل فعلی از فیلد TenantId legacy استفاده می‌کند؛ دامنهٔ رویدادهای system/tenant/company و معنای فیلتر باید جداگانه تثبیت شود.
+- `AuthenticationService` و `UserSession`: احراز هویت و نشست در سطح نصب/Identity Realm هستند؛ نشست به User وصل است و Company context بعد از ورود انتخاب می‌شود. نبود TenantId روی UserSession به‌خودی‌خود نقص نیست، مشروط به باقی‌ماندن authorization شرکت در هر درخواست.
+
+### 13.3 فایل‌ها، پردازش‌های پس‌زمینه و Migration
+
+- HR employee photo در جدول `CompanyEmployeePhotos` به‌صورت BLOB ذخیره می‌شود و endpointهای مجاز GET/PUT/DELETE دارد.
+- طبق قرارداد پذیرفته‌شده Trade، باینری اسناد Trade باید خارج SQL Server و metadata آن company-scoped باشد؛ مدل `TradeDocument`/DocumentVersion و storage adapter هنوز پیاده‌سازی نشده‌اند.
+- در جست‌وجوی Source، BackgroundService مرتبط با این دامنه فقط `VendorAuditCheckpointBackgroundService` در Host مستقل Vendor پیدا شد؛ در این دور job بازرگانی/Core که Tenant/Company data را پردازش کند مشاهده نشد. این نتیجه محدود به جست‌وجوی کد فعلی است.
+- Migration host همچنان شکاف مستقل S3-0f است: `--migrate` فقط Core را اجرا می‌کند؛ تست Integration هر دو Context را روی دیتابیس disposable اجرا می‌کند و جایگزین مسیر نصب مشتری نیست.
+
+### 13.4 محدودیت‌ها و کار باقیمانده
+
+1. این دور، Entityها و مسیرهای شناخته‌شده مرتبط با TenantId، HR، membership، Trade، provisioning، group و audit را بررسی کرده است؛ همهٔ endpointهای نصب، export، گزارش، raw SQL، bulk operation و همهٔ تست‌های isolation هنوز به‌صورت سطر‌به‌سطر ردیابی نشده‌اند.
+2. مدل‌های global/reference و تمام موجودیت‌های V3.2 باید در ماتریس نهایی تکمیل شوند؛ V3.2 همچنان Proposed است و D-086 فقط قواعد منتخب را Accepted کرده است.
+3. وضعیت واقعی ردیف‌ها و مقدار TenantId در دیتابیس Farano-Local بررسی نشده؛ اسکریپت SQL فقط metadata و Migration History را خوانده است.
+4. S3-0d-b در این دور **در حال انجام** باقی می‌ماند؛ این یادداشت فقط دور اول inventory است و معیار تکمیل کامل را ادعا نمی‌کند.
+5. هیچ Entity، API، Query، Migration، Schema، داده، فایل یا تنظیم runtime تغییر نکرده است. Build/Test اجرا نشده؛ این PR مستنداتی است.
+
+**گام بعدی:** ادامهٔ inventory روی تمام endpointهای Core/HR/Trade و مسیرهای export/report/raw SQL، بررسی تست‌های مثبت/منفی isolation، تکمیل داده‌های global و سپس ثبت ماتریس Current→Target نهایی. S3-0e، S3-0f و S3-0g تا تصمیم/خروجی مستقل باز می‌مانند.
