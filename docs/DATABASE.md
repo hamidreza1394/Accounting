@@ -113,3 +113,34 @@
 - FK به اطلاعات پایه (Party، Product و …) `Restrict`/`NoAction` باشد؛ حذف آبشاری اسناد و سوابق به‌واسطهٔ حذف اطلاعات پایه ممنوع است (هم‌راستا با «همه FKها Restrict» در V3.2 و `CORPORATE_GROUPS_DATA_MODEL.md`).
 - رکورد استفاده‌شده با غیرفعال‌سازی مدیریت می‌شود؛ شکل حذف رکورد استفاده‌نشده (فیزیکی یا `SoftDelete`/`IsDeleted`) به پرسش Q-1 در D-083 وابسته است، چون V3.2 حذف فیزیکی در Trade را پیش‌بینی نکرده است. ایندکس‌های یکتای فعلی Party/Product با `[IsDeleted] = 0` فیلتر می‌شوند و `IsActive` در آن نیست (Q-4).
 - هیچ Migration یا تغییر Schema با این بخش انجام نمی‌شود.
+
+## Migration Host: Core و Trade — PR-1 (S3-0f، 2026-11-14)
+**اصل:** Migration متعلق به دیتابیس است؛ مجوز استفاده از ماژول متعلق به Tenant یا نصب اختصاصی. این دو با هم ترکیب نمی‌شوند و `--migrate` هیچ Entitlement را نمی‌خواند یا تغییر نمی‌دهد.
+
+**قبل:** `Server.dll --migrate` فقط `DatabaseContext` (Core) را اجرا می‌کرد؛ `TradeDbContext` (تاریخچهٔ `__TradeMigrationsHistory`، Assembly مستقل) هیچ مسیر اجرایی نداشت. **بعد:** `Infrastructure.Hosting.DatabaseMigrationHost` یک نقطهٔ اجرا برای هر دو Context است.
+
+| فرمان | رفتار |
+|---|---|
+| `Server.dll --migrate` | فقط Core. Trade اجرا نمی‌شود (پیش‌فرض امن). |
+| `Server.dll --migrate --include-trade` | اول Core، سپس Trade؛ اگر Core شکست بخورد Trade شروع نمی‌شود. |
+
+**کد خروج:** `0` موفق؛ `1` شکست Core؛ `2` شکست Trade؛ `3` قفل گرفته نشد؛ `4` وضعیت ناسازگار Trade (جدول بدون History).
+
+**Shared و Dedicated (همان فرمان؛ تفاوت فقط در اینکه چه کسی و کِی `--include-trade` را می‌زند):**
+```bash
+# دیتابیس مشترک ابری: Core همیشه؛ Trade یک‌بار برای کل دیتابیس، هنگام فعال‌شدن اولین مشتری Trade (نه به ازای هر Tenant)
+ConnectionStrings__ConnectionString="<مشترک>" dotnet Server.dll --migrate
+ConnectionStrings__ConnectionString="<مشترک>" dotnet Server.dll --migrate --include-trade
+# نصب اختصاصی: Trade فقط وقتی برای همان نصب خریداری و فعال شده است
+dotnet Server.dll --migrate                 # پیش از خرید Trade
+dotnet Server.dll --migrate --include-trade # پس از خرید، بدون نصب مجدد
+```
+**قرارداد برای آینده (در این PR پیاده نشد):** اتصال خرید/فعال‌سازی Trade به اجرای `--include-trade` در PR جداگانه انجام می‌شود؛ نقطهٔ اجرا `DatabaseMigrationHost.RunAsync(includeTrade)` است. تشخیص Shared/Dedicated از روی Connection String یا تعداد شرکت‌ها انجام نمی‌شود؛ Deployment Mode معتبری در پروژه وجود ندارد و تنظیم جدیدی افزوده نشد.
+
+**قفل هم‌زمانی:** `sp_getapplock` (Exclusive، `LockOwner = 'Session'`، `LockTimeout = 0`) روی یک اتصال اختصاصی بدون Pool با منبع `Farano.DatabaseMigration:<نام دیتابیس>`. اجرای دوم بلافاصله با کد `3` رد می‌شود. قفل در موفقیت و شکست با `sp_releaseapplock` آزاد می‌شود و با بسته‌شدن اتصال (قطع اجرا یا مرگ پروسه) سرور آن را آزاد می‌کند. اگر دیتابیس هنوز وجود ندارد (EF آن را می‌سازد)، قفل از طریق `master` با همان نام منبع گرفته می‌شود.
+
+**شکست و اجرای مجدد:** هر Context تاریخچهٔ مستقل دارد و Migrationهای موفق دوباره اجرا نمی‌شوند. شکست Trade پس از موفقیت Core نتیجه را `2` می‌کند؛ اجرای مجدد Core را «به‌روز» می‌بیند و از Trade ادامه می‌دهد. خطاها فقط نوع استثنا، شمارهٔ خطای SQL و پیام با تنظیمات اتصال حذف‌شده (`Password`, `User ID`, `Data Source`, ...) چاپ می‌کنند.
+
+**دیتابیس قدیمی بدون History:** اگر جدول‌های Schema `trade` وجود دارند و `__TradeMigrationsHistory` نیست یا خالی است، اجرا با کد `4` متوقف می‌شود. هیچ Baseline خودکار، حذف یا بازسازی انجام نمی‌شود. روش بازیابی (دستی، با تأیید مالک): ۱) پشتیبان‌گیری کامل؛ ۲) مقایسهٔ Schema جدول‌های `trade` با Migration `20261113072823_InitialTradeMasterData` (`dotnet ef migrations script --context TradeDbContext`)؛ ۳) فقط پس از اثبات هم‌ارزی، تصمیم دربارهٔ ثبت ردیف History با مالک؛ ۴) در غیر این صورت انتقال داده به Schema جدید. Baseline/Backfill در PR-1 انجام نشد. در `Farano-Local` جدول‌های Trade ممکن است اصلاً نباشند؛ در این حالت اجرای عادی `--include-trade` آن‌ها را می‌سازد.
+
+**خارج از دامنه (Backlog):** هشدار «Migration Trade در انتظار» هنگام شروع برنامه (امروز فقط Core گزارش می‌شود).

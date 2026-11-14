@@ -3163,3 +3163,9 @@
 - **یافته:** نقص Path Traversal در `Admin/FileManager` (Medium) اصلاح شد؛ سایر مسیرهای مدیریتی و تنها Export CSV بدون نقص مستقل؛ موارد وابسته به OD-1 در Backlog.
 - **تست:** مجموعهٔ کامل روی SQL Server: ۱۳۹۲ موفق، ۱۰ Skip، ۰ شکست.
 - **Handoff:** `docs/handoffs/ISSUE-UNNUMBERED-pr-e1b-admin-surface-audit.md`.
+
+## 2026-11-14 — PR-1: Migration Host برای Core و Trade (S3-0f)
+- **مبنا:** `origin/main@40e125a`؛ D-087، OD-17.
+- **انجام‌شده:** `DatabaseMigrationHost`؛ `--migrate` فقط Core، `--migrate --include-trade` اول Core سپس Trade؛ قفل `sp_getapplock` جلسه‌ای؛ توقف (کد ۴) روی جدول Trade بدون History؛ کد خروج مشخص؛ خطاهای بدون تنظیمات اتصال.
+- **محدوده:** فقط `Server/Program.cs`، `Server/Infrastructure/Hosting/DatabaseMigrationHost.cs`، تست و مستندات؛ بدون Schema/Migration/Backfill/Baseline/Entitlement.
+- **Handoff:** `docs/handoffs/ISSUE-UNNUMBERED-pr-1-migration-host-core-trade.md`.

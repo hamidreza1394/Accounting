@@ -210,3 +210,6 @@ cd ClientApp && npm ci && npm run typecheck && npm test && npm run build && npm 
 | extraction | contract tests بدون Entity داخلی | reference مستقیم به DbContext/Entity ماژول دیگر رد شود |
 
 تست Integration باید روی SQL Server provider واقعی اجرا شود؛ تست Host/cookie/anti-forgery، migration تازه و ارتقایافته، stale-session و cross-tenant نیز لازم است. تست نوشته‌شده بدون اجرای CI/SQL Server Verified نیست.
+
+## Migration Host — PR-1
+`DatabaseMigrationHostSqlServerTests` (۸ تست، SQL Server واقعی با `FARANOU_TEST_SQLSERVER`؛ بدون آن Skip): دیتابیس خالی Core-only (Trade اجرا نمی‌شود)؛ Core سپس Trade با History جدا و اجرای مجدد بدون تکرار؛ جدول Trade بدون History ⇒ توقف بدون تغییر؛ اجرای هم‌زمان ⇒ رد با کد ۳ و آزاد‌بودن قفل بعد از پایان؛ آزادسازی قفل پس از شکست؛ شکست Core ⇒ Trade شروع نمی‌شود و پیام بدون Password/Host/User؛ شکست Trade ⇒ غیرموفق و اجرای مجدد ادامه می‌دهد؛ Redact. شکست‌های Core/Trade با Runner شکست‌خورنده شبیه‌سازی شده‌اند (از بیرون قابل تولید نیستند). گارد‌ها با ۴ جهش (قفل همیشه موفق، حذف گارد legacy، اجرای Trade بدون درخواست، اجرای Trade پس از شکست Core) آزموده شدند و هر کدام تست مربوط را شکستند.

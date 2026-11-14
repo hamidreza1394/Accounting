@@ -354,9 +354,18 @@ var applyMigrationsOnStartup = !connectionLoadedFromLocalSettings
 
 if (!setupRequired && migrateOnly)
 {
+    // Core always runs first; Trade only when the operator asks for it explicitly (--include-trade).
+    // The same command serves shared and dedicated databases: migrations belong to the database.
+    var includeTrade = args.Any(arg => string.Equals(arg, "--include-trade", StringComparison.OrdinalIgnoreCase));
     using var scope = app.Services.CreateScope();
-    var migrator = scope.ServiceProvider.GetRequiredService<Data.IDatabaseSchemaMigrator>();
-    await migrator.MigrateAsync();
+    var coreContext = scope.ServiceProvider.GetRequiredService<Data.DatabaseContext>();
+    var tradeContext = scope.ServiceProvider.GetRequiredService<Faranou.Modules.Trade.Infrastructure.Persistence.TradeDbContext>();
+    var migrationHost = new Infrastructure.Hosting.DatabaseMigrationHost(
+        coreContext.Database.GetConnectionString()!,
+        new Infrastructure.Hosting.EfContextMigrationRunner("Core", coreContext),
+        new Infrastructure.Hosting.TradeMigrationRunner(tradeContext),
+        Console.Out);
+    Environment.ExitCode = (int)await migrationHost.RunAsync(includeTrade);
     return;
 }
 
