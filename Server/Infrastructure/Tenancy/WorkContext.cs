@@ -41,6 +41,10 @@ public sealed record WorkContext(CompanyAccess Company, FiscalPeriodInfo FiscalP
 	/// server; a read-only (closed) period is entered for viewing and reporting only.
 	/// </summary>
 	public bool AllowsWrites => FiscalPeriod.AccessMode == WorkAccessMode.ReadWrite;
+
+	/// <summary>The tenant and company of this verified context (see <see cref="OwnershipScope" />).</summary>
+	[System.Text.Json.Serialization.JsonIgnore]
+	public OwnershipScope Ownership => OwnershipScope.FromLegacyCompany(this);
 }
 
 /// <summary>What the client has to do after sign-in (decided by the server, never by the client).</summary>

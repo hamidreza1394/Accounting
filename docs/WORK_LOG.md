@@ -3143,3 +3143,9 @@
 - **نتیجه:** SQL Server 2022 RTM-CU28 (16.0.4325.4)، EF Core SqlServer 10.0.14؛ 5/5 تست جدید و `Template.Tests` کامل 1237 موفق/0 ناموفق/10 Skip. Runner ویندوزی و Vendor/E2E/ClientApp اجرا نشد (Not Run).
 - **محدوده:** فقط تست، یک ردیف در `docs/TESTING.md` و مستندات؛ بدون Migration اپلیکیشن، Schema، داده، CI یا Trade Host.
 - **Handoff:** `docs/handoffs/ISSUE-397-pr-ss-1-sqlserver-validation-controlled-rename.md`.
+
+## 2026-11-14 — S3-0 PR-3: قراردادهای مالکیت Tenant/Company و تست‌های معماری
+- **مبنا:** `origin/main@ad0c44a92ac164fded57601692f3a6dab008df1a`؛ Issue #397؛ D-087.
+- **انجام‌شده:** `TenantScope`/`CompanyScope`/`OwnershipScope` (تنها منبع: `CompanyAccess`/`WorkContext` تأییدشده سمت سرور؛ نقطهٔ واحد معادلهٔ Legacy Tenant=Company)، `WorkContext.Ownership`، ۱۰ تست معماری/رفتاری و بخش SECURITY.md. بدون Global Query Filter.
+- **محدوده:** فقط Server/Tenancy، تست و مستندات؛ بدون Entity/Migration/Schema/Backfill/Trade/تغییر رفتار Auth.
+- **Handoff:** `docs/handoffs/ISSUE-397-pr-3-tenant-company-ownership-contracts.md`.
