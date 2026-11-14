@@ -3088,6 +3088,21 @@
 - هیچ SQL تغییردهنده، Migration، DDL/DML، Build یا Test اجرا نشد. جزئیات در handoff S3-0 ثبت شد؛ S3-0d-b/e/f/g باز می‌مانند.
 
 
+## 2026-11-14 — S3-0d-b: ثبت دور اول inventory مسیرهای داده
+- **مبنا:** `main` پس از Merge PR #652؛ D-087 Accepted؛ Issue #397.
+- **بررسی Source:** CompanyAccessService، WorkContextService، TradeAuthorizationAdapter، PartyStore، ProductStore، Company/FiscalPeriod/Role/Membership/HR/Audit/Session/Provisioning entities و configurations، membership/provisioning/HR photo/audit endpoints و CorporateGroupService.
+- **یافته‌ها:** مسیر فعلی CompanyId را در TenantId legacy نگه می‌دارد؛ Trade stores فقط TenantId را فیلتر می‌کنند و adapter مقدار Company جاری را می‌دهد؛ session در سطح User است؛ HR photo در SQL BLOB است؛ Trade file storage هنوز پیاده نشده؛ CustomerBoundaryId مرز Tenant نیست.
+- **خروجی:** handoff Issue #397 بخش ۱۳؛ Roadmap و Project Status به‌روز شدند.
+- **محدودیت:** inventory همهٔ export/report/raw SQL و تست‌های isolation تکمیل نشده؛ S3-0d-b باز است. Build/Test اجرا نشد؛ فقط مستندات تغییر کرد.
+- **محدوده:** بدون تغییر runtime، API، Entity، Migration، Schema یا داده.
+
+
+### تکمیل جست‌وجوی SQL خام و تست‌های isolation در S3-0d-b
+- FromSqlRaw فقط در TpmAnchoredOfflineRevocationStateStore؛ ExecuteSqlRawAsync فقط برای sp_getapplock در provisioning، license import و enrollment؛ ExecuteUpdateAsync فقط در UserSessionService/SessionValidator/UserPasswordService (لغو نشست پس از تغییر گذرواژه) برای نشست‌های کاربر.
+- تست‌های موجود: CompanyAccessTests، TradeAuthorizationAdapterTests، TradeEndpointGateTests و DatabaseModelTests. این تست‌ها وضعیت legacy را بررسی می‌کنند و جای تست Tenant isolation هدف را نمی‌گیرند.
+- گزارش در handoff بخش 13.5 اضافه شد؛ inventory گزارش‌ها/Exportها و تست‌های cross-tenant SQL Server هنوز باز است.
+
+
 ## 2026-11-14 — ریشه‌یابی و اصلاح شکست متناوب E2E با 429 در سیاست api-sensitive
 
 - **مبنای ریشه‌یابی:** لاگ کامل Job `e2e` اجرای 43585704506 (نتیجه: 1 failed / 48 passed). درخواست failing، `GET /api/v1/companies/{companyId}/org/employees/{employeeId}` در `hr-structure.spec.mjs:195` بود با پاسخ 429 (بدنه Problem فارسی محدودسازی نرخ).

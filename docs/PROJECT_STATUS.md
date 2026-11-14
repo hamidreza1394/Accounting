@@ -718,3 +718,21 @@
 - timestamp خروجی `2026-11-18` گزارش شده که از تاریخ ثبت این یادداشت جلوتر است؛ زمان سیستم نیازمند تأیید است.
 - S3-0c-b برای Farano-Local تکمیل شد. هیچ Migration، DDL، DML یا تغییر runtime اجرا نشد. S3-0d-b، S3-0e، S3-0f و S3-0g همچنان بازند.
 - جزئیات و محدودیت‌های شواهد در `docs/handoffs/ISSUE-397-s3-0-tenant-company-audit.md`، بخش ۱۲ ثبت شد.
+
+
+## 2026-11-14 — S3-0d-b: دور اول ممیزی مسیرهای داده و دسترسی
+
+- PR #652 با merge commit `d81bb29dc686d582a57904b2fc5b05ec3b7f45d1` ادغام شد؛ S3-0c-b برای Farano-Local تکمیل است.
+- دور اول S3-0d-b روی Entityهای Core/Identity/HR/Trade، مسیرهای CompanyAccess/WorkContext، provisioning، membership requests، CorporateGroup، audit، فایل عکس HR و jobهای شناخته‌شده انجام شد.
+- یافته محوری: مسیرهای فعلی CompanyAccessService، WorkContextService، provisioning، HR و Trade در عمل CompanyId را در فیلد TenantId حمل می‌کنند. این قرارداد legacy است و D-087 را پیاده نمی‌کند.
+- UserSession در سطح User/Identity Realm است و Company context بعد از ورود انتخاب و در هر درخواست مجدداً اعتبارسنجی می‌شود؛ CompanyId/TenantId روی Session الزام هدف نیست.
+- عکس HR در SQL به‌صورت BLOB است؛ فایل‌های Trade طبق طراحی خارج SQL خواهند بود، اما storage مدل/adapter هنوز پیاده نشده است.
+- S3-0d-b هنوز کامل نیست: همه endpointهای export/report/raw SQL، تست‌های isolation و داده‌های مرجع global نیازمند بررسی تکمیلی‌اند. S3-0e/f/g باز هستند.
+- فقط مستندات تغییر می‌کند؛ هیچ کد، Entity، API، Schema، Migration یا داده‌ای تغییر نکرده و Build/Test اجرا نشده است.
+- جزئیات: `docs/handoffs/ISSUE-397-s3-0-tenant-company-audit.md` بخش ۱۳.
+
+
+### تکمیل دور اول جست‌وجوی مسیرهای داده — S3-0d-b
+- جست‌وجوی Source برای FromSqlRaw/ExecuteSqlRaw/ExecuteUpdateAsync انجام شد: FromSqlRaw فقط در state ضد rollback نصب/لایسنس؛ ExecuteSqlRaw فقط برای sp_getapplock در provisioning/import لایسنس؛ ExecuteUpdateAsync برای lifecycle نشست User در سطح Identity Realm.
+- تست‌های موجود CompanyAccess، TradeAuthorizationAdapter، Trade endpoint gate و DatabaseModel شناسایی شدند؛ این‌ها قواعد فعلی را پوشش می‌دهند، نه اثبات جداسازی Tenant مستقل Shared/Dedicated.
+- بازبینی همه گزارش‌ها/Exportها و سناریوهای SQL Server cross-tenant هدف هنوز لازم است؛ S3-0d-b باز می‌ماند.
