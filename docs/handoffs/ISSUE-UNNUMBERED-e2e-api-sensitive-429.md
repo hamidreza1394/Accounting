@@ -66,7 +66,7 @@ Error: GET employee detail after deactivate:
 | `dotnet test tests/Template.Tests -c Release` (کامل) | موفق به‌جز ۲ شکست محیطی | 1242: 1141 پاس، 99 Skip (SqlServer)، ۲ شکست `SafeExceptionRealApplicationTests` که میزبان Real Application با `DatabaseSchemaMigrator` را بالا می‌آورد و به SQL Server رابطه‌ای نیاز دارد؛ پیش‌زمینه‌ای و بی‌ربط به این تغییر (در CI همان commit، job `build-and-test` موفق است) |
 | `dotnet test tests/Vendor.Host.Tests -c Release` | اجرا نشد | پروژه VSTest-runner است و `dotnet test` این sandbox فقط Microsoft.Testing.Platform را می‌پذیرد؛ Vendor.sln جدا است و پوشش آن با CI (`vendor-ci.yml`) است |
 | `node --check` روی دو فایل تغییرکرده | موفق | — |
-| E2E کامل (job `e2e` CI) | در PR اجرا شد | نتیجه در گزارش نهایی PR ثبت می‌شود |
+| E2E کامل (job `e2e` CI) | موفق | اجرای [43591355980](https://github.com/hamidreza1394/Accounting/actions/runs/43591355980) روی commit `562d5d64` و PR #654: **49 passed / 0 failed**؛ تست #44 (`hr-structure.spec.mjs:57` — همان تست شکست‌خورده با GET بعد از deactivate) ✓ و تست #43 (آزمون flood محدودسازی حساس پس از تغییر) ✓ |
 | `git diff --check` | موفق | بدون خطا |
 
 محدودیت محیط: Docker و SQL Server در sandbox در دسترس نبود؛ `HrOrganizationalStructureSqlServerTests` و سایر تست‌های SqlServer به‌جای اجرا «Skip» شدند و اثبات واقعی E2E به CI پرکردگی شد.
@@ -85,5 +85,5 @@ Error: GET employee detail after deactivate:
 ## شناسه‌های Git
 
 - Branch: `fix/e2e-api-sensitive-rate-limit` (از `main`)
-- Commit: (پس از push تکمیل می‌شود)
-- Pull Request: (پس از ساخت تکمیل می‌شود؛ merge نمی‌شود)
+- Commit: `562d5d64c03de9e8d42bfc54d46dbeaca3190e01`
+- Pull Request: https://github.com/hamidreza1394/Accounting/pull/654 (هدف: `main`؛ merge نمی‌شود و در انتظار بازبینی است)
