@@ -312,19 +312,20 @@ class RenameIsStillRefusedTests(PinnedMappingBase):
         self.assertIn("HasColumnName", message)
         self.assertIn("RoleCode", message)
 
-    def test_rename_operations_are_not_in_the_accepted_operations(self):
-        for operation in ("RenameColumn", "RenameIndex"):
+    def test_rename_operations_are_parsed_but_never_accepted_without_the_allowlist(self):
+        # PR-2b: the parser reads the renames; the guard only accepts them for a migration
+        # on the reviewed ALLOWED_RENAMES allowlist (see test_migration_guard_rename.py).
+        import verify_migration_model as vm
+
+        for operation, kind in (("RenameColumn", "rename_column"), ("RenameIndex", "rename_index")):
             with self.subTest(operation=operation):
                 source = (
                     "protected override void Up(MigrationBuilder migrationBuilder)\n{\n"
                     f'    migrationBuilder.{operation}(name: "A", table: "T", newName: "B");\n'
                     "}\nprotected override void Down(MigrationBuilder migrationBuilder)\n{\n}\n"
                 )
-                import verify_migration_model as vm
-
-                with self.assertRaises(vm.VerificationError) as context:
-                    vm.parse_operations(source, "up")
-                self.assertIn(operation, str(context.exception))
+                self.assertEqual(vm.parse_operations(source, "up"), [(kind, "T", "A", "B")])
+                self.assertEqual(vm.ALLOWED_RENAMES, {})
 
 
 class GeneratedFileParserFailClosedTests(unittest.TestCase):

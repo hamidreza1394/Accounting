@@ -25,6 +25,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import copy
 import os
 import re
 import sys
@@ -113,7 +114,16 @@ def parse_create_tables(source: str) -> dict[str, dict[str, Any]]:
 
 # The operations that a migration may contain, per method. Everything else is refused
 # (fail-closed): an operation that is not listed here is not verified, so it must not pass.
+# The renames that a migration may contain, reviewed by hand and listed here (PR-2b). The key
+# is the 14 digit id of the migration; the value lists the renamed columns and indexes as
+# (table, old name, new name). A migration with a RenameColumn/RenameIndex that is not listed
+# is refused, and a listed migration may contain nothing else (see 'verify_rename_step').
+# No migration of the repository renames anything yet, so the list is empty.
+ALLOWED_RENAMES: dict[str, dict[str, list[tuple[str, str, str]]]] = {}
+
 UP_OPERATIONS = {
+    "RenameColumn",
+    "RenameIndex",
     "AddColumn",
     "AlterColumn",
     "CreateIndex",
@@ -122,6 +132,8 @@ UP_OPERATIONS = {
     "AddUniqueConstraint",
 }
 DOWN_OPERATIONS = {
+    "RenameColumn",
+    "RenameIndex",
     "DropColumn",
     "AlterColumn",
     "CreateIndex",
@@ -146,6 +158,8 @@ ADD_FOREIGN_KEY_ARGUMENTS = {
     "onDelete",
 }
 NAME_TABLE_ARGUMENTS = {"name", "table"}
+RENAME_ARGUMENTS = {"name", "table", "newName"}
+RENAME_KINDS = {"rename_column", "rename_index"}
 UNIQUE_CONSTRAINT_ARGUMENTS = {"name", "table", "column", "columns"}
 CREATE_INDEX_ARGUMENTS = {"name", "table", "column", "columns", "unique", "filter", "clustered"}
 ALTER_COLUMN_ARGUMENTS = {
@@ -253,7 +267,19 @@ def parse_operations(
                 f"does not verify: '{kind}'."
             )
 
-        if kind == "AddColumn":
+        if kind in {"RenameColumn", "RenameIndex"}:
+            arguments = _call_arguments(arguments_text, kind, RENAME_ARGUMENTS)
+            if set(arguments) != RENAME_ARGUMENTS:
+                raise VerificationError(f"'{kind}' needs the arguments name, table and newName.")
+            operations.append(
+                (
+                    "rename_column" if kind == "RenameColumn" else "rename_index",
+                    _string(arguments["table"]),
+                    _string(arguments["name"]),
+                    _string(arguments["newName"]),
+                )
+            )
+        elif kind == "AddColumn":
             arguments = _call_arguments(arguments_text, kind, ADD_COLUMN_ARGUMENTS)
             operations.append(
                 (
@@ -844,17 +870,171 @@ def migration_chain(directory: str) -> list[str]:
     )
 
 
+def apply_renames(model: dict[str, Any], entry: dict[str, list[tuple[str, str, str]]]) -> dict[str, Any]:
+    """The model that results from the reviewed renames of an allowlist entry, nothing else.
+
+    A renamed column is renamed everywhere the model refers to it (keys, indexes, foreign
+    keys on both sides). The NAMES of the keys, indexes and foreign keys stay as they are:
+    they are the pins of PR-2a, so the rename is not read as a drop and re-creation of a
+    constraint. Only the indexes that the allowlist names are renamed.
+    """
+    unknown = set(entry) - {"columns", "indexes"}
+    if unknown:
+        raise MigrationModelError(f"The allowlist entry has the unknown keys {sorted(unknown)}.")
+    result = copy.deepcopy(model)
+
+    def entity_of(table: str) -> dict[str, Any]:
+        found = [item for item in result["entities"].values() if item["table"] == table]
+        if len(found) != 1:
+            raise MigrationModelError(f"The allowlisted rename names the unknown table '{table}'.")
+        return found[0]
+
+    for table, old, new in entry.get("columns", []):
+        entity = entity_of(table)
+        names = [column["name"] for column in entity["columns"]]
+        if old == new or old not in names:
+            raise MigrationModelError(f"The column '{table}.{old}' to rename does not exist.")
+        if new in names:
+            raise MigrationModelError(f"The column '{table}.{new}' already exists.")
+        swap = lambda columns: [new if column == old else column for column in columns]  # noqa: E731
+        for column in entity["columns"]:
+            if column["name"] == old:
+                column["name"] = new
+        entity["primary_key"] = swap(entity["primary_key"])
+        entity["alternate_keys"] = [swap(key) for key in entity["alternate_keys"]]
+        for index in entity["indexes"]:
+            index["columns"] = swap(index["columns"])
+        for relationship in result["relationships"]:
+            if result["entities"][relationship["dependent"]] is entity:
+                relationship["columns"] = swap(relationship["columns"])
+            principal_columns = relationship["principal_columns"]
+            if principal_columns and result["entities"][relationship["principal"]] is entity:
+                relationship["principal_columns"] = swap(principal_columns)
+
+    for table, old, new in entry.get("indexes", []):
+        entity = entity_of(table)
+        taken = {index["name"].casefold() for index in entity["indexes"]}
+        taken |= {name.casefold() for name in entity["alternate_key_names"]}
+        if entity["primary_key_name"]:
+            taken.add(entity["primary_key_name"].casefold())
+        target = [index for index in entity["indexes"] if index["name"] == old]
+        if old == new or len(target) != 1:
+            raise MigrationModelError(f"The index '{table}.{old}' to rename does not exist.")
+        if new.casefold() in taken:
+            raise MigrationModelError(f"The name '{new}' is already used in '{table}'.")
+        target[0]["name"] = new
+    return result
+
+
+def name_differences(expected: dict[str, Any], actual: dict[str, Any]) -> list[str]:
+    """The keys, indexes and foreign keys whose NAME differs between two models."""
+    problems: list[str] = []
+    hint = (
+        "a rename keeps every constraint name through an explicit pin (HasName, "
+        "HasDatabaseName, HasConstraintName) or lists an index rename in the allowlist"
+    )
+    for clr_name, wanted in expected["entities"].items():
+        described = actual["entities"].get(clr_name)
+        if described is None:
+            continue
+        table = wanted["table"]
+        if wanted.get("primary_key_name") != described.get("primary_key_name"):
+            problems.append(
+                f"The primary key name of '{table}' changes from '{wanted.get('primary_key_name')}' "
+                f"to '{described.get('primary_key_name')}'; {hint}."
+            )
+        wanted_keys = dict(zip(map(tuple, wanted["alternate_keys"]), wanted["alternate_key_names"]))
+        described_keys = dict(zip(map(tuple, described["alternate_keys"]), described["alternate_key_names"]))
+        for key in sorted(set(wanted_keys) & set(described_keys)):
+            if wanted_keys[key] != described_keys[key]:
+                problems.append(
+                    f"The alternate key name of '{table}' {list(key)} changes from "
+                    f"'{wanted_keys[key]}' to '{described_keys[key]}'; {hint}."
+                )
+        wanted_indexes = {tuple(index["columns"]): index["name"] for index in wanted["indexes"]}
+        for index in described["indexes"]:
+            before = wanted_indexes.get(tuple(index["columns"]))
+            if before is not None and before != index["name"]:
+                problems.append(
+                    f"The index name of '{table}' {index['columns']} changes from '{before}' to "
+                    f"'{index['name']}'; {hint}."
+                )
+    wanted_foreign_keys = {mm._relationship_structure_key(item): item["name"] for item in expected["relationships"]}
+    for item in actual["relationships"]:
+        before = wanted_foreign_keys.get(mm._relationship_structure_key(item))
+        if before is not None and before != item["name"]:
+            problems.append(
+                f"The foreign key name changes from '{before}' to '{item['name']}'; {hint}."
+            )
+    return problems
+
+
+def verify_rename_step(
+    migration_id: str,
+    previous_designer: dict[str, Any],
+    designer: dict[str, Any],
+    up: list[tuple[Any, ...]],
+    down: list[tuple[Any, ...]],
+    entry: dict[str, list[tuple[str, str, str]]] | None,
+) -> list[str]:
+    """Verifies a migration that renames columns or indexes (fail-closed, PR-2b)."""
+    if entry is None:
+        return [
+            f"The migration contains RenameColumn/RenameIndex but {migration_id} is not on the "
+            "reviewed ALLOWED_RENAMES allowlist of verify_migration_model.py."
+        ]
+    problems: list[str] = []
+    expected_up = [("rename_column", *item) for item in entry.get("columns", [])] + [
+        ("rename_index", *item) for item in entry.get("indexes", [])
+    ]
+    if up != expected_up:
+        problems.append(
+            "Up must contain exactly the allowlisted renames and nothing else (a rename can "
+            "not be combined with other operations).\n"
+            f"  applied:   {up}\n  expected:  {expected_up}"
+        )
+    expected_down = [(kind, table, new, old) for kind, table, old, new in reversed(expected_up)]
+    if down != expected_down:
+        problems.append(
+            "Down is not the exact reverse of the allowlisted renames of Up.\n"
+            f"  applied:   {down}\n  expected:  {expected_down}"
+        )
+    expected_model = apply_renames(previous_designer, entry)
+    differences = name_differences(expected_model, designer)
+    problems.extend(differences)
+    if not differences:
+        remaining = mm.compute_operations(expected_model, designer)
+        if remaining:
+            problems.append(
+                "The model changes by more than the allowlisted renames: "
+                f"{signatures_of(remaining)}"
+            )
+    return problems
+
+
 def verify_step(
     name: str,
     previous_designer: dict[str, Any],
     designer: dict[str, Any],
     source: str,
+    allowed_renames: dict[str, dict[str, list[tuple[str, str, str]]]] | None = None,
 ) -> list[str]:
     """Verifies one migration against the models of its own and of the previous designer."""
     added_tables = set(designer["entities"]) - set(previous_designer["entities"])
     if added_tables:
         return verify_migration_with_added_tables(
             designer_foreign_keys(designer), previous_designer, designer, designer, source
+        )
+
+    allowlist = ALLOWED_RENAMES if allowed_renames is None else allowed_renames
+    entry = allowlist.get(name[:14])
+    up_operations = parse_operations(source, "up")
+    down_operations = parse_operations(source, "down")
+    if entry is not None or any(
+        operation[0] in RENAME_KINDS for operation in up_operations + down_operations
+    ):
+        return verify_rename_step(
+            name[:14], previous_designer, designer, up_operations, down_operations, entry
         )
 
     problems: list[str] = []
@@ -953,6 +1133,15 @@ def verify(repository_root: str) -> list[str]:
     for path in paths:
         if not os.path.exists(path):
             problems.append(f"{path} is missing.")
+    if problems:
+        return problems
+
+    for migration_id in sorted(ALLOWED_RENAMES):
+        if migration_id not in {name[:14] for name in chain}:
+            problems.append(
+                f"The ALLOWED_RENAMES allowlist lists the migration {migration_id} but no such "
+                "migration exists (a stale allowlist entry)."
+            )
     if problems:
         return problems
 

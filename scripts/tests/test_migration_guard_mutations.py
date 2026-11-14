@@ -269,10 +269,19 @@ class ChainMutationTests(MutationBase):
         self.mutate(f"{SNAPSHOT}.cs", lambda t: replace_once(t, 'b.HasIndex("RoleId");', "// removed"), "verify",
                     "missing in the model snapshot")
 
+    def test_a_rename_outside_the_allowlist_is_refused(self):
+        for statement in (
+            'migrationBuilder.RenameColumn(name: "A", table: "Companies", newName: "B");',
+            'migrationBuilder.RenameIndex(name: "A", table: "Companies", newName: "B");',
+        ):
+            with self.subTest(statement=statement):
+                self.mutate(f"{BOUNDARY}.cs", lambda t, s=statement: insert_statement(t, "Up", s),
+                            "verify", "ALLOWED_RENAMES")
+
     def test_unsupported_operations_in_up_are_refused(self):
         for statement in (
             'migrationBuilder.DropColumn(name: "A", table: "Companies");',
-            'migrationBuilder.RenameColumn(name: "A", table: "Companies", newName: "B");',
+            'migrationBuilder.RenameTable(name: "A", newName: "B");',
             'migrationBuilder.DropTable(name: "Companies");',
             'migrationBuilder.InsertData(table: "Companies", column: "Id", value: 1);',
             'migrationBuilder.DropForeignKey(name: "FK_x", table: "Users");',
