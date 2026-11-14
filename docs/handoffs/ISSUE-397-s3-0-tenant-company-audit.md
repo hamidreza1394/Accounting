@@ -193,3 +193,66 @@ Party، Product، VesselCompanyNote، Proforma، OrderRegistration، ImportCase�
 - **Base:** b4d38c0999ff1db7c2f8cc9bb78da1c55b27a6ad
 - **Commit:** در PR ثبت می‌شود.
 - **Pull Request:** پس از ثبت تغییرات ایجاد می‌شود؛ Merge انجام نمی‌شود.
+
+
+## 12. الحاقیهٔ شواهد زنده SQL Server — دریافت خروجی اپراتور
+
+**وضعیت:** دریافت شد؛ ممیزی metadata و Migration History دیتابیس منتخب تکمیل شد. این الحاقیه بخش‌های قبلی گزارش را که دریافت SQL Server را «باز» یا «اجرانشده» اعلام می‌کردند، برای همین دیتابیس به‌روز می‌کند.
+
+### 12.1 مشخصات محیط و ملاحظهٔ زمان
+
+| مشخصه | مقدار گزارش‌شده |
+|---|---|
+| Database | `Farano-Local` |
+| SQL Server | `DESKTOP-75DF1LQ` |
+| ProductVersion | `16.0.1000.6` |
+| Edition | `Developer Edition (64-bit)` |
+| CapturedAt | `2026-11-18 11:03:14.1939760 +01:00` |
+
+**ملاحظهٔ ممیزی:** مقدار CapturedAt در خروجی، 2026-11-18 است؛ این تاریخ از تاریخ جاری ثبت این الحاقیه (2026-11-14) جلوتر است. مقدار عیناً از خروجی حفظ شده و ساعت سیستم/SQL Server مستقلاً تأیید نشده است. این اختلاف بر مشاهدهٔ metadata تأثیری ندارد، اما timestamp باید پیش از استفاده به‌عنوان زمان قطعی ممیزی تأیید شود.
+
+### 12.2 Schema و جدول‌های واقعی
+
+- تمام جدول‌های فهرست‌شده در خروجی در Schema برابر `dbo` هستند.
+- هیچ جدول در Schema برابر `trade` در این دیتابیس گزارش نشده است.
+- جدول `dbo.__TradeMigrationsHistory` نیز وجود ندارد؛ نتیجهٔ بخش Trade history برابر `NOT FOUND` است.
+- این نتیجه فقط وضعیت دیتابیس `Farano-Local` را اثبات می‌کند؛ دربارهٔ دیتابیس‌های دیگر یا اجرای Trade Migration در محیط دیگری نتیجه‌گیری نمی‌شود.
+- نبود جدول‌های Trade در این دیتابیس با وجود پنج نگاشت در Trade Model Snapshot و یک فایل Migration در Source، تفاوت وضعیت Source و دیتابیس نصب‌شده را نشان می‌دهد. از این خروجی به‌تنهایی نمی‌توان علت ایجادنشدن جداول را تعیین کرد.
+
+### 12.3 Migration History واقعی
+
+در `dbo.__EFMigrationsHistory` تعداد ۱۶ Migration از Core ثبت شده است. آخرین Migration ثبت‌شده:
+
+`20261105094700_AddUserSessions` — ProductVersion `10.0.14`
+
+Migrationهای قدیمی‌تر با ProductVersion `10.0.13` و موارد جدیدتر با `10.0.14` ثبت شده‌اند. تعداد ۱۶ مورد اعمال‌شده در این دیتابیس با ۲۰ فایل Migration اصلی موجود در Source یکی نیست؛ اولی تاریخچهٔ دیتابیس منتخب و دومی شمار فایل‌های Source است. هیچ Migration در این بررسی اجرا نشده است.
+
+### 12.4 روابط و قیود تأییدشده
+
+- `Companies` در دیتابیس زنده نیز ستون `TenantId` ندارد.
+- FKهای `FiscalPeriods.TenantId`، `CompanyRoles.TenantId`، `UserCompanyMemberships.TenantId`، `CompanyEmployees.TenantId`، `CompanyOrganizationalUnits.TenantId` و `CompanyPositions.TenantId` به `Companies.Id` متصل‌اند.
+- `CompanyMembershipRequests.DestinationTenantId` نیز به `Companies.Id` متصل است؛ نام ستون با معنای عملیاتی فعلی آن (شناسهٔ شرکت مقصد) یکسان نیست.
+- FK مرکب `ConsolidationRunCompanies(FiscalPeriodId, CompanyId)` به `FiscalPeriods(Id, TenantId)` متصل است؛ بنابراین تطبیق دوره و شرکت در دیتابیس فعلی همچنان بر قرارداد legacy تکیه دارد.
+- FKهای مرکب HR و Role/Membership نیز TenantId را در کلیدهای ارجاعی حفظ می‌کنند.
+- در خروجی FK و Check Constraint، تمام موارد گزارش‌شده فعال و Trusted هستند: `IsDisabled=0` و `IsNotTrusted=0`.
+- `Companies.NationalId` دارای unique filtered index سراسری روی مقدارهای غیر NULL است؛ دامنهٔ این قید باید در طراحی هدف جداگانه بررسی شود و در این مرحله تغییر نمی‌کند.
+
+### 12.5 Identity، Session و Audit
+
+- `Users.EmailAddress` دارای unique index بدون فیلتر است.
+- `Users.Username` دارای unique filtered index برای مقدارهای غیر NULL است.
+- هر دو قید در دیتابیس فعلی tenant-scoped نیستند؛ D-087 به‌تنهایی مجوز تغییر دامنهٔ یکتایی Identity Realm را نمی‌دهد.
+- `UserSessions` فقط به `Users.Id` ارجاع می‌دهد و TenantId/CompanyId ندارد؛ اعتبارسنجی مجوز شرکت باید در مسیر درخواست باقی بماند.
+- `SecurityAuditEvents.TenantId` nullable است و ستون `CompanyId` ندارد. طبقه‌بندی رخدادهای system/tenant/company و نگاشت legacy آن باید در طرح هدف مشخص شود.
+- اسکریپت فقط metadata و Migration History را خوانده است؛ هیچ دادهٔ تجاری، تعداد رکوردها یا مقدار واقعی TenantId را بررسی نکرده است.
+
+### 12.6 نتیجه و موارد باز
+
+1. **S3-0c-b برای دیتابیس Farano-Local تکمیل شد**؛ هیچ DDL/DML یا Migration اجرا نشده است.
+2. مدل زنده همچنان Company=Tenant legacy است و هیچ Tenant مستقل در Schema این دیتابیس وجود ندارد.
+3. Trade Schema و Trade Migration History در این دیتابیس وجود ندارند؛ مسیر اعمال Migrationهای Trade در نصب مشتری همچنان یک شکاف عملیاتی باز است.
+4. نگاشت معتبر Company→Tenant از این خروجی قابل استخراج نیست؛ هیچ backfill یا استنتاج از CustomerBoundaryId/CorporateGroup/OwnershipRelationship مجاز نیست.
+5. S3-0d-b (inventory کامل مسیرهای داده)، S3-0e (منبع معتبر نگاشت)، S3-0f (قرارداد Migration host) و S3-0g (ERD و طرح گذار) همچنان بازند.
+6. پیش از طراحی Migration باید روشن شود این دیتابیس محلی نمایندهٔ چه سناریوی نصب/داده‌ای است و وضعیت Trade tables در محیط هدف چگونه باید ایجاد شود.
+
+**محدودهٔ بررسی:** فقط خواندن خروجی SELECT-only اپراتور؛ بدون اتصال مستقیم، اجرای SQL از سمت ممیز، تغییر Schema، تغییر داده، ساخت Entity/API یا اجرای Migration.

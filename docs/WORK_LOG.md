@@ -3074,3 +3074,15 @@
 - **محدودیت:** به SQL Server نصب‌شده دسترسی نداشتیم؛ جدول‌ها/ایندکس‌ها/Foreign Keyها و دو Migration History واقعی از دیتابیس خوانده نشدند. Build/Test و git diff --check اجرا نشدند.
 - **خروجی:** handoff docs/handoffs/ISSUE-397-s3-0-tenant-company-audit.md؛ اسکریپت فقط‌خواندنی scripts/audits/s3-0c-sqlserver-readonly-audit.sql. اجرای اسکریپت و تعیین منبع معتبر Company→Tenant همچنان باز است.
 - **محدوده:** فقط مستندات و یک اسکریپت SELECT-only؛ هیچ Entity، API، Migration، Schema، داده یا runtime تغییر نکرد.
+
+
+## 2026-11-14 — تکمیل ممیزی زنده SQL Server در S3-0c-b (Farano-Local)
+
+- خروجی اسکریپت SELECT-only از اپراتور دریافت و بررسی شد؛ DB: `Farano-Local`، SQL Server `16.0.1000.6`، Developer Edition.
+- جدول‌های گزارش‌شده همگی در `dbo` هستند؛ Schema `trade` و جدول تاریخچه `dbo.__TradeMigrationsHistory` وجود ندارند.
+- ۱۶ Migration Core در `dbo.__EFMigrationsHistory` ثبت شده است؛ آخرین مورد `20261105094700_AddUserSessions` با EF Core `10.0.14`.
+- نبود Trade tables در دیتابیس منتخب با Trade Model Snapshot موجود در Source متفاوت است؛ علت از metadata به‌تنهایی قابل اثبات نیست. شکاف migration host همچنان باز است.
+- FKها و Check Constraintهای گزارش‌شده فعال و Trusted هستند. Company فاقد TenantId است و FKهای TenantId همچنان به Companies.Id اشاره می‌کنند.
+- Unique indexهای Username/EmailAddress tenant-scoped نیستند؛ UserSessions فاقد TenantId و SecurityAuditEvents فاقد CompanyId مستقل است.
+- timestamp اعلام‌شده در خروجی `2026-11-18` است و نسبت به تاریخ ثبت یادداشت جلوتر است؛ باید ساعت محیط تأیید شود.
+- هیچ SQL تغییردهنده، Migration، DDL/DML، Build یا Test اجرا نشد. جزئیات در handoff S3-0 ثبت شد؛ S3-0d-b/e/f/g باز می‌مانند.

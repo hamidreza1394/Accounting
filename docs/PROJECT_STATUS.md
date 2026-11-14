@@ -706,3 +706,15 @@
 - جزئیات: `docs/USER_ACCESS_MANAGEMENT.md` §16، `docs/DECISIONS.md` D-077 و `docs/handoffs/ISSUE-444-fiscal-year-user-access.md`.
 
 - **مرحلهٔ صفر Trade تکمیل شد (2026-11-13):** PR #637 (فقط مستندات؛ هیچ قابلیت عملیاتی Trade پیاده‌سازی نشده) پس از موفق‌بودن همهٔ Check Runها (۱۶ مورد: ۱۳ موفق، ۱ neutral، ۱ skipped CodeRabbit، ۱ neutral Graphify؛ بدون شکست) با squash در `main` ادغام شد؛ SHA نهایی `main`: `1825107437894e941ef51f60802117ba8e057ca4`. هیچ Issue یا تصمیم باز دیگری بسته نشد: OD-001..OD-022 `Open`، D-080 جز P-1 همچنان `Proposed`، D-083 `Proposed`+`NeedsApproval`. S2 آغاز می‌شود؛ تا Merge شاخه‌های S2 همه `NotImplemented`.
+
+
+## 2026-11-14 — دریافت شواهد زنده SQL Server برای S3-0 (Farano-Local)
+
+- خروجی read-only اپراتور برای دیتابیس `Farano-Local` دریافت شد؛ SQL Server 2022 Developer Edition، نسخه `16.0.1000.6`.
+- فقط Schema `dbo` در فهرست جدول‌ها دیده شد؛ هیچ جدول `trade` و هیچ `dbo.__TradeMigrationsHistory` وجود نداشت. این یافته فقط دربارهٔ همین دیتابیس است.
+- در `dbo.__EFMigrationsHistory` تعداد ۱۶ Migration Core تا `20261105094700_AddUserSessions` ثبت شده است؛ این عدد با ۲۰ فایل Migration اصلی Source متفاوت است و نباید با آن اشتباه شود.
+- Companies همچنان TenantId ندارد؛ FKهای چندین جدول TenantId را به Companies.Id متصل می‌کنند. FKها و Check Constraintهای خروجی همگی فعال و Trusted هستند.
+- Unique indexهای EmailAddress و Username در سطح Identity Realm باقی‌اند؛ UserSessions فاقد TenantId و SecurityAuditEvents فاقد CompanyId مستقل است.
+- timestamp خروجی `2026-11-18` گزارش شده که از تاریخ ثبت این یادداشت جلوتر است؛ زمان سیستم نیازمند تأیید است.
+- S3-0c-b برای Farano-Local تکمیل شد. هیچ Migration، DDL، DML یا تغییر runtime اجرا نشد. S3-0d-b، S3-0e، S3-0f و S3-0g همچنان بازند.
+- جزئیات و محدودیت‌های شواهد در `docs/handoffs/ISSUE-397-s3-0-tenant-company-audit.md`، بخش ۱۲ ثبت شد.
