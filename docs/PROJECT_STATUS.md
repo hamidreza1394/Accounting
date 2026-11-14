@@ -1,3 +1,12 @@
+## وضعیت جاری معماری Tenant/Company و S3 — 2026-11-14
+
+- PR #648 با عنوان D-087 در `2026-11-14T07:58:56Z` ادغام شد؛ merge commit: `f3bd810aa247b3f11ff337cb84db8af26df27013`. مبنای پیش از این PR مستنداتی، `main@017f18eca481b06ff4fc69157ead30fc53121edc` (پس از PR #649) بود.
+- D-087 پذیرفته شده است: Tenant مرز مشتری/فضای داده و Company شرکت عملیاتی داخل Tenant است؛ Shared Database و Dedicated Database از یک مدل منطقی و کنترل دسترسی استفاده می‌کنند.
+- کد و Schema هنوز تاریخی‌اند: Entity مستقل Tenant وجود ندارد و در بخشی از مدل‌ها TenantId عملاً Company.Id است. گذار کد/Schema هنوز NotImplemented است.
+- ممیزی ایستای منبع کد بخشی از S3-0 را پوشش داده است: مدل هسته و Trade، مسیر CompanyAccess/WorkContext، ثبت DbContextها و شکاف فرمان Migration Trade بررسی شد. این بررسی، ممیزی کامل همه queryها/موجودیت‌ها یا تأیید SQL Server واقعی نیست.
+- موارد باز برای بستن S3-0: بررسی کامل V3.2، Schema و Migration History روی SQL Server آزمایشی/نسخه موجود، inventory جامع FK/index/query/job/file و تعیین منبع معتبر mapping Company→Tenant بدون حدس، ERD و طرح گذار مرحله‌ای.
+- این به‌روزرسانی مستنداتی هیچ کد اجرایی، Entity، API، Migration، Schema یا داده‌ای را تغییر نمی‌دهد.
+
 # وضعیت جاری ماژول Vendor — 2026-11-13 (بازبینی تکمیلی پس از Merge #639)
 
 ## وضعیت جاری بازرگانی خارجی — بازبینی مستنداتی 2026-11-14

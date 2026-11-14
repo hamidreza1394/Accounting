@@ -5,6 +5,8 @@
 - Decision reference: D-064 (Accepted)، D-065 (Accepted)، **D-072 (Accepted)** — مالک در مأموریت 2026-11-05 اجرای این طراحی را صریحاً دستور داد و سند با ادغام PR #542 پذیرفته شد.
 - وضعیت: **Implemented (Backend)** — گزینه B با PR پیاده‌سازی (Entityها، Migration زنجیره‌ای `20261104200301_AddHrOrganizationalStructure`، کاتالوگ ۱۲ کد `hr.*`، Endpointهای `/org/*`، Audit و تست‌ها) تحویل شده است؛ UI در ClientApp و گردش‌کارهای عملیاتی تکمیلی در PR بعدی (فاز ۴) ادامه می‌یابند. این سند مرجع قرارداد باقی می‌ماند.
 
+> **ملاحظه D-087:** Entityها و Migrationهای HR فعلی در مدل تاریخی Company=Tenant ساخته شده‌اند و TenantId آن‌ها عملاً CompanyId است. این وضعیت برای کد فعلی معتبر است، اما مدل هدف باید TenantId و CompanyId مستقل را رعایت کند. این سند، مجوز backfill یا Migration خودکار نیست؛ اثر تغییر بر HR باید در ممیزی S3-0 ثبت شود.
+
 ## 1. شواهد مدل فعلی
 
 - Domain.User یک هویت ورود در سطح Installation/Identity Realm است و اطلاعات حساب و تماس را نگه می‌دارد.

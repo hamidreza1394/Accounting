@@ -34,33 +34,34 @@
 
 ### 2.1 داده پایه Party و Product — وضعیت S2.2
 
-- `Party` و `Product` داده مرجع شرکت‌محورند؛ `TenantId` از قرارداد TradeEntity می‌آید و هیچ `FiscalPeriodId` ندارند.
+- `Party` و `Product` داده مرجع company-owned هستند؛ در مدل هدف D-087 هر دو `TenantId` و `CompanyId` دارند و هیچ `FiscalPeriodId` ندارند. در پیاده‌سازی فعلی، `TradeEntity.TenantId` عملاً `Company.Id` را نگه می‌دارد و این فقط قرارداد legacy است؛ نبود `CompanyId` مستقل به معنی tenant-owned بودن این داده‌ها نیست.
 - `Party` شامل کد، نام حقوقی، نام نمایشی، شناسه حقوقی، کشور، نقش‌های چندگانه و وضعیت فعال است.
 - حساب بانکی Party یک رکورد فرزند مستقل است؛ وضعیت Pending/Verified/Rejected و تأییدکننده/زمان تأیید صریح دارد. تغییر مشخصات حساب، تأیید قبلی را باطل و وضعیت را Pending می‌کند. وضعیت حساب به‌تنهایی کافی نیست و use case پرداخت باید فعال بودن Party را نیز کنترل کند.
 - `Product` شامل کد/نام، گروه کالا، HS و واحد پایه است. `ProductIdentifier` کد GTIN و IRC را در دو ستون متنی مستقل نگه می‌دارد؛ صفر ابتدایی حذف نمی‌شود و تاریخ اعتبار اجباری است.
-- روابط فرزند به والد با کلید مرکب `TenantId + Id` برقرار می‌شوند تا رکورد فرزند نتواند به والد شرکت دیگر متصل شود. کدهای Party/Product و شناسه‌های GTIN/IRC ایندکس یکتای tenant-scoped با فیلتر رکورد حذف‌نشده دارند.
+- روابط فرزند به والد با کلید مرکب `TenantId + Id` برقرار می‌شوند تا رکورد فرزند نتواند به والد شرکت دیگر متصل شود. در مدل هدف، کدهای Party/Product و شناسه‌های GTIN/IRC باید با scope شرکت (Company) یکتا باشند؛ ایندکس‌های فعلی tenant-scoped به دلیل قرارداد legacy `TenantId == Company.Id` عملاً company-scoped هستند و پس از گذار D-087 باید با `TenantId + CompanyId` بازبینی شوند. فیلتر رکورد حذف‌نشده حفظ می‌شود.
 - این مرحله فقط Domain و EF Model را افزوده است؛ هیچ Migration تولید/اجرا نشده و API، seed داده مرجع و فرم UI خارج از این Issue هستند. تا ایجاد Migration و آزمون SQL Server، این مدل برای استقرار عملیاتی آماده محسوب نمی‌شود.
 
 - **API کالا (S2-4، `Implemented`؛ PR #644 با CI سبز ادغام شد، SHA `6fa65e9e`):** `GET/POST /api/v1/trade/products`، `GET/PUT /api/v1/trade/products/{id}` و `GET /api/v1/trade/reference/units` (فقط‌خواندنی، مجوز `trade.form.product.view`). الگو و خطاها همان Party است (404 خالی، 409 `trade_product_code_duplicate`/`trade_concurrency_conflict`، 413 `trade_request_too_large`). POST/PUT علاوه بر `create|update` مجوز `view` می‌خواهند و مستقل از دورهٔ مالی‌اند (پرچم `periodIndependent`؛ گسترش D-084 به Product در D-085 ثبت شده و `Proposed`+`NeedsApproval` است). `hsCode` متن است (حداکثر ۱۶ نویسهٔ لاتین قابل‌چاپ) و `baseUnitCode` باید در واحدهای مرجع باشد. `isActive` برگردانده می‌شود ولی قابل ویرایش نیست و Endpoint حذف/غیرفعال‌سازی نیست (D-083 `Proposed`). `ProductIdentifier` استفاده نمی‌شود و Migration/Schema تغییر نکرده است.
 
 ## 3. Tenant و جداسازی شرکت
 
-در این مخزن طبق D-013، Company.Id همان TenantId است. Tenant entity جدید نسازید.
+طبق D-087، Tenant مرز مالکیت/جداسازی داده مشتری و Company شرکت حقوقی/عملیاتی داخل آن است. هر Company دقیقاً به یک Tenant تعلق دارد. Shared Database چند Tenant را در یک DB و Dedicated Database یک Tenant را در DB مستقل نگه می‌دارد؛ قرارداد منطقی و authorization در هر دو یکسان است.
 
-1. تمام داده‌های متعلق به شرکت باید TenantId داشته باشند.
-2. TenantId از درخواست کلاینت یا Claim شرکت پذیرفته نمی‌شود؛ سرور آن را از Work Context معتبر و CompanyAccessService تأیید می‌کند.
-3. هر query، update، delete، export، attachment و report باید TenantId را صریحاً در scope داشته باشد.
-4. Global Query Filter به‌تنهایی کنترل امنیتی نیست و در این مخزن عمداً جایگزین predicate صریح نمی‌شود.
-5. تست منفی باید دسترسی به رکورد شرکت دیگر را با شناسه معتبر اما غیرمجاز رد کند؛ بدون افشای وجود داده.
+1. داده tenant-owned دارای TenantId و داده company-owned دارای هر دو TenantId و CompanyId است. دامنه مالکیت هر Entity باید در طراحی S3-0 صریح شود.
+2. TenantId و CompanyId از درخواست کلاینت یا Claim پذیرفته نمی‌شوند؛ سرور Tenant را از رابطه معتبر Company و دسترسی Company را از WorkContext/CompanyAccessService resolve و اعتبارسنجی می‌کند.
+3. هر query، update، delete، export، attachment، report و background job باید scope مالکیت مناسب (Tenant و در داده company-owned، Company) را صریحاً اعمال کند.
+4. کد فعلی Trade هنوز تاریخی است: TradeEntity.TenantId در عمل Company.Id را نگه می‌دارد و CompanyId مستقلی ندارد. این وضعیت پیاده‌سازی D-087 نیست؛ تغییر آن فقط پس از ممیزی S3-0 و طرح گذار مصوب مجاز است.
+5. Global Query Filter به‌تنهایی کنترل امنیتی نیست و در این مخزن عمداً جایگزین predicate صریح نمی‌شود.
+6. تست منفی باید دسترسی cross-company و cross-tenant را با شناسه معتبر اما غیرمجاز رد کند؛ بدون افشای وجود داده.
 
 ## 4. دوره‌های مالی مشترک با هسته فرانو
 
 - تنها مرجع تعریف، انتخاب و چرخه عمر دوره مالی، موجودیت `Domain.FiscalPeriod` در هسته فرانو است؛ Trade هیچ `OperationalPeriod`، جدول یا سرویس موازی ندارد.
-- داده‌های مرجع tenant-scoped مانند Party و Product به‌طور معمول `TenantId` دارند و `FiscalPeriodId` نمی‌گیرند. اسناد و عملیات تراکنشی period-scoped هر دو شناسه `TenantId` و `FiscalPeriodId` را نگه می‌دارند؛ `TenantId` همان `Company.Id` و `FiscalPeriodId` همان `FiscalPeriod.Id` است.
+- داده‌های مرجع company-owned مانند Party و Product در مدل هدف D-087 دارای `TenantId` و `CompanyId` هستند و `FiscalPeriodId` نمی‌گیرند. اسناد و عملیات تراکنشی period-scoped نیز scope مالکیت خود را همراه `FiscalPeriodId` نگه می‌دارند؛ `FiscalPeriodId` همان `FiscalPeriod.Id` است. قرارداد فعلی که `TenantId` را برابر `Company.Id` می‌گیرد، صرفاً legacy است و نباید به‌عنوان مدل نهایی Tenant/Company استفاده شود.
 - **قاعدهٔ تاریخی D-063 (برای ImportCase/Proforma/OrderRegistration با D-086 superseded شده است):** قبلاً دورهٔ افتتاح روی ImportCase ثبت و هر سند/عملیات فرزند به دورهٔ انتخاب‌شده متصل می‌شد. طبق D-086، خود ImportCase، Proforma، OrderRegistration و پیگیری بلندمدت پرونده FiscalPeriodId ندارند و با بسته‌شدن دوره از دسترس خارج نمی‌شوند. اسناد مالی واقعی و عملیات حسابداری آینده همچنان FiscalPeriodId دورهٔ ثبت خود را دارند و باید WorkContext، تعلق و وضعیت دوره و مجوز را در سرور اعتبارسنجی کنند.
-- Trade.Domain و Trade.Application برای حفظ مرز ماژول به Core Domain/DbContext Reference نمی‌دهند. Host باید پیش از اجرای use case بررسی کند که `FiscalPeriod.TenantId == TenantId` و دوره از طریق `WorkContext` معتبر انتخاب شده است. این ارجاع منطقی است و FK بین schemaها ایجاد نمی‌شود.
+- Trade.Domain و Trade.Application برای حفظ مرز ماژول به Core Domain/DbContext Reference نمی‌دهند. Host باید پیش از اجرای use case تعلق دوره به همان Company و Tenant را از context معتبر کنترل کند. تا زمان گذار D-087، مقایسه تاریخی `FiscalPeriod.TenantId == TenantId` فقط توصیف قرارداد فعلی است و نباید به‌عنوان قرارداد نهایی Tenant/Company کپی شود. این ارجاع منطقی است و FK بین schemaها ایجاد نمی‌شود.
 - انتخاب شرکت/دوره، فهرست دوره‌های قابل انتخاب و سیاست وضعیت دوره از `WorkContext` و `FiscalPeriodSelectionPolicy` مشترک پیروی می‌کند؛ هیچ دسترسی جداگانه‌ای برای «دوره بازرگانی» تعریف نمی‌شود.
-- سیاست مشترک دوره حفظ می‌شود: دوره Open قابل ورود با رعایت مجوز عملیات است؛ دوره Closed برای مشاهده/گزارش فقط خواندنی است و عملیات نوشتن با قواعد مشترک بسته می‌شود (**استثنا، D-084 و D-085 (`Proposed`):** عملیات صریحاً «مستقل از دوره» مثل ایجاد/ویرایش Party و Product که اطلاعات پایهٔ سطح Tenant است؛ بقیهٔ کنترل‌ها حفظ می‌شود)؛ Archived مطابق سیاست هسته قابل انتخاب نیست.
+- سیاست مشترک دوره حفظ می‌شود: دوره Open قابل ورود با رعایت مجوز عملیات است؛ دوره Closed برای مشاهده/گزارش فقط خواندنی است و عملیات نوشتن با قواعد مشترک بسته می‌شود (**استثنا، D-084 و D-085 (`Proposed`):** عملیات صریحاً «مستقل از دوره» مثل ایجاد/ویرایش Party و Product که اطلاعات پایهٔ سطح Company است؛ بقیهٔ کنترل‌ها حفظ می‌شود)؛ Archived مطابق سیاست هسته قابل انتخاب نیست.
 - ورود خودکار به شرکت/دوره قبلی ممنوع است؛ هر نشست جدید باید context معتبر را طبق سیاست هسته تعیین کند.
 
 ## 5. مجوز فرم‌ها و عملیات
@@ -68,7 +69,7 @@
 - مجوزهای بازرگانی به‌صورت کدهای تخصصی در همان کاتالوگ مجوزهای فرانو (`PermissionDefinitions`) تعریف و به نقش شرکت از طریق `CompanyRolePermissions` تخصیص داده می‌شوند؛ سیستم موازی تخصیص نقش یا دوره ایجاد نمی‌شود. **وضعیت فعلی:** API/UI تخصیص `CompanyRolePermissions` در اسکلت فرانو هنوز پیاده‌سازی نشده است (`docs/CORPORATE_GROUPS.md`). مرحله بعد باید یک فرم یکپارچه مدیریت دسترسی نقش شرکت بسازد و بخش Trade را کنار سایر ماژول‌ها در همان فرم نمایش دهد.
 - `Server/Infrastructure/Trade/TradeAuthorizationAdapter.cs` هویت را از principal احراز‌شده می‌گیرد و با `WorkContextService` زمینه جاری را دوباره از Cookie محافظت‌شده و دیتابیس اعتبارسنجی می‌کند.
 - `CompanyAccessService` مرجع سنجش مجوز نقش در شرکت است. Adapter تعلق `FiscalPeriodId` به شرکت جاری را کنترل می‌کند و سپس مجوز تخصصی عملیات را از سازوکار مشترک می‌سنجد.
-- شناسه دوره در اینجا context اجرای مجوز است، نه مجوز مستقل دوره‌ای. سطح دسترسی به وضعیت Open/Closed/Archived از سیاست مشترک `FiscalPeriodSelectionPolicy` می‌آید؛ `TradeAccessIntent.Write` در دوره بسته رد می‌شود (**استثنا، D-084 و D-085 (`Proposed`):** عملیات صریحاً «مستقل از دوره» مثل ایجاد/ویرایش Party و Product که اطلاعات پایهٔ سطح Tenant است؛ بقیهٔ کنترل‌ها حفظ می‌شود).
+- شناسه دوره در اینجا context اجرای مجوز است، نه مجوز مستقل دوره‌ای. سطح دسترسی به وضعیت Open/Closed/Archived از سیاست مشترک `FiscalPeriodSelectionPolicy` می‌آید؛ `TradeAccessIntent.Write` در دوره بسته رد می‌شود (**استثنا، D-084 و D-085 (`Proposed`):** عملیات صریحاً «مستقل از دوره» مثل ایجاد/ویرایش Party و Product که اطلاعات پایهٔ سطح Company است؛ بقیهٔ کنترل‌ها حفظ می‌شود).
 - طبق D-063، گزارش عملیاتی چندشرکتی از موج اول لازم است؛ مجوز نقش باید در تمام شرکت‌ها وجود داشته باشد و هر جفت `TenantId/FiscalPeriodId` جداگانه اعتبارسنجی شود؛ نتیجه جزئی پذیرفته نیست. این گزارش، گزارش تلفیقی حسابداری نیست.
 
 برای هر فرم/منبع کد مجوز مستقل و پایدار تعریف می‌شود:

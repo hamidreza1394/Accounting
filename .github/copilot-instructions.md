@@ -15,7 +15,7 @@
 - همیشه تست واحد یا Integration مربوط به تغییر را اضافه یا به‌روز کن.
 - برای UI جدید در `ClientApp` حتماً `docs/UI_COMPONENTS.md` و استاندارد RTL فارسی را رعایت کن.
 - دارایی‌ها (CSS/JS/فونت/آیکون) باید محلی باشند؛ هیچ CDN در runtime مجاز نیست.
-- Multi-Tenancy: فقط از `CompanyAccessService` استفاده کن؛ به Claim یا TenantId ارسالی کلاینت اعتماد نکن.
+- Multi-Tenancy: طبق D-087، Tenant و Company مستقل‌اند و هر دو استقرار Shared/Dedicated از یک مدل منطقی استفاده می‌کنند. CompanyAccessService مرجع عضویت/مجوز Company است؛ Tenant از رابطه معتبر Company در سمت سرور resolve می‌شود. به Claim یا TenantId/CompanyId ارسالی کلاینت اعتماد نکن. کد فعلی هنوز legacy Company=Tenant است؛ هیچ Migration/backfill پیش از S3-0 و طرح مصوب انجام نده.
 - Anti-forgery + مجوز سمت سرور برای هر mutation اجباری است.
 - Exception را بی‌صدا نبلع؛ با `ILogger<T>` لاگ کن ولی secret ننویس.
 

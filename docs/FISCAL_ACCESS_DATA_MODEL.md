@@ -5,6 +5,8 @@
 - وضعیت: طراحی مصوب محصول؛ پیاده‌سازی runtime و schema هنوز NotImplemented
 - اصل راهبردی: تغییر افزایشی، حفظ CompanyRole/PermissionDefinitions و عدم اعطای دسترسی ضمنی
 
+> **ملاحظه D-087:** این طرح پیش از تفکیک Tenant/Company نوشته شده است. ستون‌های TenantId و FKهای مرکب آن باید در مدل هدف با CompanyId و رابطه Tenant→Company بازبینی شوند؛ هیچ‌یک از ترکیب‌های فعلی (TenantId به‌عنوان CompanyId) را بدون طرح گذار به‌عنوان قرارداد نهایی پیاده نکنید. پیاده‌سازی schema/runtime همچنان NotImplemented است.
+
 ## 1. مفاهیم
 
 | مفهوم | منبع حقیقت | معنا |

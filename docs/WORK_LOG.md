@@ -3052,3 +3052,13 @@
 - **فایل‌ها:** Startup service، تست‌های `Pkcs11SigningProviderTests`، handoff شماره #236 و همین Work Log.
 - **اعتبارسنجی:** تست محلی اجرا نشد؛ CI روی PR باید اجرا شود. هیچ نتیجه تست یا Merge پیشاپیش ادعا نمی‌شود.
 - **محدوده:** Vendor-only؛ بدون Customer consumer، `Server/**`، Migration مشتری، کلید خصوصی یا credential.
+
+
+## 2026-11-14 — هم‌راستاسازی اسناد با D-087 و تثبیت گیت S3-0
+- **زمینه:** PR #648 / D-087 ادغام شد (merge commit `f3bd810aa247b3f11ff337cb84db8af26df27013`). بررسی کد `main@017f18eca481b06ff4fc69157ead30fc53121edc` نشان داد چند سند اجرایی هنوز Company=Tenant و ممنوعیت ساخت Tenant را الزام می‌کنند.
+- **اصلاح:** دستورالعمل‌های Agent، معماری، امنیت، Migration، Trade، V3.2، گروه شرکتی، HR و Fiscal Access با D-087 هم‌راستا شدند یا فرض‌های قبلی‌شان به‌عنوان legacy/design تاریخی برچسب خوردند. Shared/Dedicated، مرز هویت، محدودیت یکتایی فعلی Username/Email، و استقلال CustomerBoundaryId روشن شد.
+- **یافته فنی:** در `Server/Program.cs`، `--migrate` فقط `DatabaseSchemaMigrator` هسته را اجرا می‌کند؛ `AddTradePersistence` ثبت می‌شود اما migrator مربوط به Trade در این فرمان اجرا نمی‌شود. این شکاف فقط مستند شد و هیچ runtime یا migration host تغییر نکرد.
+- **Roadmap:** S3-0 به ممیزی ایستای اولیه، اصلاح مستندات، بررسی SQL Server، تطبیق V3.2، تعیین نگاشت Tenant، بررسی migration pipeline و تهیه طرح گذار تقسیم شد. ممیزی SQL/V3.2 تکمیل‌شده ادعا نشده است.
+- **محدودیت:** فقط منبع کد/مستندات از GitHub خوانده شد؛ Build/Test، SQL Server واقعی و V3.2 کامل اجرا/بازبینی نشدند. هیچ Entity، API، Migration، Schema، داده یا تنظیم runtime تغییر نکرد.
+- **Handoff:** `docs/handoffs/ISSUE-UNNUMBERED-d087-doc-alignment.md`.
+- **Git:** شاخه `docs/d087-tenant-company-source-of-truth`؛ PR #650 برای بازبینی باز است: https://github.com/hamidreza1394/Accounting/pull/650.

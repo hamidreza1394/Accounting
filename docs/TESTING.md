@@ -49,8 +49,8 @@ dotnet test Template.sln --no-build --configuration Release
 
 
 ## تست‌های جداسازی شرکت و API (2026-10-20)
-- (نام کلاس‌ها در `tests/Template.Tests/CompanyAccessTests.cs`) `CompanyAccessServiceTests`: دسترسی فقط با عضویت فعال در شرکت فعال با نقش فعال؛ عدم دسترسی به شرکت Tenant دیگر، شرکت ناموجود و `Guid.Empty`؛ حساب غیرفعال؛ اثر فوری لغو عضویت؛ نادیده‌گرفتن Claim روی هویت احراز‌نشده.
-- `ApiEndpointTests`: فهرست شرکت‌ها فقط برای کاربر جاری، حساب زیرساختی بدون شرکت، 401 برای نشست قدیمی بدون شناسه، نمای کلی فقط با داده همان شرکت، 404 یکسان برای Tenant دیگر و شرکت ناموجود، بی‌اثر بودن Claim جعلی `TenantId`، مسیرهای API.
+- (نام کلاس‌ها در `tests/Template.Tests/CompanyAccessTests.cs`) `CompanyAccessServiceTests`: در مدل فعلی legacy دسترسی فقط با عضویت فعال در Company فعال با نقش فعال؛ عدم دسترسی به Company دیگر، Company ناموجود و `Guid.Empty`؛ حساب غیرفعال؛ اثر فوری لغو عضویت؛ نادیده‌گرفتن Claim روی هویت احراز‌نشده. این تست‌ها رفتار کد قدیمی را پوشش می‌دهند، نه جداسازی D-087.
+- `ApiEndpointTests`: فهرست شرکت‌ها فقط برای کاربر جاری، حساب زیرساختی بدون شرکت، 401 برای نشست قدیمی بدون شناسه، نمای کلی فقط با داده همان Company، 404 یکسان برای Company غیرمجاز و Company ناموجود، بی‌اثر بودن Claim جعلی `TenantId`، مسیرهای API. تست‌های cross-tenant و Tenant/Company consistency برای مدل هدف D-087 باید در S3-0 و PRهای اجرایی اضافه شوند.
 - `ApiCookieAuthenticationEventsTests`: پاسخ 401/403 برای `/api` و حفظ Redirect صفحه ورود برای صفحات مرورگر.
 - `SessionHardeningTests` و `SuccessfulSignIn_IssuesTheUserIdentifier_AndNoCompanyClaims`: خروج فقط با POST، Claim شناسه کاربر و نبود Claim شرکت.
 - این تست‌ها Endpointها را مستقیم با EF Core InMemory اجرا می‌کنند؛ تست HTTP کامل با `WebApplicationFactory` و SQL Server واقعی بعداً اضافه شد (بخش «تست‌های Integration HTTP» پایین).

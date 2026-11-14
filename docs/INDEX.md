@@ -15,6 +15,8 @@
 |---|---|
 | [TRADE_MODULE.md](TRADE_MODULE.md) | معماری، امنیت چندشرکتی، استفاده مشترک از دوره‌های مالی، فرم‌ها، گزارش‌ها و مسیر استخراج ماژول بازرگانی (D-061/D-062) |
 | [TRADE_S3_ARCHITECTURE.md](TRADE_S3_ARCHITECTURE.md) | مبنای پذیرفته‌شده S3 در D-086 و قرارداد Tenant/Company و استقرار مشترک/اختصاصی در D-087 |
+| [DATABASE.md](DATABASE.md) و [database-migrations.md](database-migrations.md) | مدل منطقی و Schema فعلی/هدف، قواعد Migration و انحراف پیاده‌سازی D-087 |
+| [ACCESS_CONTROL_ARCHITECTURE.md](ACCESS_CONTROL_ARCHITECTURE.md) و [SECURITY.md](SECURITY.md) | قرارداد هویت، عضویت، authorization و جداسازی Tenant/Company؛ D-087 بر فرض تاریخی Company=Tenant مقدم است |
 | [TRADE_PHASE0_DRAFTS.md](TRADE_PHASE0_DRAFTS.md) | پیش‌نویس (`Proposed`/`NeedsApproval`، 2026-11-12) ساختار منوی سایدبار بازرگانی خارجی و Issueهای S0..S2؛ ADRهای مرتبط در `DECISIONS.md`: D-080 (P-1 گزینهٔ الف، P-2 و P-3 `Accepted`؛ فقط P-4 و P-5 `Proposed` + `NeedsApproval`)، D-081 و D-082 (`Accepted`)، D-083 (`Proposed` + `NeedsApproval`)؛ شامل جدول تصمیم‌های قطعی/باز/موکول و برنامهٔ S2 |
 | [USER_ACCESS_MANAGEMENT.md](USER_ACCESS_MANAGEMENT.md) | طراحی و نقشه اجرایی مدیریت کاربران، سمت‌ها، گروه‌های دسترسی، مجوزهای جزئی، عضویت داخلی/بین‌شرکتی (D-078) و سوابق امنیتی (Issue #444) |
 | [SUBSYSTEM_CATALOG.md](SUBSYSTEM_CATALOG.md) | کاتالوگ رسمی زیرسیستم‌های واقعی مخزن با شواهد کد، وضعیت، منو، کدهای مجوز و پیوند entitlement؛ مدل زیرسیستم/منو/فرم/عملیات در D-075 (Stage 2-A، Issue #444) |
