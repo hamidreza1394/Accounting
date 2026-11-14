@@ -131,7 +131,8 @@ BEGIN
         N'Core' AS DbContextName,
         N'dbo.__EFMigrationsHistory' AS HistoryTable,
         MigrationId,
-        ProductVersion
+        ProductVersion,
+        N'FOUND' AS HistoryStatus
     FROM dbo.__EFMigrationsHistory
     ORDER BY MigrationId;
 END
@@ -151,7 +152,8 @@ BEGIN
         N'Trade' AS DbContextName,
         N'dbo.__TradeMigrationsHistory' AS HistoryTable,
         MigrationId,
-        ProductVersion
+        ProductVersion,
+        N'FOUND' AS HistoryStatus
     FROM dbo.__TradeMigrationsHistory
     ORDER BY MigrationId;
 END
