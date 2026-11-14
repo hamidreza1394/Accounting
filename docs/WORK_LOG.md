@@ -3098,7 +3098,7 @@
 
 
 ### تکمیل جست‌وجوی SQL خام و تست‌های isolation در S3-0d-b
-- FromSqlRaw فقط در TpmAnchoredOfflineRevocationStateStore؛ ExecuteSqlRawAsync فقط برای sp_getapplock در provisioning و license import؛ ExecuteUpdateAsync فقط در UserSessionService/SessionValidator برای نشست‌های کاربر.
+- FromSqlRaw فقط در TpmAnchoredOfflineRevocationStateStore؛ ExecuteSqlRawAsync فقط برای sp_getapplock در provisioning، license import و enrollment؛ ExecuteUpdateAsync فقط در UserSessionService/SessionValidator/UserPasswordService (لغو نشست پس از تغییر گذرواژه) برای نشست‌های کاربر.
 - تست‌های موجود: CompanyAccessTests، TradeAuthorizationAdapterTests، TradeEndpointGateTests و DatabaseModelTests. این تست‌ها وضعیت legacy را بررسی می‌کنند و جای تست Tenant isolation هدف را نمی‌گیرند.
 - گزارش در handoff بخش 13.5 اضافه شد؛ inventory گزارش‌ها/Exportها و تست‌های cross-tenant SQL Server هنوز باز است.
 
