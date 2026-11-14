@@ -1,23 +1,28 @@
 ## وضعیت جاری معماری Tenant/Company و S3 — 2026-11-14
 
-- PR #648 با عنوان D-087 در `2026-11-14T07:58:56Z` ادغام شد؛ merge commit: `f3bd810aa247b3f11ff337cb84db8af26df27013`. مبنای پیش از این PR مستنداتی، `main@017f18eca481b06ff4fc69157ead30fc53121edc` (پس از PR #649) بود.
+- PR #648 / D-087 در `2026-11-14T07:58:56Z` ادغام شد؛ PR #650 هم‌راستاسازی اسناد در `2026-11-14T09:19:13Z` ادغام شد. مبنای ممیزی جاری: `main@b4d38c0999ff1db7c2f8cc9bb78da1c55b27a6ad`.
 - D-087 پذیرفته شده است: Tenant مرز مشتری/فضای داده و Company شرکت عملیاتی داخل Tenant است؛ Shared Database و Dedicated Database از یک مدل منطقی و کنترل دسترسی استفاده می‌کنند.
-- کد و Schema هنوز تاریخی‌اند: Entity مستقل Tenant وجود ندارد و در بخشی از مدل‌ها TenantId عملاً Company.Id است. گذار کد/Schema هنوز NotImplemented است.
-- ممیزی ایستای منبع کد بخشی از S3-0 را پوشش داده است: مدل هسته و Trade، مسیر CompanyAccess/WorkContext، ثبت DbContextها و شکاف فرمان Migration Trade بررسی شد. این بررسی، ممیزی کامل همه queryها/موجودیت‌ها یا تأیید SQL Server واقعی نیست.
-- موارد باز برای بستن S3-0: بررسی کامل V3.2، Schema و Migration History روی SQL Server آزمایشی/نسخه موجود، inventory جامع FK/index/query/job/file و تعیین منبع معتبر mapping Company→Tenant بدون حدس، ERD و طرح گذار مرحله‌ای.
-- این به‌روزرسانی مستنداتی هیچ کد اجرایی، Entity، API، Migration، Schema یا داده‌ای را تغییر نمی‌دهد.
+- کد و Schema هنوز تاریخی‌اند: Entity مستقل Tenant وجود ندارد؛ Company فاقد TenantId است و TenantId در چند Entity عملاً Company.Id را نگه می‌دارد. گذار کد/Schema هنوز NotImplemented است.
+- ممیزی ایستای منبع کد: Snapshot هسته ۳۳ نگاشت جدول و ۲۰ Migration اصلی؛ Snapshot Trade پنج نگاشت جدول و یک Migration اصلی (سه جدول ایجادشده) دارد. این اعداد از Source/Snapshot هستند و وضعیت دیتابیس واقعی را اثبات نمی‌کنند.
+- مسیر دسترسی فعلی نیز legacy است: CompanyAccessService و WorkContextService، TenantId را به‌عنوان CompanyId تفسیر می‌کنند؛ عضویت، نقش، FiscalPeriod و HR به همین قرارداد متکی‌اند. در Trade نیز TradeEntity فقط TenantId دارد.
+- شکاف Migration: فرمان `--migrate` فقط DatabaseSchemaMigrator هسته را اجرا می‌کند؛ TradeDbContext در Program ثبت می‌شود، اما Migration آن در مسیر اپراتوری اجرا نمی‌شود. تست Integration هر دو Context را جداگانه روی دیتابیس disposable مهاجرت می‌دهد.
+- بازبینی اولیه V3.2: گروه B و گزارش‌های R01–R10 هنوز TenantId=Company/OwnerCompany را فرض می‌کنند؛ گروه C باید Tenant و هر دو Company طرف رابطه را جداگانه کنترل کند. V3.2 همچنان Proposed است؛ D-086 فقط قواعد مشخص کسب‌وکار را Accepted کرده است.
+- موارد باز: اجرای اسکریپت read-only روی SQL Server و خواندن دو Migration History واقعی؛ تکمیل inventory تمام مسیرهای داده؛ تعیین منبع معتبر Company→Tenant؛ قرارداد migration host؛ ERD و طرح گذار مرحله‌ای. CustomerBoundaryId یا عضویت گروه منبع Tenant نیست.
+- هیچ Entity، API، Migration، Schema، داده یا تنظیم runtime در این ممیزی تغییر نکرده است.
 
 # وضعیت جاری ماژول Vendor — 2026-11-13 (بازبینی تکمیلی پس از Merge #639)
 
-## وضعیت جاری بازرگانی خارجی — بازبینی مستنداتی 2026-11-14
+## وضعیت جاری بازرگانی خارجی — ممیزی S3-0، 2026-11-14
 
-- مبنای مخزن: main@b5a6caf6217a054643ba9aed04d7c1b7af831abe.
-- S2-1 تا S2-4 طبق Roadmap/Work Log ادغام شده‌اند؛ Party، Product و داده‌های مرجع موجودند و در S3 دوباره ساخته نمی‌شوند.
-- D-086 قواعد پرونده، پیش‌فاکتور، ثبت سفارش، پروفایل فعالیت، فایل‌ها و گردش کار را Accepted کرده است؛ پیاده‌سازی قابلیت‌های S3 همچنان NotImplemented است.
-- D-087 مدل هدف را تثبیت کرده است: Tenant مرز مشتری/فضای داده و Company شرکت عملیاتی داخل آن است؛ هر دو استقرار Shared Database و Dedicated Database پشتیبانی می‌شوند. مدل کد فعلی هنوز تاریخی و Company=Tenant است؛ گذار Schema/API تا ممیزی S3-0 NotImplemented است.
-- S3 از نظر تصمیم کسب‌وکاری آماده شروع پس از Merge این بسته مستنداتی است؛ P-4/P-5 در D-080 بازند و رفتارهای وابسته به آن‌ها از محدوده S3 کنار گذاشته شده‌اند.
-- این PR فقط مستندات را تغییر می‌دهد؛ هیچ کد، Entity، API، Migration، داده یا تنظیم runtime تغییر نکرده است.
-- محدودیت باقی‌مانده: روش اعمال Migrationهای Trade در نصب مشتری نیازمند تصمیم/کار جداگانه است؛ این PR آن را تغییر نمی‌دهد.
+- مبنای ممیزی: main@b4d38c0999ff1db7c2f8cc9bb78da1c55b27a6ad.
+- S2-1 تا S2-4 ادغام شده‌اند؛ Party، Product و داده‌های مرجع موجودند و در S3 دوباره ساخته نمی‌شوند.
+- D-086 قواعد منتخب کسب‌وکار S3 را Accepted کرده است؛ خود سند TRADE_DESIGN_V3_2.md همچنان Proposed است و همه جزئیات آن Approved تلقی نمی‌شوند.
+- D-087 مدل هدف Tenant/Company را تثبیت کرده است؛ کد فعلی هنوز Company=Tenant است و گذار Schema/API NotImplemented است.
+- ممیزی ایستای Core/Trade انجام شد: Core Snapshot برابر ۳۳ جدول و ۲۰ Migration؛ Trade Snapshot برابر پنج جدول و یک Migration که سه جدول ایجاد می‌کند. این اعداد وضعیت زنده دیتابیس را اثبات نمی‌کنند.
+- یافته‌های اصلی: Company TenantId ندارد؛ CompanyAccess/WorkContext و Trade هنوز TenantId را به‌عنوان CompanyId تفسیر می‌کنند؛ گروه B در V3.2 نیازمند TenantId+CompanyId است؛ گروه C نیازمند tenant boundary و مجوز صریح بین‌شرکتی است.
+- اسکریپت فقط‌خواندنی SQL Server در scripts/audits/s3-0c-sqlserver-readonly-audit.sql قرار دارد. اجرای آن و بررسی __EFMigrationsHistory و __TradeMigrationsHistory واقعی هنوز انجام نشده است.
+- P-4/P-5 از D-080 و D-083 همچنان Proposed/NeedsApproval هستند؛ رفتارهای وابسته نباید ضمنی پیاده‌سازی شوند.
+- هیچ Entity، API، Migration، Schema، داده یا تنظیم runtime تغییر نکرده است. جزئیات و ماتریس اولیه در handoffs/ISSUE-397-s3-0-tenant-company-audit.md ثبت شده‌اند.
 
 
 **مبنای جاری:** `main@8e58ad6dd9c8943845df6e328577d6816812c2b3`؛ merge commit PR #639 در 2026-11-13T07:50:14Z.

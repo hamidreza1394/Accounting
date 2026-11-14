@@ -3062,3 +3062,15 @@
 - **محدودیت:** فقط منبع کد/مستندات از GitHub خوانده شد؛ Build/Test، SQL Server واقعی و V3.2 کامل اجرا/بازبینی نشدند. هیچ Entity، API، Migration، Schema، داده یا تنظیم runtime تغییر نکرد.
 - **Handoff:** `docs/handoffs/ISSUE-UNNUMBERED-d087-doc-alignment.md`.
 - **Git:** شاخه `docs/d087-tenant-company-source-of-truth`؛ PR #650 برای بازبینی باز است: https://github.com/hamidreza1394/Accounting/pull/650.
+
+## 2026-11-14 — ممیزی S3-0: مدل Tenant/Company و V3.2 (read-only)
+
+- **مبنای ممیزی:** main@b4d38c0999ff1db7c2f8cc9bb78da1c55b27a6ad؛ Issue #397؛ تصمیم‌های D-086 و D-087.
+- **مدل Core:** Company هنوز TenantId ندارد و Entity مستقل Tenant در کد نیست. هشت Entity دارای TenantId غیرnullable و SecurityAuditEvent دارای TenantId nullable هستند؛ در قرارداد فعلی این شناسه‌ها عملاً Company.Id هستند. CompanyMembershipRequest.DestinationTenantId نیز در API از DestinationCompanyId مقدار می‌گیرد.
+- **مدل Trade:** TradeEntity فقط TenantId دارد؛ Party/Product با TenantId فیلتر می‌شوند و CompanyId مستقل ندارند. Core Snapshot شامل ۳۳ نگاشت جدول و ۲۰ Migration اصلی؛ Trade Snapshot پنج نگاشت و یک Migration اصلی با سه جدول ایجادشده است. PartyBankAccounts و ProductIdentifiers از Migration فعلی ExcludeFromMigrations شده‌اند.
+- **مسیر دسترسی:** CompanyAccessService و WorkContextService TenantId را به‌عنوان CompanyId تفسیر می‌کنند؛ provisioning و HR نیز همین قرارداد را می‌نویسند/می‌خوانند. CorporateGroupService از CustomerBoundaryId برای محدودیت گروه استفاده می‌کند؛ این فیلد منبع Tenant نیست.
+- **Migration pipeline:** Program.cs فقط DatabaseSchemaMigrator هسته را در --migrate اجرا می‌کند؛ Trade Migration در مسیر اپراتوری اجرا نمی‌شود. Test harness هر دو Context را روی دیتابیس disposable تست مهاجرت می‌دهد؛ این موضوع اثبات اجرای Trade Migration در نصب مشتری نیست.
+- **V3.2:** گروه B و گزارش‌های R01–R10 هنوز TenantId=Company را فرض می‌کنند. گروه C نیازمند Tenant scope، Company طرفین و مجوز صریح بین‌شرکتی است. V3.2 همچنان Proposed است؛ D-086 فقط قواعد منتخب را Accepted کرده است.
+- **محدودیت:** به SQL Server نصب‌شده دسترسی نداشتیم؛ جدول‌ها/ایندکس‌ها/Foreign Keyها و دو Migration History واقعی از دیتابیس خوانده نشدند. Build/Test و git diff --check اجرا نشدند.
+- **خروجی:** handoff docs/handoffs/ISSUE-397-s3-0-tenant-company-audit.md؛ اسکریپت فقط‌خواندنی scripts/audits/s3-0c-sqlserver-readonly-audit.sql. اجرای اسکریپت و تعیین منبع معتبر Company→Tenant همچنان باز است.
+- **محدوده:** فقط مستندات و یک اسکریپت SELECT-only؛ هیچ Entity، API، Migration، Schema، داده یا runtime تغییر نکرد.
