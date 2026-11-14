@@ -3086,3 +3086,12 @@
 - Unique indexهای Username/EmailAddress tenant-scoped نیستند؛ UserSessions فاقد TenantId و SecurityAuditEvents فاقد CompanyId مستقل است.
 - timestamp اعلام‌شده در خروجی `2026-11-18` است و نسبت به تاریخ ثبت یادداشت جلوتر است؛ باید ساعت محیط تأیید شود.
 - هیچ SQL تغییردهنده، Migration، DDL/DML، Build یا Test اجرا نشد. جزئیات در handoff S3-0 ثبت شد؛ S3-0d-b/e/f/g باز می‌مانند.
+
+
+## 2026-11-14 — S3-0d-b: ثبت دور اول inventory مسیرهای داده
+- **مبنا:** `main` پس از Merge PR #652؛ D-087 Accepted؛ Issue #397.
+- **بررسی Source:** CompanyAccessService، WorkContextService، TradeAuthorizationAdapter، PartyStore، ProductStore، Company/FiscalPeriod/Role/Membership/HR/Audit/Session/Provisioning entities و configurations، membership/provisioning/HR photo/audit endpoints و CorporateGroupService.
+- **یافته‌ها:** مسیر فعلی CompanyId را در TenantId legacy نگه می‌دارد؛ Trade stores فقط TenantId را فیلتر می‌کنند و adapter مقدار Company جاری را می‌دهد؛ session در سطح User است؛ HR photo در SQL BLOB است؛ Trade file storage هنوز پیاده نشده؛ CustomerBoundaryId مرز Tenant نیست.
+- **خروجی:** handoff Issue #397 بخش ۱۳؛ Roadmap و Project Status به‌روز شدند.
+- **محدودیت:** inventory همهٔ export/report/raw SQL و تست‌های isolation تکمیل نشده؛ S3-0d-b باز است. Build/Test اجرا نشد؛ فقط مستندات تغییر کرد.
+- **محدوده:** بدون تغییر runtime، API، Entity، Migration، Schema یا داده.
