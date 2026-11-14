@@ -3061,4 +3061,4 @@
 - **Roadmap:** S3-0 به ممیزی ایستای اولیه، اصلاح مستندات، بررسی SQL Server، تطبیق V3.2، تعیین نگاشت Tenant، بررسی migration pipeline و تهیه طرح گذار تقسیم شد. ممیزی SQL/V3.2 تکمیل‌شده ادعا نشده است.
 - **محدودیت:** فقط منبع کد/مستندات از GitHub خوانده شد؛ Build/Test، SQL Server واقعی و V3.2 کامل اجرا/بازبینی نشدند. هیچ Entity، API، Migration، Schema، داده یا تنظیم runtime تغییر نکرد.
 - **Handoff:** `docs/handoffs/ISSUE-UNNUMBERED-d087-doc-alignment.md`.
-- **Git:** شاخه `docs/d087-tenant-company-source-of-truth`؛ PR پس از ساخت ثبت می‌شود.
+- **Git:** شاخه `docs/d087-tenant-company-source-of-truth`؛ PR #650 برای بازبینی باز است: https://github.com/hamidreza1394/Accounting/pull/650.
