@@ -57,6 +57,22 @@ public static class LicenseRevisionRules
 			return false;
 		}
 
+		// A v1 -> v2 step may introduce CompanyReferences for the first time. Once a v2 payload
+		// exists the set is immutable: no reference may be changed, removed, replaced or added.
+		// Both payloads passed StructuralValidation above, so entries are non-null, valid and unique.
+		if (current.FormatVersion == LicensePayload.CurrentFormatVersion &&
+			candidate.FormatVersion == LicensePayload.CurrentFormatVersion &&
+			!CompanyReferences(current).SetEquals(CompanyReferences(candidate)))
+		{
+			errorCode = "company_references_changed";
+			return false;
+		}
+
 		return true;
 	}
+
+	private static HashSet<string> CompanyReferences(LicensePayload payload) =>
+		payload.CompanyEntitlements!
+			.Select(company => company!.CompanyReference!)
+			.ToHashSet(StringComparer.Ordinal);
 }
