@@ -2547,7 +2547,7 @@ Trade بدون اجرا Fail-closed است؛ جدول Trade بدون History م�
 
 ### معیار پذیرش و روش تأیید
 - مالک یکی از الف/ب/ج را صریحاً می‌پذیرد؛ برای ج: قاعدهٔ نام‌گذاری در `docs/DATABASE.md` و نام‌های Pin شدهٔ قیدهای Tenant واقعی بدون تعارض (تست SQL Server قبل از PR-4).
-- شواهد: `TenantMigrationSqlServerValidationTests` (D1، D1c) در PR-D #675 (در زمان نگارش ادغام‌نشده)؛ اجرای واقعی تغییر نام قید و تعارض نام.
+- شواهد: `TenantMigrationSqlServerValidationTests` (D1، D1c) در PR-D #675؛ اجرای واقعی تغییر نام قید و تعارض نام.
 
 ### مراجع
 `handoffs/ISSUE-397-s3-0-decision-gates-od15-od16.md`، `handoffs/ISSUE-397-pr-d-tenant-migration-sqlserver-validation.md`، `handoffs/ISSUE-397-s3-0h-consolidated-tenant-company-migration-plan.md` (OD-15)، D-087، D-091.

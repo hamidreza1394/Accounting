@@ -10,8 +10,8 @@
 | شاهد | منبع | وضعیت |
 |---|---|---|
 | Guard فقط `RenameColumn`/`RenameIndex` را (با allowlist) می‌پذیرد؛ تفاوت نام قید = Rename = رد | `scripts/verify_migration_model.py` (فهرست عملیات Rename)، `scripts/tests/test_migration_guard_pinned_mappings.py::test_a_name_difference_between_two_models_is_a_rename_and_is_refused` | Source + تست (اجرای محلی سبز) |
-| Rename ستون با Pin: AK/FK با نام قدیمی می‌مانند، Identity ثابت | PR-D #675 (D1، D2) | اجرای واقعی SQL Server؛ ادغام‌نشده |
-| نام قدیمی قید روی همان جدول قابل ساخت مجدد نیست (1913)؛ تغییر نام قید با `sp_rename 'dbo.<نام>'` ممکن و Identity-حفظ‌کننده است | PR-D #675 (D1c) | اجرای واقعی؛ ادغام‌نشده |
+| Rename ستون با Pin: AK/FK با نام قدیمی می‌مانند، Identity ثابت | PR-D #675 (D1، D2) | اجرای واقعی SQL Server |
+| نام قدیمی قید روی همان جدول قابل ساخت مجدد نیست (1913)؛ تغییر نام قید با `sp_rename 'dbo.<نام>'` ممکن و Identity-حفظ‌کننده است | PR-D #675 (D1c) | اجرای واقعی |
 | Production روی دیتابیس موجود خودکار Migrate نمی‌شود؛ فقط هشدار Pending | `Server/Program.cs` (حدود خط ۳۴۷ تا ۳۹۵) | Source |
 | `--migrate` با `sp_getapplock` (Exclusive، Session، Timeout=0)، کد خروج ۰..۴، Redact پیام‌ها | `DatabaseMigrationHost.cs`؛ `DatabaseMigrationHostSqlServerTests` | اجرای واقعی: ۸ موفق (محلی روی SQL Server موقت؛ CI نیز آن را اجرا می‌کند) |
 | ممیزی اجرای Migration و Backup خودکار وجود ندارد | D-094، `docs/DEPLOYMENT.md` §8 | Source/سند |
