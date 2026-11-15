@@ -14,6 +14,7 @@ public static class CustomerProvisioningPackageValidator
 {
     public const int CurrentFormatVersion = 1;
     public const int CurrentPayloadSchemaVersion = 4;
+    public const int CompanyReferencePayloadSchemaVersion = 5;
     public const int MaxPayloadJsonChars = 64 * 1024;
     public const int MaxPackageLifetimeHours = 24;
     public const int ClockSkewMinutes = 2;
@@ -35,7 +36,8 @@ public static class CustomerProvisioningPackageValidator
         ReadOnlySpan<byte> trustedPublicKeySubjectPublicKeyInfo,
         DateTimeOffset nowUtc,
         out CustomerProvisioningPayload? payload,
-        out string errorCode)
+        out string errorCode,
+        bool allowCompanyReference = false)
     {
         payload = null;
         errorCode = "provisioning_package_invalid";
@@ -92,7 +94,7 @@ public static class CustomerProvisioningPackageValidator
             return false;
         }
 
-        if (!TryValidatePayload(package.PayloadJson, nowUtc, out payload, out errorCode))
+        if (!TryValidatePayload(package.PayloadJson, nowUtc, out payload, out errorCode, allowCompanyReference))
             return false;
 
         errorCode = string.Empty;
@@ -107,7 +109,8 @@ public static class CustomerProvisioningPackageValidator
         string? payloadJson,
         DateTimeOffset nowUtc,
         out CustomerProvisioningPayload? payload,
-        out string errorCode)
+        out string errorCode,
+        bool allowCompanyReference = false)
     {
         payload = null;
         errorCode = "provisioning_payload_invalid";
@@ -124,7 +127,7 @@ public static class CustomerProvisioningPackageValidator
             return false;
         }
 
-        if (payload is null || !HasValidPayload(payload, nowUtc))
+        if (payload is null || !HasValidPayload(payload, nowUtc, allowCompanyReference))
         {
             payload = null;
             return false;
@@ -152,14 +155,16 @@ public static class CustomerProvisioningPackageValidator
         return true;
     }
 
-    private static bool HasValidPayload(CustomerProvisioningPayload payload, DateTimeOffset nowUtc)
+    private static bool HasValidPayload(
+        CustomerProvisioningPayload payload, DateTimeOffset nowUtc, bool allowCompanyReference)
     {
         var isV1 = payload.SchemaVersion == 1;
         var isV2 = payload.SchemaVersion == 2;
         var isV3 = payload.SchemaVersion == 3;
         var isV4 = payload.SchemaVersion == CurrentPayloadSchemaVersion;
+        var isV5 = allowCompanyReference && payload.SchemaVersion == CompanyReferencePayloadSchemaVersion;
 
-        if ((!isV1 && !isV2 && !isV3 && !isV4) ||
+        if ((!isV1 && !isV2 && !isV3 && !isV4 && !isV5) ||
             !Guid.TryParseExact(payload.RequestId, "D", out _) ||
             !IsBoundedText(payload.CustomerReference, 1, 128) ||
             !IsBoundedText(payload.InstallationId, 1, 128) ||
@@ -191,7 +196,8 @@ public static class CustomerProvisioningPackageValidator
                 payload.ParentCompanyReference is null &&
                 payload.InitialAdminEmail is null &&
                 payload.LicenseId is null &&
-                payload.Sequence is null;
+                payload.Sequence is null &&
+                payload.CompanyReference is null;
         }
 
         if (!IsBoundedText(payload.FiscalPeriodTitle, 1, 100) ||
@@ -205,13 +211,18 @@ public static class CustomerProvisioningPackageValidator
         if (isV2 && (payload.InitialAdminEmail is not null || payload.LicenseId is not null || payload.Sequence is not null))
             return false;
 
-        if ((isV3 || isV4) && !IsValidEmail(payload.InitialAdminEmail))
+        if ((isV3 || isV4 || isV5) && !IsValidEmail(payload.InitialAdminEmail))
             return false;
 
-        if (!isV4 && (payload.LicenseId is not null || payload.Sequence is not null))
+        if (!isV4 && !isV5 && (payload.LicenseId is not null || payload.Sequence is not null))
             return false;
 
-        if (isV4 && (!IsCanonicalLicenseId(payload.LicenseId) || payload.Sequence is not >= 1))
+        // companyReference exists only from v5; it is required there and forbidden in v1-v4.
+        if (isV5 ? !StructuralValidation.IsValidCompanyReference(payload.CompanyReference)
+                 : payload.CompanyReference is not null)
+            return false;
+
+        if ((isV4 || isV5) && (!IsCanonicalLicenseId(payload.LicenseId) || payload.Sequence is not >= 1))
             return false;
 
         var hasParentReference = IsVendorIssuedRequestReference(payload.ParentCompanyReference);
