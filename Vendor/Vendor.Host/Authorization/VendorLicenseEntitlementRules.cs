@@ -23,17 +23,8 @@ public static class VendorLicenseEntitlementRules
         out NormalizedVendorLicenseEntitlements? normalized)
     {
         normalized = null;
-        var kind = string.IsNullOrWhiteSpace(licenseKind)
-            ? (validUntilUtc.HasValue ? LicensePayload.KindTerm : LicensePayload.KindPerpetual)
-            : licenseKind.Trim();
-        var graceDays = requestedGraceDays ?? LicensePayload.DefaultGraceDays;
-
-        if (kind is not (LicensePayload.KindTerm or LicensePayload.KindPerpetual) ||
-            maxCompanies.HasValue && maxCompanies.Value < 1 ||
-            graceDays is < 0 or > LicensePayload.MaxGraceDaysCeiling ||
-            validUntilUtc.HasValue && validUntilUtc.Value < validFromUtc ||
-            kind == LicensePayload.KindTerm && !validUntilUtc.HasValue ||
-            kind == LicensePayload.KindPerpetual && validUntilUtc.HasValue)
+        if (!TryNormalizeCommon(licenseKind, maxCompanies, requestedGraceDays, validFromUtc, validUntilUtc,
+                out var kind, out var graceDays))
         {
             return false;
         }
@@ -56,6 +47,52 @@ public static class VendorLicenseEntitlementRules
             JsonSerializer.Serialize(sortedCodes),
             graceDays);
         return true;
+    }
+
+    /// <summary>
+    /// Company-scoped (payload v2) metadata: term, capacity and grace rules are shared with v1, but there are
+    /// no installation-level subsystems. The legacy <c>SubsystemsJson</c> is never produced or reinterpreted here.
+    /// </summary>
+    public static bool TryNormalizeCompanyScoped(
+        string? licenseKind,
+        int? maxCompanies,
+        int? requestedGraceDays,
+        DateTimeOffset validFromUtc,
+        DateTimeOffset? validUntilUtc,
+        out NormalizedVendorLicenseEntitlements? normalized)
+    {
+        normalized = null;
+        if (!TryNormalizeCommon(licenseKind, maxCompanies, requestedGraceDays, validFromUtc, validUntilUtc,
+                out var kind, out var graceDays))
+        {
+            return false;
+        }
+
+        normalized = new NormalizedVendorLicenseEntitlements(
+            kind, maxCompanies, Array.Empty<string>(), "[]", graceDays);
+        return true;
+    }
+
+    private static bool TryNormalizeCommon(
+        string? licenseKind,
+        int? maxCompanies,
+        int? requestedGraceDays,
+        DateTimeOffset validFromUtc,
+        DateTimeOffset? validUntilUtc,
+        out string kind,
+        out int graceDays)
+    {
+        kind = string.IsNullOrWhiteSpace(licenseKind)
+            ? (validUntilUtc.HasValue ? LicensePayload.KindTerm : LicensePayload.KindPerpetual)
+            : licenseKind.Trim();
+        graceDays = requestedGraceDays ?? LicensePayload.DefaultGraceDays;
+
+        return kind is LicensePayload.KindTerm or LicensePayload.KindPerpetual &&
+            !(maxCompanies.HasValue && maxCompanies.Value < 1) &&
+            graceDays is >= 0 and <= LicensePayload.MaxGraceDaysCeiling &&
+            !(validUntilUtc.HasValue && validUntilUtc.Value < validFromUtc) &&
+            !(kind == LicensePayload.KindTerm && !validUntilUtc.HasValue) &&
+            !(kind == LicensePayload.KindPerpetual && validUntilUtc.HasValue);
     }
 
     public static IReadOnlyList<string> ParseSubsystems(string? json)

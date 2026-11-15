@@ -2,6 +2,10 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ManagedSelect, type SelectOption } from '@/components/forms/managed-select';
+import {
+  CompanyEntitlementsEditor, CompanyEntitlementsReadOnly, buildCompanyPayload, companiesFromResponse,
+  type CompanyDraft, type CompanyEntitlementResponse,
+} from './CompanyEntitlementsEditor';
 
 export type LicenseDraft = {
   id?: string;
@@ -13,6 +17,8 @@ export type LicenseDraft = {
   licenseKind?: string;
   maxCompanies?: number | null;
   subsystems?: string[];
+  /** null/undefined means a legacy v1 license. */
+  companies?: CompanyEntitlementResponse[] | null;
   graceDays?: number;
   lastIssuedSequence?: number;
   validFromUtc: string;
@@ -76,6 +82,11 @@ function errorMessage(status: number, code: string): string {
   if (status === 400 && code === 'contract_customer_mismatch') return 'قرارداد انتخاب‌شده متعلق به مشتری انتخاب‌شده نیست.';
   if (status === 400 && code === 'installation_customer_mismatch') return 'نصب انتخاب‌شده متعلق به مشتری انتخاب‌شده نیست.';
   if (status === 400 && code === 'invalid_row_version') return 'نسخه اطلاعات برای ویرایش معتبر نیست؛ فهرست را تازه‌سازی کنید.';
+  if (status === 400 && code === 'invalid_company_entitlements') return 'مجوزهای شرکت‌ها معتبر نیست؛ شناسه توصیفی، ماژول‌ها، حداکثر کاربر و قابلیت‌ها را بررسی کنید.';
+  if (status === 400 && code === 'company_entitlements_too_large') return 'حجم مجوزهای شرکت‌ها بیش از حد مجاز است؛ تعداد شرکت‌ها یا قابلیت‌ها را کم کنید.';
+  if (status === 400 && code === 'company_reference_not_assignable') return 'شناسه مرجع یکی از شرکت‌ها معتبر یا قابل‌انتساب نیست؛ فهرست را تازه‌سازی کنید.';
+  if (status === 400 && code === 'company_entitlements_required') return 'این لایسنس شرکت‌محور است و باید فهرست شرکت‌ها را بفرستید.';
+  if (status === 400 && code === 'subsystems_not_allowed_for_company_license') return 'در لایسنس شرکت‌محور زیرسیستم‌های سطح نصب مجاز نیست.';
   if (status === 409 && code === 'license_number_exists') return 'این شماره لایسنس قبلاً ثبت شده است.';
   if (status === 409 && code === 'stale_row_version') return 'لایسنس تغییر کرده است؛ فهرست را تازه‌سازی و دوباره تلاش کنید.';
   if (status === 409 && code === 'license_not_editable_after_draft') return 'لایسنس از وضعیت پیش‌نویس خارج شده و دیگر قابل ویرایش نیست.';
@@ -127,6 +138,10 @@ export function LicenseForm({
   const [licenseKind, setLicenseKind] = useState(initial?.licenseKind ?? 'term');
   const [maxCompanies, setMaxCompanies] = useState(initial?.maxCompanies == null ? '' : String(initial.maxCompanies));
   const [subsystems, setSubsystems] = useState<string[]>(initial?.subsystems ?? []);
+  const companyScopedLocked = Boolean(initial?.companies);
+  const [companyScoped, setCompanyScoped] = useState(companyScopedLocked);
+  const [companies, setCompanies] = useState<CompanyDraft[]>(() => initial?.companies
+    ? companiesFromResponse(initial.companies, (() => { let i = 0; return () => `saved-company-${++i}`; })()) : []);
   const [graceDays, setGraceDays] = useState(String(initial?.graceDays ?? 30));
   const [validFromUtc, setValidFromUtc] = useState(initial?.validFromUtc?.slice(0, 10) ?? todayUtcDate());
   const [validUntilUtc, setValidUntilUtc] = useState(initial?.validUntilUtc?.slice(0, 10) ?? '');
@@ -352,9 +367,14 @@ export function LicenseForm({
           (validUntilUtc && validUntilUtc < validFromUtc) ||
           (parsedMaxCompanies !== null && (!Number.isInteger(parsedMaxCompanies) || parsedMaxCompanies < 1)) ||
           !Number.isInteger(parsedGraceDays) || parsedGraceDays < 0 || parsedGraceDays > 90 ||
-          subsystems.length === 0 || new Set(subsystems).size !== subsystems.length ||
-          subsystems.some(code => !allowedSubsystems.has(code))) {
+          (!companyScoped && (subsystems.length === 0 || new Set(subsystems).size !== subsystems.length ||
+            subsystems.some(code => !allowedSubsystems.has(code))))) {
         throw new Error('نوع لایسنس، سقف شرکت، زیرسیستم‌ها یا بازه اعتبار معتبر نیست.');
+      }
+      let companyPayload: ReturnType<typeof buildCompanyPayload> | null = null;
+      if (companyScoped) {
+        companyPayload = buildCompanyPayload(companies);
+        if ('error' in companyPayload) throw new Error(companyPayload.error);
       }
       const tokenResponse = await fetch('/api/auth/antiforgery', {
         credentials: 'same-origin', cache: 'no-store',
@@ -371,7 +391,7 @@ export function LicenseForm({
         productCode: product,
         licenseKind,
         maxCompanies: parsedMaxCompanies,
-        subsystems,
+        ...(companyPayload && 'companies' in companyPayload ? { companies: companyPayload.companies } : { subsystems }),
         graceDays: parsedGraceDays,
         validFromUtc: asUtcDate(validFromUtc),
         validUntilUtc: validUntilUtc ? asUtcDate(validUntilUtc) : null,
@@ -478,6 +498,25 @@ export function LicenseForm({
               value={graceDays} onChange={event => setGraceDays(event.target.value)} disabled={busy || !editable} />
           </div>
           <fieldset className="space-y-2 rounded-md border border-input p-3 md:col-span-2">
+            <legend className="px-1 text-sm font-medium">مدل مجوزدهی</legend>
+            <div className="flex flex-wrap gap-4 text-sm">
+              <label className="flex items-center gap-2">
+                <input type="radio" name="license-scope" checked={!companyScoped}
+                  onChange={() => setCompanyScoped(false)} disabled={busy || !editable || companyScopedLocked} />
+                <span>سطح نصب (زیرسیستم‌ها، نسخه قدیمی)</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input type="radio" name="license-scope" checked={companyScoped}
+                  onChange={() => setCompanyScoped(true)} disabled={busy || !editable || companyScopedLocked} />
+                <span>شرکت‌محور (v2)</span>
+              </label>
+            </div>
+            {companyScopedLocked && <p className="text-xs text-muted-foreground">این لایسنس شرکت‌محور است و به مدل قدیمی برنمی‌گردد.</p>}
+          </fieldset>
+          {!editable && initial?.companies ? <div className="md:col-span-2"><CompanyEntitlementsReadOnly companies={initial.companies} /></div>
+          : companyScoped ? <CompanyEntitlementsEditor companies={companies} onChange={setCompanies}
+              disabled={busy || !editable} maxCompanies={maxCompanies.trim() && Number.isInteger(Number(maxCompanies)) ? Number(maxCompanies) : null} />
+          : <fieldset className="space-y-2 rounded-md border border-input p-3 md:col-span-2">
             <legend className="px-1 text-sm font-medium">زیرسیستم‌های خریداری‌شده</legend>
             <p className="text-xs text-muted-foreground">برای جلوگیری از اعطای مجوز ناخواسته، هیچ زیرسیستمی به‌صورت پیش‌فرض انتخاب نشده است.</p>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -493,7 +532,7 @@ export function LicenseForm({
                 </label>
               ))}
             </div>
-          </fieldset>
+          </fieldset>}
           <div className="space-y-2">
             <label htmlFor="license-valid-from" className="text-sm font-medium">تاریخ شروع اعتبار</label>
             <input id="license-valid-from" type="date" required
