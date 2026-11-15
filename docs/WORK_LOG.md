@@ -3207,6 +3207,42 @@
 - **محدوده:** بدون Production/Schema/Migration/Backfill؛ هیچ Tenant ساخته نشد.
 - **Handoff:** `docs/handoffs/ISSUE-397-pr-3-tenant-company-ownership-contracts.md` (بخش تکمیل).
 
+## 2026-11-15 — بازبینی Vendor پس از PR #649 و Merge اصلی #674
+
+- **مبنا:** main@`53dd2eab9bf19148d80eb8ee01bbc744d8033d3f` (Merge PR #674 در 2026-11-15T07:38:26Z). PR #649 نیز با merge commit `017f18eca481b06ff4fc69157ead30fc53121edc` ادغام شده است.
+- **کار واقعی:** PRهای #281/#282/#284 و #649/#674، Issueهای #228/#214/#236/#235/#107/#393/#392، کد قرارداد v4، resolver، endpointهای provisioning/export و وضعیت Purchased Add-on بازبینی شدند. اصلاح Hardware Assurance در #649 اکنون در main است؛ این رخداد وجود HSM واقعی را اثبات نمی‌کند.
+- **شواهد CI روی head PRها:** #281: .NET 7/7 و 576/576 تست؛ #282: .NET 7/7 و 582/582، Vendor CI 1/1 و Semgrep 1/1؛ #284: .NET 7/7 و 582/582، Vendor CI 1/1 و Semgrep 1/1. #649: .NET 7/7، 1352 موفق/0 شکست/8 Skip از 1360؛ Vendor CI 3/3 و Semgrep 1/1. #674: .NET 7/7، 1425 موفق/0 شکست/8 Skip از 1433 و Semgrep 1/1. شناسهٔ Runها در handoff همین تاریخ ثبت شده‌اند.
+- **محدودیت شواهد:** این Runها روی head PR هستند. endpoint workflow در اتصال حاضر فقط Runهای PR-triggered را برمی‌گرداند؛ post-merge push Run روی merge commitهای #281/#282/#284/#649 و main SHA جاری از این مسیر قابل بازیابی نبود. handoff قبلی شواهد تاریخی post-merge #281/#282/#284 را ثبت کرده، اما این نوبت تازه‌خوانی نشد. فهرست ۱۰۰ اجرای اخیر Actions و فهرست all-author PRها نیز در این اتصال موجود نبود؛ صفر PR باز فقط در ۱۰۰ PR اخیر حساب متصل مشاهده شد.
+- **یافتهٔ کد:** Payload schema v4 فاقد CompanyReference است؛ resolver برای LicensePayload v2 با `provisioning_company_reference_mapping_required` متوقف می‌شود. `ParentCompanyReference` فعلی به RequestId درخواست والد Confirmed اشاره دارد، نه CompanyReference. قرارداد v5 بدون mapping #392 و consumer سازگار #235 صادر نمی‌شود. مدل تجاری Order/Payment در #393 نیز هنوز وجود ندارد و semantics پرداخت نیازمند تأیید است.
+- **امنیت:** #632 بسته است. در logهای محدود #649، markerهای password argument، Connection String دارای Password/Pwd، PEM private key و token رایج یافت نشدند؛ این بررسی محدود، اسکن جامع همهٔ Actions نیست. هیچ secret یا credentialی در Git/log/artifact افزوده نشد.
+- **فایل‌ها:** `docs/PROJECT_STATUS.md`، `docs/WORK_LOG.md`، `docs/INDEX.md` و `docs/handoffs/ISSUE-UNNUMBERED-vendor-reconcile-2026-11-15.md`.
+- **محدوده:** فقط مستندات؛ بدون تغییر کد، Customer consumer، `Server/**`، دیتابیس یا Migration مشتری. تست محلی، Build محلی و `git diff --check` اجرا نشدند؛ CIهای بالا فقط شواهد GitHub روی head PRها هستند.
+- **باقی‌مانده:** #392 (CompanyReference mapping/schema review)، #393 (Payment Evidence/approver/state decisions)، #236 (KMS/HSM واقعی و Key Ceremony)، #107 (Production sink مستقل) و #235 (trust distribution و آزمون عملیاتی دو میزبان). تا رفع آن‌ها fail-closed باقی می‌ماند.
+- **PR:** [#677](https://github.com/hamidreza1394/Accounting/pull/677)؛ باز و merge نشده؛ CI باید روی head نهایی تکمیل شود.
+- **Handoff:** `docs/handoffs/ISSUE-UNNUMBERED-vendor-reconcile-2026-11-15.md`.
+
+
+## 2026-11-15 — تصحیح شواهد پس از Merge و وضعیت جاری Vendor
+
+- **مبنا:** `main@53dd2eab9bf19148d80eb8ee01bbc744d8033d3f`؛ PR #674 در 2026-11-15T07:38:26Z ادغام شده است.
+- **اصلاح ثبت قبلی:** در بازبینی اولیه #677، دسترسی به push workflowها و فهرست PRهای باز ناقص گزارش شده بود. با دریافت مستقیم مجموعهٔ Actions runs و جست‌وجوی صریح PRهای باز، شواهد پس از Merge و شمار ۱۰۰ اجرای اخیر تازه‌خوانی شد؛ handoff و Project Status با شواهد جدید جایگزین شدند.
+- **#281/#282/#284:** post-merge Check Runها به‌ترتیب ۱۲/۱۲، ۱۳/۱۳ و ۱۳/۱۳ موفق. .NET CI هر سه روی merge SHA واقعی ۷/۷ Job و ۵۸۲/۵۸۲ تست موفق دارد؛ #282 و #284 علاوه بر .NET، Vendor CI، Semgrep و Push on main موفق دارند.
+- **#649:** post-merge Check Runها ۱۵/۱۵ موفق؛ .NET CI ۷/۷ Job و ۱۳۵۲ موفق، ۸ Skip، صفر شکست از ۱۳۶۰؛ Vendor CI ۳/۳ Job، Semgrep و Push on main موفق.
+- **#674/main:** post-merge Check Runها ۱۲/۱۲ موفق؛ .NET CI ۷/۷ Job و ۱۴۲۵ موفق، ۸ Skip، صفر شکست از ۱۴۳۳؛ Semgrep و Push on main/CodeQL موفق.
+- **تداوم کد Vendor:** Compare از merge #649 تا main فعلی ۲۴ Commit جلوتر، صفر عقب‌تر و ۸۴ فایل تغییرکرده نشان داد؛ هیچ مسیر Vendor، Licensing.Contracts یا Vendor tests تغییر نکرده است. آخرین Vendor CI پس از Merge #649 بنابراین روی کد Vendor فعلی معتبر است.
+- **PRهای باز:** query مخزن `is:open`، #675، #676 و #677 را برگرداند. #675/#676 خارج از محدوده Vendor هستند؛ #677 PR مستنداتی Vendor است.
+- **Actions:** از ۱۰۰ اجرای اخیر، ۹۲ موفق، ۷ لغوشده، یک در حال اجرا و صفر ناموفق. PR #677 روی head `c9085edf3627a480deda93650a214f8ff4ea5a0e`، ۱۵ Check Run دارد: ۱۱ موفق، یک neutral و سه در حال اجرا؛ چهار Required Check سبز هستند.
+- **مانع Merge #677:** Ruleset فعال main-protection Code Owner review را الزام می‌کند؛ CODEOWNERS فقط مالک مخزن را برای مسیرهای Vendor تعیین کرده و نویسنده PR همان حساب است. هیچ Review تأییدشده‌ای ثبت نشده؛ Merge انجام نشد.
+- **محدوده:** فقط اصلاح مستندات در PR #677؛ هیچ کد Vendor، Customer consumer، `Server/**`، دیتابیس/Migration مشتری یا secret تغییر نکرد.
+- **آزمون محلی و diff check:** اجرا نشد؛ شواهد فقط GitHub Actions/REST و بازبینی diff است.
+- **گام بعدی:** تکمیل سه Job جاری #677 و تأمین Code Owner Reviewer مستقل؛ سپس Merge فقط پس از کنترل SHA و تمام قواعد لازم. کار اجرایی #228/#393 همچنان به تصمیم‌های #392 و semantics پرداخت نیاز دارد.
+## 2026-11-15 — ثبت commitهای تکمیلی همگام‌سازی شواهد PR #677
+
+- Commit `89417cb7da5ae861145b2c4a7535d0fff451731e`، اصلاح سه سند برای ثبت CI واقعی پس از Merge و حذف محدودیت نادرست دسترسی به push workflowها.
+- Commit `a3c00a6bef80b68155ab2abd6303129b814203bf`، ثبت شناسه commit بازبینی شواهد در Work Log؛ این تغییر PR synchronize را فعال کرد.
+- روی head `a3c00a6bef80b68155ab2abd6303129b814203bf`، .NET CI و Semgrep مجدداً اجرا شدند؛ Semgrep موفق شد، Secret Scan و Publish Scripts موفق شدند، اما Client و Build/Test و CodeQL C# در آخرین snapshot در حال اجرا بودند. این نتایج برای SHAهای بعدی قابل تعمیم نیستند.
+- Ruleset main-protection به Code Owner review نیاز دارد؛ نویسنده PR تنها Code Owner تعریف‌شده است. Merge انجام نشد.
+
 ## 2026-11-15 — ثبت OD-15 و OD-16 (سری Tenant) به‌صورت Proposed
 - **مبنا:** `origin/main@53dd2ea`.
 - **انجام‌شده:** D-095 (نام قیدهای legacy) و D-096 (اجرای Migration چندنمونه‌ای) در `docs/DECISIONS.md`؛ handoff تکمیلی با جدول مقایسهٔ گزینه‌ها (امنیت، سازگاری، هزینه، پیچیدگی، نسخه‌های قدیمی، Rollback، Lock، مجوز، Backup، Recovery، شکست جزئی، Audit).
