@@ -784,6 +784,7 @@ public sealed class HrOrganizationalStructureEndpointTests
             HrOrganizationalStructureEndpoints.UpdateEmployeesPermission,
             HrOrganizationalStructureEndpoints.ViewEmployeesPermission,
             HrOrganizationalStructureEndpoints.ManageEmployeeUserLinkPermission,
+            HrOrganizationalStructureEndpoints.CreateUnitsPermission,
             HrOrganizationalStructureEndpoints.UpdateUnitsPermission,
             HrOrganizationalStructureEndpoints.ListUnitsPermission,
             HrOrganizationalStructureEndpoints.UpdatePositionsPermission,
@@ -791,6 +792,9 @@ public sealed class HrOrganizationalStructureEndpointTests
             HrOrganizationalStructureEndpoints.CreateEmployeesPermission,
             HrOrganizationalStructureEndpoints.ManageAssignmentsPermission);
         var ownEmployee = await fixture.AddCreatedEmployee(manager.Id, "OWN-1", "علی", "محمدی");
+        var ownUnit = await fixture.AddCreatedUnit(manager.Id, "OWN-U", "واحد خودی");
+        var assignedEmployee = await fixture.AddCreatedEmployee(manager.Id, "OWN-2", "رضا", "احمدی");
+        Assert.IsType<Created<HrAssignmentCreatedResponse>>(await fixture.StartAssignment(manager.Id, assignedEmployee, unitId: ownUnit));
 
         var foreignCompany = fixture.AddCompany("شرکت بیرونی");
         var foreignEmployee = fixture.AddCreatedEmployeeRecord(foreignCompany.Id, "FOR-1", "بیرونی", "کارمند");
@@ -831,7 +835,7 @@ public sealed class HrOrganizationalStructureEndpointTests
         {
             ["StartAssignmentForeignUnit"] = await fixture.StartAssignment(manager.Id, ownEmployee, unitId: foreignUnit.Id),
             ["StartAssignmentForeignPosition"] = await fixture.StartAssignment(manager.Id, ownEmployee, positionId: foreignPosition.Id),
-            ["ChangeAssignmentForeignUnit"] = await fixture.ChangeAssignment(manager.Id, ownEmployee, unitId: foreignUnit.Id),
+            ["ChangeAssignmentForeignUnit"] = await fixture.ChangeAssignment(manager.Id, assignedEmployee, unitId: foreignUnit.Id),
         };
 
         foreach (var (name, result) in routeIdentifiers)
@@ -864,6 +868,11 @@ public sealed class HrOrganizationalStructureEndpointTests
         Assert.Null(assignment.EndOnUtc);
         Assert.Equal(Domain.CompanyEmployeeAssignmentStatus.Active, assignment.Status);
         Assert.Equal(0, await verify.CompanyEmployeeAssignments.CountAsync(item => item.EmployeeId == ownEmployee));
+        // the refused change keeps the valid active assignment of the own employee exactly as it was
+        var kept = await verify.CompanyEmployeeAssignments.AsNoTracking().SingleAsync(item => item.EmployeeId == assignedEmployee);
+        Assert.Equal(ownUnit, kept.OrganizationalUnitId);
+        Assert.Null(kept.EndOnUtc);
+        Assert.Equal(Domain.CompanyEmployeeAssignmentStatus.Active, kept.Status);
     }
 
     private sealed class Fixture : IAsyncDisposable
