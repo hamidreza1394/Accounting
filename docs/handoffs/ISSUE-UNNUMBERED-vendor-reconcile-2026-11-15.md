@@ -92,7 +92,9 @@
 | CI پس از Merge #281/#282/#284 | موفق | به‌ترتیب ۱۲/۱۲، ۱۳/۱۳ و ۱۳/۱۳ Check؛ .NET هرکدام ۵۸۲/۵۸۲ تست موفق |
 | CI پس از Merge #649/#674 و main فعلی | موفق | #649: ۱۵/۱۵؛ #674/main: ۱۲/۱۲؛ Run و Test totals در بخش بالا |
 | تست محلی / Build محلی | اجرا نشد | checkout و runner محلی در این اجرا در دسترس نبود |
-| PR #677 روی head ثبت‌شده در snapshot | در حال اجرا | secret-scan و publish-scripts موفق؛ client و build-and-test ناتمام؛ Code Owner review غایب |\n| ۱۰۰ اجرای اخیر Actions | بدون شکست | ۹۲ موفق، ۷ لغوشده، ۱ در حال اجرا، ۰ ناموفق |\n| `git diff --check` محلی | اجرا نشد | diff از GitHub بازبینی می‌شود؛ ادعای اجرای محلی نداریم |
+| PR #677 روی head ثبت‌شده در snapshot | در حال اجرا | secret-scan و publish-scripts موفق؛ client و build-and-test ناتمام؛ Code Owner review غایب |
+| ۱۰۰ اجرای اخیر Actions | بدون شکست | ۹۲ موفق، ۷ لغوشده، ۱ در حال اجرا، ۰ ناموفق |
+| `git diff --check` محلی | اجرا نشد | diff از GitHub بازبینی می‌شود؛ ادعای اجرای محلی نداریم |
 
 ## امنیت، داده و سازگاری
 - Issue #632 بسته شده است. در logهای #649، الگوهای مشخص `sqlcmd -P/--password`، Connection String حاوی Password/Pwd، PEM private key و tokenهای رایج اسکن شدند؛ هیچ‌یک از این markerها در logهای بررسی‌شده یافت نشد. این بررسی محدود به همان logها و الگوهاست، نه ادعای اسکن جامع تمام Actions.
