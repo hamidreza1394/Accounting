@@ -3192,3 +3192,10 @@
 - **انجام‌شده:** رفع تناقض Migration Host در `PROJECT_STATUS.md`/`ROADMAP.md` (رفتار واقعی #665)؛ تفکیک S3-0f به «Host پیاده‌شده» و «سیاست و استقرار باقی‌مانده»؛ ثبت وضعیت D-088 (`Partial`) و D-089 (`NotImplemented`)؛ ارجاع S3-0d-b به PR #670 (Done نشده) و OD-11/12/13/14/17 به PR #671 (`Proposed`)؛ یادداشت‌های `DATABASE.md` و `TRADE_MODULE.md`.
 - **محدوده:** فقط مستندات؛ بدون کد، Schema، Migration، Backfill، Runtime. هیچ تصمیمی Accepted نشد. تست اجرا نشد.
 - **وابستگی:** ارجاع به #670 و #671 که هنوز ادغام نشده‌اند؛ اگر تأیید یا ادغام آن‌ها تغییر کند، این سند باید به‌روز شود.
+
+## 2026-11-15 — فهرست قطعی موجودیت‌های Legacy TenantId (S3 PR-3 تکمیلی)
+- **مبنا:** `origin/main@47cca6e`. بررسی Source نشان داد #662 قرارداد `OwnershipScope` و Guardها را قبلاً پیاده کرده است؛ فقط فهرست قطعی ستون‌های Legacy `TenantId` ناقص بود.
+- **انجام‌شده:** `LegacyTenantIdEntityContractTests` (۳ تست) روی مدل واقعی Core (۱۰ ستون) و Trade (۵ ستون). Mutation حذف یک ردیف شکست می‌دهد.
+- **تست:** ۳ تست جدید + ۱۴ تست معماری/OwnershipScope موجود = ۱۷ موفق، ۰ شکست. مجموعهٔ کامل و SQL Server اجرا نشد.
+- **محدوده:** بدون Production/Schema/Migration/Backfill؛ هیچ Tenant ساخته نشد.
+- **Handoff:** `docs/handoffs/ISSUE-397-pr-3-tenant-company-ownership-contracts.md` (بخش تکمیل).
