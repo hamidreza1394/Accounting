@@ -3206,3 +3206,10 @@
 - **تست:** ۳ تست جدید + ۱۴ تست معماری/OwnershipScope موجود = ۱۷ موفق، ۰ شکست. مجموعهٔ کامل و SQL Server اجرا نشد.
 - **محدوده:** بدون Production/Schema/Migration/Backfill؛ هیچ Tenant ساخته نشد.
 - **Handoff:** `docs/handoffs/ISSUE-397-pr-3-tenant-company-ownership-contracts.md` (بخش تکمیل).
+
+## 2026-11-15 — ثبت OD-15 و OD-16 (سری Tenant) به‌صورت Proposed
+- **مبنا:** `origin/main@53dd2ea`.
+- **انجام‌شده:** D-095 (نام قیدهای legacy) و D-096 (اجرای Migration چندنمونه‌ای) در `docs/DECISIONS.md`؛ handoff تکمیلی با جدول مقایسهٔ گزینه‌ها (امنیت، سازگاری، هزینه، پیچیدگی، نسخه‌های قدیمی، Rollback، Lock، مجوز، Backup، Recovery، شکست جزئی، Audit).
+- **تعارض شماره‌گذاری:** OD-15/OD-16 در `LICENSING_OPEN_DECISIONS.md` معنای دیگری دارند؛ در متن «OD-15 (Tenant)» و شناسهٔ ADR به‌کار رفت.
+- **محدوده:** فقط مستندات؛ هیچ تصمیمی Accepted نشد؛ D-090 تا D-094 دست‌نخورده؛ بدون Schema/Migration/Runtime. تست اجرا نشد.
+- **Handoff:** `docs/handoffs/ISSUE-397-s3-0-decision-gates-od15-od16.md`.
