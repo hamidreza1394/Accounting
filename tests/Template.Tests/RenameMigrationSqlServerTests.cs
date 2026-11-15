@@ -124,7 +124,7 @@ public sealed class RenameMigrationSqlServerTests
 
 	// Names are always written in brackets so that a column or index rename can be applied to a
 	// snapshot as an exact token replacement ("[OwnerId]" -> "[CompanyId]").
-	private const string StructureQuery = @"
+	internal const string StructureQuery = @"
 SELECT 'column' AS kind, CONCAT('[', t.name COLLATE DATABASE_DEFAULT, ']|', c.column_id, '|[', c.name COLLATE DATABASE_DEFAULT, ']|', ty.name COLLATE DATABASE_DEFAULT, '|', c.max_length, '|', c.is_nullable, '|', c.is_identity) AS line
 FROM sys.columns c JOIN sys.tables t ON t.object_id = c.object_id JOIN sys.types ty ON ty.user_type_id = c.user_type_id
 WHERE t.name COLLATE DATABASE_DEFAULT LIKE 'Rename%'
@@ -159,7 +159,7 @@ WHERE pt.name COLLATE DATABASE_DEFAULT LIKE 'Rename%'";
 	// R1 for plain indexes: that part is covered by the script check (no DROP/CREATE INDEX in the SQL
 	// that EF generates and runs). Mutation check done for this PR: an extra DropIndex/CreateIndex in
 	// the rename migration is caught by that script check.
-	private const string IdentityQuery = @"
+	internal const string IdentityQuery = @"
 SELECT CONCAT('constraint|', o.object_id, '|', CONVERT(varchar(30), o.create_date, 121), '|', o.type_desc COLLATE DATABASE_DEFAULT) FROM sys.objects o
 JOIN sys.tables t ON t.object_id = o.parent_object_id WHERE t.name COLLATE DATABASE_DEFAULT LIKE 'Rename%' AND o.type IN ('PK','UQ','F')
 UNION ALL
