@@ -3220,3 +3220,19 @@
 - **باقی‌مانده:** #392 (CompanyReference mapping/schema review)، #393 (Payment Evidence/approver/state decisions)، #236 (KMS/HSM واقعی و Key Ceremony)، #107 (Production sink مستقل) و #235 (trust distribution و آزمون عملیاتی دو میزبان). تا رفع آن‌ها fail-closed باقی می‌ماند.
 - **PR:** [#677](https://github.com/hamidreza1394/Accounting/pull/677)؛ باز و merge نشده؛ CI باید روی head نهایی تکمیل شود.
 - **Handoff:** `docs/handoffs/ISSUE-UNNUMBERED-vendor-reconcile-2026-11-15.md`.
+
+
+## 2026-11-15 — تصحیح شواهد پس از Merge و وضعیت جاری Vendor
+
+- **مبنا:** `main@53dd2eab9bf19148d80eb8ee01bbc744d8033d3f`؛ PR #674 در 2026-11-15T07:38:26Z ادغام شده است.
+- **اصلاح ثبت قبلی:** در بازبینی اولیه #677، دسترسی به push workflowها و فهرست PRهای باز ناقص گزارش شده بود. با دریافت مستقیم مجموعهٔ Actions runs و جست‌وجوی صریح PRهای باز، شواهد پس از Merge و شمار ۱۰۰ اجرای اخیر تازه‌خوانی شد؛ handoff و Project Status با شواهد جدید جایگزین شدند.
+- **#281/#282/#284:** post-merge Check Runها به‌ترتیب ۱۲/۱۲، ۱۳/۱۳ و ۱۳/۱۳ موفق. .NET CI هر سه روی merge SHA واقعی ۷/۷ Job و ۵۸۲/۵۸۲ تست موفق دارد؛ #282 و #284 علاوه بر .NET، Vendor CI، Semgrep و Push on main موفق دارند.
+- **#649:** post-merge Check Runها ۱۵/۱۵ موفق؛ .NET CI ۷/۷ Job و ۱۳۵۲ موفق، ۸ Skip، صفر شکست از ۱۳۶۰؛ Vendor CI ۳/۳ Job، Semgrep و Push on main موفق.
+- **#674/main:** post-merge Check Runها ۱۲/۱۲ موفق؛ .NET CI ۷/۷ Job و ۱۴۲۵ موفق، ۸ Skip، صفر شکست از ۱۴۳۳؛ Semgrep و Push on main/CodeQL موفق.
+- **تداوم کد Vendor:** Compare از merge #649 تا main فعلی ۲۴ Commit جلوتر، صفر عقب‌تر و ۸۴ فایل تغییرکرده نشان داد؛ هیچ مسیر Vendor، Licensing.Contracts یا Vendor tests تغییر نکرده است. آخرین Vendor CI پس از Merge #649 بنابراین روی کد Vendor فعلی معتبر است.
+- **PRهای باز:** query مخزن `is:open`، #675، #676 و #677 را برگرداند. #675/#676 خارج از محدوده Vendor هستند؛ #677 PR مستنداتی Vendor است.
+- **Actions:** از ۱۰۰ اجرای اخیر، ۹۲ موفق، ۷ لغوشده، یک در حال اجرا و صفر ناموفق. PR #677 روی head `c9085edf3627a480deda93650a214f8ff4ea5a0e`، ۱۵ Check Run دارد: ۱۱ موفق، یک neutral و سه در حال اجرا؛ چهار Required Check سبز هستند.
+- **مانع Merge #677:** Ruleset فعال main-protection Code Owner review را الزام می‌کند؛ CODEOWNERS فقط مالک مخزن را برای مسیرهای Vendor تعیین کرده و نویسنده PR همان حساب است. هیچ Review تأییدشده‌ای ثبت نشده؛ Merge انجام نشد.
+- **محدوده:** فقط اصلاح مستندات در PR #677؛ هیچ کد Vendor، Customer consumer، `Server/**`، دیتابیس/Migration مشتری یا secret تغییر نکرد.
+- **آزمون محلی و diff check:** اجرا نشد؛ شواهد فقط GitHub Actions/REST و بازبینی diff است.
+- **گام بعدی:** تکمیل سه Job جاری #677 و تأمین Code Owner Reviewer مستقل؛ سپس Merge فقط پس از کنترل SHA و تمام قواعد لازم. کار اجرایی #228/#393 همچنان به تصمیم‌های #392 و semantics پرداخت نیاز دارد.

@@ -11,7 +11,7 @@
 - [x] Workflowهای PR-triggered در SHAهای نهایی مرتبط و Jobهای آن‌ها بررسی شد.
 - [x] Issueهای #228، #214، #236، #235، #107، #393 و #392 بازخوانی شدند.
 - [x] قرارداد و کد جاری Provisioning، resolver، export و وضعیت CompanyReference بازبینی شد.
-- [ ] اجرای post-merge push workflow روی main و فهرست کامل PRهای همهٔ نویسندگان در این اتصال قابل بازیابی نبود؛ این محدودیت صریحاً ثبت شد.
+- [x] اجرای post-merge روی #281/#282/#284/#649 و main@53dd2e با Run ID و Job/Test summary تازه تأیید شد؛ جست‌وجوی صریح PRهای باز #675/#676/#677 را برگرداند.
 - [ ] Provisioning v2 برای entitlementهای Company-scoped تا تکمیل #392 و مصرف‌کنندهٔ سازگار در #235 عمداً fail-closed می‌ماند.
 
 ## خلاصه تغییرات و شواهد
@@ -32,11 +32,18 @@
 - **#649**، head `99a197ecd4bf4777b55e3ad4696be7b4a2a6a75c`: .NET CI run [43573902803](https://github.com/hamidreza1394/Accounting/actions/runs/43573902803)، ۷/۷ Job موفق؛ log: 1360 کل، 1352 موفق، صفر شکست، ۸ Skip. Vendor CI run [43573902807](https://github.com/hamidreza1394/Accounting/actions/runs/43573902807)، ۳/۳ Job موفق؛ Semgrep run [43573902837](https://github.com/hamidreza1394/Accounting/actions/runs/43573902837)، ۱/۱ موفق.
 - **#674**، head `3f4498833e3fde0100fe93bc79d0db711c8fdc32`: .NET CI run [43689700875](https://github.com/hamidreza1394/Accounting/actions/runs/43689700875)، ۷/۷ Job موفق؛ log: 1433 کل، 1425 موفق، صفر شکست، ۸ Skip. Semgrep run [43689700877](https://github.com/hamidreza1394/Accounting/actions/runs/43689700877)، ۱/۱ موفق. این PR خارج از مسیر Vendor بود؛ Vendor CI برای آن انتظار نمی‌رفت.
 
-### محدودیت اثبات post-merge و فهرست PRها
-- ابزار workflow در این اتصال فقط اجراهای PR-triggered را برمی‌گرداند. برای merge commitهای #281/#282/#284/#649 و main SHA، `fetch_commit_workflow_runs` اجرای push را برنگرداند؛ `get_commit_combined_status` نیز روی main SHA وضعیت commit نداشت. بنابراین Runهای PR-head بالا **جایگزین CI پس از Merge نیستند**.
-- handoff مورخ 2026-11-13 قبلاً ۱۲/۱۲ برای #281 و ۱۳/۱۳ برای #282/#284 را به‌عنوان شواهد post-merge ثبت کرده است؛ این نوبت آن Check Runهای merge commit را مستقلاً تازه‌خوانی نکرد. برای #282، شواهد تازهٔ قابل‌بازیابی در این نوبت فقط CI روی head PR است.
-- `get_users_recent_prs_in_repo(state=open)` صفر PR باز برگرداند و در ۱۰۰ PR اخیر حساب متصل نیز مورد باز دیده نشد. جست‌وجوی Issues با qualifierهای PR، خروجی Issue داد؛ endpoint فهرست همهٔ PRهای همهٔ نویسندگان در این اتصال در دسترس نبود. پس «هیچ PR بازی در کل مخزن نیست» ادعا نمی‌شود؛ PR #649 که قبلاً Vendor-open بود اکنون ادغام شده است.
-- فهرست ۱۰۰ اجرای اخیر Actions و شمارش کلی موفق/ناموفق/لغوشده نیز از endpointهای در دسترس قابل استخراج نبود. در اجراهای PR-head بالا شکست مشاهده نشد.
+### راستی‌آزمایی تکمیلی post-merge و وضعیت جاری — 2026-11-15
+
+- **#281:** merge commit `2ee1edc52904833bc28eead5a679185377363c24`؛ Check Runها ۱۲/۱۲ موفق. .NET CI run [40843230825](https://github.com/hamidreza1394/Accounting/actions/runs/40843230825) با ۷/۷ Job و ۵۸۲/۵۸۲ تست موفق؛ Semgrep [40843230797](https://github.com/hamidreza1394/Accounting/actions/runs/40843230797) و Push on main [40843230369](https://github.com/hamidreza1394/Accounting/actions/runs/40843230369) موفق.
+- **#282:** merge commit `f4a0462b0972e7686a686eca0febfaee680baecf`؛ Check Runها ۱۳/۱۳ موفق. .NET CI run [40843073694](https://github.com/hamidreza1394/Accounting/actions/runs/40843073694) با ۷/۷ Job و ۵۸۲/۵۸۲ تست موفق؛ Vendor CI [40843073693](https://github.com/hamidreza1394/Accounting/actions/runs/40843073693)، Semgrep [40843073640](https://github.com/hamidreza1394/Accounting/actions/runs/40843073640) و Push on main [40843073179](https://github.com/hamidreza1394/Accounting/actions/runs/40843073179) موفق.
+- **#284:** merge commit `81ed5f64ed86ebbae47a433cea63e3655cb1d24b`؛ Check Runها ۱۳/۱۳ موفق. .NET CI run [40845416352](https://github.com/hamidreza1394/Accounting/actions/runs/40845416352) با ۷/۷ Job و ۵۸۲/۵۸۲ تست موفق؛ Vendor CI [40845416309](https://github.com/hamidreza1394/Accounting/actions/runs/40845416309)، Semgrep [40845416374](https://github.com/hamidreza1394/Accounting/actions/runs/40845416374) و Push on main [40845416241](https://github.com/hamidreza1394/Accounting/actions/runs/40845416241) موفق.
+- **#649:** merge commit `017f18eca481b06ff4fc69157ead30fc53121edc`؛ Check Runها ۱۵/۱۵ موفق. .NET CI [43575126688](https://github.com/hamidreza1394/Accounting/actions/runs/43575126688)، ۷/۷ Job، ۱۳۵۲ موفق/۸ Skip/۰ شکست از ۱۳۶۰؛ Vendor CI [43575126726](https://github.com/hamidreza1394/Accounting/actions/runs/43575126726)، ۳/۳ Job؛ Semgrep [43575126727](https://github.com/hamidreza1394/Accounting/actions/runs/43575126727) و Push on main [43575126414](https://github.com/hamidreza1394/Accounting/actions/runs/43575126414) موفق.
+- **#674 و main فعلی:** merge commit #674 همان `53dd2eab9bf19148d80eb8ee01bbc744d8033d3f` است؛ Check Runها ۱۲/۱۲ موفق. .NET CI [43690845226](https://github.com/hamidreza1394/Accounting/actions/runs/43690845226)، ۷/۷ Job، ۱۴۲۵ موفق/۸ Skip/۰ شکست از ۱۴۳۳؛ Semgrep [43690845229](https://github.com/hamidreza1394/Accounting/actions/runs/43690845229) و Push on main/CodeQL [43690844923](https://github.com/hamidreza1394/Accounting/actions/runs/43690844923) موفق. Check Runهای main: ۱۲/۱۲ موفق.
+- **تداوم کد Vendor:** Compare بین merge commit #649 و main فعلی ۲۴ Commit ahead، صفر behind و ۸۴ فایل تغییرکرده دارد؛ هیچ مسیر Vendor، Vendor.sln، Licensing.Contracts یا تست Vendor تغییر نکرده است. بنابراین Vendor CI پس از #649 روی کد Vendor فعلی معتبر است؛ PR #674 صرفاً تغییرات Tenant/test/docs خارج از Vendor دارد.
+- **PRهای باز:** جست‌وجوی صریح `is:open` سه PR را برگرداند: #675 و #676 خارج از Vendor، و #677 مستندات Vendor. هیچ PR باز دیگری در نتیجه جست‌وجوی مخزن مشاهده نشد.
+- **۱۰۰ اجرای اخیر Actions:** ۹۲ success، ۷ cancelled، یک in_progress و صفر failure. شکست تازه‌ای در این بازه مشاهده نشد.
+- **PR #677:** head فعلی `c9085edf3627a480deda93650a214f8ff4ea5a0e`، mergeable=true؛ ۱۵ Check Run شامل ۱۱ success، یک neutral (CodeRabbit rate limit) و سه in_progress برای publish، publish-windows و e2e. هر چهار Required Status Check سبز هستند، اما Code Owner review ثبت نشده است. Ruleset `main-protection`، Code Owner review را الزام می‌کند؛ CODEOWNERS فقط `@hamidreza1394` را مالک مسیرهای Vendor می‌داند و نویسنده PR نیز همین حساب است. Merge انجام نشد.
+
 
 ## بازبینی کد و شکاف‌ها
 
@@ -82,10 +89,10 @@
 | Semgrep روی #649 head | موفق | ۱/۱ Job |
 | GitHub .NET CI روی #674 head | موفق | ۷/۷ Job؛ 1425 موفق، ۰ شکست، ۸ Skip |
 | Semgrep روی #674 head | موفق | ۱/۱ Job |
-| CI روی headهای #281/#282/#284 | موفق | جزئیات Run و شمار تست در بالا؛ این‌ها post-merge نیستند |
-| CI push روی main و Check Runهای merge commit | قابل‌بازیابی نبود | از endpointهای موجود، نه ادعای موفقیت و نه شکست |
+| CI پس از Merge #281/#282/#284 | موفق | به‌ترتیب ۱۲/۱۲، ۱۳/۱۳ و ۱۳/۱۳ Check؛ .NET هرکدام ۵۸۲/۵۸۲ تست موفق |
+| CI پس از Merge #649/#674 و main فعلی | موفق | #649: ۱۵/۱۵؛ #674/main: ۱۲/۱۲؛ Run و Test totals در بخش بالا |
 | تست محلی / Build محلی | اجرا نشد | checkout و runner محلی در این اجرا در دسترس نبود |
-| `git diff --check` محلی | اجرا نشد | diff از GitHub بازبینی می‌شود؛ ادعای اجرای محلی نداریم |
+| PR #677 روی head فعلی | در حال اجرا | چهار Required Check سبز؛ publish، publish-windows و e2e ناتمام؛ Code Owner review غایب |\n| ۱۰۰ اجرای اخیر Actions | بدون شکست | ۹۲ موفق، ۷ لغوشده، ۱ در حال اجرا، ۰ ناموفق |\n| `git diff --check` محلی | اجرا نشد | diff از GitHub بازبینی می‌شود؛ ادعای اجرای محلی نداریم |
 
 ## امنیت، داده و سازگاری
 - Issue #632 بسته شده است. در logهای #649، الگوهای مشخص `sqlcmd -P/--password`، Connection String حاوی Password/Pwd، PEM private key و tokenهای رایج اسکن شدند؛ هیچ‌یک از این markerها در logهای بررسی‌شده یافت نشد. این بررسی محدود به همان logها و الگوهاست، نه ادعای اسکن جامع تمام Actions.
