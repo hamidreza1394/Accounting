@@ -3169,3 +3169,8 @@
 - **انجام‌شده:** `DatabaseMigrationHost`؛ `--migrate` فقط Core، `--migrate --include-trade` اول Core سپس Trade؛ قفل `sp_getapplock` جلسه‌ای؛ توقف (کد ۴) روی جدول Trade بدون History؛ کد خروج مشخص؛ خطاهای بدون تنظیمات اتصال.
 - **محدوده:** فقط `Server/Program.cs`، `Server/Infrastructure/Hosting/DatabaseMigrationHost.cs`، تست و مستندات؛ بدون Schema/Migration/Backfill/Baseline/Entitlement.
 - **Handoff:** `docs/handoffs/ISSUE-UNNUMBERED-pr-1-migration-host-core-trade.md`.
+
+## 2026-11-15 — مستندسازی OD-1 (D-088)
+- **مبنا:** `origin/main@1c0eec0`.
+- **انجام‌شده:** ثبت D-088 (`Accepted`، پیاده‌سازی `Partial`) در `docs/DECISIONS.md`؛ اصلاح بخش PR-E1b در `docs/SECURITY.md`: مشاهدهٔ سراسری مدیر نصب از فهرست نقص‌ها خارج شد و الزامات ۱ تا ۶ D-088 به‌عنوان کار باز ماند؛ وابستگی به Tenant واقعی فقط برای فیلتر `companyId`/`TenantId` باقی ماند.
+- **محدوده:** فقط مستندات؛ بدون کد، Schema یا Migration.
