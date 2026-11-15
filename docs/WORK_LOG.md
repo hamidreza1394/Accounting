@@ -3174,3 +3174,8 @@
 - **مبنا:** `origin/main@1c0eec0`.
 - **انجام‌شده:** ثبت D-088 (`Accepted`، پیاده‌سازی `Partial`) در `docs/DECISIONS.md`؛ اصلاح بخش PR-E1b در `docs/SECURITY.md`: مشاهدهٔ سراسری مدیر نصب از فهرست نقص‌ها خارج شد و الزامات ۱ تا ۶ D-088 به‌عنوان کار باز ماند؛ وابستگی به Tenant واقعی فقط برای فیلتر `companyId`/`TenantId` باقی ماند.
 - **محدوده:** فقط مستندات؛ بدون کد، Schema یا Migration.
+
+## 2026-11-15 — ثبت تصمیم OD-6 (D-089)
+- **مبنا:** `origin/main` پس از Merge شدن #666.
+- **انجام‌شده:** ثبت D-089 (`Accepted`، پیاده‌سازی `NotImplemented`) برای OD-6 و OD-6a: ساخت Tenant فقط توسط مدیر نصب، `CustomerReference` فقط کلید ارجاع و نگاشت یک‌به‌یک، Provisioning فقط اتصال، اعتبارسنجی امضا با `KeyId`، ممنوعیت حدس Tenant، Bootstrap نصب اختصاصی.
+- **محدوده:** فقط مستندات؛ بدون کد، Schema، Migration یا Backfill.
