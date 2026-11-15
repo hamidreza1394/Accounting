@@ -399,8 +399,9 @@ public sealed class VendorProvisioningLicenseResolverSqlServerTests
         }
     }
 
-    private static VendorProvisioningLicenseResolver CreateResolver(VendorDbContext db, ECDsa key) =>
-        new(db, CreateTrustStore(key), TimeProvider.System);
+    internal static VendorProvisioningLicenseResolver CreateResolver(
+        VendorDbContext db, ECDsa key, VendorProvisioningCompanyReferenceGate? gate = null) =>
+        new(db, CreateTrustStore(key), TimeProvider.System, gate);
 
     private static LicenseSigningTrustStore CreateTrustStore(ECDsa key, bool revoked = false)
     {
@@ -415,7 +416,7 @@ public sealed class VendorProvisioningLicenseResolverSqlServerTests
         return new LicenseSigningTrustStore(configuration);
     }
 
-    private static async Task<SeededLicense> SeedAsync(
+    internal static async Task<SeededLicense> SeedAsync(
         VendorDbContext db, ECDsa key, int sequence, string[] subsystems)
     {
         var now = DateTimeOffset.UtcNow;
@@ -465,14 +466,31 @@ public sealed class VendorProvisioningLicenseResolverSqlServerTests
         return new SeededLicense(customer, installation, license);
     }
 
-    private static async Task AddCompanyScopedEnvelopeAsync(
+    private static Task AddCompanyScopedEnvelopeAsync(
         VendorDbContext db,
         VendorLicense license,
         VendorInstallation installation,
         ECDsa key,
         int sequence,
         string companyReference,
-        string[] modules)
+        string[] modules) =>
+        AddCompanyScopedEnvelopeAsync(
+            db, license, installation, key, sequence,
+            [
+                new CompanyLicenseEntitlement(
+                    companyReference,
+                    Array.AsReadOnly(modules),
+                    5,
+                    Array.Empty<LicenseFeatureEntitlement?>())
+            ]);
+
+    internal static async Task AddCompanyScopedEnvelopeAsync(
+        VendorDbContext db,
+        VendorLicense license,
+        VendorInstallation installation,
+        ECDsa key,
+        int sequence,
+        IReadOnlyList<CompanyLicenseEntitlement?> companies)
     {
         var now = DateTimeOffset.UtcNow;
         var payload = new LicensePayload(
@@ -488,14 +506,7 @@ public sealed class VendorProvisioningLicenseResolverSqlServerTests
             sequence,
             new LicenseLimits(license.MaxCompanies, Array.Empty<string>()))
         {
-            CompanyEntitlements =
-            [
-                new CompanyLicenseEntitlement(
-                    companyReference,
-                    Array.AsReadOnly(modules),
-                    5,
-                    Array.Empty<LicenseFeatureEntitlement?>())
-            ]
+            CompanyEntitlements = companies
         };
         Assert.Empty(StructuralValidation.ValidatePayload(payload));
 
@@ -564,7 +575,7 @@ public sealed class VendorProvisioningLicenseResolverSqlServerTests
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
-    private static async Task<Fixture?> OpenAsync()
+    internal static async Task<Fixture?> OpenAsync()
     {
         var baseConnection = Environment.GetEnvironmentVariable("FARANO_VENDOR_TEST_SQLSERVER");
         if (string.IsNullOrWhiteSpace(baseConnection))
@@ -594,17 +605,17 @@ public sealed class VendorProvisioningLicenseResolverSqlServerTests
         }
     }
 
-    private static async Task CleanupAsync(Fixture fixture)
+    internal static async Task CleanupAsync(Fixture fixture)
     {
         await fixture.Db.Database.EnsureDeletedAsync(TestContext.Current.CancellationToken);
         fixture.Scope.Dispose();
         await fixture.Provider.DisposeAsync();
     }
 
-    private sealed record SeededLicense(
+    internal sealed record SeededLicense(
         VendorCustomer Customer, VendorInstallation Installation, VendorLicense License);
 
-    private sealed record Fixture(
+    internal sealed record Fixture(
         Microsoft.Extensions.DependencyInjection.ServiceProvider Provider,
         Microsoft.Extensions.DependencyInjection.IServiceScope Scope,
         VendorDbContext Db);

@@ -214,7 +214,7 @@ public static class VendorProvisioningEndpoints
             }
 
             var licenseBinding = await licenseResolver.ResolveLatestAsync(
-                request.LicenseId, customer, installation, request.Subsystems, ct);
+                request.LicenseId, customer, installation, request.Subsystems, request.CompanyReference, ct);
             if (!licenseBinding.Succeeded)
                 return Results.Json(new { error = licenseBinding.ErrorCode }, statusCode: licenseBinding.StatusCode);
 
@@ -224,25 +224,9 @@ public static class VendorProvisioningEndpoints
             var now = timeProvider.GetUtcNow().ToUniversalTime();
             var nonce = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
                 .TrimEnd('=').Replace('+', '-').Replace('/', '_');
-            var payload = new CustomerProvisioningPayload(
-                CustomerProvisioningPackageValidator.CurrentPayloadSchemaVersion,
-                requestId,
-                customer.CustomerNumber,
-                installation.InstallationCode,
-                request.CompanyName!.Trim(),
-                request.CompanyType!.Trim(),
-                request.InitialAdminUserName!.Trim(),
-                licenseBinding.Subsystems!,
-                now,
-                now.AddHours(CustomerProvisioningPackageValidator.MaxPackageLifetimeHours),
-                nonce,
-                request.FiscalPeriodTitle!.Trim(),
-                request.FiscalPeriodStartDate,
-                request.FiscalPeriodEndDate,
-                request.ParentCompanyReference?.Trim(),
-                request.InitialAdminEmail!.Trim(),
-                licenseBinding.LicenseId,
-                licenseBinding.Sequence);
+            var payload = VendorProvisioningRequestRules.BuildPayload(
+                request, requestId, customer.CustomerNumber, installation.InstallationCode,
+                licenseBinding, now, nonce);
             var payloadJson = CustomerProvisioningCanonicalJson.Serialize(payload);
             var payloadHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payloadJson))).ToLowerInvariant();
 
@@ -424,13 +408,16 @@ public static class VendorProvisioningEndpoints
                 return Results.Conflict(new { error = "provisioning_license_binding_required" });
             }
 
-            if (exportPayload is null || exportPayload.SchemaVersion != 4 ||
+            if (exportPayload is null ||
+                exportPayload.SchemaVersion is not (CustomerProvisioningPackageValidator.CurrentPayloadSchemaVersion or
+                    CustomerProvisioningPackageValidator.CompanyReferencePayloadSchemaVersion) ||
                 !Guid.TryParseExact(exportPayload.LicenseId, "D", out var exportLicenseId) ||
                 exportPayload.Sequence is not int)
                 return Results.Conflict(new { error = "provisioning_license_binding_required" });
 
             var exportBinding = await licenseResolver.ResolveLatestAsync(
-                exportLicenseId, customer, installation, exportPayload.Subsystems, ct);
+                exportLicenseId, customer, installation, exportPayload.Subsystems,
+                exportPayload.CompanyReference, ct);
             if (!exportBinding.Succeeded)
                 return Results.Json(new { error = exportBinding.ErrorCode }, statusCode: exportBinding.StatusCode);
             if (!VendorProvisioningLicenseBindingRules.MatchesCurrentBinding(exportPayload, exportBinding))
@@ -671,14 +658,17 @@ public static class VendorProvisioningEndpoints
         try
         {
             var payload = JsonSerializer.Deserialize<CustomerProvisioningPayload>(existing.PayloadJson, PayloadJsonOptions);
-            if (payload is null || payload.SchemaVersion != 4 ||
+            if (payload is null ||
+                payload.SchemaVersion is not (CustomerProvisioningPackageValidator.CurrentPayloadSchemaVersion or
+                    CustomerProvisioningPackageValidator.CompanyReferencePayloadSchemaVersion) ||
                 payload.Sequence is not int sequence ||
                 !Guid.TryParseExact(payload.LicenseId, "D", out var payloadLicenseId) ||
                 payloadLicenseId != request.LicenseId)
                 return false;
 
             var binding = await licenseResolver.ResolveSequenceAsync(
-                request.LicenseId, sequence, customer, installation, request.Subsystems, cancellationToken);
+                request.LicenseId, sequence, customer, installation, request.Subsystems,
+                request.CompanyReference, cancellationToken);
             return binding.Succeeded &&
                    VendorProvisioningRequestRules.MatchesExisting(
                        payload, request, customer.CustomerNumber, installation.InstallationCode, binding);

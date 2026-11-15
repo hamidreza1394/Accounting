@@ -3,6 +3,11 @@ using System.Net.Mail;
 
 namespace Faranou.Vendor.Host.Authorization;
 
+/// <param name="CompanyReference">
+/// Selector among the references granted by the signed company-scoped license. It is never the issued
+/// value: the issued reference is read from the verified signed payload
+/// (see <see cref="VendorProvisioningCompanyReferenceRules"/>).
+/// </param>
 public sealed record CreateVendorProvisioningRequest(
     Guid RequestId,
     Guid CustomerId,
@@ -16,7 +21,8 @@ public sealed record CreateVendorProvisioningRequest(
     DateOnly? FiscalPeriodStartDate = null,
     DateOnly? FiscalPeriodEndDate = null,
     string? ParentCompanyReference = null,
-    string? InitialAdminEmail = null);
+    string? InitialAdminEmail = null,
+    string? CompanyReference = null);
 
 /// <summary>Pure validation rules for a Vendor-side provisioning request; no customer DB access.</summary>
 public static class VendorProvisioningRequestRules
@@ -67,6 +73,10 @@ public static class VendorProvisioningRequestRules
             request.FiscalPeriodStartDate.Value >= request.FiscalPeriodEndDate.Value)
             return "invalid_provisioning_fiscal_period";
 
+        if (request.CompanyReference is not null &&
+            !StructuralValidation.IsValidCompanyReference(request.CompanyReference))
+            return "invalid_provisioning_company_reference";
+
         var parentReference = request.ParentCompanyReference?.Trim();
         var hasValidParentReference = Guid.TryParseExact(parentReference, "D", out var parentRequestId) &&
             parentRequestId != Guid.Empty &&
@@ -89,6 +99,50 @@ public static class VendorProvisioningRequestRules
         string.Equals(customerStatus, "Active", StringComparison.Ordinal) &&
         string.Equals(installationStatus, "Active", StringComparison.Ordinal);
 
+    /// <summary>
+    /// Builds the canonical payload from a resolved binding. Schema v4 for legacy licenses; schema v5 only
+    /// when the binding carries a CompanyReference read from the signed license. The browser-supplied
+    /// selector is never copied into the payload.
+    /// </summary>
+    public static CustomerProvisioningPayload BuildPayload(
+        CreateVendorProvisioningRequest request,
+        string requestId,
+        string customerReference,
+        string installationId,
+        VendorProvisioningLicenseBindingResult binding,
+        DateTimeOffset now,
+        string nonce)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(binding);
+        if (!binding.Succeeded || binding.Subsystems is null || binding.LicenseId is null)
+            throw new InvalidOperationException("A provisioning payload requires a successfully resolved license binding.");
+
+        var schemaVersion = binding.CompanyReference is null
+            ? CustomerProvisioningPackageValidator.CurrentPayloadSchemaVersion
+            : CustomerProvisioningPackageValidator.CompanyReferencePayloadSchemaVersion;
+        return new CustomerProvisioningPayload(
+            schemaVersion,
+            requestId,
+            customerReference,
+            installationId,
+            request.CompanyName!.Trim(),
+            request.CompanyType!.Trim(),
+            request.InitialAdminUserName!.Trim(),
+            binding.Subsystems,
+            now,
+            now.AddHours(CustomerProvisioningPackageValidator.MaxPackageLifetimeHours),
+            nonce,
+            request.FiscalPeriodTitle!.Trim(),
+            request.FiscalPeriodStartDate,
+            request.FiscalPeriodEndDate,
+            request.ParentCompanyReference?.Trim(),
+            request.InitialAdminEmail!.Trim(),
+            binding.LicenseId,
+            binding.Sequence,
+            binding.CompanyReference);
+    }
+
     public static bool MatchesExisting(
         CustomerProvisioningPayload existing,
         CreateVendorProvisioningRequest request,
@@ -100,7 +154,15 @@ public static class VendorProvisioningRequestRules
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(licenseBinding);
 
+        // Schema v4 (legacy license) carries no reference; schema v5 carries exactly the signed one, and a
+        // replay is the same request only when the operator selected that same reference again.
+        var expectedSchemaVersion = licenseBinding.CompanyReference is null
+            ? CustomerProvisioningPackageValidator.CurrentPayloadSchemaVersion
+            : CustomerProvisioningPackageValidator.CompanyReferencePayloadSchemaVersion;
+
         return licenseBinding.Succeeded &&
+               string.Equals(request.CompanyReference, licenseBinding.CompanyReference, StringComparison.Ordinal) &&
+               string.Equals(existing.CompanyReference, licenseBinding.CompanyReference, StringComparison.Ordinal) &&
                string.Equals(request.LicenseId.ToString("D"), licenseBinding.LicenseId, StringComparison.OrdinalIgnoreCase) &&
                string.Equals(existing.RequestId, request.RequestId.ToString("D"), StringComparison.OrdinalIgnoreCase) &&
                string.Equals(existing.CustomerReference, customerReference, StringComparison.Ordinal) &&
@@ -111,7 +173,7 @@ public static class VendorProvisioningRequestRules
                string.Equals(existing.CompanyType, request.CompanyType?.Trim(), StringComparison.Ordinal) &&
                string.Equals(existing.InitialAdminUserName, request.InitialAdminUserName?.Trim(), StringComparison.Ordinal) &&
                string.Equals(existing.InitialAdminEmail, request.InitialAdminEmail?.Trim(), StringComparison.OrdinalIgnoreCase) &&
-               existing.SchemaVersion == CustomerProvisioningPackageValidator.CurrentPayloadSchemaVersion &&
+               existing.SchemaVersion == expectedSchemaVersion &&
                string.Equals(existing.FiscalPeriodTitle, request.FiscalPeriodTitle?.Trim(), StringComparison.Ordinal) &&
                existing.FiscalPeriodStartDate == request.FiscalPeriodStartDate &&
                existing.FiscalPeriodEndDate == request.FiscalPeriodEndDate &&
