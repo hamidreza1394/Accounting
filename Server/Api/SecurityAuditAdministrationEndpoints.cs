@@ -75,6 +75,12 @@ public static class SecurityAuditAdministrationEndpoints
                 Infrastructure.Tenancy.CompanyAccessService.UserAccountKind))
             .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
 
+        api.MapGet("/admin/security/installation-admin-activity", GetInstallationAdminActivityAsync)
+            .RequireAuthorization(policy => policy.RequireClaim(
+                Infrastructure.Tenancy.CompanyAccessService.AccountKindClaimType,
+                Infrastructure.Tenancy.CompanyAccessService.UserAccountKind))
+            .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+
         api.MapPost("/admin/security/audit-events/export", ExportAuditEventsAsync)
             .RequireAuthorization(policy => policy.RequireClaim(
                 Infrastructure.Tenancy.CompanyAccessService.AccountKindClaimType,
@@ -202,7 +208,97 @@ public static class SecurityAuditAdministrationEndpoints
                 item.CorrelationId);
         }).ToArray();
 
+        await Infrastructure.Security.InstallationAdminAudit.RecordAccessAsync(
+            database, principal, httpContext.Connection.RemoteIpAddress?.ToString(), "SecurityAuditEvents",
+            isSearch: eventType is not null || userId.HasValue || companyId.HasValue || fromUtc.HasValue || toUtc.HasValue,
+            filters: new { eventType, userId, companyId, fromUtc, toUtc, sort, descending, page, pageSize },
+            resultCount: items.Length, entityId: null, cancellationToken);
+
         return TypedResults.Ok(new SecurityAuditEventListResponse(items, totalCount, page, pageSize));
+    }
+
+    /// <summary>
+    /// D-088 independent report: what the installation administrator viewed, searched and changed.
+    /// Read-only; viewing the report is itself recorded.
+    /// </summary>
+    public static async Task<IResult> GetInstallationAdminActivityAsync(
+        HttpContext httpContext,
+        ClaimsPrincipal principal,
+        Data.DatabaseContext database,
+        Guid? actorId = null,
+        DateTimeOffset? fromUtc = null,
+        DateTimeOffset? toUtc = null,
+        int page = 1,
+        int pageSize = 25,
+        CancellationToken cancellationToken = default)
+    {
+        SetNoStore(httpContext);
+
+        var authorization = await UserAdministrationEndpoints.AuthorizeInstallationAdministratorAsync(
+            principal, database, cancellationToken);
+        if (authorization is not null)
+            return authorization;
+
+        if (actorId == Guid.Empty || (fromUtc.HasValue && toUtc.HasValue && fromUtc.Value > toUtc.Value))
+            return TypedResults.BadRequest(new { error = "فیلترهای گزارش فعالیت مدیر نصب معتبر نیستند." });
+
+        page = Math.Clamp(page, 1, MaxPage);
+        pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
+
+        var types = Infrastructure.Security.InstallationAdminAudit.ReportEventTypes;
+        IQueryable<Domain.SecurityAuditEvent> query = database.SecurityAuditEvents.AsNoTracking()
+            .Where(item => types.Contains(item.EventType));
+        if (actorId.HasValue)
+            query = query.Where(item => item.UserId == actorId.Value);
+        if (fromUtc.HasValue)
+        {
+            var from = fromUtc.Value.UtcDateTime;
+            query = query.Where(item => item.OccurredAtUtc >= from);
+        }
+        if (toUtc.HasValue)
+        {
+            var to = toUtc.Value.UtcDateTime;
+            query = query.Where(item => item.OccurredAtUtc <= to);
+        }
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        var rows = await query
+            .OrderByDescending(item => item.OccurredAtUtc)
+            .ThenByDescending(item => item.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(item => new
+            {
+                item.Id, item.UserId, item.TenantId, item.EventType, item.EntityType,
+                item.EntityId, item.OccurredAtUtc, item.CorrelationId, item.DetailsJson,
+            })
+            .ToListAsync(cancellationToken);
+
+        var actorIds = rows.Where(row => row.UserId.HasValue).Select(row => row.UserId!.Value).Distinct().ToArray();
+        var actors = await database.Users.AsNoTracking()
+            .Where(user => actorIds.Contains(user.Id))
+            .Select(user => new { user.Id, user.Username })
+            .ToDictionaryAsync(user => user.Id, user => user.Username, cancellationToken);
+
+        var items = rows.Select(row => new InstallationAdminActivityItemResponse(
+            row.Id,
+            row.UserId,
+            row.UserId.HasValue && actors.TryGetValue(row.UserId.Value, out var username) ? username : null,
+            row.TenantId,
+            row.EventType,
+            row.EntityType,
+            row.EntityId,
+            DateTime.SpecifyKind(row.OccurredAtUtc, DateTimeKind.Utc),
+            row.CorrelationId,
+            row.DetailsJson)).ToArray();
+
+        await Infrastructure.Security.InstallationAdminAudit.RecordAccessAsync(
+            database, principal, httpContext.Connection.RemoteIpAddress?.ToString(), "InstallationAdminActivityReport",
+            isSearch: actorId.HasValue || fromUtc.HasValue || toUtc.HasValue,
+            filters: new { actorId, fromUtc, toUtc, page, pageSize },
+            resultCount: items.Length, entityId: null, cancellationToken);
+
+        return TypedResults.Ok(new InstallationAdminActivityListResponse(items, totalCount, page, pageSize));
     }
 
 
@@ -267,6 +363,10 @@ public static class SecurityAuditAdministrationEndpoints
             .Select(company => new SecurityAuditCompanyItemResponse(
                 company.Id, company.Name, company.IsActive))
             .ToListAsync(cancellationToken);
+
+        await Infrastructure.Security.InstallationAdminAudit.RecordAccessAsync(
+            database, principal, httpContext.Connection.RemoteIpAddress?.ToString(), "Companies", isSearch: search is not null,
+            filters: new { search, page, pageSize }, resultCount: items.Count, entityId: null, cancellationToken);
 
         return TypedResults.Ok(new SecurityAuditCompanyListResponse(items, totalCount, page, pageSize));
     }
@@ -470,6 +570,24 @@ public sealed record SecurityAuditExportRequest(
     Guid? CompanyId,
     DateTimeOffset? FromUtc,
     DateTimeOffset? ToUtc);
+
+public sealed record InstallationAdminActivityItemResponse(
+    Guid Id,
+    Guid? ActorUserId,
+    string? ActorUsername,
+    Guid? CompanyId,
+    string EventType,
+    string? EntityType,
+    string? EntityId,
+    DateTime OccurredAtUtc,
+    string? CorrelationId,
+    string? DetailsJson);
+
+public sealed record InstallationAdminActivityListResponse(
+    IReadOnlyList<InstallationAdminActivityItemResponse> Items,
+    int TotalCount,
+    int Page,
+    int PageSize);
 
 public sealed record SecurityAuditEventListResponse(
     IReadOnlyList<SecurityAuditEventItemResponse> Items,

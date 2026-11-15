@@ -44,6 +44,11 @@ public class DeleteModel : Infrastructure.BasePageModelWithDatabaseContext
 				return RedirectToPage(pageName: "Index");
 			}
 
+			await Infrastructure.Security.InstallationAdminAudit.RecordAccessAsync(
+				DatabaseContext, User, HttpContext.Connection.RemoteIpAddress?.ToString(), "User", isSearch: false,
+				filters: new { channel = "AdminPage" }, resultCount: null, entityId: id.Value.ToString(),
+				cancellationToken: default);
+
 			ViewModel =
 				await
 				DatabaseContext.Users
@@ -149,6 +154,25 @@ public class DeleteModel : Infrastructure.BasePageModelWithDatabaseContext
 
 				return RedirectToPage(pageName: "Index");
 			}
+
+			DatabaseContext.SecurityAuditEvents.Add(Infrastructure.Security.InstallationAdminAudit.CreateEvent(
+				Infrastructure.Security.InstallationAdminAudit.GetActorId(User), Infrastructure.Security.InstallationAdminAudit.UserDeleted, "User", foundedItem.Id.ToString(),
+				new
+				{
+					channel = "AdminPage",
+					subjectUserId = foundedItem.Id,
+					companyIds = await Infrastructure.Security.InstallationAdminAudit.GetCompanyIdsAsync(DatabaseContext, foundedItem.Id, default),
+					changes = Infrastructure.Security.InstallationAdminAudit.Diff(
+						("Username", foundedItem.Username, null),
+						("FirstName", foundedItem.FirstName, null),
+						("LastName", foundedItem.LastName, null),
+						("EmailAddress", foundedItem.EmailAddress, null),
+						("CellPhoneNumber", foundedItem.CellPhoneNumber, null),
+						("RoleId", foundedItem.RoleId?.ToString(), null),
+						("IsActive", foundedItem.IsActive.ToString(), null)),
+					reason = (string?)null,
+				},
+				HttpContext.Connection.RemoteIpAddress?.ToString()));
 
 			var entityEntry =
 				DatabaseContext.Remove(entity: foundedItem);

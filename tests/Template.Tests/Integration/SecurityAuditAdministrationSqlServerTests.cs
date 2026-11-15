@@ -123,7 +123,9 @@ public sealed class SecurityAuditAdministrationSqlServerTests
                 sort: "eventType", descending: false,
                 page: 1, pageSize: 10, cancellationToken: cancellationToken);
             var sortedItems = Assert.IsType<Ok<Server.Api.SecurityAuditEventListResponse>>(sorted).Value!.Items;
-            Assert.Equal(new[] { "LoginSucceeded", "LogoutSucceeded" }, sortedItems.Select(row => row.EventType));
+            // D-088: reading the audit list is itself recorded, so only the two seeded types are compared
+            Assert.Equal(new[] { "LoginSucceeded", "LogoutSucceeded" },
+                sortedItems.Select(row => row.EventType).Where(type => type is "LoginSucceeded" or "LogoutSucceeded"));
             Assert.All(sortedItems, row => Assert.Equal(DateTimeKind.Utc, row.OccurredAtUtc.Kind));
 
             var eventTypes = await Server.Api.SecurityAuditAdministrationEndpoints.GetAuditEventTypesAsync(

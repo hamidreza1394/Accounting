@@ -69,6 +69,34 @@ public class DatabaseContext : Microsoft.EntityFrameworkCore.DbContext
     public Microsoft.EntityFrameworkCore.DbSet<Domain.CompanyEmployeePhoto> CompanyEmployeePhotos { get; set; }
     public Microsoft.EntityFrameworkCore.DbSet<Domain.UserSession> UserSessions { get; set; }
 
+        /// <summary>
+        /// D-088 (OD-1 item 3): security audit events are append-only through the application. A change or
+        /// removal of an existing audit row is refused here for every caller, including the installation
+        /// administrator. (A database-level guard would need a schema change and is a separate decision.)
+        /// </summary>
+        private void EnsureAuditEventsAreAppendOnly()
+        {
+                if (ChangeTracker.Entries<Domain.SecurityAuditEvent>().Any(entry =>
+                        entry.State is Microsoft.EntityFrameworkCore.EntityState.Modified
+                            or Microsoft.EntityFrameworkCore.EntityState.Deleted))
+                {
+                        throw new InvalidOperationException("Security audit events are append-only.");
+                }
+        }
+
+        public override int SaveChanges(bool acceptAllChangesOnSuccess)
+        {
+                EnsureAuditEventsAreAppendOnly();
+                return base.SaveChanges(acceptAllChangesOnSuccess);
+        }
+
+        public override System.Threading.Tasks.Task<int> SaveChangesAsync(
+                bool acceptAllChangesOnSuccess, System.Threading.CancellationToken cancellationToken = default)
+        {
+                EnsureAuditEventsAreAppendOnly();
+                return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
+
         protected override void OnModelCreating
                 (Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder)
         {

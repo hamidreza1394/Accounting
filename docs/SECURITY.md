@@ -404,3 +404,12 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
   6. اصلاح اطلاعات مشتری فقط از مسیر سرویس‌ها و قواعد معتبر برنامه، بدون تغییر مستقیم و کنترل‌نشدهٔ داده.
 - **همچنان وابسته به Tenant واقعی (S3، بدون اصلاح):** فیلتر `companyId` روی `TenantId` میراثی و `TenantId` در Trade. D-088 Tenant نمی‌سازد؛ فیلتر Tenant جعلی اضافه نشد.
 - **Backlog کم‌اهمیت:** `CsvCell("")` برای رشتهٔ خالی `value[0]` می‌خواند (امروز مسیر قابل‌رسیدن ندارد؛ نام خالی `null` می‌شود)؛ `DatabaseSetup` صفحهٔ پیش از نصب است و خارج از دامنه.
+
+## اجرای D-088: ردیابی دسترسی و تغییرات مدیر نصب (2026-11-15)
+- **مبنا:** D-088 (OD-1 Accepted). بدون Schema/Migration/Backfill/Tenant؛ فقط روی `SecurityAuditEvent` موجود (جزئیات در `DetailsJson`).
+- **ثبت مشاهده/جستجو (الزام ۱):** `InstallationAdminAudit.RecordAccessAsync` پیش از خواندن داده و با ذخیرهٔ فوری (fail-closed) رویداد `InstallationAdminDataViewed`/`InstallationAdminDataSearched` ثبت می‌کند: فهرست/جزئیات/سابقهٔ ورود کاربران، نشست‌ها، فهرست رویدادهای ممیزی، فهرست شرکت‌ها (API)، صفحات Razor کاربران (Index/Details/Update/Delete)، و صف/تاریخچه/تأییدکنندگان درخواست عضویت هر شرکت (استثنای D-071، با `companyId`).
+- **ثبت تغییر (الزام ۲):** `UserCreated`/`UserUpdated`/`UserDeleted` با هویت مدیر (`UserId`)، `subjectUserId`، شرکت‌ها، زمان، نوع عملیات، `changes` (فقط فیلدهای تغییرکرده: قبلی/جدید؛ هرگز رمز عبور) و `reason` (حداکثر ۵۰۰ نویسه). `reason` در API اختیاری است و صفحات Razor فیلد دلیل ندارند (`null`).
+- **عدم دست‌کاری ممیزی (الزام ۳):** `DatabaseContext.SaveChanges*` هر تغییر/حذف ردیف `SecurityAuditEvent` را با `InvalidOperationException` رد می‌کند؛ آزمون اسکن منبع، `ExecuteUpdate/ExecuteDelete/Remove/Update` روی آن را در کد برنامه ممنوع می‌کند. **محدودیت:** SQL مستقیم روی پایگاه‌داده را متوقف نمی‌کند؛ محافظت سطح DB (Trigger/مجوز) نیازمند تصمیم Schema است و انجام نشد.
+- **گزارش مستقل (الزام ۶):** `GET /api/v1/admin/security/installation-admin-activity` (فقط Admin، فقط‌خواندنی، `no-store`، فیلتر بازه/عامل، صفحه‌بندی)؛ مشاهدهٔ خود گزارش هم ثبت می‌شود.
+- **الزام ۴ (دور نزدن مجوزها):** آزمون HTTP: مدیر نصب بدون عضویت، دایرکتوری کاربران شرکت و Trade را نمی‌بیند. **یافتهٔ باز برای مالک:** تأیید/رد درخواست عضویت هر شرکت توسط مدیر نصب طبق D-071 بند ۷ مجاز است (ثبت‌شده، بدون نقش سیستمی، بدون خودتأییدی)؛ سازگاری آن با بند ۴ D-088 باید مالک تأیید کند.
+- **Backlog:** الزام دلیل و فیلد دلیل در Razor؛ محافظت DB (نیازمند تأیید Schema)؛ ممیزی Razor Roles؛ آزمون خرابی نوشتن ممیزی (fail-closed)؛ صفحه‌بندی Razor Users Index؛ موارد وابسته به Tenant در S3.

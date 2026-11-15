@@ -232,6 +232,25 @@ public class CreateModel : Infrastructure.BasePageModelWithDatabaseContext
 				await
 				DatabaseContext.AddAsync(entity: newEntity);
 
+			DatabaseContext.SecurityAuditEvents.Add(Infrastructure.Security.InstallationAdminAudit.CreateEvent(
+				Infrastructure.Security.InstallationAdminAudit.GetActorId(User), "UserCreated", "User", newEntity.Id.ToString(),
+				new
+				{
+					channel = "AdminPage",
+					subjectUserId = newEntity.Id,
+					changes = Infrastructure.Security.InstallationAdminAudit.Diff(
+						("Username", null, newEntity.Username),
+						("FirstName", null, newEntity.FirstName),
+						("LastName", null, newEntity.LastName),
+						("EmailAddress", null, newEntity.EmailAddress),
+						("CellPhoneNumber", null, newEntity.CellPhoneNumber),
+						("RoleId", null, newEntity.RoleId?.ToString()),
+						("IsActive", null, newEntity.IsActive.ToString()),
+						("IsProgrammer", null, newEntity.IsProgrammer.ToString())),
+					reason = (string?)null,
+				},
+				HttpContext.Connection.RemoteIpAddress?.ToString()));
+
 			var affectedRows =
 				await
 				DatabaseContext.SaveChangesAsync();
