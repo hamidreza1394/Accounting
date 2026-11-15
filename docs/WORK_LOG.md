@@ -3179,3 +3179,10 @@
 - **مبنا:** `origin/main` پس از Merge شدن #666.
 - **انجام‌شده:** ثبت D-089 (`Accepted`، پیاده‌سازی `NotImplemented`) برای OD-6 و OD-6a: ساخت Tenant فقط توسط مدیر نصب، `CustomerReference` فقط کلید ارجاع و نگاشت یک‌به‌یک، Provisioning فقط اتصال، اعتبارسنجی امضا با `KeyId`، ممنوعیت حدس Tenant، Bootstrap نصب اختصاصی.
 - **محدوده:** فقط مستندات؛ بدون کد، Schema، Migration یا Backfill.
+
+## 2026-11-15 — اجرای D-088: ردیابی دسترسی و تغییرات مدیر نصب
+- **مبنا:** شاخهٔ PR #666 (D-088) روی `origin/main@1c0eec0`.
+- **انجام‌شده:** `InstallationAdminAudit`؛ ثبت مشاهده/جستجو/تغییر؛ گزارش `installation-admin-activity`؛ محافظ Append-only در `DatabaseContext`؛ بدون Schema.
+- **تست:** مجموعهٔ کامل روی SQL Server: ۱۳۱۱ اجرا، ۱۳۰۱ موفق، ۰ شکست، ۱۰ Skip. ۲ آزمون ممیزی موجود به‌دلیل ثبت خودِ مشاهده تطبیق یافتند.
+- **Handoff:** `docs/handoffs/ISSUE-UNNUMBERED-d088-installation-admin-audit.md`.
+

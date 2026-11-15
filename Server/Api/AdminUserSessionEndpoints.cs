@@ -93,6 +93,10 @@ public static class AdminUserSessionEndpoints
 
         var sessions = await sessionService.ListActiveSessionsAsync(userId, currentSessionId: null, cancellationToken);
 
+        await Infrastructure.Security.InstallationAdminAudit.RecordAccessAsync(
+            database, principal, httpContext.Connection.RemoteIpAddress?.ToString(), "UserSessions", isSearch: false, filters: null,
+            resultCount: sessions.Count, entityId: userId.ToString(), cancellationToken);
+
         return TypedResults.Ok(sessions.Select(session => new AdminUserSessionListItem(
             session.SessionId,
             DateTime.SpecifyKind(session.CreatedAtUtc, DateTimeKind.Utc),
