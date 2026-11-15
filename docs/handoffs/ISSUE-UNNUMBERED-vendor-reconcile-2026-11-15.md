@@ -103,5 +103,5 @@
 ## شناسه‌های Git
 - **Branch:** `docs/vendor-reconcile-2026-11-15-main-53dd2eab`
 - **Base:** `53dd2eab9bf19148d80eb8ee01bbc744d8033d3f`
-- **Commit:** پس از ثبت تغییرات در Work Log/PR درج می‌شود.
-- **Pull Request:** پس از ایجاد PR درج می‌شود.
+- **Commit(s):** handoff `be3906c2d07ae30f77f54f92cbeb8d3e866a5ea4`؛ Project Status `094e9dc223823afb4dd61175fb3bfdbbaf62f55c` و `(PR #677 update)`؛ Work Log `2aaf1167d8503facc2bbc96ae854f5fcfb7c54b7`؛ Index `b31bd2fa343f400cc38dea1c65e8802e0cc692dc`. Head نهایی را از PR بخوانید.
+- **Pull Request:** [#677](https://github.com/hamidreza1394/Accounting/pull/677) — باز؛ CI روی head نهایی باید کامل شود؛ Merge انجام نشده.
