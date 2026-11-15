@@ -2398,3 +2398,129 @@ D-013، D-087، D-088 معتبر می‌مانند. OD-6 و OD-6a در `handoffs
 
 ### مراجع
 D-013، D-087، D-088؛ `handoffs/ISSUE-397-s3-0e-tenant-company-ownership-audit.md`، `handoffs/ISSUE-397-s3-0h-consolidated-tenant-company-migration-plan.md` (OD-6، OD-6a).
+
+## D-090 — یکپارچگی Tenant و Company در Trade (OD-11)
+- **وضعیت تصمیم:** Proposed — تأیید مالک لازم است؛ Accepted نشده.
+- **وضعیت پیاده‌سازی:** NotImplemented
+- **تاریخ:** 2026-11-15
+
+### زمینه و پیشنهاد
+Host فقط زوج اعتبارسنجی‌شدهٔ `(TenantId, CompanyId)` را به Trade می‌دهد؛ Storeها هر دو را در Query و Insert کنترل می‌کنند؛ بدون FK به Core. محدودیت: درج مستقیم SQL ناسازگار در سطح DB متوقف نمی‌شود و باید مستند بماند.
+
+### گزینه‌های بررسی‌شده و دلایل رد
+- FK یا Reference مستقیم به `Companies`: وابستگی Trade→Core می‌سازد و استخراج schema `trade` به دیتابیس مستقل را ناممکن می‌کند؛ فقط با ADR جدا.
+- جدول مرجع محلی همگام‌شده: منبع حقیقت دوم و پیچیدگی همگام‌سازی.
+- ابقای وضع فعلی (`TenantId = Company.Id`): مدل هدف D-087 را پیاده نمی‌کند.
+
+### آثار امنیتی و داده‌ای
+ریسک باقی‌مانده: داده ناسازگار با ورود مستقیم SQL؛ پوشش با آزمون Store/Use Case و مستندسازی. نشت بین Tenantها با آزمون دو-Tenant روی SQL Server بررسی می‌شود.
+
+### نحوهٔ مهاجرت
+این تصمیم Schema/Migration ندارد. افزودن `CompanyId` به جدول‌های Trade در S3 و با تأیید جداگانهٔ Schema انجام می‌شود.
+
+### معیار پذیرش و روش تأیید
+- Store با `CompanyId` متعلق به Tenant دیگر رد شود؛ نشت List/Find/Update/Unique آزمون شود (SQL Server).
+- تست معماری: Trade به Core وابسته نشود.
+- محدودیت درج مستقیم SQL در `TRADE_MODULE.md` ثبت شود.
+
+### مراجع
+`handoffs/ISSUE-397-s3-0-decision-package.md`، D-087، D-088، D-089؛ `handoffs/ISSUE-397-s3-0h-consolidated-tenant-company-migration-plan.md`.
+
+## D-091 — تحمل Downtime و Rename فیزیکی ستون‌های legacy (OD-12)
+- **وضعیت تصمیم:** Proposed — تأیید مالک لازم است؛ Accepted نشده.
+- **وضعیت پیاده‌سازی:** NotImplemented
+- **تاریخ:** 2026-11-15
+
+### زمینه و پیشنهاد
+حداقل Downtime: حفظ نام فیزیکی `TenantId` و استفاده از `HasColumnName` (گام P)؛ Rename فیزیکی اختیاری، جدا، Rename-only و فقط پس از اثبات روی SQL Server واقعی (G3) و تأیید مالک. زمان Downtime بدون اندازه‌گیری اعلام نمی‌شود.
+
+### گزینه‌های بررسی‌شده و دلایل رد
+- Rename فیزیکی اجباری در همین مرحله: با نسخهٔ قدیمی برنامه ناسازگار و نیازمند پنجرهٔ نگهداری است.
+- حذف دائمی Rename: همان حالت پیشنهادی با تصمیم قطعی؛ بدهی نام‌گذاری می‌ماند.
+
+### آثار امنیتی و داده‌ای
+Rename فیزیکی و NOT NULL با نسخهٔ قدیمی ناسازگارند؛ ریسک از دست رفتن دسترسی به داده؛ Rollback = Rename معکوس + کد قدیمی + Backup.
+
+### نحوهٔ مهاجرت
+در این PR هیچ Migration/Rename ساخته نمی‌شود. هر Rename آینده فقط با Guard کنترل‌شده، Backup، `Down` آزموده‌شده و مجوز اجرا روی دیتابیس مشتری.
+
+### معیار پذیرش و روش تأیید
+- بدون تأیید و G3 هیچ Migration Rename ادغام نشود.
+- اگر Rename تأیید شد: `Up/Down` روی SQL Server واقعی و رویهٔ Rollback مستند آزمون شود.
+
+### مراجع
+`handoffs/ISSUE-397-s3-0-decision-package.md`، D-087، D-088، D-089؛ `handoffs/ISSUE-397-s3-0h-consolidated-tenant-company-migration-plan.md`.
+
+## D-092 — مرجعیت Manifest نگاشت Backfill (OD-13)
+- **وضعیت تصمیم:** Proposed — تأیید مالک لازم است؛ Accepted نشده.
+- **وضعیت پیاده‌سازی:** NotImplemented
+- **تاریخ:** 2026-11-15
+
+### زمینه و پیشنهاد
+تنها مرجع نگاشت Company→Tenant، Manifest تأییدشدهٔ مالک (ساده، با SHA256 و هویت تأییدکننده) است؛ Claimهای Provisioning فقط شاهد. فرمان اپراتوری با `--dry-run` پیش‌فرض، تراکنش Serializable و `sp_getapplock`، توقف کامل برای Manifest ناقص/اضافه/ناسازگار، اجرای مجدد no-op. سامانهٔ جدید مدیریت Manifest ساخته نمی‌شود.
+
+### گزینه‌های بررسی‌شده و دلایل رد
+- Claimهای Provisioning به‌عنوان مرجع: `CustomerReference` شناسهٔ Tenant نیست (D-089).
+- استنتاج از `CustomerBoundaryId`/گروه/نام/مالکیت: ممنوع (D-087).
+
+### آثار امنیتی و داده‌ای
+نگاشت اشتباه به نشت دائمی داده می‌انجامد؛ هر رکورد مبهم رد می‌شود؛ ممیزی با Hash و شمارها و بدون Secret.
+
+### نحوهٔ مهاجرت
+هیچ Backfill در این تصمیم اجرا نمی‌شود؛ Backfill عملیاتی فقط پس از Schema تأییدشده، Backup (G5) و مجوز جدا.
+
+### معیار پذیرش و روش تأیید
+- Dry-run بدون نوشتن و با گزارش اختلاف/شمارها؛ توقف کامل برای ناقص/اضافه/ناسازگار؛ اجرای مجدد بی‌اثر؛ آزمون SQL Server.
+
+### مراجع
+`handoffs/ISSUE-397-s3-0-decision-package.md`، D-087، D-088، D-089؛ `handoffs/ISSUE-397-s3-0h-consolidated-tenant-company-migration-plan.md`.
+
+## D-093 — مدل Shared و Multi-Tenant Runtime (OD-14)
+- **وضعیت تصمیم:** Proposed — تأیید مالک لازم است؛ Accepted نشده.
+- **وضعیت پیاده‌سازی:** NotImplemented
+- **تاریخ:** 2026-11-15
+
+### زمینه و پیشنهاد
+نمونه (و در صورت نیاز دیتابیس) مستقل به‌ازای Tenant با همان مدل منطقی D-087؛ چند Tenant در یک نمونهٔ اجرایی فقط با تصمیم جدا پس از بسته‌شدن گیت G6 (SP-1..SP-9) و آزمون بار واقعی. مدل هدف D-087 تغییر نمی‌کند.
+
+### گزینه‌های بررسی‌شده و دلایل رد
+- Shared Runtime چند Tenant از ابتدا: کمترین هزینه، اما بیشترین ریسک نشت و گیت‌های امنیتی؛ ظرفیت ۱۰۰ کاربر هم‌زمان `NotVerified` است.
+- نصب اختصاصی کامل برای همه: بالاترین هزینهٔ عملیاتی؛ به‌عنوان یکی از دو حالت پیشنهادی باقی می‌ماند.
+
+### آثار امنیتی و داده‌ای
+مرز فرایند و دیتابیس جداسازی را قوی‌تر می‌کند؛ Shared Runtime نیازمند SP-1..SP-9 و آزمون‌های منفی دو-Tenant.
+
+### نحوهٔ مهاجرت
+بدون تغییر Schema/Migration در این تصمیم؛ Provisioning هر نمونه و رویهٔ Backup/Restore در S3/استقرار.
+
+### معیار پذیرش و روش تأیید
+- برای Shared Runtime: SP-1..SP-9 + آزمون منفی دو-Tenant روی SQL Server واقعی + آزمون بار ۱۰۰ کاربر در محیط isolated.
+- برای نمونهٔ مستقل: رویهٔ Provisioning، Backup/Restore، تنظیم Data Protection/Rate Limit.
+
+### مراجع
+`handoffs/ISSUE-397-s3-0-decision-package.md`، D-087، D-088، D-089؛ `handoffs/ISSUE-397-s3-0h-consolidated-tenant-company-migration-plan.md`.
+
+## D-094 — سیاست اجرای Migration برای Trade (OD-17)
+- **وضعیت تصمیم:** Proposed — تأیید مالک لازم است؛ Accepted نشده.
+- **وضعیت پیاده‌سازی:** NotImplemented
+- **تاریخ:** 2026-11-15
+
+### زمینه و پیشنهاد
+گزینهٔ H2 (opt-in صریح `--migrate --include-trade`) که در PR #665 پیاده شده باقی بماند تا Entitlement و Deployment Policy معتبر وصل شود؛ H3 با ADR جدا. اجرا روی دیتابیس مشتری با مجوز عملیاتی و Backup؛ در Shared یک‌بار برای کل دیتابیس.
+
+### گزینه‌های بررسی‌شده و دلایل رد
+- H1 (همیشه Trade): Schema خالی برای نصب بدون مجوز و اثر شکست Trade بر همه.
+- H3 (مشروط به Entitlement): امروز ممکن نیست (`DenyAll`) و Licensing↔Migration را وابسته می‌کند.
+- H4 (فقط ابزار دستی/CI): ناهماهنگ و مستعد خطای انسانی.
+
+### آثار امنیتی و داده‌ای
+Trade بدون اجرا Fail-closed است؛ جدول Trade بدون History متوقف می‌شود؛ بدون Baseline خودکار؛ ممیزی اجرای Migration هنوز پیاده نیست.
+
+### نحوهٔ مهاجرت
+هیچ تغییری در Migration Host یا Entitlement در این تصمیم نیست. اجرا روی دیتابیس مشتری با مجوز جدا.
+
+### معیار پذیرش و روش تأیید
+- `DatabaseMigrationHostSqlServerTests` سبز بماند؛ رویهٔ Backup/Recovery/مجوز اجرا مستند شود؛ اتصال Entitlement فقط با PR/ADR جدا.
+
+### مراجع
+`handoffs/ISSUE-397-s3-0-decision-package.md`، D-087، D-088، D-089؛ `handoffs/ISSUE-397-s3-0h-consolidated-tenant-company-migration-plan.md`.
