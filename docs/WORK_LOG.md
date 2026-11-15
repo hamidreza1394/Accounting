@@ -3218,4 +3218,5 @@
 - **فایل‌ها:** `docs/PROJECT_STATUS.md`، `docs/WORK_LOG.md`، `docs/INDEX.md` و `docs/handoffs/ISSUE-UNNUMBERED-vendor-reconcile-2026-11-15.md`.
 - **محدوده:** فقط مستندات؛ بدون تغییر کد، Customer consumer، `Server/**`، دیتابیس یا Migration مشتری. تست محلی، Build محلی و `git diff --check` اجرا نشدند؛ CIهای بالا فقط شواهد GitHub روی head PRها هستند.
 - **باقی‌مانده:** #392 (CompanyReference mapping/schema review)، #393 (Payment Evidence/approver/state decisions)، #236 (KMS/HSM واقعی و Key Ceremony)، #107 (Production sink مستقل) و #235 (trust distribution و آزمون عملیاتی دو میزبان). تا رفع آن‌ها fail-closed باقی می‌ماند.
+- **PR:** [#677](https://github.com/hamidreza1394/Accounting/pull/677)؛ باز و merge نشده؛ CI باید روی head نهایی تکمیل شود.
 - **Handoff:** `docs/handoffs/ISSUE-UNNUMBERED-vendor-reconcile-2026-11-15.md`.
