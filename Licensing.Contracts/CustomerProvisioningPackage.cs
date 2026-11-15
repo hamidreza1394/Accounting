@@ -7,7 +7,7 @@ namespace Faranou.Licensing.Contracts;
 /// <summary>
 /// Versioned, signed customer-side provisioning payload. It intentionally contains no password,
 /// password hash, reusable bootstrap secret, connection string, or customer accounting data.
-/// Schemas v1-v3 remain byte-for-byte compatible; v2 adds the initial fiscal period, v3 adds the initial administrator email, and v4 binds one signed license ID and sequence.
+/// Schemas v1-v3 remain byte-for-byte compatible; v2 adds the initial fiscal period, v3 adds the initial administrator email, and v4 binds one signed license ID and sequence, and v5 adds the Vendor-issued per-Company reference.
 /// </summary>
 public sealed record CustomerProvisioningPayload(
     int SchemaVersion,
@@ -27,7 +27,8 @@ public sealed record CustomerProvisioningPayload(
     string? ParentCompanyReference = null,
     string? InitialAdminEmail = null,
     string? LicenseId = null,
-    int? Sequence = null);
+    int? Sequence = null,
+    string? CompanyReference = null);
 
 /// <summary>
 /// Signed provisioning package transported to a trusted customer-side provisioning consumer.
@@ -91,6 +92,12 @@ public static class CustomerProvisioningCanonicalJson
                     writer.WriteNumber("sequence", sequence);
                 else
                     writer.WriteNull("sequence");
+            }
+
+            // v1-v4 canonical JSON is immutable for already-issued packages.
+            if (payload.SchemaVersion >= 5)
+            {
+                writer.WriteString("companyReference", payload.CompanyReference);
             }
 
             writer.WriteEndObject();
