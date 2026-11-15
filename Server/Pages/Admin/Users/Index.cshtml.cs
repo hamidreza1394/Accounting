@@ -36,6 +36,11 @@ public class IndexModel : Infrastructure.BasePageModelWithDatabaseContext
 	{
 		try
 		{
+			await Infrastructure.Security.InstallationAdminAudit.RecordAccessAsync(
+				DatabaseContext, User, HttpContext.Connection.RemoteIpAddress?.ToString(), "Users", isSearch: false,
+				filters: new { channel = "AdminPage" }, resultCount: null, entityId: null,
+				cancellationToken: default);
+
 			ViewModel =
 				await
 				DatabaseContext.Users

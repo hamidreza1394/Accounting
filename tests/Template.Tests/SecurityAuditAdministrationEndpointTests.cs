@@ -77,14 +77,17 @@ public sealed class SecurityAuditAdministrationEndpointTests
         Assert.Equal("LoginSucceeded", item.EventType);
         Assert.Equal("no-store", filteredContext.Response.Headers.CacheControl.ToString());
 
+        // D-088: reading the audit list is itself recorded; the date bound keeps that read event out of the fixed set
         var firstPage = await Server.Api.SecurityAuditAdministrationEndpoints.GetAuditEventsAsync(
-            new DefaultHttpContext(), Principal(admin.Id), fixture.Database, page: 1, pageSize: 2);
+            new DefaultHttpContext(), Principal(admin.Id), fixture.Database,
+            toUtc: new DateTimeOffset(t4, TimeSpan.Zero), page: 1, pageSize: 2);
         var firstPageOk = Assert.IsType<Ok<Server.Api.SecurityAuditEventListResponse>>(firstPage);
         Assert.Equal(4, firstPageOk.Value!.TotalCount);
         Assert.Equal(new[] { t4, t3 }, firstPageOk.Value.Items.Select(row => row.OccurredAtUtc));
 
         var secondPage = await Server.Api.SecurityAuditAdministrationEndpoints.GetAuditEventsAsync(
-            new DefaultHttpContext(), Principal(admin.Id), fixture.Database, page: 2, pageSize: 2);
+            new DefaultHttpContext(), Principal(admin.Id), fixture.Database,
+            toUtc: new DateTimeOffset(t4, TimeSpan.Zero), page: 2, pageSize: 2);
         var secondPageOk = Assert.IsType<Ok<Server.Api.SecurityAuditEventListResponse>>(secondPage);
         Assert.Equal(new[] { t2, t1 }, secondPageOk.Value!.Items.Select(row => row.OccurredAtUtc));
 
