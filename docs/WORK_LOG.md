@@ -3236,4 +3236,10 @@
 - **محدوده:** فقط اصلاح مستندات در PR #677؛ هیچ کد Vendor، Customer consumer، `Server/**`، دیتابیس/Migration مشتری یا secret تغییر نکرد.
 - **آزمون محلی و diff check:** اجرا نشد؛ شواهد فقط GitHub Actions/REST و بازبینی diff است.
 - **گام بعدی:** تکمیل سه Job جاری #677 و تأمین Code Owner Reviewer مستقل؛ سپس Merge فقط پس از کنترل SHA و تمام قواعد لازم. کار اجرایی #228/#393 همچنان به تصمیم‌های #392 و semantics پرداخت نیاز دارد.
-- **Commit بازبینی شواهد:** `89417cb7da5ae861145b2c4a7535d0fff451731e`؛ این commit فقط مستندات را تغییر داد و پس از آن اجرای CI روی head نهایی باید دوباره بررسی شود.
+## 2026-11-15 — ثبت commitهای تکمیلی همگام‌سازی شواهد PR #677
+
+- Commit `89417cb7da5ae861145b2c4a7535d0fff451731e`، اصلاح سه سند برای ثبت CI واقعی پس از Merge و حذف محدودیت نادرست دسترسی به push workflowها.
+- Commit `a3c00a6bef80b68155ab2abd6303129b814203bf`، ثبت شناسه commit بازبینی شواهد در Work Log؛ این تغییر PR synchronize را فعال کرد.
+- روی head `a3c00a6bef80b68155ab2abd6303129b814203bf`، .NET CI و Semgrep مجدداً اجرا شدند؛ Semgrep موفق شد، Secret Scan و Publish Scripts موفق شدند، اما Client و Build/Test و CodeQL C# در آخرین snapshot در حال اجرا بودند. این نتایج برای SHAهای بعدی قابل تعمیم نیستند.
+- Ruleset main-protection به Code Owner review نیاز دارد؛ نویسنده PR تنها Code Owner تعریف‌شده است. Merge انجام نشد.
+

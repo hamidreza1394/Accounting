@@ -41,8 +41,8 @@
 - **#674 و main فعلی:** merge commit #674 همان `53dd2eab9bf19148d80eb8ee01bbc744d8033d3f` است؛ Check Runها ۱۲/۱۲ موفق. .NET CI [43690845226](https://github.com/hamidreza1394/Accounting/actions/runs/43690845226)، ۷/۷ Job، ۱۴۲۵ موفق/۸ Skip/۰ شکست از ۱۴۳۳؛ Semgrep [43690845229](https://github.com/hamidreza1394/Accounting/actions/runs/43690845229) و Push on main/CodeQL [43690844923](https://github.com/hamidreza1394/Accounting/actions/runs/43690844923) موفق. Check Runهای main: ۱۲/۱۲ موفق.
 - **تداوم کد Vendor:** Compare بین merge commit #649 و main فعلی ۲۴ Commit ahead، صفر behind و ۸۴ فایل تغییرکرده دارد؛ هیچ مسیر Vendor، Vendor.sln، Licensing.Contracts یا تست Vendor تغییر نکرده است. بنابراین Vendor CI پس از #649 روی کد Vendor فعلی معتبر است؛ PR #674 صرفاً تغییرات Tenant/test/docs خارج از Vendor دارد.
 - **PRهای باز:** جست‌وجوی صریح `is:open` سه PR را برگرداند: #675 و #676 خارج از Vendor، و #677 مستندات Vendor. هیچ PR باز دیگری در نتیجه جست‌وجوی مخزن مشاهده نشد.
-- **۱۰۰ اجرای اخیر Actions:** ۹۲ success، ۷ cancelled، یک in_progress و صفر failure. شکست تازه‌ای در این بازه مشاهده نشد.
-- **PR #677:** head فعلی `c9085edf3627a480deda93650a214f8ff4ea5a0e`، mergeable=true؛ ۱۵ Check Run شامل ۱۱ success، یک neutral (CodeRabbit rate limit) و سه in_progress برای publish، publish-windows و e2e. هر چهار Required Status Check سبز هستند، اما Code Owner review ثبت نشده است. Ruleset `main-protection`، Code Owner review را الزام می‌کند؛ CODEOWNERS فقط `@hamidreza1394` را مالک مسیرهای Vendor می‌داند و نویسنده PR نیز همین حساب است. Merge انجام نشد.
+- **۱۰۰ اجرای اخیر Actions (snapshot ساعت 08:36 UTC):** ۹۰ success، ۸ cancelled، دو in_progress و صفر failure. شکست تازه‌ای در این بازه مشاهده نشد.
+- **PR #677:** در snapshot ساعت 08:36 UTC، head `a3c00a6bef80b68155ab2abd6303129b814203bf`، mergeable=true؛ ۱۲ Check Run شامل ۷ success، ۳ in_progress (client، build-and-test، CodeQL C#) و ۲ neutral. Required Status Checkهای secret-scan و publish-scripts موفق و client/build-and-test ناتمام بودند؛ شکست مشاهده نشد. Code Owner review ثبت نشده است. Ruleset `main-protection`، Code Owner review را الزام می‌کند؛ CODEOWNERS فقط `@hamidreza1394` را مالک مسیرهای Vendor می‌داند و نویسنده PR نیز همین حساب است. Merge انجام نشد.
 
 
 ## بازبینی کد و شکاف‌ها
@@ -92,7 +92,7 @@
 | CI پس از Merge #281/#282/#284 | موفق | به‌ترتیب ۱۲/۱۲، ۱۳/۱۳ و ۱۳/۱۳ Check؛ .NET هرکدام ۵۸۲/۵۸۲ تست موفق |
 | CI پس از Merge #649/#674 و main فعلی | موفق | #649: ۱۵/۱۵؛ #674/main: ۱۲/۱۲؛ Run و Test totals در بخش بالا |
 | تست محلی / Build محلی | اجرا نشد | checkout و runner محلی در این اجرا در دسترس نبود |
-| PR #677 روی head فعلی | در حال اجرا | چهار Required Check سبز؛ publish، publish-windows و e2e ناتمام؛ Code Owner review غایب |\n| ۱۰۰ اجرای اخیر Actions | بدون شکست | ۹۲ موفق، ۷ لغوشده، ۱ در حال اجرا، ۰ ناموفق |\n| `git diff --check` محلی | اجرا نشد | diff از GitHub بازبینی می‌شود؛ ادعای اجرای محلی نداریم |
+| PR #677 روی head ثبت‌شده در snapshot | در حال اجرا | secret-scan و publish-scripts موفق؛ client و build-and-test ناتمام؛ Code Owner review غایب |\n| ۱۰۰ اجرای اخیر Actions | بدون شکست | ۹۲ موفق، ۷ لغوشده، ۱ در حال اجرا، ۰ ناموفق |\n| `git diff --check` محلی | اجرا نشد | diff از GitHub بازبینی می‌شود؛ ادعای اجرای محلی نداریم |
 
 ## امنیت، داده و سازگاری
 - Issue #632 بسته شده است. در logهای #649، الگوهای مشخص `sqlcmd -P/--password`، Connection String حاوی Password/Pwd، PEM private key و tokenهای رایج اسکن شدند؛ هیچ‌یک از این markerها در logهای بررسی‌شده یافت نشد. این بررسی محدود به همان logها و الگوهاست، نه ادعای اسکن جامع تمام Actions.
