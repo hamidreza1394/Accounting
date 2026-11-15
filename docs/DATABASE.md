@@ -29,6 +29,8 @@
 
 **وضعیت کد فعلی:** مدل موجود تاریخی، `Company` را عملاً مرز Tenant گرفته و در چند جدول `TenantId` برابر شناسه Company است. این وضعیت با D-087 یکسان نیست و نباید با تغییر نام یا فرض‌گرفتن معنای جدید، سازگار اعلام شود. S3-0 باید همه Entityها، FKها، unique indexها، queryها، هویت/عضویت و migration pipeline را ممیزی کند و طرح گذار افزایشی و سازگار با هر دو نوع استقرار ارائه دهد. تا تصویب طرح گذار، هیچ ستون/کلید/مهاجرت Tenant جدید یا backfill خودکار ساخته نشود.
 
+**وضعیت تصمیم‌های Tenant (2026-11-15):** D-089 (`Accepted`، پیاده‌سازی `NotImplemented`): ایجاد Tenant فقط توسط مدیر نصب؛ نگاشت یکتای `CustomerReference → TenantId`؛ Provisioning فقط به Tenant موجود متصل می‌شود؛ Tenant از `CompanyId`/`CustomerBoundaryId`/گروه/نام استنتاج نمی‌شود؛ ستون‌های `TenantId` فعلی (= `Company.Id`) داده میراثی‌اند و تبدیل آن‌ها فقط در S3 با تأیید جداگانهٔ Schema و Backfill انجام می‌شود. هیچ جدول یا ستون Tenant در Schema وجود ندارد. تصمیم‌های OD-11/12/13/14/17 در D-090..D-094 `Proposed` هستند (PR #671).
+
 ### قرارداد داده برای توسعه جدید
 - موجودیت tenant-owned: `TenantId` اجباری.
 - موجودیت company-owned: `TenantId` و `CompanyId`؛ هر دو از context معتبر سمت سرور تعیین و با هم تطبیق داده شوند.
@@ -135,6 +137,8 @@ ConnectionStrings__ConnectionString="<مشترک>" dotnet Server.dll --migrate -
 dotnet Server.dll --migrate                 # پیش از خرید Trade
 dotnet Server.dll --migrate --include-trade # پس از خرید، بدون نصب مجدد
 ```
+**تفکیک وضعیت (2026-11-15):** «Migration Host پیاده‌شده» (کد و تست‌ها در `main@1c0eec0`) با «سیاست عملیاتی Migration» یکی نیست. سیاست نهایی (اتصال Entitlement، Shared/Dedicated، نصب فاقد مجوز، Backup/Recovery، ثبت ممیزی اجرا) هنوز تعیین نشده و پیشنهاد آن D-094 (`Proposed`) است. هیچ ادعای امنیتی دربارهٔ Migration Host فراتر از تست‌های `DatabaseMigrationHostSqlServerTests` ثبت نمی‌شود و اجرا روی دیتابیس مشتری مجوز عملیاتی جداگانه می‌خواهد.
+
 **قرارداد برای آینده (در این PR پیاده نشد):** اتصال خرید/فعال‌سازی Trade به اجرای `--include-trade` در PR جداگانه انجام می‌شود؛ نقطهٔ اجرا `DatabaseMigrationHost.RunAsync(includeTrade)` است. تشخیص Shared/Dedicated از روی Connection String یا تعداد شرکت‌ها انجام نمی‌شود؛ Deployment Mode معتبری در پروژه وجود ندارد و تنظیم جدیدی افزوده نشد.
 
 **قفل هم‌زمانی:** `sp_getapplock` (Exclusive، `LockOwner = 'Session'`، `LockTimeout = 0`) روی یک اتصال اختصاصی بدون Pool با منبع `Farano.DatabaseMigration:<نام دیتابیس>`. اجرای دوم بلافاصله با کد `3` رد می‌شود. قفل در موفقیت و شکست با `sp_releaseapplock` آزاد می‌شود و با بسته‌شدن اتصال (قطع اجرا یا مرگ پروسه) سرور آن را آزاد می‌کند. اگر دیتابیس هنوز وجود ندارد (EF آن را می‌سازد)، قفل از طریق `master` با همان نام منبع گرفته می‌شود.

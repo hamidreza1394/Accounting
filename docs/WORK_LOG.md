@@ -3186,3 +3186,9 @@
 - **تست:** مجموعهٔ کامل روی SQL Server: ۱۳۱۱ اجرا، ۱۳۰۱ موفق، ۰ شکست، ۱۰ Skip. ۲ آزمون ممیزی موجود به‌دلیل ثبت خودِ مشاهده تطبیق یافتند.
 - **Handoff:** `docs/handoffs/ISSUE-UNNUMBERED-d088-installation-admin-audit.md`.
 
+
+## 2026-11-15 — هم‌ترازی Roadmap/Project Status/Database/Trade با S3-0 (PR-C)
+- **مبنا:** `origin/main@9eb281b`؛ SHAها و زمان ادغام از GitHub: #665 `1c0eec0` (2026-11-14T19:13:07Z)، #666 `6426af1`، #668 `b6ea191`، #669 `9eb281b` (2026-11-15T06:25:21Z).
+- **انجام‌شده:** رفع تناقض Migration Host در `PROJECT_STATUS.md`/`ROADMAP.md` (رفتار واقعی #665)؛ تفکیک S3-0f به «Host پیاده‌شده» و «سیاست و استقرار باقی‌مانده»؛ ثبت وضعیت D-088 (`Partial`) و D-089 (`NotImplemented`)؛ ارجاع S3-0d-b به PR #670 (Done نشده) و OD-11/12/13/14/17 به PR #671 (`Proposed`)؛ یادداشت‌های `DATABASE.md` و `TRADE_MODULE.md`.
+- **محدوده:** فقط مستندات؛ بدون کد، Schema، Migration، Backfill، Runtime. هیچ تصمیمی Accepted نشد. تست اجرا نشد.
+- **وابستگی:** ارجاع به #670 و #671 که هنوز ادغام نشده‌اند؛ اگر تأیید یا ادغام آن‌ها تغییر کند، این سند باید به‌روز شود.

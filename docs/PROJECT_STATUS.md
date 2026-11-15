@@ -5,16 +5,24 @@
 - کد و Schema هنوز تاریخی‌اند: Entity مستقل Tenant وجود ندارد؛ Company فاقد TenantId است و TenantId در چند Entity عملاً Company.Id را نگه می‌دارد. گذار کد/Schema هنوز NotImplemented است.
 - ممیزی ایستای منبع کد: Snapshot هسته ۳۳ نگاشت جدول و ۲۰ Migration اصلی؛ Snapshot Trade پنج نگاشت جدول و یک Migration اصلی (سه جدول ایجادشده) دارد. این اعداد از Source/Snapshot هستند و وضعیت دیتابیس واقعی را اثبات نمی‌کنند.
 - مسیر دسترسی فعلی نیز legacy است: CompanyAccessService و WorkContextService، TenantId را به‌عنوان CompanyId تفسیر می‌کنند؛ عضویت، نقش، FiscalPeriod و HR به همین قرارداد متکی‌اند. در Trade نیز TradeEntity فقط TenantId دارد.
-- شکاف Migration: فرمان `--migrate` فقط DatabaseSchemaMigrator هسته را اجرا می‌کند؛ TradeDbContext در Program ثبت می‌شود، اما Migration آن در مسیر اپراتوری اجرا نمی‌شود. تست Integration هر دو Context را جداگانه روی دیتابیس disposable مهاجرت می‌دهد.
+- Migration Host: PR #665 (ادغام `2026-11-14T19:13:07Z`، `main@1c0eec0`) `DatabaseMigrationHost` را افزود؛ `--migrate` فقط Core و `--migrate --include-trade` اول Core سپس Trade را اجرا می‌کند (شکست Core مانع Trade؛ کد خروج `0..4`؛ `sp_getapplock`؛ بدون Baseline خودکار). هنوز حل‌نشده: اتصال به Entitlement، سیاست Shared/Dedicated، سیاست Trade در نصب فاقد مجوز، رویهٔ Backup/Recovery (OD-17 / D-094 `Proposed`).
 - بازبینی اولیه V3.2: گروه B و گزارش‌های R01–R10 هنوز TenantId=Company/OwnerCompany را فرض می‌کنند؛ گروه C باید Tenant و هر دو Company طرف رابطه را جداگانه کنترل کند. V3.2 همچنان Proposed است؛ D-086 فقط قواعد مشخص کسب‌وکار را Accepted کرده است.
 - موارد باز: اجرای اسکریپت read-only روی SQL Server و خواندن دو Migration History واقعی؛ تکمیل inventory تمام مسیرهای داده؛ تعیین منبع معتبر Company→Tenant؛ قرارداد migration host؛ ERD و طرح گذار مرحله‌ای. CustomerBoundaryId یا عضویت گروه منبع Tenant نیست.
 - هیچ Entity، API، Migration، Schema، داده یا تنظیم runtime در این ممیزی تغییر نکرده است.
+
+## وضعیت تصمیم‌ها و S3-0 پس از #666، #668 و #669 — 2026-11-15
+
+- **D-088** (OD-1، `Accepted`): PR #666 در `2026-11-15T05:40:10Z` (`6426af1`) و پیاده‌سازی PR #668 در `2026-11-15T05:57:57Z` (`b6ea191`) ادغام شد. پیاده‌سازی **Partial** است. باقی‌مانده: دلیل اجباری برای اصلاحات مدیریتی؛ فیلد دلیل در Razor؛ حفاظت سطح پایگاه‌داده از `SecurityAuditEvent` (نیازمند تصمیم Schema)؛ ممیزی مسیرهای باقی‌مانده (مثلاً Razor Roles)؛ آزمون خرابی ثبت ممیزی و fail-closed؛ تطبیق استثنای D-071 با بند ۴ D-088.
+- **D-089** (OD-6/OD-6a، `Accepted`): PR #669 در `2026-11-15T06:25:21Z` (`9eb281b`). پیاده‌سازی **NotImplemented**: Entity/جدول Tenant، نگاشت `CustomerReference → TenantId`، اعتبارسنجی امضا و Bootstrap ساخته نشده‌اند. چهار شفاف‌سازی `Proposed` (عامل Bootstrap، درخواست در حال انتظار هنگام تغییر نگاشت، ساخت Company، شناسهٔ نصب) نیازمند تأیید مالک است.
+- **S3-0d-b:** inventory ایستای تکمیلی در PR #670 ارائه شده؛ Done نیست تا ادغام و تأیید مالک؛ Verified نیست.
+- **OD-11/12/13/14/17:** در PR #671 (D-090..D-094) `Proposed`.
+- کد و Schema همچنان legacy است؛ هیچ Schema، Migration، Backfill یا تغییر Runtime در این هم‌ترازی انجام نشد.
 
 ## وضعیت S3-0e تا S3-0h (طرح گذار Tenant/Company) — 2026-11-14
 
 - چهار handoff در `docs/handoffs/` ثبت شد: `ISSUE-397-s3-0e-tenant-company-ownership-audit.md` (ممیزی مالکیت)، `...-s3-0f-tenant-company-migration-design.md` (طرح Migration)، `...-s3-0g-tenant-company-technical-validation.md` (اعتبارسنجی فنی با آزمایش‌های ایزوله خارج از Repo) و `...-s3-0h-consolidated-tenant-company-migration-plan.md` (طرح تجمیعی، ثبت تصمیم‌ها OD-1..OD-18، گیت‌ها و PR-0).
 - وضعیت: همهٔ این خروجی‌ها **Proposed** هستند؛ پیاده‌سازی **NotImplemented** است. تصمیم‌های باز Accepted نشده‌اند و D-087 بدون تغییر Accepted باقی است.
-- کد و Schema همچنان legacy است (Company=Tenant؛ ستون‌های `TenantId` مقدار `Company.Id` دارند). هیچ جدول/ستون Tenant، Backfill، Migration یا تغییر migration host ساخته نشده و گیت S3-0g در ROADMAP برقرار است.
+- کد و Schema همچنان legacy است (Company=Tenant؛ ستون‌های `TenantId` مقدار `Company.Id` دارند). هیچ جدول/ستون Tenant، Backfill یا Migration Tenant ساخته نشده (تغییر migration host فقط در #665 به دستور صریح مالک انجام شد) و گیت S3-0g در ROADMAP برقرار است.
 - نتایج آزمایش‌های S3-0g فقط در handoff همان مرحله و با برچسب‌های اجرا/اجرا‌نشده ثبت شده‌اند؛ آزمایش‌ها بخشی از Repo نیستند و هیچ تست اجرا‌نشده‌ای به‌عنوان پاس گزارش نشده است.
 - نام‌گذاری: ردیف‌های S3-0e/f/g در ROADMAP سرفصل‌های Roadmap‌اند و با نام خروجی‌های کاری handoffها یکی نیستند؛ توضیح در ROADMAP، ردیف S3-0h.
 
