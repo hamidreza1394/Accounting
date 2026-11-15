@@ -64,6 +64,12 @@ public sealed class VendorLicense
     public string LicenseKind { get; set; } = "perpetual";
     public int? MaxCompanies { get; set; }
     public string SubsystemsJson { get; set; } = "[]";
+    /// <summary>
+    /// Unissued company-scoped (payload v2) input. NULL means the legacy installation-level v1 path.
+    /// After issuance it is reduced in the same transaction to CompanyReference and Descriptor only;
+    /// the signed envelope is the source of truth for entitlements. Never an ownership basis.
+    /// </summary>
+    public string? CompanyEntitlementsDraftJson { get; set; }
     public int GraceDays { get; set; } = 30;
     public int LastIssuedSequence { get; set; }
     public DateTimeOffset ValidFromUtc { get; set; }

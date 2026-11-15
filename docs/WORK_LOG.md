@@ -3256,3 +3256,10 @@
 - **تست:** SQL Server واقعی: ۲۰ از ۲۰ موفق؛ ۴۶ موفق همراه تست‌های مرتبط؛ `DatabaseMigrationHostSqlServerTests` ۸ موفق. بدون SQL Server: ۷ موفق، ۱۳ Skip (NotRun).
 - **محدوده:** بدون Schema/Migration عملیاتی/Backfill/Tenant/Workflow.
 - **Handoff:** `docs/handoffs/ISSUE-397-pr-d-tenant-migration-sqlserver-validation.md`.
+## 2026-11-15 — Issue #681: صدور اولیهٔ LicensePayload v2 شرکت‌محور در Vendor
+- **مبنا:** `main@e2297b4` (PR #680).
+- **انجام‌شده:** ستون nullable `CompanyEntitlementsDraftJson` + Migration افزایشی Vendor؛ مدل/اعتبارسنجی پیش‌نویس (`VendorLicenseCompanyDraft`)، `TryNormalizeCompanyScoped`، شاخهٔ v2 در `VendorLicensePayloadBuilder`، کاهش پیش‌نویس در تراکنش صدور، فیلد `companies` در Create/Update/Response لایسنس و فرم Vendor.Web.
+- **تست (واقعی):** `Vendor.Host.Tests` روی SQL Server واقعی (Docker): ۲۹۵ مورد، ۲۹۴ موفق، ۰ ناموفق، ۱ Skip (SoftHSM)؛ `Licensing.Contracts.Tests` ۱۶۷/۱۶۷؛ Vendor.Web: typecheck، ۶۸ تست vitest و build موفق؛ `Template.sln` Release بدون خطا.
+- **بازبینی:** `code-reviewer` (بدون یافتهٔ مهم؛ ۳ مورد اصلاح شد) و `security-reviewer` (بدون Critical/High/Medium؛ L1 و I1 اصلاح شد؛ L2 مستند).
+- **محدوده:** بدون تغییر Customer DB، Provisioning v5، Customer Runtime و Issue #393؛ مسیر v1 و تغییرناپذیری #680 حفظ شد.
+- **Handoff:** `docs/handoffs/ISSUE-681-vendor-initial-v2-company-entitlements.md`.

@@ -25,7 +25,7 @@ type PageResponse<T> = {
   hasNextPage: boolean;
 };
 type Row = Record<string, unknown>;
-type Column = { key: string; label: string; kind?: 'date' | 'status' | 'environment' | 'licenseKind' | 'subsystems' };
+type Column = { key: string; label: string; kind?: 'date' | 'status' | 'environment' | 'licenseKind' | 'subsystems' | 'companies' };
 
 const resources: Record<BusinessSection, { title: string; description: string; endpoint: string; columns: Column[] }> = {
   customers: {
@@ -73,6 +73,7 @@ const resources: Record<BusinessSection, { title: string; description: string; e
       { key: 'productCode', label: 'محصول' },
       { key: 'licenseKind', label: 'نوع', kind: 'licenseKind' },
       { key: 'subsystems', label: 'زیرسیستم‌های خریداری‌شده', kind: 'subsystems' },
+      { key: 'companies', label: 'شرکت‌های لایسنس', kind: 'companies' },
       { key: 'maxCompanies', label: 'سقف شرکت' },
       { key: 'status', label: 'وضعیت', kind: 'status' },
       { key: 'validFromUtc', label: 'شروع اعتبار', kind: 'date' },
@@ -114,6 +115,12 @@ function formatValue(value: unknown, kind?: Column['kind']): string {
     if (!Array.isArray(value)) return '—';
     const labels = value.filter((code): code is string => typeof code === 'string').map(code => subsystemLabels[code] ?? code);
     return labels.length ? labels.join('، ') : 'بدون زیرسیستم';
+  }
+  if (kind === 'companies') {
+    if (!Array.isArray(value)) return '—';
+    const names = value.map(item => (item as { descriptor?: unknown } | null)?.descriptor)
+      .filter((item): item is string => typeof item === 'string' && item.length > 0);
+    return names.length ? `${names.length} شرکت: ${names.join('، ')}` : '—';
   }
   if (kind === 'date') {
     const date = new Date(raw);
@@ -327,6 +334,7 @@ export function BusinessLists({ section, permissions = [] }: { section: Business
       licenseKind: String(row.licenseKind ?? (row.validUntilUtc ? 'term' : 'perpetual')),
       maxCompanies: typeof row.maxCompanies === 'number' ? row.maxCompanies : null,
       subsystems: Array.isArray(row.subsystems) ? row.subsystems.filter((item): item is string => typeof item === 'string') : [],
+      companies: Array.isArray(row.companies) ? row.companies as NonNullable<LicenseDraft['companies']> : null,
       graceDays: typeof row.graceDays === 'number' ? row.graceDays : 30,
       lastIssuedSequence: typeof row.lastIssuedSequence === 'number' ? row.lastIssuedSequence : 0,
       validFromUtc: String(row.validFromUtc ?? ''),

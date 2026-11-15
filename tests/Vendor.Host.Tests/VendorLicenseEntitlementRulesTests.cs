@@ -66,4 +66,44 @@ public sealed class VendorLicenseEntitlementRulesTests
         Assert.False(VendorLicenseEntitlementRules.TryNormalize("term", null, ["finance", "not-a-module"], 30, validFrom, end, out _));
         Assert.False(VendorLicenseEntitlementRules.TryNormalize("term", null, ["finance", "finance"], 30, validFrom, end, out _));
     }
+
+    [Fact]
+    public void CompanyScopedNormalizationAcceptsEmptyInstallationSubsystemsWhileV1StillRejectsThem()
+    {
+        var validFrom = DateTimeOffset.UtcNow;
+
+        Assert.True(VendorLicenseEntitlementRules.TryNormalizeCompanyScoped(
+            "perpetual", 5, 30, validFrom, null, out var normalized));
+        Assert.Equal("perpetual", normalized!.LicenseKind);
+        Assert.Equal(5, normalized.MaxCompanies);
+        Assert.Empty(normalized.Subsystems);
+        Assert.False(VendorLicenseEntitlementRules.TryNormalize("perpetual", 5, [], 30, validFrom, null, out _));
+    }
+
+    [Theory]
+    [InlineData("term", 25, 30, false)]
+    [InlineData("perpetual", 25, 30, true)]
+    [InlineData("perpetual", 0, 30, false)]
+    [InlineData("perpetual", 25, 91, false)]
+    public void CompanyScopedNormalizationRejectsInvalidKindTermCapacityAndGraceCombinations(
+        string kind, int maxCompanies, int graceDays, bool hasExpiry)
+    {
+        var validFrom = new DateTimeOffset(2026, 10, 28, 0, 0, 0, TimeSpan.Zero);
+        DateTimeOffset? validUntil = hasExpiry ? validFrom.AddDays(1) : null;
+
+        Assert.False(VendorLicenseEntitlementRules.TryNormalizeCompanyScoped(
+            kind, maxCompanies, graceDays, validFrom, validUntil, out _));
+    }
+
+    [Theory]
+    [InlineData("company_draft_too_large", "company_entitlements_too_large")]
+    [InlineData("company_reference_unknown", "company_reference_not_assignable")]
+    [InlineData("company_reference_duplicate", "company_reference_not_assignable")]
+    [InlineData("company_list_empty", "invalid_company_entitlements")]
+    [InlineData("company_descriptor_invalid", "invalid_company_entitlements")]
+    [InlineData("company_entitlements_invalid", "invalid_company_entitlements")]
+    public void DraftErrorCodesMapToStablePublicApiCodes(string internalCode, string apiCode)
+    {
+        Assert.Equal(apiCode, VendorLicenseCompanyDraft.ToApiErrorCode(internalCode));
+    }
 }

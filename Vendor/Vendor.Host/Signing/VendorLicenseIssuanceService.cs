@@ -5,6 +5,7 @@ using Faranou.Vendor.Persistence;
 using Faranou.Vendor.Persistence.Auditing;
 using Faranou.Vendor.Persistence.Domain;
 using Faranou.Licensing.Contracts;
+using Faranou.Vendor.Host.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -84,6 +85,10 @@ public sealed class VendorLicenseIssuanceService(
             approval.ExpectedResourceRowVersion;
         license.LastIssuedSequence = payload.Sequence;
         license.Status = "Issued";
+        // Same SaveChanges/transaction as the envelope: after issuance the signed envelope is the source of
+        // truth, so the draft keeps only CompanyReference + Descriptor (operator identification, never ownership).
+        if (license.CompanyEntitlementsDraftJson is not null)
+            license.CompanyEntitlementsDraftJson = VendorLicenseCompanyDraft.Reduce(license.CompanyEntitlementsDraftJson);
 
         db.Entry(approval).Property(item => item.RowVersion).OriginalValue = expectedApprovalVersion;
         approval.Status = "Approved";

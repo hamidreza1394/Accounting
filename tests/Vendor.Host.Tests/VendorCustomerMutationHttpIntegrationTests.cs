@@ -880,6 +880,121 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal("stale_row_version", json.RootElement.GetProperty("error").GetString());
             }
 
+            // Company-scoped (payload v2) license: server-generated GUID-D references, no client authority.
+            var v2Number = "V2-LIC-" + Guid.NewGuid().ToString("N")[..8];
+            object V2Body(object[] companies, string[]? subsystems = null, string? rowVersion = null) => new
+            {
+                customerId,
+                licenseNumber = v2Number,
+                productCode = "FARANOU-BASE",
+                licenseKind = "perpetual",
+                maxCompanies = 3,
+                subsystems,
+                graceDays = 30,
+                validFromUtc = DateTimeOffset.UtcNow.AddDays(-1),
+                companies,
+                rowVersion
+            };
+            object V2Company(string descriptor, string? reference = null) => new
+            {
+                companyReference = reference,
+                descriptor,
+                modules = new[] { "finance", "sales" },
+                maxUsers = 5,
+                features = new[] { new { code = "finance.cost_centers", type = "max_count", maxCount = 4 } }
+            };
+
+            using (var response = await PostWithTokenAsync(client, "/api/vendor/licenses/",
+                V2Body([V2Company("Main", Guid.NewGuid().ToString("D"))]), antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("company_reference_not_assignable", json.RootElement.GetProperty("error").GetString());
+            }
+            using (var response = await PostWithTokenAsync(client, "/api/vendor/licenses/",
+                V2Body([V2Company("Main")], subsystems: ["finance"]), antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("subsystems_not_allowed_for_company_license", json.RootElement.GetProperty("error").GetString());
+            }
+            using (var response = await PostWithTokenAsync(client, "/api/vendor/licenses/",
+                V2Body([]), antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("invalid_company_entitlements", json.RootElement.GetProperty("error").GetString());
+            }
+
+            string v2LicenseId;
+            string v2RowVersion;
+            string[] v2References;
+            using (var response = await PostWithTokenAsync(client, "/api/vendor/licenses/",
+                V2Body([V2Company("Main"), V2Company("Branch")]), antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                v2LicenseId = json.RootElement.GetProperty("id").GetGuid().ToString("D");
+                v2RowVersion = json.RootElement.GetProperty("rowVersion").GetString()!;
+                Assert.Empty(json.RootElement.GetProperty("subsystems").EnumerateArray());
+                v2References = json.RootElement.GetProperty("companies").EnumerateArray()
+                    .Select(item => item.GetProperty("companyReference").GetString()!).ToArray();
+                Assert.Equal(2, v2References.Length);
+                Assert.All(v2References, reference => Assert.True(Guid.TryParseExact(reference, "D", out _)));
+            }
+
+            // Legacy SubsystemsJson stays "[]" for a company-scoped license; no v1 data is invented.
+            await using (var v2Scope = factory.Services.CreateAsyncScope())
+            {
+                var db = v2Scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var stored = await db.Licenses.AsNoTracking().SingleAsync(item => item.LicenseNumber == v2Number, cancellationToken);
+                Assert.Equal("[]", stored.SubsystemsJson);
+                Assert.NotNull(stored.CompanyEntitlementsDraftJson);
+            }
+
+            var v2Path = $"/api/vendor/licenses/{v2LicenseId}";
+            using (var response = await SendPutAsync(client, v2Path,
+                V2Body([V2Company("Main", v2References[0])], rowVersion: v2RowVersion), antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                var kept = json.RootElement.GetProperty("companies").EnumerateArray().Single();
+                Assert.Equal(v2References[0], kept.GetProperty("companyReference").GetString());
+                Assert.NotEqual(v2RowVersion, json.RootElement.GetProperty("rowVersion").GetString());
+                v2RowVersion = json.RootElement.GetProperty("rowVersion").GetString()!;
+            }
+
+            // Removing a company and re-adding its old reference must not bypass server-only reference assignment.
+            using (var response = await SendPutAsync(client, v2Path,
+                V2Body([V2Company("Main", v2References[0]), V2Company("Branch", v2References[1])], rowVersion: v2RowVersion),
+                antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("company_reference_not_assignable", json.RootElement.GetProperty("error").GetString());
+            }
+
+            // A company-scoped draft can never silently fall back to the installation-level v1 shape.
+            using (var response = await SendPutAsync(client, v2Path,
+                new
+                {
+                    licenseNumber = v2Number, productCode = "FARANOU-BASE", licenseKind = "perpetual", maxCompanies = 3,
+                    subsystems = new[] { "finance" }, graceDays = 30, validFromUtc = DateTimeOffset.UtcNow.AddDays(-1),
+                    rowVersion = v2RowVersion
+                }, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal("company_entitlements_required", json.RootElement.GetProperty("error").GetString());
+            }
+
+            using (var response = await client.GetAsync(v2Path, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Single(json.RootElement.GetProperty("companies").EnumerateArray());
+            }
+
             Guid approvalLicenseId;
             byte[] licenseVersion;
             await using (var licenseScope = factory.Services.CreateAsyncScope())
