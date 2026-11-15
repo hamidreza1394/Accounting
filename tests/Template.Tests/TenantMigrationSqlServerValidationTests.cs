@@ -282,6 +282,42 @@ INSERT INTO TvChildren (Id, [{tenantColumn}], ParentId, Note) VALUES
 	}
 
 	[Fact]
+	public async Task D1c_ARenameOfTheKeptLegacyConstraintNames_IsPossibleWithSpRename_ButTheOldNameCanNotBeTakenAgainOnTheSameTable()
+	{
+		Assert.SkipUnless(SqlServerAvailable(), "SQL Server is not configured (FARANOU_TEST_SQLSERVER).");
+
+		await WithDatabaseAsync(async (database, context) =>
+		{
+			await MigrateAsync(context, RenamePinned); // legacy constraint names are kept, the columns are renamed
+			await SeedStructureAsync(database, "CompanyId");
+			var identityBefore = await IdentityAsync(database);
+
+			// OD-15 "keep": a NEW real TenantId index named like the kept legacy index would collide on the same table
+			var collision = await RefusedAsync(database, "CREATE INDEX [AK_TvParents_TenantId_Id] ON [TvParents] ([Code]);");
+			Assert.Equal(1913, collision.Number);
+
+			// OD-15 "rename later": EF has no operation for it, it needs hand-written sp_rename ... 'OBJECT' (a schema-qualified constraint name, not
+			// table.name); on a real server it keeps the
+			// object identity and the foreign key that references the alternate key keeps pointing at it
+			await ExecuteAsync(database, @"
+EXEC sp_rename N'dbo.AK_TvParents_TenantId_Id', N'AK_TvParents_CompanyId_Id', 'OBJECT';
+EXEC sp_rename N'dbo.FK_TvChildren_TvParents_TenantId_ParentId', N'FK_TvChildren_TvParents_CompanyId_ParentId', 'OBJECT';
+EXEC sp_rename N'dbo.FK_TvParents_TvOwners_TenantId', N'FK_TvParents_TvOwners_CompanyId', 'OBJECT';");
+			Assert.Equal(identityBefore, await IdentityAsync(database));
+			var structure = await StructureAsync(database);
+			Assert.Contains(structure, line => line.StartsWith("foreign_key|[TvChildren]|[FK_TvChildren_TvParents_CompanyId_ParentId]|parent=[CompanyId],[ParentId]|ref=[TvParents][CompanyId],[Id]|refindex=[AK_TvParents_CompanyId_Id]", StringComparison.Ordinal));
+			Assert.DoesNotContain(structure, line => line.Contains("_TenantId_Id]", StringComparison.Ordinal) && line.Contains("|[TvParents]|", StringComparison.Ordinal));
+			await AssertReferencedKeyStillEnforcedAsync(database);
+		});
+	}
+
+	private static async Task AssertReferencedKeyStillEnforcedAsync(string database)
+	{
+		var composite = await RefusedAsync(database, $"INSERT INTO TvChildren (Id, [CompanyId], ParentId, Note) VALUES (NEWID(), '{OwnerB}', '{ParentA1}', N'cross-owner')");
+		Assert.Contains("FK_TvChildren_TvParents_CompanyId_ParentId", composite.Message, StringComparison.Ordinal);
+	}
+
+	[Fact]
 	public async Task D1_ThePinnedRenameScripts_ContainNoDropOrCreateOfConstraintsOrIndexes()
 	{
 		Assert.SkipUnless(SqlServerAvailable(), "SQL Server is not configured (FARANOU_TEST_SQLSERVER).");

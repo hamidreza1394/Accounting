@@ -6,7 +6,7 @@
 - **وضعیت:** تست‌ها روی SQL Server 2022 واقعی (کانتینر موقت `scripts/dev/test-sqlserver.sh`) اجرا شدند؛ CI همان سرویس `mssql` موجود را با `FARANOU_REQUIRE_SQLSERVER=1` استفاده می‌کند (سرویس جدیدی ساخته نشد).
 
 ## فایل‌ها
-- `tests/Template.Tests/TenantMigrationSqlServerValidationTests.cs` — ۱۹ تست (D1 تا D6).
+- `tests/Template.Tests/TenantMigrationSqlServerValidationTests.cs` — ۲۰ تست (D1 تا D6).
 - `tests/Template.Tests/TenantValidationMigrations.cs` — Context و Migrationهای آزمایشی (`Tv1..Tv3`) فقط در Assembly تست.
 - `tests/Template.Tests/TenantValidationUnpinnedModels.cs` — دو مدل Before/After برای R1.
 - `tests/Template.Tests/RenameMigrationSqlServerTests.cs` — فقط `private const` ← `internal const` برای دو Query ساختار (استفادهٔ مجدد، بدون تغییر رفتار).
@@ -17,6 +17,7 @@
 | D1 | `RenameColumn`+`RenameIndex` با نام‌های Pin روی ستون legacy `TenantId`، AK، FK، Unique Index، Index، FK وابسته به AK | فقط نام ستون/Indexهای تغییرنام‌یافته عوض شد؛ AK و FK با نام فیزیکی قدیمی (حاوی `TenantId`) ماندند؛ Object Identity همهٔ قیدها بدون تغییر؛ اسکریپت فقط `sp_rename` | U1 ✅ |
 | D2 | Up → Down | ساختار، Identity، دادهٔ ردیف‌ها و تعداد رکوردها (۲/۳/۳) دقیقاً برگشت؛ تاریخچهٔ EF برگشت | U4 ✅ |
 | D1b | `sp_rename` ستونی که **Filtered Index** نام آن را در Predicate دارد | **خطای 5074 و هیچ تغییری** (اتمیک). اگر Filter فقط ستون‌های دیگر را نام ببرد، Rename موفق است | **یافتهٔ جدید** |
+| D1c | نام‌های legacy نگه‌داشته‌شدهٔ AK/FK/Index (OD-15) | ساخت Index جدید با نام قدیمی روی همان جدول ← **خطای 1913** (تعارض نام با ستون واقعی `TenantId` آینده). تغییر نام AK/FK با `sp_rename 'dbo.<نام قید>' … 'OBJECT'` (نام با Schema، نه `table.name`؛ شکل `table.name` خطای «ambiguous» می‌دهد) ممکن است، Identity قیدها ثابت می‌ماند و FK وابسته به AK درست ادامه می‌دهد. EF عملیاتی برای آن ندارد (فقط SQL دستی) | ورودی OD-15 |
 | D3 | FK مرکب `(CompanyId, TenantId)` با `TenantId` nullable | جفت معتبر ✔؛ جفت نامعتبر (Tenant دیگر/جابه‌جا/Company ناموجود/Company با Tenant=NULL) ✘ با خطای 547؛ **اگر `TenantId` در فرزند NULL باشد، FK اصلاً بررسی نمی‌شود** (حتی Company ناموجود پذیرفته می‌شود) و حذف والد با فرزند NULL مجاز است | U3 ✅ (MATCH SIMPLE) |
 | D4 | NOT NULL برای `Guid` | Migration دستی با `THROW` تا وجود NULL → خطای 50001 و **هیچ تغییری** (بدون Default، بدون تبدیل NULL به `Guid.Empty`، تاریخچه ثبت نشد). پس از تکمیل داده موفق؛ دادهٔ ردیف‌ها و FK دست‌نخورده؛ NULL جدید → 515 | U7 ✅ |
 | D4b | `ALTER COLUMN … NOT NULL` وقتی **Index وابسته** دارد | **خطای 5074** حتی با داده کامل؛ فقط با Drop Index → Alter → Create Index موفق می‌شود (Identity Index عوض می‌شود). `Tv3` همین را صریح می‌نویسد | **یافتهٔ جدید** |
@@ -28,9 +29,9 @@
 افزودن Drop/Add یک FK به `Tv2.Up` ← `D1` (Identity)، `D1_ThePinnedRenameScripts…` (اسکریپت) و `D2` هر سه شکست خوردند؛ سپس برگردانده شد.
 
 ## نتیجهٔ اجرا (واقعی)
-- با SQL Server: `TenantMigrationSqlServerValidation` ۱۹ اجرا، ۱۹ موفق، ۰ شکست، ۰ Skip. همراه `RenameMigrationSqlServerTests`، `DatabaseModelTests`، `LegacyTenantIdEntityContractTests`: ۴۵ موفق، ۰ شکست.
+- با SQL Server: `TenantMigrationSqlServerValidation` ۲۰ اجرا، ۲۰ موفق، ۰ شکست، ۰ Skip. همراه `RenameMigrationSqlServerTests`، `DatabaseModelTests`، `LegacyTenantIdEntityContractTests`: ۴۶ موفق، ۰ شکست.
 - `DatabaseMigrationHostSqlServerTests` (قفل همزمانی، اجرای تکراری، شکست Core/Trade از #665): ۸ موفق.
-- بدون SQL Server: همان ۱۹ تست ← ۷ موفق (بدون نیاز به سرور: اعتبارسنجی مقصد)، ۱۲ Skip (**NotRun**).
+- بدون SQL Server: همان ۲۰ تست ← ۷ موفق (بدون نیاز به سرور: اعتبارسنجی مقصد)، ۱۳ Skip (**NotRun**).
 
 ## تأثیر بر Guard و طراحی (توصیه، نه تصمیم)
 1. **Guard باید Rename ستونی را که در Predicate یک Filtered Index آمده، پیش از Migration رد کند** (یا Index صریح Drop/Recreate شود)؛ در مخزن امروز Index فیلتردار روی ستون Tenant وجود ندارد، ولی Unique Index با ستون nullable (مثلاً `SecurityAuditEvent.TenantId`) فیلتر خودکار `IS NOT NULL` می‌گیرد.
