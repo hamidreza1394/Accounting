@@ -82,4 +82,5 @@
 
 ## شناسه‌های Git
 - Branch: `feat/issue-392-vendor-provisioning-v5-prepare`
-- Commit/Pull Request: پس از ایجاد در PR ثبت می‌شود.
+- Base: `ce20943`؛ Commit: `19062ff`؛ Pull Request: #683
+- CI روی Commit `19062ff`: همهٔ Jobها (build-and-test، client، e2e، publish، publish-windows، publish-scripts، build-test-package، secret-scan، CodeQL، Semgrep) موفق.
