@@ -3192,3 +3192,10 @@
 - **انجام‌شده:** رفع تناقض Migration Host در `PROJECT_STATUS.md`/`ROADMAP.md` (رفتار واقعی #665)؛ تفکیک S3-0f به «Host پیاده‌شده» و «سیاست و استقرار باقی‌مانده»؛ ثبت وضعیت D-088 (`Partial`) و D-089 (`NotImplemented`)؛ ارجاع S3-0d-b به PR #670 (Done نشده) و OD-11/12/13/14/17 به PR #671 (`Proposed`)؛ یادداشت‌های `DATABASE.md` و `TRADE_MODULE.md`.
 - **محدوده:** فقط مستندات؛ بدون کد، Schema، Migration، Backfill، Runtime. هیچ تصمیمی Accepted نشد. تست اجرا نشد.
 - **وابستگی:** ارجاع به #670 و #671 که هنوز ادغام نشده‌اند؛ اگر تأیید یا ادغام آن‌ها تغییر کند، این سند باید به‌روز شود.
+
+## 2026-11-15 — تکمیل شواهد S3-0d-b (بازبینی بدنهٔ تست‌ها)
+- **مبنا:** `origin/main@47cca6e`.
+- **انجام‌شده:** بازبینی بدنهٔ تست‌های Trade/HR/Membership/Provisioning/WorkContext/Audit، Razor و ClientApp. یک شکاف واقعی: Handlerهای HR با شناسهٔ Company دیگر تست نداشتند ← تست `ForeignCompanyIdentifiers_AreRefusedByEveryHrHandler_AndTheForeignRowsStayUntouched`. Mutation (حذف فیلتر `TenantId` از `GetUnitAsync`) تست را شکست داد.
+- **تست:** ۲۶۵ تست مرتبط: ۲۵۶ موفق، ۰ شکست، ۹ Skip (SQL Server). Vitest و SQL Server اجرا نشد.
+- **محدوده:** بدون تغییر Production/Schema/Migration؛ بدون Tenant؛ ادعای دو Tenant واقعی NotVerified.
+- **Handoff:** `docs/handoffs/ISSUE-397-s3-0d-b-data-path-inventory.md` بخش ۱۳.
