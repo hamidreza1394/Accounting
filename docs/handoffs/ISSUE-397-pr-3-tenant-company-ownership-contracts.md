@@ -27,3 +27,11 @@
 - تغییر نام/نوع `TenantId` در قراردادهای Trade (`TradeAccessContext`, `TradePeriodScope`) و تصمیم Trade Migration Host.
 - قرارداد Query Filter کد (Global Filter) فقط پس از طراحی context ورود/Jobها و تست‌های منفی cross-tenant.
 - قرارداد Background Job/Export/Raw SQL فقط وقتی ضرورت مشخص شد.
+
+## تکمیل (PR پیگیری): فهرست قطعی موجودیت‌های Legacy `TenantId`
+- **شکاف واقعی:** #662 قرارداد `OwnershipScope` و Guardهای ساختاری را داشت، اما فهرست قطعیِ ستون‌هایی که `TenantId` آن‌ها هنوز `Company.Id` است در هیچ تستی نبود.
+- **افزوده‌شده:** `tests/Template.Tests/LegacyTenantIdEntityContractTests.cs` — مدل واقعی EF هر دو Context (Core و Trade) را می‌خواند و ستون‌های `*TenantId` را با فهرست ثابت مقایسه می‌کند: Core ۱۰ ستون، Trade ۵ ستون؛ و تأیید می‌کند `Company` ستون Tenant ندارد و Entity با نام `Tenant` وجود ندارد.
+- **اثر:** افزودن Entity جدید با ستون Tenant تا تصمیم صریح مالک (افزودن به فهرست = «معنای Legacy = Company.Id») تست را می‌شکند.
+- **Mutation:** حذف یک ردیف از فهرست → ۱ شکست، ۲ موفق (اجرا شد). تست روی SQL Server واقعی لازم ندارد (فقط ساخت مدل در حافظه).
+- **بدون تغییر:** Production، Schema، Migration، رفتار CompanyAccess/WorkContext، Interface/Scope جدید (هیچ‌کدام لازم نبود).
+- **NotRun / محدودیت:** Tenant واقعی وجود ندارد و این تست ایزولاسیون دو Tenant را اثبات نمی‌کند.
