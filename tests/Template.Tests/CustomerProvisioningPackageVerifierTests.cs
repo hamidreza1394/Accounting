@@ -26,6 +26,25 @@ public sealed class CustomerProvisioningPackageVerifierTests
     }
 
     [Fact]
+    public void CompanyBoundV5Package_IsRejectedUntilTheCustomerCanMapAndApplyCompanyReference()
+    {
+        // Vendor schema v5 is prepared but disabled. A correctly signed v5 package for this very customer
+        // and installation must still be refused here: the Customer has no CompanyReference mapping yet,
+        // so accepting it would create a Company that can never be tied back to its license entitlement.
+        using var signingKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var verifier = CreateVerifier(signingKey, "customer-001", "install-001");
+        var package = Sign(signingKey, Sample("customer-001", "install-001") with
+        {
+            SchemaVersion = CustomerProvisioningPackageValidator.CompanyReferencePayloadSchemaVersion,
+            CompanyReference = "company-ref-0001"
+        });
+
+        Assert.False(verifier.TryVerify(package, out var payload, out var error));
+        Assert.Null(payload);
+        Assert.Equal("provisioning_payload_invalid", error);
+    }
+
+    [Fact]
     public void UnknownKeyId_IsRejectedWithoutTrustingPackageKeyMaterial()
     {
         using var signingKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);

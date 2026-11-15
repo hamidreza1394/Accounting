@@ -3263,3 +3263,10 @@
 - **بازبینی:** `code-reviewer` (بدون یافتهٔ مهم؛ ۳ مورد اصلاح شد) و `security-reviewer` (بدون Critical/High/Medium؛ L1 و I1 اصلاح شد؛ L2 مستند).
 - **محدوده:** بدون تغییر Customer DB، Provisioning v5، Customer Runtime و Issue #393؛ مسیر v1 و تغییرناپذیری #680 حفظ شد.
 - **Handoff:** `docs/handoffs/ISSUE-681-vendor-initial-v2-company-entitlements.md`.
+
+## 2026-11-15 — #392 PR-2: آماده‌سازی صدور Provisioning v5 در Vendor (Gate خاموش)
+- **انجام‌شده:** انتخاب `CompanyReference` فقط از LicensePayload v2 امضاشده (`VendorProvisioningCompanyReferenceRules`)، ساخت Payload v4/v5 و Binding/Idempotency/Export آگاه از schema، Gate دوکلیدی پیش‌فرض خاموش (`Provisioning:CompanyReferenceIssuance:Enabled` + قفل کدی `CustomerConsumerReady=false`). بدون Migration/Customer/Contracts.
+- **وضعیت:** صدور عملیاتی v5 **غیرفعال**؛ Customer هنوز v5 را رد می‌کند و Mapping/Apply/`maxCompanies`/Bootstrap `NotImplemented`.
+- **تست (واقعی، SQL Server موقت):** `Vendor.Host.Tests` ۳۵۰ (۳۴۸ موفق، ۰ ناموفق، ۲ Skip: SoftHSM و Dual-Host که جدا اجرا و موفق شد)؛ `Licensing.Contracts.Tests` ۱۶۷/۱۶۷؛ `Template.Tests` کلاس‌های `CustomerProvisioning*` ۶۵/۶۵؛ آزمون جهش دو قاعدهٔ حیاتی. اجرا نشد: `dotnet test Template.sln` کامل، Playwright، `verify_migration_model.py`.
+- **بازبینی:** `code-reviewer` و `security-reviewer` مستقل؛ بدون Critical/High/Medium؛ Lowها در handoff.
+- **Handoff:** `docs/handoffs/ISSUE-392-vendor-provisioning-v5-prepare.md`.

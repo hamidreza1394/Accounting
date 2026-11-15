@@ -17,8 +17,12 @@ namespace Faranou.Vendor.Host.Authorization;
 public sealed class VendorProvisioningLicenseResolver(
     VendorDbContext db,
     LicenseSigningTrustStore trustStore,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    VendorProvisioningCompanyReferenceGate? companyReferenceGate = null)
 {
+    private readonly VendorProvisioningCompanyReferenceGate _companyReferenceGate =
+        companyReferenceGate ?? VendorProvisioningCompanyReferenceGate.Disabled;
+
     private static readonly JsonSerializerOptions EnvelopeJsonOptions = new()
     {
         PropertyNameCaseInsensitive = false
@@ -30,7 +34,22 @@ public sealed class VendorProvisioningLicenseResolver(
         VendorInstallation installation,
         IReadOnlyList<string>? requestedSubsystems,
         CancellationToken cancellationToken) =>
-        ResolveAsync(licenseId, customer, installation, requestedSubsystems, null, true, cancellationToken);
+        ResolveAsync(licenseId, customer, installation, requestedSubsystems, null, null, true, cancellationToken);
+
+    /// <summary>
+    /// <paramref name="requestedCompanyReference"/> is only a selector for a company-scoped (v2) license; the
+    /// returned reference is read from the verified signed payload. It is rejected for legacy v1 licenses.
+    /// </summary>
+    public Task<VendorProvisioningLicenseBindingResult> ResolveLatestAsync(
+        Guid licenseId,
+        VendorCustomer customer,
+        VendorInstallation installation,
+        IReadOnlyList<string>? requestedSubsystems,
+        string? requestedCompanyReference,
+        CancellationToken cancellationToken) =>
+        ResolveAsync(
+            licenseId, customer, installation, requestedSubsystems, requestedCompanyReference, null, true,
+            cancellationToken);
 
     public Task<VendorProvisioningLicenseBindingResult> ResolveSequenceAsync(
         Guid licenseId,
@@ -39,13 +58,26 @@ public sealed class VendorProvisioningLicenseResolver(
         VendorInstallation installation,
         IReadOnlyList<string>? requestedSubsystems,
         CancellationToken cancellationToken) =>
-        ResolveAsync(licenseId, customer, installation, requestedSubsystems, sequence, false, cancellationToken);
+        ResolveAsync(licenseId, customer, installation, requestedSubsystems, null, sequence, false, cancellationToken);
+
+    public Task<VendorProvisioningLicenseBindingResult> ResolveSequenceAsync(
+        Guid licenseId,
+        int sequence,
+        VendorCustomer customer,
+        VendorInstallation installation,
+        IReadOnlyList<string>? requestedSubsystems,
+        string? requestedCompanyReference,
+        CancellationToken cancellationToken) =>
+        ResolveAsync(
+            licenseId, customer, installation, requestedSubsystems, requestedCompanyReference, sequence, false,
+            cancellationToken);
 
     private async Task<VendorProvisioningLicenseBindingResult> ResolveAsync(
         Guid licenseId,
         VendorCustomer customer,
         VendorInstallation installation,
         IReadOnlyList<string>? requestedSubsystems,
+        string? requestedCompanyReference,
         int? expectedSequence,
         bool requireLatest,
         CancellationToken cancellationToken)
@@ -148,11 +180,27 @@ public sealed class VendorProvisioningLicenseResolver(
             return VendorProvisioningLicenseBindingResult.Conflict("provisioning_license_binding_mismatch");
 
         // Payload v2 stores modules per opaque CompanyReference and intentionally has no
-        // installation-wide subsystem list. Provisioning schema v4 has no trusted company-reference
-        // binding, so never flatten company entitlements or persist an empty v4 request.
+        // installation-wide subsystem list. Schema v4 has no trusted company-reference binding, so
+        // company entitlements are never flattened. Schema v5 binds exactly one CompanyReference taken
+        // from this signed payload, and only while the (default-off) gate is open.
         if (payload.FormatVersion == LicensePayload.CurrentFormatVersion)
-            return VendorProvisioningLicenseBindingResult.Conflict(
-                "provisioning_company_reference_mapping_required");
+        {
+            if (!_companyReferenceGate.IsEnabled)
+                return VendorProvisioningLicenseBindingResult.Conflict(
+                    "provisioning_company_reference_mapping_required");
+
+            var selection = VendorProvisioningCompanyReferenceRules.Select(
+                payload, requestedCompanyReference, requestedSubsystems);
+            return selection.Succeeded
+                ? VendorProvisioningLicenseBindingResult.Success(
+                    license.Id.ToString("D"), storedEnvelope.Sequence, selection.Subsystems!,
+                    selection.Entitlements!, selection.CompanyReference)
+                : new VendorProvisioningLicenseBindingResult(false, selection.StatusCode, selection.ErrorCode);
+        }
+
+        // A company selector is meaningless for a legacy installation-wide license.
+        if (requestedCompanyReference is not null)
+            return VendorProvisioningLicenseBindingResult.BadRequest("provisioning_company_reference_not_applicable");
 
         var entitlements = payload.Limits.Subsystems
             .OrderBy(code => code, StringComparer.Ordinal)
@@ -189,11 +237,16 @@ public sealed record VendorProvisioningLicenseBindingResult(
     string? LicenseId = null,
     int Sequence = 0,
     IReadOnlyList<string>? Subsystems = null,
-    IReadOnlyList<string>? Entitlements = null)
+    IReadOnlyList<string>? Entitlements = null,
+    string? CompanyReference = null)
 {
+    /// <param name="companyReference">
+    /// Null for legacy (schema v4) bindings; otherwise the reference read from the signed v2 payload (schema v5).
+    /// </param>
     public static VendorProvisioningLicenseBindingResult Success(
-        string licenseId, int sequence, IReadOnlyList<string> subsystems, IReadOnlyList<string> entitlements) =>
-        new(true, StatusCodes.Status200OK, null, licenseId, sequence, subsystems, entitlements);
+        string licenseId, int sequence, IReadOnlyList<string> subsystems, IReadOnlyList<string> entitlements,
+        string? companyReference = null) =>
+        new(true, StatusCodes.Status200OK, null, licenseId, sequence, subsystems, entitlements, companyReference);
 
     public static VendorProvisioningLicenseBindingResult BadRequest(string code) =>
         new(false, StatusCodes.Status400BadRequest, code);

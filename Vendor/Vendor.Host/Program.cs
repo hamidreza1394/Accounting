@@ -138,6 +138,9 @@ builder.Services.AddSingleton(sp =>
 });
 builder.Services.Configure<VendorOfflineRevocationOptions>(
     builder.Configuration.GetSection("OfflineRevocation"));
+// Company-bound provisioning (schema v5) is prepared but disabled: the Customer cannot yet verify or
+// apply it. The gate needs the (default-off) flag AND the code-level Customer-readiness interlock.
+builder.Services.AddSingleton(VendorProvisioningCompanyReferenceGate.FromConfiguration(builder.Configuration));
 builder.Services.AddScoped<VendorProvisioningLicenseResolver>();
 builder.Services.AddScoped<VendorLicenseEnvelopeFactory>();
 builder.Services.AddScoped<VendorLicenseIssuanceService>();
