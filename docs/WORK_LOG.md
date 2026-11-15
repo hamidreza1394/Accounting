@@ -3206,3 +3206,11 @@
 - **تست:** ۳ تست جدید + ۱۴ تست معماری/OwnershipScope موجود = ۱۷ موفق، ۰ شکست. مجموعهٔ کامل و SQL Server اجرا نشد.
 - **محدوده:** بدون Production/Schema/Migration/Backfill؛ هیچ Tenant ساخته نشد.
 - **Handoff:** `docs/handoffs/ISSUE-397-pr-3-tenant-company-ownership-contracts.md` (بخش تکمیل).
+
+## 2026-11-15 — PR-D: اعتبارسنجی عملیات Migration Tenant روی SQL Server واقعی (G3)
+- **مبنا:** `origin/main@53dd2ea`.
+- **انجام‌شده:** ۲۰ تست D1 تا D6 با Migration آزمایشی داخل `tests/` (Rename با Pin، Up/Down، FK مرکب با NULL، NOT NULL برای Guid با THROW، R1 بدون Pin، ایزولاسیون).
+- **یافته‌های جدید:** (۱) `sp_rename` با Filtered Index که ستون را در Predicate دارد خطای 5074 می‌دهد؛ (۲) `ALTER COLUMN NOT NULL` با Index وابسته خطای 5074 می‌دهد؛ (۳) NULL در FK مرکب بررسی را کاملاً خاموش می‌کند؛ (۴) R1 با FK وابسته رد و Rollback می‌شود و بدون آن همهٔ قیدها Object جدید می‌شوند؛ (۵) نام قدیمی قید روی همان جدول قابل استفادهٔ دوباره نیست (1913) و تغییر نام قید فقط با `sp_rename 'dbo.<نام>'` ممکن است.
+- **تست:** SQL Server واقعی: ۲۰ از ۲۰ موفق؛ ۴۶ موفق همراه تست‌های مرتبط؛ `DatabaseMigrationHostSqlServerTests` ۸ موفق. بدون SQL Server: ۷ موفق، ۱۳ Skip (NotRun).
+- **محدوده:** بدون Schema/Migration عملیاتی/Backfill/Tenant/Workflow.
+- **Handoff:** `docs/handoffs/ISSUE-397-pr-d-tenant-migration-sqlserver-validation.md`.
