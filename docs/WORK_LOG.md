@@ -3193,6 +3193,13 @@
 - **محدوده:** فقط مستندات؛ بدون کد، Schema، Migration، Backfill، Runtime. هیچ تصمیمی Accepted نشد. تست اجرا نشد.
 - **وابستگی:** ارجاع به #670 و #671 که هنوز ادغام نشده‌اند؛ اگر تأیید یا ادغام آن‌ها تغییر کند، این سند باید به‌روز شود.
 
+## 2026-11-15 — تکمیل شواهد S3-0d-b (بازبینی بدنهٔ تست‌ها)
+- **مبنا:** `origin/main@47cca6e`.
+- **انجام‌شده:** بازبینی بدنهٔ تست‌های Trade/HR/Membership/Provisioning/WorkContext/Audit، Razor و ClientApp. یک شکاف واقعی: Handlerهای HR با شناسهٔ Company دیگر تست نداشتند ← تست `ForeignCompanyIdentifiers_AreRefusedByEveryHrHandler_AndTheForeignRowsStayUntouched`. Mutation (حذف فیلتر `TenantId` از `GetUnitAsync`) تست را شکست داد.
+- **تست:** ۲۶۵ تست مرتبط: ۲۵۶ موفق، ۰ شکست، ۹ Skip (SQL Server). Vitest و SQL Server اجرا نشد.
+- **محدوده:** بدون تغییر Production/Schema/Migration؛ بدون Tenant؛ ادعای دو Tenant واقعی NotVerified.
+- **Handoff:** `docs/handoffs/ISSUE-397-s3-0d-b-data-path-inventory.md` بخش ۱۳.
+
 ## 2026-11-15 — فهرست قطعی موجودیت‌های Legacy TenantId (S3 PR-3 تکمیلی)
 - **مبنا:** `origin/main@47cca6e`. بررسی Source نشان داد #662 قرارداد `OwnershipScope` و Guardها را قبلاً پیاده کرده است؛ فقط فهرست قطعی ستون‌های Legacy `TenantId` ناقص بود.
 - **انجام‌شده:** `LegacyTenantIdEntityContractTests` (۳ تست) روی مدل واقعی Core (۱۰ ستون) و Trade (۵ ستون). Mutation حذف یک ردیف شکست می‌دهد.

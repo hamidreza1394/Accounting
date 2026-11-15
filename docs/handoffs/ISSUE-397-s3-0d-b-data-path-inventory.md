@@ -91,7 +91,7 @@
 - **شناسهٔ جعلی:** `UpdateRole_RejectsRoleIdOwnedByAnotherCompany`، `AssignMembership_RejectsRoleFromAnotherCompany`، `ApproveMembership_RejectsInactiveOrForeignCompanyRole`، `WorkContextTests.ATamperedForeignOrGarbageValue…`، `CompanyAccessTests.Overview_IgnoresATenantClaimForgedIntoThePrincipal`، `RolePermissionPreviewEndpointTests.Preview_RejectsUnknownCodesForeignRoles…`.
 - **فقط Source/Architecture:** `OwnershipScopeArchitectureTests` (دو Scope مجزا، ممنوعیت `CustomerBoundaryId` به‌جای Tenant)، `ArchitectureDependencyGuardTests`، `DatabaseModelTests` (کلید/FK).
 - **Export بدون تست منفی Cross-Tenant:** تنها Export (ممیزی امنیتی) سراسری است و تست Cross-Tenant مفهومی ندارد.
-- **اجرا:** در این PR هیچ تستی اجرا نشد؛ فهرست بالا بر پایهٔ نام‌ها و فایل‌هاست و موفقیت آن‌ها در این کار ادعا نمی‌شود.
+- **اجرا (نسخهٔ اولیه #670):** هیچ تستی اجرا نشد؛ فهرست بالا بر پایهٔ نام‌ها بود. وضعیت اجرای واقعی در بخش «تکمیل شواهد» زیر آمده است.
 
 ## ۱۰. وضعیت: تأییدشده، ناقص، اثبات‌نشده
 **تأییدشده (با Source):** بند ۲؛ ماتریس بند ۳ برای Entityهای فهرست‌شده؛ نبود Raw SQL/Set-based روی داده Tenant؛ نبود Job در Server؛ نبود Global Query Filter؛ فرق Snapshot و Migration Trade.
@@ -112,3 +112,37 @@
 
 ## ۱۲. محدودیت‌های این PR
 بدون تغییر کد، تست، Schema، Migration، Backfill، Authorization یا UI. `DECISIONS.md`، `ROADMAP.md`، `PROJECT_STATUS.md`، `WORK_LOG.md` طبق دستور دست نخورد (در PR-C).
+
+## ۱۳. تکمیل شواهد (S3-0d-b، پیگیری پس از #670)
+مبنا: `origin/main@47cca6e`. بدنهٔ تست‌ها خوانده شد، نه فقط نام‌ها.
+
+### ۱۳.۱ شاهد برای ادعاهای «Verified»
+| ادعا | شاهد مشخص | وضعیت |
+|---|---|---|
+| Trade Party/Product: موجودیت Company دیگر نامرئی و بدون تغییر | `TradePartyHttpTests.OtherTenantPartyIsInvisible…` و معادل Product: GET/PUT/لیست/فیلتر با شناسهٔ بیرونی؛ پاسخ 404 خالی؛ ردیف بیرونی در DB دست‌نخورده؛ `tenantId` در Body نادیده | بدنه بازبینی شد؛ **روی SQL Server اجرا نشد** (`Assert.SkipUnless`) |
+| `TenantId` از Body کلاینت پذیرفته نمی‌شود | همان تست‌ها + `tradeClient.test.ts:83` (Client فیلد را نمی‌فرستد) | بدنه بازبینی شد؛ Vitest اجرا نشد (`node_modules` در این محیط نیست) |
+| HR: Employee/Unit/Position/Assignment بیرونی | **قبلاً فقط** `UnitSubtree`، Photo، Manager بیرونی. بقیهٔ Handlerهای دارای شناسه تست نداشتند ← **شکاف واقعی** | با تست جدید بسته شد (۱۳.۲) |
+| Membership/Role/Provisioning: نقش و عضویت Company دیگر | تست‌های `…RejectsRoleFromAnotherCompany`، `…ForeignCompanyRole`، `Directory_…HidesForeignCompanies` — بدنه‌ها Assertion روی کد وضعیت و عدم جابه‌جایی عضو دارند | بدنه بازبینی شد؛ InMemory اجرا شد |
+| CompanyAccess/WorkContext: عضویت لغوشده، Cookie دستکاری‌شده، دورهٔ مالی Company دیگر | `CompanyAccessTests`، `WorkContextTests`، `Integration/WorkContextHttpTests` | InMemory اجرا شد؛ HTTP/SQL Server اجرا نشد |
+| Audit: خواندن/تغییر مدیر نصب ثبت می‌شود | `InstallationAdminAuditTests`، `InstallationAdminAuditHttpTests` | InMemory اجرا شد |
+
+### ۱۳.۲ شکاف واقعی و تست افزوده‌شده
+`ForeignCompanyIdentifiers_AreRefusedByEveryHrHandler_AndTheForeignRowsStayUntouched` (در `HrOrganizationalStructureEndpointTests`): عضوِ دارای همهٔ مجوزهای HR شرکت خودش، ۱۳ Handler را با شناسهٔ Company دیگر (Employee، User-link، Unit، Position، Assignment) و ۳ ارجاع Body (Unit/Position بیرونی در شروع/تغییر تخصیص) صدا می‌زند؛ همه ۴۰۴ (یا ۴۰۴/۴۰۹/۴۰۰ برای ارجاع Body) می‌شوند و ردیف‌های بیرونی بدون تغییرند. رفتار فعلی Production صحیح است (تست از اول سبز بود).
+**اثبات توان شکست:** حذف `current.TenantId == companyId` از `GetUnitAsync` ← تست شکست خورد (`GetUnit … got status=200` با دادهٔ واحد بیرونی). سپس برگردانده شد.
+
+### ۱۳.۳ بازبینی Razor و ClientApp
+- `Server/Pages`: فقط `Admin/Users/Update|Delete.cshtml.cs` شناسه Company را می‌خوانند (برای ثبت ممیزی مدیر نصب، `InstallationAdminAudit.GetCompanyIdsAsync`)، و `Index` با `GetAccessibleCompaniesAsync`؛ هیچ Query بدون محدودیت عضویت برای کاربر عادی نیست.
+- `ClientApp`: انتخاب Company فقط `companyId` را به `/context` می‌دهد و Server دوباره از DB اعتبارسنجی می‌کند؛ هیچ `localStorage/sessionStorage` برای Company/Tenant استفاده نمی‌شود (جست‌وجوی Source)؛ `tenantId` در Client Trade ارسال نمی‌شود (تست Client).
+- Bulk/Export: بدون تغییر نسبت به بند ۵ و ۶ (تنها Export = CSV ممیزی سراسری مدیر نصب؛ `ExecuteUpdate` فقط `UserSessions`).
+
+### ۱۳.۴ طبقه‌بندی تست‌های ناموجود
+| دسته | مورد |
+|---|---|
+| قابل‌آزمون با مدل Company فعلی | (بسته‌شده) HR شناسهٔ بیرونی. باقی: Trade Children (PartyBankAccount/PartyRoleAssignment/ProductIdentifier) فقط از طریق Party/Product قابل دسترسی‌اند و Endpoint مستقل ندارند ← نیاز به تست جدا نیست |
+| نیازمند Tenant واقعی | هر ادعای «دو Tenant مستقل»، فیلتر Tenant مستقل از Company، Tenant با چند Company |
+| نیازمند SQL Server واقعی | اجرای تست‌های Trade/HR/WorkContext HTTP روی SQL Server در CI؛ در این PR اجرا نشد |
+| نیازمند تصمیم معماری | Global Query Filter، DB-level Append-only، فیلتر Tenant در Job/Export آینده |
+
+### ۱۳.۵ وضعیت نهایی بندهای «اثبات‌نشده» ۱ تا ۳
+۱. بدنهٔ تست‌های مرتبط بازبینی شد و یک شکاف واقعی (HR) بسته شد. ۲. `.cshtml` و `ClientApp` بازبینی شد (بند ۱۳.۳)؛ Vitest اجرا نشد. ۳. مقادیر `TenantId` در دیتابیس واقعی همچنان **NotVerified** (دیتابیس واقعی در دسترس نیست).
+**نتیجه:** S3-0d-b برای مسیرهای قابل‌اثبات با مدل Company فعلی **Verified (InMemory)**؛ ادعای ایزولاسیون دو Tenant واقعی **NotVerified**، و بخش SQL Server **NotRun**. تأیید وضعیت نهایی با مالک است.
