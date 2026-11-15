@@ -396,6 +396,11 @@ public static class CompanyMembershipRequestEndpoints
             return new MembershipApproverResponse(item.UserId, displayName, item.Username);
         }).ToArray();
 
+        if (isInstallationAdministrator)
+            await Infrastructure.Security.InstallationAdminAudit.RecordAccessAsync(
+                database, principal, httpContext.Connection.RemoteIpAddress?.ToString(), "CompanyMembershipApprovers", isSearch: false, filters: new { companyId, page = safePage, pageSize = safePageSize },
+                resultCount: items.Length, entityId: companyId.ToString(), cancellationToken, companyId: companyId);
+
         return TypedResults.Ok(new MembershipApproverListResponse(
             items, safePage, safePageSize, totalCount));
     }
@@ -411,7 +416,7 @@ public static class CompanyMembershipRequestEndpoints
         int pageSize = 25,
         CancellationToken cancellationToken = default)
     {
-        var (failure, _, _) = await AuthorizeDestinationApproverAsync(
+        var (failure, _, isInstallationAdministrator) = await AuthorizeDestinationApproverAsync(
             database, companyAccess, principal, companyId, cancellationToken);
         if (failure is not null) return failure;
 
@@ -475,6 +480,11 @@ public static class CompanyMembershipRequestEndpoints
                 item.DecisionReason);
         }).ToArray();
 
+        if (isInstallationAdministrator)
+            await Infrastructure.Security.InstallationAdminAudit.RecordAccessAsync(
+                database, principal, httpContext.Connection.RemoteIpAddress?.ToString(), "CompanyMembershipRequestHistory", isSearch: false, filters: new { companyId, page = safePage, pageSize = safePageSize },
+                resultCount: items.Length, entityId: companyId.ToString(), cancellationToken, companyId: companyId);
+
         return TypedResults.Ok(new CompanyMembershipRequestHistoryListResponse(
             items, safePage, safePageSize, totalCount));
     }
@@ -489,7 +499,7 @@ public static class CompanyMembershipRequestEndpoints
         int pageSize = 25,
         CancellationToken cancellationToken = default)
     {
-        var (failure, _, _) = await AuthorizeDestinationApproverAsync(
+        var (failure, _, isInstallationAdministrator) = await AuthorizeDestinationApproverAsync(
             database, companyAccess, principal, companyId, cancellationToken);
         if (failure is not null) return failure;
 
@@ -536,6 +546,11 @@ public static class CompanyMembershipRequestEndpoints
                 AsUtc(item.RequestedAtUtc),
                 item.IsRequesterActive);
         }).ToArray();
+
+        if (isInstallationAdministrator)
+            await Infrastructure.Security.InstallationAdminAudit.RecordAccessAsync(
+                database, principal, httpContext.Connection.RemoteIpAddress?.ToString(), "CompanyMembershipRequestsPending", isSearch: false, filters: new { companyId, page = safePage, pageSize = safePageSize },
+                resultCount: items.Length, entityId: companyId.ToString(), cancellationToken, companyId: companyId);
 
         SetNoStore(httpContext);
         return TypedResults.Ok(new CompanyMembershipPendingListResponse(

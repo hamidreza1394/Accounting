@@ -39,6 +39,11 @@ public class DetailsModel : Infrastructure.BasePageModelWithDatabaseContext
 				return RedirectToPage(pageName: "Index");
 			}
 
+			await Infrastructure.Security.InstallationAdminAudit.RecordAccessAsync(
+				DatabaseContext, User, HttpContext.Connection.RemoteIpAddress?.ToString(), "User", isSearch: false,
+				filters: new { channel = "AdminPage" }, resultCount: null, entityId: id.Value.ToString(),
+				cancellationToken: default);
+
 			ViewModel =
 				await
 				DatabaseContext.Users
