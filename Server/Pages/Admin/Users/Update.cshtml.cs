@@ -43,6 +43,11 @@ public class UpdateModel : Infrastructure.BasePageModelWithDatabaseContext
 				return RedirectToPage(pageName: "Index");
 			}
 
+			await Infrastructure.Security.InstallationAdminAudit.RecordAccessAsync(
+				DatabaseContext, User, HttpContext.Connection.RemoteIpAddress?.ToString(), "User", isSearch: false,
+				filters: new { channel = "AdminPage" }, resultCount: null, entityId: id.Value.ToString(),
+				cancellationToken: default);
+
 			ViewModel =
 				await
 				DatabaseContext.Users
@@ -246,6 +251,11 @@ public class UpdateModel : Infrastructure.BasePageModelWithDatabaseContext
 				Dtat.Utility.FixText
 				(text: ViewModel.TitleInContactUsPage);
 
+			var previous = (foundedItem.Username, foundedItem.FirstName, foundedItem.LastName,
+				foundedItem.EmailAddress, foundedItem.CellPhoneNumber, foundedItem.RoleId,
+				foundedItem.IsActive, foundedItem.IsProgrammer,
+				foundedItem.IsEmailAddressVerified, foundedItem.IsCellPhoneNumberVerified);
+
 			foundedItem.RoleId = ViewModel.RoleId;
 
 			foundedItem.Ordering = ViewModel.Ordering;
@@ -267,6 +277,28 @@ public class UpdateModel : Infrastructure.BasePageModelWithDatabaseContext
 			foundedItem.TitleInContactUsPage = fixedTitleInContactUsPage;
 
 			foundedItem.SetUpdateDateTime();
+
+			DatabaseContext.SecurityAuditEvents.Add(Infrastructure.Security.InstallationAdminAudit.CreateEvent(
+				Infrastructure.Security.InstallationAdminAudit.GetActorId(User), "UserUpdated", "User", foundedItem.Id.ToString(),
+				new
+				{
+					channel = "AdminPage",
+					subjectUserId = foundedItem.Id,
+					companyIds = await Infrastructure.Security.InstallationAdminAudit.GetCompanyIdsAsync(DatabaseContext, foundedItem.Id, default),
+					changes = Infrastructure.Security.InstallationAdminAudit.Diff(
+						("Username", previous.Username, foundedItem.Username),
+						("FirstName", previous.FirstName, foundedItem.FirstName),
+						("LastName", previous.LastName, foundedItem.LastName),
+						("EmailAddress", previous.EmailAddress, foundedItem.EmailAddress),
+						("CellPhoneNumber", previous.CellPhoneNumber, foundedItem.CellPhoneNumber),
+						("RoleId", previous.RoleId?.ToString(), foundedItem.RoleId?.ToString()),
+						("IsActive", previous.IsActive.ToString(), foundedItem.IsActive.ToString()),
+						("IsProgrammer", previous.IsProgrammer.ToString(), foundedItem.IsProgrammer.ToString()),
+						("IsEmailAddressVerified", previous.IsEmailAddressVerified.ToString(), foundedItem.IsEmailAddressVerified.ToString()),
+						("IsCellPhoneNumberVerified", previous.IsCellPhoneNumberVerified.ToString(), foundedItem.IsCellPhoneNumberVerified.ToString())),
+					reason = (string?)null,
+				},
+				HttpContext.Connection.RemoteIpAddress?.ToString()));
 
 			var affectedRows =
 				await

@@ -3174,3 +3174,10 @@
 - **مبنا:** `origin/main@1c0eec0`.
 - **انجام‌شده:** ثبت D-088 (`Accepted`، پیاده‌سازی `Partial`) در `docs/DECISIONS.md`؛ اصلاح بخش PR-E1b در `docs/SECURITY.md`: مشاهدهٔ سراسری مدیر نصب از فهرست نقص‌ها خارج شد و الزامات ۱ تا ۶ D-088 به‌عنوان کار باز ماند؛ وابستگی به Tenant واقعی فقط برای فیلتر `companyId`/`TenantId` باقی ماند.
 - **محدوده:** فقط مستندات؛ بدون کد، Schema یا Migration.
+
+## 2026-11-15 — اجرای D-088: ردیابی دسترسی و تغییرات مدیر نصب
+- **مبنا:** شاخهٔ PR #666 (D-088) روی `origin/main@1c0eec0`.
+- **انجام‌شده:** `InstallationAdminAudit`؛ ثبت مشاهده/جستجو/تغییر؛ گزارش `installation-admin-activity`؛ محافظ Append-only در `DatabaseContext`؛ بدون Schema.
+- **تست:** مجموعهٔ کامل روی SQL Server: ۱۳۱۱ اجرا، ۱۳۰۱ موفق، ۰ شکست، ۱۰ Skip. ۲ آزمون ممیزی موجود به‌دلیل ثبت خودِ مشاهده تطبیق یافتند.
+- **Handoff:** `docs/handoffs/ISSUE-UNNUMBERED-d088-installation-admin-audit.md`.
+

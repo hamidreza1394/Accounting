@@ -97,6 +97,12 @@ public static class UserAdministrationEndpoints
                     membership.UserId == user.Id && membership.IsActive)))
             .ToListAsync(cancellationToken);
 
+        await Infrastructure.Security.InstallationAdminAudit.RecordAccessAsync(
+            database, principal, httpContext.Connection.RemoteIpAddress?.ToString(), "Users",
+            isSearch: search is not null || normalizedStatus != "all",
+            filters: new { search, status = normalizedStatus, sort = normalizedSort, page, pageSize },
+            resultCount: items.Count, entityId: null, cancellationToken);
+
         SetNoStore(httpContext);
         return TypedResults.Ok(new UserListResponse(items, totalCount, page, pageSize));
     }
@@ -156,6 +162,11 @@ public static class UserAdministrationEndpoints
         {
             CreatedAtUtc = DateTime.SpecifyKind(membership.CreatedAtUtc, DateTimeKind.Utc),
         }).ToArray();
+
+        await Infrastructure.Security.InstallationAdminAudit.RecordAccessAsync(
+            database, principal, httpContext.Connection.RemoteIpAddress?.ToString(), "User", isSearch: false, filters: null,
+            resultCount: 1, entityId: userId.ToString(), cancellationToken,
+            companyId: null);
 
         SetNoStore(httpContext);
         return TypedResults.Ok(new UserDetailsResponse(
@@ -221,6 +232,10 @@ public static class UserAdministrationEndpoints
                 item.OccurredAtUtc,
                 item.IpAddress))
             .ToListAsync(cancellationToken);
+
+        await Infrastructure.Security.InstallationAdminAudit.RecordAccessAsync(
+            database, principal, httpContext.Connection.RemoteIpAddress?.ToString(), "UserLoginHistory", isSearch: false, filters: new { take },
+            resultCount: events.Count, entityId: userId.ToString(), cancellationToken);
 
         return TypedResults.Ok<IReadOnlyList<LoginHistoryItemResponse>>(events);
     }
@@ -365,10 +380,17 @@ public static class UserAdministrationEndpoints
             OccurredAtUtc = timeProvider.GetUtcNow().UtcDateTime,
             CorrelationId = System.Diagnostics.Activity.Current?.Id,
             IpAddress = httpContext.Connection.RemoteIpAddress?.ToString(),
-            DetailsJson = System.Text.Json.JsonSerializer.Serialize(new
+            DetailsJson = Infrastructure.Security.InstallationAdminAudit.Serialize(new
             {
-                username = user.Username,
-                isActive = user.IsActive,
+                subjectUserId = user.Id,
+                changes = Infrastructure.Security.InstallationAdminAudit.Diff(
+                    ("Username", null, user.Username),
+                    ("FirstName", null, user.FirstName),
+                    ("LastName", null, user.LastName),
+                    ("EmailAddress", null, user.EmailAddress),
+                    ("CellPhoneNumber", null, user.CellPhoneNumber),
+                    ("IsActive", null, user.IsActive.ToString())),
+                reason = Infrastructure.Security.InstallationAdminAudit.ClipReason(request.Reason),
             }),
         });
 
@@ -466,6 +488,8 @@ public static class UserAdministrationEndpoints
         }
 
         var previousActive = user.IsActive;
+        var previous = (Email: user.EmailAddress, user.Username, user.FirstName, user.LastName,
+            Phone: user.CellPhoneNumber);
         user.ChangeEmailAddress(email);
         user.Username = username;
         user.FirstName = firstName;
@@ -474,22 +498,24 @@ public static class UserAdministrationEndpoints
         user.IsActive = request.IsActive;
         user.SetUpdateDateTime();
 
-        database.SecurityAuditEvents.Add(new Domain.SecurityAuditEvent
-        {
-            UserId = actorId,
-            EventType = "UserUpdated",
-            EntityType = "User",
-            EntityId = user.Id.ToString(),
-            OccurredAtUtc = timeProvider.GetUtcNow().UtcDateTime,
-            CorrelationId = System.Diagnostics.Activity.Current?.Id,
-            IpAddress = httpContext.Connection.RemoteIpAddress?.ToString(),
-            DetailsJson = System.Text.Json.JsonSerializer.Serialize(new
+        var updateEvent = Infrastructure.Security.InstallationAdminAudit.CreateEvent(
+            actorId, "UserUpdated", "User", user.Id.ToString(),
+            new
             {
-                changedFields = new[] { "EmailAddress", "Username", "FirstName", "LastName", "CellPhoneNumber", "IsActive" },
-                previousIsActive = previousActive,
-                currentIsActive = user.IsActive,
-            }),
-        });
+                subjectUserId = user.Id,
+                companyIds = await Infrastructure.Security.InstallationAdminAudit.GetCompanyIdsAsync(database, user.Id, cancellationToken),
+                changes = Infrastructure.Security.InstallationAdminAudit.Diff(
+                    ("EmailAddress", previous.Email, user.EmailAddress),
+                    ("Username", previous.Username, user.Username),
+                    ("FirstName", previous.FirstName, user.FirstName),
+                    ("LastName", previous.LastName, user.LastName),
+                    ("CellPhoneNumber", previous.Phone, user.CellPhoneNumber),
+                    ("IsActive", previousActive.ToString(), user.IsActive.ToString())),
+                reason = Infrastructure.Security.InstallationAdminAudit.ClipReason(request.Reason),
+            },
+            httpContext.Connection.RemoteIpAddress?.ToString());
+        updateEvent.OccurredAtUtc = timeProvider.GetUtcNow().UtcDateTime;
+        database.SecurityAuditEvents.Add(updateEvent);
 
         try
         {
@@ -641,7 +667,8 @@ public sealed record CreateUserRequest(
     string? CellPhoneNumber,
     string? Password,
     string? ConfirmPassword,
-    bool IsActive);
+    bool IsActive,
+    string? Reason = null);
 
 public sealed record UpdateUserRequest(
     string? Username,
@@ -649,7 +676,8 @@ public sealed record UpdateUserRequest(
     string? LastName,
     string? EmailAddress,
     string? CellPhoneNumber,
-    bool IsActive);
+    bool IsActive,
+    string? Reason = null);
 
 public sealed record UserCreatedResponse(Guid Id);
 
