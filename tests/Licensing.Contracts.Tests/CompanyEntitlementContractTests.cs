@@ -378,6 +378,167 @@ public sealed class CompanyEntitlementContractTests
 		Assert.Equal("payload_format_downgrade", error);
 	}
 
+	[Fact]
+	public void RevisionRules_AllowV1ToV2_ToIntroduceCompanyReferencesForTheFirstTime()
+	{
+		var current = SampleV1();
+		var candidate = SampleV2WithCompanies("company-0001", "company-0002") with
+		{
+			Sequence = 2,
+			LicenseId = current.LicenseId,
+			InstallationId = current.InstallationId,
+			ProductCode = current.ProductCode
+		};
+
+		Assert.True(LicenseRevisionRules.TryValidateSuccessor(current, candidate, out var error), error);
+		Assert.Null(error);
+	}
+
+	[Fact]
+	public void RevisionRules_AllowV2ToV2_WhenCompanyReferencesAreIdentical()
+	{
+		var current = SampleV2WithCompanies("company-0001", "company-0002");
+		var candidate = current with
+		{
+			Sequence = current.Sequence + 1,
+			CompanyEntitlements = new[]
+			{
+				SampleCompany("company-0001") with { MaxUsers = 40 },
+				SampleCompany("company-0002")
+			}
+		};
+
+		Assert.True(LicenseRevisionRules.TryValidateSuccessor(current, candidate, out var error), error);
+		Assert.Null(error);
+	}
+
+	[Fact]
+	public void RevisionRules_AllowV2ToV2_WhenOnlyEntitlementOrderDiffers()
+	{
+		var current = SampleV2WithCompanies("company-0001", "company-0002");
+		var candidate = current with
+		{
+			Sequence = current.Sequence + 1,
+			CompanyEntitlements = new[] { SampleCompany("company-0002"), SampleCompany("company-0001") }
+		};
+
+		Assert.True(LicenseRevisionRules.TryValidateSuccessor(current, candidate, out var error), error);
+		Assert.Null(error);
+	}
+
+	[Fact]
+	public void RevisionRules_RejectV2ToV2_WhenACompanyReferenceIsChanged()
+	{
+		var current = SampleV2WithCompanies("company-0001");
+		var candidate = SampleV2WithCompanies("company-9999") with { Sequence = current.Sequence + 1 };
+
+		Assert.False(LicenseRevisionRules.TryValidateSuccessor(current, candidate, out var error));
+		Assert.Equal("company_references_changed", error);
+	}
+
+	[Fact]
+	public void RevisionRules_RejectV2ToV2_WhenACompanyIsRemoved()
+	{
+		var current = SampleV2WithCompanies("company-0001", "company-0002");
+		var candidate = SampleV2WithCompanies("company-0001") with { Sequence = current.Sequence + 1 };
+
+		Assert.False(LicenseRevisionRules.TryValidateSuccessor(current, candidate, out var error));
+		Assert.Equal("company_references_changed", error);
+	}
+
+	[Fact]
+	public void RevisionRules_RejectV2ToV2_WhenACompanyReferenceIsReplacedByANewOne()
+	{
+		var current = SampleV2WithCompanies("company-0001", "company-0002");
+		var candidate = SampleV2WithCompanies("company-0001", "company-0003") with
+		{
+			Sequence = current.Sequence + 1
+		};
+
+		Assert.False(LicenseRevisionRules.TryValidateSuccessor(current, candidate, out var error));
+		Assert.Equal("company_references_changed", error);
+	}
+
+	[Fact]
+	public void RevisionRules_RejectV2ToV2_WhenACompanyReferenceIsAdded()
+	{
+		var current = SampleV2WithCompanies("company-0001");
+		var candidate = SampleV2WithCompanies("company-0001", "company-0002") with
+		{
+			Sequence = current.Sequence + 1
+		};
+
+		Assert.False(LicenseRevisionRules.TryValidateSuccessor(current, candidate, out var error));
+		Assert.Equal("company_references_changed", error);
+	}
+
+	[Theory]
+	[InlineData("duplicate")]
+	[InlineData("invalid")]
+	public void RevisionRules_RejectV2ToV2_WhenCandidateHasDuplicateOrInvalidCompanyReference(string defect)
+	{
+		var current = SampleV2WithCompanies("company-0001", "company-0002");
+		var candidate = (defect == "duplicate"
+			? SampleV2WithCompanies("company-0001", "company-0001")
+			: SampleV2WithCompanies("company-0001", "x")) with { Sequence = current.Sequence + 1 };
+
+		Assert.False(LicenseRevisionRules.TryValidateSuccessor(current, candidate, out var error));
+		Assert.Equal("candidate_payload_invalid", error);
+	}
+
+	[Fact]
+	public void RevisionRules_FailClosed_WhenCurrentV2PayloadHasNoEntitlementList()
+	{
+		var current = SampleV2() with { CompanyEntitlements = null };
+		var candidate = SampleV2() with { Sequence = current.Sequence + 1 };
+
+		Assert.False(LicenseRevisionRules.TryValidateSuccessor(current, candidate, out var error));
+		Assert.Equal("current_payload_invalid", error);
+	}
+
+	[Fact]
+	public void RevisionRules_FailClosed_WhenCurrentV2PayloadHasNullOrInvalidEntitlementEntry()
+	{
+		var withNullEntry = SampleV2() with
+		{
+			CompanyEntitlements = new CompanyLicenseEntitlement?[] { null }
+		};
+		var withInvalidReference = SampleV2WithCompanies("x");
+		var candidate = SampleV2() with { Sequence = 2 };
+
+		Assert.False(LicenseRevisionRules.TryValidateSuccessor(withNullEntry, candidate, out var nullEntryError));
+		Assert.Equal("current_payload_invalid", nullEntryError);
+		Assert.False(LicenseRevisionRules.TryValidateSuccessor(withInvalidReference, candidate, out var invalidError));
+		Assert.Equal("current_payload_invalid", invalidError);
+	}
+
+	[Fact]
+	public void RevisionRules_V1ToV1_IsUnaffectedByCompanyReferenceRule()
+	{
+		var current = SampleV1();
+		var candidate = SampleV1() with { Sequence = 2, Limits = new LicenseLimits(9, new[] { "finance" }) };
+
+		Assert.True(LicenseRevisionRules.TryValidateSuccessor(current, candidate, out var error), error);
+		Assert.Null(error);
+	}
+
+	[Fact]
+	public void RevisionRules_ExistingErrorCodesKeepPrecedenceOverCompanyReferenceRule()
+	{
+		var current = SampleV2WithCompanies("company-0001");
+		var replayWithChangedReference = SampleV2WithCompanies("company-9999");
+		var changedLicenseAndReference = SampleV2WithCompanies("company-9999") with
+		{
+			LicenseId = "lic-00000002",
+			Sequence = current.Sequence + 1
+		};
+
+		Assert.False(LicenseRevisionRules.TryValidateSuccessor(current, replayWithChangedReference, out var replayError));
+		Assert.Equal("sequence_not_increasing", replayError);
+		Assert.False(LicenseRevisionRules.TryValidateSuccessor(current, changedLicenseAndReference, out var licenseError));
+		Assert.Equal("license_id_changed", licenseError);
+	}
+
 	private static LicenseEnvelopeValidator CreateValidator(ECDsa signingKey)
 	{
 		var resolver = new StaticTrustedKeyResolver(new[]
@@ -429,8 +590,13 @@ public sealed class CompanyEntitlementContractTests
 		UpdatesUntilUtc = new DateTimeOffset(2027, 6, 1, 0, 0, 0, TimeSpan.Zero)
 	};
 
-	private static CompanyLicenseEntitlement SampleCompany() => new(
-		"company-0001",
+	private static LicensePayload SampleV2WithCompanies(params string[] references) => SampleV2() with
+	{
+		CompanyEntitlements = references.Select(reference => SampleCompany(reference)).ToArray()
+	};
+
+	private static CompanyLicenseEntitlement SampleCompany(string reference = "company-0001") => new(
+		reference,
 		new[] { LicenseSubsystemCodes.TradeImport, LicenseSubsystemCodes.Finance, LicenseSubsystemCodes.Inventory },
 		25,
 		new LicenseFeatureEntitlement?[]
