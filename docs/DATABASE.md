@@ -61,6 +61,10 @@
 ## مدل داده لایسنس (طرح، `NotImplemented`)
 هیچ جدول لایسنس/مشتری/نصب وجود ندارد. طرح و ERD در [`LICENSING_DATA_MODEL.md`](LICENSING_DATA_MODEL.md)؛ هر جدول آینده فقط با Migration افزایشی بازبینی‌شده پس از تأیید کارفرما (D-020، D-025).
 
+**به‌روزرسانی 2026-11-15 (#384/#228):** جدول‌های `InstallationIdentities`، `InstalledLicenses`، `CustomerOfflineRevocationStates` و `ProvisioningRequestClaims` با Migrationهای خودشان در `Infrastructure/Persistence/Migrations` اضافه شده‌اند؛ متن بالا فقط سابقهٔ تاریخی آن نقطه است.
+
+**به‌روزرسانی 2026-11-16 (#392 بازسازی):** جدول `CompanySetupRecords` با Migration `20261116070805_AddCompanySetupRecords` اضافه شد (فقط جدول جدید؛ بقیهٔ Schema لمس نشده): نگاشت یک‌به‌یک `CompanyReference` امضاشدهٔ Vendor به Company با FK با `Restrict`، ایندکس یکتای `CompanyId`، و ایندکس یکتای مرجع روی Collation `Latin1_General_BIN2` (پس‌پردهٔ Migration پیش از ساخت ایندکس اجرا می‌شود تا ایندکس از Collation باینری پیروی کند — پاسخ به یافتهٔ L-2 بازبینی Vendor). حذف Company دارای نگاشت با FK رد می‌شود؛ `Down` فقط همین جدول را حذف می‌کند. معنای عملیاتی در [Runbook #392](handoffs/ISSUE-392-customer-implementation-runbook.md) است.
+
 
 ## راه‌اندازی اولیه و فایل تنظیمات محلی — Issue #22 (بازطراحی 2026-10-23)
 

@@ -4,7 +4,6 @@
 >
 > تصمیم‌ها: D-020 تا D-057 در [`DECISIONS.md`](DECISIONS.md)؛ موارد باز در [`LICENSING_OPEN_DECISIONS.md`](LICENSING_OPEN_DECISIONS.md)؛ مدل داده در [`LICENSING_DATA_MODEL.md`](LICENSING_DATA_MODEL.md)؛ گردش‌کارها در [`LICENSING_WORKFLOWS.md`](LICENSING_WORKFLOWS.md)؛ تهدیدها در [`LICENSING_THREAT_MODEL.md`](LICENSING_THREAT_MODEL.md).
 
-
 ## ۱) وضعیت فعلی (واقعی)
 
 - هیچ کنترل لایسنس در برنامه فعال نیست. `ActivationKeysHandlerMiddleware` کد مرده است و از commit `370fe67` در Pipeline نیست (D-028).
@@ -71,7 +70,6 @@
 
 تصمیم‌های OD-01/02/12 پذیرفته شده‌اند؛ گام L1 قرارداد در PR #82 ادغام شده است. تصمیم‌های مسدودکننده OD-07/09/11 در D-046 پذیرفته شده‌اند؛ گام بعدی طراحی/پیاده‌سازی کنترل‌شده L2 در Issue #83 است. پس از آن، مراحل مستقل: (۱) ماژول نصب با ارزیابی و ممیزی; (۲) نقطه مشترک سیاست Authorization و بررسی سقف شرکت; (۳) حالت محدودشده و خروجی; (۴) سامانه فروشنده و سرویس صدور; (۵) حذف کد مرده Activation (D-028). هیچ‌کدام از قابلیت‌های اجرایی لایسنس در حال حاضر فعال نیستند.
 
-
 ## ۸) اتصال Provisioning به یک لایسنس (D-054، Issue #228/#235)
 
 - هر درخواست جدید باید به یک LicenseId و آخرین Sequence امضاشدهٔ همان لایسنس متصل باشد؛ چندلایسنس/تجمیع entitlement پشتیبانی نمی‌شود.
@@ -83,7 +81,6 @@
 - افزودن زیرسیستم به شرکت موجود و تجمیع چند لایسنس نیز NotImplemented است.
 - **محدودیت آفلاین:** بسته‌ای که قبلاً Export شده، تعلیق یا Sequence جدیدتر Vendor را در نصب کاملاً آفلاین کشف نمی‌کند. این محدودیت در D-054 پذیرفته و باید در قرارداد/عملیات به‌روشنی اعلام شود.
 - وضعیت پیاده‌سازی این دامنه در شاخه feat/issue-235-single-license-v4 است؛ تا CI سبز و Merge، NotVerified باقی می‌ماند.
-
 
 ## 2026-10-31 — customer validator DI boundary (rebased conflict resolution)
 - Reapplied on the current mainline: introduced `ICustomerLicenseEnvelopeValidator`; `RevocationAwareLicenseEnvelopeValidator` implements it; Server DI exposes only the interface and constructs the raw signature/time validator as an internal dependency.
@@ -106,7 +103,6 @@
 - این فرمان باید با هویت/ACL سازگار با حساب اجرای سرویس اجرا شود. فرمان کلید موجود را overwrite نمی‌کند؛ rotation نیازمند KeyVersion جدید و مسیر کنترل‌شده است.
 - کد این PR هنوز persistence و audit consent را در دیتابیس کامل نمی‌کند؛ تا آن زمان خروجی command به‌تنهایی فعال‌سازی License نیست.
 
-
 ## ۱۰) تصمیم پذیرفته‌شده D-059 و برنامه اجرایی
 
 در 2026-10-31 مالک محصول D-059 را تأیید کرد. مدل قبلی که maxUsers را Deferred می‌دانست برای بخش user-seat superseded است: Seatها در سطح Company هستند؛ Module و Feature نیز مستقل و Company-scoped هستند؛ maxCompanies در سطح Installation باقی می‌ماند. برای جزئیات سیاست‌ها، معیارهای پذیرش و ترتیب کار به [LICENSING_IMPLEMENTATION_PLAN.md](LICENSING_IMPLEMENTATION_PLAN.md) مراجعه کنید.
@@ -118,14 +114,12 @@
 - bootstrap مدیر اولیه در Offline محلی است؛ رمز فقط روی Customer Host تعیین و با ASP.NET Core Identity hash می‌شود و به Vendor/package/log/telemetry نمی‌رود.
 - ترتیب اجرا: #395 → #390 → #391/#392 → #393 → #394. پذیرش تصمیم به معنی پیاده‌سازی نیست.
 
-
 ### وضعیت Issue #384 / PR #388 پس از ادغام (2026-10-31)
 
 - PR #387 ادغام شده و Customer-only persistence schema در main است؛ Migration روی دیتابیس واقعی اجرا نشده است.
 - PR #388 با commit `75b0af84d5543a2bfb935d893d8bfc37ee330eef` ادغام شد. Enrollment هویت نصب CNG و import/replace تراکنشی از طریق ICustomerLicenseEnvelopeValidator، endpointهای Infrastructure-only، antiforgery-protected، rate-limited و no-store و InstallationId سمت سرور تحویل شدند. تمام ۷ Job CI موفق بودند.
 - طبق D-059، import باید یک envelope امضاشده با status برابر Restricted را نیز persist کند تا Customer بتواند به read/export/recovery محدود شود؛ Grace رد می‌شود چون grace ضمنی پذیرفته نشده است. اتصال این status به runtime policy همچنان در #391/#384 باقی است.
 - Startup reload/revalidation، license-first gate، Activation Wizard، enforcement در call-siteهای عملیات حسابداری، Cloud authoritative entitlement resolution و recovery عملیاتی هنوز تکمیل نشده‌اند؛ Issues #391 و #396 و ادامه #384 این موارد را پوشش می‌دهند. تست فیزیکی TPM/دو میزبان اجرا نشده است.
-
 
 ## ۱۱) معماری سه‌حوزه‌ای و تجربه License-first (D-060)
 
@@ -149,8 +143,6 @@
 - قرارداد amendment فقط invariants را اعتبارسنجی می‌کند؛ persistence/replay transaction در #391 و Vendor issuance در #393 هستند.
 - وضعیت: پیاده‌سازی در PR #390؛ تا تکمیل CI و ادغام، Verified محسوب نمی‌شود.
 
-
-
 ## ۱۲) ترکیب Entitlement با Permission عملیاتی — D-074 (Accepted، 2026-11-06)
 
 - D-025 و D-059 پابرجا هستند: Entitlement تجاری و Permission عملیاتی دو مرجع مستقل‌اند و هر دو برای عملیات ماژول مجوزدار لازم‌اند.
@@ -173,6 +165,9 @@
 - **معنای هر درخواست:** هر درخواست Provisioning دقیقاً یک Company را مشخص می‌کند. `Subsystems` پیلود v5 = ماژول‌های همان Company (فقط کدهای مجاز Provisioning؛ `TRADE_IMPORT` کپی نمی‌شود)، یا زیرمجموعهٔ درخواستی از آن‌ها. `MaxCompanies` و `SubsystemsJson` سطح Installation هرگز به فهرست مجوز شرکت تبدیل نمی‌شوند. مقایسه دقیق و حساس به حروف است و به ترتیب آرایه وابسته نیست.
 - **سازگاری:** لایسنس v1 مسیر v4 را بدون هیچ تغییر بایتی در canonical JSON حفظ می‌کند و انتخاب‌گر را رد می‌کند (`provisioning_company_reference_not_applicable`). canonical bytes و رفتار نسخه‌های v1–v4 حفظ شده‌اند؛ v5 به‌صورت additive فیلد اجباری `companyReference` را دارد. Envelope بیرونی، امضا و Crypto Profile دست‌نخورده‌اند.
 - **Gate (پیش‌فرض خاموش، دو کلید):** `Provisioning:CompanyReferenceIssuance:Enabled` (فقط مقدار قابل‌پارس `true` به‌صورت `bool.TryParse`؛ حروف بزرگ/کوچک و فاصله پذیرفته می‌شود ولی `1`/`yes` نه) **و** قفل کدی `VendorProvisioningCompanyReferenceGate.CustomerConsumerReady` که اکنون `false` است. تا وقتی PR مصرف‌کنندهٔ Customer (تأیید v5 + Mapping + Apply اتمیک) این قفل را همراه تستش تغییر ندهد، هیچ پیکربندی صدور v5 را روشن نمی‌کند. با Gate خاموش رفتار قبلی حفظ است: لایسنس v2 با `provisioning_company_reference_mapping_required` (و دلیل اپراتوری `company_reference_mapping_required`) مسدود می‌ماند و Payload v5 ذخیره‌شده در Issuance/Export رد می‌شود.
-- **Customer امروز:** `CustomerProvisioningPackageValidator.TryValidateAndVerify` بدون `allowCompanyReference` بستهٔ v5 را با `provisioning_payload_invalid` رد می‌کند (تست حفاظتی در `CustomerProvisioningPackageVerifierTests`)؛ `ApplyAsync` فیلد `CompanyReference` را نمی‌خواند. PR #684 جدول `CompanySetupRecords` و Migration مشتری را پیشنهاد کرده اما هنوز ادغام نشده و تا ثبت schema approval صریح نباید ادغام/اجرا شود.
+
+- **Customer (PR مصرف‌کننده، 2026-11-16 — Implemented):** Customer اکنون v5 را می‌پذیرد و Apply می‌کند. `CustomerProvisioningPackageVerifier` با `allowCompanyReference: true` اعتبارسنجی می‌کند (تست پین قبلی به پذیرش v5 و تست تزریق فیلد در JSON v4 به ردّ آن تبدیل شد). جدول Mapping `CompanySetupRecords` با ایندکس یکتای `Latin1_General_BIN2` روی `CompanyReference` ساخته شده است (Migration `20261116070805_AddCompanySetupRecords`)؛ مقایسهٔ مرجع باینری است (پاسخ به یافتهٔ L-2 Vendor). در `ApplyAsync` برای بستهٔ شرکت‌محور، ترتیب بررسی‌ها ثابت است: **Verifier → Claim/Replay → (بررسی‌های v1–v4: والد، مدیر اولیه) → Entitlement → Duplicate → Capacity** و Company + Record در یک `SaveChanges` داخل همان تراکنش `Serializable` + `sp_getapplock` درج می‌شوند. کدهای رد جدید: `provisioning_license_not_installed`، `provisioning_not_entitled_for_company`، `provisioning_company_reference_conflict`، `provisioning_company_capacity_exceeded` — همه به‌صورت ACK امضاشدهٔ `Rejected` ذخیره و دقیقاً بازپخش می‌شوند. Entitlement از آخرین لایسنس `Current` همان `LicenseId` روی همین Installation می‌آید (مرجع‌های Company در amendmentها تغییرناپذیرند)؛ `maxCompanies` کل شرکت‌های نصب را می‌شمارد و فقط ایجاد جدید را مسدود می‌کند (D-059 §2/§6)؛ نبود `MaxCompanies` در پیلود امضاشده یعنی سقف عددی ندارند و همان فهرست entitlement مرز است.
+- **وابستگی Vendor باقی‌مانده:** تا وقتی allow-list کدهای رد در intake Vendor (بخش امنیت، PR #293) با این چهار کد گسترش نیابد، ACK رد مشتری روی سمت Vendor وضعیت درخواست را تغییر نمی‌دهد (رفتار fail-closed موجود). این تغییر Vendor یک PR مستقل و نیازمند تأیید مالک است. Gate صدور Vendor (`CustomerConsumerReady=false`) در این PRها تغییر نکرده و صدور عملیاتی v5 همچنان خاموش است.
+- **خارج از محدوده (نیازمند تأیید و PR جدا):** گسترش allow-list ACK در Vendor، UI انتخاب Company در Vendor.Web، رفع انحراف `TenantId = company.Id` (D-087/D-089)، سیاست Restore/Clone (OD-06/#364) و Bootstrap مدیر Dedicated/Offline.
 - **Merge/CI:** PR #682 با merge SHA `ce2094321e881d488f953c2ea3276b1f302d29bc` و PR #683 با merge SHA `b05c1c58c5ff9830b10fb0034354ab8309da9b0d` در main هستند. پس از Merge #683، Vendor CI [43740624610](https://github.com/hamidreza1394/Accounting/actions/runs/43740624610)، .NET CI [43740624547](https://github.com/hamidreza1394/Accounting/actions/runs/43740624547)، Semgrep [43740624503](https://github.com/hamidreza1394/Accounting/actions/runs/43740624503) و Push on main [43740624071](https://github.com/hamidreza1394/Accounting/actions/runs/43740624071) همگی موفق‌اند. PR #682 نیز هر چهار Workflow پس از Merge را با موفقیت گذرانده است.
-- **خارج از محدوده (نیازمند تأیید و PR جدا):** جدول/ستون Mapping و Migration مشتری، پذیرش و Apply در Customer، اجرای `maxCompanies`، ساخت Company توسط مدیر، Bootstrap مدیر Dedicated/Offline، UI انتخاب Company در Vendor.Web، رفع انحراف `TenantId = company.Id` (D-087/D-089).
+

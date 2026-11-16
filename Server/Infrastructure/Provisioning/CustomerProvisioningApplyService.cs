@@ -64,6 +64,13 @@ public sealed class CustomerProvisioningApplyService
     private const string SignerKeyUntrusted = "provisioning_acknowledgement_signer_key_untrusted";
     private const string SignatureInvalid = "provisioning_acknowledgement_signature_invalid";
 
+    // Company-bound (schema v5) rejection codes; stable, non-sensitive, replayed exactly like every
+    // other stored rejection. Issue #392 / D-059 §14.
+    private const string LicenseNotInstalled = "provisioning_license_not_installed";
+    private const string NotEntitledForCompany = "provisioning_not_entitled_for_company";
+    private const string CompanyReferenceConflict = "provisioning_company_reference_conflict";
+    private const string CompanyCapacityExceeded = "provisioning_company_capacity_exceeded";
+
     private static readonly TimeSpan EnrollmentLifetime = TimeSpan.FromMinutes(30);
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -197,6 +204,51 @@ public sealed class CustomerProvisioningApplyService
             CustomerBoundaryId = _settings.CustomerBoundaryId,
             IsActive = true
         };
+
+        // Company-bound (schema v5) packages are validated against the latest accepted signed
+        // license on this installation (D-059 §14). The check order is fixed — entitlement,
+        // duplicate, capacity — so a repeated request always produces the same rejection code and
+        // a package that is not entitled learns nothing about existing mappings. The cap counts
+        // every company of the installation (D-059 §2); over-limit blocks only new provisioning
+        // and never removes or deactivates existing companies (D-059 §6). An absent MaxCompanies
+        // means the vendor signed no numeric cap; the entitlement list still bounds the references.
+        Domain.CompanySetupRecord? companySetupRecord = null;
+        if (payload.CompanyReference is not null)
+        {
+            var license = await CustomerCompanyEntitlementResolver.ResolveCurrentLicensePayloadAsync(
+                _database, _settings.InstallationId, payload.LicenseId!, cancellationToken);
+            if (license is null)
+                return await StoreRejectedAcknowledgementAsync(
+                    payload, payloadHash, LicenseNotInstalled, now, transaction, cancellationToken);
+
+            if (!CustomerCompanyEntitlementResolver.IsReferenceEntitled(license, payload.CompanyReference))
+                return await StoreRejectedAcknowledgementAsync(
+                    payload, payloadHash, NotEntitledForCompany, now, transaction, cancellationToken);
+
+            if (await _database.CompanySetupRecords.AsNoTracking().AnyAsync(
+                    record => record.CompanyReference == payload.CompanyReference, cancellationToken))
+                return await StoreRejectedAcknowledgementAsync(
+                    payload, payloadHash, CompanyReferenceConflict, now, transaction, cancellationToken);
+
+            if (CustomerCompanyEntitlementResolver.GetMaxCompanies(license) is { } maxCompanies &&
+                await _database.Companies.AsNoTracking().CountAsync(cancellationToken) >= maxCompanies)
+            {
+                _logger.LogInformation(
+                    "Company-bound provisioning request {RequestId} exceeded the installation company cap of {MaxCompanies}.",
+                    payload.RequestId, maxCompanies);
+                return await StoreRejectedAcknowledgementAsync(
+                    payload, payloadHash, CompanyCapacityExceeded, now, transaction, cancellationToken);
+            }
+
+            companySetupRecord = new Domain.CompanySetupRecord
+            {
+                CompanyId = company.Id,
+                CompanyReference = payload.CompanyReference,
+                InstallationId = payload.InstallationId,
+                CreatedAtUtc = now
+            };
+        }
+
         var fiscalPeriod = new Domain.FiscalPeriod
         {
             TenantId = company.Id,
@@ -290,6 +342,8 @@ public sealed class CustomerProvisioningApplyService
         _database.Users.Add(admin);
         _database.UserCompanyMemberships.Add(membership);
         _database.ProvisioningRequestClaims.Add(claimEntity);
+        if (companySetupRecord is not null)
+            _database.CompanySetupRecords.Add(companySetupRecord);
         _database.SecurityAuditEvents.Add(CreateAcknowledgementAudit(
             company.Id, payload.RequestId, signedAcknowledgement, "ProvisioningApplied", now));
 

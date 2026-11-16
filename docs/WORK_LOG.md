@@ -121,7 +121,6 @@
 - **شاهد محلی:** ۲۵۳ تست .NET (Provider حافظه‌ای)، ۴۸ تست کلاینت، Build/typecheck/offline/static assets موفق. **اجرانشده:** E2E و تست روی SQL Server (فقط CI).
 - **باقی:** رفتار `Archived`/آینده `NeedsApproval`؛ اِعمال `AllowsWrites` روی Endpointهای نوشتن آینده.
 
-
 ## 2026-10-22 — ممیزی آمادگی 100+ کاربر هم‌زمان ابری (Issue #49)
 - **دامنه:** بررسی مستندات و فایل‌های مرتبط در مخزن GitHub؛ معماری Modular Monolith، .NET 10/EF Core 10/SQL Server، Razor Pages + API `/api/v1` + React، Rate Limiting، Reverse Proxy و CI.
 - **نتیجه اصلی:** ظرفیت 100 کاربر `NotVerified` است. در جست‌وجوی انجام‌شده سناریوی بار قابل تکرار در مخزن/CI پیدا نشد؛ تعداد نمونه‌های Production باز است؛ Rate Limiting فعلی per-instance است؛ ماژول‌های حسابداری اصلی و تست رقابت نوشتن مالی هنوز پیاده‌سازی نشده‌اند.
@@ -148,7 +147,6 @@
 - آزمون واقعی: ۳۰۵ از ۳۰۵ روی SQL Server 2022؛ هر دو گارد Migration و `has-pending-model-changes` سبز؛ `apply_migrations_to_testdb.sh` روی دیتابیس آزمایشی.
 - بازبینی مستقل امنیتی و کیفیت: بدون یافته Critical/High؛ یافته‌های Medium/Low اصلاح یا به‌عنوان ریسک ثبت شدند.
 - Commit/Push/PR انجام نشد. جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-corporate-groups-consolidation.md`.
-
 
 ## 2026-10-22 — اصلاحات ممیزی پس از ادغام گروه شرکتی (Issue #54)
 - PR #53 در `main` ادغام شده است (Merge commit `1d30436d25b4f1e76b95e76a764afe249fd84f6f`); CI اجرا [39826940050](https://github.com/hamidreza1394/Accounting/actions/runs/39826940050) موفق گزارش شده است. این واقعیت جایگزین وضعیت تاریخی ثبت‌شده در گزارش اولیه می‌شود.
@@ -199,7 +197,6 @@
 - **باز:** سازگاری مسیر مطلق با `PathBase`؛ `AGENTS.md`/`CLAUDE.md` هنوز «ADR بعدی D-036» دارند.
 - **توکن:** code-reviewer ≈۴۵٬۰۰۰؛ security-reviewer ≈۴۴٬۰۰۰؛ پیاده‌سازی توسط Lead بدون Subagent (تغییر کوچک و متمرکز؛ تقسیم صرفه نداشت).
 
-
 ## 2026-10-23 — جلوگیری از 404 در `/app/` هنگام اجرای محلی Visual Studio (Issue #61)
 - **علت محتمل بر اساس کد:** `Server/wwwroot/app` خروجی تولیدی React است و در `.gitignore` قرار دارد؛ اسکریپت‌های انتشار آن را می‌سازند، اما اجرای مستقیم Server با Visual Studio F5 قبلاً الزام یا ساخت خودکار آن را نداشت.
 - **اصلاح پیشنهادی در PR:** افزودن MSBuild target افزایشی فقط برای Buildهای عادی Visual Studio؛ در صورت قدیمی/غایب بودن خروجی، وابستگی‌های npm در صورت نیاز نصب و React ساخته می‌شود. خروجی تولیدی وارد Git نمی‌شود و رفتار CLI/CI تغییر داده نمی‌شود.
@@ -223,14 +220,12 @@
 - **توکن:** frontend-developer ≈۱۶۱٬۰۰۰؛ code-reviewer ≈۶۲٬۰۰۰؛ security-reviewer ≈۳۷٬۰۰۰.
 - **جزئیات:** `docs/handoffs/ISSUE-UNNUMBERED-work-context-selector-final-design.md`.
 
-
 ## 2026-10-23 — پیش‌انتخاب سال مالی و تصمیم مرز مشتری (PR #65، Draft)
 - **تصمیم کارفرما:** شرکت پیش‌فرض باید مفهوم جداگانه‌ای برای هر کاربر باشد؛ جدیدترین دوره مالی باز به‌عنوان سال پیش‌فرض انتخاب شود. ممنوعیت رابطه گروهی/مالکیت بین مشتریان مختلف در فضای ابری مشترک طبق D-037 تأیید شد.
 - **پیاده‌سازی این برش:** در `ClientApp/src/lib/fiscalYears.ts` جدیدترین سال دارای دوره باز انتخاب می‌شود؛ اگر هیچ دوره بازی وجود نداشته باشد جدیدترین سال قابل ورود فقط‌خواندنی انتخاب می‌شود. در جریان تغییر محیط کاری سال جاریِ معتبر حفظ می‌شود. تست‌های واحد کلاینت برای این رفتار به‌روزرسانی شدند.
 - **محدوده عمداً مسدود:** ترجیح ذخیره‌شده شرکت برای هر کاربر و برچسب نوع رابطه شرکت هنوز پیاده نشده‌اند. D-020 می‌گوید CustomerAccount متعلق به سامانه فروشنده است و در کد عملیاتی هنوز نگاشت امن Company→مرز مشتری وجود ندارد. تا طراحی و پیاده‌سازی شناسه مرز عملیاتی و تست‌های منفی متقاطع، انتشار API/UI برای روابط گروهی ممنوع است؛ D-037 این گارد را ثبت می‌کند.
 - **اعتبارسنجی:** CI برای commit شاخه گزارش شکست داده است؛ جزئیات Job/گام از API در دسترس نبود و علت شکست هنوز تشخیص داده نشده. تست محلی اجرا نشده است؛ PR در حالت Draft باقی می‌ماند.
 - **Git (وضعیت زمان ثبت اولیه):** شاخه `feature/work-context-defaults-company-boundary`؛ PR #65. این گزارش پس از ثبت اولیه قدیمی شد؛ PR #65 در ادامه توسط GitHub ادغام شد و مبنای شاخه جدید `main` است.
-
 
 ## 2026-10-23 — اصلاح به‌خاطر‌سپاری نام کاربری در ورود (PR جدید)
 - **رفتار پیاده‌شده:** در صورت فعال بودن «ذخیره نام کاربری و ورود پایدار»، نام کاربری پس از ورود موفق در کوکی اختصاصی HttpOnly با SameSite=Lax و انقضای یک‌ساله ذخیره می‌شود و در بازدید بعدی صفحه ورود پیش‌پر می‌شود. با برداشتن تیک، کوکی در ابتدای ارسال فرم حذف می‌شود. رمز عبور هرگز توسط برنامه ذخیره نمی‌شود.
@@ -244,7 +239,6 @@
 - PR #67 پیش‌تر Merge شده بود؛ اصلاحات در شاخه `fix/login-remember-username-review`. جزئیات و نتایج واقعی: `docs/handoffs/ISSUE-67-login-remember-username-review.md`.
 - قاعده Secure هم‌سو با کوکی احراز هویت، اعتبارسنجی مقدار هنگام خواندن، حذف شرطی کوکی، برچسب و یادداشت صادقانه، ۱۰ تست Integration و ۳ تست E2E جدید.
 - بازبینی مستقل امنیت/کیفیت: بدون یافته مسدودکننده. اجرا نشد: Firefox/Safari، Axe، HTTPS پشت Proxy. شکست‌های Vitest/E2E از PR #65 و توقف CI به‌علت صورتحساب: خارج از دامنه و گزارش‌شده.
-
 
 ## 2026-10-23 — ممیزی، سخت‌سازی و مستندسازی مرز مشتری، شرکت پیش‌فرض و برچسب‌های رابطه (Issue #66، شاخه `feature/customer-boundary-audit-and-docs`)
 - **زمینه:** PRهای #65، #67، #68، #69 ادغام شده‌اند. PR #68 (`4bcee61`) مرز مشتری، شرکت پیش‌فرض و برچسب‌ها را بدون ADR/handoff/`WORK_LOG` و بدون Build/Test (طبق شرح خودش) ادغام کرد؛ این کار ممیزی، سخت‌سازی و ثبت آن است.
@@ -276,7 +270,6 @@
 - **اصلاح:** زنجیرهٔ کامل Up/Down از روی پوشه، SQL مرورشده برای همهٔ Migrationها، `AddColumn`/`AddForeignKey` fail-closed، ۳۱ تست جهشی + تست‌های واحد. هیچ Migration/Snapshot/مدل برای سبز شدن CI تغییر نکرد.
 - **باز:** AUD-2026-10-25-02 (محدودیت‌های باقی‌مانده). جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-migration-guard-hasone-generic.md`.
 
-
 ## 2026-10-25 — ثبت تصمیم‌های مالک برای هستهٔ قرارداد لایسنس (Issue #80)
 - **تصمیم صریح مالک:** OD-01 پذیرفته شد (حق تجاری در سطح `CustomerAccount` و لایسنس فنی برای هر `Installation`); OD-02 پذیرفته شد (`maxCompanies` + فهرست زیرسیستم‌ها، `maxUsers` موکول، سقف نصب در سامانهٔ فروشنده); OD-12 پذیرفته شد (ECDSA P-256/SHA-256، IEEE P1363 با طول ثابت 64 بایت، امضا روی بایت‌های دقیق Payload).
 - **انجام‌شده در این تغییر:** ثبت D-045 و همگام‌سازی وضعیت اسناد تصمیم‌های باز، طرح لایسنس و نقشهٔ راه. این تغییر صرفاً مستنداتی است؛ هیچ کد لایسنس، Schema/Migration یا Enforcement اضافه نشده است.
@@ -284,19 +277,16 @@
 - **باز:** پیاده‌سازی `Licensing.Contracts`، تعریف دقیق قالب نسخه‌دار و بردارهای آزمون؛ اجرای آزمون‌ها روی Linux و Windows. هیچ ادعایی مبنی بر سازگاری چندسکویی تأییدشده وجود ندارد.
 - **جزئیات:** [Issue #80](https://github.com/hamidreza1394/Accounting/issues/80).
 
-
 ## 2026-10-25 — سخت‌سازی قرارداد لایسنس پس از D-045 (Issue #80، PR کد در حال آماده‌سازی)
 - **یافتهٔ بازبینی:** `Licensing.Contracts` از قبل وجود داشت؛ کد و تست تکراری ساخته نشد. کامنت‌های OD-02/OD-12 که تصمیم‌ها را هنوز Proposed می‌خواندند، با D-045 همگام شدند.
 - **اصلاحات:** allowlist زیرسیستم‌های v1 (`finance`, `sales`, `inventory`, `treasury`)، رد کد ناشناخته و تکراری، آزمون بردار ثابت RFC 6979 با امضای 64 بایتی P1363، آزمون تغییر whitespace برای اثبات امضا روی بایت‌های دقیق Payload، اجرای تست‌های قرارداد در Job ویندوز.
 - **اعتبارسنجی:** تغییرات از طریق GitHub API ثبت شده‌اند؛ Build/Test هنوز در این محیط اجرا نشده‌اند. باید CI لینوکس و ویندوز را بگذراند تا ادعای چندسکویی تأیید شود.
 - **باز:** بررسی رفتار آزمون در CI؛ اطمینان از سازگاری بردار ثابت روی Windows؛ سپس بازبینی diff مستقل. بدون Schema/Migration/Enforcement.
 
-
 ## 2026-10-25 — تکمیل بردارهای ثابت و کنترل منحنی در قرارداد لایسنس (Issue #80)
 - **افزوده شد:** آزمون کامل رشتهٔ canonical JSON، بردار ثابت RFC 6979، آزمون تغییر whitespace، allowlist زیرسیستم، رد تکرار و کد ناشناخته، و کنترل OID منحنی P-256.
 - **CI:** تست مستقل قرارداد به Job ویندوز اضافه شد؛ اجرای واقعی هر دو سیستم‌عامل پس از اجرای PR باید تأیید شود.
 - **وضعیت:** کد در شاخهٔ `feature/licensing-contracts-d045` ثبت شده؛ هنوز Build/Test محلی اجرا نشده و PR نباید پیش از CI سبز آمادهٔ ادغام اعلام شود.
-
 
 ## 2026-10-25 — پذیرش تصمیم‌های امنیت و عملیات سامانهٔ مرکزی فروشنده (Issue #83، D-046)
 - **تصمیم صریح مالک:** سه پیشنهاد OD-07/09/11 تأیید شد؛ مدیریت مرکزی ممکن است چندمدیره باشد و طراحی باید از ابتدا برای چند مدیر آماده شود.
@@ -306,7 +296,6 @@
 - **ریسک/باقی‌مانده:** انتخاب ارائه‌دهندهٔ KMS، پیاده‌سازی provider، طراحی مدل هویت/نقش/تأیید، ذخیره‌سازی ممیزی و runbook بازیابی در Issueهای اجرایی L2 باقی است. بدون تأیید بیشتر، این جزئیات نباید به کلید/محیط واقعی متصل شوند.
 - **جزئیات:** [Issue #83](https://github.com/hamidreza1394/Accounting/issues/83); D-046.
 
-
 ## 2026-10-25 — نسخه‌بندی Skillهای مهندسی فرانو (Issue #85)
 - **هدف:** همگام‌کردن راهنمای توسعه با معماری تأییدشده و ایجاد راهنماهای تخصصی قابل‌بازبینی در مخزن.
 - **تغییرات:** Skill اصلی برای `.NET 10 / C# 14` و معماری Razor Pages + React/TypeScript/Vite/Tailwind + API هم‌مبدأ همگام شد؛ Skillهای معماری، امنیت و Multi-Tenancy، تست/کیفیت، UI/UX فارسی RTL و دامنه حسابداری اضافه شدند. `CLAUDE.md`، `docs/INDEX.md` و handoff Issue #85 به‌روزرسانی شدند.
@@ -314,7 +303,6 @@
 - **اعتبارسنجی:** فایل‌های مبنا و Skill نصب‌شده از GitHub/محیط Skill خوانده شدند. Build، تست .NET و تست کلاینت اجرا نشدند؛ این تغییر صرفاً مستنداتی است. بررسی نهایی لینک‌ها و diff در PR باقی است.
 - **وضعیت:** روی شاخه `docs/issue-85-faranou-engineering-skills`؛ ادغام نشده و نیازمند بازبینی انسانی است.
 - **گزارش تحویل:** `docs/handoffs/ISSUE-85-faranou-engineering-skills.md`.
-
 
 ## 2026-10-25 — انتخاب و سازگارسازی Skillهای ECC (Issue #87)
 - **منبع:** مخزن رسمی `affaan-m/ECC`، snapshot درخت `90606c8315ee09cafc303515c5f33024db6b9882`؛ مجوز MIT در `third_party/ECC-LICENSE.txt` حفظ شد.
@@ -325,7 +313,6 @@
 - **وضعیت:** شاخه `docs/issue-87-curated-ecc-skills`؛ PR برای بازبینی ایجاد می‌شود و ادغام نشده است.
 - **گزارش تحویل:** `docs/handoffs/ISSUE-87-curated-ecc-skills.md`.
 
-
 ## 2026-10-25 — شروع L2 سامانه مرکزی فروشنده (Issue #89)
 - **پیش‌شرط تأییدشده:** PR #84 ادغام شده است؛ D-046 تصمیم‌های OD-07/09/11 را پذیرفته است. Issue #83 پس از ثبت تصمیم‌ها بسته شد.
 - **ممیزی اولیه:** `.NET 10 / EF Core 10` و `Licensing.Contracts` در main بررسی شد. `Template.sln` و `Server` متعلق به برنامه مشتری‌اند؛ Vendor باید Solution/Host/DB/Identity مستقل داشته باشد. وضعیت فعلی پروژه لایسنس همچنان `NotImplemented` است.
@@ -335,7 +322,6 @@
 - **ریسک/باقی‌مانده:** D-047 هنوز `Proposed` است. محصول KMS/HSM، runbook بازیابی/break-glass و مقصد مستقل checkpoint نیازمند تعیین محیط/تصمیم جدا هستند. هیچ پیاده‌سازی Production مجاز فرض نشده است.
 - **گزارش تحویل:** `docs/handoffs/ISSUE-89-vendor-control-plane.md`; [Issue #89](https://github.com/hamidreza1394/Accounting/issues/89).
 
-
 ## 2026-10-25 — L2.1 اسکلت مستقل Vendor (Issue #91)
 - **تصمیم:** کارفرما D-047 را برای محیط‌های ابری و سرور اختصاصی تأیید کرد؛ وضعیت تصمیم در `docs/DECISIONS.md` به `Accepted` تغییر یافت. پیاده‌سازی همچنان `NotImplemented` در سطح قابلیت‌های کامل لایسنس است.
 - **تغییرات روی شاخه `feature/vendor-host-skeleton`:** ایجاد `Vendor.sln` مستقل، پروژهٔ `Vendor/Vendor.Host` با target `net10.0`، endpoint حداقلی `/health/live`، تست‌های smoke و `Vendor/README.md` برای استقرار cloud/dedicated-server. افزودن Job مجزا برای Build/Test Vendor در CI.
@@ -344,12 +330,10 @@
 - **ریسک/محدودیت:** Host هنوز احراز هویت، RBAC، دیتابیس، logging عملیاتی یا صدور لایسنس ندارد و Production-ready نیست. این موارد به PRهای جداگانه واگذار شده‌اند.
 - **تحویل:** `docs/handoffs/ISSUE-91-vendor-host-skeleton.md`.
 
-
 ## 2026-10-25 — اصلاح شکست اولیهٔ CI برای Vendor.Host.Tests
 - **شاهد:** اجرای GitHub Actions شماره `40212637047`، Job `vendor-build-test` در Build شکست خورد؛ خطای xUnit v3 تصریح کرد پروژهٔ تست باید `<OutputType>Exe</OutputType>` داشته باشد. Restore و Build خود Host موفق بودند؛ تست‌ها به‌دلیل شکست Build اجرا نشدند.
 - **اصلاح:** `tests/Vendor.Host.Tests/Vendor.Host.Tests.csproj` به‌روزرسانی شد تا خروجی تست executable باشد. این اصلاح از خطای واقعی CI ناشی شد، نه حدس.
 - **اعتبارسنجی پس از اصلاح:** CI باید روی HEAD جدید دوباره اجرا شود؛ تا آن زمان نتیجهٔ نهایی `Verified` نیست.
-
 
 ## 2026-10-25 — گارد وابستگی Vendor (Issue #95)
 - **مبنای معماری:** D-041 شرط می‌گذارد که گراف وابستگی Server به پروژه‌های Vendor نرسد و `Licensing.Contracts` بدون ProjectReference/لینک منبع بیرونی بماند. بررسی مجدد نشان داد G2 و G3 موجودند، اما G1 هنوز به‌صورت تست رگرسیون وجود نداشت؛ G4/G5 و allow-list کامل G2 نیز حل‌شده فرض نمی‌شوند.
@@ -358,7 +342,6 @@
 - **اعتبارسنجی:** Build/Test محلی و `git diff --check` در این محیط اجرا نشده‌اند؛ منتظر CI واقعی روی PR هستیم. تا آن زمان G1 `NotVerified` است.
 - **ریسک/باقی‌مانده:** تحلیل XML fail-closed است و ProjectReference دارای property/wildcard را غیرقابل‌اثبات تلقی می‌کند. آزمون CI باید ثابت کند گراف فعلی بدون نقض است. G4/G5 و allow-list کامل Publish خارج از محدوده‌اند.
 - **گزارش تحویل:** `docs/handoffs/ISSUE-95-vendor-isolation-g1.md`.
-
 
 ## 2026-10-25 — جداسازی workflow و مالکیت کد Vendor (Issue #98)
 - **مبنای تصمیم:** D-041 G4/G5 را برای جداسازی فروشنده ضروری می‌داند. PRهای #92/#94/#96 ادغام شده‌اند؛ گارد G1 در CI run `40214517027` تأیید شد و G2/G3 موجودند، ولی allow-list کامل G2 و تنظیمات Branch protection هنوز تأیید نشده‌اند.
@@ -382,7 +365,6 @@
 - **اعتبارسنجی محلی:** typecheck، ۹۶ تست، build، check:offline و check_static_assets موفق؛ .NET اجرا نشد (کد تغییر نکرده).
 - **گزارش تحویل:** `docs/handoffs/ISSUE-UNNUMBERED-ui-selection-audit.md`.
 
-
 ## 2026-10-25 — تکمیل L2.2: ثبت Migrationهای Vendor در مخزن (Issue #100، پیگیری پس از PR #101)
 - **علت پیگیری:** PR #101 ادغام شد، ولی Migration و Snapshot اولیه صرفاً به‌صورت موقت توسط CI ساخته می‌شدند؛ در نتیجه source قابل اعمال/بازبینی در مخزن نبود. سبز شدن تست همان run به‌تنهایی این خلأ را برطرف نمی‌کرد.
 - **اصلاح در شاخهٔ follow-up:** سه فایل تولیدشده توسط `dotnet-ef 10.0.13` ثبت شدند: `Vendor/Vendor.Persistence/Migrations/20261025180755_VendorInitialIdentityAndAudit.cs`, فایل `.Designer.cs` و `VendorDbContextModelSnapshot.cs`. گام scaffolding/آپلود موقت از `vendor-ci.yml` حذف شد و به جایش بررسی دائمی `dotnet ef migrations has-pending-model-changes` اضافه شد.
@@ -402,7 +384,6 @@
 - **اعتبارسنجی:** Build/Test محلی اجرا نشده‌اند. Vendor CI روی PR #118، run `40272872248`، سبز شد: Restore، Build، `dotnet ef migrations has-pending-model-changes`، تست‌های Vendor (از جمله Migration واقعی روی SQL Server)، Publish و گارد خروجی موفق بودند. `.NET CI` run `40272872260` در زمان ثبت هنوز در حال اجرا بود؛ نتیجهٔ کلی PR تا پایان آن نهایی نیست. CI PR #102 پیش از این تغییرات فقط model-snapshot check داشت.
 - **باقی‌مانده:** MFA/passkey/TOTP، bootstrap یک‌بارمصرف، RBAC سمت سرور، audit writer/verifier/checkpoint، maker-checker، کنترل‌های deploy و G2 allow-list انتشار همچنان مرحله‌های مستقل هستند.
 - **Handoff:** `docs/handoffs/ISSUE-117-vendor-persistence-hardening.md`.
-
 
 ## 2026-10-26 — مبنای shadcn/ui و RTL فارسی
 - **درخواست:** پذیرش shadcn/ui در رابط React و مستندسازی در مخزن.
@@ -426,7 +407,6 @@
 - اصلاح: افزودن usingهای صریح در Vendor/Vendor.Host/Program.cs، commit 3d317ea206087ae026520a84ada49f61941bf139.
 - وضعیت بازبینی: اجرای Vendor CI روی commit اصلاحی 3d317ea در صف GitHub Actions است؛ هنوز نتیجه Build/Test نهایی نداریم. PR #127 همچنان Draft است و Merge نشده است.
 
-
 ## 2026-10-26 — بهبود سرعت بارگذاری Vendor UI و اصلاح پیکربندی CI
 - **دامنه:** ادامهٔ UI پنل فروشنده در شاخه `feat/issue-126-vendor-ui-shell`، بدون تغییر ClientApp یا دیتابیس مشتری.
 - **بهبود بارگذاری:** فایل‌های خروجی Vite در مسیر `/assets` دارای نام‌های hashدار هستند؛ Host برای این فایل‌ها `Cache-Control: public,max-age=31536000,immutable` می‌فرستد تا بارگذاری مجدد از cache مرورگر انجام شود. `index.html` همچنان `no-store` می‌ماند تا انتشار نسخهٔ جدید به bundle قدیمی قفل نشود. این تغییر از الگوی استاندارد asset fingerprinting/cache استفاده می‌کند؛ اندازه و زمان واقعی لود هنوز با Lighthouse/مرورگر اندازه‌گیری نشده است.
@@ -442,7 +422,6 @@
 - **کش مرورگر:** assetهای hashدار یک سال immutable و index.html بدون cache باقی می‌ماند.
 - **مبنای فنی:** راهنمای رسمی Vite توضیح می‌دهد که build تولیدی، preload و CSS splitting را پشتیبانی می‌کند؛ از code splitting دستی تا وقتی bundle بزرگ یا مسیرهای واقعی ماژولار نشده‌اند پرهیز می‌کنیم تا درخواست‌های اضافی و پیچیدگی غیرضروری ایجاد نشود: https://vite.dev/guide/features و https://vite.dev/guide/performance.html.
 
-
 ## 2026-10-26 — Vendor UI Issue #128: Passkey/TOTP UX و بازیابی CI
 - **مبنای کار:** PR #127 در main ادغام شده بود؛ Issue #128 برای پیگیری UX احراز هویت و خطاهای CI ایجاد شد. شاخه: `feat/issue-128-vendor-passkey-mfa-ui`.
 - **Passkey:** UI به endpointهای واقعی `/api/auth/passkey/options` و `/api/auth/passkey/sign-in` برای ورود، و `/api/auth/passkey/creation-options` و `/api/auth/passkey/register` برای ثبت کلید عبور متصل شده است. از WebAuthn native API استفاده می‌شود؛ کلید عمومی/خصوصی توسط مرورگر/Authenticator مدیریت می‌شود و verification نهایی سمت سرور است.
@@ -453,12 +432,10 @@
 - **مرزها:** هیچ تغییری در ClientApp، Customer DB یا Migrationهای مشتری نیست. CRUD مشتری/نصب/قرارداد/لایسنس، bootstrap کامل، RBAC، maker-checker، audit checkpoint مستقل و KMS/HSM همچنان مانع آمادگی Production هستند.
 - **مراجع:** Issue #128 https://github.com/hamidreza1394/Accounting/issues/128؛ PR #127 merged https://github.com/hamidreza1394/Accounting/pull/127.
 
-
 ### تکمیل‌یادداشت Issue #128 — یافتهٔ CI دوم
 - اجرای Vendor CI روی commit `c5aadd0`، پس از سبزشدن تمام گام‌های فرانت‌اند، در `dotnet test` شکست خورد: `PendingModelChangesWarning` هنگام اجرای Migration در تست احراز هویت؛ در همان run، دستور EF CLI برای بررسی pending model changes موفق بود.
 - بررسی `Vendor/Vendor.Host/Program.cs` دو ثبت مستقل `AddDbContext<VendorDbContext>` را نشان داد: یک ثبت در `AddVendorPersistence` با Migration Assembly صریح و یک ثبت تکراری در Host بدون آن تنظیم. ثبت تکراری حذف شد تا persistence module تنها منبع پیکربندی DbContext و Migration Assembly باشد. این اصلاح نیازمند اجرای دوبارهٔ integration test است؛ علت به‌عنوان قطعیِ حل‌شده اعلام نمی‌شود تا CI تأیید کند.
 - آخرین اصلاح: commit `a2af05b78fe5f8d5237d3b36aa92c786a171b783`. CI جدید هنوز باید بررسی شود.
-
 
 ## Issue #130 — استاندارد RTL فارسی و کمبوباکس قابل مدیریت
 - فایل `Vendor/Vendor.Web/index.html` از قبل `lang="fa"` و `dir="rtl"` داشت؛ این مبنا حفظ شد.
@@ -468,7 +445,6 @@
 - مرز معماری: شرکت‌های حسابداری (از جمله مستقل/مادر/زیرمجموعه) متعلق به دیتابیس نصب مشتری‌اند، نه دیتابیس تجاری Vendor. Vendor مشتری تجاری، نصب و مجوز را مدیریت می‌کند. ایجاد شرکت حسابداری از پنل مرکزی بدون طرح provisioning مستقل و تأییدشده انجام نمی‌شود.
 - تست‌های جدید برای جهت RTL، پیش‌فرض اولین گزینه، تغییر انتخاب، پنهان بودن مدیریت گزینه بدون مجوز و پیام خطا اضافه شده‌اند.
 - اعتبارسنجی محلی در این محیط اجرا نشد؛ وضعیت تا نتیجه Vendor CI روی PR **Implemented / Not yet Verified** است.
-
 
 ## 2026-10-26 — Vendor Identity registration regression
 - بازبینی پس از ادغام‌ها نشان داد `AddVendorPersistence`، `AddIdentityCore<VendorAdminUser>` را ثبت می‌کند و `Vendor.Host/Program.cs` دوباره Identity را با همان DbContext ثبت می‌کرد؛ بنابراین گزارش قدیمی مبنی بر تک‌منبع بودن Identity با کد فعلی `main` هم‌خوان نبود.
@@ -485,12 +461,10 @@
 - همین شاخه اکنون designer را از snapshot جاری ساخته، `BuildModel` را به `BuildTargetModel` تبدیل کرده، metadata را در designer متمرکز کرده و تست SQL Server را برای وجود جدول `VendorAdminUserPasskeys` و اعمال هر دو migration تقویت می‌کند. ثبت Identity نیز جداگانه تک‌منبع شده است.
 - تا CI جدید سبز نشود، این علت/اصلاح تأییدشده محسوب نمی‌شود.
 
-
 ## 2026-10-26 — Fix Vendor CI compile failure
 - CI run 40286276604 failed at compile time because `IdentityBuilder.AddSignInManager()` is not available to the plain `Microsoft.NET.Sdk` Persistence project with its current references.
 - Follow-up branch `fix/vendor-identity-signin-manager-registration` removes that host-layer extension call from Persistence and registers SignInManager in the ASP.NET Core Host after `AddVendorPersistence`; IdentityCore, roles, EF stores and token providers remain registered once in Persistence.
 - Must be validated by a fresh Vendor CI run; do not merge if compile or runtime migration tests fail.
-
 
 ## 2026-10-26 — Issue #134: انتقال ثبت Identity token providers به Host
 - **علت CI:** Vendor CI run [40287063856](https://github.com/hamidreza1394/Accounting/actions/runs/40287063856) در Build شکست خورد؛ `IdentityBuilder.AddDefaultTokenProviders()` در پروژهٔ کلاس‌لایبرری Persistence با `Microsoft.NET.Sdk` و وابستگی‌های فعلی در دسترس نیست.
@@ -499,11 +473,9 @@
 - **اعتبارسنجی:** هنوز Build/Test پس از اصلاح اجرا نشده؛ نتیجهٔ معتبر فقط پس از Vendor CI جدید ثبت می‌شود.
 - **Issue/Branch:** [#134](https://github.com/hamidreza1394/Accounting/issues/134)؛ `fix/vendor-identity-token-providers`.
 
-
 ### Issue #134 — نتیجهٔ CI اول و اصلاح دوم
 - اجرای Vendor CI [40288514593](https://github.com/hamidreza1394/Accounting/actions/runs/40288514593) ثابت کرد که `AddDefaultTokenProviders()` به Host منتقل شده اما خط قدیمی `builder.Services.AddSignInManager()` هنوز اشتباه است: extension متد روی `IdentityBuilder` قرار دارد، نه `IServiceCollection`.
 - اصلاح دوم در همان شاخه، `AddSignInManager()` و `AddDefaultTokenProviders()` را روی یک `IdentityBuilder` در Host ثبت می‌کند. پس از این اصلاح باید CI دوباره اجرا شود؛ هیچ تستی هنوز پس از اصلاح دوم موفق گزارش نشده است.
-
 
 ## 2026-10-26 — Vendor EF Core Identity SchemaVersion 3 migration drift
 
@@ -514,7 +486,6 @@
 - **Safety:** no warning suppression, no deleted tests, no changes to customer accounting migrations. PR #138 remains Draft and must not be merged until the SQL Server migration test, strict EF snapshot check, full Vendor tests and publish pass.
 - **Next steps:** inspect latest Vendor CI; correct any further migration/model mismatch; then implement the secure first-admin bootstrap and forced password-change flow as a separate small change, followed by RBAC and audit wiring.
 
-
 ## 2026-10-26 — Issue #139: اصلاح آزمون antiforgery در جریان Password → TOTP
 - **شواهد اولیه:** Vendor CI run [40345676162](https://github.com/hamidreza1394/Accounting/actions/runs/40345676162) در آزمون `PasswordOnlyIsDeniedAndTotpChallengeDoesNotIssueApplicationCookie` شکست خورد؛ Expected `OK` و Actual `BadRequest`. لاگ علت را «antiforgery token was meant for a different claims-based user» گزارش کرد.
 - **اصلاح در شاخه `fix/issue-139-totp-antiforgery-test`:** آزمون بعد از دریافت کوکی challenge مربوط به TOTP توکن antiforgery تازه می‌گیرد؛ بعد از ورود موفق نیز برای هویت Application توکن تازه می‌گیرد. اعتبارسنجی antiforgery و assertion عدم صدور کوکی Application قبل از TOTP حفظ شده‌اند.
@@ -523,7 +494,6 @@
 - **امنیت/داده:** هیچ تغییری در منطق runtime، سیاست امنیتی، Schema/Migration یا دیتابیس مشتری اعمال نشده است. این اصلاح فقط آزمون را با چرخه واقعی هویت هماهنگ می‌کند.
 - **وضعیت:** Implemented in branch / Not yet Verified. Merge نشود تا آزمون SQL Server، کل Vendor suite، EF snapshot gate و Publish موفق شوند.
 
-
 ## 2026-10-26 — Issue #141: حفظ کوکی antiforgery هنگام تغییر هویت MFA
 - **شاهد CI:** Vendor CI run [40346746819](https://github.com/hamidreza1394/Accounting/actions/runs/40346746819) شکست آزمون PasswordOnlyIsDeniedAndTotpChallengeDoesNotIssueApplicationCookie را در helper دریافت توکن ثبت کرد: InvalidOperationException: The given header was not found. این خطا از انتظار قطعی برای وجود هدر Set-Cookie جدید ناشی می‌شد.
 - **تحلیل:** ASP.NET Core می‌تواند وقتی کوکی antiforgery قبلاً در درخواست وجود دارد، توکن درخواست تازه متناسب با هویت جاری صادر کند بدون اینکه کوکی را دوباره در Set-Cookie برگرداند. پس از تغییر هویت به TOTP یا Application باید همان کوکی antiforgery نیز صریحاً همراه کوکی هویت ارسال شود؛ صرفاً ساخت توکن جدید کافی نیست.
@@ -531,7 +501,6 @@
 - **اعتبارسنجی:** اصلاح روی GitHub ثبت شده؛ هنوز Vendor CI پس از این اصلاح اجرا/تأیید نشده است. تا سبز شدن آزمون SQL Server، کل Vendor suite، EF snapshot gate و Publish، Verified یا آماده ادغام محسوب نمی‌شود.
 - **ایمنی:** هیچ تغییر در دیتابیس مشتری، Migrationهای مشتری یا منطق احراز هویت Production انجام نشده است.
 - **مراجع:** Issue [#141](https://github.com/hamidreza1394/Accounting/issues/141)، PR follow-up پس از آماده شدن branch ایجاد می‌شود.
-
 
 ## 2026-10-26 — Issue #143: اصلاح خطای کامپایل آزمون antiforgery
 - **شاهد CI:** Vendor CI run [40349534341](https://github.com/hamidreza1394/Accounting/actions/runs/40349534341) پس از ادغام PR #142 در مرحله Build شکست خورد: متغیر antiforgeryCookie در خطوط جریان TOTP و Application استفاده شده بود اما در دریافت اولیه توکن با discard (`var (token, _)`) دور انداخته شده بود. خطاهای CS0103 و خطاهای زنجیره‌ای CS8130 از همین مورد ناشی می‌شدند.
@@ -573,7 +542,6 @@
 - **اقدام:** PR مستنداتی برای اجرای دوبارهٔ Vendor CI و CI کامل ایجاد می‌شود. فقط در صورت سبزشدن تست SQL Server، strict EF snapshot gate و Publish می‌توان bootstrap را Verified دانست.
 - **محدوده:** این پیگیری فقط مستندات است؛ هیچ کد Production، Migration مشتری یا داده‌ای تغییر نمی‌کند.
 
-
 ## 2026-10-26 — Issue #150: مبنای RBAC فروشنده (در شاخه؛ در انتظار CI)
 - **محدوده:** شاخه `feat/issue-150-vendor-rbac-foundation` بر مبنای `main`@ `6fc04fd368185c6e9935cbd121ed9ccaac1455a6`، کاتالوگ نسخه‌دار مجوزها، policyهای نام‌دار، ارزیابی claimهای نقش Identity و تست‌های ترکیب policy را اضافه می‌کند.
 - **طراحی امنیتی:** مجوزها شناسه‌های پایدار سمت سرورند و از نام نقش یا برچسب UI جدا هستند. هر policy مجوزی هم‌زمان گارد موجود مدیر فعال/MFA را الزام می‌کند. شناسه مجوز ناشناخته fail-closed رد می‌شود. مجوزها از claim نوع `vendor:permission:v1` روی نقش‌های Identity خوانده می‌شوند؛ هنوز endpoint یا UI برای مدیریت نقش/مجوز ساخته نشده است.
@@ -581,9 +549,7 @@
 - **اعتبارسنجی:** کد از طریق GitHub API روی شاخه ثبت شد؛ Build/Test محلی در این محیط اجرا نشده‌اند. CI روی PR باید Vendor UI، Build/Test با SQL Server، strict EF snapshot gate، Publish/artifact scan و full repository CI را تأیید کند. وضعیت تا آن زمان **Implemented in branch / Not Verified** است.
 - **Handoff:** `docs/handoffs/ISSUE-150-vendor-rbac-foundation.md`.
 
-
 - **CI بازخورد اولیه PR #153:** Vendor CI run [40380994581](https://github.com/hamidreza1394/Accounting/actions/runs/40380994581) کامپایل را متوقف کرد: `VendorPermissionRequirement.cs` namespace مربوط به `VendorAdminAccessRequirement` را وارد نکرده بود. علت مشخص شد و `using Faranou.Vendor.Host.Authentication;` اضافه شد. این اصلاح باید با اجرای جدید CI تأیید شود؛ نتیجهٔ قبلی شکست خورده و هیچ تست .NET پس از Build اجرا نشده بود.
-
 
 ## 2026-10-26 — اصلاح خطای کامپایل آزمون RBAC فروشنده
 - **گزارش CI:** فایل `tests/Vendor.Host.Tests/VendorPermissionAuthorizationTests.cs` با خطای `CS0246` متوقف شد؛ نوع `VendorAdminAccessRequirement` در فضای نام `Faranou.Vendor.Host.Authentication` تعریف شده بود ولی فضای نام در فایل آزمون وارد نشده بود.
@@ -593,7 +559,6 @@
 - **مستندات:** handoff فارسی `docs/handoffs/ISSUE-150-vendor-rbac-foundation.md` و بخش RBAC در `docs/SECURITY.md` به‌روزرسانی شدند.
 - **پیوند پیگیری:** [PR #153](https://github.com/hamidreza1394/Accounting/pull/153).
 
-
 ## 2026-10-26 — Issue #154: پوشش metadata مجوزدهی Vendor
 - Issue #154 پس از بسته‌شدن زودهنگام بازگشایی شد؛ علت: آزمون پوشش endpointها و مجوزدهی منبع‌محور هنوز کامل نبود.
 - به VendorPermissionAuthorizationTests.cs آزمون integration اضافه شد که endpointهای /api/ را از EndpointDataSource استخراج می‌کند، نبود metadata دسترسی را رد می‌کند و فهرست مسیرهای AllowAnonymous را با فهرست مجاز ثابت مقایسه می‌کند.
@@ -602,12 +567,10 @@
 - **باقی‌مانده:** آزمون‌های منفی با احراز هویت واقعی، resource-level authorization/IDOR و maker-checker؛ هیچ Migration مشتری تغییر نکرده است.
 - Handoff: docs/handoffs/ISSUE-154-vendor-endpoint-authorization-coverage.md
 
-
 ## تکمیل Issue #154 — آزمون سیاست مؤثر endpointهای محافظت‌شده
 - افزوده شد: آزمون می‌سازد سیاست مؤثر هر endpoint محافظت‌شده API را با AuthorizationPolicy.CombineAsync و تأیید می‌کند VendorAdminAccessRequirement (گارد مدیر فعال/MFA) در همه آن‌ها وجود دارد؛ در کنار آزمون metadata دسترسی و فهرست مسیرهای عمومی مجاز.
 - Commit: 1708e1d7c4b67a51222690bc756b95e945db2eee.
 - وضعیت: تست/Build هنوز منتظر CI هستند؛ Verified اعلام نمی‌شود.
-
 
 ## 2026-10-27 — Issue #159: اجبار تغییر گذرواژهٔ اولیه در Vendor
 - **یافته:** `VendorAdminUser.MustChangePassword` در مدل وجود داشت اما تا این تغییر، enforcement عمومی در API pipeline و فرم واقعی تغییر گذرواژه تکمیل نبود؛ فیلد به‌تنهایی مرز امنیتی نیست.
@@ -624,7 +587,6 @@
 - **CI و اصلاح مبتنی بر شواهد:** Vendor CI run [40451859716](https://github.com/hamidreza1394/Accounting/actions/runs/40451859716) در آزمون HTTP شکست خورد: انتظار `BadRequest` اما `TooManyRequests` دریافت شد، چون تست چند تلاش ورود و سپس تلاش تغییر رمز را با یک policy مشترک پنج‌در-دقیقه اجرا می‌کرد. Build، typecheck، UI tests، audit وابستگی‌ها و Vite build موفق بودند. برای جلوگیری از coupling غیرضروری، policy مستقل `vendor-password-change` با همان حد ۵ تلاش در دقیقه افزوده شد. این اصلاح هنوز باید با Vendor CI جدید تأیید شود.
 
 - **بازبینی تکمیلی ممیزی:** audit writer فقط correlation ID به‌شکل GUID یا W3C trace ID می‌پذیرد؛ `HttpContext.TraceIdentifier` این قالب را تضمین نمی‌کند. endpoint اصلاح شد تا از `Activity.Current.TraceId` یا GUID استفاده کند. همچنین تغییر هش، پاک‌کردن `MustChangePassword` و append زنجیرهٔ ممیزی اکنون در یک تراکنش SQL Server مشترک هستند؛ شکست ممیزی باید تغییر گذرواژه را rollback کند. CI جدید باید این مسیر را تأیید کند.
-
 
 ## 2026-10-27 — Issue #161: مدیریت نقش Vendor و زیرساخت مجوزدهی منبع‌محور
 - **وضعیت مبنا:** PR #160 با commit ادغام `c4cc59bd93545e5b0e28f5cc35d76d97f731cccd` ادغام شده است؛ Vendor CI run `40452250226` و .NET CI run `40452250285` روی SHA پیش از ادغام موفق شدند.
@@ -651,7 +613,6 @@
 - **اعتبارسنجی:** در این محیط Build محلی اجرا نشده است؛ CI روی آخرین SHA شاخه باید مرجع نهایی باشد.
 - **مرز داده:** Migration فقط برای دیتابیس مستقل Vendor است؛ هیچ Migration دیتابیس حسابداری مشتری ساخته نشده است.
 
-
 ## 2026-10-27 — Issue #165: صفحه‌بندی bounded برای APIهای تجاری Vendor
 - **مبنا:** ادغام PR #164 در main؛ شاخه `feat/issue-165-vendor-api-pagination`.
 - **تغییر:** endpointهای فهرست مشتریان، نصب‌ها، قراردادها و لایسنس‌ها از `page` و `pageSize` پشتیبانی می‌کنند؛ مقدار پیش‌فرض 25 و سقف 100 است. پرس‌وجو با `CountAsync`، `Skip` و `Take` در دیتابیس صفحه‌بندی می‌شود و پاسخ metadata صفحه دارد.
@@ -659,7 +620,6 @@
 - **داده/امنیت:** هیچ Migration یا تغییر دیتابیس مشتری انجام نشده؛ مجوزهای فعلی endpointها حفظ شده‌اند. تغییر قرارداد پاسخ فهرست باید در UI و مصرف‌کننده‌ها هماهنگ شود.
 - **وضعیت اعتبارسنجی:** Build و تست .NET در این محیط اجرا نشده‌اند؛ تا نتیجه CI، وضعیت `Implemented / Not Verified` است.
 - **گزارش:** `docs/handoffs/ISSUE-165-vendor-api-pagination.md`.
-
 
 ## 2026-10-27 — Issue #169: اتصال فهرست‌های تجاری Vendor به API
 - ناوبری چهار بخش مشتریان، نصب‌ها، قراردادها و لایسنس‌ها به viewهای واقعی فهرست متصل شد؛ هر فهرست از endpoint Vendor با کوکی هم‌مبدأ داده می‌خواند و از envelope صفحه‌بندی استفاده می‌کند.
@@ -681,14 +641,12 @@
 - **داده:** هیچ Migration یا تغییر Schema دیتابیس حسابداری مشتری؛ هیچ کلید خصوصی امضا یا API صدور واقعی لایسنس اضافه نشده است.
 - **Branch:** \`feat/issue-171-vendor-update-lifecycle\`; **Issue:** #171.
 
-
 ## 2026-10-27 — Issue #174: پاسخ پایدار برای تعارض کلید یکتا در درخواست‌های هم‌زمان Vendor
 - **مسئله:** بررسی اولیه با `AnyAsync` به‌تنهایی جلوی رقابت دو درخواست را نمی‌گیرد؛ ایندکس یکتای SQL Server ممکن است یکی را با خطای 2601/2627 رد کند.
 - **تغییر:** endpointهای ایجاد و ویرایش مشتری، نصب، قرارداد و لایسنس اکنون فقط خطاهای unique-key شناخته‌شده SQL Server را به HTTP 409 و کد خطای قراردادی همان منبع تبدیل می‌کنند. خطای هم‌زمانی RowVersion همچنان `stale_row_version` است؛ خطاهای اتصال، FK و خطاهای ناشناخته بلعیده نمی‌شوند.
 - **تراکنش:** تعارض رخ‌داده پس از شروع تراکنش پیش از ثبت ممیزی برمی‌گردد؛ با خروج از scope تراکنش ناتمام rollback می‌شود. ممیزی برای عملیات ناموفق ثبت نمی‌شود.
 - **آزمون:** CI این شاخه باید compile/test/publish را تأیید کند. آزمون اختصاصی رقابت دو درخواست روی SQL Server هنوز باید اضافه شود؛ این تغییر ادعای پوشش race واقعی در تست را ندارد.
 - **Issue:** #174؛ **Branch:** `fix/vendor-unique-conflict-races`.
-
 
 ## 2026-10-27 — Vendor business HTTP authorization regression coverage (Issue #176)
 
@@ -697,7 +655,6 @@
 - **Explicit limitation:** this is an initial slice of Issue #176, not its full acceptance. It does not yet test authenticated permissions, anti-forgery validation, SQL Server persistence, rowversion conflicts, audit rollback, cross-resource validation, or concurrent unique-key races.
 - **Validation:** no local .NET execution was available in this connector-only workflow. CI must validate compilation and execution. Do not treat this commit as full integration coverage or production-readiness evidence.
 - **Isolation:** tests use the real Vendor host but anonymous requests should be rejected by authorization before business handlers execute. No database is seeded or mutated by these tests; no customer accounting database is involved.
-
 
 ## 2026-10-27 — Authenticated customer mutation HTTP integration test
 
@@ -708,14 +665,12 @@
 - **Validation status:** CI is required; this connector workflow does not provide a local .NET execution environment. Do not claim the test passed until its workflow completes.
 - **Remaining:** equivalent successful/stale/malformed coverage for installation, contract, and license updates; cross-resource mismatch, draft-only lifecycle, operational status transitions, audit-failure rollback, and deterministic SQL Server duplicate-key race coverage.
 
-
 ## 2026-10-27 — اصلاح شکست CI آزمون HTTP ویرایش مشتری Vendor
 - **شکست مشاهده‌شده:** Vendor CI run `40489907527`، آزمون `CustomerUpdateEnforcesAntiforgeryAndRowVersionAndAuditsOnlyCommittedWrites` شکست خورد؛ 68 آزمون موفق و 1 آزمون ناموفق بود. assertion روی `invalid_row_version` شکست خورد.
 - **علت ریشه‌ای از لاگ:** توکن ضد-CSRF قبل از ورود ناشناس دریافت شده و پس از ورود موفق با TOTP دوباره استفاده می‌شد. ASP.NET Core آن را به دلیل تعلق داشتن به هویت claims متفاوت رد می‌کرد؛ بنابراین درخواست پیش از رسیدن به اعتبارسنجی RowVersion رد می‌شد.
 - **اصلاح:** پس از تکمیل MFA، آزمون اکنون توکن ضد-CSRF تازه‌ای از `/api/auth/antiforgery` دریافت می‌کند و همان توکن را برای درخواست‌های تغییر داده استفاده می‌کند. توکن ناشناس فقط برای درخواست‌های ورود باقی می‌ماند.
 - **Commit اصلاح:** `86828e36ee2f3d9c473ef7fb8df01fca0dc24b93` روی `test/vendor-customer-mutation-http`.
 - **اعتبارسنجی:** اجرای CI پس از اصلاح هنوز تأیید نشده؛ PR #178 در ادامه با merge commit `63681bc4119f347e706620f8541a571df3b3d7ee` ادغام شد، اما workflowهای بعدی لغو شدند و نتیجهٔ سبز برای آزمون اصلاح‌شده در دست نیست.
-
 
 ## 2026-10-27 — گسترش آزمون HTTP برای ویرایش نصب، قرارداد و لایسنس Vendor
 
@@ -728,11 +683,9 @@
 - **Commitهای این مرحله:** `bbf37ac1fe8a5c1d0b2f1bb7b668eb10124a56d4` و `f0c2e7a547e556f8d6e3cad7e849503f96c8e17c` روی شاخه `test/vendor-business-mutation-http-coverage`.
 - **اعتبارسنجی:** Build/Test محلی در این محیط اجرا نشده؛ منتظر CI واقعی روی شاخه جدید هستیم. آزمون‌های نصب/قرارداد/لایسنس، تا سبز شدن CI، تأییدشده محسوب نمی‌شوند.
 
-
 - **افزایش پوشش روابط لایسنس:** آزمون اکنون علاوه بر قرارداد نامرتبط، نصب متعلق به مشتری دیگر را نیز با قرارداد معتبر آزمایش می‌کند و انتظار `installation_customer_mismatch` دارد. Commit: `8b35026d709538ba29fa8c88523b3166599477cd`. اجرای CI برای این آخرین تغییر هنوز در انتظار است.
 
 - **اصلاح کنترل RowVersion در بازپخش بدون تغییر:** CI نشان داد ارسال دوباره همان بدنهٔ PUT با RowVersion قدیمی می‌توانست `200 OK` بگیرد، چون EF Core در نبود تغییر واقعی ممکن است دستور UPDATE تولید نکند و بررسی concurrency سمت SQL Server اجرا نشود. در هر شش مسیر ویرایش/تغییر وضعیت، RowVersion ارسالی اکنون پیش از تغییر داده با مقدار فعلی موجودیت مقایسه می‌شود؛ توکن قدیمی به `409 stale_row_version` منجر می‌شود و کنترل concurrency در `SaveChanges` همچنان برای race بعد از خواندن باقی می‌ماند. Commit: `7bc21cf62dc2e1076353f652f724ec6ca4ab678a`. CI مجدد هنوز باید این اصلاح را تأیید کند.
-
 
 ## 2026-10-27 — افزودن آزمون HTTP انتقال وضعیت عملیاتی Vendor
 - **دامنه:** ادامه Issue #176 پس از ادغام PR #179 در main با merge commit `b425fd06856da30f187836b4c1b2de547921369a`.
@@ -743,13 +696,11 @@
 
 - **گسترش تکمیلی:** همان آزمون، انتقال وضعیت نصب `Active -> Suspended` و رد `Suspended -> Draft` را نیز با HTTP واقعی و RowVersion تازه بررسی می‌کند. Commit: `77f3ce8b67660541c9c05d4593a8022b3bc1e3b5`.
 
-
 ## 2026-10-27 — آزمون Rollback در صورت شکست Audit
 - **تغییر:** آزمون HTTP واقعی مشتری در `VendorCustomerMutationHttpIntegrationTests` اکنون یک شکست کنترل‌شده در `IVendorAuditWriter` تزریق می‌کند؛ پس از خطای درخواست، مقدار مشتری و تعداد رویدادهای Audit را از SQL Server دوباره می‌خواند و عدم ماندگاری تغییر را بررسی می‌کند.
 - **محدودیت ایمنی:** جایگزینی writer فقط در `WebApplicationFactory` آزمون انجام می‌شود؛ ثبت سرویس تولیدی تغییر نکرده و فقط دیتابیس موقت Vendor آزمون استفاده می‌شود.
 - **اعتبارسنجی:** در انتظار CI برای شاخه `test/vendor-audit-failure-rollback-http`؛ نتیجه تا پایان اجرای آزمون SQL Server تأییدشده محسوب نمی‌شود.
 - **باقی‌مانده:** آزمون قطعی رقابت کلید یکتا در SQL Server برای خطاهای 2601/2627 و بررسی نهایی معیارهای پذیرش Issue #176.
-
 
 ## 2026-10-27 — آزمون قطعی رقابت کلید یکتا در API فروشنده
 - **دامنه:** تکمیل بخش باقی‌ماندهٔ Issue #174 و پوشش یکپارچگی Issue #176 برای race واقعی SQL Server.
@@ -758,13 +709,11 @@
 - **ایمنی:** Interceptor فقط در `WebApplicationFactory` و فقط در بازهٔ آزمون رقابت فعال است. هیچ ثبت سرویس تولیدی، Migration یا دیتابیس حسابداری مشتری تغییر نمی‌کند.
 - **اعتبارسنجی:** تا این لحظه CI برای این شاخه اجرا/تأیید نشده است؛ سبز بودن Build و اجرای واقعی تست SQL Server باید پس از CI بررسی شود. اجرای محلی از طریق اتصال GitHub در دسترس نیست.
 
-
 ## 2026-10-27 — سخت‌کردن اثبات آزمون رقابت SQL Server
 - **یافتهٔ بازبینی:** پاسخ‌های 201/409 به‌تنهایی اثبات نمی‌کردند که هر دو INSERT به Interceptor رسیده‌اند؛ اگر شرط متن SQL تطبیق نمی‌کرد، بررسی اولیهٔ تکراری‌بودن می‌توانست همان نتایج را تولید کند.
 - **اصلاح:** تست اکنون تعداد INSERTهای مشاهده‌شده توسط gate را دقیقاً ۲ می‌سنجد؛ در نتیجه عدم تطبیق شرط SQL باعث شکست تست می‌شود، نه موفقیت کاذب.
 - **اعتبارسنجی قبلی:** PR #182 با Vendor CI و .NET CI سبز ادغام شد؛ Vendor CI متغیر `FARANO_REQUIRE_VENDOR_SQLSERVER=1` و صفر تست Skip را گزارش کرد. این شواهد مربوط به نسخهٔ پیش از assertion جدید است.
 - **وضعیت اصلاح فعلی:** CI جدید هنوز لازم است تا اجرای SQL Server و assertion جدید را تأیید کند.
-
 
 ## 2026-10-27 — رابط کاربری ثبت و ویرایش مشتری تجاری Vendor
 - **Issue:** #184؛ PR: #185.
@@ -774,13 +723,11 @@
 - **محدودیت:** این فرم فقط رکورد مشتری تجاری Vendor را مدیریت می‌کند؛ شرکت حسابداری، دیتابیس مشتری یا کاربر/رمز اولیه مشتری ایجاد نمی‌شود.
 - **اعتبارسنجی:** CI نهایی برای آخرین commit PR #185 هنوز لازم است. وضعیت تا موفقیت Vendor CI و .NET CI، `Implemented / Not yet Verified` باقی می‌ماند.
 
-
 ## 2026-10-27 — اجرای Vendor CI روی push شاخه‌های کاری Vendor
 - **یافته:** به‌روزرسانی‌های شاخه از طریق GitHub Contents API به‌صورت رویداد `push` ثبت می‌شدند؛ Vendor CI فقط روی push به `main` و روی رویدادهای PR اجرا می‌شد و برای برخی commitهای نهایی PR check جدید ایجاد نمی‌کرد.
 - **اصلاح:** workflow مستقل Vendor اکنون علاوه بر `main`، push شاخه‌های `feat/vendor-*`، `fix/vendor-*`، `test/vendor-*` و `ci/vendor-*` را نیز بررسی می‌کند؛ فیلتر مسیرهای Vendor و قراردادهای مرتبط حفظ شده‌اند، بنابراین تغییرات غیرمرتبط Accounting باعث اجرای این workflow نمی‌شوند.
 - **دلیل:** تضمین اجرای واقعی TypeScript/Vitest و تست‌های SQL Server Vendor روی head جاری، نه اتکا به نتیجهٔ commit قدیمی‌تر.
 - **اعتبارسنجی:** CI باید روی آخرین head این PR سبز شود؛ نتیجهٔ workflow قبل از تغییر trigger برای آخرین commit ادعا نمی‌شود.
-
 
 ## 2026-10-27 — رابط کاربری مدیریت نصب‌های Vendor
 - **Issue:** #186.
@@ -790,7 +737,6 @@
 - **تست‌ها:** Vitest برای ایجاد، محیط پیش‌فرض، نبود مجوز مشتری، ویرایش با RowVersion و تعارض؛ تست‌های UI برای تغییر وضعیت نصب و stale conflict.
 - **اعتبارسنجی:** Vendor CI و .NET CI روی head نهایی باید سبز شوند؛ تا آن زمان `Implemented / Not yet Verified`.
 
-
 ## 2026-10-27 — رابط کاربری ثبت و ویرایش قراردادهای Draft
 - **Issue:** #191.
 - **تغییر:** فرم RTL ثبت/ویرایش قرارداد به APIهای موجود متصل شد؛ انتخاب مشتری از فهرست صفحه‌بندی‌شده، شماره قرارداد، تاریخ شروع/پایان، کد ارز سه‌حرفی و RowVersion در ویرایش پیاده‌سازی شدند.
@@ -799,14 +745,12 @@
 - **تست‌ها:** Vitest برای ایجاد با مشتری واقعی و CSRF، تاریخ UTC، نبود مجوز مشتری، RowVersion stale و نمایش ویرایش فقط برای Draft.
 - **اعتبارسنجی:** Vendor CI و .NET CI روی head نهایی باید سبز شوند؛ تا آن زمان `Implemented / Not yet Verified`.
 
-
 ## 2026-10-27 — کمبوباکس ارز در فرم قرارداد Vendor
 - **زمینه:** PR #192 پس از اصلاح شرط نمایش ستون عملیات ادغام شد؛ بازبینی تکمیلی نشان داد ارز قرارداد هنوز ورودی آزاد است، در حالی که UI باید گزینه‌های رایج را به‌صورت کمبوباکس ارائه کند.
 - **تغییر:** ارزهای رایج USD/EUR/IRR/AED در `ManagedSelect` ارائه می‌شوند. اگر قرارداد قدیمی کد ارز سه‌حرفی دیگری داشته باشد، مقدار ذخیره‌شده به‌عنوان «ارز فعلی ثبت‌شده» باقی می‌ماند تا ویرایش سایر فیلدها آن را ناخواسته تغییر ندهد.
 - **تست بازگشت:** تست ایجاد قرارداد اکنون از کمبوباکس ارز استفاده می‌کند؛ تست تازه تأیید می‌کند کد ارز موجود خارج از فهرست رایج انتخاب‌شده و حفظ می‌شود.
 - **دامنه:** فقط UI و مستندات Vendor تغییر کرده‌اند؛ API، دیتابیس مشتری و migrationها دست‌نخورده‌اند.
 - **اعتبارسنجی:** CI شاخهٔ `feat/vendor-contract-currency-select` پس از تغییر باید سبز شود؛ تا آن زمان این تغییر تأییدشده محسوب نمی‌شود.
-
 
 ## 2026-10-27 — Issue #195: رابط مدیریت metadata لایسنس Vendor
 - **هدف:** افزودن ثبت و ویرایش metadata لایسنس‌های Draft در پنل Vendor با endpointهای فعلی، بدون ادعای صدور یا activation رمزنگاری‌شده.
@@ -818,13 +762,11 @@
 - **دامنه:** فقط Vendor Host/UI، تست‌های Vendor و مستندات مرتبط تغییر می‌کنند؛ هیچ Migration یا دیتابیس حسابداری مشتری تغییر نکرده است.
 - **اعتبارسنجی:** Vendor CI و .NET CI روی head نهایی باید سبز شوند؛ تا آن زمان وضعیت `Implemented / Not yet Verified` است.
 
-
 ## 2026-10-27 — اصلاح شکست آزمون کمبوباکس در Issue #195
 - **شاهد شکست:** Vendor CI run [40549993097](https://github.com/hamidreza1394/Accounting/actions/runs/40549993097) روی commit `7ce4c4125f6f29c452de207d0605f8eb563c3280` با ۱ شکست از ۳۷ تست UI متوقف شد: فرم لایسنس گزینهٔ `CTR-001 — Draft` را نمی‌دید.
 - **علت ریشه‌ای:** `ManagedSelect` وجود گزینهٔ فعال را با شرط `firstEnabledValue !== ''` تشخیص می‌داد. گزینهٔ معتبر «بدون قرارداد» مقدار خالی دارد؛ در نتیجه حتی وقتی گزینه‌های دیگر هم وجود داشتند، کنترل کاملاً غیرفعال و فهرست گزینه‌ها حذف می‌شد. متن CSS طولانی در گزارش تست فقط بخشی از DOM بود، نه علت خطا.
 - **اصلاح:** تشخیص به `options.some(option => !option.disabled)` تغییر کرد تا مقدار خالیِ مجاز از نبود گزینهٔ فعال تفکیک شود. تست بازگشت برای انتخاب خالیِ اختیاری و گزینهٔ قراردادی اضافه شد.
 - **اعتبارسنجی:** CI تازه برای commit `2eb44a82d6d9a81baa8fc9f8ead868c8eb93d697` در صف است؛ تا تکمیل Vendor CI و .NET CI نتیجهٔ اصلاح Verified نیست.
-
 
 ## 2026-10-27 — تکمیل و تأیید Issue #195 / PR #196
 - **نتیجه نهایی:** PR #196 با merge commit `45e843ebe639b0013e9b0bc9d28106eb435e4742` ادغام شد.
@@ -833,13 +775,11 @@
 - **دامنه:** metadata لایسنس Draft ثبت/ویرایش می‌شود؛ صدور امضاشده، KMS/HSM و activation آفلاین همچنان خارج از این Issue و مانع Production هستند.
 - **گام بعدی:** Issue #197 برای هم‌راستا کردن وضعیت مرکزی و مستندات Vendor با شواهد واقعی و فهرست صریح شکاف‌های Production ایجاد شد.
 
-
 ## 2026-10-27 — ثبت استاندارد کتابخانه‌ها، آفلاین‌بودن دارایی‌ها و قواعد طراحی/سرعت UI (D-049)
 - **دامنه:** فقط مستندات، شاخهٔ `docs/ui-component-standards`؛ بدون تغییر کد، وابستگی یا Migration. Issue: `UNNUMBERED`.
 - **تغییر:** `docs/UI_COMPONENTS.md` سه بخش گرفت (قواعد طراحی/سرعت/ویژوال؛ کتابخانه‌های پذیرفته‌شدهٔ جدول، نمودار و تاریخ؛ قانون محلی‌سازی دارایی‌ها). ADR جدید D-049 ثبت و ارجاع به آن در `AGENTS.md`، `CLAUDE.md`، `docs/INDEX.md` و Skillهای UI/مشترک افزوده شد. شمارهٔ «ADR بعدی» کهنه در `AGENTS.md` و `INDEX.md` به D-050 اصلاح شد.
 - **اعتبارسنجی:** `git diff --check` و `scripts/check_static_assets.py` موفق؛ build/test اجرا نشد چون تغییر فقط مستندات است. CI ندیده شده است.
 - **باقی‌مانده:** نصب هر کتابخانه کار جدا است؛ ساخت آفلاین `NeedsApproval`؛ سقف بودجهٔ سرعت `Deferred` تا اندازه‌گیری مبنا. جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-ui-component-standards.md`.
-
 
 ## 2026-10-27 — استفادهٔ مشروط از KendoReact Free و مسیر گزارش پیوت (D-050)
 - **دامنه:** فقط مستندات، شاخهٔ `docs/ui-component-standards`؛ بدون کد، وابستگی یا Migration. Issue: `UNNUMBERED`.
@@ -849,14 +789,12 @@
 
 - **اصلاح (2026-10-27، همان روز):** عبارت «RTL Kendo تأیید نشد» در D-050 و `docs/UI_COMPONENTS.md` اصلاح شد: RTL عمومی و WCAG 2.2 AA گرید طبق مستندات رسمی Telerik تأیید شد؛ ارقام فارسی و تقویم شمسی همچنان تأیید نشده‌اند. build/test اجرا نشد (فقط مستندات).
 
-
 ## 2026-10-27 — افزودن مهارت ui-ux-pro-max برای کیفیت فرم‌ها
 - **دامنه:** مهارت/مستندات، شاخهٔ `docs/ui-ux-pro-max-skill` (روی شاخهٔ PR #199)؛ بدون تغییر کد برنامه، وابستگی runtime یا Migration. Issue: `UNNUMBERED`.
 - **تغییر:** کپی خام `.claude/skills/ui-ux-pro-max` از upstream کامیت `28b3b8dee8c976df4fa3e94aed4e092ad43fcb03` (MIT) بدون `scripts/tests/`؛ بند تقدم فرانو در `SKILL.md`؛ مجوز در `third_party/`؛ ثبت منشأ و بررسی در `docs/THIRD_PARTY_SKILLS.md`؛ راهنمای استفاده در `docs/UI_COMPONENTS.md` و ارجاع از `AGENTS.md`، `CLAUDE.md`، `docs/INDEX.md`.
 - **عمداً کپی نشد:** CLI، افزونه و مهارت‌های `design`، `brand`، `slides`، `banner-design`، `ui-styling`، `design-system` (API بیرونی با کلید و CDN).
 - **اعتبارسنجی:** مقایسهٔ بایتی با upstream، اجرای واقعی `search.py` (ux، shadcn، chart)، `check_static_assets.py` و `git diff --check` موفق؛ build/test اجرا نشد؛ CI ندیده شده.
 - **باقی‌مانده:** سنجش فایدهٔ واقعی روی یک فرم؛ در صورت لزوم کاهش حجم داده؛ جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-ui-ux-pro-max-skill.md`.
-
 
 ## 2026-10-27 — بهینه‌سازی lookup زنجیره Audit در Vendor (Issue #202)
 - **هدف:** کاهش هزینهٔ جست‌وجوی برگ و والد زنجیره در VendorAuditWriter با ایندکس‌گذاری ستون‌هایی که در predicateهای PreviousHash و EventHash استفاده می‌شوند.
@@ -879,7 +817,6 @@
 - **رفتارهای آزموده‌شده:** endpoint مستقیم وضعیت دیگر bypass ندارد؛ درخواست تکراری و انتقال نامعتبر رد می‌شود؛ self-approval رد می‌شود؛ مدیر دوم با MFA می‌تواند درخواست را اعمال کند؛ stale RowVersion درخواست را Stale می‌کند؛ Audit در تراکنش ثبت می‌شود.
 - **محدوده:** فقط Vendor، تست‌ها و مستندات؛ دیتابیس حسابداری مشتری تغییر نکرده است. این کار به معنی تکمیل signing/KMS/HSM یا checkpoint مستقل Audit نیست.
 
-
 ## 2026-10-28 — تطبیق شواهد Bootstrap و RBAC پس از PR #207 (Issue #209)
 - **هدف:** اصلاح وضعیت‌های تاریخی متناقض در اسناد امنیتی Vendor بر اساس کد فعلی و شواهد CI واقعی.
 - **شواهد:** PR #207 ادغام‌شده با merge commit `d644ab5d36d00b1ce3763b64f17fd6fe7ef9fbac`; Vendor CI [40570240409](https://github.com/hamidreza1394/Accounting/actions/runs/40570240409) و .NET CI [40570240205](https://github.com/hamidreza1394/Accounting/actions/runs/40570240205) هر دو موفق؛ PR #208 با commit `9f9b9024eb4581b3e674c155befb57f657dab2b9` ادغام شد.
@@ -893,7 +830,6 @@
 - **تست‌ها:** تست‌های واحد canonicalization/version/tampering و تست Integration SQL Server برای advancement، idempotence و tampering اضافه شدند. Fake store فقط در تست وجود دارد؛ هیچ store محلی/DB fallback به برنامه اضافه نشده است.
 - **محدوده:** فقط Vendor persistence/tests/docs؛ هیچ Migration، `Template.sln` یا دیتابیس مشتری تغییر نکرد. ستون HashVersion برای هر رخداد، adapter مستقل Production، immutability/retention، SQL append-only permissions و alerting هنوز انجام نشده‌اند؛ Issue #107 باز می‌ماند.
 - **اعتبارسنجی:** CI روی HEAD این شاخه هنوز اجرا نشده؛ تست محلی در این محیط در دسترس نیست. تا سبز شدن Vendor CI و .NET CI، وضعیت Implemented / Not Verified است.
-
 
 ## 2026-10-28 — Issue #107: نسخه‌بندی هش و یکتایی زنجیره ممیزی Vendor (در انتظار CI)
 - **هدف:** جلوگیری از fork در زنجیره ممیزی، ثبت نسخه الگوریتم هش برای هر رویداد و رد امن نسخه‌های ناشناخته.
@@ -911,14 +847,12 @@
 - **محدودیت‌های صریح:** فرمان محلی `dotnet ef migrations add` اجرا نشده؛ فایل Migration/Designer/Snapshot با Vendor CI و `has-pending-model-changes` بررسی شدند. checkpoint مستقل provider واقعی، fail-closed runtime wiring در Production، SQL permission separation، alerting و recovery runbook هنوز ناتمام‌اند. Issue #107 باز می‌ماند.
 - **محدوده:** فقط Vendor و تست/مستندات آن؛ هیچ تغییر در `Server/**` یا schema دیتابیس مشتری انجام نشد.
 
-
 ## 2026-10-28 — Issue #214: مرحلهٔ نخست درخواست تأیید صدور/ابطال لایسنس
 - **مبنای کار:** PR #216 ادغام شد؛ `main` در شروع این مرحله روی `8e5770f049a875f1c75968d18f7a159691c023b9` بود. شاخهٔ مستقل `feat/vendor-license-approval-workflow` ساخته شد.
 - **تغییر:** endpoint درخواست تأیید برای لایسنس با permission `vendor.licenses.issue`، بررسی resource authorization، اعتبارسنجی RowVersion، جلوگیری از درخواست تکراری با index Pending موجود و رخداد ممیزی اضافه شد. endpoint تصمیم Maker-Checker اجازه نمی‌دهد metadata لایسنس به‌تنهایی با تأیید به `Issued`/`Revoked` تبدیل شود؛ تأیید تا آماده‌شدن signer و persistence امن artifact با `503 license_issuance_unavailable` fail-closed است؛ رد درخواست قابل انجام است.
 - **تست:** مسیر جدید به تست HTTP برای رد دسترسی ناشناس افزوده شد؛ تست Integration مبتنی بر SQL Server اکنون درخواست صدور، جلوگیری از Pending تکراری، پاسخ 503 هنگام تأیید بدون signer و حفظ وضعیت Draft/Pending را بررسی می‌کند. اجرای CI هنوز در انتظار PR است؛ این تغییر هنوز Verified نیست.
 - **امنیت/محدوده:** هیچ کلید خصوصی یا credential اضافه نشد؛ هیچ فایل `Server/**` یا schema دیتابیس مشتری تغییر نکرد. هنوز migration جدیدی برای Vendor ایجاد نشده است.
 - **باقی‌مانده:** تست integration برای درخواست صدور/ابطال، تست self-approval/stale version، ذخیرهٔ envelope امضاشده، provider-neutral signer با پیاده‌سازی production مبتنی بر KMS/HSM یا سرویس امضا، ابطال قابل‌اعتبارسنجی، migration/Snapshot افزایشی Vendor، و CI سبز. Issue #214 نباید بسته شود.
-
 
 ## 2026-10-28 — Issue #214: قرارداد provider-neutral امضای لایسنس (در انتظار CI)
 - **وضعیت قبلی:** PR #217 با merge commit `a643451fb445ff97bb9069fbd1c5cb8f2984dfe1` ادغام شد؛ Vendor CI run [40677449281](https://github.com/hamidreza1394/Accounting/actions/runs/40677449281) و .NET CI run [40677449226](https://github.com/hamidreza1394/Accounting/actions/runs/40677449226) موفق‌اند. Issue #214 به‌طور خودکار بسته شده بود، با اینکه معیار پذیرش آن تصریح می‌کند تا انتخاب/پیکربندی signer واقعی و آزمون عملیاتی باز بماند؛ بنابراین Issue دوباره باز شد.
@@ -928,13 +862,11 @@
 - **مستندات:** `docs/PROJECT_STATUS.md`, `Vendor/README.md`, `docs/LICENSING_THREAT_MODEL.md` و handoff اختصاصی به‌روزرسانی شدند.
 - **اعتبارسنجی:** تست محلی در این محیط اجرا نشده؛ CI این شاخه باید نتیجهٔ Build/Test، SQL Server integration، EF guard و publish را تأیید کند. تا سبزشدن CI، این slice Verified محسوب نمی‌شود.
 
-
 ## 2026-10-28 — Issue #214: payload builder and envelope factory
 - PR #219 adds `VendorLicensePayloadBuilder` to map Vendor metadata into a validated Licensing v1 payload; both Vendor CI and .NET CI passed on head `b8e5e860b8e8f08cffcce404c22d3d3bba71d328` and PR #219 was merged (merge commit `0477c06a0f8a7bcaacf48aa09a0a8e499ad45c11`).
 - Next slice adds `VendorLicenseEnvelopeFactory`: canonicalizes payload bytes, calls only the injected signing provider, validates provider output and envelope structure, and returns safe failure codes. Tests use a test-only ephemeral ECDSA key and cover successful verification, provider-unavailable fail-closed behavior, and invalid-payload rejection.
 - **Explicit limitations:** factory does not persist the envelope, update license sequence/status, or wire approval decisions to issuance. No production KMS/HSM implementation or private key is added. No customer DB or `Server/**` changes.
 - Status: PR opened; must wait for CI and merge only after all required checks pass. Issue #214 remains open.
-
 
 ## 2026-10-28 — ذخیره‌سازی پایدار پاکت امضاشدهٔ لایسنس (شاخهٔ پیگیری پس از PR #220)
 - **پیش‌نیاز تأیید شد:** PR #220 با SHA نهایی `2381bce5844b398233f7ef10a5cb85b53e98f547` ادغام شده و Vendor CI [40682375836](https://github.com/hamidreza1394/Accounting/actions/runs/40682375836) و .NET CI [40682375621](https://github.com/hamidreza1394/Accounting/actions/runs/40682375621) موفق‌اند.
@@ -991,13 +923,11 @@
 - No production KMS/HSM adapter was selected or implemented; no customer-side consumer/acknowledgement was implemented. See #235 and #236 and `docs/handoffs/ISSUE-236-provisioning-maker-checker.md`.
 - CI must verify the final PR SHA; no local build/test was available in the GitHub-only session.
 
-
 ## 2026-10-28 — Issue #107: fail-closed Production checkpoint readiness (history preservation)
 - Preserved the Issue #107 operational requirement that Production startup fails unless an explicit `IProductionVendorAuditCheckpointStore` adapter is registered; a generic or fake store does not satisfy the production gate.
 - Vendor cannot start in Production until an independent external checkpoint provider is configured with separate credentials, suitable append-only/immutability retention, SQL principal separation, alerting and recovery. No local-file or same-database fallback is accepted.
 - Handoff: docs/handoffs/ISSUE-107-checkpoint-runtime-guard.md.
 - Documentation correction during Issue #236 review: the earlier edit had replaced this checkpoint section instead of retaining it. This entry restores the historical requirement; Issue #236 does not supersede it.
-
 
 ## 2026-10-28 — Issue #236: اصلاح خطاهای Vendor CI و تست binding نصب
 - رفع خطای TypeScript در `Vendor/Vendor.Web/src/ProvisioningForm.test.tsx`: دو عضو استاتیک `TestURL` باید صریحاً `override` داشته باشند (commit `b1d355add0cc0a54561cc6cd9f8f1324599c4a90`).
@@ -1006,7 +936,6 @@
 - شواهد Vendor CI روی SHA `d30693f649a50edd2f2a493ab3b05648469174a1` سبز: typecheck، تست UI، runtime dependency audit، build UI، build/test Vendor روی SQL Server، EF snapshot guard، publish و گارد نبود کلید خصوصی.
 - CI روی SHA نهایی مستندات باید مجدداً تأیید شود؛ .NET CI، E2E و انتشار Linux/Windows تا مشاهدهٔ نتیجهٔ نهایی این commit مستنداتی هنوز Verified محسوب نمی‌شوند.
 
-
 ## 2026-10-28 — Issue #233: جداسازی signer راه‌اندازی مشتری از signer لایسنس
 - بازبینی پس از ادغام PR #240 نشان داد سرویس provisioning مستقیماً `ILicenseSigningProvider` را تزریق می‌کرد؛ این با الزام Issue #233 برای کلید provisioning مجزا از کلید لایسنس ناسازگار بود.
 - افزودن `IProvisioningSigningProvider` و `UnavailableProvisioningSigningProvider`، ثبت مستقل در DI و تغییر سرویس صدور provisioning به interface جدید. Provider پیش‌فرض همچنان fail-closed است؛ provider واقعی یا کلید نرم‌افزاری اضافه نشده است.
@@ -1014,13 +943,11 @@
 - README و `docs/LICENSING_THREAT_MODEL.md` به‌روزرسانی شدند؛ handoff: `docs/handoffs/ISSUE-233-provisioning-dedicated-signer.md`.
 - **CI نهایی این شاخه هنوز اجرا/تأیید نشده است.** Provider تولیدی، trusted key ID/rotation، verify امضا قبل از persistence و runbook عملیاتی همچنان باقی‌اند.
 
-
 ## 2026-10-28 — PR #241 merged and open Vendor blockers reconciled
 - PR #241 merged as `9ff7ae3a1cc9a2a2623335740f8adeb2b536417f`; both Vendor CI (`40745034125`) and .NET CI (`40745033978`) were green on the final PR head.
 - The provisioning signing interface is now distinct from the license signing interface. Both production signing and independent audit checkpoint adapters remain intentionally unconfigured and fail closed.
 - Added status comments to Issues #107, #214, #228, #233 and #236 to distinguish implemented/CI-verified work from deployment-approval blockers. Customer-side consumer/acknowledgement remains in Issues #234/#235 and is outside Vendor-only scope.
 - Corrected the Issue #107 handoff so it no longer says the merged startup guard is waiting for CI.
-
 
 ## 2026-10-29 — اعتبارسنجی بومی فرم‌های Vendor و وضعیت onboarding
 - **محدوده:** Issue #228؛ اصلاح رگرسیون در فرم درخواست provisioning، فرم مشتری، قرارداد، نصب و metadata لایسنس.
@@ -1030,7 +957,6 @@
 - **مانع بعدی:** provisioning همچنان intent ثبت‌شده در control plane است تا مصرف‌کنندهٔ مشتری بستهٔ امضاشده را تأیید و acknowledgement معتبر برگرداند. signer پیش‌فرض عمداً fail-closed است. Issueهای #228، #235، #236، #214 و #107 را تا ارائهٔ شواهد واقعی امنیتی/عملیاتی نباید بسته اعلام کرد.
 - **اعتبارسنجی پس از ادغام:** CI روی `main`@ `ecce57cbb5b8c0b058a1cea2643a27a870245b32` در زمان این ثبت هنوز در حال اجرا بود؛ نتیجهٔ نهایی باید بعداً بررسی شود.
 
-
 ## 2026-10-29 — بازبینی پس از ادغام وابستگی‌های Vendor
 
 - **محدوده:** مستندسازی وضعیت CI و شکاف‌های onboarding/issuance در Issueهای #228، #235، #236، #214 و #107؛ مبنا `main`@ `365b1b89a7370cba91c01de4f2c43219b5bf04ea`.
@@ -1038,7 +964,6 @@
 - **تغییرات اخیر وابستگی:** PRهای #268، #269 و #271 در main ادغام شده‌اند. انتشار Windows در .NET CI run 40825997059 هم با موفقیت پایان یافته است.
 - **مرز Production:** سبز بودن CI، وجود فرم provisioning یا ذخیرهٔ درخواست، ایجاد واقعی شرکت/مدیر در مشتری را اثبات نمی‌کند. signer عملیاتی KMS/HSM، consumer/ack سمت مشتری و sink مستقل checkpoint همچنان نیازمند پیاده‌سازی/تصمیم استقرار هستند؛ signer فعلی عمداً fail-closed می‌ماند.
 - **دامنهٔ تغییر:** فقط مستندات وضعیت و گزارش کار؛ هیچ کد اجرایی، schema، migration یا دیتابیس مشتری تغییر نکرده است.
-
 
 ## 2026-10-29 — Issue #228: جلوگیری از انتخاب نصب غیرفعال در راه‌اندازی مشتری
 - **یافته:** فرم provisioning همهٔ نصب‌های برگشتی API را در فهرست نشان می‌داد، در حالی که مسیر صدور بسته فقط نصب فعال را می‌پذیرد؛ انتخاب نصب غیرفعال باعث خطای قابل پیشگیری در ادامهٔ گردش‌کار می‌شد.
@@ -1049,7 +974,6 @@
 - **ادغام:** PR #273 با روش squash ادغام شد؛ merge commit: `a37b1c32b84d7622dbb7770f38aa852979058ae3`.
 - **Handoff:** `docs/handoffs/ISSUE-228-active-installation-filter.md`.
 
-
 ## 2026-10-29 — هم‌ترازسازی وضعیت مدل تهدید Vendor با پیاده‌سازی واقعی
 - **یافته:** مقدمهٔ `docs/LICENSING_THREAT_MODEL.md` ادعا می‌کرد هیچ کنترلی پیاده‌سازی نشده است؛ این گزاره با کنترل‌های ادغام‌شدهٔ maker-checker، پاکت امضاشده و تراکنش، مرز signer، audit-chain و guard مربوط به checkpoint تناقض داشت و می‌توانست وضعیت را گمراه‌کننده نشان دهد.
 - **اصلاح:** مقدمه اکنون کنترل‌های مرحله‌ای موجود را از موانع Production جدا می‌کند؛ عنوان و متن بخش تاریخی Issue #214 نیز روشن می‌کند که بخشی از موارد بعداً ادغام شده‌اند.
@@ -1057,14 +981,12 @@
 - **اعتبارسنجی:** بررسی متن و diff مستندات در این نشست؛ Build، تست‌ها و CI برای تغییر مستنداتی اجرا نشده‌اند و باید از PR/CI نهایی پیگیری شوند.
 - **Branch:** `docs/vendor-threat-model-status-reconciliation`؛ مبنا `df9256bf774e918c6ee540786fcda3490702431f`.
 
-
 ## 2026-10-29 — مشخص‌کردن بخش تاریخی فاز صفر در مدل تهدید
 - **یافته:** پس از اصلاح مقدمه در PR #275، عنوان بخش فاز صفر همچنان «Proposed، همگی NotImplemented» می‌گفت و با کنترل‌های بعداً ادغام‌شده تناقض داشت.
 - **اصلاح:** عنوان به «سابقهٔ طرح اولیه» تغییر کرد و توضیح اضافه شد که این جدول تاریخی است، نه داشبورد وضعیت جاری؛ برای وضعیت واقعی به شواهد PR/CI و Issueهای باز ارجاع داده می‌شود.
 - **محدوده:** مستندات فقط؛ بدون تغییر کد اجرایی، signer، secret، API، schema، migration یا دیتابیس مشتری.
 - **اعتبارسنجی:** بررسی محتوای سند و تغییر هدفمند متن؛ CI و تست‌ها پس از ایجاد PR باید بررسی شوند.
 - **Branch:** `docs/clarify-threat-model-phase-zero-history`؛ مبنا `4f1ca368c33d5a5692a2ead34c993b5ad6ff2d8d`.
-
 
 ## 2026-10-29 — Issue #228: reject provisioning requests for inactive targets
 - Added server-side validation requiring both the Vendor customer and selected installation to have the exact status `Active` before a new provisioning request is persisted.
@@ -1081,8 +1003,6 @@
 - **محدودیت اعتبارسنجی:** تست محلی/ساخت محلی در این نشست اجرا نشده است؛ وضعیت‌ها فقط بر اساس نتایج واقعی GitHub Actions گزارش شده‌اند.
 - **باقی‌مانده:** #228 جریان کامل provisioning، #235 مصرف‌کننده و acknowledgement سمت مشتری، #236 signer واقعی KMS/HSM و #107 sink مستقل checkpoint ممیزی هنوز شکاف‌های Production هستند؛ انتخاب provider و اعتبارنامه‌های عملیاتی را نباید جعل کرد.
 
-
-
 ## 2026-10-29 — جلوگیری از تحویل بستهٔ Provisioning پس از تعلیق هدف (#228)
 - **یافته:** وضعیت مشتری و نصب هنگام ایجاد درخواست و امضا کنترل می‌شد، اما ممکن بود پس از امضای بسته و پیش از نخستین export، مشتری یا نصب تعلیق شود و endpoint همچنان بسته را تحویل دهد.
 - **اصلاح پیشنهادی در شاخه:** export اکنون داخل تراکنش Serializable وضعیت فعال مشتری و نصب مرتبط را دوباره بررسی می‌کند؛ هدف حذف‌شده/ناسازگار 404 و هدف غیرفعال 409 می‌گیرد. قفل‌های تراکنش از تغییر هم‌زمان وضعیت هدف تا ثبت تحویل/ممیزی جلوگیری می‌کنند.
@@ -1090,7 +1010,6 @@
 - **دامنه داده:** فقط Vendor DB آزمایشی؛ هیچ Server/** یا schema/migration مشتری تغییر نمی‌کند.
 - **PR:** #283 (`fix/228-provisioning-export-active-target`، پیاده‌سازی اولیه `fd390cb4af7e6af519305277cd0a73f45a2e6d2e`).
 - **اعتبارسنجی:** در این محیط اجرای محلی Build/Test و SQL Server انجام نشده؛ نتیجه باید از GitHub Actions روی PR و سپس main تأیید شود. تا سبزشدن CI، این تغییر Implemented / Not Verified است.
-
 
 ## 2026-10-29 — همگام‌سازی وضعیت Vendor پس از PR #282 و #284
 - **مبنای کد:** `main` در `81ed5f64ed86ebbae47a433cea63e3655cb1d24b`.
@@ -1102,7 +1021,6 @@
 ## 2026-10-29 — تأیید وضعیت PR #283
 - بررسی فهرست PRهای بسته‌شدهٔ GitHub تأیید کرد PR #283 با عنوان «block export for inactive provisioning targets» در ساعت 08:45:55Z ادغام شده و merge commit آن `95a098895056a1fe34348fac93091bf2f82780b4` است.
 - مستندات وضعیت جاری اصلاح شد تا PR #283 را به‌درستی ادغام‌شده ثبت کند؛ هیچ ادعایی دربارهٔ provisioning end-to-end یا تأیید مشتری افزوده نشد.
-
 
 ## 2026-10-29 — تأیید امضای provisioning پیش از parse (#228)
 - **یافته:** `CustomerProvisioningPackageValidator.TryValidateAndVerify` پیش از بررسی امضا، JSON ورودی را deserialize و اعتبارسنجی می‌کرد. اندازه محدود بود و state اعمال نمی‌شد، اما این ترتیب با الزام امنیتی «verify exact bytes before parsing» در Issue #235 هم‌راستا نبود.
@@ -1120,7 +1038,6 @@
 - **Blockers recorded on Issues:** #236 requires an approved signing provider; #107 requires an independently permissioned checkpoint destination and deployment credentials; #235 customer-side consumer remains a separate reviewed change; #214 customer-side sequence persistence/enforcement remains separate.
 - **Tests:** not run locally in this tool session. GitHub Actions must verify the final branch SHA before merge readiness can be claimed.
 - **PR:** [#292](https://github.com/hamidreza1394/Accounting/pull/292) is open for the consolidated branch. `main` advanced through merged PR #291 while this work was in progress; the branch now includes `main` as a merge parent and does not overwrite its trust-store registration. CI must pass on the final head SHA.
-
 
 ## 2026-10-29 — Vendor acknowledgement intake (PR #293, merged)
 
@@ -1145,7 +1062,6 @@
 - **Measurements:** Bundle-size before/after and browser LCP/CLS were not measured; no new dependency or external runtime asset was added.
 - **Remaining:** UI display does not implement the customer-side consumer, one-time admin enrollment, fiscal-period provisioning inputs or parent-company relationship. These are tracked under #228/#235 and must not be represented as complete.
 
-
 ## 2026-10-29 — Issue #235: provisioning payload schema v2 (contract slice)
 - **دامنه:** رفع شکاف قراردادی دورهٔ مالی و رابطهٔ شرکت مادر پیش از پیاده‌سازی consumer سمت مشتری.
 - **تغییر:** payload schema v2 فیلدهای عنوان/تاریخ شروع/پایان دورهٔ مالی و ParentCompanyReference را اضافه می‌کند؛ v1 canonical JSON قبلی را بدون فیلدهای جدید حفظ می‌کند.
@@ -1154,7 +1070,6 @@
 - **امنیت/داده:** هیچ رمز، password hash، secret، private key، Connection String، Migration یا تغییر Server/** اضافه نشده است. Consumer، replay protection و enrollment مدیر اولیه هنوز پیاده‌سازی نشده‌اند.
 - **آزمون واقعی:** dotnet test و git diff --check در این نشست اجرا نشدند؛ checkout محلی متصل به مخزن/SDK در دسترس نبود. نتیجهٔ CI باید قبل از Merge بررسی شود.
 - **Branch:** feat/provisioning-payload-v2. PR بعد از ثبت این گزارش ساخته می‌شود.
-
 
 ## 2026-10-29 — Vendor provisioning payload v2 onboarding integration (Issue #228)
 
@@ -1192,7 +1107,6 @@
 - Still missing: atomic claim + actual company/fiscal-period/role/membership application in one transaction, enrollment flow with forced password change, signed customer acknowledgement, parent-company external-reference mapping, SQL Server replay/concurrency/rollback tests, and final .NET CI on the current HEAD.
 - No plaintext password, password hash, private key, customer DB connection, or signing fallback was added.
 
-
 ## 2026-10-29 — Issue #235: اصلاح RowVersion در مدل EF و Snapshot
 
 - **علت:** CI در run `40913297367` در مرحله Test شکست خورد؛ مدل runtime ویژگی `ProvisioningRequestClaim.RowVersion` را با `.IsRowVersion()` تنظیم می‌کرد اما ابزار مدل سفارشی `byte[]` و metadata rowversion را در Snapshot ثبت نمی‌کرد، که باعث `PendingModelChangesWarning` می‌شد.
@@ -1203,7 +1117,6 @@
 - **باقی‌مانده:** نتیجه CI روی آخرین HEAD؛ سپس تکمیل consumer تراکنشی، replay/idempotency، enrollment مدیر اولیه، acknowledgement امضاشده و نگاشت شرکت مادر. PR #302 همچنان Draft است و نباید merge شود.
 - **Branch:** `feat/customer-provisioning-consumer`; **PR:** https://github.com/hamidreza1394/Accounting/pull/302.
 
-
 ## 2026-10-29 — رفع شکست گارد Migration در PR #302
 - **دامنه:** CI run [40917960102](https://github.com/hamidreza1394/Accounting/actions/runs/40917960102)، برای شاخه `feat/customer-provisioning-consumer`.
 - **علت‌های ریشه‌ای:** ۶۱۳ تست .NET و گام بررسی Migrationهای تولیدشده موفق بودند؛ شکست در تست‌های گارد Migration بود. اول، `verify_migration_model.py` نوع CLR آرایه‌ای `byte[]` را در عبارت `table.Column<byte[]>` نمی‌پذیرفت، پس ستون معتبر SQL Server `rowversion` در Migration شناسایی نمی‌شد. دوم، تست جهشی «مهاجرت جدیدتر از ثابت‌ها» از تاریخ `2026-10-24` استفاده می‌کرد که از Migration فعلی `20261029161402` قدیمی‌تر است؛ بنابراین تغییر آزمایشی جدیدتر نبود و تست خطا را تشخیص نمی‌داد.
@@ -1211,7 +1124,6 @@
 - **اعتبارسنجی CI قبل از اصلاح:** `dotnet build` موفق، `dotnet test` موفق با ۶۱۳/۶۱۳، `generate_migrations.py --check` موفق؛ دو تست گارد شکست خوردند (ستون RowVersion شناسایی نمی‌شد و تست migration جدیدتر fixture منسوخ داشت). تست‌ها بعد از اصلاح باید در اجرای CI جدید تأیید شوند.
 - **امنیت/داده:** گاردها خاموش یا ضعیف نشده‌اند؛ Migration اجرایی و دیتابیس مشتری تغییر نکرده‌اند.
 - **Git:** شاخه `feat/customer-provisioning-consumer`؛ PR موجود [#302](https://github.com/hamidreza1394/Accounting/pull/302)، هنوز Draft است و نباید Merge شود تا مصرف‌کننده تراکنشی provisioning و آزمون‌های نهایی کامل شوند.
-
 
 ## 2026-10-29 — Issue #235: provisioning payload schema v3 for administrator identity
 - **Motivation:** The customer-side `Users.EmailAddress` field is required, while the existing signed provisioning contract carried only `InitialAdminUserName`. Inventing a placeholder email during customer DB provisioning would create a false identity and could collide with login/account recovery semantics.
@@ -1222,12 +1134,10 @@
 - **Remaining:** Implement the transactional customer consumer, one-time enrollment delivery and forced password-change enforcement, parent-reference mapping, signed customer acknowledgement generation, replay/concurrency/rollback SQL Server tests, and full E2E. Production customer acknowledgement signing remains fail-closed until a separate trusted signer is configured.
 - **Branch/PR:** `feat/provisioning-schema-v3-admin-email-verified`, [PR #304](https://github.com/hamidreza1394/Accounting/pull/304) (Draft). CI must validate the latest head; do not merge until the remaining consumer path is implemented and validated.
 
-
 ## 2026-10-29 — PR #304 CI regression follow-up
 - Vendor CI exposed an existing provisioning HTTP integration fixture that omitted `initialAdminEmail`; the request now supplies a valid test email in all three related scenarios.
 - .NET CI exposed the customer verifier fixture still generating schema v3 without `InitialAdminEmail`; the fixture now includes `admin@example.com`. The failures were caused by stale test payloads after the schema version bump, not by weakening signature or identity validation.
 - The initial CI attempt was on the prior head and failed in those tests. Fresh CI is required on the updated head.
-
 
 ## 2026-10-29 — Customer provisioning: fixed subsystem permission ownership map
 - **تصمیم:** پس از تأیید مالک محصول، مسیر نگاشت مجوزها به‌صورت کاتالوگ ثابت در کد انتخاب شد؛ Migration جدید برای افزودن `ModuleCode` در این slice ساخته نمی‌شود.
@@ -1236,7 +1146,6 @@
 - **محدودیت فعلی:** این تغییر فقط قاعدهٔ ownership را تثبیت می‌کند؛ transactional apply، ثبت مجوزها در role، enrollment یک‌بارمصرف، اجبار تغییر رمز و enforcement مجوزهای role در APIها هنوز تکمیل نشده‌اند. چون repository audit می‌گوید مجوزهای شرکتی در همه APIهای موجود enforce نمی‌شوند، نباید از این تغییر به‌عنوان مجوزدهی Production نتیجه‌گیری کرد.
 - **اعتبارسنجی:** کد و تست از طریق GitHub Contents API در شاخه `feat/customer-provisioning-transactional-apply` ثبت شده‌اند؛ اجرای محلی .NET در این محیط انجام نشده است. CI روی PR باید compile/test را تأیید کند.
 
-
 ## 2026-10-29 — Customer provisioning: one-time enrollment token primitive
 - **هدف:** ایجاد پایهٔ مستقل برای enrollment امن مدیر اولیه بدون قرار دادن رمز، hash رمز یا secret قابل‌استفادهٔ مجدد در package.
 - **تغییر:** `CustomerProvisioningEnrollmentToken` توکن ۲۵۶ بیتی تصادفی با نمایش Base64URL بدون padding تولید می‌کند؛ فقط SHA-256 hex برای ذخیره‌سازی در DB مناسب است. بررسی token از مقایسهٔ constant-time استفاده می‌کند و ورودی‌های malformed را رد می‌کند.
@@ -1244,14 +1153,12 @@
 - **محدودیت مهم:** این commit فقط primitive رمزنگاری و تست آن است؛ endpoint مصرف یک‌باره، transaction/RowVersion، انقضا، audit، محدودسازی تلاش و گردش امن تحویل token هنوز پیاده‌سازی نشده‌اند. این primitive نباید به‌تنهایی به‌عنوان enrollment end-to-end یا Verified اعلام شود.
 - **اعتبارسنجی:** باید CI روی همین شاخه اجرا شود؛ اجرای محلی .NET در این محیط انجام نشده است.
 
-
 ## 2026-10-30 — D-053: تصمیم‌های قطعی Issue #235
 - مالک محصول صریحاً تأیید کرد: ParentCompanyReference همان RequestId بستهٔ مادر با GUID canonical D است؛ resolve فقط از claim به CompanyId محلی؛ اعتبارسنجی Vendor و Customer؛ والدهای مجاز parent/subsidiary؛ فقط ParentCompanyId روی claim و عدم ایجاد روابط گروه/مالکیت؛ شرکت‌های قدیمی خارج از دامنه و بدون Company migration.
 - Enrollment: token فقط در پاسخ همان apply پس از commit، hash-only در DB، no-store و بدون log/audit/ack/URL/cache؛ replay فقط acknowledgement؛ reissue مستقل با ابطال token قبلی، audit و مجوز صریح؛ expiry کوتاه، مصرف اتمیک، محدودیت تلاش و اجبار تغییر رمز. در ابر مشترک اپراتور فقط کارکنان میزبان است و هیچ دسترسی ماندگار پس از bootstrap ندارد.
 - Production signing فقط provider واقعی Issue #236؛ fail-closed برقرار می‌ماند.
 - پیشنهاد نوع والد پذیرفته‌شده در D-053: parent یا subsidiary می‌تواند والد مستقیم باشد؛ independent مجاز نیست تا ساختار چندسطحی پشتیبانی شود.
 - وضعیت این ثبت: تصمیم/تهدیدمُدل به‌روزرسانی می‌شود؛ این ثبت به معنی تکمیل کد یا تست نیست.
-
 
 ## 2026-10-30 — Issue #235: enforce Vendor-issued parent references
 - **تغییرات:** ParentCompanyReference در قرارداد مشترک و قواعد Vendor فقط GUID canonical با قالب D می‌پذیرد؛ مقایسهٔ GUID case-insensitive است و مقادیر آزاد مانند parent-001 رد می‌شوند.
@@ -1261,7 +1168,6 @@
 - **تست‌های اضافه‌شده:** unit tests برای GUID canonical و مقایسهٔ حروف؛ SQL Server integration test برای resolver و مرز مشتری. تست‌ها فقط به مخزن افزوده شده‌اند؛ در این محیط اجرا نشده‌اند.
 - **اعتبارسنجی:** build، unit tests، SQL Server integration، rollback، concurrent replay و E2E اجرا نشده‌اند. checkout محلی به علت خطای DNS برای github.com در دسترس نبود؛ CI روی PR نهایی لازم است.
 - **Git:** branch feat/issue-235-transactional-consumer؛ PR هنوز ساخته نشده؛ هیچ merge انجام نشده است.
-
 
 ## 2026-10-30 — Issue #235: transactional apply and one-time enrollment slice
 - **پیاده‌سازی:** CustomerProvisioningApplyService با transaction در سطح Serializable؛ verify بسته قبل از mutation؛ claim یکتا برای RequestId/nonce؛ ایجاد Company، FiscalPeriod، User، CompanyRole، Membership و permissionهای دقیق موجود در D-052؛ ParentCompanyId فقط در claim؛ بدون ساخت گروه یا OwnershipRelationship.
@@ -1282,12 +1188,10 @@
 - **باگ یافته و رفع‌شده:** Deadlock (1205) در درخواست‌های هم‌زمان تکراری apply/enrollment → خطای مدیریت‌نشده. رفع با `sp_getapplock` تراکنشی؛ تست‌ها پیش از رفع شکست خوردند و پس از رفع سه بار پشت‌سرهم موفق بودند. کل Template.sln: 664 کل، 662 موفق، 2 skipped، 0 ناموفق.
 - **انجام نشد:** E2E خودکار دو-میزبانه (Vendor + مشتری)؛ دلیل در handoff. جزئیات: `docs/handoffs/ISSUE-235-provisioning-e2e-tests.md`.
 
-
 ## 2026-10-30 — Issue #235: first-login/enrollment guard for the provisioned administrator
 - **ممیزی:** مدیر اولیه با رمز تصادفیِ ناشناخته ساخته می‌شود و رمز واقعی را فقط در Enrollment تعیین می‌کند؛ پس «تغییر رمز در اولین ورود» از قبل ساختاری برقرار بود. معیار باز قبلی («محدودسازی نشست») به‌صورت لایهٔ دفاعی بسته شد.
 - **تغییر:** `SessionValidator` نشست کاربری را که claim با `MustChangePassword=true` دارد رد می‌کند؛ `AuthenticationService` ورود چنین کاربری را حتی با رمز درست با پاسخ عمومی `InvalidCredentials` رد و رویداد `LoginDeniedEnrollmentPending` را ثبت می‌کند (بدون افزایش شمارندهٔ قفل). بدون Schema/Migration/endpoint جدید.
 - **تست:** واحد (نشست و ورود) و SQL Server واقعی در مسیر apply ← reissue ← enrollment؛ اجرای کامل Template.sln: 660 کل، 658 موفق، 2 skipped، 0 ناموفق. بازبینی مستقل Subagent اجرا نشد. جزئیات: `docs/handoffs/ISSUE-235-first-login-enrollment-guard.md`.
-
 
 ## 2026-10-30 — بازآشتی وضعیت Vendor پس از PR #281 و mergeهای بعدی
 - **مبنای بازبینی:** `main` در SHA `a5db9e3f3a04ebdb8cafd0f5f02767cdaa3f36f6`.
@@ -1308,13 +1212,11 @@
 - **اعتبارسنجی:** تست محلی اجرا نشده؛ PR و CI لازم است. وضعیت این تغییر `Implemented / Not Verified` تا سبز شدن بررسی‌های الزامی است.
 - **Branch / PR:** `fix/vendor-acknowledgement-error-code-allowlist` / [PR #312](https://github.com/hamidreza1394/Accounting/pull/312).
 
-
 ## 2026-10-30 — رفع یافتهٔ Gitleaks در تست provisioning (#235)
 - **شاهد شکست:** .NET CI run `41021431573` روی head قبلی PR #309 در job `secret-scan` شکست خورد؛ Gitleaks مقدار ثابت password-like را در fixture تست `CustomerProvisioningTransactionalSqlServerTests.cs` شناسایی کرد. این مقدار فقط دادهٔ آزمایشی بود و هیچ credential عملیاتی/مشتری نبود، اما نگه‌داشتن literal ثابت در repository غیرضروری و خلاف hardening بود.
 - **اصلاح:** مقدار ثابت حذف شد؛ رمزهای موردنیاز تست با `RandomNumberGenerator.GetBytes(32)` به‌صورت runtime و per-test تولید می‌شوند. تست همچنان بررسی می‌کند رمز و enrollment token در audit ذخیره نشده‌اند.
 - **دامنه:** فقط تست و handoff/work log در شاخهٔ مستقل Issue #235؛ بدون تغییر Vendor، دیتابیس مشتری، migration یا secret configuration.
 - **اعتبارسنجی:** Gitleaks روی SHA قبلی ناموفق بود؛ اجرای CI روی commit اصلاحی در انتظار است. هیچ نتیجهٔ سبزی برای SHA جدید ادعا نمی‌شود.
-
 
 ## 2026-10-30 — Issue #235: اتصال provisioning به یک لایسنس امضاشده (D-054)
 
@@ -1328,7 +1230,6 @@
 - **کار باقی‌مانده:** اجرای CI؛ رفع خطاهای کامپایل/تست؛ افزودن تست SQL Server برای revalidation در issuance/export؛ هماهنگ‌سازی E2E دو میزبان در PR #317 با API جدید v4 (ساخت لایسنس و انتخاب licenseId)؛ بررسی کلید عمومی واقعی در deployment docs؛ تکمیل handoff و به‌روزرسانی Issue #235.
 - **Branch:** feat/issue-235-single-license-v4 — وضعیت تا CI سبز: Implemented in branch / NotVerified؛ هنوز Merge نشده است.
 
-
 ## 2026-10-30 — بازخورد CI و اصلاحات v4
 
 - Vendor CI run 851 روی commit قبلی، به علت تداخل نام range variable در LINQ query مربوط به Export، با CS1931 شکست خورد؛ نام متغیرهای query به targetCustomer/targetInstallation تغییر کرد.
@@ -1337,17 +1238,14 @@
 - E2E دو میزبان نیز اکنون بعد از اولین Export موفق، Sequence جدیدتر صادر می‌کند؛ Export مجدد بستهٔ قدیمی باید 409 بگیرد، ولی فایل قبلاً Exportشده همچنان در Customer آفلاین قابل اعمال است و acknowledgement معتبر می‌تواند جریان را تکمیل کند.
 - اجرای مجدد روی SHA نهایی پس از این اصلاحات هنوز در انتظار CI است؛ شکست‌های runهای قبلی به‌عنوان نتیجهٔ نهایی تلقی نمی‌شوند.
 
-
 ## 2026-10-30 — اصلاح build و همگام‌سازی E2E نسخه ۴
 - شکست Vendor CI روی PR #319 و #323 ریشه‌یابی شد: دو fixture JSON در C# به‌اشتباه double-escaped شده بودند و باعث CS1003/CS1056 می‌شدند.
 - fixture سمت Vendor در شاخه #319 اصلاح شد؛ همان fixture در تست دو میزبان PR #323 نیز اصلاح شد. اجرای CI جدید روی SHAهای جدید آغاز شده است؛ نتیجه هنوز نهایی نیست.
 - توضیح PR #319 و handoff به PR #323 به‌روزرسانی شد؛ PR #317 قدیمی v3 همچنان ممنوع از Merge است.
 
-
 ## 2026-10-30 — همگام‌سازی E2E با اصلاح PR #318
 - PR #319 از نظر محتوای Server branch هنوز فاقد fix ادغام‌شدهٔ PR #318 بود، چون شاخه از commit پیش از آن منشعب شده بود؛ نسخهٔ merged فایل ApiEndpoints و تست regression به شاخهٔ #319 منتقل شد.
 - شاخهٔ E2E جدید از آخرین HEAD #319 ساخته شد تا تست فایل ناقص در Customer Host نیز پاسخ 400 عمومی را از همان کد ادغام‌شده دریافت کند.
-
 
 ## 2026-10-30 — Issue #214: reconcile offline revocation contract status
 
@@ -1356,7 +1254,6 @@
 - **Boundary:** only the signed snapshot contract/validator is implemented. Customer-side durable sequence persistence, installed-license enforcement, backup-restore rollback handling, and production signer are still not implemented/configured.
 - **Architecture note:** a database-only high-water mark cannot prove rollback resistance after restoring an older full database backup unless its trust anchor is held outside that backup failure domain.
 - **Changes:** handoff and this work-log entry only; no runtime code, schema, migration or key material changed.
-
 
 ## 2026-10-30 — بازبینی نهایی Issue #235 پس از PR #329
 
@@ -1369,7 +1266,6 @@
 - **تست محلی این بازبینی:** اجرا نشد؛ فقط نتایج واقعی GitHub Actions بالا بررسی شدند.
 - **تغییرات این PR:** فقط مستندات وضعیت، handoff، work log و هم‌ترازی شماره ADR بعدی؛ هیچ کد runtime، schema یا migration تغییر نکرد.
 
-
 ## 2026-10-30 — Issue #107: Production audit checkpoint startup verification
 
 - Added a Production-only hosted startup probe that verifies the complete Vendor audit chain against the independently permissioned checkpoint store before readiness.
@@ -1379,14 +1275,12 @@
 - No provider-specific cloud dependency, key, credential, local-file fallback, same-database fallback, or migration was introduced. External provider selection, failure-domain separation, immutable retention, periodic verification, alerting, and restore drills remain operational gates.
 - Local tests were not executed in this GitHub-only workflow; require .NET CI, Vendor CI, and Semgrep on the final PR head before merge.
 
-
 ## 2026-10-30 — Issue #236: مالک تصمیم امضای HSM/PKCS#11 را پذیرفت
 
 - پاسخ مالک ثبت شد: Vendor می‌تواند روی سیستم/سرور اختصاصی یا سرور ابری اجرا شود؛ Azure/AWS دسترسی/مجوز ندارد؛ بودجهٔ HSM فعلاً صفر است.
 - D-055 به وضعیت Accepted تغییر کرد. معماری deployment-neutral است و هیچ Azure/AWS adapter ساخته نمی‌شود.
 - توسعهٔ adapter PKCS#11 و تست‌های CI با SoftHSM (صرفاً تست) مجاز است؛ Production signing برای بسته و لایسنس تا تأمین HSM واقعی همچنان Blocked و fail-closed می‌ماند. SoftHSM یا software key جایگزین Production نیست.
 - ACK هر نصب فقط با TPM/OS secure store غیرقابل‌استخراج فعال می‌شود؛ نبود backend امن به معنی fail-closed است.
-
 
 ## 2026-10-30 — Issue #236: Runbook عملیات HSM/TPM
 
@@ -1395,15 +1289,11 @@
 - Runbook به سازنده یا cloud خاص وابسته نیست و هیچ private-key export یا software fallback را مجاز نمی‌کند.
 - وضعیت اجرایی: بودجهٔ HSM صفر و HSM واقعی provision نشده؛ بخش Vendor HSM runbook فعلاً غیرقابل اجراست. SoftHSM صرفاً Testing/CI است.
 
-
 ## 2026-10-30 — Issue #236: هم‌ترازی Security contract برای Customer ACK
 
 - متن قدیمی SECURITY.md که می‌گفت private key در نصب مشتری نگهداری نمی‌شود و انتخاب HSM هنوز NeedsApproval است، با تصمیم پذیرفته‌شده D-055 مغایرت داشت.
 - قرارداد اصلاح شد: کلید ACK برای هر نصب جدا و non-exportable در TPM/OS secure store همان نصب می‌ماند؛ امضا محلی/offline است و کلید به Vendor منتقل نمی‌شود.
 - Vendor package/license همچنان به PKCS#11 HSM واقعی با کلیدهای مجزا نیاز دارد؛ با بودجه صفر Production signing unavailable/fail-closed می‌ماند. Customer ACK adapter هنوز پیاده‌سازی نشده و default unavailable است.
-
-
-
 
 ## 2026-10-30 — Issue #236: adapter امضای PKCS#11 و تست SoftHSM
 
@@ -1416,7 +1306,6 @@
 - با بودجهٔ HSM صفر، هیچ تنظیم Production فعال نشده است؛ providerهای Production پیش‌فرض unavailable/fail-closed می‌مانند تا HSM واقعی provision شود. Runbook عملیاتی در PR #341 ادغام شد؛ اجرای واقعی Key Ceremony، rotation/revocation، HA/DR و backup/recovery به تأمین HSM وابسته است. پیاده‌سازی ACK TPM مشتری همچنان باقی است.
 - Local build/test اجرا نشد (محیط GitHub-only)؛ نتایج واقعی .NET CI، Vendor CI و Semgrep روی SHA نهایی PR باید بررسی شوند.
 
-
 ## 2026-10-30 — Issue #236: ادغام PKCS#11 adapter و CI نهایی
 
 - PR #344 با merge commit `5a9717ca08ec2009305e480dbf6443683bf2e60f` ادغام شد.
@@ -1424,7 +1313,6 @@
 - اشکالات کشف‌شده و اصلاح‌شده در CI: ambiguity نام ISession؛ وابستگی Linux loader به libdl؛ جداسازی readiness امضا از liveness؛ و تست محیط Staging بدون تداخل session/module.
 - Production signer همچنان به‌صورت پیش‌فرض disabled/unavailable است؛ بودجهٔ HSM صفر و HSM واقعی provision نشده. هیچ Azure/AWS adapter یا software fallback اضافه نشد.
 - Customer ACK TPM/OS signer per-installation هنوز پیاده‌سازی نشده و باید بر اساس OS واقعی مشتری (Windows Server یا Linux) در PR مستقل انجام شود.
-
 
 ## 2026-10-30 — Issue #236: Windows-first Customer ACK CNG signer
 
@@ -1435,7 +1323,6 @@
 - تست‌ها قبل از implementation نوشته شدند و CI Windows برای اجرای مجموعهٔ محدود CNG اضافه شد. اجرای محلی در این محیط انجام نشده؛ نتیجهٔ واقعی باید از CI PR نهایی ثبت شود.
 - باقی‌مانده: command امن Key Ceremony/Provisioning و ثبت public key در Trust Store مشتری/Vendor، audit durable metadata-only، health/readiness و تست سخت‌افزار TPM واقعی؛ حداقل نسخه Windows/Server هنوز certify نشده است. Linux در PR آینده.
 
-
 ## 2026-10-30 — Issue #236: تکمیل Windows ACK signer و فرمان Key Ceremony
 
 - نصب‌های مشتری در مرحله فعلی Windows نسخه‌های مختلف و Windows Server هستند؛ Linux به مرحله مستقل بعدی موکول شد.
@@ -1444,7 +1331,6 @@
 - فرمان آفلاین `dotnet Server.dll --provisioning-ack-key create` اضافه شد. فرمان به Enabled وابسته نیست و signer runtime را فعال نمی‌کند؛ پس از ثبت public key در هر دو Trust Store، اپراتور می‌تواند فعال‌سازی را جداگانه انجام دهد.
 - CI ویندوز تست‌های focused را اجرا می‌کند؛ Software KSP صرفاً fixture تست است و آزمون TPM واقعی روی Windows Server سخت‌افزاری هنوز لازم است.
 - PR #347 در حال CI است. Local build/test در این محیط اجرا نشده است. Audit durable metadata-only، trust enrollment/rotation/revocation workflow، readiness و ماتریس نسخه Windows/TPM همچنان باقی‌اند.
-
 
 ## 2026-10-30 — Issue #236: اصلاح فیلتر تست Windows CNG در MTP
 
@@ -1460,7 +1346,6 @@
 - تست: unit tests برای key resolution، revoked key، overlap نسخه جدید و مقدار malformed اضافه شدند. مرور اولیه نشان داد `bool.TryParse` نامعتبر را به‌اشتباه مانند «revoked=false» تلقی می‌کرد؛ حالا هر مقدار غیر null که boolean معتبر نباشد fail-closed است. CI باید روی PR نهایی اجرا شود؛ تست محلی اجرا نشده است.
 - محدودیت: این revocation مبتنی بر configuration است و در برابر restore کامل backup/config قدیمی به‌تنهایی anti-rollback مقاوم نیست؛ trust anchor مستقل/rollback-resistant هنوز نیازمند طراحی است.
 
-
 ## 2026-10-30 — Issue #236: ادغام revocation کلید ACK و CI نهایی
 
 - PR #352 با merge commit `b6ee9419abf53997e28dec19105645d6ed9f8833` ادغام شد.
@@ -1469,7 +1354,6 @@
 - محدودیت صریح: revocation فعلی در configuration است؛ restore کامل backup/config قدیمی می‌تواند trust قبلی را بازگرداند. anti-rollback مستقل هنوز نیازمند طراحی/تصمیم و anchor خارج از همان backup است.
 - PR #351 نیز ادغام شد و فیلتر xUnit v3/MTP در Windows CI به `--filter-class` تغییر کرد؛ تست CNG اکنون واقعاً کشف و اجرا می‌شود.
 - باقی‌مانده: enrollment عملیاتی SPKI در Trust Store مشتری و Vendor، durable metadata-only audit/readiness، تست TPM واقعی و ماتریس نسخه‌های Windows/Server؛ Linux backend در مرحلهٔ بعدی.
-
 
 ## 2026-10-30 — Issue #228: هم‌ترازی داشبورد Vendor با وضعیت واقعی Provisioning
 
@@ -1480,7 +1364,6 @@
 - handoff: docs/handoffs/ISSUE-228-vendor-onboarding-finalization.md. Issue #228 به‌دلیل HSM واقعی، checkpoint مستقل #107، revocation آفلاین #214 و آزمون میدانی هنوز Production-complete نیست.
 - اجرای محلی انجام نشد؛ .NET CI و Vendor CI و Semgrep باید روی PR اجرا شوند.
 
-
 ## 2026-10-30 — Issue #228: ادغام PR #354 و شواهد CI
 
 - PR #354 با merge commit `31f1873ce9f26405beaf773e876bf99155c43fa2` ادغام شد.
@@ -1490,14 +1373,12 @@
 - Post-merge CI روی main با SHA `31f1873ce9f26405beaf773e876bf99155c43fa2` در زمان ثبت این یادداشت هنوز در حال اجراست: .NET `41096833025`، Vendor `41096832981`، Semgrep `41096832996`.
 - PR #354 فقط متن داشبورد و آزمون آن را اصلاح کرد؛ هیچ endpoint، schema، migration، secret، private key یا customer DB تغییر نکرد. Issue #228 به‌دلیل HSM واقعی، checkpoint مستقل #107 و revocation آفلاین #214 Production-complete نیست.
 
-
 ## 2026-10-30 — Issue #228: حذف KPIهای ساختگی داشبورد Vendor
 
 - داشبورد چهار KPI با مقدار «—» و متن «نمای آماری در مرحله بعد» نشان می‌داد؛ این‌ها نه داده واقعی بودند و نه برای وضعیت فعلی کنترل‌پلین مفید.
 - آن‌ها با کارت‌های وضعیت قابلیت جایگزین شدند: مدیریت تجاری، Provisioning v4، تأیید دو نفره و وضعیت مسدود بودن امضای Production تا تأمین HSM واقعی.
 - تست UI وجود چهار کارت و نبود placeholder آماری را بررسی می‌کند.
 - هیچ API یا DB تغییر نکرد؛ کارت‌ها ادعای تعداد رکورد یا آمادگی Production نمی‌کنند.
-
 
 ## 2026-10-30 — Vendor status reconciliation after PR #356
 
@@ -1509,13 +1390,11 @@
 - موانع Production همچنان واقعی‌اند: HSM مرکزی provision نشده (بودجه صفر)، sink مستقل Audit هنوز provider/credential ندارد، revocation آفلاین هنوز consumer/enforcement ضد rollback ندارد، و آزمون فیزیکی TPM/دو ماشین و backup/restore انجام نشده است.
 - PR #356: https://github.com/hamidreza1394/Accounting/pull/356
 
-
 ## 2026-10-30 — D-056: پذیرش امضای نرم‌افزاری برای Stage 1
 - مالک محصول استفاده از همان Provider مبتنی بر PKCS#11 با SoftHSM در Development و Staging را تأیید کرد؛ Production software فقط با پذیرش ریسک صریح و Audit در هر startup مجاز است.
 - Stage 1: کد کامل + Staging روی سیستم مالک/سرور ابری + نصب مشتری روی ماشین دوم؛ Stage 2: HSM واقعی، دو میزبان واقعی و بازیابی شواهد پیش‌نیاز برچسب Production کامل.
 - این PR فقط تصمیم و اسناد را ثبت می‌کند؛ تغییر کد Assurance، استقرار واقعی، آزمون دو میزبان فیزیکی و بازیابی هنوز انجام نشده‌اند.
 - فایل‌ها: D-055، D-056، DECISIONS.md، INDEX.md، WORK_LOG.md.
-
 
 ## 2026-10-30 — Issue #236 / PR #360: رفع خطای Build در Validate options
 - CI در Job `build-test-package` سه خطای کامپایل `CS1503` در `tests/Vendor.Host.Tests/Pkcs11SigningProviderTests.cs` نشان داد: متد `Validate(bool isProduction = false)` به‌صورت method group دیگر با `Action` سازگار نبود.
@@ -1525,7 +1404,6 @@
 - تست پیش از اصلاح: CI شکست خورد با سه خطای CS1503 در تبدیل method group به `System.Action`.
 - تست پس از اصلاح: در انتظار CI روی commit جدید؛ اجرای محلی در این نشست انجام نشده است.
 - هیچ migration، schema، customer DB، secret یا کلید خصوصی تغییر نکرد.
-
 
 ## 2026-10-30 — Issue #236 / PR #360: پوشش آزمون startup assurance
 - سه تست برای مسیر startup افزوده شد: ثبت رخداد metadata-only در Production با پذیرش ریسک Software، شکست startup در صورت شکست Audit، و عدم نیاز Development/Staging به sink ممیزی Production.
@@ -1540,12 +1418,10 @@
 - محدودیت صریح: هنوز adapter پایدار مشتری، اتصال به مسیر واقعی LicenseEnvelopeValidator/LicenseEvaluator و مقابله با restore دیتابیس قدیمی پیاده نشده؛ هیچ customer DB migration ایجاد نشده است.
 - اجرای محلی .NET در این نشست در دسترس نیست؛ نتیجهٔ CI معیار تأیید است.
 
-
 ### تکمیل fail-closed در بررسی وضعیت ابطال (#214)
 - بررسی ابطال دیگر `false` را برای نبود snapshot برنمی‌گرداند؛ نتیجه سه‌حالته `Unavailable/NotRevoked/Revoked` اضافه شد.
 - تاریخ انقضای snapshot در state نگهداری می‌شود؛ snapshot غایب یا منقضی‌شده `Unavailable` است و مصرف‌کننده باید fail-closed عمل کند.
 - تست‌های نبود snapshot و انقضای snapshot اضافه شدند. CI روی HEAD جدید باید این تغییرات را تأیید کند.
-
 
 ### اتصال قرارداد ابطال به ارزیابی مجوز (#214)
 - `RevocationAwareLicenseEnvelopeValidator` اضافه شد: ابتدا امضای لایسنس و InstallationId را با `LicenseEnvelopeValidator` بررسی می‌کند، سپس وضعیت ابطال را می‌سنجد.
@@ -1553,10 +1429,7 @@
 - سه تست regression برای snapshot غایب، مجوز خارج از فهرست و مجوز باطل‌شده افزوده شد.
 - این adapter هنوز به runtime customer host متصل نشده و state store پایدار هم پیاده نشده؛ این PR قرارداد اتصال را آماده می‌کند، نه ادعای enforcement production.
 
-
 - تست‌های ترکیبی pipeline در همان فایل `tests/Licensing.Contracts.Tests/OfflineRevocationConsumerTests.cs` قرار گرفتند تا قرارداد consumer و validator در یک مجموعه تست هم‌خوان بمانند.
-
-
 
 ## 2026-10-30 — Issue #107: Development/Test checkpoint journal
 - تست‌های اولیه برای append/read monotonic، رد sequence تکراری/کاهشی، تشخیص دستکاری checkpoint و الزام مسیر مطلق اضافه شد.
@@ -1565,14 +1438,12 @@
 - اجرای محلی .NET در این نشست در دسترس نیست؛ تأیید compile/test به CI واگذار شده و تا نتیجه آن ادعای موفقیت تست نمی‌شود.
 - فایل‌ها: `Vendor/Vendor.Persistence/Auditing/DevelopmentFileVendorAuditCheckpointStore.cs` و `tests/Vendor.Host.Tests/DevelopmentFileVendorAuditCheckpointStoreTests.cs`.
 
-
 ## 2026-10-31 — Issue #107: harden Development checkpoint lock
 - بازبینی PR #361 نشان داد انتظار lock در برابر IOExceptionهای دائمی می‌توانست نامحدود شود و Dispose خطادار می‌توانست semaphore درون‌پردازه را آزاد نکند.
 - انتظار lock به ۱۵ ثانیه محدود شد و آزادسازی semaphore در finally تضمین شد.
 - تست cancellation هنگام اشغال lock اضافه شد تا آزادشدن ProcessGate پس از لغو انتظار بررسی شود.
 - تست واقعی چندپردازه‌ای و تأیید cross-platform هنوز انجام نشده‌اند؛ این محدودیت صریحاً در handoff ثبت شد.
 - اجرای محلی .NET ممکن نبود؛ نتیجهٔ نهایی به CI روی آخرین SHA وابسته است.
-
 
 ## 2026-10-31 — Issue #107 operational hardening
 - HashVersion=1 per VendorAuditEvent, versioned verifier dispatch and unique PreviousHash/EventHash indexes are already in main (Issue #107/#202).
@@ -1583,14 +1454,12 @@
 - Recovery runbook now covers periodic verification/alerting and SQL permission deployment.
 - Provider selection, separate external credentials, immutability/retention, real alert receiver, SQL permission execution and a target-environment restore drill remain open. No Production sink is claimed.
 
-
 ## 2026-10-31 — Issue #236/#214: dedicated offline revocation signing key
 - Added IOfflineRevocationSigningProvider and an unavailable fail-closed default; PKCS#11 provider signs only with OfflineRevocationKey and emits purpose-specific metadata-only audit events.
 - PKCS#11 configuration now requires three distinct versioned key IDs (license, provisioning/package, offline-revocation); health/readiness verifies all three private-key objects and their required attributes.
 - Added unit coverage for purpose separation, duplicate/invalid IDs, fail-closed default, and SoftHSM signing/verification using a third independent non-extractable P-256 key.
 - Updated Vendor README, HSM runbook and D-055/D-056 clarification. This does not implement snapshot issuance, persistence, export or customer enforcement; those remain Issue #214 work.
 - No real HSM/production key was provisioned; CI is pending after PR creation.
-
 
 ## 2026-10-31 — PR #369 CI syntax correction
 - Vendor CI caught over-escaped JSON string literals in the new offline-revocation tests (CS1003/CS1056). Corrected the C# string escaping in the unit and SoftHSM integration tests; no production code or test assertions were weakened.
@@ -1605,13 +1474,11 @@
 - adapter TPM با Microsoft.TSS برای Windows TBS و Linux local TPM device اضافه شد؛ Linux از StrictLinuxTpmDevice استفاده می‌کند تا simulator fallback کتابخانه فعال نشود. default provider بدون section پیکربندی صریح unavailable است. ابزار create-only provisioning برای Windows/TBS و اسکریپت Linux/tpm2-tools با TCTI محلی اضافه شدند؛ اجرای واقعی، secret delivery/rotation و hardware tests هنوز NotImplemented/NotVerified هستند.
 - تست‌های SQL Server اضافه شده‌اند اما اجرای محلی .NET در این نشست ممکن نبود؛ نتیجهٔ CI روی PR معیار بعدی است.
 
-
 ### Issue #364 follow-up — customer validator registration
 - ConfigurationLicenseTrustStore به‌صورت مستقل از revocation-list trust set افزوده شد؛ کلیدها فقط ECDSA P-256 SPKI عمومی هستند و retirement flag نامعتبر fail-closed است.
 - Server DI اکنون LicenseEnvelopeValidator، OfflineRevocationConsumer و RevocationAwareLicenseEnvelopeValidator را register می‌کند؛ بدون TPM config، revocation provider unavailable می‌ماند.
 - تست‌های config برای unknown key، malformed retirement flag و retired key اضافه شدند.
 - محدودیت: هنوز باید تمام call-siteهای runtime مشتری به RevocationAwareLicenseEnvelopeValidator منتقل شوند؛ صرف DI registration به‌تنهایی enforcement را اثبات نمی‌کند.
-
 
 ## 2026-10-31 — Issue #364 CI regression fixes
 - Aligned the migration Designer generated output and corrected the mutation-test fixture so its synthetic migration is newer than the current migration constants.
@@ -1619,20 +1486,17 @@
 - Re-reviewed the production store: the session lock already protects both GetCurrentAsync and TryApplyAsync. No unnecessary production code change was made.
 - Latest CI result is pending; no local .NET/SQL Server or physical TPM execution is claimed.
 
-
 ## 2026-10-31 — PR #366 merged and CI verified
 - PR #366 (feat(licensing): add TPM-anchored customer revocation state store) merged into main at head SHA d2005b618528b416c3773ed7632d09a8627685db.
 - .NET CI run 41175579282 succeeded across client, secret-scan, build-and-test, publish-scripts, E2E, publish and Windows publish; Vendor CI 41175579288 and Semgrep 41175579255 also succeeded.
 - Updated Issue #364 handoff and project status to distinguish merged software implementation from still-open hardware provisioning/verification and production runtime enforcement.
 - No physical TPM test, production NV provisioning, secret delivery/rotation or production database migration is claimed.
 
-
 ## 2026-10-31 — Issue #214: canonical offline revocation snapshot factory (PR #375)
 - Added Vendor-side `VendorOfflineRevocationSnapshotFactory` to validate bounded inputs, ordinal-sort/deduplicate revoked license IDs, serialize the canonical contract and sign the exact UTF-8 bytes with the dedicated revocation signer.
 - Added tests for signature verification, canonicalization, invalid input bounds, unavailable signer and cancellation.
 - This is only the factory slice: durable sequence/history, atomic maker-checker revocation + license state + audit, no-store export and customer runtime enforcement remain open. The Vendor default signer remains unavailable/fail-closed; no private key or customer DB migration was added.
 - No local .NET SDK/build/test was available. On head `d689db2eb28f31fdc268abf6a2627b23df0274a3`, .NET CI and Vendor CI were in progress and Semgrep had succeeded when recorded; no unverified test result is claimed.
-
 
 ## 2026-10-31 — Issue #214: durable Vendor revocation workflow added to PR #375
 - PR #375 expanded from the canonical snapshot factory to the complete Vendor-side issuance slice: immutable `VendorSignedRevocationSnapshots` table/migration, monotonic sequence serialized with transaction-owned `sp_getapplock`, and unique constraints for sequence/list/approval/triggering license.
@@ -1643,7 +1507,6 @@
 - **Validation:** local .NET/SQL Server tests were not run. Fresh .NET CI, Vendor CI (including EF snapshot/migration and SQL Server tests), and Semgrep on final PR head are required before merge.
 - **Boundary:** no customer-side consumer, `Server/**`, customer database schema or production private key/credential is changed. #235/#364, #236 and #107 remain separate work.
 
-
 ## 2026-10-31 — Issue #214: consolidated revocation workflow and CI fixes (PR #375)
 - Consolidated Vendor-side revocation factory, independent public trust store, signed snapshot persistence, application-lock global sequence, transactional maker-checker revocation, audit writes and antiforgery-protected no-cache export into PR #375.
 - Service verifies the newly signed envelope against the independent trust store before committing license/approval state. Added SQL Server trigger rejecting UPDATE/DELETE on signed snapshot history and an integration assertion for immutability.
@@ -1651,13 +1514,11 @@
 - Previous CI head `0508c553e4cab42f967bc6bcd86e48cefac2ec9a` failed on those two issues; latest head `2a9e227b28d9e54dfc08a4378642abaf4395b533` has fresh CI runs pending/in progress. No green result is claimed yet.
 - Duplicate stacked PRs #376/#377 were closed as superseded; immutable-row trigger was ported into #375. Customer runtime enforcement and production signer/trust provisioning remain open.
 
-
 ## 2026-10-31 — Issue #214 / PR #375: suppress only the historical test-KeyId false positive
 - **تکرارپذیری شکست:** پس از تغییر مقدار فعلی fixture از شناسهٔ بلند به `test-kid`، Gitleaks همچنان همان finding را گزارش کرد؛ fingerprint به commit قدیمی `0508c553e4cab42f967bc6bcd86e48cefac2ec9a`، فایل تست، rule `generic-api-key` و خط 161 اشاره می‌کند. علت این است که اسکنر کل commit range مربوط به PR را بررسی می‌کند، نه فقط working tree نهایی.
 - **اصلاح حداقلی:** فقط fingerprint دقیق تاریخی در `.gitleaksignore` اضافه شد؛ rule، مسیر فایل یا الگوی عمومی مستثنا نشده است. مقدار فعلی fixture همچنان یک KeyId عمومی و غیرمحرمانه است و هیچ private key/credential در مخزن وجود ندارد.
 - **اعتبارسنجی:** .NET CI run `41183238913` روی head قبلی `6e089f4f017ea1321c42acbd24e099bdd592760e` به علت همین finding شکست خورد؛ Vendor CI run `41183238859` در زمان ثبت هنوز در حال اجرا بود. اجرای جدید پس از این commit لازم است.
 - **محدوده:** فقط اسکن اسرار و مستندات Vendor؛ بدون تغییر منطق runtime، دیتابیس مشتری یا migration مشتری.
-
 
 ## 2026-10-31 — Issue #214 / PR #375: migration syntax regression coverage
 - Vendor CI run `41183238859` روی head `6e089f4f017ea1321c42acbd24e099bdd592760e` در کامپایل migration با `CS1519/CS1031/CS8124` شکست خورد؛ علت بسته‌شدن زودهنگام متد `Up` قبل از تعریف trigger بود.
@@ -1665,20 +1526,17 @@
 - تست SQL Server برای immutability گسترش یافت تا UPDATE و DELETE را رد کند و شمار رکورد snapshot پس از هر دو تلاش یک باقی بماند.
 - **اعتبارسنجی:** این تست در CI جدید باید همراه migration/pending-model guard اجرا شود؛ اجرای محلی .NET/SQL Server انجام نشده است.
 
-
 ## 2026-10-31 — independent-process checkpoint regression
 - Added a helper executable and a regression test launching eight independent .NET processes that concurrently append the same sequence to one development JSONL checkpoint journal. Exactly one append must succeed; the other seven must reject the duplicate; the final journal must contain one valid record.
 - Added a Windows/Linux matrix to the existing Vendor CI workflow (rather than introducing a workflow that cannot run until merged).
 - This verifies cross-process locking for the Development/Test adapter only. It does not create a Production checkpoint sink or satisfy independent failure-domain, external retention/immutability, alerting or recovery requirements.
 - Local .NET execution was unavailable; the matrix must pass before verification.
 
-
 ## 2026-10-31 — customer validator DI boundary (rebased conflict resolution)
 - Reapplied on the current mainline: introduced `ICustomerLicenseEnvelopeValidator`; `RevocationAwareLicenseEnvelopeValidator` implements it; Server DI exposes only the interface and constructs the raw signature/time validator as an internal dependency.
 - Added a scoped dual-host DI assertion proving the safe interface resolves while neither raw nor concrete validator is directly registered; unit coverage now targets the interface contract.
 - This prevents accidental DI bypass, but is **not end-to-end license enforcement**. Production call-sites, customer envelope storage/import, authorization/audit policy, installation binding and approved OD-03/04 expiry/grace behavior remain unresolved. TPM hardware provisioning and real Windows/Linux verification remain NotVerified.
 - Rebuilt this change from current `main` to resolve PR #381's divergence; CI must run on the replacement PR head. No local .NET/SQL Server execution is claimed.
-
 
 ## 2026-10-31 — به‌روزرسانی وضعیت Issue #364 پس از ادغام PR #382
 
@@ -1710,7 +1568,6 @@
 - مدل تاریخچهٔ کلیدهای نصب را حفظ می‌کند؛ برای هر InstallationId تنها یک identity جاری و یک license جاری مجاز است. کلید خصوصی در دیتابیس نیست؛ SoftwareProtected فقط با consent timestamp/actor قابل ثبت است.
 - PR #387 هنوز CI نشده/ادغام نشده؛ هیچ Migration روی دیتابیس واقعی اجرا نشده و Vendor schema تغییر نکرده است.
 
-
 ## 2026-10-31 — Issue #395 / D-059: entitlement architecture and execution roadmap
 
 - ثبت D-059 با تأیید مالک محصول: Base License واحد برای هر Installation؛ Company-scoped Module/Feature/UserSeat؛ maxCompanies در سطح Installation؛ add-on با amendment امضاشده و sequence افزایشی روی همان LicenseId.
@@ -1719,7 +1576,6 @@
 - sync دوحالته است: online authenticated وقتی اتصال موجود است و signed file exchange همیشه. Cloud server-authoritative است؛ Offline آخرین entitlement امضاشده پذیرفته‌شده را حفظ می‌کند.
 - نقشه اجرا: #395 → #390 → #391/#392 → #393 → #394. مستندات مرجع در docs/LICENSING_IMPLEMENTATION_PLAN.md قرار گرفتند.
 - این تغییر فقط مستندسازی و ثبت تصمیم است؛ هیچ قابلیت اجرایی، Migration یا Production readiness را ادعا نمی‌کند.
-
 
 ## 2026-10-31 — Issue #384 / PR #388: customer identity enrollment and import status
 
@@ -1730,7 +1586,6 @@
 - D-059 changes the accepted status policy: signed Restricted envelopes are persisted for later restricted-mode enforcement; Grace is rejected because there is no implicit grace period. Runtime call-site enforcement remains a separate implementation slice.
 - No local .NET/SQL Server execution, physical TPM verification or independent-host E2E is claimed. Startup reload/revalidation, operational authorization enforcement and Cloud authoritative entitlement resolution remain open.
 
-
 ## 2026-10-31 — D-060: سه حوزه Vendor و دروازه فعال‌سازی Customer
 
 - ثبت D-060 در DECISIONS.md: Vendor CRM & Commercial، Licensing & Entitlement Engine و Customer Deployment & Sync به‌عنوان مرزهای منطقی Modular Monolith.
@@ -1740,14 +1595,12 @@
 - Issue #396 برای startup gate و Activation Wizard ایجاد شد و به #384/#390/#392/#394 متصل است. کد و UI هنوز پیاده‌سازی نشده‌اند.
 - فایل‌های مستندات این PR به‌روزرسانی شدند؛ هیچ کد اجرایی، Migration یا تست واقعی در این تغییر انجام نشده است.
 
-
 ## 2026-10-31 — PR #388 merged and CI verified
 
 - PR #388 merged as `75b0af84d5543a2bfb935d893d8bfc37ee330eef`.
 - All 7 CI jobs succeeded: secret-scan, client, build-and-test, publish-scripts, e2e, publish and publish-windows. Earlier compile/test fixture failures were fixed before merge.
 - Customer installation identity enrollment and durable license import/replace are now on main. This does not imply startup gate, startup reload/revalidation, accounting-operation enforcement or Cloud authority are complete.
 - Physical TPM, independent two-host and recovery drills remain deferred to the final operational test phase.
-
 
 ## 2026-10-31 — Issue #397 / D-061: آغاز ماژول بازرگانی خارجی در Accounting
 
@@ -1758,7 +1611,6 @@
 - هیچ Migration ساخته یا روی دیتابیس مشتری اجرا نشده؛ Host هنوز adapterها و runtime enforcement را ثبت نمی‌کند.
 - تست‌های محلی .NET/SQL Server در این محیط اجرا نشده‌اند؛ CI شاخه باید build/test را تأیید کند.
 
-
 ## 2026-10-31 — اصلاح D-061 طبق D-062: دوره مالی مشترک بازرگانی
 
 - تصمیم جدید مالک محصول ثبت شد: Trade دقیقاً از دوره‌های مالی موجود در Core (FiscalPeriod) و همان انتخاب شرکت/دوره و سیاست WorkContext استفاده می‌کند.
@@ -1767,7 +1619,6 @@
 - مجوزهای trade.period.* حذف شدند؛ مجوزهای فرم/عملیات/گزارش Trade همچنان تخصصی‌اند اما از کاتالوگ و تخصیص نقش مشترک فرانو استفاده می‌کنند.
 - هیچ Migration یا تغییری در جدول FiscalPeriods یا دیتابیس مشتری ایجاد/اجرا نشد.
 - تست معماری برای اطمینان از نبود Entity دوره در Trade جایگزین تست‌های دوره مستقل شد؛ اجرای آن باید در CI تأیید شود.
-
 
 ## 2026-10-31 — اتصال authorization بازرگانی به هسته فرانو
 
@@ -1778,14 +1629,12 @@
 - تست‌های adapter برای دوره Open/Closed، دوره متعلق به شرکت دیگر، تطبیق principal و مجوز همه شرکت/دوره‌ها افزوده شدند.
 - کاتالوگ/seed کدهای Trade، UI تخصیص permission به نقش، مصرف adapter در API/use case، entitlement runtime و تست SQL Server هنوز باقی‌اند. هیچ Migration یا تغییر دیتابیس اجرا نشده است.
 
-
 ## 2026-10-31 — Issue #399: S0 decisions and Trade architecture alignment
 - مالک محصول چهار تصمیم را تأیید کرد: ADR-B گزینه A (یک شرکت مالک Voyage و allocation برای دیگران)، سیاست دوره selected (پرونده ImportCase چنددوره‌ای و اسناد/عملیات با FiscalPeriod واقعی هر عملیات)، گزارش عملیاتی چندشرکتی از موج اول، و enforcement entitlement مستقل TRADE_IMPORT از S1.
 - Issue #399 به‌عنوان کار S0 ایجاد شد و شاخه `docs/issue-399-trade-s0-alignment` از main ساخته شد.
 - D-063 و هم‌ترازی اولیه DECISIONS، TRADE_MODULE، PROJECT_STATUS و ROADMAP روی شاخه ثبت شدند. این تغییرات هنوز PR/merge نشده‌اند.
 - ممیزی read-only نشان داد PR #398 در main ادغام شده است؛ اما TradeDbContext هنوز در Server/DI یا migration design-time path به‌طور کامل قابل اثبات نیست. هیچ migration مشتری اجرا نشده است.
 - تست محلی یا CI برای این شاخه اجرا نشده؛ تا اجرای checks، اسناد و D-063 فقط در شاخه کاری هستند و Verified نیستند.
-
 
 ## 2026-10-31 — Issue #402: کاتالوگ اولیه مجوزهای بازرگانی
 - شاخه `feat/issue-402-trade-permission-catalog` بر مبنای شاخه مستندات S0 ایجاد شد تا PR #403 به‌صورت stacked نسبت به PR #400 بازبینی شود.
@@ -1826,7 +1675,6 @@
 - هیچ Migration تولید یا اجرا نشده؛ هیچ داده نمونه یا داده مشتری seed نشده است. Build و تست‌ها از محیط حاضر اجرا نشده‌اند و باید CI PR #406 آن‌ها را تأیید کند.
 - PR #405 CI یک شکست تست داشت که از مقایسه رشته خام Connection String ناشی می‌شد؛ تست به مقایسه اجزای نرمال‌شده SqlConnectionStringBuilder اصلاح شد و اجرای مجدد CI روی commit `7104d10` در جریان است.
 
-
 ## 2026-11-01 — یکسان‌سازی منبع زمان در Provisioning و Approval سمت Vendor (#228)
 
 - **مبنای بازبینی:** `main` در SHA `94b45fce6c260909bb0828b8fa67686936e2f99e`. فقط PR باز #409 وجود داشت و تغییرات آن مربوط به UI داشبورد و خارج از محدوده Vendor بود.
@@ -1851,7 +1699,6 @@
 - **محدوده:** این commit فقط مستندات Vendor را همگام می‌کند؛ هیچ کد اجرایی، customer `Server/**`، customer schema/migration یا دیتابیس مشتری تغییر نمی‌کند.
 - **تست محلی:** اجرا نشد؛ این نشست checkout محلی و SDK/SQL Server اجرایی ندارد. نتیجه‌های بالا فقط از GitHub Actions و log واقعی job استخراج شده‌اند.
 - **باقی‌مانده:** consumer/ACK مشتری در #235 فقط در کار جداگانه؛ provider/credential و HSM Production در #236؛ sink مستقل checkpoint در #107؛ و تکمیل post-merge .NET CI `41285195040`.
-
 
 ## 2026-11-01 — تکمیل post-merge .NET CI برای PR #410
 
@@ -1965,7 +1812,6 @@
 
 - **رفع خطای E2E در PR #423:** اجرای Playwright سناریوی دوره بسته را شکست می‌داد؛ تست قرارداد موجود «فقط مشاهده و گزارش‌گیری» را بررسی می‌کرد، اما بازطراحی فقط «فقط مشاهده» را در هدر نشان می‌داد. برچسب کامل به UI بازگردانده شد و تست واحد AppShell برای حالت `readOnly` افزوده شد. اجرای مجدد CI روی commit `501844e` در حال انجام است.
 
-
 ## 2026-11-02 — یکسان‌سازی TimeProvider در عملیات تجاری Vendor (#228)
 - **مبنای کد:** main در SHA `ed86c011b6731c1b496395b701441654b15e3a20`؛ در شروع این اجرا هیچ PR بازی وجود نداشت.
 - **یافته:** پنج timestamp در APIهای ساخت/ویرایش Customer، Installation، Contract و License از `DateTimeOffset.UtcNow` مستقیم استفاده می‌کردند، درحالی‌که Provisioning و Approval قبلاً به `TimeProvider` تزریق‌شده منتقل شده بودند.
@@ -1977,7 +1823,6 @@
 - **اعتبارسنجی نهایی:** تست محلی اجرا نشده؛ تا سبزشدن Vendor CI، .NET CI، Semgrep و CodeQL روی SHA جدید، وضعیت Implemented / Not Verified و merge ممنوع است.
 - **باقی‌مانده:** یک timestamp مستقیم در command-mode `VendorBootstrapCommand` باقی است و در این slice تغییر نمی‌کند؛ #235 customer consumer، #236 signer واقعی و #107 sink مستقل Production موانع جداگانه‌اند.
 
-
 ## 2026-11-02 — Issue #425: ارتقای گرافیک داشبورد و سایدبار فرانو
 - متن زیرعنوان بنر به عبارت ثابت «مدیریت هوشمند کسب‌وکار با دقت، شفافیت و امنیت بیشتر.» تغییر کرد؛ نام کاربر فقط در بخش‌های هویت و اطلاعات نشست باقی می‌ماند.
 - پالت هدر و سایدبار از آبی اشباع به سرمه‌ای-سبزآبی عمیق، فیروزه‌ای و accent طلایی محدود تغییر کرد؛ پس‌زمینه سایدبار با glow و الگوی هندسی کم‌کنتراست عمق بصری گرفت.
@@ -1985,7 +1830,6 @@
 - تست regression برای متن ثابت خوشامدگویی و حذف نام کاربر از زیرعنوان اضافه شد.
 - بدون تغییر API، مجوز، احراز هویت، دیتابیس، migration یا وابستگی؛ تست‌ها/Build و مرورگر در این نشست اجرا نشده‌اند و باید CI بررسی شود.
 - گزارش: docs/handoffs/ISSUE-425-dashboard-vibrant-visuals.md.
-
 
 ## 2026-11-02 — Issue #427: روشن‌سازی سایدبار و بازطراحی برج میلاد
 - علت بازخورد #426 پذیرفته شد: سایدبار تیره بود و تصویر برج میلاد به‌صورت قابل تشخیص بازطراحی نشده بود.
@@ -1995,7 +1839,6 @@
 - تست‌های AppShell و Dashboard برای variantهای بصری جدید اضافه شدند. اجرای Vitest/typecheck/build/check:offline و visual QA در این نشست انجام نشده و باید در CI/مرورگر تأیید شوند.
 - گزارش: docs/handoffs/ISSUE-427-light-luminous-dashboard.md.
 
-
 ## 2026-11-02 — Issue #429: اصلاح کنتراست سایدبار و بازطراحی برج میلاد
 - علت کنتراست ضعیف تأیید شد: قواعد قدیمی سایدبار با specificity بالاتر از variant روشن، رنگ متن و badge را سفید نگه می‌داشتند.
 - قواعد اختصاصی با specificity کافی برای منوی غیرفعال، برچسب «به‌زودی»، عنوان منو، جداکننده و footer اضافه شد؛ رنگ متن‌ها سرمه‌ای/خاکستری خوانا و active state آبی-فیروزه‌ای با accent طلایی است.
@@ -2003,7 +1846,6 @@
 - SVG پانوراما از نو با بوم کامل 2700×360 طراحی شد؛ برج میلاد با آنتن، تاج، سکوی دید عریض، خطوط سازه و بدنه مخروطی بزرگ‌تر و در مرکز ترکیب قرار گرفت؛ skyline در کل عرض تصویر امتداد دارد.
 - بدون تغییر منطق دسترسی، وضعیت منوها، API، احراز هویت، دیتابیس یا dependency.
 - اعتبارسنجی CI و بازبینی مرورگر پس از PR لازم است؛ هنوز نتیجه‌ای برای این تغییر جدید ثبت نشده است.
-
 
 ## 2026-11-02 — Issue #442: خوانایی سایدبار و رفع باگ منبع حقیقت دوگانهٔ CSS
 - علت اصلی بریده‌شدن برچسب‌های زیرمنوی تنظیمات سیستم/مدیریت کاربری (مثلاً «مشاهده ورود و خروج کاربران») عرض کم سایدبار و `truncate` روی برچسب‌ها بود.
@@ -2014,7 +1856,6 @@
 - تست/Build واقعاً در این نشست اجرا شد: `tsc --noEmit` موفق، `vitest run` کامل (12 فایل/115 تست) موفق، `npm run build` موفق، `npm run check:offline` موفق، `scripts/check_static_assets.py` موفق، `git diff --check` موفق. علاوه‌براین با اسکرین‌شات Playwright واقعی روی build واقعی تأیید شد: عرض رندرشدهٔ سایدبار = 276px و برچسب‌های تودرتو بدون بریدگی.
 - گزارش: docs/handoffs/ISSUE-442-sidebar-readability.md.
 
-
 ## 2026-11-02 — Issue #444: مرکز مدیریت کاربران و دسترسی‌ها
 - Issue #444 ایجاد و شاخه feature/admin-identity-access-management-444 ساخته شد.
 - ممیزی اولیه با Graphify و GitHub نشان داد Users، UserCompanyMemberships، CompanyRoles، PermissionDefinitions، CompanyRolePermissions، CompanyAccessService، LoginLogs و SecurityAuditEvents موجودند؛ از ساخت موتور موازی دسترسی جلوگیری می‌شود.
@@ -2023,7 +1864,6 @@
 - سند طراحی و معیارهای پذیرش در docs/USER_ACCESS_MANAGEMENT.md و گزارش در docs/handoffs/ISSUE-444-user-access-management.md ثبت شد.
 - هیچ Migration، Entity، API اجرایی یا تغییر schema در این مرحله انجام نشده است. لایسنس/Entitlement مشتری طبق اسناد فعلی NotImplemented است و در این Issue فقط مرز اتصال آن رعایت می‌شود.
 - Build/Test اجرا نشده؛ مرحله S0 ممیزی endpointها، DI، mappingها، migrationها، permission catalog و routing کلاینت باید پیش از هر تغییر رفتاری تکمیل شود.
-
 
 ### تکمیل ممیزی اولیه و بازآرایی منوی مدیریت سیستم — Issue #444
 - مدل legacy Users.RoleId → Role و نقش‌های صفحات Razor با Constants.Role.Admin از مدل شرکتی CompanyRole → CompanyRolePermissions جدا هستند؛ یکپارچه‌سازی بدون تصمیم و tracing ممنوع.
@@ -2035,7 +1875,6 @@
 - «لیست کاربران فعال» به فیلتر داخل مدیریت کاربران منتقل شد؛ ورود/خروج در گزارش امنیت ادغام شد؛ گروه‌های دسترسی از کاتالوگ جزئی مجوزها جدا شدند.
 - AppShell.test.tsx با ساختار جدید هماهنگ شد. تست هنوز اجرا نشده است؛ Build/Typecheck/Vitest و مرورگر باید در محیط دارای checkout اجرا شوند.
 
-
 ### تکمیل ممیزی مدل مجوز و حساب شخصی — Issue #444
 - مدل legacy شامل Role → Permission → ApplicationHandler است، اما جستجوی call-siteهای تولیدی هیچ enforcement runtime برای Permission/ApplicationHandler در API یا handlerها نشان نداد. RouteFinder فقط PageModelهای Razor را ثبت می‌کند؛ پس این مدل به‌تنهایی کاتالوگ امنیتی APIهای React نیست.
 - CompanyRole/PermissionDefinitions/CompanyRolePermissions در CompanyAccessService و Trade واقعاً بررسی می‌شوند و نقش/مجوز company-scoped هستند.
@@ -2045,13 +1884,11 @@
 - Customer-side license import/signature/revocation در بخشی از کد وجود دارد؛ اما Trade entitlement با DenyAllTradeModuleEntitlement ثبت شده و مجوز مؤثر زیرسیستم هنوز فعال نیست.
 - PR #445 Draft باز است. Client CI (typecheck, unit tests, build, offline check, runtime dependency audit) موفق؛ Semgrep موفق؛ .NET Build/Test در آخرین مشاهده موفق شده و job در مرحله گزارش آسیب‌پذیری/جمع‌بندی بود. نتیجه نهایی باید مجدداً poll شود.
 
-
 ### D-064 پیشنهادی — Issue #444
 - تفکیک مدیر سراسری نصب از مدیر شرکتی به‌صورت Proposed در docs/DECISIONS.md ثبت شد.
 - پیشنهاد: Role.Admin برای مدیریت سراسری کاربران همان نصب؛ CompanyRole/CompanyRolePermissions برای دسترسی عملیاتی در هر شرکت. در APIهای جدید نقش مدیر سراسری باید از DB در هر درخواست بررسی شود تا claim قدیمی پس از لغو نقش معتبر نماند.
 - CompanyRole به‌عنوان گروه دسترسی شرکتی استفاده می‌شود؛ تا اثبات نیاز نسخه‌بندی/مالکیت مستقل، AccessGroup جدا ساخته نمی‌شود.
 - سمت/واحد سازمانی از مجوز تفکیک و در S2 طراحی می‌شود. هیچ Migration در این مرحله انجام نشد.
-
 
 ## 2026-11-03 — تصویب معماری مدیریت دسترسی چندشرکتی (D-065 / Issue #444)
 
@@ -2061,7 +1898,6 @@
 - PR این مرحله صرفاً مستندات و تصمیمات است؛ هیچ entity، migration، API اجرایی یا رفتار runtime تغییر نکرده است.
 - Build، Unit و SQL Server tests اجرا نشده‌اند؛ CI مربوط به PR باید بررسی شود.
 - PRهای باز #445..#456 باید از نظر stacked base و انحراف از D-065 reconcile شوند؛ end-to-end implementation هنوز Verified نیست.
-
 
 ## 2026-11-03 — نهایی‌سازی D-064
 
@@ -2094,7 +1930,6 @@
 - حذف hex و کلاس‌های خام Tailwind از کامپوننت‌ها (توکن‌های جدید)، منطقی‌سازی RTL، ادغام `PasswordInput`، `fiscalStatus`، `ErrorBoundary`، lazy بودن صفحات Provisioning (JS ورودی: ۳۹۵٫۰۴kB ← ۳۲۵٫۶۵kB)، لینک پرش، `headingLevel`؛ مستند `docs/ADMIN_UI.md`.
 - بررسی مرورگر واقعی با Playwright: ۴ باگ یافت و اصلاح شد (ارتفاع دکمه‌ها در موبایل، برش تب‌ها و هم‌پوشانی فوتر کشو، فوکوس‌پذیری سایدبار بسته، آیکون جست‌وجو). بازبینی مستقل: ۰ مسدودکننده/۲ major اصلاح‌شد. ۳۳۸ تست سبز. مقایسه پیکسلی با main: تغییر فقط جزئی در آیکون‌ها/نشان‌ها.
 
-
 ## 2026-11-03 — Issue #458: انتقال API مدیریت نقش و کاتالوگ مجوز به main
 
 - ممیزی مشخص کرد PRهای #454 تا #456 به‌صورت stacked روی شاخه‌های والد ادغام شده بودند و فایل Backend `Server/Api/CompanyRoleAdministrationEndpoints.cs` و تست متناظر در tree فعلی main حضور نداشتند؛ ادغام وضعیت PR با حضور در main اشتباه گرفته نشد.
@@ -2106,9 +1941,7 @@
 - تست محلی .NET و SQL Server اجرا نشده است: محیط فاقد dotnet SDK است و clone محلی GitHub به علت خطای DNS ممکن نشد. نتایج CI پس از ایجاد PR باید جداگانه بررسی شود.
 - handoff: `docs/handoffs/ISSUE-458-company-role-api.md`.
 
-
 - Regression test `UserAdministrationEndpointTests.ListUsers_RequiresAnActiveInstallationAdministratorFromTheDatabase` به پاسخ JSON دارای فیلد error با HTTP 403 به‌روزرسانی شد تا با helper صریح 403 در head فعلی هم‌خوان باشد.
-
 
 ## 2026-11-03 — Issue #467: پوشش تست خروج موفق در سوابق ورود/خروج
 
@@ -2118,7 +1951,6 @@
 - هیچ API، schema، Migration یا Frontend تغییر نکرد.
 - اجرای dotnet test و build در محیط ChatGPT انجام نشد؛ نتیجهٔ CI همین PR باید بررسی شود.
 - handoff: `docs/handoffs/ISSUE-467-login-history-logout-test.md`.
-
 
 ## 2026-11-03 — Issue #390: قرارداد entitlement شرکت‌محور payload v2
 
@@ -2131,11 +1963,9 @@
 - هیچ تغییری در Vendor/**، Server/**، دیتابیس مشتری یا migration انجام نشد. Vendor issuance #393 و Customer state/replay #391 خارج از این PR هستند.
 - تست محلی در این نشست اجرا نشده است؛ CI روی PR لازم است. وضعیت تا آن زمان Verified نیست.
 
-
 ## 2026-11-03 — Issue #475 (PR-B1): نقش‌ها، کاتالوگ مجوز و PermissionTree
 - صفحات کاتالوگ مجوز، فهرست نقش‌ها، ایجاد و ویرایش نقش با `PermissionTree` و پیش‌نمایش قبل/بعد؛ روی قرارداد PR #459 (هنوز Merge نشده؛ بدون اتصال به سرور واقعی). دایرکتوری هم‌گروه (PR #466) به‌دلیل نبود API فهرست گروه‌ها ساخته نشد.
 - بازبینی مستقل: code-reviewer ۰ مسدودکننده/۱ major (فرم کهنه پس از ذخیره) اصلاح شد؛ security-reviewer بدون Critical/High (Medium: نبود Delegation Ceiling سمت سرور، مستند شد). ۴۰۸ تست سبز؛ QA مرورگر واقعی ۳۶ از ۳۶ سناریو روی API شبیه‌سازی‌شده.
-
 
 ## 2026-11-03 — بازبینی تحویل Claude برای Issue #444 (پس از PR #478)
 
@@ -2154,8 +1984,6 @@
 - شواهد محلی: `generate_migrations.py --check` و `verify_migration_model.py` (۱۱ migration، Up و Down) موفق؛ `test_migration_tooling.py` ۲۸ تست و `test_migration_guard_mutations.py` ۳۱ تست موفق؛ `dotnet ef migrations has-pending-model-changes` (ابزار 10.0.13) خروجی «No changes have been made to the model since the last migration».
 - ریسک ثبت‌شده: در همین PR بررسی بایت‌به‌بایت designer/snapshot برای migration فعلی با `CURRENT_MIGRATION_WRITTEN_BY_EF_TOOLS` عمداً کنار گذاشته شده و تنها به EF (`has-pending-model-changes`) واگذار شده است؛ این کاهش پوشش گارد باید توسط Maintainer بازبینی شود.
 
-
-
 ## 2026-11-03 — Issue #444: UI گردش درخواست عضویت بین‌شرکتی
 - دو صفحهٔ React روی API ادغام‌شدهٔ #479 ساخته شد: «درخواست‌های عضویت من» و «صف تأیید مقصد» (تأیید با انتخاب گروه فعال همان شرکت، رد با دلیل اختیاری)، Client/Parser سخت‌گیر، مسیرها و لینک منو. سمت سرور تغییر نکرد؛ داده ساختگی استفاده نشد.
 - فرم ثبت درخواست جدید ساخته نشد: API کشف شرکت‌های قابل‌درخواست وجود ندارد. تأییدکنندهٔ غیر مدیر نصب هم گروه‌ها را نمی‌بیند (`GET .../roles` فقط مدیر نصب). قرارداد پیشنهادی برای Backend در handoff ثبت شد.
@@ -2168,7 +1996,6 @@
 - ریسک ثبت‌شده: نبود concurrency token روی CompanyRole/UserCompanyMembership (رفع نیازمند Migration و تأیید).
 - تست محلی: ۲۶ تست مرتبط موفق؛ دو تست SQL Server محلی اجرا نشد (Docker نبود) و باید در CI سبز شوند. هیچ Migration، Schema یا UI تغییر نکرد.
 - handoff: `docs/handoffs/ISSUE-444-role-members-api.md`.
-
 
 ## 2026-11-03 — Issue #444: UI اعضای گروه دسترسی و انتقال اعضا
 - بخش «اعضای این گروه» به صفحهٔ جزئیات گروه اضافه شد: فهرست صفحه‌بندی‌شدهٔ اعضای فعال و انتقال گروهی با تأییدیه روی API ادغام‌شدهٔ #482؛ گروه سیستمی و سقف ۵۰۰ نفر در UI توضیح داده می‌شوند و سرور مرجع می‌ماند.
@@ -2184,7 +2011,6 @@
 - تست‌های unit و SQL Server integration اضافه شدند؛ اجرای محلی در این محیط ممکن نبود (GitHub DNS و .NET SDK در دسترس نیست). CI روی PR معیار تأیید است.
 - handoff: `docs/handoffs/ISSUE-485-security-audit-report-api.md`.
 
-
 ## 2026-11-03 — Issue #444: UI گزارش امنیت و سوابق مدیریتی (S7)
 - صفحهٔ `/admin/security/audit` روی API ادغام‌شدهٔ #487 ساخته شد: فهرست صفحه‌بندی‌شدهٔ رویدادها، فیلتر نوع رویداد/بازهٔ تاریخ/کاربر/شرکت، برچسب فارسی برای کدهای شناخته‌شده، هشدار «نبودِ رویداد = نبودِ اتفاق نیست». IP و محتوای رویداد نمایش داده نمی‌شود. سمت سرور تغییر نکرد.
 - انتخابگر تاریخ شمسی ساخته نشد (وابستگی جدید نیازمند تأیید مالک)؛ `input type=date` بومی استفاده شد. ورود/خروج سراسری، نشست‌ها، export و retention به API وابسته‌اند.
@@ -2197,7 +2023,6 @@
 - سناریوی Playwright روی سرور Production منتشرشده و SQL Server واقعی، خواندن کاتالوگ و نقش‌ها، رد POST بدون Anti-forgery، ایجاد نقش با مجوز catalog موجود، بازخوانی، تغییر مجوزها، رد role ID شرکت دیگر با 404 و غیرفعال‌سازی نقش را پوشش می‌دهد.
 - هیچ کد Production، API، UI، Schema یا Migration تغییر نکرده است. تست محلی در این محیط اجرا نشد (GitHub clone به‌علت DNS و .NET SDK در دسترس نبود)؛ اجرای E2E در CI مرجع Verified شدن است.
 - handoff: `docs/handoffs/ISSUE-483-role-admin-positive-e2e.md`.
-
 
 ## 2026-11-03 — PR #484: رفع ناپایداری تست عنوان صفحهٔ دسترسی ممنوع
 
@@ -2229,7 +2054,6 @@
 - تست‌های unit و SQL Server integration اضافه شدند؛ اجرای محلی در این محیط ممکن نیست (GitHub DNS و .NET SDK در دسترس نیست). CI مرجع تأیید است.
 - بدون UI/ClientApp؛ Claude می‌تواند endpoint را مصرف کند. handoff: docs/handoffs/ISSUE-494-company-user-directory-api.md.
 
-
 ## 2026-11-03 — Issue #494: فهرست کاربران با scope شرکت و users.list
 
 - permission code پایدار users.list با migration افزایشی و idempotent به PermissionDefinitions افزوده شد؛ هیچ Role یا کاربری به‌صورت خودکار این مجوز را دریافت نمی‌کند.
@@ -2238,7 +2062,6 @@
 - پاسخ حداقلی شامل username/name، وضعیت user/membership/role و role display است؛ email، phone، password/hash، login history، IP، DetailsJson و permission list حذف شده‌اند. Search و pagination سمت سرور و no-store است.
 - تست‌های unit و SQL Server integration اضافه شدند؛ اجرای محلی در این محیط ممکن نیست (GitHub DNS و .NET SDK در دسترس نیست). CI مرجع تأیید است.
 - بدون UI/ClientApp؛ Claude می‌تواند endpoint را مصرف کند. handoff: docs/handoffs/ISSUE-494-company-user-directory-api.md.
-
 
 ## 2026-11-03 — Issue #444: ممیزی و قرارداد زمان (UTC)
 - ممیزی نشان داد فیلدهای `*Utc` با `DateTime.UtcNow` نوشته می‌شوند ولی بدون `Z` سریال می‌شوند، و فیلدهای قدیمی (`InsertDateTime`، `UpdateDateTime`، `LastLoginDateTime`) با `DateTime.Now` (ساعت محلی سرور) نوشته می‌شوند؛ پس مبدل سراسری «بدون Z = UTC» غلط است.
@@ -2252,7 +2075,6 @@
 - هیچ Schema، Migration، UI یا قرارداد پاسخ موفق تغییر نکرد.
 - تست محلی و dotnet build اجرا نشدند؛ CI باید روی SHA نهایی بررسی شود. نتیجه تست SQL Server هنوز Verified نیست.
 - handoff: docs/handoffs/ISSUE-498-membership-permission-delegation-ceiling.md.
-
 
 ## 2026-11-03 — Issue #444: انتخابگر تاریخ شمسی (D-068)
 - ADR D-068: `react-day-picker@9.14.0` با مسیر `/persian` (نسخهٔ 10 این مسیر را ندارد) پین شد؛ مجوزها MIT، `npm audit` بدون آسیب‌پذیری، حجم chunk تنبل ≈ 72 kB gzip، اجرای آفلاین تأیید شد.
@@ -2312,14 +2134,12 @@
 ## 2026-11-03 — Issue #444: قراردادهای API مورد نیاز UI (هماهنگی Backend)
 - برای قابلیت‌هایی که API ندارند (کشف شرکت برای درخواست عضویت، گروه‌های قابل‌تخصیص، `/me/permissions`، مرتب‌سازی/Export/Retention گزارش، نشست‌ها، S2) قرارداد دقیق endpoint، مدل و کدهای خطا در `docs/FRONTEND_API_CONTRACT_NEEDS.md` ثبت شد (`Proposed`، مسئول ChatGPT). UI مربوط عمداً ساخته نشد تا قابلیت ظاهری یا داده ساختگی تولید نشود؛ هر مورد پس از Merge شدن API در PR مستقل مصرف می‌شود.
 
-
 ## 2026-11-03 — Issue #515: تکمیل خنثی‌سازی کنترل‌کاراکترهای ابتدای سلول CSV
 - بازبینی پس از Merge #507 نشان داد Tab یا CR مستقل در ابتدای سلول در guard قبلی پوشش داده نشده بود.
 - CsvCell اکنون Tab/CR/LF ابتدایی را نیز با apostrophe خنثی می‌کند؛ رفتار قبلی برای پیشوندهای فرمولی پس از whitespace حفظ شده است.
 - تست regression برای سلول‌های آغازشونده با Tab و CR اضافه شد؛ Audit rowCount نیز برای دو ردیف خروجی بررسی می‌شود.
 - تست، Build، SQL Server، diff-check و CI هنوز اجرا/تأیید نشده‌اند؛ وضعیت Verified نیست.
 - handoff: docs/handoffs/ISSUE-515-csv-leading-control-characters.md.
-
 
 ## 2026-11-03 — Issue #511: API مجوزهای کاربر جاری
 - قرارداد `GET /api/v1/me/permissions` نهایی شد: شرکت از زمینه کاری محافظت‌شده همین نشست می‌آید و هیچ شناسه شرکت کلاینتی پذیرفته نمی‌شود.
@@ -2328,7 +2148,6 @@
 - هیچ Migration، ClientApp یا E2E تغییر نکرد. Build/Test/SQL Server و diff-check هنوز اجرا نشده‌اند؛ Verified نیست.
 - handoff: docs/handoffs/ISSUE-511-me-permissions.md.
 
-
 ## 2026-11-03 — Issue #510: تکمیل گردش API درخواست عضویت
 - قرارداد کشف مقصد، سقف واگذاری، فهرست تأییدکنندگان و تاریخچه تصمیم به‌روز شد.
 - مقصد فقط با نام exact در CustomerBoundary مشترک با یکی از عضویت‌های فعال کاربر قابل کشف است؛ CustomerBoundary null/متفاوت fail-closed و POST هم همان قاعده را مستقل enforce می‌کند.
@@ -2336,7 +2155,6 @@
 - زمان‌های *Utc پس از EF read صریحاً Kind=UTC می‌گیرند؛ RowVersion و transaction approval موجود حفظ شد.
 - Unit و SQL Server regression tests اضافه شدند؛ هیچ‌کدام هنوز اجرا نشده‌اند. بدون Migration/ClientApp/E2E.
 - handoff: docs/handoffs/ISSUE-510-membership-workflow-api.md.
-
 
 ## 2026-11-04 — Issue #520: UTC در projectionهای عضویت
 - برچسب UTC پس از materialization برای سه پاسخ عضویت؛ فیلدهای قدیمی و schema بدون تغییر.
@@ -2360,14 +2178,12 @@
 - Retention در D-070 با وضعیت Proposed ثبت شد؛ هیچ endpoint/job/permission اجرایی یا purge پیاده‌سازی نشد تا مالک تصمیم بگیرد.
 - Unit/SQL Server/Build/Full Test هنوز اجرا نشده‌اند؛ Verified نیست. بدون Migration و ClientApp.
 
-
 ## 2026-11-04 — Issue #214: customer runtime revocation evaluation
 - Added `ICustomerLicenseRuntimeEvaluator` as the shared customer-runtime evaluation entry point; it reloads the current installed envelope and validates it through the revocation-aware `ICustomerLicenseEnvelopeValidator` on every evaluation.
 - Registered the evaluator in Server DI through `AddCustomerLicenseRuntimeEvaluator()`; existing startup middleware and forwarded-header configuration are preserved.
 - Added unit regression coverage for valid/revoked licenses, unavailable or invalid revocation snapshots/trust, state-store failure, missing license, deterministic retries, Grace rejection, and invalid installation IDs.
 - Reused the clean evaluator implementation; the two similarly named enforcement branches were inspected separately. The divergent branch with an empty work log and removed middleware was not used.
 - .NET build/tests have not been run in this environment. CI must verify the PR head; no local test success is claimed.
-
 
 ## 2026-11-04 — Issue #214: اصلاح شکست DI registration در PR #526
 - **علت ریشه‌ای CI:** `Server/Program.cs` متد `AddCustomerLicenseRuntimeEvaluator()` را به‌صورت extension فراخوانی می‌کرد، اما namespace تعریف آن (`Infrastructure.Licensing`) وارد نشده بود؛ کامپایلر `CS1061` گزارش کرد.
@@ -2388,7 +2204,6 @@
 - CI for commit `2cf2799` passed build-and-test, E2E, publication, secret scan, CodeQL and Semgrep. Added real-application Development/Production tests that inject a synthetic nested secret-bearing exception inside the middleware pipeline and inspect all captured log entries and responses. The added tests have not been run locally; they need their own CI result. Host/startup/third-party logging outside that pipeline remains a separate limitation.
 - Addressed the CodeQL PR review concern that `HttpContext.TraceIdentifier` can be untrusted: the request logger uses W3C activity trace IDs, or a bounded SHA-256-derived correlation identifier instead of copying arbitrary trace identifier text. Added a synthetic secret/newline regression test. Local .NET execution remains unavailable.
 
-
 ## 2026-11-04 — Issue #530: بازیابی وضعیت جستجوی مقصد عضویت پس از لغو
 - ریشه باگ: وقتی query جستجو خالی می‌شد، effect درخواست قبلی را با AbortController لغو می‌کرد اما مسیر early-return مقدار loading را reset نمی‌کرد؛ در نتیجه دکمه جستجو می‌توانست برای همیشه disabled بماند.
 - هنگام پاک‌شدن ورودی یا نامعتبر بودن query، loading بلافاصله false می‌شود؛ effect همچنان درخواست قبلی را با AbortController لغو می‌کند و نتیجه/خطای درخواست لغوشده وارد UI نمی‌شود.
@@ -2405,7 +2220,6 @@
 - **اعتبارسنجی:** CI قبلی روی SHA aa0474b7c46b67c5f349f3091091dbb563471e42 به علت CS0117 در Build شکست خورد؛ Test به همین دلیل اجرا نشد. اصلاحات روی SHA جدید ثبت شده‌اند، اما برای SHA نهایی هنوز CI تازه مشاهده نشده است. هشدار CodeQL نیز باید با اسکن جدید تأیید شود.
 - **وضعیت PR:** #529 باز و Merge نشده است. Branch هنگام بررسی ۱۳ commit از main عقب بود و GitHub وضعیت mergeability را false گزارش می‌کرد؛ این موضوع جدا از اصلاح حاضر باید پیش از Merge بررسی و حل شود.
 
-
 ## 2026-11-04 — Issue #393: سازندهٔ امن Payload برای افزایش سقف شرکت
 - **محدوده:** نخستین برش Vendor-only از Add-on issuance؛ فقط ساخت candidate payload برای افزایش installation-scoped `maxCompanies` روی همان LicenseId/InstallationId.
 - **پیاده‌سازی:** `VendorLicenseAmendmentPayloadBuilder` وضعیت Active مشتری/نصب و Issued بودن لایسنس، تطابق شناسه‌ها و metadata با payload جاری، هم‌ترازی LastIssuedSequence، وجود سقف قبلی و افزایش strict را کنترل می‌کند. Sequence دقیقاً یک واحد افزایش می‌یابد و issuedAt عقب‌تر از revision فعلی پذیرفته نمی‌شود.
@@ -2415,9 +2229,7 @@
 - **اعتبارسنجی:** Build/Test محلی اجرا نشده؛ CI روی PR لازم است. هیچ Migration، Customer-side consumer، `Server/**`، کلید یا secret تغییر نکرد.
 - **باقی‌مانده:** purchase/order evidence، API درخواست Amendment، Maker-Checker، امضای fail-closed و export در گام‌های بعدی #393؛ Company-scoped add-ons تا وجود current v2 و CompanyReference قابل اعتماد.
 
-
 - **تکمیل اعتبار زمانی در همان PR #527:** builder اکنون term license را پیش از NotBefore یا پس از Expires رد می‌کند و هیچ grace ضمنی برای صدور add-on به کار نمی‌برد؛ support/update expiry به‌تنهایی perpetual entitlement را منقضی نمی‌کند. تست‌های منفی/مثبت این مرز اضافه شدند. این commit جدید نیازمند اجرای مجدد CI است.
-
 
 ## 2026-11-04 — Issue #393: جداسازی snapshot amendment از collectionهای mutable
 - **یافته بازبینی:** `IReadOnlyList` در قرارداد تضمین immutability نیست؛ caller می‌تواند `List<T>` یا آرایه mutable بدهد. نسخه قبلی builder همان referenceهای v1 subsystem و v2 company/module/feature را در amendment نگه می‌داشت؛ mutation بعدی caller می‌توانست payload آماده canonicalization/signing را عوض کند.
@@ -2448,7 +2260,6 @@
 - **محدوده:** بدون API، migration، persistence، cache یا call-site عملیاتی جدید.
 - **Blocker کشف‌شده:** Contract V2 از opaque `CompanyReference` استفاده می‌کند، اما provisioning schema v4 و `ProvisioningRequestClaim` نگاشت durable به Company.Id را ذخیره نمی‌کنند و `CompanySetupRecord` در کد وجود ندارد. این mapping باید در #384/#392 طراحی و پیاده‌سازی شود؛ استفاده از Company.Id یا CustomerBoundaryId به‌عنوان جایگزین ممنوع است.
 - **اعتبارسنجی:** اجرای محلی .NET انجام نشد؛ CI روی PR #539 مرجع است.
-
 
 ## 2026-11-04 — Issue #384: تصحیح وضعیت تحویل نصب/Import مشتری
 - **وضعیت واقعی:** PRهای #386، #387 و #388 همگی merged هستند و CI آن‌ها موفق بوده است؛ handoff قدیمی که #388 را open/pending معرفی می‌کرد اصلاح شد.
@@ -2511,7 +2322,6 @@
 - **Migration:** هیچ Schema Change جدیدی در فاز ۴ لازم نبود و Migration جدید ساخته نشد؛ فقط endpoint خواندنی + قاعده اعتبارسنجی نوشتن.
 - **PR:** #545 (`feat/hr-organizational-structure-workflows-main` → `main`)؛ merge نهایی منوط به اجازه مالک.
 
-
 ## 2026-11-05 — Issue #228: جلوگیری از ایجاد درخواست Provisioning غیرقابل‌امضا برای LicensePayload v2
 
 - **مبنای بازبینی:** main@5715df82bfe1a42859cbc2d5c85da67f2bb67563؛ آخرین main پس از ادغام PR #545. تمام PRهای باز در ابتدای اجرا بررسی شدند (صفر PR باز) و سه Workflow آخر main روی همین SHA موفق بودند.
@@ -2572,7 +2382,6 @@
 - **محدودهٔ تغییرنداده (نیازمند تصمیم مالک):** بازیابی رمز فراموش‌شده، یکسان‌سازی حداقل طول رمز (۸/۱۲)، فیلدهای ساعت محلی قدیمی (D-067 Proposed) و رویداد مجزای UserDeactivated.
 - **PR:** شاخه `fix/identity-username-charset`؛ Merge فقط با اجازهٔ مالک.
 
-
 ## 2026-11-05 — پیاده‌سازی چرخهٔ عمر نشست سروری طبق D-069 (ISSUE-504-session-lifecycle-implementation)
 - **مبنا:** `main@584f87da` + دستور صریح مالک در پرامپ Wave-1 («Implement the missing session lifecycle functionality according to D-069»)؛ ADR از `Proposed` به `Implemented` ارتقا یافت (الگوی D-072)؛ باز: retention (D-070) و ابطال نشست دیگران توسط مدیر نصب.
 - **تغییرات:** Entity `UserSession` + Migration افزودنی `20261105094700_AddUserSessions` (زنجیرهٔ ۱۶ تأیید شد)؛ نشست به ازای هر ورود موفق با Claim `SessionId` واقعی؛ اعتبارسنجی fail-closed (مفقود/ابطال‌شده/بیگانه/idle>30min) با آخرین‌مشاهدهٔ ۵ دقیقه‌ای؛ سه API self-service `/me/sessions*` با anti-forgery و rate limit؛ ابطال همهٔ نشست‌ها پس از تغییر رمز؛ ابطال نشست جاری در خروج API و Razor؛ رویدادهای `UserSessionRevoked`/`UserSessionsRevokedOthers` با برچسب فارسی.
@@ -2593,24 +2402,20 @@
 - `docs/INDEX.md` به سند ارجاع داد؛ هیچ کدی تغییر نکرد.
 - PR: شاخه `docs/api-user-access-contract`؛ Merge فقط با اجازهٔ مالک.
 
-
 ## 2026-11-05 — تحویل دست به دست Frontend (docs/handoffs/USER-ACCESS-FRONTEND-HANDOFF.md)
 - نقشهٔ مصرف UI نوشته شد: مدل احراز هویت/نشست، زمینهٔ شرکت، جدول نگاشت صفحه‌ها به endpointها با وضعیت واقعی، قرارداد خطاهای 401/403/404/409/429/413، فهرست قابلیت‌های عمداً ناموجود و وضعیت PRهای #549..#553.
 - `docs/INDEX.md` به سند ارجاع داد؛ فقط مستندات.
-
 
 ## 2026-11-06 — هم‌ترازی قرارداد API مدیریت دسترسی با DTOهای واقعی (PR #553)
 - بازبینی محتوایی سند docs/api/USER_ACCESS_MANAGEMENT_API.md در برابر پیاده‌سازی main انجام شد؛ چهار مغایرت اصلاح شد: پارامترهای فیلتر/مرتب‌سازی فهرست مدیر نصب، DTO و خروجی دفترچه کاربران شرکت، بدنه و خروجی ایجاد نقش و اعضای نقش، و حذف فیلد پشتیبانی‌نشدهٔ reason از درخواست عضویت.
 - همچنین روشن شد فهرست نقش‌ها همهٔ نقش‌های شرکت را برمی‌گرداند (نه فقط فعال‌ها) و DTO واقعی آن شامل companyId، شمارنده‌ها و کدهای مجوز است؛ قرارداد اعضای نقش نیز با DTO واقعی هم‌تراز شد.
 - فقط مستندات تغییر کردند؛ هیچ کد Backend، API، Migration یا تست محصولی تغییر نکرد. بررسی نهایی و CI باید روی SHA جدید PR اجرا شود.
 
-
 ## 2026-11-06 — تکمیل UI امنیت و مدیریت دسترسی (شاخه feature/access-security-ui-completion)
 - Scope A: مجوزهای UI فقط از `/me/permissions` شرکت فعال می‌آید (`lib/permissions.ts`)؛ `session.isAdministrator` دیگر برای مجوز سطح شرکت استفاده نمی‌شود. تا پایان دریافت یا هنگام خطا هیچ دسترسی داده نمی‌شود (fail-closed)، با تغییر شرکت وضعیت پاک و دوباره دریافت می‌شود، پاسخ دیررس نادیده گرفته می‌شود و مجوز کهنه (>۶۰ ثانیه) هنگام بازگشت به تب بازخوانی می‌شود. مسیر و منو بین مدیر نصب، مدیر شرکت و عضو عادی تفکیک شد؛ پاسخ 403 سرور باعث بازخوانی مجوزها می‌شود.
 - Scope B: `RoleMemberAssign` (افزودن عضو فعال موجود به نقش با `POST .../roles/{roleId}/members/{userId}`)، حالت فقط‌خواندنی برای نقشی که مجوزهایش خارج از سقف مدیر شرکت است، دکمهٔ «دریافت آخرین اطلاعات» برای 409، متن سقف تفویض مطابق D-071.
 - Scope C: بخش «نشست‌های فعال» در تب امنیت حساب (`ActiveSessions`) با endpointهای D-069؛ شناسهٔ نشست نمایش داده یا ذخیره نمی‌شود؛ پایان‌دادن به نشست فعلی به صفحهٔ ورود می‌رود.
 - فقط ClientApp و مستندات تغییر کردند؛ Backend، Schema و Migration دست نخورد. تست‌های .NET و E2E در این محیط اجرا نشدند.
-
 
 ## 2026-11-06 — Issue #393: candidate افزایش entitlement شرکت موجود
 - **مبنای کار:** `main` @ `553405d4f773683b5a43eb08f12dfa4f3669697a`؛ شاخه مستقل `feat/393-company-entitlement-additions-20261106`.
@@ -2642,7 +2447,6 @@
 - `lib/permissions.ts`: سه hint `hr.units.view`/`hr.positions.view`/`hr.employees.view` برای کدهای verified‌شدهٔ `hr.organizational-units.list`، `hr.positions.list`، `hr.employees.list`؛ fail-closed در loading/error/شرکت نامطابق.
 - آزمون: `HrIntegration.test.tsx` (۲۲ تست) + تست‌های `permissions`؛ کل ClientApp ۷۵۵ تست موفق؛ build و check:offline موفق. Backend، Schema و `features/hr/**` تغییر نکرد؛ dotnet/E2E اجرا نشد.
 
-
 ## 2026-11-06 — ممیزی جامع تکمیل مدیریت کاربران، سازمان و دسترسی‌ها (Issue #444)
 - مبنا: آخرین `origin/main` @ `129b93b5`؛ وضعیت GitHub API (Issue #444، PRهای #559/#560/#561، صفر PR Open) و کد واقعی بررسی شد.
 - Build/تست واقعی روی main تمیز: SDK 10.0.403 نصب شد؛ `dotnet build` ۰ خطا؛ `dotnet test` ۱۰۳۸ موفق، ۲ ناموفق پیش‌موجود (`SafeExceptionRealApplicationTests` نیازمند SQL Server)، ۶۲ Skip gated — مطابق handoffهای قبلی.
@@ -2663,15 +2467,12 @@
 - تست مرزی جدید: رمز ۱۴ نویسه رد، رمز ۱۵ نویسه با فاصله پذیرفته؛ `PasswordPolicyTests` بازساختگان منطبق با حداقل ۱۵.
 - نتایج واقعی: dotnet کل ۱۰۴۰ موفق / ۲ پیش‌موجود (`SafeExceptionRealApplicationTests`) / ۶۲ Skip؛ vitest ۷۸۳/۷۸۳؛ typecheck و build سبز. `docs/USER_SELF_SERVICE.md` به‌روزرسانی شد؛ handoff: `ISSUE-444-password-policy-d073.md`. Merge فقط با اجازه مالک.
 
-
-
 ## 2026-11-07 — Issue #393: candidate تمدید مستقل دوره‌های پشتیبانی و به‌روزرسانی
 - **مبنا:** `main@7fd0f7ee23d168e2c48561fc3db8bd5a80a35db1`؛ شاخه مستقل `feat/393-support-update-period-amendments-20261107`.
 - **تغییر:** افزودن `TryBuildSupportAndUpdatePeriodExtension` برای ساخت candidate Payload v2؛ support و updates جداگانه و فقط از تاریخ قبلاً اعطاشده تمدید می‌شوند. تاریخ انقضای License و entitlementهای Company دست‌نخورده می‌مانند.
 - **Fail-closed:** v1، تاریخ null فعلی، no-op، کاهش/تکرار، تاریخ جدید غیرآینده، sequence/metadata stale، منبع غیرمجاز و term منقضی‌شده رد می‌شوند. perpetual با پایان support/update منقضی نمی‌شود.
 - **تست‌ها:** Regression برای تمدید مستقل Support/Updates، عدم تغییر expiry، عدم اعطای ضمنی از null، رد no-op/تاریخ نامعتبر/term منقضی و تمدید Support منقضی‌شده برای perpetual افزوده شد.
 - **محدوده:** فقط Vendor Host، تست و مستندات؛ بدون سفارش/پرداخت، persistence، approval، signer/export، Migration، `Server/**`، Customer DB یا secret. تست محلی اجرا نشده؛ نتیجه فقط پس از CI روی SHA نهایی قابل Verified است.
-
 
 ## 2026-11-07 — Issue #444 مرحله ۱: پوستهٔ حرفه‌ای فرانو، منوها و Workspace چندتب (۶ PR)
 - **مبنا:** `main@66b60cc4`؛ شاخه‌های `fix/hr-installation-admin-access`، `fix/user-detail-back-nav`، `feat/ui-app-shell`، `feat/ui-workspace-tabs`، `feat/ui-dirty-form-protection` و `fix/ui-final-polish` به‌صورت stacked از آخرین `origin/main`/شاخهٔ مادر.
@@ -2735,7 +2536,6 @@
 - **انحراف‌های ثبت‌شده:** تأیید و رها کردن Dirty هنگام تغییر زمینه (در برابر توقف)، نبود `Saving`/`Error` در `formGuard`، گروه‌بندی Sidebar ناهم‌تراز با UI-05/UI-08، نبود i18n متمرکز.
 - **آزمون:** کد و تست اجرا/تغییر نشد (فقط مستندات). Handoff: `docs/handoffs/UNNUMBERED-ui-workspace-context-contracts.md`. Merge فقط با اجازهٔ مالک.
 
-
 ## 2026-11-08 — Vendor/Licensing: تطبیق وضعیت با Mergeهای واقعی و CI پس از Merge
 - مبنای بازبینی: main@da8ed012074f8439cb836ea4ae190e3ad2fc542e. GitHub Compare تأیید کرد این main شامل merge commit PR #565 است (۵۵ commit جلوتر، صفر عقب‌تر از 66b60cc48f6454997e260cb1244374114e2bfbd4).
 - PRهای مرجع: #281 = ۱۲/۱۲، #282 = ۱۳/۱۳ و #284 = ۱۳/۱۳ Check Run موفق روی merge commitهای واقعی؛ ترتیب authorization در approval همچنان تأییدشده است.
@@ -2745,7 +2545,6 @@
 - Issue #228: PR #546 fail-closed را حفظ کرده است؛ provisioning برای LicensePayload v2 تا CompanyReference mapping معتبر در #392 عمداً unavailable است. #235 و هر تغییر Customer consumer/ACK جدا می‌مانند.
 - Actions خارج از Vendor: در ۱۰۰ اجرای اخیر ۸۶ success، ۴ in-progress، ۷ cancelled و ۳ failure دیده شد. سه failure از headهای قدیمی #584/#585/#586 (Workspace/HR) بودند؛ logها missing UI headings و SQL Server 18456/State 38 برای FaranouE2E را نشان دادند. این شاخه‌ها خارج از محدوده Vendor هستند و headهای جدیدشان در حال اجرای مجدد بودند؛ هیچ تغییری در آن‌ها انجام نشد.
 - تست محلی: در این اجرا Build/Test محلی اجرا نشد؛ تمام نتایج موفق فوق فقط به Check Runهای واقعی GitHub نسبت داده می‌شوند. هیچ Migration، تغییر Customer Server/** یا secret ایجاد نشد.
-
 
 ## 2026-11-08 — PR #584: حفظ Shell و تب‌ها هنگام بارگذاری مجدد زمینهٔ کاری
 - **علت شکست CI (job `client`، Head 253025e):** `reload()` در `App.tsx` همیشه state را به `loading` می‌برد و `AppShell` را Unmount می‌کرد؛ در نتیجه با «تغییر شرکت» و سپس «انصراف» تب داشبورد از بین می‌رفت. تست `App.test.tsx` («lets the user change company or period in the same sign-in, and cancel») این را در CI و محلی به‌صورت قطعی نشان می‌داد.
@@ -2832,7 +2631,6 @@
 - E2E واقعی پرونده کاربر (۳ سناریو روی سرور Publish + SQL Server): باز کردن پرونده/اتصال-قطع HR، درخواست‌های عضویت Pending→تأیید/رد با دلیل، ابطال نشست step-up D-073 با اثبات 401؛ axe WCAG 2.x A/AA صفر نقض (یک نقض definition-list واقعی پیدا و رفع شد)؛ اسکرین‌شات واقعی ۹ نما به artifacts/ui-preview/stage-3-profile (artifact CI).
 - اصلاحات اعتماد CI: ریس prefill کپی نقش، تشخیص خودشناس 429 در hr-structure (ریشه flakeهای متناوب)، مدیر نصب اختصاصی per test به‌جای اشتراک بودجهٔ نرخ. vitest 927/927؛ e2e نهایی 49/49. main پس از ادغام #600: b1348b3f.
 
-
 ## 2026-11-08 — Issue #444: تصمیم D-077 برای دسترسی مستقل سالانه و فراخوانی از سال دیگر
 - با تأیید مالک ثبت شد: User/پرونده پرسنلی برای هر سال تکرار نمی‌شوند؛ تخصیص CompanyRole در هر سال/دوره مستقل است؛ نقش متفاوت بین سال‌ها مجاز؛ نبود تخصیص مقصد به معنی عدم دسترسی و ارث‌بری خودکار ممنوع.
 - «فراخوانی دسترسی» به‌عنوان کپی همان کاربر از سال مبدأ به مقصد تعریف شد: همان شرکت، preview، امکان ویرایش، تأیید صریح، ذخیره اتمیک، بدون تغییر مبدأ، idempotency و Audit. اطلاعات هویتی، رمز، نشست و سوابق کپی نمی‌شوند.
@@ -2840,12 +2638,10 @@
 - D-077 Accepted است؛ پیاده‌سازی NotImplemented. طراحی فیزیکی/DDL تا تعیین معنای FiscalPeriod در D-066 / Issue #488 مسدود است. هیچ کد، API، UI یا Migration تغییر نکرد.
 - این PR مستنداتی است؛ تست build/runtime اجرا نشده و CI پس از PR باید بررسی شود.
 
-
 ## 2026-11-08 — مأموریت رابط مدیریت سیستم: PR1 سایدبار و ساختار منوها
 - سایدبار با قاب پیوسته و ظریف، کادرهای تمام‌عرض گروه‌ها، آیتم فعال با نوار طلایی و Logout انتهایی بازطراحی شد؛ دکمه و حالت «جمع‌کردن منو» حذف شد.
 - «ساختار سازمانی و کارکنان» به «ساختار سازمانی» (Network/Building2/BriefcaseBusiness) تغییر نام یافت و زیر «مدیریت سیستم» ماند؛ «کارکنان» زیر همین بخش حفظ شد.
 - فقط UI؛ بدون تغییر Backend/Migration. نتایج واقعی: `docs/handoffs/UNNUMBERED-ui-sidebar-system-menus.md`. Playwright/E2E و بررسی بصری ۷۶۸/۱۰۲۴/۱۴۴۰ اجرا نشد؛ ۶ شکست Vitest از قبل در main است.
-
 
 ## 2026-11-08 — مأموریت رابط مدیریت سیستم: PR2 پیشنهاد شماره پرسنلی بعدی (Backend)
 - `GET /companies/{companyId}/org/employees/next-number` اضافه شد (فقط‌خواندنی، غیررزروکننده؛ یکتایی با Unique Index و 409). بدون Migration. تغییر شماره پس از ایجاد NeedsApproval است.
@@ -2869,7 +2665,6 @@
 - **مرزبندی:** بدون تغییر `Server/**`، Customer consumer، `Licensing.Contracts`، schema یا Migration مشتری؛ هیچ private key، رمز، hash رمز مشتری، connection string یا secret اضافه نشد.
 - **وضعیت:** Implemented / Not Verified تا تکمیل تمام بررسی‌های الزامی PR #613.
 
-
 ## 2026-11-09 — تصمیم D-078: تأیید عضویت داخلی در برابر عضویت بین‌شرکتی
 - مدیر مجاز شرکت هنگام ایجاد کاربر برای همان Company، عضویت همان شرکت را خودکار Approved/Active می‌کند؛ تأیید دوباره لازم نیست.
 - عضویت در Company دیگر، از جمله درخواست هلدینگ برای شرکت زیرمجموعه، PendingApproval است و فقط مدیر مجاز مقصد تصمیم می‌گیرد؛ عضویت گروهی/مالکیت اختیار مقصد ایجاد نمی‌کند و self-approval بین‌شرکتی ممنوع می‌ماند.
@@ -2888,18 +2683,15 @@
 - تست‌های Sidebar برای ترتیب، وضعیت disabled و نبود لینک قابل کلیک به‌روزرسانی شدند.
 - اعتبارسنجی محلی در این محیط اجرا نشده؛ CI PR باید typecheck و Vitest را تأیید کند.
 
-
 ## 2026-11-09 — اصلاح تکمیلی منوی مدیریت سیستم: انتقال «مجوزهای دسترسی»
 - لینک «مجوزهای دسترسی» از بخش «دسترسی و مجوزها» خارج و بلافاصله پس از «مدیریت کاربران» به‌عنوان یک آیتم مستقل و فعال قرار گرفت؛ مسیر موجود `/admin/access` حفظ شد.
 - بخش «دسترسی و مجوزها» به آخرین جایگاه زیرمنوهای مدیریت سیستم منتقل و کاملاً disabled شد؛ زیرگزینه‌های «گروه‌های دسترسی» و «کاتالوگ و جزئیات مجوزها» در این وضعیت نمایش داده نمی‌شوند.
 - «کارکنان» همچنان disabled باقی ماند. هیچ Route، API، permission catalog، schema یا authorization سمت سرور تغییر نکرد.
 - تست‌های Sidebar برای ترتیب جدید، فعال بودن لینک مجوزهای دسترسی و غیرفعال بودن کامل بخش انتهایی اصلاح شدند؛ اجرای محلی انجام نشده و نتیجه CI باید بررسی شود.
 
-
 ## 2026-11-10 — مأموریت D-078 PR اول: مجوز شرکتی users.create
 - Migration فقط-داده idempotent `20261110120000_SeedUsersCreatePermission` کد `users.create` را با GUID پایدار و Ordering 21007 به کاتالوگ اضافه کرد؛ هیچ نقشی خودکار مجوز نمی‌گیرد (تست SQL-gated قفل می‌کند). کاتالوگ مستندات به ۷۴ کد رسید؛ کد فعلاً seeded-only است و enforcement در PR دوم سری D-078 می‌آید.
 - `generate_migrations.py` به‌روزرسانی شد (CURRENT/DELTA + HAND_WRITTEN_SQL)؛ هر دو گارد migration سبز. Build سبز؛ تست ۱۰۹۲ موفق/۶۷ Skip/۲ شکست محیطی قدیمی. تست‌های SQL Server محلی NotRun (Docker موجود نیست). جزئیات: `docs/handoffs/UNNUMBERED-d078-users-create-permission-seed.md`.
-
 
 ## 2026-11-10 — Issue #632: جلوگیری از ثبت credential آزمایشی در Vendor CI
 - در log واقعی Vendor CI run `42651850808` روی SHA `9fb6400569b282d18829073d76588b82f7c3c5d8`، password آزمایشی SQL Server در Docker create command و env stepها بدون masking دیده شد؛ مقدار credential در Work Log بازنشر نشده است.
@@ -2909,7 +2701,6 @@
 - هیچ secret قابل استفاده مجدد، private key، Customer hash، Customer DB، `Server/**` یا تغییر `.github/workflows/dotnet.yml` وارد این کار نشد.
 - **وضعیت:** Implemented / Not Verified؛ PR #633 باز است؛ SHA جاری از metadata PR خوانده می‌شود. Vendor CI و ممیزی log هنوز اجرا/تأیید نهایی نشده‌اند. اجرای محلی انجام نشده است.
 
-
 ## 2026-11-10 — Issue #632: حذف نمایش fragmentهای connection string از logهای Vendor CI
 - ممیزی Vendor CI run `42775690727`، job `129693604250`، نشان داد password در نسخه اول اصلاح mask شده بود، اما GitHub متن inline shell source را پیش از اجرای دستور mask در log ثبت می‌کند؛ در نتیجه بخش‌هایی از connection string در خط‌های assignment قابل مشاهده بود. معیار عدم نمایش connection string در log پاس نشده بود و PR عمداً ادغام نشد.
 - ساخت runtime مقادیر اتصال به `.github/scripts/run-vendor-ci-database-checks.sh` منتقل شد؛ workflow فقط helper و mode را فراخوانی می‌کند. helper مقدارها را از اجزای runtime می‌سازد، کل مقدار را با `add-mask` ثبت می‌کند و سپس export می‌کند؛ هیچ مقدار واقعی در Git قرار نگرفت.
@@ -2917,16 +2708,13 @@
 - فایل‌های handoff و INDEX به‌روزرسانی شدند. تست محلی اجرا نشده است؛ اجرای CI روی head جدید و ممیزی log نهایی هنوز pending است.
 - **وضعیت:** Implemented / Not Verified؛ PR #633 باز می‌ماند تا Vendor CI، .NET CI و ممیزی log واقعی روی SHA نهایی سبز/پاک شوند.
 
-
 ## 2026-11-10 — Issue #632 تکمیل hardening credentialهای تستی Vendor CI
 - در بازبینی workflow مشخص شد دو PIN ثابت SoftHSM (فقط برای token موقت CI) نیز در متن workflow وجود داشتند. برای رعایت قاعدهٔ عدم نگهداری password/PIN ثابت در Git، هر دو اکنون با `openssl rand` در همان run تولید و پیش از `softhsm2-util` mask می‌شوند؛ فقط user PIN موردنیاز تست از `GITHUB_ENV` منتقل می‌شود.
 - guard ایستا هر PIN عددی ثابت در فرمان `softhsm2-util` یا مقدار ثابت `FARANO_TEST_PKCS11_PIN` را رد می‌کند و ترتیب mask-before-use را کنترل می‌کند.
 - این تغییر فقط در Vendor CI است؛ کلید خصوصی واقعی، credential قابل استفاده مجدد، Customer hash، Customer DB و workflow عمومی مشتری وارد دامنه نشده‌اند.
 - **وضعیت:** Implemented / Not Verified؛ CI و ممیزی log باید روی head نهایی اجرا شوند؛ تست محلی اجرا نشده است.
 
-
 - بازبینی تکمیلی guard: کنترل ترتیب mask اکنون به‌طور مشخص اولین استفاده از متغیر SQL `$password` را با `docker run` مقایسه می‌کند (نه صرفاً هر add-mask قبلی)؛ اسکن fragmentهای اتصال در workflow نیز case-insensitive است.
-
 
 - اجرای Vendor CI روی SHA `9456df27ea69c05fd1df681e46a6a329ce84af3d` در guard ایستا متوقف شد؛ علت ریشه‌ای false-positive بود: الگوی case-insensitive واژهٔ `password=` را در انتساب متغیر محلی `password=` نیز connection string تلقی می‌کرد. لاگ job `129700425798` این موضوع را در خط workflow نشان داد؛ مقدار واقعی credential تولید یا چاپ نشد. الگو محدود شد به کلیدهای connection-string مانند `Server=`، `Data Source=` و `;Password=` تا متغیر shell را اشتباه تشخیص ندهد. CI باید روی head بعدی دوباره اجرا شود.
 
@@ -2991,7 +2779,6 @@
 - **S2-3 — بک‌اند طرف‌حساب Trade (2026-11-13):** فهرست/جزئیات/ایجاد/ویرایش در `/api/v1/trade/parties` و `GET /trade/reference/countries` (Implemented)؛ بدون حذف/غیرفعال‌سازی؛ ۱۴۵ تست Trade روی SQL Server واقعی ۳ بار موفق؛ ۴۱۳ بدنه روی Kestrel اجرا نشد؛ جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-trade-s2-3-party-backend.md`.
 - **S2-3 — فرانت‌اند طرف‌حساب Trade (2026-11-13):** `/trade/parties` (فهرست، `/new`، جزئیات، `/edit`) در `ClientApp/src/features/trade` همراه کامپوننت مشترک `SearchableCombobox` (D-082)، hintهای مجوز از `/trade/capabilities` (fail-closed)، آیتم منوی «طرف‌حساب‌ها» و ردیف‌های `MENU_FORM_CATALOG` (Implemented؛ typecheck/تست‌ها/build/check:offline اجرا شد؛ مرورگر واقعی و SQL Server اجرا نشد؛ ۳ شکست قدیمی SecurityAudit باقی است)؛ جزئیات: `docs/handoffs/ISSUE-UNNUMBERED-trade-s2-3-party-frontend.md`.
 
-
 ## 2026-11-13 — بازبینی Vendor روی main جدید و ثبت موانع اجرایی
 
 - مبنای بازبینی: `main@1825107437894e941ef51f60802117ba8e057ca4`؛ SHA از GitHub خوانده شد و با merge commit PR #637 یکسان است.
@@ -3005,7 +2792,6 @@
 - وضعیت شکاف‌ها بازتأیید شد: #228 به CompanyReference/versioned contract و تأیید Customer schema در #392 وابسته است؛ #393 به تصویب Payment Evidence و نقش تأییدکننده؛ #236 به KMS/HSM واقعی و credential معتبر؛ #107 به Production sink/identity مستقل. #214 در سمت Vendor تکمیل است؛ #235/#364 و آزمون عملیاتی Customer-side مستقل باقی می‌مانند.
 - **یافتهٔ خارج از محدوده:** لاگ `.github/workflows/dotnet.yml` در .NET CI فعلی، فرمان ساخت SQL Server تستی و آرگومان `sqlcmd -P` را بدون mask نشان می‌دهد. مقدار رمز در این گزارش درج نشده است. Vendor CI logs بررسی‌شده فاقد این markerها هستند. این workflow در این PR تغییر نکرده و نیازمند اصلاح مستقل CI است.
 - در این PR فقط `PROJECT_STATUS.md`، `WORK_LOG.md`، `INDEX.md` و handoff جدید به‌روزرسانی می‌شوند؛ هیچ Customer code، `Server/**`، Migration، Issue، Commit, Push یا Merge در main انجام نشده است. تست محلی اجرا نشده است؛ CI PR پس از push باید مبنای اعتبارسنجی مستندات باشد.
-
 
 ## 2026-11-13 — اصلاح snapshot پس از Merge PR #639
 
@@ -3031,7 +2817,6 @@
 
 - چک‌باکس‌های S2-1..S2-4 در `docs/ROADMAP.md` بر اساس PRهای ادغام‌شده #641، #640، #643 و #644 علامت خورد؛ Epic #397 باز می‌ماند (S3 به بعد و #401 باقی است). پیشنهاد مرحلهٔ بعد: تأیید مالک برای D-080 (بندهای باز) و D-085؛ سپس S3. شروع S3 مجوز جداگانه می‌خواهد.
 
-
 ## 2026-11-14 — تثبیت مستندات معماری S3 با D-086
 
 - **پایه:** main@b5a6caf6217a054643ba9aed04d7c1b7af831abe؛ شاخه docs/trade-s3-architecture-baseline.
@@ -3042,7 +2827,6 @@
 - **اعتبارسنجی:** anchorها و ارجاعات/شماره ADR در محتوای تولیدشده بررسی شدند؛ Build/Test اجرا نشد (تغییر مستنداتی است). PR برای بازبینی مالک باز می‌شود؛ Merge انجام نمی‌شود.
 - **گیت S3:** پس از Merge بسته مستنداتی، S3-0 بررسی read-only مدل واقعی و V3.2 را آغاز می‌کند؛ هیچ جدول یا Migration پیش از تطبیق مدل ساخته نمی‌شود.
 
-
 ## 2026-11-14 — Issue #236: ثبت انتخاب Hardware Assurance در Audit هنگام Startup
 
 - **مبنای کد:** `main@56d5ac736ad45d52cc7ec3e147e0486f08fccf8e`.
@@ -3052,7 +2836,6 @@
 - **فایل‌ها:** Startup service، تست‌های `Pkcs11SigningProviderTests`، handoff شماره #236 و همین Work Log.
 - **اعتبارسنجی:** تست محلی اجرا نشد؛ CI روی PR باید اجرا شود. هیچ نتیجه تست یا Merge پیشاپیش ادعا نمی‌شود.
 - **محدوده:** Vendor-only؛ بدون Customer consumer، `Server/**`، Migration مشتری، کلید خصوصی یا credential.
-
 
 ## 2026-11-14 — هم‌راستاسازی اسناد با D-087 و تثبیت گیت S3-0
 - **زمینه:** PR #648 / D-087 ادغام شد (merge commit `f3bd810aa247b3f11ff337cb84db8af26df27013`). بررسی کد `main@017f18eca481b06ff4fc69157ead30fc53121edc` نشان داد چند سند اجرایی هنوز Company=Tenant و ممنوعیت ساخت Tenant را الزام می‌کنند.
@@ -3075,7 +2858,6 @@
 - **خروجی:** handoff docs/handoffs/ISSUE-397-s3-0-tenant-company-audit.md؛ اسکریپت فقط‌خواندنی scripts/audits/s3-0c-sqlserver-readonly-audit.sql. اجرای اسکریپت و تعیین منبع معتبر Company→Tenant همچنان باز است.
 - **محدوده:** فقط مستندات و یک اسکریپت SELECT-only؛ هیچ Entity، API، Migration، Schema، داده یا runtime تغییر نکرد.
 
-
 ## 2026-11-14 — تکمیل ممیزی زنده SQL Server در S3-0c-b (Farano-Local)
 
 - خروجی اسکریپت SELECT-only از اپراتور دریافت و بررسی شد؛ DB: `Farano-Local`، SQL Server `16.0.1000.6`، Developer Edition.
@@ -3087,7 +2869,6 @@
 - timestamp اعلام‌شده در خروجی `2026-11-18` است و نسبت به تاریخ ثبت یادداشت جلوتر است؛ باید ساعت محیط تأیید شود.
 - هیچ SQL تغییردهنده، Migration، DDL/DML، Build یا Test اجرا نشد. جزئیات در handoff S3-0 ثبت شد؛ S3-0d-b/e/f/g باز می‌مانند.
 
-
 ## 2026-11-14 — S3-0d-b: ثبت دور اول inventory مسیرهای داده
 - **مبنا:** `main` پس از Merge PR #652؛ D-087 Accepted؛ Issue #397.
 - **بررسی Source:** CompanyAccessService، WorkContextService، TradeAuthorizationAdapter، PartyStore، ProductStore، Company/FiscalPeriod/Role/Membership/HR/Audit/Session/Provisioning entities و configurations، membership/provisioning/HR photo/audit endpoints و CorporateGroupService.
@@ -3096,12 +2877,10 @@
 - **محدودیت:** inventory همهٔ export/report/raw SQL و تست‌های isolation تکمیل نشده؛ S3-0d-b باز است. Build/Test اجرا نشد؛ فقط مستندات تغییر کرد.
 - **محدوده:** بدون تغییر runtime، API، Entity، Migration، Schema یا داده.
 
-
 ### تکمیل جست‌وجوی SQL خام و تست‌های isolation در S3-0d-b
 - FromSqlRaw فقط در TpmAnchoredOfflineRevocationStateStore؛ ExecuteSqlRawAsync فقط برای sp_getapplock در provisioning، license import و enrollment؛ ExecuteUpdateAsync فقط در UserSessionService/SessionValidator/UserPasswordService (لغو نشست پس از تغییر گذرواژه) برای نشست‌های کاربر.
 - تست‌های موجود: CompanyAccessTests، TradeAuthorizationAdapterTests، TradeEndpointGateTests و DatabaseModelTests. این تست‌ها وضعیت legacy را بررسی می‌کنند و جای تست Tenant isolation هدف را نمی‌گیرند.
 - گزارش در handoff بخش 13.5 اضافه شد؛ inventory گزارش‌ها/Exportها و تست‌های cross-tenant SQL Server هنوز باز است.
-
 
 ## 2026-11-14 — ریشه‌یابی و اصلاح شکست متناوب E2E با 429 در سیاست api-sensitive
 
@@ -3113,7 +2892,6 @@
 - **آزمون واقعی:** `dotnet build Template.sln -c Release` موفق؛ `SensitiveReadRateLimitBehaviorTests` 2/2، `ApiSensitiveReadRateLimitTests` 1/1، `HttpSecurityTests` 30/30؛ مجموعه کامل `Template.Tests`: 1141 پاس، 99 Skip (SqlServer) و ۲ شکست محیطی `SafeExceptionRealApplicationTests` (میزبان Real Application به SQL Server رابطه‌ای نیاز دارد؛ پیش‌زمینه‌ای و بی‌ربط به این تغییر — در CI همان commit موفق است). `Vendor.Host.Tests` محلی اجرا نشد (VSTest-runner؛ پوشش با `vendor-ci.yml`). `node --check` روی فایل‌های تغییریافته موفق. Docker/SQL Server در sandbox نبود؛ اثبات نهایی E2E با job `e2e` روی PR #654 داده شد: اجرای 43591355980 با **49 passed / 0 failed** شامل همان تست شکست‌خورده (`hr-structure.spec.mjs:57`) و آزمون flood تغییر یافته (`membership-workflow.spec.mjs:502`).
 - **محدوده:** فقط `tests/e2e/*` و مستندات؛ هیچ تغییر در Server/Domain/Infrastructure/Migration/appsettings. PR #653 (docs S3-0d) دست‌نخورده ماند و اصلاح در شاخه و PR مستقل ثبت شد.
 - **Handoff:** `docs/handoffs/ISSUE-UNNUMBERED-e2e-api-sensitive-429.md`.
-
 
 ## 2026-11-14 — PR-0: ثبت handoffهای S3-0e تا S3-0h و هم‌راستاسازی اسناد
 - **مبنا:** `origin/main@96b8fd15a995f6d54b7aab85a23db3408fd88e78` (شامل PR #653 و #654)؛ Issue #397؛ D-087 Accepted و بدون تغییر.
@@ -3186,7 +2964,6 @@
 - **تست:** مجموعهٔ کامل روی SQL Server: ۱۳۱۱ اجرا، ۱۳۰۱ موفق، ۰ شکست، ۱۰ Skip. ۲ آزمون ممیزی موجود به‌دلیل ثبت خودِ مشاهده تطبیق یافتند.
 - **Handoff:** `docs/handoffs/ISSUE-UNNUMBERED-d088-installation-admin-audit.md`.
 
-
 ## 2026-11-15 — هم‌ترازی Roadmap/Project Status/Database/Trade با S3-0 (PR-C)
 - **مبنا:** `origin/main@9eb281b`؛ SHAها و زمان ادغام از GitHub: #665 `1c0eec0` (2026-11-14T19:13:07Z)، #666 `6426af1`، #668 `b6ea191`، #669 `9eb281b` (2026-11-15T06:25:21Z).
 - **انجام‌شده:** رفع تناقض Migration Host در `PROJECT_STATUS.md`/`ROADMAP.md` (رفتار واقعی #665)؛ تفکیک S3-0f به «Host پیاده‌شده» و «سیاست و استقرار باقی‌مانده»؛ ثبت وضعیت D-088 (`Partial`) و D-089 (`NotImplemented`)؛ ارجاع S3-0d-b به PR #670 (Done نشده) و OD-11/12/13/14/17 به PR #671 (`Proposed`)؛ یادداشت‌های `DATABASE.md` و `TRADE_MODULE.md`.
@@ -3220,7 +2997,6 @@
 - **باقی‌مانده:** #392 (CompanyReference mapping/schema review)، #393 (Payment Evidence/approver/state decisions)، #236 (KMS/HSM واقعی و Key Ceremony)، #107 (Production sink مستقل) و #235 (trust distribution و آزمون عملیاتی دو میزبان). تا رفع آن‌ها fail-closed باقی می‌ماند.
 - **PR:** [#677](https://github.com/hamidreza1394/Accounting/pull/677)؛ باز و merge نشده؛ CI باید روی head نهایی تکمیل شود.
 - **Handoff:** `docs/handoffs/ISSUE-UNNUMBERED-vendor-reconcile-2026-11-15.md`.
-
 
 ## 2026-11-15 — تصحیح شواهد پس از Merge و وضعیت جاری Vendor
 
@@ -3271,7 +3047,6 @@
 - **بازبینی:** `code-reviewer` و `security-reviewer` مستقل؛ بدون Critical/High/Medium؛ Lowها در handoff.
 - **Handoff:** `docs/handoffs/ISSUE-392-vendor-provisioning-v5-prepare.md`.
 
-
 ## 2026-11-16 — بازبینی و همگام‌سازی وضعیت Vendor پس از PR #683
 
 - **مبنا:** `main@b05c1c58c5ff9830b10fb0034354ab8309da9b0d`؛ PR #683 در `2026-11-15T17:21:09Z` ادغام شده است.
@@ -3283,4 +3058,13 @@
 - **اصلاح مستندات:** Project Status، Licensing، Licensing Workflows، Threat Model، Roadmap و Security با وضعیت واقعی هم‌راستا شدند؛ handoff جدید برای #228 ثبت شد. وضعیت قدیمی #677 به‌عنوان مانع باز دیگر گزارش نمی‌شود.
 - **محدوده:** فقط مستندات Vendor/License؛ بدون کد اجرایی، Customer `Server/**`، Customer schema/Migration، secret یا تغییر تصمیم معماری. تست محلی/Build محلی اجرا نشد؛ شواهد CI فقط Runهای لینک‌شدهٔ GitHub هستند.
 - **گام بعدی:** mapping و Customer consumer برای #228/#392/#235 فقط در PRهای مستقل با schema review؛ تکمیل خرید افزونه #393 پس از تصمیم Payment Evidence/approver/state؛ Production signer #236 و sink مستقل #107 پس از انتخاب و provision مقصد/هویت/credential.
+
+## 2026-11-16 — #392 بازسازی: Schema مشتری و مصرف‌کنندهٔ v5 (طبق طرح مصوب مالک)
+- **انجام‌شده (PR-1 Schema):** `Domain/CompanySetupRecord` + Configuration + Migration افزایشی `20261116070805_AddCompanySetupRecords` با ایندکس یکتای `CompanyId` و پس‌پردهٔ `Latin1_General_BIN2` روی `CompanyReference` پیش از ساخت ایندکس یکتای مرجع (پاسخ به L-2 Vendor)؛ به‌روزرسانی گاردها (`CURRENT_MIGRATION_*` + `HAND_WRITTEN_SQL`) و `DatabaseModelTests`؛ تست SQL Server-بستهٔ schema.
+- **انجام‌شده (PR مصرف‌کننده):** Verifier با `allowCompanyReference: true`؛ در `ApplyAsync` بستهٔ شرکت‌محور با ترتیب ثابت Entitlement→Duplicate→Capacity داخل تراکنش `Serializable`+`sp_getapplock`؛ درج اتمیک Company + Record در یک `SaveChanges`؛ کدهای رد `provisioning_license_not_installed`، `provisioning_not_entitled_for_company`، `provisioning_company_reference_conflict`، `provisioning_company_capacity_exceeded` با ACK امضاشده و Replay قطعی؛ Entitlement از لایسنس `Current` همان `LicenseId` (تغییرناپذیری مرجع‌ها در amendment)؛ `maxCompanies` شمارش کل شرکت‌های نصب با سیاست block-new (D-059 §2/§6)؛ Bootstrap مدیر از مسیر موجود v1–v4. تست‌های SQL Server-بستهٔ رفتاری (خوش‌مسیر/Replay، عدم-مجوز، تکرار، ظرفیت شامل Legacy، Rollback اتمیک، Race).
+- **انجام‌شده (PR Entitlement):** استخراج `CustomerCompanyEntitlementResolver` (هم‌الگوی `CustomerProvisioningParentClaimResolver`) با سه تابع Resolve/IsReferenceEntitled/GetMaxCompanies؛ تست‌های لبهٔ نبود سقف عددی (مهار با فهرست امضاشده) و عدم اعتماد به نسخهٔ Superseded؛ به‌روزرسانی `docs/TESTING.md`.
+- **انجام‌شده (PR Runbook/مستندات):** `docs/handoffs/ISSUE-392-customer-implementation-runbook.md` (جریان اپراتوری، Migration، ماتریس خطا با Replay، معنای مصوب `maxCompanies` و راهنمای صدور، تکرار/Restore/Clone، چک‌لیست فعال‌سازی دوکلیدی Gate، خلاصهٔ شواهد آزمون)؛ بخش جدول `CompanySetupRecords` در `docs/DATABASE.md`.
+- **محدوده:** بدون تغییر `Licensing.Contracts` و Vendor (Gate و `CustomerConsumerReady=false` دست‌نخورده)؛ بدون اجرای Migration روی دیتابیس مشتری؛ v1–v4 بدون تغییر رفتاری.
+- **باقی‌مانده (نیازمند مالک):** گسترش allow-list ACK در Vendor، فعال‌سازی دوکلیدی Gate، سیاست Restore/Clone.
+- **ادغام (2026-11-16):** با مجوز صریح مالک، #684 مرج شد (`5f4baf82`) و PR #686 پس از سبز شدن CI ادغام می‌شود؛ Migration فقط به Repository اضافه شده و روی دیتابیس مشتری اجرا نشده است؛ Gate صدور v5 (`CustomerConsumerReady=false` و `Provisioning:CompanyReferenceIssuance:Enabled=false`) خاموش مانده است.
 
