@@ -87,12 +87,14 @@ public sealed class CustomerCompanyBoundProvisioningSqlServerTests
                 NullLogger<CustomerProvisioningApplyService>.Instance);
 
         /// <summary>
-        /// Seeds the current accepted license envelope for the installation. The reference set is
-        /// what the entitlement check trusts; MaxCompanies carries the numeric installation cap.
+        /// Seeds an accepted license envelope for the installation. The reference set is what the
+        /// entitlement check trusts; MaxCompanies carries the numeric installation cap.
         /// </summary>
         public async Task SeedLicenseAsync(
             Data.DatabaseContext database,
             int? maxCompanies,
+            string state = InstalledLicense.StateCurrent,
+            int sequence = 1,
             params string[] entitledReferences)
         {
             var identity = new InstallationIdentity
@@ -130,7 +132,7 @@ public sealed class CustomerCompanyBoundProvisioningSqlServerTests
                 InstallationIdentityId = identity.Id,
                 InstallationId = Settings.InstallationId,
                 LicenseId = LicenseId,
-                Sequence = 1,
+                Sequence = sequence,
                 FormatVersion = LicensePayload.CurrentFormatVersion,
                 Kid = "license-key-1",
                 Algorithm = LicenseAlgorithms.EcdsaP256Sha256,
@@ -139,7 +141,7 @@ public sealed class CustomerCompanyBoundProvisioningSqlServerTests
                 EnvelopeJson = "{}",
                 PayloadDigest = new string('c', 64),
                 ImportedAtUtc = DateTime.UtcNow,
-                State = InstalledLicense.StateCurrent
+                State = state
             });
             await database.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
@@ -263,7 +265,7 @@ public sealed class CustomerCompanyBoundProvisioningSqlServerTests
         await WithHarnessAsync(async harness =>
         {
             await using (var setup = harness.CreateContext())
-                await harness.SeedLicenseAsync(setup, maxCompanies: 3, "company-ref-0001");
+                await harness.SeedLicenseAsync(setup, maxCompanies: 3, entitledReferences: "company-ref-0001");
 
             var package = harness.NewPackage("mapped-admin", "company-ref-0001");
             await using (var serviceContext = harness.CreateContext())
@@ -308,7 +310,7 @@ public sealed class CustomerCompanyBoundProvisioningSqlServerTests
         await WithHarnessAsync(async harness =>
         {
             await using (var setup = harness.CreateContext())
-                await harness.SeedLicenseAsync(setup, maxCompanies: 3, "company-ref-0001");
+                await harness.SeedLicenseAsync(setup, maxCompanies: 3, entitledReferences: "company-ref-0001");
 
             var package = harness.NewPackage("unentitled-admin", "company-ref-0002");
             string rejectionAcknowledgementJson;
@@ -350,7 +352,7 @@ public sealed class CustomerCompanyBoundProvisioningSqlServerTests
         await WithHarnessAsync(async harness =>
         {
             await using (var setup = harness.CreateContext())
-                await harness.SeedLicenseAsync(setup, maxCompanies: 2, "company-ref-0001");
+                await harness.SeedLicenseAsync(setup, maxCompanies: 2, entitledReferences: "company-ref-0001");
 
             var first = harness.NewPackage("first-admin", "company-ref-0001");
             await using (var serviceContext = harness.CreateContext())
@@ -383,7 +385,7 @@ public sealed class CustomerCompanyBoundProvisioningSqlServerTests
                 // A legacy company that never went through provisioning still occupies capacity.
                 setup.Companies.Add(new Company { Name = "شرکت Legacy", IsActive = true });
                 await setup.SaveChangesAsync(TestContext.Current.CancellationToken);
-                await harness.SeedLicenseAsync(setup, maxCompanies: 1, "company-ref-0001");
+                await harness.SeedLicenseAsync(setup, maxCompanies: 1, entitledReferences: "company-ref-0001");
             }
 
             var package = harness.NewPackage("capped-admin", "company-ref-0001");
@@ -407,7 +409,7 @@ public sealed class CustomerCompanyBoundProvisioningSqlServerTests
                 var license = await setup.InstalledLicenses.SingleAsync(TestContext.Current.CancellationToken);
                 setup.InstalledLicenses.Remove(license);
                 await setup.SaveChangesAsync(TestContext.Current.CancellationToken);
-                await harness.SeedLicenseAsync(setup, maxCompanies: 2, "company-ref-0001");
+                await harness.SeedLicenseAsync(setup, maxCompanies: 2, entitledReferences: "company-ref-0001");
             }
 
             await using (var retryContext = harness.CreateContext())
@@ -431,7 +433,7 @@ public sealed class CustomerCompanyBoundProvisioningSqlServerTests
         await WithHarnessAsync(async harness =>
         {
             await using (var setup = harness.CreateContext())
-                await harness.SeedLicenseAsync(setup, maxCompanies: 3, "company-ref-0001");
+                await harness.SeedLicenseAsync(setup, maxCompanies: 3, entitledReferences: "company-ref-0001");
 
             var package = harness.NewPackage("rollback-admin", "company-ref-0001");
             var interceptor = new FailingSaveInterceptor(() => new InvalidOperationException("forced failure"));
@@ -469,7 +471,7 @@ public sealed class CustomerCompanyBoundProvisioningSqlServerTests
         await WithHarnessAsync(async harness =>
         {
             await using (var setup = harness.CreateContext())
-                await harness.SeedLicenseAsync(setup, maxCompanies: 3, "company-ref-0001");
+                await harness.SeedLicenseAsync(setup, maxCompanies: 3, entitledReferences: "company-ref-0001");
 
             var packages = Enumerable.Range(0, 6)
                 .Select(index => harness.NewPackage($"race-admin-{index}", "company-ref-0001"))
@@ -487,6 +489,67 @@ public sealed class CustomerCompanyBoundProvisioningSqlServerTests
                 Assert.All(outcomes, outcome => Assert.True(outcome.Success || outcome.ErrorCode is
                     "provisioning_company_reference_conflict" or "provisioning_apply_conflict",
                     outcome.ErrorCode));
+            }
+        });
+    }
+
+    [Fact]
+    public async Task AbsentMaxCompanies_IsBoundedByTheSignedEntitlementList_Alone()
+    {
+        Assert.SkipUnless(SqlServerAvailable(), "SQL Server is not configured (FARANOU_TEST_SQLSERVER).");
+
+        await WithHarnessAsync(async harness =>
+        {
+            await using (var setup = harness.CreateContext())
+            {
+                // A licensed install far above any legacy size still provisions when the vendor
+                // signed no numeric cap: the entitlement list is the binding boundary (D-059 §14).
+                for (var index = 0; index < 5; index++)
+                    setup.Companies.Add(new Company { Name = "شرکت Legacy " + index, IsActive = true });
+                await setup.SaveChangesAsync(TestContext.Current.CancellationToken);
+                await harness.SeedLicenseAsync(setup, maxCompanies: null, entitledReferences: "company-ref-0001");
+            }
+
+            var package = harness.NewPackage("uncapped-admin", "company-ref-0001");
+            await using (var serviceContext = harness.CreateContext())
+            {
+                var service = harness.CreateService(serviceContext);
+                var result = await service.ApplyAsync(package, TestContext.Current.CancellationToken);
+
+                Assert.True(result.Success, result.ErrorCode);
+                Assert.Equal(6, await serviceContext.Companies.CountAsync(TestContext.Current.CancellationToken));
+                Assert.Equal(1, await serviceContext.CompanySetupRecords.CountAsync(TestContext.Current.CancellationToken));
+            }
+        });
+    }
+
+    [Fact]
+    public async Task SupersededRevision_IsNotTrustedForEntitlements()
+    {
+        Assert.SkipUnless(SqlServerAvailable(), "SQL Server is not configured (FARANOU_TEST_SQLSERVER).");
+
+        await WithHarnessAsync(async harness =>
+        {
+            await using (var setup = harness.CreateContext())
+            {
+                // The superseded revision entitles the reference; the current one does not.
+                // Amendments never change company references, but a re-import with an empty
+                // entitlement list is a legitimately narrower current revision.
+                await harness.SeedLicenseAsync(setup, maxCompanies: 5,
+                    state: InstalledLicense.StateSuperseded, sequence: 1, entitledReferences: "company-ref-0001");
+                await harness.SeedLicenseAsync(setup, maxCompanies: 5,
+                    state: InstalledLicense.StateCurrent, sequence: 2);
+            }
+
+            var package = harness.NewPackage("superseded-admin", "company-ref-0001");
+            await using (var serviceContext = harness.CreateContext())
+            {
+                var service = harness.CreateService(serviceContext);
+                var result = await service.ApplyAsync(package, TestContext.Current.CancellationToken);
+
+                Assert.False(result.Success);
+                Assert.Equal("provisioning_not_entitled_for_company", result.ErrorCode);
+                Assert.Equal(0, await serviceContext.CompanySetupRecords.CountAsync(TestContext.Current.CancellationToken));
             }
         });
     }

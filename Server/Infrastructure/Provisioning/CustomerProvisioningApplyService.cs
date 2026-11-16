@@ -215,15 +215,13 @@ public sealed class CustomerProvisioningApplyService
         Domain.CompanySetupRecord? companySetupRecord = null;
         if (payload.CompanyReference is not null)
         {
-            var license = await TryResolveCurrentLicensePayloadAsync(payload.LicenseId!, cancellationToken);
+            var license = await CustomerCompanyEntitlementResolver.ResolveCurrentLicensePayloadAsync(
+                _database, _settings.InstallationId, payload.LicenseId!, cancellationToken);
             if (license is null)
                 return await StoreRejectedAcknowledgementAsync(
                     payload, payloadHash, LicenseNotInstalled, now, transaction, cancellationToken);
 
-            var isEntitled = license.CompanyEntitlements?.Any(entitlement =>
-                entitlement?.CompanyReference is not null &&
-                string.Equals(entitlement.CompanyReference, payload.CompanyReference, StringComparison.Ordinal)) == true;
-            if (!isEntitled)
+            if (!CustomerCompanyEntitlementResolver.IsReferenceEntitled(license, payload.CompanyReference))
                 return await StoreRejectedAcknowledgementAsync(
                     payload, payloadHash, NotEntitledForCompany, now, transaction, cancellationToken);
 
@@ -232,7 +230,7 @@ public sealed class CustomerProvisioningApplyService
                 return await StoreRejectedAcknowledgementAsync(
                     payload, payloadHash, CompanyReferenceConflict, now, transaction, cancellationToken);
 
-            if (license.Limits?.MaxCompanies is { } maxCompanies &&
+            if (CustomerCompanyEntitlementResolver.GetMaxCompanies(license) is { } maxCompanies &&
                 await _database.Companies.AsNoTracking().CountAsync(cancellationToken) >= maxCompanies)
             {
                 _logger.LogInformation(
@@ -496,33 +494,6 @@ public sealed class CustomerProvisioningApplyService
         await _database.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return new CustomerProvisioningEnrollmentResult(true, null);
-    }
-
-    /// <summary>
-    /// Resolves the current accepted license envelope payload for the license identifier a v5
-    /// package is bound to. The import pipeline verified the envelope and its signature before
-    /// storing it; company entitlements are immutable across amendments, so the current revision
-    /// is authoritative for the entitled reference set. Any resolution failure is fail-closed.
-    /// </summary>
-    private async Task<LicensePayload?> TryResolveCurrentLicensePayloadAsync(
-        string licenseId, CancellationToken cancellationToken)
-    {
-        var installed = await _database.InstalledLicenses.AsNoTracking()
-            .Where(item => item.LicenseId == licenseId &&
-                item.State == Domain.InstalledLicense.StateCurrent &&
-                item.InstallationId == _settings.InstallationId)
-            .OrderByDescending(item => item.Sequence)
-            .FirstOrDefaultAsync(cancellationToken);
-        if (installed is null)
-            return null;
-
-        if (!CanonicalJson.TryParsePayload(installed.PayloadJson, out var payload, out _) || payload is null)
-            return null;
-
-        return string.Equals(payload.InstallationId, _settings.InstallationId, StringComparison.Ordinal) &&
-            string.Equals(payload.LicenseId, licenseId, StringComparison.Ordinal)
-            ? payload
-            : null;
     }
 
     private async Task<CustomerProvisioningApplyResult> StoreRejectedAcknowledgementAsync(
