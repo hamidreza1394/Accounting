@@ -265,7 +265,7 @@ jobs:
     env:
       # Same repository secret as build-and-test; the runner masks the value in all logs.
       MSSQL_SA_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
-      FARANOU_E2E_SQL: Server=localhost,1433;Database=FaranouE2E;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
+      FARANOU_E2E_SQL: Server=localhost,1433;Database=FaranouE2E;User Id=sa;Password=${{ secrets.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
     services:
       mssql:
         image: mcr.microsoft.com/mssql/server:2022-latest
