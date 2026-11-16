@@ -215,7 +215,7 @@
 | #391 (موتور سیاست Entitlement) | بسته (موتور خالص PR #534)؛ اتصال runtime انجام نشده | فعال‌سازی Production | **خیر** |
 | #401 (اتصال entitlement واقعی Trade) | **باز**، آخرین به‌روزرسانی 2026-11-04 | فعال‌سازی Production | **خیر** برای توسعه |
 | #384 (فعال‌سازی و لایسنس مشتری: startup/runtime/Cloud) | **باز**، آخرین به‌روزرسانی 2026-10-31 | فعال‌سازی Production | **خیر** |
-| #392 (ساخت شرکت مجاز و نگاشت `CompanyReference`) | **باز**؛ Vendor PR-2 در #683 ادغام و Verified شده؛ Customer mapping/Apply باقی است | فعال‌سازی Production (نگاشت مورداعتماد شرکت) | **خیر** |
+| #392 (ساخت شرکت مجاز و نگاشت `CompanyReference`) | **باز**؛ Vendor PR-2 در #683 ادغام و Verified شده؛ PR #684 برای Customer schema باز اما ادغام‌نشده و نیازمند approval صریح است؛ mapping/Apply باقی است | فعال‌سازی Production (نگاشت مورداعتماد شرکت) | **خیر** |
 | #228 (Provisioning؛ Vendor v5 آماده اما Gate خاموش) | **باز**؛ Customer verifier/mapping هنوز v5 را نمی‌پذیرد | فعال‌سازی Production و onboarding end-to-end | **خیر** |
 
 **جمع‌بندی:** هیچ‌یک از Issueهای باز بالا توسعه و تست S2/S3 را مسدود نمی‌کند. `DenyAllTradeModuleEntitlement` در `Program.cs` بدون شرط محیط ثبت شده است؛ بنابراین تست‌های Integration/API باید در میزبان تست، `ITradeModuleEntitlement` را با test double جایگزین کنند (الگوی `RecordingEntitlement` در `TradeAccessGateTests` و `WebApplicationFactory<Program>` موجود در تست‌ها). افزودن پرچم/تنظیم bypass در کد Production ممنوع است؛ هر مسیر اجرای دستی Development با entitlement موقت تصمیم جدا و ADR می‌خواهد. فعال‌سازی برای کاربر واقعی تا بسته‌شدن زنجیرهٔ #392/#228 → #384 → اتصال #391 → #401 ممکن نیست.
