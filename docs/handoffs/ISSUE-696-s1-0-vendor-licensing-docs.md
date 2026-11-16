@@ -71,4 +71,4 @@
 ## شناسه‌های Git
 - Branch: `agent/696-s1-0-vendor-licensing-docs` (از `main@947901bb`)
 - Commit: SHA نهایی از head همان PR خوانده می‌شود.
-- Pull Request: مستنداتی؛ merge نمی‌شود.
+- Pull Request: مستنداتی؛ وضعیت ادغام و SHA نهایی در PR #697 و تاریخچه Git ثبت می‌شود.
