@@ -3270,3 +3270,17 @@
 - **تست (واقعی، SQL Server موقت):** `Vendor.Host.Tests` ۳۵۰ (۳۴۸ موفق، ۰ ناموفق، ۲ Skip: SoftHSM و Dual-Host که جدا اجرا و موفق شد)؛ `Licensing.Contracts.Tests` ۱۶۷/۱۶۷؛ `Template.Tests` کلاس‌های `CustomerProvisioning*` ۶۵/۶۵؛ آزمون جهش دو قاعدهٔ حیاتی. اجرا نشد: `dotnet test Template.sln` کامل، Playwright، `verify_migration_model.py`.
 - **بازبینی:** `code-reviewer` و `security-reviewer` مستقل؛ بدون Critical/High/Medium؛ Lowها در handoff.
 - **Handoff:** `docs/handoffs/ISSUE-392-vendor-provisioning-v5-prepare.md`.
+
+
+## 2026-11-16 — بازبینی و همگام‌سازی وضعیت Vendor پس از PR #683
+
+- **مبنا:** `main@b05c1c58c5ff9830b10fb0034354ab8309da9b0d`؛ PR #683 در `2026-11-15T17:21:09Z` ادغام شده است.
+- **بررسی زنده GitHub:** در snapshot اولیه فهرست PRهای باز خالی بود؛ سپس PR #684 (Customer schema، Issue #392) و PR #685 (این همگام‌سازی مستندات) باز بودند. #684 ادغام نشده و نیازمند schema approval مستقل است. PRهای #281/#282/#284، #677 و زنجیرهٔ #679/#680/#682/#683 ادغام شده‌اند؛ Issue #681 با PR #682 بسته شده است.
+- **#281/#282/#284:** Runهای پس از Merge روی merge SHA واقعی دوباره خوانده شدند. #281 دارای .NET CI هفت Job، Semgrep و چهار تحلیل Push on main موفق است؛ #282 و #284 علاوه بر آن Vendor CI را نیز موفق گذرانده‌اند. کد #284 بررسی شد: resolve و authorization منبع هدف پیش از بررسی RowVersion/status/self-approval انجام می‌شود؛ تست HTTP/SQL Server برای Customer/Installation ناسازگار و RowVersion کهنه، 404 را assert می‌کند. #282 نیز پس از Merge، اعتبارسنجی کامل payload پیش از Signing را با CI موفق دارد.
+- **#677/#679/#680/#682/#683:** merge SHA و چهار Workflow پس از Merge برای هر PR بررسی شد. #677 فقط مستندات بود؛ برای چهار PR بعدی .NET CI، Vendor CI، Semgrep و Push on main موفق‌اند.
+- **main فعلی:** Vendor CI سه Job، .NET CI هفت Job، Semgrep یک Job و Push on main چهار تحلیل را با نتیجه موفق گذرانده‌اند؛ هیچ Job ناموفق یا در حال اجرا روی SHA فعلی مشاهده نشد.
+- **یافتهٔ پیاده‌سازی:** #682 صدور اولیهٔ LicensePayload v2 را در Vendor با GUID-D سمت سرور و یک ستون nullable در Vendor DB اضافه کرده است؛ #683 آماده‌سازی Provisioning v5 را با انتخاب CompanyReference فقط از payload v2 امضاشده و Gate دوکلیدی پیش‌فرض خاموش تکمیل کرده است. Customer verifier هنوز v5 را نمی‌پذیرد؛ هیچ بستهٔ v5 عملیاتی صادر نمی‌شود.
+- **اصلاح مستندات:** Project Status، Licensing، Licensing Workflows، Threat Model، Roadmap و Security با وضعیت واقعی هم‌راستا شدند؛ handoff جدید برای #228 ثبت شد. وضعیت قدیمی #677 به‌عنوان مانع باز دیگر گزارش نمی‌شود.
+- **محدوده:** فقط مستندات Vendor/License؛ بدون کد اجرایی، Customer `Server/**`، Customer schema/Migration، secret یا تغییر تصمیم معماری. تست محلی/Build محلی اجرا نشد؛ شواهد CI فقط Runهای لینک‌شدهٔ GitHub هستند.
+- **گام بعدی:** mapping و Customer consumer برای #228/#392/#235 فقط در PRهای مستقل با schema review؛ تکمیل خرید افزونه #393 پس از تصمیم Payment Evidence/approver/state؛ Production signer #236 و sink مستقل #107 پس از انتخاب و provision مقصد/هویت/credential.
+
