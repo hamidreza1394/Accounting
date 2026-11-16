@@ -77,8 +77,15 @@ describe('workspace tab state indicators (Issue #444 stage 1 completion)', () =>
     expect(buttons.length).toBeGreaterThanOrEqual(3);
     const activeTab = buttons.find((button) => button.getAttribute('aria-current') === 'page');
     const inactiveTab = buttons.find((button) => button.getAttribute('aria-current') !== 'page');
-    expect(activeTab).toHaveStyle({ backgroundColor: 'var(--color-navy)', color: 'var(--color-primary-foreground)' });
-    expect(inactiveTab).toHaveStyle({ backgroundColor: 'var(--color-period)', color: 'var(--color-sub)' });
+    // jsdom 31 replaced cssstyle with a spec-compliant CSS engine that does not
+    // substitute CSS custom properties, so getComputedStyle() reports initial
+    // values (transparent/black) for var() declarations instead of echoing them.
+    // The contract under test is the declared inline style (which design tokens
+    // the tab uses per state), so assert on element.style, not computed style.
+    expect(activeTab?.style.getPropertyValue('background-color')).toBe('var(--color-navy)');
+    expect(activeTab?.style.getPropertyValue('color')).toBe('var(--color-primary-foreground)');
+    expect(inactiveTab?.style.getPropertyValue('background-color')).toBe('var(--color-period)');
+    expect(inactiveTab?.style.getPropertyValue('color')).toBe('var(--color-sub)');
     // The icons are meaningful per route, not one icon for everything.
     const iconClasses = buttons.map((button) => button.querySelector('svg')?.classList.contains('faranou-tab-icon'));
     expect(iconClasses.every(Boolean)).toBe(true);
