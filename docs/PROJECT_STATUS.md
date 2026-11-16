@@ -1,3 +1,13 @@
+## وضعیت جاری Vendor/Licensing و مأموریت S1-0 — 2026-11-16
+
+**مبنای بررسی:** `main@947901bb586b6fccf2d14e432a666695ffad6e80` (ادغام PR #695). این بخش، snapshot قبلی «وضعیت جاری ماژول Vendor — 2026-11-16» (مبنا `b05c1c58`) را فقط در وضعیت PRهای #684/#686/#687 و PRهای وابستگی supersede می‌کند؛ بقیهٔ بخش‌های تاریخی سند حفظ شده‌اند.
+
+- **PRهای زنجیرهٔ شرکت‌محور، همگی merge شده‌اند:** #679 (`47e53225`)، #680 (`e2297b41`)، #682 (`ce209432`)، #683 (`b05c1c58`)، #684 (`5f4baf82` — schema `CompanySetupRecords` و Migration `20261116070805_AddCompanySetupRecords` فقط در مخزن)، #686 (`b0eefa37` — مصرف‌کنندهٔ v5 با پذیرش، mapping، apply اتمیک و `maxCompanies` block-new)، #687 (`f8a98713` — استخراج `CustomerCompanyEntitlementResolver`). PRهای وابستگی #692 (jsdom 31 با اصلاح تست `WorkspaceTabStatus.test.tsx`)، #693، #694، #695 نیز merge شده‌اند. CI پس از merge این PRها موفق بوده است.
+- **گیت صدور v5 بسته است:** `VendorProvisioningCompanyReferenceGate.CustomerConsumerReady=false` و `Provisioning:CompanyReferenceIssuance:Enabled` پیش‌فرض خاموش؛ در این SHA هیچ بستهٔ v5 عملیاتی صادر نمی‌شود و هیچ تغییر تنظیمی برای بازکردن آن مجاز نیست مگر در مأموریت مستقل با تأیید مالک. Migration مشتری روی دیتابیس واقعی اجرا نشده است.
+- **مأموریت S1-0 (Issue #696):** ممیزی مستندات Vendor/Licensing انجام و تصمیم‌های مالک محصول در شش ADR جدید **D-097..D-102** (پشتیبانی/Update مستقل، انقضای Cloud، فعال‌سازی مجدد سخت‌افزاری، سقف نشست هم‌زمان، Update با تأیید، اطلاعیه و CRM سبک) ثبت شد؛ پرسش‌های باز در OD-20..OD-26؛ هم‌ترازی LICENSING*.md، ROADMAP، AGENT_COORDINATION، INDEX و WORK_LOG در PR مستنداتی این Issue. این PR فقط مستندات است: بدون کد اجرایی، Entity، API، UI، Migration، جدول، تنظیم Runtime یا تغییر کلید امضا؛ هیچ PRی در این مأموریت merge نمی‌شود.
+- **Trade:** همچنان `DenyAllTradeModuleEntitlement` (fail-closed)؛ اتصال entitlement واقعی در #401 باقی است.
+- **محدودیت این به‌روزرسانی:** تغییر فقط مستنداتی است؛ Build/Test محلی اجرا نشده (قابلیت جدیدی اضافه نشده) و شواهد CI به Runهای merge قبلی ارجاع می‌دهد.
+
 ## وضعیت جاری معماری Tenant/Company و S3 — 2026-11-14
 
 - PR #648 / D-087 در `2026-11-14T07:58:56Z` ادغام شد؛ PR #650 هم‌راستاسازی اسناد در `2026-11-14T09:19:13Z` ادغام شد. مبنای ممیزی جاری: `main@b4d38c0999ff1db7c2f8cc9bb78da1c55b27a6ad`.

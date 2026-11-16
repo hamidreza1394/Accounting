@@ -170,18 +170,20 @@
 - [ ] گزارش‌گیری بین نصب‌ها با بسته امضاشده (D-035، نیازمند تأیید).
 
 
-## تکمیل Licensing و Vendor بر اساس D-059 (2026-10-31)
+## تکمیل Licensing و Vendor بر اساس D-059 (2026-10-31؛ به‌روزرسانی وضعیت 2026-11-16، Issue #696)
 
-ترتیب مصوب در Issue #389 و سند [LICENSING_IMPLEMENTATION_PLAN.md](LICENSING_IMPLEMENTATION_PLAN.md):
+ترتیب مصوب در Issue #389 و سند [LICENSING_IMPLEMENTATION_PLAN.md](LICENSING_IMPLEMENTATION_PLAN.md). وضعیت‌های زیر با کد و CI واقعی تطبیق داده شده‌اند؛ «انجام‌شده» یعنی merge + CI، نه لزوماً فعال‌سازی عملیاتی:
 
-- [ ] **#395 — مستندسازی D-059 و هم‌ترازی ADR/مدل/گردش‌کار/تهدیدها**؛ این PR مستندات را ثبت می‌کند، اما merge و CI لازم است.
-- [ ] **#390 — قرارداد نسخه‌دار Company-scoped Module/Feature/UserSeat و amendment**؛ حفظ LicenseId و sequence افزایشی.
-- [ ] **#391 — enforcement سمت Customer**؛ seat block-new، feature over-limit، restricted term expiry، بدون حذف داده.
-- [ ] **#392 — ایجاد Company و bootstrap مدیر Offline**؛ local-only password، Identity hash، یک‌بارمصرف و اتمیک.
-- [ ] **#393 — Vendor add-on sale/issuance**؛ amendment امضاشده برای همان Installation/LicenseId.
+- [x] **#395 — مستندسازی D-059 و هم‌ترازی ADR/مدل/گردش‌کار/تهدیدها** — انجام‌شده؛ سند اجرایی و هم‌ترازی‌ها در main هستند و هم‌ترازی جدید S1-0 در Issue #696 ادامه یافته است.
+- [x] **#390 — قرارداد نسخه‌دار Company-scoped Module/Feature/UserSeat و amendment** — انجام‌شده؛ قرارداد v2 با PR #472 و صدور اولیهٔ Vendor با #682 ادغام و CI-Verified شده‌اند.
+- [~] **#391 — enforcement سمت Customer** — موتور خالص تصمیم (PR #534/#539) در main است؛ اتصال runtime به مسیرهای واقعی (از جمله Trade) انجام نشده و رفتار Production fail-closed می‌ماند.
+- [~] **#392 — ایجاد Company و bootstrap مدیر Offline** — بخش عمدهٔ مسیر Provisioning شرکت‌محور ادغام شده است (Vendor: #679/#680/#682/#683؛ مشتری: #684/#686/#687 با `CompanySetupRecords`، پذیرش v5، mapping/apply اتمیک و `maxCompanies` block-new)؛ اما Gate صدور v5 در Vendor بسته است (`CustomerConsumerReady=false`)، Migration مشتری روی دیتابیس واقعی اجرا نشده، Bootstrap مدیر Dedicated/Offline و سیاست Restore/Clone باقی‌اند.
+- [~] **#393 — Vendor add-on sale/issuance** — سه candidate builder (ظرفیت شرکت #527، ماژول/Feature/Seat #558، تمدید Support/Updates #565) در main و CI-Verified هستند؛ سفارش/پرداخت، persistence، approval تجاری و صدور پایدار amendment هنوز NotImplemented است و به تصمیم مالک نیاز دارد.
 - [ ] **#394 — online authenticated sync و signed offline file exchange**؛ stale telemetry واضح.
 
-تست‌های واحد/Integration/CI برای هر PR الزامی‌اند. تست واقعی دو میزبان، TPM فیزیکی و recovery drill در انتهای پیاده‌سازی انجام می‌شوند. این چک‌لیست برنامه است، نه ادعای تکمیل.
+### S1 — نقشهٔ اجرایی فعال‌سازی Licensing (2026-11-16؛ D-097..D-102، Issue #696)
+
+مأموریت مستنداتی S1-0، تصمیم‌های مالک محصول را در D-097 (پشتیبانی/Update مستقل)، D-098 (انقضای Cloud)، D-099 (فعال‌سازی مجدد سخت‌افزاری)، D-100 (سقف نشست هم‌زمان)، D-101 (Update با تأیید) و D-102 (اطلاعیه و CRM سبک) ثبت و پرسش‌های باز را در OD-20..OD-26 نگه داشته است. نقشهٔ اجرایی برش‌های S1-a تا S1-g، وابستگی‌های واقعی و تقسیم مسئولیت GLM/Qwen در بخش «نقشه اجرایی S1» از [LICENSING_IMPLEMENTATION_PLAN.md](LICENSING_IMPLEMENTATION_PLAN.md) است. مراحل انجام‌شدهٔ بالا نباید به‌اشتباه NotImplemented خوانده شوند؛ برچسب هر قابلیت در همان سند اجرایی نگه داشته می‌شود.
 
 
 ## تکمیل تجربه نصب و معماری سه‌حوزه‌ای D-060
@@ -215,8 +217,8 @@
 | #391 (موتور سیاست Entitlement) | بسته (موتور خالص PR #534)؛ اتصال runtime انجام نشده | فعال‌سازی Production | **خیر** |
 | #401 (اتصال entitlement واقعی Trade) | **باز**، آخرین به‌روزرسانی 2026-11-04 | فعال‌سازی Production | **خیر** برای توسعه |
 | #384 (فعال‌سازی و لایسنس مشتری: startup/runtime/Cloud) | **باز**، آخرین به‌روزرسانی 2026-10-31 | فعال‌سازی Production | **خیر** |
-| #392 (ساخت شرکت مجاز و نگاشت `CompanyReference`) | **باز**؛ Vendor PR-2 در #683 ادغام و Verified شده؛ PR #684 برای Customer schema باز اما ادغام‌نشده و نیازمند approval صریح است؛ mapping/Apply باقی است | فعال‌سازی Production (نگاشت مورداعتماد شرکت) | **خیر** |
-| #228 (Provisioning؛ Vendor v5 آماده اما Gate خاموش) | **باز**؛ Customer verifier/mapping هنوز v5 را نمی‌پذیرد | فعال‌سازی Production و onboarding end-to-end | **خیر** |
+| #392 (ساخت شرکت مجاز و نگاشت `CompanyReference`) | **باز**؛ Vendor PR-2 در #683 ادغام و Verified شده و سمت مشتری نیز schema `CompanySetupRecords` (#684)، پذیرش/Apply اتمیک v5 (#686) و `CustomerCompanyEntitlementResolver` (#687) در main هستند؛ مانع باقی‌مانده: بازکردن دوکلیدی Gate صدور Vendor با تأیید مالک، گسترش allow-list ACK، اجرای Migration روی دیتابیس مشتری و Bootstrap مدیر | فعال‌سازی Production (نگاشت مورداعتماد شرکت) | **خیر** |
+| #228 (Provisioning؛ Vendor v5 آماده اما Gate خاموش) | **باز**؛ سمت مشتری v5 را اکنون می‌پذیرد و Apply می‌کند (#684/#686/#687 در main)؛ مانع باقی‌مانده Gate صدور Vendor بسته + گسترش allow-list ACK + اجرای Migration روی دیتابیس مشتری | فعال‌سازی Production و onboarding end-to-end | **خیر** |
 
 **جمع‌بندی:** هیچ‌یک از Issueهای باز بالا توسعه و تست S2/S3 را مسدود نمی‌کند. `DenyAllTradeModuleEntitlement` در `Program.cs` بدون شرط محیط ثبت شده است؛ بنابراین تست‌های Integration/API باید در میزبان تست، `ITradeModuleEntitlement` را با test double جایگزین کنند (الگوی `RecordingEntitlement` در `TradeAccessGateTests` و `WebApplicationFactory<Program>` موجود در تست‌ها). افزودن پرچم/تنظیم bypass در کد Production ممنوع است؛ هر مسیر اجرای دستی Development با entitlement موقت تصمیم جدا و ADR می‌خواهد. فعال‌سازی برای کاربر واقعی تا بسته‌شدن زنجیرهٔ #392/#228 → #384 → اتصال #391 → #401 ممکن نیست.
 
@@ -232,7 +234,7 @@
 ### S1 — امنیت دسترسی و فعال‌سازی ماژول
 - [ ] اتصال ITradeModuleEntitlement به Licensing runtime و entitlement شرکت‌محور TRADE_IMPORT؛ fail-closed در Production.
   - S1-a (Issue #403، بسته؛ PR #407 ادغام‌شده 2026-10-31): دروازه، پیش‌فرض DenyAll، route gating و capabilities در `main` هست (Implemented).
-  - **وضعیت وابستگی‌های S1 (به‌روز 2026-11-12؛ جایگزین عبارت قبلی «Blocked تا ادغام #390»):** #390 بسته و قرارداد Entitlement V2 ادغام‌شده است؛ #391 بسته است و موتور خالص تصمیم (`EntitlementPolicyEngine`، PR #534) ادغام شده، اما اتصال آن به `ITradeModuleEntitlement` انجام نشده و رفتار Production همچنان `DenyAll` است؛ #384 **باز** است (هویت نصب و import لایسنس ادغام شده، ولی startup/runtime/Cloud ناتمام)؛ #401 (اتصال entitlement واقعی Trade) **باز** است. **مانع واقعی Production:** Vendor صدور اولیهٔ LicensePayload v2 را در #682 و آماده‌سازی provisioning v5 را پشت Gate دوکلیدی خاموش در #683 ادغام کرده است؛ اما نگاشت مورداعتماد `CompanyReference` به `CompanyId` محلی و consumer/Apply سازگار در #392/#235 هنوز نیست. بنابراین هیچ بستهٔ v5 عملیاتی صادر نمی‌شود و resolver برای v2 با `provisioning_company_reference_mapping_required` fail-closed می‌ماند؛ هیچ entitlement شرکت‌محور به Trade نمی‌رسد. تفکیک «لازم برای توسعه» و «لازم برای فعال‌سازی Production» در جدول بالای همین بخش آمده است؛ این زنجیره توسعهٔ S2/S3 را متوقف نمی‌کند.
+  - **وضعیت وابستگی‌های S1 (به‌روز 2026-11-12؛ جایگزین عبارت قبلی «Blocked تا ادغام #390»):** #390 بسته و قرارداد Entitlement V2 ادغام‌شده است؛ #391 بسته است و موتور خالص تصمیم (`EntitlementPolicyEngine`، PR #534) ادغام شده، اما اتصال آن به `ITradeModuleEntitlement` انجام نشده و رفتار Production همچنان `DenyAll` است؛ #384 **باز** است (هویت نصب و import لایسنس ادغام شده، ولی startup/runtime/Cloud ناتمام)؛ #401 (اتصال entitlement واقعی Trade) **باز** است. **مانع واقعی Production (به‌روز 2026-11-16):** Vendor صدور اولیهٔ LicensePayload v2 را در #682 و آماده‌سازی provisioning v5 را پشت Gate دوکلیدی خاموش در #683 ادغام کرده است؛ سمت مشتری نیز پذیرش، mapping (`CompanySetupRecords`) و Apply اتمیک با #684/#686/#687 در main آماده است. مانع فعلی بازکردن Gate صدور Vendor (`CustomerConsumerReady=false` + تنظیم غیرفعال) با تصمیم صریح مالک و پس از گسترش allow-list ACK است؛ تا آن زمان هیچ بستهٔ v5 عملیاتی صادر نمی‌شود و resolver برای v2 با `provisioning_company_reference_mapping_required` fail-closed می‌ماند؛ هیچ entitlement شرکت‌محور به Trade نمی‌رسد. تفکیک «لازم برای توسعه» و «لازم برای فعال‌سازی Production» در جدول بالای همین بخش آمده است؛ این زنجیره توسعهٔ S2/S3 را متوقف نمی‌کند.
 - [ ] تعریف PermissionDefinitions با کدهای پایدار فرم/عملیات/گزارش و seed ایدمپوتنت؛ عدم ایجاد role/permission store موازی.
 - [ ] API و route gating سمت سرور؛ ترتیب کنترل نشست، membership، WorkContext/FiscalPeriod، entitlement، permission و سپس use case.
 - [ ] تست منفی کاربر بدون entitlement، کاربر بدون permission، شرکت/دوره بیگانه، دوره Closed و دستکاری شناسه‌ها.
