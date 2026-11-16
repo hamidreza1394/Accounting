@@ -52,6 +52,7 @@ public sealed class DatabaseModelTests
 				"CompanyPositions",
 				"CompanyRolePermissions",
 				"CompanyRoles",
+				"CompanySetupRecords",
 				"ConsolidationProfiles",
 				"ConsolidationRunCompanies",
 				"ConsolidationRuns",
