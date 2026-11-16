@@ -78,6 +78,7 @@
 | [`handoffs/ISSUE-107-vendor-audit-checkpoints.md`](handoffs/ISSUE-107-vendor-audit-checkpoints.md) | قرارداد و startup guard ممیزی؛ شکاف sink مستقل Production، credential separation و recovery |
 | [`handoffs/ISSUE-UNNUMBERED-vendor-reconcile-2026-11-13.md`](handoffs/ISSUE-UNNUMBERED-vendor-reconcile-2026-11-13.md) | بازبینی SHA/CI جاری، PRهای باز، وضعیت شکاف‌های #107/#214/#228/#235/#236/#393 و موانع انسانی در 2026-11-13 |
 | [`handoffs/ISSUE-UNNUMBERED-vendor-reconcile-2026-11-15.md`](handoffs/ISSUE-UNNUMBERED-vendor-reconcile-2026-11-15.md) | بازبینی main@53dd2، Mergeهای #649/#674، شواهد PR-head CI و تأیید تازهٔ post-merge با Run ID؛ وضعیت CompanyReference، signer، purchased add-ons و audit sink در 2026-11-15 |
+| [`handoffs/ISSUE-228-vendor-status-after-pr683.md`](handoffs/ISSUE-228-vendor-status-after-pr683.md) | وضعیت post-merge #679/#680/#682/#683، صدور LicensePayload v2 و آماده‌سازی gated v5، شواهد CI و موانع #228/#392/#235/#393/#236/#107 (2026-11-16) |
 
 | [`handoffs/ISSUE-444-membership-requests-ui.md`](handoffs/ISSUE-444-membership-requests-ui.md) | تحویل UI گردش درخواست عضویت بین‌شرکتی (درخواست‌های من و صف تأیید) و قرارداد API مورد نیاز از Backend (Issue #444) |
 | [`handoffs/ISSUE-444-role-members-api.md`](handoffs/ISSUE-444-role-members-api.md) | تحویل Backend فهرست اعضای گروه دسترسی و انتقال اعضا (Issue #444، مورد ۳)؛ UI و RowVersion باقی‌مانده |
