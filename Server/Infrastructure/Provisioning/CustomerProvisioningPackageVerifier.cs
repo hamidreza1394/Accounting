@@ -46,7 +46,8 @@ public sealed class CustomerProvisioningPackageVerifier(
                 trustedPublicKey,
                 timeProvider.GetUtcNow(),
                 out payload,
-                out errorCode))
+                out errorCode,
+                allowCompanyReference: true))
             return false;
 
         if (!string.Equals(payload!.CustomerReference, settings.CustomerReference, StringComparison.Ordinal))

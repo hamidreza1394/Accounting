@@ -64,6 +64,13 @@ public sealed class CustomerProvisioningApplyService
     private const string SignerKeyUntrusted = "provisioning_acknowledgement_signer_key_untrusted";
     private const string SignatureInvalid = "provisioning_acknowledgement_signature_invalid";
 
+    // Company-bound (schema v5) rejection codes; stable, non-sensitive, replayed exactly like every
+    // other stored rejection. Issue #392 / D-059 §14.
+    private const string LicenseNotInstalled = "provisioning_license_not_installed";
+    private const string NotEntitledForCompany = "provisioning_not_entitled_for_company";
+    private const string CompanyReferenceConflict = "provisioning_company_reference_conflict";
+    private const string CompanyCapacityExceeded = "provisioning_company_capacity_exceeded";
+
     private static readonly TimeSpan EnrollmentLifetime = TimeSpan.FromMinutes(30);
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -197,6 +204,53 @@ public sealed class CustomerProvisioningApplyService
             CustomerBoundaryId = _settings.CustomerBoundaryId,
             IsActive = true
         };
+
+        // Company-bound (schema v5) packages are validated against the latest accepted signed
+        // license on this installation (D-059 §14). The check order is fixed — entitlement,
+        // duplicate, capacity — so a repeated request always produces the same rejection code and
+        // a package that is not entitled learns nothing about existing mappings. The cap counts
+        // every company of the installation (D-059 §2); over-limit blocks only new provisioning
+        // and never removes or deactivates existing companies (D-059 §6). An absent MaxCompanies
+        // means the vendor signed no numeric cap; the entitlement list still bounds the references.
+        Domain.CompanySetupRecord? companySetupRecord = null;
+        if (payload.CompanyReference is not null)
+        {
+            var license = await TryResolveCurrentLicensePayloadAsync(payload.LicenseId!, cancellationToken);
+            if (license is null)
+                return await StoreRejectedAcknowledgementAsync(
+                    payload, payloadHash, LicenseNotInstalled, now, transaction, cancellationToken);
+
+            var isEntitled = license.CompanyEntitlements?.Any(entitlement =>
+                entitlement?.CompanyReference is not null &&
+                string.Equals(entitlement.CompanyReference, payload.CompanyReference, StringComparison.Ordinal)) == true;
+            if (!isEntitled)
+                return await StoreRejectedAcknowledgementAsync(
+                    payload, payloadHash, NotEntitledForCompany, now, transaction, cancellationToken);
+
+            if (await _database.CompanySetupRecords.AsNoTracking().AnyAsync(
+                    record => record.CompanyReference == payload.CompanyReference, cancellationToken))
+                return await StoreRejectedAcknowledgementAsync(
+                    payload, payloadHash, CompanyReferenceConflict, now, transaction, cancellationToken);
+
+            if (license.Limits?.MaxCompanies is { } maxCompanies &&
+                await _database.Companies.AsNoTracking().CountAsync(cancellationToken) >= maxCompanies)
+            {
+                _logger.LogInformation(
+                    "Company-bound provisioning request {RequestId} exceeded the installation company cap of {MaxCompanies}.",
+                    payload.RequestId, maxCompanies);
+                return await StoreRejectedAcknowledgementAsync(
+                    payload, payloadHash, CompanyCapacityExceeded, now, transaction, cancellationToken);
+            }
+
+            companySetupRecord = new Domain.CompanySetupRecord
+            {
+                CompanyId = company.Id,
+                CompanyReference = payload.CompanyReference,
+                InstallationId = payload.InstallationId,
+                CreatedAtUtc = now
+            };
+        }
+
         var fiscalPeriod = new Domain.FiscalPeriod
         {
             TenantId = company.Id,
@@ -290,6 +344,8 @@ public sealed class CustomerProvisioningApplyService
         _database.Users.Add(admin);
         _database.UserCompanyMemberships.Add(membership);
         _database.ProvisioningRequestClaims.Add(claimEntity);
+        if (companySetupRecord is not null)
+            _database.CompanySetupRecords.Add(companySetupRecord);
         _database.SecurityAuditEvents.Add(CreateAcknowledgementAudit(
             company.Id, payload.RequestId, signedAcknowledgement, "ProvisioningApplied", now));
 
@@ -440,6 +496,33 @@ public sealed class CustomerProvisioningApplyService
         await _database.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return new CustomerProvisioningEnrollmentResult(true, null);
+    }
+
+    /// <summary>
+    /// Resolves the current accepted license envelope payload for the license identifier a v5
+    /// package is bound to. The import pipeline verified the envelope and its signature before
+    /// storing it; company entitlements are immutable across amendments, so the current revision
+    /// is authoritative for the entitled reference set. Any resolution failure is fail-closed.
+    /// </summary>
+    private async Task<LicensePayload?> TryResolveCurrentLicensePayloadAsync(
+        string licenseId, CancellationToken cancellationToken)
+    {
+        var installed = await _database.InstalledLicenses.AsNoTracking()
+            .Where(item => item.LicenseId == licenseId &&
+                item.State == Domain.InstalledLicense.StateCurrent &&
+                item.InstallationId == _settings.InstallationId)
+            .OrderByDescending(item => item.Sequence)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (installed is null)
+            return null;
+
+        if (!CanonicalJson.TryParsePayload(installed.PayloadJson, out var payload, out _) || payload is null)
+            return null;
+
+        return string.Equals(payload.InstallationId, _settings.InstallationId, StringComparison.Ordinal) &&
+            string.Equals(payload.LicenseId, licenseId, StringComparison.Ordinal)
+            ? payload
+            : null;
     }
 
     private async Task<CustomerProvisioningApplyResult> StoreRejectedAcknowledgementAsync(
