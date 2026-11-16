@@ -201,10 +201,11 @@
 | تهدید | کنترل قرارداد | مرز باقی‌مانده |
 |---|---|---|
 | ارتقای ناخواسته ماژول با دستکاری کلاینت | module فقط از payload امضاشده و در CompanyReference مشخص خوانده می‌شود؛ v2 global subsystem را رد می‌کند | enforcement هر API و Company context در #391 |
-| فعال‌شدن ضمنی Trade در نصب قدیمی | v1 allowlist تغییر نکرده؛ `TRADE_IMPORT` فقط در v2 و scope شرکت معتبر است | issuance v2 در #393 |
+| فعال‌شدن ضمنی Trade در نصب قدیمی | v1 allowlist تغییر نکرده؛ `TRADE_IMPORT` فقط در v2 و scope شرکت معتبر است؛ صدور اولیهٔ v2 در Vendor در PR #682 انجام شده است | binding و provisioning v5 برای Customer در #392/#235 |
 | استفاده از feature ناشناخته یا type confusion | catalog allowlist، type ثابت هر code و union دقیقاً تک‌مقداری | افزودن catalog key جدید نیازمند review و golden test |
-| جعل یا تغییر CompanyReference | مرجع opaque در payload امضاشده است و canonical/strict validation دارد | نگاشت reference به Company محلی و authorization در #391 |
+| جعل یا تغییر CompanyReference | مرجع opaque در LicensePayload v2 امضاشده است؛ Vendor آن را در provisioning v5 فقط از entitlement امضاشده انتخاب می‌کند و مقدار browser صرفاً selector است | نگاشت reference به Company محلی و Apply اتمیک در #392؛ verifier/ACK مشتری در #235 |
 | replay/downgrade amendment | LicenseId/InstallationId/ProductCode ثابت و Sequence strictly increasing در helper قرارداد | ذخیره و مقایسه اتمیک sequence پذیرفته‌شده در Customer #391 |
 | parser differential / extension smuggling | v2 unknown fields رد و canonical byte representation الزام می‌شود | v1 برای سازگاری تاریخی رفتار قبلی را حفظ می‌کند |
+| جعل selector در درخواست Provisioning | مقدار درخواست باید عضو دقیق و case-sensitive مجموعهٔ CompanyReferenceهای payload امضاشده باشد؛ مقدار صادرشده از payload امضاشده می‌آید؛ Gate دوکلیدی v5 تا آمادگی Customer خاموش است | mapping و authorization محلی Customer در #392/#235 |
 | نشت اطلاعات مشتری | فقط opaque CompanyReference و entitlement تجاری؛ نام/شناسه مالیاتی/داده حسابداری ممنوع | مراقبت در تولید Reference و telemetry |
 
