@@ -97,19 +97,28 @@ public sealed class CustomerCompanyBoundProvisioningSqlServerTests
             int sequence = 1,
             params string[] entitledReferences)
         {
-            var identity = new InstallationIdentity
+            // Reuse the current identity of this installation; the (InstallationId, KeyVersion)
+            // unique index rejects a second row with the same key version.
+            var identity = await database.InstallationIdentities.SingleOrDefaultAsync(
+                item => item.InstallationId == Settings.InstallationId &&
+                    item.State == InstallationIdentity.StateCurrent,
+                TestContext.Current.CancellationToken);
+            if (identity is null)
             {
-                InstallationId = Settings.InstallationId,
-                KeyId = "identity-key-1",
-                KeyVersion = 1,
-                ProviderName = "Microsoft Platform Crypto Provider",
-                AssuranceLevel = InstallationIdentity.AssuranceHardwareTpm,
-                OsInstallationMarkerDigest = new string('a', 64),
-                PublicKeyFingerprint = new string('b', 64),
-                PublicKeySubjectPublicKeyInfoBase64 = Convert.ToBase64String(new byte[] { 1, 2, 3 }),
-                State = InstallationIdentity.StateCurrent
-            };
-            database.InstallationIdentities.Add(identity);
+                identity = new InstallationIdentity
+                {
+                    InstallationId = Settings.InstallationId,
+                    KeyId = "identity-key-1",
+                    KeyVersion = 1,
+                    ProviderName = "Microsoft Platform Crypto Provider",
+                    AssuranceLevel = InstallationIdentity.AssuranceHardwareTpm,
+                    OsInstallationMarkerDigest = new string('a', 64),
+                    PublicKeyFingerprint = new string('b', 64),
+                    PublicKeySubjectPublicKeyInfoBase64 = Convert.ToBase64String(new byte[] { 1, 2, 3 }),
+                    State = InstallationIdentity.StateCurrent
+                };
+                database.InstallationIdentities.Add(identity);
+            }
 
             var payload = new LicensePayload(
                 LicensePayload.CurrentFormatVersion,
@@ -436,7 +445,9 @@ public sealed class CustomerCompanyBoundProvisioningSqlServerTests
                 await harness.SeedLicenseAsync(setup, maxCompanies: 3, entitledReferences: "company-ref-0001");
 
             var package = harness.NewPackage("rollback-admin", "company-ref-0001");
-            var interceptor = new FailingSaveInterceptor(() => new InvalidOperationException("forced failure"));
+            // A DbUpdateException is what the apply service treats as a database failure and rolls
+            // back; an arbitrary exception would intentionally propagate as an unhandled crash.
+            var interceptor = new FailingSaveInterceptor(() => new DbUpdateException("forced failure"));
             await using (var serviceContext = harness.CreateContext(interceptor))
             {
                 interceptor.Armed = true;
@@ -477,18 +488,41 @@ public sealed class CustomerCompanyBoundProvisioningSqlServerTests
                 .Select(index => harness.NewPackage($"race-admin-{index}", "company-ref-0001"))
                 .ToArray();
 
-            await using (var serviceContext = harness.CreateContext())
+            // Each request runs on its own context and service; a DbContext is not thread-safe and
+            // real concurrency happens on separate connections exactly like in production.
+            var outcomes = await Task.WhenAll(packages.Select(async package =>
             {
-                var service = harness.CreateService(serviceContext);
-                var outcomes = await Task.WhenAll(packages.Select(package =>
-                    service.ApplyAsync(package, TestContext.Current.CancellationToken)));
+                try
+                {
+                    await using var database = harness.CreateContext();
+                    return (Result: await harness.CreateService(database).ApplyAsync(
+                            package, TestContext.Current.CancellationToken),
+                        Error: (Exception?)null);
+                }
+                catch (Exception exception)
+                {
+                    return (Result: (CustomerProvisioningApplyResult?)null, Error: exception);
+                }
+            }));
 
-                Assert.Equal(1, await serviceContext.Companies.CountAsync(TestContext.Current.CancellationToken));
-                Assert.Equal(1, await serviceContext.CompanySetupRecords.CountAsync(TestContext.Current.CancellationToken));
-                Assert.Equal(1, outcomes.Count(outcome => outcome.Success));
-                Assert.All(outcomes, outcome => Assert.True(outcome.Success || outcome.ErrorCode is
-                    "provisioning_company_reference_conflict" or "provisioning_apply_conflict",
-                    outcome.ErrorCode));
+            // No request may fail with an unhandled database error (for example an uncaught deadlock).
+            Assert.All(outcomes, outcome => Assert.Null(outcome.Error));
+
+            var results = outcomes.Select(outcome => outcome.Result!).ToList();
+            Assert.Single(results.Where(result => result.Success && !result.Replayed));
+            Assert.All(results.Where(result => !(result.Success && !result.Replayed)), other =>
+            {
+                Assert.Null(other.EnrollmentToken);
+                Assert.True(
+                    (other.Success && other.Replayed) || other.ErrorCode is
+                        "provisioning_company_reference_conflict" or "provisioning_apply_conflict",
+                    "A duplicate must be an idempotent replay or a stable conflict, not a second application.");
+            });
+
+            await using (var verification = harness.CreateContext())
+            {
+                Assert.Equal(1, await verification.Companies.CountAsync(TestContext.Current.CancellationToken));
+                Assert.Equal(1, await verification.CompanySetupRecords.CountAsync(TestContext.Current.CancellationToken));
             }
         });
     }
