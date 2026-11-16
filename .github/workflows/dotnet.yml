@@ -68,8 +68,10 @@ jobs:
           MSSQL_SA_PASSWORD: Ci1Faranou${{ github.run_id }}x
         ports:
           - 1433:1433
+        # The password is expanded by the container shell from the container env, so the
+        # runner's "Validate container options" log echoes only the variable name, never the value.
         options: >-
-          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Ci1Faranou${{ github.run_id }}x -Q 'SELECT 1' -b"
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P $MSSQL_SA_PASSWORD -Q 'SELECT 1' -b"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 20
@@ -268,8 +270,9 @@ jobs:
           MSSQL_SA_PASSWORD: Ci1Faranou${{ github.run_id }}e2e
         ports:
           - 1433:1433
+        # Same masking as the build-and-test job: the health check expands the container env.
         options: >-
-          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Ci1Faranou${{ github.run_id }}e2e -Q 'SELECT 1' -b"
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P $MSSQL_SA_PASSWORD -Q 'SELECT 1' -b"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 20
