@@ -147,7 +147,7 @@ public sealed class CompanySetupRecordsSqlServerTests
 				await afterDown.GetService<IMigrator>().MigrateAsync(
 					PreviousMigration, TestContext.Current.CancellationToken);
 
-				Assert.Equal(3, await afterDown.Companies.CountAsync(TestContext.Current.CancellationToken));
+				Assert.Equal(4, await afterDown.Companies.CountAsync(TestContext.Current.CancellationToken));
 				var tables = await afterDown.Database.SqlQueryRaw<string>(
 					"SELECT [name] AS [Value] FROM sys.tables WHERE [name] = 'CompanySetupRecords'")
 					.ToListAsync(TestContext.Current.CancellationToken);
@@ -155,7 +155,7 @@ public sealed class CompanySetupRecordsSqlServerTests
 
 				await afterDown.Database.MigrateAsync(TestContext.Current.CancellationToken);
 				Assert.Empty(await afterDown.Database.GetPendingMigrationsAsync(TestContext.Current.CancellationToken));
-				Assert.Equal(3, await afterDown.Companies.CountAsync(TestContext.Current.CancellationToken));
+				Assert.Equal(4, await afterDown.Companies.CountAsync(TestContext.Current.CancellationToken));
 				Assert.Empty(await afterDown.CompanySetupRecords.ToListAsync(TestContext.Current.CancellationToken));
 			}
 		});
