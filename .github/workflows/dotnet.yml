@@ -59,17 +59,20 @@ jobs:
     runs-on: ubuntu-latest
     needs: [secret-scan]
     env:
-      MSSQL_SA_PASSWORD: Ci1Faranou${{ github.run_id }}x
+      # Repository secret (Actions secrets): the runner masks the value in every log line,
+      # including the internal "docker create --env" and service-env echoes.
+      MSSQL_SA_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
     services:
       mssql:
         image: mcr.microsoft.com/mssql/server:2022-latest
         env:
           ACCEPT_EULA: Y
-          MSSQL_SA_PASSWORD: Ci1Faranou${{ github.run_id }}x
+          MSSQL_SA_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
         ports:
           - 1433:1433
         # The password is expanded by the container shell from the container env, so the
-        # runner's "Validate container options" log echoes only the variable name, never the value.
+        # health-cmd itself carries only the variable name; the value is additionally
+        # masked by the runner because it originates from secrets.MSSQL_SA_PASSWORD.
         options: >-
           --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P $MSSQL_SA_PASSWORD -Q 'SELECT 1' -b"
           --health-interval 10s
@@ -260,14 +263,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: [client, build-and-test]
     env:
-      MSSQL_SA_PASSWORD: Ci1Faranou${{ github.run_id }}e2e
-      FARANOU_E2E_SQL: Server=localhost,1433;Database=FaranouE2E;User Id=sa;Password=Ci1Faranou${{ github.run_id }}e2e;TrustServerCertificate=True;Encrypt=True
+      # Same repository secret as build-and-test; the runner masks the value in all logs.
+      MSSQL_SA_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
+      FARANOU_E2E_SQL: Server=localhost,1433;Database=FaranouE2E;User Id=sa;Password=${{ env.MSSQL_SA_PASSWORD }};TrustServerCertificate=True;Encrypt=True
     services:
       mssql:
         image: mcr.microsoft.com/mssql/server:2022-latest
         env:
           ACCEPT_EULA: Y
-          MSSQL_SA_PASSWORD: Ci1Faranou${{ github.run_id }}e2e
+          MSSQL_SA_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
         ports:
           - 1433:1433
         # Same masking as the build-and-test job: the health check expands the container env.
