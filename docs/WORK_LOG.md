@@ -3093,3 +3093,17 @@
 - **هم‌ترازی تکمیلی:** عنوان D-100، خلاصه LICENSING، DATA_MODEL، WORKFLOWS، PROJECT_STATUS و handoff با تصمیم‌های فوق هماهنگ شدند؛ عبارت‌های نادرست دربارهٔ merge در اسناد جاری اصلاح شد.
 - **محدوده:** فقط `AGENTS.md` و `docs/*.md`؛ بدون کد اجرایی، Migration، Schema، DB یا تغییر Gate v5. `git diff --check` در سطح patch بازرسی شد و هیچ خط اضافه‌شده با whitespace انتهایی یافت نشد.
 - **وضعیت CI:** منتظر تکمیل چک‌های HEAD نهایی PR #697؛ Merge فقط پس از موفقیت چک‌های الزامی انجام می‌شود.
+
+
+## 2026-11-17 — Issue #698: پذیرش ACK رد برای provisioning شرکت‌محور در Vendor
+
+- **مبنا:** \`main@0797bcad754795e071342102c9192b88050f6663\`؛ شاخهٔ \`agent/698-vendor-company-provisioning-ack-errors\`.
+- **شکاف تأییدشده:** Customer v5 چهار کد ثابت \`provisioning_license_not_installed\`، \`provisioning_not_entitled_for_company\`، \`provisioning_company_reference_conflict\` و \`provisioning_company_capacity_exceeded\` را تولید و ACK امضاشدهٔ Rejected را ذخیره/بازپخش می‌کند؛ allow-list Vendor فقط دو کد قدیمی را می‌پذیرفت و ACK معتبر جدید را با 400 رد می‌کرد.
+- **تغییر Vendor:** چهار کد به allow-list محدود \`ProvisioningAcknowledgementStateRules\` افزوده شد. هیچ متن آزاد، diagnostic، PII یا کد ناشناخته‌ای پذیرفته یا ذخیره نمی‌شود. رفتار Applied/AlreadyApplied، دو کد قدیمی، exact retry و conflict تغییر نکرده است.
+- **Regression:** تست واحد برای هر شش کد مجاز؛ تست SQL Server برای ACK امضاشدهٔ هر چهار کد جدید، state برابر Failed، \`FailureCode\` دقیق، acknowledgement metadata و Audit، retry دقیق idempotent، ACK متفاوت با 409، و رد کد ناشناخته/متن تشخیصی بدون mutation.
+- **مستندات:** SECURITY، TESTING، PROJECT_STATUS، INDEX و handoff این Issue به‌روزرسانی شدند.
+- **محدوده:** بدون تغییر \`Server/**\`، Customer schema/Migration، \`Licensing.Contracts\`، signer/trust store، Gate v5 یا secret.
+- **تست محلی:** Build/Test محلی در این اجرا انجام نشده است؛ checkout/SDK محلی در اختیار این اجرا نیست. تست واحد و SQL Server باید از CI روی HEAD نهایی اثبات شوند؛ تا آن زمان \`Not Verified\`.
+- **Commitهای شاخه:** \`89fdd1559f17f5fee6903aab99a38e430740036d\`، \`e7db85ea90297ffdb3b363a3ab6f1d6feecad5e1\`، \`17e4201e632419a2e2952663ab03bf530fb8815f\`، \`96da8ad6d844d56b0be3677c154b64cd17d5328a\`، \`2395b253711cb9ac0e05ca502660de43803b4705\`.
+- **PR/CI:** هنوز باز نشده؛ CI pending است.
+
