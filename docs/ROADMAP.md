@@ -252,7 +252,7 @@
 
 ### S3 — پرونده واردات، پروفایل فعالیت و پیش‌فاکتور (D-086 و D-087 Accepted؛ S3-0 در حال انجام)
 
-**گیت:** S3-0 باید پیش از هر کدنویسی تغییردهنده Schema بسته شود. P-4 و P-5 از D-080 باز می‌مانند و رفتارهای وابسته به آن‌ها خارج از محدوده‌اند. D-083 همچنان باز است و حذف/غیرفعال‌سازی Party/Product در S3 ساخته نمی‌شود. D-087 مدل هدف Tenant/Company و هر دو استقرار Shared/Dedicated را تعیین می‌کند؛ وضعیت فعلی کد هنوز تاریخی و Company=Tenant است و تا تصویب/اجرای طرح گذار نباید فرض شود که گذار انجام شده است.
+**گیت:** S3-0 باید پیش از هر کدنویسی تغییردهنده Schema بسته شود. P-4 و P-5 از D-080 باز می‌مانند و رفتارهای وابسته به آن‌ها خارج از محدوده‌اند. D-083 همچنان باز است و حذف/غیرفعال‌سازی Party/Product در S3 ساخته نمی‌شود. D-087 مدل هدف Tenant/Company و هر دو استقرار Shared/Dedicated را تعیین می‌کند؛ D-103 مرز Tenant را در CustomerAccount/فضای کاری تثبیت کرده و نقش دامنه را صرفاً lookup برای Tenant + Company/CorporateGroup context می‌داند. وضعیت فعلی کد هنوز تاریخی و Company=Tenant است و تا تصویب/اجرای طرح گذار نباید فرض شود که گذار انجام شده است. D-103 به‌تنهایی گیت S3-0g را نمی‌بندد و مجوز Schema/Backfill نیست.
 
 - [x] **S3-0a — ممیزی ایستای اولیه منبع کد:** بررسی اولیه Entityهای Company/FiscalPeriod/Membership/Role و TradeEntity/Party/Product، CompanyAccessService و WorkContext انجام شد؛ inventory تکمیلی در این دور ثبت شده است.
 - [x] **S3-0b — رفع تناقض اسناد معماری:** هم‌راستاسازی AGENTS.md، ARCHITECTURE، ACCESS_CONTROL_ARCHITECTURE، SECURITY، database-migrations و TRADE_MODULE با D-087؛ ثبت وضعیت تاریخی کد و حفظ CustomerBoundaryId به‌عنوان مرز مستقل.
