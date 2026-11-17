@@ -1,3 +1,12 @@
+## وضعیت Vendor — پذیرش ACKهای رد شرکت‌محور (Issue #698) — 2026-11-17
+
+**مبنای شروع:** \`main@0797bcad754795e071342102c9192b88050f6663\`؛ شاخهٔ کاری \`agent/698-vendor-company-provisioning-ack-errors\`.
+
+- چهار کد رد ثابت که Customer v5 در #686/#687 تولید می‌کند به allow-list صریح Vendor افزوده شده‌اند: \`provisioning_license_not_installed\`، \`provisioning_not_entitled_for_company\`، \`provisioning_company_reference_conflict\` و \`provisioning_company_capacity_exceeded\`. دو کد قدیمی parent/admin بدون تغییر باقی مانده‌اند.
+- تست واحد برای شش کد مجاز و تست SQL Server برای پذیرش امضاشده، انتقال \`PendingDelivery → Failed\`، ذخیرهٔ دقیق \`FailureCode\`، metadata/Audit، retry یکسان و conflict برای ACK متفاوت افزوده/گسترش یافته‌اند. کد ناشناخته و diagnostic/PII همچنان باید بدون mutation رد شوند.
+- **وضعیت:** تغییرات روی شاخهٔ اختصاصی \`Implemented / Not Verified\` هستند؛ PR و CI هنوز ایجاد/تکمیل نشده‌اند. تا مشاهدهٔ CI سبز روی SHA نهایی، این قابلیت \`Verified\` محسوب نمی‌شود.
+- **مرز تغییر:** فقط Vendor و مستندات/تست‌های Vendor؛ هیچ \`Server/**\`، Customer DB/Migration، قرارداد canonical، signer/trust store یا تنظیم Gate v5 تغییر نکرده است. Gate دوکلیدی v5 همچنان بسته است.
+
 ## وضعیت جاری Vendor/Licensing و مأموریت S1-0 — 2026-11-16
 
 **مبنای بررسی:** `main@947901bb586b6fccf2d14e432a666695ffad6e80` (ادغام PR #695). این بخش، snapshot قبلی «وضعیت جاری ماژول Vendor — 2026-11-16» (مبنا `b05c1c58`) را فقط در وضعیت PRهای #684/#686/#687 و PRهای وابستگی supersede می‌کند؛ بقیهٔ بخش‌های تاریخی سند حفظ شده‌اند.
