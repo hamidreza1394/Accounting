@@ -3122,7 +3122,7 @@
 - **دامنه:** Company domain و Group domain به Tenant به‌علاوه context مربوط resolve می‌شوند؛ Host صرفاً lookup key است، نه authorization. دامنه مشترک به‌تنهایی معیار ادغام نیست؛ CustomerAccount، مالکیت معتبر و مرز محرمانگی/عملیات معیارند. گروه از CustomerAccount عبور نمی‌کند.
 - **استقرار:** Cloud از binding معتبر provisioning Vendor و Registry محلی استفاده می‌کند؛ Dedicated از Tenant پیکربندی معتبر Installation و تطبیق DB. X-Forwarded-Host طبق D-017 مرجع Tenant نیست.
 - **Import/Backfill:** TenantId/CompanyId از ورودی یا فایل Import پذیرفته نمی‌شوند؛ context معتبر سمت سرور مرجع است. Manifest D-092 فقط Backfill یک‌باره است، نه runtime registry.
-- **مستندات:** D-103 به DECISIONS.md اضافه و ACCESS_CONTROL_ARCHITECTURE.md، SECURITY.md، INDEX.md و PROJECT_STATUS.md هم‌راستا شدند؛ handoff مستقل ثبت شد.
+- **مستندات:** D-103 به DECISIONS.md اضافه و ACCESS_CONTROL_ARCHITECTURE.md، SECURITY.md، INDEX.md، PROJECT_STATUS.md و ROADMAP.md هم‌راستا شدند؛ handoff مستقل ثبت شد.
 - **محدوده:** فقط مستندات؛ بدون Entity، API، Runtime، Schema، Migration، Backfill، تنظیم نصب یا تغییر داده.
 - **اعتبارسنجی:** بررسی محتوای فایل‌ها و diff متنی انجام شد؛ Build/Test اجرا نشد (تغییر مستنداتی است). CI و بازبینی PR باید انجام شود.
 - **وضعیت:** PR مستنداتی برای Issue #397؛ Merge نشده است.
