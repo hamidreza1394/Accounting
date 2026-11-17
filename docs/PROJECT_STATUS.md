@@ -745,3 +745,12 @@
 - جست‌وجوی Source برای FromSqlRaw/ExecuteSqlRaw/ExecuteUpdateAsync انجام شد: FromSqlRaw فقط در state ضد rollback نصب/لایسنس؛ ExecuteSqlRaw فقط برای sp_getapplock در provisioning/import لایسنس؛ ExecuteUpdateAsync برای lifecycle نشست User در سطح Identity Realm.
 - تست‌های موجود CompanyAccess، TradeAuthorizationAdapter، Trade endpoint gate و DatabaseModel شناسایی شدند؛ این‌ها قواعد فعلی را پوشش می‌دهند، نه اثبات جداسازی Tenant مستقل Shared/Dedicated.
 - بازبینی همه گزارش‌ها/Exportها و سناریوهای SQL Server cross-tenant هدف هنوز لازم است؛ S3-0d-b باز می‌ماند.
+
+
+## وضعیت تصمیم معماری Tenant/Company/Domain — D-103 (2026-11-17)
+
+- مالک محصول D-103 را پذیرفت: Tenant مرز CustomerAccount/فضای کاری است؛ هر مشتری مستقل Tenant جدا دارد و هر Tenant می‌تواند چند Company مستقل داشته باشد.
+- دامنه verified فقط به Tenant و context اختیاری Company یا CorporateGroup resolve می‌شود؛ Host مجوز نیست. دامنه گروهی فقط Companyهای دارای عضویت Approved/فعال را نمایش می‌دهد. دامنه مشترک به‌تنهایی معیار ادغام Tenant نیست و CorporateGroup نباید از CustomerAccount عبور کند.
+- Cloud: binding مشتری→Tenant از provisioning معتبر Vendor و Registry محلی؛ Dedicated: Tenant از پیکربندی معتبر Installation و تطبیق DB. X-Forwarded-Host طبق D-017 مرجع Tenant نیست. Import از context سمت سرور استفاده می‌کند؛ Manifest D-092 فقط Backfill یک‌باره است.
+- **وضعیت:** تصمیم Accepted؛ پیاده‌سازی Tenant entity/schema، registry، host resolution و گذار داده همچنان NotImplemented. این تغییر فقط مستنداتی است؛ هیچ Runtime، Schema، Migration، داده یا تنظیم نصب تغییر نکرده است.
+- **گام بعدی:** ادامه S3-0 با شواهد SQL Server واقعی، تکمیل inventory و انتخاب منبع معتبر Company→Tenant؛ بدون Backfill یا Migration تا تصویب طرح و عبور از گیت‌ها.
