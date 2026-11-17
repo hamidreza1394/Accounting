@@ -79,6 +79,7 @@
 | [`handoffs/ISSUE-UNNUMBERED-vendor-reconcile-2026-11-13.md`](handoffs/ISSUE-UNNUMBERED-vendor-reconcile-2026-11-13.md) | بازبینی SHA/CI جاری، PRهای باز، وضعیت شکاف‌های #107/#214/#228/#235/#236/#393 و موانع انسانی در 2026-11-13 |
 | [`handoffs/ISSUE-UNNUMBERED-vendor-reconcile-2026-11-15.md`](handoffs/ISSUE-UNNUMBERED-vendor-reconcile-2026-11-15.md) | بازبینی main@53dd2، Mergeهای #649/#674، شواهد PR-head CI و تأیید تازهٔ post-merge با Run ID؛ وضعیت CompanyReference، signer، purchased add-ons و audit sink در 2026-11-15 |
 | [`handoffs/ISSUE-228-vendor-status-after-pr683.md`](handoffs/ISSUE-228-vendor-status-after-pr683.md) | وضعیت post-merge #679/#680/#682/#683، صدور LicensePayload v2 و آماده‌سازی gated v5، شواهد CI و موانع #228/#392/#235/#393/#236/#107 (2026-11-16) |
+| [`handoffs/ISSUE-698-vendor-company-provisioning-ack-errors.md`](handoffs/ISSUE-698-vendor-company-provisioning-ack-errors.md) | پذیرش چهار کد رد ثابت Company-bound از Customer v5 در Vendor؛ تست SQL Server برای state، FailureCode، Audit و retry (Issue #698) |
 | [`handoffs/ISSUE-696-s1-0-vendor-licensing-docs.md`](handoffs/ISSUE-696-s1-0-vendor-licensing-docs.md) | ممیزی و هم‌ترازی مستندات Vendor/Licensing، ثبت ADRهای D-097..D-102 و OD-20..OD-26، نقشه اجرایی S1 و مالکیت حوزه‌های فنی/قواعد انتخاب عامل اجرایی (مأموریت S1-0؛ فقط مستندات) |
 
 | [`handoffs/ISSUE-444-membership-requests-ui.md`](handoffs/ISSUE-444-membership-requests-ui.md) | تحویل UI گردش درخواست عضویت بین‌شرکتی (درخواست‌های من و صف تأیید) و قرارداد API مورد نیاز از Backend (Issue #444) |
