@@ -21,6 +21,7 @@ Cloud از binding معتبر Vendor provisioning به Registry محلی است�
 - docs/SECURITY.md — ثبت قواعد امنیتی Resolve دامنه، Import و Host.
 - docs/INDEX.md — به‌روزرسانی فهرست ADRها.
 - docs/PROJECT_STATUS.md — ثبت وضعیت Accepted/NotImplemented و گام بعدی S3-0.
+- docs/ROADMAP.md — اتصال صریح D-103 به گیت S3 و تصریح اینکه پذیرش ADR به‌تنهایی مجوز Schema/Backfill نیست.
 - docs/WORK_LOG.md — ثبت سابقه این تغییر.
 - docs/handoffs/ISSUE-397-d103-tenant-customer-domain.md — این گزارش.
 
