@@ -25,6 +25,7 @@
 - tests/Vendor.Host.Tests/ProvisioningAcknowledgementStateRulesTests.cs — پوشش چهار کد جدید.
 - tests/Vendor.Host.Tests/ProvisioningAcknowledgementSqlServerIntegrationTests.cs — regression امضاشده روی SQL Server.
 - docs/SECURITY.md — فهرست کدهای قابل ذخیره و مرز رد diagnostic/PII.
+- docs/LICENSING_WORKFLOWS.md — وضعیت گسترش allow-list Vendor و گیت‌های باقی‌مانده.
 - docs/TESTING.md — قرارداد اجرای تست SQL Server در CI.
 - docs/PROJECT_STATUS.md — وضعیت دقیق و برچسب Not Verified تا CI.
 - docs/WORK_LOG.md — ثبت مأموریت و محدودیت‌های اجرا.
