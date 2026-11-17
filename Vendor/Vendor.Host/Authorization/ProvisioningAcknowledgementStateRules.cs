@@ -39,5 +39,9 @@ public static class ProvisioningAcknowledgementStateRules
 
     private static bool IsAllowedRejectionCode(string? errorCode) =>
         errorCode is "provisioning_parent_reference_invalid"
-            or "provisioning_initial_admin_conflict";
+            or "provisioning_initial_admin_conflict"
+            or "provisioning_license_not_installed"
+            or "provisioning_not_entitled_for_company"
+            or "provisioning_company_reference_conflict"
+            or "provisioning_company_capacity_exceeded";
 }
