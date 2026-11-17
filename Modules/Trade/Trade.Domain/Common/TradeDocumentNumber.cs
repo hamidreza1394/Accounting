@@ -21,7 +21,7 @@ public enum TradeDocumentNumberError
 /// <para>
 /// The normalized form is built in the application, not by database collation (D-080 section 9, D-086 section 3):
 /// Unicode NFKC, Persian/Arabic-Indic digits to ASCII digits, Arabic Yeh/Kaf to Persian Yeh/Kaf, upper-invariant.
-/// Whitespace is only trimmed and collapsed; separators such as '-', '/' and ' ' are never removed or unified,
+/// Whitespace (including spaces produced by NFKC) is only trimmed and collapsed; separators such as '-', '/' and ' ' are never removed or unified,
 /// so <c>FM-1008</c> and <c>FM-1008/1</c> stay distinct (the user, not the software, picks a replacement number).
 /// </para>
 /// <para>
@@ -64,23 +64,25 @@ public sealed class TradeDocumentNumber : IEquatable<TradeDocumentNumber>
             return false;
         }
 
-        if (display.Length == 0)
-        {
-            error = TradeDocumentNumberError.Missing;
-            return false;
-        }
-
         if (display.Length > MaxLength)
         {
             error = TradeDocumentNumberError.TooLong;
             return false;
         }
 
-        var normalized = Normalize(display);
-        if (normalized.Length == 0 || normalized.Length > MaxLength)
+        // NFKC and the letter/digit mapping run first; validation and space collapsing then run again on the
+        // result, so characters that NFKC turns into spaces, combining marks or controls cannot slip through.
+        if (!TryCollapse(MapLetters(display.Normalize(NormalizationForm.FormKC)), out var collapsed))
+        {
+            error = TradeDocumentNumberError.InvalidCharacter;
+            return false;
+        }
+
+        var normalized = collapsed.ToUpperInvariant();
+        if (normalized.Length > MaxLength)
         {
             // NFKC can expand some characters; the stored form must still fit the column.
-            error = normalized.Length == 0 ? TradeDocumentNumberError.InvalidCharacter : TradeDocumentNumberError.TooLong;
+            error = TradeDocumentNumberError.TooLong;
             return false;
         }
 
@@ -98,28 +100,28 @@ public sealed class TradeDocumentNumber : IEquatable<TradeDocumentNumber>
 
     public override string ToString() => Display;
 
-    /// <summary>Rejects invisible/control characters and collapses space runs; tabs and newlines are rejected.</summary>
-    private static bool TryCollapse(string raw, out string collapsed)
+    /// <summary>
+    /// Rejects invisible, control and combining characters and collapses space runs (tabs and newlines are rejected).
+    /// Coverage is deliberate but partial: Unicode has no complete "invisible character" list, so a rejected-set miss
+    /// is possible for exotic code points; it is not a substitute for a visual-similarity (homoglyph) check.
+    /// </summary>
+    private static bool TryCollapse(string text, out string collapsed)
     {
-        var builder = new StringBuilder(raw.Length);
+        var builder = new StringBuilder(text.Length);
         var pendingSpace = false;
 
-        foreach (var ch in raw)
+        foreach (var ch in text)
         {
-            switch (CharUnicodeInfo.GetUnicodeCategory(ch))
+            if (CharUnicodeInfo.GetUnicodeCategory(ch) == UnicodeCategory.SpaceSeparator)
             {
-                case UnicodeCategory.SpaceSeparator:
-                    pendingSpace = builder.Length > 0;
-                    continue;
-                case UnicodeCategory.Control:
-                case UnicodeCategory.Format:
-                case UnicodeCategory.LineSeparator:
-                case UnicodeCategory.ParagraphSeparator:
-                case UnicodeCategory.PrivateUse:
-                case UnicodeCategory.Surrogate:
-                case UnicodeCategory.OtherNotAssigned:
-                    collapsed = string.Empty;
-                    return false;
+                pendingSpace = builder.Length > 0;
+                continue;
+            }
+
+            if (IsRejected(ch))
+            {
+                collapsed = string.Empty;
+                return false;
             }
 
             if (pendingSpace)
@@ -135,23 +137,43 @@ public sealed class TradeDocumentNumber : IEquatable<TradeDocumentNumber>
         return true;
     }
 
-    private static string Normalize(string display)
+    private static bool IsRejected(char ch)
     {
-        var text = display.Normalize(NormalizationForm.FormKC);
+        switch (CharUnicodeInfo.GetUnicodeCategory(ch))
+        {
+            case UnicodeCategory.Control:
+            case UnicodeCategory.Format:
+            case UnicodeCategory.LineSeparator:
+            case UnicodeCategory.ParagraphSeparator:
+            case UnicodeCategory.PrivateUse:
+            case UnicodeCategory.Surrogate:
+            case UnicodeCategory.OtherNotAssigned:
+            case UnicodeCategory.NonSpacingMark:
+            case UnicodeCategory.EnclosingMark:
+                return true;
+        }
+
+        // Letter/symbol code points that render as blank: Hangul fillers and the Braille blank pattern.
+        return (int)ch is 0x115F or 0x1160 or 0x3164 or 0xFFA0 or 0x2800;
+    }
+
+    private static string MapLetters(string text)
+    {
         var builder = new StringBuilder(text.Length);
 
         foreach (var ch in text)
         {
-            builder.Append(ch switch
+            var code = (int)ch;
+            builder.Append(code switch
             {
-                >= '\u06F0' and <= '\u06F9' => (char)('0' + (ch - '\u06F0')),
-                >= '\u0660' and <= '\u0669' => (char)('0' + (ch - '\u0660')),
-                '\u064A' or '\u0649' => '\u06CC',
-                '\u0643' => '\u06A9',
+                >= 0x06F0 and <= 0x06F9 => (char)('0' + (code - 0x06F0)),
+                >= 0x0660 and <= 0x0669 => (char)('0' + (code - 0x0660)),
+                0x064A or 0x0649 => (char)0x06CC,
+                0x0643 => (char)0x06A9,
                 _ => ch,
             });
         }
 
-        return builder.ToString().ToUpperInvariant();
+        return builder.ToString();
     }
 }

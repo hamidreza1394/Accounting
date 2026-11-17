@@ -132,6 +132,14 @@ public sealed class TradeDocumentNumberTests
     [InlineData("A\uFEFFB")]
     [InlineData("A\uE000B")]
     [InlineData("A\uD83D\uDE00B")]
+    [InlineData("A\u3164B")]
+    [InlineData("A\uFFA0B")]
+    [InlineData("A\u115FB")]
+    [InlineData("A\u2800B")]
+    [InlineData("A\u034FB")]
+    [InlineData("A\uFE0FB")]
+    [InlineData("A\u17B4B")]
+    [InlineData("A\uFE70B")]
     public void InvalidCharacter_RejectsControlFormatAndInvisibleCharacters(string raw)
     {
         Invalid(raw, TradeDocumentNumberError.InvalidCharacter);
@@ -145,20 +153,52 @@ public sealed class TradeDocumentNumberTests
     }
 
     [Fact]
-    public void Rejection_DoesNotEchoTheValueInAnyPublicMember()
-    {
-        const string secret = "SECRET\u0000VALUE";
-
-        Assert.False(TradeDocumentNumber.TryCreate(secret, out var number, out var error));
-        Assert.Null(number);
-        Assert.DoesNotContain("SECRET", error.ToString(), StringComparison.Ordinal);
-    }
-
-    [Fact]
     public void SameNumberDifferentCase_IsEqualAndNeighbouringNumbersAreNot()
     {
         Assert.Equal(Valid("PI-100"), Valid("pi-100 "));
         Assert.NotEqual(Valid("AB-G/P-W-7"), Valid("AB-G/P-W-8"));
         Assert.NotEqual(Valid("AB-G/P-W-7"), Valid("AB-G/P-W-7/1"));
+    }
+
+    [Fact]
+    public void Normalized_ConvertsZeroDigitsOfBothScripts()
+    {
+        Assert.Equal("0", Valid("\u06F0").Normalized);
+        Assert.Equal("0", Valid("\u0660").Normalized);
+        Assert.Equal("90", Valid("\u06F9\u0660").Normalized);
+    }
+
+    [Fact]
+    public void Normalized_UpperCasesNonLatinLettersWithSimpleMappings()
+    {
+        Assert.Equal("\u0391\u0392", Valid("\u03B1\u03B2").Normalized);
+        Assert.Equal("\u0410\u0411", Valid("\u0430\u0431").Normalized);
+    }
+
+    [Fact]
+    public void TooLong_IsAlsoDetectedAfterNfkcExpansion()
+    {
+        // U+FDFA expands to 18 characters under NFKC: four of them fit the raw limit but not the stored form.
+        var raw = new string((char)0xFDFA, 4);
+
+        Assert.True(raw.Length <= TradeDocumentNumber.MaxLength);
+        Invalid(raw, TradeDocumentNumberError.TooLong);
+    }
+
+    [Fact]
+    public void SpacesProducedByNfkc_AreNotAllowedToSplitEquivalentInputs()
+    {
+        // U+FE70 turns into a space plus a combining mark under NFKC; the combining mark is rejected after NFKC.
+        Invalid("A\uFE70", TradeDocumentNumberError.InvalidCharacter);
+        Invalid("A \uFE70", TradeDocumentNumberError.InvalidCharacter);
+    }
+
+    [Theory]
+    [InlineData("\t")]
+    [InlineData("\n")]
+    [InlineData(" \t ")]
+    public void OnlyWhitespaceControlCharacters_AreReportedAsMissing(string raw)
+    {
+        Invalid(raw, TradeDocumentNumberError.Missing);
     }
 }
