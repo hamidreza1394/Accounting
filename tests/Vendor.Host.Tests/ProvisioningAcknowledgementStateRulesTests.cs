@@ -19,6 +19,10 @@ public sealed class ProvisioningAcknowledgementStateRulesTests
     [Theory]
     [InlineData("provisioning_parent_reference_invalid")]
     [InlineData("provisioning_initial_admin_conflict")]
+    [InlineData("provisioning_license_not_installed")]
+    [InlineData("provisioning_not_entitled_for_company")]
+    [InlineData("provisioning_company_reference_conflict")]
+    [InlineData("provisioning_company_capacity_exceeded")]
     public void RejectedOutcomeAcceptsOnlyKnownStableErrorCodes(string errorCode)
     {
         Assert.True(ProvisioningAcknowledgementStateRules.TryResolveOutcome(

@@ -176,6 +176,13 @@ cd ClientApp && npm ci && npm run typecheck && npm test && npm run build && npm 
 - در `Licensing.Contracts` نیز هر `ProjectReference`، هر وابستگی ASP.NET Core/EF Core/Vendor و هر `Compile`/`Content Link` بیرون از پوشه رد می‌شود. این گارد بخشی از `Template.sln` است و با فرمان‌های معمول `dotnet test Template.sln --configuration Release` اجرا می‌شود. نتیجهٔ واقعی CI روی PR باید قبل از اعلام `Verified` بررسی شود.
 - این تست جایگزین G2/G3 نیست؛ G2 خروجی Publish را بررسی می‌کند و G3 اسکن اسرار در CI است. G4/G5 و allow-list کامل Publish هنوز جداگانه باید تعیین/پیاده‌سازی شوند.
 
+## Vendor provisioning rejection acknowledgement allow-list (Issue #698)
+
+- `ProvisioningAcknowledgementStateRules` accepts exactly six fixed rejection codes: the two existing parent/admin conflicts and the four company-bound outcomes emitted by the Customer v5 apply flow (`provisioning_license_not_installed`, `provisioning_not_entitled_for_company`, `provisioning_company_reference_conflict`, `provisioning_company_capacity_exceeded`).
+- A verified signature does not make an arbitrary `ErrorCode` trusted. Unknown codes, free-form diagnostics and PII-like values are rejected before persistence; the request remains `PendingDelivery` and can be retried.
+- The Vendor persists only the fixed allow-listed code as `FailureCode` when the verified `Rejected` acknowledgement is accepted. Exact signed retries are idempotent; a different acknowledgement for the same finalized request remains a conflict.
+- SQL Server coverage belongs to `ProvisioningAcknowledgementSqlServerIntegrationTests` and must run with `FARANO_VENDOR_TEST_SQLSERVER` plus `FARANO_REQUIRE_VENDOR_SQLSERVER=1` in CI. This change does not modify `Server/**`, customer schema, migrations, canonical contracts, signing keys or the v5 issuance gate.
+
 ## ممیزی Vendor و checkpoint مستقل (Issue #105 / #107)
 - `VendorAuditChainVerifierTests` آزمون‌های واحد برای رد metadata آزاد و شناسهٔ قابل‌شناسایی دارد.
 - `VendorAuditChainIntegrationTests` در SQL Server واقعی یک دیتابیس موقت `FaranouVendorTests_<guid>` می‌سازد؛ ۱۶ نویسنده با DbContext مستقل هم‌زمان رخداد ثبت می‌کنند، زنجیره بررسی می‌شود و دستکاری محتوا باید با `event-content-mismatch` رد شود.

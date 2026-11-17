@@ -636,10 +636,10 @@
 - **هم‌زمانی:** EF Core از OriginalValue روی concurrency token استفاده می‌کند؛ token نامعتبر پاسخ 400 و نسخهٔ stale پاسخ 409 می‌گیرد. RowVersion موجود استفاده شده و Migration جدیدی ساخته نشده است.
 - **اعتبارسنجی و امنیت:** عملیات تغییر Anti-forgery و permission policy دارند؛ دسترسی به رکورد با evaluator منبع‌محور بررسی می‌شود؛ CustomerId تغییرپذیر نیست و رابطهٔ Contract/Installation برای License از دیتابیس بررسی می‌شود. عملیات update و audit در یک تراکنش قرار دارند.
 - **وضعیت:** انتقال وضعیت فقط Active↔Suspended برای Customer و Installation مجاز است. Contract و License فقط در Draft ویرایش می‌شوند؛ انتقال وضعیت آن‌ها عمداً تا تعیین matrix پذیرفته‌شده و maker-checker انجام نمی‌شود. Metadata لایسنس به معنی صدور/ابطال رمزنگاری‌شده نیست.
-- **تست‌ها:** \`VendorBusinessMutationRulesTests\` برای rowversion/status/environment و \`VendorPersistenceTests.Business_records_use_sql_server_rowversion_concurrency_tokens\` برای metadata مدل اضافه شد. CI مربوط به PR #172 روی commit شاخه موفق شد: Vendor CI run `40467317429` و .NET CI run `40467317576`؛ تمام jobها از جمله Windows Publish و E2E سبز شدند و 569 تست .NET موفق بود. PR #172 با merge commit `8f1f021fd0f8b1c9faf0f24f4a1deef708245643` در main ادغام شده است. تست HTTP end-to-end و آزمون cross-resource/rollback همچنان پوشش تکمیلی‌اند.
+- **تست‌ها:** `VendorBusinessMutationRulesTests` برای rowversion/status/environment و `VendorPersistenceTests.Business_records_use_sql_server_rowversion_concurrency_tokens` برای metadata مدل اضافه شد. CI مربوط به PR #172 روی commit شاخه موفق شد: Vendor CI run `40467317429` و .NET CI run `40467317576`؛ تمام jobها از جمله Windows Publish و E2E سبز شدند و 569 تست .NET موفق بود. PR #172 با merge commit `8f1f021fd0f8b1c9faf0f24f4a1deef708245643` در main ادغام شده است. تست HTTP end-to-end و آزمون cross-resource/rollback همچنان پوشش تکمیلی‌اند.
 - **محدودیت:** تست HTTP end-to-end برای هر چهار PUT، آزمون cross-resource واقعی و آزمون rollback در SQL Server هنوز به پوشش تکمیلی نیاز دارند؛ این PR آن‌ها را به‌عنوان انجام‌شده ادعا نمی‌کند.
 - **داده:** هیچ Migration یا تغییر Schema دیتابیس حسابداری مشتری؛ هیچ کلید خصوصی امضا یا API صدور واقعی لایسنس اضافه نشده است.
-- **Branch:** \`feat/issue-171-vendor-update-lifecycle\`; **Issue:** #171.
+- **Branch:** `feat/issue-171-vendor-update-lifecycle`; **Issue:** #171.
 
 ## 2026-10-27 — Issue #174: پاسخ پایدار برای تعارض کلید یکتا در درخواست‌های هم‌زمان Vendor
 - **مسئله:** بررسی اولیه با `AnyAsync` به‌تنهایی جلوی رقابت دو درخواست را نمی‌گیرد؛ ایندکس یکتای SQL Server ممکن است یکی را با خطای 2601/2627 رد کند.
@@ -3093,3 +3093,25 @@
 - **هم‌ترازی تکمیلی:** عنوان D-100، خلاصه LICENSING، DATA_MODEL، WORKFLOWS، PROJECT_STATUS و handoff با تصمیم‌های فوق هماهنگ شدند؛ عبارت‌های نادرست دربارهٔ merge در اسناد جاری اصلاح شد.
 - **محدوده:** فقط `AGENTS.md` و `docs/*.md`؛ بدون کد اجرایی، Migration، Schema، DB یا تغییر Gate v5. `git diff --check` در سطح patch بازرسی شد و هیچ خط اضافه‌شده با whitespace انتهایی یافت نشد.
 - **وضعیت CI:** منتظر تکمیل چک‌های HEAD نهایی PR #697؛ Merge فقط پس از موفقیت چک‌های الزامی انجام می‌شود.
+
+
+## 2026-11-17 — Issue #698: پذیرش ACK رد برای provisioning شرکت‌محور در Vendor
+
+- **مبنا:** `main@0797bcad754795e071342102c9192b88050f6663`؛ شاخهٔ `agent/698-vendor-company-provisioning-ack-errors`.
+- **شکاف تأییدشده:** Customer v5 چهار کد ثابت `provisioning_license_not_installed`، `provisioning_not_entitled_for_company`، `provisioning_company_reference_conflict` و `provisioning_company_capacity_exceeded` را تولید و ACK امضاشدهٔ Rejected را ذخیره/بازپخش می‌کند؛ allow-list Vendor فقط دو کد قدیمی را می‌پذیرفت و ACK معتبر جدید را با 400 رد می‌کرد.
+- **تغییر Vendor:** چهار کد به allow-list محدود `ProvisioningAcknowledgementStateRules` افزوده شد. هیچ متن آزاد، diagnostic، PII یا کد ناشناخته‌ای پذیرفته یا ذخیره نمی‌شود. رفتار Applied/AlreadyApplied، دو کد قدیمی، exact retry و conflict تغییر نکرده است.
+- **Regression:** تست واحد برای هر شش کد مجاز؛ تست SQL Server برای ACK امضاشدهٔ هر چهار کد جدید، state برابر Failed، `FailureCode` دقیق، acknowledgement metadata و Audit، retry دقیق idempotent، ACK متفاوت با 409، و رد کد ناشناخته/متن تشخیصی بدون mutation.
+- **مستندات:** SECURITY، LICENSING_WORKFLOWS، TESTING، PROJECT_STATUS، INDEX و handoff این Issue به‌روزرسانی شدند.
+- **محدوده:** بدون تغییر `Server/**`، Customer schema/Migration، `Licensing.Contracts`، signer/trust store، Gate v5 یا secret.
+- **تست محلی:** Build/Test محلی در این اجرا انجام نشده است؛ checkout/SDK محلی در اختیار این اجرا نیست. تست واحد و SQL Server باید از CI روی HEAD نهایی اثبات شوند؛ تا آن زمان `Not Verified`.
+- **Commitهای شاخه:** `89fdd1559f17f5fee6903aab99a38e430740036d`، `e7db85ea90297ffdb3b363a3ab6f1d6feecad5e1`، `17e4201e632419a2e2952663ab03bf530fb8815f`، `96da8ad6d844d56b0be3677c154b64cd17d5328a`، `2395b253711cb9ac0e05ca502660de43803b4705`.
+- **PR/CI:** [PR #699](https://github.com/hamidreza1394/Accounting/pull/699) باز شده؛ CI روی HEAD نهایی pending است.
+
+
+
+## 2026-11-17 — triage و اصلاح شکست اولیهٔ Vendor CI در PR #699 (Issue #698)
+
+- **شاهد:** Vendor CI run [44041194822](https://github.com/hamidreza1394/Accounting/actions/runs/44041194822) روی HEAD 5eae14ad8eb3bfb32a92dbf14ffaebec522e8024 شکست خورد. Build دو خطای CS0136 در ProvisioningAcknowledgementSqlServerIntegrationTests.cs خطوط 277 و 280 گزارش کرد: نام‌های محلی repeatedBody و repeated در scope تودرتو با متغیرهای همان نام در scope بیرونی تداخل داشتند.
+- **علت ریشه‌ای:** خطای scope در کد تست integration؛ نه منطق production ACK و نه شکست واقعی قفل فایل checkpoint. دو job ویندوز و اوبونتو با عنوان checkpoint file-lock regression نیز به علت build همان پروژهٔ تست پیش از اجرای regression متوقف شدند.
+- **اصلاح حداقلی:** فقط نام متغیرهای retry داخل حلقهٔ rejection به rejectedRepeatedBody و rejectedRepeated تغییر یافت؛ assertion و رفتار محصول دست‌نخورده ماند. تست SQL Server موجود همان regression رفتاری را اجرا می‌کند و پس از رفع compile باید در CI واقعی اجرا شود.
+- **وضعیت پس از اصلاح:** CI مجدد روی HEAD اصلاح‌شده هنوز در انتظار است؛ هیچ تستی Verified اعلام نمی‌شود و PR #699 ادغام نمی‌شود تا همهٔ بررسی‌های الزامی سبز شوند.
