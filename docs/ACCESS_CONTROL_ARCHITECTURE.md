@@ -90,7 +90,7 @@ Directory فقط کاربران شرکت‌هایی را نشان می‌دهد 
 - Host ناشناخته، غیرفعال، تأییدنشده، تکراری، متداخل یا مبهم و Tenant تعلیق‌شده fail-closed رد می‌شود. TLS اجباری و cookie ترجیحاً host-only با Secure و HttpOnly و SameSite مناسب است.
 - طبق D-017، X-Forwarded-Host مرجع تعیین Tenant نیست و نباید از مسیر proxy پذیرفته شود. سایر forwarded headers فقط طبق قرارداد trusted proxy موجود قابل استفاده‌اند.
 - در Cloud، binding CustomerReference→TenantId از provisioning معتبر Vendor به Registry محلی معتبر می‌رسد؛ درخواست عادی وابسته به تماس زنده Vendor نیست. در Dedicated، Tenant از پیکربندی معتبر Installation می‌آید و با DB تطبیق داده می‌شود.
-- پس از login، Company انتخاب‌شده باید با رابطه Tenant→Company و CompanyAccessService، عضویت فعال و permission سمت سرور اعتبارسنجی شود. TenantId/CompanyId از ورودی کلاینت یا Import پذیرفته نمی‌شود.
+- پس از login، Company انتخاب‌شده باید با رابطه Tenant→Company و CompanyAccessService، عضویت فعال و permission سمت سرور اعتبارسنجی شود. TenantId/CompanyId از ورودی کلاینت یا Import به‌عنوان مرجع scope پذیرفته نمی‌شود؛ درخواست انتخاب Company (مانند `POST /api/v1/context`) فقط ورودی درخواست است و با همین اعتبارسنجی سمت سرور بررسی می‌شود.
 - Manifest در D-092 فقط برای Backfill یک‌باره است، نه Resolve زمان اجرا. انتقال Company بین Tenantها نیز به Migration کنترل‌شده و تاریخچه‌محور نیاز دارد، نه صرفاً تغییر دامنه.
 
 جزئیات تصمیم و وضعیت پیاده‌سازی در D-103 و DECISIONS.md ثبت شده است. این قرارداد هنوز در Runtime پیاده‌سازی/Verified نشده است.
