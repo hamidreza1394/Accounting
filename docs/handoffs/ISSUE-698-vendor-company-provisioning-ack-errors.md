@@ -3,7 +3,7 @@
 - **Issue:** [#698 — پذیرش ACKهای رد شرکت‌محور در Vendor](https://github.com/hamidreza1394/Accounting/issues/698)
 - **Agent/مسئول:** عامل اجرایی Vendor
 - **تاریخ:** 2026-11-17
-- **وضعیت:** پیاده‌سازی روی شاخه انجام شده؛ منتظر PR و CI
+- **وضعیت:** PR #699 باز است؛ نخستین Vendor CI روی HEAD 5eae14ad به‌علت خطای کامپایل در تست integration شکست خورد. علت ریشه‌ای، نام‌گذاری متغیرهای محلی تکراری بود و اصلاح حداقلی روی همان شاخه ثبت می‌شود؛ تا اجرای مجدد CI روی HEAD اصلاح‌شده، وضعیت همچنان Not Verified است.
 
 ## هدف و معیارهای پذیرش
 - [x] چهار کد ثابت Rejected که Customer v5 تولید می‌کند در allow-list محدود Vendor ثبت شود.
@@ -44,7 +44,9 @@
 | dotnet test Vendor.sln -c Release | اجرا نشده | تست واحد و SQL Server فقط پس از اجرای واقعی CI Verified می‌شوند. |
 | ProvisioningAcknowledgementStateRulesTests | در انتظار CI | شش کد مجاز و کدهای نامعتبر. |
 | ProvisioningAcknowledgementSqlServerIntegrationTests | در انتظار CI | نیازمند FARANO_VENDOR_TEST_SQLSERVER و FARANO_REQUIRE_VENDOR_SQLSERVER=1. |
-| git diff --check | اجرا نشده | تغییرات از طریق GitHub Contents API ثبت شده‌اند؛ جایگزین اجرای محلی نیست. |
+| git diff --check | اجرا نشده | تغییرات از طریق GitHub Git Data API ثبت می‌شوند؛ جایگزین اجرای محلی نیست. |
+| Vendor CI اولیه روی 5eae14ad | ناموفق | Build به‌دلیل CS0136 در خطوط 277 و 280 همین تست متوقف شد: repeatedBody و repeated در scope تودرتو با نام‌های موجود در scope بیرونی دوباره تعریف شده بودند. دو job ویندوز/اوبونتو checkpoint regression نیز قبل از اجرای تست، هنگام build همین پروژه شکست خوردند؛ این شکست، نتیجهٔ خود تست قفل checkpoint نبود. |
+| اصلاح regression | ثبت شد؛ CI مجدد در انتظار | متغیرهای retry در شاخهٔ داخلی به rejectedRepeatedBody و rejectedRepeated تغییر نام داده شدند؛ رفتار assertion و منطق ACK تغییر نکرد. نتیجهٔ نهایی فقط پس از CI روی HEAD اصلاح‌شده ثبت می‌شود. |
 
 ## امنیت، داده و سازگاری
 - فقط کدهای ثابت allow-list شده در FailureCode ذخیره می‌شوند؛ متن exception، SQL diagnostic، PII و کد ناشناخته رد می‌شوند.
@@ -61,5 +63,5 @@
 ## شناسه‌های Git
 - **Branch:** agent/698-vendor-company-provisioning-ack-errors
 - **Base:** main@0797bcad754795e071342102c9192b88050f6663
-- **HEAD فعلی شاخه هنگام ثبت PR:** 713956b2ed1d440c19b2e09ef4759a382cc8e077 (پیش از به‌روزرسانی همین مستندات؛ SHA نهایی را از PR #699 بخوانید)
+- **HEAD پیش از اصلاح CI:** 5eae14ad8eb3bfb32a92dbf14ffaebec522e8024؛ SHA اصلاح‌شده را از PR #699 و commit بعدی بخوانید.
 - **Pull Request:** [#699](https://github.com/hamidreza1394/Accounting/pull/699)؛ CI روی HEAD نهایی pending است.

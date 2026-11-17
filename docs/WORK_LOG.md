@@ -3107,3 +3107,11 @@
 - **Commitهای شاخه:** `89fdd1559f17f5fee6903aab99a38e430740036d`، `e7db85ea90297ffdb3b363a3ab6f1d6feecad5e1`، `17e4201e632419a2e2952663ab03bf530fb8815f`، `96da8ad6d844d56b0be3677c154b64cd17d5328a`، `2395b253711cb9ac0e05ca502660de43803b4705`.
 - **PR/CI:** [PR #699](https://github.com/hamidreza1394/Accounting/pull/699) باز شده؛ CI روی HEAD نهایی pending است.
 
+
+
+## 2026-11-17 — triage و اصلاح شکست اولیهٔ Vendor CI در PR #699 (Issue #698)
+
+- **شاهد:** Vendor CI run [44041194822](https://github.com/hamidreza1394/Accounting/actions/runs/44041194822) روی HEAD 5eae14ad8eb3bfb32a92dbf14ffaebec522e8024 شکست خورد. Build دو خطای CS0136 در ProvisioningAcknowledgementSqlServerIntegrationTests.cs خطوط 277 و 280 گزارش کرد: نام‌های محلی repeatedBody و repeated در scope تودرتو با متغیرهای همان نام در scope بیرونی تداخل داشتند.
+- **علت ریشه‌ای:** خطای scope در کد تست integration؛ نه منطق production ACK و نه شکست واقعی قفل فایل checkpoint. دو job ویندوز و اوبونتو با عنوان checkpoint file-lock regression نیز به علت build همان پروژهٔ تست پیش از اجرای regression متوقف شدند.
+- **اصلاح حداقلی:** فقط نام متغیرهای retry داخل حلقهٔ rejection به rejectedRepeatedBody و rejectedRepeated تغییر یافت؛ assertion و رفتار محصول دست‌نخورده ماند. تست SQL Server موجود همان regression رفتاری را اجرا می‌کند و پس از رفع compile باید در CI واقعی اجرا شود.
+- **وضعیت پس از اصلاح:** CI مجدد روی HEAD اصلاح‌شده هنوز در انتظار است؛ هیچ تستی Verified اعلام نمی‌شود و PR #699 ادغام نمی‌شود تا همهٔ بررسی‌های الزامی سبز شوند.

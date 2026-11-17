@@ -274,10 +274,10 @@ public sealed class ProvisioningAcknowledgementSqlServerIntegrationTests
                     cancellationToken))
                 {
                     Assert.Equal(HttpStatusCode.OK, repeatedRejectedResponse.StatusCode);
-                    var repeatedBody = await repeatedRejectedResponse.Content
+                    var rejectedRepeatedBody = await repeatedRejectedResponse.Content
                         .ReadFromJsonAsync<Dictionary<string, JsonElement>>(cancellationToken);
-                    Assert.True(repeatedBody is not null &&
-                        repeatedBody.TryGetValue("repeated", out var repeated) && repeated.GetBoolean());
+                    Assert.True(rejectedRepeatedBody is not null &&
+                        rejectedRepeatedBody.TryGetValue("repeated", out var rejectedRepeated) && rejectedRepeated.GetBoolean());
                 }
 
                 var conflictingRejectedEnvelope = CreateEnvelope(
