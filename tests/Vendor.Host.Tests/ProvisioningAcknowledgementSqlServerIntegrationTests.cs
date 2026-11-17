@@ -18,7 +18,7 @@ namespace Faranou.Vendor.Host.Tests;
 public sealed class ProvisioningAcknowledgementSqlServerIntegrationTests
 {
     [Fact]
-    public async Task SignedAcknowledgementConfirmsOnceAndRejectsConflictingRetry()
+    public async Task SignedAcknowledgementHandlesSuccessAndCompanyScopedRejectionsWithIdempotentRetries()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var baseConnection = Environment.GetEnvironmentVariable("FARANO_VENDOR_TEST_SQLSERVER");
