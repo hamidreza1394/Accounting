@@ -3105,5 +3105,5 @@
 - **محدوده:** بدون تغییر `Server/**`، Customer schema/Migration، `Licensing.Contracts`، signer/trust store، Gate v5 یا secret.
 - **تست محلی:** Build/Test محلی در این اجرا انجام نشده است؛ checkout/SDK محلی در اختیار این اجرا نیست. تست واحد و SQL Server باید از CI روی HEAD نهایی اثبات شوند؛ تا آن زمان `Not Verified`.
 - **Commitهای شاخه:** `89fdd1559f17f5fee6903aab99a38e430740036d`، `e7db85ea90297ffdb3b363a3ab6f1d6feecad5e1`، `17e4201e632419a2e2952663ab03bf530fb8815f`، `96da8ad6d844d56b0be3677c154b64cd17d5328a`، `2395b253711cb9ac0e05ca502660de43803b4705`.
-- **PR/CI:** هنوز باز نشده؛ CI pending است.
+- **PR/CI:** [PR #699](https://github.com/hamidreza1394/Accounting/pull/699) باز شده؛ CI روی HEAD نهایی pending است.
 
