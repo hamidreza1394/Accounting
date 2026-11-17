@@ -414,3 +414,10 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - **گزارش مستقل (الزام ۶):** `GET /api/v1/admin/security/installation-admin-activity` (فقط Admin، فقط‌خواندنی، `no-store`، فیلتر بازه/عامل، صفحه‌بندی)؛ مشاهدهٔ خود گزارش هم ثبت می‌شود.
 - **الزام ۴ (دور نزدن مجوزها):** آزمون HTTP: مدیر نصب بدون عضویت، دایرکتوری کاربران شرکت و Trade را نمی‌بیند. **یافتهٔ باز برای مالک:** تأیید/رد درخواست عضویت هر شرکت توسط مدیر نصب طبق D-071 بند ۷ مجاز است (ثبت‌شده، بدون نقش سیستمی، بدون خودتأییدی)؛ سازگاری آن با بند ۴ D-088 باید مالک تأیید کند.
 - **Backlog:** الزام دلیل و فیلد دلیل در Razor؛ محافظت DB (نیازمند تأیید Schema)؛ ممیزی Razor Roles؛ آزمون خرابی نوشتن ممیزی (fail-closed)؛ صفحه‌بندی Razor Users Index؛ موارد وابسته به Tenant در S3.
+
+
+## Resolve دامنه و مرز Tenant — D-103 (Accepted، 2026-11-17)
+
+Tenant مرز CustomerAccount/فضای کاری است و هر Tenant می‌تواند چند Company مستقل داشته باشد. دامنه canonical و verified فقط به Tenant و context اختیاری Company یا CorporateGroup lookup می‌شود؛ Host authorization نیست. پس از login، CompanyAccessService، عضویت Approved/فعال و permission سمت سرور باید دسترسی را تعیین کنند. هر CustomerAccount مستقل Tenant جدا دارد و CorporateGroup/Ownership نباید از CustomerAccount عبور کند. دامنه مشترک به‌تنهایی دلیل ادغام Tenant نیست.
+
+در Cloud، binding مشتری به Tenant از provisioning معتبر Vendor و Registry محلی معتبر می‌آید؛ درخواست عادی نباید به تماس زنده Vendor متکی باشد. در Dedicated، Tenant از پیکربندی معتبر Installation resolve و با DB تطبیق داده می‌شود. طبق D-017، X-Forwarded-Host برای تعیین Tenant پذیرفته نمی‌شود. Tenant/Company از body، query، header دلخواه یا فایل Import قابل تعیین نیست؛ Import از context معتبر سمت سرور استفاده می‌کند. Manifest فقط برای Backfill یک‌باره D-092 است. Host یا Tenant ناشناخته/مبهم/غیرفعال باید fail-closed رد شود. پیاده‌سازی هنوز NotImplemented است؛ هیچ Migration یا تغییر Runtime با این ADR مجاز نشده است.
