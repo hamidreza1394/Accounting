@@ -3115,3 +3115,14 @@
 - **علت ریشه‌ای:** خطای scope در کد تست integration؛ نه منطق production ACK و نه شکست واقعی قفل فایل checkpoint. دو job ویندوز و اوبونتو با عنوان checkpoint file-lock regression نیز به علت build همان پروژهٔ تست پیش از اجرای regression متوقف شدند.
 - **اصلاح حداقلی:** فقط نام متغیرهای retry داخل حلقهٔ rejection به rejectedRepeatedBody و rejectedRepeated تغییر یافت؛ assertion و رفتار محصول دست‌نخورده ماند. تست SQL Server موجود همان regression رفتاری را اجرا می‌کند و پس از رفع compile باید در CI واقعی اجرا شود.
 - **وضعیت پس از اصلاح:** CI مجدد روی HEAD اصلاح‌شده هنوز در انتظار است؛ هیچ تستی Verified اعلام نمی‌شود و PR #699 ادغام نمی‌شود تا همهٔ بررسی‌های الزامی سبز شوند.
+
+## 2026-11-17 — ثبت D-103: مرز Tenant بر مبنای مشتری و Resolve دامنه (Issue #397)
+
+- **تصمیم مالک:** Tenant نماینده CustomerAccount/فضای کاری است، نه الزاماً یک Company حقوقی. هر مشتری مستقل Tenant جدا دارد؛ یک Tenant می‌تواند چند Company داشته باشد و هر Company داده مالی/عملیاتی، CompanyId، عضویت، مجوز و دوره مالی مستقل دارد.
+- **دامنه:** Company domain و Group domain به Tenant به‌علاوه context مربوط resolve می‌شوند؛ Host صرفاً lookup key است، نه authorization. دامنه مشترک به‌تنهایی معیار ادغام نیست؛ CustomerAccount، مالکیت معتبر و مرز محرمانگی/عملیات معیارند. گروه از CustomerAccount عبور نمی‌کند.
+- **استقرار:** Cloud از binding معتبر provisioning Vendor و Registry محلی استفاده می‌کند؛ Dedicated از Tenant پیکربندی معتبر Installation و تطبیق DB. X-Forwarded-Host طبق D-017 مرجع Tenant نیست.
+- **Import/Backfill:** TenantId/CompanyId از ورودی یا فایل Import پذیرفته نمی‌شوند؛ context معتبر سمت سرور مرجع است. Manifest D-092 فقط Backfill یک‌باره است، نه runtime registry.
+- **مستندات:** D-103 به DECISIONS.md اضافه و ACCESS_CONTROL_ARCHITECTURE.md، SECURITY.md، INDEX.md و PROJECT_STATUS.md هم‌راستا شدند؛ handoff مستقل ثبت شد.
+- **محدوده:** فقط مستندات؛ بدون Entity، API، Runtime، Schema، Migration، Backfill، تنظیم نصب یا تغییر داده.
+- **اعتبارسنجی:** بررسی محتوای فایل‌ها و diff متنی انجام شد؛ Build/Test اجرا نشد (تغییر مستنداتی است). CI و بازبینی PR باید انجام شود.
+- **وضعیت:** PR مستنداتی برای Issue #397؛ Merge نشده است.
