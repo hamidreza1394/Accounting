@@ -61,5 +61,5 @@
 ## شناسه‌های Git
 - **Branch:** agent/698-vendor-company-provisioning-ack-errors
 - **Base:** main@0797bcad754795e071342102c9192b88050f6663
-- **Commits:** 89fdd1559f17f5fee6903aab99a38e430740036d, e7db85ea90297ffdb3b363a3ab6f1d6feecad5e1, 17e4201e632419a2e2952663ab03bf530fb8815f, 96da8ad6d844d56b0be3677c154b64cd17d5328a, 2395b253711cb9ac0e05ca502660de43803b4705
-- **Pull Request:** هنوز ایجاد نشده.
+- **HEAD فعلی شاخه هنگام ثبت PR:** 713956b2ed1d440c19b2e09ef4759a382cc8e077 (پیش از به‌روزرسانی همین مستندات؛ SHA نهایی را از PR #699 بخوانید)
+- **Pull Request:** [#699](https://github.com/hamidreza1394/Accounting/pull/699)؛ CI روی HEAD نهایی pending است.
