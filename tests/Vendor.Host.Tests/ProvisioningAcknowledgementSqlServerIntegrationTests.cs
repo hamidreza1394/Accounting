@@ -126,6 +126,17 @@ public sealed class ProvisioningAcknowledgementSqlServerIntegrationTests
                 Assert.Equal(HttpStatusCode.BadRequest, rejectedResponse.StatusCode);
             }
 
+            var unknownErrorEnvelope = CreateEnvelope(
+                signingKey, requestId, nonce, payloadHash, customerReference, installationCode,
+                "Rejected", now, "provisioning_unknown_company_error");
+            using (var unknownResponse = await client.PostAsJsonAsync(
+                $"/api/vendor/provisioning-requests/{requestId:D}/acknowledgement",
+                unknownErrorEnvelope,
+                cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.BadRequest, unknownResponse.StatusCode);
+            }
+
             await using (var unchangedScope = factory.Services.CreateAsyncScope())
             {
                 var db = unchangedScope.ServiceProvider.GetRequiredService<VendorDbContext>();
@@ -189,6 +200,106 @@ public sealed class ProvisioningAcknowledgementSqlServerIntegrationTests
                 Assert.Equal("Applied", stored.AcknowledgementResult);
                 Assert.Equal(2, await db.AuditEvents.CountAsync(
                     auditEvent => auditEvent.ActionCode == "vendor.provisioning.acknowledgement-confirmed" || auditEvent.ActionCode == "vendor.provisioning.acknowledgement-retried",
+                    cancellationToken));
+            }
+
+            var companyScopedRejectionCodes = new[]
+            {
+                "provisioning_license_not_installed",
+                "provisioning_not_entitled_for_company",
+                "provisioning_company_reference_conflict",
+                "provisioning_company_capacity_exceeded"
+            };
+
+            foreach (var errorCode in companyScopedRejectionCodes)
+            {
+                var rejectedRequestId = Guid.NewGuid();
+                var rejectedNonce = "nonce-" + Guid.NewGuid().ToString("N");
+                var rejectedPayloadHash = Convert.ToHexString(
+                    SHA256.HashData(Encoding.UTF8.GetBytes(rejectedRequestId.ToString("D")))).ToLowerInvariant();
+
+                await using (var rejectedSetupScope = factory.Services.CreateAsyncScope())
+                {
+                    var db = rejectedSetupScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                    db.ProvisioningRequests.Add(new VendorProvisioningRequest
+                    {
+                        Id = Guid.NewGuid(),
+                        CustomerId = customerId,
+                        InstallationId = installationId,
+                        RequestId = rejectedRequestId.ToString("D"),
+                        Nonce = rejectedNonce,
+                        PayloadJson = "{}",
+                        PayloadSha256 = rejectedPayloadHash,
+                        Status = "PendingDelivery",
+                        CreatedAtUtc = now.AddMinutes(-2),
+                        UpdatedAtUtc = now.AddMinutes(-1),
+                        DeliveredAtUtc = now.AddMinutes(-1),
+                        KeyId = "vendor-test-key",
+                        Algorithm = LicenseAlgorithms.EcdsaP256Sha256,
+                        SignatureBase64 = Convert.ToBase64String(new byte[64])
+                    });
+                    await db.SaveChangesAsync(cancellationToken);
+                }
+
+                var rejectedEnvelope = CreateEnvelope(
+                    signingKey, rejectedRequestId, rejectedNonce, rejectedPayloadHash,
+                    customerReference, installationCode, "Rejected", now, errorCode);
+                using (var rejectedResponse = await client.PostAsJsonAsync(
+                    $"/api/vendor/provisioning-requests/{rejectedRequestId:D}/acknowledgement",
+                    rejectedEnvelope,
+                    cancellationToken))
+                {
+                    Assert.Equal(HttpStatusCode.OK, rejectedResponse.StatusCode);
+                }
+
+                await using (var rejectedVerifyScope = factory.Services.CreateAsyncScope())
+                {
+                    var db = rejectedVerifyScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                    var stored = await db.ProvisioningRequests.SingleAsync(
+                        item => item.RequestId == rejectedRequestId.ToString("D"), cancellationToken);
+                    Assert.Equal("Failed", stored.Status);
+                    Assert.Equal("Rejected", stored.AcknowledgementResult);
+                    Assert.Equal(errorCode, stored.FailureCode);
+                    Assert.Equal("customer-ack-key-v1", stored.AcknowledgementKeyId);
+                    Assert.NotNull(stored.AcknowledgementSha256);
+                    Assert.NotNull(stored.AcknowledgedAtUtc);
+                    Assert.Null(stored.ConfirmedAtUtc);
+                    Assert.Contains(await db.AuditEvents.ToListAsync(cancellationToken),
+                        auditEvent => auditEvent.ActionCode == "vendor.provisioning.acknowledgement-rejected");
+                }
+
+                using (var repeatedRejectedResponse = await client.PostAsJsonAsync(
+                    $"/api/vendor/provisioning-requests/{rejectedRequestId:D}/acknowledgement",
+                    rejectedEnvelope,
+                    cancellationToken))
+                {
+                    Assert.Equal(HttpStatusCode.OK, repeatedRejectedResponse.StatusCode);
+                    var repeatedBody = await repeatedRejectedResponse.Content
+                        .ReadFromJsonAsync<Dictionary<string, JsonElement>>(cancellationToken);
+                    Assert.True(repeatedBody is not null &&
+                        repeatedBody.TryGetValue("repeated", out var repeated) && repeated.GetBoolean());
+                }
+
+                var conflictingRejectedEnvelope = CreateEnvelope(
+                    signingKey, rejectedRequestId, rejectedNonce, rejectedPayloadHash,
+                    customerReference, installationCode, "Applied", now);
+                using (var conflictingRejectedResponse = await client.PostAsJsonAsync(
+                    $"/api/vendor/provisioning-requests/{rejectedRequestId:D}/acknowledgement",
+                    conflictingRejectedEnvelope,
+                    cancellationToken))
+                {
+                    Assert.Equal(HttpStatusCode.Conflict, conflictingRejectedResponse.StatusCode);
+                }
+            }
+
+            await using (var rejectedFinalScope = factory.Services.CreateAsyncScope())
+            {
+                var db = rejectedFinalScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                Assert.Equal(4, await db.AuditEvents.CountAsync(
+                    auditEvent => auditEvent.ActionCode == "vendor.provisioning.acknowledgement-rejected",
+                    cancellationToken));
+                Assert.Equal(5, await db.AuditEvents.CountAsync(
+                    auditEvent => auditEvent.ActionCode == "vendor.provisioning.acknowledgement-retried",
                     cancellationToken));
             }
         }
