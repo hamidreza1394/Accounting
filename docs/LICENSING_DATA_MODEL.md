@@ -330,3 +330,30 @@ User/Identity در Customer Host محلی است. برای هر Company می‌�
 - v2 strict unknown-property rejection و canonical serialization دارد. ترتیب company reference، module code و feature code با Ordinal sort می‌شود. v1 parser و canonical output برای سازگاری تاریخی حفظ می‌شوند.
 - `LicenseRevisionRules` فقط پس از اعتبارسنجی امضای هر دو Envelope استفاده می‌شود؛ LicenseId، InstallationId و ProductCode ثابت و Sequence باید strictly increasing باشد. این helper state را persist نمی‌کند و جایگزین anti-replay تراکنشی Customer در #391 نیست.
 - این PR فقط `Licensing.Contracts` و تست/مستندات را تغییر می‌دهد؛ هیچ Vendor dependency، Customer `Server/**` یا migration دیتابیس مشتری اضافه نمی‌کند.
+
+## ۱۱) مدل مفهومی S1 — پشتیبانی، CRM سبک، فعال‌سازی مجدد، Update و نشست هم‌زمان (2026-11-16؛ `Proposed`، `NotImplemented`)
+
+> مأموریت S1-0 (Issue #696) تصمیم‌های D-097..D-102 را ثبت کرد. این بخش فقط مدل مفهومی و مالکیت داده است، نه مجوز Migration. هیچ Entity، جدول یا Migration در این مأموریت ساخته نشده است؛ هر مورد قبل از پیاده‌سازی به Issue، schema review و تأیید مالک نیاز دارد. مرز «Vendor DB در برابر Customer DB» بدون تغییر است (بخش ۴ و ت همین سند).
+
+### الف) فقط Vendor DB (داده تجاری؛ هرگز به نصب مشتری نمی‌رود)
+| موجودیت پیشنهادی | هدف (تصمیم مرجع) | یادداشت مالکیت/ضرورت |
+|---|---|---|
+| `SupportEntitlement` / `SupportPeriod` | دورهٔ پشتیبانی/Update مستقل به‌ازای هر Customer و Installation (D-097 بند ۲) | منبع تجاری صدور amendment تمدید (#393)؛ مقدار فنی فقط با امضای amendment به Payload می‌رسد. |
+| `SupportServiceRecord` / `ContactLog` | سوابق خدمات انجام‌شده، تماس‌ها و تمدیدها (D-097 بند ۶، D-102 بند ۵) | append-only؛ فقط رکورد تجاری Vendor؛ بدون credential مشتری. |
+| `Announcement` / `AnnouncementTarget` | اطلاعیهٔ فنی/تجاری/امنیتی با هدف‌گیری Customer/Installation/محصول (D-102 بند ۱ و ۴) | دسته‌بندی الزامی؛ ارسال هرگز entitlement را تغییر نمی‌دهد؛ opt-out در OD-25 باز است. |
+| `ReactivationRequest` / `HardwareProfileSnapshot` | درخواست فعال‌سازی مجدد و تاریخچهٔ نسخه‌دار مشخصات سخت‌افزار (D-099 بند ۲ و ۸) | فقط مشخصات نسخه‌دار حداقلی (OD-20)؛ هیچ کلید خصوصی و هیچ دادهٔ حسابداری؛ تصمیم تأیید/رد + علت + تأییدکننده audit می‌شود (D-099 بند ۸ و ۱۱). |
+| `SalesOrder` / `SalesOrderLine` (تکمیل بخش 9.1) | سفارش خرید پایه/add-on و تمدید؛ ورودی commercial برای amendment (#393) | Payment Evidence و state transitionها نیازمند تصمیم مالک است (شکاف شناخته‌شده #393). |
+| فیلد قراردادی `maxConcurrentSessions` (سطح Installation) | سقف نشست هم‌زمان (D-100) | فقط پس از تأیید OD-26 به Payload نسخه‌دار اضافه می‌شود؛ تبدیل از maxUsers ممنوع. |
+
+### ب) فقط Customer DB (هویت و وضعیت نصب؛ هرگز داده تجاری ندارد)
+| مورد | وضعیت |
+|---|---|
+| `InstallationIdentity`، `InstalledLicense`، `CompanySetupRecords`، `CustomerOfflineRevocationState` | موجود/در حال تکمیل از #384/#684؛ بخش ۶ همین سند. |
+| ثبت درخواست/پاسخ reactivation | موجودیت دائمی جدید لازم ندارد: درخواست transient است و فقط رخدادهای audit آن (ارسال، پاسخ، تأیید/رد Vendor) در audit محلی ثبت می‌شود؛ binding جدید همان مسیر import لایسنس است. |
+| شمارش کاربران یکتای هم‌زمان (D-100) | در صورت تصویب OD-26، `UserSessions` موجود (D-069/Issue #504) می‌تواند منبع تشخیص نشست‌های معتبر باشد؛ واحد شمارش `UserId` یکتا است، نه تعداد Session. شمارش Session فقط پس از تأیید OD-26 مجاز است؛ جدول موازی ساخته نمی‌شود. رفتار چندنمونه‌ای/Offline نیز در OD-26 باز است. |
+| دریافت بستهٔ Update امضاشده (D-101) | بسته transient است؛ نتیجهٔ اعتبارسنجی و تأیید مدیر در audit محلی ثبت می‌شود؛ هیچ جدول vendor-related در Customer ساخته نمی‌شود. |
+
+### ج) قواعد مالکیت S1 (افزوده به بخش ت)
+- مشخصات سخت‌افزاری و تاریخچهٔ فعال‌سازی مجدد فقط در Vendor DB؛ در نصب فقط در audit محلی.
+- کلید خصوصی Installation هرگز در هیچ DB، فایل Vendor یا بستهٔ انتقال ذخیره/ارسال نمی‌شود (D-058/D-099)؛ درخواست reactivation فقط SPKI و proof-of-possession دارد.
+- اطلاعیه‌ها و سوابق CRM فقط Vendor DB هستند و هرگز به فایل لایسنس/provisioning/ACK یا telemetry نصب وارد نمی‌شوند.
