@@ -42,6 +42,7 @@
 - مسیر دسترسی فعلی نیز legacy است: CompanyAccessService و WorkContextService، TenantId را به‌عنوان CompanyId تفسیر می‌کنند؛ عضویت، نقش، FiscalPeriod و HR به همین قرارداد متکی‌اند. در Trade نیز TradeEntity فقط TenantId دارد.
 - Migration Host: PR #665 (ادغام `2026-11-14T19:13:07Z`، `main@1c0eec0`) `DatabaseMigrationHost` را افزود؛ `--migrate` فقط Core و `--migrate --include-trade` اول Core سپس Trade را اجرا می‌کند (شکست Core مانع Trade؛ کد خروج `0..4`؛ `sp_getapplock`؛ بدون Baseline خودکار). هنوز حل‌نشده: اتصال به Entitlement، سیاست Shared/Dedicated، سیاست Trade در نصب فاقد مجوز، رویهٔ Backup/Recovery (OD-17 / D-094 `Proposed`).
 - بازبینی اولیه V3.2: گروه B و گزارش‌های R01–R10 هنوز TenantId=Company/OwnerCompany را فرض می‌کنند؛ گروه C باید Tenant و هر دو Company طرف رابطه را جداگانه کنترل کند. V3.2 همچنان Proposed است؛ D-086 فقط قواعد مشخص کسب‌وکار را Accepted کرده است.
+- 2026-11-18: ممیزی مالکیت Tenant/Company و آمادگی S3 در `TRADE_TENANT_COMPANY_AUDIT.md`، `TRADE_DECISION_RECONCILIATION.md` و `TRADE_S3_READINESS.md` ثبت شد (فقط مستندات، `Proposed` تا تأیید مالک). D-104 (رابطهٔ یک‌به‌یک Proforma/OrderRegistration) Accepted و NotImplemented است. S3-0 همچنان بسته نشده و D-090..D-096 Proposed هستند.
 - موارد باز: اجرای اسکریپت read-only روی SQL Server و خواندن دو Migration History واقعی؛ تکمیل inventory تمام مسیرهای داده؛ تعیین منبع معتبر Company→Tenant؛ قرارداد migration host؛ ERD و طرح گذار مرحله‌ای. CustomerBoundaryId یا عضویت گروه منبع Tenant نیست.
 - هیچ Entity، API، Migration، Schema، داده یا تنظیم runtime در این ممیزی تغییر نکرده است.
 

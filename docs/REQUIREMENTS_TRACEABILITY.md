@@ -62,7 +62,7 @@
 | نیازمندی | تصمیم/Issue | شاهد کد/تست هدف | وضعیت |
 |---|---|---|---|
 | ماژول مستقل در Accounting با امکان استخراج آتی | D-061 / #397 | Modules/Trade/* و TradeModuleFoundationTests | Foundation در main ادغام‌شده (PR #398) |
-| Company = TenantId و جداسازی داده | D-013/D-061/D-062 | TradeAuthorizationAdapter + CompanyAccessService + WorkContextService | Adapter و تست‌های foundation در main؛ اتصال endpoint/use case و تست SQL Server اختصاصی باقی است |
+| Company = TenantId و جداسازی داده (وضعیت legacy فعلی؛ مدل هدف D-087/D-103: Tenant و Company مستقل‌اند، یادداشت 2026-11-18) | D-013/D-061/D-062 | TradeAuthorizationAdapter + CompanyAccessService + WorkContextService | Adapter و تست‌های foundation در main؛ اتصال endpoint/use case و تست SQL Server اختصاصی باقی است |
 | استفاده از دوره مالی مشترک فرانو | D-062 / #397 | WorkContext/FiscalPeriodSelectionPolicy + TradePeriodScope + TradeAuthorizationAdapter؛ بدون Trade period entity | Adapter implemented؛ مصرف در use case pending |
 | مجوز تخصصی فرم/عملیات بازرگانی در سازوکار نقش مشترک | D-062 / #397, #402 | TradePermissionCodes + TradePermissionCatalog + migration + SQL Server tests | کاتالوگ و Migration در شاخه PR #403؛ CI/SQL Server verification pending؛ تخصیص نقش و enforcement API pending |
 | entitlement مستقل TRADE_IMPORT | D-025/D-059/D-061 | TradeModuleIdentity و ITradeModuleEntitlement | Port موجود؛ entitlement runtime از S1 طبق D-063 NotImplemented |
