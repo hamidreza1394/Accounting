@@ -3186,3 +3186,14 @@
 - شاخهٔ سابقهٔ `feat/tenant-v1-management@7e9abc1c` و شاخهٔ اولیهٔ اصلاحی (`743b0d90`/`f3b5bf6f`) بدون تغییر حفظ شدند.
 - **اعتبارسنجی مجدد:** `dotnet test Vendor.sln` = ۳۵۸ کل، ۳۰۴ موفق، ۰ ناموفق، ۵۴ Skip؛ `npm test` = ۶۸/۶۸؛ build/typecheck سبز؛ بودجهٔ دارایی برقرار؛ `check_static_assets.py` PASS؛ `git diff --check` پاک؛ CI هنوز اجرا نشده است.
 - **وضعیت:** Ready for Review (منوط به تأیید مالک برای Push و ایجاد PR).
+
+
+## 2026-11-18 — تثبیت سیاست‌های طرح پرداخت پیش‌فاکتور با تأیید مالک (#710)
+
+- Issue اختصاصی #710 ایجاد و PR #705 به آن متصل شد؛ Issue چتر #397 باز می‌ماند.
+- مالک تأیید کرد محاسبات با `decimal` انجام شود؛ مراحل غیرآخر با `MidpointRounding.AwayFromZero` و دقت `CurrencyRef.MinorUnits` گرد شوند؛ باقیماندهٔ واقعی به مرحلهٔ آخر برسد و باقیماندهٔ صفر/منفی خطای اعتبارسنجی باشد.
+- تست صریح با نام `NonLastStage_Rounds_0_025To0_03_AndLastStageReceivesRemainder` مشخصاً `0.05 × 50% = 0.025 → 0.03` و تخصیص `0.02` به مرحلهٔ آخر را بررسی می‌کند.
+- فهرست `TT/LC/DP/DA/OPEN_ACCOUNT` صرفاً مرجع اولیه است و توسعه‌پذیر می‌ماند. `allowedMethodCodes == null` یعنی همهٔ روش‌های مرجع مجاز؛ محدودیت هر Company به S3 و پروفایل D-086 موکول است.
+- فرمول مبلغ نهایی پیش‌فاکتور همچنان باز است و در این PR تعیین نمی‌شود. هیچ Schema، Migration، API یا UI اضافه نشده است.
+- Handoff به `docs/handoffs/ISSUE-710-trade-payment-plan-validation.md` منتقل شد.
+- تغییر اجرایی جدید فقط نام‌گذاری دقیق‌تر تست موجود است؛ نتیجهٔ CI روی HEAD جدید باید پیش از Merge تأیید شود.
