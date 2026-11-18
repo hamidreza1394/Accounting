@@ -3154,3 +3154,13 @@
 - وضعیت واقعی main: CompanyReference هر Company جدید فقط سمت سرور با `Guid.NewGuid().ToString("D")` تولید می‌شود؛ reference ارسالی client برای Company جدید رد می‌شود؛ در Update فقط reference موجود در همان draft پذیرفته و حفظ می‌شود؛ descriptor صرفاً label اپراتور است.
 - شواهد کد/تست: `Vendor/Vendor.Host/Authorization/VendorLicenseCompanyDraft.cs` و `tests/Vendor.Host.Tests/VendorLicenseCompanyDraftTests.cs`، شامل `NewCompanyReceivesServerGeneratedGuidDReference`، `ClientSuppliedReferenceForNewCompanyIsRejected` و `ExistingReferenceIsKeptWhenItMatchesTheSameDraft`.
 - PROJECT_STATUS، LICENSING و handoff همین PR اصلاح شدند. Work Log append-only باقی ماند؛ جملهٔ قبلی به‌عنوان ثبت اولیه حفظ و این اصلاح به‌صورت شفاف اضافه شد. هیچ کد یا قرارداد تغییر نکرد.
+
+
+## 2026-11-18 — PR #705: اعتبارسنجی و محاسبهٔ طرح پرداخت پیش‌فاکتور (Trade، بدون Schema)
+
+- Issue مرتبط: #397 (Issue چتر؛ Issue اختصاصی یافت نشد، `Refs` نه `Closes`). شاخه: `feat/trade-payment-plan-validation`. Handoff: `docs/handoffs/ISSUE-397-trade-payment-plan-validation.md`.
+- محدوده: `PaymentPlanCalculator.TryBuild`، `PaymentPlan`/`PaymentPlanStage`، فهرست مرجع `PaymentMethods` در `Trade.Application`؛ بدون Schema، Migration، TenantId/CompanyId، API یا UI.
+- اصلاحات Review: سازندهٔ عمومی و `init` حذف شد؛ ورودی `stages` و `allowedMethodCodes` یک‌بار در کپی خصوصی خوانده می‌شود؛ `PaymentPlan.Stages` و فهرست‌های مرجع `ImmutableArray` شدند (راه `ICollection.SyncRoot`/Cast به آرایهٔ قابل‌نوشتن بسته شد)؛ تست‌های رفتاری افزوده شد (سه تست جدید روی کد قبلی شکست می‌خورند).
+- تست محلی (SQL Server آزمایشی): ۱۶۰۸ اجرا / ۱۵۹۸ موفق / ۰ ناموفق / ۱۰ Skip (Windows CNG و chmod-root). نتیجهٔ CI جدا در PR گزارش می‌شود.
+- باز (تصمیم مالک): سیاست گردکردن `AwayFromZero` برای مراحل غیرآخر؛ منبع «روش‌های مجاز هر Company» (`allowedMethodCodes == null` یعنی همهٔ روش‌ها)؛ کامل‌بودن فهرست روش‌ها؛ فرمول مبلغ پیش‌فاکتور.
+- Commit کد: `23226a3`.
