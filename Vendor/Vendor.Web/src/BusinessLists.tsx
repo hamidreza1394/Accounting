@@ -25,7 +25,7 @@ type PageResponse<T> = {
   hasNextPage: boolean;
 };
 type Row = Record<string, unknown>;
-type Column = { key: string; label: string; kind?: 'date' | 'status' | 'environment' | 'licenseKind' | 'subsystems' | 'companies' };
+type Column = { key: string; label: string; kind?: 'date' | 'status' | 'environment' | 'licenseKind' | 'subsystems' | 'companies' | 'tenantView' };
 
 const resources: Record<BusinessSection, { title: string; description: string; endpoint: string; columns: Column[] }> = {
   customers: {
@@ -37,6 +37,7 @@ const resources: Record<BusinessSection, { title: string; description: string; e
       { key: 'legalName', label: 'نام حقوقی' },
       { key: 'displayName', label: 'نام نمایشی' },
       { key: 'status', label: 'وضعیت', kind: 'status' },
+      { key: 'tenantView', label: 'فضای کاری (مشتق از حساب مشتری)', kind: 'tenantView' },
       { key: 'createdAtUtc', label: 'تاریخ ثبت', kind: 'date' },
     ],
   },
@@ -121,6 +122,15 @@ function formatValue(value: unknown, kind?: Column['kind']): string {
     const names = value.map(item => (item as { descriptor?: unknown } | null)?.descriptor)
       .filter((item): item is string => typeof item === 'string' && item.length > 0);
     return names.length ? `${names.length} شرکت: ${names.join('، ')}` : '—';
+  }
+  if (kind === 'tenantView') {
+    // Read-only server derivation (D-103 V1): no independent tenant record is stored or managed.
+    const view = value as { derivedFrom?: unknown; workspaceReference?: unknown; status?: unknown } | null;
+    if (!view || typeof view !== 'object') return '—';
+    if (view.derivedFrom !== 'customer-account') return '—';
+    const reference = typeof view.workspaceReference === 'string' ? view.workspaceReference : '';
+    const status = typeof view.status === 'string' ? (statusLabels[view.status] ?? view.status) : '';
+    return `مشتق از حساب مشتری — مرجع: ${reference}${status ? ` — وضعیت: ${status}` : ''}`;
   }
   if (kind === 'date') {
     const date = new Date(raw);

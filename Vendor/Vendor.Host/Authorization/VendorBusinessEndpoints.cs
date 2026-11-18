@@ -20,7 +20,7 @@ public static class VendorBusinessEndpoints
         {
             var pagination = VendorPageRequest.Normalize(page, pageSize);
             var query = db.Customers.AsNoTracking().OrderBy(item => item.CustomerNumber).ThenBy(item => item.Id)
-                .Select(item => new CustomerResponse(item.Id, item.CustomerNumber, item.LegalName, item.DisplayName, item.Status, item.CreatedAtUtc, item.UpdatedAtUtc, Convert.ToBase64String(item.RowVersion)));
+                .Select(item => new CustomerResponse(item.Id, item.CustomerNumber, item.LegalName, item.DisplayName, item.Status, VendorTenantView.From(item.CustomerNumber, item.Status), item.CreatedAtUtc, item.UpdatedAtUtc, Convert.ToBase64String(item.RowVersion)));
             var totalCount = await query.CountAsync(ct);
             var items = await query.Skip(pagination.Skip).Take(pagination.PageSize).ToListAsync(ct);
             return Results.Ok(new VendorPageResponse<CustomerResponse>(items, pagination.Page, pagination.PageSize, totalCount));
@@ -36,7 +36,7 @@ public static class VendorBusinessEndpoints
             if (!access.Succeeded) return Results.Forbid();
             var item = await db.Customers.AsNoTracking().SingleOrDefaultAsync(value => value.Id == id, ct);
             return item is null ? Results.NotFound() :
-                Results.Ok(new CustomerResponse(item.Id, item.CustomerNumber, item.LegalName, item.DisplayName, item.Status, item.CreatedAtUtc, item.UpdatedAtUtc, Convert.ToBase64String(item.RowVersion)));
+                Results.Ok(new CustomerResponse(item.Id, item.CustomerNumber, item.LegalName, item.DisplayName, item.Status, VendorTenantView.From(item.CustomerNumber, item.Status), item.CreatedAtUtc, item.UpdatedAtUtc, Convert.ToBase64String(item.RowVersion)));
         }).RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.CustomersRead));
 
         customers.MapPost("/", async (
@@ -77,7 +77,7 @@ public static class VendorBusinessEndpoints
                 System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
             await tx.CommitAsync(ct);
             return Results.Created($"/api/vendor/customers/{item.Id:D}",
-                new CustomerResponse(item.Id, item.CustomerNumber, item.LegalName, item.DisplayName, item.Status, item.CreatedAtUtc, item.UpdatedAtUtc, Convert.ToBase64String(item.RowVersion)));
+                new CustomerResponse(item.Id, item.CustomerNumber, item.LegalName, item.DisplayName, item.Status, VendorTenantView.From(item.CustomerNumber, item.Status), item.CreatedAtUtc, item.UpdatedAtUtc, Convert.ToBase64String(item.RowVersion)));
         }).RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.CustomersManage));
 
         MapReadOnlyResource<InstallationResponse>(endpoints, "/api/vendor/installations", "installation",
@@ -311,7 +311,7 @@ public static class VendorBusinessEndpoints
                 System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
             await tx.CommitAsync(ct);
             return Results.Ok(new CustomerResponse(item.Id, item.CustomerNumber, item.LegalName, item.DisplayName,
-                item.Status, item.CreatedAtUtc, item.UpdatedAtUtc, Convert.ToBase64String(item.RowVersion)));
+                item.Status, VendorTenantView.From(item.CustomerNumber, item.Status), item.CreatedAtUtc, item.UpdatedAtUtc, Convert.ToBase64String(item.RowVersion)));
         });
 
         // Legacy direct status changes are intentionally blocked. Use the Maker-Checker approval API.
@@ -561,7 +561,7 @@ public sealed record ChangeOperationalStatusRequest(string? Status, string? RowV
 public sealed record UpdateInstallationRequest(string? InstallationCode, string? Name, string? Environment, string? RowVersion);
 public sealed record UpdateContractRequest(string? ContractNumber, DateTimeOffset StartsAtUtc, DateTimeOffset? EndsAtUtc, string? CurrencyCode, string? RowVersion);
 public sealed record UpdateLicenseRequest(Guid? ContractId, Guid? InstallationId, string? LicenseNumber, string? ProductCode, DateTimeOffset ValidFromUtc, DateTimeOffset? ValidUntilUtc, string? RowVersion, string? LicenseKind = null, int? MaxCompanies = null, IReadOnlyList<string>? Subsystems = null, int? GraceDays = null, IReadOnlyList<VendorCompanyDraftInput>? Companies = null);
-public sealed record CustomerResponse(Guid Id, string CustomerNumber, string LegalName, string DisplayName, string Status, DateTimeOffset CreatedAtUtc, DateTimeOffset UpdatedAtUtc, string RowVersion);
+public sealed record CustomerResponse(Guid Id, string CustomerNumber, string LegalName, string DisplayName, string Status, VendorTenantView TenantView, DateTimeOffset CreatedAtUtc, DateTimeOffset UpdatedAtUtc, string RowVersion);
 public sealed record InstallationResponse(Guid Id, Guid CustomerId, string InstallationCode, string Name, string Environment, string Status, DateTimeOffset CreatedAtUtc, DateTimeOffset? LastSeenAtUtc, string RowVersion);
 public sealed record ContractResponse(Guid Id, Guid CustomerId, string ContractNumber, string Status, DateTimeOffset StartsAtUtc, DateTimeOffset? EndsAtUtc, string CurrencyCode, DateTimeOffset CreatedAtUtc, string RowVersion);
 public sealed record LicenseResponse(Guid Id, Guid CustomerId, Guid? ContractId, Guid? InstallationId, string LicenseNumber, string ProductCode, string Status, string LicenseKind, int? MaxCompanies, IReadOnlyList<string> Subsystems, int GraceDays, int LastIssuedSequence, DateTimeOffset ValidFromUtc, DateTimeOffset? ValidUntilUtc, DateTimeOffset CreatedAtUtc, string RowVersion, IReadOnlyList<VendorCompanyDraftEntry>? Companies = null);
