@@ -2682,7 +2682,7 @@ Trade بدون اجرا Fail-closed است؛ جدول Trade بدون History م�
 
 ## D-103 — مرز Tenant بر مبنای مشتری و Resolve هویت از دامنه (2026-11-17)
 
-- **وضعیت:** Accepted (تأیید صریح مالک محصول، 2026-11-17) | **پیاده‌سازی:** NotImplemented؛ این ADR فقط قرارداد هدف را تثبیت می‌کند و مجوز تغییر Schema، Migration یا Runtime نیست.
+- **وضعیت:** Accepted (تأیید صریح مالک محصول، 2026-11-17) | **پیاده‌سازی:** فقط نمایش مشتق‌شدهٔ فقط-خواندنی در V1 (به‌روزرسانی 2026-11-18): `VendorTenantView` در زمان درخواست از فیلدهای `VendorCustomer` ساخته و در `CustomerResponse` بازگردانده می‌شود؛ بدون Entity/جدول/Migration/کد مجوز/API مستقل/TenantKey ذخیره‌شده/Runtime. هرگونه ذخیره‌سازی یا مدیریت مستقل Tenant پیش از عبور از گیت‌های S3-0h همچنان ممنوع است و این ADR مجوز تغییر Schema، Migration یا Runtime نیست.
 - **زمینه:** D-087 Tenant را از Company مستقل کرده و D-065 هر دو دامنه Company و CorporateGroup را پذیرفته است؛ اما نسبت Tenant با CustomerAccount و نقش دامنه در Resolve کردن زمینه هنوز صریح نبود. در گذشته، بعضی اسناد/Issueها Company=Tenant را فرض می‌کردند؛ آن فرض با D-087 و این ADR superseded است.
 
 ### تصمیم مالک محصول
