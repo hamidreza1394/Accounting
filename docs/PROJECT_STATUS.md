@@ -1,11 +1,26 @@
-## وضعیت Vendor — پذیرش ACKهای رد شرکت‌محور (Issue #698) — 2026-11-17
+## وضعیت جاری ماژول Vendor — 2026-11-18
 
-**مبنای شروع:** `main@0797bcad754795e071342102c9192b88050f6663`؛ شاخهٔ کاری `agent/698-vendor-company-provisioning-ack-errors`.
+**مبنای بررسی:** `main@163e0be3a430439b69c13e0c17e8b99e98617fb9`؛ این snapshot، وضعیت قبلی Issue #698 را پس از Mergeهای #699، #700 و #701 به‌روز می‌کند.
 
-- چهار کد رد ثابت که Customer v5 در #686/#687 تولید می‌کند به allow-list صریح Vendor افزوده شده‌اند: `provisioning_license_not_installed`، `provisioning_not_entitled_for_company`، `provisioning_company_reference_conflict` و `provisioning_company_capacity_exceeded`. دو کد قدیمی parent/admin بدون تغییر باقی مانده‌اند.
-- تست واحد برای شش کد مجاز و تست SQL Server برای پذیرش امضاشده، انتقال `PendingDelivery → Failed`، ذخیرهٔ دقیق `FailureCode`، metadata/Audit، retry یکسان و conflict برای ACK متفاوت افزوده/گسترش یافته‌اند. کد ناشناخته و diagnostic/PII همچنان باید بدون mutation رد شوند.
-- **وضعیت:** تغییرات روی شاخهٔ اختصاصی `Implemented / Not Verified` هستند؛ PR #699 باز شده است؛ CI روی HEAD نهایی در انتظار تکمیل است. تا مشاهدهٔ CI سبز روی SHA نهایی، این قابلیت `Verified` محسوب نمی‌شود.
-- **مرز تغییر:** فقط Vendor و مستندات/تست‌های Vendor؛ هیچ `Server/**`، Customer DB/Migration، قرارداد canonical، signer/trust store یا تنظیم Gate v5 تغییر نکرده است. Gate دوکلیدی v5 همچنان بسته است.
+### GitHub و CI
+- **main:** `163e0be3a430439b69c13e0c17e8b99e98617fb9` (Merge PR #702؛ پس از #701). PR #700 با SHA `5be1ff7a8f1a3e793062ea1158038640041ea7b9` و PR #701 با SHA بالا ادغام شده‌اند.
+- **PRهای جاری:** PR #702 در 2026-11-18 با merge commit `163e0be3a430439b69c13e0c17e8b99e98617fb9` ادغام شد و فقط Trade را تغییر داد. PR #703 همین بازبینی مستنداتی Vendor باز است؛ PR باز کد-محور Vendor وجود ندارد.
+- **PR #699 / Issue #698:** با merge commit `755150929b211ac3b952a3c3a7f0856624b11f0d` ادغام شد. چهار کد رد ثابت شرکت‌محور Customer v5 به allow-list محدود ACK در Vendor افزوده شده‌اند.
+- **CI روی HEAD نهایی PR #699:** Vendor CI [44042742801](https://github.com/hamidreza1394/Accounting/actions/runs/44042742801) با ۳/۳ Job موفق؛ Semgrep [44042742931](https://github.com/hamidreza1394/Accounting/actions/runs/44042742931) با ۱/۱ Job موفق؛ .NET CI [44042743089](https://github.com/hamidreza1394/Accounting/actions/runs/44042743089) با ۷/۷ Job موفق، شامل Build/Test، E2E و Publish ویندوز/لینوکس.
+- **علت شکست اولیهٔ PR #699:** خطای CS0136 در تست SQL Server به‌دلیل نام‌های محلی تکراری `repeatedBody` و `repeated`؛ با تغییر نام به `rejectedRepeatedBody` و `rejectedRepeated` اصلاح شد. منطق تولیدی ACK تغییر نکرد.
+- **PRهای مرجع #281/#282/#284:** هر سه Merge شده‌اند. Jobهای runهای ثبت‌شده در اسناد دوباره خوانده شدند و همه موفق بودند: #281 .NET هفت Job، Semgrep یک Job و Push on main چهار تحلیل؛ #282 و #284 علاوه بر آن Vendor CI یک Job نیز موفق داشتند.
+- **CI پس از Merge روی pushهای main:** در این اجرا تأیید نشد. GitHub connector موجود فقط Workflow Runهای PR-triggered را فهرست می‌کند؛ برای merge SHAهای #699/#700/#701 خروجی run خالی و Combined Status خالی بود. این محدودیت نه موفقیت است و نه شکست CI روی main.
+
+### وضعیت Provisioning و Licensing
+- **#228 / #392:** قرارداد v5، نگاشت Customer-side در `CompanySetupRecords`، Apply اتمیک و `maxCompanies` در main هستند؛ allow-list ردهای شرکت‌محور Vendor نیز با #699 تکمیل شد. بااین‌حال Gate صدور v5 همچنان بسته است: `VendorProvisioningCompanyReferenceGate.CustomerConsumerReady=false` و `Provisioning:CompanyReferenceIssuance:Enabled` پیش‌فرض خاموش. Migration مشتری روی دیتابیس واقعی اجرا نشده و bootstrap مدیر Dedicated/Offline و سیاست Restore/Clone باقی‌اند.
+- **#235:** کار Customer-side مستقل است؛ trust-key distribution/rotation، readiness و audit پایدار، retry/error semantics و آزمون Staging دو میزبان/دو process باقی‌اند. این موارد در PR محدود به Vendor تغییر نمی‌کنند.
+- **#236/#214:** maker-checker، تراکنش صدور و fail-closed در کد هستند؛ providerهای پیش‌فرض unavailable باقی‌اند. هیچ KMS/HSM واقعی، token، module path یا credential عملیاتی provision نشده است؛ Production signing فعال نمی‌شود.
+- **#393:** سه candidate builder برای maxCompanies، Company-scoped Module/Feature/UserSeat و Support/Update در main هستند؛ Order/OrderLine، Payment Evidence، persistence خرید، approval تجاری و صدور پایدار amendment هنوز NotImplemented است. تصمیم دربارهٔ مدرک پرداخت، نقش تأییدکننده و transitionهای خرید لازم است.
+- **#107:** hash-chain، checkpoint contract و Production startup guard fail-closed در main هستند؛ sink واقعی مستقل با failure domain و credential جدا، immutability/retention و recovery drill عملیاتی هنوز انتخاب/provision نشده است.
+- **ریسک هویت مشتری:** `CustomerNumber` در Vendor هنوز قابل ویرایش است، درحالی‌که هنگام صدور برابر `CustomerReference` قرار می‌گیرد. این می‌تواند binding مشتری Provisioning‌شده را ناپایدار کند؛ سیاست اصلاح/تغییر آن نیازمند تصمیم مالک است و در این snapshot هیچ رفتار اجرایی حدس زده یا تغییر داده نشده است.
+- **CompanyReference:** برای هر Company جدید فقط سمت سرور با `Guid.NewGuid().ToString("D")` ساخته می‌شود؛ مقدار client-supplied برای Company جدید رد می‌شود. هنگام ویرایش، فقط reference موجود در همان draft پذیرفته و حفظ می‌شود؛ descriptor صرفاً برچسب اپراتوری است. تست‌های `NewCompanyReceivesServerGeneratedGuidDReference`، `ClientSuppliedReferenceForNewCompanyIsRejected` و `ExistingReferenceIsKeptWhenItMatchesTheSameDraft` این قواعد را پوشش می‌دهند.
+
+**وضعیت کلی:** PR #699 از نظر PR-head CI موفق و در main ادغام شده است؛ post-merge main CI در این اجرا تأیید نشده. Gate v5، signer Production و audit sink مستقل عمداً fail-closed باقی مانده‌اند. این snapshot به معنی Production readiness یا اجرای Migration مشتری نیست.
 
 ## وضعیت جاری Vendor/Licensing و مأموریت S1-0 — 2026-11-16
 

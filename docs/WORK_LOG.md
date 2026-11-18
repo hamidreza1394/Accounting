@@ -3126,3 +3126,31 @@
 - **محدوده:** فقط مستندات؛ بدون Entity، API، Runtime، Schema، Migration، Backfill، تنظیم نصب یا تغییر داده.
 - **اعتبارسنجی:** بررسی محتوای فایل‌ها و diff متنی انجام شد؛ Build/Test اجرا نشد (تغییر مستنداتی است). CI و بازبینی PR باید انجام شود.
 - **وضعیت:** PR مستنداتی برای Issue #397؛ Merge نشده است.
+
+
+## 2026-11-18 — بازبینی پس از Merge #699/#700/#701 و هم‌راستاسازی وضعیت Vendor
+
+- **مبنای Git:** شاخه `main` روی `a7693cf476a8ce4dd0095666c9871b69ce3d00e4` (Merge #701)؛ PR باز فعلی فقط #702 است و به Trade مربوط می‌شود. Issues باز مرتبط با Vendor: #228، #235، #236، #214، #393، #107 و #392.
+- **PR #699 / Issue #698:** merge commit `755150929b211ac3b952a3c3a7f0856624b11f0d`. چهار کد رد ثابت شرکت‌محور به allow-list محدود Vendor افزوده شد. CI روی HEAD نهایی PR: Vendor CI run [44042742801](https://github.com/hamidreza1394/Accounting/actions/runs/44042742801) سه Job موفق؛ Semgrep run [44042742931](https://github.com/hamidreza1394/Accounting/actions/runs/44042742931) یک Job موفق؛ .NET CI run [44042743089](https://github.com/hamidreza1394/Accounting/actions/runs/44042743089) هفت Job موفق، شامل Build/Test، E2E و Publishهای Windows/Linux.
+- **علت شکست اولیه:** CS0136 در تست SQL Server به‌علت تعریف دوبارهٔ `repeatedBody` و `repeated` در scope تودرتو؛ اصلاح فقط نام‌ها را به `rejectedRepeatedBody` و `rejectedRepeated` تغییر داد و منطق production را دست نزد.
+- **PRهای مرجع:** #281، #282 و #284 واقعاً Merge شده‌اند؛ Jobهای runهای مستندشده برای هر سه PR دوباره خوانده شدند و همگی موفق بودند. #700 (D-103) و #701 (ممیزی S3-0e) نیز Merge شده‌اند.
+- **محدودیت CI پس از Merge:** فهرست Workflow Runs برای pushهای main از GitHub connector این اجرا قابل دریافت نبود؛ `fetch_commit_workflow_runs` فقط PR-triggered است و برای merge SHAها خروجی خالی داد؛ Combined Status نیز خالی بود. بنابراین post-merge CI روی main را موفق اعلام نمی‌کنیم و باید از Actions UI/API دارای دسترسی Workflow Runs تأیید شود.
+- **هم‌راستایی مستندات:** snapshot جاری PROJECT_STATUS، LICENSING و LICENSING_WORKFLOWS وضعیت #699 را از «باز/در انتظار» به «Merged؛ PR CI سبز» تغییر می‌دهد؛ Gate v5 همچنان بسته است.
+- **موانع باقی‌مانده:** #228/#392 منتظر Gate دوکلیدی، تأیید Migration/عملیات مشتری، Bootstrap Dedicated/Offline و Restore/Clone؛ #235 منتظر trust distribution/rotation و readiness/audit/دو میزبان؛ #236/#214 منتظر provider/credential/ceremony واقعی؛ #393 منتظر تصمیم Payment Evidence/approver/state؛ #107 منتظر مقصد مستقل و credential/retention/recovery.
+- **ریسک تازهٔ ثبت‌شده:** `VendorCustomer.CustomerNumber` پس از Provisioning قابل تغییر است، درحالی‌که `CustomerReference` از آن مشتق می‌شود. به‌دلیل نبود تصمیم صریح برای اصلاح/تغییر شناسه، این اجرا فقط ریسک را ثبت کرد و کد را تغییر نداد.
+- **محدوده:** فقط مستندات Vendor/Licensing/Work Log؛ بدون کد اجرایی، Migration، Customer DB، `Server/**`، signer، secret یا Gate change. Build/Test محلی و `git diff --check` اجرا نشدند؛ این محیط checkout محلی ندارد.
+
+
+## 2026-11-18 — هم‌راستاسازی مبنای PR #703 پس از Merge هم‌زمان PR #702
+
+- پس از ایجاد شاخهٔ مستنداتی Vendor از `main@a7693cf476a8ce4dd0095666c9871b69ce3d00e4`، PR مستقل Trade #702 ادغام شد و `main` به `163e0be3a430439b69c13e0c17e8b99e98617fb9` رسید. PR #702 فقط `TradeDocumentNumber.cs`، تست Trade و handoff مربوط را تغییر داده و فایل‌های Vendor/مستندات مشترک این PR را لمس نکرد.
+- PR #703 روی همان مبنای قبلی ساخته شده، اکنون نسبت به main یک commit عقب و هفت commit جلو است؛ GitHub آن را `mergeable=true` گزارش می‌کند. این تغییر هم‌زمان در Project Status و LICENSING ثبت شد؛ قبل از Merge باید CI جدید روی head نهایی PR #703 کامل و سبز شود.
+- PRهای باز فعلی پس از Merge #702: فقط #703 (این PR مستنداتی). تغییرات Trade وارد محدودهٔ Vendor نشدند.
+
+
+## 2026-11-18 — اصلاح یک خطای factual در snapshot CompanyReference
+
+- بازخوانی مستقیم `VendorLicenseCompanyDraft.cs` و `VendorLicenseCompanyDraftTests.cs` نشان داد جملهٔ قبلی همین Work Log و snapshot اولیهٔ این مأموریت دربارهٔ «operator-entered CompanyReference» نادرست بود و از handoff قدیمی S3-0e پیش از PR #682 باقی مانده بود.
+- وضعیت واقعی main: CompanyReference هر Company جدید فقط سمت سرور با `Guid.NewGuid().ToString("D")` تولید می‌شود؛ reference ارسالی client برای Company جدید رد می‌شود؛ در Update فقط reference موجود در همان draft پذیرفته و حفظ می‌شود؛ descriptor صرفاً label اپراتور است.
+- شواهد کد/تست: `Vendor/Vendor.Host/Authorization/VendorLicenseCompanyDraft.cs` و `tests/Vendor.Host.Tests/VendorLicenseCompanyDraftTests.cs`، شامل `NewCompanyReceivesServerGeneratedGuidDReference`، `ClientSuppliedReferenceForNewCompanyIsRejected` و `ExistingReferenceIsKeptWhenItMatchesTheSameDraft`.
+- PROJECT_STATUS، LICENSING و handoff همین PR اصلاح شدند. Work Log append-only باقی ماند؛ جملهٔ قبلی به‌عنوان ثبت اولیه حفظ و این اصلاح به‌صورت شفاف اضافه شد. هیچ کد یا قرارداد تغییر نکرد.
