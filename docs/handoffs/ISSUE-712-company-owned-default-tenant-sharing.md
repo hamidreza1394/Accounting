@@ -52,4 +52,4 @@
 ## شناسه‌های Git
 - Branch: docs/d105-company-owned-default-tenant-sharing
 - Commit: در پایان تغییرات ثبت می‌شود.
-- Pull Request: #713 (Draft؛ تا ادغام PR #711 و رفع تداخل WORK_LOG نباید Merge شود).
+- Pull Request: #713 (Draft؛ PR #711 نیز WORK_LOG را تغییر می‌دهد؛ mergeability پس از هر ادغام دوباره کنترل شود).
