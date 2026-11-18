@@ -19,7 +19,7 @@
 - Semgrep run [44042742931](https://github.com/hamidreza1394/Accounting/actions/runs/44042742931): یک Job موفق.
 - .NET CI run [44042743089](https://github.com/hamidreza1394/Accounting/actions/runs/44042743089): هر هفت Job (secret scan، client، build/test، publish scripts، E2E، Windows publish، publish) موفق.
 - علت شکست اولیهٔ Vendor CI، تعارض نام متغیرهای `repeatedBody` و `repeated` در تست SQL Server بود؛ تغییر نام به `rejectedRepeatedBody` و `rejectedRepeated` خطای کامپایل را رفع کرد. منطق تولیدی ACK تغییر نکرد.
-- PRهای #700 (D-103) و #701 (ممیزی S3-0e) نیز ادغام شده‌اند؛ main اکنون روی SHA `a7693cf476a8ce4dd0095666c9871b69ce3d00e4` است.
+- PRهای #700 (D-103) و #701 (ممیزی S3-0e) نیز ادغام شده‌اند؛ main پس از Merge #702 اکنون روی SHA `163e0be3a430439b69c13e0c17e8b99e98617fb9` است.
 - PRهای #281، #282 و #284 همچنان Merge شده‌اند. Jobهای runهای ثبت‌شده در اسناد برای هر سه PR دوباره خوانده شدند و همهٔ Jobهای موجود موفق بودند.
 - تنها PR باز فعلی #702 است و به Trade مربوط است؛ در محدودهٔ Vendor نیست.
 
