@@ -71,7 +71,7 @@
 
 | Entity | مالکیت هدف | Scope یکتایی | وضعیت و ریسک |
 |---|---|---|---|
-| ImportCase، ImportCaseItem | Company-owned با Tenant | شماره پرونده خارجی در هر Company [D: D-086] | Blocked تا بسته‌شدن گیت‌های G0..G6 |
+| ImportCase، ImportCaseItem | Company-owned با Tenant | شماره پرونده خارجی در هر Company [D: D-086] | Blocked تا تأیید D-090 (Proposed) و PR-4 (A1) طبق `TRADE_S3_READINESS.md` §۴؛ G6 فقط فعال‌سازی Shared را مسدود می‌کند |
 | Proforma، ProformaRevision | Company-owned با Tenant | شماره Proforma در هر Company | Blocked؛ فرمول مبلغ باز است |
 | OrderRegistration، Amendment | Company-owned با Tenant | شماره ثبت‌سفارش در هر Company؛ شماره ابطال‌شده دوباره استفاده نمی‌شود | Blocked |
 | Voyage | Company-owned، یک `OwnerCompanyId`؛ سایر شرکت‌ها فقط با Allocation/Share [D: D-063] | Unknown | چندشرکتی؛ ریسک نشت بین Company در یک Tenant اگر Share به Tenant گسترش یابد |
@@ -179,8 +179,8 @@
 
 ```mermaid
 erDiagram
-    CUSTOMER_ACCOUNT ||..o{ TENANT : "هر مشتری مستقل یک Tenant (D-103، پیاده‌نشده)"
-    TENANT ||..o{ COMPANY : "هر Company دقیقاً یک Tenant (D-087، پیاده‌نشده)"
+    CUSTOMER_ACCOUNT ||..|| TENANT : "هر Tenant به یک CustomerAccount مستقل متصل است و هر مشتری مستقل Tenant مستقل دارد (D-103 بند ۱ و ۳؛ مفهومی)"
+    TENANT ||..|{ COMPANY : "یک Tenant یک یا چند Company دارد؛ هر Company دقیقاً یک Tenant (D-087/D-103؛ پیاده‌نشده)"
     INSTALLATION }o..o{ TENANT : "؟ نگاشت Installation↔Tenant در Dedicated/Cloud: D-089/D-103"
     CORPORATE_GROUP }o--o{ COMPANY : "عضویت (CompanyId، موجود در کد؛ بدون اعطای دسترسی)"
     CORPORATE_GROUP }o..|| TENANT : "مفهومی: هر گروه به یک Tenant تعلق دارد (D-103 بند ۴)؛ بدون FK/Schema تصمیم‌گرفته‌شده"
@@ -196,6 +196,7 @@ erDiagram
     PROFORMA ||..|| ORDER_REGISTRATION : "کاردینالیتی یک‌به‌یک (D-104)"
 ```
 
+- **CustomerAccount/Tenant/Company:** یک CustomerAccount در چارچوب D-103 می‌تواند فضای کاری (Tenant) شامل چند Company داشته باشد؛ اشتراک نام تجاری، دامنه، مدیر یا سهام‌دار به‌تنهایی Tenant را ادغام نمی‌کند. فقط مفهومی است و FK/Entity/ستون/Schema تعریف نمی‌کند.
 - **CorporateGroup:** تعلق گروه به یک Tenant بازتاب مفهومی D-103 بند ۴ است (گروه از مرز CustomerAccount عبور نمی‌کند)؛ FK، ستون یا Entity پیشنهاد قطعی نیست و کد فعلی چنین ستونی ندارد. عضویت در گروه به‌تنهایی هیچ مجوز دسترسی به Company ایجاد نمی‌کند؛ مجوز هر Company از `CompanyAccessService.HasPermissionAsync` سنجیده می‌شود (AGENTS §5.3).
 - **Proforma/OrderRegistration:** نمودار فقط کاردینالیتی مصوب D-104 را نشان می‌دهد. اینکه Proforma می‌تواند پیش از ایجاد OrderRegistration موقتاً وجود داشته باشد، **باز است** و تغییر تصمیم مالک یا یک‌به‌چند‌شدن رابطه نیست؛ این یک پرسش وضعیت چرخهٔ حیات است. P-4، P-5، ثبت مجدد، Revision و ForexCommitment باز هستند. هیچ قید یکتا یا Schema تعریف نمی‌شود.
 - `CUSTOMER_ACCOUNT` در Core کلاسی ندارد؛ در Vendor با `VendorCustomer` مرتبط است و در این نمودار فقط مفهومی است.

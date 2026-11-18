@@ -21,7 +21,7 @@
 - `docs/DECISIONS.md`، `docs/TRADE_DESIGN_V3_2.md`، `docs/TRADE_OPEN_DECISIONS.md`، `docs/TRADE_S3_ARCHITECTURE.md`، `docs/REQUIREMENTS_TRACEABILITY.md`، `docs/PROJECT_STATUS.md` — یادداشت/ردیف
 
 ## تصمیم‌های فنی
-- D-104 ثبت شد؛ دامنهٔ آن عمداً محدود است: سمت Proforma («دقیقاً یک» یا «حداکثر یک»)، ثبت مجدد، Revision، ForexCommitment، P-4/P-5 تعیین نشده‌اند.
+- D-104 ثبت شد؛ دامنهٔ آن عمداً محدود است: کاردینالیتی یک‌به‌یک مصوب است و تغییر نکرده؛ فقط وجود موقت Proforma پیش از OrderRegistration باز است (نه کاردینالیتی). ثبت مجدد، Revision، ForexCommitment، P-4 و P-5 هم باز هستند.
 - خطر تصادم شمارهٔ D-104 با ADR هم‌زمان شاخه‌های دیگر وجود دارد.
 
 ## بررسی و آزمون
@@ -45,7 +45,7 @@
 - بدون تغییر کد/Schema/Migration. ریسک‌های ایزولاسیون در سند ممیزی §۶ فهرست شده‌اند.
 
 ## ریسک‌ها و کارهای باقی‌مانده
-- تأیید مالک: D-090..D-096، مالکیت Party/Product، P-4/P-5، فرمول مبلغ/تلورانس، روش‌های پرداخت مجاز هر Company، سمت Proforma در D-104.
+- تأیید مالک: D-090..D-096، مالکیت Party/Product، P-4/P-5، فرمول مبلغ/تلورانس، روش‌های پرداخت مجاز هر Company، و وجود موقت Proforma پیش از OrderRegistration (چرخهٔ حیات؛ نه کاردینالیتی).
 - S3-0 بسته نشده است (بخش آمادگی).
 
 ## شناسه‌های Git
