@@ -79,15 +79,21 @@ Directory فقط کاربران شرکت‌هایی را نشان می‌دهد 
 
 به‌صورت پیش‌فرض ممنوع: رمز و hash، token، MFA secret، recovery code، LoginHistory، session، IP، device fingerprint، جزئیات audit، role و permission داخلی شرکت دیگر. تلفن و ایمیل فقط با مجوز مستقل و ضرورت روشن. Directory هیچ mutation، approval یا مدیریت عضویت در شرکت دیگر را ممکن نمی‌کند و هیچ مجوز عملیاتی ایجاد نمی‌کند.
 
-## 7. دامنه‌های ورود
+## 7. دامنه‌ها و Resolve زمینه Tenant — D-065 + D-087 + D-103
 
-هر دو نوع دامنه پشتیبانی می‌شوند:
+دامنهٔ اختصاصی Company و دامنهٔ CorporateGroup هر دو پشتیبانی می‌شوند، اما مقصد هر دو در مدل هدف ابتدا یک Tenant معتبر است:
 
-- Company domain به یک Company فعال و verified resolve می‌شود.
-- Group domain به یک CorporateGroup فعال و verified resolve می‌شود؛ پس از login فقط شرکت‌هایی نمایش داده می‌شوند که کاربر در آن‌ها عضویت Approved و فعال دارد.
-- Custom domain آینده از همان قرارداد verified-domain استفاده می‌کند.
+- Company domain به ترکیب Tenant + Company فعال و verified resolve می‌شود.
+- Group domain به ترکیب Tenant + CorporateGroup فعال و verified resolve می‌شود؛ پس از ورود فقط Companyهایی نمایش داده می‌شوند که کاربر در آن‌ها عضویت Approved و فعال دارد.
+- هر Tenant متعلق به یک CustomerAccount مستقل است و می‌تواند چند Company داشته باشد. دامنه به‌تنهایی مرز CustomerAccount یا دلیل ادغام Tenant نیست؛ گروه و مالکیت نیز نباید از CustomerAccount عبور کنند.
+- هر Host canonicalized و verified دقیقاً یک مقصد فعال دارد. Host فقط lookup key برای ساخت LoginContext است؛ نه هویت کاربر و نه authorization. دامنه گروه هیچ عضویت، role، grant مالی یا permission جدیدی ایجاد نمی‌کند.
+- Host ناشناخته، غیرفعال، تأییدنشده، تکراری، متداخل یا مبهم و Tenant تعلیق‌شده fail-closed رد می‌شود. TLS اجباری و cookie ترجیحاً host-only با Secure و HttpOnly و SameSite مناسب است.
+- طبق D-017، X-Forwarded-Host مرجع تعیین Tenant نیست و نباید از مسیر proxy پذیرفته شود. سایر forwarded headers فقط طبق قرارداد trusted proxy موجود قابل استفاده‌اند.
+- در Cloud، binding CustomerReference→TenantId از provisioning معتبر Vendor به Registry محلی معتبر می‌رسد؛ درخواست عادی وابسته به تماس زنده Vendor نیست. در Dedicated، Tenant از پیکربندی معتبر Installation می‌آید و با DB تطبیق داده می‌شود.
+- پس از login، Company انتخاب‌شده باید با رابطه Tenant→Company و CompanyAccessService، عضویت فعال و permission سمت سرور اعتبارسنجی شود. TenantId/CompanyId از ورودی کلاینت یا Import به‌عنوان مرجع scope پذیرفته نمی‌شود؛ درخواست انتخاب Company (مانند `POST /api/v1/context`) فقط ورودی درخواست است و با همین اعتبارسنجی سمت سرور بررسی می‌شود.
+- Manifest در D-092 فقط برای Backfill یک‌باره است، نه Resolve زمان اجرا. انتقال Company بین Tenantها نیز به Migration کنترل‌شده و تاریخچه‌محور نیاز دارد، نه صرفاً تغییر دامنه.
 
-هر Host canonicalized فقط یک مقصد فعال دارد. Host ناشناخته، غیرفعال، تأییدنشده، متداخل یا مبهم fail-closed است. Host فقط LoginContext می‌سازد و authorization نیست. Forwarded headers فقط از proxyهای allowlisted پذیرفته می‌شوند. TLS اجباری و cookie ترجیحاً host-only با Secure و HttpOnly و SameSite مناسب است. دامنه گروه هیچ عضویت یا role جدیدی ایجاد نمی‌کند.
+جزئیات تصمیم و وضعیت پیاده‌سازی در D-103 و DECISIONS.md ثبت شده است. این قرارداد هنوز در Runtime پیاده‌سازی/Verified نشده است.
 
 ## 8. API و مرز ماژول
 

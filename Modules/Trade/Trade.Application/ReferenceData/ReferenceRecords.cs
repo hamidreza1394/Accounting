@@ -11,3 +11,6 @@ public sealed record UnitRef(string Code, string NameFa, string NameEn);
 
 /// <summary>Incoterms 2020 rule; <see cref="SeaOnly" /> marks sea and inland-waterway only rules.</summary>
 public sealed record IncotermRef(string Code, string NameFa, string NameEn, bool SeaOnly);
+
+/// <summary>Trade payment method (settlement instrument) used by Proforma payment plan stages. Reference only; no banking integration.</summary>
+public sealed record PaymentMethodRef(string Code, string NameFa, string NameEn);

@@ -373,6 +373,241 @@ public sealed class CustomerProvisioningPackageValidatorTests
             legacyWithLicenseFields, Now, out _, out _));
     }
 
+    // ---- Schema v5: per-Company companyReference (PR-A) ----
+
+    private const string GoldenV1 =
+        "{\"schemaVersion\":1,\"requestId\":\"9b0d2c4d-53bc-4bb2-a22c-90b30f2b58e8\",\"customerReference\":\"customer-ref-001\"," +
+        "\"installationId\":\"installation-001\",\"companyName\":\"Company Example\",\"companyType\":\"independent\"," +
+        "\"initialAdminUserName\":\"initial-admin\",\"subsystems\":[\"finance\",\"inventory\"]," +
+        "\"issuedAtUtc\":\"2026-10-28T11:59:00.0000000\\u002B00:00\",\"expiresAtUtc\":\"2026-10-28T13:00:00.0000000\\u002B00:00\"," +
+        "\"nonce\":\"abcdefghijklmnopqrstuvwxyz0123456789_-\"";
+
+    private const string GoldenV2Tail =
+        ",\"fiscalPeriodTitle\":\"FY 2026\",\"fiscalPeriodStartDate\":\"2026-01-01\",\"fiscalPeriodEndDate\":\"2027-01-01\",\"parentCompanyReference\":null";
+
+    private const string GoldenV3Tail = ",\"initialAdminEmail\":\"admin@example.com\"";
+
+    private const string GoldenV4Tail = ",\"licenseId\":\"0a5f7d20-3a2c-4c8d-9e1f-2a6b7c8d9e10\",\"sequence\":7";
+
+    private const string GoldenV5Tail = ",\"companyReference\":\"company-ref-0001\"";
+
+    private static string Golden(int version) =>
+        GoldenV1.Replace("\"schemaVersion\":1", $"\"schemaVersion\":{version}", StringComparison.Ordinal) +
+        (version >= 2 ? GoldenV2Tail : "") +
+        (version >= 3 ? GoldenV3Tail : "") +
+        (version >= 4 ? GoldenV4Tail : "") +
+        (version >= 5 ? GoldenV5Tail : "") +
+        "}";
+
+    private static CustomerProvisioningPayload GoldenSample(int version) => version switch
+    {
+        1 => Sample(),
+        2 => SampleV2() with { FiscalPeriodTitle = "FY 2026" },
+        3 => SampleV3() with { FiscalPeriodTitle = "FY 2026" },
+        4 => SampleV4() with { FiscalPeriodTitle = "FY 2026" },
+        _ => SampleV5() with { FiscalPeriodTitle = "FY 2026" }
+    };
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    [InlineData(5)]
+    public void CanonicalJson_MatchesGoldenBytesForEverySchemaVersion(int version)
+    {
+        Assert.Equal(Golden(version), CustomerProvisioningCanonicalJson.Serialize(GoldenSample(version)));
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    public void LegacyVersions_IgnoreCompanyReferenceInCanonicalJson(int version)
+    {
+        var with = GoldenSample(version) with { CompanyReference = "company-ref-0001" };
+
+        Assert.Equal(Golden(version), CustomerProvisioningCanonicalJson.Serialize(with));
+    }
+
+    [Fact]
+    public void V5Payload_WithCompanyReference_IsValidWhenOptedIn()
+    {
+        var json = CustomerProvisioningCanonicalJson.Serialize(SampleV5());
+
+        Assert.True(CustomerProvisioningPackageValidator.TryValidatePayload(
+            json, Now, out var parsed, out var error, allowCompanyReference: true), error);
+        Assert.Equal(5, parsed!.SchemaVersion);
+        Assert.Equal("company-ref-0001", parsed.CompanyReference);
+        Assert.Equal(SampleV5().LicenseId, parsed.LicenseId);
+    }
+
+    [Fact]
+    public void V5SignedPackage_VerifiesWhenOptedInAndIsRejectedByDefault()
+    {
+        using var signingKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var package = Sign(signingKey, SampleV5());
+
+        Assert.True(CustomerProvisioningPackageValidator.TryValidateAndVerify(
+            package, signingKey.ExportSubjectPublicKeyInfo(), Now, out var parsed, out var error,
+            allowCompanyReference: true), error);
+        Assert.Equal("company-ref-0001", parsed!.CompanyReference);
+
+        Assert.False(CustomerProvisioningPackageValidator.TryValidateAndVerify(
+            package, signingKey.ExportSubjectPublicKeyInfo(), Now, out var rejected, out var defaultError));
+        Assert.Null(rejected);
+        Assert.Equal("provisioning_payload_invalid", defaultError);
+    }
+
+    [Fact]
+    public void V5Payload_IsRejectedByDefaultWithoutOptIn()
+    {
+        Assert.False(CustomerProvisioningPackageValidator.TryValidatePayload(
+            CustomerProvisioningCanonicalJson.Serialize(SampleV5()), Now, out var parsed, out _));
+        Assert.Null(parsed);
+    }
+
+    [Fact]
+    public void V5Payload_WithoutCompanyReference_IsRejected()
+    {
+        foreach (var missing in new string?[] { null, "", "   " })
+        {
+            Assert.False(CustomerProvisioningPackageValidator.TryValidatePayload(
+                CustomerProvisioningCanonicalJson.Serialize(SampleV5() with { CompanyReference = missing }),
+                Now, out var parsed, out _, allowCompanyReference: true));
+            Assert.Null(parsed);
+        }
+    }
+
+    [Theory]
+    [InlineData("short")]
+    [InlineData("has space in it")]
+    [InlineData("slash/not/allowed")]
+    [InlineData("unicode-\u0633\u0644\u0627\u0645-ref")]
+    public void V5Payload_WithInvalidCompanyReference_IsRejected(string value)
+    {
+        Assert.False(CustomerProvisioningPackageValidator.TryValidatePayload(
+            CustomerProvisioningCanonicalJson.Serialize(SampleV5() with { CompanyReference = value }),
+            Now, out _, out _, allowCompanyReference: true));
+        Assert.False(CustomerProvisioningPackageValidator.TryValidatePayload(
+            CustomerProvisioningCanonicalJson.Serialize(SampleV5() with { CompanyReference = new string('a', 129) }),
+            Now, out _, out _, allowCompanyReference: true));
+    }
+
+    [Theory]
+    [InlineData("company-ref-0001")]
+    [InlineData("0a5f7d20-3a2c-4c8d-9e1f-2a6b7c8d9e10")]
+    [InlineData("ABCDEFGH")]
+    [InlineData("a.b_c-d.e")]
+    public void V5Payload_AcceptsAnyValueMatchingTheCurrentContractPattern(string value)
+    {
+        Assert.True(CustomerProvisioningPackageValidator.TryValidatePayload(
+            CustomerProvisioningCanonicalJson.Serialize(SampleV5() with { CompanyReference = value }),
+            Now, out var parsed, out var error, allowCompanyReference: true), error);
+        Assert.Equal(value, parsed!.CompanyReference);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    public void LegacyVersions_RejectCompanyReferenceEvenWhenOptedIn(int version)
+    {
+        var legacyJson = CustomerProvisioningCanonicalJson.Serialize(GoldenSample(version));
+        var withReference = legacyJson[..^1] + ",\"companyReference\":\"company-ref-0001\"}";
+
+        foreach (var optIn in new[] { false, true })
+        {
+            Assert.False(CustomerProvisioningPackageValidator.TryValidatePayload(
+                withReference, Now, out var parsed, out _, allowCompanyReference: optIn));
+            Assert.Null(parsed);
+        }
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    public void LegacyVersions_StillValidateIdenticallyWhenOptedIn(int version)
+    {
+        var json = CustomerProvisioningCanonicalJson.Serialize(GoldenSample(version));
+
+        Assert.True(CustomerProvisioningPackageValidator.TryValidatePayload(
+            json, Now, out var plain, out var plainError), plainError);
+        Assert.True(CustomerProvisioningPackageValidator.TryValidatePayload(
+            json, Now, out var optedIn, out var optedInError, allowCompanyReference: true), optedInError);
+        Assert.Equal(
+            CustomerProvisioningCanonicalJson.Serialize(plain!),
+            CustomerProvisioningCanonicalJson.Serialize(optedIn!));
+        Assert.Null(plain!.CompanyReference);
+    }
+
+    [Fact]
+    public void V5Payload_WithDuplicateCompanyReferenceKey_IsRejectedAsNoncanonical()
+    {
+        var json = CustomerProvisioningCanonicalJson.Serialize(SampleV5());
+        var duplicated = json[..^1] + ",\"companyReference\":\"company-ref-0002\"}";
+
+        Assert.False(CustomerProvisioningPackageValidator.TryValidatePayload(
+            duplicated, Now, out var parsed, out var error, allowCompanyReference: true));
+        Assert.Null(parsed);
+        Assert.Equal("provisioning_payload_noncanonical", error);
+    }
+
+    [Fact]
+    public void V5Payload_WithoutCompanyReferenceKey_IsRejected()
+    {
+        var json = CustomerProvisioningCanonicalJson.Serialize(SampleV5());
+        var stripped = json.Replace(",\"companyReference\":\"company-ref-0001\"", "", StringComparison.Ordinal);
+        Assert.NotEqual(json, stripped);
+
+        Assert.False(CustomerProvisioningPackageValidator.TryValidatePayload(
+            stripped, Now, out _, out _, allowCompanyReference: true));
+    }
+
+    [Fact]
+    public void V5Payload_StillRequiresLicenseBindingAndEmail()
+    {
+        foreach (var invalid in new[]
+        {
+            SampleV5() with { LicenseId = null },
+            SampleV5() with { Sequence = 0 },
+            SampleV5() with { InitialAdminEmail = null }
+        })
+        {
+            Assert.False(CustomerProvisioningPackageValidator.TryValidatePayload(
+                CustomerProvisioningCanonicalJson.Serialize(invalid), Now, out _, out _,
+                allowCompanyReference: true));
+        }
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(6)]
+    [InlineData(99)]
+    public void UnknownSchemaVersion_IsRejectedEvenWhenOptedIn(int version)
+    {
+        var json = CustomerProvisioningCanonicalJson.Serialize(SampleV5() with { SchemaVersion = version });
+
+        foreach (var optIn in new[] { false, true })
+        {
+            Assert.False(CustomerProvisioningPackageValidator.TryValidatePayload(
+                json, Now, out var parsed, out var error, allowCompanyReference: optIn));
+            Assert.Null(parsed);
+            Assert.Equal("provisioning_payload_invalid", error);
+        }
+    }
+
+    [Fact]
+    public void VersionConstants_KeepCurrentAtFourAndExposeV5Independently()
+    {
+        Assert.Equal(4, CustomerProvisioningPackageValidator.CurrentPayloadSchemaVersion);
+        Assert.Equal(5, CustomerProvisioningPackageValidator.CompanyReferencePayloadSchemaVersion);
+    }
+
     private static CustomerProvisioningPackage Sign(ECDsa key, CustomerProvisioningPayload payload)
     {
         var json = CustomerProvisioningCanonicalJson.Serialize(payload);
@@ -416,5 +651,11 @@ public sealed class CustomerProvisioningPackageValidatorTests
         SchemaVersion = 4,
         LicenseId = "0a5f7d20-3a2c-4c8d-9e1f-2a6b7c8d9e10",
         Sequence = 7
+    };
+
+    private static CustomerProvisioningPayload SampleV5() => SampleV4() with
+    {
+        SchemaVersion = 5,
+        CompanyReference = "company-ref-0001"
     };
 }

@@ -16,6 +16,10 @@ public static class StructuralValidation
 		@"^[A-Za-z0-9._-]{1," + LicenseInputLimits.MaxKidChars + "}$",
 		RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
+	/// <summary>True when the value is a well-formed contract identifier (company reference pattern).</summary>
+	public static bool IsValidCompanyReference(string? value) =>
+		value is not null && IdPattern.IsMatch(value);
+
 	public static IReadOnlyList<string> ValidateActivationRequest(ActivationRequest request)
 	{
 		ArgumentNullException.ThrowIfNull(request);
@@ -152,7 +156,7 @@ public static class StructuralValidation
 				continue;
 			}
 
-			if (company.CompanyReference is null || !IdPattern.IsMatch(company.CompanyReference))
+			if (!IsValidCompanyReference(company.CompanyReference))
 				errors.Add("company reference is invalid");
 			else if (!seenCompanies.Add(company.CompanyReference))
 				errors.Add("duplicate company reference");

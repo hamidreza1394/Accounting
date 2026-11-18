@@ -769,6 +769,112 @@ public sealed class HrOrganizationalStructureEndpointTests
         Assert.Equal(StatusCodes.Status404NotFound, (result as IStatusCodeHttpResult)?.StatusCode);
     }
 
+    /// <summary>
+    /// S3-0d-b: every handler that takes an employee/unit/position/assignment id from the route or body
+    /// must treat an identifier owned by another company exactly like an unknown one, and must leave the
+    /// foreign rows untouched. The member holds every HR permission of its own company, so only the
+    /// ownership check can be what refuses. Legacy meaning: "other company" is another Company.Id, not a Tenant.
+    /// </summary>
+    [Fact]
+    public async Task ForeignCompanyIdentifiers_AreRefusedByEveryHrHandler_AndTheForeignRowsStayUntouched()
+    {
+        await using var fixture = new Fixture();
+        var manager = await fixture.AddMemberWithPermission(
+            fixture.Company,
+            HrOrganizationalStructureEndpoints.UpdateEmployeesPermission,
+            HrOrganizationalStructureEndpoints.ViewEmployeesPermission,
+            HrOrganizationalStructureEndpoints.ManageEmployeeUserLinkPermission,
+            HrOrganizationalStructureEndpoints.CreateUnitsPermission,
+            HrOrganizationalStructureEndpoints.UpdateUnitsPermission,
+            HrOrganizationalStructureEndpoints.ListUnitsPermission,
+            HrOrganizationalStructureEndpoints.UpdatePositionsPermission,
+            HrOrganizationalStructureEndpoints.ListPositionsPermission,
+            HrOrganizationalStructureEndpoints.CreateEmployeesPermission,
+            HrOrganizationalStructureEndpoints.ManageAssignmentsPermission);
+        var ownEmployee = await fixture.AddCreatedEmployee(manager.Id, "OWN-1", "علی", "محمدی");
+        var ownUnit = await fixture.AddCreatedUnit(manager.Id, "OWN-U", "واحد خودی");
+        var assignedEmployee = await fixture.AddCreatedEmployee(manager.Id, "OWN-2", "رضا", "احمدی");
+        Assert.IsType<Created<HrAssignmentCreatedResponse>>(await fixture.StartAssignment(manager.Id, assignedEmployee, unitId: ownUnit));
+
+        var foreignCompany = fixture.AddCompany("شرکت بیرونی");
+        var foreignEmployee = fixture.AddCreatedEmployeeRecord(foreignCompany.Id, "FOR-1", "بیرونی", "کارمند");
+        var foreignUnit = new Domain.CompanyOrganizationalUnit { TenantId = foreignCompany.Id, Code = "FU", Name = "واحد بیرونی", IsActive = true };
+        var foreignPosition = new Domain.CompanyPosition { TenantId = foreignCompany.Id, Code = "FP", Name = "سمت بیرونی", IsActive = true };
+        fixture.Database.CompanyOrganizationalUnits.Add(foreignUnit);
+        fixture.Database.CompanyPositions.Add(foreignPosition);
+        await fixture.Database.SaveChangesAsync();
+        var foreignAssignment = new Domain.CompanyEmployeeAssignment
+        {
+            TenantId = foreignCompany.Id,
+            EmployeeId = foreignEmployee.Id,
+            OrganizationalUnitId = foreignUnit.Id,
+            PositionId = foreignPosition.Id,
+            StartOnUtc = DateTime.UtcNow.AddDays(-1),
+            Status = Domain.CompanyEmployeeAssignmentStatus.Active,
+        };
+        fixture.Database.CompanyEmployeeAssignments.Add(foreignAssignment);
+        await fixture.Database.SaveChangesAsync();
+
+        var routeIdentifiers = new Dictionary<string, IResult>
+        {
+            ["UpdateEmployee"] = await fixture.UpdateEmployee(manager.Id, foreignEmployee.Id, null),
+            ["DeactivateEmployee"] = await fixture.DeactivateEmployee(manager.Id, foreignEmployee.Id),
+            ["LinkEmployeeUser"] = await fixture.LinkEmployeeUser(manager.Id, foreignEmployee.Id, manager.Id),
+            ["UnlinkEmployeeUser"] = await fixture.UnlinkEmployeeUser(manager.Id, foreignEmployee.Id),
+            ["GetUnit"] = await fixture.GetUnit(manager.Id, foreignUnit.Id),
+            ["UpdateUnit"] = await fixture.UpdateUnit(manager.Id, foreignUnit.Id, "HIJACK", null, false, null),
+            ["DeactivateUnit"] = await fixture.DeactivateUnit(manager.Id, foreignUnit.Id),
+            ["GetPosition"] = await fixture.GetPosition(manager.Id, foreignPosition.Id),
+            ["UpdatePosition"] = await fixture.UpdatePosition(manager.Id, foreignPosition.Id, "HIJACK", false, null),
+            ["DeactivatePosition"] = await fixture.DeactivatePosition(manager.Id, foreignPosition.Id),
+            ["EndAssignment"] = await fixture.EndAssignment(manager.Id, foreignAssignment.Id),
+            ["ChangeAssignment"] = await fixture.ChangeAssignment(manager.Id, foreignEmployee.Id, unitId: null),
+            ["StartAssignmentForeignEmployee"] = await fixture.StartAssignment(manager.Id, foreignEmployee.Id),
+        };
+        var bodyReferences = new Dictionary<string, IResult>
+        {
+            ["StartAssignmentForeignUnit"] = await fixture.StartAssignment(manager.Id, ownEmployee, unitId: foreignUnit.Id),
+            ["StartAssignmentForeignPosition"] = await fixture.StartAssignment(manager.Id, ownEmployee, positionId: foreignPosition.Id),
+            ["ChangeAssignmentForeignUnit"] = await fixture.ChangeAssignment(manager.Id, assignedEmployee, unitId: foreignUnit.Id),
+        };
+
+        foreach (var (name, result) in routeIdentifiers)
+        {
+            Assert.True(
+                (result as IStatusCodeHttpResult)?.StatusCode == StatusCodes.Status404NotFound,
+                $"{name}: expected 404 for a foreign identifier, got {Fixture.Describe(result)}");
+        }
+
+        foreach (var (name, result) in bodyReferences)
+        {
+            var status = (result as IStatusCodeHttpResult)?.StatusCode;
+            Assert.True(
+                status is StatusCodes.Status404NotFound or StatusCodes.Status409Conflict or StatusCodes.Status400BadRequest,
+                $"{name}: a foreign reference must be refused, got {Fixture.Describe(result)}");
+        }
+
+        await using var verify = fixture.NewContext();
+        var employee = await verify.CompanyEmployees.AsNoTracking().SingleAsync(item => item.Id == foreignEmployee.Id);
+        Assert.Equal(Domain.CompanyEmployeeEmploymentStatus.Active, employee.EmploymentStatus);
+        Assert.Equal("بیرونی", employee.FirstName);
+        Assert.Null(employee.UserCompanyMembershipId);
+        var unit = await verify.CompanyOrganizationalUnits.AsNoTracking().SingleAsync(item => item.Id == foreignUnit.Id);
+        Assert.True(unit.IsActive);
+        Assert.Equal("واحد بیرونی", unit.Name);
+        var position = await verify.CompanyPositions.AsNoTracking().SingleAsync(item => item.Id == foreignPosition.Id);
+        Assert.True(position.IsActive);
+        Assert.Equal("سمت بیرونی", position.Name);
+        var assignment = await verify.CompanyEmployeeAssignments.AsNoTracking().SingleAsync(item => item.Id == foreignAssignment.Id);
+        Assert.Null(assignment.EndOnUtc);
+        Assert.Equal(Domain.CompanyEmployeeAssignmentStatus.Active, assignment.Status);
+        Assert.Equal(0, await verify.CompanyEmployeeAssignments.CountAsync(item => item.EmployeeId == ownEmployee));
+        // the refused change keeps the valid active assignment of the own employee exactly as it was
+        var kept = await verify.CompanyEmployeeAssignments.AsNoTracking().SingleAsync(item => item.EmployeeId == assignedEmployee);
+        Assert.Equal(ownUnit, kept.OrganizationalUnitId);
+        Assert.Null(kept.EndOnUtc);
+        Assert.Equal(Domain.CompanyEmployeeAssignmentStatus.Active, kept.Status);
+    }
+
     private sealed class Fixture : IAsyncDisposable
     {
         public Fixture()

@@ -84,3 +84,15 @@ internal static class IncotermData
         "CIF|Cost, Insurance and Freight|هزینه، بیمه و کرایه حمل|1",
     ];
 }
+
+internal static class PaymentMethodData
+{
+    internal static readonly string[] Rows =
+    [
+        "TT|Telegraphic Transfer|حواله بانکی",
+        "LC|Letter of Credit|اعتبار اسنادی",
+        "DP|Documents against Payment|اسناد در مقابل پرداخت",
+        "DA|Documents against Acceptance|اسناد در مقابل قبولی",
+        "OPEN_ACCOUNT|Open Account|حساب باز",
+    ];
+}

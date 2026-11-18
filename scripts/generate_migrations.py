@@ -57,9 +57,9 @@ DELTA_MIGRATION_NAME = "SeedUsersCreatePermission"
 # the model of the migration before it (DELTA_MIGRATION_*) and the model of the code
 # base, so the files can not drift apart from the snapshot. DELTA_MIGRATION_* is
 # published history and is never rewritten, exactly like 'InitialCreate'.
-CURRENT_MIGRATION_ID = "20261110130000"
-CURRENT_MIGRATION_NAME = "MakeCompanyMembershipRoleOptional"
-CURRENT_MIGRATION_CLASS = "MakeCompanyMembershipRoleOptional"
+CURRENT_MIGRATION_ID = "20261116070805"
+CURRENT_MIGRATION_NAME = "AddCompanySetupRecords"
+CURRENT_MIGRATION_CLASS = "AddCompanySetupRecords"
 
 # The target model artifacts use EF Core's generated snapshot format because SQL Server
 # rowversion metadata is provider-specific. Keep them stable; verify_migration_model.py
@@ -346,6 +346,15 @@ HAND_WRITTEN_SQL: dict[str, tuple[list[str], list[str]]] = {
         [
             "DELETE FROM [PermissionDefinitions] WHERE [Id] = 'f47a2026-1103-4d00-8000-000000000003' AND [Code] = 'users.create' AND NOT EXISTS (SELECT 1 FROM [CompanyRolePermissions] WHERE [CompanyRolePermissions].[PermissionId] = [PermissionDefinitions].[Id]);",
         ],
+    ),
+    # AddCompanySetupRecords (Issue #392): the vendor-signed CompanyReference must compare
+    # binary (vendor review L-2). The re-collation runs before the unique index is built, so
+    # the index inherits the binary collation; Down drops the whole table.
+    "20261116070805": (
+        [
+            "ALTER TABLE [CompanySetupRecords] ALTER COLUMN [CompanyReference] nvarchar(450) COLLATE Latin1_General_BIN2 NOT NULL;",
+        ],
+        [],
     ),
 }
 CURRENT_MIGRATION_EPILOGUE, CURRENT_MIGRATION_DOWN_PRELUDE = HAND_WRITTEN_SQL.get(

@@ -216,12 +216,13 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - Every auth POST validates antiforgery; credential attempts are rate-limited by remote IP. Auth responses and WebAuthn/TOTP setup payloads are not cacheable.
 - Production requires a fully qualified persistent Data Protection key directory, an explicit non-wildcard AllowedHosts list, and an explicit passkey relying-party domain.
 - Branch-only until CI/review/committed migration complete. Bootstrap, granular RBAC, maker-checker, independent audit checkpoints, and UI remain out of scope.
-## سامانهٔ مرکزی Vendor — زنجیرهٔ ممیزی (Issue #105)
-- Writer زنجیرهٔ ممیزی در main پیاده و با CI Vendor (از جمله تست SQL Server زنجیره روی HEAD نهایی PR #207) تأیید شده است؛ قفل تراکنشی SQL Server و hash رخدادها برقرار است. با این حال، HashVersion هنوز در هر رخداد ذخیره نمی‌شود و checkpoint مستقل عملیاتی هنوز وجود ندارد.
-- Hash-chain در همان پایگاه داده، تغییر یک رخداد را تشخیص می‌دهد اما بازنویسی کامل توسط DBA را متوقف نمی‌کند. برای Production، حساب SQL برنامه باید کمترین دسترسی لازم و بدون UPDATE/DELETE روی جدول ممیزی داشته باشد؛ مهاجرت/حساب اجرایی نیازمند تفکیک مجوز است.
-- پیش از ادغام عملیات حساس: Verify chain باید fail-closed عمل کند؛ شکست اعتبارسنجی نباید به صدور لایسنس، تغییر مدیر یا عملیات حساس اجازه دهد.
-- در شاخهٔ Issue #107 قرارداد versioned برای checkpoint، hash canonical و سرویس ایجاد checkpoint پس از verification کامل زنجیره اضافه شده است؛ این تغییر هنوز CI-Verified نیست و هیچ adapter مستقلی ثبت/انتخاب نشده است. مقصد مستقل با credential جدا و immutability/retention، مجوز SQL append-only، پایش شکست/انحراف و runbook بازیابی همچنان لازم‌اند؛ هیچ ادعای ممیزی تغییرناپذیر/Production-ready مطرح نمی‌شود.
+## سامانهٔ مرکزی Vendor — زنجیرهٔ ممیزی و checkpoint مستقل (Issue #105/#107)
 
+- زنجیرهٔ ممیزی Vendor در main دارای `HashVersion`، verifier نسخه‌دار، یکتایی زنجیره و preflight fail-closed است. تست‌های SQL Server برای duplicate/fork و آزمون‌های CI مربوط در PRهای #212 و بعدی ادغام شده‌اند.
+- قرارداد `IVendorAuditCheckpointStore`، verify-before-checkpoint، guard راه‌اندازی Production و JSONL store فقط برای Development/Test در main هستند. قفل بین‌پردازه‌ای و regression چندپردازه‌ای روی Windows/Linux CI بررسی می‌شوند؛ این store محلی Production sink مستقل نیست.
+- Hash-chain داخل همان Vendor DB بازنویسی کامل توسط DBA دارای مجوز را متوقف نمی‌کند. فایل محلی یا همان Vendor DB/credential به‌عنوان مقصد مستقل Production پذیرفته نیست.
+- **باقی‌ماندهٔ #107:** مقصد مستقل با failure domain و هویت/credential جدا، append-only/immutability، retention، جداسازی مجوز SQL، alerting و recovery/restore drill هنوز انتخاب و provision نشده است. تا آن زمان Production startup در نبود دقیقاً یک `IProductionVendorAuditCheckpointStore` معتبر fail-closed می‌ماند.
+- هیچ provider، credential یا retention policy واقعی در این مرحله حدس زده یا اضافه نشده است.
 
 ## زیرساخت RBAC در Vendor — Issue #150 (هنوز تأیید Production نشده)
 - در Host فروشنده، کاتالوگ نسخه‌دار مجوزها تعریف شده است. شناسه مجوز با نام نقش یا نمایش/مخفی‌بودن اجزای UI یکی نیست.
@@ -268,7 +269,7 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - `POST /api/vendor/provisioning-requests/{requestId}/acknowledgement` is a machine-to-machine endpoint. It intentionally does not rely on the Vendor administrator cookie or browser antiforgery token; the signed acknowledgement is authenticated with a public key from the independently configured `ProvisioningAcknowledgementTrustStore`.
 - Unknown/revoked key IDs are rejected. The endpoint verifies the exact canonical acknowledgement bytes and binds request ID, nonce, payload SHA-256, customer reference, and installation code before changing state.
 - Only a verified `Applied` / `AlreadyApplied` acknowledgement can set `Confirmed`; a verified `Rejected` acknowledgement sets `Failed`. Exporting a package alone never confirms provisioning.
-- The Vendor transition rule accepts only the stable, non-sensitive rejection codes currently emitted by the customer consumer: `provisioning_parent_reference_invalid` and `provisioning_initial_admin_conflict`. Free-form diagnostics, SQL/exception text and PII-like values are rejected before persistence; unknown signed codes do not change the request state.
+- The Vendor transition rule accepts only these stable, non-sensitive rejection codes emitted by the customer consumer: `provisioning_parent_reference_invalid`, `provisioning_initial_admin_conflict`, `provisioning_license_not_installed`, `provisioning_not_entitled_for_company`, `provisioning_company_reference_conflict`, and `provisioning_company_capacity_exceeded` (the last four are the company-bound outcomes added for Issue #392 and accepted by the Vendor in Issue #698). Free-form diagnostics, SQL/exception text, PII-like values and unknown signed codes are rejected before persistence; invalid acknowledgements leave the request retryable.
 - The acknowledgement digest, key ID, outcome, timestamp, status transition, and metadata-only audit event are persisted in one Vendor DB transaction. Exact retries are idempotent and audited; a different acknowledgement for the same request is rejected as a conflict.
 - The endpoint has a dedicated IP-based rate limit and bounded request-body limits. This is not a replacement for TLS, host hardening, or independent key lifecycle management.
 - **Not production-ready by this change alone:** customer-side provisioning consumer, atomic nonce claim, SQL Server integration proof, and operational KMS/HSM signer remain separate work. No customer database schema or `Server/**` file is changed by the Vendor intake PR.
@@ -413,3 +414,10 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - **گزارش مستقل (الزام ۶):** `GET /api/v1/admin/security/installation-admin-activity` (فقط Admin، فقط‌خواندنی، `no-store`، فیلتر بازه/عامل، صفحه‌بندی)؛ مشاهدهٔ خود گزارش هم ثبت می‌شود.
 - **الزام ۴ (دور نزدن مجوزها):** آزمون HTTP: مدیر نصب بدون عضویت، دایرکتوری کاربران شرکت و Trade را نمی‌بیند. **یافتهٔ باز برای مالک:** تأیید/رد درخواست عضویت هر شرکت توسط مدیر نصب طبق D-071 بند ۷ مجاز است (ثبت‌شده، بدون نقش سیستمی، بدون خودتأییدی)؛ سازگاری آن با بند ۴ D-088 باید مالک تأیید کند.
 - **Backlog:** الزام دلیل و فیلد دلیل در Razor؛ محافظت DB (نیازمند تأیید Schema)؛ ممیزی Razor Roles؛ آزمون خرابی نوشتن ممیزی (fail-closed)؛ صفحه‌بندی Razor Users Index؛ موارد وابسته به Tenant در S3.
+
+
+## Resolve دامنه و مرز Tenant — D-103 (Accepted، 2026-11-17)
+
+Tenant مرز CustomerAccount/فضای کاری است و هر Tenant می‌تواند چند Company مستقل داشته باشد. دامنه canonical و verified فقط به Tenant و context اختیاری Company یا CorporateGroup lookup می‌شود؛ Host authorization نیست. پس از login، CompanyAccessService، عضویت Approved/فعال و permission سمت سرور باید دسترسی را تعیین کنند. هر CustomerAccount مستقل Tenant جدا دارد و CorporateGroup/Ownership نباید از CustomerAccount عبور کند. دامنه مشترک به‌تنهایی دلیل ادغام Tenant نیست.
+
+در Cloud، binding مشتری به Tenant از provisioning معتبر Vendor و Registry محلی معتبر می‌آید؛ درخواست عادی نباید به تماس زنده Vendor متکی باشد. در Dedicated، Tenant از پیکربندی معتبر Installation resolve و با DB تطبیق داده می‌شود. طبق D-017، X-Forwarded-Host برای تعیین Tenant پذیرفته نمی‌شود. Tenant/Company از body، query، header دلخواه یا فایل Import به‌عنوان مرجع scope قابل تعیین نیست؛ درخواست انتخاب Company (مانند `POST /api/v1/context`) فقط ورودی درخواست است و سمت سرور با عضویت فعال و CompanyAccessService اعتبارسنجی می‌شود. Import از context معتبر سمت سرور استفاده می‌کند. Manifest فقط برای Backfill یک‌باره D-092 است. Host یا Tenant ناشناخته/مبهم/غیرفعال باید fail-closed رد شود. پیاده‌سازی هنوز NotImplemented است؛ هیچ Migration یا تغییر Runtime با این ADR مجاز نشده است.

@@ -629,6 +629,7 @@ namespace Faranou.Vendor.Persistence.Migrations
             modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorLicense", b =>
                 {
                     b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
+                    b.Property<string>("CompanyEntitlementsDraftJson").HasColumnType("nvarchar(max)");
                     b.Property<Guid>("CustomerId").HasColumnType("uniqueidentifier");
                     b.Property<Guid?>("ContractId").HasColumnType("uniqueidentifier");
                     b.Property<Guid?>("InstallationId").HasColumnType("uniqueidentifier");

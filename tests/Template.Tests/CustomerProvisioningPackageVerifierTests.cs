@@ -26,6 +26,50 @@ public sealed class CustomerProvisioningPackageVerifierTests
     }
 
     [Fact]
+    public void CompanyBoundV5Package_IsVerifiedOnceTheCustomerConsumerMapsCompanyReference()
+    {
+        // The customer consumer now maps CompanyReference (Issue #392, PR-2): a correctly signed
+        // v5 package for this very customer and installation passes verification; the entitlement,
+        // duplicate and capacity checks run later inside the apply transaction, not here.
+        using var signingKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var verifier = CreateVerifier(signingKey, "customer-001", "install-001");
+        var package = Sign(signingKey, Sample("customer-001", "install-001") with
+        {
+            SchemaVersion = CustomerProvisioningPackageValidator.CompanyReferencePayloadSchemaVersion,
+            CompanyReference = "company-ref-0001"
+        });
+
+        Assert.True(verifier.TryVerify(package, out var payload, out var error), error);
+        Assert.NotNull(payload);
+        Assert.Equal("company-ref-0001", payload!.CompanyReference);
+    }
+
+    [Fact]
+    public void V4PayloadJson_WithInjectedCompanyReference_IsStillRejected()
+    {
+        // The v4 canonical JSON has no companyReference field. A payload claiming schema v4 while
+        // carrying the field is malformed and must stay rejected even though the signature is valid.
+        using var signingKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var verifier = CreateVerifier(signingKey, "customer-001", "install-001");
+        var payloadJson = CustomerProvisioningCanonicalJson.Serialize(Sample("customer-001", "install-001"));
+        var injectedJson = payloadJson.Insert(payloadJson.Length - 1, ",\"companyReference\":\"company-ref-0001\"");
+        var signature = signingKey.SignData(
+            Encoding.UTF8.GetBytes(injectedJson),
+            HashAlgorithmName.SHA256,
+            DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
+        var package = new CustomerProvisioningPackage(
+            CustomerProvisioningPackageValidator.CurrentFormatVersion,
+            "vendor-key-1",
+            LicenseAlgorithms.EcdsaP256Sha256,
+            injectedJson,
+            Convert.ToBase64String(signature));
+
+        Assert.False(verifier.TryVerify(package, out var payload, out var error));
+        Assert.Null(payload);
+        Assert.Equal("provisioning_payload_invalid", error);
+    }
+
+    [Fact]
     public void UnknownKeyId_IsRejectedWithoutTrustingPackageKeyMaterial()
     {
         using var signingKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);

@@ -21,8 +21,13 @@ public sealed class VendorProvisioningIssuanceService(
     IVendorAuditWriter audit,
     VendorProvisioningLicenseResolver licenseResolver,
     TimeProvider timeProvider,
-    ILogger<VendorProvisioningIssuanceService> logger)
+    ILogger<VendorProvisioningIssuanceService> logger,
+    VendorProvisioningCompanyReferenceGate? companyReferenceGate = null)
 {
+    // Schema v5 (company-bound) is accepted only while the default-off gate is open.
+    private readonly bool _allowCompanyReference =
+        (companyReferenceGate ?? VendorProvisioningCompanyReferenceGate.Disabled).IsEnabled;
+
     public async Task<VendorProvisioningIssuanceResult> IssueApprovedAsync(
         VendorApprovalRequest approval,
         Guid reviewerUserId,
@@ -67,7 +72,7 @@ public sealed class VendorProvisioningIssuanceService(
 
         var now = timeProvider.GetUtcNow().ToUniversalTime();
         if (!CustomerProvisioningPackageValidator.TryValidatePayload(
-                request.PayloadJson, now, out var payload, out _) ||
+                request.PayloadJson, now, out var payload, out _, _allowCompanyReference) ||
             payload is null ||
             !string.Equals(payload.RequestId, request.RequestId, StringComparison.Ordinal) ||
             !string.Equals(payload.Nonce, request.Nonce, StringComparison.Ordinal) ||
@@ -80,13 +85,16 @@ public sealed class VendorProvisioningIssuanceService(
         if (!string.Equals(payloadHash, request.PayloadSha256, StringComparison.Ordinal))
             return VendorProvisioningIssuanceResult.Conflict("provisioning_payload_hash_mismatch");
 
-        if (payload.SchemaVersion != CustomerProvisioningPackageValidator.CurrentPayloadSchemaVersion ||
+        if (payload.SchemaVersion is not (CustomerProvisioningPackageValidator.CurrentPayloadSchemaVersion or
+                CustomerProvisioningPackageValidator.CompanyReferencePayloadSchemaVersion) ||
             !Guid.TryParseExact(payload.LicenseId, "D", out var licenseId) ||
             payload.Sequence is not int)
             return VendorProvisioningIssuanceResult.Conflict("provisioning_license_binding_required");
 
+        // The reference in a v5 payload is only a claim: it must be one granted by the freshly verified
+        // signed license, and the resolved binding must equal the payload exactly.
         var licenseBinding = await licenseResolver.ResolveLatestAsync(
-            licenseId, customer, installation, payload.Subsystems, cancellationToken);
+            licenseId, customer, installation, payload.Subsystems, payload.CompanyReference, cancellationToken);
         if (!licenseBinding.Succeeded)
             return new VendorProvisioningIssuanceResult(false, licenseBinding.StatusCode, licenseBinding.ErrorCode);
         if (!VendorProvisioningLicenseBindingRules.MatchesCurrentBinding(payload, licenseBinding))
@@ -164,7 +172,8 @@ public sealed class VendorProvisioningIssuanceService(
                 trustedPublicKey.Span,
                 now,
                 out _,
-                out _))
+                out _,
+                _allowCompanyReference))
         {
             logger.LogWarning(
                 "Provisioning signing provider returned a signature that does not verify against the configured trust key; issuance remains unavailable.");

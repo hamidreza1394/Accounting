@@ -145,13 +145,13 @@ flowchart TD
 ## ۱۲) Provisioning مشتری با یک لایسنس مشخص (D-054، Issue #228/#235)
 
 1. کاربر Vendor نصب مقصد را انتخاب می‌کند؛ API فقط لایسنس‌هایی را نمایش می‌دهد که envelope امضاشدهٔ آن‌ها با کلید عمومی مورد اعتماد تأیید شده و برای همان مشتری/نصب فعال و در بازهٔ اعتبار هستند.
-2. درخواست کلاینت شامل licenseId و در صورت نیاز subset زیرسیستم‌ها است. نبود subset یعنی تمام entitlementهای آخرین payload امضاشده. sequence یا فهرست کامل entitlement از کلاینت دریافت نمی‌شود.
-3. Vendor در تراکنش Serializable، همان لایسنس را از دیتابیس Vendor resolve می‌کند، آخرین VendorSignedLicenseEnvelope را می‌خواند و digest، signature و binding را کنترل می‌کند. برای LicensePayload v1، sequence و زیرمجموعهٔ installation-scoped در provisioning schema v4 قرار می‌گیرد. برای LicensePayload v2، چون ماژول‌ها فقط در CompanyEntitlements و بر اساس CompanyReference مات هستند و schema v4 این binding را حمل نمی‌کند، Vendor پیش از ثبت درخواست با خطای provisioning_company_reference_mapping_required fail-closed می‌شود؛ هیچ ماژول شرکت به entitlement نصب‌محور تبدیل نمی‌شود.
+2. درخواست شامل licenseId و برای LicensePayload v1 در صورت نیاز subset زیرسیستم‌های installation-scoped است. برای LicensePayload v2، `companyReference` فقط selector شرکت از مجموعهٔ payload امضاشده است؛ ورودی مرورگر مرجع معتبر محسوب نمی‌شود و Vendor باید عضویت آن را در envelope بررسی و مقدار نهایی را از همان envelope بردارد. sequence یا فهرست کامل entitlement از کلاینت دریافت نمی‌شود.
+3. Vendor در تراکنش Serializable، همان لایسنس را از دیتابیس Vendor resolve می‌کند، آخرین VendorSignedLicenseEnvelope را می‌خواند و digest، signature و binding را کنترل می‌کند. برای LicensePayload v1، sequence و زیرمجموعهٔ installation-scoped در provisioning schema v4 قرار می‌گیرد. برای LicensePayload v2، PR #683 انتخاب `CompanyReference` را فقط از `CompanyEntitlements` در payload امضاشده انجام می‌دهد و payload v5 را با ماژول‌های همان Company آماده می‌کند؛ اما Gate دوکلیدی خاموش است (`Provisioning:CompanyReferenceIssuance:Enabled=false` به‌صورت پیش‌فرض و `CustomerConsumerReady=false` در کد). بنابراین در وضعیت فعلی resolver همچنان با `provisioning_company_reference_mapping_required` fail-closed می‌شود و هیچ بستهٔ v5 صادر نمی‌شود؛ هیچ entitlement شرکتی به سطح Installation flatten نمی‌شود.
 4. پیش از امضای بستهٔ Provisioning، Vendor دوباره بررسی می‌کند که لایسنس همان مشتری/نصب و فعال باشد، تاریخ اعتبار نگذشته باشد و sequence payload هنوز آخرین revision امضاشده باشد. در صورت تعلیق، انقضا، تغییر نصب یا صدور revision جدید، امضا رد می‌شود.
 5. پیش از هر Export مجدد نیز همین اعتبارسنجی انجام می‌شود. پس از Export موفق، مشتری آفلاین نمی‌تواند تعلیق بعدی یا revision جدید Vendor را کشف کند؛ این محدودیت در قرارداد پذیرفته شده است.
 6. idempotency شامل licenseId و sequence امضاشده، به‌علاوهٔ تنظیمات و زیرسیستم مؤثر است. retry یک requestId قدیمی به revision تاریخی خودش متصل می‌ماند و به revision جدیدتر منتقل نمی‌شود.
-7. درخواست‌های تاریخی schema v3 نه backfill می‌شوند و نه به لایسنس حدس‌زده وصل می‌شوند. verifier مشتری schemaهای v1-v4 را می‌پذیرد و canonical bytes نسخه‌های v1-v3 حفظ شده‌اند؛ Vendor درخواست v3 را دوباره امضا یا Export نمی‌کند و LicenseId/Sequence مفقود را حدس نمی‌زند.
-8. برای MaxCompanies فقط candidate payload builder در Vendor (#393) موجود است؛ سفارش/پرداخت، persistence، Approval، signing/export و اعمال Customer هنوز NotImplemented هستند. افزودن Module/Feature/Seat به Company موجود و حمل CompanyReference در provisioning schema v5 نیز تا تکمیل نگاشت مورداعتماد در #392 و هماهنگی consumer مستقل #235 NotImplemented می‌ماند. LicensePayload v2 در مسیر v4 صریحاً رد می‌شود؛ هیچ کنترل ناقص یا تخمینی جایگزین آن‌ها نمی‌شود.
+7. درخواست‌های تاریخی schema v3 نه backfill می‌شوند و نه به لایسنس حدس‌زده وصل می‌شوند. `Licensing.Contracts` نسخهٔ v5 را به‌صورت additive می‌شناسد. سمت Customer، `CustomerProvisioningPackageVerifier` از PR #686 با `allowCompanyReference=true` v5 را می‌پذیرد و `ApplyAsync` آن را اتمیک اعمال می‌کند؛ اما چون Gate صدور Vendor خاموش است، در عمل هنوز فقط بسته‌های v1-v4 در جریان‌اند. canonical bytes نسخه‌های v1-v3 حفظ شده‌اند؛ Vendor درخواست v3 را دوباره امضا یا Export نمی‌کند و LicenseId/Sequence مفقود را حدس نمی‌زند.
+8. برای MaxCompanies و Company-scoped Module/Feature/Seat candidate builderهای Vendor در #393 موجودند؛ سفارش/پرداخت، persistence خرید و amendment و Approval تجاری هنوز NotImplemented هستند. سمت مشتری، PRهای #684 (`5f4baf82`؛ schema `CompanySetupRecords` و Migration `20261116070805_AddCompanySetupRecords`)، #686 (`b0eefa37`؛ مصرف‌کنندهٔ v5 با ترتیب Entitlement→Duplicate→Capacity و کدهای رد `provisioning_license_not_installed`/`provisioning_not_entitled_for_company`/`provisioning_company_reference_conflict`/`provisioning_company_capacity_exceeded`) و #687 (`f8a98713`؛ استخراج `CustomerCompanyEntitlementResolver`) ادغام شده‌اند و `maxCompanies` با سیاست block-new شمرده می‌شود؛ اما Gate صدور Vendor (`CustomerConsumerReady=false`) بسته مانده و هیچ بستهٔ v5 عملیاتی صادر نمی‌شود. Migration مشتری روی دیتابیس واقعی اجرا نشده است؛ LicensePayload v2 در مسیر provisioning عملیاتی fail-closed می‌ماند و هیچ کنترل ناقص یا تخمینی جایگزین binding معتبر نمی‌شود. PR #699 در Issue #698 ادغام شده و چهار کد رد ثابت شرکت‌محور در allow-list محدود Vendor پذیرفته می‌شوند؛ Vendor CI روی HEAD نهایی ۳/۳، Semgrep یک Job و .NET CI هفت Job موفق بوده‌اند. CI push روی main پس از Merge در بازبینی 2026-11-18 تأیید نشده است. گام‌های باقی‌مانده: فعال‌سازی دوکلیدی Gate (نیازمند تأیید مالک) و سیاست Restore/Clone.
 
 
 ## ۱۴) Add-on amendment، bootstrap و entitlement sync (D-059)
@@ -223,3 +223,37 @@ Vendor پس از بررسی Customer/Installation و خرید/تأیید، یک 
 7. این contract rule به‌تنهایی state یا replay ledger ایجاد نمی‌کند. #391 باید sequence پذیرفته‌شده را اتمیک در Customer ذخیره و هم‌زمانی/replay را کنترل کند؛ #393 صدور amendment را در Vendor و از مسیر خرید/Approval/Signer اضافه می‌کند.
 8. support و update end-dateها مستقل از expiry هستند. Perpetual license با پایان support/update منقضی نمی‌شود.
 
+
+## ۱۶) گردش‌کارهای S1 — پشتیبانی، Update، فعال‌سازی مجدد و انقضا (D-097..D-102؛ `Accepted` رفتاری، `NotImplemented`)
+
+این بخش تصمیم‌های مالک محصول در مأموریت S1-0 (Issue #696) را به گردش‌کار ترجمه می‌کند. هیچ‌یک پیاده‌سازی نشده‌اند و هر قابلیت به Issue/PR مستقل با معیار پذیرش خودش نیاز دارد.
+
+### 16.1 تمدید پشتیبانی و Update مستقل (D-097)
+1. Vendor برای هر Customer/Installation، دورهٔ پشتیبانی و Update را مستقل از License مدیریت می‌کند؛ تمدید فقط از مسیر amendment امضاشده با sequence افزایشی (#393) به `supportUntilUtc`/`updatesUntilUtc` payload اعمال می‌شود.
+2. مشتری فاقد پشتیبانی در داشبورد Vendor با وضعیت هشدار متمایز نمایش داده می‌شود؛ سوابق خدمات، تماس‌ها و تمدیدها در CRM سبک (D-102) append-only ثبت می‌شوند.
+3. پایان پشتیبانی/Update نرم‌افزار Perpetual را غیرفعال نمی‌کند (D-022/D-059)؛ فقط دسترسی به Updateهای جدید محدود می‌شود.
+
+### 16.2 فعال‌سازی مجدد سخت‌افزاری — Online و Offline (D-099؛ توسعهٔ D-058/Issue #384)
+1. پس از نصب مجدد Windows یا تغییر سخت‌افزاری مهم، Customer Host با possession کلید غیر-exportable یک درخواست reactivation نسخه‌دار می‌سازد: InstallationId، SPKI/key version جدید، مشخصات سخت‌افزاری نسخه‌دار، requestId/nonce، زمان/انقضا و امضا. تغییر RAM یا کارت شبکه به‌تنهایی درخواست تولید نمی‌کند (تشخیص نسخه‌دار و قابل تنظیم است).
+2. **Online:** درخواست مستقیماً به Vendor ارسال می‌شود؛ **Offline:** فایل درخواست صادر و به Vendor منتقل می‌شود (الگوی .request.json بخش ۱۱).
+3. Vendor مشخصات قبلی و جدید را مقایسه می‌کند، تاریخچهٔ Installation را نگه می‌دارد و درخواست را به صف تأیید مالک می‌گذارد؛ هیچ پاسخ امضاشده‌ای بدون تأیید صریح مالک صادر نمی‌شود.
+4. تأیید مالک: هویت تأییدکننده، زمان و علت audit می‌شود؛ پاسخ جدید امضا و به Installation، requestId، کلید جدید (SPKI) و License revision مشخص bind می‌شود؛ Customer آن را با همان validation ورود لایسنس اعمال می‌کند.
+5. رد درخواست: فقط عدم صدور binding جدید است؛ نه Revocation و نه حذف دادهٔ مشتری. نتیجهٔ رد نیز audit می‌شود.
+6. اثرانگشت سخت‌افزار به‌تنهایی اثبات هویت نیست؛ اثبات فقط با possession کلید نصب معتبر است. TPM ترجیحی است ولی شرط اجباری نیست؛ رفتار VM/vTPM در OD-22 باز است.
+
+### 16.3 Update با تأیید مدیر مشتری (D-101)
+1. بررسی نسخه و اطلاع از Update می‌تواند خودکار باشد؛ نصب بدون تأیید صریح مدیر Customer انجام نمی‌شود.
+2. بستهٔ Update پیش از اجرا بررسی می‌کند: امضا (D-045)، Hash، نسخهٔ مقصد و سازگاری با نسخهٔ فعلی؛ هر عدم‌انطباق fail-closed رد می‌شود.
+3. پیش از نصب، پشتیبان‌گیری ثبت و مسیر بازیابی بررسی می‌شود؛ Update بدون مسیر بازگشت اجرا نمی‌شود.
+4. مشتری Offline همان بستهٔ امضاشده را از طریق فایل دریافت می‌کند؛ بایت‌های بستهٔ Online و Offline یکسان‌اند.
+
+### 16.4 پایان Support، پایان License و انقضای Cloud (D-097/D-098)
+1. پایان پشتیبانی/Update: هیچ رفتار runtime نصب عوض نمی‌شود؛ فقط Updateهای جدید از دسترس خارج می‌شوند و داشبورد Vendor هشدار متمایز نشان می‌دهد.
+2. پایان License مدت‌دار در Dedicated/Offline: طبق D-059 بند ۷ به Restricted می‌رود (read/export/recovery مجاز؛ نوشتن مسدود؛ بدون grace ضمنی).
+3. پایان License در Cloud (D-098): ورود عادی کاربران مسدود می‌شود؛ صفحهٔ وضعیت انقضا و راهنمای تمدید نمایش داده می‌شود؛ مسیر تمدید آنلاین (#394) و بازیابی/حفظ داده برای نقش‌های authorized باز می‌ماند؛ هیچ داده‌ای حذف نمی‌شود.
+
+### 16.5 مسیر recovery
+1. بازیابی Backup با همان کلید روی همان سخت‌افزار، یا جابه‌جایی‌ای که از آستانهٔ تغییر سخت‌افزاری نسخه‌دار عبور نمی‌کند، طبق پیشنهاد OD-06(a) می‌تواند بدون صدور binding جدید و با ثبت audit انجام شود؛ این استثنا به معنی مجازبودن انتقال آزاد Installation به سخت‌افزار متفاوت نیست.
+2. **تعویض سخت‌افزاری مهم نیازمند reactivation و تأیید مالک Vendor است، حتی اگر کلید قبلی هنوز در دسترس باشد**؛ در این مورد D-099 (تصمیم Accepted و جدیدتر) بر پیشنهاد قدیمی‌تر OD-06(a) مقدم است. درخواست باید با همان کلید نصب موجود اثبات possession شود، مشخصات قبلی/جدید مقایسه و پاسخ جدید به Installation/request/key/revision bind شود.
+3. گم‌شدن کلید: گردش‌کار reactivation با تأیید مالک Vendor؛ احراز هویت/مالکیت پس از گم‌شدن کلید قبلی در OD-21 باز است. possession کلید جدید، هویت Installation قبلی را اثبات نمی‌کند؛ تا تعیین OD-21، تأیید مالک Vendor تنها gate این مسیر است و هیچ مسیر خودکاری وجود ندارد.
+4. در همهٔ حالت‌ها دادهٔ حسابداری هرگز حذف نمی‌شود و مسیر Backup/Export همیشه برای نقش‌های مجاز باز می‌ماند (D-026/S-08).

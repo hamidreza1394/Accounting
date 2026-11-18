@@ -15,8 +15,14 @@ public static class VendorProvisioningLicenseBindingRules
         ArgumentNullException.ThrowIfNull(payload);
         ArgumentNullException.ThrowIfNull(binding);
 
+        // v4 (no reference) must meet a legacy binding; v5 must carry exactly the signed reference.
+        var expectedSchemaVersion = binding.CompanyReference is null
+            ? CustomerProvisioningPackageValidator.CurrentPayloadSchemaVersion
+            : CustomerProvisioningPackageValidator.CompanyReferencePayloadSchemaVersion;
+
         return binding.Succeeded &&
-               payload.SchemaVersion == CustomerProvisioningPackageValidator.CurrentPayloadSchemaVersion &&
+               payload.SchemaVersion == expectedSchemaVersion &&
+               string.Equals(payload.CompanyReference, binding.CompanyReference, StringComparison.Ordinal) &&
                string.Equals(payload.LicenseId, binding.LicenseId, StringComparison.OrdinalIgnoreCase) &&
                payload.Sequence == binding.Sequence &&
                binding.Subsystems is not null &&

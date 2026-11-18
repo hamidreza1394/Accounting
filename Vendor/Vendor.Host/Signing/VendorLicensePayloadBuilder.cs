@@ -1,11 +1,12 @@
 using System.Text.Json;
 using Faranou.Licensing.Contracts;
+using Faranou.Vendor.Host.Authorization;
 using Faranou.Vendor.Persistence.Domain;
 
 namespace Faranou.Vendor.Host.Signing;
 
 /// <summary>
-/// Builds the exact v1 payload from Vendor control-plane metadata. This does not sign, persist,
+/// Builds the license payload from Vendor control-plane metadata: v1 (installation-level) when no company draft exists, v2 (company-scoped) otherwise. This does not sign, persist,
 /// or change license state; those actions remain gated behind the approval workflow.
 /// </summary>
 public static class VendorLicensePayloadBuilder
@@ -45,6 +46,9 @@ public static class VendorLicensePayloadBuilder
             license.ValidUntilUtc is not null && license.ValidUntilUtc <= license.ValidFromUtc)
             return Fail("license_term_invalid", out errorCode);
 
+        if (license.CompanyEntitlementsDraftJson is not null)
+            return TryBuildCompanyScoped(license, installation, issuedAtUtc, out payload, out errorCode);
+
         string[] subsystems;
         try
         {
@@ -78,6 +82,50 @@ public static class VendorLicensePayloadBuilder
                 license.MaxCompanies,
                 subsystems.OrderBy(code => code, StringComparer.Ordinal).ToArray()));
 
+        return true;
+    }
+
+    /// <summary>
+    /// Initial company-scoped payload (format v2). The legacy <c>SubsystemsJson</c> is neither read nor
+    /// reinterpreted, installation-level subsystems stay empty, and every entry is validated by the contract.
+    /// </summary>
+    private static bool TryBuildCompanyScoped(
+        VendorLicense license,
+        VendorInstallation installation,
+        DateTimeOffset issuedAtUtc,
+        out LicensePayload? payload,
+        out string? errorCode)
+    {
+        payload = null;
+        if (license.MaxCompanies is < 1)
+            return Fail("license_company_limit_invalid", out errorCode);
+
+        if (!VendorLicenseCompanyDraft.TryParse(license.CompanyEntitlementsDraftJson, out var draft) ||
+            draft!.Companies.Count == 0 ||
+            !VendorLicenseCompanyDraft.TryToEntitlements(draft.Companies, license.MaxCompanies, out var entitlements))
+            return Fail("license_company_draft_invalid", out errorCode);
+
+        var candidate = new LicensePayload(
+            FormatVersion: LicensePayload.CurrentFormatVersion,
+            LicenseId: license.Id.ToString("D"),
+            InstallationId: installation.Id.ToString("D"),
+            ProductCode: license.ProductCode,
+            LicenseKind: license.LicenseKind,
+            IssuedAtUtc: issuedAtUtc.ToUniversalTime(),
+            NotBeforeUtc: license.ValidFromUtc.ToUniversalTime(),
+            ExpiresAtUtc: license.ValidUntilUtc?.ToUniversalTime(),
+            GraceDays: license.GraceDays,
+            Sequence: license.LastIssuedSequence + 1,
+            Limits: new LicenseLimits(license.MaxCompanies, Array.Empty<string>()))
+        {
+            CompanyEntitlements = entitlements.OrderBy(c => c!.CompanyReference, StringComparer.Ordinal).ToArray()
+        };
+
+        if (StructuralValidation.ValidatePayload(candidate).Count > 0)
+            return Fail("license_company_draft_invalid", out errorCode);
+
+        payload = candidate;
+        errorCode = null;
         return true;
     }
 

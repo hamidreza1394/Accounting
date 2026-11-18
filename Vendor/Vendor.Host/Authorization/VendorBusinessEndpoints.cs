@@ -20,7 +20,7 @@ public static class VendorBusinessEndpoints
         {
             var pagination = VendorPageRequest.Normalize(page, pageSize);
             var query = db.Customers.AsNoTracking().OrderBy(item => item.CustomerNumber).ThenBy(item => item.Id)
-                .Select(item => new CustomerResponse(item.Id, item.CustomerNumber, item.LegalName, item.DisplayName, item.Status, item.CreatedAtUtc, item.UpdatedAtUtc, Convert.ToBase64String(item.RowVersion)));
+                .Select(item => new CustomerResponse(item.Id, item.CustomerNumber, item.LegalName, item.DisplayName, item.Status, VendorTenantView.From(item.CustomerNumber, item.Status), item.CreatedAtUtc, item.UpdatedAtUtc, Convert.ToBase64String(item.RowVersion)));
             var totalCount = await query.CountAsync(ct);
             var items = await query.Skip(pagination.Skip).Take(pagination.PageSize).ToListAsync(ct);
             return Results.Ok(new VendorPageResponse<CustomerResponse>(items, pagination.Page, pagination.PageSize, totalCount));
@@ -36,7 +36,7 @@ public static class VendorBusinessEndpoints
             if (!access.Succeeded) return Results.Forbid();
             var item = await db.Customers.AsNoTracking().SingleOrDefaultAsync(value => value.Id == id, ct);
             return item is null ? Results.NotFound() :
-                Results.Ok(new CustomerResponse(item.Id, item.CustomerNumber, item.LegalName, item.DisplayName, item.Status, item.CreatedAtUtc, item.UpdatedAtUtc, Convert.ToBase64String(item.RowVersion)));
+                Results.Ok(new CustomerResponse(item.Id, item.CustomerNumber, item.LegalName, item.DisplayName, item.Status, VendorTenantView.From(item.CustomerNumber, item.Status), item.CreatedAtUtc, item.UpdatedAtUtc, Convert.ToBase64String(item.RowVersion)));
         }).RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.CustomersRead));
 
         customers.MapPost("/", async (
@@ -77,7 +77,7 @@ public static class VendorBusinessEndpoints
                 System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
             await tx.CommitAsync(ct);
             return Results.Created($"/api/vendor/customers/{item.Id:D}",
-                new CustomerResponse(item.Id, item.CustomerNumber, item.LegalName, item.DisplayName, item.Status, item.CreatedAtUtc, item.UpdatedAtUtc, Convert.ToBase64String(item.RowVersion)));
+                new CustomerResponse(item.Id, item.CustomerNumber, item.LegalName, item.DisplayName, item.Status, VendorTenantView.From(item.CustomerNumber, item.Status), item.CreatedAtUtc, item.UpdatedAtUtc, Convert.ToBase64String(item.RowVersion)));
         }).RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.CustomersManage));
 
         MapReadOnlyResource<InstallationResponse>(endpoints, "/api/vendor/installations", "installation",
@@ -112,13 +112,13 @@ public static class VendorBusinessEndpoints
                 if (customerId.HasValue) query = query.Where(item => item.CustomerId == customerId.Value);
                 return query.OrderBy(item => item.LicenseNumber).ThenBy(item => item.Id)
                     .Select(item => new LicenseResponse(item.Id, item.CustomerId, item.ContractId, item.InstallationId, item.LicenseNumber, item.ProductCode, item.Status, item.LicenseKind, item.MaxCompanies,
-                    VendorLicenseEntitlementRules.ParseSubsystems(item.SubsystemsJson), item.GraceDays, item.LastIssuedSequence,
-                    item.ValidFromUtc, item.ValidUntilUtc, item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion)));
+                    VendorLicenseCompanyDraft.EffectiveSubsystems(item.CompanyEntitlementsDraftJson, item.SubsystemsJson), item.GraceDays, item.LastIssuedSequence,
+                    item.ValidFromUtc, item.ValidUntilUtc, item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion), VendorLicenseCompanyDraft.ToResponse(item.CompanyEntitlementsDraftJson)));
             },
             async (db, id, ct) => await db.Licenses.AsNoTracking().Where(item => item.Id == id)
                 .Select(item => new LicenseResponse(item.Id, item.CustomerId, item.ContractId, item.InstallationId, item.LicenseNumber, item.ProductCode, item.Status, item.LicenseKind, item.MaxCompanies,
-                    VendorLicenseEntitlementRules.ParseSubsystems(item.SubsystemsJson), item.GraceDays, item.LastIssuedSequence,
-                    item.ValidFromUtc, item.ValidUntilUtc, item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion))).SingleOrDefaultAsync(ct));
+                    VendorLicenseCompanyDraft.EffectiveSubsystems(item.CompanyEntitlementsDraftJson, item.SubsystemsJson), item.GraceDays, item.LastIssuedSequence,
+                    item.ValidFromUtc, item.ValidUntilUtc, item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion), VendorLicenseCompanyDraft.ToResponse(item.CompanyEntitlementsDraftJson))).SingleOrDefaultAsync(ct));
 
         var installations = endpoints.MapGroup("/api/vendor/installations")
             .RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.InstallationsManage));
@@ -212,10 +212,12 @@ public static class VendorBusinessEndpoints
             var number = request.LicenseNumber?.Trim();
             var product = request.ProductCode?.Trim();
             if (request.CustomerId == Guid.Empty || string.IsNullOrWhiteSpace(number) || number.Length > 64 ||
-                string.IsNullOrWhiteSpace(product) || product.Length > 64 ||
-                !VendorLicenseEntitlementRules.TryNormalize(request.LicenseKind, request.MaxCompanies, request.Subsystems,
-                    request.GraceDays, request.ValidFromUtc, request.ValidUntilUtc, out var entitlements))
+                string.IsNullOrWhiteSpace(product) || product.Length > 64)
                 return Results.BadRequest(new { error = "invalid_license" });
+            var entitlementError = ResolveLicenseEntitlements(request.LicenseKind, request.MaxCompanies,
+                request.Subsystems, request.GraceDays, request.ValidFromUtc, request.ValidUntilUtc,
+                request.Companies, existingDraftJson: null, out var entitlements, out var draftJson);
+            if (entitlementError is not null) return entitlementError;
             if (!await db.Customers.AnyAsync(item => item.Id == request.CustomerId, ct))
                 return Results.BadRequest(new { error = "customer_not_found" });
             if (request.ContractId.HasValue && !await db.Contracts.AnyAsync(item =>
@@ -235,6 +237,7 @@ public static class VendorBusinessEndpoints
                 LicenseNumber = number, ProductCode = product, Status = "Draft",
                 LicenseKind = entitlements!.LicenseKind, MaxCompanies = entitlements.MaxCompanies,
                 SubsystemsJson = entitlements.SubsystemsJson, GraceDays = entitlements.GraceDays, LastIssuedSequence = 0,
+                CompanyEntitlementsDraftJson = draftJson,
                 ValidFromUtc = request.ValidFromUtc, ValidUntilUtc = request.ValidUntilUtc, CreatedAtUtc = now };
             db.Licenses.Add(item);
             try { await db.SaveChangesAsync(ct); }
@@ -248,8 +251,8 @@ public static class VendorBusinessEndpoints
             await tx.CommitAsync(ct);
             return Results.Created($"/api/vendor/licenses/{item.Id:D}",
                 new LicenseResponse(item.Id, item.CustomerId, item.ContractId, item.InstallationId, item.LicenseNumber, item.ProductCode, item.Status, item.LicenseKind, item.MaxCompanies,
-                    VendorLicenseEntitlementRules.ParseSubsystems(item.SubsystemsJson), item.GraceDays, item.LastIssuedSequence,
-                    item.ValidFromUtc, item.ValidUntilUtc, item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion)));
+                    VendorLicenseCompanyDraft.EffectiveSubsystems(item.CompanyEntitlementsDraftJson, item.SubsystemsJson), item.GraceDays, item.LastIssuedSequence,
+                    item.ValidFromUtc, item.ValidUntilUtc, item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion), VendorLicenseCompanyDraft.ToResponse(item.CompanyEntitlementsDraftJson)));
         });
 
 
@@ -308,7 +311,7 @@ public static class VendorBusinessEndpoints
                 System.Diagnostics.Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N")), ct);
             await tx.CommitAsync(ct);
             return Results.Ok(new CustomerResponse(item.Id, item.CustomerNumber, item.LegalName, item.DisplayName,
-                item.Status, item.CreatedAtUtc, item.UpdatedAtUtc, Convert.ToBase64String(item.RowVersion)));
+                item.Status, VendorTenantView.From(item.CustomerNumber, item.Status), item.CreatedAtUtc, item.UpdatedAtUtc, Convert.ToBase64String(item.RowVersion)));
         });
 
         // Legacy direct status changes are intentionally blocked. Use the Maker-Checker approval API.
@@ -442,10 +445,12 @@ public static class VendorBusinessEndpoints
             var number = request.LicenseNumber?.Trim();
             var product = request.ProductCode?.Trim();
             if (string.IsNullOrWhiteSpace(number) || number.Length > 64 ||
-                string.IsNullOrWhiteSpace(product) || product.Length > 64 ||
-                !VendorLicenseEntitlementRules.TryNormalize(request.LicenseKind, request.MaxCompanies, request.Subsystems,
-                    request.GraceDays, request.ValidFromUtc, request.ValidUntilUtc, out var entitlements))
+                string.IsNullOrWhiteSpace(product) || product.Length > 64)
                 return Results.BadRequest(new { error = "invalid_license" });
+            var entitlementError = ResolveLicenseEntitlements(request.LicenseKind, request.MaxCompanies,
+                request.Subsystems, request.GraceDays, request.ValidFromUtc, request.ValidUntilUtc,
+                request.Companies, item.CompanyEntitlementsDraftJson, out var entitlements, out var draftJson);
+            if (entitlementError is not null) return entitlementError;
             if (await db.Licenses.AnyAsync(value => value.Id != id && value.LicenseNumber == number, ct))
                 return Results.Conflict(new { error = "license_number_exists" });
             if (request.ContractId.HasValue && !await db.Contracts.AnyAsync(value =>
@@ -464,7 +469,9 @@ public static class VendorBusinessEndpoints
             item.ProductCode = product;
             item.LicenseKind = entitlements!.LicenseKind;
             item.MaxCompanies = entitlements.MaxCompanies;
-            item.SubsystemsJson = entitlements.SubsystemsJson;
+            // Legacy SubsystemsJson is untouched for company-scoped licenses (never reinterpreted for v2).
+            if (draftJson is null) item.SubsystemsJson = entitlements.SubsystemsJson;
+            item.CompanyEntitlementsDraftJson = draftJson;
             item.GraceDays = entitlements.GraceDays;
             item.ValidFromUtc = request.ValidFromUtc;
             item.ValidUntilUtc = request.ValidUntilUtc;
@@ -478,11 +485,44 @@ public static class VendorBusinessEndpoints
             await tx.CommitAsync(ct);
             return Results.Ok(new LicenseResponse(item.Id, item.CustomerId, item.ContractId, item.InstallationId,
                 item.LicenseNumber, item.ProductCode, item.Status, item.LicenseKind, item.MaxCompanies,
-                VendorLicenseEntitlementRules.ParseSubsystems(item.SubsystemsJson), item.GraceDays, item.LastIssuedSequence,
-                item.ValidFromUtc, item.ValidUntilUtc, item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion)));
+                VendorLicenseCompanyDraft.EffectiveSubsystems(item.CompanyEntitlementsDraftJson, item.SubsystemsJson), item.GraceDays, item.LastIssuedSequence,
+                item.ValidFromUtc, item.ValidUntilUtc, item.CreatedAtUtc, Convert.ToBase64String(item.RowVersion), VendorLicenseCompanyDraft.ToResponse(item.CompanyEntitlementsDraftJson)));
         });
 
         return endpoints;
+    }
+
+    /// <summary>
+    /// Chooses the v1 (installation subsystems, <c>Companies == null</c>) or v2 (company-scoped) metadata path.
+    /// A license that already has a company draft can never silently fall back to v1.
+    /// </summary>
+    private static IResult? ResolveLicenseEntitlements(
+        string? licenseKind, int? maxCompanies, IReadOnlyList<string>? subsystems, int? graceDays,
+        DateTimeOffset validFromUtc, DateTimeOffset? validUntilUtc,
+        IReadOnlyList<VendorCompanyDraftInput>? companies, string? existingDraftJson,
+        out NormalizedVendorLicenseEntitlements? entitlements, out string? draftJson)
+    {
+        entitlements = null;
+        draftJson = null;
+        if (companies is null)
+        {
+            if (existingDraftJson is not null)
+                return Results.BadRequest(new { error = "company_entitlements_required" });
+            return VendorLicenseEntitlementRules.TryNormalize(licenseKind, maxCompanies, subsystems,
+                graceDays, validFromUtc, validUntilUtc, out entitlements)
+                ? null
+                : Results.BadRequest(new { error = "invalid_license" });
+        }
+
+        if (subsystems is { Count: > 0 })
+            return Results.BadRequest(new { error = "subsystems_not_allowed_for_company_license" });
+        if (!VendorLicenseEntitlementRules.TryNormalizeCompanyScoped(licenseKind, maxCompanies, graceDays,
+                validFromUtc, validUntilUtc, out entitlements))
+            return Results.BadRequest(new { error = "invalid_license" });
+        if (!VendorLicenseCompanyDraft.TryNormalize(companies, existingDraftJson, entitlements!.MaxCompanies,
+                out draftJson, out var draftError))
+            return Results.BadRequest(new { error = VendorLicenseCompanyDraft.ToApiErrorCode(draftError!) });
+        return null;
     }
 
     private static bool IsUniqueConstraintViolation(DbUpdateException exception) =>
@@ -520,15 +560,15 @@ public sealed record UpdateCustomerRequest(string? CustomerNumber, string? Legal
 public sealed record ChangeOperationalStatusRequest(string? Status, string? RowVersion);
 public sealed record UpdateInstallationRequest(string? InstallationCode, string? Name, string? Environment, string? RowVersion);
 public sealed record UpdateContractRequest(string? ContractNumber, DateTimeOffset StartsAtUtc, DateTimeOffset? EndsAtUtc, string? CurrencyCode, string? RowVersion);
-public sealed record UpdateLicenseRequest(Guid? ContractId, Guid? InstallationId, string? LicenseNumber, string? ProductCode, DateTimeOffset ValidFromUtc, DateTimeOffset? ValidUntilUtc, string? RowVersion, string? LicenseKind = null, int? MaxCompanies = null, IReadOnlyList<string>? Subsystems = null, int? GraceDays = null);
-public sealed record CustomerResponse(Guid Id, string CustomerNumber, string LegalName, string DisplayName, string Status, DateTimeOffset CreatedAtUtc, DateTimeOffset UpdatedAtUtc, string RowVersion);
+public sealed record UpdateLicenseRequest(Guid? ContractId, Guid? InstallationId, string? LicenseNumber, string? ProductCode, DateTimeOffset ValidFromUtc, DateTimeOffset? ValidUntilUtc, string? RowVersion, string? LicenseKind = null, int? MaxCompanies = null, IReadOnlyList<string>? Subsystems = null, int? GraceDays = null, IReadOnlyList<VendorCompanyDraftInput>? Companies = null);
+public sealed record CustomerResponse(Guid Id, string CustomerNumber, string LegalName, string DisplayName, string Status, VendorTenantView TenantView, DateTimeOffset CreatedAtUtc, DateTimeOffset UpdatedAtUtc, string RowVersion);
 public sealed record InstallationResponse(Guid Id, Guid CustomerId, string InstallationCode, string Name, string Environment, string Status, DateTimeOffset CreatedAtUtc, DateTimeOffset? LastSeenAtUtc, string RowVersion);
 public sealed record ContractResponse(Guid Id, Guid CustomerId, string ContractNumber, string Status, DateTimeOffset StartsAtUtc, DateTimeOffset? EndsAtUtc, string CurrencyCode, DateTimeOffset CreatedAtUtc, string RowVersion);
-public sealed record LicenseResponse(Guid Id, Guid CustomerId, Guid? ContractId, Guid? InstallationId, string LicenseNumber, string ProductCode, string Status, string LicenseKind, int? MaxCompanies, IReadOnlyList<string> Subsystems, int GraceDays, int LastIssuedSequence, DateTimeOffset ValidFromUtc, DateTimeOffset? ValidUntilUtc, DateTimeOffset CreatedAtUtc, string RowVersion);
+public sealed record LicenseResponse(Guid Id, Guid CustomerId, Guid? ContractId, Guid? InstallationId, string LicenseNumber, string ProductCode, string Status, string LicenseKind, int? MaxCompanies, IReadOnlyList<string> Subsystems, int GraceDays, int LastIssuedSequence, DateTimeOffset ValidFromUtc, DateTimeOffset? ValidUntilUtc, DateTimeOffset CreatedAtUtc, string RowVersion, IReadOnlyList<VendorCompanyDraftEntry>? Companies = null);
 
 public sealed record CreateInstallationRequest(Guid CustomerId, string? InstallationCode, string? Name, string? Environment);
 public sealed record CreateContractRequest(Guid CustomerId, string? ContractNumber, DateTimeOffset StartsAtUtc, DateTimeOffset? EndsAtUtc, string? CurrencyCode);
-public sealed record CreateLicenseRequest(Guid CustomerId, Guid? ContractId, Guid? InstallationId, string? LicenseNumber, string? ProductCode, DateTimeOffset ValidFromUtc, DateTimeOffset? ValidUntilUtc, string? LicenseKind = null, int? MaxCompanies = null, IReadOnlyList<string>? Subsystems = null, int? GraceDays = null);
+public sealed record CreateLicenseRequest(Guid CustomerId, Guid? ContractId, Guid? InstallationId, string? LicenseNumber, string? ProductCode, DateTimeOffset ValidFromUtc, DateTimeOffset? ValidUntilUtc, string? LicenseKind = null, int? MaxCompanies = null, IReadOnlyList<string>? Subsystems = null, int? GraceDays = null, IReadOnlyList<VendorCompanyDraftInput>? Companies = null);
 
 
 /// <summary>Normalizes list paging to bounded, deterministic values.</summary>
