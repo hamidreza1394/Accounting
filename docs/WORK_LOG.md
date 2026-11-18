@@ -3165,6 +3165,15 @@
 - باز: اعتبارسنجی کد واحد با `TradeReferenceData.TryFindUnit` در Application (برش ذخیره‌سازی)؛ سیاست دقت و سقف‌های تجاری تصمیم مالک است؛ `TryRestore` با قواعد «امروز» می‌سنجد (تغییر سقف‌ها بعداً نیاز به مهاجرت دارد).
 - Commit: `7d57e8f` (قبلی `931f578`).
 
+## 2026-11-18 — PR #705: اعتبارسنجی و محاسبهٔ طرح پرداخت پیش‌فاکتور (Trade، بدون Schema)
+
+- Issue مرتبط: #397 (Issue چتر؛ Issue اختصاصی یافت نشد، `Refs` نه `Closes`). شاخه: `feat/trade-payment-plan-validation`. Handoff: `docs/handoffs/ISSUE-397-trade-payment-plan-validation.md`.
+- محدوده: `PaymentPlanCalculator.TryBuild`، `PaymentPlan`/`PaymentPlanStage`، فهرست مرجع `PaymentMethods` در `Trade.Application`؛ بدون Schema، Migration، TenantId/CompanyId، API یا UI.
+- اصلاحات Review: سازندهٔ عمومی و `init` حذف شد؛ ورودی `stages` و `allowedMethodCodes` یک‌بار در کپی خصوصی خوانده می‌شود؛ `PaymentPlan.Stages` و فهرست‌های مرجع `ImmutableArray` شدند (راه `ICollection.SyncRoot`/Cast به آرایهٔ قابل‌نوشتن بسته شد)؛ تست‌های رفتاری افزوده شد (سه تست جدید روی کد قبلی شکست می‌خورند).
+- تست محلی (SQL Server آزمایشی): ۱۶۰۸ اجرا / ۱۵۹۸ موفق / ۰ ناموفق / ۱۰ Skip (Windows CNG و chmod-root). نتیجهٔ CI جدا در PR گزارش می‌شود.
+- باز (تصمیم مالک): سیاست گردکردن `AwayFromZero` برای مراحل غیرآخر؛ منبع «روش‌های مجاز هر Company» (`allowedMethodCodes == null` یعنی همهٔ روش‌ها)؛ کامل‌بودن فهرست روش‌ها؛ فرمول مبلغ پیش‌فاکتور.
+- Commit کد: `23226a3`.
+
 ## 2026-11-18 — اصلاح محدودهٔ V1 D-103: حذف Tenant مستقل و حفظ نمایش مشتق‌شده (UNNUMBERED)
 
 - **مبنای Git:** شاخهٔ اصلاحی `fix/d103-v1-derived-tenant-view` از `origin/main@89c00641bad5403bd56526ff89a4c6be443b587b`؛ شاخهٔ سابقهٔ `feat/tenant-v1-management` با Commit `7e9abc1c` بدون تغییر حفظ شد.
@@ -3198,3 +3207,13 @@
 - **بدون کدنویسی جدید:** Gate/تنظیم/قرارداد/allow-list/کلیدها تغییر نکردند؛ Blockerها فقط ثبت شدند (بازکردن Gate v5، اجرای Migration واقعی مشتری، سیاست Restore/Clone — OD-06/#364، Staging دو پردازه/دو ماشین و signer عملیاتی #236، bootstrap مدیر Dedicated/Offline #389، trust distribution/rotation #235) و هیچ مجوزی فرض نشد. هیچ موردی از S1-b تا S1-g شروع نشد.
 - **پیش‌نیازهای S1-e** (انقضای Cloud و recovery؛ D-098): Issues باز #396 (دروازهٔ license-first)، #384 (اتصال runtime enforcement)، #228/#235 و تثبیت قرارداد مشترک بین‌بخشی Vendor/Customer؛ سهم Vendor در مأموریت بعدی صراحتاً محدوده‌بندی شود.
 - **بررسی:** `git diff --check` پاک؛ Build/Test محلی اجرا نشده (تغییر اجرایی وجود ندارد؛ طبق `AGENTS.md` صادقانه ثبت می‌شود)؛ CI روی PR پس از باز شدن گزارش واقعی می‌شود.
+
+## 2026-11-18 — تثبیت سیاست‌های طرح پرداخت پیش‌فاکتور با تأیید مالک (#710)
+
+- Issue اختصاصی #710 ایجاد و PR #705 به آن متصل شد؛ Issue چتر #397 باز می‌ماند.
+- مالک تأیید کرد محاسبات با `decimal` انجام شود؛ مراحل غیرآخر با `MidpointRounding.AwayFromZero` و دقت `CurrencyRef.MinorUnits` گرد شوند؛ باقیماندهٔ واقعی به مرحلهٔ آخر برسد و باقیماندهٔ صفر/منفی خطای اعتبارسنجی باشد.
+- تست صریح با نام `NonLastStage_Rounds_0_025To0_03_AndLastStageReceivesRemainder` مشخصاً `0.05 × 50% = 0.025 → 0.03` و تخصیص `0.02` به مرحلهٔ آخر را بررسی می‌کند.
+- فهرست `TT/LC/DP/DA/OPEN_ACCOUNT` صرفاً مرجع اولیه است و توسعه‌پذیر می‌ماند. `allowedMethodCodes == null` یعنی همهٔ روش‌های مرجع مجاز؛ محدودیت هر Company به S3 و پروفایل D-086 موکول است.
+- فرمول مبلغ نهایی پیش‌فاکتور همچنان باز است و در این PR تعیین نمی‌شود. هیچ Schema، Migration، API یا UI اضافه نشده است.
+- Handoff به `docs/handoffs/ISSUE-710-trade-payment-plan-validation.md` منتقل شد.
+- تغییر اجرایی جدید فقط نام‌گذاری دقیق‌تر تست موجود است؛ نتیجهٔ CI روی HEAD جدید باید پیش از Merge تأیید شود.
