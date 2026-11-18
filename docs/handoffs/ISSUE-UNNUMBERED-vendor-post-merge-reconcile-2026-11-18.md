@@ -70,6 +70,6 @@
 
 ## شناسه‌های Git
 - **Branch:** `docs/vendor-post-merge-reconcile-2026-11-18`
-- **Base:** `main@a7693cf476a8ce4dd0095666c9871b69ce3d00e4`
-- **Commit:** پس از ثبت تغییرات
-- **Pull Request:** پس از ثبت تغییرات
+- **Base:** `main@163e0be3a430439b69c13e0c17e8b99e98617fb9` (پس از Merge #702؛ شاخهٔ PR از مبنای قبلی a769 شروع شده و یک commit عقب است)
+- **Initial branch head:** `6f730fe8382daa4b337edaf378c47a0d23d86e9d`
+- **Pull Request:** [#703](https://github.com/hamidreza1394/Accounting/pull/703)؛ CI روی head نهایی باید دوباره بررسی شود.
