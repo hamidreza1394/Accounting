@@ -1,6 +1,6 @@
-# تحویل وظیفه — ISSUE-UNNUMBERED-trade-unit-conversion-snapshot
+# تحویل وظیفه — ISSUE-397-trade-unit-conversion-snapshot
 
-- **Issue:** `UNNUMBERED` (Epic مرتبط: #397 و S3 Trade؛ شماره جعلی ساخته نشد)
+- **Issue مرتبط:** #397 (Issue چتر ماژول Trade؛ باز). Issue اختصاصی برای این برش در مخزن یافت نشد و شماره‌ای ساخته نشد؛ PR از `Refs #397` استفاده می‌کند (نه `Closes`) تا Issue چتر بسته نشود. ایجاد Issue اختصاصی تصمیم مالک است.
 - **Agent/مسئول:** Claude (Trade؛ مستقل از کار GLM روی Vendor)
 - **تاریخ:** 2026-11-18
 - **وضعیت:** انجام‌شده برای این برش (فقط دامنه و تست، بدون Schema)؛ CI در PR گزارش می‌شود
@@ -23,7 +23,7 @@
 ## فایل‌های مهم تغییرکرده
 - `Modules/Trade/Trade.Domain/Units/TradeUnitConversion.cs`، `TradeRoundingPolicy.cs`، `TradeQuantitySnapshot.cs`، `ProductUnitConversionSet.cs`، `TradeUnitConversionError.cs` — نوع‌های دامنه (جدید)
 - `tests/Template.Tests/TradeUnitConversionTests.cs` — ۷۵ تست (جدید؛ فقط داده ساختگی)
-- `docs/handoffs/ISSUE-UNNUMBERED-trade-unit-conversion-snapshot.md` — این گزارش (جدید)
+- `docs/handoffs/ISSUE-397-trade-unit-conversion-snapshot.md` — این گزارش (جدید)
 
 ## تصمیم‌های فنی
 - `TradeQuantitySnapshot` سازندهٔ عمومی و `init` ندارد (سازنده `internal`، property فقط‌خواندنی)؛ پس `snapshot with { ConversionFactor = … }` کامپایل نمی‌شود. دو مسیر ساخت: `TradeUnitConversion.TryConvert` و `TradeQuantitySnapshot.TryRestore` (public، برای خواندن مقدار ذخیره‌شده توسط Infrastructure آینده؛ بدون Reflection/Factory). `TryRestore` مقادیر ذخیره‌شده را باور نمی‌کند (و آن‌ها را با قواعد «امروز» می‌سنجد؛ پس سخت‌تر کردن سقف‌ها یا قواعد بعداً باید همراه مهاجرت/نسخه‌بندی داده باشد وگرنه Snapshot تاریخی خوانده نمی‌شود؛ مقیاس `BaseQuantity` بازگردانده‌شده ممکن است با مقدار ذخیره‌شده فرق کند ولی مقدارش برابر است): سقف‌ها و سیاست گردکردن را دوباره می‌سنجد، `BaseQuantity` را با محاسبهٔ همان ورودی‌ها مقایسه می‌کند و کد واحد غیر نرمال (کوچک‌حرف یا با فاصله) را رد می‌کند (`SnapshotInconsistent`). `ToMidpointRounding` هر سه حالت را صریح پیاده کرده و حالت تعریف‌نشده را با استثنا رد می‌کند (در عمل پیش‌تر با `IsValid` رد می‌شود).
@@ -41,21 +41,21 @@
 | همهٔ کلاس‌های `*Trade*` بدون SQL Server (`--filter-class "*Trade*"`)؛ اجرای پیش از اصلاحات Review | ۳۱۰ موفق، ۰ شکست، ۲۶ Skip | ۲۶ Skip تست SQL Server بودند (متغیر `FARANOU_TEST_SQLSERVER` آن لحظه تنظیم نبود)؛ در اجرای کامل پایین‌تر با SQL Server واقعی اجرا شدند |
 | آزمون جهش | ۳ جهش، هر سه شکست ایجاد کردند | جایگزینی `HalfEven` با `AwayFromZero`؛ حذف رد «گرد به صفر»؛ حذف قاعدهٔ ضریب ۱ برای واحد یکسان؛ پس از هر جهش کد برگردانده شد |
 | `dotnet build Template.sln --no-restore -c Release` | موفق | ۰ خطا، ۳۶۷۳ هشدار (هشدارهای تحلیل‌گر موجود در Server/Trade؛ هیچ‌کدام از فایل‌های جدید نیست) |
-| `dotnet test --solution Template.sln --no-build -c Release` با SQL Server 2022 واقعی (کانتینر موقت `scripts/dev/test-sqlserver.sh up`، پس از اجرا حذف می‌شود) | موفق | ۱۶۳۹ تست: ۱۶۲۹ موفق، ۰ شکست، ۱۰ Skip (Windows CNG و chmod-root؛ پس از اصلاحات Review، 2026-11-18) |
+| `dotnet test --solution Template.sln --no-build -c Release` با SQL Server 2022 واقعی (کانتینر موقت `scripts/dev/test-sqlserver.sh up`، پس از اجرا حذف می‌شود) | موفق | ۱۶۳۹ تست: ۱۶۲۹ موفق، ۰ شکست، ۱۰ Skip (Windows CNG و chmod-root؛ پس از اصلاحات Review و merge با main، 2026-11-18) |
 | `python3 scripts/check_static_assets.py` | موفق | |
 | `git diff --check` | موفق | |
 | ClientApp (`npm ci`، `typecheck`، `test`، `build`، `check:offline`) | اجرا نشد | کلاینت و API تغییر نکرده است |
 
 ## امنیت، داده و سازگاری
 - هیچ تغییری در احراز هویت، مجوز، Tenant/Company، دیتابیس یا Migration نیست؛ هیچ `TenantId`/`CompanyId` اضافه یا تغییر نکرده است.
-- هیچ فایل Vendor، Core یا فایل مشترک (`DECISIONS`، `PROJECT_STATUS`، `WORK_LOG`، Solution) تغییر نکرد.
+- هیچ فایل Vendor، Core یا فایل مشترک (`DECISIONS`، `PROJECT_STATUS`، Solution) تغییر نکرد؛ فقط ورودی append-only در `docs/WORK_LOG.md` افزوده شد.
 - در فایل‌ها داده واقعی مشتری یا Excel نیست.
 
 ## ریسک‌ها و کارهای باقی‌مانده
 - هنوز Entity مصرف‌کننده‌ای ندارد؛ مصرف در S3 (ردیف Proforma و ذخیرهٔ واحدهای کالا) پس از بسته‌شدن گیت Tenant/Company.
 - ذخیرهٔ `ProductUnitConversionSet` (جدول واحدهای تجاری کالا) و ستون‌های Snapshot: `Blocked` تا تأیید Schema.
 - پرسش باز برای مالک: واحد پیش‌فرض Proforma در کدام سطح تنظیم شود؛ و آیا سقف‌های `MaxFactor`/`MaxQuantity` برای کالاهای واقعی کافی‌اند.
-- ردیف `docs/WORK_LOG.md` طبق قاعدهٔ «عدم تغییر فایل مشترک هم‌زمان» (و برای جلوگیری از تعارض بین دو PR مستقل این مأموریت) به یک PR هماهنگ‌شده موکول شد (مانند `trade-s3-document-number`).
+- ورودی `docs/WORK_LOG.md` در commit جدا افزوده شد (append-only؛ ممکن است هنگام Merge با ورودی PR #705 در همان انتهای فایل تداخل متنی بگیرد و با حفظ هر دو ورودی حل شود).
 
 ## شناسه‌های Git
 - Branch: `feat/trade-unit-conversion-snapshot`
