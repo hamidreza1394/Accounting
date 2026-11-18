@@ -89,6 +89,30 @@ public sealed class TradeUnitConversionTests
         Assert.Equal((decimal)halfUpAtSixDecimals / 1_000_000m, snapshot.BaseQuantity);
     }
 
+    [Fact]
+    public void Conversion_AtBothCeilings_IsExact()
+    {
+        // 1,000,000 x 1,000,000,000 = 10^15; the largest values the ceilings allow.
+        var snapshot = Convert(
+            Conversion("TON", "KG", TradeUnitConversion.MaxFactor, new TradeRoundingPolicy(0, TradeRoundingMode.Truncate)),
+            TradeUnitConversion.MaxQuantity);
+
+        Assert.Equal(1_000_000_000_000_000m, snapshot.BaseQuantity);
+    }
+
+    [Fact]
+    public void FactorWithALargeStoredScale_ButSmallEffectiveScale_IsConvertedExactly()
+    {
+        // 29-digit coefficient, scale 28, value exactly 1. The exactness argument works on the effective scale (six),
+        // not on the stored one, so this representation is safe and the result is exact.
+        const decimal factor = 1.0000000000000000000000000000m;
+        Assert.Equal(28, (decimal.GetBits(factor)[3] >> 16) & 0xFF);
+
+        var snapshot = Convert(Conversion("PCS", "KG", factor, new TradeRoundingPolicy(6, TradeRoundingMode.HalfUp)), 999_999_999.999999m);
+
+        Assert.Equal(999_999_999.999999m, snapshot.BaseQuantity);
+    }
+
     // --- rounding ----------------------------------------------------------------------------------------------
 
     [Theory]
@@ -153,8 +177,110 @@ public sealed class TradeUnitConversionTests
     {
         var snapshot = Convert(Conversion("ton", "kg", 1000m, new TradeRoundingPolicy(2, TradeRoundingMode.HalfEven)), 24.5m);
 
-        Assert.Equal(new TradeQuantitySnapshot("TON", 24.5m, "KG", 1000m, 24500m, 2, TradeRoundingMode.HalfEven), snapshot);
+        Assert.Equal("TON", snapshot.TradeUnitCode);
+        Assert.Equal(24.5m, snapshot.TradeQuantity);
+        Assert.Equal("KG", snapshot.BaseUnitCode);
+        Assert.Equal(1000m, snapshot.ConversionFactor);
+        Assert.Equal(24500m, snapshot.BaseQuantity);
+        Assert.Equal(2, snapshot.RoundingDecimals);
+        Assert.Equal(TradeRoundingMode.HalfEven, snapshot.RoundingMode);
     }
+
+    [Fact]
+    public void Snapshot_HasNoPublicConstructor_AndNoWritableProperty()
+    {
+        // Neither a public constructor nor an init accessor exists, so an inconsistent snapshot can only come from
+        // TryConvert or TryRestore; `snapshot with { ConversionFactor = ... }` does not compile.
+        Assert.Empty(typeof(TradeQuantitySnapshot).GetConstructors());
+        foreach (var property in typeof(TradeQuantitySnapshot).GetProperties(
+                     System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public))
+        {
+            if (property.Name == "EqualityContract")
+            {
+                continue;
+            }
+
+            Assert.Null(property.SetMethod);
+        }
+    }
+
+    private static bool Restore(
+        string? trade, decimal quantity, string? baseUnit, decimal factor, decimal baseQuantity, int decimals, TradeRoundingMode mode,
+        out TradeQuantitySnapshot? snapshot, out TradeUnitConversionError error) =>
+        TradeQuantitySnapshot.TryRestore(trade, quantity, baseUnit, factor, baseQuantity, decimals, mode, out snapshot, out error);
+
+    [Fact]
+    public void Restore_OfAStoredSnapshot_ReturnsTheSameSnapshot()
+    {
+        var original = Convert(Conversion("TON", "KG", 1000.5m, new TradeRoundingPolicy(2, TradeRoundingMode.HalfEven)), 24.5m);
+
+        Assert.True(Restore(
+            original.TradeUnitCode, original.TradeQuantity, original.BaseUnitCode, original.ConversionFactor,
+            original.BaseQuantity, original.RoundingDecimals, original.RoundingMode, out var restored, out var error));
+
+        Assert.Equal(TradeUnitConversionError.None, error);
+        Assert.Equal(original, restored);
+    }
+
+    [Theory]
+    [InlineData("TON", "24.5", "KG", "1000", "24501")] // base quantity does not match
+    [InlineData("TON", "24.5", "KG", "2000", "24500")] // factor changed alone
+    [InlineData("ton", "24.5", "KG", "1000", "24500")] // trade unit not in stored (upper-case) form
+    [InlineData("TON", "24.5", " KG", "1000", "24500")] // base unit not in stored (trimmed) form
+    public void Restore_OfInconsistentStoredValues_IsRejected(
+        string trade, string quantity, string baseUnit, string factor, string baseQuantity)
+    {
+        Assert.False(Restore(
+            trade, Dec(quantity), baseUnit, Dec(factor), Dec(baseQuantity), 2, TradeRoundingMode.HalfEven, out var snapshot, out var error));
+
+        Assert.Null(snapshot);
+        Assert.Equal(TradeUnitConversionError.SnapshotInconsistent, error);
+    }
+
+    [Fact]
+    public void Restore_WhereTheRoundingModeChangesTheResult_IsRejected()
+    {
+        // 0.25 x 5 = 1.25 -> HalfUp 1.3, Truncate 1.2. Stored as HalfUp but claiming the Truncate result.
+        Assert.False(Restore("PCS", 5m, "KG", 0.25m, 1.2m, 1, TradeRoundingMode.HalfUp, out var snapshot, out var error));
+        Assert.Null(snapshot);
+        Assert.Equal(TradeUnitConversionError.SnapshotInconsistent, error);
+        Assert.True(Restore("PCS", 5m, "KG", 0.25m, 1.3m, 1, TradeRoundingMode.HalfUp, out _, out _));
+    }
+
+    [Theory]
+    [InlineData("0", "1000", 2, TradeUnitConversionError.QuantityNotPositive)]
+    [InlineData("-1", "1000", 2, TradeUnitConversionError.QuantityNotPositive)]
+    [InlineData("1000000000.000001", "1000", 2, TradeUnitConversionError.QuantityTooLarge)]
+    [InlineData("1", "0", 2, TradeUnitConversionError.FactorNotPositive)]
+    [InlineData("1", "1000000.000001", 2, TradeUnitConversionError.FactorTooLarge)]
+    [InlineData("1", "1000", 7, TradeUnitConversionError.InvalidRoundingPolicy)]
+    public void Restore_OutsideTheArithmeticCeilings_IsRejected(string quantity, string factor, int decimals, TradeUnitConversionError expected)
+    {
+        Assert.False(Restore("TON", Dec(quantity), "KG", Dec(factor), 1m, decimals, TradeRoundingMode.HalfUp, out var snapshot, out var error));
+        Assert.Null(snapshot);
+        Assert.Equal(expected, error);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(99)]
+    public void Restore_WithAnUndefinedRoundingMode_IsRejected(int mode)
+    {
+        Assert.False(Restore("TON", 1m, "KG", 1000m, 1000m, 2, (TradeRoundingMode)mode, out var snapshot, out var error));
+        Assert.Null(snapshot);
+        Assert.Equal(TradeUnitConversionError.InvalidRoundingPolicy, error);
+    }
+
+    [Fact]
+    public void Restore_WithMissingOrMalformedUnitCodes_IsRejected()
+    {
+        Assert.False(Restore(null, 1m, "KG", 1000m, 1000m, 2, TradeRoundingMode.HalfUp, out _, out var e1));
+        Assert.Equal(TradeUnitConversionError.TradeUnitMissing, e1);
+        Assert.False(Restore("TON", 1m, "K G", 1000m, 1000m, 2, TradeRoundingMode.HalfUp, out _, out var e2));
+        Assert.Equal(TradeUnitConversionError.InvalidUnitCode, e2);
+    }
+
+    private static decimal Dec(string value) => decimal.Parse(value, CultureInfo.InvariantCulture);
 
     [Fact]
     public void Snapshot_IsNotChangedByALaterFactorOrRoundingChange()

@@ -18,16 +18,17 @@
 - `TradeQuantitySnapshot`: رکورد تغییرناپذیر شامل واحد و مقدار معامله، واحد اصلی، ضریب، مقدار واحد اصلی، تعداد اعشار و حالت گردکردن. هر ورودی در خود Snapshot کپی می‌شود.
 - `ProductUnitConversionSet`: مجموعهٔ واحدهای مجاز یک کالا؛ واحد اصلی خودش فقط با ورودی صریح (ضریب ۱) مجاز است؛ رد واحد تکراری، ورودی با واحد اصلی دیگر و مجموعهٔ خالی.
 - خطاها فقط یک مقدار `TradeUnitConversionError` هستند و هرگز مقدار ورودی را بازتاب نمی‌دهند (همان الگوی `TradeDocumentNumber`).
-- سقف‌های عددی صرفاً برای دقیق‌ماندن ضرب `decimal` هستند (حداکثر ۱۶ و ۱۳ رقم بدون مقیاس؛ حاصل ≤ ۲۸ رقم)، نه قاعدهٔ کسب‌وکار.
+- سقف‌های عددی صرفاً برای دقیق‌ماندن ضرب `decimal` هستند، نه قاعدهٔ کسب‌وکار. مبنای اثبات (مقیاس مؤثر ۶): ضریب ≤ 10^6 و مقدار ≤ 10^9 فقط با حداکثر ۶ رقم اعشار پذیرفته می‌شوند؛ پس ضریب بدون‌مقیاس مقدار ≤ 10^15 و ضریب تبدیل ≤ 10^12 است و حاصل‌ضرب ≤ 10^27 در مقیاس ۱۲ است، کمتر از 2^96 (حدود 7.9×10^28). این کران برای نمایش‌هایی که مقیاس ذخیره‌شدهٔ بزرگ‌تری دارند (مثل `1.0000000000000000000000000000m`) هم برقرار است، چون ارقام اضافه صفر انتهایی‌اند و ضرب رقم معنادار را گرد نمی‌کند (تست دارد). تغییر سقف‌ها نیازمند بازبینی همین استدلال است.
 
 ## فایل‌های مهم تغییرکرده
 - `Modules/Trade/Trade.Domain/Units/TradeUnitConversion.cs`، `TradeRoundingPolicy.cs`، `TradeQuantitySnapshot.cs`، `ProductUnitConversionSet.cs`، `TradeUnitConversionError.cs` — نوع‌های دامنه (جدید)
-- `tests/Template.Tests/TradeUnitConversionTests.cs` — ۵۷ تست (جدید؛ فقط داده ساختگی)
+- `tests/Template.Tests/TradeUnitConversionTests.cs` — ۷۵ تست (جدید؛ فقط داده ساختگی)
 - `docs/handoffs/ISSUE-UNNUMBERED-trade-unit-conversion-snapshot.md` — این گزارش (جدید)
 
 ## تصمیم‌های فنی
+- `TradeQuantitySnapshot` سازندهٔ عمومی و `init` ندارد (سازنده `internal`، property فقط‌خواندنی)؛ پس `snapshot with { ConversionFactor = … }` کامپایل نمی‌شود. دو مسیر ساخت: `TradeUnitConversion.TryConvert` و `TradeQuantitySnapshot.TryRestore` (public، برای خواندن مقدار ذخیره‌شده توسط Infrastructure آینده؛ بدون Reflection/Factory). `TryRestore` مقادیر ذخیره‌شده را باور نمی‌کند (و آن‌ها را با قواعد «امروز» می‌سنجد؛ پس سخت‌تر کردن سقف‌ها یا قواعد بعداً باید همراه مهاجرت/نسخه‌بندی داده باشد وگرنه Snapshot تاریخی خوانده نمی‌شود؛ مقیاس `BaseQuantity` بازگردانده‌شده ممکن است با مقدار ذخیره‌شده فرق کند ولی مقدارش برابر است): سقف‌ها و سیاست گردکردن را دوباره می‌سنجد، `BaseQuantity` را با محاسبهٔ همان ورودی‌ها مقایسه می‌کند و کد واحد غیر نرمال (کوچک‌حرف یا با فاصله) را رد می‌کند (`SnapshotInconsistent`). `ToMidpointRounding` هر سه حالت را صریح پیاده کرده و حالت تعریف‌نشده را با استثنا رد می‌کند (در عمل پیش‌تر با `IsValid` رد می‌شود).
 - تصمیم معماری جدیدی گرفته نشد. این برش فقط منطق خالص دامنه است؛ ذخیرهٔ واحدهای تجاری هر کالا و ستون‌های Snapshot روی ردیف Proforma جدول و ستون جدید می‌خواهد و تا تأیید نقشهٔ Tenant/Company (D-087، D-090) Blocked است.
-- بررسی «کد واحد در فهرست مرجع هست» عمداً در دامنه نیست (دامنه به Application وابسته نیست)؛ لایهٔ Application هنگام ساخت مجموعه با `TradeReferenceData.TryFindUnit` اعتبارسنجی می‌کند. تست توافق: همهٔ کدهای `TradeReferenceData.Units` کد معتبر تبدیل‌اند.
+- بررسی «کد واحد در فهرست مرجع هست» عمداً در دامنه نیست (دامنه به Application وابسته نیست)؛ این بررسی در این تغییر اجرا **نمی‌شود**: هیچ مسیر Application ای `ProductUnitConversionSet.TryCreate` را فراخوانی نمی‌کند. لایهٔ Application باید پیش از ساخت مجموعه با `TradeReferenceData.TryFindUnit` کد واحد را اعتبارسنجی کند؛ این الزام برای برش ذخیره‌سازی بعدی است. تست توافق فقط تأیید می‌کند همهٔ کدهای `TradeReferenceData.Units` کد معتبر تبدیل‌اند؛ رد کد ناشناخته را اثبات نمی‌کند.
 - `Product.BaseUnitCode` موجود بدون تغییر ماند؛ ارتباط `ProductUnitConversionSet.BaseUnitCode` با آن هنگام ذخیره‌سازی (برش بعدی) برقرار می‌شود.
 - «واحد پیش‌فرض Proforma» ساخته نشد: مرجع آن (سطح Proforma، شرکت یا کالا) در مأموریت صریح نیست و حدس زده نشد.
 
@@ -36,11 +37,11 @@
 |---|---|---|
 | `dotnet restore Template.sln` | موفق | |
 | `dotnet build tests/Template.Tests/Template.Tests.csproj -c Release --no-restore` | موفق | ۰ خطا |
-| `dotnet test --project tests/Template.Tests/Template.Tests.csproj -c Release --no-build --filter-class Template.Tests.TradeUnitConversionTests` | موفق | ۵۷ موفق، ۰ شکست، ۰ Skip |
-| همهٔ کلاس‌های `*Trade*` بدون SQL Server (`--filter-class "*Trade*"`) | ۳۱۰ موفق، ۰ شکست، ۲۶ Skip | ۲۶ Skip تست SQL Server بودند (متغیر `FARANOU_TEST_SQLSERVER` آن لحظه تنظیم نبود)؛ در اجرای کامل پایین‌تر با SQL Server واقعی اجرا شدند |
+| `dotnet test --project tests/Template.Tests/Template.Tests.csproj -c Release --no-build --filter-class Template.Tests.TradeUnitConversionTests` | موفق | ۷۵ موفق، ۰ شکست، ۰ Skip |
+| همهٔ کلاس‌های `*Trade*` بدون SQL Server (`--filter-class "*Trade*"`)؛ اجرای پیش از اصلاحات Review | ۳۱۰ موفق، ۰ شکست، ۲۶ Skip | ۲۶ Skip تست SQL Server بودند (متغیر `FARANOU_TEST_SQLSERVER` آن لحظه تنظیم نبود)؛ در اجرای کامل پایین‌تر با SQL Server واقعی اجرا شدند |
 | آزمون جهش | ۳ جهش، هر سه شکست ایجاد کردند | جایگزینی `HalfEven` با `AwayFromZero`؛ حذف رد «گرد به صفر»؛ حذف قاعدهٔ ضریب ۱ برای واحد یکسان؛ پس از هر جهش کد برگردانده شد |
 | `dotnet build Template.sln --no-restore -c Release` | موفق | ۰ خطا، ۳۶۷۳ هشدار (هشدارهای تحلیل‌گر موجود در Server/Trade؛ هیچ‌کدام از فایل‌های جدید نیست) |
-| `dotnet test --solution Template.sln --no-build -c Release` با SQL Server 2022 واقعی (کانتینر موقت `scripts/dev/test-sqlserver.sh up`، پس از اجرا حذف می‌شود) | موفق | ۱۶۲۱ تست: ۱۶۱۱ موفق، ۰ شکست، ۱۰ Skip (همگی Windows CNG؛ فقط روی Windows اجرا می‌شوند) |
+| `dotnet test --solution Template.sln --no-build -c Release` با SQL Server 2022 واقعی (کانتینر موقت `scripts/dev/test-sqlserver.sh up`، پس از اجرا حذف می‌شود) | موفق | ۱۶۳۹ تست: ۱۶۲۹ موفق، ۰ شکست، ۱۰ Skip (Windows CNG و chmod-root؛ پس از اصلاحات Review، 2026-11-18) |
 | `python3 scripts/check_static_assets.py` | موفق | |
 | `git diff --check` | موفق | |
 | ClientApp (`npm ci`، `typecheck`، `test`، `build`، `check:offline`) | اجرا نشد | کلاینت و API تغییر نکرده است |

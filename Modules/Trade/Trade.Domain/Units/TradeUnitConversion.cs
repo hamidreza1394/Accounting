@@ -13,9 +13,13 @@ namespace Faranou.Modules.Trade.Domain.Units;
 /// explicit <see cref="Rounding" /> policy.
 /// </para>
 /// <para>
-/// The numeric ceilings below exist so that the product of quantity and factor is always exact in a 96-bit decimal
-/// (at most 16 and 13 unscaled digits, so the product has at most 28 digits and the decimal mantissa holds 29). They are arithmetic limits, not business rules; raising
-/// them needs a review of that exactness argument.
+/// The numeric ceilings below exist so that the product of quantity and factor is always exact in a 96-bit decimal.
+/// Premise: both inputs are accepted only if they equal their own value rounded to <see cref="MaxScale" /> decimals,
+/// so at that effective scale the quantity coefficient is at most 10^15 (10^9 x 10^6) and the factor coefficient is
+/// at most 10^12 (10^6 x 10^6). Their product is at most 10^27 at scale twelve, below 2^96 (about 7.9 x 10^28).
+/// The bound holds even when an accepted representation stores a larger scale (for example 1.0000000000000000000000000000m):
+/// the extra digits are trailing zeros, so the multiplication never has to round away a significant digit.
+/// They are arithmetic limits, not business rules; raising them needs a review of that argument.
 /// </para>
 /// <para>
 /// This type knows nothing about reference data, persistence or ownership. Whether a unit code exists in the unit
@@ -195,6 +199,7 @@ public sealed class TradeUnitConversion : IEquatable<TradeUnitConversion>
     {
         TradeRoundingMode.HalfUp => MidpointRounding.AwayFromZero,
         TradeRoundingMode.HalfEven => MidpointRounding.ToEven,
-        _ => MidpointRounding.ToZero,
+        TradeRoundingMode.Truncate => MidpointRounding.ToZero,
+        _ => throw new ArgumentOutOfRangeException(nameof(mode), "Rounding mode is not defined."),
     };
 }

@@ -20,4 +20,5 @@ public enum TradeUnitConversionError
     DuplicateTradeUnit,
     BaseUnitMismatch,
     UnitNotAllowed,
+    SnapshotInconsistent,
 }
