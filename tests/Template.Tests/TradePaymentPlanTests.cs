@@ -266,4 +266,66 @@ public sealed class TradePaymentPlanTests
         Assert.Equal("tt", input[0].MethodCode);
         Assert.Equal(70m, input[1].Percent);
     }
+
+    [Fact]
+    public void PlanAndStage_HaveNoPublicConstructorAndNoWritableProperty()
+    {
+        // An invalid plan cannot be built by hand or altered with `with`; TryBuild is the only producer.
+        foreach (var type in new[] { typeof(PaymentPlan), typeof(PaymentPlanStage) })
+        {
+            Assert.Empty(type.GetConstructors());
+            Assert.All(
+                type.GetProperties(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
+                    .Where(p => p.Name != "EqualityContract"),
+                p => Assert.Null(p.SetMethod));
+        }
+    }
+
+    [Fact]
+    public void StoredPlan_IsRestoredByBuildingAgainFromItsStoredInputs()
+    {
+        Assert.True(Build("KWD", 1000.001m, [P("TT", 33.3333m), P("LC", 33.3333m), P("DP", 33.3334m)], out var percentPlan, out _));
+        var percentInputs = percentPlan!.Stages.Select(s => P(s.MethodCode, s.Percent!.Value)).ToArray();
+        Assert.True(Build(percentPlan.CurrencyCode, percentPlan.FinalAmount, percentInputs, out var percentRestored, out _));
+        Assert.Equal(percentPlan.Stages.Select(s => s.Amount), percentRestored!.Stages.Select(s => s.Amount));
+
+        Assert.True(Build("USD", 100m, [A("TT", 40m), A("LC", 60m)], out var amountPlan, out _));
+        var amountInputs = amountPlan!.Stages.Select(s => A(s.MethodCode, s.Amount)).ToArray();
+        Assert.True(Build(amountPlan.CurrencyCode, amountPlan.FinalAmount, amountInputs, out var amountRestored, out _));
+        Assert.Equal(amountPlan.Stages.Select(s => s.Amount), amountRestored!.Stages.Select(s => s.Amount));
+    }
+
+    [Fact]
+    public void EmptyAllowedList_RejectsEveryMethod_WhileNullAllowsAllReferenceMethods()
+    {
+        Assert.False(Build("USD", 100m, [P("TT", 100m)], out _, out var issues, allowed: []));
+        AssertIssue(issues, PaymentPlanIssueCode.MethodNotAllowed, 1);
+        Assert.True(Build("USD", 100m, [P("TT", 100m)], out _, out _, allowed: null));
+    }
+
+    [Fact]
+    public void NonLastStages_RoundAwayFromZero_AndTheLastStageTakesTheRealRemainder()
+    {
+        // 0.05 USD x 50% = 0.025 -> 0.03 (midpoint away from zero); the last stage receives 0.05 - 0.03 = 0.02.
+        Assert.True(Build("USD", 0.05m, [P("TT", 50m), P("LC", 50m)], out var plan, out _));
+        Assert.Equal([0.03m, 0.02m], plan!.Stages.Select(s => s.Amount));
+        Assert.Equal(0.05m, plan.Stages.Sum(s => s.Amount));
+    }
+
+    [Theory]
+    [InlineData("USD", "1000000000000000", "333333000000000.00", "333334000000000.00")]
+    [InlineData("JPY", "1000000000000000", "333333000000000", "333334000000000")]
+    [InlineData("KWD", "999999999999999.999", "333333000000000.000", "333333999999999.999")]
+    public void LargestAmounts_InPercentPlans_GiveTheHandComputedAmountsInEveryMinorUnitScale(
+        string currency, string total, string nonLastAmount, string lastAmount)
+    {
+        // Expected values were computed by hand: total x 33.3333 / 100 for the two non-last stages (already whole minor
+        // units, so no rounding applies) and total - 2 x that for the last stage. They do not come from the code under test.
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        Assert.True(Build(currency, decimal.Parse(total, inv), [P("TT", 33.3333m), P("LC", 33.3333m), P("DP", 33.3334m)], out var plan, out _));
+
+        Assert.Equal(
+            [decimal.Parse(nonLastAmount, inv), decimal.Parse(nonLastAmount, inv), decimal.Parse(lastAmount, inv)],
+            plan!.Stages.Select(s => s.Amount));
+    }
 }

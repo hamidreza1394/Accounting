@@ -30,8 +30,52 @@ public sealed record PaymentPlanIssue(PaymentPlanIssueCode Code, int? StageNumbe
 /// <summary>Caller input for one stage: exactly one of <see cref="Percent" /> or <see cref="Amount" /> must be set.</summary>
 public sealed record PaymentPlanStageInput(string? MethodCode, decimal? Percent, decimal? Amount);
 
-/// <summary>Resolved stage. <see cref="Percent" /> is set only for plans defined by percentage.</summary>
-public sealed record PaymentPlanStage(int Sequence, string MethodCode, decimal? Percent, decimal Amount);
+/// <summary>
+/// Resolved stage. <see cref="Percent" /> is set only for plans defined by percentage. It has no public constructor and
+/// no <c>init</c> accessor: a stage exists only inside a plan produced by <see cref="PaymentPlanCalculator.TryBuild" />.
+/// </summary>
+public sealed record PaymentPlanStage
+{
+    internal PaymentPlanStage(int sequence, string methodCode, decimal? percent, decimal amount)
+    {
+        Sequence = sequence;
+        MethodCode = methodCode;
+        Percent = percent;
+        Amount = amount;
+    }
 
-/// <summary>Validated, immutable payment plan whose stage amounts sum exactly to <see cref="FinalAmount" />.</summary>
-public sealed record PaymentPlan(string CurrencyCode, decimal FinalAmount, IReadOnlyList<PaymentPlanStage> Stages);
+    public int Sequence { get; }
+
+    public string MethodCode { get; }
+
+    public decimal? Percent { get; }
+
+    public decimal Amount { get; }
+}
+
+/// <summary>
+/// Validated, immutable payment plan whose stage amounts sum exactly to <see cref="FinalAmount" />.
+/// </summary>
+/// <remarks>
+/// There is no public constructor and no <c>init</c> accessor, so an invalid plan cannot be built by hand or changed
+/// with a <c>with</c> expression. The only way to obtain a plan is <see cref="PaymentPlanCalculator.TryBuild" />.
+/// A stored plan is restored the same way, by calling <see cref="PaymentPlanCalculator.TryBuild" /> again with the stored
+/// currency, final amount and stage inputs (percent for a percentage plan, amount for an amount plan); the stored stage
+/// amounts must then be compared with the rebuilt ones by the code that reads them. No separate restore type exists yet
+/// because nothing is stored yet.
+/// </remarks>
+public sealed record PaymentPlan
+{
+    internal PaymentPlan(string currencyCode, decimal finalAmount, IReadOnlyList<PaymentPlanStage> stages)
+    {
+        CurrencyCode = currencyCode;
+        FinalAmount = finalAmount;
+        Stages = stages;
+    }
+
+    public string CurrencyCode { get; }
+
+    public decimal FinalAmount { get; }
+
+    public IReadOnlyList<PaymentPlanStage> Stages { get; }
+}
