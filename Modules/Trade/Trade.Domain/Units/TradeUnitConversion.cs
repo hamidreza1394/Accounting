@@ -22,8 +22,10 @@ namespace Faranou.Modules.Trade.Domain.Units;
 /// They are arithmetic limits, not business rules; raising them needs a review of that argument.
 /// </para>
 /// <para>
-/// This type knows nothing about reference data, persistence or ownership. Whether a unit code exists in the unit
-/// reference list is checked by the Application layer that builds the conversion.
+/// This type knows nothing about reference data, persistence or ownership. <c>TryCreate</c> accepts any well-formed unit
+/// code and does not check that it exists in the unit reference list. Callers must validate that membership; no
+/// Application path builds conversion sets yet, so this change does not wire that check anywhere. The Application layer
+/// that first builds a conversion must add it.
 /// </para>
 /// </remarks>
 public sealed class TradeUnitConversion : IEquatable<TradeUnitConversion>

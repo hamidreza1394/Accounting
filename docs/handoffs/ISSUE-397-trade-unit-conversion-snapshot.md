@@ -41,7 +41,7 @@
 | همهٔ کلاس‌های `*Trade*` بدون SQL Server (`--filter-class "*Trade*"`)؛ اجرای پیش از اصلاحات Review | ۳۱۰ موفق، ۰ شکست، ۲۶ Skip | ۲۶ Skip تست SQL Server بودند (متغیر `FARANOU_TEST_SQLSERVER` آن لحظه تنظیم نبود)؛ در اجرای کامل پایین‌تر با SQL Server واقعی اجرا شدند |
 | آزمون جهش | ۳ جهش، هر سه شکست ایجاد کردند | جایگزینی `HalfEven` با `AwayFromZero`؛ حذف رد «گرد به صفر»؛ حذف قاعدهٔ ضریب ۱ برای واحد یکسان؛ پس از هر جهش کد برگردانده شد |
 | `dotnet build Template.sln --no-restore -c Release` | موفق | ۰ خطا، ۳۶۷۳ هشدار (هشدارهای تحلیل‌گر موجود در Server/Trade؛ هیچ‌کدام از فایل‌های جدید نیست) |
-| `dotnet test --solution Template.sln --no-build -c Release` با SQL Server 2022 واقعی (کانتینر موقت `scripts/dev/test-sqlserver.sh up`، پس از اجرا حذف می‌شود) | موفق | ۱۶۳۹ تست: ۱۶۲۹ موفق، ۰ شکست، ۱۰ Skip (Windows CNG و chmod-root؛ پس از اصلاحات Review و merge با main، 2026-11-18) |
+| `out="$(scripts/dev/test-sqlserver.sh up)" && eval "$out"` سپس `dotnet test --solution Template.sln --no-build -c Release` (هر دو در یک Shell؛ خروجی `up` چاپ یا ذخیره نشود چون رمز تولیدشده را دارد) با SQL Server 2022 واقعی (کانتینر موقت؛ پس از اجرا حذف می‌شود) | موفق | ۱۶۳۹ تست: ۱۶۲۹ موفق، ۰ شکست، ۱۰ Skip (Windows CNG و chmod-root؛ پس از اصلاحات Review و merge با main، 2026-11-18) |
 | `python3 scripts/check_static_assets.py` | موفق | |
 | `git diff --check` | موفق | |
 | ClientApp (`npm ci`، `typecheck`، `test`، `build`، `check:offline`) | اجرا نشد | کلاینت و API تغییر نکرده است |
