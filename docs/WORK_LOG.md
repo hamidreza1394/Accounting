@@ -3156,6 +3156,15 @@
 - PROJECT_STATUS، LICENSING و handoff همین PR اصلاح شدند. Work Log append-only باقی ماند؛ جملهٔ قبلی به‌عنوان ثبت اولیه حفظ و این اصلاح به‌صورت شفاف اضافه شد. هیچ کد یا قرارداد تغییر نکرد.
 
 
+## 2026-11-18 — PR #704: تبدیل دقیق واحد کالا و Snapshot مقدار (Trade، بدون Schema)
+
+- Issue مرتبط: #397 (Issue چتر؛ Issue اختصاصی یافت نشد، `Refs` نه `Closes`). شاخه: `feat/trade-unit-conversion-snapshot`. Handoff: `docs/handoffs/ISSUE-397-trade-unit-conversion-snapshot.md`.
+- محدوده: `TradeUnitConversion`، `ProductUnitConversionSet`، `TradeQuantitySnapshot`، `TradeRoundingPolicy` در `Trade.Domain/Units`؛ بدون Schema، Migration، TenantId/CompanyId، API یا UI.
+- اصلاحات Review: `TradeQuantitySnapshot` سازندهٔ عمومی و `init` ندارد و فقط از `TryConvert` یا `TryRestore` (اعتبارسنجی مجدد؛ `SnapshotInconsistent`) ساخته می‌شود؛ اثبات دقت `decimal` با مقیاس مؤثر ۶ اصلاح شد؛ سه حالت گردکردن صریح‌اند؛ handoff دربارهٔ اعتبارسنجی کد واحد (در Application هنوز اجرا نمی‌شود) اصلاح شد؛ ۷۵ تست.
+- تست محلی (SQL Server آزمایشی): ۱۶۳۹ اجرا / ۱۶۲۹ موفق / ۰ ناموفق / ۱۰ Skip (Windows CNG و chmod-root). نتیجهٔ CI جدا در PR گزارش می‌شود.
+- باز: اعتبارسنجی کد واحد با `TradeReferenceData.TryFindUnit` در Application (برش ذخیره‌سازی)؛ سیاست دقت و سقف‌های تجاری تصمیم مالک است؛ `TryRestore` با قواعد «امروز» می‌سنجد (تغییر سقف‌ها بعداً نیاز به مهاجرت دارد).
+- Commit: `7d57e8f` (قبلی `931f578`).
+
 ## 2026-11-18 — اصلاح محدودهٔ V1 D-103: حذف Tenant مستقل و حفظ نمایش مشتق‌شده (UNNUMBERED)
 
 - **مبنای Git:** شاخهٔ اصلاحی `fix/d103-v1-derived-tenant-view` از `origin/main@89c00641bad5403bd56526ff89a4c6be443b587b`؛ شاخهٔ سابقهٔ `feat/tenant-v1-management` با Commit `7e9abc1c` بدون تغییر حفظ شد.
