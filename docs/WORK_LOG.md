@@ -3154,3 +3154,15 @@
 - وضعیت واقعی main: CompanyReference هر Company جدید فقط سمت سرور با `Guid.NewGuid().ToString("D")` تولید می‌شود؛ reference ارسالی client برای Company جدید رد می‌شود؛ در Update فقط reference موجود در همان draft پذیرفته و حفظ می‌شود؛ descriptor صرفاً label اپراتور است.
 - شواهد کد/تست: `Vendor/Vendor.Host/Authorization/VendorLicenseCompanyDraft.cs` و `tests/Vendor.Host.Tests/VendorLicenseCompanyDraftTests.cs`، شامل `NewCompanyReceivesServerGeneratedGuidDReference`، `ClientSuppliedReferenceForNewCompanyIsRejected` و `ExistingReferenceIsKeptWhenItMatchesTheSameDraft`.
 - PROJECT_STATUS، LICENSING و handoff همین PR اصلاح شدند. Work Log append-only باقی ماند؛ جملهٔ قبلی به‌عنوان ثبت اولیه حفظ و این اصلاح به‌صورت شفاف اضافه شد. هیچ کد یا قرارداد تغییر نکرد.
+
+
+## 2026-11-18 — اصلاح محدودهٔ V1 D-103: حذف Tenant مستقل و حفظ نمایش مشتق‌شده (UNNUMBERED)
+
+- **مبنای Git:** شاخهٔ اصلاحی `fix/d103-v1-derived-tenant-view` از `origin/main@89c00641bad5403bd56526ff89a4c6be443b587b`؛ شاخهٔ سابقهٔ `feat/tenant-v1-management` با Commit `7e9abc1c` بدون تغییر حفظ شد.
+- **نتیجهٔ بازبینی:** پیاده‌سازی قبلی از نظر الگوها درست اما از نظر محدوده خارج از تصمیم مالک بود (Entity مستقل `VendorTenant`، Migration، ستون `TenantId` روی `VendorInstallations`، APIهای مستقل `/api/vendor/tenants*`، کدهای مجوز `vendor.tenants.*`، ResourceType مستقل و Maker-Checker مستقل Tenant، `TenantKey` ذخیره‌شده، UI مستقل). طبق بند ۲ مأموریت، در V1 Tenant فقط مفهوم مشتق‌شده و نمایشی از CustomerAccount است.
+- **آنچه ماند:** `VendorTenantView` فقط-خواندنی (`DerivedFrom="customer-account"`، `WorkspaceReference=CustomerNumber`، `Status=وضعیت مشتری`) که در زمان درخواست در چهار مسیر `CustomerResponse` ساخته می‌شود؛ ستون فقط-خواندنی در بخش موجود «مشتریان تجاری»؛ بدون ذخیره‌سازی، endpoint، مجوز، Migration یا lifecycle مستقل.
+- **نگهبان scope:** تست Unit `VendorTenantViewTests` (نبود شناسه/کلید قابل مدیریت) و تست Integration SQL Server با تأیید `404` برای `GET/POST /api/vendor/tenants/` تا هیچ API مستقل Tenant به‌صورت تصادفی بازنگردد.
+- **بدون دوباره‌کاری:** مدیریت CustomerAccount/Installation، تعلیق/فعال‌سازی با Maker-Checker موجود، Provisioning/ACK امضاشده و پنل فارسی RTL همگی از main استفاده شدند و لمس نشدند.
+- **اعتبارسنجی واقعی:** `dotnet build Vendor.sln` موفق؛ `dotnet test Vendor.sln` = ۳۵۸ کل، ۳۰۴ موفق، ۰ ناموفق، ۵۴ Skip (همهٔ Skipها نیازمند SQL Server واقعی؛ شامل تست این PR)؛ `npm test` = ۶۸/۶۸؛ typecheck/build سبز؛ بودجهٔ دارایی JS gzip ۹۷,۷۷۲ ≤ ۱۰۲,۴۰۰؛ `check_static_assets.py` PASS؛ `has-pending-model-changes` بدون تغییر؛ `git diff --check` پاک. CI اجرا نشده و موفقیت آن ادعا نمی‌شود.
+- **اثر Migration:** هیچ Migration جدیدی در شاخهٔ اصلاحی وجود ندارد؛ Migration قبلی هرگز push یا روی دیتابیس واقعی اجرا نشد و شاخهٔ سابقه دست‌نخورده است.
+- **وضعیت:** Ready for Review. handoff: `docs/handoffs/ISSUE-UNNUMBERED-vendor-tenant-derived-view-correction.md`. Push/PR/Merge انجام نشد.
