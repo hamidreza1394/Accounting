@@ -3228,4 +3228,4 @@
 - **محدوده:** فقط مستندات؛ بدون کد، Entity، Schema، Migration، Backfill، API، Runtime یا تغییر داده. D-087/D-103 و گیت‌های S3-0 دست‌نخورده‌اند.
 - **وضعیت کد:** مدل Tenant واقعی هنوز در برخی مسیرها پیاده نشده و مقدار TenantId تاریخی ممکن است Company.Id باشد؛ D-105 این انحراف را اصلاح نمی‌کند.
 - **اعتبارسنجی:** محتوای مبنا و ADRهای قبلی از مخزن بازبینی شد. Build/Test و git diff --check اجرا نشدند؛ در بازبینی PR/CI باید کنترل شوند.
-- **Git:** Branch docs/d105-company-owned-default-tenant-sharing؛ Issue #712؛ PR پس از تکمیل تغییرات.
+- **Git:** Branch docs/d105-company-owned-default-tenant-sharing؛ Issue #712؛ Draft PR #713 (mergeability=false؛ به‌دلیل تداخل هم‌زمان WORK_LOG با PR #711 باید پس از ادغام #711 هم‌تراز و بازبینی شود).
