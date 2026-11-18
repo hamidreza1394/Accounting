@@ -3146,3 +3146,11 @@
 - پس از ایجاد شاخهٔ مستنداتی Vendor از `main@a7693cf476a8ce4dd0095666c9871b69ce3d00e4`، PR مستقل Trade #702 ادغام شد و `main` به `163e0be3a430439b69c13e0c17e8b99e98617fb9` رسید. PR #702 فقط `TradeDocumentNumber.cs`، تست Trade و handoff مربوط را تغییر داده و فایل‌های Vendor/مستندات مشترک این PR را لمس نکرد.
 - PR #703 روی همان مبنای قبلی ساخته شده، اکنون نسبت به main یک commit عقب و هفت commit جلو است؛ GitHub آن را `mergeable=true` گزارش می‌کند. این تغییر هم‌زمان در Project Status و LICENSING ثبت شد؛ قبل از Merge باید CI جدید روی head نهایی PR #703 کامل و سبز شود.
 - PRهای باز فعلی پس از Merge #702: فقط #703 (این PR مستنداتی). تغییرات Trade وارد محدودهٔ Vendor نشدند.
+
+
+## 2026-11-18 — اصلاح یک خطای factual در snapshot CompanyReference
+
+- بازخوانی مستقیم `VendorLicenseCompanyDraft.cs` و `VendorLicenseCompanyDraftTests.cs` نشان داد جملهٔ قبلی همین Work Log و snapshot اولیهٔ این مأموریت دربارهٔ «operator-entered CompanyReference» نادرست بود و از handoff قدیمی S3-0e پیش از PR #682 باقی مانده بود.
+- وضعیت واقعی main: CompanyReference هر Company جدید فقط سمت سرور با `Guid.NewGuid().ToString("D")` تولید می‌شود؛ reference ارسالی client برای Company جدید رد می‌شود؛ در Update فقط reference موجود در همان draft پذیرفته و حفظ می‌شود؛ descriptor صرفاً label اپراتور است.
+- شواهد کد/تست: `Vendor/Vendor.Host/Authorization/VendorLicenseCompanyDraft.cs` و `tests/Vendor.Host.Tests/VendorLicenseCompanyDraftTests.cs`، شامل `NewCompanyReceivesServerGeneratedGuidDReference`، `ClientSuppliedReferenceForNewCompanyIsRejected` و `ExistingReferenceIsKeptWhenItMatchesTheSameDraft`.
+- PROJECT_STATUS، LICENSING و handoff همین PR اصلاح شدند. Work Log append-only باقی ماند؛ جملهٔ قبلی به‌عنوان ثبت اولیه حفظ و این اصلاح به‌صورت شفاف اضافه شد. هیچ کد یا قرارداد تغییر نکرد.
