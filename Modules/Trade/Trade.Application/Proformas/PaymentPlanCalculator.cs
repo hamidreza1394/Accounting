@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+using System.Collections.Immutable;
 using Faranou.Modules.Trade.Application.ReferenceData;
 
 namespace Faranou.Modules.Trade.Application.Proformas;
@@ -46,26 +46,39 @@ public static class PaymentPlanCalculator
             found.Add(new(PaymentPlanIssueCode.FinalAmountPrecisionTooHigh, null));
         }
 
-        if (stages is null || stages.Count == 0)
+        // The caller owns `stages` and `allowedMethodCodes` and may change them at any time. Each is read exactly once
+        // into a private copy; validation and allocation below use only the copies, so what is validated is what is built.
+        var count = stages?.Count ?? 0;
+        if (stages is null || count == 0)
         {
             found.Add(new(PaymentPlanIssueCode.NoStages, null));
             return false;
         }
 
-        if (stages.Count > MaxStages)
+        if (count > MaxStages)
         {
             found.Add(new(PaymentPlanIssueCode.TooManyStages, null));
             return false;
         }
 
-        var methods = new string[stages.Count];
+        var snapshot = new PaymentPlanStageInput?[count];
+        for (var i = 0; i < count; i++)
+        {
+            snapshot[i] = stages[i];
+        }
+
+        var allowed = allowedMethodCodes is null
+            ? null
+            : new HashSet<string>(allowedMethodCodes, StringComparer.OrdinalIgnoreCase);
+
+        var methods = new string[count];
         var percentStages = 0;
         var amountStages = 0;
-        for (var i = 0; i < stages.Count; i++)
+        for (var i = 0; i < count; i++)
         {
             var n = i + 1;
-            var stage = stages[i];
-            methods[i] = ResolveMethod(stage?.MethodCode, allowedMethodCodes, n, found);
+            var stage = snapshot[i];
+            methods[i] = ResolveMethod(stage?.MethodCode, allowed, n, found);
             if (stage is null || (stage.Percent is null && stage.Amount is null))
             {
                 found.Add(new(PaymentPlanIssueCode.StageValueMissing, n));
@@ -116,24 +129,24 @@ public static class PaymentPlanCalculator
         }
 
         var result = percentStages > 0
-            ? BuildFromPercent(currency, finalAmount, stages, methods, found)
-            : BuildFromAmounts(finalAmount, stages, methods, found);
+            ? BuildFromPercent(currency, finalAmount, snapshot, methods, found)
+            : BuildFromAmounts(finalAmount, snapshot, methods, found);
         if (result is null)
         {
             return false;
         }
 
-        plan = new PaymentPlan(currency.Code, finalAmount, result);
+        plan = new PaymentPlan(currency.Code, finalAmount, result.Value);
         return true;
     }
 
-    private static ReadOnlyCollection<PaymentPlanStage>? BuildFromPercent(
-        CurrencyRef currency, decimal finalAmount, IReadOnlyList<PaymentPlanStageInput> stages, string[] methods, List<PaymentPlanIssue> found)
+    private static ImmutableArray<PaymentPlanStage>? BuildFromPercent(
+        CurrencyRef currency, decimal finalAmount, PaymentPlanStageInput?[] stages, string[] methods, List<PaymentPlanIssue> found)
     {
         var percentSum = 0m;
         foreach (var stage in stages)
         {
-            percentSum += stage.Percent!.Value;
+            percentSum += stage!.Percent!.Value;
         }
 
         if (percentSum != 100m)
@@ -142,11 +155,11 @@ public static class PaymentPlanCalculator
             return null;
         }
 
-        var result = new PaymentPlanStage[stages.Count];
+        var result = new PaymentPlanStage[stages.Length];
         var allocated = 0m;
-        for (var i = 0; i < stages.Count - 1; i++)
+        for (var i = 0; i < stages.Length - 1; i++)
         {
-            var percent = stages[i].Percent!.Value;
+            var percent = stages[i]!.Percent!.Value;
             var amount = decimal.Round(finalAmount * percent / 100m, currency.MinorUnits, MidpointRounding.AwayFromZero);
             if (amount <= 0)
             {
@@ -163,7 +176,7 @@ public static class PaymentPlanCalculator
             return null;
         }
 
-        var last = stages.Count - 1;
+        var last = stages.Length - 1;
         var residual = finalAmount - allocated;
         if (residual <= 0)
         {
@@ -171,18 +184,18 @@ public static class PaymentPlanCalculator
             return null;
         }
 
-        result[last] = new(last + 1, methods[last], stages[last].Percent!.Value, residual);
-        return new ReadOnlyCollection<PaymentPlanStage>(result);
+        result[last] = new(last + 1, methods[last], stages[last]!.Percent!.Value, residual);
+        return ImmutableArray.Create(result);
     }
 
-    private static ReadOnlyCollection<PaymentPlanStage>? BuildFromAmounts(
-        decimal finalAmount, IReadOnlyList<PaymentPlanStageInput> stages, string[] methods, List<PaymentPlanIssue> found)
+    private static ImmutableArray<PaymentPlanStage>? BuildFromAmounts(
+        decimal finalAmount, PaymentPlanStageInput?[] stages, string[] methods, List<PaymentPlanIssue> found)
     {
-        var result = new PaymentPlanStage[stages.Count];
+        var result = new PaymentPlanStage[stages.Length];
         var sum = 0m;
-        for (var i = 0; i < stages.Count; i++)
+        for (var i = 0; i < stages.Length; i++)
         {
-            var amount = stages[i].Amount!.Value;
+            var amount = stages[i]!.Amount!.Value;
             sum += amount;
             result[i] = new(i + 1, methods[i], null, amount);
         }
@@ -193,10 +206,10 @@ public static class PaymentPlanCalculator
             return null;
         }
 
-        return new ReadOnlyCollection<PaymentPlanStage>(result);
+        return ImmutableArray.Create(result);
     }
 
-    private static string ResolveMethod(string? code, IReadOnlyCollection<string>? allowed, int stageNumber, List<PaymentPlanIssue> found)
+    private static string ResolveMethod(string? code, HashSet<string>? allowed, int stageNumber, List<PaymentPlanIssue> found)
     {
         if (!TradeReferenceData.TryFindPaymentMethod(code, out var method))
         {
@@ -204,7 +217,7 @@ public static class PaymentPlanCalculator
             return string.Empty;
         }
 
-        if (allowed is not null && !allowed.Contains(method.Code, StringComparer.OrdinalIgnoreCase))
+        if (allowed is not null && !allowed.Contains(method.Code))
         {
             found.Add(new(PaymentPlanIssueCode.MethodNotAllowed, stageNumber));
         }

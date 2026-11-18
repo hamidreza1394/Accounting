@@ -328,4 +328,99 @@ public sealed class TradePaymentPlanTests
             [decimal.Parse(nonLastAmount, inv), decimal.Parse(nonLastAmount, inv), decimal.Parse(lastAmount, inv)],
             plan!.Stages.Select(s => s.Amount));
     }
+
+    // A list that serves different values on each read of the same entry, like a caller changing it concurrently.
+    private sealed class ShiftingStages : IReadOnlyList<PaymentPlanStageInput>
+    {
+        private readonly int[] _reads = new int[2];
+
+        public int Count => 2;
+
+        public int Reads(int index) => _reads[index];
+
+        public PaymentPlanStageInput this[int index]
+        {
+            get
+            {
+                // First read: a valid 40 + 60 plan. Any later read of the same entry: a different, invalid value.
+                var first = _reads[index]++ == 0;
+                return index == 0 ? A("TT", first ? 40m : -40m) : A("LC", first ? 60m : 140m);
+            }
+        }
+
+        public IEnumerator<PaymentPlanStageInput> GetEnumerator() => throw new NotSupportedException();
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => throw new NotSupportedException();
+    }
+
+    [Fact]
+    public void Build_ReadsEachCallerStageExactlyOnce_SoValidatedValuesAreTheBuiltValues()
+    {
+        var stages = new ShiftingStages();
+
+        Assert.True(PaymentPlanCalculator.TryBuild("USD", 100m, stages, null, out var plan, out _));
+
+        Assert.Equal(1, stages.Reads(0));
+        Assert.Equal(1, stages.Reads(1));
+        Assert.Equal([40m, 60m], plan!.Stages.Select(x => x.Amount));
+    }
+
+    [Fact]
+    public void ChangingTheCallerList_AfterBuild_DoesNotChangeThePlan()
+    {
+        var input = new List<PaymentPlanStageInput> { A("TT", 40m), A("LC", 60m) };
+        Assert.True(PaymentPlanCalculator.TryBuild("USD", 100m, input, null, out var plan, out _));
+
+        input[0] = A("TT", 70m);
+        input.Add(A("DP", 5m));
+        input.Clear();
+
+        Assert.Equal([40m, 60m], plan!.Stages.Select(x => x.Amount));
+        Assert.Equal(["TT", "LC"], plan.Stages.Select(x => x.MethodCode));
+        Assert.Equal(100m, plan.FinalAmount);
+    }
+
+    [Fact]
+    public void Stages_CannotBeChangedThroughAnyInterfaceOrCast()
+    {
+        Assert.True(Build("USD", 100m, [A("TT", 40m), A("LC", 60m)], out var plan, out _));
+        object boxed = plan!.Stages;
+
+        var list = Assert.IsAssignableFrom<IList<PaymentPlanStage>>(boxed);
+        Assert.True(list.IsReadOnly);
+        Assert.Throws<NotSupportedException>(() => list[0] = list[1]);
+        Assert.Throws<NotSupportedException>(() => list.Add(list[0]));
+        Assert.Throws<NotSupportedException>(() => list.RemoveAt(0));
+        Assert.Throws<NotSupportedException>(() => list.Clear());
+
+        // The route that exposed the backing array of a read-only wrapper: ICollection.SyncRoot, and a cast to an array.
+        var nonGeneric = Assert.IsAssignableFrom<System.Collections.ICollection>(boxed);
+        Assert.Throws<NotSupportedException>(() => nonGeneric.SyncRoot);
+        Assert.Null(boxed as PaymentPlanStage[]);
+        Assert.Null(boxed as System.Collections.ObjectModel.ReadOnlyCollection<PaymentPlanStage>);
+
+        Assert.Equal([40m, 60m], plan.Stages.Select(x => x.Amount));
+    }
+
+    [Fact]
+    public void PaymentMethods_CannotBeChangedAndTheLookupStaysConsistentWithTheList()
+    {
+        object boxed = TradeReferenceData.PaymentMethods;
+        var before = TradeReferenceData.PaymentMethods.ToArray();
+
+        var list = Assert.IsAssignableFrom<IList<PaymentMethodRef>>(boxed);
+        Assert.Throws<NotSupportedException>(() => list[0] = list[1]);
+        Assert.Throws<NotSupportedException>(() => list.Add(list[0]));
+        Assert.Throws<NotSupportedException>(() => list.Clear());
+        var nonGeneric = Assert.IsAssignableFrom<System.Collections.ICollection>(boxed);
+        Assert.Throws<NotSupportedException>(() => nonGeneric.SyncRoot);
+        Assert.Null(boxed as PaymentMethodRef[]);
+
+        Assert.Equal(before, TradeReferenceData.PaymentMethods);
+        foreach (var method in before)
+        {
+            Assert.True(TradeReferenceData.TryFindPaymentMethod(method.Code, out var found));
+            Assert.Same(method, found);
+        }
+    }
 }

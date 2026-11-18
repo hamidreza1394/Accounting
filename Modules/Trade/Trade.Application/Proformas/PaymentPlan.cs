@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+
 namespace Faranou.Modules.Trade.Application.Proformas;
 
 /// <summary>Machine-readable reason a payment plan was rejected. Never reflects caller input.</summary>
@@ -57,6 +59,8 @@ public sealed record PaymentPlanStage
 /// Validated, immutable payment plan whose stage amounts sum exactly to <see cref="FinalAmount" />.
 /// </summary>
 /// <remarks>
+/// <see cref="Stages" /> is an <see cref="ImmutableArray{T}" /> built from a private copy: unlike a read-only wrapper around an array, no
+/// cast (for example to <c>ICollection</c> and its <c>SyncRoot</c>) gives access to writable storage.
 /// There is no public constructor and no <c>init</c> accessor, so an invalid plan cannot be built by hand or changed
 /// with a <c>with</c> expression. The only way to obtain a plan is <see cref="PaymentPlanCalculator.TryBuild" />.
 /// A stored plan is restored the same way, by calling <see cref="PaymentPlanCalculator.TryBuild" /> again with the stored
@@ -66,7 +70,7 @@ public sealed record PaymentPlanStage
 /// </remarks>
 public sealed record PaymentPlan
 {
-    internal PaymentPlan(string currencyCode, decimal finalAmount, IReadOnlyList<PaymentPlanStage> stages)
+    internal PaymentPlan(string currencyCode, decimal finalAmount, ImmutableArray<PaymentPlanStage> stages)
     {
         CurrencyCode = currencyCode;
         FinalAmount = finalAmount;
@@ -77,5 +81,5 @@ public sealed record PaymentPlan
 
     public decimal FinalAmount { get; }
 
-    public IReadOnlyList<PaymentPlanStage> Stages { get; }
+    public ImmutableArray<PaymentPlanStage> Stages { get; }
 }

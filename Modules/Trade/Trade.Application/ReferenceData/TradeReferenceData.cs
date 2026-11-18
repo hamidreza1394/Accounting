@@ -1,12 +1,12 @@
-using System.Collections.ObjectModel;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
 namespace Faranou.Modules.Trade.Application.ReferenceData;
 
 /// <summary>
-/// Local, read-only, in-code reference data (no database, no network). Lists are read-only
-/// wrappers (casting to IList/array and mutating throws); lookups are ordinal and case-insensitive, and trim surrounding whitespace.
+/// Local, read-only, in-code reference data (no database, no network). Lists are immutable arrays
+/// (every mutating member throws and no cast exposes writable storage; the lookup indexes are built from the same lists); lookups are ordinal and case-insensitive, and trim surrounding whitespace.
 /// </summary>
 public static class TradeReferenceData
 {
@@ -60,7 +60,7 @@ public static class TradeReferenceData
         return map;
     }
 
-    private static ReadOnlyCollection<T> Build<T>(string[] rows, Func<string[], T> parse)
+    private static ImmutableArray<T> Build<T>(string[] rows, Func<string[], T> parse)
     {
         var items = new T[rows.Length];
         for (var i = 0; i < rows.Length; i++)
@@ -68,7 +68,7 @@ public static class TradeReferenceData
             items[i] = parse(rows[i].Split('|'));
         }
 
-        return new ReadOnlyCollection<T>(items);
+        return ImmutableArray.Create(items);
     }
 
     private static CountryRef ParseCountry(string[] p) => new(p[0], p[2], p[1]);

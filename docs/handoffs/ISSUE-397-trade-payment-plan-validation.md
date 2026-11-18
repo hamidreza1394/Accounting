@@ -1,6 +1,6 @@
-# تحویل وظیفه — ISSUE-UNNUMBERED-trade-payment-plan-validation
+# تحویل وظیفه — ISSUE-397-trade-payment-plan-validation
 
-- Issue: ندارد (UNNUMBERED)
+- Issue مرتبط: #397 (Issue چتر ماژول Trade؛ باز). Issue اختصاصی برای این برش در مخزن یافت نشد و شماره‌ای ساخته نشد؛ PR از `Refs #397` استفاده می‌کند (نه `Closes`) تا Issue چتر بسته نشود. ایجاد Issue اختصاصی تصمیم مالک است.
 - شاخه: `feat/trade-payment-plan-validation`
 
 ## هدف و معیارهای پذیرش
@@ -15,9 +15,14 @@
 - سقف‌های فنی: حداکثر ۱۲ مرحله، دقت درصد ۴ رقم، `MaxAmount = 1e15`.
 - حالت ترکیبی درصد و مبلغ، مرحلهٔ بدون مقدار یا با هر دو مقدار، و مرحلهٔ غیرآخر که پس از گرد‌کردن صفر شود رد می‌شوند.
 - `PaymentPlan` و `PaymentPlanStage` سازندهٔ عمومی و `init` ندارند (سازنده `internal`، property فقط‌خواندنی)؛ طرح نامعتبر دستی ساخته نمی‌شود و با `with` تغییر نمی‌کند. تنها تولیدکننده `PaymentPlanCalculator.TryBuild` است. بازیابی طرح ذخیره‌شده در آینده با فراخوانی دوبارهٔ `TryBuild` روی ارز، مبلغ نهایی و ورودی مراحل (درصد یا مبلغ) انجام می‌شود و خواننده باید مبالغ ذخیره‌شده را با مبالغ بازسازی‌شده مقایسه کند؛ نوع Restore جدا ساخته نشد چون هنوز ذخیره‌ای وجود ندارد.
-- ۴۰ تست در `tests/Template.Tests/TradePaymentPlanTests.cs`.
+- ورودی `stages` (و فهرست `allowedMethodCodes`) در آغاز `TryBuild` دقیقاً یک بار در کپی خصوصی خوانده می‌شود و اعتبارسنجی و تخصیص فقط روی همان کپی انجام می‌شود؛ تغییر فهرست فراخواننده (حتی هم‌زمان) نتیجه را عوض نمی‌کند. شمارش `Count` یک بار و هر `stages[i]` یک بار خوانده می‌شود (محدودیت: اگر فراخواننده فهرست را حین کپی کوچک کند، indexer استثنا می‌دهد؛ این رد ایمن است نه نتیجهٔ نادرست).
+- `PaymentPlan.Stages` اکنون `ImmutableArray<PaymentPlanStage>` است (از `System.Collections.Immutable` چارچوب؛ بدون NuGet جدید)؛ پیش‌تر `ReadOnlyCollection` روی آرایه بود و از مسیر `ICollection.SyncRoot` آرایهٔ قابل‌نوشتن برمی‌گرداند. نوع عمومی `Stages` از `IReadOnlyList` به `ImmutableArray` تغییر کرد.
+- `TradeReferenceData.Build` اکنون `ImmutableArray<T>` برمی‌گرداند. `PaymentMethods` و ایندکس `TryFindPaymentMethod` از همان فهرست ساخته می‌شوند و راه تغییر (Cast، `SyncRoot`، آرایه) ندارند. چون `Build` مشترک است، فهرست‌های قدیمی `Countries`، `Currencies`، `Units` و `Incoterms` در `main` هم که همان ایراد را داشتند تغییرناپذیر شدند (نوع عمومی `IReadOnlyList` ثابت ماند؛ تست‌های قبلی بدون تغییر سبزند).
+- `allowedMethodCodes == null` یعنی همهٔ روش‌های مرجع مجازند؛ این رفتار فعلی حفظ شد و **تصمیم باز و ریسک اتصال به Application** است: لایهٔ Application باید صریحاً فهرست مجاز هر Company را بدهد؛ در این PR هیچ سیاست کسب‌وکاری جدیدی اعمال نشد.
+- ۴۴ تست در `tests/Template.Tests/TradePaymentPlanTests.cs`.
 
 ## فایل‌های مهم تغییرکرده
+- `docs/WORK_LOG.md` — ورودی این PR (append)
 - `Modules/Trade/Trade.Application/Proformas/PaymentPlan.cs`، `PaymentPlanCalculator.cs` (جدید)
 - `Modules/Trade/Trade.Application/ReferenceData/ReferenceRecords.cs`، `MiscData.cs`، `TradeReferenceData.cs`
 - `tests/Template.Tests/TradePaymentPlanTests.cs` (جدید)
@@ -31,7 +36,7 @@
 
 ## بررسی و آزمون
 - Build کامل Release: ۰ خطا.
-- اجرای کامل با SQL Server آزمایشی (پس از اصلاحات Review؛ 2026-11-18): ۱۶۰۴ اجراشده / ۱۵۹۴ موفق / ۰ ناموفق / ۱۰ ردشده (Windows CNG و chmod-root).
+- اجرای کامل با SQL Server آزمایشی (پس از اصلاحات تغییرناپذیری و merge با main؛ 2026-11-18): ۱۶۰۸ اجراشده / ۱۵۹۸ موفق / ۰ ناموفق / ۱۰ ردشده (Windows CNG و chmod-root).
 - بازبینی مستقل دوم (`code-reviewer`، فقط‌خواندنی، روی تغییرات اصلاحی): بدون یافتهٔ Critical/High؛ یک تست توتولوژیک بود (مبلغ‌های دستی جایگزین شد) و عبارت Overflow دقیق‌تر شد.
 - `check_static_assets.py` موفق؛ `git diff --check` موفق.
 - ClientApp: اجرا نشد (تغییر کلاینت ندارد).
@@ -45,7 +50,8 @@
 - در برش ذخیره‌سازی آینده باید تست رد «مبلغ ذخیره‌شدهٔ ناسازگار با مبلغ بازسازی‌شده» نوشته شود؛ تست فعلی بازیابی فقط رفت‌وبرگشت خروجی خود محاسبه‌گر را می‌سنجد.
 - `issues` همان `List` داخلی است (قابل Cast)؛ اثر عملی ندارد و تغییر نکرد.
 - تصمیم مالک دربارهٔ روش‌های مجاز و سیاست گرد‌کردن (اکنون AwayFromZero برای مراحل غیرآخر).
-- ردیف WORK_LOG عمداً اضافه نشد تا با PR دیگر تداخل نکند.
+- ورودی WORK_LOG در commit جدا افزوده شد (append-only؛ با ورودی PR #704 در انتهای فایل ممکن است تداخل متنی بگیرد و با حفظ هر دو حل می‌شود).
+- ریسک اتصال به Application: `allowedMethodCodes == null` همهٔ روش‌ها را مجاز می‌کند؛ منبع فهرست مجاز هر Company تصمیم مالک است.
 
 ## شناسه‌های Git
 Commit و PR پس از ایجاد در توضیحات PR ثبت می‌شود.
