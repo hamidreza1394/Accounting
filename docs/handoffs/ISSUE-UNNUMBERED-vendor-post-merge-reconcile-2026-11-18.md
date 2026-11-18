@@ -35,7 +35,7 @@
 ## تصمیم‌های فنی
 - تصمیم معماری جدیدی گرفته نشد.
 - Gate دوکلیدی صدور Provisioning v5 همچنان بسته است: `CustomerConsumerReady=false` و `Provisioning:CompanyReferenceIssuance:Enabled` پیش‌فرض خاموش.
-- `CompanyReference` همچنان از draft اپراتور انتخاب می‌شود؛ مولد خودکار GUID اضافه نشد، چون این تغییر قبلاً به تأیید مالک موکول شده بود.
+- `CompanyReference` برای هر Company جدید فقط سمت سرور با `Guid.NewGuid().ToString("D")` تولید می‌شود؛ reference ارسالی client برای Company جدید رد می‌شود و در Update فقط reference موجود در همان draft پذیرفته و حفظ می‌شود. `Descriptor` صرفاً label اپراتور است و مبنای مالکیت/Company/Tenant نیست. تست‌های موجود این رفتار را پوشش می‌دهند.
 - `VendorCustomer.CustomerNumber` هنوز پس از Provisioning قابل تغییر است، در حالی که هنگام صدور با `CustomerReference` برابر می‌شود. این ریسک پایداری binding ثبت شد؛ رفتار اصلاح نشد چون سیاست تغییر/اصلاح شناسه نیازمند تصمیم مالک است و قفل‌کردن بی‌قید آن می‌تواند اصلاح اشتباهات ثبت را نیز ناممکن کند.
 - خرید add-on در #393 هنوز candidate builder دارد، اما Order/Payment Evidence/persistence/approval تجاری و صدور پایدار amendment وجود ندارد. پیاده‌سازی تا تعیین مدرک پرداخت، نقش تأییدکننده و transitionهای تجاری شروع نشد.
 - signer پیش‌فرض Production همچنان unavailable/fail-closed است؛ هیچ KMS/HSM یا credential فرضی انتخاب نشد.
