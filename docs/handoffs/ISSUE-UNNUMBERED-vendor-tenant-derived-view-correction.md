@@ -69,9 +69,10 @@
 - مفاهیم «Cloud/Dedicated از یک مدل مالکیت واحد» در گیت‌های S3-0 باقی است.
 
 ## ۱۰) شناسه‌های Git
-- Branch: `fix/d103-v1-derived-tenant-view` (پایه: `origin/main@89c00641`)
-- Commitها: کد + مستندات (دو Commit شفاف؛ در PR ثبت می‌شود)
-- Push/PR/Merge انجام نشد؛ طبق بند ۶ مأموریت
+- Branch اولیه: `fix/d103-v1-derived-tenant-view` (پایه: `origin/main@89c00641`) — Commitهای `743b0d90` (کد) و `f3b5bf6f` (مستندات)
+- **انتقال به مبنای فعلی main (به‌روزرسانی 2026-11-18):** Branch نهایی `fix/d103-v1-derived-tenant-view-rebased` (پایه: `origin/main@b785e0148e1ee6213c0d5e5edb541b7c1dc3d5bb`؛ پس از Merge PR #706)
+- Commitهای نهایی: `a3cd7137` (کد؛ cherry-pick از `743b0d90`) و `53d66a87` (مستندات؛ cherry-pick از `f3b5bf6f`) — با `-x` و **بدون هیچ تعارضی**
+- Push/PR/Merge انجام نشده؛ طبق محدودیت‌های مأموریت
 
 ## ۱۱) آمادگی برای بازبینی و PR
 - Diff کوچک (۴ فایل کد/تست + ۵ فایل مستندات)، بدون تغییر Schema، بدون قابلیت تکراری، با تست نگهبان scope — آمادهٔ بازبینی. Push/PR پس از مجوز/توکن دارای دسترسی انجام خواهد شد.
@@ -80,5 +81,11 @@
 - اولویت و شکل «جست‌وجوی سمت سرور، خلاصه و تاریخچه» برای CustomerAccount/Installation
 - مجوز تغییر handler ACK برای ثبت `LastSeenAtUtc` امضاشده (در بند ۴ فعلی ممنوع)
 - تکلیف شاخهٔ سابقهٔ `feat/tenant-v1-management` (حفظ/حذف) و تصریح اینکه V1 صرفاً نمایشی است در صورت تمایل به ثبت ADR جداگانه
+
+## ۱۳) پیوست: انتقال به مبنای `main@b785e014` و بررسی LastSeenAtUtc (2026-11-18)
+- **حفظ PR #706:** تمام تغییرات مستنداتی #706 (`D-104`، یادداشت تاریخ‌دار D-086، سند Trade و handoff آن) دست‌نخورده باقی است؛ Cherry-pick دو Commit این شاخه روی `b785e014` **بدون تعارض** انجام شد (مناطق تغییر غیرمجاور بودند: DECISIONS.md بخش D-103 و آغاز PROJECT_STATUS در برابر ضمیمهٔ D-104 و بخش Trade).
+- **سازگاری D-103/D-104:** D-104 مربوط به کاردینالیتی Proforma↔OrderRegistration در دامنه Trade است و با تصمیم D-103 در دامنه Vendor هم‌پوشانی ندارد؛ هیچ ADR تکراری، شماره تکراری، Migration یا تغییر Schema ایجاد نشد.
+- **بررسی LastSeenAtUtc (فقط بررسی، بدون تغییر کد):** در کل Vendor دقیقاً ۶ رخداد غیر-Migration وجود دارد: یک property نال‌پذیر در `VendorBusinessEntities` و ۵ projection فقط-خواندنی در `InstallationResponse`. **هیچ سایت نوشتن (assignment) وجود ندارد** و handler امضاشدهٔ m2m ACK (`POST /{requestId}/acknowledgement`) نیز آن را ثبت نمی‌کند؛ یعنی ACK معتبر در حال حاضر `LastSeenAtUtc` را به‌روز نمی‌کند. این به‌عنوان **Gap مستند** می‌ماند و ثبت آن نیازمند تصمیم مالک و تغییر جداگانهٔ handler Provisioning است (در محدودهٔ این مأموریت ممنوع).
+- **اعتبارسنجی مجدد پس از انتقال:** `dotnet test Vendor.sln` = ۳۵۸ کل، ۳۰۴ موفق، ۰ ناموفق، ۵۴ Skip؛ `npm test` = ۶۸/۶۸؛ بودجهٔ دارایی برقرار؛ `check_static_assets.py` PASS؛ `git diff --check` پاک؛ `has-pending-model-changes` بدون تغییر؛ CI هنوز اجرا نشده و موفقیت آن ادعا نمی‌شود.
 
 **وضعیت نهایی: Ready for Review** (بدون نیاز به تصمیم مالک برای ادغام این شاخه؛ موارد بند ۱۲ مستقل‌اند)

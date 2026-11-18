@@ -3166,3 +3166,14 @@
 - **اعتبارسنجی واقعی:** `dotnet build Vendor.sln` موفق؛ `dotnet test Vendor.sln` = ۳۵۸ کل، ۳۰۴ موفق، ۰ ناموفق، ۵۴ Skip (همهٔ Skipها نیازمند SQL Server واقعی؛ شامل تست این PR)؛ `npm test` = ۶۸/۶۸؛ typecheck/build سبز؛ بودجهٔ دارایی JS gzip ۹۷,۷۷۲ ≤ ۱۰۲,۴۰۰؛ `check_static_assets.py` PASS؛ `has-pending-model-changes` بدون تغییر؛ `git diff --check` پاک. CI اجرا نشده و موفقیت آن ادعا نمی‌شود.
 - **اثر Migration:** هیچ Migration جدیدی در شاخهٔ اصلاحی وجود ندارد؛ Migration قبلی هرگز push یا روی دیتابیس واقعی اجرا نشد و شاخهٔ سابقه دست‌نخورده است.
 - **وضعیت:** Ready for Review. handoff: `docs/handoffs/ISSUE-UNNUMBERED-vendor-tenant-derived-view-correction.md`. Push/PR/Merge انجام نشد.
+
+
+## 2026-11-18 — انتقال اصلاح D-103 V1 به مبنای `main@b785e014` پس از Merge PR #706 (UNNUMBERED)
+
+- `main` به `b785e0148e1ee6213c0d5e5edb541b7c1dc3d5bb` (Merge PR #706؛ docs-only: ADR جدید D-104 دربارهٔ کاردینالیتی Proforma↔OrderRegistration در Trade، یادداشت تاریخ‌دار روی D-086، سندهای `TRADE_DECISION_RECONCILIATION.md`، `TRADE_TENANT_COMPANY_AUDIT.md`، `TRADE_S3_READINESS.md` و handoff آن) رسید. شاخهٔ اصلاحی Vendor روی همین مبنای بازسازی شد.
+- شاخهٔ جدید `fix/d103-v1-derived-tenant-view-rebased` از `b785e014` ساخته و دو Commit قبلی با `git cherry-pick -x` منتقل شد: `743b0d90→a3cd7137` (کد) و `f3b5bf6f→53d66a87` (مستندات) — **بدون هیچ تعارضی**؛ مناطق تغییر در `DECISIONS.md` (بخش D-103) و `PROJECT_STATUS.md` (آغاز فایل) با ضمیمه‌های #706 مجاور نبودند.
+- **حفظ کامل #706:** D-104، یادداشت D-086 و تمام فایل‌های Trade دست‌نخورده تأیید شد؛ تغییر این PR محدود به بخش Vendor است و هیچ ADR/شماره تکراری، Migration یا تغییر Schema ایجاد نمی‌کند.
+- **بررسی LastSeenAtUtc (فقط بررسی):** ۶ رخداد غیر-Migration = یک property نال‌پذیر + ۵ projection فقط-خواندنی؛ **هیچ سایت نوشتن وجود ندارد** و handler m2m ACK آن را ثبت نمی‌کند؛ به‌عنوان Gap مستند ماند و handler/قرارداد ACK/allow-list #699 تغییر نکرد.
+- شاخهٔ سابقهٔ `feat/tenant-v1-management@7e9abc1c` و شاخهٔ اولیهٔ اصلاحی (`743b0d90`/`f3b5bf6f`) بدون تغییر حفظ شدند.
+- **اعتبارسنجی مجدد:** `dotnet test Vendor.sln` = ۳۵۸ کل، ۳۰۴ موفق، ۰ ناموفق، ۵۴ Skip؛ `npm test` = ۶۸/۶۸؛ build/typecheck سبز؛ بودجهٔ دارایی برقرار؛ `check_static_assets.py` PASS؛ `git diff --check` پاک؛ CI هنوز اجرا نشده است.
+- **وضعیت:** Ready for Review (منوط به تأیید مالک برای Push و ایجاد PR).

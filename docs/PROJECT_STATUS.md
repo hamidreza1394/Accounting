@@ -4,7 +4,7 @@
 
 ### اصلاح محدودهٔ V1 مرز Tenant مشتق‌شده از CustomerAccount (D-103) — افزوده 2026-11-18
 - **تصمیم مالک:** در V1، Tenant فقط مفهوم مشتق‌شده و نمایشی از CustomerAccount است؛ Entity/جدول/Migration مستقل، API مستقل، کدهای مجوز مستقل، TenantKey ذخیره‌شده و Maker-Checker مستقل Tenant ممنوع‌اند.
-- **Implemented (شاخهٔ اصلاحی `fix/d103-v1-derived-tenant-view` از `origin/main@89c00641`؛ Verified پس از CI):** `VendorTenantView` فقط-خواندنی (`DerivedFrom="customer-account"`, `WorkspaceReference=CustomerNumber`, `Status=وضعیت مشتری`) که در زمان درخواست در چهار مسیر `CustomerResponse` (لیست/جزئیات/ایجاد/ویرایش) ساخته می‌شود؛ ستون فقط-خواندنی «فضای کاری (مشتق از حساب مشتری)» در بخش موجود «مشتریان تجاری» در Vendor.Web.
+- **Implemented (شاخهٔ اصلاحی `fix/d103-v1-derived-tenant-view-rebased` از `origin/main@b785e014` — شامل PR #706؛ Commitهای `a3cd7137`/`53d66a87`؛ Verified پس از CI):** `VendorTenantView` فقط-خواندنی (`DerivedFrom="customer-account"`, `WorkspaceReference=CustomerNumber`, `Status=وضعیت مشتری`) که در زمان درخواست در چهار مسیر `CustomerResponse` (لیست/جزئیات/ایجاد/ویرایش) ساخته می‌شود؛ ستون فقط-خواندنی «فضای کاری (مشتق از حساب مشتری)» در بخش موجود «مشتریان تجاری» در Vendor.Web.
 - **نگهبان scope:** تست Unit نبود شناسه/کلید قابل مدیریت؛ تست Integration SQL Server با تأیید `tenantView` در پاسخ مشتری و تأیید `404` برای `GET/POST /api/vendor/tenants/` (هیچ API مستقل Tenant نباید وجود داشته باشد).
 - **بدون تغییر Schema:** هیچ Migration/جدول/ستون/FK جدیدی وجود ندارد؛ `has-pending-model-changes` بدون تغییر؛ دیتابیس مشتری و قراردادهای Canonical و Provisioning/ACK/v5 Gate دست‌نخورده.
 - **بدون دوباره‌کاری:** CRUD مشتری/نصب، تعلیق/فعال‌سازی با Maker-Checker موجود، Provisioning/ACK امضاشدهٔ m2m و پنل فارسی RTL موجود استفاده شدند.
