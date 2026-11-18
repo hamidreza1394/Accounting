@@ -421,3 +421,14 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 Tenant مرز CustomerAccount/فضای کاری است و هر Tenant می‌تواند چند Company مستقل داشته باشد. دامنه canonical و verified فقط به Tenant و context اختیاری Company یا CorporateGroup lookup می‌شود؛ Host authorization نیست. پس از login، CompanyAccessService، عضویت Approved/فعال و permission سمت سرور باید دسترسی را تعیین کنند. هر CustomerAccount مستقل Tenant جدا دارد و CorporateGroup/Ownership نباید از CustomerAccount عبور کند. دامنه مشترک به‌تنهایی دلیل ادغام Tenant نیست.
 
 در Cloud، binding مشتری به Tenant از provisioning معتبر Vendor و Registry محلی معتبر می‌آید؛ درخواست عادی نباید به تماس زنده Vendor متکی باشد. در Dedicated، Tenant از پیکربندی معتبر Installation resolve و با DB تطبیق داده می‌شود. طبق D-017، X-Forwarded-Host برای تعیین Tenant پذیرفته نمی‌شود. Tenant/Company از body، query، header دلخواه یا فایل Import به‌عنوان مرجع scope قابل تعیین نیست؛ درخواست انتخاب Company (مانند `POST /api/v1/context`) فقط ورودی درخواست است و سمت سرور با عضویت فعال و CompanyAccessService اعتبارسنجی می‌شود. Import از context معتبر سمت سرور استفاده می‌کند. Manifest فقط برای Backfill یک‌باره D-092 است. Host یا Tenant ناشناخته/مبهم/غیرفعال باید fail-closed رد شود. پیاده‌سازی هنوز NotImplemented است؛ هیچ Migration یا تغییر Runtime با این ADR مجاز نشده است.
+
+
+## پیش‌فرض مالکیت و اشتراک‌گذاری داده‌های مشتری — D-105 (Accepted، 2026-11-18)
+
+- داده‌های عملیاتی/کسب‌وکاری مشتری در مدل هدف به‌صورت پیش‌فرض Company-owned هستند و هر رکورد این گروه باید به Tenant واقعی و Company مالک آن متصل باشد (TenantId + CompanyId).
+- Tenant-owned کردن یک نوع داده فقط پس از تصمیم مستقل همان موجودیت مجاز است؛ در آن حالت رکورد مشترک با TenantId و بدون CompanyId مستقیم نگهداری و شرکت‌های مجاز از جدول پیوند صریح همان Tenant متصل می‌شوند.
+- اشتراک‌گذاری بین Tenantها ممنوع است، مگر اینکه تصمیم معماری و امنیتی مستقل دیگری تصویب شود. گروه شرکتی، مالکیت، عضویت یا CustomerBoundaryId به‌تنهایی مجوز خواندن/نوشتن داده ایجاد نمی‌کند.
+- برای Company-owned، سرور Tenant و Company را از context و رابطه معتبر سمت سرور resolve می‌کند و سازگاری آن‌ها را کنترل می‌کند؛ برای داده مشترک، علاوه بر Tenant scope باید وجود رابطه فعال/مجاز Company با رکورد مشترک و permission عملیات بررسی شود.
+- شناسه‌های Tenant/Company/SharedRecord ارسالی از کلاینت، Claim، Header یا فایل Import به‌تنهایی مرجع scope نیستند. Import/Export، فایل پیوست، گزارش، cache و background job نیز باید همان scope را رعایت کنند.
+- قواعد دقیق دسترسی، ویرایش، غیرفعال‌سازی، حذف، ممیزی و نگهداری داده مشترک باید در تصمیم همان موجودیت مشخص شوند؛ اشتراک صرفاً با افزودن جدول پیوند، مجوز عملیاتی ضمنی ایجاد نمی‌کند.
+- این ADR وضعیت کد legacy را تغییر نمی‌دهد: در برخی مسیرها TenantId هنوز Company.Id است؛ تا تکمیل گیت‌های S3-0 و گذار مصوب، جداسازی Tenant واقعی را Implemented یا Verified گزارش نکنید. هیچ Migration یا تغییر Runtime از این سند مجاز نمی‌شود.
