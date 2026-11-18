@@ -52,4 +52,4 @@
 ## شناسه‌های Git
 - Branch: docs/d105-company-owned-default-tenant-sharing
 - Commit: در پایان تغییرات ثبت می‌شود.
-- Pull Request: پس از تکمیل تغییرات ساخته می‌شود.
+- Pull Request: #713 (Draft؛ تا ادغام PR #711 و رفع تداخل WORK_LOG نباید Merge شود).
