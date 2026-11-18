@@ -304,7 +304,7 @@ public sealed class TradePaymentPlanTests
     }
 
     [Fact]
-    public void NonLastStages_RoundAwayFromZero_AndTheLastStageTakesTheRealRemainder()
+    public void NonLastStage_Rounds_0_025To0_03_AndLastStageReceivesRemainder()
     {
         // 0.05 USD x 50% = 0.025 -> 0.03 (midpoint away from zero); the last stage receives 0.05 - 0.03 = 0.02.
         Assert.True(Build("USD", 0.05m, [P("TT", 50m), P("LC", 50m)], out var plan, out _));
