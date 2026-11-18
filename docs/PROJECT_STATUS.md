@@ -2,6 +2,17 @@
 
 **مبنای بررسی:** `main@163e0be3a430439b69c13e0c17e8b99e98617fb9`؛ این snapshot، وضعیت قبلی Issue #698 را پس از Mergeهای #699، #700 و #701 به‌روز می‌کند.
 
+### اصلاح محدودهٔ V1 مرز Tenant مشتق‌شده از CustomerAccount (D-103) — افزوده 2026-11-18
+- **تصمیم مالک:** در V1، Tenant فقط مفهوم مشتق‌شده و نمایشی از CustomerAccount است؛ Entity/جدول/Migration مستقل، API مستقل، کدهای مجوز مستقل، TenantKey ذخیره‌شده و Maker-Checker مستقل Tenant ممنوع‌اند.
+- **Implemented (شاخهٔ اصلاحی `fix/d103-v1-derived-tenant-view-rebased` از `origin/main@b785e014` — شامل PR #706؛ Commitهای `a3cd7137`/`53d66a87`؛ Verified پس از CI):** `VendorTenantView` فقط-خواندنی (`DerivedFrom="customer-account"`, `WorkspaceReference=CustomerNumber`, `Status=وضعیت مشتری`) که در زمان درخواست در چهار مسیر `CustomerResponse` (لیست/جزئیات/ایجاد/ویرایش) ساخته می‌شود؛ ستون فقط-خواندنی «فضای کاری (مشتق از حساب مشتری)» در بخش موجود «مشتریان تجاری» در Vendor.Web.
+- **نگهبان scope:** تست Unit نبود شناسه/کلید قابل مدیریت؛ تست Integration SQL Server با تأیید `tenantView` در پاسخ مشتری و تأیید `404` برای `GET/POST /api/vendor/tenants/` (هیچ API مستقل Tenant نباید وجود داشته باشد).
+- **بدون تغییر Schema:** هیچ Migration/جدول/ستون/FK جدیدی وجود ندارد؛ `has-pending-model-changes` بدون تغییر؛ دیتابیس مشتری و قراردادهای Canonical و Provisioning/ACK/v5 Gate دست‌نخورده.
+- **بدون دوباره‌کاری:** CRUD مشتری/نصب، تعلیق/فعال‌سازی با Maker-Checker موجود، Provisioning/ACK امضاشدهٔ m2m و پنل فارسی RTL موجود استفاده شدند.
+- **شاخهٔ سابقهٔ حفظ‌شده:** `feat/tenant-v1-management` با Commit `7e9abc1c` (پیاده‌سازی اولیه با Entity مستقل Tenant) بدون تغییر باقی است و ادغام نمی‌شود.
+- **شواهد آزمون (محلی، SDK 10.0.404):** `dotnet test Vendor.sln` = ۳۵۸ کل، ۳۰۴ موفق، ۰ ناموفق، ۵۴ Skip (نیازمند SQL Server؛ تست‌های SQL این شاخه فقط در CI)؛ `npm test` = ۶۸/۶۸؛ بودجهٔ دارایی JS gzip ۹۷,۷۷۲ ≤ ۱۰۲,۴۰۰؛ `check_static_assets.py` PASS؛ `git diff --check` پاک؛ CI هنوز اجرا نشده است.
+- **باقی‌مانده/نیازمند تصمیم مالک:** جست‌وجوی سمت سرور، خلاصه و تاریخچهٔ CustomerAccount/Installation (در main وجود ندارد)؛ ثبت `LastSeenAtUtc` از ACK معتبر (نیازمند تغییر handler m2m Provisioning که در بند ۴ مأموریت ممنوع است)؛ Resolve دامنه/Registry/Backfill همچنان NotImplemented (D-103 بندهای ۵..۱۱).
+- **handoff:** `docs/handoffs/ISSUE-UNNUMBERED-vendor-tenant-derived-view-correction.md` (UNNUMBERED چون Issue اختصاصی در دسترس نبود؛ مرجع تصمیم D-103 است).
+
 ### GitHub و CI
 - **main:** `163e0be3a430439b69c13e0c17e8b99e98617fb9` (Merge PR #702؛ پس از #701). PR #700 با SHA `5be1ff7a8f1a3e793062ea1158038640041ea7b9` و PR #701 با SHA بالا ادغام شده‌اند.
 - **PRهای جاری:** PR #702 در 2026-11-18 با merge commit `163e0be3a430439b69c13e0c17e8b99e98617fb9` ادغام شد و فقط Trade را تغییر داد. PR #703 همین بازبینی مستنداتی Vendor باز است؛ PR باز کد-محور Vendor وجود ندارد.

@@ -3164,3 +3164,25 @@
 - تست محلی (SQL Server آزمایشی): ۱۶۳۹ اجرا / ۱۶۲۹ موفق / ۰ ناموفق / ۱۰ Skip (Windows CNG و chmod-root). نتیجهٔ CI جدا در PR گزارش می‌شود.
 - باز: اعتبارسنجی کد واحد با `TradeReferenceData.TryFindUnit` در Application (برش ذخیره‌سازی)؛ سیاست دقت و سقف‌های تجاری تصمیم مالک است؛ `TryRestore` با قواعد «امروز» می‌سنجد (تغییر سقف‌ها بعداً نیاز به مهاجرت دارد).
 - Commit: `7d57e8f` (قبلی `931f578`).
+
+## 2026-11-18 — اصلاح محدودهٔ V1 D-103: حذف Tenant مستقل و حفظ نمایش مشتق‌شده (UNNUMBERED)
+
+- **مبنای Git:** شاخهٔ اصلاحی `fix/d103-v1-derived-tenant-view` از `origin/main@89c00641bad5403bd56526ff89a4c6be443b587b`؛ شاخهٔ سابقهٔ `feat/tenant-v1-management` با Commit `7e9abc1c` بدون تغییر حفظ شد.
+- **نتیجهٔ بازبینی:** پیاده‌سازی قبلی از نظر الگوها درست اما از نظر محدوده خارج از تصمیم مالک بود (Entity مستقل `VendorTenant`، Migration، ستون `TenantId` روی `VendorInstallations`، APIهای مستقل `/api/vendor/tenants*`، کدهای مجوز `vendor.tenants.*`، ResourceType مستقل و Maker-Checker مستقل Tenant، `TenantKey` ذخیره‌شده، UI مستقل). طبق بند ۲ مأموریت، در V1 Tenant فقط مفهوم مشتق‌شده و نمایشی از CustomerAccount است.
+- **آنچه ماند:** `VendorTenantView` فقط-خواندنی (`DerivedFrom="customer-account"`، `WorkspaceReference=CustomerNumber`، `Status=وضعیت مشتری`) که در زمان درخواست در چهار مسیر `CustomerResponse` ساخته می‌شود؛ ستون فقط-خواندنی در بخش موجود «مشتریان تجاری»؛ بدون ذخیره‌سازی، endpoint، مجوز، Migration یا lifecycle مستقل.
+- **نگهبان scope:** تست Unit `VendorTenantViewTests` (نبود شناسه/کلید قابل مدیریت) و تست Integration SQL Server با تأیید `404` برای `GET/POST /api/vendor/tenants/` تا هیچ API مستقل Tenant به‌صورت تصادفی بازنگردد.
+- **بدون دوباره‌کاری:** مدیریت CustomerAccount/Installation، تعلیق/فعال‌سازی با Maker-Checker موجود، Provisioning/ACK امضاشده و پنل فارسی RTL همگی از main استفاده شدند و لمس نشدند.
+- **اعتبارسنجی واقعی:** `dotnet build Vendor.sln` موفق؛ `dotnet test Vendor.sln` = ۳۵۸ کل، ۳۰۴ موفق، ۰ ناموفق، ۵۴ Skip (همهٔ Skipها نیازمند SQL Server واقعی؛ شامل تست این PR)؛ `npm test` = ۶۸/۶۸؛ typecheck/build سبز؛ بودجهٔ دارایی JS gzip ۹۷,۷۷۲ ≤ ۱۰۲,۴۰۰؛ `check_static_assets.py` PASS؛ `has-pending-model-changes` بدون تغییر؛ `git diff --check` پاک. CI اجرا نشده و موفقیت آن ادعا نمی‌شود.
+- **اثر Migration:** هیچ Migration جدیدی در شاخهٔ اصلاحی وجود ندارد؛ Migration قبلی هرگز push یا روی دیتابیس واقعی اجرا نشد و شاخهٔ سابقه دست‌نخورده است.
+- **وضعیت:** Ready for Review. handoff: `docs/handoffs/ISSUE-UNNUMBERED-vendor-tenant-derived-view-correction.md`. Push/PR/Merge انجام نشد.
+
+
+## 2026-11-18 — انتقال اصلاح D-103 V1 به مبنای `main@b785e014` پس از Merge PR #706 (UNNUMBERED)
+
+- `main` به `b785e0148e1ee6213c0d5e5edb541b7c1dc3d5bb` (Merge PR #706؛ docs-only: ADR جدید D-104 دربارهٔ کاردینالیتی Proforma↔OrderRegistration در Trade، یادداشت تاریخ‌دار روی D-086، سندهای `TRADE_DECISION_RECONCILIATION.md`، `TRADE_TENANT_COMPANY_AUDIT.md`، `TRADE_S3_READINESS.md` و handoff آن) رسید. شاخهٔ اصلاحی Vendor روی همین مبنای بازسازی شد.
+- شاخهٔ جدید `fix/d103-v1-derived-tenant-view-rebased` از `b785e014` ساخته و دو Commit قبلی با `git cherry-pick -x` منتقل شد: `743b0d90→a3cd7137` (کد) و `f3b5bf6f→53d66a87` (مستندات) — **بدون هیچ تعارضی**؛ مناطق تغییر در `DECISIONS.md` (بخش D-103) و `PROJECT_STATUS.md` (آغاز فایل) با ضمیمه‌های #706 مجاور نبودند.
+- **حفظ کامل #706:** D-104، یادداشت D-086 و تمام فایل‌های Trade دست‌نخورده تأیید شد؛ تغییر این PR محدود به بخش Vendor است و هیچ ADR/شماره تکراری، Migration یا تغییر Schema ایجاد نمی‌کند.
+- **بررسی LastSeenAtUtc (فقط بررسی):** ۶ رخداد غیر-Migration = یک property نال‌پذیر + ۵ projection فقط-خواندنی؛ **هیچ سایت نوشتن وجود ندارد** و handler m2m ACK آن را ثبت نمی‌کند؛ به‌عنوان Gap مستند ماند و handler/قرارداد ACK/allow-list #699 تغییر نکرد.
+- شاخهٔ سابقهٔ `feat/tenant-v1-management@7e9abc1c` و شاخهٔ اولیهٔ اصلاحی (`743b0d90`/`f3b5bf6f`) بدون تغییر حفظ شدند.
+- **اعتبارسنجی مجدد:** `dotnet test Vendor.sln` = ۳۵۸ کل، ۳۰۴ موفق، ۰ ناموفق، ۵۴ Skip؛ `npm test` = ۶۸/۶۸؛ build/typecheck سبز؛ بودجهٔ دارایی برقرار؛ `check_static_assets.py` PASS؛ `git diff --check` پاک؛ CI هنوز اجرا نشده است.
+- **وضعیت:** Ready for Review (منوط به تأیید مالک برای Push و ایجاد PR).

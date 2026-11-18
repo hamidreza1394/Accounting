@@ -95,7 +95,9 @@ describe('Vendor control plane shell', () => {
       if (url.startsWith('/api/vendor/customers/')) {
         const page = Number(new URL(url, 'http://localhost').searchParams.get('page'));
         return Promise.resolve(response({
-          items: [{ id: 'customer-1', customerNumber: 'C-001', legalName: 'شرکت نمونه', displayName: 'نمونه', status: 'Active', createdAtUtc: '2026-10-27T08:00:00Z' }],
+          items: [{ id: 'customer-1', customerNumber: 'C-001', legalName: 'شرکت نمونه', displayName: 'نمونه', status: 'Active',
+            tenantView: { derivedFrom: 'customer-account', workspaceReference: 'C-001', status: 'Active' },
+            createdAtUtc: '2026-10-27T08:00:00Z' }],
           page, pageSize: 25, totalCount: 26, totalPages: 2, hasPreviousPage: page > 1, hasNextPage: page < 2,
         }));
       }
@@ -106,6 +108,8 @@ describe('Vendor control plane shell', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'مشتریان تجاری' }));
     expect(await screen.findByText('شرکت نمونه')).toBeInTheDocument();
+    expect(screen.getByText(/مشتق از حساب مشتری — مرجع: C-001 — وضعیت: فعال/)).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'فضای کاری (مشتق از حساب مشتری)' })).toBeInTheDocument();
     expect(screen.getByText(/تعداد کل:/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /بعدی/ }));
     await screen.findByText('شرکت نمونه');
