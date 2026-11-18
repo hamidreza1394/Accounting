@@ -22,7 +22,7 @@
 3. **مسیر دسترسی Trade در محدودهٔ بررسی‌شده fail-closed است [V]**: نشست ← عضویت فعال و Company ← دوره ← entitlement ← مجوز. شناسهٔ Company از `WorkContext` سمت سرور می‌آید، نه از Client.
 4. **جداسازی داده فقط با فیلتر صریح در Store است [V].** Global Query Filter وجود ندارد و طبق تصمیم‌های فعلی خودسرانه اضافه نمی‌شود؛ این یک ریسک نگهداشت است، نه نقص قطعی.
 5. **شکاف اصلی مدل هدف:** منبع معتبر Company→Tenant، جدول Tenant و ستون `CompanyId` مستقل وجود ندارند. هیچ‌کدام بدون ممیزی کامل، تصمیم D-090 و تأیید Schema ساخته نمی‌شوند.
-6. **Trade امروز در Production غیرفعال است [V]**: `DenyAllTradeModuleEntitlement` متصل است. پس نشت واقعی داده از مسیر API/برنامهٔ Trade امروز ممکن نیست (دسترسی مستقیم به دیتابیس خارج از این ادعاست)؛ ریسک‌های زیر برای هنگام فعال‌سازی‌اند.
+6. **Trade امروز در Production غیرفعال است [V]**: `DenyAllTradeModuleEntitlement` متصل است. در مسیرهای بررسی‌شده (`PartyStore` و `ProductStore` [V]) شناسهٔ scope از context معتبر سمت سرور می‌آید و هر Query/Include فیلتر `TenantId == tenantId && !IsDeleted` دارد. تست‌های موجود Gate، Adapter و `CompanyAccessService` دسترسی غیرمجاز بین Companyها و Claim جعلی را رد می‌کنند (بخش ۸)؛ اما تست دو-Tenant روی خودِ Storeهای Trade با SQL Server یافت نشد. این نتیجه فقط به همین مسیرهای بررسی‌شده محدود است؛ مسیرهای نقل‌شده از ممیزی‌های قبلی با برچسب [S] باقی‌اند، نبود Global Query Filter برای مسیرها و Storeهای جدید آینده ریسک است (R-1) و دسترسی مستقیم به دیتابیس خارج از دامنهٔ این ادعاست. ریسک‌های زیر برای هنگام فعال‌سازی‌اند.
 
 ## ۲. مدل فعلی (شواهد)
 
@@ -183,7 +183,7 @@ erDiagram
     TENANT ||..o{ COMPANY : "هر Company دقیقاً یک Tenant (D-087، پیاده‌نشده)"
     INSTALLATION }o..o{ TENANT : "؟ نگاشت Installation↔Tenant در Dedicated/Cloud: D-089/D-103"
     CORPORATE_GROUP }o--o{ COMPANY : "عضویت (CompanyId، موجود در کد؛ بدون اعطای دسترسی)"
-    CORPORATE_GROUP }o..o{ TENANT : "؟ گروه نباید از مرز CustomerAccount عبور کند (D-103 بند ۴)"
+    CORPORATE_GROUP }o..|| TENANT : "مفهومی: هر گروه به یک Tenant تعلق دارد (D-103 بند ۴)؛ بدون FK/Schema تصمیم‌گرفته‌شده"
     COMPANY ||--o{ FISCAL_PERIOD : "موجود: TenantId=Company.Id"
     COMPANY ||--o{ USER_COMPANY_MEMBERSHIP : "موجود: TenantId=Company.Id"
     COMPANY ||--o{ PARTY : "موجود (legacy): TenantId=Company.Id؛ مالکیت هدف Unknown"
@@ -193,9 +193,11 @@ erDiagram
     PRODUCT ||--o{ PRODUCT_IDENTIFIER : "موجود"
     COMPANY ||..o{ IMPORT_CASE : "طراحی‌شده (S3)، NotImplemented"
     IMPORT_CASE ||..o{ PROFORMA : "طراحی‌شده"
-    PROFORMA ||..o| ORDER_REGISTRATION : "یک‌به‌یک (D-104)؛ حداقل سمت Proforma تعیین‌نشده"
+    PROFORMA ||..|| ORDER_REGISTRATION : "کاردینالیتی یک‌به‌یک (D-104)"
 ```
 
+- **CorporateGroup:** تعلق گروه به یک Tenant بازتاب مفهومی D-103 بند ۴ است (گروه از مرز CustomerAccount عبور نمی‌کند)؛ FK، ستون یا Entity پیشنهاد قطعی نیست و کد فعلی چنین ستونی ندارد. عضویت در گروه به‌تنهایی هیچ مجوز دسترسی به Company ایجاد نمی‌کند؛ مجوز هر Company از `CompanyAccessService.HasPermissionAsync` سنجیده می‌شود (AGENTS §5.3).
+- **Proforma/OrderRegistration:** نمودار فقط کاردینالیتی مصوب D-104 را نشان می‌دهد. اینکه Proforma می‌تواند پیش از ایجاد OrderRegistration موقتاً وجود داشته باشد، **باز است** و تغییر تصمیم مالک یا یک‌به‌چند‌شدن رابطه نیست؛ این یک پرسش وضعیت چرخهٔ حیات است. P-4، P-5، ثبت مجدد، Revision و ForexCommitment باز هستند. هیچ قید یکتا یا Schema تعریف نمی‌شود.
 - `CUSTOMER_ACCOUNT` در Core کلاسی ندارد؛ در Vendor با `VendorCustomer` مرتبط است و در این نمودار فقط مفهومی است.
 - `CompanyId` مستقل در جدول‌های Trade امروز وجود ندارد؛ رابطه‌های `COMPANY ||--o{ PARTY` از طریق ستون `TenantId` (= `Company.Id`) برقرارند، نه ستون `CompanyId`.
 - ارتباط Vendor/CustomerAccount/Installation با Tenant دست‌نخورده و در محدودهٔ GLM است؛ در اینجا فقط «تصمیم‌شده» ثبت شد.
