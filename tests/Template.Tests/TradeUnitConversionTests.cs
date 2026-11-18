@@ -115,6 +115,19 @@ public sealed class TradeUnitConversionTests
 
     // --- rounding ----------------------------------------------------------------------------------------------
 
+    [Fact]
+    public void Conversion_MultipliesFullPrecisionBeforeApplyingTheSingleFinalRounding()
+    {
+        // 0.123456 x 0.123456 = 0.015241383936; only the final result is rounded to six decimals.
+        var snapshot = Convert(
+            Conversion("PCS", "KG", 0.123456m, new TradeRoundingPolicy(6, TradeRoundingMode.HalfUp)),
+            0.123456m);
+
+        Assert.Equal(0.015241m, snapshot.BaseQuantity);
+        Assert.Equal(6, snapshot.RoundingDecimals);
+    }
+
+
     [Theory]
     [InlineData(TradeRoundingMode.HalfUp, "1.3")]
     [InlineData(TradeRoundingMode.HalfEven, "1.2")]
