@@ -3139,3 +3139,10 @@
 - **موانع باقی‌مانده:** #228/#392 منتظر Gate دوکلیدی، تأیید Migration/عملیات مشتری، Bootstrap Dedicated/Offline و Restore/Clone؛ #235 منتظر trust distribution/rotation و readiness/audit/دو میزبان؛ #236/#214 منتظر provider/credential/ceremony واقعی؛ #393 منتظر تصمیم Payment Evidence/approver/state؛ #107 منتظر مقصد مستقل و credential/retention/recovery.
 - **ریسک تازهٔ ثبت‌شده:** `VendorCustomer.CustomerNumber` پس از Provisioning قابل تغییر است، درحالی‌که `CustomerReference` از آن مشتق می‌شود. به‌دلیل نبود تصمیم صریح برای اصلاح/تغییر شناسه، این اجرا فقط ریسک را ثبت کرد و کد را تغییر نداد.
 - **محدوده:** فقط مستندات Vendor/Licensing/Work Log؛ بدون کد اجرایی، Migration، Customer DB، `Server/**`، signer، secret یا Gate change. Build/Test محلی و `git diff --check` اجرا نشدند؛ این محیط checkout محلی ندارد.
+
+
+## 2026-11-18 — هم‌راستاسازی مبنای PR #703 پس از Merge هم‌زمان PR #702
+
+- پس از ایجاد شاخهٔ مستنداتی Vendor از `main@a7693cf476a8ce4dd0095666c9871b69ce3d00e4`، PR مستقل Trade #702 ادغام شد و `main` به `163e0be3a430439b69c13e0c17e8b99e98617fb9` رسید. PR #702 فقط `TradeDocumentNumber.cs`، تست Trade و handoff مربوط را تغییر داده و فایل‌های Vendor/مستندات مشترک این PR را لمس نکرد.
+- PR #703 روی همان مبنای قبلی ساخته شده، اکنون نسبت به main یک commit عقب و هفت commit جلو است؛ GitHub آن را `mergeable=true` گزارش می‌کند. این تغییر هم‌زمان در Project Status و LICENSING ثبت شد؛ قبل از Merge باید CI جدید روی head نهایی PR #703 کامل و سبز شود.
+- PRهای باز فعلی پس از Merge #702: فقط #703 (این PR مستنداتی). تغییرات Trade وارد محدودهٔ Vendor نشدند.
