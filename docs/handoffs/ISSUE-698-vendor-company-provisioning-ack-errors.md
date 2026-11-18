@@ -11,8 +11,8 @@
 - [x] تست SQL Server برای پذیرش ACK امضاشده، Failed/FailureCode، metadata/Audit، retry دقیق و conflict اضافه شود.
 - [x] کد ناشناخته و diagnostic/PII بدون mutation رد شوند.
 - [x] مستندات امنیت، تست، وضعیت، فهرست و Work Log به‌روز شوند.
-- [ ] اجرای تست‌های واحد و SQL Server در CI روی HEAD نهایی.
-- [ ] تأیید post-merge CI روی main.
+- [x] اجرای تست‌های واحد و SQL Server در CI روی HEAD نهایی. (تأیید 2026-11-18 — شواهد در افزودهٔ پایین)
+- [x] تأیید post-merge CI روی main. (تأیید 2026-11-18 — شواهد در افزودهٔ پایین)
 
 ## خلاصه تغییرات
 - چهار کد provisioning_license_not_installed، provisioning_not_entitled_for_company، provisioning_company_reference_conflict و provisioning_company_capacity_exceeded به دو کد قدیمی allow-list افزوده شدند.
@@ -65,3 +65,10 @@
 - **Base:** main@0797bcad754795e071342102c9192b88050f6663
 - **HEAD پیش از اصلاح CI:** 5eae14ad8eb3bfb32a92dbf14ffaebec522e8024؛ SHA اصلاح‌شده را از PR #699 و commit بعدی بخوانید.
 - **Pull Request:** [#699](https://github.com/hamidreza1394/Accounting/pull/699)؛ CI روی HEAD نهایی pending است.
+
+## افزودهٔ 2026-11-18 — تأیید نهایی CI، ادغام و بستن معیارهای پذیرش
+
+- PR #699 در `2026-11-17T09:51:12Z` با merge commit `755150929b211ac3b952a3c3a7f0856624b11f0d` در main ادغام شد؛ Issue #698 بسته شد.
+- CI روی HEAD نهایی PR (شواهد ثبت‌شده در `PROJECT_STATUS.md`): Vendor CI ۳/۳ Job، Semgrep ۱/۱ Job و .NET CI ۷/۷ Job موفق (شامل Build/Test، E2E و Publish ویندوز/لینوکس) — دو معیار نخستِ باقی‌مانده با این شواهد بررسی شد.
+- **تأیید جدید post-merge (API بازبینی 2026-11-18):** روی merge commit `75515092` در main، هر ۱۵ Check Run موفق بودند (e2e، publish، publish-windows، publish-scripts، build-and-test، CodeQL ×۴، build-test-package، client، checkpoint regression ویندوز و غیره). محدودیت connector در snapshot قبلی اکنون با این بازبینی برطرف شد؛ این نتیجه نه موفقیت بیش از شواهد ذکرشده و نه اثبات Production readiness است.
+- سابقهٔ قبلی این handoff (شامل خطوط «Not Verified» و وضعیت PR باز در زمان نگارش) عمداً دست‌نخورده ماند و فقط این افزوده اضافه شد.

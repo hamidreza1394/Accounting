@@ -1,3 +1,14 @@
+## تعیین تکلیف S1-a از سمت Vendor — 2026-11-18
+
+**مبنای بررسی:** `main@ab4ddef16f965b98c21720c5784a1fe068538878` (ادغام PR #707 در `2026-11-18T13:10:04Z`). این بخش، وضعیتMergeهای بعد از snapshot قبلی و خطوط «CI هنوز اجرا نشده»/«تأیید نشد» بخش‌های تاریخی زیر را بر اساس شواهد API بازبینی 2026-11-18 supersede می‌کند؛ سابقه حفظ شده است.
+
+- **Mergeهای تأییدشده:** PR #707 (D-103 V1 — `VendorTenantView` مشتق‌شده فقط-خواندنی) با merge commit `ab4ddef1` ادغام شد؛ CI روی HEAD نهایی PR آن **۱۸/۱۸ Check Run موفق** بود (شامل Vendor CI، e2e، publish-windows، Semgrep و secret-scan). PR #703 نیز با `89c00641` ادغام شده است؛ هیچ PR باز کد-محور Vendor وجود ندارد.
+- **تأیید جدید CI post-merge:** روی merge commit `75515092` (PR #699) در main، **۱۵/۱۵ Check Run موفق** — این، محدودیت تأییدنشدهٔ قبلی را رفع می‌کند.
+- **S1-a (زنجیرهٔ فعال‌سازی شرکت‌محور) از سمت Vendor: کامل** — (۱) allow-list ACK شرکت‌محور با #699 کامل و CI-verified؛ (۲) اعتبارسنجی ACK امضاشده با رفتار idempotent retry/conflict/fail-closed و تست‌های واحد+SQL Server؛ (۳) مرز `CompanyReference` فقط از payload امضاشده و بدون ستون/جدول در Vendor.Persistence؛ (۴) Gate دوکلیدی صدور v5 بسته و سالم (`CustomerConsumerReady=false` + تنظیم پیش‌فرض خاموش)؛ (۵) تست دو میزبان v4 در main و CI سبز؛ تست دو میزبان v5 پس از بازشدن Gate.
+- **باقی‌ماندهٔ S1-a = تصمیم/زیرساخت مالک، نه کد Vendor:** بازکردن Gate دوکلیدی، اجرای Migration `20261116070805_AddCompanySetupRecords` روی دیتابیس واقعی مشتری، سیاست Restore/Clone (OD-06/#364)، Staging دو پردازه/دو ماشین و signer عملیاتی (#236)، bootstrap مدیر Dedicated/Offline (#389) و trust distribution/rotation (#235).
+- **پیش‌نیازهای S1-e** (انقضای Cloud و recovery؛ D-098): Issues باز #396 (دروازهٔ license-first)، #384 (اتصال runtime enforcement)، #228/#235؛ و تثبیت قرارداد مشترک بین‌بخشی Vendor/Customer. جزئیات کامل در handoff `ISSUE-UNNUMBERED-vendor-s1-a-status-determination.md` (لینک در `INDEX.md`).
+- این بازبینی فقط مستنداتی است: بدون کد، Migration، تغییر تنظیم یا تغییر Gate؛ هیچ موردی از S1-b تا S1-g شروع نشد.
+
 ## وضعیت جاری ماژول Vendor — 2026-11-18
 
 **مبنای بررسی:** `main@163e0be3a430439b69c13e0c17e8b99e98617fb9`؛ این snapshot، وضعیت قبلی Issue #698 را پس از Mergeهای #699، #700 و #701 به‌روز می‌کند.
