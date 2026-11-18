@@ -3126,3 +3126,16 @@
 - **محدوده:** فقط مستندات؛ بدون Entity، API، Runtime، Schema، Migration، Backfill، تنظیم نصب یا تغییر داده.
 - **اعتبارسنجی:** بررسی محتوای فایل‌ها و diff متنی انجام شد؛ Build/Test اجرا نشد (تغییر مستنداتی است). CI و بازبینی PR باید انجام شود.
 - **وضعیت:** PR مستنداتی برای Issue #397؛ Merge نشده است.
+
+
+## 2026-11-18 — بازبینی پس از Merge #699/#700/#701 و هم‌راستاسازی وضعیت Vendor
+
+- **مبنای Git:** شاخه `main` روی `a7693cf476a8ce4dd0095666c9871b69ce3d00e4` (Merge #701)؛ PR باز فعلی فقط #702 است و به Trade مربوط می‌شود. Issues باز مرتبط با Vendor: #228، #235، #236، #214، #393، #107 و #392.
+- **PR #699 / Issue #698:** merge commit `755150929b211ac3b952a3c3a7f0856624b11f0d`. چهار کد رد ثابت شرکت‌محور به allow-list محدود Vendor افزوده شد. CI روی HEAD نهایی PR: Vendor CI run [44042742801](https://github.com/hamidreza1394/Accounting/actions/runs/44042742801) سه Job موفق؛ Semgrep run [44042742931](https://github.com/hamidreza1394/Accounting/actions/runs/44042742931) یک Job موفق؛ .NET CI run [44042743089](https://github.com/hamidreza1394/Accounting/actions/runs/44042743089) هفت Job موفق، شامل Build/Test، E2E و Publishهای Windows/Linux.
+- **علت شکست اولیه:** CS0136 در تست SQL Server به‌علت تعریف دوبارهٔ `repeatedBody` و `repeated` در scope تودرتو؛ اصلاح فقط نام‌ها را به `rejectedRepeatedBody` و `rejectedRepeated` تغییر داد و منطق production را دست نزد.
+- **PRهای مرجع:** #281، #282 و #284 واقعاً Merge شده‌اند؛ Jobهای runهای مستندشده برای هر سه PR دوباره خوانده شدند و همگی موفق بودند. #700 (D-103) و #701 (ممیزی S3-0e) نیز Merge شده‌اند.
+- **محدودیت CI پس از Merge:** فهرست Workflow Runs برای pushهای main از GitHub connector این اجرا قابل دریافت نبود؛ `fetch_commit_workflow_runs` فقط PR-triggered است و برای merge SHAها خروجی خالی داد؛ Combined Status نیز خالی بود. بنابراین post-merge CI روی main را موفق اعلام نمی‌کنیم و باید از Actions UI/API دارای دسترسی Workflow Runs تأیید شود.
+- **هم‌راستایی مستندات:** snapshot جاری PROJECT_STATUS، LICENSING و LICENSING_WORKFLOWS وضعیت #699 را از «باز/در انتظار» به «Merged؛ PR CI سبز» تغییر می‌دهد؛ Gate v5 همچنان بسته است.
+- **موانع باقی‌مانده:** #228/#392 منتظر Gate دوکلیدی، تأیید Migration/عملیات مشتری، Bootstrap Dedicated/Offline و Restore/Clone؛ #235 منتظر trust distribution/rotation و readiness/audit/دو میزبان؛ #236/#214 منتظر provider/credential/ceremony واقعی؛ #393 منتظر تصمیم Payment Evidence/approver/state؛ #107 منتظر مقصد مستقل و credential/retention/recovery.
+- **ریسک تازهٔ ثبت‌شده:** `VendorCustomer.CustomerNumber` پس از Provisioning قابل تغییر است، درحالی‌که `CustomerReference` از آن مشتق می‌شود. به‌دلیل نبود تصمیم صریح برای اصلاح/تغییر شناسه، این اجرا فقط ریسک را ثبت کرد و کد را تغییر نداد.
+- **محدوده:** فقط مستندات Vendor/Licensing/Work Log؛ بدون کد اجرایی، Migration، Customer DB، `Server/**`، signer، secret یا Gate change. Build/Test محلی و `git diff --check` اجرا نشدند؛ این محیط checkout محلی ندارد.
