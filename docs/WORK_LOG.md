@@ -3188,6 +3188,17 @@
 - **وضعیت:** Ready for Review (منوط به تأیید مالک برای Push و ایجاد PR).
 
 
+## 2026-11-18 — تعیین تکلیف S1-a از سمت Vendor و هماهنگی مستندات با Mergeهای واقعی (UNNUMBERED)
+
+- **مبنا:** `main@ab4ddef16f965b98c21720c5784a1fe068538878` (ادغام PR #707 — D-103 V1، در `2026-11-18T13:10:04Z`). شاخهٔ `agent/s1-a-vendor-status-determination` از همین مبنا؛ تغییر فقط مستندات.
+- **بررسی واقعی از کد/PR/CI:** `AGENTS.md`، `INDEX`، `PROJECT_STATUS`، `DECISIONS`، شش سند `LICENSING*`، `AGENT_COORDINATION` و handoffهای #228/#235/#392/#393/#696/#698 خوانده شد؛ وضعیت PR #707 (merged) و PR #699 (merged با `75515092`) از API تأیید شد.
+- **نتیجهٔ S1-a — کامل از سمت Vendor (هفت بند):** (۱) allow-list شش کد در `ProvisioningAcknowledgementStateRules.cs` (~۴۱..۴۶) با #699؛ (۲) ACK امضاشده با idempotent retry/conflict/fail-closed و تست واحد+SQL Server؛ (۳) مرز `CompanyReference` فقط از payload امضاشده — هیچ ستون/جدولی در Vendor.Persistence نیست؛ (۴) Gate دوکلیدی صدور v5 بسته و سالم (`CustomerConsumerReady=false` + تنظیم پیش‌فرض خاموش) با تست ماتریس؛ (۵) تست‌های Integration ACK/Provisioning موجود و CI-verified؛ (۶) وابستگی‌های #684/#686/#687 در main (Migration `20261116070805` فقط در مخزن، روی دیتابیس واقعی اجرا نشده)؛ (۷) تست دو میزبان v4 در main (PR #329، schemaVersion=4) و تست دو میزبان v5 پس از بازشدن Gate.
+- **شواهد CI جدید:** PR #707 روی HEAD نهایی ۱۸/۱۸ Check Run موفق (شامل e2e و publish-windows)؛ post-merge main روی `75515092` (#699) ۱۵/۱۵ موفق؛ روی `ab4ddef1` هنگام بازبینی ۱۳/۱۵ موفق و e2e/publish-windows در حال اجرا — محدودیت «تأییدنشده» snapshotهای قبلی برطرف شد.
+- **تغییرات مستنداتی:** handoff جدید `ISSUE-UNNUMBERED-vendor-s1-a-status-determination.md` (یافته‌ها، Blockerهای مالک، پیش‌نیازهای S1-e)؛ `PROJECT_STATUS.md` بخش جدید بالای سند (فقط خطوط CI تاریخی supersede شدند)؛ handoff `ISSUE-698` افزودهٔ تأیید CI و تیک دو معیار پذیرش باقی‌مانده؛ `LICENSING.md` یک جملهٔ به‌روزرسانی CI post-merge در header؛ `INDEX.md` لینک handoff جدید؛ همین ورود.
+- **بدون کدنویسی جدید:** Gate/تنظیم/قرارداد/allow-list/کلیدها تغییر نکردند؛ Blockerها فقط ثبت شدند (بازکردن Gate v5، اجرای Migration واقعی مشتری، سیاست Restore/Clone — OD-06/#364، Staging دو پردازه/دو ماشین و signer عملیاتی #236، bootstrap مدیر Dedicated/Offline #389، trust distribution/rotation #235) و هیچ مجوزی فرض نشد. هیچ موردی از S1-b تا S1-g شروع نشد.
+- **پیش‌نیازهای S1-e** (انقضای Cloud و recovery؛ D-098): Issues باز #396 (دروازهٔ license-first)، #384 (اتصال runtime enforcement)، #228/#235 و تثبیت قرارداد مشترک بین‌بخشی Vendor/Customer؛ سهم Vendor در مأموریت بعدی صراحتاً محدوده‌بندی شود.
+- **بررسی:** `git diff --check` پاک؛ Build/Test محلی اجرا نشده (تغییر اجرایی وجود ندارد؛ طبق `AGENTS.md` صادقانه ثبت می‌شود)؛ CI روی PR پس از باز شدن گزارش واقعی می‌شود.
+
 ## 2026-11-18 — تثبیت سیاست‌های طرح پرداخت پیش‌فاکتور با تأیید مالک (#710)
 
 - Issue اختصاصی #710 ایجاد و PR #705 به آن متصل شد؛ Issue چتر #397 باز می‌ماند.
