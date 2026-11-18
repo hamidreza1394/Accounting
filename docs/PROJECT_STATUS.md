@@ -3,7 +3,7 @@
 **مبنای بررسی:** `main@163e0be3a430439b69c13e0c17e8b99e98617fb9`؛ این snapshot، وضعیت قبلی Issue #698 را پس از Mergeهای #699، #700 و #701 به‌روز می‌کند.
 
 ### GitHub و CI
-- **main:** `163e0be3a430439b69c13e0c17e8b99e98617fb9` (Merge PR #701). PR #700 با SHA `5be1ff7a8f1a3e793062ea1158038640041ea7b9` و PR #701 با SHA بالا ادغام شده‌اند.
+- **main:** `163e0be3a430439b69c13e0c17e8b99e98617fb9` (Merge PR #702؛ پس از #701). PR #700 با SHA `5be1ff7a8f1a3e793062ea1158038640041ea7b9` و PR #701 با SHA بالا ادغام شده‌اند.
 - **PRهای جاری:** PR #702 در 2026-11-18 با merge commit `163e0be3a430439b69c13e0c17e8b99e98617fb9` ادغام شد و فقط Trade را تغییر داد. PR #703 همین بازبینی مستنداتی Vendor باز است؛ PR باز کد-محور Vendor وجود ندارد.
 - **PR #699 / Issue #698:** با merge commit `755150929b211ac3b952a3c3a7f0856624b11f0d` ادغام شد. چهار کد رد ثابت شرکت‌محور Customer v5 به allow-list محدود ACK در Vendor افزوده شده‌اند.
 - **CI روی HEAD نهایی PR #699:** Vendor CI [44042742801](https://github.com/hamidreza1394/Accounting/actions/runs/44042742801) با ۳/۳ Job موفق؛ Semgrep [44042742931](https://github.com/hamidreza1394/Accounting/actions/runs/44042742931) با ۱/۱ Job موفق؛ .NET CI [44042743089](https://github.com/hamidreza1394/Accounting/actions/runs/44042743089) با ۷/۷ Job موفق، شامل Build/Test، E2E و Publish ویندوز/لینوکس.
