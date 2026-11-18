@@ -149,6 +149,7 @@ public sealed class TradeDocumentNumber : IEquatable<TradeDocumentNumber>
             case UnicodeCategory.Surrogate:
             case UnicodeCategory.OtherNotAssigned:
             case UnicodeCategory.NonSpacingMark:
+            case UnicodeCategory.SpacingCombiningMark:
             case UnicodeCategory.EnclosingMark:
                 return true;
         }

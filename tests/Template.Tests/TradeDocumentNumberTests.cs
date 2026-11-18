@@ -140,6 +140,8 @@ public sealed class TradeDocumentNumberTests
     [InlineData("A\uFE0FB")]
     [InlineData("A\u17B4B")]
     [InlineData("A\uFE70B")]
+    [InlineData("A\u093E")]
+    [InlineData("A\u093EB")]
     public void InvalidCharacter_RejectsControlFormatAndInvisibleCharacters(string raw)
     {
         Invalid(raw, TradeDocumentNumberError.InvalidCharacter);
