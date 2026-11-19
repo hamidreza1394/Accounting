@@ -65,6 +65,21 @@ public sealed class WindowsCngCertificatePolicyTests
     }
 
     [Fact]
+    public void CertificateWithoutDigitalSignatureUsageIsRejected()
+    {
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var request = new CertificateRequest("CN=Faranou Vendor Encryption Only", key, HashAlgorithmName.SHA256);
+        request.CertificateExtensions.Add(
+            new X509KeyUsageExtension(X509KeyUsageFlags.KeyEncipherment, critical: true));
+        using var certificate = request.CreateSelfSigned(
+            DateTime.UtcNow.AddMinutes(-5), DateTime.UtcNow.AddHours(1));
+
+        Assert.Equal(
+            "certificate_key_usage_invalid",
+            WindowsCngCertificatePolicy.ValidateStructural(certificate, DateTimeOffset.UtcNow));
+    }
+
+    [Fact]
     public void PrivateKeysWithoutCngNonExportableAssuranceAreRejected()
     {
         using var certificate = CreateCertificate(
