@@ -9,7 +9,7 @@
 - [x] Provider نسخهٔ اول با Windows Certificate Store و CNG؛ فقط عملیات Sign؛ هیچ export/سریال‌سازی کلید خصوصی.
 - [x] `AssuranceLevel=SoftwareProtected` صریح در پیکربندی، startup log، health و Audit؛ هیچ ادعای Hardware.
 - [x] کلیدهای License و Provisioning جدا (Thumbprint و KeyId مجزا؛ اعتبارسنجی یکتایی)؛ KeyId نسخه‌دار.
-- [x] کلید غیرقابل‌Export (CNG export policy بدون AllowPlaintextExport/AllowArchiving) به‌صورت fail-closed اعتبارسنجی می‌شود.
+- [x] کلید فقط در Microsoft Software KSP، با CNG ExportPolicy دقیقاً None و MachineKey در Production به‌صورت fail-closed اعتبارسنجی می‌شود؛ گواهی باید KeyUsage=DigitalSignature داشته باشد.
 - [x] گواهی ECDSA P-256 معتبر الزامی؛ RSA/P-384/گواهی منقضی/آینده رد می‌شوند.
 - [x] هیچ fallback به کلید آزمایشی؛ نبود/خرابی گواهی یا Store → `signing_provider_unavailable`؛ ثبت در Audit و صدور 503 در مسیر صدور.
 - [x] Audit هر عملیات امضا (metadata-only)؛ شکست Audit → دورریختن امضا (پابرجای الگوی PKCS#11).
@@ -19,7 +19,7 @@
 - [ ] اجرای تست‌های واقعی با کلید MachineKey روی Windows Server هدف — نیازمند میزبان ویندوز/Key Ceremony (بخش باقی‌مانده).
 
 ## خلاصه تغییرات
-- Provider امضای SoftwareProtected طبق D-107 اضافه شد: انتخاب گواهی با Thumbprint از Store مشخص، اعتبارسنجی ساختاری (ECDSA P-256، بازهٔ اعتبار)، الزام CNG non-exportable برای کلید خصوصی و امضای دقیق بایت‌های canonical با SHA-256/P1363 و خروجی ۶۴ بایتی.
+- Provider امضای SoftwareProtected طبق D-107 اضافه شد: انتخاب گواهی با Thumbprint از Store مشخص، اعتبارسنجی ساختاری (ECDSA P-256، بازهٔ اعتبار، KeyUsage=DigitalSignature)، الزام Microsoft Software KSP، CNG ExportPolicy=None و MachineKey در Production و امضای دقیق بایت‌های canonical با SHA-256/P1363 و خروجی ۶۴ بایتی.
 - دو Provider هدف‌مند `ILicenseSigningProvider` و `IProvisioningSigningProvider` با Audit مشترک metadata-only (`VendorSigningAuditExecution`)؛ رفتار شکست Audit عین الگوی PKCS#11 است.
 - Startup service اعتبارسنجی پیکربندی (fail-fast، شامل رد میزبان غیرویندوزی و رد `CurrentUser` در Production) و Audit Production را انجام می‌دهد.
 - Health check برای گواهی‌های هر دو هدف.
