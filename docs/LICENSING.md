@@ -190,7 +190,7 @@
 
 ## تصمیم‌های مالک محصول در 2026-11-19 — امضای Vendor و پرداخت مستقل (D-107/D-108)
 
-- D-107 Accepted: برای امضای مرکزی License/Provisioning Vendor در نسخه اول، Windows CNG/Certificate Store با کلید MachineKey غیرقابل‌استخراج و سطح صریح SoftwareProtected در Production مجاز است؛ TPM/HSM/KMS اجباری نیست. ریسک مدیر محلی/میزبان صریح است؛ Maker-Checker، MFA، Audit، rotation و fail-closed حفظ می‌شوند. این تصمیم D-047 بند ۷ و بخش Production از D-046 OD-07/D-056 را فقط برای امضای مرکزی Vendor supersede می‌کند.
+- D-107 Accepted: برای امضای مرکزی License/Provisioning Vendor در نسخه اول، Windows CNG/Certificate Store با Microsoft Software KSP، KeyUsage=DigitalSignature، CNG ExportPolicy=None، MachineKey در Production و سطح صریح SoftwareProtected در Production مجاز است؛ TPM/HSM/KMS اجباری نیست. ریسک مدیر محلی/میزبان صریح است؛ Maker-Checker، MFA، Audit، rotation و fail-closed حفظ می‌شوند. این تصمیم D-047 بند ۷ و بخش Production از D-046 OD-07/D-056 را فقط برای امضای مرکزی Vendor supersede می‌کند.
 - D-108 Accepted: صدور/فعال‌سازی از پرداخت مستقل است. Payment و Issuance دو چرخه مستقل Maker-Checker/Audit هستند. Vendor سفارش‌های Unpaid/Partial/Overdue را با محاسبه زمان خواندن در داشبورد/گزارش نشان می‌دهد؛ بدون درگاه، Ledger، scheduler یا Broker.
 - محدودیت مستقل Customer: D-057 برای anti-rollback snapshot ابطال آفلاین Customer همچنان TPM 2.0 می‌خواهد؛ D-107 آن را تغییر نمی‌دهد. اثر این الزام بر مشتری فاقد TPM در OD-27 باز است.
 - وضعیت: فقط تصمیم و مستندات؛ هیچ Provider، کلید، Entity، Migration، endpoint یا enforcement با این ADRها به‌تنهایی فعال نشده است.
