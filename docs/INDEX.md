@@ -14,8 +14,8 @@
 | سند | کاربرد |
 |---|---|
 | [DECISIONS.md](DECISIONS.md) | فهرست ADRها؛ D-105 مالکیت پیش‌فرض داده‌های مشتری و اشتراک کنترل‌شده در سطح Tenant را مشخص می‌کند؛ D-106 (`Proposed`، `NotImplemented`، Issue #715) نیازمندی‌ها و طراحی پیشنهادی Excel Import مرحله‌ای را ثبت می‌کند |
-| [EXCEL_IMPORT_DESIGN.md](EXCEL_IMPORT_DESIGN.md) | طراحی پیشنهادی (`Proposed`؛ `NotImplemented`) Excel Import مرحله‌ای: موتور خنثی Mapping/اعتبارسنجی، Canonical Schema، Preview، سیاست ثبت و امنیت فایل، تعارض‌ها با اسناد موجود و EXC-1..EXC-17 (D-106، Issue #715) |
-| [EXCEL_IMPORT_LIBRARY_COMPARISON.md](EXCEL_IMPORT_LIBRARY_COMPARISON.md) | مقایسهٔ کتابخانه‌های خواندن Excel با برچسب شواهد و نتیجهٔ Spike (`Proposed`؛ انتخاب = `NeedsApproval`؛ هیچ Package افزوده نشده؛ 2026-11-19) |
+| [EXCEL_IMPORT_DESIGN.md](EXCEL_IMPORT_DESIGN.md) | طراحی پیشنهادی (`Proposed`؛ `NotImplemented`) Excel Import مرحله‌ای متعلق به Trade: موتور Mapping/اعتبارسنجی در `Trade.Application` و Parser در `Trade.Infrastructure`، Canonical Schema، Preview، سیاست ثبت، امنیت فایل و سقف‌های پیشنهادی، تعارض‌ها با اسناد موجود و EXC-1..EXC-17 (D-106، Issue #715) |
+| [EXCEL_IMPORT_LIBRARY_COMPARISON.md](EXCEL_IMPORT_LIBRARY_COMPARISON.md) | مقایسهٔ کتابخانه‌های خواندن Excel با برچسب شواهد، ارزیابی ClosedXML 0.105.1 (گزینهٔ اول فعلی مالک، مشروط به Spike) و شواهد Spike 2 (`Proposed`؛ انتخاب = `NeedsApproval`؛ هیچ Package افزوده نشده؛ 2026-11-19) |
 | [TRADE_MODULE.md](TRADE_MODULE.md) | معماری، امنیت چندشرکتی، استفاده مشترک از دوره‌های مالی، فرم‌ها، گزارش‌ها و مسیر استخراج ماژول بازرگانی (D-061/D-062) |
 | [TRADE_S3_ARCHITECTURE.md](TRADE_S3_ARCHITECTURE.md) | مبنای پذیرفته‌شده S3 در D-086 و قرارداد Tenant/Company و استقرار مشترک/اختصاصی در D-087 |
 | [DATABASE.md](DATABASE.md) و [database-migrations.md](database-migrations.md) | مدل منطقی و Schema فعلی/هدف، قواعد مالکیت پیش‌فرض Company-owned و اشتراک کنترل‌شده در D-105، قواعد Migration و انحراف پیاده‌سازی D-087 |
