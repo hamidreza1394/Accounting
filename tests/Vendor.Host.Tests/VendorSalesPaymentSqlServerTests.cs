@@ -27,7 +27,6 @@ namespace Faranou.Vendor.Host.Tests;
 public sealed class VendorSalesPaymentSqlServerTests
 {
     private const string MakerPassword = "Strong-Vendor#2026-Maker";
-    private const string CheckerPassword = "Strong-Vendor#2026-Checker";
 
     [Fact]
     public async Task PaymentCycle_DerivesUnpaidPartialPaidOverdue_AndKeepsCyclesIndependent()
@@ -80,18 +79,13 @@ public sealed class VendorSalesPaymentSqlServerTests
                 await CreateAdminAsync(users, roles, "maker-", MakerPassword,
                 [
                     VendorPermissionCatalog.PaymentsRead,
-                    VendorPermissionCatalog.PaymentsManage
-                ]);
-                await CreateAdminAsync(users, roles, "checker-", CheckerPassword,
-                [
-                    VendorPermissionCatalog.PaymentsRead,
+                    VendorPermissionCatalog.PaymentsManage,
                     VendorPermissionCatalog.PaymentsVerify,
                     VendorPermissionCatalog.ApprovalsReview
                 ]);
             }
 
             var maker = new VendorTestAdmin(factory, "maker-", MakerPassword);
-            var checker = new VendorTestAdmin(factory, "checker-", CheckerPassword);
 
             // Maker creates two orders: one collectible, one fully paid.
             var paidOrderId = await maker.CreateOrderAsync(customerId, totalAmount: 500m, dueInDays: null, cancellationToken);
@@ -107,18 +101,27 @@ public sealed class VendorSalesPaymentSqlServerTests
             Assert.Equal("Unpaid", beforeVerification.GetProperty("paymentStatus").GetString());
             Assert.Equal(1200m, beforeVerification.GetProperty("remainingAmount").GetDecimal());
 
-            // Maker requests verification; checker decides (two-person rule).
+            // The same authorized operator requests and decides verification per D-109.
             var verifyApprovalId = await maker.RequestPaymentDecisionAsync(
                 collectiblePaymentId, "verify", cancellationToken);
-            await checker.DecideAsync(verifyApprovalId, "Approved", cancellationToken);
+            await maker.DecideAsync(verifyApprovalId, "Approved", cancellationToken);
             var rejectApprovalId = await maker.RequestPaymentDecisionAsync(paidPaymentId, "verify", cancellationToken);
-            await checker.DecideAsync(rejectApprovalId, "Approved", cancellationToken);
+            await maker.DecideAsync(rejectApprovalId, "Approved", cancellationToken);
 
-            // Self-approval is forbidden: the maker cannot review their own request.
+            // Self-approval is explicitly allowed for the single-operator Vendor v1 policy (D-109).
             var secondPaymentId = await maker.RecordPaymentAsync(collectibleOrderId, 100m, cancellationToken);
             var selfApprovalId = await maker.RequestPaymentDecisionAsync(secondPaymentId, "verify", cancellationToken);
-            var decisionBody = await maker.RawDecisionAsync(selfApprovalId, "Approved", cancellationToken);
-            Assert.Equal(HttpStatusCode.Forbidden, decisionBody);
+            await maker.DecideAsync(selfApprovalId, "Approved", cancellationToken);
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var verifiedByMaker = await db.PaymentRecords.AsNoTracking()
+                    .SingleAsync(item => item.Id == secondPaymentId, cancellationToken);
+                Assert.Equal(VendorPaymentRecord.StatusVerified, verifiedByMaker.Status);
+                Assert.Equal(verifiedByMaker.VerifiedByUserId,
+                    (await db.ApprovalRequests.AsNoTracking()
+                        .SingleAsync(item => item.Id == selfApprovalId, cancellationToken)).ReviewedByUserId);
+            }
 
             var collectible = await maker.GetOrderAsync(collectibleOrderId, cancellationToken);
             Assert.Equal("PartiallyPaid", collectible.GetProperty("paymentStatus").GetString());
