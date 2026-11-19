@@ -52,7 +52,7 @@ npm --version
 sqlcmd -?
 ```
 
-برای اجرای برنامه پس از Build، Node.js و npm لازم نیستند. اگر `sqlcmd` نبود، از SSMS یا ماژول `SqlServer` استفاده کنید (`Install-Module SqlServer -Scope CurrentUser`). برای ابزار Migration مربوط به Vendor نیز EF CLI نسخهٔ 10.0.14 را نصب کنید:
+برای اجرای برنامه پس از Build، Node.js و npm لازم نیستند. برای استخراج Envelope با `Invoke-Sqlcmd`، وجود ماژول PowerShell `SqlServer` مستقل از نصب `sqlcmd` لازم است؛ اگر ماژول نصب نیست، آن را نصب کنید. برای ابزار Migration مربوط به Vendor نیز EF CLI نسخهٔ 10.0.13 را نصب کنید:
 
 ```powershell
 dotnet tool install --global dotnet-ef --version 10.0.13
@@ -142,8 +142,9 @@ dotnet Vendor\Vendor.Host\bin\Debug\net10.0\Faranou.Vendor.Host.dll --signing-ce
 خروجی JSON را نگه دارید؛ `publicKeySubjectPublicKeyInfoBase64` هر کلید باید در Trust Store همان هدف ثبت شود:
 
 ```powershell
-$env:FARANO_VENDOR_Licensing__TrustedSigningKeys__vendor-license-v1__PublicKeySubjectPublicKeyInfoBase64 = "<SPKI-License>"
-$env:FARANO_VENDOR_ProvisioningSigningTrust__Keys__vendor-provisioning-v1__PublicKeySubjectPublicKeyInfoBase64 = "<SPKI-Provisioning>"
+${env:FARANO_VENDOR_Licensing__TrustedSigningKeys__vendor-license-v1__PublicKeySubjectPublicKeyInfoBase64} = "<SPKI-License>"
+${env:FARANO_VENDOR_ProvisioningSigningTrust__Keys__0__KeyId} = "vendor-provisioning-v1"
+${env:FARANO_VENDOR_ProvisioningSigningTrust__Keys__0__PublicKeySubjectPublicKeyInfoBase64} = "<SPKI-Provisioning>"
 
 # اجرای Vendor را پس از Migration و Bootstrap انجام دهید
 ```
@@ -264,14 +265,14 @@ Invoke-RestMethod http://localhost:5000/api/v1/licensing/status | ConvertTo-Json
 
 ## ۷) سناریوهای انقضا، تمدید، آفلاین و Restricted
 
-سناریوهای زیر فقط وقتی قابل اجرا هستند که یک Envelope معتبر از قبل صادر و با مسیر احرازشده Import شده باشد؛ با نصب تازه، تا زمان پیاده‌سازی D-109 در Runtime، قاعدهٔ قدیمی self-approval مانع رسیدن به این نقطه است.
+سناریوهای زیر فقط وقتی قابل اجرا هستند که یک Envelope معتبر از قبل صادر و با مسیر احرازشده Import شده باشد؛ با نصب تازه، پس از Merge شدن PR #724 (پیاده‌سازی D-109 در Runtime) قابل اجراست؛ تا پیش از آن، کد main هنوز شرط قدیمی self-approval را دارد.
 
 | تست | روش کنترل‌شده | رفتار مورد انتظار |
 |---|---|---|
 | **انقضای Term (Dedicated)** | لایسنس `term` با `ValidUntilUtc` گذشته بسازید → approve → export envelope → import (جایگزین طبق sequence) | status `restricted`؛ GET باز، POST عادی `403 license_restricted`؛ هیچ داده‌ای حذف نمی‌شود |
 | **انقضا در Cloud** | همین لایسنس منقضی با `Licensing__DeploymentMode="Cloud"` | عملیات عادی/ورود عادی بسته `403 license_cloud_expired`؛ مسیر تمدید/بازیابی باز (D-098) |
 | **تمدید/Amendment** | در Vendor روی همان License تغییرات جدید → approve → Sequence جدید → envelope جدید → import | پذیرش فقط Sequence جدیدتر (`LicenseRevisionRules`)؛ replay/downgrade رد می‌شود |
-| **Offline** | همان فایل `license.json` را روی دستگاه دوم/قطع‌شده کپی کنید و import کنید | اعتبارسنجی کاملاً محلی؛ قطع اینترنت به‌تنهایی انقضا نیست |
+| **Offline** | فایل `license.json` را روی همان Installation (حتی در حالت قطع اینترنت) import کنید؛ کپی به دستگاه با InstallationId متفاوت باید رد شود | اعتبارسنجی کاملاً محلی؛ قطع اینترنت به‌تنهایی انقضا نیست |
 | **Support/Update مستقل** | `supportUntilUtc`/`updatesUntilUtc` را در لایسنس جدا از `expiresAtUtc` تنظیم کنید | پایان Support نرم‌افزار Perpetual را قفل نمی‌کند (D-097) |
 | **Provisioning آفلاین** | Vendor: Provisioning → `package/export`؛ Customer: `/provisioning/import` + apply | ACK امضاشده (CNG) به Vendor برمی‌گردد و وضعیت Confirmed می‌شود |
 | **Unlicensed** | دیتابیس `InstalledLicenses` را در یک دیتابیس تمیز آزمایش کنید | فقط `/api/v1/licensing/*` و `/api/v1/provisioning/*` باز؛ بقیه 503 |
