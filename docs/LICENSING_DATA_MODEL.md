@@ -357,3 +357,16 @@ User/Identity در Customer Host محلی است. برای هر Company می‌�
 - مشخصات سخت‌افزاری و تاریخچهٔ فعال‌سازی مجدد فقط در Vendor DB؛ در نصب فقط در audit محلی.
 - کلید خصوصی Installation هرگز در هیچ DB، فایل Vendor یا بستهٔ انتقال ذخیره/ارسال نمی‌شود (D-058/D-099)؛ درخواست reactivation فقط SPKI و proof-of-possession دارد.
 - اطلاعیه‌ها و سوابق CRM فقط Vendor DB هستند و هرگز به فایل لایسنس/provisioning/ACK یا telemetry نصب وارد نمی‌شوند.
+
+
+## ۱۲) تکمیل مدل تجاری پرداخت و پیگیری سررسید (D-108؛ Proposed schema، NotImplemented)
+
+این بخش فقط قرارداد مفهومی Vendor DB است؛ هیچ Migration یا Entity با این متن ایجاد نشده است. قبل از Migration، مدل واقعی Vendor و دستورات #393 بررسی و از تکرار موجودیت جلوگیری شود.
+
+- VendorSalesOrder: مبلغ کل سفارش (TotalAmount از نوع decimal)، ارز سفارش و تاریخ سررسید اختیاری (PaymentDueAtUtc) را نگه می‌دارد. مبلغ کل Snapshot تجاری سفارش است، نه دفتر حسابداری یا محاسبه تسویه.
+- VendorPayment: چند رکورد پرداخت دستی برای هر Order؛ فیلدهای typed شامل مبلغ، ارز (برابر ارز سفارش)، روش، مرجع بیرونی، زمان ادعایی پرداخت، زمان/کاربر ثبت، وضعیت بررسی، تأییدکننده/زمان تأیید یا رد، توضیح محدود و metadata محدود مدرک. Payment Evidence به‌صورت JSON آزاد روی Line ذخیره نمی‌شود.
+- وضعیت هر Payment: Recorded | Verified | Rejected. فقط Verified در جمع پرداخت‌شده لحاظ می‌شود.
+- وضعیت Order در زمان خواندن مشتق می‌شود: Unpaid | PartiallyPaid | Paid؛ اگر باقی‌مانده مثبت و PaymentDueAtUtc < now باشد برچسب Overdue نیز نمایش داده می‌شود. اگر سررسید NULL باشد، سفارش Unpaid/Partial گزارش می‌شود ولی Overdue نیست.
+- هیچ PaymentAllocation در نسخه اول وجود ندارد؛ پرداخت به کل Order تعلق دارد، نه Line. هیچ Ledger، حساب دریافتنی، درگاه پرداخت، Bank reconciliation یا جدول تسویه ایجاد نمی‌شود.
+- چرخه Payment verification با Maker-Checker موجود و ResourceType= salesOrderPayment / Permission= vendor.payments.verify؛ چرخه صدور با salesOrderLine / vendor.licenses.issue مستقل است. صدور License/Amendment به وجود Payment یا Verified بودن آن وابسته نیست.
+- گزارش Unpaid/Partial/Overdue از query صفحه‌بندی‌شده و تجمیع decimal در زمان خواندن تولید می‌شود؛ scheduler، job، broker یا جدول alert مشتق‌شده لازم نیست. Audit هر تغییر پرداخت، سررسید و وضعیت صدور جداست.
