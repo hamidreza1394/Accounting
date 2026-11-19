@@ -88,6 +88,24 @@ public sealed class WindowsCngCertificatePolicyTests
         Assert.NotNull(WindowsCngCertificatePolicy.ValidatePrivateKey(publicOnly));
     }
 
+    [Fact]
+    public void CertificatesSharingPublicKeyAreDetectedEvenWithDifferentThumbprints()
+    {
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var firstRequest = new CertificateRequest("CN=Faranou Vendor License", key, HashAlgorithmName.SHA256);
+        var secondRequest = new CertificateRequest("CN=Faranou Vendor Provisioning", key, HashAlgorithmName.SHA256);
+        using var first = firstRequest.CreateSelfSigned(
+            DateTime.UtcNow.AddMinutes(-5), DateTime.UtcNow.AddHours(1));
+        using var second = secondRequest.CreateSelfSigned(
+            DateTime.UtcNow.AddMinutes(-5), DateTime.UtcNow.AddHours(1));
+        using var independent = CreateCertificate(
+            DateTime.UtcNow.AddMinutes(-5), DateTime.UtcNow.AddHours(1));
+
+        Assert.NotEqual(first.Thumbprint, second.Thumbprint);
+        Assert.True(WindowsCngCertificatePolicy.HaveSamePublicKey(first, second));
+        Assert.False(WindowsCngCertificatePolicy.HaveSamePublicKey(first, independent));
+    }
+
     private static X509Certificate2 CreateCertificate(DateTime notBefore, DateTime notAfter)
     {
         using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
