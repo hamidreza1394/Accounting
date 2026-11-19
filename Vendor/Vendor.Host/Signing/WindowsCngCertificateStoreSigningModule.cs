@@ -69,8 +69,7 @@ public sealed class WindowsCngCertificateStoreSigningModule(
         try
         {
             return await Task.Run(
-                () => FindConfiguredCertificate(_options.LicenseKey) is not null &&
-                     FindConfiguredCertificate(_options.ProvisioningKey) is not null,
+                IsConfiguredPairUsable,
                 cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -84,6 +83,25 @@ public sealed class WindowsCngCertificateStoreSigningModule(
                 exception.GetType().Name);
             return false;
         }
+    }
+
+    private bool IsConfiguredPairUsable()
+    {
+        _options.Validate(_environment.IsProduction(), OperatingSystem.IsWindows());
+
+        using var licenseCertificate = FindConfiguredCertificate(_options.LicenseKey);
+        using var provisioningCertificate = FindConfiguredCertificate(_options.ProvisioningKey);
+        if (licenseCertificate is null || provisioningCertificate is null)
+        {
+            return false;
+        }
+
+        var now = _timeProvider.GetUtcNow();
+        return WindowsCngCertificatePolicy.ValidateStructural(licenseCertificate, now) is null &&
+               WindowsCngCertificatePolicy.ValidatePrivateKey(licenseCertificate) is null &&
+               WindowsCngCertificatePolicy.ValidateStructural(provisioningCertificate, now) is null &&
+               WindowsCngCertificatePolicy.ValidatePrivateKey(provisioningCertificate) is null &&
+               !WindowsCngCertificatePolicy.HaveSamePublicKey(licenseCertificate, provisioningCertificate);
     }
 
     private LicenseSigningResult SignCore(WindowsCngSigningKeyOptions key, byte[] canonicalPayload)
@@ -168,16 +186,9 @@ public sealed class WindowsCngCertificateStoreSigningModule(
             return null;
         }
 
-        var matches = store.Certificates.Find(
-            X509FindType.FindByThumbprint,
-            _options.ThumbprintNormalised(key),
-            validOnly: false);
-        if (matches.Count != 1)
-        {
-            return null;
-        }
-
-        return matches[0];
+        return WindowsCngCertificateLookup.TakeExactlyOne(
+            store.Certificates,
+            _options.ThumbprintNormalised(key));
     }
 
     private void ValidateRequestedKey(WindowsCngSigningKeyOptions key)
@@ -220,6 +231,24 @@ public static class WindowsCngCertificatePolicy
         return null;
     }
 
+    /// <summary>Compares public SPKI only; private key material is never accessed.</summary>
+    public static bool HaveSamePublicKey(X509Certificate2 first, X509Certificate2 second)
+    {
+        ArgumentNullException.ThrowIfNull(first);
+        ArgumentNullException.ThrowIfNull(second);
+        using var firstKey = first.GetECDsaPublicKey();
+        using var secondKey = second.GetECDsaPublicKey();
+        if (firstKey is null || secondKey is null)
+        {
+            return false;
+        }
+
+        var firstSpki = firstKey.ExportSubjectPublicKeyInfo();
+        var secondSpki = secondKey.ExportSubjectPublicKeyInfo();
+        return firstSpki.Length == secondSpki.Length &&
+               CryptographicOperations.FixedTimeEquals(firstSpki, secondSpki);
+    }
+
     /// <summary>Rejects non-CNG or exportable private keys; private key material is never read.</summary>
     public static string? ValidatePrivateKey(X509Certificate2 certificate)
     {
@@ -230,15 +259,56 @@ public static class WindowsCngCertificatePolicy
             return "certificate_key_not_cng_non_exportable";
         }
 
-        const CngExportPolicies forbiddenExportPolicies =
-            CngExportPolicies.AllowPlaintextExport |
-            CngExportPolicies.AllowArchiving |
-            CngExportPolicies.AllowPlaintextArchiving;
-        if ((cngEcdsa.Key.ExportPolicy & forbiddenExportPolicies) != 0)
+        if (cngEcdsa.Key.ExportPolicy != CngExportPolicies.None)
         {
             return "certificate_key_exportable";
         }
 
+        return null;
+    }
+}
+
+/// <summary>
+/// Selects exactly one certificate while disposing every certificate wrapper returned by the store
+/// except the selected wrapper, whose ownership transfers to the caller.
+/// </summary>
+internal static class WindowsCngCertificateLookup
+{
+    public static X509Certificate2? TakeExactlyOne(
+        X509Certificate2Collection certificates,
+        string thumbprint)
+    {
+        ArgumentNullException.ThrowIfNull(certificates);
+        ArgumentException.ThrowIfNullOrWhiteSpace(thumbprint);
+
+        X509Certificate2? selected = null;
+        var matchCount = 0;
+        foreach (var certificate in certificates)
+        {
+            if (string.Equals(certificate.Thumbprint, thumbprint, StringComparison.OrdinalIgnoreCase))
+            {
+                matchCount++;
+                if (matchCount == 1)
+                {
+                    selected = certificate;
+                }
+                else
+                {
+                    certificate.Dispose();
+                }
+            }
+            else
+            {
+                certificate.Dispose();
+            }
+        }
+
+        if (matchCount == 1)
+        {
+            return selected;
+        }
+
+        selected?.Dispose();
         return null;
     }
 }
