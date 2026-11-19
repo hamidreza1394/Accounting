@@ -3280,3 +3280,11 @@
   4. **ReferenceNumber:** یکتایی سراسری فرض حذف شد؛ فقط Index غیریکتا + هشدار تشخیص تکرار در v1؛ قید unique فقط با Namespace صریح `(Method, ProviderOrBank, ReferenceNumber)` معنا دارد و به‌صورت Proposed موکول به schema approval ماند (تصمیم ۱۰ بازنویسی).
 - **فهرست تصمیم مالک:** ۹ مورد → ۱۱ مورد؛ شمارنده در بخش ۸ هماهنگ شد؛ برنامهٔ PR-۲/PR-۳ با قواعد جدید به‌روز شد.
 - **محدوده:** فقط `docs/handoffs/ISSUE-393-s1-b-order-payment-design-v2.md` و WORK_LOG؛ بدون کد/Entity/Migration/API/UI/Permission/Package؛ بدون تغییر Gate/Entitlement/سیاست امنیتی؛ هیچ Proposed به Accepted تبدیل نشد؛ تغییرات دیگران حفظ شد.
+
+
+## 2026-11-19 — S1-b / Issue #393: رفع یافته‌های بازبینی PR #717
+
+- **محدوده:** فقط مستندات موجود در همان PR؛ بدون کد، Entity، Migration، API، UI، Permission عملیاتی یا تغییر Gate.
+- **اصلاحات:** (۱) در جریان Mermaid، تأیید پرداخت دیگر پیش‌شرط همیشگی درخواست صدور نمایش داده نمی‌شود و فقط در صورت انتخاب گیت پرداخت طبق تصمیم مالک ۱۱ اعمال می‌شود؛ گزینهٔ (ب) تصمیم ۱۱ نیز با مستقل‌بودن صدور سازگار شد. (۲) هر چهار نقطهٔ dispatch در `VendorApprovalEndpoints` مشخص شد: دو allow-list و دو نگاشت `PermissionFor`؛ نگاشت `salesOrderPayment` به `vendor.payments.verify` و `salesOrderLine` به `vendor.licenses.issue`. (۳) نسخهٔ Line و License جداگانه ثبت و پیش از ساخت amendment کنترل می‌شوند؛ stale بودن هرکدام به conflict می‌انجامد. (۴) مسیر بازیابی stale به‌صورت اتمیک تعریف شد: Approval=`Stale` و در صورت تطبیق نسخه/پیوند، Line از `ApprovalRequested` به `Pending` برمی‌گردد؛ درخواست بعدی فقط با RowVersionهای تازه ساخته می‌شود. (۵) pipeهای literal داخل سلول‌های جدول Markdown escape شدند. (۶) یادداشت handoff نسخهٔ v1 صریحاً پیشنهاد قدیمی `InstallationId` در سطح Line را superseded اعلام می‌کند، بدون بازنویسی سابقهٔ ممیزی.
+- **وضعیت تصمیم‌ها:** همهٔ پیشنهادها همچنان `Proposed`/`NeedsApproval` هستند؛ هیچ تصمیم مالکانه‌ای Accepted نشده است.
+- **اعتبارسنجی:** `git diff --check` و Markdown lint باید پس از دریافت CI همین commit بررسی شوند؛ Build/Test کد موضوعیت ندارد چون تغییرات مستنداتی‌اند.
