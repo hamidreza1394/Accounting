@@ -3242,3 +3242,14 @@
 - **وضعیت کد:** مدل Tenant واقعی هنوز در برخی مسیرها پیاده نشده و مقدار TenantId تاریخی ممکن است Company.Id باشد؛ D-105 این انحراف را اصلاح نمی‌کند.
 - **اعتبارسنجی:** محتوای مبنا و ADRهای قبلی از مخزن بازبینی شد. Build/Test و git diff --check اجرا نشدند؛ در بازبینی PR/CI باید کنترل شوند.
 - **Git:** Branch docs/d105-company-owned-default-tenant-sharing؛ Issue #712؛ Draft PR #713 (GitHub در بازبینی نهایی mergeable=true گزارش کرد؛ چون PR #711 نیز WORK_LOG را تغییر می‌دهد، پس از هر ادغام وضعیت دوباره کنترل شود).
+
+
+## 2026-11-19 — S1-b / Issue #393: آماده‌سازی طراحی سفارش تجاری، مدرک پرداخت و گردش‌کار تا Amendment
+
+- **مبنا:** `origin/main@98c2edf3` (پس از Merge #711 و #713)؛ SHA ادعایی مأموریت با GitHub تطبیق داده شد و عیناً برقرار بود. PRهای باز مخزن: صفر.
+- **انجام‌شده:** ممیزی کد Vendor روی main — نهادهای `VendorCustomer/VendorInstallation/VendorContract/VendorLicense/VendorApprovalRequest/VendorSignedLicenseEnvelope`، سه candidate builder (#527/#558/#565) با محافظ‌های fail-closed هر یک، تراکنش صدور (`VendorLicenseIssuanceService` + `Vendor/docs/license-issuance-transaction.md`)، endpointهای Maker-Checker و ساختار Vendor.Web. پاسخ پرسش‌های بند ۳ مأموریت از کد واقعی (اتصال Customer/Installation، سطح ظرفیت‌ها، CompanyReference، تمدید مستقل، چندقلمی، ضدتکرار صدور با چهار نگهبان موجود).
+- **خروجی:** handoff جدید `docs/handoffs/ISSUE-393-s1-b-commercial-order-payment-design-prep.md` — طراحی حداقلی Proposed (گزینهٔ A: یک `VendorSalesOrder` + خطوط typed + مدرک پرداخت نسخه‌دار محدود)، وضعیت‌ها و گردش‌کار سفارش→ACK، مقایسهٔ سه گزینه، ۹ سؤال نیازمند تصمیم مالک، وابستگی/ریسک‌ها. ادامهٔ handoff 2026-11-04 (#393)، بدون بازنویسی آن.
+- **یافتهٔ مستنداتی جدید:** اختلاف نام ERD پیشنهادی بخش ۵ `LICENSING_DATA_MODEL.md` (`CustomerAccount/Contract/SupportContract/LicenseRevision`) با پیاده‌سازی واقعی (`VendorCustomer/VendorContract/VendorLicense/VendorSignedLicenseEnvelope`) ثبت شد؛ هر PR schema آینده باید نام‌های واقعی را مبنا بگیرد.
+- **محدوده:** فقط مستندات؛ بدون کد/Entity/Migration/API/UI؛ بدون باز کردن Gate v5، بدون Production signer، بدون تغییر `CustomerNumber`، بدون تغییر Customer-side؛ هیچ سیاست تجاری به‌جای مالک تصمیم گرفته نشد و همهٔ مدل‌ها Proposed هستند.
+- **اعتبارسنجی:** `git diff --check` پاک؛ Build/Test اجرا نشد (تغییر اجرایی وجود ندارد)؛ وضعیت CI واقعی مرجع: post-merge builderها ۱۵/۱۵ و PR #711 ۱۵/۱۵؛ CI این PR پس از اجرا گزارش می‌شود.
+- **Handoff:** `docs/handoffs/ISSUE-393-s1-b-commercial-order-payment-design-prep.md`.
