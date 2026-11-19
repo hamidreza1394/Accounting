@@ -106,7 +106,6 @@ public sealed class WindowsCngCertificateStoreSigningTests
 
             Assert.False(result.Succeeded);
             Assert.Equal("signing_provider_unavailable", result.ErrorCode);
-            Assert.False(await module.IsAvailableAsync());
         }
         finally
         {
@@ -203,6 +202,7 @@ public sealed class WindowsCngCertificateStoreSigningTests
 
             Assert.False(result.Succeeded);
             Assert.Equal("signing_provider_unavailable", result.ErrorCode);
+            Assert.False(await module.IsAvailableAsync());
         }
         finally
         {
