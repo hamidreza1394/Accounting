@@ -1,12 +1,23 @@
 ## وضعیت Signer ویندوز CNG SoftwareProtected (D-107) — 2026-11-19
 
-**مبنای بررسی:** `main@efaaa1c5` (Merge PR #719). این بخش وضعیت پیاده‌سازی Provider امضای مرکزی Vendor طبق ADR پذیرفته‌شدهٔ D-107 را ثبت می‌کند.
+**مبنای بررسی:** `main@da2ca7a9` (Merge PR #721). این بخش وضعیت پیاده‌سازی Provider امضای مرکزی Vendor طبق ADR پذیرفته‌شدهٔ D-107 را ثبت می‌کند.
 
 - **پیاده‌شده (شاخهٔ `agent/236-windows-cng-signer`):** Provider `WindowsCngCertificateStoreSigningModule` با دو Provider هدف‌مند License/Provisioning، Audit metadata-only هر امضا با دورریختن امضا در شکست Audit، Health check، Startup assurance service (اعتبارسنجی fail-fast و Audit Production `vendor.signing.assurance.software-protected-selected`)، رد تداخل هم‌زمانی PKCS#11/CNG و فرمان فقط‌عمومی `--signing-certificate export-public`. الزامات D-107 اعمال شده‌اند: ECDSA P-256، بازهٔ اعتبار، KeyUsage=DigitalSignature، Microsoft Software KSP، ExportPolicy=None، MachineKey در Production و جدایی SPKI/KeyId هر هدف، `AssuranceLevel=SoftwareProtected` صریح، هیچ fallback و هیچ کلید آزمایشی؛ Provider ابطال آفلاین عمداً خارج از این شاخه است (D-055 پابرجا).
 - **ثبت DI opt-in:** `Signing:CertificateStore:Enabled` (پیش‌فرض خاموش). بدون فعال‌سازی، Providerهای Unavailable عین قبل fail-closed می‌مانند و صدور 503 می‌دهد. میزبان غیرویندوزی با فعال‌سازی صریح در Startup fail-fast می‌شود؛ Production الزام `StoreLocation=LocalMachine` دارد.
 - **تست‌های محلی (SDK 10.0.100، Linux):** `dotnet build Vendor.sln` موفق؛ `dotnet test Vendor.sln` = ۳۸۶ کل، ۳۱۶ موفق، ۹ ناموفق، ۶۱ Skip. **۹ شکست دقیقاً روی `main` خالص (worktree جدا) هم تکرار شد** و محیطی است: تست‌های HTTP Host به `FARANO_VENDOR_ConnectionStrings__VendorDb` (SQL Server) نیاز دارند که فقط در CI ست می‌شود؛ ناشی از این تغییر نیست. `--filter "FullyQualifiedName~WindowsCng"` = ۲۱ موفق / ۷ Skip / ۰ شکست؛ ۷ Skip ویندوزی‌اند و در job جدید `windows-cng-signer` در Vendor CI واقعاً روی Windows runner اجرا می‌شوند.
 - **باقی‌مانده:** Key Ceremony واقعی روی Windows Server هدف (ساخت MachineKey non-exportable، ACL هویت سرویس، ثبت SPKI در `Licensing:TrustedSigningKeys`/`ProvisioningSigningTrust:Keys`، تست امضای Production و drill rotation). تا اجرای آن، Verified عملیاتی با کلید واقعی ادعا نمی‌شود؛ CI تست کلید موقت Software KSP در CurrentUser را اجرا می‌کند و این اثبات ACL/MachineKey سرور نیست.
 - **handoff:** `docs/handoffs/ISSUE-236-windows-cng-software-protected-signer.md` (Issue #236، ADR D-107).
+
+## دروازهٔ Runtime License (Issue #396) — 2026-11-19
+
+**مبنای بررسی:** `main@efaaa1c5` (Merge PR #719). این بخش اتصال License به Runtime فرانو طبق D-060 §1-6 و D-098 را ثبت می‌کند.
+
+- **پیاده‌شده (شاخهٔ `agent/396-license-runtime-gate`):** `ILicenseRuntimeStateService` وضعیت نصب را در هر درخواست از `ICustomerLicenseRuntimeEvaluator` (revocation-aware، بدون cache) می‌سازد و `LicenseRuntimeGateMiddleware` قبل از Routing عملیات عادی را کنترل می‌کند: **Unlicensed** → فقط مسیرهای فعال‌سازی/بازیابی (`/api/v1/licensing/*`، `/api/v1/provisioning/*`) و logout باز؛ **Invalid** → fail-closed؛ **Restricted در Dedicated** → خواندن باز، نوشتن عادی 403؛ **Restricted در Cloud** → عملیات عادی بسته با `license_cloud_expired` (D-098). endpoint جدید `GET /api/v1/licensing/status` projection وضعیت/entitlement را فقط از payload امضاشده می‌دهد.
+- **پیکربندی:** `Licensing:RuntimeGate:Enabled` پیش‌فرض **خاموش** (rollout مرحله‌ای، هم‌الگوی Gate v5؛ روشن‌کردن تصمیم عملیاتی استقرار است) و `Licensing:DeploymentMode` = `Dedicated|Cloud` (نامعتبر → fail-fast در startup). با gate خاموش رفتار میزبان عین قبل است.
+- **تست‌ها:** ۲۳ تست واحد + ۸ تست HTTP روی Pipeline واقعی (gate روشن/خاموش؛ بدون License → 503 `license_required` روی API و صفحهٔ Login، status باز و `unlicensed`). اجرای محلی: `--filter "FullyQualifiedName~LicenseRuntime"` = ۳۱ موفق / ۰ شکست.
+- **بدون Migration:** هیچ Schema/داده‌ای تغییر نکرد. هیچ grace ضمنی اضافه نشد (D-059 §7) و هیچ داده‌ای در هیچ حالتی حذف نمی‌شود.
+- **باقی‌مانده:** Wizard فعال‌سازی در React، cache نسخه‌دار رزولوشن برای بار بالا (D-058 §Cloud)، enforcement entitlement شرکت‌محور در call-siteهای عملیاتی (#391/#401) و E2E با License واقعی امضاشده (راهنمای Windows).
+- **handoff:** `docs/handoffs/ISSUE-396-license-runtime-gate.md`.
 
 ## تعیین تکلیف S1-a از سمت Vendor — 2026-11-18
 
