@@ -68,5 +68,5 @@
 
 ## شناسه‌های Git
 - Branch: `agent/236-windows-cng-signer`
-- Commit: (پس از commit نهایی ثبت می‌شود)
-- Pull Request: (پس از باز شدن PR ثبت می‌شود)
+- Commit: `d00d6e52`
+- Pull Request: #720
