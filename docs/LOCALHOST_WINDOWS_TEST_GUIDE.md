@@ -176,7 +176,7 @@ dotnet run --project Vendor\Vendor.Host -- --urls http://localhost:5100
 
 سپس در `http://localhost:5100` با مدیر اول و MFA/TOTP وارد شوید و مشتری/نصب/قرارداد/لایسنس را تا وضعیت `Draft` بسازید.
 
-**محدودیت واقعی Maker-Checker:** کد فعلی `bootstrap-admin` فقط مدیر اول را می‌سازد و API/UI عمومی برای ایجاد مدیر دوم در اختیار این راهنما نیست؛ API مدیریت Role هم API ایجاد کاربر نیست. بنابراین صدور نهایی که نیازمند تأیید مدیر دوم مستقل است، با نصب تازه از صفر در وضعیت فعلی قابل تکمیل نیست. برای دورزدن این محدودیت، مدیر دوم را مستقیم در SQL نسازید و Maker-Checker را غیرفعال نکنید؛ این مسیر تا ارائهٔ گردش‌کار امن ایجاد مدیر دوم، Blocked است.
+**تصمیم مالک (D-109):** نسخهٔ اول Vendor تک‌اپراتوره است؛ یک مدیر مجاز می‌تواند درخواست را ثبت و خودش تأیید کند و نیازی به مدیر دوم نیست. بااین‌حال کد فعلی هنوز قاعدهٔ قدیمی Requester != Reviewer را enforce می‌کند؛ بنابراین **تصمیم پذیرفته شده اما هنوز در Runtime پیاده نشده است** و صدور نهایی از نصب تازه تا اصلاح کد/تست‌ها همچنان Blocked است. این مانع به‌علت نبود مدیر دوم نیست، بلکه انحراف پیاده‌سازی از D-109 است. حساب مدیر دوم نسازید و کنترل را با SQL یا خاموش‌کردن Maker-Checker دور نزنید؛ اصلاح باید در PR کد مستقل با تست‌های مجازبودن self-approval و حفظ Authorization/Audit انجام شود.
 
 > اگر به‌جای صدور، خطای `license_issuance_unavailable` دیدید یعنی Signer/Trust Store کامل پیکربندی نشده — این همان رفتار fail-closed صحیح است؛ بند ۴ را بازبینی کنید.
 
@@ -240,7 +240,7 @@ WHERE l.Status = N'Issued'
 ORDER BY e.CreatedAtUtc DESC;
 "@
 if ($null -eq $envelope -or [string]::IsNullOrWhiteSpace([string]$envelope.EnvelopeJson)) {
-  throw "هیچ Envelope صادرشده‌ای پیدا نشد؛ تا زمان تکمیل Maker-Checker، این مرحله قابل انجام نیست."
+  throw "هیچ Envelope صادرشده‌ای پیدا نشد؛ ابتدا بررسی کنید اصلاح Runtime مطابق D-109 در نسخهٔ مورد استفاده اعمال شده باشد."
 }
 # بدون BOM؛ برای سازگاری PowerShell 5.1 و JSON parser
 [System.IO.File]::WriteAllText(
@@ -264,7 +264,7 @@ Invoke-RestMethod http://localhost:5000/api/v1/licensing/status | ConvertTo-Json
 
 ## ۷) سناریوهای انقضا، تمدید، آفلاین و Restricted
 
-سناریوهای زیر فقط وقتی قابل اجرا هستند که یک Envelope معتبر از قبل صادر و با مسیر احرازشده Import شده باشد؛ با نصب تازه، محدودیت Maker-Checker بند ۴ مانع رسیدن به این نقطه است.
+سناریوهای زیر فقط وقتی قابل اجرا هستند که یک Envelope معتبر از قبل صادر و با مسیر احرازشده Import شده باشد؛ با نصب تازه، تا زمان پیاده‌سازی D-109 در Runtime، قاعدهٔ قدیمی self-approval مانع رسیدن به این نقطه است.
 
 | تست | روش کنترل‌شده | رفتار مورد انتظار |
 |---|---|---|
@@ -286,7 +286,7 @@ Invoke-RestMethod http://localhost:5000/api/v1/licensing/status | ConvertTo-Json
 2. آماده‌سازی دیتابیس محلی — بند ۲
 3. اجرای Vendor محلی — بند ۴
 4. Customer/Installation آزمایشی — بند ۴ (UI Vendor)
-5. ساخت Draft و بررسی Signer — بند ۴؛ صدور نهایی فعلاً Blocked به‌دلیل نبود گردش‌کار ایجاد مدیر دوم
+5. ساخت Draft و بررسی Signer — بند ۴؛ صدور نهایی پس از پیاده‌سازی D-109 در Runtime
 6. اجرای فرانو روی localhost:5000 — بند ۵
 7. ورود با License معتبر — مشروط به رفع Blockerهای بند ۴ و ۶
 8. بررسی وضعیت و Entitlement — `GET /api/v1/licensing/status`
@@ -303,6 +303,6 @@ Invoke-RestMethod http://localhost:5000/api/v1/licensing/status | ConvertTo-Json
 - **کد فعال‌سازی یک‌بارمصرف Vendor و گردش‌کار reactivation (D-099)** پیاده نشده‌اند؛ بازیابی هویت نصب با `--license-installation-key` و مسیر `installation-identity/enroll` انجام می‌شود.
 - **صدور Provisioning v5 (شرکت‌محور) پشت Gate دوکلیدی بستهٔ مصوب است**؛ در این تست بستهٔ v4 استفاده می‌شود.
 - Concurrent-session cap (D-100)، Update با تأیید مدیر (D-101) و CRM سبک (D-102) NotImplemented هستند.
-- گردش‌کار امن ایجاد مدیر دوم Vendor در کد فعلی موجود نیست؛ صدور نهایی Maker-Checker در نصب تازه Blocked است و نباید با SQL یا خاموش‌کردن کنترل دور زده شود.
+- D-109 سیاست V1 را تک‌اپراتوره و self-approval را مجاز می‌کند، اما کد فعلی هنوز شرط دو هویت متفاوت را enforce می‌کند؛ تا PR اصلاحی و CI، صدور نهایی از نصب تازه Blocked است. این اختلاف تصمیم/کد نباید با SQL یا خاموش‌کردن کنترل دور زده شود.
 - این راهنما مسیر License/Provisioning مرکزی را بدون TPM/HSM/KMS پوشش می‌دهد؛ امضای Vendor offline-revocation snapshot همچنان طبق D-055 و anti-rollback ابطال آفلاین مشتری طبق D-057 تصمیم/الزام جداگانه دارند و این راهنما آن‌ها را حذف یا دور نمی‌زند.
 - تست این راهنما روی ماتریس واقعی Windows هنوز توسط مالک اجرا نشده؛ اجرای محلی Agent (Linux) فقط Build/تست‌های خودکار را پوشش داده است. اجرای CNG فقط روی Windows ممکن است.
