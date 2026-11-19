@@ -108,7 +108,7 @@
 flowchart TD
     A[اپراتور مجاز: ثبت VendorSalesOrder + Lineهای typed] --> B[ثبت دستی VendorPayment<br/>ReferenceNumber/Amount/Currency/PaidAt]
     B --> C{تأیید پرداخت<br/>Maker-Checker: ResourceType=salesOrderPayment<br/>permission: vendor.payments.verify}
-    C -- Rejected --> XR[Payment.Rejected<br/>سفارش قابل ادامه نیست]
+    C -- Rejected --> XR[Payment.Rejected<br/>اثر تجاری طبق تصمیم ۱۱]
     A --> D[ثبت ApprovalRequest صدور<br/>ResourceType=salesOrderLine, TargetStatus=Issued<br/>License هدف = line.LicenseId تثبیت‌شده<br/>شرط - فقط یک درخواست صدور باز به‌ازای هر License]
     C -.->|فقط اگر تصمیم ۱۱ گیت پرداخت را انتخاب کند| D
     D --> E{تأیید صدور<br/>Maker-Checker موجود<br/>requester≠reviewer, RowVersion}
@@ -131,7 +131,7 @@ flowchart TD
 |---|---|---|---|
 | تجاری (Order) | `VendorSalesOrder.CommercialStatus` | `Open → PaymentRecorded → Confirmed` + terminalهای `Cancelled`، `Rejected`؛ **معنا:** `PaymentRecorded` = وجود حداقل یک رکورد `VendorPayment` (هر وضعیتی)؛ قاعدهٔ رسیدن به `Confirmed` = **تصمیم مالک (تصمیم ۱۱)** — پیشنهاد پیش‌فرض فنی: نخستین Payment `Verified`؛ پرداخت جدید پس از `Confirmed` هم مجاز است و گذار به عقب رخ نمی‌دهد | یک ستون کافی است؛ وضعیت تجاری هرگز با صدور مخلوط نمی‌شود |
 | بررسی پرداخت | `VendorPayment.VerificationStatus` | `Recorded → Verified \| Rejected` | چون پرداخت Entity مستقل شد، وضعیتش هم مستقل و طبیعی است |
-| Fulfillment (Line) | `VendorSalesOrderLine.FulfillmentStatus` | `Pending → ApprovalRequested → Issued` + terminal `Rejected \| Cancelled`؛ **قاعدهٔ حاکم: در هر لحظه حداکثر یک عملیات صدور باز (`ApprovalRequested`) به‌ازای هر License** — پس از terminal شدن یک Line، درخواست Line بعدیِ هم‌هدف با `LastIssuedSequence` و RowVersion تازه ساخته می‌شود (بخش ۷) | ردیف‌ها مستقل صادر می‌شوند؛ «بسته‌شدن سفارش» مقدار ذخیره‌شده نیست، **مشتق** است (همهٔ ردیف‌ها terminal) — از دو منبع حقیقت جلوگیری می‌کند |
+| Fulfillment (Line) | `VendorSalesOrderLine.FulfillmentStatus` | `Pending → ApprovalRequested → Issued` + terminal `Rejected \| Cancelled`؛ فقط در بازیابی approval کهنه طبق بخش ۷، گذار غیرترمینال `ApprovalRequested → Pending` مجاز است؛ **قاعدهٔ حاکم: در هر لحظه حداکثر یک عملیات صدور باز (`ApprovalRequested`) به‌ازای هر License** — پس از terminal شدن یک Line، درخواست Line بعدیِ هم‌هدف با `LastIssuedSequence` و RowVersion تازه ساخته می‌شود (بخش ۷) | ردیف‌ها مستقل صادر می‌شوند؛ «بسته‌شدن سفارش» مقدار ذخیره‌شده نیست، **مشتق** است (همهٔ ردیف‌ها terminal) — از دو منبع حقیقت جلوگیری می‌کند |
 | اعمال Entitlement در مشتری | **فعلاً ستونی ساخته نمی‌شود** | `Delivered/Applied` در PR مربوط به #394 به‌صورت additive به `FulfillmentStatus` اضافه می‌شود | چون ACK معتبر و allow-list هنوز مسیر #394 است؛ ستون خالی امروز = ابهام فردا. ثبت گذارها با audit append-only موجود کافی است |
 
 قواعد انتقال: هیچ گذار معکوسی از terminal مجاز نیست؛ هیچ حذفی رخ نمی‌دهد (append-only ممیزی)؛ گذار فقط از مسیر endpoint مجاز + antiforgery + server-side authorization انجام می‌شود؛ لغو سفارش فقط وقتی مجاز است که هیچ ردیفی `Issued` نشده باشد (ردیف صادرشده فقط با amendment جدید و sequence جدید قابل واگرد است — حذف entitlement در builderهای فعلی وجود ندارد و باید هم نباشد).
