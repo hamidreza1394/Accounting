@@ -62,11 +62,11 @@
 | `OrderId` Guid | الزامی | Vendor | پرداخت متعلق به **سفارش** است (یک پرداخت می‌تواند چند ردیف را پوشش دهد) | FK Restrict | Index |
 | `Amount` decimal(18,2) | الزامی | Vendor | مبلغ ثبت‌شدهٔ دستی | > 0 | — |
 | `CurrencyCode` char(3) | الزامی | Vendor | ارز پرداخت | **باید برابر Currency سفارش** (v1؛ چندارز موکول) | — |
-| `Method` string | الزامی | Vendor | کانال ثبت‌شده | مجموعهٔ بستهٔ اولیه: `BankTransfer | Card | Cash | Other` | — |
+| `Method` string | الزامی | Vendor | کانال ثبت‌شده | مجموعهٔ بستهٔ اولیه: `BankTransfer \| Card \| Cash \| Other` | — |
 | `ReferenceNumber` string(128) | الزامی | Vendor | شماره مرجع بیرونی (رسید/تراکنش) | اجباری، غیرخالی؛ **یکتایی سراسری فرض نمی‌شود** — شمارهٔ رسید بین بانک‌ها/ارائه‌دهندگان می‌تواند تکرار شود؛ در v1 فقط Index غیریکتا برای جست‌وجو + هشدار تشخیص تکرار هنگام ثبت (جست‌وجو در همان مشتری/سفارش)؛ در صورت تصمیم به قید unique، Namespace صریح لازم است (تصمیم ۱۰؛ schema approval) | Index (غیریکتا) |
 | `PaidAtUtc` DateTimeOffset | الزامی | Vendor | زمان ادعایی پرداخت | ≤ اکنون + تلورانس، ≥ CreatedAt سفارش | — |
 | `RecordedAtUtc` / `RecordedByUserId` | الزامی (سیستمی) | Vendor | چه کسی/چه زمانی ثبت کرد | — | — |
-| `VerificationStatus` string | الزامی | Vendor | چرخهٔ بررسی پرداخت (بخش ۵) | مجموعهٔ بسته: `Recorded | Verified | Rejected` | Index (OrderId) |
+| `VerificationStatus` string | الزامی | Vendor | چرخهٔ بررسی پرداخت (بخش ۵) | مجموعهٔ بسته: `Recorded \| Verified \| Rejected` | Index (OrderId) |
 | `VerifiedByUserId?` / `VerifiedAtUtc?` / `ReviewComment?` | شرطی | Vendor | فقط با تصمیم تأییدکنندهٔ پرداخت پر می‌شود | در `Verified/Rejected` الزامی، در `Recorded` NULL | — |
 | `RowVersion` | الزامی | Vendor | هم‌زمانی + گارد ExpectedResourceRowVersion در approval | — | RowVersion |
 
@@ -82,7 +82,7 @@
 | `InstallationId` | **فیلد Line نیست** | از `License.InstallationId` مشتق می‌شود و در سه نقطه هم‌راستایی کنترل می‌شود: ثبت سفارش (سازگاری مشتری)، ساخت درخواست تأیید، و داخل builder در زمان صدور. گزینهٔ جایگزین در صورت نظر مالک: نگه‌داشتن `InstallationId` صریح برای دو نوع Installation-scoped با FK مرکب تساوی — گزینهٔ (ب) تصمیم ۵ | — |
 | `CompanyReference` string(64)? | شرطی | فقط `CompanyEntitlementIncrease`؛ **عیناً** از payload v2 امضاشدهٔ آن License؛ در ثبت سفارش فقط اعتبارسنجی شکل، تطبیق با payload در زمان approval توسط builder موجود انجام می‌شود | — |
 | `NewMaxCompanies` int? | شرطی | فقط `MaxCompaniesIncrease`؛ > مقدار فعلی (چک نهایی نزد builder) | — |
-| `EntitlementKind` string? | شرطی | فقط `CompanyEntitlementIncrease`؛ مجموعهٔ بسته: `Module | Feature | UserSeat` | — |
+| `EntitlementKind` string? | شرطی | فقط `CompanyEntitlementIncrease`؛ مجموعهٔ بسته: `Module \| Feature \| UserSeat` | — |
 | `EntitlementTargetCode` string(64)? | شرطی | فقط `CompanyEntitlementIncrease`؛ کد ماژول یا کلید Feature یا شناسهٔ Seat؛ باید در کاتالوگ payload مجاز باشد (چک نهایی builder) | — |
 | `NewLimit` int? | شرطی | فقط `CompanyEntitlementIncrease`؛ > مقدار فعلی، در بازهٔ مجاز (چک نهایی builder) | — |
 | `NewSupportUntilUtc` DateTimeOffset? | شرطی | فقط `SupportExtension`؛ > مقدار فعلی payload؛ در صورت NULL بودن تاریخ فعلی، رد (policy فعلی builder) | — |
@@ -108,8 +108,9 @@
 flowchart TD
     A[اپراتور مجاز: ثبت VendorSalesOrder + Lineهای typed] --> B[ثبت دستی VendorPayment<br/>ReferenceNumber/Amount/Currency/PaidAt]
     B --> C{تأیید پرداخت<br/>Maker-Checker: ResourceType=salesOrderPayment<br/>permission: vendor.payments.verify}
-    C -- Rejected --> XR[Payment.Rejected<br/>سفارش قابل ادامه نیست]
-    C -- Verified --> D[ثبت ApprovalRequest صدور<br/>ResourceType=salesOrderLine, TargetStatus=Issued<br/>License هدف = line.LicenseId تثبیت‌شده<br/>شرط - فقط یک درخواست صدور باز به‌ازای هر License]
+    C -- Rejected --> XR[Payment.Rejected<br/>اثر تجاری طبق تصمیم ۱۱]
+    A --> D[ثبت ApprovalRequest صدور<br/>ResourceType=salesOrderLine, TargetStatus=Issued<br/>License هدف = line.LicenseId تثبیت‌شده<br/>شرط - فقط یک درخواست صدور باز به‌ازای هر License]
+    C -.->|فقط اگر تصمیم ۱۱ گیت پرداخت را انتخاب کند| D
     D --> E{تأیید صدور<br/>Maker-Checker موجود<br/>requester≠reviewer, RowVersion}
     E -- Rejected --> XL[Line.Rejected - terminal]
     E -- Approved --> F[تراکنش اتمیک ۷گامی موجود:<br/>builder → signer fail-closed → Envelope<br/>Sequence+1 → audit → commit]
@@ -120,7 +121,7 @@ flowchart TD
     F -.->|signer unavailable| XF[503 fail-closed<br/>هیچ commit ناقصی]
 ```
 
-مرزها: گام‌های A..G در محدودهٔ #393/S1-b است؛ H..J متعلق به #394 است و این طراحی فقط جای وضعیت را رزرو می‌کند. تأیید پرداخت **به‌تنهایی هیچ مجوز صدوری ایجاد نمی‌کند** (پاسخ پیش‌فرض مأموریت؛ هیچ تصمیم مصوب خلاف آن وجود ندارد).
+مرزها: گام‌های A..G در محدودهٔ #393/S1-b است؛ H..J متعلق به #394 است و این طراحی فقط جای وضعیت را رزرو می‌کند. مسیر صدور از پرداخت مستقل است؛ فقط اگر مالک در تصمیم ۱۱ گزینه‌ای را برگزیند که گیت پرداخت را لازم می‌داند، Verified شدن پرداخت پیش‌شرط ثبت درخواست صدور خواهد بود. تأیید پرداخت به‌تنهایی هیچ مجوز صدوری ایجاد نمی‌کند.
 
 ## ۵. وضعیت‌ها و انتقال‌های مجاز (پاسخ به «آیا سه ستون مستقل لازم است؟»)
 
@@ -129,15 +130,15 @@ flowchart TD
 | چرخه | محل | مقادیر بسته (Proposed) | نتیجه‌گیری |
 |---|---|---|---|
 | تجاری (Order) | `VendorSalesOrder.CommercialStatus` | `Open → PaymentRecorded → Confirmed` + terminalهای `Cancelled`، `Rejected`؛ **معنا:** `PaymentRecorded` = وجود حداقل یک رکورد `VendorPayment` (هر وضعیتی)؛ قاعدهٔ رسیدن به `Confirmed` = **تصمیم مالک (تصمیم ۱۱)** — پیشنهاد پیش‌فرض فنی: نخستین Payment `Verified`؛ پرداخت جدید پس از `Confirmed` هم مجاز است و گذار به عقب رخ نمی‌دهد | یک ستون کافی است؛ وضعیت تجاری هرگز با صدور مخلوط نمی‌شود |
-| بررسی پرداخت | `VendorPayment.VerificationStatus` | `Recorded → Verified | Rejected` | چون پرداخت Entity مستقل شد، وضعیتش هم مستقل و طبیعی است |
-| Fulfillment (Line) | `VendorSalesOrderLine.FulfillmentStatus` | `Pending → ApprovalRequested → Issued` + terminal `Rejected | Cancelled`؛ **قاعدهٔ حاکم: در هر لحظه حداکثر یک عملیات صدور باز (`ApprovalRequested`) به‌ازای هر License** — پس از terminal شدن یک Line، درخواست Line بعدیِ هم‌هدف با `LastIssuedSequence` و RowVersion تازه ساخته می‌شود (بخش ۷) | ردیف‌ها مستقل صادر می‌شوند؛ «بسته‌شدن سفارش» مقدار ذخیره‌شده نیست، **مشتق** است (همهٔ ردیف‌ها terminal) — از دو منبع حقیقت جلوگیری می‌کند |
+| بررسی پرداخت | `VendorPayment.VerificationStatus` | `Recorded → Verified \| Rejected` | چون پرداخت Entity مستقل شد، وضعیتش هم مستقل و طبیعی است |
+| Fulfillment (Line) | `VendorSalesOrderLine.FulfillmentStatus` | `Pending → ApprovalRequested → Issued` + terminal `Rejected \| Cancelled`؛ فقط در بازیابی approval کهنه طبق بخش ۷، گذار غیرترمینال `ApprovalRequested → Pending` مجاز است؛ **قاعدهٔ حاکم: در هر لحظه حداکثر یک عملیات صدور باز (`ApprovalRequested`) به‌ازای هر License** — پس از terminal شدن یک Line، درخواست Line بعدیِ هم‌هدف با `LastIssuedSequence` و RowVersion تازه ساخته می‌شود (بخش ۷) | ردیف‌ها مستقل صادر می‌شوند؛ «بسته‌شدن سفارش» مقدار ذخیره‌شده نیست، **مشتق** است (همهٔ ردیف‌ها terminal) — از دو منبع حقیقت جلوگیری می‌کند |
 | اعمال Entitlement در مشتری | **فعلاً ستونی ساخته نمی‌شود** | `Delivered/Applied` در PR مربوط به #394 به‌صورت additive به `FulfillmentStatus` اضافه می‌شود | چون ACK معتبر و allow-list هنوز مسیر #394 است؛ ستون خالی امروز = ابهام فردا. ثبت گذارها با audit append-only موجود کافی است |
 
 قواعد انتقال: هیچ گذار معکوسی از terminal مجاز نیست؛ هیچ حذفی رخ نمی‌دهد (append-only ممیزی)؛ گذار فقط از مسیر endpoint مجاز + antiforgery + server-side authorization انجام می‌شود؛ لغو سفارش فقط وقتی مجاز است که هیچ ردیفی `Issued` نشده باشد (ردیف صادرشده فقط با amendment جدید و sequence جدید قابل واگرد است — حذف entitlement در builderهای فعلی وجود ندارد و باید هم نباشد).
 
 ## ۶. قواعد امنیتی و Maker-Checker
 
-1. **زیرساخت واحد، دو ResourceType:** `salesOrderPayment` (TargetStatus=Verified) و `salesOrderLine` (TargetStatus=Issued) روی همان `VendorApprovalRequest`. سیستم approval موازی ساخته نمی‌شود؛ فقط allow-list دو نقطه در کد آینده گسترش می‌یابد (`VendorApprovalEndpoints.cs:62` و `:166`) و ساخت درخواست‌ها مثل الگوی لایسنس از **endpoint اختصاصی** انجام می‌شود نه endpoint عمومی status-change. License هدف صدور از `line.LicenseId` تثبیت‌شده خوانده می‌شود (انتخاب آزاد در لحظهٔ تصمیم وجود ندارد) و ساخت درخواست صدور جدید برای License‌ای که درخواست باز دارد رد می‌شود.
+1. **زیرساخت واحد، دو ResourceType:** `salesOrderPayment` (TargetStatus=Verified) و `salesOrderLine` (TargetStatus=Issued) روی همان `VendorApprovalRequest`. سیستم approval موازی ساخته نمی‌شود؛ هر چهار نقطهٔ dispatch در کد آینده باید گسترش یابد: allow-list ساخت درخواست (`VendorApprovalEndpoints.cs:62`)، نگاشت permission هنگام ساخت (`PermissionFor` در `:66`)، allow-list تصمیم (`:166`) و نگاشت permission هنگام تصمیم (`PermissionFor` در `:189`). `PermissionFor` باید `salesOrderPayment` را به `vendor.payments.verify` و `salesOrderLine` را به `vendor.licenses.issue` نگاشت کند. ساخت درخواست‌ها مثل الگوی لایسنس از **endpoint اختصاصی** انجام می‌شود نه endpoint عمومی status-change. License هدف صدور از `line.LicenseId` تثبیت‌شده خوانده می‌شود (انتخاب آزاد در لحظهٔ تصمیم وجود ندارد) و ساخت درخواست صدور جدید برای License‌ای که درخواست باز دارد رد می‌شود.
 2. **جلوگیری از تأیید توسط درخواست‌دهنده:** قاعدهٔ موجود `approval.RequestedByUserId == reviewerUserId ⇒ conflict` در هر دو سرویس آینده الزامی است (همان الگوی `VendorLicenseIssuanceService`).
 3. **Permission مستقل:** بررسی پرداخت به permission جدید **پیشنهادی** `vendor.payments.verify` نیاز دارد (هم‌خوان با نام‌گذاری/نسخهٔ `VendorPermissionCatalog` v1)؛ ثبت سفارش/پرداخت با `vendor.orders.manage` پیشنهادی؛ تأیید صدور با `vendor.licenses.issue` **موجود**. تعریف عملیاتی این permissionها در PR پیاده‌سازی بعدی است؛ این سند فقط نام را پیشنهاد می‌دهد.
 4. **تفکیک سه مفهوم:** ثبت پرداخت ≠ تأیید پرداخت ≠ تأیید صدور؛ هر کدام actor، endpoint و audit event جدا دارد. این هم‌پوشانی نقش‌ها را از نظر فنی ناممکن نمی‌کند (یک مدیر می‌تواند هر دو permission را داشته باشد)؛ سخت‌گیری بیشتر (ممنوعیت تأیید صدور توسط همان تأییدکنندهٔ پرداختِ همان سفارش) = تصمیم مالک (تصمیم ۲).
@@ -152,10 +153,10 @@ flowchart TD
 | DB | unique `(LicenseId, Sequence)` + `CK Sequence>=1` + FK Restrict (`VendorDbContext.cs:178-194`) | درخواست هم‌زمان دوم با همان Sequence در commit شکست می‌خورد (SqlException 2601/2627 → `license_sequence_already_issued`) — **نگهبان نهایی، مستقل از اپلیکیشن** |
 | سیاست یک صدور باز به‌ازای هر License | چک اپلیکیشن در endpoint ساخت درخواست تأیید صدور: License‌ای که Line در `ApprovalRequested` دارد درخواست جدید نمی‌پذیرد (`license_issuance_in_progress`)؛ پیشنهاد نگهبان DB: **filtered unique index `ON VendorSalesOrderLines(LicenseId) WHERE FulfillmentStatus = 'ApprovalRequested'`** (Proposed؛ schema approval) | حداکثر یک عملیات صدور فعال به‌ازای هر License **بدون Queue/Event Bus/Distributed Lock**؛ دو Line هم‌هدف اصلاً هم‌زمان به مرحلهٔ تصمیم نمی‌رسند؛ حتی اگر هر دو عبور کنند، unique `(LicenseId, Sequence)` نگهبان نهایی است |
 | Builder | `license.LastIssuedSequence == currentPayload.Sequence` و `Sequence != int.MaxValue` | payload کهنه/stale و overflow رد می‌شود |
-| RowVersion | `ExpectedResourceRowVersion` روی approval و تطبیق RowVersion license در سرویس + `DbUpdateConcurrencyException` | تصمیم دوباره روی همان approval، یا تغییر resource بین request و decision |
+| RowVersion | برای درخواست صدور Line، `ExpectedResourceRowVersion` نسخهٔ Line را نگه می‌دارد و فیلد جداگانهٔ پیشنهادی `ExpectedLicenseRowVersion` (افزودهٔ nullable در schema approval؛ الزامی برای `salesOrderLine`) نسخهٔ License را ثبت می‌کند؛ هر دو نسخه پیش از ساخت amendment داخل همان تراکنش با رکورد جاری تطبیق داده می‌شوند و اختلاف هرکدام ⇒ 409 conflict؛ نسخهٔ جدید License هرگز خودکار جایگزین نسخهٔ زمان درخواست نمی‌شود | جلوگیری از اجرای approval کهنه، هم برای تغییر Line و هم برای تغییر License بین درخواست و تصمیم |
 | تراکنش | envelope + approval + sequence + audit در **یک** SaveChanges/txn؛ audit درون-تراکنشی | هیچ وضعیت ناقصی در شکست signer/audit باقی نمی‌ماند |
 | پیوند Line→Envelope | `IssuedEnvelopeId` 0..1 + filtered unique index (پیشنهاد schema) | هر ردیف حداکثر یک صدور؛ retry روی همان ردیف به‌جای envelope جدید، وضعیت موجود را برمی‌گرداند |
-| رفتار Retry | پس از conflict، باید payload تازه بخواند (LastIssuedSequence جدید) و **درخواست تأیید جدید** ساخته شود؛ اتوماتیک-retry و اجرای خودکار درخواست کهنه با دادهٔ جدید ممنوع — گارد موجود `license.RowVersion ↔ approval.ExpectedResourceRowVersion` (`VendorLicenseIssuanceService.cs:50`) هر اجرای stale را conflict می‌کند | دو Line هم‌هدف یک سفارش: با سیاست ردیف «یک صدور باز» تنها یکی درخواست باز دارد؛ پس از terminal شدن آن، درخواست Line بعدی با Sequence/RowVersion تازه ساخته می‌شود؛ درخواست کهنه در صورت تغییر payload اجرا نمی‌شود و conflict می‌گیرد |
+| رفتار Retry و بازیابی approval کهنه | اگر نسخهٔ License یا Line با نسخهٔ ثبت‌شده در approval منطبق نباشد، تصمیم صدور با 409 رد می‌شود و هیچ builder یا signer اجرا نمی‌شود. مسیر بازیابی در همان تراکنش: approval به وضعیت `Stale` (وضعیت موجود در مدل/endpoint فعلی) می‌رود؛ فقط اگر Line هنوز به همان ApprovalRequest متصل و در `ApprovalRequested` باشد و RowVersion ثبت‌شدهٔ Line منطبق باشد، Line به `Pending` برمی‌گردد، پیوند درخواست باز آزاد می‌شود و audit هر دو تغییر ثبت می‌شود. اگر Line نیز تغییر کرده باشد، کل عملیات rollback و conflict می‌شود؛ هیچ وضعیت یا payloadی خودکار جایگزین نمی‌شود و اصلاح/لغو باید از مسیر مجاز و ممیزی‌شده انجام شود. پس از بازیابی موفق، درخواست تازه فقط با خواندن مجدد Line/License و ثبت هر دو RowVersion ساخته می‌شود؛ اتوماتیک-retry ممنوع است | slot یکتای باز آزاد می‌شود؛ درخواست بعدی با نسخه‌های جاری ساخته می‌شود؛ درخواست stale هرگز با payload جدید اجرا نمی‌شود |
 
 نتیجه: بررسی‌های سطح اپلیکیشن لازم‌اند اما **کافی نیستند**؛ امنیت در برابر اجرای هم‌زمان و تکرار، به قید پایگاه‌داده و RowVersion تکیه دارد — همان استراتژی اثبات‌شدهٔ issuance فعلی.
 
@@ -185,7 +186,7 @@ flowchart TD
 | 8 | `CustomerId` به‌جای `CustomerNumber` | CustomerNumber؛ CustomerId Guid | **CustomerId (Guid) در همهٔ FKهای جدید؛ CustomerNumber فقط نمایشی/جست‌وجو** | CustomerNumber امروز قابل‌ویرایش است (ریسک ثبت‌شده)؛ Guid پایدار است | تغییر آیندهٔ CustomerNumber هیچ رکوردی را نمی‌شکند | **بله** (PR1) |
 | 9 | اجباری/اختیاری بودن `VendorContract` | اجباری؛ اختیاری | **اختیاری + FK مرکب سازگاری مشتری** | doc خود entity: قرارداد پرداخت را imply نمی‌کند؛ اجبار، خرید بدون قرارداد را ناممکن می‌کند | الزام قرارداد فعال = سیاست آیندهٔ مالک | **بله** (PR1) |
 | 10 | یکتایی `ReferenceNumber` پرداخت | (الف) بدون قید unique در v1: index جست‌وجو + هشدار تشخیص تکرار هنگام ثبت؛ (ب) unique با Namespace صریح `(Method, ProviderOrBank, ReferenceNumber)` — نیازمند فیلد جدید نام ارائه‌دهنده/بانک | **(الف)**؛ قید unique تا تعیین دامنهٔ namespace فقط Proposed و موکول به schema approval | شمارهٔ رسید بین بانک‌ها/ارائه‌دهندگان می‌تواند تکرار شود؛ یکتایی سراسری فرض فنی نیست و بدون دادهٔ Provider قابل اجرا نیست | در (ب) رسیدهای مشروع با Provider ثبت‌نشده مسدود می‌شوند؛ در (الف) ریسک ثبت دوبارهٔ همان رسید با هشدار انسانی کنترل می‌شود | می‌تواند در schema approval حل شود (موکول‌پذیر) |
-| 11 | قاعدهٔ رسیدن به `Confirmed` و نسبت صدور با تأیید پرداخت (بدون allocation/Ledger/درگاه) | (الف) `Confirmed` با نخستین Payment `Verified`؛ جمع Verified فقط نمایش اطلاعاتی؛ صدور Line مستقل از پرداخت (فقط Maker-Checker خودش)؛ (ب) `Confirmed` وقتی جمع Verified ≥ TotalAmount (TotalAmount الزامی می‌شود و رفتار NULL باید تعریف شود)؛ صدور مستقل؛ (ج) `Confirmed` دستی اپراتور مجاز + گیت اختیاری «حداقل یک Verified» برای صدور | **(الف)** — پیشنهاد پیش‌فرض فنی؛ Accepted ثبت نشده | بدون allocation هیچ قاعدهٔ خودکار دقیقی برای کفایت پرداخت وجود ندارد؛ (الف) ساده‌ترین مدل معتبر است و خرید اعتباری/پرداخت مرحله‌ای را نمی‌شکند (چند Payment مجاز است) | در (الف) سفارش با پرداخت جزئی هم Confirmed و قابل صدور می‌شود و کنترل تجاری انسانی باقی می‌ماند؛ در (ب) صدور تا تسویهٔ کامل قفل می‌شود؛ در (ج) بیشترین انعطاف با اتکا به فرآیند انسانی | **بله** — قاعدهٔ Confirmed برای PR2، گیت صدور برای PR3 |
+| 11 | قاعدهٔ رسیدن به `Confirmed` و نسبت صدور با تأیید پرداخت (بدون allocation/Ledger/درگاه) | (الف) `Confirmed` با نخستین Payment `Verified`؛ جمع Verified فقط نمایش اطلاعاتی؛ صدور Line مستقل از پرداخت (فقط Maker-Checker خودش)؛ (ب) `Confirmed` وقتی جمع Verified ≥ TotalAmount (TotalAmount الزامی می‌شود و رفتار NULL باید تعریف شود)؛ صدور مستقل از پرداخت؛ (ج) `Confirmed` دستی اپراتور مجاز + گیت اختیاری «حداقل یک Verified» برای صدور | **(الف)** — پیشنهاد پیش‌فرض فنی؛ Accepted ثبت نشده | بدون allocation هیچ قاعدهٔ خودکار دقیقی برای کفایت پرداخت وجود ندارد؛ (الف) ساده‌ترین مدل معتبر است و خرید اعتباری/پرداخت مرحله‌ای را نمی‌شکند (چند Payment مجاز است) | در (الف) سفارش با پرداخت جزئی هم Confirmed و قابل صدور می‌شود؛ در (ب) فقط وضعیت تجاری تا تسویهٔ کامل Confirmed نمی‌شود و چون صدور در همین گزینه مستقل از پرداخت است، Confirmed نبودن به‌تنهایی گیت صدور نیست؛ در (ج) بیشترین انعطاف با اتکا به فرآیند انسانی | **بله** — قاعدهٔ Confirmed برای PR2، گیت صدور برای PR3 |
 
 سؤال‌های جزئی‌تر (فرمت OrderNumber، حداکثر طول Note، نام دقیق permissionها) به schema approval/PR مربوطه موکول شد تا فهرست مالک کوتاه بماند.
 
