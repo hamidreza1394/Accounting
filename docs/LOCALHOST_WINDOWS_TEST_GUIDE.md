@@ -144,8 +144,7 @@ dotnet Vendor\Vendor.Host\bin\Debug\net10.0\Faranou.Vendor.Host.dll --signing-ce
 $env:FARANO_VENDOR_Licensing__TrustedSigningKeys__vendor-license-v1__PublicKeySubjectPublicKeyInfoBase64 = "<SPKI-License>"
 $env:FARANO_VENDOR_ProvisioningSigningTrust__Keys__vendor-provisioning-v1__PublicKeySubjectPublicKeyInfoBase64 = "<SPKI-Provisioning>"
 
-# اجرای Vendor روی 5100
-dotnet run --project Vendor\Vendor.Host -- --urls http://localhost:5100
+# اجرای Vendor را پس از Migration و Bootstrap انجام دهید
 ```
 
 پیش از ساخت مدیر اول، دیتابیس Vendor باید Migrationهای خودش را دریافت کند. Vendor در Startup به‌صورت خودکار Migration اجرا نمی‌کند؛ این دستور را فقط روی دیتابیس آزمایشی همین راهنما اجرا کنید:
@@ -155,23 +154,23 @@ $env:FARANO_VENDOR_ConnectionStrings__VendorDb = "Server=localhost;Database=Fara
 dotnet ef database update --project Vendor\Vendor.Persistence\Vendor.Persistence.csproj --startup-project Vendor\Vendor.Host\Vendor.Host.csproj
 ```
 
-در پنجرهٔ Vendor، مدیر اول را بسازید. Bootstrap به راز تصادفی یک‌بارهٔ حداقل ۳۲ بایت نیاز دارد؛ مقدار زیر فقط در Environment همان پنجره نگهداری می‌شود:
+در همان پنجره‌ای که Connection String و مسیر Data Protection را تنظیم کرده‌اید، مدیر اول را بسازید. Bootstrap به راز تصادفی یک‌باره با حداقل ۳۲ بایت نیاز دارد. یک مقدار تصادفی حداقل ۳۲ کاراکتری را از Password Manager تولید کنید؛ آن را در فایل یا Git قرار ندهید. ابتدا آن را به‌صورت مخفی در Environment بگیرید:
 
 ```powershell
-$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
-$secretBytes = New-Object byte[] 32
-$rng.GetBytes($secretBytes)
-$rng.Dispose()
-$env:FARANO_VENDOR_Bootstrap__Secret = [Convert]::ToBase64String($secretBytes)
-Remove-Variable secretBytes
+$bootstrapSecret = Read-Host -AsSecureString "راز تصادفی یک‌بارهٔ Bootstrap (حداقل ۳۲ کاراکتر)"
+$env:FARANO_VENDOR_Bootstrap__Secret = (New-Object System.Net.NetworkCredential('', $bootstrapSecret)).Password
+$bootstrapSecret.Dispose()
 
 dotnet Vendor\Vendor.Host\bin\Debug\net10.0\Faranou.Vendor.Host.dll bootstrap-admin
 ```
 
-در فرمان تعاملی، راز bootstrap را از مقدار Environment وارد کنید و سپس مشخصات مدیر و گذرواژه را وارد کنید. بعد از اتمام موفق، راز موقت را پاک کنید:
+در فرمان تعاملی، همان راز را دوباره وارد کنید و سپس مشخصات مدیر و گذرواژه را وارد کنید. بعد از اتمام موفق، راز موقت را پاک کنید:
 
 ```powershell
 Remove-Item Env:FARANO_VENDOR_Bootstrap__Secret
+
+# اکنون Vendor را اجرا کنید (در همین پنجره یا پنجره‌ای با همان تنظیمات Environment)
+dotnet run --project Vendor\Vendor.Host -- --urls http://localhost:5100
 ```
 
 سپس در `http://localhost:5100` با مدیر اول و MFA/TOTP وارد شوید و مشتری/نصب/قرارداد/لایسنس را تا وضعیت `Draft` بسازید.
@@ -248,7 +247,7 @@ if ($null -eq $envelope -or [string]::IsNullOrWhiteSpace([string]$envelope.Envel
 [System.IO.File]::WriteAllText(
   'C:\FaranouLocalTest\license.json',
   [string]$envelope.EnvelopeJson,
-  (New-Object System.Text.UTF8Encoding($false)))
+  ([System.Text.UTF8Encoding]::new($false)))
 ```
 
 > برای import، ابتدا باید Provisioning v4 از مسیر موجود اعمال شود و حساب Infrastructure ایجاد/Enroll شود. صفحهٔ Provisioning مشتری در کد React توکن ضدجعل را از `GET /api/v1/antiforgery/token` می‌گیرد و از Cookie همان مرورگر استفاده می‌کند؛ این صفحه یک API مستقل CLI نیست. این راهنما عمداً `$session` و `$token` تعریف‌نشده را به‌عنوان فرمان PowerShell ارائه نمی‌کند. ورود تعاملی و Import License از API نیازمند Cookie نشست معتبر و مقدار واقعی `requestToken`/`headerName` همان نشست است؛ تا زمانی که یک مسیر UI کامل یا اسکریپت ورود/CSRF تست‌شده ارائه نشده، این بخش را به‌عنوان گام دستیِ نیازمند احراز هویت در نظر بگیرید و از ارسال درخواست با Session خالی خودداری کنید.
@@ -260,11 +259,13 @@ if ($null -eq $envelope -or [string]::IsNullOrWhiteSpace([string]$envelope.Envel
 Invoke-RestMethod http://localhost:5000/api/v1/licensing/status | ConvertTo-Json -Depth 6
 ```
 
-پس از این مرحله ورود عادی باز می‌شود و دسترسی‌ها بر اساس Company/Module/UserSeat همان payload اعمال می‌شوند.
+فقط پس از Import موفق Envelope امضاشده، وضعیت باید `active` شود و ورود عادی بر اساس Company/Module/UserSeat همان payload ارزیابی می‌شود. در وضعیت فعلی، چون صدور نهایی از نصب تازه و گردش‌کار CLI Import هنوز قابل تکمیل/تأیید نیست، این مرحله را بدون Envelope معتبر و نشست احرازشده، انجام‌شده تلقی نکنید.
 
 ---
 
 ## ۷) سناریوهای انقضا، تمدید، آفلاین و Restricted
+
+سناریوهای زیر فقط وقتی قابل اجرا هستند که یک Envelope معتبر از قبل صادر و با مسیر احرازشده Import شده باشد؛ با نصب تازه، محدودیت Maker-Checker بند ۴ مانع رسیدن به این نقطه است.
 
 | تست | روش کنترل‌شده | رفتار مورد انتظار |
 |---|---|---|
@@ -288,7 +289,7 @@ Invoke-RestMethod http://localhost:5000/api/v1/licensing/status | ConvertTo-Json
 4. Customer/Installation آزمایشی — بند ۴ (UI Vendor)
 5. ساخت Draft و بررسی Signer — بند ۴؛ صدور نهایی فعلاً Blocked به‌دلیل نبود گردش‌کار ایجاد مدیر دوم
 6. اجرای فرانو روی localhost:5000 — بند ۵
-7. ورود با License معتبر — بند ۶ (import) و سپس Login
+7. ورود با License معتبر — مشروط به رفع Blockerهای بند ۴ و ۶
 8. بررسی وضعیت و Entitlement — `GET /api/v1/licensing/status`
 9. تغییر کنترل‌شدهٔ اعتبار — بند ۷ (Term گذشته)
 10. تمدید و License جدید — بند ۷ (Sequence جدید)
