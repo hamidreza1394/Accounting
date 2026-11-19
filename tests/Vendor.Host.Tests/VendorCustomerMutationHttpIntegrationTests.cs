@@ -679,19 +679,20 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
             }
 
             using (var response = await PostWithTokenAsync(client, $"/api/vendor/approvals/{customerApprovalId:D}/decision",
-                new { decision = "Approved", rowVersion = customerApprovalRowVersion, comment = "self approval must fail" },
+                new { decision = "Approved", rowVersion = customerApprovalRowVersion, comment = "self approval allowed by D-109" },
                 antiForgeryToken, cancellationToken))
             {
-                Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             }
 
             await using (var scope = factory.Services.CreateAsyncScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
                 var persisted = await db.Customers.AsNoTracking().SingleAsync(item => item.Id == customerId, cancellationToken);
-                Assert.Equal("Active", persisted.Status);
+                Assert.Equal("Suspended", persisted.Status);
                 Assert.Equal(1, await db.ApprovalRequests.CountAsync(item =>
-                    item.Id == customerApprovalId && item.Status == "Pending", cancellationToken));
+                    item.Id == customerApprovalId && item.Status == "Approved" &&
+                    item.RequestedByUserId == item.ReviewedByUserId, cancellationToken));
                 Assert.Equal(1, await db.AuditEvents.CountAsync(item =>
                     item.ActionCode == "vendor.approval.requested" && item.SubjectId == customerApprovalId.ToString("D"), cancellationToken));
             }
@@ -1220,20 +1221,20 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal(HttpStatusCode.NotFound, inaccessibleDecision.StatusCode);
             }
 
-            using (var licenseDecisionResponse = await PostWithTokenAsync(reviewerClient,
+            using (var licenseDecisionResponse = await PostWithTokenAsync(client,
                 $"/api/vendor/approvals/{licenseApprovalId:D}/decision",
-                new { decision = "Approved", rowVersion = licenseApprovalRowVersion, comment = "must fail closed without signer" },
-                reviewerAntiForgeryToken, cancellationToken))
+                new { decision = "Approved", rowVersion = licenseApprovalRowVersion, comment = "self-approval must still fail closed without signer" },
+                antiForgeryToken, cancellationToken))
             {
                 Assert.Equal(HttpStatusCode.ServiceUnavailable, licenseDecisionResponse.StatusCode);
                 using var json = JsonDocument.Parse(await licenseDecisionResponse.Content.ReadAsStringAsync(cancellationToken));
                 Assert.Equal("license_issuance_unavailable", json.RootElement.GetProperty("error").GetString());
             }
 
-            using (var provisioningDecisionResponse = await PostWithTokenAsync(reviewerClient,
+            using (var provisioningDecisionResponse = await PostWithTokenAsync(client,
                 $"/api/vendor/approvals/{provisioningApprovalId:D}/decision",
-                new { decision = "Approved", rowVersion = provisioningApprovalRowVersion, comment = "First attempt must fail closed" },
-                reviewerAntiForgeryToken, cancellationToken))
+                new { decision = "Approved", rowVersion = provisioningApprovalRowVersion, comment = "self-approval must still fail closed without signer" },
+                antiForgeryToken, cancellationToken))
             {
                 var provisioningDecisionBody = await provisioningDecisionResponse.Content.ReadAsStringAsync(cancellationToken);
                 Assert.True(provisioningDecisionResponse.StatusCode == HttpStatusCode.ServiceUnavailable,
