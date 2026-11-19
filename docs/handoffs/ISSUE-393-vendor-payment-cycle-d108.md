@@ -9,7 +9,7 @@
 - [x] ثبت دستی چند Payment برای هر سفارش با ستون‌های typed (مبلغ decimal(19,4)، ارز، روش، مرجع بیرونی، زمان ادعایی پرداخت).
 - [x] وضعیت‌های Unpaid / PartiallyPaid / Paid + Overdue — همه در زمان خواندن محاسبه می‌شوند؛ هیچ ستون وضعیت روی سفارش ذخیره یا ویرایش نمی‌شود.
 - [x] فقط Paymentهای Verified در جمع پرداخت‌شده لحاظ می‌شوند؛ Recorded/Rejected بدهی را کم نمی‌کنند.
-- [x] تأیید پرداخت Maker-Checker مستقل: ResourceType جدید `salesOrderPayment` + permission جدید `vendor.payments.verify` (صدا: `vendor.payments.manage`)؛ منع self-approval، RowVersion، تراکنش واحد.
+- [x] تأیید مستقل پرداخت: ResourceType جدید `salesOrderPayment` + permission جدید `vendor.payments.verify` (صدا: `vendor.payments.manage`)؛ self-approval مجاز طبق D-109، RowVersion، تراکنش واحد.
 - [x] Audit مستقل هر دو چرخه: `vendor.payment.recorded/approval-requested/verified/rejected` و `vendor.sales-order.created` — جدا از Audit صدور.
 - [x] صدور و فعال‌سازی License مستقل از پرداخت: هیچ کدی بین Payment و LicenseIssuance وجود ندارد (هر دو سرویس مستقل‌اند) و برعکس.
 - [x] ارز Payment باید با ارز Order برابر باشد (پاسخ `payment_currency_mismatch`).
@@ -55,7 +55,7 @@
 
 ## امنیت، داده و سازگاری
 - Migration فقط Vendor DB؛ هیچ FK یا جدول مشترکی با Customer نیست.
-- antiforgery روی همهٔ mutationها؛ مجوزدهی سمت سرور؛ RowVersion و منع self-approval؛ Audit فقط metadata.
+- antiforgery روی همهٔ mutationها؛ مجوزدهی سمت سرور؛ RowVersion و self-approval مجاز طبق D-109؛ Audit فقط metadata.
 - هیچ secret یا کلیدی در کد/تست نیست؛ تست‌ها دیتابیس disposable با نام `FaranouVendorPayments_*` می‌سازند و حذف می‌کنند.
 
 ## ریسک‌ها و کارهای باقی‌مانده
