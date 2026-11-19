@@ -170,10 +170,12 @@ ClosedXML با Guard پیش از بازکردن: 1933 / 2005 / 2084ms (Guard ≈
 
 | مورد (فایل کوچک ساختگی) | ClosedXML | ExcelDataReader | Open XML SDK |
 |---|---|---|---|
-| سلول متنی «00123» | حفظ شد | حفظ شد | حفظ شد |
+| سلول متنی «00123» | حفظ شد | حفظ شد | پشتیبانی‌نشده با این artifact (Spike ۱ رشتهٔ مشترک/inline را حل نمی‌کند؛ `NotRun`) |
 | عددی با فرمت `00000` و مقدار ذخیره‌شدهٔ 123 | Number=123 و رشتهٔ فرمت‌شده «00123» | Double=123 و رشتهٔ فرمت «00000» (متن نمایشی را خودمان باید بسازیم) | مقدار خام 123 و StyleIndex (جست‌وجوی فرمت از `styles.xml` بر عهدهٔ ما) |
 | تاریخ | DateTime | DateTime | عدد سریال خام |
 | فرمول بدون مقدار cached | Blank با `HasFormula=true` | مقدار null؛ تفاوت «فرمول بدون مقدار» با «خالی» نشان داده نمی‌شود (**شکاف برای EXC-6**) | عنصر فرمول دیده می‌شود |
+
+> **یادداشت:** ستون Open XML برای ردیف «00123» اجرای تأییدشده ندارد؛ با این artifact رشتهٔ مشترک (shared string)/inline در Spike ۱ حل نشده و `NotRun` است. سایر ستون‌ها بدون تغییر.
 
 عدد ۱۶رقمی: مقدار ذخیره‌شده `double` است (ClosedXML متن نمایشی را علمی `8.90123456789012E+15` می‌دهد). عدد ۱۹رقمی در فایل به‌صورت `double` دقت را از دست داده بود؛ یعنی دقت پیش از رسیدن به هر کتابخانه‌ای از بین رفته و فقط با سیاست خطا (EXC-5) قابل‌مدیریت است.
 
@@ -283,6 +285,7 @@ ws.append(['TextCode','NumFmtCode','GeneralNum','BigId','Formula','Date','Shamsi
 ws.append(['00123', 123, 123, 8901234567890123, '=1/0', datetime.date(2026,11,19), '1405/08/28', None])
 ws['B2'].number_format = '00000'
 ws.append(['0012345678901', 123, '1,234.50', 1234567890123456789, '=SUM(C2:C3)', datetime.datetime(2026,11,19,10,30), '۱۴۰۵/۰۸/۲۸', ''])
+import os; os.makedirs('data', exist_ok=True)
 wb.save('data/small.xlsx')
 wb = Workbook(write_only=True); ws = wb.create_sheet('Big')
 ws.append(['Code','Name','Qty','Price','Country','Hs','Gtin','Note'])
