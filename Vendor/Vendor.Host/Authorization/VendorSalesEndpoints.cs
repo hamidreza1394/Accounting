@@ -12,7 +12,7 @@ namespace Faranou.Vendor.Host.Authorization;
 
 /// <summary>
 /// Vendor commercial sales orders, manual multi-payment recording, independent payment
-/// maker-checker verification and read-time receivables reporting (D-108). Payment state never
+/// approval and read-time receivables reporting (D-108/D-109). Payment state never
 /// gates license issuance and issuance never changes payment state; both keep separate
 /// resource types, permissions and audit cycles.
 /// </summary>
