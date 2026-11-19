@@ -3253,3 +3253,17 @@
 - **محدوده:** فقط مستندات؛ بدون کد/Entity/Migration/API/UI؛ بدون باز کردن Gate v5، بدون Production signer، بدون تغییر `CustomerNumber`، بدون تغییر Customer-side؛ هیچ سیاست تجاری به‌جای مالک تصمیم گرفته نشد و همهٔ مدل‌ها Proposed هستند.
 - **اعتبارسنجی:** `git diff --check` پاک؛ Build/Test اجرا نشد (تغییر اجرایی وجود ندارد)؛ وضعیت CI واقعی مرجع: post-merge builderها ۱۵/۱۵ و PR #711 ۱۵/۱۵؛ CI این PR پس از اجرا گزارش می‌شود.
 - **Handoff:** `docs/handoffs/ISSUE-393-s1-b-commercial-order-payment-design-prep.md`.
+
+## 2026-11-19 — D-106 (Proposed): نیازمندی‌ها و طراحی Excel Import مرحله‌ای (Issue #715)
+
+- **مبنا:** main@6f539679؛ شاخهٔ docs/excel-import-adr-proposed.
+- **انجام‌شده:** ثبت ۱۵ توافق مالک به‌صورت Proposed (نه Accepted) در ADR جدید D-106؛ سند طراحی `docs/EXCEL_IMPORT_DESIGN.md` (جریان Import، Canonical Schema، الگوریتم پیشنهاد Mapping، تشخیص تغییر ساختار، اعتبارسنجی، Preview، امنیت فایل، سیاست ثبت همه‌یاهیچ، تعارض‌ها، تصمیم‌های باز، مراحل آینده)؛ سند `docs/EXCEL_IMPORT_LIBRARY_COMPARISON.md` با شواهد Spike و برچسب‌های راستی‌آزمایی؛ ارجاع در `docs/INDEX.md`.
+- **وضعیت تصمیم‌ها:** EXC-1..EXC-17 همه Proposed/NeedsApproval/Deferred؛ فقط D-103 بند ۹، D-105 بند ۸ و D-082 به‌عنوان Accepted ارجاع شدند. هیچ Package، کد، Entity، جدول، Migration، API، UI یا Sidebar افزوده نشد.
+- **تعارض‌های ثبت‌شده (حل‌نشده):** V3.2 §12 (Trade-محور، بدون Mapping)، `TRADE_S3_READINESS.md` («بعد از S3»)، و وضعیت `NotImplemented` Combobox در D-082/`UI_COMPONENTS.md` در حالی که `SearchableCombobox.tsx` در کد هست.
+- **اعتبارسنجی:** فقط مستندات؛ Build/Test کد اجرا نشد. نتیجهٔ بررسی‌های متنی در handoff.
+- **Handoff:** `docs/handoffs/ISSUE-715-excel-import-adr-proposed.md`.
+
+## 2026-11-19 — اصلاحات بازبینی D-106 / Excel Import (Issue #715)
+
+- بازبینی مستقل `architect` و `security-reviewer` روی سه سند و ADR اعمال شد (فقط مستندات): حذف هرگونه محل ذخیرهٔ Mapping و صراحت وابستگی EXC-9 به EXC-8؛ کلید جست‌وجوی Mapping بدون اثر انگشت سرستون؛ نقد EXC-2 و محل Parser؛ تکمیل EXC-12 (گره‌خوردن Preview به Commit، Idempotency)؛ سخت‌تر شدن EXC-5 و EXC-13؛ برچسب‌گذاری منبع/تفسیر Lead برای توافق‌های ۴ و ۱۲؛ پیوست بازتولید Spike (بدون افزودن فایل کد به مخزن)؛ اصلاح ادعای آسیب‌پذیری و برچسب EPPlus.
+- هیچ وضعیت Accepted جدیدی؛ ADR مصوب قبلی دست‌نخورده؛ فهرست کامل در handoff `docs/handoffs/ISSUE-715-excel-import-adr-proposed.md`.
