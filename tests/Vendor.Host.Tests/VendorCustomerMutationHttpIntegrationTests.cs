@@ -1186,7 +1186,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
             using var createdJson = JsonDocument.Parse(await createdResponse.Content.ReadAsStringAsync(cancellationToken));
             var createdCustomerId = createdJson.RootElement.GetProperty("id").GetGuid();
 
-            // A distinct MFA-authenticated administrator can approve both requests.
+            // A second MFA-authenticated administrator is retained for authorization/retry checks; D-109 permits the requester to submit the initial approval decisions.
             using var reviewerClient = factory.CreateClient(new WebApplicationFactoryClientOptions
             {
                 BaseAddress = new Uri("https://localhost"),
