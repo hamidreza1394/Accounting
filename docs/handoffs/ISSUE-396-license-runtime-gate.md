@@ -60,5 +60,5 @@
 
 ## شناسه‌های Git
 - Branch: `agent/396-license-runtime-gate`
-- Commit: (پس از commit نهایی)
-- Pull Request: (پس از باز شدن)
+- Commit: `7f81a5f3`
+- Pull Request: #721
