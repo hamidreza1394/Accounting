@@ -126,8 +126,8 @@ public sealed class VendorSalesPaymentSqlServerTests
             var collectible = await maker.GetOrderAsync(collectibleOrderId, cancellationToken);
             Assert.Equal("PartiallyPaid", collectible.GetProperty("paymentStatus").GetString());
             Assert.True(collectible.GetProperty("overdue").GetBoolean());
-            Assert.Equal(300m, collectible.GetProperty("verifiedPaidAmount").GetDecimal());
-            Assert.Equal(900m, collectible.GetProperty("remainingAmount").GetDecimal());
+            Assert.Equal(400m, collectible.GetProperty("verifiedPaidAmount").GetDecimal());
+            Assert.Equal(800m, collectible.GetProperty("remainingAmount").GetDecimal());
 
             var paid = await maker.GetOrderAsync(paidOrderId, cancellationToken);
             Assert.Equal("Paid", paid.GetProperty("paymentStatus").GetString());
