@@ -232,6 +232,13 @@ public static class WindowsCngCertificatePolicy
             return "certificate_algorithm_unsupported";
         }
 
+        var keyUsageExtensions = certificate.Extensions.OfType<X509KeyUsageExtension>().ToArray();
+        if (keyUsageExtensions.Length != 1 ||
+            !keyUsageExtensions[0].KeyUsages.HasFlag(X509KeyUsageFlags.DigitalSignature))
+        {
+            return "certificate_key_usage_invalid";
+        }
+
         return null;
     }
 
@@ -261,6 +268,11 @@ public static class WindowsCngCertificatePolicy
         if (ecdsa is not ECDsaCng cngEcdsa)
         {
             return "certificate_key_not_cng_non_exportable";
+        }
+
+        if (!cngEcdsa.Key.Provider.Equals(CngProvider.MicrosoftSoftwareKeyStorageProvider))
+        {
+            return "certificate_key_provider_unsupported";
         }
 
         if (cngEcdsa.Key.ExportPolicy != CngExportPolicies.None)
