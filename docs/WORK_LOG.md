@@ -3217,3 +3217,17 @@
 - فرمول مبلغ نهایی پیش‌فاکتور همچنان باز است و در این PR تعیین نمی‌شود. هیچ Schema، Migration، API یا UI اضافه نشده است.
 - Handoff به `docs/handoffs/ISSUE-710-trade-payment-plan-validation.md` منتقل شد.
 - تغییر اجرایی جدید فقط نام‌گذاری دقیق‌تر تست موجود است؛ نتیجهٔ CI روی HEAD جدید باید پیش از Merge تأیید شود.
+
+
+## 2026-11-18 — تکمیل ممیزی S3-0d-b: DatabaseSetup، کاربر/عضویت، SetDefaultCompany، Session و FK (Issue #397)
+
+- **مبنا:** `main@b8cadbfd` (پس از #704/#705/#709). Branch `docs/s3-0d-b-data-path-inventory` ادامه یافت: merge غیرمخرب `origin/main` به داخل branch (commit `3f4ed81a` آن از قبل با PR #670 در main بود؛ تعارض add/add سند به نفع نسخهٔ main حل شد) + commit مستندات جدید؛ بدون reset/force.
+- **فاز صفر:** PR #653 merged (دور اول S3-0d)؛ PR #709 merged؛ هیچ PR باز مخزن خالی نیست. «HTTP 429» دو جریان: خطای واقعی E2E = PR #654 (`8f103aa0`) merged و کامل؛ Issue #429 (کنتراست سایدبار/برج میلاد) branch `fix/issue-429-sidebar-contrast-milad-tower` با ۷ commit merge‌نشده و بدون PR — متعلق به جریان دیگر، دست نخورد. Branch `test/tenant-s3-0d-b-isolation-verification` merge commit تاریخی #673/#674 است و محتوای تست/کدش با main بیت‌به‌بیت یکسان (diff مستقیم خالی)؛ دست نخورد.
+- **بخش ۱۴ handoff افزوده شد** (فقط مستندات؛ بدون بازنویسی سابقه):
+  - ۱۴.۱ DatabaseSetup: سه مسیر ایجاد داده — راه‌اندازی زیرساخت (بدون هیچ Seed؛ توکن یک‌بارمصرف؛ allowlist/blocklist؛ طبقه‌بندی وضعیت DB؛ Migration فقط Empty/PartiallyMigrated؛ `--migrate` با DatabaseMigrationHost)، ایجاد Company فقط از Provisioning (Serializable + sp_getapplock + idempotent replay + Rollback روی شکست)، و کاربر/عضویت. Dedicated/Cloud کد واحد، فقط deployment.
+  - ۱۴.۲ جریان userCreateFlow.ts (دومرحله‌ای D-072، شکست نیمه‌کاره، 409→پیشنهاد جدید)؛ قرارداد اعتبارسنجی مشترک admin/D-078؛ عضویت فوری roleless؛ جلوگیری از تکرار با unique index `(UserId,TenantId)`؛ بین‌شرکتی فقط با درخواست/تأیید مقصد در همان CustomerBoundary، سقف واگذاری D-071 با RowVersion و مجوز تأییدِ غیرقابل‌واگذاری.
+  - ۱۴.۳ `SetDefaultCompanyAsync` تک‌پیاده‌سازی (`WorkContextEndpoints:83`)؛ دروازهٔ عضویت فعال؛ 404 یکنواخت؛ ترجیحِ stale بی‌اثر؛ دورهٔ مالی فقط در SelectAsync با `TenantId == access.CompanyId` تأییدشده.
+  - ۱۴.۴ SessionValidator: اعتبارسنجی هر درخواست (فعال بودن، credential stamp زمان-ثابت، D-069، idle ۳۰ دقیقه، LastSeen set-based با شرط RevokedAtUtc==null)، R-16 جایگزینی نقش، لغو با تغییر رمز/خودکاربر/مدیر؛ لغو عضویت session را لغو نمی‌کند — WorkContext در هر خواندن دوباره resolve می‌شود.
+  - ۱۴.۵ FK/RI: جدول کامل FKهای واقعی Restrict + FKهای مرکب `(RoleId,TenantId)`/`(EmployeeId,TenantId)`/`(ApprovedRoleId,DestinationTenantId)` که «از شرکت دیگر» را در DB ناممکن می‌کنند؛ شکاف‌های مستند: بدون FK بودن `UserCompanyMemberships.UserId`، `ProvisioningRequestClaims.CompanyId/FiscalPeriodId/AdminUserId`، عمداً بدون FK بودن audit، و نبود FK Trade به Core (مرز ماژول). طبقه‌بندی مالکیت مکمل ماتریس بند ۳.
+  - ۱۴.۶ وضعیت: inventory در حد static/InMemory Verified؛ دو Tenant واقعی/SQL Server/مقادیر واقعی همچنان NotVerified/NotRun؛ هیچ تصمیم جدیدی گرفته نشد.
+- **بررسی:** `git diff --check` پاک؛ Build/Test اجرا نشد (تغییر اجرایی وجود ندارد — طبق AGENTS.md صادقانه ثبت می‌شود)؛ CI روی PR گزارش واقعی می‌شود.
