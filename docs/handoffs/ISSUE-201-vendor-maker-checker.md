@@ -1,5 +1,8 @@
 # تحویل وظیفه — ISSUE-201-vendor-maker-checker
 
+> **یادداشت تاریخی و supersession — D-109 (2026-11-19):** بندهای زیر رفتار و معیار پذیرش زمان PR #207 را ثبت می‌کنند. برای Vendor v1، الزام «درخواست‌کننده نمی‌تواند درخواست خودش را تأیید کند» دیگر معتبر نیست؛ یک اپراتور مجاز می‌تواند درخواست خود را تأیید کند. Customer-side membership approvals و سایر جریان‌های `Server/**` تحت این تغییر نیستند. اصلاح Vendor runtime در پیگیری Issue #214 انجام می‌شود.
+
+
 - **Issue:** https://github.com/hamidreza1394/Accounting/issues/201
 - **Branch:** feat/vendor-maker-checker-clean
 - **Pull Request:** https://github.com/hamidreza1394/Accounting/pull/207
