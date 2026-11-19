@@ -117,7 +117,7 @@
 - D-054 / #228 / #235: provisioning package و ACK؛ این مسیر با LicenseEnvelope/amendment یکی نیست و نباید دوباره پیاده‌سازی شود.
 - #214: Vendor signed revocation workflow؛ entitlement amendment جایگزین revocation snapshot نیست.
 - OD-06 و recovery در OD-08: انتقال/بازیابی installation و فقدان کلید هنوز نیازمند تصمیم/طرح مجزا است.
-- Production signer، independent audit sink، MFA/maker-checker عملیاتی و physical TPM verification blockers جداگانه‌اند.
+- پیاده‌سازی SoftwareProtected signer طبق D-107، independent audit sink و MFA/maker-checker عملیاتی blockers باقی‌مانده‌اند؛ HSM/TPM برای Vendor signer اجباری نیست. physical TPM verification فقط به D-057/Customer offline-revocation مربوط است.
 - این سند مجوز Migration نیست؛ هر Migration باید در Issue خودش با schema review و rollout/rollback plan بررسی شود.
 
 ## 8. Issues و پیوندها
@@ -141,7 +141,7 @@
 - CustomerAccount و مخاطبان/اطلاعات حقوقی و عملیاتی مشتری.
 - قرارداد، سفارش، اقلام خرید، پرداخت/تطبیق، تمدید، تعهد پشتیبانی، SLA و تاریخچه تجاری.
 - ارتباط پشتیبانی و سوابق تجاری قابل ممیزی؛ بدون حساب کاربری/رمز Customer و بدون داده حسابداری مشتری.
-- سفارش پرداخت‌شده/تأییدشده درخواست تغییر entitlement را به Engine تحویل می‌دهد؛ Commercial خودش LicenseEnvelope امضا نمی‌کند.
+- سفارش و Line تأییدشده، مستقل از وضعیت پرداخت، درخواست تغییر entitlement را به Engine تحویل می‌دهند؛ Commercial خودش LicenseEnvelope امضا نمی‌کند. Payment verification چرخه Maker-Checker/Audit جدا دارد و شرط صدور نیست (D-108).
 
 ### 9.2 Licensing & Entitlement Engine
 - کاتالوگ محصول، Module، Feature و سیاست‌های ظرفیت.
