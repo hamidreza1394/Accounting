@@ -257,6 +257,12 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - این بخش هیچ Migration یا تغییری در دیتابیس حسابداری مشتری ایجاد نمی‌کند. وضعیت پایه: `Implemented / CI-Verified` در محدوده تست‌های موجود؛ آمادگی کامل Production تأیید نشده است.
 
 
+## تغییر سیاست تأیید Vendor طبق D-109 (2026-11-19)
+- D-109 سیاست Vendor v1 را از تأیید دو هویت به تک‌اپراتوره تغییر داده است؛ یک مدیر مجاز می‌تواند درخواست را ثبت و خودش تأیید/رد کند. این استثنا فقط برای Vendor control-plane است و به Company membership/customer approval در `Server/**` تعمیم ندارد.
+- متن تاریخی بخش بعد دربارهٔ منع self-approval، رفتار Verified زمان PR #207 را ثبت می‌کند؛ الزام دو هویت برای Vendor v1 با D-109 superseded شده است.
+- پیاده‌سازی فعلی در شاخهٔ اجرایی Issue #214 حذف guardهای self-approval را برای endpoint عمومی، License issuance، Provisioning issuance و Offline Revocation issuance پوشش می‌دهد. وضعیت نهایی فقط پس از CI این PR قابل Verified اعلام‌کردن است.
+- MFA، مجوزدهی سمت سرور، Audit تراکنشی، RowVersion/concurrency و fail-closed signer حفظ می‌شوند.
+
 ## وضعیت تأییدشده فعلی Vendor — Maker-Checker مشتری/نصب (2026-10-27, PR #207)
 - تغییر وضعیت مشتری و نصب فقط از مسیر درخواست تأیید انجام می‌شود؛ endpointهای قدیمی مستقیم با `approval_required` پاسخ می‌دهند.
 - درخواست‌کننده نمی‌تواند درخواست خودش را تأیید/رد کند. تصمیم مستقل، تغییر وضعیت و رویدادهای Audit در یک تراکنش ثبت می‌شوند؛ RowVersion منبع و درخواست از replay و تصمیم روی دادهٔ stale جلوگیری می‌کنند.
