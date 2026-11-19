@@ -109,6 +109,7 @@ public sealed class VendorSalesPaymentSqlServerTests
             await maker.DecideAsync(rejectApprovalId, "Approved", cancellationToken);
 
             // Self-approval is explicitly allowed for the single-operator Vendor v1 policy (D-109).
+            // The same identity is persisted as both requester and reviewer; no second administrator is required.
             var secondPaymentId = await maker.RecordPaymentAsync(collectibleOrderId, 100m, cancellationToken);
             var selfApprovalId = await maker.RequestPaymentDecisionAsync(secondPaymentId, "verify", cancellationToken);
             await maker.DecideAsync(selfApprovalId, "Approved", cancellationToken);
