@@ -94,15 +94,21 @@ public static class VendorSalesEndpoints
             if (!await antiforgery.IsRequestValidAsync(context))
                 return Results.BadRequest(new { error = "invalid_antiforgery_token" });
             if (request is null ||
+                request.CustomerId == Guid.Empty ||
+                string.IsNullOrWhiteSpace(request.OrderNumber) ||
+                request.OrderNumber.Trim().Length > 64 ||
                 !IsValidCurrency(request.CurrencyCode) ||
-                request.TotalAmount < 0 ||
-                (request.DueAtUtc is { } due && due < default(DateTimeOffset)))
+                !FitsDecimal19Scale4(request.TotalAmount) ||
+                request.TotalAmount < 0)
                 return Results.BadRequest(new { error = "invalid_sales_order" });
             if (request.Lines is { Count: > 0 })
             {
                 foreach (var line in request.Lines)
                 {
-                    if (line.Quantity < 1 || line.UnitAmount < 0 ||
+                    if (string.IsNullOrWhiteSpace(line.ProductCode) || line.ProductCode.Trim().Length > 64 ||
+                        string.IsNullOrWhiteSpace(line.Description) || line.Description.Trim().Length > 500 ||
+                        line.Quantity < 1 || !FitsDecimal19Scale4(line.UnitAmount) ||
+                        !FitsDecimal19Scale4(line.LineAmount) || line.UnitAmount < 0 ||
                         line.LineAmount != decimal.Round(line.Quantity * line.UnitAmount, 4))
                         return Results.BadRequest(new { error = "invalid_sales_order_line" });
                 }
@@ -116,6 +122,24 @@ public static class VendorSalesEndpoints
             if (!customerExists)
                 return Results.NotFound();
 
+            if (request.ContractId is { } contractId &&
+                !await db.Contracts.AsNoTracking().AnyAsync(
+                    item => item.Id == contractId && item.CustomerId == request.CustomerId, ct))
+                return Results.BadRequest(new { error = "contract_customer_mismatch" });
+
+            var licenseIds = request.Lines?
+                .Where(line => line.LicenseId.HasValue)
+                .Select(line => line.LicenseId!.Value)
+                .Distinct()
+                .ToArray() ?? [];
+            if (licenseIds.Length > 0)
+            {
+                var matchingLicenseCount = await db.Licenses.AsNoTracking().CountAsync(
+                    item => licenseIds.Contains(item.Id) && item.CustomerId == request.CustomerId, ct);
+                if (matchingLicenseCount != licenseIds.Length)
+                    return Results.BadRequest(new { error = "license_customer_mismatch" });
+            }
+
             var actor = await users.GetUserAsync(context.User);
             if (actor is null) return Results.Forbid();
 
@@ -125,10 +149,10 @@ public static class VendorSalesEndpoints
                 Id = Guid.NewGuid(),
                 CustomerId = request.CustomerId,
                 ContractId = request.ContractId,
-                OrderNumber = request.OrderNumber!.Trim(),
+                OrderNumber = request.OrderNumber.Trim(),
                 TotalAmount = request.TotalAmount,
-                CurrencyCode = request.CurrencyCode!,
-                DueAtUtc = request.DueAtUtc,
+                CurrencyCode = request.CurrencyCode!.ToUpperInvariant(),
+                DueAtUtc = request.DueAtUtc?.ToUniversalTime(),
                 CreatedAtUtc = timeProvider.GetUtcNow().ToUniversalTime()
             };
             if (request.Lines is { Count: > 0 })
@@ -174,7 +198,10 @@ public static class VendorSalesEndpoints
         {
             if (!await antiforgery.IsRequestValidAsync(context))
                 return Results.BadRequest(new { error = "invalid_antiforgery_token" });
-            if (request is null || request.Amount <= 0 || !IsValidCurrency(request.CurrencyCode))
+            if (request is null || request.Amount <= 0 || !FitsDecimal19Scale4(request.Amount) ||
+                !IsValidCurrency(request.CurrencyCode) ||
+                string.IsNullOrWhiteSpace(request.Method) || request.Method.Trim().Length > 32 ||
+                (!string.IsNullOrWhiteSpace(request.ExternalReference) && request.ExternalReference.Trim().Length > 200))
                 return Results.BadRequest(new { error = "invalid_payment" });
 
             var order = await db.SalesOrders.AsNoTracking()
@@ -197,7 +224,7 @@ public static class VendorSalesEndpoints
                 ExternalReference = string.IsNullOrWhiteSpace(request.ExternalReference)
                     ? null
                     : request.ExternalReference.Trim(),
-                ClaimedPaidAtUtc = request.ClaimedPaidAtUtc,
+                ClaimedPaidAtUtc = request.ClaimedPaidAtUtc?.ToUniversalTime(),
                 Status = VendorPaymentRecord.StatusRecorded,
                 CreatedAtUtc = timeProvider.GetUtcNow().ToUniversalTime()
             };
@@ -325,6 +352,11 @@ public static class VendorSalesEndpoints
             payments ?? [],
             Convert.ToBase64String(order.RowVersion));
     }
+
+    private static bool FitsDecimal19Scale4(decimal value) =>
+        value >= -999999999999999.9999m &&
+        value <= 999999999999999.9999m &&
+        decimal.Round(value, 4, MidpointRounding.ToEven) == value;
 
     private static bool IsValidCurrency(string? currency) =>
         !string.IsNullOrWhiteSpace(currency) && currency.Length == 3 &&
