@@ -22,7 +22,7 @@
 - Paymentهای ثبت/رد/تأییدشده، اصلاح سررسید و نتیجه صدور تاریخچه قابل ممیزی دارند.
 
 ## ۳) گزارش و هشدار مطالبات
-- فهرست سفارش‌های Unpaid، Partial، DueSoon و Overdue.
+- فهرست سفارش‌های Unpaid، Partial و Overdue.
 - مبلغ باقی‌مانده = مبلغ کل سفارش − جمع Paymentهای Verified؛ محاسبه decimal و در ارز سفارش.
 - هشدارها فقط در داشبورد و گزارش داخلی Vendor؛ در نسخه اول بدون scheduler، BackgroundService، Message Broker، SMS/Email، درگاه پرداخت، Ledger، PaymentAllocation یا CRM/Ticketing جدید.
 - عدم پرداخت به‌خودی‌خود License، Perpetual use، Support یا Update را تغییر نمی‌دهد.
