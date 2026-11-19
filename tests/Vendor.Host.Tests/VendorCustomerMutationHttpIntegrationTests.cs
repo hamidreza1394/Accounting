@@ -679,7 +679,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
             }
 
             using (var response = await PostWithTokenAsync(client, $"/api/vendor/approvals/{customerApprovalId:D}/decision",
-                new { decision = "Approved", rowVersion = customerApprovalRowVersion, comment = "self approval allowed by D-109" },
+                new { decision = "Rejected", rowVersion = customerApprovalRowVersion, comment = "self-review allowed by D-109" },
                 antiForgeryToken, cancellationToken))
             {
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -689,9 +689,9 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
             {
                 var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
                 var persisted = await db.Customers.AsNoTracking().SingleAsync(item => item.Id == customerId, cancellationToken);
-                Assert.Equal("Suspended", persisted.Status);
+                Assert.Equal("Active", persisted.Status);
                 Assert.Equal(1, await db.ApprovalRequests.CountAsync(item =>
-                    item.Id == customerApprovalId && item.Status == "Approved" &&
+                    item.Id == customerApprovalId && item.Status == "Rejected" &&
                     item.RequestedByUserId == item.ReviewedByUserId, cancellationToken));
                 Assert.Equal(1, await db.AuditEvents.CountAsync(item =>
                     item.ActionCode == "vendor.approval.requested" && item.SubjectId == customerApprovalId.ToString("D"), cancellationToken));
