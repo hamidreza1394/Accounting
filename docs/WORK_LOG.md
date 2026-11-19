@@ -3318,3 +3318,14 @@
 ## 2026-11-19 — راهنمای Windows Localhost (سناریوی A مأموریت)
 
 - `docs/LOCALHOST_WINDOWS_TEST_GUIDE.md`: مسیر کامل ۱۲ مرحله‌ای تست واقعی روی Windows شخصی با PowerShell Copy/Paste؛ شامل Key Ceremony CNG (D-107)، اجرای Vendor/فرانو روی localhost، فعال‌سازی با import، دروازهٔ Runtime و سناریوهای انقضا/تمدید/آفلاین/Restricted/Unlicensed. فقط مستندات؛ بدون کد و بدون Migration. handoff: `ISSUE-UNNUMBERED-localhost-windows-guide.md`.
+
+
+## 2026-11-19 — بازبینی سازگاری Windows و اصلاح راهنمای Localhost
+
+- **درخواست مالک:** راهنمای اجرا نباید به Windows 11 یا سخت‌افزار خاص محدود باشد.
+- **دامنه:** فقط مستندات PR #723؛ هیچ کد، Migration، Schema، API یا تصمیم امنیتی تغییر نکرد.
+- **سازگاری:** ماتریس .NET 10/SQL Server 2022 ثبت شد: Windows 11، Windows 10 Enterprise/LTSC در نسخه‌های پشتیبانی‌شده، Windows Server 2016+؛ SQL Server 2022 محلی x64 است. Windows 10 Home/Pro از ماتریس پشتیبانی .NET 10 خارج‌اند؛ Windows ARM64 برای SQL محلی نیازمند SQL Server روی میزبان x64 جداگانه است. Node فقط برای Build React لازم است.
+- **سخت‌افزار:** برای License/Provisioning central signing از Windows CNG Software KSP با کلید non-exportable استفاده می‌شود؛ TPM/HSM/KMS لازم نیست. D-055 (امضای offline-revocation) و D-057 (anti-rollback سمت مشتری) خارج از این استثنا و بدون تغییر باقی ماندند.
+- **رفع خطاهای راهنما:** Build صریح Vendor.Host پیش از export-public؛ Migration دیتابیس Vendor با EF CLI (Startup به‌صورت خودکار migrate نمی‌کند)؛ افزودن Bootstrap secret حداقل ۳۲ بایت؛ اصلاح پارامترهای Invoke-Sqlcmd؛ سازگاری آزمون HTTP با PowerShell 5.1؛ خروجی JSON بدون BOM.
+- **محدودیت‌های کشف‌شده:** تنها bootstrap-admin مدیر اول را می‌سازد و مسیر پشتیبانی‌شده‌ای برای مدیر دوم وجود ندارد؛ بنابراین صدور Maker-Checker در نصب تازه Blocked است. نمونهٔ API import که از متغیرهای تعریف‌نشدهٔ `$session` و `$token` استفاده می‌کرد حذف و به‌عنوان مسیر نیازمند نشست معتبر/قرارداد CSRF تست‌شده مشخص شد.
+- **اعتبارسنجی:** تغییرات مستنداتی‌اند؛ Build/Test برنامه اجرا نشد. CI پس از Commitهای مستندات باید بررسی شود؛ تست واقعی Windows و مسیر import/issuance هنوز توسط مالک اجرا نشده‌اند.
