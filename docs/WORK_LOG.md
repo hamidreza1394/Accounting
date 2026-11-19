@@ -3304,3 +3304,12 @@
 - **Spike reproducibility:** ساخت پوشهٔ خروجی در هر دو generator صریح شد؛ فرمان Build با `-o bin` مستند شد تا `bin/h.dll` با runnerها سازگار باشد؛ تفسیر cache خالی اصلاح شد و آن را نتیجهٔ قطعی عدم اجرای فرمول نمی‌داند.
 - **Markup:** pipe فرمول `=cmd\|...` در سلول جدول Escape شد.
 - **محدوده/وضعیت:** فقط مستندات؛ D-106 و همهٔ EXCها Proposed/NeedsApproval باقی‌اند؛ هیچ Package، کد اجرایی، Schema، Migration، API یا UI اضافه نشد. CI پس از این commit باید بررسی شود؛ Build/Test کد اجرا نشده چون تغییرات docs-only است.
+
+
+## 2026-11-19 — D-107/D-108: اصلاح سیاست امضای Vendor و استقلال پرداخت از صدور
+
+- D-107 (Accepted): مالک محصول الزام KMS/HSM برای امضای مرکزی Vendor در نسخه اول را تغییر داد. Windows CNG/Certificate Store با MachineKey non-exportable و assurance صریح SoftwareProtected برای Production مجاز است؛ TPM/HSM/KMS اجباری نیست. ریسک دسترسی مدیر محلی/میزبان، محدودیت Windows Server/Windows VM نسخه اول، Maker-Checker، MFA، Audit، rotation و fail-closed ثبت شدند. D-047 بند ۷، D-046 OD-07.3 و بخش Production در D-056 فقط در محدوده Vendor License/Provisioning signer superseded شدند.
+- مرزبندی امنیتی: D-057 برای Customer Offline Revocation همچنان TPM NV Extend را الزام می‌کند؛ این با امضای مرکزی Vendor متفاوت است و در OD-27 به‌عنوان تصمیم باز ثبت شد. D-055 برای Customer ACK و D-058 برای Installation identity مستقل باقی ماندند.
+- D-108 (Accepted): پرداخت شرط صدور/فعال‌سازی نیست. Payment و Issuance چرخه‌های مستقل Maker-Checker و Audit دارند. Payment دستی چندگانه، Verified-only aggregation، وضعیت‌های مشتق‌شده Unpaid/Partial/Paid/Overdue و هشدار/گزارش read-time بدون scheduler/broker/درگاه/Ledger ثبت شدند.
+- تعارض مستندات: عبارت قدیمی در LICENSING_IMPLEMENTATION_PLAN.md که سفارش پرداخت‌شده/تأییدشده را پیش‌شرط handoff به Engine معرفی می‌کرد، با D-108 اصلاح شد. وضعیت‌های تجاری/تحویل/ACK مستقل می‌مانند؛ Payment Verified نه صدور را تأیید می‌کند و نه برعکس.
+- محدوده تغییر: مستندات و تصمیم‌ها؛ هیچ کد، Entity، Migration، API، UI، کلید واقعی یا Gate Production تغییر نکرد. Build/Test کد اجرا نشده است؛ CI مستندات پس از PR باید بررسی شود.
