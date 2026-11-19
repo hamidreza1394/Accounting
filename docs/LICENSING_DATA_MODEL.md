@@ -359,7 +359,7 @@ User/Identity در Customer Host محلی است. برای هر Company می‌�
 - اطلاعیه‌ها و سوابق CRM فقط Vendor DB هستند و هرگز به فایل لایسنس/provisioning/ACK یا telemetry نصب وارد نمی‌شوند.
 
 
-## ۱۲) تکمیل مدل تجاری پرداخت و پیگیری سررسید (D-108؛ Proposed schema، NotImplemented)
+## ۱۲) تکمیل مدل تجاری پرداخت و پیگیری سررسید (D-108/D-109؛ Schema/API در PR #722، pending CI/merge)
 
 این بخش فقط قرارداد مفهومی Vendor DB است؛ هیچ Migration یا Entity با این متن ایجاد نشده است. قبل از Migration، مدل واقعی Vendor و دستورات #393 بررسی و از تکرار موجودیت جلوگیری شود.
 
