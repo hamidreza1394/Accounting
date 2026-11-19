@@ -33,7 +33,6 @@ public sealed class VendorPaymentVerificationService(
 
         if (approval.ResourceType != "salesOrderPayment" ||
             approval.Status != "Pending" ||
-            approval.RequestedByUserId == reviewerUserId ||
             approval.ResourceId == Guid.Empty || expectedApprovalVersion.Length != 8 ||
             !approval.RowVersion.AsSpan().SequenceEqual(expectedApprovalVersion))
             return VendorPaymentVerificationResult.Conflict("stale_approval_version");
