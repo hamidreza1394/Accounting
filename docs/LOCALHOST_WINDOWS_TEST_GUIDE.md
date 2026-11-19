@@ -7,8 +7,8 @@
 > **ماتریس سازگاری مبنا:**
 > - Windows 11 نسخه‌های پشتیبانی‌شده توسط .NET 10، در x64 و ARM64.
 > - Windows 10 فقط نسخه‌ها/Editionهایی که .NET 10 پشتیبانی می‌کند (در حال حاضر Enterprise/LTSC؛ Windows 10 Home و Pro در ماتریس پشتیبانی .NET 10 نیستند).
-> - Windows Server 2016، 2019، 2022 و 2025 در x64؛ Windows Server Core نیز برای اجرای Host قابل استفاده است.
-> - این سناریو SQL Server 2022 را محلی نصب می‌کند؛ SQL Server 2022 به Windows 10 1607+ یا Windows Server 2016+ و پردازنده x64 نیاز دارد. روی Windows ARM64، SQL Server را روی میزبان x64 جداگانه اجرا کنید.
+> - Windows Server 2012 و 2012 R2، 2016، 2019، 2022 و 2025 در x64 برای اجرای .NET 10 فهرست شده‌اند؛ Windows Server Core نیز برای نسخه‌های پشتیبانی‌شده قابل استفاده است. روی Server 2012/2012 R2 پیش‌نیاز Visual C++ 2015–2019 Redistributable لازم است. این دو سیستم‌عامل قدیمی‌اند و برای Production فقط با بررسی وضعیت پشتیبانی امنیتی/ESU و ریسک سازمانی استفاده شوند؛ توصیهٔ عملی برای Production همچنان Server 2016+ است.
+> - این سناریو SQL Server 2022 را محلی نصب می‌کند؛ SQL Server 2022 به Windows 10 1607+ یا Windows Server 2016+ و پردازنده x64 نیاز دارد. بنابراین روی Server 2012/2012 R2 یا Windows ARM64، SQL Server 2022 باید روی میزبان x64 جداگانه و پشتیبانی‌شده اجرا شود.
 > - Windows 7 و Windows 8.1 برای .NET 10 پشتیبانی نمی‌شوند. ترکیب OS، نسخه .NET و SQL Server باید در زمان استقرار با ماتریس رسمی Microsoft تطبیق داده شود.
 > - منابع رسمی: [سیستم‌عامل‌های پشتیبانی‌شدهٔ .NET 10](https://learn.microsoft.com/en-us/dotnet/core/install/windows) و [پیش‌نیازها و سیستم‌عامل‌های SQL Server 2022](https://learn.microsoft.com/en-us/sql/sql-server/install/hardware-and-software-requirements-for-installing-sql-server-2022?view=sql-server-ver16).
 >
