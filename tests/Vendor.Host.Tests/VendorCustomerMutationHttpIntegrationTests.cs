@@ -678,22 +678,65 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal("approval_already_pending", json.RootElement.GetProperty("error").GetString());
             }
 
-            using (var response = await PostWithTokenAsync(client, $"/api/vendor/approvals/{customerApprovalId:D}/decision",
-                new { decision = "Approved", rowVersion = customerApprovalRowVersion, comment = "self approval must fail" },
+            // Exercise self-approval on an isolated resource so the original customer approval
+            // remains Pending for the later suspension/provisioning scenario.
+            var selfReviewCustomerId = Guid.NewGuid();
+            byte[] selfReviewCustomerVersion;
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                db.Customers.Add(new VendorCustomer
+                {
+                    Id = selfReviewCustomerId,
+                    CustomerNumber = "IT-SELF-" + selfReviewCustomerId.ToString("N")[..12],
+                    LegalName = "Self Review Test Customer",
+                    DisplayName = "Self Review Test Customer",
+                    Status = "Active",
+                    CreatedAtUtc = timeProvider.GetUtcNow(),
+                    UpdatedAtUtc = timeProvider.GetUtcNow()
+                });
+                await db.SaveChangesAsync(cancellationToken);
+                selfReviewCustomerVersion = (await db.Customers.AsNoTracking()
+                    .SingleAsync(item => item.Id == selfReviewCustomerId, cancellationToken)).RowVersion.ToArray();
+            }
+
+            Guid selfReviewApprovalId;
+            string selfReviewApprovalVersion;
+            using (var response = await PostWithTokenAsync(client, "/api/vendor/approvals/status-change",
+                new
+                {
+                    resourceType = "customer",
+                    resourceId = selfReviewCustomerId,
+                    targetStatus = "Suspended",
+                    rowVersion = Convert.ToBase64String(selfReviewCustomerVersion)
+                }, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                selfReviewApprovalId = json.RootElement.GetProperty("id").GetGuid();
+                selfReviewApprovalVersion = json.RootElement.GetProperty("rowVersion").GetString()!;
+            }
+
+            using (var response = await PostWithTokenAsync(client,
+                $"/api/vendor/approvals/{selfReviewApprovalId:D}/decision",
+                new { decision = "Rejected", rowVersion = selfReviewApprovalVersion, comment = "self-review allowed by D-109" },
                 antiForgeryToken, cancellationToken))
             {
-                Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             }
 
             await using (var scope = factory.Services.CreateAsyncScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
-                var persisted = await db.Customers.AsNoTracking().SingleAsync(item => item.Id == customerId, cancellationToken);
+                var persisted = await db.Customers.AsNoTracking()
+                    .SingleAsync(item => item.Id == selfReviewCustomerId, cancellationToken);
                 Assert.Equal("Active", persisted.Status);
                 Assert.Equal(1, await db.ApprovalRequests.CountAsync(item =>
-                    item.Id == customerApprovalId && item.Status == "Pending", cancellationToken));
+                    item.Id == selfReviewApprovalId && item.Status == "Rejected" &&
+                    item.RequestedByUserId == item.ReviewedByUserId, cancellationToken));
                 Assert.Equal(1, await db.AuditEvents.CountAsync(item =>
-                    item.ActionCode == "vendor.approval.requested" && item.SubjectId == customerApprovalId.ToString("D"), cancellationToken));
+                    item.ActionCode == "vendor.approval.requested" &&
+                    item.SubjectId == selfReviewApprovalId.ToString("D"), cancellationToken));
             }
 
             // Installation update: real HTTP, current RowVersion succeeds, replay is rejected.
