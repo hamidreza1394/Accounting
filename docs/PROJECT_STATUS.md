@@ -2,7 +2,7 @@
 
 - `docs/LOCALHOST_WINDOWS_TEST_GUIDE.md` اکنون Windows 11، نسخه‌های پشتیبانی‌شدهٔ Windows 10 Enterprise/LTSC و Windows Server 2016+ (از جمله Server Core برای اجرای Host) را هدف می‌گیرد؛ ماتریس واقعی .NET 10 و SQL Server 2022 و محدودیت Windows 10 Home/Pro و SQL x64 صریح شده است. Node.js فقط برای Build کلاینت لازم است.
 - مسیر CNG برای License/Provisioning با Microsoft Software Key Storage Provider مستند شده؛ TPM/HSM/KMS یا سخت‌افزار اختصاصی برای این دو کاربرد لازم نیست. D-055/D-057 برای offline-revocation و anti-rollback جدا باقی می‌مانند.
-- راهنما اصلاح شد: Build صریح Vendor.Host پیش از Export، Migration مستقل Vendor با EF CLI، راز اجباری Bootstrap، PowerShell 5.1، Invoke-Sqlcmd با ConnectionString معتبر و فایل UTF-8 بدون BOM.
+- راهنما اصلاح شد: Build صریح Vendor.Host پیش از Export، اجرای Migration مستقل Vendor با EF CLI پیش از Startup، Bootstrap با راز مخفی و حداقل ۳۲ بایت، PowerShell 5.1، Invoke-Sqlcmd با ConnectionString معتبر و فایل UTF-8 بدون BOM.
 - دو مانع اجرایی صادقانه ثبت شد: کد فعلی گردش‌کار ایجاد مدیر دوم Vendor ندارد، پس Maker-Checker صدور از نصب تازه Blocked است؛ همچنین نمونهٔ API Import قبلی از متغیرهای نشست/توکن تعریف‌نشده استفاده می‌کرد و به‌عنوان دستور اجرایی حذف شد تا قرارداد نشست/CSRF تست‌شده فراهم شود.
 - این PR فقط مستندات است؛ هیچ کد/Migration/Schema/تصمیم امنیتی تغییر نکرد. اجرای واقعی روی نسخه‌های Windows هنوز انجام نشده است. handoff: `ISSUE-UNNUMBERED-localhost-windows-guide.md`.
 
