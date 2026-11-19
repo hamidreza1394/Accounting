@@ -6,6 +6,17 @@
 - **وضعیت Runtime:** در main هنوز guardهای قدیمی باقی‌اند؛ PR #724 حذف آن‌ها را برای approval عمومی، License، Provisioning و Offline Revocation پیاده‌سازی کرده و PR #722 همین سیاست را برای Payment اعمال می‌کند. تا Merge و CI سبز این PRها، پیاده‌سازی D-109 در main نهایی نشده است. مانع، نبود حساب مدیر دوم نیست.
 - MFA، RBAC/Permission سمت سرور، Audit مستقل، concurrency/RowVersion، idempotency، حفاظت کلید و fail-closed حفظ می‌شوند. هیچ کد، Schema، Migration یا تنظیم Runtime در این ثبت مستنداتی تغییر نکرده است.
 
+## دروازهٔ Runtime License (Issue #396) — 2026-11-19
+
+**مبنای بررسی:** `main@efaaa1c5` (Merge PR #719). این بخش اتصال License به Runtime فرانو طبق D-060 §1-6 و D-098 را ثبت می‌کند.
+
+- **پیاده‌شده (شاخهٔ `agent/396-license-runtime-gate`):** `ILicenseRuntimeStateService` وضعیت نصب را در هر درخواست از `ICustomerLicenseRuntimeEvaluator` (revocation-aware، بدون cache) می‌سازد و `LicenseRuntimeGateMiddleware` قبل از Routing عملیات عادی را کنترل می‌کند: **Unlicensed** → فقط مسیرهای فعال‌سازی/بازیابی (`/api/v1/licensing/*`، `/api/v1/provisioning/*`) و logout باز؛ **Invalid** → fail-closed؛ **Restricted در Dedicated** → خواندن باز، نوشتن عادی 403؛ **Restricted در Cloud** → عملیات عادی بسته با `license_cloud_expired` (D-098). endpoint جدید `GET /api/v1/licensing/status` projection وضعیت/entitlement را فقط از payload امضاشده می‌دهد.
+- **پیکربندی:** `Licensing:RuntimeGate:Enabled` پیش‌فرض **خاموش** (rollout مرحله‌ای، هم‌الگوی Gate v5؛ روشن‌کردن تصمیم عملیاتی استقرار است) و `Licensing:DeploymentMode` = `Dedicated|Cloud` (نامعتبر → fail-fast در startup). با gate خاموش رفتار میزبان عین قبل است.
+- **تست‌ها:** ۲۳ تست واحد + ۸ تست HTTP روی Pipeline واقعی (gate روشن/خاموش؛ بدون License → 503 `license_required` روی API و صفحهٔ Login، status باز و `unlicensed`). اجرای محلی: `--filter "FullyQualifiedName~LicenseRuntime"` = ۳۱ موفق / ۰ شکست.
+- **بدون Migration:** هیچ Schema/داده‌ای تغییر نکرد. هیچ grace ضمنی اضافه نشد (D-059 §7) و هیچ داده‌ای در هیچ حالتی حذف نمی‌شود.
+- **باقی‌مانده:** Wizard فعال‌سازی در React، cache نسخه‌دار رزولوشن برای بار بالا (D-058 §Cloud)، enforcement entitlement شرکت‌محور در call-siteهای عملیاتی (#391/#401) و E2E با License واقعی امضاشده (راهنمای Windows).
+- **handoff:** `docs/handoffs/ISSUE-396-license-runtime-gate.md`.
+
 ## اصلاح راهنمای Windows Localhost و دامنهٔ سازگاری — 2026-11-19
 
 - `docs/LOCALHOST_WINDOWS_TEST_GUIDE.md` اکنون Windows 11، نسخه‌های پشتیبانی‌شدهٔ Windows 10 Enterprise/LTSC و Windows Server 2012/2012 R2/2016+ را برای Runtime .NET 10 هدف می‌گیرد (SQL Server 2022 محلی فقط روی Server 2016+؛ Server 2012/R2 نیازمند SQL میزبان جدا است؛ Server Core نیز پشتیبانی می‌شود)؛ ماتریس واقعی .NET 10 و SQL Server 2022 و محدودیت Windows 10 Home/Pro و SQL x64 صریح شده است. Node.js فقط برای Build کلاینت لازم است.
