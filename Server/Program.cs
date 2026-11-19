@@ -307,6 +307,14 @@ if (!setupRequired)
                     .GetRequiredService<Infrastructure.Security.PasswordHashService>()));
 }
 
+// License-first runtime gate (Issue #396): registered unconditionally — also during first-run
+// setup, where the middleware only passes /DatabaseSetup through — but opt-in via
+// Licensing:RuntimeGate:Enabled. While disabled the host behaves exactly as before, so rollout
+// stays a deployment decision.
+Infrastructure.Licensing.LicenseRuntimeGateServiceCollectionExtensions.AddLicenseRuntimeGate(
+    builder.Services,
+    builder.Configuration);
+
 var app = builder.Build();
 
 if (settingsLoad is not null)
@@ -445,6 +453,10 @@ app.Use(async (context, next) =>
 
     await next();
 });
+
+// License-first gate (D-060 §1-6 / D-098): after first-run setup handling and before routing so
+// normal pages and APIs cannot execute while the installation is Unlicensed/Invalid/Restricted.
+app.UseMiddleware<Infrastructure.Licensing.LicenseRuntimeGateMiddleware>();
 
 app.UseRouting();
 app.UseAuthentication();

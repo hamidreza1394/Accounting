@@ -7,7 +7,7 @@
 
 ## ۱) وضعیت فعلی (واقعی)
 
-- هیچ کنترل لایسنس در برنامه فعال نیست. `ActivationKeysHandlerMiddleware` کد مرده است و از commit `370fe67` در Pipeline نیست (D-028).
+- هیچ کنترل لایسنس در برنامه فعال نیست. `ActivationKeysHandlerMiddleware` کد مرده است و از commit `370fe67` در Pipeline نیست (D-028). **(به‌روزرسانی 2026-11-19، Issue #396):** دروازهٔ license-first runtime (`LicenseRuntimeGateMiddleware` + `ILicenseRuntimeStateService` + `GET /api/v1/licensing/status`) طبق D-060 §1-6/D-098 پیاده شده است؛ با `Licensing:RuntimeGate:Enabled` opt-in است و پیش‌فرض خاموش می‌ماند (rollout مرحله‌ای)؛ Active/Restricted/Unlicensed/Invalid سمت سرور اعمال می‌شوند.
 - مدل Tenant و عضویت (`Company`، `UserCompanyMembership`، `CompanyRole`) وجود دارد و پایه کار است (D-009، D-013).
 - مجوز عملیاتی در دیتابیس تعریف شده ولی در کد مصرف نمی‌شود (D-025).
 
