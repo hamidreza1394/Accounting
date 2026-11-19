@@ -52,7 +52,7 @@
 | [`SECURITY.md`](SECURITY.md) | امنیت؛ شامل الزامات تغییر زمینه و جداسازی چندشرکتی (D-076، Proposed) |
 | [`VENDOR_BOOTSTRAP.md`](VENDOR_BOOTSTRAP.md) | راهنمای عملیاتی command-mode برای راه‌اندازی اولین مدیر Vendor، TOTP و بازیابی pending |
 | [`runbooks/vendor-audit-checkpoint-recovery.md`](runbooks/vendor-audit-checkpoint-recovery.md) | رویهٔ provider-neutral برای checkpoint مستقل Audit، backup/restore و recovery؛ تا انتخاب مقصد واقعی، Production-ready نیست |
-| [`runbooks/ISSUE-236-HSM-TPM-KEY-OPERATIONS.md`](runbooks/ISSUE-236-HSM-TPM-KEY-OPERATIONS.md) | Key Ceremony، کنترل دو نفره، rotation/revocation، Backup/Recovery، TPM مشتری و alerting؛ اجرای Production تا تأمین HSM واقعی Blocked است |
+| [`runbooks/ISSUE-236-HSM-TPM-KEY-OPERATIONS.md`](runbooks/ISSUE-236-HSM-TPM-KEY-OPERATIONS.md) | Key Ceremony و عملیات HSM آینده؛ الزام HSM برای امضای مرکزی Vendor با D-107 superseded است؛ Customer ACK و TPM anti-rollback جداگانه باقی می‌مانند |
 | [`TESTING.md`](TESTING.md) | تست |
 | [`DEPLOYMENT.md`](DEPLOYMENT.md), [`DEVELOPMENT.md`](DEVELOPMENT.md) | استقرار و توسعه |
 | [`CODING_STANDARDS.md`](CODING_STANDARDS.md) | استانداردها |
