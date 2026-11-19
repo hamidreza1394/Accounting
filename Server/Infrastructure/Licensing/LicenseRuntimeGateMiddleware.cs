@@ -75,7 +75,7 @@ public sealed class LicenseRuntimeGateMiddleware(RequestDelegate next)
                     return;
                 }
 
-                Deny(context, StatusCodes.Status403Forbidden, "license_restricted", snapshot);
+                await DenyAsync(context, StatusCodes.Status403Forbidden, "license_restricted", snapshot);
                 logger.LogInformation(
                     "License gate denied a write while restricted. DeploymentMode={DeploymentMode}.",
                     snapshot.DeploymentMode);
@@ -90,7 +90,7 @@ public sealed class LicenseRuntimeGateMiddleware(RequestDelegate next)
                     LicenseRuntimeState.Unlicensed => (StatusCodes.Status503ServiceUnavailable, "license_required"),
                     _ => (StatusCodes.Status503ServiceUnavailable, "license_invalid")
                 };
-                Deny(context, status, errorCode, snapshot);
+                await DenyAsync(context, status, errorCode, snapshot);
                 logger.LogInformation(
                     "License gate denied a normal request. State={State} DeploymentMode={DeploymentMode}.",
                     snapshot.State,
@@ -99,7 +99,7 @@ public sealed class LicenseRuntimeGateMiddleware(RequestDelegate next)
         }
     }
 
-    private static void Deny(HttpContext context, int statusCode, string errorCode, LicenseRuntimeStateSnapshot snapshot)
+    private static async Task DenyAsync(HttpContext context, int statusCode, string errorCode, LicenseRuntimeStateSnapshot snapshot)
     {
         context.Response.Headers.CacheControl = "no-store";
         context.Response.StatusCode = statusCode;
@@ -110,7 +110,7 @@ public sealed class LicenseRuntimeGateMiddleware(RequestDelegate next)
             state = snapshot.State.ToString().ToLowerInvariant(),
             deploymentMode = snapshot.DeploymentMode.ToLowerInvariant()
         });
-        context.Response.WriteAsync(body).GetAwaiter().GetResult();
+        await context.Response.WriteAsync(body, context.RequestAborted);
     }
 
     private static bool IsAlwaysAllowed(PathString path) =>
