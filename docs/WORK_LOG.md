@@ -3268,3 +3268,15 @@
 - **خروجی:** `docs/handoffs/ISSUE-393-s1-b-order-payment-design-v2.md` (۱۰ بخش خواسته‌شدهٔ مأموریت + جدول فیلد به‌تفکیک + نمودار جریان + فهرست ۹+۱ تصمیم ساختاریافتهٔ مالک + برنامهٔ ۶ PR مرحله‌ای)؛ یادداشت به‌روزرسانی بالای handoff v1؛ بدون تغییر مستندات نامرتبط.
 - **محدوده:** فقط مستندات؛ هیچ Entity/Migration/API/UI/Permission/Package ساخته نشد؛ هیچ تصمیم Proposed Accepted نشد؛ هیچ Gate/signer/سیاست امنیتی تغییر نکرد؛ تغییرات دیگران حفظ شد.
 - **اعتبارسنجی:** `git diff --check` پاک؛ Build/Test اجرا نشد (تغییر اجرایی وجود ندارد)؛ شواهد کد (ایندکس یکتا، allow-list، کاتالوگ permission، تراکنش صدور) مستقیماً از `main@6f539679` بازخوانی شد.
+
+
+## 2026-11-19 — S1-b / Issue #393: اصلاح محدود سند v2 (PR #717) — چهار ابهام بازبینی
+
+- **مبنا:** `origin/main@6f539679` (بدون جابه‌جایی)؛ PR #717 باز و untouched توسط دیگران؛ فقط همان PR به‌روزرسانی شد (PR جدید نساخته شد).
+- **اصلاحات (فقط سند v2؛ بدون تغییر جهت معماری):**
+  1. **License در MaxCompaniesIncrease:** تناقض «LicenseId ممنوع در حالی که `TryBuildMaxCompaniesIncrease` به License/Installation/Customer نیاز دارد» رفع شد — `LicenseId` برای هر چهار LineType الزامی و پیش از درخواست تأیید صدور روی Line تثبیت می‌شود؛ انتخاب آزاد License در لحظهٔ صدور وجود ندارد؛ `InstallationId` فیلد مستقل Line نیست و از `License.InstallationId` مشتق می‌شود (entity آن `Guid?` nullable است؛ هر سه امضای builder در `VendorLicenseAmendmentPayloadBuilder.cs:13-43` زنجیره را با `license_installation_mismatch` fail-closed اعتبارسنجی می‌کنند)؛ ماتریس ۳.۴ و Check Constraintها هماهنگ شد؛ گزینهٔ «InstallationId صریح با FK تساوی» به‌عنوان گزینهٔ مالک حفظ شد.
+  2. **یک صدور باز به‌ازای هر License:** سیاست «حداکثر یک عملیات صدور فعال به‌ازای هر License» به بخش‌های ۵/۶/۷ و نمودار اضافه شد (چک اپلیکیشن `license_issuance_in_progress` + پیشنهاد filtered unique index `ON Lines(LicenseId) WHERE FulfillmentStatus='ApprovalRequested'`)؛ درخواست کهنه با گارد موجود `license.RowVersion ↔ approval.ExpectedResourceRowVersion` (`VendorLicenseIssuanceService.cs:50`) هرگز با دادهٔ جدید خودکار اجرا نمی‌شود؛ Line بعدی پس از terminal شدن قبلی با Sequence/RowVersion تازه؛ بدون Queue/Event Bus/Distributed Lock؛ unique `(LicenseId, Sequence)` نگهبان نهایی ماند.
+  3. **معنای PaymentRecorded/Confirmed:** معنای گذارها روشن شد و تصمیم ۱۱ با سه گزینه (A: Confirmed با نخستین Verified + صدور مستقل از پرداخت [پیشنهاد پیش‌فرض فنی، Accepted نشده]؛ B: Confirmed با جمع Verified ≥ TotalAmount؛ C: Confirmed دستی + گیت اختیاری صدور) به فهرست مالک اضافه شد؛ هیچ allocation/Ledger/درگاه پیشنهاد نشد.
+  4. **ReferenceNumber:** یکتایی سراسری فرض حذف شد؛ فقط Index غیریکتا + هشدار تشخیص تکرار در v1؛ قید unique فقط با Namespace صریح `(Method, ProviderOrBank, ReferenceNumber)` معنا دارد و به‌صورت Proposed موکول به schema approval ماند (تصمیم ۱۰ بازنویسی).
+- **فهرست تصمیم مالک:** ۹ مورد → ۱۱ مورد؛ شمارنده در بخش ۸ هماهنگ شد؛ برنامهٔ PR-۲/PR-۳ با قواعد جدید به‌روز شد.
+- **محدوده:** فقط `docs/handoffs/ISSUE-393-s1-b-order-payment-design-v2.md` و WORK_LOG؛ بدون کد/Entity/Migration/API/UI/Permission/Package؛ بدون تغییر Gate/Entitlement/سیاست امنیتی؛ هیچ Proposed به Accepted تبدیل نشد؛ تغییرات دیگران حفظ شد.
