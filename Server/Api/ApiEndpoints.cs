@@ -99,6 +99,9 @@ public static class ApiEndpoints
                 api.MapPost("/licensing/import", ImportCustomerLicenseAsync)
                         .RequireAuthorization(policy => policy.RequireClaim("AccountKind", "Infrastructure"))
                         .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
+                api.MapGet("/licensing/status", GetLicensingStatusAsync)
+                        .AllowAnonymous()
+                        .RequireRateLimiting(Infrastructure.Security.RateLimitingPolicies.ApiSensitivePolicy);
 
                 return endpoints;
         }
@@ -775,6 +778,60 @@ public static class ApiEndpoints
                         title: "ثبت هویت نصب انجام نشد.",
                         detail: result.ErrorCode,
                         statusCode: statusCode);
+        }
+
+        /// <summary>
+        /// License-first status projection (D-060): reachable in every gate state and derived only
+        /// from the server-resolved signed payload; client input is never trusted here.
+        /// </summary>
+        public static async Task<IResult> GetLicensingStatusAsync(
+                HttpContext httpContext,
+                [FromServices] Infrastructure.Licensing.ILicenseRuntimeStateService stateService,
+                CancellationToken cancellationToken)
+        {
+                httpContext.Response.Headers.CacheControl = "no-store";
+                httpContext.Response.Headers.Pragma = "no-cache";
+
+                var snapshot = await stateService.ResolveAsync(cancellationToken);
+
+                object? license = null;
+                if (snapshot.ValidatedPayload is { } payload)
+                {
+                        license = new
+                        {
+                                payload.LicenseId,
+                                payload.Sequence,
+                                payload.ProductCode,
+                                payload.LicenseKind,
+                                payload.IssuedAtUtc,
+                                payload.NotBeforeUtc,
+                                payload.ExpiresAtUtc,
+                                payload.SupportUntilUtc,
+                                payload.UpdatesUntilUtc,
+                                MaxCompanies = payload.Limits?.MaxCompanies,
+                                Subsystems = payload.Limits?.Subsystems ?? Array.Empty<string>(),
+                                CompanyEntitlements = (payload.CompanyEntitlements ?? Array.Empty<Faranou.Licensing.Contracts.CompanyLicenseEntitlement>())
+                                        .Where(item => item is not null)
+                                        .Select(item => new
+                                        {
+                                                item!.CompanyReference,
+                                                item.Modules,
+                                                item.MaxUsers,
+                                                item.Features
+                                        })
+                                        .ToArray()
+                        };
+                }
+
+                return TypedResults.Ok(new
+                {
+                        State = snapshot.State.ToString().ToLowerInvariant(),
+                        DeploymentMode = snapshot.DeploymentMode.ToLowerInvariant(),
+                        Status = snapshot.Status?.ToString(),
+                        snapshot.ErrorCode,
+                        License = license,
+                        snapshot.ResolvedAtUtc
+                });
         }
 
         /// <summary>Imports a customer license for the installation configured by the server, never by the request.</summary>
