@@ -301,6 +301,7 @@ public sealed class WindowsCngCertificateStoreSigningTests
     {
         var creationParameters = new CngKeyCreationParameters
         {
+            Provider = CngProvider.MicrosoftSoftwareKeyStorageProvider,
             ExportPolicy = exportPolicy,
             KeyCreationOptions = CngKeyCreationOptions.None
         };
