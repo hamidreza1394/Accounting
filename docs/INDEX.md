@@ -13,9 +13,10 @@
 | [AGENT_SKILL_LIBRARY.md](AGENT_SKILL_LIBRARY.md) | کتابخانه مهارت‌های مشترک Agentها و قواعد استفاده از VoltAgent |
 | سند | کاربرد |
 |---|---|
+| [DECISIONS.md](DECISIONS.md) | فهرست ADRها؛ D-105 مالکیت پیش‌فرض داده‌های مشتری و اشتراک کنترل‌شده در سطح Tenant را مشخص می‌کند |
 | [TRADE_MODULE.md](TRADE_MODULE.md) | معماری، امنیت چندشرکتی، استفاده مشترک از دوره‌های مالی، فرم‌ها، گزارش‌ها و مسیر استخراج ماژول بازرگانی (D-061/D-062) |
 | [TRADE_S3_ARCHITECTURE.md](TRADE_S3_ARCHITECTURE.md) | مبنای پذیرفته‌شده S3 در D-086 و قرارداد Tenant/Company و استقرار مشترک/اختصاصی در D-087 |
-| [DATABASE.md](DATABASE.md) و [database-migrations.md](database-migrations.md) | مدل منطقی و Schema فعلی/هدف، قواعد Migration و انحراف پیاده‌سازی D-087 |
+| [DATABASE.md](DATABASE.md) و [database-migrations.md](database-migrations.md) | مدل منطقی و Schema فعلی/هدف، قواعد مالکیت پیش‌فرض Company-owned و اشتراک کنترل‌شده در D-105، قواعد Migration و انحراف پیاده‌سازی D-087 |
 | [ACCESS_CONTROL_ARCHITECTURE.md](ACCESS_CONTROL_ARCHITECTURE.md) و [SECURITY.md](SECURITY.md) | قرارداد هویت، عضویت، authorization و جداسازی Tenant/Company؛ D-087 بر فرض تاریخی Company=Tenant مقدم است |
 | [TRADE_PHASE0_DRAFTS.md](TRADE_PHASE0_DRAFTS.md) | پیش‌نویس (`Proposed`/`NeedsApproval`، 2026-11-12) ساختار منوی سایدبار بازرگانی خارجی و Issueهای S0..S2؛ ADRهای مرتبط در `DECISIONS.md`: D-080 (P-1 گزینهٔ الف، P-2 و P-3 `Accepted`؛ فقط P-4 و P-5 `Proposed` + `NeedsApproval`)، D-081 و D-082 (`Accepted`)، D-083 (`Proposed` + `NeedsApproval`)؛ شامل جدول تصمیم‌های قطعی/باز/موکول و برنامهٔ S2 |
 | [handoffs/ISSUE-397-s3-0-tenant-company-audit.md](handoffs/ISSUE-397-s3-0-tenant-company-audit.md) | ممیزی ایستای مدل Core/Trade، FK/unique index، WorkContext، Migration pipeline و بازبینی مالکیت V3.2 پس از D-087؛ اجرای زنده SQL Server هنوز لازم است |

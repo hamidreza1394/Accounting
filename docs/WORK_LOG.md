@@ -3231,3 +3231,14 @@
   - ۱۴.۵ FK/RI: جدول کامل FKهای واقعی Restrict + FKهای مرکب `(RoleId,TenantId)`/`(EmployeeId,TenantId)`/`(ApprovedRoleId,DestinationTenantId)` که «از شرکت دیگر» را در DB ناممکن می‌کنند؛ شکاف‌های مستند: بدون FK بودن `UserCompanyMemberships.UserId`، `ProvisioningRequestClaims.CompanyId/FiscalPeriodId/AdminUserId`، عمداً بدون FK بودن audit، و نبود FK Trade به Core (مرز ماژول). طبقه‌بندی مالکیت مکمل ماتریس بند ۳.
   - ۱۴.۶ وضعیت: inventory در حد static/InMemory Verified؛ دو Tenant واقعی/SQL Server/مقادیر واقعی همچنان NotVerified/NotRun؛ هیچ تصمیم جدیدی گرفته نشد.
 - **بررسی:** `git diff --check` پاک؛ Build/Test اجرا نشد (تغییر اجرایی وجود ندارد — طبق AGENTS.md صادقانه ثبت می‌شود)؛ CI روی PR گزارش واقعی می‌شود.
+
+## 2026-11-18 — ثبت D-105: مالکیت پیش‌فرض Company و اشتراک کنترل‌شده در سطح Tenant (Issue #712)
+
+- **مبنا:** main@b8cadbfd12fd7ae3c8a1cbfe7108b7a8e1c03608.
+- **تصمیم مالک:** داده‌های عملیاتی/کسب‌وکاری مشتری در ابتدا Company-owned هستند و در مدل هدف TenantId و CompanyId معتبر دارند. اشتراک هر نوع داده فقط پس از تصمیم مستقل همان موجودیت و فقط بین Companyهای همان Tenant مجاز است؛ موجودیت مشترک Tenant-owned و از طریق جدول پیوند به شرکت‌های مجاز وصل می‌شود. فعلاً مرجع سراسری کسب‌وکاری نداریم.
+- **استثناها:** Vendor، Installation، جداول فنی/زیرساختی و روابط بین‌شرکتی مکانیکی مشمول الزام دو ستون نیستند و جداگانه طبقه‌بندی می‌شوند.
+- **ثبت:** ADR جدید D-105 در docs/DECISIONS.md؛ هم‌ترازی docs/DATABASE.md، docs/SECURITY.md و docs/INDEX.md؛ handoff در docs/handoffs/ISSUE-712-company-owned-default-tenant-sharing.md.
+- **محدوده:** فقط مستندات؛ بدون کد، Entity، Schema، Migration، Backfill، API، Runtime یا تغییر داده. D-087/D-103 و گیت‌های S3-0 دست‌نخورده‌اند.
+- **وضعیت کد:** مدل Tenant واقعی هنوز در برخی مسیرها پیاده نشده و مقدار TenantId تاریخی ممکن است Company.Id باشد؛ D-105 این انحراف را اصلاح نمی‌کند.
+- **اعتبارسنجی:** محتوای مبنا و ADRهای قبلی از مخزن بازبینی شد. Build/Test و git diff --check اجرا نشدند؛ در بازبینی PR/CI باید کنترل شوند.
+- **Git:** Branch docs/d105-company-owned-default-tenant-sharing؛ Issue #712؛ Draft PR #713 (GitHub در بازبینی نهایی mergeable=true گزارش کرد؛ چون PR #711 نیز WORK_LOG را تغییر می‌دهد، پس از هر ادغام وضعیت دوباره کنترل شود).
