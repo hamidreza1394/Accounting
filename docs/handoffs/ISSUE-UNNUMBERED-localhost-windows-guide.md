@@ -16,7 +16,7 @@
 - [x] محدودیت‌های واقعی صادقانه ثبت شده‌اند (Wizard React، reactivation D-099، Gate v5، D-100/101/102).
 
 ## خلاصه تغییرات
-- `docs/LOCALHOST_WINDOWS_TEST_GUIDE.md` اضافه شد: معماری سه‌نقشی محلی، دو دیتابیس، Key Ceremony CNG با `New-SelfSignedCertificate -KeyExportPolicy NonExportable`، پیکربندی `Signing:CertificateStore` + Trust Store با فرمان فقط‌عمومی `--signing-certificate export-public`، bootstrap-admin، Maker-Checker صدور، اجرای فرانو با `Licensing:RuntimeGate:Enabled` و `Licensing:DeploymentMode`، import فایل Envelope، سناریوهای انقضا/تمدید/آفلاین/Restricted/Unlicensed با رفتارهای دقیق.
+- راهنمای موجود بازبینی شد: ماتریس OS سازگار با .NET 10 و SQL Server 2022، تفکیک Build/Runtime، CNG Software KSP بدون TPM/HSM/KMS برای License/Provisioning، ترتیب Build → Migration → Bootstrap → Startup، راز Bootstrap، PowerShell 5.1، SQL extraction بدون BOM و Blockerهای واقعی Maker-Checker/Import.
 
 ## فایل‌های مهم تغییرکرده
 - `docs/LOCALHOST_WINDOWS_TEST_GUIDE.md` — سند جدید
@@ -46,5 +46,5 @@
 
 ## شناسه‌های Git
 - Branch: `agent/unnumbered-localhost-windows-guide`
-- Commit: (پس از commit)
-- Pull Request: (پس از باز شدن)
+- Commit: در تاریخچه Branch `agent/unnumbered-localhost-windows-guide` (PR #723)
+- Pull Request: #723 (باز؛ Merge نشده)
