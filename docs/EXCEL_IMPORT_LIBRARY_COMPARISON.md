@@ -140,7 +140,7 @@ ClosedXML با Guard پیش از بازکردن: 1933 / 2005 / 2084ms (Guard ≈
 **«Guard Spike v2» (اجراشده) راه‌حل نهایی نیست؛ «Guard پیشنهادی» هنوز NotRun است.**
 1. **تکیه بر نام Entry (امنیت؛ High):** شمارش Style/Sheet/ماکرو/Workbook به نام ثابت partها تکیه دارد و با تغییر نام part (+ اصلاح rels و Content_Types) دور زده می‌شود. آزمون مستقل بازبین امنیتی (خروجی خام در پیوست پ نیست): `styles_5k` تغییرنام‌داده ⇒ Guard `ok` و ClosedXML 2249ms/184MB پذیرفت؛ فایل 30k Style با همین روش از Guard رد نمی‌شود و ≈32–36s CPU غیرقابل‌لغو می‌گیرد (استنتاج).
 2. **«Guard پیشنهادی» (NotRun؛ در Spike پیاده/اجرا نشده؛ کار PR Parser؛ «نهایی» بودنش فقط پس از پیاده‌سازی و آزمون):** partها را از `_rels/.rels`، `xl/_rels/workbook.xml.rels` و `[Content_Types].xml` (`XmlReader` با DTD ممنوع) resolve کند؛ Sheetها از عناصر `<sheet>` شمرده شوند؛ `cellXfs` در part با Relationship نوع styles؛ ماکرو با Content Type/نوع Relationship؛ Entry ناشناخته/نام تکراری ⇒ رد؛ نام‌های OPC نرمال‌سازی شوند (حساسیت به حروف، percent-encoding، Targetهای نسبی/مطلق) و ورودی تکراری پس از نرمال‌سازی رد شود؛ Relationship با `TargetMode="External"` دنبال نشود؛ علاوه بر `cellXfs` سقف `fonts/fills/cellStyleXfs/dxfs` هم بررسی شود؛ رد part از نوع externalLink؛ تست رگرسیون «تغییر نام part» ([`EXCEL_IMPORT_DESIGN.md`](EXCEL_IMPORT_DESIGN.md) بخش ۱۶).
-3. **اندازهٔ اعلامی Entry (آزموده شد؛ فقط حالت «کوچک‌تر از واقعی»):** Guard بر `ZipArchiveEntry.Length` (اندازهٔ اعلام‌شده) استوار است. `spoof_header.xlsx`: Entry واقعاً 314,573,013 بایت (300.0MB؛ رمزگشایی deflate توسط مستندساز) با اندازهٔ اعلامی 2,000 بایت در Central Directory و Local Header و فشردهٔ 305,947 بایت. Guard آن را پذیرفت؛ ClosedXML با `XmlException` شکست (بدون Guard 490ms؛ با Guard 406ms؛ Peak 76MB، افزوده 42MB؛ بازبین امنیتی مستقل 337ms). پیام خطا (position 2001) نشان می‌دهد خواندن در این runtime حدود اندازهٔ اعلامی قطع شد (استنتاج؛ وابسته به runtime). **پیشنهاد جدید:** Entryای با `CompressedLength > Length` رد شود (در `spoof_header` فشرده 305,947 و اعلامی 2,000؛ تلورانس Entryهای بسیار کوچک در PR Parser تعیین شود). حالت‌های دیگر دست‌کاری هدر و Entryهای تودرتو آزموده نشد. **شرط اعتبار سقف‌های Entry/جمع بازشده (پیشنهادی):** این سقف‌ها فقط وقتی کران واقعی‌اند که runtime خواندن Entry را در اندازهٔ اعلامی قطع کند؛ این قطع فقط در یک runtime و برای یک فایل مشاهده شد؛ اگر در نسخه‌ای دیگر برقرار نبود، باید شمارش بایت‌های واقعاً خوانده‌شده (Stream شمارنده) جایگزین اتکا به اندازهٔ اعلامی شود (NeedsApproval).
+3. **اندازهٔ اعلامی Entry (آزموده شد؛ فقط حالت «کوچک‌تر از واقعی»):** Guard بر `ZipArchiveEntry.Length` (اندازهٔ اعلام‌شده) استوار است. `spoof_header.xlsx`: Entry واقعاً 314,573,013 بایت (300.0MB؛ رمزگشایی deflate توسط مستندساز) با اندازهٔ اعلامی 2,000 بایت در Central Directory و Local Header و فشردهٔ 305,947 بایت. Guard آن را پذیرفت؛ ClosedXML با `XmlException` شکست (بدون Guard 490ms؛ با Guard 406ms؛ Peak 76MB، افزوده 42MB؛ بازبین امنیتی مستقل 337ms). پیام خطا (position 2001) نشان می‌دهد خواندن در این runtime حدود اندازهٔ اعلامی قطع شد (استنتاج؛ وابسته به runtime). **اصلاح پیشنهاد Guard:** صرفِ `CompressedLength > Length` معیار رد نیست؛ محتوای از قبل فشرده یا غیرقابل‌فشرده‌سازی در فایل معتبر ممکن است چنین وضعیتی داشته باشد. برای مقابله با `spoof_header`، Guard باید هنگام خواندن هر Entry بایت‌های واقعاً بازشده را با Stream شمارنده اندازه بگیرد و سقف هر Entry/مجموع را بر بایت واقعی اعمال کند؛ نسبت فشرده‌سازی نیز بر اساس بایت واقعی بازشده نسبت به `CompressedLength` محاسبه شود. `Length` فقط راهنمای غیرقابل‌اعتماد است. حالت‌های دیگر دست‌کاری هدر و Entryهای تودرتو آزموده نشد. **شرط اعتبار سقف‌های Entry/جمع بازشده (پیشنهادی):** این سقف‌ها فقط وقتی کران واقعی‌اند که runtime خواندن Entry را در اندازهٔ اعلامی قطع کند؛ این قطع فقط در یک runtime و برای یک فایل مشاهده شد؛ اگر در نسخه‌ای دیگر برقرار نبود، باید شمارش بایت‌های واقعاً خوانده‌شده (Stream شمارنده) جایگزین اتکا به اندازهٔ اعلامی شود (NeedsApproval).
 
 ### ۳.۴ کالیبراسیون سقف‌ها (استنتاج، نه اندازه‌گیری مستقیم)
 
@@ -218,7 +218,7 @@ ClosedXML با Guard پیش از بازکردن: 1933 / 2005 / 2084ms (Guard ≈
 ## ۶. محدودیت‌ها و NotRun
 
 - روی ClosedXML NotRun: لغو در نسخهٔ منتشرشده؛ هم‌زمانی چند Import؛ Windows؛ فایل واقعی مشتری؛ Issueهای باز؛ GitHub Advisory؛ externalLink/DDE و Entity خارجی XXE (فقط DTD داخلی را بازبین امنیتی آزمود).
-- Guard پیشنهادی (resolve رابطه‌ها، نرمال‌سازی نام‌های OPC)، رد externalLink و رد `CompressedLength > Length` پیشنهاد هستند و اجرا نشدند. «تغییر نام part» و `GetFormattedString` و DTD را فقط بازبین مستقل آزمود (به‌جز `GetFormattedString` که probe اجراشده هم دارد) و خروجی خام آن‌ها در دسترس این Agent و در پیوست پ نیست.
+- Guard پیشنهادی (resolve رابطه‌ها، نرمال‌سازی نام‌های OPC)، رد externalLink و شمارش بایت واقعی بازشده با Stream محدودکننده پیشنهاد هستند و اجرا نشدند؛ صرفِ `CompressedLength > Length` موجب رد فایل معتبر نمی‌شود. «تغییر نام part» و `GetFormattedString` و DTD را فقط بازبین مستقل آزمود (به‌جز `GetFormattedString` که probe اجراشده هم دارد) و خروجی خام آن‌ها در دسترس این Agent و در پیوست پ نیست.
 - Guard: اندازهٔ دروغین هدر فقط در حالت «کوچک‌تر از واقعی» آزموده شد؛ قاعدهٔ نسبت و تعداد Entry در Guard Spike v2 هیچ فایل Spike تنها را رد نکردند؛ سقف تعداد سلول/ستون اندازه‌گیری مستقیم ندارد.
 - بدترین حالت (≈600MB و ≈4.1–4.4s برای 40MB؛ ≈1.2GB برای دو Import) برون‌یابی خطی فقط برای محتوای واقع‌نما است؛ محتوای پر از shared strings (SharedStringTable بزرگ) و بدترین حالت ترکیبی NotRun؛ سقف هم‌زمانی ≤ 2 پیش از تثبیت باید اندازه‌گیری شود.
 - Open XML SDK و ExcelDataReader فقط روی فایل 20k اجرا شدند، نه روی فایل‌های مخرب/Style/سلول؛ مقایسهٔ تاب‌آوری آن‌ها NotRun. Open XML SDK در Spike 2 فقط شمارش بود (بدون مادی‌سازی مقدار)؛ مقایسهٔ منابع آن عادلانه نیست؛ بار SharedStringTable/styles اندازه‌گیری نشد.
@@ -402,6 +402,7 @@ from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Font
 random.seed(7)
 D = sys.argv[1]
+os.makedirs(D, exist_ok=True)
 fa = ["شرکت بازرگانی", "پتروشیمی", "فولاد", "کاشی", "صنعت", "گستر", "پارس", "آریا", "نوین", "کیمیا"]
 en = ["Alpha Trading", "Beta Steel", "Gamma Chem", "Delta Foods", "Omega Ltd", "Sigma Co"]
 fadig = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
@@ -531,6 +532,7 @@ import zipfile, sys, random
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Font
 D=sys.argv[1]
+import os; os.makedirs(D, exist_ok=True)
 # ۵۰۰۰ Style متمایز در یک فایل ۲۰هزار ردیفی
 wb=Workbook(); ws=wb.active
 for i in range(1,20001):
@@ -554,6 +556,20 @@ for it in src.infolist():
     else: z.writestr(it.filename,src.read(it.filename))
 z.close()
 ```
+
+### Build and run order
+
+از پوشه‌ای که `h.csproj` در آن قرار دارد اجرا شود تا مسیر خروجی با هر دو runner (`bin/h.dll`) یکسان باشد:
+
+```bash
+dotnet build h.csproj -c Release -o bin
+python gen.py data
+python gen2.py data
+python run.py
+python run_extra.py
+```
+
+گزینهٔ `-o bin` عمداً خروجی را در `bin/h.dll` قرار می‌دهد؛ Build معمولی Release بدون `-o bin` خروجی را در `bin/Release/net10.0/h.dll` می‌گذارد و با مسیر hard-coded runnerها سازگار نیست.
 
 ### run.py
 
@@ -774,7 +790,7 @@ foreach (var (name, act) in probes) {
 
 ### results_api_eval.txt (خروجی `apiprobe` روی `formulas_nov.xlsx`؛ شاهد Allow-list محور ۸)
 
-خروجی خام عیناً؛ `cached=[blank]` یعنی فرمول اجرا نشد و `cached=[10]`/`[ab]` یعنی اجرا شد.
+خروجی خام عیناً؛ `cached=[blank]` فقط نشان می‌دهد در لحظهٔ مشاهده مقدار cached خالی بوده است و به‌تنهایی اثبات نمی‌کند فرمول اجرا نشده؛ ممکن است ارزیابی بدون تغییر cache باقی مانده باشد. مقادیر غیرخالی مانند `cached=[10]`/`[ab]` نشان می‌دهند cache به آن مقدار تغییر کرده است.
 
 ```text
 GetString                B1 cached=[10] B4 cached=[ab]

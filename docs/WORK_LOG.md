@@ -3254,6 +3254,41 @@
 - **اعتبارسنجی:** `git diff --check` پاک؛ Build/Test اجرا نشد (تغییر اجرایی وجود ندارد)؛ وضعیت CI واقعی مرجع: post-merge builderها ۱۵/۱۵ و PR #711 ۱۵/۱۵؛ CI این PR پس از اجرا گزارش می‌شود.
 - **Handoff:** `docs/handoffs/ISSUE-393-s1-b-commercial-order-payment-design-prep.md`.
 
+
+## 2026-11-19 — S1-b / Issue #393: بازبینی و تکمیل طراحی — سند نسخهٔ ۲ (v2)
+
+- **مبنا:** `origin/main@6f539679` — PR #714 (نسخهٔ ۱ طراحی) در این فاصله **Merged** شده است؛ مبنا به وضعیت جدید منتقل شد و PR تکراری نساخته نشد.
+- **اصلاح‌های معماری v2 (پاسخ به ایرادهای مطرح‌شده):**
+  1. جداسازی سه چرخه: تجاری (`Order.CommercialStatus`)، بررسی پرداخت (`VendorPayment.VerificationStatus`)، fulfillment ردیف (`Line.FulfillmentStatus`)؛ پاسخ به «سه ستون لازم است؟»: نه — Applied بدون مسیر ACK (#394) امروز ستون نمی‌شود و در PR مربوطه additive اضافه می‌شود؛ بسته‌شدن سفارش مشتق است نه ذخیره‌شده.
+  2. مدرک پرداخت از `PaymentEvidenceJson` روی Line به Entity مستقل `VendorPayment` روی Order با ستون‌های typed منتقل شد (پرداخت چندردیفی/چندمرحله‌ای، بدون JSON، پیشنهاد unique `(Method, ReferenceNumber)`).
+  3. تفکیک تأیید پرداخت از تأیید صدور روی همان Maker-Checker موجود با دو ResourceType جدید (`salesOrderPayment`/`salesOrderLine`)، endpoint اختصاصی به الگوی لایسنس، requester≠reviewer موجود، و permission پیشنهادی `vendor.payments.verify` در برابر `vendor.licenses.issue` موجود؛ تأیید پرداخت به‌تنهایی مجوز صدور نیست.
+  4. حذف `TargetRef/NewValue` عمومی؛ چهار LineType بسته با ماتریس اجبار/ممنوعی ستون‌ها (نگاشت یک‌به‌یک به سه builder موجود)؛ سفارش بدون Installation معتبر؛ صدور مستقل به‌ازای ردیف.
+  5. ضدتکرار صدور با کد واقعی تطبیق داده شد: unique `(LicenseId, Sequence)` در `VendorDbContext.cs:178-194`، گارد `LastIssuedSequence`، RowVersion، تراکنش اتمیک، پیوند 0..1 Line→Envelope با filtered unique index، رفتار retry/هم‌زمانی.
+  6. `CustomerId` (Guid) در همهٔ FKهای جدید؛ `CustomerNumber` فقط نمایشی؛ `VendorContract` اختیاری با پیشنهاد FK مرکب سازگاری مشتری؛ یک ارز در سفارش و فقط-اطلاعاتی.
+- **خروجی:** `docs/handoffs/ISSUE-393-s1-b-order-payment-design-v2.md` (۱۰ بخش خواسته‌شدهٔ مأموریت + جدول فیلد به‌تفکیک + نمودار جریان + فهرست ۹+۱ تصمیم ساختاریافتهٔ مالک + برنامهٔ ۶ PR مرحله‌ای)؛ یادداشت به‌روزرسانی بالای handoff v1؛ بدون تغییر مستندات نامرتبط.
+- **محدوده:** فقط مستندات؛ هیچ Entity/Migration/API/UI/Permission/Package ساخته نشد؛ هیچ تصمیم Proposed Accepted نشد؛ هیچ Gate/signer/سیاست امنیتی تغییر نکرد؛ تغییرات دیگران حفظ شد.
+- **اعتبارسنجی:** `git diff --check` پاک؛ Build/Test اجرا نشد (تغییر اجرایی وجود ندارد)؛ شواهد کد (ایندکس یکتا، allow-list، کاتالوگ permission، تراکنش صدور) مستقیماً از `main@6f539679` بازخوانی شد.
+
+
+## 2026-11-19 — S1-b / Issue #393: اصلاح محدود سند v2 (PR #717) — چهار ابهام بازبینی
+
+- **مبنا:** `origin/main@6f539679` (بدون جابه‌جایی)؛ PR #717 باز و untouched توسط دیگران؛ فقط همان PR به‌روزرسانی شد (PR جدید نساخته شد).
+- **اصلاحات (فقط سند v2؛ بدون تغییر جهت معماری):**
+  1. **License در MaxCompaniesIncrease:** تناقض «LicenseId ممنوع در حالی که `TryBuildMaxCompaniesIncrease` به License/Installation/Customer نیاز دارد» رفع شد — `LicenseId` برای هر چهار LineType الزامی و پیش از درخواست تأیید صدور روی Line تثبیت می‌شود؛ انتخاب آزاد License در لحظهٔ صدور وجود ندارد؛ `InstallationId` فیلد مستقل Line نیست و از `License.InstallationId` مشتق می‌شود (entity آن `Guid?` nullable است؛ هر سه امضای builder در `VendorLicenseAmendmentPayloadBuilder.cs:13-43` زنجیره را با `license_installation_mismatch` fail-closed اعتبارسنجی می‌کنند)؛ ماتریس ۳.۴ و Check Constraintها هماهنگ شد؛ گزینهٔ «InstallationId صریح با FK تساوی» به‌عنوان گزینهٔ مالک حفظ شد.
+  2. **یک صدور باز به‌ازای هر License:** سیاست «حداکثر یک عملیات صدور فعال به‌ازای هر License» به بخش‌های ۵/۶/۷ و نمودار اضافه شد (چک اپلیکیشن `license_issuance_in_progress` + پیشنهاد filtered unique index `ON Lines(LicenseId) WHERE FulfillmentStatus='ApprovalRequested'`)؛ درخواست کهنه با گارد موجود `license.RowVersion ↔ approval.ExpectedResourceRowVersion` (`VendorLicenseIssuanceService.cs:50`) هرگز با دادهٔ جدید خودکار اجرا نمی‌شود؛ Line بعدی پس از terminal شدن قبلی با Sequence/RowVersion تازه؛ بدون Queue/Event Bus/Distributed Lock؛ unique `(LicenseId, Sequence)` نگهبان نهایی ماند.
+  3. **معنای PaymentRecorded/Confirmed:** معنای گذارها روشن شد و تصمیم ۱۱ با سه گزینه (A: Confirmed با نخستین Verified + صدور مستقل از پرداخت [پیشنهاد پیش‌فرض فنی، Accepted نشده]؛ B: Confirmed با جمع Verified ≥ TotalAmount؛ C: Confirmed دستی + گیت اختیاری صدور) به فهرست مالک اضافه شد؛ هیچ allocation/Ledger/درگاه پیشنهاد نشد.
+  4. **ReferenceNumber:** یکتایی سراسری فرض حذف شد؛ فقط Index غیریکتا + هشدار تشخیص تکرار در v1؛ قید unique فقط با Namespace صریح `(Method, ProviderOrBank, ReferenceNumber)` معنا دارد و به‌صورت Proposed موکول به schema approval ماند (تصمیم ۱۰ بازنویسی).
+- **فهرست تصمیم مالک:** ۹ مورد → ۱۱ مورد؛ شمارنده در بخش ۸ هماهنگ شد؛ برنامهٔ PR-۲/PR-۳ با قواعد جدید به‌روز شد.
+- **محدوده:** فقط `docs/handoffs/ISSUE-393-s1-b-order-payment-design-v2.md` و WORK_LOG؛ بدون کد/Entity/Migration/API/UI/Permission/Package؛ بدون تغییر Gate/Entitlement/سیاست امنیتی؛ هیچ Proposed به Accepted تبدیل نشد؛ تغییرات دیگران حفظ شد.
+
+
+## 2026-11-19 — S1-b / Issue #393: رفع یافته‌های بازبینی PR #717
+
+- **محدوده:** فقط مستندات موجود در همان PR؛ بدون کد، Entity، Migration، API، UI، Permission عملیاتی یا تغییر Gate.
+- **اصلاحات:** (۱) در جریان Mermaid، تأیید پرداخت دیگر پیش‌شرط همیشگی درخواست صدور نمایش داده نمی‌شود و فقط در صورت انتخاب گیت پرداخت طبق تصمیم مالک ۱۱ اعمال می‌شود؛ گزینهٔ (ب) تصمیم ۱۱ نیز با مستقل‌بودن صدور سازگار شد. (۲) هر چهار نقطهٔ dispatch در `VendorApprovalEndpoints` مشخص شد: دو allow-list و دو نگاشت `PermissionFor`؛ نگاشت `salesOrderPayment` به `vendor.payments.verify` و `salesOrderLine` به `vendor.licenses.issue`. (۳) نسخهٔ Line و License جداگانه ثبت و پیش از ساخت amendment کنترل می‌شوند؛ stale بودن هرکدام به conflict می‌انجامد. (۴) مسیر بازیابی stale به‌صورت اتمیک تعریف شد: اگر Line تغییر نکرده و هنوز به همان درخواست متصل است، Approval=`Stale` و Line از `ApprovalRequested` به `Pending` برمی‌گردد؛ اگر Line نیز تغییر کرده باشد، لغو/جایگزینی مجاز Approval را `Stale` و Line را `Cancelled` می‌کند و Line جایگزین با RowVersionهای تازه ساخته می‌شود؛ وضعیت نامنطبق بدون بازنویسی به conflict می‌رسد. (۵) pipeهای literal داخل سلول‌های جدول Markdown escape شدند. (۶) یادداشت handoff نسخهٔ v1 صریحاً پیشنهاد قدیمی `InstallationId` در سطح Line را superseded اعلام می‌کند، بدون بازنویسی سابقهٔ ممیزی.
+- **وضعیت تصمیم‌ها:** همهٔ پیشنهادها همچنان `Proposed`/`NeedsApproval` هستند؛ هیچ تصمیم مالکانه‌ای Accepted نشده است.
+- **اعتبارسنجی:** `git diff --check` و Markdown lint باید پس از دریافت CI همین commit بررسی شوند؛ Build/Test کد موضوعیت ندارد چون تغییرات مستنداتی‌اند.
+
 ## 2026-11-19 — D-106 (Proposed): نیازمندی‌ها و طراحی Excel Import مرحله‌ای (Issue #715)
 
 - **مبنا:** main@6f539679؛ شاخهٔ docs/excel-import-adr-proposed.
@@ -3286,7 +3321,7 @@
 ## 2026-11-19 — دور سوم (نهایی) اصلاح D-106 / Excel Import پس از بازبینی معماری و امنیت (Issue #715، PR #716)
 
 - **قاعدهٔ فرمول (Allow-list):** برای سلول با `HasFormula` فقط `HasFormula`، `FormulaA1`، `CachedValue`، `DataType`، `Style.NumberFormat` و `Address` مجازند و هر API دیگر ممنوع است؛ فهرست ممنوعِ قبلی ناکافی بود. شاهد: probe `apiprobe` (`results_api_eval.txt`؛ `formulas_nov.xlsx`، سلول‌های B1/B4؛ معیار تغییر `CachedValue`): 11 API فرمول را اجرا کردند (از جمله `GetFormattedString` و `ws.Search`) و 5 مورد نه؛ `Address` در probe نبود (NotRun). کد و خروجی خام در پیوست‌های ب و پ سند مقایسه.
-- **نام‌گذاری Guard:** «Guard Spike v2» = اجراشده و دورزدنی با تغییر نام part؛ «Guard پیشنهادی» = NotRun (resolve رابطه‌ها، نرمال‌سازی نام‌های OPC، عدم دنبال‌کردن `TargetMode="External"`، رد externalLink و `CompressedLength > Length`). شرط اعتبار سقف‌ها: قطع خواندن Entry در اندازهٔ اعلامی (مشاهده‌شده در یک runtime).
+- **نام‌گذاری Guard:** «Guard Spike v2» = اجراشده و دورزدنی با تغییر نام part؛ «Guard پیشنهادی» = NotRun (resolve رابطه‌ها، نرمال‌سازی نام‌های OPC، عدم دنبال‌کردن `TargetMode="External"`، رد externalLink و شمارش بایت واقعی بازشده با Stream محدودکننده). صرفِ `CompressedLength > Length` معیار رد نیست؛ شرط اعتبار سقف‌ها اعمال محدودیت روی بایت‌هایی است که واقعاً از هر Entry خوانده می‌شوند، نه اتکا به اندازهٔ اعلامی.
 - **اعداد:** فایل واقع‌نما بازشده 18,865,100 بایت (≈18MiB؛ محاسبهٔ مستندساز؛ قبلاً «17MB» نوشته شده بود). بدترین حالت اکنون «برآوردی» (برون‌یابی خطی ×40/18 فقط برای محتوای واقع‌نما): ≈600MB و ≈4.1–4.4s برای یک Import، ≈1.2GB برای دو؛ اعداد قبلی ≈635MB و ≈4.5–5s و ≈1.3GB حذف شدند؛ محتوای پر از shared strings NotRun.
 - **Commit و توکن:** شرط رفع مسدودی یکسان شد: S3-0 و D-105، و نیز state سمت سرور یا تأیید صریح گزینهٔ توکن Data Protection؛ انقضا داخل توکن بی‌state ممکن است و Blocked نیست (فقط تک‌مصرف‌بودن و Idempotency سطح Import). پیش‌شرط‌های توکن: وضعیت key ring (بدون `AddDataProtection` صریح در Host؛ `WorkContextCookie` از `IDataProtectionProvider` تزریقی استفاده می‌کند)، توکن فقط در حافظهٔ کلاینت (D-012)، مقادیر Tenant/Company فقط برای تطبیق برابری با Context سرور (D-013).
 - **سایر:** جملهٔ لغو اصلاح شد (`CancellationToken` فقط بین مراحل؛ لغو Host حین بارگذاری CPU را آزاد نمی‌کند؛ استنتاج)؛ «پروژهٔ مستقل لازم دانسته نمی‌شود (NeedsApproval)»؛ EXC-15 «برای خود موتور»؛ ردپای شواهد: پنج فایل خام (چهار JSONL و یک TXT)؛ آزمون‌های مستقل بازبین با برچسب یکسان «خروجی خام در پیوست پ نیست».
@@ -3298,3 +3333,13 @@
 - **اصلاح:** نسخهٔ Target Schema از کلید بازیابی Mapping خارج شد و به‌عنوان ویژگی رکورد تعریف شد؛ جست‌وجو با Company سمت سرور، شناسهٔ پایدار Target Schema و هویت Template/Sheet انجام می‌شود. اگر نسخهٔ ذخیره‌شده با نسخهٔ جاری فرق داشته باشد، رکورد فقط برای اعتبارسنجی مجدد بازیابی می‌شود و تا تأیید صریح معتبر/قابل‌اعمال نیست؛ پس از تأیید، نسخهٔ جدید ساخته می‌شود.
 - **هماهنگ‌سازی:** جریان Import، توضیح EXC-8 و جدول تصمیم‌ها با همین قاعده هم‌راستا شدند. ذخیره‌سازی Mapping همچنان Blocked است و D-106 همچنان Proposed؛ هیچ Package/Schema/Migration یا کد اجرایی اضافه نشد.
 - **اعتبارسنجی:** پس از commit، diff و CI همین PR بررسی می‌شود؛ Build/Test کد به‌دلیل docs-only بودن اجرا نشده است.
+
+
+## 2026-11-19 — D-106 / PR #716: اصلاحات بازبینی نهایی
+
+- **EXC-8:** کلید Mapping در `DECISIONS.md` با طراحی هم‌راستا شد؛ نسخهٔ Target Schema ویژگی رکورد است، نه جزء کلید. ذخیره‌سازی همچنان تا D-105/S3-0 مسدود است.
+- **Preview binding:** گزینهٔ توکن پیشنهادی باید `ConsumerOperation` و `TargetSchemaId` پایدار را هم در payload احرازشده و هم در purpose محافظ Data Protection مقید کند؛ Commit این دو را با مقادیر resolveشده از سمت سرور تطبیق می‌دهد. این گزینه همچنان Proposed/NeedsApproval و Commit همچنان Blocked است.
+- **ZIP Guard:** قاعدهٔ رد صرفاً بر اساس `CompressedLength > Length` حذف شد؛ این مقایسه می‌تواند فایل معتبر دارای محتوای از قبل فشرده را رد کند. پیشنهاد به شمارش بایت واقعی decompressed هنگام خواندن هر Entry و اعمال سقف per-entry/total و compression ratio بر اساس بایت واقعی تغییر کرد. Guard هنوز NotRun است.
+- **Spike reproducibility:** ساخت پوشهٔ خروجی در هر دو generator صریح شد؛ فرمان Build با `-o bin` مستند شد تا `bin/h.dll` با runnerها سازگار باشد؛ تفسیر cache خالی اصلاح شد و آن را نتیجهٔ قطعی عدم اجرای فرمول نمی‌داند.
+- **Markup:** pipe فرمول `=cmd\|...` در سلول جدول Escape شد.
+- **محدوده/وضعیت:** فقط مستندات؛ D-106 و همهٔ EXCها Proposed/NeedsApproval باقی‌اند؛ هیچ Package، کد اجرایی، Schema، Migration، API یا UI اضافه نشد. CI پس از این commit باید بررسی شود؛ Build/Test کد اجرا نشده چون تغییرات docs-only است.
