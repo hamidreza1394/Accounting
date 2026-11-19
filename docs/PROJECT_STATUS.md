@@ -8,7 +8,7 @@
 
 ## اصلاح راهنمای Windows Localhost و دامنهٔ سازگاری — 2026-11-19
 
-- `docs/LOCALHOST_WINDOWS_TEST_GUIDE.md` اکنون Windows 11، نسخه‌های پشتیبانی‌شدهٔ Windows 10 Enterprise/LTSC و Windows Server 2016+ (از جمله Server Core برای اجرای Host) را هدف می‌گیرد؛ ماتریس واقعی .NET 10 و SQL Server 2022 و محدودیت Windows 10 Home/Pro و SQL x64 صریح شده است. Node.js فقط برای Build کلاینت لازم است.
+- `docs/LOCALHOST_WINDOWS_TEST_GUIDE.md` اکنون Windows 11، نسخه‌های پشتیبانی‌شدهٔ Windows 10 Enterprise/LTSC و Windows Server 2012/2012 R2/2016+ را برای Runtime .NET 10 هدف می‌گیرد (SQL Server 2022 محلی فقط روی Server 2016+؛ Server 2012/R2 نیازمند SQL میزبان جدا است؛ Server Core نیز پشتیبانی می‌شود)؛ ماتریس واقعی .NET 10 و SQL Server 2022 و محدودیت Windows 10 Home/Pro و SQL x64 صریح شده است. Node.js فقط برای Build کلاینت لازم است.
 - مسیر CNG برای License/Provisioning با Microsoft Software Key Storage Provider مستند شده؛ TPM/HSM/KMS یا سخت‌افزار اختصاصی برای این دو کاربرد لازم نیست. D-055/D-057 برای offline-revocation و anti-rollback جدا باقی می‌مانند.
 - راهنما اصلاح شد: Build صریح Vendor.Host پیش از Export، اجرای Migration مستقل Vendor با EF CLI پیش از Startup، Bootstrap با راز مخفی و حداقل ۳۲ بایت، PowerShell 5.1، Invoke-Sqlcmd با ConnectionString معتبر و فایل UTF-8 بدون BOM.
 - محدودیت‌های اجرایی صادقانه ثبت شد: تا Merge شدن PRهای #722 و #724، main هنوز سیاست تک‌اپراتوره D-109 را در Runtime کامل اعمال نمی‌کند؛ همچنین نمونهٔ API Import قبلی از متغیرهای نشست/توکن تعریف‌نشده استفاده می‌کرد و به‌عنوان دستور اجرایی حذف شد تا قرارداد نشست/CSRF تست‌شده فراهم شود.
