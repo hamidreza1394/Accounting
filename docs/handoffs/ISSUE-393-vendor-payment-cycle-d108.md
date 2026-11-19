@@ -66,5 +66,5 @@
 
 ## شناسه‌های Git
 - Branch: `agent/393-vendor-payment-cycle`
-- Commit: (پس از commit نهایی)
-- Pull Request: (پس از باز شدن)
+- Commit: `a7147435`
+- Pull Request: #722
