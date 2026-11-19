@@ -1036,12 +1036,12 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
             {
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
                 using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-                // Customer, installation, license, and provisioning requests are still pending.
-                Assert.Equal(4, json.RootElement.GetProperty("totalCount").GetInt32());
+                // The customer request was rejected by its own requester per D-109; the other three requests remain pending.
+                Assert.Equal(3, json.RootElement.GetProperty("totalCount").GetInt32());
                 var pendingIds = json.RootElement.GetProperty("items").EnumerateArray()
                     .Select(item => item.GetProperty("id").GetGuid())
                     .ToHashSet();
-                Assert.Contains(customerApprovalId, pendingIds);
+                Assert.DoesNotContain(customerApprovalId, pendingIds);
                 Assert.Contains(installationApprovalId, pendingIds);
                 Assert.Contains(licenseApprovalId, pendingIds);
                 Assert.Contains(provisioningApprovalId, pendingIds);
