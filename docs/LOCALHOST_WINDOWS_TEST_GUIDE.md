@@ -55,7 +55,7 @@ sqlcmd -?
 برای اجرای برنامه پس از Build، Node.js و npm لازم نیستند. اگر `sqlcmd` نبود، از SSMS یا ماژول `SqlServer` استفاده کنید (`Install-Module SqlServer -Scope CurrentUser`). برای ابزار Migration مربوط به Vendor نیز EF CLI نسخهٔ 10.0.14 را نصب کنید:
 
 ```powershell
-dotnet tool install --global dotnet-ef --version 10.0.14
+dotnet tool install --global dotnet-ef --version 10.0.13
 ```
 
 ```powershell
