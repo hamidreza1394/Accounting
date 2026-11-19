@@ -217,8 +217,8 @@ public sealed class WindowsCngCertificateStoreSigningTests
 
         var licenseKeyName = "faranou-vendor-signer-health-" + Guid.NewGuid().ToString("N");
         var provisioningKeyName = licenseKeyName + "-p";
-        var (licenseThumbprint, _) = CreateUserCertificate(licenseKeyName, exportable: false);
-        var (provisioningThumbprint, _) = CreateUserCertificate(provisioningKeyName, exportable: false);
+        var (licenseThumbprint, _) = CreateUserCertificate(licenseKeyName, CngExportPolicies.None);
+        var (provisioningThumbprint, _) = CreateUserCertificate(provisioningKeyName, CngExportPolicies.None);
         var missingOptions = TestOptions(new string('E', 40), new string('F', 40));
         var healthyOptions = TestOptions(licenseThumbprint, provisioningThumbprint);
 
