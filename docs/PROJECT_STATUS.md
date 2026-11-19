@@ -1,3 +1,8 @@
+## راهنمای اجرا و تست Windows Localhost — 2026-11-19
+
+- `docs/LOCALHOST_WINDOWS_TEST_GUIDE.md` افزوده شد: مسیر تکرارپذیر ۱۲ مرحله‌ای سناریوی A مأموریت (Vendor :5100 + فرانو :5000 + دو دیتابیس محلی)، Key Ceremony CNG غیرقابل‌Export طبق D-107، پیکربندی Trust Store با فرمان فقط‌عمومی `--signing-certificate export-public`، Maker-Checker صدور، فعال‌سازی با import فایل Envelope، فعال‌سازی دروازهٔ Runtime (`Licensing:RuntimeGate:Enabled`) و سناریوهای انقضا/تمدید/آفلاین/Restricted/Unlicensed با رفتارهای دقیق مصوب. همهٔ دستورها PowerShell آمادهٔ Copy/Paste هستند.
+- این PR فقط مستندات است؛ هیچ کد/Migration/Schema تغییر نکرد. محدودیت‌های واقعی (Wizard React، D-099، Gate v5، D-100/101/102) صادقانه ثبت شده‌اند. handoff: `ISSUE-UNNUMBERED-localhost-windows-guide.md`.
+
 ## تعیین تکلیف S1-a از سمت Vendor — 2026-11-18
 
 **مبنای بررسی:** `main@ab4ddef16f965b98c21720c5784a1fe068538878` (ادغام PR #707 در `2026-11-18T13:10:04Z`). این بخش، وضعیتMergeهای بعد از snapshot قبلی و خطوط «CI هنوز اجرا نشده»/«تأیید نشد» بخش‌های تاریخی زیر را بر اساس شواهد API بازبینی 2026-11-18 supersede می‌کند؛ سابقه حفظ شده است.
