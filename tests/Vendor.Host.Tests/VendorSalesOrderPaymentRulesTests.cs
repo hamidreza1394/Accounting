@@ -43,6 +43,7 @@ public sealed class VendorSalesOrderPaymentRulesTests
     [Fact]
     public void OverpaymentNeverCreatesDebt()
     {
+        // Preserve the full verified amount for reporting while clamping remaining debt to zero.
         var status = VendorSalesOrderPaymentRules.Derive(1000m, 1200m, null, Now);
 
         Assert.Equal(VendorSalesOrderPaymentRules.StatusPaid, status.PaymentStatus);
