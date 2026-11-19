@@ -77,9 +77,8 @@ public sealed class LicenseRuntimeGateMiddleware(RequestDelegate next)
 
                 Deny(context, StatusCodes.Status403Forbidden, "license_restricted", snapshot);
                 logger.LogInformation(
-                    "License gate denied a write while restricted. DeploymentMode={DeploymentMode} Path={Path}.",
-                    snapshot.DeploymentMode,
-                    path);
+                    "License gate denied a write while restricted. DeploymentMode={DeploymentMode}.",
+                    snapshot.DeploymentMode);
                 return;
 
             default:
@@ -93,11 +92,9 @@ public sealed class LicenseRuntimeGateMiddleware(RequestDelegate next)
                 };
                 Deny(context, status, errorCode, snapshot);
                 logger.LogInformation(
-                    "License gate denied a normal request. State={State} DeploymentMode={DeploymentMode} ErrorCode={ErrorCode} Path={Path}.",
+                    "License gate denied a normal request. State={State} DeploymentMode={DeploymentMode}.",
                     snapshot.State,
-                    snapshot.DeploymentMode,
-                    snapshot.ErrorCode,
-                    path);
+                    snapshot.DeploymentMode);
                 return;
         }
     }
