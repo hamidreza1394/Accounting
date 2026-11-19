@@ -10,6 +10,7 @@
 > - Windows Server 2016، 2019، 2022 و 2025 در x64؛ Windows Server Core نیز برای اجرای Host قابل استفاده است.
 > - این سناریو SQL Server 2022 را محلی نصب می‌کند؛ SQL Server 2022 به Windows 10 1607+ یا Windows Server 2016+ و پردازنده x64 نیاز دارد. روی Windows ARM64، SQL Server را روی میزبان x64 جداگانه اجرا کنید.
 > - Windows 7 و Windows 8.1 برای .NET 10 پشتیبانی نمی‌شوند. ترکیب OS، نسخه .NET و SQL Server باید در زمان استقرار با ماتریس رسمی Microsoft تطبیق داده شود.
+> - منابع رسمی: [سیستم‌عامل‌های پشتیبانی‌شدهٔ .NET 10](https://learn.microsoft.com/en-us/dotnet/core/install/windows) و [پیش‌نیازها و سیستم‌عامل‌های SQL Server 2022](https://learn.microsoft.com/en-us/sql/sql-server/install/hardware-and-software-requirements-for-installing-sql-server-2022?view=sql-server-ver16).
 >
 > **تفکیک Build و Runtime:** Node.js فقط برای Build فایل‌های React لازم است؛ برای اجرای روزمرهٔ برنامه روی سرور لازم نیست. Build را می‌توان روی همان Windows یا در CI انجام داد و فایل‌های استاتیک خروجی را همراه Host منتشر کرد. در Windows Server Core، UI را از مرورگر یک رایانهٔ دیگر باز کنید؛ دستورهای localhost در این راهنما برای اجرای یک‌ماشینه/توسعه هستند.
 >
@@ -217,10 +218,8 @@ try {
 catch {
   $response = $_.Exception.Response
   if ($null -eq $response -or [int]$response.StatusCode -ne 503) { throw }
-  $reader = New-Object System.IO.StreamReader($response.GetResponseStream())
-  try { $errorBody = $reader.ReadToEnd() } finally { $reader.Dispose() }
-  $errorBody
-  # انتظار: 503 با error=license_required
+  # انتظار: 503 با error=license_required؛ بدنه را می‌توان در ابزار HTTP بررسی کرد.
+  "Confirmed: API returned HTTP 503 while Unlicensed."
 }
 ```
 
