@@ -120,7 +120,6 @@ public sealed class WindowsCngCertificateStoreSigningTests
 
         var keyName = "faranou-vendor-user-key-" + Guid.NewGuid().ToString("N");
         var (thumbprint, _) = CreateUserCertificate(keyName, CngExportPolicies.None);
-        var options = TestOptions(thumbprint, new string('B', 40));
 
         try
         {
