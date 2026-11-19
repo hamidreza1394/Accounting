@@ -62,25 +62,25 @@ public static class WindowsCngSigningCertificateCommand
             return Task.FromResult(1);
         }
 
-        var exports = new List<object>(2);
-        foreach (var (purpose, key) in new (string Purpose, WindowsCngSigningKeyOptions Key)[]
+        using var licenseCertificate = WindowsCngCertificateLookup.TakeExactlyOne(
+            store.Certificates,
+            configured.ThumbprintNormalised(configured.LicenseKey));
+        using var provisioningCertificate = WindowsCngCertificateLookup.TakeExactlyOne(
+            store.Certificates,
+            configured.ThumbprintNormalised(configured.ProvisioningKey));
+        if (licenseCertificate is null || provisioningCertificate is null)
+        {
+            error.WriteLine("Exactly one certificate for each signing purpose must be present; nothing was exported.");
+            return Task.FromResult(1);
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        foreach (var (purpose, certificate) in new[]
                  {
-                     ("license", configured.LicenseKey),
-                     ("provisioning", configured.ProvisioningKey)
+                     ("license", licenseCertificate),
+                     ("provisioning", provisioningCertificate)
                  })
         {
-            var matches = store.Certificates.Find(
-                X509FindType.FindByThumbprint,
-                configured.ThumbprintNormalised(key),
-                validOnly: false);
-            if (matches.Count != 1)
-            {
-                error.WriteLine($"Exactly one '{purpose}' certificate was not found in the store; nothing was exported.");
-                return Task.FromResult(1);
-            }
-
-            var certificate = matches[0];
-            var now = DateTimeOffset.UtcNow;
             var structuralError = WindowsCngCertificatePolicy.ValidateStructural(certificate, now);
             var privateKeyError = WindowsCngCertificatePolicy.ValidatePrivateKey(certificate);
             if (structuralError is not null || privateKeyError is not null)
@@ -89,24 +89,42 @@ public static class WindowsCngSigningCertificateCommand
                     $"The '{purpose}' certificate is not acceptable (structural={structuralError ?? "ok"}, privateKey={privateKeyError ?? "ok"}); nothing was exported.");
                 return Task.FromResult(1);
             }
-
-            using var publicKey = certificate.PublicKey.GetECDsaPublicKey()
-                ?? throw new InvalidOperationException("The selected certificate has no ECDSA public key.");
-            exports.Add(new
-            {
-                purpose,
-                keyId = key.KeyId,
-                thumbprint = certificate.Thumbprint,
-                subject = certificate.Subject,
-                notAfterUtc = certificate.NotAfter.ToUniversalTime().ToString("O"),
-                publicKeySubjectPublicKeyInfoBase64 = Convert.ToBase64String(
-                    publicKey.ExportSubjectPublicKeyInfo())
-            });
         }
+
+        if (WindowsCngCertificatePolicy.HaveSamePublicKey(licenseCertificate, provisioningCertificate))
+        {
+            error.WriteLine("License and provisioning certificates must use independent public keys; nothing was exported.");
+            return Task.FromResult(1);
+        }
+
+        var exports = new List<object>(2)
+        {
+            CreateExport("license", configured.LicenseKey, licenseCertificate),
+            CreateExport("provisioning", configured.ProvisioningKey, provisioningCertificate)
+        };
 
         output.WriteLine(JsonSerializer.Serialize(exports));
         output.WriteLine(
             "Enrol each keyId + publicKeySubjectPublicKeyInfoBase64 under Licensing:TrustedSigningKeys / ProvisioningSigningTrust:Keys. Private keys never leave the store.");
         return Task.FromResult(0);
     }
+    private static object CreateExport(
+        string purpose,
+        WindowsCngSigningKeyOptions key,
+        X509Certificate2 certificate)
+    {
+        using var publicKey = certificate.GetECDsaPublicKey()
+            ?? throw new InvalidOperationException("The selected certificate has no ECDSA public key.");
+        return new
+        {
+            purpose,
+            keyId = key.KeyId,
+            thumbprint = certificate.Thumbprint,
+            subject = certificate.Subject,
+            notAfterUtc = certificate.NotAfter.ToUniversalTime().ToString("O"),
+            publicKeySubjectPublicKeyInfoBase64 = Convert.ToBase64String(
+                publicKey.ExportSubjectPublicKeyInfo())
+        };
+    }
+
 }
