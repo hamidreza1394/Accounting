@@ -44,7 +44,7 @@
 | Usage telemetry | در Offline stale تا sync | Vendor زمان آخرین sync را نشان دهد؛ stale به‌عنوان live معرفی نشود |
 
 ## 4. قواعد امنیتی غیرقابل نقض
-- هیچ private signing key در Git، Customer/Vendor DB، artifact، log یا پاسخ API قرار نگیرد. طبق D-107، امضای مرکزی Vendor برای LicenseEnvelope و Provisioning/Amendment در نسخه اول با Windows CNG/Certificate Store و سطح صریح SoftwareProtected مجاز است؛ TPM/HSM/KMS برای این دو کاربرد اجباری نیست. این معافیت شامل امضای Vendor offline-revocation snapshot نیست؛ آن مسیر طبق D-055 همچنان به HSM واقعی در Production نیاز دارد. کلید SoftwareProtected باید non-exportable، محدود به هویت سرویس، با Maker-Checker/Audit و fail-closed در خطا باشد. D-057 مربوط به Customer offline-revocation جداست.
+- هیچ private signing key در Git، Customer/Vendor DB، artifact، log یا پاسخ API قرار نگیرد. طبق D-107، امضای مرکزی Vendor برای LicenseEnvelope و Provisioning/Amendment در نسخه اول با Windows CNG/Certificate Store و سطح صریح SoftwareProtected مجاز است؛ TPM/HSM/KMS برای این دو کاربرد اجباری نیست. این معافیت شامل امضای Vendor offline-revocation snapshot نیست؛ آن مسیر طبق D-055 همچنان به HSM واقعی در Production نیاز دارد. کلید SoftwareProtected باید non-exportable، محدود به هویت سرویس، با گردش‌کار درخواست/تصمیم، Audit و fail-closed در خطا باشد؛ طبق D-109 تأیید تک‌اپراتوره در Vendor v1 مجاز است. D-057 مربوط به Customer offline-revocation جداست.
 - کلید هویت نصب Windows: TPM 2.0 / Microsoft Platform Crypto Provider ترجیحی؛ Software CNG/DPAPI فقط با رضایت صریح و ثبت SoftwareProtected با assurance پایین‌تر. fallback خودکار ممنوع.
 - هویت نصب از OS marker و کلید non-exportable/اثبات possession تشکیل می‌شود؛ MachineGuid به‌تنهایی کافی نیست. Restart/reboot/servicing معمولی نباید activation را از بین ببرد؛ OS reinstall/re-image با تغییر OS identity نیازمند reactivation کنترل‌شده است.
 - تبادل آنلاین اختیاری است؛ هر عملیات حسابداری عادی به Vendor وابسته نیست. Offline باید مستقل کار کند.
@@ -85,7 +85,7 @@
 ### مرحله چهار — فروش و صدور افزونه Vendor (#393)
 - ثبت خرید/تغییر ظرفیت شرکت، seat، module و feature.
 - ساخت amendment امضاشده برای همان Installation LicenseId.
-- maker-checker برای عملیات حساس، audit و sequence monotonic.
+- گردش‌کار approval برای عملیات حساس، audit و sequence monotonic؛ self-approval در Vendor v1 طبق D-109 مجاز است.
 - entitlementها به Company مورد نظر bind شوند؛ افزایش ظرفیت برای Cloud و Offline.
 **معیار پذیرش:** purchase-to-amendment، scope validation، signer unavailable fail-closed، duplicate/replay/downgrade، audit atomicity و منع cross-customer/company.
 
@@ -218,7 +218,7 @@ Issue #396 فقط مسئول startup gate و Activation Wizard است؛ contract
 
 ## وضعیت اجرایی Issue #393 — 2026-11-04
 - **Implemented / Verified in main:** candidate افزایش installation-scoped `maxCompanies` در PR #527 ادغام شد؛ merge commit `2a62811acdb71bda77288356743be45356685954` دارای ۱۵/۱۵ Check Run موفق پس از Merge است. این builder Payload v1/v2 را در همان نسخه نگه می‌دارد و تمام entitlementهای دیگر را حفظ می‌کند.
-- **NotImplemented:** commercial order/payment evidence، persistence درخواست Amendment، endpoint، approval، signing/export و statusهای purchased/delivered/acknowledged. طبق D-108، Verified payment شرط صدور نیست؛ چرخه پرداخت و صدور مستقل و هر دو Maker-Checker/Audit دارند.
+- **NotImplemented:** commercial order/payment evidence، persistence درخواست Amendment، endpoint، approval، signing/export و statusهای purchased/delivered/acknowledged. طبق D-108، Verified payment شرط صدور نیست؛ چرخه پرداخت و صدور مستقل و هر دو approval/Audit جدا دارند؛ self-approval طبق D-109 برای Vendor v1 مجاز است.
 - **Dependency:** add-onهای Company-scoped برای module/feature/user-seat نیازمند current Payload v2 و CompanyReference قابل اعتماد است. تبدیل خودکار Payload v1 به v2 ممنوع است؛ تا زمانی که مرجع شرکت‌های نصب از مسیر provisioning/signed ACK معتبر در دسترس نباشد، UI نباید Company دلخواه را به‌عنوان مرجع معتبر بپذیرد.
 - **محدوده:** این برش هیچ تغییر در Customer `Server/**`، دیتابیس مشتری یا Migration مشتری ندارد و signer واقعی KMS/HSM را انتخاب یا شبیه‌سازی نمی‌کند.
 
