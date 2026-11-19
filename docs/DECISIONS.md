@@ -2893,3 +2893,74 @@ D-013، D-030، D-037، D-038، D-087، D-089، D-103؛ DATABASE.md، SECURITY.m
 ### مراجع
 
 D-030، D-074، D-082، D-084، D-087، D-103، D-105؛ `docs/TRADE_DESIGN_V3_2.md` §12؛ `docs/TRADE_S3_READINESS.md`؛ `docs/UI_COMPONENTS.md`؛ `docs/UI_LIBRARIES.md`؛ `AGENTS.md` بخش ۲؛ [`EXCEL_IMPORT_DESIGN.md`](EXCEL_IMPORT_DESIGN.md)؛ [`EXCEL_IMPORT_LIBRARY_COMPARISON.md`](EXCEL_IMPORT_LIBRARY_COMPARISON.md).
+
+
+
+## D-107 — امضای نرم‌افزاری حفاظت‌شده برای نسخه اول Vendor (2026-11-19)
+
+- وضعیت: Accepted با تأیید صریح مالک محصول در 2026-11-19.
+- وضعیت پیاده‌سازی: NotImplemented برای اتصال Production؛ این ADR به‌تنهایی کلید واقعی یا Provider را فعال نمی‌کند.
+- دامنه: فقط کلیدهای امضای مرکزی Vendor برای LicenseEnvelope و بسته‌های Provisioning/Amendment. کلیدهای Customer ACK، هویت Installation و anti-rollback ابطال آفلاین Customer دامنه‌های جدا هستند.
+
+### تصمیم مالک
+1. برای نسخه اول Vendor، سطح اطمینان SoftwareProtected در Production مجاز است؛ TPM، HSM یا KMS شرط اجباری استقرار یا صدور نیست. Vendor می‌تواند روی Windows Server معمولی تحت کنترل مالک، در محل یا به‌شکل Windows VM در Cloud، بدون خرید سخت‌افزار یا سرویس KMS اجرا شود.
+2. Provider نسخه اول از Windows Certificate Store و CNG با کلید MachineKey و private key غیرقابل‌استخراج استفاده می‌کند. دسترسی کلید به هویت سرویس امضای Vendor محدود است؛ برنامه فقط عملیات Sign را از SigningKeyProvider درخواست می‌کند و private key را دریافت نمی‌کند.
+3. کلید ریشه اعتماد از کلیدهای روزمره صدور جدا و خارج از مسیر روزمره نگهداری می‌شود. کلیدهای License و Provisioning و هر purpose دیگر مستقل، دارای KeyId و چرخه اعتبار/چرخش جدا هستند؛ اشتراک کلید یا KeyId ممنوع است.
+4. SoftwareProtected باید در پیکربندی، readiness/health، Audit و گزارش وضعیت صریحاً نمایش داده شود و هرگز Hardware یا معادل HSM معرفی نشود.
+5. ریسک پذیرفته‌شده: مدیر محلی یا مهاجم دارای دسترسی سطح بالا به میزبان ممکن است بدون استخراج کلید، از Provider برای امضای غیرمجاز استفاده کند. CNG non-exportable این ریسک را حذف نمی‌کند. میزبانی Production باید روی Windows host/VM اختصاصی و با دسترسی مدیریتی محدود باشد؛ اجرای کلید صدور روی میزبان مشترک با مدیران نامرتبط مجاز نیست.
+6. Maker-Checker، MFA، Audit هر درخواست/تأیید/امضا، محدودیت دسترسی سرویس، rotation/overlap، ابطال اضطراری و fail-closed در نبود کلید/خطای Provider حفظ می‌شوند. نبود کلید معتبر یا خطای Store هرگز به کلید آزمایشی یا fallback خودکار منتهی نمی‌شود.
+7. امضا در GitHub Actions انجام نمی‌شود؛ private key در Git، Vendor DB، Customer DB، log، backup عادی یا بسته مشتری ذخیره/صادر نمی‌شود. روش بازیابی، چرخش و incident response باید با مدل نرم‌افزاری مستند و آزموده شود.
+8. HSM/KMS سخت‌افزاری می‌تواند در آینده Provider قوی‌تری باشد، اما برای نسخه اول پیش‌نیاز یا مانع فعال‌سازی نیست. abstraction مستقل از Provider حفظ می‌شود؛ Adapter پولی یا وابسته به Cloud خاص نیازمند تصمیم جداست.
+
+### رابطه با تصمیم‌های قبلی
+- بند ۷ D-047 در بخش امضای Production از تاریخ این تصمیم superseded است؛ سایر بندهای معماری D-047 معتبر می‌مانند.
+- بند OD-07.3 در D-046 و سیاست متناظر OD-07 فقط در الزام اجباری KMS/HSM برای Production superseded می‌شوند؛ root trust آفلاین، KeyId، rotation، جداسازی purpose، عدم export و کنترل دو نفره معتبر می‌مانند.
+- شرط HSM واقعی برای Production در D-056 و D-055 فقط برای امضای مرکزی License/Provisioning Vendor superseded است. قرارداد PKCS#11 و SoftHSM می‌تواند برای تست یا Provider سخت‌افزاری آینده باقی بماند.
+- D-055 برای Customer ACK، D-057 برای TPM anti-rollback وضعیت ابطال آفلاین Customer، و D-058 برای کلید هویت Installation مستقل باقی می‌مانند؛ این ADR الزام TPM در آن سه حوزه را حذف نمی‌کند.
+
+### پیامدها و معیار پذیرش
+- نصب Vendor روی Windows Server معمولی بدون TPM/HSM/KMS ممکن باشد؛ Cloud نسخه اول نیز می‌تواند روی Windows VM اختصاصی اجرا شود. هزینه خود میزبان Cloud ممکن است وجود داشته باشد؛ این تصمیم فقط هزینه سخت‌افزار/سرویس امضای تخصصی را حذف می‌کند.
+- تست ثابت کند کلید MachineKey non-exportable است، ACL فقط هویت سرویس مجاز را می‌پذیرد، purposeها جدا هستند، امضای مجاز با KeyId درست انجام می‌شود و فقدان/خرابی کلید fail-closed است.
+- تست‌های منفی Maker-Checker، requester≠reviewer، مجوز نقش، Audit، rotation overlap، revocation و عدم افشای مواد کلید الزامی‌اند.
+- تا اجرای تست روی Windows Server هدف و CI، وضعیت Implemented/Verified یا Production-ready ادعا نمی‌شود.
+
+### خارج از دامنه و باقی‌مانده
+- Linux Vendor host در نسخه اول با CNG پشتیبانی‌شده فرض نمی‌شود؛ برای آن Provider نرم‌افزاری OS-native جداگانه و آزمون‌شده لازم است. مسیر کم‌هزینه Cloud نسخه اول، Windows VM است.
+- الزام TPM در D-057 برای anti-rollback snapshot ابطال آفلاین Customer برقرار است؛ اثر آن بر مشتری فاقد TPM در OD-27 باز می‌ماند.
+- این ADR هیچ Entity، Migration، API، endpoint، مجوز تجاری، Gate صدور v5 یا کلید واقعی ایجاد/فعال نمی‌کند.
+
+مراجع: D-046، D-047، D-055، D-056، D-057، D-058؛ Issue #236؛ OD-07 و OD-27.
+
+
+## D-108 — استقلال پرداخت از صدور مجوز و پیگیری کم‌هزینه مطالبات (2026-11-19)
+
+- وضعیت تصمیم: Accepted با تأیید صریح مالک محصول در 2026-11-19.
+- وضعیت پیاده‌سازی: NotImplemented در Commercial Order/Payment؛ این تصمیم به‌تنهایی Entity، Migration، API یا UI ایجاد نمی‌کند.
+- دامنه: Vendor Commercial، گردش‌کار صدور Amendment در #393 و داشبورد/گزارش داخلی Vendor؛ دیتابیس و گردش حسابداری Customer خارج از دامنه‌اند.
+
+### تصمیم مالک
+1. پرداخت شرط صدور یا فعال‌سازی نیست. سفارش می‌تواند ثبت و تأیید شود و برای آن License/Amendment صادر و از مسیر آنلاین یا فایل آفلاین فعال شود، حتی اگر هیچ پرداختی ثبت نشده یا پرداخت هنوز تأیید نشده باشد. ثبت/تأیید پرداخت به‌تنهایی نیز مجوز صادر نمی‌کند.
+2. چرخه صدور و چرخه پرداخت مستقل‌اند. هر دو از Maker-Checker موجود استفاده می‌کنند، اما ResourceType و Permission جدا دارند: تأیید پرداخت با salesOrderPayment و vendor.payments.verify؛ تأیید صدور با salesOrderLine و vendor.licenses.issue. درخواست‌کننده و تأییدکننده در هر چرخه دو کاربر متفاوت‌اند.
+3. Audit پرداخت و Audit صدور جدا و قابل ردیابی‌اند؛ ثبت‌کننده، تأییدکننده، زمان، نتیجه، دلیل رد و ارتباط با Order/Line/License/Envelope ثبت می‌شود. تأیید پرداخت Approval صدور را خودکار تأیید نمی‌کند و برعکس.
+4. هر سفارش مبلغ کل و ارز مشخص دارد. پرداخت‌ها دستی و چندگانه برای همان Order ثبت می‌شوند؛ مبلغ، ارز، روش، مرجع بیرونی، زمان ادعایی پرداخت و metadata محدود مدرک ثبت می‌شود. نسخه اول درگاه پرداخت، Ledger، حساب دریافتنی، تسویه بانکی یا تخصیص پرداخت به Lineها ندارد. ارز Payment باید با ارز Order یکسان باشد.
+5. وضعیت هر Payment برابر Recorded، Verified یا Rejected است. فقط Paymentهای Verified در جمع پرداخت‌شده محاسبه می‌شوند؛ Recorded یا Rejected مبلغ بدهی را کاهش نمی‌دهد. چند پرداخت می‌توانند یک سفارش را جزئی یا کامل پوشش دهند؛ تخصیص به Line در نسخه اول وجود ندارد.
+6. وضعیت پرداخت Order ذخیره یا دستی ویرایش نمی‌شود؛ هنگام خواندن از مبلغ سفارش و مجموع Paymentهای Verified مشتق می‌شود: Unpaid، PartiallyPaid یا Paid. اگر مبلغ باقی‌مانده مثبت و تاریخ سررسید موجود و گذشته باشد، برچسب Overdue نیز مشتق می‌شود. تاریخ سررسید می‌تواند خالی باشد؛ سفارش بدون سررسید همچنان Unpaid/PartiallyPaid است ولی Overdue نیست.
+7. Vendor فهرست/هشدار داخلی برای سفارش‌های پرداخت‌نشده، پرداخت جزئی و سررسیدگذشته و گزارش مبلغ باقی‌مانده ارائه می‌کند. وضعیت‌ها هنگام درخواست داشبورد/گزارش محاسبه می‌شوند؛ زمان‌بند دائمی، Background Worker، Message Broker، CRM/Ticketing سنگین، درگاه پرداخت و ارسال اجباری ایمیل/SMS لازم نیست.
+8. هشدار مطالبات، اعلان داخلی تجاری Vendor است و با اعلان‌های فنی/امنیتی Customer یا D-102 خلط نمی‌شود. هشدار پرداختی حق استفاده، Support یا Update را خودکار تغییر نمی‌دهد. تمدید Support/Update مستقل از Perpetual/Term و مستقل از پرداخت باقی می‌ماند؛ تغییر entitlement فقط از گردش صدور و Amendment امضاشده عبور می‌کند.
+9. سفارش پرداخت‌نشده حذف یا مخفی نمی‌شود؛ سابقه پرداخت‌های ثبت/تأیید/ردشده و تاریخچه صدور حفظ می‌شود. اصلاح مبلغ/سررسید یا ثبت Payment جدید Audit می‌شود.
+
+### گزینه‌های ردشده
+- وابسته‌کردن صدور/فعال‌سازی به Verified شدن پرداخت؛
+- یک Status مشترک برای پرداخت، سفارش و صدور؛
+- ثبت Payment Evidence در JSON آزاد روی OrderLine؛
+- درگاه پرداخت، Ledger یا سیستم حسابداری موازی در Vendor v1؛
+- زمان‌بند/Message Broker یا ارسال SMS/Email برای محاسبه مطالبات نسخه اول.
+
+### پیامدها و معیار پذیرش
+- تست صدور و فعال‌سازی با صفر Payment، Payment ثبت‌شده ولی تأییدنشده، Payment ردشده، جزئی و کامل؛ هیچ‌کدام نباید چرخه صدور را ضمنی تغییر دهند.
+- تست Maker-Checker مستقل برای پرداخت و صدور، عدم self-approval، کنترل RowVersion/idempotency و Audit هر دو چرخه.
+- محاسبه درست Unpaid/PartiallyPaid/Paid/Overdue با TimeProvider، پرداخت‌های Verified، تاریخ سررسید خالی/گذشته و مرز مبلغ صفر.
+- گزارش مطالبات بدون Job یا سرویس زمان‌بندی‌شده و با query صفحه‌بندی‌شده؛ مبالغ با decimal و ارز سفارش محاسبه شوند.
+- هیچ تغییر مستقیمی در Customer DB یا Customer License state از ثبت/تأیید Payment انجام نشود.
+
+مراجع: D-022، D-059، D-060، D-097، D-098، D-102؛ Issue #393؛ handoff طراحی S1-b نسخه ۲.۱.

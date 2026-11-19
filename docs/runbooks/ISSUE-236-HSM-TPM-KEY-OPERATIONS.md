@@ -1,8 +1,8 @@
 # Runbook عملیات کلید HSM/TPM — Issue #236 / D-055
 
-- **وضعیت:** مستند عملیاتی آمادهٔ بازبینی؛ اجرای Production تا تأمین HSM واقعی و provision شدن backend امن هر نصب مشتری **Blocked** است.
-- **دامنه:** کلیدهای مرکزی Vendor برای امضای بسته، لایسنس و revocation آفلاین، و کلید مستقل هر نصب مشتری برای ACK.
-- **اصل غیرقابل‌مذاکره:** کلید خصوصی هرگز export، serialize، backup به‌صورت فایل، commit، log یا داخل بستهٔ Provisioning نمی‌شود. هیچ software fallback یا کلید SoftHSM در Production وجود ندارد.
+- **وضعیت پس از D-107:** الزام HSM برای امضای مرکزی Vendor superseded شده است؛ Vendor v1 پس از پیاده‌سازی و آزمون Windows CNG با AssuranceLevel=SoftwareProtected می‌تواند بدون HSM فعال شود. این Runbook HSM-specific برای مسیر سخت‌افزاری آینده نگه داشته می‌شود. Customer ACK و Customer offline-revocation همچنان تابع D-055/D-057 و تأمین backend امن/TPM خود هستند.
+- **دامنه تاریخی:** کلیدهای مرکزی Vendor برای امضای بسته، لایسنس و revocation آفلاین، و کلید مستقل هر نصب مشتری برای ACK. از D-107 به بعد، این Runbook برای HSM آینده است؛ مسیر SoftwareProtected مرکزی Vendor در handoff D-107 تعریف شده و نباید این Runbook را به‌عنوان مانع HSM برای Vendor v1 تفسیر کرد.
+- **اصل غیرقابل‌مذاکره:** کلید خصوصی هرگز export، serialize، backup به‌صورت فایل، commit، log یا داخل بستهٔ Provisioning نمی‌شود. SoftHSM و کلید آزمایشی هرگز Production نیستند. امضای SoftwareProtected طبق D-107 یک Provider تولیدی مستقل با CNG است، نه fallback به SoftHSM یا فایل کلید.
 - **مبنای استقرار:** deployment-neutral؛ Vendor می‌تواند روی سرور اختصاصی یا میزبان ابری اجرا شود. این Runbook به Azure/AWS وابسته نیست.
 
 ## 1. نقش‌ها و تفکیک مسئولیت
@@ -167,8 +167,8 @@
 
 ## 12. وضعیت اجرایی فعلی
 
-- HSM واقعی خریداری/اجاره نشده و بودجهٔ فعلی صفر است؛ بنابراین Vendor Production package/license signing باید disabled و fail-closed بماند.
-- SoftHSM فقط در محیط اختصاصی Testing و CI برای تست adapter استفاده می‌شود؛ هیچ token نرم‌افزاری در Development، Staging یا Production مجاز نیست.
+- HSM واقعی خریداری/اجاره نشده و بودجهٔ فعلی صفر است؛ طبق D-107 این موضوع دیگر مانع Vendor v1 نیست، مشروط به پیاده‌سازی/تست SoftwareProtected. Provider فعلی تا آن زمان unavailable/fail-closed باقی می‌ماند.
+- SoftHSM فقط برای Testing و CI یا مسیرهای مجاز Development/Staging طبق D-056 است؛ هیچ SoftHSM token به‌عنوان Provider Production استفاده نمی‌شود. SoftwareProtected تولیدی Vendor باید Windows CNG/Certificate Store باشد.
 - مدل و سازندهٔ HSM، محل فیزیکی، HA/DR و قرارداد پشتیبانی هنوز انتخاب نشده‌اند؛ در نتیجه بخش‌های HSM این Runbook فعلاً **قابل اجرا نیستند**.
 - Customer ACK production signing نیز تا پیاده‌سازی و اثبات backend غیرقابل‌استخراج TPM/OS و trust enrollment آفلاین فعال نمی‌شود.
 - این سند راهنمای عملیاتی است؛ اجرای آن بدون HSM واقعی، دو Custodian و تأیید Security Owner مجاز نیست.

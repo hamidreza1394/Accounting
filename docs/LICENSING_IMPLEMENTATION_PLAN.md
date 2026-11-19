@@ -42,7 +42,7 @@
 | Usage telemetry | در Offline stale تا sync | Vendor زمان آخرین sync را نشان دهد؛ stale به‌عنوان live معرفی نشود |
 
 ## 4. قواعد امنیتی غیرقابل نقض
-- هیچ private signing key در Git، Customer/Vendor DB، artifact، log یا پاسخ API قرار نگیرد. Production signer مستقل KMS/HSM/remote signer و fail-closed است.
+- هیچ private signing key در Git، Customer/Vendor DB، artifact، log یا پاسخ API قرار نگیرد. طبق D-107، امضای مرکزی Vendor برای LicenseEnvelope و Provisioning/Amendment در نسخه اول با Windows CNG/Certificate Store و سطح صریح SoftwareProtected مجاز است؛ TPM/HSM/KMS برای این دو کاربرد اجباری نیست. این معافیت شامل امضای Vendor offline-revocation snapshot نیست؛ آن مسیر طبق D-055 همچنان به HSM واقعی در Production نیاز دارد. کلید SoftwareProtected باید non-exportable، محدود به هویت سرویس، با Maker-Checker/Audit و fail-closed در خطا باشد. D-057 مربوط به Customer offline-revocation جداست.
 - کلید هویت نصب Windows: TPM 2.0 / Microsoft Platform Crypto Provider ترجیحی؛ Software CNG/DPAPI فقط با رضایت صریح و ثبت SoftwareProtected با assurance پایین‌تر. fallback خودکار ممنوع.
 - هویت نصب از OS marker و کلید non-exportable/اثبات possession تشکیل می‌شود؛ MachineGuid به‌تنهایی کافی نیست. Restart/reboot/servicing معمولی نباید activation را از بین ببرد؛ OS reinstall/re-image با تغییر OS identity نیازمند reactivation کنترل‌شده است.
 - تبادل آنلاین اختیاری است؛ هر عملیات حسابداری عادی به Vendor وابسته نیست. Offline باید مستقل کار کند.
@@ -117,7 +117,7 @@
 - D-054 / #228 / #235: provisioning package و ACK؛ این مسیر با LicenseEnvelope/amendment یکی نیست و نباید دوباره پیاده‌سازی شود.
 - #214: Vendor signed revocation workflow؛ entitlement amendment جایگزین revocation snapshot نیست.
 - OD-06 و recovery در OD-08: انتقال/بازیابی installation و فقدان کلید هنوز نیازمند تصمیم/طرح مجزا است.
-- Production signer، independent audit sink، MFA/maker-checker عملیاتی و physical TPM verification blockers جداگانه‌اند.
+- پیاده‌سازی SoftwareProtected signer طبق D-107 برای LicenseEnvelope و Provisioning/Amendment، independent audit sink و MFA/maker-checker عملیاتی blockers باقی‌مانده‌اند؛ HSM/TPM برای این دو کاربرد Vendor signer اجباری نیست. امضای Vendor offline-revocation snapshot همچنان به HSM واقعی Production طبق D-055 نیاز دارد. physical TPM verification هم برای دو الزام مستقل باقی است: آزمون TPM سخت‌افزاری روی سرور Customer پیش‌نیاز Production ACK طبق D-055 است و TPM 2.0 NV Extend برای anti-rollback ابطال آفلاین مشتری طبق D-057 لازم است.
 - این سند مجوز Migration نیست؛ هر Migration باید در Issue خودش با schema review و rollout/rollback plan بررسی شود.
 
 ## 8. Issues و پیوندها
@@ -141,7 +141,7 @@
 - CustomerAccount و مخاطبان/اطلاعات حقوقی و عملیاتی مشتری.
 - قرارداد، سفارش، اقلام خرید، پرداخت/تطبیق، تمدید، تعهد پشتیبانی، SLA و تاریخچه تجاری.
 - ارتباط پشتیبانی و سوابق تجاری قابل ممیزی؛ بدون حساب کاربری/رمز Customer و بدون داده حسابداری مشتری.
-- سفارش پرداخت‌شده/تأییدشده درخواست تغییر entitlement را به Engine تحویل می‌دهد؛ Commercial خودش LicenseEnvelope امضا نمی‌کند.
+- سفارش و Line تأییدشده، مستقل از وضعیت پرداخت، درخواست تغییر entitlement را به Engine تحویل می‌دهند؛ Commercial خودش LicenseEnvelope امضا نمی‌کند. Payment verification چرخه Maker-Checker/Audit جدا دارد و شرط صدور نیست (D-108).
 
 ### 9.2 Licensing & Entitlement Engine
 - کاتالوگ محصول، Module، Feature و سیاست‌های ظرفیت.
@@ -216,7 +216,7 @@ Issue #396 فقط مسئول startup gate و Activation Wizard است؛ contract
 
 ## وضعیت اجرایی Issue #393 — 2026-11-04
 - **Implemented / Verified in main:** candidate افزایش installation-scoped `maxCompanies` در PR #527 ادغام شد؛ merge commit `2a62811acdb71bda77288356743be45356685954` دارای ۱۵/۱۵ Check Run موفق پس از Merge است. این builder Payload v1/v2 را در همان نسخه نگه می‌دارد و تمام entitlementهای دیگر را حفظ می‌کند.
-- **NotImplemented:** commercial order/payment evidence، persistence درخواست Amendment، endpoint، maker-checker approval، signing/export و statusهای purchased/delivered/acknowledged.
+- **NotImplemented:** commercial order/payment evidence، persistence درخواست Amendment، endpoint، maker-checker approval، signing/export و statusهای purchased/delivered/acknowledged. طبق D-108، Verified payment شرط صدور نیست؛ چرخه پرداخت و صدور مستقل و هر دو Maker-Checker/Audit دارند.
 - **Dependency:** add-onهای Company-scoped برای module/feature/user-seat نیازمند current Payload v2 و CompanyReference قابل اعتماد است. تبدیل خودکار Payload v1 به v2 ممنوع است؛ تا زمانی که مرجع شرکت‌های نصب از مسیر provisioning/signed ACK معتبر در دسترس نباشد، UI نباید Company دلخواه را به‌عنوان مرجع معتبر بپذیرد.
 - **محدوده:** این برش هیچ تغییر در Customer `Server/**`، دیتابیس مشتری یا Migration مشتری ندارد و signer واقعی KMS/HSM را انتخاب یا شبیه‌سازی نمی‌کند.
 
@@ -252,7 +252,7 @@ Issue #396 فقط مسئول startup gate و Activation Wizard است؛ contract
 | برش | محتوا | Issues | وابستگی واقعی |
 |---|---|---|---|
 | S1-a — فعال‌سازی end-to-end شرکت‌محور | تصمیم و اجرای دوکلیدی Gate v5 پس از schema review، allow-list ACK سمت Vendor، تست دو میزبان، سیاست Restore/Clone | #392، #228، #235 | کد مشتری (#686) آماده است؛ مانع: تصمیم مالک برای Gate، گسترش allow-list ACK (PR مستقل Vendor)، اجرای Migration روی دیتابیس مشتری با schema approval |
-| S1-b — پشتیبانی و تمدید مستقل | مدل تجاری Support/Update به‌ازای Customer/Installation، داشبورد هشدار، amendment تمدید با Order/Approval | D-097، #393، #228 | تصمیم Payment Evidence/approver/state در #393؛ بدون درگاه پرداخت یا Ledger موازی |
+| S1-b — چرخه تجاری، پرداخت و صدور مستقل | Order/Line typed، Payment دستی چندگانه، تأیید مستقل پرداخت و صدور، Amendment امضاشده بدون گیت پرداخت، پیگیری Unpaid/Partial/Overdue و تمدید مستقل Support/Update | D-097، D-108، #393، #228 | Vendor DB فقط؛ بدون درگاه پرداخت، Ledger، Allocation، Job یا Broker؛ signer طبق D-107 |
 | S1-c — فعال‌سازی مجدد سخت‌افزاری | گردش‌کار Online/Offline با تأیید مالک، تاریخچهٔ مشخصات، bind چهارگانهٔ پاسخ، audit | D-099، #384، #394 | اتصال به identity موجود #384 (بدون سیستم موازی)؛ OD-20/21/22 برای جزئیات باز‌اند |
 | S1-d — Update با تأیید | بررسی بستهٔ امضاشده، تأیید مدیر مشتری، پشتیبان‌گیری، توزیع فایل Offline | D-101، #394 | به #236 برای امضای بسته وابسته است؛ بدون کانال توزیع موازی |
 | S1-e — انقضای Cloud و recovery | شاخهٔ Cloud در state machine شروع (مسدودسازی ورود عادی + حفظ مسیر تمدید/بازیابی) | D-098، #396، #384 | به license-first gate #396 وابسته است |
@@ -260,7 +260,7 @@ Issue #396 فقط مسئول startup gate و Activation Wizard است؛ contract
 | S1-g — سقف هم‌زمانی کاربران | فیلد قراردادی نسخه‌دار + شمارش کاربران یکتای هم‌زمان طبق D-100؛ شمارش Session فقط در صورت تأیید صریح OD-26 | D-100، OD-26، #504 | تنها پس از تأیید OD-26 و اتصال runtime (#391/#384) |
 
 ### ترتیب پیشنهادی و معیار پایان S1
-ترتیب: S1-a (فعال‌سازی زنجیرهٔ موجود) → S1-e (دروازهٔ شروع) → S1-b/S1-f (چرخهٔ تجاری Vendor) → S1-c/S1-d (سخت‌افزار و Update) → S1-g (نیازمند تصمیم OD-26). پایان S1 وقتی است که: زنجیرهٔ v5 با تصمیم صریح مالک فعال و روی دو میزبان تست شده باشد، دروازهٔ شروع سه حالت Unlicensed/Active/Restricted (+Cloud expired) را enforce کند، تمدید Support/Update از سفارش تا amendment و import قابل ردیابی باشد و گردش‌کار reactivation با audit کامل کار کند. تست واقعی TPM فیزیکی، recovery drill و بار (فاز ۹) خارج از S1 و در فاز نهایی است.
+ترتیب: S1-a (فعال‌سازی زنجیرهٔ موجود) → S1-e (دروازهٔ شروع) → S1-b/S1-f (چرخه تجاری Vendor، پرداخت مستقل و گزارش مطالبات) → S1-c/S1-d (فعال‌سازی مجدد و Update) → S1-g (نیازمند تصمیم OD-26). پایان S1 وقتی است که: زنجیرهٔ v5 با تصمیم صریح مالک فعال و روی دو میزبان تست شده باشد، دروازهٔ شروع سه حالت Unlicensed/Active/Restricted (+Cloud expired) را enforce کند، تمدید Support/Update از سفارش تا amendment و import قابل ردیابی باشد و گردش‌کار reactivation با audit کامل کار کند. تست واقعی TPM فیزیکی برای دو مورد مستقل باقی است: آزمون TPM سخت‌افزاری روی سرور Customer پیش‌نیاز فعال‌سازی Production ACK طبق D-055 است؛ TPM 2.0 NV Extend برای anti-rollback ابطال آفلاین مشتری و recovery drill مربوطه طبق D-057 در فاز نهایی لازم است. معافیت D-107 از TPM/HSM فقط به امضای مرکزی LicenseEnvelope و Provisioning/Amendment در Vendor مربوط است؛ امضای Vendor offline-revocation snapshot همچنان HSM واقعی Production طبق D-055 می‌خواهد.
 
 ### مالکیت حوزه‌های فنی و قواعد انتخاب عامل اجرایی (تصمیم مالک پروژه، 2026-11-16؛ جایگزین ثبت قبلی «تقسیم GLM/Qwen»)
 

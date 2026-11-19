@@ -792,3 +792,11 @@
 - Cloud: binding مشتری→Tenant از provisioning معتبر Vendor و Registry محلی؛ Dedicated: Tenant از پیکربندی معتبر Installation و تطبیق DB. X-Forwarded-Host طبق D-017 مرجع Tenant نیست. Import از context سمت سرور استفاده می‌کند؛ Manifest D-092 فقط Backfill یک‌باره است.
 - **وضعیت:** تصمیم Accepted؛ پیاده‌سازی Tenant entity/schema، registry، host resolution و گذار داده همچنان NotImplemented. این تغییر فقط مستنداتی است؛ هیچ Runtime، Schema، Migration، داده یا تنظیم نصب تغییر نکرده است.
 - **گام بعدی:** ادامه S3-0 با شواهد SQL Server واقعی، تکمیل inventory و انتخاب منبع معتبر Company→Tenant؛ بدون Backfill یا Migration تا تصویب طرح و عبور از گیت‌ها.
+
+
+## Vendor/Licensing — تصمیم‌های D-107 و D-108 (2026-11-19)
+
+- D-107: سیاست امضای مرکزی Vendor برای نسخه اول به SoftwareProtected روی Windows CNG/Certificate Store تغییر کرد؛ TPM/HSM/KMS برای Vendor signer اجباری نیست. پیاده‌سازی Production همچنان NotImplemented تا Provider، تست Windows، کنترل ACL، Audit، rotation و readiness تکمیل شوند.
+- D-108: صدور/فعال‌سازی از پرداخت مستقل است؛ دو چرخه Maker-Checker/Audit جدا هستند. هشدار و گزارش مطالبات Unpaid/Partial/Overdue باید در Vendor و با محاسبه read-time ساخته شود؛ بدون scheduler، broker، درگاه یا Ledger.
+- D-057 برای anti-rollback snapshot ابطال آفلاین Customer همچنان TPM 2.0 می‌خواهد؛ اثر آن بر Customer فاقد TPM در OD-27 NeedsApproval است.
+- این ثبت صرفاً مستنداتی است؛ هیچ Entity، Migration، API، UI، Signing Provider، Gate v5 یا Runtime Enforcement با این تصمیم‌ها فعال نشده است.
