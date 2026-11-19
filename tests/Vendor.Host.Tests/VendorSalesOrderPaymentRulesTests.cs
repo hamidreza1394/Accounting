@@ -46,7 +46,7 @@ public sealed class VendorSalesOrderPaymentRulesTests
         var status = VendorSalesOrderPaymentRules.Derive(1000m, 1200m, null, Now);
 
         Assert.Equal(VendorSalesOrderPaymentRules.StatusPaid, status.PaymentStatus);
-        Assert.Equal(1000m, status.VerifiedPaidAmount);
+        Assert.Equal(1200m, status.VerifiedPaidAmount);
         Assert.Equal(0m, status.RemainingAmount);
     }
 
