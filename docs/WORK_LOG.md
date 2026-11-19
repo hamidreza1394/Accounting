@@ -3288,3 +3288,19 @@
 - **اصلاحات:** (۱) در جریان Mermaid، تأیید پرداخت دیگر پیش‌شرط همیشگی درخواست صدور نمایش داده نمی‌شود و فقط در صورت انتخاب گیت پرداخت طبق تصمیم مالک ۱۱ اعمال می‌شود؛ گزینهٔ (ب) تصمیم ۱۱ نیز با مستقل‌بودن صدور سازگار شد. (۲) هر چهار نقطهٔ dispatch در `VendorApprovalEndpoints` مشخص شد: دو allow-list و دو نگاشت `PermissionFor`؛ نگاشت `salesOrderPayment` به `vendor.payments.verify` و `salesOrderLine` به `vendor.licenses.issue`. (۳) نسخهٔ Line و License جداگانه ثبت و پیش از ساخت amendment کنترل می‌شوند؛ stale بودن هرکدام به conflict می‌انجامد. (۴) مسیر بازیابی stale به‌صورت اتمیک تعریف شد: اگر Line تغییر نکرده و هنوز به همان درخواست متصل است، Approval=`Stale` و Line از `ApprovalRequested` به `Pending` برمی‌گردد؛ اگر Line نیز تغییر کرده باشد، لغو/جایگزینی مجاز Approval را `Stale` و Line را `Cancelled` می‌کند و Line جایگزین با RowVersionهای تازه ساخته می‌شود؛ وضعیت نامنطبق بدون بازنویسی به conflict می‌رسد. (۵) pipeهای literal داخل سلول‌های جدول Markdown escape شدند. (۶) یادداشت handoff نسخهٔ v1 صریحاً پیشنهاد قدیمی `InstallationId` در سطح Line را superseded اعلام می‌کند، بدون بازنویسی سابقهٔ ممیزی.
 - **وضعیت تصمیم‌ها:** همهٔ پیشنهادها همچنان `Proposed`/`NeedsApproval` هستند؛ هیچ تصمیم مالکانه‌ای Accepted نشده است.
 - **اعتبارسنجی:** `git diff --check` و Markdown lint باید پس از دریافت CI همین commit بررسی شوند؛ Build/Test کد موضوعیت ندارد چون تغییرات مستنداتی‌اند.
+
+## 2026-11-19 — D-106 / Issue #715: رفع تناقض کلید Mapping در PR #716
+
+- **اصلاح:** نسخهٔ Target Schema از کلید بازیابی Mapping خارج شد و به‌عنوان ویژگی رکورد تعریف شد؛ جست‌وجو با Company سمت سرور، شناسهٔ پایدار Target Schema و هویت Template/Sheet انجام می‌شود. اگر نسخهٔ ذخیره‌شده با نسخهٔ جاری فرق داشته باشد، رکورد فقط برای اعتبارسنجی مجدد بازیابی می‌شود و تا تأیید صریح معتبر/قابل‌اعمال نیست؛ پس از تأیید، نسخهٔ جدید ساخته می‌شود.
+- **هماهنگ‌سازی:** جریان Import، توضیح EXC-8 و جدول تصمیم‌ها با همین قاعده هم‌راستا شدند. ذخیره‌سازی Mapping همچنان Blocked است و D-106 همچنان Proposed؛ هیچ Package/Schema/Migration یا کد اجرایی اضافه نشد.
+- **اعتبارسنجی:** پس از commit، diff و CI همین PR بررسی می‌شود؛ Build/Test کد به‌دلیل docs-only بودن اجرا نشده است.
+
+
+## 2026-11-19 — D-106 / PR #716: اصلاحات بازبینی نهایی
+
+- **EXC-8:** کلید Mapping در `DECISIONS.md` با طراحی هم‌راستا شد؛ نسخهٔ Target Schema ویژگی رکورد است، نه جزء کلید. ذخیره‌سازی همچنان تا D-105/S3-0 مسدود است.
+- **Preview binding:** گزینهٔ توکن پیشنهادی باید `ConsumerOperation` و `TargetSchemaId` پایدار را هم در payload احرازشده و هم در purpose محافظ Data Protection مقید کند؛ Commit این دو را با مقادیر resolveشده از سمت سرور تطبیق می‌دهد. این گزینه همچنان Proposed/NeedsApproval و Commit همچنان Blocked است.
+- **ZIP Guard:** قاعدهٔ رد صرفاً بر اساس `CompressedLength > Length` حذف شد؛ این مقایسه می‌تواند فایل معتبر دارای محتوای از قبل فشرده را رد کند. پیشنهاد به شمارش بایت واقعی decompressed هنگام خواندن هر Entry و اعمال سقف per-entry/total و compression ratio بر اساس بایت واقعی تغییر کرد. Guard هنوز NotRun است.
+- **Spike reproducibility:** ساخت پوشهٔ خروجی در هر دو generator صریح شد؛ فرمان Build با `-o bin` مستند شد تا `bin/h.dll` با runnerها سازگار باشد؛ تفسیر cache خالی اصلاح شد و آن را نتیجهٔ قطعی عدم اجرای فرمول نمی‌داند.
+- **Markup:** pipe فرمول `=cmd\|...` در سلول جدول Escape شد.
+- **محدوده/وضعیت:** فقط مستندات؛ D-106 و همهٔ EXCها Proposed/NeedsApproval باقی‌اند؛ هیچ Package، کد اجرایی، Schema، Migration، API یا UI اضافه نشد. CI پس از این commit باید بررسی شود؛ Build/Test کد اجرا نشده چون تغییرات docs-only است.
