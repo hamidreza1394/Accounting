@@ -93,7 +93,9 @@ public sealed class WindowsCngCertificatePolicyTests
     {
         using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         var firstRequest = new CertificateRequest("CN=Faranou Vendor License", key, HashAlgorithmName.SHA256);
+        firstRequest.CertificateExtensions.Add(new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature, true));
         var secondRequest = new CertificateRequest("CN=Faranou Vendor Provisioning", key, HashAlgorithmName.SHA256);
+        secondRequest.CertificateExtensions.Add(new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature, true));
         using var first = firstRequest.CreateSelfSigned(
             DateTime.UtcNow.AddMinutes(-5), DateTime.UtcNow.AddHours(1));
         using var second = secondRequest.CreateSelfSigned(
@@ -110,6 +112,7 @@ public sealed class WindowsCngCertificatePolicyTests
     {
         using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         var request = new CertificateRequest("CN=Faranou Vendor Test", key, HashAlgorithmName.SHA256);
+        request.CertificateExtensions.Add(new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature, true));
         return request.CreateSelfSigned(notBefore, notAfter);
     }
 }
