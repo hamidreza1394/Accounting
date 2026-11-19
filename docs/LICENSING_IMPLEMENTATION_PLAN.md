@@ -42,7 +42,7 @@
 | Usage telemetry | در Offline stale تا sync | Vendor زمان آخرین sync را نشان دهد؛ stale به‌عنوان live معرفی نشود |
 
 ## 4. قواعد امنیتی غیرقابل نقض
-- هیچ private signing key در Git، Customer/Vendor DB، artifact، log یا پاسخ API قرار نگیرد. طبق D-107، امضای مرکزی Vendor در نسخه اول با Windows CNG/Certificate Store و سطح صریح SoftwareProtected مجاز است؛ TPM/HSM/KMS اجباری نیست. کلید non-exportable، محدود به هویت سرویس، با Maker-Checker/Audit و fail-closed در خطا است. D-057 مربوط به Customer offline-revocation جداست.
+- هیچ private signing key در Git، Customer/Vendor DB، artifact، log یا پاسخ API قرار نگیرد. طبق D-107، امضای مرکزی Vendor برای LicenseEnvelope و Provisioning/Amendment در نسخه اول با Windows CNG/Certificate Store و سطح صریح SoftwareProtected مجاز است؛ TPM/HSM/KMS برای این دو کاربرد اجباری نیست. این معافیت شامل امضای Vendor offline-revocation snapshot نیست؛ آن مسیر طبق D-055 همچنان به HSM واقعی در Production نیاز دارد. کلید SoftwareProtected باید non-exportable، محدود به هویت سرویس، با Maker-Checker/Audit و fail-closed در خطا باشد. D-057 مربوط به Customer offline-revocation جداست.
 - کلید هویت نصب Windows: TPM 2.0 / Microsoft Platform Crypto Provider ترجیحی؛ Software CNG/DPAPI فقط با رضایت صریح و ثبت SoftwareProtected با assurance پایین‌تر. fallback خودکار ممنوع.
 - هویت نصب از OS marker و کلید non-exportable/اثبات possession تشکیل می‌شود؛ MachineGuid به‌تنهایی کافی نیست. Restart/reboot/servicing معمولی نباید activation را از بین ببرد؛ OS reinstall/re-image با تغییر OS identity نیازمند reactivation کنترل‌شده است.
 - تبادل آنلاین اختیاری است؛ هر عملیات حسابداری عادی به Vendor وابسته نیست. Offline باید مستقل کار کند.
@@ -117,7 +117,7 @@
 - D-054 / #228 / #235: provisioning package و ACK؛ این مسیر با LicenseEnvelope/amendment یکی نیست و نباید دوباره پیاده‌سازی شود.
 - #214: Vendor signed revocation workflow؛ entitlement amendment جایگزین revocation snapshot نیست.
 - OD-06 و recovery در OD-08: انتقال/بازیابی installation و فقدان کلید هنوز نیازمند تصمیم/طرح مجزا است.
-- پیاده‌سازی SoftwareProtected signer طبق D-107، independent audit sink و MFA/maker-checker عملیاتی blockers باقی‌مانده‌اند؛ HSM/TPM برای Vendor signer اجباری نیست. physical TPM verification فقط به D-057/Customer offline-revocation مربوط است.
+- پیاده‌سازی SoftwareProtected signer طبق D-107 برای LicenseEnvelope و Provisioning/Amendment، independent audit sink و MFA/maker-checker عملیاتی blockers باقی‌مانده‌اند؛ HSM/TPM برای این دو کاربرد Vendor signer اجباری نیست. امضای Vendor offline-revocation snapshot همچنان به HSM واقعی Production طبق D-055 نیاز دارد. physical TPM verification هم برای دو الزام مستقل باقی است: آزمون TPM سخت‌افزاری روی سرور Customer پیش‌نیاز Production ACK طبق D-055 است و TPM 2.0 NV Extend برای anti-rollback ابطال آفلاین مشتری طبق D-057 لازم است.
 - این سند مجوز Migration نیست؛ هر Migration باید در Issue خودش با schema review و rollout/rollback plan بررسی شود.
 
 ## 8. Issues و پیوندها
@@ -260,7 +260,7 @@ Issue #396 فقط مسئول startup gate و Activation Wizard است؛ contract
 | S1-g — سقف هم‌زمانی کاربران | فیلد قراردادی نسخه‌دار + شمارش کاربران یکتای هم‌زمان طبق D-100؛ شمارش Session فقط در صورت تأیید صریح OD-26 | D-100، OD-26، #504 | تنها پس از تأیید OD-26 و اتصال runtime (#391/#384) |
 
 ### ترتیب پیشنهادی و معیار پایان S1
-ترتیب: S1-a (فعال‌سازی زنجیرهٔ موجود) → S1-e (دروازهٔ شروع) → S1-b/S1-f (چرخه تجاری Vendor، پرداخت مستقل و گزارش مطالبات) → S1-c/S1-d (فعال‌سازی مجدد و Update) → S1-g (نیازمند تصمیم OD-26). پایان S1 وقتی است که: زنجیرهٔ v5 با تصمیم صریح مالک فعال و روی دو میزبان تست شده باشد، دروازهٔ شروع سه حالت Unlicensed/Active/Restricted (+Cloud expired) را enforce کند، تمدید Support/Update از سفارش تا amendment و import قابل ردیابی باشد و گردش‌کار reactivation با audit کامل کار کند. تست واقعی TPM فیزیکی فقط برای D-057/anti-rollback مشتری و recovery drill مربوطه خارج از S1 و در فاز نهایی است؛ امضای مرکزی Vendor طبق D-107 به TPM/HSM وابسته نیست.
+ترتیب: S1-a (فعال‌سازی زنجیرهٔ موجود) → S1-e (دروازهٔ شروع) → S1-b/S1-f (چرخه تجاری Vendor، پرداخت مستقل و گزارش مطالبات) → S1-c/S1-d (فعال‌سازی مجدد و Update) → S1-g (نیازمند تصمیم OD-26). پایان S1 وقتی است که: زنجیرهٔ v5 با تصمیم صریح مالک فعال و روی دو میزبان تست شده باشد، دروازهٔ شروع سه حالت Unlicensed/Active/Restricted (+Cloud expired) را enforce کند، تمدید Support/Update از سفارش تا amendment و import قابل ردیابی باشد و گردش‌کار reactivation با audit کامل کار کند. تست واقعی TPM فیزیکی برای دو مورد مستقل باقی است: آزمون TPM سخت‌افزاری روی سرور Customer پیش‌نیاز فعال‌سازی Production ACK طبق D-055 است؛ TPM 2.0 NV Extend برای anti-rollback ابطال آفلاین مشتری و recovery drill مربوطه طبق D-057 در فاز نهایی لازم است. معافیت D-107 از TPM/HSM فقط به امضای مرکزی LicenseEnvelope و Provisioning/Amendment در Vendor مربوط است؛ امضای Vendor offline-revocation snapshot همچنان HSM واقعی Production طبق D-055 می‌خواهد.
 
 ### مالکیت حوزه‌های فنی و قواعد انتخاب عامل اجرایی (تصمیم مالک پروژه، 2026-11-16؛ جایگزین ثبت قبلی «تقسیم GLM/Qwen»)
 
