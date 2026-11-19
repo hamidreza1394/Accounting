@@ -98,9 +98,9 @@ public sealed class WindowsCngCertificateStoreSigningModule(
 
         var now = _timeProvider.GetUtcNow();
         return WindowsCngCertificatePolicy.ValidateStructural(licenseCertificate, now) is null &&
-               WindowsCngCertificatePolicy.ValidatePrivateKey(licenseCertificate) is null &&
+               WindowsCngCertificatePolicy.ValidatePrivateKey(licenseCertificate, requireMachineKey: _environment.IsProduction()) is null &&
                WindowsCngCertificatePolicy.ValidateStructural(provisioningCertificate, now) is null &&
-               WindowsCngCertificatePolicy.ValidatePrivateKey(provisioningCertificate) is null &&
+               WindowsCngCertificatePolicy.ValidatePrivateKey(provisioningCertificate, requireMachineKey: _environment.IsProduction()) is null &&
                !WindowsCngCertificatePolicy.HaveSamePublicKey(licenseCertificate, provisioningCertificate);
     }
 
@@ -254,7 +254,7 @@ public static class WindowsCngCertificatePolicy
     }
 
     /// <summary>Rejects non-CNG or exportable private keys; private key material is never read.</summary>
-    public static string? ValidatePrivateKey(X509Certificate2 certificate)
+    public static string? ValidatePrivateKey(X509Certificate2 certificate, bool requireMachineKey = false)
     {
         ArgumentNullException.ThrowIfNull(certificate);
         using var ecdsa = certificate.GetECDsaPrivateKey();
@@ -266,6 +266,11 @@ public static class WindowsCngCertificatePolicy
         if (cngEcdsa.Key.ExportPolicy != CngExportPolicies.None)
         {
             return "certificate_key_exportable";
+        }
+
+        if (requireMachineKey && !cngEcdsa.Key.IsMachineKey)
+        {
+            return "certificate_key_not_machine_key";
         }
 
         return null;
