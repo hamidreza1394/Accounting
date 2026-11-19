@@ -108,6 +108,10 @@ public sealed class WindowsCngCertificateStoreSigningModule(
     {
         _options.Validate(_environment.IsProduction(), OperatingSystem.IsWindows());
         ValidateRequestedKey(key);
+        if (!IsConfiguredPairUsable())
+        {
+            return LicenseSigningResult.Unavailable();
+        }
 
         var certificate = FindConfiguredCertificate(key);
         if (certificate is null)
