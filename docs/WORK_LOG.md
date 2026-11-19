@@ -3313,3 +3313,11 @@
 - D-108 (Accepted): پرداخت شرط صدور/فعال‌سازی نیست. Payment و Issuance چرخه‌های مستقل Maker-Checker و Audit دارند. Payment دستی چندگانه، Verified-only aggregation، وضعیت‌های مشتق‌شده Unpaid/Partial/Paid/Overdue و هشدار/گزارش read-time بدون scheduler/broker/درگاه/Ledger ثبت شدند.
 - تعارض مستندات: عبارت قدیمی در LICENSING_IMPLEMENTATION_PLAN.md که سفارش پرداخت‌شده/تأییدشده را پیش‌شرط handoff به Engine معرفی می‌کرد، با D-108 اصلاح شد. وضعیت‌های تجاری/تحویل/ACK مستقل می‌مانند؛ Payment Verified نه صدور را تأیید می‌کند و نه برعکس.
 - محدوده تغییر: مستندات و تصمیم‌ها؛ هیچ کد، Entity، Migration، API، UI، کلید واقعی یا Gate Production تغییر نکرد. Build/Test کد اجرا نشده است؛ CI مستندات پس از PR باید بررسی شود.
+
+
+## 2026-11-19 — Issue #236 / D-107: پیاده‌سازی Signer ویندوز CNG SoftwareProtected برای Vendor
+
+- Provider امضای مرکزی License/Provisioning طبق D-107 پیاده شد: انتخاب گواهی با Thumbprint از Windows Certificate Store، ECDSA P-256، کلید CNG غیرقابل‌Export (رد exportable fail-closed)، KeyId/گواهی مجزا برای هر هدف، Audit metadata-only با دورریختن امضا در شکست Audit، Health check، Startup assurance (fail-fast + Audit Production)، رد تداخل PKCS#11/CNG و فرمان فقط‌عمومی `--signing-certificate export-public` برای Trust Store.
+- opt-in با `Signing:CertificateStore:Enabled` (پیش‌فرض خاموش؛ fail-closed عین قبل). میزبان غیرویندوزی fail-fast؛ Production الزام LocalMachine. Provider ابطال آفلاین طبق D-055 خارج از این Provider ماند.
+- تست‌ها: ۲۱ تست cross-platform موفق روی Linux؛ ۷ تست ویندوزی با کلید CNG موقت Software KSP به job جدید `windows-cng-signer` در Vendor CI موکول است. Build کل Vendor.sln سبز؛ ۹ شکست تست SQL/HTTP محیطی روی main خالص هم تکرار شد (نیاز به `FARANO_VENDOR_ConnectionStrings__VendorDb`).
+- مستندات: SECURITY.md (بخش D-107)، PROJECT_STATUS.md، LICENSING.md و handoff `ISSUE-236-windows-cng-software-protected-signer.md` هم‌تراز شدند. هیچ Migration/Schema/داده‌ای تغییر نکرد؛ هیچ کلید خصوصی در کد/تست/پیکربندی نیست.
