@@ -342,7 +342,7 @@ User/Identity در Customer Host محلی است. برای هر Company می‌�
 | `SupportServiceRecord` / `ContactLog` | سوابق خدمات انجام‌شده، تماس‌ها و تمدیدها (D-097 بند ۶، D-102 بند ۵) | append-only؛ فقط رکورد تجاری Vendor؛ بدون credential مشتری. |
 | `Announcement` / `AnnouncementTarget` | اطلاعیهٔ فنی/تجاری/امنیتی با هدف‌گیری Customer/Installation/محصول (D-102 بند ۱ و ۴) | دسته‌بندی الزامی؛ ارسال هرگز entitlement را تغییر نمی‌دهد؛ opt-out در OD-25 باز است. |
 | `ReactivationRequest` / `HardwareProfileSnapshot` | درخواست فعال‌سازی مجدد و تاریخچهٔ نسخه‌دار مشخصات سخت‌افزار (D-099 بند ۲ و ۸) | فقط مشخصات نسخه‌دار حداقلی (OD-20)؛ هیچ کلید خصوصی و هیچ دادهٔ حسابداری؛ تصمیم تأیید/رد + علت + تأییدکننده audit می‌شود (D-099 بند ۸ و ۱۱). |
-| `SalesOrder` / `SalesOrderLine` (تکمیل بخش 9.1) | سفارش خرید پایه/add-on و تمدید؛ ورودی commercial برای amendment (#393) | Payment Evidence و state transitionها نیازمند تصمیم مالک است (شکاف شناخته‌شده #393). |
+| `SalesOrder` / `SalesOrderLine` (تکمیل بخش 9.1) | سفارش خرید پایه/add-on و تمدید؛ ورودی commercial برای amendment (#393) | Payment و صدور طبق D-108 مستقل‌اند؛ مدل typed و Payment Evidence دستی در VendorPayment، بدون Ledger/Allocation. |
 | فیلد قراردادی `maxConcurrentSessions` (سطح Installation) | سقف نشست هم‌زمان (D-100) | فقط پس از تأیید OD-26 به Payload نسخه‌دار اضافه می‌شود؛ تبدیل از maxUsers ممنوع. |
 
 ### ب) فقط Customer DB (هویت و وضعیت نصب؛ هرگز داده تجاری ندارد)
