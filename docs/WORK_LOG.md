@@ -3286,7 +3286,7 @@
 ## 2026-11-19 — دور سوم (نهایی) اصلاح D-106 / Excel Import پس از بازبینی معماری و امنیت (Issue #715، PR #716)
 
 - **قاعدهٔ فرمول (Allow-list):** برای سلول با `HasFormula` فقط `HasFormula`، `FormulaA1`، `CachedValue`، `DataType`، `Style.NumberFormat` و `Address` مجازند و هر API دیگر ممنوع است؛ فهرست ممنوعِ قبلی ناکافی بود. شاهد: probe `apiprobe` (`results_api_eval.txt`؛ `formulas_nov.xlsx`، سلول‌های B1/B4؛ معیار تغییر `CachedValue`): 11 API فرمول را اجرا کردند (از جمله `GetFormattedString` و `ws.Search`) و 5 مورد نه؛ `Address` در probe نبود (NotRun). کد و خروجی خام در پیوست‌های ب و پ سند مقایسه.
-- **نام‌گذاری Guard:** «Guard Spike v2» = اجراشده و دورزدنی با تغییر نام part؛ «Guard پیشنهادی» = NotRun (resolve رابطه‌ها، نرمال‌سازی نام‌های OPC، عدم دنبال‌کردن `TargetMode="External"`، رد externalLink و `CompressedLength > Length`). شرط اعتبار سقف‌ها: قطع خواندن Entry در اندازهٔ اعلامی (مشاهده‌شده در یک runtime).
+- **نام‌گذاری Guard:** «Guard Spike v2» = اجراشده و دورزدنی با تغییر نام part؛ «Guard پیشنهادی» = NotRun (resolve رابطه‌ها، نرمال‌سازی نام‌های OPC، عدم دنبال‌کردن `TargetMode="External"`، رد externalLink و شمارش بایت واقعی بازشده با Stream محدودکننده). صرفِ `CompressedLength > Length` معیار رد نیست؛ شرط اعتبار سقف‌ها اعمال محدودیت روی بایت‌هایی است که واقعاً از هر Entry خوانده می‌شوند، نه اتکا به اندازهٔ اعلامی.
 - **اعداد:** فایل واقع‌نما بازشده 18,865,100 بایت (≈18MiB؛ محاسبهٔ مستندساز؛ قبلاً «17MB» نوشته شده بود). بدترین حالت اکنون «برآوردی» (برون‌یابی خطی ×40/18 فقط برای محتوای واقع‌نما): ≈600MB و ≈4.1–4.4s برای یک Import، ≈1.2GB برای دو؛ اعداد قبلی ≈635MB و ≈4.5–5s و ≈1.3GB حذف شدند؛ محتوای پر از shared strings NotRun.
 - **Commit و توکن:** شرط رفع مسدودی یکسان شد: S3-0 و D-105، و نیز state سمت سرور یا تأیید صریح گزینهٔ توکن Data Protection؛ انقضا داخل توکن بی‌state ممکن است و Blocked نیست (فقط تک‌مصرف‌بودن و Idempotency سطح Import). پیش‌شرط‌های توکن: وضعیت key ring (بدون `AddDataProtection` صریح در Host؛ `WorkContextCookie` از `IDataProtectionProvider` تزریقی استفاده می‌کند)، توکن فقط در حافظهٔ کلاینت (D-012)، مقادیر Tenant/Company فقط برای تطبیق برابری با Context سرور (D-013).
 - **سایر:** جملهٔ لغو اصلاح شد (`CancellationToken` فقط بین مراحل؛ لغو Host حین بارگذاری CPU را آزاد نمی‌کند؛ استنتاج)؛ «پروژهٔ مستقل لازم دانسته نمی‌شود (NeedsApproval)»؛ EXC-15 «برای خود موتور»؛ ردپای شواهد: پنج فایل خام (چهار JSONL و یک TXT)؛ آزمون‌های مستقل بازبین با برچسب یکسان «خروجی خام در پیوست پ نیست».
@@ -3298,3 +3298,13 @@
 - **اصلاح:** نسخهٔ Target Schema از کلید بازیابی Mapping خارج شد و به‌عنوان ویژگی رکورد تعریف شد؛ جست‌وجو با Company سمت سرور، شناسهٔ پایدار Target Schema و هویت Template/Sheet انجام می‌شود. اگر نسخهٔ ذخیره‌شده با نسخهٔ جاری فرق داشته باشد، رکورد فقط برای اعتبارسنجی مجدد بازیابی می‌شود و تا تأیید صریح معتبر/قابل‌اعمال نیست؛ پس از تأیید، نسخهٔ جدید ساخته می‌شود.
 - **هماهنگ‌سازی:** جریان Import، توضیح EXC-8 و جدول تصمیم‌ها با همین قاعده هم‌راستا شدند. ذخیره‌سازی Mapping همچنان Blocked است و D-106 همچنان Proposed؛ هیچ Package/Schema/Migration یا کد اجرایی اضافه نشد.
 - **اعتبارسنجی:** پس از commit، diff و CI همین PR بررسی می‌شود؛ Build/Test کد به‌دلیل docs-only بودن اجرا نشده است.
+
+
+## 2026-11-19 — D-106 / PR #716: اصلاحات بازبینی نهایی
+
+- **EXC-8:** کلید Mapping در `DECISIONS.md` با طراحی هم‌راستا شد؛ نسخهٔ Target Schema ویژگی رکورد است، نه جزء کلید. ذخیره‌سازی همچنان تا D-105/S3-0 مسدود است.
+- **Preview binding:** گزینهٔ توکن پیشنهادی باید `ConsumerOperation` و `TargetSchemaId` پایدار را هم در payload احرازشده و هم در purpose محافظ Data Protection مقید کند؛ Commit این دو را با مقادیر resolveشده از سمت سرور تطبیق می‌دهد. این گزینه همچنان Proposed/NeedsApproval و Commit همچنان Blocked است.
+- **ZIP Guard:** قاعدهٔ رد صرفاً بر اساس `CompressedLength > Length` حذف شد؛ این مقایسه می‌تواند فایل معتبر دارای محتوای از قبل فشرده را رد کند. پیشنهاد به شمارش بایت واقعی decompressed هنگام خواندن هر Entry و اعمال سقف per-entry/total و compression ratio بر اساس بایت واقعی تغییر کرد. Guard هنوز NotRun است.
+- **Spike reproducibility:** ساخت پوشهٔ خروجی در هر دو generator صریح شد؛ فرمان Build با `-o bin` مستند شد تا `bin/h.dll` با runnerها سازگار باشد؛ تفسیر cache خالی اصلاح شد و آن را نتیجهٔ قطعی عدم اجرای فرمول نمی‌داند.
+- **Markup:** pipe فرمول `=cmd\|...` در سلول جدول Escape شد.
+- **محدوده/وضعیت:** فقط مستندات؛ D-106 و همهٔ EXCها Proposed/NeedsApproval باقی‌اند؛ هیچ Package، کد اجرایی، Schema، Migration، API یا UI اضافه نشد. CI پس از این commit باید بررسی شود؛ Build/Test کد اجرا نشده چون تغییرات docs-only است.
