@@ -82,7 +82,8 @@ public static class WindowsCngSigningCertificateCommand
                  })
         {
             var structuralError = WindowsCngCertificatePolicy.ValidateStructural(certificate, now);
-            var privateKeyError = WindowsCngCertificatePolicy.ValidatePrivateKey(certificate);
+            var privateKeyError = WindowsCngCertificatePolicy.ValidatePrivateKey(
+                certificate, requireMachineKey: storeLocation == StoreLocation.LocalMachine);
             if (structuralError is not null || privateKeyError is not null)
             {
                 error.WriteLine(
