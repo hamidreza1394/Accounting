@@ -3,6 +3,8 @@
 
 > **وضعیت:** مرجع نیازمندی و ترتیب اجرا؛ تصمیم‌های محصول پذیرفته شده‌اند، اما این سند به‌تنهایی شاهد پیاده‌سازی نیست. وضعیت هر قابلیت باید با کد و CI جاری تطبیق داده شود.
 
+> **توضیح سیاست تأیید (D-109، 2026-11-19):** عبارت‌های تاریخی Maker-Checker در این برنامه به گردش‌کار درخواست/تصمیم اشاره دارند؛ برای Vendor v1 الزام دو کاربر متفاوت یا منع self-approval وجود ندارد. اپراتور مجاز می‌تواند درخواست خود را تأیید/رد کند. Maker-Checker دو‌نفره فقط با تصمیم مستقل مالک در آینده فعال می‌شود.
+
 ## 1. هدف و مرز معماری
 هدف، تکمیل سامانه Vendor از یک issuance/control-plane موجود به چرخه کامل تجاری و فنی لایسنس است؛ بدون بازنویسی معماری فعلی و بدون اتصال مستقیم Vendor به دیتابیس Customer.
 
@@ -141,7 +143,7 @@
 - CustomerAccount و مخاطبان/اطلاعات حقوقی و عملیاتی مشتری.
 - قرارداد، سفارش، اقلام خرید، پرداخت/تطبیق، تمدید، تعهد پشتیبانی، SLA و تاریخچه تجاری.
 - ارتباط پشتیبانی و سوابق تجاری قابل ممیزی؛ بدون حساب کاربری/رمز Customer و بدون داده حسابداری مشتری.
-- سفارش و Line تأییدشده، مستقل از وضعیت پرداخت، درخواست تغییر entitlement را به Engine تحویل می‌دهند؛ Commercial خودش LicenseEnvelope امضا نمی‌کند. Payment verification چرخه Maker-Checker/Audit جدا دارد و شرط صدور نیست (D-108).
+- سفارش و Line تأییدشده، مستقل از وضعیت پرداخت، درخواست تغییر entitlement را به Engine تحویل می‌دهند؛ Commercial خودش LicenseEnvelope امضا نمی‌کند. Payment verification چرخه درخواست/تصمیم و Audit جدا دارد و شرط صدور نیست (D-108). طبق D-109، self-approval توسط اپراتور مجاز در Vendor v1 مجاز است.
 
 ### 9.2 Licensing & Entitlement Engine
 - کاتالوگ محصول، Module، Feature و سیاست‌های ظرفیت.
@@ -216,7 +218,7 @@ Issue #396 فقط مسئول startup gate و Activation Wizard است؛ contract
 
 ## وضعیت اجرایی Issue #393 — 2026-11-04
 - **Implemented / Verified in main:** candidate افزایش installation-scoped `maxCompanies` در PR #527 ادغام شد؛ merge commit `2a62811acdb71bda77288356743be45356685954` دارای ۱۵/۱۵ Check Run موفق پس از Merge است. این builder Payload v1/v2 را در همان نسخه نگه می‌دارد و تمام entitlementهای دیگر را حفظ می‌کند.
-- **NotImplemented:** commercial order/payment evidence، persistence درخواست Amendment، endpoint، maker-checker approval، signing/export و statusهای purchased/delivered/acknowledged. طبق D-108، Verified payment شرط صدور نیست؛ چرخه پرداخت و صدور مستقل و هر دو Maker-Checker/Audit دارند.
+- **NotImplemented:** commercial order/payment evidence، persistence درخواست Amendment، endpoint، approval، signing/export و statusهای purchased/delivered/acknowledged. طبق D-108، Verified payment شرط صدور نیست؛ چرخه پرداخت و صدور مستقل و هر دو Maker-Checker/Audit دارند.
 - **Dependency:** add-onهای Company-scoped برای module/feature/user-seat نیازمند current Payload v2 و CompanyReference قابل اعتماد است. تبدیل خودکار Payload v1 به v2 ممنوع است؛ تا زمانی که مرجع شرکت‌های نصب از مسیر provisioning/signed ACK معتبر در دسترس نباشد، UI نباید Company دلخواه را به‌عنوان مرجع معتبر بپذیرد.
 - **محدوده:** این برش هیچ تغییر در Customer `Server/**`، دیتابیس مشتری یا Migration مشتری ندارد و signer واقعی KMS/HSM را انتخاب یا شبیه‌سازی نمی‌کند.
 
@@ -226,7 +228,7 @@ Issue #396 فقط مسئول startup gate و Activation Wizard است؛ contract
 - **Implemented / Verified in main:** `VendorLicenseAmendmentPayloadBuilder.TryBuildCompanyEntitlementIncrease` در PR #558 ادغام شد؛ merge commit `8d9740631e715e17b6d280026a049a89a2596f3b` دارای ۱۵/۱۵ Check Run موفق پس از Merge است.
 - **قواعد fail-closed:** فقط reference موجود در payload پذیرفته می‌شود؛ v1 به v2 تبدیل نمی‌شود؛ Company جدید ساخته نمی‌شود؛ ماژول/Feature ناشناخته، تکراری، از قبل موجود، Feature بدون ماژول مالک، کاهش یا مقدار برابر، سقف خارج از محدوده و درخواست بدون تغییر رد می‌شود. enum تا تصویب کاتالوگ مقادیر قابل صدور نیست.
 - payload candidate همان LicenseId/InstallationId و نسخه v2 را نگه می‌دارد، Sequence را فقط در candidate یک واحد افزایش می‌دهد و maxCompanies، تاریخ‌های support/update و entitlement شرکت‌های دیگر را حفظ می‌کند. اعتبارسنجی امضا و ثبت sequence پایدار همچنان مسئولیت caller/service و مرحله بعدی است.
-- **NotImplemented:** Commercial Order/Payment Evidence، persistence درخواست Amendment، endpoint، Maker-Checker، signer/export و وضعیت‌های Purchased/Delivered/Acknowledged. این PR آن‌ها را تکمیل‌شده معرفی نمی‌کند.
+- **NotImplemented:** Commercial Order/Payment Evidence، persistence درخواست Amendment، endpoint، approval، signer/export و وضعیت‌های Purchased/Delivered/Acknowledged. این PR آن‌ها را تکمیل‌شده معرفی نمی‌کند.
 - **مرز:** فقط Vendor Host، تست Vendor و مستندات؛ بدون `Server/**`، دیتابیس/Migration مشتری یا secret. تست محلی در زمان PR اجرا نشد؛ post-merge CI روی merge commit #558 اکنون ۱۵/۱۵ Check Run موفق دارد.
 
 
@@ -234,7 +236,7 @@ Issue #396 فقط مسئول startup gate و Activation Wizard است؛ contract
 - **Implemented / Verified in main:** متد `TryBuildSupportAndUpdatePeriodExtension` در PR #565 ادغام شد؛ merge commit `66b60cc48f6454997e260cb1244374114e2bfbd4` دارای ۱۵/۱۵ Check Run موفق پس از Merge است.
 - تاریخ `expiresAtUtc` و entitlementهای Company/Installation تغییر نمی‌کنند؛ term license پس از expiry قابل amendment نیست و perpetual license با پایان support/update منقضی نمی‌شود.
 - تاریخ null فعلی به‌عنوان مجوز ضمنی تفسیر نمی‌شود؛ این برش فقط دوره‌ای را تمدید می‌کند که قبلاً در payload امضاشده وجود داشته است. اعطای اولیه از null تا روشن‌شدن معنای تجاری آن جدا نگه داشته شده است.
-- **NotImplemented:** سفارش/پرداخت، persistence، endpoint، maker-checker، signer/export و وضعیت‌های Purchased/Delivered/Acknowledged. هیچ Migration یا Customer-side change انجام نشده است.
+- **NotImplemented:** سفارش/پرداخت، persistence، endpoint، approval، signer/export و وضعیت‌های Purchased/Delivered/Acknowledged. هیچ Migration یا Customer-side change انجام نشده است.
 
 
 ## نقشه اجرایی S1 — هم‌ترازشده در مأموریت S1-0 (2026-11-16؛ Issue #696)
