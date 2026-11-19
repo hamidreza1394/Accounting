@@ -40,7 +40,7 @@ public sealed class VendorSalesOrderLine
 
 /// <summary>
 /// One manually recorded payment for a sales order (D-108 §4-5). Recorded payments never reduce
-/// debt; only Verified payments do. Verification is a separate maker-checker cycle with its own
+/// debt; only Verified payments do. Verification is a separate approval cycle with its own
 /// ResourceType (salesOrderPayment) and permission (vendor.payments.verify).
 /// </summary>
 public sealed class VendorPaymentRecord
