@@ -257,18 +257,20 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - این بخش هیچ Migration یا تغییری در دیتابیس حسابداری مشتری ایجاد نمی‌کند. وضعیت پایه: `Implemented / CI-Verified` در محدوده تست‌های موجود؛ آمادگی کامل Production تأیید نشده است.
 
 
-## تغییر سیاست تأیید Vendor طبق D-109 (2026-11-19)
-- D-109 سیاست Vendor v1 را از تأیید دو هویت به تک‌اپراتوره تغییر داده است؛ یک مدیر مجاز می‌تواند درخواست را ثبت و خودش تأیید/رد کند. این استثنا فقط برای Vendor control-plane است و به Company membership/customer approval در `Server/**` تعمیم ندارد.
-- متن تاریخی بخش بعد دربارهٔ منع self-approval، رفتار Verified زمان PR #207 را ثبت می‌کند؛ الزام دو هویت برای Vendor v1 با D-109 superseded شده است.
-- پیاده‌سازی فعلی در شاخهٔ اجرایی Issue #214 حذف guardهای self-approval را برای endpoint عمومی، License issuance، Provisioning issuance و Offline Revocation issuance پوشش می‌دهد. وضعیت نهایی فقط پس از CI این PR قابل Verified اعلام‌کردن است.
-- MFA، مجوزدهی سمت سرور، Audit تراکنشی، RowVersion/concurrency و fail-closed signer حفظ می‌شوند.
-
 ## وضعیت تأییدشده فعلی Vendor — Maker-Checker مشتری/نصب (2026-10-27, PR #207)
 - تغییر وضعیت مشتری و نصب فقط از مسیر درخواست تأیید انجام می‌شود؛ endpointهای قدیمی مستقیم با `approval_required` پاسخ می‌دهند.
 - درخواست‌کننده نمی‌تواند درخواست خودش را تأیید/رد کند. تصمیم مستقل، تغییر وضعیت و رویدادهای Audit در یک تراکنش ثبت می‌شوند؛ RowVersion منبع و درخواست از replay و تصمیم روی دادهٔ stale جلوگیری می‌کنند.
 - شاهد: merge commit `d644ab5d36d00b1ce3763b64f17fd6fe7ef9fbac`; Vendor CI 40570240409 و .NET CI 40570240205 موفق.
 - محدوده: این Verified فقط برای تغییر وضعیت مشتری/نصب است. تأیید دو نفره برای صدور/ابطال لایسنس، checkpoint مستقل Audit، bootstrap/recovery مدیر اول و KMS/HSM همچنان شکاف‌های Production هستند.
 
+
+## تغییر سیاست تأیید Vendor طبق D-109 (2026-11-19)
+
+- بند تاریخی PR #207 بالا، رفتار زمان پیاده‌سازی در 2026-10-27 را ثبت می‌کند؛ شرط «درخواست‌کننده نمی‌تواند درخواست خودش را تأیید کند» برای Vendor v1 با D-109 superseded شده است.
+- در Vendor v1 یک مدیر/اپراتور مجاز می‌تواند درخواست را ثبت و خودش تأیید یا رد کند؛ حساب دوم و جداسازی دو هویت برای تأیید لازم نیست. این استثنا فقط برای Vendor control-plane است و به عضویت بین‌شرکتی یا approvalهای Customer در `Server/**` تعمیم ندارد.
+- PR #724 این سیاست را برای approval عمومی، صدور License، Provisioning و Offline Revocation پیاده‌سازی می‌کند؛ PR #722 چرخه Payment را با همین سیاست هم‌راستا می‌کند. تا Merge و CI سبز این PRها، main هنوز ممکن است guardهای قدیمی داشته باشد.
+- MFA، RBAC سمت سرور، authorization منبع‌محور، antiforgery، RowVersion/concurrency، Audit تراکنشی، idempotency و fail-closed signer حفظ می‌شوند. حذف الزام دو هویت به معنی حذف ثبت درخواست، ثبت تصمیم یا Audit نیست.
+- Maker-Checker دو‌نفره فقط با تصمیم و Issue مستقل مالک در آینده فعال می‌شود؛ این گذار خودکار نیست.
 
 ## Vendor provisioning acknowledgement intake (2026-10-29, PR #293)
 
