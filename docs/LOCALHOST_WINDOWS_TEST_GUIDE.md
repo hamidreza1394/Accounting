@@ -55,6 +55,9 @@ sqlcmd -?
 برای اجرای برنامه پس از Build، Node.js و npm لازم نیستند. برای استخراج Envelope با `Invoke-Sqlcmd`، وجود ماژول PowerShell `SqlServer` مستقل از نصب `sqlcmd` لازم است؛ اگر ماژول نصب نیست، آن را نصب کنید. برای ابزار Migration مربوط به Vendor نیز EF CLI نسخهٔ 10.0.13 را نصب کنید:
 
 ```powershell
+if (-not (Get-Module -ListAvailable -Name SqlServer)) {
+    Install-Module SqlServer -Scope CurrentUser -Force
+}
 dotnet tool install --global dotnet-ef --version 10.0.13
 ```
 
