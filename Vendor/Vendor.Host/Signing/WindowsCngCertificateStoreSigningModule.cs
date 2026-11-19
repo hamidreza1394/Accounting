@@ -264,6 +264,11 @@ public static class WindowsCngCertificatePolicy
     public static string? ValidatePrivateKey(X509Certificate2 certificate, bool requireMachineKey = false)
     {
         ArgumentNullException.ThrowIfNull(certificate);
+        if (!OperatingSystem.IsWindows())
+        {
+            return "certificate_key_not_cng_non_exportable";
+        }
+
         using var ecdsa = certificate.GetECDsaPrivateKey();
         if (ecdsa is not ECDsaCng cngEcdsa)
         {
