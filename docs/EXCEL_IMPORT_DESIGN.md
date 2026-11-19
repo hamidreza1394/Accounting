@@ -305,7 +305,7 @@ Trade.Domain
 | موتور | Unit Test | ورودی ثابت (ردیف‌های ساختگی) و Target Schema ساختگی؛ پیشنهاد Mapping، ابهام، نرمال‌سازی، اعتبارسنجی، تکراری، شمارهٔ ردیف/نام فیلد |
 | Parser | تست قرارداد روی فایل‌های **تولیدشدهٔ ساختگی** | صفر ابتدایی، ۱۶رقمی، تاریخ، فرمول بدون cached، **فرمول بدون عنصر `<v>` (الزامی؛ فقط Allow-list خوانده شود؛ هر API دیگر ممکن است فرمول را اجرا کند)**، فرمول خطادار، Sheet خالی، سرستون تکراری؛ رفتار Guard روی فایل‌های مخرب ساختگی |
 | معماری | تست سبک جهت وابستگی (**پیشنهادی؛ در این PR افزوده نشد**) | `Trade.Application` نباید Excel/EF/Server/Infrastructure یا ClosedXML را Reference کند؛ الگو: `tests/Template.Tests/Architecture` |
-| امنیت فایل | تست مرزی | zip-bomb ساختگی کوچک، لینک خارجی/externalLink، ماکرو، سقف‌ها، XXE/DTD، Cancellation، Timeout؛ **رگرسیون «تغییر نام part» (Style/Sheet/ماکرو با rels و Content_Types اصلاح‌شده)**، Entry با اندازهٔ اعلامی دروغین، Entry ناشناخته/نام تکراری، Entry معتبر با `CompressedLength > Length` (نباید صرفاً به این علت رد شود)، Entry با اندازهٔ اعلامی دروغین و کنترل سقف روی بایت واقعی بازشده |
+| امنیت فایل | تست مرزی | zip-bomb ساختگی کوچک، لینک خارجی/externalLink، ماکرو، سقف‌ها، XXE/DTD، Cancellation، Timeout؛ **رگرسیون «تغییر نام part» (Style/Sheet/ماکرو با rels و Content_Types اصلاح‌شده)**، Entry معتبر با `CompressedLength > Length` (نباید صرفاً به این علت رد شود)، Entry با اندازهٔ اعلامی دروغین و کنترل سقف روی بایت واقعی بازشده، Entry ناشناخته/نام تکراری |
 | Persistence | Integration روی SQL Server | پس از رفع مسدودی (EXC-8) |
 | API/UI | تست API، کامپوننت، E2E | پس از EXC-15 |
 | سناریوی پذیرش | V3.2 پیوست | «شناسهٔ ۱۶رقمی بدون تغییر حفظ شود» فقط برای **سلول متنی** معتبر است؛ سلول عددی با بیش از ۱۵ رقم صحیح رد می‌شود (EXC-5)؛ «ورود تکراری دوباره ثبت نکند»؛ «شکست میانه Rollback» |
