@@ -3253,3 +3253,18 @@
 - **محدوده:** فقط مستندات؛ بدون کد/Entity/Migration/API/UI؛ بدون باز کردن Gate v5، بدون Production signer، بدون تغییر `CustomerNumber`، بدون تغییر Customer-side؛ هیچ سیاست تجاری به‌جای مالک تصمیم گرفته نشد و همهٔ مدل‌ها Proposed هستند.
 - **اعتبارسنجی:** `git diff --check` پاک؛ Build/Test اجرا نشد (تغییر اجرایی وجود ندارد)؛ وضعیت CI واقعی مرجع: post-merge builderها ۱۵/۱۵ و PR #711 ۱۵/۱۵؛ CI این PR پس از اجرا گزارش می‌شود.
 - **Handoff:** `docs/handoffs/ISSUE-393-s1-b-commercial-order-payment-design-prep.md`.
+
+
+## 2026-11-19 — S1-b / Issue #393: بازبینی و تکمیل طراحی — سند نسخهٔ ۲ (v2)
+
+- **مبنا:** `origin/main@6f539679` — PR #714 (نسخهٔ ۱ طراحی) در این فاصله **Merged** شده است؛ مبنا به وضعیت جدید منتقل شد و PR تکراری نساخته نشد.
+- **اصلاح‌های معماری v2 (پاسخ به ایرادهای مطرح‌شده):**
+  1. جداسازی سه چرخه: تجاری (`Order.CommercialStatus`)، بررسی پرداخت (`VendorPayment.VerificationStatus`)، fulfillment ردیف (`Line.FulfillmentStatus`)؛ پاسخ به «سه ستون لازم است؟»: نه — Applied بدون مسیر ACK (#394) امروز ستون نمی‌شود و در PR مربوطه additive اضافه می‌شود؛ بسته‌شدن سفارش مشتق است نه ذخیره‌شده.
+  2. مدرک پرداخت از `PaymentEvidenceJson` روی Line به Entity مستقل `VendorPayment` روی Order با ستون‌های typed منتقل شد (پرداخت چندردیفی/چندمرحله‌ای، بدون JSON، پیشنهاد unique `(Method, ReferenceNumber)`).
+  3. تفکیک تأیید پرداخت از تأیید صدور روی همان Maker-Checker موجود با دو ResourceType جدید (`salesOrderPayment`/`salesOrderLine`)، endpoint اختصاصی به الگوی لایسنس، requester≠reviewer موجود، و permission پیشنهادی `vendor.payments.verify` در برابر `vendor.licenses.issue` موجود؛ تأیید پرداخت به‌تنهایی مجوز صدور نیست.
+  4. حذف `TargetRef/NewValue` عمومی؛ چهار LineType بسته با ماتریس اجبار/ممنوعی ستون‌ها (نگاشت یک‌به‌یک به سه builder موجود)؛ سفارش بدون Installation معتبر؛ صدور مستقل به‌ازای ردیف.
+  5. ضدتکرار صدور با کد واقعی تطبیق داده شد: unique `(LicenseId, Sequence)` در `VendorDbContext.cs:178-194`، گارد `LastIssuedSequence`، RowVersion، تراکنش اتمیک، پیوند 0..1 Line→Envelope با filtered unique index، رفتار retry/هم‌زمانی.
+  6. `CustomerId` (Guid) در همهٔ FKهای جدید؛ `CustomerNumber` فقط نمایشی؛ `VendorContract` اختیاری با پیشنهاد FK مرکب سازگاری مشتری؛ یک ارز در سفارش و فقط-اطلاعاتی.
+- **خروجی:** `docs/handoffs/ISSUE-393-s1-b-order-payment-design-v2.md` (۱۰ بخش خواسته‌شدهٔ مأموریت + جدول فیلد به‌تفکیک + نمودار جریان + فهرست ۹+۱ تصمیم ساختاریافتهٔ مالک + برنامهٔ ۶ PR مرحله‌ای)؛ یادداشت به‌روزرسانی بالای handoff v1؛ بدون تغییر مستندات نامرتبط.
+- **محدوده:** فقط مستندات؛ هیچ Entity/Migration/API/UI/Permission/Package ساخته نشد؛ هیچ تصمیم Proposed Accepted نشد؛ هیچ Gate/signer/سیاست امنیتی تغییر نکرد؛ تغییرات دیگران حفظ شد.
+- **اعتبارسنجی:** `git diff --check` پاک؛ Build/Test اجرا نشد (تغییر اجرایی وجود ندارد)؛ شواهد کد (ایندکس یکتا، allow-list، کاتالوگ permission، تراکنش صدور) مستقیماً از `main@6f539679` بازخوانی شد.
