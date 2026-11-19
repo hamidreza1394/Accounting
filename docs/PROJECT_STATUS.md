@@ -4,6 +4,17 @@
 - **تست‌ها:** ۱۲ تست واحد قواعد مشتق سبز؛ دو تست Integration چرخهٔ کامل SQL Server (چرخهٔ verify/reject، self-approval مجاز طبق D-109، عدم شمارش Recorded، ناهم‌خوانی ارز) با گیت `FARANO_VENDOR_TEST_SQLSERVER` — اجرا در CI.
 - **باقی‌مانده:** UI React داشبورد سفارش/پرداخت، اتصال amendment تمدید Support/Update به این چرخه در PR جداگانه، و تأیید نتیجهٔ تست SQL پس از CI.
 
+## دروازهٔ Runtime License (Issue #396) — 2026-11-19
+
+**مبنای بررسی:** `main@efaaa1c5` (Merge PR #719). این بخش اتصال License به Runtime فرانو طبق D-060 §1-6 و D-098 را ثبت می‌کند.
+
+- **پیاده‌شده (شاخهٔ `agent/396-license-runtime-gate`):** `ILicenseRuntimeStateService` وضعیت نصب را در هر درخواست از `ICustomerLicenseRuntimeEvaluator` (revocation-aware، بدون cache) می‌سازد و `LicenseRuntimeGateMiddleware` قبل از Routing عملیات عادی را کنترل می‌کند: **Unlicensed** → فقط مسیرهای فعال‌سازی/بازیابی (`/api/v1/licensing/*`، `/api/v1/provisioning/*`) و logout باز؛ **Invalid** → fail-closed؛ **Restricted در Dedicated** → خواندن باز، نوشتن عادی 403؛ **Restricted در Cloud** → عملیات عادی بسته با `license_cloud_expired` (D-098). endpoint جدید `GET /api/v1/licensing/status` projection وضعیت/entitlement را فقط از payload امضاشده می‌دهد.
+- **پیکربندی:** `Licensing:RuntimeGate:Enabled` پیش‌فرض **خاموش** (rollout مرحله‌ای، هم‌الگوی Gate v5؛ روشن‌کردن تصمیم عملیاتی استقرار است) و `Licensing:DeploymentMode` = `Dedicated|Cloud` (نامعتبر → fail-fast در startup). با gate خاموش رفتار میزبان عین قبل است.
+- **تست‌ها:** ۲۳ تست واحد + ۸ تست HTTP روی Pipeline واقعی (gate روشن/خاموش؛ بدون License → 503 `license_required` روی API و صفحهٔ Login، status باز و `unlicensed`). اجرای محلی: `--filter "FullyQualifiedName~LicenseRuntime"` = ۳۱ موفق / ۰ شکست.
+- **بدون Migration:** هیچ Schema/داده‌ای تغییر نکرد. هیچ grace ضمنی اضافه نشد (D-059 §7) و هیچ داده‌ای در هیچ حالتی حذف نمی‌شود.
+- **باقی‌مانده:** Wizard فعال‌سازی در React، cache نسخه‌دار رزولوشن برای بار بالا (D-058 §Cloud)، enforcement entitlement شرکت‌محور در call-siteهای عملیاتی (#391/#401) و E2E با License واقعی امضاشده (راهنمای Windows).
+- **handoff:** `docs/handoffs/ISSUE-396-license-runtime-gate.md`.
+
 ## تعیین تکلیف S1-a از سمت Vendor — 2026-11-18
 
 **مبنای بررسی:** `main@ab4ddef16f965b98c21720c5784a1fe068538878` (ادغام PR #707 در `2026-11-18T13:10:04Z`). این بخش، وضعیتMergeهای بعد از snapshot قبلی و خطوط «CI هنوز اجرا نشده»/«تأیید نشد» بخش‌های تاریخی زیر را بر اساس شواهد API بازبینی 2026-11-18 supersede می‌کند؛ سابقه حفظ شده است.
