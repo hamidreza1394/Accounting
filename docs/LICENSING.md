@@ -25,7 +25,7 @@
 
 | جزء | توضیح | وضعیت |
 |---|---|---|
-| سامانه مرکزی فروشنده (Vendor Control Plane) | Host، persistence، هویت/مجوز، ممیزی، maker-checker، workflow صدور/ابطال و داشبورد در مراحل مختلف پیاده‌سازی شده‌اند؛ provider امضای Production و sink مستقل ممیزی هنوز مانع Production هستند | `Partially Implemented / NotProductionReady` |
+| سامانه مرکزی فروشنده (Vendor Control Plane) | Host، persistence، هویت/مجوز، ممیزی، گردش‌کار درخواست/تصمیم صدور/ابطال و داشبورد در مراحل مختلف پیاده‌سازی شده‌اند؛ provider امضای Production و sink مستقل ممیزی هنوز مانع Production هستند | `Partially Implemented / NotProductionReady` |
 | سرویس صدور Vendor | workflow درخواست/تصمیم و ذخیرهٔ envelope/sequence پیاده‌سازی شده؛ طبق D-109 تأیید تک‌اپراتوره در V1 مجاز است؛ adapter PKCS#11 و SoftHSM توسعه/آزمون موجود است؛ provider Production فقط با پیکربندی و پذیرش ریسک معتبر قابل فعال‌سازی است | `Partially Implemented / NotProductionReady` |
 | `Licensing.Contracts` | قرارداد LicenseEnvelope، اعتبارسنج امضا/زمان، revocation-aware validator و provisioning payload v1-v5؛ v5 additive و برای CompanyReference. سمت Customer، verifier با `allowCompanyReference=true` (PR #686) v5 را می‌پذیرد، اما صدور v5 در Vendor پشت Gate خاموش است | `Implemented`; صدور عملیاتی v5 در Vendor `NotImplemented` (Gate خاموش) |
 | ماژول لایسنس نصب | ورود فایل، ذخیره، ارزیابی وضعیت، ممیزی، محدودسازی سمت سرور | `NotImplemented` |
@@ -190,7 +190,7 @@
 
 ## تصمیم‌های مالک محصول در 2026-11-19 — امضای Vendor، پرداخت مستقل و تأیید تک‌اپراتوره (D-107/D-108/D-109)
 
-- D-107 Accepted: برای امضای مرکزی License/Provisioning Vendor در نسخه اول، Windows CNG/Certificate Store با کلید MachineKey غیرقابل‌استخراج و سطح صریح SoftwareProtected در Production مجاز است؛ TPM/HSM/KMS اجباری نیست. ریسک مدیر محلی/میزبان صریح است؛ Maker-Checker، MFA، Audit، rotation و fail-closed حفظ می‌شوند. این تصمیم D-047 بند ۷ و بخش Production از D-046 OD-07/D-056 را فقط برای امضای مرکزی Vendor supersede می‌کند.
+- D-107 Accepted: برای امضای مرکزی License/Provisioning Vendor در نسخه اول، Windows CNG/Certificate Store با کلید MachineKey غیرقابل‌استخراج و سطح صریح SoftwareProtected در Production مجاز است؛ TPM/HSM/KMS اجباری نیست. ریسک مدیر محلی/میزبان صریح است؛ گردش‌کار درخواست/تصمیم، MFA، Audit، rotation و fail-closed حفظ می‌شوند. طبق D-109، V1 تک‌اپراتوره است. این تصمیم D-047 بند ۷ و بخش Production از D-046 OD-07/D-056 را فقط برای امضای مرکزی Vendor supersede می‌کند.
 - D-108 Accepted: صدور/فعال‌سازی از پرداخت مستقل است. Payment و Issuance دو چرخه مستقل درخواست/تصمیم و Audit دارند؛ طبق D-109 همان اپراتور مجاز می‌تواند درخواست را خودش تأیید کند. Vendor سفارش‌های Unpaid/Partial/Overdue را با محاسبه زمان خواندن در داشبورد/گزارش نشان می‌دهد؛ بدون درگاه، Ledger، scheduler یا Broker.
 - D-109 Accepted: Vendor v1 تک‌اپراتوره است؛ یک مدیر مجاز می‌تواند عملیات مدیریتی، درخواست‌ها و تأیید/ردها را انجام دهد. شرط requester≠reviewer و الزام مدیر دوم برای V1 اعمال نمی‌شود. Maker-Checker دو‌نفره فقط با تصمیم/Issue مستقل مالک در آینده فعال خواهد شد؛ MFA، Permission، Audit، RowVersion و fail-closed حفظ می‌شوند.
 - محدودیت مستقل Customer: D-057 برای anti-rollback snapshot ابطال آفلاین Customer همچنان TPM 2.0 می‌خواهد؛ D-107 آن را تغییر نمی‌دهد. اثر این الزام بر مشتری فاقد TPM در OD-27 باز است.
