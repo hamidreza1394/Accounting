@@ -1,3 +1,5 @@
+> اصلاح دامنه با D-107 (2026-11-19): الزام HSM واقعی برای Production در این سند فقط برای امضای مرکزی Vendor (License/Provisioning) superseded شده است. نسخه اول Vendor می‌تواند از Windows CNG/Certificate Store با MachineKey non-exportable و AssuranceLevel صریح SoftwareProtected استفاده کند؛ TPM/HSM/KMS برای Vendor signer اجباری نیست. ریسک مدیر محلی/میزبان باید ثبت شود و Maker-Checker، MFA، Audit، rotation و fail-closed حفظ شوند. این اصلاح D-055 را برای Customer ACK و D-057 را برای Customer offline-revocation تغییر نمی‌دهد؛ کلیدها و purposeها همچنان جدا هستند. D-055/PKCS#11 و SoftHSM می‌توانند برای تست یا Provider سخت‌افزاری آینده باقی بمانند، اما دیگر شرط فعال‌سازی نسخه اول Vendor نیستند.
+
 # D-055 — سرویس امضای مستقل HSM/TPM با PKCS#11 برای Vendor و ACK مشتری
 
 
