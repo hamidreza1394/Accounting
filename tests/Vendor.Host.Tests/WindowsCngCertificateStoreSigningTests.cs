@@ -114,6 +114,33 @@ public sealed class WindowsCngCertificateStoreSigningTests
     }
 
     [Fact]
+    public void CurrentUserKeyIsRejectedWhenMachineKeyAssuranceIsRequired()
+    {
+        Assert.SkipWhen(!OperatingSystem.IsWindows(), "Windows CNG is available only on Windows.");
+
+        var keyName = "faranou-vendor-user-key-" + Guid.NewGuid().ToString("N");
+        var (thumbprint, _) = CreateUserCertificate(keyName, CngExportPolicies.None);
+        var options = TestOptions(thumbprint, new string('B', 40));
+
+        try
+        {
+            using var store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
+            store.Open(OpenFlags.ReadOnly);
+            var matches = store.Certificates.Find(
+                X509FindType.FindByThumbprint, thumbprint, validOnly: false);
+            Assert.Single(matches);
+            using var certificate = matches[0];
+            Assert.Equal(
+                "certificate_key_not_machine_key",
+                WindowsCngCertificatePolicy.ValidatePrivateKey(certificate, requireMachineKey: true));
+        }
+        finally
+        {
+            DeleteUserCertificate(thumbprint, keyName);
+        }
+    }
+
+    [Fact]
     public async Task AllowExportOnlyPrivateKeyIsRejectedFailClosed()
     {
         Assert.SkipWhen(!OperatingSystem.IsWindows(), "Windows CNG is available only on Windows.");
