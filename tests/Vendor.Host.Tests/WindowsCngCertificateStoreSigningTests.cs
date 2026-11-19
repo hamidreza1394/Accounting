@@ -26,8 +26,8 @@ public sealed class WindowsCngCertificateStoreSigningTests
 
         var licenseKeyName = "faranou-vendor-signer-test-" + Guid.NewGuid().ToString("N");
         var provisioningKeyName = licenseKeyName + "-p";
-        var (licenseThumbprint, licenseSpki) = CreateUserCertificate(licenseKeyName, exportable: false);
-        var (provisioningThumbprint, _) = CreateUserCertificate(provisioningKeyName, exportable: false);
+        var (licenseThumbprint, licenseSpki) = CreateUserCertificate(licenseKeyName, CngExportPolicies.None);
+        var (provisioningThumbprint, _) = CreateUserCertificate(provisioningKeyName, CngExportPolicies.None);
         var options = TestOptions(licenseThumbprint, provisioningThumbprint);
         var module = CreateModule(options);
         var audit = new RecordingAuditWriter();
@@ -94,7 +94,33 @@ public sealed class WindowsCngCertificateStoreSigningTests
         Assert.SkipWhen(!OperatingSystem.IsWindows(), "Windows CNG is available only on Windows.");
 
         var keyName = "faranou-vendor-signer-exportable-" + Guid.NewGuid().ToString("N");
-        var (thumbprint, _) = CreateUserCertificate(keyName, exportable: true);
+        var (thumbprint, _) = CreateUserCertificate(keyName, CngExportPolicies.AllowPlaintextExport);
+        var options = TestOptions(thumbprint, new string('B', 40));
+        var module = CreateModule(options);
+
+        try
+        {
+            var result = await module.SignAsync(
+                options.LicenseKey,
+                Encoding.UTF8.GetBytes("{\"sequence\":1}"));
+
+            Assert.False(result.Succeeded);
+            Assert.Equal("signing_provider_unavailable", result.ErrorCode);
+            Assert.False(await module.IsAvailableAsync());
+        }
+        finally
+        {
+            DeleteUserCertificate(thumbprint, keyName);
+        }
+    }
+
+    [Fact]
+    public async Task AllowExportOnlyPrivateKeyIsRejectedFailClosed()
+    {
+        Assert.SkipWhen(!OperatingSystem.IsWindows(), "Windows CNG is available only on Windows.");
+
+        var keyName = "faranou-vendor-signer-allow-export-" + Guid.NewGuid().ToString("N");
+        var (thumbprint, _) = CreateUserCertificate(keyName, CngExportPolicies.AllowExport);
         var options = TestOptions(thumbprint, new string('B', 40));
         var module = CreateModule(options);
 
@@ -163,7 +189,7 @@ public sealed class WindowsCngCertificateStoreSigningTests
         var keyName = "faranou-vendor-signer-expired-" + Guid.NewGuid().ToString("N");
         var (thumbprint, _) = CreateUserCertificate(
             keyName,
-            exportable: false,
+            CngExportPolicies.None,
             notBefore: DateTime.UtcNow.AddHours(-2),
             notAfter: DateTime.UtcNow.AddHours(-1));
         var options = TestOptions(thumbprint, new string('B', 40));
@@ -243,15 +269,13 @@ public sealed class WindowsCngCertificateStoreSigningTests
 
     private static (string Thumbprint, byte[] PublicKeySpki) CreateUserCertificate(
         string keyName,
-        bool exportable,
+        CngExportPolicies exportPolicy,
         DateTime? notBefore = null,
         DateTime? notAfter = null)
     {
         var creationParameters = new CngKeyCreationParameters
         {
-            ExportPolicy = exportable
-                ? CngExportPolicies.AllowPlaintextExport
-                : CngExportPolicies.None,
+            ExportPolicy = exportPolicy,
             KeyCreationOptions = CngKeyCreationOptions.None
         };
         string thumbprint;
