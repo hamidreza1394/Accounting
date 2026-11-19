@@ -235,7 +235,7 @@
 
 **شکاف‌های مستند (موجود، بدون تغییر در این PR):**
 1. `UserCompanyMemberships.UserId` **FK به Users ندارد** (قبلاً در DATABASE.md ثبت شده؛ جلوگیری از عضویت یتیم فقط در اپ/تست؛ اصلاح، تصمیم جدا می‌خواهد).
-2. `ProvisioningRequestClaims.CompanyId/FiscalPeriodId/AdminUserId` FK ندارند (صحت در اپ، داخل همان تراکنش Serializable که همه را یک‌جا می‌سازد؛ عمر ردیف کوتاه است).
+2. `ProvisioningRequestClaims`: `(FiscalPeriodId, CompanyId)` یک FK مرکب به `FiscalPeriod (Id, TenantId)` با `Restrict` دارد (`ProvisioningRequestClaimConfiguration`، Migration `20261029161402_AddCustomerProvisioningClaims`)؛ `CompanyId` FK مستقل به `Companies` ندارد و فقط از همین FK مرکب پوشش می‌گیرد. `AdminUserId` FK ندارد و فقط ایندکس `(AdminUserId, MustChangePassword)` دارد (صحت در اپ، داخل همان تراکنش Serializable که همه را یک‌جا می‌سازد؛ عمر ردیف کوتاه است).
 3. `SecurityAuditEvents` عمداً FK ندارد (مستقل‌بودن audit؛ فقط index).
 4. **Trade:** `TradeEntity` AK `(TenantId, Id)` دارد ولی هیچ FK به Core ندارد (مرز ماژول، طبق بند ۲ قبلی)؛ `TenantId` فقط Guid است — درج مستقیم SQL می‌تواند ردیف با TenantId دلخواه بسازد؛ کنترل در اپ با `TradeAccessFilter` fail-closed است و تهدید درج مستقیم در Threat/بند ۱۱ قبلی باز است. FKهای داخلی Trade (Party→PartyBankAccount و…) با AK مرکب داخل همان DbContext است.
 - **دو Tenant متفاوت:** با معنای Legacy (`TenantId == Company.Id`)، تمام FKهای مرکب بالا «از شرکت دیگر» را در سطح DB ناممکن می‌کنند؛ تنها روابط عمداً بین‌شرکتی (گروه/مالکیت) و روابط مستقل از شرکت (کاربر/نقش سراسری/Trade بدون FK) از این قاعده خارج‌اند — اولی با `CustomerBoundaryId` در اپ محدود می‌شود و دومی طبق D-088 مجاز است. در گذار به Tenant واقعی (S3-0f)، همین FKهای مرکب الگوی امن را آماده دارند (`TenantId` بخشی از کلید است).
