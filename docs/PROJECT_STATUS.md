@@ -1,7 +1,7 @@
 ## چرخهٔ سفارش و پرداخت Vendor (D-108، Issue #393) — 2026-11-19
 
 - **پیاده‌شده (شاخهٔ `agent/393-vendor-payment-cycle`):** سه Entity جدید `VendorSalesOrders` (+Lines) و `VendorPaymentRecords` با Migration `20261119175924_VendorSalesOrdersAndPayments` (فقط Vendor DB؛ گیت `has-pending-model-changes` سبز). ثبت پرداخت دستی چندگانه با ستون‌های typed، تأیید مستقل پرداخت با ResourceType جدید `salesOrderPayment` و permissionهای جدید `vendor.payments.read|manage|verify`، تراکنش واحد و self-approval مجاز طبق D-109. وضعیت‌های `Unpaid/PartiallyPaid/Paid` و برچسب `Overdue` صرفاً در زمان خواندن از مبلغ سفارش و جمع پرداخت‌های Verified مشتق می‌شوند؛ گزارش مطالبات `/api/vendor/receivables` صفحه‌بندی‌شده و بدون Scheduler/Broker/درگاه/Ledger (ممنوعیت‌های D-108 رعایت شده). صدور License از پرداخت و پرداخت از صدور کاملاً مستقل‌اند.
-- **تست‌ها:** ۱۲ تست واحد قواعد مشتق سبز؛ دو تست Integration چرخهٔ کامل SQL Server (چرخهٔ verify/reject، منع self-approval، عدم شمارش Recorded، ناهم‌خوانی ارز) با گیت `FARANO_VENDOR_TEST_SQLSERVER` — اجرا در CI.
+- **تست‌ها:** ۱۲ تست واحد قواعد مشتق سبز؛ دو تست Integration چرخهٔ کامل SQL Server (چرخهٔ verify/reject، self-approval مجاز طبق D-109، عدم شمارش Recorded، ناهم‌خوانی ارز) با گیت `FARANO_VENDOR_TEST_SQLSERVER` — اجرا در CI.
 - **باقی‌مانده:** UI React داشبورد سفارش/پرداخت، اتصال amendment تمدید Support/Update به این چرخه در PR جداگانه، و تأیید نتیجهٔ تست SQL پس از CI.
 
 ## تعیین تکلیف S1-a از سمت Vendor — 2026-11-18
