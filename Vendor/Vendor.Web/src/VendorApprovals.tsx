@@ -91,13 +91,13 @@ export function VendorApprovals({ permissions }: { permissions: string[] }) {
   return <section className="space-y-5" dir="rtl" aria-labelledby="vendor-approvals-title">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div><h1 id="vendor-approvals-title" className="text-xl font-semibold">درخواست‌های تأیید</h1>
-        <p className="mt-1 text-sm text-muted-foreground">تغییر وضعیت مشتری یا نصب به تأیید مدیر دیگری نیاز دارد.</p></div>
+        <p className="mt-1 text-sm text-muted-foreground">تغییر وضعیت مشتری یا نصب پس از ثبت درخواست و تأیید مدیر مجاز اعمال می‌شود.</p></div>
       <Button type="button" variant="outline" onClick={() => void load()} disabled={loading}>تازه‌سازی</Button>
     </div>
     {error && <p role="alert" className="rounded-md border border-destructive/40 p-3 text-sm">{error}</p>}
     {notice && <p role="status" className="rounded-md border border-border p-3 text-sm">{notice}</p>}
     <Card><CardHeader><CardTitle>در انتظار بررسی</CardTitle>
-      <CardDescription>درخواست‌کننده نمی‌تواند درخواست خودش را تأیید یا رد کند.</CardDescription></CardHeader>
+      <CardDescription>مدیر مجاز می‌تواند درخواست ثبت‌شده را خودش تأیید یا رد کند.</CardDescription></CardHeader>
       <CardContent>
         {loading ? <p role="status" className="py-6 text-sm text-muted-foreground">در حال دریافت درخواست‌ها…</p>
           : items.length === 0 ? <p className="py-6 text-sm text-muted-foreground">درخواست در انتظاری وجود ندارد.</p>
