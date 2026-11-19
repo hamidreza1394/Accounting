@@ -3254,6 +3254,41 @@
 - **اعتبارسنجی:** `git diff --check` پاک؛ Build/Test اجرا نشد (تغییر اجرایی وجود ندارد)؛ وضعیت CI واقعی مرجع: post-merge builderها ۱۵/۱۵ و PR #711 ۱۵/۱۵؛ CI این PR پس از اجرا گزارش می‌شود.
 - **Handoff:** `docs/handoffs/ISSUE-393-s1-b-commercial-order-payment-design-prep.md`.
 
+
+## 2026-11-19 — S1-b / Issue #393: بازبینی و تکمیل طراحی — سند نسخهٔ ۲ (v2)
+
+- **مبنا:** `origin/main@6f539679` — PR #714 (نسخهٔ ۱ طراحی) در این فاصله **Merged** شده است؛ مبنا به وضعیت جدید منتقل شد و PR تکراری نساخته نشد.
+- **اصلاح‌های معماری v2 (پاسخ به ایرادهای مطرح‌شده):**
+  1. جداسازی سه چرخه: تجاری (`Order.CommercialStatus`)، بررسی پرداخت (`VendorPayment.VerificationStatus`)، fulfillment ردیف (`Line.FulfillmentStatus`)؛ پاسخ به «سه ستون لازم است؟»: نه — Applied بدون مسیر ACK (#394) امروز ستون نمی‌شود و در PR مربوطه additive اضافه می‌شود؛ بسته‌شدن سفارش مشتق است نه ذخیره‌شده.
+  2. مدرک پرداخت از `PaymentEvidenceJson` روی Line به Entity مستقل `VendorPayment` روی Order با ستون‌های typed منتقل شد (پرداخت چندردیفی/چندمرحله‌ای، بدون JSON، پیشنهاد unique `(Method, ReferenceNumber)`).
+  3. تفکیک تأیید پرداخت از تأیید صدور روی همان Maker-Checker موجود با دو ResourceType جدید (`salesOrderPayment`/`salesOrderLine`)، endpoint اختصاصی به الگوی لایسنس، requester≠reviewer موجود، و permission پیشنهادی `vendor.payments.verify` در برابر `vendor.licenses.issue` موجود؛ تأیید پرداخت به‌تنهایی مجوز صدور نیست.
+  4. حذف `TargetRef/NewValue` عمومی؛ چهار LineType بسته با ماتریس اجبار/ممنوعی ستون‌ها (نگاشت یک‌به‌یک به سه builder موجود)؛ سفارش بدون Installation معتبر؛ صدور مستقل به‌ازای ردیف.
+  5. ضدتکرار صدور با کد واقعی تطبیق داده شد: unique `(LicenseId, Sequence)` در `VendorDbContext.cs:178-194`، گارد `LastIssuedSequence`، RowVersion، تراکنش اتمیک، پیوند 0..1 Line→Envelope با filtered unique index، رفتار retry/هم‌زمانی.
+  6. `CustomerId` (Guid) در همهٔ FKهای جدید؛ `CustomerNumber` فقط نمایشی؛ `VendorContract` اختیاری با پیشنهاد FK مرکب سازگاری مشتری؛ یک ارز در سفارش و فقط-اطلاعاتی.
+- **خروجی:** `docs/handoffs/ISSUE-393-s1-b-order-payment-design-v2.md` (۱۰ بخش خواسته‌شدهٔ مأموریت + جدول فیلد به‌تفکیک + نمودار جریان + فهرست ۹+۱ تصمیم ساختاریافتهٔ مالک + برنامهٔ ۶ PR مرحله‌ای)؛ یادداشت به‌روزرسانی بالای handoff v1؛ بدون تغییر مستندات نامرتبط.
+- **محدوده:** فقط مستندات؛ هیچ Entity/Migration/API/UI/Permission/Package ساخته نشد؛ هیچ تصمیم Proposed Accepted نشد؛ هیچ Gate/signer/سیاست امنیتی تغییر نکرد؛ تغییرات دیگران حفظ شد.
+- **اعتبارسنجی:** `git diff --check` پاک؛ Build/Test اجرا نشد (تغییر اجرایی وجود ندارد)؛ شواهد کد (ایندکس یکتا، allow-list، کاتالوگ permission، تراکنش صدور) مستقیماً از `main@6f539679` بازخوانی شد.
+
+
+## 2026-11-19 — S1-b / Issue #393: اصلاح محدود سند v2 (PR #717) — چهار ابهام بازبینی
+
+- **مبنا:** `origin/main@6f539679` (بدون جابه‌جایی)؛ PR #717 باز و untouched توسط دیگران؛ فقط همان PR به‌روزرسانی شد (PR جدید نساخته شد).
+- **اصلاحات (فقط سند v2؛ بدون تغییر جهت معماری):**
+  1. **License در MaxCompaniesIncrease:** تناقض «LicenseId ممنوع در حالی که `TryBuildMaxCompaniesIncrease` به License/Installation/Customer نیاز دارد» رفع شد — `LicenseId` برای هر چهار LineType الزامی و پیش از درخواست تأیید صدور روی Line تثبیت می‌شود؛ انتخاب آزاد License در لحظهٔ صدور وجود ندارد؛ `InstallationId` فیلد مستقل Line نیست و از `License.InstallationId` مشتق می‌شود (entity آن `Guid?` nullable است؛ هر سه امضای builder در `VendorLicenseAmendmentPayloadBuilder.cs:13-43` زنجیره را با `license_installation_mismatch` fail-closed اعتبارسنجی می‌کنند)؛ ماتریس ۳.۴ و Check Constraintها هماهنگ شد؛ گزینهٔ «InstallationId صریح با FK تساوی» به‌عنوان گزینهٔ مالک حفظ شد.
+  2. **یک صدور باز به‌ازای هر License:** سیاست «حداکثر یک عملیات صدور فعال به‌ازای هر License» به بخش‌های ۵/۶/۷ و نمودار اضافه شد (چک اپلیکیشن `license_issuance_in_progress` + پیشنهاد filtered unique index `ON Lines(LicenseId) WHERE FulfillmentStatus='ApprovalRequested'`)؛ درخواست کهنه با گارد موجود `license.RowVersion ↔ approval.ExpectedResourceRowVersion` (`VendorLicenseIssuanceService.cs:50`) هرگز با دادهٔ جدید خودکار اجرا نمی‌شود؛ Line بعدی پس از terminal شدن قبلی با Sequence/RowVersion تازه؛ بدون Queue/Event Bus/Distributed Lock؛ unique `(LicenseId, Sequence)` نگهبان نهایی ماند.
+  3. **معنای PaymentRecorded/Confirmed:** معنای گذارها روشن شد و تصمیم ۱۱ با سه گزینه (A: Confirmed با نخستین Verified + صدور مستقل از پرداخت [پیشنهاد پیش‌فرض فنی، Accepted نشده]؛ B: Confirmed با جمع Verified ≥ TotalAmount؛ C: Confirmed دستی + گیت اختیاری صدور) به فهرست مالک اضافه شد؛ هیچ allocation/Ledger/درگاه پیشنهاد نشد.
+  4. **ReferenceNumber:** یکتایی سراسری فرض حذف شد؛ فقط Index غیریکتا + هشدار تشخیص تکرار در v1؛ قید unique فقط با Namespace صریح `(Method, ProviderOrBank, ReferenceNumber)` معنا دارد و به‌صورت Proposed موکول به schema approval ماند (تصمیم ۱۰ بازنویسی).
+- **فهرست تصمیم مالک:** ۹ مورد → ۱۱ مورد؛ شمارنده در بخش ۸ هماهنگ شد؛ برنامهٔ PR-۲/PR-۳ با قواعد جدید به‌روز شد.
+- **محدوده:** فقط `docs/handoffs/ISSUE-393-s1-b-order-payment-design-v2.md` و WORK_LOG؛ بدون کد/Entity/Migration/API/UI/Permission/Package؛ بدون تغییر Gate/Entitlement/سیاست امنیتی؛ هیچ Proposed به Accepted تبدیل نشد؛ تغییرات دیگران حفظ شد.
+
+
+## 2026-11-19 — S1-b / Issue #393: رفع یافته‌های بازبینی PR #717
+
+- **محدوده:** فقط مستندات موجود در همان PR؛ بدون کد، Entity، Migration، API، UI، Permission عملیاتی یا تغییر Gate.
+- **اصلاحات:** (۱) در جریان Mermaid، تأیید پرداخت دیگر پیش‌شرط همیشگی درخواست صدور نمایش داده نمی‌شود و فقط در صورت انتخاب گیت پرداخت طبق تصمیم مالک ۱۱ اعمال می‌شود؛ گزینهٔ (ب) تصمیم ۱۱ نیز با مستقل‌بودن صدور سازگار شد. (۲) هر چهار نقطهٔ dispatch در `VendorApprovalEndpoints` مشخص شد: دو allow-list و دو نگاشت `PermissionFor`؛ نگاشت `salesOrderPayment` به `vendor.payments.verify` و `salesOrderLine` به `vendor.licenses.issue`. (۳) نسخهٔ Line و License جداگانه ثبت و پیش از ساخت amendment کنترل می‌شوند؛ stale بودن هرکدام به conflict می‌انجامد. (۴) مسیر بازیابی stale به‌صورت اتمیک تعریف شد: اگر Line تغییر نکرده و هنوز به همان درخواست متصل است، Approval=`Stale` و Line از `ApprovalRequested` به `Pending` برمی‌گردد؛ اگر Line نیز تغییر کرده باشد، لغو/جایگزینی مجاز Approval را `Stale` و Line را `Cancelled` می‌کند و Line جایگزین با RowVersionهای تازه ساخته می‌شود؛ وضعیت نامنطبق بدون بازنویسی به conflict می‌رسد. (۵) pipeهای literal داخل سلول‌های جدول Markdown escape شدند. (۶) یادداشت handoff نسخهٔ v1 صریحاً پیشنهاد قدیمی `InstallationId` در سطح Line را superseded اعلام می‌کند، بدون بازنویسی سابقهٔ ممیزی.
+- **وضعیت تصمیم‌ها:** همهٔ پیشنهادها همچنان `Proposed`/`NeedsApproval` هستند؛ هیچ تصمیم مالکانه‌ای Accepted نشده است.
+- **اعتبارسنجی:** `git diff --check` و Markdown lint باید پس از دریافت CI همین commit بررسی شوند؛ Build/Test کد موضوعیت ندارد چون تغییرات مستنداتی‌اند.
+
 ## 2026-11-19 — D-106 (Proposed): نیازمندی‌ها و طراحی Excel Import مرحله‌ای (Issue #715)
 
 - **مبنا:** main@6f539679؛ شاخهٔ docs/excel-import-adr-proposed.
