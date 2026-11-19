@@ -37,12 +37,12 @@ public static class VendorSalesOrderPaymentRules
             remaining = 0;
         }
 
-        var paidAmount = Math.Min(verifiedPaidAmount, totalAmount);
         var status = remaining == 0
             ? StatusPaid
-            : paidAmount > 0 ? StatusPartiallyPaid : StatusUnpaid;
+            : verifiedPaidAmount > 0 ? StatusPartiallyPaid : StatusUnpaid;
         var overdue = remaining > 0 && dueAtUtc is { } due && due <= nowUtc;
-        return new VendorSalesOrderPaymentStatus(status, overdue, paidAmount, remaining);
+        // Preserve the actual verified total (including overpayment) for transparent reporting.
+        return new VendorSalesOrderPaymentStatus(status, overdue, verifiedPaidAmount, remaining);
     }
 
     /// <summary>Sum of Verified payments only; Recorded and Rejected never count (D-108 §5).</summary>
