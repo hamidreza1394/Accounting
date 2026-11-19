@@ -3313,3 +3313,9 @@
 - D-108 (Accepted): پرداخت شرط صدور/فعال‌سازی نیست. Payment و Issuance چرخه‌های مستقل Maker-Checker و Audit دارند. Payment دستی چندگانه، Verified-only aggregation، وضعیت‌های مشتق‌شده Unpaid/Partial/Paid/Overdue و هشدار/گزارش read-time بدون scheduler/broker/درگاه/Ledger ثبت شدند.
 - تعارض مستندات: عبارت قدیمی در LICENSING_IMPLEMENTATION_PLAN.md که سفارش پرداخت‌شده/تأییدشده را پیش‌شرط handoff به Engine معرفی می‌کرد، با D-108 اصلاح شد. وضعیت‌های تجاری/تحویل/ACK مستقل می‌مانند؛ Payment Verified نه صدور را تأیید می‌کند و نه برعکس.
 - محدوده تغییر: مستندات و تصمیم‌ها؛ هیچ کد، Entity، Migration، API، UI، کلید واقعی یا Gate Production تغییر نکرد. Build/Test کد اجرا نشده است؛ CI مستندات پس از PR باید بررسی شود.
+
+
+## 2026-11-19 — Issue #393 / D-108: چرخهٔ سفارش و پرداخت مستقل Vendor
+
+- Entityهای `VendorSalesOrders`/`VendorSalesOrderLines`/`VendorPaymentRecords` با Migration جدید Vendor و CHECK constraintها؛ ثبت پرداخت دستی چندگانه با ستون‌های typed؛ تأیید Maker-Checker مستقل (`salesOrderPayment` + `vendor.payments.verify`) با منع self-approval و تراکنش واحد؛ وضعیت‌های مشتق Unpaid/PartiallyPaid/Paid/Overdue فقط در زمان خواندن؛ گزارش مطالبات `/api/vendor/receivables` بدون Scheduler/درگاه/Ledger. صدور و پرداخت دو چرخهٔ مستقل ماندند.
+- ۱۲ تست واحد سبز محلی؛ دو تست Integration SQL-گیت برای CI. `dotnet ef migrations has-pending-model-changes` سبز. هیچ تغییری در Customer DB و هیچ اثری بر صدور/فعال‌سازی وجود ندارد. handoff: `ISSUE-393-vendor-payment-cycle-d108.md`.
