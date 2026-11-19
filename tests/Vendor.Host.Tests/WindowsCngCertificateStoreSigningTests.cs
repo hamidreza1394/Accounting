@@ -310,6 +310,8 @@ public sealed class WindowsCngCertificateStoreSigningTests
         using (var ecdsa = new ECDsaCng(cngKey))
         {
             var request = new CertificateRequest("CN=Faranou Vendor CNG Test", ecdsa, HashAlgorithmName.SHA256);
+            request.CertificateExtensions.Add(
+                new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature, critical: true));
             using var certificate = request.CreateSelfSigned(
                 notBefore ?? DateTime.UtcNow.AddMinutes(-5),
                 notAfter ?? DateTime.UtcNow.AddHours(1));
