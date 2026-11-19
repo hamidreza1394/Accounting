@@ -3315,6 +3315,13 @@
 - محدوده تغییر: مستندات و تصمیم‌ها؛ هیچ کد، Entity، Migration، API، UI، کلید واقعی یا Gate Production تغییر نکرد. Build/Test کد اجرا نشده است؛ CI مستندات پس از PR باید بررسی شود.
 
 
+## 2026-11-19 — Issue #396: اتصال License به Runtime فرانو (دروازهٔ license-first)
+
+- دروازهٔ license-first طبق D-060 §1-6 و D-098 پیاده شد: `LicenseRuntimeStateService` (resolve در هر درخواست از ارزیاب revocation-aware) + `LicenseRuntimeGateMiddleware` (قبل از Routing) + endpoint `GET /api/v1/licensing/status`. حالت‌ها: Active/Restricted/Unlicensed/Invalid؛ رفتار Restricted در Dedicated (فقط-خواندن) و Cloud (بستن عملیات عادی، باز ماندن مسیر تمدید/بازیابی) تفکیک شد؛ هیچ grace ضمنی و هیچ حذف داده‌ای وجود ندارد.
+- پیکربندی opt-in: `Licensing:RuntimeGate:Enabled` (پیش‌فرض خاموش؛ هم‌الگوی Gate v5) و `Licensing:DeploymentMode=Dedicated|Cloud` (نامعتبر → fail-fast). با gate خاموش رفتار میزبان عین قبل است.
+- تست‌ها: ۲۳ تست واحد + ۸ تست HTTP واقعی = ۳۱ موفق / ۰ شکست محلی؛ بدون Migration و بدون تغییر Schema. Wizard React، cache نسخه‌دار و E2E با License واقعی باقی‌مانده‌اند.
+- مستندات: PROJECT_STATUS.md، handoff `ISSUE-396-license-runtime-gate.md`.
+
 ## 2026-11-19 — Issue #236 / D-107: پیاده‌سازی Signer ویندوز CNG SoftwareProtected برای Vendor
 
 - Provider امضای مرکزی License/Provisioning طبق D-107 پیاده شد: انتخاب گواهی با Thumbprint از Windows Certificate Store، ECDSA P-256، کلید CNG غیرقابل‌Export (رد exportable fail-closed)، KeyId/گواهی مجزا برای هر هدف، Audit metadata-only با دورریختن امضا در شکست Audit، Health check، Startup assurance (fail-fast + Audit Production)، رد تداخل PKCS#11/CNG و فرمان فقط‌عمومی `--signing-certificate export-public` برای Trust Store.
