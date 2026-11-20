@@ -3,14 +3,14 @@
 - **Issue:** [#728](https://github.com/hamidreza1394/Accounting/issues/728)
 - **Agent/مسئول:** ChatGPT
 - **تاریخ:** 2026-11-20
-- **وضعیت:** مستندات ثبت‌شده روی شاخه؛ PR برای بازبینی
+- **وضعیت:** PR باز برای بازبینی
 
 ## هدف و معیارهای پذیرش
 - [x] ممیزی شماره‌ها و محتوای موجود D-087..D-092
 - [x] حفظ ADRهای موجود و ثبت تصمیم‌های جدید با شماره‌های آزاد بعدی
 - [x] هم‌ترازی DECISIONS، INDEX و WORK_LOG
 - [x] ثبت صریح وضعیت پیاده‌سازی و عدم ادعای اجرای قابلیت‌ها
-- [ ] اجرای git diff --check و بازبینی نهایی
+- [ ] اجرای git diff --check و بازبینی نهایی در CI/محیط Git
 
 ## خلاصه تغییرات
 - D-087 موجود حفظ شد.
@@ -51,5 +51,5 @@
 
 ## شناسه‌های Git
 - Branch: docs/issue-728-tenant-dedicated-decisions
-- Commit: در انتظار ثبت
-- Pull Request: در انتظار ایجاد
+- Commit: `7656ad6c1734c19630beab79f6ca9c477c752741`
+- Pull Request: [#729](https://github.com/hamidreza1394/Accounting/pull/729)
