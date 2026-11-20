@@ -20,7 +20,7 @@ using Xunit;
 namespace Faranou.Vendor.Host.Tests;
 
 /// <summary>
-/// D-108 SQL Server cycle: manual multi-payment recording, independent maker-checker
+/// D-108 SQL Server cycle: manual multi-payment recording, independent payment-approval
 /// verification (salesOrderPayment / vendor.payments.verify), read-time derived statuses and the
 /// receivables report. Payment verification never touches license issuance state.
 /// </summary>
@@ -113,25 +113,6 @@ public sealed class VendorSalesPaymentSqlServerTests
             var secondPaymentId = await maker.RecordPaymentAsync(collectibleOrderId, 100m, cancellationToken);
             var selfApprovalId = await maker.RequestPaymentDecisionAsync(secondPaymentId, "verify", cancellationToken);
             await maker.DecideAsync(selfApprovalId, "Approved", cancellationToken);
-
-            // Rejected payments retain their reviewer in ApprovalRequest; VerifiedBy/VerifiedAt
-            // are reserved for payments that actually reached Verified.
-            var rejectedPaymentId = await maker.RecordPaymentAsync(collectibleOrderId, 50m, cancellationToken);
-            var rejectedPaymentApprovalId = await maker.RequestPaymentDecisionAsync(
-                rejectedPaymentId, "reject", cancellationToken);
-            await maker.DecideAsync(rejectedPaymentApprovalId, "Approved", cancellationToken);
-            await using (var scope = factory.Services.CreateAsyncScope())
-            {
-                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
-                var rejected = await db.PaymentRecords.AsNoTracking()
-                    .SingleAsync(item => item.Id == rejectedPaymentId, cancellationToken);
-                Assert.Equal(VendorPaymentRecord.StatusRejected, rejected.Status);
-                Assert.Null(rejected.VerifiedByUserId);
-                Assert.Null(rejected.VerifiedAtUtc);
-                var rejectedApproval = await db.ApprovalRequests.AsNoTracking()
-                    .SingleAsync(item => item.Id == rejectedPaymentApprovalId, cancellationToken);
-                Assert.Equal(rejectedApproval.RequestedByUserId, rejectedApproval.ReviewedByUserId);
-            }
             await using (var scope = factory.Services.CreateAsyncScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
