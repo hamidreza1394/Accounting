@@ -495,6 +495,36 @@ public static class VendorLicenseAmendmentPayloadBuilder
         return true;
     }
 
+    /// <summary>
+    /// Pure request-time validation for support/updates amendment requests. The reference point
+    /// is always the current SIGNATURE-VERIFIED payload (never operator input or guessed state):
+    /// a requested period must strictly extend a previously granted one and stay in the future.
+    /// Returns null when the request is buildable; otherwise the same stable error code the
+    /// issuance builder would fail with later, so an invalid request is never stored as
+    /// <c>Requested</c> and the operator gets an actionable message at submission time.
+    /// Payment state is deliberately absent (D-108 \u00a71); this validation never creates or
+    /// issues anything by itself.
+    /// </summary>
+    public static string? ValidateRequestedPeriods(
+        LicensePayload currentPayload,
+        DateTimeOffset? newSupportUntilUtc,
+        DateTimeOffset? newUpdatesUntilUtc,
+        DateTimeOffset issuedAtUtc)
+    {
+        ArgumentNullException.ThrowIfNull(currentPayload);
+        if (currentPayload.FormatVersion != LicensePayload.CurrentFormatVersion)
+            return "support_update_periods_require_payload_v2";
+        if (newSupportUntilUtc is null && newUpdatesUntilUtc is null)
+            return "amendment_has_no_period_increase";
+        if (newSupportUntilUtc is { } supportUntil &&
+            !TryExtendPeriod(currentPayload.SupportUntilUtc, supportUntil, issuedAtUtc, "support", out _, out var supportError))
+            return supportError;
+        if (newUpdatesUntilUtc is { } updatesUntil &&
+            !TryExtendPeriod(currentPayload.UpdatesUntilUtc, updatesUntil, issuedAtUtc, "updates", out _, out var updatesError))
+            return updatesError;
+        return null;
+    }
+
     private static bool TryExtendPeriod(
         DateTimeOffset? currentUntilUtc,
         DateTimeOffset? requestedUntilUtc,
