@@ -611,7 +611,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                     item.ActionCode == "vendor.customer.updated" && item.SubjectId == customerId.ToString("D"), cancellationToken));
             }
 
-            // Direct status changes are blocked; an authorized Vendor administrator must decide the proposal.
+            // Direct status changes are blocked; a distinct administrator must approve the proposal.
             byte[] customerStatusVersion;
             await using (var scope = factory.Services.CreateAsyncScope())
             {
@@ -1078,7 +1078,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
             {
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
                 using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-                // The isolated self-review request was rejected; customer, installation, license, and provisioning requests remain pending.
+                // Customer, installation, license, and provisioning requests are still pending.
                 Assert.Equal(4, json.RootElement.GetProperty("totalCount").GetInt32());
                 var pendingIds = json.RootElement.GetProperty("items").EnumerateArray()
                     .Select(item => item.GetProperty("id").GetGuid())
@@ -1228,7 +1228,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
             using var createdJson = JsonDocument.Parse(await createdResponse.Content.ReadAsStringAsync(cancellationToken));
             var createdCustomerId = createdJson.RootElement.GetProperty("id").GetGuid();
 
-            // A second MFA-authenticated administrator is retained for authorization/retry checks; D-109 permits the requester to submit the initial approval decisions.
+            // A distinct MFA-authenticated administrator can approve both requests.
             using var reviewerClient = factory.CreateClient(new WebApplicationFactoryClientOptions
             {
                 BaseAddress = new Uri("https://localhost"),
@@ -1263,20 +1263,20 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal(HttpStatusCode.NotFound, inaccessibleDecision.StatusCode);
             }
 
-            using (var licenseDecisionResponse = await PostWithTokenAsync(client,
+            using (var licenseDecisionResponse = await PostWithTokenAsync(reviewerClient,
                 $"/api/vendor/approvals/{licenseApprovalId:D}/decision",
-                new { decision = "Approved", rowVersion = licenseApprovalRowVersion, comment = "self-approval must still fail closed without signer" },
-                antiForgeryToken, cancellationToken))
+                new { decision = "Approved", rowVersion = licenseApprovalRowVersion, comment = "must fail closed without signer" },
+                reviewerAntiForgeryToken, cancellationToken))
             {
                 Assert.Equal(HttpStatusCode.ServiceUnavailable, licenseDecisionResponse.StatusCode);
                 using var json = JsonDocument.Parse(await licenseDecisionResponse.Content.ReadAsStringAsync(cancellationToken));
                 Assert.Equal("license_issuance_unavailable", json.RootElement.GetProperty("error").GetString());
             }
 
-            using (var provisioningDecisionResponse = await PostWithTokenAsync(client,
+            using (var provisioningDecisionResponse = await PostWithTokenAsync(reviewerClient,
                 $"/api/vendor/approvals/{provisioningApprovalId:D}/decision",
-                new { decision = "Approved", rowVersion = provisioningApprovalRowVersion, comment = "self-approval must still fail closed without signer" },
-                antiForgeryToken, cancellationToken))
+                new { decision = "Approved", rowVersion = provisioningApprovalRowVersion, comment = "First attempt must fail closed" },
+                reviewerAntiForgeryToken, cancellationToken))
             {
                 var provisioningDecisionBody = await provisioningDecisionResponse.Content.ReadAsStringAsync(cancellationToken);
                 Assert.True(provisioningDecisionResponse.StatusCode == HttpStatusCode.ServiceUnavailable,
@@ -1340,7 +1340,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
             {
                 using var response = await PostWithTokenAsync(reviewerClient,
                     $"/api/vendor/approvals/{approval.Id:D}/decision",
-                    new { decision = "Approved", rowVersion = approval.RowVersion, comment = "Reviewed by an authorized Vendor administrator" },
+                    new { decision = "Approved", rowVersion = approval.RowVersion, comment = "Reviewed by a distinct administrator" },
                     reviewerAntiForgeryToken, cancellationToken);
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
                 using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
