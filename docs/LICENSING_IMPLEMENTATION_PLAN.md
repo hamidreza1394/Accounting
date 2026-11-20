@@ -239,6 +239,14 @@ Issue #396 فقط مسئول startup gate و Activation Wizard است؛ contract
 - **NotImplemented:** سفارش/پرداخت، persistence، endpoint، approval، signer/export و وضعیت‌های Purchased/Delivered/Acknowledged. هیچ Migration یا Customer-side change انجام نشده است.
 
 
+## وضعیت اجرایی Issue #393 — اتصال خرید تأییدشده به Amendment امضاشده (2026-11-20، برش چهارم)
+
+- **Implemented / Verified in PR جاری:** درخواست صریح Amendment (Entity + endpoint + قواعد خالص) از ردیف سفارش دارای پرداخت Verified؛ کاندید همیشه با builderهای رسمی (`TryBuildMaxCompaniesIncrease`/`TryBuildSupportAndUpdatePeriodExtension`) از آخرین پاکت امضاشده و verify‌شده بازسازی و با pipeline امضای موجود به‌صورت sequence+1 روی همان LicenseId صادر می‌شود؛ Delivery بدون تغییر از مسیر موجود (`VendorProvisioningLicenseResolver`) انجام می‌شود؛ preview فقط-خواندنی برای بازبینی اپراتور.
+- **کنترل‌های fail-closed:** unique filtered index روی OrderLineId برای وضعیت‌های فعال (ضد تکرار/Replay)؛ verify امضا و hash قبل از هر build؛ sequence stale و binding نامعتبر رد می‌شود؛ شکست Signer → 503 بدون تغییر وضعیت؛ شکست Audit → Rollback کامل تراکنش؛ Rejected اجازه retry اصلاح‌شده می‌دهد؛ تأیید پرداخت خودکار Amendment نمی‌سازد و صدور به پرداخت وابسته نیست (D-108).
+- **Blocked:** Company-scoped Module/Feature/UserSeat — نیاز به CompanyReference معتبر #392 دارد؛ builder company-scoped عمداً در جریان جدید expose نشده است. هیچ تغییر در Customer `Server/**` انجام نشد.
+- **NotImplemented:** ACK/Applied tracking اختصاصی Amendment (وضعیت Applied همچنان فقط با Customer ACK معتبر ثبت می‌شود — در مسیر provisioning موجود) و Delivery tracking جداگانه برای Amendment؛ در صورت نیاز مالک به Issue مستقل ارجاع می‌شود.
+
+
 ## وضعیت اجرایی Issue #393 — رابط کاربری چرخه فروش و پرداخت (2026-11-20)
 - **Implemented / Verified in main:** چرخه کامل Backend سفارش تجاری/پرداخت/تأیید مستقل/گزارش مطالبات از PR #722 (squash `c46e200b`) در main است؛ Migration `20261119175924_VendorSalesOrdersAndPayments`، مجوزهای `vendor.payments.read|manage|verify` و تست‌های Unit + SQL Server مربوط موجودند. درخواست امضای مأموریت فعلی، `origin/agent/393-vendor-payment-cycle` (شاخه قدیمی بر پایه main قبل از #722/#724) را بررسی کردیم؛ محتوای Backend آن با #722 در main منطبق است و بازنویسی نشد.
 - **Implemented در PR جاری (فقط UI و تست):** صفحه فارسی/RTL «فروش و پرداخت» در Vendor Web (`VendorSales.tsx`) با فهرست سفارش‌ها، ثبت سفارش با ردیف‌ها و کنترل جمع، ثبت پرداخت دستی با مرجع رسید، درخواست تأیید/رد پرداخت با RowVersion، گزارش «مطالبات باز»، نمایش مانده بدهی و اضافه‌پرداخت و وضعیت معوق؛ صفحه «درخواست‌های تأیید» اکنون درخواست‌های `salesOrderPayment` را با برچسب اختصاصی و تصمیم‌گیری با مجوز `vendor.payments.verify` نمایش می‌دهد. تست‌های Vitest برای همه حالت‌ها اضافه شد و یک تست SQL Server برای گاردهای stale RowVersion، تصمیم تکراری، رد مجوز و Rollback شکست Audit اضافه شد.

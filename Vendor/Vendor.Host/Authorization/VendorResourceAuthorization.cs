@@ -74,6 +74,12 @@ public static class VendorResourceCatalog
             {
                 VendorPermissionCatalog.PaymentsRead,
                 VendorPermissionCatalog.PaymentsVerify
+            },
+            ["licenseAmendment"] = new HashSet<string>(StringComparer.Ordinal)
+            {
+                VendorPermissionCatalog.LicensesRead,
+                VendorPermissionCatalog.LicensesManage,
+                VendorPermissionCatalog.LicensesIssue
             }
         };
 

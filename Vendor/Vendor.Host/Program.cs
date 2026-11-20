@@ -186,6 +186,7 @@ builder.Services.AddScoped<VendorProvisioningLicenseResolver>();
 builder.Services.AddScoped<VendorLicenseEnvelopeFactory>();
 builder.Services.AddScoped<VendorLicenseIssuanceService>();
 builder.Services.AddScoped<VendorPaymentVerificationService>();
+builder.Services.AddScoped<VendorLicenseAmendmentIssuanceService>();
 builder.Services.AddScoped<VendorProvisioningIssuanceService>();
 builder.Services.AddScoped<VendorOfflineRevocationSnapshotFactory>();
 builder.Services.AddScoped<VendorOfflineRevocationIssuanceService>();
@@ -501,6 +502,7 @@ app.MapVendorBusinessEndpoints();
 app.MapVendorProvisioningEndpoints();
 app.MapVendorApprovalEndpoints();
 app.MapVendorSalesEndpoints();
+app.MapVendorLicenseAmendmentEndpoints();
 app.MapVendorOfflineRevocationEndpoints();
 app.MapFallback(async context =>
 {

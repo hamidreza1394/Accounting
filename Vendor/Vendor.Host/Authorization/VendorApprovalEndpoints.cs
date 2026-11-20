@@ -140,6 +140,7 @@ public static class VendorApprovalEndpoints
             VendorProvisioningIssuanceService provisioningIssuance,
             VendorOfflineRevocationIssuanceService offlineRevocationIssuance,
             VendorPaymentVerificationService paymentVerification,
+            VendorLicenseAmendmentIssuanceService amendmentIssuanceService,
             TimeProvider timeProvider, CancellationToken ct) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context))
@@ -164,7 +165,7 @@ public static class VendorApprovalEndpoints
                 resourceType == "provisioning" ? IsolationLevel.Serializable : IsolationLevel.ReadCommitted, ct);
             var approval = await db.ApprovalRequests.SingleOrDefaultAsync(item => item.Id == id, ct);
             if (approval is null) return Results.NotFound();
-            if (approval.ResourceType is not ("customer" or "installation" or "license" or "provisioning" or "salesOrderPayment"))
+            if (approval.ResourceType is not ("customer" or "installation" or "license" or "provisioning" or "salesOrderPayment" or "licenseAmendment"))
                 return Results.NotFound();
 
             VendorProvisioningRequest? provisioning = null;
@@ -290,6 +291,60 @@ public static class VendorApprovalEndpoints
                 if (!verification.Succeeded)
                     return Results.Json(new { error = verification.ErrorCode }, statusCode: verification.StatusCode);
 
+                await tx.CommitAsync(ct);
+                return Results.Ok(ToResponse(approval));
+            }
+
+            // Amendment issuance reuses the fail-closed license signing pipeline (D-108/D-109):
+            // the candidate is rebuilt from the latest signature-verified envelope and signed as
+            // the next sequence of the same license. Payment state is never consulted here.
+            if (approval.ResourceType == "licenseAmendment" && request.Decision == "Approved")
+            {
+                var amendmentIssuance = await amendmentIssuanceService.IssueApprovedAsync(
+                    approval, actor.Id, expectedApprovalVersion,
+                    request.Comment, CorrelationId(), ct);
+                if (!amendmentIssuance.Succeeded)
+                    return Results.Json(new { error = amendmentIssuance.ErrorCode }, statusCode: amendmentIssuance.StatusCode);
+
+                await tx.CommitAsync(ct);
+                return Results.Ok(ToResponse(approval));
+            }
+
+            if (approval.ResourceType == "licenseAmendment" && request.Decision == "Rejected")
+            {
+                var amendmentRequest = await db.LicenseAmendmentRequests.SingleOrDefaultAsync(
+                    item => item.Id == approval.ResourceId, ct);
+                if (amendmentRequest is null ||
+                    amendmentRequest.Status != VendorLicenseAmendmentRequest.StatusPendingApproval ||
+                    !amendmentRequest.RowVersion.AsSpan().SequenceEqual(approval.ExpectedResourceRowVersion))
+                    return Results.Conflict(new { error = "approval_resource_stale" });
+
+                var amendedAt = timeProvider.GetUtcNow().ToUniversalTime();
+                db.Entry(amendmentRequest).Property(item => item.RowVersion).OriginalValue =
+                    approval.ExpectedResourceRowVersion;
+                amendmentRequest.Status = VendorLicenseAmendmentRequest.StatusRejected;
+                amendmentRequest.FailureCode = "amendment_rejected";
+                amendmentRequest.UpdatedAtUtc = amendedAt;
+                approval.Status = "Rejected";
+                approval.ReviewedByUserId = actor.Id;
+                approval.ReviewedAtUtc = amendedAt;
+                approval.ReviewComment = string.IsNullOrWhiteSpace(request.Comment) ? null : request.Comment.Trim();
+                db.Entry(approval).Property(item => item.RowVersion).OriginalValue = expectedApprovalVersion;
+                try
+                {
+                    await db.SaveChangesAsync(ct);
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    return Results.Conflict(new { error = "stale_approval_or_resource_version" });
+                }
+
+                await audit.AppendAsync(new VendorAuditWriteRequest(
+                    actor.Id, "vendor.approval.rejected", nameof(VendorApprovalRequest),
+                    approval.Id.ToString("D"), CorrelationId()), ct);
+                await audit.AppendAsync(new VendorAuditWriteRequest(
+                    actor.Id, "vendor.amendment.rejected", nameof(VendorLicenseAmendmentRequest),
+                    amendmentRequest.Id.ToString("D"), CorrelationId()), ct);
                 await tx.CommitAsync(ct);
                 return Results.Ok(ToResponse(approval));
             }
@@ -456,6 +511,7 @@ public static class VendorApprovalEndpoints
         "license" => VendorPermissionCatalog.LicensesIssue,
         "provisioning" => VendorPermissionCatalog.CustomersManage,
         "salesOrderPayment" => VendorPermissionCatalog.PaymentsVerify,
+        "licenseAmendment" => VendorPermissionCatalog.LicensesIssue,
         _ => throw new ArgumentOutOfRangeException(nameof(resourceType))
     };
 

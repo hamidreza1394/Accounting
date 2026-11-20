@@ -21,6 +21,7 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
     public DbSet<Domain.VendorProvisioningRequest> ProvisioningRequests => Set<Domain.VendorProvisioningRequest>();
     public DbSet<Domain.VendorSalesOrder> SalesOrders => Set<Domain.VendorSalesOrder>();
     public DbSet<Domain.VendorPaymentRecord> PaymentRecords => Set<Domain.VendorPaymentRecord>();
+    public DbSet<Domain.VendorLicenseAmendmentRequest> LicenseAmendmentRequests => Set<Domain.VendorLicenseAmendmentRequest>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -278,6 +279,37 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
             entity.HasIndex(item => new { item.Status, item.OrderId });
             entity.HasOne(item => item.Order).WithMany(order => order.Payments)
                 .HasForeignKey(item => item.OrderId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<Domain.VendorLicenseAmendmentRequest>(entity =>
+        {
+            entity.ToTable("VendorLicenseAmendmentRequests", table =>
+            {
+                table.HasCheckConstraint("CK_VendorLicenseAmendmentRequests_Status",
+                    "[Status] IN (N'Requested', N'PendingApproval', N'Issued', N'Rejected', N'Failed')");
+                table.HasCheckConstraint("CK_VendorLicenseAmendmentRequests_Kind",
+                    "[Kind] IN (N'maxCompanies', N'supportUpdates')");
+            });
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Kind).HasMaxLength(32).IsUnicode(false).IsRequired();
+            entity.Property(item => item.Status).HasMaxLength(32).IsUnicode(false).IsRequired();
+            entity.Property(item => item.FailureCode).HasMaxLength(64).IsUnicode(false);
+            entity.Property(item => item.CreatedAtUtc).HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
+            entity.Property(item => item.UpdatedAtUtc).HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
+            entity.Property(item => item.RowVersion).IsRowVersion();
+            entity.HasIndex(item => item.OrderLineId).IsUnique().HasFilter("[Status] IN (N'Requested', N'PendingApproval', N'Issued')");
+            entity.HasIndex(item => item.LicenseId);
+            entity.HasIndex(item => item.CustomerId);
+            entity.HasIndex(item => item.OrderId);
+            entity.HasIndex(item => item.ApprovalRequestId);
+            entity.HasOne(item => item.OrderLine).WithMany()
+                .HasForeignKey(item => item.OrderLineId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(item => item.Order).WithMany()
+                .HasForeignKey(item => item.OrderId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(item => item.Customer).WithMany()
+                .HasForeignKey(item => item.CustomerId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(item => item.License).WithMany()
+                .HasForeignKey(item => item.LicenseId).OnDelete(DeleteBehavior.Restrict);
         });
 
         builder.Entity<Domain.VendorApprovalRequest>(entity =>

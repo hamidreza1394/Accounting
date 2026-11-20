@@ -51,7 +51,7 @@ function ordersPage(items: Array<Record<string, unknown>>) {
 
 const orderDetail = {
   ...collectibleOrder,
-  lines: [{ id: 'line-1', productCode: 'ADDON-COMPANY', description: 'افزایش ظرفیت شرکت', quantity: 3, unitAmount: 400, lineAmount: 1200, licenseId: null }],
+  lines: [{ id: 'line-1', productCode: 'addon.company.seat', description: 'افزایش ظرفیت شرکت', quantity: 3, unitAmount: 400, lineAmount: 1200, licenseId: 'license-1' }],
   payments: [
     {
       id: 'payment-1', orderId: 'order-1', amount: 300, currencyCode: 'IRR', method: 'bank_transfer',
@@ -201,5 +201,81 @@ describe('Vendor sales and payments workspace', () => {
     expect(await screen.findByText('SO-1405-002')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /سفارش جدید/ })).not.toBeInTheDocument();
     expect(screen.getAllByText('پرداخت‌شده').length).toBeGreaterThan(0);
+  });
+
+  it('previews, records and submits a license amendment for a purchased line with a verified payment', async () => {
+    const calls: Array<{ url: string; init?: RequestInit | undefined; body?: unknown }> = [];
+    let amendmentCreated = false;
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const body = init?.body ? (JSON.parse(String(init.body)) as unknown) : undefined;
+      calls.push({ url, init, body });
+      if (url.startsWith('/api/vendor/sales-orders/?')) return Promise.resolve(response(ordersPage([collectibleOrder])));
+      if (url.startsWith('/api/vendor/receivables/?')) return Promise.resolve(response(page([])));
+      if (url === '/api/auth/antiforgery') return Promise.resolve(response({ requestToken: 'csrf-amendment' }));
+      if (url === `/api/vendor/sales-orders/${collectibleOrder.id}`) return Promise.resolve(response(orderDetail));
+      if (url.includes('/api/vendor/license-amendment-requests/?orderId=')) {
+        return Promise.resolve(response(amendmentCreated ? page([{
+          id: 'amendment-1', orderId: collectibleOrder.id, orderLineId: 'line-1', licenseId: 'license-1',
+          kind: 'maxCompanies', requestedMaxCompanies: 8, requestedSupportUntilUtc: null,
+          requestedUpdatesUntilUtc: null, status: 'Requested', failureCode: null, rowVersion: 'AQIDBAUGBwg=',
+        }]) : page([])));
+      }
+      if (url === '/api/vendor/license-amendment-requests/preview')
+        return Promise.resolve(response({ sequence: 2, maxCompanies: 8, supportUntilUtc: null, updatesUntilUtc: null }));
+      if (url === '/api/vendor/license-amendment-requests') {
+        amendmentCreated = true;
+        return Promise.resolve(response({ id: 'amendment-1' }, 201));
+      }
+      if (url === '/api/vendor/license-amendment-requests/amendment-1/approval-request')
+        return Promise.resolve(response({ approvalId: 'approval-am' }, 202));
+      return Promise.resolve(response({}, 404));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<VendorSales permissions={['vendor.payments.read', 'vendor.payments.manage', 'vendor.licenses.manage', 'vendor.licenses.issue']} />);
+
+    fireEvent.click((await screen.findAllByRole('button', { name: 'جزئیات' }))[0]!);
+    expect(await screen.findByText('Amendment لایسنس (خرید تأییدشده)')).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: 'درخواست Amendment' }));
+    fireEvent.change(await screen.findByLabelText('سقف جدید شرکت‌ها'), { target: { value: '8' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'پیش‌نمایش' }));
+    expect(await screen.findByText(/پیش‌نمایش کاندید: نسخه ۲/)).toBeInTheDocument();
+    const preview = calls.find(call => call.url === '/api/vendor/license-amendment-requests/preview');
+    expect(preview!.body).toMatchObject({ orderLineId: 'line-1', licenseId: 'license-1', kind: 'maxCompanies', requestedMaxCompanies: 8 });
+    expect(preview!.init!.headers).toMatchObject({ 'X-CSRF-TOKEN': 'csrf-amendment' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'ثبت درخواست' }));
+    expect(await screen.findByText(/پس از بازبینی، آن را برای تأیید مدیر ارسال کنید/)).toBeInTheDocument();
+    const create = calls.find(call => call.url === '/api/vendor/license-amendment-requests' && call.init?.method === 'POST');
+    expect(create!.body).toMatchObject({ kind: 'maxCompanies', requestedMaxCompanies: 8 });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'ارسال برای تأیید' }));
+    expect(await screen.findByText(/در صفحه درخواست‌های تأیید انجام می‌شود/)).toBeInTheDocument();
+    const submitted = calls.find(call => call.url.includes('/approval-request'));
+    expect(submitted!.body).toMatchObject({ rowVersion: 'AQIDBAUGBwg=' });
+  });
+
+  it('explains why an amendment cannot start without a verified payment', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      void init;
+      if (url.startsWith('/api/vendor/sales-orders/?')) return Promise.resolve(response(ordersPage([collectibleOrder])));
+      if (url.startsWith('/api/vendor/receivables/?')) return Promise.resolve(response(page([])));
+      if (url === '/api/auth/antiforgery') return Promise.resolve(response({ requestToken: 'csrf-amendment' }));
+      if (url === `/api/vendor/sales-orders/${collectibleOrder.id}`) return Promise.resolve(response(orderDetail));
+      if (url.includes('/api/vendor/license-amendment-requests/?orderId=')) return Promise.resolve(response(page([])));
+      if (url === '/api/vendor/license-amendment-requests')
+        return Promise.resolve(response({ error: 'order_payment_not_verified' }, 409));
+      return Promise.resolve(response({}, 404));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<VendorSales permissions={['vendor.payments.read', 'vendor.payments.manage', 'vendor.licenses.manage', 'vendor.licenses.issue']} />);
+
+    fireEvent.click((await screen.findAllByRole('button', { name: 'جزئیات' }))[0]!);
+    fireEvent.click(await screen.findByRole('button', { name: 'درخواست Amendment' }));
+    fireEvent.change(await screen.findByLabelText('سقف جدید شرکت‌ها'), { target: { value: '8' } });
+    fireEvent.click(screen.getByRole('button', { name: 'ثبت درخواست' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('هیچ پرداخت تأییدشده‌ای برای این سفارش ثبت نشده است');
   });
 });
