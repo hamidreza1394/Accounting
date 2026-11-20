@@ -42,44 +42,52 @@ public sealed record DatabaseScope(Guid TenantId, Guid? CompanyId = null, Guid? 
 }
 
 /// <summary>
-/// The authoritative routing answer for one logical scope: exactly one physical target
-/// (D-115 §2). The connection string is a secret (D-115 §3): it is stored in a private
-/// field and is only handed out through <see cref="GetConnectionString"/> for the layer
-/// that actually opens the connection — so it cannot leak through a public property,
-/// <see cref="ToString"/>, JSON serialization, structured-logging destructuring, audit
-/// events, error messages or API responses.
+/// The authoritative routing answer for one logical scope: exactly one physical target,
+/// named by its registry reference only (D-115 §2). This type deliberately carries no
+/// credential — the connection string never leaves the <see cref="IDatabaseTargetRegistry"/>
+/// implementation (see <see cref="IDatabaseConnectionSecrets"/>) — so <see cref="ToString"/>,
+/// JSON serialization, structured-logging destructuring, audit events, error messages, test
+/// failure messages and API responses cannot leak it, and public routing consumers have no
+/// way to obtain it at all.
 /// </summary>
-public sealed class DatabaseTarget
+public sealed record DatabaseTarget(string DatabaseId);
+
+/// <summary>
+/// The restricted access path to the connection strings held by the registry (D-115 §3).
+/// Deliberately <c>internal</c> and implemented explicitly on
+/// <see cref="ConfigurationDatabaseTargetRegistry"/>: the secret is reachable only from the
+/// assembly that actually opens the connection — the <c>Data.DatabaseContext</c> factory in
+/// <c>Infrastructure.Persistence</c>, granted visibility through <c>InternalsVisibleTo</c>
+/// (see Server.csproj) — never through the public routing API. Stated C# limit: visibility
+/// is enforced per assembly, not per call site, so code compiled inside the Server assembly
+/// would also see internals; keeping production consumers out of it is a code-review rule.
+/// </summary>
+internal interface IDatabaseConnectionSecrets
 {
-	private readonly string _connectionString;
+	/// <summary>
+	/// Returns the connection string of the referenced target, or <c>false</c> when the
+	/// reference is unknown or its configured value is missing/empty. Never throws, never
+	/// logs, and the out value stays empty on failure.
+	/// </summary>
+	bool TryGetConnectionString(string databaseId, out string connectionString);
+}
 
-	public DatabaseTarget(string databaseId, string connectionString)
+/// <summary>
+/// Strict topology-name parsing (D-111 §2 names, case-insensitive; the exact numeric value
+/// of a defined member is also accepted because the configuration is server-side and
+/// owner-controlled). Plain <c>Enum.TryParse</c> would accept undefined numeric strings
+/// such as <c>999</c> — <see cref="Enum.IsDefined{TEnum}(TEnum)"/> rejects them so no
+/// unknown topology can become a valid routing target (fail closed, D-115 §2). The pending
+/// <c>TenantFiscalPeriodDatabase</c> kind parses as defined; callers reject it with their
+/// own distinct <c>topology_kind_pending_owner_decision</c> code (D-115 §8).
+/// </summary>
+internal static class DatabaseTopologyKindParser
+{
+	public static bool TryParse(string? value, out DatabaseTopologyKind kind)
 	{
-		DatabaseId = databaseId;
-		_connectionString = connectionString;
+		kind = default;
+		return Enum.TryParse(value, ignoreCase: true, out kind) && Enum.IsDefined(kind);
 	}
-
-	/// <summary>The registry reference of the target database (not a credential).</summary>
-	public string DatabaseId { get; }
-
-	/// <summary>
-	/// The only way to obtain the connection string; callers outside the connection layer
-	/// must not use it. The value never appears in <see cref="ToString"/>, logs or errors.
-	/// </summary>
-	public string GetConnectionString() => _connectionString;
-
-	/// <summary>
-	/// The default textual representation is the identifier only, so an accidental
-	/// <c>ToString()</c>, log line or exception message can never leak the secret.
-	/// </summary>
-	public override string ToString() => $"DatabaseId={DatabaseId}";
-
-	public bool Equals(DatabaseTarget? other) =>
-		other is not null && DatabaseId == other.DatabaseId && _connectionString == other._connectionString;
-
-	public override bool Equals(object? obj) => obj is DatabaseTarget other && Equals(other);
-
-	public override int GetHashCode() => HashCode.Combine(DatabaseId, _connectionString);
 }
 
 /// <summary>Fail-closed routing outcome with a stable, non-sensitive error code (D-115 §2).</summary>

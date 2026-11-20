@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Reflection;
 using System.Text.Json;
 using Infrastructure.DatabaseTopology;
 using Microsoft.Extensions.Logging;
@@ -9,21 +10,12 @@ namespace Template.Tests;
 
 /// <summary>
 /// Unit tests for the D-115 database routing registry: per-topology resolution over the
-/// three approved topologies, the rejected pending Tenant+FiscalPeriod topology, the
-/// fail-closed error codes, the single-authoritative-destination rule, cross-scope safety,
-/// secret non-disclosure (ToString, JSON, logging, exceptions) and the fail-fast
-/// configuration validation. Pure resolution logic; no database is needed.
-///
-/// Coverage of the mission's required routing scenarios:
-/// 1 approved topologies (TenantDatabase, CompanyDatabase, CompanyFiscalPeriodDatabase);
-/// 2 pending Tenant+FiscalPeriod rejected (resolve + validate); 3 empty TenantId;
-/// 4 missing CompanyId in Company topology; 5 missing FiscalPeriodId in
-/// Company+FiscalPeriod topology; 6 unrelated Company+Period identity; 7 FiscalPeriod of
-/// another company; 8 unrelated tenant; 9 duplicate assignment (validate);
-/// 10 conflicting assignment (resolve); 11 missing assignment; 12/13 invalid target
-/// connection; 14 ToString; 15 JSON; 16 structured logging; 17 enabled without
-/// assignments; 18 disabled configuration; 19 invalid scope fail-closed;
-/// 20 concurrent scope isolation.
+/// three approved topologies, the rejected pending Tenant+FiscalPeriod topology, strict
+/// topology parsing (undefined numeric values rejected), the fail-closed error codes, the
+/// single-authoritative-destination rule, cross-scope safety, secret non-disclosure
+/// (public surface, ToString, JSON, logging, exceptions, test failures), the restricted
+/// internal secret access path, the startup snapshot lifetime (no runtime reload) and the
+/// fail-fast configuration validation. Pure resolution logic; no database is needed.
 /// </summary>
 public sealed class DatabaseTopologyRoutingTests
 {
@@ -37,36 +29,6 @@ public sealed class DatabaseTopologyRoutingTests
 	private static readonly Guid CompanyTwo = Guid.NewGuid();
 	private static readonly Guid FiscalPeriodOne = Guid.NewGuid();
 	private static readonly Guid FiscalPeriodTwo = Guid.NewGuid();
-
-	private sealed class StaticOptionsMonitor(DatabaseTopologyOptions options) :
-		IOptionsMonitor<DatabaseTopologyOptions>
-	{
-		public DatabaseTopologyOptions CurrentValue => options;
-
-		public DatabaseTopologyOptions Get(string? name) => options;
-
-		public IDisposable? OnChange(Action<DatabaseTopologyOptions, string?> listener) => null;
-	}
-
-	/// <summary>A minimal capturing logger that records formatted and destructured output.</summary>
-	private sealed class CapturingLogger : ILogger
-	{
-		public List<string> FormattedMessages { get; } = [];
-
-		public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-
-		public bool IsEnabled(LogLevel logLevel) => true;
-
-		public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
-			Func<TState, Exception?, string> formatter)
-		{
-			FormattedMessages.Add(formatter(state, exception));
-			if (exception is not null)
-			{
-				FormattedMessages.Add(exception.ToString());
-			}
-		}
-	}
 
 	private static DatabaseTopologyOptions Options(
 		string topology,
@@ -84,8 +46,17 @@ public sealed class DatabaseTopologyRoutingTests
 			},
 		};
 
+	// The registry binds once at startup (IOptions snapshot): the wrapper holds one
+	// validated instance for the whole test, exactly like the DI singleton does.
 	private static ConfigurationDatabaseTargetRegistry Registry(DatabaseTopologyOptions options) =>
-		new(new StaticOptionsMonitor(options));
+		new(Microsoft.Extensions.Options.Options.Create(options));
+
+	/// <summary>The tests themselves use the restricted internal path (InternalsVisibleTo).</summary>
+	private static string SecretOf(IDatabaseTargetRegistry registry, string databaseId)
+	{
+		Assert.True(((IDatabaseConnectionSecrets)registry).TryGetConnectionString(databaseId, out var secret));
+		return secret;
+	}
 
 	// 1 — the three approved topologies resolve to their own destination.
 
@@ -102,7 +73,7 @@ public sealed class DatabaseTopologyRoutingTests
 
 		Assert.True(resolution.Success);
 		Assert.Equal("main", resolution.Target!.DatabaseId);
-		Assert.Equal(MainConnectionString, resolution.Target.GetConnectionString());
+		Assert.Equal(MainConnectionString, SecretOf(registry, "main"));
 	}
 
 	[Fact]
@@ -116,7 +87,8 @@ public sealed class DatabaseTopologyRoutingTests
 		var resolution = registry.Resolve(new DatabaseScope(TenantOne, CompanyOne));
 
 		Assert.True(resolution.Success);
-		Assert.Equal(CompanyAConnectionString, resolution.Target!.GetConnectionString());
+		Assert.Equal("company-a", resolution.Target!.DatabaseId);
+		Assert.Equal(CompanyAConnectionString, SecretOf(registry, "company-a"));
 	}
 
 	[Fact]
@@ -137,7 +109,8 @@ public sealed class DatabaseTopologyRoutingTests
 			new DatabaseScope(TenantOne, CompanyOne, FiscalPeriodOne));
 
 		Assert.True(resolution.Success);
-		Assert.Equal(PeriodConnectionString, resolution.Target!.GetConnectionString());
+		Assert.Equal("period-1405", resolution.Target!.DatabaseId);
+		Assert.Equal(PeriodConnectionString, SecretOf(registry, "period-1405"));
 	}
 
 	// 2 — the pending Tenant+FiscalPeriod topology is never routable and never valid.
@@ -185,6 +158,54 @@ public sealed class DatabaseTopologyRoutingTests
 				(IEnumerable<string>)["topology_kind_pending_owner_decision"],
 				options.Validate());
 		}
+	}
+
+	// — strict topology parsing: no undefined value becomes a routing target.
+
+	[Fact]
+	public void NumericDefinedTopologyKind_IsAcceptedLikeItsName()
+	{
+		// The configuration is server-side and owner-controlled; the exact numeric value of
+		// a defined member behaves exactly like its name (CompanyDatabase = 2).
+		var registry = Registry(Options(
+			"2",
+			connections: null,
+			new DatabaseAssignmentOption { TenantId = TenantOne, CompanyId = CompanyOne, DatabaseId = "company-a" }));
+
+		var resolution = registry.Resolve(new DatabaseScope(TenantOne, CompanyOne));
+
+		Assert.True(resolution.Success);
+		Assert.Equal("company-a", resolution.Target!.DatabaseId);
+	}
+
+	[Fact]
+	public void UndefinedNumericTopology_FailsClosedOnResolve()
+	{
+		var registry = Registry(Options(
+			"999",
+			connections: null,
+			new DatabaseAssignmentOption { TenantId = TenantOne, DatabaseId = "main" }));
+
+		var resolution = registry.Resolve(new DatabaseScope(TenantOne));
+
+		Assert.False(resolution.Success);
+		Assert.Null(resolution.Target);
+		Assert.Equal("topology_kind_invalid", resolution.ErrorCode);
+	}
+
+	[Theory]
+	[InlineData("")]
+	[InlineData("   ")]
+	[InlineData("999")]
+	[InlineData("SomethingElse")]
+	public void UnusableTopologyConfiguration_FailsFastOnValidate(string brokenTopology)
+	{
+		var options = Options(
+			brokenTopology,
+			connections: null,
+			new DatabaseAssignmentOption { TenantId = TenantOne, DatabaseId = "main" });
+
+		Assert.Equal((IEnumerable<string>)["topology_kind_invalid"], options.Validate());
 	}
 
 	// 3, 4, 5, 19 — incomplete or invalid scopes are rejected fail-closed.
@@ -422,29 +443,33 @@ public sealed class DatabaseTopologyRoutingTests
 		Assert.Equal("topology_disabled", resolution.ErrorCode);
 	}
 
+	// 14, 15, 16 — the connection string is a secret and cannot leak through any surface;
+	// the safe target type carries no credential at all.
+
 	[Fact]
-	public void InvalidTopologyKind_FailsClosed()
+	public void DatabaseTarget_PublicSurface_CarriesNoSecretAccessor()
 	{
-		var registry = Registry(Options(
-			"SomethingElse",
-			connections: null,
-			new DatabaseAssignmentOption { TenantId = TenantOne, DatabaseId = "main" }));
+		// The public surface must not offer any way to reach a connection string: no
+		// GetConnectionString-style member and no property besides the registry reference.
+		var members = typeof(DatabaseTarget)
+			.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+			.Select(member => member.Name)
+			.ToList();
 
-		var resolution = registry.Resolve(new DatabaseScope(TenantOne));
-
-		Assert.False(resolution.Success);
-		Assert.Null(resolution.Target);
-		Assert.Equal("topology_kind_invalid", resolution.ErrorCode);
+		Assert.DoesNotContain(members, name => name.Contains("ConnectionString", StringComparison.OrdinalIgnoreCase));
+		var properties = typeof(DatabaseTarget)
+			.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+			.Select(property => property.Name)
+			.ToList();
+		Assert.Equal((IEnumerable<string>)["DatabaseId"], properties);
 	}
 
-	// 14, 15, 16 — the connection string is a secret and cannot leak through any surface.
-
 	[Fact]
-	public void DatabaseTarget_TextAndExceptionPaths_NeverContainTheConnectionString()
+	public void DatabaseTarget_TextAndExceptionPaths_NeverContainAConnectionString()
 	{
-		var target = new DatabaseTarget("main", MainConnectionString);
+		var target = new DatabaseTarget("main");
 
-		Assert.Equal("DatabaseId=main", target.ToString());
+		Assert.Equal("DatabaseTarget { DatabaseId = main }", target.ToString());
 		Assert.DoesNotContain(MainConnectionString, target.ToString(), StringComparison.Ordinal);
 
 		var exceptionMessage = new InvalidOperationException($"Routing failed for {target}").Message;
@@ -452,9 +477,9 @@ public sealed class DatabaseTopologyRoutingTests
 	}
 
 	[Fact]
-	public void DatabaseTarget_JsonSerialization_NeverContainsTheConnectionString()
+	public void DatabaseTarget_JsonSerialization_NeverContainsAConnectionString()
 	{
-		var target = new DatabaseTarget("main", MainConnectionString);
+		var target = new DatabaseTarget("main");
 
 		var targetJson = JsonSerializer.Serialize(target);
 		Assert.DoesNotContain(MainConnectionString, targetJson, StringComparison.Ordinal);
@@ -467,9 +492,9 @@ public sealed class DatabaseTopologyRoutingTests
 	}
 
 	[Fact]
-	public void DatabaseTarget_StructuredLogging_NeverContainsTheConnectionString()
+	public void DatabaseTarget_StructuredLogging_NeverContainsAConnectionString()
 	{
-		var target = new DatabaseTarget("main", MainConnectionString);
+		var target = new DatabaseTarget("main");
 		var logger = new CapturingLogger();
 
 		logger.Log(
@@ -482,19 +507,50 @@ public sealed class DatabaseTopologyRoutingTests
 		Assert.NotEmpty(logger.FormattedMessages);
 		Assert.All(logger.FormattedMessages, message =>
 			Assert.DoesNotContain(MainConnectionString, message, StringComparison.Ordinal));
-		Assert.Contains("DatabaseId=main", logger.FormattedMessages[0], StringComparison.Ordinal);
+		Assert.Contains("DatabaseTarget { DatabaseId = main }", logger.FormattedMessages[0], StringComparison.Ordinal);
 	}
 
 	[Fact]
-	public void DatabaseTarget_ValueEquality_CoversTheConnectionString()
+	public void DatabaseTarget_ValueEquality_IsRegistryReferenceIdentity()
 	{
-		var first = new DatabaseTarget("main", MainConnectionString);
-		var same = new DatabaseTarget("main", MainConnectionString);
-		var other = new DatabaseTarget("main", CompanyAConnectionString);
+		Assert.Equal(new DatabaseTarget("main"), new DatabaseTarget("main"));
+		Assert.NotEqual(new DatabaseTarget("main"), new DatabaseTarget("company-a"));
+	}
 
-		Assert.Equal(first, same);
-		Assert.NotEqual(first, other);
-		Assert.Equal(first.GetHashCode(), same.GetHashCode());
+	[Fact]
+	public void SecretAccess_IsLimitedToTheInternalRegistryPath()
+	{
+		var registry = Registry(Options(
+			nameof(DatabaseTopologyKind.TenantDatabase),
+			connections: null,
+			new DatabaseAssignmentOption { TenantId = TenantOne, DatabaseId = "main" }));
+
+		// The internal path works for the connection factory assembly (InternalsVisibleTo).
+		Assert.Equal(MainConnectionString, SecretOf(registry, "main"));
+
+		// Unknown references return false with an empty out value — never a partial secret.
+		Assert.False(((IDatabaseConnectionSecrets)registry).TryGetConnectionString("ghost", out var empty));
+		Assert.Equal(string.Empty, empty);
+	}
+
+	[Fact]
+	public void RepeatedResolves_AreDeterministicAcrossTheProcessLifetime()
+	{
+		// The startup snapshot (IOptions bound once) makes every request in the process see
+		// the same registry: no reload can retarget requests between or during operations.
+		var registry = Registry(Options(
+			nameof(DatabaseTopologyKind.TenantDatabase),
+			connections: null,
+			new DatabaseAssignmentOption { TenantId = TenantOne, DatabaseId = "main" },
+			new DatabaseAssignmentOption { TenantId = TenantTwo, DatabaseId = "company-a" }));
+
+		var first = registry.Resolve(new DatabaseScope(TenantOne));
+		var second = registry.Resolve(new DatabaseScope(TenantOne));
+		var other = registry.Resolve(new DatabaseScope(TenantTwo));
+
+		Assert.Equal(first.Target, second.Target);
+		Assert.Equal("main", first.Target!.DatabaseId);
+		Assert.Equal("company-a", other.Target!.DatabaseId);
 	}
 
 	// 17 — enabled routing without a single assignment is a startup configuration error.
@@ -585,9 +641,26 @@ public sealed class DatabaseTopologyRoutingTests
 			Assert.Equal(
 				tenant == TenantOne ? "main" : "company-a",
 				resolution.Target!.DatabaseId);
-			Assert.Equal(
-				tenant == TenantOne ? MainConnectionString : CompanyAConnectionString,
-				resolution.Target.GetConnectionString());
+		}
+	}
+
+	/// <summary>A minimal capturing logger that records formatted and destructured output.</summary>
+	private sealed class CapturingLogger : ILogger
+	{
+		public List<string> FormattedMessages { get; } = [];
+
+		public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+		public bool IsEnabled(LogLevel logLevel) => true;
+
+		public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+			Func<TState, Exception?, string> formatter)
+		{
+			FormattedMessages.Add(formatter(state, exception));
+			if (exception is not null)
+			{
+				FormattedMessages.Add(exception.ToString());
+			}
 		}
 	}
 }

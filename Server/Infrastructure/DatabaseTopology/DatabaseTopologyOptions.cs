@@ -50,9 +50,11 @@ public sealed class DatabaseTopologyOptions
 	/// codes. An empty, disabled configuration is valid; a partially configured registry
 	/// (assignments without a topology, unknown connection references, incoherent keys)
 	/// fails fast at startup. Routing that is <c>Enabled</c> without any assignment, the
-	/// pending <c>TenantFiscalPeriodDatabase</c> topology and duplicate assignments for the
-	/// same scope are configuration errors as well — they must stop the startup instead of
-	/// surfacing as the first runtime request failure.
+	/// pending <c>TenantFiscalPeriodDatabase</c> topology, a topology value that is not a
+	/// defined <see cref="DatabaseTopologyKind"/> member (undefined numeric strings such as
+	/// <c>999</c> included) and duplicate assignments for the same scope are configuration
+	/// errors as well — they must stop the startup instead of surfacing as the first
+	/// runtime request failure.
 	/// </summary>
 	public List<string> Validate()
 	{
@@ -72,8 +74,9 @@ public sealed class DatabaseTopologyOptions
 			return errors;
 		}
 
-		if (!Enum.TryParse<DatabaseTopologyKind>(Topology, ignoreCase: true, out var kind) ||
-			kind == default)
+		// Strict parsing (Enum.IsDefined): undefined numeric values such as "999" must not
+		// become a routable topology (fail closed, D-115 §2).
+		if (!DatabaseTopologyKindParser.TryParse(Topology, out var kind))
 		{
 			errors.Add("topology_kind_invalid");
 			return errors;

@@ -6,7 +6,10 @@ namespace Infrastructure.DatabaseTopology;
 
 /// <summary>
 /// The configuration-backed <see cref="IDatabaseTargetRegistry"/>: the single authoritative
-/// server-side mapping from logical scopes to database targets (D-115 §1-3).
+/// server-side mapping from logical scopes to database targets (D-115 §1-3). It is also the
+/// only holder of the connection strings: they leave it solely through the internal
+/// <see cref="IDatabaseConnectionSecrets"/> path for the connection factory — the public
+/// routing API answers with <see cref="DatabaseTarget"/> references only.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -14,16 +17,24 @@ namespace Infrastructure.DatabaseTopology;
 /// topology — a company is never routed by its identifier alone if the scope carries another
 /// tenant boundary, so a spoofed or cross-tenant scope cannot reach a foreign database.
 /// Matching keys per kind (D-111 §2): <c>TenantDatabase</c> → TenantId;
-/// <c>CompanyDatabase</c> → TenantId+CompanyId; <c>TenantFiscalPeriodDatabase</c> →
-/// TenantId+FiscalPeriodId; <c>CompanyFiscalPeriodDatabase</c> → TenantId+CompanyId+FiscalPeriodId.
+/// <c>CompanyDatabase</c> → TenantId+CompanyId; <c>CompanyFiscalPeriodDatabase</c> →
+/// TenantId+CompanyId+FiscalPeriodId.
 /// </para>
 /// <para>
 /// Exactly one assignment may match (D-115 §2): zero matches fail closed with
 /// <c>assignment_missing</c> and more than one with <c>assignment_conflict</c>; there is no
 /// fallback to a default database. The resolved connection string comes from the same secure
-/// configuration source as the main connection string and never appears in a log, exception
-/// or API response (D-115 §3; <see cref="DatabaseTarget"/> keeps it private and
-/// <c>ToString()</c> stays identifier-only).
+/// configuration source as the main connection string, is read through
+/// <see cref="IDatabaseConnectionSecrets"/> only, and never appears in a log, exception
+/// or API response (D-115 §3).
+/// </para>
+/// <para>
+/// The <see cref="IOptions{TOptions}"/> snapshot is the deliberate lifetime choice (D-115 §6):
+/// the registry is validated once at startup (<c>ValidateOnStart</c>) and binds once with
+/// it — <c>IOptionsMonitor</c>/<c>IOptionsSnapshot</c> are deliberately not used and no
+/// change listener is subscribed, so a configuration file reload can never retarget running
+/// requests, concurrent requests always read one consistent configuration, and a destination
+/// change happens only through the controlled, audited change path and a restart.
 /// </para>
 /// <para>
 /// The <c>TenantFiscalPeriodDatabase</c> topology (D-111 §2, option 3) is a
@@ -32,19 +43,18 @@ namespace Infrastructure.DatabaseTopology;
 /// can never be activated through configuration alone (D-115 §8).
 /// </para>
 /// </remarks>
-public sealed class ConfigurationDatabaseTargetRegistry(IOptionsMonitor<DatabaseTopologyOptions> options) :
-	IDatabaseTargetRegistry
+public sealed class ConfigurationDatabaseTargetRegistry(IOptions<DatabaseTopologyOptions> options) :
+	IDatabaseTargetRegistry, IDatabaseConnectionSecrets
 {
 	public DatabaseTargetResolution Resolve(DatabaseScope scope)
 	{
-		var current = options.CurrentValue;
+		var current = options.Value;
 		if (!current.Enabled)
 		{
 			return DatabaseTargetResolution.Fail("topology_disabled");
 		}
 
-		if (!Enum.TryParse<DatabaseTopologyKind>(current.Topology, ignoreCase: true, out var kind) ||
-			kind == default)
+		if (!DatabaseTopologyKindParser.TryParse(current.Topology, out var kind))
 		{
 			return DatabaseTargetResolution.Fail("topology_kind_invalid");
 		}
@@ -73,13 +83,35 @@ public sealed class ConfigurationDatabaseTargetRegistry(IOptionsMonitor<Database
 		}
 
 		var databaseId = matches[0].DatabaseId;
-		if (!current.Connections.TryGetValue(databaseId, out var connectionString) ||
-			string.IsNullOrWhiteSpace(connectionString))
+		if (!TryGetConnectionString(databaseId, out var connectionString))
 		{
 			return DatabaseTargetResolution.Fail("connection_missing");
 		}
 
-		return DatabaseTargetResolution.Ok(new DatabaseTarget(databaseId, connectionString!));
+		// The safe answer carries the registry reference only; the secret stays here.
+		return DatabaseTargetResolution.Ok(new DatabaseTarget(databaseId));
+	}
+
+	/// <summary>
+	/// The only path to the held connection strings: the internal interface, so the future
+	/// connection factory assembly (InternalsVisibleTo: Infrastructure.Persistence) can open
+	/// the connection while public routing consumers cannot obtain the secret at all.
+	/// </summary>
+	bool IDatabaseConnectionSecrets.TryGetConnectionString(string databaseId, out string connectionString) =>
+		TryGetConnectionString(databaseId, out connectionString);
+
+	private bool TryGetConnectionString(string databaseId, out string connectionString)
+	{
+		connectionString = string.Empty;
+		if (string.IsNullOrWhiteSpace(databaseId) ||
+			!options.Value.Connections.TryGetValue(databaseId, out var value) ||
+			string.IsNullOrWhiteSpace(value))
+		{
+			return false;
+		}
+
+		connectionString = value;
+		return true;
 	}
 
 	private static bool Matches(DatabaseTopologyKind kind, DatabaseAssignmentOption assignment, DatabaseScope scope) =>
