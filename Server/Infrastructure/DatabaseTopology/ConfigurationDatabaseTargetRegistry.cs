@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
 namespace Infrastructure.DatabaseTopology;
@@ -46,9 +47,15 @@ namespace Infrastructure.DatabaseTopology;
 public sealed class ConfigurationDatabaseTargetRegistry(IOptions<DatabaseTopologyOptions> options) :
 	IDatabaseTargetRegistry, IDatabaseConnectionSecrets
 {
+	// Captured once at construction: the registry never reads configuration again, so a
+	// post-startup configuration change can never retarget routing (D-115 §6). The DI
+	// registration forces construction during host startup (DatabaseTopologyStartupSnapshot),
+	// closing the lazy-IOptions window between validation and the first Resolve.
+	private readonly DatabaseTopologyOptions _snapshot = options.Value;
+
 	public DatabaseTargetResolution Resolve(DatabaseScope scope)
 	{
-		var current = options.Value;
+		var current = _snapshot;
 		if (!current.Enabled)
 		{
 			return DatabaseTargetResolution.Fail("topology_disabled");
@@ -104,7 +111,7 @@ public sealed class ConfigurationDatabaseTargetRegistry(IOptions<DatabaseTopolog
 	{
 		connectionString = string.Empty;
 		if (string.IsNullOrWhiteSpace(databaseId) ||
-			!options.Value.Connections.TryGetValue(databaseId, out var value) ||
+			!_snapshot.Connections.TryGetValue(databaseId, out var value) ||
 			string.IsNullOrWhiteSpace(value))
 		{
 			return false;
@@ -147,6 +154,28 @@ public static class DatabaseTopologyServiceCollectionExtensions
 			.ValidateOnStart();
 		services.AddSingleton<IValidateOptions<DatabaseTopologyOptions>, DatabaseTopologyOptionsValidator>();
 		services.AddSingleton<IDatabaseTargetRegistry, ConfigurationDatabaseTargetRegistry>();
+		// Force the options build and the registry construction during host startup, before
+		// the host serves anything: the registry captures its configuration snapshot there,
+		// so a post-startup configuration change can never retarget routing (D-115 §6).
+		services.AddHostedService<DatabaseTopologyStartupSnapshot>();
 		return services;
 	}
+}
+
+/// <summary>
+/// Startup guard for the routing snapshot: touching the validated options and the registry
+/// here closes the lazy-<c>IOptions.Value</c> window between startup validation and the
+/// first <c>Resolve</c> — a configuration change in that window would otherwise route the
+/// first requests with changed values.
+/// </summary>
+internal sealed class DatabaseTopologyStartupSnapshot(IServiceProvider services) : IHostedService
+{
+	public Task StartAsync(CancellationToken cancellationToken)
+	{
+		_ = services.GetRequiredService<IOptions<DatabaseTopologyOptions>>().Value;
+		_ = services.GetRequiredService<IDatabaseTargetRegistry>();
+		return Task.CompletedTask;
+	}
+
+	public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }

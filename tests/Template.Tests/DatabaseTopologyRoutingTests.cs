@@ -2,6 +2,8 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json;
 using Infrastructure.DatabaseTopology;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Xunit;
@@ -551,6 +553,41 @@ public sealed class DatabaseTopologyRoutingTests
 		Assert.Equal(first.Target, second.Target);
 		Assert.Equal("main", first.Target!.DatabaseId);
 		Assert.Equal("company-a", other.Target!.DatabaseId);
+	}
+
+	[Fact]
+	public async Task ConfigurationChangesAfterStartup_NeverRetargetRouting()
+	{
+		var source = new Dictionary<string, string?>
+		{
+			["DatabaseTopology:Enabled"] = "true",
+			["DatabaseTopology:Topology"] = "TenantDatabase",
+			["DatabaseTopology:Assignments:0:TenantId"] = TenantOne.ToString(),
+			["DatabaseTopology:Assignments:0:DatabaseId"] = "main",
+			["DatabaseTopology:Connections:main"] = MainConnectionString,
+		};
+		var configuration = new ConfigurationBuilder().AddInMemoryCollection(source).Build();
+		var services = new ServiceCollection();
+		services.AddSingleton<IConfiguration>(configuration);
+		services.AddDatabaseTopologyResolution(configuration);
+
+		await using var provider = services.BuildServiceProvider();
+		// Resolving the registry performs exactly the capture that the
+		// DatabaseTopologyStartupSnapshot hosted service forces during real host startup.
+		var registry = provider.GetRequiredService<IDatabaseTargetRegistry>();
+		var startup = registry.Resolve(new DatabaseScope(TenantOne));
+		Assert.True(startup.Success);
+		Assert.Equal("main", startup.Target!.DatabaseId);
+
+		// A valid post-startup configuration change (retargeting the tenant to another
+		// database and its connection) must be ignored: the registry captured its snapshot
+		// at startup and never reads configuration again (D-115 §6).
+		configuration["DatabaseTopology:Assignments:0:DatabaseId"] = "company-a";
+		configuration["DatabaseTopology:Connections:company-a"] = CompanyAConnectionString;
+
+		var after = registry.Resolve(new DatabaseScope(TenantOne));
+		Assert.Equal(startup.Target, after.Target);
+		Assert.Equal("main", after.Target!.DatabaseId);
 	}
 
 	// 17 — enabled routing without a single assignment is a startup configuration error.
