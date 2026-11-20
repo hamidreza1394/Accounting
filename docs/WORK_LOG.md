@@ -3321,3 +3321,12 @@
 - پیکربندی opt-in: `Licensing:RuntimeGate:Enabled` (پیش‌فرض خاموش؛ هم‌الگوی Gate v5) و `Licensing:DeploymentMode=Dedicated|Cloud` (نامعتبر → fail-fast). با gate خاموش رفتار میزبان عین قبل است.
 - تست‌ها: ۲۳ تست واحد + ۸ تست HTTP واقعی = ۳۱ موفق / ۰ شکست محلی؛ بدون Migration و بدون تغییر Schema. Wizard React، cache نسخه‌دار و E2E با License واقعی باقی‌مانده‌اند.
 - مستندات: PROJECT_STATUS.md، handoff `ISSUE-396-license-runtime-gate.md`.
+
+
+## 2026-11-20 — Issue #236 / D-107: ادغام Provider امضای ویندوز CNG در شاخه بازبنیادشده
+
+- Provider امضای مرکزی License/Provisioning طبق D-107 با Windows Certificate Store و CNG در کد اضافه شد: ECDSA P-256، Microsoft Software KSP، KeyUsage=DigitalSignature، ExportPolicy=None، MachineKey در Production و SPKI/KeyId مجزا برای License و Provisioning.
+- Provider opt-in است و پیش‌فرض خاموش می‌ماند؛ تداخل PKCS#11/CNG رد می‌شود، نبود/خرابی کلید fail-closed است، Audit metadata-only و health/startup assurance حفظ شده‌اند. Provider ابطال آفلاین طبق D-055 تغییر نکرد.
+- CI روی commit کد PR #720 (a697dc76) موفق بود: Vendor CI شامل job Windows CNG و دو checkpoint regression، .NET CI و Semgrep موفق؛ تست‌های Windows CNG روی Windows runner موفق شدند. تغییرات مستنداتی بعدی همان PR پس از این اجرای CI بودند.
+- Key Ceremony واقعی، MachineKey/ACL روی Windows Server هدف، ثبت Trust Store و drill چرخش کلید هنوز انجام‌نشده‌اند؛ بنابراین Production readiness امضا ادعا نمی‌شود.
+- این انتقال فقط کد و مستندات Provider امضا را وارد شاخه ادغام می‌کند؛ هیچ Migration/Schema یا تغییر Customer DB ندارد.

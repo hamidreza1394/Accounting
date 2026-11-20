@@ -31,6 +31,21 @@ if (bootstrapCommandRequested && (Console.IsInputRedirected || Console.IsOutputR
     return;
 }
 
+// Read-only public-key ceremony for the D-107 Windows CNG signer; bypasses the HTTP host and the
+// Vendor database entirely and prints only public SubjectPublicKeyInfo for trust-store enrolment.
+if (WindowsCngSigningCertificateCommand.IsRequested(args))
+{
+    var signingCommandBuilder = WebApplication.CreateBuilder(Array.Empty<string>());
+    signingCommandBuilder.Configuration.AddEnvironmentVariables(prefix: "FARANO_VENDOR_");
+    var signingCommandExitCode = await WindowsCngSigningCertificateCommand.RunAsync(
+        args,
+        signingCommandBuilder.Configuration,
+        Console.Out,
+        Console.Error);
+    Environment.ExitCode = signingCommandExitCode;
+    return;
+}
+
 // A bare command name is not valid input for the default command-line configuration provider.
 var builder = WebApplication.CreateBuilder(bootstrapCommandRequested ? Array.Empty<string>() : args);
 
@@ -82,9 +97,17 @@ builder.Services.TryAddSingleton<ILicenseSigningProvider, UnavailableLicenseSign
 builder.Services.TryAddSingleton<IProvisioningSigningProvider, UnavailableProvisioningSigningProvider>();
 builder.Services.TryAddSingleton<IOfflineRevocationSigningProvider, UnavailableOfflineRevocationSigningProvider>();
 
+var pkcs11SigningEnabled = builder.Configuration.GetValue<bool>("Signing:Pkcs11:Enabled");
+var cngSigningEnabled = builder.Configuration.GetValue<bool>("Signing:CertificateStore:Enabled");
+if (pkcs11SigningEnabled && cngSigningEnabled)
+{
+    throw new InvalidOperationException(
+        "Only one Vendor signing provider configuration (Signing:Pkcs11 or Signing:CertificateStore) may be enabled at startup.");
+}
+
 // PKCS#11 is opt-in and disabled by default. With no provisioned hardware HSM, Production
 // remains on the unavailable providers and signing endpoints fail closed with HTTP 503.
-if (builder.Configuration.GetValue<bool>("Signing:Pkcs11:Enabled"))
+if (pkcs11SigningEnabled)
 {
     builder.Services.Configure<Pkcs11SigningOptions>(
         builder.Configuration.GetSection("Signing:Pkcs11"));
@@ -97,6 +120,24 @@ if (builder.Configuration.GetValue<bool>("Signing:Pkcs11:Enabled"))
     builder.Services.AddScoped<IOfflineRevocationSigningProvider, Pkcs11OfflineRevocationSigningProvider>();
     builder.Services.AddHostedService<Pkcs11SigningAssuranceStartupService>();
     builder.Services.AddHealthChecks().AddCheck<Pkcs11SigningHealthCheck>(
+        "vendor-signing-provider",
+        tags: new[] { "signing" });
+}
+else if (cngSigningEnabled)
+{
+    // D-107 SoftwareProtected signer: Windows CNG certificates with non-exportable MachineKey
+    // private keys and purpose-separated license/provisioning credentials. Opt-in; configuration
+    // on a non-Windows host fails fast at startup. Offline-revocation signing deliberately stays
+    // unavailable here (D-055 keeps that purpose on a real Production HSM).
+    builder.Services.Configure<WindowsCngSigningOptions>(
+        builder.Configuration.GetSection("Signing:CertificateStore"));
+    builder.Services.RemoveAll<ILicenseSigningProvider>();
+    builder.Services.RemoveAll<IProvisioningSigningProvider>();
+    builder.Services.AddSingleton<IWindowsCngSigningModule, WindowsCngCertificateStoreSigningModule>();
+    builder.Services.AddScoped<ILicenseSigningProvider, WindowsCngLicenseSigningProvider>();
+    builder.Services.AddScoped<IProvisioningSigningProvider, WindowsCngProvisioningSigningProvider>();
+    builder.Services.AddHostedService<WindowsCngSigningAssuranceStartupService>();
+    builder.Services.AddHealthChecks().AddCheck<WindowsCngSigningHealthCheck>(
         "vendor-signing-provider",
         tags: new[] { "signing" });
 }
