@@ -105,7 +105,8 @@ public sealed class VendorSalesPaymentSqlServerTests
             var verifyApprovalId = await maker.RequestPaymentDecisionAsync(
                 collectiblePaymentId, "verify", cancellationToken);
             await maker.DecideAsync(verifyApprovalId, "Approved", cancellationToken);
-            var rejectApprovalId = await maker.RequestPaymentDecisionAsync(paidPaymentId, "verify", cancellationToken);
+            var rejectPaymentId = await maker.RecordPaymentAsync(collectibleOrderId, 50m, cancellationToken);
+            var rejectApprovalId = await maker.RequestPaymentDecisionAsync(rejectPaymentId, "reject", cancellationToken);
             await maker.DecideAsync(rejectApprovalId, "Approved", cancellationToken);
 
             // Self-approval is explicitly allowed for the single-operator Vendor v1 policy (D-109).
@@ -122,6 +123,16 @@ public sealed class VendorSalesPaymentSqlServerTests
                 Assert.Equal(verifiedByMaker.VerifiedByUserId,
                     (await db.ApprovalRequests.AsNoTracking()
                         .SingleAsync(item => item.Id == selfApprovalId, cancellationToken)).ReviewedByUserId);
+            }
+
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var rejected = await db.PaymentRecords.AsNoTracking()
+                    .SingleAsync(item => item.Id == rejectPaymentId, cancellationToken);
+                Assert.Equal(VendorPaymentRecord.StatusRejected, rejected.Status);
+                Assert.Null(rejected.VerifiedByUserId);
+                Assert.Null(rejected.VerifiedAtUtc);
             }
 
             var collectible = await maker.GetOrderAsync(collectibleOrderId, cancellationToken);
