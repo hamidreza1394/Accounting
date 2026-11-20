@@ -68,6 +68,8 @@ CustomerAccount
 
 در این جریان نباید روی تراکنش توزیع‌شده بین چند SQL Server حساب کرد. هر مرحله باید retry-safe و قابل ممیزی باشد.
 
+> **قرارداد عملیاتی Routing و مهاجرت کنترل‌شده در D-115** (`docs/DECISIONS.md`) ثبت شده است: منبع یگانه Routing (Registry سمت سرور)، سیاست Read/Write در حالت Transitioning، مراحل پیش‌شرط Cutover (Final Reconciliation تنها با توقف معتبر Write مبدأ)، Cutover اتمیک، Health Verification پس از Cutover و مرز Rollback (فقط تا پیش از اولین Write روی مقصد). روال این بخش باید با آن سازگار اجرا شود و در تعارض، D-115 مرجع است. توپولوژی «Tenant + FiscalPeriod DB» تا تأیید مالک Pending است و قابل‌انتخاب نیست.
+
 ## 6. Endpoint در Dedicated
 
 دامنه اجباری نیست. Endpointهای پشتیبانی‌شده:

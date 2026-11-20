@@ -4,11 +4,14 @@ import { LoadingState } from './components/Feedback';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 
 // The two provisioning pages are rarely used (first-run enrollment and package import), so they
-// are separate chunks; the common path (the application) stays in the entry bundle.
+// are separate chunks; the common path (the application) stays in the entry bundle. The license
+// activation wizard (Issue #396) is likewise a rarely used first-run/ops screen.
 const loadEnrollmentPage = () =>
   import('./components/ProvisioningEnrollmentPage').then((module) => ({ default: module.ProvisioningEnrollmentPage }));
 const loadImportPage = () =>
   import('./components/CustomerProvisioningImportPage').then((module) => ({ default: module.CustomerProvisioningImportPage }));
+const loadLicenseActivationPage = () =>
+  import('./components/LicenseActivationPage').then((module) => ({ default: module.LicenseActivationPage }));
 
 /**
  * A lazily loaded page with a loading state and a failure state. `React.lazy` caches a rejected
@@ -27,13 +30,15 @@ function LazyPage({ load }: { load: () => Promise<{ default: ComponentType }> })
 }
 
 /** Chooses the top-level screen from the pathname (these screens are not part of the `/app` router). */
-export function Root({ pathname, loadEnrollment = loadEnrollmentPage, loadImport = loadImportPage }: {
+export function Root({ pathname, loadEnrollment = loadEnrollmentPage, loadImport = loadImportPage, loadLicenseActivation = loadLicenseActivationPage }: {
   pathname: string;
   /** Overridable loaders (tests simulate a failed chunk load). */
   loadEnrollment?: () => Promise<{ default: ComponentType }>;
   loadImport?: () => Promise<{ default: ComponentType }>;
+  loadLicenseActivation?: () => Promise<{ default: ComponentType }>;
 }) {
   if (pathname === '/enroll') return <LazyPage load={loadEnrollment} />;
   if (pathname === '/provisioning/import') return <LazyPage load={loadImport} />;
+  if (pathname === '/licensing/activation') return <LazyPage load={loadLicenseActivation} />;
   return <App />;
 }
