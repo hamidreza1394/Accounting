@@ -183,6 +183,11 @@ public static class VendorLicenseAmendmentEndpoints
             try
             {
                 await db.SaveChangesAsync(ct);
+                // The approval must pin the request state it approved: PendingApproval, which is
+                // the row version EF assigned by the save above (the operator-submitted version
+                // belonged to Requested and is intentionally superseded here).
+                approval.ExpectedResourceRowVersion = request.RowVersion.ToArray();
+                await db.SaveChangesAsync(ct);
             }
             catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
             {
