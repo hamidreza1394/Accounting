@@ -19,6 +19,8 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
     public DbSet<Domain.VendorSignedLicenseEnvelope> SignedLicenseEnvelopes => Set<Domain.VendorSignedLicenseEnvelope>();
     public DbSet<Domain.VendorSignedRevocationSnapshot> SignedRevocationSnapshots => Set<Domain.VendorSignedRevocationSnapshot>();
     public DbSet<Domain.VendorProvisioningRequest> ProvisioningRequests => Set<Domain.VendorProvisioningRequest>();
+    public DbSet<Domain.VendorSalesOrder> SalesOrders => Set<Domain.VendorSalesOrder>();
+    public DbSet<Domain.VendorPaymentRecord> PaymentRecords => Set<Domain.VendorPaymentRecord>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -216,6 +218,66 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
                 .WithMany()
                 .HasForeignKey(item => item.TriggeringLicenseId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<Domain.VendorSalesOrder>(entity =>
+        {
+            entity.ToTable("VendorSalesOrders", table =>
+                table.HasCheckConstraint("CK_VendorSalesOrders_TotalAmount", "[TotalAmount] >= 0"));
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.OrderNumber).HasMaxLength(64).IsRequired();
+            entity.Property(item => item.TotalAmount).HasPrecision(19, 4).IsRequired();
+            entity.Property(item => item.CurrencyCode).HasMaxLength(3).IsUnicode(false).IsRequired();
+            entity.Property(item => item.CreatedAtUtc).HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
+            entity.Property(item => item.RowVersion).IsRowVersion();
+            entity.HasIndex(item => new { item.CustomerId, item.OrderNumber }).IsUnique();
+            entity.HasIndex(item => item.CustomerId);
+            entity.HasIndex(item => item.DueAtUtc);
+            entity.HasOne(item => item.Customer).WithMany()
+                .HasForeignKey(item => item.CustomerId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(item => item.Contract).WithMany()
+                .HasForeignKey(item => item.ContractId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<Domain.VendorSalesOrderLine>(entity =>
+        {
+            entity.ToTable("VendorSalesOrderLines", table =>
+            {
+                table.HasCheckConstraint("CK_VendorSalesOrderLines_Quantity", "[Quantity] >= 1");
+                table.HasCheckConstraint("CK_VendorSalesOrderLines_Amounts", "[UnitAmount] >= 0 AND [LineAmount] >= 0");
+            });
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.ProductCode).HasMaxLength(64).IsRequired();
+            entity.Property(item => item.Description).HasMaxLength(500).IsRequired();
+            entity.Property(item => item.UnitAmount).HasPrecision(19, 4).IsRequired();
+            entity.Property(item => item.LineAmount).HasPrecision(19, 4).IsRequired();
+            entity.Property(item => item.CreatedAtUtc).HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
+            entity.HasIndex(item => item.OrderId);
+            entity.HasOne(item => item.Order).WithMany(order => order.Lines)
+                .HasForeignKey(item => item.OrderId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<Domain.VendorPaymentRecord>(entity =>
+        {
+            entity.ToTable("VendorPaymentRecords", table =>
+            {
+                table.HasCheckConstraint("CK_VendorPaymentRecords_Status",
+                    "[Status] IN (N'Recorded', N'Verified', N'Rejected')");
+                table.HasCheckConstraint("CK_VendorPaymentRecords_Amount", "[Amount] > 0");
+            });
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Amount).HasPrecision(19, 4).IsRequired();
+            entity.Property(item => item.CurrencyCode).HasMaxLength(3).IsUnicode(false).IsRequired();
+            entity.Property(item => item.Method).HasMaxLength(32).IsRequired();
+            entity.Property(item => item.ExternalReference).HasMaxLength(200);
+            entity.Property(item => item.Status).HasMaxLength(16).IsRequired();
+            entity.Property(item => item.RejectionReason).HasMaxLength(500);
+            entity.Property(item => item.CreatedAtUtc).HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
+            entity.Property(item => item.RowVersion).IsRowVersion();
+            entity.HasIndex(item => item.OrderId);
+            entity.HasIndex(item => new { item.Status, item.OrderId });
+            entity.HasOne(item => item.Order).WithMany(order => order.Payments)
+                .HasForeignKey(item => item.OrderId).OnDelete(DeleteBehavior.Restrict);
         });
 
         builder.Entity<Domain.VendorApprovalRequest>(entity =>

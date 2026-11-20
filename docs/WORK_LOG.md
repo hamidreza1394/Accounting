@@ -3310,7 +3310,7 @@
 
 - D-107 (Accepted): مالک محصول الزام KMS/HSM برای امضای مرکزی Vendor در نسخه اول را تغییر داد. Windows CNG/Certificate Store با MachineKey non-exportable و assurance صریح SoftwareProtected برای Production مجاز است؛ TPM/HSM/KMS اجباری نیست. ریسک دسترسی مدیر محلی/میزبان، محدودیت Windows Server/Windows VM نسخه اول، Maker-Checker، MFA، Audit، rotation و fail-closed ثبت شدند. D-047 بند ۷، D-046 OD-07.3 و بخش Production در D-056 فقط در محدوده Vendor License/Provisioning signer superseded شدند.
 - مرزبندی امنیتی: D-057 برای Customer Offline Revocation همچنان TPM NV Extend را الزام می‌کند؛ این با امضای مرکزی Vendor متفاوت است و در OD-27 به‌عنوان تصمیم باز ثبت شد. D-055 برای Customer ACK و D-058 برای Installation identity مستقل باقی ماندند.
-- D-108 (Accepted): پرداخت شرط صدور/فعال‌سازی نیست. Payment و Issuance چرخه‌های مستقل Maker-Checker و Audit دارند. Payment دستی چندگانه، Verified-only aggregation، وضعیت‌های مشتق‌شده Unpaid/Partial/Paid/Overdue و هشدار/گزارش read-time بدون scheduler/broker/درگاه/Ledger ثبت شدند.
+- D-108 (Accepted): پرداخت شرط صدور/فعال‌سازی نیست. Payment و Issuance چرخه‌های مستقل درخواست/تصمیم و Audit دارند. طبق D-109، Vendor v1 تک‌اپراتوره است و self-approval مجاز است؛ این موضوع استقلال دو چرخه را تغییر نمی‌دهد. Payment دستی چندگانه، Verified-only aggregation، وضعیت‌های مشتق‌شده Unpaid/Partial/Paid/Overdue و هشدار/گزارش read-time بدون scheduler/broker/درگاه/Ledger ثبت شدند.
 - تعارض مستندات: عبارت قدیمی در LICENSING_IMPLEMENTATION_PLAN.md که سفارش پرداخت‌شده/تأییدشده را پیش‌شرط handoff به Engine معرفی می‌کرد، با D-108 اصلاح شد. وضعیت‌های تجاری/تحویل/ACK مستقل می‌مانند؛ Payment Verified نه صدور را تأیید می‌کند و نه برعکس.
 - محدوده تغییر: مستندات و تصمیم‌ها؛ هیچ کد، Entity، Migration، API، UI، کلید واقعی یا Gate Production تغییر نکرد. Build/Test کد اجرا نشده است؛ CI مستندات پس از PR باید بررسی شود.
 
@@ -3322,9 +3322,7 @@
 - تست‌ها: ۲۳ تست واحد + ۸ تست HTTP واقعی = ۳۱ موفق / ۰ شکست محلی؛ بدون Migration و بدون تغییر Schema. Wizard React، cache نسخه‌دار و E2E با License واقعی باقی‌مانده‌اند.
 - مستندات: PROJECT_STATUS.md، handoff `ISSUE-396-license-runtime-gate.md`.
 
-## 2026-11-19 — Issue #236 / D-107: پیاده‌سازی Signer ویندوز CNG SoftwareProtected برای Vendor
+## 2026-11-19 — Issue #393 / D-108: چرخهٔ سفارش و پرداخت مستقل Vendor
 
-- Provider امضای مرکزی License/Provisioning طبق D-107 پیاده شد: انتخاب گواهی با Thumbprint از Windows Certificate Store، ECDSA P-256، کلید CNG غیرقابل‌Export (رد exportable fail-closed)، KeyId/گواهی مجزا برای هر هدف، Audit metadata-only با دورریختن امضا در شکست Audit، Health check، Startup assurance (fail-fast + Audit Production)، رد تداخل PKCS#11/CNG و فرمان فقط‌عمومی `--signing-certificate export-public` برای Trust Store.
-- opt-in با `Signing:CertificateStore:Enabled` (پیش‌فرض خاموش؛ fail-closed عین قبل). میزبان غیرویندوزی fail-fast؛ Production الزام LocalMachine. Provider ابطال آفلاین طبق D-055 خارج از این Provider ماند.
-- تست‌ها: ۲۱ تست cross-platform موفق روی Linux؛ ۷ تست ویندوزی با کلید CNG موقت Software KSP به job جدید `windows-cng-signer` در Vendor CI موکول است. Build کل Vendor.sln سبز؛ ۹ شکست تست SQL/HTTP محیطی روی main خالص هم تکرار شد (نیاز به `FARANO_VENDOR_ConnectionStrings__VendorDb`).
-- مستندات: SECURITY.md (بخش D-107)، PROJECT_STATUS.md، LICENSING.md و handoff `ISSUE-236-windows-cng-software-protected-signer.md` هم‌تراز شدند. هیچ Migration/Schema/داده‌ای تغییر نکرد؛ هیچ کلید خصوصی در کد/تست/پیکربندی نیست.
+- Entityهای `VendorSalesOrders`/`VendorSalesOrderLines`/`VendorPaymentRecords` با Migration جدید Vendor و CHECK constraintها؛ ثبت پرداخت دستی چندگانه با ستون‌های typed؛ تأیید Maker-Checker مستقل (`salesOrderPayment` + `vendor.payments.verify`) با منع self-approval و تراکنش واحد؛ وضعیت‌های مشتق Unpaid/PartiallyPaid/Paid/Overdue فقط در زمان خواندن؛ گزارش مطالبات `/api/vendor/receivables` بدون Scheduler/درگاه/Ledger. صدور و پرداخت دو چرخهٔ مستقل ماندند.
+- ۱۲ تست واحد سبز محلی؛ دو تست Integration SQL-گیت برای CI. `dotnet ef migrations has-pending-model-changes` سبز. هیچ تغییری در Customer DB و هیچ اثری بر صدور/فعال‌سازی وجود ندارد. handoff: `ISSUE-393-vendor-payment-cycle-d108.md`.

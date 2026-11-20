@@ -45,6 +45,10 @@ public sealed class VendorResourceAccessEvaluator(
                     (!item.InstallationId.HasValue || db.Installations.Any(installation =>
                         installation.Id == item.InstallationId.Value && installation.CustomerId == item.CustomerId)),
                 cancellationToken),
+            "salesOrderPayment" => await db.PaymentRecords.AsNoTracking().AnyAsync(
+                item => item.Id == resource.ResourceId &&
+                    (!resource.ParentResourceId.HasValue || item.Order.CustomerId == resource.ParentResourceId.Value),
+                cancellationToken),
             _ => false
         };
     }
