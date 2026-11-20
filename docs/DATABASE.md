@@ -162,3 +162,15 @@ dotnet Server.dll --migrate --include-trade # پس از خرید، بدون نص
 **دیتابیس قدیمی بدون History:** اگر جدول‌های Schema `trade` وجود دارند و `__TradeMigrationsHistory` نیست یا خالی است، اجرا با کد `4` متوقف می‌شود. هیچ Baseline خودکار، حذف یا بازسازی انجام نمی‌شود. روش بازیابی (دستی، با تأیید مالک): ۱) پشتیبان‌گیری کامل؛ ۲) مقایسهٔ Schema جدول‌های `trade` با Migration `20261113072823_InitialTradeMasterData` (`dotnet ef migrations script --context TradeDbContext`)؛ ۳) فقط پس از اثبات هم‌ارزی، تصمیم دربارهٔ ثبت ردیف History با مالک؛ ۴) در غیر این صورت انتقال داده به Schema جدید. Baseline/Backfill در PR-1 انجام نشد. در `Farano-Local` جدول‌های Trade ممکن است اصلاً نباشند؛ در این حالت اجرای عادی `--include-trade` آن‌ها را می‌سازد.
 
 **خارج از دامنه (Backlog):** هشدار «Migration Trade در انتظار» هنگام شروع برنامه (امروز فقط Core گزارش می‌شود).
+
+## زیرساخت Database Topology Routing (D-115، Issue #728) — 2026-11-20
+
+طبق D-115 (Accepted) و بند ۴/۵ D-111، لایه کوچک Resolve مقصد دیتابیس در `Server/Infrastructure/DatabaseTopology/` پیاده شده است و **فقط زیرساخت است**: `Data.DatabaseContext` همچنان با Connection String منفرد فعلی کار می‌کند و سوییچ عملیاتی Context به Resolver تغییر مجزای نیازمند تأیید مالک است.
+
+- `IDatabaseTargetRegistry` / `ConfigurationDatabaseTargetRegistry`: تنها منبع معتبر Routing، Registry سمت سرور (پیکربندی `DatabaseTopology:*`). مقصد دیتابیس از هیچ ورودی کلاینت پذیرفته نمی‌شود (D-115 §1).
+- کلیدهای Matching هر توپولوژی: TenantDatabase → TenantId؛ CompanyDatabase → TenantId+CompanyId؛ TenantFiscalPeriodDatabase → TenantId+FiscalPeriodId؛ CompanyFiscalPeriodDatabase → هر سه. تطبیق کامل هویت است؛ Scope با مرز Tenant دیگر هرگز به دیتابیس Company دیگر نمی‌رسد.
+- Fail-closed با کدهای ثابت و بدون داده حساس: `topology_disabled` (پیش‌فرض؛ رفتار میزبان عین قبل)، `topology_kind_invalid`، `scope_invalid`، `scope_incomplete`، `assignment_missing`، `assignment_conflict` (دو Assignment هم‌پوشان برای یک Scope خطای پیکربندی است)، `connection_missing`. هیچ fallback به دیتابیس پیش‌فرض وجود ندارد.
+- `DatabaseTarget.ToString()` فقط `DatabaseId` را نشان می‌دهد؛ Connection String از منبع امن فعلی (فایل تنظیمات/پیکربندی میزبان) خوانده می‌شود و در Log، Audit، API Response یا Exception ظاهر نمی‌شود (D-115 §3).
+- ثبت DI با اعتبارسنجی fail-fast: `AddDatabaseTopologyResolution` (ValidateOnStart). پیکربندی ناقص (Assignment بدون Connection یا کلیدهای ناهم‌خوان با توپولوژی) میزبان را در Startup متوقف می‌کند؛ پیکربندی خالی/غیرفعال معتبر است.
+- گزینه چهارم توپولوژی (Tenant+FiscalPeriod) طبق D-111 §2 در مدل Resolver پشتیبانی می‌شود اما تا تعیین تکلیف اختلاف D-111 توسط مالک، در استقرار واقعی فعال نمی‌شود (handoff `ISSUE-728-tenant-dedicated-decisions.md`).
+- تست‌ها: `DatabaseTopologyRoutingTests` (۱۳ تست واحد: Routing صحیح هر توپولوژی، عدم fallback، مقاومت Cross-Tenant، تعارض Assignment، نبود Connection، Scope ناهم‌خوان، عدم افشای Connection String در ToString، اعتبارسنجی پیکربندی). تست‌های مسیر عملیاتی Context (اتصال Resolver به DbContext) در PR سوییچ عملیاتی خواهند آمد.
