@@ -54,6 +54,10 @@ export function VendorApprovals({ permissions }: { permissions: string[] }) {
   const [notice, setNotice] = useState('');
   const canRead = permissions.includes('vendor.approvals.read');
   const canReview = permissions.includes('vendor.approvals.review');
+  // Amendment decisions additionally require the issuance permission server-side; the UI only
+  // mirrors that gate so an authorized reviewer without vendor.licenses.issue sees why the
+  // controls are disabled instead of a 404.
+  const canIssueLicense = permissions.includes('vendor.licenses.issue');
 
   const load = useCallback(async () => {
     if (!canRead) { setError('مجوز مشاهده درخواست‌ها را ندارید.'); setLoading(false); return; }
@@ -127,8 +131,8 @@ export function VendorApprovals({ permissions }: { permissions: string[] }) {
               <td className="px-3 py-3 font-mono text-xs" dir="ltr" title={item.requestedByUserId}>{item.requestedByUserId.slice(0, 8)}</td>
               <td className="px-3 py-3" dir="ltr">{new Date(item.requestedAtUtc).toLocaleString('fa-IR')}</td>
               <td className="px-3 py-3"><div className="flex gap-2">
-                <Button type="button" size="sm" disabled={!canReview || Boolean(busy)} onClick={() => void decide(item, 'Approved')} aria-label={`تأیید درخواست ${item.id}`}>تأیید</Button>
-                <Button type="button" size="sm" variant="outline" disabled={!canReview || Boolean(busy)} onClick={() => void decide(item, 'Rejected')} aria-label={`رد درخواست ${item.id}`}>رد</Button>
+                <Button type="button" size="sm" disabled={!canReview || Boolean(busy) || (item.resourceType === 'licenseAmendment' && !canIssueLicense)} onClick={() => void decide(item, 'Approved')} aria-label={`تأیید درخواست ${item.id}`}>تأیید</Button>
+                <Button type="button" size="sm" variant="outline" disabled={!canReview || Boolean(busy) || (item.resourceType === 'licenseAmendment' && !canIssueLicense)} onClick={() => void decide(item, 'Rejected')} aria-label={`رد درخواست ${item.id}`}>رد</Button>
               </div></td>
             </tr>)}</tbody></table></div>}
         {totalPages > 1 && <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
