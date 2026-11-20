@@ -125,4 +125,120 @@ describe('License activation page', () => {
 
 		expect(await screen.findByText(/fail-closed انجام نمی‌شود/)).toBeTruthy();
 	});
+
+	it('maps an authorization failure to the infrastructure-account guidance', async () => {
+		const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+			const url = String(input);
+			if (url === '/api/v1/licensing/status') return response(unlicensedStatus);
+			if (url === '/api/v1/antiforgery/token') return response({ headerName: 'X-XSRF-TOKEN', requestToken: 'csrf-activation' });
+			if (url === '/api/v1/licensing/import' && init?.method === 'POST') {
+				return response({ title: 'Forbidden' }, 403);
+			}
+			throw new Error(`Unexpected request: ${url}`);
+		});
+		vi.stubGlobal('fetch', fetchMock);
+
+		render(<LicenseActivationPage />);
+		const envelope = await screen.findByLabelText('یا محتوای پاکت را اینجا بچسبانید');
+		fireEvent.change(envelope, { target: { value: '{"formatVersion":1}' } });
+		fireEvent.click(screen.getByRole('button', { name: 'فعال‌سازی مجوز' }));
+
+		expect(await screen.findByText(/حساب زیرساخت \(Infrastructure\)/)).toBeTruthy();
+	});
+
+	it('shows a connection failure message when the network request fails', async () => {
+		const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+			const url = String(input);
+			if (url === '/api/v1/licensing/status') return response(unlicensedStatus);
+			if (url === '/api/v1/antiforgery/token') return response({ headerName: 'X-XSRF-TOKEN', requestToken: 'csrf-activation' });
+			if (url === '/api/v1/licensing/import' && init?.method === 'POST') throw new TypeError('network down');
+			throw new Error(`Unexpected request: ${url}`);
+		});
+		vi.stubGlobal('fetch', fetchMock);
+
+		render(<LicenseActivationPage />);
+		const envelope = await screen.findByLabelText('یا محتوای پاکت را اینجا بچسبانید');
+		fireEvent.change(envelope, { target: { value: '{"formatVersion":1}' } });
+		fireEvent.click(screen.getByRole('button', { name: 'فعال‌سازی مجوز' }));
+
+		expect(await screen.findByText('خطای ارتباط با سرور.')).toBeTruthy();
+	});
+
+	it('sends exactly one POST even when the submit button is clicked repeatedly while busy', async () => {
+		let resolveImport: ((value: Response) => void) | undefined;
+		const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+			const url = String(input);
+			if (url === '/api/v1/licensing/status') return response(unlicensedStatus);
+			if (url === '/api/v1/antiforgery/token') return response({ headerName: 'X-XSRF-TOKEN', requestToken: 'csrf-activation' });
+			if (url === '/api/v1/licensing/import' && init?.method === 'POST') {
+				return await new Promise((resolve) => { resolveImport = resolve as (value: Response) => void; });
+			}
+			throw new Error(`Unexpected request: ${url}`);
+		});
+		vi.stubGlobal('fetch', fetchMock);
+
+		render(<LicenseActivationPage />);
+		const envelope = await screen.findByLabelText('یا محتوای پاکت را اینجا بچسبانید');
+		fireEvent.change(envelope, { target: { value: '{"formatVersion":1}' } });
+
+		const submit = screen.getByRole('button', { name: 'فعال‌سازی مجوز' }) as HTMLButtonElement;
+		fireEvent.click(submit);
+		fireEvent.click(submit);
+		fireEvent.click(submit);
+		expect(submit.disabled).toBe(true);
+
+		resolveImport?.(response({ alreadyInstalled: false, status: 'Active' }) as unknown as Response);
+		expect(await screen.findByText(/فعال‌سازی با موفقیت انجام شد/)).toBeTruthy();
+		expect(fetchMock.mock.calls.filter(([url]) => String(url) === '/api/v1/licensing/import')).toHaveLength(1);
+	});
+
+	it('rejects an oversized file locally without any network POST', async () => {
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const url = String(input);
+			if (url === '/api/v1/licensing/status') return response(unlicensedStatus);
+			if (url === '/api/v1/antiforgery/token') return response({ headerName: 'X-XSRF-TOKEN', requestToken: 'csrf-activation' });
+			if (url === '/api/v1/licensing/import') throw new Error('import must never be called for an oversized file');
+			throw new Error(`Unexpected request: ${url}`);
+		});
+		vi.stubGlobal('fetch', fetchMock);
+
+		render(<LicenseActivationPage />);
+		const input = (await screen.findByLabelText('فایل مجوز (.json)')) as HTMLInputElement;
+		const oversized = new File(['x'.repeat(300_001)], 'huge.json', { type: 'application/json' });
+		fireEvent.change(input, { target: { files: [oversized] } });
+
+		expect(await screen.findByText(/بیش از حد مجاز است/)).toBeTruthy();
+		expect(fetchMock.mock.calls.filter(([url]) => String(url) === '/api/v1/licensing/import')).toHaveLength(0);
+	});
+
+	it('degrades to the offline guidance when the status response is not usable', async () => {
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const url = String(input);
+			if (url === '/api/v1/licensing/status') return response(null, 500);
+			if (url === '/api/v1/antiforgery/token') return response({ headerName: 'X-XSRF-TOKEN', requestToken: 'csrf-activation' });
+			throw new Error(`Unexpected request: ${url}`);
+		});
+		vi.stubGlobal('fetch', fetchMock);
+
+		render(<LicenseActivationPage />);
+
+		expect(await screen.findByText('دریافت وضعیت مجوز ناموفق بود؛ بعداً دوباره تلاش کنید.')).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'به‌روزرسانی وضعیت' })).toBeTruthy();
+	});
+
+	it('renders the page right-to-left with Persian headings', async () => {
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const url = String(input);
+			if (url === '/api/v1/licensing/status') return response(unlicensedStatus);
+			if (url === '/api/v1/antiforgery/token') return response({ headerName: 'X-XSRF-TOKEN', requestToken: 'csrf-activation' });
+			throw new Error(`Unexpected request: ${url}`);
+		});
+		vi.stubGlobal('fetch', fetchMock);
+
+		const { container } = render(<LicenseActivationPage />);
+
+		const main = container.querySelector('main');
+		expect(main?.getAttribute('dir')).toBe('rtl');
+		expect(await screen.findByRole('heading', { level: 1, name: 'فعال‌سازی مجوز فرانو' })).toBeTruthy();
+	});
 });

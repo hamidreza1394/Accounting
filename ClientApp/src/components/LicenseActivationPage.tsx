@@ -102,7 +102,10 @@ export function LicenseActivationPage() {
 			setStatus((response.body ?? {}) as LicensingStatus);
 		} catch (reason) {
 			setStatus(null);
-			setStatusError(reason instanceof Error ? reason.message : 'خطای ارتباط با سرور.');
+			// A failed fetch (TypeError) is a connection problem, not a server answer: keep
+			// the message in Persian instead of surfacing the raw browser error text.
+			setStatusError(reason instanceof TypeError ? 'خطای ارتباط با سرور.' :
+				reason instanceof Error ? reason.message : 'خطای ارتباط با سرور.');
 		}
 	}, []);
 
@@ -181,7 +184,10 @@ export function LicenseActivationPage() {
 			if (fileInputRef.current) fileInputRef.current.value = '';
 			await loadStatus();
 		} catch (reason) {
-			setError(reason instanceof Error ? reason.message : 'خطای ارتباط با سرور.');
+			// A failed fetch (TypeError) is a connection problem, not a server answer: keep
+			// the message in Persian instead of surfacing the raw browser error text.
+			setError(reason instanceof TypeError ? 'خطای ارتباط با سرور.' :
+				reason instanceof Error ? reason.message : 'خطای ارتباط با سرور.');
 		} finally {
 			setBusy(false);
 		}
