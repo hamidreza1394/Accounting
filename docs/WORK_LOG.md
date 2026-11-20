@@ -3387,3 +3387,9 @@
 - **مرز:** بدون تغییر `Server/**` و Trade؛ Company-scoped expose نشد (Blocked تا #392)؛ بدون مسیر صدور موازی و بدون مدل موازی برای قابلیت موجود.
 
 - **اصلاح الزامی پس از بازبینی مالک (D-108 §1):** شرط پرداخت از چرخه Amendment حذف شد — `orderHasVerifiedPayment` از قواعد و `HasVerifiedPayment` از مسیر ایجاد حذف گردید؛ کد خطای `order_payment_not_verified` منسوخ شد. باگ `ActiveAmendment` در `BuildTransientRequestAsync` رفع شد (مقایسه با `line.Id` به‌جای شناسه سفارش؛ ایندکس یکتای فیلترشده همچنان آخرین لایه محافظ است). Rejection به‌عنوان متد رسمی `RejectApprovedAsync` به سرویس صدور منتقل شد (هم‌الگوی DecideApprovedAsync پرداخت‌ها) و endpoint تصمیم نازک شد. تست SQL جدید ماتریس D-108 (بدون پرداخت/Recorded/Verified/Rejected/PartiallyPaid → همه مجاز) و تست Rejection واقعی با Retry اصلاح‌شده واقعی (درخواست دوم → صدور sequence+1) جایگزین شد.
+
+## 2026-11-20 — Review round 2 (CodeRabbit) روی اصلاحات D-108
+
+- **F42W (رفع شد):** `ValidateRequestedPeriodsAsync` اکنون `(Error, StatusCode)` برمی‌گرداند — شکست verify امضا/کلید وضعیت verifier خودش را حفظ می‌کند (503 کلید غیرمورد اعتماد) و فقط درخواست دوره نامعتبر 409 است؛ هر دو endpoint وضعیت را propagate می‌کنند.
+- **F42c (رفع شد):** گیت «فهرست ناقص» فقط برای اپراتوری است که مجوز `vendor.licenses.read` دارد؛ پاسخ 403/401 فهرست برای اپراتور mutation-مجاز «دنیال نیست» و دکمه‌هایش فعال می‌مانند (مجوزهای manage/issue مستقل‌اند). تست Vitest حالت denied اضافه شد.
+- **F42Q (Needs Owner Decision):** ثبت `LastSeenAtUtc` در تراکنش ACK (الزام مرحله ۳ مأموریت) RV نصب را جلو می‌برد و مثل `UpdateInstallation` ممکن است یک installation approval در انتظار را stale کند — جهت شکست fail-closed است و هیچ تصمیمی اشتباه پاس نمی‌شود. تغییر مکانیزم (جدول سلامت جدا یا توکن وضعیت-محور) نیازمند Migration و تصمیم مالک است؛ بدون مجوز انجام نشد.
