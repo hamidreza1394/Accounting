@@ -440,3 +440,13 @@ Tenant مرز CustomerAccount/فضای کاری است و هر Tenant می‌ت�
 - شناسه‌های Tenant/Company/SharedRecord ارسالی از کلاینت، Claim، Header یا فایل Import به‌تنهایی مرجع scope نیستند. Import/Export، فایل پیوست، گزارش، cache و background job نیز باید همان scope را رعایت کنند.
 - قواعد دقیق دسترسی، ویرایش، غیرفعال‌سازی، حذف، ممیزی و نگهداری داده مشترک باید در تصمیم همان موجودیت مشخص شوند؛ اشتراک صرفاً با افزودن جدول پیوند، مجوز عملیاتی ضمنی ایجاد نمی‌کند.
 - این ADR وضعیت کد legacy را تغییر نمی‌دهد: در برخی مسیرها TenantId هنوز Company.Id است؛ تا تکمیل گیت‌های S3-0 و گذار مصوب، جداسازی Tenant واقعی را Implemented یا Verified گزارش نکنید. هیچ Migration یا تغییر Runtime از این سند مجاز نمی‌شود.
+
+
+## Bootstrap مشتری و امنیت Endpoint/Database Routing — D-110..D-114
+
+- هیچ رمز ثابت یا مشترک admin برای نصب مشتری تعریف نشود. نام کاربری را مشتری انتخاب می‌کند و رمز را خودش تعیین می‌کند؛ توکن Bootstrap باید امضاشده، یک‌بارمصرف، منقضی‌شونده و مقید به Tenant/Installation باشد.
+- Vendor نباید برای ایجاد مدیر اولیه به دیتابیس عملیاتی مشتری دسترسی مستقیم بگیرد. برای Dedicated/Offline، اعتبارسنجی بسته Bootstrap باید محلی و fail-closed باشد.
+- Tenant/Company/FiscalPeriod و DatabaseAssignment فقط از پیکربندی/Context معتبر سمت سرور resolve می‌شوند. Connection String، DatabaseId یا مقصد دیتابیس از ورودی کلاینت پذیرفته نشود.
+- تغییر دامنه/IP، سرور یا دیتابیس نباید هویت Tenant/Installation یا اعتبار License را تغییر دهد. Host و X-Forwarded-Host منبع مجوز یا Tenant identity نیستند.
+- Dedicated عمومی فقط با HTTPS معتبر؛ IP عمومی فقط در صورت گواهی معتبر دارای IP SAN؛ شبکه خصوصی از طریق VPN/DNS داخلی و CA مورد اعتماد. SQL Server مستقیماً به اینترنت منتشر نشود.
+- اتصال و DbContext pooling باید tenant-safe باشد؛ state یا connection متعلق به یک Tenant نباید برای Tenant دیگر reuse شود. این موارد هنوز در قالب D-110..D-114 قرارداد هدف‌اند و پیاده‌سازی آن‌ها NotImplemented است.

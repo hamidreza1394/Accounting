@@ -811,3 +811,13 @@
 - D-108: صدور/فعال‌سازی از پرداخت مستقل است؛ دو چرخه Maker-Checker/Audit جدا هستند. هشدار و گزارش مطالبات Unpaid/Partial/Overdue باید در Vendor و با محاسبه read-time ساخته شود؛ بدون scheduler، broker، درگاه یا Ledger.
 - D-057 برای anti-rollback snapshot ابطال آفلاین Customer همچنان TPM 2.0 می‌خواهد؛ اثر آن بر Customer فاقد TPM در OD-27 NeedsApproval است.
 - این ثبت صرفاً مستنداتی است؛ هیچ Entity، Migration، API، UI، Signing Provider، Gate v5 یا Runtime Enforcement با این تصمیم‌ها فعال نشده است.
+
+
+## Vendor — Bootstrap مشتری، توپولوژی دیتابیس و Endpoint اختصاصی (D-110..D-114، 2026-11-20)
+
+- D-110 Accepted: هر Tenant مشتری مسیر Bootstrap امن برای ایجاد اولین TenantOwner دارد؛ نام کاربری را مشتری تعیین می‌کند، رمز پیش‌فرض/مشترک وجود ندارد و توکن باید یک‌بارمصرف، امضاشده، منقضی‌شونده و مقید به Tenant/Installation باشد. پیاده‌سازی NotImplemented.
+- D-111 Accepted: مدل هدف باید توپولوژی Tenant DB، Company DB، Tenant+FiscalPeriod DB و Company+FiscalPeriod DB را پشتیبانی کند؛ routing و assignment سمت سرور است. Control Plane از Customer Operational Data جدا می‌ماند؛ cross-database FK و فرض distributed transaction ممنوع‌اند. پیاده‌سازی NotImplemented.
+- D-112 Accepted: دامنه برای Dedicated اجباری نیست؛ دامنه DNS، IP عمومی با TLS/IP SAN یا IP خصوصی/DNS داخلی روی VPN قابل قبول است. Endpoint هویت Tenant/Installation را تعیین نمی‌کند. قرارداد Provisioning/Endpoint NotImplemented.
+- D-113 Accepted: انتخاب اولیه DeploymentMode/DatabaseTopology/Endpoint در خرید؛ تغییر بعدی با درخواست مشتری و تأیید/اجرای مدیر فنی. Shared و Dedicated از معماری منطقی مشترک استفاده می‌کنند. Provisioning lifecycle NotImplemented.
+- مرجع جزئیات: [VENDOR_DEPLOYMENT_ARCHITECTURE.md](VENDOR_DEPLOYMENT_ARCHITECTURE.md). این ADRها به معنی ساخت فوری همه توپولوژی‌ها نیستند؛ Tenant DB مسیر پیش‌فرض کم‌هزینه است و قابلیت‌های دیگر مرحله‌ای پیاده می‌شوند.
+- D-109 نیز اکنون در main پیاده و پس از Merge PR #724 با ۱۵/۱۵ Check Run موفق Verified شده است؛ این وضعیت به معنی Production readiness کل Vendor نیست.
