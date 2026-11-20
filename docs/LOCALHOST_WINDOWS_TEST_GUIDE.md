@@ -245,7 +245,7 @@ WHERE l.Status = N'Issued'
 ORDER BY e.CreatedAtUtc DESC;
 "@
 if ($null -eq $envelope -or [string]::IsNullOrWhiteSpace([string]$envelope.EnvelopeJson)) {
-  throw "هیچ Envelope صادرشده‌ای پیدا نشد؛ ابتدا بررسی کنید اصلاح Runtime مطابق D-109 در نسخهٔ مورد استفاده اعمال شده باشد."
+  throw "هیچ Envelope صادرشده‌ای پیدا نشد؛ ابتدا وضعیت Signer، Trust Store و آماده‌سازی کلیدها را در بند ۴ بررسی کنید."
 }
 # بدون BOM؛ برای سازگاری PowerShell 5.1 و JSON parser
 [System.IO.File]::WriteAllText(
