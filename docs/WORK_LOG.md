@@ -3387,3 +3387,9 @@
 - **مرز:** بدون تغییر `Server/**` و Trade؛ Company-scoped expose نشد (Blocked تا #392)؛ بدون مسیر صدور موازی و بدون مدل موازی برای قابلیت موجود.
 
 - **اصلاح الزامی پس از بازبینی مالک (D-108 §1):** شرط پرداخت از چرخه Amendment حذف شد — `orderHasVerifiedPayment` از قواعد و `HasVerifiedPayment` از مسیر ایجاد حذف گردید؛ کد خطای `order_payment_not_verified` منسوخ شد. باگ `ActiveAmendment` در `BuildTransientRequestAsync` رفع شد (مقایسه با `line.Id` به‌جای شناسه سفارش؛ ایندکس یکتای فیلترشده همچنان آخرین لایه محافظ است). Rejection به‌عنوان متد رسمی `RejectApprovedAsync` به سرویس صدور منتقل شد (هم‌الگوی DecideApprovedAsync پرداخت‌ها) و endpoint تصمیم نازک شد. تست SQL جدید ماتریس D-108 (بدون پرداخت/Recorded/Verified/Rejected/PartiallyPaid → همه مجاز) و تست Rejection واقعی با Retry اصلاح‌شده واقعی (درخواست دوم → صدور sequence+1) جایگزین شد.
+
+## 2026-11-20 — Stage 3: تکمیل ممیزی Customer Onboarding و Provisioning (شاخه زنجیره‌ای)
+
+- **ممیزی:** چرخه Provisioning/Bootstrap عملاً کامل است — package creation با RequestId+Nonce و dedupe، approval دو مجوزه، امضای fail-closed، export، ACK با verify امضا و Idempotent retry، Apply سمت مشتری با سقف MaxCompanies و CompanySetupRecord، مدیر اولیه با رمز تصادفی غیرقابل استفاده + Enrollment یک‌بارمصرف (hash/انقضا/rate-limit/SecurityAudit/D-073) و Reissue. هیچ قابلیتی دوباره ساخته نشد.
+- **اصلاح واقعی:** ثبت `VendorInstallation.LastSeenAtUtc` هنگام نخستین ACK امضاشده و معتبر (در همان تراکنش Serializable؛ Retry دقیق بازنویسی نمی‌کند) — تنها فیلد سلامت نصب بدون نویسنده بود؛ تست SQL آن اضافه شد.
+- **Needs Owner Decision (Blocked):** انتخاب نام کاربری مستقل توسط مشتری (نیازمند payload v6 و تغییر سمت مشتری)، فعال‌سازی توپولوژی‌های per-Company و Company×FiscalPeriod، Company-scoped (#392). سند کامل: `docs/VENDOR_ONBOARDING_AND_PROVISIONING.md`.

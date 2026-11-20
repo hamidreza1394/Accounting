@@ -166,6 +166,11 @@ public sealed class ProvisioningAcknowledgementSqlServerIntegrationTests
                     item => item.RequestId == requestId.ToString("D"), cancellationToken);
                 Assert.Equal("Confirmed", stored.Status);
                 Assert.Equal("Applied", stored.AcknowledgementResult);
+                // The verified acknowledgement is proof of the initial connection: the
+                // installation's LastSeenAtUtc is stamped in the same transaction.
+                var installation = await db.Installations.SingleAsync(
+                    item => item.Id == stored.InstallationId, cancellationToken);
+                Assert.NotNull(installation.LastSeenAtUtc);
                 Assert.Equal("customer-ack-key-v1", stored.AcknowledgementKeyId);
                 Assert.NotNull(stored.AcknowledgementSha256);
                 Assert.NotNull(stored.AcknowledgedAtUtc);

@@ -144,3 +144,4 @@
 | [EXCEL_IMPORT_LIBRARY_COMPARISON.md](EXCEL_IMPORT_LIBRARY_COMPARISON.md) | مقایسهٔ کتابخانه‌های خواندن Excel با برچسب شواهد، ارزیابی ClosedXML 0.105.1 (گزینهٔ اول فعلی مالک، مشروط به Spike) و شواهد Spike 2 (`Proposed`؛ انتخاب = `NeedsApproval`؛ هیچ Package افزوده نشده؛ 2026-11-19) |
 
 | [handoffs/ISSUE-393-s1-b-owner-decisions-2026-11-19.md](handoffs/ISSUE-393-s1-b-owner-decisions-2026-11-19.md) | تصمیم‌های مالک D-108 درباره استقلال پرداخت/صدور، Maker-Checker مستقل و گزارش مطالبات؛ D-107 درباره امضای SoftwareProtected و مرز TPM در Customer |
+| [VENDOR_ONBOARDING_AND_PROVISIONING.md](VENDOR_ONBOARDING_AND_PROVISIONING.md) | ممیزی مرحله سوم مأموریت Vendor (2026-11-20): جدول وضعیت واقعی چرخه ثبت مشتری تا Provisioning/Bootstrap/Enrollment، تحلیل سه توپولوژی دیتابیس (فعال: یک DB برای هر Installation؛ دو گزینه دیگر Needs Owner Decision)، شکاف Needs-Owner-Decision انتخاب نام کاربری توسط مشتری و ثبت سلامت اتصال اولیه با LastSeenAtUtc |
