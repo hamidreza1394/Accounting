@@ -8,7 +8,20 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <None Remove="Pages\Admin\ApplicationHandlers\cyplncat.hzs~" />
+		<None Remove="Pages\Admin\ApplicationHandlers\cyplncat.hzs~" />
+	</ItemGroup>
+
+	<!--
+		Database routing secrets (D-115 §3) are internal to this assembly: the connection
+		strings leave the registry only through the internal IDatabaseConnectionSecrets
+		interface, implemented explicitly on ConfigurationDatabaseTargetRegistry.
+		- Infrastructure.Persistence: the future connection factory (Data.DatabaseContext)
+		  wiring step (owner-approved, separate change) is the only production consumer.
+		- Template.Tests: the unit tests assert the restricted access path itself.
+	-->
+	<ItemGroup>
+		<InternalsVisibleTo Include="Infrastructure.Persistence" />
+		<InternalsVisibleTo Include="Template.Tests" />
 	</ItemGroup>
 
 	<ItemGroup>

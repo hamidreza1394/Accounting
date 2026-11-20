@@ -315,6 +315,15 @@ Infrastructure.Licensing.LicenseRuntimeGateServiceCollectionExtensions.AddLicens
     builder.Services,
     builder.Configuration);
 
+// Database topology routing registry (D-115; Issue #728): registered unconditionally with
+// fail-fast configuration validation, but opt-in via DatabaseTopology:Enabled. While disabled
+// the resolver fails closed and the operational DatabaseContext keeps its single connection
+// string, so current behavior is untouched; switching the context to the resolver is a
+// separate owner-approved change (D-115 implementation plan).
+Infrastructure.DatabaseTopology.DatabaseTopologyServiceCollectionExtensions.AddDatabaseTopologyResolution(
+    builder.Services,
+    builder.Configuration);
+
 var app = builder.Build();
 
 if (settingsLoad is not null)
