@@ -302,6 +302,44 @@ public sealed class VendorLicenseAmendmentIssuanceService(
         return VendorLicenseAmendmentPreviewResult.Success(candidate);
     }
 
+    /// <summary>
+    /// Request-time period validation for support/updates amendments. The reference point is the
+    /// latest STORED envelope after signature and payload-hash verification against the
+    /// deployment trust store (D-056) — never operator input and never a guessed state. Returns
+    /// null when the requested periods are buildable today; otherwise the same stable error code
+    /// the issuance builder would fail with later, so the endpoints can reject an invalid request
+    /// before it is ever stored as Requested. Payment state is deliberately absent (D-108 §1);
+    /// this method is read-only and never creates, signs or issues anything by itself.
+    /// </summary>
+    public async Task<string?> ValidateRequestedPeriodsAsync(
+        Guid licenseId,
+        Guid customerId,
+        DateTimeOffset? requestedSupportUntilUtc,
+        DateTimeOffset? requestedUpdatesUntilUtc,
+        CancellationToken cancellationToken)
+    {
+        var license = await db.Licenses.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == licenseId, cancellationToken);
+        if (license is null)
+            return "license_not_found";
+        if (license.CustomerId != customerId)
+            return "license_installation_mismatch";
+        var installation = license.InstallationId is { } installationId
+            ? await db.Installations.AsNoTracking().SingleOrDefaultAsync(
+                item => item.Id == installationId, cancellationToken)
+            : null;
+        if (installation is null)
+            return "license_installation_mismatch";
+
+        var verified = await TryVerifyLatestPayloadAsync(license, installation, cancellationToken);
+        if (verified.Error is not null || verified.Payload is null)
+            return verified.Error ?? "amendment_envelope_invalid";
+
+        return VendorLicenseAmendmentPayloadBuilder.ValidateRequestedPeriods(
+            verified.Payload, requestedSupportUntilUtc, requestedUpdatesUntilUtc,
+            timeProvider.GetUtcNow().ToUniversalTime());
+    }
+
     private async Task<(LicensePayload? Payload, int StatusCode, string? Error)> TryVerifyLatestPayloadAsync(
         VendorLicense license, VendorInstallation installation, CancellationToken cancellationToken)
     {

@@ -42,6 +42,11 @@ public static class VendorLicenseAmendmentEndpoints
             if (error is not null || request is null)
                 return Results.Conflict(new { error });
 
+            var periodError = await ValidateRequestedPeriodsAsync(
+                body, request, issuance, ct);
+            if (periodError is not null)
+                return Results.Conflict(new { error = periodError });
+
             var preview = await issuance.PreviewAsync(request, ct);
             if (!preview.Succeeded || preview.Candidate is null)
                 return Results.Json(new { error = preview.ErrorCode }, statusCode: preview.StatusCode);
@@ -59,6 +64,7 @@ public static class VendorLicenseAmendmentEndpoints
         group.MapPost("/", async (
             CreateVendorLicenseAmendmentRequest body, HttpContext context,
             IAntiforgery antiforgery, IAuthorizationService authorization, VendorDbContext db,
+            VendorLicenseAmendmentIssuanceService issuance,
             UserManager<VendorAdminUser> users, IVendorAuditWriter audit,
             TimeProvider timeProvider, CancellationToken ct) =>
         {
@@ -76,6 +82,14 @@ public static class VendorLicenseAmendmentEndpoints
                 body, db, timeProvider, requireFreshCheck: true, ct);
             if (error is not null || transient is null)
                 return Results.Conflict(new { error });
+
+            // supportUpdates requests are validated against the latest SIGNATURE-VERIFIED
+            // envelope before anything is stored: an invalid or not-yet-extendable period fails
+            // here with an actionable code instead of surfacing later at issuance time.
+            var periodError = await ValidateRequestedPeriodsAsync(
+                body, transient, issuance, ct);
+            if (periodError is not null)
+                return Results.Conflict(new { error = periodError });
 
             var request = new VendorLicenseAmendmentRequest
             {
@@ -212,6 +226,20 @@ public static class VendorLicenseAmendmentEndpoints
 
         return endpoints;
     }
+
+    /// <summary>
+    /// Envelope-backed period validation for supportUpdates requests: shared by preview and
+    /// creation so both paths fail identically before any state is stored. Other kinds skip
+    /// this check — maxCompanies has its own rules, and no payment state is ever consulted.
+    /// </summary>
+    private static async Task<string?> ValidateRequestedPeriodsAsync(
+        CreateVendorLicenseAmendmentRequest body, VendorLicenseAmendmentRequest transient,
+        VendorLicenseAmendmentIssuanceService issuance, CancellationToken ct) =>
+        transient.Kind == VendorLicenseAmendmentRules.KindSupportUpdates
+            ? await issuance.ValidateRequestedPeriodsAsync(
+                body.LicenseId, transient.CustomerId,
+                body.RequestedSupportUntilUtc, body.RequestedUpdatesUntilUtc, ct)
+            : null;
 
     /// <summary>
     /// Shared eligibility validation for preview and creation. Loads the purchased line, its order

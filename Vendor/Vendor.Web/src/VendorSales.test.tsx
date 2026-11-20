@@ -256,4 +256,91 @@ describe('Vendor sales and payments workspace', () => {
     expect(submitted!.body).toMatchObject({ rowVersion: 'AQIDBAUGBwg=' });
   });
 
+  it('treats a failed amendment page as incomplete, disables actions and recovers via retry', async () => {
+    const requestedRow = {
+      id: 'amendment-1', orderId: collectibleOrder.id, orderLineId: 'line-1', licenseId: 'license-1',
+      kind: 'maxCompanies', requestedMaxCompanies: 8, requestedSupportUntilUtc: null,
+      requestedUpdatesUntilUtc: null, status: 'Requested', failureCode: null, rowVersion: 'AQIDBAUGBwg=',
+    };
+    const issuedRow = { ...requestedRow, id: 'amendment-2', status: 'Issued' };
+    let page2Fails = true;
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      void init;
+      const url = String(input);
+      if (url.startsWith('/api/vendor/sales-orders/?')) return Promise.resolve(response(ordersPage([collectibleOrder])));
+      if (url.startsWith('/api/vendor/receivables/?')) return Promise.resolve(response(page([])));
+      if (url === '/api/auth/antiforgery') return Promise.resolve(response({ requestToken: 'csrf-retry' }));
+      if (url === `/api/vendor/sales-orders/${collectibleOrder.id}`) return Promise.resolve(response(orderDetail));
+      if (url.includes('/api/vendor/license-amendment-requests/?orderId=')) {
+        const pageNumber = Number(url.match(/page=(\d+)/)?.[1]);
+        if (pageNumber === 1) return Promise.resolve(response({
+          items: [requestedRow], page: 1, pageSize: 50, totalCount: 2, totalPages: 2, hasPreviousPage: false, hasNextPage: true,
+        }));
+        return page2Fails
+          ? Promise.resolve(response({ error: 'boom' }, 500))
+          : Promise.resolve(response({
+              items: [issuedRow], page: 2, pageSize: 50, totalCount: 2, totalPages: 2, hasPreviousPage: true, hasNextPage: false,
+            }));
+      }
+      return Promise.resolve(response({}, 404));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<VendorSales permissions={['vendor.payments.read', 'vendor.payments.manage', 'vendor.licenses.manage', 'vendor.licenses.issue']} />);
+
+    fireEvent.click((await screen.findAllByRole('button', { name: 'جزئیات' }))[0]!);
+    // Page 1 succeeded but page 2 failed: the incomplete list must not look complete.
+    expect(await screen.findByRole('alert')).toHaveTextContent('فهرست Amendmentها کامل بارگذاری نشد');
+    // The line already has a Requested row, so the only action button is the approval submit —
+    // and it must be disabled until the list is complete.
+    expect(screen.getByRole('button', { name: 'ارسال برای تأیید' })).toBeDisabled();
+
+    // Retry reloads only this order's data and completes the list.
+    page2Fails = false;
+    fireEvent.click(screen.getByRole('button', { name: 'تلاش دوباره' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'ارسال برای تأیید' })).toBeEnabled());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('discards out-of-order detail responses so a slower earlier order never overwrites the selection', async () => {
+    const order2Detail = {
+      ...orderDetail,
+      id: 'order-2',
+      orderNumber: 'SO-1405-002',
+      lines: [{ id: 'line-2', productCode: 'addon.company.seat', description: 'سفارش دوم', quantity: 1, unitAmount: 400, lineAmount: 400, licenseId: 'license-1' }],
+      payments: [],
+    };
+    let resolveOrder1Detail: ((value: unknown) => void) | null = null;
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      void init;
+      const url = String(input);
+      if (url.startsWith('/api/vendor/sales-orders/?')) return Promise.resolve(response(ordersPage([collectibleOrder, overpaidOrder])));
+      if (url.startsWith('/api/vendor/receivables/?')) return Promise.resolve(response(page([])));
+      if (url === '/api/auth/antiforgery') return Promise.resolve(response({ requestToken: 'csrf-race' }));
+      if (url === `/api/vendor/sales-orders/${collectibleOrder.id}`) {
+        return new Promise(resolve => { resolveOrder1Detail = resolve; });
+      }
+      if (url === '/api/vendor/sales-orders/order-2') return Promise.resolve(response(order2Detail));
+      if (url.includes('license-amendment-requests/?orderId=order-1')) return new Promise(() => { /* hangs: never completes */ });
+      if (url.includes('license-amendment-requests/?orderId=order-2')) return Promise.resolve(response(page([])));
+      return Promise.resolve(response({}, 404));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<VendorSales permissions={['vendor.payments.read', 'vendor.payments.manage', 'vendor.licenses.manage', 'vendor.licenses.issue']} />);
+
+    const detailButtons = await screen.findAllByRole('button', { name: 'جزئیات' });
+    fireEvent.click(detailButtons[0]!);
+    fireEvent.click(detailButtons[1]!);
+    // The fast order-2 detail (with its completed amendment list) is published.
+    expect(await screen.findByText('سفارش دوم')).toBeInTheDocument();
+    expect(screen.getByText('بدون درخواست')).toBeInTheDocument();
+
+    // The slow order-1 responses (detail and its still-hanging amendment pages) must never
+    // overwrite the current selection's state.
+    resolveOrder1Detail!(response(orderDetail));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('orderId=order-1'), expect.anything()));
+    expect(screen.getByText('سفارش دوم')).toBeInTheDocument();
+    expect(screen.queryByText('ارسال برای تأیید')).not.toBeInTheDocument();
+  });
+
 });
