@@ -38,7 +38,6 @@ CustomerAccount
 |---|---|---|
 | Tenant DB | یک دیتابیس برای کل Tenant | همه شرکت‌ها و دوره‌ها در یک DB |
 | Company DB | یک دیتابیس برای هر Company | شرکت A همه سال‌ها در DB-A؛ شرکت B همه سال‌ها در DB-B |
-| Tenant + FiscalPeriod DB | یک دیتابیس برای هر دوره مالی Tenant | DB-1405 برای همه شرکت‌ها؛ DB-1406 برای همه شرکت‌ها |
 | Company + FiscalPeriod DB | یک دیتابیس برای هر جفت شرکت/دوره | ۲ شرکت × ۲ سال = ۴ DB |
 
 درخواست «هر شرکت دیتابیس مستقل داشته باشد و تمام سال‌های آن شرکت در همان دیتابیس باشند» توپولوژی Company DB است. درخواست «هر شرکت و هر سال مالی دیتابیس مستقل داشته باشند» توپولوژی Company + FiscalPeriod است. اگر مشتری یک دیتابیس مشترک برای تمام شرکت‌های یک Tenant در هر سال مالی بخواهد، توپولوژی Tenant + FiscalPeriod مناسب است.
@@ -46,7 +45,7 @@ CustomerAccount
 **پیش‌فرض کم‌هزینه:** Tenant DB. جداسازی بیشتر فقط با نیاز روشن، بررسی ظرفیت/هزینه و انتخاب مشتری در زمان خرید فعال می‌شود.
 
 ### قواعد فنی
-- هر Tenant یک DatabaseTopology فعال دارد و resolver فقط کلید همان توپولوژی را می‌خواند: TenantId، TenantId+CompanyId، TenantId+FiscalPeriodId یا TenantId+CompanyId+FiscalPeriodId. ترکیب fallback میان توپولوژی‌ها ممنوع است؛ assignment مفقود یا متعارض fail-closed می‌شود.
+- هر Tenant یک DatabaseTopology فعال دارد و resolver فقط کلید همان توپولوژی را می‌خواند: TenantId، TenantId+CompanyId یا TenantId+CompanyId+FiscalPeriodId. ترکیب fallback میان توپولوژی‌ها ممنوع است؛ assignment مفقود یا متعارض fail-closed می‌شود.
 - زیرسیستم‌ها فقط از DbContext/Factory و routing مورد اعتماد استفاده می‌کنند؛ Connection String یا DatabaseId از کلاینت پذیرفته نمی‌شود.
 - از Cross-database FK و فرض Distributed Transaction اجتناب می‌شود.
 - Master Data طبق مالکیت D-105 نگهداری می‌شود؛ داده مرجع Company-level نباید بدون دلیل در هر DB سالانه کپی شود. Snapshot یا versioning فقط برای مواردی که نیاز تاریخی/ممیزی دارند تعریف می‌شود.
@@ -101,7 +100,7 @@ CustomerAccount
 ## 9. تفکیک تصمیم‌های ثبت‌شده
 
 - D-110: Bootstrap امن مدیر اولیه TenantOwner.
-- D-111: انتخاب توپولوژی دیتابیس Tenant، Company، Tenant+FiscalPeriod یا Company+FiscalPeriod.
+- D-111: انتخاب توپولوژی دیتابیس Tenant، Company یا Company+FiscalPeriod.
 - D-112: DatabaseAssignment/DatabaseRouting، ترتیب resolve، امنیت connection و انتقال کنترل‌شده.
 - D-113: Endpoint اختصاصی بدون الزام دامنه؛ DNS، IP عمومی TLS و شبکه خصوصی/VPN.
 - D-114: پروفایل Provisioning مشترک Shared/Dedicated و مدیریت فنی تغییرات بعدی.
