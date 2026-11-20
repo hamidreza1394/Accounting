@@ -340,7 +340,9 @@ public sealed class VendorLicenseAmendmentIssuanceService(
         var ruleError = VendorLicenseAmendmentPayloadBuilder.ValidateRequestedPeriods(
             verified.Payload, requestedSupportUntilUtc, requestedUpdatesUntilUtc,
             timeProvider.GetUtcNow().ToUniversalTime());
-        return (ruleError, StatusCodes.Status409Conflict);
+        return (ruleError, ruleError is null
+            ? StatusCodes.Status200OK
+            : StatusCodes.Status409Conflict);
     }
 
     private async Task<(LicensePayload? Payload, int StatusCode, string? Error)> TryVerifyLatestPayloadAsync(
