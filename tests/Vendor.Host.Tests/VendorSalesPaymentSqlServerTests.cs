@@ -105,6 +105,9 @@ public sealed class VendorSalesPaymentSqlServerTests
             var verifyApprovalId = await maker.RequestPaymentDecisionAsync(
                 collectiblePaymentId, "verify", cancellationToken);
             await maker.DecideAsync(verifyApprovalId, "Approved", cancellationToken);
+            var paidApprovalId = await maker.RequestPaymentDecisionAsync(
+                paidPaymentId, "verify", cancellationToken);
+            await maker.DecideAsync(paidApprovalId, "Approved", cancellationToken);
             var rejectPaymentId = await maker.RecordPaymentAsync(collectibleOrderId, 50m, cancellationToken);
             var rejectApprovalId = await maker.RequestPaymentDecisionAsync(rejectPaymentId, "reject", cancellationToken);
             await maker.DecideAsync(rejectApprovalId, "Approved", cancellationToken);
