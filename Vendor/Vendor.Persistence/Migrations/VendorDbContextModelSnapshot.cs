@@ -493,7 +493,7 @@ namespace Faranou.Vendor.Persistence.Migrations
 
                     b.HasIndex("OrderLineId")
                         .IsUnique()
-                        .HasFilter("[Status] IN (N'Requested', N'PendingApproval', N'Issued')");
+                        .HasFilter("[Status] IN ('Requested', 'PendingApproval', 'Issued')");
 
                     b.ToTable("VendorLicenseAmendmentRequests", null, t =>
                         {

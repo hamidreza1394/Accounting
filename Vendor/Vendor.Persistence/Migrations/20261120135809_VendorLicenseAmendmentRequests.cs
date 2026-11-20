@@ -88,7 +88,7 @@ namespace Faranou.Vendor.Persistence.Migrations
                 table: "VendorLicenseAmendmentRequests",
                 column: "OrderLineId",
                 unique: true,
-                filter: "[Status] IN (N'Requested', N'PendingApproval', N'Issued')");
+                filter: "[Status] IN ('Requested', 'PendingApproval', 'Issued')");
         }
 
         /// <inheritdoc />
