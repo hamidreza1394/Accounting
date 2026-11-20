@@ -3321,3 +3321,11 @@
 - پیکربندی opt-in: `Licensing:RuntimeGate:Enabled` (پیش‌فرض خاموش؛ هم‌الگوی Gate v5) و `Licensing:DeploymentMode=Dedicated|Cloud` (نامعتبر → fail-fast). با gate خاموش رفتار میزبان عین قبل است.
 - تست‌ها: ۲۳ تست واحد + ۸ تست HTTP واقعی = ۳۱ موفق / ۰ شکست محلی؛ بدون Migration و بدون تغییر Schema. Wizard React، cache نسخه‌دار و E2E با License واقعی باقی‌مانده‌اند.
 - مستندات: PROJECT_STATUS.md، handoff `ISSUE-396-license-runtime-gate.md`.
+
+
+## 2026-11-20 — تصمیم‌های Vendor D-110..D-113 و تکمیل راهنمای Windows
+
+- مالک محصول D-110..D-113 را پذیرفت: Bootstrap امن TenantOwner بدون رمز مشترک؛ توپولوژی‌های مستقل از Tenant/Company/FiscalPeriod؛ Endpoint Dedicated بدون الزام دامنه؛ انتخاب اولیه پروفایل و تغییرات بعدی با تأیید مدیر فنی.
+- سند جامع docs/VENDOR_DEPLOYMENT_ARCHITECTURE.md اضافه شد؛ جزئیات توپولوژی‌ها، جداسازی Control Plane/Data Plane، routing، انتقال و امنیت endpoint را ثبت می‌کند.
+- راهنمای Windows Localhost و handoff سناریو A از PR #723 به‌روزرسانی شدند تا وضعیت واقعی D-109 پس از Merge PR #724 (۱۵/۱۵ Check Run موفق) را منعکس کنند. تست واقعی ماتریس Windows توسط مالک همچنان انجام‌نشده است.
+- این تغییر فقط مستندات است؛ هیچ Runtime، Schema، Migration، Endpoint، Bootstrap token یا Database Router پیاده‌سازی نشده است.
