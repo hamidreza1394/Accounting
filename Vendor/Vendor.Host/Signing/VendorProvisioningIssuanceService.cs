@@ -45,7 +45,6 @@ public sealed class VendorProvisioningIssuanceService(
         if (approval.ResourceType != "provisioning" ||
             approval.TargetStatus != "PendingDelivery" ||
             approval.Status != "Pending" ||
-            approval.RequestedByUserId == reviewerUserId ||
             approval.ResourceId == Guid.Empty ||
             expectedApprovalVersion.Length != 8 ||
             !approval.RowVersion.AsSpan().SequenceEqual(expectedApprovalVersion))

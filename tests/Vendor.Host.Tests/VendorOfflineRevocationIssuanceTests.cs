@@ -52,7 +52,7 @@ public sealed class VendorOfflineRevocationIssuanceTests
             var licenseId = fixture.LicenseIds.Single();
             var approval = await db.ApprovalRequests.SingleAsync(
                 item => item.Id == fixture.ApprovalIds[licenseId], TestContext.Current.CancellationToken);
-            var reviewer = Guid.NewGuid();
+            var reviewer = approval.RequestedByUserId;
             var service = CreateService(db, key, new VendorAuditWriter(db, TimeProvider.System));
 
             await using (var tx = await db.Database.BeginTransactionAsync(TestContext.Current.CancellationToken))

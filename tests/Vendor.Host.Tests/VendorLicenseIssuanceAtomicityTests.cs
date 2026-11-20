@@ -27,7 +27,7 @@ public sealed class VendorLicenseIssuanceAtomicityTests
             var db = fixture.Db;
             var approval = await db.ApprovalRequests.SingleAsync();
             var expectedVersion = approval.RowVersion.ToArray();
-            var reviewer = Guid.NewGuid();
+            var reviewer = approval.RequestedByUserId;
             var service = new VendorLicenseIssuanceService(
                 db, new VendorLicenseEnvelopeFactory(new TestSigner(key)),
                 new VendorAuditWriter(db, TimeProvider.System), TimeProvider.System);

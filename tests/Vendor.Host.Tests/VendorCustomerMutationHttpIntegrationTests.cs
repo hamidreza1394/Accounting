@@ -611,7 +611,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                     item.ActionCode == "vendor.customer.updated" && item.SubjectId == customerId.ToString("D"), cancellationToken));
             }
 
-            // Direct status changes are blocked; a distinct administrator must approve the proposal.
+            // Direct status changes are blocked; an authorized Vendor administrator must decide the proposal.
             byte[] customerStatusVersion;
             await using (var scope = factory.Services.CreateAsyncScope())
             {
@@ -678,22 +678,65 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal("approval_already_pending", json.RootElement.GetProperty("error").GetString());
             }
 
-            using (var response = await PostWithTokenAsync(client, $"/api/vendor/approvals/{customerApprovalId:D}/decision",
-                new { decision = "Approved", rowVersion = customerApprovalRowVersion, comment = "self approval must fail" },
+            // Exercise self-approval on an isolated resource so the original customer approval
+            // remains Pending for the later suspension/provisioning scenario.
+            var selfReviewCustomerId = Guid.NewGuid();
+            byte[] selfReviewCustomerVersion;
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                db.Customers.Add(new VendorCustomer
+                {
+                    Id = selfReviewCustomerId,
+                    CustomerNumber = "IT-SELF-" + selfReviewCustomerId.ToString("N")[..12],
+                    LegalName = "Self Review Test Customer",
+                    DisplayName = "Self Review Test Customer",
+                    Status = "Active",
+                    CreatedAtUtc = timeProvider.GetUtcNow(),
+                    UpdatedAtUtc = timeProvider.GetUtcNow()
+                });
+                await db.SaveChangesAsync(cancellationToken);
+                selfReviewCustomerVersion = (await db.Customers.AsNoTracking()
+                    .SingleAsync(item => item.Id == selfReviewCustomerId, cancellationToken)).RowVersion.ToArray();
+            }
+
+            Guid selfReviewApprovalId;
+            string selfReviewApprovalVersion;
+            using (var response = await PostWithTokenAsync(client, "/api/vendor/approvals/status-change",
+                new
+                {
+                    resourceType = "customer",
+                    resourceId = selfReviewCustomerId,
+                    targetStatus = "Suspended",
+                    rowVersion = Convert.ToBase64String(selfReviewCustomerVersion)
+                }, antiForgeryToken, cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+                using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+                selfReviewApprovalId = json.RootElement.GetProperty("id").GetGuid();
+                selfReviewApprovalVersion = json.RootElement.GetProperty("rowVersion").GetString()!;
+            }
+
+            using (var response = await PostWithTokenAsync(client,
+                $"/api/vendor/approvals/{selfReviewApprovalId:D}/decision",
+                new { decision = "Rejected", rowVersion = selfReviewApprovalVersion, comment = "self-review allowed by D-109" },
                 antiForgeryToken, cancellationToken))
             {
-                Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             }
 
             await using (var scope = factory.Services.CreateAsyncScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
-                var persisted = await db.Customers.AsNoTracking().SingleAsync(item => item.Id == customerId, cancellationToken);
+                var persisted = await db.Customers.AsNoTracking()
+                    .SingleAsync(item => item.Id == selfReviewCustomerId, cancellationToken);
                 Assert.Equal("Active", persisted.Status);
                 Assert.Equal(1, await db.ApprovalRequests.CountAsync(item =>
-                    item.Id == customerApprovalId && item.Status == "Pending", cancellationToken));
+                    item.Id == selfReviewApprovalId && item.Status == "Rejected" &&
+                    item.RequestedByUserId == item.ReviewedByUserId, cancellationToken));
                 Assert.Equal(1, await db.AuditEvents.CountAsync(item =>
-                    item.ActionCode == "vendor.approval.requested" && item.SubjectId == customerApprovalId.ToString("D"), cancellationToken));
+                    item.ActionCode == "vendor.approval.requested" &&
+                    item.SubjectId == selfReviewApprovalId.ToString("D"), cancellationToken));
             }
 
             // Installation update: real HTTP, current RowVersion succeeds, replay is rejected.
@@ -1035,7 +1078,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
             {
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
                 using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-                // Customer, installation, license, and provisioning requests are still pending.
+                // The isolated self-review request was rejected; customer, installation, license, and provisioning requests remain pending.
                 Assert.Equal(4, json.RootElement.GetProperty("totalCount").GetInt32());
                 var pendingIds = json.RootElement.GetProperty("items").EnumerateArray()
                     .Select(item => item.GetProperty("id").GetGuid())
@@ -1185,7 +1228,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
             using var createdJson = JsonDocument.Parse(await createdResponse.Content.ReadAsStringAsync(cancellationToken));
             var createdCustomerId = createdJson.RootElement.GetProperty("id").GetGuid();
 
-            // A distinct MFA-authenticated administrator can approve both requests.
+            // A second MFA-authenticated administrator is retained for authorization/retry checks; D-109 permits the requester to submit the initial approval decisions.
             using var reviewerClient = factory.CreateClient(new WebApplicationFactoryClientOptions
             {
                 BaseAddress = new Uri("https://localhost"),
@@ -1220,20 +1263,20 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal(HttpStatusCode.NotFound, inaccessibleDecision.StatusCode);
             }
 
-            using (var licenseDecisionResponse = await PostWithTokenAsync(reviewerClient,
+            using (var licenseDecisionResponse = await PostWithTokenAsync(client,
                 $"/api/vendor/approvals/{licenseApprovalId:D}/decision",
-                new { decision = "Approved", rowVersion = licenseApprovalRowVersion, comment = "must fail closed without signer" },
-                reviewerAntiForgeryToken, cancellationToken))
+                new { decision = "Approved", rowVersion = licenseApprovalRowVersion, comment = "self-approval must still fail closed without signer" },
+                antiForgeryToken, cancellationToken))
             {
                 Assert.Equal(HttpStatusCode.ServiceUnavailable, licenseDecisionResponse.StatusCode);
                 using var json = JsonDocument.Parse(await licenseDecisionResponse.Content.ReadAsStringAsync(cancellationToken));
                 Assert.Equal("license_issuance_unavailable", json.RootElement.GetProperty("error").GetString());
             }
 
-            using (var provisioningDecisionResponse = await PostWithTokenAsync(reviewerClient,
+            using (var provisioningDecisionResponse = await PostWithTokenAsync(client,
                 $"/api/vendor/approvals/{provisioningApprovalId:D}/decision",
-                new { decision = "Approved", rowVersion = provisioningApprovalRowVersion, comment = "First attempt must fail closed" },
-                reviewerAntiForgeryToken, cancellationToken))
+                new { decision = "Approved", rowVersion = provisioningApprovalRowVersion, comment = "self-approval must still fail closed without signer" },
+                antiForgeryToken, cancellationToken))
             {
                 var provisioningDecisionBody = await provisioningDecisionResponse.Content.ReadAsStringAsync(cancellationToken);
                 Assert.True(provisioningDecisionResponse.StatusCode == HttpStatusCode.ServiceUnavailable,
@@ -1297,7 +1340,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
             {
                 using var response = await PostWithTokenAsync(reviewerClient,
                     $"/api/vendor/approvals/{approval.Id:D}/decision",
-                    new { decision = "Approved", rowVersion = approval.RowVersion, comment = "Reviewed by a distinct administrator" },
+                    new { decision = "Approved", rowVersion = approval.RowVersion, comment = "Reviewed by an authorized Vendor administrator" },
                     reviewerAntiForgeryToken, cancellationToken);
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
                 using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));

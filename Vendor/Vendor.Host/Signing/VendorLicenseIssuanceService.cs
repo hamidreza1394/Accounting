@@ -37,7 +37,7 @@ public sealed class VendorLicenseIssuanceService(
             throw new InvalidOperationException("License issuance must run inside the approval transaction.");
 
         if (approval.ResourceType != "license" || approval.TargetStatus != "Issued" ||
-            approval.Status != "Pending" || approval.RequestedByUserId == reviewerUserId ||
+            approval.Status != "Pending" ||
             approval.ResourceId == Guid.Empty || expectedApprovalVersion.Length != 8 ||
             !approval.RowVersion.AsSpan().SequenceEqual(expectedApprovalVersion))
             return VendorLicenseIssuanceResult.Conflict("stale_approval_version");

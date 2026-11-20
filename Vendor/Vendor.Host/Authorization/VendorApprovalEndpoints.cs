@@ -199,9 +199,6 @@ public static class VendorApprovalEndpoints
                 return Results.Conflict(new { error = "stale_approval_version" });
             if (approval.Status != "Pending")
                 return Results.Conflict(new { error = "approval_already_decided" });
-            if (approval.RequestedByUserId == actor.Id)
-                return Results.Forbid();
-
             if (provisioning is not null)
             {
                 if (request.Decision == "Approved")

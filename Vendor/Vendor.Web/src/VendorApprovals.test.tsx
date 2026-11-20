@@ -40,6 +40,7 @@ describe('Vendor approval queue', () => {
 
     render(<VendorApprovals permissions={['vendor.approvals.read', 'vendor.approvals.review']} />);
     expect(await screen.findByText('تعلیق')).toBeInTheDocument();
+    expect(screen.getByText('مدیر مجاز می‌تواند درخواست ثبت‌شده را خودش تأیید یا رد کند.')).toBeInTheDocument();
 
     fireEvent.click(await screen.findByRole('button', { name: 'تأیید درخواست approval-1' }));
     expect(await screen.findByRole('status')).toHaveTextContent('درخواست تأیید و تغییر وضعیت اعمال شد.');
