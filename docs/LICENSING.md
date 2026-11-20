@@ -194,3 +194,8 @@
 - D-108 Accepted: صدور/فعال‌سازی از پرداخت مستقل است. Payment و Issuance دو چرخه مستقل Maker-Checker/Audit هستند. Vendor سفارش‌های Unpaid/Partial/Overdue را با محاسبه زمان خواندن در داشبورد/گزارش نشان می‌دهد؛ بدون درگاه، Ledger، scheduler یا Broker.
 - محدودیت مستقل Customer: D-057 برای anti-rollback snapshot ابطال آفلاین Customer همچنان TPM 2.0 می‌خواهد؛ D-107 آن را تغییر نمی‌دهد. اثر این الزام بر مشتری فاقد TPM در OD-27 باز است.
 - وضعیت: فقط تصمیم و مستندات؛ هیچ Provider، کلید، Entity، Migration، endpoint یا enforcement با این ADRها به‌تنهایی فعال نشده است.
+
+
+## توپولوژی استقرار و نگاشت دیتابیس مشتری — D-110..D-113
+
+قرارداد جزئی Bootstrap مدیر اولیه، توپولوژی‌های Tenant/Company/FiscalPeriod، DatabaseAssignment/DatabaseRouting، انتقال کنترل‌شده داده و Endpointهای Dedicated در [VENDOR_DEPLOYMENT_ARCHITECTURE.md](VENDOR_DEPLOYMENT_ARCHITECTURE.md) ثبت شده است. این تصمیم‌ها Tenant را از Company و محل فیزیکی ذخیره‌سازی مستقل نگه می‌دارند. Tenant DB پیش‌فرض کم‌هزینه است؛ جداسازی بیشتر بر اساس انتخاب مشتری و با تأیید فنی ارائه می‌شود. دامنه Dedicated اجباری نیست و IP عمومی/خصوصی یا VPN با TLS/trust مناسب قابل پشتیبانی است. همه قابلیت‌های فوق در Vendor Provisioning هنوز NotImplemented هستند.
