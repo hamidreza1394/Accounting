@@ -423,6 +423,10 @@ export function VendorSales({ permissions }: { permissions: string[] }) {
   const canManage = permissions.includes('vendor.payments.manage');
   const canAmendManage = permissions.includes('vendor.licenses.manage');
   const canAmendIssue = permissions.includes('vendor.licenses.issue');
+  // The amendment list endpoint requires its own read permission, independent from manage/
+  // issue: an operator holding mutation permissions without the read permission must not be
+  // gated (or blocked) by a denied list request — the server authorizes their actions.
+  const canAmendRead = permissions.includes('vendor.licenses.read');
   const [view, setView] = useState<'orders' | 'receivables'>('orders');
   const [orders, setOrders] = useState<PageResponse<OrderRow> | null>(null);
   const [orderPage, setOrderPage] = useState(1);
@@ -435,7 +439,11 @@ export function VendorSales({ permissions }: { permissions: string[] }) {
   const [showCreate, setShowCreate] = useState(false);
   const [openOrder, setOpenOrder] = useState<OrderRow | null>(null);
   const [orderAmendments, setOrderAmendments] = useState<AmendmentRequestRow[]>([]);
-  const [amendmentForm, setAmendmentForm] = useState<{ line: OrderLine } | null>(null);
+  // True while some amendment page for the displayed order failed to load: the operator sees
+  // the order details and the pages fetched so far, but every amendment action stays disabled
+  // until a retry completes the list (an unfinished list must never look complete).
+  const [amendmentLoadIncomplete, setAmendmentLoadIncomplete] = useState(false);
+  const [amendmentForm, setAmendmentForm] = useState<{ orderId: string; line: OrderLine } | null>(null);
   const [amendmentKind, setAmendmentKind] = useState('');
   const [amendmentMaxCompanies, setAmendmentMaxCompanies] = useState('');
   const [amendmentSupportUntil, setAmendmentSupportUntil] = useState('');
@@ -472,6 +480,7 @@ export function VendorSales({ permissions }: { permissions: string[] }) {
     openedOrderRef.current = orderId;
     setBusyOrder(orderId);
     setOrderAmendments([]);
+    setAmendmentLoadIncomplete(false);
     setAmendmentForm(null);
     setAmendmentKind('');
     setAmendmentMaxCompanies('');
@@ -483,24 +492,42 @@ export function VendorSales({ permissions }: { permissions: string[] }) {
       if (!response.ok) throw new Error(await readError(response));
       const order = await response.json() as OrderRow;
       const amendments: AmendmentRequestRow[] = [];
+      let pagesComplete = true;
+      let listDenied = false;
       // One paged call per page: the amendment panel has no paging controls of its own, so
       // every page for this order is loaded (bounded by the request loop, not a magic limit).
       for (let page = 1; ; page++) {
         const amendmentsResponse = await fetch(`/api/vendor/license-amendment-requests/?orderId=${orderId}&page=${page}&pageSize=50`, { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } });
-        if (!amendmentsResponse.ok) break;
+        if (!amendmentsResponse.ok) {
+          pagesComplete = false;
+          // A denied list request (missing vendor.licenses.read) is not a data failure for
+          // mutation-permitted operators: their actions stay enabled and server-gated.
+          listDenied = amendmentsResponse.status === 403 || amendmentsResponse.status === 401;
+          break;
+        }
         const pageData = (await amendmentsResponse.json()) as PageResponse<AmendmentRequestRow>;
         amendments.push(...pageData.items);
         if (!pageData.hasNextPage || pageData.totalPages <= page) break;
       }
-      // Only apply if this order is still the one the operator wants to see.
+      // Only apply if this order is still the one the operator wants to see: a slow response
+      // for a previously selected order never overwrites the current selection.
       if (openedOrderRef.current !== orderId) return;
       setOpenOrder(order);
       setOrderAmendments(amendments);
+      // The order details stay visible; a failed amendment page is reported loudly and the
+      // incomplete list is never presented as the full picture (operator can retry the load).
+      // The gate only matters for operators who can actually act on amendments: without the
+      // permission the actions are disabled anyway and a 403 page load must not look like a
+      // data error. The dedicated banner (role=alert) carries the message and the retry action.
+      setAmendmentLoadIncomplete(!pagesComplete && !listDenied && canAmendRead && (canAmendManage || canAmendIssue));
     } catch (reason) {
       if (openedOrderRef.current === orderId) {
         setError(reason instanceof Error ? reason.message : 'دریافت جزئیات سفارش ناموفق بود.');
       }
-    } finally { setBusyOrder(null); }
+    } finally {
+      // A superseded request must not clear the busy state of the order currently opening.
+      if (openedOrderRef.current === orderId) setBusyOrder(null);
+    }
   }
 
   function amendmentPayloadFor(line: OrderLine): Record<string, unknown> | null {
@@ -539,7 +566,11 @@ export function VendorSales({ permissions }: { permissions: string[] }) {
   }
 
   async function previewAmendment(line: OrderLine) {
-    if (busyAmendment) return;
+    if (busyAmendment || amendmentLoadIncomplete) return;
+    if (!openOrder || amendmentForm?.orderId !== openOrder.id) {
+      setError('فرم Amendment متعلق به سفارش دیگری است؛ فرم را برای این سفارش باز کنید.');
+      return;
+    }
     setError(''); setNotice(''); setAmendmentPreview(null);
     const payload = amendmentPayloadFor(line);
     if (!payload) { setError('برای این ردیف، مقادیر Amendment را کامل کنید.'); return; }
@@ -553,7 +584,12 @@ export function VendorSales({ permissions }: { permissions: string[] }) {
   }
 
   async function createAmendment(line: OrderLine) {
-    if (busyAmendment) return;
+    if (busyAmendment || amendmentLoadIncomplete) return;
+    if (!openOrder || amendmentForm?.orderId !== openOrder.id) {
+      setError('فرم Amendment متعلق به سفارش دیگری است؛ فرم را برای این سفارش باز کنید.');
+      return;
+    }
+    const targetOrderId = openOrder.id;
     setError(''); setNotice(''); setAmendmentPreview(null);
     const payload = amendmentPayloadFor(line);
     if (!payload) { setError('برای این ردیف، مقادیر Amendment را کامل کنید.'); return; }
@@ -562,14 +598,15 @@ export function VendorSales({ permissions }: { permissions: string[] }) {
       await postAmendmentJson('/api/vendor/license-amendment-requests', payload);
       setNotice('درخواست Amendment ثبت شد؛ پس از بازبینی، آن را برای تأیید مدیر ارسال کنید.');
       resetAmendmentForm();
-      await openOrderDetail(openOrder!.id);
+      // Reload only the order the request was submitted for, and only if it is still selected.
+      if (openedOrderRef.current === targetOrderId) await openOrderDetail(targetOrderId);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'ثبت درخواست Amendment ناموفق بود.');
     } finally { setBusyAmendment(false); }
   }
 
   async function submitAmendmentForApproval(row: AmendmentRequestRow) {
-    if (busyAmendment || !canAmendIssue) return;
+    if (busyAmendment || !canAmendIssue || amendmentLoadIncomplete) return;
     setError(''); setNotice('');
     setBusyAmendment(true);
     try {
@@ -705,6 +742,10 @@ export function VendorSales({ permissions }: { permissions: string[] }) {
           {canManage && <RecordPaymentForm order={openOrder} onRecorded={() => { setNotice('پرداخت ثبت شد؛ تا تأیید مستقل، مانده بدهی تغییری نمی‌کند.'); void openOrderDetail(openOrder.id); }} onError={handleError} />}
           <div>
             <h3 className="mb-1 text-sm font-medium">Amendment لایسنس (ردیف خرید)</h3>
+            {amendmentLoadIncomplete && <div className="mb-2 flex flex-wrap items-center gap-2 rounded-md border border-destructive/50 bg-destructive/5 p-2 text-sm" role="alert">
+              <span>فهرست Amendmentها کامل بارگذاری نشد؛ فهرست نمایش‌داده‌شده ناقص است.</span>
+              <Button type="button" size="sm" variant="outline" disabled={Boolean(busyOrder)} onClick={() => openOrder && void openOrderDetail(openOrder.id)}>تلاش دوباره</Button>
+            </div>}
             <p className="mb-2 text-xs text-muted-foreground">
               فقط ردیف‌های دارای مرجع لایسنس قابل Amendment هستند؛ نوع تغییر باید با محصول خرید هم‌خوان باشد و صدور فقط با تأیید مدیر و امضای رسمی انجام می‌شود. وضعیت پرداخت ملاک ثبت یا صدور Amendment نیست (D-108). موارد وابسته به CompanyReference (#392) فعال نیستند.
             </p>
@@ -727,8 +768,8 @@ export function VendorSales({ permissions }: { permissions: string[] }) {
                         </span>
                       : <span className="text-muted-foreground">بدون درخواست</span>}</td>
                     <td className="px-3 py-2">{canAmendManage && kinds.length > 0 && !active
-                      ? <Button type="button" size="sm" variant="outline" disabled={busyAmendment}
-                          onClick={() => { setAmendmentForm({ line }); setAmendmentKind(kinds[0] ?? ''); setAmendmentMaxCompanies(''); setAmendmentSupportUntil(''); setAmendmentUpdatesUntil(''); setAmendmentPreview(null); }}>
+                      ? <Button type="button" size="sm" variant="outline" disabled={busyAmendment || amendmentLoadIncomplete}
+                          onClick={() => { setAmendmentForm({ orderId: openOrder!.id, line }); setAmendmentKind(kinds[0] ?? ''); setAmendmentMaxCompanies(''); setAmendmentSupportUntil(''); setAmendmentUpdatesUntil(''); setAmendmentPreview(null); }}>
                           درخواست Amendment
                         </Button>
                       : <span className="text-xs text-muted-foreground">{kinds.length === 0 ? 'نوع پشتیبانی‌شده ندارد' : active ? 'درخواست فعال موجود است' : 'مجوز مدیریت لایسنس لازم است'}</span>}</td>
@@ -767,14 +808,14 @@ export function VendorSales({ permissions }: { permissions: string[] }) {
                 {amendmentPreview.updatesUntilUtc !== null && ` — به‌روزرسانی تا: ${formatDate(amendmentPreview.updatesUntilUtc)}`}
               </p>}
               <div className="mt-3 flex gap-2">
-                <Button type="button" size="sm" variant="outline" disabled={busyAmendment} onClick={() => void previewAmendment(amendmentForm.line)}>پیش‌نمایش</Button>
-                <Button type="button" size="sm" disabled={busyAmendment} onClick={() => void createAmendment(amendmentForm.line)}>ثبت درخواست</Button>
+                <Button type="button" size="sm" variant="outline" disabled={busyAmendment || amendmentLoadIncomplete} onClick={() => void previewAmendment(amendmentForm.line)}>پیش‌نمایش</Button>
+                <Button type="button" size="sm" disabled={busyAmendment || amendmentLoadIncomplete} onClick={() => void createAmendment(amendmentForm.line)}>ثبت درخواست</Button>
                 <Button type="button" size="sm" variant="ghost" disabled={busyAmendment} onClick={resetAmendmentForm}>انصراف</Button>
               </div>
             </div>}
             {orderAmendments.filter(amendment => amendment.status === 'Requested').map(amendment => <div key={amendment.id} className="mt-2 flex flex-wrap items-center gap-2 rounded-md border border-border p-2 text-sm">
               <span>{amendmentKindLabels[amendment.kind] ?? amendment.kind} — {amendmentStatusLabels[amendment.status]}</span>
-              {canAmendIssue && <Button type="button" size="sm" disabled={busyAmendment} onClick={() => void submitAmendmentForApproval(amendment)}>ارسال برای تأیید</Button>}
+              {canAmendIssue && <Button type="button" size="sm" disabled={busyAmendment || amendmentLoadIncomplete} onClick={() => void submitAmendmentForApproval(amendment)}>ارسال برای تأیید</Button>}
             </div>)}
             <p className="mt-2 text-xs text-muted-foreground">صدور Amendment همیشه از مسیر امضای رسمی لایسنس انجام می‌شود و تأیید پرداخت به‌تنهایی هیچ چیزی صادر نمی‌کند.</p>
           </div>
