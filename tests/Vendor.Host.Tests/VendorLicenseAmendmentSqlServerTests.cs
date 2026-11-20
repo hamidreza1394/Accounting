@@ -106,9 +106,11 @@ public sealed class VendorLicenseAmendmentSqlServerTests
         var undecidedApproval = await db.ApprovalRequests.AsNoTracking()
             .SingleAsync(item => item.Id == undecidedApprovalId, TestContext.Current.CancellationToken);
         var service = fixture.CreateService(failAudit: false);
+        await using var undecidedTx = await db.Database.BeginTransactionAsync(TestContext.Current.CancellationToken);
         var undecidedResult = await service.IssueApprovedAsync(
             undecidedApproval, Guid.NewGuid(), undecidedApproval.RowVersion.ToArray(), null,
             Guid.NewGuid().ToString("N"), TestContext.Current.CancellationToken);
+        await undecidedTx.RollbackAsync(TestContext.Current.CancellationToken);
         // The request row is still Requested, not PendingApproval: fail closed.
         Assert.False(undecidedResult.Succeeded);
         Assert.Equal("approval_resource_stale", undecidedResult.ErrorCode);

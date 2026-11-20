@@ -121,15 +121,15 @@ public sealed class VendorLicenseAmendmentIssuanceService(
         var payloadHash = Convert.ToHexString(SHA256.HashData(payloadBytes)).ToLowerInvariant();
         var envelopeJson = JsonSerializer.Serialize(envelope);
 
-        db.Entry(license).Property(item => item.RowVersion).OriginalValue =
-            approval.ExpectedResourceRowVersion;
-        license.LastIssuedSequence = candidate.Sequence;
-
+        // The approval pins the amendment REQUEST row version (captured after PendingApproval);
+        // the license row keeps its own optimistic-concurrency version: a concurrent issuance of
+        // the same license still fails SaveChanges (stale) or the unique (LicenseId, Sequence).
         db.Entry(request).Property(item => item.RowVersion).OriginalValue =
             approval.ExpectedResourceRowVersion;
         request.Status = VendorLicenseAmendmentRequest.StatusIssued;
         request.UpdatedAtUtc = now;
         request.ApprovalRequestId = approval.Id;
+        license.LastIssuedSequence = candidate.Sequence;
 
         db.Entry(approval).Property(item => item.RowVersion).OriginalValue = expectedApprovalVersion;
         approval.Status = "Approved";
