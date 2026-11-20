@@ -3326,3 +3326,8 @@
 
 - Entityهای `VendorSalesOrders`/`VendorSalesOrderLines`/`VendorPaymentRecords` با Migration جدید Vendor و CHECK constraintها؛ ثبت پرداخت دستی چندگانه با ستون‌های typed؛ تأیید Maker-Checker مستقل (`salesOrderPayment` + `vendor.payments.verify`) با منع self-approval و تراکنش واحد؛ وضعیت‌های مشتق Unpaid/PartiallyPaid/Paid/Overdue فقط در زمان خواندن؛ گزارش مطالبات `/api/vendor/receivables` بدون Scheduler/درگاه/Ledger. صدور و پرداخت دو چرخهٔ مستقل ماندند.
 - ۱۲ تست واحد سبز محلی؛ دو تست Integration SQL-گیت برای CI. `dotnet ef migrations has-pending-model-changes` سبز. هیچ تغییری در Customer DB و هیچ اثری بر صدور/فعال‌سازی وجود ندارد. handoff: `ISSUE-393-vendor-payment-cycle-d108.md`.
+
+## 2026-11-20 — امنیت: ثبت supersession سیاست تأیید Vendor (D-109) در SECURITY.md
+
+- بخش «تغییر سیاست تأیید Vendor طبق D-109» به docs/SECURITY.md اضافه شد تا حالت واقعی Vendor v1 (تک‌اپراتوره، self-approval مجاز، حفظ MFA/RBAC/Audit/RowVersion/fail-closed) مستند بماند؛ محتوای یکتای PR #726 پس از ادغام کد آن در main (#720) منتقل شد. این PR کد آن شاخه را بازتولید نمی‌کند.
+- تغییر فقط مستندات است؛ هیچ کد، Schema، Migration، API یا پیکربندی تغییر نکرد. Build/Test برای تغییر docs-only اجرا نشد؛ CI مستندات روی HEAD این PR بررسی می‌شود.
