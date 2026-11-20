@@ -562,7 +562,7 @@ public sealed class VendorLicenseAmendmentSqlServerTests
 
         // Real production validation path: the endpoints call ValidateRequestedPeriodsAsync
         // before storing anything, so the invalid request is never persisted as Requested.
-        var error = await fixture.Issuance.ValidateRequestedPeriodsAsync(
+        var (error, _) = await fixture.Issuance.ValidateRequestedPeriodsAsync(
             fixture.LicenseId, fixture.CustomerId,
             DateTimeOffset.UtcNow.AddYears(1), null, TestContext.Current.CancellationToken);
 
@@ -581,14 +581,19 @@ public sealed class VendorLicenseAmendmentSqlServerTests
         await fixture.GrantSupportPeriodsAsync(now.AddDays(180), now.AddDays(180));
 
         var service = fixture.Issuance;
-        Assert.Null(await service.ValidateRequestedPeriodsAsync(
-            fixture.LicenseId, fixture.CustomerId, now.AddDays(365), null, TestContext.Current.CancellationToken));
-        Assert.Null(await service.ValidateRequestedPeriodsAsync(
-            fixture.LicenseId, fixture.CustomerId, null, now.AddDays(365), TestContext.Current.CancellationToken));
-        Assert.Equal("support_period_not_increased", await service.ValidateRequestedPeriodsAsync(
-            fixture.LicenseId, fixture.CustomerId, now.AddDays(180), null, TestContext.Current.CancellationToken));
-        Assert.Equal("updates_period_not_increased", await service.ValidateRequestedPeriodsAsync(
-            fixture.LicenseId, fixture.CustomerId, null, now.AddDays(90), TestContext.Current.CancellationToken));
+        var (validError, validStatus) = await service.ValidateRequestedPeriodsAsync(
+            fixture.LicenseId, fixture.CustomerId, now.AddDays(365), null, TestContext.Current.CancellationToken);
+        Assert.Null(validError);
+        Assert.Equal(200, validStatus);
+        var (validUpdatesError, _) = await service.ValidateRequestedPeriodsAsync(
+            fixture.LicenseId, fixture.CustomerId, null, now.AddDays(365), TestContext.Current.CancellationToken);
+        Assert.Null(validUpdatesError);
+        var (supportError, _) = await service.ValidateRequestedPeriodsAsync(
+            fixture.LicenseId, fixture.CustomerId, now.AddDays(180), null, TestContext.Current.CancellationToken);
+        Assert.Equal("support_period_not_increased", supportError);
+        var (updatesError, _) = await service.ValidateRequestedPeriodsAsync(
+            fixture.LicenseId, fixture.CustomerId, null, now.AddDays(90), TestContext.Current.CancellationToken);
+        Assert.Equal("updates_period_not_increased", updatesError);
         Assert.Equal(0, await fixture.Db.LicenseAmendmentRequests.CountAsync(TestContext.Current.CancellationToken));
     }
 }

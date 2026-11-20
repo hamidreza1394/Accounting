@@ -285,7 +285,7 @@ describe('Vendor sales and payments workspace', () => {
       return Promise.resolve(response({}, 404));
     });
     vi.stubGlobal('fetch', fetchMock);
-    render(<VendorSales permissions={['vendor.payments.read', 'vendor.payments.manage', 'vendor.licenses.manage', 'vendor.licenses.issue']} />);
+    render(<VendorSales permissions={['vendor.payments.read', 'vendor.payments.manage', 'vendor.licenses.read', 'vendor.licenses.manage', 'vendor.licenses.issue']} />);
 
     fireEvent.click((await screen.findAllByRole('button', { name: 'جزئیات' }))[0]!);
     // Page 1 succeeded but page 2 failed: the incomplete list must not look complete.
@@ -299,6 +299,28 @@ describe('Vendor sales and payments workspace', () => {
     fireEvent.click(screen.getByRole('button', { name: 'تلاش دوباره' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'ارسال برای تأیید' })).toBeEnabled());
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('keeps amendment actions enabled for a mutation operator when the list request is denied', async () => {
+    // The list endpoint needs vendor.licenses.read; manage/issue are independent permissions.
+    // A 403 on the list must not gate this operator's server-authorized mutation actions.
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      void init;
+      const url = String(input);
+      if (url.startsWith('/api/vendor/sales-orders/?')) return Promise.resolve(response(ordersPage([collectibleOrder])));
+      if (url.startsWith('/api/vendor/receivables/?')) return Promise.resolve(response(page([])));
+      if (url === '/api/auth/antiforgery') return Promise.resolve(response({ requestToken: 'csrf-denied' }));
+      if (url === `/api/vendor/sales-orders/${collectibleOrder.id}`) return Promise.resolve(response(orderDetail));
+      if (url.includes('/api/vendor/license-amendment-requests/?orderId=')) return Promise.resolve(response({}, 403));
+      return Promise.resolve(response({}, 404));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<VendorSales permissions={['vendor.payments.read', 'vendor.licenses.manage', 'vendor.licenses.issue']} />);
+
+    fireEvent.click((await screen.findAllByRole('button', { name: 'جزئیات' }))[0]!);
+    expect(await screen.findByText('Amendment لایسنس (ردیف خرید)')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'درخواست Amendment' })).toBeEnabled();
   });
 
   it('discards out-of-order detail responses so a slower earlier order never overwrites the selection', async () => {

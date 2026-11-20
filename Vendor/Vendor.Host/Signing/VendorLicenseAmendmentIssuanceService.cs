@@ -311,7 +311,7 @@ public sealed class VendorLicenseAmendmentIssuanceService(
     /// before it is ever stored as Requested. Payment state is deliberately absent (D-108 §1);
     /// this method is read-only and never creates, signs or issues anything by itself.
     /// </summary>
-    public async Task<string?> ValidateRequestedPeriodsAsync(
+    public async Task<(string? Error, int StatusCode)> ValidateRequestedPeriodsAsync(
         Guid licenseId,
         Guid customerId,
         DateTimeOffset? requestedSupportUntilUtc,
@@ -321,23 +321,26 @@ public sealed class VendorLicenseAmendmentIssuanceService(
         var license = await db.Licenses.AsNoTracking()
             .SingleOrDefaultAsync(item => item.Id == licenseId, cancellationToken);
         if (license is null)
-            return "license_not_found";
+            return ("license_not_found", StatusCodes.Status404NotFound);
         if (license.CustomerId != customerId)
-            return "license_installation_mismatch";
+            return ("license_installation_mismatch", StatusCodes.Status409Conflict);
         var installation = license.InstallationId is { } installationId
             ? await db.Installations.AsNoTracking().SingleOrDefaultAsync(
                 item => item.Id == installationId, cancellationToken)
             : null;
         if (installation is null)
-            return "license_installation_mismatch";
+            return ("license_installation_mismatch", StatusCodes.Status409Conflict);
 
+        // Verification failures keep their verifier status (e.g. 503 for an untrusted signing
+        // key) instead of degrading into a request conflict; invalid requested periods are 409.
         var verified = await TryVerifyLatestPayloadAsync(license, installation, cancellationToken);
         if (verified.Error is not null || verified.Payload is null)
-            return verified.Error ?? "amendment_envelope_invalid";
+            return (verified.Error ?? "amendment_envelope_invalid", verified.StatusCode);
 
-        return VendorLicenseAmendmentPayloadBuilder.ValidateRequestedPeriods(
+        var ruleError = VendorLicenseAmendmentPayloadBuilder.ValidateRequestedPeriods(
             verified.Payload, requestedSupportUntilUtc, requestedUpdatesUntilUtc,
             timeProvider.GetUtcNow().ToUniversalTime());
+        return (ruleError, StatusCodes.Status409Conflict);
     }
 
     private async Task<(LicensePayload? Payload, int StatusCode, string? Error)> TryVerifyLatestPayloadAsync(

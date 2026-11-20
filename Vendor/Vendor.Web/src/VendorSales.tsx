@@ -423,6 +423,10 @@ export function VendorSales({ permissions }: { permissions: string[] }) {
   const canManage = permissions.includes('vendor.payments.manage');
   const canAmendManage = permissions.includes('vendor.licenses.manage');
   const canAmendIssue = permissions.includes('vendor.licenses.issue');
+  // The amendment list endpoint requires its own read permission, independent from manage/
+  // issue: an operator holding mutation permissions without the read permission must not be
+  // gated (or blocked) by a denied list request — the server authorizes their actions.
+  const canAmendRead = permissions.includes('vendor.licenses.read');
   const [view, setView] = useState<'orders' | 'receivables'>('orders');
   const [orders, setOrders] = useState<PageResponse<OrderRow> | null>(null);
   const [orderPage, setOrderPage] = useState(1);
@@ -489,11 +493,18 @@ export function VendorSales({ permissions }: { permissions: string[] }) {
       const order = await response.json() as OrderRow;
       const amendments: AmendmentRequestRow[] = [];
       let pagesComplete = true;
+      let listDenied = false;
       // One paged call per page: the amendment panel has no paging controls of its own, so
       // every page for this order is loaded (bounded by the request loop, not a magic limit).
       for (let page = 1; ; page++) {
         const amendmentsResponse = await fetch(`/api/vendor/license-amendment-requests/?orderId=${orderId}&page=${page}&pageSize=50`, { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } });
-        if (!amendmentsResponse.ok) { pagesComplete = false; break; }
+        if (!amendmentsResponse.ok) {
+          pagesComplete = false;
+          // A denied list request (missing vendor.licenses.read) is not a data failure for
+          // mutation-permitted operators: their actions stay enabled and server-gated.
+          listDenied = amendmentsResponse.status === 403 || amendmentsResponse.status === 401;
+          break;
+        }
         const pageData = (await amendmentsResponse.json()) as PageResponse<AmendmentRequestRow>;
         amendments.push(...pageData.items);
         if (!pageData.hasNextPage || pageData.totalPages <= page) break;
@@ -508,7 +519,7 @@ export function VendorSales({ permissions }: { permissions: string[] }) {
       // The gate only matters for operators who can actually act on amendments: without the
       // permission the actions are disabled anyway and a 403 page load must not look like a
       // data error. The dedicated banner (role=alert) carries the message and the retry action.
-      setAmendmentLoadIncomplete(!pagesComplete && (canAmendManage || canAmendIssue));
+      setAmendmentLoadIncomplete(!pagesComplete && !listDenied && canAmendRead && (canAmendManage || canAmendIssue));
     } catch (reason) {
       if (openedOrderRef.current === orderId) {
         setError(reason instanceof Error ? reason.message : 'دریافت جزئیات سفارش ناموفق بود.');
