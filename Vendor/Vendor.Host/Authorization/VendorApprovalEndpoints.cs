@@ -312,39 +312,12 @@ public static class VendorApprovalEndpoints
 
             if (approval.ResourceType == "licenseAmendment" && request.Decision == "Rejected")
             {
-                var amendmentRequest = await db.LicenseAmendmentRequests.SingleOrDefaultAsync(
-                    item => item.Id == approval.ResourceId, ct);
-                if (amendmentRequest is null ||
-                    amendmentRequest.Status != VendorLicenseAmendmentRequest.StatusPendingApproval ||
-                    !amendmentRequest.RowVersion.AsSpan().SequenceEqual(approval.ExpectedResourceRowVersion))
-                    return Results.Conflict(new { error = "approval_resource_stale" });
+                var amendmentRejection = await amendmentIssuanceService.RejectApprovedAsync(
+                    approval, actor.Id, expectedApprovalVersion,
+                    request.Comment, CorrelationId(), ct);
+                if (!amendmentRejection.Succeeded)
+                    return Results.Json(new { error = amendmentRejection.ErrorCode }, statusCode: amendmentRejection.StatusCode);
 
-                var amendedAt = timeProvider.GetUtcNow().ToUniversalTime();
-                db.Entry(amendmentRequest).Property(item => item.RowVersion).OriginalValue =
-                    approval.ExpectedResourceRowVersion;
-                amendmentRequest.Status = VendorLicenseAmendmentRequest.StatusRejected;
-                amendmentRequest.FailureCode = "amendment_rejected";
-                amendmentRequest.UpdatedAtUtc = amendedAt;
-                approval.Status = "Rejected";
-                approval.ReviewedByUserId = actor.Id;
-                approval.ReviewedAtUtc = amendedAt;
-                approval.ReviewComment = string.IsNullOrWhiteSpace(request.Comment) ? null : request.Comment.Trim();
-                db.Entry(approval).Property(item => item.RowVersion).OriginalValue = expectedApprovalVersion;
-                try
-                {
-                    await db.SaveChangesAsync(ct);
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    return Results.Conflict(new { error = "stale_approval_or_resource_version" });
-                }
-
-                await audit.AppendAsync(new VendorAuditWriteRequest(
-                    actor.Id, "vendor.approval.rejected", nameof(VendorApprovalRequest),
-                    approval.Id.ToString("D"), CorrelationId()), ct);
-                await audit.AppendAsync(new VendorAuditWriteRequest(
-                    actor.Id, "vendor.amendment.rejected", nameof(VendorLicenseAmendmentRequest),
-                    amendmentRequest.Id.ToString("D"), CorrelationId()), ct);
                 await tx.CommitAsync(ct);
                 return Results.Ok(ToResponse(approval));
             }

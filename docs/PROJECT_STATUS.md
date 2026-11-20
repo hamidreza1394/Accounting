@@ -850,4 +850,4 @@
 
 - جریان `Order → Payment Verified → درخواست صریح Amendment → Candidate از builder رسمی → Approval → امضای رسمی (sequence+1 روی همان LicenseId) → Delivery از مسیر موجود` اکنون قابل استفاده است؛ کاندید همیشه از آخرین پاکت امضاشده و verify‌شده بازسازی می‌شود و هیچ داده entitlement مشتق‌شده در دیتابیس ذخیره نمی‌شود.
 - فقط kinds نصب‌محور (maxCompanies، support/updates) فعال‌اند؛ kinds شرکت‌محور به #392 وابسته و Blocked هستند و builder company-scoped در جریان جدید expose نشده است.
-- کنترل‌های D-108/D-109: تأیید پرداخت به‌صورت خودکار چیزی صادر نمی‌کند؛ صدور مستقل از پرداخت و فقط با مجوز `vendor.licenses.issue`؛ RowVersion روی درخواست و approval؛ unique filtered index یک Amendment فعال برای هر ردیف خرید؛ شکست Audit/Singer fail-closed با Rollback کامل.
+- کنترل‌های D-108/D-109: وضعیت پرداخت هیچ پیش‌شرطی برای ثبت یا صدور Amendment نیست و تأیید پرداخت به‌صورت خودکار چیزی صادر نمی‌کند؛ صدور مستقل از پرداخت و فقط با مجوز `vendor.licenses.issue`؛ RowVersion روی درخواست و approval؛ unique filtered index یک Amendment فعال برای هر ردیف خرید؛ شکست Audit/Singer fail-closed با Rollback کامل.

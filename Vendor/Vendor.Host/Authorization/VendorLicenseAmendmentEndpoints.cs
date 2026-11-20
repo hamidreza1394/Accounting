@@ -215,8 +215,8 @@ public static class VendorLicenseAmendmentEndpoints
 
     /// <summary>
     /// Shared eligibility validation for preview and creation. Loads the purchased line, its order
-    /// (with the Verified-payment eligibility check) and the referenced license, then applies the
-    /// pure rules. No state is persisted; the returned entity is transient.
+    /// and the referenced license, then applies the pure rules. Payment state is intentionally not
+    /// consulted (D-108 §1). No state is persisted; the returned entity is transient.
     /// </summary>
     private static async Task<(VendorLicenseAmendmentRequest? Request, string? Error)> BuildTransientRequestAsync(
         CreateVendorLicenseAmendmentRequest body, VendorDbContext db, TimeProvider timeProvider,
@@ -231,20 +231,16 @@ public static class VendorLicenseAmendmentEndpoints
             .SingleOrDefaultAsync(ct);
         if (line is null) return (null, "order_line_not_found");
 
+        if (requireFreshCheck && await db.LicenseAmendmentRequests.AsNoTracking().AnyAsync(
+                amendment => amendment.OrderLineId == line.Id &&
+                    VendorLicenseAmendmentRules.BlockingStatuses.Contains(amendment.Status), ct))
+            return (null, "amendment_request_already_active");
+
         var order = await db.SalesOrders.AsNoTracking()
             .Where(item => item.Id == line.OrderId)
-            .Select(item => new
-            {
-                item.Id, item.CustomerId,
-                HasVerifiedPayment = item.Payments.Any(payment => payment.Status == VendorPaymentRecord.StatusVerified),
-                ActiveAmendment = db.LicenseAmendmentRequests.Any(amendment =>
-                    amendment.OrderLineId == item.Id &&
-                    VendorLicenseAmendmentRules.BlockingStatuses.Contains(amendment.Status))
-            })
+            .Select(item => new { item.Id, item.CustomerId })
             .SingleOrDefaultAsync(ct);
         if (order is null) return (null, "order_line_not_found");
-        if (requireFreshCheck && order.ActiveAmendment)
-            return (null, "amendment_request_already_active");
 
         var license = await db.Licenses.AsNoTracking()
             .Where(item => item.Id == body.LicenseId)
@@ -256,7 +252,7 @@ public static class VendorLicenseAmendmentEndpoints
 
         var validationError = VendorLicenseAmendmentRules.ValidateCreate(
             body.Kind, line.ProductCode, line.LicenseId, body.LicenseId, license.Status,
-            order.HasVerifiedPayment, body.RequestedMaxCompanies, license.MaxCompanies,
+            body.RequestedMaxCompanies, license.MaxCompanies,
             body.RequestedSupportUntilUtc, body.RequestedUpdatesUntilUtc,
             timeProvider.GetUtcNow().ToUniversalTime());
         if (validationError is not null) return (null, validationError);

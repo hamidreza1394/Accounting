@@ -5,8 +5,9 @@ using Xunit;
 namespace Faranou.Vendor.Host.Tests;
 
 /// <summary>
-/// Pure rules for explicit license amendment requests (D-108/D-109): only purchased lines with a
-/// Verified payment are eligible, only installation-scoped kinds are accepted while CompanyReference
+/// Pure rules for explicit license amendment requests (D-108/D-109): payment state is never part
+/// of eligibility (missing, recorded, verified, rejected or partially paid all allow the
+/// amendment cycle), only installation-scoped kinds are accepted while CompanyReference
 /// mapping (#392) is unresolved, and product codes must commercially match the requested kind.
 /// </summary>
 public sealed class VendorLicenseAmendmentRulesTests
@@ -19,7 +20,6 @@ public sealed class VendorLicenseAmendmentRulesTests
         Guid? lineLicenseId = null,
         Guid? licenseId = null,
         string licenseStatus = "Issued",
-        bool verifiedPayment = true,
         int? requestedMaxCompanies = 7,
         int? licenseMaxCompanies = 5,
         DateTimeOffset? supportUntilUtc = null,
@@ -31,20 +31,14 @@ public sealed class VendorLicenseAmendmentRulesTests
             kind, productCode,
             lineLicense,
             licenseId ?? lineLicense,
-            licenseStatus, verifiedPayment, requestedMaxCompanies, licenseMaxCompanies,
+            licenseStatus, requestedMaxCompanies, licenseMaxCompanies,
             supportUntilUtc, updatesUntilUtc, now ?? Now);
     }
 
     [Fact]
-    public void EligibleVerifiedPurchaseWithCompatibleCodeIsAccepted()
+    public void EligiblePurchasedLineWithCompatibleCodeIsAccepted()
     {
         Assert.Null(Validate(VendorLicenseAmendmentRules.KindMaxCompanies, requestedMaxCompanies: 6));
-    }
-
-    [Fact]
-    public void PendingAndRejectedPaymentsAreNeverEligible()
-    {
-        Assert.Equal("order_payment_not_verified", Validate(VendorLicenseAmendmentRules.KindMaxCompanies, verifiedPayment: false));
     }
 
     [Fact]

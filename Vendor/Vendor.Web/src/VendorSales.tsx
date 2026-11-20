@@ -146,7 +146,6 @@ const amendmentErrorMessages: Record<string, string> = {
   license_order_line_mismatch: 'لایسنس به مشتری این سفارش تعلق ندارد.',
   amendment_request_already_active: 'برای این ردیف از قبل یک Amendment فعال وجود دارد.',
   invalid_amendment_transition: 'وضعیت درخواست Amendment اجازه این عملیات را نمی‌دهد.',
-  order_payment_not_verified: 'هیچ پرداخت تأییدشده‌ای برای این سفارش ثبت نشده است؛ ابتدا پرداخت را تأیید کنید.',
   amendment_envelope_missing: 'پاکت امضاشده لایسنس یافت نشد؛ صدور جدید لازم است.',
   amendment_envelope_invalid: 'پاکت ذخیره‌شده معتبر نیست؛ با پشتیبانی فنی تماس بگیرید.',
   amendment_signature_or_payload_invalid: 'اعتبارسنجی امضای لایسنس فعلی ناموفق بود؛ عملیات متوقف شد.',
@@ -705,9 +704,9 @@ export function VendorSales({ permissions }: { permissions: string[] }) {
           </div>
           {canManage && <RecordPaymentForm order={openOrder} onRecorded={() => { setNotice('پرداخت ثبت شد؛ تا تأیید مستقل، مانده بدهی تغییری نمی‌کند.'); void openOrderDetail(openOrder.id); }} onError={handleError} />}
           <div>
-            <h3 className="mb-1 text-sm font-medium">Amendment لایسنس (خرید تأییدشده)</h3>
+            <h3 className="mb-1 text-sm font-medium">Amendment لایسنس (ردیف خرید)</h3>
             <p className="mb-2 text-xs text-muted-foreground">
-              فقط ردیف‌های دارای مرجع لایسنس قابل Amendment هستند؛ نوع تغییر باید با محصول خرید هم‌خوان باشد و صدور، فقط با تأیید مدیر و امضای رسمی انجام می‌شود. موارد وابسته به CompanyReference (#392) فعال نیستند.
+              فقط ردیف‌های دارای مرجع لایسنس قابل Amendment هستند؛ نوع تغییر باید با محصول خرید هم‌خوان باشد و صدور فقط با تأیید مدیر و امضای رسمی انجام می‌شود. وضعیت پرداخت ملاک ثبت یا صدور Amendment نیست (D-108). موارد وابسته به CompanyReference (#392) فعال نیستند.
             </p>
             {openOrder.lines.filter(line => line.licenseId).length === 0
               ? <p className="text-sm text-muted-foreground">این سفارش ردیف متصل به لایسنس ندارد.</p>

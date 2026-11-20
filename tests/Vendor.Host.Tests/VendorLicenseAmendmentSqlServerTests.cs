@@ -31,7 +31,8 @@ public sealed class VendorLicenseAmendmentSqlServerTests
         await using var fixture = await AmendmentFixture.OpenAsync();
         if (fixture is null) return;
         await fixture.IssueBaseLicenseAsync();
-        await fixture.SeedPurchasedLineAsync(productCode: "addon.company.seat", verifiedPayment: true);
+        // No payment row at all: D-108 §1 — payment state never gates the amendment cycle.
+        await fixture.SeedPurchasedLineAsync(productCode: "addon.company.seat");
         await fixture.SeedAmendmentRequestAsync(VendorLicenseAmendmentRequest.KindMaxCompanies, requestedMaxCompanies: 8);
 
         var result = await fixture.IssueAmendmentAsync();
@@ -63,7 +64,7 @@ public sealed class VendorLicenseAmendmentSqlServerTests
         await using var fixture = await AmendmentFixture.OpenAsync();
         if (fixture is null) return;
         await fixture.IssueBaseLicenseAsync();
-        await fixture.SeedPurchasedLineAsync(productCode: "addon.company.seat", verifiedPayment: true);
+        await fixture.SeedPurchasedLineAsync(productCode: "addon.company.seat", paymentState: "Recorded");
         await fixture.SeedAmendmentRequestAsync(VendorLicenseAmendmentRequest.KindMaxCompanies, requestedMaxCompanies: 8);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
@@ -83,7 +84,7 @@ public sealed class VendorLicenseAmendmentSqlServerTests
         await using var fixture = await AmendmentFixture.OpenAsync();
         if (fixture is null) return;
         await fixture.IssueBaseLicenseAsync();
-        await fixture.SeedPurchasedLineAsync(productCode: "addon.company.seat", verifiedPayment: true);
+        await fixture.SeedPurchasedLineAsync(productCode: "addon.company.seat", paymentState: "PartiallyPaid");
         await fixture.SeedAmendmentRequestAsync(VendorLicenseAmendmentRequest.KindMaxCompanies, requestedMaxCompanies: 8);
 
         // A decision built on a stale approval version never reaches the signing pipeline.
@@ -93,7 +94,7 @@ public sealed class VendorLicenseAmendmentSqlServerTests
 
         // A request that is not in PendingApproval cannot be decided: seed an independent
         // purchased line (the filtered unique index forbids two active requests on one line).
-        await fixture.SeedPurchasedLineAsync(productCode: "addon.company.seat", verifiedPayment: true);
+        await fixture.SeedPurchasedLineAsync(productCode: "addon.company.seat", paymentState: "Rejected");
         await fixture.SeedAmendmentRequestAsync(
             VendorLicenseAmendmentRequest.KindMaxCompanies, requestedMaxCompanies: 9,
             status: VendorLicenseAmendmentRequest.StatusRequested);
@@ -123,7 +124,7 @@ public sealed class VendorLicenseAmendmentSqlServerTests
         await using var fixture = await AmendmentFixture.OpenAsync();
         if (fixture is null) return;
         await fixture.IssueBaseLicenseAsync();
-        await fixture.SeedPurchasedLineAsync(productCode: "addon.company.seat", verifiedPayment: true);
+        await fixture.SeedPurchasedLineAsync(productCode: "addon.company.seat", paymentState: "Verified");
         await fixture.SeedAmendmentRequestAsync(VendorLicenseAmendmentRequest.KindMaxCompanies, requestedMaxCompanies: 8);
 
         // Corrupt the stored payload hash: the candidate must never be built from an unverifiable envelope.
@@ -138,22 +139,80 @@ public sealed class VendorLicenseAmendmentSqlServerTests
         Assert.Equal(1, await fixture.Db.SignedLicenseEnvelopes.CountAsync(TestContext.Current.CancellationToken));
     }
 
-    [Fact]
-    public async Task RejectedDecisionMarksTheRequestRejectedAndAllowsACorrectedRetry()
+    /// <summary>
+    /// D-108 §1 matrix: missing, recorded, verified, rejected and partially paid payment states
+    /// all allow the amendment cycle. No payment state may gate issuance (or trigger it).
+    /// </summary>
+    [Theory]
+    [InlineData("none")]
+    [InlineData("Recorded")]
+    [InlineData("Verified")]
+    [InlineData("Rejected")]
+    [InlineData("PartiallyPaid")]
+    public async Task AmendmentIsIssuedRegardlessOfPaymentState(string paymentState)
     {
         await using var fixture = await AmendmentFixture.OpenAsync();
         if (fixture is null) return;
         await fixture.IssueBaseLicenseAsync();
-        await fixture.SeedPurchasedLineAsync(productCode: "renewal.support-updates", verifiedPayment: true);
+        await fixture.SeedPurchasedLineAsync(productCode: "addon.company.seat", paymentState: paymentState);
+        await fixture.SeedAmendmentRequestAsync(VendorLicenseAmendmentRequest.KindMaxCompanies, requestedMaxCompanies: 8);
+
+        var result = await fixture.IssueAmendmentAsync();
+
+        Assert.True(result.Succeeded, result.ErrorCode);
+        fixture.Db.ChangeTracker.Clear();
+        var license = await fixture.Db.Licenses.AsNoTracking().SingleAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(2, license.LastIssuedSequence);
+    }
+
+    [Fact]
+    public async Task RejectedDecisionRunsThroughTheProductionPathAndAllowsACorrectedRetry()
+    {
+        await using var fixture = await AmendmentFixture.OpenAsync();
+        if (fixture is null) return;
+        await fixture.IssueBaseLicenseAsync();
+        await fixture.SeedPurchasedLineAsync(productCode: "renewal.support-updates");
         await fixture.SeedAmendmentRequestAsync(VendorLicenseAmendmentRequest.KindSupportUpdates,
             supportUntilUtc: DateTimeOffset.UtcNow.AddYears(1));
 
-        await fixture.RejectAmendmentAsync();
+        // Real production rejection path: the same RejectApprovedAsync service the decision
+        // endpoint calls for licenseAmendment rejections — no helper mutates entities directly.
+        var rejection = await fixture.RejectAmendmentAsync();
+        Assert.True(rejection.Succeeded, rejection.ErrorCode);
+
         fixture.Db.ChangeTracker.Clear();
         var request = await fixture.Db.LicenseAmendmentRequests.AsNoTracking().SingleAsync(TestContext.Current.CancellationToken);
         Assert.Equal(VendorLicenseAmendmentRequest.StatusRejected, request.Status);
         Assert.Equal("amendment_rejected", request.FailureCode);
+        var approval = await fixture.Db.ApprovalRequests.AsNoTracking()
+            .SingleAsync(item => item.ResourceType == "licenseAmendment" && item.ResourceId == request.Id,
+                TestContext.Current.CancellationToken);
+        Assert.Equal("Rejected", approval.Status);
         Assert.Equal(1, await fixture.Db.SignedLicenseEnvelopes.CountAsync(TestContext.Current.CancellationToken));
+        var amendmentAudit = await fixture.Db.AuditEvents.AsNoTracking()
+            .Where(item => item.ActionCode == "vendor.amendment.rejected" && item.SubjectId == request.Id.ToString("D"))
+            .ToListAsync(TestContext.Current.CancellationToken);
+        Assert.Single(amendmentAudit);
+        var approvalAudit = await fixture.Db.AuditEvents.AsNoTracking()
+            .Where(item => item.ActionCode == "vendor.approval.rejected" && item.SubjectId == approval.Id.ToString("D"))
+            .ToListAsync(TestContext.Current.CancellationToken);
+        Assert.Single(approvalAudit);
+
+        // A corrected retry: Rejected no longer blocks the line, so a NEW request with corrected
+        // values can be submitted for approval and issued for real (envelope sequence 2).
+        await fixture.SeedAmendmentRequestAsync(VendorLicenseAmendmentRequest.KindSupportUpdates,
+            supportUntilUtc: DateTimeOffset.UtcNow.AddYears(2));
+        var retry = await fixture.IssueAmendmentAsync();
+        Assert.True(retry.Succeeded, retry.ErrorCode);
+
+        fixture.Db.ChangeTracker.Clear();
+        var license = await fixture.Db.Licenses.AsNoTracking().SingleAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(2, license.LastIssuedSequence);
+        Assert.Equal(2, await fixture.Db.SignedLicenseEnvelopes.CountAsync(TestContext.Current.CancellationToken));
+        var requests = await fixture.Db.LicenseAmendmentRequests.AsNoTracking().ToListAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(2, requests.Count);
+        Assert.Contains(requests, item => item.Status == VendorLicenseAmendmentRequest.StatusRejected);
+        Assert.Contains(requests, item => item.Status == VendorLicenseAmendmentRequest.StatusIssued);
     }
 
     private static async Task<Guid> SeedApprovalAsync(VendorDbContext db, VendorLicenseAmendmentRequest request, string status)
@@ -215,7 +274,7 @@ public sealed class VendorLicenseAmendmentSqlServerTests
             Db.ChangeTracker.Clear();
         }
 
-        public async Task SeedPurchasedLineAsync(string productCode, bool verifiedPayment)
+        public async Task SeedPurchasedLineAsync(string productCode, string paymentState = "none")
         {
             var now = DateTimeOffset.UtcNow;
             var order = new VendorSalesOrder
@@ -231,16 +290,31 @@ public sealed class VendorLicenseAmendmentSqlServerTests
                 Quantity = 2, UnitAmount = 200m, LineAmount = 400m,
                 LicenseId = LicenseId, CreatedAtUtc = now
             };
-            var payment = new VendorPaymentRecord
+            Db.AddRange(order, line);
+            if (paymentState != "none")
             {
-                Id = Guid.NewGuid(), OrderId = order.Id, Order = order,
-                Amount = 400m, CurrencyCode = "EUR", Method = "bank_transfer",
-                Status = verifiedPayment ? VendorPaymentRecord.StatusVerified : VendorPaymentRecord.StatusRecorded,
-                VerifiedByUserId = verifiedPayment ? Guid.NewGuid() : null,
-                VerifiedAtUtc = verifiedPayment ? now : null,
-                CreatedAtUtc = now
-            };
-            Db.AddRange(order, line, payment);
+                // "PartiallyPaid": a verified payment below the total plus a recorded remainder.
+                var partial = paymentState == "PartiallyPaid";
+                Db.Add(new VendorPaymentRecord
+                {
+                    Id = Guid.NewGuid(), OrderId = order.Id, Order = order,
+                    Amount = partial ? 150m : 400m, CurrencyCode = "EUR", Method = "bank_transfer",
+                    Status = partial || paymentState == "Verified"
+                        ? VendorPaymentRecord.StatusVerified
+                        : paymentState == "Rejected" ? VendorPaymentRecord.StatusRejected
+                        : VendorPaymentRecord.StatusRecorded,
+                    VerifiedByUserId = partial || paymentState == "Verified" ? Guid.NewGuid() : null,
+                    VerifiedAtUtc = partial || paymentState == "Verified" ? now : null,
+                    CreatedAtUtc = now
+                });
+                if (partial)
+                    Db.Add(new VendorPaymentRecord
+                    {
+                        Id = Guid.NewGuid(), OrderId = order.Id, Order = order,
+                        Amount = 250m, CurrencyCode = "EUR", Method = "bank_transfer",
+                        Status = VendorPaymentRecord.StatusRecorded, CreatedAtUtc = now
+                    });
+            }
             await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
             OrderId = order.Id;
             OrderLineId = line.Id;
@@ -299,23 +373,26 @@ public sealed class VendorLicenseAmendmentSqlServerTests
             }
         }
 
-        public async Task RejectAmendmentAsync()
+        public async Task<VendorLicenseAmendmentRejectionResult> RejectAmendmentAsync()
         {
             var approval = await Db.ApprovalRequests.AsNoTracking()
                 .SingleAsync(item => item.ResourceId == _pendingAmendmentRequestId
                     && item.ResourceType == "licenseAmendment", TestContext.Current.CancellationToken);
-            var request = await Db.LicenseAmendmentRequests.SingleAsync(
-                item => item.Id == _pendingAmendmentRequestId, TestContext.Current.CancellationToken);
-            var now = DateTimeOffset.UtcNow;
-            Db.Entry(request).Property(item => item.RowVersion).OriginalValue =
-                approval.ExpectedResourceRowVersion;
-            request.Status = VendorLicenseAmendmentRequest.StatusRejected;
-            request.FailureCode = "amendment_rejected";
-            request.UpdatedAtUtc = now;
-            approval.Status = "Rejected";
-            approval.ReviewedByUserId = Guid.NewGuid();
-            approval.ReviewedAtUtc = now;
-            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+            await using var tx = await Db.Database.BeginTransactionAsync(TestContext.Current.CancellationToken);
+            try
+            {
+                var result = await CreateService(failAudit: false).RejectApprovedAsync(
+                    approval, Guid.NewGuid(), approval.RowVersion.ToArray(), "reviewer rejected this amendment",
+                    Guid.NewGuid().ToString("N"), TestContext.Current.CancellationToken);
+                if (result.Succeeded) await tx.CommitAsync(TestContext.Current.CancellationToken);
+                else await tx.RollbackAsync(TestContext.Current.CancellationToken);
+                return result;
+            }
+            catch
+            {
+                await tx.RollbackAsync(TestContext.Current.CancellationToken);
+                throw;
+            }
         }
 
         public static async Task<AmendmentFixture?> OpenAsync()
