@@ -4,9 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 type Approval = {
   id: string;
-  resourceType: 'customer' | 'installation' | 'salesOrderPayment';
+  resourceType: 'customer' | 'installation' | 'salesOrderPayment' | 'licenseAmendment';
   resourceId: string;
-  targetStatus: 'Active' | 'Suspended' | 'Verified' | 'Rejected';
+  targetStatus: 'Active' | 'Suspended' | 'Verified' | 'Rejected' | 'Issued';
   requestedByUserId: string;
   requestedAtUtc: string;
   rowVersion: string;
@@ -24,12 +24,14 @@ const resourceLabels: Record<Approval['resourceType'], string> = {
   customer: 'مشتری',
   installation: 'نصب',
   salesOrderPayment: 'پرداخت سفارش',
+  licenseAmendment: 'Amendment لایسنس',
 };
 const targetStatusLabels: Record<Approval['targetStatus'], string> = {
   Active: 'فعال‌سازی',
   Suspended: 'تعلیق',
   Verified: 'تأیید پرداخت',
   Rejected: 'رد پرداخت',
+  Issued: 'صدور Amendment',
 };
 
 function message(status: number, code = '') {

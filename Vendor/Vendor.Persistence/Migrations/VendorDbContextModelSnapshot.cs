@@ -415,6 +415,94 @@ namespace Faranou.Vendor.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorLicenseAmendmentRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ApprovalRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<Guid>("LicenseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OrderLineId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("RequestedMaxCompanies")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("RequestedSupportUntilUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("RequestedUpdatesUntilUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApprovalRequestId");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("LicenseId");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("OrderLineId")
+                        .IsUnique()
+                        .HasFilter("[Status] IN (N'Requested', N'PendingApproval', N'Issued')");
+
+                    b.ToTable("VendorLicenseAmendmentRequests", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_VendorLicenseAmendmentRequests_Kind", "[Kind] IN (N'maxCompanies', N'supportUpdates')");
+
+                            t.HasCheckConstraint("CK_VendorLicenseAmendmentRequests_Status", "[Status] IN (N'Requested', N'PendingApproval', N'Issued', N'Rejected', N'Failed')");
+                        });
+                });
+
             modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorPaymentRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1122,6 +1210,41 @@ namespace Faranou.Vendor.Persistence.Migrations
                     b.Navigation("Customer");
 
                     b.Navigation("Installation");
+                });
+
+            modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorLicenseAmendmentRequest", b =>
+                {
+                    b.HasOne("Faranou.Vendor.Persistence.Domain.VendorCustomer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Faranou.Vendor.Persistence.Domain.VendorLicense", "License")
+                        .WithMany()
+                        .HasForeignKey("LicenseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Faranou.Vendor.Persistence.Domain.VendorSalesOrder", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Faranou.Vendor.Persistence.Domain.VendorSalesOrderLine", "OrderLine")
+                        .WithMany()
+                        .HasForeignKey("OrderLineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("License");
+
+                    b.Navigation("Order");
+
+                    b.Navigation("OrderLine");
                 });
 
             modelBuilder.Entity("Faranou.Vendor.Persistence.Domain.VendorPaymentRecord", b =>

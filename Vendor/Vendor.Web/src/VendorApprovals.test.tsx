@@ -94,4 +94,46 @@ describe('Vendor approval queue', () => {
       body: JSON.stringify({ decision: 'Approved', rowVersion: 'AQIDBAUGBwg=', comment: null }),
     }));
   });
+
+  it('renders license amendment issuance requests with their dedicated labels', async () => {
+    const amendmentApproval = {
+      id: 'approval-3',
+      resourceType: 'licenseAmendment',
+      resourceId: 'amendment-7',
+      targetStatus: 'Issued',
+      requestedByUserId: 'requester-3',
+      requestedAtUtc: '2026-11-20T11:00:00Z',
+      status: 'Pending',
+      rowVersion: 'AQIDBAUGBwg=',
+    };
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.startsWith('/api/vendor/approvals/?')) {
+        return Promise.resolve(response({
+          items: [amendmentApproval],
+          page: 1, pageSize: 100, totalCount: 1,
+          totalPages: 1, hasPreviousPage: false, hasNextPage: false,
+        }));
+      }
+      if (url === '/api/auth/antiforgery') return Promise.resolve(response({ requestToken: 'csrf-amendment' }));
+      if (url === '/api/vendor/approvals/approval-3/decision' && init?.method === 'POST')
+        return Promise.resolve(response({ ...amendmentApproval, status: 'Approved' }));
+      return Promise.resolve(response({}, 404));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<VendorApprovals permissions={['vendor.approvals.read', 'vendor.approvals.review']} />);
+    expect(await screen.findByText('Amendment لایسنس')).toBeInTheDocument();
+    expect(screen.getByText('صدور Amendment')).toBeInTheDocument();
+    expect(screen.queryByText('نصب')).not.toBeInTheDocument();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'تأیید درخواست approval-3' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('درخواست تأیید و تغییر وضعیت اعمال شد.');
+    expect(fetchMock).toHaveBeenCalledWith('/api/vendor/approvals/approval-3/decision', expect.objectContaining({
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': 'csrf-amendment' },
+      body: JSON.stringify({ decision: 'Approved', rowVersion: 'AQIDBAUGBwg=', comment: null }),
+    }));
+  });
 });

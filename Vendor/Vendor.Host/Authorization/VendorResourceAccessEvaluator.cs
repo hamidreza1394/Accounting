@@ -49,6 +49,10 @@ public sealed class VendorResourceAccessEvaluator(
                 item => item.Id == resource.ResourceId &&
                     (!resource.ParentResourceId.HasValue || item.Order.CustomerId == resource.ParentResourceId.Value),
                 cancellationToken),
+            "licenseAmendment" => await db.LicenseAmendmentRequests.AsNoTracking().AnyAsync(
+                item => item.Id == resource.ResourceId &&
+                    (!resource.ParentResourceId.HasValue || item.CustomerId == resource.ParentResourceId.Value),
+                cancellationToken),
             _ => false
         };
     }

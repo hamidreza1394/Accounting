@@ -72,6 +72,27 @@ type ReceivableRow = {
 type CustomerOption = { id: string; customerNumber: string; legalName: string; displayName: string | null };
 type ContractOption = { id: string; contractNumber: string };
 
+type AmendmentRequestRow = {
+  id: string;
+  orderId: string;
+  orderLineId: string;
+  licenseId: string;
+  kind: string;
+  requestedMaxCompanies: number | null;
+  requestedSupportUntilUtc: string | null;
+  requestedUpdatesUntilUtc: string | null;
+  status: string;
+  failureCode: string | null;
+  rowVersion: string;
+};
+
+type AmendmentPreviewSummary = {
+  sequence: number;
+  maxCompanies: number | null;
+  supportUntilUtc: string | null;
+  updatesUntilUtc: string | null;
+};
+
 type LineDraft = { productCode: string; description: string; quantity: string; unitAmount: string };
 
 const paymentStatusLabels: Record<string, string> = {
@@ -90,6 +111,48 @@ const methodLabels: Record<string, string> = {
   card: 'کارت',
 };
 
+const amendmentKindLabels: Record<string, string> = {
+  maxCompanies: 'افزایش سقف شرکت‌ها',
+  supportUpdates: 'تمدید پشتیبانی/به‌روزرسانی',
+};
+
+const amendmentStatusLabels: Record<string, string> = {
+  Requested: 'ثبت‌شده (در انتظار ارسال برای تأیید)',
+  PendingApproval: 'در انتظار تصمیم مدیر',
+  Issued: 'صادر و امضا شد',
+  Rejected: 'ردشده',
+  Failed: 'ناموفق',
+};
+
+// Client-side mirror of the server rules; the server remains authoritative (fail-closed).
+function amendmentKindsForProductCode(productCode: string): string[] {
+  if (productCode.startsWith('addon.company')) return ['maxCompanies'];
+  if (productCode.startsWith('renewal.support')) return ['supportUpdates'];
+  return [];
+}
+
+const amendmentErrorMessages: Record<string, string> = {
+  invalid_amendment_kind: 'نوع Amendment معتبر نیست.',
+  amendment_kind_product_mismatch: 'نوع Amendment با محصول ردیف خرید سازگار نیست.',
+  order_line_license_mismatch: 'لایسنس انتخاب‌شده با مرجع ردیف سفارش هم‌خوانی ندارد.',
+  license_not_amendable: 'این لایسنس صادرشده و قابل Amendment نیست.',
+  current_company_limit_missing: 'سقف فعلی شرکت‌های این لایسنس تعریف نشده است.',
+  company_limit_not_increased: 'سقف جدید باید بزرگ‌تر از سقف فعلی باشد.',
+  amendment_dates_missing: 'حداقل یکی از تاریخ‌های پشتیبانی یا به‌روزرسانی لازم است.',
+  amendment_dates_in_past: 'تاریخ‌های تمدید باید در آینده باشند.',
+  invalid_amendment_request: 'درخواست Amendment معتبر نیست؛ مقادیر را بررسی کنید.',
+  order_line_not_found: 'ردیف سفارش یافت نشد؛ صفحه را تازه‌سازی کنید.',
+  license_not_found: 'لایسنس یافت نشد؛ صفحه را تازه‌سازی کنید.',
+  license_order_line_mismatch: 'لایسنس به مشتری این سفارش تعلق ندارد.',
+  amendment_request_already_active: 'برای این ردیف از قبل یک Amendment فعال وجود دارد.',
+  invalid_amendment_transition: 'وضعیت درخواست Amendment اجازه این عملیات را نمی‌دهد.',
+  order_payment_not_verified: 'هیچ پرداخت تأییدشده‌ای برای این سفارش ثبت نشده است؛ ابتدا پرداخت را تأیید کنید.',
+  amendment_envelope_missing: 'پاکت امضاشده لایسنس یافت نشد؛ صدور جدید لازم است.',
+  amendment_envelope_invalid: 'پاکت ذخیره‌شده معتبر نیست؛ با پشتیبانی فنی تماس بگیرید.',
+  amendment_signature_or_payload_invalid: 'اعتبارسنجی امضای لایسنس فعلی ناموفق بود؛ عملیات متوقف شد.',
+  amendment_envelope_binding_invalid: 'پاکت امضاشده با این لایسنس هم‌خوانی ندارد.',
+};
+
 function formatMoney(value: number, currency: string): string {
   return new Intl.NumberFormat('fa-IR', { style: 'currency', currency, maximumFractionDigits: 4 }).format(value);
 }
@@ -99,6 +162,7 @@ function formatDate(value: string | null): string {
 }
 
 function apiMessage(status: number, code = ''): string {
+  if (code && amendmentErrorMessages[code]) return amendmentErrorMessages[code];
   if (status === 401) return 'نشست شما منقضی شده است؛ دوباره وارد شوید.';
   if (status === 403) return 'برای این عملیات مجوز کافی ندارید.';
   if (status === 404) return 'رکورد موردنظر یافت نشد؛ فهرست را تازه‌سازی کنید.';
@@ -358,6 +422,8 @@ function RecordPaymentForm({ order, onRecorded, onError }: { order: OrderRow; on
 export function VendorSales({ permissions }: { permissions: string[] }) {
   const canRead = permissions.includes('vendor.payments.read');
   const canManage = permissions.includes('vendor.payments.manage');
+  const canAmendManage = permissions.includes('vendor.licenses.manage');
+  const canAmendIssue = permissions.includes('vendor.licenses.issue');
   const [view, setView] = useState<'orders' | 'receivables'>('orders');
   const [orders, setOrders] = useState<PageResponse<OrderRow> | null>(null);
   const [orderPage, setOrderPage] = useState(1);
@@ -369,6 +435,14 @@ export function VendorSales({ permissions }: { permissions: string[] }) {
   const [notice, setNotice] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [openOrder, setOpenOrder] = useState<OrderRow | null>(null);
+  const [orderAmendments, setOrderAmendments] = useState<AmendmentRequestRow[]>([]);
+  const [amendmentForm, setAmendmentForm] = useState<{ line: OrderLine } | null>(null);
+  const [amendmentKind, setAmendmentKind] = useState('');
+  const [amendmentMaxCompanies, setAmendmentMaxCompanies] = useState('');
+  const [amendmentSupportUntil, setAmendmentSupportUntil] = useState('');
+  const [amendmentUpdatesUntil, setAmendmentUpdatesUntil] = useState('');
+  const [amendmentPreview, setAmendmentPreview] = useState<AmendmentPreviewSummary | null>(null);
+  const [busyAmendment, setBusyAmendment] = useState(false);
 
   const handleError = useCallback((message: string) => setError(message), []);
 
@@ -398,9 +472,91 @@ export function VendorSales({ permissions }: { permissions: string[] }) {
       const response = await fetch(`/api/vendor/sales-orders/${orderId}`, { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } });
       if (!response.ok) throw new Error(await readError(response));
       setOpenOrder(await response.json() as OrderRow);
+      const amendmentsResponse = await fetch(`/api/vendor/license-amendment-requests/?orderId=${orderId}&page=1&pageSize=50`, { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } });
+      setOrderAmendments(amendmentsResponse.ok ? ((await amendmentsResponse.json()) as PageResponse<AmendmentRequestRow>).items : []);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'دریافت جزئیات سفارش ناموفق بود.');
     } finally { setBusyOrder(null); }
+  }
+
+  function amendmentPayloadFor(line: OrderLine): Record<string, unknown> | null {
+    const kinds = amendmentKindsForProductCode(line.productCode);
+    const kind = kinds.includes(amendmentKind) ? amendmentKind : kinds[0];
+    if (!kind) return null;
+    if (kind === 'maxCompanies') {
+      const newMax = Number(amendmentMaxCompanies);
+      return Number.isFinite(newMax) && newMax > 0
+        ? { orderLineId: line.id, licenseId: line.licenseId, kind, requestedMaxCompanies: newMax }
+        : null;
+    }
+    return {
+      orderLineId: line.id,
+      licenseId: line.licenseId,
+      kind,
+      requestedSupportUntilUtc: amendmentSupportUntil ? new Date(amendmentSupportUntil).toISOString() : null,
+      requestedUpdatesUntilUtc: amendmentUpdatesUntil ? new Date(amendmentUpdatesUntil).toISOString() : null,
+    };
+  }
+
+  function resetAmendmentForm() {
+    setAmendmentForm(null); setAmendmentKind(''); setAmendmentMaxCompanies('');
+    setAmendmentSupportUntil(''); setAmendmentUpdatesUntil(''); setAmendmentPreview(null);
+  }
+
+  async function postAmendmentJson(path: string, payload: Record<string, unknown>) {
+    const token = await mutationToken();
+    const response = await fetch(path, {
+      method: 'POST', credentials: 'same-origin', cache: 'no-store',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw new Error(await readError(response));
+    return response;
+  }
+
+  async function previewAmendment(line: OrderLine) {
+    if (busyAmendment) return;
+    setError(''); setNotice(''); setAmendmentPreview(null);
+    const payload = amendmentPayloadFor(line);
+    if (!payload) { setError('برای این ردیف، مقادیر Amendment را کامل کنید.'); return; }
+    setBusyAmendment(true);
+    try {
+      const response = await postAmendmentJson('/api/vendor/license-amendment-requests/preview', payload);
+      setAmendmentPreview(await response.json() as AmendmentPreviewSummary);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'پیش‌نمایش Amendment ناموفق بود.');
+    } finally { setBusyAmendment(false); }
+  }
+
+  async function createAmendment(line: OrderLine) {
+    if (busyAmendment) return;
+    setError(''); setNotice(''); setAmendmentPreview(null);
+    const payload = amendmentPayloadFor(line);
+    if (!payload) { setError('برای این ردیف، مقادیر Amendment را کامل کنید.'); return; }
+    setBusyAmendment(true);
+    try {
+      await postAmendmentJson('/api/vendor/license-amendment-requests', payload);
+      setNotice('درخواست Amendment ثبت شد؛ پس از بازبینی، آن را برای تأیید مدیر ارسال کنید.');
+      resetAmendmentForm();
+      await openOrderDetail(openOrder!.id);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'ثبت درخواست Amendment ناموفق بود.');
+    } finally { setBusyAmendment(false); }
+  }
+
+  async function submitAmendmentForApproval(row: AmendmentRequestRow) {
+    if (busyAmendment || !canAmendIssue) return;
+    setError(''); setNotice('');
+    setBusyAmendment(true);
+    try {
+      await postAmendmentJson(
+        `/api/vendor/license-amendment-requests/${row.id}/approval-request`,
+        { rowVersion: row.rowVersion });
+      setNotice('درخواست Amendment برای تأیید ارسال شد؛ تصمیم‌گیری در صفحه درخواست‌های تأیید انجام می‌شود.');
+      await openOrderDetail(row.orderId);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'ارسال برای تأیید ناموفق بود.');
+    } finally { setBusyAmendment(false); }
   }
 
   async function requestPaymentDecision(payment: PaymentRow, action: 'verify' | 'reject') {
@@ -523,6 +679,79 @@ export function VendorSales({ permissions }: { permissions: string[] }) {
             <p className="mt-2 text-xs text-muted-foreground">تصمیم نهایی تأیید یا رد، فقط در صفحه «درخواست‌های تأیید» با مجوز بررسی پرداخت ثبت می‌شود.</p>
           </div>
           {canManage && <RecordPaymentForm order={openOrder} onRecorded={() => { setNotice('پرداخت ثبت شد؛ تا تأیید مستقل، مانده بدهی تغییری نمی‌کند.'); void openOrderDetail(openOrder.id); }} onError={handleError} />}
+          <div>
+            <h3 className="mb-1 text-sm font-medium">Amendment لایسنس (خرید تأییدشده)</h3>
+            <p className="mb-2 text-xs text-muted-foreground">
+              فقط ردیف‌های دارای مرجع لایسنس قابل Amendment هستند؛ نوع تغییر باید با محصول خرید هم‌خوان باشد و صدور، فقط با تأیید مدیر و امضای رسمی انجام می‌شود. موارد وابسته به CompanyReference (#392) فعال نیستند.
+            </p>
+            {openOrder.lines.filter(line => line.licenseId).length === 0
+              ? <p className="text-sm text-muted-foreground">این سفارش ردیف متصل به لایسنس ندارد.</p>
+              : <div className="overflow-x-auto"><table className="w-full min-w-[560px] text-sm">
+                <thead><tr className="border-b text-right">
+                  <th scope="col" className="px-3 py-2 font-medium">کد محصول</th>
+                  <th scope="col" className="px-3 py-2 font-medium">وضعیت Amendment</th>
+                  <th scope="col" className="px-3 py-2 font-medium">عملیات</th>
+                </tr></thead><tbody>{openOrder.lines.filter(line => line.licenseId).map(line => {
+                  const existing = orderAmendments.find(amendment => amendment.orderLineId === line.id);
+                  const kinds = amendmentKindsForProductCode(line.productCode);
+                  const active = existing && ['Requested', 'PendingApproval', 'Issued'].includes(existing.status);
+                  return <tr key={line.id} className="border-b last:border-0">
+                    <td className="px-3 py-2 font-mono text-xs" dir="ltr">{line.productCode}</td>
+                    <td className="px-3 py-2">{existing
+                      ? <span className={existing.status === 'Issued' ? 'text-green-700' : existing.status === 'Rejected' || existing.status === 'Failed' ? 'text-destructive' : ''}>
+                          {amendmentKindLabels[existing.kind] ?? existing.kind} — {amendmentStatusLabels[existing.status] ?? existing.status}
+                        </span>
+                      : <span className="text-muted-foreground">بدون درخواست</span>}</td>
+                    <td className="px-3 py-2">{canAmendManage && kinds.length > 0 && !active
+                      ? <Button type="button" size="sm" variant="outline" disabled={busyAmendment}
+                          onClick={() => { setAmendmentForm({ line }); setAmendmentKind(kinds[0] ?? ''); setAmendmentMaxCompanies(''); setAmendmentSupportUntil(''); setAmendmentUpdatesUntil(''); setAmendmentPreview(null); }}>
+                          درخواست Amendment
+                        </Button>
+                      : <span className="text-xs text-muted-foreground">{kinds.length === 0 ? 'نوع پشتیبانی‌شده ندارد' : active ? 'درخواست فعال موجود است' : 'مجوز مدیریت لایسنس لازم است'}</span>}</td>
+                  </tr>;
+                })}</tbody></table></div>}
+            {amendmentForm && <div className="mt-3 rounded-md border border-border p-3">
+              <p className="mb-2 text-sm font-medium">Amendment برای ردیف <span dir="ltr" className="font-mono text-xs">{amendmentForm.line.productCode}</span></p>
+              <div className="grid gap-3 md:grid-cols-2">
+                {amendmentKindsForProductCode(amendmentForm.line.productCode).map(kind => <label key={kind} className="grid gap-1 text-sm">
+                  نوع تغییر
+                  <select className="h-9 rounded-md border border-input bg-background px-2" value={amendmentKind || kind}
+                    onChange={event => setAmendmentKind(event.target.value)} disabled={busyAmendment} aria-label="نوع Amendment">
+                    {amendmentKindsForProductCode(amendmentForm.line.productCode).map(value => <option key={value} value={value}>{amendmentKindLabels[value]}</option>)}
+                  </select>
+                </label>)}
+                {(amendmentKind || amendmentKindsForProductCode(amendmentForm.line.productCode).at(0)) === 'maxCompanies'
+                  ? <label className="grid gap-1 text-sm">سقف جدید شرکت‌ها
+                    <input required type="number" min={1} step={1} className="h-9 rounded-md border border-input bg-background px-2" dir="ltr"
+                      value={amendmentMaxCompanies} onChange={event => setAmendmentMaxCompanies(event.target.value)} disabled={busyAmendment} aria-label="سقف جدید شرکت‌ها" />
+                  </label>
+                  : <>
+                    <label className="grid gap-1 text-sm">تا تاریخ پشتیبانی
+                      <input type="date" className="h-9 rounded-md border border-input bg-background px-2" value={amendmentSupportUntil}
+                        onChange={event => setAmendmentSupportUntil(event.target.value)} disabled={busyAmendment} aria-label="تا تاریخ پشتیبانی" />
+                    </label>
+                    <label className="grid gap-1 text-sm">تا تاریخ به‌روزرسانی
+                      <input type="date" className="h-9 rounded-md border border-input bg-background px-2" value={amendmentUpdatesUntil}
+                        onChange={event => setAmendmentUpdatesUntil(event.target.value)} disabled={busyAmendment} aria-label="تا تاریخ به‌روزرسانی" />
+                    </label>
+                  </>}
+              </div>
+              {amendmentPreview && <p className="mt-2 text-xs" aria-live="polite">
+                پیش‌نمایش کاندید: نسخه {new Intl.NumberFormat('fa-IR').format(amendmentPreview.sequence)}
+                {amendmentPreview.maxCompanies !== null && ` — سقف شرکت‌ها: ${new Intl.NumberFormat('fa-IR').format(amendmentPreview.maxCompanies)}`}
+              </p>}
+              <div className="mt-3 flex gap-2">
+                <Button type="button" size="sm" variant="outline" disabled={busyAmendment} onClick={() => void previewAmendment(amendmentForm.line)}>پیش‌نمایش</Button>
+                <Button type="button" size="sm" disabled={busyAmendment} onClick={() => void createAmendment(amendmentForm.line)}>ثبت درخواست</Button>
+                <Button type="button" size="sm" variant="ghost" disabled={busyAmendment} onClick={resetAmendmentForm}>انصراف</Button>
+              </div>
+            </div>}
+            {orderAmendments.filter(amendment => amendment.status === 'Requested').map(amendment => <div key={amendment.id} className="mt-2 flex flex-wrap items-center gap-2 rounded-md border border-border p-2 text-sm">
+              <span>{amendmentKindLabels[amendment.kind] ?? amendment.kind} — {amendmentStatusLabels[amendment.status]}</span>
+              {canAmendIssue && <Button type="button" size="sm" disabled={busyAmendment} onClick={() => void submitAmendmentForApproval(amendment)}>ارسال برای تأیید</Button>}
+            </div>)}
+            <p className="mt-2 text-xs text-muted-foreground">صدور Amendment همیشه از مسیر امضای رسمی لایسنس انجام می‌شود و تأیید پرداخت به‌تنهایی هیچ چیزی صادر نمی‌کند.</p>
+          </div>
         </CardContent></Card>}
     </>}
 

@@ -844,3 +844,10 @@
 - چرخه Backend سفارش تجاری و پرداخت (D-108) از PR #722 در main است؛ در PR جاری فقط رابط کاربری فارسی/RTL آن به Vendor Web اضافه شد: ثبت سفارش با ردیف‌ها، ثبت پرداخت دستی با مرجع رسید، درخواست تأیید/رد پرداخت با RowVersion، گزارش مطالبات باز با مانده بدهی/اضافه‌پرداخت/معوق و نمایش درست درخواست‌های `salesOrderPayment` در صفحه تأییدها.
 - قواعد D-108/D-109 در UI نقض نمی‌شوند: پرداخت ثبت‌شده بدهی را کاهش نمی‌دهد و تصمیم نهایی فقط در صفحه «درخواست‌های تأیید» با مجوز `vendor.payments.verify` ثبت می‌شود؛ self-approval طبق D-109 مجاز است. PaymentAllocation چندسفارشه طبق برش مصوب S1-b عمداً خارج از محدوده است.
 - تست‌ها: Vitest ۷۵/۷۵ (Vendor Web) و تست SQL Server جدید برای گاردهای تصمیم (stale RowVersion، تکراری، مجوز، Rollback Audit). صدور Amendment از خرید تأییدشده (Stage 2) و Company-scoped add-onها (وابسته به #392) همچنان Blocked و نیازمند تأیید مالک هستند.
+
+
+## Vendor — اتصال سفارش تأییدشده به Amendment امضاشده (2026-11-20، #393 در انتظار مالک)
+
+- جریان `Order → Payment Verified → درخواست صریح Amendment → Candidate از builder رسمی → Approval → امضای رسمی (sequence+1 روی همان LicenseId) → Delivery از مسیر موجود` اکنون قابل استفاده است؛ کاندید همیشه از آخرین پاکت امضاشده و verify‌شده بازسازی می‌شود و هیچ داده entitlement مشتق‌شده در دیتابیس ذخیره نمی‌شود.
+- فقط kinds نصب‌محور (maxCompanies، support/updates) فعال‌اند؛ kinds شرکت‌محور به #392 وابسته و Blocked هستند و builder company-scoped در جریان جدید expose نشده است.
+- کنترل‌های D-108/D-109: تأیید پرداخت به‌صورت خودکار چیزی صادر نمی‌کند؛ صدور مستقل از پرداخت و فقط با مجوز `vendor.licenses.issue`؛ RowVersion روی درخواست و approval؛ unique filtered index یک Amendment فعال برای هر ردیف خرید؛ شکست Audit/Singer fail-closed با Rollback کامل.
