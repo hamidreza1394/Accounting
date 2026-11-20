@@ -1,3 +1,13 @@
+## وضعیت Signer ویندوز CNG SoftwareProtected (D-107) — 2026-11-19
+
+**مبنای بررسی:** `main@da2ca7a9` (Merge PR #721). این بخش وضعیت پیاده‌سازی Provider امضای مرکزی Vendor طبق ADR پذیرفته‌شدهٔ D-107 را ثبت می‌کند.
+
+- **پیاده‌شده (شاخهٔ `agent/236-windows-cng-signer`):** Provider `WindowsCngCertificateStoreSigningModule` با دو Provider هدف‌مند License/Provisioning، Audit metadata-only هر امضا با دورریختن امضا در شکست Audit، Health check، Startup assurance service (اعتبارسنجی fail-fast و Audit Production `vendor.signing.assurance.software-protected-selected`)، رد تداخل هم‌زمانی PKCS#11/CNG و فرمان فقط‌عمومی `--signing-certificate export-public`. الزامات D-107 اعمال شده‌اند: ECDSA P-256، بازهٔ اعتبار، KeyUsage=DigitalSignature، Microsoft Software KSP، ExportPolicy=None، MachineKey در Production و جدایی SPKI/KeyId هر هدف، `AssuranceLevel=SoftwareProtected` صریح، هیچ fallback و هیچ کلید آزمایشی؛ Provider ابطال آفلاین عمداً خارج از این شاخه است (D-055 پابرجا).
+- **ثبت DI opt-in:** `Signing:CertificateStore:Enabled` (پیش‌فرض خاموش). بدون فعال‌سازی، Providerهای Unavailable عین قبل fail-closed می‌مانند و صدور 503 می‌دهد. میزبان غیرویندوزی با فعال‌سازی صریح در Startup fail-fast می‌شود؛ Production الزام `StoreLocation=LocalMachine` دارد.
+- **تست‌های محلی (SDK 10.0.100، Linux):** `dotnet build Vendor.sln` موفق؛ `dotnet test Vendor.sln` = ۳۸۶ کل، ۳۱۶ موفق، ۹ ناموفق، ۶۱ Skip. **۹ شکست دقیقاً روی `main` خالص (worktree جدا) هم تکرار شد** و محیطی است: تست‌های HTTP Host به `FARANO_VENDOR_ConnectionStrings__VendorDb` (SQL Server) نیاز دارند که فقط در CI ست می‌شود؛ ناشی از این تغییر نیست. `--filter "FullyQualifiedName~WindowsCng"` = ۲۱ موفق / ۷ Skip / ۰ شکست؛ ۷ Skip ویندوزی‌اند و در job جدید `windows-cng-signer` در Vendor CI واقعاً روی Windows runner اجرا می‌شوند.
+- **باقی‌مانده:** Key Ceremony واقعی روی Windows Server هدف (ساخت MachineKey non-exportable، ACL هویت سرویس، ثبت SPKI در `Licensing:TrustedSigningKeys`/`ProvisioningSigningTrust:Keys`، تست امضای Production و drill rotation). تا اجرای آن، Verified عملیاتی با کلید واقعی ادعا نمی‌شود؛ CI تست کلید موقت Software KSP در CurrentUser را اجرا می‌کند و این اثبات ACL/MachineKey سرور نیست.
+- **handoff:** `docs/handoffs/ISSUE-236-windows-cng-software-protected-signer.md` (Issue #236، ADR D-107).
+
 ## دروازهٔ Runtime License (Issue #396) — 2026-11-19
 
 **مبنای بررسی:** `main@efaaa1c5` (Merge PR #719). این بخش اتصال License به Runtime فرانو طبق D-060 §1-6 و D-098 را ثبت می‌کند.

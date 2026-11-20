@@ -3321,3 +3321,10 @@
 - پیکربندی opt-in: `Licensing:RuntimeGate:Enabled` (پیش‌فرض خاموش؛ هم‌الگوی Gate v5) و `Licensing:DeploymentMode=Dedicated|Cloud` (نامعتبر → fail-fast). با gate خاموش رفتار میزبان عین قبل است.
 - تست‌ها: ۲۳ تست واحد + ۸ تست HTTP واقعی = ۳۱ موفق / ۰ شکست محلی؛ بدون Migration و بدون تغییر Schema. Wizard React، cache نسخه‌دار و E2E با License واقعی باقی‌مانده‌اند.
 - مستندات: PROJECT_STATUS.md، handoff `ISSUE-396-license-runtime-gate.md`.
+
+## 2026-11-19 — Issue #236 / D-107: پیاده‌سازی Signer ویندوز CNG SoftwareProtected برای Vendor
+
+- Provider امضای مرکزی License/Provisioning طبق D-107 پیاده شد: انتخاب گواهی با Thumbprint از Windows Certificate Store، ECDSA P-256، کلید CNG غیرقابل‌Export (رد exportable fail-closed)، KeyId/گواهی مجزا برای هر هدف، Audit metadata-only با دورریختن امضا در شکست Audit، Health check، Startup assurance (fail-fast + Audit Production)، رد تداخل PKCS#11/CNG و فرمان فقط‌عمومی `--signing-certificate export-public` برای Trust Store.
+- opt-in با `Signing:CertificateStore:Enabled` (پیش‌فرض خاموش؛ fail-closed عین قبل). میزبان غیرویندوزی fail-fast؛ Production الزام LocalMachine. Provider ابطال آفلاین طبق D-055 خارج از این Provider ماند.
+- تست‌ها: ۲۱ تست cross-platform موفق روی Linux؛ ۷ تست ویندوزی با کلید CNG موقت Software KSP به job جدید `windows-cng-signer` در Vendor CI موکول است. Build کل Vendor.sln سبز؛ ۹ شکست تست SQL/HTTP محیطی روی main خالص هم تکرار شد (نیاز به `FARANO_VENDOR_ConnectionStrings__VendorDb`).
+- مستندات: SECURITY.md (بخش D-107)، PROJECT_STATUS.md، LICENSING.md و handoff `ISSUE-236-windows-cng-software-protected-signer.md` هم‌تراز شدند. هیچ Migration/Schema/داده‌ای تغییر نکرد؛ هیچ کلید خصوصی در کد/تست/پیکربندی نیست.
