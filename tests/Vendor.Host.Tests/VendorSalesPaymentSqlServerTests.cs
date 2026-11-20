@@ -7,14 +7,17 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using Faranou.Vendor.Host.Authorization;
 using Faranou.Vendor.Persistence;
+using Faranou.Vendor.Persistence.Auditing;
 using Faranou.Vendor.Persistence.Domain;
 using Faranou.Vendor.Persistence.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit;
 
 namespace Faranou.Vendor.Host.Tests;
@@ -237,6 +240,179 @@ public sealed class VendorSalesPaymentSqlServerTests
         finally
         {
             await DropDatabaseAsync(baseConnection, databaseName, cancellationToken);
+        }
+    }
+
+    [Fact]
+    public async Task PaymentVerification_GuardsStaleVersion_DuplicateDecisions_Permissions_AndAuditRollback()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var baseConnection = Environment.GetEnvironmentVariable("FARANO_VENDOR_TEST_SQLSERVER");
+        if (string.IsNullOrWhiteSpace(baseConnection))
+        {
+            if (string.Equals(Environment.GetEnvironmentVariable("FARANO_REQUIRE_VENDOR_SQLSERVER"), "1", StringComparison.Ordinal))
+                Assert.Fail("CI requires FARANO_VENDOR_TEST_SQLSERVER for Vendor payment cycle integration tests.");
+            Assert.Skip("A disposable SQL Server connection is required for Vendor payment cycle integration tests.");
+            return;
+        }
+
+        var databaseName = "FaranouVendorPaymentsGuard_" + Guid.NewGuid().ToString("N");
+        var testConnection = new SqlConnectionStringBuilder(baseConnection) { InitialCatalog = databaseName }.ConnectionString;
+        await CreateDatabaseAsync(baseConnection, databaseName, cancellationToken);
+
+        try
+        {
+            await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(webHost =>
+            {
+                webHost.ConfigureAppConfiguration((_, configuration) =>
+                    configuration.AddInMemoryCollection(new Dictionary<string, string?>
+                    {
+                        ["ConnectionStrings:VendorDb"] = testConnection
+                    }));
+                webHost.ConfigureTestServices(services =>
+                {
+                    services.RemoveAll<IVendorAuditWriter>();
+                    services.AddSingleton<AuditFailureSwitch>();
+                    services.AddScoped<IVendorAuditWriter>(provider => new SwitchableVendorAuditWriter(
+                        provider.GetRequiredService<VendorDbContext>(),
+                        provider.GetRequiredService<TimeProvider>(),
+                        provider.GetRequiredService<AuditFailureSwitch>()));
+                });
+            });
+
+            Guid customerId;
+            await using (var setupScope = factory.Services.CreateAsyncScope())
+            {
+                var db = setupScope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                await db.Database.MigrateAsync(cancellationToken);
+                customerId = (await db.Customers.AddAsync(new VendorCustomer
+                {
+                    Id = Guid.NewGuid(),
+                    CustomerNumber = "PAYG-" + Guid.NewGuid().ToString("N")[..12],
+                    LegalName = "Payment Guard Customer",
+                    DisplayName = "Payment Guard",
+                    Status = "Active",
+                    CreatedAtUtc = DateTimeOffset.UtcNow,
+                    UpdatedAtUtc = DateTimeOffset.UtcNow
+                }, cancellationToken)).Entity.Id;
+                await db.SaveChangesAsync(cancellationToken);
+
+                var users = setupScope.ServiceProvider.GetRequiredService<UserManager<VendorAdminUser>>();
+                var roles = setupScope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+                // The recorder may record payments and request decisions, but never decide them.
+                await CreateAdminAsync(users, roles, "recorder-", MakerPassword,
+                [
+                    VendorPermissionCatalog.PaymentsRead,
+                    VendorPermissionCatalog.PaymentsManage
+                ]);
+                // The verifier decides payment requests only with the dedicated verify permission.
+                await CreateAdminAsync(users, roles, "verifier-", MakerPassword,
+                [
+                    VendorPermissionCatalog.PaymentsRead,
+                    VendorPermissionCatalog.PaymentsVerify,
+                    VendorPermissionCatalog.ApprovalsReview
+                ]);
+            }
+
+            var recorder = new VendorTestAdmin(factory, "recorder-", MakerPassword);
+            var verifier = new VendorTestAdmin(factory, "verifier-", MakerPassword);
+            var orderId = await recorder.CreateOrderAsync(customerId, 200m, dueInDays: null, cancellationToken);
+            var paymentId = await recorder.RecordPaymentAsync(orderId, 50m, cancellationToken);
+
+            // A decision request built on a stale payment row version is rejected fail-closed.
+            using (var stale = await recorder.PostAsync(
+                $"/api/vendor/payments/{paymentId:D}/approval-request",
+                new { action = "verify", rowVersion = Convert.ToBase64String(new byte[8]) },
+                cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Conflict, stale.StatusCode);
+                Assert.Contains("stale_row_version", await stale.Content.ReadAsStringAsync(cancellationToken));
+            }
+
+            var approvalId = await recorder.RequestPaymentDecisionAsync(paymentId, "verify", cancellationToken);
+
+            // A second request for the still-pending payment is rejected (unique pending approval).
+            using (var duplicateRequest = await recorder.PostAsync(
+                $"/api/vendor/payments/{paymentId:D}/approval-request",
+                new { action = "verify", rowVersion = Convert.ToBase64String(
+                    (await GetPaymentRowVersionAsync(factory, paymentId, cancellationToken)).RowVersion) },
+                cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Conflict, duplicateRequest.StatusCode);
+                Assert.Contains("approval_already_pending", await duplicateRequest.Content.ReadAsStringAsync(cancellationToken));
+            }
+
+            // The recorder lacks vendor.payments.verify and vendor.approvals.review: deciding is forbidden.
+            Assert.Equal(HttpStatusCode.Forbidden, await recorder.RawDecisionAsync(approvalId, "Approved", cancellationToken));
+
+            // A failing audit write rolls the whole decision transaction back: the payment stays Recorded.
+            var failureSwitch = factory.Services.GetRequiredService<AuditFailureSwitch>();
+            failureSwitch.FailNextAppend = true;
+            Assert.Equal(HttpStatusCode.InternalServerError, await verifier.RawDecisionAsync(approvalId, "Approved", cancellationToken));
+            Assert.Equal(VendorPaymentRecord.StatusRecorded, (await GetPaymentRowVersionAsync(factory, paymentId, cancellationToken)).Status);
+
+            // After the audit writer recovers, the same decision succeeds and marks the payment Verified.
+            failureSwitch.FailNextAppend = false;
+            await verifier.DecideAsync(approvalId, "Approved", cancellationToken);
+
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var verified = await db.PaymentRecords.AsNoTracking()
+                    .SingleAsync(item => item.Id == paymentId, cancellationToken);
+                Assert.Equal(VendorPaymentRecord.StatusVerified, verified.Status);
+                Assert.NotNull(verified.VerifiedByUserId);
+                Assert.NotNull(verified.VerifiedAtUtc);
+            }
+
+            // A decided payment can never be decided again (fail closed on duplicate verification).
+            using (var duplicateDecision = await recorder.PostAsync(
+                $"/api/vendor/payments/{paymentId:D}/approval-request",
+                new { action = "verify", rowVersion = Convert.ToBase64String(
+                    (await GetPaymentRowVersionAsync(factory, paymentId, cancellationToken)).RowVersion) },
+                cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Conflict, duplicateDecision.StatusCode);
+                Assert.Contains("payment_already_decided", await duplicateDecision.Content.ReadAsStringAsync(cancellationToken));
+            }
+        }
+        finally
+        {
+            await DropDatabaseAsync(baseConnection, databaseName, cancellationToken);
+        }
+    }
+
+    private static async Task<VendorPaymentRecord> GetPaymentRowVersionAsync(
+        WebApplicationFactory<Program> factory, Guid paymentId, CancellationToken ct)
+    {
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+        return await db.PaymentRecords.AsNoTracking().SingleAsync(item => item.Id == paymentId, ct);
+    }
+
+    /// <summary>Shared switch that makes the next audit append throw, to prove transaction rollback.</summary>
+    private sealed class AuditFailureSwitch
+    {
+        public bool FailNextAppend { get; set; }
+    }
+
+    /// <summary>Decorates the real audit writer with an injectable failure (D-108 §8 rollback coverage).</summary>
+    private sealed class SwitchableVendorAuditWriter(
+        VendorDbContext dbContext,
+        TimeProvider timeProvider,
+        AuditFailureSwitch failureSwitch) : IVendorAuditWriter
+    {
+        public Task<VendorAuditWriteResult> AppendAsync(
+            VendorAuditWriteRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            if (failureSwitch.FailNextAppend)
+            {
+                failureSwitch.FailNextAppend = false;
+                throw new InvalidOperationException("Injected audit failure for payment decision rollback coverage.");
+            }
+
+            return new VendorAuditWriter(dbContext, timeProvider).AppendAsync(request, cancellationToken);
         }
     }
 

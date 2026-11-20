@@ -4,9 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 type Approval = {
   id: string;
-  resourceType: 'customer' | 'installation';
+  resourceType: 'customer' | 'installation' | 'salesOrderPayment';
   resourceId: string;
-  targetStatus: 'Active' | 'Suspended';
+  targetStatus: 'Active' | 'Suspended' | 'Verified' | 'Rejected';
   requestedByUserId: string;
   requestedAtUtc: string;
   rowVersion: string;
@@ -18,6 +18,18 @@ type ApprovalPage = {
   totalPages: number;
   hasPreviousPage: boolean;
   hasNextPage: boolean;
+};
+
+const resourceLabels: Record<Approval['resourceType'], string> = {
+  customer: 'مشتری',
+  installation: 'نصب',
+  salesOrderPayment: 'پرداخت سفارش',
+};
+const targetStatusLabels: Record<Approval['targetStatus'], string> = {
+  Active: 'فعال‌سازی',
+  Suspended: 'تعلیق',
+  Verified: 'تأیید پرداخت',
+  Rejected: 'رد پرداخت',
 };
 
 function message(status: number, code = '') {
@@ -91,7 +103,7 @@ export function VendorApprovals({ permissions }: { permissions: string[] }) {
   return <section className="space-y-5" dir="rtl" aria-labelledby="vendor-approvals-title">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div><h1 id="vendor-approvals-title" className="text-xl font-semibold">درخواست‌های تأیید</h1>
-        <p className="mt-1 text-sm text-muted-foreground">تغییر وضعیت مشتری یا نصب پس از ثبت درخواست و تأیید مدیر مجاز اعمال می‌شود.</p></div>
+        <p className="mt-1 text-sm text-muted-foreground">تغییر وضعیت مشتری یا نصب و تأیید/رد پرداخت‌های سفارش پس از ثبت درخواست و تأیید مدیر مجاز اعمال می‌شود.</p></div>
       <Button type="button" variant="outline" onClick={() => void load()} disabled={loading}>تازه‌سازی</Button>
     </div>
     {error && <p role="alert" className="rounded-md border border-destructive/40 p-3 text-sm">{error}</p>}
@@ -107,9 +119,9 @@ export function VendorApprovals({ permissions }: { permissions: string[] }) {
               <th scope="col" className="px-3 py-3 font-medium">وضعیت پیشنهادی</th><th scope="col" className="px-3 py-3 font-medium">درخواست‌کننده</th>
               <th scope="col" className="px-3 py-3 font-medium">زمان ثبت</th><th scope="col" className="px-3 py-3 font-medium">عملیات</th>
             </tr></thead><tbody>{items.map(item => <tr key={item.id} className="border-b last:border-0">
-              <td className="px-3 py-3">{item.resourceType === 'customer' ? 'مشتری' : 'نصب'}</td>
+              <td className="px-3 py-3">{resourceLabels[item.resourceType] ?? item.resourceType}</td>
               <td className="px-3 py-3 font-mono text-xs" dir="ltr" title={item.resourceId}>{item.resourceId.slice(0, 8)}</td>
-              <td className="px-3 py-3">{item.targetStatus === 'Suspended' ? 'تعلیق' : 'فعال‌سازی'}</td>
+              <td className="px-3 py-3">{targetStatusLabels[item.targetStatus] ?? item.targetStatus}</td>
               <td className="px-3 py-3 font-mono text-xs" dir="ltr" title={item.requestedByUserId}>{item.requestedByUserId.slice(0, 8)}</td>
               <td className="px-3 py-3" dir="ltr">{new Date(item.requestedAtUtc).toLocaleString('fa-IR')}</td>
               <td className="px-3 py-3"><div className="flex gap-2">
