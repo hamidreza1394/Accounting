@@ -3066,7 +3066,7 @@ D-030، D-074، D-082، D-084، D-087، D-103، D-105؛ `docs/TRADE_DESIGN_V3_2.
 
 ### تصمیم
 1. یک نگاشت سمت سرور از نوع DatabaseAssignment، Tenant/Company/FiscalPeriod را به مقصد دیتابیس resolve می‌کند. مقصد دیتابیس و Connection String هرگز از ورودی کلاینت پذیرفته نمی‌شوند.
-2. Resolve باید deterministic باشد. در صورت وجود چند سطح assignment، ترتیب خاص‌تر به عام‌تر است: Company+FiscalPeriod، Tenant+FiscalPeriod، Company، سپس Tenant؛ تعارض یا نبود assignment معتبر باید fail-closed باشد.
+2. هر Tenant در هر زمان یک DatabaseTopology فعال دارد و همان توپولوژی کلید resolve را تعیین می‌کند: TenantId؛ TenantId+CompanyId؛ TenantId+FiscalPeriodId؛ یا TenantId+CompanyId+FiscalPeriodId. Resolver فقط از همان کلید استفاده می‌کند؛ fallback ترکیبی میان توپولوژی‌های متفاوت انجام نمی‌شود. نبود assignment یا وجود assignment متعارض fail-closed است.
 3. مشخصات مقصد (Server/Catalog/Provider) از Secret/credential جدا نگهداری می‌شود. Connection String و رمز دیتابیس در پاسخ API، log یا داده قابل مشاهده مشتری قرار نمی‌گیرد.
 4. Control Plane/Installation Metadata از Customer Operational Data جداست. Dedicated می‌تواند metadata محلی کوچک داشته باشد؛ داده مالی مشتری به Vendor Control Plane منتقل نمی‌شود.
 5. زیرسیستم‌ها از قرارداد/Factory مورداعتماد DbContext و routing استفاده می‌کنند و نام دیتابیس/سرور را hard-code نمی‌کنند. Context یا Connection دارای state یک Tenant نباید برای Tenant دیگر reuse شود؛ DbContext/connection pooling باید tenant-safe باشد.
