@@ -52,4 +52,46 @@ describe('Vendor approval queue', () => {
     }));
     expect(await screen.findByText('درخواست در انتظاری وجود ندارد.')).toBeInTheDocument();
   });
+
+  it('renders payment verification requests with their dedicated labels and reviews them', async () => {
+    const paymentApproval = {
+      id: 'approval-2',
+      resourceType: 'salesOrderPayment',
+      resourceId: 'payment-9',
+      targetStatus: 'Verified',
+      requestedByUserId: 'requester-2',
+      requestedAtUtc: '2026-11-20T10:00:00Z',
+      status: 'Pending',
+      rowVersion: 'AQIDBAUGBwg=',
+    };
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.startsWith('/api/vendor/approvals/?')) {
+        return Promise.resolve(response({
+          items: [paymentApproval],
+          page: 1, pageSize: 100, totalCount: 1,
+          totalPages: 1, hasPreviousPage: false, hasNextPage: false,
+        }));
+      }
+      if (url === '/api/auth/antiforgery') return Promise.resolve(response({ requestToken: 'csrf-payment' }));
+      if (url === '/api/vendor/approvals/approval-2/decision' && init?.method === 'POST')
+        return Promise.resolve(response({ ...paymentApproval, status: 'Approved' }));
+      return Promise.resolve(response({}, 404));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<VendorApprovals permissions={['vendor.approvals.read', 'vendor.approvals.review']} />);
+    expect(await screen.findByText('پرداخت سفارش')).toBeInTheDocument();
+    expect(screen.getByText('تأیید پرداخت')).toBeInTheDocument();
+    expect(screen.queryByText('نصب')).not.toBeInTheDocument();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'تأیید درخواست approval-2' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('درخواست تأیید و تغییر وضعیت اعمال شد.');
+    expect(fetchMock).toHaveBeenCalledWith('/api/vendor/approvals/approval-2/decision', expect.objectContaining({
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': 'csrf-payment' },
+      body: JSON.stringify({ decision: 'Approved', rowVersion: 'AQIDBAUGBwg=', comment: null }),
+    }));
+  });
 });

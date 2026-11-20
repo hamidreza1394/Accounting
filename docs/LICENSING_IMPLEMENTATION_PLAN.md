@@ -239,6 +239,13 @@ Issue #396 فقط مسئول startup gate و Activation Wizard است؛ contract
 - **NotImplemented:** سفارش/پرداخت، persistence، endpoint، approval، signer/export و وضعیت‌های Purchased/Delivered/Acknowledged. هیچ Migration یا Customer-side change انجام نشده است.
 
 
+## وضعیت اجرایی Issue #393 — رابط کاربری چرخه فروش و پرداخت (2026-11-20)
+- **Implemented / Verified in main:** چرخه کامل Backend سفارش تجاری/پرداخت/تأیید مستقل/گزارش مطالبات از PR #722 (squash `c46e200b`) در main است؛ Migration `20261119175924_VendorSalesOrdersAndPayments`، مجوزهای `vendor.payments.read|manage|verify` و تست‌های Unit + SQL Server مربوط موجودند. درخواست امضای مأموریت فعلی، `origin/agent/393-vendor-payment-cycle` (شاخه قدیمی بر پایه main قبل از #722/#724) را بررسی کردیم؛ محتوای Backend آن با #722 در main منطبق است و بازنویسی نشد.
+- **Implemented در PR جاری (فقط UI و تست):** صفحه فارسی/RTL «فروش و پرداخت» در Vendor Web (`VendorSales.tsx`) با فهرست سفارش‌ها، ثبت سفارش با ردیف‌ها و کنترل جمع، ثبت پرداخت دستی با مرجع رسید، درخواست تأیید/رد پرداخت با RowVersion، گزارش «مطالبات باز»، نمایش مانده بدهی و اضافه‌پرداخت و وضعیت معوق؛ صفحه «درخواست‌های تأیید» اکنون درخواست‌های `salesOrderPayment` را با برچسب اختصاصی و تصمیم‌گیری با مجوز `vendor.payments.verify` نمایش می‌دهد. تست‌های Vitest برای همه حالت‌ها اضافه شد و یک تست SQL Server برای گاردهای stale RowVersion، تصمیم تکراری، رد مجوز و Rollback شکست Audit اضافه شد.
+- **NotImplemented / عمداً خارج از محدوده:** PaymentAllocation چندسفارشه طبق برش مصوب S1-b (بدون Ledger/Allocation) — پرداخت به‌صورت مستقیم به یک Order ثبت می‌شود و جمع پرداخت‌های Verified هیچ‌گاه بدهی را منفی نمی‌کند؛ اتصال سفارش پرداخت‌شده به Candidate Builder و صدور Amendment امضاشده در برش بعدی (#393، Stage 2) پس از تأیید مالک؛ Company-scoped add-onها همچنان به CompanyReference معتبر #392 وابسته و Blocked هستند.
+- **محدوده:** فقط Vendor Web، تست Vendor و مستندات؛ بدون `Server/**`، بدون Migration جدید، بدون تغییر Trade و بدون درگاه پرداخت.
+
+
 ## نقشه اجرایی S1 — هم‌ترازشده در مأموریت S1-0 (2026-11-16؛ Issue #696)
 
 این بخش نقشهٔ اجرایی مرحلهٔ S1 را با تصمیم‌های D-097..D-102 و وضعیت واقعی کد در `main@947901bb` هم‌تراز می‌کند. وضعیت‌ها طبق بخش ۶ همین سند تفسیر می‌شوند؛ هیچ آیتمی از این نقشه به‌تنهایی ادعای Implemented/Verified نیست.

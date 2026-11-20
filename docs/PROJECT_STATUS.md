@@ -837,3 +837,10 @@
 - **Wizard فعال‌سازی (#735):** صفحه فارسی RTL در مسیر `/licensing/activation` با ۱۶ تست Vitest؛ توکن antiforgery از مسیر همیشه-مجاز Provisioning؛ ثبت مجوز همچنان `AccountKind=Infrastructure`. فعال‌سازی Runtime Gate در Production هنوز نیازمند تأیید مالک است.
 - **Runbook CNG (#736):** Runbook Key Ceremony/Rotation با کد واقعی تطبیق داده شد؛ **Windows Operational Verification همچنان Not Verified** و اجرای واقعی نیازمند میزبان هدف و تأیید مالک است.
 - سلامت Main پس از Merge (`e9f412d8`): Build هر دو Solution سبز؛ Template.Tests ۱۴۳۶ موفق/۱۳۵ skip/۲ شکست محیطی شناخته‌شده بدون SQL Server (در CI سبز)؛ Vitest ۱۲۸۸/۱۲۸۸؛ production build و offline سبز؛ Semgrep بدون یافته؛ صفر تغییر Migration. موارد باز مالک: توپولوژی Pending، اتصال عملیاتی Routing، قرارداد v6، Amendment #393، D-106 و فعال‌سازی Production Gate.
+
+
+## Vendor — رابط کاربری چرخه فروش و پرداخت (2026-11-20، #393 در انتظار مالک)
+
+- چرخه Backend سفارش تجاری و پرداخت (D-108) از PR #722 در main است؛ در PR جاری فقط رابط کاربری فارسی/RTL آن به Vendor Web اضافه شد: ثبت سفارش با ردیف‌ها، ثبت پرداخت دستی با مرجع رسید، درخواست تأیید/رد پرداخت با RowVersion، گزارش مطالبات باز با مانده بدهی/اضافه‌پرداخت/معوق و نمایش درست درخواست‌های `salesOrderPayment` در صفحه تأییدها.
+- قواعد D-108/D-109 در UI نقض نمی‌شوند: پرداخت ثبت‌شده بدهی را کاهش نمی‌دهد و تصمیم نهایی فقط در صفحه «درخواست‌های تأیید» با مجوز `vendor.payments.verify` ثبت می‌شود؛ self-approval طبق D-109 مجاز است. PaymentAllocation چندسفارشه طبق برش مصوب S1-b عمداً خارج از محدوده است.
+- تست‌ها: Vitest ۷۵/۷۵ (Vendor Web) و تست SQL Server جدید برای گاردهای تصمیم (stale RowVersion، تکراری، مجوز، Rollback Audit). صدور Amendment از خرید تأییدشده (Stage 2) و Company-scoped add-onها (وابسته به #392) همچنان Blocked و نیازمند تأیید مالک هستند.
