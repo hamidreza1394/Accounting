@@ -93,14 +93,21 @@ export function LicenseActivationPage() {
 	const [error, setError] = useState('');
 	const [result, setResult] = useState<ImportResult | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	/** Monotonic revision of the envelope input; stale async work is dropped (see below). */
+	const inputRevisionRef = useRef(0);
+	/** Monotonic id of the newest status request; stale responses never overwrite newer ones. */
+	const statusRequestRef = useRef(0);
 
 	const loadStatus = useCallback(async () => {
 		setStatusError('');
+		const requestId = ++statusRequestRef.current;
 		try {
 			const response = await apiGetRaw('/licensing/status');
+			if (requestId !== statusRequestRef.current) return;
 			if (!response.ok) throw new Error('دریافت وضعیت مجوز ناموفق بود؛ بعداً دوباره تلاش کنید.');
 			setStatus((response.body ?? {}) as LicensingStatus);
 		} catch (reason) {
+			if (requestId !== statusRequestRef.current) return;
 			setStatus(null);
 			// A failed fetch (TypeError) is a connection problem, not a server answer: keep
 			// the message in Persian instead of surfacing the raw browser error text.
@@ -112,7 +119,11 @@ export function LicenseActivationPage() {
 	useEffect(() => {
 		void loadStatus();
 		let cancelled = false;
-		apiGetRaw('/antiforgery/token').then((tokenResult) => {
+		// The runtime gate keeps only the /api/v1/licensing and /api/v1/provisioning prefixes
+		// reachable in Unlicensed/Invalid/Restricted states. The provisioning-prefix token
+		// endpoint returns the same antiforgery token, so the wizard stays usable in exactly
+		// its recovery states without touching the owner-gated gate configuration.
+		apiGetRaw('/provisioning/enrollment/antiforgery').then((tokenResult) => {
 			if (cancelled || !tokenResult.ok) return;
 			const body = (tokenResult.body ?? {}) as AntiforgeryResponse;
 			setRequestToken(body.requestToken ?? '');
@@ -124,6 +135,12 @@ export function LicenseActivationPage() {
 	async function readFile(event: ChangeEvent<HTMLInputElement>) {
 		setError('');
 		setResult(null);
+		// Invalidate the previous selection first: a malformed or oversized replacement must
+		// never leave the earlier envelope eligible for submission.
+		++inputRevisionRef.current;
+		setEnvelopeJson('');
+		setFileName('');
+		const revision = inputRevisionRef.current;
 		const file = event.target.files?.[0];
 		if (!file) return;
 		if (file.size > MaximumEnvelopeChars) {
@@ -132,6 +149,7 @@ export function LicenseActivationPage() {
 			return;
 		}
 		const text = await file.text();
+		if (revision !== inputRevisionRef.current) return;
 		if (text.length > MaximumEnvelopeChars) {
 			setError('محتوای فایل مجاز بیش از حد مجاز است (سقف ۳۰۰ هزار نویسه).');
 			return;
@@ -142,11 +160,13 @@ export function LicenseActivationPage() {
 			setError('محتوای فایل، JSON معتبر نیست؛ فایل پاکت امضاشده را عیناً انتخاب کنید.');
 			return;
 		}
+		if (revision !== inputRevisionRef.current) return;
 		setEnvelopeJson(text);
 		setFileName(file.name);
 	}
 
 	function clearSelection() {
+		++inputRevisionRef.current;
 		setEnvelopeJson('');
 		setFileName('');
 		if (fileInputRef.current) fileInputRef.current.value = '';
@@ -160,6 +180,18 @@ export function LicenseActivationPage() {
 			setError('ابتدا فایل مجوز امضاشده را انتخاب کنید.');
 			return;
 		}
+		// Pasted content gets the same client-side checks as a selected file; the server
+		// re-validates everything and stays fail-closed either way.
+		if (trimmed.length > MaximumEnvelopeChars) {
+			setError('محتوای مجاز بیش از حد مجاز است (سقف ۳۰۰ هزار نویسه).');
+			return;
+		}
+		try {
+			JSON.parse(trimmed);
+		} catch {
+			setError('محتوای پاکت، JSON معتبر نیست؛ فایل پاکت امضاشده را عیناً انتخاب کنید.');
+			return;
+		}
 		if (!requestToken) {
 			setError('توکن امنیتی صفحه آماده نیست؛ صفحه را تازه‌سازی کنید.');
 			return;
@@ -167,6 +199,7 @@ export function LicenseActivationPage() {
 		setBusy(true);
 		setError('');
 		setResult(null);
+		const submittedRevision = inputRevisionRef.current;
 		try {
 			const response = await apiPostJson(
 				'/licensing/import',
@@ -179,9 +212,13 @@ export function LicenseActivationPage() {
 			}
 			const body = (response.body ?? {}) as ImportResult;
 			setResult(body);
-			setEnvelopeJson('');
-			setFileName('');
-			if (fileInputRef.current) fileInputRef.current.value = '';
+			// Only clear the form when the operator has not started entering a new envelope
+			// while the import was in flight.
+			if (submittedRevision === inputRevisionRef.current) {
+				setEnvelopeJson('');
+				setFileName('');
+				if (fileInputRef.current) fileInputRef.current.value = '';
+			}
 			await loadStatus();
 		} catch (reason) {
 			// A failed fetch (TypeError) is a connection problem, not a server answer: keep
@@ -268,13 +305,14 @@ export function LicenseActivationPage() {
 								ref={fileInputRef}
 								type="file"
 								accept=".json,.txt,application/json,text/plain"
+								disabled={busy}
 								onChange={(event) => void readFile(event)}
 								className="rounded-md border border-input bg-background p-2 text-sm file:mr-3"
 							/>
 							{fileName && (
 								<p className="text-sm text-muted-foreground">
 									فایل انتخاب‌شده: <code dir="ltr">{fileName}</code>
-									<button type="button" className="mr-2 underline" onClick={clearSelection}>حذف</button>
+									<button type="button" className="mr-2 underline" disabled={busy} onClick={clearSelection}>حذف</button>
 								</p>
 							)}
 						</div>
@@ -285,7 +323,14 @@ export function LicenseActivationPage() {
 								dir="ltr"
 								rows={6}
 								value={envelopeJson}
-								onChange={(event) => { setEnvelopeJson(event.target.value); setFileName(''); }}
+								disabled={busy}
+								onChange={(event) => {
+									// A paste is a new input revision: a pending slow file read must
+									// never overwrite it (and vice versa).
+									++inputRevisionRef.current;
+									setEnvelopeJson(event.target.value);
+									setFileName('');
+								}}
 								className="rounded-md border border-input bg-background p-2 font-mono text-xs"
 							/>
 						</div>
