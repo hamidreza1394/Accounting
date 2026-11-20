@@ -827,3 +827,13 @@
 - D-113 Accepted: انتخاب اولیه DeploymentMode/DatabaseTopology/Endpoint در خرید؛ تغییر بعدی با درخواست مشتری و تأیید/اجرای مدیر فنی. Shared و Dedicated از معماری منطقی مشترک استفاده می‌کنند. Provisioning lifecycle NotImplemented.
 - مرجع جزئیات: [VENDOR_DEPLOYMENT_ARCHITECTURE.md](VENDOR_DEPLOYMENT_ARCHITECTURE.md). این ADRها به معنی ساخت فوری همه توپولوژی‌ها نیستند؛ Tenant DB مسیر پیش‌فرض کم‌هزینه است و قابلیت‌های دیگر مرحله‌ای پیاده می‌شوند.
 - D-109 نیز اکنون در main پیاده و پس از Merge PR #724 با ۱۵/۱۵ Check Run موفق Verified شده است؛ این وضعیت به معنی Production readiness کل Vendor نیست.
+
+
+## Database Routing Foundation، Wizard فعال‌سازی و Runbook CNG در Main (2026-11-20، پس از Merge پنج PR)
+
+- **D-114/D-115 (Accepted، پیاده‌سازی Partial):** ADRهای مالکیت FiscalPeriod و مسیریابی سمت سرور دیتابیس در main (#732). زیرساخت Routing (#734) در main است: Registry سمت سرور تنها منبع Routing؛ `DatabaseTarget` فقط شناسه مرجع و Connection String فقط از مسیر داخلی `IDatabaseConnectionSecrets` برای لایه اتصال (`InternalsVisibleTo`: Infrastructure.Persistence)؛ snapshot پیکربندی یک‌بار در Startup (بدون Reload)؛ رد fail-closed توپولوژی Pending و مقادیر Enum نامعتبر؛ ۳۵ تست Routing سبز. **اتصال `Data.DatabaseContext` به Resolver هنوز انجام نشده و فعال‌سازی چنددیتابیسی نیازمند Issue مستقل و تأیید مالک است.**
+- **توپولوژی‌ها:** TenantDatabase، CompanyDatabase و CompanyFiscalPeriodDatabase مجاز؛ «Tenant + FiscalPeriod DB» (گزینه ۳ D-111) Pending Owner Decision و در کد و Startup غیرقابل‌فعال‌سازی.
+- **Bootstrap (#733):** چک‌لیست #228 کامل شد — تست SQL «رد قطعی مدیر اولیه تکراری بدون ایجاد مدیر دوم» در main (با SQL Server در CI سبز).
+- **Wizard فعال‌سازی (#735):** صفحه فارسی RTL در مسیر `/licensing/activation` با ۱۶ تست Vitest؛ توکن antiforgery از مسیر همیشه-مجاز Provisioning؛ ثبت مجوز همچنان `AccountKind=Infrastructure`. فعال‌سازی Runtime Gate در Production هنوز نیازمند تأیید مالک است.
+- **Runbook CNG (#736):** Runbook Key Ceremony/Rotation با کد واقعی تطبیق داده شد؛ **Windows Operational Verification همچنان Not Verified** و اجرای واقعی نیازمند میزبان هدف و تأیید مالک است.
+- سلامت Main پس از Merge (`e9f412d8`): Build هر دو Solution سبز؛ Template.Tests ۱۴۳۶ موفق/۱۳۵ skip/۲ شکست محیطی شناخته‌شده بدون SQL Server (در CI سبز)؛ Vitest ۱۲۸۸/۱۲۸۸؛ production build و offline سبز؛ Semgrep بدون یافته؛ صفر تغییر Migration. موارد باز مالک: توپولوژی Pending، اتصال عملیاتی Routing، قرارداد v6، Amendment #393، D-106 و فعال‌سازی Production Gate.
