@@ -51,12 +51,21 @@ public sealed class VendorPaymentVerificationService(
 
         var now = timeProvider.GetUtcNow().ToUniversalTime();
         payment.Status = approval.TargetStatus;
-        payment.VerifiedByUserId = reviewerUserId;
-        payment.VerifiedAtUtc = now;
-        if (approval.TargetStatus == VendorPaymentRecord.StatusRejected &&
-            !string.IsNullOrWhiteSpace(reviewComment))
+        if (approval.TargetStatus == VendorPaymentRecord.StatusVerified)
         {
-            payment.RejectionReason = reviewComment.Trim();
+            payment.VerifiedByUserId = reviewerUserId;
+            payment.VerifiedAtUtc = now;
+        }
+        else if (approval.TargetStatus == VendorPaymentRecord.StatusRejected)
+        {
+            // Rejected is a decision, not a verification. The approval row records who/when
+            // decided it; VerifiedBy/VerifiedAt must remain empty for a rejected payment.
+            payment.VerifiedByUserId = null;
+            payment.VerifiedAtUtc = null;
+            if (!string.IsNullOrWhiteSpace(reviewComment))
+            {
+                payment.RejectionReason = reviewComment.Trim();
+            }
         }
 
         db.Entry(payment).Property(item => item.RowVersion).OriginalValue =
