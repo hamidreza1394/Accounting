@@ -181,7 +181,7 @@ dotnet run --project Vendor\Vendor.Host -- --urls http://localhost:5100
 
 سپس در `http://localhost:5100` با مدیر اول و MFA/TOTP وارد شوید و مشتری/نصب/قرارداد/لایسنس را تا وضعیت `Draft` بسازید.
 
-**تصمیم مالک (D-109):** نسخهٔ اول Vendor تک‌اپراتوره است؛ یک مدیر مجاز می‌تواند درخواست را ثبت و خودش تأیید کند و نیازی به مدیر دوم نیست. بااین‌حال کد فعلی هنوز قاعدهٔ قدیمی Requester != Reviewer را enforce می‌کند؛ بنابراین **تصمیم پذیرفته شده اما هنوز در Runtime پیاده نشده است** و صدور نهایی از نصب تازه تا اصلاح کد/تست‌ها همچنان Blocked است. این مانع به‌علت نبود مدیر دوم نیست، بلکه انحراف پیاده‌سازی از D-109 است. حساب مدیر دوم نسازید و کنترل را با SQL یا خاموش‌کردن Maker-Checker دور نزنید؛ اصلاح باید در PR کد مستقل با تست‌های مجازبودن self-approval و حفظ Authorization/Audit انجام شود.
+**تصمیم مالک (D-109):** نسخهٔ اول Vendor تک‌اپراتوره است؛ یک مدیر مجاز می‌تواند درخواست را ثبت و خودش تأیید کند و نیازی به مدیر دوم نیست. PR #724 این رفتار را در Runtime پیاده کرده و در main ادغام شده است؛ CI پس از Merge آن ۱۵/۱۵ Check Run موفق بوده است. این تغییر فقط مسیرهای approval پوشش‌داده‌شده در PR را تأیید می‌کند و جایگزین آماده‌سازی کلید/Trust Store یا Key Ceremony امضاکننده نیست. برای تست، از حساب مجاز استفاده کنید و کنترل‌های Permission، MFA و Audit را دور نزنید.
 
 > اگر به‌جای صدور، خطای `license_issuance_unavailable` دیدید یعنی Signer/Trust Store کامل پیکربندی نشده — این همان رفتار fail-closed صحیح است؛ بند ۴ را بازبینی کنید.
 
@@ -269,7 +269,7 @@ Invoke-RestMethod http://localhost:5000/api/v1/licensing/status | ConvertTo-Json
 
 ## ۷) سناریوهای انقضا، تمدید، آفلاین و Restricted
 
-سناریوهای زیر فقط وقتی قابل اجرا هستند که یک Envelope معتبر از قبل صادر و با مسیر احرازشده Import شده باشد؛ با نصب تازه، پس از Merge شدن PR #724 (پیاده‌سازی D-109 در Runtime) قابل اجراست؛ تا پیش از آن، کد main هنوز شرط قدیمی self-approval را دارد.
+سناریوهای زیر فقط وقتی قابل اجرا هستند که یک Envelope معتبر از قبل صادر و با مسیر احرازشده Import شده باشد؛ PR #724 و رفتار self-approval مطابق D-109 اکنون در main هستند. اجرای صدور واقعی همچنان به آماده‌سازی Signer، کلید و Trust Store در بند ۴ وابسته است.
 
 | تست | روش کنترل‌شده | رفتار مورد انتظار |
 |---|---|---|
@@ -278,7 +278,7 @@ Invoke-RestMethod http://localhost:5000/api/v1/licensing/status | ConvertTo-Json
 | **تمدید/Amendment** | در Vendor روی همان License تغییرات جدید → approve → Sequence جدید → envelope جدید → import | پذیرش فقط Sequence جدیدتر (`LicenseRevisionRules`)؛ replay/downgrade رد می‌شود |
 | **Offline** | فایل `license.json` را روی همان Installation (حتی در حالت قطع اینترنت) import کنید؛ کپی به دستگاه با InstallationId متفاوت باید رد شود | اعتبارسنجی کاملاً محلی؛ قطع اینترنت به‌تنهایی انقضا نیست |
 | **Support/Update مستقل** | `supportUntilUtc`/`updatesUntilUtc` را در لایسنس جدا از `expiresAtUtc` تنظیم کنید | پایان Support نرم‌افزار Perpetual را قفل نمی‌کند (D-097) |
-| **Provisioning آفلاین** | Vendor: Provisioning → `package/export`؛ Customer: `/provisioning/import` + apply | ACK امضاشده (CNG) به Vendor برمی‌گردد و وضعیت Confirmed می‌شود |
+| **Provisioning آفلاین** | Vendor: Provisioning → `package/export`؛ Customer: `/provisioning/import` + apply | پس از ادغام PR #720 و تنظیم Trust Store، ACK امضاشده با CNG به Vendor برمی‌گردد و وضعیت Confirmed می‌شود |
 | **Unlicensed** | دیتابیس `InstalledLicenses` را در یک دیتابیس تمیز آزمایش کنید | فقط `/api/v1/licensing/*` و `/api/v1/provisioning/*` باز؛ بقیه 503 |
 
 نکته: صرف قطع اینترنت هرگز License معتبر را باطل نمی‌کند (D-046/D-059 §9)؛ انقضای Term/پایان Support/ابطالِ امضاشده مسیرهای رسمی‌اند.
@@ -291,7 +291,7 @@ Invoke-RestMethod http://localhost:5000/api/v1/licensing/status | ConvertTo-Json
 2. آماده‌سازی دیتابیس محلی — بند ۲
 3. اجرای Vendor محلی — بند ۴
 4. Customer/Installation آزمایشی — بند ۴ (UI Vendor)
-5. ساخت Draft و بررسی Signer — بند ۴؛ صدور نهایی پس از پیاده‌سازی D-109 در Runtime
+5. ساخت Draft و بررسی Signer — بند ۴؛ self-approval طبق D-109 در main پیاده شده است؛ صدور نهایی به آماده‌سازی کلید و Trust Store وابسته است.
 6. اجرای فرانو روی localhost:5000 — بند ۵
 7. ورود با License معتبر — مشروط به رفع Blockerهای بند ۴ و ۶
 8. بررسی وضعیت و Entitlement — `GET /api/v1/licensing/status`
