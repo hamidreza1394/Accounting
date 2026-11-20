@@ -534,6 +534,145 @@ public sealed class CustomerProvisioningClaimsSqlServerTests
         });
     }
 
+    [Fact]
+    public async Task DuplicateInitialAdmin_IsRejectedDeterministically_WithoutCreatingASecondAdmin()
+    {
+        Assert.SkipUnless(SqlServerAvailable(), "SQL Server is not configured (FARANOU_TEST_SQLSERVER).");
+
+        await WithDatabaseAsync(async name =>
+        {
+            await using var database = CreateContext(name);
+            await database.Database.MigrateAsync(TestContext.Current.CancellationToken);
+
+            var settings = new CustomerProvisioningSettings
+            {
+                CustomerReference = "customer-ref",
+                InstallationId = "installation-ref",
+                CustomerBoundaryId = Guid.NewGuid()
+            };
+            database.PermissionDefinitions.Add(
+                new PermissionDefinition { Code = "finance.invoice.create", Name = "Create invoice" });
+            await database.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            using var vendorKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+            using var acknowledgementKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Provisioning:TrustedVendorKeys:vendor-key-1"] =
+                        Convert.ToBase64String(vendorKey.ExportSubjectPublicKeyInfo()),
+                    [ConfigurationCustomerProvisioningAcknowledgementTrustStore.SectionPath + ":customer-ack-test-key"] =
+                        Convert.ToBase64String(acknowledgementKey.ExportSubjectPublicKeyInfo())
+                })
+                .Build();
+            var verifier = new CustomerProvisioningPackageVerifier(
+                new ConfigurationCustomerProvisioningTrustStore(configuration),
+                Options.Create(settings),
+                TimeProvider.System);
+            var service = new CustomerProvisioningApplyService(
+                database, verifier, new TestAcknowledgementSigner(acknowledgementKey),
+                new ConfigurationCustomerProvisioningAcknowledgementTrustStore(configuration),
+                Options.Create(settings), new PasswordHashService(), TimeProvider.System,
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<CustomerProvisioningApplyService>.Instance);
+
+            (CustomerProvisioningPackage Package, CustomerProvisioningPayload Payload) NewPackage(
+                string companyName, string adminName, string adminEmail)
+            {
+                var now = DateTimeOffset.UtcNow;
+                var payload = new CustomerProvisioningPayload(
+                    3,
+                    Guid.NewGuid().ToString("D"),
+                    settings.CustomerReference,
+                    settings.InstallationId,
+                    companyName,
+                    "independent",
+                    adminName,
+                    new[] { "finance" },
+                    now.AddMinutes(-1),
+                    now.AddHours(1),
+                    Guid.NewGuid().ToString("N"),
+                    "سال مالی ۱۴۰۵",
+                    new DateOnly(2026, 3, 21),
+                    new DateOnly(2027, 3, 20),
+                    null,
+                    adminEmail);
+                var json = CustomerProvisioningCanonicalJson.Serialize(payload);
+                var signature = vendorKey.SignData(
+                    Encoding.UTF8.GetBytes(json),
+                    HashAlgorithmName.SHA256,
+                    DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
+                return (
+                    new CustomerProvisioningPackage(
+                        CustomerProvisioningPackageValidator.CurrentFormatVersion,
+                        "vendor-key-1",
+                        LicenseAlgorithms.EcdsaP256Sha256,
+                        json,
+                        Convert.ToBase64String(signature)),
+                    payload);
+            }
+
+            // The first valid provisioning creates the company and its initial administrator.
+            var first = await service.ApplyAsync(
+                NewPackage("شرکت اول", "initial-admin", "initial-admin@example.test").Package,
+                TestContext.Current.CancellationToken);
+            Assert.True(first.Success);
+            Assert.False(first.Replayed);
+            Assert.NotNull(first.EnrollmentToken);
+            Assert.Equal(1, await database.Companies.CountAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(1, await database.Users.CountAsync(TestContext.Current.CancellationToken));
+
+            // A second valid package reusing the same administrator username (with a different
+            // e-mail, isolating the username conflict) is rejected with a stable, non-sensitive
+            // code: no second administrator, company, membership or claim.
+            var duplicate = NewPackage("شرکت دوم", "initial-admin", "other-admin@example.test");
+            var rejected = await service.ApplyAsync(duplicate.Package, TestContext.Current.CancellationToken);
+            Assert.False(rejected.Success);
+            Assert.False(rejected.Replayed);
+            Assert.Equal("provisioning_initial_admin_conflict", rejected.ErrorCode);
+            Assert.Null(rejected.EnrollmentToken);
+            Assert.NotNull(rejected.Acknowledgement);
+
+            Assert.Equal(1, await database.Companies.CountAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(1, await database.Users.CountAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(1, await database.ProvisioningRequestClaims.CountAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(1, await database.UserCompanyMemberships.CountAsync(TestContext.Current.CancellationToken));
+
+            // The stored rejection is signed and verifies offline against the trusted key.
+            var duplicatePayloadHash = Convert.ToHexString(
+                SHA256.HashData(Encoding.UTF8.GetBytes(duplicate.Package.PayloadJson))).ToLowerInvariant();
+            Assert.True(CustomerProvisioningAcknowledgementValidator.TryValidateAndVerify(
+                rejected.Acknowledgement,
+                acknowledgementKey.ExportSubjectPublicKeyInfo(),
+                duplicate.Payload.RequestId,
+                duplicate.Payload.Nonce,
+                duplicatePayloadHash,
+                duplicate.Payload.CustomerReference,
+                duplicate.Payload.InstallationId,
+                DateTimeOffset.UtcNow,
+                out var ack,
+                out var ackError), ackError);
+            Assert.Equal("Rejected", ack!.Result);
+            Assert.Equal("provisioning_initial_admin_conflict", ack.ErrorCode);
+
+            // Replaying the exact rejected package is idempotent: the stored rejection comes back
+            // verbatim and still creates nothing.
+            var replayed = await service.ApplyAsync(duplicate.Package, TestContext.Current.CancellationToken);
+            Assert.False(replayed.Success);
+            Assert.True(replayed.Replayed);
+            Assert.Equal("provisioning_request_rejected", replayed.ErrorCode);
+            Assert.Null(replayed.EnrollmentToken);
+            Assert.Equal(1, await database.Companies.CountAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(1, await database.Users.CountAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(1, await database.ProvisioningRequestClaims.CountAsync(TestContext.Current.CancellationToken));
+
+            // The original enrollment token stays usable and never appears in any audit JSON.
+            var auditJson = await database.SecurityAuditEvents.Select(item => item.DetailsJson)
+                .ToListAsync(TestContext.Current.CancellationToken);
+            Assert.DoesNotContain(auditJson,
+                value => value?.Contains(first.EnrollmentToken!, StringComparison.Ordinal) == true);
+        });
+    }
+
     private static async Task<bool> SessionIsValidAsync(
         Data.DatabaseContext database, Guid userId, string storedCredential)
     {
