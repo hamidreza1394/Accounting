@@ -3354,3 +3354,9 @@
 - **اختلاف توپولوژی D-111 پرچم شد (نیازمند تأیید مالک):** متن merge‌شده D-111 گزینه سوم «Tenant + FiscalPeriod DB» را با قید «فقط در صورت نیاز واقعی» ثبت کرده؛ طبق دستور مالک حذف/اجباری نشد و اثرات معماری (کلید Routing بدون Company، جداسازی Company فقط منطقی، ریسک نشت Cross-Company، Backup غیرمستقل Company) در handoff `ISSUE-728-tenant-dedicated-decisions.md` ثبت شد. تا تعیین تکلیف، پیاده‌سازی Routing فقط سه توپولوژی توافق‌شده «Tenant DB، Company DB و Company+FiscalPeriod DB» (گزینه‌های ۱، ۲ و ۴ فهرست D-111) را هدف می‌گیرد و «Tenant + FiscalPeriod DB» (گزینه ۳) Pending Owner Decision و غیرقابل‌انتخاب است.
 - **شماره‌گذاری:** D-114/D-115 شماره‌های آزاد پس از D-113 هستند و تعارض قبلی #729 (ثبت مالکیت FiscalPeriod روی D-109) با این شماره‌ها رفع می‌شود؛ سابقه #729 در handoff مستند است.
 - این تغییر فقط مستندات است؛ هیچ کد، Entity، Migration، API، UI یا پیکربندی تغییر نکرد. CI مستندات روی HEAD این PR بررسی می‌شود؛ Issue #728 پس از Merge بسته می‌شود.
+
+## 2026-11-20 — عملیات: Runbook Key Ceremony و Rotation برای Windows CNG (D-107)
+
+- `docs/runbooks/ISSUE-236-CNG-KEY-CEREMONY-ROTATION.md` اضافه شد: ساخت دو کلید مجاز P-256 با Software KSP و ExportPolicy=None در LocalMachine، ACL خصوصی فقط برای هویت سرویس، Key Ceremony با فرمان فقط‌خواندنی `--signing-certificate export-public`، ثبت SPKI در Trust Storeها، پیکربندی `Signing:CertificateStore` با KeyId نسخه‌دار، چک‌لیست پذیرش عملیاتی (Not Verified تا اجرا روی میزبان Windows هدف)، rotation با overlap و بازیابی رخداد fail-closed.
+- این تغییر فقط مستندات است؛ هیچ کد، Migration، پیکربندی یا کلیدی تغییر نکرد و هیچ ادعای اجرای عملیاتی ثبت نشده است.
+

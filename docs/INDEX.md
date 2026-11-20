@@ -52,6 +52,7 @@
 | [`VENDOR_BOOTSTRAP.md`](VENDOR_BOOTSTRAP.md) | راهنمای عملیاتی command-mode برای راه‌اندازی اولین مدیر Vendor، TOTP و بازیابی pending |
 | [`runbooks/vendor-audit-checkpoint-recovery.md`](runbooks/vendor-audit-checkpoint-recovery.md) | رویهٔ provider-neutral برای checkpoint مستقل Audit، backup/restore و recovery؛ تا انتخاب مقصد واقعی، Production-ready نیست |
 | [`runbooks/ISSUE-236-HSM-TPM-KEY-OPERATIONS.md`](runbooks/ISSUE-236-HSM-TPM-KEY-OPERATIONS.md) | Key Ceremony و عملیات HSM؛ الزام HSM برای امضای License و Provisioning/Amendment مرکزی Vendor با D-107 superseded است؛ امضای Vendor offline-revocation snapshot همچنان HSM واقعی Production طبق D-055 لازم دارد؛ آزمون TPM سخت‌افزاری Customer ACK طبق D-055 و TPM anti-rollback مشتری طبق D-057 جداگانه باقی می‌مانند |
+| [`runbooks/ISSUE-236-CNG-KEY-CEREMONY-ROTATION.md`](runbooks/ISSUE-236-CNG-KEY-CEREMONY-ROTATION.md) | Runbook عملیاتی Key Ceremony و Rotation مسیر SoftwareProtected: ساخت دو کلید مجاز CNG P-256 غیرقابل‌Export با MachineKey، ACL هویت سرویس، استخراج SPKI با فرمان فقط‌خواندنی export-public، ثبت Trust Store، چک‌لیست پذیرش (Not Verified تا اجرا روی میزبان Windows هدف)، rotation با overlap و بازیابی رخداد fail-closed (D-107؛ Issue #236) |
 | [`TESTING.md`](TESTING.md) | تست |
 | [`DEPLOYMENT.md`](DEPLOYMENT.md), [`DEVELOPMENT.md`](DEVELOPMENT.md) | استقرار و توسعه |
 | [`CODING_STANDARDS.md`](CODING_STANDARDS.md) | استانداردها |
