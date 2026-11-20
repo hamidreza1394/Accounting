@@ -3393,3 +3393,9 @@
 - **ممیزی:** چرخه Provisioning/Bootstrap عملاً کامل است — package creation با RequestId+Nonce و dedupe، approval دو مجوزه، امضای fail-closed، export، ACK با verify امضا و Idempotent retry، Apply سمت مشتری با سقف MaxCompanies و CompanySetupRecord، مدیر اولیه با رمز تصادفی غیرقابل استفاده + Enrollment یک‌بارمصرف (hash/انقضا/rate-limit/SecurityAudit/D-073) و Reissue. هیچ قابلیتی دوباره ساخته نشد.
 - **اصلاح واقعی:** ثبت `VendorInstallation.LastSeenAtUtc` هنگام نخستین ACK امضاشده و معتبر (در همان تراکنش Serializable؛ Retry دقیق بازنویسی نمی‌کند) — تنها فیلد سلامت نصب بدون نویسنده بود؛ تست SQL آن اضافه شد.
 - **Needs Owner Decision (Blocked):** انتخاب نام کاربری مستقل توسط مشتری (نیازمند payload v6 و تغییر سمت مشتری)، فعال‌سازی توپولوژی‌های per-Company و Company×FiscalPeriod، Company-scoped (#392). سند کامل: `docs/VENDOR_ONBOARDING_AND_PROVISIONING.md`.
+
+## 2026-11-20 — Stage 4 و 5: Readiness Diagnostics و ممیزی نهایی (شاخه‌های زنجیره‌ای)
+
+- **Stage 4 (#741 Draft):** قواعد خالص `VendorLifecycleReadinessRules` + endpoint فقط-خواندنی `GET /api/vendor/customers/{id}/readiness` (۱۴ مرحله از داده واقعی؛ هیچ mutation و Secret؛ #392 همیشه Blocked تا باز شدن gate) + صفحه فارسی/RTL با جست‌وجو/انتخاب مشتری و علت/اقدام اصلاحی/مرجع/زمان؛ ۸ تست Unit + ۲ تست Vitest (مجموع ۷۹/۷۹).
+- **Stage 5:** ممیزی ۱۲ Issue واقعی از GitHub + کد (`docs/VENDOR_LIFECYCLE_FINAL_AUDIT.md`) — #214/#228/#235/#390/#391/#396 Implemented/Verified؛ #107/#393/#394 Partially؛ #236 Blocked زیرساخت؛ #389/#392 Blocked/Needs-Owner؛ امنیت/هزینه/آمادگی Production مستند شد (Not Ready تا HSM و #392 و #107).
+- هیچ PRای Merge نشده؛ زنجیره: #739 (باز) ← #740 (Draft) ← #741 (Draft) ← Stage 5 (Draft).
