@@ -3333,3 +3333,8 @@
 - سند جامع docs/VENDOR_DEPLOYMENT_ARCHITECTURE.md اضافه شد؛ جزئیات توپولوژی‌ها، جداسازی Control Plane/Data Plane، routing، انتقال و امنیت endpoint را ثبت می‌کند.
 - راهنمای Windows Localhost و handoff سناریو A از PR #723 به‌روزرسانی شدند تا وضعیت واقعی D-109 پس از Merge PR #724 (۱۵/۱۵ Check Run موفق) را منعکس کنند. تست واقعی ماتریس Windows توسط مالک همچنان انجام‌نشده است.
 - این تغییر فقط مستندات است؛ هیچ Runtime، Schema، Migration، Endpoint، Bootstrap token یا Database Router پیاده‌سازی نشده است.
+
+## 2026-11-20 — امنیت: ثبت supersession سیاست تأیید Vendor (D-109) در SECURITY.md
+
+- بخش «تغییر سیاست تأیید Vendor طبق D-109» به docs/SECURITY.md اضافه شد تا حالت واقعی Vendor v1 (تک‌اپراتوره، self-approval مجاز، حفظ MFA/RBAC/Audit/RowVersion/fail-closed) مستند بماند؛ محتوای یکتای PR #726 پس از ادغام کد آن در main (#720) منتقل شد. این PR کد آن شاخه را بازتولید نمی‌کند.
+- تغییر فقط مستندات است؛ هیچ کد، Schema، Migration، API یا پیکربندی تغییر نکرد. Build/Test برای تغییر docs-only اجرا نشد؛ CI مستندات روی HEAD این PR بررسی می‌شود.

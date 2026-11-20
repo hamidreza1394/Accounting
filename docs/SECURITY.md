@@ -264,6 +264,15 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - محدوده: این Verified فقط برای تغییر وضعیت مشتری/نصب است. تأیید دو نفره برای صدور/ابطال لایسنس، checkpoint مستقل Audit، bootstrap/recovery مدیر اول و KMS/HSM همچنان شکاف‌های Production هستند.
 
 
+## تغییر سیاست تأیید Vendor طبق D-109 (2026-11-19)
+
+- بند تاریخی PR #207 بالا، رفتار زمان پیاده‌سازی در 2026-10-27 را ثبت می‌کند؛ شرط «درخواست‌کننده نمی‌تواند درخواست خودش را تأیید کند» برای Vendor v1 با D-109 superseded شده است.
+- در Vendor v1 یک مدیر/اپراتور مجاز می‌تواند درخواست را ثبت و خودش تأیید یا رد کند؛ حساب دوم و جداسازی دو هویت برای تأیید لازم نیست. این استثنا فقط برای Vendor control-plane است و به عضویت بین‌شرکتی یا approvalهای Customer در `Server/**` تعمیم ندارد.
+- PR #724 این سیاست را برای approval عمومی، صدور License، Provisioning و Offline Revocation در main پیاده‌سازی کرده است؛ PR #722 نیز چرخهٔ Payment را با همین سیاست هم‌راستا کرده و با squash commit `c46e200b28a775080faaaa08c9515cf6a112897f` در main ادغام شده است.
+- MFA، RBAC سمت سرور، authorization منبع‌محور، antiforgery، RowVersion/concurrency، Audit تراکنشی، idempotency و fail-closed signer حفظ می‌شوند. حذف الزام دو هویت به معنی حذف ثبت درخواست، ثبت تصمیم یا Audit نیست.
+- Maker-Checker دو‌نفره فقط با تصمیم و Issue مستقل مالک در آینده فعال می‌شود؛ این گذار خودکار نیست.
+
+
 ## Vendor provisioning acknowledgement intake (2026-10-29, PR #293)
 
 - `POST /api/vendor/provisioning-requests/{requestId}/acknowledgement` is a machine-to-machine endpoint. It intentionally does not rely on the Vendor administrator cookie or browser antiforgery token; the signed acknowledgement is authenticated with a public key from the independently configured `ProvisioningAcknowledgementTrustStore`.
