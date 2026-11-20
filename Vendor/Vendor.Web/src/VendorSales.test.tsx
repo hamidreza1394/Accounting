@@ -203,7 +203,7 @@ describe('Vendor sales and payments workspace', () => {
     expect(screen.getAllByText('پرداخت‌شده').length).toBeGreaterThan(0);
   });
 
-  it('previews, records and submits a license amendment for a purchased line with a verified payment', async () => {
+  it('previews, records and submits a license amendment for a purchased line', async () => {
     const calls: Array<{ url: string; init?: RequestInit | undefined; body?: unknown }> = [];
     let amendmentCreated = false;
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
@@ -235,7 +235,7 @@ describe('Vendor sales and payments workspace', () => {
     render(<VendorSales permissions={['vendor.payments.read', 'vendor.payments.manage', 'vendor.licenses.manage', 'vendor.licenses.issue']} />);
 
     fireEvent.click((await screen.findAllByRole('button', { name: 'جزئیات' }))[0]!);
-    expect(await screen.findByText('Amendment لایسنس (خرید تأییدشده)')).toBeInTheDocument();
+    expect(await screen.findByText('Amendment لایسنس (ردیف خرید)')).toBeInTheDocument();
     fireEvent.click(await screen.findByRole('button', { name: 'درخواست Amendment' }));
     fireEvent.change(await screen.findByLabelText('سقف جدید شرکت‌ها'), { target: { value: '8' } });
 
@@ -256,26 +256,4 @@ describe('Vendor sales and payments workspace', () => {
     expect(submitted!.body).toMatchObject({ rowVersion: 'AQIDBAUGBwg=' });
   });
 
-  it('explains why an amendment cannot start without a verified payment', async () => {
-    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input);
-      void init;
-      if (url.startsWith('/api/vendor/sales-orders/?')) return Promise.resolve(response(ordersPage([collectibleOrder])));
-      if (url.startsWith('/api/vendor/receivables/?')) return Promise.resolve(response(page([])));
-      if (url === '/api/auth/antiforgery') return Promise.resolve(response({ requestToken: 'csrf-amendment' }));
-      if (url === `/api/vendor/sales-orders/${collectibleOrder.id}`) return Promise.resolve(response(orderDetail));
-      if (url.includes('/api/vendor/license-amendment-requests/?orderId=')) return Promise.resolve(response(page([])));
-      if (url === '/api/vendor/license-amendment-requests')
-        return Promise.resolve(response({ error: 'order_payment_not_verified' }, 409));
-      return Promise.resolve(response({}, 404));
-    });
-    vi.stubGlobal('fetch', fetchMock);
-    render(<VendorSales permissions={['vendor.payments.read', 'vendor.payments.manage', 'vendor.licenses.manage', 'vendor.licenses.issue']} />);
-
-    fireEvent.click((await screen.findAllByRole('button', { name: 'جزئیات' }))[0]!);
-    fireEvent.click(await screen.findByRole('button', { name: 'درخواست Amendment' }));
-    fireEvent.change(await screen.findByLabelText('سقف جدید شرکت‌ها'), { target: { value: '8' } });
-    fireEvent.click(screen.getByRole('button', { name: 'ثبت درخواست' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('هیچ پرداخت تأییدشده‌ای برای این سفارش ثبت نشده است');
-  });
 });

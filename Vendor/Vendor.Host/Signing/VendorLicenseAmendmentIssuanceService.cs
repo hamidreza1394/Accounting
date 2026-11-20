@@ -181,6 +181,74 @@ public sealed class VendorLicenseAmendmentIssuanceService(
     }
 
     /// <summary>
+    /// Applies an Approved=Rejected decision through the production decision path: marks the
+    /// amendment request Rejected with a stable failure code and the approval Rejected in the
+    /// caller's transaction, with RowVersion pinning and two independent audit events. Never
+    /// signs or persists an envelope, and never touches payment state (D-108).
+    /// </summary>
+    public async Task<VendorLicenseAmendmentRejectionResult> RejectApprovedAsync(
+        VendorApprovalRequest approval,
+        Guid reviewerUserId,
+        byte[] expectedApprovalVersion,
+        string? reviewComment,
+        string correlationId,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(approval);
+        ArgumentNullException.ThrowIfNull(expectedApprovalVersion);
+
+        if (db.Database.CurrentTransaction is null)
+            throw new InvalidOperationException("License amendment rejection must run inside the approval transaction.");
+
+        if (approval.ResourceType != "licenseAmendment" ||
+            approval.Status != "Pending" ||
+            approval.ResourceId == Guid.Empty || expectedApprovalVersion.Length != 8 ||
+            !approval.RowVersion.AsSpan().SequenceEqual(expectedApprovalVersion))
+            return VendorLicenseAmendmentRejectionResult.Conflict("stale_approval_version");
+
+        var request = await db.LicenseAmendmentRequests.SingleOrDefaultAsync(
+            item => item.Id == approval.ResourceId, cancellationToken);
+        if (request is null)
+            return VendorLicenseAmendmentRejectionResult.NotFound("amendment_request_not_found");
+        if (request.Status != VendorLicenseAmendmentRequest.StatusPendingApproval ||
+            !request.RowVersion.AsSpan().SequenceEqual(approval.ExpectedResourceRowVersion))
+            return VendorLicenseAmendmentRejectionResult.Conflict("approval_resource_stale");
+
+        var now = timeProvider.GetUtcNow().ToUniversalTime();
+        db.Entry(request).Property(item => item.RowVersion).OriginalValue =
+            approval.ExpectedResourceRowVersion;
+        request.Status = VendorLicenseAmendmentRequest.StatusRejected;
+        request.FailureCode = "amendment_rejected";
+        request.UpdatedAtUtc = now;
+
+        approval.Status = "Rejected";
+        approval.ReviewedByUserId = reviewerUserId;
+        approval.ReviewedAtUtc = now;
+        approval.ReviewComment = string.IsNullOrWhiteSpace(reviewComment) ? null : reviewComment.Trim();
+        db.Entry(approval).Property(item => item.RowVersion).OriginalValue = expectedApprovalVersion;
+
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return VendorLicenseAmendmentRejectionResult.Conflict("stale_approval_or_resource_version");
+        }
+
+        // VendorAuditWriter participates in the current transaction: a failing audit append rolls
+        // the request status and approval decision back together (fail-closed).
+        await audit.AppendAsync(new VendorAuditWriteRequest(
+            reviewerUserId, "vendor.approval.rejected", nameof(VendorApprovalRequest),
+            approval.Id.ToString("D"), correlationId), cancellationToken);
+        await audit.AppendAsync(new VendorAuditWriteRequest(
+            reviewerUserId, "vendor.amendment.rejected", nameof(VendorLicenseAmendmentRequest),
+            request.Id.ToString("D"), correlationId), cancellationToken);
+
+        return VendorLicenseAmendmentRejectionResult.Success();
+    }
+
+    /// <summary>
     /// Read-only review support: rebuilds the candidate from the latest signature-verified
     /// envelope and returns its summary without persisting, auditing or advancing any state.
     /// </summary>
@@ -289,6 +357,16 @@ public sealed class VendorLicenseAmendmentIssuanceService(
 
     private static bool IsUniqueConstraintViolation(DbUpdateException exception) =>
         exception.InnerException is SqlException { Number: 2601 or 2627 };
+}
+
+public sealed record VendorLicenseAmendmentRejectionResult(bool Succeeded, int StatusCode, string? ErrorCode)
+{
+    public static VendorLicenseAmendmentRejectionResult Success() =>
+        new(true, StatusCodes.Status200OK, null);
+    public static VendorLicenseAmendmentRejectionResult Conflict(string code) =>
+        new(false, StatusCodes.Status409Conflict, code);
+    public static VendorLicenseAmendmentRejectionResult NotFound(string code) =>
+        new(false, StatusCodes.Status404NotFound, code);
 }
 
 public sealed record VendorLicenseAmendmentIssuanceResult(bool Succeeded, int StatusCode, string? ErrorCode)

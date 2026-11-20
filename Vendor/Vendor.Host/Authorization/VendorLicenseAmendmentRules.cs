@@ -2,8 +2,9 @@ namespace Faranou.Vendor.Host.Authorization;
 
 /// <summary>
 /// Pure business rules for explicit license amendment requests (D-108/D-109). An amendment request
-/// may only be started by an authorized operator for a purchased line whose order carries at least
-/// one Verified payment, and only for installation-scoped kinds while CompanyReference mapping
+/// is started by an authorized operator for a purchased line; payment state is NEVER a condition
+/// for starting or issuing one (D-108 §1: payment is not a condition of license/amendment
+/// issuance), and only installation-scoped kinds are accepted while CompanyReference mapping
 /// (#392) is not operational: company-scoped module/feature/user-seat amendments stay Blocked.
 /// The rules never sign, persist or change payment state.
 /// </summary>
@@ -37,8 +38,10 @@ public static class VendorLicenseAmendmentRules
     };
 
     /// <summary>
-    /// Fail-closed validation for starting an explicit amendment request. Returns null when the
-    /// request may be created; otherwise a stable error code for the API error contract.
+    /// Fail-closed validation for starting an explicit amendment request. Payment state is
+    /// deliberately absent: a missing, recorded, verified or rejected payment never gates the
+    /// amendment cycle (D-108 §1), and no payment state may trigger issuance by itself either.
+    /// Returns null when the request may be created; otherwise a stable error code.
     /// </summary>
     public static string? ValidateCreate(
         string? kind,
@@ -46,7 +49,6 @@ public static class VendorLicenseAmendmentRules
         Guid? lineLicenseId,
         Guid licenseId,
         string licenseStatus,
-        bool orderHasVerifiedPayment,
         int? requestedMaxCompanies,
         int? licenseMaxCompanies,
         DateTimeOffset? requestedSupportUntilUtc,
@@ -60,8 +62,6 @@ public static class VendorLicenseAmendmentRules
             return "order_line_license_mismatch";
         if (!IsKindCompatible(kind, productCode))
             return "amendment_kind_product_mismatch";
-        if (!orderHasVerifiedPayment)
-            return "order_payment_not_verified";
         if (!string.Equals(licenseStatus, "Issued", StringComparison.Ordinal))
             return "license_not_amendable";
         if (kind == KindMaxCompanies)
