@@ -3321,3 +3321,11 @@
 - پیکربندی opt-in: `Licensing:RuntimeGate:Enabled` (پیش‌فرض خاموش؛ هم‌الگوی Gate v5) و `Licensing:DeploymentMode=Dedicated|Cloud` (نامعتبر → fail-fast). با gate خاموش رفتار میزبان عین قبل است.
 - تست‌ها: ۲۳ تست واحد + ۸ تست HTTP واقعی = ۳۱ موفق / ۰ شکست محلی؛ بدون Migration و بدون تغییر Schema. Wizard React، cache نسخه‌دار و E2E با License واقعی باقی‌مانده‌اند.
 - مستندات: PROJECT_STATUS.md، handoff `ISSUE-396-license-runtime-gate.md`.
+
+## 2026-11-20 — Issue #728: تصمیم‌های معماری Tenant و استقرار Dedicated
+
+- ممیزی نشان داد D-087 موجود و Accepted است، اما D-088..D-092 نیز قبلاً برای موضوعات مستقل ثبت شده‌اند؛ بنابراین هیچ شناسه یا سابقه‌ای بازنویسی نشد.
+- برای جلوگیری از تعارض شماره‌گذاری، تصمیم‌های جدید با شماره‌های واقعی بعدی ثبت شدند: D-109 مالکیت FiscalPeriod در Company؛ D-110 مدیر اولیه مستقل مشتری؛ D-111 توپولوژی سه‌گانه دیتابیس؛ D-112 مسیریابی و انتقال کنترل‌شده؛ D-113 endpoint دامنه/IP/شبکه داخلی یا VPN؛ D-114 پروفایل‌های استقرار و Provisioning مشترک.
+- وضعیت تصمیم‌ها Accepted است؛ وضعیت پیاده‌سازی هر قابلیت مطابق متن ADR جداگانه و صادقانه NotImplemented/Partial ثبت شده است.
+- این تغییر فقط مستنداتی است: هیچ کد، Entity، Schema، Migration، API، endpoint، Connection String یا تنظیم استقرار تغییر نکرده است.
+- تست Build/Backend/Frontend موضوعیت ندارد؛ git diff --check و بررسی لینک‌ها/شماره‌ها باید پیش از ادغام اجرا شوند.
