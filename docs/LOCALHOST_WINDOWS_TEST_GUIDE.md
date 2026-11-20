@@ -75,8 +75,13 @@ cd Accounting
 ## ۲) ساخت دو دیتابیس محلی
 
 ```powershell
-sqlcmd -S localhost -E -Q "IF DB_ID('FaranoVendor_Local') IS NULL CREATE DATABASE FaranoVendor_Local;"
-sqlcmd -S localhost -E -Q "IF DB_ID('Farano_Local') IS NULL CREATE DATABASE Farano_Local;"
+# اگر SQL Server روی میزبان دیگری است (مثلاً Windows ARM64 یا Server 2012/2012 R2)،
+# مقدار $SqlHost را به نام/آدرس میزبان SQL Server تغییر دهید؛ در بند ۵ هم در رشتهٔ اتصال
+# Customer مقدار Server=localhost را با همان مقدار جایگزین کنید.
+$SqlHost = "localhost"
+
+sqlcmd -S $SqlHost -E -Q "IF DB_ID('FaranoVendor_Local') IS NULL CREATE DATABASE FaranoVendor_Local;"
+sqlcmd -S $SqlHost -E -Q "IF DB_ID('Farano_Local') IS NULL CREATE DATABASE Farano_Local;"
 ```
 
 اگر از SQL Auth استفاده می‌کنید، `-E` را با `-U sa -P '<رمز>'` جایگزین کنید و همهٔ رشته‌های اتصال پایین را هم‌سان کنید. **هیچ رمزی در فایل داخل مخزن ذخیره نشود.**
@@ -208,6 +213,10 @@ dotnet run --project Server -- --migrate
 $env:Licensing__RuntimeGate__Enabled = "true"
 $env:Licensing__DeploymentMode = "Dedicated"   # در سناریوی Cloud: "Cloud" → رفتار انقضای D-098
 
+# Trust Store سمت مشتری — بدون این مقدار، Host پاکت امضاشده با vendor-license-v1 را
+# تأیید نمی‌کند و فعال‌سازی fail-closed می‌شود. همان SPKI عمومی بند ۴ (کلید License).
+$env:Licensing__TrustedLicenseKeys__vendor-license-v1 = "<SPKI-License>"
+
 dotnet run --project Server -- --urls http://localhost:5000
 ```
 
@@ -241,7 +250,7 @@ $envelope = Invoke-Sqlcmd -ConnectionString $vendorConn -Query @"
 SELECT TOP 1 e.EnvelopeJson
 FROM VendorSignedLicenseEnvelopes e
 JOIN VendorLicenses l ON l.Id = e.LicenseId
-WHERE l.Status = N'Issued'
+WHERE l.Status = N'Issued' AND l.InstallationId = N'<InstallationId سناریو>'
 ORDER BY e.CreatedAtUtc DESC;
 "@
 if ($null -eq $envelope -or [string]::IsNullOrWhiteSpace([string]$envelope.EnvelopeJson)) {

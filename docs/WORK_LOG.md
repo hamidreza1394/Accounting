@@ -3327,14 +3327,14 @@
 - Entityهای `VendorSalesOrders`/`VendorSalesOrderLines`/`VendorPaymentRecords` با Migration جدید Vendor و CHECK constraintها؛ ثبت پرداخت دستی چندگانه با ستون‌های typed؛ تأیید Maker-Checker مستقل (`salesOrderPayment` + `vendor.payments.verify`) با منع self-approval و تراکنش واحد؛ وضعیت‌های مشتق Unpaid/PartiallyPaid/Paid/Overdue فقط در زمان خواندن؛ گزارش مطالبات `/api/vendor/receivables` بدون Scheduler/درگاه/Ledger. صدور و پرداخت دو چرخهٔ مستقل ماندند.
 - ۱۲ تست واحد سبز محلی؛ دو تست Integration SQL-گیت برای CI. `dotnet ef migrations has-pending-model-changes` سبز. هیچ تغییری در Customer DB و هیچ اثری بر صدور/فعال‌سازی وجود ندارد. handoff: `ISSUE-393-vendor-payment-cycle-d108.md`.
 
+## 2026-11-20 — امنیت: ثبت supersession سیاست تأیید Vendor (D-109) در SECURITY.md
+
+- بخش «تغییر سیاست تأیید Vendor طبق D-109» به docs/SECURITY.md اضافه شد تا حالت واقعی Vendor v1 (تک‌اپراتوره، self-approval مجاز، حفظ MFA/RBAC/Audit/RowVersion/fail-closed) مستند بماند؛ محتوای یکتای PR #726 پس از ادغام کد آن در main (#720) منتقل شد. این PR کد آن شاخه را بازتولید نمی‌کند.
+- تغییر فقط مستندات است؛ هیچ کد، Schema، Migration، API یا پیکربندی تغییر نکرد. Build/Test برای تغییر docs-only اجرا نشد؛ CI مستندات روی HEAD این PR بررسی می‌شود.
+
 ## 2026-11-20 — تصمیم‌های Vendor D-110..D-113 و تکمیل راهنمای Windows
 
 - مالک محصول D-110..D-113 را پذیرفت: Bootstrap امن TenantOwner بدون رمز مشترک؛ توپولوژی‌های مستقل از Tenant/Company/FiscalPeriod؛ Endpoint Dedicated بدون الزام دامنه؛ انتخاب اولیه پروفایل و تغییرات بعدی با تأیید مدیر فنی.
 - سند جامع docs/VENDOR_DEPLOYMENT_ARCHITECTURE.md اضافه شد؛ جزئیات توپولوژی‌ها، جداسازی Control Plane/Data Plane، routing، انتقال و امنیت endpoint را ثبت می‌کند.
 - راهنمای Windows Localhost و handoff سناریو A از PR #723 به‌روزرسانی شدند تا وضعیت واقعی D-109 پس از Merge PR #724 (۱۵/۱۵ Check Run موفق) را منعکس کنند. تست واقعی ماتریس Windows توسط مالک همچنان انجام‌نشده است.
 - این تغییر فقط مستندات است؛ هیچ Runtime، Schema، Migration، Endpoint، Bootstrap token یا Database Router پیاده‌سازی نشده است.
-
-## 2026-11-20 — امنیت: ثبت supersession سیاست تأیید Vendor (D-109) در SECURITY.md
-
-- بخش «تغییر سیاست تأیید Vendor طبق D-109» به docs/SECURITY.md اضافه شد تا حالت واقعی Vendor v1 (تک‌اپراتوره، self-approval مجاز، حفظ MFA/RBAC/Audit/RowVersion/fail-closed) مستند بماند؛ محتوای یکتای PR #726 پس از ادغام کد آن در main (#720) منتقل شد. این PR کد آن شاخه را بازتولید نمی‌کند.
-- تغییر فقط مستندات است؛ هیچ کد، Schema، Migration، API یا پیکربندی تغییر نکرد. Build/Test برای تغییر docs-only اجرا نشد؛ CI مستندات روی HEAD این PR بررسی می‌شود.
