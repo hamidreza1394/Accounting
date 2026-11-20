@@ -145,4 +145,3 @@
 
 | [handoffs/ISSUE-393-s1-b-owner-decisions-2026-11-19.md](handoffs/ISSUE-393-s1-b-owner-decisions-2026-11-19.md) | تصمیم‌های مالک D-108 درباره استقلال پرداخت/صدور، Maker-Checker مستقل و گزارش مطالبات؛ D-107 درباره امضای SoftwareProtected و مرز TPM در Customer |
 | [VENDOR_ONBOARDING_AND_PROVISIONING.md](VENDOR_ONBOARDING_AND_PROVISIONING.md) | ممیزی مرحله سوم مأموریت Vendor (2026-11-20): جدول وضعیت واقعی چرخه ثبت مشتری تا Provisioning/Bootstrap/Enrollment، تحلیل سه توپولوژی دیتابیس (فعال: یک DB برای هر Installation؛ دو گزینه دیگر Needs Owner Decision)، شکاف Needs-Owner-Decision انتخاب نام کاربری توسط مشتری و ثبت سلامت اتصال اولیه با LastSeenAtUtc |
-| [VENDOR_LIFECYCLE_FINAL_AUDIT.md](VENDOR_LIFECYCLE_FINAL_AUDIT.md) | ممیزی نهایی مرحله پنجم مأموریت Vendor (2026-11-20): وضعیت واقعی ۱۲ Issue با شواهد کد، ممیزی امنیت/هزینه، آمادگی Production (Not Ready تا HSM/#392/#107) و وضعیت زنجیره PRها |

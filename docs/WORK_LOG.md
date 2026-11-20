@@ -3388,14 +3388,8 @@
 
 - **اصلاح الزامی پس از بازبینی مالک (D-108 §1):** شرط پرداخت از چرخه Amendment حذف شد — `orderHasVerifiedPayment` از قواعد و `HasVerifiedPayment` از مسیر ایجاد حذف گردید؛ کد خطای `order_payment_not_verified` منسوخ شد. باگ `ActiveAmendment` در `BuildTransientRequestAsync` رفع شد (مقایسه با `line.Id` به‌جای شناسه سفارش؛ ایندکس یکتای فیلترشده همچنان آخرین لایه محافظ است). Rejection به‌عنوان متد رسمی `RejectApprovedAsync` به سرویس صدور منتقل شد (هم‌الگوی DecideApprovedAsync پرداخت‌ها) و endpoint تصمیم نازک شد. تست SQL جدید ماتریس D-108 (بدون پرداخت/Recorded/Verified/Rejected/PartiallyPaid → همه مجاز) و تست Rejection واقعی با Retry اصلاح‌شده واقعی (درخواست دوم → صدور sequence+1) جایگزین شد.
 
-## 2026-11-20 — Stage 3: تکمیل ممیزی Customer Onboarding و Provisioning (شاخه زنجیره‌ای)
+## 2026-11-20 — Review round 2 (CodeRabbit) روی اصلاحات D-108
 
-- **ممیزی:** چرخه Provisioning/Bootstrap عملاً کامل است — package creation با RequestId+Nonce و dedupe، approval دو مجوزه، امضای fail-closed، export، ACK با verify امضا و Idempotent retry، Apply سمت مشتری با سقف MaxCompanies و CompanySetupRecord، مدیر اولیه با رمز تصادفی غیرقابل استفاده + Enrollment یک‌بارمصرف (hash/انقضا/rate-limit/SecurityAudit/D-073) و Reissue. هیچ قابلیتی دوباره ساخته نشد.
-- **اصلاح واقعی:** ثبت `VendorInstallation.LastSeenAtUtc` هنگام نخستین ACK امضاشده و معتبر (در همان تراکنش Serializable؛ Retry دقیق بازنویسی نمی‌کند) — تنها فیلد سلامت نصب بدون نویسنده بود؛ تست SQL آن اضافه شد.
-- **Needs Owner Decision (Blocked):** انتخاب نام کاربری مستقل توسط مشتری (نیازمند payload v6 و تغییر سمت مشتری)، فعال‌سازی توپولوژی‌های per-Company و Company×FiscalPeriod، Company-scoped (#392). سند کامل: `docs/VENDOR_ONBOARDING_AND_PROVISIONING.md`.
-
-## 2026-11-20 — Stage 4 و 5: Readiness Diagnostics و ممیزی نهایی (شاخه‌های زنجیره‌ای)
-
-- **Stage 4 (#741 Draft):** قواعد خالص `VendorLifecycleReadinessRules` + endpoint فقط-خواندنی `GET /api/vendor/customers/{id}/readiness` (۱۴ مرحله از داده واقعی؛ هیچ mutation و Secret؛ #392 همیشه Blocked تا باز شدن gate) + صفحه فارسی/RTL با جست‌وجو/انتخاب مشتری و علت/اقدام اصلاحی/مرجع/زمان؛ ۸ تست Unit + ۲ تست Vitest (مجموع ۷۹/۷۹).
-- **Stage 5:** ممیزی ۱۲ Issue واقعی از GitHub + کد (`docs/VENDOR_LIFECYCLE_FINAL_AUDIT.md`) — #214/#228/#235/#390/#391/#396 Implemented/Verified؛ #107/#393/#394 Partially؛ #236 Blocked زیرساخت؛ #389/#392 Blocked/Needs-Owner؛ امنیت/هزینه/آمادگی Production مستند شد (Not Ready تا HSM و #392 و #107).
-- هیچ PRای Merge نشده؛ زنجیره: #739 (باز) ← #740 (Draft) ← #741 (Draft) ← Stage 5 (Draft).
+- **F42W (رفع شد):** `ValidateRequestedPeriodsAsync` اکنون `(Error, StatusCode)` برمی‌گرداند — شکست verify امضا/کلید وضعیت verifier خودش را حفظ می‌کند (503 کلید غیرمورد اعتماد) و فقط درخواست دوره نامعتبر 409 است؛ هر دو endpoint وضعیت را propagate می‌کنند.
+- **F42c (رفع شد):** گیت «فهرست ناقص» فقط برای اپراتوری است که مجوز `vendor.licenses.read` دارد؛ پاسخ 403/401 فهرست برای اپراتور mutation-مجاز «دنیال نیست» و دکمه‌هایش فعال می‌مانند (مجوزهای manage/issue مستقل‌اند). تست Vitest حالت denied اضافه شد.
+- **F42Q (Needs Owner Decision):** ثبت `LastSeenAtUtc` در تراکنش ACK (الزام مرحله ۳ مأموریت) RV نصب را جلو می‌برد و مثل `UpdateInstallation` ممکن است یک installation approval در انتظار را stale کند — جهت شکست fail-closed است و هیچ تصمیمی اشتباه پاس نمی‌شود. تغییر مکانیزم (جدول سلامت جدا یا توکن وضعیت-محور) نیازمند Migration و تصمیم مالک است؛ بدون مجوز انجام نشد.

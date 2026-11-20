@@ -503,7 +503,6 @@ app.MapVendorProvisioningEndpoints();
 app.MapVendorApprovalEndpoints();
 app.MapVendorSalesEndpoints();
 app.MapVendorLicenseAmendmentEndpoints();
-app.MapVendorLifecycleReadinessEndpoints();
 app.MapVendorOfflineRevocationEndpoints();
 app.MapFallback(async context =>
 {
