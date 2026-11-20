@@ -175,9 +175,8 @@ public sealed class VendorLicenseAmendmentSqlServerTests
         await using var fixture = await AmendmentFixture.OpenAsync();
         if (fixture is null) return;
         await fixture.IssueBaseLicenseAsync();
-        await fixture.SeedPurchasedLineAsync(productCode: "renewal.support-updates");
-        await fixture.SeedAmendmentRequestAsync(VendorLicenseAmendmentRequest.KindSupportUpdates,
-            supportUntilUtc: DateTimeOffset.UtcNow.AddYears(1));
+        await fixture.SeedPurchasedLineAsync(productCode: "addon.company.seat");
+        await fixture.SeedAmendmentRequestAsync(VendorLicenseAmendmentRequest.KindMaxCompanies, requestedMaxCompanies: 8);
 
         // Real production rejection path: the same RejectApprovedAsync service the decision
         // endpoint calls for licenseAmendment rejections — no helper mutates entities directly.
@@ -204,8 +203,10 @@ public sealed class VendorLicenseAmendmentSqlServerTests
 
         // A corrected retry: Rejected no longer blocks the line, so a NEW request with corrected
         // values can be submitted for approval and issued for real (envelope sequence 2).
-        await fixture.SeedAmendmentRequestAsync(VendorLicenseAmendmentRequest.KindSupportUpdates,
-            supportUntilUtc: DateTimeOffset.UtcNow.AddYears(2));
+        // (A supportUpdates retry is documented as Blocked-by-upstream: no issuance path grants
+        // initial SupportUntilUtc/UpdatesUntilUtc, so the official extension builder rejects it
+        // with support_period_not_previously_granted — an owner decision, not guessed here.)
+        await fixture.SeedAmendmentRequestAsync(VendorLicenseAmendmentRequest.KindMaxCompanies, requestedMaxCompanies: 10);
         var retry = await fixture.IssueAmendmentAsync();
         Assert.True(retry.Succeeded, retry.ErrorCode);
 
