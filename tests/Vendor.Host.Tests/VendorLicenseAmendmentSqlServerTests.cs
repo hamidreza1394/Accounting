@@ -91,27 +91,23 @@ public sealed class VendorLicenseAmendmentSqlServerTests
         Assert.False(staleResult.Succeeded);
         Assert.Equal("stale_approval_version", staleResult.ErrorCode);
 
-        // A request that is not in PendingApproval cannot be decided.
+        // A request that is not in PendingApproval cannot be decided: seed an independent
+        // purchased line (the filtered unique index forbids two active requests on one line).
+        await fixture.SeedPurchasedLineAsync(productCode: "addon.company.seat", verifiedPayment: true);
+        await fixture.SeedAmendmentRequestAsync(
+            VendorLicenseAmendmentRequest.KindMaxCompanies, requestedMaxCompanies: 9,
+            status: VendorLicenseAmendmentRequest.StatusRequested);
         await using var scope = fixture.Provider.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
-        var secondRequest = new VendorLicenseAmendmentRequest
-        {
-            Id = Guid.NewGuid(), OrderId = fixture.OrderId!.Value, OrderLineId = fixture.OrderLineId!.Value,
-            CustomerId = fixture.CustomerId, LicenseId = fixture.LicenseId,
-            Kind = VendorLicenseAmendmentRequest.KindMaxCompanies, RequestedMaxCompanies = 9,
-            Status = VendorLicenseAmendmentRequest.StatusRequested,
-            RequestedByUserId = Guid.NewGuid(),
-            CreatedAtUtc = DateTimeOffset.UtcNow, UpdatedAtUtc = DateTimeOffset.UtcNow
-        };
-        db.LicenseAmendmentRequests.Add(secondRequest);
-        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
-        var undecidedApproval = await SeedApprovalAsync(db, secondRequest, status: "Pending");
+        var undecidedRequest = await db.LicenseAmendmentRequests.AsNoTracking()
+            .SingleAsync(item => item.OrderLineId == fixture.OrderLineId, TestContext.Current.CancellationToken);
+        var undecidedApprovalId = await SeedApprovalAsync(db, undecidedRequest, status: "Pending");
         db.ChangeTracker.Clear();
-        var wrongStateApproval = await db.ApprovalRequests.AsNoTracking()
-            .SingleAsync(item => item.Id == undecidedApproval, TestContext.Current.CancellationToken);
+        var undecidedApproval = await db.ApprovalRequests.AsNoTracking()
+            .SingleAsync(item => item.Id == undecidedApprovalId, TestContext.Current.CancellationToken);
         var service = fixture.CreateService(failAudit: false);
         var undecidedResult = await service.IssueApprovedAsync(
-            wrongStateApproval, Guid.NewGuid(), wrongStateApproval.RowVersion.ToArray(), null,
+            undecidedApproval, Guid.NewGuid(), undecidedApproval.RowVersion.ToArray(), null,
             Guid.NewGuid().ToString("N"), TestContext.Current.CancellationToken);
         // The request row is still Requested, not PendingApproval: fail closed.
         Assert.False(undecidedResult.Succeeded);
@@ -181,18 +177,20 @@ public sealed class VendorLicenseAmendmentSqlServerTests
         public Guid LicenseId { get; private set; }
         public Guid? OrderId { get; private set; }
         public Guid? OrderLineId { get; private set; }
-        private readonly ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        // ONE key signs every envelope and is the only trusted key: signing and verification
+        // must agree or the signature check would fail closed for the wrong reason.
+        public required ECDsa SigningKey { get; init; }
         private Guid _pendingAmendmentRequestId;
 
         public VendorLicenseAmendmentIssuanceService CreateService(bool failAudit) => new(
-            Db, new VendorLicenseEnvelopeFactory(new TestSigner(key)), BuildTrustStore(),
+            Db, new VendorLicenseEnvelopeFactory(new TestSigner(SigningKey)), BuildTrustStore(),
             failAudit ? new FailingAuditWriter() : new VendorAuditWriter(Db, TimeProvider.System), TimeProvider.System);
 
         private LicenseSigningTrustStore BuildTrustStore() => new(new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 [$"Licensing:TrustedSigningKeys:{TestKeyId}:PublicKeySubjectPublicKeyInfoBase64"] =
-                    Convert.ToBase64String(key.ExportSubjectPublicKeyInfo())
+                    Convert.ToBase64String(SigningKey.ExportSubjectPublicKeyInfo())
             }).Build());
 
         public async Task IssueBaseLicenseAsync()
@@ -247,27 +245,31 @@ public sealed class VendorLicenseAmendmentSqlServerTests
         }
 
         public async Task SeedAmendmentRequestAsync(
-            string kind, int? requestedMaxCompanies = null, DateTimeOffset? supportUntilUtc = null)
+            string kind, int? requestedMaxCompanies = null, DateTimeOffset? supportUntilUtc = null,
+            string? status = null)
         {
             var request = new VendorLicenseAmendmentRequest
             {
                 Id = Guid.NewGuid(), OrderId = OrderId!.Value, OrderLineId = OrderLineId!.Value,
                 CustomerId = CustomerId, LicenseId = LicenseId, Kind = kind,
                 RequestedMaxCompanies = requestedMaxCompanies, RequestedSupportUntilUtc = supportUntilUtc,
-                Status = VendorLicenseAmendmentRequest.StatusPendingApproval,
+                Status = status ?? VendorLicenseAmendmentRequest.StatusPendingApproval,
                 RequestedByUserId = Guid.NewGuid(),
                 CreatedAtUtc = DateTimeOffset.UtcNow, UpdatedAtUtc = DateTimeOffset.UtcNow
             };
             Db.LicenseAmendmentRequests.Add(request);
             await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
-            Db.ApprovalRequests.Add(new VendorApprovalRequest
+            if (request.Status == VendorLicenseAmendmentRequest.StatusPendingApproval)
             {
-                Id = Guid.NewGuid(), ResourceType = "licenseAmendment", ResourceId = request.Id,
-                TargetStatus = "Issued", ExpectedResourceRowVersion = request.RowVersion.ToArray(),
-                RequestedByUserId = Guid.NewGuid(), RequestedAtUtc = DateTimeOffset.UtcNow, Status = "Pending"
-            });
-            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
-            _pendingAmendmentRequestId = request.Id;
+                Db.ApprovalRequests.Add(new VendorApprovalRequest
+                {
+                    Id = Guid.NewGuid(), ResourceType = "licenseAmendment", ResourceId = request.Id,
+                    TargetStatus = "Issued", ExpectedResourceRowVersion = request.RowVersion.ToArray(),
+                    RequestedByUserId = Guid.NewGuid(), RequestedAtUtc = DateTimeOffset.UtcNow, Status = "Pending"
+                });
+                await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+                _pendingAmendmentRequestId = request.Id;
+            }
             Db.ChangeTracker.Clear();
         }
 
@@ -378,7 +380,7 @@ public sealed class VendorLicenseAmendmentSqlServerTests
                 var envelopeFactory = new VendorLicenseEnvelopeFactory(new TestSigner(key));
                 var fixture = new AmendmentFixture
                 {
-                    Provider = provider, Scope = scope, Db = db,
+                    Provider = provider, Scope = scope, Db = db, SigningKey = key,
                     LicenseIssuance = new VendorLicenseIssuanceService(
                         db, envelopeFactory, new VendorAuditWriter(db, TimeProvider.System), TimeProvider.System),
                     Issuance = new VendorLicenseAmendmentIssuanceService(
@@ -406,7 +408,7 @@ public sealed class VendorLicenseAmendmentSqlServerTests
             await Db.Database.EnsureDeletedAsync();
             Scope.Dispose();
             await Provider.DisposeAsync();
-            key.Dispose();
+            SigningKey.Dispose();
         }
     }
 
