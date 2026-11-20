@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Faranou.Vendor.Persistence.Migrations
 {
     [DbContext(typeof(VendorDbContext))]
-    [Migration("20261120134232_VendorLicenseAmendmentRequests")]
+    [Migration("20261120135809_VendorLicenseAmendmentRequests")]
     partial class VendorLicenseAmendmentRequests
     {
         /// <inheritdoc />
@@ -496,7 +496,7 @@ namespace Faranou.Vendor.Persistence.Migrations
 
                     b.HasIndex("OrderLineId")
                         .IsUnique()
-                        .HasFilter("[Status] IN (N'Requested', N'PendingApproval', N'Issued')");
+                        .HasFilter("[Status] IN ('Requested', 'PendingApproval', 'Issued')");
 
                     b.ToTable("VendorLicenseAmendmentRequests", null, t =>
                         {

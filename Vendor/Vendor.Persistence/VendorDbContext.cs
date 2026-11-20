@@ -297,7 +297,7 @@ public sealed class VendorDbContext(DbContextOptions<VendorDbContext> options)
             entity.Property(item => item.CreatedAtUtc).HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
             entity.Property(item => item.UpdatedAtUtc).HasDefaultValueSql("CONVERT(datetimeoffset, SYSUTCDATETIME())");
             entity.Property(item => item.RowVersion).IsRowVersion();
-            entity.HasIndex(item => item.OrderLineId).IsUnique().HasFilter("[Status] IN (N'Requested', N'PendingApproval', N'Issued')");
+            entity.HasIndex(item => item.OrderLineId).IsUnique().HasFilter("[Status] IN ('Requested', 'PendingApproval', 'Issued')");
             entity.HasIndex(item => item.LicenseId);
             entity.HasIndex(item => item.CustomerId);
             entity.HasIndex(item => item.OrderId);
