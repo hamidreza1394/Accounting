@@ -90,6 +90,7 @@ $env:FARANO_VENDOR_ProvisioningSigningTrust__Keys__0__PublicKeySubjectPublicKeyI
 ```
 
 4. کنترل‌های Startup طبق کد: `AssuranceLevel` باید دقیقاً `SoftwareProtected` باشد؛ در Production، StoreLocation=LocalMachine و KeyId دو کلید مجزا الزامی است؛ در صورت تداخل با `Signing:Pkcs11` هر دو هم‌زمان فعال، میزبان fail-fast می‌شود.
+5. **سطح اعتبارسنجی و زنجیره گواهی (طبق کد):** `WindowsCngCertificatePolicy` فقط گواهیِ منتخب را کنترل می‌کند — Thumbprint دقیق از پیکربندی، منحنی/اندازه کلید عمومی ECDSA P-256، KeyUsage=DigitalSignature، بازه اعتبار زمانی و سیاست PrivateKey (Software KSP، NonExportable، MachineKey در Production). **اعتبارسنجی Chain/CA انجام نمی‌شود**؛ بنابراین گواهی self-signed با همین مشخصات طبق D-107 قابل قبول است و Trust Store مصرف‌کننده فقط SPKI خام هر KeyId را نگه می‌دارد، نه زنجیره. امضای بسته‌ها با digest SHA-256 و الگوریتم `EcdsaP256Sha256` انجام می‌شود.
 
 ## 6. راستی‌آزمایی عملیاتی (چک‌لیست پذیرش)
 
@@ -111,7 +112,8 @@ $env:FARANO_VENDOR_ProvisioningSigningTrust__Keys__0__PublicKeySubjectPublicKeyI
 3. **سوییچ امضا:** `Thumbprint` پیکربندی امضا را به v2 تغییر دهید و KeyId را هم‌زمان نسخه‌دار کنید؛ Startup اعتبار الگوی KeyId/Thumbprint را کنترل می‌کند.
 4. **بازبینی:** readiness/health سبز، امضای آزمایشی موفق، Audit از امضای اول با v2.
 5. **بستن overlap:** پس از اطمینان از نبود بستهٔ نیازمند تأیید با v1، SPKI v1 را از Trust Store حذف کنید؛ گواهی v1 را در Store نگه ندارید (حذف؛ رویداد ثبت شود).
-6. این drill دست‌کم سالانه و همچنین در هر رخداد احتمالی افشا اجرا شود.
+6. **Rollback به کلید قبلی و مرز آن:** تا پیش از گام ۵ (حذف v1 از Store)، بازگشت به v1 ممکن است: `Thumbprint`/`KeyId` پیکربندی امضا را دوباره روی v1 تنظیم و سرویس را restart کنید؛ SPKI v1 هنوز در Trust Store است و Verify امضاهای صادرشده با v2 نیز با overlap ادامه می‌یابد. پس از حذف v1 از Store بازگشت با این روش ممکن نیست (کلید حذف‌شده non-exportable است و از Backup مادهٔ خصوصی مسیر ندارد — بخش 8). **محدودیت امنیتی:** Rollback فقط برای مشکل عملیاتی/فنی کلید جدید مجاز است؛ اگر v2 (یا هر کلید) به افشا مشکوک شود، مسیر درست حذف اعتماد و Rotation اضطراری طبق بخش 8 است، نه بازگشت. هر Rollback با تاریخ، علت و تأیید مالک در Audit ثبت شود.
+7. این drill دست‌کم سالانه و همچنین در هر رخداد احتمالی افشا اجرا شود.
 
 ## 8. بازیابی از رخداد (کلید حذف/ناموجود/گواهی منقضی)
 
