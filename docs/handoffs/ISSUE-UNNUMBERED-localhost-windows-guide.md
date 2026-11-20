@@ -17,7 +17,7 @@
 - [x] محدودیت‌های واقعی صادقانه ثبت شده‌اند (Wizard React، reactivation D-099، Gate v5، D-100/101/102).
 
 ## خلاصه تغییرات
-- راهنمای موجود بازبینی شد: ماتریس OS سازگار با .NET 10 و SQL Server 2022، تفکیک Build/Runtime، CNG Software KSP بدون TPM/HSM/KMS برای License/Provisioning، ترتیب Build → Migration → Bootstrap → Startup، راز Bootstrap، PowerShell 5.1، SQL extraction بدون BOM و شکاف پیاده‌سازی self-approval نسبت به D-109 و محدودیت Import.
+- راهنمای موجود بازبینی شد: ماتریس OS سازگار با .NET 10 و SQL Server 2022، تفکیک Build/Runtime، CNG Software KSP بدون TPM/HSM/KMS برای License/Provisioning، ترتیب Build → Migration → Bootstrap → Startup، راز Bootstrap، PowerShell 5.1، SQL extraction بدون BOM و پیاده‌سازی self-approval طبق D-109 در PR #724؛ محدودیت‌های باقی‌مانده مربوط به آماده‌سازی کلید/Trust Store و تست عملیاتی Windows هستند.
 
 ## فایل‌های مهم تغییرکرده
 - `docs/LOCALHOST_WINDOWS_TEST_GUIDE.md` — سند جدید
@@ -33,7 +33,7 @@
 | Build/Test در PRهای #720/#721/#722 | ثبت‌شده در همان PRها | این PR فقط مستندات است |
 | Build/Test پس از اصلاح مستندات | اجرا نشده | تغییر کد وجود ندارد؛ CI مستندات باید بررسی شود |
 | اجرای راهنما روی Windowsهای هدف | اجرا نشده | مالک باید روی هر OS هدف تست کند |
-| صدور از نصب تازه طبق D-109 | Blocked در کد فعلی | شرط قدیمی Requester != Reviewer هنوز enforce می‌شود |
+| صدور از نصب تازه طبق D-109 | self-approval در Runtime main پیاده شده | PR #724 ادغام شده؛ Key Ceremony، CNG/Trust Store و تست عملیاتی Windows باقی است |
 | Import License از CLI | Not verified | نیازمند نشست معتبر و قرارداد CSRF تست‌شده است |
 
 ## امنیت، داده و سازگاری
