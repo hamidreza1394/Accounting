@@ -264,14 +264,6 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - محدوده: این Verified فقط برای تغییر وضعیت مشتری/نصب است. تأیید دو نفره برای صدور/ابطال لایسنس، checkpoint مستقل Audit، bootstrap/recovery مدیر اول و KMS/HSM همچنان شکاف‌های Production هستند.
 
 
-## تغییر سیاست تأیید Vendor طبق D-109 (2026-11-19)
-
-- بند تاریخی PR #207 بالا، رفتار زمان پیاده‌سازی در 2026-10-27 را ثبت می‌کند؛ شرط «درخواست‌کننده نمی‌تواند درخواست خودش را تأیید کند» برای Vendor v1 با D-109 superseded شده است.
-- در Vendor v1 یک مدیر/اپراتور مجاز می‌تواند درخواست را ثبت و خودش تأیید یا رد کند؛ حساب دوم و جداسازی دو هویت برای تأیید لازم نیست. این استثنا فقط برای Vendor control-plane است و به عضویت بین‌شرکتی یا approvalهای Customer در `Server/**` تعمیم ندارد.
-- PR #724 این سیاست را برای approval عمومی، صدور License، Provisioning و Offline Revocation پیاده‌سازی می‌کند؛ PR #722 چرخه Payment را با همین سیاست هم‌راستا می‌کند. تا Merge و CI سبز این PRها، main هنوز ممکن است guardهای قدیمی داشته باشد.
-- MFA، RBAC سمت سرور، authorization منبع‌محور، antiforgery، RowVersion/concurrency، Audit تراکنشی، idempotency و fail-closed signer حفظ می‌شوند. حذف الزام دو هویت به معنی حذف ثبت درخواست، ثبت تصمیم یا Audit نیست.
-- Maker-Checker دو‌نفره فقط با تصمیم و Issue مستقل مالک در آینده فعال می‌شود؛ این گذار خودکار نیست.
-
 ## Vendor provisioning acknowledgement intake (2026-10-29, PR #293)
 
 - `POST /api/vendor/provisioning-requests/{requestId}/acknowledgement` is a machine-to-machine endpoint. It intentionally does not rely on the Vendor administrator cookie or browser antiforgery token; the signed acknowledgement is authenticated with a public key from the independently configured `ProvisioningAcknowledgementTrustStore`.
@@ -312,6 +304,17 @@ dotnet user-secrets set "ApplicationSettings:MasterPassword" "<credential produc
 - A customer that has already received a package while fully offline cannot discover later Vendor-side suspension, key revocation or a newer sequence. This is a protocol limitation, not a claim of offline revocation.
 - This branch adds no database migration and no Customer DB schema change. MaxCompanies enforcement, module additions to existing companies and multi-license aggregation remain NotImplemented.
 
+
+## Vendor central signing: Windows CNG SoftwareProtected provider (D-107, 2026-11-19)
+
+- With D-107 accepted, the first-version Vendor central signer for `ILicenseSigningProvider` and `IProvisioningSigningProvider` may run as `SoftwareProtected` on Windows: certificates from the Windows Certificate Store (StoreName `My`) with CNG ECDSA P-256 MachineKey private keys whose CNG export policy forbids any export. The provider requests a Sign operation only and never receives, serializes or exports private key material.
+- The provider is opt-in and off by default: `Signing:CertificateStore:Enabled=true` replaces the unavailable license/provisioning providers; enabling both PKCS#11 and the certificate-store signer at startup is rejected. Non-Windows hosts fail fast at startup when explicitly enabled (no Linux signer in the first version per D-107). Production additionally requires `StoreLocation=LocalMachine` (MachineKey); `CurrentUser` is accepted only outside Production.
+- Certificates are selected by thumbprint, one per purpose with distinct versioned KeyIds (`vendor-license-v1`, `vendor-provisioning-v1`, …). Any structural defect fails closed: certificate expired or not yet valid, non-ECDSA or non-P-256 public key, missing/incorrect DigitalSignature KeyUsage, private key missing, private key not CNG, KSP other than Microsoft Software KSP, any non-None export policy, or a non-MachineKey in Production. Failures surface as `signing_provider_unavailable`, so issuance keeps returning 503 instead of falling back to any test key.
+- Assurance is explicitly `SoftwareProtected` in configuration, the startup log, health check data and audit; it never claims Hardware/HSM. Production startup audits `vendor.signing.assurance.software-protected-selected` and logs the accepted D-107 risk: a local administrator can trigger signatures without extracting the key, so the signing host must be dedicated with restricted administrative access.
+- Each signing attempt is audited metadata-only (`vendor.signing.<purpose>.<keyId>.succeeded|failed`); if the audit append fails, the signature is discarded and the operation fails closed. Canonical payload bytes, signatures and key material are never logged.
+- The read-only ceremony command `dotnet Vendor.Host.dll --signing-certificate export-public` prints only public SubjectPublicKeyInfo, KeyId, thumbprint and NotAfter for the two configured certificates so deployment can enrol them under `Licensing:TrustedSigningKeys` and `ProvisioningSigningTrust:Keys`; it never prints private material and never enables signing by itself.
+- Offline-revocation snapshot signing stays out of this provider: per D-055 that purpose still requires a real Production HSM, and the offline-revocation provider remains unavailable/fail-closed in the certificate-store branch.
+- Status: the provider, its cross-platform unit tests and its Windows-only CNG tests are `Implemented`; the Windows CNG test job runs in Vendor CI. Signing with a real provisioned MachineKey on the target Windows Server (`Implemented/Verified` end-to-end, trust-store enrolment, rotation drill) remains pending the operational key ceremony. CI test keys never enter runtime or Production configuration.
 
 ## هویت، دامنه و دسترسی بین‌شرکتی — D-065
 
