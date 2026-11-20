@@ -63,7 +63,9 @@ public static class VendorProvisioningEndpoints
 
             var customer = await db.Customers.AsNoTracking()
                 .SingleOrDefaultAsync(value => value.Id == item.CustomerId, ct);
-            var installation = await db.Installations.AsNoTracking()
+            // Tracked: a freshly accepted acknowledgement stamps the installation's connection
+            // health in the same transaction (LastSeenAtUtc).
+            var installation = await db.Installations
                 .SingleOrDefaultAsync(value => value.Id == item.InstallationId, ct);
             if (customer is null || installation is null || installation.CustomerId != customer.Id)
                 return Results.NotFound();
@@ -120,6 +122,10 @@ public static class VendorProvisioningEndpoints
             item.Status = targetStatus;
             item.ConfirmedAtUtc = targetStatus == "Confirmed" ? now : null;
             item.FailureCode = failureCode;
+            // A freshly accepted, signature-verified customer acknowledgement is the first proof
+            // that the installation is alive: stamp connection health in the same transaction.
+            // Exact signed retries return earlier and never rewrite this timestamp.
+            installation.LastSeenAtUtc = now;
 
             try
             {
