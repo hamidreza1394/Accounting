@@ -49,4 +49,4 @@
 ## شناسه‌های Git
 - Branch: `agent/unnumbered-localhost-windows-guide`
 - Commit: در تاریخچه Branch `agent/unnumbered-localhost-windows-guide` (PR #723)
-- Pull Request: #723 (باز؛ Merge نشده)
+- Pull Request: #723 (منبع اولیه؛ تغییرات راهنما در شاخه مستندات جدید تجمیع شده‌اند؛ وضعیت نهایی پس از Merge PR جایگزین ثبت می‌شود)
