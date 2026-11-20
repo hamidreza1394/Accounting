@@ -46,7 +46,7 @@ CustomerAccount
 **پیش‌فرض کم‌هزینه:** Tenant DB. جداسازی بیشتر فقط با نیاز روشن، بررسی ظرفیت/هزینه و انتخاب مشتری در زمان خرید فعال می‌شود.
 
 ### قواعد فنی
-- نگاشت سمت سرور بر اساس TenantId و در صورت نیاز CompanyId/FiscalPeriodId انجام می‌شود؛ الگوی precedence باید deterministic باشد.
+- هر Tenant یک DatabaseTopology فعال دارد و resolver فقط کلید همان توپولوژی را می‌خواند: TenantId، TenantId+CompanyId، TenantId+FiscalPeriodId یا TenantId+CompanyId+FiscalPeriodId. ترکیب fallback میان توپولوژی‌ها ممنوع است؛ assignment مفقود یا متعارض fail-closed می‌شود.
 - زیرسیستم‌ها فقط از DbContext/Factory و routing مورد اعتماد استفاده می‌کنند؛ Connection String یا DatabaseId از کلاینت پذیرفته نمی‌شود.
 - از Cross-database FK و فرض Distributed Transaction اجتناب می‌شود.
 - Master Data طبق مالکیت D-105 نگهداری می‌شود؛ داده مرجع Company-level نباید بدون دلیل در هر DB سالانه کپی شود. Snapshot یا versioning فقط برای مواردی که نیاز تاریخی/ممیزی دارند تعریف می‌شود.
