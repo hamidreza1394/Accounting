@@ -3047,12 +3047,12 @@ D-030، D-074، D-082، D-084، D-087، D-103، D-105؛ `docs/TRADE_DESIGN_V3_2.
 
 ### گزینه‌های ردشده
 - الزام دائمی به یک دیتابیس برای هر Tenant یا هر Company؛
-- یکی دانستن Company+FiscalPeriod با Tenant+FiscalPeriod؛
+- افزودن توپولوژی «یک دیتابیس مشترک برای دوره‌های هم‌نام چند Company» بدون تعریف و تصویب کلید partition مشترک؛
 - وابسته‌کردن TenantId/CompanyId/FiscalPeriodId به نام دیتابیس یا سرور؛
 - تکثیر همه Master Data در هر دیتابیس سالانه بدون تعیین مالکیت و نیاز تاریخی.
 
 ### معیار پذیرش
-- هر چهار توپولوژی در قرارداد Provisioning قابل بیان باشند؛ Tenant DB گزینه پیش‌فرض باشد.
+- هر سه توپولوژی مصوب در قرارداد Provisioning قابل بیان باشند؛ Tenant DB گزینه پیش‌فرض باشد.
 - جداسازی فیزیکی هیچ تغییری در معنای Tenant/Company/FiscalPeriod ایجاد نکند.
 - برای نمونه دو شرکت × دو دوره، Company+FiscalPeriod به چهار assignment مجزا resolve شود.
 
