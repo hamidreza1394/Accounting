@@ -2,12 +2,12 @@
 
 > **وضعیت واقعی در main (بازبینی 2026-11-19؛ `main@4c91797e3f395e1fbc737ce1ff363630f03a6052`):** زنجیرهٔ شرکت‌محور شامل قرارداد Provisioning v5 (#679)، تغییرناپذیری CompanyReference در amendment (#680)، صدور اولیهٔ LicensePayload v2 (#682)، آماده‌سازی gated Vendor (#683) و مصرف‌کنندهٔ Customer با CompanySetupRecords و Apply اتمیک (#684/#686/#687) در main است. PR #699 نیز allow-list ACK Vendor را برای چهار کد رد ثابت شرکت‌محور تکمیل کرده و Merge شده است؛ CI روی HEAD نهایی PR آن سبز بوده: Vendor ۳/۳، Semgrep ۱/۱ و .NET ۷/۷ Job. PR #702 با merge commit `163e0be3a430439b69c13e0c17e8b99e98617fb9` و PR #707 با merge commit `ab4ddef16f965b98c21720c5784a1fe068538878` ادغام شده‌اند؛ برای PR #707، CI روی HEAD نهایی ۱۸/۱۸ Check Run موفق و برای PR #699، CI پس از Merge روی `755150929b211ac3b952a3c3a7f0856624b11f0d` برابر ۱۵/۱۵ Check Run موفق تأیید شده است. این شواهد به‌تنهایی تأیید CI پس از Merge برای همهٔ تغییرات main یا Production readiness نیستند. Gate دوکلیدی صدور v5 همچنان بسته است (`CustomerConsumerReady=false` و تنظیم `Provisioning:CompanyReferenceIssuance:Enabled` پیش‌فرض خاموش)، پس هیچ بستهٔ v5 عملیاتی صادر نمی‌شود. Migration `20261116070805_AddCompanySetupRecords` فقط در مخزن است و روی دیتابیس واقعی مشتری اجرا نشده؛ Bootstrap Dedicated/Offline، سیاست Restore/Clone، trust distribution/rotation و آزمون Staging دو میزبان باقی‌اند. Providerهای Production همچنان unavailable/fail-closed هستند؛ با D-107، SoftwareProtected روی Windows CNG مجاز شده اما Provider عملیاتی/تست‌شده و کلید واقعی هنوز provision نشده است؛ KMS/HSM عملیاتی یا credential هم وجود ندارد. Call-site اجرایی enforcement و Authorization مشترک لایسنس در عملیات حسابداری هنوز NotImplemented است؛ سامانه Production-ready نیست.
 >
-> تصمیم‌ها: D-020 تا D-109 در [`DECISIONS.md`](DECISIONS.md)؛ موارد باز در [`LICENSING_OPEN_DECISIONS.md`](LICENSING_OPEN_DECISIONS.md)؛ مدل داده در [`LICENSING_DATA_MODEL.md`](LICENSING_DATA_MODEL.md)؛ گردش‌کارها در [`LICENSING_WORKFLOWS.md`](LICENSING_WORKFLOWS.md)؛ تهدیدها در [`LICENSING_THREAT_MODEL.md`](LICENSING_THREAT_MODEL.md)؛ نقشه اجرایی S1 در [`LICENSING_IMPLEMENTATION_PLAN.md`](LICENSING_IMPLEMENTATION_PLAN.md).
+> تصمیم‌ها: D-020 تا D-108 در [`DECISIONS.md`](DECISIONS.md)؛ موارد باز در [`LICENSING_OPEN_DECISIONS.md`](LICENSING_OPEN_DECISIONS.md)؛ مدل داده در [`LICENSING_DATA_MODEL.md`](LICENSING_DATA_MODEL.md)؛ گردش‌کارها در [`LICENSING_WORKFLOWS.md`](LICENSING_WORKFLOWS.md)؛ تهدیدها در [`LICENSING_THREAT_MODEL.md`](LICENSING_THREAT_MODEL.md)؛ نقشه اجرایی S1 در [`LICENSING_IMPLEMENTATION_PLAN.md`](LICENSING_IMPLEMENTATION_PLAN.md).
 
 
 ## ۱) وضعیت فعلی (واقعی)
 
-- هیچ کنترل لایسنس در برنامه فعال نیست. `ActivationKeysHandlerMiddleware` کد مرده است و از commit `370fe67` در Pipeline نیست (D-028).
+- هیچ کنترل لایسنس در برنامه فعال نیست. `ActivationKeysHandlerMiddleware` کد مرده است و از commit `370fe67` در Pipeline نیست (D-028). **(به‌روزرسانی 2026-11-19، Issue #396):** دروازهٔ license-first runtime (`LicenseRuntimeGateMiddleware` + `ILicenseRuntimeStateService` + `GET /api/v1/licensing/status`) طبق D-060 §1-6/D-098 پیاده شده است؛ با `Licensing:RuntimeGate:Enabled` opt-in است و پیش‌فرض خاموش می‌ماند (rollout مرحله‌ای)؛ Active/Restricted/Unlicensed/Invalid سمت سرور اعمال می‌شوند.
 - مدل Tenant و عضویت (`Company`، `UserCompanyMembership`، `CompanyRole`) وجود دارد و پایه کار است (D-009، D-013).
 - مجوز عملیاتی در دیتابیس تعریف شده ولی در کد مصرف نمی‌شود (D-025).
 
@@ -25,8 +25,8 @@
 
 | جزء | توضیح | وضعیت |
 |---|---|---|
-| سامانه مرکزی فروشنده (Vendor Control Plane) | Host، persistence، هویت/مجوز، ممیزی، گردش‌کار درخواست/تصمیم صدور/ابطال و داشبورد در مراحل مختلف پیاده‌سازی شده‌اند؛ provider امضای Production و sink مستقل ممیزی هنوز مانع Production هستند | `Partially Implemented / NotProductionReady` |
-| سرویس صدور Vendor | workflow درخواست/تصمیم و ذخیرهٔ envelope/sequence پیاده‌سازی شده؛ طبق D-109 تأیید تک‌اپراتوره در V1 مجاز است؛ adapter PKCS#11 و SoftHSM توسعه/آزمون موجود است؛ provider Production فقط با پیکربندی و پذیرش ریسک معتبر قابل فعال‌سازی است | `Partially Implemented / NotProductionReady` |
+| سامانه مرکزی فروشنده (Vendor Control Plane) | Host، persistence، هویت/مجوز، ممیزی، maker-checker، workflow صدور/ابطال و داشبورد در مراحل مختلف پیاده‌سازی شده‌اند؛ provider امضای Production و sink مستقل ممیزی هنوز مانع Production هستند | `Partially Implemented / NotProductionReady` |
+| سرویس صدور Vendor | workflow دو نفره و ذخیرهٔ envelope/sequence پیاده‌سازی شده؛ adapter PKCS#11 و SoftHSM توسعه/آزمون موجود است؛ provider Production فقط با پیکربندی و پذیرش ریسک معتبر قابل فعال‌سازی است | `Partially Implemented / NotProductionReady` |
 | `Licensing.Contracts` | قرارداد LicenseEnvelope، اعتبارسنج امضا/زمان، revocation-aware validator و provisioning payload v1-v5؛ v5 additive و برای CompanyReference. سمت Customer، verifier با `allowCompanyReference=true` (PR #686) v5 را می‌پذیرد، اما صدور v5 در Vendor پشت Gate خاموش است | `Implemented`; صدور عملیاتی v5 در Vendor `NotImplemented` (Gate خاموش) |
 | ماژول لایسنس نصب | ورود فایل، ذخیره، ارزیابی وضعیت، ممیزی، محدودسازی سمت سرور | `NotImplemented` |
 | نمایش در React | فقط بازتاب وضعیت از API؛ منبع تصمیم نیست | `NotImplemented` |
@@ -188,10 +188,14 @@
 
 
 
-## تصمیم‌های مالک محصول در 2026-11-19 — امضای Vendor، پرداخت مستقل و تأیید تک‌اپراتوره (D-107/D-108/D-109)
+## تصمیم‌های مالک محصول در 2026-11-19 — امضای Vendor و پرداخت مستقل (D-107/D-108)
 
-- D-107 Accepted: برای امضای مرکزی License/Provisioning Vendor در نسخه اول، Windows CNG/Certificate Store با Microsoft Software KSP، KeyUsage=DigitalSignature، ExportPolicy=None، MachineKey در Production و سطح صریح SoftwareProtected در Production مجاز است؛ TPM/HSM/KMS اجباری نیست. ریسک مدیر محلی/میزبان صریح است؛ گردش‌کار درخواست/تصمیم، MFA، Audit، rotation و fail-closed حفظ می‌شوند. طبق D-109، V1 تک‌اپراتوره است. این تصمیم D-047 بند ۷ و بخش Production از D-046 OD-07/D-056 را فقط برای امضای مرکزی Vendor supersede می‌کند.
-- D-108 Accepted: صدور/فعال‌سازی از پرداخت مستقل است. Payment و Issuance دو چرخه مستقل درخواست/تصمیم و Audit دارند؛ طبق D-109 همان اپراتور مجاز می‌تواند درخواست را خودش تأیید کند. Vendor سفارش‌های Unpaid/Partial/Overdue را با محاسبه زمان خواندن در داشبورد/گزارش نشان می‌دهد؛ بدون درگاه، Ledger، scheduler یا Broker.
-- D-109 Accepted: Vendor v1 تک‌اپراتوره است؛ یک مدیر مجاز می‌تواند عملیات مدیریتی، درخواست‌ها و تأیید/ردها را انجام دهد. شرط requester≠reviewer و الزام مدیر دوم برای V1 اعمال نمی‌شود. Maker-Checker دو‌نفره فقط با تصمیم/Issue مستقل مالک در آینده فعال خواهد شد؛ MFA، Permission، Audit، RowVersion و fail-closed حفظ می‌شوند.
+- D-107 Accepted: برای امضای مرکزی License/Provisioning Vendor در نسخه اول، Windows CNG/Certificate Store با کلید MachineKey غیرقابل‌استخراج و سطح صریح SoftwareProtected در Production مجاز است؛ TPM/HSM/KMS اجباری نیست. ریسک مدیر محلی/میزبان صریح است؛ Maker-Checker، MFA، Audit، rotation و fail-closed حفظ می‌شوند. این تصمیم D-047 بند ۷ و بخش Production از D-046 OD-07/D-056 را فقط برای امضای مرکزی Vendor supersede می‌کند.
+- D-108 Accepted: صدور/فعال‌سازی از پرداخت مستقل است. Payment و Issuance دو چرخه مستقل Maker-Checker/Audit هستند. Vendor سفارش‌های Unpaid/Partial/Overdue را با محاسبه زمان خواندن در داشبورد/گزارش نشان می‌دهد؛ بدون درگاه، Ledger، scheduler یا Broker.
 - محدودیت مستقل Customer: D-057 برای anti-rollback snapshot ابطال آفلاین Customer همچنان TPM 2.0 می‌خواهد؛ D-107 آن را تغییر نمی‌دهد. اثر این الزام بر مشتری فاقد TPM در OD-27 باز است.
 - وضعیت: فقط تصمیم و مستندات؛ هیچ Provider، کلید، Entity، Migration، endpoint یا enforcement با این ADRها به‌تنهایی فعال نشده است.
+
+
+## توپولوژی استقرار و نگاشت دیتابیس مشتری — D-110..D-114
+
+قرارداد جزئی Bootstrap مدیر اولیه، توپولوژی‌های Tenant/Company/FiscalPeriod، DatabaseAssignment/DatabaseRouting، انتقال کنترل‌شده داده و Endpointهای Dedicated در [VENDOR_DEPLOYMENT_ARCHITECTURE.md](VENDOR_DEPLOYMENT_ARCHITECTURE.md) ثبت شده است. این تصمیم‌ها Tenant را از Company و محل فیزیکی ذخیره‌سازی مستقل نگه می‌دارند. Tenant DB پیش‌فرض کم‌هزینه است؛ جداسازی بیشتر بر اساس انتخاب مشتری و با تأیید فنی ارائه می‌شود. دامنه Dedicated اجباری نیست و IP عمومی/خصوصی یا VPN با TLS/trust مناسب قابل پشتیبانی است. همه قابلیت‌های فوق در Vendor Provisioning هنوز NotImplemented هستند.
