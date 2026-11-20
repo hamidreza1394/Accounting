@@ -3315,30 +3315,17 @@
 - محدوده تغییر: مستندات و تصمیم‌ها؛ هیچ کد، Entity، Migration، API، UI، کلید واقعی یا Gate Production تغییر نکرد. Build/Test کد اجرا نشده است؛ CI مستندات پس از PR باید بررسی شود.
 
 
-## 2026-11-19 — راهنمای Windows Localhost (سناریوی A مأموریت)
+## 2026-11-19 — Issue #396: اتصال License به Runtime فرانو (دروازهٔ license-first)
 
-- `docs/LOCALHOST_WINDOWS_TEST_GUIDE.md`: مسیر کامل ۱۲ مرحله‌ای تست واقعی روی Windows شخصی با PowerShell Copy/Paste؛ شامل Key Ceremony CNG (D-107)، اجرای Vendor/فرانو روی localhost، فعال‌سازی با import، دروازهٔ Runtime و سناریوهای انقضا/تمدید/آفلاین/Restricted/Unlicensed. فقط مستندات؛ بدون کد و بدون Migration. handoff: `ISSUE-UNNUMBERED-localhost-windows-guide.md`.
-
-
-## 2026-11-19 — بازبینی سازگاری Windows و اصلاح راهنمای Localhost
-
-- **درخواست مالک:** راهنمای اجرا نباید به Windows 11 یا سخت‌افزار خاص محدود باشد.
-- **دامنه:** فقط مستندات PR #723؛ هیچ کد، Migration، Schema، API یا تصمیم امنیتی تغییر نکرد.
-- **سازگاری:** ماتریس .NET 10/SQL Server 2022 ثبت شد: Windows 11، Windows 10 Enterprise/LTSC در نسخه‌های پشتیبانی‌شده، Windows Server 2012/2012 R2/2016+ برای Runtime .NET 10 (با پیش‌نیاز VC++ روی 2012/R2)؛ SQL Server 2022 محلی فقط روی Server 2016+ و x64 است. Windows 10 Home/Pro از ماتریس پشتیبانی .NET 10 خارج‌اند؛ Windows ARM64 برای SQL محلی نیازمند SQL Server روی میزبان x64 جداگانه است. Node فقط برای Build React لازم است.
-- **سخت‌افزار:** برای License/Provisioning central signing از Windows CNG Software KSP با کلید non-exportable استفاده می‌شود؛ TPM/HSM/KMS لازم نیست. D-055 (امضای offline-revocation) و D-057 (anti-rollback سمت مشتری) خارج از این استثنا و بدون تغییر باقی ماندند.
-- **رفع خطاهای راهنما:** Build صریح Vendor.Host پیش از export-public؛ Migration دیتابیس Vendor با EF CLI (Startup به‌صورت خودکار migrate نمی‌کند)؛ افزودن Bootstrap secret حداقل ۳۲ بایت؛ اصلاح پارامترهای Invoke-Sqlcmd؛ سازگاری آزمون HTTP با PowerShell 5.1؛ خروجی JSON بدون BOM.
-- **محدودیت‌های کشف‌شده:** bootstrap-admin مدیر اول را می‌سازد؛ طبق D-109 دیگر مدیر دوم برای V1 لازم نیست. PR #724 اصلاح Runtime approval/issuance و PR #722 اصلاح چرخه Payment را جداگانه پیاده‌سازی می‌کنند؛ تا Merge آن‌ها main هنوز guardهای قدیمی دارد. نمونهٔ API import که از متغیرهای تعریف‌نشدهٔ `$session` و `$token` استفاده می‌کرد حذف و به‌عنوان مسیر نیازمند نشست معتبر/قرارداد CSRF تست‌شده مشخص شد.
-- **اعتبارسنجی:** تغییرات مستنداتی‌اند؛ Build/Test برنامه اجرا نشد. CI پس از Commitهای مستندات باید بررسی شود؛ تست واقعی Windows و مسیر import/issuance هنوز توسط مالک اجرا نشده‌اند.
-
-- **بازبینی تکمیلی ترتیب اجرا:** Migration دیتابیس Vendor اکنون پیش از Startup میزبان قرار دارد؛ Bootstrap با راز تصادفی مخفی از ورودی SecureString انجام می‌شود و سپس Host اجرا می‌شود. این ترتیب مانع اجرای EF Migration هم‌زمان با Host و جلوگیری از استفادهٔ راز ثابت/ثبت‌شده می‌شود.
+- دروازهٔ license-first طبق D-060 §1-6 و D-098 پیاده شد: `LicenseRuntimeStateService` (resolve در هر درخواست از ارزیاب revocation-aware) + `LicenseRuntimeGateMiddleware` (قبل از Routing) + endpoint `GET /api/v1/licensing/status`. حالت‌ها: Active/Restricted/Unlicensed/Invalid؛ رفتار Restricted در Dedicated (فقط-خواندن) و Cloud (بستن عملیات عادی، باز ماندن مسیر تمدید/بازیابی) تفکیک شد؛ هیچ grace ضمنی و هیچ حذف داده‌ای وجود ندارد.
+- پیکربندی opt-in: `Licensing:RuntimeGate:Enabled` (پیش‌فرض خاموش؛ هم‌الگوی Gate v5) و `Licensing:DeploymentMode=Dedicated|Cloud` (نامعتبر → fail-fast). با gate خاموش رفتار میزبان عین قبل است.
+- تست‌ها: ۲۳ تست واحد + ۸ تست HTTP واقعی = ۳۱ موفق / ۰ شکست محلی؛ بدون Migration و بدون تغییر Schema. Wizard React، cache نسخه‌دار و E2E با License واقعی باقی‌مانده‌اند.
+- مستندات: PROJECT_STATUS.md، handoff `ISSUE-396-license-runtime-gate.md`.
 
 
-## 2026-11-19 — D-109: سیاست تک‌اپراتوره Vendor در نسخه اول
+## 2026-11-20 — تصمیم‌های Vendor D-110..D-114 و تکمیل راهنمای Windows
 
-- **تصمیم مالک:** تمام عملیات انسانی مدیریتی Vendor در V1 توسط یک مدیر/اپراتور مجاز انجام می‌شود؛ همان شخص می‌تواند درخواست را ایجاد و تأیید کند. مدیر دوم و شرط Requester != Reviewer لازم نیست.
-- **دامنه:** صدور و تمدید License/Amendment، ثبت/تأیید پرداخت، مدیریت مشتری/نصب/قرارداد، قفل/رفع قفل و سایر درخواست‌ها و عملیات مدیریتی Vendor. استقلال چرخه Payment و Issuance و Auditهای جدا طبق D-108 حفظ می‌شوند.
-- **آینده:** Maker-Checker دو‌نفره فقط با تصمیم و Issue مستقل مالک، در صورت رشد کسب‌وکار/استخدام نیرو فعال می‌شود؛ V1 به‌صورت خودکار تغییر نمی‌کند.
-- **کنترل‌های حفظ‌شده:** MFA، RBAC/Permission سمت سرور، Audit، RowVersion/concurrency، idempotency، حفاظت کلید و fail-closed. حذف الزام دو انسان به معنی حذف Approval یا Audit نیست.
-- **اثر بر تصمیمات:** D-109 الزام دو مدیر/عدم self-approval در D-046، D-047 و D-107 برای عملیات انسانی Vendor V1 را supersede می‌کند و بند عدم self-approval در D-108 را تغییر می‌دهد؛ D-055/D-057/D-058 سمت Customer مستقل باقی می‌مانند.
-- **شکاف کد:** main هنوز درخواست‌کننده و تأییدکنندهٔ متفاوت می‌خواهد؛ PR #724 این شرط را در approval عمومی و مسیرهای License/Provisioning/Offline Revocation و PR #722 در Payment اصلاح می‌کنند. تا Merge و CI سبز، Runtime main نهایی نیست. هیچ bypass دیتابیسی یا خاموش‌کردن کنترل انجام نمی‌شود.
-- **محدوده این ثبت:** فقط مستندات در PR #723؛ بدون تغییر کد، Schema، Migration، API، UI یا تنظیمات Runtime. Build/Test برنامه اجرا نشده؛ CI این Commit باید جداگانه بررسی شود.
+- مالک محصول D-110..D-114 را پذیرفت: Bootstrap امن TenantOwner بدون رمز مشترک؛ توپولوژی‌های مستقل از Tenant/Company/FiscalPeriod؛ Endpoint Dedicated بدون الزام دامنه؛ انتخاب اولیه پروفایل و تغییرات بعدی با تأیید مدیر فنی.
+- سند جامع docs/VENDOR_DEPLOYMENT_ARCHITECTURE.md اضافه شد؛ جزئیات توپولوژی‌ها، جداسازی Control Plane/Data Plane، routing، انتقال و امنیت endpoint را ثبت می‌کند.
+- راهنمای Windows Localhost و handoff سناریو A از PR #723 به‌روزرسانی شدند تا وضعیت واقعی D-109 پس از Merge PR #724 (۱۵/۱۵ Check Run موفق) را منعکس کنند. تست واقعی ماتریس Windows توسط مالک همچنان انجام‌نشده است.
+- این تغییر فقط مستندات است؛ هیچ Runtime، Schema، Migration، Endpoint، Bootstrap token یا Database Router پیاده‌سازی نشده است.
