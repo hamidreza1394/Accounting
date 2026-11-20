@@ -239,6 +239,7 @@ public sealed class VendorLicenseAmendmentSqlServerTests
         public required IServiceScope Scope { get; init; }
         public required VendorDbContext Db { get; init; }
         public required VendorLicenseAmendmentIssuanceService Issuance { get; init; }
+        public required VendorLicenseEnvelopeFactory Factory { get; init; }
         public required VendorLicenseIssuanceService LicenseIssuance { get; init; }
         public Guid CustomerId { get; private set; }
         public Guid LicenseId { get; private set; }
@@ -378,6 +379,46 @@ public sealed class VendorLicenseAmendmentSqlServerTests
             }
         }
 
+        /// <summary>
+        /// Signs and stores a sequence+1 envelope that GRANTS initial support/updates periods on
+        /// the current payload (no issuance path grants them natively yet). Uses the fixture's
+        /// real signer, so the amendment service can verify it like any production envelope.
+        /// </summary>
+        public async Task GrantSupportPeriodsAsync(DateTimeOffset supportUntilUtc, DateTimeOffset updatesUntilUtc)
+        {
+            var envelopeRow = await Db.SignedLicenseEnvelopes.AsNoTracking()
+                .Where(item => item.LicenseId == LicenseId)
+                .OrderByDescending(item => item.Sequence)
+                .FirstAsync(TestContext.Current.CancellationToken);
+            var envelope = JsonSerializer.Deserialize<LicenseEnvelope>(envelopeRow.EnvelopeJson, new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+            Assert.True(CanonicalJson.TryParsePayload(envelope.PayloadJson, out var payload, out _));
+            var granted = payload! with
+            {
+                Sequence = payload.Sequence + 1,
+                IssuedAtUtc = DateTimeOffset.UtcNow,
+                SupportUntilUtc = supportUntilUtc,
+                UpdatesUntilUtc = updatesUntilUtc
+            };
+            var creation = await Factory.CreateAsync(granted, TestContext.Current.CancellationToken);
+            Assert.True(creation.Succeeded, creation.ErrorCode);
+            Db.SignedLicenseEnvelopes.Add(new VendorSignedLicenseEnvelope
+            {
+                Id = Guid.NewGuid(),
+                LicenseId = LicenseId,
+                Sequence = granted.Sequence,
+                KeyId = creation.Envelope!.Kid,
+                Algorithm = creation.Envelope.Algorithm,
+                EnvelopeJson = System.Text.Json.JsonSerializer.Serialize(creation.Envelope, new JsonSerializerOptions(JsonSerializerDefaults.Web)),
+                PayloadSha256 = Convert.ToHexString(
+                    System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(creation.Envelope.PayloadJson))).ToLowerInvariant(),
+                CreatedAtUtc = DateTimeOffset.UtcNow
+            });
+            var trackedLicense = await Db.Licenses.SingleAsync(item => item.Id == LicenseId, TestContext.Current.CancellationToken);
+            trackedLicense.LastIssuedSequence = granted.Sequence;
+            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+            Db.ChangeTracker.Clear();
+        }
+
         public async Task<VendorLicenseAmendmentRejectionResult> RejectAmendmentAsync()
         {
             var approval = await Db.ApprovalRequests
@@ -469,7 +510,8 @@ public sealed class VendorLicenseAmendmentSqlServerTests
                     LicenseIssuance = new VendorLicenseIssuanceService(
                         db, envelopeFactory, new VendorAuditWriter(db, TimeProvider.System), TimeProvider.System),
                     Issuance = new VendorLicenseAmendmentIssuanceService(
-                        db, envelopeFactory, trustStore, new VendorAuditWriter(db, TimeProvider.System), TimeProvider.System)
+                        db, envelopeFactory, trustStore, new VendorAuditWriter(db, TimeProvider.System), TimeProvider.System),
+                    Factory = envelopeFactory
                 };
                 return fixture;
             }
@@ -509,5 +551,49 @@ public sealed class VendorLicenseAmendmentSqlServerTests
     {
         public Task<VendorAuditWriteResult> AppendAsync(VendorAuditWriteRequest request, CancellationToken cancellationToken = default) =>
             throw new InvalidOperationException("Simulated audit write failure.");
+    }
+
+    [Fact]
+    public async Task SupportUpdatesRequestWithoutPreviouslyGrantedPeriodIsRejected()
+    {
+        await using var fixture = await AmendmentFixture.OpenAsync();
+        if (fixture is null) return;
+        await fixture.IssueBaseLicenseAsync();
+
+        // Real production validation path: the endpoints call ValidateRequestedPeriodsAsync
+        // before storing anything, so the invalid request is never persisted as Requested.
+        var (error, _) = await fixture.Issuance.ValidateRequestedPeriodsAsync(
+            fixture.LicenseId, fixture.CustomerId,
+            DateTimeOffset.UtcNow.AddYears(1), null, TestContext.Current.CancellationToken);
+
+        Assert.Equal("support_period_not_previously_granted", error);
+        Assert.Equal(0, await fixture.Db.LicenseAmendmentRequests.CountAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task SupportUpdatesValidationMeasuresRequestedDatesAgainstTheSignedEnvelope()
+    {
+        await using var fixture = await AmendmentFixture.OpenAsync();
+        if (fixture is null) return;
+        await fixture.IssueBaseLicenseAsync();
+        var now = DateTimeOffset.UtcNow;
+        // A previously granted period exists only after a signature-verified envelope carries it.
+        await fixture.GrantSupportPeriodsAsync(now.AddDays(180), now.AddDays(180));
+
+        var service = fixture.Issuance;
+        var (validError, validStatus) = await service.ValidateRequestedPeriodsAsync(
+            fixture.LicenseId, fixture.CustomerId, now.AddDays(365), null, TestContext.Current.CancellationToken);
+        Assert.Null(validError);
+        Assert.Equal(200, validStatus);
+        var (validUpdatesError, _) = await service.ValidateRequestedPeriodsAsync(
+            fixture.LicenseId, fixture.CustomerId, null, now.AddDays(365), TestContext.Current.CancellationToken);
+        Assert.Null(validUpdatesError);
+        var (supportError, _) = await service.ValidateRequestedPeriodsAsync(
+            fixture.LicenseId, fixture.CustomerId, now.AddDays(180), null, TestContext.Current.CancellationToken);
+        Assert.Equal("support_period_not_increased", supportError);
+        var (updatesError, _) = await service.ValidateRequestedPeriodsAsync(
+            fixture.LicenseId, fixture.CustomerId, null, now.AddDays(90), TestContext.Current.CancellationToken);
+        Assert.Equal("updates_period_not_increased", updatesError);
+        Assert.Equal(0, await fixture.Db.LicenseAmendmentRequests.CountAsync(TestContext.Current.CancellationToken));
     }
 }
