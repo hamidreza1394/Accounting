@@ -3346,3 +3346,8 @@
 - **تعارض‌های حل‌شده:** WORK_LOG.md در سه ادغام (حفظ append-only همهٔ ورودی‌ها)؛ اصلاحات CodeRabbit روی #725 (پارامتر $SqlHost راهنمای Windows، پیکربندی Licensing:TrustedLicenseKeys__vendor-license-v1 سمت مشتری، فیلتر InstallationId در query خروجی Envelope، ترتیب ورودی‌ها، هم‌راستاسازی وضعیت D-109 با #722).
 - **متوقف و نیازمند تصمیم مالک:** #729 — ورودی D-109 آن (مالکیت FiscalPeriod) با شمارهٔ D-109 در حال استفاده در main (README، commit d357bb95، تست‌ها) تعارض دارد و D-110..D-114 آن با نسخهٔ merge‌شدهٔ #725 هم‌پوشانی دارد؛ تصمیم FiscalPeriod سالم است و به شمارهٔ بعدی واقعی نیاز دارد. شواهد کامل در کامنت PR #729.
 - محدودیت محیطی: SQL Server تستی در محیط بازبینی در دسترس نبود؛ تست‌های SQL/E2E مربوط از طریق CI سبز پوشش داده شدند و ۲ شکست محلی فقط تست‌های DatabaseSetupSqlServerTests بدون FARANOU_TEST_SQLSERVER بود.
+
+## 2026-11-20 — عملیات: Runbook Key Ceremony و Rotation برای Windows CNG (D-107)
+
+- `docs/runbooks/ISSUE-236-CNG-KEY-CEREMONY-ROTATION.md` اضافه شد: ساخت دو کلید مجاز P-256 با Software KSP و ExportPolicy=None در LocalMachine، ACL خصوصی فقط برای هویت سرویس، Key Ceremony با فرمان فقط‌خواندنی `--signing-certificate export-public`، ثبت SPKI در Trust Storeها، پیکربندی `Signing:CertificateStore` با KeyId نسخه‌دار، چک‌لیست پذیرش عملیاتی (Not Verified تا اجرا روی میزبان Windows هدف)، rotation با overlap و بازیابی رخداد fail-closed.
+- این تغییر فقط مستندات است؛ هیچ کد، Migration، پیکربندی یا کلیدی تغییر نکرد و هیچ ادعای اجرای عملیاتی ثبت نشده است.
