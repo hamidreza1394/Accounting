@@ -3083,7 +3083,7 @@ D-030، D-074، D-082، D-084، D-087، D-103، D-105؛ `docs/TRADE_DESIGN_V3_2.
 - انتقال داده با backup، reconciliation، audit و rollback قابل ردیابی باشد.
 - تست‌ها ثابت کنند DbContext/connection pooling state بین Tenantها نشت نمی‌کند.
 
-مراجع: D-030، D-087، D-103، D-105؛ docs/DATABASE.md و docs/SECURITY.md;
+مراجع: D-030، D-087، D-103، D-105؛ docs/DATABASE.md و docs/SECURITY.md.
 
 ## D-113 — Endpoint استقرار اختصاصی؛ دامنه اختیاری، IP و VPN مجاز (2026-11-20)
 
