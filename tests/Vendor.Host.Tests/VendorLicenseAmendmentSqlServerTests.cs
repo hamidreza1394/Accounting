@@ -53,6 +53,10 @@ public sealed class VendorLicenseAmendmentSqlServerTests
             .SingleAsync(TestContext.Current.CancellationToken);
         Assert.Equal(VendorLicenseAmendmentRequest.StatusIssued, request.Status);
         Assert.NotNull(request.ApprovalRequestId);
+        var approval = await fixture.Db.ApprovalRequests.AsNoTracking()
+            .SingleAsync(item => item.ResourceType == "licenseAmendment" && item.ResourceId == request.Id,
+                TestContext.Current.CancellationToken);
+        Assert.Equal("Approved", approval.Status);
         var audits = await fixture.Db.AuditEvents.AsNoTracking()
             .Where(item => item.ActionCode == "vendor.amendment.issued").ToListAsync(TestContext.Current.CancellationToken);
         Assert.Single(audits);
@@ -353,7 +357,7 @@ public sealed class VendorLicenseAmendmentSqlServerTests
         public async Task<VendorLicenseAmendmentIssuanceResult> IssueAmendmentAsync(
             byte[]? approvalVersionOverride = null, bool failAudit = false)
         {
-            var approval = await Db.ApprovalRequests.AsNoTracking()
+            var approval = await Db.ApprovalRequests
                 .SingleAsync(item => item.ResourceId == _pendingAmendmentRequestId
                     && item.ResourceType == "licenseAmendment", TestContext.Current.CancellationToken);
             await using var tx = await Db.Database.BeginTransactionAsync(TestContext.Current.CancellationToken);
@@ -375,7 +379,7 @@ public sealed class VendorLicenseAmendmentSqlServerTests
 
         public async Task<VendorLicenseAmendmentRejectionResult> RejectAmendmentAsync()
         {
-            var approval = await Db.ApprovalRequests.AsNoTracking()
+            var approval = await Db.ApprovalRequests
                 .SingleAsync(item => item.ResourceId == _pendingAmendmentRequestId
                     && item.ResourceType == "licenseAmendment", TestContext.Current.CancellationToken);
             await using var tx = await Db.Database.BeginTransactionAsync(TestContext.Current.CancellationToken);
