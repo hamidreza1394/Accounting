@@ -94,6 +94,7 @@ public static class VendorLicenseAmendmentEndpoints
                 UpdatedAtUtc = timeProvider.GetUtcNow().ToUniversalTime()
             };
             db.LicenseAmendmentRequests.Add(request);
+            await using var tx = await db.Database.BeginTransactionAsync(ct);
             try
             {
                 await db.SaveChangesAsync(ct);
@@ -105,9 +106,12 @@ public static class VendorLicenseAmendmentEndpoints
                 return Results.Conflict(new { error = "amendment_request_already_active" });
             }
 
+            // The audit event shares the request's transaction: a failing audit append rolls the
+            // request row back instead of leaving an unaudited purchase-fulfillment record.
             await audit.AppendAsync(new VendorAuditWriteRequest(
                 actor.Id, "vendor.amendment.requested", nameof(VendorLicenseAmendmentRequest),
                 request.Id.ToString("D"), CorrelationId(context)), ct);
+            await tx.CommitAsync(ct);
             return Results.Created($"/api/vendor/license-amendment-requests/{request.Id:D}", ToResponse(request));
         }).RequireAuthorization(VendorPermissionCatalog.PolicyFor(VendorPermissionCatalog.LicensesManage));
 
@@ -188,6 +192,11 @@ public static class VendorLicenseAmendmentEndpoints
                 // belonged to Requested and is intentionally superseded here).
                 approval.ExpectedResourceRowVersion = request.RowVersion.ToArray();
                 await db.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                // A concurrent write raced the pre-transaction version check: fail closed.
+                return Results.Conflict(new { error = "stale_row_version" });
             }
             catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
             {

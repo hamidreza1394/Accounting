@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { VendorApprovals } from './VendorApprovals';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';import { VendorApprovals } from './VendorApprovals';
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
@@ -126,7 +125,11 @@ describe('Vendor approval queue', () => {
     expect(await screen.findByText('Amendment لایسنس')).toBeInTheDocument();
     expect(screen.getByText('صدور Amendment')).toBeInTheDocument();
     expect(screen.queryByText('نصب')).not.toBeInTheDocument();
+    // Without vendor.licenses.issue the amendment controls stay disabled (server is authoritative).
+    expect(screen.getByRole('button', { name: 'تأیید درخواست approval-3' })).toBeDisabled();
 
+    cleanup();
+    render(<VendorApprovals permissions={['vendor.approvals.read', 'vendor.approvals.review', 'vendor.licenses.issue']} />);
     fireEvent.click(await screen.findByRole('button', { name: 'تأیید درخواست approval-3' }));
     expect(await screen.findByRole('status')).toHaveTextContent('درخواست تأیید و تغییر وضعیت اعمال شد.');
     expect(fetchMock).toHaveBeenCalledWith('/api/vendor/approvals/approval-3/decision', expect.objectContaining({

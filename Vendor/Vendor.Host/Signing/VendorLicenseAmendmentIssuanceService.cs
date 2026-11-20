@@ -130,6 +130,12 @@ public sealed class VendorLicenseAmendmentIssuanceService(
         request.UpdatedAtUtc = now;
         request.ApprovalRequestId = approval.Id;
         license.LastIssuedSequence = candidate.Sequence;
+        // Keep the license row in lockstep with the signed payload: the delivery resolver and
+        // every future amendment builder compare license.MaxCompanies against the payload's
+        // value, and a stale column would reject the very amendment just issued. Support and
+        // update periods exist only in the signed payload, so there is nothing to mirror.
+        if (request.Kind == VendorLicenseAmendmentRequest.KindMaxCompanies)
+            license.MaxCompanies = candidate.Limits.MaxCompanies;
 
         db.Entry(approval).Property(item => item.RowVersion).OriginalValue = expectedApprovalVersion;
         approval.Status = "Approved";

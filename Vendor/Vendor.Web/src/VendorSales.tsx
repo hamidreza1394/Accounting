@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { ChevronLeft, ChevronRight, Plus, ReceiptText, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -443,6 +443,8 @@ export function VendorSales({ permissions }: { permissions: string[] }) {
   const [amendmentUpdatesUntil, setAmendmentUpdatesUntil] = useState('');
   const [amendmentPreview, setAmendmentPreview] = useState<AmendmentPreviewSummary | null>(null);
   const [busyAmendment, setBusyAmendment] = useState(false);
+  // Latest order the operator asked to open; stale responses from an older order are discarded.
+  const openedOrderRef = useRef<string | null>(null);
 
   const handleError = useCallback((message: string) => setError(message), []);
 
@@ -467,15 +469,38 @@ export function VendorSales({ permissions }: { permissions: string[] }) {
   async function openOrderDetail(orderId: string) {
     // Messages are intentionally preserved: callers like the payment flows set a notice
     // right before refreshing the order and the operator must still see it afterwards.
+    // The amendment form belongs to a specific order's line, so switching orders resets it.
+    openedOrderRef.current = orderId;
     setBusyOrder(orderId);
+    setOrderAmendments([]);
+    setAmendmentForm(null);
+    setAmendmentKind('');
+    setAmendmentMaxCompanies('');
+    setAmendmentSupportUntil('');
+    setAmendmentUpdatesUntil('');
+    setAmendmentPreview(null);
     try {
       const response = await fetch(`/api/vendor/sales-orders/${orderId}`, { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } });
       if (!response.ok) throw new Error(await readError(response));
-      setOpenOrder(await response.json() as OrderRow);
-      const amendmentsResponse = await fetch(`/api/vendor/license-amendment-requests/?orderId=${orderId}&page=1&pageSize=50`, { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } });
-      setOrderAmendments(amendmentsResponse.ok ? ((await amendmentsResponse.json()) as PageResponse<AmendmentRequestRow>).items : []);
+      const order = await response.json() as OrderRow;
+      const amendments: AmendmentRequestRow[] = [];
+      // One paged call per page: the amendment panel has no paging controls of its own, so
+      // every page for this order is loaded (bounded by the request loop, not a magic limit).
+      for (let page = 1; ; page++) {
+        const amendmentsResponse = await fetch(`/api/vendor/license-amendment-requests/?orderId=${orderId}&page=${page}&pageSize=50`, { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } });
+        if (!amendmentsResponse.ok) break;
+        const pageData = (await amendmentsResponse.json()) as PageResponse<AmendmentRequestRow>;
+        amendments.push(...pageData.items);
+        if (!pageData.hasNextPage || pageData.totalPages <= page) break;
+      }
+      // Only apply if this order is still the one the operator wants to see.
+      if (openedOrderRef.current !== orderId) return;
+      setOpenOrder(order);
+      setOrderAmendments(amendments);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'دریافت جزئیات سفارش ناموفق بود.');
+      if (openedOrderRef.current === orderId) {
+        setError(reason instanceof Error ? reason.message : 'دریافت جزئیات سفارش ناموفق بود.');
+      }
     } finally { setBusyOrder(null); }
   }
 
@@ -716,29 +741,31 @@ export function VendorSales({ permissions }: { permissions: string[] }) {
                 {amendmentKindsForProductCode(amendmentForm.line.productCode).map(kind => <label key={kind} className="grid gap-1 text-sm">
                   نوع تغییر
                   <select className="h-9 rounded-md border border-input bg-background px-2" value={amendmentKind || kind}
-                    onChange={event => setAmendmentKind(event.target.value)} disabled={busyAmendment} aria-label="نوع Amendment">
+                    onChange={event => { setAmendmentKind(event.target.value); setAmendmentPreview(null); }} disabled={busyAmendment} aria-label="نوع Amendment">
                     {amendmentKindsForProductCode(amendmentForm.line.productCode).map(value => <option key={value} value={value}>{amendmentKindLabels[value]}</option>)}
                   </select>
                 </label>)}
                 {(amendmentKind || amendmentKindsForProductCode(amendmentForm.line.productCode).at(0)) === 'maxCompanies'
                   ? <label className="grid gap-1 text-sm">سقف جدید شرکت‌ها
                     <input required type="number" min={1} step={1} className="h-9 rounded-md border border-input bg-background px-2" dir="ltr"
-                      value={amendmentMaxCompanies} onChange={event => setAmendmentMaxCompanies(event.target.value)} disabled={busyAmendment} aria-label="سقف جدید شرکت‌ها" />
+                      value={amendmentMaxCompanies} onChange={event => { setAmendmentMaxCompanies(event.target.value); setAmendmentPreview(null); }} disabled={busyAmendment} aria-label="سقف جدید شرکت‌ها" />
                   </label>
                   : <>
                     <label className="grid gap-1 text-sm">تا تاریخ پشتیبانی
                       <input type="date" className="h-9 rounded-md border border-input bg-background px-2" value={amendmentSupportUntil}
-                        onChange={event => setAmendmentSupportUntil(event.target.value)} disabled={busyAmendment} aria-label="تا تاریخ پشتیبانی" />
+                        onChange={event => { setAmendmentSupportUntil(event.target.value); setAmendmentPreview(null); }} disabled={busyAmendment} aria-label="تا تاریخ پشتیبانی" />
                     </label>
                     <label className="grid gap-1 text-sm">تا تاریخ به‌روزرسانی
                       <input type="date" className="h-9 rounded-md border border-input bg-background px-2" value={amendmentUpdatesUntil}
-                        onChange={event => setAmendmentUpdatesUntil(event.target.value)} disabled={busyAmendment} aria-label="تا تاریخ به‌روزرسانی" />
+                        onChange={event => { setAmendmentUpdatesUntil(event.target.value); setAmendmentPreview(null); }} disabled={busyAmendment} aria-label="تا تاریخ به‌روزرسانی" />
                     </label>
                   </>}
               </div>
               {amendmentPreview && <p className="mt-2 text-xs" aria-live="polite">
                 پیش‌نمایش کاندید: نسخه {new Intl.NumberFormat('fa-IR').format(amendmentPreview.sequence)}
                 {amendmentPreview.maxCompanies !== null && ` — سقف شرکت‌ها: ${new Intl.NumberFormat('fa-IR').format(amendmentPreview.maxCompanies)}`}
+                {amendmentPreview.supportUntilUtc !== null && ` — پشتیبانی تا: ${formatDate(amendmentPreview.supportUntilUtc)}`}
+                {amendmentPreview.updatesUntilUtc !== null && ` — به‌روزرسانی تا: ${formatDate(amendmentPreview.updatesUntilUtc)}`}
               </p>}
               <div className="mt-3 flex gap-2">
                 <Button type="button" size="sm" variant="outline" disabled={busyAmendment} onClick={() => void previewAmendment(amendmentForm.line)}>پیش‌نمایش</Button>
