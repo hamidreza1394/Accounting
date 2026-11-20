@@ -3329,3 +3329,13 @@
 - سند جامع docs/VENDOR_DEPLOYMENT_ARCHITECTURE.md اضافه شد؛ جزئیات توپولوژی‌ها، جداسازی Control Plane/Data Plane، routing، انتقال و امنیت endpoint را ثبت می‌کند.
 - راهنمای Windows Localhost و handoff سناریو A از PR #723 به‌روزرسانی شدند تا وضعیت واقعی D-109 پس از Merge PR #724 (۱۵/۱۵ Check Run موفق) را منعکس کنند. تست واقعی ماتریس Windows توسط مالک همچنان انجام‌نشده است.
 - این تغییر فقط مستندات است؛ هیچ Runtime، Schema، Migration، Endpoint، Bootstrap token یا Database Router پیاده‌سازی نشده است.
+
+
+## 2026-11-20 — Issue #393 / D-108: چرخه مستقل پرداخت Vendor
+
+- چرخه SalesOrder/Payment در Vendor DB اضافه شد؛ سفارش می‌تواند چند پرداخت داشته باشد و تأیید Payment از صدور License مستقل است.
+- فقط Paymentهای Verified بدهی را کاهش می‌دهند؛ مبلغ پرداختی واقعی حتی در Overpayment گزارش می‌شود و RemainingAmount هرگز منفی نیست.
+- وضعیت Unpaid/PartiallyPaid/Paid/Overdue در زمان خواندن محاسبه می‌شود؛ هیچ Scheduler، Broker، درگاه، Ledger یا CRM سنگین اضافه نشده است.
+- مسیر self-approval مطابق D-109 تک‌اپراتوره است؛ Audit و Permission سمت سرور و RowVersion/concurrency حفظ می‌شوند.
+- Migration فقط در Vendor DB است؛ Customer DB تغییر نمی‌کند. تست SQL Server و snapshot guard در CI باید روی شاخه نهایی دوباره تأیید شوند.
+- UI React برای سفارش/پرداخت/مطالبات خارج از این PR باقی می‌ماند.

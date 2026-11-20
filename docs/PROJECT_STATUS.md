@@ -821,3 +821,12 @@
 - D-113 Accepted: انتخاب اولیه DeploymentMode/DatabaseTopology/Endpoint در خرید؛ تغییر بعدی با درخواست مشتری و تأیید/اجرای مدیر فنی. Shared و Dedicated از معماری منطقی مشترک استفاده می‌کنند. Provisioning lifecycle NotImplemented.
 - مرجع جزئیات: [VENDOR_DEPLOYMENT_ARCHITECTURE.md](VENDOR_DEPLOYMENT_ARCHITECTURE.md). این ADRها به معنی ساخت فوری همه توپولوژی‌ها نیستند؛ Tenant DB مسیر پیش‌فرض کم‌هزینه است و قابلیت‌های دیگر مرحله‌ای پیاده می‌شوند.
 - D-109 نیز اکنون در main پیاده و پس از Merge PR #724 با ۱۵/۱۵ Check Run موفق Verified شده است؛ این وضعیت به معنی Production readiness کل Vendor نیست.
+
+
+## Vendor — چرخه مستقل سفارش، پرداخت و مطالبات (D-108، Issue #393، 2026-11-20)
+
+- پیاده‌سازی PR #722 به‌صورت شاخه integration انجام می‌شود: SalesOrder و چند Payment مستقل در Vendor DB؛ approval پرداخت جدا از صدور License؛ فقط Verified در جمع پرداختی؛ RemainingAmount منفی نمی‌شود و Overpayment واقعی جداگانه گزارش می‌شود.
+- وضعیت‌ها Unpaid/PartiallyPaid/Paid/Overdue هنگام خواندن مشتق می‌شوند؛ Scheduler، Broker، درگاه پرداخت، Ledger یا CRM سنگین اضافه نشده است.
+- تست‌های SQL Server، قواعد محاسبه و snapshot migration باید روی HEAD نهایی این شاخه CI شوند. UI React سفارش/پرداخت/مطالبات خارج از Scope و برای کار مستقل بعدی است.
+- D-109 self-approval تک‌اپراتوره برای approvalهای Vendor را مجاز می‌کند؛ کنترل Permission، MFA، RowVersion، Audit و fail-closed حفظ می‌شوند.
+- هیچ تغییری در Customer DB یا Customer License state انجام نمی‌شود.

@@ -139,6 +139,7 @@ public static class VendorApprovalEndpoints
             IVendorAuditWriter audit, VendorLicenseIssuanceService licenseIssuance,
             VendorProvisioningIssuanceService provisioningIssuance,
             VendorOfflineRevocationIssuanceService offlineRevocationIssuance,
+            VendorPaymentVerificationService paymentVerification,
             TimeProvider timeProvider, CancellationToken ct) =>
         {
             if (!await antiforgery.IsRequestValidAsync(context))
@@ -163,7 +164,7 @@ public static class VendorApprovalEndpoints
                 resourceType == "provisioning" ? IsolationLevel.Serializable : IsolationLevel.ReadCommitted, ct);
             var approval = await db.ApprovalRequests.SingleOrDefaultAsync(item => item.Id == id, ct);
             if (approval is null) return Results.NotFound();
-            if (approval.ResourceType is not ("customer" or "installation" or "license" or "provisioning"))
+            if (approval.ResourceType is not ("customer" or "installation" or "license" or "provisioning" or "salesOrderPayment"))
                 return Results.NotFound();
 
             VendorProvisioningRequest? provisioning = null;
@@ -276,6 +277,21 @@ public static class VendorApprovalEndpoints
                 }
 
                 return Results.Conflict(new { error = "unsupported_license_approval_target" });
+            }
+
+            // Payment verification is its own maker-checker cycle (D-108 §2): approving the
+            // request applies the requested Verified/Rejected state in the same transaction;
+            // it never touches license issuance, and issuance approvals never touch payments.
+            if (approval.ResourceType == "salesOrderPayment" && request.Decision == "Approved")
+            {
+                var verification = await paymentVerification.DecideApprovedAsync(
+                    approval, actor.Id, expectedApprovalVersion,
+                    request.Comment, CorrelationId(), ct);
+                if (!verification.Succeeded)
+                    return Results.Json(new { error = verification.ErrorCode }, statusCode: verification.StatusCode);
+
+                await tx.CommitAsync(ct);
+                return Results.Ok(ToResponse(approval));
             }
 
             var now = timeProvider.GetUtcNow().ToUniversalTime();
@@ -439,6 +455,7 @@ public static class VendorApprovalEndpoints
         "installation" => VendorPermissionCatalog.InstallationsManage,
         "license" => VendorPermissionCatalog.LicensesIssue,
         "provisioning" => VendorPermissionCatalog.CustomersManage,
+        "salesOrderPayment" => VendorPermissionCatalog.PaymentsVerify,
         _ => throw new ArgumentOutOfRangeException(nameof(resourceType))
     };
 

@@ -144,6 +144,7 @@ builder.Services.AddSingleton(VendorProvisioningCompanyReferenceGate.FromConfigu
 builder.Services.AddScoped<VendorProvisioningLicenseResolver>();
 builder.Services.AddScoped<VendorLicenseEnvelopeFactory>();
 builder.Services.AddScoped<VendorLicenseIssuanceService>();
+builder.Services.AddScoped<VendorPaymentVerificationService>();
 builder.Services.AddScoped<VendorProvisioningIssuanceService>();
 builder.Services.AddScoped<VendorOfflineRevocationSnapshotFactory>();
 builder.Services.AddScoped<VendorOfflineRevocationIssuanceService>();
@@ -458,6 +459,7 @@ app.MapVendorRoleManagement();
 app.MapVendorBusinessEndpoints();
 app.MapVendorProvisioningEndpoints();
 app.MapVendorApprovalEndpoints();
+app.MapVendorSalesEndpoints();
 app.MapVendorOfflineRevocationEndpoints();
 app.MapFallback(async context =>
 {
