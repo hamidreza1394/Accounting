@@ -48,13 +48,25 @@ public sealed class DatabaseTopologyOptions
 	/// <summary>
 	/// Validates the whole registry configuration and returns stable, non-sensitive error
 	/// codes. An empty, disabled configuration is valid; a partially configured registry
-	/// (assignments without a topology, unknown connection references, incoherent keys) fails
-	/// fast at startup.
+	/// (assignments without a topology, unknown connection references, incoherent keys)
+	/// fails fast at startup. Routing that is <c>Enabled</c> without any assignment, the
+	/// pending <c>TenantFiscalPeriodDatabase</c> topology and duplicate assignments for the
+	/// same scope are configuration errors as well — they must stop the startup instead of
+	/// surfacing as the first runtime request failure.
 	/// </summary>
 	public List<string> Validate()
 	{
 		var errors = new List<string>();
 		var assignmentsPresent = Assignments.Count > 0;
+
+		// Enabled routing without a single assignment is a broken registry (D-115 §2):
+		// fail fast here instead of an assignment_missing on the first request.
+		if (Enabled && !assignmentsPresent)
+		{
+			errors.Add("registry_empty");
+			return errors;
+		}
+
 		if (!assignmentsPresent)
 		{
 			return errors;
@@ -67,11 +79,23 @@ public sealed class DatabaseTopologyOptions
 			return errors;
 		}
 
+		// Pending owner decision (D-115 §8): the registry must not start with a topology
+		// that the resolver refuses to route, so no configuration can half-activate it.
+		if (kind == DatabaseTopologyKind.TenantFiscalPeriodDatabase)
+		{
+			errors.Add("topology_kind_pending_owner_decision");
+			return errors;
+		}
+
 		// The identity keys of each topology (D-111 §2): the required keys must be present
 		// and the keys of finer scopes must stay empty, so an assignment can never be
 		// interpreted under a different topology.
 		var needsCompany = kind is DatabaseTopologyKind.CompanyDatabase or DatabaseTopologyKind.CompanyFiscalPeriodDatabase;
-		var needsPeriod = kind is DatabaseTopologyKind.TenantFiscalPeriodDatabase or DatabaseTopologyKind.CompanyFiscalPeriodDatabase;
+		var needsPeriod = kind is DatabaseTopologyKind.CompanyFiscalPeriodDatabase;
+
+		// One authoritative destination per scope (D-115 §2): the same identity keys must
+		// not appear twice, whatever the target references are.
+		var seenKeys = new HashSet<(Guid Tenant, Guid? Company, Guid? Period)>();
 
 		for (var index = 0; index < Assignments.Count; index++)
 		{
@@ -92,6 +116,10 @@ public sealed class DatabaseTopologyOptions
 			if (!keysValid)
 			{
 				errors.Add($"{prefix}:keys_invalid_for_topology");
+			}
+			else if (!seenKeys.Add((assignment.TenantId.Value, assignment.CompanyId, assignment.FiscalPeriodId)))
+			{
+				errors.Add($"{prefix}:duplicate");
 			}
 
 			// Fail fast on both a present-but-empty and a completely missing connection

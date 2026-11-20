@@ -22,7 +22,14 @@ namespace Infrastructure.DatabaseTopology;
 /// <c>assignment_missing</c> and more than one with <c>assignment_conflict</c>; there is no
 /// fallback to a default database. The resolved connection string comes from the same secure
 /// configuration source as the main connection string and never appears in a log, exception
-/// or API response (D-115 §3; <see cref="DatabaseTarget.ToString"/> stays identifier-only).
+/// or API response (D-115 §3; <see cref="DatabaseTarget"/> keeps it private and
+/// <c>ToString()</c> stays identifier-only).
+/// </para>
+/// <para>
+/// The <c>TenantFiscalPeriodDatabase</c> topology (D-111 §2, option 3) is a
+/// <b>pending owner decision</b> (D-115 §8): it is never routable here — a configured
+/// pending topology fails closed with <c>topology_kind_pending_owner_decision</c> — so it
+/// can never be activated through configuration alone (D-115 §8).
 /// </para>
 /// </remarks>
 public sealed class ConfigurationDatabaseTargetRegistry(IOptionsMonitor<DatabaseTopologyOptions> options) :
@@ -40,6 +47,13 @@ public sealed class ConfigurationDatabaseTargetRegistry(IOptionsMonitor<Database
 			kind == default)
 		{
 			return DatabaseTargetResolution.Fail("topology_kind_invalid");
+		}
+
+		if (kind == DatabaseTopologyKind.TenantFiscalPeriodDatabase)
+		{
+			// Pending owner decision (D-111 §2 option 3, D-115 §8): structurally parsed but
+			// never routable, so no configuration can activate it (fail closed).
+			return DatabaseTargetResolution.Fail("topology_kind_pending_owner_decision");
 		}
 
 		if (scope is null || !scope.IsCoherent)
@@ -75,11 +89,11 @@ public sealed class ConfigurationDatabaseTargetRegistry(IOptionsMonitor<Database
 				assignment.TenantId == scope.TenantId,
 			DatabaseTopologyKind.CompanyDatabase =>
 				assignment.TenantId == scope.TenantId && assignment.CompanyId == scope.CompanyId,
-			DatabaseTopologyKind.TenantFiscalPeriodDatabase =>
-				assignment.TenantId == scope.TenantId && assignment.FiscalPeriodId == scope.FiscalPeriodId,
 			DatabaseTopologyKind.CompanyFiscalPeriodDatabase =>
 				assignment.TenantId == scope.TenantId && assignment.CompanyId == scope.CompanyId &&
 				assignment.FiscalPeriodId == scope.FiscalPeriodId,
+			// The pending TenantFiscalPeriodDatabase kind never reaches this method: it is
+			// rejected before the scope is even considered (fail closed, D-115 §8).
 			_ => false,
 		};
 }
