@@ -1,11 +1,3 @@
-## Vendor/Licensing — سیاست تک‌اپراتوره V1 (D-109) — 2026-11-19
-
-- مالک محصول تأیید کرد تمام عملیات انسانی مدیریتی Vendor در نسخه اول توسط یک مدیر/اپراتور مجاز (مالک یا فرد مورداعتماد) انجام شود؛ همان شخص می‌تواند درخواست را ثبت و تأیید کند. مدیر دوم و شرط Requester != Reviewer در V1 لازم نیست.
-- این سیاست برای صدور/تمدید مجوز، پرداخت، مشتری/نصب/قرارداد، قفل/رفع قفل و سایر عملیات مدیریتی Vendor یکسان است. استقلال Payment از Issuance و Auditهای جدا در D-108 حفظ می‌شوند.
-- Maker-Checker دو‌نفره فقط در آینده و با تصمیم/Issue مستقل مالک، در صورت رشد مشتریان و استخدام نیرو، فعال می‌شود؛ فعال‌سازی خودکار یا زیرساخت اضافی در V1 نداریم.
-- **وضعیت Runtime:** در main هنوز guardهای قدیمی باقی‌اند؛ PR #724 حذف آن‌ها را برای approval عمومی، License، Provisioning و Offline Revocation پیاده‌سازی کرده و PR #722 همین سیاست را برای Payment اعمال می‌کند. تا Merge و CI سبز این PRها، پیاده‌سازی D-109 در main نهایی نشده است. مانع، نبود حساب مدیر دوم نیست.
-- MFA، RBAC/Permission سمت سرور، Audit مستقل، concurrency/RowVersion، idempotency، حفاظت کلید و fail-closed حفظ می‌شوند. هیچ کد، Schema، Migration یا تنظیم Runtime در این ثبت مستنداتی تغییر نکرده است.
-
 ## دروازهٔ Runtime License (Issue #396) — 2026-11-19
 
 **مبنای بررسی:** `main@efaaa1c5` (Merge PR #719). این بخش اتصال License به Runtime فرانو طبق D-060 §1-6 و D-098 را ثبت می‌کند.
@@ -16,14 +8,6 @@
 - **بدون Migration:** هیچ Schema/داده‌ای تغییر نکرد. هیچ grace ضمنی اضافه نشد (D-059 §7) و هیچ داده‌ای در هیچ حالتی حذف نمی‌شود.
 - **باقی‌مانده:** Wizard فعال‌سازی در React، cache نسخه‌دار رزولوشن برای بار بالا (D-058 §Cloud)، enforcement entitlement شرکت‌محور در call-siteهای عملیاتی (#391/#401) و E2E با License واقعی امضاشده (راهنمای Windows).
 - **handoff:** `docs/handoffs/ISSUE-396-license-runtime-gate.md`.
-
-## اصلاح راهنمای Windows Localhost و دامنهٔ سازگاری — 2026-11-19
-
-- `docs/LOCALHOST_WINDOWS_TEST_GUIDE.md` اکنون Windows 11، نسخه‌های پشتیبانی‌شدهٔ Windows 10 Enterprise/LTSC و Windows Server 2012/2012 R2/2016+ را برای Runtime .NET 10 هدف می‌گیرد (SQL Server 2022 محلی فقط روی Server 2016+؛ Server 2012/R2 نیازمند SQL میزبان جدا است؛ Server Core نیز پشتیبانی می‌شود)؛ ماتریس واقعی .NET 10 و SQL Server 2022 و محدودیت Windows 10 Home/Pro و SQL x64 صریح شده است. Node.js فقط برای Build کلاینت لازم است.
-- مسیر CNG برای License/Provisioning با Microsoft Software Key Storage Provider مستند شده؛ TPM/HSM/KMS یا سخت‌افزار اختصاصی برای این دو کاربرد لازم نیست. D-055/D-057 برای offline-revocation و anti-rollback جدا باقی می‌مانند.
-- راهنما اصلاح شد: Build صریح Vendor.Host پیش از Export، اجرای Migration مستقل Vendor با EF CLI پیش از Startup، Bootstrap با راز مخفی و حداقل ۳۲ بایت، PowerShell 5.1، Invoke-Sqlcmd با ConnectionString معتبر و فایل UTF-8 بدون BOM.
-- محدودیت‌های اجرایی صادقانه ثبت شد: تا Merge شدن PRهای #722 و #724، main هنوز سیاست تک‌اپراتوره D-109 را در Runtime کامل اعمال نمی‌کند؛ همچنین نمونهٔ API Import قبلی از متغیرهای نشست/توکن تعریف‌نشده استفاده می‌کرد و به‌عنوان دستور اجرایی حذف شد تا قرارداد نشست/CSRF تست‌شده فراهم شود.
-- این PR فقط مستندات است؛ هیچ کد/Migration/Schema/تصمیم امنیتی تغییر نکرد. اجرای واقعی روی نسخه‌های Windows هنوز انجام نشده است. handoff: `ISSUE-UNNUMBERED-localhost-windows-guide.md`.
 
 ## تعیین تکلیف S1-a از سمت Vendor — 2026-11-18
 
@@ -827,3 +811,13 @@
 - D-108: صدور/فعال‌سازی از پرداخت مستقل است؛ دو چرخه Maker-Checker/Audit جدا هستند. هشدار و گزارش مطالبات Unpaid/Partial/Overdue باید در Vendor و با محاسبه read-time ساخته شود؛ بدون scheduler، broker، درگاه یا Ledger.
 - D-057 برای anti-rollback snapshot ابطال آفلاین Customer همچنان TPM 2.0 می‌خواهد؛ اثر آن بر Customer فاقد TPM در OD-27 NeedsApproval است.
 - این ثبت صرفاً مستنداتی است؛ هیچ Entity، Migration، API، UI، Signing Provider، Gate v5 یا Runtime Enforcement با این تصمیم‌ها فعال نشده است.
+
+
+## Vendor — Bootstrap مشتری، توپولوژی دیتابیس و Endpoint اختصاصی (D-110..D-114، 2026-11-20)
+
+- D-110 Accepted: هر Tenant مشتری مسیر Bootstrap امن برای ایجاد اولین TenantOwner دارد؛ نام کاربری را مشتری تعیین می‌کند، رمز پیش‌فرض/مشترک وجود ندارد و توکن باید یک‌بارمصرف، امضاشده، منقضی‌شونده و مقید به Tenant/Installation باشد. پیاده‌سازی NotImplemented.
+- D-111 Accepted: مدل هدف باید توپولوژی Tenant DB، Company DB، Tenant+FiscalPeriod DB و Company+FiscalPeriod DB را پشتیبانی کند؛ routing و assignment سمت سرور است. Control Plane از Customer Operational Data جدا می‌ماند؛ cross-database FK و فرض distributed transaction ممنوع‌اند. پیاده‌سازی NotImplemented.
+- D-112 Accepted: دامنه برای Dedicated اجباری نیست؛ دامنه DNS، IP عمومی با TLS/IP SAN یا IP خصوصی/DNS داخلی روی VPN قابل قبول است. Endpoint هویت Tenant/Installation را تعیین نمی‌کند. قرارداد Provisioning/Endpoint NotImplemented.
+- D-113 Accepted: انتخاب اولیه DeploymentMode/DatabaseTopology/Endpoint در خرید؛ تغییر بعدی با درخواست مشتری و تأیید/اجرای مدیر فنی. Shared و Dedicated از معماری منطقی مشترک استفاده می‌کنند. Provisioning lifecycle NotImplemented.
+- مرجع جزئیات: [VENDOR_DEPLOYMENT_ARCHITECTURE.md](VENDOR_DEPLOYMENT_ARCHITECTURE.md). این ADRها به معنی ساخت فوری همه توپولوژی‌ها نیستند؛ Tenant DB مسیر پیش‌فرض کم‌هزینه است و قابلیت‌های دیگر مرحله‌ای پیاده می‌شوند.
+- D-109 نیز اکنون در main پیاده و پس از Merge PR #724 با ۱۵/۱۵ Check Run موفق Verified شده است؛ این وضعیت به معنی Production readiness کل Vendor نیست.
