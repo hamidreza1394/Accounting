@@ -1,8 +1,8 @@
-## چرخهٔ سفارش و پرداخت Vendor (D-108، Issue #393) — 2026-11-19
+## چرخهٔ سفارش و پرداخت Vendor (D-108، Issue #393) — 2026-11-21 (PR #722/#738/#739 در main)
 
 - **پیاده‌شده در main (Merge PR #722، squash commit `c46e200b28a775080faaaa08c9515cf6a112897f`؛ CI روی head ۱۸/۱۸ و پس از Merge روی main سبز):** سه Entity جدید `VendorSalesOrders` (+Lines) و `VendorPaymentRecords` با Migration `20261119175924_VendorSalesOrdersAndPayments` (فقط Vendor DB؛ گیت `has-pending-model-changes` سبز). ثبت پرداخت دستی چندگانه با ستون‌های typed، تأیید مستقل پرداخت با ResourceType جدید `salesOrderPayment` و permissionهای جدید `vendor.payments.read|manage|verify`، تراکنش واحد و self-approval مجاز طبق D-109. وضعیت‌های `Unpaid/PartiallyPaid/Paid` و برچسب `Overdue` صرفاً در زمان خواندن از مبلغ سفارش و جمع پرداخت‌های Verified مشتق می‌شوند؛ گزارش مطالبات `/api/vendor/receivables` صفحه‌بندی‌شده و بدون Scheduler/Broker/درگاه/Ledger (ممنوعیت‌های D-108 رعایت شده). صدور License از پرداخت و پرداخت از صدور کاملاً مستقل‌اند.
 - **تست‌ها:** ۱۲ تست واحد قواعد مشتق سبز؛ دو تست Integration چرخهٔ کامل SQL Server (چرخهٔ verify/reject، self-approval مجاز طبق D-109، عدم شمارش Recorded، ناهم‌خوانی ارز) با گیت `FARANO_VENDOR_TEST_SQLSERVER` — اجرا در CI.
-- **باقی‌مانده:** UI React داشبورد سفارش/پرداخت، اتصال amendment تمدید Support/Update به این چرخه در PR جداگانه، و تأیید نتیجهٔ تست SQL پس از CI.
+- **باقی‌مانده:** Company-scoped Module/Feature/UserSeat تا تکمیل #392 مسدود است؛ ACK/Applied tracking اختصاصی و Delivery tracking جداگانه برای Amendment هنوز باقی‌اند. PaymentAllocation چندسفارشه، درگاه پرداخت و Ledger موازی طبق D-108/S1-b خارج از محدوده‌اند.
 
 ## دروازهٔ Runtime License (Issue #396) — 2026-11-19
 
@@ -26,7 +26,7 @@
 - **پیش‌نیازهای S1-e** (انقضای Cloud و recovery؛ D-098): Issues باز #396 (دروازهٔ license-first)، #384 (اتصال runtime enforcement)، #228/#235؛ و تثبیت قرارداد مشترک بین‌بخشی Vendor/Customer. جزئیات کامل در handoff `ISSUE-UNNUMBERED-vendor-s1-a-status-determination.md` (لینک در `INDEX.md`).
 - این بازبینی فقط مستنداتی است: بدون کد، Migration، تغییر تنظیم یا تغییر Gate؛ هیچ موردی از S1-b تا S1-g شروع نشد.
 
-## وضعیت جاری ماژول Vendor — 2026-11-18
+## Snapshot تاریخی ماژول Vendor — 2026-11-18
 
 **مبنای بررسی:** `main@163e0be3a430439b69c13e0c17e8b99e98617fb9`؛ این snapshot، وضعیت قبلی Issue #698 را پس از Mergeهای #699، #700 و #701 به‌روز می‌کند.
 
@@ -53,13 +53,13 @@
 ### وضعیت Provisioning و Licensing
 - **#228 / #392:** قرارداد v5، نگاشت Customer-side در `CompanySetupRecords`، Apply اتمیک و `maxCompanies` در main هستند؛ allow-list ردهای شرکت‌محور Vendor نیز با #699 تکمیل شد. بااین‌حال Gate صدور v5 همچنان بسته است: `VendorProvisioningCompanyReferenceGate.CustomerConsumerReady=false` و `Provisioning:CompanyReferenceIssuance:Enabled` پیش‌فرض خاموش. Migration مشتری روی دیتابیس واقعی اجرا نشده و bootstrap مدیر Dedicated/Offline و سیاست Restore/Clone باقی‌اند.
 - **#235:** کار Customer-side مستقل است؛ trust-key distribution/rotation، readiness و audit پایدار، retry/error semantics و آزمون Staging دو میزبان/دو process باقی‌اند. این موارد در PR محدود به Vendor تغییر نمی‌کنند.
-- **#236/#214:** maker-checker، تراکنش صدور و fail-closed در کد هستند؛ providerهای پیش‌فرض unavailable باقی‌اند. هیچ KMS/HSM واقعی، token، module path یا credential عملیاتی provision نشده است؛ Production signing فعال نمی‌شود.
-- **#393:** سه candidate builder برای maxCompanies، Company-scoped Module/Feature/UserSeat و Support/Update در main هستند؛ Order/OrderLine، Payment Evidence، persistence خرید، approval تجاری و صدور پایدار amendment هنوز NotImplemented است. تصمیم دربارهٔ مدرک پرداخت، نقش تأییدکننده و transitionهای خرید لازم است.
+- **#236/#214:** Vendor-side revocation snapshot و کنترل‌های تراکنشی در کد هستند؛ طبق D-109 همان اپراتور مجاز می‌تواند درخواست و تصمیم را ثبت کند. signer مرکزی License/Provisioning با Windows CNG/SoftwareProtected در PR #720 پیاده‌سازی و Runbook در #736 ادغام شده؛ Key Ceremony واقعی، ACL، Trust Store، rotation و recovery روی میزبان هدف هنوز تأیید نشده‌اند. HSM/KMS خارجی برای signer مرکزی اجباری نیست؛ D-055/D-057 برای offline revocation و Customer anti-rollback مستقل‌اند.
+- **#393:** candidate builderهای maxCompanies، Company-scoped Module/Feature/UserSeat و Support/Update در main هستند؛ چرخه Order/OrderLine/Payment/Receivables از #722، UI فارسی RTL از #738 و درخواست/صدور Amendment امضاشده از #739 در main ادغام شده‌اند. Payment و Issuance مستقل‌اند (D-108). Company-scoped add-onها تا mapping معتبر #392 مسدودند؛ ACK/Applied و Delivery tracking اختصاصی Amendment هنوز باقی است.
 - **#107:** hash-chain، checkpoint contract و Production startup guard fail-closed در main هستند؛ sink واقعی مستقل با failure domain و credential جدا، immutability/retention و recovery drill عملیاتی هنوز انتخاب/provision نشده است.
 - **ریسک هویت مشتری:** `CustomerNumber` در Vendor هنوز قابل ویرایش است، درحالی‌که هنگام صدور برابر `CustomerReference` قرار می‌گیرد. این می‌تواند binding مشتری Provisioning‌شده را ناپایدار کند؛ سیاست اصلاح/تغییر آن نیازمند تصمیم مالک است و در این snapshot هیچ رفتار اجرایی حدس زده یا تغییر داده نشده است.
 - **CompanyReference:** برای هر Company جدید فقط سمت سرور با `Guid.NewGuid().ToString("D")` ساخته می‌شود؛ مقدار client-supplied برای Company جدید رد می‌شود. هنگام ویرایش، فقط reference موجود در همان draft پذیرفته و حفظ می‌شود؛ descriptor صرفاً برچسب اپراتوری است. تست‌های `NewCompanyReceivesServerGeneratedGuidDReference`، `ClientSuppliedReferenceForNewCompanyIsRejected` و `ExistingReferenceIsKeptWhenItMatchesTheSameDraft` این قواعد را پوشش می‌دهند.
 
-**وضعیت کلی:** PR #699 از نظر PR-head CI موفق و در main ادغام شده است؛ post-merge main CI در این اجرا تأیید نشده. Gate v5، signer Production و audit sink مستقل عمداً fail-closed باقی مانده‌اند. این snapshot به معنی Production readiness یا اجرای Migration مشتری نیست.
+**وضعیت کلی در 2026-11-21:** PRهای #739 و #740 در main ادغام شده‌اند؛ PR #741 (Lifecycle Readiness) و #742 (Final Audit) Draft و باز هستند. main@b5f8c53db240ced0d9086aa18bc223db2432b6ce دارای .NET CI، Vendor CI، Semgrep و Push on main همگی موفق است. Gate صدور v5 و Runtime Gate طبق rollout پیش‌فرض خاموش‌اند؛ CNG مرکزی پیاده‌سازی شده اما Key Ceremony عملیاتی انجام نشده؛ sink مستقل #107 و آزمون‌های End-to-End/Production هنوز باقی‌اند. این وضعیت به معنی Production readiness یا اجرای Migration مشتری نیست.
 
 ## وضعیت جاری Vendor/Licensing و مأموریت S1-0 — 2026-11-16
 

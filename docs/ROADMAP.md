@@ -170,15 +170,15 @@
 - [ ] گزارش‌گیری بین نصب‌ها با بسته امضاشده (D-035، نیازمند تأیید).
 
 
-## تکمیل Licensing و Vendor بر اساس D-059 (2026-10-31؛ به‌روزرسانی وضعیت 2026-11-16، Issue #696)
+## تکمیل Licensing و Vendor بر اساس D-059 (به‌روزرسانی وضعیت 2026-11-21، Issue #696/#228/#393)
 
 ترتیب مصوب در Issue #389 و سند [LICENSING_IMPLEMENTATION_PLAN.md](LICENSING_IMPLEMENTATION_PLAN.md). وضعیت‌های زیر با کد و CI واقعی تطبیق داده شده‌اند؛ «انجام‌شده» یعنی merge + CI، نه لزوماً فعال‌سازی عملیاتی:
 
 - [x] **#395 — مستندسازی D-059 و هم‌ترازی ADR/مدل/گردش‌کار/تهدیدها** — انجام‌شده؛ سند اجرایی و هم‌ترازی‌ها در main هستند و هم‌ترازی جدید S1-0 در Issue #696 ادامه یافته است.
 - [x] **#390 — قرارداد نسخه‌دار Company-scoped Module/Feature/UserSeat و amendment** — انجام‌شده؛ قرارداد v2 با PR #472 و صدور اولیهٔ Vendor با #682 ادغام و CI-Verified شده‌اند.
 - [~] **#391 — enforcement سمت Customer** — موتور خالص تصمیم (PR #534/#539) در main است؛ اتصال runtime به مسیرهای واقعی (از جمله Trade) انجام نشده و رفتار Production fail-closed می‌ماند.
-- [~] **#392 — ایجاد Company و bootstrap مدیر Offline** — بخش عمدهٔ مسیر Provisioning شرکت‌محور ادغام شده است (Vendor: #679/#680/#682/#683 و allow-list ACK شرکت‌محور در #699؛ مشتری: #684/#686/#687 با `CompanySetupRecords`، پذیرش v5، mapping/apply اتمیک و `maxCompanies` block-new)؛ اما Gate صدور v5 در Vendor بسته است (`CustomerConsumerReady=false`)، Migration مشتری روی دیتابیس واقعی اجرا نشده، Bootstrap مدیر Dedicated/Offline و سیاست Restore/Clone باقی‌اند.
-- [~] **#393 — Vendor add-on sale/issuance** — سه candidate builder (ظرفیت شرکت #527، ماژول/Feature/Seat #558، تمدید Support/Updates #565) در main و CI-Verified هستند؛ سفارش/پرداخت، persistence، approval تجاری و صدور پایدار amendment هنوز NotImplemented است و به تصمیم مالک نیاز دارد.
+- [~] **#392 — ایجاد Company و bootstrap مدیر Offline** — قرارداد v5 و CompanyReference، Customer schema/Apply اتمیک و maxCompanies block-new در PRهای #679/#680/#682/#683/#684/#686/#687 و allow-list چهار کد ACK در #699 در main هستند؛ Gate صدور v5 همچنان default-off است، Migration مشتری روی DB واقعی اجرا نشده و Bootstrap Dedicated/Offline و Restore/Clone باقی‌اند.
+- [~] **#393 — Vendor add-on sale/issuance** — candidate builderها (#527/#558/#565)، چرخه Order/Payment/Receivables (#722)، UI فارسی RTL (#738) و Amendment نصب‌محور امضاشده (#739) در main و CI-Verified هستند؛ Payment از Issuance مستقل است (D-108). Company-scoped Module/Feature/UserSeat تا #392 مسدود است؛ ACK/Applied و Delivery tracking اختصاصی Amendment باقی است.
 - [ ] **#394 — online authenticated sync و signed offline file exchange**؛ stale telemetry واضح.
 
 ### S1 — نقشهٔ اجرایی فعال‌سازی Licensing (2026-11-16؛ D-097..D-102، Issue #696)
@@ -188,13 +188,13 @@
 
 ## تکمیل تجربه نصب و معماری سه‌حوزه‌ای D-060
 
-- [ ] **Vendor CRM & Commercial:** چرخه مشتری، قرارداد، سفارش، پرداخت، تمدید و پشتیبانی؛ مالک تجاری entitlement است نه signer.
-- [ ] **Licensing & Entitlement Engine:** قرارداد نسخه‌دار، ظرفیت‌ها، ماژول‌ها، Featureها، amendment، امضا و ابطال.
-- [ ] **Customer Deployment & Sync:** license-first startup، Activation Wizard، مدیر محلی، Cloud API، درخواست/پاسخ فایل آفلاین و ACK.
-- [ ] **#396:** دروازه سمت سرور؛ بدون License به Wizard، با License معتبر به Login، Restricted به مسیر read/export/recovery و وضعیت نامعتبر به recovery/fail-closed.
-- [ ] **Offline file exchange:** درخواست .request.json و پاسخ .license.json؛ .txt فقط wrapper Base64 بایت‌های دقیق signed package.
+- [~] **Vendor CRM & Commercial:** مشتری/قرارداد، سفارش/پرداخت/مطالبات و Amendment نصب‌محور پیاده شده‌اند؛ Company-scoped add-on و بخش‌های تجاری/fulfillment باقی‌اند.
+- [~] **Licensing & Entitlement Engine:** قرارداد v1-v5، entitlement، candidate builder، Amendment، signer مرکزی CNG و revocation پایه وجود دارند؛ runtime enforcement عملیاتی و برخی call-siteها باقی‌اند.
+- [~] **Customer Deployment & Sync:** provisioning v5 consumer، Apply/ACK پایه و Runtime Gate opt-in وجود دارند؛ trust distribution/rotation، bootstrap Dedicated/Offline، sync و recovery عملیاتی باقی‌اند.
+- [~] **#396:** Runtime Gate سمت سرور پیاده‌سازی و opt-in است؛ rollout، Wizard و E2E با License واقعی هنوز تأیید عملیاتی نشده‌اند.
+- [~] **Offline file exchange:** قالب request/response امضاشده و مسیر export/import پایه وجود دارد؛ sync، reconciliation و backup/restore عملیاتی باقی‌اند.
 
-این موارد در D-060 Accepted هستند اما پیاده‌سازی و Verified محسوب نمی‌شوند. جزئیات در LICENSING_IMPLEMENTATION_PLAN.md.
+D-060 معماری سه‌حوزه‌ای را Accepted می‌کند؛ وضعیت پیاده‌سازی هر حوزه اکنون ترکیبی از Implemented/CI-Verified و NotImplemented است و در موارد بالا و LICENSING_IMPLEMENTATION_PLAN.md تفکیک شده است.
 
 
 ## ماژول بازرگانی خارجی (D-061..D-063 / Issues #397 و #399)
@@ -217,8 +217,8 @@
 | #391 (موتور سیاست Entitlement) | بسته (موتور خالص PR #534)؛ اتصال runtime انجام نشده | فعال‌سازی Production | **خیر** |
 | #401 (اتصال entitlement واقعی Trade) | **باز**، آخرین به‌روزرسانی 2026-11-04 | فعال‌سازی Production | **خیر** برای توسعه |
 | #384 (فعال‌سازی و لایسنس مشتری: startup/runtime/Cloud) | **باز**، آخرین به‌روزرسانی 2026-10-31 | فعال‌سازی Production | **خیر** |
-| #392 (ساخت شرکت مجاز و نگاشت `CompanyReference`) | **باز**؛ Vendor PR-2 در #683 ادغام و Verified شده و سمت مشتری نیز schema `CompanySetupRecords` (#684)، پذیرش/Apply اتمیک v5 (#686) و `CustomerCompanyEntitlementResolver` (#687) در main هستند؛ مانع باقی‌مانده: بازکردن دوکلیدی Gate صدور Vendor با تأیید مالک، گسترش allow-list ACK، اجرای Migration روی دیتابیس مشتری و Bootstrap مدیر | فعال‌سازی Production (نگاشت مورداعتماد شرکت) | **خیر** |
-| #228 (Provisioning؛ Vendor v5 آماده اما Gate خاموش) | **باز**؛ سمت مشتری v5 را اکنون می‌پذیرد و Apply می‌کند (#684/#686/#687 در main)؛ مانع باقی‌مانده Gate صدور Vendor بسته + گسترش allow-list ACK + اجرای Migration روی دیتابیس مشتری | فعال‌سازی Production و onboarding end-to-end | **خیر** |
+| #392 (ساخت شرکت مجاز و نگاشت `CompanyReference`) | **باز**؛ Vendor v2/v5 preparation و allow-list ACK در #699، Customer schema/Apply در #684/#686/#687 در main؛ مانع باقی‌مانده: Gate دوکلیدی، اجرای Migration روی DB واقعی، Bootstrap Dedicated/Offline و Restore/Clone | فعال‌سازی Production | **خیر** |
+| #228 (Provisioning؛ Vendor v5 آماده اما Gate خاموش) | **باز**؛ provisioning/ACK پایه در main و allow-list چهار کد رد #699 کامل است؛ مانع باقی‌مانده Gate صدور Vendor، اجرای Migration روی DB واقعی، bootstrap و عملیات دو میزبان | فعال‌سازی Production و onboarding end-to-end | **خیر** |
 
 **جمع‌بندی:** هیچ‌یک از Issueهای باز بالا توسعه و تست S2/S3 را مسدود نمی‌کند. `DenyAllTradeModuleEntitlement` در `Program.cs` بدون شرط محیط ثبت شده است؛ بنابراین تست‌های Integration/API باید در میزبان تست، `ITradeModuleEntitlement` را با test double جایگزین کنند (الگوی `RecordingEntitlement` در `TradeAccessGateTests` و `WebApplicationFactory<Program>` موجود در تست‌ها). افزودن پرچم/تنظیم bypass در کد Production ممنوع است؛ هر مسیر اجرای دستی Development با entitlement موقت تصمیم جدا و ADR می‌خواهد. فعال‌سازی برای کاربر واقعی تا بسته‌شدن زنجیرهٔ #392/#228 → #384 → اتصال #391 → #401 ممکن نیست.
 

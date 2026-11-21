@@ -1,16 +1,19 @@
-> **سیاست جاری تأیید Vendor (D-109، 2026-11-19):** نسخهٔ اول تک‌اپراتوره است؛ همان مدیر مجاز می‌تواند درخواست را ثبت و تأیید کند. این سیاست الزام قدیمی منع self-approval را برای Vendor v1 supersede می‌کند. MFA، RBAC، Audit، کنترل RowVersion/concurrency و fail-closed حفظ می‌شوند. جزئیات تصمیم در PR #723 و پیگیری اجرایی در Issue #214 است.
+> **سیاست جاری تأیید Vendor (D-109، 2026-11-19):** نسخه اول تک‌اپراتوره است؛ همان مدیر مجاز می‌تواند درخواست را ثبت و تأیید کند. این سیاست در PR #724 پیاده و در main ادغام شده است؛ PR #723 منبع تصمیم/راهنمای اولیه بود و merge نشده است. MFA، RBAC، Audit، کنترل RowVersion/concurrency و fail-closed حفظ می‌شوند.
 
 # سامانهٔ مرکزی فروشندهٔ فرانو
 
-## وضعیت جاری Vendor — 2026-10-31 (Issue #214 PR pending)
+## وضعیت جاری Vendor — 2026-11-21
 
-- **Offline revocation در PR #375:** مسیر maker-checker برای `TargetStatus=Revoked` اکنون فقط پس از ساخت و verify شدن snapshot canonical، ذخیرهٔ envelope، تغییر License، تصمیم approval و audit در transaction واحد موفق می‌شود. این تغییر هنوز merge نشده و CI نهایی آن باید روی head نهایی PR تأیید شود.
-- **توالی و تاریخچه:** sequence با قفل تراکنشی SQL Server و unique index کنترل می‌شود؛ snapshotها immutable و به approval و license محرک متصل‌اند. export از `POST /api/vendor/offline-revocations/latest/export` با antiforgery، مجوز `LicensesRead`، audit و no-store انجام می‌شود.
-- **پیکربندی لازم:** `OfflineRevocation:SnapshotValidityDays` باید صریحاً ۱..۳۶۵ باشد؛ trust set مستقل `OfflineRevocationSigningTrust:Keys` فقط public SPKI دارد. نبود policy/trust یا signer معتبر به fail-closed/503 منجر می‌شود.
-- **امضاکننده:** `UnavailableOfflineRevocationSigningProvider` پیش‌فرض باقی است؛ PKCS#11 adapter و KeyId purpose-specific در main وجود دارند، اما هیچ KMS/HSM/credential واقعی در این PR انتخاب یا provision نمی‌شود.
-- **مرز:** این PR فقط Vendor control plane و Vendor DB را تغییر می‌دهد. customer-side consumer/enforcement در #235، checkpoint مستقل ممیزی در #107 و provisioning واقعی کلید در #236 همچنان جداگانه‌اند.
+- **فروش/پرداخت و Amendment (#393):** چرخه Backend سفارش/پرداخت/مطالبات در PR #722، رابط فارسی RTL در PR #738 و درخواست صریح Amendment/Approval/Signing/sequence+1 نصب‌محور در PR #739 در main ادغام شده‌اند. پرداخت از صدور مستقل است (D-108). Company-scoped Module/Feature/UserSeat تا تکمیل #392 مسدود است؛ ACK/Applied tracking اختصاصی و Delivery tracking جداگانه Amendment باقی‌اند.
+- **Provisioning و CompanyReference (#228/#392):** مسیر پایه درخواست/Approval/Signing/Export/ACK و Customer Apply v5 در main وجود دارد؛ allow-list چهار کد رد شرکت‌محور با #699 تکمیل شده است. Gate صدور v5 همچنان default-off است و Migration مشتری روی DB واقعی اجرا نشده؛ Bootstrap Dedicated/Offline و Restore/Clone و آزمون عملیاتی دو میزبان باقی‌اند.
+- **Signer مرکزی (#236):** PR #720 Windows CNG/Certificate Store با MachineKey غیرقابل‌استخراج و AssuranceLevel=SoftwareProtected را برای License/Provisioning اضافه کرده و PR #736 Runbook Key Ceremony/Rotation را ثبت کرده است. D-107، HSM/KMS خارجی را برای این signer مرکزی اجباری نمی‌کند؛ اما Key Ceremony واقعی، ACL سرویس، Trust Store، rotation و recovery روی میزبان هدف هنوز Not Verified است. D-055/D-057 برای offline revocation و Customer anti-rollback جدا هستند.
+- **Approval (#214، D-109):** self-approval اپراتور مجاز در Vendor V1 پذیرفته شده؛ ادعای نیاز به دو کاربر متفاوت معتبر نیست. Permission، MFA، RowVersion و Audit همچنان الزامی‌اند.
+- **Customer consumer (#235):** verifier/Apply/ACK پایه وجود دارد؛ trust distribution/rotation، readiness/audit پایدار، retry/error semantics و آزمون Staging دو میزبان/دو OS باقی‌اند و باید در PR مستقل Customer-side انجام شوند.
+- **Audit checkpoint (#107):** hash-chain، قرارداد sink، Development/Test file store و Production startup guard fail-closed موجودند؛ sink مستقل Production با failure domain/identity جدا، retention/immutability و recovery drill هنوز انتخاب و provision نشده است.
+- **Lifecycle Readiness / Final Audit:** PR #741 (Vendor diagnostics) و #742 (ممیزی نهایی) Draft هستند؛ CI روی HEADهای جاری باید کامل شود و هیچ‌کدام هنوز Merge نشده‌اند.
+- **Production readiness:** Not Ready تا تکمیل #392، آزمون عملیاتی CNG و trust/rotation، #235، sink مستقل #107 و sync/recovery #394. هیچ KMS/HSM، credential یا کلید واقعی فرض یا در repo/log ثبت نشده است.
 
-> وضعیت CI PR #375 تا پایان اجرا در حال بررسی است؛ تست محلی .NET/SQL Server اجرا نشده است.
+---
 
 ---
 

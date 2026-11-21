@@ -3393,3 +3393,39 @@
 - **F42W (رفع شد):** `ValidateRequestedPeriodsAsync` اکنون `(Error, StatusCode)` برمی‌گرداند — شکست verify امضا/کلید وضعیت verifier خودش را حفظ می‌کند (503 کلید غیرمورد اعتماد) و فقط درخواست دوره نامعتبر 409 است؛ هر دو endpoint وضعیت را propagate می‌کنند.
 - **F42c (رفع شد):** گیت «فهرست ناقص» فقط برای اپراتوری است که مجوز `vendor.licenses.read` دارد؛ پاسخ 403/401 فهرست برای اپراتور mutation-مجاز «دنیال نیست» و دکمه‌هایش فعال می‌مانند (مجوزهای manage/issue مستقل‌اند). تست Vitest حالت denied اضافه شد.
 - **F42Q (Needs Owner Decision):** ثبت `LastSeenAtUtc` در تراکنش ACK (الزام مرحله ۳ مأموریت) RV نصب را جلو می‌برد و مثل `UpdateInstallation` ممکن است یک installation approval در انتظار را stale کند — جهت شکست fail-closed است و هیچ تصمیمی اشتباه پاس نمی‌شود. تغییر مکانیزم (جدول سلامت جدا یا توکن وضعیت-محور) نیازمند Migration و تصمیم مالک است؛ بدون مجوز انجام نشد.
+
+
+## 2026-11-21 — اصلاح state mapping در Vendor Lifecycle Readiness (#228، PR #741)
+
+- **یافتهٔ ریشه‌ای:** صفحه readiness از stateهای فرضی `Signed` و `Rejected` استفاده می‌کرد، درحالی‌که stateهای مجاز جدول `VendorProvisioningRequests` عبارت‌اند از `AwaitingSigner`، `PendingDelivery`، `Confirmed` و `Failed`. همچنین `AlreadyApplied` که ACK معتبر است Ready گزارش نمی‌شد؛ `DeliveredAtUtc` در snapshot خوانده نمی‌شد؛ وضعیت نصب `Suspended` نیز بدون توجه به Status برابر Ready می‌شد.
+- **اصلاح Vendor-only:** خواندن `DeliveredAtUtc` در query موجود؛ نگاشت واقعی Signing/Delivery/ACK/Bootstrap/Provisioning؛ `AlreadyApplied` موفق؛ `AwaitingSigner` Pending (نه ادعای خرابی signer)؛ نصب Suspended مسدود؛ state ناشناخته Failed. متن signer با D-107 و CNG SoftwareProtected هم‌راستا شد و HSM/KMS پیش‌نیاز اجباری معرفی نمی‌شود.
+- **Regression tests:** ماتریس Active/Suspended/unknown نصب، PendingDelivery پیش/پس از ثبت تحویل، ACK در انتظار، AlreadyApplied، Failed و provisioning status ناشناخته افزوده شد.
+- **بدون تغییر:** هیچ Migration، Customer-side consumer، `Server/**`، secret، کلید یا تنظیم Production تغییر نکرد.
+- **اعتبارسنجی:** CI روی HEAD قبلی PR #741 سبز بود؛ تست‌های commit جدید تا اجرای CI بعد از push **در انتظار** هستند. تست HTTP/SQL Server اختصاصی query/authorization endpoint نیز هنوز باقی است.
+- **handoff:** `docs/handoffs/ISSUE-228-vendor-lifecycle-readiness.md`.
+
+
+## 2026-11-21 — دقت متن مرحله Entitlement در readiness (#228، PR #741)
+
+- **یافته:** query readiness فقط `Status == Issued` را می‌شمارد و زمان اعتبار envelope/runtime را ارزیابی نمی‌کند؛ متن قبلی به‌اشتباه آن را «لایسنس فعال» می‌نامید.
+- **اصلاح:** پیام اکنون فقط وجود لایسنس صادرشده را گزارش می‌کند و اعتبار زمانی/runtime را جدا می‌داند؛ منطق صدور یا runtime تغییر نکرد.
+- **Regression:** تست اضافه شد تا پیام Ready برای entitlement صادرشده ادعای فعال بودن runtime نکند.
+- **اعتبارسنجی:** CI قبلی برای commit `56c6712c8fc60ac90d5562dde241f44904027b79` در حال اجرا بود؛ این commit جدید CI را دوباره اجرا می‌کند و نتیجه آن تا پایان workflowها نامعلوم است.
+
+
+## 2026-11-21 — همگام‌سازی Stage 5 با آخرین اصلاح readiness
+
+- PR #741 به commit `bdcc306caa3f65d25ff457a0ff76e5f2632dfb52` رسید؛ علاوه بر state mapping، متن Entitlement اصلاح شد تا وجود `Status=Issued` به‌اشتباه فعال‌بودن runtime تعبیر نشود.
+- شاخه Draft #742 با head جدید #741 همگام شد؛ فایل‌های Rules/Endpoint/Tests و handoff/index/worklog از همان head گرفته شدند. سند ممیزی Stage 5 نیز SHA جاری را منعکس می‌کند.
+- CI commit جدید #741 و CI شاخه همگام‌شده #742 باید از ابتدا کامل شوند؛ نتایج قبلی به این SHAهای جدید تعمیم داده نمی‌شوند.
+- هیچ Merge یا فعال‌سازی Production انجام نشد.
+
+
+## 2026-11-21 — هم‌راستاسازی اسناد جاری Vendor پس از PRهای #720 تا #740
+
+- **فایل‌های به‌روز‌شده:** `PROJECT_STATUS.md`، `ROADMAP.md`، `LICENSING_IMPLEMENTATION_PLAN.md`، `LICENSING_WORKFLOWS.md`، `LICENSING.md` و `Vendor/README.md`.
+- **اصلاح‌های factual:** #393 اکنون Order/Payment (#722)، UI (#738) و Amendment نصب‌محور (#739) را در main دارد؛ این موارد دیگر NotImplemented معرفی نمی‌شوند. #228/#392 Gate v5 خاموش و Migration مشتری روی DB واقعی اجرا نشده باقی می‌مانند.
+- **Signer:** D-107 و PR #720/#736 در اسناد جاری منعکس شدند؛ CNG/SoftwareProtected برای signer مرکزی License/Provisioning مجاز است و HSM/KMS خارجی blocker اجباری نیست. Key Ceremony و ACL/Trust/rotation عملیاتی هنوز تأیید نشده؛ D-055/D-057 مستقل‌اند.
+- **Approval:** D-109 از PR #724 (نه PR #723 که merge نشده) مرجع پیاده‌سازی self-approval Vendor V1 است.
+- **Workflow docs:** ادعای کلی «همه گردش‌کارها NotImplemented» اصلاح شد؛ وضعیت هر بخش تفکیک می‌شود. Work Log append-only است؛ snapshotهای تاریخی حذف یا بازنویسی نشده‌اند.
+- **اعتبارسنجی:** فقط تغییر مستندات؛ هیچ Build/Test محلی ادعا نمی‌شود. CI PR #742 پس از این commit باید دوباره اجرا و بررسی شود.
