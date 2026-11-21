@@ -3,11 +3,11 @@
 این سند وضعیت Issueها، امنیت، هزینه و آمادگی Production را با main و شاخه‌های جاری تطبیق می‌دهد. وجود کد یا سبز بودن CI به‌تنهایی به معنی تکمیل End-to-End یا Production readiness نیست.
 
 **مبنای کد و Git:**
-- main: `b5f8c53db240ced0d9086aa18bc223db2432b6ce`
-- PR #739 (مرحله ۲) با merge commit `2d181e0d801a962e66e62b80ddba04dc6f3eaac1` ادغام شده است.
-- PR #740 (مرحله ۳) با merge commit `b5f8c53db240ced0d9086aa18bc223db2432b6ce` ادغام شده است.
-- PR #741 (مرحله ۴) همچنان Draft است؛ اصلاح state mapping و متن دقیق Entitlement در commit `bdcc306caa3f65d25ff457a0ff76e5f2632dfb52` push شده و CI آن در حال اجراست.
-- PR #742 (این مرحله) Draft و وابسته به #741 است؛ هیچ‌یک از دو PR باز هنوز Merge نشده‌اند.
+- main: `755aeba20032...` (مرحله ۴ ادغام شده)؛ بازبینی این سند روی شاخه Stage 5 پس از همگام‌سازی با همین main انجام شده است.
+- PR #739 (مرحله ۲): ادغام‌شده با روش Rebase (قاعده `required_linear_history` مخزن Merge Commit را ممنوع می‌کند)؛ ۱۱ commit حفظ‌شده و tip ادغام `2d181e0d801a...`.
+- PR #740 (مرحله ۳): ادغام‌شده با Squash؛ commit `b5f8c53db240...`.
+- PR #741 (مرحله ۴): ادغام‌شده با Squash؛ commit `755aeba20032...` از head `811fbb08`؛ CI روی head نهایی ۱۸/۱۸ Check Run سبز؛ UI مطابق D-107/D-109 هماهنگ و تست‌های رگرسیون ادعاها اضافه شد (Vitest ۸۳/۸۳).
+- PR #742 (این مرحله): Draft؛ شاخه با main (مرحله ۴ ادغام‌شده) همگام شد و علاوه بر مستندات، هم‌راستاسازی readiness با وضعیت‌های ذخیره‌شده و تفکیک پرداخت آخرین سفارش را به‌صورت تغییرات مستقل خود دارد؛ ادغام معنایی بدون Force Push انجام شد.
 
 ## ۱. وضعیت Issueهای مرتبط
 
@@ -59,10 +59,10 @@
 
 ## ۵. وضعیت مأموریت و CI
 
-- **Stage 2 / PR #739:** Merge شده؛ merge commit `2d181e0d801a962e66e62b80ddba04dc6f3eaac1`.
-- **Stage 3 / PR #740:** Merge شده؛ merge commit `b5f8c53db240ced0d9086aa18bc223db2432b6ce`.
-- **Stage 4 / PR #741:** Draft؛ commit اصلاحی `56c6712c8fc60ac90d5562dde241f44904027b79`. CI پس از این commit در زمان نگارش در حال اجراست؛ تست‌های قبلی روی head قدیمی، جایگزین نتیجه این commit نیستند.
-- **Stage 5 / PR #742:** Draft؛ این سند ممیزی اصلاح‌شده است و باید پس از #741 بررسی شود.
+- **Stage 2 / PR #739:** Merge شده؛ Rebase، tip `2d181e0d801a...`، CI ۱۸/۱۸.
+- **Stage 3 / PR #740:** Merge شده؛ Squash `b5f8c53db240...`، CI ۱۸/۱۸ روی head قبل از Merge.
+- **Stage 4 / PR #741:** Merge شده؛ Squash `755aeba20032...` از head `811fbb08`، CI ۱۸/۱۸ روی head نهایی؛ شامل هماهنگ‌سازی Overview با D-107/D-109، تست‌های رگرسیون ادعاها، رفع race پاسخ‌های readiness و تفکیک پرداخت آخرین سفارش.
+- **Stage 5 / PR #742:** Draft؛ این سند با وضعیت واقعی (SHAها و CI بالا) به‌روز شده است؛ CI این PR باید روی head نهایی خودش سبز شود و نتیجه آن جایگزین این جمله می‌شود.
 - **Production Readiness:** Not Ready؛ موارد جدول و بخش ۴ باز هستند.
 
 هیچ PR باز در این زنجیره بدون تکمیل بررسی‌های الزامی Merge نشده است.
