@@ -3411,3 +3411,12 @@
 - **اصلاح:** پیام اکنون فقط وجود لایسنس صادرشده را گزارش می‌کند و اعتبار زمانی/runtime را جدا می‌داند؛ منطق صدور یا runtime تغییر نکرد.
 - **Regression:** تست اضافه شد تا پیام Ready برای entitlement صادرشده ادعای فعال بودن runtime نکند.
 - **اعتبارسنجی:** CI قبلی برای commit `56c6712c8fc60ac90d5562dde241f44904027b79` در حال اجرا بود؛ این commit جدید CI را دوباره اجرا می‌کند و نتیجه آن تا پایان workflowها نامعلوم است.
+
+
+## 2026-11-21 — رفع route registration در Vendor Lifecycle Readiness (#228، PR #741)
+
+- **علت ریشه‌ای:** endpoint readiness در فایل مستقل تعریف شده بود، اما `Program.cs` آن را map نمی‌کرد؛ UI درخواست API می‌فرستاد و fallback برای مسیر `/api` پاسخ 404 می‌داد. تست‌های pure rules و UI mock این نقص composition-root را پوشش نمی‌دادند.
+- **اصلاح:** `app.MapVendorLifecycleReadinessEndpoints()` در composition root ثبت شد.
+- **Regression:** `VendorLifecycleReadinessRouteTests` با WebApplicationFactory درخواست anonymous به مسیر واقعی می‌فرستد و 401 را assert می‌کند؛ route ثبت‌نشده به‌جای آن 404 می‌داد. این تست DB و signer را مصرف نمی‌کند.
+- **مرز پوشش:** query translation و resource-level authorization با SQL Server هنوز تست اختصاصی می‌خواهند؛ این موارد به‌عنوان باقی‌مانده ثبت شدند.
+- **اعتبارسنجی:** فقط GitHub contents API برای ایجاد commitها استفاده شد؛ اجرای محلی ادعا نمی‌شود. CI باید روی HEAD جدید کامل و سبز شود.
