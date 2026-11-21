@@ -85,3 +85,6 @@
 - **اصلاح حداقلی:** query اکنون فقط آخرین Order (با ترتیب قطعی `CreatedAtUtc DESC, Id ASC`) و پرداخت‌های همان Order را می‌خواند. ReferenceId مرحله Payment نیز شماره همان سفارش است.
 - **Regression SQL Server:** یک Customer با دو سفارش ساخته می‌شود؛ سفارش قدیمی پرداخت Verified دارد و سفارش جدید بدون پرداخت است. انتظار: سفارش جدید مرجع commercialOrder و payment باشد و Payment آن Pending بماند. این تست رفتار تجمیع اشتباه customer-wide را رد می‌کند.
 - **مرز معنایی:** Ready در مرحله Payment یعنی حداقل یک پرداخت برای آخرین سفارش تأیید شده؛ این به‌تنهایی ادعای تسویه کامل مانده نیست و Amendment همچنان مستقل از پرداخت است.
+
+
+- **بازبینی projection پس از اصلاح query:** نام فیلدهای anonymous projection با snapshot (`LatestOrderNumber` و `LatestOrderAtUtc`) هم‌نام نگه داشته شد تا mapping compile-time دقیق بماند؛ CI روی HEAD جدید باید build و SQL regression را تأیید کند.
