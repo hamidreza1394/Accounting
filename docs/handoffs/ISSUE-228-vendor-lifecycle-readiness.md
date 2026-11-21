@@ -66,3 +66,11 @@
 - **Regression HTTP:** تست `VendorLifecycleReadinessRouteTests.ReadinessRouteIsMappedAndRequiresAuthentication` با `WebApplicationFactory<Program>` درخواست anonymous می‌فرستد و 401 را الزام می‌کند؛ اگر route دوباره از composition root حذف شود، fallback پاسخ 404 می‌دهد و تست شکست می‌خورد. Hosted serviceها در این تست حذف می‌شوند تا آزمون route به DB یا signer عملیاتی وابسته نباشد.
 - **محدودیت پوشش:** این regression فقط registration و challenge احراز هویت را اثبات می‌کند؛ query translation روی SQL Server و resource-level 403/404 برای مشتری مجاز/غیرمجاز هنوز نیازمند integration test جداگانه است.
 - **اعتبارسنجی:** کد روی branch به‌روزرسانی شد؛ اجرای محلی انجام نشده و CI روی SHA جدید باید کامل شود.
+
+
+### تکمیل پوشش HTTP/SQL Server — 2026-11-21
+
+- تست موجود `VendorCustomerMutationHttpIntegrationTests` اکنون پس از ورود MFA و ایجاد Customer، مسیر readiness را از طریق همان Host واقعی و SQL Server موقت فراخوانی می‌کند.
+- Assertions: پاسخ 200 برای Customer موجود و مجاز، تطبیق CustomerId، مرحلهٔ `customerRegistration=Ready` و `payment=NotApplicable` در نبود سفارش.
+- این تست query translation و projectionهای EF Core برای سفارش/پرداخت/لایسنس/نصب/Provisioning/Approval/Amendment را در SQL Server واقعی CI اجرا می‌کند.
+- قرارداد resource authorization فعلی برای شناسه ناشناخته قبل از handler به 403 می‌رسد؛ این باگ 404 نیست و تست‌ها باید همین رفتار را حفظ کنند. پوشش منفی اختصاصی 403 در این برش هنوز اضافه نشده است.
