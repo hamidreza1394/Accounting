@@ -499,6 +499,7 @@ app.MapVendorAuthentication();
 app.MapVendorPasswordChange();
 app.MapVendorRoleManagement();
 app.MapVendorBusinessEndpoints();
+app.MapVendorLifecycleReadinessEndpoints();
 app.MapVendorProvisioningEndpoints();
 app.MapVendorApprovalEndpoints();
 app.MapVendorSalesEndpoints();
