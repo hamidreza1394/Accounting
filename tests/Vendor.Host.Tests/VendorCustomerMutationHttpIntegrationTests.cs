@@ -344,6 +344,14 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal("NotApplicable", payment.GetProperty("status").GetString());
             }
 
+            // Resource authorization resolves the persisted customer before the handler;
+            // an unknown ID is denied as 403 (not leaked as a 404 existence oracle).
+            using (var unknownCustomerResponse = await client.GetAsync(
+                $"/api/vendor/customers/{Guid.NewGuid():D}/readiness", cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Forbidden, unknownCustomerResponse.StatusCode);
+            }
+
             Guid installationIdForProvisioning;
             Guid otherInstallationIdForProvisioning;
             Guid provisioningLicenseId;
