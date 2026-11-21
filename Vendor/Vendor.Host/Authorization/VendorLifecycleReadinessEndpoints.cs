@@ -41,8 +41,8 @@ public static class VendorLifecycleReadinessEndpoints
                 .OrderByDescending(item => item.CreatedAtUtc).ThenBy(item => item.Id)
                 .Select(order => new
                 {
-                    order.OrderNumber,
-                    order.CreatedAtUtc,
+                    LatestOrderNumber = order.OrderNumber,
+                    LatestOrderAtUtc = order.CreatedAtUtc,
                     VerifiedPayments = order.Payments.Count(payment => payment.Status == VendorPaymentRecord.StatusVerified),
                     RecordedPayments = order.Payments.Count(payment => payment.Status == VendorPaymentRecord.StatusRecorded),
                     RejectedPayments = order.Payments.Count(payment => payment.Status == VendorPaymentRecord.StatusRejected)
