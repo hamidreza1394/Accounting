@@ -3473,3 +3473,12 @@
 - **Workflow docs:** ادعای کلی «همه گردش‌کارها NotImplemented» اصلاح شد؛ وضعیت هر بخش تفکیک می‌شود. Work Log append-only است؛ snapshotهای تاریخی حذف یا بازنویسی نشده‌اند.
 - **اعتبارسنجی:** فقط تغییر مستندات؛ هیچ Build/Test محلی ادعا نمی‌شود. CI PR #742 پس از این commit باید دوباره اجرا و بررسی شود.
 
+## 2026-11-21 — PR-0: هم‌راستاسازی اسناد جاری با main@ac0ec741 پس از ادغام #741/#742 (فقط مستندات)
+
+- **فایل‌های به‌روز‌شده:** `PROJECT_STATUS.md`، `VENDOR_LIFECYCLE_FINAL_AUDIT.md`، `ROADMAP.md`، `LICENSING_WORKFLOWS.md` و همین Work Log. هیچ فایل کد، تست، Workflow یا Migration تغییر نکرده است.
+- **اصلاح‌های factual:** PRهای #741 (Squash `755aeba2` از head `811fbb08`؛ CI ۱۸/۱۸) و #742 (Squash `ac0ec741` از head `7a8c1759`؛ CI ۱۸/۱۸ و post-merge main سبز) دیگر Draft معرفی نمی‌شوند؛ مبنای main از `b5f8c53d` به `ac0ec741` به‌روز شد.
+- **D-109:** در ROADMAP فاز 8، لفظ «تأیید دو نفره برای صدور/ابطال لایسنس هنوز تکمیل نیست» با قرارداد D-109 (الزام نبودن دو اپراتور مستقل در V1 با حفظ Permission و Audit) هم‌راستا شد.
+- **شماره‌گذاری LICENSING_WORKFLOWS:** بخش‌های تکراری (دو «۱۲» و سه «۱۴») و زیربخش تکراری «15.1» یکتا شدند (۱۲..۱۹ با زیربخش‌های هم‌شماره). ارجاع‌های تاریخی WORK_LOG و handoffها به شماره‌های وقتِ ثبت خود، دست‌نخورده ماندند.
+- **CodeQL/E2E:** در سند ممیزی Vendor ثبت شد که «Push on main/CodeQL» گردش‌کار CodeQL پیش‌فرض GitHub (dynamic/github-code-scanning/codeql) است و فایل workflow جداگانه ندارد، و تست‌های e2e این چک‌ها اپ اصلی را می‌رانند نه Vendor.Web.
+- **اعتبارسنجی:** فقط تغییر مستندات؛ Diff نسبت به main شامل هیچ فایل غیر-md نیست. CI روی head این PR باید سبز شود؛ Merge با تأیید مالک است.
+
