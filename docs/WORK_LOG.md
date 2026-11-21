@@ -3393,3 +3393,68 @@
 - **F42W (رفع شد):** `ValidateRequestedPeriodsAsync` اکنون `(Error, StatusCode)` برمی‌گرداند — شکست verify امضا/کلید وضعیت verifier خودش را حفظ می‌کند (503 کلید غیرمورد اعتماد) و فقط درخواست دوره نامعتبر 409 است؛ هر دو endpoint وضعیت را propagate می‌کنند.
 - **F42c (رفع شد):** گیت «فهرست ناقص» فقط برای اپراتوری است که مجوز `vendor.licenses.read` دارد؛ پاسخ 403/401 فهرست برای اپراتور mutation-مجاز «دنیال نیست» و دکمه‌هایش فعال می‌مانند (مجوزهای manage/issue مستقل‌اند). تست Vitest حالت denied اضافه شد.
 - **F42Q (Needs Owner Decision):** ثبت `LastSeenAtUtc` در تراکنش ACK (الزام مرحله ۳ مأموریت) RV نصب را جلو می‌برد و مثل `UpdateInstallation` ممکن است یک installation approval در انتظار را stale کند — جهت شکست fail-closed است و هیچ تصمیمی اشتباه پاس نمی‌شود. تغییر مکانیزم (جدول سلامت جدا یا توکن وضعیت-محور) نیازمند Migration و تصمیم مالک است؛ بدون مجوز انجام نشد.
+
+
+## 2026-11-21 — اصلاح state mapping در Vendor Lifecycle Readiness (#228، PR #741)
+
+- **یافتهٔ ریشه‌ای:** صفحه readiness از stateهای فرضی `Signed` و `Rejected` استفاده می‌کرد، درحالی‌که stateهای مجاز جدول `VendorProvisioningRequests` عبارت‌اند از `AwaitingSigner`، `PendingDelivery`، `Confirmed` و `Failed`. همچنین `AlreadyApplied` که ACK معتبر است Ready گزارش نمی‌شد؛ `DeliveredAtUtc` در snapshot خوانده نمی‌شد؛ وضعیت نصب `Suspended` نیز بدون توجه به Status برابر Ready می‌شد.
+- **اصلاح Vendor-only:** خواندن `DeliveredAtUtc` در query موجود؛ نگاشت واقعی Signing/Delivery/ACK/Bootstrap/Provisioning؛ `AlreadyApplied` موفق؛ `AwaitingSigner` Pending (نه ادعای خرابی signer)؛ نصب Suspended مسدود؛ state ناشناخته Failed. متن signer با D-107 و CNG SoftwareProtected هم‌راستا شد و HSM/KMS پیش‌نیاز اجباری معرفی نمی‌شود.
+- **Regression tests:** ماتریس Active/Suspended/unknown نصب، PendingDelivery پیش/پس از ثبت تحویل، ACK در انتظار، AlreadyApplied، Failed و provisioning status ناشناخته افزوده شد.
+- **بدون تغییر:** هیچ Migration، Customer-side consumer، `Server/**`، secret، کلید یا تنظیم Production تغییر نکرد.
+- **اعتبارسنجی:** CI روی HEAD قبلی PR #741 سبز بود؛ تست‌های commit جدید تا اجرای CI بعد از push **در انتظار** هستند. تست HTTP/SQL Server اختصاصی query/authorization endpoint نیز هنوز باقی است.
+- **handoff:** `docs/handoffs/ISSUE-228-vendor-lifecycle-readiness.md`.
+
+
+## 2026-11-21 — دقت متن مرحله Entitlement در readiness (#228، PR #741)
+
+- **یافته:** query readiness فقط `Status == Issued` را می‌شمارد و زمان اعتبار envelope/runtime را ارزیابی نمی‌کند؛ متن قبلی به‌اشتباه آن را «لایسنس فعال» می‌نامید.
+- **اصلاح:** پیام اکنون فقط وجود لایسنس صادرشده را گزارش می‌کند و اعتبار زمانی/runtime را جدا می‌داند؛ منطق صدور یا runtime تغییر نکرد.
+- **Regression:** تست اضافه شد تا پیام Ready برای entitlement صادرشده ادعای فعال بودن runtime نکند.
+- **اعتبارسنجی:** CI قبلی برای commit `56c6712c8fc60ac90d5562dde241f44904027b79` در حال اجرا بود؛ این commit جدید CI را دوباره اجرا می‌کند و نتیجه آن تا پایان workflowها نامعلوم است.
+
+
+## 2026-11-21 — رفع route registration در Vendor Lifecycle Readiness (#228، PR #741)
+
+- **علت ریشه‌ای:** endpoint readiness در فایل مستقل تعریف شده بود، اما `Program.cs` آن را map نمی‌کرد؛ UI درخواست API می‌فرستاد و fallback برای مسیر `/api` پاسخ 404 می‌داد. تست‌های pure rules و UI mock این نقص composition-root را پوشش نمی‌دادند.
+- **اصلاح:** `app.MapVendorLifecycleReadinessEndpoints()` در composition root ثبت شد.
+- **Regression:** `VendorLifecycleReadinessRouteTests` با WebApplicationFactory درخواست anonymous به مسیر واقعی می‌فرستد و 401 را assert می‌کند؛ route ثبت‌نشده به‌جای آن 404 می‌داد. این تست DB و signer را مصرف نمی‌کند.
+- **مرز پوشش:** query translation و resource-level authorization با SQL Server هنوز تست اختصاصی می‌خواهند؛ این موارد به‌عنوان باقی‌مانده ثبت شدند.
+- **اعتبارسنجی:** فقط GitHub contents API برای ایجاد commitها استفاده شد؛ اجرای محلی ادعا نمی‌شود. CI باید روی HEAD جدید کامل و سبز شود.
+
+
+### تکمیل regression برای readiness در SQL Server — 2026-11-21
+
+- تست HTTP جدید در `VendorCustomerMutationHttpIntegrationTests` با Host واقعی و SQL Server موقت، GET مجاز readiness را اجرا می‌کند و 200، CustomerId، `customerRegistration=Ready` و `payment=NotApplicable` را assert می‌کند.
+- این تست query translation و projectionهای endpoint را پوشش می‌دهد؛ تست جداگانهٔ route registration همچنان 401 anonymous را اثبات می‌کند.
+- شناسه ناشناخته در resource evaluator فعلی پیش از handler به 403 می‌رسد؛ 404 انتظار نمی‌رود. پوشش منفی 403 اختصاصی هنوز باقی است.
+- اجرای محلی انجام نشده؛ CI روی HEAD جدید مرجع اعتبارسنجی است.
+
+
+- **Resource authorization regression:** تست SQL Server برای شناسهٔ Customer ناشناخته پاسخ 403 را نیز assert می‌کند؛ رفتار موجود عمداً وجود Customer را قبل از handler بررسی می‌کند.
+
+
+## 2026-11-21 — هم‌دامنه‌سازی Payment readiness با آخرین Order (#228، PR #741)
+
+- **یافتهٔ ریشه‌ای:** readiness پرداخت‌ها را از همه سفارش‌های Customer aggregate می‌کرد ولی شماره سفارش آخر را نمایش می‌داد؛ یک پرداخت قدیمی می‌توانست سفارش جدیدِ پرداخت‌نشده را Ready کند.
+- **اصلاح:** endpoint فقط آخرین Order و پرداخت‌های همان Order را query می‌کند؛ stage Payment همان OrderNumber را به‌عنوان ReferenceId نمایش می‌دهد.
+- **Regression SQL Server:** دو سفارش برای یک Customer؛ پرداخت Verified فقط روی سفارش قدیمی و هیچ پرداختی روی سفارش جدید. انتظار: سفارش/Payment مرجع به آخرین سفارش اشاره کند و وضعیت Payment برابر Pending باشد.
+- **مرز:** Ready به معنی وجود پرداخت تأییدشده برای آخرین سفارش است، نه تسویه کامل؛ این مرحله به‌هیچ‌وجه گیت صدور Amendment نیست (D-108).
+- **اعتبارسنجی:** اجرای محلی انجام نشده؛ CI روی HEAD جدید باید نتیجه را مشخص کند.
+
+
+- **بازبینی compile-time:** aliasهای projection آخرین Order با نام‌های مورد انتظار snapshot هم‌راستا شدند؛ build/SQL regression تا پایان CI روی HEAD جدید تأییدشده محسوب نمی‌شود.
+
+
+## 2026-11-21 — رفع race در انتخاب مشتری Vendor Lifecycle Readiness (#228، PR #741)
+
+- **یافتهٔ ریشه‌ای:** `loadReadiness` به `busy` وابسته بود و با `if (busy) return` انتخاب دوم را حین درخواست اول نادیده می‌گرفت؛ پاسخ مشتری اول می‌توانست با انتخاب بصری مشتری دوم ناسازگار شود.
+- **TDD:** commit تستی `6857ebe40cdbfd8423a866c91f67aa4dfb58df20`؛ Vendor CI run `44886468525` در job `build-test-package` همان regression را شکست داد چون درخواست readiness مشتری دوم ارسال نشد. این شکست مورد انتظار و ناشی از رفتار UI بود، نه build/SQL.
+- **Fix:** commit `d46d1979eb156acac1f0cc26f460c65f8ba21920`؛ sequence مستقل درخواست، اعمال پاسخ فقط برای آخرین انتخاب، و بی‌اثر کردن پاسخ‌های باقی‌مانده هنگام unmount. گارد `busy` حذف شد تا انتخاب جدید بتواند درخواست مستقل خود را آغاز کند.
+- **اعتبارسنجی پس از Fix:** CI روی HEAD اصلاح‌شده باید دوباره کامل شود؛ تا آن زمان نتیجهٔ سبز/Verified ثبت نمی‌شود.
+- **مرز:** فقط Vendor Web، تست UI و handoff/Work Log؛ بدون `Server/**`، Customer consumer/ACK، Customer migration، تغییر Schema یا secret.
+
+## 2026-11-21 — هماهنگ‌سازی Overview و Provisioning UI با D-107/D-109 (Stage 4)
+
+- ادعاهای متعارض در `App.tsx` اصلاح شد: «تأیید دو نفره فعال / Maker-Checker» به «تصمیم‌گیری مجوز-محور با کنترل مجوز و Audit؛ در V1 تک‌اپراتور مجاز است (D-109)» تبدیل شد؛ «امضای Production مسدود تا تأمین HSM واقعی» به «fail-closed تا تأیید Key Ceremony، ACL هویت سرویس، Trust Store، Rotation و آزمون بازیابی روی میزبان هدف؛ CNG/SoftwareProtected مجاز (D-107)؛ بدون fallback» تغییر کرد؛ «هیچ کلید نرم‌افزاری جایگزین نمی‌شود» و «قابل اجرا با HSM» و footer مربوطه حذف/اصلاح شدند.
+- در `ProvisioningForm.tsx` برچسب‌های «بررسی دو نفره» به «بررسی و تصمیم‌گیری» و دکمه «ارسال برای تأیید دو نفره» به «ارسال برای تصمیم‌گیری» تغییر کرد (D-109: گردش approval-queue حفظ شده اما دو اپراتور متفاوت الزام نیست).
+- تست‌های رگرسیون Vitest اضافه شد: نبود ادعای Maker/Checker فعال، نبود HSM به‌عنوان الزام امضا، حضور متن صریح SoftwareProtected/پیش‌نیاز نبودن HSM/عدم Production-Ready خودکار و fail-closed بودن تا تأیید کنترل‌های میزبان هدف. Vitest: ۸۳/۸۳، typecheck پاک، build موفق؛ bundleهای wwwroot با build واقعی هماهنگ شدند.

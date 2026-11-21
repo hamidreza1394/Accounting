@@ -304,12 +304,15 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
             (antiForgeryToken, _) = await GetAntiforgeryTokenAsync(client, cancellationToken);
 
             Guid customerId;
+            Guid otherCustomerId;
             byte[] initialRowVersion;
             await using (var scope = factory.Services.CreateAsyncScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
                 var customer = await db.Customers.SingleAsync(item => item.CustomerNumber.StartsWith("IT-"), cancellationToken);
+                var otherCustomer = await db.Customers.SingleAsync(item => item.CustomerNumber.StartsWith("OTHER-"), cancellationToken);
                 customerId = customer.Id;
+                otherCustomerId = otherCustomer.Id;
                 initialRowVersion = customer.RowVersion.ToArray();
             }
 
@@ -323,6 +326,97 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 var items = json.RootElement.GetProperty("items");
                 Assert.Single(items.EnumerateArray());
                 Assert.Equal(customerId.ToString("D"), items[0].GetProperty("customerId").GetString());
+            }
+
+            // Exercise the readiness endpoint through the real SQL Server-backed host. This
+            // covers EF translation, resource authorization and the persisted customer snapshot;
+            // the separate route test covers composition-root registration without a database.
+            using (var readinessResponse = await client.GetAsync(
+                $"/api/vendor/customers/{customerId:D}/readiness", cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, readinessResponse.StatusCode);
+                using var readinessJson = JsonDocument.Parse(
+                    await readinessResponse.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal(customerId, readinessJson.RootElement.GetProperty("customerId").GetGuid());
+                var stages = readinessJson.RootElement.GetProperty("stages");
+                var registration = stages.EnumerateArray().Single(stage =>
+                    stage.GetProperty("key").GetString() == "customerRegistration");
+                Assert.Equal("Ready", registration.GetProperty("status").GetString());
+                var payment = stages.EnumerateArray().Single(stage =>
+                    stage.GetProperty("key").GetString() == "payment");
+                Assert.Equal("NotApplicable", payment.GetProperty("status").GetString());
+            }
+
+            // Resource authorization resolves the persisted customer before the handler;
+            // an unknown ID is denied as 403 (not leaked as a 404 existence oracle).
+            using (var unknownCustomerResponse = await client.GetAsync(
+                $"/api/vendor/customers/{Guid.NewGuid():D}/readiness", cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.Forbidden, unknownCustomerResponse.StatusCode);
+            }
+
+            // A verified payment on an older order must not make the latest unpaid order Ready.
+            // The readiness row references the latest order, so its payment counts must use the
+            // same order rather than a customer-wide aggregate.
+            var olderOrderNumber = "OTHER-OLD-" + Guid.NewGuid().ToString("N")[..8];
+            var latestOrderNumber = "OTHER-NEW-" + Guid.NewGuid().ToString("N")[..8];
+            await using (var scope = factory.Services.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var users = scope.ServiceProvider.GetRequiredService<UserManager<VendorAdminUser>>();
+                var verifier = await users.FindByNameAsync(reviewerUserName);
+                Assert.NotNull(verifier);
+                var olderOrder = new VendorSalesOrder
+                {
+                    Id = Guid.NewGuid(),
+                    CustomerId = otherCustomerId,
+                    OrderNumber = olderOrderNumber,
+                    TotalAmount = 100m,
+                    CurrencyCode = "EUR",
+                    CreatedAtUtc = DateTimeOffset.UtcNow.AddDays(-2)
+                };
+                var latestOrder = new VendorSalesOrder
+                {
+                    Id = Guid.NewGuid(),
+                    CustomerId = otherCustomerId,
+                    OrderNumber = latestOrderNumber,
+                    TotalAmount = 200m,
+                    CurrencyCode = "EUR",
+                    CreatedAtUtc = DateTimeOffset.UtcNow.AddDays(-1)
+                };
+                db.SalesOrders.AddRange(olderOrder, latestOrder);
+                db.PaymentRecords.Add(new VendorPaymentRecord
+                {
+                    Id = Guid.NewGuid(),
+                    OrderId = olderOrder.Id,
+                    Amount = 100m,
+                    CurrencyCode = "EUR",
+                    Method = "bank-transfer",
+                    ExternalReference = "IT-OLD-VERIFIED",
+                    ClaimedPaidAtUtc = olderOrder.CreatedAtUtc,
+                    Status = VendorPaymentRecord.StatusVerified,
+                    VerifiedByUserId = verifier!.Id,
+                    VerifiedAtUtc = olderOrder.CreatedAtUtc,
+                    CreatedAtUtc = olderOrder.CreatedAtUtc
+                });
+                await db.SaveChangesAsync(cancellationToken);
+            }
+
+            using (var latestOrderReadinessResponse = await client.GetAsync(
+                $"/api/vendor/customers/{otherCustomerId:D}/readiness", cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, latestOrderReadinessResponse.StatusCode);
+                using var latestOrderReadiness = JsonDocument.Parse(
+                    await latestOrderReadinessResponse.Content.ReadAsStringAsync(cancellationToken));
+                var stages = latestOrderReadiness.RootElement.GetProperty("stages");
+                var commercialOrder = stages.EnumerateArray().Single(stage =>
+                    stage.GetProperty("key").GetString() == "commercialOrder");
+                Assert.Equal(latestOrderNumber, commercialOrder.GetProperty("referenceId").GetString());
+                var payment = stages.EnumerateArray().Single(stage =>
+                    stage.GetProperty("key").GetString() == "payment");
+                Assert.Equal("Pending", payment.GetProperty("status").GetString());
+                Assert.Equal(latestOrderNumber, payment.GetProperty("referenceId").GetString());
+                Assert.Contains("آخرین سفارش", payment.GetProperty("reason").GetString());
             }
 
             Guid installationIdForProvisioning;
