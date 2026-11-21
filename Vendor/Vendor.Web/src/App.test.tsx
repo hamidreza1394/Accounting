@@ -58,12 +58,24 @@ describe('Vendor control plane shell', () => {
 
     expect(await screen.findByRole('heading', { name: 'مرکز کنترل فرانو' })).toBeInTheDocument();
     expect(screen.getByText('وضعیت عملیاتی Vendor')).toBeInTheDocument();
-    expect(screen.getByText(/درخواست راه‌اندازی نسخه ۴، تأیید دو نفره، خروجی بسته و دریافت پاسخ امضاشده/)).toBeInTheDocument();
-    expect(screen.getByText(/امضای Production بسته و لایسنس تا تأمین HSM واقعی غیرفعال است/)).toBeInTheDocument();
+    // D-109: single-operator decisions are the V1 contract — the overview must not present
+    // two-person (Maker/Checker) review as an active V1 capability.
+    expect(screen.getByText(/درخواست راه‌اندازی نسخه ۴، تصمیم‌گیری مجوز-محور با ثبت Audit/)).toBeInTheDocument();
+    expect(screen.getByText(/همان اپراتور مجاز می‌تواند درخواست را تصمیم‌گیری کند و دو اپراتور متفاوت پیش‌نیاز نیست/)).toBeInTheDocument();
+    expect(screen.getByText('تصمیم‌گیری درخواست‌ها')).toBeInTheDocument();
+    expect(screen.queryByText(/Maker\/Checker برای صدور/)).not.toBeInTheDocument();
+    expect(screen.queryByText('تأیید دو نفره')).not.toBeInTheDocument();
+    // D-107: SoftwareProtected signing (Windows CNG/Certificate Store) is allowed in V1 and
+    // external HSM is NOT a prerequisite — but production readiness stays fail-closed until
+    // the real operational controls on the target host are verified.
+    expect(screen.getByText(/امضای SoftwareProtected با Windows CNG و Certificate Store/)).toBeInTheDocument();
+    expect(screen.getByText(/HSM\/KMS خارجی پیش‌نیاز نیست/)).toBeInTheDocument();
+    expect(screen.getByText(/SoftwareProtected به‌تنهایی Production Ready نیست/)).toBeInTheDocument();
+    expect(screen.getByText(/Key Ceremony واقعی، ACL هویت سرویس، Trust Store، Rotation گواهی و آزمون بازیابی روی میزبان هدف/)).toBeInTheDocument();
+    expect(screen.getByText('امضای Production')).toBeInTheDocument();
+    expect(screen.queryByText(/تا تأمین HSM واقعی/)).not.toBeInTheDocument();
     expect(screen.getByText('مدیریت تجاری')).toBeInTheDocument();
     expect(screen.getByText('Provisioning v4')).toBeInTheDocument();
-    expect(screen.getByText('تأیید دو نفره')).toBeInTheDocument();
-    expect(screen.getByText('امضای Production')).toBeInTheDocument();
     expect(screen.queryByText('نمای آماری در مرحله بعد')).not.toBeInTheDocument();
     expect(screen.queryByText('نسخه اولیه رابط')).not.toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith('/api/auth/change-password', expect.objectContaining({ method: 'POST', cache: 'no-store' }));

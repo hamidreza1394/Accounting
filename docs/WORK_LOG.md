@@ -3452,3 +3452,9 @@
 - **Fix:** commit `d46d1979eb156acac1f0cc26f460c65f8ba21920`؛ sequence مستقل درخواست، اعمال پاسخ فقط برای آخرین انتخاب، و بی‌اثر کردن پاسخ‌های باقی‌مانده هنگام unmount. گارد `busy` حذف شد تا انتخاب جدید بتواند درخواست مستقل خود را آغاز کند.
 - **اعتبارسنجی پس از Fix:** CI روی HEAD اصلاح‌شده باید دوباره کامل شود؛ تا آن زمان نتیجهٔ سبز/Verified ثبت نمی‌شود.
 - **مرز:** فقط Vendor Web، تست UI و handoff/Work Log؛ بدون `Server/**`، Customer consumer/ACK، Customer migration، تغییر Schema یا secret.
+
+## 2026-11-21 — هماهنگ‌سازی Overview و Provisioning UI با D-107/D-109 (Stage 4)
+
+- ادعاهای متعارض در `App.tsx` اصلاح شد: «تأیید دو نفره فعال / Maker-Checker» به «تصمیم‌گیری مجوز-محور با کنترل مجوز و Audit؛ در V1 تک‌اپراتور مجاز است (D-109)» تبدیل شد؛ «امضای Production مسدود تا تأمین HSM واقعی» به «fail-closed تا تأیید Key Ceremony، ACL هویت سرویس، Trust Store، Rotation و آزمون بازیابی روی میزبان هدف؛ CNG/SoftwareProtected مجاز (D-107)؛ بدون fallback» تغییر کرد؛ «هیچ کلید نرم‌افزاری جایگزین نمی‌شود» و «قابل اجرا با HSM» و footer مربوطه حذف/اصلاح شدند.
+- در `ProvisioningForm.tsx` برچسب‌های «بررسی دو نفره» به «بررسی و تصمیم‌گیری» و دکمه «ارسال برای تأیید دو نفره» به «ارسال برای تصمیم‌گیری» تغییر کرد (D-109: گردش approval-queue حفظ شده اما دو اپراتور متفاوت الزام نیست).
+- تست‌های رگرسیون Vitest اضافه شد: نبود ادعای Maker/Checker فعال، نبود HSM به‌عنوان الزام امضا، حضور متن صریح SoftwareProtected/پیش‌نیاز نبودن HSM/عدم Production-Ready خودکار و fail-closed بودن تا تأیید کنترل‌های میزبان هدف. Vitest: ۸۳/۸۳، typecheck پاک، build موفق؛ bundleهای wwwroot با build واقعی هماهنگ شدند.
