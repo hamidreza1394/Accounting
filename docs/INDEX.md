@@ -38,6 +38,7 @@
 | [`PRODUCT_REQUIREMENTS.md`](PRODUCT_REQUIREMENTS.md) | نیازمندی‌های محصول |
 | [`REQUIREMENTS_TRACEABILITY.md`](REQUIREMENTS_TRACEABILITY.md) | ردیابی نیازمندی ← کد/تست |
 | [`LICENSING.md`](LICENSING.md) | معماری و وضعیت لایسنس و فعال‌سازی |
+| [`VENDOR_LIFECYCLE_FINAL_AUDIT.md`](VENDOR_LIFECYCLE_FINAL_AUDIT.md) | ممیزی وضعیت Issueهای Vendor، تفکیک پیاده‌سازی از End-to-End/Production و اصلاح D-107/D-109 (2026-11-21) |
 | [`LICENSING_IMPLEMENTATION_PLAN.md`](LICENSING_IMPLEMENTATION_PLAN.md) | مرجع اجرایی D-059/D-060 و ترتیب Issues #389–#396 |
 | [`handoffs/ISSUE-384-customer-license-import.md`](handoffs/ISSUE-384-customer-license-import.md) | وضعیت واقعی نصب هویت، persistence و import لایسنس مشتری پس از ادغام PRهای #386–#388 و کارهای runtime باقیمانده |
 | [`handoffs/ISSUE-228-vendor-provisioning-state.md`](handoffs/ISSUE-228-vendor-provisioning-state.md) | وضعیت Vendor provisioning، binding لایسنس و شکاف CompanyReference در payload v2 |
