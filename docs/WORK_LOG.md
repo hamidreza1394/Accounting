@@ -3419,3 +3419,13 @@
 - شاخه Draft #742 با head جدید #741 همگام شد؛ فایل‌های Rules/Endpoint/Tests و handoff/index/worklog از همان head گرفته شدند. سند ممیزی Stage 5 نیز SHA جاری را منعکس می‌کند.
 - CI commit جدید #741 و CI شاخه همگام‌شده #742 باید از ابتدا کامل شوند؛ نتایج قبلی به این SHAهای جدید تعمیم داده نمی‌شوند.
 - هیچ Merge یا فعال‌سازی Production انجام نشد.
+
+
+## 2026-11-21 — هم‌راستاسازی اسناد جاری Vendor پس از PRهای #720 تا #740
+
+- **فایل‌های به‌روز‌شده:** `PROJECT_STATUS.md`، `ROADMAP.md`، `LICENSING_IMPLEMENTATION_PLAN.md`، `LICENSING_WORKFLOWS.md`، `LICENSING.md` و `Vendor/README.md`.
+- **اصلاح‌های factual:** #393 اکنون Order/Payment (#722)، UI (#738) و Amendment نصب‌محور (#739) را در main دارد؛ این موارد دیگر NotImplemented معرفی نمی‌شوند. #228/#392 Gate v5 خاموش و Migration مشتری روی DB واقعی اجرا نشده باقی می‌مانند.
+- **Signer:** D-107 و PR #720/#736 در اسناد جاری منعکس شدند؛ CNG/SoftwareProtected برای signer مرکزی License/Provisioning مجاز است و HSM/KMS خارجی blocker اجباری نیست. Key Ceremony و ACL/Trust/rotation عملیاتی هنوز تأیید نشده؛ D-055/D-057 مستقل‌اند.
+- **Approval:** D-109 از PR #724 (نه PR #723 که merge نشده) مرجع پیاده‌سازی self-approval Vendor V1 است.
+- **Workflow docs:** ادعای کلی «همه گردش‌کارها NotImplemented» اصلاح شد؛ وضعیت هر بخش تفکیک می‌شود. Work Log append-only است؛ snapshotهای تاریخی حذف یا بازنویسی نشده‌اند.
+- **اعتبارسنجی:** فقط تغییر مستندات؛ هیچ Build/Test محلی ادعا نمی‌شود. CI PR #742 پس از این commit باید دوباره اجرا و بررسی شود.
