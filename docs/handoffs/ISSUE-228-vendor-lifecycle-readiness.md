@@ -74,3 +74,6 @@
 - Assertions: پاسخ 200 برای Customer موجود و مجاز، تطبیق CustomerId، مرحلهٔ `customerRegistration=Ready` و `payment=NotApplicable` در نبود سفارش.
 - این تست query translation و projectionهای EF Core برای سفارش/پرداخت/لایسنس/نصب/Provisioning/Approval/Amendment را در SQL Server واقعی CI اجرا می‌کند.
 - قرارداد resource authorization فعلی برای شناسه ناشناخته قبل از handler به 403 می‌رسد؛ این باگ 404 نیست و تست‌ها باید همین رفتار را حفظ کنند. پوشش منفی اختصاصی 403 در این برش هنوز اضافه نشده است.
+
+
+- **Resource-boundary negative test:** همان integration test اکنون برای CustomerId تصادفی/ناشناخته نیز پاسخ 403 را assert می‌کند؛ مطابق evaluator فعلی، وجود Customer قبل از اجرای handler بررسی می‌شود و شناسهٔ ناشناخته نباید به پاسخ 404 قابل‌استفاده برای enumeration تبدیل شود.
