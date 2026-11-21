@@ -88,3 +88,13 @@
 
 
 - **بازبینی projection پس از اصلاح query:** نام فیلدهای anonymous projection با snapshot (`LatestOrderNumber` و `LatestOrderAtUtc`) هم‌نام نگه داشته شد تا mapping compile-time دقیق بماند؛ CI روی HEAD جدید باید build و SQL regression را تأیید کند.
+
+
+## اصلاح UI race در انتخاب مشتری — 2026-11-21
+
+- **علت ریشه‌ای:** `loadReadiness` به state محلی `busy` وابسته بود و هنگام درخواست اول، انتخاب مشتری دوم را با `if (busy) return` بی‌صدا نادیده می‌گرفت. در نتیجه دکمه انتخاب مشتری دوم تغییر می‌کرد، اما داده مشتری اول می‌توانست زیر عنوان انتخاب جدید نمایش داده شود.
+- **TDD / شاهد RED:** commit `6857ebe40cdbfd8423a866c91f67aa4dfb58df20` فقط تست regression را اضافه کرد. Vendor CI run [44886468525](https://github.com/hamidreza1394/Accounting/actions/runs/44886468525)، job `build-test-package`، همان تست را شکست داد: انتظار فراخوانی `/api/vendor/customers/c-2/readiness` برقرار نشد. این شکست دقیقاً گارد `busy` را اثبات کرد؛ شکست compile یا SQL نبود.
+- **اصلاح:** commit `d46d1979eb156acac1f0cc26f460c65f8ba21920` گارد `busy` را حذف کرد؛ sequence مستقل درخواست readiness اضافه شد تا فقط آخرین انتخاب اجازه تغییر state داشته باشد. درخواست‌های در حال اجرا هنگام unmount نیز با افزایش sequence بی‌اثر می‌شوند.
+- **Regression:** تست دو درخواست کنترل‌شده را با ترتیب پاسخ معکوس اجرا می‌کند و تضمین می‌کند پاسخ مشتری قدیمی عنوان/وضعیت انتخاب جدید را بازنویسی نکند.
+- **اعتبارسنجی پس از اصلاح:** هنوز در انتظار CI روی HEAD اصلاح‌شده است؛ هیچ نتیجه محلی یا سبز نهایی ادعا نمی‌شود.
+- **مرز:** فقط `Vendor.Web` و تست Vendor تغییر کردند؛ هیچ `Server/**`، Customer consumer، Customer migration، Vendor schema یا secret تغییر نکرد.
