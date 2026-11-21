@@ -86,6 +86,7 @@ export function VendorLifecycleReadiness({ permissions }: { permissions: string[
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const listRequestId = useRef(0);
+  const readinessRequestId = useRef(0);
 
   const loadCustomers = useCallback(async () => {
     if (!canRead) { setError('مجوز مشاهده مشتریان را ندارید.'); setLoading(false); return; }
@@ -107,21 +108,33 @@ export function VendorLifecycleReadiness({ permissions }: { permissions: string[
     }
   }, [canRead]);
 
-  useEffect(() => { void loadCustomers(); }, [loadCustomers]);
+  useEffect(() => {
+    void loadCustomers();
+    return () => {
+      listRequestId.current++;
+      readinessRequestId.current++;
+    };
+  }, [loadCustomers]);
 
   const loadReadiness = useCallback(async (customer: CustomerOption) => {
-    if (busy) return;
+    const requestId = ++readinessRequestId.current;
+    setSelected(customer);
     setBusy(true);
     setError('');
     setReadiness(null);
     try {
       const response = await fetch(`/api/vendor/customers/${customer.id}/readiness`, { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } });
       if (!response.ok) throw new Error(apiMessage(response.status));
-      setReadiness(await response.json() as ReadinessResponse);
+      const data = await response.json() as ReadinessResponse;
+      if (readinessRequestId.current === requestId) setReadiness(data);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'دریافت وضعیت چرخه ناموفق بود.');
-    } finally { setBusy(false); }
-  }, [busy]);
+      if (readinessRequestId.current === requestId) {
+        setError(reason instanceof Error ? reason.message : 'دریافت وضعیت چرخه ناموفق بود.');
+      }
+    } finally {
+      if (readinessRequestId.current === requestId) setBusy(false);
+    }
+  }, []);
 
   const filtered = search.trim()
     ? customers.filter(customer =>
@@ -172,7 +185,7 @@ export function VendorLifecycleReadiness({ permissions }: { permissions: string[
               : <ul className="mt-3 grid gap-1 max-h-64 overflow-y-auto">
                 {filtered.map(customer => <li key={customer.id}>
                   <button type="button" className={'w-full rounded-md border border-border px-3 py-2 text-start text-sm hover:bg-accent ' + (selected?.id === customer.id ? 'bg-accent' : '')}
-                    onClick={() => { setSelected(customer); void loadReadiness(customer); }}>
+                    onClick={() => { void loadReadiness(customer); }}>
                     <b>{customer.displayName ?? customer.legalName}</b>
                     <span className="ms-2 font-mono text-xs text-muted-foreground" dir="ltr">{customer.customerNumber}</span>
                   </button>
