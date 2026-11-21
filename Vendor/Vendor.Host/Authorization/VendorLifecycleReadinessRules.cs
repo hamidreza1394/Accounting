@@ -70,15 +70,18 @@ public static class VendorLifecycleReadinessRules
             ? new LifecycleStage("payment", NotApplicable, "بدون سفارش، پرداخت موضوعیت ندارد.")
             : s.VerifiedPayments > 0
                 ? new LifecycleStage("payment", Ready,
-                    $"{s.VerifiedPayments} پرداخت تأییدشده؛ مانده بدهی مستقل از Amendment است.",
-                    ChangedAtUtc: s.LatestOrderAtUtc)
+                    $"{s.VerifiedPayments} پرداخت تأییدشده برای آخرین سفارش؛ مانده بدهی مستقل از Amendment است.",
+                    ReferenceId: s.LatestOrderNumber, ChangedAtUtc: s.LatestOrderAtUtc)
                 : s.RecordedPayments > 0
                     ? new LifecycleStage("payment", Pending, "پرداخت آخرین سفارش ثبت شده اما هنوز تأیید مستقل نشده است.",
+                        ReferenceId: s.LatestOrderNumber,
                         CorrectiveAction: "درخواست تأیید پرداخت را از صفحه «فروش و پرداخت» ارسال کنید.")
                     : s.RejectedPayments > 0
                         ? new LifecycleStage("payment", Pending, "پرداخت آخرین سفارش رد شده است؛ وضعیت همچنان مستقل از Amendment است.",
+                            ReferenceId: s.LatestOrderNumber,
                             CorrectiveAction: "پرداخت اصلاح‌شده جدیدی ثبت کنید.")
                         : new LifecycleStage("payment", Pending, "برای آخرین سفارش پرداختی ثبت نشده است.",
+                            ReferenceId: s.LatestOrderNumber,
                             CorrectiveAction: "پرداخت را با مرجع رسید ثبت کنید."));
 
         stages.Add(s.PendingApprovals > 0
