@@ -33,19 +33,21 @@ public static class VendorLifecycleReadinessEndpoints
                 .SingleOrDefaultAsync(ct);
             if (customer is null) return Results.NotFound();
 
+            // Read payment counts from the latest order only. Aggregating payments across all
+            // orders while displaying the latest order number can falsely mark a new unpaid order
+            // Ready because an older order happened to have a verified payment.
             var orderStats = await db.SalesOrders.AsNoTracking()
                 .Where(item => item.CustomerId == customerId)
-                .GroupBy(item => item.CustomerId)
-                .Select(group => new
+                .OrderByDescending(item => item.CreatedAtUtc).ThenBy(item => item.Id)
+                .Select(order => new
                 {
-                    HasOrder = true,
-                    VerifiedPayments = group.Sum(order => order.Payments.Count(payment => payment.Status == VendorPaymentRecord.StatusVerified)),
-                    RecordedPayments = group.Sum(order => order.Payments.Count(payment => payment.Status == VendorPaymentRecord.StatusRecorded)),
-                    RejectedPayments = group.Sum(order => order.Payments.Count(payment => payment.Status == VendorPaymentRecord.StatusRejected)),
-                    LatestOrderNumber = group.OrderByDescending(order => order.CreatedAtUtc).First().OrderNumber,
-                    LatestOrderAtUtc = group.Max(order => order.CreatedAtUtc)
+                    order.OrderNumber,
+                    order.CreatedAtUtc,
+                    VerifiedPayments = order.Payments.Count(payment => payment.Status == VendorPaymentRecord.StatusVerified),
+                    RecordedPayments = order.Payments.Count(payment => payment.Status == VendorPaymentRecord.StatusRecorded),
+                    RejectedPayments = order.Payments.Count(payment => payment.Status == VendorPaymentRecord.StatusRejected)
                 })
-                .SingleOrDefaultAsync(ct);
+                .FirstOrDefaultAsync(ct);
 
             var licenseStats = await db.Licenses.AsNoTracking()
                 .Where(item => item.CustomerId == customerId)
