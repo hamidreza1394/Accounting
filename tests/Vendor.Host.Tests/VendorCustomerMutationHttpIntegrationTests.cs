@@ -325,6 +325,25 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                 Assert.Equal(customerId.ToString("D"), items[0].GetProperty("customerId").GetString());
             }
 
+            // Exercise the readiness endpoint through the real SQL Server-backed host. This
+            // covers EF translation, resource authorization and the persisted customer snapshot;
+            // the separate route test covers composition-root registration without a database.
+            using (var readinessResponse = await client.GetAsync(
+                $"/api/vendor/customers/{customerId:D}/readiness", cancellationToken))
+            {
+                Assert.Equal(HttpStatusCode.OK, readinessResponse.StatusCode);
+                using var readinessJson = JsonDocument.Parse(
+                    await readinessResponse.Content.ReadAsStringAsync(cancellationToken));
+                Assert.Equal(customerId, readinessJson.RootElement.GetProperty("customerId").GetGuid());
+                var stages = readinessJson.RootElement.GetProperty("stages");
+                var registration = stages.EnumerateArray().Single(stage =>
+                    stage.GetProperty("key").GetString() == "customerRegistration");
+                Assert.Equal("Ready", registration.GetProperty("status").GetString());
+                var payment = stages.EnumerateArray().Single(stage =>
+                    stage.GetProperty("key").GetString() == "payment");
+                Assert.Equal("NotApplicable", payment.GetProperty("status").GetString());
+            }
+
             Guid installationIdForProvisioning;
             Guid otherInstallationIdForProvisioning;
             Guid provisioningLicenseId;
