@@ -3420,3 +3420,11 @@
 - **Regression:** `VendorLifecycleReadinessRouteTests` با WebApplicationFactory درخواست anonymous به مسیر واقعی می‌فرستد و 401 را assert می‌کند؛ route ثبت‌نشده به‌جای آن 404 می‌داد. این تست DB و signer را مصرف نمی‌کند.
 - **مرز پوشش:** query translation و resource-level authorization با SQL Server هنوز تست اختصاصی می‌خواهند؛ این موارد به‌عنوان باقی‌مانده ثبت شدند.
 - **اعتبارسنجی:** فقط GitHub contents API برای ایجاد commitها استفاده شد؛ اجرای محلی ادعا نمی‌شود. CI باید روی HEAD جدید کامل و سبز شود.
+
+
+### تکمیل regression برای readiness در SQL Server — 2026-11-21
+
+- تست HTTP جدید در `VendorCustomerMutationHttpIntegrationTests` با Host واقعی و SQL Server موقت، GET مجاز readiness را اجرا می‌کند و 200، CustomerId، `customerRegistration=Ready` و `payment=NotApplicable` را assert می‌کند.
+- این تست query translation و projectionهای endpoint را پوشش می‌دهد؛ تست جداگانهٔ route registration همچنان 401 anonymous را اثبات می‌کند.
+- شناسه ناشناخته در resource evaluator فعلی پیش از handler به 403 می‌رسد؛ 404 انتظار نمی‌رود. پوشش منفی 403 اختصاصی هنوز باقی است.
+- اجرای محلی انجام نشده؛ CI روی HEAD جدید مرجع اعتبارسنجی است.
