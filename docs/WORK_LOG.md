@@ -3428,3 +3428,6 @@
 - این تست query translation و projectionهای endpoint را پوشش می‌دهد؛ تست جداگانهٔ route registration همچنان 401 anonymous را اثبات می‌کند.
 - شناسه ناشناخته در resource evaluator فعلی پیش از handler به 403 می‌رسد؛ 404 انتظار نمی‌رود. پوشش منفی 403 اختصاصی هنوز باقی است.
 - اجرای محلی انجام نشده؛ CI روی HEAD جدید مرجع اعتبارسنجی است.
+
+
+- **Resource authorization regression:** تست SQL Server برای شناسهٔ Customer ناشناخته پاسخ 403 را نیز assert می‌کند؛ رفتار موجود عمداً وجود Customer را قبل از handler بررسی می‌کند.
