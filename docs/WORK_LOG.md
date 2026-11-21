@@ -3443,3 +3443,12 @@
 
 
 - **بازبینی compile-time:** aliasهای projection آخرین Order با نام‌های مورد انتظار snapshot هم‌راستا شدند؛ build/SQL regression تا پایان CI روی HEAD جدید تأییدشده محسوب نمی‌شود.
+
+
+## 2026-11-21 — رفع race در انتخاب مشتری Vendor Lifecycle Readiness (#228، PR #741)
+
+- **یافتهٔ ریشه‌ای:** `loadReadiness` به `busy` وابسته بود و با `if (busy) return` انتخاب دوم را حین درخواست اول نادیده می‌گرفت؛ پاسخ مشتری اول می‌توانست با انتخاب بصری مشتری دوم ناسازگار شود.
+- **TDD:** commit تستی `6857ebe40cdbfd8423a866c91f67aa4dfb58df20`؛ Vendor CI run `44886468525` در job `build-test-package` همان regression را شکست داد چون درخواست readiness مشتری دوم ارسال نشد. این شکست مورد انتظار و ناشی از رفتار UI بود، نه build/SQL.
+- **Fix:** commit `d46d1979eb156acac1f0cc26f460c65f8ba21920`؛ sequence مستقل درخواست، اعمال پاسخ فقط برای آخرین انتخاب، و بی‌اثر کردن پاسخ‌های باقی‌مانده هنگام unmount. گارد `busy` حذف شد تا انتخاب جدید بتواند درخواست مستقل خود را آغاز کند.
+- **اعتبارسنجی پس از Fix:** CI روی HEAD اصلاح‌شده باید دوباره کامل شود؛ تا آن زمان نتیجهٔ سبز/Verified ثبت نمی‌شود.
+- **مرز:** فقط Vendor Web، تست UI و handoff/Work Log؛ بدون `Server/**`، Customer consumer/ACK، Customer migration، تغییر Schema یا secret.
