@@ -3432,7 +3432,6 @@
 
 - **Resource authorization regression:** تست SQL Server برای شناسهٔ Customer ناشناخته پاسخ 403 را نیز assert می‌کند؛ رفتار موجود عمداً وجود Customer را قبل از handler بررسی می‌کند.
 
-
 ## 2026-11-21 — هم‌دامنه‌سازی Payment readiness با آخرین Order (#228، PR #741)
 
 - **یافتهٔ ریشه‌ای:** readiness پرداخت‌ها را از همه سفارش‌های Customer aggregate می‌کرد ولی شماره سفارش آخر را نمایش می‌داد؛ یک پرداخت قدیمی می‌توانست سفارش جدیدِ پرداخت‌نشده را Ready کند.
@@ -3443,7 +3442,6 @@
 
 
 - **بازبینی compile-time:** aliasهای projection آخرین Order با نام‌های مورد انتظار snapshot هم‌راستا شدند؛ build/SQL regression تا پایان CI روی HEAD جدید تأییدشده محسوب نمی‌شود.
-
 
 ## 2026-11-21 — رفع race در انتخاب مشتری Vendor Lifecycle Readiness (#228، PR #741)
 
@@ -3458,3 +3456,20 @@
 - ادعاهای متعارض در `App.tsx` اصلاح شد: «تأیید دو نفره فعال / Maker-Checker» به «تصمیم‌گیری مجوز-محور با کنترل مجوز و Audit؛ در V1 تک‌اپراتور مجاز است (D-109)» تبدیل شد؛ «امضای Production مسدود تا تأمین HSM واقعی» به «fail-closed تا تأیید Key Ceremony، ACL هویت سرویس، Trust Store، Rotation و آزمون بازیابی روی میزبان هدف؛ CNG/SoftwareProtected مجاز (D-107)؛ بدون fallback» تغییر کرد؛ «هیچ کلید نرم‌افزاری جایگزین نمی‌شود» و «قابل اجرا با HSM» و footer مربوطه حذف/اصلاح شدند.
 - در `ProvisioningForm.tsx` برچسب‌های «بررسی دو نفره» به «بررسی و تصمیم‌گیری» و دکمه «ارسال برای تأیید دو نفره» به «ارسال برای تصمیم‌گیری» تغییر کرد (D-109: گردش approval-queue حفظ شده اما دو اپراتور متفاوت الزام نیست).
 - تست‌های رگرسیون Vitest اضافه شد: نبود ادعای Maker/Checker فعال، نبود HSM به‌عنوان الزام امضا، حضور متن صریح SoftwareProtected/پیش‌نیاز نبودن HSM/عدم Production-Ready خودکار و fail-closed بودن تا تأیید کنترل‌های میزبان هدف. Vitest: ۸۳/۸۳، typecheck پاک، build موفق؛ bundleهای wwwroot با build واقعی هماهنگ شدند.
+
+## 2026-11-21 — همگام‌سازی Stage 5 با آخرین اصلاح readiness
+
+- PR #741 به commit `bdcc306caa3f65d25ff457a0ff76e5f2632dfb52` رسید؛ علاوه بر state mapping، متن Entitlement اصلاح شد تا وجود `Status=Issued` به‌اشتباه فعال‌بودن runtime تعبیر نشود.
+- شاخه Draft #742 با head جدید #741 همگام شد؛ فایل‌های Rules/Endpoint/Tests و handoff/index/worklog از همان head گرفته شدند. سند ممیزی Stage 5 نیز SHA جاری را منعکس می‌کند.
+- CI commit جدید #741 و CI شاخه همگام‌شده #742 باید از ابتدا کامل شوند؛ نتایج قبلی به این SHAهای جدید تعمیم داده نمی‌شوند.
+- هیچ Merge یا فعال‌سازی Production انجام نشد.
+
+## 2026-11-21 — هم‌راستاسازی اسناد جاری Vendor پس از PRهای #720 تا #740
+
+- **فایل‌های به‌روز‌شده:** `PROJECT_STATUS.md`، `ROADMAP.md`، `LICENSING_IMPLEMENTATION_PLAN.md`، `LICENSING_WORKFLOWS.md`، `LICENSING.md` و `Vendor/README.md`.
+- **اصلاح‌های factual:** #393 اکنون Order/Payment (#722)، UI (#738) و Amendment نصب‌محور (#739) را در main دارد؛ این موارد دیگر NotImplemented معرفی نمی‌شوند. #228/#392 Gate v5 خاموش و Migration مشتری روی DB واقعی اجرا نشده باقی می‌مانند.
+- **Signer:** D-107 و PR #720/#736 در اسناد جاری منعکس شدند؛ CNG/SoftwareProtected برای signer مرکزی License/Provisioning مجاز است و HSM/KMS خارجی blocker اجباری نیست. Key Ceremony و ACL/Trust/rotation عملیاتی هنوز تأیید نشده؛ D-055/D-057 مستقل‌اند.
+- **Approval:** D-109 از PR #724 (نه PR #723 که merge نشده) مرجع پیاده‌سازی self-approval Vendor V1 است.
+- **Workflow docs:** ادعای کلی «همه گردش‌کارها NotImplemented» اصلاح شد؛ وضعیت هر بخش تفکیک می‌شود. Work Log append-only است؛ snapshotهای تاریخی حذف یا بازنویسی نشده‌اند.
+- **اعتبارسنجی:** فقط تغییر مستندات؛ هیچ Build/Test محلی ادعا نمی‌شود. CI PR #742 پس از این commit باید دوباره اجرا و بررسی شود.
+
