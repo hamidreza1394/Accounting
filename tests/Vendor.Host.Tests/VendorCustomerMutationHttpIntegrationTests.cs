@@ -363,6 +363,9 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
             await using (var scope = factory.Services.CreateAsyncScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<VendorDbContext>();
+                var users = scope.ServiceProvider.GetRequiredService<UserManager<VendorAdminUser>>();
+                var verifier = await users.FindByNameAsync(reviewerUserName);
+                Assert.NotNull(verifier);
                 var olderOrder = new VendorSalesOrder
                 {
                     Id = Guid.NewGuid(),
@@ -392,6 +395,7 @@ public sealed partial class VendorCustomerMutationHttpIntegrationTests
                     ExternalReference = "IT-OLD-VERIFIED",
                     ClaimedPaidAtUtc = olderOrder.CreatedAtUtc,
                     Status = VendorPaymentRecord.StatusVerified,
+                    VerifiedByUserId = verifier!.Id,
                     VerifiedAtUtc = olderOrder.CreatedAtUtc,
                     CreatedAtUtc = olderOrder.CreatedAtUtc
                 });
