@@ -43,6 +43,7 @@ public static class VendorLifecycleReadinessRules
         string? ProvisioningFailureCode,
         string? AcknowledgementResult,
         DateTimeOffset? ProvisioningUpdatedAtUtc,
+        DateTimeOffset? ProvisioningDeliveredAtUtc,
         int PendingApprovals,
         string? LatestAmendmentStatus,
         string? LatestAmendmentFailureCode,
@@ -113,71 +114,138 @@ public static class VendorLifecycleReadinessRules
                     CorrectiveAction: "با پشتیبانی فنی بررسی کنید.")
             });
 
-        stages.Add(s.ProvisioningStatus is null
-            ? new LifecycleStage("signing", NotApplicable)
-            : s.ProvisioningStatus == "AwaitingSigner"
-                ? new LifecycleStage("signing", Blocked,
-                    Reason: "امضای بسته Provisioning در دسترس نیست." +
-                        (s.ProvisioningFailureCode is null ? string.Empty : $" ({s.ProvisioningFailureCode})"),
-                    ChangedAtUtc: s.ProvisioningUpdatedAtUtc,
-                    CorrectiveAction: "تأمین HSM/Signer واقعی را بررسی کنید (D-056/D-107).")
-                : new LifecycleStage("signing", Ready, "بسته Provisioning امضا شده است.",
-                    ChangedAtUtc: s.ProvisioningUpdatedAtUtc));
+        stages.Add(s.ProvisioningStatus switch
+        {
+            null => new LifecycleStage("signing", NotApplicable),
+            "AwaitingSigner" => new LifecycleStage("signing", Pending,
+                "بسته هنوز با موفقیت امضا نشده است.",
+                ChangedAtUtc: s.ProvisioningUpdatedAtUtc,
+                CorrectiveAction: "درخواست تأیید را بررسی کنید؛ در صورت خطای امضا، signer پیکربندی‌شده را بررسی کنید (D-107)."),
+            "PendingDelivery" or "Confirmed" or "Failed" => new LifecycleStage("signing", Ready,
+                "بسته Provisioning با موفقیت امضا شده است.",
+                ChangedAtUtc: s.ProvisioningUpdatedAtUtc),
+            _ => new LifecycleStage("signing", Failed,
+                $"وضعیت Provisioning برای مرحله امضا ناشناخته است ({s.ProvisioningStatus}).",
+                ChangedAtUtc: s.ProvisioningUpdatedAtUtc,
+                CorrectiveAction: "وضعیت ذخیره‌شده را بررسی کنید؛ از فرض موفقیت امضا خودداری کنید.")
+        });
 
         stages.Add(s.LatestAmendmentStatus == "Issued"
             ? new LifecycleStage("signatureVerification", Ready,
                 "کاندید Amendment از آخرین پاکت امضاشده و verify‌شده بازسازی شد.")
-            : new LifecycleStage("signatureVerification", NotApplicable));
+            : s.ProvisioningStatus is "PendingDelivery" or "Confirmed" or "Failed"
+                ? new LifecycleStage("signatureVerification", Ready,
+                    "امضای بسته Provisioning پیش از ثبت وضعیت نهایی verify شده است.")
+                : new LifecycleStage("signatureVerification", NotApplicable));
 
-        stages.Add(s.ProvisioningStatus is "Signed" or "Confirmed" or "Rejected"
-            ? new LifecycleStage("delivery", Ready, "بسته امضاشده برای خروجی و تحویل آماده است.",
-                ChangedAtUtc: s.ProvisioningUpdatedAtUtc)
-            : s.ProvisioningStatus == "AwaitingSigner"
-                ? new LifecycleStage("delivery", Pending, "تحویل پس از امضا انجام می‌شود.")
-                : new LifecycleStage("delivery", NotApplicable));
-
-        stages.Add(s.AcknowledgementResult is null
-            ? (s.ProvisioningStatus == "Confirmed"
-                ? new LifecycleStage("ack", Pending, "وضعیت Confirmed است اما نتیجه ACK ثبت نشده.")
-                : new LifecycleStage("ack", NotApplicable))
-            : s.AcknowledgementResult == "Applied"
-                ? new LifecycleStage("ack", Ready, "پاسخ امضاشده مشتری «اعمال‌شده» تأیید شد.",
-                    ChangedAtUtc: s.ProvisioningUpdatedAtUtc)
-                : new LifecycleStage("ack", Failed,
-                    Reason: $"پاسخ مشتری «{s.AcknowledgementResult}» بود." +
-                        (s.ProvisioningFailureCode is null ? string.Empty : $" ({s.ProvisioningFailureCode})"),
+        stages.Add(s.ProvisioningStatus switch
+        {
+            null => new LifecycleStage("delivery", NotApplicable),
+            "AwaitingSigner" => new LifecycleStage("delivery", Pending,
+                "تحویل پس از تکمیل امضا امکان‌پذیر است.",
+                ChangedAtUtc: s.ProvisioningUpdatedAtUtc),
+            "PendingDelivery" when s.ProvisioningDeliveredAtUtc is null =>
+                new LifecycleStage("delivery", Pending,
+                    "بسته امضا شده اما هنوز زمان تحویل ثبت نشده است.",
                     ChangedAtUtc: s.ProvisioningUpdatedAtUtc,
-                    CorrectiveAction: "علت رد در بسته را اصلاح و درخواست Provisioning جدید ثبت کنید."));
+                    CorrectiveAction: "بسته را از مسیر مجاز Export و به مشتری تحویل دهید."),
+            "PendingDelivery" => new LifecycleStage("delivery", Ready,
+                "زمان تحویل بسته ثبت شده؛ پاسخ ACK مشتری در انتظار است.",
+                ChangedAtUtc: s.ProvisioningDeliveredAtUtc),
+            "Confirmed" or "Failed" => new LifecycleStage("delivery", Ready,
+                "بسته تحویل شده و پاسخ مشتری ثبت شده است.",
+                ChangedAtUtc: s.ProvisioningUpdatedAtUtc),
+            _ => new LifecycleStage("delivery", Failed,
+                $"وضعیت Provisioning برای مرحله تحویل ناشناخته است ({s.ProvisioningStatus}).",
+                ChangedAtUtc: s.ProvisioningUpdatedAtUtc,
+                CorrectiveAction: "وضعیت ذخیره‌شده و تاریخچه تحویل را بررسی کنید.")
+        });
 
-        stages.Add(s.HasInstallations
-            ? new LifecycleStage("installation", Ready,
-                $"نصب {s.LatestInstallationCode} با وضعیت {s.LatestInstallationStatus} ثبت شده است.",
-                ReferenceId: s.LatestInstallationCode)
-            : new LifecycleStage("installation", Pending, "نصبی برای این مشتری ثبت نشده است.",
-                CorrectiveAction: "در صفحه مشتریان یک نصب ایجاد کنید."));
+        stages.Add(s.AcknowledgementResult switch
+        {
+            "Applied" or "AlreadyApplied" => new LifecycleStage("ack", Ready,
+                "پاسخ امضاشده مشتری اعمال یا قبلاً اعمال‌شده تأیید شد.",
+                ChangedAtUtc: s.ProvisioningUpdatedAtUtc),
+            "Rejected" => new LifecycleStage("ack", Failed,
+                Reason: $"پاسخ مشتری «Rejected» بود." +
+                    (s.ProvisioningFailureCode is null ? string.Empty : $" ({s.ProvisioningFailureCode})"),
+                ChangedAtUtc: s.ProvisioningUpdatedAtUtc,
+                CorrectiveAction: "علت رد در بسته را اصلاح و درخواست Provisioning جدید ثبت کنید."),
+            null when s.ProvisioningDeliveredAtUtc is not null =>
+                new LifecycleStage("ack", Pending,
+                    "بسته تحویل شده اما ACK معتبر مشتری هنوز ثبت نشده است.",
+                    ChangedAtUtc: s.ProvisioningDeliveredAtUtc,
+                    CorrectiveAction: "پس از Import در میزبان مشتری، ACK امضاشده را دریافت کنید."),
+            null when s.ProvisioningStatus is "Confirmed" or "Failed" =>
+                new LifecycleStage("ack", Failed,
+                    "وضعیت نهایی Provisioning بدون نتیجه ACK ذخیره شده است.",
+                    ChangedAtUtc: s.ProvisioningUpdatedAtUtc,
+                    CorrectiveAction: "سازگاری وضعیت و رکورد ACK را بررسی کنید."),
+            null => new LifecycleStage("ack", NotApplicable),
+            _ => new LifecycleStage("ack", Failed,
+                $"نتیجه ACK ناشناخته است ({s.AcknowledgementResult}).",
+                ChangedAtUtc: s.ProvisioningUpdatedAtUtc,
+                CorrectiveAction: "نتیجه ACK ذخیره‌شده را بررسی کنید.")
+        });
 
-        stages.Add(s.AcknowledgementResult == "Applied"
+        stages.Add(!s.HasInstallations
+            ? new LifecycleStage("installation", Pending, "نصبی برای این مشتری ثبت نشده است.",
+                CorrectiveAction: "در صفحه مشتریان یک نصب ایجاد کنید.")
+            : s.LatestInstallationStatus switch
+            {
+                "Active" => new LifecycleStage("installation", Ready,
+                    $"نصب {s.LatestInstallationCode} فعال است.",
+                    ReferenceId: s.LatestInstallationCode),
+                "Suspended" => new LifecycleStage("installation", Blocked,
+                    $"نصب {s.LatestInstallationCode} تعلیق شده است.",
+                    ReferenceId: s.LatestInstallationCode,
+                    CorrectiveAction: "پس از رفع علت تعلیق، وضعیت نصب را از مسیر تأیید مجاز فعال کنید."),
+                _ => new LifecycleStage("installation", Failed,
+                    $"وضعیت نصب ناشناخته یا نامعتبر است ({s.LatestInstallationStatus ?? "null"}).",
+                    ReferenceId: s.LatestInstallationCode,
+                    CorrectiveAction: "وضعیت ذخیره‌شده نصب را بررسی کنید.")
+            });
+
+        stages.Add(s.AcknowledgementResult is "Applied" or "AlreadyApplied"
             ? new LifecycleStage("bootstrap", Ready,
                 "مدیر اولیه مشتری ایجاد شد؛ تکمیل Enrollment (تعیین رمز) در سمت مشتری انجام می‌شود.")
-            : s.ProvisioningStatus == "Confirmed" && s.HasProvisioningRequest
-                ? new LifecycleStage("bootstrap", Pending, "پاسخ مشتری هنوز «اعمال‌شده» نشده است.")
-                : new LifecycleStage("bootstrap", NotApplicable));
+            : s.AcknowledgementResult == "Rejected"
+                ? new LifecycleStage("bootstrap", Failed,
+                    "درخواست راه‌اندازی توسط مشتری رد شده و Bootstrap تکمیل نشده است.",
+                    ChangedAtUtc: s.ProvisioningUpdatedAtUtc,
+                    CorrectiveAction: "علت رد را رفع و درخواست Provisioning جدید ثبت کنید.")
+                : s.ProvisioningDeliveredAtUtc is not null && s.AcknowledgementResult is null
+                    ? new LifecycleStage("bootstrap", Pending,
+                        "بسته تحویل شده؛ تکمیل Bootstrap پس از اعمال بسته و ACK معتبر تأیید می‌شود.")
+                    : new LifecycleStage("bootstrap", NotApplicable));
 
         stages.Add(s.ProvisioningStatus switch
         {
             null => new LifecycleStage("provisioning", NotApplicable),
-            "Confirmed" => new LifecycleStage("provisioning", Ready, "چرخه Provisioning با ACK معتبر بسته شد.",
+            "AwaitingSigner" => new LifecycleStage("provisioning", Pending,
+                "درخواست در انتظار تأیید و امضای بسته است.",
                 ChangedAtUtc: s.ProvisioningUpdatedAtUtc),
+            "PendingDelivery" when s.ProvisioningDeliveredAtUtc is null =>
+                new LifecycleStage("provisioning", Pending,
+                    "بسته امضا شده اما هنوز تحویل نشده است.",
+                    ChangedAtUtc: s.ProvisioningUpdatedAtUtc,
+                    CorrectiveAction: "بسته را از مسیر مجاز Export و به مشتری تحویل دهید."),
             "PendingDelivery" => new LifecycleStage("provisioning", Pending,
-                "بسته امضا شده اما هنوز تحویل/ACK نشده است.",
-                CorrectiveAction: "بسته را Export و به مشتری تحویل دهید."),
-            "Rejected" or "Failed" => new LifecycleStage("provisioning", Failed,
-                Reason: "چرخه Provisioning با شکست بسته شد." +
+                "بسته تحویل شده و منتظر ACK معتبر مشتری است.",
+                ChangedAtUtc: s.ProvisioningDeliveredAtUtc,
+                CorrectiveAction: "پس از Import، ACK امضاشده مشتری را دریافت کنید."),
+            "Confirmed" => new LifecycleStage("provisioning", Ready,
+                "چرخه Provisioning با ACK معتبر بسته شد.",
+                ChangedAtUtc: s.ProvisioningUpdatedAtUtc),
+            "Failed" => new LifecycleStage("provisioning", Failed,
+                Reason: "چرخه Provisioning با پاسخ ردشده مشتری بسته شد." +
                     (s.ProvisioningFailureCode is null ? string.Empty : $" ({s.ProvisioningFailureCode})"),
                 ChangedAtUtc: s.ProvisioningUpdatedAtUtc,
                 CorrectiveAction: "علت را اصلاح و درخواست جدید ثبت کنید."),
-            _ => new LifecycleStage("provisioning", Pending, $"وضعیت فعلی: {s.ProvisioningStatus}.",
-                ChangedAtUtc: s.ProvisioningUpdatedAtUtc)
+            _ => new LifecycleStage("provisioning", Failed,
+                $"وضعیت Provisioning ناشناخته است ({s.ProvisioningStatus}).",
+                ChangedAtUtc: s.ProvisioningUpdatedAtUtc,
+                CorrectiveAction: "وضعیت ذخیره‌شده را بررسی کنید؛ آن را Pending یا Ready فرض نکنید.")
         });
 
         stages.Add(s.CompanyReferenceGateEnabled

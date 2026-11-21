@@ -10,6 +10,9 @@ namespace Faranou.Vendor.Host.Tests;
 /// </summary>
 public sealed class VendorLifecycleReadinessRulesTests
 {
+    private static readonly DateTimeOffset DeliveredAt =
+        new(2026, 11, 21, 8, 0, 0, TimeSpan.Zero);
+
     private static VendorLifecycleReadinessRules.LifecycleSnapshot Snapshot(
         string customerStatus = "Active",
         bool hasOrder = true,
@@ -19,15 +22,17 @@ public sealed class VendorLifecycleReadinessRulesTests
         int issued = 0,
         int draft = 0,
         bool hasInstallations = false,
+        string? installationStatus = "Active",
         string? provisioningStatus = null,
+        DateTimeOffset? deliveredAtUtc = null,
         string? ack = null,
         string? amendmentStatus = null,
         string? amendmentFailureCode = null,
         bool gateEnabled = false) => new(
         customerStatus, hasOrder, "SO-1", null,
         verified, recorded, rejected,
-        issued, draft, hasInstallations, "I-1", "Active", null,
-        provisioningStatus is not null, provisioningStatus, null, ack, null,
+        issued, draft, hasInstallations, "I-1", installationStatus, null,
+        provisioningStatus is not null, provisioningStatus, null, ack, null, deliveredAtUtc,
         0, amendmentStatus, amendmentFailureCode, null, gateEnabled);
 
     private static string StatusOf(IReadOnlyList<VendorLifecycleReadinessRules.LifecycleStage> stages, string key) =>
@@ -66,9 +71,12 @@ public sealed class VendorLifecycleReadinessRulesTests
     public void FailedAckAndRejectedAmendmentSurfaceAsFailedWithReason()
     {
         var stages = VendorLifecycleReadinessRules.Resolve(Snapshot(
-            issued: 1, hasInstallations: true, provisioningStatus: "Rejected",
+            issued: 1, hasInstallations: true, provisioningStatus: "Failed", deliveredAtUtc: DeliveredAt,
             ack: "Rejected", amendmentStatus: "Rejected", amendmentFailureCode: "amendment_rejected"));
+        Assert.Equal(VendorLifecycleReadinessRules.Ready, StatusOf(stages, "signing"));
+        Assert.Equal(VendorLifecycleReadinessRules.Ready, StatusOf(stages, "delivery"));
         Assert.Equal(VendorLifecycleReadinessRules.Failed, StatusOf(stages, "ack"));
+        Assert.Equal(VendorLifecycleReadinessRules.Failed, StatusOf(stages, "bootstrap"));
         Assert.Equal(VendorLifecycleReadinessRules.Failed, StatusOf(stages, "provisioning"));
         Assert.Equal(VendorLifecycleReadinessRules.Failed, StatusOf(stages, "amendment"));
         var provisioning = stages.Single(stage => stage.Key == "provisioning");
@@ -85,11 +93,64 @@ public sealed class VendorLifecycleReadinessRulesTests
         Assert.Contains("#392", gate.Reason);
     }
 
+    [Theory]
+    [InlineData("Active", VendorLifecycleReadinessRules.Ready)]
+    [InlineData("Suspended", VendorLifecycleReadinessRules.Blocked)]
+    [InlineData("Unexpected", VendorLifecycleReadinessRules.Failed)]
+    public void InstallationStageReflectsPersistedStatus(string installationStatus, string expected)
+    {
+        var stages = VendorLifecycleReadinessRules.Resolve(Snapshot(
+            hasInstallations: true, installationStatus: installationStatus));
+        Assert.Equal(expected, StatusOf(stages, "installation"));
+    }
+
     [Fact]
-    public void AwaitingSignerBlocksSigningInsteadOfFakingSuccess()
+    public void AwaitingSignerRemainsPendingUntilSigningActuallySucceeds()
     {
         var stages = VendorLifecycleReadinessRules.Resolve(Snapshot(provisioningStatus: "AwaitingSigner"));
-        Assert.Equal(VendorLifecycleReadinessRules.Blocked, StatusOf(stages, "signing"));
+        Assert.Equal(VendorLifecycleReadinessRules.Pending, StatusOf(stages, "signing"));
         Assert.Equal(VendorLifecycleReadinessRules.Pending, StatusOf(stages, "delivery"));
+        Assert.Equal(VendorLifecycleReadinessRules.NotApplicable, StatusOf(stages, "ack"));
+    }
+
+    [Fact]
+    public void PendingDeliveryUsesDeliveredAtUtcToDistinguishExportFromAwaitingAck()
+    {
+        var notDelivered = VendorLifecycleReadinessRules.Resolve(Snapshot(
+            provisioningStatus: "PendingDelivery"));
+        Assert.Equal(VendorLifecycleReadinessRules.Ready, StatusOf(notDelivered, "signing"));
+        Assert.Equal(VendorLifecycleReadinessRules.Pending, StatusOf(notDelivered, "delivery"));
+        Assert.Equal(VendorLifecycleReadinessRules.NotApplicable, StatusOf(notDelivered, "ack"));
+        Assert.Equal(VendorLifecycleReadinessRules.Pending, StatusOf(notDelivered, "provisioning"));
+
+        var delivered = VendorLifecycleReadinessRules.Resolve(Snapshot(
+            provisioningStatus: "PendingDelivery", deliveredAtUtc: DeliveredAt));
+        Assert.Equal(VendorLifecycleReadinessRules.Ready, StatusOf(delivered, "delivery"));
+        Assert.Equal(VendorLifecycleReadinessRules.Pending, StatusOf(delivered, "ack"));
+        Assert.Equal(VendorLifecycleReadinessRules.Pending, StatusOf(delivered, "bootstrap"));
+        Assert.Equal(VendorLifecycleReadinessRules.Pending, StatusOf(delivered, "provisioning"));
+    }
+
+    [Fact]
+    public void AlreadyAppliedAcknowledgementIsSuccessfulForAckAndBootstrap()
+    {
+        var stages = VendorLifecycleReadinessRules.Resolve(Snapshot(
+            provisioningStatus: "Confirmed", ack: "AlreadyApplied", deliveredAtUtc: DeliveredAt));
+        Assert.Equal(VendorLifecycleReadinessRules.Ready, StatusOf(stages, "signing"));
+        Assert.Equal(VendorLifecycleReadinessRules.Ready, StatusOf(stages, "signatureVerification"));
+        Assert.Equal(VendorLifecycleReadinessRules.Ready, StatusOf(stages, "delivery"));
+        Assert.Equal(VendorLifecycleReadinessRules.Ready, StatusOf(stages, "ack"));
+        Assert.Equal(VendorLifecycleReadinessRules.Ready, StatusOf(stages, "bootstrap"));
+        Assert.Equal(VendorLifecycleReadinessRules.Ready, StatusOf(stages, "provisioning"));
+    }
+
+    [Fact]
+    public void UnknownProvisioningStatusFailsClosed()
+    {
+        var stages = VendorLifecycleReadinessRules.Resolve(Snapshot(
+            provisioningStatus: "Unexpected"));
+        Assert.Equal(VendorLifecycleReadinessRules.Failed, StatusOf(stages, "signing"));
+        Assert.Equal(VendorLifecycleReadinessRules.Failed, StatusOf(stages, "delivery"));
+        Assert.Equal(VendorLifecycleReadinessRules.Failed, StatusOf(stages, "provisioning"));
     }
 }
