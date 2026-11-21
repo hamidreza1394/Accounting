@@ -394,10 +394,10 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
           // Do not expose raw server errors.
         }
         throw new Error(response.status === 409 && code === 'approval_already_pending'
-          ? 'این درخواست قبلاً برای بررسی دو نفره ارسال شده است.'
+          ? 'این درخواست قبلاً برای بررسی و تصمیم‌گیری ارسال شده است.'
           : publicError(response.status, code));
       }
-      setNotice('درخواست برای بررسی دو نفره ارسال شد؛ بسته هنوز امضا یا به مشتری تحویل نشده است.');
+      setNotice('درخواست برای بررسی و تصمیم‌گیری ارسال شد؛ بسته هنوز امضا یا به مشتری تحویل نشده است.');
       setRefreshKey(current => current + 1);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'ارسال برای بررسی ناموفق بود.');
@@ -715,10 +715,10 @@ export function ProvisioningForm({ customerId, customerName, onCancel, onSaved, 
                       </label>
                     </div>
                     : canRequestApproval && item.approvalStatus === 'Pending'
-                      ? <span className="text-xs text-muted-foreground">در انتظار بررسی دو نفره</span>
+                      ? <span className="text-xs text-muted-foreground">در انتظار بررسی و تصمیم‌گیری</span>
                       : canRequestApproval && item.status === 'AwaitingSigner' && <Button type="button" size="sm" variant="outline"
                         onClick={() => void requestApproval(item)} disabled={busy || approvalBusyId !== null || exportBusyId !== null || !item.rowVersion}>
-                        {approvalBusyId === item.id ? <><LoaderCircle size={14} className="animate-spin"/> در حال ارسال…</> : 'ارسال برای تأیید دو نفره'}
+                        {approvalBusyId === item.id ? <><LoaderCircle size={14} className="animate-spin"/> در حال ارسال…</> : 'ارسال برای تصمیم‌گیری'}
                       </Button>}
                 </td>}
               </tr>)}</tbody>

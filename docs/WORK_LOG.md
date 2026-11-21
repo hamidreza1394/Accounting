@@ -3413,13 +3413,56 @@
 - **اعتبارسنجی:** CI قبلی برای commit `56c6712c8fc60ac90d5562dde241f44904027b79` در حال اجرا بود؛ این commit جدید CI را دوباره اجرا می‌کند و نتیجه آن تا پایان workflowها نامعلوم است.
 
 
+## 2026-11-21 — رفع route registration در Vendor Lifecycle Readiness (#228، PR #741)
+
+- **علت ریشه‌ای:** endpoint readiness در فایل مستقل تعریف شده بود، اما `Program.cs` آن را map نمی‌کرد؛ UI درخواست API می‌فرستاد و fallback برای مسیر `/api` پاسخ 404 می‌داد. تست‌های pure rules و UI mock این نقص composition-root را پوشش نمی‌دادند.
+- **اصلاح:** `app.MapVendorLifecycleReadinessEndpoints()` در composition root ثبت شد.
+- **Regression:** `VendorLifecycleReadinessRouteTests` با WebApplicationFactory درخواست anonymous به مسیر واقعی می‌فرستد و 401 را assert می‌کند؛ route ثبت‌نشده به‌جای آن 404 می‌داد. این تست DB و signer را مصرف نمی‌کند.
+- **مرز پوشش:** query translation و resource-level authorization با SQL Server هنوز تست اختصاصی می‌خواهند؛ این موارد به‌عنوان باقی‌مانده ثبت شدند.
+- **اعتبارسنجی:** فقط GitHub contents API برای ایجاد commitها استفاده شد؛ اجرای محلی ادعا نمی‌شود. CI باید روی HEAD جدید کامل و سبز شود.
+
+
+### تکمیل regression برای readiness در SQL Server — 2026-11-21
+
+- تست HTTP جدید در `VendorCustomerMutationHttpIntegrationTests` با Host واقعی و SQL Server موقت، GET مجاز readiness را اجرا می‌کند و 200، CustomerId، `customerRegistration=Ready` و `payment=NotApplicable` را assert می‌کند.
+- این تست query translation و projectionهای endpoint را پوشش می‌دهد؛ تست جداگانهٔ route registration همچنان 401 anonymous را اثبات می‌کند.
+- شناسه ناشناخته در resource evaluator فعلی پیش از handler به 403 می‌رسد؛ 404 انتظار نمی‌رود. پوشش منفی 403 اختصاصی هنوز باقی است.
+- اجرای محلی انجام نشده؛ CI روی HEAD جدید مرجع اعتبارسنجی است.
+
+
+- **Resource authorization regression:** تست SQL Server برای شناسهٔ Customer ناشناخته پاسخ 403 را نیز assert می‌کند؛ رفتار موجود عمداً وجود Customer را قبل از handler بررسی می‌کند.
+
+## 2026-11-21 — هم‌دامنه‌سازی Payment readiness با آخرین Order (#228، PR #741)
+
+- **یافتهٔ ریشه‌ای:** readiness پرداخت‌ها را از همه سفارش‌های Customer aggregate می‌کرد ولی شماره سفارش آخر را نمایش می‌داد؛ یک پرداخت قدیمی می‌توانست سفارش جدیدِ پرداخت‌نشده را Ready کند.
+- **اصلاح:** endpoint فقط آخرین Order و پرداخت‌های همان Order را query می‌کند؛ stage Payment همان OrderNumber را به‌عنوان ReferenceId نمایش می‌دهد.
+- **Regression SQL Server:** دو سفارش برای یک Customer؛ پرداخت Verified فقط روی سفارش قدیمی و هیچ پرداختی روی سفارش جدید. انتظار: سفارش/Payment مرجع به آخرین سفارش اشاره کند و وضعیت Payment برابر Pending باشد.
+- **مرز:** Ready به معنی وجود پرداخت تأییدشده برای آخرین سفارش است، نه تسویه کامل؛ این مرحله به‌هیچ‌وجه گیت صدور Amendment نیست (D-108).
+- **اعتبارسنجی:** اجرای محلی انجام نشده؛ CI روی HEAD جدید باید نتیجه را مشخص کند.
+
+
+- **بازبینی compile-time:** aliasهای projection آخرین Order با نام‌های مورد انتظار snapshot هم‌راستا شدند؛ build/SQL regression تا پایان CI روی HEAD جدید تأییدشده محسوب نمی‌شود.
+
+## 2026-11-21 — رفع race در انتخاب مشتری Vendor Lifecycle Readiness (#228، PR #741)
+
+- **یافتهٔ ریشه‌ای:** `loadReadiness` به `busy` وابسته بود و با `if (busy) return` انتخاب دوم را حین درخواست اول نادیده می‌گرفت؛ پاسخ مشتری اول می‌توانست با انتخاب بصری مشتری دوم ناسازگار شود.
+- **TDD:** commit تستی `6857ebe40cdbfd8423a866c91f67aa4dfb58df20`؛ Vendor CI run `44886468525` در job `build-test-package` همان regression را شکست داد چون درخواست readiness مشتری دوم ارسال نشد. این شکست مورد انتظار و ناشی از رفتار UI بود، نه build/SQL.
+- **Fix:** commit `d46d1979eb156acac1f0cc26f460c65f8ba21920`؛ sequence مستقل درخواست، اعمال پاسخ فقط برای آخرین انتخاب، و بی‌اثر کردن پاسخ‌های باقی‌مانده هنگام unmount. گارد `busy` حذف شد تا انتخاب جدید بتواند درخواست مستقل خود را آغاز کند.
+- **اعتبارسنجی پس از Fix:** CI روی HEAD اصلاح‌شده باید دوباره کامل شود؛ تا آن زمان نتیجهٔ سبز/Verified ثبت نمی‌شود.
+- **مرز:** فقط Vendor Web، تست UI و handoff/Work Log؛ بدون `Server/**`، Customer consumer/ACK، Customer migration، تغییر Schema یا secret.
+
+## 2026-11-21 — هماهنگ‌سازی Overview و Provisioning UI با D-107/D-109 (Stage 4)
+
+- ادعاهای متعارض در `App.tsx` اصلاح شد: «تأیید دو نفره فعال / Maker-Checker» به «تصمیم‌گیری مجوز-محور با کنترل مجوز و Audit؛ در V1 تک‌اپراتور مجاز است (D-109)» تبدیل شد؛ «امضای Production مسدود تا تأمین HSM واقعی» به «fail-closed تا تأیید Key Ceremony، ACL هویت سرویس، Trust Store، Rotation و آزمون بازیابی روی میزبان هدف؛ CNG/SoftwareProtected مجاز (D-107)؛ بدون fallback» تغییر کرد؛ «هیچ کلید نرم‌افزاری جایگزین نمی‌شود» و «قابل اجرا با HSM» و footer مربوطه حذف/اصلاح شدند.
+- در `ProvisioningForm.tsx` برچسب‌های «بررسی دو نفره» به «بررسی و تصمیم‌گیری» و دکمه «ارسال برای تأیید دو نفره» به «ارسال برای تصمیم‌گیری» تغییر کرد (D-109: گردش approval-queue حفظ شده اما دو اپراتور متفاوت الزام نیست).
+- تست‌های رگرسیون Vitest اضافه شد: نبود ادعای Maker/Checker فعال، نبود HSM به‌عنوان الزام امضا، حضور متن صریح SoftwareProtected/پیش‌نیاز نبودن HSM/عدم Production-Ready خودکار و fail-closed بودن تا تأیید کنترل‌های میزبان هدف. Vitest: ۸۳/۸۳، typecheck پاک، build موفق؛ bundleهای wwwroot با build واقعی هماهنگ شدند.
+
 ## 2026-11-21 — همگام‌سازی Stage 5 با آخرین اصلاح readiness
 
 - PR #741 به commit `bdcc306caa3f65d25ff457a0ff76e5f2632dfb52` رسید؛ علاوه بر state mapping، متن Entitlement اصلاح شد تا وجود `Status=Issued` به‌اشتباه فعال‌بودن runtime تعبیر نشود.
 - شاخه Draft #742 با head جدید #741 همگام شد؛ فایل‌های Rules/Endpoint/Tests و handoff/index/worklog از همان head گرفته شدند. سند ممیزی Stage 5 نیز SHA جاری را منعکس می‌کند.
 - CI commit جدید #741 و CI شاخه همگام‌شده #742 باید از ابتدا کامل شوند؛ نتایج قبلی به این SHAهای جدید تعمیم داده نمی‌شوند.
 - هیچ Merge یا فعال‌سازی Production انجام نشد.
-
 
 ## 2026-11-21 — هم‌راستاسازی اسناد جاری Vendor پس از PRهای #720 تا #740
 
@@ -3429,3 +3472,4 @@
 - **Approval:** D-109 از PR #724 (نه PR #723 که merge نشده) مرجع پیاده‌سازی self-approval Vendor V1 است.
 - **Workflow docs:** ادعای کلی «همه گردش‌کارها NotImplemented» اصلاح شد؛ وضعیت هر بخش تفکیک می‌شود. Work Log append-only است؛ snapshotهای تاریخی حذف یا بازنویسی نشده‌اند.
 - **اعتبارسنجی:** فقط تغییر مستندات؛ هیچ Build/Test محلی ادعا نمی‌شود. CI PR #742 پس از این commit باید دوباره اجرا و بررسی شود.
+

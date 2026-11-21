@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { VendorLifecycleReadiness } from './VendorLifecycleReadiness';
 
 const customersPage = (items: unknown[]) => ({
@@ -27,6 +27,9 @@ function response(body: unknown, status = 200): Response {
     status, headers: { 'Content-Type': 'application/json' },
   });
 }
+
+
+const secondCustomer = { id: 'c-2', customerNumber: 'C-1002', legalName: 'شرکت دوم', displayName: null };
 
 describe('Vendor lifecycle readiness diagnostics', () => {
   beforeEach(() => { vi.unstubAllGlobals(); });
@@ -79,5 +82,47 @@ describe('Vendor lifecycle readiness diagnostics', () => {
     render(<VendorLifecycleReadiness permissions={['vendor.payments.read']} />);
     expect(await screen.findByText('مجوز مشاهده مشتریان برای این صفحه لازم است.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'شرکت نمونه' })).not.toBeInTheDocument();
+  });
+
+  it('does not let an older readiness response overwrite the latest selection', async () => {
+    let resolveFirst!: (value: Response) => void;
+    let resolveSecond!: (value: Response) => void;
+    const firstRequest = new Promise<Response>(resolve => { resolveFirst = resolve; });
+    const secondRequest = new Promise<Response>(resolve => { resolveSecond = resolve; });
+
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      void init;
+      const url = String(input);
+      if (url.startsWith('/api/vendor/customers/?')) {
+        return Promise.resolve(response(customersPage([customer, secondCustomer])));
+      }
+      if (url === '/api/vendor/customers/c-1/readiness') return firstRequest;
+      if (url === '/api/vendor/customers/c-2/readiness') return secondRequest;
+      return Promise.resolve(response({}, 404));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<VendorLifecycleReadiness permissions={['vendor.customers.read']} />);
+
+    fireEvent.click(await screen.findByText('شرکت نمونه'));
+    fireEvent.click(await screen.findByText('شرکت دوم'));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/vendor/customers/c-2/readiness',
+      expect.objectContaining({ credentials: 'same-origin' }),
+    );
+
+    await act(async () => {
+      resolveSecond(response({ ...readinessResponse, customerId: 'c-2', customerNumber: 'C-1002', displayName: 'شرکت دوم' }));
+      await secondRequest;
+    });
+    expect(await screen.findByText('چرخه شرکت دوم')).toBeInTheDocument();
+
+    await act(async () => {
+      resolveFirst(response({ ...readinessResponse, displayName: 'شرکت نمونه' }));
+      await firstRequest;
+    });
+
+    expect(screen.getByText('چرخه شرکت دوم')).toBeInTheDocument();
+    expect(screen.queryByText('چرخه شرکت نمونه')).not.toBeInTheDocument();
   });
 });

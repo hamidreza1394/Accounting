@@ -181,10 +181,10 @@ describe('Vendor customer provisioning form', () => {
     render(<ProvisioningForm customerId="customer-1" customerName="مشتری نمونه"
       onCancel={vi.fn()} onSaved={vi.fn()} canRequestApproval />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'ارسال برای تأیید دو نفره' }));
-    await screen.findByText('در انتظار بررسی دو نفره');
-    await screen.findByText(/درخواست برای بررسی دو نفره ارسال شد/);
-    expect(screen.queryByRole('button', { name: 'ارسال برای تأیید دو نفره' })).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: 'ارسال برای تصمیم‌گیری' }));
+    await screen.findByText('در انتظار بررسی و تصمیم‌گیری');
+    await screen.findByText(/درخواست برای بررسی و تصمیم‌گیری ارسال شد/);
+    expect(screen.queryByRole('button', { name: 'ارسال برای تصمیم‌گیری' })).not.toBeInTheDocument();
 
     const post = fetchMock.mock.calls.find(([url, init]) =>
       String(url) === '/api/vendor/provisioning-requests/provision-1/approval-request' && init?.method === 'POST');
