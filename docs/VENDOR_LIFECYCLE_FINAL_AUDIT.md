@@ -6,7 +6,7 @@
 - main: `b5f8c53db240ced0d9086aa18bc223db2432b6ce`
 - PR #739 (مرحله ۲) با merge commit `2d181e0d801a962e66e62b80ddba04dc6f3eaac1` ادغام شده است.
 - PR #740 (مرحله ۳) با merge commit `b5f8c53db240ced0d9086aa18bc223db2432b6ce` ادغام شده است.
-- PR #741 (مرحله ۴) همچنان Draft است؛ اصلاح state mapping در commit `56c6712c8fc60ac90d5562dde241f44904027b79` push شده و CI آن در حال اجراست.
+- PR #741 (مرحله ۴) همچنان Draft است؛ اصلاح state mapping و متن دقیق Entitlement در commit `bdcc306caa3f65d25ff457a0ff76e5f2632dfb52` push شده و CI آن در حال اجراست.
 - PR #742 (این مرحله) Draft و وابسته به #741 است؛ هیچ‌یک از دو PR باز هنوز Merge نشده‌اند.
 
 ## ۱. وضعیت Issueهای مرتبط

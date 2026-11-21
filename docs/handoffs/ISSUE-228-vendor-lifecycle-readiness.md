@@ -52,3 +52,8 @@
 - Parent: `90d75362af12810f17ba98bd6dc39a776eb75c63`
 - Commit: پس از ساخت Git object ثبت می‌شود.
 - Pull Request: https://github.com/hamidreza1394/Accounting/pull/741
+
+
+### اصلاح تکمیلی متن Entitlement
+- مرحله Entitlement فقط `Status == Issued` را می‌شمارد و زمان اعتبار envelope/runtime را evaluate نمی‌کند؛ متن به «لایسنس صادرشده ثبت شده» تغییر کرد تا Ready به معنی runtime-active تلقی نشود.
+- تست `IssuedLicenseStageDoesNotClaimRuntimeValidity` این مرز معنایی را تثبیت می‌کند.

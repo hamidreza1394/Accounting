@@ -3405,13 +3405,17 @@
 - **handoff:** `docs/handoffs/ISSUE-228-vendor-lifecycle-readiness.md`.
 
 
-## 2026-11-21 — ممیزی نهایی Vendor و هم‌راستاسازی D-107/D-109 (PR #742)
+## 2026-11-21 — دقت متن مرحله Entitlement در readiness (#228، PR #741)
 
-- **مبنای وضعیت:** main@b5f8c53db240ced0d9086aa18bc223db2432b6ce؛ PR #739 و #740 در main ادغام شده‌اند؛ #741 و #742 هنوز Draft هستند.
-- **اصلاح factual:** D-107 برای signer مرکزی License/Provisioning، Windows CNG/SoftwareProtected را مجاز کرده و HSM/KMS خارجی را پیش‌نیاز اجباری نمی‌داند. Key Ceremony، ACL، Trust Store، rotation و recovery روی Windows host هدف همچنان اجرا/تأیید نشده‌اند. D-055/D-057 برای offline revocation و Customer anti-rollback مستقل باقی می‌مانند.
-- **Approval:** D-109 اجازه می‌دهد همان اپراتور مجاز در Vendor V1 درخواست و تصمیم را ثبت کند؛ ادعای requester≠reviewer یا دو کاربر متفاوت superseded است. Permission، RowVersion و Audit حفظ می‌شوند.
-- **Issue audit:** #107/#228/#235/#236/#392/#393/#394 و #214 به‌عنوان Partial/Operational Pending ثبت شدند؛ #390/#391 بسته و CI-verified هستند؛ #396 کد/CI-verified اما Production rollout آن تأیید نشده است.
-- **Stage 4 regression commit:** #741 head `56c6712c8fc60ac90d5562dde241f44904027b79`؛ Vendor CI run 44882029532 موفق (۴ Job؛ build-test-package شامل ۴۴۶ تست: ۴۳۷ موفق، صفر شکست، ۹ Skip؛ Windows CNG tests: ۳۰ موفق، صفر شکست، ۲ Skip)؛ Semgrep و CodeQL موفق؛ .NET CI run 44882029470 در زمان ثبت هنوز در حال اجرا بود.
-- **Stage 5 CI:** پس از sync با #741، PR #742 head `1b3f1872b24ea1ad07cca84086bc3af35f38e829`؛ Semgrep موفق و Vendor/.NET/CodeQL در زمان ثبت در حال اجرا بودند. هیچ Merge انجام نشده است.
-- **بدون تغییر:** هیچ کلید، credential، provider عملیاتی، Migration مشتری، `Server/**` یا Gate v5 فعال نشده است.
-- **سند ممیزی:** `docs/VENDOR_LIFECYCLE_FINAL_AUDIT.md`؛ موانع Production به‌صورت جداگانه در همان سند ثبت شده‌اند.
+- **یافته:** query readiness فقط `Status == Issued` را می‌شمارد و زمان اعتبار envelope/runtime را ارزیابی نمی‌کند؛ متن قبلی به‌اشتباه آن را «لایسنس فعال» می‌نامید.
+- **اصلاح:** پیام اکنون فقط وجود لایسنس صادرشده را گزارش می‌کند و اعتبار زمانی/runtime را جدا می‌داند؛ منطق صدور یا runtime تغییر نکرد.
+- **Regression:** تست اضافه شد تا پیام Ready برای entitlement صادرشده ادعای فعال بودن runtime نکند.
+- **اعتبارسنجی:** CI قبلی برای commit `56c6712c8fc60ac90d5562dde241f44904027b79` در حال اجرا بود؛ این commit جدید CI را دوباره اجرا می‌کند و نتیجه آن تا پایان workflowها نامعلوم است.
+
+
+## 2026-11-21 — همگام‌سازی Stage 5 با آخرین اصلاح readiness
+
+- PR #741 به commit `bdcc306caa3f65d25ff457a0ff76e5f2632dfb52` رسید؛ علاوه بر state mapping، متن Entitlement اصلاح شد تا وجود `Status=Issued` به‌اشتباه فعال‌بودن runtime تعبیر نشود.
+- شاخه Draft #742 با head جدید #741 همگام شد؛ فایل‌های Rules/Endpoint/Tests و handoff/index/worklog از همان head گرفته شدند. سند ممیزی Stage 5 نیز SHA جاری را منعکس می‌کند.
+- CI commit جدید #741 و CI شاخه همگام‌شده #742 باید از ابتدا کامل شوند؛ نتایج قبلی به این SHAهای جدید تعمیم داده نمی‌شوند.
+- هیچ Merge یا فعال‌سازی Production انجام نشد.

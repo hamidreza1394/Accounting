@@ -88,7 +88,7 @@ public static class VendorLifecycleReadinessRules
             : new LifecycleStage("issuanceApproval", NotApplicable));
 
         stages.Add(s.IssuedLicenses > 0
-            ? new LifecycleStage("entitlement", Ready, $"{s.IssuedLicenses} لایسنس صادرشده فعال است.")
+            ? new LifecycleStage("entitlement", Ready, $"{s.IssuedLicenses} لایسنس صادرشده ثبت شده است؛ اعتبار زمانی و runtime جداگانه بررسی می‌شوند.")
             : s.DraftLicenses > 0
                 ? new LifecycleStage("entitlement", Pending, "لایسنس پیش‌نویس موجود است اما صادر نشده.",
                     CorrectiveAction: "درخواست صدور لایسنس را ثبت و تأیید کنید.")
