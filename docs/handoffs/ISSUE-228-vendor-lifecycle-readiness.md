@@ -57,3 +57,12 @@
 ### اصلاح تکمیلی متن Entitlement
 - مرحله Entitlement فقط `Status == Issued` را می‌شمارد و زمان اعتبار envelope/runtime را evaluate نمی‌کند؛ متن به «لایسنس صادرشده ثبت شده» تغییر کرد تا Ready به معنی runtime-active تلقی نشود.
 - تست `IssuedLicenseStageDoesNotClaimRuntimeValidity` این مرز معنایی را تثبیت می‌کند.
+
+
+## اصلاح route registration — 2026-11-21
+
+- **یافتهٔ بازبینی:** extension جدید `MapVendorLifecycleReadinessEndpoints` در `Program.cs` فراخوانی نشده بود؛ بنابراین UI مسیر `GET /api/vendor/customers/{customerId}/readiness` را به fallback API می‌فرستاد و 404 می‌گرفت، هرچند unit/UI tests سبز بودند.
+- **اصلاح حداقلی:** `app.MapVendorLifecycleReadinessEndpoints()` در composition root، کنار `MapVendorBusinessEndpoints()` ثبت شد.
+- **Regression HTTP:** تست `VendorLifecycleReadinessRouteTests.ReadinessRouteIsMappedAndRequiresAuthentication` با `WebApplicationFactory<Program>` درخواست anonymous می‌فرستد و 401 را الزام می‌کند؛ اگر route دوباره از composition root حذف شود، fallback پاسخ 404 می‌دهد و تست شکست می‌خورد. Hosted serviceها در این تست حذف می‌شوند تا آزمون route به DB یا signer عملیاتی وابسته نباشد.
+- **محدودیت پوشش:** این regression فقط registration و challenge احراز هویت را اثبات می‌کند؛ query translation روی SQL Server و resource-level 403/404 برای مشتری مجاز/غیرمجاز هنوز نیازمند integration test جداگانه است.
+- **اعتبارسنجی:** کد روی branch به‌روزرسانی شد؛ اجرای محلی انجام نشده و CI روی SHA جدید باید کامل شود.
