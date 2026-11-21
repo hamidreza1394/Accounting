@@ -1,54 +1,68 @@
-# ممیزی نهایی چرخه Vendor — مرحله پنجم مأموریت (2026-11-20)
+# ممیزی نهایی چرخه Vendor — مرحله پنجم مأموریت (بازبینی 2026-11-21)
 
-این سند وضعیت واقعی Issueها، امنیت، هزینه و آمادگی Production را با کد واقعی Main + شاخه‌های زنجیره‌ای #739/#740/#741 تطبیق می‌دهد. هیچ Issueای صرفاً به‌دلیل وجود کد Completed اعلام نشده است.
+این سند وضعیت Issueها، امنیت، هزینه و آمادگی Production را با main و شاخه‌های جاری تطبیق می‌دهد. وجود کد یا سبز بودن CI به‌تنهایی به معنی تکمیل End-to-End یا Production readiness نیست.
 
-## ۱. وضعیت Issueهای مرتبط (بررسی‌شده از GitHub + کد)
+**مبنای کد و Git:**
+- main: `b5f8c53db240ced0d9086aa18bc223db2432b6ce`
+- PR #739 (مرحله ۲) با merge commit `2d181e0d801a962e66e62b80ddba04dc6f3eaac1` ادغام شده است.
+- PR #740 (مرحله ۳) با merge commit `b5f8c53db240ced0d9086aa18bc223db2432b6ce` ادغام شده است.
+- PR #741 (مرحله ۴) همچنان Draft است؛ اصلاح state mapping در commit `56c6712c8fc60ac90d5562dde241f44904027b79` push شده و CI آن در حال اجراست.
+- PR #742 (این مرحله) Draft و وابسته به #741 است؛ هیچ‌یک از دو PR باز هنوز Merge نشده‌اند.
 
-| Issue | وضعیت GitHub | وضعیت ممیزی | شواهد کد | اقدام لازم |
+## ۱. وضعیت Issueهای مرتبط
+
+| Issue | وضعیت GitHub | وضعیت ممیزی | شواهد و مرز واقعی | اقدام باقی‌مانده |
 |---|---|---|---|---|
-| #107 — یکتایی زنجیره Audit و checkpointهای مستقل | open | **Partially Implemented** | `VendorAuditWriter` درون-تراکنشی با hash chain (`VendorAuditEvent`، PreviousHash/EventHash) و شکست Audit → Rollback؛ checkpoint مستقل/آرشیو دوره‌ای هنوز پیاده نشده | پیاده‌سازی checkpoint + سیاست Retention/Archive مستند |
-| #214 — صدور/ابطال fail-closed با Maker-Checker | open | **Implemented / Verified** | approval workflow + `VendorLicenseIssuanceService` داخل تراکنش + unique sequence؛ مدل تک‌عملیات مجاز طبق D-109 | بستن با تأیید مالک |
-| #228 — Onboarding امن Vendor | open | **Implemented / Verified** | package create (RequestId+Nonce unique، dedupe) → approval دو مجوزه → امضا → export → ACK | بستن با تأیید مالک |
-| #235 — مصرف‌کننده امضاشده سمت مشتری + ACK | open | **Implemented / Verified** | `CustomerProvisioningApplyService` + ACK امضاشده با trust store سمت وند | بستن با تأیید مالک |
-| #236 — Signer عملیاتی با KMS/HSM خارجی | open | **Blocked (نیازمند زیرساخت)** | `UnavailableLicenseSigningProvider` fail-closed؛ Windows CNG runbook (#736) آماده؛ HSM/KMS واقعی تأمین نشده | تأمین زیرساخت + key ceremony (D-107) |
-| #389 — Entitlement شرکت‌محور و add-onها | open | **Blocked** | وابسته به #392؛ builder شرکت‌محور در جریان Amendment عمداً expose نشده | پس از #392 |
-| #390 — نسخه‌بندی Entitlement شرکت‌محور | closed | **Implemented / Verified** | payload v2 + `CompanyEntitlementsDraftJson` + تست‌ها | بسته‌شده صحیح |
-| #391 — سقف seats/modules سمت مشتری | closed | **Implemented / Verified** | resolver v2/v5 سمت مشتری + تست‌ها | بسته‌شده صحیح |
-| #392 — ایجاد شرکت‌های مجاز و Bootstrap آفلاین | open | **Partially Implemented / Needs Owner Decision** | `CompanySetupRecord` + v5 + gate بسته (default-off)؛ mapping عملیاتی نشده | تصمیم مالک + فعال‌سازی gate پس از ممیزی |
-| #393 — فروش و صدور add-onها | open | **Partially Implemented** | سفارش/پرداخت/مطالبات (#722+#738) + Amendment نصب‌محور (#739) کامل؛ شرکت‌محور Blocked؛ ACK tracking اختصاصی Amendment در مسیر provisioning موجود | ادامه پس از #392 |
-| #394 — همگام‌سازی آنلاین + تبادل آفلاین امضاشده | open | **Partially Implemented / Needs Verification** | offline revocation snapshots + activation wizard؛ سناریوهای همگام‌سازی دوره‌ای کامل ممیزی نشده | ممیزی مستقل + تصمیم مالک |
-| #396 — گیت startup و فعال‌سازی آنلاین/آفلاین | open | **Implemented / Verified** | Runtime Gate سمت مشتری + wizard RTL (#735) | بستن با تأیید مالک |
+| #107 — زنجیره Audit و checkpoint مستقل | open | **Partially Implemented** | hash-chain داخل Vendor DB، قرارداد checkpoint، `IVendorAuditCheckpointStore`، startup guard برای Production و file store مخصوص Development/Test وجود دارد. File store محلی Production sink مستقل محسوب نمی‌شود. | انتخاب و provision یک sink با failure domain و identity مستقل، immutability/retention، alerting و recovery drill |
+| #214 — صدور/ابطال fail-closed | open | **Vendor-side Implemented / End-to-End Partial** | صدور و snapshot ابطال Vendor، sequence تراکنشی، approval، Audit و rollback در شکست وجود دارد. طبق D-109 همان اپراتور مجاز می‌تواند در V1 درخواست و تصمیم را ثبت کند؛ تضمین دو نفر متفاوت وجود ندارد. Customer-side consumer و runtime enforcement جدا هستند. | تکمیل/اثبات مسیر Customer-side در #235/#364 و آزمون عملیاتی revocation؛ الزامات کلید snapshot ابطال طبق D-055 مستقل از D-107 بررسی شوند |
+| #228 — Onboarding و Provisioning | open | **Partially Implemented** | Vendor intent، payload نسخه‌دار، approval، signing، export و ACK intake وجود دارند؛ Customer Apply/Enrollment نیز مسیر پایه دارد. CompanyReference v5 و allow-list خطاهای Company-bound در کد هستند، اما Gate صدور v5 پیش‌فرض بسته است. | تکمیل mapping و bootstrap در #392، اعتماد/آمادگی #235 و آزمون واقعی نصب/تحویل |
+| #235 — Customer consumer و ACK | open | **Partially Implemented** | verifier، trust store، claim/replay اتمیک، Apply و ACK امضاشده در main هستند. تست دو TestServer/دو SQL database در یک process، معادل دو میزبان فیزیکی یا دو OS مستقل نیست. | trust distribution/rotation، readiness و audit پایدار، retry/error semantics و آزمون Staging دو میزبان |
+| #236 — signer و maker-checker | open | **Code Implemented / Operational Verification Pending** | D-107 برای امضای مرکزی License و Provisioning، Windows CNG/Certificate Store با MachineKey غیرقابل‌استخراج و AssuranceLevel=SoftwareProtected را برای V1 مجاز کرده است؛ Provider و Runbook در PR #720/#736 وجود دارند. HSM/KMS خارجی پیش‌نیاز اجباری این signer مرکزی نیست. | Key Ceremony واقعی روی Windows Server هدف، ACL هویت سرویس، ثبت SPKI در Trust Store، rotation/overlap، recovery و آزمون fail-closed عملیاتی |
+| #389 — entitlement شرکت‌محور | open | **Blocked on #392** | مالکیت CompanyReference و mapping باید از مسیر #392 کامل شود؛ هیچ flatten یا reference حدسی مجاز نیست. | تکمیل #392 |
+| #390 — قرارداد entitlement شرکت‌محور | closed | **Implemented / CI-Verified** | payload v2 و ساختار entitlement شرکت‌محور در کد و تست‌ها وجود دارد. | مورد کدباقی‌مانده در محدوده این Issue شناسایی نشد |
+| #391 — ظرفیت و enforcement entitlement | closed | **Implemented / CI-Verified (scope محدود)** | evaluator و قواعد ظرفیت در مسیرهای مربوط وجود دارند؛ بسته بودن Issue به معنی فعال بودن همه call-siteهای عملیاتی حسابداری نیست. | call-siteهای runtime خارج از این برش باید جداگانه ردیابی شوند |
+| #392 — mapping شرکت مجاز و Bootstrap | open | **Partially Implemented / Gate Closed** | قرارداد v5، CompanySetupRecord و مسیر Apply در مخزن وجود دارند؛ Gate دوکلیدی Vendor default-off است. Migration مربوط به Customer فقط در مخزن است و اجرای آن روی DB واقعی مشتری اثبات نشده است. | تصمیم/تأیید فعال‌سازی، mapping معتبر، اجرای Migration در پنجره کنترل‌شده و تست restore/clone |
+| #393 — فروش و صدور add-on | open | **Partially Implemented** | Order/Payment/Receivables و Amendment نصب‌محور در PRهای #722/#738/#739 وارد main شده‌اند؛ پرداخت و صدور طبق D-108 مستقل‌اند. Company-scoped Module/Feature/UserSeat تا #392 مسدود است. | ادامه fulfillment/ACK tracking و مسیرهای company-scoped پس از #392؛ بدون درگاه پرداخت یا Ledger موازی |
+| #394 — Sync آنلاین/آفلاین | open | **Partially Implemented / Needs Verification** | بسته‌های امضاشده، export/import و Wizard وجود دارند؛ این‌ها اثبات sync دوره‌ای و recovery عملیاتی کامل نیستند. | قرارداد retry/sequence، آزمون قطع‌و‌وصل، reconciliation و backup/restore روی محیط واقعی |
+| #396 — Startup Gate و Wizard | open | **Code / CI-Verified; Production Rollout Not Verified** | Runtime Gate و Wizard وجود دارند، اما CompanyReference issuance خاموش است و فعال‌سازی Production اثبات نشده است. | rollout کنترل‌شده پس از تکمیل #392/#235 و تأیید مالک |
 
-## ۲. ممیزی امنیت (خلاصه شواهد)
+## ۲. ممیزی امنیت
 
-- **Authentication/Authorization:** مجوزهای نسخه‌بندی‌شده سمت سرور؛ resource-bound policy برای تصمیم‌ها؛ MFA اجباری ورود مدیر (TOTP/Passkey).
-- **Isolation:** همه queryهای resource-bound با `VendorResourceAccessEvaluator` روی مالکیت واقعی؛ مسیر ACK با customerId+installationCode در envelope امضاشده مقایسه می‌شود.
-- **Bootstrap/Credential:** رمز اولیه تصادفی غیرقابل استفاده؛ Enrollment یک‌بارمصرف (hash+انقضا+مصرف اتمی+rate-limit)؛ هیچ Secret در Log/Audit/URL.
-- **Signing/Trust:** D-056 fail-closed؛ trust store deployment-based؛ verify امضا+payload-hash پیش از هر rebuild کاندید Amendment؛ sequence یکتا (LicenseId,Sequence).
-- **Concurrency/Idempotency:** RowVersion همه mutationها؛ uniqueهای فیلترشده؛ retry دقیق ACK؛ دو SaveChanges با پین RV در approval Amendment.
-- **Audit atomicity:** AuditWriter در تراکنش caller؛ شکست → Rollback کامل (تست SQL دارد).
-- **Antiforgery:** همه Mutationهای وند؛ صفحات فقط-خواندنی GET.
-- **نقطه‌های ریسک باقی‌مانده:** هیچ کلید عملیاتی Production (نرم‌افزاری ممنوع؛ #236)، checkpoint مستقل Audit (#107)، سناریوهای همگام‌سازی #394.
+- **Authentication/Authorization:** endpoint readiness فقط-خواندنی از resource-bound authorization مشتری و مجوز `vendor.customers.read` استفاده می‌کند؛ queryها با CustomerId محدود می‌شوند.
+- **Isolation:** Vendor فقط metadata و وضعیت کنترل‌پلین خود را می‌خواند؛ به Customer DB متصل نمی‌شود و هیچ Connection String مشتری در Vendor ذخیره نمی‌شود.
+- **Bootstrap/Credential:** رمز پیش‌فرض مشترک وجود ندارد؛ Enrollment یک‌بارمصرف است و secret قابل استفاده مجدد در Vendor یا package نگهداری نمی‌شود.
+- **Central Signing/Trust:** D-107 مبنای V1 است: Windows CNG/Certificate Store، MachineKey، private key غیرقابل‌استخراج، purposeهای License و Provisioning جدا، Trust Store مجزا و fail-closed. `SoftwareProtected` هرگز Hardware/HSM معرفی نمی‌شود. امضا در GitHub Actions انجام نمی‌شود.
+- **Scope separation:** D-107 فقط signer مرکزی License/Provisioning/Amendment را پوشش می‌دهد. D-055 برای Customer ACK و Vendor offline-revocation snapshot و D-057 برای anti-rollback مشتری مستقل باقی می‌مانند؛ الزامات آن‌ها را نباید با CNG مرکزی یکی دانست.
+- **Approval:** طبق D-109، در Vendor V1 self-approval اپراتور مجاز پذیرفته شده است؛ نباید در مستندات ادعای کنترل دو نفر متفاوت شود. Permission، RowVersion و Audit همچنان الزامی‌اند.
+- **Concurrency/Idempotency:** RowVersion، unique indexها، ACK exact-retry و transactionهای approval/issuance حفظ می‌شوند.
+- **Audit atomicity:** Audit در تراکنش caller نوشته می‌شود و شکست آن باید mutation مربوط را rollback کند؛ checkpoint مستقل Production هنوز جایگزین این زنجیره نیست.
+- **Antiforgery:** mutationهای مرورگر محافظت می‌شوند؛ endpointهای readiness فقط GET هستند.
 
-## ۳. ممیزی هزینه و پیچیدگی
+## ۳. هزینه و پیچیدگی
 
-- بدون جدول/سرویس موازی برای قابلیت‌های موجود؛ Amendment فقط یک جدول جدید با داده غیرمشتق اضافه کرد.
-- Readiness Diagnostics فقط-خواندنی با چند query ایندکس‌شده در زمان خواندن — بدون Background Worker، Message Broker یا Cache جدید؛ برای ~۱۰۰ کاربر هم‌زمان کافی است.
-- Audit/Log: نیاز به سیاست Retention/Archive مصوب برای رشد بلندمدت (پیشنهاد: ADR مستقل — تصمیم مالک).
-- هیچ Database یا سرویس ابری جدیدی ایجاد نشد.
+- Readiness Diagnostics فقط-خواندنی است؛ جدول، Worker، Broker، Cache یا سرویس جدیدی برای آن اضافه نشده است.
+- Order/Payment و Amendment فقط مدل‌های موردنیاز Vendor را اضافه کرده‌اند؛ Ledger حسابداری یا Payment Gateway موازی وجود ندارد.
+- File checkpoint فقط Development/Test است و نباید به‌عنوان sink مستقل Production معرفی شود.
+- رشد Audit باید با retention/archive و sink مستقل کنترل شود؛ نگهداری نامحدود همه رکوردها در دیتابیس عملیاتی تصمیم پیش‌فرض نیست.
 
 ## ۴. آمادگی Production
 
-**Not Ready — Blocked on:**
-1. تأمین HSM/KSM واقعی و key ceremony (#236/D-107) — تا آن زمان صدور fail-closed است.
-2. حل #392 و فعال‌سازی gate شرکت‌محور با تأیید مالک.
-3. checkpoint/retention مستقل Audit (#107).
-4. ممیزی سناریوهای همگام‌سازی #394.
-هیچ‌یک از این‌ها با فرض یا دور زدن حل نشده‌اند.
+**Not Ready.** موانع واقعی:
+1. اجرای Key Ceremony و آزمون ACL/Trust/rotation/recovery برای Windows CNG روی میزبان Production هدف؛ HSM/KMS خارجی برای signer مرکزی License/Provisioning شرط D-107 نیست.
+2. تکمیل #392 و فعال‌سازی Gate شرکت‌محور فقط پس از تأیید مالک؛ Migration مشتری در محیط واقعی هنوز اجرا/تأیید نشده است.
+3. تکمیل trust distribution/rotation و آزمون دو میزبان/دو OS در #235.
+4. انتخاب و provision sink مستقل Audit، retention و recovery drill در #107.
+5. تکمیل و آزمون واقعی sync/reconciliation/restore در #394.
+6. الزامات جداگانه D-055/D-057 برای offline revocation و Customer anti-rollback باید در حوزه خودشان provision و آزمون شوند.
 
-## ۵. وضعیت نهایی مأموریت
+هیچ کلید، credential، provider یا مقصد Production فرضی اضافه نشده است. نبود تنظیم یا provider معتبر همچنان fail-closed است.
 
-- **Implementation:** Completed برای مراحل ۲–۴ (زنجیره #739→#740→#741)؛ Blocked/Needs-Owner برای موارد جدول بالا.
-- **Tests:** Verified (Unit + SQL CI + Vitest + Semgrep + CI سبز روی هر head).
-- **PRs:** #739 باز آماده Merge؛ #740 و #741 Draft زنجیره‌ای.
-- **Merge:** Awaiting Owner — هیچ PRای Merge نشده و هیچ Push مستقیم به Main انجام نشده است.
+## ۵. وضعیت مأموریت و CI
+
+- **Stage 2 / PR #739:** Merge شده؛ merge commit `2d181e0d801a962e66e62b80ddba04dc6f3eaac1`.
+- **Stage 3 / PR #740:** Merge شده؛ merge commit `b5f8c53db240ced0d9086aa18bc223db2432b6ce`.
+- **Stage 4 / PR #741:** Draft؛ commit اصلاحی `56c6712c8fc60ac90d5562dde241f44904027b79`. CI پس از این commit در زمان نگارش در حال اجراست؛ تست‌های قبلی روی head قدیمی، جایگزین نتیجه این commit نیستند.
+- **Stage 5 / PR #742:** Draft؛ این سند ممیزی اصلاح‌شده است و باید پس از #741 بررسی شود.
+- **Production Readiness:** Not Ready؛ موارد جدول و بخش ۴ باز هستند.
+
+هیچ PR باز در این زنجیره بدون تکمیل بررسی‌های الزامی Merge نشده است.

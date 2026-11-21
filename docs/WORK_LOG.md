@@ -3393,3 +3393,13 @@
 - **F42W (رفع شد):** `ValidateRequestedPeriodsAsync` اکنون `(Error, StatusCode)` برمی‌گرداند — شکست verify امضا/کلید وضعیت verifier خودش را حفظ می‌کند (503 کلید غیرمورد اعتماد) و فقط درخواست دوره نامعتبر 409 است؛ هر دو endpoint وضعیت را propagate می‌کنند.
 - **F42c (رفع شد):** گیت «فهرست ناقص» فقط برای اپراتوری است که مجوز `vendor.licenses.read` دارد؛ پاسخ 403/401 فهرست برای اپراتور mutation-مجاز «دنیال نیست» و دکمه‌هایش فعال می‌مانند (مجوزهای manage/issue مستقل‌اند). تست Vitest حالت denied اضافه شد.
 - **F42Q (Needs Owner Decision):** ثبت `LastSeenAtUtc` در تراکنش ACK (الزام مرحله ۳ مأموریت) RV نصب را جلو می‌برد و مثل `UpdateInstallation` ممکن است یک installation approval در انتظار را stale کند — جهت شکست fail-closed است و هیچ تصمیمی اشتباه پاس نمی‌شود. تغییر مکانیزم (جدول سلامت جدا یا توکن وضعیت-محور) نیازمند Migration و تصمیم مالک است؛ بدون مجوز انجام نشد.
+
+
+## 2026-11-21 — اصلاح state mapping در Vendor Lifecycle Readiness (#228، PR #741)
+
+- **یافتهٔ ریشه‌ای:** صفحه readiness از stateهای فرضی `Signed` و `Rejected` استفاده می‌کرد، درحالی‌که stateهای مجاز جدول `VendorProvisioningRequests` عبارت‌اند از `AwaitingSigner`، `PendingDelivery`، `Confirmed` و `Failed`. همچنین `AlreadyApplied` که ACK معتبر است Ready گزارش نمی‌شد؛ `DeliveredAtUtc` در snapshot خوانده نمی‌شد؛ وضعیت نصب `Suspended` نیز بدون توجه به Status برابر Ready می‌شد.
+- **اصلاح Vendor-only:** خواندن `DeliveredAtUtc` در query موجود؛ نگاشت واقعی Signing/Delivery/ACK/Bootstrap/Provisioning؛ `AlreadyApplied` موفق؛ `AwaitingSigner` Pending (نه ادعای خرابی signer)؛ نصب Suspended مسدود؛ state ناشناخته Failed. متن signer با D-107 و CNG SoftwareProtected هم‌راستا شد و HSM/KMS پیش‌نیاز اجباری معرفی نمی‌شود.
+- **Regression tests:** ماتریس Active/Suspended/unknown نصب، PendingDelivery پیش/پس از ثبت تحویل، ACK در انتظار، AlreadyApplied، Failed و provisioning status ناشناخته افزوده شد.
+- **بدون تغییر:** هیچ Migration، Customer-side consumer، `Server/**`، secret، کلید یا تنظیم Production تغییر نکرد.
+- **اعتبارسنجی:** CI روی HEAD قبلی PR #741 سبز بود؛ تست‌های commit جدید تا اجرای CI بعد از push **در انتظار** هستند. تست HTTP/SQL Server اختصاصی query/authorization endpoint نیز هنوز باقی است.
+- **handoff:** `docs/handoffs/ISSUE-228-vendor-lifecycle-readiness.md`.

@@ -66,7 +66,7 @@ public static class VendorLifecycleReadinessEndpoints
             var provisioning = await db.ProvisioningRequests.AsNoTracking()
                 .Where(item => item.CustomerId == customerId)
                 .OrderByDescending(item => item.CreatedAtUtc).ThenBy(item => item.Id)
-                .Select(item => new { item.Status, item.FailureCode, item.AcknowledgementResult, item.UpdatedAtUtc })
+                .Select(item => new { item.Status, item.FailureCode, item.AcknowledgementResult, item.UpdatedAtUtc, item.DeliveredAtUtc })
                 .FirstOrDefaultAsync(ct);
 
             var pendingApprovals = await db.ApprovalRequests.AsNoTracking()
@@ -103,6 +103,7 @@ public static class VendorLifecycleReadinessEndpoints
                 provisioning?.FailureCode,
                 provisioning?.AcknowledgementResult,
                 provisioning?.UpdatedAtUtc,
+                provisioning?.DeliveredAtUtc,
                 pendingApprovals,
                 amendment?.Status,
                 amendment?.FailureCode,
