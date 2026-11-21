@@ -85,6 +85,18 @@ public sealed class VendorLifecycleReadinessRulesTests
     }
 
     [Fact]
+    public void IssuedLicenseStageDoesNotClaimRuntimeValidity()
+    {
+        var entitlement = VendorLifecycleReadinessRules.Resolve(Snapshot(issued: 1))
+            .Single(stage => stage.Key == "entitlement");
+
+        Assert.Equal(VendorLifecycleReadinessRules.Ready, entitlement.Status);
+        Assert.Contains("صادرشده ثبت شده", entitlement.Reason);
+        Assert.Contains("اعتبار زمانی و runtime جداگانه", entitlement.Reason);
+        Assert.DoesNotContain("فعال است", entitlement.Reason);
+    }
+
+    [Fact]
     public void ClosedCompanyReferenceGateIsBlockedNeverReady()
     {
         var stages = VendorLifecycleReadinessRules.Resolve(Snapshot(gateEnabled: false));

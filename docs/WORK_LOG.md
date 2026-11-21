@@ -3403,3 +3403,11 @@
 - **بدون تغییر:** هیچ Migration، Customer-side consumer، `Server/**`، secret، کلید یا تنظیم Production تغییر نکرد.
 - **اعتبارسنجی:** CI روی HEAD قبلی PR #741 سبز بود؛ تست‌های commit جدید تا اجرای CI بعد از push **در انتظار** هستند. تست HTTP/SQL Server اختصاصی query/authorization endpoint نیز هنوز باقی است.
 - **handoff:** `docs/handoffs/ISSUE-228-vendor-lifecycle-readiness.md`.
+
+
+## 2026-11-21 — دقت متن مرحله Entitlement در readiness (#228، PR #741)
+
+- **یافته:** query readiness فقط `Status == Issued` را می‌شمارد و زمان اعتبار envelope/runtime را ارزیابی نمی‌کند؛ متن قبلی به‌اشتباه آن را «لایسنس فعال» می‌نامید.
+- **اصلاح:** پیام اکنون فقط وجود لایسنس صادرشده را گزارش می‌کند و اعتبار زمانی/runtime را جدا می‌داند؛ منطق صدور یا runtime تغییر نکرد.
+- **Regression:** تست اضافه شد تا پیام Ready برای entitlement صادرشده ادعای فعال بودن runtime نکند.
+- **اعتبارسنجی:** CI قبلی برای commit `56c6712c8fc60ac90d5562dde241f44904027b79` در حال اجرا بود؛ این commit جدید CI را دوباره اجرا می‌کند و نتیجه آن تا پایان workflowها نامعلوم است.
