@@ -28,7 +28,7 @@
 ## ۲) گیت‌ها — دقیق
 - **تمام Schemaهای S3 مسدود است، نه فقط ستون‌های Tenant/Company:** ROADMAP می‌گوید S3-0 باید پیش از هر کدنویسی تغییردهندهٔ Schema بسته شود (`docs/ROADMAP.md:257`) و تا تصویب S3-0g/h هیچ جدول/ستون Tenant جدید یا Backfill مجاز نیست (`:269`).
 - **دلیل فنی [V]:** هر جدول جدید از `TradeEntity` ارث می‌برد که `TenantId` را نگه می‌دارد و در عمل `Company.Id` است (`TradeEntity.cs:25-26`، `TradeAuthorizationAdapter.cs:45`). ساخت جدول پیش از D-090 (`Proposed`) بدهی legacy می‌افزاید و پس از هر تغییر، کلید/ایندکس `(TenantId, …)` باید بازطراحی شود.
-- **مسدودکننده‌ها:** G0 (تأیید S3-0h)، D-090، D-094/OD-17 (Tenant)، D-095، و OD-017 سری Trade (دقت ستون‌های مالی/تناژ؛ `Open`) [D] `docs/TRADE_OPEN_DECISIONS.md:165`.
+- **مسدودکننده‌ها:** بسته‌شدن S3-0 (G0..G5؛ جزئیات در بستهٔ آمادگی که در شاخهٔ جدا و PR جدا است)، و در Trade: D-090، D-094/OD-17 (Tenant)، D-095، و OD-017 سری Trade (دقت ستون‌های مالی/تناژ؛ `Open`) [D] `docs/TRADE_OPEN_DECISIONS.md:165`.
 - **بدون گیت قابل‌انجام:** کلاس‌های دامنهٔ خالص بدون نگاشت EF، Use Caseهای Application با port باریک و Store جعلی در پروژهٔ تست، تست واحد، ADR و مستندات. پیش از Migration نباید EF Configuration یا `DbSet` اضافه شود (ناهمخوانی با Snapshot).
 
 ## ۳) منطق موجود برای استفادهٔ مجدد (بازنویسی نمی‌شود) [V]
@@ -72,7 +72,7 @@
 | PR-1 | ADR: ثبت قواعد ۲، ۳، ۵ بخش ۰ + تعویق ImportCaseItem + پروفایل v1 | اکنون، **به شرط تأیید صریح مالک** | `documentation-engineer`، بازبین `architect` | ADR با شمارهٔ بعدی واقعی؛ Accepted فقط با تأیید مالک؛ بدون کد |
 | PR-2 | Domain خالص (بدون EF/DbSet) + تست واحد | اکنون (پس از PR-1) | `backend-developer` | تست: شمارهٔ نامعتبر، Revision بدون mutator، تمدید بدون Revision، قفل کالا پس از OR، ۱:۱؛ مدل EF/Snapshot بدون تغییر |
 | PR-3 | Application: Serviceها + portهای باریک + Store جعلی فقط در تست؛ بدون endpoint/DI | اکنون (پس از تصمیم تخصیص PaymentPlan) | `backend-developer` | Context فقط از `TradeAccessContext`؛ باقیماندهٔ دقیق؛ بازیابی طرح ناسازگار رد شود |
-| PR-4 | EF Configuration + Migration جدول‌ها + کنترل `Deleted` | **Blocked**: G0، D-090، D-094، D-095، OD-017 | `database-engineer` | Up/Down روی SQL Server؛ کدهای 2601/2627 برای هر یکتایی؛ دو شرکت با شمارهٔ یکسان مجاز |
+| PR-4 | EF Configuration + Migration جدول‌ها + کنترل `Deleted` | **Blocked**: بسته‌شدن S3-0 (G0..G5 مطابق `ISSUE-UNNUMBERED-trade-s3-0-readiness-decision-package.md`) به‌علاوهٔ موارد ویژهٔ Trade: D-090، D-094، D-095، OD-017 | `database-engineer` | Up/Down روی SQL Server؛ کدهای 2601/2627 برای هر یکتایی؛ دو شرکت با شمارهٔ یکسان مجاز |
 | PR-5 | Store + endpointهای `/api/v1/trade/*` + تست HTTP | Blocked (PR-4) | `backend-developer` | `TradeEndpointGateTests` سبز؛ `404` شرکت دیگر؛ Anti-forgery؛ تست رقابتی |
 | PR-6 | UI در `features/trade` | Blocked (PR-5) | `frontend-developer` | `UI_COMPONENTS.md`؛ typecheck/test/build/offline |
 | PR-7 | Migration داده‌ای Core برای `trade.form.order-registration.*` | NeedsApproval (Core، DB مشتری) | `database-engineer` | فقط درج ردیف؛ تست کاتالوگ مجوز |
@@ -91,7 +91,7 @@
 4. نام مجوزها: V3.2 `trade.form.orderregistration.*` در برابر کاتالوگ (`import-case` دارد؛ `order-registration` ندارد).
 5. تعداد کالا: `TRADE_S3_ARCHITECTURE.md:39` «یک کالا» در برابر قاعدهٔ مالک (چندکالایی) و D-086 §3.2 (تنظیم‌پذیر).
 6. کاردینالیتی: D-086 §4.1 ظرفیت را تنظیم‌پذیر می‌داند اما ایندکس یکتا و ۱:۱ مقدار ۱ را در DB قفل می‌کند.
-7. Fail-Closed Entitlement در همهٔ محیط‌ها سخت‌گیرانه‌تر از D-063 بند ۵ است؛ تأیید صریح برای آن یافت نشد.
+7. Fail-Closed Entitlement در همهٔ محیط‌ها با D-063 بند ۵ و D-074 (`Accepted`) سازگار است: D-074 صراحتاً «حفظ DenyAll تا آماده و تست‌شدن مسیر واقعی اعتبارسنجی» را می‌خواهد (`docs/DECISIONS.md:1513`). تناقضی وجود ندارد و هیچ اقدامی برای شل‌کردن آن پیشنهاد نمی‌شود.
 
 ## ۸) پرسش‌های باز مالک (پیش‌فرض پیشنهادی)
 1. ثبت قواعد ۲، ۳، ۵ بخش ۰ در ADR تأیید می‌شود؟ — پیش‌فرض: PR-2 تا تأیید شروع نشود.
