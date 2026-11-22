@@ -3512,3 +3512,7 @@
 - بازبینی CodeRabbit نشان داد ارجاع D-070 به سیاست نگهداری Vendor نادرست است: D-070 فقط `SecurityAuditEvents` و metadata نشست `UserSession` در Customer Host را پوشش می‌دهد.
 - جملهٔ جاری در `VENDOR_LIFECYCLE_FINAL_AUDIT.md` اصلاح شد: مرز ممیزی Vendor از D-046 می‌آید؛ D-046 تعیین دورهٔ عددی را به پیکربندی/راهنمای استقرار و Issue اجرایی واگذار می‌کند و در حال حاضر دورهٔ Vendor تعریف/مصوب نیست؛ Retention/Archive همچنان پیاده‌سازی نشده است.
 - این رکورد، عبارت تاریخی همین ممیزی را تصحیح می‌کند و سابقهٔ append-only قبلی را بازنویسی نمی‌کند. هیچ کد، Schema، Migration یا Customer Host تغییر نکرده است.
+
+## 2026-11-22 — تست Update نویسه‌های ممنوع Product و طبقه‌بندی شکاف‌های Party/Product
+
+- تست Update برای نویسه‌های کنترلی/bidi و ZWNJ در Product اضافه شد؛ کد تولیدی تغییر نکرد. موارد ZWSP/WJ، نرمال‌سازی ارقام و ی/ک نیازمند سیاست مالک است (`docs/handoffs/ISSUE-UNNUMBERED-trade-product-update-forbidden-chars-tests.md`).
