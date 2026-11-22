@@ -3539,3 +3539,9 @@
 
 - ۱۰ تست invariant به `TradePaymentPlanInvariantTests` افزوده شد؛ هیچ نقضی از قرارداد مصوب #710 دیده نشد و کد تولیدی تغییر نکرد.
 - سه تصمیم باز مالک (largest-remainder، درصد مؤثر مرحلهٔ آخر، واحد کوچک IRR) با مثال در `docs/handoffs/ISSUE-UNNUMBERED-trade-payment-plan-invariants-and-decision-proposal.md` ثبت شد. بدون Schema/Migration.
+
+## 2026-11-22 — Vendor: ممیزی وضعیت پس از Mergeهای GLM و نقشهٔ مراحل بعدی (GLM)
+
+- ممیزی تازه روی `main@be2283d80f`: هر سه PR قبلی GLM ادغام‌شده‌اند — #745 (`2026-11-22T08:24:38Z`)، #746 (Squash `c04b440f48`؛ CI head برابر ۱۵/۱۵)، #753 (Squash `d60db127cc`؛ CI head `d9e0d8da` برابر ۱۹ چک = ۱۸ موفق + ۱ neutral CodeRabbit؛ CI پس از Merge روی main برابر ۱۲/۱۲). ایراد v1→v2 entitlement قبلاً با commit `6490214e` در همان #753 اصلاح و Merge شده است؛ دوباره‌کاری نشد.
+- مستندات کهنه هم‌گام شد: snapshot جدید بالای `PROJECT_STATUS.md`، برچسب «شاخهٔ باز» در `LICENSING_WORKFLOWS.md` §۱۴.۷ و `VENDOR_LIFECYCLE_FINAL_AUDIT.md` بخش مرحله ۱ به وضعیت Mergeشده با SHA و شواهد CI تغییر کرد.
+- نقشهٔ کارهای باقی‌مانده و Open Decisionها (تحویل ACK amendment، cache نسخه‌دار رزولوشن، enforcement شرکت‌محور در call-siteها، D-099/D-100/D-101، موارد زیرساختی مالک و سیاست `CustomerNumber`) با مانع هر مورد در handoff `ISSUE-UNNUMBERED-vendor-stage2-roadmap-2026-11-22.md` ثبت شد؛ هیچ کدی برای موارد نیازمند تصمیم مالک پیاده نشد. تغییرات این record فقط مستنداتی است.
