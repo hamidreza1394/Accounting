@@ -87,5 +87,5 @@
 ## شناسه‌های Git
 
 - Branch: `glm/vendor-stage1-entitlement-consumers` (از `main@5484758722d0a316511806cf3097c5c691875599`)
-- Commitها: `27e85c57` (کد و تست)، `65dc7ab2` (مستندات + ثبت CI واقعی)
+- Commitها: `27e85c57` (کد و تست)، `65dc7ab2` (مستندات)، `69cd355f` (ثبت شاهد CI)، `f544f347` (هم‌راستاسازی ارجاع SHA)؛ commit نهایی همین فایل فقط این فهرست را تکمیل می‌کند.
 - Pull Request: [#753](https://github.com/hamidreza1394/Accounting/pull/753) — باز، بدون Merge (ادغام فقط با مالک)
