@@ -14,13 +14,15 @@
 
 ## خلاصه تغییرات
 - ADR جدید D-116 (`Accepted`، پیاده‌سازی `NotImplemented`) به انتهای `docs/DECISIONS.md` افزوده شد.
-- یادداشت تاریخ‌دار در سربرگ D-086 (روال D-104) و در `TRADE_S3_ARCHITECTURE.md` («مقادیر فعالیت فعلی»): تک‌کالایی فقط پیش‌فرض/سقف قابل‌تنظیم است.
+- یادداشت تاریخ‌دار در سربرگ D-086 (روال D-104)، در `TRADE_S3_ARCHITECTURE.md` (دو خط پیش‌فرض تک‌کالایی) و در `TRADE_MODULE.md` (یک خط): تک‌کالایی فقط پیش‌فرض/سقف قابل‌تنظیم فعالیت فعلی است.
+- پیامدهای D-116 صریح شد: `TenantId` و `CompanyId` مستقل‌اند (D-087/D-105)؛ برابری فعلی `TenantId = Company.Id` فقط وضعیت Legacy است و الزام طراحی نیست؛ D-090 `Proposed` می‌ماند.
 - قواعد تأییدشدهٔ قبلی (یک‌به‌یک بودن: D-104؛ مالکیت Voyage: D-063 بند ۱؛ عدم ایجاد `TradeOperationalPeriod`: D-062؛ استقلال از FiscalPeriod: D-086 بند ۷؛ Excel Import: D-106 `Proposed`) فقط ارجاع شدند و تغییر نکردند.
 - بازبینی مستقل (`architect`) یافته‌های ارجاع نادرست D-062، فهرست باز P-1، محدودشدن D-086 بند ۳.۵ و واژگان وضعیت را گزارش کرد؛ همه با grep راستی‌آزمایی و اصلاح شدند.
 
 ## فایل‌های مهم تغییرکرده
-- `docs/DECISIONS.md` — ADR D-116 + یادداشت D-086
-- `docs/TRADE_S3_ARCHITECTURE.md` — یادداشت یک‌خطی
+- `docs/DECISIONS.md` — ADR D-116 + یادداشت D-086 + روشن‌سازی TenantId/CompanyId
+- `docs/TRADE_S3_ARCHITECTURE.md` — یادداشت D-116 روی خط پیش‌فرض تک‌کالایی (دو خط)
+- `docs/TRADE_MODULE.md` — یادداشت D-116 روی خط «فعالیت فعلی تک‌کالایی» (خط ۱۶۷)
 - `docs/handoffs/ISSUE-UNNUMBERED-trade-domain-contract-adr.md` — همین سند
 
 ## تصمیم‌های فنی
