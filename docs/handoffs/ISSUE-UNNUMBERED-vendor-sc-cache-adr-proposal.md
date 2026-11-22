@@ -14,6 +14,7 @@
 
 ## خلاصه تغییرات
 - سند جدید `docs/LICENSE_RESOLUTION_CACHE_ADR_PROPOSAL.md` (پیش‌نویس ADR با گزینهٔ O2 fingerprint-keyed memo به‌عنوان پیشنهاد بررسی) و ورودی `OD-28` در `docs/LICENSING_OPEN_DECISIONS.md`.
+- **اصلاحیه در همین PR:** بخش ۶ «پیشنهاد نهایی» به سند ADR افزوده شد — تا Benchmark واقعی یا شواهد معتبر عملکردی، **عدم استفاده از Cache (O1) انتخاب بهتر و پیش‌فرض فعلی است** (مسیر کاملاً محلی؛ بدون round-trip شبکه؛ سود ممکن فقط CPU)؛ O2 فقط گزینهٔ آیندهٔ مشروط به شواهد + تأیید مالک + حفظ invariantهاست. پیشنهاد OD-28 در `LICENSING_OPEN_DECISIONS.md` نیز هم‌راستا شد؛ وضعیت OD-28 همچنان `NeedsApproval` و ADR همچنان `Proposed` است و هیچ کد/فلگ cache ساخته نشده است.
 
 ## فایل‌های مهم تغییرکرده
 - `docs/LICENSE_RESOLUTION_CACHE_ADR_PROPOSAL.md` — جدید
