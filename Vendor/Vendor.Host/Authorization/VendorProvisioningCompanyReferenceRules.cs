@@ -35,8 +35,9 @@ public static class VendorProvisioningCompanyReferenceRules
                 return VendorProvisioningCompanySelection.Conflict("provisioning_company_reference_invalid");
         }
 
-        var selected = companies.SingleOrDefault(company =>
-            string.Equals(company!.CompanyReference, requestedCompanyReference, StringComparison.Ordinal));
+        // Company resolution is the engine's decision over the signed payload: the selector must
+        // already be a member of the signed entitlement set, never an inferred or client value.
+        var selected = EntitlementPolicyEngine.ResolveCompany(signedPayload, requestedCompanyReference);
         if (selected is null)
             return VendorProvisioningCompanySelection.Conflict("provisioning_company_reference_not_entitled");
 
@@ -63,7 +64,10 @@ public static class VendorProvisioningCompanyReferenceRules
                 return VendorProvisioningCompanySelection.BadRequest("invalid_provisioning_subsystems");
 
             chosen = requestedSubsystems.Order(StringComparer.Ordinal).ToArray();
-            if (chosen.Except(entitlements, StringComparer.Ordinal).Any())
+            // Module entitlement is decided by the engine over the signed company entitlement:
+            // the requested subset can only narrow, never expand, the signed grant.
+            if (chosen.Any(code => !EntitlementPolicyEngine.EvaluateModule(
+                    signedPayload, selected.CompanyReference, code).Allowed))
                 return VendorProvisioningCompanySelection.Conflict("provisioning_subsystem_not_entitled");
         }
 

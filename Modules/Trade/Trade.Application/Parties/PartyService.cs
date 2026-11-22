@@ -318,7 +318,8 @@ public sealed class PartyService(IPartyStore store, TimeProvider timeProvider)
     /// </summary>
     private static bool HasForbiddenCharacters(string value) => value.Any(character =>
         char.IsControl(character) ||
-        character is '\u200E' or '\u200F' or (>= '\u202A' and <= '\u202E') or (>= '\u2066' and <= '\u2069'));
+        character is '\u200E' or '\u200F' or '\u061C' or '\u2028' or '\u2029' or '\uFEFF' ||
+        character is (>= '\u202A' and <= '\u202E') or (>= '\u2066' and <= '\u2069'));
 
     private static string? Optional(string? value)
     {
