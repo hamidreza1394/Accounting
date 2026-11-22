@@ -3512,3 +3512,8 @@
 - بازبینی CodeRabbit نشان داد ارجاع D-070 به سیاست نگهداری Vendor نادرست است: D-070 فقط `SecurityAuditEvents` و metadata نشست `UserSession` در Customer Host را پوشش می‌دهد.
 - جملهٔ جاری در `VENDOR_LIFECYCLE_FINAL_AUDIT.md` اصلاح شد: مرز ممیزی Vendor از D-046 می‌آید؛ D-046 تعیین دورهٔ عددی را به پیکربندی/راهنمای استقرار و Issue اجرایی واگذار می‌کند و در حال حاضر دورهٔ Vendor تعریف/مصوب نیست؛ Retention/Archive همچنان پیاده‌سازی نشده است.
 - این رکورد، عبارت تاریخی همین ممیزی را تصحیح می‌کند و سابقهٔ append-only قبلی را بازنویسی نمی‌کند. هیچ کد، Schema، Migration یا Customer Host تغییر نکرده است.
+
+## 2026-11-22 — Workstream C: تست ایزولاسیون Company در سطح سرویس Party/Product
+
+- ۶ تست سرویس برای Update شرکت دیگر، کد یکسان در دو شرکت و عدم تغییر رکورد پس از تعارض کد افزوده شد؛ دو جهش روی `ProductService` شکست تست را نشان داد. کد تولیدی تغییر نکرد.
+- ماتریس #749 بازبینی شد: «ReadOnly + DenyAll ← 409» از قبل با `ClosedPeriodWriteGets409ReadOnly` پوشش دارد. جزئیات و شکاف‌های P2 در `docs/handoffs/ISSUE-UNNUMBERED-trade-test-hardening-workstream-c.md`.
