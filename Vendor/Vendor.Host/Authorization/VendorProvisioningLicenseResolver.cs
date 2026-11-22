@@ -221,7 +221,9 @@ public sealed class VendorProvisioningLicenseResolver(
                 return VendorProvisioningLicenseBindingResult.BadRequest("invalid_provisioning_subsystems");
 
             selected = requestedSubsystems.OrderBy(code => code, StringComparer.Ordinal).ToArray();
-            if (selected.Except(entitlements, StringComparer.Ordinal).Any())
+            // Entitlement is decided by the pure engine against the signed payload: a requested
+            // code outside the signed installation-wide allowlist is denied (fail-closed).
+            if (selected.Any(code => !EntitlementPolicyEngine.EvaluateLegacySubsystem(payload, code).Allowed))
                 return VendorProvisioningLicenseBindingResult.Conflict("provisioning_subsystem_not_entitled");
         }
 
