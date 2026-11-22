@@ -94,25 +94,23 @@ public sealed class TradePaymentPlanInvariantTests
         }
     }
 
-    [Theory]
-    [InlineData("JPY", 5, 10)] // 10 x 10% of 5 yen: each non-last rounds 0.5 -> 1, nine stages = 9 > 5
-    [InlineData("USD", 0.05, 4)] // 4 x 25% of 0.05: 0.0125 -> 0.01 each, last = 0.02
-    public void Percent_TinyTotals_NeverSilentlyOverAllocate(string currency, double totalDouble, int stages)
+    [Fact]
+    public void Percent_Usd005FourQuarters_IsAcceptedWithExactAmounts()
     {
-        var total = (decimal)totalDouble;
-        var share = 100m / stages;
-        var input = Enumerable.Range(0, stages).Select(_ => P(share)).ToArray();
-        var ok = PaymentPlanCalculator.TryBuild(currency, total, input, null, out var plan, out var issues);
-        if (ok)
-        {
-            Assert.Equal(total, plan!.Stages.Sum(s => s.Amount));
-            Assert.All(plan.Stages, s => Assert.True(s.Amount > 0));
-        }
-        else
-        {
-            Assert.Null(plan);
-            Assert.NotEmpty(issues);
-        }
+        // Approved rule: non-last stages 0.0125 -> 0.01 (AwayFromZero, 2 minor units); the last stage takes the real remainder.
+        Assert.True(PaymentPlanCalculator.TryBuild("USD", 0.05m, [P(25m), P(25m), P(25m), P(25m)], null, out var plan, out var issues));
+        Assert.Empty(issues);
+        Assert.Equal([0.01m, 0.01m, 0.01m, 0.02m], plan!.Stages.Select(s => s.Amount));
+    }
+
+    [Fact]
+    public void Percent_Jpy5TenStagesOfTenPercent_IsRejectedExplicitlyNotOverAllocated()
+    {
+        // Nine non-last stages each round 0.5 -> 1 (nine yen > 5), so the remainder is -4: explicit rejection, never a silent over-allocation.
+        var input = Enumerable.Range(0, 10).Select(_ => P(10m)).ToArray();
+        Assert.False(PaymentPlanCalculator.TryBuild("JPY", 5m, input, null, out var plan, out var issues));
+        Assert.Null(plan);
+        Assert.Contains(issues, i => i.Code == PaymentPlanIssueCode.ResidualStageNotPositive && i.StageNumber == 10);
     }
 
     [Fact]
