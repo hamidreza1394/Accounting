@@ -38,7 +38,8 @@
 - `Vendor/Vendor.Host/Signing/VendorAmendmentEntitlementPolicy.cs` (جدید): Gate خالص متولی Engine — جانشین amendment حق لغو هیچ entitlement اعطاشدهٔ payload جاری را ندارد و فقط می‌تواند entitlementهای قابل‌تصمیم و مجازِ Engine را حمل کند؛ کد خطای پایدار جدید `amendment_payload_policy_invalid`. سیم‌کشی در `VendorLicenseAmendmentIssuanceService.IssueApprovedAsync` پیش از `envelopeFactory.CreateAsync`.
 - `VendorProvisioningLicenseResolver`: بررسی subset زیرسیستم‌های v1 به `EvaluateLegacySubsystem` متولی Engine شد (همان کد خطا/وضعیت HTTP).
 - `VendorProvisioningCompanyReferenceRules`: انتخاب شرکت با `ResolveCompany` و بررسی ماژول هر کد درخواستی با `EvaluateModule` متولی Engine شد (همان کدهای خطا/وضعیت HTTP؛ حلقهٔ دفاعی structural/uniqueness قبل از Engine حفظ شد).
-- تست‌ها: `VendorAmendmentEntitlementPolicyTests` (۱۱ تست قرارداد Gate) و `Architecture/VendorEntitlementEnforcementGuardTests` (۳ تست: مصرف Engine فقط در نقاط مجاز با allow-list بستهٔ نام فایل؛ پابرجایی اتصال Engine در نقاط مجاز؛ بسته‌بودن interlock v5).
+- تست‌ها: `VendorAmendmentEntitlementPolicyTests` (۱۲ تست قرارداد Gate؛ شامل دو تست رگرسیون fail-closed انتقال FormatVersion) و `Architecture/VendorEntitlementEnforcementGuardTests` (۳ تست: مصرف Engine فقط در نقاط مجاز با allow-list بستهٔ نام فایل؛ پابرجایی اتصال Engine در نقاط مجاز؛ بسته‌بودن interlock v5).
+- **اصلاح مأموریت مرور نهایی (commit `6490214e`):** Gate سیاستی روی هر تغییر FormatVersion — در هر دو جهت v1→v2 و v2→v1 — fail-closed شد؛ پیش از آن انتقال v1→v2 فقط سمت candidate بررسی می‌شد و می‌توانست حذف یک مجوز (مثال مأموریت: حذف `sales` هنگام انتقال به finance شرکت‌محور) را پنهان کند. هیچ مسیر عملیاتی تغییر FormatVersion ندارد (هر سه Builder نسخه را با `currentPayload with { … }` حفظ می‌کنند و دو Builder صریحاً v2 را الزامی می‌کنند؛ `LicenseRevisionRules` فقط downgrade را می‌بندد)؛ بنابراین این قاعده یک گارد جلوی امضا است، نه قانون لایسنس جدید، و تا تعریف نگاشت مصوب مالک بسته می‌ماند.
 
 ## فایل‌های مهم تغییرکرده
 
@@ -46,7 +47,7 @@
 - `Vendor/Vendor.Host/Signing/VendorLicenseAmendmentIssuanceService.cs` — فراخوانی Gate پیش از امضا (+۶ خط)
 - `Vendor/Vendor.Host/Authorization/VendorProvisioningLicenseResolver.cs` — تصمیم v1 با Engine (+۴/−۱)
 - `Vendor/Vendor.Host/Authorization/VendorProvisioningCompanyReferenceRules.cs` — تصمیم v2 با Engine (+۱۰/−۳)
-- `tests/Vendor.Host.Tests/VendorAmendmentEntitlementPolicyTests.cs` — ۱۱ تست قرارداد Gate
+- `tests/Vendor.Host.Tests/VendorAmendmentEntitlementPolicyTests.cs` — ۱۲ تست قرارداد Gate (۱۰ اولیه + ۲ تست رگرسیون انتقال FormatVersion)
 - `tests/Vendor.Host.Tests/Architecture/VendorEntitlementEnforcementGuardTests.cs` — ۳ تست گارد معماری
 - `docs/VENDOR_LIFECYCLE_FINAL_AUDIT.md`، `docs/LICENSING_WORKFLOWS.md` §۱۴، `docs/INDEX.md`، `docs/WORK_LOG.md` — هم‌راستاسازی وضعیت (فقط مستندات)
 
@@ -56,6 +57,7 @@
 - **Seat/MaxCompanies در Vendor ارزیابی مصرفی نمی‌شود:** تعداد عضویت فعال و شمارش شرکت‌های واقعی در Customer Host است و طبق D-054 Vendor نباید ادعای enforce این سقف‌ها را داشته باشد؛ تنها محدودهٔ ساختاری در payload اعمال می‌شود.
 - **کد خطای جدید فقط یکی** (`amendment_payload_policy_invalid`) برای Gate جدید؛ هیچ کد خطای تثبیت‌شدهٔ دیگری تغییر نکرده است.
 - **دلتای Gate نسبت به قواعد موجود:** `StructuralValidation` + `LicenseRevisionRules` در Builder باقی‌اند؛ Gate جدید لایهٔ Engine-محور ضدرود (anti-revoke) است که قبلاً وجود نداشت و آینده را از kinds سیاست‌شکن مصون می‌کند.
+- **انتقال FormatVersion دوطرفه fail-closed است (تصمیم مأموریت مرور نهایی، بدون اختراع نگاشت):** هیچ قرارداد مصوبی برای نگاشت مجوزهای installation-wide v1 به مجوزهای company-scoped v2 (یا برعکس) وجود ندارد؛ تا پیش از تعریف چنین نگاشتی توسط مالک، هر جانشین با FormatVersion متفاوت با `amendment_payload_policy_invalid` قبل از امضا رد می‌شود، حتی اگر candidate به‌تنهایی از نظر ساختاری معتبر باشد. جایگزینی نگاشت یا بازکردن این مسیر صرفاً با تصمیم مالک است و در این PR انجام نشده است.
 - تصمیم معماری/ADR جدیدی ثبت نشد؛ هیچ Proposed به Accepted تبدیل نشد.
 
 ## بررسی و آزمون (نتایج واقعی، SDK 10.0.100، بدون SQL Server/SoftHSM محلی)
@@ -68,6 +70,7 @@
 | `dotnet test --project tests/Licensing.Contracts.Tests/Licensing.Contracts.Tests.csproj -c Release` | `total: 167, failed: 0, succeeded: 167, skipped: 0` | قراردادها دست‌نخورده؛ همه سبز |
 | `python3 scripts/check_static_assets.py` | PASS | exit 0 |
 | `git diff --check` | تمیز | exit 0 |
+| `dotnet test --solution Vendor.sln --no-build -c Release` (پس از اصلاح `6490214e`) | `total: 463, succeeded: 375, failed: 10, skipped: 78` | دو تست رگرسیون انتقال FormatVersion ابتدا RED بودند (قبل از اصلاح Gate) و سپس GREEN شدند؛ کلاس Gate: `total: 12, failed: 0`؛ **۱۰ خطا دقیقاً همان مجموعهٔ پیش‌موجود است (نام‌ها یکسان، فقط زمان اجرا متفاوت)**. ۷۸ Skip: تست‌های SQL Server و SoftHSM؛ «Skip» به معنی موفق نیست |
 | `dotnet build Template.sln` / `dotnet test --solution Template.sln` | اجرا شد (نتیجه در PR ثبت می‌شود) | اثبات عدم اثر جانبی روی اپ اصلی |
 | CI مخزن روی head کدِ PR (`65dc7ab2`) و head مستندات (`69cd355f`) — هر دو با نتیجهٔ یکسان | پایان‌یافته: ۱۹ Check Run — ۱۸ `success` و ۱ `neutral` | همهٔ Jobهای Vendor (checkpoint file-lock regression روی ubuntu/windows، Windows CNG signer tests) و چک‌های الزامی مخزن سبز؛ `neutral` مربوط به CodeRabbit است و تأیید یا Review موفق تلقی نمی‌شود؛ این CI شامل اجرای تست‌های SQL Server در محیط CI است، ولی نتیجهٔ آن جایگزین گزارش شفاف بالا نمی‌شود |
 
@@ -87,5 +90,5 @@
 ## شناسه‌های Git
 
 - Branch: `glm/vendor-stage1-entitlement-consumers` (از `main@5484758722d0a316511806cf3097c5c691875599`)
-- Commitها: `27e85c57` (کد و تست)، `65dc7ab2` (مستندات)، `69cd355f` (ثبت شاهد CI)، `f544f347` (هم‌راستاسازی ارجاع SHA)؛ commit نهایی همین فایل فقط این فهرست را تکمیل می‌کند.
-- Pull Request: [#753](https://github.com/hamidreza1394/Accounting/pull/753) — باز، بدون Merge (ادغام فقط با مالک)
+- Commitها: `27e85c57` (کد و تست)، `65dc7ab2` (مستندات)، `69cd355f` (ثبت شاهد CI)، `f544f347`/`792375fc` (هم‌راستاسازی ارجاع SHA)، `6490214e` (اصلاح fail-closed انتقال FormatVersion + ۲ تست رگرسیون)؛ commit مستندات این اصلاحیه همین فایل و `WORK_LOG.md` را هم‌راستا می‌کند.
+- Pull Request: [#753](https://github.com/hamidreza1394/Accounting/pull/753) — باز؛ Merge با اختیار صریح مأموریت مرور نهایی، فقط پس از احراز کامل هشت شرط (ایراد v1→v2 بسته، checks سبز روی head نهایی، Mergeable/Clean، بدون thread باز قابل اقدام)
