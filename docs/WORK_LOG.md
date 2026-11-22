@@ -3534,3 +3534,8 @@
 ## 2026-11-22 — تست Update نویسه‌های ممنوع Product و طبقه‌بندی شکاف‌های Party/Product
 
 - تست Update برای نویسه‌های کنترلی/bidi و ZWNJ در Product اضافه شد؛ کد تولیدی تغییر نکرد. موارد ZWSP/WJ، نرمال‌سازی ارقام و ی/ک نیازمند سیاست مالک است (`docs/handoffs/ISSUE-UNNUMBERED-trade-product-update-forbidden-chars-tests.md`).
+
+## 2026-11-22 — ممیزی invariantهای PaymentPlanCalculator و پیشنهاد تصمیم (Trade)
+
+- ۱۰ تست invariant به `TradePaymentPlanInvariantTests` افزوده شد؛ هیچ نقضی از قرارداد مصوب #710 دیده نشد و کد تولیدی تغییر نکرد.
+- سه تصمیم باز مالک (largest-remainder، درصد مؤثر مرحلهٔ آخر، واحد کوچک IRR) با مثال در `docs/handoffs/ISSUE-UNNUMBERED-trade-payment-plan-invariants-and-decision-proposal.md` ثبت شد. بدون Schema/Migration.
