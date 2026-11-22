@@ -2,6 +2,22 @@
 
 > **وضعیت سند:** خروجی S-G مأموریت. این چک‌لیست فقط «وضعیت واقعی + پیش‌نیاز + مسئول + شواهد لازم» را ثبت می‌کند؛ **هیچ Gate یا فلگی را باز نمی‌کند و تکمیل مستندات به‌تنهایی مجوز باز کردن هیچ گیت یا ادعای Production readiness نیست.** مبنای واقعیت: `docs/DECISIONS.md` (D-041/D-055/D-057/D-058/D-107)، `docs/LICENSING.md` (هدر وضعیت main@`4c91797e`)، `docs/PROJECT_STATUS.md` snapshot 2026-11-22 و کد main@`58a1ccd4`.
 
+## ۰) دسته‌بندی وضعیت موارد مأموریت (واژگان D-030؛ وجود پیاده‌سازی ≠ اثبات آمادگی عملیاتی)
+
+هر مورد در ستون‌های مستقل ارزیابی می‌شود: «Implemented» (در کد/مستند رسمی موجود)، «Tested» (شاهد تست واقعی/CI)، «Operationally Verified» (شواهد اجرای عملیاتی روی میزبان/دیتابیس هدف) و «وضعیت عملیاتی نهایی» از واژگان مخزن. **هیچ موردی به‌صرف وجود کد یا مستندات Operationally Verified تلقی نمی‌شود:**
+
+| مورد | Implemented | Tested | Operationally Verified | وضعیت عملیاتی نهایی | دلیل/مانع |
+|---|---|---|---|---|---|
+| Gate دوکلیدی v5 | بله — `VendorProvisioningCompanyReferenceGate` + interlock کدی | بله — `VendorEntitlementEnforcementGuardTests` و تست‌های Gate در CI | **خیر** — هیچ بستهٔ v5 عملیاتی صادر/apply نشده | **Blocked** (باز شدن = تصمیم صریح مالک) | زنجیرهٔ #392/#235 + تست دو میزبان + تصمیم مالک (§۲) |
+| Customer Migration (#392) | جزئی — فایل Migration `20261116070805` در مخزن؛ mapping/bootstrap نه | **خیر** — روی DB واقعی هرگز اجرا نشده | **خیر** | **Blocked** (+ پیاده‌سازی ناقص) | اجرای migration روی DB واقعی + تصمیم #392 (مالک/DBA) |
+| Key Ceremony (#236) | فقط Runbookها و کد signer | تست‌های CNG signer در CI (ماشین CI، نه میزبان Production) | **خیر** — ceremony واقعی، ACL، rotation/recovery روی میزبان هدف انجام نشده | **Blocked** (Not Verified عملیاتی) | زیرساخت میزبان Windows + حضور انسانی + ثبت شواهد (مالک) |
+| Audit Sink (#107) | جزئی — قرارداد checkpoint + startup guard + file store فقط Development/Test | بله — regressionهای قفل checkpoint و تست‌های audit در CI | **خیر** — sink مستقل Production با failure domain مستقل provision نشده | **Blocked** (sink Production `NotImplemented`) | تصمیم زیرساخت sink + provision + drill بازیابی (مالک) |
+| Trust Distribution (#235) | جزئی — trust storeهای دو طرف ACK provisioning در کد | بله — تست‌های ACK دو میزبان SQL Server در CI برای مسیر provisioning | **خیر** — توزیع/چرخش trust و staging واقعی برای amendment/trust مشتری وجود ندارد | **Blocked / Proposed** | قرارداد توزیع/چرخش باز (خروجی S-B: `AMENDMENT_ACK_CONTRACT_ANALYSIS.md`) + میزبان Staging |
+| OD-27 (نصب فاقد TPM) | نه — D-057 fail-closed باقی است؛ هیچ جایگزین software پیاده نشده | نه | **خیر** | **Proposed/NeedsApproval** (مسیر فعلی fail-closed) | تصمیم باز مالک؛ هیچ software anchor معادل TPM مجاز نیست |
+| Enforcement عملیاتی (#391/#401) | جزئی — گیت سراسری state-only opt-in (پیش‌فرض خاموش)؛ enforcement شرکت‌محور نه | بله — تست‌های state گیت در CI | **خیر** — فلگ در هیچ محیط عملیاتی روشن نشده؛ شکاف شرکت‌محور باز | **Proposed** (طرح E1..E4) + `NotImplemented` برای بخش شرکت‌محور | تأیید مالک روی Inventory S-D (`ENTITLEMENT_ENFORCEMENT_CALLSITE_INVENTORY.md`) + برش‌بندی مستقل |
+
+قاعده: انتقال هر مورد به `Verified` فقط با شواهد اجرای واقعی (میزبان/DB هدف، runbook اجراشده، drill ثبت‌شده) و از مسیر PR مربوط انجام می‌شود؛ وجود تست CI معیار «Tested» است و هرگز به‌تنهایی معیار Operationally Verified نیست.
+
 ## ۱) گاردهای جداسازی D-041 (G1..G6)
 
 وضعیت ثبت‌شده در پیگیری گاردهای D-041 (بند «پیگیری گاردها، 2026-10-25») — از آن زمان تغییر وضعیت ثبت‌شدهٔ جدیدی در مستندات وجود ندارد:

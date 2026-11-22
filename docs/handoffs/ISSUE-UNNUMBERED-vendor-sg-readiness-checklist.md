@@ -10,6 +10,7 @@
 - [x] Gate دوکلیدی v5: سازوکار دو کلید (`Provisioning:CompanyReferenceIssuance:Enabled` + `CustomerConsumerReady=false` در `VendorProvisioningCompanyReferenceGate.cs:22`)، پیش‌نیاز باز شدن و ممنوعیت باز کردن توسط عامل
 - [x] چک‌لیست Customer Migration (#392)، Key Ceremony (#236)، #107، Trust #235، OD-27 و #391/#401 با ستون‌های پیش‌نیاز/مسئول/شواهد/تست/مانع/قابلیت انجام در محیط فعلی
 - [x] قاعدهٔ صریح: هیچ گیت با تکمیل مستندات باز نمی‌شود؛ هیچ وضعیت Accepted/Verified جدیدی ایجاد نشد
+- [x] تکمیل در اصلاحیهٔ همین PR: بخش ۰ — دسته‌بندی مستقل هر مورد مأموریت (Gate دوکلیدی، Customer Migration، Key Ceremony، Audit Sink، Trust Distribution، OD-27، Enforcement) در چهار ستون Implemented/Tested/Operationally Verified/وضعیت نهایی با واژگان D-030؛ تفاوت «وجود پیاده‌سازی» با «اثبات آمادگی عملیاتی» صریح شد و هیچ موردی Operationally Verified اعلام نشد
 
 ## خلاصه تغییرات
 - سند جدید `docs/VENDOR_OPERATIONAL_READINESS_CHECKLIST.md` — تفکیک شفاف «قابل انجام در محیط فعلی» (G2 و بخش کدی #235 و #391 پس از تأیید) از «فقط مالک/زیرساخت» (G4/G5، migration واقعی، Key Ceremony، sink #107، OD-27).
