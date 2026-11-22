@@ -142,7 +142,7 @@ flowchart TD
 6. تا ورود ماژول‌های حسابداری، تنها نقطهٔ آزمون‌پذیر سقف، ایجاد شرکت است؛ این هنوز مسیر ایجاد شرکت پشتیبانی‌شده‌ای ندارد (D-044).
 
 
-## ۱۲) Provisioning مشتری با یک لایسنس مشخص (D-054، Issue #228/#235)
+## ۱۴) Provisioning مشتری با یک لایسنس مشخص (D-054، Issue #228/#235)
 
 1. کاربر Vendor نصب مقصد را انتخاب می‌کند؛ API فقط لایسنس‌هایی را نمایش می‌دهد که envelope امضاشدهٔ آن‌ها با کلید عمومی مورد اعتماد تأیید شده و برای همان مشتری/نصب فعال و در بازهٔ اعتبار هستند.
 2. درخواست شامل licenseId و برای LicensePayload v1 در صورت نیاز subset زیرسیستم‌های installation-scoped است. برای LicensePayload v2، `companyReference` فقط selector شرکت از مجموعهٔ payload امضاشده است؛ ورودی مرورگر مرجع معتبر محسوب نمی‌شود و Vendor باید عضویت آن را در envelope بررسی و مقدار نهایی را از همان envelope بردارد. sequence یا فهرست کامل entitlement از کلاینت دریافت نمی‌شود.
@@ -151,10 +151,10 @@ flowchart TD
 5. پیش از هر Export مجدد نیز همین اعتبارسنجی انجام می‌شود. پس از Export موفق، مشتری آفلاین نمی‌تواند تعلیق بعدی یا revision جدید Vendor را کشف کند؛ این محدودیت در قرارداد پذیرفته شده است.
 6. idempotency شامل licenseId و sequence امضاشده، به‌علاوهٔ تنظیمات و زیرسیستم مؤثر است. retry یک requestId قدیمی به revision تاریخی خودش متصل می‌ماند و به revision جدیدتر منتقل نمی‌شود.
 7. درخواست‌های تاریخی schema v3 نه backfill می‌شوند و نه به لایسنس حدس‌زده وصل می‌شوند. `Licensing.Contracts` نسخهٔ v5 را به‌صورت additive می‌شناسد. سمت Customer، `CustomerProvisioningPackageVerifier` از PR #686 با `allowCompanyReference=true` v5 را می‌پذیرد و `ApplyAsync` آن را اتمیک اعمال می‌کند؛ اما چون Gate صدور Vendor خاموش است، در عمل هنوز فقط بسته‌های v1-v4 در جریان‌اند. canonical bytes نسخه‌های v1-v3 حفظ شده‌اند؛ Vendor درخواست v3 را دوباره امضا یا Export نمی‌کند و LicenseId/Sequence مفقود را حدس نمی‌زند.
-8. candidate builderهای Vendor برای MaxCompanies و Company-scoped Module/Feature/Seat در #393 موجودند. چرخه Order/Payment/Receivables از PR #722، رابط فارسی RTL از PR #738 و درخواست صریح Amendment/Approval/Signing/sequence+1 نصب‌محور از PR #739 در main ادغام و CI-Verified شده‌اند. Payment و Issuance مستقل‌اند (D-108). Company-scoped add-onها تا mapping معتبر #392 مسدودند؛ ACK/Applied tracking اختصاصی و Delivery tracking جداگانه Amendment هنوز باقی است. سمت مشتری، PRهای #684/#686/#687 schema و consumer v5 را در main دارند؛ Gate صدور Vendor (`CustomerConsumerReady=false`) بسته است و هیچ بسته v5 عملیاتی صادر نمی‌شود. Migration مشتری روی DB واقعی اجرا نشده و سیاست Restore/Clone و آزمون دو میزبان باقی‌اند. CI فعلی main@b5f8c53 دارای .NET CI، Vendor CI، Semgrep و Push on main همگی موفق است؛ این وضعیت Production readiness را اثبات نمی‌کند.
+8. candidate builderهای Vendor برای MaxCompanies و Company-scoped Module/Feature/Seat در #393 موجودند. چرخه Order/Payment/Receivables از PR #722، رابط فارسی RTL از PR #738 و درخواست صریح Amendment/Approval/Signing/sequence+1 نصب‌محور از PR #739 در main ادغام و CI-Verified شده‌اند. Payment و Issuance مستقل‌اند (D-108). Company-scoped add-onها تا mapping معتبر #392 مسدودند؛ ACK/Applied tracking اختصاصی و Delivery tracking جداگانه Amendment هنوز باقی است. سمت مشتری، PRهای #684/#686/#687 schema و consumer v5 را در main دارند؛ Gate صدور Vendor (`CustomerConsumerReady=false`) بسته است و هیچ بسته v5 عملیاتی صادر نمی‌شود. Migration مشتری روی DB واقعی اجرا نشده و سیاست Restore/Clone و آزمون دو میزبان باقی‌اند. CI فعلی main@ac0ec741 دارای .NET CI، Vendor CI، Semgrep و Push on main همگی موفق است؛ این وضعیت Production readiness را اثبات نمی‌کند.
 
 
-## ۱۴) Add-on amendment، bootstrap و entitlement sync (D-059)
+## ۱۵) Add-on amendment، bootstrap و entitlement sync (D-059)
 
 ### خرید افزونه
 1. Vendor سفارش/خرید افزونه را برای CustomerAccount و Installation مشخص ثبت می‌کند؛ Company scope برای Seat/Module/Feature صریح است.
@@ -173,9 +173,9 @@ flowchart TD
 - قطع شبکه نباید license معتبر پذیرفته‌شده را باطل کند؛ usage داده نشده در Vendor stale است تا sync بعدی.
 
 
-## ۱۴) دروازه شروع برنامه و Activation Wizard (D-060 / #396)
+## ۱۶) دروازه شروع برنامه و Activation Wizard (D-060 / #396)
 
-### 14.1 بررسی وضعیت قبل از ورود
+### 16.1 بررسی وضعیت قبل از ورود
 1. Customer Host در Startup و روی هر درخواست حساس، state نصب را از persistence/authority سمت سرور می‌خواند؛ React/browser state یا InstallationId ارسالی کاربر معتبر نیست.
 2. Unlicensed: صفحه ورود عادی نمایش داده نمی‌شود؛ کاربر به Activation Wizard هدایت می‌شود.
 3. Active: هویت نصب و envelope معتبرند؛ صفحه ورود عادی نمایش داده می‌شود.
@@ -185,26 +185,26 @@ flowchart TD
 
 Unlicensed با Restricted یا InvalidOrUntrusted یکی نیست. تصمیم دسترسی سمت سرور enforce می‌شود؛ مخفی‌کردن صفحه یا route در React کنترل امنیتی نیست.
 
-### 14.2 فرم نصب چندشرکتی
+### 16.2 فرم نصب چندشرکتی
 - فرم Company referenceهای داخل envelope را نشان می‌دهد؛ کاربر نام و اطلاعات محلی شرکت الف/ب را برای هر reference تکمیل/تأیید می‌کند.
 - زیرسیستم‌ها، Featureها، سقف شرکت/کاربر و مقادیر خریداری‌شده برای هر Company از payload امضاشده پر می‌شوند و UI حق افزایش آن‌ها را ندارد.
 - برای هر Company مدیر اولیه محلی و عضویت/نقش ساخته می‌شود. حساب User در سطح نصب یکتا است؛ می‌توان مدیرهای جدا برای شرکت‌ها تعریف کرد و یک User هم می‌تواند عضو چند Company باشد. عضویت چندشرکتی برای هر Company یک Seat مصرف می‌کند.
 - رمز هر مدیر فقط در فرم محلی Customer Host گرفته و به Identity hash تبدیل می‌شود. رمز/hash/token در Vendor، فایل تبادل، log، audit detail یا telemetry قرار نمی‌گیرد.
 - ایجاد Companyهای بعدی پس از فعال‌سازی تحت #392 و maxCompanies است؛ اطلاعات provisioning v4 تکرار/جایگزین نمی‌شود.
 
-## ۱۵) تبادل فایل کلید/لایسنس در Offline (D-060 / #394 / #396)
+## ۱۷) تبادل فایل کلید/لایسنس در Offline (D-060 / #394 / #396)
 
-### 15.1 کد فعال‌سازی و بسته درخواست Customer
+### 17.1 کد فعال‌سازی و بسته درخواست Customer
 
 کد فعال‌سازی را Vendor با مدت اعتبار قابل تنظیم و مصرف یک‌باره صادر می‌کند و به CustomerAccount/Installation مشخص bind می‌کند. کد مجوز امضاشده نیست؛ فقط اجازه شروع/تکمیل صدور LicenseEnvelope را می‌دهد. در Cloud کد در Customer Wizard و از طریق API احراز هویت‌شده redeem می‌شود. در Offline اپراتور کد را در Vendor Host و پس از دریافت درخواست Installation redeem می‌کند. کد در فایل انتقال، log یا telemetry قرار نمی‌گیرد.
 
-### 15.1 بسته درخواست Customer
+### 17.2 بسته درخواست Customer
 Customer Host یک .request.json نسخه‌دار صادر می‌کند که فقط metadata لازم، InstallationId، public SPKI/key version، assurance level، nonce/request ID، زمان/انقضا، contract version و proof-of-possession را حمل می‌کند. Private key، password و داده حسابداری در آن نیست.
 
-### 15.2 پاسخ Vendor
+### 17.3 پاسخ Vendor
 Vendor پس از بررسی Customer/Installation و خرید/تأیید، یک .license.json شامل envelope یا amendment امضاشده صادر می‌کند. Customer فایل را import می‌کند؛ signature، exact signed bytes، Installation binding، nonce، sequence، validity، revocation و idempotency بررسی و سپس به‌صورت اتمیک ذخیره می‌شود.
 
-### 15.3 انتقال متن/رسانه
+### 17.4 انتقال متن/رسانه
 - .txt فقط wrapper متنی Base64/armored برای همان بایت‌های دقیق بسته است؛ متن قابل ویرایش و بدون امضا مجوز نیست.
 - QR فقط برای شناسه/challenge کوتاه‌عمر و کوچک اختیاری است؛ payload کامل entitlement و private key داخل QR قرار نمی‌گیرد.
 - انتقال می‌تواند از طریق USB یا شبکه داخلی انجام شود؛ هیچ مسیر به Vendor برای اتصال به Customer DB وجود ندارد.
@@ -212,7 +212,7 @@ Vendor پس از بررسی Customer/Installation و خرید/تأیید، یک 
 
 این گردش‌کار هنوز Accepted / NotImplemented است تا PR کد و CI مرتبط ادغام شوند.
 
-## ۱۴) قرارداد نسخه‌دار entitlement و amendment (Issue #390)
+## ۱۸) قرارداد نسخه‌دار entitlement و amendment (Issue #390)
 
 1. نصب دارای یک LicenseId پایه است. Envelope بیرونی v1 می‌ماند؛ payload می‌تواند v1 یا v2 باشد.
 2. اعتبارسنج ابتدا envelope bounds، algorithm، trusted kid و امضای دقیق PayloadJson را بررسی می‌کند؛ سپس JSON را parse می‌کند. payload v2 علاوه بر آن باید strict schema و canonical byte representation داشته باشد.
@@ -224,16 +224,16 @@ Vendor پس از بررسی Customer/Installation و خرید/تأیید، یک 
 8. support و update end-dateها مستقل از expiry هستند. Perpetual license با پایان support/update منقضی نمی‌شود.
 
 
-## ۱۶) گردش‌کارهای S1 — پشتیبانی، Update، فعال‌سازی مجدد و انقضا (D-097..D-102؛ `Accepted` رفتاری، `NotImplemented`)
+## ۱۹) گردش‌کارهای S1 — پشتیبانی، Update، فعال‌سازی مجدد و انقضا (D-097..D-102؛ `Accepted` رفتاری، `NotImplemented`)
 
 این بخش تصمیم‌های مالک محصول در مأموریت S1-0 (Issue #696) را به گردش‌کار ترجمه می‌کند. هیچ‌یک پیاده‌سازی نشده‌اند و هر قابلیت به Issue/PR مستقل با معیار پذیرش خودش نیاز دارد.
 
-### 16.1 تمدید پشتیبانی و Update مستقل (D-097)
+### 19.1 تمدید پشتیبانی و Update مستقل (D-097)
 1. Vendor برای هر Customer/Installation، دورهٔ پشتیبانی و Update را مستقل از License مدیریت می‌کند؛ تمدید فقط از مسیر amendment امضاشده با sequence افزایشی (#393) به `supportUntilUtc`/`updatesUntilUtc` payload اعمال می‌شود.
 2. مشتری فاقد پشتیبانی در داشبورد Vendor با وضعیت هشدار متمایز نمایش داده می‌شود؛ سوابق خدمات، تماس‌ها و تمدیدها در CRM سبک (D-102) append-only ثبت می‌شوند.
 3. پایان پشتیبانی/Update نرم‌افزار Perpetual را غیرفعال نمی‌کند (D-022/D-059)؛ فقط دسترسی به Updateهای جدید محدود می‌شود.
 
-### 16.2 فعال‌سازی مجدد سخت‌افزاری — Online و Offline (D-099؛ توسعهٔ D-058/Issue #384)
+### 19.2 فعال‌سازی مجدد سخت‌افزاری — Online و Offline (D-099؛ توسعهٔ D-058/Issue #384)
 1. پس از نصب مجدد Windows یا تغییر سخت‌افزاری مهم، Customer Host با possession کلید غیر-exportable یک درخواست reactivation نسخه‌دار می‌سازد: InstallationId، SPKI/key version جدید، مشخصات سخت‌افزاری نسخه‌دار، requestId/nonce، زمان/انقضا و امضا. تغییر RAM یا کارت شبکه به‌تنهایی درخواست تولید نمی‌کند (تشخیص نسخه‌دار و قابل تنظیم است).
 2. **Online:** درخواست مستقیماً به Vendor ارسال می‌شود؛ **Offline:** فایل درخواست صادر و به Vendor منتقل می‌شود (الگوی .request.json بخش ۱۱).
 3. Vendor مشخصات قبلی و جدید را مقایسه می‌کند، تاریخچهٔ Installation را نگه می‌دارد و درخواست را به صف تأیید مالک می‌گذارد؛ هیچ پاسخ امضاشده‌ای بدون تأیید صریح مالک صادر نمی‌شود.
@@ -241,25 +241,25 @@ Vendor پس از بررسی Customer/Installation و خرید/تأیید، یک 
 5. رد درخواست: فقط عدم صدور binding جدید است؛ نه Revocation و نه حذف دادهٔ مشتری. نتیجهٔ رد نیز audit می‌شود.
 6. اثرانگشت سخت‌افزار به‌تنهایی اثبات هویت نیست؛ اثبات فقط با possession کلید نصب معتبر است. TPM ترجیحی است ولی شرط اجباری نیست؛ رفتار VM/vTPM در OD-22 باز است.
 
-### 16.3 Update با تأیید مدیر مشتری (D-101)
+### 19.3 Update با تأیید مدیر مشتری (D-101)
 1. بررسی نسخه و اطلاع از Update می‌تواند خودکار باشد؛ نصب بدون تأیید صریح مدیر Customer انجام نمی‌شود.
 2. بستهٔ Update پیش از اجرا بررسی می‌کند: امضا (D-045)، Hash، نسخهٔ مقصد و سازگاری با نسخهٔ فعلی؛ هر عدم‌انطباق fail-closed رد می‌شود.
 3. پیش از نصب، پشتیبان‌گیری ثبت و مسیر بازیابی بررسی می‌شود؛ Update بدون مسیر بازگشت اجرا نمی‌شود.
 4. مشتری Offline همان بستهٔ امضاشده را از طریق فایل دریافت می‌کند؛ بایت‌های بستهٔ Online و Offline یکسان‌اند.
 
-### 16.4 پایان Support، پایان License و انقضای Cloud (D-097/D-098)
+### 19.4 پایان Support، پایان License و انقضای Cloud (D-097/D-098)
 1. پایان پشتیبانی/Update: هیچ رفتار runtime نصب عوض نمی‌شود؛ فقط Updateهای جدید از دسترس خارج می‌شوند و داشبورد Vendor هشدار متمایز نشان می‌دهد.
 2. پایان License مدت‌دار در Dedicated/Offline: طبق D-059 بند ۷ به Restricted می‌رود (read/export/recovery مجاز؛ نوشتن مسدود؛ بدون grace ضمنی).
 3. پایان License در Cloud (D-098): ورود عادی کاربران مسدود می‌شود؛ صفحهٔ وضعیت انقضا و راهنمای تمدید نمایش داده می‌شود؛ مسیر تمدید آنلاین (#394) و بازیابی/حفظ داده برای نقش‌های authorized باز می‌ماند؛ هیچ داده‌ای حذف نمی‌شود.
 
-### 16.5 مسیر recovery
+### 19.5 مسیر recovery
 1. بازیابی Backup با همان کلید روی همان سخت‌افزار، یا جابه‌جایی‌ای که از آستانهٔ تغییر سخت‌افزاری نسخه‌دار عبور نمی‌کند، طبق پیشنهاد OD-06(a) می‌تواند بدون صدور binding جدید و با ثبت audit انجام شود؛ این استثنا به معنی مجازبودن انتقال آزاد Installation به سخت‌افزار متفاوت نیست.
 2. **تعویض سخت‌افزاری مهم نیازمند reactivation و تأیید مالک Vendor است، حتی اگر کلید قبلی هنوز در دسترس باشد**؛ در این مورد D-099 (تصمیم Accepted و جدیدتر) بر پیشنهاد قدیمی‌تر OD-06(a) مقدم است. درخواست باید با همان کلید نصب موجود اثبات possession شود، مشخصات قبلی/جدید مقایسه و پاسخ جدید به Installation/request/key/revision bind شود.
 3. گم‌شدن کلید: گردش‌کار reactivation با تأیید مالک Vendor؛ احراز هویت/مالکیت پس از گم‌شدن کلید قبلی در OD-21 باز است. possession کلید جدید، هویت Installation قبلی را اثبات نمی‌کند؛ تا تعیین OD-21، تأیید مالک Vendor تنها gate این مسیر است و هیچ مسیر خودکاری وجود ندارد.
 4. در همهٔ حالت‌ها دادهٔ حسابداری هرگز حذف نمی‌شود و مسیر Backup/Export همیشه برای نقش‌های مجاز باز می‌ماند (D-026/S-08).
 
 
-### 16.6 سفارش، پرداخت و صدور مستقل + هشدار مطالبات (D-108)
+### 19.6 سفارش، پرداخت و صدور مستقل + هشدار مطالبات (D-108)
 
 1. Vendor Order با مبلغ کل، ارز و در صورت وجود تاریخ سررسید ثبت می‌شود. Order می‌تواند بدون هیچ Payment وارد گردش صدور شود.
 2. هر Payment دستی و مستقل ثبت می‌شود. ثبت‌کننده فقط وضعیت Recorded ایجاد می‌کند؛ تأییدکننده مستقل با vendor.payments.verify آن را Verified یا Rejected می‌کند. ثبت‌کننده نمی‌تواند تأییدکننده باشد.
