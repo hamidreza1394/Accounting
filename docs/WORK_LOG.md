@@ -3539,3 +3539,8 @@
 
 - ۱۰ تست invariant به `TradePaymentPlanInvariantTests` افزوده شد؛ هیچ نقضی از قرارداد مصوب #710 دیده نشد و کد تولیدی تغییر نکرد.
 - سه تصمیم باز مالک (largest-remainder، درصد مؤثر مرحلهٔ آخر، واحد کوچک IRR) با مثال در `docs/handoffs/ISSUE-UNNUMBERED-trade-payment-plan-invariants-and-decision-proposal.md` ثبت شد. بدون Schema/Migration.
+
+## 2026-11-22 — Workstream C: تست ایزولاسیون Company در سطح سرویس Party/Product
+
+- ۶ تست سرویس برای Update شرکت دیگر، کد یکسان در دو شرکت و عدم تغییر رکورد پس از تعارض کد افزوده شد؛ دو جهش روی `ProductService` شکست تست را نشان داد. کد تولیدی تغییر نکرد.
+- ماتریس #749 بازبینی شد: «ReadOnly + DenyAll ← 409» از قبل با `ClosedPeriodWriteGets409ReadOnly` پوشش دارد. جزئیات و شکاف‌های P2 در `docs/handoffs/ISSUE-UNNUMBERED-trade-test-hardening-workstream-c.md`.
