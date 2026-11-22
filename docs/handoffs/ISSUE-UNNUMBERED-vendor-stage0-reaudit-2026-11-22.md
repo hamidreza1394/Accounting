@@ -40,7 +40,7 @@
 | استعلام GitHub API (PR #743، PRها، Issueها، Check Runها) | اجرا شد | PR #743 merged؛ PR #745 همین PR مستنداتی Vendor است و #744 مربوط به Trade/خارج از دامنه؛ Issues اولویت‌دار باز #228/#236/#214/#235/#107 و وابستگی‌های #392/#393/#364 |
 | `grep` شواهد کد روی `eba5e336` (هشت محور مأموریت) | اجرا شد | نتایج در سند ممیزی ثبت شد |
 | `dotnet build / test` | اجرا نشده | مرحلهٔ ممیزی docs-only است؛ هیچ فایل کد تغییر نکرده و نیاز به Build ندارد |
-| CI مخزن | روی این PR اجرا می‌شود | شاهد سبزی در گزارش نهایی ثبت می‌شود |
+| CI مخزن روی head نهایی PR (`e63e1ee2`) | پایان‌یافته: ۱۵ Check — ۱۴ `success` و ۱ `neutral` | چک `neutral` مربوط به CodeRabbit است؛ هیچ Check در انتظار اجرا نماند؛ `neutral` به‌عنوان تأیید یا Review موفق CodeRabbit تلقی نمی‌شود؛ شامل هر ۴ چک الزامی مخزن (secret-scan، client، build-and-test، publish-scripts) با نتیجه `success` |
 
 ## امنیت، داده و سازگاری
 

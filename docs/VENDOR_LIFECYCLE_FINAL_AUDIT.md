@@ -27,6 +27,15 @@
   - Signer: `WindowsCng*` (Provider/Options/CertificateStore module/فرمان Certificate)، Runbook Key Ceremony (PR #736؛ `Vendor/README.md` و `runbooks/ISSUE-236-CNG-KEY-CEREMONY-ROTATION.md`) و مسیر HSM `Pkcs11SigningProvider` با enablement opt-in برای snapshot ابطال آفلاین (D-055) و سرویس `VendorOfflineRevocation*` در کد هستند؛ Key Ceremony واقعی روی میزبان هدف و ACL/Trust Store/rotation/recovery همچنان Not Verified است.
   - پوشش تست: چهار پروژهٔ تست (`Template.Tests`، `Template.Tests.Js`، `Vendor.Host.Tests`، `Licensing.Contracts.Tests`)؛ چک‌لیست‌های e2e CI اپ اصلی (Server/ClientApp) را می‌رانند و Vendor.Web را پوشش نمی‌دهند (پوشش UI Vendor در این زنجیره Vitest است) → تفکیک و تکمیل تست واقعی Vendor مرحله ۴ است.
 
+## اتصال Entitlement به مصرف‌کنندگان عملیاتی Vendor — مرحله ۱ (2026-11-22، شاخهٔ باز)
+
+این افزودنی وضعیت شکاف مرحله ۱ (بند ممیزی مجدد بالا) را بر پایهٔ شاخهٔ `glm/vendor-stage1-entitlement-consumers` به‌روز می‌کند؛ تا Merge و سبز شدن CI، وضعیت «Implemented / در انتظار CI و بررسی مالک» است، نه Verified:
+
+- `EntitlementPolicyEngine` اکنون در سه نقطهٔ عملیاتی تأییدشدهٔ Vendor مصرف می‌شود: تصمیم subset زیرسیستم‌های v1 در `VendorProvisioningLicenseResolver` (مسیر زندهٔ صدور بسته‌های v1–v4)، انتخاب شرکت و بررسی ماژول در `VendorProvisioningCompanyReferenceRules` (مسیر v2؛ همچنان پشت Gate دوکلیدی بسته)، و Gate سیاستی payload نهایی amendment در `VendorAmendmentEntitlementPolicy` پیش از امضا (ضد-لغو entitlement اعطاشده).
+- تست گارد معماری `VendorEntitlementEnforcementGuardTests` مصرف Engine را به همین allow-list محدود و interlock بستهٔ v5 (`CustomerConsumerReady=false`) را تثبیت می‌کند؛ تست موجود `TradeEndpointGateTests.ExactlyOneEntitlementImplementationShipsAndItDeniesAll` نیز بسته‌ماندن Trade را پوشش می‌دهد.
+- Feature grant و Seat در سطح payload عمداً با سمانتیک مصرفی Engine ارزیابی نمی‌شوند: feature غیرفعال وضعیت پیش از اعطا است و شمارش عضویت/شرکت واقعی در Vendor وجود ندارد (D-054). جزئیات و نتایج واقعی تست در handoff مرحله ۱ آمده است.
+- محدودیت این بخش: تغییر روی شاخهٔ باز است؛ هیچ ادعای CI یا Production readiness بدون شاهد Check Run ثبت نشده است.
+
 ## ۱. وضعیت Issueهای مرتبط
 
 | Issue | وضعیت GitHub | وضعیت ممیزی | شواهد و مرز واقعی | اقدام باقی‌مانده |

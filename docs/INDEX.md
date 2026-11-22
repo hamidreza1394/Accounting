@@ -43,6 +43,7 @@
 | [`handoffs/ISSUE-228-vendor-provisioning-state.md`](handoffs/ISSUE-228-vendor-provisioning-state.md) | وضعیت Vendor provisioning، binding لایسنس و شکاف CompanyReference در payload v2 |
 | [`handoffs/ISSUE-393-vendor-addon-payload-builder.md`](handoffs/ISSUE-393-vendor-addon-payload-builder.md) | تحویل Vendor-only برای candidate افزایش ظرفیت شرکت/ماژول/Feature و تمدید مستقل support/update؛ بدون persistence، approval یا Customer-side changes (Issue #393) |
 | [`handoffs/ISSUE-391-runtime-entitlement-enforcement.md`](handoffs/ISSUE-391-runtime-entitlement-enforcement.md) | وضعیت لایه تصمیم Entitlement، پل payload معتبر و blocker نگاشت CompanyReference در Issue #391 |
+| [`handoffs/ISSUE-UNNUMBERED-vendor-stage1-entitlement-consumers-2026-11-22.md`](handoffs/ISSUE-UNNUMBERED-vendor-stage1-entitlement-consumers-2026-11-22.md) | مرحله ۱ Entitlement: اتصال `EntitlementPolicyEngine` به provisioning و amendment با Gate سیاستی ضد-لغو و گارد معماری؛ PR باز، در انتظار CI و بررسی مالک |
 | [`LICENSING_DATA_MODEL.md`](LICENSING_DATA_MODEL.md) | ERD واقعی و پیشنهادی |
 | [`LICENSING_WORKFLOWS.md`](LICENSING_WORKFLOWS.md) | گردش‌کارها |
 | [`LICENSING_THREAT_MODEL.md`](LICENSING_THREAT_MODEL.md) | تهدیدها |

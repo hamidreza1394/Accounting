@@ -3513,6 +3513,28 @@
 - جملهٔ جاری در `VENDOR_LIFECYCLE_FINAL_AUDIT.md` اصلاح شد: مرز ممیزی Vendor از D-046 می‌آید؛ D-046 تعیین دورهٔ عددی را به پیکربندی/راهنمای استقرار و Issue اجرایی واگذار می‌کند و در حال حاضر دورهٔ Vendor تعریف/مصوب نیست؛ Retention/Archive همچنان پیاده‌سازی نشده است.
 - این رکورد، عبارت تاریخی همین ممیزی را تصحیح می‌کند و سابقهٔ append-only قبلی را بازنویسی نمی‌کند. هیچ کد، Schema، Migration یا Customer Host تغییر نکرده است.
 
+
+## 2026-11-22 — مرحله ۱ Entitlement: اتصال Engine به مصرف‌کنندگان عملیاتی Vendor
+
+- شاخهٔ `glm/vendor-stage1-entitlement-consumers` از `main@5484758722d0` (کد `27e85c57`): تصمیم entitlement در دو نقطهٔ عملیاتی به `EntitlementPolicyEngine` متولی شد — subset زیرسیستم v1 در `VendorProvisioningLicenseResolver`، انتخاب شرکت/ماژول v2 در `VendorProvisioningCompanyReferenceRules`، و Gate سیاستی payload نهایی amendment (`VendorAmendmentEntitlementPolicy`؛ کد `amendment_payload_policy_invalid`) پیش از امضا در `VendorLicenseAmendmentIssuanceService`. بدون تغییر در `Licensing.Contracts`، Trade، Migration، Workflow یا کدهای خطای تثبیت‌شده؛ Gate دوکلیدی v5 بسته ماند.
+- تست‌های جدید: ۱۱ تست قرارداد Gate (`VendorAmendmentEntitlementPolicyTests`) و ۳ تست گارد معماری (`VendorEntitlementEnforcementGuardTests`: allow-list نقاط مصرف Engine، پابرجایی اتصال، بسته‌ماندن interlock v5). تست‌های SQL Server/SoftHSM محلی Skip شدند (زیرساخت sandbox ندارد) و «Skip» موفق حساب نشده است.
+- نتایج واقعی محلی (SDK 10.0.100): build `Vendor.sln` موفق؛ `dotnet test --solution Vendor.sln` → ۴۶۲ تست، ۳۷۴ موفق، ۱۰ ناموفق (همان مجموعهٔ پیش‌موجود محیطی HTTP/SPA روی baseline `main@54847587`: ۴۴۸/۳۶۰/۱۰)، ۷۸ Skip؛ `Licensing.Contracts.Tests` → ۱۶۷/۱۶۷ سبز؛ `check_static_assets.py` PASS؛ `git diff --check` تمیز. وضعیت CI فقط با شاهد Check Run روی PR گزارش می‌شود؛ هیچ ادعای Production readiness ثبت نشده است.
+- handoff: `docs/handoffs/ISSUE-UNNUMBERED-vendor-stage1-entitlement-consumers-2026-11-22.md`؛ Merge فقط با مالک.
+- شاهد CI روی head نهایی PR #753 (`65dc7ab2`): ۱۹ Check Run پایان‌یافته — ۱۸ `success` و ۱ `neutral` (CodeRabbit)؛ بدون Check معلق؛ شامل `build-and-test`، `publish-windows`، `e2e`، `Windows CNG certificate-store signer tests` و هر دو regression قفل checkpoint. ادغام نشده؛ تأیید نهایی با مالک است.
+
+
+## 2026-11-22 — اصلاح Gate سیاستی amendment: fail-closed شدن انتقال FormatVersion (مأموریت مرور نهایی)
+
+- ایراد شناسایی‌شده در مرور نهایی (commit `6490214e` روی همان PR #753): در `VendorAmendmentEntitlementPolicy` انتقال v1→v2 فقط سمت candidate بررسی می‌شد و حذف مجوز (مثال مأموریت: v1 با `finance`+`sales` → v2 فقط company-A با `finance`) می‌توانست از Gate عبور کند. اصلاح: هر جانشین با FormatVersion متفاوت از payload جاری — در هر دو جهت — با `amendment_payload_policy_invalid` قبل از امضا رد می‌شود؛ هیچ نگاشت فرضی بین مجوزهای v1 و v2 اختراع نشد و بازکردن این مسیر نیازمند تصمیم مالک است.
+- راستی‌آزمایی مسیر عملیاتی: هیچ Builder واقعی تغییر FormatVersion تولید نمی‌کند (هر سه با `currentPayload with { … }` نسخه را حفظ می‌کنند؛ `TryBuildCompanyEntitlementIncrease` و `TryBuildSupportAndUpdatePeriodExtension` صریحاً v2 را الزامی می‌کنند؛ `LicenseRevisionRules` فقط downgrade را می‌بندد) → این قاعده گارد جلوی امضاست، نه قانون جدید.
+- TDD: تست قبلی `UpgradeFromV1ToV2IsCheckedOnTheCandidateSideOnly` جایگزین شد با `UpgradeFromV1ToV2IsDeniedUntilAnOwnerApprovedMappingExists` (بازتولید دقیق مثال مأموریت) + `UpgradeFromV1ToV2IsDeniedEvenWhenTheCandidateAloneIsValid`؛ هر دو قبل از اصلاح RED و پس از آن GREEN شدند (کلاس Gate: ۱۲ تست، صفر شکست).
+- نتایج واقعی محلی پس از اصلاح: build `Vendor.sln` موفق؛ `dotnet test --solution Vendor.sln` → ۴۶۳ تست، ۳۷۵ موفق، ۱۰ ناموفق (نام‌ها دقیقاً همان مجموعهٔ پیش‌موجود محیطی)، ۷۸ Skip؛ `Licensing.Contracts.Tests` → ۱۶۷/۱۶۷؛ `check_static_assets.py` PASS؛ `git diff --check` تمیز. CI روی head پس از اصلاحیه در PR ثبت می‌شود؛ «neutral» CodeRabbit تأیید یا Review موفق تلقی نمی‌شود.
+- Merge این PR با اختیار صریح مأموریت مرور نهایی و فقط پس از احراز کامل هشت شرط انجام می‌شود؛ ثبت پس از Merge در همین گزارش انجام خواهد شد.
+
+## 2026-11-22 — تست Update نویسه‌های ممنوع Product و طبقه‌بندی شکاف‌های Party/Product
+
+- تست Update برای نویسه‌های کنترلی/bidi و ZWNJ در Product اضافه شد؛ کد تولیدی تغییر نکرد. موارد ZWSP/WJ، نرمال‌سازی ارقام و ی/ک نیازمند سیاست مالک است (`docs/handoffs/ISSUE-UNNUMBERED-trade-product-update-forbidden-chars-tests.md`).
+
 ## 2026-11-22 — ممیزی invariantهای PaymentPlanCalculator و پیشنهاد تصمیم (Trade)
 
 - ۱۰ تست invariant به `TradePaymentPlanInvariantTests` افزوده شد؛ هیچ نقضی از قرارداد مصوب #710 دیده نشد و کد تولیدی تغییر نکرد.
