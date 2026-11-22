@@ -37,7 +37,7 @@
 | فرمان/آزمون | نتیجه واقعی | توضیح |
 |---|---|---|
 | `git fetch && git log ac0ec741..origin/main --name-status` | اجرا شد | فقط ۵ فایل md؛ بدون تغییر کد |
-| استعلام GitHub API (PR #743، PRها، Issueها، Check Runها) | اجرا شد | PR #743 merged؛ تنها PR باز #744 (Trade/Claude)؛ بدون Issue جدید Vendor پس از #401 |
+| استعلام GitHub API (PR #743، PRها، Issueها، Check Runها) | اجرا شد | PR #743 merged؛ PR #745 همین PR مستنداتی Vendor است و #744 مربوط به Trade/خارج از دامنه؛ Issues اولویت‌دار باز #228/#236/#214/#235/#107 و وابستگی‌های #392/#393/#364 |
 | `grep` شواهد کد روی `eba5e336` (هشت محور مأموریت) | اجرا شد | نتایج در سند ممیزی ثبت شد |
 | `dotnet build / test` | اجرا نشده | مرحلهٔ ممیزی docs-only است؛ هیچ فایل کد تغییر نکرده و نیاز به Build ندارد |
 | CI مخزن | روی این PR اجرا می‌شود | شاهد سبزی در گزارش نهایی ثبت می‌شود |
@@ -50,3 +50,13 @@
 ## ریسک‌ها و کارهای باقی‌مانده
 
 - ریسک‌های عملیاتی/امنیتی باز و برنامهٔ اجرایی اصلاح‌شدهٔ مراحل ۱ تا ۷ در گزارش پایان مرحله ۰ ارائه شده است؛ شروع مرحله ۱ نیازمند تأیید مالک است.
+
+
+## بازبینی تکمیلی GitHub و اولویت‌ها — 2026-11-22
+
+- **main:** `eba5e3368dda0c2e859fd9f204603f073b065cf0`؛ ۱۲/۱۲ Check Run موفق. Vendor CI به‌دلیل docs-only بودن delta اجرا نشد؛ آخرین Vendor CI روی `ac0ec741`، run 44926165757، چهار Job موفق است.
+- **PRهای مرجع:** #281 روی `2ee1edc5` با ۱۲/۱۲، #282 روی `f4a0462b` با ۱۳/۱۳ و #284 روی `81ed5f64` با ۱۳/۱۳ Check Run post-merge موفق‌اند. #282 روی SHA دقیق merge بررسی شد.
+- **#284:** Authorization منبع هدف قبل از RowVersion/Status در endpoint جاری حفظ شده و regression پاسخ 404 برای provisioning با parent/installation غیرمجاز و RowVersion نامعتبر وجود دارد. شرط self-approval قدیمی با D-109/#724 supersede شده است.
+- **شکست #742:** run 44920988669 روی commit میانی `69d70a64` در readiness payment، `ReferenceId` آخرین سفارش را null برمی‌گرداند. اصلاح حداقلی در `7a8c1759` شناسه سفارش را به شاخه‌های Ready/Pending افزود؛ Vendor CI نهایی 44924770922 موفق است. duplicate-key مشاهده‌شده در همان log از تست جداگانهٔ failure-injection ممیزی بود و علت assertion شکست‌خورده نبود.
+- **گام بعدی:** #228 فقط Vendor-side؛ #392 mapping/bootstrap و #235 consumer/trust/ACK در مسیرهای مستقل؛ #393 company-scoped purchased subsystems تا mapping معتبر Blocked؛ #236/#214/#364 و #107 نیازمند زیرساخت/دسترسی عملیاتی هستند.
+- این بازبینی فقط مستندات است؛ Build/Test محلی اجرا نشده است.
