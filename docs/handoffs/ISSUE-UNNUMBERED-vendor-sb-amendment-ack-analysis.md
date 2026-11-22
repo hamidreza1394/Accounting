@@ -11,6 +11,7 @@
 - [x] جدول تقسیم مسئولیت Vendor/Consumer و وابستگی دقیق به #235/#394/#392
 - [x] پیشنهاد حداقلی بدون broker/زیرساخت جدید + چهار سؤال مشخص مالک
 - [x] هیچ ACK فرضی یا غیرامضاشده‌ای وارد مسیر عملیاتی نشد
+- [x] تکمیل در اصلاحیهٔ همین PR: بخش ۳.۱ «رفتار در Timeout، پیام تکراری و ACK ناشی از پیام اشتباه» — انتظار ACK با re-delivery امنِ همان بایت‌های پاکت (import idempotent موجود در `CustomerLicenseImportService.cs:155-164`)، ACK تکراری retry-safe، ACK ناسازگار/پیام اشتباه با `Conflict` صریح و bind چهارگانه؛ همه `Proposed` و بدون هیچ کد جدید
 
 ## خلاصه تغییرات
 - سند جدید `docs/AMENDMENT_ACK_CONTRACT_ANALYSIS.md` با پیشنهاد گزینهٔ A (بازاستفاده از الگوی ACK امضاشدهٔ provisioning با kind جدید) به‌صورت `Proposed`.

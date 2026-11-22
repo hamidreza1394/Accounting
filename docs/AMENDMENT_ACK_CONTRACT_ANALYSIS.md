@@ -32,6 +32,13 @@
 | توزیع/چرخش کلیدهای امضای ACK مشتری و دو میزبان Staging | Consumer side / زیرساخت | **#235** (trust distribution/rotation) |
 | freshness (نمایش زمان آخرین sync) | Vendor | §۱۷.۴ |
 
+### ۳.۱) رفتار در Timeout، پیام تکراری و ACK ناشی از پیام اشتباه (پیشنهاد؛ `Proposed`)
+
+- **Timeout (ACK نرسید):** رکورد amendment نزد Vendor در وضعیت «تحویل‌شده بدون ACK» می‌ماند؛ هیچ تغییر وضعیت بازگشتی یا حدس‌زده‌ای رخ نمی‌دهد. Vendor می‌تواند **همان بایت‌های همان پاکت** را دوباره صادر کند (بدون sequence جدید و بدون امضای مجدد متفاوت)؛ سمت مشتری، import مجدد پاکت یکسان (همان LicenseId + Sequence + همان EnvelopeJson) امروز idempotent و no-op است (`CustomerLicenseImportService.cs:155-164`)، پس re-delivery امن است و هیچ اثر دوباره‌ای نمی‌گذارد. نمایش وضعیت انتظار ACK فقط از مسیر freshness/گزارش §۱۷.۴ است.
+- **پیام تکراری (ACK دوباره برای همان amendment):** ACK تکراریِ سازگار همان پاسخ قبلی را برمی‌گرداند (retry-safe) و وضعیت جلوتر نمی‌رود؛ هیچ رکورد دوباره‌ای ساخته نمی‌شود.
+- **ACK ناسازگار/پیام اشتباه:** چون ACK به چهارگانهٔ (envelopeId amendment، sequence، licenseId، hash پاکت اصلی) bind است، ACK مربوط به پیام یا amendment دیگر با hash/sequence متفاوت با `Conflict` صریح رد می‌شود و وضعیت amendment دست‌نخورده می‌ماند؛ ACK غیرامضاشده یا خارج از trust store نیز fail-closed رد می‌شود (الگوی provisioning؛ #699). هیچ مسیری برای «پذیرش ACK برای پیام اشتباه» وجود ندارد.
+- **مرز:** این رفتارها پیشنهاد قراردادند و تا تأیید مالک هیچ کدی نوشته نمی‌شود؛ بخش idempotent re-import امروز و در کد موجود اثبات شده است.
+
 ## ۴) وابستگی‌های دقیق خارج از این سند
 
 1. **#235 — trust distribution/rotation:** قرارداد ACK amendment تا تثبیت مدل توزیع/چرخش کلیدهای امضای مشتری نباید نهایی شود؛ تست دو میزبان Staging پیش‌شرط اعتبارسنجی end-to-end است.
@@ -43,7 +50,7 @@
 
 - گزینهٔ A: بازاستفادهٔ کامل از الگوی ACK provisioning با kind `license-amendment`؛ بدون broker، بدون کانال موازی، بدون ACK غیرامضاشده.
 - ثبت تحویل export و دو وضعیت جدید روی درخواست amendment فقط پس از تأیید (تغییر وضعیت = تصمیم قراردادی، نه صرفاً فنی).
-- تست‌های لازم پس از تصویب: واحد (validator/replay/idempotency)، SQL Server در CI، HTTP قراردادی برای ACK تکراری/ناسازگار، رگرسیون fail-closed (ACK نامعتبر هرگز وضعیت را جلو نبرد).
+- تست‌های لازم پس از تصویب: واحد (validator/replay/idempotency)، SQL Server در CI، HTTP قراردادی برای ACK تکراری/ناسازگار، سناریوی Timeout (re-delivery همان پاکت → import idempotent no-op، بدون تغییر وضعیت نادرست) و رگرسیون fail-closed (ACK نامعتبر/پیام اشتباه هرگز وضعیت را جلو نبرد).
 
 ## ۶) سؤالات نیازمند تصمیم مالک
 
