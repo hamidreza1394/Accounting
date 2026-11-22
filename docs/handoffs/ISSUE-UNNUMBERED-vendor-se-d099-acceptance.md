@@ -8,12 +8,13 @@
 ## هدف و معیارهای پذیرش
 - [x] بازبینی D-099 و استخراج پیش‌نیازهای واقعی (P1..P8) با مرجع تصمیم‌ها و ODهای باز
 - [x] مشخص‌کردن وضعیت واقعی Software/Hardware signing و تفاوت دو مسیر (TPM در برابر SoftwareProtected/D-107)
-- [x] ۱۰ معیار پذیرش آزمون‌پذیر (AC-1..AC-10) با نگاشت به بندهای D-099
+- [x] ۱۰ معیار پذیرش آزمون‌پذیر (AC-1..AC-10) با نگاشت به بندهای D-099؛ AC-8 در اصلاحیهٔ این PR به دو زیرمعیار **مستقل** تفکیک شد: AC-8a (`HardwareTpm` fail-closed، بدون fallback خودکار به Software KSP) و AC-8b (`SoftwareProtected` فقط با انتخاب/تأیید صریح سطح assurance؛ نبود TPM به‌تنهایی شکست نیست؛ بدون downgrade خودکار و با سطح قابل‌تشخیص در وضعیت/گزارش‌ها)
 - [x] ماتریس تست چهار سطحی (T-A unit / T-B SoftHSM / T-C CNG واقعی در CI / T-D سخت‌افزار واقعی) با قاعدهٔ «هیچ AC کلیدی فقط با mock بسته نشود»
 - [x] حفظ fail-closed، D-107/D-055 و عدم ادعای Production Hardware readiness
 
 ## خلاصه تغییرات
 - سند جدید `docs/D099_HARDWARE_REACTIVATION_ACCEPTANCE.md` — تصمیم جدیدی نمی‌گیرد؛ رفتار Accepted را به معیار آزمون‌پذیر ترجمه می‌کند و مرز mock/سخت‌افزار واقعی را ثبت می‌کند.
+- **اصلاحیه ابهام AC-8 (همین PR):** AC-8 واحد که «رفتار یکسان در هر دو سطح» می‌گفت، دو مسیر مستقل را مخلوط می‌کرد؛ اکنون AC-8a/AC-8b رفتار fail-closed متفاوت و درست هر مسیر را جدا تعریف می‌کنند، ماتریس تست (T-C برای AC-8b و T-D برای AC-8a) و قاعدهٔ «هیچ AC کلیدی فقط با mock بسته نشود» هم‌راستا شدند و رفتار موجود کد (`WindowsCngLicenseInstallationIdentityProofVerifier.cs:71-78`، consent در `WindowsCngLicenseInstallationKeyProvisioner.cs:66/105`، نمایش `AssuranceLevel` در `ApiEndpoints.cs:766`) به‌عنوان شاهد ارجاع داده شد. ماتریس تست سطح سند است؛ هیچ تست کدی در این PR اجرا یا ادعا نشده است.
 
 ## فایل‌های مهم تغییرکرده
 - `docs/D099_HARDWARE_REACTIVATION_ACCEPTANCE.md` — جدید

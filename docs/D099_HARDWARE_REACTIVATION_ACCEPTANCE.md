@@ -45,9 +45,12 @@
 | AC-5 | پاسخ صادرشده فقط با چهار binder معتبر پذیرفته شود: Installation، requestId/nonce، SPKI کلید جدید، License revision؛ reuse برای درخواست دیگر یا revision دیگر رد شود | بند ۱۰ |
 | AC-6 | تأیید و رد هر دو با هویت تأییدکننده، زمان UTC و علت در Audit ثبت شوند؛ maker-checker (D-046) رعایت شود | بند ۱۱ |
 | AC-7 | رد درخواست هیچ داده‌ای حذف نکند؛ وضعیت لایسنس/Installation دست‌نخورده بماند | بند ۹ |
-| AC-8 | در هر دو سطح `HardwareTpm` و `SoftwareProtected` رفتار یکسان و fail-closed باشد؛ نبود TPM/کلید → رد با کد روشن، بدون fallback | بند ۵، D-058 |
+| AC-8a | مسیر `HardwareTpm` — **مستقل و fail-closed:** نبود TPM یا نبود/ناهمخوانی کلید سخت‌افزاری مورد انتظار، اعتبارسنجی هویت را با کد روشن رد کند (رفتار موجود: `Unavailable` در `WindowsCngLicenseInstallationIdentityProofVerifier.cs:71-73`)؛ هیچ تغییر مسیر خودکار به Software KSP یا هر روش ضعیف‌تر مجاز نیست و شکست اعتبارسنجی سخت‌افزار هرگز نباید به فعال‌سازی بدون کنترل منجر شود | بند ۵، D-058، OD-08 |
+| AC-8b | مسیر `SoftwareProtected` — **مستقل از مسیر ۸a:** استفاده از Software KSP فقط وقتی مجاز است که این سطح assurance صریحاً انتخاب و تأیید شده باشد (رضایت ثبت‌شده: `SoftwareProviderRiskAcceptedAtUtc` + `SoftwareProviderRiskAcceptedBy`؛ الزام در `WindowsCngLicenseInstallationKeyProvisioner.cs:66/105` و verifier `:75-78`)؛ **نبود TPM به‌تنهایی نباید باعث شکست این مسیر شود**؛ سطح assurance باید در وضعیت (`ApiEndpoints.cs:766` `AssuranceLevel`) و گزارش‌های مربوط قابل تشخیص باشد؛ **هیچ downgrade خودکاری از `HardwareTpm` به `SoftwareProtected` مجاز نیست** — تغییر سطح فقط با فرایند صریح re-enrollment/مجوز، نه fallback بی‌صدا | بند ۵، D-058، OD-08 |
 | AC-9 | هر رخداد (درخواست/تأیید/رد/صدور پاسخ) ممیزی نسخه‌دار داشته باشد و در Vendor history هر Installation قابل مشاهده باشد | بند ۲/۸ |
 | AC-10 | عدم ادغام با revocation: ردِ reactivation، لایسنس را revoke نکند و پروتکل ابطال آفلاین (D-057/D-055) را bypass نکند | مرز معماری |
+
+**استقلال دو مسیر AC-8 (اصلاح ابهام AC-8 نسخهٔ اول):** `HardwareTpm` (AC-8a) و `SoftwareProtected` (AC-8b) دو مسیر مستقل‌اند و هیچ رفتار مشترکِ «یکی به‌جای دیگری» ندارند: در مسیر ۸a نبود TPM/کلید سخت‌افزاری fail-closed است و نباید خودکار به Software KSP بیفتد؛ در مسیر ۸b نبود TPM به‌تنهایی شکست نیست، اما استفاده از Software KSP مشروط به انتخاب و تأیید صریح همان سطح assurance است و سطح انتخابی در وضعیت/گزارش‌ها قابل تشخیص می‌ماند. هیچ مسیری از ۸a به ۸b (یا برعکس) به‌صورت خودکار تغییر نمی‌کند؛ تبدیل سطح فقط re-enrollment صریح است. متن D-058 «هیچ fallback خودکار یا تغییر provider بی‌صدا مجاز نیست» مرجع هر دو زیرمعیار است.
 
 ## ۵) ماتریس تست — چه چیزی با mock/SoftHSM و چه چیزی با سخت‌افزار واقعی
 
@@ -55,10 +58,10 @@
 |---|---|---|---|
 | T-A (کاملاً قابل انجام اکنون) | منطق خالص: اعتبارسنجی قرارداد نسخه‌دار درخواست/پاسخ، binderهای AC-5، reject replay، رد possession نامعتبر، رد علامت‌گذاری‌های ناقص، state transitions صف تأیید، audit fields — با درون‌ریزی signer/verifier و clock تزریقی | Unit testها روی `Vendor.sln` + `Template.Tests`؛ هیچ سخت‌افزاری لازم نیست | قابل شروع پس از تأیید قرارداد (P1) |
 | T-B (SoftHSM / شبیه‌ساز) | مسیر PKCS#11/HSM vendor-side برای هر بخشی که به کلید امضای vendor وصل می‌شود؛ رفتار fail-closed در نبود provider | SoftHSM در CI (الگوی موجود تست‌های Skip-local) | زیرساخت تست موجود، قابلیت هنوز پیاده نشده |
-| T-C (Windows CNG واقعی در CI) | MachineKey non-exportable، `ExportPolicy=None`، مسیر `SoftwareProtected`، proof-of-possession با کلید واقعی | Windows runner CI (الگوی موجود: تست‌های CNG #753 در CI سبز) | زیرساخت موجود |
-| T-D (سخت‌افزار واقعی — فقط دستی/Stage) | TPM 2.0 واقعی (Platform Crypto Provider)، re-image واقعی Windows، restore از backup، دو میزبان Vendor/Customer | میزبان Windows فیزیکی/VM با TPM + میزبان Vendor؛ ثبت شواهد در runbook | **انجام‌نشده و خارج از محیط فعلی؛ هیچ ادعای Production readiness بدون آن مجاز نیست** |
+| T-C (Windows CNG واقعی در CI) | MachineKey non-exportable، `ExportPolicy=None`، **مسیر `SoftwareProtected` و AC-8b** (نیاز به رضایت ثبت‌شده؛ رد بدون رضایت؛ نبود TPM این مسیر را نمی‌شکند)، proof-of-possession با کلید واقعی | Windows runner CI (الگوی موجود: تست‌های CNG #753 در CI سبز) | زیرساخت موجود |
+| T-D (سخت‌افزار واقعی — فقط دستی/Stage) | **مسیر `HardwareTpm` و AC-8a**: TPM 2.0 واقعی (Platform Crypto Provider)، fail-closed در نبود TPM و رد هر fallback خودکار، re-image واقعی Windows، restore از backup، دو میزبان Vendor/Customer | میزبان Windows فیزیکی/VM با TPM + میزبان Vendor؛ ثبت شواهد در runbook | **انجام‌نشده و خارج از محیط فعلی؛ هیچ ادعای Production readiness بدون آن مجاز نیست** |
 
-قواعد ماتریس: هیچ ACای نباید فقط با T-A بسته اعلام شود اگر به کلید واقعی وابسته است (مثلاً AC-1/AC-8 به T-C یا T-D نیاز دارند)؛ رد شدن در T-B/C هرگز با mock «سبز» پوشانده نشود؛ تست‌های وابسته به SQL Server/SoftHSM/HSM فقط در CI/Stage معتبرند (تفاوت با InMemory صریح ثبت شود).
+قواعد ماتریس: هیچ ACای نباید فقط با T-A بسته اعلام شود اگر به کلید واقعی وابسته است (مثلاً AC-1/AC-8a/AC-8b به T-C یا T-D نیاز دارند)؛ رد شدن در T-B/C هرگز با mock «سبز» پوشانده نشود؛ تست‌های وابسته به SQL Server/SoftHSM/HSM فقط در CI/Stage معتبرند (تفاوت با InMemory صریح ثبت شود).
 
 ## ۶) الزامات Production fail-closed و مرزهای حفظ‌شده
 
