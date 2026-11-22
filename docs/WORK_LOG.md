@@ -3505,3 +3505,10 @@
 - **دامنه و وضعیت PRها:** در snapshot فعلی #745 تنها PR باز مرتبط با Vendor و مستنداتی است؛ #744 مربوط به Trade است و دست‌نخورده می‌ماند. هیچ Customer-side consumer، `Server/**` یا Customer migration در این تغییر مستنداتی اضافه نشده است.
 - **گام بعدی طبق اولویت مأموریت:** ادامه #228 فقط در مرز Vendor؛ CompanyReference mapping/bootstrap در #392 و Customer consumer/trust/ACK در #235 وابستگی‌های جدا هستند. Purchased Company-scoped add-on در #393 تا #392 مسدود می‌ماند. Key Ceremony در #236، الزامات offline revocation در #214/#364 و sink مستقل #107 به زیرساخت/دسترسی واقعی نیاز دارند.
 - **اعتبارسنجی این ثبت:** فقط مستندات؛ هیچ Build/Test محلی اجرا نشده است.
+
+
+## 2026-11-22 — اصلاح مرز سیاست نگهداری Vendor در بازبینی PR #745
+
+- بازبینی CodeRabbit نشان داد ارجاع D-070 به سیاست نگهداری Vendor نادرست است: D-070 فقط `SecurityAuditEvents` و metadata نشست `UserSession` در Customer Host را پوشش می‌دهد.
+- جملهٔ جاری در `VENDOR_LIFECYCLE_FINAL_AUDIT.md` اصلاح شد: مرز ممیزی Vendor از D-046 می‌آید؛ D-046 تعیین دورهٔ عددی را به پیکربندی/راهنمای استقرار و Issue اجرایی واگذار می‌کند و در حال حاضر دورهٔ Vendor تعریف/مصوب نیست؛ Retention/Archive همچنان پیاده‌سازی نشده است.
+- این رکورد، عبارت تاریخی همین ممیزی را تصحیح می‌کند و سابقهٔ append-only قبلی را بازنویسی نمی‌کند. هیچ کد، Schema، Migration یا Customer Host تغییر نکرده است.
