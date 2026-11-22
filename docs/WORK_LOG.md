@@ -3544,3 +3544,13 @@
 
 - ۶ تست سرویس برای Update شرکت دیگر، کد یکسان در دو شرکت و عدم تغییر رکورد پس از تعارض کد افزوده شد؛ دو جهش روی `ProductService` شکست تست را نشان داد. کد تولیدی تغییر نکرد.
 - ماتریس #749 بازبینی شد: «ReadOnly + DenyAll ← 409» از قبل با `ClosedPeriodWriteGets409ReadOnly` پوشش دارد. جزئیات و شکاف‌های P2 در `docs/handoffs/ISSUE-UNNUMBERED-trade-test-hardening-workstream-c.md`.
+
+## 2026-11-22 — Vendor: تحویل‌های مستقل S-D..S-G مأموریت ادامهٔ کار (GLM)
+
+- **S-D (PR #757):** Inventory نقاط مصرف Entitlement در Customer Host با file:line واقعی از `main@58a1ccd4` و طرح اجرای حداقلی E1..E4 (`docs/ENTITLEMENT_ENFORCEMENT_CALLSITE_INVENTORY.md`)؛ همه `Proposed`، هیچ سیاستی فعال نشد و Trade فقط به‌عنوان قرارداد مرجع خوانده شد.
+- **S-E (PR #758):** معیارهای پذیرش آزمون‌پذیر D-099 (AC-1..AC-10) + هشت پیش‌نیاز + ماتریس تست چهار سطحی mock/SoftHSM/CNG CI/سخت‌افزار واقعی (`docs/D099_HARDWARE_REACTIVATION_ACCEPTANCE.md`)؛ بدون ادعای Production readiness.
+- **S-B (PR #759):** تحلیل قرارداد Signed ACK برای amendment delivery (#393/#394) با الگوی مرجع ACK provisioning، مقایسهٔ ۴ گزینه، تقسیم مسئولیت و ۴ سؤال مالک (`docs/AMENDMENT_ACK_CONTRACT_ANALYSIS.md`)؛ هیچ ACK فرضی وارد مسیر عملیاتی نشد.
+- **S-C (PR #760):** پیش‌نویس ADR Proposed cache نسخه‌دار رزولوشن (#396) + ثبت OD-28 در `LICENSING_OPEN_DECISIONS.md` (`docs/LICENSE_RESOLUTION_CACHE_ADR_PROPOSAL.md`)؛ نکتهٔ کلیدی: مفاد D-058/D-059 برای Cloud با authority مرکزی است و پیاده‌سازی فعلی محلی است؛ هیچ کدی تغییر نکرد.
+- **S-F/S-H (PR #761):** دو بستهٔ تصمیم‌گیری مالک — سقف نشست هم‌زمان (D-100/OD-26، گزینهٔ G-1 مرحله‌ای) و ویرایش‌پذیری `CustomerNumber` (شواهد binding/PUT بی‌قید، پیشنهاد قفل پس از اولین binding) — هر دو `Proposed` با سؤال مشخص مالک.
+- **S-G (PR #762):** چک‌لیست آمادگی عملیاتی (`docs/VENDOR_OPERATIONAL_READINESS_CHECKLIST.md`) — گاردهای D-041 G1..G6 با وضعیت واقعی، Gate دوکلیدی v5، Migration مشتری، Key Ceremony #236، sink #107، Trust #235 و OD-27؛ هیچ گیت باز نشد.
+- همهٔ تحویل‌ها فقط مستندات‌اند (کد تولیدی، Schema و Workflow تغییر نکردند)، هر کدام با PR مستقل از `main@58a1ccd4` و handoff اختصاصی؛ رکوردهای WORK_LOG/INDEX عمداً در همین PR واحد هم‌گام شد تا PRهای موازی تعارض فایل مشترک نداشته باشند.
