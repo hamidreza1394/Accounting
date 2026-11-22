@@ -161,11 +161,28 @@ public sealed class VendorAmendmentEntitlementPolicyTests
     }
 
     [Fact]
-    public void UpgradeFromV1ToV2IsCheckedOnTheCandidateSideOnly()
+    public void UpgradeFromV1ToV2IsDeniedUntilAnOwnerApprovedMappingExists()
     {
-        var current = V1Payload(["finance"]);
+        // Mission reproduction: current v1 grants finance + sales installation-wide; the v2
+        // candidate carries only company-0001 with finance. No owner-approved contract maps v1
+        // installation-wide grants to v2 company-scoped grants, so the format change itself must
+        // be denied — the removed `sales` grant must not slip through a format transition.
+        var current = V1Payload(["finance", "sales"]);
         var candidate = V2Payload([Company(CompanyOne, ["finance"])], sequence: 8);
 
-        Assert.Null(VendorAmendmentEntitlementPolicy.ValidateSuccessorKeepsEntitlements(current, candidate));
+        Assert.Equal(VendorAmendmentEntitlementPolicy.PolicyViolationCode,
+            VendorAmendmentEntitlementPolicy.ValidateSuccessorKeepsEntitlements(current, candidate));
+    }
+
+    [Fact]
+    public void UpgradeFromV1ToV2IsDeniedEvenWhenTheCandidateAloneIsValid()
+    {
+        // Even with an identical effective grant set, a format transition has no owner-approved
+        // mapping: a structurally valid candidate is still not signable by the amendment path.
+        var current = V1Payload(["finance", "sales"]);
+        var candidate = V2Payload([Company(CompanyOne, ["finance", "sales"])], sequence: 8);
+
+        Assert.Equal(VendorAmendmentEntitlementPolicy.PolicyViolationCode,
+            VendorAmendmentEntitlementPolicy.ValidateSuccessorKeepsEntitlements(current, candidate));
     }
 }

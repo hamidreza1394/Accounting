@@ -8,6 +8,13 @@ namespace Faranou.Vendor.Host.Signing;
 /// monotonic: it must not revoke any entitlement the current signature-verified payload grants,
 /// and every entitlement the candidate carries must itself be policy-decidable and allowed.
 ///
+/// Format transitions are fail-closed in both directions: no owner-approved contract maps
+/// installation-wide v1 grants to company-scoped v2 grants (or back), so a v1 → v2 step can hide
+/// a revoked grant (e.g. dropping `sales` while moving to company-scoped finance) and a v2 → v1
+/// step cannot be proven non-revoking at all. No operational builder produces a format change —
+/// every builder inherits the payload's FormatVersion and two of them require v2 explicitly —
+/// so this rule is a guard in front of the signer until the owner defines a mapping.
+///
 /// Deliberately out of scope here (existing contracts, not new rules): feature grant values —
 /// a disabled feature is a legitimate pre-grant state until a later amendment enables it, so
 /// <see cref="EntitlementPolicyEngine.EvaluateFeature"/> grant semantics must not run at payload
@@ -22,7 +29,8 @@ public static class VendorAmendmentEntitlementPolicy
 
     /// <summary>
     /// Returns null when the candidate keeps every currently granted entitlement and only carries
-    /// engine-allowed entitlements; otherwise <see cref="PolicyViolationCode"/>.
+    /// engine-allowed entitlements; otherwise <see cref="PolicyViolationCode"/>. A FormatVersion
+    /// transition is always a violation until an owner-approved grant mapping exists.
     /// </summary>
     public static string? ValidateSuccessorKeepsEntitlements(
         LicensePayload currentPayload,
@@ -31,22 +39,21 @@ public static class VendorAmendmentEntitlementPolicy
         ArgumentNullException.ThrowIfNull(currentPayload);
         ArgumentNullException.ThrowIfNull(candidatePayload);
 
+        // Fail-closed: with no owner-approved v1 ↔ v2 grant mapping, a format transition can hide
+        // revocations (v1 installation-wide grants vs v2 company-scoped grants are not comparable).
+        if (candidatePayload.FormatVersion != currentPayload.FormatVersion)
+            return PolicyViolationCode;
+
         if (candidatePayload.FormatVersion == LicensePayload.CurrentFormatVersion)
         {
             if (ValidateCompanyScoped(candidatePayload) is { } candidateError)
                 return candidateError;
 
-            // Company references were first introduced by payload v2; there is no defined mapping
-            // from v2 grants back to v1, so a v2 → v1 step cannot be proven non-revoking.
-            if (currentPayload.FormatVersion == LicensePayload.CurrentFormatVersion &&
-                RevokesCompanyEntitlements(currentPayload, candidatePayload))
+            if (RevokesCompanyEntitlements(currentPayload, candidatePayload))
                 return PolicyViolationCode;
 
             return null;
         }
-
-        if (currentPayload.FormatVersion == LicensePayload.CurrentFormatVersion)
-            return PolicyViolationCode; // unmappable downgrade; fail closed
 
         return ValidateLegacy(currentPayload, candidatePayload);
     }
