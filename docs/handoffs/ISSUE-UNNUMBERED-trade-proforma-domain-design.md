@@ -36,7 +36,7 @@ Proforma، ProformaRevision، ProformaLine، `ProformaPaymentStage`، `ProformaH
 | F-5 | `ProformaRevision` در V3.2 نسخهٔ سند است و D-116 تمدید اعتبار را از آن مستثنا می‌کند؛ مدل V3.2 محل `ValidUntil` را مشخص نکرده | V3.2، D-116 | ابهام B-4 (محل تاریخ اعتبار) |
 
 ### ۱.۴ قابل استفادهٔ مجدد بدون بازنویسی
-`TradeEntity` (الگوی Id/Audit/RowVersion/SoftDelete)، `PaymentPlanCalculator` (بدون تغییر)، `TradeDocumentNumber`، `TradeQuantitySnapshot`، الگوی `Outcome` سرویس‌های Party/Product، `TradeAccessGate`، `TradeEntityConfiguration`. هیچ کلاس تکراری نباید ساخته شود.
+`TradeEntity` (الگوی Id/Audit/RowVersion/SoftDelete؛ برای Revision/History با هشدار H-2 در بخش ۲.۵)، `PaymentPlanCalculator` (بدون تغییر)، `TradeDocumentNumber`، `TradeQuantitySnapshot`، الگوی `Outcome` سرویس‌های Party/Product، `TradeAccessGate`، `TradeEntityConfiguration`. هیچ کلاس تکراری نباید ساخته شود.
 
 ---
 
@@ -69,7 +69,7 @@ Proforma ─1──0..1─ OrderRegistration (D-104؛ Aggregate جدا)
 ### ۲.۵ شناسه‌ها و مالکیت
 هر Entity: `Id`، `TenantId`، `CompanyId` (هدف)، Audit و `RowVersion` در ریشه (الگوی `TradeEntity`). فرزندان با FK مرکب شامل مالک ریشه ارجاع می‌دهند (الگوی `ProductIdentifier`). جزئیات و مانع F-1 در بخش ۸.
 
-**هشدار H-2:** `TradeEntity` متدهای عمومی `RecordUpdate` و `SoftDelete` دارد (`TradeEntity.cs:45,58`). برای `ProformaRevision`، `ProformaLine`، `ProformaPaymentStage` و `ProformaHistoryEvent` که باید تغییرناپذیر/append-only باشند، ارث‌بری مستقیم از آن با ادعای «بدون mutator عمومی» (بخش ۵.۳) در تضاد است. در مرحلهٔ C باید یکی انتخاب شود: پایهٔ append-only جدا بدون این دو متد، یا ارث‌بری همراه Guard صریح که هر دو را رد کند. V3.2 (`TRADE_DESIGN_V3_2.md` بند ۲) `IsDeleted` را فقط برای رکوردی می‌داند که هنوز اثر کسب‌وکاری نداشته و Revision/History را صراحتاً استثنا نکرده است. فقط ریشهٔ Proforma می‌تواند `IsDeleted` داشته باشد و آن هم فقط پیش از هر اثر.
+**هشدار H-2:** `TradeEntity` متدهای عمومی `RecordUpdate` و `SoftDelete` دارد (`TradeEntity.cs:45,58`). برای `ProformaRevision`، `ProformaLine`، `ProformaPaymentStage` و `ProformaHistoryEvent` که باید تغییرناپذیر/append-only باشند، ارث‌بری مستقیم از آن با ادعای «بدون mutator عمومی» (بخش ۵.۳) در تضاد است. در مرحلهٔ C باید یکی انتخاب شود: پایهٔ append-only جدا بدون این دو متد، یا ارث‌بری همراه Guard صریح که هر دو را رد کند. V3.2 (`TRADE_DESIGN_V3_2.md` بند ۲) `IsDeleted` را فقط برای رکوردی می‌داند که هنوز اثر کسب‌وکاری نداشته و Revision/History را صراحتاً استثنا نکرده است. `[طراحی-پیشنهادی]` فقط ریشهٔ Proforma می‌تواند `IsDeleted` داشته باشد و آن هم فقط پیش از هر اثر.
 
 ---
 
@@ -111,7 +111,7 @@ Proforma ─1──0..1─ OrderRegistration (D-104؛ Aggregate جدا)
 1. **نسخهٔ اولیه:** ایجاد Proforma ⇒ Revision شمارهٔ ۱ با خطوط و مراحل پرداخت.
 2. **نسخهٔ جدید:** هر تغییر «شرایط تجاری» ⇒ Revision با شمارهٔ بعدی؛ کپی صریح خطوط و مراحل با تغییر لازم؛ نسخهٔ قبلی دست نمی‌خورد `[Accepted]` (D-116 بند ۳).
 3. **تغییرناپذیری:** Revisionها (و خطوط و مراحل آن‌ها) فقط INSERT می‌شوند. اجرای قید (پیشنهاد، چون Trigger مطلوب مخزن نیست): (الف) دامنه هیچ setter/mutator عمومی ندارد؛ (ب) پورت ذخیره‌سازی فقط `Add` دارد؛ (ج) ردیاب تغییرات EF هنگام `SaveChanges` هر `Modified`/`Deleted` روی این جدول‌ها را رد می‌کند؛ (د) تست Integration روی SQL Server واقعی. **صریح:** این‌ها دیتابیس را در برابر `UPDATE` مستقیم SQL محافظت نمی‌کنند؛ نیاز به قید سطح DB (مجوز/Trigger) تصمیم جدا است.
-   **هم‌ترازی با V3.2:** `TRADE_DESIGN_V3_2.md` بند ۲–۴ پیش‌تر بررسی `ChangeTracker` در `SaveChangesAsync`، نبود Trigger در فاز اول، ممنوعیت `ExecuteDelete` و خارج‌بودن کنترل DB از دامنه را تثبیت کرده است؛ این سند آن‌ها را تکرار می‌کند، نه بازگشایی. مسیرهای دورزننده‌ی ChangeTracker شامل `ExecuteUpdate`، `ExecuteDelete` و SQL مستقیم‌اند و باید در Guard/قاعدهٔ کد ممنوع شوند.
+   **نسبت به V3.2:** `TRADE_DESIGN_V3_2.md` (بند ۲–۴، حدود خطوط ۴۳ تا ۵۰) بررسی `ChangeTracker` برای وضعیت `Deleted`، نبود Trigger در فاز اول و ممنوعیت `ExecuteDelete` را تثبیت کرده و حفاظت سطح DB را «برای این فاز لازم نیست» دانسته است. این سند آن‌ها را **تکرار و گسترش پیشنهادی** می‌دهد: وضعیت `Modified` و `ExecuteUpdate` را هم **فقط برای جدول‌های Revision/Line/Stage/History** ممنوع می‌کند (V3.2 خود برای Cascade کشتی از `ExecuteUpdate` استفاده می‌کند، پس ممنوعیت به همین جدول‌ها محدود است)، و N-6 بازگشایی صریح پرسش حفاظت سطح DB است، نه تکرار.
 4. **همزمانی:** یکتایی `(ProformaId, RevisionNumber)` رقابت دو Revision هم‌شماره را در SQL Server می‌بندد. `RowVersion` ریشه فقط وقتی کمک می‌کند که ریشه در همان `SaveChanges` واقعاً تغییر کند (درج صرف فرزند آن را بررسی نمی‌کند)؛ پس باید ریشه صراحتاً به‌روزرسانی شود.
 5. **حفظ تاریخچه:** همهٔ Revisionها نگه‌داری می‌شوند؛ حذف فیزیکی ممنوع.
 6. **فهرست فیلدهای «شرایط تجاری»:** `NeedsApproval`. D-086 بند ۳.۷ فهرست «فیلدهای نسخهٔ اول» را داده ولی نگفته تغییر کدام‌ها Revision می‌سازد. این سند هیچ فهرستی را قانون اعلام نمی‌کند (ابهام A-3).
@@ -128,7 +128,7 @@ Proforma ─1──0..1─ OrderRegistration (D-104؛ Aggregate جدا)
 1. کاربر مجاز و `AllowsWrites`؛ Company از context معتبر.
 2. پیش‌شرط‌ها: Proforma پایانی (`Cancelled`) نباشد؛ `NewValidUntil` معتبر باشد. D-086 بند ۳.۸ می‌گوید «تاریخ اعتبار قابل اصلاح است» و محدود به رو به جلو نیست؛ مجاز بودن کاهش تاریخ و نوع رویداد آن در A-2 باز است.
 3. در یک تراکنش: درج `ProformaHistoryEvent(ValidityExtended)`؛ و **اگر** پاسخ A-1 «ویژگی جاری روی سرتیتر» باشد، به‌روزرسانی همان مقدار. این گام پیش از پاسخ A-1 قطعی نیست.
-4. `RowVersion` برای رقابت هم‌زمان دو تمدید.
+4. رقابت هم‌زمان دو تمدید: ریشهٔ Proforma در هر حال (چه مقدار جاری روی سرتیتر باشد چه نه) باید در همان `SaveChanges` صراحتاً به‌روز شود تا `RowVersion` آن بررسی شود (قاعدهٔ بخش ۵.۴).
 
 ### ۶.۳ آنچه نباید قطعی شود
 - **محل نگهداری تاریخ اعتبار (A-1):** گزینه‌ها: (الف) ستون روی سرتیتر Proforma + رویداد برای هر تغییر؛ (ب) فقط روی Revision؛ (ج) مقدار اولیه روی Revision و مقدار مؤثر = آخرین رویداد. (ب) با تمدید بدون Revision متناقض است مگر Revision تغییر کند (بر خلاف D-116)، پس عملاً الف یا ج. **پیشنهاد فنی (غیرمصوب): الف.**
@@ -139,8 +139,8 @@ Proforma ─1──0..1─ OrderRegistration (D-104؛ Aggregate جدا)
 ## ۷. ارتباط با OrderRegistration (B-5) `[Accepted]` D-104؛ P-5 باز
 
 - یک Proforma = دقیقاً یک OrderRegistration و برعکس. `[Accepted]`
-- پیشنهاد داده: `OrderRegistration.ProformaId` (یکتا) و `BasedOnProformaRevisionId` با FK مرکب `(Id, ProformaId)`. «دقیقاً یک» در دامنه با `0..1` پیش از ثبت‌سفارش مدل می‌شود؛ ایجاد Proforma بدون OrderRegistration مجاز است (D-104: وجود موقت Proforma باز است).
-- OrderRegistration به **Revisionی** که مبنای ثبت بوده متصل می‌ماند. این اصل در V3.2 §1 و D-080 بند ۳ (متن «تصمیم پیشنهادی») آمده و پس‌ازآن D-086 در «موارد باز» قید موقت `Accepted` گذاشته است: «تا تصمیم، پیوند Revision ثبت‌سفارش جابه‌جا نمی‌شود». یعنی جابه‌جایی پیوند فعلاً **ممنوع (قید موقت مصوب)** است و اصل کلی آن `[طراحی-پیشنهادی]` است؛ P-5 و A-5 به آن وابسته‌اند.
+- پیشنهاد داده: `OrderRegistration.ProformaId` (یکتا) و `BasedOnProformaRevisionId` با FK مرکب با همان کلید جایگزین واحد بخش ۳ (شامل `TenantId` و `CompanyId` و `ProformaId`). `TradeEntityConfiguration` برای همهٔ Entityها کلید `(TenantId, Id)` تعریف می‌کند؛ اینکه Revision آن را ارث ببرد یا پایهٔ جدا (H-2) داشته باشد و کلید پیشنهادی جایگزین آن شود، به مرحلهٔ C سپرده شده است. «دقیقاً یک» در دامنه با `0..1` پیش از ثبت‌سفارش مدل می‌شود؛ ایجاد Proforma بدون OrderRegistration مجاز است (D-104: وجود موقت Proforma باز است).
+- OrderRegistration به **Revisionی** که مبنای ثبت بوده متصل می‌ماند. این اصل در V3.2 §1 و D-080 بند ۳ (متن «تصمیم پیشنهادی») آمده و پس‌ازآن D-086 (ADR با وضعیت `Accepted`) در بخش «موارد باز» خود قید موقت ثبت کرده است: «تا تصمیم، پیوند Revision ثبت‌سفارش جابه‌جا نمی‌شود». یعنی جابه‌جایی پیوند فعلاً **ممنوع (قید موقت ثبت‌شده در موارد باز D-086؛ این تبدیل Open به Accepted نیست)** است و اصل کلی آن `[طراحی-پیشنهادی]` است؛ P-5 و A-5 به آن وابسته‌اند.
 - پس از دریافت شمارهٔ ثبت‌سفارش، تغییر کالا ممنوع است `[Accepted]` (D-086 بند ۴.۶ و ۲.۵).
 - **P-5 باز نگه داشته شد:** Replace یا تغییر شماره/فروشنده وقتی OrderRegistration زنده به Revision قبلی متصل است. هیچ رفتاری انتخاب نشد.
 - **Revision پس از ثبت‌سفارش (D-104 باز):** اگر مجاز باشد، پیوند به Revision قدیمی می‌ماند یا نه، تصمیم‌نشده است (ابهام A-5).
@@ -178,7 +178,7 @@ D-087/D-105: `TenantId` و `CompanyId` مستقل‌اند؛ هر Entity جدی�
 ## ۹. محدودیت‌های معماری
 
 - Modular Monolith: `Trade.Domain` به `Trade.Application`/`Server`/`Infrastructure` وابسته نمی‌شود؛ دامنهٔ Proforma به `PaymentPlan` (Application) وابسته نشود (مرحلهٔ C مدل مرحله‌ها را در Domain مستقل نگه می‌دارد یا ورودی را بدون وابستگی دریافت می‌کند).
-- D-111 `Accepted`: معماری باید توپولوژی‌های Tenant DB، Company DB و Company + FiscalPeriod DB را پشتیبانی کند (بند ۲)، و بین دیتابیس‌های عملیاتی Foreign Key مستقیم یا تراکنش اتمیک توزیع‌شده ممنوع است (بند ۸). هر قید یکتایی و FK پیشنهادی این سند فقط **داخل یک دیتابیس** معتبر است؛ فرض «همهٔ دادهٔ یک Company در یک دیتابیس» از D-111 قابل استنتاج نیست (N-7). ارجاع بین دیتابیس‌ها با شناسه پایدار و اعتبارسنجی سمت سرور است.
+- D-111 `Accepted`: معماری باید توپولوژی‌های Tenant DB، Company DB و Company + FiscalPeriod DB را پشتیبانی کند (بند ۲)، و بین دیتابیس‌های عملیاتی Foreign Key مستقیم یا تراکنش اتمیک توزیع‌شده ممنوع است (بند ۸). هر قید یکتایی و FK پیشنهادی این سند فقط **داخل یک دیتابیس** معتبر است؛ فرض «همهٔ دادهٔ یک Company در یک دیتابیس» از D-111 قابل استنتاج نیست (N-7). ارجاع بین دیتابیس‌ها با شناسه پایدار و اعتبارسنجی سمت سرور است. توپولوژی Tenant + FiscalPeriod طبق D-115 بند ۸ تا تأیید صریح مالک `Pending Owner Decision` است و Resolver آن را fail-closed رد می‌کند؛ D-111 بند ۷ (دادهٔ Company-level نباید بی‌دلیل برای هر دوره تکثیر شود) مستقیماً به N-7 مربوط است. وضعیت پیاده‌سازی D-111 `NotImplemented` است.
 - بدون `TradeOperationalPeriod` (D-062)، بدون وابستگی جدید به FiscalPeriod، بدون انتقال Product به Inventory، بدون تغییر Entitlement.
 - Repository عمومی/MediatR/Event Bus/abstraction جدید بدون نیاز واقعی ممنوع (`AGENTS.md`)؛ پورت‌های باریک شبیه `IPartyStore`.
 - `SecurityAuditEvent` تاریخچهٔ تجاری نیست.
@@ -233,7 +233,7 @@ D-087/D-105: `TenantId` و `CompanyId` مستقل‌اند؛ هر Entity جدی�
 | **N-8** | Maker-Checker (P-3، D-086 بند ۹.۳) روی Revision و تمدید | اگر تأیید فعال باشد، عملیات تا تأیید نفر دوم Pending است؛ معلوم نیست Revision یا رویداد Pending کجا نگه داشته می‌شود و مجوز `trade.form.proforma.approve` چه چیزی را تأیید می‌کند | کدام عملیات Proforma (Revision، تمدید، لغو) مشمول Maker-Checker است و حالت Pending چگونه ذخیره شود؟ | ک | تصمیم نشود؛ Pending خارج از Revision ثبت‌شده مدل شود |
 | **N-9** | محل نگهداری فروشنده (سرتیتر یا Revision) | تعیین می‌کند تغییر فروشنده Revision بسازد یا Replace؛ بر یکتایی و P-5 اثر دارد | فروشنده جزو محتوای Revision است یا هویت ثابت Proforma؟ | ک | تصمیم نشود تا پاسخ N-1 |
 | **N-10** | آزادشدن شمارهٔ Proforma `Cancelled` یا حذف‌نرم‌شده، و معنای مجوز `trade.form.proforma.delete` | تعیین می‌کند ایندکس یکتا چه ردیف‌هایی را شامل شود؛ بر P-1 (ثبت مجدد در پروندهٔ جدید) اثر دارد | آیا شمارهٔ Proforma ابطال‌شده یا حذف‌شده دوباره قابل استفاده است؟ حذف Proforma چه معنایی دارد؟ | ک | شمارهٔ `Cancelled` آزاد نشود؛ حذف فقط پیش از هر اثر |
-| **N-11** | سایر ابهام‌های کوچک مخزن | HS Code روی Product اختیاری است (`Product.cs:28`)؛ برنامهٔ پرداخت با صفر مرحله رد می‌شود (`PaymentPlanIssueCode.NoStages`)؛ سقف خطوط باید از نسخهٔ پروفایل ثبت‌شده روی پرونده بیاید (D-086 بند ۱.۳)؛ OD-007 و OD-001 | آیا HS Code روی خط الزامی است؟ آیا برنامهٔ پرداخت برای Proforma اجباری است؟ | ک | بدون پیش‌فرض |
+| **N-11** | سایر ابهام‌های کوچک مخزن | HS Code روی Product اختیاری است (`Product.cs:28`)؛ برنامهٔ پرداخت با صفر مرحله رد می‌شود (`PaymentPlanIssueCode.NoStages`)؛ سقف خطوط باید از نسخهٔ پروفایل ثبت‌شده روی پرونده بیاید (D-086 بند ۱.۳)؛ OD-007 (سطح `ForexCommitment`: Proforma یا OrderRegistration)؛ OD-001 (`ImportCase.OnHold`) فقط از جهت وضعیت پرونده با صفر Proforma جاری مرتبط است | آیا HS Code روی خط الزامی است؟ آیا برنامهٔ پرداخت برای Proforma اجباری است؟ | ک | بدون پیش‌فرض |
 | **G0..G6، D-090..D-096** | گیت‌های S3-0، سیاست Migration و Backfill | هر Schema/Migration را مسدود می‌کنند | (تعریف گیت‌ها در `TRADE_S3_READINESS.md` §۳؛ G0 به تأیید S3-0h، D-092 و D-094 وابسته است؛ این سند بازشان نمی‌کند) | ک | — |
 
 ---
@@ -260,10 +260,10 @@ D-087/D-105: `TenantId` و `CompanyId` مستقل‌اند؛ هر Entity جدی�
 
 مرحلهٔ C **به‌تنهایی شروع نمی‌شود**؛ ورودی آن تأیید مالک روی N-4 و N-5 است.
 
-1. **C-1 (دامنهٔ خالص، بدون EF):** `Proforma`، `ProformaRevision` (سازنده‌ای بدون mutator)، `ProformaLine`، `ProformaHistoryEvent` با `CompanyId` صریح؛ تست واحد TDD؛ بدون DbSet/Migration/Snapshot. ورودی‌هایی که به پروفایل (سقف خطوط) و ImportCase وابسته‌اند **پارامتر** هستند؛ در کد هیچ Entity پروفایل یا ImportCase وجود ندارد (S3-1/S3-2 اجرا نشده) و C نباید آن‌ها را بسازد.
+1. **C-1 (دامنهٔ خالص، بدون EF):** `Proforma`، `ProformaRevision` (سازنده‌ای بدون mutator)، `ProformaLine`، `ProformaPaymentStage`، `ProformaHistoryEvent` با `CompanyId` صریح؛ تست واحد TDD؛ بدون DbSet/Migration/Snapshot. ورودی‌هایی که به پروفایل (سقف خطوط) و ImportCase وابسته‌اند **پارامتر** هستند؛ در کد هیچ Entity پروفایل یا ImportCase وجود ندارد (S3-1/S3-2 اجرا نشده) و C نباید آن‌ها را بسازد. پایه/Guard تغییرناپذیری مطابق H-2 (بخش ۲.۵) در ابتدای C-1 تصمیم‌گیری می‌شود.
 2. **C-2 (Application با Fake Store):** `ProformaService` با پورت باریک، Outcome، `RowVersion`، شمارهٔ یکتا، تمدید اعتبار، Revision. تست‌ها با Fake Store و **نه** «تست SQL Server». `PaymentPlanCalculator` بدون تغییر. ImportCase و پروفایل از طریق پورت باریک و Fake در تست تأمین می‌شوند، نه Entity واقعی.
 3. **C-3 (OrderRegistration):** فقط پس از تصمیم A-5 و P-5.
-4. **ترتیب مستقل از باز بودن:** C-1 و C-2 بدون تصمیم P-4/P-5/A-1/A-3 قابل انجام‌اند به شرطی که این‌ها پارامتر یا `NeedsApproval` بمانند.
+4. **ترتیب مستقل از باز بودن:** C-1 و C-2 فقط بدون تصمیم P-4/P-5/A-3/A-6/A-7/A-8 قابل انجام‌اند به شرطی که این‌ها پارامتر یا `NeedsApproval` بمانند. **تمدید اعتبار و فروشنده تا پاسخ A-1 و N-9 از C-1/C-2 بیرون می‌مانند** (یا ValidUntil/فروشنده صراحتاً پارامتر پشت پورت می‌شوند)؛ Maker-Checker (N-8) و A-2 نیز اثر دارند و Pending در C مدل نمی‌شود.
 5. **مسدود (`Blocked`):** persistence، Migration، Endpoint، UI، Entitlement — تا G0..G6 و تأیید مالک.
 
 ---
